@@ -194,5 +194,13 @@ jobs:
           # あわせて、中のファイルを納品の名前にした zip を添付する。
           python3 src/scripts/name-pdfs.py "$VER" "$TAG" dist release
           mapfile -t ASSETS < release/assets.txt
-          gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" \
-            --title "$TAG" --notes "タグ $TAG の時点のソースから自動で組んだ PDF です。納品の名前のファイルは ${TAG}_pdf.zip の中にあります。委員会の確認は docs/議事録 を参照。"
+          NOTES="タグ $TAG の時点のソースから自動で組んだ PDF です。納品の名前のファイルは ${TAG}_pdf.zip の中にあります。委員会の確認は docs/議事録 を参照。"
+          # 依頼者が「Releases」の画面でタグを作ったとき（リリースがもうある）は、そのリリースに PDF を足す（第18回）
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+            if [ -z "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)" ]; then
+              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES"
+            fi
+          else
+            gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes "$NOTES"
+          fi
