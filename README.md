@@ -30,7 +30,7 @@ scripts/ci-build.sh all        # 第1〜9巻とガイドブック
 | `tex/` | 本文（`chN-MM.tex`）、巻の親ファイル（`volN.tex`）、共通の部品（`bk-*.sty`）、ガイドブック（`guide-*.tex`）、書体（`fonts/`）、案内役の絵（`img/`） |
 | `phys/`・`tex/p1-*`・`tex/ph*` | 物理シリーズ（作業を止めている） |
 | `texmf/` | 固定版の LuaTeX-ja など（`texmf/README.md`） |
-| `tools/` | ページ合わせ・確認のスクリプト、執筆と確認の指示書（BRIEF・PROMPT・FIX） |
+| `tools/` | ページ合わせ・確認のスクリプト、確認の指示書（FIX）・執筆の資料 |
 | `checks/` | 検算に使った Python（巻ごと） |
 | `scripts/` | 組版（`ci-build.sh`）、組む巻の判定、納品の名前づけ |
 | `.github/workflows/build.yml` | GitHub Actions の設定 |
@@ -48,5 +48,3 @@ scripts/ci-build.sh all        # 第1〜9巻とガイドブック
 - 書体（`tex/fonts/`）と、`texmf/` の組版用ソフトウェア（LuaTeX-ja・luaotfload・lualibs・lualatex-math・lua-uni-algos）は、それぞれのライセンスに従います（`licenses/README.md`）。
 - 2026年10月31日に規約を差し替えるまで、このリポジトリは Apache License 2.0 の表示で公開していました。その時点までに入手された版には、その表示のライセンスが適用されます。
 - 一般に言う「オープンソース」（OSI の定義）ではなく、ソースを公開した非営利のライセンスです。
-
-リリースの「Source code (zip)」には、AI への依頼文（`tools/BRIEF-*`・`tools/PROMPT-*`）と読者の指摘のスクリーンショット（`docs/修正事項/読者の指摘/`）は入りません（`.gitattributes`）。
