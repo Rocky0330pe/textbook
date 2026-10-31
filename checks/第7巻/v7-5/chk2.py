@@ -1,0 +1,21 @@
+import numpy as np, math
+A=np.array([[2,1],[1,2]])
+for th in range(-90,91,15):
+    r=math.radians(th); v=np.array([math.cos(r),math.sin(r)]); w=A@v
+    ang=math.degrees(math.atan2(w[1],w[0]))
+    print(th, f"{v[0]:.3f} {v[1]:.3f} {w[0]:.3f} {w[1]:.3f} {ang:.1f} {ang-th:.1f} {np.linalg.norm(w):.3f}")
+print(np.__version__)
+w,V=np.linalg.eig(A); print(w); print(V)
+B=np.array([[4,1],[2,3]]); w,V=np.linalg.eig(B); print(w); print(V)
+C=np.array([[3,1],[2,2]]); w,V=np.linalg.eig(C); print(w); print(V)
+s=np.array([[80,30],[30,-20]]); th=0.5*math.atan2(60,100); print(math.degrees(th))
+R=np.array([[math.cos(th),-math.sin(th)],[math.sin(th),math.cos(th)]]); print(R.T@s@R)
+print(30+math.sqrt(3400),30-math.sqrt(3400), 8.3095/30, -108.3095/30, 1+0.27698*(-3.61032))
+P=np.array([[1,1],[1,-1]]); print(np.linalg.inv(P)@A@P, np.linalg.inv(P))
+print(np.linalg.matrix_power(A,5), np.linalg.matrix_power(A,3), np.linalg.matrix_power(np.array([[3,1],[1,3]]),3))
+r=1/math.sqrt(2); R45=np.array([[r,-r],[r,r]]); print(R45.T@A@R45, R45.T@np.array([[3,1],[1,3]])@R45, R45.T@np.array([[5,-2],[-2,5]])@R45)
+t=math.atan2(1,2); R=np.array([[math.cos(t),-math.sin(t)],[math.sin(t),math.cos(t)]]); print(math.degrees(t), R.T@np.array([[50,20],[20,20]])@R)
+t=math.atan2(-1,2); R=np.array([[math.cos(t),-math.sin(t)],[math.sin(t),math.cos(t)]]); print(math.degrees(t), R.T@np.array([[30,-20],[-20,0]])@R)
+print(np.linalg.inv(P)@np.array([[-110,10],[10,-110]])@P)
+print(np.linalg.inv(P)@A@P)
+x=np.array([2,0]); print(np.linalg.inv(P)@x)

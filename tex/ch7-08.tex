@@ -1,0 +1,1123 @@
+%% 7-8 固有値と固有ベクトル：向きの変わらない方向（第14回：組 V7-5。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   6-12（ch6-12:692）「第7巻では、行列の固有値も同じ λ で書く」、6-14（ch6-14:748）「固有ベクトルは和や差のような、ほどける組み合わせ、
+%%   固有値はそのときの s」→ 3-10・6-12 の2つの式（s^2+3s+2=0、s^2+2s+5=0）と 6-14 の台車（m=1、k=100、K=10：−100・−120）・水そう（0・−0.2）で数を見せる。
+%%   状態の式 \dot{\vec x}=A\vec x は「\vec x=\vec v e^{st} を入れると A\vec v=s\vec v、s は固有値」まで（委員会の決定6）。入力の項は書かない（9-10）。
+%%   物理 p1-09（思い出そう）：A\vec v=λ\vec v、det(A−λI)=0、対称なら固有値は実数・固有ベクトルは直交（S10 → せいかくに言うと）。
+%%   物理 p1-11：「向きが変わらない特別なベクトル」。応力 σ=(80 30; 30 −20) MPa → 88.3・−28.3（力-9）。σ は物理の本のとおり太字。
+%%   主役の行列 A=(2 1; 1 2)：固有値3と1、固有ベクトル (1,1)・(1,−1)。型は tools/kata7.md（V7-1）。
+\usetikzlibrary{matrix}
+\makeatletter
+% ---- kata7 の型（頭文字 kviii に置きかえ）----
+\tikzset{
+  kviii mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=8mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=0pt, row sep=0pt, inner sep=0.6mm},
+  kviii row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviii col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviii ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm}}
+\newcommand\kviiihl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 方眼と軸  \kviiigrid{xmin}{xmax}{ymin}{ymax}（tikzpicture[x=5mm, y=5mm] の中で）
+\newcommand\kviiigrid[4]{%
+  \draw[bkLine, line width=0.4pt, step=1] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.7},0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.7}) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \node[below left, font=\sffamily\footnotesize, inner sep=1.2pt] at (0,0) {O};}
+\newcommand\kviiihousezero{%
+  \filldraw[fill=bkGray!12, draw=bkGray, line width=0.8pt, dashed, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkGray, line width=0.6pt, dashed] (1.25,0) -- (1.25,1) -- (1.75,1) -- (1.75,0);}
+\newcommand\kviiihouse[5][bkOrange]{%
+  \begin{scope}[cm={#2,#4,#3,#5,(0,0)}]
+    \filldraw[fill=#1!25, draw=#1!80!black, line width=1.1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+    \filldraw[fill=white, draw=#1!80!black, line width=0.8pt] (1.25,0) -- (1.75,0) -- (1.75,1) -- (1.25,1) -- cycle;
+  \end{scope}}
+% 数式バー  \kviiifx{セル}{式}
+\newcommand\kviiifx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=46mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+% ---- この章の部品 ----
+% 小見出し（太字の1行）
+\newcommand\kviiihead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiibox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviiiline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviiiframe[はば]{中身}
+\newcommand\kviiiframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiia{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiib{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiis{\rightskip=0pt plus 8em\relax}
+% ばね（横）・台車・かべ（6-14 と同じ形）
+\newcommand\kviiispring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.3mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] #1 -- #2;}
+\newcommand\kviiicart[3]{\begin{scope}[shift={#1}]
+  \filldraw[fill=#3!25, draw=#3!80!black, line width=0.8pt, rounded corners=0.8mm] (0,1.6) rectangle (12,10);
+  \filldraw[fill=bkInk!60, draw=bkInk] (3,0.8) circle (0.8) (9,0.8) circle (0.8);
+  \node[font=\sffamily\bfseries\small] at (6,5.8) {#2};
+\end{scope}}
+\newcommand\kviiiwall[3]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,#2);
+  \foreach \kviiiy in {0,2.5,...,#2} {\draw[bkInk!60, line width=0.4pt] (0,\kviiiy) -- ({-1.6*#3},{\kviiiy+1.6});}
+\end{scope}}
+% 小さな矢印の図  \kviiipanel{(原点)}{vx}{vy}{wx}{wy}{下のことば}   1目もり 6.5 mm
+\newcommand\kviiipanel[6]{\begin{scope}[shift={#1}]
+  \draw[bkLine, line width=0.5pt] (-4,0) -- (17,0) (0,-6) -- (0,16);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1pt off 1pt] (0,0) circle (6.5);
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- ({6.5*#2},{6.5*#3});
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- ({6.5*#4},{6.5*#5});
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (6,-7.5) {#6};
+\end{scope}}
+\colorlet{kviiiM}{bkTheme!12}\colorlet{kviiiV}{bkGreen!14}\colorlet{kviiiR}{bkYellow!35}
+\makeatother
+
+\bkchapter{7}{8}{固有値と固有ベクトル：\\向きの変わらない方向}{\bklevel{5}}{固有値と固有ベクトル：向きの変わらない方向}
+\bkmichishirube{3-10,4-12,6-6,6-12,6-14,7-2,7-4,7-5}{7-9,7-10,7-11,9-10,9-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 行列をかけても向きが変わらない矢印を、図と表計算でさがせる。
+\item \bklevel{4}\enspace $A\vec v$ を計算して固有ベクトルかどうかを確かめ、振動モードが固有ベクトルだと説明できる。
+\item \bklevel{5}\enspace 特性方程式 $\det(A-\lambda I)=0$ で固有値と固有ベクトルを求め、6-12 の $s$ と同じものだと確かめられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+7-2 から使ってきた主役の行列 $A$ を、方眼にかいた矢印にかけてみます。右向きの矢印 $(1,\ 0)$ は $(2,\ 1)$ になり、向きが少し上に変わります。上向きの矢印 $(0,\ 1)$ は $(1,\ 2)$ になり、向きが少し右に変わります。\par\vspace{4pt}
+行列をかけると、ふつうは矢印の向きが変わります。では、$A$ をかけても\textbf{向きが変わらない矢印}は、あるでしょうか。あるとしたら、どの向きでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkLine, line width=0.4pt, step=1] (-0.5,-0.5) grid (3.5,3.5);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-0.5,0) -- (3.9,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-0.5) -- (0,3.9);
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (1,0);
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (0,1);
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (2,1);
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (1,2);
+  \node[font=\sffamily\footnotesize, anchor=north] at (1,-0.2) {$(1,\ 0)$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (2.1,1) {$(2,\ 1)$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (1,2.15) {$(1,\ 2)$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-0.15,1.2) {$(0,\ 1)$};
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 灰色の矢印に $A$ をかけると、オレンジの矢印になる。}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-2 で、行列は「矢印を入れると、矢印が出てくる機械」だと学びました。7-4 では面積が何倍になるか、7-5 では元にもどす方法、7-6・7-7 では回す行列を調べました。この章では、行列という機械の「くせ」を調べます。
+
+多くの行列には、「入れても向きが変わらず、のびたりちぢんだりするだけ」の特別な向きがあります。その向きと、のびる倍率がわかると、機械の動きのほとんどがわかってしまいます。じつは、6-14 の2つの台車の「いっしょに動く」「反対に動く」ゆれ（振動モード）は、この特別な向きでした。
+
+★★★★★の章ですが、「目でわかる」「手でわかる」の段は、表計算と、行列×ベクトルの計算（7-2）だけで読めるように書きました。「式でわかる」の段は、1回で分からなくても大丈夫です。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[向きが変わらない矢印を、表計算でさがそう]
+長さ1の矢印を、下向き（$-90°$）から上向き（$90°$）まで、$15°$ずつ回します。1本ずつ主役の行列 $A$ をかけ、出てきた矢印の向きが何度変わったかを表にします。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列に矢印の角 $\theta$ を入れる。A2 に \texttt{-90}、A3 に \texttt{=A2+15} と入れ、A14（90）まで下へコピーする。
+\item 長さ1の矢印の成分を作る。B2 に \texttt{=COS(RADIANS(A2))}、C2 に \texttt{=SIN(RADIANS(A2))}。
+\item $A$ をかける。D2 に \texttt{=2*B2+1*C2}、E2 に \texttt{=1*B2+2*C2}。
+\item 出てきた矢印の向きの角を F2 に \texttt{=DEGREES(ATAN2(D2,E2))}、向きの変わり方を G2 に \texttt{=F2-A2} と入れる。
+\item 2行めの B〜G を下へコピーして、G列が0になる角をさがそう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ②は、角 $\theta$ の向きの長さ1の矢印が $(\cos\theta,\ \sin\theta)$ だからです（4-8）。表計算の \texttt{COS} は角をラジアンで受けとるので、\texttt{RADIANS} で度から直しています（6-9）。③は、$A$ の1行め $(2,\ 1)$ と矢印の内積、2行め $(1,\ 2)$ と矢印の内積です（7-2 の行列×ベクトル）。④の \texttt{ATAN2} は、「$x$ 成分, $y$ 成分」の順に入れると、矢印の向きの角を $-180°$ から $180°$ で答える関数です（6-9 でも使いました）。
+
+\begin{bkcenter}
+\bksheet{7}{13}{%
+1 & $\theta$ & $x$ & $y$ & $A\vec v$ の $x$ & $A\vec v$ の $y$ & 向き & 変わり方 \\
+2 & $-90$ & 0.000 & $-1.000$ & $-1.000$ & $-2.000$ & $-116.6$ & $-26.6$ \\
+3 & $-75$ & 0.259 & $-0.966$ & $-0.448$ & $-1.673$ & $-105.0$ & $-30.0$ \\
+4 & $-60$ & 0.500 & $-0.866$ & 0.134 & $-1.232$ & $-83.8$ & $-23.8$ \\
+5 & $-45$ & 0.707 & $-0.707$ & 0.707 & $-0.707$ & $-45.0$ & 0.0 \\
+6 & $-30$ & 0.866 & $-0.500$ & 1.232 & $-0.134$ & $-6.2$ & 23.8 \\
+7 & $-15$ & 0.966 & $-0.259$ & 1.673 & 0.448 & 15.0 & 30.0 \\
+8 & 0 & 1.000 & 0.000 & 2.000 & 1.000 & 26.6 & 26.6 \\
+9 & 15 & 0.966 & 0.259 & 2.191 & 1.484 & 34.1 & 19.1 \\
+10 & 30 & 0.866 & 0.500 & 2.232 & 1.866 & 39.9 & 9.9 \\
+11 & 45 & 0.707 & 0.707 & 2.121 & 2.121 & 45.0 & 0.0 \\
+12 & 60 & 0.500 & 0.866 & 1.866 & 2.232 & 50.1 & $-9.9$ \\
+13 & 75 & 0.259 & 0.966 & 1.484 & 2.191 & 55.9 & $-19.1$ \\
+14 & 90 & 0.000 & 1.000 & 1.000 & 2.000 & 63.4 & $-26.6$ \\}
+\bktabcaption{表計算の結果（小数第3位・第1位までにそろえた）。G列が0になるのは、$\theta=-45°$ と $\theta=45°$ の2か所。}
+\end{bkcenter}
+
+\noindent G列は、矢印が何度回されたかです。正なら左回り、負なら右回りに回されています。表から、次のことがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{$45°$ と $-45°$ では、向きが変わらない。}\par\nobreak\noindent $45°$ の矢印 $(0.707,\ 0.707)$ は $(2.121,\ 2.121)$ になります。同じ向きのまま、ちょうど3倍の長さです（$0.707\times3=2.121$）。$-45°$ の矢印 $(0.707,\ -0.707)$ は、そのまま $(0.707,\ -0.707)$。向きも長さも変わりません（1倍）。
+\item \textbf{$45°$ のまわりの矢印は、$45°$ のほうへ引きよせられる。}\par\nobreak\noindent $30°$ の矢印は左回りに $9.9°$、$60°$ の矢印は右回りに $9.9°$ 回されて、どちらも $45°$ に近づきます。
+\item \textbf{$-45°$ のまわりの矢印は、$-45°$ から遠ざけられる。}\par\nobreak\noindent $-30°$ の矢印は左回りに $23.8°$、$-60°$ の矢印は右回りに $23.8°$ 回されて、$-45°$ からはなれます。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=56mm, xmin=-97, xmax=99, ymin=-36, ymax=36, xtick={-90,-45,45,90}, ytick={-30,-15,15,30}, xlabel={$\theta$（°）}, ylabel={変わり方（°）}]
+  \addplot[bkcurve, line width=1.4pt, smooth] coordinates {(-90,-26.57) (-87,-27.69) (-84,-28.63) (-81,-29.35) (-78,-29.83) (-75,-30.00) (-72,-29.81) (-69,-29.18) (-66,-28.03) (-63,-26.27) (-60,-23.79) (-57,-20.52) (-54,-16.41) (-51,-11.50) (-48,-5.94) (-45,0.00) (-42,5.94) (-39,11.50) (-36,16.41) (-33,20.52) (-30,23.79) (-27,26.27) (-24,28.03) (-21,29.18) (-18,29.81) (-15,30.00) (-12,29.83) (-9,29.35) (-6,28.63) (-3,27.69) (0,26.57) (3,25.29) (6,23.89) (9,22.39) (12,20.79) (15,19.11) (18,17.36) (21,15.56) (24,13.71) (27,11.82) (30,9.90) (33,7.95) (36,5.98) (39,3.99) (42,2.00) (45,0.00) (48,-2.00) (51,-3.99) (54,-5.98) (57,-7.95) (60,-9.90) (63,-11.82) (66,-13.71) (69,-15.56) (72,-17.36) (75,-19.11) (78,-20.79) (81,-22.39) (84,-23.89) (87,-25.29) (90,-26.57)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkBlue!70!black] coordinates {(-90,-26.6) (-75,-30.0) (-60,-23.8) (-45,0) (-30,23.8) (-15,30.0) (0,26.6) (15,19.1) (30,9.9) (45,0) (60,-9.9) (75,-19.1) (90,-26.6)};
+  \addplot[only marks, mark=*, mark size=2.6pt, bkRed] coordinates {(-45,0) (45,0)};
+  \draw[bkRed!80!black, line width=0.5pt] (axis cs:-57,14) -- (axis cs:-47,2.5);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:-92,13) {$-45°$：1倍};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:47,3) {$45°$：3倍};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表の G列（向きの変わり方）をグラフにした。0の線と交わる2つの角（赤い点）で、矢印の向きが変わらない。}
+\label{bk:7-8:fig-graph}
+\end{bkfigure}
+
+\begin{omoidasou}
+\bkrecall{7-2}{行列×ベクトル：$A\vec x$ の1つめの成分は「$A$ の1行めと $\vec x$ の内積」、2つめは「2行めと $\vec x$ の内積」。行列は、矢印を入れると矢印が出てくる機械。}
+\bkrecall{7-4}{行列式 $\det A=ad-bc$ は面積の倍率。0なら、平面が1本の直線（または1点）に平らにつぶれる。}
+\bkrecall{7-5}{行列式が0でなければ逆行列 $A^{-1}$ があり、$A\vec x=\vec b$ の答えは $\vec x=A^{-1}\vec b$ の1つだけ。}
+\bkrecall{6-14}{2つの台車（$m=\qty{1}{kg}$、$k=\qty{100}{N/m}$、$K=\qty{10}{N/m}$）は、和（いっしょに動く）と差（反対に動く）に分けるとほどけた。角振動数は $\omega_1=10$、$\omega_2=\sqrt{120}\approx10.95$（rad/s）。}
+\bkrecall{6-12}{$m\ddot x+c\dot x+kx=0$ に $x=e^{st}$ を入れると、特性方程式 $ms^2+cs+k=0$。3-10 の $s^2+3s+2=0$ の解は $-1$ と $-2$。}
+\bkrecall{4-12}{$\vec 0$ でない2つのベクトルの内積が0なら、2つは直交する（直角に交わる）。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{向きが変わらない矢印}{\bklevel{3}}
+
+\bksubsection{1}{矢印を回しながら、さがす}
+
+\label{bk:7-8:sagasu}やってみようの表から、5本の矢印をえらんで図にかきます。灰色が入れた矢印 $\vec v$、オレンジが出てきた矢印 $A\vec v$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiipanel{(5,10)}{1}{0}{2}{1}{$0°$\\左回りに $26.6°$}
+  \kviiipanel{(31,10)}{0.866}{0.5}{2.232}{1.866}{$30°$\\左回りに $9.9°$}
+  \kviiipanel{(57,10)}{0.707}{0.707}{2.121}{2.121}{\textcolor{bkRed!80!black}{$45°$}\\\textcolor{bkRed!80!black}{回らない（3倍）}}
+  \kviiipanel{(83,10)}{0}{1}{1}{2}{$90°$\\右回りに $26.6°$}
+  \kviiipanel{(109,10)}{0.707}{-0.707}{0.707}{-0.707}{\textcolor{bkRed!80!black}{$-45°$}\\\textcolor{bkRed!80!black}{回らない（1倍）}}
+\end{tikzpicture}
+\bkfigcaption{入れた矢印（灰色）と、$A$ をかけて出てきた矢印（オレンジ）。点線の円は長さ1。$-45°$ では2本がぴったり重なっている。}
+\label{bk:7-8:fig-panels}
+\end{bkfigure}
+
+$0°$・$30°$・$90°$ の矢印は、向きが変わっています。ところが $45°$ の矢印は、同じ向きのまま3倍にのび、$-45°$ の矢印は、まったく変わりません。
+
+\kviiihead{円がだ円になる}
+長さ1の矢印の先を、ぐるっと一周ぶん全部集めると、半径1の円になります。この円の上のすべての点に $A$ をかけると、どんな形になるでしょう。表計算の D列・E列の点を方眼にかいていくと、ななめにのびた\textbf{だ円}になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=7.6mm, y=7.6mm]
+  \begin{scope}
+    \draw[bkLine, line width=0.4pt, step=1] (-1.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-1.6,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.6) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \draw[bkGray!80!black, line width=1.1pt] (0,0) circle (1);
+    \fill[bkBlue!70!black] (1,0) circle (0.07) (0,1) circle (0.07);
+    \fill[bkRed] (0.707,0.707) circle (0.09) (0.707,-0.707) circle (0.09);
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-1.75) {長さ1の矢印の先（円）};
+  \end{scope}
+  \draw[bk arrow, line width=1pt] (2.2,0) -- (3.4,0) node[midway, above, font=\sffamily\footnotesize] {$A$ をかける};
+  \begin{scope}[shift={(6.6,0)}]
+    \draw[bkLine, line width=0.4pt, step=1] (-2.5,-2.5) grid (2.5,2.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-2.6,0) -- (2.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2.6) -- (0,2.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \draw[bkRed, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (-2.5,-2.5) -- (2.5,2.5);
+    \draw[bkRed, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (-2.2,2.2) -- (2.2,-2.2);
+    \draw[bkOrange!85!black, line width=1.3pt, rotate=45] (0,0) ellipse (3 and 1);
+    \fill[bkBlue!70!black] (2,1) circle (0.07) (1,2) circle (0.07);
+    \fill[bkRed] (2.121,2.121) circle (0.09) (0.707,-0.707) circle (0.09);
+    \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (2.2,1.95) {3倍};
+    \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (0.85,-0.75) {1倍};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-2.75) {$A$ をかけた先（だ円）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{円は、ななめにのびただ円になる。赤い点（$45°$ と $-45°$）は、点線の直線の上にとどまる。青い点 $(1,\ 0)$・$(0,\ 1)$ は、$(2,\ 1)$・$(1,\ 2)$ へ動き、向きが変わる。}
+\label{bk:7-8:fig-daen}
+\end{bkfigure}
+
+だ円のいちばん長い向き（$45°$）と、いちばん短い向き（$-45°$）が、ちょうど向きの変わらない2つの向きです。いちばん長い向きの矢印は、まっすぐ3倍にのばされるだけです。いちばん短い向きの矢印は、1倍で、そのままです。そのほかの矢印は、のばされながら、長い向きのほうへかたむけられます。だから円が、$45°$ の向きにのびただ円になるのです。
+
+\kviiihead{方眼の家の絵で見る}
+7-2 の家の絵でも確かめます。原点を通る2本の直線 $y=x$（$45°$）と $y=-x$（$-45°$）を、赤い点線でかきこみました。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=5mm, y=5mm]
+  \kviiigrid{-2}{7}{-2}{8}
+  \draw[bkRed, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (-2,-2) -- (7,7);
+  \draw[bkRed, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (-2,2) -- (2,-2);
+  \kviiihousezero
+  \kviiihouse{2}{1}{1}{2}
+  \fill[bkRed] (2,2) circle (0.16) (6,6) circle (0.16);
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (1,-1);
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (6.25,5.6) {$(6,\ 6)$};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (2.25,1.75) {$(2,\ 2)$};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (1.15,-1.1) {$(1,\ -1)$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\raggedright\small
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item もとの家（灰色の点線）の頂点③ $(2,\ 2)$ は、直線 $y=x$ の上にあります。$A$ をかけると $(6,\ 6)$。同じ直線の上で、原点から3倍の所です。
+\item 矢印 $(1,\ -1)$ は、$A$ をかけても $(1,\ -1)$ のまま。直線 $y=-x$ の上の点は、動きません。
+\item ほかの頂点、たとえば④ $(1,\ 3)$ は $(5,\ 7)$ へ動き、原点から見た向きが変わります。
+\end{itemize}
+\end{minipage}
+\bkfigcaption{主役の行列 $A$ をかけた家（オレンジ）。2本の赤い点線の上の点は、$A$ をかけても同じ直線の上にある。}
+\label{bk:7-8:fig-ie}
+\end{bkfigure}
+
+家の絵は、ななめにのびて、ゆがみます。でも、2本の赤い直線の上だけは、のび・ちぢみがあるだけで、直線そのものは動きません。
+
+\bksubsection{2}{名前をつける：固有ベクトルと固有値}
+
+\label{bk:7-8:namae}ここまでに見つけたことを、式で書きます。$45°$ の向きの矢印を、成分が簡単な $(1,\ 1)$ にしてかけてみます。
+\[ A\begin{pmatrix}1\\1\end{pmatrix}=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\1\end{pmatrix}=\begin{pmatrix}2\times1+1\times1\\1\times1+2\times1\end{pmatrix}=\begin{pmatrix}3\\3\end{pmatrix}=3\begin{pmatrix}1\\1\end{pmatrix} \]
+\[ A\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}2\times1+1\times(-1)\\1\times1+2\times(-1)\end{pmatrix}=\begin{pmatrix}1\\-1\end{pmatrix}=1\begin{pmatrix}1\\-1\end{pmatrix} \]
+どちらも、「行列をかける」が「数をかける」と同じになっています。1つめは3をかけるのと同じ、2つめは1をかけるのと同じです。
+
+このように、行列 $A$ をかけても向きが変わらず、ある数 $\lambda$ をかけたのと同じになる、$\vec 0$ でないベクトル $\vec v$ を、$A$ の\textbf{固有ベクトル}（こゆうベクトル）といいます。\bkidx{こゆうべくとる}{固有ベクトル}そのときの倍率 $\lambda$ を、\textbf{固有値}（こゆうち）といいます。\bkidx{こゆうち}{固有値}$\lambda$ はギリシャ文字で「ラムダ」と読みます。
+\kviiiframe[96mm]{\Large $A\vec v=\lambda\vec v$\\[2pt]\normalsize\sffamily $\vec v$：固有ベクトル（$\vec 0$ でない）\qquad $\lambda$：固有値}
+左辺は「行列×ベクトル」、右辺は「数×ベクトル」です。物理の本では、固有ベクトルを「\textbf{向きが変わらない特別なベクトル}」とよんでいます。主役の行列 $A$ の固有値は3と1で、固有ベクトルは $(1,\ 1)$ と $(1,\ -1)$ です。
+
+「固有」は、「その物だけがもともと持っている」という意味です。6-6 のもっと知りたいで、ギターの弦の「固有値問題」が出てきました。同じ「固有」のことばで、考え方もよくにています（コラム「『固有』ということば」）。6-12 の約束どおり、固有値には文字 $\lambda$ を使います。
+
+\kviiihead{固有値が負のとき：向きが反対でも同じ直線}
+7-2 の「裏返し」の行列で考えます。$x$ 軸を鏡にして、上下を入れかえる行列です。
+\[ F=\begin{pmatrix}1&0\\0&-1\end{pmatrix},\qquad F\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}1\\0\end{pmatrix},\qquad F\begin{pmatrix}0\\1\end{pmatrix}=\begin{pmatrix}0\\-1\end{pmatrix}=-1\begin{pmatrix}0\\1\end{pmatrix} \]
+\begin{bkfigure}
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=9mm, y=9mm]
+  \draw[bkLine, line width=0.4pt, step=1] (-1.5,-1.5) grid (1.5,1.5);
+  \draw[bkInk, line width=1.2pt] (-1.7,0) -- (1.7,0);
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (-0.25,0.12) {鏡};
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (0,1);
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (0,-1);
+  \draw[bkOrange!85!black, line width=1.6pt, -{Stealth[length=2.6mm]}] (0,0) -- (1,0);
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (0.707,0.707);
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (0.707,-0.707);
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (0.08,1) {$(0,\ 1)$};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (0.08,-1) {$(0,\ -1)$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+\raggedright\small
+$(1,\ 0)$ は鏡の上にあるので動きません（固有値1）。$(0,\ 1)$ は $(0,\ -1)$ になり、向きは反対です。でも、$y$ 軸という同じ直線の上にあります。これも固有ベクトルで、固有値は $-1$ です。ななめの矢印（灰色）は、向きが変わります。
+\end{minipage}
+\bkfigcaption{裏返しの行列 $F$。灰色が入れた矢印、オレンジが出てきた矢印。}
+\end{bkfigure}
+
+「向きが変わらない」は、正確には「\textbf{原点を通る同じ直線の上にある}」という意味です。固有値が負なら、矢印は反対を向きますが、同じ直線の上です。
+
+\kviiihead{何倍しても固有ベクトル}
+$(1,\ 1)$ が固有ベクトルなら、それを2倍した $(2,\ 2)$ はどうでしょう。
+\[ A\begin{pmatrix}2\\2\end{pmatrix}=\begin{pmatrix}6\\6\end{pmatrix}=3\begin{pmatrix}2\\2\end{pmatrix},\qquad A\begin{pmatrix}-1\\-1\end{pmatrix}=\begin{pmatrix}-3\\-3\end{pmatrix}=3\begin{pmatrix}-1\\-1\end{pmatrix} \]
+同じ直線の上の矢印は、長さや向き（$-1$ 倍）がちがっても、みな固有ベクトルで、固有値は同じ3です。だから「固有ベクトルは $(1,\ 1)$」と答えても、「$(2,\ 2)$」と答えても、同じことを言っています。ふつうは、成分がいちばん簡単な整数のものを答えます。
+
+\kviiihead{なぜ $\vec 0$ はのぞくのか}
+$\vec 0$（成分がどちらも0）には、どんな行列をかけても $\vec 0$ です。そして $\vec 0$ はどんな数をかけても $\vec 0$ です。だから $A\vec 0=\lambda\vec 0$ は、$\lambda$ が3でも100でも成り立ってしまい、何も教えてくれません。そこで、固有ベクトルは $\vec 0$ でないものに決めています。いっぽう、\textbf{固有値は0でもかまいません}。$A\vec v=0\vec v=\vec 0$ は「その向きの矢印は、原点につぶされる」という、大事な情報だからです（③の水そうで出てきます）。
+
+\kviiihead{\bkhatenaref の答え}
+主役の行列 $A$ をかけても向きが変わらない矢印は、$(1,\ 1)$ の向き（$45°$）と、$(1,\ -1)$ の向き（$-45°$）の2つです。$(1,\ 1)$ の向きの矢印は3倍に、$(1,\ -1)$ の向きの矢印は1倍に（そのまま）なります。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item $A\vec v=\lambda\vec v$ となる $\vec 0$ でないベクトル $\vec v$ が固有ベクトル、倍率 $\lambda$ が固有値。
+\item 固有ベクトルは「$A$ をかけても、原点を通る同じ直線の上にある矢印」。何倍しても固有ベクトル。
+\item 主役の行列 $A$ の固有値は3と1、固有ベクトルは $(1,\ 1)$ と $(1,\ -1)$。
+\end{itemize}
+\end{taisetsu}
+
+
+
+\bkstage{te}{手でわかる}{かけて確かめる・くり返して見つける}{\bklevel{4}}
+
+\bksubsection{3}{かけて確かめる：台車と水そう}
+
+\label{bk:7-8:daisha}ある矢印が固有ベクトルかどうかは、行列をかけてみればわかります。手順は3つです。\par\Needspace{8\baselineskip}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $A\vec v$ を計算する（7-2）。
+\item $A\vec v$ の成分を、$\vec v$ の同じ場所の成分でわる。
+\item わった答えが全部同じなら固有ベクトルで、その数が固有値。ちがえば固有ベクトルではない。
+\end{enumerate}
+主役の行列 $A$ で、$(1,\ 2)$ を確かめてみます。
+\[ A\begin{pmatrix}1\\2\end{pmatrix}=\begin{pmatrix}2\times1+1\times2\\1\times1+2\times2\end{pmatrix}=\begin{pmatrix}4\\5\end{pmatrix} \]
+$4\div1=4$、$5\div2=2.5$ で、そろいません。だから $(1,\ 2)$ は固有ベクトルではありません。$(1,\ 1)$ なら $3\div1=3$、$3\div1=3$ でそろいました。（成分に0があるときは、0の成分どうしは、どちらも0になっていればよい、と考えます。）
+
+\kviiihead{6-14 の台車を、行列で書く}
+6-14 の2つの台車をもう一度考えます。$m=\qty{1}{kg}$、外側のばね $k=\qty{100}{N/m}$、つなぎのばね $K=\qty{10}{N/m}$ でした。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (124,0);
+  \kviiiwall{(2,0)}{14}{1}
+  \kviiiwall{(122,0)}{14}{-1}
+  \kviiispring{(2,7)}{(30,7)}
+  \kviiicart{(30,0)}{$m$}{bkBlue}
+  \kviiispring{(42,7)}{(80,7)}
+  \kviiicart{(80,0)}{$m$}{bkOrange}
+  \kviiispring{(92,7)}{(122,7)}
+  \node[font=\sffamily\footnotesize, anchor=south] at (16,10) {ばね $k$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (61,10) {つなぎのばね $K$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (107,10) {ばね $k$};
+  \draw[bkInk, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (36,-2) -- (36,-9) (86,-2) -- (86,-9);
+  \draw[bkBlue!80!black, line width=1.1pt, -{Stealth[length=4pt]}] (36,-6) -- (46,-6);
+  \draw[bkOrange!80!black, line width=1.1pt, -{Stealth[length=4pt]}] (86,-6) -- (96,-6);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black] at (47,-6) {$x_1$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (97,-6) {$x_2$};
+\end{tikzpicture}
+\bkfigcaption{6-14 の2つの台車。$x_1$、$x_2$ はつり合いの位置からのずれ（右向きが正）。}
+\end{bkfigure}
+
+6-14 で作った運動方程式を $m=1$ でわると、加速度は次のようになりました（6-14②）。
+\kviiiline{$\ddot x_1=-110x_1+10x_2$\qquad $\ddot x_2=10x_1-110x_2$}
+$-110$ は $-(k+K)\div m=-(100+10)\div1$、10 は $K\div m=10\div1$ です。7-1 と同じように、係数を行列に、$x_1$、$x_2$ をベクトルにまとめます。
+\[ \begin{pmatrix}\ddot x_1\\\ddot x_2\end{pmatrix}=\begin{pmatrix}-110&10\\10&-110\end{pmatrix}\begin{pmatrix}x_1\\x_2\end{pmatrix},\qquad\text{つまり}\qquad \ddot{\vec x}=B\vec x \]
+7-2 のように右辺を計算すると、1行めは $-110x_1+10x_2$ です。2行めは $10x_1-110x_2$ です。もとの2つの式にもどりました。この節では、この係数の行列を $B$ とよびます（主役の行列 $A$ と区別するため）。
+
+6-14 で見つけた2つの動き方、「いっしょに動く $(1,\ 1)$」と「反対に動く $(1,\ -1)$」に、$B$ をかけてみます。
+\[ B\begin{pmatrix}1\\1\end{pmatrix}=\begin{pmatrix}-110+10\\10-110\end{pmatrix}=\begin{pmatrix}-100\\-100\end{pmatrix}=-100\begin{pmatrix}1\\1\end{pmatrix} \]
+\[ B\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}-110-10\\10+110\end{pmatrix}=\begin{pmatrix}-120\\120\end{pmatrix}=-120\begin{pmatrix}1\\-1\end{pmatrix} \]
+\textbf{2つの振動モードは、行列 $B$ の固有ベクトルでした。}固有値は $-100$ と $-120$ です。
+
+\kviiihead{なぜ、固有値が $-\omega^2$ になるのか}
+固有値 $-100$、$-120$ と、6-14 の角振動数 $\omega_1=10$、$\omega_2=\sqrt{120}$ には、$-100=-10^2$、$-120=-(\sqrt{120})^2$ の関係があります。わけを考えます。
+
+振動モードでは、2つの台車が「同じ形」をたもったまま、全体の大きさだけが $\cos\omega t$ で変わります（6-14⑥）。形を表す矢印を $\vec v$ とすると、
+\begin{bkhenkei}[0.3]
+\vec x=\vec v\cos\omega t & 形 $\vec v$ のまま、大きさが $\cos\omega t$ で変わる \\
+\ddot{\vec x}=-\omega^2\vec v\cos\omega t & 成分ごとに2回微分した（6-6） \\
+B\vec x=(B\vec v)\cos\omega t & $\cos\omega t$ はただの数なので、外に出せる \\
+B\vec v=-\omega^2\vec v & $\ddot{\vec x}=B\vec x$ なので、2行めと3行めが等しい \\
+\end{bkhenkei}
+最後の行は、$B\vec v=\lambda\vec v$ の形です。だから、形 $\vec v$ は $B$ の固有ベクトルで、$-\omega^2$ が固有値です。
+\kviiiframe[110mm]{\sffamily 振動モードの形 ＝ 固有ベクトル\qquad 固有値 ＝ $-\omega^2$\\[2pt]\sffamily だから\quad $\omega=\sqrt{-\lambda}$}
+$\omega_1=\sqrt{100}=10$、$\omega_2=\sqrt{120}\approx10.95$（rad/s）で、6-14 と同じ数が出てきました。3本とも同じばね（$K=k=100$）なら、$B$ の対角成分は $-200$、ほかは100 になり、固有値は $-100$ と $-300$、$\omega$ は10 と $\sqrt{300}\approx17.3$ で、これも 6-14 と一致します。
+
+6-14 では、「和と差」という組み合わせを、うまく思いついて式をほどきました。その組み合わせは、係数の行列の固有ベクトルだったのです。6-14 で予告した「ほどける組み合わせを、係数の表（行列）の計算で見つける方法」が、この章の方法です。
+
+\kviiihead{6-14 の水そう：固有値は0でもよい}
+6-14 の、同じ形の2つの水そうの式も、行列で書きます。
+\[ \begin{pmatrix}\dot h_1\\\dot h_2\end{pmatrix}=\begin{pmatrix}-0.1&0.1\\0.1&-0.1\end{pmatrix}\begin{pmatrix}h_1\\h_2\end{pmatrix},\qquad\text{つまり}\qquad \dot{\vec h}=H\vec h \]
+1行めは $-0.1h_1+0.1h_2=-0.1(h_1-h_2)$ で、6-14 の左の水そうの式です。$(1,\ 1)$ と $(1,\ -1)$ をかけると、
+\[ H\begin{pmatrix}1\\1\end{pmatrix}=\begin{pmatrix}0\\0\end{pmatrix}=0\begin{pmatrix}1\\1\end{pmatrix},\qquad H\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}-0.2\\0.2\end{pmatrix}=-0.2\begin{pmatrix}1\\-1\end{pmatrix} \]
+固有値は0と $-0.2$ です。固有値0の $(1,\ 1)$ は「2つの水位がそろった状態」で、そこでは水はもう動きません。合計の水位が変わらなかったのは、このためです。固有値 $-0.2$ の $(1,\ -1)$ は「差」の向きで、6-14 の $\dfrac{\dd D}{\dd t}=-0.2D$ の $-0.2$ と同じ数です。
+
+\begin{column}{「固有」ということば}
+固有値・固有ベクトルの「固有」は、ドイツ語の eigen（アイゲン：自分の、その物だけの）を訳したことばです。英語でも eigenvalue（アイゲンバリュー）、eigenvector とよびます。20世紀のはじめごろ、ドイツの数学者ヒルベルトたちが、微分方程式や積分方程式の「とびとびの特別な値」をこの名前でよび、それが行列にも広まったと伝えられています。
+
+対称な行列の固有値がいつも実数になることは、19世紀の前半、フランスの数学者コーシーが、惑星の動きの計算に関係して示したと伝えられています（1829年ごろ）。行列ということばができる（1850年）より前のことです。
+\end{column}
+
+\Needspace{8\baselineskip}\bksubsection{4}{何回もかけると、そろってくる}
+
+\label{bk:7-8:kurikaeshi}やってみようのグラフでは、矢印は $45°$ のほうへ引きよせられました。では、同じ行列 $A$ を何回もかけたら、どうなるでしょう。$(1,\ 0)$ から始めて、$A$ を1回ずつかけていきます。
+\begin{bkfigure}
+\begin{minipage}[c]{0.6\linewidth}
+\centering
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=21mm] Q[c,m,wd=14mm] Q[c,m,wd=16mm]}, colsep=2pt, rowsep=0pt, row{1}={font=\sffamily\footnotesize}}
+回数 & 矢印 & 向き & 長さ \\
+0 & $(1,\ 0)$ & $0°$ & \\
+1 & $(2,\ 1)$ & $26.6°$ & 2.236 倍 \\
+2 & $(5,\ 4)$ & $38.7°$ & 2.864 倍 \\
+3 & $(14,\ 13)$ & $42.9°$ & 2.984 倍 \\
+4 & $(41,\ 40)$ & $44.3°$ & 2.998 倍 \\
+5 & $(122,\ 121)$ & $44.8°$ & 3.000 倍 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-2,0) -- (44,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2) -- (0,42);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1pt off 1pt] (34,0) arc (0:90:34);
+  \draw[bkRed, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (0,0) -- (30,30);
+  \foreach \kviiiang in {0, 26.57, 38.66, 42.88} {
+    \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (\kviiiang:34);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (36,1.2) {0};
+  \node[font=\sffamily\footnotesize] at (26.57:39) {1};
+  \node[font=\sffamily\footnotesize] at (35.5:39) {2};
+  \node[font=\sffamily\footnotesize] at (40.6:43) {3};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south east] at (29,30.5) {$45°$};
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{$(1,\ 0)$ に $A$ をくり返しかけた。「長さ」は前の行の矢印の長さの何倍か。右の図は矢印の長さをそろえて向きだけをかいたもので、数字はかけた回数（4回め以降は $45°$ の線とほぼ重なる）。向きは $45°$ に、倍率は3に近づく。}
+\label{bk:7-8:fig-power}
+\end{bkfigure}
+2回めは $A(2,\ 1)=(2\times2+1\times1,\ 1\times2+2\times1)=(5,\ 4)$ です。かけるたびに、向きは $45°$（固有ベクトル $(1,\ 1)$ の向き）に近づき、長さは毎回ほぼ3倍（大きいほうの固有値）になっていきます。
+
+\kviiihead{なぜ、そろうのか}
+わけは、$(1,\ 0)$ を2つの固有ベクトルに分けるとわかります。
+\kviiiline{$\begin{pmatrix}1\\0\end{pmatrix}=\dfrac12\begin{pmatrix}1\\1\end{pmatrix}+\dfrac12\begin{pmatrix}1\\-1\end{pmatrix}$}
+（右辺を計算すると $\bigl(\tfrac12+\tfrac12,\ \tfrac12-\tfrac12\bigr)=(1,\ 0)$ です。）$A$ をかけると、$(1,\ 1)$ の部分は3倍に、$(1,\ -1)$ の部分は1倍になります（7-2 の線形：たしてからかけても、かけてからたしても同じ）。5回かけると、
+\kviiiline{$A^5\begin{pmatrix}1\\0\end{pmatrix}=\dfrac{3^5}{2}\begin{pmatrix}1\\1\end{pmatrix}+\dfrac{1^5}{2}\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}121.5+0.5\\121.5-0.5\end{pmatrix}=\begin{pmatrix}122\\121\end{pmatrix}$}
+で、表と同じです。（$A^5$ は $A$ を5回かけること。7-3。）3倍の部分は、かけるたびに大きくなり、1倍の部分は小さいまま残ります。だから、矢印はどんどん $(1,\ 1)$ の向きにそろうのです。
+
+このように、くり返しかけて、いちばん大きい固有値の固有ベクトルを見つける方法を、\textbf{べき乗法}（べきじょうほう）といいます。\bkidx{べきじょうほう}{べき乗法}「べき乗」は、$3^5$ のような「何回もかけること」の名前です。インターネットの検索で、ページに順位をつける計算にも使われています（7-10・7-11）。
+
+\begin{column}{表計算で、くり返しかける}
+このべき乗法は、表計算でもできます。2行めにはじめの矢印 $(1,\ 0)$ を入れ、B3 に \texttt{=2*B2+1*C2}、C3 に \texttt{=1*B2+2*C2}（前の行に $A$ をかける）、D3 に \texttt{=C3/B3}、E3 に \texttt{=B3/B2} と入れて、3行めを下へコピーします。
+\begin{bkcenter}
+\bksheet{5}{16}{%
+1 & 回数 & $x$ & $y$ & $y\div x$ & 何倍か \\
+2 & 0 & 1 & 0 & & \\
+3 & 1 & 2 & 1 & 0.5 & 2 \\
+4 & 2 & 5 & 4 & 0.8 & 2.5 \\
+5 & 3 & 14 & 13 & 0.929 & 2.8 \\
+6 & 4 & 41 & 40 & 0.976 & 2.929 \\
+7 & 5 & 122 & 121 & 0.992 & 2.976 \\
+}
+\end{bkcenter}
+D列は1（向き $(1,\ 1)$）に、E列は3（固有値）に近づきます。B3・C3 の式の数を変えれば、ほかの行列でも同じように確かめられます（例題3）。
+\end{column}
+
+\bksubsection{5}{コンピュータで求める}
+
+\label{bk:7-8:python}表計算には、固有値を求める関数はありません（やってみようの表やべき乗法で見つけます）。Python の numpy には、固有値と固有ベクトルを一度に求める関数 \texttt{np.linalg.eig} があります。
+
+\Needspace{14\baselineskip}\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1],
+              [1, 2]])
+w, V = np.linalg.eig(A)   \# w に固有値、V に固有ベクトル
+print(w)
+print(V)
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[3.+0.j 1.+0.j]
+[[ 0.70710678+0.j -0.70710678+0.j]
+ [ 0.70710678+0.j  0.70710678+0.j]]
+\end{bkcodeout}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (V) at (0,0) [kviii mat, nodes={minimum width=22mm}] {0.707 \& -0.707\\ 0.707 \& 0.707\\};
+  \kviiihl{kviii col}{V-1-1}{V-2-1}
+  \kviiihl{kviii ans}{V-1-2}{V-2-2}
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at ([yshift=2.5mm]V-1-1.north) {1列め\\固有値3の組};
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at ([yshift=2.5mm]V-1-2.north) {2列め\\固有値1の組};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (30,0) {$0.707=\dfrac{1}{\sqrt2}$\\[2pt]1列め：$(1,\ 1)$ を $\sqrt2$ でわった\\2列め：$(1,\ -1)$ を $-\sqrt2$ でわった};
+\end{tikzpicture}
+\bkfigcaption{numpy の固有ベクトルは、\textbf{列}（たて）に並んでいる。$w$ の1つめの固有値には $V$ の1列め、2つめには2列めが組になる。}
+\label{bk:7-8:fig-numpy}
+\end{bkfigure}
+
+実行結果は、次のように読みます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{w の行}\par\nobreak\noindent 固有値は3と1です。\texttt{+0.j} は「虚部が0の複素数」という意味です（6-8：numpy の \texttt{j} は虚数単位）。numpy 2.5 からは、固有値はいつも複素数の形で出てきます（2.4 までの版では \texttt{[3. 1.]} と出ます）。
+\item \textbf{V の行列}\par\nobreak\noindent 固有ベクトルは、\textbf{列ごと}にたてに並んでいます。1行めの $(0.707,\ -0.707)$ を固有ベクトルと読むのはまちがいです（まちがえやすいところ④）。
+\item \textbf{長さは1にそろえてある}\par\nobreak\noindent $0.70710678$ は $1\div\sqrt2$ です。1列めは $(1,\ 1)$ を、長さが1になるように $\sqrt2$（$(1,\ 1)$ の長さ。4-4 の三平方）でわったものです。2列めは $(-0.707,\ 0.707)$ で、$(1,\ -1)$ と向きが反対ですが、同じ直線の上なので、同じ固有ベクトルです。
+\end{enumerate}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=42mm] Q[l,m,wd=80mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+見つけ方 & できること \\
+やってみようの表 & 向きの変わらない角を、表とグラフでだいたい見つける \\
+べき乗法（くり返し） & いちばん大きい固有値と、その固有ベクトルを見つける \\
+\texttt{np.linalg.eig} & 全部の固有値と固有ベクトルを一度に（列に並ぶ・長さ1） \\
+⑥の特性方程式 & 式で、ぴったりの値を求める \\
+\end{bktable}
+\bktabcaption{固有値と固有ベクトルの見つけ方。どれで見つけても、最後は $A\vec v=\lambda\vec v$ をかけて確かめられる。}
+\end{bkcenter}
+
+\bkkokomade[向きの変わらない矢印を、かけて確かめ、表やくり返しやコンピュータで見つけられれば十分です。この先は、式でぴったり求めます。]
+
+
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{特性方程式で求める}{\bklevel{5}}
+
+\bksubsection{6}{$\det(A-\lambda I)=0$：特性方程式}
+
+\label{bk:7-8:tokusei}表やくり返しでは、だいたいの向きしかわかりません。$\lambda$ と $\vec v$ を、式でぴったり求める方法を作ります。わからないものは、固有値 $\lambda$ と、固有ベクトル $\vec v=(x,\ y)$ の3つです。まず、$A\vec v=\lambda\vec v$ を変形します。
+\begin{bkhenkei}[0.4]
+A\vec v=\lambda\vec v & 固有ベクトルの式 \\
+A\vec v=\lambda I\vec v & 単位行列 $I$ はかけても変わらないので、$\vec v=I\vec v$（7-3） \\
+A\vec v-\lambda I\vec v=\vec 0 & 右辺を左辺へうつした \\
+(A-\lambda I)\vec v=\vec 0 & $\vec v$ でくくった（行列の分配法則。7-3） \\
+\end{bkhenkei}
+2行めで $I$ を入れたのは、行列 $A$ から数 $\lambda$ を、そのままではひけないからです（大きさのちがうものはひけない。7-1）。$\lambda I$ は、ななめに $\lambda$ が並んだ行列なので、$A-\lambda I$ は、\textbf{ななめの成分（対角成分）からだけ $\lambda$ をひいた行列}になります。
+\kviiiline{$A-\lambda I=\begin{pmatrix}2&1\\1&2\end{pmatrix}-\begin{pmatrix}\lambda&0\\0&\lambda\end{pmatrix}=\begin{pmatrix}2-\lambda&1\\1&2-\lambda\end{pmatrix}$}
+
+\kviiihead{なぜ、行列式が0になるのか}
+$(A-\lambda I)\vec v=\vec 0$ は、「行列 $A-\lambda I$ は、$\vec 0$ でない矢印 $\vec v$ を、原点につぶしてしまう」ということです。そんなことができるのは、どんな行列でしょう。2通りで考えます。
+
+\noindent\textbf{図で考える}\quad $\lambda=3$ のとき、$A-3I$ を方眼にかけてみます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=8mm, y=8mm]
+  \begin{scope}
+    \draw[bkLine, line width=0.4pt, step=1] (-1.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-1.6,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.6) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \filldraw[fill=bkGray!15, draw=bkGray!80!black, line width=0.9pt] (0,0) rectangle (1,1);
+    \draw[bkRed, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0) -- (1,1);
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!80!black] at (1.05,1.15) {$\vec v=(1,\ 1)$};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-1.75) {面積1の正方形};
+  \end{scope}
+  \draw[bk arrow, line width=1pt] (2.4,0) -- (4.0,0) node[midway, above, font=\sffamily\footnotesize] {$A-3I$};
+  \begin{scope}[shift={(6.4,0)}]
+    \draw[bkLine, line width=0.4pt, step=1] (-1.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-1.6,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.6) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \draw[bkOrange!85!black, line width=2.2pt] (-1,1) -- (1,-1);
+    \fill[bkRed] (0,0) circle (0.1);
+    \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!80!black, fill=white, inner sep=1pt] at (0.15,0.15) {$\vec v$ は原点へ};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-1.75) {線分（面積0）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{$A-3I$ をかけると、正方形は1本の線分につぶれる。$(1,\ 0)$ は $(-1,\ 1)$ に、$(0,\ 1)$ は $(1,\ -1)$ に、$(1,\ 1)$ は原点に行く。}
+\label{bk:7-8:fig-tsubureru}
+\end{bkfigure}
+
+$A-3I$ の1列めは $(-1,\ 1)$、2列めは $(1,\ -1)$ です（7-2：列は物差しの矢印 $(1,\ 0)$・$(0,\ 1)$ の行き先）。2本の列は同じ直線の上にあるので、正方形は平行四辺形にならず、1本の線分につぶれます。面積は0。7-4 の「行列式0＝平らにつぶれる」です。$\vec 0$ でない矢印が原点に行くのは、平面がつぶれるときだけです。
+
+\noindent\textbf{逆行列で考える}\quad もし $\det(A-\lambda I)\neq0$ なら、逆行列 $(A-\lambda I)^{-1}$ があります（7-5）。$(A-\lambda I)\vec v=\vec 0$ の両辺に左からかけると、$\vec v=(A-\lambda I)^{-1}\vec 0=\vec 0$。$\vec v$ は $\vec 0$ になってしまい、固有ベクトルではありません。だから、固有ベクトルがあるためには、行列式が0でなければなりません。
+\kviiiframe[104mm]{\Large $\det(A-\lambda I)=0$\\[2pt]\normalsize\sffamily 特性方程式（固有方程式ともいう）}
+この $\lambda$ の方程式を、行列 $A$ の\textbf{特性方程式}（とくせいほうていしき）、または固有方程式といいます。\bkidx{とくせいほうていしき}{特性方程式}6-12 と同じ名前なのは、⑦で見るように、同じものだからです。
+
+\kviiihead{主役の行列で解く}
+\begin{bkhenkei}[0.56]
+\det(A-\lambda I)=(2-\lambda)(2-\lambda)-1\times1 & $ad-bc$（7-4） \\
+\phantom{\det(A-\lambda I)}=\lambda^2-4\lambda+4-1 & かっこを展開した（3-8） \\
+\phantom{\det(A-\lambda I)}=\lambda^2-4\lambda+3 & まとめた \\
+\lambda^2-4\lambda+3=0 & 特性方程式 \\
+(\lambda-1)(\lambda-3)=0 & 因数分解した（3-10） \\
+\lambda=1,\ 3 & 固有値 \\
+\end{bkhenkei}
+やってみようの表で見つけた「3倍」と「1倍」が、式から出てきました。
+
+\kviiihead{固有値から、固有ベクトルを求める}
+$\lambda=3$ を $(A-\lambda I)\vec v=\vec 0$ にもどします。$\vec v=(x,\ y)$ として、
+\[ \begin{pmatrix}2-3&1\\1&2-3\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}-1&1\\1&-1\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}0\\0\end{pmatrix} \]
+1行めは $-x+y=0$、2行めは $x-y=0$ です。\textbf{2つの式は同じ式}です（2つめは、1つめに $-1$ をかけたもの）。どちらも $y=x$ を表します。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{なぜ同じ式になる？}\par\nobreak\noindent $\det(A-3I)=0$ なので、$A-3I$ の2つの行は平行です（7-4：行列式0なら、2本の列も2本の行も平行）。だから2つの式は同じことを言っています。もし別々の式だったら、連立方程式の答えは $x=y=0$ の1つだけになり（3-6）、固有ベクトルは見つかりません。
+\item \textbf{確かめに使える}\par\nobreak\noindent 計算した $\lambda$ を入れても2つの式が同じにならなければ、$\lambda$ の計算がまちがっています。
+\end{itemize}
+$y=x$ をみたす $\vec 0$ でない矢印なら、どれでも固有ベクトルです。いちばん簡単な $(1,\ 1)$ を答えにします。
+
+$\lambda=1$ のときは、$A-I$ の行が $(1,\ 1)$ と $(1,\ 1)$ になり、2つの式はどちらも $x+y=0$ です。$y=-x$ なので、固有ベクトルは $(1,\ -1)$ です。
+
+\begin{taisetsu}
+\kviiibox{固有値と固有ベクトルの求め方}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 対角成分から $\lambda$ をひいた行列 $A-\lambda I$ を作る。
+\item 特性方程式 $\det(A-\lambda I)=0$（$\lambda$ の2次方程式）を解いて、固有値を出す。
+\item 固有値を1つずつ $(A-\lambda I)\vec v=\vec 0$ に入れる。2つの式は同じ式になるので、1つから $x$ と $y$ の関係を出す。
+\item その関係をみたす簡単な $\vec v$ を答え、$A\vec v=\lambda\vec v$ をかけて確かめる。
+\end{enumerate}
+\end{taisetsu}
+
+\kviiihead{2つの確かめの式}
+2×2 の行列を文字で書き、特性方程式を、文字のまま作ります。
+\[ A=\begin{pmatrix}a&b\\c&d\end{pmatrix},\qquad A-\lambda I=\begin{pmatrix}a-\lambda&b\\c&d-\lambda\end{pmatrix} \]
+\kviiiline{$\det(A-\lambda I)=(a-\lambda)(d-\lambda)-bc=\lambda^2-(a+d)\lambda+(ad-bc)$}
+いっぽう、2つの固有値を $\lambda_1$、$\lambda_2$ とすると、この式は次のようにも書けます（6-12 の解と係数の関係）。
+\kviiiline{$(\lambda-\lambda_1)(\lambda-\lambda_2)=\lambda^2-(\lambda_1+\lambda_2)\lambda+\lambda_1\lambda_2$}
+2つの式の係数をくらべると、
+\kviiiframe[112mm]{$\lambda_1+\lambda_2=a+d$\quad（対角成分の和）\qquad $\lambda_1\lambda_2=ad-bc=\det A$}
+主役の行列なら、$3+1=4=2+2$、$3\times1=3=\det A$ です。台車の $B$ なら、次のとおりです。
+\kviiiline{$(-100)+(-120)=-220=(-110)+(-110)$}
+\kviiiline{$(-100)\times(-120)=\num{12000}=(-110)\times(-110)-10\times10$}
+
+2つめの式には、おもしろい意味があります。主役の行列は、$(1,\ 1)$ の向きに3倍、$(1,\ -1)$ の向きに1倍のばします。だから面積は $3\times1=3$ 倍。7-4 で方眼を数えて見つけた「面積3倍」は、2つの固有値のかけ算だったのです。
+
+\bksubsection{7}{6-12 の $s$ は、行列の固有値}
+
+\label{bk:7-8:ess}6-12 では、ばね・質量・ダンパーの式 $m\ddot x+c\dot x+kx=0$ に $x=e^{st}$ を入れて、特性方程式 $ms^2+cs+k=0$ を作りました。そこで「第7巻では、行列の固有値も同じ $\lambda$ で書く」と約束しました。同じ「特性方程式」の名前がついているわけを、確かめます。
+
+\kviiihead{2回微分の式を、行列の式にする}
+6-14④ で、2回微分の式1つは、「位置」と「速度」の1回微分の式2つの組に書きかえられました。速度を $\dot x$ と書くと、
+\kviiiline{$\dfrac{\dd x}{\dd t}=\dot x$\qquad $\dfrac{\dd\dot x}{\dd t}=\ddot x=-\dfrac{k}{m}x-\dfrac{c}{m}\dot x$}
+2つめは、$m\ddot x+c\dot x+kx=0$ を「$\ddot x=\cdots$」の形にしたものです。位置と速度をたてに並べたベクトルを $\vec x$ として（6-14 の「状態」）、係数を行列にまとめます。
+\[ \frac{\dd}{\dd t}\begin{pmatrix}x\\\dot x\end{pmatrix}=\begin{pmatrix}0&1\\-\dfrac km&-\dfrac cm\end{pmatrix}\begin{pmatrix}x\\\dot x\end{pmatrix},\qquad\text{つまり}\qquad \dot{\vec x}=A\vec x \]
+右辺の1行めは $0\times x+1\times\dot x=\dot x$、2行めは $-\dfrac km x-\dfrac cm\dot x$ で、たしかにもとの2つの式です。左辺の $\dot{\vec x}$ は、ベクトルの成分を1つずつ微分したものです。この節では、この行列を $A$（状態の行列）とよびます。
+
+\kviiihead{状態の行列の特性方程式}
+対角成分から $\lambda$ をひくと、次の行列になります。
+\[ A-\lambda I=\begin{pmatrix}-\lambda&1\\-\dfrac km&-\dfrac cm-\lambda\end{pmatrix} \]
+\begin{bkhenkei}[0.6]
+\det(A-\lambda I)=(-\lambda)\Bigl(-\dfrac cm-\lambda\Bigr)-1\times\Bigl(-\dfrac km\Bigr) & $ad-bc$（7-4） \\
+\phantom{\det(A-\lambda I)}=\lambda^2+\dfrac cm\lambda+\dfrac km & 展開した \\
+m\lambda^2+c\lambda+k=0 & $=0$ と置き、$m$ をかけた \\
+\end{bkhenkei}
+最後の式は、6-12 の特性方程式 $ms^2+cs+k=0$ の $s$ を $\lambda$ に書きかえたものと、まったく同じです。
+\kviiiframe[118mm]{\sffamily 6-12 の特性方程式の $s$ ＝ 状態の行列の固有値 $\lambda$}
+
+3-10 の2つの式と、6-7 のばねで、数を確かめます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m] Q[c,m] Q[c,m] Q[c,m]}, colsep=3pt, rowsep=2pt, cells={font=\small}, row{1}={font=\sffamily\small}}
+もとの式 & 状態の行列 $A$ & 6-12 の特性方程式 & 固有値 \\
+$\ddot x+3\dot x+2x=0$ & $\begin{pmatrix}0&1\\-2&-3\end{pmatrix}$ & $s^2+3s+2=0$ & $-1$、$-2$ \\
+$\ddot x+2\dot x+5x=0$ & $\begin{pmatrix}0&1\\-5&-2\end{pmatrix}$ & $s^2+2s+5=0$ & $-1\pm2j$ \\
+$0.5\ddot x+0.4\dot x+8x=0$ & $\begin{pmatrix}0&1\\-16&-0.8\end{pmatrix}$ & $0.5s^2+0.4s+8=0$ & $-0.4\pm3.980j$ \\
+\end{bktable}
+\bktabcaption{1行めと2行めは 3-10・6-12 の車A・車B、3行めは 6-7 のばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=0.4$\,N·s/m）。固有値は numpy で確かめた。}
+\end{bkcenter}
+3行めの $-16$ は $-k/m=-8\div0.5$、$-0.8$ は $-c/m=-0.4\div0.5$ です。固有値の $3.980$ は、6-12 の $\omega_{\mathrm d}$（減衰があるときの角振動数）と同じ数です。
+
+\kviiihead{なぜ同じになる？　$\vec x=\vec v e^{st}$ を入れる}
+6-12 では、「微分しても形が変わらない関数」として $e^{st}$ を入れました。行列の式 $\dot{\vec x}=A\vec x$ では、それに「向きが変わらない矢印」を組み合わせて、$\vec x=\vec ve^{st}$ という形をためします。向き $\vec v$ はそのままで、大きさだけが $e^{st}$ で変わる動きです。
+\begin{bkhenkei}[0.4]
+\vec x=\vec v e^{st} & 向き $\vec v$ は変えず、大きさが $e^{st}$ で変わる \\
+\dot{\vec x}=s\vec v e^{st} & 成分ごとに微分した（5-14：$e^{st}$ の微分は $se^{st}$） \\
+s\vec v e^{st}=A\vec v e^{st} & $\dot{\vec x}=A\vec x$ の両辺に入れた \\
+A\vec v=s\vec v & 両辺を $e^{st}$（0にならない）でわった \\
+\end{bkhenkei}
+最後の行は、$A\vec v=\lambda\vec v$ そのものです。$\vec x=\vec ve^{st}$ が答えになるのは、\textbf{$\vec v$ が $A$ の固有ベクトルで、$s$ がその固有値のとき}です。だから、6-12 の $s$ は、状態の行列の固有値です。この本で $s$ と書いてきたものを、大学の本では $\lambda$ と書くことが多いのは、このためです。
+
+車A で確かめます。固有値 $s=-1$ のとき、$A-(-1)I$ の1行めは $(1,\ 1)$ なので、$x+\dot x=0$、固有ベクトルは $(1,\ -1)$ です。「位置が1なら、速度は $-1$」という形で、$x=e^{-t}$、$\dot x=-e^{-t}$ にぴったり合います（$e^{-t}$ を微分すると $-e^{-t}$）。
+
+\kviiihead{6-14 の答えも、固有値と固有ベクトルで書ける}
+6-14 の水そう $\dot{\vec h}=H\vec h$ に $\vec h=\vec ve^{st}$ を入れると、$H\vec v=s\vec v$。③で求めた固有値から、$s=0$（向き $(1,\ 1)$）と $s=-0.2$（向き $(1,\ -1)$）です。2つの答えをたし合わせて、はじめの水位 $(20,\ 0)$ に合わせると、
+\kviiiline{$\vec h=10\begin{pmatrix}1\\1\end{pmatrix}e^{0t}+10\begin{pmatrix}1\\-1\end{pmatrix}e^{-0.2t}$}
+（$t=0$ で $(10+10,\ 10-10)=(20,\ 0)$。）成分にすると $h_1=10+10e^{-0.2t}$、$h_2=10-10e^{-0.2t}$ で、6-14 の答えと同じです。6-14 の専門書の「一般解は $c_1\symbf{v}_1e^{\lambda_1t}+c_2\symbf{v}_2e^{\lambda_2t}$」は、この式のことでした。
+
+台車の式 $\ddot{\vec x}=B\vec x$ に $\vec x=\vec ve^{st}$ を入れると、2回微分なので $s^2\vec v=B\vec v$ です。$s^2$ が $B$ の固有値 $-100$ になるのは $s=\pm10j$。$e^{\pm10jt}$ は $\cos10t$ と $\sin10t$ でゆれる動き（6-10）で、③の $\omega_1=10$ と同じです。
+
+第9巻（9-10）では、モーターの電圧のように外から加える量も入れた $\dot{\vec x}=A\vec x+(\text{外から加える量の項})$ を\textbf{状態方程式}とよび、機械やロボットの制御の土台にします。その固有値が、機械が落ち着くかどうかを決めます。
+
+\bksubsection{8}{複素数の固有値：回る動き}
+
+\label{bk:7-8:fukuso}7-6 の回転行列 $R(30°)$ は、どの矢印も左回りに $30°$ 回します。向きの変わらない矢印は、1本もありません。特性方程式はどうなるでしょう。$\cos30°=0.866$、$\sin30°=0.5$ です。
+\kviiiline{$R(30°)-\lambda I=\begin{pmatrix}\cos30°-\lambda&-\sin30°\\\sin30°&\cos30°-\lambda\end{pmatrix}$}
+\begin{bkhenkei}[0.42]
+(\cos30°-\lambda)^2+\sin^2 30°=0 & $\det=0$。$ad-bc$ の $-bc$ は $+\sin^2 30°$ \\
+\lambda^2-2\cos30°\,\lambda+1=0 & 展開し、$\cos^2 30°+\sin^2 30°=1$（4-6） \\
+\lambda=\cos30°\pm j\sin30° & 解の公式（3-10・6-8） \\
+\end{bkhenkei}
+判別式は $4\cos^2 30°-4=-4\sin^2 30°$ で負なので、固有値は実数になりません。$\lambda=0.866\pm0.5j$、つまり 6-10 の $e^{\pm j30°}$ です。\textbf{実数の固有ベクトルがないとき、固有値は複素数になり、その偏角が回る角を表します。}$|\lambda|=1$ なのは、回転が長さを変えないからです。
+
+ばね・質量・ダンパーでも同じです。⑦の表の車B は $-1\pm2j$ でした。$e^{(-1+2j)t}=e^{-t}(\cos2t+j\sin2t)$ なので（6-10）、実部 $-1$ は「$e^{-t}$ で小さくなる」、虚部2は「角振動数2で回る（ゆれる）」を表します。6-14 で見た、状態の点がうずをまいて原点に近づく動きです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=56mm, xmin=-0.42, xmax=1.15, ymin=-0.8, ymax=0.55, xtick={0.5,1}, ytick={-0.5}, xlabel={$x$}, ylabel={$\dot x$}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkRed, line width=0.8pt, dash pattern=on 2pt off 1.5pt, domain=-0.4:0.72] {-x};
+  \addplot[bkPurple, line width=0.8pt, dash pattern=on 2pt off 1.5pt, domain=-0.22:0.36] {-2*x};
+  \addplot[bkcurve, domain=0:7, samples=160, variable=\t] ({2*exp(-\t)-exp(-2*\t)}, {-2*exp(-\t)+2*exp(-2*\t)});
+  \addplot[only marks, mark=*, mark size=2pt, bkOrange] coordinates {(1,0)};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.74,-0.72) {$(1,\ -1)$};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east, fill=white, inner sep=1pt] at (axis cs:-0.23,0.45) {$(1,\ -2)$};
+\end{axis}
+\end{tikzpicture}\hspace{8mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=56mm, xmin=-0.45, xmax=1.15, ymin=-1.4, ymax=0.6, xtick={0.5,1}, ytick={-1,0.5}, xlabel={$x$}, ylabel={$\dot x$}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkcurve2, domain=0:7, samples=300, variable=\t] ({exp(-\t)*(cos(deg(2*\t))+0.5*sin(deg(2*\t)))}, {-2.5*exp(-\t)*sin(deg(2*\t))});
+  \addplot[only marks, mark=*, mark size=2pt, bkOrange] coordinates {(1,0)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{状態の点 $(x,\ \dot x)$ の動き（オレンジの点がスタート）。左：車A（固有値 $-1$、$-2$）。点は固有ベクトル $(1,\ -1)$ の直線（赤の点線）にそって、ゆれずに原点へ。右：車B（固有値 $-1\pm2j$）。実数の固有ベクトルがなく、うずをまいて原点へ。}
+\label{bk:7-8:fig-uzu}
+\end{bkfigure}
+左の車A では、点は、はじめは固有ベクトル $(1,\ -2)$ の向き（固有値 $-2$、速く小さくなる部分）の動きもまじっていますが、その部分は $e^{-2t}$ ですぐに消え、あとは固有ベクトル $(1,\ -1)$ の直線にそって原点に近づきます（$e^{-t}$ の部分が残る）。固有ベクトルは、状態の平面の上の「通り道」でもあるのです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[l,m,wd=76mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+状態の行列の固有値 & 動き（6-12⑩ の $s$ の場所と同じ） \\
+負の実数 & ゆれずに小さくなる（$e^{-t}$ など） \\
+0 & 変わらない（水そうの合計） \\
+正の実数 & どんどん大きくなる \\
+複素数（実部が負） & ゆれながら小さくなる（車B・ダンパーつきのばね） \\
+複素数（実部が0） & 同じ大きさでゆれ続ける（台車の $\pm10j$） \\
+\end{bktable}
+\bktabcaption{固有値の種類と、$\dot{\vec x}=A\vec x$ の動き。第9巻の制御では、固有値が全部「左半分」（実部が負）にあるように機械を作る。}
+\end{bkcenter}
+
+\bksubsection{9}{対称な行列：固有ベクトルは直交する}
+
+\label{bk:7-8:taisho}ここまでの行列の固有ベクトルを、くらべてみます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=34mm] Q[c,m,wd=24mm] Q[c,m,wd=34mm] Q[c,m,wd=26mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+行列 & 固有値 & 固有ベクトル & 内積 \\
+$\begin{pmatrix}2&1\\1&2\end{pmatrix}$（主役） & 3、1 & $(1,\ 1)$、$(1,\ -1)$ & 0 \\
+$\begin{pmatrix}-110&10\\10&-110\end{pmatrix}$（台車） & $-100$、$-120$ & $(1,\ 1)$、$(1,\ -1)$ & 0 \\
+$\begin{pmatrix}4&1\\2&3\end{pmatrix}$ & 5、2 & $(1,\ 1)$、$(1,\ -2)$ & $-1$ \\
+\end{bktable}
+\bktabcaption{固有ベクトルの内積（4-12）。$1\times1+1\times(-1)=0$、$1\times1+1\times(-2)=-1$。}
+\end{bkcenter}
+上の2つの行列では、2本の固有ベクトルの内積が0で、直交しています（4-12）。この2つは、1-13 の九九の表のように、ななめの線をはさんで向かい合う成分が等しい\textbf{対称な行列}です（7-1）。3つめの行列は対称ではなく、固有ベクトルは直交しません。
+
+\kviiihead{応力の行列：主応力と主方向}
+物理の本（力-9）では、物の中の力のかかり方（応力）を、2×2 の対称な行列で表します。
+\[ \symbfit{\sigma}=\begin{pmatrix}80&30\\30&-20\end{pmatrix}\quad\text{（単位は MPa）} \]
+（物理の本では、成分の $\sigma_x$ と区別するために、この行列だけ太字で書きます。）特性方程式は
+\kviiiline{$\lambda^2-60\lambda-\num{2500}=0$\qquad $\lambda=30\pm\sqrt{30^2+\num{2500}}=30\pm58.31$}
+（$a+d=80-20=60$、$ad-bc=80\times(-20)-30^2=-\num{2500}$。）固有値は $88.31$ と $-28.31$ で、固有ベクトルは $(1,\ 0.277)$ と $(1,\ -3.61)$ です。内積は $1+0.277\times(-3.61)=1-1.000=0$（小さなちがいは丸めのため）で、直交しています。物理の本では、この固有値を\textbf{主応力}、固有ベクトルの向きを\textbf{主方向}とよびます。主方向の切り口では、ずらす力（せん断）がなく、引く力か押す力だけがはたらきます。
+
+\begin{seikaku}
+\textbf{対称な行列の固有値はいつも実数で、ちがう固有値の固有ベクトルは直交します。}2×2 で確かめます。対称な行列の1行めを $(a,\ b)$、2行めを $(b,\ d)$ とします（右上と左下が同じ $b$）。
+
+\textbf{実数になること}\quad 特性方程式 $\lambda^2-(a+d)\lambda+(ad-b^2)=0$ の判別式は
+\kviiiline{$(a+d)^2-4(ad-b^2)=a^2-2ad+d^2+4b^2=(a-d)^2+4b^2$}
+で、2乗の和なので0以上です。だから解は実数です（3-10）。
+
+\textbf{直交すること}\quad $b\neq0$ のとき、$(A-\lambda I)\vec v=\vec 0$ の1行めは $(a-\lambda)x+by=0$ なので、$\vec v=(b,\ \lambda-a)$ が固有ベクトルです。2つの固有値 $\lambda_1$、$\lambda_2$ の固有ベクトルの内積は
+\kviiiline{$b^2+(\lambda_1-a)(\lambda_2-a)=b^2+\lambda_1\lambda_2-a(\lambda_1+\lambda_2)+a^2$}
+です。ここに、2つの確かめの式 $\lambda_1\lambda_2=ad-b^2$ と $\lambda_1+\lambda_2=a+d$ を入れます。
+\kviiiline{$b^2+(ad-b^2)-a(a+d)+a^2=0$}
+だから直交します。（$b=0$ なら、固有ベクトルは $(1,\ 0)$ と $(0,\ 1)$ で、やはり直交します。）3×3 以上の対称な行列でも同じことが成り立ちます（証明は大学の線形代数で学びます）。
+\end{seikaku}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[10.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{固有ベクトル・固有値}$A\vec v=\lambda\vec v$（$\vec v\neq\vec 0$）。向きの変わらない矢印と倍率\\[3pt]
+\tsl{特性方程式}$\det(A-\lambda I)=0$。対角成分からだけ $\lambda$ をひく\\[3pt]
+\tsl{確かめの式}$\lambda_1+\lambda_2=a+d$、\ $\lambda_1\lambda_2=\det A$\\[3pt]
+\tsl{振動モード}形は固有ベクトル、固有値は $-\omega^2$\\[3pt]
+\tsl{6-12 の $s$}状態の行列の固有値（$\vec x=\vec ve^{st}$ で $A\vec v=s\vec v$）\\[3pt]
+\tsl{対称な行列}固有値は実数、固有ベクトルは直交
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{固有ベクトル}{行列をかけても向きが変わらない（原点を通る同じ直線の上にある）、$\vec 0$ でないベクトル。}
+\bkword{固有値}{固有ベクトルが、行列をかけると何倍になるかを表す数 $\lambda$。0や負の数、複素数のこともある。}
+\bkword{特性方程式}{$\det(A-\lambda I)=0$。固有値を求める方程式。固有方程式ともいう。6-12 の特性方程式と同じもの。}
+\bkword{べき乗法}{同じ行列を何回もかけて、いちばん大きい固有値とその固有ベクトルを見つける方法。}
+\bkword{主応力・主方向}{応力の行列の固有値と、固有ベクトルの向き（物理 力-9）。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\lambda$}{ラムダ}{固有値。$A\vec v=\lambda\vec v$ の倍率。6-12 の特性方程式の $s$ と同じもの}{eigenvalue}{7-8}}
+{\bkkigocard{$\vec v$}{ベクトル・ブイ}{この章では固有ベクトルによく使う文字。$\vec 0$ はのぞく。何倍しても同じ固有ベクトル}{eigenvector}{7-8}}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+$n$ 次正方行列 $A$ に対し、$A\symbf{x}=\lambda\symbf{x}$ をみたす零ベクトルでない $\symbf{x}$ が存在するとき、$\lambda$ を $A$ の固有値、$\symbf{x}$ を固有値 $\lambda$ に対する固有ベクトルという。$\lambda$ が $A$ の固有値であるための必要十分条件は、$|A-\lambda E|=0$ である。実対称行列の固有値はすべて実数であり、相異なる固有値に対する固有ベクトルは互いに直交する。
+\end{bkhonbun}
+\bkyaku{「$n$ 次正方行列」はたて・横 $n$ 個ずつの行列。太字の $\symbf{x}$ は、この本の矢印のベクトル $\vec v$。「零ベクトル」は $\vec 0$。$|A-\lambda E|$ は $\det(A-\lambda I)$ のこと（$E$ は単位行列。この本では $I$）。「必要十分条件」は「ちょうどそのとき」。「実対称行列」は成分が実数の対称な行列、「相異なる」は「ちがう」。}
+\end{senmonsho}
+
+\begin{motto}[5]
+\kviiibox{質量がちがう台車}
+2つの台車の質量が $m_1$、$m_2$ とちがうと、運動方程式を質量でわる数が上と下でちがうので、係数の行列は対称になりません。それでも、$\vec x=\vec v\cos\omega t$ を入れると、同じように $-\omega^2$ が固有値、モードの形が固有ベクトルになります。大学の本では、質量の行列 $M$ とばねの行列 $K$ を使って $K\vec v=\omega^2M\vec v$ と書きます（物理 波-3 の多自由度の振動）。
+
+3×3 の行列の特性方程式は、3次方程式になります。手で解くのはたいへんなので、べき乗法や \texttt{np.linalg.eig} で求めます（3階建ての建物、3次元の応力）。
+\end{motto}
+
+
+
+
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[固有ベクトルかどうかを確かめる]
+次の行列 $A$ について、下の3つのベクトルが固有ベクトルかどうかを調べ、固有ベクトルなら固有値を答えましょう。
+\kviiiline{$A=\begin{pmatrix}4&1\\2&3\end{pmatrix}$}
+（1）$(1,\ 1)$\qquad（2）$(1,\ -2)$\qquad（3）$(2,\ 1)$\par
+\kangaekata ③の手順。$A\vec v$ を計算して、成分どうしをわった答えがそろうかを見る。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 （1）$A\vec v=(4\times1+1\times1,\ 2\times1+3\times1)=(5,\ 5)$\par
+\kviiib $5\div1=5$、$5\div1=5$ でそろう\par
+\kviiia （2）$A\vec v=(4\times1+1\times(-2),\ 2\times1+3\times(-2))=(2,\ -4)$\par
+\kviiib $2\div1=2$、$(-4)\div(-2)=2$ でそろう\par
+\kviiia （3）$A\vec v=(4\times2+1\times1,\ 2\times2+3\times1)=(9,\ 7)$\par
+\kviiib $9\div2=4.5$、$7\div1=7$ でそろわない\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 （1）固有ベクトル、固有値5\quad （2）固有ベクトル、固有値2\par
+\kviiia （3）固有ベクトルではない
+\end{reidai}
+
+\begin{jibun}
+次の行列 $A$ について、$(1,\ 1)$、$(1,\ -2)$、$(1,\ 2)$ が固有ベクトルかどうかを調べ、固有ベクトルなら固有値を答えましょう。
+\kviiiline{$A=\begin{pmatrix}3&1\\2&2\end{pmatrix}$}
+\bkjans{$(1,\ 1)$ は $A\vec v=(4,\ 4)$ で固有値4。$(1,\ -2)$ は $(1,\ -2)$ で固有値1。$(1,\ 2)$ は $(5,\ 6)$ で、$5\div1=5$、$6\div2=3$ なので固有ベクトルではない。}
+\end{jibun}
+
+\begin{reidai}[台車の振動モード]
+6-14 の例題6 と同じ台車2つです。質量は $m=\qty{2}{kg}$、外側のばね2本は $k=\qty{200}{N/m}$、つなぎのばねは $K=\qty{100}{N/m}$ です。\par
+（1）$\ddot{\vec x}=B\vec x$ の係数の行列 $B$ を求めましょう。\par
+（2）$(1,\ 1)$ と $(1,\ -1)$ が固有ベクトルであることを確かめ、固有値を求めましょう。\par
+（3）2つのモードの角振動数を求めましょう。\par
+\kangaekata 対角成分は $-(k+K)\div m$、ほかは $K\div m$（③）。角振動数は $\omega=\sqrt{-\lambda}$。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 （1）$-(200+100)\div2=-150$、$100\div2=50$\par
+\kviiia （2）$B(1,\ 1)=(-150+50,\ 50-150)=(-100,\ -100)$ なので固有値 $-100$\par
+\kviiib $B(1,\ -1)=(-150-50,\ 50+150)=(-200,\ 200)$ なので固有値 $-200$\par
+\kviiia （3）$\omega_1=\sqrt{100}=10$、\ $\omega_2=\sqrt{200}\approx14.1$\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 （1）対角成分が $-150$、ほかが50 の行列\par
+\kviiia （2）$-100$（いっしょに動く）、$-200$（反対に動く）\par
+\kviiia （3）\qty{10}{rad/s}、約\qty{14.1}{rad/s}（6-14 と同じ）
+\end{reidai}
+
+\begin{jibun}
+$m=\qty{1}{kg}$ の台車2つを、$k=\qty{16}{N/m}$ のばね2本と $K=\qty{10}{N/m}$ のつなぎのばねでつなぎます。係数の行列 $B$、$(1,\ 1)$ と $(1,\ -1)$ の固有値、2つのモードの角振動数を求めましょう。
+\bkjans{$B$ は対角成分が $-26$、ほかが10。$B(1,\ 1)=(-16,\ -16)$ で固有値 $-16$、$B(1,\ -1)=(-36,\ 36)$ で固有値 $-36$。$\omega_1=\qty{4}{rad/s}$、$\omega_2=\qty{6}{rad/s}$。}
+\end{jibun}
+
+\begin{reidai}[くり返しかけて、固有ベクトルを見つける]
+次の行列 $A$ を、$(1,\ 0)$ に3回かけましょう。
+\kviiiline{$A=\begin{pmatrix}4&1\\2&3\end{pmatrix}$}
+また、そのたびに「$y$ 成分÷$x$ 成分」と「$x$ 成分が前の何倍になったか」を求め、近づいていく固有ベクトルと固有値を予想しましょう。\par
+\kangaekata ④のべき乗法。かけるたびに、前の答えに $A$ をかける。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 1回：$(4\times1+1\times0,\ 2\times1+3\times0)=(4,\ 2)$、$2\div4=0.5$、4倍\par
+\kviiia 2回：$(4\times4+1\times2,\ 2\times4+3\times2)=(18,\ 14)$\par
+\kviiib $14\div18\approx0.778$、$18\div4=4.5$ 倍\par
+\kviiia 3回：$(4\times18+1\times14,\ 2\times18+3\times14)=(86,\ 78)$\par
+\kviiib $78\div86\approx0.907$、$86\div18\approx4.78$ 倍\par
+\kviiia $y\div x$ は1に、倍率は5に近づいていく\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 $(4,\ 2)$、$(18,\ 14)$、$(86,\ 78)$。固有ベクトル $(1,\ 1)$、固有値5（例題1の（1）と同じ）
+\end{reidai}
+
+\begin{jibun}
+次の行列 $A$ を、$(1,\ 0)$ に3回かけましょう。
+\kviiiline{$A=\begin{pmatrix}3&1\\2&2\end{pmatrix}$}
+そのたびに「$y$ 成分÷$x$ 成分」と「$x$ 成分が前の何倍になったか」を求め、近づいていく固有ベクトルと固有値を予想しましょう。
+\bkjans{$(3,\ 2)$、$(11,\ 10)$、$(43,\ 42)$。$y\div x$ は約0.667、0.909、0.977、倍率は3、約3.67、約3.91。固有ベクトル $(1,\ 1)$、固有値4。}
+\end{jibun}
+
+\begin{reidai}[numpy の答えを読む]
+例題1の行列 $A$ で \texttt{w, V = np.linalg.eig(A)} を実行すると、次のように表示されました。固有値と、それぞれの固有ベクトルを、成分が簡単な整数の形で答えましょう。
+\begin{bkcodeout}[実行結果]
+[5.+0.j 2.+0.j]
+[[ 0.70710678+0.j -0.4472136 +0.j]
+ [ 0.70710678+0.j  0.89442719+0.j]]
+\end{bkcodeout}
+\kangaekata 固有ベクトルは列に並ぶ（⑤）。長さ1にそろえてあるので、いちばん小さい成分の大きさでわって整数にする。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 固有値：1つめが5、2つめが2（\texttt{+0.j} は虚部0）\par
+\kviiia 固有値5：1列め $(0.707,\ 0.707)$ を0.707でわる\par
+\kviiia 固有値2：2列め $(-0.447,\ 0.894)$ を $-0.447$ でわる\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 固有値5、固有ベクトル $(1,\ 1)$。固有値2、固有ベクトル $(1,\ -2)$
+\end{reidai}
+
+\begin{jibun}
+1行めが $(1,\ 4)$、2行めが $(2,\ 3)$ の行列 $A$ で \texttt{w, V = np.linalg.eig(A)} を実行すると、下のように表示されました。固有値と、それぞれの固有ベクトルを、成分が簡単な整数の形で答えましょう。
+\begin{bkcodeout}[実行結果]
+[-1.+0.j  5.+0.j]
+[[-0.89442719+0.j -0.70710678+0.j]
+ [ 0.4472136 +0.j -0.70710678+0.j]]
+\end{bkcodeout}
+\bkjans{固有値 $-1$ の固有ベクトルは1列め $(-0.894,\ 0.447)$ を0.447でわった $(-2,\ 1)$、つまり $(2,\ -1)$。固有値5 の固有ベクトルは2列め $(-0.707,\ -0.707)$ から $(1,\ 1)$。}
+\end{jibun}
+
+
+
+\begin{reidai}[特性方程式で固有値と固有ベクトルを求める]
+次の行列 $A$ の固有値と固有ベクトルを求め、2つの確かめの式で確かめましょう。
+\kviiiline{$A=\begin{pmatrix}5&2\\2&2\end{pmatrix}$}
+\kangaekata ⑥の手順①〜④。2つの式が同じ式になることを確かめながら進める。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 $\det(A-\lambda I)=(5-\lambda)(2-\lambda)-2\times2$\par
+\kviiib $=\lambda^2-7\lambda+10-4=\lambda^2-7\lambda+6$\par
+\kviiia $\lambda^2-7\lambda+6=0$ より $(\lambda-1)(\lambda-6)=0$、$\lambda=6,\ 1$\par
+\kviiia $\lambda=6$：$A-6I$ の行は $(-1,\ 2)$ と $(2,\ -4)$\par
+\kviiib 式は $-x+2y=0$ と $2x-4y=0$（同じ式）。$x=2y$ より $(2,\ 1)$\par
+\kviiia $\lambda=1$：$A-I$ の行は $(4,\ 2)$ と $(2,\ 1)$\par
+\kviiib 式は $4x+2y=0$ と $2x+y=0$（同じ式）。$y=-2x$ より $(1,\ -2)$\par
+\kviiia 確かめ：$6+1=7=5+2$、$6\times1=6=5\times2-2\times2$\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 固有値6、固有ベクトル $(2,\ 1)$。固有値1、固有ベクトル $(1,\ -2)$
+\end{reidai}
+
+\begin{jibun}
+次の行列 $A$ の固有値と固有ベクトルを求め、2つの確かめの式で確かめましょう。
+\kviiiline{$A=\begin{pmatrix}2&2\\2&5\end{pmatrix}$}
+\bkjans{$\det(A-\lambda I)=\lambda^2-7\lambda+6=0$ より $\lambda=1,\ 6$。$\lambda=1$：$x+2y=0$ で $(2,\ -1)$。$\lambda=6$：$-4x+2y=0$ で $(1,\ 2)$。確かめ：$1+6=7=2+5$、$1\times6=6=2\times5-2\times2$。}
+\end{jibun}
+
+\begin{reidai}[ばね・ダンパーの状態の行列]
+ばね・質量・ダンパーの式 $\ddot x+4\dot x+3x=0$（$m=\qty{1}{kg}$、$c=4$\,N·s/m、$k=\qty{3}{N/m}$）について、\par
+（1）状態の行列 $A$ を求めましょう。\par
+（2）$A$ の固有値と固有ベクトルを求め、6-12 の特性方程式の解とくらべましょう。\par
+\kangaekata ⑦。1行めは $(0,\ 1)$、2行めは $(-k/m,\ -c/m)$。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 （1）1行め $(0,\ 1)$、2行め $(-3,\ -4)$\par
+\kviiia （2）$\det(A-\lambda I)=(-\lambda)(-4-\lambda)-1\times(-3)=\lambda^2+4\lambda+3$\par
+\kviiib $(\lambda+1)(\lambda+3)=0$ より $\lambda=-1,\ -3$\par
+\kviiia $\lambda=-1$：$A+I$ の1行め $(1,\ 1)$ から $x+y=0$、固有ベクトル $(1,\ -1)$\par
+\kviiia $\lambda=-3$：$A+3I$ の1行め $(3,\ 1)$ から $3x+y=0$、固有ベクトル $(1,\ -3)$\par
+\kviiia 6-12：$s^2+4s+3=0$ の解も $-1$、$-3$ で同じ\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 （1）1行め $(0,\ 1)$、2行め $(-3,\ -4)$ の行列\par
+\kviiia （2）$-1$ と $(1,\ -1)$、$-3$ と $(1,\ -3)$。6-12 の $s$ と同じ
+\end{reidai}
+
+\begin{jibun}
+$2\ddot x+6\dot x+4x=0$（$m=\qty{2}{kg}$、$c=6$\,N·s/m、$k=\qty{4}{N/m}$）の状態の行列 $A$、固有値と固有ベクトルを求め、6-12 の特性方程式の解とくらべましょう。
+\bkjans{$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -3)$。$\lambda^2+3\lambda+2=0$ より $\lambda=-1,\ -2$。$-1$ の固有ベクトル $(1,\ -1)$、$-2$ の固有ベクトル $(1,\ -2)$。6-12 の $2s^2+6s+4=0$ の解も $-1$、$-2$。}
+\end{jibun}
+
+\begin{reidai}[複素数の固有値]
+$\ddot x+2\dot x+10x=0$ の状態の行列 $A$ の固有値を求め、どんな動きになるかを答えましょう。\par
+\kangaekata ⑧。特性方程式の判別式が負なら、固有値は複素数。実部が負なら小さくなり、虚部が角振動数。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 $A$ は1行め $(0,\ 1)$、2行め $(-10,\ -2)$\par
+\kviiia $\det(A-\lambda I)=(-\lambda)(-2-\lambda)+10=\lambda^2+2\lambda+10$\par
+\kviiia 解の公式：$\lambda=\dfrac{-2\pm\sqrt{4-40}}{2}=\dfrac{-2\pm6j}{2}=-1\pm3j$\par
+\kviiia 実部 $-1$：$e^{-t}$ で小さくなる。虚部3：角振動数 \qty{3}{rad/s} でゆれる\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 $-1\pm3j$。ゆれながら小さくなる（角振動数 \qty{3}{rad/s}、$e^{-t}$ でへる）
+\end{reidai}
+
+\begin{reidai}[対称な行列：応力の主応力と主方向]
+次の応力の行列（MPa）の主応力（固有値）と主方向（固有ベクトル）を求め、2本の固有ベクトルが直交することを確かめましょう。
+\kviiiline{$\symbfit{\sigma}=\begin{pmatrix}50&20\\20&20\end{pmatrix}$}
+\kangaekata ⑥の手順で求め、⑨のように内積を計算する。\par
+\shiki\kviiis\hangindent=2.6\zw\hangafter=1 $\lambda^2-70\lambda+(50\times20-20\times20)=\lambda^2-70\lambda+600=0$\par
+\kviiib $(\lambda-10)(\lambda-60)=0$ より $\lambda=60,\ 10$\par
+\kviiia $\lambda=60$：1行め $(-10,\ 20)$ から $-10x+20y=0$、$x=2y$、$(2,\ 1)$\par
+\kviiia $\lambda=10$：1行め $(40,\ 20)$ から $40x+20y=0$、$y=-2x$、$(1,\ -2)$\par
+\kviiia 内積：$2\times1+1\times(-2)=0$\par
+\kotae\kviiis\hangindent=2.6\zw\hangafter=1 主応力 \qty{60}{MPa}（主方向 $(2,\ 1)$）、\qty{10}{MPa}（主方向 $(1,\ -2)$）。内積0で直交
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiiEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+$\ddot x+4\dot x+13x=0$ の状態の行列 $A$ の固有値を求め、どんな動きになるかを答えましょう。
+\bkjans{$A$ は1行め $(0,\ 1)$、2行め $(-13,\ -4)$。$\lambda^2+4\lambda+13=0$ より $\lambda=\dfrac{-4\pm\sqrt{16-52}}{2}=-2\pm3j$。ゆれながら小さくなる（角振動数 \qty{3}{rad/s}、$e^{-2t}$ でへる）。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+次の応力の行列（MPa）の主応力と主方向を求め、直交することを確かめましょう。
+\kviiiline{$\symbfit{\sigma}=\begin{pmatrix}30&-20\\-20&0\end{pmatrix}$}
+\bkjans{$\lambda^2-30\lambda-400=0$ より $(\lambda-40)(\lambda+10)=0$、$\lambda=40,\ -10$。$40$：$-10x-20y=0$ で $(2,\ -1)$。$-10$：$40x-20y=0$ で $(1,\ 2)$。内積 $2\times1+(-1)\times2=0$ で直交。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 固有ベクトルに $\vec 0$ を答える}
+\bkng{$(A-3I)\vec v=\vec 0$ の答えは $\vec v=(0,\ 0)$}
+\bkok{$y=x$ をみたす $\vec 0$ でない $\vec v$、たとえば $(1,\ 1)$}
+$\vec 0$ はどんな $\lambda$ でも式をみたすので、固有ベクトルにはふくめません。$\vec 0$ しか出てこないときは、$\lambda$ の計算をまちがえています。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 全部の成分から $\lambda$ をひく}
+\bkng{$A-\lambda I$ の行を $(2-\lambda,\ 1-\lambda)$、$(1-\lambda,\ 2-\lambda)$ とする}
+\bkok{$A-\lambda I$ の行は $(2-\lambda,\ 1)$、$(1,\ 2-\lambda)$}
+$\lambda I$ は、対角成分だけが $\lambda$ で、ほかは0の行列です。だから $\lambda$ は対角成分からだけひきます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 長さや向きがちがうと「答えがちがう」と思う}
+\bkng{答えは $(1,\ 1)$ なので、$(2,\ 2)$ や $(-0.707,\ -0.707)$ はまちがい}
+\bkok{同じ直線の上なら、どれも同じ固有ベクトル}
+$(1,\ 1)$ の何倍（$\vec 0$ 以外）でも、$A$ をかけると同じ3倍になります。答えの成分の比（$x:y$）が同じかどうかを見ます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ numpy の固有ベクトルを行で読む}
+\bkng{$V$ の1行め $(0.707,\ -0.707)$ が、固有値3の固有ベクトル}
+\bkok{$V$ の1列め $(0.707,\ 0.707)$ が、固有値3の固有ベクトル}
+numpy は固有ベクトルを列（たて）に並べて返します。かけて確かめると、1行めの $(0.707,\ -0.707)$ は $A$ をかけると $(0.707,\ -0.707)$ で、3倍になりません。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiiEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $\lambda$ と $\omega$ を取りちがえる}
+\raggedright\bkng{固有値 $-100$ だから $\omega=-100$}
+\bkok{$\omega=\sqrt{-(-100)}=10$}
+台車の固有値は $-\omega^2$ です。符号を変えてから平方根をとります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 固有値0はだめだと思う}
+\raggedright\bkng{$H\vec v=\vec 0$ なので $(1,\ 1)$ は固有ベクトルでない}
+\bkok{固有値0の固有ベクトル}
+だめなのは $\vec v=\vec 0$ です。$\lambda=0$ はかまいません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiibox{橋や建物の固有振動数とモード}
+\noindent\begin{minipage}[c]{0.73\linewidth}
+\raggedright
+2000年に開通したロンドンのミレニアム・ブリッジ（歩行者用のつり橋）は、たくさんの人が歩くと横に大きくゆれ、2日ほどで通行止めになりました。人が歩くときの横ゆれのリズム（1秒に1回ほど）が、橋の横ゆれのモードの振動数に近く、共振（6-13）したと説明されています。ダンパーをつけて、2002年に再開しました。橋や建物の設計では、固有値（固有振動数）と固有ベクトル（モードの形）をコンピュータで求め、地震や風、人の歩くリズムと重ならないようにします。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.25\linewidth}
+\centering
+\begin{tikzpicture}[x=0.6mm, y=0.8mm]
+  \fill[bkBlue!14] (0,0) rectangle (48,6);
+  \draw[bkInk, line width=1pt] (2,14) .. controls (16,9) and (32,9) .. (46,14);
+  \draw[bkInk, line width=0.9pt] (2,6) -- (2,18) (46,6) -- (46,18);
+  \foreach \kviiix in {8,14,20,26,32,38} {\draw[bkInk!60, line width=0.4pt] (\kviiix,{14-5*sin(180*(\kviiix-2)/44)}) -- (\kviiix,16);}
+  \draw[bkInk, line width=1.4pt] (2,16) -- (46,16);
+  \draw[bkOrange!85!black, line width=1pt, dash pattern=on 2pt off 1.2pt] (2,16) .. controls (16,20) and (32,20) .. (46,16);
+  \node[font=\sffamily\footnotesize, anchor=north] at (24,-1) {川};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkOrange!80!black] at (24,20.5) {ゆれのモード};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kviiibox{主応力：部品のこわれやすい向き}
+機械の部品に力がかかると、中の応力は向きによってちがいます。応力の行列の固有値（主応力）がいちばん大きい向きで、部品はさけやすくなります。ひずみゲージ（のびをはかるセンサー）で3つの向きののびをはかって応力の行列を作り、固有値を計算すれば、どの向きにどれだけの力がかかっているかがわかります（物理 力-9）。
+
+\par\vspace{4pt}
+\kviiibox{タイヤのバランス：ぶれずに回る軸}
+\noindent\begin{minipage}[c]{0.73\linewidth}
+\raggedright
+回る物の回りにくさ（慣性モーメント）は、3次元では1つの数ではなく、3×3 の対称な行列（慣性の行列）になります（物理 力-6）。その固有ベクトルの向きの軸（主軸）のまわりなら、物はぶれずに回ります。車のタイヤをかえると、ホイールに小さなおもりをはりつけて、回る軸と主軸をそろえます（バランス取り）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.25\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \filldraw[fill=bkInk!70, draw=bkInk, line width=0.8pt] (0,0) circle (14);
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt] (0,0) circle (8.5);
+  \filldraw[fill=bkGray!50, draw=bkInk, line width=0.6pt] (0,0) circle (2.2);
+  \fill[bkOrange] (7.6,-3.2) rectangle (9.8,-0.6);
+  \draw[bkInk, line width=0.5pt] (8.7,-3.2) -- (11,-15.5);
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-16) {おもり};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+
+\begin{column}{量子の世界の「とびとびの値」}
+原子の中の電子は、決まったとびとびのエネルギーしか持てません。この「とびとびの値」は、シュレディンガー方程式という方程式の固有値として求められます（物理 原-5）。水素原子から出る光の色（波長）がとびとびなのは、このためです。固有値の考えは、橋のゆれから原子の中まで、とても広く使われています。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 次の行列 $A$ について、$(1,\ 1)$、$(1,\ -2)$、$(1,\ 2)$ が固有ベクトルかどうかを調べ、固有ベクトルなら固有値を答えましょう\mbox{（\bkreidairef{1}）}。
+\par\nobreak\kviiiline{$A=\begin{pmatrix}5&1\\2&4\end{pmatrix}$}
+\bkpans{$(1,\ 1)$ は $A\vec v=(6,\ 6)$ で固有値6。$(1,\ -2)$ は $(3,\ -6)$ で固有値3。$(1,\ 2)$ は $(7,\ 10)$ で、$7\div1=7$、$10\div2=5$ なので固有ベクトルではない。}
+
+\bkproblem 6-14 の水そうで、管を太くすると、水位の式が次のようになりました（cm、分）。$(1,\ 1)$ と $(1,\ -1)$ が固有ベクトルかどうかを調べ、固有ベクトルなら固有値を答えましょう\mbox{（\bkreidairef{1}）}。
+\par\nobreak\kviiiline{$\begin{pmatrix}\dot h_1\\\dot h_2\end{pmatrix}=\begin{pmatrix}-0.2&0.2\\0.2&-0.2\end{pmatrix}\begin{pmatrix}h_1\\h_2\end{pmatrix}$}
+\bkpans{$(1,\ 1)$ をかけると $(0,\ 0)$ なので固有値0。$(1,\ -1)$ をかけると $(-0.4,\ 0.4)$ なので固有値 $-0.4$。どちらも固有ベクトル。}
+
+\bkproblem $m=\qty{1}{kg}$ の台車2つを、$k=\qty{36}{N/m}$ のばね2本と $K=\qty{32}{N/m}$ のつなぎのばねでつなぎます。係数の行列 $B$、$(1,\ 1)$ と $(1,\ -1)$ の固有値、2つのモードの角振動数を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$B$ は対角成分が $-68$、ほかが32。$B(1,\ 1)=(-36,\ -36)$ で固有値 $-36$、$B(1,\ -1)=(-100,\ 100)$ で固有値 $-100$。$\omega_1=\qty{6}{rad/s}$、$\omega_2=\qty{10}{rad/s}$。}
+
+\bkproblem 1の行列 $A$ を $(1,\ 0)$ に3回かけ、そのたびに「$y$ 成分÷$x$ 成分」と「$x$ 成分が前の何倍になったか」を求めて、近づいていく固有ベクトルと固有値を予想しましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$(5,\ 2)$、$(27,\ 18)$、$(153,\ 126)$。$y\div x$ は0.4、約0.667、約0.824、倍率は5、5.4、約5.67。固有ベクトル $(1,\ 1)$、固有値6。}
+
+\bkproblem 例題1の行列 $A$（1行め $(4,\ 1)$、2行め $(2,\ 3)$）の固有値と固有ベクトルを、特性方程式で求め、2つの確かめの式で確かめましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$\lambda^2-7\lambda+10=0$ より $\lambda=5,\ 2$。$5$：$-x+y=0$ で $(1,\ 1)$。$2$：$2x+y=0$ で $(1,\ -2)$。$5+2=7=4+3$、$5\times2=10=4\times3-1\times2$。}
+
+\bkproblem $\ddot x+5\dot x+4x=0$ の状態の行列 $A$、固有値と固有ベクトルを求め、6-12 の特性方程式の解とくらべましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$A$ は1行め $(0,\ 1)$、2行め $(-4,\ -5)$。$\lambda^2+5\lambda+4=0$ より $\lambda=-1,\ -4$。$-1$ の固有ベクトル $(1,\ -1)$、$-4$ の固有ベクトル $(1,\ -4)$。$s^2+5s+4=0$ の解も $-1$、$-4$。}
+
+\bkproblem $\ddot x+6\dot x+25x=0$ の状態の行列の固有値を求め、どんな動きになるかを答えましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$\lambda^2+6\lambda+25=0$ より $\lambda=\dfrac{-6\pm\sqrt{36-100}}{2}=-3\pm4j$。ゆれながら小さくなる（角振動数 \qty{4}{rad/s}、$e^{-3t}$ でへる）。}
+
+\bkproblem 次の応力の行列（MPa）の主応力と主方向を求め、直交することを確かめましょう\mbox{（\bkreidairef{8}）}。
+\par\nobreak\kviiiline{$\symbfit{\sigma}=\begin{pmatrix}60&20\\20&30\end{pmatrix}$}
+\bkpans{$\lambda^2-90\lambda+\num{1400}=0$ より $(\lambda-70)(\lambda-20)=0$、$\lambda=70,\ 20$。$70$：$-10x+20y=0$ で $(2,\ 1)$。$20$：$40x+20y=0$ で $(1,\ -2)$。内積 $2-2=0$ で直交。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 1行めが $(2,\ 3)$、2行めが $(3,\ 2)$ の行列 $A$ で \texttt{w, V = np.linalg.eig(A)} を実行すると、次のように表示されました。固有値と、それぞれの固有ベクトルを整数の形で答えましょう\mbox{（\bkreidairef{4}）}。
+\begin{bkcodeout}[実行結果]
+[ 5.+0.j -1.+0.j]
+[[ 0.70710678+0.j -0.70710678+0.j]
+ [ 0.70710678+0.j  0.70710678+0.j]]
+\end{bkcodeout}
+\bkpans{固有値5の固有ベクトルは1列め $(0.707,\ 0.707)$ から $(1,\ 1)$。固有値 $-1$ の固有ベクトルは2列め $(-0.707,\ 0.707)$ から $(-1,\ 1)$、つまり $(1,\ -1)$。}
+
+\bkproblem 次の応力の行列（MPa）の主応力と主方向を求め、直交することを確かめましょう\mbox{（\bkreidairef{8}）}。
+\par\nobreak\kviiiline{$\symbfit{\sigma}=\begin{pmatrix}40&30\\30&-40\end{pmatrix}$}
+\bkpans{$\lambda^2-\num{2500}=0$ より $\lambda=50,\ -50$。$50$：$-10x+30y=0$ で $(3,\ 1)$。$-50$：$90x+30y=0$ で $(1,\ -3)$。内積 $3-3=0$ で直交。}
+
+\bkproblem 1行めが $(7,\ 2)$、2行めが $(2,\ 4)$ の行列 $A$ の固有値と固有ベクトルを求め、2つの確かめの式と、固有ベクトルが直交することを確かめましょう\mbox{（\bkreidairef{5}・\bkreidairef{8}）}。
+\bkpans{$\lambda^2-11\lambda+24=0$ より $\lambda=8,\ 3$。$8$：$-x+2y=0$ で $(2,\ 1)$。$3$：$4x+2y=0$ で $(1,\ -2)$。$8+3=11=7+4$、$8\times3=24=28-4$。内積 $2-2=0$ で直交。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 行列をかけても向きが変わらない矢印を、図と表計算でさがせる。\bkfurref{bk:7-8:sagasu}
+\item $A\vec v$ を計算して固有ベクトルを確かめ、振動モードが固有ベクトルだと説明できる。\bkfurref{bk:7-8:daisha}
+\item 特性方程式で固有値と固有ベクトルを求め、6-12 の $s$ と同じものだと確かめられる。\bkfurref{bk:7-8:tokusei}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{向きの変わらない矢印が、ゆれ方まで教えてくれるんだね。次は、その矢印を物差しにしてみよう。}

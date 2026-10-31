@@ -1,0 +1,67 @@
+# 力-2 の例題・じぶんでとこう・章末問題の数値（g=9.8。宇宙の例題は GM を与える）
+from math import *
+g=9.8
+def p(*a): print(*a)
+p("ex1 60kg a1.0 up:", 60*(g+1.0), 60*(g+1.0)/g, "stop a-1.0:", 60*(g-1.0), 60*(g-1)/g)
+p("jb1 50kg a0.8:", 50*(g+0.8), 50*(g+0.8)/g)
+p("ex2 slope30:", g*sin(radians(30)), "N for 2kg", 2*g*cos(radians(30)))
+p("jb2 slope20:", g*sin(radians(20)))
+p("ex3 slide 30 mu.1:", g*(sin(radians(30))-0.1*cos(radians(30))), "N 30kg", 30*g*cos(radians(30)), "friction", 0.1*30*g*cos(radians(30)))
+p("jb3 25 mu.2:", g*(sin(radians(25))-0.2*cos(radians(25))))
+p("ex4 mu.5:", degrees(atan(0.5)))
+p("jb4 mu.3:", degrees(atan(0.3)))
+m1,m2=1200,1000; a=(m1-m2)/(m1+m2)*g; p("ex5 atwood:", a, "T", m2*(g+a), 2*m1*m2*g/(m1+m2), "motor diff", (m1-m2)*g)
+m1,m2=1000,800; a=(m1-m2)/(m1+m2)*g; p("jb5:", a, 2*m1*m2*g/(m1+m2))
+p("ex6:", 400/2000, 1000*0.2)
+p("jb6:", 500/2000, 800*0.25)
+p("ex7 mu.4:", 0.4*g); p("jb7 mu.25:", 0.25*g)
+v=sqrt(0.7*g*50); p("ex8:", v, v*3.6); v=sqrt(0.4*g*50); p("jb8:", v, v*3.6)
+th=radians(30); l=10; p("ex9 conical:", 2*pi*sqrt(l*cos(th)/g), "r", l*sin(th), "v", sqrt(g*l*sin(th)*tan(th)), "T/mg", 1/cos(th))
+th=radians(45); l=5; p("jb9:", 2*pi*sqrt(l*cos(th)/g))
+R=6.371e6; v=sqrt(g*R); p("ex10 v1:", v, "T min", 2*pi*R/v/60)
+GM=3.99e14; r=R+4.0e5; v=sqrt(GM/r); p("jb10 ISS:", v, 2*pi*r/v/60)
+T=86164; r=(GM*T**2/(4*pi**2))**(1/3); p("ex11 geo r km:", r/1e3, "alt (R=6.38e6)", (r-6.38e6)/1e3, "v", 2*pi*r/T)
+GM2=3.986004418e14; r2=(GM2*T**2/(4*pi**2))**(1/3); p(" exact GM r", r2/1e3, (r2-6.378137e6)/1e3)
+T=43082; r=(GM*T**2/(4*pi**2))**(1/3); p("jb11 GPS r km:", r/1e3, "alt", (r-6.38e6)/1e3)
+mu=1.81e-5; rho=1000
+for rr in [10e-6,5e-6,20e-6]:
+    m=4/3*pi*rr**3*rho; b=6*pi*mu*rr; vf=m*g/b; p("fog r",rr, "m",m,"b",b,"vf",vf, "Re", 1.20*vf*2*rr/mu, "tau", m/b)
+c=0.5*1.2*0.43; p("ex13 c", c, "vt 80", sqrt(80*g/c), "vt 60", sqrt(60*g/c))
+p("g=GM/R^2:", 3.986e14/R**2, "ISS g", 3.986e14/(R+4e5)**2)
+p("100g weight:", 0.1*g)
+p("pb1 40kg 1.5:", 40*(g+1.5), 40*(g+1.5)/g, 40*(g-1.5), 40*(g-1.5)/g)
+p("pb2 45:", g*sin(radians(45)))
+p("pb3 mu.6:", degrees(atan(0.6)))
+p("pb4 push:", 10/5, 2*2)
+p("pb5 R100 mu.5:", sqrt(0.5*g*100), sqrt(0.5*g*100)*3.6)
+m=4/3*pi*(20e-6)**3*rho; p("pb6 fog 20um", m*g/(6*pi*mu*20e-6))
+p("pb7 atwood 3,2:", (3-2)/5*g, 2*3*2*g/5)
+a=g*(0.5-0.3*cos(radians(30))); p("pb8:", a, sqrt(2*5/a))
+p("pb9:", 2*pi*sqrt(0.5*cos(radians(60))/g))
+r=3.84e8; T=2*pi*sqrt(r**3/GM); p("pb10 moon:", T, T/86400)
+p("elevator 0.15g", 0.15*g)
+p("tsurikawa 0.83", degrees(atan(0.83/g)))
+print("==== 追加")
+R=6.37e6; v=sqrt(g*R); p("ex10(1) R=6.37e6:", v, 2*pi*R/v, 2*pi*R/v/60)
+r=6.37e6+4.0e5; v=sqrt(GM/r); p("ex10(2) ISS GM=3.99e14 r=6.77e6:", v, 2*pi*r/v/60)
+v=sqrt(1.6*1.74e6); p("jb10(1) moon:", v, 2*pi*1.74e6/v/60)
+r=6.37e6+8.0e5; v=sqrt(GM/r); p("jb10(2) 800km:", v, 2*pi*r/v/60)
+p("ex2 N 2kg 30:", 2*g*cos(radians(30)), "v 2s", 4.9*2)
+p("jb2 20 2kg:", g*sin(radians(20)), 2*g*cos(radians(20)), g*sin(radians(20))*2)
+p("ex3 f:", 0.1*30*g*cos(radians(30)))
+p("jb3 f:", 0.2*30*g*cos(radians(30*0+25)))
+p("pb2 45 2kg:", g*sin(radians(45)), 2*g*cos(radians(45)), g*sin(radians(45))*2)
+c=0.26
+for m in [80,60]:
+    v=0
+    out=[]
+    for i in range(3):
+        a=g-c/m*v*v; out.append((i,round(v,3),round(a,3))); v=v+a
+    out.append((3,round(v,3)))
+    p("euler m",m,out, "vt", sqrt(m*g/c))
+# RK4 and exact at t=3 for m=80
+vt=sqrt(80*g/c); p("exact t=3", vt*tanh(g*3/vt))
+p("nyushi check: nothing numeric")
+print("==== 二乗抵抗の式の解 v=vt*tanh(gt/vt)")
+vt=sqrt(80*g/0.26)
+for t in (1,2,3,5,10): p(t, vt*tanh(g*t/vt), g*t)

@@ -1,0 +1,673 @@
+%% 2-17 コンピュータの数：2進数と16進数（第11回：ページ制限なし。なぜ位が 1・2・4・8 なのか、なぜ 4けたずつなのかを1段ずつ）
+%% この章の部品（頭文字 \bkiir…）
+\makeatletter
+% ランプ  \bkiirlamp{(x,y)}{1=つく／0=消える}{半径}
+\newcommand\bkiirlamp[3]{%
+  \ifnum#2=1
+    \fill[bkYellow!30] #1 circle (#3*1.25);
+    \filldraw[fill=bkYellow, draw=bkYellow!65!black, line width=0.6pt] #1 circle (#3);
+  \else
+    \filldraw[fill=bkGray!18, draw=bkGray, line width=0.6pt] #1 circle (#3);
+  \fi}
+% 点のカード  \bkiircard{x}{y}{1=表／0=裏}{点の座標のならび}   カードは 16×22 mm
+\newcommand\bkiircard[4]{\begin{scope}[shift={(#1,#2)}]
+  \ifnum#3=1
+    \filldraw[fill=white, draw=bkInk, line width=0.7pt, rounded corners=1.2mm] (0,0) rectangle (16,22);
+    \foreach \x/\y in #4 {\fill[bkRed] (\x,\y) circle (1.05);}
+  \else
+    \filldraw[fill=bkBlue!22, draw=bkInk, line width=0.7pt, rounded corners=1.2mm] (0,0) rectangle (16,22);
+    \fill[pattern=north east lines, pattern color=bkBlue!55] (1.5,1.5) rectangle (14.5,20.5);
+  \fi
+  \end{scope}}
+\def\bkiirdotsA{8/11}
+\def\bkiirdotsD{5/7,11/7,5/15,11/15}
+\def\bkiirdotsH{5/4.5,11/4.5,5/8.8,11/8.8,5/13.2,11/13.2,5/17.5,11/17.5}
+% 1 の大きさの小さな正方形のならび  \bkiirsq{(x,y)}{よこの数}{たての数}{色}   1つ 3.6 mm
+\newcommand\bkiirsq[4]{\begin{scope}[shift={#1}]
+  \foreach \i in {1,...,#2} {\foreach \j in {1,...,#3} {
+    \filldraw[fill=#4!35, draw=#4!80!black, line width=0.5pt] ({(\i-1)*3.6},{(\j-1)*3.6}) rectangle ({\i*3.6},{\j*3.6});}}
+  \end{scope}}
+\makeatother
+
+\bkchapter{2}{17}{コンピュータの\R{数}{かず}：\\2\R{進数}{しん|すう}と16\R{進数}{しん|すう}}{\bklevel{2}}{コンピュータの\R{数}{かず}：2\R{進数}{しん|すう}と16\R{進数}{しん|すう}}
+\bkmichishirube{1-2,2-7}{2-19,3-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 2\R{進数}{しん|すう}の\R{位}{くらい}が1・2・4・8…であることを\R{使}{つか}って、2\R{進数}{しん|すう}と10\R{進数}{しん|すう}を\R{行}{い}き\R{来}{き}できる。
+\item \bklevel{2}\enspace ビットの\R{数}{かず}から、\R{何}{なん}\R{通}{とお}りの\R{数}{かず}を\R{表}{あらわ}せるかを\R{計算}{けい|さん}できる。
+\item \bklevel{2}\enspace 2\R{進数}{しん|すう}を4けたずつまとめて、16\R{進数}{しん|すう}で\R{書}{か}ける。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}
+ランプが4つならんでいます。どのランプも、「つく」か「\R{消}{き}える」かの2\R{通}{とお}りしかありません。
+
+ランプのつき\R{方}{かた}で、\R{数}{かず}を\R{表}{あらわ}すことにします。4つのランプで、ちがう\R{数}{かず}を\R{何}{なん}\R{通}{とお}り\R{表}{あらわ}せるかな？　4\R{通}{とお}り？　8\R{通}{とお}り？　それとも、もっと？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk!80, rounded corners=2mm] (-6,-7.5) rectangle (42,7.5);
+  \foreach \i/\s in {0/1,1/0,2/1,3/1} {\bkiirlamp{(\i*12,0)}{\s}{3.8}}
+  \foreach \i/\t in {0/つく,1/{\R{消}{き}える},2/つく,3/つく}
+    \node[anchor=base, font=\sffamily\footnotesize, text=bkInk] at (\i*12,-12.5) {\t};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+コンピュータの\R{中}{なか}には、「5」や「7」の\R{形}{かたち}をした\R{部品}{ぶ|ひん}はありません。あるのは、\R{電気}{でん|き}を\R{流}{なが}すか\R{流}{なが}さないかを\R{切}{き}りかえる、とても\R{小}{ちい}さなスイッチ（トランジスタという\R{部品}{ぶ|ひん}）だけです。スマホの\R{頭脳}{ず|のう}にあたる\R{部品}{ぶ|ひん}には、このスイッチが\R{何十億}{なん|じゅう|おく}こも\R{入}{はい}っています。スイッチのオンとオフだけで、どうやって\R{数}{かず}を\R{表}{あらわ}しているのでしょう。この\R{章}{しょう}では、コンピュータの\R{数}{かず}の\R{書}{か}き\R{方}{かた}を\R{調}{しら}べます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[\R{点}{てん}のカードで\R{数}{かず}を\R{作}{つく}ろう]
+\R{厚紙}{あつ|がみ}で5\R{枚}{まい}のカードを\R{作}{つく}り、16こ・8こ・4こ・2こ・1この\R{点}{てん}をかきます。\R{左}{ひだり}から\R{点}{てん}の\R{多}{おお}い\R{順}{じゅん}にならべ、\R{表}{おもて}（\R{点}{てん}が\R{見}{み}える\R{面}{めん}）か\R{裏}{うら}かを\R{決}{き}めて、\R{見}{み}えている\R{点}{てん}を\R{数}{かぞ}えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiircard{0}{0}{0}{}
+  \bkiircard{20}{0}{1}{\bkiirdotsH}
+  \bkiircard{40}{0}{1}{\bkiirdotsD}
+  \bkiircard{60}{0}{0}{}
+  \bkiircard{80}{0}{1}{\bkiirdotsA}
+  \foreach \i/\n/\f/\b in {0/16/\R{裏}{うら}/0,1/8/\R{表}{おもて}/1,2/4/\R{表}{おもて}/1,3/2/\R{裏}{うら}/0,4/1/\R{表}{おもて}/1} {
+    \node[anchor=south, font=\sffamily\footnotesize, text=bkGray] at (\i*20+8,24) {\n こ};
+    \node[anchor=north, font=\sffamily\small, text=bkInk] at (\i*20+8,-2) {\f};
+    \node[anchor=north, font=\sffamily\bfseries\Large, text=bkTheme] at (\i*20+8,-9.5) {\b};}
+  \node[anchor=west, font=\sffamily\small, text=bkInk, align=left] at (101,11) {\R{見}{み}えている\R{点}{てん}は\\$8+4+1=13$};
+\end{tikzpicture}
+\bkfigcaption{\R{表}{おもて}を1、\R{裏}{うら}を0と\R{書}{か}くと、13は「01101」になる。}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \R{表}{おもて}と\R{裏}{うら}をいろいろ\R{変}{か}えて、\R{見}{み}えている\R{点}{てん}の\R{数}{かず}を\R{数}{かぞ}えよう。
+\item 6を\R{作}{つく}るには、どのカードを\R{表}{おもて}にすればよいかな？　20では？
+\item 0から31まで、どの\R{数}{かず}でも\R{作}{つく}れるかな？　\R{作}{つく}り\R{方}{かた}は1\R{通}{とお}りだけかな？
+\end{enumerate}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{1-2}{10あつまったらたばねて、1つ\R{左}{ひだり}の\R{位}{くらい}へ。234は、100が2つ、10が3つ、1が4つ。}
+\bkrecall{2-7}{$2^1=2$、$2^2=4$、$2^3=8$、$2^4=16$。$2^0=1$。\R{指数}{し|すう}が1ふえるごとに2\R{倍}{ばい}。$2^{10}=1024$ はほぼ1000。}
+\bkrecall{2-7}{かけ\R{算}{ざん}は\R{指数}{し|すう}をたす：$2^3\times2^4=2^7$}
+\bkrecall{2-6}{\R{四捨五入}{し|しゃ|ご|にゅう}：\R{求}{もと}める\R{位}{くらい}の1つ\R{下}{した}が0〜4なら\R{切}{き}り\R{捨}{す}て、5〜9なら\R{切}{き}り\R{上}{あ}げ。}
+\end{omoidasou}
+
+\clearpage
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{ふだんの\R{数}{かず}のしくみを\R{見}{み}なおす：10\R{進数}{しん|すう}}
+
+\leavevmode\label{bk:2-17:jushin}ふだん\R{使}{つか}う\R{数}{かず}は、0〜9の10\R{種類}{しゅ|るい}の\R{数字}{すう|じ}で\R{書}{か}きます。9の\R{次}{つぎ}は、\R{数字}{すう|じ}が\R{足}{た}りなくなるので、1つ\R{左}{ひだり}の\R{位}{くらい}に1を\R{立}{た}てて「10」と\R{書}{か}きます。1が10あつまったら、1つ\R{左}{ひだり}の\R{位}{くらい}の1になるのです（1-2）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\p/\d/\c in {0/{\R{百}{ひゃく}の\R{位}{くらい}}/2/bkRed, 1/{\R{十}{じゅう}の\R{位}{くらい}}/3/bkBlue, 2/{\R{一}{いち}の\R{位}{くらい}}/4/bkGreen} {
+    \node[draw=\c, line width=0.9pt, fill=\c!10, minimum width=26mm, minimum height=12mm, font=\sffamily\bfseries\LARGE, text=bkInk] at (\k*32,0) {\d};
+    \node[anchor=south, font=\sffamily\footnotesize, text=bkInk] at (\k*32,7.5) {\p};}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk, align=center] at (0,-8) {100が2つ\\$100\times2=200$};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk, align=center] at (32,-8) {10が3つ\\$10\times3=30$};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk, align=center] at (64,-8) {1が4つ\\$1\times4=4$};
+  \node[anchor=west, font=\sffamily\small, text=bkInk, align=left] at (82,0) {$200+30+4$\\$=234$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3.5pt]}] (26,-23) -- (6,-23);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray] at (16,-24.5) {10\R{倍}{ばい}};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3.5pt]}] (58,-23) -- (38,-23);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray] at (48,-24.5) {10\R{倍}{ばい}};
+\end{tikzpicture}
+\bkfigcaption{234のしくみ。\R{位}{くらい}の\R{大}{おお}きさは、1つ\R{左}{ひだり}へ\R{進}{すす}むごとに10\R{倍}{ばい}（1・10・100）。}
+\end{bkfigure}
+
+1が10こで10、10が10こで $10\times10=100$、100が10こで1000です。だから\R{位}{くらい}の\R{大}{おお}きさは、\R{右}{みぎ}から1・10・100・1000…と、1つ\R{左}{ひだり}へ\R{進}{すす}むごとに10\R{倍}{ばい}になります。2-7の\R{書}{か}き\R{方}{かた}では、$10^0$・$10^1$・$10^2$・$10^3$…です。
+
+このように、10あつまるごとに1つ\R{左}{ひだり}の\R{位}{くらい}へ\R{上}{あ}がる\R{書}{か}き\R{方}{かた}を\textbf{10\R{進数}{しん|すう}}といいます。「10\R{進}{しん}」は「10で\R{次}{つぎ}の\R{位}{くらい}へ\R{進}{すす}む」という\R{意味}{い|み}です。
+
+\bksubsection{2}{2あつまったら、1つ\R{左}{ひだり}の\R{位}{くらい}へ}
+
+\leavevmode\label{bk:2-17:nishin}ランプには「\R{消}{き}える」と「つく」の2\R{種類}{しゅ|るい}しかありません。\R{数字}{すう|じ}にすると、0と1の2つだけです。そこで、\R{消}{き}えるを0、つくを1として、\textbf{2あつまったら1つ\R{左}{ひだり}の\R{位}{くらい}へ\R{上}{あ}がる}ことにします。
+
+10\R{進数}{しん|すう}で9の\R{次}{つぎ}が「10」になったのと\R{同}{おな}じです。0と1しか\R{使}{つか}えないので、1の\R{次}{つぎ}で\R{数字}{すう|じ}が\R{足}{た}りなくなり、1つ\R{左}{ひだり}の\R{位}{くらい}に1を\R{立}{た}てて「10」と\R{書}{か}きます。0から\R{順}{じゅん}に\R{数}{かぞ}えてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \bx in {0,66} {
+    \begin{scope}[shift={(\bx,0)}]
+    \node[font=\sffamily\bfseries\footnotesize, text=bkInk] at (6,5.5) {10\R{進数}{しん|すう}};
+    \foreach \k/\v in {0/8,1/4,2/2,3/1} \node[font=\sffamily\footnotesize, text=bkGray] at (19+\k*6,5.5) {\v};
+    \node[font=\sffamily\bfseries\footnotesize, text=bkInk] at (50,5.5) {2\R{進数}{しん|すう}};
+    \draw[bkLine, line width=0.6pt] (-1,1.8) -- (60,1.8);
+    \end{scope}}
+  \foreach \n/\s in {0/0,1/1,2/10,3/11,4/100,5/101,6/110,7/111,8/1000,9/1001,10/1010,11/1011,12/1100,13/1101,14/1110,15/1111} {
+    \pgfmathtruncatemacro\col{\n>7 ? 1 : 0}
+    \pgfmathtruncatemacro\row{mod(\n,8)}
+    \pgfmathsetmacro\yy{-2.6-\row*6}
+    \pgfmathsetmacro\xx{\col*66}
+    \pgfmathtruncatemacro\top{(\n==2 || \n==4 || \n==8) ? 1 : 0}
+    \begin{scope}[shift={(\xx,\yy)}]
+      \ifnum\top=1 \fill[bkTheme!14, rounded corners=1mm] (-1,-2.8) rectangle (60,2.8); \fi
+      \node[anchor=east, font=\sffamily\small, text=bkInk] at (10,0) {\n};
+      \foreach \k/\w in {0/8,1/4,2/2,3/1} {
+        \pgfmathtruncatemacro\bit{mod(floor(\n/\w),2)}
+        {\bkiirlamp{(19+\k*6,0)}{\bit}{1.9}}}
+      \node[anchor=east, font=\ttfamily\small, text=bkInk] at (57,0) {\s};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{ランプで0から15まで\R{数}{かぞ}える。\R{色}{いろ}のついた\R{行}{ぎょう}で、1つ\R{左}{ひだり}の\R{位}{くらい}に\R{上}{あ}がる。}
+\end{bkfigure}
+
+\textbf{くり\R{上}{あ}がりのようす}\quad 3（$11_{(2)}$）に1をたすと、\R{右}{みぎ}の\R{位}{くらい}は $1+1=2$ になりますが、2という\R{数字}{すう|じ}はありません。2あつまったので0にして、1つ\R{左}{ひだり}へくり\R{上}{あ}げます。すると\R{左}{ひだり}の\R{位}{くらい}も $1+1=2$ になるので、また0にしてくり\R{上}{あ}げます。こうして $100_{(2)}$ になります。10\R{進数}{しん|すう}の $99+1=100$ と\R{同}{おな}じ\R{動}{うご}きです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] Q[c,m,wd=34mm] Q[l,m,wd=60mm]}, rowsep=1pt, colsep=3pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+ & \R{計算}{けい|さん} & \R{起}{お}きていること \\
+10\R{進数}{しん|すう} & $999+1=1000$ & どの\R{位}{くらい}も「9＋1＝10」で0になり、くり\R{上}{あ}がる \\
+2\R{進数}{しん|すう} & $111_{(2)}+1=1000_{(2)}$ & どの\R{位}{くらい}も「1＋1＝2」で0になり、くり\R{上}{あ}がる \\
+\end{bktable}
+\bktabcaption{10\R{進数}{しん|すう}は10で、2\R{進数}{しん|すう}は2で、くり\R{上}{あ}がる。}
+\end{bkcenter}
+
+\textbf{\R{位}{くらい}の\R{大}{おお}きさは、なぜ1・2・4・8？}\quad \R{新}{あたら}しい\R{位}{くらい}に1が\R{立}{た}つのは、2・4・8のときでした（\R{表}{ひょう}の\R{色}{いろ}のついた\R{行}{ぎょう}）。\R{正方形}{せい|ほう|けい}のブロックで\R{確}{たし}かめましょう。1のブロックが2つで「2のまとまり」、2のまとまりが2つで「4のまとまり」、4のまとまりが2つで「8のまとまり」になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiirsq{(0,0)}{1}{1}{bkGreen}
+  \node[anchor=north, font=\sffamily\footnotesize] at (1.8,-1.8) {1};
+  \draw[bk arrow, bkGray] (6,1.8) -- (13,1.8);
+  \node[anchor=south, font=\sffamily\scriptsize, text=bkGray] at (9.5,3.2) {2つで};
+  \bkiirsq{(15,0)}{2}{1}{bkBlue}
+  \node[anchor=north, font=\sffamily\footnotesize] at (18.6,-1.8) {2};
+  \draw[bk arrow, bkGray] (25.5,1.8) -- (32.5,1.8);
+  \node[anchor=south, font=\sffamily\scriptsize, text=bkGray] at (29,3.2) {2つで};
+  \bkiirsq{(34.5,0)}{2}{2}{bkOrange}
+  \node[anchor=north, font=\sffamily\footnotesize] at (38.1,-1.8) {4};
+  \draw[bk arrow, bkGray] (45,3.6) -- (52,3.6);
+  \node[anchor=south, font=\sffamily\scriptsize, text=bkGray] at (48.5,5) {2つで};
+  \bkiirsq{(54,0)}{4}{2}{bkRed}
+  \node[anchor=north, font=\sffamily\footnotesize] at (61.2,-1.8) {8};
+  \draw[bk arrow, bkGray] (72,3.6) -- (79,3.6);
+  \node[anchor=south, font=\sffamily\scriptsize, text=bkGray] at (75.5,5) {2つで};
+  \bkiirsq{(81,0)}{4}{4}{bkPurple}
+  \node[anchor=north, font=\sffamily\footnotesize] at (88.2,-1.8) {16};
+\end{tikzpicture}
+\bkfigcaption{2つずつまとめていくと、まとまりの\R{大}{おお}きさは1・2・4・8・16…と2\R{倍}{ばい}ずつになる。}
+\end{bkfigure}
+
+だから2\R{進数}{しん|すう}の\R{位}{くらい}の\R{大}{おお}きさは、\R{右}{みぎ}から\textbf{1・2・4・8・16…}。1つ\R{左}{ひだり}へ\R{進}{すす}むごとに2\R{倍}{ばい}で、$2^0$、$2^1$、$2^2$、$2^3$、$2^4$…です（2-7）。10\R{進数}{しん|すう}の「10\R{倍}{ばい}ずつ」が、「2\R{倍}{ばい}ずつ」に\R{変}{か}わっただけです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{8}{Q[c,m,wd=10.5mm]}}, rowsep=1pt, colsep=2pt, cells={font=\sffamily\small}}
+\R{右}{みぎ}から\R{何番目}{なん|ばん|め} & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 \\
+\R{位}{くらい}の\R{大}{おお}きさ & 128 & 64 & 32 & 16 & 8 & 4 & 2 & 1 \\
+2の\R{累乗}{るい|じょう} & $2^7$ & $2^6$ & $2^5$ & $2^4$ & $2^3$ & $2^2$ & $2^1$ & $2^0$ \\
+\end{bktable}
+\bktabcaption{2\R{進数}{しん|すう}の\R{位}{くらい}の\R{大}{おお}きさ。\R{左}{ひだり}へ1つ\R{進}{すす}むごとに2\R{倍}{ばい}。}
+\end{bkcenter}
+
+このように、2あつまるごとに1つ\R{左}{ひだり}の\R{位}{くらい}へ\R{上}{あ}がる\R{書}{か}き\R{方}{かた}を\textbf{2\R{進数}{しん|すう}}といいます。\bkidx{にしんすう}{2\R{進数}{しん|すう}}$1011_{(2)}$ のように\R{右下}{みぎ|した}に (2) をつけて、10\R{進数}{しん|すう}と\R{区別}{く|べつ}します。\R{読}{よ}むときは「いち・ぜろ・いち・いち」と、1けたずつ\R{読}{よ}みます。
+
+2\R{進数}{しん|すう}の $10_{(2)}$ は「じゅう」ではありません。「2が1つ、1が0こ」で、2のことです。
+
+\bkhatenaref の\R{答}{こた}え：4つのランプは、0000から1111までの\textbf{16\R{通}{とお}り}（0〜15）を\R{表}{あらわ}せます。\bkhatenaref のランプは「つく・\R{消}{き}える・つく・つく」で $1011_{(2)}$ なので、$8+2+1=11$ を\R{表}{あらわ}しています。
+
+\bksubsection{3}{2\R{進数}{しん|すう}と10\R{進数}{しん|すう}を\R{行}{い}き\R{来}{き}する}
+
+\leavevmode\label{bk:2-17:henkan}\noindent\begin{minipage}[t]{0.44\linewidth}
+\textbf{2\R{進数}{しん|すう}→10\R{進数}{しん|すう}}\par
+1が\R{立}{た}っている\R{位}{くらい}の\R{大}{おお}きさを、たします。234を $200+30+4$ と\R{考}{かんが}えたのと\R{同}{おな}じです。
+
+\vspace{3pt}\centering
+\begin{bktable}{colspec={Q[c,m,wd=13mm] Q[c,m,wd=19mm] Q[c,m,wd=17mm]}, rowsep=1.2pt, colsep=2pt, cells={font=\sffamily\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+\R{位}{くらい} & $1011_{(2)}$ & \R{位}{くらい}×\R{数字}{すう|じ} \\
+8 & 1 & 8 \\
+4 & 0 & 0 \\
+2 & 1 & 2 \\
+1 & 1 & 1 \\
+\end{bktable}
+\par\vspace{3pt}
+$8+0+2+1=11$
+\end{minipage}\hfill
+\begin{minipage}[t]{0.5\linewidth}
+\textbf{10\R{進数}{しん|すう}→2\R{進数}{しん|すう}}\par
+\R{大}{おお}きい\R{位}{くらい}から\R{順}{じゅん}に、\R{使}{つか}えたらひきます（やってみようのカードを、\R{大}{おお}きい\R{順}{じゅん}に\R{表}{おもて}にするか\R{決}{き}めていくのと\R{同}{おな}じ）。
+
+\vspace{3pt}\centering
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=34mm] Q[c,m,wd=11mm]}, rowsep=1.2pt, colsep=2pt, cells={font=\sffamily\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+\R{位}{くらい} & 13の\R{残}{のこ}りから\R{使}{つか}える？ & \R{数字}{すう|じ} \\
+8 & \R{使}{つか}う：$13-8=5$ & 1 \\
+4 & \R{使}{つか}う：$5-4=1$ & 1 \\
+2 & \R{使}{つか}わない（2は\R{残}{のこ}りの1より\R{大}{おお}きい） & 0 \\
+1 & \R{使}{つか}う：$1-1=0$ & 1 \\
+\end{bktable}
+\par\vspace{3pt}
+\R{上}{うえ}から\R{読}{よ}んで $13=1101_{(2)}$
+\end{minipage}
+
+\par\addvspace{6pt}
+\textbf{なぜ\R{大}{おお}きい\R{位}{くらい}から？}\quad 16より\R{小}{ちい}さい\R{数}{かず}なら、8・4・2・1を1つずつ\R{使}{つか}えば、どれでも\R{作}{つく}れます（$8+4+2+1=15$ まで）。だから、\R{使}{つか}える\R{中}{なか}でいちばん\R{大}{おお}きい8を\R{先}{さき}に\R{使}{つか}っておけば、\R{残}{のこ}りは\R{必}{かなら}ず\R{小}{ちい}さい\R{位}{くらい}で\R{作}{つく}れます。もし\R{大}{おお}きい8を\R{使}{つか}わずに\R{残}{のこ}すと、4・2・1を\R{全部}{ぜん|ぶ}\R{使}{つか}っても7にしかならず、13には\R{届}{とど}きません。2\R{進数}{しん|すう}では、どの\R{位}{くらい}も「\R{使}{つか}う（1）」か「\R{使}{つか}わない（0）」かのどちらかで、2\R{回}{かい}\R{使}{つか}うことはありません。
+
+\R{残}{のこ}りが0になれば、できあがりです。\R{確}{たし}かめは、\R{左}{ひだり}の\R{方法}{ほう|ほう}で10\R{進数}{しん|すう}にもどします。$1101_{(2)}$ は $8+4+0+1=13$ で、もとの13にもどりました。
+
+\bkyattemiyouref の\R{答}{こた}え：6は\R{点}{てん}4こと2このカード（$4+2$）、20は16こと4このカード（$16+4$）を\R{表}{おもて}にします。0から31まで、どの\R{数}{かず}もちょうど1\R{通}{とお}りで\R{作}{つく}れます（31は\R{全部}{ぜん|ぶ}\R{表}{おもて}で $16+8+4+2+1=31$）。
+
+\begin{motto}[2]
+\textbf{2でわっていく\R{方法}{ほう|ほう}}\par
+10\R{進数}{しん|すう}を2\R{進数}{しん|すう}にするには、2でわってあまりを\R{書}{か}く\R{方法}{ほう|ほう}もあります。13なら、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=16mm] Q[l,m,wd=50mm]}, rowsep=0.5pt, colsep=3pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+わり\R{算}{ざん} & あまり & \R{意味}{い|み} \\
+$13\div2=6$ あまり1 & 1 & 1の\R{位}{くらい}は1（13は\R{奇数}{き|すう}） \\
+$6\div2=3$ あまり0 & 0 & 2の\R{位}{くらい}は0 \\
+$3\div2=1$ あまり1 & 1 & 4の\R{位}{くらい}は1 \\
+$1\div2=0$ あまり1 & 1 & 8の\R{位}{くらい}は1 \\
+\end{bktable}
+\end{bkcenter}
+あまりを\R{下}{した}から\R{上}{うえ}へ\R{読}{よ}むと $1101_{(2)}$ です。\R{最初}{さい|しょ}のあまりが1の\R{位}{くらい}になるのは、2・4・8…の\R{位}{くらい}がどれも2でわり\R{切}{き}れるので、2でわったあまりは1の\R{位}{くらい}からしか\R{出}{で}ないからです。\R{商}{しょう}の6は「2のまとまりが6こ」という\R{意味}{い|み}で、それをまた2つずつまとめると4のまとまりの\R{数}{かず}がわかります。
+\end{motto}
+
+\bksubsection{4}{ビットの\R{数}{かず}と、\R{何}{なん}\R{通}{とお}り}
+
+\leavevmode\label{bk:2-17:bit}2\R{進数}{しん|すう}の1けた（0か1か）を\textbf{ビット}といいます。\bkidx{びっと}{ビット}ランプ1つが1ビットです。ランプを1つふやすと、\R{何}{なん}\R{通}{とお}りになるかな？
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm,
+  bx/.style={draw=#1, line width=0.7pt, fill=white, rounded corners=1mm, minimum width=12mm, minimum height=5mm, inner sep=0pt, font=\ttfamily\small}]
+  \node[font=\sffamily\bfseries\small] at (8,5) {1ビット};
+  \node[font=\sffamily\bfseries\small] at (36,5) {2ビット};
+  \node[font=\sffamily\bfseries\small] at (75,5) {3ビット};
+  \foreach \t [count=\k] in {0,1} \node[bx=bkGray] at (8,-\k*6+2) {\t};
+  \foreach \t [count=\k] in {00,01} \node[bx=bkBlue] at (36,-\k*6+2) {\t};
+  \foreach \t [count=\k] in {10,11} \node[bx=bkOrange] at (36,-\k*6-10) {\t};
+  \foreach \t [count=\k] in {000,001,010,011} \node[bx=bkBlue] at (67,-\k*6+2) {\t};
+  \foreach \t [count=\k] in {100,101,110,111} \node[bx=bkOrange] at (83,-\k*6+2) {\t};
+  \node[font=\sffamily\bfseries\small, text=bkTheme] at (8,-30) {2\R{通}{とお}り};
+  \node[font=\sffamily\bfseries\small, text=bkTheme] at (36,-30) {4\R{通}{とお}り};
+  \node[font=\sffamily\bfseries\small, text=bkTheme] at (75,-30) {8\R{通}{とお}り};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue, align=left] at (95,-4) {\R{左}{ひだり}に0を\\つけたもの};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!85!black, align=left] at (95,-17) {\R{左}{ひだり}に1を\\つけたもの};
+\end{tikzpicture}
+\bkfigcaption{ビットを1つふやすと、\R{前}{まえ}のならびの\R{左}{ひだり}に0か1をつけるので、2\R{倍}{ばい}になる。}
+\end{bkfigure}
+
+なぜ2\R{倍}{ばい}なのでしょう。2ビットの4\R{通}{とお}り（00、01、10、11）の\R{左}{ひだり}に、\R{新}{あたら}しいランプをつけます。\R{新}{あたら}しいランプが0のときに4\R{通}{とお}り、1のときにも4\R{通}{とお}りあるので、$4+4=4\times2=8$\R{通}{とお}りです。ランプを1つふやすたびに、\R{前}{まえ}の\R{通}{とお}りの\R{数}{かず}が「0のとき」と「1のとき」の2\R{組}{くみ}になるので、2\R{倍}{ばい}になります。
+
+だから、ビットの\R{数}{かず}だけ2をかけます。4ビットなら $2\times2\times2\times2=2^4=16$\R{通}{とお}りです（\bkhatenaref の\R{答}{こた}えと\R{同}{おな}じ）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=19mm] *{8}{Q[c,m,wd=8.2mm]} Q[c,m,wd=11mm] Q[c,m,wd=13mm]}, rowsep=1.5pt, colsep=1.6pt, cells={font=\sffamily\small}}
+ビットの\R{数}{かず} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 10 & 16 \\
+\R{何}{なん}\R{通}{とお}り & 2 & 4 & 8 & 16 & 32 & 64 & 128 & 256 & 1024 & 65536 \\
+\end{bktable}
+\bktabcaption{1ビットふえると2\R{倍}{ばい}。$n$ビットで $2^n$\R{通}{とお}り。}
+\end{bkcenter}
+
+8ビットをまとめて\textbf{1バイト}といいます。\bkidx{ばいと}{バイト}1バイトで\R{表}{あらわ}せるのは $2^8=256$\R{通}{とお}りです。0から\R{数}{かぞ}えはじめるので、0から255までの\R{数}{かず}になります（いちばん\R{大}{おお}きい\R{数}{かず}は、\R{通}{とお}りの\R{数}{かず}より1\R{小}{ちい}さい）。
+
+\par\addvspace{6pt}\noindent\begin{minipage}[c]{0.45\linewidth}
+\textbf{\R{細}{こま}かさ}\par
+デジタルのはかりや\R{温度計}{おん|ど|けい}は、はかった\R{量}{りょう}を\R{何}{なん}ビットかの\R{数}{かず}で\R{覚}{おぼ}えます。たとえば\qty{16}{cm}のはばを、\R{表}{あらわ}せる\R{通}{とお}りの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けます。ビットが1つふえると\R{区切}{く|ぎ}りの\R{数}{かず}が2\R{倍}{ばい}になるので、1\R{段階}{だん|かい}の\R{大}{おお}きさは\R{半分}{はん|ぶん}になります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \r/\n/\bits/\st in {0/4/2/4, 1/8/3/2, 2/16/4/1} {
+    \begin{scope}[shift={(0,-\r*10.5)}]
+    \node[anchor=south west, font=\sffamily\footnotesize, text=bkInk, inner sep=0pt] at (0,5.4) {\bits ビット（\n\R{段階}{だん|かい}）　1\R{段階}{だん|かい} \qty{\st}{cm}};
+    \fill[bkTheme!14] (0,0) rectangle (64,3.6);
+    \draw[bkInk, line width=0.6pt] (0,0) rectangle (64,3.6);
+    \pgfmathsetmacro\stepmm{64/\n}
+    \foreach \k in {1,...,\n} \draw[bkInk, line width=0.5pt] ({\k*\stepmm},0) -- ({\k*\stepmm},3.6);
+    \end{scope}}
+\end{tikzpicture}
+\end{minipage}
+
+\par\addvspace{4pt}
+1\R{段階}{だん|かい}の\R{大}{おお}きさは、「はば÷\R{段階}{だん|かい}の\R{数}{かず}」です。\qty{16}{cm}を4つに\R{分}{わ}ければ $16\div4=4$ で\qty{4}{cm}、16に\R{分}{わ}ければ $16\div16=1$ で\qty{1}{cm}です。\R{計器}{けい|き}が\R{見分}{み|わ}けられるいちばん\R{小}{ちい}さいちがい（1\R{段階}{だん|かい}の\R{大}{おお}きさ）を\textbf{\R{分解能}{ぶん|かい|のう}}といいます。\bkidx{ぶんかいのう}{\R{分解能}{ぶん|かい|のう}}8ビット（256\R{段階}{だん|かい}）なら、
+\[ \qty{16}{cm}\div256=\qty{0.0625}{cm} \]
+で、\qty{0.0625}{cm}（\R{約}{やく}\qty{0.6}{mm}）のちがいまで\R{見分}{み|わ}けられます。ビットをふやすほど\R{細}{こま}かくはかれますが、\R{覚}{おぼ}える\R{数}{かず}のけたは\R{長}{なが}くなります。
+
+\bksubsection{5}{4けたずつまとめる：16\R{進数}{しん|すう}}
+
+\leavevmode\label{bk:2-17:juroku}2\R{進数}{しん|すう}は、けたがすぐ\R{長}{なが}くなります。255は $11111111_{(2)}$ で8けたもあり、\R{人}{ひと}が\R{読}{よ}み\R{書}{か}きすると\R{見}{み}まちがえやすくなります。そこで、\R{右}{みぎ}から4けたずつ\R{区切}{く|ぎ}って、4けたを1\R{文字}{も|じ}で\R{書}{か}くことにします。
+
+\textbf{なぜ4けたずつ？}\quad 2\R{進数}{しん|すう}の4けたは、ビットの\R{表}{ひょう}より $2^4=16$\R{通}{とお}り（0000〜1111、つまり0〜15）です。だから、16\R{種類}{しゅ|るい}の\R{文字}{も|じ}を\R{用意}{よう|い}すれば、4けたをちょうど1\R{文字}{も|じ}で\R{表}{あらわ}せます。0〜9のほかに、10〜15を1\R{文字}{も|じ}で\R{書}{か}く\R{数字}{すう|じ}はないので、アルファベットのA〜Fを\R{使}{つか}います（Aが10、Bが11、…、Fが15）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=16mm] *{8}{Q[c,m,wd=10.5mm]}}, rowsep=0.8pt, colsep=2pt, cells={font=\sffamily\footnotesize},
+  row{1,4}={bg=white}, column{1}={font=\sffamily\bfseries\footnotesize}, row{3,6}={fg=bkTheme!80!black, font=\sffamily\bfseries\small}, hline{4}={1pt,bkTheme}}
+10\R{進数}{しん|すう} & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+2\R{進数}{しん|すう} & 0000 & 0001 & 0010 & 0011 & 0100 & 0101 & 0110 & 0111 \\
+16\R{進数}{しん|すう} & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+10\R{進数}{しん|すう} & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\
+2\R{進数}{しん|すう} & 1000 & 1001 & 1010 & 1011 & 1100 & 1101 & 1110 & 1111 \\
+16\R{進数}{しん|すう} & 8 & 9 & A & B & C & D & E & F \\
+\end{bktable}
+\bktabcaption{2\R{進数}{しん|すう}4けたが、16\R{進数}{しん|すう}の1けたになる。}
+\end{bkcenter}
+
+16あつまるごとに1つ\R{左}{ひだり}の\R{位}{くらい}へ\R{上}{あ}がる\R{書}{か}き\R{方}{かた}を\textbf{16\R{進数}{しん|すう}}といいます。\bkidx{じゅうろくしんすう}{16\R{進数}{しん|すう}}Fの\R{次}{つぎ}（15の\R{次}{つぎ}）は、1つ\R{左}{ひだり}の\R{位}{くらい}に1が\R{立}{た}って「10」になります。だから\R{位}{くらい}の\R{大}{おお}きさは、\R{右}{みぎ}から1・16・$16\times16=256$…です。
+
+\textbf{なぜ\R{右}{みぎ}から\R{区切}{く|ぎ}るの？}\quad 1の\R{位}{くらい}は\R{右}{みぎ}のはしにあるからです。\R{右}{みぎ}の4けた（1・2・4・8の\R{位}{くらい}）が16\R{進数}{しん|すう}の1の\R{位}{くらい}に、その\R{左}{ひだり}の4けた（16・32・64・128の\R{位}{くらい}）が16の\R{位}{くらい}になります。\R{左}{ひだり}のはしが4けたにならないときは、\R{左}{ひだり}に0をつけてそろえます（$101101_{(2)}$ は $0010\,|\,1101$）。
+
+255を16\R{進数}{しん|すう}にしてみましょう。
+\[ 11111111_{(2)}\ \to\ \underbrace{1111}_{\mathrm{F}}\ \underbrace{1111}_{\mathrm{F}}\ \to\ \mathrm{FF}_{(16)} \]
+\R{確}{たし}かめに10\R{進数}{しん|すう}へもどします。16の\R{位}{くらい}がF（15）、1の\R{位}{くらい}がF（15）なので、
+\[ \mathrm{FF}_{(16)}=16\times15+1\times15=240+15=255 \]
+8けたの2\R{進数}{しん|すう}が、たった2けたで\R{書}{か}けました。1バイト（8ビット）は、16\R{進数}{しん|すう}でちょうど2けたです。
+
+\clearpage
+\bksubsection{6}{\R{色}{いろ}の\R{番号}{ばん|ごう}と、\R{組}{く}み\R{合}{あ}わせの\R{数}{かず}}
+
+\leavevmode\label{bk:2-17:iro}\noindent\begin{minipage}[c]{0.53\linewidth}
+スマホの\R{画面}{が|めん}を\R{虫}{むし}めがねで\R{見}{み}ると、\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{小}{ちい}さな\R{光}{ひかり}がならんでいます。この3\R{色}{しょく}の\R{明}{あか}るさを\R{変}{か}えて\R{混}{ま}ぜると、いろいろな\R{色}{いろ}に\R{見}{み}えます。それぞれの\R{明}{あか}るさを1バイト（0〜255）で\R{決}{き}めます。1バイトは16\R{進数}{しん|すう}で2けたなので、\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{順}{じゅん}に2けたずつならべて、\R{色}{いろ}を\#FF8000のように6けたで\R{書}{か}きます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}\centering
+\definecolor{bkiirmix}{RGB}{255,128,0}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \r/\c/\nm/\h/\v/\len in {0/bkRed/{\R{赤}{あか}}/FF/255/30, 1/bkGreen/{\R{緑}{みどり}}/80/128/15.06, 2/bkBlue/{\R{青}{あお}}/00/0/0} {
+    \begin{scope}[shift={(0,-\r*7.5)}]
+    \node[anchor=east, font=\sffamily\small, text=bkInk] at (-1.5,0) {\nm};
+    \draw[bkLine, line width=0.5pt] (0,-2.2) rectangle (30,2.2);
+    \ifdim\len pt>0pt \fill[\c] (0,-2.2) rectangle (\len,2.2); \fi
+    \node[anchor=west, font=\sffamily\small, text=bkInk] at (32,0) {\texttt{\h}→\v};
+    \end{scope}}
+  \fill[bkiirmix, rounded corners=1.5mm] (0,-26) rectangle (30,-19);
+  \node[anchor=west, font=\sffamily\small, text=bkInk] at (32,-22.5) {\texttt{\#FF8000}};
+\end{tikzpicture}
+\end{minipage}
+
+\par\addvspace{6pt}
+\#FF8000を\R{読}{よ}んでみましょう。\R{前}{まえ}から2けたずつ\R{区切}{く|ぎ}ると、FF・80・00です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \R{赤}{あか}：$\mathrm{FF}_{(16)}=16\times15+15=255$（いちばん\R{明}{あか}るい）
+\item \R{緑}{みどり}：$80_{(16)}=16\times8+0=128$（\R{半分}{はん|ぶん}くらいの\R{明}{あか}るさ）
+\item \R{青}{あお}：$00_{(16)}=0$（\R{光}{ひか}らない）
+\end{itemize}
+\R{赤}{あか}がいっぱいで\R{緑}{みどり}が\R{半分}{はん|ぶん}なので、だいだい\R{色}{いろ}に\R{見}{み}えます。
+
+\textbf{\R{全部}{ぜん|ぶ}で\R{何色}{なん|しょく}？}\quad \R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}がそれぞれ256\R{通}{とお}りのとき、\R{色}{いろ}は\R{全部}{ぜん|ぶ}で\R{何}{なん}\R{通}{とお}りでしょう。\R{数}{かず}が\R{大}{おお}きいので、まず\R{赤}{あか}と\R{緑}{みどり}だけで、それぞれ「\R{消}{き}える・\R{光}{ひか}る」の2\R{通}{とお}りのときを\R{考}{かんが}えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\footnotesize, text=bkInk] at (24,28) {\R{緑}{みどり}};
+  \node[font=\sffamily\footnotesize, text=bkInk] at (14,21) {\R{消}{き}える};
+  \node[font=\sffamily\footnotesize, text=bkInk] at (34,21) {\R{光}{ひか}る};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (-11,8.5) {\R{赤}{あか}};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (2,13) {\R{消}{き}える};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (2,4) {\R{光}{ひか}る};
+  \fill[black] (6,9.5) rectangle (22,16.5);
+  \fill[green!80!black] (26,9.5) rectangle (42,16.5);
+  \fill[red!85!black] (6,0.5) rectangle (22,7.5);
+  \fill[yellow!90!orange] (26,0.5) rectangle (42,7.5);
+  \foreach \x/\y/\t/\c in {14/13/{\R{黒}{くろ}}/white, 34/13/{\R{緑}{みどり}}/white, 14/4/{\R{赤}{あか}}/white, 34/4/{\R{黄}{き}}/bkInk}
+    \node[font=\sffamily\footnotesize, text=\c] at (\x,\y) {\t};
+  \node[anchor=west, font=\sffamily\small, text=bkInk, align=left] at (50,8.5) {\R{赤}{あか}の2\R{通}{とお}りそれぞれに、\\\R{緑}{みどり}の2\R{通}{とお}りがある。\\$2\times2=4$\R{通}{とお}り};
+\end{tikzpicture}
+\bkfigcaption{\R{赤}{あか}2\R{通}{とお}り×\R{緑}{みどり}2\R{通}{とお}り。\R{表}{ひょう}のますの\R{数}{かず}が、\R{組}{く}み\R{合}{あ}わせの\R{数}{かず}。}
+\end{bkfigure}
+
+\R{赤}{あか}の1\R{通}{とお}りごとに、\R{緑}{みどり}の\R{通}{とお}りが\R{全部}{ぜん|ぶ}ある（\R{表}{ひょう}の1\R{行}{ぎょう}ごとに\R{列}{れつ}が\R{全部}{ぜん|ぶ}ある）ので、\R{組}{く}み\R{合}{あ}わせの\R{数}{かず}はかけ\R{算}{ざん}になります。ビットの\R{数}{かず}で2\R{倍}{ばい}ずつふえたのも、\R{同}{おな}じ\R{理由}{り|ゆう}です。\R{青}{あお}もあれば、さらにかけます。それぞれ256\R{通}{とお}りなら、
+\[ 256\times256\times256=2^8\times2^8\times2^8=2^{24}=16777216 \]
+で、\R{約}{やく}1678\R{万}{まん}\R{通}{とお}りの\R{色}{いろ}を\R{表}{あらわ}せます（$2^8\times2^8\times2^8$ は\R{指数}{し|すう}をたして $2^{8+8+8}$、2-7）。1つの\R{点}{てん}の\R{色}{いろ}に、$8\times3=24$ ビットを\R{使}{つか}っています。
+
+\begin{taisetsu}
+2\R{進数}{しん|すう}：2あつまったら1つ\R{左}{ひだり}の\R{位}{くらい}へ。\R{位}{くらい}は\R{右}{みぎ}から1・2・4・8・16…（2\R{倍}{ばい}ずつ）\\
+ビットが1つふえると2\R{倍}{ばい}。$n$ ビットで $2^n$ \R{通}{とお}り。8ビット（1バイト）で256\R{通}{とお}り（0〜255）\\
+2\R{進数}{しん|すう}4けたが、16\R{進数}{しん|すう}1けた（0〜9、A〜F）。\R{組}{く}み\R{合}{あ}わせの\R{数}{かず}はかけ\R{算}{ざん}
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{10\R{進数}{しん|すう}・2\R{進数}{しん|すう}・16\R{進数}{しん|すう}}{10・2・16あつまったら、1つ\R{左}{ひだり}の\R{位}{くらい}へ\R{上}{あ}がる\R{書}{か}き\R{方}{かた}。}
+\bkword{ビット・バイト}{2\R{進数}{しん|すう}の1けたが1ビット。8ビットをまとめて1バイト。}
+\bkword{\R{分解能}{ぶん|かい|のう}}{\R{計器}{けい|き}が\R{見分}{み|わ}けられる、いちばん\R{小}{ちい}さいちがい。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$10_{(2)}$}{いち・ぜろ}{2\R{進数}{しん|すう}で\R{書}{か}いた\R{数}{かず}。$10_{(2)}$ は2のこと。}{binary number}{2-17}}
+{\bkkigocard{$\mathrm{FF}_{(16)}$}{エフ・エフ}{16\R{進数}{しん|すう}で\R{書}{か}いた\R{数}{かず}。$\mathrm{FF}_{(16)}$ は255のこと。}{hexadecimal number}{2-17}}
+
+\clearpage
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[2\R{進数}{しん|すう}を10\R{進数}{しん|すう}に]
+$11010_{(2)}$ を10\R{進数}{しん|すう}になおしましょう。\par
+\kangaekata 5けたなので、\R{位}{くらい}は\R{右}{みぎ}から1・2・4・8・16。\R{位}{くらい}の\R{大}{おお}きさと\R{数字}{すう|じ}をかけて、たします。\par
+\shiki \begin{tblr}{colspec={Q[l,m] *{5}{Q[c,m,wd=7mm]}}, rowsep=0pt, colsep=1.5pt, hlines={0.4pt,bkLine}, vlines={0.4pt,bkLine}, cells={font=\sffamily\small}}
+\R{位}{くらい} & 16 & 8 & 4 & 2 & 1 \\
+\R{数字}{すう|じ} & 1 & 1 & 0 & 1 & 0 \\
+\end{tblr}\par
+\hspace*{2.6\zw}$16\times1+8\times1+4\times0+2\times1+1\times0=16+8+2=26$\par
+\kotae 26
+\end{reidai}
+
+\begin{jibun}
+$100110_{(2)}$ を10\R{進数}{しん|すう}になおしましょう。6けたなので、いちばん\R{左}{ひだり}の\R{位}{くらい}は32です。
+\bkjans{$32+4+2=38$。38}
+\end{jibun}
+
+\bkfukidashi{sora}{2\R{進数}{しん|すう}→10\R{進数}{しん|すう}は、\R{位}{くらい}の\R{大}{おお}きさを\R{表}{ひょう}に\R{書}{か}いて、1が\R{立}{た}っている\R{位}{くらい}だけたせばいいんだね。0の\R{位}{くらい}はたさなくていいよ。}
+
+\begin{reidai}[10\R{進数}{しん|すう}を2\R{進数}{しん|すう}に]
+45を2\R{進数}{しん|すう}になおしましょう。\par
+\kangaekata 1・2・4・8・16・32・64…のうち、45より\R{小}{ちい}さくていちばん\R{大}{おお}きいのは32（64は45より\R{大}{おお}きい）。32の\R{位}{くらい}から\R{順}{じゅん}に、\R{使}{つか}えたらひきます。\par
+\shiki 32を\R{使}{つか}う：$45-32=13$。16は\R{使}{つか}わない（$16>13$）。8を\R{使}{つか}う：$13-8=5$\par
+\hspace*{2.6\zw}4を\R{使}{つか}う：$5-4=1$。2は\R{使}{つか}わない（$2>1$）。1を\R{使}{つか}う：$1-1=0$\par
+\hspace*{2.6\zw}\begin{tblr}{colspec={Q[l,m] *{6}{Q[c,m,wd=6.5mm]}}, rowsep=0pt, colsep=1.5pt, hlines={0.4pt,bkLine}, vlines={0.4pt,bkLine}, cells={font=\sffamily\small}}
+\R{位}{くらい} & 32 & 16 & 8 & 4 & 2 & 1 \\
+\R{数字}{すう|じ} & 1 & 0 & 1 & 1 & 0 & 1 \\
+\end{tblr}\par
+\kotae $101101_{(2)}$\quad（\R{確}{たし}かめ：$32+8+4+1=45$）
+\end{reidai}
+
+\begin{jibun}
+27を2\R{進数}{しん|すう}になおしましょう。
+\bkjans{$27-16=11$、$11-8=3$、4は\R{使}{つか}わない、$3-2=1$、$1-1=0$。$11011_{(2)}$}
+\end{jibun}
+
+\begin{column}{\R{片手}{かた|て}で31まで\R{数}{かぞ}えられる}
+\R{指}{ゆび}1\R{本}{ぽん}を1ビットと\R{考}{かんが}えます。\R{右手}{みぎ|て}の\R{親指}{おや|ゆび}を1、\R{人差}{ひと|さ}し\R{指}{ゆび}を2、\R{中指}{なか|ゆび}を4、\R{薬指}{くすり|ゆび}を8、\R{小指}{こ|ゆび}を16の\R{位}{くらい}にして、\R{立}{た}てた\R{指}{ゆび}を1、\R{曲}{ま}げた\R{指}{ゆび}を0とします。\R{全部}{ぜん|ぶ}\R{立}{た}てると $16+8+4+2+1=31$。\R{片手}{かた|て}5\R{本}{ほん}で $2^5=32$\R{通}{とお}り、0から31まで\R{数}{かぞ}えられます。\R{両手}{りょう|て}10\R{本}{ぽん}なら $2^{10}=1024$\R{通}{とお}りで、0から1023までです。\R{友}{とも}だちと、\R{指}{ゆび}で\R{数}{かず}を\R{伝}{つた}え\R{合}{あ}ってみよう。
+\end{column}
+
+\begin{reidai}[ビットの\R{数}{かず}と1\R{段階}{だん|かい}の\R{大}{おお}きさ]
+\qty{0}{\degreeCelsius}から\qty{64}{\degreeCelsius}までのはばを、8ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}す\R{温度計}{おん|ど|けい}があります。（1）\nobreak \R{何}{なん}\R{段階}{だん|かい}ですか。（2）\nobreak 1\R{段階}{だん|かい}は\R{何}{なん}℃ですか。\par
+\kangaekata 1ビットごとに2\R{倍}{ばい}なので、8ビットは2を8\R{回}{かい}かけます。はばを\R{段階}{だん|かい}の\R{数}{かず}だけの\R{小}{ちい}さなはばに\R{等}{ひと}しく\R{区切}{く|ぎ}り、\R{下}{した}から\R{順}{じゅん}に0、1、2、…と\R{数}{かず}を1つずつわりあてます。だから1\R{段階}{だん|かい}の\R{大}{おお}きさは、はば÷\R{段階}{だん|かい}の\R{数}{かず}です。\par
+\shiki （1）\nobreak $2\times2\times2\times2\times2\times2\times2\times2=2^8=256$\par
+\hspace*{2.6\zw}（2）\nobreak はばは $64-0=64$ で\qty{64}{\degreeCelsius}。$64\div256=0.25$\par
+\kotae （1）\nobreak 256\R{段階}{だん|かい}\quad（2）\nobreak \qty{0.25}{\degreeCelsius}\par
+{\small いちばん\R{上}{うえ}の\R{段階}{だん|かい}（\R{数}{かず}は255）は、\qty{63.75}{\degreeCelsius}から\qty{64}{\degreeCelsius}までのはばです。}
+\end{reidai}
+
+\begin{jibun}
+\qty{0}{g}から\qty{512}{g}までのはばを、10ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}す\R{電子}{でん|し}はかりがあります。（1）\nobreak \R{何}{なん}\R{段階}{だん|かい}ですか。（2）\nobreak 1\R{段階}{だん|かい}は\R{何}{なん}gですか。
+\bkjans{（1）\nobreak $2^{10}=1024$\nobreak\R{段階}{だん|かい}\quad（2）\nobreak $512\div1024=0.5$。\qty{0.5}{g}}
+\end{jibun}
+
+\begin{reidai}[わり\R{切}{き}れないときは\R{四捨五入}{し|しゃ|ご|にゅう}]
+\qty{0}{V}から\qty{10}{V}までの\R{電圧}{でん|あつ}を、8ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}します。1\R{段階}{だん|かい}は\R{何}{なん}Vですか。\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}を\R{四捨五入}{し|しゃ|ご|にゅう}して\R{答}{こた}えましょう。\par
+\kangaekata 8ビットは256\R{段階}{だん|かい}。$10\div256$ はわり\R{切}{き}れるまで\R{長}{なが}いので、\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}を\R{見}{み}て\R{四捨五入}{し|しゃ|ご|にゅう}します（2-6）。\par
+\shiki $10\div256=0.0390625$\par
+\hspace*{2.6\zw}\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}は6（0.0390\underline{6}25）。5〜9なので\R{切}{き}り\R{上}{あ}げて0.0391\par
+\kotae \R{約}{やく}\qty{0.0391}{V}
+\end{reidai}
+
+\begin{jibun}
+\qty{0}{V}から\qty{3}{V}までの\R{電圧}{でん|あつ}を、10ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}します。1\R{段階}{だん|かい}は\R{何}{なん}Vですか。\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}を\R{四捨五入}{し|しゃ|ご|にゅう}して\R{答}{こた}えましょう。
+\bkjans{$2^{10}=1024$\nobreak\R{段階}{だん|かい}。$3\div1024=0.0029296\cdots$。\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}は2なので\R{切}{き}り\R{捨}{す}てて、\R{約}{やく}\qty{0.0029}{V}}
+\end{jibun}
+
+\begin{reidai}[16\R{進数}{しん|すう}で\R{書}{か}く]
+$10110100_{(2)}$ を16\R{進数}{しん|すう}で\R{書}{か}き、10\R{進数}{しん|すう}にもなおしましょう。\par
+\kangaekata \R{右}{みぎ}から4けたずつ\R{区切}{く|ぎ}り、4けたごとに10\R{進数}{しん|すう}にしてから、10〜15ならA〜Fにします。16\R{進数}{しん|すう}の\R{位}{くらい}は\R{右}{みぎ}から1・16。\par
+\shiki $1011\,|\,0100$\par
+\hspace*{2.6\zw}\R{左}{ひだり}の4けた：$1011_{(2)}=8+2+1=11$ で B\par
+\hspace*{2.6\zw}\R{右}{みぎ}の4けた：$0100_{(2)}=4$ で 4\par
+\hspace*{2.6\zw}$\mathrm{B4}_{(16)}=16\times11+1\times4=176+4=180$\par
+\kotae $\mathrm{B4}_{(16)}$、180
+\end{reidai}
+
+\begin{jibun}
+$11100101_{(2)}$ を16\R{進数}{しん|すう}で\R{書}{か}き、10\R{進数}{しん|すう}にもなおしましょう。
+\bkjans{$1110\,|\,0101$。$1110_{(2)}=14$ で E、$0101_{(2)}=5$ で 5。$\mathrm{E5}_{(16)}$。$16\times14+5=229$}
+\end{jibun}
+
+\begin{reidai}[\R{色}{いろ}の\R{番号}{ばん|ごう}を\R{読}{よ}む]
+\R{色}{いろ}の\R{番号}{ばん|ごう}「\#40C0FF」の\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{明}{あか}るさを、それぞれ10\R{進数}{しん|すう}で\R{答}{こた}えましょう。\par
+\kangaekata \R{前}{まえ}から2けたずつ、\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}。どれも16\R{進数}{しん|すう}2けたなので、16の\R{位}{くらい}×16＋1の\R{位}{くらい}。Cは12、Fは15です。\par
+\shiki \R{赤}{あか} $40_{(16)}=16\times4+0=64$\quad \R{緑}{みどり} $\mathrm{C0}_{(16)}=16\times12+0=192$\par
+\hspace*{2.6\zw}\R{青}{あお} $\mathrm{FF}_{(16)}=16\times15+15=255$\par
+\kotae \R{赤}{あか}64、\R{緑}{みどり}192、\R{青}{あお}255（\R{明}{あか}るい\R{水色}{みず|いろ}）
+\end{reidai}
+
+\begin{jibun}
+\R{色}{いろ}の\R{番号}{ばん|ごう}「\#2080A0」の\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{明}{あか}るさを、それぞれ10\R{進数}{しん|すう}で\R{答}{こた}えましょう。
+\bkjans{\R{赤}{あか} $16\times2+0=32$、\R{緑}{みどり} $16\times8+0=128$、\R{青}{あお} $16\times10+0=160$}
+\end{jibun}
+
+\begin{reidai}[\R{組}{く}み\R{合}{あ}わせの\R{数}{かず}]
+\R{古}{ふる}いゲーム\R{機}{き}には、\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{明}{あか}るさを、それぞれ2ビットで\R{決}{き}めるものがありました。\R{全部}{ぜん|ぶ}で\R{何}{なん}\R{通}{とお}りの\R{色}{いろ}を\R{表}{あらわ}せますか。\par
+\kangaekata 2ビットは $2^2=4$\R{通}{とお}り。\R{赤}{あか}の1\R{通}{とお}りごとに\R{緑}{みどり}が4\R{通}{とお}り、その1\R{通}{とお}りごとに\R{青}{あお}が4\R{通}{とお}りあるので、かけ\R{算}{ざん}です。\par
+\shiki $4\times4\times4=64$\quad（ビットで\R{考}{かんが}えると $2+2+2=6$ ビットで $2^6=64$）\par
+\kotae 64\R{通}{とお}り
+\end{reidai}
+
+\begin{jibun}
+\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{明}{あか}るさを、それぞれ4ビットで\R{決}{き}めると、\R{全部}{ぜん|ぶ}で\R{何}{なん}\R{通}{とお}りの\R{色}{いろ}を\R{表}{あらわ}せますか。
+\bkjans{4ビットは $2^4=16$\nobreak\R{通}{とお}り。$16\times16\times16=4096$\nobreak\R{通}{とお}り（$2^{12}$）}
+\end{jibun}
+
+\begin{reidai}[1\R{分間}{ぷん|かん}に\R{記録}{き|ろく}する\R{数}{かず}（\R{単位}{たん|い}つきで\R{換算}{かん|さん}）]
+\R{音楽}{おん|がく}CDは、1\R{秒}{びょう}あたり44100\R{回}{かい}、\R{音}{おと}の\R{大}{おお}きさをはかって\R{数}{かず}にしています。1\R{分間}{ぷん|かん}の\R{曲}{きょく}では、\R{何回}{なん|かい}はかっていますか。\par
+\kangaekata 「1\R{秒}{びょう}あたり44100\R{回}{かい}」は\R{単位}{たん|い}つきの\R{量}{りょう}で、$44100\,\text{\R{回}{かい}}/\mathrm{s}$ と\R{書}{か}けます。\R{時間}{じ|かん}を\R{秒}{びょう}にそろえるために、1\R{分}{ぷん}を\qty{60}{s/min}で\R{秒}{びょう}にしてから（2-10）、44100\R{回}{かい}/sをかけます。\par
+\shiki $\qty{1}{min}\times\qty{60}{s/min}=1\,\cancel{\mathrm{min}}\times\dfrac{60\,\mathrm{s}}{1\,\cancel{\mathrm{min}}}=\qty{60}{s}$\par
+\hspace*{2.6\zw}$\qty{60}{s}\times44100\,\dfrac{\text{\R{回}{かい}}}{\mathrm{s}}=60\,\cancel{\mathrm{s}}\times44100\,\dfrac{\text{\R{回}{かい}}}{\cancel{\mathrm{s}}}=2646000\,\text{\R{回}{かい}}$\par
+\kotae 2646000\R{回}{かい}（\R{約}{やく}265\R{万}{まん}\R{回}{かい}）
+\end{reidai}
+
+\begin{jibun}
+\R{動画}{どう|が}は、1\R{秒}{びょう}あたり30\R{枚}{まい}の\R{絵}{え}をつぎつぎに\R{見}{み}せています。2\R{分間}{ふん|かん}の\R{動画}{どう|が}には、\R{絵}{え}が\R{何枚}{なん|まい}ありますか。\R{単位}{たん|い}つきの\R{式}{しき}で\R{求}{もと}めましょう。
+\bkjans{$\qty{2}{min}\times\qty{60}{s/min}=\qty{120}{s}$。$\qty{120}{s}\times30\,\text{\R{枚}{まい}}/\mathrm{s}=3600\,\text{\R{枚}{まい}}$。3600\nobreak\R{枚}{まい}}
+\end{jibun}
+
+
+\clearpage
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{\R{位}{くらい}の\R{大}{おお}きさを1・2・3・4とする}
+\bkng{$1011_{(2)}=4\times1+3\times0+2\times1+1\times1=7$}
+\bkok{$1011_{(2)}=8\times1+4\times0+2\times1+1\times1=11$}
+2\R{進数}{しん|すう}の\R{位}{くらい}は、1ずつふえるのではなく、\R{左}{ひだり}へ1つ\R{進}{すす}むごとに2\R{倍}{ばい}になります（1・2・4・8）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{8ビットで「0〜256」とする}
+\bkng{8ビットで\R{表}{あらわ}せるいちばん\R{大}{おお}きい\R{数}{かず}は256}
+\bkok{8ビットは256\R{通}{とお}り。0から\R{数}{かぞ}えるので、いちばん\R{大}{おお}きい\R{数}{かず}は255}
+4ビットで\R{確}{たし}かめると、0〜15の16\R{通}{とお}りでした。いちばん\R{大}{おお}きい\R{数}{かず}は、\R{通}{とお}りの\R{数}{かず}より1\R{小}{ちい}さくなります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{16\R{進数}{しん|すう}に\R{区切}{く|ぎ}るとき、\R{左}{ひだり}から\R{区切}{く|ぎ}る}
+\bkng{$101101_{(2)}$ を\quad $1011\,|\,01$\quad と\R{区切}{く|ぎ}って $\mathrm{B1}_{(16)}$}
+\bkok{$101101_{(2)}$ を\quad $0010\,|\,1101$\quad と\R{区切}{く|ぎ}って $\mathrm{2D}_{(16)}$}
+1の\R{位}{くらい}は\R{右}{みぎ}のはしなので、\R{右}{みぎ}から\R{区切}{く|ぎ}ります（どちらも45：$16\times2+13=45$）。
+\end{tsumazuki}
+
+\begin{butsuri}
+\textbf{センサーの\R{値}{あたい}を\R{数}{かず}にする}\par
+\R{温度}{おん|ど}センサーは、\R{温度}{おん|ど}を\R{電圧}{でん|あつ}に\R{変}{か}える\R{部品}{ぶ|ひん}です。\R{電圧}{でん|あつ}はなめらかに\R{変}{か}わりますが、コンピュータは\R{何}{なん}ビットかの\R{数}{かず}しか\R{覚}{おぼ}えられません。そこで、\R{電圧}{でん|あつ}をいちばん\R{近}{ちか}い\R{段階}{だん|かい}の\R{数}{かず}に\R{置}{お}きかえます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=52mm, xmin=0, xmax=10.6, ymin=0, ymax=8.6, xtick=\empty, ytick={1,...,7},
+  xlabel={\R{時間}{じ|かん}}, ylabel={\R{段階}{だん|かい}}]
+  \addplot[bkcurve, domain=0:10, samples=200] {3.6+3*sin(deg(x*0.62))};
+  \addplot[bkcurve2, const plot, line width=1.3pt] coordinates {
+    (0,4) (0.5,5) (1,5) (1.5,6) (2,6) (2.5,7) (3,6) (3.5,6) (4,5) (4.5,5) (5,4) (5.5,3) (6,2) (6.5,1) (7,1) (7.5,1) (8,1) (8.5,1) (9,2) (9.5,2) (10,3) (10.5,3)};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue, fill=white, inner sep=1pt] at (axis cs:4.3,7.6) {\R{本当}{ほん|とう}の\R{電圧}{でん|あつ}};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!85!black, fill=white, inner sep=1pt] at (axis cs:7.6,6.4) {3ビットの\R{数}{かず}};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{3ビット（8\R{段階}{だん|かい}）では、なめらかな\R{変化}{へん|か}が\R{階段}{かい|だん}になる。ビットをふやすと、\R{階段}{かい|だん}が\R{細}{こま}かくなる。}
+\end{bkfigure}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{マイコンボード}\par\noindent \R{電子工作}{でん|し|こう|さく}\R{用}{よう}の\R{小}{ちい}さなコンピュータには、\qty{0}{V}〜\qty{5}{V}を10ビット（1024\R{段階}{だん|かい}）の\R{数}{かず}にするものがあります。
+\item \textbf{\R{音楽}{おん|がく}のデータ}\par\noindent \R{音楽}{おん|がく}CDは、\R{音}{おと}の\R{大}{おお}きさを16ビット（65536\R{段階}{だん|かい}）の\R{数}{かず}にして、1\R{秒}{びょう}あたり44100\R{回}{かい}\R{記録}{き|ろく}しています（\R{例題}{れい|だい}で\R{計算}{けい|さん}したように、1\R{分}{ぷん}で264\R{万}{まん}\R{回}{かい}あまり）。
+\end{itemize}
+\R{大学}{だい|がく}の\R{工学}{こう|がく}では、\R{量}{りょう}を\R{段階}{だん|かい}の\R{数}{かず}にすることを「AD\R{変換}{へん|かん}」とよび、ビットの\R{数}{かず}と\R{細}{こま}かさの\R{関係}{かん|けい}から\R{計器}{けい|き}を\R{設計}{せっ|けい}します。
+
+\par\addvspace{3pt}\textbf{なぜ2\R{進数}{しん|すう}？}\par\noindent 0〜\qty{9}{V}の10\R{段階}{だん|かい}で10\R{種類}{しゅ|るい}の\R{数字}{すう|じ}を\R{表}{あらわ}すと、\R{雑音}{ざつ|おん}で\qty{3}{V}が\qty{3.6}{V}にずれただけで4とまちがえます。「\R{高}{たか}い（1）」「\R{低}{ひく}い（0）」の2\R{種類}{しゅ|るい}なら、\R{少}{すこ}しずれてもまちがえません。だからコンピュータは2\R{進数}{しん|すう}を\R{使}{つか}うのです。
+\end{butsuri}
+
+
+
+\clearpage
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{2}
+
+\bkproblem ランプ（つく＝1、\R{消}{き}える＝0）が\R{表}{あらわ}している2\R{進数}{しん|すう}を\R{書}{か}き、10\R{進数}{しん|すう}になおしましょう。
+\par\nobreak\vspace{3pt}\noindent\hspace*{1.6\zw}%
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \px/\lab/\bits in {0/（1）/{0,1,1,0}, 40/（2）/{1,0,0,1}, 80/（3）/{1,1,1,1,1,1}} {
+    \node[anchor=east, font=\small] at (\px+1,0) {\lab};
+    \foreach \b [count=\k] in \bits {\bkiirlamp{(\px+\k*6,0)}{\b}{2}}}
+\end{tikzpicture}
+\bkpans{（1）\nobreak $0110_{(2)}$（$110_{(2)}$ でもよい）、6\quad（2）\nobreak $1001_{(2)}$、9\quad（3）\nobreak $111111_{(2)}$、63}
+
+\bkproblem 2\R{進数}{しん|すう}になおしましょう。\quad（1）\nobreak 7\quad（2）\nobreak 18\quad（3）\nobreak 50
+\bkpans{（1）\nobreak $111_{(2)}$\quad（2）\nobreak $10010_{(2)}$\quad（3）\nobreak $110010_{(2)}$}
+
+\bkproblem \R{何}{なん}\R{通}{とお}りの\R{数}{かず}を\R{表}{あらわ}せますか。\quad（1）\nobreak 5ビット\quad（2）\nobreak 12ビット
+\bkpans{（1）\nobreak $2^5=32$\nobreak\R{通}{とお}り\quad（2）\nobreak $2^{12}=4096$\nobreak\R{通}{とお}り}
+
+\bkproblem \qty{0}{cm}から\qty{128}{cm}までのはばを、8ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}す\R{距離}{きょ|り}センサーがあります。1\R{段階}{だん|かい}は\R{何}{なん}cmですか。
+\par\nobreak\vspace{4pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkTheme!14] (0,0) rectangle (96,3.6);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (96,3.6);
+  \foreach \k in {1,...,12} \draw[bkInk, line width=0.4pt] ({\k*0.375},0) -- ({\k*0.375},3.6);
+  \foreach \k in {1,...,12} \draw[bkInk, line width=0.4pt] ({96-\k*0.375},0) -- ({96-\k*0.375},3.6);
+  \node[anchor=south, font=\sffamily\small, text=bkInk, inner sep=0pt] at (48,5.5) {256\R{段階}{だん|かい}に\R{等}{ひと}しく\R{分}{わ}ける};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk] at (0,-1.6) {\qty{0}{cm}};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk] at (96,-1.6) {\qty{128}{cm}};
+\end{tikzpicture}\par}
+\bkpans{$2^8=256$\nobreak\R{段階}{だん|かい}。$128\div256=0.5$。\qty{0.5}{cm}}
+
+\bkproblem $11110000_{(2)}$ を16\R{進数}{しん|すう}で\R{書}{か}き、10\R{進数}{しん|すう}にもなおしましょう。
+\bkpans{$1111\,|\,0000$ で $\mathrm{F0}_{(16)}$、$16\times15+0=240$}
+
+\bkproblem \R{色}{いろ}の\R{番号}{ばん|ごう}「\#80FF00」の\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}の\R{明}{あか}るさを、それぞれ10\R{進数}{しん|すう}で\R{答}{こた}えましょう。
+\par\nobreak\vspace{4pt}{\centering
+\definecolor{bkiirmixb}{RGB}{128,255,0}%
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkiirmixb, rounded corners=1.5mm] (0,0) rectangle (30,9);
+  \draw[bkLine, line width=0.5pt, rounded corners=1.5mm] (0,0) rectangle (30,9);
+  \node[anchor=west, font=\sffamily\small, text=bkInk] at (33,4.5) {\texttt{\#80FF00} の\R{色}{いろ}（\R{黄緑}{き|みどり}）};
+\end{tikzpicture}\par}
+\bkpans{\R{赤}{あか} $16\times8+0=128$、\R{緑}{みどり} 255、\R{青}{あお} 0}
+
+\clearpage
+\bkproblemgroup{チャレンジ}{2}
+
+\bkproblem 1バイトで\R{表}{あらわ}せるいちばん\R{大}{おお}きい\R{数}{かず}を、2\R{進数}{しん|すう}・16\R{進数}{しん|すう}・10\R{進数}{しん|すう}で\R{書}{か}きましょう。
+\bkpans{$11111111_{(2)}$、$\mathrm{FF}_{(16)}$、255}
+
+\bkproblem マイコンボードは、\qty{0}{V}から\qty{5}{V}までのはばを、10ビットの\R{数}{かず}で\R{等}{ひと}しく\R{分}{わ}けて\R{表}{あらわ}します。1\R{段階}{だん|かい}は\R{何}{なん}Vですか。\R{小数}{しょう|すう}\R{第}{だい}5\R{位}{い}を\R{四捨五入}{し|しゃ|ご|にゅう}して\R{答}{こた}えましょう。
+\bkpans{$2^{10}=1024$\nobreak\R{段階}{だん|かい}。$5\div1024=0.00488\cdots$ で、\R{約}{やく}\qty{0.0049}{V}}
+
+\bkproblem スマホの\R{画面}{が|めん}の\R{点}{てん}は、\R{赤}{あか}・\R{緑}{みどり}・\R{青}{あお}をそれぞれ8ビットで\R{決}{き}めます（\R{色}{いろ}の\R{番号}{ばん|ごう}→\pageref{bk:2-17:iro}ページ）。（1）\nobreak 1つの\R{点}{てん}の\R{色}{いろ}は、\R{全部}{ぜん|ぶ}で\R{何}{なん}ビットですか。（2）\nobreak \R{何}{なん}\R{通}{とお}りの\R{色}{いろ}を\R{表}{あらわ}せますか。
+\bkpans{（1）\nobreak $8\times3=24$\nobreak ビット\quad（2）\nobreak $256\times256\times256=2^{24}=16777216$\nobreak\R{通}{とお}り（\R{約}{やく}1678\nobreak\R{万}{まん}\R{通}{とお}り）}
+
+\bkproblem \R{音楽}{おん|がく}CDは、1\R{秒}{びょう}あたり44100\R{回}{かい}、\R{音}{おと}の\R{大}{おお}きさを\R{記録}{き|ろく}します。3\R{分間}{ぷん|かん}の\R{曲}{きょく}では、\R{何回}{なん|かい}\R{記録}{き|ろく}しますか。\R{単位}{たん|い}つきの\R{式}{しき}で\R{求}{もと}めましょう。
+\bkpans{$\qty{3}{min}\times\qty{60}{s/min}=\qty{180}{s}$。$\qty{180}{s}\times44100\,\text{\R{回}{かい}}/\mathrm{s}=7938000\,\text{\R{回}{かい}}$}
+
+\bkproblem $1111_{(2)}$ に1をたすと、2\R{進数}{しん|すう}でどうなりますか。10\R{進数}{しん|すう}にもなおして\R{確}{たし}かめましょう。
+\bkpans{どの\R{位}{くらい}も $1+1=2$ でくり\R{上}{あ}がり、$10000_{(2)}$。$15+1=16$、$10000_{(2)}=16$ で\R{同}{おな}じ}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 2\R{進数}{しん|すう}と10\R{進数}{しん|すう}を\R{行}{い}き\R{来}{き}できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-17:henkan}ページ}
+\item ビットの\R{数}{かず}から、\R{何}{なん}\R{通}{とお}りの\R{数}{かず}を\R{表}{あらわ}せるかを\R{計算}{けい|さん}できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-17:bit}ページ}
+\item 2\R{進数}{しん|すう}を4けたずつまとめて、16\R{進数}{しん|すう}で\R{書}{か}ける。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-17:juroku}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{0と1だけで、どんな\R{数}{かず}も\R{書}{か}けたね。\R{次}{つぎ}の2-18では、たくさんの\R{計算}{けい|さん}をコンピュータにまかせる\R{方法}{ほう|ほう}を\R{学}{まな}ぶよ。}

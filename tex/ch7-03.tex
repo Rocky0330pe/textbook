@@ -1,0 +1,957 @@
+%% 7-3 行列×行列：変換をつなぐ（第14回：組 V7-2。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   積の成分は「1つめの行列の行と、2つめの行列の列の内積」（物理 力-7 の言い方）。積の決め方の理由は「変換をつなぐと自然にそうなる」。
+%%   S=(2 0;0 1)、R90=(0 -1;1 0)、ずらし (1 1;0 1)、主役 A=(2 1;1 2)（組どうしの約束1）。家の絵・なぞる図・表計算・Python は tools/kata7.md の型。
+%%   右から先に作用する（AB x は B が先）。単位行列 I の記号カードはこの章（決定1：E と書く本も多い）。A^2、A^3 は 7-10 の予告。
+%%   四端子定数（決定6）：例題2つ。①抵抗だけの箱を2つつなぐ（直列 2Ω・並列 2Ω、(2 2;0.5 1)、つなぐ順で (1 2;0.5 2)）
+%%     ②コイル jωL とコンデンサー 1/(jωC) の箱（6-10・6-13 の続き。L=10 mH、C=1 μF は 6-13 と同じ）。成分に A〜D の文字を使わない。
+%%     7-4 で「箱の行列の行列式は1」、7-11 で送電線（分布定数回路）。光線の行列（波-12）は物理・工学ではこう使うで。
+%%   R(θ1)R(θ2)（7-6）は予告だけ。
+\usetikzlibrary{matrix}
+\makeatletter
+% 行と列をなぞる図（kata7 の型）
+\tikzset{
+  kviid mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=8mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=0pt, row sep=0pt, inner sep=0.6mm},
+  kviid row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviid col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviid ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm}}
+\newcommand\kviidhl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 数式バー（kata7 の型）
+\newcommand\kviidfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=46mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviidM}{bkTheme!12}\colorlet{kviidV}{bkGreen!14}\colorlet{kviidR}{bkYellow!35}
+% 小見出し（太字の1行）
+\newcommand\kviidhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviidbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviidline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviidframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviida{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviidb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviids{\rightskip=0pt plus 8em\relax}
+% 例題の中で、式（行列）を1行に立てる
+\newcommand\kviidm[1]{\par\vspace{2pt}{\centering $\displaystyle #1$\par}\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+% 問題文を左、式を右に  \kviidq{文}{式}
+\newcommand\kviidq[2]{\par\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright #1\end{minipage}\hfill\begin{minipage}[c]{0.38\linewidth}\centering $\displaystyle #2$\end{minipage}\par\vspace{3pt}}
+% 式の変形の表（行列の行の間を広げない）
+\newenvironment{kviidhk}[1][0.48]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.4}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle\def\arraystretch{1}}m{#1\linewidth}<{$}@{\hspace{2\zw}}>{\small\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.90\linewidth-#1\linewidth\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% 方眼と軸（kata7 の型。1目もり＝tikzpicture の単位）
+\newcommand\kviidgrid[4]{%
+  \draw[bkLine, line width=0.4pt, step=1] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.7},0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.7}) node[above, font=\footnotesize, inner sep=1pt] {$y$};}
+% もとの家（灰色の点線）
+\newcommand\kviidhousezero{%
+  \filldraw[fill=bkGray!12, draw=bkGray, line width=0.8pt, dashed, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkGray, line width=0.6pt, dashed] (1.25,0) -- (1.25,1) -- (1.75,1) -- (1.75,0);}
+% 行列 (a b; c d) をかけた家  \kviidhouse[色]{a}{b}{c}{d}
+\newcommand\kviidhouse[5][bkOrange]{%
+  \begin{scope}[cm={#2,#4,#3,#5,(0,0)}]
+    \filldraw[fill=#1!25, draw=#1!80!black, line width=1.1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+    \filldraw[fill=white, draw=#1!80!black, line width=0.8pt] (1.25,0) -- (1.75,0) -- (1.75,1) -- (1.25,1) -- cycle;
+  \end{scope}}
+% 回路の部品（1目もり＝1 mm）
+% 横向きの抵抗  \kviidRh{x}{y}（まん中）
+\newcommand\kviidRh[2]{\filldraw[fill=white, draw=bkInk, line width=0.9pt] ({#1-4.5},{#2-1.6}) rectangle ({#1+4.5},{#2+1.6});}
+% たて向きの抵抗  \kviidRv{x}{y}
+\newcommand\kviidRv[2]{\filldraw[fill=white, draw=bkInk, line width=0.9pt] ({#1-1.6},{#2-4.5}) rectangle ({#1+1.6},{#2+4.5});}
+% 端子（白い丸）
+\newcommand\kviidT[1]{\filldraw[fill=white, draw=bkInk, line width=0.8pt] #1 circle (1.1);}
+% ロボットの腕の関節（丸）
+\newcommand\kviidjoint[1]{\filldraw[fill=white, draw=bkInk, line width=0.8pt] #1 circle (1.6);}
+\makeatother
+
+\bkchapter{7}{3}{行列×行列：\\変換をつなぐ}{\bklevel{4}}{行列×行列：変換をつなぐ}
+\bkmichishirube{4-8,4-12,6-10,6-13,7-1,7-2}{7-4,7-5,7-6,7-7,7-9,7-10,7-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 2×2 や 3×3 の行列×行列を、行と列の内積で計算できる。
+\item \bklevel{4}\enspace 2つの変換をつなぐと行列の積になること、かける順番で結果が変わることを、方眼の絵と数で説明できる。
+\item \bklevel{4}\enspace 電気の「箱」をつないだ回路（四端子定数）を、行列の積で計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.48\linewidth}
+\raggedright
+方眼の家に、2つのことをします。
+
+（ア）左回りに90°回してから、横に2倍にのばす。
+
+（イ）横に2倍にのばしてから、左回りに90°回す。
+
+することは同じ2つで、順番がちがうだけです。できあがる家は、同じになるでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=16mm, font=\sffamily\footnotesize] (a1) at (0,9) {90°回す};
+  \node[bk node, minimum width=16mm, font=\sffamily\footnotesize] (a2) at (24,9) {2倍にのばす};
+  \draw[bk link] (a1) -- (a2);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-11,9) {（ア）};
+  \node[bk node, minimum width=16mm, font=\sffamily\footnotesize] (b1) at (0,-3) {2倍にのばす};
+  \node[bk node, minimum width=16mm, font=\sffamily\footnotesize] (b2) at (24,-3) {90°回す};
+  \draw[bk link] (b1) -- (b2);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-11,-3) {（イ）};
+  \node[font=\sffamily\bfseries\Huge, text=\bkTT] at (39,3) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-2 で、行列は「ベクトルを入れると、別のベクトルが出てくる機械」だと学びました。工学では、機械を1つだけ使うことはあまりありません。ロボットの腕は、肩・ひじ・手首の関節の回転を\textbf{つないで}動きます。電気の回路は、部品の入った箱を\textbf{つないで}作ります。カメラのレンズも、何枚ものレンズを\textbf{つないで}います。
+
+この章では、機械を2つつなぐと何が起きるかを調べます。答えを先に言うと、\textbf{2つの機械は、1つの機械（1つの行列）にまとめられます}。そのまとめ方が、行列×行列です。7-1 で買い物の表から決めた「行×列」のきまりが、なぜあの形なのかも、この章でわかります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (a) at (0,0) {①②\\機械をつなぐと\\1つにまとまる};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (b) at (33,0) {③④⑤\\積の計算と\\順番のきまり};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize, fill=bkTheme!12] (c) at (66,0) {⑥⑦\\電気の箱・\\ロボットの腕};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (d) at (99,0) {⑧\\表計算と\\Python};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道のり。}
+\end{bkfigure}
+
+\begin{omoidasou}
+\bkrecall{7-2}{行列×ベクトル $A\vec x$：行ごとにベクトルとの内積をとる。行列の1列めは $\vec e_x$ の行き先、2列めは $\vec e_y$ の行き先。$S$（1行め 2、0、2行め 0、1）は横に2倍、$R_{90}$（1行め 0、$-1$、2行め 1、0）は左回りに90°。}
+\bkrecall{7-1}{行列×行列（お店が2つ）：右の行列の列ごとに、行列×ベクトルをする。左の行列の列の数と、右の行列の行の数が同じでないとかけられない。}
+\bkrecall{4-12}{内積 $\vec a\cdot\vec b=a_xb_x+a_yb_y$（同じ向きの成分どうしをかけて、たす）。}
+\bkrecall{3-6}{合わさった電流は、たし算。オームの法則：抵抗 $R$〔Ω〕に電流 $I$〔A〕が流れると、電圧は $RI$〔V〕。}
+\bkrecall{6-10}{インピーダンス：コイルは「電圧＝$j\omega L$×電流」、コンデンサーは「電流＝$j\omega C$×電圧」（$j^2=-1$、6-8）。}
+\end{omoidasou}
+
+\begin{yattemiyou}[紙の家で、順番を入れかえてみよう]
+\kviidbox{用意するもの}
+方眼紙（\qty{5}{mm}方眼）、色えんぴつ、電卓
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 7-2 の家（かど $(0,\ 0)$、$(2,\ 0)$、$(2,\ 2)$、$(1,\ 3)$、$(0,\ 2)$）の5つのかどに、まず $R_{90}$ をかける。出てきた点に、つぎに $S$ をかける（はてな？の（ア））。
+\item こんどは、まず $S$、つぎに $R_{90}$ をかける（（イ））。
+\item 2つの家を、方眼紙に色を変えてかく。同じ家になったかな？
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=17mm] *{4}{Q[c,m,wd=21mm]}}, rowsep=1pt, colsep=1.5pt, row{1}={font=\footnotesize}, hline{2}={0.5pt,bkLine}}
+もとのかど & （ア）まず $R_{90}$ & つぎに $S$ & （イ）まず $S$ & つぎに $R_{90}$ \\
+$(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ \\
+$(2,\ 0)$ & $(0,\ 2)$ & $(0,\ 2)$ & $(4,\ 0)$ & $(0,\ 4)$ \\
+$(2,\ 2)$ & $(-2,\ 2)$ & $(-4,\ 2)$ & $(4,\ 2)$ & $(-2,\ 4)$ \\
+$(1,\ 3)$ & $(-3,\ 1)$ & $(-6,\ 1)$ & $(2,\ 3)$ & $(-3,\ 2)$ \\
+$(0,\ 2)$ & $(-2,\ 0)$ & $(-4,\ 0)$ & $(0,\ 2)$ & $(-2,\ 0)$ \\
+\end{bktable}
+\bktabcaption{ミナさんが計算した、かどの行き先}
+\end{bkcenter}
+\end{yattemiyou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{2つの機械をつなぐ}
+\label{bk:7-3:tsunagu}
+
+やってみようの（ア）を、機械の図にかきます。点 $\vec x$ を、まず機械 $R_{90}$ に入れ、出てきた $R_{90}\vec x$ を、そのまま機械 $S$ に入れます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=16mm, minimum height=9mm] (i) at (0,0) {$\vec x$};
+  \node[bk node, minimum width=16mm, minimum height=11mm, fill=bkGreen!15, draw=bkGreen!60!black, line width=1pt] (b) at (30,0) {$R_{90}$};
+  \node[bk node, minimum width=16mm, minimum height=9mm] (m) at (60,0) {$R_{90}\vec x$};
+  \node[bk node, minimum width=16mm, minimum height=11mm, fill=bkRed!12, draw=bkRed!80!black, line width=1pt] (a) at (90,0) {$S$};
+  \node[bk node, minimum width=18mm, minimum height=9mm] (o) at (118,0) {$S(R_{90}\vec x)$};
+  \draw[bk link] (i) -- (b); \draw[bk link] (b) -- (m); \draw[bk link] (m) -- (a); \draw[bk link] (a) -- (o);
+  \draw[\bkTT, line width=0.9pt, dashed, rounded corners=2mm] (18,-10) rectangle (102,10);
+  \node[font=\sffamily\footnotesize, text=\bkTT, anchor=north] at (60,-11) {2つまとめて、1つの機械と見たい};
+\end{tikzpicture}
+\bkfigcaption{機械を2つつなぐ。先に通るのは $R_{90}$、あとに通るのは $S$。}
+\end{bkfigure}
+
+どんな点 $(x,\ y)$ でも、1つずつ計算できます。\par
+\begin{kviidhk}[0.66]
+R_{90}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}-y\\x\end{pmatrix} & まず90°回す（4-8 の $(-y,\ x)$） \\
+S\begin{pmatrix}-y\\x\end{pmatrix}=\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}-y\\x\end{pmatrix}=\begin{pmatrix}-2y\\x\end{pmatrix} & 出てきたものを、横に2倍 \\
+\end{kviidhk}
+入れた $(x,\ y)$ から、$(-2y,\ x)$ が出てきました。これは、$-2y=0x-2y$、$x=1x+0y$ なので、次の行列を1回かけたのと同じです。
+\kviidline{$\begin{pmatrix}-2y\\x\end{pmatrix}=\begin{pmatrix}0&-2\\1&0\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}$}
+つまり、2つの機械 $R_{90}$ と $S$ をつないだものは、上の1つの機械（行列）にまとめられます。やってみようの表で確かめます。かど $(2,\ 2)$ を入れると、$(0\times2-2\times2,\ 1\times2+0\times2)=(-4,\ 2)$。表の（ア）の答え $(-4,\ 2)$ と同じです。
+
+\kviidhead{まとめた機械を、積とよぶ}
+このまとめた機械を、2つの行列の\textbf{積}（せき）といい、$SR_{90}$ と書きます。
+\kviidframe{$S(R_{90}\vec x)=(SR_{90})\vec x$\qquad $SR_{90}=\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix}=\begin{pmatrix}0&-2\\1&0\end{pmatrix}$}
+\bkidx{せき（ぎょうれつの）}{積（行列の）}ここで、とても大切な注意があります。先に通る機械 $R_{90}$ が\textbf{右}、あとに通る機械 $S$ が\textbf{左}です。$S(R_{90}\vec x)$ のかっこを見ると、$\vec x$ にいちばん近い（右にある）$R_{90}$ が先にかかっています。行列の積は、\textbf{右から順に読む}のです。
+
+\begin{taisetsu}
+2つの変換をつなぐと、1つの行列（積）にまとめられる。$AB\vec x=A(B\vec x)$ では、\textbf{右の $B$ が先}、左の $A$ があと。
+\end{taisetsu}
+
+\bksubsection{2}{積の決め方には、わけがある}
+\label{bk:7-3:kimekata}
+
+①でしたことを、どんな2つの行列でもやってみます。先にかける行列を $B$、あとにかける行列を $A$ として、成分を文字で書きます。
+\kviidline{$B=\begin{pmatrix}p&q\\r&s\end{pmatrix}$\qquad $A=\begin{pmatrix}a&b\\c&d\end{pmatrix}$}
+点 $(x,\ y)$ を、まず $B$ に、つぎに $A$ に入れます。式の変形は1行に1つずつです。\par
+\begin{kviidhk}[0.68]
+B\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}px+qy\\rx+sy\end{pmatrix} & まず $B$ に入れる（7-2） \\
+A\begin{pmatrix}px+qy\\rx+sy\end{pmatrix}=\begin{pmatrix}a(px+qy)+b(rx+sy)\\c(px+qy)+d(rx+sy)\end{pmatrix} & 出てきたものを $A$ に入れる \\
+=\begin{pmatrix}(ap+br)x+(aq+bs)y\\(cp+dr)x+(cq+ds)y\end{pmatrix} & かっこを開き、$x$ の項と $y$ の項にまとめた \\
+\end{kviidhk}
+最後の形は、$x$ と $y$ に4つの数をかけてたした形、つまり、行列×ベクトルです。その4つの数を表に並べたものが、まとめた機械 $AB$ です。
+\kviidframe{$AB=\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}p&q\\r&s\end{pmatrix}=\begin{pmatrix}ap+br&aq+bs\\cp+dr&cq+ds\end{pmatrix}$}
+
+よく見てください。左上の $ap+br$ は、$A$ の1行め $(a,\ b)$ と、$B$ の1列め $(p,\ r)$ の内積（4-12）です。右上の $aq+bs$ は、$A$ の1行めと $B$ の2列め $(q,\ s)$ の内積。下の行も同じです。これは、7-1 で買い物の表（お店が2つ）から決めた「右の行列の列ごとに、行列×ベクトルをする」きまりと、ぴったり同じです。
+
+7-1 では「合計を計算するのに便利だから」という理由で、行列の積をこう決めました。ここで、もう1つの理由がわかりました。\textbf{機械を2つつないだものを、1つの機械として表すと、自然にこの形になる}のです。行列の積が「成分どうしのかけ算」ではなく、この少し複雑な形をしているのは、そのためです。
+
+\kviidhead{列で見ると：積の1列めは、$B$ の1列めの行き先}
+7-2 の「列は物差しの行き先」でも確かめられます。$AB$ の1列めは、$\vec e_x$ を $AB$ に入れたときに出てくるものです。$\vec e_x$ は、まず $B$ で $B$ の1列め $(p,\ r)$ へ行き、つぎに $A$ で $A(p,\ r)$ へ行きます。だから
+\kviidline{$AB$ の1列め＝$A$×（$B$ の1列め）\qquad $AB$ の2列め＝$A$×（$B$ の2列め）}
+①の $SR_{90}$ で確かめると、$R_{90}$ の1列め $(0,\ 1)$ に $S$ をかけて $(0,\ 1)$、2列め $(-1,\ 0)$ に $S$ をかけて $(-2,\ 0)$。積 $SR_{90}$ の1列め $(0,\ 1)$・2列め $(-2,\ 0)$ と同じです。「右の行列の列ごとに、左の行列をかける」という 7-1 のきまりは、この意味だったのです。
+
+\Needspace{14\baselineskip}
+\begin{motto}[3]
+\kviidbox{形でなくても、つなげる：お菓子の材料}
+お菓子屋さんで、クッキー1箱に小麦粉\qty{200}{g}と卵1個、ケーキ1個に小麦粉\qty{150}{g}と卵3個を使います。Aさんはクッキー2箱とケーキ1個、Bさんはクッキー1箱とケーキ2個を注文しました。「注文→作る数」と「作る数→材料」の2つの表を、つなぎます。
+\kviidline{$\underbrace{\begin{pmatrix}200&150\\1&3\end{pmatrix}}_{\text{作る数→材料}}\underbrace{\begin{pmatrix}2&1\\1&2\end{pmatrix}}_{\text{注文→作る数}}=\begin{pmatrix}550&500\\5&7\end{pmatrix}$}
+積の1列めは、Aさんの注文に必要な小麦粉\qty{550}{g}と卵5個、2列めはBさんの分（\qty{500}{g}と7個）です。ここでも、先に使う表（注文→作る数）が右です。順番を入れかえた積は、「材料」を「作る数」の表に入れることになり、意味がありません。
+\end{motto}
+
+\begin{column}{行列のかけ算は、変換をつなぐことから}
+行列の計算のきまりを1つの理論としてまとめたのは、イギリスの数学者ケイリーで、1858年の論文でした（名前の由来は 7-0 のコラム）。
+
+ケイリーが行列のかけ算を考えたのも、この章の①と同じ「2つの変換をつなぐと、どうなるか」という問いからでした。ケイリーは、この論文で、かける順番を入れかえると答えが変わる（$AB\neq BA$）ことも書いています。この「ふしぎなかけ算」は当時の数学者にはおどろきでしたが、いまでは、ロボット・ゲームの画面・電気回路の計算に欠かせない道具になっています。
+\end{column}
+
+\bksubsection{3}{積の成分は、行と列の内積}
+\label{bk:7-3:naiseki}
+
+②のきまりを、計算の手順にします。物理の本では「積の成分は、1つめの行列の行と、2つめの行列の列の内積」と言います。積の $i$ 行め $j$ 列めの成分は、左の行列の $i$ 行めと、右の行列の $j$ 列めを、指でなぞってかけてたしたものです。主役の行列 $A$ と、ずらしの行列 $H$ で計算します。
+\kviidline{$A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$\qquad $H=\begin{pmatrix}1&1\\0&1\end{pmatrix}$}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (L) at (0,0) [kviid mat] {2 \& 1\\ 1 \& 2\\};
+  \matrix (R) [kviid mat, anchor=west] at ([xshift=6mm]L.east) {1 \& 1\\ 0 \& 1\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]R.east) {$=$};
+  \matrix (C) [kviid mat, anchor=west] at ([xshift=3.5mm]eq.east) {2 \& 3\\ 1 \& 3\\};
+  \kviidhl{kviid row}{L-1-1}{L-1-2}
+  \kviidhl{kviid col}{R-1-2}{R-2-2}
+  \kviidhl{kviid ans}{C-1-2}{C-1-2}
+  \node[anchor=west, font=\small] at ([xshift=6mm]C.east) {$\textcolor{bkOrange!80!black}{2}\times\textcolor{\bkTT}{1}+\textcolor{bkOrange!80!black}{1}\times\textcolor{\bkTT}{1}=\textcolor{bkGreen!50!black}{3}$};
+  \node[font=\sffamily\footnotesize, anchor=north] at ([yshift=-3mm]R.south) {1行めと2列め → 1行め2列めの成分};
+\end{tikzpicture}
+\bkfigcaption{$AH$ の1行め2列めの成分は、$A$ の1行め（オレンジ）と $H$ の2列め（青）の内積。行と列が出会う所（緑）に書く。}
+\label{bk:7-3:fig-naiseki}
+\end{bkfigure}
+
+4つの成分を、1つずつ書きます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=28mm] Q[c,m,wd=26mm] Q[c,m,wd=34mm]}, rowsep=1pt, row{1}={font=\sffamily\small}, hline{2}={0.5pt,bkLine}}
+積の成分 & $A$ の行 & $H$ の列 & 内積 \\
+1行め1列め & 1行め $(2,\ 1)$ & 1列め $(1,\ 0)$ & $2\times1+1\times0=2$ \\
+1行め2列め & 1行め $(2,\ 1)$ & 2列め $(1,\ 1)$ & $2\times1+1\times1=3$ \\
+2行め1列め & 2行め $(1,\ 2)$ & 1列め $(1,\ 0)$ & $1\times1+2\times0=1$ \\
+2行め2列め & 2行め $(1,\ 2)$ & 2列め $(1,\ 1)$ & $1\times1+2\times1=3$ \\
+\end{bktable}
+\bktabcaption{$AH$ の4つの成分。$AH$ は1行めが 2、3、2行めが 1、3。}
+\end{bkcenter}
+
+\kviidhead{かけられる大きさと、できる大きさ}
+指でなぞる行と列は、同じ数ずつ進んで同時に終わらなければなりません。だから、\textbf{左の行列の列の数（横の数）と、右の行列の行の数（たての数）が同じ}ときだけ、かけられます（7-1）。できる行列は、左の行列の行の数だけ行があり、右の行列の列の数だけ列があります。
+\kviidframe{（$m$ 行 $n$ 列）×（$n$ 行 $p$ 列）＝（$m$ 行 $p$ 列）}
+内側の $n$ がそろうとかけられ、外側の $m$ と $p$ が残ります。
+たとえば、2行3列 × 3行2列 は、内側の3がそろうのでかけられて、2行2列の行列ができます。2行3列 × 2行3列 は、内側が3と2でそろわないので、かけられません。7-2 の行列×ベクトルも、（2行2列）×（2行1列）＝（2行1列）の、この形の1つです。
+
+\Needspace{16\baselineskip}
+\begin{motto}[4]
+\kviidbox{積の転置は、順番が逆になる}
+7-1 の転置（たてと横の入れかえ、$A^{\mathsf T}$）と積を組み合わせると、次のきまりがあります。
+\kviidframe{$(AB)^{\mathsf T}=B^{\mathsf T}A^{\mathsf T}$}
+③の $A$ と $H$ で確かめます。$AH$ は1行めが 2、3、2行めが 1、3 なので、$(AH)^{\mathsf T}$ は1行めが 2、1、2行めが 3、3。いっぽう
+\kviidline{$H^{\mathsf T}A^{\mathsf T}=\begin{pmatrix}1&0\\1&1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}=\begin{pmatrix}2&1\\3&3\end{pmatrix}$}
+で、同じです。$AB$ の $i$ 行 $j$ 列めは「$A$ の $i$ 行めと $B$ の $j$ 列めの内積」でした。転置すると行と列が入れかわるので、$B^{\mathsf T}$ の行（＝$B$ の列）と $A^{\mathsf T}$ の列（＝$A$ の行）の内積になり、順番が逆になるのです。このきまりは、7-5 の最小二乗法や 7-6 の回転で使います。
+\end{motto}
+
+\bksubsection{4}{順番を変えると、結果が変わる}
+\label{bk:7-3:junban}
+
+はてな？の（イ）は、まず $S$、つぎに $R_{90}$ でした。右から読むので、まとめた行列は $R_{90}S$ です。③の手順で計算します。\par
+\begin{kviidhk}[0.56]
+R_{90}S=\begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}2&0\\0&1\end{pmatrix} & 先に $S$（右）、あとで $R_{90}$（左） \\
+=\begin{pmatrix}0\times2+(-1)\times0&0\times0+(-1)\times1\\1\times2+0\times0&1\times0+0\times1\end{pmatrix} & 行と列の内積 \\
+=\begin{pmatrix}0&-1\\2&0\end{pmatrix} & \\
+\end{kviidhk}
+①の $SR_{90}$（1行めが 0、$-2$、2行めが 1、0）とは、ちがう行列になりました。$\vec e_x=(1,\ 0)$ を入れてみると、$SR_{90}$ では1列めの $(0,\ 1)$ へ、$R_{90}S$ では1列めの $(0,\ 2)$ へ行きます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=4.4mm, y=4.4mm]
+  \begin{scope}
+    \kviidgrid{-7}{3}{-1}{5}
+    \kviidhousezero
+    \kviidhouse[bkOrange]{0}{-2}{1}{0}
+    \node[font=\footnotesize, anchor=north, align=center] at (-3,-1.6) {（ア）まず回して、のばす\\$SR_{90}=\begin{pmatrix}0&-2\\1&0\end{pmatrix}$\\横に長い、ねた家};
+  \end{scope}
+  \begin{scope}[xshift=60mm]
+    \kviidgrid{-4}{3}{-1}{5}
+    \kviidhousezero
+    \kviidhouse[bkGreen]{0}{-1}{2}{0}
+    \node[font=\footnotesize, anchor=north, align=center] at (-0.5,-1.6) {（イ）まずのばして、回す\\$R_{90}S=\begin{pmatrix}0&-1\\2&0\end{pmatrix}$\\たてに長い、ねた家};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ2つの変換でも、順番を変えると、ちがう家になる（点線はもとの家）。（ア）は横に、（イ）はたてに長い。}
+\label{bk:7-3:fig-junban}
+\end{bkfigure}
+
+これが、\bkhatenaref の答えです。（ア）では、先に回したので、もとの家の「たて」が横向きになり、その横向きのものを2倍にのばしました。だから、ねた家が\textbf{横に}長くなります。（イ）では、先にもとの家の「横」を2倍にしてから回したので、長くなった部分がたてを向き、ねた家が\textbf{たてに}長くなります。
+
+\begin{taisetsu}
+行列の積では、ふつう $AB\neq BA$。かける順番を勝手に入れかえてはいけない。
+\end{taisetsu}
+
+数のかけ算では、$2\times3=3\times2$ のように、順番を入れかえても同じでした（交換法則）。行列の積では、これがふつうは成り立ちません。くつ下をはいてからくつをはくのと、くつをはいてからくつ下をはくのが、ちがう結果になるのと同じです。
+
+\kviidhead{順番を変えても同じになる、特別な場合}
+いつもちがうわけではありません。次のような場合は、$AB=BA$ になります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{ななめ以外が0の行列どうし}（横と、たての、のばし方だけを決める行列）：
+\kviidline{$\begin{pmatrix}2&0\\0&3\end{pmatrix}\begin{pmatrix}3&0\\0&1\end{pmatrix}=\begin{pmatrix}6&0\\0&3\end{pmatrix}=\begin{pmatrix}3&0\\0&1\end{pmatrix}\begin{pmatrix}2&0\\0&3\end{pmatrix}$}
+横に2倍してから3倍しても、3倍してから2倍しても、横は6倍です。
+\item \textbf{平面の回転どうし}：30°回してから45°回しても、45°回してから30°回しても、75°回したのと同じ（7-6 で確かめます）。
+\item \textbf{同じ行列どうし}：$AA$ は、入れかえても $AA$ です。
+\end{itemize}
+
+\begin{seikaku}
+「ふつう $AB\neq BA$」とは、「$AB=BA$ がいつも成り立つとはかぎらない」という意味です。上のように成り立つ組もありますが、成り立たない組が1つでもあるので、きまりとしては使えません。また、$A$ が2行3列、$B$ が3行2列のように大きさがちがうと、$AB$ は2行2列、$BA$ は3行3列で、大きさからしてちがいます。$A$ が2行3列、$B$ が3行3列なら、$AB$ はかけられても、$BA$ はかけられません（内側が3と2）。
+\end{seikaku}
+
+\Needspace{14\baselineskip}
+\bksubsection{5}{区切りは自由、何もしない機械}
+\label{bk:7-3:ketsugo}
+
+\kviidhead{3つつないでも、どこで区切ってもよい}
+機械を3つ、$C$、$B$、$A$ の順につなぎます（右から読むので $ABC$）。前の2つ $C$ と $B$ を先にまとめて $(BC)$ にしても、後ろの2つ $B$ と $A$ を先にまとめて $(AB)$ にしても、点が機械を通る順番は同じ $C\to B\to A$ です。だから、
+\kviidframe{$(AB)C=A(BC)$}
+が成り立ちます（結合法則）。\bkidx{けつごうほうそく}{結合法則}$S$、$R_{90}$、$H$ で確かめます。③と同じ手順で計算すると、$R_{90}H$ は1行めが 0、$-1$、2行めが 1、1 です。①の $SR_{90}$ と合わせて
+\kviidline{$(SR_{90})H=\begin{pmatrix}0&-2\\1&0\end{pmatrix}\begin{pmatrix}1&1\\0&1\end{pmatrix}=\begin{pmatrix}0&-2\\1&1\end{pmatrix}$\qquad $S(R_{90}H)=\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}0&-1\\1&1\end{pmatrix}=\begin{pmatrix}0&-2\\1&1\end{pmatrix}$}
+同じになりました。順番（左右の並び）さえ変えなければ、かっこの位置は自由です。だから、かっこをはずして $ABC$ と書いてかまいません。
+
+\kviidhead{何もしない機械：単位行列 $I$}
+ななめが1で、ほかが0の行列
+\kviidline{$I=\begin{pmatrix}1&0\\0&1\end{pmatrix}$}
+は、7-1 で名前だけ出てきた\textbf{単位行列}（たんいぎょうれつ）です。\bkidx{たんいぎょうれつ}{単位行列}1列め $(1,\ 0)$ は $\vec e_x$ の行き先、2列め $(0,\ 1)$ は $\vec e_y$ の行き先なので、物差しをまったく動かさない、「何もしない機械」です。何もしない機械を前や後ろにつないでも、変わりません。
+\kviidframe{$AI=IA=A$}
+数のかけ算で、1をかけても変わらない（$5\times1=1\times5=5$）のと同じ役目です。3×3 の単位行列は、ななめに1が3つ並んだ行列です。
+
+\kviidhead{同じ機械を何回もつなぐ：$A^2$、$A^3$}
+同じ行列を2回つないだ $AA$ を $A^2$、3回つないだ $AAA$ を $A^3$ と書きます。主役の行列で計算します。
+\kviidline{$A^2=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}=\begin{pmatrix}5&4\\4&5\end{pmatrix}$\qquad $A^3=A^2A=\begin{pmatrix}5&4\\4&5\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}=\begin{pmatrix}14&13\\13&14\end{pmatrix}$}
+$A^2$ は、成分をそれぞれ2乗したもの（1行め 4、1、2行め 1、4）では\textbf{ありません}（まちがえやすいところ⑤）。何回もかけると数がどんどん大きくなりますが、どの向きにどれだけ大きくなるのかは、7-8 の固有値と 7-10 で調べます。また、$R_{90}$ を2回つなぐと
+\kviidline{$R_{90}^2=\begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix}=\begin{pmatrix}-1&0\\0&-1\end{pmatrix}=-I$}
+で、180°回す（どの点も $(-x,\ -y)$ へ行く）行列になります。90°を2回で180°。6-8 の $j^2=-1$（$j$ をかけると90°回る）とそっくりです。
+
+
+
+\bksubsection{6}{電気の箱をつなぐ：四端子定数}
+\label{bk:7-3:hako}
+
+電気の回路では、部品の入った「箱」を何個もつなぐことがよくあります。音をよくする回路、雑音を取りのぞく回路（フィルター）、遠くまで電気を送る送電線。どれも「入口が2本、出口が2本の線」の箱を、くさりのようにつないだものと考えられます。この箱を、行列で表してみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,10) -- (22,10) (0,-10) -- (22,-10) (58,10) -- (80,10) (58,-10) -- (80,-10);
+  \filldraw[fill=bkTheme!10, draw=\bkTT, line width=1.1pt, rounded corners=2mm] (22,-14) rectangle (58,14);
+  \node[font=\sffamily\small, text=\bkTT] at (40,0) {箱};
+  \kviidT{(0,10)}\kviidT{(0,-10)}\kviidT{(80,10)}\kviidT{(80,-10)}
+  \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=3.5pt]}] (5,13) -- (15,13);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south] at (10,13.5) {$I_1$};
+  \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=3.5pt]}] (65,13) -- (75,13);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south] at (70,13.5) {$I_2$};
+  \draw[bkBlue!80!black, line width=0.8pt, {Stealth[length=3pt]}-] (-4,8) -- (-4,-8);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=east] at (-5,0) {$V_1$};
+  \draw[bkBlue!80!black, line width=0.8pt, {Stealth[length=3pt]}-] (84,8) -- (84,-8);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at (85,0) {$V_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (5,-12.5) {入口};
+  \node[font=\sffamily\footnotesize, anchor=north] at (75,-12.5) {出口};
+\end{tikzpicture}
+\bkfigcaption{入口の電圧 $V_1$〔V〕・電流 $I_1$〔A〕と、出口の電圧 $V_2$・電流 $I_2$。$I_2$ は、出口から次の箱へ出ていく電流。}
+\label{bk:7-3:fig-hako}
+\end{bkfigure}
+
+箱の入口の電圧と電流の組 $(V_1,\ I_1)$ と、出口の組 $(V_2,\ I_2)$ を考えます。電気の本では、\textbf{出口の組を入れると、入口の組が出てくる機械}として箱を表すことに決めています。出口に「ほしい電圧と電流」を決めると、入口に何を用意すればよいかがわかる、という向きです。
+
+\kviidhead{箱1：直列の抵抗}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+上の線のとちゅうに、抵抗 $R$〔Ω〕を1つ入れた箱です。電流は抵抗を通りぬけるだけなので、入口と出口で同じです：$I_1=I_2$。電圧は、抵抗の電圧 $RI_2$（オームの法則）の分だけ、入口が高くなります：$V_1=V_2+RI_2$。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \draw[bkInk, line width=0.9pt] (0,8) -- (40,8) (0,-8) -- (40,-8);
+  \kviidRh{20}{8}
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (20,10) {$R$};
+  \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(40,8)}\kviidT{(40,-8)}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-2,0) {$V_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (42,0) {$V_2$};
+  \draw[bkInk!50, line width=0.6pt, dashed, rounded corners=1.5mm] (6,-12) rectangle (34,17);
+\end{tikzpicture}
+\end{minipage}
+\kviidline{$\begin{pmatrix}V_1\\I_1\end{pmatrix}=\begin{pmatrix}V_2+RI_2\\I_2\end{pmatrix}=\begin{pmatrix}1&R\\0&1\end{pmatrix}\begin{pmatrix}V_2\\I_2\end{pmatrix}$}
+（$V_2+RI_2=1V_2+RI_2$、$I_2=0V_2+1I_2$ と見て、4つの数を並べた。）
+
+\kviidhead{箱2：並列の抵抗}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+上の線と下の線のあいだに、抵抗 $R$ を橋のようにわたした箱です。電圧は、入口と出口で同じです：$V_1=V_2$。入口から入った電流は、抵抗を通る $V_2/R$ と、出口へ行く $I_2$ に分かれます。合わさった電流はたし算（3-6）なので：$I_1=\dfrac{1}{R}V_2+I_2$。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \draw[bkInk, line width=0.9pt] (0,8) -- (40,8) (0,-8) -- (40,-8) (20,8) -- (20,-8);
+  \kviidRv{20}{0}
+  \fill[bkInk] (20,8) circle (0.8) (20,-8) circle (0.8);
+  \node[font=\sffamily\footnotesize, anchor=west] at (22.5,0) {$R$};
+  \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(40,8)}\kviidT{(40,-8)}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-2,0) {$V_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (42,0) {$V_2$};
+  \draw[bkInk!50, line width=0.6pt, dashed, rounded corners=1.5mm] (6,-12) rectangle (34,17);
+\end{tikzpicture}
+\end{minipage}
+\kviidline{$\begin{pmatrix}V_1\\I_1\end{pmatrix}=\begin{pmatrix}V_2\\\frac{1}{R}V_2+I_2\end{pmatrix}=\begin{pmatrix}1&0\\\frac{1}{R}&1\end{pmatrix}\begin{pmatrix}V_2\\I_2\end{pmatrix}$}
+
+\kviidhead{箱をつなぐと、行列のかけ算}
+箱1（$R=\qty{2}{\ohm}$）のあとに、箱2（$R=\qty{2}{\ohm}$）をつなぎます。箱1の出口の組を $(V_2,\ I_2)$、箱2の出口の組を $(V_3,\ I_3)$ とします。箱1の出口は、箱2の入口そのものです。
+\begin{kviidhk}[0.52]
+\begin{pmatrix}V_2\\I_2\end{pmatrix}=\begin{pmatrix}1&0\\0.5&1\end{pmatrix}\begin{pmatrix}V_3\\I_3\end{pmatrix} & 箱2（並列 \qty{2}{\ohm}、$\frac12=0.5$） \\
+\begin{pmatrix}V_1\\I_1\end{pmatrix}=\begin{pmatrix}1&2\\0&1\end{pmatrix}\begin{pmatrix}V_2\\I_2\end{pmatrix} & 箱1（直列 \qty{2}{\ohm}） \\
+=\begin{pmatrix}1&2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}\begin{pmatrix}V_3\\I_3\end{pmatrix} & 上の式を入れた（①と同じ「機械をつなぐ」） \\
+\end{kviidhk}
+2つの箱は、1つの行列にまとめられます。
+\kviidline{$\begin{pmatrix}1&2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}=\begin{pmatrix}1\times1+2\times0.5&1\times0+2\times1\\0\times1+1\times0.5&0\times0+1\times1\end{pmatrix}$}
+\kviidframe{$\begin{pmatrix}1&2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}=\begin{pmatrix}2&2\\0.5&1\end{pmatrix}$}
+行列の並び（箱1が左、箱2が右）が、回路の図の箱の並び（入口側が左）と同じになりました。①の「右が先」とも合っています。出口から計算を始めるので、出口に近い箱2が先にかかるのです。
+
+\kviidhead{確かめ：出口を開いたとき}
+出口に何もつながない（電流が出ていかない、$I_3=0$）で、出口の電圧が $V_3=\qty{1}{V}$ になるようにするには、入口に何が必要でしょう。行列に $(1,\ 0)$ を入れると、1列めの $(2,\ 0.5)$ が出てきます。入口は\qty{2}{V}・\qty{0.5}{A}です。
+
+回路で確かめます（下の図）。出口に電流が出ていかないので、電流は2つの抵抗を順に流れ、合わせて\qty{4}{\ohm}です。\qty{2}{V}なら $2\div4=\qty{0.5}{A}$、並列の抵抗の電圧は $2\times0.5=\qty{1}{V}$。行列の答えと合っています。
+\begin{bkcenter}
+\begin{tikzpicture}[x=0.72mm, y=0.8mm]
+  \draw[bkInk, line width=0.9pt] (0,8) -- (46,8) (0,-8) -- (46,-8) (32,8) -- (32,-8);
+  \kviidRh{15}{8}\kviidRv{32}{0}
+  \fill[bkInk] (32,8) circle (0.8) (32,-8) circle (0.8);
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,10.5) {2\,Ω};
+  \node[font=\sffamily\footnotesize, anchor=west] at (34.5,0) {2\,Ω};
+  \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(46,8)}\kviidT{(46,-8)}
+  \node[font=\sffamily\footnotesize, anchor=east, align=right] at (-2,0) {2\,V\\0.5\,A};
+  \node[font=\sffamily\footnotesize, anchor=west] at (48,0) {1\,V};
+  \node[font=\sffamily\footnotesize, anchor=north] at (15,-10) {箱1};
+  \node[font=\sffamily\footnotesize, anchor=north] at (32,-10) {箱2};
+\end{tikzpicture}
+\end{bkcenter}
+
+\kviidhead{つなぐ順番を変えると}
+箱2を先（入口側）に、箱1をあとにつなぐと、行列の順番も入れかわります。
+\kviidline{$\begin{pmatrix}1&0\\0.5&1\end{pmatrix}\begin{pmatrix}1&2\\0&1\end{pmatrix}=\begin{pmatrix}1&2\\0.5&2\end{pmatrix}$}
+出口を開いて $V_3=\qty{1}{V}$ なら、入口は1列めの\qty{1}{V}・\qty{0.5}{A}です。こんどは並列の抵抗が入口にじかにつながっているので、そこに $1\div2=\qty{0.5}{A}$ 流れるだけで、直列の抵抗には電流が流れず、電圧は下がりません。同じ2つの部品でも、つなぐ順番で回路のはたらきが変わります。④の $AB\neq BA$ が、回路でも起きているのです。
+
+\kviidhead{四端子定数}
+このように、入口が2本・出口が2本の線の箱を表す2×2 の行列の4つの数を、電気の本では\textbf{四端子定数}（よんたんしていすう）または F 行列とよび、$A$、$B$、$C$、$D$ の文字で書きます。\bkidx{よんたんしていすう}{四端子定数}この巻では、行列の名前の $A$ とまぎれないように、数で書きます。左上と右下は「電圧÷電圧」「電流÷電流」で単位がなく、右上は抵抗と同じ Ω、左下は「電流÷電圧」で $1/\Omega$（S、ジーメンス）の単位をもちます。
+
+箱1・箱2のどちらも、また、つないだ行列（1行め 2、2、2行め 0.5、1）も、「左上×右下－右上×左下」が $2\times1-2\times0.5=1$ になっています。これがなぜかは、7-4（行列式）で学びます。また 7-11 では、長い送電線を「小さな箱を何個もつないだもの」と見て、同じ考えで調べます。
+
+\begin{seikaku}
+この本では、出口の電流 $I_2$ を「出口から次の箱へ出ていく向き」にとりました（図\ref{bk:7-3:fig-hako}）。こうすると、箱1の出口の電流が、そのまま箱2の入口の電流になるので、箱をつなぐことが行列のかけ算だけで表せます。本によっては、$I_2$ を「出口から箱へ入る向き」にとっているものがあります。その場合は $I_2$ の符号が逆になり、右上と右下の数の符号（＋と－）が入れかわります。専門書を読むときは、まず電流の向きの決め方を確かめましょう。
+\end{seikaku}
+
+\kviidhead{コイルとコンデンサーの箱}
+6-10 で、交流ではコイルが「電圧＝$j\omega L$×電流」、コンデンサーが「電流＝$j\omega C$×電圧」になることを学びました。抵抗の $R$ のかわりに、コイルでは $j\omega L$ を、並列の抵抗の $\frac1R$ のかわりに、コンデンサーでは $j\omega C$ を使えば、同じ形の箱になります。成分が複素数になるだけで、行列のかけ算のしかたは同じです。コイルの箱（入口側）とコンデンサーの箱（出口側）をつなぐと、
+\kviidline{$\begin{pmatrix}1&j\omega L\\0&1\end{pmatrix}\begin{pmatrix}1&0\\j\omega C&1\end{pmatrix}=\begin{pmatrix}1-\omega^2LC&j\omega L\\j\omega C&1\end{pmatrix}$}
+です（$j^2=-1$ なので $j\omega L\times j\omega C=-\omega^2LC$）。例題9で、雑音を取りのぞく回路（6-13 のローパスフィルター）の仲間を計算します。
+
+\begin{senmonsho}[電気回路の本の書き方]
+\begin{bkhonbun}
+二端子対回路の入力側の電圧・電流 $V_1$、$I_1$ と出力側の電圧・電流 $V_2$、$I_2$ の関係を
+\[ \begin{pmatrix}V_1\\I_1\end{pmatrix}=\begin{pmatrix}A&B\\C&D\end{pmatrix}\begin{pmatrix}V_2\\I_2\end{pmatrix} \]
+と表すとき、$A$、$B$、$C$、$D$ を四端子定数（F パラメータ）という。二つの二端子対回路を縦続接続した回路の F 行列は、各回路の F 行列の積で与えられる。
+\end{bkhonbun}
+\bkyaku{「二端子対回路」は入口2本・出口2本の線の箱、「入力側」は入口、「出力側」は出口。「縦続接続」は、箱を前の出口と次の入口でくさりのようにつなぐこと。つまり⑥の「箱をつなぐと、行列のかけ算」を書いている。ここの $A$ や $D$ は数の名前で、行列の名前ではない。}
+\end{senmonsho}
+
+\bksubsection{7}{ロボットの腕：肩とひじの回転をつなぐ}
+\label{bk:7-3:robot}
+
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\raggedright
+2本のうでのロボット（7-2⑧）で、肩を90°、ひじを90°回すと、手はどちらを向くでしょう。2本めのうでの向きは、まず肩の回転で90°回り、さらにひじの回転で90°回ります。回転を2つつなぐので、行列の積です。
+\kviidline{$R_{90}R_{90}=\begin{pmatrix}-1&0\\0&-1\end{pmatrix}$}
+2本めのうでは、もとの向き（$x$ の向き）から180°回って、左を向きます。いっぱんの角 $\theta_1$、$\theta_2$ でも、回転をつなぐと、行列の積 $R(\theta_1)R(\theta_2)$ になります。この積が $R(\theta_1+\theta_2)$ になること（30°と45°で75°）を、7-6 で確かめ、手の位置を求めます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk!35] (-6,-2.5) rectangle (6,0);
+  \draw[bkBlue!70!black, line width=3pt, line cap=round] (0,0) -- (0,30);
+  \draw[bkOrange!80!black, line width=3pt, line cap=round] (0,30) -- (-25,30);
+  \kviidjoint{(0,0)}\kviidjoint{(0,30)}
+  \fill[bkInk] (-25,30) circle (1.2);
+  \draw[bkInk, line width=0.6pt] (0,7) -- (7,7) -- (7,0);
+  \draw[bkInk, line width=0.6pt] (-7,30) -- (-7,23) -- (0,23);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-3) {肩};
+  \node[font=\sffamily\footnotesize, anchor=west] at (2.5,32) {ひじ};
+  \node[font=\sffamily\footnotesize, anchor=south] at (-25,31.5) {手};
+  \node[font=\sffamily\footnotesize, anchor=west] at (8,4) {90°};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (-1,22.5) {90°};
+\end{tikzpicture}
+\end{minipage}
+
+\bksubsection{8}{表計算と Python で、3×3 の積}
+\label{bk:7-3:pc}
+
+3×3 の積は、成分が9つ、それぞれ3つのかけ算のたし算で、手で計算すると大変です。表計算では、7-1 と同じ \texttt{MMULT} を使います。左の行列を A2:C4、右の行列を D2:F4 に入れ、答えは下の A6:C8 に出します。
+
+\begin{bkcenter}
+\kviidfx{A6}{=MMULT(A2:C4,D2:F4)}\par\vspace{1mm}
+\bksheet{6}{14}{%
+1 & \SetCell[c=3]{c} 左の行列 $P$ & & & \SetCell[c=3]{c} 右の行列 $Q$ & & \\
+2 & \SetCell{bg=kviidM} 1 & \SetCell{bg=kviidM} 2 & \SetCell{bg=kviidM} 0 & \SetCell{bg=kviidV} 2 & \SetCell{bg=kviidV} 0 & \SetCell{bg=kviidV} 1 \\
+3 & \SetCell{bg=kviidM} 0 & \SetCell{bg=kviidM} 1 & \SetCell{bg=kviidM} 1 & \SetCell{bg=kviidV} 1 & \SetCell{bg=kviidV} 1 & \SetCell{bg=kviidV} 0 \\
+4 & \SetCell{bg=kviidM} 1 & \SetCell{bg=kviidM} 0 & \SetCell{bg=kviidM} 1 & \SetCell{bg=kviidV} 0 & \SetCell{bg=kviidV} 3 & \SetCell{bg=kviidV} 1 \\
+5 & \SetCell[c=3]{c} 積 $PQ$ & & & & & \\
+6 & \SetCell{bg=kviidR} 4 & \SetCell{bg=kviidR} 2 & \SetCell{bg=kviidR} 1 & & & \\
+7 & \SetCell{bg=kviidR} 1 & \SetCell{bg=kviidR} 4 & \SetCell{bg=kviidR} 1 & & & \\
+8 & \SetCell{bg=kviidR} 2 & \SetCell{bg=kviidR} 3 & \SetCell{bg=kviidR} 2 & & & \\}
+\bktabcaption{3×3 の積。A6 に式を入れて、7-1 と同じように確定すると、A6:C8 の9マスに答えが出る。}
+\end{bkcenter}
+たとえば A6 の4は、$P$ の1行め $(1,\ 2,\ 0)$ と $Q$ の1列め $(2,\ 1,\ 0)$ の内積 $1\times2+2\times1+0\times0=4$ です。
+
+Python では \texttt{@} を使います。\par
+\noindent\begin{minipage}[t]{0.64\linewidth}\vspace{0pt}
+\begin{bkcode}[Python]
+import numpy as np
+P = np.array([[1, 2, 0],
+              [0, 1, 1],
+              [1, 0, 1]])
+Q = np.array([[2, 0, 1],
+              [1, 1, 0],
+              [0, 3, 1]])
+print(P @ Q)   \# 行列×行列
+print(P * Q)   \# 成分ごと（別物）
+\end{bkcode}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}\vspace{0pt}
+\begin{bkcodeout}[実行結果]
+[[4 2 1]
+ [1 4 1]
+ [2 3 2]]
+[[2 0 0]
+ [0 1 0]
+ [0 0 1]]
+\end{bkcodeout}
+\end{minipage}\par\vspace{3pt}
+\texttt{P * Q} は、同じ場所の成分どうしをかけただけ（左上は $1\times2=2$）で、行列の積ではありません。表計算で \texttt{=A2*D2} をコピーしたときも、同じまちがいになります（まちがえやすいところ③）。
+
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{積の意味}2つの変換をつないで、1つにまとめたもの\\[2pt]
+\hspace*{6.6\zw}$AB\vec x=A(B\vec x)$。右の $B$ が先\\[3pt]
+\tsl{積の計算}$i$ 行 $j$ 列めの成分＝左の $i$ 行めと、右の $j$ 列めの内積\\[2pt]
+\hspace*{6.6\zw}$\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}p&q\\r&s\end{pmatrix}=\begin{pmatrix}ap+br&aq+bs\\cp+dr&cq+ds\end{pmatrix}$\\[3pt]
+\tsl{大きさ}（$m$ 行 $n$ 列）×（$n$ 行 $p$ 列）＝（$m$ 行 $p$ 列）\\[3pt]
+\tsl{きまり}ふつう $AB\neq BA$。$(AB)C=A(BC)$。$AI=IA=A$\\[3pt]
+\tsl{箱をつなぐ}四端子定数の行列を、入口側から順に左からかける
+\end{taisetsu}
+
+
+\begin{kotoba}
+\small
+\bkword{積（行列の）}{2つの行列を、行と列の内積でかけたもの。2つの変換をつないだ1つの変換を表す。}
+\bkword{結合法則}{$(AB)C=A(BC)$。順番を変えなければ、どこから先にまとめてもよい。}
+\bkword{単位行列}{ななめが1、ほかが0の行列。何もしない変換。数の1と同じ役目。}
+\bkword{四端子定数}{入口2本・出口2本の線の箱で、出口の電圧・電流から入口の電圧・電流を求める2×2 の行列の4つの数。F 行列ともいう。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$AB$}{エー・ビー}{行列の積。$B$ の変換のあとに $A$ の変換をする（右が先）。ふつう $AB\neq BA$}{matrix product}{7-3}}
+{\bkkigocard{$I$}{アイ}{単位行列。何もしない変換。$AI=IA=A$。$E$ と書く本も多い}{identity matrix}{7-3}}
+
+
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[2×2 の積を、行と列で]
+次の積を計算しましょう。
+\kviidline{$\begin{pmatrix}1&2\\3&-1\end{pmatrix}\begin{pmatrix}2&0\\1&4\end{pmatrix}$}
+\kangaekata $i$ 行め $j$ 列めの成分は、左の $i$ 行めと、右の $j$ 列めの内積。負の数はかっこをつけてかける。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 1行め1列め：$1\times2+2\times1=4$\par
+\kviida 1行め2列め：$1\times0+2\times4=8$\par
+\kviida 2行め1列め：$3\times2+(-1)\times1=5$\par
+\kviida 2行め2列め：$3\times0+(-1)\times4=-4$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 $\begin{pmatrix}4&8\\5&-4\end{pmatrix}$
+\end{reidai}
+
+\begin{jibun}
+次の積を計算しましょう。
+\kviidline{$\begin{pmatrix}3&1\\0&2\end{pmatrix}\begin{pmatrix}1&-1\\2&5\end{pmatrix}$}
+\bkjans{1行め1列め $3+2=5$、1行め2列め $-3+5=2$、2行め1列め $0+4=4$、2行め2列め $0+10=10$。答えは1行め 5、2、2行め 4、10。}
+\end{jibun}
+
+\begin{reidai}[$AB$ と $BA$ をくらべる]
+次の2つの行列で、$AB$ と $BA$ を計算してくらべましょう。
+\kviidline{$A=\begin{pmatrix}1&1\\0&1\end{pmatrix}\qquad B=\begin{pmatrix}2&0\\0&1\end{pmatrix}$}
+\kangaekata どちらも、左の行と右の列の内積。順番を変えると、左と右が入れかわる。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 $AB$：1行め $(1\times2+1\times0,\ 1\times0+1\times1)=(2,\ 1)$、2行め $(0,\ 1)$\par
+\kviida $BA$：1行め $(2\times1+0\times0,\ 2\times1+0\times1)=(2,\ 2)$、2行め $(0,\ 1)$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 $AB=\begin{pmatrix}2&1\\0&1\end{pmatrix}$、$BA=\begin{pmatrix}2&2\\0&1\end{pmatrix}$。右上がちがい、$AB\neq BA$。
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=4mm, y=4mm]
+  \begin{scope}
+    \kviidgrid{-1}{5}{-1}{4}\kviidhousezero\kviidhouse[bkPurple]{2}{1}{0}{1}
+    \node[font=\footnotesize, anchor=north, align=center] at (2,-1.5) {$AB$：横に2倍してから、ずらす};
+  \end{scope}
+  \begin{scope}[xshift=60mm]
+    \kviidgrid{-1}{7}{-1}{4}\kviidhousezero\kviidhouse[bkRed]{2}{2}{0}{1}
+    \node[font=\footnotesize, anchor=north, align=center] at (3,-1.5) {$BA$：ずらしてから、横に2倍};
+  \end{scope}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+次の2つの行列で、$AB$ と $BA$ を計算してくらべましょう。
+\kviidline{$A=\begin{pmatrix}0&-1\\1&0\end{pmatrix}\qquad B=\begin{pmatrix}1&0\\0&-1\end{pmatrix}$}
+\bkjans{$AB$ は1行め 0、1、2行め 1、0。$BA$ は1行め 0、$-1$、2行め $-1$、0。$AB\neq BA$。}
+\end{jibun}
+
+\begin{reidai}[2つの変換をつないだ行列を作る]
+はじめに横に2倍にのばし（$S$）、つぎに左回りに90°回す（$R_{90}$）変換を、1つの行列で表しましょう。また、その行列で点 $(1,\ 1)$ がどこへ行くかを求め、1つずつ変換した結果とくらべましょう。\par
+\kangaekata 先にする $S$ が右、あとにする $R_{90}$ が左。積は $R_{90}S$。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 $R_{90}S=\begin{pmatrix}0&-1\\1&0\end{pmatrix}\begin{pmatrix}2&0\\0&1\end{pmatrix}=\begin{pmatrix}0&-1\\2&0\end{pmatrix}$（④と同じ）\par
+\kviida 行列で：$(0\times1+(-1)\times1,\ 2\times1+0\times1)=(-1,\ 2)$\par
+\kviida 1つずつ：$S$ で $(2,\ 1)$、つぎに $R_{90}$ で $(-1,\ 2)$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 $\begin{pmatrix}0&-1\\2&0\end{pmatrix}$、点 $(-1,\ 2)$（どちらの方法でも同じ）
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=6mm, y=6mm]
+  \kviidgrid{-2}{3}{-1}{3}
+  \fill[bkInk] (1,1) circle (0.1) (2,1) circle (0.1) (-1,2) circle (0.1);
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (1.15,1) -- (1.85,1);
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}, bend right=35] (1.95,1.15) to (-0.85,2.05);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (1,0.75) {$(1,\ 1)$};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (2.2,1) {$S$ で $(2,\ 1)$};
+  \node[font=\sffamily\footnotesize, anchor=east, fill=white, inner sep=1pt] at (-1.2,2) {$R_{90}$ で $(-1,\ 2)$};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+はじめにずらし（左）をし、つぎに上下の裏返し（右）をする変換を、1つの行列で表しましょう。
+\kviidline{$\begin{pmatrix}1&1\\0&1\end{pmatrix}$\qquad $\begin{pmatrix}1&0\\0&-1\end{pmatrix}$}また、点 $(1,\ 2)$ がどこへ行くかを、2通りで求めましょう。
+\bkjans{積は（裏返し）×（ずらし）で、1行め 1、1、2行め 0、$-1$。行列で $(1+2,\ -2)=(3,\ -2)$。1つずつ：ずらしで $(3,\ 2)$、裏返しで $(3,\ -2)$。}
+\end{jibun}
+
+\begin{reidai}[同じ行列を何回もかける]
+主役の行列 $A$（下）の $A^2$ と $A^3$ を求めましょう。
+\kviidline{$A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$}
+\kangaekata $A^2=AA$、$A^3=A^2A$。成分を2乗するのではない。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 $A^2$：1行め $(2\times2+1\times1,\ 2\times1+1\times2)=(5,\ 4)$\par
+\kviidb 2行め $(1\times2+2\times1,\ 1\times1+2\times2)=(4,\ 5)$\par
+\kviida $A^3=A^2A$：1行め $(5\times2+4\times1,\ 5\times1+4\times2)=(14,\ 13)$\par
+\kviidb 2行め $(4\times2+5\times1,\ 4\times1+5\times2)=(13,\ 14)$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 $A^2=\begin{pmatrix}5&4\\4&5\end{pmatrix}$、$A^3=\begin{pmatrix}14&13\\13&14\end{pmatrix}$
+\end{reidai}
+
+\begin{jibun}
+ずらしの行列 $H$（下）の $H^2$ と $H^3$ を求め、何回ずらしたのと同じかを言いましょう。
+\kviidline{$H=\begin{pmatrix}1&1\\0&1\end{pmatrix}$}
+\bkjans{$H^2$ は1行め 1、2、2行め 0、1。$H^3$ は1行め 1、3、2行め 0、1。$H^n$ は右上が $n$ で、$n$ 回ずらした（高さ $y$ の点が $ny$ だけ右へずれる）のと同じ。}
+\end{jibun}
+
+\begin{reidai}[3つの積を、2通りの区切りで]
+次の3つの行列で、$(AB)C$ と $A(BC)$ をそれぞれ計算し、同じになることを確かめましょう。
+\kviidline{$A=\begin{pmatrix}1&2\\0&1\end{pmatrix}$\qquad $B=\begin{pmatrix}0&1\\1&0\end{pmatrix}$\qquad $C=\begin{pmatrix}2&0\\0&3\end{pmatrix}$}
+\kangaekata ⑤の結合法則。かっこの中を先に計算する。左右の並び（$A$、$B$、$C$ の順）は変えない。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 $AB$：1行め $(1\times0+2\times1,\ 1\times1+2\times0)=(2,\ 1)$、2行め $(1,\ 0)$\par
+\kviidb $(AB)C$：1行め $(2\times2+1\times0,\ 2\times0+1\times3)=(4,\ 3)$、2行め $(2,\ 0)$\par
+\kviida $BC$：1行め $(0\times2+1\times0,\ 0\times0+1\times3)=(0,\ 3)$、2行め $(2,\ 0)$\par
+\kviidb $A(BC)$：1行め $(1\times0+2\times2,\ 1\times3+2\times0)=(4,\ 3)$、2行め $(2,\ 0)$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 どちらも $\begin{pmatrix}4&3\\2&0\end{pmatrix}$ で、同じ。
+\end{reidai}
+
+\begin{jibun}
+次の3つの行列で、$(AB)C$ と $A(BC)$ をそれぞれ計算し、同じになることを確かめましょう。
+\kviidline{$A=\begin{pmatrix}1&0\\3&1\end{pmatrix}$\qquad $B=\begin{pmatrix}2&1\\0&1\end{pmatrix}$\qquad $C=\begin{pmatrix}1&1\\1&0\end{pmatrix}$}
+\bkjans{$AB$ は1行め 2、1、2行め 6、4。$(AB)C$ は1行め 3、2、2行め 10、6。$BC$ は1行め 3、2、2行め 1、0。$A(BC)$ は1行め 3、2、2行め 10、6。同じ。}
+\end{jibun}
+
+\begin{reidai}[3×3 の積]
+⑧の $P$ と $Q$ の積 $PQ$ の、2行め3列めの成分と、3行め2列めの成分を、手で計算して確かめましょう。
+\kviidline{$P=\begin{pmatrix}1&2&0\\0&1&1\\1&0&1\end{pmatrix}$\qquad $Q=\begin{pmatrix}2&0&1\\1&1&0\\0&3&1\end{pmatrix}$}
+\kangaekata 2行め3列め＝$P$ の2行めと $Q$ の3列めの内積。3つずつかけてたす。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 2行め3列め：$(0,\ 1,\ 1)\cdot(1,\ 0,\ 1)=0\times1+1\times0+1\times1=1$\par
+\kviida 3行め2列め：$(1,\ 0,\ 1)\cdot(0,\ 1,\ 3)=1\times0+0\times1+1\times3=3$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 1と3（⑧の表計算の B8 の3、C7 の1と同じ）
+\end{reidai}
+
+\begin{jibun}
+次の積 $PQ$ の9つの成分をすべて求めましょう（表計算か Python でも確かめよう）。
+\kviidline{$P=\begin{pmatrix}1&0&2\\2&1&0\\0&1&1\end{pmatrix}$\qquad $Q=\begin{pmatrix}1&1&0\\0&2&1\\3&0&1\end{pmatrix}$}
+\bkjans{1行め $1+0+6=7$、$1+0+0=1$、$0+0+2=2$。2行め $2+0+0=2$、$2+2+0=4$、$0+1+0=1$。3行め $0+0+3=3$、$0+2+0=2$、$0+1+1=2$。答えは1行め 7、1、2、2行め 2、4、1、3行め 3、2、2。}
+\end{jibun}
+
+\begin{reidai}[抵抗の箱を2つつなぐ]
+直列の抵抗 \qty{2}{\ohm} の箱（入口側）と、並列の抵抗 \qty{2}{\ohm} の箱（出口側）をつなぎます。\par
+（1）つないだ回路の行列を求めましょう。\par
+（2）出口を開いて（$I_3=0$）、出口の電圧を\qty{1}{V}にするには、入口の電圧と電流はいくらですか。\par
+（3）2つの箱をつなぐ順番を入れかえた回路の行列を求めましょう。\par
+\kangaekata ⑥の箱の行列。直列 $R$ は1行め 1、$R$、2行め 0、1。並列 $R$ は1行め 1、0、2行め $\frac1R$、1。入口側の箱を左に並べてかける。\par
+\shiki\kviids\hangindent=4.3\zw\hangafter=1 （1）$\begin{pmatrix}1&2\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}=\begin{pmatrix}1+1&0+2\\0+0.5&0+1\end{pmatrix}=\begin{pmatrix}2&2\\0.5&1\end{pmatrix}$\par
+\kviida （2）$\begin{pmatrix}2&2\\0.5&1\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}2\\0.5\end{pmatrix}$（1列め）\par
+\kviida （3）$\begin{pmatrix}1&0\\0.5&1\end{pmatrix}\begin{pmatrix}1&2\\0&1\end{pmatrix}=\begin{pmatrix}1+0&2+0\\0.5+0&1+1\end{pmatrix}=\begin{pmatrix}1&2\\0.5&2\end{pmatrix}$\par
+\kotae\kviids\hangindent=4.3\zw\hangafter=1 （1）$\begin{pmatrix}2&2\\0.5&1\end{pmatrix}$\quad （2）\qty{2}{V}、\qty{0.5}{A}\quad （3）$\begin{pmatrix}1&2\\0.5&2\end{pmatrix}$
+\par\vspace{1pt}{\centering\begin{tikzpicture}[x=0.75mm, y=0.7mm]
+  \begin{scope}
+    \draw[bkInk, line width=0.9pt] (0,8) -- (46,8) (0,-8) -- (46,-8) (32,8) -- (32,-8);
+    \kviidRh{15}{8}\kviidRv{32}{0}
+    \fill[bkInk] (32,8) circle (0.8) (32,-8) circle (0.8);
+    \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(46,8)}\kviidT{(46,-8)}
+    \node[font=\sffamily\footnotesize, anchor=south] at (15,10.5) {2\,Ω};
+    \node[font=\sffamily\footnotesize, anchor=west] at (34.5,0) {2\,Ω};
+    \node[font=\sffamily\footnotesize, anchor=north] at (23,-11) {（1）直列が入口側};
+  \end{scope}
+  \begin{scope}[xshift=63mm]
+    \draw[bkInk, line width=0.9pt] (0,8) -- (46,8) (0,-8) -- (46,-8) (12,8) -- (12,-8);
+    \kviidRv{12}{0}\kviidRh{30}{8}
+    \fill[bkInk] (12,8) circle (0.8) (12,-8) circle (0.8);
+    \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(46,8)}\kviidT{(46,-8)}
+    \node[font=\sffamily\footnotesize, anchor=south] at (30,10.5) {2\,Ω};
+    \node[font=\sffamily\footnotesize, anchor=west] at (14.5,0) {2\,Ω};
+    \node[font=\sffamily\footnotesize, anchor=north] at (23,-11) {（3）並列が入口側};
+  \end{scope}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+直列の抵抗 \qty{1}{\ohm} の箱（入口側）と、並列の抵抗 \qty{4}{\ohm} の箱（出口側）をつなぎます。
+\par（1）つないだ回路の行列を求めましょう。\par（2）出口を開いて、出口の電圧を\qty{4}{V}にするには、入口の電圧と電流はいくらですか。\par（3）つなぐ順番を入れかえた回路の行列を求めましょう。
+\bkjans{（1）\nobreak 直列 \qty{1}{\ohm} の行列（1行め 1、1、2行め 0、1）× 並列 \qty{4}{\ohm} の行列（1行め 1、0、2行め 0.25、1）＝1行め 1.25、1、2行め 0.25、1。（2）\nobreak $(1.25\times4,\ 0.25\times4)$ で\qty{5}{V}、\qty{1}{A}。（3）\nobreak 1行め 1、1、2行め 0.25、1.25。}
+\end{jibun}
+
+\begin{reidai}[箱を3つつなぐ]
+直列 \qty{1}{\ohm}、並列 \qty{2}{\ohm}、直列 \qty{1}{\ohm} の3つの箱を、この順に入口側からつないだ回路（T の字の形）の行列を求め、左上×右下－右上×左下を計算しましょう。\par
+\kangaekata 3つの行列を入口側から左に並べてかける。⑤の結合法則で、左の2つを先にまとめてよい。\par
+\shiki\kviids\hangindent=2.6\zw\hangafter=1 左の2つ：$\begin{pmatrix}1&1\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}=\begin{pmatrix}1+0.5&0+1\\0+0.5&0+1\end{pmatrix}=\begin{pmatrix}1.5&1\\0.5&1\end{pmatrix}$\par
+\kviida 3つめをかける：$\begin{pmatrix}1.5&1\\0.5&1\end{pmatrix}\begin{pmatrix}1&1\\0&1\end{pmatrix}=\begin{pmatrix}1.5+0&1.5+1\\0.5+0&0.5+1\end{pmatrix}=\begin{pmatrix}1.5&2.5\\0.5&1.5\end{pmatrix}$\par
+\kviida $1.5\times1.5-2.5\times0.5=2.25-1.25=1$\par
+\kotae\kviids\hangindent=2.6\zw\hangafter=1 $\begin{pmatrix}1.5&2.5\\0.5&1.5\end{pmatrix}$、1（7-4 で、なぜ1になるかを学ぶ）
+\end{reidai}
+
+\begin{reidai}[コイルとコンデンサーの箱]
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+上の線にコイル（$L=\qty{10}{mH}$）、出口側の2本の線のあいだにコンデンサー（$C=\qty{1}{\micro F}$）を入れた箱があります（右の図。6-13 と同じ部品）。角周波数 $\omega=\qty{20000}{rad/s}$ の交流で考えます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \draw[bkInk, line width=0.9pt] (0,8) -- (10,8) (20,8) -- (44,8) (0,-8) -- (44,-8) (32,8) -- (32,1.2) (32,-1.2) -- (32,-8);
+  \draw[bkInk, line width=0.9pt] (10,8) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25);
+  \draw[bkInk, line width=1.4pt] (28.5,1.2) -- (35.5,1.2) (28.5,-1.2) -- (35.5,-1.2);
+  \fill[bkInk] (32,8) circle (0.8) (32,-8) circle (0.8);
+  \kviidT{(0,8)}\kviidT{(0,-8)}\kviidT{(44,8)}\kviidT{(44,-8)}
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,11) {$L$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (36.5,0) {$C$};
+\end{tikzpicture}
+\end{minipage}\par\vspace{2pt}
+
+（1）コイルの箱とコンデンサーの箱の行列を作り、つないだ行列を求めましょう。\par
+（2）出口を開いたとき（$I_2=0$）、出口の電圧の大きさは、入口の電圧の何倍ですか。\par
+\kangaekata ⑥の直列の箱の $R$ を $j\omega L$ に、並列の箱の $\frac1R$ を $j\omega C$ にかえる（6-10）。$j^2=-1$。\par
+\shiki\kviids\hangindent=4.3\zw\hangafter=1 （1）$j\omega L=j\times\qty{20000}{rad/s}\times\qty{0.01}{H}=j200$\quad 〔Ω〕\par
+\kviidb $j\omega C=j\times\qty{20000}{rad/s}\times\qty{1e-6}{F}=j0.02$\quad 〔S〕\par
+\kviidb $\begin{pmatrix}1&j200\\0&1\end{pmatrix}\begin{pmatrix}1&0\\j0.02&1\end{pmatrix}=\begin{pmatrix}1+j200\times j0.02&j200\\j0.02&1\end{pmatrix}$\par
+\kviidb 左上：$j200\times j0.02=4j^2=-4$ なので $1-4=-3$\par
+\kviida （2）$I_2=0$ なので、1行めから $V_1=-3V_2$、つまり $V_2=-\dfrac13V_1$\par
+\kotae\kviids\hangindent=4.3\zw\hangafter=1 （1）$\begin{pmatrix}-3&j200\\j0.02&1\end{pmatrix}$\quad （2）$\dfrac13$ 倍（$-$ は、山と谷が逆になること）\par\vspace{4pt}
+\noindent\textbf{くらべてみよう}\par\noindent
+同じ箱で、ゆっくりした交流 $\omega=\qty{1000}{rad/s}$ なら、$j\omega L=j10$、$j\omega C=j0.001$ で、左上は $1+j10\times j0.001=1-0.01=0.99$。出口の電圧は入口の約1.01倍で、ほぼそのまま通ります。速い交流は小さくなり、ゆっくりした交流はそのまま通る。この箱は、6-13 の「雑音を取りのぞく回路（ローパスフィルター）」の仲間です。
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+直列の抵抗 \qty{2}{\ohm}、並列の抵抗 \qty{4}{\ohm}、直列の抵抗 \qty{2}{\ohm} の3つの箱を、この順に入口側からつないだ回路の行列を求め、左上×右下－右上×左下を計算しましょう。
+\bkjans{左の2つで1行め 1.5、2、2行め 0.25、1。3つめをかけて1行め 1.5、5、2行め 0.25、1.5。$1.5\times1.5-5\times0.25=2.25-1.25=1$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+例題9と同じ箱（$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$）で、$\omega=\qty{30000}{rad/s}$ のときの行列を求め、出口を開いたとき、出口の電圧の大きさが入口の何倍になるかを求めましょう。
+\bkjans{$j\omega L=j300$、$j\omega C=j0.03$。左上は $1+j300\times j0.03=1-9=-8$。行列は1行め $-8$、$j300$、2行め $j0.03$、1。$V_2=-\dfrac18V_1$ で、$\dfrac18$ 倍。}
+\end{jibun}
+\end{minipage}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① $AB=BA$ と思う}
+\bkng{$\begin{pmatrix}1&1\\0&1\end{pmatrix}\begin{pmatrix}2&0\\0&1\end{pmatrix}$ を、$\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}1&1\\0&1\end{pmatrix}$ と同じとして計算する}
+\bkok{$\begin{pmatrix}2&1\\0&1\end{pmatrix}$ と $\begin{pmatrix}2&2\\0&1\end{pmatrix}$ で、ちがう（例題2）}
+行列のかけ算は、変換をつなぐ順番を表すので、入れかえると別の変換になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 先にする変換を左に書く}
+\bkng{「先に $S$、あとで $R_{90}$」を $SR_{90}$ と書く}
+\bkok{$R_{90}S$（先にする $S$ が右）}
+$R_{90}S\vec x=R_{90}(S\vec x)$ で、ベクトルにいちばん近い右の行列が先にかかります。日本語の文の順と逆になるので注意しましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 成分どうしをかける}
+\bkng{$\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}5&6\\7&8\end{pmatrix}=\begin{pmatrix}1\times5&2\times6\\3\times7&4\times8\end{pmatrix}=\begin{pmatrix}5&12\\21&32\end{pmatrix}$}
+\bkok{$\begin{pmatrix}1\times5+2\times7&1\times6+2\times8\\3\times5+4\times7&3\times6+4\times8\end{pmatrix}=\begin{pmatrix}19&22\\43&50\end{pmatrix}$}
+×は、表計算の \texttt{=A2*D2}、Python の \texttt{P * Q} と同じまちがいです。行列の積は、行と列の内積です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ 箱の行列を、出口側から並べる}
+\bkng{直列（入口側）→並列（出口側）を（並列）×（直列）とかける}
+\bkok{（直列）×（並列）。入口側の箱を左に書く}
+箱の行列は「出口の組を入れると入口の組が出てくる」向きなので、出口に近い箱が右（先）です。
+\end{tsumazuki}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $A^2$ を成分の2乗にする}
+\raggedright
+\bkng{$\begin{pmatrix}2&1\\1&2\end{pmatrix}^2=\begin{pmatrix}4&1\\1&4\end{pmatrix}$}
+\bkok{$\begin{pmatrix}5&4\\4&5\end{pmatrix}$（$AA$ を行と列で）}
+$A^2$ は「同じ変換を2回」です。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 大きさをたしかめない}
+\raggedright
+\bkng{2行3列×2行3列をかけようとする}
+\bkok{左の列の数と右の行の数をくらべる}
+内側の数（3と2）がそろわないと、かけられません。
+\end{tsumazuki}
+\end{minipage}
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviidbox{カメラのレンズ：光線の行列}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+光線を「軸からの高さ $y$〔m〕と、かたむき $\theta$〔rad〕」の組で表します。長さ $d$ のすき間を進むと高さが $d\theta$ 変わり（$\theta$ が小さいとき）、焦点距離 $f$ のうすいレンズではかたむきが $y/f$ だけ内向きに曲がります。行列は電気の箱と同じ形（下）ですが、電気の箱（出口の組を入れると入口の組が出てくる）とは\textbf{向きが反対}で、「入る光を入れると出る光が出てくる」向きです。だから、かける順番も反対になり、すき間のあとにレンズなら（レンズ）×（すき間）です（物理 波-12）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (-2,0) -- (50,0);
+  \draw[bkBlue!70!black, line width=1pt, fill=bkBlue!15] (30,-14) .. controls (33,-5) and (33,5) .. (30,14) .. controls (27,5) and (27,-5) .. (30,-14);
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=3.5pt]}] (0,4) -- (30,10) -- (48,0.4);
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (0,-6) -- (30,-6);
+  \node[font=\sffamily\footnotesize, anchor=north] at (15,-7) {すき間 $d$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (30,14.5) {レンズ $f$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-0.5,4) {光};
+\end{tikzpicture}\par\vspace{3pt}
+{\small すき間 $\begin{pmatrix}1&d\\0&1\end{pmatrix}$\quad レンズ $\begin{pmatrix}1&0\\-\frac1f&1\end{pmatrix}$\par}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviidbox{ゲームの画面：拡大してから回す}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+3次元のゲームでは、キャラクターの形に「大きさを合わせる」「向きを変える」「場所に置く」変換を順につなぎ、積1つにまとめておきます。何万もある形の点には、その1つの行列だけをかければよいので速いのです。順番をまちがえると、キャラクターが横に長くなったりします（④）。「置く」の行列は 7-7 で。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=17mm, font=\sffamily\footnotesize] (a) at (0,16) {大きさ $S$};
+  \node[bk node, minimum width=17mm, font=\sffamily\footnotesize] (b) at (0,4) {向き $R$};
+  \node[bk node, minimum width=17mm, font=\sffamily\footnotesize] (c) at (0,-8) {置く $T$};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c);
+  \node[bk node, minimum width=17mm, font=\sffamily\footnotesize, fill=bkTheme!12] (m) at (27,4) {$M=TRS$};
+  \draw[bk link] (b) -- (m);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (27,-2) {1つにまとめて、\\全部の点にかける};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviidbox{産業用ロボット：6つの関節をつなぐ}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+工場で車の溶接や部品の組み立てをするロボットには、関節が6つあるものが多く使われています。根もとから手先まで、関節ごとに「回して、腕の長さだけ進む」行列を作り、6つの行列を順にかけると、手先の位置と向きが1つの行列で求まります（物理 力-7、数学 7-7）。積の順番を1つでもまちがえると、手先はまったくちがう場所になってしまいます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \fill[bkInk!40] (-10,-3) rectangle (10,0);
+  \draw[bkInk!70, line width=5pt, line cap=round] (0,0) -- (0,10);
+  \draw[bkBlue!70!black, line width=4pt, line cap=round] (0,10) -- (14,26);
+  \draw[bkOrange!80!black, line width=3.5pt, line cap=round] (14,26) -- (32,22);
+  \draw[bkGreen!60!black, line width=3pt, line cap=round] (32,22) -- (38,15);
+  \kviidjoint{(0,10)}\kviidjoint{(14,26)}\kviidjoint{(32,22)}
+  \draw[bkInk, line width=1pt] (36,13) -- (40,13) (38,15) -- (38,11);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-3.5) {根もと};
+  \node[font=\sffamily\footnotesize, anchor=west] at (40,13) {手先};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 次の積を計算しましょう\mbox{（\bkreidairef{1}）}。
+\kviidline{（1）\ $\begin{pmatrix}2&-1\\1&3\end{pmatrix}\begin{pmatrix}0&2\\1&1\end{pmatrix}$\qquad （2）\ $\begin{pmatrix}0.5&1\\2&0\end{pmatrix}\begin{pmatrix}2&4\\1&-2\end{pmatrix}$}
+\bkpans{（1）\nobreak 1行め $0-1=-1$、$4-1=3$。2行め $0+3=3$、$2+3=5$。（2）\nobreak 1行め $1+1=2$、$2-2=0$。2行め $4+0=4$、$8+0=8$。}
+
+\bkproblem 次の $A$、$B$ で、$AB$ と $BA$ を計算してくらべましょう\mbox{（\bkreidairef{2}）}。
+\kviidline{$A=\begin{pmatrix}1&0\\0&2\end{pmatrix}$\qquad $B=\begin{pmatrix}0&1\\1&0\end{pmatrix}$}
+\bkpans{$AB$ は1行め 0、1、2行め 2、0。$BA$ は1行め 0、2、2行め 1、0。$AB\neq BA$。}
+
+\bkproblem はじめに上下の裏返し（左）をし、つぎに横に2倍（右の $S$）にする変換を、1つの行列で表しましょう。
+\kviidline{$\begin{pmatrix}1&0\\0&-1\end{pmatrix}$\qquad $S=\begin{pmatrix}2&0\\0&1\end{pmatrix}$}
+また、点 $(1,\ 1)$ がどこへ行くかを2通りで求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$S$×（裏返し）で、1行め 2、0、2行め 0、$-1$。行列で $(2,\ -1)$。1つずつ：裏返しで $(1,\ -1)$、$S$ で $(2,\ -1)$。}
+
+\bkproblem 次の行列 $A$ の $A^2$ と $A^3$ を求めましょう\mbox{（\bkreidairef{4}）}。
+\kviidline{$A=\begin{pmatrix}1&0\\1&1\end{pmatrix}$}
+\bkpans{$A^2$ は1行め 1、0、2行め 2、1。$A^3$ は1行め 1、0、2行め 3、1。}
+
+\bkproblem 直列の抵抗 \qty{4}{\ohm} の箱（入口側）と、並列の抵抗 \qty{2}{\ohm} の箱（出口側）をつなぎます。（1）つないだ回路の行列（2）出口を開いて出口の電圧を\qty{2}{V}にするときの入口の電圧と電流（3）つなぐ順番を入れかえた行列、を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{（1）\nobreak 1行め 3、4、2行め 0.5、1。（2）\nobreak $(3\times2,\ 0.5\times2)$ で\qty{6}{V}、\qty{1}{A}。（3）\nobreak 1行め 1、4、2行め 0.5、3。}
+
+\bkproblem 次の積 $PQ$ を求めましょう\mbox{（\bkreidairef{6}）}。
+\kviidline{$P=\begin{pmatrix}1&0&2\\0&1&0\\1&1&0\end{pmatrix}$\qquad $Q=\begin{pmatrix}1&1&0\\0&1&1\\2&0&1\end{pmatrix}$}
+\bkpans{1行め 5、1、2。2行め 0、1、1。3行め 1、2、1。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 例題9の箱（$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$）で、$\omega=\qty{5000}{rad/s}$ のときの行列を求め、出口を開いたとき、出口の電圧の大きさが入口の何倍になるかを求めましょう。入口より大きくなるのはなぜかも考えましょう（ヒント：6-13 の共振）\mbox{（\bkreidairef{9}）}。
+\bkpans{$j\omega L=j50$、$j\omega C=j0.005$。左上 $1+j50\times j0.005=1-0.25=0.75$。行列は1行め 0.75、$j50$、2行め $j0.005$、1。$V_2=\dfrac{V_1}{0.75}$ で約1.33倍。$\omega$ がこの LC の共振の角周波数 $\dfrac{1}{\sqrt{LC}}=\qty{10000}{rad/s}$ に近づいたため、出口の電圧が大きくなる。}
+
+\bkproblem 光線が、長さ $d=\qty{0.1}{m}$ のすき間を進んでから、焦点距離 $f=\qty{0.05}{m}$ のレンズを通ります（物理・工学ではこう使う）。（1）2つをつないだ行列を求めましょう。（2）高さ $y=\qty{0.01}{m}$、かたむき $\theta=\qty{0.1}{rad}$ で入った光の、レンズを出たあとの高さとかたむきを求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{（1）\nobreak 先にすき間（右）、あとでレンズ（左）。レンズの行列（1行め 1、0、2行め $-20$、1）×すき間の行列（1行め 1、0.1、2行め 0、1）＝1行め 1、0.1、2行め $-20$、$-1$。（2）\nobreak $y=0.01+0.1\times0.1=\qty{0.02}{m}$、$\theta=-20\times0.01-1\times0.1=\qty{-0.3}{rad}$（軸のほうへ曲がる）。}
+
+\bkproblem 2本のうでのロボットで、肩を90°、ひじを90°回しました（⑦）。$R_{90}R_{90}$ を計算し、2本めのうでの向き $\vec e_x=(1,\ 0)$ がどこへ行くかを求めましょう。また、肩を90°・ひじを $-90°$（右回りに90°）回したときはどうなりますか。右回りに90°の行列は、下の行列です\mbox{（\bkreidairef{1}）}。
+\kviidline{$\begin{pmatrix}0&1\\-1&0\end{pmatrix}$}
+\bkpans{$R_{90}R_{90}$ は1行め $-1$、0、2行め 0、$-1$ で、$(1,\ 0)$ は $(-1,\ 0)$（左向き）。$R_{90}$×（右回り90°）は1行め 1、0、2行め 0、1 ＝ $I$ で、$(1,\ 0)$ のまま（右向き。回転が打ち消しあう）。}
+
+\bkproblem 直列の抵抗 \qty{3}{\ohm}、並列の抵抗 \qty{2}{\ohm}、直列の抵抗 \qty{1}{\ohm} の3つの箱を、この順に入口側からつないだ回路の行列を求め、左上×右下－右上×左下を計算しましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{左の2つで1行め 2.5、3、2行め 0.5、1。3つめをかけて1行め 2.5、5.5、2行め 0.5、1.5。$2.5\times1.5-5.5\times0.5=3.75-2.75=1$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 行列×行列を、行と列の内積で計算できる。\bkfurref{bk:7-3:naiseki}
+\item 変換をつなぐと積になり、順番で結果が変わることを説明できる。\bkfurref{bk:7-3:junban}
+\item 電気の箱をつないだ回路を、行列の積で計算できる。\bkfurref{bk:7-3:hako}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{機械をつなぐと、行列の積1つになるんだね。次の 7-4 では、行列が面積を何倍にするかを1つの数で表すよ。}

@@ -1,0 +1,1142 @@
+%% 7-10 行列のくり返し：漸化式とオイラー法を行列で（第14回：組 V7-6。ページ制限なし。偶数ページ）
+%% ほかの巻が指している形：
+%%   6-2 のふつうのオイラー法でばねがふくらむ数：ω=1（5-15 のばね）・Δt=0.1 で1歩 √1.01≈1.005 倍、1周（約63歩）で1.37倍（6-2 じぶんでとこう）。
+%%     ω=4・Δt=0.02 で1歩 1.0032 倍（6-2⑩）。ここでは「1歩の行列 I+AΔt の固有値 1±jωΔt の大きさ」として説明する（Δt=0.01 なら1周 1.03 倍）。
+%%   6-2 の冷めるお湯：差は1歩ごとに 1−0.05Δt 倍（Δt=30 で −0.5、Δt<40 でこわれない：6-2 せいかくに言うと）。2-18 の 55.92℃。
+%%   6-14 の水そう（係数0.1、はじめ20 cm と 0 cm）：Δt=1 の表で差が毎分ちょうど0.8倍、ほんとうは約0.82倍。
+%%   S14：等比級数 1+x+x^2+…=1/(1−x)（|x|<1）を、$1\times1$ のくり返しの合計として。熱-15・原-2 は x=e^{−a} の形で使う。
+%%   主役の行列 A=(2 1;1 2)：固有値3と1、固有ベクトル (1,1)・(1,−1)、A^5=(122 121;121 122)。天気の行列 (0.8 0.4;0.2 0.6)：落ち着く先 (2/3,1/3)。
+%%   e^{At} は名前だけ（9-11）。5-14 の (1+1/n)^n と同じ形。
+\makeatletter
+% 本文の小見出し（太字の1行）
+\newcommand\kviikhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviikbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviikline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviikframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（「式」の札のあとにそろえる）
+\newcommand\kviikq{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 式の変形の表（左の式の列を広くしたもの。共通部品 bkhenkei と同じ使い方）
+\newenvironment{kviikhk}[1][0.6]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.5}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle}m{#1\linewidth}<{$}@{\hspace{1.5\zw}}>{\footnotesize\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.97\linewidth-#1\linewidth-2.5\zw\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% 天気の丸（状態の図）  \kviikwx{(x,y)}{名前}{色}
+\newcommand\kviikwx[3]{\node[circle, draw=#3!80!black, line width=1pt, fill=#3!18, minimum size=13mm, font=\sffamily\bfseries\small, text=bkInk] at #1 {#2};}
+% 植木鉢  \kviikpot{(x,y)}{大きさ}
+\newcommand\kviikpot[2]{\begin{scope}[shift={#1}, scale=#2]
+  \fill[bkOrange!55!bkRed!60] (-6,0) -- (6,0) -- (7.5,9) -- (-7.5,9) -- cycle;
+  \fill[bkOrange!60!bkRed!70] (-8.3,9) rectangle (8.3,11.2);
+  \draw[bkInk, line width=0.6pt] (-6,0) -- (6,0) -- (7.5,9) -- (-7.5,9) -- cycle (-8.3,9) rectangle (8.3,11.2);
+  \fill[bkInk!65] (-7.6,11.2) -- (7.6,11.2) -- (7.2,11.9) -- (-7.2,11.9) -- cycle;
+  \draw[bkGreen!60!black, line width=1.1pt] (0,11.8) -- (0,20);
+  \fill[bkGreen!70!black] (0,16) .. controls (-4,17.5) and (-6,16) .. (-7,13.5) .. controls (-4,13.2) and (-1.5,14) .. (0,16);
+  \fill[bkGreen!70!black] (0,18.5) .. controls (4,20) and (6,18.5) .. (7,16) .. controls (4,15.7) and (1.5,16.5) .. (0,18.5);
+\end{scope}}
+% 表計算の数式バー（7-1 の型 kviibfx と同じ）  \kviikfx{D2}{=MMULT(A2:B3,C2:C3)}
+\newcommand\kviikfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=46mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviikM}{bkTheme!12}\colorlet{kviikV}{bkGreen!14}\colorlet{kviikR}{bkYellow!35}
+% 表（bkhenkei）の中でも行列の行の間を広げない
+\newcommand\kviikpm[1]{{\renewcommand\arraystretch{1}\begin{pmatrix}#1\end{pmatrix}}}
+\makeatother
+
+\bkchapter{7}{10}{行列のくり返し：\\漸化式とオイラー法を行列で}{\bklevel{5}}{行列のくり返し：漸化式とオイラー法を行列で}
+\bkmichishirube{2-18,3-11,5-14,6-2,6-14,7-8,7-9}{7-11,9-10,9-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 同じ行列を何回もかけたとき、点がどこへ向かうかを、表計算と図で調べられる。
+\item \bklevel{4}\enspace 1つの数のくり返し（倍々）と、そのくり返しの合計（等比級数）を計算できる。
+\item \bklevel{5}\enspace 固有値の大きさから「ふえる・消える・回る」を見分け、オイラー法でばねのゆれがふくらむわけを説明できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+6-2 で、ばね（$\omega=1$。5-15 のばね）の動きを、ふつうのオイラー法で $\Delta t=0.1$ として計算しました。ほんとうのゆれは、いつまでも同じ大きさのはずです。ところが計算では、ゆれが1周するたびに\textbf{1.37倍}にふくらみました。$\Delta t=0.01$ にすると、1周で\textbf{1.03倍}です。\par\vspace{4pt}
+この1.37や1.03は、どこから出てきた数なのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=13mm, y=13mm]
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-1.6,0) -- (1.75,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {$x$};
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-1.55) -- (0,1.6) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {$v$};
+  \draw[bkBlue, line width=1.3pt] (0,0) circle (1);
+  \draw[bkOrange, line width=1pt] plot[smooth] coordinates {(1.000,0.000) (1.000,-0.100) (0.990,-0.200) (0.970,-0.299) (0.940,-0.396) (0.900,-0.490) (0.851,-0.580) (0.793,-0.665) (0.727,-0.745) (0.653,-0.817) (0.571,-0.883) (0.483,-0.940) (0.389,-0.988) (0.290,-1.027) (0.187,-1.056) (0.082,-1.074) (-0.026,-1.083) (-0.134,-1.080) (-0.242,-1.067) (-0.349,-1.042) (-0.453,-1.007) (-0.554,-0.962) (-0.650,-0.907) (-0.741,-0.842) (-0.825,-0.768) (-0.902,-0.685) (-0.970,-0.595) (-1.030,-0.498) (-1.079,-0.395) (-1.119,-0.287) (-1.148,-0.175) (-1.165,-0.060) (-1.171,0.056) (-1.166,0.173) (-1.148,0.290) (-1.119,0.405) (-1.079,0.516) (-1.027,0.624) (-0.965,0.727) (-0.892,0.824) (-0.810,0.913) (-0.718,0.994) (-0.619,1.066) (-0.513,1.128) (-0.400,1.179) (-0.282,1.219) (-0.160,1.247) (-0.035,1.263) (0.091,1.266) (0.218,1.257) (0.343,1.236) (0.467,1.201) (0.587,1.155) (0.703,1.096) (0.812,1.026) (0.915,0.944) (1.009,0.853) (1.094,0.752) (1.170,0.643) (1.234,0.526) (1.286,0.402) (1.327,0.274) (1.354,0.141) (1.368,0.006)};
+  \fill[bkInk] (1,0) circle (0.045);
+  \fill[bkOrange] (1.368,0.006) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (1.02,-0.08) {1};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (1.12,0.42) {1.37};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ばねのオイラー法を、行列で何回もかけよう]
+6-2 のふつうのオイラー法（$\omega=1$ のばね、$\Delta t=0.1$）の1歩は、次の行列 $G$ を、位置と速度の組 $(x,\ v)$ にかけることと同じです（なぜそうなるかは⑨で作ります）。
+\[ G=\begin{pmatrix}1&0.1\\-0.1&1\end{pmatrix} \]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A2:B3 に行列 $G$ を入れる（A2 に1、B2 に0.1、A3 に $-0.1$、B3 に1）。7-1 の型と同じ置き方。
+\item C2:C3 に、はじめの状態 $\vec x_0=(1,\ 0)$ を入れる（はしで手をはなす。5-15）。
+\item D2 に \texttt{=MMULT(\$A\$2:\$B\$3,C2:C3)} を入れ、7-1 と同じように確定する。D2:D3 に $G\vec x_0$ が出る。
+\item E2 に \texttt{=MMULT(\$A\$2:\$B\$3,D2:D3)} を入れて、③と同じように確定する。F2・G2 にも、1つ左の列を指す同じ形の式を入れる（F2 なら \texttt{E2:E3}）。4行めには原点からの距離 $\sqrt{x^2+v^2}$（C4 に \texttt{=SQRT(C2\^{}2+C3\^{}2)}）を出し、右へコピーする。
+\end{enumerate}
+\begin{bkcenter}
+\kviikfx{D2}{=MMULT(\$A\$2:\$B\$3,C2:C3)}\par\vspace{1mm}
+\bksheet{7}{12}{%
+1 & \SetCell[c=2]{c} 行列 $G$ & & \SetCell{c} $\vec x_0$ & \SetCell{c} $\vec x_1$ & \SetCell{c} $\vec x_2$ & \SetCell{c} $\vec x_3$ & \SetCell{c} $\vec x_4$ \\
+2 & \SetCell{bg=kviikM} 1 & \SetCell{bg=kviikM} 0.1 & \SetCell{bg=kviikV} 1 & \SetCell{bg=kviikR} 1 & \SetCell{bg=kviikR} ア & \SetCell{bg=kviikR} エ & \SetCell{bg=kviikR} 0.940 \\
+3 & \SetCell{bg=kviikM} $-0.1$ & \SetCell{bg=kviikM} 1 & \SetCell{bg=kviikV} 0 & \SetCell{bg=kviikR} $-0.1$ & \SetCell{bg=kviikR} イ & \SetCell{bg=kviikR} オ & \SetCell{bg=kviikR} $-0.396$ \\
+4 & & & 1 & 1.005 & ウ & カ & 1.020 \\}
+\end{bkcenter}
+\vspace{2pt}
+アからカをうめよう（小数第3位まで）。距離（4行め）は、1列ごとに何倍になっているかな？
+\end{yattemiyou}
+
+\noindent D2:D3 は、7-1 の \texttt{MMULT} で「行列 $G$ × C列の状態」を計算したものです。E列は「D列の状態に $G$ をかけたもの」、F列は「E列に $G$ をかけたもの」なので、1列ごとに「今の状態に $G$ をかけて次の状態を作る」がくり返されます。行列の場所 \texttt{\$A\$2:\$B\$3} は動かさず、かける状態だけを1列ずつずらすのがポイントです（2-18 の \texttt{\$}）。手で計算すると、次のとおりです（7-1・7-2 の「行列×ベクトル」を、1行ずつ書いた形）。
+\begin{bkhenkei}
+x=1\times1+0.1\times(-0.1)=0.99 & ア：1行め $(1,\ 0.1)$ と $\vec x_1$ \\
+v=-0.1\times1+1\times(-0.1)=-0.2 & イ：2行め $(-0.1,\ 1)$ と $\vec x_1$ \\
+\sqrt{0.99^2+0.2^2}=1.010 & ウ（三平方の定理。4-4） \\
+x=0.99+0.1\times(-0.2)=0.97 & エ \\
+v=-0.1\times0.99+(-0.2)=-0.299 & オ \\
+\sqrt{0.97^2+0.299^2}=1.015 & カ \\
+\end{bkhenkei}
+距離は1、1.005、1.010、1.015、1.020 と、\textbf{1列ごとに約1.005倍}になっています。同じ計算を63回続けると、距離は1.368になります（⑩の Python で確かめます）。1周（約63歩）で1.37倍。\bkhatenaref の数が、行列を何回もかけるだけで出てきました。
+
+ほんとうのばねなら、距離（ゆれの円の半径。6-2⑩）は1のままのはずです。では、1列ごとの「1.005倍」は、行列 $G$ のどこから来るのでしょう。それを知るには、同じ行列を何回もかけたときに何が起きるのかを、まず調べる必要があります。
+
+6-2 では、このふくらみを、円の図と三平方の定理で説明しました。この章では、同じことを\textbf{行列}で見なおします。すると、1.37という数が、ある行列の「固有値の大きさ」から、たった1行の計算で出てきます。
+
+6-2・6-14 の表計算は、どれも「今の行から次の行を作る」くり返しでした。2つの列を同時に進める1行ぶんの計算は、\textbf{行列を1回かける}ことと同じです。だから、表を何行も進めることは、\textbf{同じ行列を何回もかける}ことです。何回もかけると、大きくなるのか、0に近づくのか、回るのか。それを教えてくれるのが、7-8 の固有値です。
+
+★★★★★ の章ですが、「目でわかる」「手でわかる」の段は、表計算と電卓だけで読めます。「式でわかる」の段は、1回で分からなくても大丈夫です。
+
+\begin{omoidasou}
+\bkrecall{3-11}{同じ時間ごとに同じ割合でふえる（へる）量は、倍々でふえる（へる）。1.5倍を3回なら $1.5^3$ 倍。}
+\bkrecall{6-2}{オイラー法：次の値＝今の値＋今の変わる速さ×$\Delta t$。ふつうのオイラー法では、ばねのゆれの円の半径が、1歩ごとに $\sqrt{1+(\omega\,\Delta t)^2}$ 倍にふくらむ。速度を先に進めると、ふくらまない。}
+\bkrecall{6-9}{複素数のかけ算は、大きさはかけ算、角はたし算。$|a+bj|=\sqrt{a^2+b^2}$。}
+\bkrecall{6-14}{2回微分の式は、位置と速度の組の、1回微分の式2つになる。2つの水そうは、和と差に分けるとほどける。}
+\bkrecall{7-3}{$A^2=AA$。$AB\vec x$ は、右の $B$ が先にはたらく。$I$ は単位行列で、$I\vec x=\vec x$。}
+\bkrecall{7-8}{$A\vec v=\lambda\vec v$ となる $\vec v$ が固有ベクトル、$\lambda$ が固有値。主役の行列は $(1,\ 1)$ で3倍、$(1,\ -1)$ で1倍。固有値は 6-12 の $s$ と同じもの。$\lambda_1\lambda_2=\det A$。}
+\bkrecall{7-9}{固有ベクトルを物差しにすると、行列は「のびるだけ」になる。だから、何回もかける計算は $A^n=PD^nP^{-1}$ と書ける。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{14\baselineskip}
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{何回もかけると、どこへ行く？}{\bklevel{3}}
+
+\bksubsection{1}{同じ行列を、くり返しかける}
+
+\leavevmode\label{bk:7-10:kurikaeshi}やってみようでは、ばねの1歩の行列 $G$ を何回もかけました。7-8④ では、主役の行列 $A$ を点 $(1,\ 0)$ に5回かけて、$(122,\ 121)$ になる表を作りました。どちらも「今の点に同じ行列をかけて、次の点を作る」ことのくり返しです。これを式で書きます。
+
+はじめの点を $\vec x_0$、1回かけた点を $\vec x_1$、2回かけた点を $\vec x_2$、…と書きます。右下の小さな数は「何回めか」を表す名札です（6-2 の $y_n$ と同じ）。やってみようなら、
+\[ \vec x_0=\begin{pmatrix}1\\0\end{pmatrix},\qquad \vec x_1=G\vec x_0=\begin{pmatrix}1&0.1\\-0.1&1\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}1\\-0.1\end{pmatrix} \]
+です。次の点は、今の点にもう一度同じ行列をかけて作ります。どの回でも、することは同じです。かける行列を $A$ と書くと、
+\kviikframe{$\vec x_{n+1}=A\vec x_n$\\[3pt]{\small 次の点 ＝ 行列 × 今の点}}
+このように、1つ前の値から次の値を作るきまりを\textbf{漸化式}（ぜんかしき）といいます。\bkidx{ぜんかしき}{漸化式}6-2 のオイラー法の1行 $y_{n+1}=y_n+f(y_n)\,\Delta t$ も、1つ前の $y_n$ から次の $y_{n+1}$ を作るので、漸化式です。
+
+漸化式を2回使うと、$\vec x_2=A\vec x_1=A(A\vec x_0)$ です。7-3 で学んだように、かけるつなぎ方の区切りは自由なので、$A(A\vec x_0)=(AA)\vec x_0=A^2\vec x_0$ です。同じように、$n$ 回かけると
+\kviikframe{$\vec x_n=A^n\vec x_0$\qquad（$A^n$ は、$A$ を $n$ 回かけた行列）}
+です。$A^0$ は「1回もかけない」ことなので、単位行列 $I$ とします（$I\vec x_0=\vec x_0$）。数で $2^0=1$ としたのと同じ考えです。7-9⑧ では、$A^n=PD^nP^{-1}$ を使って、$A^5$ を1回の計算で求めました。
+
+同じくり返しでも、主役の行列では、点は $(1,\ 1)$ の向きにそろいながら約3倍ずつ大きくなりました（7-8④）。ばねの $G$ では、点は回りながら少しずつ外へ広がりました（\bkhatenaref の図）。かける行列によって、行き先はちがいます。②・③で、もう2つの例を見ます。
+
+\bksubsection{2}{天気の行列：落ち着く先がある}
+
+\label{bk:7-10:tenki}こんどは、ふえ続けない例です。ある町の天気を、毎日「晴れ」か「雨」かで記録したら、次のきまりが見つかったとします（話を簡単にするため、くもりは晴れに入れます）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 晴れの日の次の日は、80\,\%が晴れ、20\,\%が雨。
+\item 雨の日の次の日は、40\,\%が晴れ、60\,\%が雨。
+\end{itemize}
+「80\,\%が晴れ」は、晴れの日のあとの日をたくさん集めると、そのうち80\,\%が晴れだった、ということです。3-17 のことばでは、晴れの次の日が晴れる\textbf{確率}は0.8です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviikwx{(0,0)}{晴れ}{bkOrange}
+  \kviikwx{(50,0)}{雨}{bkBlue}
+  \draw[bk link, bkInk, line width=0.9pt, bend left=22] (7.5,3.5) to node[bk link label, above] {0.2} (42.5,3.5);
+  \draw[bk link, bkInk, line width=0.9pt, bend left=22] (42.5,-3.5) to node[bk link label, below] {0.4} (7.5,-3.5);
+  \draw[bk link, bkInk, line width=0.9pt] (-5,5.5) .. controls (-14,20) and (5,22) .. (2.5,7.6);
+  \node[font=\sffamily\footnotesize, anchor=south] at (-4.5,17.5) {0.8};
+  \draw[bk link, bkInk, line width=0.9pt] (47.5,7.6) .. controls (45,22) and (64,20) .. (55,5.5);
+  \node[font=\sffamily\footnotesize, anchor=south] at (54.5,17.5) {0.6};
+\end{tikzpicture}
+\bkfigcaption{天気の移り方。矢印の数は、次の日にその天気になる確率。1つの丸から出る矢印の数をたすと、どちらも1（$0.8+0.2=1$、$0.4+0.6=1$）。}
+\end{bkfigure}
+
+今日の天気が晴れのとき、明日、あさって、…の天気はどうなるでしょう。$n$ 日後に晴れる確率を $a_n$、雨の確率を $b_n$ として、組 $\vec p_n$ にします。$\vec p_0$ は今日の天気です。今日は晴れと決まっているので、晴れの確率1、雨の確率0です。
+\[ \vec p_n=\begin{pmatrix}a_n\\b_n\end{pmatrix},\qquad \vec p_0=\begin{pmatrix}1\\0\end{pmatrix} \]
+次の日に晴れるのは、「晴れの次の日が晴れ」と「雨の次の日が晴れ」の2つの場合です。それぞれの確率をたします。
+\begin{kviikhk}[0.42]
+a_{n+1}=0.8\,a_n+0.4\,b_n & 晴れ→晴れ（0.8）と、雨→晴れ（0.4） \\
+b_{n+1}=0.2\,a_n+0.6\,b_n & 晴れ→雨（0.2）と、雨→雨（0.6） \\
+\end{kviikhk}
+係数を表にならべると、行列×ベクトルの形になります（7-1）。
+\[ \vec p_{n+1}=M\vec p_n,\qquad M=\begin{pmatrix}0.8&0.4\\0.2&0.6\end{pmatrix} \]
+$M$ の\textbf{1列めは「晴れの日からの移り方」}、\textbf{2列めは「雨の日からの移り方」}です。どちらの列も、たすと1になります。次の日は、晴れか雨のどちらかに必ずなるからです。
+
+あとは、やってみようと同じ表計算です。A2:B3 に $M$、C2:C3 に今日の天気 $\vec p_0$ を入れ、D2 の \texttt{MMULT} を右へコピーします。
+\begin{bkcenter}
+\kviikfx{D2}{=MMULT(\$A\$2:\$B\$3,C2:C3)}\par\vspace{1mm}
+\bksheet{7}{12}{%
+1 & \SetCell[c=2]{c} 行列 $M$ & & \SetCell{c} $\vec p_0$ & \SetCell{c} $\vec p_1$ & \SetCell{c} $\vec p_2$ & \SetCell{c} $\vec p_3$ & \SetCell{c} $\vec p_4$ \\
+2 & \SetCell{bg=kviikM} 0.8 & \SetCell{bg=kviikM} 0.4 & \SetCell{bg=kviikV} 1 & \SetCell{bg=kviikR} 0.8 & \SetCell{bg=kviikR} 0.72 & \SetCell{bg=kviikR} 0.688 & \SetCell{bg=kviikR} 0.675 \\
+3 & \SetCell{bg=kviikM} 0.2 & \SetCell{bg=kviikM} 0.6 & \SetCell{bg=kviikV} 0 & \SetCell{bg=kviikR} 0.2 & \SetCell{bg=kviikR} 0.28 & \SetCell{bg=kviikR} 0.312 & \SetCell{bg=kviikR} 0.325 \\}
+\bktabcaption{今日が晴れ（C2 に1、C3 に0）のとき。2行めが晴れ、3行めが雨の確率。どの列も、たすと1。}
+\end{bkcenter}
+はじめの2列を、手で確かめます。
+\begin{kviikhk}[0.64]
+\vec p_1=\kviikpm{0.8\times1+0.4\times0\\0.2\times1+0.6\times0}=\kviikpm{0.8\\0.2} & 明日（今日が晴れ） \\
+\vec p_2=\kviikpm{0.8\times0.8+0.4\times0.2\\0.2\times0.8+0.6\times0.2}=\kviikpm{0.72\\0.28} & あさって \\
+\end{kviikhk}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=54mm, xmin=0, xmax=8.6, ymin=0, ymax=1.12, xtick={0,1,2,3,4,5,6,7,8}, ytick={0.2,0.4,0.6,0.8,1}, yticklabel style={/pgf/number format/fixed}, xlabel={$n$（日後）}, ylabel={晴れる確率 $a_n$}]
+  \addplot[bkthin, dashed, domain=0:8.3] {2/3};
+  \addplot[bkcurve2, line width=1.2pt, mark=*, mark size=1.6pt] coordinates {(0,1.000) (1,0.800) (2,0.720) (3,0.688) (4,0.675) (5,0.670) (6,0.668) (7,0.667) (8,0.667)};
+  \addplot[bkcurve, line width=1.2pt, mark=square*, mark size=1.4pt] coordinates {(0,0.000) (1,0.400) (2,0.560) (3,0.624) (4,0.650) (5,0.660) (6,0.664) (7,0.666) (8,0.666)};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:1.15,0.83) {今日が晴れ};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkBlue, fill=white, inner sep=1pt] at (axis cs:1.15,0.37) {今日が雨};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkGray, fill=white, inner sep=1pt] at (axis cs:7,0.72) {$\frac{2}{3}=0.667$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$n$ 日後に晴れる確率。今日が晴れでも雨でも、何日かたつと、同じ $\frac{2}{3}$ に落ち着く。}
+\label{bk:7-10:fig-tenki}
+\end{bkfigure}
+
+今日が晴れなら 1、0.8、0.72、0.688、0.675、…、今日が雨なら 0、0.4、0.56、0.624、0.650、…と進み、どちらも $\frac{2}{3}=0.667$ に近づきます（図\ref{bk:7-10:fig-tenki}）。遠い先の天気は、今日の天気をほとんど覚えていないのです。
+
+落ち着いた先の組を、$M$ にかけてみます。
+\[ M\begin{pmatrix}\frac{2}{3}\\[2pt]\frac{1}{3}\end{pmatrix}=\begin{pmatrix}0.8\times\frac{2}{3}+0.4\times\frac{1}{3}\\[3pt]0.2\times\frac{2}{3}+0.6\times\frac{1}{3}\end{pmatrix}=\begin{pmatrix}\frac{1.6+0.4}{3}\\[3pt]\frac{0.4+0.6}{3}\end{pmatrix}=\begin{pmatrix}\frac{2}{3}\\[2pt]\frac{1}{3}\end{pmatrix} \]
+かけても変わりません。$M\vec v=1\times\vec v$ なので、$\left(\frac{2}{3},\ \frac{1}{3}\right)$ は、\textbf{固有値1の固有ベクトル}です（7-8）。落ち着く先は、かけても変わらない組、つまり固有値1の固有ベクトルだったのです。長い目で見ると、この町は3日に2日が晴れ、ということです。
+
+このように、「次の状態が、今の状態だけで決まり、移り方の確率が毎回同じ」くり返しを、\textbf{マルコフ連鎖}（マルコフれんさ）といいます。\bkidx{まるこふれんさ}{マルコフ連鎖}ほんとうの天気は、こんなに簡単ではありません（天気予報は、6-2 で見たように、空気の動きの式を数値計算で解いて作ります）。それでも、「状態の移り方の表」をくり返しかける考え方は、人やお客さんの動き、機械の故障、文章の次の文字の予測など、いろいろな所で使われています。
+
+\bksubsection{3}{回る行列・うずを巻く行列}
+
+\label{bk:7-10:uzu}7-6 の回転行列 $R(30°)$ を、点 $(1,\ 0)$ に何回もかけてみます。1回ごとに左回りに30°回るので、点は半径1の円の上を進み、12回で360°回って $(1,\ 0)$ にもどります（図\ref{bk:7-10:fig-uzu}の左）。大きくも小さくもなりません。
+
+つぎに、回転行列を0.9倍した行列 $0.9R(30°)$ をかけます。成分を書くと、次のとおりです。
+\[ 0.9R(30°)=0.9\begin{pmatrix}\cos30°&-\sin30°\\\sin30°&\cos30°\end{pmatrix}=\begin{pmatrix}0.779&-0.45\\0.45&0.779\end{pmatrix} \]
+この行列は、「30°回して、長さを0.9倍にする」はたらきをします（7-3：回してからちぢめる、をまとめた行列）。1回かけるたびに30°回って、原点からの距離が0.9倍になるので、点はうずを巻きながら原点に近づきます。12回で1周したときの距離は $0.9^{12}=0.282$ です（図\ref{bk:7-10:fig-uzu}の右）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=22mm, y=22mm]
+  \begin{scope}
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-1.25,0) -- (1.3,0);
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-1.2) -- (0,1.25);
+    \draw[bkLine, line width=0.6pt] (0,0) circle (1);
+    \draw[bkPurple, line width=1pt] plot coordinates {(1.000,0.000) (0.866,0.500) (0.500,0.866) (0.000,1.000) (-0.500,0.866) (-0.866,0.500) (-1.000,0.000) (-0.866,-0.500) (-0.500,-0.866) (-0.000,-1.000) (0.500,-0.866) (0.866,-0.500) (1.000,-0.000)};
+    \foreach \p in {(1.000,0.000),(0.866,0.500),(0.500,0.866),(0.000,1.000),(-0.500,0.866),(-0.866,0.500),(-1.000,0.000),(-0.866,-0.500),(-0.500,-0.866),(0.000,-1.000),(0.500,-0.866),(0.866,-0.500)} {\fill[bkPurple] \p circle (0.035);}
+    \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (1.03,-0.03) {$\vec x_0$};
+    \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (0.88,0.52) {$\vec x_1$};
+    \node[font=\sffamily\small, anchor=north] at (0,-1.3) {$R(30°)$：円の上を回り続ける};
+  \end{scope}
+  \begin{scope}[xshift=63mm]
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-1.25,0) -- (1.3,0);
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-1.2) -- (0,1.25);
+    \draw[bkLine, line width=0.6pt] (0,0) circle (1);
+    \draw[bkGreen!70!black, line width=1pt] plot coordinates {(1.000,0.000) (0.779,0.450) (0.405,0.701) (0.000,0.729) (-0.328,0.568) (-0.511,0.295) (-0.531,0.000) (-0.414,-0.239) (-0.215,-0.373) (-0.000,-0.387) (0.174,-0.302) (0.272,-0.157) (0.282,-0.000)};
+    \foreach \p in {(1.000,0.000),(0.779,0.450),(0.405,0.701),(0.000,0.729),(-0.328,0.568),(-0.511,0.295),(-0.531,0.000),(-0.414,-0.239),(-0.215,-0.373),(0.000,-0.387),(0.174,-0.302),(0.272,-0.157),(0.282,0.000)} {\fill[bkGreen!70!black] \p circle (0.035);}
+    \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (1.03,-0.03) {$\vec x_0$};
+    \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (0.8,0.47) {$\vec x_1$};
+    \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (0.3,-0.06) {$\vec x_{12}$};
+    \node[font=\sffamily\small, anchor=north] at (0,-1.3) {$0.9R(30°)$：うずを巻いて原点へ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{点 $(1,\ 0)$ に、行列を12回かけた。灰色の円は半径1。左は12回でもとの点にもどり、右は1回ごとに0.9倍ずつ原点に近づく。}
+\label{bk:7-10:fig-uzu}
+\end{bkfigure}
+
+ここまでの5つの行列を、表にまとめます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] X[l,m]}, width=0.92\linewidth, rowsep=2pt, row{1}={font=\sffamily\small}}
+行列 & 何回もかけると \\
+主役 $A$（7-8④） & $(1,\ 1)$ の向きにそろい、1回ごとに約3倍ずつ大きくなる \\
+ばねの $G$（やってみよう） & 回りながら、少しずつ外へ広がる（1回ごとに約1.005倍） \\
+天気 $M$（②） & 1つの組 $\left(\frac{2}{3},\ \frac{1}{3}\right)$ に落ち着く \\
+$R(30°)$（③） & 円の上を回り続ける（大きさは変わらない） \\
+$0.9R(30°)$（③） & うずを巻きながら、原点に近づく \\
+\end{bktable}
+\bktabcaption{同じ行列を何回もかけたときの、5つのふるまい。}
+\end{bkcenter}
+ふえる・広がる・落ち着く・回る・消える。かける行列によって、行き先はさまざまです。かけてみる前に、行列を見ただけで、どれになるかがわからないでしょうか。答えは「固有値の大きさを見ればわかる」です。それを、まず1つの数（$1\times1$ の行列）で確かめ、⑥・⑦で行列に広げます。
+
+\Needspace{10\baselineskip}
+\bkstage{te}{手でわかる}{1つの数のくり返しから}{\bklevel{4}}
+
+\bksubsection{4}{$1\times1$ の行列：倍々のくり返し}
+
+\label{bk:7-10:baibai}いちばん小さい行列は、数が1つだけの $1\times1$ の行列です。$1\times1$ の行列 $(a)$ を数 $x$ にかけることは、ふつうのかけ算 $ax$ と同じです。だから、$1\times1$ の漸化式は
+\[ x_{n+1}=a\,x_n \]
+です。1回ごとに $a$ 倍になるので、$x_1=ax_0$、$x_2=a^2x_0$、…、$x_n=a^nx_0$。3-11 の「倍々」そのものです。
+
+$a$ の値で、ふるまいがどう変わるかを見ます。$x_0=1$ として、$a=1.5$、0.5、$-0.5$、$-1.5$ の4つを計算しました。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] *{7}{Q[c,m,wd=12.4mm]}}, colsep=1.5pt, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\footnotesize}}
+$a$ & $x_0$ & $x_1$ & $x_2$ & $x_3$ & $x_4$ & $x_5$ & $x_6$ \\
+1.5 & 1 & 1.5 & 2.25 & 3.375 & 5.06 & 7.59 & 11.39 \\
+0.5 & 1 & 0.5 & 0.25 & 0.125 & 0.063 & 0.031 & 0.016 \\
+$-0.5$ & 1 & $-0.5$ & 0.25 & $-0.125$ & 0.063 & $-0.031$ & 0.016 \\
+$-1.5$ & 1 & $-1.5$ & 2.25 & $-3.375$ & 5.06 & $-7.59$ & 11.39 \\
+\end{bktable}
+\bktabcaption{$x_{n+1}=ax_n$、$x_0=1$ のくり返し（小数第3位までで四捨五入したものがある）。}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=a1, width=60mm, height=36mm, xmin=0, xmax=6.6, ymin=-12, ymax=12, xtick={0,2,4,6}, ytick={-10,10}, xlabel={$n$}, title={$a=1.5$：ふえる}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[ycomb, bkRed, line width=1.1pt, mark=*, mark size=1.4pt] coordinates {(0,1) (1,1.5) (2,2.25) (3,3.375) (4,5.0625) (5,7.594) (6,11.39)};
+\end{axis}
+\begin{axis}[bkplot, at={(a1.east)}, anchor=west, xshift=14mm, width=60mm, height=36mm, xmin=0, xmax=6.6, ymin=-1.2, ymax=1.2, xtick={0,2,4,6}, ytick={-1,1}, xlabel={$n$}, title={$a=0.5$：へって0へ}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[ycomb, bkBlue, line width=1.1pt, mark=*, mark size=1.4pt] coordinates {(0,1) (1,0.5) (2,0.25) (3,0.125) (4,0.0625) (5,0.03125) (6,0.015625)};
+\end{axis}
+\end{tikzpicture}\par\vspace{3mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=a3, width=60mm, height=36mm, xmin=0, xmax=6.6, ymin=-1.2, ymax=1.2, xtick={0,2,4,6}, ytick={-1,1}, xlabel={$n$}, title={$a=-0.5$：ゆれながら0へ}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[ycomb, bkGreen!70!black, line width=1.1pt, mark=*, mark size=1.4pt] coordinates {(0,1) (1,-0.5) (2,0.25) (3,-0.125) (4,0.0625) (5,-0.03125) (6,0.015625)};
+\end{axis}
+\begin{axis}[bkplot, at={(a3.east)}, anchor=west, xshift=14mm, width=60mm, height=36mm, xmin=0, xmax=6.6, ymin=-12, ymax=12, xtick={0,2,4,6}, ytick={-10,10}, xlabel={$n$}, title={$a=-1.5$：ゆれながらふえる}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[ycomb, bkPurple, line width=1.1pt, mark=*, mark size=1.4pt] coordinates {(0,1) (1,-1.5) (2,2.25) (3,-3.375) (4,5.0625) (5,-7.594) (6,11.39)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{4つの $a$ でのくり返し。たての棒の長さが $x_n$。上の2つは同じ符号のまま、下の2つは符号が毎回入れかわる。}
+\label{bk:7-10:fig-baibai}
+\end{bkfigure}
+
+表と図\ref{bk:7-10:fig-baibai}から、次のきまりが読みとれます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ふえるか、0に近づくかは、$a$ の大きさ $|a|$ で決まる。}\par\noindent $|a|>1$ ならふえ続け、$|a|<1$ なら0に近づく。$a=-1.5$ は負の数ですが、大きさは1.5なので、ふえていきます。
+\item \textbf{$a$ が負なら、符号が毎回入れかわる。}\par\noindent 負の数を2回かけると正になるからです。グラフは0の上と下を、行ったり来たりします。
+\end{enumerate}
+$a=1$ ならずっと同じ値、$a=-1$ なら同じ大きさで符号だけが入れかわり続けます。大きさがちょうど1のときが、ふえるか消えるかの境目です。
+
+\kviikhead{冷めるお湯は、$1\times1$ のくり返し}
+6-2 で、冷めるお湯をオイラー法で計算しました（部屋は20\,℃、はじめ80\,℃、ルールは $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$）。部屋との差 $u_n=T_n-20$ で見ると、1歩の計算は
+\[ u_{n+1}=(1-0.05\,\Delta t)\,u_n \]
+でした（6-2②）。これは、$a=1-0.05\,\Delta t$ の$1\times1$ のくり返しです。$\Delta t=1$ 分なら $a=0.95$ で、10歩で $0.95^{10}=0.5987$ 倍。差は $60\times0.5987=35.92$\,℃、温度は $20+35.92=55.92$\,℃でした（2-18・6-2）。
+
+6-2⑥ では、$\Delta t=30$ 分にすると、お湯が $-10$\,℃になって、部屋の温度の上と下をふらふらしました。$a=1-0.05\times30=-0.5$ だからです。負の $a$ なので符号が入れかわり（②）、大きさが0.5なので、ゆれながら0に近づきます（①）。$\Delta t=50$ 分なら $a=-1.5$ で、ゆれながらふえていき、計算がこわれます。6-2 でふしぎに見えたふるまいは、表と図\ref{bk:7-10:fig-baibai}の4つの形のどれかだったのです。
+
+\bksubsection{5}{くり返しの合計：等比級数}
+
+\label{bk:7-10:kyusu}くり返しには、もう1つ大切な形があります。毎回 $a$ 倍になりながら、外から同じ量が加わる形です。
+
+\noindent\begin{minipage}[c]{0.66\linewidth}\raggedright
+植木鉢の土に、毎朝 \qty{100}{mL} の水をやります。土の中の水は、蒸発したり植物に吸われたりして、1日で半分になるとします。水をやった直後の土の水の量を、1日め $y_1$、2日め $y_2$、…とします。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviikpot{(14,0)}{1}
+  \draw[bkBlue, line width=0.9pt, -{Stealth[length=3pt]}] (24,26) -- (17,21);
+  \node[font=\sffamily\footnotesize, anchor=west] at (24.5,26.5) {\qty{100}{mL}};
+\end{tikzpicture}
+\end{minipage}
+
+\medskip
+次の朝の量は「前の日の量の半分」に「新しい100\,mL」をたしたものです。
+\[ y_{n+1}=0.5\,y_n+100,\qquad y_1=100 \]
+1行ずつ計算します。
+\begin{bkhenkei}
+y_2=0.5\times100+100=150 & 2日め \\
+y_3=0.5\times150+100=175 & 3日め \\
+y_4=0.5\times175+100=187.5 & 4日め \\
+y_5=0.5\times187.5+100=193.75 & 5日め \\
+\end{bkhenkei}
+150、175、187.5、193.75、…と、ふえ方がだんだん小さくなり、200に近づいていくように見えます。ほんとうに200に近づくのでしょうか。
+
+\kviikhead{合計の形に書きなおす}
+4日めの水を、「いつやった水か」で分けてみます。今朝の100\,mL は全部残っています。きのうの100\,mL は1日たったので半分、おとといの分は $0.5^2$、3日前の分は $0.5^3$ だけ残っています。
+\[ y_4=100+100\times0.5+100\times0.5^2+100\times0.5^3 \]
+\[ =100\,(1+0.5+0.25+0.125)=187.5 \]
+同じように、$n$ 日めの量は
+\[ y_n=100\,(1+0.5+0.5^2+\cdots+0.5^{n-1}) \]
+です。かっこの中は、1から始めて、毎回0.5倍した数をたしたものです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=40mm, y=40mm]
+  \fill[bkOrange!25] (0,0) rectangle (1,1);
+  \fill[bkBlue!20] (1,0.5) rectangle (2,1);
+  \fill[bkGreen!22] (1,0) rectangle (1.5,0.5);
+  \fill[bkPurple!20] (1.5,0.25) rectangle (2,0.5);
+  \fill[bkYellow!35] (1.5,0) rectangle (1.75,0.25);
+  \fill[bkRed!18] (1.75,0.125) rectangle (2,0.25);
+  \fill[bkGray!25] (1.75,0) rectangle (2,0.125);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (2,1) (1,0) -- (1,1) (1,0.5) -- (2,0.5) (1.5,0) -- (1.5,0.5) (1.5,0.25) -- (2,0.25) (1.75,0) -- (1.75,0.25) (1.75,0.125) -- (2,0.125);
+  \node[font=\sffamily\small] at (0.5,0.5) {1};
+  \node[font=\sffamily\small] at (1.5,0.75) {$\dfrac{1}{2}$};
+  \node[font=\sffamily\small] at (1.25,0.25) {$\dfrac{1}{4}$};
+  \node[font=\sffamily\footnotesize] at (1.75,0.375) {$\dfrac{1}{8}$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (0,-0.08) -- (2,-0.08);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (1,-0.1) {横2};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (2.06,0) -- (2.06,1);
+  \node[font=\sffamily\footnotesize, anchor=west] at (2.08,0.5) {たて1};
+\end{tikzpicture}
+\bkfigcaption{面積2の長方形を、1、$\frac{1}{2}$、$\frac{1}{4}$、$\frac{1}{8}$、…と、前の半分ずつに切っていく。いくら切っても長方形からはみ出さず、残りの部分はいくらでも小さくなる。}
+\label{bk:7-10:fig-menseki}
+\end{bkfigure}
+
+$1+0.5+0.25+0.125+\cdots$ は、図\ref{bk:7-10:fig-menseki}のように、面積2の長方形を半分ずつ切っていった面積の合計です。たす数をふやすほど、合計は長方形の面積2に近づきます（1、1.5、1.75、1.875、1.9375、…）。だから、植木鉢の水は $100\times2=\qty{200}{mL}$ に近づきます。
+
+\kviikhead{いつでも使える形に}
+1から始めて毎回 $x$ 倍した数の列 $1,\ x,\ x^2,\ x^3,\ \ldots$ を\textbf{等比数列}（とうひすうれつ）といいます。となりどうしの比（$x^2\div x=x$ など）が、どこでも等しいからです。\bkidx{とうひすうれつ}{等比数列}そのはじめの $n$ 個の合計を $S_n$ とし、図を使わずに求めます。
+\begin{bkhenkei}
+S_n=1+x+x^2+\cdots+x^{n-1} & はじめの $n$ 個の合計 \\
+xS_n=x+x^2+x^3+\cdots+x^{n} & 両辺に $x$ をかける（1つずつずれる） \\
+S_n-xS_n=1-x^n & 上の式から下の式をひく。まん中は全部消える \\
+(1-x)\,S_n=1-x^n & 左辺を $S_n$ でくくる（3-8） \\
+S_n=\frac{1-x^n}{1-x} & $1-x$ でわる（$x\neq1$） \\
+\end{bkhenkei}
+3行めで、$x$ から $x^{n-1}$ までは、上の式にも下の式にもあるので、ひくと消えます。残るのは、上の式のいちばん前の1と、下の式のいちばん後ろの $x^n$ だけです。
+
+$x=0.5$、$n=4$ で確かめます。$0.5^4=0.0625$ なので、
+\[ S_4=\frac{1-0.0625}{1-0.5}=\frac{0.9375}{0.5}=1.875 \]
+です。じかにたした $1+0.5+0.25+0.125=1.875$ と合います。
+
+ここで、$|x|<1$ なら、$n$ をふやすと $x^n$ は0に近づきます（④の①）。だから、合計は $\dfrac{1}{1-x}$ に近づきます。
+\kviikframe[100mm]{$1+x+x^2+x^3+\cdots=\dfrac{1}{1-x}$\qquad（$|x|<1$ のとき）}
+このように、等比数列を限りなくたしたものを\textbf{等比級数}（とうひきゅうすう）といいます。\bkidx{とうひきゅうすう}{等比級数}$x=0.5$ なら $\dfrac{1}{1-0.5}=2$ で、図\ref{bk:7-10:fig-menseki}の面積と合います。
+
+\kviikhead{落ち着く先を、もう1つの方法で}
+植木鉢の水が落ち着く先を $y$ とすると、落ち着いたあとは「今朝の量」と「次の朝の量」が同じなので、漸化式の $y_{n+1}$ と $y_n$ を両方 $y$ にできます。
+\begin{bkhenkei}
+y=0.5\,y+100 & 落ち着いたら、次の量＝今の量 \\
+0.5\,y=100 & 両辺から $0.5\,y$ をひく \\
+y=200 & 両辺を0.5でわる \\
+\end{bkhenkei}
+等比級数の $100\times\dfrac{1}{1-0.5}=200$ と、同じ答えです。②の天気の行列で、落ち着く先が「$M$ をかけても変わらない組」だったのと同じ考え方です。
+
+\Needspace{10\baselineskip}
+\begin{seikaku}
+等比級数の式が使えるのは $|x|<1$ のときだけです。$x=2$ を入れると、
+\[ 1+2+4+8+\cdots=\frac{1}{1-2}=-1 \]
+となりますが、正の数をたしてどんどん大きくなる合計が $-1$ になるはずはありません。$|x|\geqq1$ では $x^n$ が0に近づかないので、3行めの $x^n$ を消せないのです。物理の本（熱力学・原子）では、$x$ が $e^{-a}$（$a>0$。5-14）の形で出てきます。$0<e^{-a}<1$ なので、$1+e^{-a}+e^{-2a}+\cdots=\dfrac{1}{1-e^{-a}}$ と使えます。
+\end{seikaku}
+
+\bkkokomade[同じ数を何回もかけると、大きさが1より大きければふえ、小さければ消えます。負なら符号が入れかわります。この先は、行列でも同じことが「固有値」で言えることを、式で確かめます。]
+
+\Needspace{10\baselineskip}
+\bkstage{shiki}{式でわかる}{固有値が、行き先を決める}{\bklevel{5}}
+
+\bksubsection{6}{固有ベクトルの向きでは、$\lambda^n$ 倍するだけ}
+
+\label{bk:7-10:koyu}行列 $A$ の固有ベクトル $\vec v$ と固有値 $\lambda$ は、$A\vec v=\lambda\vec v$ をみたすものでした（7-8）。固有ベクトルに $A$ を何回もかけると、どうなるでしょう。1回ずつ確かめます。
+\begin{bkhenkei}
+A\vec v=\lambda\vec v & 固有ベクトルの決まり（7-8） \\
+A^2\vec v=A(\lambda\vec v)=\lambda A\vec v & 数 $\lambda$ は行列の前に出せる（7-2） \\
+=\lambda\,\lambda\vec v=\lambda^2\vec v & もう一度 $A\vec v=\lambda\vec v$ を使う \\
+A^n\vec v=\lambda^n\vec v & 同じことを $n$ 回くり返す \\
+\end{bkhenkei}
+固有ベクトルの向きでは、行列のくり返しは、④の「$1\times1$ のくり返し」と同じになります。向きは変わらず、1回ごとに $\lambda$ 倍されるだけです。
+
+\kviikhead{どんな点も、固有ベクトルに分けて考える}
+7-8④ では、点 $(1,\ 0)$ を主役の行列の2本の固有ベクトルに分けました。
+\[ \begin{pmatrix}1\\0\end{pmatrix}=\frac{1}{2}\begin{pmatrix}1\\1\end{pmatrix}+\frac{1}{2}\begin{pmatrix}1\\-1\end{pmatrix} \]
+だから、
+\[ A^n\begin{pmatrix}1\\0\end{pmatrix}=\frac{3^n}{2}\begin{pmatrix}1\\1\end{pmatrix}+\frac{1^n}{2}\begin{pmatrix}1\\-1\end{pmatrix} \]
+上の式の両辺に $A^n$ をかけると、それぞれの部分が $\lambda^n$ 倍になります（7-2 の線形：分けてかけてからたしても同じ）。$(1,\ 1)$ の部分は1回ごとに3倍、$(1,\ -1)$ の部分は1倍のままなので、何回もかけると $(1,\ 1)$ の部分ばかりが大きくなり、点はその向きにそろいます。7-8④ で名前をつけた\textbf{べき乗法}は、このしくみを使っています。一般に、何回もかけると、\textbf{大きさ $|\lambda|$ がいちばん大きい固有値の固有ベクトル}の向きにそろいます。7-9⑧ の $A^n=PD^nP^{-1}$ も、「固有ベクトルの物差しで見ると、$D^n$（それぞれ $\lambda^n$ 倍）になるだけ」という、同じことを行列の形で書いたものです。
+
+\begin{motto}[4]
+\kviikbox{ウサギのつがいとフィボナッチ数}
+1、1、2、3、5、8、13、21、…のように、前の2つをたして次を作る数の列を、フィボナッチ数といいます（1202年のイタリアの本で、ウサギのつがいの数として紹介された、と伝えられています）。「今の数と1つ前の数」の組にすると、行列のくり返しになります。
+\[ \begin{pmatrix}F_{n+1}\\F_n\end{pmatrix}=\begin{pmatrix}1&1\\1&0\end{pmatrix}\begin{pmatrix}F_n\\F_{n-1}\end{pmatrix} \]
+この行列の固有値は、特性方程式 $\lambda^2-\lambda-1=0$ から $\dfrac{1\pm\sqrt5}{2}$、つまり1.618と $-0.618$ です。大きさのいちばん大きい1.618が勝つので（7-8④ のべき乗法）、となりどうしの比 $F_{n+1}\div F_n$ は、2、1.5、1.667、1.6、1.625、1.615、1.619、…と1.618に近づきます。この1.618は、美しい長方形の比として知られる\textbf{黄金比}です。
+\end{motto}
+
+\kviikhead{天気の行列でも}
+天気の行列 $M$ の固有値は、1と0.4です。固有値1の固有ベクトルは②で見つけた $\left(\frac{2}{3},\ \frac{1}{3}\right)$、固有値0.4の固有ベクトルは $(1,\ -1)$ です（$M$ にかけると $(0.8-0.4,\ 0.2-0.6)=(0.4,\ -0.4)$ で、0.4倍）。今日が晴れの $(1,\ 0)$ を分けると、
+\[ \begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}\frac{2}{3}\\[2pt]\frac{1}{3}\end{pmatrix}+\frac{1}{3}\begin{pmatrix}1\\-1\end{pmatrix}\qquad\text{だから}\qquad \vec p_n=\begin{pmatrix}\frac{2}{3}\\[2pt]\frac{1}{3}\end{pmatrix}+\frac{1}{3}\times0.4^n\begin{pmatrix}1\\-1\end{pmatrix} \]
+固有値1の部分は何回かけても変わらず、固有値0.4の部分は0.4倍ずつ消えていきます。だから、$\left(\frac{2}{3},\ \frac{1}{3}\right)$ が残ります。$n=3$ なら $0.4^3=0.064$ で、晴れの確率は $0.667+\frac{0.064}{3}=0.688$。②の表と合います。
+
+ここまでを、表にまとめます（行列の固有値を $\lambda_1$、$\lambda_2$ とする）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=56mm] X[l,m]}, width=0.94\linewidth, rowsep=2pt, row{1}={font=\sffamily\small}}
+固有値の大きさ & 何回もかけると \\
+どちらも $|\lambda|<1$ & 0に近づく（消える） \\
+1つが $\lambda=1$、もう1つは $|\lambda|<1$ & $\lambda=1$ の固有ベクトルの部分が残り、そこに落ち着く \\
+どちらかが $|\lambda|>1$ & ふえていき、いちばん大きい $|\lambda|$ の固有ベクトルの向きにそろう \\
+\end{bktable}
+\bktabcaption{くり返しの行き先は、固有値の大きさで決まる（④の$1\times1$ のきまりを、固有ベクトルの向きごとに使う）。}
+\end{bkcenter}
+7-8⑧ の表は、微分方程式 $\dot{\vec x}=A\vec x$ の動きで、固有値の\textbf{実部の符号}で決まりました。くり返し $\vec x_{n+1}=A\vec x_n$ では、固有値の\textbf{大きさと1}をくらべます。2つの表のつながりは、⑧でわかります。
+
+\Needspace{12\baselineskip}
+\begin{seikaku}
+「固有ベクトルに分けて、それぞれ $\lambda^n$ 倍」と考えられるのは、固有ベクトルが2本そろう行列（7-9 の対角化できる行列）です。7-9⑧ のせいかくに言うとのずらし $S$ は、固有ベクトルが1本しかありません。$S$ を $n$ 回かけると、
+\[ \begin{pmatrix}1&1\\0&1\end{pmatrix}^n=\begin{pmatrix}1&n\\0&1\end{pmatrix} \]
+になり、固有値の大きさは1なのに、右上の成分が $n$ に比例して大きくなります（6-12 の重解で、$e^{st}$ に $t$ がかかった $te^{st}$ が出てきたのと同じことです）。それでも、固有値の大きさが1より小さければ、$n$ に比例する分より $|\lambda|^n$ が小さくなる分のほうが勝つので、最後は0に近づきます。
+\end{seikaku}
+
+\bksubsection{7}{複素数の固有値は「回りながら」}
+
+\label{bk:7-10:fukuso}③の回転行列 $R(30°)$ には、向きの変わらない矢印がありません。どの矢印も30°回ってしまうからです。7-8 で見たように、このとき固有値は複素数になり、$\cos30°\pm j\sin30°$、つまり $e^{\pm j30°}$（6-10）でした。$0.9R(30°)$ の固有値は、それを0.9倍した $0.9\,e^{\pm j30°}$ です。
+
+複素数 $\lambda=r\,e^{j\theta}$（大きさ $r$、偏角 $\theta$）を $n$ 回かけると、6-9 の「大きさはかけ算、角はたし算」から、
+\[ \lambda^n=r^n\,e^{jn\theta}\qquad\text{（大きさは $r^n$、角は $n\theta$）} \]
+です。1回かけるごとに、角が $\theta$ 進み、大きさが $r$ 倍になります。$R(30°)$ では $r=1$、$\theta=30°$ なので、大きさを変えずに30°ずつ回ります。$0.9R(30°)$ では $r=0.9$ なので、30°ずつ回りながら0.9倍ずつ小さくなります。図\ref{bk:7-10:fig-uzu}のとおりです。
+
+複素数の固有値でも、行き先を決めるのは\textbf{大きさ $|\lambda|$} です。$|\lambda|=1$ なら回り続け、$|\lambda|<1$ ならうずを巻いて消え、$|\lambda|>1$ ならうずを巻いて広がります。実数の固有値は、角が0°（正の数）か180°（負の数）の特別な場合です。角が180°の負の数では、1回ごとに向きが反対になり、④の「符号が入れかわる」になります。
+
+\kviikhead{固有値の地図：単位円}
+固有値を、6-9 の複素数平面に点でかきます。原点を中心とする半径1の円を\textbf{単位円}（たんいえん）といいます。\bkidx{たんいえん}{単位円（固有値の）}固有値が単位円の内側にあれば $|\lambda|<1$、外側にあれば $|\lambda|>1$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=22mm, y=22mm]
+  \fill[bkRed!7] (-1.45,-1.2) rectangle (3.4,1.25);
+  \fill[bkGreen!16] (0,0) circle (1);
+  \draw[bkInk, line width=1pt] (0,0) circle (1);
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-1.45,0) -- (3.4,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {実部};
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-1.2) -- (0,1.35) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {虚部};
+  \foreach \v in {1,2,3} {\draw[bkGray, line width=0.5pt] (\v,0.04) -- (\v,-0.04);}
+  \node[font=\sffamily\footnotesize, anchor=north east, inner sep=1pt] at (-0.03,-0.03) {0};
+  \node[font=\sffamily\footnotesize, anchor=north, inner sep=1pt] at (2,-0.07) {2};
+  % 点
+  \fill[bkRed] (3,0) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=bkRed!7, inner sep=1pt] at (3,-0.1) {3（主役 $A$）};
+  \fill[bkBlue] (1,0) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=south west, align=left, fill=bkRed!7, inner sep=1pt] at (1.07,0.08) {1（主役 $A$・天気 $M$）};
+  \fill[bkBlue] (0.4,0) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=bkGreen!16, inner sep=1pt] at (0.4,-0.08) {0.4 天気};
+  \fill[bkPurple] (0.866,0.5) circle (0.05);
+  \fill[bkPurple] (0.866,-0.5) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=bkRed!7, inner sep=1pt] at (0.92,0.52) {$e^{\pm j30°}$：$R(30°)$};
+  \fill[bkGreen!60!black] (0.779,0.45) circle (0.05);
+  \fill[bkGreen!60!black] (0.779,-0.45) circle (0.05);
+  \node[font=\sffamily\footnotesize, anchor=east, fill=bkGreen!16, inner sep=1pt] at (0.7,0.42) {$0.9e^{\pm j30°}$};
+  % 領域の名前
+  \node[font=\sffamily\small, text=bkGreen!40!black, anchor=center] at (-0.42,-0.55) {消える};
+  \node[font=\sffamily\small, text=bkRed!70!black, anchor=west] at (1.75,-0.75) {ふえる（円の外）};
+  \draw[bkInk, line width=0.5pt] (1.72,0.98) -- (0.62,0.79);
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=west, fill=bkRed!7, inner sep=1pt] at (1.74,0.98) {円の上：大きさが変わらない};
+\end{tikzpicture}
+\bkfigcaption{固有値の地図。緑の円の中（$|\lambda|<1$）の部分は消え、外（$|\lambda|>1$）の部分はふえ、円の上（$|\lambda|=1$）の部分は大きさが変わらない。点の色は、それぞれの行列の固有値。}
+\label{bk:7-10:fig-chizu}
+\end{bkfigure}
+
+図\ref{bk:7-10:fig-chizu}で、主役の行列は固有値3が円の外にあるのでふえ、天気の行列は1が円の上、0.4が円の中なので、1の部分だけが残ります。$R(30°)$ の2つの固有値は円の上で回り続け、$0.9R(30°)$ は円の中なので消えます。表とぴったり合っています。
+
+\bksubsection{8}{オイラー法は、行列のくり返し}
+
+\label{bk:7-10:euler}いよいよ、6-2 のオイラー法を行列で見ます。6-14 の2つの水そうでは、左の水位 $h_1$、右の水位 $h_2$〔cm〕が、次のルールで変わりました（時刻は分）。
+\[ \frac{\dd h_1}{\dd t}=-0.1\,(h_1-h_2),\qquad \frac{\dd h_2}{\dd t}=0.1\,(h_1-h_2) \]
+右辺を $h_1$ と $h_2$ でまとめて、係数を行列にならべます（6-14 の係数の表。7-8 と同じ $H$）。
+\[ \frac{\dd}{\dd t}\begin{pmatrix}h_1\\h_2\end{pmatrix}=\begin{pmatrix}-0.1&0.1\\0.1&-0.1\end{pmatrix}\begin{pmatrix}h_1\\h_2\end{pmatrix},\qquad\text{短く書くと}\quad \dot{\vec h}=H\vec h \]
+左辺の $\dot{\vec h}$ は、ベクトルの成分をそれぞれ微分したものです。7-8⑦ で、この形の式の固有値は 6-12 の $s$ と同じものだと学びました。ここからは、どんな行列でも使えるように、$\dot{\vec x}=A\vec x$ と書いて進めます（水そうなら $A$ が $H$、$\vec x$ が $\vec h$）。
+
+オイラー法の1行「次の値＝今の値＋今の変わる速さ×$\Delta t$」を、ベクトルのまま書きます。今の変わる速さは $A\vec x_n$ です。
+\begin{bkhenkei}
+\vec x_{n+1}=\vec x_n+(A\vec x_n)\,\Delta t & オイラー法の1行（6-2） \\
+\vec x_{n+1}=I\vec x_n+(A\,\Delta t)\,\vec x_n & $\vec x_n=I\vec x_n$（7-3）。数 $\Delta t$ は前に出せる \\
+\vec x_{n+1}=(I+A\,\Delta t)\,\vec x_n & 右から $\vec x_n$ でくくる \\
+\end{bkhenkei}
+2行めで $\vec x_n$ を $I\vec x_n$ と書いたのは、くくったあとのかっこの中を、行列どうしのたし算にするためです。「$1+A\,\Delta t$」と書くと、数と行列のたし算になってしまい、意味がありません（まちがえやすいところ）。
+
+\kviikframe[104mm]{オイラー法は、行列 $I+A\,\Delta t$ のくり返し\\[3pt]$\vec x_{n+1}=(I+A\,\Delta t)\,\vec x_n$}
+この本では、$I+A\,\Delta t$ を「1歩の行列」とよぶことにします。オイラー法で表を何行も進めることは、1歩の行列を何回もかけることだったのです。
+
+\kviikhead{水そうで確かめる}
+$\Delta t=1$ 分なら、1歩の行列は
+\[ I+H\times1=\begin{pmatrix}1+(-0.1)&0+0.1\\0+0.1&1+(-0.1)\end{pmatrix}=\begin{pmatrix}0.9&0.1\\0.1&0.9\end{pmatrix} \]
+です。はじめの水位 $(20,\ 0)$ にかけると、
+\[ \begin{pmatrix}0.9&0.1\\0.1&0.9\end{pmatrix}\begin{pmatrix}20\\0\end{pmatrix}=\begin{pmatrix}0.9\times20+0.1\times0\\0.1\times20+0.9\times0\end{pmatrix}=\begin{pmatrix}18\\2\end{pmatrix} \]
+もう一度かけると $(16.4,\ 3.6)$ です。6-14③ の表計算と同じ数です。
+
+この行列の固有ベクトルは、6-14 の「和」と「差」の向きです。$(1,\ 1)$ にかけると $(1,\ 1)$ のまま（固有値1）、$(1,\ -1)$ にかけると $(0.8,\ -0.8)$（固有値0.8）。水の合計は変わらず、水位の差は1分ごとに0.8倍になります。6-14 で「表では差が毎分ちょうど0.8倍、ほんとうは約0.82倍」と書いたのは、このことでした。
+
+\kviikhead{$\Delta t$ を大きくすると}
+1歩の行列の固有値0.8は、$\Delta t=1$ 分のときの数です。$\Delta t$ を変えると、差の倍率も変わります。$\Delta t=2.5$ 分なら、1歩の行列の1行めは $(1-0.25,\ 0.25)$ で、差は1歩ごとに $1-0.2\times2.5=0.5$ 倍。$\Delta t=7.5$ 分なら $1-0.2\times7.5=-0.5$ 倍で、差の符号が毎回入れかわります。④の4つの形のどれになるかが、$\Delta t$ で決まるのです。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=middle, axis y line=left, width=122mm, height=64mm, xmin=0, xmax=18, ymin=-13, ymax=22, xtick={0,5,10,15}, ytick={-10,10,20}, xlabel={$t$（分）}, ylabel={水位の差 $h_1-h_2$（cm）}, legend style={at={(axis cs:17.8,21.5)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine, fill=white, row sep=1pt}, legend cell align=left]
+  \addplot[bkcurve, domain=0:15.5, samples=60] {20*exp(-0.2*x)};
+  \addlegendentry{ほんとう $20e^{-0.2t}$}
+  \addplot[bkcurve2, line width=1.1pt, mark=*, mark size=1.5pt] coordinates {(0,20) (1,16) (2,12.8) (3,10.24) (4,8.192) (5,6.554) (6,5.243) (7,4.194) (8,3.355) (9,2.684) (10,2.147) (11,1.718) (12,1.374) (13,1.1) (14,0.88) (15,0.704)};
+  \addlegendentry{$\Delta t=1$（1歩で0.8倍）}
+  \addplot[bkGreen!60!black, line width=1.1pt, mark=square*, mark size=1.4pt] coordinates {(0,20) (2.5,10) (5,5) (7.5,2.5) (10,1.25) (12.5,0.625) (15,0.3125)};
+  \addlegendentry{$\Delta t=2.5$（0.5倍）}
+  \addplot[bkRed, line width=1.1pt, dashed, mark=triangle*, mark size=2pt] coordinates {(0,20) (7.5,-10) (15,5)};
+  \addlegendentry{$\Delta t=7.5$（$-0.5$倍）}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{6-14 の水そうの水位の差を、3つの $\Delta t$ のオイラー法で進めた。$\Delta t=7.5$ 分（赤）では差がマイナスになり、左右の水位が入れかわる（ほんとうはおこらない）。}
+\label{bk:7-10:fig-suiso}
+\end{bkfigure}
+
+\kviikhead{1歩の行列の固有値は $1+\lambda\,\Delta t$}
+0.8という数は、どこから来たのでしょう。$A$ の固有ベクトル $\vec v$（固有値 $\lambda$）に、1歩の行列をかけてみます。
+\begin{bkhenkei}
+(I+A\,\Delta t)\,\vec v=I\vec v+\Delta t\,A\vec v & 分けてかける（7-2） \\
+=\vec v+\Delta t\,\lambda\vec v & $I\vec v=\vec v$、$A\vec v=\lambda\vec v$ \\
+=(1+\lambda\,\Delta t)\,\vec v & $\vec v$ でくくる \\
+\end{bkhenkei}
+$A$ の固有ベクトルは、そのまま1歩の行列の固有ベクトルで、固有値は $1+\lambda\,\Delta t$ になります。水そうの $H$ は、和の向きで $\lambda=0$、差の向きで $\lambda=-0.2$ です（7-8③）。だから、1歩の行列の固有値は $1+0\times1=1$ と $1-0.2\times1=0.8$ です。
+
+ほんとうの答えでは、差は $e^{-0.2t}$ の形でへり、1分ごとに $e^{-0.2}=0.8187$ 倍になります（6-4・6-14）。オイラー法の0.8は、$e^{-0.2}$ を $1-0.2$ でおきかえたものです。5-14・5-17 で学んだ「$e^x$ の $x=0$ での接線は $y=1+x$」、つまり $e^x\approx1+x$ のおきかえです。
+\kviikframe{1歩で、ほんとうは $e^{\lambda\,\Delta t}$ 倍\\[3pt]オイラー法では $1+\lambda\,\Delta t$ 倍}
+接線は $e^x$ のグラフの下にあるので、$1+x$ は $e^x$ より少し小さくなります。オイラー法の水位の差が、ほんとうより少し速く小さくなったのは、そのためです。
+
+\kviikhead{こわれない条件}
+④で見たように、くり返しがふくらまないためには、1歩の行列の固有値の大きさが1より小さい（またはちょうど1）ことが必要です。オイラー法がこわれない条件は、
+\kviikframe[96mm]{$|1+\lambda\,\Delta t|<1$}
+です（ちょうど1のときは、ふえも消えもしない境目）。冷めるお湯は $\lambda=-0.05$（$1\times1$ の行列）なので、$1+\lambda\,\Delta t=1-0.05\,\Delta t$ です。$\Delta t$ をふやしていくと、この数は数直線の上を左へ進んでいきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=32mm, y=1mm]
+  \fill[bkGreen!16] (-1,-3) rectangle (1,3);
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] (-1.85,0) -- (1.35,0);
+  \foreach \v/\l in {-1.5/{$-1.5$},-1/{$-1$},-0.5/{$-0.5$},0/0,0.5/0.5,1/1} {\draw[bkInk, line width=0.6pt] (\v,2) -- (\v,-2); \node[font=\sffamily\footnotesize, anchor=north] at (\v,-3.5) {\l};}
+  \foreach \v/\t in {0.95/1,0.5/10,0/20,-0.5/30,-1/40,-1.5/50} {\fill[bkRed] (\v,0) circle (1.2mm);}
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (0.95,4) {1};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (0.5,4) {10};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (0,4) {20};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (-0.5,4) {30};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (-1,4) {40};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (-1.5,4) {50};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkRed!80!black] at (-1.62,7.5) {$\Delta t$（分）};
+  \draw[bkGray, line width=0.7pt, -{Stealth[length=3.5pt]}] (0.85,13) -- (-1.4,13);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (-0.25,14) {$\Delta t$ をふやすと、$1-0.05\,\Delta t$ は左へ進む};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (0.5,-9) {ゆれずに近づく};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (-0.5,-9) {ゆれながら近づく};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!70!black] at (-1.5,-9) {こわれる};
+\end{tikzpicture}
+\bkfigcaption{冷めるお湯の1歩の数 $1-0.05\,\Delta t$。赤い点の上の数は $\Delta t$（分）。緑の区間（$-1$ と1のあいだ）に入っていれば、こわれない。}
+\label{bk:7-10:fig-suuchoku}
+\end{bkfigure}
+
+$-1<1-0.05\,\Delta t$ をとくと $\Delta t<40$ 分。6-2 のせいかくに言うとで書いた「こわれないのは $\Delta t<40$ 分のとき」は、この条件だったのです。$\Delta t=20$ 分までは0以上なのでゆれず、20分から40分のあいだは負の数なので、ゆれながら近づきます（④の4つの形）。
+
+\bksubsection{9}{ばねがふくらむわけ：固有値の大きさ}
+
+\label{bk:7-10:bane}\bkhatenaref のばねを、行列で見ます。5-15 のばね（$\omega=1$、$\ddot x=-x$）を、6-14④ のように位置 $x$ と速度 $v$ の組にします。
+\[ \frac{\dd x}{\dd t}=v,\quad \frac{\dd v}{\dd t}=-x\qquad\text{だから}\qquad \frac{\dd}{\dd t}\begin{pmatrix}x\\v\end{pmatrix}=\begin{pmatrix}0&1\\-1&0\end{pmatrix}\begin{pmatrix}x\\v\end{pmatrix} \]
+この行列を $A$ とします。1行めの $(0,\ 1)$ は「$x$ の変わる速さは $0\times x+1\times v$」、2行めの $(-1,\ 0)$ は「$v$ の変わる速さは $-1\times x+0\times v$」という意味です。
+
+\kviikhead{$A$ の固有値}
+特性方程式（7-8）を作ります。
+\begin{bkhenkei}
+\det(A-\lambda I)=\det\kviikpm{-\lambda&1\\-1&-\lambda} & ななめから $\lambda$ をひく（7-8） \\
+=(-\lambda)(-\lambda)-1\times(-1)=\lambda^2+1 & $ad-bc$（7-4） \\
+\lambda^2+1=0\quad\text{から}\quad \lambda=\pm j & $\lambda^2=-1$（6-8） \\
+\end{bkhenkei}
+6-12 で、ばね $\ddot x+\omega^2x=0$ の特性方程式は $s^2+\omega^2=0$、$s=\pm j\omega$ でした。$\omega=1$ なら $s=\pm j$ で、同じです（7-8：固有値は 6-12 の $s$ と同じもの）。ほんとうの動きでは、1歩ごとに $e^{\pm j\Delta t}$ 倍で、その大きさは1です（6-10：$|e^{j\theta}|=1$）。だから、ほんとうのゆれは大きくも小さくもなりません。
+
+\kviikhead{ふつうのオイラー法の1歩の行列}
+オイラー法の1歩は、6-2 の表のとおり「$x$ は今の $v$ で、$v$ は今の $x$ で」進めます。
+\[ x_{n+1}=x_n+v_n\,\Delta t,\qquad v_{n+1}=v_n-x_n\,\Delta t \]
+係数をならべると、1歩の行列は次のとおりです。やってみようの $G$ です。$I+A\,\Delta t$ を計算しても、同じ行列になります。
+\[ \begin{pmatrix}x_{n+1}\\v_{n+1}\end{pmatrix}=\begin{pmatrix}1&\Delta t\\-\Delta t&1\end{pmatrix}\begin{pmatrix}x_n\\v_n\end{pmatrix} \]
+⑧から、この行列の固有値は $1+\lambda\,\Delta t=1\pm j\,\Delta t$ です。その大きさは、6-9 の三平方の定理で
+\kviikframe[96mm]{$|1\pm j\,\Delta t|=\sqrt{1^2+\Delta t^2}=\sqrt{1+\Delta t^2}$}
+です。$\Delta t$ が0でなければ、これは\textbf{いつも1より大きい}。だから、⑦の地図では固有値は単位円の外にあり、ゆれは1歩ごとに少しずつふくらみます。
+
+\kviikhead{1.37 と 1.03 を出す}
+$\Delta t=0.1$ なら、1歩で $\sqrt{1+0.01}=\sqrt{1.01}=1.005$ 倍です。ゆれの周期は $2\pi=6.28$ 秒（$\omega=1$。4-8）なので、1周は $6.28\div0.1\approx63$ 歩です。
+\[ (\sqrt{1.01})^{63}=1.01^{31.5}\approx1.37 \]
+\bkhatenaref の答え：1.37は、ふつうのオイラー法の1歩の行列 $G$ の固有値の大きさ $\sqrt{1.01}$ を、1周の歩数（約63）だけかけた数です。やってみようで見た「1列ごとに約1.005倍」の1.005は、この $\sqrt{1.01}$ でした。
+
+$\Delta t=0.01$ なら、1歩で $\sqrt{1.0001}=1.00005$ 倍、1周は約628歩なので、$1.0001^{314}\approx1.03$ 倍です。$\Delta t$ を $\frac{1}{10}$ にすると、ふくらみの「0.37」がおよそ $\frac{1}{10}$ の「0.03」になります（6-2⑤：1次の方法）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=36mm, y=36mm]
+  \begin{scope}
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-0.15,0) -- (1.35,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {$x$};
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-0.62) -- (0,0.5) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {$v$};
+    \draw[bkBlue, line width=1pt] (0,0) ++(28:1) arc (28:-40:1);
+    \draw[bkInk, line width=0.8pt] (0,0) -- (1,0);
+    \draw[bkOrange, line width=1.3pt, -{Stealth[length=3.5pt]}] (1,0) -- (1,-0.5);
+    \draw[bkRed, line width=0.8pt, dashed] (0,0) -- (1,-0.5);
+    \draw[bkInk, line width=0.5pt] (0.93,0) -- (0.93,-0.07) -- (1,-0.07);
+    \fill[bkInk] (1,0) circle (0.02);
+    \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (0.5,0.02) {1};
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (1.03,-0.25) {$\Delta t$};
+    \node[font=\sffamily\footnotesize, anchor=north east, text=bkRed!80!black, inner sep=1pt] at (0.5,-0.27) {$\sqrt{1+\Delta t^2}$};
+    \node[font=\sffamily\small, anchor=north] at (0.6,-0.72) {1歩で進む点 $(x,\ v)$};
+  \end{scope}
+  \begin{scope}[xshift=64mm]
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (-0.15,0) -- (1.35,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {実部};
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,-0.2) -- (0,0.72) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {虚部};
+    \draw[bkBlue, line width=1pt] (0,0) ++(-12:1) arc (-12:40:1);
+    \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (1,-0.15) -- (1,0.7);
+    \draw[bkInk, line width=0.8pt] (0,0) -- (1,0);
+    \fill[bkInk] (1,0) circle (0.02);
+    \fill[bkOrange] (1,0.5) circle (0.025);
+    \fill[bkBlue] ({cos(28.65)},{sin(28.65)}) circle (0.025);
+    \draw[bkRed, line width=0.8pt, dashed] (0,0) -- (1,0.5);
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (1.04,0.5) {$1+j\,\Delta t$};
+    \node[font=\sffamily\footnotesize, anchor=east, text=bkBlue, fill=white, inner sep=1pt] at (0.76,0.63) {$e^{j\,\Delta t}$};
+    \node[font=\sffamily\footnotesize, anchor=north, inner sep=1pt] at (0.5,-0.02) {1};
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkGray, fill=white, inner sep=1pt] at (1.04,0.12) {1での接線};
+    \node[font=\sffamily\small, anchor=north] at (0.6,-0.72) {1歩の行列の固有値};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：6-2⑩ の図。点 $(1,\ 0)$ から真下に $\Delta t$ 進むので、新しい半径は $\sqrt{1+\Delta t^2}$。右：オイラー法の固有値 $1+j\,\Delta t$（オレンジ）は、単位円の1での接線（点線）の上にあり、円の外に出る。ほんとうの $e^{j\,\Delta t}$（青）は円の上。どちらの図も、わかりやすいように $\Delta t=0.5$ でかいた。}
+\label{bk:7-10:fig-sessen}
+\end{bkfigure}
+
+図\ref{bk:7-10:fig-sessen}の左右は、同じ直角三角形です。6-2 では「接線の向きに進むので円の外へ出る」と考えました。行列で見ると、「1歩の行列の固有値が、単位円の接線の上にあるので円の外へ出る」となります。⑧の「$e^x$ を接線 $1+x$ でおきかえる」の、複素数の版です。
+
+ほかの $\Delta t$ でも計算して、表にします。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=30mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, rowsep=1pt, row{1}={font=\sffamily\small}}
+$\Delta t$ & 1歩の倍率 $\sqrt{1+\Delta t^2}$ & 1周の歩数 & 1周の倍率 \\
+0.2 & 1.0198 & 31.4 & 1.85 \\
+0.1 & 1.00499 & 62.8 & 1.37 \\
+0.05 & 1.00125 & 125.7 & 1.17 \\
+0.01 & 1.00005 & 628.3 & 1.03 \\
+\end{bktable}
+\bktabcaption{ふつうのオイラー法（$\omega=1$）のふくらみ。1周の倍率は $(1+\Delta t^2)^{\pi/\Delta t}$ で、小数第3位を四捨五入した。}
+\end{bkcenter}
+$\Delta t$ を小さくすると1に近づきますが、どんなに小さくしても1より大きいままです。
+
+6-2 の主なばね（$\omega=4$、$\Delta t=0.02$）なら、$A$ の固有値は $\pm4j$、1歩の行列の固有値は $1\pm4j\times0.02=1\pm0.08j$、大きさは $\sqrt{1.0064}=1.0032$ です。6-2⑩ で三平方の定理から出した「1歩で1.0032倍」と同じ数です。$\omega$ がいくつでも、大きさは $\sqrt{1+(\omega\,\Delta t)^2}$ で、6-2 のもっと知りたいの式になります。
+
+\kviikhead{行列式で見る：面積が1.01倍}
+もう1つの見方です。ふつうのオイラー法の1歩の行列の行列式は
+\[ \det\begin{pmatrix}1&\Delta t\\-\Delta t&1\end{pmatrix}=1\times1-\Delta t\times(-\Delta t)=1+\Delta t^2 \]
+です。7-4 で学んだように、行列式は面積の倍率でした。1歩ごとに、ゆれの円の面積が $1+\Delta t^2$ 倍（$\Delta t=0.1$ なら1.01倍）になるので、半径は $\sqrt{1+\Delta t^2}$ 倍です。7-8 の「$\lambda_1\lambda_2=\det A$」とも合います。$\lambda_1\lambda_2=(1+j\,\Delta t)(1-j\,\Delta t)=1+\Delta t^2$ だからです（6-8：共役な数どうしの積は、大きさの2乗）。
+
+\kviikhead{速度を先に進めると、なぜふくらまない？}
+6-2⑪ の「速度を先に進めるオイラー法」も、1歩の行列で書きます。先に $v$ を新しくし、その新しい $v$ で $x$ を進めます。
+\begin{kviikhk}[0.58]
+v_{n+1}=v_n-x_n\,\Delta t & 速度を先に進める \\
+x_{n+1}=x_n+v_{n+1}\,\Delta t & 新しい速度で位置を進める \\
+=x_n+(v_n-x_n\,\Delta t)\,\Delta t & 1行めの $v_{n+1}$ を入れる \\
+=(1-\Delta t^2)\,x_n+\Delta t\,v_n & $x_n$ と $v_n$ でまとめる \\
+\end{kviikhk}
+だから、1歩の行列は
+\[ \begin{pmatrix}x_{n+1}\\v_{n+1}\end{pmatrix}=\begin{pmatrix}1-\Delta t^2&\Delta t\\-\Delta t&1\end{pmatrix}\begin{pmatrix}x_n\\v_n\end{pmatrix} \]
+です。行列式を計算すると、
+\[ (1-\Delta t^2)\times1-\Delta t\times(-\Delta t)=1-\Delta t^2+\Delta t^2=1 \]
+\textbf{ちょうど1}です。面積を変えない行列なので、ゆれの大きさは1周してもほぼ同じです。固有値で言うと、2つの固有値は共役な複素数の組（$\Delta t=0.1$ なら $0.995\pm0.0999j$）で、積 $\lambda\bar\lambda=|\lambda|^2$ が行列式1に等しいので、$|\lambda|=1$。固有値は\textbf{単位円の上}にあります。6-2 で「順番を変えただけで、ゆれがふくらまなくなった」わけは、ここにありました。
+
+\Needspace{7\baselineskip}
+\begin{seikaku}
+速度を先に進める方法でも、$\Delta t$ を大きくしすぎるとこわれます。$\omega=1$ では、固有値が複素数になるのは $\Delta t<2$ のときで、そのとき $|\lambda|=1$ です。$\Delta t>2$ では2つの固有値が実数になり、積は1のままなので、片方の大きさが1より大きくなります（$\Delta t=2.5$ なら $-0.25$ と $-4$）。一般の $\omega$ では、条件は $\omega\,\Delta t<2$ です。実際には、ずれを小さくするために、$\Delta t$ はこれよりずっと小さくとります（6-2：周期の数十分の1）。
+\end{seikaku}
+
+\bksubsection{10}{Python で確かめる}
+
+\label{bk:7-10:python}ここまでの計算を、Python の numpy（2-19・7-1）で確かめます。まず、主役の行列を5回かけます。\par\nobreak
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1], [1, 2]])      \# 主役の行列（行ごとに書く）
+x = np.array([1, 0])                \# はじめの点
+for n in range(5):                  \# 5回くり返す
+    x = A @ x                       \# 漸化式 x(n+1) = A x(n)
+    print(x)
+print(np.linalg.matrix\_power(A, 5)) \# A の5乗
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[2 1]
+[5 4]
+[14 13]
+[41 40]
+[122 121]
+[[122 121]
+ [121 122]]
+\end{bkcodeout}
+\texttt{A @ x} が行列×ベクトル、\texttt{np.linalg.matrix\_power(A, 5)} が $A^5$ です。最後の行列の1列めが $(122,\ 121)$ で、$A^5\vec x_0$ と合います（$\vec x_0=(1,\ 0)$ をかけると、1列めが取り出されるから。7-2）。
+
+つぎに、ばねの1歩の行列の固有値と、その大きさを出します。\par\nobreak
+\begin{bkcode}[Python]
+G = np.array([[1, 0.1], [-0.1, 1]])     \# ふつうのオイラー法（Δt=0.1）
+lam = np.linalg.eigvals(G)              \# 固有値
+print(lam)
+print(abs(lam))                         \# 固有値の大きさ
+print(abs(lam[0]) ** 63)                \# 63歩（約1周）
+G2 = np.array([[0.99, 0.1], [-0.1, 1]]) \# 速度を先に進める方法
+print(abs(np.linalg.eigvals(G2)))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[1.+0.1j 1.-0.1j]
+[1.00498756 1.00498756]
+1.368117109470992
+[1. 1.]
+\end{bkcodeout}
+\texttt{np.linalg.eigvals} は固有値だけを出す命令、\texttt{abs} は大きさ（複素数なら6-9 の絶対値）を出す命令です。Python では虚数単位を \texttt{j} と書きます（6-8）。1歩で1.005倍、63歩で1.37倍、速度を先に進める方法では大きさがちょうど1と、本文の計算と合いました。
+
+\Needspace{14\baselineskip}
+\begin{motto}[5]
+\kviikbox{刻みを細かくした先：$e^{At}$}
+オイラー法で、時刻 $t$ までを $n$ 歩で進めると、1歩は $\Delta t=\dfrac{t}{n}$ なので、
+\[ \vec x(t)\approx\Bigl(I+A\,\frac{t}{n}\Bigr)^n\vec x_0 \]
+です。$1\times1$ の冷めるお湯（$A=-0.05$、$t=10$ 分）なら $\left(1-\frac{0.5}{n}\right)^n$ で、$n=10$ で0.5987（2-18）、$n=1000$ で0.60645と、ほんとうの $e^{-0.5}=0.60653$ に近づきます。5-14 の $\left(1+\frac{1}{n}\right)^n\to e$ と同じ形です。
+
+行列でも同じで、$n$ をふやすと $\left(I+A\frac{t}{n}\right)^n$ はある行列に近づきます。その行列を $e^{At}$（行列の指数関数）と書きます。ばね（$\omega=1$）で $t=2\pi$（1周）とすると、$n=63$ では成分が1.37ほどの行列ですが、$n=630$ で1.03ほど、$n=6283$ で1.003ほどになり、単位行列 $I$ に近づきます。1周するともとにもどる、というほんとうの動きです。$e^{At}$ は、第9巻（9-11）で、制御の式を解く主役になります。
+\end{motto}
+
+\Needspace{14\baselineskip}
+\begin{motto}[5]
+\kviikbox{ダンパーがあっても、$\Delta t$ が大きいと}
+5-15・6-7 のばね（\qty{0.5}{kg}、\qty{8}{N/m}、ダンパー $c=0.4$）は、ほんとうはだんだん止まります。固有値は（7-8⑦） $\lambda=-0.4\pm3.98j$ で、大きさの2乗は $0.4^2+3.98^2=16$ です。ふつうのオイラー法の1歩の行列の固有値 $1+\lambda\,\Delta t$ の大きさの2乗は、
+\[ |1+\lambda\,\Delta t|^2=(1-0.4\,\Delta t)^2+(3.98\,\Delta t)^2=1-0.8\,\Delta t+16\,\Delta t^2 \]
+です。$\Delta t=0.02$ なら0.9904（1より小さい）で、計算でもゆれは消えます。$\Delta t=0.1$ なら1.08で、止まるはずのばねが計算では暴れだします。1より小さくなる条件は $\Delta t<0.8\div16=0.05$ です。
+\end{motto}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+線形差分方程式 $\symbf{x}_{k+1}=A\symbf{x}_k$ の解は $\symbf{x}_k=A^k\symbf{x}_0$ である。$A$ が対角化可能ならば，固有値 $\lambda_i$，固有ベクトル $\symbf{v}_i$ を用いて $\symbf{x}_k=\sum_ic_i\lambda_i^k\symbf{v}_i$ と書ける。$\dot{\symbf{x}}=A\symbf{x}$ に前進オイラー法を適用すると $\symbf{x}_{k+1}=(E+hA)\symbf{x}_k$ となり，その安定条件は全ての固有値について $|1+h\lambda_i|<1$ である。
+\end{bkhonbun}
+\bkyaku{「差分方程式」は漸化式。太字の $\symbf{x}$ はこの本の $\vec x$、$k$ は $n$。$\sum_i$ は固有ベクトルの数だけたすこと（$c_1\vec v_1+c_2\vec v_2$）。「前進オイラー法」はふつうのオイラー法、$h$ は $\Delta t$、$E$ は単位行列 $I$。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{くり返し}$\vec x_{n+1}=A\vec x_n$ なら $\vec x_n=A^n\vec x_0$\\[3pt]
+\tsl{行き先}$A^n\vec v=\lambda^n\vec v$。$|\lambda|<1$ の部分は消え、$|\lambda|>1$ はふえる\\[3pt]
+\tsl{等比級数}$1+x+x^2+\cdots=\dfrac{1}{1-x}$（$|x|<1$）\\[3pt]
+\tsl{オイラー法}1歩の行列 $I+A\,\Delta t$、固有値は $1+\lambda\,\Delta t$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{漸化式}{1つ前の値から次の値を作るきまり。$\vec x_{n+1}=A\vec x_n$ など。}
+\bkword{マルコフ連鎖}{次の状態が今の状態だけで、毎回同じ確率で決まるくり返し。}
+\bkword{単位円}{原点が中心の半径1の円。この中の固有値の部分は消える。}
+\bkword{等比級数}{毎回同じ数をかけてできる数の列（等比数列）を、限りなくたしたもの。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$A^n$}{エー・エヌじょう}{行列 $A$ を $n$ 回かけた行列。成分を $n$ 乗したものではない。$A^0=I$}{A to the n}{7-10}}
+{\bkkigocard{$\vec x_n$}{ベクトル・エックス・エヌ}{$n$ 歩め（$n$ 回め）の状態を表すベクトル。6-2 の $y_n$ のベクトル版}{x sub n}{7-10}}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[倍々のくり返し]
+$x_{n+1}=-0.5\,x_n$、$x_0=16$ のとき、$x_1$ から $x_4$ を求めましょう。また、くり返すとどうなるかを答えましょう。\par
+\kangaekata 1回ごとに $-0.5$ 倍。ふるまいは $a$ の大きさと符号で決まる（④）。\par
+\shiki $x_1=-0.5\times16=-8$、\ $x_2=-0.5\times(-8)=4$\par
+\kviikq $x_3=-0.5\times4=-2$、\ $x_4=-0.5\times(-2)=1$\par
+\kviikq $|a|=0.5<1$ なので0に近づき、$a<0$ なので符号が毎回入れかわる\par
+\kotae $-8$、4、$-2$、1。ゆれながら0に近づく
+\end{reidai}
+
+\begin{reidai}[くり返しの合計：植木鉢]
+植木鉢に毎朝 \qty{50}{mL} の水をやり、土の水は1日で0.6倍になります。水をやった直後の量 $y_n$〔mL〕は $y_{n+1}=0.6\,y_n+50$、$y_1=50$ です。$y_4$ と、落ち着く先を求めましょう。\par
+\kangaekata 落ち着く先は $50\,(1+0.6+0.6^2+\cdots)$。等比級数の式を使う（⑤）。\par
+\shiki $y_2=0.6\times50+50=80$\par
+\kviikq $y_3=0.6\times80+50=98$\par
+\kviikq $y_4=0.6\times98+50=108.8$\par
+\kviikq 落ち着く先：$50\times\dfrac{1}{1-0.6}=50\times\dfrac{1}{0.4}=125$\par
+\kotae $y_4=\qty{108.8}{mL}$、\qty{125}{mL} に落ち着く
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviikjA}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $x_{n+1}=-1.5\,x_n$、$x_0=4$ のとき、$x_1$ から $x_4$ を求めましょう。また、くり返すとどうなるかを答えましょう。
+\bkjans{$-6$、9、$-13.5$、20.25。$|a|=1.5>1$、$a<0$ なので、ゆれながらふえる。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 毎朝 \qty{30}{mL} の水をやり、土の水は1日で0.8倍になります。$y_{n+1}=0.8\,y_n+30$、$y_1=30$ です。$y_4$ と、落ち着く先を求めましょう。
+\bkjans{$y_2=54$、$y_3=73.2$、$y_4=\qty{88.56}{mL}$。落ち着く先 $30\times\dfrac{1}{1-0.8}=\qty{150}{mL}$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[天気の行列]
+晴れの日の次の日は90\,\%が晴れ・10\,\%が雨、雨の日の次の日は50\,\%が晴れ・50\,\%が雨の町があります。（1）今日が雨のとき、3日後に晴れる確率を求めましょう。（2）落ち着く先を求めましょう。\par
+\kangaekata $M$ の1列めは $(0.9,\ 0.1)$、2列めは $(0.5,\ 0.5)$（②）。落ち着く先は $M$ をかけても変わらない組。\par
+\shiki（1）$\vec p_0=(0,\ 1)$ から $\vec p_1=(0.5,\ 0.5)$（$M$ の2列め）\par
+\kviikq $\vec p_2=(0.45+0.25,\ 0.05+0.25)=(0.7,\ 0.3)$\par
+\kviikq $\vec p_3=(0.63+0.15,\ 0.07+0.15)=(0.78,\ 0.22)$\par
+\kviikq（2）$0.9a+0.5b=a$ から $0.5b=0.1a$、$a=5b$\par
+\kviikq $a+b=1$ に入れて $6b=1$、$b=\frac{1}{6}$、$a=\frac{5}{6}$\par
+\kotae（1）0.78。（2）晴れ $\frac{5}{6}$、雨 $\frac{1}{6}$
+\end{reidai}
+
+\begin{reidai}[固有ベクトルに分けて $A^n$ をかける]
+主役の行列 $A$（1行め $(2,\ 1)$、2行め $(1,\ 2)$）について、$A^4\vec x_0$ を求めましょう。ただし $\vec x_0=(3,\ 1)$ です。\par
+\kangaekata 固有ベクトル $(1,\ 1)$（固有値3）と $(1,\ -1)$（固有値1）に分け、それぞれ $\lambda^4$ 倍（⑥）。\par
+\shiki $(3,\ 1)=c_1(1,\ 1)+c_2(1,\ -1)$ とすると、$c_1+c_2=3$、$c_1-c_2=1$\par
+\kviikq 2つの式をたして $2c_1=4$、$c_1=2$。$c_2=1$\par
+\kviikq $A^4\vec x_0=2\times3^4\,(1,\ 1)+1\times1^4\,(1,\ -1)$\par
+\kviikq $=162\,(1,\ 1)+(1,\ -1)=(163,\ 161)$\par
+\kotae $A^4\vec x_0=(163,\ 161)$
+\end{reidai}
+
+\begin{reidai}[固有値で行き先を見分ける]
+行列 $B$ の1行めは $(0.6,\ 0.2)$、2行めは $(0.2,\ 0.6)$ です。（1）$B$ を $(1,\ 1)$ と $(1,\ -1)$ にかけて、固有値を求めましょう。（2）$B$ を何回もかけると、点 $(1,\ 0)$ はどうなりますか。\par
+\kangaekata $|\lambda|<1$ の部分は消える（⑥の表）。消え方のおそいほうの向きが最後まで残る。\par
+\shiki（1）$B(1,\ 1)=(0.6+0.2,\ 0.2+0.6)=(0.8,\ 0.8)$：固有値0.8\par
+\kviikq $B(1,\ -1)=(0.6-0.2,\ 0.2-0.6)=(0.4,\ -0.4)$：固有値0.4\par
+\kviikq（2）どちらも $|\lambda|<1$ なので0に近づく。0.4の部分のほうが速く消える\par
+\kotae（1）0.8と0.4。（2）$(1,\ 1)$ の向きにそろいながら、原点に近づく
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviikjB}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 晴れの次の日は70\,\%が晴れ・30\,\%が雨、雨の次の日は60\,\%が晴れ・40\,\%が雨です。今日が晴れのとき、3日後に晴れる確率と、落ち着く先を求めましょう。
+\bkjans{$\vec p_1=(0.7,\ 0.3)$、$\vec p_2=(0.67,\ 0.33)$、$\vec p_3=(0.667,\ 0.333)$。3日後は0.667。$0.7a+0.6b=a$ から $a=2b$。晴れ $\frac{2}{3}$、雨 $\frac{1}{3}$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 主役の行列 $A$ について、$A^4\vec x_0$ を求めましょう。ただし $\vec x_0=(1,\ 3)$ です。
+\bkjans{$c_1+c_2=1$、$c_1-c_2=3$ から $c_1=2$、$c_2=-1$。$A^4\vec x_0$ は $162\,(1,\ 1)$ から $(1,\ -1)$ をひいて、$(161,\ 163)$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[水そうのオイラー法を行列で]
+6-14 の水そう（⑧の $H$）を、$\Delta t=2$ 分のオイラー法で進めます。（1）1歩の行列と、（2）その固有値を求めましょう。（3）はじめ $(20,\ 0)$ から2歩（4分後）の水位を求めましょう。\par
+\kangaekata 1歩の行列は $I+H\,\Delta t$、固有値は $1+\lambda\,\Delta t$。$H$ の固有値は0と $-0.2$（⑧）。\par
+\shiki（1）$I+2H$ の1行めは $(1-0.2,\ 0.2)=(0.8,\ 0.2)$、2行めは $(0.2,\ 0.8)$\par
+\kviikq（2）$1+0\times2=1$（$(1,\ 1)$ の向き）、$1-0.2\times2=0.6$（$(1,\ -1)$ の向き）\par
+\kviikq（3）1歩め $(0.8\times20+0.2\times0,\ 0.2\times20+0.8\times0)=(16,\ 4)$\par
+\kviikq 2歩め $(0.8\times16+0.2\times4,\ 0.2\times16+0.8\times4)=(13.6,\ 6.4)$\par
+\kotae（1）上の行列。（2）1と0.6。（3）左 \qty{13.6}{cm}、右 \qty{6.4}{cm}
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviikjC}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 行列 $C$ の1行めは $(1.1,\ 0.1)$、2行めは $(0.1,\ 1.1)$ です。（1）$(1,\ 1)$ と $(1,\ -1)$ にかけて固有値を求めましょう。（2）何回もかけると、点 $(1,\ 0)$ はどうなりますか。
+\bkjans{（1）\nobreak 1.2と1.0。（2）\nobreak 1.2の部分がふえ、$(1,\ 1)$ の向きにそろいながら大きくなる。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 6-14 の水そうを、$\Delta t=0.5$ 分のオイラー法で進めます。（1）1歩の行列と、（2）その固有値を求めましょう。（3）はじめ $(20,\ 0)$ から4歩（2分後）の水位を求めましょう（$0.9^4=0.6561$）。
+\bkjans{（1）\nobreak 1行め $(0.95,\ 0.05)$、2行め $(0.05,\ 0.95)$。（2）\nobreak 1と0.9。（3）\nobreak 和は20、差は $20\times0.6561=13.122$。左 \qty{16.561}{cm}、右 \qty{3.439}{cm}。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[こわれない $\Delta t$]
+お茶の温度が $\dfrac{\dd T}{\dd t}=-0.1\,(T-20)$（$t$ は分）で冷めます（6-2 の例題）。オイラー法で、（1）ゆれずに近づく $\Delta t$、（2）こわれない $\Delta t$ を求めましょう。（3）$\Delta t=15$ 分では、部屋との差は1歩で何倍ですか。\par
+\kangaekata $\lambda=-0.1$ の$1\times1$ のくり返し。1歩の数は $1-0.1\,\Delta t$（⑧）。\par
+\shiki（1）$1-0.1\,\Delta t\geqq0$ から $0.1\,\Delta t\leqq1$、$\Delta t\leqq10$\par
+\kviikq（2）$-1<1-0.1\,\Delta t$ から $0.1\,\Delta t<2$、$\Delta t<20$\par
+\kviikq（3）$1-0.1\times15=1-1.5=-0.5$\par
+\kotae（1）10分以下。（2）20分より短いとき。（3）$-0.5$ 倍。ゆれながら部屋の温度に近づく
+\end{reidai}
+
+\begin{reidai}[ばねのふくらみを固有値で]
+$m=\qty{1}{kg}$、$k=\qty{4}{N/m}$ のばね（$\omega=2$）を、ふつうのオイラー法で $\Delta t=0.1$ として計算します。（1）位置と速度の組の行列 $A$ の固有値、（2）1歩の行列の固有値とその大きさ、（3）1周期（$\pi$ 秒、約31.4歩）で何倍になるかを求めましょう（$1.04^{15.7}=1.85$）。\par
+\kangaekata $A$ の1行めは $(0,\ 1)$、2行めは $(-4,\ 0)$（$\dot v=-4x$）。1歩の行列の固有値は $1+\lambda\,\Delta t$（⑨）。\par
+\shiki（1）$\det(A-\lambda I)=\lambda^2+4=0$ から $\lambda=\pm2j$\par
+\kviikq（2）$1\pm2j\times0.1=1\pm0.2j$。大きさ $\sqrt{1+0.04}=\sqrt{1.04}\approx1.020$\par
+\kviikq（3）$(\sqrt{1.04})^{31.4}=1.04^{15.7}\approx1.85$\par
+\kotae（1）$\pm2j$。（2）$1\pm0.2j$、大きさ約1.020。（3）約1.85倍
+\end{reidai}
+
+\begin{reidai}[速度を先に進める方法の1歩の行列]
+$\omega=2$ のばね（$\dot x=v$、$\dot v=-4x$）を、速度を先に進めるオイラー法、$\Delta t=0.1$ で計算します。（1）1歩の行列 $G$、（2）その行列式、（3）固有値とその大きさを求めましょう。\par
+\kangaekata 先に $v$、新しい $v$ で $x$ を進める（⑨）。固有値の積は行列式（7-8）。\par
+\shiki（1）$v_{n+1}=v_n-0.4\,x_n$\par
+\kviikq $x_{n+1}=x_n+0.1\,(v_n-0.4\,x_n)=0.96\,x_n+0.1\,v_n$\par
+\kviikq $G$ の1行めは $(0.96,\ 0.1)$、2行めは $(-0.4,\ 1)$\par
+\kviikq（2）$0.96\times1-0.1\times(-0.4)=1$\qquad（3）$\lambda^2-1.96\lambda+1=0$\par
+\kviikq $\lambda=(1.96\pm\sqrt{-0.1584})\div2=0.98\pm0.199j$\par
+\kviikq 共役な組なので $|\lambda|^2=\lambda\bar\lambda=\det G=1$、$|\lambda|=1$\par
+\kotae（1）上の $G$。（2）1。（3）$0.98\pm0.199j$、大きさ1（ふくらまない）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviikjD}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright コンデンサーの電圧が $\dfrac{\dd V}{\dd t}=\dfrac{10-V}{2}$（$t$ は秒）で変わります（6-2⑧）。目標との差 $10-V$ は $\lambda=-0.5$ の$1\times1$ のくり返しです。オイラー法で、（1）ゆれずに近づく $\Delta t$、（2）こわれない $\Delta t$ を求めましょう。（3）$\Delta t=\qty{3}{s}$ では差は1歩で何倍ですか。
+\bkjans{1歩の数は $1-0.5\,\Delta t$。（1）\nobreak \qty{2}{s} 以下。（2）\nobreak \qty{4}{s} より短いとき。（3）\nobreak $-0.5$ 倍（ゆれながら近づく）。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $m=\qty{1}{kg}$、$k=\qty{9}{N/m}$ のばね（$\omega=3$）を、ふつうのオイラー法で $\Delta t=0.1$ として計算します。（1）$A$ の固有値、（2）1歩の行列の固有値とその大きさ、（3）1周期（約20.9歩）で何倍になるかを求めましょう（$1.09^{10.5}=2.47$）。
+\bkjans{（1）\nobreak $\pm3j$。（2）\nobreak $1\pm0.3j$、大きさ $\sqrt{1.09}\approx1.044$。（3）\nobreak $1.09^{10.5}\approx2.47$ 倍。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[プログラムを読む]
+\noindent\begin{minipage}[c]{0.41\linewidth}\raggedright
+次のプログラムで表示される数を答えましょう。また、くり返しを続けると、$y\div x$ は何に近づきますか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+\begin{bkcode}[Python]
+import numpy as np
+B = np.array([[3, 1], [1, 3]])
+x = np.array([1, 0])
+for n in range(3):
+    x = B @ x
+    print(x)
+\end{bkcode}
+\end{minipage}\par
+\kangaekata \texttt{B @ x} は行列×ベクトル。$B$ の固有値は、$(1,\ 1)$ の向きで4、$(1,\ -1)$ の向きで2。大きい4の向きにそろう（⑥）。\par
+\shiki 1回め $(3\times1+1\times0,\ 1\times1+3\times0)=(3,\ 1)$\par
+\kviikq 2回め $(3\times3+1\times1,\ 1\times3+3\times1)=(10,\ 6)$\par
+\kviikq 3回め $(3\times10+1\times6,\ 1\times10+3\times6)=(36,\ 28)$\par
+\kotae \texttt{[3 1]}、\texttt{[10 6]}、\texttt{[36 28]}。$y\div x$ は1に近づく（$(1,\ 1)$ の向き）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviikjE}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $\omega=3$ のばね（$\dot x=v$、$\dot v=-9x$）を、速度を先に進めるオイラー法で $\Delta t=0.1$ として計算します。1歩の行列、その行列式、固有値の大きさを求めましょう。
+\bkjans{$v_{n+1}=-0.9\,x_n+v_n$、$x_{n+1}=0.91\,x_n+0.1\,v_n$。1行め $(0.91,\ 0.1)$、2行め $(-0.9,\ 1)$。行列式 $0.91+0.09=1$。$\lambda^2-1.91\lambda+1=0$ から $\lambda=0.955\pm0.297j$、大きさ1。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 次のプログラムで表示される数を答えましょう。また、$y\div x$ は何に近づきますか。\par\vspace{2pt}
+\begin{bkcode}[Python]
+import numpy as np
+B=np.array([[1,2],[2,1]])
+x=np.array([1,0])
+for n in range(3):
+    x = B @ x
+    print(x)
+\end{bkcode}
+\bkjans{\texttt{[1 2]}、\texttt{[5 4]}、\texttt{[13 14]}。固有値は3（$(1,\ 1)$）と $-1$（$(1,\ -1)$）で、大きさの大きい3が勝つので、$y\div x$ は1に近づく。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$A^2$ を成分の2乗にする}
+\bkng{主役の行列の $A^2$ を、成分を2乗して1行め $(4,\ 1)$ とする}
+\bkok{$A^2=AA$。行と列をかけて、1行めは $(5,\ 4)$}
+$A^2$ は行列のかけ算 $AA$ です（7-3）。Python の \texttt{A ** 2} も成分ごとの2乗なので、\texttt{A @ A} を使います。
+\end{tsumazuki}
+
+\begin{tsumazuki}{複素数の大きさを、たし算で出す}
+\bkng{$|1+0.1j|=1+0.1=1.1$}
+\bkok{$|1+0.1j|=\sqrt{1^2+0.1^2}=\sqrt{1.01}\approx1.005$}
+大きさは原点からの距離なので、三平方の定理で求めます（6-9）。1.1倍なら、ばねは1周で約400倍にもなり、6-2 と合いません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{負の固有値なら小さくなる、と思う}
+\bkng{固有値が $-1.5$ で負の数だから、くり返すと小さくなる}
+\bkok{大きさ $|-1.5|=1.5>1$ だから、ゆれながらふえる}
+ふえるか消えるかは、大きさ $|\lambda|$ で決まります（④）。負の符号は、向きが毎回入れかわることを表すだけです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{等比級数の式を、$|x|\geqq1$ で使う}
+\bkng{$1+2+4+8+\cdots=\dfrac{1}{1-2}=-1$}
+\bkok{$\dfrac{1}{1-x}$ が使えるのは $|x|<1$ のときだけ}
+$|x|\geqq1$ では $x^n$ が0に近づかないので、合計はどこにも落ち着きません（⑤のせいかくに言うと）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{1歩の行列で、$I$ を忘れる}
+\bkng{オイラー法の1歩は $\vec x_{n+1}=A\,\Delta t\,\vec x_n$}
+\bkok{$\vec x_{n+1}=(I+A\,\Delta t)\,\vec x_n$}
+$A\,\Delta t\,\vec x_n$ は1歩で「変わる量」だけです。今の値 $\vec x_n=I\vec x_n$ をたすのを忘れないこと（⑧）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{天気の行列の、行と列を取りちがえる}
+\bkng{1行めに「晴れの日からの移り方」(0.8, 0.2) を書く}
+\bkok{1列めに「晴れの日からの移り方」を書く。各列の和が1}
+$M\vec p_n$ では、今日の晴れの確率 $a_n$ は $M$ の1列めにかかります（7-2）。「どの列もたすと1」で確かめましょう。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{シェアサイクルの自転車の数}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+貸し自転車の「1日に、どの置き場からどこへ何割が移るか」の表は、②の天気の行列と同じ形です。落ち着く先を見れば、自転車がたまる置き場と足りなくなる置き場がわかり、運び直す計画に役立ちます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (4,4) circle (3.6) (20,4) circle (3.6);
+  \draw[bkOrange!80!black, line width=1pt, line join=round] (4,4) -- (9,11) -- (16,11) -- (20,4) (9,11) -- (12,4) -- (16,11) (12,4) -- (4,4) (8,13.5) -- (10,13.5) (9,11) -- (9,13.5) (16,11) -- (17,14) -- (19.5,14);
+  \fill[bkInk] (12,4) circle (0.8);
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{ゲームの中の物理}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+ゲームの物の動きは、画面をかきかえるたびに（1秒に60回なら $\Delta t=\frac{1}{60}$ 秒）オイラー法で進めます。ばねが暴れださないよう、固有値が単位円の上にくる「速度を先に進める方法」がよく使われます（⑨）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkInk!85, draw=bkInk, rounded corners=1.5mm] (0,0) rectangle (26,17);
+  \fill[bkGreen!25] (2,2) rectangle (24,15);
+  \draw[bkInk, line width=0.7pt, decorate, decoration={zigzag, amplitude=1mm, segment length=1.6mm}] (13,15) -- (13,8);
+  \fill[bkOrange] (13,6.5) circle (2);
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{ドローンや機械のデジタル制御}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+ドローンや機械の中のコンピュータは、センサーを読んでモーターへの命令を計算することを、短い時間ごとにくり返します。これは「次の状態＝行列×今の状態＋命令」の漸化式です。行列の固有値が単位円の中に入るように命令の決め方を選び、ゆれが消えるようにします（9-10）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[xscale=0.85, xshift=1mm]
+  \fill[bkGray!70] (8,5) rectangle (18,9);
+  \draw[bkInk, line width=0.9pt] (3,9) -- (23,9);
+  \foreach \x in {3,23} {\draw[bkInk, line width=0.8pt] (\x,9) -- (\x,11); \draw[bkBlue, line width=1.1pt] ({\x-4},11.5) -- ({\x+4},11.5);}
+  \draw[bkInk, line width=0.6pt] (10,5) -- (9,1.5) (16,5) -- (17,1.5);
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{マルコフと「次の文字」}
+②の「次の状態が今の状態だけで決まるくり返し」に名前を残したのは、ロシアの数学者マルコフ（1856〜1922年）です。マルコフは1906年ころからこのくり返しを研究し、1913年には、プーシキンの詩『エフゲニー・オネーギン』のはじめの2万字を数えて、母音の次に母音が来る割合、子音の次に母音が来る割合などを調べたと伝えられています。「今の文字から次の文字の出やすさを決める」考えは、スマートフォンの予測入力などの遠い祖先です。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $x_{n+1}=-0.8\,x_n$、$x_0=10$ のとき、$x_1$ から $x_4$ を求め、くり返すとどうなるかを答えましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$-8$、6.4、$-5.12$、4.096。$|a|=0.8<1$、$a<0$ なので、ゆれながら0に近づく。}
+
+\bkproblem 植木鉢に毎朝 \qty{80}{mL} の水をやり、土の水は1日で0.75倍になります。$y_{n+1}=0.75\,y_n+80$、$y_1=80$ のとき、$y_4$ と、落ち着く先を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$y_2=140$、$y_3=185$、$y_4=\qty{218.75}{mL}$。落ち着く先 $80\times\dfrac{1}{1-0.75}=\qty{320}{mL}$。}
+
+\bkproblem 晴れの次の日は60\,\%が晴れ・40\,\%が雨、雨の次の日は30\,\%が晴れ・70\,\%が雨です。今日が晴れのとき、2日後に晴れる確率と、落ち着く先を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\vec p_1=(0.6,\ 0.4)$、$\vec p_2=(0.48,\ 0.52)$。2日後は0.48。$0.6a+0.3b=a$ から $0.3b=0.4a$、$a:b=3:4$。晴れ $\frac{3}{7}$、雨 $\frac{4}{7}$。}
+
+\bkproblem 次のプログラムで表示される数を答えましょう\mbox{（\bkreidairef{10}）}。\par\nobreak\vspace{2pt}
+\noindent\hfill\begin{minipage}[c]{0.7\linewidth}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[1, 1], [0, 2]])
+x = np.array([0, 1])
+for n in range(3):
+    x = A @ x
+    print(x)
+\end{bkcode}
+\end{minipage}\par
+\bkpans{\texttt{[1 2]}、\texttt{[3 4]}、\texttt{[7 8]}。}
+
+\bkproblem 主役の行列 $A$ について、$A^3\vec x_0$ を求めましょう。ただし $\vec x_0=(2,\ 0)$ です\mbox{（\bkreidairef{4}）}。
+\bkpans{$(2,\ 0)=(1,\ 1)+(1,\ -1)$。$A^3\vec x_0$ は $27\,(1,\ 1)$ と $(1,\ -1)$ の和で、$(28,\ 26)$。}
+
+\bkproblem 6-14 の水そうを、$\Delta t=4$ 分のオイラー法で進めます。1歩の行列と、その固有値を求め、はじめ $(20,\ 0)$ から2歩（8分後）の水位を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{1行め $(0.6,\ 0.4)$、2行め $(0.4,\ 0.6)$。固有値1と0.2。1歩め $(12,\ 8)$、2歩め $(10.4,\ 9.6)$。左 \qty{10.4}{cm}、右 \qty{9.6}{cm}。}
+
+\bkproblem お湯の温度が $\dfrac{\dd T}{\dd t}=-0.2\,(T-25)$（$t$ は分）で冷めます。オイラー法で、（1）ゆれずに近づく $\Delta t$、（2）こわれない $\Delta t$ を求めましょう。（3）$\Delta t=7.5$ 分では、差は1歩で何倍ですか\mbox{（\bkreidairef{7}）}。
+\bkpans{1歩の数は $1-0.2\,\Delta t$。（1）\nobreak 5分以下。（2）\nobreak 10分より短いとき。（3）\nobreak $-0.5$ 倍（ゆれながら近づく）。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 行列の1行めが $(0.7,\ 0.2)$、2行めが $(0.2,\ 0.7)$ です。（1）$(1,\ 1)$ と $(1,\ -1)$ にかけて固有値を求めましょう。（2）点 $(1,\ 0)$ に何回もかけるとどうなりますか\mbox{（\bkreidairef{5}）}。
+\bkpans{（1）\nobreak 0.9と0.5。（2）\nobreak どちらも $|\lambda|<1$ なので、$(1,\ 1)$ の向きにそろいながら原点に近づく。}
+
+\bkproblem $\omega=1$ のばねを、ふつうのオイラー法、$\Delta t=0.02$ で計算します。1歩の行列の固有値とその大きさ、1周期（約314歩）で何倍になるかを求めましょう（$1.0004^{157}=1.065$）\mbox{（\bkreidairef{8}）}。
+\bkpans{固有値 $1\pm0.02j$、大きさ $\sqrt{1.0004}\approx1.0002$。1周で $1.0004^{157}\approx1.065$ 倍。}
+
+\bkproblem $\omega=1$ のばね（$\dot x=v$、$\dot v=-x$）を、速度を先に進めるオイラー法で $\Delta t=0.2$ として計算します。1歩の行列、その行列式、固有値とその大きさを求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$v_{n+1}=-0.2\,x_n+v_n$、$x_{n+1}=0.96\,x_n+0.2\,v_n$。1行め $(0.96,\ 0.2)$、2行め $(-0.2,\ 1)$。行列式 $0.96+0.04=1$。$\lambda^2-1.96\lambda+1=0$ から $\lambda=0.98\pm0.199j$、大きさ1。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 同じ行列を何回もかけて、点の向かう先を表計算と図で調べられる。\bkfurref{bk:7-10:kurikaeshi}
+\item 倍々のくり返しと、等比級数の合計を計算できる。\bkfurref{bk:7-10:kyusu}
+\item 固有値の大きさで行き先を見分け、ばねがふくらむわけを説明できる。\bkfurref{bk:7-10:bane}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{表を何行も進めることは、行列を何回もかけることだった。行き先を決めるのは固有値の大きさ。次の 7-11 では、行列が働く現場を見に行こう。}

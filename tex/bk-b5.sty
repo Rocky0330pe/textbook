@@ -1,0 +1,704 @@
+%% bk-b5.sty
+%% 『物理を理解するための数学』 教科書フォーマット（B5・両面・CMYK）
+%% LuaLaTeX + LuaTeX-ja 専用。A4片面版 butsuri-sugaku.sty v0.1 を改訂（第2回編集委員会）
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bk-b5}[2026/10/16 v0.2 textbook format B5 twoside]
+%% 巻の番号（1〜9）。\usepackage[vol=2]{bk-b5}
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=bk, prefix=bk@opt@}
+\DeclareStringOption[2]{vol}
+\ProcessKeyvalOptions*
+\edef\bkvol{\bk@opt@vol}
+
+%% ------------------------------------------------------------
+%% 0. 基本パッケージ
+%% ------------------------------------------------------------
+%% B5（182×257 mm）両面。のど20・小口22・天20・地22 → 本文 140×215 mm
+\RequirePackage[paperwidth=182mm,paperheight=257mm,twoside,
+  inner=20mm,outer=22mm,top=20mm,bottom=22mm,
+  headheight=0pt,headsep=0pt,footskip=0pt]{geometry}
+\RequirePackage{luatexja-fontspec}
+\RequirePackage{luatexja-ruby}
+\RequirePackage{amsmath}
+\RequirePackage{unicode-math}
+\RequirePackage{cancel}
+\RequirePackage[dvipsnames]{xcolor}
+\AddToHook{begindocument/end}{\selectcolormodel{cmyk}}% 印刷用に、本文の色はすべてCMYKで出力
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\usetikzlibrary{calc,arrows.meta,positioning,shapes.geometric,decorations.pathmorphing,decorations.pathreplacing,patterns,backgrounds,fit}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{tabularray}
+\UseTblrLibrary{siunitx}
+\RequirePackage{siunitx}
+% 第12回：\square（□）と華氏の単位を使えるようにする
+\AtBeginDocument{\let\square\mdlgwhtsquare}
+\DeclareSIUnit\degreeFahrenheit{{}^{\circ}\mathrm{F}}
+\RequirePackage{enumitem}
+\RequirePackage{multicol}
+\RequirePackage{needspace}
+\RequirePackage[hidelinks,bookmarksnumbered]{hyperref}
+
+%% ------------------------------------------------------------
+%% 1. フォント
+%%   和文：BIZ UD明朝・BIZ UDゴシック（fonts/ に同梱, SIL OFL）
+%%   欧文：TeX Gyre Schola（教科書の定番 Century Schoolbook 系）
+%% ------------------------------------------------------------
+\providecommand\bkfontpath{./fonts/}
+\ltjdefcharrange{200}{"D7, "F7, "2212}
+\ltjsetparameter{jacharrange={+200}}
+% 第5回：第1巻は × ÷ − を欧文の字（Klee One）にする。和文の字にすると、右に大きな空きができるため
+\ifnum\bkvol=1\relax\ltjsetparameter{jacharrange={-200}}\fi
+\ifnum\bkvol=1\relax
+  % 第1巻：教科書体の代わりに Klee One（SIL OFL）を仮に使う
+  \setmainjfont{KleeOne}[Path=\bkfontpath, Extension=.ttf,
+    UprightFont=*-Regular, BoldFont=*-SemiBold]
+\else
+  \setmainjfont{BIZUDMincho}[Path=\bkfontpath, Extension=.ttf,
+    UprightFont=*-Regular, BoldFont=*-Bold]
+\fi
+\newjfontfamily\bkkyokasho{KleeOne}[Path=\bkfontpath, Extension=.ttf,
+  UprightFont=*-Regular, BoldFont=*-SemiBold]
+\setsansjfont{BIZUDGothic}[Path=\bkfontpath, Extension=.ttf,
+  UprightFont=*-Regular, BoldFont=*-Bold]
+\ifnum\bkvol=1\relax
+  % 第1巻：数字や英字も教科書体ふうの字形にそろえる（数式の中は Schola のまま）
+  \setmainfont{KleeOne}[Path=\bkfontpath, Extension=.ttf,
+    UprightFont=*-Regular, BoldFont=*-SemiBold]
+\else
+\setmainfont{texgyreschola}[Extension=.otf,
+  UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\fi
+\setsansfont{texgyreheros}[Extension=.otf,
+  UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\IfFontExistsTF{texgyreschola-math.otf}{%
+  \setmathfont{texgyreschola-math.otf}%
+}{%
+  % Schola の数式フォントがない環境：Latin Modern Math に本文と同じ数字・英字を重ねる
+  \setmathfont{latinmodern-math.otf}%
+  \setmathfont{texgyreschola-regular.otf}[range={up/{num,latin,Latin}}]%
+}
+\sisetup{per-mode=symbol, mode=match, reset-text-family=false, retain-explicit-plus,
+  reset-text-series=false, reset-math-version=false}
+% 第7回：総ルビの巻（第1〜3巻）では、\qty の数も本文と同じく区切らない（10000）。万・億の区切りを見せたい表は、その場で書く
+\ifnum\bkvol<4\relax\sisetup{group-digits=none}\fi
+% 第13回：第4巻からは整数の部分だけを区切る（5けた以上：10 000）。小数の部分（3.14159）は区切らない
+\ifnum\bkvol>3\relax\sisetup{group-digits=integer, group-minimum-digits=5}\fi
+
+%% 本文 12pt／行送り 24pt（ルビが入っても行間がそろう）
+\renewcommand{\normalsize}{\@setfontsize\normalsize{12pt}{22pt}%
+  \abovedisplayskip 8pt plus 2pt minus 2pt
+  \belowdisplayskip \abovedisplayskip
+  \abovedisplayshortskip 4pt
+  \belowdisplayshortskip 4pt}
+\renewcommand{\small}{\@setfontsize\small{10.5pt}{19pt}}
+\renewcommand{\footnotesize}{\@setfontsize\footnotesize{9.5pt}{17pt}}
+\renewcommand{\large}{\@setfontsize\large{14pt}{26pt}}
+\renewcommand{\Large}{\@setfontsize\Large{17pt}{30pt}}
+\renewcommand{\LARGE}{\@setfontsize\LARGE{21pt}{36pt}}
+\renewcommand{\huge}{\@setfontsize\huge{26pt}{42pt}}
+\renewcommand{\Huge}{\@setfontsize\Huge{34pt}{52pt}}
+\ifnum\bkvol=1\relax
+  \renewcommand{\normalsize}{\@setfontsize\normalsize{15pt}{28pt}%
+    \abovedisplayskip 10pt plus 2pt minus 2pt
+    \belowdisplayskip \abovedisplayskip
+    \abovedisplayshortskip 5pt
+    \belowdisplayshortskip 5pt}
+\fi
+\AtBeginDocument{\normalsize}
+\setlength{\parindent}{1\zw}
+\setlength{\parskip}{2pt plus 1pt}
+\clubpenalty=10000 \widowpenalty=10000 \displaywidowpenalty=10000
+% 第6回：文中の式の「＝」「＋」のあとで改行しない（行末に＝を残さない）。入らないときは別行立ての式にする
+\relpenalty=10000 \binoppenalty=10000 \emergencystretch=1\zw
+% 第7回：章の番号「2-12」などが「2-」と「12」に分かれないように、ハイフンのあとで改行しない（全巻）。
+% 小さい「ゃ・ゅ・ょ・っ」などが行の頭に来ないようにする（行頭禁則を強める）
+\exhyphenpenalty=10000
+% 第7回：両端をそろえた行で、文中の式の「＋」「＝」のまわりの空きが0までちぢまないようにする（第2巻から）
+\ifnum\bkvol>1\relax\AtBeginDocument{\medmuskip=4mu plus 2mu minus 1.5mu\relax\thickmuskip=5mu plus 4mu minus 1mu\relax}\fi
+\ltjsetparameter{prebreakpenalty={`ぁ,10000}}\ltjsetparameter{prebreakpenalty={`ぃ,10000}}\ltjsetparameter{prebreakpenalty={`ぅ,10000}}
+\ltjsetparameter{prebreakpenalty={`ぇ,10000}}\ltjsetparameter{prebreakpenalty={`ぉ,10000}}\ltjsetparameter{prebreakpenalty={`っ,10000}}
+\ltjsetparameter{prebreakpenalty={`ゃ,10000}}\ltjsetparameter{prebreakpenalty={`ゅ,10000}}\ltjsetparameter{prebreakpenalty={`ょ,10000}}
+\ltjsetparameter{prebreakpenalty={`ゎ,10000}}\ltjsetparameter{prebreakpenalty={`ァ,10000}}\ltjsetparameter{prebreakpenalty={`ィ,10000}}
+\ltjsetparameter{prebreakpenalty={`ゥ,10000}}\ltjsetparameter{prebreakpenalty={`ェ,10000}}\ltjsetparameter{prebreakpenalty={`ォ,10000}}
+\ltjsetparameter{prebreakpenalty={`ッ,10000}}\ltjsetparameter{prebreakpenalty={`ャ,10000}}\ltjsetparameter{prebreakpenalty={`ュ,10000}}
+\ltjsetparameter{prebreakpenalty={`ョ,10000}}
+% 第7回：文の中の全角の記号「＝ ＋ － × ÷」のあとで改行しない（行の終わりに残さない。次の行の頭はよい）
+\ltjsetparameter{postbreakpenalty={`＝,10000}}\ltjsetparameter{postbreakpenalty={`＋,10000}}\ltjsetparameter{postbreakpenalty={`－,10000}}
+\ltjsetparameter{postbreakpenalty={`×,10000}}\ltjsetparameter{postbreakpenalty={`÷,10000}}
+% 第6回：分数のある行どうしが1ptまで近づかないように、行のあいだを最低3ptあける（第2巻から）
+\ifnum\bkvol>1\relax\AtBeginDocument{\lineskiplimit=2.5pt \lineskip=2.5pt}\fi
+\ltjsetparameter{xkanjiskip=0.2em plus 0.1em minus 0.05em}
+\ltjsetparameter{kanjiskip=0pt plus 0.4pt minus 0.4pt}
+
+%% ------------------------------------------------------------
+%% 2. ルビ  \R{漢字}{かん|じ}
+%%   読みの区切り「|」の数が字数と同じ → 1字ずつ（熟語ルビ）
+%%   違う（今日{きょう} など）→ まとめてルビ（グループルビ）
+%% ------------------------------------------------------------
+\ltjsetruby{size=0.5, stretch=101}
+\directlua{
+  bk = bk or {}
+  local cct = luatexbase.registernumber('catcodetable@latex')
+  function bk.ruby()
+    local base = token.scan_argument(false)
+    local reading = token.scan_argument(false)
+    local _, bars = reading:gsub('|', '|')
+    local chars = {}
+    for _, c in utf8.codes(base) do chars[\string#chars + 1] = utf8.char(c) end
+    local b = base
+    local groups, long = {}, false
+    for g in (reading .. '|'):gmatch('([^|]*)|') do
+      groups[\string#groups + 1] = g
+      if utf8.len(g) > 2 then long = true end
+    end
+    if bars > 0 and bars + 1 == \string#chars and not long then
+      % 1字ずつ（モノルビ）
+      b = table.concat(chars, '|')
+    else
+      % 読みが親字からはみ出す熟語は、まとめてルビ（グループルビ）にして字間のすき間を防ぐ
+      reading = reading:gsub('|', '')
+    end
+    tex.sprint(cct, '\\ruby{' .. b .. '}{' .. reading .. '}')
+  end
+}
+\protected\def\R{\directlua{bk.ruby()}}
+%% 第4巻以降は総ルビにしない（親字だけを出す。使う漢字は常用漢字＝中学までの範囲）
+\ifnum\bkvol>3\relax\protected\def\R#1#2{#1}\fi
+%% PDFのしおり（目次）には親字だけを出す
+\pdfstringdefDisableCommands{\def\R#1#2{#1}}
+
+%% ------------------------------------------------------------
+%% 3. 色（カラーユニバーサルデザインに配慮し、明るさにも差をつける）
+%% ------------------------------------------------------------
+\definecolor{bkInk}{cmyk}{0,0,0,0.92}      % 本文（スミ1色）
+\definecolor{bkNavy}{cmyk}{0.95,0.75,0.25,0.25} % 見出し
+\definecolor{bkGray}{cmyk}{0,0,0,0.65}
+\definecolor{bkLine}{cmyk}{0.15,0.10,0.08,0.05}
+\definecolor{bkPaper}{cmyk}{0.03,0.02,0.01,0}
+\definecolor{bkYellow}{cmyk}{0,0.28,1,0.08}   % はてな？
+\definecolor{bkYellowBg}{cmyk}{0,0.04,0.16,0}
+\definecolor{bkGreen}{cmyk}{0.85,0.10,0.65,0.10}    % やってみよう
+\definecolor{bkGreenBg}{cmyk}{0.10,0,0.07,0}
+\definecolor{bkBlue}{cmyk}{0.88,0.50,0,0}     % 例題
+\definecolor{bkBlueBg}{cmyk}{0.08,0.03,0,0}
+\definecolor{bkOrange}{cmyk}{0,0.62,1,0.05}   % じぶんでとこう
+\definecolor{bkOrangeBg}{cmyk}{0,0.06,0.13,0}
+\definecolor{bkRed}{cmyk}{0.05,0.88,0.60,0.05}      % つまずきポイント
+\definecolor{bkRedBg}{cmyk}{0,0.08,0.04,0}
+\definecolor{bkPurple}{cmyk}{0.62,0.75,0,0}   % 物理・工学ではこう使う
+\definecolor{bkPurpleBg}{cmyk}{0.06,0.08,0,0}
+\definecolor{bkStar}{cmyk}{0,0.48,1,0}
+%% 巻ごとのテーマ色（表紙・帯・柱・つめ・ノンブル）
+\definecolor{bkVol1}{cmyk}{0,0.80,0.85,0}
+\definecolor{bkVol2}{cmyk}{0,0.58,1,0}
+\definecolor{bkVol3}{cmyk}{0.04,0.20,1,0}
+\definecolor{bkVol4}{cmyk}{0.50,0,1,0}
+\definecolor{bkVol5}{cmyk}{0.88,0.12,0.90,0.05}
+\definecolor{bkVol6}{cmyk}{0.82,0,0.34,0}
+\definecolor{bkVol7}{cmyk}{0.90,0.48,0,0}
+\definecolor{bkVol8}{cmyk}{0.95,0.85,0.12,0.08}
+\definecolor{bkVol9}{cmyk}{0.55,0.82,0,0}
+% 第16回：はじめに読む冊子（ガイドブック、vol=0）は、全9巻をまとめる落ち着いた紺灰色（白い字で約8:1）
+\definecolor{bkVol0}{cmyk}{0.72,0.52,0.30,0.42}
+%% 色の上にのせる文字の色（明るい黄・黄緑の巻は濃い色の文字）
+\colorlet{bkOn1}{white}\colorlet{bkOn2}{white}
+\definecolor{bkOn3}{cmyk}{0.95,0.75,0.25,0.25}\definecolor{bkOn4}{cmyk}{0.95,0.75,0.25,0.25}
+\colorlet{bkOn5}{white}\definecolor{bkOn6}{cmyk}{0.95,0.75,0.25,0.25}\colorlet{bkOn7}{white}\colorlet{bkOn8}{white}\colorlet{bkOn9}{white}\colorlet{bkOn0}{white}% 第14回：第6巻（明るい青緑）も濃い字
+% 第11回：巻の番号の小さな札（表紙・裏表紙の全9巻の帯）は、明るい巻の色では濃い字にする（物理シリーズ第9回 No.5・14）
+\definecolor{bkBandInk}{cmyk}{0.75,0.65,0.45,0.70}
+\colorlet{bkBandOn1}{bkBandInk}\colorlet{bkBandOn2}{bkBandInk}\colorlet{bkBandOn3}{bkBandInk}\colorlet{bkBandOn4}{bkBandInk}
+\colorlet{bkBandOn5}{bkBandInk}\colorlet{bkBandOn6}{bkBandInk}\colorlet{bkBandOn7}{bkBandInk}\colorlet{bkBandOn8}{white}\colorlet{bkBandOn9}{white}\colorlet{bkBandOn0}{white}
+%% 濃い版（明るい巻でも文字に使える）
+\colorlet{bkDeep1}{bkVol1!85!black}\colorlet{bkDeep2}{bkVol2!80!black}
+\colorlet{bkDeep3}{bkVol3!55!black}\colorlet{bkDeep4}{bkVol4!50!black}% 第13回：小さな字で 4.5:1 以上（約4.9:1）
+\colorlet{bkDeep5}{bkVol5!85!black}\colorlet{bkDeep6}{bkVol6!50!black}% 第14回：約5:1
+\colorlet{bkDeep7}{bkVol7!80!black}\colorlet{bkDeep8}{bkVol8}\colorlet{bkDeep9}{bkVol9!90!black}\colorlet{bkDeep0}{bkVol0}
+%% 7本の路線の色（形の記号も必ず添える）
+\definecolor{bkRoute1}{cmyk}{0,0.75,1,0.05}
+\definecolor{bkRoute2}{cmyk}{1,0.45,0,0.05}
+\definecolor{bkRoute3}{cmyk}{0,0.40,1,0}
+\definecolor{bkRoute4}{cmyk}{0.95,0,0.70,0.05}
+\definecolor{bkRoute5}{cmyk}{0.15,0.80,0,0}
+\definecolor{bkRoute6}{cmyk}{0.75,0.05,0,0}
+\definecolor{bkRoute7}{cmyk}{0,0.20,1,0.25}
+%% 旧版の部ごとの色名も残す（巻の色に読みかえる）
+\colorlet{bkVol}{bkVol\bkvol}\colorlet{bkOn}{bkOn\bkvol}\colorlet{bkDeep}{bkDeep\bkvol}
+%% 第12回：明るい巻の色（第3巻＝黄・第4巻＝黄緑）では、白い地の上の「巻の色の字」と、
+%% 巻の色で塗った小さな札（丸数字・問題番号）を濃い版（bkDeep）にする。帯の上の字は bkOn（濃い紺）。ほかの巻は今までと同じ
+\def\bkTT{bkTheme}\def\bkTF{bkTheme}
+\ifnum\bkvol=3\relax\def\bkTT{bkDeep}\def\bkTF{bkDeep}\fi
+\ifnum\bkvol=4\relax\def\bkTT{bkDeep}\def\bkTF{bkDeep}\fi
+\ifnum\bkvol=6\relax\def\bkTT{bkDeep}\def\bkTF{bkDeep}\fi% 第14回
+\ifnum\bkvol=7\relax\def\bkTT{bkDeep}\def\bkTF{bkDeep}\fi% 第14回：第7巻も巻の色の字は濃い色（bkDeep7＝白地で約5.3:1）
+\colorlet{bkTheme}{bkVol}
+\foreach \i in {0,...,8} {\global\colorlet{bkPart\i}{bkVol}}\global\colorlet{bkPartA}{bkVol}
+\AtBeginDocument{\color{bkInk}}
+\hypersetup{pdfpagelayout=TwoPageRight}
+
+%% ------------------------------------------------------------
+%% 4. アイコン（TikZ）  \bkicon[大きさ]{名前}
+%% ------------------------------------------------------------
+\tikzset{
+  bk icon/.style={line width=0.9pt, line cap=round, line join=round},
+}
+\newcommand\bk@icon@hatena{% はてなマーク（第11回：手で描いた線の「?」は小さいと形がくずれて見えたので、ゴシックの太字の「?」をそのまま置く）
+  \node[anchor=base, text=white, inner sep=0pt, font=\sffamily\bfseries\fontsize{0.78\dimexpr\bk@iu\relax}{0.78\dimexpr\bk@iu\relax}\selectfont] at (0.03,-0.55) {?};}% 字の高さの半分だけ下に基準線を置いて、丸のまん中にそろえる
+\newcommand\bk@icon@yattemiyou{% 三角フラスコ
+  \draw[white, bk icon, line width=1.1pt] (-0.22,0.72)--(-0.22,0.25)--(-0.62,-0.55)--(0.62,-0.55)--(0.22,0.25)--(0.22,0.72);
+  \draw[white, bk icon, line width=1.1pt] (-0.32,0.72)--(0.32,0.72);
+  \fill[white] (-0.47,-0.25)--(0.47,-0.25)--(0.62,-0.55)--(-0.62,-0.55)--cycle;}
+\newcommand\bk@icon@reidai{% ひらいた本
+  % 第14回 A4：かき直し。左右対称の1本の線（ページの外がわ・上下のふち・まん中の綴じ目）。線の太さは丸の直径に比例（直径の6.5%）。
+  % 本の形は丸のまん中（上下 -0.42〜0.40、左右 ±0.60）に置き、丸のふちとのあいだを十分にあける
+  \begin{scope}[white, line width={0.065*\bk@iu}, line cap=round, line join=round]
+  \draw (0,0.26) .. controls (-0.12,0.36) and (-0.35,0.40) .. (-0.60,0.38) -- (-0.60,-0.30)
+        .. controls (-0.35,-0.28) and (-0.12,-0.32) .. (0,-0.42)
+        .. controls (0.12,-0.32) and (0.35,-0.28) .. (0.60,-0.30) -- (0.60,0.38)
+        .. controls (0.35,0.40) and (0.12,0.36) .. (0,0.26) -- cycle;
+  \draw (0,0.26) -- (0,-0.42);
+  \end{scope}}
+\newcommand\bk@icon@jibun{% えんぴつ
+  \begin{scope}[rotate=-45]
+  \draw[white, bk icon, line width=1.1pt] (-0.2,0.75)--(0.2,0.75)--(0.2,-0.35)--(0,-0.75)--(-0.2,-0.35)--cycle;
+  \draw[white, bk icon, line width=1.1pt] (-0.2,-0.35)--(0.2,-0.35);
+  \draw[white, bk icon, line width=1.1pt] (-0.2,0.5)--(0.2,0.5);
+  \end{scope}}
+\newcommand\bk@icon@tsumazuki{% 注意の三角
+  \draw[white, bk icon, line width=1.2pt] (0,0.72)--(0.72,-0.55)--(-0.72,-0.55)--cycle;
+  \draw[white, line width=1.6pt, line cap=round] (0,0.3)--(0,-0.12);
+  \fill[white] (0,-0.33) circle (0.09);}
+\newcommand\bk@icon@butsuri{% 原子
+  \draw[white, bk icon] (0,0) ellipse (0.78 and 0.28);
+  \draw[white, bk icon, rotate=60] (0,0) ellipse (0.78 and 0.28);
+  \draw[white, bk icon, rotate=-60] (0,0) ellipse (0.78 and 0.28);
+  \fill[white] (0,0) circle (0.13);}
+\newcommand\bk@icon@goal{% 旗
+  \draw[white, bk icon, line width=1.2pt] (-0.5,-0.7)--(-0.5,0.72);
+  \fill[white] (-0.5,0.72)--(0.62,0.42)--(-0.5,0.1)--cycle;}
+\newcommand\bk@icon@taisetsu{% 星
+  \fill[white] (90:0.8)--(126:0.33)--(162:0.8)--(198:0.33)--(234:0.8)--(270:0.33)--(306:0.8)--(342:0.33)--(18:0.8)--(54:0.33)--cycle;}
+\newcommand\bk@icon@check{% チェック
+  \draw[white, line width=1.8pt, line cap=round, line join=round] (-0.55,0.0)--(-0.15,-0.42)--(0.6,0.5);}
+\newcommand\bk@icon@motto{% ルーペ
+  \draw[white, bk icon, line width=1.2pt] (-0.15,0.15) circle (0.42);
+  \draw[white, line width=2pt, line cap=round] (0.15,-0.15)--(0.6,-0.6);}
+\newcommand\bk@icon@doguu{% 定規と分度器
+  \draw[white, bk icon, line width=1.1pt] (-0.75,-0.45) rectangle (0.75,-0.05);
+  \foreach \x in {-0.5,-0.25,0,0.25,0.5} \draw[white, line width=0.8pt] (\x,-0.05)--(\x,-0.2);
+  \draw[white, bk icon, line width=1.1pt] (-0.55,0.1) arc (180:0:0.55) -- cycle;}
+%% \bkicon[直径]{名前}{色}
+%% 第14回 A4：札（\bkboxref）など、角を丸めた node の中に置いても形がくずれないよう sharp corners にする
+\newcommand\bkicon[3][1.15em]{%
+  \tikz[baseline=-0.38em, x=#1/2, y=#1/2, sharp corners]{\def\bk@iu{#1}\fill[#3] (0,0) circle (1);
+  \csname bk@icon@#2\endcsname}}
+
+%% ------------------------------------------------------------
+%% 5. レベル表示 ★
+%% ------------------------------------------------------------
+\DeclareRobustCommand\bkstars[1]{{\sffamily\color{bkStar}\ifcase#1\or★\or★★\or★★★\or★★★★\or★★★★★\fi}}
+\DeclareRobustCommand\bklevel[1]{\tikz[baseline=(b.base)]\node[inner xsep=4pt, inner ysep=2pt,
+  rounded corners=2pt, draw=bkStar, line width=0.6pt, fill=white] (b)
+  {\sffamily\footnotesize\color{bkStar}\bkstars{#1}};}
+\DeclareRobustCommand\bklevelrange[2]{\tikz[baseline=(b.base)]\node[inner xsep=4pt, inner ysep=2pt,
+  rounded corners=2pt, draw=bkStar, line width=0.6pt, fill=white] (b)
+  {\sffamily\footnotesize\color{bkStar}\bkstars{#1}〜\bkstars{#2}};}
+
+%% 丸数字（見出し用）
+\newcommand\bkcircled[2][\bkTF]{\tikz[baseline=(c.base)]\node[circle, fill=#1,
+  text=white, inner sep=0pt, minimum size=1.35em, font=\sffamily\bfseries] (c) {#2};}
+
+%% ------------------------------------------------------------
+%% 6. ページの飾り（柱・ノンブル・つめ）
+%% ------------------------------------------------------------
+\newif\ifbk@deco \bk@decotrue
+\def\bk@runpart{}\def\bk@runchap{}\def\bk@tabnum{}\def\bk@tabpos{0}
+\newcommand\bkdecoration[1]{\global\csname bk@deco#1\endcsname}% true / false
+\newcommand\bksetrunning[3]{\gdef\bk@tabnum{#1}\gdef\bk@runpart{#2}\gdef\bk@runchap{#3}}
+\pagestyle{empty}
+\newif\ifbk@folio \bk@foliotrue
+\newcommand\bkfolio[1]{\global\csname bk@folio#1\endcsname}% ノンブルだけの表示切替
+\AddToHook{shipout/background}{%
+  \put(0,-\paperheight){%
+  \begin{tikzpicture}[overlay, x=1mm, y=1mm]
+    \ifodd\value{page}
+      \def\bk@xin{20}\def\bk@xout{160}\def\bk@tabx{176}\def\bk@tabw{9}\def\bk@tabtx{179}
+    \else
+      \def\bk@xin{162}\def\bk@xout{22}\def\bk@tabx{-3}\def\bk@tabw{9}\def\bk@tabtx{3}
+    \fi
+    \ifbk@deco
+    % 柱（小口側）：偶数ページは巻・部、奇数ページは章
+    \ifx\bk@runpart\@empty\else
+      \draw[bkTheme, line width=0.7pt] (\bk@xin,245)--(\bk@xout,245);
+      \ifodd\value{page}
+        \node[anchor=south east, inner sep=0pt, font=\sffamily\footnotesize, text=bkGray] at (160,246.6) {\bk@runchap};
+      \else
+        \node[anchor=south west, inner sep=0pt, font=\sffamily\footnotesize, text=bkDeep] at (22,246.6) {\bk@runpart};
+      \fi
+    \fi
+    % つめ（部の番号）。小口側の端まで（塗り足し3 mm）
+    \ifx\bk@tabnum\@empty\else
+      \filldraw[fill=bkTheme, draw=white, line width=0.8pt] (\bk@tabx,{232-32*(\bk@tabpos-1)}) rectangle ++(\bk@tabw,-28);% 第5回：部扉の色の上でも見えるように白いふち
+      \node[text=bkOn, font=\sffamily\bfseries\large] at (\bk@tabtx,{218-32*(\bk@tabpos-1)}) {\bk@tabnum};
+    \fi
+    \fi
+    \ifbk@folio
+    % ノンブル（下の小口側）
+    \ifodd\value{page}\def\bk@fx{155.5}\else\def\bk@fx{26.5}\fi
+    \node[circle, fill=bkTheme, text=bkOn, minimum size=8mm, inner sep=0pt,
+      font=\sffamily\bfseries\small] at (\bk@fx,11) {\thepage};
+    \fi
+  \end{tikzpicture}}}
+
+%% ------------------------------------------------------------
+%% 7. 目次
+%% ------------------------------------------------------------
+\newcommand\bktableofcontents{\@starttoc{toc}}
+% 部の行  \bktocpart{番号の表示}{部の名前}{ページ}{色}
+\newcommand\bktocpart[4]{%
+  \par\addvspace{5pt}\noindent
+  \begin{tikzpicture}[baseline=(t.base)]
+    \node[anchor=west, fill=#4, text=white, rounded corners=3pt, inner xsep=6pt, inner ysep=3pt,
+      text width=\dimexpr\linewidth-12pt\relax, font=\sffamily\bfseries] (t)
+      {#1\hspace{0.8\zw}#2\hfill\mdseries #3};
+  \end{tikzpicture}\par\nobreak\vspace{2pt}}
+% 章の行  \bktocchap{番号}{題名}{レベル}{ページ}  ページが空 → 原稿準備中（灰色）
+\newcommand\bktocchap[4]{%
+  \par\noindent
+  \begingroup
+  \def\bk@tmp{#4}%
+  \ifx\bk@tmp\@empty\color{bkGray}\fi
+  \def\\{}\rightskip=0pt plus 4em\relax
+  \hangindent=4.2\zw\hangafter=1
+  \hspace{1\zw}\makebox[3.2\zw][l]{\sffamily\bfseries #1}#2%
+  \nobreak\leaders\hbox to 0.8em{\hss{\color{bkLine}・}\hss}\hfill\nobreak
+  \makebox[4.5em][r]{\let\bklevel\bkstars\def\bklevelrange##1##2{\bkstars{##1}〜\bkstars{##2}}\scriptsize #3}%
+  \makebox[2em][r]{\sffamily #4}\par\endgroup}
+\newcommand\bktocplain[2]{% 前付・後付の行
+  \par\noindent{\sffamily\bfseries #1}\nobreak
+  \leaders\hbox to 0.8em{\hss{\color{bkLine}・}\hss}\hfill\nobreak
+  \makebox[2.2em][r]{\sffamily #2}\par}
+% 原稿がまだない章を目次にだけ出す
+\newcommand\bkplannedpart[3]{\addtocontents{toc}{\protect\bktocpart{#1}{#2}{}{#3!45}}}
+\newcommand\bkplannedchap[3]{\addtocontents{toc}{\protect\bktocchap{#1}{#2}{#3}{}}}
+\newcommand\bktocentry[1]{\addtocontents{toc}{\protect\bktocplain{#1}{\thepage}}}
+
+%% ------------------------------------------------------------
+%% 7b. ページ制限なし（第11回）：章・部扉はかならず偶数ページ（左）から。
+%%     前の章が奇数ページで終わったときは、まるごと1ページのメモらんを入れる。
+%%     奥付の前では、本全体が4の倍数になるまでメモのページを足す（\bkpadfour）。
+%% ------------------------------------------------------------
+\newcommand\bkmemopage{%
+  \clearpage
+  \noindent\begin{tikzpicture}[x=1mm, y=1mm]
+    \pgfmathsetmacro\bk@mh{(\textheight-4mm)/1mm}\pgfmathsetmacro\bk@mw{\linewidth/1mm}%
+    \draw[bkLine, line width=0.6pt, rounded corners=2.5mm] (0,0) rectangle (\bk@mw,\bk@mh);
+    \node[anchor=north west, inner sep=0pt, text=bkGray, font=\sffamily\bfseries\small] at (4,\bk@mh-3.5) {メモ};
+    \pgfmathtruncatemacro\bk@mn{(\bk@mh-14)/9}%
+    \foreach \i in {1,...,\bk@mn} \draw[bkLine, line width=0.5pt, dash pattern=on 1.5pt off 2pt]
+      (4,\bk@mh-6-\i*9) -- (\bk@mw-4,\bk@mh-6-\i*9);
+  \end{tikzpicture}\par
+  \clearpage}
+\newcommand\bkevenpage{\clearpage\ifodd\value{page}\bkmemopage\fi}
+\newcommand\bkpadfour{\clearpage
+  \loop\ifnum\directlua{tex.print(math.tointeger(math.fmod(tex.count['c@page'],4)))}>0 \bkmemopage\repeat
+  \typeout{BKPAGE colophon \thepage}}
+
+%% ------------------------------------------------------------
+%% 8. 部扉・章見出し・節見出し
+%% ------------------------------------------------------------
+% \bkpart{番号}{部の名前}{色}{しおり用の文字}
+\newcommand\bkpart[4]{%
+  \clearpage
+  \colorlet{bkTheme}{bkVol}%
+  \bksetrunning{#1}{}{}\gdef\bk@tabpos{#1}%
+  \global\bk@decofalse
+  \pdfbookmark[0]{第#1部　#4}{bkpart#1}\gdef\bk@partplain{第#1部　#4}%
+  \addtocontents{toc}{\protect\bktocpart{\protect\R{第}{だい}#1\protect\R{部}{ぶ}}{#2}{\thepage}{#3}}%
+  \gdef\bk@partlabel{\R{第}{だい}#1\R{部}{ぶ}}\gdef\bk@partname{#2}%
+}
+\newcommand\bkpartend{\clearpage\global\bk@decotrue}
+\def\bk@partlabel{}\def\bk@partname{}\def\bk@partplain{}
+
+% \bkchapter{部}{章}{題名}{レベル表示}{しおり用の文字}
+\newcounter{bkfig}\newcounter{bktab}\newcounter{bkreidai}\newcounter{bkjibun}\newcounter{bkmondai}
+\newcommand\bkchapter[5]{%
+  \bkevenpage
+  \global\bk@decotrue
+  \setcounter{bkfig}{0}\setcounter{bktab}{0}\setcounter{bkreidai}{0}%
+  \setcounter{bkjibun}{0}\setcounter{bkmondai}{0}%
+  % 第7回：「序章」にもルビ（第1〜3巻）
+  \ifnum#2=0 \gdef\bk@chapnum{\R{序章}{じょ|しょう}}\else\gdef\bk@chapnum{#1-#2}\fi
+  \ifnum#2=0 \bksetrunning{}{\R{第}{だい}\bkvol\R{巻}{かん}\hspace{0.8\zw}\R{序章}{じょ|しょう}}{\R{序章}{じょ|しょう}\hspace{0.6\zw}#5}%
+  \else\bksetrunning{\bk@tabpos}{\R{第}{だい}\bkvol\R{巻}{かん}\hspace{0.8\zw}\bk@partlabel\hspace{0.6\zw}\bk@partname}{\bk@chapnum\hspace{0.6\zw}#5}\fi
+  \pdfbookmark[1]{#1-#2　#5}{bkchap#1-#2}\typeout{BKPAGE chap #1-#2 \thepage}%
+  \addtocontents{toc}{\protect\bktocchap{#1-#2}{#3}{#4}{\thepage}}%
+  % 題名の高さを測る（上に部の名前の行 0.85 cm、下に 0.4 cm の余白をとる）
+  \setbox\bk@titlebox=\hbox{\parbox{\dimexpr\linewidth-3.9cm\relax}{\bk@chaptitlefont\raggedright #3}}%
+  \bk@contenth=\dimexpr\ht\bk@titlebox+\dp\bk@titlebox\relax
+  \ifdim\bk@contenth<1.75cm \bk@contenth=1.75cm \fi
+  \edef\bk@bandh{\strip@pt\dimexpr(\bk@contenth+1.25cm)*20/569\relax}%
+  \ifdim\bk@bandh pt<\bk@bandmin pt \edef\bk@bandh{\bk@bandmin}\fi
+  \edef\bk@bandmid{\strip@pt\dimexpr(\bk@bandh pt*569/20-0.85cm+0.4cm)/2*20/569\relax}%
+  \noindent
+  \begin{tikzpicture}
+    \useasboundingbox (0,0) rectangle (\linewidth,\bk@bandh);
+    \clip (0,0) rectangle (\linewidth,\bk@bandh);
+    \fill[bkTheme] (0,0) rectangle (\linewidth,\bk@bandh);
+    \fill[white, opacity=0.13] (\linewidth-2.2,\bk@bandh) circle (2.0);
+    \fill[white, opacity=0.10] (\linewidth-0.6,0) circle (1.3);
+    % いちばん上の行：左に部の名前、右に★（上下のまん中をそろえる）
+    \node[anchor=west, text=bkOn, font=\sffamily\small] at (0.5,\bk@bandh-0.5)
+      {\bk@partlabel\hspace{0.6\zw}\bk@partname};
+    \node[anchor=east] at (\linewidth-0.3,\bk@bandh-0.5) {#4};
+    \node[anchor=west, circle, fill=white, text=\bkTT, minimum size=1.65cm,
+      font=\sffamily\bfseries\Large, inner sep=0pt] (n) at (0.45,\bk@bandmid) {\ifnum#2=0 {\large \R{序章}{じょ|しょう}}\else\ifnum#2>9 {\fontsize{15}{15}\selectfont #1-#2}\else #1-#2\fi\fi};
+    \node[anchor=west, text=bkOn, font=\bk@chaptitlefont,
+      text width=\linewidth-3.9cm, align=left, inner sep=0pt] at ([xshift=0.35cm]n.east) {#3};
+  \end{tikzpicture}\par
+  \vspace{4pt}}
+\def\bk@chapnum{}
+% 章の帯の高さと、番号の丸の高さ（cm）。第1巻は題名の文字が大きいので高くする
+\def\bk@bandmin{3.1}\def\bk@bandh{3.1}\def\bk@bandmid{1.3}
+\newbox\bk@titlebox\newdimen\bk@contenth
+% 章の題名の字。2行になったとき行の間が開きすぎないように、行送りを字の大きさの1.3倍（ルビのある巻は1.55倍）にする
+\def\bk@chaptitlefont{\sffamily\bfseries\LARGE\baselineskip=\ifnum\bkvol>3 1.3\else 1.55\fi\dimexpr\f@size pt\relax}
+
+% 節見出し  \bksection{アイコン名}{見出し}
+\newcommand\bksection[2]{%
+  \par\addvspace{12pt}\Needspace{5\baselineskip}\noindent
+  \begin{tikzpicture}[baseline=(t.base)]
+    \node[anchor=west, inner sep=0pt] (i) at (0,0) {\bkicon[1.7em]{#1}{bkTheme}};
+    \node[anchor=west, font=\sffamily\bfseries\Large, text=\bkTT, inner sep=0pt] (t) at ([xshift=0.5\zw]i.east) {#2};
+    \draw[bkTheme, line width=1pt] ([yshift=-7pt]i.south west) -- ++(\linewidth,0);
+  \end{tikzpicture}\par\nobreak\vspace{8pt}}
+% ふりかえりのページ参照  \bkfurref{ラベル}（第12回）：「→番号ページ」をひとまとまりにし、行に入らないときは丸ごと次の行の右へ送る
+\newcommand\bkfurref[1]{\unskip\nobreak\hfil\penalty50\hskip1em\null\nobreak\hfill\mbox{\footnotesize\sffamily\color{\bkTT}→\pageref{#1}ページ}}
+% 小見出し  \bksubsection{番号}{見出し}
+\newcommand\bksubsection[2]{%
+  \par\addvspace{10pt}\Needspace{4.2\baselineskip}\noindent
+  \bkcircled{#1}\hspace{0.5\zw}{\sffamily\bfseries\large\color{\bkTT}#2}\par\nobreak\vspace{4pt}}
+
+% 前付・後付の見出し  \bkfronttitle{見出し}{しおり用の文字}
+\newcommand\bkfronttitle[2]{%
+  \clearpage\global\bk@decotrue
+  \colorlet{bkTheme}{bkNavy}%
+  \bksetrunning{}{}{}\gdef\bk@tabpos{0}%
+  \pdfbookmark[0]{#2}{bkfront-#2}%
+  \noindent{\sffamily\bfseries\Huge\color{bkNavy}#1}\par\vspace{4pt}
+  {\color{bkNavy}\hrule height 2pt}\vspace{14pt}}
+% 解答と解説  \bkanswers{部の番号}{部の名前（ルビ付き）}
+\newcommand\bkanswers{%
+  \clearpage\global\bk@decotrue
+  \bksetrunning{}{\R{解答}{かい|とう}と\R{解説}{かい|せつ}}{}\gdef\bk@tabpos{0}%
+  \pdfbookmark[0]{解答と解説}{bk-answers}%
+  \bktocentry{\R{解答}{かい|とう}と\R{解説}{かい|せつ}}%
+  \noindent{\sffamily\bfseries\Huge\color{\bkTT}\R{解答}{かい|とう}と\R{解説}{かい|せつ}}\par\vspace{4pt}
+  {\color{\bkTT}\hrule height 2pt}\vspace{10pt}}
+
+%% 改ページ（見開き・ページ単位で組むための区切り）
+\newcommand\bknewpage{\par\vfill\clearpage}
+
+%% ○・✕ のしるし
+\newcommand\bkmaru{\tikz[baseline=-0.6ex]\draw[bkBlue, line width=1.3pt] (0,0) circle (0.42em);}
+\newcommand\bkbatsu{\tikz[baseline=-0.6ex]{\draw[bkRed, line width=1.3pt, line cap=round] (-0.38em,-0.38em)--(0.38em,0.38em) (-0.38em,0.38em)--(0.38em,-0.38em);}}
+% 第6回：まちがえやすいところの × と ○ は1行に1つ。記号の列をそろえ、式は行の途中で折り返さない
+\newcommand\bkng[1]{\par\addvspace{2pt}\noindent\hangindent=2\zw\hangafter=1\makebox[2\zw][l]{\bkbatsu}#1\par}
+\newcommand\bkok[1]{\par\addvspace{2pt}\noindent\hangindent=2\zw\hangafter=1\makebox[2\zw][l]{\bkmaru}#1\par}
+
+%% ------------------------------------------------------------
+%% 9. 図・表のキャプション
+%% ------------------------------------------------------------
+\newcommand\bkfigcaption[1]{\refstepcounter{bkfig}%
+  \ifnum\bkvol>1\relax\unskip\fi% 第6回：図のあとの空白が次の行にこぼれて、図と図番号の間が1行あくのを防ぐ（第2巻から）
+  \par\nobreak\vspace{1pt}{\centering\sffamily\small
+  {\color{\bkTT}\bfseries \R{図}{ず}\thebkfig}\hspace{0.8\zw}#1\par}\vspace{4pt}}
+\newcommand\bktabcaption[1]{\refstepcounter{bktab}%
+  \ifnum\bkvol>1\relax\unskip\fi\par\nobreak\ifnum\bkvol>1\relax\vspace{2.5pt}\fi% 第6回：表の下の線に表の名前がくっつかないように
+  {\centering\sffamily\small
+  {\color{\bkTT}\bfseries \R{表}{ひょう}\thebktab}\hspace{0.8\zw}#1\par}\vspace{4pt}}
+\newenvironment{bkcenter}{\par\addvspace{4pt}\noindent\begin{minipage}{\linewidth}\centering}{\end{minipage}\par\addvspace{4pt}}
+% 図と図のキャプションを1つの箱にして、ページの境目で離れないようにする
+\newenvironment{bkfigure}{\par\addvspace{4pt}\noindent\begin{minipage}{\linewidth}\centering}{\end{minipage}\par\addvspace{5pt}}
+
+%% 表の共通スタイル（tabularray）
+\NewTblrEnviron{bktable}
+\SetTblrInner[bktable]{hlines={0.6pt,bkLine}, vlines={0.6pt,bkLine},
+  row{1}={bg=bkTheme!12, font=\sffamily\bfseries\small},
+  rowsep=4pt, colsep=6pt, cells={valign=m}}
+
+%% ------------------------------------------------------------
+%% 10. 囲み記事（tcolorbox）
+%% ------------------------------------------------------------
+\tcbset{
+  bk base/.style={enhanced, breakable, arc=3mm, boxrule=0.9pt,
+    left=4mm, right=4mm, top=3mm, bottom=3.5mm,
+    before skip=8pt, after skip=8pt,
+    fonttitle=\sffamily\bfseries\large, coltitle=white},
+  bk labeled/.style 2 args={bk base, colframe=#1, colback=#2,
+    attach boxed title to top left={xshift=4mm, yshift*=-\tcboxedtitleheight/2},
+    boxed title style={colback=#1, colframe=#1, arc=2.2mm, boxrule=0pt,
+      left=2mm, right=3mm, top=1mm, bottom=1mm},
+    top=\dimexpr\tcboxedtitleheight/2+0.5mm\relax},
+}
+% 第6回：箱の最後の行（分数のある「答え」など）と下の枠のあいだを、深さが小さい行でも同じだけあける（第2巻から）
+\ifnum\bkvol>1\relax\tcbset{bk base/.append style={after upper={\par\ifdim\prevdepth>-999pt\ifdim\prevdepth<\dp\strutbox\kern\dimexpr\dp\strutbox-\prevdepth\relax\fi\fi}}}\fi
+% はてな？
+% 第11回：黄色の地に白い字は読みにくい（コントラスト約2:1）ので、題の字を濃い茶にする
+\newtcolorbox{hatena}{bk labeled={bkYellow}{bkYellowBg}, coltitle=bkYellow!30!black,
+  title={\bkicon[1.25em]{hatena}{bkYellow!70!black}\hspace{0.4\zw}はてな？}}
+% この章でできるようになること
+\newtcolorbox{goal}{bk base, colframe=bkTheme, colback=white, arc=2mm, boxrule=0.8pt,
+  title={\bkicon[1.25em]{goal}{\bkTF}\hspace{0.4\zw}この\R{章}{しょう}でできるようになること},
+  colbacktitle=white, coltitle=\bkTT, titlerule=0pt, toptitle=1mm}
+% やってみよう
+\newtcolorbox{yattemiyou}[1][]{bk labeled={bkGreen}{bkGreenBg}, unbreakable,
+  title={\bkicon[1.25em]{yattemiyou}{bkGreen!70!black}\hspace{0.4\zw}やってみよう\ifx\relax#1\relax\else\hspace{0.6\zw}{\mdseries #1}\fi}}
+% たいせつ
+\newtcolorbox{taisetsu}{enhanced, colback=white, colframe=bkNavy, boxrule=1.2pt, arc=2mm,
+  left=5mm, right=5mm, top=4mm, bottom=3mm, before skip=12pt, after skip=10pt,
+  fontupper=\sffamily\bfseries,
+  overlay={\node[anchor=west, fill=bkNavy, text=white, font=\sffamily\bfseries\small,
+    rounded corners=1.5mm, inner xsep=7pt, inner ysep=3pt] at ([xshift=4mm]frame.north west) {たいせつ};}}
+% 例題
+\newtcolorbox{reidai}[1][]{bk labeled={bkBlue}{bkBlueBg}, step=bkreidai, unbreakable,
+  title={\bkicon[1.25em]{reidai}{bkBlue!70!black}\hspace{0.4\zw}\R{例題}{れい|だい}\thebkreidai\ifx\relax#1\relax\else\hspace{0.8\zw}{\mdseries\normalsize #1}\fi}}
+% じぶんでとこう
+\newtcolorbox{jibun}[1][]{bk labeled={bkOrange}{white}, step=bkjibun, boxrule=1.4pt, unbreakable,
+  title={\bkicon[1.25em]{jibun}{bkOrange!70!black}\hspace{0.4\zw}じぶんでとこう\thebkjibun\ifx\relax#1\relax\else\hspace{0.8\zw}{\mdseries\normalsize #1}\fi}}
+% まちがえやすいところ（「この本の使い方」・章の見出しと同じ名前にする）
+% 第6回：帯には「まちがえやすいところ」だけを出し、題は箱の中の1行目に小見出しとして出す（帯が長くなりすぎないように）
+\newtcolorbox{tsumazuki}[1]{bk labeled={bkRed}{bkRedBg}, unbreakable,
+  title={\bkicon[1.25em]{tsumazuki}{bkRed!70!black}\hspace{0.4\zw}まちがえやすいところ},
+  before upper={\noindent{\sffamily\bfseries\color{bkRed!62!black}#1}\par\vspace{4pt}}}
+% 物理ではこう使う
+\newtcolorbox{butsuri}{bk labeled={bkPurple}{bkPurpleBg}, unbreakable,
+  title={\bkicon[1.25em]{butsuri}{bkPurple!70!black}\hspace{0.4\zw}\R{物理}{ぶつ|り}・\R{工学}{こう|がく}ではこう\R{使}{つか}う}}
+% もっと知りたい（発展）  [レベル]
+\newtcolorbox{motto}[1][2]{bk base, colframe=bkGray, colback=bkPaper, boxrule=0.7pt,
+  borderline={0.7pt}{0pt}{bkGray, dashed}, frame hidden,
+  title={\bkicon[1.25em]{motto}{bkGray}\hspace{0.4\zw}もっと\R{知}{し}りたい\hspace{0.6\zw}\bklevel{#1}},
+  colbacktitle=bkPaper, coltitle=bkGray, titlerule=0pt, fonttitle=\sffamily\bfseries}
+% コラム（読みもの）
+\newtcolorbox{column}[1]{bk base, unbreakable, colframe=bkNavy!70, colback=bkPaper, boxrule=0.8pt,
+  title={\bkicon[1.25em]{motto}{bkNavy!80}\hspace{0.4\zw}コラム\hspace{0.8\zw}{\mdseries #1}},
+  colbacktitle=bkPaper, coltitle=bkNavy, titlerule=0pt, fonttitle=\sffamily\bfseries}
+% この章で出てきたことば
+\newtcolorbox{kotoba}{bk base, unbreakable, colframe=bkTheme!55, colback=white, boxrule=0.8pt,
+  title={\bkicon[1.25em]{reidai}{\bkTF}\hspace{0.4\zw}この\R{章}{しょう}で\R{出}{で}てきたことば},
+  colbacktitle=white, coltitle=\bkTT, titlerule=0pt, fonttitle=\sffamily\bfseries}
+\newcommand\bkword[2]{\par\noindent\hangindent=1\zw\hangafter=1
+  {\sffamily\bfseries\color{\bkTT}#1}\hspace{0.8\zw}#2\par}
+% ふりかえり
+\newtcolorbox{furikaeri}{bk base, unbreakable, colframe=bkTheme, colback=bkTheme!5,
+  title={\bkicon[1.25em]{check}{\bkTF}\hspace{0.4\zw}ふりかえり　できるようになったかな？},
+  colbacktitle=bkTheme!5, coltitle=\bkTT, titlerule=0pt}
+% 第4回：第2巻からは、ふりかえり（とキャラクターのふきだし）を章の最後のページの下にそろえる
+\ifnum\bkvol>1\relax\AddToHook{env/furikaeri/before}{\par\vspace{0pt plus 1fill}}\fi
+
+%% 例題の中のステップ見出し
+\newcommand\bkstep[2][bkBlue]{\par\ifnum\bkvol>1\relax\addvspace{2pt}\fi\noindent
+  \tikz[baseline=(s.base)]\node[fill=#1, text=white, rounded corners=1.2mm,
+    font=\sffamily\bfseries\small, inner xsep=5pt, inner ysep=2.5pt] (s) {#2};\hspace{0.6\zw}}
+\newcommand\kangaekata{\bkstep{\R{考}{かんが}え\R{方}{かた}}}
+\ifnum\bkvol>3\relax\def\bkshikilabel{式}\def\bkkotaelabel{答え}\else\def\bkshikilabel{しき}\def\bkkotaelabel{こたえ}\fi
+\newcommand\shiki{\bkstep{\bkshikilabel}}
+\newcommand\kotae{\bkstep{\bkkotaelabel}}
+% 同じ行に続けて置く「こたえ」
+\newcommand\kotaenext{\hspace{2.5\zw}\tikz[baseline=(s.base)]\node[fill=bkBlue, text=white, rounded corners=1.2mm,
+    font=\sffamily\bfseries\small, inner xsep=5pt, inner ysep=2.5pt] (s) {\bkkotaelabel};\hspace{0.6\zw}}
+
+%% 書きこみらん  \bkwrite[1行目の見出し]{行数}
+\NewDocumentCommand\bkwrite{O{} m}{\par\nobreak\vspace{2pt}\noindent
+  \begin{tikzpicture}
+    \foreach \i in {1,...,#2} \draw[bkLine, line width=0.6pt, dash pattern=on 2pt off 2pt]
+      (0,-\i*0.85) -- (\linewidth,-\i*0.85);
+    \if\relax\detokenize{#1}\relax\else
+      \node[anchor=south west, fill=bkOrange, text=white, rounded corners=1.2mm,
+        font=\sffamily\bfseries\small, inner xsep=5pt, inner ysep=2.5pt] at (0,-0.85+0.08) {#1};
+    \fi
+    \path (0,0) (0,-#2*0.85-0.1);
+  \end{tikzpicture}\par}
+%% こたえらん  \bkanswerbox{幅}
+\NewDocumentCommand\bkanswerbox{O{9\zw} O{}}{\par\vspace{2pt}\noindent#2\hfill
+  \tikz[baseline=(a.base)]{\node[font=\sffamily\bfseries\small, text=bkOrange] (a) {\bkkotaelabel};
+  \draw[bkOrange, line width=1pt, rounded corners=1.5mm] ([xshift=3pt,yshift=-9pt]a.east) rectangle ++(#1,25pt);}\par}
+%% 第2巻からは、問題はノートに解く（本には書きこまない）。書きこみらんの命令は何もしない。
+%% ヒントだけは残す。第1巻は本に書きこむ（数字を書く練習も兼ねる）。
+\ifnum\bkvol>1\relax
+  \RenewDocumentCommand\bkwrite{O{} m}{}
+  \RenewDocumentCommand\bkanswerbox{O{9\zw} O{}}{\if\relax\detokenize{#2}\relax\else\par\vspace{2pt}\noindent#2\par\fi}
+\fi
+%% チェック欄
+\newcommand\bkcheckbox{\tikz[baseline=-0.6ex]\draw[bkTheme, line width=0.9pt, rounded corners=0.6pt] (0,-0.35em) rectangle (0.95em,0.6em);}
+\newlist{checklist}{itemize}{1}
+% 第5回：ふりかえりの「→○ページ」が本文にくっつかないように、少なくとも1.2字あけ、入らないときは次の行の右へ送る
+\newcommand\bk@chkfill{\unskip\nobreak\hskip0pt plus 1fill\penalty50\hskip1.2em\hbox{}\nobreak\hskip0pt plus 1fill\relax}
+\setlist[checklist]{label=\bkcheckbox, leftmargin=2.2\zw, itemsep=2pt, before={\let\hfill\bk@chkfill}}
+
+%% 章末問題の見出し・問題番号
+\newcommand\bkendproblems{%
+  \par\addvspace{8pt}\Needspace{10\baselineskip}\noindent
+  \begin{tikzpicture}
+    \fill[bkTheme] (0,0) rectangle (\linewidth,1.25);
+    \node[anchor=west, inner sep=0pt] (i) at (0.35,0.625) {\bkicon[1.7em]{check}{bkTheme!60!black}};
+    \node[anchor=west, text=bkOn, font=\sffamily\bfseries\Large] at ([xshift=0.25cm]i.east)
+      {\R{章末問題}{しょう|まつ|もん|だい}};
+    \node[anchor=east, text=bkOn, font=\sffamily\small] at (\linewidth-0.35,0.625)
+      {\bk@chapnum\hspace{0.5\zw}のまとめ};
+  \end{tikzpicture}\par\vspace{6pt}}
+\newcommand\bkproblemgroup[2]{% {基本／チャレンジ}{レベル}
+  \par\addvspace{10pt}\noindent{\sffamily\bfseries\large\color{\bkTT}#1}\hspace{0.6\zw}\bklevel{#2}%
+  \par\nobreak\vspace{2pt}{\color{\bkTT}\hrule height 0.6pt}\nobreak\vspace{6pt}}
+\newcommand\bkproblem{\par\addvspace{8pt}\refstepcounter{bkmondai}\noindent
+  \tikz[baseline=(p.base)]\node[fill=\bkTF, text=white, minimum width=1.6em, minimum height=1.6em,
+    rounded corners=1.5mm, font=\sffamily\bfseries, inner sep=0pt] (p) {\thebkmondai};\hspace{0.6\zw}}
+\setlist[enumerate]{label=（\arabic*）, leftmargin=2.6\zw, itemsep=3pt, topsep=4pt}
+
+%% 解答ページの小見出し
+\newcommand\bkanswerhead[1]{\par\addvspace{6pt}\noindent
+  \tikz[baseline=(p.base)]\node[fill=\bkTF, text=white, minimum width=1.5em, minimum height=1.5em,
+    rounded corners=1.5mm, font=\sffamily\bfseries\small, inner sep=0pt] (p) {#1};\hspace{0.6\zw}}
+
+%% ------------------------------------------------------------
+%% 11. 図の共通スタイル（TikZ）
+%% ------------------------------------------------------------
+\tikzset{
+  bk axis/.style={-{Stealth[length=6pt]}, line width=0.9pt, bkInk},
+  bk grid/.style={bkLine, line width=0.4pt},
+  bk tick/.style={font=\sffamily\small, text=bkInk},
+  bk label/.style={font=\sffamily\small, text=bkInk},
+  bk data/.style={line width=1.8pt, bkBlue},
+  bk area/.style={fill=bkBlue!18},
+  bk note/.style={font=\sffamily\small, text=bkGray, align=left},
+  bk arrow/.style={-{Stealth[length=7pt]}, line width=1.3pt},
+  % 第6回：図の箱と矢印のきまり。矢印は箱の名前どうしでつなぎ、両端を1.5mm 離す。字は footnotesize 以上
+  bk node/.style={draw=bkTheme, line width=0.9pt, fill=white, rounded corners=2mm, align=center,
+    font=\sffamily\small, inner xsep=3.5mm, inner ysep=2.5mm},
+  bk link/.style={-{Stealth[length=6pt]}, line width=1.1pt, bkGray, shorten <=1.5mm, shorten >=1.5mm},
+  bk link label/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1.5mm},
+}
+
+%% ------------------------------------------------------------
+%% 12. 道しるべ（章の帯のすぐ下）  \bkmichishirube{前に読む章}{この章の先}
+%%   章番号の札は、その章がある巻の色でぬる（ほかの巻の章もひと目でわかる）
+%% ------------------------------------------------------------
+\def\bk@getvol#1-#2\relax{#1}
+\newcommand\bk@pill[1]{\edef\bk@pv{\expandafter\bk@getvol#1\relax}%
+  \tikz[baseline=(p.base)]\node[fill=bkVol\bk@pv, text=bkOn\bk@pv, rounded corners=1mm, inner xsep=1.6mm, inner ysep=0.8mm,
+    font=\sffamily\bfseries\fontsize{8}{9}\selectfont] (p) {#1};}
+\newcommand\bk@pills[1]{\foreach \bk@c [count=\bk@k] in {#1}{\ifnum\bk@k>1\hspace{0.3em}\fi\expandafter\bk@pill\expandafter{\bk@c}}}
+\newcommand\bk@signicon{\tikz[baseline=-0.6ex, x=1em, y=1em]{\fill[bkTheme] (0,0) circle (0.55);
+  \draw[white, line width=0.9pt] (0,-0.38)--(0,0.4); \fill[white] (-0.32,0.12)--(0.28,0.12)--(0.4,0.24)--(0.28,0.36)--(-0.32,0.36)--cycle;}}
+\newcommand\bkmichishirube[2]{%
+  \par\vspace{1mm}{\sffamily\fontsize{8.5}{12}\selectfont\color{bkGray}%
+  \setbox0\hbox{\bk@signicon\hspace{0.4em}{\bfseries\R{道}{みち}しるべ}\hspace{1.2em}}%
+  \hangindent=\wd0 \hangafter=1 \rightskip=0pt plus 1fil\noindent% 第13回：2行めに折り返したら「道しるべ」の右にそろえ、「この章の先に」をひとまとまりで送る
+  \bk@signicon\hspace{0.4em}{\bfseries\color{bkDeep}\R{道}{みち}しるべ}\hspace{1.2em}%
+  \if\relax\detokenize{#1}\relax\else この\R{章}{しょう}の\R{前}{まえ}に\hspace{0.5em}\bk@pills{#1}\hspace{1.5em}\penalty0 \fi% 第5回：前に読む章がなければ出さない
+  \mbox{この\R{章}{しょう}の\R{先}{さき}に\hspace{0.5em}\bk@pills{#2}}\par}
+  \vspace{1.5mm}{\color{bkLine}\hrule height 0.5pt}\vspace{3mm}}
+
+\endinput

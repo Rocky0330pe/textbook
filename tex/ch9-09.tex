@@ -1,0 +1,1422 @@
+%% 9-9 極と安定性：s の値でふるまいがわかる（第15回：組 V9-6。ページ制限なし。偶数ページ）
+%% ほかの巻との約束：
+%%   6-12（ch6-12:685）「解を左半分に置くことが…（9-9 では、この点を『極』とよびます）」→ ②で回収。6-12⑩の4つの点に×。
+%%   6-12（ch6-12:931）ロボットの腕の ζ を選ぶ → ⑤・⑨（s^2+2s+K、K=4 で ζ=0.5）。3-10:863「ほんの少しだけゆれる」→ サスペンション ζ=0.5、1.27 Hz。
+%%   6-4（ch6-04:425）熱電対「1次おくれ（9-9）」τ=30 s、ランプのおくれ rτ=1 ℃ → ④。
+%%   7-8（ch7-08:724）「固有値が全部『左半分』（実部が負）にあるように機械を作る」→ ⑦（極＝状態の行列の固有値）。
+%%   6-8（ch6-08:626）「3次の特性方程式の解をさがす場面」→ ⑩ (s+1)^3+K=0（6-9 の z^3 の正三角形）。
+%%   3-01（ch3-01:725）エアコン → ⑪（RK_p=9 で 26.9 ℃、ずれ 0.9 ℃）。9-8 のモーター 10/(0.5s+1)（K_p=1 で極 −22、ずれ 9.1 %）。
+%%   第15回の決定5(b)(c)：積分でずれが消える＝もっと知りたい、3次の判定 a2a1>a0 ＝せいかくに言うと（ラウス・フルビッツは名前）。
+%%   「名前と操作」の型は tools/kata9-int.md（頭文字 kixj）。小さな「場合分けの表9-9」（brief9-parts 3-2-7）と流れ図。
+%%   数はすべて Python で検算した（scratchpad/v9-6calc/c1.py〜c3.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixj =====
+\colorlet{kixjNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixjSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixjSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixj dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixj dan1/.style={kixj dan, draw=kixjNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixj dan2/.style={kixj dan, draw=kixjSc, fill=kixjSb, text=bkInk},
+  kixj dan3/.style={kixj dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixj name/.style={draw=kixjNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixj seki/.style={draw=kixjSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixjSb},
+  kixj tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixj q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixj do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixj go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixj yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+\def\kixj@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+\newcommand\kixjdan[1]{\tikz[baseline=(d.base)]\node[kixj dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+\newcommand\kixjnaosu[1]{\tikz[baseline=(d.base)]\node[kixj dan2] (d) {\vphantom{あ}直す：\kixj@op{#1}};}
+\newcommand\kixjop[1]{\tikz[baseline=(d.base)]\node[kixj dan2] (d) {\vphantom{あ}\kixj@op{#1}};}
+\newcommand\kixjdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixj dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+\newcommand\kixjcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+\newcommand\kixjbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixj@cases#3,\@nil）}
+\def\kixj@cases#1,#2\@nil{\kixjcase{#1}\ifx\relax#2\relax\else と\kixj@cases#2\@nil\fi}
+\newcommand\kixjN[1]{\tikz[baseline=(n.base)]\node[kixj name] (n) {$\displaystyle #1$};}
+\newcommand\kixjNt[1]{\tikz[baseline=(n.base)]{\node[kixj name] (n) {$\displaystyle #1$};\node[kixj tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixjS[1]{\tikz[baseline=(n.base)]\node[kixj seki] (n) {$\displaystyle #1$};}
+\newcommand\kixjSt[2]{\tikz[baseline=(n.base)]{\node[kixj seki] (n) {$\displaystyle #2$};\node[kixj tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixj@op{#1}};}}
+\newcommand\kixjcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+%% ===== 2つの世界の図の部品（tools/kata9.md、組 V9-1。頭文字 kixj）=====
+\colorlet{kixjW}{bkBlue!80!black}% 時間の世界の線・1つめの例の×
+\colorlet{kixjF}{bkOrange!85!black}% 2つめの例
+\colorlet{kixjP}{bkRed!80!black}% s の世界の点（×・○）
+\pgfplotsset{
+  kixj splane/.style={bkplot, scale only axis, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixj sig/.style={kixjW, line width=1.4pt, no markers, samples=241, smooth}}
+% s の世界の点（axis の中で）  \kixjpole[色]{実部}{虚部}（×）  \kixjzero[色]{実部}{虚部}（○）
+\newcommand\kixjpole[3][kixjP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixjzero[3][kixjP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+% 安定な左半分（うすい緑）  \kixjleft{xmin}{ymin}{ymax}
+\newcommand\kixjleft[3]{\fill[bkGreen!10] (axis cs:#1,#2) rectangle (axis cs:0,#3);}
+%% ===== この章の部品（9-9）=====
+% 小見出し（太字の1行）
+\newcommand\kixjhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixjbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kixjline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixjframe[はば]{中身}
+\newcommand\kixjframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center, text width=#1]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixja{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixjb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixjs{\rightskip=0pt plus 8em\relax}
+% 極の印（×）と零点の印（○）  \kixjx{(x,y)}{色}  \kixjo{(x,y)}{色}（tikzpicture[x=1mm,y=1mm] の中で）
+\newcommand\kixjx[2]{\draw[#2, line width=1.3pt] ($#1+(-1.6,-1.6)$) -- ($#1+(1.6,1.6)$) ($#1+(-1.6,1.6)$) -- ($#1+(1.6,-1.6)$);}
+\newcommand\kixjo[2]{\draw[#2, line width=1.2pt, fill=white] #1 circle (1.6);}
+% s の平面の軸  \kixjaxes{xmin}{xmax}{ymin}{ymax}（mm。原点は (0,0)）
+\newcommand\kixjaxes[4]{%
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (#1,0) -- (#2,0) node[right, font=\footnotesize, inner sep=1pt] {実部};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,#3) -- (0,#4) node[above, font=\footnotesize, inner sep=1pt] {虚部};}
+% 小さな動きのグラフ（極の地図の中）  \kixjmini{(x,y)}{種類 1〜5}{色}
+%   1 ゆれずに小さく  2 ゆれながら小さく  3 ゆれ続ける  4 ゆれながら大きく  5 ゆれずに大きく
+\newcommand\kixjmini[3]{\begin{scope}[shift={#1}]
+  \fill[white] (-0.5,-5.5) rectangle (17,5.5);
+  \draw[bkGray, line width=0.4pt] (0,0) -- (16,0) (0,-5) -- (0,5);
+  \ifcase#2\or
+    \draw[#3, line width=1pt, domain=0:15, samples=40] plot (\x,{4.5*exp(-\x/3)});
+  \or
+    \draw[#3, line width=1pt, domain=0:15, samples=80] plot (\x,{4.5*exp(-\x/5)*cos(\x*65)});
+  \or
+    \draw[#3, line width=1pt, domain=0:15, samples=80] plot (\x,{3.6*cos(\x*65)});
+  \or
+    \draw[#3, line width=1pt, domain=0:15, samples=80] plot (\x,{1.2*exp(\x/13.5)*cos(\x*65)});
+  \or
+    \draw[#3, line width=1pt, domain=0:15, samples=40] plot (\x,{0.7*exp(\x/8)});
+  \fi
+\end{scope}}
+% ばねとおもり（たて）  \kixjspring{(x,y) 上のはし}{ばねの長さ}{おもりの色}
+\newcommand\kixjspring[3]{\begin{scope}[shift={#1}]
+  \fill[bkInk!50] (-7,0) rectangle (7,1.6);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=2mm, segment length=2.4mm, pre length=1.5mm, post length=1.5mm}] (0,0) -- (0,-#2);
+  \filldraw[fill=#3!30, draw=#3!80!black, line width=0.9pt, rounded corners=0.8mm] (-5,-#2) rectangle (5,{-#2-8});
+\end{scope}}
+\makeatother
+
+\bkchapter{9}{9}{極と安定性：\\$s$ の値でふるまいがわかる}{\bklevel{5}}{極と安定性：$s$ の値でふるまいがわかる}
+\bkmichishirube{3-1,3-10,6-4,6-8,6-12,7-8,9-6,9-7,9-8}{9-10,9-11,9-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 伝達関数の分母が0になる $s$（極）を $s$ の平面に×で打ち、その場所から「ゆっくり追いつく・ゆれる・大きくなる」を当てられる。
+\item \bklevel{4}\enspace 1次おくれ・2次おくれの極から、時定数、行きすぎの大きさ、最初の山の時刻を求められる。
+\item \bklevel{5}\enspace すべての極の実部が負かどうかで安定を判定し、フィードバックで極が動くようすと、3次の式の安定の条件、残るずれを計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+お湯に入れた温度計の数字は、ゆっくり追いつきます。ばねにつけたおもりから手をはなすと、のびすぎて上下にゆれます。水の中なら、ゆれがすぐ小さくなり、空気の中ではなかなか止まりません。\par\vspace{3pt}
+\textbf{こうした動き方を、グラフをかかずに、式の中の数を見るだけで当てられるでしょうか。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=0.92mm, y=0.92mm]
+  % 温度計とカップ
+  \bkcup{(8,0)}{16}{20}{0.75}{0}
+  \draw[bkInk!70, line width=0.8pt, fill=white, rounded corners=1mm] (10,6) rectangle (13,27);
+  \fill[bkRed] (11.5,7.8) circle (1.3);
+  \draw[bkRed, line width=1.2pt] (11.5,8.5) -- (11.5,20);
+  \node[font=\sffamily\footnotesize, anchor=north] at (8,-1.5) {温度計};
+  % ばねとおもり（空気の中）
+  \kixjspring{(28,27)}{10}{bkBlue}
+  \draw[bkOrange!85!black, line width=0.9pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (36,6) -- (36,16);
+  \node[font=\sffamily\footnotesize, anchor=north] at (28,-1.5) {空気の中};
+  % 水の中のばね
+  \kixjspring{(47,27)}{10}{bkGreen}
+  \fill[bkBlue!20] (39.5,0) rectangle (54.5,14);
+  \draw[bkInk!80, line width=0.9pt] (39.5,16) -- (39.5,0) -- (54.5,0) -- (54.5,16);
+  \node[font=\sffamily\footnotesize, anchor=north] at (47,-1.5) {水の中};
+  \node[font=\sffamily\bfseries\Large, text=\bkTT] at (58,24) {?};
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 3つとも「追いつき方」がちがう。}
+\end{minipage}
+\end{hatena}
+
+\noindent 9-7 では、ラプラス変換と部分分数で、微分方程式の答えを式で求めました。9-8 では、「入れると出てくる」箱の中のきまりを、伝達関数 $G(s)$ という $s$ の分数の式で書きました。
+
+この章では、答えの式を全部求めなくても、伝達関数の\textbf{分母が0になる $s$} を見るだけで、機械や計器がどう動くかがわかることを学びます。6-12 で、特性方程式の解 $s$ を複素平面に打つと「左半分なら落ち着き、右半分なら大きくなる」ことを見ました。6-12 は、そのとき「9-9 では、この点を『極』とよびます」と予告しました。この章で、その約束を果たします。
+
+制御工学の目標は、機械が「ゆれずに・こわれずに落ち着く」ように作ることです。この章の考え方は、エアコン、モーター、ロボットの腕、車のサスペンション、工場の計器など、身のまわりの「自動で動く機械」の設計のいちばん土台になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=24mm, align=center, font=\sffamily\footnotesize] (a) at (15,0) {微分方程式\\$m\ddot x+c\dot x$\\$+kx=F$};
+  \node[bk node, text width=24mm, align=center, font=\sffamily\footnotesize] (b) at (50,0) {伝達関数（9-8）\\$\dfrac{1}{ms^2+cs+k}$};
+  \node[bk node, text width=20mm, align=center, font=\sffamily\footnotesize] (c) at (84,0) {極（×）\\分母$=0$ の $s$\\（この章）};
+  \node[bk node, text width=22mm, align=center, font=\sffamily\footnotesize] (d) at (117,0) {動き方\\落ち着く・ゆれる・\\大きくなる};
+  \draw[bk link] (a) -- (b);
+  \draw[bk link] (b) -- (c);
+  \draw[bk link] (c) -- (d);
+  \draw[bkGray, line width=0.7pt, dash pattern=on 2pt off 1.5pt, -{Stealth[length=2mm]}] (a.south) -- ++(0,-6) -| node[pos=0.25, below, font=\sffamily\footnotesize] {答えの式を全部求める（9-7）：手間がかかる} (d.south);
+\end{tikzpicture}
+\bkfigcaption{この章の道すじ。答えの式を全部求めなくても、伝達関数の分母から極を出せば、動き方がわかる。}
+\label{bk:9-9:fig-michi}
+\end{bkfigure}
+
+★★★★★の章ですが、「目でわかる」と「手でわかる」の段は、グラフと2次方程式の解の公式（3-10）だけで読めるように書きました。「式でわかる」の段は、1回でわからなくても大丈夫です。例題を1つずつ解いてから、もう一度読むと、すっと入ってきます。
+
+\begin{omoidasou}
+\bkrecall{6-4}{$\dfrac{\dd T_{\mathrm m}}{\dd t}=\dfrac{T_{\mathrm w}-T_{\mathrm m}}{\tau}$（$T_{\mathrm m}$ は温度計の値）の答えは、差が $e^{-t/\tau}$ でへる形。時定数 $\tau$〔s〕の時刻に、差は $e^{-1}\approx0.368$ 倍。}
+\bkrecall{6-12}{$m\ddot x+c\dot x+kx=0$ に $x=e^{st}$ を入れると特性方程式 $ms^2+cs+k=0$。解 $s$ を複素平面に打つと、左半分なら落ち着き、右半分なら大きくなる。}
+\bkrecall{7-8}{状態の行列 $A$ の固有値 $\lambda$ は、6-12 の特性方程式の解 $s$ と同じもの。}
+\bkrecall{9-7}{$\dfrac{1}{(s+1)(s+2)}=\dfrac{1}{s+1}-\dfrac{1}{s+2}\to e^{-t}-e^{-2t}$。部分分数の1つずつの項 $\dfrac{1}{s-p}$ が、$e^{pt}$ にもどる。}
+\bkrecall{9-8}{伝達関数 $G(s)=\dfrac{Y(s)}{U(s)}$（はじめの値は0）。フィードバックでつなぐと、全体は $\dfrac{G_1}{1+G_1G_2}$。}
+\bkrecall{9-6}{最終値の定理：$f(t)$ が落ち着くなら、最後の値は $\displaystyle\lim_{s\to0}sF(s)$。}
+\end{omoidasou}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[温度計が追いつくようすを、表計算で見よう]
+20\,℃の部屋に置いてあった温度計を、80\,℃のお湯に入れます。この温度計の時定数（6-4）は $\tau=\qty{30}{s}$ です。6-4 で求めたとおり、温度計の値は $T=80-60e^{-t/30}$ で追いつきます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列に時刻 $t$（s）を入れる。A2 に \texttt{0}、A3 に \texttt{=A2+30} と入れ、A7（150）まで下へコピーする。
+\item B2 に \texttt{=80-60*EXP(-A2/30)} と入れる（温度計の値）。
+\item C2 に \texttt{=80-B2} と入れる（お湯の温度まで、あと何度か）。
+\item D2 に \texttt{=C2/60} と入れる（はじめの差60\,℃のうち、まだ残っている割合）。
+\item E2 に \texttt{=1-D2} と入れる（もう追いついた割合）。2行めの B〜E を下へコピーしよう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ②の $60$ は、はじめの差 $80-20=60$（℃）です。$e^{-t/30}$ は、時間がたつと0に近づくので、$T$ は80\,℃に近づきます（6-4）。
+
+\begin{bkcenter}
+\bksheet{5}{17}{%
+1 & $t$（s） & 温度計（℃） & 残りの差（℃） & 残りの割合 & 追いついた割合 \\
+2 & 0 & 20.00 & 60.00 & 1.000 & 0.000 \\
+3 & 30 & 57.93 & 22.07 & 0.368 & 0.632 \\
+4 & 60 & 71.88 & 8.12 & 0.135 & 0.865 \\
+5 & 90 & 77.01 & 2.99 & 0.050 & 0.950 \\
+6 & 120 & 78.90 & 1.10 & 0.018 & 0.982 \\
+7 & 150 & 79.60 & 0.40 & 0.007 & 0.993 \\}
+\bktabcaption{表計算の結果。30秒ごとに、残りの割合は0.368倍（$e^{-1}$）になる。}
+\label{bk:9-9:tab-sheet}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=110mm, height=44mm, xmin=0, xmax=160, ymin=15, ymax=88, xtick={30,60,90,120,150}, ytick={20,40,60,80}, xlabel={$t$（s）}, ylabel={温度計（℃）}]
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:0,80) -- (axis cs:160,80);
+  \addplot[kixjW, line width=1.4pt, domain=0:155, samples=80] {80-60*exp(-x/30)};
+  \addplot[only marks, mark=*, mark size=1.8pt, kixjF] coordinates {(0,20) (30,57.93) (60,71.88) (90,77.01) (120,78.90) (150,79.60)};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.5pt] (axis cs:30,15) -- (axis cs:30,57.93);
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:33,55) {30秒で 57.93\,℃（63.2\,\%）};
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:155,81) {お湯の温度 80\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表\ref{bk:9-9:tab-sheet}の値（オレンジの点）と、$T=80-60e^{-t/30}$ のグラフ（青の線）。下から少しずつ 80\,℃に追いつき、行きすぎない。}
+\label{bk:9-9:fig-sheet}
+\end{bkfigure}
+
+\noindent 表から、次のことがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{30秒（$\tau$）で、63.2\,\%追いつく。}\par\nobreak\noindent 残りの割合は0.368です。時定数の時刻 $t=30$ では、次のようになるからです。
+\kixjline{$e^{-t/30}=e^{-30/30}=e^{-1}=0.368$}
+\item \textbf{30秒たつごとに、残りの差は0.368倍になる。}\par\nobreak\noindent 残りの割合は、0秒で1、30秒で0.368、60秒で0.135、90秒で0.050 です。$0.368\times0.368=0.135$、\ $0.135\times0.368=0.050$ です。
+\item \textbf{90秒（$3\tau$）で95\,\%、150秒（$5\tau$）で99.3\,\%。}\par\nobreak\noindent 行きすぎることは一度もなく、下から少しずつ追いつきます。
+\end{enumerate}
+
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{16\baselineskip}\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{極の場所を見る}{\bklevel{3}}
+
+\bksubsection{1}{3つの追いつき方と、分母が0になる $s$}
+
+\label{bk:9-9:mittsu}はてな？の3つの動きを、グラフにします。おもりは、6-13 のばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$）につけたものとします。$\omega_{\mathrm n}=\sqrt{8\div0.5}=4$（rad/s）です。「水の中」はダンパーの強さ $c=1.2$\,N·s/m（$\zeta=0.3$）、「空気の中」はダンパーがほとんどない（$\zeta=0$）と考えます。
+
+それぞれの伝達関数（9-8）は、入れるもの（お湯の温度・つるした重さ）を1とすると、次のとおりです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,28mm] Q[c,m,44mm] Q[c,m,44mm]}, rowsep=3pt, row{1}={font=\sffamily\small}}
+ & 伝達関数 $G(s)$ & 分母が0になる $s$ \\
+温度計 & $\dfrac{1}{30s+1}$ & $s=-\dfrac{1}{30}$ \\
+ばね（水の中） & $\dfrac{16}{s^2+2.4s+16}$ & $s=-1.2\pm3.816j$ \\
+ばね（空気の中） & $\dfrac{16}{s^2+16}$ & $s=\pm4j$ \\
+\end{bktable}
+\bktabcaption{3つの伝達関数。ばねは $m\ddot x+c\dot x+kx=(\text{力})$ を $m$ でわり、最後ののびを1にそろえた形（$\omega_{\mathrm n}^2=16$）。}
+\label{bk:9-9:tab-mittsu}
+\end{bkcenter}
+分母が0になる $s$ は、温度計なら $30s+1=0$ を解いて $s=-\frac{1}{30}$。水の中のばねなら $s^2+2.4s+16=0$ を解の公式（3-10）で解いて、
+\kixjline{$s=\dfrac{-2.4\pm\sqrt{2.4^2-64}}{2}=\dfrac{-2.4\pm\sqrt{-58.24}}{2}=-1.2\pm3.816j$}
+です（$\sqrt{58.24}=7.632$）。空気の中なら $s^2=-16$ で、$s=\pm4j$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, scale only axis, width=28mm, height=20mm, at={(8mm,0mm)}, xmin=0, xmax=160, ymin=0, ymax=1.25, xtick={30,150}, ytick={0.632,1}, yticklabels={0.632,1}, xlabel={$t$（s）}, ylabel={}]
+  \addplot[kixj sig, domain=0:155] {1-exp(-x/30)};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.5pt] (axis cs:30,0) -- (axis cs:30,0.632) -- (axis cs:0,0.632);
+\end{axis}
+\begin{axis}[bkplot, scale only axis, width=28mm, height=20mm, at={(52mm,0mm)}, xmin=0, xmax=3.2, ymin=0, ymax=1.5, xtick={1,2,3}, ytick={1}, xlabel={$t$（s）}, ylabel={}]
+  \addplot[kixj sig, domain=0:3.1] {1-exp(-1.2*x)*(cos(deg(3.8158*x))+0.31449*sin(deg(3.8158*x)))};
+\end{axis}
+\begin{axis}[bkplot, scale only axis, width=28mm, height=20mm, at={(96mm,0mm)}, xmin=0, xmax=3.2, ymin=0, ymax=2.25, xtick={1,2,3}, ytick={1,2}, xlabel={$t$（s）}, ylabel={}]
+  \addplot[kixj sig, domain=0:3.1] {1-cos(deg(4*x))};
+\end{axis}
+\begin{axis}[kixj splane, width=30mm, height=30mm, at={(7mm,-49mm)}, xmin=-0.1, xmax=0.05, ymin=-0.075, ymax=0.075, xtick={-0.1}, ytick=\empty, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-0.1}{-0.075}{0.075}
+  \kixjpole{-0.0333}{0}
+\end{axis}
+\begin{axis}[kixj splane, width=30mm, height=30mm, at={(51mm,-49mm)}, xmin=-7.5, xmax=3.5, ymin=-5.5, ymax=5.5, xtick={-4}, ytick=\empty, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-7.5}{-5.5}{5.5}
+  \kixjpole{-1.2}{3.8158}\kixjpole{-1.2}{-3.8158}
+\end{axis}
+\begin{axis}[kixj splane, width=30mm, height=30mm, at={(95mm,-49mm)}, xmin=-7.5, xmax=3.5, ymin=-5.5, ymax=5.5, xtick={-4}, ytick=\empty, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-7.5}{-5.5}{5.5}
+  \kixjpole{0}{4}\kixjpole{0}{-4}
+\end{axis}
+\begin{scope}[x=1mm, y=1mm]
+  \foreach \kixjxo in {22,66,110} {\draw[bk arrow, line width=0.9pt] (\kixjxo,-6.5) -- (\kixjxo,-11);}
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (22,-55) {温度計\\極 $-\tfrac{1}{30}$\\ゆっくり追いつく};
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (66,-55) {ばね（水の中）\\極 $-1.2\pm3.8j$\\ゆれながら落ち着く};
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (110,-55) {ばね（空気の中）\\極 $\pm4j$\\ゆれ続ける};
+\end{scope}
+\end{tikzpicture}
+\bkfigcaption{上は時間の世界（入れたものを1としたときの、温度計の値・おもりの位置）、下は $s$ の世界（分母が0になる $s$ を×で打った）。うすい緑は、実部が負の左半分。温度計の $s$ の平面だけ、目もりを細かくした。}
+\label{bk:9-9:fig-futatsu}
+\end{bkfigure}
+
+図\ref{bk:9-9:fig-futatsu}の上と下を見くらべます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item ゆれない温度計は、×が横の軸（実数）の上にあります。
+\item ゆれるばねは、×が上と下に1つずつ、横の軸から同じだけはなれてあります。
+\item ゆれが消えていく（水の中）ときは、×が左半分にあります。ゆれが消えない（空気の中）ときは、×がたての軸の上にあります。
+\end{itemize}
+つまり、時間の世界のグラフをかかなくても、$s$ の世界で×の場所を見るだけで、動き方の見当がつきます。これが、この章の考え方のすべてです。
+
+\bksubsection{2}{名前をつける：極}
+
+\label{bk:9-9:kyoku}伝達関数 $G(s)$ の分母が0になる $s$ を、$G(s)$ の\textbf{極}（きょく）といいます。\bkidx{きょく}{極}$s$ の平面には×の印で打ちます。
+
+6-12 で、特性方程式の解を複素平面に打ち、「解を左半分に置くことが、第9巻の制御工学の大きな目標です（9-9 では、この点を『極』とよびます）」と書きました。伝達関数の分母は、特性方程式の左辺と同じ式です（ばねなら $ms^2+cs+k$）。だから、\textbf{6-12 の特性方程式の解 $s$ が、そのまま伝達関数の極}です。9-0 の図\ref{bk:9-0:fig-ten} の車A・車B の×も、極です。
+
+\kixjdanhead{1}{「極」は名前。値は、分母$=0$ を解いて出す}
+「極」は、「$G(s)$ がかぎりなく大きくなる $s$」につけた名前です。名前を聞いただけでは、まだ $s$ の値はわかりません。実際の値は、分母を0と置いた方程式を解いて求めます。
+\[ \kixjNt{G(s)\text{ の極}}=\kixjS{\text{分母}=0\ \text{の解}\ s} \]
+
+\kixjhead{なぜ「極」という名前なのか}
+分数は、分母が0に近づくと、かぎりなく大きくなります。9-7 の次の $G(s)$ で、$s$ を横の軸の上（実数）で動かして、$|G(s)|$ の大きさをグラフにかいてみます。
+\kixjline{$G(s)=\dfrac{1}{(s+1)(s+2)}$}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=46mm, xmin=-3.2, xmax=0.9, ymin=0, ymax=6.3, xtick={-3,-2,-1}, ytick={2,4,6}, xlabel={$s$（実数）}, ylabel={$|G(s)|$}, restrict y to domain=0:6.2, unbounded coords=jump]
+  \addplot[bkcurve, domain=-3.2:0.8, samples=600] {abs(1/((x+1)*(x+2)))};
+  \draw[bkRed, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:-2,0) -- (axis cs:-2,6.2) (axis cs:-1,0) -- (axis cs:-1,6.2);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.12,5.3) {柱のように立つ};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$|G(s)|=\left|\dfrac{1}{(s+1)(s+2)}\right|$ の大きさ。$s=-1$ と $s=-2$（赤い点線）で、分母が0になり、グラフがかぎりなく高くなる。}
+\label{bk:9-9:fig-pole}
+\end{bkfigure}
+
+$s=-1$ と $s=-2$ の所で、グラフはテントの柱のように、まっすぐ上へのびていきます。$s$ の平面全体で $|G(s)|$ を高さにして山の形をかくと、極の所に、かぎりなく高い柱が立ちます。英語では、この点を pole（柱・さお）といいます。日本語の「極」は、このことばを訳したものです。
+
+\kixjhead{なぜ極の場所で、動き方が決まるのか}
+9-7 で、この $G(s)$ を部分分数に分けて、表を逆に引きました。
+\[ \frac{1}{(s+1)(s+2)}=\frac{1}{s+1}-\frac{1}{s+2}\quad\longrightarrow\quad e^{-t}-e^{-2t} \]
+左の分数の分母 $s+1$ が0になるのは $s=-1$、$s+2$ が0になるのは $s=-2$ で、これが極です。そして、もどした答えの $e^{-t}$ と $e^{-2t}$ の肩の数（$-1$ と $-2$）は、ちょうど極の値です。表9-6 の「$\tfrac{1}{s-p}\longleftrightarrow e^{pt}$」のとおり、\textbf{極 $p$ は、答えの中の $e^{pt}$ になる}のです。
+\kixjframe[96mm]{\sffamily 極 $p$ が1つあると、動きの中に $e^{pt}$ が1つ入る}
+だから、極の場所を見れば、答えの中にどんな $e^{pt}$ が入っているかがわかり、動き方の見当がつきます。極が複素数 $p=\sigma+j\omega$ のときは、6-10 のオイラーの公式から
+\kixjline{$e^{(\sigma+j\omega)t}=e^{\sigma t}(\cos\omega t+j\sin\omega t)$}
+なので、実部 $\sigma$ が「大きくなるか・小さくなるか」を、虚部 $\omega$ が「ゆれの角周波数」を決めます（6-12 で $-\alpha\pm j\omega_{\mathrm d}$ と書いたものと同じです。この巻では、実部を 6-10 と同じ $\sigma$ で書きます）。
+
+\kixjhead{分子が0になる $s$：零点}
+分母ではなく、\textbf{分子}が0になる $s$ もあります。これを\textbf{零点}（れいてん）といい、\bkidx{れいてん}{零点}$s$ の平面に○の印で打ちます。たとえば $\dfrac{s+3}{(s+1)(s+2)}$ は、$s=-3$ が零点で、極は $-1$ と $-2$ です。零点は、⑥で見るように、動きの形（行きすぎの大きさなど）を少し変えますが、\textbf{落ち着くかどうかは決めません}。落ち着くかどうかを決めるのは極だけです。
+
+\bksubsection{3}{極の地図}
+
+\label{bk:9-9:chizu}6-12⑩の図に、極の×と、それぞれの動きを書きこむと、次の「極の地図」ができます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGreen!10] (-60,-30) rectangle (0,31);
+  \node[font=\sffamily\bfseries\small, text=bkGreen!50!black, anchor=south west] at (-59,-29) {左半分：落ち着く};
+  \node[font=\sffamily\bfseries\small, text=bkRed!80!black, anchor=south east] at (57,-29) {右半分：大きくなる};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-60,0) -- (60,0) node[right, font=\footnotesize, inner sep=1pt] {実部};
+  \draw[color=\bkTT, line width=1.6pt] (0,-30) -- (0,31);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,31) -- (0,34) node[above, font=\footnotesize, inner sep=1pt] {虚部};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (1.5,30.5) {たての軸の上：大きさが変わらない};
+  % 極
+  \kixjx{(-44,0)}{kixjP}
+  \kixjx{(-22,16)}{kixjP}\kixjx{(-22,-16)}{kixjP}
+  \kixjx{(0,16)}{kixjP}\kixjx{(0,-16)}{kixjP}
+  \kixjx{(22,16)}{kixjP}\kixjx{(22,-16)}{kixjP}
+  \kixjx{(42,0)}{kixjP}
+  % 小さなグラフ
+  \kixjmini{(-56,-14)}{1}{bkBlue}
+  \kixjmini{(-44,20)}{2}{bkBlue}
+  \kixjmini{(4,9)}{3}{bkGreen!60!black}
+  \kixjmini{(26,20)}{4}{bkRed}
+  \kixjmini{(38,-14)}{5}{bkRed}
+  \draw[bkInk!60, line width=0.5pt] (-44,-8.2) -- (-44,-2.4) (-27,18) -- (-23.9,16.9) (3.5,12.5) -- (1.9,14.6) (25.5,18) -- (23.9,16.9) (42,-8.2) -- (42,-2.4);
+\end{tikzpicture}
+\bkfigcaption{極の地図。×は極、小さなグラフは、細い線でつないだ×（上下の組のときは上の×）があるときの動き。うすい緑は、実部が負の左半分。横の軸の上の極はゆれず、横の軸からはなれた極（上と下の組）はゆれる。左半分は落ち着き、右半分は大きくなる。}
+\label{bk:9-9:fig-chizu}
+\end{bkfigure}
+
+地図の読み方は、2つだけです。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{左右（実部 $\sigma$）を見る。}\par\nobreak\noindent 左半分（$\sigma<0$）なら $e^{\sigma t}$ が小さくなって落ち着きます。左へ遠いほど早く落ち着きます。右半分（$\sigma>0$）なら $e^{\sigma t}$ が大きくなり、どこまでも大きくなります。たての軸の上（$\sigma=0$）なら、大きさが変わりません（虚部があればゆれ続け、原点なら止まったまま）。
+\item \textbf{上下（虚部 $\omega$）を見る。}\par\nobreak\noindent 横の軸の上（$\omega=0$）なら、ゆれません。横の軸から上下にはなれているほど、速くゆれます（角周波数が $\omega$）。複素数の極は、いつも上と下の2つが組になって出てきます（6-8 の共役な解）。
+\end{enumerate}
+
+\kixjhead{\bkhatenaref の答え}
+はい、当てられます。伝達関数の分母を0と置いて解き、極を $s$ の平面に打てばよいのです。温度計の極 $-\frac{1}{30}$ は左の横の軸の上なので「ゆっくり追いつく」、水の中のばねの極 $-1.2\pm3.816j$ は左半分の上下なので「ゆれながら落ち着く」、空気の中のばねの極 $\pm4j$ はたての軸の上なので「ゆれ続ける」と、グラフをかかずにわかります。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 伝達関数の分母が0になる $s$ が\textbf{極}（×）、分子が0になる $s$ が\textbf{零点}（○）。
+\item 極 $p$ が1つあると、動きの中に $e^{pt}$ が1つ入る。
+\item 極の実部が負なら落ち着き、正なら大きくなり、0なら大きさが変わらない（虚部があればゆれ続ける）。虚部があれば、ゆれる。
+\end{itemize}
+\end{taisetsu}
+
+\bkstage{te}{手でわかる}{1次おくれと2次おくれ}{\bklevel{4}}
+
+\bksubsection{4}{1次おくれ：極が1つ、横の軸の上}
+
+\label{bk:9-9:ichiji}6-4 のコラムで、工場の熱電対（温度をはかるセンサー）は「時定数 $\tau$ ほどおくれて追いつきます。このような反応を、制御工学では1次おくれといいます（9-9）」と書きました。やってみようの温度計も、1次おくれです。式で書くと、出てくるもの $y$ と入れるもの $u$ が
+\kixjline{$\tau\dot y+y=Ku$}
+の形で結ばれているものを、\textbf{1次おくれ}（いちじおくれ）といいます。\bkidx{いちじおくれ}{1次おくれ}微分が1回（1次）だけの式で、入れたものに「おくれて」追いつくので、この名前があります。温度計なら $K=1$、$\tau=30$ です（6-4 の $\dfrac{\dd T_{\mathrm m}}{\dd t}=\dfrac{T_{\mathrm w}-T_{\mathrm m}}{\tau}$ の両辺に $\tau$ をかけて、$T_{\mathrm m}$ を左へ移すと、この形になります）。
+
+\kixjhead{伝達関数と極}
+9-8 の作り方（表9-8のA）で、伝達関数を作ります。
+\begin{bkhenkei}[0.4]
+\tau\dot y+y=Ku & 1次おくれの式 \\
+\tau sY+Y=KU & はじめの値を0にして、$\dot y\to sY$（9-8） \\
+(\tau s+1)Y=KU & $Y$ でくくった \\
+G(s)=\dfrac{Y}{U}=\dfrac{K}{\tau s+1} & 両辺を $(\tau s+1)U$ でわった \\
+\end{bkhenkei}
+分母 $\tau s+1$ を0と置くと、$s=-\tfrac{1}{\tau}$。極は1つで、横の軸の上の、原点から $\tfrac{1}{\tau}$ だけ左の点です。
+\kixjframe[100mm]{\sffamily 1次おくれ $\dfrac{K}{\tau s+1}$ の極は $-\dfrac{1}{\tau}$（時定数の逆数だけ左）}
+
+\kixjhead{ステップの入力で、極を確かめる}
+入れるものを、$t=0$ から1にした（ステップ。$U=\frac1s$）ときの答えを、9-7 と同じ部分分数で求めます。
+\begin{bkhenkei}[0.46]
+Y=\dfrac{K}{s(\tau s+1)}=\dfrac{K/\tau}{s\,(s+1/\tau)} & $Y=GU$。分母・分子を $\tau$ でわった \\
+\phantom{Y}=K\Bigl(\dfrac{1}{s}-\dfrac{1}{s+1/\tau}\Bigr) & 部分分数（9-7 の B） \\
+y=K\bigl(1-e^{-t/\tau}\bigr) & 表を逆に引いた \\
+\end{bkhenkei}
+答えの中の $e^{-t/\tau}$ の肩の数 $-\tfrac1\tau$ が、ちょうど極です（②）。$\tfrac1s$ のほうは入れたもの（ステップ）から来た項で、最後の値 $K$ を決めます。時定数ごとに何\,\%追いついたかは、やってみようの表と同じです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m] *{5}{Q[c,m,13mm]}}, rowsep=2pt, row{1}={font=\sffamily\small}}
+時刻 & $\tau$ & $2\tau$ & $3\tau$ & $4\tau$ & $5\tau$ \\
+追いついた割合（\%） & 63.2 & 86.5 & 95.0 & 98.2 & 99.3 \\
+\end{bktable}
+\bktabcaption{1次おくれのステップの答え。$1-e^{-1}=0.632$、$1-e^{-3}=0.950$ のように計算した。}
+\end{bkcenter}
+$4\tau\sim5\tau$ たつと、ほぼ落ち着いたと考えてよいので、工場では、この時間を「落ち着くまでの時間」（整定時間の目安）にします。
+
+\kixjhead{極が左にあるほど、速く追いつく}
+時定数 $\tau=\qty{30}{s}$ の温度計と、細くて熱をためにくい $\tau=\qty{10}{s}$ の温度計をくらべます。極は $-\frac{1}{30}\approx-0.033$ と $-\frac{1}{10}=-0.1$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=72mm, height=40mm, at={(0,0)}, xmin=0, xmax=125, ymin=0, ymax=1.2, xtick={10,30,60,90,120}, ytick={0.632,1}, yticklabels={0.632,1}, xlabel={$t$（s）}, ylabel={}]
+  \addplot[kixj sig, domain=0:120] {1-exp(-x/30)};
+  \addplot[kixjF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=120, domain=0:120] {1-exp(-x/10)};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.5pt] (axis cs:30,0) -- (axis cs:30,0.632) (axis cs:10,0) -- (axis cs:10,0.632) (axis cs:0,0.632) -- (axis cs:30,0.632);
+  \node[font=\sffamily\footnotesize, text=kixjF, anchor=west, fill=white, inner sep=1pt] at (axis cs:17,1.08) {$\tau=10$（破線）};
+  \node[font=\sffamily\footnotesize, text=kixjW, anchor=north west, fill=white, inner sep=1pt] at (axis cs:46,0.62) {$\tau=30$（実線）};
+\end{axis}
+\begin{axis}[kixj splane, width=50mm, height=25mm, at={(78mm,0mm)}, xmin=-0.16, xmax=0.04, ymin=-0.05, ymax=0.05, xtick=\empty, ytick=\empty, xticklabel style={yshift=-1.4mm, /pgf/number format/fixed}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-0.16}{-0.05}{0.05}
+  \kixjpole[kixjW]{-0.0333}{0}
+  \kixjpole[kixjF]{-0.1}{0}
+  \node[font=\footnotesize, text=kixjW, anchor=north east, fill=white, inner sep=0.6pt] at (axis cs:-0.014,-0.011) {$\tau=30$：$-0.033$};
+  \node[font=\footnotesize, text=kixjF, anchor=south, fill=white, inner sep=0.6pt] at (axis cs:-0.1,0.011) {$\tau=10$：$-0.1$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{時定数のちがう2つの温度計。左は時間の世界、右は $s$ の世界（うすい緑は左半分）。極が左にある（$-\frac{1}{10}$）ほうが、3倍速く追いつく。}
+\label{bk:9-9:fig-ichiji}
+\end{bkfigure}
+
+$\tau=10$ の温度計は、10秒で63.2\,\%に着きます。$e^{-t/10}$ の小さくなり方は、$e^{-t/30}$ の3倍の速さです。\textbf{極が原点から左へ遠いほど、$e^{pt}$ が速く小さくなり、速く落ち着きます。}
+
+\kixjhead{6-4 の熱電対：上がり続ける温度を追いかけると}
+6-4 のコラムの図は、タンクの温度が1秒に $r=\frac{1}{30}$\,℃（1分に2\,℃）ずつ上がり続けるとき、$\tau=\qty{30}{s}$ の熱電対が、いつも $r\tau=1$\,℃だけ低い値を指す、というものでした。9-7 で、このランプ（坂道）の入力 $U=\dfrac{r}{s^2}$ を部分分数で解くと、
+\kixjline{$Y=\dfrac{r}{s^2(\tau s+1)}=r\Bigl(\dfrac{1}{s^2}-\dfrac{\tau}{s}+\dfrac{\tau}{s+1/\tau}\Bigr)\ \longrightarrow\ y=r\bigl(t-\tau+\tau e^{-t/\tau}\bigr)$}
+でした。本当の温度 $rt$ とのちがい（おくれ）は $rt-y=r\tau\bigl(1-e^{-t/\tau}\bigr)$ です。ここにも極 $-\frac1\tau$ の $e^{-t/\tau}$ が入っていて、30秒で0.632\,℃、60秒で0.865\,℃、150秒で0.993\,℃と、$r\tau=1$\,℃に近づきます。速く変わる温度をはかるには、極が左にある（$\tau$ の小さい）計器を選びます。
+
+\bksubsection{5}{2次おくれ：極が2つ、上と下}
+
+\label{bk:9-9:niji}ばね・質量・ダンパーの式 $m\ddot x+c\dot x+kx=F$ を $m$ でわり、6-12 の $\omega_{\mathrm n}=\sqrt{\frac km}$、$\zeta=\frac{c}{2\sqrt{mk}}$ を使うと、$\ddot x+2\zeta\omega_{\mathrm n}\dot x+\omega_{\mathrm n}^2x=\frac Fm$ になります。最後ののびを1にそろえた伝達関数は、次の形です。
+\kixjframe[100mm]{\Large $G(s)=\dfrac{\omega_{\mathrm n}^2}{s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2}$}
+分母が2次式（微分が2回）なので、この形を\textbf{2次おくれ}（にじおくれ）といいます。\bkidx{にじおくれ}{2次おくれ}6-12 の物理・工学で「制御工学の『2次遅れ』」と書いたものです。RLC 回路（$L\ddot q+R\dot q+\frac qC=V$）も、モーターで動かすロボットの腕も、この形になります。
+
+\kixjhead{極の場所と、$\zeta$・$\omega_{\mathrm n}$}
+$\zeta<1$ のとき、分母$=0$ を解の公式で解くと（6-12⑥と同じ計算）、
+\kixjline{$s=-\zeta\omega_{\mathrm n}\pm j\omega_{\mathrm n}\sqrt{1-\zeta^2}=-\sigma\pm j\omega_{\mathrm d}$\qquad（$\sigma=\zeta\omega_{\mathrm n}$、$\omega_{\mathrm d}=\omega_{\mathrm n}\sqrt{1-\zeta^2}$）}
+です。この2つの極の場所を、図にかきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \kixjaxes{-46}{8}{-8}{46}
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.5pt] (0,0) ++(90:40) arc (90:180:40);
+  \draw[bkBlue, line width=0.9pt] (0,0) -- ({-40*0.5},{40*0.866});
+  \kixjx{({-40*0.5},{40*0.866})}{kixjP}
+  \draw[bkInk, line width=0.6pt, dash pattern=on 1.5pt off 1.2pt] ({-40*0.5},{40*0.866}) -- ({-40*0.5},0) ({-40*0.5},{40*0.866}) -- (0,{40*0.866});
+  \draw[bkRed, line width=0.9pt] (-9,0) arc (180:120:9);
+  \node[font=\footnotesize, text=bkRed!80!black] at (-11.5,6.5) {$\theta$};
+  \node[font=\footnotesize, anchor=north] at (-20,-1.5) {$-\sigma$};
+  \node[font=\footnotesize, anchor=west] at (1.5,34.64) {$\omega_{\mathrm d}$};
+  \node[font=\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (-11,18) {$\omega_{\mathrm n}$};
+  \node[font=\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (-22,36) {極};
+  \node[font=\sffamily\footnotesize, anchor=north] at (-25,-8) {極の場所と $\zeta$、$\omega_{\mathrm n}$};
+  \end{scope}
+  \begin{scope}[shift={(70,0)}]
+  \kixjaxes{-46}{8}{-8}{46}
+  \foreach \kixjz/\kixjl in {0.1/0.1,0.3/0.3,0.5/0.5,0.7/0.7} {
+    \pgfmathsetmacro\kixjang{180-acos(\kixjz)}
+    \draw[bkBlue, line width=0.7pt] (0,0) -- (\kixjang:36);
+    \node[font=\footnotesize, fill=white, inner sep=0.8pt] at (\kixjang:40) {$\kixjl$};}
+  \node[font=\sffamily\footnotesize, anchor=north] at (-25,-8) {同じ $\zeta$ の線（数は $\zeta$）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：上の極（下の極は横の軸で折り返した所）。原点からの距離は $\omega_{\mathrm n}$、横の軸から測った角 $\theta$ は $\cos\theta=\zeta$。右：$\zeta$ が同じ極は、原点を通る同じ直線の上にある。}
+\label{bk:9-9:fig-niji}
+\end{bkfigure}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{原点からの距離は $\omega_{\mathrm n}$}：三平方の定理（4-4）で、次のようになるからです。
+\kixjline{$\sigma^2+\omega_{\mathrm d}^2=\zeta^2\omega_{\mathrm n}^2+\omega_{\mathrm n}^2(1-\zeta^2)=\omega_{\mathrm n}^2$}
+\item \textbf{角 $\theta$ は $\cos\theta=\zeta$}：横の軸の向きの長さが $\sigma=\zeta\omega_{\mathrm n}$、ななめの長さが $\omega_{\mathrm n}$ なので、$\cos\theta=\dfrac{\zeta\omega_{\mathrm n}}{\omega_{\mathrm n}}=\zeta$ です（4-8）。$\zeta=1$ なら $\theta=0°$ で、極は横の軸の上（重解）。$\zeta=0$ なら $\theta=90°$ で、たての軸の上です。
+\end{itemize}
+
+\kixjhead{行きすぎの大きさは、$\zeta$（角）だけで決まる}
+$\omega_{\mathrm n}=4$\,rad/s（6-13 のばね）で、$\zeta$ だけを変えたステップの答えをくらべます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=52mm, xmin=0, xmax=4.2, ymin=0, ymax=1.85, xtick={1,2,3,4}, ytick={0.5,1,1.5}, xlabel={$t$（s）}, ylabel={},
+  legend style={at={(1.06,1)}, anchor=north west, draw=none, fill=none, font=\sffamily\footnotesize, row sep=1.5pt, cells={anchor=west}}, legend cell align=left]
+  \addplot[bkRed, line width=1.3pt, domain=0:4, samples=300] {1-exp(-0.4*x)*(cos(deg(3.97995*x))+0.1005*sin(deg(3.97995*x)))};
+  \addlegendentry{$\zeta=0.1$（72.9\,\%）}
+  \addplot[kixjW, line width=1.5pt, dash pattern=on 5pt off 2pt, domain=0:4, samples=200] {1-exp(-1.2*x)*(cos(deg(3.81576*x))+0.31449*sin(deg(3.81576*x)))};
+  \addlegendentry{$\zeta=0.3$（37.2\,\%）}
+  \addplot[kixjF, line width=1.5pt, dash pattern=on 5pt off 1.5pt on 1.2pt off 1.5pt, domain=0:4, samples=200] {1-exp(-2*x)*(cos(deg(3.4641*x))+0.57735*sin(deg(3.4641*x)))};
+  \addlegendentry{$\zeta=0.5$（16.3\,\%）}
+  \addplot[bkGreen!60!black, line width=1.6pt, dash pattern=on 1.5pt off 1.5pt, domain=0:4, samples=200] {1-exp(-2.8*x)*(cos(deg(2.85657*x))+0.9802*sin(deg(2.85657*x)))};
+  \addlegendentry{$\zeta=0.7$（4.6\,\%）}
+  \addplot[bkInk, line width=0.9pt, domain=0:4, samples=100] {1-exp(-4*x)*(1+4*x)};
+  \addlegendentry{$\zeta=1$（0\,\%）}
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west, fill=white, inner sep=0.8pt] at (axis cs:0.95,1.74) {0.1};
+  \node[font=\sffamily\footnotesize, text=kixjW, anchor=west, fill=white, inner sep=0.8pt] at (axis cs:0.25,1.45) {0.3};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2次おくれのステップの答え（$\omega_{\mathrm n}=\qty{4}{rad/s}$）。右の見本の線の形と色で区別する（かっこの中は行きすぎ）。$\zeta$ が小さいほど、大きく行きすぎて、長くゆれる。}
+\label{bk:9-9:fig-zeta}
+\end{bkfigure}
+
+最後の値（1）より上へ出た分を、\textbf{行きすぎ}（オーバーシュート）といい、最後の値の何\,\%かで表します。行きすぎは、次の式で計算でき、$\zeta$ だけで決まります（わけは、この節のせいかくに言うとで）。
+\kixjframe[110mm]{\sffamily 行きすぎ $=e^{-\pi\zeta/\sqrt{1-\zeta^2}}$\qquad 最初の山の時刻 $=\dfrac{\pi}{\omega_{\mathrm d}}$}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m] *{5}{Q[c,m,14mm]}}, rowsep=2pt, row{1}={font=\sffamily\small}}
+$\zeta$ & 0.1 & 0.3 & 0.5 & 0.7 & 1 \\
+極の角 $\theta$ & $84.3°$ & $72.5°$ & $60°$ & $45.6°$ & $0°$ \\
+行きすぎ（\%） & 72.9 & 37.2 & 16.3 & 4.6 & 0 \\
+最初の山（s） & 0.789 & 0.823 & 0.907 & 1.100 & なし \\
+\end{bktable}
+\bktabcaption{$\zeta$ と行きすぎ。最初の山の時刻は $\omega_{\mathrm n}=\qty{4}{rad/s}$ のとき。$\zeta=0.1$ は6-13 のばね（$\omega_{\mathrm d}=3.980$\,rad/s）。}
+\label{bk:9-9:tab-zeta}
+\end{bkcenter}
+図\ref{bk:9-9:fig-niji}の右のように、同じ直線の上の極は、$\omega_{\mathrm n}$ がちがっても、同じ $\zeta$ で、同じ行きすぎになります。$\omega_{\mathrm n}$（原点からの距離）は、速さだけを決めます。\textbf{極の「角」が行きすぎを、「距離」が速さを決める}のです。
+
+\kixjhead{設計する人は、$\zeta$ で極の角を選ぶ}
+6-12 の物理・工学で、「モーターでロボットの腕を動かすとき…行きすぎと速さのかね合いで $\zeta$ を選びます（9-9）」と書きました。物をつかむロボットの腕なら、行きすぎて物にぶつからないよう、$\zeta=0.7$（行きすぎ4.6\,\%）くらいの角に極を置くことがよくあります。どうやって極をその場所へ動かすかは、⑨で見ます。
+
+車のサスペンションでは、3-10 で「実際の車は、ほんの少しだけゆれるように」と書きました。1輪分を $m=\qty{250}{kg}$、$k=\qty{16000}{N/m}$、$c=\num{2000}$\,N·s/m とすると、次のようになります。
+\kixjline{$\omega_{\mathrm n}=\sqrt{\num{16000}\div250}=8$\,rad/s（$8\div2\pi\approx1.27$\,Hz）}
+\kixjline{$\zeta=\dfrac{\num{2000}}{2\sqrt{250\times\num{16000}}}=\dfrac{\num{2000}}{\num{4000}}=0.5$}
+極は $-4\pm6.93j$ で、$\theta=60°$ の線の上にあります。車体を上から一定の力でおしたときの行きすぎは16.3\,\%で、「ほんの少しだけゆれる」が、数で言えるようになりました。乗用車の $\zeta$ は、0.2〜0.5 くらいにすることが多いとされ、この章では 0.5 の例で計算します。
+
+\begin{seikaku}
+\kixjbox{行きすぎの式のわけ}
+$\tfrac1s\times G(s)$ を、9-7 の場合D（平方完成）で分けます。$s^2+2\sigma s+\omega_{\mathrm n}^2=(s+\sigma)^2+\omega_{\mathrm d}^2$ です（$\omega_{\mathrm n}^2-\sigma^2=\omega_{\mathrm d}^2$）。
+\begin{bkhenkei}[0.6]
+Y=\dfrac{\omega_{\mathrm n}^2}{s\{(s+\sigma)^2+\omega_{\mathrm d}^2\}} & $\dfrac1s\times G(s)$ \\
+\phantom{Y}=\dfrac1s-\dfrac{s+2\sigma}{(s+\sigma)^2+\omega_{\mathrm d}^2} & 通分すると分子が $\omega_{\mathrm n}^2$ にもどる \\
+\phantom{Y}=\dfrac1s-\dfrac{s+\sigma}{(s+\sigma)^2+\omega_{\mathrm d}^2}-\dfrac{\sigma}{\omega_{\mathrm d}}\cdot\dfrac{\omega_{\mathrm d}}{(s+\sigma)^2+\omega_{\mathrm d}^2} & 分子を $(s+\sigma)$ と定数に分けた \\
+y=1-e^{-\sigma t}\Bigl(\cos\omega_{\mathrm d}t+\dfrac{\sigma}{\omega_{\mathrm d}}\sin\omega_{\mathrm d}t\Bigr) & 表を逆に引いた（9-7） \\
+\dot y=\dfrac{\omega_{\mathrm n}^2}{\omega_{\mathrm d}}e^{-\sigma t}\sin\omega_{\mathrm d}t & 微分して整理した \\
+\end{bkhenkei}
+$\dot y=0$ になる最初の時刻（山）は $\sin\omega_{\mathrm d}t=0$ の $\omega_{\mathrm d}t=\pi$ です。そのとき $\cos\pi=-1$、$\sin\pi=0$ なので、$y=1+e^{-\sigma\pi/\omega_{\mathrm d}}$。$\sigma/\omega_{\mathrm d}=\zeta/\sqrt{1-\zeta^2}$ なので、行きすぎは $e^{-\pi\zeta/\sqrt{1-\zeta^2}}$ で、$\omega_{\mathrm n}$ に関係しません。$\sigma/\omega_{\mathrm d}$ は、図\ref{bk:9-9:fig-niji}の角 $\theta$ で決まる数（$1/\tan\theta$）です。
+\end{seikaku}
+
+\bksubsection{6}{零点があると：段差をこえる車}
+
+\label{bk:9-9:reiten}車が高さ $x_{\mathrm r}$ の段差をこえると、ばねとダンパーは、車体の位置 $x$ と路面の高さ $x_{\mathrm r}$ の差でのび縮みします。
+\begin{bkhenkei}[0.5]
+m\ddot x=-k(x-x_{\mathrm r})-c(\dot x-\dot x_{\mathrm r}) & ばねとダンパーの力（差で決まる） \\
+(ms^2+cs+k)X=(cs+k)X_{\mathrm r} & はじめの値を0にして変換し、移項した \\
+G(s)=\dfrac{X}{X_{\mathrm r}}=\dfrac{cs+k}{ms^2+cs+k} & 路面から車体への伝達関数 \\
+\end{bkhenkei}
+分子 $cs+k$ が0になる $s=-k/c=-\num{16000}\div\num{2000}=-8$ が零点（○）です。極は⑤と同じ $-4\pm6.93j$（×）です。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[kixj splane, width=34mm, height=46mm, xmin=-10, xmax=2, ymin=-9, ymax=9, xtick={-8}, ytick={-6,6}, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-10}{-9}{9}
+  \kixjpole{-4}{6.93}\kixjpole{-4}{-6.93}
+  \kixjzero{-8}{0}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.66\linewidth}
+\centering\small
+\begin{bktable}{colspec={Q[c,m,13mm] Q[c,m,7mm] Q[c,m,17mm] Q[c,m,27mm]}, colsep=3pt, rowsep=1.5pt, row{1}={font=\sffamily\footnotesize}}
+$c$（N·s/m） & $\zeta$ & いちばん高い所 & 零点がないとき \\
+\num{1000} & 0.25 & 7.53\,cm & 7.22\,cm \\
+\num{2000} & 0.5 & 6.49\,cm & 5.82\,cm \\
+\num{4000} & 1 & 5.68\,cm & 5.00\,cm＊ \\
+\num{8000} & 2 & 5.24\,cm & 5.00\,cm＊ \\
+\end{bktable}
+\end{minipage}
+\bkfigcaption{左：$c=\num{2000}$ のときの極（×、$-4\pm6.93j$）と零点（○、$-8$）。うすい緑は左半分。右：\qty{5}{cm} の段差をこえたときの車体のいちばん高い所（Python の数値）。「零点がないとき」は、分子を $k$ だけにした伝達関数の答え。＊は、5\,cm をこえず、下から近づく。}
+\label{bk:9-9:fig-reiten}
+\end{bkfigure}
+
+表から、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 零点があると、同じ極でも、行きすぎが少し大きくなります。分子の $cs$ は、路面が急に上がった瞬間の速さを、ダンパーがそのまま車体へ伝える分です。
+\item $\zeta=1$（$c=\num{4000}$）でも、零点のせいで、5\,cm より上へ行きすぎます。「$\zeta=1$ なら行きすぎない」は、分子が定数のときだけの話です。
+\item それでも、どの $c$ でも車体はちゃんと落ち着きます。\textbf{零点は形を変えますが、落ち着くかどうかは極だけで決まります。}
+\end{itemize}
+
+\bkkokomade[伝達関数の分母を0と置いて極を求め、1次おくれなら時定数、2次おくれなら $\zeta$ と行きすぎを、極の場所から読めれば十分です。この先は、安定かどうかの判定と、フィードバックで極を動かす話です。]
+
+\Needspace{12\baselineskip}\bkstage{shiki}{式でわかる}{安定の判定と、極を動かす}{\bklevel{5}}
+
+\bksubsection{7}{安定：すべての極の実部が負}
+
+\label{bk:9-9:antei}入れるものを0にしたあと（または一定にしたあと）、動きがやがて落ち着くことを、\textbf{安定}（あんてい）といいます。\bkidx{あんてい}{安定}どこまでも大きくなる動きが入っていれば\textbf{不安定}です。②で見たとおり、極 $p$ が1つあると動きの中に $e^{pt}$ が1つ入るので、安定かどうかは、次のように極だけで決まります。
+\kixjframe[112mm]{\sffamily\bfseries 安定 \ $\Longleftrightarrow$\ すべての極の実部が負（すべての×が左半分）}
+
+\kixjhead{なぜ「すべて」なのか}
+極が $-1$ と $2$ の次の $G(s)$ を、9-7 の場合B で分けます。
+\kixjline{$G(s)=\dfrac{1}{(s+1)(s-2)}$}
+\begin{bkhenkei}[0.5]
+\dfrac{1}{(s+1)(s-2)}=\dfrac{A}{s-2}+\dfrac{B}{s+1} & 部分分数の形を置く（9-7） \\
+A=\dfrac{1}{2+1}=\dfrac13,\quad B=\dfrac{1}{-1-2}=-\dfrac13 & かくす方法（9-7）：そのかっこをかくして、極の値を代入 \\
+\dfrac13e^{2t}-\dfrac13e^{-t} & 表を逆に引いた \\
+\end{bkhenkei}
+$e^{-t}$ の項はすぐ消えますが、$e^{2t}$ の項は、10秒後には $\frac13e^{20}$、約1.6億になります。極が1つでも右半分にあると、その項がどこまでも大きくなって、ほかの項がいくら早く消えても、全体は大きくなります。だから、「すべての極」の実部が負でなければなりません。
+
+極が重なって $te^{pt}$ の形が出るとき（9-7 の場合C）も、$p$ の実部が負なら、5-18 で見たとおり $t$ がかかっていても0に近づきます。だから、この判定はそのまま使えます。
+
+\kixjhead{実部が0の極は「安定」とはいわない}
+空気の中のばね（極 $\pm4j$）は、こわれはしませんが、いつまでもゆれ続けて落ち着きません。このように、たての軸の上の極が1つずつ（重ならない）ときは、安定とはいわず、専門書では「安定の限界」「安定限界」とよびます。ところが、たての軸の上に同じ極が重なってあると、$t\sin4t$ のように、ゆれがだんだん大きくなります（6-13 の共振）。これは不安定です。原点の極（$s=0$）も同じで、1つだけなら止まった所にそのまま残り、重なると $t$ のように大きくなります。
+
+\kixjhead{極は、状態の行列の固有値}
+7-8 で、「第9巻の制御では、固有値が全部『左半分』（実部が負）にあるように機械を作る」と書きました。3-10 の車A $\ddot x+3\dot x+2x=u$ を、7-8 と同じ状態の行列で書くと、
+\[ \begin{pmatrix}\dot x\\\ddot x\end{pmatrix}=A\begin{pmatrix}x\\\dot x\end{pmatrix}+\begin{pmatrix}0\\1\end{pmatrix}u \]
+\[ A=\begin{pmatrix}0&1\\-2&-3\end{pmatrix} \]
+です。$A$ の固有値を求める式を、$\det(sI-A)=0$ の形で作ります。7-8 の $\det(A-\lambda I)=0$ と同じ解になります。
+\begin{bkhenkei}[0.5]
+sI-A=\begin{pmatrix}s&-1\\2&s+3\end{pmatrix} & 対角成分は $s-0$ と $s-(-3)$ \\
+\det(sI-A)=s(s+3)-(-1)\times2 & $ad-bc$（7-4） \\
+\phantom{\det(sI-A)}=s^2+3s+2 & 展開した \\
+\end{bkhenkei}
+これは、車Aの伝達関数（$s^2+3s+2$ 分の1）の分母そのものです。だから、\textbf{極＝状態の行列の固有値}で、「固有値が全部左半分」と「すべての極の実部が負」は、同じことを言っています。くわしくは 9-10・9-11 で学びます。
+
+\kixjhead{2次式なら、係数を見るだけでわかる}
+分母が $s^2+a_1s+a_0$ のとき、6-12③の解と係数の関係から、2つの極 $p_1$、$p_2$ には $p_1+p_2=-a_1$、$p_1p_2=a_0$ が成り立ちます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 極が2つとも実数のとき：2つとも負 $\Longleftrightarrow$ 和が負で積が正 $\Longleftrightarrow$ $a_1>0$ かつ $a_0>0$。
+\item 極が複素数の組 $-\sigma\pm j\omega_{\mathrm d}$ のとき：和は $-2\sigma$、積は $\sigma^2+\omega_{\mathrm d}^2$（いつも正）。実部が負 $\Longleftrightarrow$ $\sigma>0$ $\Longleftrightarrow$ $a_1>0$。
+\end{itemize}
+\kixjframe[110mm]{\sffamily 2次の判定：$s^2+a_1s+a_0$ は、$a_1>0$ かつ $a_0>0$ なら安定}
+（$s^2$ の係数が1でないときは、全体をその係数でわってから見ます。）解かずに判定できるので、③楽をする段の道具です。
+
+\Needspace{40\baselineskip}\bksubsection{8}{場合分けの表と流れ図}
+
+\label{bk:9-9:hyou}極を求めたり、安定かどうかを判定したりするとき、どんな式なら、どうすればよいかを表にまとめます。
+
+\kixjcasetitle{9-9}{極と安定：どんなときに、どうする？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,36mm] X[l,m] Q[c,m,12mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixjcase{A} & 分母が1次式（$\tau s+1$ など） & \kixjdan{2}\enspace 1次方程式を解く。$\tau s+1$ なら極は $-\dfrac1\tau$。$\tau>0$ なら安定 & 2・6・7 \\
+\kixjcase{B} & 分母（2次以上）が、$(s-p)$ や $(s+\sigma)^2+\omega^2$ だけでできている（$p$・$\sigma$ は0でもよい。$s^2+4^2$ もふくむ。かけ算してあってもよい） & \kixjdan{3}\enspace 解かない。かっこごとに0と置いて、極を読む & 1・4 \\
+\kixjcase{C} & 分母が2次式（分かれていない） & \kixjdan{2}\enspace 解の公式（3-10）。$\zeta$・$\omega_{\mathrm n}$ も読む。安定かだけなら2次の判定（係数がすべて正） & 3・5・8 \\
+\kixjcase{D} & 分母が3次式（分かれていない） & \kixjdan{3}\enspace 安定かだけなら3次の判定：係数がすべて正で $a_2a_1>a_0$（⑩）。$(s+a)^3+K$ の形なら、極は3乗根で求まる & 9 \\
+\kixjcase{E} & 分母が4次以上（分かれていない） & \kixjdan{3}\enspace Python の \texttt{np.roots} で極を出し、実部の符号を見る & 10 \\
+\kixjcase{F} & フィードバックでつないだ全体の極 & \kixjdan{2}\enspace 全体 $\dfrac{G_1}{1+G_1G_2}$ を通分して、分母の式を作る → 下の問いへ & 6〜9 \\
+\kixjcase{G} & 状態方程式 $\dot{\vec x}=A\vec x+B\vec u$ で書いてある & \kixjop{4}\enspace $\det(sI-A)$ を作る（極＝固有値）→ 下の問いへ & 5 \\
+\end{bktable}
+\end{bkcenter}
+\noindent F・G は、分母の式を作るまでの手順です。作った式が何次式かで、A〜E のどれかへ進みます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixj do, text width=90mm] (s) at (52,0) {名前の段：何の極か（1つの箱・つないだ全体・状態方程式）を決める};
+  \node[kixj q] (q1) at (33,-20) {フィードバックがある？};
+  \node[kixj do, text width=36mm, anchor=west] (rF) at (77,-20) {全体の分母 $1+G_1G_2$ を\\通分して作る\enspace\kixjcase{F}};
+  \node[kixj q] (q2) at (33,-44) {状態方程式で書いてある？};
+  \node[kixj do, text width=36mm, anchor=west] (rG) at (77,-44) {$\det(sI-A)$ を作る\enspace\kixjcase{G}};
+  \node[kixj q] (q3) at (33,-64) {分母は1次式？};
+  \node[kixj do, text width=36mm, anchor=west] (rA) at (77,-64) {1次方程式を解く\enspace\kixjcase{A}};
+  \node[kixj q, aspect=3] (q4) at (33,-92) {分母が $(s-p)$ や\\$(s+\sigma)^2+\omega^2$ だけ？};
+  \node[kixj do, text width=36mm, anchor=west] (rB) at (77,-92) {かっこごとに極を読む\enspace\kixjcase{B}};
+  \node[kixj q] (q5) at (33,-120) {分母は2次式？};
+  \node[kixj do, text width=36mm, anchor=west] (rC) at (77,-120) {解の公式・2次の判定\enspace\kixjcase{C}};
+  \node[kixj q] (q6) at (33,-140) {分母は3次式？};
+  \node[kixj do, text width=36mm, anchor=west] (rD) at (77,-140) {3次の判定 $a_2a_1>a_0$\enspace\kixjcase{D}};
+  \node[kixj do, text width=40mm] (rE) at (33,-160) {Python で極を出す\enspace\kixjcase{E}};
+  \node[kixj do, text width=104mm] (end) at (60,-180) {確かめ：すべての極の実部が負か。ステップの答えのグラフ（表計算・Python）が落ち着くか};
+  \draw[kixj go] (s.south -| q1) -- (q1);
+  \foreach \kixjq/\kixjr in {q1/rF,q2/rG,q3/rA,q4/rB,q5/rC,q6/rD} {\draw[kixj go] (\kixjq) -- node[kixj yn, above] {はい} (\kixjr);}
+  \foreach \kixjq/\kixjr in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6,q6/rE} {\draw[kixj go] (\kixjq) -- node[kixj yn, left=1mm] {いいえ} (\kixjr);}
+  \draw[kixj go, shorten >=0.4mm] (rF.south) |- (33.8,-33.5);
+  \draw[kixj go, shorten >=0.4mm] (rG.south) |- (33.8,-57.5);
+  \foreach \kixjn in {rA,rB,rC,rD,rE} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixjn.east) -- (\kixjn.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-64) -- (127,-180);
+  \draw[kixj go, shorten <=0pt] (127,-180) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{極と安定の流れ図。ひし形は問い、四角はすること。F・G のあとは、左の列の次の問いへもどる。極を求めた四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:9-9:fig-flow}
+\end{bkfigure}
+
+\kixjdanhead{1}{何の極かを決める}
+「極」も「安定」も名前です。まず、何の極を調べるのか（1つの箱の伝達関数か、フィードバックでつないだ全体か、状態方程式か）を決めます。
+
+\kixjdanhead{2}{分母$=0$ を解く}
+分母が1次式なら1次方程式、2次式なら解の公式（3-10）で解きます。状態方程式なら、行列の計算で $\det(sI-A)$ を作ってから解きます。
+
+\kixjdanhead{3}{解かずに見る・数値にまかせる}
+分母が $(s-p)$ や $(s+\sigma)^2+\omega^2$ だけでできていれば、解かずに読めます。安定かどうかだけなら、2次・3次の判定の式で、解かずにわかります。4次以上は、Python に解かせます。
+
+
+\kixjhead{流れ図の使い方：水の中のばね}
+①の水の中のばねの伝達関数をたどります。
+\kixjline{$G(s)=\dfrac{16}{s^2+2.4s+16}$}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：1つの箱（ばね）の伝達関数の極を調べる。
+\item フィードバックがある？\enspace いいえ。\enspace 状態方程式で書いてある？\enspace いいえ。
+\item 分母は1次式？\enspace いいえ。\par\nobreak\noindent 分母が $(s-p)$ や $(s+\sigma)^2+\omega^2$ だけ？\enspace いいえ（$s^2+2.4s+16$ のまま）。
+\item 分母は2次式？\enspace はい。
+\end{enumerate}
+こうして場合 \kixjcase{C} に決まり、①でしたとおり解の公式で $-1.2\pm3.816j$ が出ます。2次の判定なら、$2.4>0$、$16>0$ を見るだけで安定とわかります。
+
+\kixjhead{例題を、流れ図でたどってみよう}
+この章の例題1〜10 を、図\ref{bk:9-9:fig-flow}の流れ図の上から順にたどると、次のようになります（書いていない問いは「いいえ」）。どれも、考え方の1行めの場合に着きます。じぶんでとこうも同じ道すじです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,40mm] X[l,m] Q[c,m,16mm]}, row{2-Z}={font=\small}, rowsep=1.5pt, colsep=4pt, row{1}={font=\sffamily\small}}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 極の場所から動きを当てる & 分母が $(s-p)$ や $(s+\sigma)^2+\omega^2$ だけ & \kixjcase{B} \\
+2 & 1次おくれの温度センサー & 分母は1次式 & \kixjcase{A} \\
+3 & 2次おくれの極と行きすぎ & 分母は2次式 & \kixjcase{C} \\
+4 & 零点と極 & 分母が $(s-p)$ だけ & \kixjcase{B} \\
+5 & 状態方程式から極を求める & 状態方程式 → 分母は2次式 & \kixjcase{G}→\kixjcase{C} \\
+6 & モーターの比例制御 & フィードバック → 分母は1次式 & \kixjcase{F}→\kixjcase{A} \\
+7 & エアコンの比例制御 & フィードバック → 分母は1次式 & \kixjcase{F}→\kixjcase{A} \\
+8 & ロボットの腕の $\zeta$ を選ぶ & フィードバック → 分母は2次式 & \kixjcase{F}→\kixjcase{C} \\
+9 & 3次の電気炉の安定 & フィードバック → 分母は3次式 & \kixjcase{F}→\kixjcase{D} \\
+10 & 4次の式を Python で & （すべて「いいえ」） & \kixjcase{E} \\
+\end{bktable}
+\bktabcaption{例題1〜10 の流れ図の道すじ。}
+\end{bkcenter}
+
+\kixjhead{どの場合かな？}
+次の極は、場合分けの表9-9のどの場合で求めるでしょう。流れ図を上からたどって、先に自分で考えてから答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $\dfrac{3}{(s+2)(s+7)}$ の極\par\nobreak\noindent 答え：\kixjcase{B}。分母が $(s-p)$ だけでできている。
+\item $\dfrac{5}{8s+1}$ の極\par\nobreak\noindent 答え：\kixjcase{A}。分母は1次式。
+\item $\dfrac{1}{s^3+4s^2+5s+2}$ が安定かどうか\par\nobreak\noindent 答え：\kixjcase{D}。分母は3次式（分かれていない）。
+\item 箱 $\dfrac{2}{s+3}$ の出口をはかって、ずれ（目標−出口）を入口へもどしたときの全体の極\par\nobreak\noindent 答え：\kixjcase{F}→\kixjcase{A}。全体の分母 $s+3+2=s+5$ を作ると1次式。
+\end{enumerate}
+
+
+\bksubsection{9}{フィードバックで極が動く}
+
+\label{bk:9-9:ugoku}9-8 では、モーターの速さを、目標とのずれに比例した電圧で動かしました（比例制御）。そのとき、全体の極がどこへ動くかを調べます。
+
+\kixjhead{モーターの速度制御}
+モーターの伝達関数（電圧 $\to$ 回る速さ）は、9-8 の次の式です（1\,V で \qty{10}{rad/s}、時定数 \qty{0.5}{s}）。
+\kixjline{$\dfrac{10}{0.5s+1}$}
+目標の速さとのずれに $K_{\mathrm p}$ をかけた電圧を加えます。全体の伝達関数は、9-8 のフィードバックの式で、$G_1$ を「$K_{\mathrm p}$ 倍してからモーター」、はかってもどす箱を $G_2=1$ として、
+\begin{bkhenkei}[0.5]
+\dfrac{G_1}{1+G_1G_2}=\dfrac{\dfrac{10K_{\mathrm p}}{0.5s+1}}{1+\dfrac{10K_{\mathrm p}}{0.5s+1}} & 9-8 のフィードバックの式 \\
+\phantom{\dfrac{G_1}{1+G_1G_2}}=\dfrac{10K_{\mathrm p}}{0.5s+1+10K_{\mathrm p}} & 分母・分子に $0.5s+1$ をかけた \\
+0.5s+1+10K_{\mathrm p}=0 & 分母$=0$ \\
+s=-2(1+10K_{\mathrm p}) & 両辺を0.5でわって移項した \\
+\end{bkhenkei}
+です（場合F→A）。制御しないときの極は $-2$（$0.5s+1=0$）でした。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,18mm] Q[c,m,22mm] Q[c,m,26mm] Q[c,m,36mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+$K_{\mathrm p}$ & 全体の極 & 時定数（s） & 目標に対する残りのずれ \\
+0.1 & $-4$ & 0.25 & 50\,\% \\
+1 & $-22$ & 0.045 & 9.1\,\% \\
+10 & $-202$ & 0.005 & 1.0\,\% \\
+\end{bktable}
+\bktabcaption{比例の強さ $K_{\mathrm p}$ と、モーターの全体の極。ずれは⑪で求める。}
+\label{bk:9-9:tab-motor}
+\end{bkcenter}
+比例を強くすると、極は横の軸の上を左へ動き、速く落ち着くようになります。
+
+\kixjhead{ロボットの腕の角度}
+ロボットの腕を、モーターの力で決まった角度へ動かします。腕の回りにくさ（慣性モーメント）を1、軸のまさつを2（どちらも、計算しやすいように単位をそろえた数）とすると、腕の角度 $\theta$ は $\ddot\theta+2\dot\theta=u$（$u$ はモーターの力）にしたがいます。伝達関数は次の式で、極は $0$ と $-2$ です。
+\kixjline{$G(s)=\dfrac{1}{s^2+2s}=\dfrac{1}{s(s+2)}$}
+極 $0$ は、腕を一度おすと、止まった所にそのままいる（もどらない）ことを表します。
+
+目標の角度とのずれに $K$ をかけた力を加えると、全体の分母は $s^2+2s+K$ になります（場合F→C。モーターと同じ計算）。
+\kixjline{$s^2+2s+K=0$\qquad $s=-1\pm\sqrt{1-K}$}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[c,m,28mm] Q[c,m,14mm] Q[c,m,22mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+$K$ & 全体の極 & $\zeta$ & 行きすぎ \\
+0.5 & $-0.29$、$-1.71$ & 1.41 & 0\,\% \\
+1 & $-1$（重解） & 1 & 0\,\% \\
+2 & $-1\pm j$ & 0.71 & 4.3\,\% \\
+4 & $-1\pm1.73j$ & 0.5 & 16.3\,\% \\
+10 & $-1\pm3j$ & 0.32 & 35.1\,\% \\
+\end{bktable}
+\bktabcaption{腕の比例の強さ $K$ と極。$\omega_{\mathrm n}=\sqrt K$、$2\zeta\omega_{\mathrm n}=2$ より $\zeta=\frac{1}{\sqrt K}$。}
+\label{bk:9-9:tab-ude}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixj splane, width=70mm, height=16mm, at={(0mm,14.5mm)}, xmin=-25, xmax=4, ymin=-3.3, ymax=3.3, xtick=\empty, ytick=\empty, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-25}{-3.3}{3.3}
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.6mm]}] (axis cs:-2.6,2) -- (axis cs:-21.5,2);
+  \kixjpole[bkGray]{-2}{0}
+  \kixjpole{-4}{0}\kixjpole{-22}{0}
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=0.6pt] at (axis cs:-12,2.6) {$K_{\mathrm p}$ を強くする};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=0.6pt] at (axis cs:-4,-1.3) {$-4$};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=0.6pt] at (axis cs:-22,-1.3) {$-22$};
+\end{axis}
+\begin{axis}[kixj splane, width=36mm, height=45mm, at={(84mm,0mm)}, xmin=-3, xmax=1, ymin=-2.5, ymax=2.5, xtick={-2}, ytick={-2,2}, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-3}{-2.5}{2.5}
+  \kixjpole[bkGray]{0}{0}\kixjpole[bkGray]{-2}{0}
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-0.2,0) -- (axis cs:-0.8,0);
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-1.8,0) -- (axis cs:-1.2,0);
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-1,0.15) -- (axis cs:-1,0.72);
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-1,1.28) -- (axis cs:-1,2.35);
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-1,-0.15) -- (axis cs:-1,-0.72);
+  \draw[kixjF, line width=1.4pt, -{Stealth[length=2.2mm]}] (axis cs:-1,-1.28) -- (axis cs:-1,-2.35);
+  \kixjpole{-1}{1}\kixjpole{-1}{-1}
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=0.6pt] at (axis cs:-1.3,1) {$K=2$：$-1\pm j$};
+\end{axis}
+\node[font=\sffamily\footnotesize, anchor=north] at (35mm,-7mm) {モーター};
+\node[font=\sffamily\footnotesize, anchor=north] at (102mm,-7mm) {ロボットの腕};
+\end{tikzpicture}
+\bkfigcaption{比例の強さを0から大きくしていったときの、全体の極の動き（オレンジの矢印。灰色の×が制御しないときの極、赤の×は $K_{\mathrm p}=0.1$・1 と $K=2$ の極。うすい緑は左半分）。左右の図の目もりの大きさはちがう。モーターは左へ。腕は $0$ と $-2$ から近づき、$K=1$ で $-1$ に重なったあと、上下に分かれる。}
+\label{bk:9-9:fig-konkiseki}
+\end{bkfigure}
+
+腕の極は、$K$ を大きくすると、実部 $-1$ のたての線の上を上下に分かれて動きます。速くゆれるようになりますが、落ち着く速さ（実部 $-1$）は変わらず、行きすぎだけが大きくなります。行きすぎ4.3\,\%の $\zeta=0.71$ にしたいなら $K=2$ を選びます。これが、6-12 で約束した「$\zeta$ を選ぶ」の中身です。
+
+このように、強さを変えたときに極が動く道すじを、\textbf{根軌跡}（こんきせき）といいます。極の場所を見ながら強さを選ぶ、制御の設計の基本の図です。
+
+\bksubsection{10}{3次の特性方程式：強くしすぎると、こわれる}
+
+\label{bk:9-9:sanji}6-8 で、「第9巻の制御では、3次の特性方程式の解をさがす場面が出てきます」と予告しました。ヒーターの熱が、炉のかべ・中の空気・温度センサーの3つを順に伝わる電気炉を考えます。3つとも時定数1分の1次おくれ $\tfrac{1}{s+1}$ とし（時間の単位は分）、目標とのずれに $K$ をかけた電力でヒーターを動かします。全体の分母は、
+\begin{bkhenkei}[0.5]
+1+\dfrac{K}{(s+1)^3}=0 & 1周の式（9-8）。$G_1=\dfrac{K}{(s+1)^3}$、$G_2=1$ \\
+(s+1)^3+K=0 & 両辺に $(s+1)^3$ をかけた \\
+s^3+3s^2+3s+(1+K)=0 & 展開した（$(a+b)^3$ の公式） \\
+\end{bkhenkei}
+です（場合F→D）。モーターや腕の2次式とちがい、3次式になりました。
+
+\kixjhead{6-9 の正三角形で、極を求める}
+この3次方程式は、うまく解けます。$w=s+1$ と置くと $w^3=-K$ です。6-9 で、$z^3=1$ の3つの解が、原点を中心とする正三角形の頂点に並ぶことを見ました。$w^3=-K$ の解も、原点を中心に $K^{1/3}$ の大きさの正三角形に並びます。
+\kixjline{$w=-K^{1/3},\qquad w=K^{1/3}\Bigl(\dfrac12\pm\dfrac{\sqrt3}{2}j\Bigr)$}
+（$\bigl(\frac12\pm\frac{\sqrt3}{2}j\bigr)^3=-1$ は、6-10 の $e^{\pm j60°}$ を3乗すると $e^{\pm j180°}=-1$ になることから確かめられます。）$s=w-1$ なので、極は $-1$ を中心とする正三角形の頂点です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixj splane, width=52mm, height=52mm, xmin=-4.6, xmax=1.4, ymin=-3, ymax=3, xtick={-4,-2}, ytick=\empty, xticklabel style={yshift=-2.5mm}, xlabel={実部}, ylabel={虚部}]
+  \kixjleft{-4.6}{-3}{3}
+  \foreach \kixjc/\kixjcol/\kixjdash in {1/kixjW/{on 6pt off 0pt},2/kixjF/{on 4pt off 2pt},3/kixjP/{on 1.5pt off 1.5pt}} {
+    \edef\kixjtmp{\noexpand\draw[\kixjcol, line width=0.8pt, dash pattern=\kixjdash] (axis cs:{-1-\kixjc},0) -- (axis cs:{-1+\kixjc/2},{0.866*\kixjc}) -- (axis cs:{-1+\kixjc/2},{-0.866*\kixjc}) -- cycle;}\kixjtmp
+    \edef\kixjtmp{\noexpand\kixjpole[\kixjcol]{\number\numexpr-1-\kixjc\relax}{0}}\kixjtmp}
+  \kixjpole[kixjW]{-0.5}{0.866}\kixjpole[kixjW]{-0.5}{-0.866}
+  \kixjpole[kixjF]{0}{1.732}\kixjpole[kixjF]{0}{-1.732}
+  \kixjpole[kixjP]{0.5}{2.598}\kixjpole[kixjP]{0.5}{-2.598}
+  \fill[bkInk] (axis cs:-1,0) circle[radius=0.7mm];
+  \node[font=\footnotesize, anchor=north, inner sep=0.4pt] at (axis cs:-1,-0.08) {$-1$};
+  \draw[kixjW, line width=0.8pt] (axis cs:1.9,2.2) -- (axis cs:2.6,2.2) node[right, font=\footnotesize, text=kixjW] {$K=1$};
+  \draw[kixjF, line width=0.8pt, dash pattern=on 4pt off 2pt] (axis cs:1.9,1.5) -- (axis cs:2.6,1.5) node[right, font=\footnotesize, text=kixjF] {$K=8$};
+  \draw[kixjP, line width=0.8pt, dash pattern=on 1.5pt off 1.5pt] (axis cs:1.9,0.8) -- (axis cs:2.6,0.8) node[right, font=\footnotesize, text=kixjP] {$K=27$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$(s+1)^3+K=0$ の極（$K=1$ は青の実線、$K=8$ はオレンジの破線、$K=27$ は赤の点線の三角形。うすい緑は左半分）。$K$ を大きくすると、$-1$ を中心とする正三角形が大きくなる。$K=8$ で上下の2つがたての軸の $\pm1.73j$ に着き、それより大きいと右半分に出る。}
+\label{bk:9-9:fig-sankaku}
+\end{bkfigure}
+
+上下の2つの極の実部は $-1+K^{1/3}/2$ です。これが0になるのは $K^{1/3}=2$、つまり $K=8$ のときです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[c,m,48mm] Q[l,m,44mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+$K$ & 3つの極 & 動き \\
+1 & $-2$、\ $-0.5\pm0.866j$ & 落ち着く \\
+4 & $-2.587$、\ $-0.206\pm1.375j$ & ゆれながら、ゆっくり落ち着く \\
+8 & $-3$、\ $\pm1.732j$ & ゆれ続ける（安定の限界） \\
+10 & $-3.154$、\ $0.077\pm1.866j$ & ゆれがふくらむ（不安定） \\
+\end{bktable}
+\bktabcaption{3次の特性方程式の極。Python の \texttt{np.roots} でも同じ値になる。}
+\label{bk:9-9:tab-sanji}
+\end{bkcenter}
+
+\begin{bkcode}[Python]
+import numpy as np
+print(np.roots([1, 3, 3, 1+8]))   \# K=8 の分母の係数
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-3.00000000e+00+0.j
+ -8.32667268e-17+1.73205081j
+ -8.32667268e-17-1.73205081j]
+\end{bkcodeout}
+\texttt{-8.32667268e-17} は $-8.3\times10^{-17}$ のことで、計算の丸めのごく小さな数です。実部は0と読みます。
+
+モーターや腕では、比例を強くしても、極が右半分に出ることはありませんでした（モーターは速くなり、腕は行きすぎが大きくなるだけ）。ところが、おくれが3つ重なると、強くしすぎた（$K>8$）とたん、ゆれがふくらんでこわれます。ずれを急いで取りもどそうとして、おくれのせいで、行きすぎをくり返すのです。「強くすれば、いつもよくなる」わけではありません。
+
+\Needspace{14\baselineskip}\begin{seikaku}
+\textbf{3次の判定：$s^3+a_2s^2+a_1s+a_0$ は、係数がすべて正で $a_2a_1>a_0$ なら安定}\par
+\kixjbox{係数がすべて正であること}3つの極がすべて左半分なら、分母は $(s+p)(s^2+qs+r)$（$p>0$、$q>0$、$r>0$：実数の極 $-p$ と、2次の判定をみたす2次式）の形に分かれます。展開すると $s^3+(p+q)s^2+(pq+r)s+pr$ で、係数はすべて正です。だから、1つでも負か0の係数があれば、安定ではありません。
+
+\kixjbox{$a_2a_1>a_0$ であること}係数を少しずつ変えると、極も少しずつ動きます。だから、極が左半分から右半分へ移るときは、かならずたての軸の上を通ります。たての軸の上の極 $s=j\omega$ を入れてみます。
+\begin{bkhenkei}[0.48]
+(j\omega)^3+a_2(j\omega)^2+a_1j\omega+a_0=0 & $j^2=-1$、$j^3=-j$ \\
+(a_0-a_2\omega^2)+j\omega(a_1-\omega^2)=0 & 実部と虚部に分けた \\
+\omega^2=a_1,\quad a_0=a_2\omega^2=a_2a_1 & 実部も虚部も0（$a_0>0$ なので $\omega\neq0$） \\
+\end{bkhenkei}
+つまり、たての軸の上に極があるのは、$a_2a_1=a_0$ のときだけです。$a_2a_1$ と $a_0$ の大小が入れかわる所が、安定と不安定の境めです。どちらの側が安定かは、1つの例で決まります：$(s+1)^3=s^3+3s^2+3s+1$ は極が $-1$ だけで安定で、$3\times3=9>1$ です。だから $a_2a_1>a_0$ の側が安定です。電気炉なら $3\times3>1+K$、つまり $K<8$ で、表\ref{bk:9-9:tab-sanji}と合います。
+
+このような、係数だけで安定を判定する方法は、4次以上にも広げられていて、\textbf{ラウス・フルビッツの判定}とよばれます（物理シリーズ）。4次以上では、「係数がすべて正」だけでも、上の3次の式だけでも、判定できません（例題10）。
+\end{seikaku}
+
+
+\bksubsection{11}{残るずれ：最終値の定理}
+
+\label{bk:9-9:zure}9-6 の最終値の定理を使うと、落ち着いたあとの値を、答えの式を全部求めずに出せます。ただし、\textbf{落ち着く（安定な）ときだけ}使える、という条件がありました。だから、まず極で安定を確かめてから使います。
+
+\kixjhead{モーター：比例だけでは、ずれが残る}
+目標の速さを1（ステップ $\frac1s$）にしたとき、出てくる速さは次の $Y$ です。
+\kixjline{$Y=\dfrac{10K_{\mathrm p}}{0.5s+1+10K_{\mathrm p}}\cdot\dfrac1s$}極 $-2(1+10K_{\mathrm p})$ は左半分なので、最終値の定理が使えます。
+\begin{bkhenkei}[0.5]
+\lim_{s\to0}sY=\lim_{s\to0}\dfrac{10K_{\mathrm p}}{0.5s+1+10K_{\mathrm p}} & $s$ と $\frac1s$ が消える \\
+\phantom{\lim_{s\to0}sY}=\dfrac{10K_{\mathrm p}}{1+10K_{\mathrm p}} & $s=0$ を入れた \\
+1-\dfrac{10K_{\mathrm p}}{1+10K_{\mathrm p}}=\dfrac{1}{1+10K_{\mathrm p}} & 残るずれ \\
+\end{bkhenkei}
+$K_{\mathrm p}=1$ なら $\frac{1}{11}=0.091$ で、9.1\,\%のずれが残ります（表\ref{bk:9-9:tab-motor}）。ずれが0だと電圧も0になって、モーターが回り続けられないので、ずれが少し残ったところで落ち着くのです。
+
+\kixjhead{エアコン：設定温度に届かない}
+3-1 で、「エアコンは部屋の温度をはかりつづけ、設定温度との差が大きいほど強く冷やします（このしくみは第9巻の制御で学びます）」と書きました。これは比例制御です。9-8 と同じく、外が35\,℃、設定26\,℃、部屋の時定数 $RC=60$ 分（熱の抵抗 $R$ と熱容量 $C$ の積）、比例の強さを $RK_{\mathrm p}$ で表すと、部屋の温度 $T$ は
+\kixjline{$60\,\dfrac{\dd T}{\dd t}=(35-T)-RK_{\mathrm p}(T-26)$}
+にしたがいます。右辺の1つめは外から入る熱、2つめはエアコンが冷やす分です。$T$ の係数をまとめると $60\dot T=-(1+RK_{\mathrm p})T+\cdots$ なので、極は $s=-(1+RK_{\mathrm p})/60$（1/分）で、いつも左半分です（場合F→A）。落ち着いたときは $\dot T=0$ なので、
+\kixjline{$T=\dfrac{35+26RK_{\mathrm p}}{1+RK_{\mathrm p}}$}
+$RK_{\mathrm p}=9$ なら $\frac{35+234}{10}=26.9$\,℃で、0.9\,℃のずれが残ります。時定数は $\frac{60}{10}=6$ 分です。
+
+\begin{motto}[5]
+\kixjbox{ずれを積分して足すと、ずれが消える}
+比例の電圧に、「ずれを時間でたし合わせた量（ずれの積分）」に比例する電圧を足します。$K_{\mathrm i}$ をその強さとすると、加える電圧は $K_{\mathrm p}\times(\text{ずれ})+K_{\mathrm i}\int(\text{ずれ})\,\dd t$ です。積分は $s$ の世界では $\frac1s$ のかけ算なので（9-6）、制御の箱は $K_{\mathrm p}+K_{\mathrm i}/s$ になります。
+
+ずれが少しでも残っていると、その積分はどんどんふえて、電圧を強めつづけます。ずれがちょうど0になって、はじめて積分がふえなくなり、電圧が一定になります。だから、落ち着いた先では、ずれは0です。最終値の定理で見ると、$s\to0$ で $K_{\mathrm i}/s$ がかぎりなく大きくなるので、ずれ「$1\div(1+\text{1周の倍率})$」が0になります。
+
+たとえばモーターで $K_{\mathrm p}=1$、$K_{\mathrm i}=2$ にすると、全体の分母$=0$ の式は次のようになり、極は $-2$ と $-20$（左半分）です。
+\kixjline{$0.5s^2+11s+20=0$\quad つまり\quad $s^2+22s+40=0$}
+極が1つふえますが、安定のまま、ずれだけが消えます。これに「ずれの変わる速さ（微分）」の項を足したものが、エアコンやロボットで広く使われている \textbf{PID 制御}です（9-12）。
+\end{motto}
+
+\bksubsection{12}{右半分の極：たおれる棒}
+
+\label{bk:9-9:migi}5-18 で、手のひらに立てた棒の角度 $\theta$ が $\ddot\theta=4\theta$ にしたがい、少しかたむくと、たおれていくことを見ました。手の動きによる回す働き $u$ を入れると $\ddot\theta=4\theta+u$ で、伝達関数は $s^2-4$ 分の1、極は $\pm2$ です。極 $2$ が右半分にあるので不安定で、$0.01$\,rad のかたむきが、2秒後には $0.01\times\cosh4\approx0.273$\,rad になります（6-11 の $\cosh$）。
+
+角度だけを見て、かたむいた向きと反対に $u=-K\theta$ で動かすとどうでしょう。全体の分母は $s^2+(K-4)$ です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $K<4$ なら、極は $\pm\sqrt{4-K}$ で、まだ右半分に1つあり、たおれます。
+\item $K>4$ なら、極は $\pm j\sqrt{K-4}$ で、たての軸の上。たおれはしませんが、ゆれ続けます（$K=8$ なら $\pm2j$）。
+\end{itemize}
+どの $K$ でも、左半分には入りません。2次の判定で見ると、$s$ の係数が0だからです。棒を立て続けるには、角度だけでなく「たおれる速さ」$\dot\theta$ も見て、$s$ の係数を正にする必要があります。それが 9-10 の状態フィードバックです。
+
+\begin{taisetsu}
+\def\tsl#1{\par\addvspace{3pt}\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{極}伝達関数の分母$=0$ の解（×）。零点は分子$=0$ の解（○）
+\tsl{動き}極 $p$ ごとに $e^{pt}$。実部で大小、虚部でゆれ
+\tsl{安定}すべての極の実部が負（極＝状態の行列の固有値）
+\tsl{1次おくれ}$\dfrac{K}{\tau s+1}$：極 $-\dfrac1\tau$。$\tau$ で63.2\,\%
+\tsl{2次おくれ}極 $-\zeta\omega_{\mathrm n}\pm j\omega_{\mathrm n}\sqrt{1-\zeta^2}$。行きすぎは $\zeta$ だけで決まる
+\tsl{判定}2次：係数が正。3次：係数が正で $a_2a_1>a_0$
+\par\addvspace{4pt}{\centering $\kixjNt{G(s)\text{ の極}}=\kixjS{\text{分母}=0\ \text{の解}}$\par}
+\end{taisetsu}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,48mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=4pt, row{1}={font=\sffamily\small}}
+記号 & こんなとき & 直し方 \\
+\kixjcase{A} & 分母が1次式 & 1次方程式を解く（$-\frac1\tau$） \\
+\kixjcase{B} & 分母が $(s-p)$・$(s+\sigma)^2+\omega^2$ だけ & かっこごとに極を読む \\
+\kixjcase{C} & 分母が2次式 & 解の公式・2次の判定 \\
+\kixjcase{D} & 分母が3次式 & 3次の判定 $a_2a_1>a_0$ \\
+\kixjcase{E} & 分母が4次以上 & Python の \texttt{np.roots} \\
+\kixjcase{F} & フィードバック & 分母 $1+G_1G_2$ を作り、A〜E へ \\
+\kixjcase{G} & 状態方程式 & $\det(sI-A)$ を作り、A〜E へ \\
+\end{bktable}
+\bktabcaption{場合のまとめ（場合分けの表9-9）。}
+\end{bkcenter}
+
+\begin{kotoba}
+\small
+\bkword{極}{伝達関数の分母が0になる $s$。$G(s)$ がかぎりなく大きくなる点。$s$ の平面に×で打つ。状態の行列の固有値と同じ。}
+\bkword{零点}{伝達関数の分子が0になる $s$。○で打つ。動きの形を変えるが、安定かどうかは決めない。}
+\bkword{安定}{入れるものを0や一定にしたあと、動きがやがて落ち着くこと。すべての極の実部が負。}
+\bkword{1次おくれ・2次おくれ}{伝達関数が $K\div(\tau s+1)$ の形・$\omega_{\mathrm n}^2\div(s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2)$ の形のもの。}
+\bkword{行きすぎ}{最後の値をこえた分の、最後の値に対する割合。オーバーシュートともいう。}
+\bkword{根軌跡}{比例の強さなどを変えたときに、極が $s$ の平面の上を動く道すじ。}
+\bkword{ラウス・フルビッツの判定}{分母の係数だけから、安定かどうかを判定する方法。3次の $a_2a_1>a_0$ はその一部。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\times$}{ばつ（極）}{$s$ の平面の上の極の印。伝達関数の分母が0になる $s$。かけ算の × とは別の使い方}{pole}{9-9}}
+{\bkkigocard{$\circ$}{まる（零点）}{$s$ の平面の上の零点の印。伝達関数の分子が0になる $s$}{zero}{9-9}}
+
+\begin{senmonsho}[制御工学の教科書ふうの書き方]
+\begin{bkhonbun}
+伝達関数 $G(s)=\dfrac{N(s)}{D(s)}$ において、$D(s)=0$ の根を極、$N(s)=0$ の根を零点という。線形時不変系が漸近安定であるための必要十分条件は、すべての極が複素平面の左半平面に存在すること、すなわち $\mathrm{Re}\,p_i<0$ である。特性多項式 $s^3+a_2s^2+a_1s+a_0$ については、フルビッツの安定判別法により、$a_i>0$ かつ $a_2a_1-a_0>0$ が安定の条件となる。
+\end{bkhonbun}
+\bkyaku{$N(s)$ は分子、$D(s)$ は分母（Numerator・Denominator の頭文字）。「根」は解。「線形時不変系」は、たし算がそのまま成り立ち（線形）、係数が時間で変わらない（時不変）しくみ。「漸近安定」は、この章の「安定」（やがて0に近づく）。「必要十分条件」は「ちょうどそのとき」。$\mathrm{Re}$ は実部（Real part）。「左半平面」は、この章の「左半分」。}
+\end{senmonsho}
+
+
+%% ---------------- 例題 ----------------
+
+\begin{motto}[5]
+\kixjbox{コンピュータで動かすときの安定（9-10 の予告）}
+コンピュータは、決まった時間 $\Delta t$ ごとに計算をくり返します（6-2 のオイラー法）。1次おくれ $\dot y=-y/\tau$ なら、1回ごとに同じ数 $1-\Delta t/\tau$ をかけます。$\tau=\qty{30}{s}$ で $\Delta t=\qty{10}{s}$ なら $0.667$ で落ち着きますが、$\Delta t=\qty{70}{s}$ なら $-1.33$ で、符号を変えながら大きくなります。くり返しの安定は、「\textbf{かける数の大きさが1より小さい}」で決まります（7-10・8-13 と同じ考え。9-10）。
+\end{motto}
+
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.75mm]
+  \foreach \kixjn/\kixjxo in {a/0,b/30,c/60,d/90} {
+    \draw[bkGray, line width=0.4pt, -{Stealth[length=1.6mm]}] (\kixjxo,0) -- ({\kixjxo+26},0);
+    \draw[bkGray, line width=0.4pt] (\kixjxo,-8) -- (\kixjxo,9);
+    \node[font=\sffamily\footnotesize, anchor=north] at ({\kixjxo+12},-9) {（\kixjn）};}
+  \draw[bkBlue, line width=1pt, domain=0:24, samples=120] plot (\x,{7*sin(\x*4/6*57.3)});
+  \draw[bkBlue, line width=1pt, domain=0:24, samples=80] plot ({30+\x},{8/0.198*(exp(-2*\x/6)-exp(-5*\x/6))/3});
+  \draw[bkBlue, line width=1pt, domain=0:22, samples=80] plot ({60+\x},{8/32.3*(exp(\x/6)-exp(-3*\x/6))/4*4});
+  \draw[bkBlue, line width=1pt, domain=0:24, samples=120] plot ({90+\x},{8*exp(-\x/6)*sin(\x*4/6*57.3)*1.45});
+\end{tikzpicture}
+\bkfigcaption{例題1のグラフ（a）〜（d）：ポンとたたいたときの動き（横の軸は時間）。}
+\label{bk:9-9:fig-rei1}
+\end{bkfigure}
+
+\begin{reidai}[極の場所から動きを当てる]
+次の4つの伝達関数の極を求め、ポンとたたいたとき（インパルス応答、9-8）の動きが「ゆれずに落ち着く」「ゆれながら落ち着く」「ゆれ続ける」「どんどん大きくなる」のどれかを答え、図\ref{bk:9-9:fig-rei1}のグラフ（a）〜（d）から選びましょう。
+\kixjline{（ア）$\dfrac{1}{(s+2)(s+5)}$\qquad （イ）$\dfrac{1}{(s+1)^2+4^2}$}
+\kixjline{（ウ）$\dfrac{1}{s^2+4^2}$\qquad （エ）$\dfrac{1}{(s-1)(s+3)}$}
+\kangaekata \kixjbaai{分母が $(s-p)$ や $(s+\sigma)^2+\omega^2$ だけでできている}{9-9}{B}\par
+\kixjdan{1}\enspace 極は「分母$=0$ の $s$」。動きは、極の実部と虚部で決まる（③の地図）。\par
+\kixjdan{3}\enspace 解かずに、かっこごとに0と置いて読む（$(s+1)^2+4^2$ は $\sigma=1$、$s^2+4^2$ は $\sigma=0$ の形と見る）。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （ア）$s+2=0$、$s+5=0$ より極は $-2$、$-5$。実数で負\par
+\kixja （イ）$(s+1)^2=-4^2$ より $s+1=\pm4j$、極は $-1\pm4j$。実部が負で、虚部あり\par
+\kixja （ウ）$s^2=-4^2$ より極は $\pm4j$。実部が0\par
+\kixja （エ）極は $1$、$-3$。右半分に $1$ がある\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （ア）ゆれずに落ち着く（b）\par
+\kixja （イ）ゆれながら落ち着く（d）\par
+\kixja （ウ）ゆれ続ける（a）\par
+\kixja （エ）どんどん大きくなる（c）
+\end{reidai}
+
+\begin{jibun}
+次の4つの伝達関数の極を求め、ポンとたたいたときの動きが「ゆれずに落ち着く」「ゆれながら落ち着く」「ゆれ続ける」「どんどん大きくなる」のどれかを答えましょう。
+\kixjline{（ア）$\dfrac{1}{(s+2)^2+3^2}$\qquad （イ）$\dfrac{1}{(s-2)(s+1)}$}
+\kixjline{（ウ）$\dfrac{1}{(s+1)(s+6)}$\qquad （エ）$\dfrac{1}{s^2+5^2}$}
+\bkjans{（ア）\nobreak $-2\pm3j$、ゆれながら落ち着く。（イ）\nobreak $2$、$-1$、どんどん大きくなる。（ウ）\nobreak $-1$、$-6$、ゆれずに落ち着く。（エ）\nobreak $\pm5j$、ゆれ続ける。}
+\end{jibun}
+
+
+\begin{reidai}[1次おくれの温度センサー]
+ある温度センサーの伝達関数は、次の式です（$s$ の単位は1/秒）。
+\kixjline{$G(s)=\dfrac{2}{12s+1}$}
+（1）極を求めましょう。\par
+（2）時定数と、最後の変化の63.2\,\%・95\,\%に着く時刻を求めましょう。\par
+（3）入れたものを1上げたとき、最後に出てくるものはいくら変わる？\par
+\kangaekata \kixjbaai{分母が1次式}{9-9}{A}\par
+\kixjdan{1}\enspace 極は「分母$=0$ の $s$」。1次おくれ $\dfrac{K}{\tau s+1}$ の形と見くらべる。\par
+\kixjdan{2}\enspace 1次方程式 $12s+1=0$ を解く。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）$12s+1=0$ より $s=-\frac{1}{12}\approx-0.083$\par
+\kixja （2）$\tau=12$（s）。63.2\,\%は $\tau$、95\,\%は $3\tau=36$（s）\par
+\kixja （3）$\dfrac{K}{\tau s+1}$ と見くらべて $K=2$。ステップの答え $K(1-e^{-t/\tau})$ の最後は $K$\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）$-\frac{1}{12}$（約 $-0.083$）\par
+\kixja （2）\qty{12}{s}、\qty{12}{s}、\qty{36}{s}\par
+\kixja （3）2
+\end{reidai}
+
+\begin{jibun}
+伝達関数が $4s+1$ 分の5（$s$ の単位は1/秒）の計器について、極、時定数、63.2\,\%・95\,\%に着く時刻と、入れたものを1だけ上げたときの最後の変化を求めましょう。
+\bkjans{極 $-\frac14=-0.25$。時定数 \qty{4}{s}。63.2\,\%は \qty{4}{s}、95\,\%は \qty{12}{s}。最後の変化は5。}
+\end{jibun}
+
+\begin{reidai}[2次おくれの極と行きすぎ]
+伝達関数が次の式で表される装置があります（時間の単位は秒）。
+\kixjline{$G(s)=\dfrac{25}{s^2+6s+25}$}
+（1）極を求めましょう。\par
+（2）$\omega_{\mathrm n}$ と $\zeta$ を求めましょう。\par
+（3）ステップの答えの行きすぎ（\%）と、最初の山の時刻を求めましょう（$e^{-2.356}=0.0948$）。\par
+\kangaekata \kixjbaai{分母が2次式}{9-9}{C}\par
+\kixjdan{1}\enspace 極は「分母$=0$ の $s$」。2次おくれの形（⑤）と見くらべる。\par
+\kixjdan{2}\enspace 解の公式（3-10）。行きすぎと山の時刻は⑤の式。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）$s=\dfrac{-6\pm\sqrt{36-100}}{2}=\dfrac{-6\pm8j}{2}=-3\pm4j$\par
+\kixja （2）$\omega_{\mathrm n}^2=25$ より $\omega_{\mathrm n}=5$。$2\zeta\omega_{\mathrm n}=6$ より $\zeta=\frac{6}{10}=0.6$\par
+\kixja （3）$\sqrt{1-0.36}=0.8$、$\dfrac{\pi\times0.6}{0.8}=2.356$ なので、行きすぎは $e^{-2.356}=0.0948$\par
+\kixjb 最初の山は $\omega_{\mathrm d}=4$（極の虚部）より $\dfrac{\pi}{4}\approx0.785$（s）\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）$-3\pm4j$\par
+\kixja （2）$\omega_{\mathrm n}=\qty{5}{rad/s}$、$\zeta=0.6$\par
+\kixja （3）約9.5\,\%、約\qty{0.785}{s}
+\end{reidai}
+
+\begin{jibun}
+伝達関数が $s^2+4s+16$ 分の16 の装置の極、$\omega_{\mathrm n}$ と $\zeta$、ステップの答えの行きすぎと最初の山の時刻を求めましょう（$\sqrt{48}=6.928$、$e^{-1.814}=0.163$）。
+\bkjans{$s=\dfrac{-4\pm\sqrt{16-64}}{2}=-2\pm3.464j$。$\omega_{\mathrm n}=\qty{4}{rad/s}$、$\zeta=0.5$。行きすぎは $e^{-\pi\times0.5/0.866}=e^{-1.814}=0.163$ で約16.3\,\%。最初の山は $\pi\div3.464\approx\qty{0.907}{s}$。}
+\end{jibun}
+
+\begin{reidai}[零点と極]
+次の伝達関数の極と零点を求めて $s$ の平面に×と○で打ち、安定かどうかを答えましょう。
+\kixjline{$G(s)=\dfrac{s+4}{(s+1)(s-2)(s+5)}$}
+\kangaekata \kixjbaai{分母が $(s-p)$ だけでできている}{9-9}{B}\par
+\kixjdan{1}\enspace 極は「分母$=0$ の $s$」（×）、零点は「分子$=0$ の $s$」（○）。安定は「すべての極の実部が負」。\par
+\kixjdan{3}\enspace 分母は分かれているので、かっこごとに読む。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 極：$s+1=0$、$s-2=0$、$s+5=0$ より $-1$、$2$、$-5$\par
+\kixja 零点：$s+4=0$ より $-4$\par
+\kixja 極 $2$ の実部が正（右半分）。零点は安定に関係しない\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 極 $-1$、$2$、$-5$（×）、零点 $-4$（○）。極 $2$ が右半分にあるので不安定
+\end{reidai}
+
+\begin{jibun}
+次の $G(s)$ の極と零点を求め、安定かどうかを答えましょう。
+\kixjline{$G(s)=\dfrac{s+2}{(s+3)(s+1)(s+6)}$}
+\bkjans{極 $-3$、$-1$、$-6$、零点 $-2$。極がすべて左半分（実部が負）なので安定。}
+\end{jibun}
+
+\begin{reidai}[状態方程式から極を求める]
+3-10 の車Bを状態方程式で書くと、次のようになります。極を求め、安定かどうかと動き方を答えましょう。
+\[ \begin{pmatrix}\dot x\\\ddot x\end{pmatrix}=\begin{pmatrix}0&1\\-5&-2\end{pmatrix}\begin{pmatrix}x\\\dot x\end{pmatrix}+\begin{pmatrix}0\\1\end{pmatrix}u \]
+\kangaekata \kixjbaai{状態方程式で、作った分母が2次式}{9-9}{G,C}\par
+\kixjdan{1}\enspace 極は、状態の行列 $A$ の固有値（⑦）。$\det(sI-A)=0$ の解。\par
+\kixjnaosu{4}\enspace $sI-A$ を作り、行列式 $ad-bc$（7-4）を計算する。\par
+\kixjdan{2}\enspace できた2次方程式を、解の公式で解く。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 $sI-A$ の1行めは $(s,\ -1)$、2行めは $(5,\ s+2)$\par
+\kixja $\det(sI-A)=s(s+2)-(-1)\times5=s^2+2s+5$\par
+\kixja $s=\dfrac{-2\pm\sqrt{4-20}}{2}=\dfrac{-2\pm4j}{2}=-1\pm2j$\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 極 $-1\pm2j$。実部が負なので安定で、ゆれながら落ち着く（6-12 の車Bと同じ）
+\end{reidai}
+
+\begin{jibun}
+状態の行列が次の $A$ のとき（入力の項は例題5と同じ形）、極を求め、安定かどうかと動き方を答えましょう。
+\kixjline{$A=\begin{pmatrix}0&1\\-25&-6\end{pmatrix}$}
+\bkjans{$\det(sI-A)=s(s+6)+25=s^2+6s+25$。$s=\dfrac{-6\pm\sqrt{36-100}}{2}=-3\pm4j$。安定で、ゆれながら落ち着く。}
+\end{jibun}
+
+\begin{reidai}[モーターの比例制御]
+⑨のモーターを、比例の強さ $K_{\mathrm p}=0.5$ で速度制御します（はかってもどす箱は $G_2=1$）。
+\kixjline{モーターの伝達関数\quad $\dfrac{10}{0.5s+1}$}
+（1）全体の極と時定数を求めましょう。\par
+（2）目標の速さに対して、何\,\%のずれが残りますか。\par
+\kangaekata \kixjbaai{フィードバックで、作った分母が1次式}{9-9}{F,A}\par
+\kixjdan{1}\enspace つないだ全体の極。全体は $\dfrac{G_1}{1+G_1G_2}$（9-8）。\par
+\kixjdan{2}\enspace 通分して分母の式を作り、1次方程式を解く。ずれは最終値の定理（⑪）。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）$G_1=\dfrac{10\times0.5}{0.5s+1}=\dfrac{5}{0.5s+1}$\par
+\kixjb 全体 $=\dfrac{5}{0.5s+1+5}=\dfrac{5}{0.5s+6}$\par
+\kixjb $0.5s+6=0$ より $s=-12$。時定数は $\frac{1}{12}\approx0.083$（s）\par
+\kixja （2）極が左半分なので、最終値の定理が使える\par
+\kixjb 最後の速さは $\tfrac{5}{0+6}=\tfrac56$\par
+\kixjb ずれは $1-\dfrac56=\dfrac16\approx0.167$\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）極 $-12$、時定数 約\qty{0.083}{s}\par
+\kixja （2）約16.7\,\%
+\end{reidai}
+
+\begin{jibun}
+同じモーターを、$K_{\mathrm p}=2$ で速度制御します。全体の極と時定数、残るずれ（\%）を求めましょう。
+\bkjans{$G_1=\dfrac{20}{0.5s+1}$、全体 $=\dfrac{20}{0.5s+21}$。極 $-42$、時定数 約\qty{0.024}{s}。最後の速さ $\frac{20}{21}$、ずれ $\frac{1}{21}$ で約4.8\,\%。}
+\end{jibun}
+
+\begin{reidai}[エアコンの比例制御]
+⑪のエアコン（外35\,℃、設定26\,℃、$RC=60$ 分）を、比例の強さ $RK_{\mathrm p}=4$ で動かします。
+\kixjline{$60\,\dfrac{\dd T}{\dd t}=(35-T)-4(T-26)$}
+（1）極と時定数を求めましょう。\par
+（2）落ち着いたときの部屋の温度と、設定温度とのずれを求めましょう。\par
+\kangaekata \kixjbaai{フィードバックで、作った分母が1次式}{9-9}{F,A}\par
+\kixjdan{1}\enspace つないだ全体の極。$T$ の式の $T$ の係数をまとめると、分母の式になる。\par
+\kixjdan{2}\enspace $T$ をまとめて1次おくれの形にし、極を出す。落ち着いた値は $\dot T=0$ から。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）右辺 $=35+104-5T=139-5T$ なので、$60\dot T+5T=139$\par
+\kixjb 分母は $60s+5$（エアコンの箱と部屋の箱をフィードバックでつないだ全体の分母と同じ式）。$60s+5=0$ より $s=-\dfrac{1}{12}$（1/分）、時定数12分\par
+\kixja （2）極が左半分なので落ち着く。$\dot T=0$ より $5T=139$、$T=27.8$（℃）\par
+\kixjb ずれは $27.8-26=1.8$（℃）\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）極 $-\frac{1}{12}$（1/分）、時定数12分\par
+\kixja （2）27.8\,℃、ずれ1.8\,℃
+\end{reidai}
+
+\begin{jibun}
+同じエアコンを $RK_{\mathrm p}=19$ で動かすとき、極と時定数、落ち着いたときの部屋の温度とずれを求めましょう。
+\bkjans{$60\dot T=35+494-20T$ より $60\dot T+20T=529$。極 $-\frac13$（1/分）、時定数3分。$T=\frac{529}{20}=26.45$\,℃、ずれ0.45\,℃。}
+\end{jibun}
+
+\begin{reidai}[ロボットの腕の $\zeta$ を選ぶ]
+⑨のロボットの腕を、比例の強さ $K$ で角度制御します（$G_2=1$）。
+\kixjline{腕の伝達関数\quad $\dfrac{1}{s(s+2)}$}
+（1）$\zeta=0.5$ にするには、$K$ をいくらにすればよいでしょう。\par
+（2）そのときの極と、行きすぎ（\%）を求めましょう。\par
+\kangaekata \kixjbaai{フィードバックで、作った分母が2次式}{9-9}{F,C}\par
+\kixjdan{1}\enspace つないだ全体の極。全体の分母は $s(s+2)+K$。\par
+\kixjdan{2}\enspace 2次おくれの形 $s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2$ と係数を見くらべてから、解の公式。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）$s^2+2s+K$ と見くらべて、$\omega_{\mathrm n}^2=K$、$2\zeta\omega_{\mathrm n}=2$\par
+\kixjb $\zeta=0.5$ なら $\omega_{\mathrm n}=\dfrac{2}{2\times0.5}=2$、$K=\omega_{\mathrm n}^2=4$\par
+\kixja （2）$s^2+2s+4=0$ より $s=\dfrac{-2\pm\sqrt{4-16}}{2}=-1\pm\sqrt3\,j\approx-1\pm1.73j$\par
+\kixjb 表\ref{bk:9-9:tab-zeta}より、$\zeta=0.5$ の行きすぎは16.3\,\%\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）$K=4$\par
+\kixja （2）$-1\pm1.73j$、約16.3\,\%
+\end{reidai}
+
+\begin{jibun}
+まさつの大きい腕を、比例の強さ $K$ で角度制御します（$G_2=1$）。
+\kixjline{腕の伝達関数\quad $\dfrac{1}{s(s+4)}$}
+$\zeta=0.5$ にする $K$ と、そのときの極、行きすぎを求めましょう。
+\bkjans{$s^2+4s+K$。$2\zeta\omega_{\mathrm n}=4$、$\zeta=0.5$ より $\omega_{\mathrm n}=4$、$K=16$。極は $s=-2\pm\sqrt{4-16}=-2\pm3.46j$。行きすぎ約16.3\,\%。}
+\end{jibun}
+
+\begin{reidai}[3次の電気炉の安定]
+⑩の電気炉（全体の分母 $s^3+3s^2+3s+(1+K)$、時間の単位は分）について、\par
+（1）$K=4$ のとき、安定かどうかを、3次の判定で答えましょう。\par
+（2）安定になる $K$ の範囲を求めましょう（$K>0$ とします）。\par
+（3）安定の限界の $K$ での極と、ゆれの周期を求めましょう。\par
+\kangaekata \kixjbaai{フィードバックで、作った分母が3次式}{9-9}{F,D}\par
+\kixjdan{1}\enspace つないだ全体の極。分母は $(s+1)^3+K$。\par
+\kixjdan{3}\enspace 安定かどうかは解かずに、3次の判定（係数がすべて正で $a_2a_1>a_0$）。\par
+\kixjdan{2}\enspace 限界の極は、$(s+1)^3=-K$ の3乗根（⑩）。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 （1）$a_2=3$、$a_1=3$、$a_0=5$。すべて正で $3\times3=9>5$\par
+\kixja （2）$3\times3>1+K$ より $K<8$\par
+\kixja （3）$K=8$：$(s+1)^3=-8$ より $s+1=-2$、$1\pm\sqrt3\,j$\par
+\kixjb 極は $-3$、$\pm\sqrt3\,j\approx\pm1.73j$。周期は $\dfrac{2\pi}{\sqrt3}\approx3.63$（分）\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 （1）安定\par
+\kixja （2）$0<K<8$\par
+\kixja （3）$-3$、$\pm1.73j$、周期 約3.63分
+\end{reidai}
+
+\begin{jibun}
+時定数0.5分の1次おくれ（$0.5s+1$ 分の1）を3つつないだ電気炉を、例題9と同じ比例の強さ $K$ で動かします。$0.5s+1$ 分の1 は $s+2$ 分の2 なので、3つで $(s+2)^3$ 分の8 になり、全体の分母は次の式になります。
+\kixjline{$(s+2)^3+8K=s^3+6s^2+12s+(8+8K)$}
+$K=4$ で安定かどうか、安定になる $K$ の範囲、限界の $K$ での極とゆれの周期を求めましょう。
+\bkjans{$K=4$：$6\times12=72>8+32=40$ で安定。$72>8+8K$ より $0<K<8$。$K=8$：$(s+2)^3=-64$ より $s+2=-4$、$2\pm2\sqrt3\,j$。極は $-6$、$\pm3.46j$。周期 $2\pi\div3.46\approx1.81$ 分。}
+\end{jibun}
+
+\begin{reidai}[4次の式を Python で]
+伝達関数の分母が $s^4+2.6s^3+4.8s^2+11.2s+8$ の装置があります。分母の係数はすべて正です。Python で極を求めたら、次のようになりました。安定かどうかを答えましょう。
+\begin{bkcode}[Python]
+import numpy as np
+print(np.roots([1, 2.6, 4.8, 11.2, 8]))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[ 0.2+1.98997487j  0.2-1.98997487j
+ -2. +0.j         -1. +0.j        ]
+\end{bkcodeout}
+\kangaekata \kixjbaai{分母が4次式}{9-9}{E}\par
+\kixjdan{1}\enspace 安定は「すべての極の実部が負」。\par
+\kixjdan{3}\enspace 4次は手で解かない。Python の答えの、それぞれの実部（\texttt{j} の前の数）を見る。\par
+\shiki\kixjs\hangindent=2.6\zw\hangafter=1 極は $0.2\pm1.99j$、$-2$、$-1$\par
+\kixja $0.2\pm1.99j$ の実部 $0.2$ が正（右半分）\par
+\kotae\kixjs\hangindent=2.6\zw\hangafter=1 不安定（係数がすべて正でも、ゆれがふくらむ）
+\end{reidai}
+
+\begin{jibun}
+分母が $s^4+5s^3+11s^2+19s+12$ の装置で、\texttt{np.roots([1, 5, 11, 19, 12])} を実行すると、次のように表示されました。安定かどうかを答えましょう。
+\begin{bkcodeout}[実行結果]
+[-3. +0.j         -0.5+1.93649167j
+ -0.5-1.93649167j -1. +0.j        ]
+\end{bkcodeout}
+\bkjans{極は $-3$、$-0.5\pm1.94j$、$-1$。すべての実部が負なので安定。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 「極」を $G(s)$ の値だと思う}
+\bkng{$G(s)=2/(12s+1)$ の極は、$s=0$ を入れて $G(0)=2$}
+\bkok{極は、分母 $12s+1=0$ を解いた $s=-\tfrac{1}{12}$}
+\kixjline{$\kixjN{G(s)\text{ の極}}\neq G(0)$\qquad $\kixjN{G(s)\text{ の極}}=\kixjS{\text{分母}=0\ \text{の解}}$}
+「極」は名前です。$G$ の値ではなく、「$G$ がかぎりなく大きくなる $s$」のことで、分母$=0$ を解いて求めます。$G(0)=2$ は、ゆっくり変えたときの倍率（最後の値）です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 極と零点を取りちがえる}
+\bkng{$G(s)=(s-3)/\{(s+1)(s+2)\}$ は、$3$ が右半分にあるので不安定}
+\bkok{$3$ は零点（分子$=0$）。極 $-1$、$-2$ はどちらも左半分なので安定}
+安定かどうかを決めるのは、分母の極だけです。分子の零点は、右半分にあっても、落ち着くかどうかには関係しません。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixjEH0}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 虚部の大きさで決める}
+\raggedright\bkng{極 $-1\pm10j$ は虚部が大きいので、こわれる}
+\bkok{実部 $-1$ が負なので安定（速くゆれながら落ち着く）}
+虚部はゆれの速さです。大きくなるかどうかは、実部だけで決まります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 実部が0の極を「安定」とする}
+\raggedright\bkng{極 $\pm4j$ は大きくならないので安定}
+\bkok{いつまでもゆれ続けて落ち着かないので、安定とはいわない}
+たての軸の上の極が重なると、ゆれが大きくなる（6-13 の共振）こともあります。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixjEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 左半分なら行きすぎない}
+\raggedright\bkng{極 $-1\pm3j$ は左半分なので、行きすぎない}
+\bkok{$\zeta\approx0.32$ で、約35\,\%行きすぎる}
+左半分は「落ち着く」ことだけを表します。行きすぎは極の角（$\zeta$）で決まります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 係数が全部正なら安定}
+\raggedright\bkng{例題10の4次の分母は、係数が全部正なので安定}
+\bkok{極に $0.2\pm1.99j$ があり不安定}
+「係数が全部正」で決まるのは2次まで。3次は $a_2a_1>a_0$ も要り、4次以上は Python で。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixjEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑦ 比例を強くすればよくなる}
+\raggedright\bkng{電気炉の $K$ を10にすれば、8より速くて正確}
+\bkok{$K>8$ では極が右半分に出て、ゆれがふくらむ}
+おくれが3つ以上重なると、強くしすぎたとたん不安定になります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑧ 先に最終値の定理を使う}
+\raggedright\bkng{電気炉で $K=10$ なら、最後の値は $\frac{10}{1+10}$}
+\bkok{先に極で安定を確かめる。$K=10$ は不安定で、落ち着かない}
+最終値の定理は、落ち着くときだけ使えます（9-6）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixjbox{工場の計器と1次おくれ}
+\noindent\begin{minipage}[c]{0.7\linewidth}
+\raggedright
+工場のタンクや管の温度は、金属の保護管に入れた熱電対ではかります。保護管が太いほど丈夫ですが、熱をためやすく、時定数 $\tau$ が大きくなります（極が原点に近づく）。温度が急に変わる所では、細い保護管で $\tau$ の小さい計器を選び、極を左へ置きます。計器のおくれが大きいと、それを使って動かす制御全体の極まで右へ寄り、ゆれやすくなるからです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!15] (0,0) rectangle (34,14);
+  \draw[bkInk, line width=0.9pt] (0,14) -- (34,14) (0,0) -- (34,0);
+  \draw[bkInk, line width=0.8pt, fill=bkGray!30, rounded corners=1.5mm] (15,4) rectangle (19,24);
+  \draw[bkRed, line width=1pt] (17,6) -- (17,24);
+  \fill[bkRed] (17,6) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=west] at (20,20) {保護管};
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,-1) {管の中の液体};
+\end{tikzpicture}
+\end{minipage}\par\vspace{4pt}
+
+\kixjbox{ロボットの腕・エレベーター：極の角を選ぶ}
+ロボットの腕は、行きすぎて物にぶつからないよう、$\zeta=0.7$ くらいの角に極を置いて設計することが多い、とされています。エレベーターでは、止まる位置で行きすぎると乗っている人が上下にゆすられるので、行きすぎがほとんどないように極を選びます。どちらも、モーターの比例の強さ（⑨の $K$）などで極を動かして、ちょうどよい場所に置きます。
+\par\vspace{4pt}
+\kixjbox{車のサスペンション：乗り心地とゆれ}
+車の上下のゆれは2次おくれで、乗用車ではふつう $\omega_{\mathrm n}$ が6〜9\,rad/s（約1〜1.5\,Hz。6-12）です。⑥で見たように、ダンパーを強くして $\zeta$ を大きくしても、路面の段差は零点を通して車体に伝わります。そこで、乗り心地と、ゆれのおさまりの速さのかね合いで $\zeta$ を選びます。走る道や速さに合わせて、ダンパーの強さをコンピュータで変える車もあります。
+\end{butsuri}
+
+
+\begin{butsuri}
+\kixjbox{ハウリング：右半分に出た極}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+マイクの音をアンプで大きくしてスピーカーから出すと、その音がまたマイクに入ります。これはフィードバックです。音量（1周の倍率）を上げすぎると、ある高さの音で、全体の極が右半分に出て、「キーン」という音がどんどん大きくなります。これがハウリングです。音量を下げるか、マイクをスピーカーから遠ざける（1周の倍率を小さくする）と、極が左半分にもどり、止まります。⑩の電気炉で $K$ を大きくしすぎたのと同じしくみです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=12mm, font=\sffamily\footnotesize] (m) at (0,14) {マイク};
+  \node[bk node, minimum width=12mm, font=\sffamily\footnotesize] (a) at (26,14) {アンプ};
+  \node[bk node, minimum width=14mm, font=\sffamily\footnotesize] (sp) at (26,0) {スピーカー};
+  \draw[bk link] (m) -- (a);
+  \draw[bk link] (a) -- (sp);
+  \draw[bk link] (sp.west) -| (m.south);
+  \node[font=\sffamily\footnotesize, anchor=north] at (6,-1) {空気};
+\end{tikzpicture}
+\end{minipage}\par\vspace{4pt}
+
+\kixjbox{原子炉の「臨界」}
+原子炉の中の中性子の数は、ふえも減りもしない状態にたもって運転します。これを臨界といいます。中性子の数の変化を表す式の極で言えば、極がちょうど0にある状態です。極が少しでも右へ出ると数がふえ続け、左へ入ると減っていくので、制御棒などで極の場所をたえず調整しています（物理 原-15）。
+\end{butsuri}
+
+
+\begin{column}{調速機と、安定の判定のはじまり}
+ワットが蒸気機関の回る速さを一定に保つために使った調速機（1788年ころ）は、回る速さが上がると、遠心力で2つのおもりが開き、蒸気の弁をしぼるしくみでした（フィードバック）。ところが、機械を改良すると、速さがゆれ続けたり、ゆれがふくらんだりする「ハンチング」が起きることがありました。
+
+マクスウェルは1868年の論文「調速機について」で、このしくみを微分方程式で書き、特性方程式の解の実部が負なら安定だと考えて、3次までの式の安定の条件を示しました。そのあとラウスが、何次の式でも係数だけから判定する方法をまとめ（1877年）、フルビッツも別の形で同じ判定を示しました（1895年）。この章の3次の判定は、その出発点にあたります。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 次の伝達関数の極を求め、ポンとたたいたときの動きが「ゆれずに落ち着く」「ゆれながら落ち着く」「ゆれ続ける」「どんどん大きくなる」のどれかを答えましょう\mbox{（\bkreidairef{1}）}。
+\kixjline{（1）$\dfrac{1}{(s+3)(s+5)}$\quad （2）$\dfrac{1}{(s+2)^2+5^2}$\quad （3）$\dfrac{1}{(s-3)(s+1)}$\quad （4）$\dfrac{1}{s^2+3^2}$}
+\bkpans{（1）\nobreak $-3$、$-5$、ゆれずに落ち着く。（2）\nobreak $-2\pm5j$、ゆれながら落ち着く。（3）\nobreak $3$、$-1$、どんどん大きくなる。（4）\nobreak $\pm3j$、ゆれ続ける。}
+
+\bkproblem 伝達関数が次の式（$s$ の単位は1/秒）の計器について、極、時定数、95\,\%に着く時刻、入れたものを1だけ上げたときの最後の変化を求めましょう\mbox{（\bkreidairef{2}）}。
+\par\nobreak\kixjline{$G(s)=\dfrac{3}{8s+1}$}
+\bkpans{極 $-\frac18=-0.125$。時定数 \qty{8}{s}。95\,\%は \qty{24}{s}。最後の変化は3。}
+
+\bkproblem 次の $G(s)$ の極、$\omega_{\mathrm n}$ と $\zeta$、ステップの答えの行きすぎと最初の山の時刻を求めましょう（$\sqrt{108}=10.39$、$e^{-1.814}=0.163$）\mbox{（\bkreidairef{3}）}。
+\par\nobreak\kixjline{$G(s)=\dfrac{36}{s^2+6s+36}$}
+\bkpans{$s=\dfrac{-6\pm\sqrt{36-144}}{2}=-3\pm5.20j$。$\omega_{\mathrm n}=\qty{6}{rad/s}$、$\zeta=0.5$。行きすぎ約16.3\,\%。最初の山は $\pi\div5.20\approx\qty{0.605}{s}$。}
+
+\bkproblem 次の $G(s)$ の極と零点を求め、安定かどうかを答えましょう\mbox{（\bkreidairef{4}）}。
+\par\nobreak\kixjline{$G(s)=\dfrac{s+1}{(s+2)(s-1)(s+3)}$}
+\bkpans{極 $-2$、$1$、$-3$、零点 $-1$。極 $1$ が右半分にあるので不安定。}
+
+\bkproblem 状態の行列が次の $A$ のとき、極を求め、安定かどうかと動き方を答えましょう\mbox{（\bkreidairef{5}）}。
+\par\nobreak\kixjline{$A=\begin{pmatrix}0&1\\-8&-4\end{pmatrix}$}
+\bkpans{$\det(sI-A)=s(s+4)+8=s^2+4s+8$。$s=\dfrac{-4\pm\sqrt{16-32}}{2}=-2\pm2j$。安定で、ゆれながら落ち着く。}
+
+\bkproblem ⑨のモーター（伝達関数は $0.5s+1$ 分の10）を、$K_{\mathrm p}=0.4$ で速度制御します。全体の極と時定数、残るずれ（\%）を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{全体 $=\dfrac{4}{0.5s+5}$。極 $-10$、時定数 \qty{0.1}{s}。最後の速さ $\frac45$、ずれ20\,\%。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem ⑪のエアコンを $RK_{\mathrm p}=14$ で動かすとき、極と時定数、落ち着いたときの部屋の温度とずれを求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$60\dot T=35+364-15T$ より $60\dot T+15T=399$。極 $-\frac14$（1/分）、時定数4分。$T=\frac{399}{15}=26.6$\,℃、ずれ0.6\,℃。}
+
+\bkproblem 伝達関数が $s(s+6)$ 分の1 のロボットの腕を、比例の強さ $K$ で角度制御します。$\zeta=0.5$ にする $K$ と、そのときの極、行きすぎを求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$s^2+6s+K$。$2\zeta\omega_{\mathrm n}=6$、$\zeta=0.5$ より $\omega_{\mathrm n}=6$、$K=36$。極 $-3\pm5.20j$。行きすぎ約16.3\,\%。}
+
+\bkproblem 全体の分母が $(s+3)^3+K=s^3+9s^2+27s+(27+K)$ の電気炉（時間の単位は分）について、安定になる $K$ の範囲（$K>0$）と、限界の $K$ での極、ゆれの周期を求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$9\times27=243>27+K$ より $0<K<216$。$K=216$：$(s+3)^3=-216$ より $s+3=-6$、$3\pm3\sqrt3\,j$。極 $-9$、$\pm5.20j$。周期 $\dfrac{2\pi}{5.20}\approx1.21$ 分。}
+
+\bkproblem 分母が $s^4+3.2s^3+11.6s^2+27.4s+18$ の装置で \texttt{np.roots([1, 3.2, 11.6, 27.4, 18])} を実行すると、次のように表示されました。安定かどうかを答えましょう\mbox{（\bkreidairef{10}）}。
+\begin{bkcodeout}[実行結果]
+[-0.1+2.99833287j -0.1-2.99833287j
+ -2. +0.j         -1. +0.j        ]
+\end{bkcodeout}
+\bkpans{極は $-0.1\pm3.00j$、$-2$、$-1$。すべての実部が負なので安定（ただし $-0.1\pm3.00j$ はたての軸に近く、ゆれはなかなか消えない）。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 伝達関数の分母が0になる $s$（極）を×で打ち、その場所から動き方を当てられる。\bkfurref{bk:9-9:kyoku}
+\item 1次おくれ・2次おくれの極から、時定数、行きすぎ、最初の山の時刻を求められる。\bkfurref{bk:9-9:niji}
+\item すべての極の実部が負かどうかで安定を判定し、フィードバックで動く極、3次の判定、残るずれを計算できる。\bkfurref{bk:9-9:antei}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{分母を0にした $s$ を見るだけで、落ち着くか、ゆれるか、こわれるかがわかるんだね。次は、たくさんの式を行列でまとめる状態方程式。たおれる棒を立たせてみよう。}

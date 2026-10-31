@@ -1,0 +1,662 @@
+%% 第13回編集委員会（物理第1巻）  p1-16.tex  力-16　読みもの　コンピュータで解く力学（★4〜5・3段）　組 P1-4
+%% 計画書 tools/phys1-plan.md の B「力-16」。読みもの（例題は「見本の計算」。じぶんでとこう・章末問題はなし）。
+%% 数値はすべて Python で確かめた（scratchpad/phys1/力-16/calc.py・pipe.py・truss_k.py・crash.py）。g＝9.8 m/s²。
+%% ほかの章と同じ数値：ばね k1＝20・k2＝30 N/m と 0.30 kg（力-8 例題9）、鋼とアルミの段つき棒 20 kN（力-8 例題10）、
+%%   正三角形のトラス（1辺 2 m、C に 10 kN。力-5 ⑨）、衝突 時速55 km・つぶれ 0.6 m（力-3 工学ではこう使う）、
+%%   片持ちはり（力-10 例題6）、ハーゲン・ポアズイユ（力-14 ⑧）。鋼 E＝205 GPa、密度 7850 kg/m³（巻末の表）。
+%% 出典
+%%   ・Sleipner A（1991年8月23日、ノルウェーのガンズフィヨルド。有限要素解析がせん断応力を約47 %小さく見積もった
+%%     ことと、鉄筋の定着の不足が原因。損害 約7億ドル）：SINTEF の報告の要約（D. N. Arnold のまとめ）
+%%     https://www-users.cse.umn.edu/~arnold/disasters/sleipner.html
+%%     作り直した土台は1993年夏に完成、1993年8月24日に生産開始：Equinor の産業史の記事 https://equinor.industriminne.no/en/sleipner-a-gbs-lost-and-replaced/
+%%   ・自動車の衝突解析のモデルの要素数：ジョージ・メイソン大学 CCSA の 2012年型 Toyota Camry 詳細有限要素モデル
+%%     （米国連邦道路庁の委託。Version 5：要素 2,257,280、節点 2,255,361）https://www.ccsa.gmu.edu/models/2012-toyota-camry
+%%   ・飛行機の翼まわりの乱流の直接計算（DNS）の見積もり：P. R. Spalart, "Strategies for turbulence modelling and
+%%     simulations", Int. J. Heat Fluid Flow 21, 252–263 (2000)（翼の DNS は 2080 年ごろと見積もった）
+\makeatletter
+% ばね（たて向き）  \pxqspring{(x,y)}{長さ(mm)}{色}   上のはしを (x,y) に置き、下へのびる
+\newcommand\pxqspring[3]{\begin{scope}[shift={#1}]
+  \draw[#3, line width=0.9pt] (0,0) -- (0,-1.5)
+    \foreach \i in {1,...,6} {-- ++(2.2,{-(#2-3)/12}) -- ++(-4.4,{-(#2-3)/12}) -- ++(2.2,0)} -- (0,-#2);
+\end{scope}}
+% 天井  \pxqceil{(x,y)}{はば}
+\newcommand\pxqceil[2]{\begin{scope}[shift={#1}]
+  \fill[bkGray!40] (-#2/2,0) rectangle (#2/2,2.2);
+  \draw[bkInk, line width=0.8pt] (-#2/2,0) -- (#2/2,0);
+\end{scope}}
+% 節点の丸  \pxqnode{(x,y)}{名前}
+\newcommand\pxqnode[2]{\filldraw[fill=white, draw=bkInk, line width=0.7pt] #1 circle (1.6);
+  \node[font=\sffamily\scriptsize] at #1 {#2};}
+\makeatother
+
+\phchapter[読みもの]{16}{コンピュータで解く力学}{車をこわさずに、ぶつかったときのようすを調べるには？}{\bklevelrange{4}{5}}{コンピュータで解く力学}
+\bkmichishirube{6-2,7-5,8-13,力-5,力-8,力-14}{波-3,熱-11,電-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 形を小さな部分（要素）に分け、ばねをつないだものとして、行列の式 $K\vec u=\vec F$ で解く考え方がわかる。
+\item \bklevel{4}\enspace 時間を細かく刻んで、衝突のような速い動きを計算する考え方と、刻みの大きさの決め方がわかる。
+\item \bklevel{5}\enspace 要素を細かくしたり、手計算とくらべたりして、コンピュータの答えを確かめられる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phkx{$F=kx$（ばねののびは力に比例）}{中学理科・高校物理基礎}{力-8 で導く}
+\phkx{$\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$（ばねの直列）}{高校物理}{力-8 で導く}
+\phkx{$\Delta p=\dfrac{8\mu LQ}{\pi R^4}$（管の層流）}{大学の入口}{力-14 で導く}
+}
+
+\noindent これまでの章で学んだ式が、この章でどのように使われるかを、先に見ておきましょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{src/.style={bk node, text width=27mm, align=center, minimum height=12mm, font=\sffamily\footnotesize}}
+  \node[src] (a) at (0,24) {ばね $F=kx$\\棒は $k=\dfrac{EA}{L}$（力-8）};
+  \node[src] (b) at (34,24) {節点のつり合い\\（力-5）};
+  \node[src] (c) at (68,24) {運動方程式\\$m\vec a=\vec F$（力-2）};
+  \node[src] (d) at (102,24) {流れのつり合い\\（力-14）};
+  \node[bk node, draw=bkTheme, line width=1pt, text width=96mm, align=center, minimum height=11mm, font=\sffamily\small] (e) at (51,0) {小さく分けて、連立方程式 $K\vec u=\vec F$ にし、時間を刻んで、コンピュータで解く（力-16）};
+  \foreach \n in {a,b,c,d} {\draw[bk link] (\n.south) -- (\n.south |- e.north);}
+\end{tikzpicture}
+\bkfigcaption{これまでの章の式を、たくさん組み合わせて解くのが、この章の方法。}
+\end{bkfigure}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.54\linewidth}
+新しい車は、売り出す前に、本当にかべにぶつけて、乗る人を守れるかを確かめます（力-3）。でも、試作の車は1台作るのに何千万円もかかり、ぶつけたら、もう使えません。\par\vspace{3pt}
+形を少し変えるたびに、車を1台ずつこわしていたら、いつまでたっても設計が終わりません。車をこわさずに、ぶつかったときのようすを調べる方法はないのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \fill[bkGray!35] (48,0) rectangle (54,30);
+  \draw[bkInk, line width=0.8pt] (48,0) -- (48,30);
+  \draw[bkInk, line width=0.8pt] (-4,0) -- (54,0);
+  % 車の形を三角形の網（メッシュ）で
+  \coordinate (a) at (4,4); \coordinate (b) at (46,4); \coordinate (c) at (46,13); \coordinate (d) at (36,14);
+  \coordinate (e) at (30,22); \coordinate (f) at (14,22); \coordinate (g) at (8,14); \coordinate (h) at (4,13);
+  \filldraw[fill=bkBlue!15, draw=bkBlue!80!black, line width=0.8pt] (a) -- (b) -- (c) -- (d) -- (e) -- (f) -- (g) -- (h) -- cycle;
+  \foreach \x in {11,18,25,32,39} {\draw[bkBlue!60, line width=0.35pt] (\x,4) -- (\x,13.5);}
+  \draw[bkBlue!60, line width=0.35pt] (4,8.5) -- (46,8.5) (8,14) -- (36,14);
+  \foreach \x in {4,11,18,25,32,39} {\draw[bkBlue!60, line width=0.35pt] (\x,4) -- ({\x+7},8.5) (\x,8.5) -- ({\x+7},13.5);}
+  \draw[bkBlue!60, line width=0.35pt] (14,14) -- (14,22) (22,14) -- (22,22) (30,14) -- (30,22) (8,14) -- (14,22) (14,14) -- (22,22) (22,14) -- (30,22) (30,14) -- (36,14);
+  \fill[bkInk] (12,4) circle (3.2) (38,4) circle (3.2);
+  \fill[white] (12,4) circle (1.2) (38,4) circle (1.2);
+  \draw[bk arrow, bkRed, line width=1.1pt] (-2,26) -- (12,26);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south] at (5,26.6) {時速\qty{55}{km}};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この章は読みものです。問題はありません。これまでの章で学んだ「ばね」「つり合い」「運動方程式」「流れのつり合い」が、コンピュータの中でどのように組み合わされて、車・橋・飛行機の設計に使われているかを見ていきます。
+
+\begin{yattemiyou}[スポンジに方眼をかいて押してみよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 台所用のスポンジの横の面に、油性ペンで\qty{5}{mm}ごとの方眼をかく。
+\item スポンジを机に置き、上の面のまん中を、えんぴつのおしりでゆっくり押す。
+\item 方眼の1つ1つのマスが、どう形を変えるかを観察しよう。押した所の真下のマスと、はなれた所のマスをくらべよう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 押した所の真下のマスは大きくつぶれ、はなれるほどマスの変形は小さくなります。スポンジ全体の形の変わり方はこみ入っていますが、小さなマス1つ1つは、「少し縮む」「少しずれる」のような簡単な変形をしています。この章の考え方は、この「小さく分けると、1つ1つは簡単になる」です。
+
+\begin{omoidasou}
+\bkrecall{力-8}{棒は、ばね定数 $k=\dfrac{EA}{L}$ のばね。ばねの直列は $\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$。}
+\bkrecall{力-5}{トラスの節点ごとのつり合いの式を、行列 $A\vec x=\vec b$ にまとめて解いた（⑨）。つり合いの式だけでは解けない構造が「不静定」（⑩）。}
+\bkrecall{7-5}{連立方程式 $A\vec x=\vec b$ は、逆行列で $\vec x=A^{-1}\vec b$。表計算の \texttt{MINVERSE}・\texttt{MMULT}。}
+\bkrecall{6-2}{オイラー法：少しあとの値＝いまの値＋（変わる速さ）×短い時間 $\Delta t$。}
+\bkrecall{8-13}{棒を小さな区間に分け、となりとの差で、熱の広がりを表計算で計算する（差分）。}
+\bkrecall{力-3}{時速\qty{55}{km}（約\qty{15.3}{m/s}）の車が、前の部分が\qty{0.6}{m}つぶれて止まると、一定の減速なら約\qty{195}{m/s^2}。}
+\end{omoidasou}
+
+%% ================================================================
+\Needspace{16\baselineskip}
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{形を小さな部分に分ける}{3}
+
+\bksubsection{1}{小さな部分に分けると、1つ1つは簡単になる}
+\leavevmode\label{ph:力-16:sec1}これまでの章では、形の簡単な物を考えてきました。まっすぐな棒（力-8）、細長いはり（力-10）、まっすぐな円い管（力-14）です。だから、式を立てて、手で解くことができました。
+
+本物の車のボディは、曲がった鋼の板をたくさん組み合わせた、こみ入った形をしています。全体の式を手で立てて解くことは、とてもできません。そこで、やってみようのスポンジと同じように考えます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 形を、小さな三角形や四角形（\textbf{要素}）に分ける。要素の角の点を\textbf{節点}といいます。\bkidx{ようそ}{要素}
+\item 1つの要素は、ばねのように「節点が動くと、力が出る」と考える。要素が小さければ、ばねの式で十分よく表せます。
+\item すべての節点で、力のつり合い（または運動方程式）を書く。式は何万、何百万とできますが、どれも簡単な1次式です。
+\item その連立方程式を、コンピュータで解く（7-5）。
+\end{enumerate}
+この方法を\textbf{有限要素法}といいます。\bkidx{ゆうげんようそほう}{有限要素法}「有限」は「数が限られている（数えられる）」という意味です。分けた網の目のことを、\textbf{メッシュ}といいます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 棒→ばねの列
+  \fill[bkBlue!20] (0,24) rectangle (34,30); \draw[bkBlue!80!black, line width=0.7pt] (0,24) rectangle (34,30);
+  \draw[bk arrow, bkGray, line width=0.9pt] (17,21.5) -- (17,16.5);
+  \foreach \i in {0,1,2,3} {\draw[bkBlue!80!black, line width=0.8pt] ({\i*8.5+0.8},9) -- ({\i*8.5+1.6},11) -- ({\i*8.5+3},7) -- ({\i*8.5+4.4},11) -- ({\i*8.5+5.8},7) -- ({\i*8.5+7.2},11) -- ({\i*8.5+7.7},9);}
+  \foreach \i in {0,1,2,3,4} {\filldraw[fill=white, draw=bkInk, line width=0.6pt] ({\i*8.5},9) circle (1.1);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,4.5) {棒 → ばねの列};
+  % 板→三角形の網
+  \begin{scope}[shift={(46,0)}]
+  \fill[bkOrange!20] (0,22) rectangle (34,32); \draw[bkOrange!80!black, line width=0.7pt] (0,22) rectangle (34,32);
+  \draw[bk arrow, bkGray, line width=0.9pt] (17,19.5) -- (17,16.5);
+  \fill[bkOrange!20] (0,4) rectangle (34,14);
+  \foreach \x in {0,8.5,17,25.5} {\draw[bkOrange!80!black, line width=0.5pt] (\x,4) rectangle ({\x+8.5},14); \draw[bkOrange!80!black, line width=0.5pt] (\x,4) -- ({\x+8.5},14);}
+  \draw[bkOrange!80!black, line width=0.5pt] (0,9) -- (34,9);
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,1.8) {板 → 三角形の網（メッシュ）};
+  \end{scope}
+  % 流れ→格子
+  \begin{scope}[shift={(92,0)}]
+  \fill[bkGreen!15] (0,22) rectangle (34,32); \draw[bkGreen!80!black, line width=0.7pt] (0,22) -- (34,22) (0,32) -- (34,32);
+  \foreach \yy in {24,27,30} {\draw[bk arrow, bkGreen!80!black, line width=0.6pt] (3,\yy) -- (12,\yy);}
+  \draw[bk arrow, bkGray, line width=0.9pt] (17,19.5) -- (17,16.5);
+  \draw[bkGreen!80!black, line width=0.5pt, step=3.4] (0,4) grid (34,13.9);
+  \draw[bkGreen!80!black, line width=0.7pt] (0,4) -- (34,4) (0,14) -- (34,14);
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,1.8) {流れ → 格子};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{形を小さな部分に分ける。棒はばねの列、板は三角形の網、流れは四角い格子に分けることが多い。}
+\end{bkfigure}
+
+\phboxhead{時間も、小さく分ける}
+ぶつかる車のように、時間とともに速く変わる動きでは、時間も小さく分けます。「いまの位置と速度から、少しあとの位置と速度を出す」計算を、何万回もくり返します。これは、力-2 で落ちる物やスカイダイバーを計算したオイラー法（6-2）と同じ考え方です。
+
+\begin{phmodel}[コンピュータで解くときのモデル]
+\phignore{要素の中の、こまかい変形のようす（要素の中は、簡単な形で変形するとみなす）。}
+\phassume{要素どうしは、節点だけでつながっている。それぞれの要素は、ばねの式（力-8）で表せる。}
+\phlimit{要素が大きすぎて、要素の中で変形が大きく変わるとき。材料がこわれて、つながり方そのものが変わるとき。}
+\end{phmodel}
+
+%% ================================================================
+\phstage{te}{表計算で、ばねの行列と衝突を解く}{3}
+
+\bksubsection{2}{ばねをつないだものを、行列で解く}
+\leavevmode\label{ph:力-16:sec2}天井から、ばね定数\qty{100}{N/m}のばねを3本たてにつなぎ、つなぎ目とはしの3つの節点①②③に、\qty{0.10}{kg}の球を1つずつつるします。球1つの重さは $0.10\times9.8=\qty{0.98}{N}$ です。それぞれの節点は、どれだけ下がるでしょう。
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxqceil{(0,0)}{18}
+  \pxqspring{(0,0)}{9}{bkBlue!80!black}
+  \pxqspring{(0,-12)}{9}{bkBlue!80!black}
+  \pxqspring{(0,-24)}{9}{bkBlue!80!black}
+  \foreach \y/\n in {-10.5/1, -22.5/2, -34.5/3} {\pxqnode{(0,\y)}{\n}
+    \draw[bkInk, line width=0.5pt] (1.6,\y) -- (6,\y); \fill[bkOrange] (7.6,\y) circle (1.6);}
+  \node[font=\sffamily\scriptsize, anchor=west] at (2.6,-4.8) {$k$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (2.6,-16.8) {$k$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (2.6,-28.8) {$k$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (9.6,-34.5) {$W$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.68\linewidth}
+節点①②③が下がる量を $u_1$、$u_2$、$u_3$ とします。ばねの力は「ばね定数×のび」で、のびは「下のはしの下がり−上のはしの下がり」です。\par\vspace{3pt}
+節点ごとに、下向きの力を正としてつり合いを書きます。節点①には、上のばねが $k u_1$ で上へ、まん中のばねが $k(u_2-u_1)$ で下へ引き、球の重さ $W$ がかかります。
+\end{minipage}
+\[\text{節点①}:\ -ku_1+k(u_2-u_1)+W=0\]
+\[\text{節点②}:\ -k(u_2-u_1)+k(u_3-u_2)+W=0\]
+\[\text{節点③}:\ -k(u_3-u_2)+W=0\]
+$u$ でまとめて行列で書くと（7-2）、
+\[\begin{pmatrix}2k&-k&0\\-k&2k&-k\\0&-k&k\end{pmatrix}\begin{pmatrix}u_1\\u_2\\u_3\end{pmatrix}=\begin{pmatrix}W\\W\\W\end{pmatrix}\]
+左の行列を\textbf{剛性行列}といい、$K$ と書きます。\bkidx{ごうせいぎょうれつ}{剛性行列}「剛性」は、変形しにくさのことです。式全体は $K\vec u=\vec F$ の形です。$F=kx$ の $k$ が行列 $K$ に、のび $x$ が節点の変位を並べたベクトル $\vec u$ に、力 $F$ が節点の力を並べたベクトル $\vec F$ になりました。
+\begin{bkcenter}
+\bksheet{5}{15}{%
+1 & $K$ & & & $\vec F$（N） & $\vec u$（m） \\
+2 & 200 & $-100$ & 0 & 0.98 & 0.0294 \\
+3 & $-100$ & 200 & $-100$ & 0.98 & 0.0490 \\
+4 & 0 & $-100$ & 100 & 0.98 & 0.0588 \\}
+\bktabcaption{E列のたて3マスをえらび、\texttt{=MMULT(MINVERSE(A2:C4),D2:D4)} と入れる（力-5 ⑨と同じ）。}
+\end{bkcenter}
+\noindent 答えは、$u_1=\qty{2.94}{cm}$、$u_2=\qty{4.90}{cm}$、$u_3=\qty{5.88}{cm}$ です。手でも確かめます。いちばん上のばねは球3つ分の\qty{2.94}{N}を支えるので、のびは $2.94\div100=\qty{0.0294}{m}$。まん中のばねは球2つ分で\qty{0.0196}{m}、下のばねは1つ分で\qty{0.0098}{m}。たしていくと、同じ答えになりました。
+\begin{phyomi}[$K\vec u=\vec F$]
+剛性行列 $K$ に、節点の変位を並べたベクトル $\vec u$ をかけると、節点に加わる力を並べたベクトル $\vec F$ になる。ばねの式 $F=kx$ を、たくさんの節点にまとめて書いたもの。
+\end{phyomi}
+\begin{phmijika}[いすのクッション]
+いすのクッションの中のばねも、たくさんのばねが金具でつながっています。座った人の体重が、どのばねにどれだけかかるかは、この形の連立方程式で計算できます。
+\end{phmijika}
+
+\bksubsection{3}{時間を細かく刻んで、衝突を計算する}
+\leavevmode\label{ph:力-16:sec3}\bkhatenaref に答える第一歩です。力-3 の衝突の試験を、いちばん簡単なモデルにします。車（質量\qty{1000}{kg}）の前の部分を1本のばねと考え、時速\qty{55}{km}（$v_0=\qty{15.28}{m/s}$）でかべにぶつかります。ばね定数は、ちょうど\qty{0.6}{m}つぶれて止まるように、$k=\dfrac{mv_0^2}{0.6^2}\approx\qty{6.48e5}{N/m}$ とします（なぜこの式かは、\bkreidairef{4}で）。
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (46,0) rectangle (52,18); \draw[bkInk, line width=0.8pt] (46,0) -- (46,18);
+  \draw[bkInk, line width=0.8pt] (-2,0) -- (52,0);
+  \filldraw[fill=bkBlue!20, draw=bkBlue!80!black, line width=0.8pt] (2,2) rectangle (24,14);
+  \node[font=\sffamily\footnotesize] at (13,8) {$m$};
+  \draw[bkOrange!80!black, line width=0.9pt] (24,8) -- (26,8) -- (27.5,11) -- (30.5,5) -- (33.5,11) -- (36.5,5) -- (39.5,11) -- (42.5,5) -- (44,8) -- (46,8);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south] at (35,11.4) {$k$};
+  \draw[bk arrow, bkRed, line width=1.1pt] (4,16.5) -- (16,16.5);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south] at (10,17) {$v_0$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+つぶれた長さを $x$、速さを $v$ とすると、ばねの力は $kx$ で、車をおそくする向きです。加速度は $a=-\dfrac{kx}{m}$（力-2）。\par\vspace{3pt}
+時間を $\Delta t=\qty{0.01}{s}$ ずつ進めます。
+\end{minipage}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item いまの $x$ から、加速度 $a=-\dfrac{kx}{m}$ を出す。
+\item 次の位置：$x+v\times\Delta t$。次の速さ：$v+a\times\Delta t$（6-2のオイラー法）。
+\item 時間を $\Delta t$ 進めて、①にもどる。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{4}{20}{%
+1 & $t$（s） & $x$（m） & $v$（m/s） & $a$（m/s$^2$） \\
+2 & 0.00 & 0.000 & 15.28 & 0 \\
+3 & 0.01 & 0.153 & 15.28 & $-99$ \\
+4 & 0.02 & 0.306 & 14.29 & $-198$ \\
+5 & 0.03 & 0.448 & 12.31 & $-291$ \\
+6 & 0.04 & 0.571 & 9.40 & $-371$ \\
+7 & 0.05 & 0.665 & 5.69 & $-431$ \\
+8 & 0.06 & 0.722 & 1.38 & $-468$ \\
+9 & 0.07 & 0.736 & $-3.31$ & $-477$ \\}
+\bktabcaption{$\Delta t=\qty{0.01}{s}$ で計算した衝突。C3 は \texttt{=B2+C2*0.01}、D3 は \texttt{=C2+E2*0.01}、E3 は \texttt{=-648000*B3/1000}。}
+\end{bkcenter}
+\noindent つぶれる長さの最大は約\qty{0.74}{m}になりました。でも、ばね定数は\qty{0.6}{m}で止まるように決めたはずです。答えがずれたのは、時間の刻み\qty{0.01}{s}が、衝突の時間（約\qty{0.06}{s}）に比べて大きすぎるからです。刻みを細かくすると、どうなるでしょう。同じ計算をプログラムにして、刻みを変えてみます。
+\begin{phcode}
+m = 1000                  \# 車の質量（kg）
+v0 = 55 / 3.6             \# ぶつかる速さ（m/s）
+k = m * v0**2 / 0.6**2    \# 0.6 m つぶれて止まるばね（N/m）
+for dt in [0.01, 0.005, 0.001, 0.0001]:
+    x, v, xmax, amax = 0.0, v0, 0.0, 0.0
+    while v > 0:          \# 前へ進んでいる間
+        a = -k * x / m    \# ばねの力 ÷ 質量
+        x = x + v * dt
+        v = v + a * dt
+        xmax = max(xmax, x)
+        amax = max(amax, -a)
+    print(dt, round(xmax, 3), round(amax))
+\end{phcode}
+\begin{phcodeout}
+0.01 0.736 468
+0.005 0.664 428
+0.001 0.612 397
+0.0001 0.601 390
+\end{phcodeout}
+\noindent 左から、時間の刻み（s）、つぶれる長さの最大（m）、減速の最大（m/s$^2$）です。刻みを細かくするほど、つぶれる長さは\qty{0.6}{m}に、減速の最大は式で求めた約\qty{389}{m/s^2}（$g$ の約40倍）に近づきます。刻みを $\dfrac{1}{10}$ にすると、ずれ（\qty{0.012}{m}→\qty{0.001}{m}）もほぼ $\dfrac{1}{10}$ になっています。
+\begin{phbaisuru}[半分]{時間の刻み $\Delta t$}
+オイラー法のずれは、刻みにほぼ比例するので、およそ半分になります（\qty{0.01}{s}で\qty{0.136}{m}、\qty{0.005}{s}で\qty{0.064}{m}）。そのかわり、くり返しの回数は2倍になります。正確さと計算の手間は、とりかえっこです。
+\end{phbaisuru}
+
+\phboxhead{わかったこと：ばねのようにつぶれる車は、よくない}
+同じ\qty{0.6}{m}でも、ばねのようにつぶれると、減速の最大は約\qty{389}{m/s^2}で、一定の力でつぶれるとき（約\qty{195}{m/s^2}、力-3）の2倍になります。ばねは、つぶれるほど強く押し返すので、最後に大きな力が出るからです。だから、車の前の部分は、はじめから終わりまで、なるべく同じ力でつぶれるように作ります。そのために、どんな形の部品をどこに置けばよいかを、もっと細かいモデルで計算していきます。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=44mm, xmin=0, xmax=0.092, ymin=0, ymax=480, xtick={0.02,0.04,0.06,0.08}, ytick={100,200,300,400}, xlabel={$t$（s）}, ylabel={減速（m/s$^2$）}, xticklabel style={/pgf/number format/fixed, /pgf/number format/precision=2}]
+  \addplot[bkcurve, domain=0:0.0617, samples=60] {389*sin(deg(25.46*x))};
+  \draw[bkOrange, line width=1.7pt] (axis cs:0,195) -- (axis cs:0.0785,195);
+  \draw[bkOrange, line width=1.2pt, dashed] (axis cs:0.0785,195) -- (axis cs:0.0785,0);
+  \draw[bkBlue, line width=1.2pt, dashed] (axis cs:0.0617,0) -- (axis cs:0.0617,8);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at (axis cs:0.004,445) {ばねのようにつぶれる：最大 約389};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=north] at (axis cs:0.045,185) {一定の力でつぶれる：195};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{どちらも\qty{0.6}{m}つぶれて止まる。青の面積とだいだいの面積は、どちらも速さの変化 \qty{15.3}{m/s} に等しい（力-1：加速度のグラフの面積は速度の変化）。}
+\end{bkcenter}
+
+\phkokomade
+
+%% ================================================================
+\phstage{shiki}{剛性行列・差分・時間の刻みを式で}{5}
+
+\bksubsection{4}{剛性行列は、要素の行列のたし算}
+\leavevmode\label{ph:力-16:sec4}\phboxhead{1本の要素の行列}
+両はしを節点 $i$、$j$ とする1本のばね（ばね定数 $k$）を考えます。節点の変位を $u_i$、$u_j$、ばねが節点に及ぼす力を $f_i$、$f_j$ とします。ばねののびは $u_j-u_i$ なので、ばねは節点 $j$ を $-k(u_j-u_i)$、節点 $i$ を $+k(u_j-u_i)$ の力で引きます。節点が受ける力とつり合うために、外から加える力は、その反対です。
+\pheq{\begin{pmatrix}f_i\\ f_j\end{pmatrix}=k\begin{pmatrix}1&-1\\-1&1\end{pmatrix}\begin{pmatrix}u_i\\ u_j\end{pmatrix}}{N ＝ N/m × m}
+この2×2の行列を、要素の剛性行列といいます。棒の要素なら $k=\dfrac{EA}{L}$ です（力-8）。
+\begin{phyomi}[要素の剛性行列]
+両はしが同じだけ動く（$u_i=u_j$）と、ばねはのびないので、力は0。片方だけ動くと、両はしに、同じ大きさで反対向きの力が出る（作用・反作用、力-2）。行列の各行の和が0なのは、このため。
+\end{phyomi}
+
+\phboxhead{組み立て：同じ節点の所をたす}
+全体の剛性行列は、要素の行列を、節点の番号の場所に置いて、たし合わせると作れます。②の3本のばねでは、ばね1（天井と①）、ばね2（①と②）、ばね3（②と③）の行列が重なり、①や②のように2本のばねがつながる節点では、対角の所が $k+k=2k$ になります。天井は動かない（変位0）ので、その行と列をはずします。これを\textbf{境界条件}といいます。こうして、②の行列ができあがります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{cell/.style={draw=bkGray, line width=0.4pt, minimum width=9mm, minimum height=6mm, inner sep=0pt, font=\sffamily\footnotesize}}
+  \foreach \r/\c/\t/\col in {0/0/{$k{+}k$}/bkBlue!20, 0/1/{$-k$}/bkOrange!25, 0/2/{0}/white, 1/0/{$-k$}/bkOrange!25, 1/1/{$k{+}k$}/bkOrange!25, 1/2/{$-k$}/bkGreen!25, 2/0/{0}/white, 2/1/{$-k$}/bkGreen!25, 2/2/{$k$}/bkGreen!25} {
+    \node[cell, fill=\col] at ({\c*9+4.5},{-\r*6-3}) {\t};}
+  \node[font=\sffamily\footnotesize, anchor=west, align=left, text width=74mm] at (32,-9) {青：ばね1（天井と①。天井の行と列ははずす）\\だいだい：ばね2（①と②）\\緑：ばね3（②と③）\\色が重なる所（①①、②②）は、たし算。};
+\end{tikzpicture}
+\bkfigcaption{全体の剛性行列は、要素ごとの行列を、節点の番号の場所に置いてたしたもの。}
+\end{bkfigure}
+この手順は、要素が3つでも300万でも同じです。コンピュータは、要素ごとに小さな行列を作って、大きな行列にたしこんでいくだけです。
+
+\phboxhead{つり合いの式だけでは解けない構造も解ける}
+上下のはしを両方とも固定した、長さ\qty{1}{m}の鋼の棒（直径\qty{20}{mm}）の、上から\qty{0.4}{m}の所に、下向きに\qty{10}{kN}の力をかけます。上と下の支点は、それぞれどれだけの力を受けるでしょう。上下の支点の力が2つ、つり合いの式は1つ（たての力）なので、つり合いだけでは決まりません。不静定です（力-5 ⑩）。
+
+力をかけた点を節点にすると、上の部分（\qty{0.4}{m}）と下の部分（\qty{0.6}{m}）の2つの要素に分かれます。$k_1=\dfrac{EA}{0.4}$、$k_2=\dfrac{EA}{0.6}$ です。両はしは動かないので、動ける節点は1つだけで、式は
+\[(k_1+k_2)\,u=\qty{10}{kN}\]
+$u=\qty{0.037}{mm}$ 下がり、上の部分は $k_1u=\qty{6.0}{kN}$ の引張、下の部分は $k_2u=\qty{4.0}{kN}$ の圧縮になります。短いほうの部分が、多くの力を受けもちます（短いほうが、ばねとしてかたいから）。部材ののびと力の関係を使うと、不静定の構造も、静定と同じ手順で解けるのです（力-5 ⑩の「この先は大学で」の入口）。
+
+\phboxhead{トラスの要素：向きのある棒}
+トラスの部材は、ななめを向いています。部材の向きの単位ベクトルを $(c,\ s)=(\cos\theta,\ \sin\theta)$ とすると、部材ののびは、両はしの変位の差を部材の向きに映した長さ（内積、4-12）
+\[\Delta L=c\,(u_{xj}-u_{xi})+s\,(u_{yj}-u_{yi})\]
+です。部材の力 $\dfrac{EA}{L}\Delta L$ を $x$・$y$ に分けると、4×4の要素の剛性行列ができます。これをたし合わせるプログラムで、力-5 ⑨の正三角形のトラスを解いてみます（\bkreidairef{3}）。
+
+\bksubsection{5}{要素を細かくすると、答えは本当の値に近づく}
+\leavevmode\label{ph:力-16:sec5}要素の中は簡単な形で変形する、と決めて計算しました。でも本物の物では、要素の中でも、ようすが少しずつ変わります。その分、答えはずれます。ずれを小さくするには、要素を細かくします。
+
+長さ $L$ の棒で、断面積が一方のはし（$A_0$）から他方のはし（$2A_0$）まで、一様に太くなっているものを考えます。これを、太さの一定な棒（要素）をつないだものと考え、それぞれの要素の断面積は、要素のまん中の太さとします。棒を力 $F$ で引いたときの全体ののびを、$\dfrac{FL}{EA_0}$ を単位にして計算します。要素ののびをたすと（直列。力-8）、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] Q[c,m,wd=34mm] Q[c,m,wd=30mm]}, rowsep=1.2pt}
+要素の数 & のび（$\dfrac{FL}{EA_0}$ の何倍） & ずれ \\
+1 & 0.6667 & $-3.8$\,\% \\
+2 & 0.6857 & $-1.07$\,\% \\
+4 & 0.6912 & $-0.28$\,\% \\
+8 & 0.6927 & $-0.070$\,\% \\
+本当の値 & $\ln2\approx0.6931$ & \\
+\end{bktable}
+\bktabcaption{太さの変わる棒ののび。本当の値は積分 $\displaystyle\int_0^L\frac{F\,\dd x}{EA(x)}$ で求めた（5-14）。}
+\end{bkcenter}
+\begin{phbaisuru}{要素の数}
+ずれは、約 $\dfrac{1}{4}$ になります（$-3.8\,\%\to-1.07\,\%\to-0.28\,\%\to-0.070\,\%$）。要素の数を2倍にすると、要素の長さが半分になり、ずれは長さの2乗に比例して小さくなるからです。要素を細かくしていき、答えが変わらなくなったら、その答えを信じてよい目安になります。これを\textbf{収束}といいます。\bkidx{しゅうそく}{収束}
+\end{phbaisuru}
+\begin{phflow}
+\phflowrow{$K\vec u=\vec F$}{要素が1つ\\ばね1本}{$F=kx$（力-8）}
+\phflowrow{$\begin{pmatrix}k_1{+}k_2&-k_2\\-k_2&k_2\end{pmatrix}\vec u=\begin{pmatrix}0\\F\end{pmatrix}$}{2本を直列に\\下のはしの $u_2$}{$\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$}
+\end{phflow}
+2段めは\bkreidairef{1}で確かめます。行列で解いた下のはしの変位 $u_2$ は、$F\Bigl(\dfrac{1}{k_1}+\dfrac{1}{k_2}\Bigr)$ になり、力-8 のばねの直列の式と同じです。
+
+\bksubsection{6}{流れを格子に分ける：管の流れ}
+\leavevmode\label{ph:力-16:sec6}流れでも、同じ考え方を使います。力-14 ⑧では、円い管の中の層流を、細い円柱にはたらく力のつり合いから解き、速さが放物線の形 $u=\dfrac{\Delta p}{4\mu L}(R^2-r^2)$ になることを導きました。これを、コンピュータのやり方で解いてみます。
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \r/\c in {20/bkGreen!8, 15/bkGreen!18, 10/bkGreen!28, 5/bkGreen!40} {\filldraw[fill=\c, draw=bkGreen!80!black, line width=0.5pt] (0,0) circle (\r);}
+  \fill[bkInk] (0,0) circle (0.6);
+  \foreach \a/\n in {0/1,0/2,0/3,0/4} {}
+  \node[font=\sffamily\scriptsize] at (0,2.5) {1};
+  \node[font=\sffamily\scriptsize] at (0,7.5) {2};
+  \node[font=\sffamily\scriptsize] at (0,12.5) {3};
+  \node[font=\sffamily\scriptsize] at (0,17.5) {4};
+  \draw[bkGray, line width=0.4pt, <->] (0,-23) -- (20,-23);
+  \node[font=\sffamily\scriptsize, anchor=north] at (10,-23.4) {$R$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+管の断面を、太さの等しい輪（ここでは4つ）に分けます。それぞれの輪の中の水は、同じ速さで流れるとします。\par\vspace{3pt}
+1つの輪の水には、前後の圧力の差が流れの向きに押す力と、内側・外側のとなりの輪とのあいだのねばりの力（力-14 ⑥の $\tau=\mu\dfrac{\dd u}{\dd y}$。速さの差÷輪のはば）がはたらき、つり合います。
+\end{minipage}
+
+\par\vspace{4pt}\noindent
+輪ごとのつり合いの式を並べると、また $K\vec u=\vec F$ の形の連立方程式になります。$K$ はねばりの行列、$\vec u$ は輪の速さ、$\vec F$ は圧力の差が押す力です。いちばん外の輪は、速さ0の壁とのあいだのねばりを受けます。このように、となりとの差で式を書く方法を\textbf{差分法}といいます（8-13）。\bkidx{さぶんほう}{差分法}輪の数を変えて、管を流れる水の量（流量）$Q$ を、力-14 のハーゲン・ポアズイユの式とくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] Q[c,m,wd=36mm] Q[c,m,wd=22mm]}, rowsep=1.2pt}
+輪の数 & 流量（本当の値を1とする） & ずれ \\
+1 & 2.000 & 100\,\% \\
+2 & 1.250 & 25\,\% \\
+4 & 1.063 & 6.3\,\% \\
+8 & 1.016 & 1.6\,\% \\
+\end{bktable}
+\bktabcaption{輪に分けて計算した管の層流の流量。輪の数を2倍にすると、ずれは $\dfrac{1}{4}$ になる。}
+\end{bkcenter}
+\noindent ここでも、輪の数を2倍にすると、ずれは $\dfrac{1}{4}$ になりました。⑤の棒と同じです。構造も流れも、「小さく分けて、となりとの関係を連立方程式にし、細かくして収束を確かめる」という同じ手順で解けるのです。
+\begin{phflow}
+\phflowrow{輪ごとのつり合い\\$K\vec u=\vec F$}{輪のはばを\\限りなく小さく}{$Q=\dfrac{\pi R^4\Delta p}{8\mu L}$（力-14）}
+\end{phflow}
+
+\phboxhead{天気予報と飛行機の設計}
+空気の流れのように、3次元で時間とともに変わる流れでは、空間を何千万〜何億の小さな格子に分け、ナビエ・ストークス方程式（力-15 ⑩）を、格子ごとの差の式にして、時間を刻んで解きます。これを\textbf{数値流体力学}（CFD）といいます。天気予報も、地球の大気を格子に分けて、同じように計算しています。
+
+\bksubsection{7}{時間の刻みと、材料の中を伝わる波}
+\leavevmode\label{ph:力-16:sec7}③の衝突の計算では、刻みが大きすぎると答えがずれました。たくさんの要素でできた車の計算では、刻みが大きすぎると、ずれるだけでなく、答えがどんどん大きくなって、計算がこわれてしまいます。刻みは、どこまで小さくすればよいのでしょう。
+
+かべにぶつかった車の前のはしが押されると、その「押された」という知らせは、鋼の中を波として伝わっていきます（くわしくは波-5）。鋼の中を押しの波が伝わる速さは $c=\sqrt{\dfrac{E}{\rho}}$ です（力-8 のヤング率 $E$ と密度 $\rho$）。
+\[c=\sqrt{\frac{205\times10^9}{7850}}\approx\qty{5100}{m/s}\]
+1回の刻みのあいだに、この知らせが1つの要素より遠くまで進んでしまうと、計算は、となりの要素へ順に伝えるしくみについていけず、こわれます。だから、刻みは「波が1つの要素をわたる時間」より短くします。
+\pheq{\Delta t<\frac{(\text{要素の大きさ})}{c}}{s ＝ m ÷ m/s}
+\begin{phyomi}[時間の刻みの条件]
+要素を小さくするほど、刻みも小さくしなければならない。かたくて軽い材料（$c$ が大きい）ほど、刻みは小さくなる。この条件は、数学者の名前をとってクーラン条件（CFL 条件）とよばれます。
+\end{phyomi}
+大きさ\qty{5}{mm}の要素なら、$\Delta t<\dfrac{0.005}{5100}\approx\qty{1e-6}{s}$（\qty{1}{\micro s}）です。衝突の\qty{0.1}{s}を計算するには、約10万回の刻みが必要です。それを何百万の要素について行うので、衝突の計算は、たくさんの計算機をつないで何時間もかけて行います。
+\begin{phbaisuru}[半分]{要素の大きさ}
+刻みも半分にしなければなりません。平らな板を半分の大きさの要素に分けると、要素の数は4倍、刻みの回数は2倍で、計算の手間は約8倍になります。細かくすれば正確になりますが、手間はそれ以上にふえます。どこまで細かくするかを決めるのも、技術者の大切な仕事です。
+\end{phbaisuru}
+
+\bksubsection{8}{答えを確かめる：検証と妥当性確認}
+\leavevmode\label{ph:力-16:sec8}コンピュータは、入れたとおりの計算を、まちがえずに速く行います。でも、入れたモデルや数がまちがっていれば、まちがった答えを、きれいな色の図で出してきます。だから、答えは必ず確かめます。確かめ方は、2種類あります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=22mm, align=center] (a) at (0,0) {本物の\\現象};
+  \node[bk node, text width=22mm, align=center] (b) at (36,0) {モデル\\（式）};
+  \node[bk node, text width=22mm, align=center] (c) at (72,0) {コンピュータ\\の答え};
+  \draw[bk link] (a) -- (b);
+  \draw[bk link] (b) -- (c);
+  \draw[bkOrange!80!black, line width=0.9pt, -{Stealth[length=4pt]}] (c.north) .. controls (72,12) and (36,12) .. (b.north);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south, align=center] at (54,10.2) {検証：式を正しく解いたか};
+  \draw[bkPurple, line width=0.9pt, -{Stealth[length=4pt]}] (c.south) .. controls (72,-14) and (0,-14) .. (a.south);
+  \node[font=\sffamily\footnotesize, text=bkPurple, anchor=north, align=center] at (36,-11.4) {妥当性確認：モデルは本物を表しているか};
+\end{tikzpicture}
+\bkfigcaption{検証（式を正しく解いたか）と、妥当性確認（モデルは本物を表しているか）。英語の頭文字から V\&V とよぶ。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{検証}：手計算で解ける簡単な場合を、同じソフトで解いてくらべる。たとえば、片持ちはりの先のたわみ $\dfrac{FL^3}{3EI}$（力-10 例題6では\qty{1.63}{mm}）や、管の層流の流量（力-14 ⑧）。要素を細かくして、答えが収束するかも見る（⑤⑥）。\bkidx{けんしょう}{検証}
+\item \textbf{妥当性確認}：本物の実験の結果とくらべる。衝突の計算なら、実際に車をぶつけた試験の結果とくらべる。合わなければ、モデル（材料の性質、つなぎ目、無視したこと）を見直す。
+\end{enumerate}
+はてな？の答えは、ここにあります。車をこわさずに調べるには、車を小さな要素に分けたモデルを作り、時間を細かく刻んで、運動方程式をコンピュータで解きます。何十回も形を変えてためしたあと、最後に本物の車を数台ぶつけて、計算が正しかったかを確かめるのです。試験の台数を、大きくへらせます。
+
+\begin{phmada}[飛行機のまわりの乱流を、そのまま計算できる？]
+乱流の中には、大きなうずから、目に見えないほど小さなうずまで、いろいろな大きさのうずがあります（力-14・力-15）。いちばん小さなうずまで格子で細かく表して、ナビエ・ストークス方程式をそのまま解く方法を、直接数値計算（DNS）といいます。でも、飛行機の翼のまわりの流れでは、必要な格子の数がけた外れに多くなります。2000年に発表された見積もりでは、翼全体を DNS で計算できるのは、2080年ごろになるとされました。そのため今は、小さなうずの効果を「乱流モデル」でまとめて表して計算していますが、どのモデルがいつ正しいかは、まだ決まっていません。実験とくらべながら、研究が続いています。
+\end{phmada}
+\begin{phsaki}{有限要素法と数値流体力学}
+要素の中の変形を2次式や3次式で表す方法、曲がった板（殻）の要素、こわれていく材料の計算、流れと構造がたがいに押し合う計算などは、大学の上の学年から大学院で学びます。工学部では、構造解析や流体解析のソフトを使う実習で、この章の「検証」と「収束」の確かめ方を、実際に身につけます。
+\end{phsaki}
+\begin{motto}[5]
+\phboxhead{刻みを大きくとれる解き方：陰解法}
+③のオイラー法は、いまの値だけを使って次の値を出すので、\textbf{陽解法}といいます。計算は簡単ですが、⑦の条件のため、刻みを小さくしなければなりません。これに対して、「次の値」も式の中に入れて、毎回、連立方程式を解きながら進む方法を\textbf{陰解法}といいます。1回の計算は重くなりますが、刻みを大きくとっても計算がこわれにくくなります。衝突のように一瞬で終わる速い現象には陽解法、地震でゆれる建物や、ゆっくり温まる機械のように長い時間を計算するときには陰解法がよく使われます。どちらを選ぶかも、技術者の判断です。
+\end{motto}
+
+\begin{senmonsho}[有限要素法の書き方]
+\begin{bkhonbun}
+要素 $e$ の剛性行列 $\symbf k_e$ を全体座標系に変換して重ね合わせ、全体剛性方程式 $\symbf K\symbf u=\symbf f$ を得る。変位境界条件を課したのち、連立一次方程式を解いて節点変位 $\symbf u$ を求め、要素ごとにひずみと応力を算出する。陽解法では、時間増分 $\Delta t$ はクーラン条件 $\Delta t\leqq L_{\min}/c$ を満たす必要がある。
+\end{bkhonbun}
+\bkyaku{太字はベクトルと行列（4-13）。「全体座標系に変換」は、トラスの部材のように、ななめの要素を $x$・$y$ の向きに直すこと。「重ね合わせ」は④の組み立て。「変位境界条件」は、動かない節点を決めること。「陽解法」は、③のように、いまの値から次の値を順に出す方法。$L_{\min}$ はいちばん小さい要素の大きさ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\par\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{有限要素法}形を要素に分け、節点のつり合いを $K\vec u=\vec F$ で解く。
+\tsl{剛性行列}要素の行列 $k\begin{pmatrix}1&-1\\-1&1\end{pmatrix}$ を、節点の場所でたし合わせる。
+\tsl{収束}要素を細かくして、答えが変わらなくなるかを見る。
+\tsl{時間の刻み}$\Delta t<\dfrac{\text{要素の大きさ}}{c}$（$c$ は材料の中を伝わる波の速さ）
+\tsl{確かめる}検証（手計算・収束）と妥当性確認（実験）
+\end{taisetsu}
+\bkkigocards{\bkkigocard{$K$}{ケー}{剛性行列。節点の変位に、この行列をかけると力になる}{stiffness matrix}{力-16}}{\bkkigocard{$\vec u$}{ユー（ベクトル）}{節点の変位を並べたベクトル。流れの章では速さにも $u$ を使う}{displacement vector}{力-16}}
+\begin{kotoba}\small
+\bkword{要素・節点}{形を分けた小さな部分と、その角の点。}
+\bkword{有限要素法}{形を要素に分け、節点の式を連立方程式にして解く方法。}
+\bkword{メッシュ}{要素に分けた網の目。}
+\bkword{剛性行列}{節点の変位と力を結ぶ行列。ばね定数を行列にしたもの。}
+\bkword{境界条件}{動かない節点や、力のかかる節点を決める条件。}
+\bkword{差分法}{となりの点との差で、微分の式を表して解く方法。}
+\bkword{収束}{細かくするほど、答えが一定の値に近づくこと。}
+\bkword{検証・妥当性確認}{式を正しく解いたかを確かめること・モデルが本物を表しているかを確かめること。}
+\end{kotoba}
+
+%% ================================================================
+\bksection{reidai}{見本の計算}
+
+\begin{phreidai}[2本のばねの直列を、剛性行列で]\label{ph:力-16:ex1}
+ばね定数 $k_1=\qty{20}{N/m}$ と $k_2=\qty{30}{N/m}$ のばねを、天井から順に直列につなぎ、下に\qty{0.30}{kg}のおもりをつるします（力-8 例題9）。2つの節点の下がる量を、剛性行列で求めましょう。
+\phbamen
+天井（動かない）と、つなぎ目①、下のはし②の3つの節点があります。
+\phmushi
+ばねの重さを無視します。ばねは、のびに比例する力を出すとします。
+\phzu
+\noindent\begin{minipage}[c]{0.24\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxqceil{(0,0)}{16}
+  \pxqspring{(0,0)}{10}{bkBlue!80!black}
+  \pxqspring{(0,-13)}{10}{bkOrange!80!black}
+  \pxqnode{(0,-11.5)}{1}
+  \pxqnode{(0,-24.5)}{2}
+  \fill[bkGray] (-3,-30) rectangle (3,-26.1);
+  \node[font=\sffamily\scriptsize, anchor=west] at (2.6,-5) {$k_1$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (2.6,-18) {$k_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.74\linewidth}\raggedright
+下がる量を $u_1$、$u_2$、おもりの重さ $F=0.30\times9.8=\qty{2.94}{N}$。力は節点②にだけかかります。
+\end{minipage}
+\phriyu
+ばね1（天井と①）とばね2（①と②）の要素の行列を、④の手順でたし合わせ、天井の行と列をはずします。
+\phtateru
+\[\begin{pmatrix}k_1+k_2&-k_2\\-k_2&k_2\end{pmatrix}\begin{pmatrix}u_1\\u_2\end{pmatrix}=\begin{pmatrix}0\\F\end{pmatrix}\]
+\[\begin{pmatrix}50&-30\\-30&30\end{pmatrix}\begin{pmatrix}u_1\\u_2\end{pmatrix}=\begin{pmatrix}0\\2.94\end{pmatrix}\]
+\phtoku
+1行めから $50u_1=30u_2$。2行めに入れると $-30u_1+50u_1=2.94$ で、$u_1=\dfrac{2.94}{20}=\qty{0.147}{m}$。
+\[u_2=\frac{50}{30}\times0.147=\qty{0.245}{m}\]
+\phtashikame
+力-8 の直列の式で：$F\Bigl(\dfrac{1}{20}+\dfrac{1}{30}\Bigr)=2.94\times\dfrac{5}{60}=\qty{0.245}{m}$。同じです。\\
+ばねの力：ばね1は $20\times0.147=\qty{2.94}{N}$、ばね2は $30\times(0.245-0.147)=\qty{2.94}{N}$。どちらも、おもりの重さと同じです（直列のばねには同じ力がかかる）。
+\kotae $u_1=\qty{14.7}{cm}$、$u_2=\qty{24.5}{cm}$
+\end{phreidai}
+
+\begin{phreidai}[鋼とアルミニウムの段つき棒を3つの要素で]\label{ph:力-16:ex2}
+力-8 例題10の段つき棒（直径\qty{20}{mm}、鋼\qty{0.6}{m}・$E=\qty{205}{GPa}$、アルミニウム合金\qty{0.4}{m}・$E=\qty{69}{GPa}$）の上のはしを固定し、下のはしを\qty{20}{kN}で引きます。鋼の部分を2つに分けて、全部で3つの要素にして、節点の変位を求めましょう。
+\phbamen
+材料のちがう棒をつないだ棒を、ばねの列と考えます。
+\phmushi
+つなぎ目の変形と、棒の重さを無視します。どの部分も弾性の範囲とします。
+\phzu
+要素1・2は鋼（それぞれ\qty{0.3}{m}）、要素3はアルミニウム（\qty{0.4}{m}）。上から節点①（鋼のまん中）、②（つなぎ目）、③（下のはし）。断面積 $A=\pi\times0.010^2\approx\qty{3.14e-4}{m^2}$。
+\phriyu
+棒は $k=\dfrac{EA}{L}$ のばね（力-8）。3本のばねの列なので、②の行列と同じ形になります。
+\phtateru
+\[k_s=\frac{205\times10^9\times3.14\times10^{-4}}{0.3}\approx\qty{2.15e8}{N/m}\]
+\[k_a=\frac{69\times10^9\times3.14\times10^{-4}}{0.4}\approx\qty{5.42e7}{N/m}\]
+\[\begin{pmatrix}2k_s&-k_s&0\\-k_s&k_s+k_a&-k_a\\0&-k_a&k_a\end{pmatrix}\begin{pmatrix}u_1\\u_2\\u_3\end{pmatrix}=\begin{pmatrix}0\\0\\20000\end{pmatrix}\]
+\phtoku
+表計算の \texttt{MINVERSE}・\texttt{MMULT}（または上から順に代入）で、
+\[u_1=\qty{0.093}{mm},\qquad u_2=\qty{0.186}{mm},\qquad u_3=\qty{0.555}{mm}\]
+\phtashikame
+力-8 例題10の答え（鋼\qty{0.186}{mm}＋アルミ\qty{0.369}{mm}＝\qty{0.555}{mm}）と同じです。\\
+鋼を2つに分けても答えは変わりません。太さが一定の棒は、要素の中でも一様にのびるので、要素の式が本当の変形とぴったり合うからです（⑤の太さが変わる棒とのちがい）。
+\kotae $u_1\approx\qty{0.093}{mm}$、$u_2\approx\qty{0.186}{mm}$、$u_3\approx\qty{0.555}{mm}$
+\end{phreidai}
+
+\begin{phreidai}[三角形のトラスを、剛性行列で]\label{ph:力-16:ex3}
+力-5 ⑨の正三角形のトラス（1辺\qty{2}{m}、Aはピン、Bはローラ、頂点Cに下向き\qty{10}{kN}）の部材を、断面積\qty{10}{cm^2}の鋼（$EA=205\times10^9\times0.001=\qty{2.05e8}{N}$）とします。節点の変位と部材の力を、剛性行列で求めましょう。
+\phbamen
+力-5 では、つり合いの式だけで部材の力を求めました。こんどは、部材ののびから、変位も求めます。
+\phmushi
+部材の重さ、節点のピンのすきまを無視します。変位は部材の長さに比べてとても小さいとします。
+\phzu
+節点A$(0,\ 0)$、B$(2,\ 0)$、C$(1,\ \sqrt3)$。動けるのは、Bの横、Cの横とたての3つ（Aはピンで動かない、Bはローラでたてに動かない）。
+\phriyu
+⑤の向きのある棒の要素の行列を、プログラムで3本分たし合わせ、動ける3つの向きの連立方程式を解きます。
+\phtateru
+\begin{phcode}
+import numpy as np
+r3 = 3 ** 0.5
+P = [(0, 0), (2, 0), (1, r3)]       \# 節点 A, B, C（m）
+M = [(0, 2), (1, 2), (0, 1)]        \# 部材 AC, BC, AB
+EA = 2.05e8                         \# 鋼で断面積 10 cm2（N）
+K = np.zeros((6, 6))                \# 全体の剛性行列
+for i, k in M:
+    d = np.subtract(P[k], P[i])
+    L = np.hypot(d[0], d[1])
+    c, s = d / L                    \# 部材の向き（cos, sin）
+    t = np.array([[c*c, c*s], [c*s, s*s]])
+    ke = EA / L * np.block([[t, -t], [-t, t]])
+    n = [2*i, 2*i+1, 2*k, 2*k+1]
+    K[np.ix\_(n, n)] += ke           \# 要素の行列を、たし合わせる
+F = np.zeros(6)
+F[5] = -10e3                        \# C に下向き 10 kN
+free = [2, 4, 5]                    \# 動ける向き：Bx, Cx, Cy
+u = np.zeros(6)
+u[free] = np.linalg.solve(K[np.ix\_(free, free)], F[free])
+print('変位（mm）', np.round(u * 1000, 4))
+for i, k in M:
+    d = np.subtract(P[k], P[i])
+    L = np.hypot(d[0], d[1])
+    du = u[2*k:2*k+2] - u[2*i:2*i+2]
+    N = EA / L * np.dot(d / L, du)  \# のび×EA/L＝部材の力
+    print('ABC'[i] + 'ABC'[k], round(N / 1000, 2), 'kN')
+\end{phcode}
+\phtoku
+\begin{phcodeout}
+変位（mm） [ 0.      0.      0.0282  0.      0.0141 -0.0732]
+AC -5.77 kN
+BC -5.77 kN
+AB 2.89 kN
+\end{phcodeout}
+変位は、左から A の横・たて、B の横・たて、C の横・たてです。Cは\qty{0.073}{mm}下がり、\qty{0.014}{mm}右へ動きます。Bは\qty{0.028}{mm}右へすべります。
+\phtashikame
+部材の力は、力-5 ⑨と同じ（AC・BC は\qty{5.77}{kN}の圧縮、AB は\qty{2.89}{kN}の引張）です。\\
+AB ののび：$\dfrac{2890\times2}{2.05\times10^8}\approx\qty{0.028}{mm}$ で、Bが右へ動いた量と同じです。\\
+静定のトラスでは、部材の力は $EA$ によりません。変位は $EA$ に反比例します。
+\kotae Cは\qty{0.073}{mm}下・\qty{0.014}{mm}右、Bは\qty{0.028}{mm}右。部材の力は力-5 ⑨と同じ
+\end{phreidai}
+
+\begin{phreidai}[衝突を、ばねと質点のモデルで]\label{ph:力-16:ex4}
+質量\qty{1000}{kg}の車が時速\qty{55}{km}でかべにぶつかり、前の部分が\qty{0.6}{m}つぶれて止まりました。前の部分をばねと考えたとき、（1）ばね定数、（2）減速の最大、（3）止まるまでの時間を、式で求めましょう。③の数値計算の答えとくらべましょう。
+\phbamen
+車の前の部分がつぶれながら、車全体が止まっていきます。
+\phmushi
+車の本体の変形、タイヤと道の摩擦、はね返りを無視します。つぶれる部分は、のびに比例する力を出すばねとします。
+\phzu
+つぶれた長さ $x$、速さ $v$、$v_0=\qty{15.28}{m/s}$、つぶれる長さの最大 $d=\qty{0.6}{m}$。
+\phriyu
+止まるまでに、運動エネルギーがすべてばねのエネルギーになる（力-4）。動きは、ばねとおもりの往復の動きの $\dfrac{1}{4}$ 周期（数学 6-6）。
+\phtateru
+\[\frac{1}{2}mv_0^2=\frac{1}{2}kd^2,\qquad a_{\max}=\frac{kd}{m},\qquad t=\frac{1}{4}\times2\pi\sqrt{\frac{m}{k}}\]
+\phtoku
+（1）$k=\dfrac{mv_0^2}{d^2}=\dfrac{1000\times15.28^2}{0.36}\approx\qty{6.48e5}{N/m}$\\
+（2）$a_{\max}=\dfrac{6.48\times10^5\times0.6}{1000}\approx\qty{389}{m/s^2}$（$g$ の約40倍）\\
+（3）$\sqrt{\dfrac{m}{k}}=\sqrt{\dfrac{1000}{6.48\times10^5}}\approx\qty{0.0393}{s}$、$t=\dfrac{\pi}{2}\times0.0393\approx\qty{0.062}{s}$
+\phtashikame
+③のプログラムで刻みを\qty{0.0001}{s}にした答え（\qty{0.601}{m}、\qty{390}{m/s^2}）とよく合います。\\
+一定の力でつぶれるときは、減速\qty{195}{m/s^2}、時間\qty{0.079}{s}（力-3）。ばねでは、時間は短く、減速の最大は2倍です。\\
+単位：$\sqrt{\text{kg}\div\text{N/m}}=\text{s}$。
+\kotae （1）約\qty{6.5e5}{N/m}（2）約\qty{390}{m/s^2}（3）約\qty{0.062}{s}
+\end{phreidai}
+
+%% ================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{色のきれいな図}
+\bkng{ソフトが色のきれいな図を出したので、答えは正しい。}
+\bkok{手計算・収束・実験で確かめるまでは、正しいかどうかわからない。}
+コンピュータは、入れたモデルとデータのとおりに計算するだけだからです（⑧）。
+\end{tsumazuki}
+\begin{tsumazuki}{要素は細かいほどよい？}
+\bkng{要素は、いつでも細かくすればするほどよい。}
+\bkok{答えが収束するまで細かくすれば十分。それ以上は、計算の手間だけがふえる。}
+要素を半分の大きさにすると、要素の数も時間の刻みの回数もふえるからです（⑦）。
+\end{tsumazuki}
+
+%% ================================================================
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[車の衝突を、コンピュータの中で起こす]
+自動車の会社や研究所では、車を数百万の要素に分けたモデルで、衝突を計算します。たとえば、アメリカのジョージ・メイソン大学が作った、ある乗用車の公開モデルは、約226万の要素と約226万の節点でできています。鋼の板の1枚1枚、溶接の点、ボルト、座席、エンジンまでが要素で表されています。
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \t/\x/\c in {設計/0/bkBlue, 衝突の計算/30/bkOrange, 形を直す/60/bkGreen, 試作と試験/90/bkPurple} {
+    \node[bk node, draw=\c, text width=22mm, align=center, minimum height=10mm] (n\x) at (\x,0) {\t};}
+  \draw[bk link] (n0) -- (n30);
+  \draw[bk link] (n30) -- (n60);
+  \draw[bk link] (n60) -- (n90);
+  \draw[bkOrange!80!black, line width=0.9pt, -{Stealth[length=4pt]}] (n60.south) .. controls (60,-12) and (30,-12) .. (n30.south);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=north] at (45,-10) {何十回もくり返す};
+\end{tikzpicture}
+\bktabcaption{コンピュータで計算する設計の流れ。試作と試験は、最後に計算を確かめるために行う。}
+\end{bkcenter}
+\begin{phketa}[コンピュータで解く力学の数]
+\phketaline{乗用車の衝突解析の公開モデルの要素の数}{約226万}
+\phketaline{鋼の中を押しの波が伝わる速さ $\sqrt{E/\rho}$}{約\qty{5100}{m/s}}
+\phketaline{\qty{5}{mm}の要素の時間の刻み}{約\qty{1}{\micro s}より短く}
+\phketaline{\qty{0.1}{s}の衝突を計算する刻みの回数}{約10万回}
+\phboxhead{答えが桁で合っているか}
+コンピュータの答えも、桁の見当をつけてから見ます。たとえば衝突の減速は、一定の力でつぶれるとした $\dfrac{v^2}{2d}$（力-1）と、ばねのようにつぶれるとしたその2倍の間に、だいたい入るはずです。
+\end{phketa}
+\phboxhead{橋・ビル・飛行機・天気}
+橋やビルの設計では、地震や風の力を受けたときの部材の力を、有限要素法で計算します（力-5・力-10）。飛行機やポンプの設計では、数値流体力学で、翼や羽根車のまわりの流れを計算します（力-13・力-15）。天気予報も、大気を格子に分けて流れの方程式を解く計算です。
+\end{phkougaku}
+\phstation{構造解析,流体解析,衝突解析,数値計算}{有限要素法、メッシュ、要素・節点、剛性行列、境界条件、収束、陽解法、時間増分、クーラン条件、数値流体力学（CFD）、検証と妥当性確認（V\&V）}
+
+\begin{column}{失敗に学ぶ：海に沈んだ巨大な土台}
+1991年8月23日、ノルウェーのフィヨルド（細長い入り江）で、北海の海底ガス田の生産設備を支えるための、巨大なコンクリートの土台（Sleipner A）が、水を入れて沈める試験の途中でこわれ、海の底に沈みました。土台の中の、3つの部屋が出会う所の壁が割れ、水が入りこんだのです。調査の結果、設計に使った有限要素法の計算で、メッシュの作り方が適切でなかったために、その壁にかかるせん断応力（力-8）を約47\,\%小さく見積もっていたこと、そして壁の中の鉄筋の端の固定が足りなかったことが、原因とされました。損害は約7億ドルにのぼりました。計算をやり直して作り直した土台は、2年後の1993年に完成し、ガスの生産が始まりました。この事故は、「コンピュータの答えを、手計算や別の方法で確かめる」ことの大切さを、今も技術者に教えています。
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 形を要素に分け、ばねをつないだものとして、行列の式 $K\vec u=\vec F$ で解く考え方がわかる。\bkfurref{ph:力-16:sec2}
+\item 時間を細かく刻んで衝突を計算する考え方と、刻みの大きさの決め方がわかる。\bkfurref{ph:力-16:sec3}
+\item 要素を細かくしたり、手計算とくらべたりして、コンピュータの答えを確かめられる。\bkfurref{ph:力-16:sec5}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{コンピュータは、この本で学んだ「ばね」と「つり合い」と「運動方程式」を、何百万回もくり返しているだけなんだ。だから、式の意味がわかる人ほど、上手に使えるよ。}

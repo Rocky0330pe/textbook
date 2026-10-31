@@ -1,0 +1,928 @@
+%% 8-1 地図と等高線：2つ以上の変数の関数（第14回：組 V8-1。ページ制限なし。偶数ページ）
+%% 主役の山 h=100-0.01x^2-0.02y^2（m）、点 (30,20) で h=83。等高線はだ円（80 m で a=44.72、b=31.62）。
+%% 3-5:957「東へ進むときと北へ進むときの傾きは、8-2で学びます」→ この章では「線の間かく」で急さを比べ、傾きの値は 8-2 へ。
+%% 表計算は A列が北（大きい順）・1行めが東。式 =100-0.01*B$1^2-0.02*$A2^2。Python は meshgrid（北が先）。型は tools/kata8.md。
+\makeatletter
+%% ---- kata8 の型（tools/kata8.md。頭文字 kviiib は 8-1 のもの。自分の章の頭文字に置きかえる） ----
+% (1) 主役の山の高さ  kviiibh(x, y) = 100 - 0.01x^2 - 0.02y^2（m）。pgfmath の中で kviiibh(30,20) のように使う
+\pgfmathdeclarefunction{kviiibh}{2}{\pgfmathparse{100-0.01*(#1)^2-0.02*(#2)^2}}
+% (2) 色の名前（表計算のマス・等高線）
+\colorlet{kviiibX}{bkOrange!16}\colorlet{kviiibY}{bkGreen!16}\colorlet{kviiibP}{bkYellow!45}
+\colorlet{kviiibC}{bkGreen!60!black}
+% (3) 図のスタイル
+\tikzset{
+  kviiib note/.style={font=\sffamily\footnotesize, text=bkRed!75!black, fill=white, inner sep=1pt, align=left},
+  kviiib leader/.style={bkRed!75!black, line width=0.6pt, shorten >=1.6mm, shorten <=0.6mm}}
+\pgfplotsset{
+  kviiib map/.style={bkplot, axis equal image, grid=none, clip=true, axis lines=box, axis line style={-, line width=0.6pt, bkInk},
+    xtick distance=20, ytick distance=20, tick align=outside, xlabel={$x$（m）}, ylabel={$y$（m）},
+    every axis x label/.style={at={(axis description cs:1,0)}, anchor=north east, yshift=-5.2mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.2mm, font=\sffamily\small, text=bkInk}},
+  kviiib line/.style={kviiibC, line width=0.8pt, no markers, samples=91, domain=0:360},
+  kviiib bold/.style={kviiibC, line width=1.6pt, no markers, samples=91, domain=0:360},
+  kviiib bird/.style={view={30}{35}, axis lines=none, grid=none, xmin=-115, xmax=115, ymin=-85, ymax=85, zmin=0, zmax=100,
+    unit vector ratio=1 1 1, clip=false},
+  kviiib surf/.style={surf, shader=flat, draw=kviiibC, line width=0.35pt, samples=11, samples y=37, domain=0:100, y domain=0:360,
+    z buffer=sort, colormap={kviiib}{color=(bkGreen!28) color=(bkYellow!50) color=(bkOrange!50)}}}
+% (4) 高さ h の等高線（axis の中で）  \kviiibcontour[スタイル]{h}
+%     何本もかくときは \pgfplotsinvokeforeach{10,20,...,90}{\kviiibcontour{#1}}（\foreach は使わない）
+\newcommand\kviiibcontour[2][kviiib line]{\addplot[#1] ({sqrt((100-(#2))/0.01)*cos(x)},{sqrt((100-(#2))/0.02)*sin(x)});}
+% (5) 等高線の高さの数字  \kviiibclabel{h}{だ円の上の角（°）}
+\newcommand\kviiibclabel[2]{\pgfmathsetmacro\kviiib@a{sqrt((100-(#1))/0.01)*cos(#2)}\pgfmathsetmacro\kviiib@b{sqrt((100-(#1))/0.02)*sin(#2)}%
+  \edef\kviiib@t{\noexpand\node[fill=white, inner sep=0.8pt, font=\noexpand\sffamily\noexpand\footnotesize, text=bkGreen!35!black]
+    at (axis cs:\kviiib@a,\kviiib@b) {#1};}\kviiib@t}
+% (6) 地図の上の点（赤い丸。名前 kviiibP）  \kviiibpt{x}{y}
+\newcommand\kviiibpt[2]{\node[circle, fill=bkRed, draw=white, line width=0.6pt, inner sep=0pt, minimum size=2.6mm] (kviiibP) at (axis cs:#1,#2) {};}
+% (7) 鳥かん図：床（高さ0の地図の面）・東と北の矢印・山の面  \kviiibbird{床にかくもの}{面の上にかくもの}
+\newcommand\kviiibbird[2]{%
+  \draw[bkGray!70, line width=0.5pt, fill=bkGray!8] (axis cs:-115,-85,0) -- (axis cs:115,-85,0) -- (axis cs:115,85,0) -- (axis cs:-115,85,0) -- cycle;
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:-115,-85,0) -- (axis cs:-55,-85,0) node[anchor=north west, font=\sffamily\footnotesize, inner sep=1.5pt] {東（$x$）};
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:-115,-85,0) -- (axis cs:-115,-35,0) node[anchor=south east, font=\sffamily\footnotesize, inner sep=1.5pt] {北（$y$）};
+  #1
+  \addplot3[kviiib surf] ({sqrt(1-x/100)*100*cos(y)},{sqrt(1-x/100)*70.71*sin(y)},{x});
+  #2}
+% (8) 山の面の上の、高さ h の輪（見える所だけ。角 t1〜t2 は kata8.md の表）  \kviiibring[スタイル]{h}{t1}{t2}
+\newcommand\kviiibring[4][bkRed, line width=1.6pt]{\addplot3[#1, no markers, samples=60, samples y=0, domain=#3:#4]
+  ({sqrt((100-(#2))/0.01)*cos(x)},{sqrt((100-(#2))/0.02)*sin(x)},{#2});}
+% (9) 床の上の等高線（山のうしろにかくれる所は、山の面がおおう）  \kviiibfloor[スタイル]{h}
+\newcommand\kviiibfloor[2][bkRed!80!black, line width=0.9pt, dash pattern=on 2.5pt off 1.5pt]{\addplot3[#1, no markers, samples=91, samples y=0, domain=0:360]
+  ({sqrt((100-(#2))/0.01)*cos(x)},{sqrt((100-(#2))/0.02)*sin(x)},{0});}
+% (10) 面の上の点と、床へおろした点線  \kviiibdrop{x}{y}
+\newcommand\kviiibdrop[2]{\pgfmathsetmacro\kviiib@z{kviiibh(#1,#2)}%
+  \edef\kviiib@t{\noexpand\draw[bkRed!80!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (axis cs:#1,#2,0) -- (axis cs:#1,#2,\kviiib@z);
+  \noexpand\node[circle, fill=bkRed!80!black, inner sep=0pt, minimum size=1.8mm] (kviiibQ) at (axis cs:#1,#2,0) {};
+  \noexpand\node[circle, fill=bkRed, draw=white, line width=0.6pt, inner sep=0pt, minimum size=2.6mm] (kviiibP) at (axis cs:#1,#2,\kviiib@z) {};}\kviiib@t}
+% (11) 表計算の数式バー  \kviiibfx{セル}{式}（式の中の $ は \$、^ は \^{}）
+\newcommand\kviiibfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=64mm, text width=60mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+%% ---- この章だけで使う部品（頭文字 kviiib） ----
+\tikzset{kviiib lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  kviiib arr/.style={-{Stealth[length=1.9mm, width=1.7mm]}, line width=0.9pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiibbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiibi{\par\vspace{3pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiibii{\par\vspace{3pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiibs{\rightskip=0pt plus 8em\relax}
+% 大事な式のわく  \kviiibframe{中身}
+\newcommand\kviiibframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 色分けの地図のマスの色（高さの帯 0〜9 → オレンジのこさ）
+\newcommand\kviiibband[1]{\pgfmathtruncatemacro\kviiibk{min(floor((#1)/10),9)}\pgfmathtruncatemacro\kviiibcc{6+6*\kviiibk}}
+% 「2つの入り口」の箱  \kviiibmachine{(中心)}{入り口1}{入り口2}{出口}
+\newcommand\kviiibmachine[4]{\begin{scope}[shift={#1}]
+  \node[draw=\bkTT, line width=1pt, fill=bkTheme!8, rounded corners=2mm, minimum width=26mm, minimum height=15mm, font=\sffamily\small, align=center] (m) at (0,0) {高さの\\関数};
+  \node[anchor=east, font=\small] (i1) at ([xshift=-11mm, yshift=3.6mm]m.west) {#2};
+  \node[anchor=east, font=\small] (i2) at ([xshift=-11mm, yshift=-3.6mm]m.west) {#3};
+  \draw[bk arrow] ([xshift=1.5mm]i1.east) -- ([yshift=3.6mm, xshift=-1.5mm]m.west);
+  \draw[bk arrow] ([xshift=1.5mm]i2.east) -- ([yshift=-3.6mm, xshift=-1.5mm]m.west);
+  \node[anchor=west, font=\small] (o) at ([xshift=11mm]m.east) {#4};
+  \draw[bk arrow] ([xshift=1.5mm]m.east) -- ([xshift=-1.5mm]o.west);
+\end{scope}}
+\makeatother
+
+\bkchapter{8}{1}{地図と等高線：\\2つ以上の変数の関数}{\bklevel{4}}{地図と等高線：2つ以上の変数の関数}
+\bkmichishirube{3-2,3-3,3-5,3-9,4-8,4-13,8-0}{8-2,8-3,8-4,8-5,8-6,8-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 地図の等高線や天気図の等圧線から、高い所・低い所・急な所を読みとれる。
+\item \bklevel{4}\enspace 2つの変数の関数を、表・鳥かん図・等高線の3通りで表し、表計算と Python で作れる。
+\item \bklevel{4}\enspace 等高線の式と切り口の関数を求め、3つの変数の関数の等値面を説明できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+右の図は、ある山を真上から見た地図です。緑の線は、同じ高さの所を結んだ線（等高線）で、\qty{10}{m} ごとにかいてあります。\par\vspace{4pt}
+この線だけから、山の形がわかるかな？\enspace 頂上はどこかな？\enspace 東へ進むのと北へ進むのとでは、どちらの坂が急かな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[kviiib map, width=56mm, xmin=-100, xmax=100, ymin=-75, ymax=75, xtick={-100,0,100}, ytick={-50,0,50}]
+  \pgfplotsinvokeforeach{10,20,30,40,60,70,80,90}{\kviiibcontour{#1}}
+  \kviiibcontour[kviiib bold]{0}\kviiibcontour[kviiib bold]{50}
+  \kviiibclabel{0}{125}\kviiibclabel{50}{125}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 国土地理院のウェブ地図（地理院地図）で、地図の上の1点を選ぶと、その場所の標高（海面からの高さ）が出てきます。場所を1つ決めると、高さが1つ決まるのです。
+
+場所は、「東へ何 m、北へ何 m」の2つの数で決まります（3-2 の座標）。ですから、山の高さは、\textbf{2つの数を入れると1つの数が出てくる関数}です。第3巻から第6巻までの関数は、入れる数が1つでした。この章では、入れる数が2つ以上の関数を、地図の等高線・表・式で見ていきます。初めは記号が多く見えますが、1回で分からなくても大丈夫です。地図を指でなぞり、表に数を書きこみながら進みましょう。
+
+\begin{yattemiyou}[等高線の地図を読もう]
+はてな？の地図（この章の主役の山）を使います。地図の右が東、上が北です。いちばん内側の輪の中が頂上（\qty{100}{m}）です。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item いちばん外側の太い線（\qty{0}{m}）と、もう1本の太い線（\qty{50}{m}）を、指でなぞろう。
+\item 頂上から東へまっすぐ進みながら、線を数えよう。何本めの線が \qty{0}{m} の線かな？\enspace 北へまっすぐ進むときは？
+\item 東へ進むときと北へ進むときで、頂上から \qty{0}{m} の線までの長さをくらべよう。どちらが短いかな？
+\item できれば、地理院地図で家の近くの山を開き、線がつまった所と、まばらな所をさがそう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ②では、東へ進んでも北へ進んでも、10本めの線が \qty{0}{m} の線です。頂上の \qty{100}{m} から、\qty{90}{m}、\qty{80}{m}、…と \qty{10}{m} ずつ下がって、10本めで \qty{0}{m} になるからです。③では、\qty{0}{m} の線までの長さが、東へは \qty{100}{m}、北へは約 \qty{71}{m} です。同じ \qty{100}{m} 下がるのに、北へ進むほうが短い長さで下がります。北の坂のほうが急なのです。
+
+\begin{omoidasou}
+\bkrecall{3-3}{関数は「入れると出てくる」ルール。表・グラフ・式は、同じことを言っている。}
+\bkrecall{3-2}{場所は、2つの数の組（座標）$(x,\ y)$ で表せる。}
+\bkrecall{3-5}{傾き＝$\dfrac{\text{高さの変化}}{\text{横の長さ}}$。地図の等高線の間がせまい所ほど、坂は急。2万5千分の1の地図では、等高線は \qty{10}{m} ごと。}
+\bkrecall{3-9}{$y=ax^2+q$ のグラフは放物線。$a$ が負なら、上が山の形になる。}
+\bkrecall{4-8}{円を横に $a$ 倍、たてに $b$ 倍にのばした形がだ円。式は $\Bigl(\dfrac{x}{a}\Bigr)^2+\Bigl(\dfrac{y}{b}\Bigr)^2=1$。}
+\bkrecall{4-13}{空間の点は3つの数 $(x,\ y,\ z)$ で表せる。原点からの距離は $\sqrt{x^2+y^2+z^2}$。}
+\end{omoidasou}
+
+%% ================= 数学の道具 =================
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{地図で見る}{\bklevel{3}}
+
+\bksubsection{1}{場所を決めると、高さが1つ決まる}
+
+\label{bk:8-1:basho}この章の主役の山（8-0）を、もう一度見ます。頂上から東へ $x$〔m〕、北へ $y$〔m〕の所の高さ $h$〔m〕は、次の式で決まります。
+\[ h=100-0.01x^2-0.02y^2 \]
+頂上から西や南の所は、$x$ や $y$ を負の数にします（3-2 の座標と同じ）。たとえば、頂上から東へ \qty{30}{m}、北へ \qty{20}{m} の所は、$x=30$、$y=20$ を入れて、
+\[ h=100-0.01\times30^2-0.02\times20^2=100-9-8=83 \]
+で、高さ \qty{83}{m} です。この式は、東と北の2つの数を入れると、高さという1つの数が出てくる「箱」です（3-3 の「入れると出てくる」ルールの、入り口が2つになったもの）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiibmachine{(0,0)}{東へ 30}{北へ 20}{高さ 83}
+  \kviiibmachine{(0,-24)}{東へ 50}{北へ 0}{高さ 75}
+\end{tikzpicture}
+\bkfigcaption{入り口が2つの「高さの関数」。東へ \qty{50}{m}、北へ \qty{0}{m} の所は、$100-0.01\times50^2-0.02\times0^2=100-25=75$ で \qty{75}{m}。}
+\label{bk:8-1:fig-hako}
+\end{bkfigure}
+
+$0.01x^2$ は、「東や西へはなれると、どれだけ低くなるか」を表す部分です。$x$ を2乗しているので、$x=30$ でも $x=-30$ でも同じ $9$ だけ低くなります。頂上から東へ行っても西へ行っても、同じ距離なら同じだけ下がる、ということです。$0.02y^2$ も同じように、北や南へはなれた分です。$0.02$ のほうが $0.01$ より大きいので、同じ距離はなれたとき、北や南へ行くほうが2倍下がります。
+
+\bksubsection{2}{等高線：同じ高さの点を結んだ線}
+
+\label{bk:8-1:toukou}山を、高さ \qty{80}{m} の水平な面で切ることを考えます。たとえば、山のまわりに水を入れて、水面を \qty{80}{m} まで上げたとします。すると、水面から上には、山の頂上の部分だけが島のように出ます。このときの水ぎわの線は、高さがちょうど \qty{80}{m} の所を結んだ線です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kviiib bird, width=104mm]
+  \kviiibbird{}{\kviiibring{80}{166}{418}\kviiibring[bkOrange!85!black, line width=1.6pt]{50}{181}{404}
+    \node[kviiib note, anchor=west] (n) at (axis cs:140,-45,70) {高さ 80 m の線};
+    \draw[kviiib leader] (n.west) -- (axis cs:22.36,-27.39,80);
+    \node[kviiib note, anchor=west, text=bkOrange!75!black] (m) at (axis cs:150,-60,30) {高さ 50 m の線};
+    \draw[kviiib leader, bkOrange!75!black] (m.west) -- (axis cs:35.36,-43.30,50);}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{主役の山の鳥かん図（南東の空から見下ろした図）。山の面の横の輪が、\qty{10}{m} ごとの「同じ高さの線」。赤は \qty{80}{m}、オレンジは \qty{50}{m}。}
+\label{bk:8-1:fig-bird}
+\end{bkfigure}
+
+図\ref{bk:8-1:fig-bird}のように、同じ高さの線を、山の面の上に \qty{10}{m} ごとにかきます。それを真上から見て紙にうつしたのが、次の地図です。このように、\textbf{同じ高さの点を結んだ線}を\textbf{等高線}（とうこうせん）といいます。\bkidx{とうこうせん}{等高線}また、山を空の高い所からななめに見下ろした図\ref{bk:8-1:fig-bird}のような図を\textbf{鳥かん図}（ちょうかんず）といいます。\bkidx{ちょうかんず}{鳥かん図}鳥が空から見下ろした図、という意味です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kviiib map, width=120mm, xmin=-100, xmax=100, ymin=-75, ymax=75]
+  \pgfplotsinvokeforeach{10,20,30,40,60,70,90}{\kviiibcontour{#1}}
+  \kviiibcontour[kviiib bold]{0}\kviiibcontour[kviiib bold]{50}
+  \kviiibcontour[kviiib line, bkRed, line width=1.4pt]{80}
+  \pgfplotsinvokeforeach{0,50,80,90}{\kviiibclabel{#1}{125}}
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=1pt] at (axis cs:0,0) {▲100};
+  \kviiibpt{30}{20}
+  \node[kviiib note, anchor=north east] (n) at (axis cs:98,73) {点 $(30,\ 20)$\\高さ 83 m};
+  \draw[kviiib leader] (n.south west) -- (kviiibP);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{主役の山の等高線の地図。\qty{10}{m} ごとの線と、\qty{50}{m} ごとの太い線。赤い線が \qty{80}{m}。点 $(30,\ 20)$ は \qty{80}{m} と \qty{90}{m} の線の間にある。}
+\label{bk:8-1:fig-map}
+\end{bkfigure}
+
+等高線には、次のきまりがあります。
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{同じ線の上は、どこも同じ高さ。}\par\nobreak\noindent 赤い線の上は、どこも \qty{80}{m} です。点 $(30,\ 20)$ は \qty{80}{m} の線と \qty{90}{m} の線の間にあるので、高さは80〜\qty{90}{m} のどこかです（計算すると \qty{83}{m}）。
+\item \textbf{高さのちがう線は、交わらない。}\par\nobreak\noindent 1つの場所の高さは1つだけです。もし \qty{80}{m} の線と \qty{90}{m} の線が交わったら、その点の高さが2つになってしまいます。
+\item \textbf{線は、ぐるりと1周して閉じる。}\par\nobreak\noindent 山のまわりを、同じ高さのまま歩いていくと、もとの場所にもどります。地図のはしで切れているときは、地図の外で閉じています。
+\item \textbf{線の間の高さの差は、地図ごとに決まっている。}\par\nobreak\noindent 主役の山の地図は \qty{10}{m} ごとです。国土地理院の2万5千分の1の地形図も、\qty{10}{m} ごとに細い線（主曲線）、\qty{50}{m} ごとに太い線（計曲線）をかいています。太い線は、数えやすくするための目印です。
+\end{enumerate}
+
+\begin{seikaku}
+②の「交わらない」は、高さのちがう線どうしのことです。峠（とうげ）のように、ある向きには下がり、別の向きには上がる所では、峠と同じ高さの1本の線が、峠の点で×の形に交わることがあります（8-4 のもっと知りたい）。また、頂上の \qty{100}{m} の「線」は、1つの点だけになります。
+\end{seikaku}
+
+\bksubsection{3}{線の間かくと、坂の急さ}
+
+\label{bk:8-1:kankaku}3-5 では、「地図の等高線の間がせまい所ほど、坂は急です」と学びました。同じ \qty{10}{m} を、短い横の長さで上がる（下がる）からです。主役の山で、確かめてみます。
+
+頂上から真東へ進むときと、真北へ進むときの高さの変わり方を、グラフにします。真東へ進むときは $y=0$ なので $h=100-0.01x^2$、真北へ進むときは $x=0$ なので $h=100-0.02y^2$ です。どちらも、3-9 の放物線（上が山の形）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=62mm, xmin=0, xmax=104, ymin=0, ymax=106, xtick distance=10, ytick distance=10, xlabel={頂上からの距離（m）}, ylabel={高さ（m）},
+  every axis x label/.style={at={(axis description cs:1,0)}, anchor=north east, yshift=-21mm, font=\sffamily\small, text=bkInk}]
+  \addplot[bkOrange!85!black, line width=1.6pt, domain=0:100] {100-0.01*x^2};
+  \addplot[\bkTT, line width=1.6pt, dash pattern=on 4pt off 2pt, domain=0:70.71] {100-0.02*x^2};
+  \node[kviiib lab, anchor=west, text=bkOrange!75!black, fill=white] at (axis cs:72,62) {真東へ\enspace $h=100-0.01x^2$};
+  \node[kviiib lab, anchor=east, text=\bkTT, fill=white] at (axis cs:44,40) {真北へ\enspace $h=100-0.02y^2$};
+  % 等高線をこえる点（10 m ごと）
+  \foreach \kviiibH in {90,80,...,0} {\pgfmathsetmacro\kviiibA{sqrt((100-\kviiibH)/0.01)}\pgfmathsetmacro\kviiibB{sqrt((100-\kviiibH)/0.02)}
+    \edef\kviiibtmp{\noexpand\fill[bkOrange!85!black] (axis cs:\kviiibA,\kviiibH) circle (0.55mm);
+      \noexpand\fill[\bkTT] (axis cs:\kviiibB,\kviiibH) circle (0.55mm);
+      \noexpand\draw[bkOrange!85!black, line width=0.8pt] (axis cs:\kviiibA,-15) -- (axis cs:\kviiibA,-19);
+      \noexpand\draw[\bkTT, line width=0.8pt] (axis cs:\kviiibB,-27) -- (axis cs:\kviiibB,-31);}\kviiibtmp}
+  \draw[bkInk!60, line width=0.5pt] (axis cs:0,-17) -- (axis cs:100,-17) (axis cs:0,-29) -- (axis cs:100,-29);
+  \node[kviiib lab, anchor=east] at (axis cs:-1,-17) {東へ};
+  \node[kviiib lab, anchor=east] at (axis cs:-1,-29) {北へ};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{真東へ進むとき（オレンジの線）と真北へ進むとき（紺の点線）の高さ。点は \qty{10}{m} ごとの等高線をこえる所。下の2本の目もりは、地図の上の等高線の位置。北へ進むほうが、目もりがつまっている。}
+\label{bk:8-1:fig-kyuu}
+\end{bkfigure}
+
+図\ref{bk:8-1:fig-kyuu}の下の2本の目もりは、地図\ref{bk:8-1:fig-map}を真東・真北にたどったときに等高線をこえる位置です。北へ進むほうが、目もりの間がせまくなっています。グラフでも、紺の点線のほうが急に下がっています。\qty{80}{m} の線から \qty{70}{m} の線までを数で比べると、次のようになります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[c,m,wd=32mm] Q[c,m,wd=32mm] Q[c,m,wd=26mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+進む向き & \qty{80}{m} の線までの距離 & \qty{70}{m} の線までの距離 & 平均の傾き \\
+真東へ & \qty{44.72}{m} & \qty{54.77}{m} & $\dfrac{10}{10.05}\approx0.99$ \\
+真北へ & \qty{31.62}{m} & \qty{38.73}{m} & $\dfrac{10}{7.11}\approx1.41$ \\
+\end{bktable}
+\bktabcaption{\qty{80}{m} の線と \qty{70}{m} の線の間の、平均の傾き（3-5：高さの変化÷横の長さ）。距離は⑧で求める式から計算した。}
+\end{bkcenter}
+
+東へは \qty{10.05}{m} 進んで \qty{10}{m} 下がり、北へは \qty{7.11}{m} 進むだけで \qty{10}{m} 下がります。傾きは、北へ進むほうが約1.4倍大きい、つまり急です。
+
+\Needspace{5\baselineskip}\label{bk:8-1:kotae}\noindent\textbf{\bkhatenaref の答え}\par
+等高線だけから、山の形がわかります。頂上は、いちばん内側の輪の中です（▲の所、\qty{100}{m}）。坂が急なのは、線がつまっている所です。主役の山では、東や西へ進むより、北や南へ進むほうが急です。また、どちらの向きでも、頂上の近くでは線の間が広く（ゆるやか）、ふもとに近いほど線がつまります（急）。図\ref{bk:8-1:fig-kyuu}の目もりでも、右へ行くほど間がせまくなっています。
+
+\begin{column}{地図は、本当に数の表になっている}
+国土地理院は、日本の地面を \qty{5}{m} や \qty{10}{m} の四角いマスに分けて、マスごとの標高を並べた数の表（数値標高モデル）を公開しています。地図アプリの3次元の表示や、地理院地図で選んだ点の標高は、このような数の表をもとにしています。
+
+地図の等高線は、この数の表から、「同じ高さの所を結ぶ」という計算でかくことができます。次の手でわかるの段では、主役の山について、同じことを表計算でやってみます。
+\end{column}
+
+\bkstage{te}{手でわかる}{表で作る}{\bklevel{4}}
+
+\bksubsection{4}{表計算で、地図を作る}
+
+\label{bk:8-1:hyou}高さの式を、表計算に入れて、地図のような表を作ります。表計算の表は、たて・横にマスが並んでいるので、そのまま地図として使えます（8-0）。
+
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 1行めに、東への距離 $x$ を入れる。B1 に 0、C1 に 10、…、G1 に 50。
+\item A列に、北への距離 $y$ を入れる。A2 に 40、A3 に 30、…、A6 に 0。\textbf{北が上になるように、大きい順}に入れる。
+\item B2 に、高さの式 \texttt{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2} を入れる（\texttt{\^{}} は累乗の記号で、\texttt{B\$1\^{}2} は $x^2$）。
+\item B2 を、B2 から G6 までの全部のマスにコピーする。
+\end{enumerate}
+
+\begin{bkcenter}
+\kviiibfx{B2}{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2}\par\vspace{1mm}
+\bksheet{7}{12}{%
+1 & \SetCell{c} $y$＼$x$ & \SetCell{bg=kviiibX} 0 & \SetCell{bg=kviiibX} 10 & \SetCell{bg=kviiibX} 20 & \SetCell{bg=kviiibX} 30 & \SetCell{bg=kviiibX} 40 & \SetCell{bg=kviiibX} 50 \\
+2 & \SetCell{bg=kviiibY} 40 & 68 & 67 & 64 & 59 & 52 & 43 \\
+3 & \SetCell{bg=kviiibY} 30 & 82 & 81 & 78 & 73 & 66 & 57 \\
+4 & \SetCell{bg=kviiibY} 20 & 92 & 91 & 88 & \SetCell{bg=kviiibP} 83 & 76 & 67 \\
+5 & \SetCell{bg=kviiibY} 10 & 98 & 97 & 94 & 89 & 82 & 73 \\
+6 & \SetCell{bg=kviiibY} 0 & 100 & 99 & 96 & 91 & 84 & 75 \\}
+\bktabcaption{主役の山の高さ（m）の表。1行め（オレンジ）が東への距離 $x$、A列（緑）が北への距離 $y$。黄色のマス E4（$x=30$、$y=20$）が \qty{83}{m}。}
+\label{bk:8-1:tab-hyou}
+\end{bkcenter}
+
+③の式の \texttt{\$} は、2-18 で学んだ「ここは動かさない」という印です。\texttt{B\$1} は、行の番号1の前に \texttt{\$} があるので、どこへコピーしても「1行めの $x$」を読みます。\texttt{\$A2} は、列の文字Aの前に \texttt{\$} があるので、どこへコピーしても「A列の $y$」を読みます。この2つのおかげで、どのマスでも「そのマスの真上の $x$ と、真横の $y$」で高さが計算されます。たとえば E4 にコピーされた式は \texttt{=100-0.01*E\$1\^{}2-0.02*\$A4\^{}2} で、E1 の30と A4 の20を使って、83 になります。
+
+表の右下（$x=50$、$y=0$）は 75 で、図\ref{bk:8-1:fig-hako}の下の箱と同じです。表では\textbf{上が北}なので、行の番号が大きいほど南になります。ここだけは、ふつうの地図と同じ向きにするためのきまりです。
+
+\Needspace{8\baselineskip}
+\noindent\textbf{色分けすると、等高線が見えてくる}\par\nobreak\vspace{2pt}
+表を広げて、東は \qty{100}{m}、北は \qty{70}{m} まで計算し、マスを高さ \qty{10}{m} ごとに色分けします。高い所ほど、こい色にします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \yy [count=\i from 0] in {70,60,...,0} {
+    \foreach \xx [count=\j from 0] in {0,10,...,100} {
+      \pgfmathtruncatemacro\hh{round(100-0.01*\xx*\xx-0.02*\yy*\yy)}
+      \ifnum\hh<0
+        \draw[bkLine, line width=0.4pt, fill=white] (9*\j,-9*\i) rectangle ++(9,-9);
+        \node[font=\sffamily\footnotesize, text=bkGray] at (9*\j+4.5,-9*\i-4.5) {－};
+      \else
+        \kviiibband{\hh}
+        \draw[bkLine, line width=0.4pt, fill=bkOrange!\kviiibcc] (9*\j,-9*\i) rectangle ++(9,-9);
+        \node[font=\sffamily\footnotesize] at (9*\j+4.5,-9*\i-4.5) {\hh};
+      \fi}
+    \node[kviiib lab, anchor=east] at (-1.5,-9*\i-4.5) {\yy};}
+  \foreach \xx [count=\j from 0] in {0,10,...,100} {\node[kviiib lab, anchor=south] at (9*\j+4.5,1.5) {\xx};}
+  \node[kviiib lab, anchor=south east] at (-1.5,1.5) {$y$＼$x$};
+\end{tikzpicture}
+\bkfigcaption{東 \qty{100}{m}・北 \qty{70}{m} までの表を、\qty{10}{m} ごとに色分けしたもの（高いほどこい色）。色の境目が、ほぼ等高線になる。「－」は高さが0より小さくなるマス（山の外）。}
+\label{bk:8-1:fig-iro}
+\end{bkfigure}
+
+色の境目をたどると、図\ref{bk:8-1:fig-map}の地図の右上の部分（東と北の4分の1）と同じ形が見えてきます。表と等高線の地図は、同じ山を、ちがう形で表したものなのです。
+
+\bksubsection{5}{表から、等高線の場所を見つもる}
+
+\label{bk:8-1:mitsumori}表のマスは \qty{10}{m} ごとなので、等高線がマスとマスの間のどこを通るかは、表には直接書いてありません。そこで、となりのマスの数から見つもります。
+
+4行め（$y=20$）を見ると、$x=30$ で 83、$x=40$ で 76 です。\qty{80}{m} の等高線は、この2つのマスの間を通ります。$x$ が30から40へ \qty{10}{m} 進む間に、高さは $83-76=7$ 下がります。\qty{80}{m} まで下がるのは、$83-80=3$ 下がった所です。間をまっすぐ下がると考えると、
+\[ x\approx30+10\times\frac{3}{7}\approx30+4.3=34.3 \]
+です。7 下がるのに \qty{10}{m} かかるので、3 下がるには $10\times3\div7$〔m〕かかる、という比の計算です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=60mm, xmin=18, xmax=52, ymin=60, ymax=96, xtick={20,30,40,50}, ytick={65,70,75,80,85,90,95}, xlabel={$x$（m）}, ylabel={高さ（m）}, axis lines=left]
+  \addplot[bkGray, line width=1.2pt, domain=18:52] {92-0.01*x^2};
+  \addplot[bkRed!80!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt] coordinates {(30,83) (40,76)};
+  \addplot[only marks, mark=*, mark size=1.8pt, \bkTT] coordinates {(20,88) (30,83) (40,76) (50,67)};
+  \draw[bkInk!60, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:18,80) -- (axis cs:52,80);
+  \draw[bkRed!80!black, line width=0.6pt] (axis cs:34.29,80) -- (axis cs:34.29,60);
+  \draw[bkGray, line width=0.6pt] (axis cs:34.64,80) -- (axis cs:34.64,60);
+  \node[kviiib lab, anchor=south west, fill=white] at (axis cs:41,84) {本当の高さ（灰色の線）};
+  \node[kviiib lab, anchor=north east, fill=white, text=bkRed!75!black] at (axis cs:33.6,74) {見つもり 34.3};
+  \node[kviiib lab, anchor=north west, fill=white] at (axis cs:35.4,70) {本当は 34.64};
+  \node[kviiib lab, anchor=south west, fill=white] at (axis cs:45,80.4) {80 m};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表の4行め（$y=20$）の高さ（紺の点）。\qty{80}{m} になる所を、30 と 40 の間をまっすぐ結んで見つもると \qty{34.3}{m}（赤い点線）。本当の高さの線（灰色）で求めると \qty{34.64}{m}。}
+\label{bk:8-1:fig-mitsumori}
+\end{bkfigure}
+
+本当の位置は、⑧で式から求めると $x=\sqrt{1200}\approx34.64$ です。見つもりとのちがいは \qty{0.4}{m} ほどで、マスの大きさ \qty{10}{m} にくらべると小さいことがわかります。マスを小さくすると、見つもりは本当の位置にもっと近づきます。地図アプリや Python は、このような見つもりを、すべてのマスの間でして、等高線をかいています。
+
+\bksubsection{6}{Python で、表と等高線を作る}
+
+\label{bk:8-1:python}同じ表を Python で作ります。numpy の \texttt{meshgrid} は、「マスごとの $x$ の表」と「マスごとの $y$ の表」を作る道具です。この2つの表に、高さの式をそのまま書くと、すべてのマスの高さが一度に計算されます。
+
+\Needspace{16\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np               \# 数の表の道具 numpy を np として使う
+x = np.arange(0, 60, 10)         \# 東へ 0, 10, …, 50（60 は入らない）
+y = np.arange(40, -10, -10)      \# 北へ 40, 30, …, 0（北を上に）
+X, Y = np.meshgrid(x, y)         \# マスごとの x の表と y の表
+H = 100 - 0.01*X**2 - 0.02*Y**2  \# マスごとの高さ（B2 の式と同じ）
+print(H)
+print(H[2, 3])                   \# 上から2行め・左から3列め（0から）
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[ 68.  67.  64.  59.  52.  43.]
+ [ 82.  81.  78.  73.  66.  57.]
+ [ 92.  91.  88.  83.  76.  67.]
+ [ 98.  97.  94.  89.  82.  73.]
+ [100.  99.  96.  91.  84.  75.]]
+83.0
+\end{bkcodeout}
+
+\noindent 表\ref{bk:8-1:tab-hyou}と同じ数が、同じ並びで出てきました。\texttt{68.} の「.」は、小数（68.0）として計算したという印です。\texttt{y} を \texttt{40} から \texttt{-10} ずつにしたのは、表計算と同じく北を上にするためです。\texttt{H[2, 3]} は、上から数えて2行め、左から数えて3列めのマスです。Python は0から数えるので、上から3つめの行（$y=20$）、左から4つめの列（$x=30$）で、83 になります。
+
+等高線の図は、matplotlib という道具の \texttt{contour} でかきます。
+
+\Needspace{10\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+import matplotlib.pyplot as plt  \# 図をかく道具を plt として使う
+x = np.linspace(-100, 100, 201)  \# 1 m ごとに 201 個
+y = np.linspace(75, -75, 151)    \# 北が先。1 m ごとに 151 個
+X, Y = np.meshgrid(x, y)
+H = 100 - 0.01*X**2 - 0.02*Y**2
+\# 0, 10, …, 90 m の等高線をかき、線に高さの数字をつける
+c = plt.contour(X, Y, H, levels=range(0, 100, 10))
+plt.clabel(c)
+plt.gca().set\_aspect('equal')   \# 東西と南北の 1 m を同じ長さに
+plt.show()
+\end{bkcode}
+
+\noindent 実行すると、図\ref{bk:8-1:fig-map}と同じ形の等高線の図が出てきます（この本の図は、Python で出した図を本の形にかき直したものです）。\texttt{levels=}\allowbreak\texttt{range(0,}\allowbreak\texttt{ 100,}\allowbreak\texttt{ 10)} は「0 から \qty{10}{m} ごとに、100 の手前（90）まで」という意味です。\texttt{np.linspace} は、はじめの数から終わりの数までを、両はしをふくめて等しく分けた数を作ります。\texttt{(-100, 100, 201)} なら、$-100$ から $100$ までの201個（\qty{1}{m} ごと）です。\texttt{set\_aspect('equal')} を忘れると、東西と南北の \qty{1}{m} の長さがちがってかかれ、等高線の形がゆがんで見えます。
+
+\bkkokomade[等高線の地図を読み、表計算や Python で高さの表と等高線を作れれば十分です。この先は、式で等高線の形を確かめます。]
+
+\Needspace{12\baselineskip}
+\bkstage{shiki}{式でわかる}{式で見る}{\bklevel{4}}
+
+\bksubsection{7}{2つの変数の関数}
+
+\label{bk:8-1:kansuu}ここまで見てきた「高さ」のように、2つの数 $x$、$y$ を決めると、1つの数が決まるきまりを、\textbf{2つの変数の関数}（2変数関数）といいます。\bkidx{にへんすうかんすう}{2つの変数の関数（2変数関数）}関数の名前を $f$ とするとき、$x$、$y$ を入れて出てくる数を
+\[ f(x,\ y) \]
+と書き、「エフ・エックス・ワイ」と読みます。1つの変数の関数 $f(x)$（3-3）の、かっこの中が2つになった形です。主役の山の高さを $h$ という名前の関数にすると、
+\[ h(x,\ y)=100-0.01x^2-0.02y^2 \]
+です。$h(30,\ 20)$ は「$x=30$、$y=20$ を入れたときの値」で、$h(30,\ 20)=83$ です。
+
+かっこの中の\textbf{順番}には意味があります。この本では、1つめが東への距離 $x$、2つめが北への距離 $y$ です。たとえば $h(20,\ 30)$ は、東へ \qty{20}{m}、北へ \qty{30}{m} の所なので、
+\[ h(20,\ 30)=100-0.01\times20^2-0.02\times30^2=100-4-18=78 \]
+で、$h(30,\ 20)=83$ とはちがいます。表\ref{bk:8-1:tab-hyou}では、D3（$x=20$ の列、$y=30$ の行）が78です。
+
+同じように考えて、場所を決めると気温や気圧が1つ決まるのも、2つの変数の関数です（8-0 のスカラー場）。2つの変数の関数は、次の4通りで表せます。3-3 で「表・グラフ・式は、同じことを言っている」と学んだのと同じです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] Q[l,m,wd=56mm] Q[l,m,wd=38mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+表し方 & 主役の山では & 何がわかりやすいか \\
+式 & $h(x,\ y)=100-0.01x^2-0.02y^2$ & どの場所でも計算できる \\
+表 & 表\ref{bk:8-1:tab-hyou}（表計算・Python） & マスごとの数 \\
+鳥かん図 & 図\ref{bk:8-1:fig-bird} & 山全体の形 \\
+等高線の地図 & 図\ref{bk:8-1:fig-map} & 高さと、急な所 \\
+\end{bktable}
+\bktabcaption{2つの変数の関数の、4通りの表し方}
+\end{bkcenter}
+
+\bksubsection{8}{等高線の式は、だ円}
+
+\label{bk:8-1:daen}等高線を式で表します。高さ \qty{80}{m} の等高線は、「$h(x,\ y)=80$ になる点 $(x,\ y)$ を全部集めた線」です。式を変形して、どんな形か調べます。
+
+\begin{bkhenkei}
+100-0.01x^2-0.02y^2=80 & 高さが80の点の式 \\
+0.01x^2+0.02y^2=20 & 移項した（両辺に $0.01x^2+0.02y^2-80$ をたした） \\
+\dfrac{x^2}{2000}+\dfrac{y^2}{1000}=1 & 両辺を20でわった（$0.01\div20=1\div2000$） \\
+\Bigl(\dfrac{x}{44.72}\Bigr)^2+\Bigl(\dfrac{y}{31.62}\Bigr)^2=1 & $\sqrt{2000}\approx44.72$、$\sqrt{1000}\approx31.62$ \\
+\end{bkhenkei}
+
+最後の式は、4-8 のだ円の式で、$a=44.72$、$b=31.62$ のものです。高さ \qty{80}{m} の等高線は、東西に半径 \qty{44.72}{m}、南北に半径 \qty{31.62}{m} のだ円です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kviiib map, width=104mm, xmin=-55, xmax=55, ymin=-40, ymax=40, xtick distance=10, ytick distance=10]
+  \kviiibcontour[kviiib line, bkRed, line width=1.4pt]{80}
+  \draw[kviiib arr, \bkTT] (axis cs:0,0) -- (axis cs:44.72,0);
+  \draw[kviiib arr, \bkTT] (axis cs:0,0) -- (axis cs:0,31.62);
+  \node[kviiib lab, anchor=south, fill=white, text=\bkTT] at (axis cs:24,0.8) {$a=44.72$};
+  \node[kviiib lab, anchor=west, fill=white, text=\bkTT] at (axis cs:1.2,18) {$b=31.62$};
+  \fill[bkInk] (axis cs:0,0) circle (0.6mm);
+  \node[kviiib lab, anchor=north east, fill=white] at (axis cs:-1,-1) {頂上};
+  \kviiibpt{30}{20}
+  \node[kviiib note, anchor=north east] at ([xshift=-1.2mm, yshift=-1.2mm]kviiibP.south west) {$(30,\ 20)$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{高さ \qty{80}{m} の等高線（赤）は、東西の半径 \qty{44.72}{m}、南北の半径 \qty{31.62}{m} のだ円。点 $(30,\ 20)$ は、だ円の内側（\qty{80}{m} より高い所）にある。}
+\label{bk:8-1:fig-daen}
+\end{bkfigure}
+
+ほかの高さ $c$ でも、同じように変形できます。$0.01x^2+0.02y^2=100-c$ を $100-c$ でわると、
+\[ \Bigl(\frac{x}{a}\Bigr)^2+\Bigl(\frac{y}{b}\Bigr)^2=1,\qquad a=\sqrt{\frac{100-c}{0.01}},\quad b=\sqrt{\frac{100-c}{0.02}} \]
+となります。$c$ が小さい（低い）ほど $100-c$ が大きくなり、だ円は大きくなります。どの高さでも $b\div a=\sqrt{0.01\div0.02}\approx0.707$ なので、等高線は、同じ形のだ円が大きさだけを変えて並んだものです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=15mm]}}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+高さ $c$（m） & 90 & 80 & 70 & 60 & 50 \\
+東西の半径 $a$（m） & 31.62 & 44.72 & 54.77 & 63.25 & 70.71 \\
+南北の半径 $b$（m） & 22.36 & 31.62 & 38.73 & 44.72 & 50.00 \\
+\end{bktable}
+\bktabcaption{等高線のだ円の半径。8-1 の表の数（44.72、54.77 など）は、ここから求めた。}
+\end{bkcenter}
+
+点 $(30,\ 20)$ が \qty{80}{m} の線の内側にあることも、式で確かめられます。$x=30$、$y=20$ を入れると、
+\[ 0.01\times30^2+0.02\times20^2=9+8=17 \]
+で、20 より小さいので、だ円の式の左辺は $17\div20=0.85$ で、1より小さくなります。だ円の内側は、頂上に近い、高い側です。
+
+\bksubsection{9}{切り口：1つを止めると、ふつうの関数}
+
+\label{bk:8-1:kiriguchi}2つの変数のうち1つを決まった数に止めると、残りは1つの変数の関数になります。たとえば、北へ \qty{20}{m} の所（$y=20$）を、東西にまっすぐ歩くことを考えます。$y$ に20を入れると、
+\[ h(x,\ 20)=100-0.01x^2-0.02\times20^2=92-0.01x^2 \]
+で、$x$ だけの関数になります。3-9 の放物線 $y=ax^2+q$ で、$a=-0.01$、$q=92$ の形です。山を、$y=20$ のたての面で切ったときの切り口の形です。
+
+同じように、東へ \qty{30}{m} の所（$x=30$）を南北に歩くときは、
+\[ h(30,\ y)=100-0.01\times30^2-0.02y^2=91-0.02y^2 \]
+です。止めた文字は、ただの数としてあつかいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=g1, width=64mm, height=56mm, xmin=0, xmax=100, ymin=0, ymax=100, xtick={0,30,60,90}, ytick={0,20,40,60,83,100}, xlabel={$x$（m）}, ylabel={高さ（m）}]
+  \addplot[bkOrange!85!black, line width=1.6pt, domain=0:95.92] {92-0.01*x^2};
+  \node[kviiib lab, anchor=north east, fill=white, align=right] at (axis cs:99,99) {$y=20$ で切る\\$h=92-0.01x^2$};
+  \draw[bkInk!50, dash pattern=on 2pt off 1.5pt, line width=0.6pt] (axis cs:30,0) -- (axis cs:30,83) -- (axis cs:0,83);
+  \fill[bkRed] (axis cs:30,83) circle (0.9mm);
+\end{axis}
+\begin{axis}[bkplot, at={($(g1.east)+(16mm,0)$)}, anchor=west, width=64mm, height=56mm, xmin=0, xmax=100, ymin=0, ymax=100, xtick={0,20,40,60}, ytick={0,20,40,60,83,100}, xlabel={$y$（m）}, ylabel={高さ（m）}]
+  \addplot[\bkTT, line width=1.6pt, dash pattern=on 4pt off 2pt, domain=0:67.45] {91-0.02*x^2};
+  \node[kviiib lab, anchor=north east, fill=white, align=right] at (axis cs:99,99) {$x=30$ で切る\\$h=91-0.02y^2$};
+  \draw[bkInk!50, dash pattern=on 2pt off 1.5pt, line width=0.6pt] (axis cs:20,0) -- (axis cs:20,83) -- (axis cs:0,83);
+  \fill[bkRed] (axis cs:20,83) circle (0.9mm);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2つの切り口。左は北へ \qty{20}{m} の所を東西に、右は東へ \qty{30}{m} の所を南北に切ったもの。どちらも、点 $(30,\ 20)$ の上の \qty{83}{m}（赤い点）を通る。}
+\label{bk:8-1:fig-kiri}
+\end{bkfigure}
+
+2つの切り口は、どちらも点 $(30,\ 20)$ の上（高さ83）を通ります。左のグラフの傾きは「その点から東へ進むときの坂」、右のグラフの傾きは「北へ進むときの坂」です。この2つの傾きを、それぞれ微分（第5巻）で求めるのが、次の 8-2 の偏微分です。「1つを止めて、もう1つだけ動かす」が、8-2 の合いことばになります。
+
+\bksubsection{10}{3つの変数の関数と、等値面}
+
+\label{bk:8-1:touchi}部屋の中の温度は、床の上の場所 $(x,\ y)$ だけでなく、床からの高さ $z$ でも変わります。暖房をつけた部屋では、暖かい空気が上へ上がるので、天井の近くほど暖かくなります。このような量は、3つの数 $(x,\ y,\ z)$ を入れると1つの数が出てくる、\textbf{3つの変数の関数} $T(x,\ y,\ z)$ です。
+
+たとえば、ある部屋の温度〔℃〕が、高さ $z$〔m〕だけで決まって、
+\[ T(x,\ y,\ z)=18+2z \]
+だったとします。床（$z=0$）は \qty{18}{℃}、高さ \qty{1}{m} で \qty{20}{℃}、天井（$z=2.5$）で \qty{23}{℃} です。$2z$ の2は、「\qty{1}{m} 上がるごとに \qty{2}{℃} 上がる」という意味です。
+
+2つの変数の関数では、同じ高さの点を結ぶと「線」（等高線）になりました。3つの変数の関数で、同じ値の点を全部集めると、「面」になります。これを\textbf{等値面}（とうちめん）といいます。\bkidx{とうちめん}{等値面}この部屋で \qty{20}{℃} の点は、$18+2z=20$ から $z=1$ の所なので、\qty{20}{℃} の等値面は「床から \qty{1}{m} の高さの水平な面」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 部屋（ななめから見た箱）
+  \begin{scope}
+    \draw[bkInk!60, line width=0.6pt] (0,0) -- (44,0) -- ++(14,10) -- ++(0,30) -- ++(-44,0) -- ++(-14,-10) -- cycle;
+    \draw[bkInk!60, line width=0.6pt] (0,30) -- (44,30) -- ++(14,10) (44,0) -- (44,30);
+    \draw[bkInk!40, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (0,0) -- (14,10) -- (58,10) (14,10) -- (14,40);
+    \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=0.8pt, fill opacity=0.85] (0,12) -- (44,12) -- (58,22) -- (14,22) -- cycle;
+    \filldraw[fill=bkOrange!50, draw=bkOrange!80!black, line width=0.8pt, fill opacity=0.85] (0,24) -- (44,24) -- (58,34) -- (14,34) -- cycle;
+    \node[kviiib lab, anchor=west] at (60,22) {22 ℃（$z=2$）};
+    \node[kviiib lab, anchor=west] at (60,10) {20 ℃（$z=1$）};
+    \draw[kviiib arr, bkInk] (-4,0) -- (-4,33);
+    \node[kviiib lab, anchor=south] at (-4,33.5) {$z$};
+    \node[kviiib lab, anchor=north] at (22,-1.5) {部屋の床（18 ℃）};
+  \end{scope}
+  % 球の等値面（切り口）
+  \begin{scope}[shift={(106,18)}]
+    \draw[bkInk!60, line width=0.5pt, -{Stealth[length=2mm]}] (-20,0) -- (21,0) node[right, kviiib lab] {$x$};
+    \draw[bkInk!60, line width=0.5pt, -{Stealth[length=2mm]}] (0,-20) -- (0,21) node[above, kviiib lab] {$y$};
+    \foreach \r/\kviiibF in {5/1,10/4,15/9} {\draw[\bkTT, line width=0.9pt] (0,0) circle (\r);
+      \node[kviiib lab, fill=white, text=\bkTT] at (45:\r) {\kviiibF};}
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：$T=18+2z$ の部屋の、\qty{20}{℃} と \qty{22}{℃} の等値面（水平な面）。右：$f=x^2+y^2+z^2$ の、$f=1$・$4$・$9$ の等値面（半径1・2・3の球）を、$z=0$ の面で切った切り口。}
+\label{bk:8-1:fig-touchi}
+\end{bkfigure}
+
+等値面が水平な面にならない関数もあります。たとえば、
+\[ f(x,\ y,\ z)=x^2+y^2+z^2 \]
+は、4-13 で学んだ「原点からの距離の2乗」です。$f=4$ の等値面は、原点からの距離の2乗が4、つまり距離が2の点を全部集めたものなので、\textbf{半径2の球の面}です。小さな電球のまわりの明るさや、小さな電荷のまわりの電位（8-4）も、中心からの距離だけで決まるので、等値面は球になります。
+
+\begin{seikaku}
+「関数」というときは、\textbf{入れる数の組を1つ決めると、出てくる数がちょうど1つに決まる}ことが大事です。主役の山の式は、どんな $(x,\ y)$ でも計算できますが、山の外（$h$ が負になる所）では、式の値は「地面より下の深さ」のような意味のない数になります。そこでこの章では、主役の山を、高さ0の線（東西に \qty{100}{m}、南北に約 \qty{70.71}{m} のだ円）の内側だけで考えています。このように、関数に入れてよい数の組の範囲を、関数の\textbf{定義域}といいます（3-3 と同じことば）。
+\end{seikaku}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+$\mathbb{R}^2$ 上で定義された関数 $f$ と実数 $c$ に対し、$\{(x,y)\mid f(x,y)=c\}$ を $f$ の等高線（level curve）といい、3変数関数 $F(x,y,z)$ に対し、$\{(x,y,z)\mid F(x,y,z)=c\}$ を等位面（level surface）という。関数 $z=f(x,y)$ のグラフは、$xyz$ 空間内の曲面である。
+\end{bkhonbun}
+\bkyaku{「$\mathbb{R}^2$」は、2つの数の組 $(x,\ y)$ を全部集めたもの（平面）。「$\{(x,y)\mid f(x,y)=c\}$」は「$f(x,\ y)=c$ になる点 $(x,\ y)$ を全部集めたもの」と読む。等値面を「等位面」とよぶ本もある。英語の level は「高さの水準」。「グラフは曲面」は、この章の鳥かん図のこと。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\kviiibbox{2つの変数の関数と等高線}
+・2つの数 $(x,\ y)$ を入れると1つの数が出てくるきまりを、2つの変数の関数 $f(x,\ y)$ という。かっこの中は順番が大事（この本では東が先）。\par
+・同じ値の点を結んだ線が等高線。式 $f(x,\ y)=c$ で表せる。高さのちがう線は交わらない。線がつまった所ほど急。\par
+・1つの変数を止めると、ふつうの1つの変数の関数（切り口）になる。\par
+・3つの変数の関数 $T(x,\ y,\ z)$ では、同じ値の点の集まりは面（等値面）になる。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{2つの変数の関数}{2つの数を入れると、1つの数が出てくるきまり。$f(x,\ y)$ と書く。}
+\bkword{等高線}{同じ高さ（同じ値）の点を結んだ線。天気図の等圧線、気温の等温線も同じ仲間。}
+\bkword{鳥かん図}{高い所からななめに見下ろした図。2つの変数の関数のグラフ（曲面）。}
+\bkword{切り口}{1つの変数を止めてできる、1つの変数の関数。山をたての面で切った形。}
+\bkword{3つの変数の関数・等値面}{3つの数で1つの数が決まるきまり。同じ値の点の集まり（面）が等値面。}
+\bkword{定義域}{関数に入れてよい数（数の組）の範囲。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$f(x,y)$}{エフ・エックス・ワイ}{2つの数 $x$、$y$ を入れたときに出てくる数（2つの変数の関数）。順番が大事}{function of two variables}{8-1}}
+
+%% ================= 例題 =================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[2つの変数の関数の値]
+主役の山 $h(x,\ y)=100-0.01x^2-0.02y^2$ で、$h(40,\ 10)$ と $h(10,\ 40)$ を求め、どちらの場所が高いか答えましょう。\par
+\kangaekata かっこの1つめが $x$（東）、2つめが $y$（北）。それぞれ式に入れる。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kviiib map, width=76mm, xmin=0, xmax=60, ymin=0, ymax=50, xtick distance=10, ytick distance=10]
+  \pgfplotsinvokeforeach{60,70,80,90}{\kviiibcontour{#1}}\kviiibcontour[kviiib bold]{50}
+  \kviiibpt{40}{10}\node[kviiib note, anchor=south west] at ([xshift=0.8mm, yshift=0.8mm]kviiibP.north east) {$(40,\ 10)$};
+  \kviiibpt{10}{40}\node[kviiib note, anchor=north west] at ([xshift=0.8mm, yshift=-0.8mm]kviiibP.south east) {$(10,\ 40)$};
+\end{axis}
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 $h(40,\ 10)=100-0.01\times40^2-0.02\times10^2$\par
+\kviiibii $=100-16-2=82$\par
+\kviiibi $h(10,\ 40)=100-0.01\times10^2-0.02\times40^2$\par
+\kviiibii $=100-1-32=67$\par
+\kotae $h(40,\ 10)=82$、$h(10,\ 40)=67$。東へ \qty{40}{m}・北へ \qty{10}{m} の所のほうが高い
+\end{reidai}
+
+\begin{jibun}
+主役の山で、$h(50,\ 20)$ と $h(20,\ 50)$ を求め、どちらの場所が高いか答えましょう。
+\bkjans{$h(50,\ 20)=100-25-8=67$、$h(20,\ 50)=100-4-50=46$。東へ \qty{50}{m}・北へ \qty{20}{m} の所のほうが高い。}
+\end{jibun}
+
+\begin{reidai}[表計算の式をコピーする]
+表\ref{bk:8-1:tab-hyou}のように、B2 に \texttt{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2} と入れて、G6 までコピーしました。F5 に入っている式と、F5 の値を答えましょう。\par
+\kangaekata \texttt{\$} がついた所（1行め・A列）は動かず、ついていない所だけがずれる。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \c [count=\j from 1] in {A,B,C,D,E,F,G} {\node[kviiib lab, text=bkGray] at (9*\j+4.5,3) {\c};}
+  \foreach \r in {1,...,6} {\node[kviiib lab, text=bkGray] at (4,{-6*\r+3}) {\r};}
+  \foreach \j in {1,...,7} {\foreach \r in {1,...,6} {\draw[bkLine, line width=0.4pt] (9*\j,{-6*\r+6}) rectangle ++(9,-6);}}
+  \fill[kviiibX] (54.2,-0.2) rectangle (62.8,-5.8); \node[kviiib lab] at (58.5,-3) {40};
+  \fill[kviiibY] (9.2,-24.2) rectangle (17.8,-29.8); \node[kviiib lab] at (13.5,-27) {10};
+  \fill[kviiibP] (54.2,-24.2) rectangle (62.8,-29.8); \node[kviiib lab] at (58.5,-27) {？};
+  \draw[kviiib arr, bkOrange!80!black] (58.5,-6.6) -- (58.5,-23.4);
+  \draw[kviiib arr, bkGreen!50!black] (18.6,-27) -- (53.4,-27);
+  \node[kviiib lab, anchor=west, align=left] at (68,-12) {F5 は、真上の F1（$x$）と\\真横の A5（$y$）を使う};
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 F5 の列は F なので、\texttt{B\$1} は \texttt{F\$1}（F1 は40）\par
+\kviiibi 行は5なので、\texttt{\$A2} は \texttt{\$A5}（A5 は10）\par
+\kviiibi $100-0.01\times40^2-0.02\times10^2=100-16-2=82$\par
+\kotae \texttt{=100-0.01*F\$1\^{}2-0.02*\$A5\^{}2}、値は82
+\end{reidai}
+
+\begin{jibun}
+同じ表で、D3 に入っている式と、D3 の値を答えましょう。
+\bkjans{\texttt{=100-0.01*D\$1\^{}2-0.02*\$A3\^{}2}。D1 は20、A3 は30 なので、$100-4-18=78$。}
+\end{jibun}
+
+\begin{reidai}[等高線の式とだ円の半径]
+主役の山の、高さ \qty{60}{m} の等高線の式を、次のだ円の形に変形し、東西の半径 $a$ と南北の半径 $b$ を求めましょう（小数第2位まで）。
+\[ \Bigl(\frac{x}{a}\Bigr)^2+\Bigl(\frac{y}{b}\Bigr)^2=1 \]
+\kangaekata ⑧の手順。$h=60$ とおいて移項し、右辺が1になるようにわる。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kviiib map, width=78mm, xmin=-70, xmax=70, ymin=-50, ymax=50, xtick distance=20, ytick distance=20]
+  \kviiibcontour[kviiib line, bkRed, line width=1.4pt]{60}
+  \draw[kviiib arr, \bkTT] (axis cs:0,0) -- (axis cs:63.25,0);
+  \draw[kviiib arr, \bkTT] (axis cs:0,0) -- (axis cs:0,44.72);
+  \node[kviiib lab, anchor=south, fill=white, text=\bkTT] at (axis cs:33,1.5) {$a$};
+  \node[kviiib lab, anchor=west, fill=white, text=\bkTT] at (axis cs:1.5,24) {$b$};
+\end{axis}
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 $100-0.01x^2-0.02y^2=60$\par
+\kviiibi $0.01x^2+0.02y^2=40$\quad（移項した）\par
+\kviiibi $\dfrac{x^2}{4000}+\dfrac{y^2}{2000}=1$\quad（両辺を40でわった）\par
+\kviiibi $a=\sqrt{4000}\approx63.25$、\ $b=\sqrt{2000}\approx44.72$\par
+\kotae 東西の半径 \qty{63.25}{m}、南北の半径 \qty{44.72}{m}（$a=63.25$、$b=44.72$ のだ円）
+\end{reidai}
+
+\begin{jibun}
+主役の山の、高さ \qty{90}{m} の等高線の式を、例題3と同じだ円の形に変形し、東西の半径 $a$ と南北の半径 $b$ を求めましょう（小数第2位まで）。
+\bkjans{$0.01x^2+0.02y^2=10$ を10でわって $\dfrac{x^2}{1000}+\dfrac{y^2}{500}=1$。$a=\sqrt{1000}\approx31.62$（m）、$b=\sqrt{500}\approx22.36$（m）。}
+\end{jibun}
+
+\begin{reidai}[等高線の間かくから、坂の急さを比べる]
+主役の山で、\qty{70}{m} の等高線から \qty{60}{m} の等高線までの平均の傾きを、真東へ進むときと真北へ進むときで求め、どちらが急か答えましょう。半径は表の値（\qty{70}{m}：$a=54.77$、$b=38.73$。\qty{60}{m}：$a=63.25$、$b=44.72$）を使います。\par
+\kangaekata 傾き＝高さの変化÷横の長さ（3-5）。高さの変化は、どちらも \qty{10}{m}。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}[x=1.4mm, y=1mm]
+  \draw[bkInk!60, line width=0.5pt] (0,0) -- (70,0) (0,-12) -- (70,-12);
+  \node[kviiib lab, anchor=east] at (-1,0) {東へ}; \node[kviiib lab, anchor=east] at (-1,-12) {北へ};
+  \foreach \v/\t in {54.77/70, 63.25/60} {\draw[bkOrange!85!black, line width=1pt] (\v,-2) -- (\v,2) node[above, kviiib lab] {\t};}
+  \foreach \v/\t in {38.73/70, 44.72/60} {\draw[\bkTT, line width=1pt] (\v,-14) -- (\v,-10) node[above, kviiib lab] {\t};}
+  \draw[bkOrange!85!black, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (54.77,-4.5) -- (63.25,-4.5);
+  \draw[\bkTT, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (38.73,-16.5) -- (44.72,-16.5);
+  \node[kviiib lab, anchor=north] at (59,-5.5) {？ m}; \node[kviiib lab, anchor=north] at (41.7,-17.5) {？ m};
+  \node[kviiib lab, anchor=north west] at (0,-17.5) {頂上からの距離（m）};
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 東：横の長さ $63.25-54.77=8.48$、傾き $10\div8.48\approx1.18$\par
+\kviiibi 北：横の長さ $44.72-38.73=5.99$、傾き $10\div5.99\approx1.67$\par
+\kotae 東は約1.18、北は約1.67。北へ進むほうが急
+\end{reidai}
+
+\begin{jibun}
+主役の山で、\qty{90}{m} の等高線から \qty{80}{m} の等高線までの平均の傾きを、真東へ進むときと真北へ進むときで求め、どちらが急か答えましょう（\qty{90}{m}：$a=31.62$、$b=22.36$。\qty{80}{m}：$a=44.72$、$b=31.62$）。
+\bkjans{東：$44.72-31.62=13.10$、$10\div13.10\approx0.76$。北：$31.62-22.36=9.26$、$10\div9.26\approx1.08$。北へ進むほうが急。}
+\end{jibun}
+
+\begin{reidai}[表から等高線の場所を見つもる]
+表\ref{bk:8-1:tab-hyou}の5行め（$y=10$）で、\qty{85}{m} の等高線が通る $x$ を、となりのマスの間をまっすぐ結んで見つもりましょう（小数第1位まで）。また、式から求めた本当の値 $\sqrt{1300}\approx36.06$ とくらべましょう。\par
+\kangaekata ⑤の手順。85 をはさむ2つのマスをさがし、比で見つもる。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=78mm, height=46mm, xmin=26, xmax=44, ymin=78, ymax=92, xtick={30,40}, ytick={80,82,85,89}, xlabel={$x$（m）}, ylabel={高さ（m）}, axis lines=left]
+  \addplot[bkRed!80!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt] coordinates {(30,89) (40,82)};
+  \addplot[only marks, mark=*, mark size=1.8pt, \bkTT] coordinates {(30,89) (40,82)};
+  \draw[bkInk!60, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:26,85) -- (axis cs:44,85);
+  \draw[bkRed!80!black, line width=0.6pt] (axis cs:35.71,85) -- (axis cs:35.71,78);
+  \node[kviiib lab, anchor=west, fill=white, text=bkRed!75!black] at (axis cs:36.2,80.5) {ここを見つもる};
+\end{axis}
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 $x=30$ で89、$x=40$ で82 なので、この間を通る\par
+\kviiibi \qty{10}{m} で $89-82=7$ 下がる。85 までは $89-85=4$ 下がる\par
+\kviiibi $x\approx30+10\times\dfrac{4}{7}\approx30+5.7=35.7$\par
+\kotae 約 \qty{35.7}{m}。本当の値 \qty{36.06}{m} とのちがいは約 \qty{0.4}{m}
+\end{reidai}
+
+\begin{jibun}
+表\ref{bk:8-1:tab-hyou}の3行め（$y=30$）で、\qty{70}{m} の等高線が通る $x$ を見つもりましょう（小数第1位まで）。また、本当の値 $\sqrt{1200}\approx34.64$ とくらべましょう。
+\bkjans{$x=30$ で73、$x=40$ で66。$73-66=7$ 下がる間に、$73-70=3$ 下がる。$30+10\times\dfrac{3}{7}\approx34.3$（m）。本当の値とのちがいは約 \qty{0.3}{m}。}
+\end{jibun}
+
+\begin{reidai}[切り口の関数]
+主役の山について、次の問いに答えましょう。\par
+（1）北へ \qty{10}{m} の所（$y=10$）で東西に切った切り口の式を求め、その上で高さが \qty{82}{m} になる $x$（$x>0$）を求めましょう。\par
+（2）東へ \qty{20}{m} の所（$x=20$）で南北に切った切り口の式を求め、その上で高さが \qty{78}{m} になる $y$（$y>0$）を求めましょう。\par
+\kangaekata ⑨の手順。止めた文字に数を入れると、残りの文字だけの式になる。\par
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 （1）$h(x,\ 10)=100-0.01x^2-0.02\times10^2=98-0.01x^2$\par
+\kviiibii $98-0.01x^2=82$ から $0.01x^2=16$、$x^2=1600$、$x=40$\par
+\kviiibi （2）$h(20,\ y)=100-0.01\times20^2-0.02y^2=96-0.02y^2$\par
+\kviiibii $96-0.02y^2=78$ から $0.02y^2=18$、$y^2=900$、$y=30$\par
+\kotae\kviiibs\hangindent=2.6\zw\hangafter=1 （1）$h=98-0.01x^2$、$x=40$\par
+\kviiibi （2）$h=96-0.02y^2$、$y=30$
+\end{reidai}
+
+\begin{jibun}
+主役の山について、（1）$y=30$ で切った切り口の式と、高さが \qty{66}{m} になる $x$（$x>0$）、（2）$x=40$ で切った切り口の式と、高さが \qty{66}{m} になる $y$（$y>0$）を求めましょう。
+\bkjans{（1）$h=82-0.01x^2$。$0.01x^2=16$ より $x=40$。（2）$h=84-0.02y^2$。$0.02y^2=18$ より $y=30$。}
+\end{jibun}
+
+\begin{reidai}[3つの変数の関数と等値面]
+次の問いに答えましょう。\par
+（1）部屋の温度が $T(x,\ y,\ z)=18+2z$（℃、$z$ は床からの高さ〔m〕）のとき、高さ \qty{1.5}{m} の温度と、\qty{22}{℃} の等値面を答えましょう。\par
+（2）$f(x,\ y,\ z)=x^2+y^2+z^2$ の、$f=4$ の等値面はどんな形ですか。\par
+\kangaekata ⑩の考え。等値面は「その値になる点を全部集めたもの」。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!60, line width=0.6pt] (0,0) rectangle (40,25);
+  \foreach \z/\t in {0/18,1/20,2/22} {\draw[bkOrange!80!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (0,{10*\z}) -- (40,{10*\z}); \node[kviiib lab, anchor=west] at (41.5,{10*\z}) {$z=\z$：\t ℃};}
+  \node[kviiib lab, anchor=west] at (41.5,25) {天井 $z=2.5$：23 ℃};
+  \node[kviiib lab, anchor=south] at (20,25.8) {部屋を横から見た図};
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 （1）$T=18+2\times1.5=21$。$18+2z=22$ から $z=2$\par
+\kviiibi （2）$x^2+y^2+z^2=4$ は「原点からの距離の2乗が4」、距離は2\par
+\kotae\kviiibs\hangindent=2.6\zw\hangafter=1 （1）\qty{21}{℃}。\qty{22}{℃} の等値面は、床から \qty{2}{m} の高さの水平な面\par
+\kviiibi （2）原点を中心とする、半径2の球の面
+\end{reidai}
+
+\begin{jibun}
+（1）部屋の温度が $T=17+2.5z$（℃）のとき、高さ \qty{2}{m} の温度と、\qty{20}{℃} の等値面を答えましょう。（2）$f=x^2+y^2+z^2$ の、$f=25$ の等値面はどんな形ですか。
+\bkjans{（1）$17+2.5\times2=22$（℃）。$17+2.5z=20$ から $z=1.2$ なので、床から \qty{1.2}{m} の高さの水平な面。（2）原点を中心とする、半径5の球の面。}
+\end{jibun}
+
+\begin{reidai}[天気図の等圧線の間かく]
+天気図の等圧線は \qty{4}{hPa} ごとにかいてあります。地点Aでは、となりの等圧線までの距離が \qty{200}{km}、地点Bでは \qty{100}{km} でした。それぞれ、\qty{100}{km} あたり気圧が何 hPa 変わるかを求め、風が強くなりやすいのはどちらか答えましょう。\par
+\kangaekata 等圧線は、気圧の等高線。線の間がせまいほど、気圧の変わり方（傾き）が大きい。\par\par\addvspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xx/\p in {0/1012, 20/1008, 60/1004, 70/1000} {\draw[bkInk!75, line width=0.8pt] (\xx,0) -- (\xx,16); \node[kviiib lab, anchor=south] at (\xx,16.5) {\p};}
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (0,6) -- (20,6) node[midway, above, kviiib lab] {\qty{200}{km}};
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (60,6) -- (70,6) node[midway, below=1mm, kviiib lab] {\qty{100}{km}};
+  \node[kviiib lab, fill=white] at (10,1.5) {地点A}; \node[kviiib lab, anchor=west] at (71.5,1.5) {地点B};
+\end{tikzpicture}\par}\addvspace{2pt}
+
+\shiki\kviiibs\hangindent=2.6\zw\hangafter=1 A：$4\div200\times100=2$（hPa）\par
+\kviiibi B：$4\div100\times100=4$（hPa）\par
+\kotae A は \qty{2}{hPa}、B は \qty{4}{hPa}。気圧の変わり方が大きい B のほうが、風が強くなりやすい
+\end{reidai}
+
+\begin{jibun}
+\qty{4}{hPa} ごとの等圧線で、地点Cでは間が \qty{250}{km}、地点Dでは \qty{125}{km} でした。\qty{100}{km} あたりの気圧の変化を求め、風が強くなりやすいのはどちらか答えましょう。
+\bkjans{C：$4\div250\times100=1.6$（hPa）。D：$4\div125\times100=3.2$（hPa）。D のほうが風が強くなりやすい。}
+\end{jibun}
+
+%% ================= まちがえやすいところ =================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① かっこの中の順番を入れかえる}
+\bkng{$h(20,\ 30)$ は、東へ \qty{30}{m}、北へ \qty{20}{m} の所の高さだから83。}
+\bkok{$h(20,\ 30)$ は、東へ \qty{20}{m}、北へ \qty{30}{m} の所。$100-4-18=78$。}
+かっこの1つめが $x$（東）、2つめが $y$（北）です。主役の山は東西と南北で形がちがうので、入れかえると値が変わります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 等高線が交わると思う}
+\bkng{\qty{80}{m} の線と \qty{90}{m} の線が、ある点で交わっている地図をかく。}
+\bkok{高さのちがう等高線は、交わらない。}
+1つの場所の高さは1つだけなので、高さのちがう2本の線が同じ点を通ることはありません（峠の点で、同じ高さの線が×の形になることは、せいかくに言うとを見る）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 何 m ごとの線かを見ないで比べる}
+\bkng{線の間が同じ \qty{5}{mm} だから、2つの地図の坂の急さは同じ。}
+\bkok{\qty{10}{m} ごとの地図と \qty{20}{m} ごとの地図では、同じ間かくでも、\qty{20}{m} ごとのほうが2倍急。}
+坂の急さは「高さの差÷横の長さ」です。地図の縮尺（3-5）と、線が何 m ごとかの両方を確かめます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ 鳥かん図の見かけで判断する}
+\bkng{鳥かん図で、手前の坂が大きく見えるから、手前が急。}
+\bkok{急さは、等高線の間かくか、式で比べる。}
+鳥かん図は、見る向きによって、同じ坂でも急に見えたりゆるやかに見えたりします。図\ref{bk:8-1:fig-bird}は南東から見た図ですが、本当に急なのは北と南の坂です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{⑤ 表の行の番号を北の向きと思う}
+\bkng{表\ref{bk:8-1:tab-hyou}で、行の番号が大きい6行めのほうが北。}
+\bkok{北を上に並べたので、行の番号が大きいほど南。6行めは $y=0$。}
+表計算の行の番号は下へふえますが、この本の表では、地図と同じく北を上にしています。A列の $y$ の数を見て確かめます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{⑥ \texttt{\$} をつけ忘れる}
+\bkng{B2 に \texttt{=100-0.01*B1\^{}2-0.02*A2\^{}2} と入れて、C3 にコピーする。}
+\bkok{\texttt{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2} と入れてからコピーする。}
+\texttt{\$} がないと、C3 では \texttt{C2} と \texttt{B3} を読んでしまい、$x$ と $y$ ではなく、ほかのマスの高さを使って計算してしまいます。
+\end{tsumazuki}
+
+%% ================= 物理・工学 =================
+\begin{butsuri}
+\kviiibbox{天気図：等圧線は気圧の等高線}
+天気図の線（等圧線）は、地上の気圧が同じ所を結んだ線で、気圧の等高線です。気象庁の天気図では、\qty{4}{hPa} ごとに細い線、\qty{20}{hPa} ごとに太い線でかいてあります。等圧線がつまった所ほど、気圧の変わり方が大きく、空気を押す力が強いので、風が強くなります（8-4）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xx/\p in {6/1012, 26/1008, 46/1004, 60/1000, 74/996, 88/992} {
+    \draw[bkInk!75, line width=0.8pt] (\xx,-2) .. controls (\xx+3,10) and (\xx-3,20) .. (\xx,32);
+    \node[kviiib lab, anchor=south, fill=white] at (\xx,32.5) {\p};}
+  \node[font=\sffamily\bfseries\large, text=bkRed!80!black] at (100,15) {低};
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (6,-6) -- (26,-6) node[midway, below, kviiib lab] {\qty{200}{km}};
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (60,-6) -- (74,-6) node[midway, below, kviiib lab] {\qty{140}{km}};
+  \draw[kviiib arr, bkBlue!80!black] (13,12) -- ++(5,1.5);
+  \draw[kviiib arr, bkBlue!80!black] (64,12) -- ++(9,2.8);
+  \node[kviiib lab, anchor=north west, text=bkBlue!80!black] at (12,10) {弱い風};
+  \node[kviiib lab, anchor=north west, text=bkBlue!80!black] at (62,10) {強い風};
+\end{tikzpicture}
+\bkfigcaption{等圧線（\qty{4}{hPa} ごと）と風。右の低気圧に近いほど線がつまり、風が強い。}
+\end{bkfigure}
+
+\end{butsuri}
+
+\begin{butsuri}
+\kviiibbox{サーモグラフィー：温度の地図}
+物の表面から出る赤外線の強さを、たくさんの小さな受光部（画素）ではかると、表面の温度の地図ができます。これがサーモグラフィー（熱画像）で、2つの変数の関数 $T(x,\ y)$ を、色分けした表として見せる機械です。電子回路の基板で、熱くなりすぎた部品をさがすのに使われます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,...,5} {\foreach \j in {0,...,9} {
+    \pgfmathsetmacro\kviiibT{30+45*exp(-((\j-6)^2+(\i-2)^2)/6)}
+    \pgfmathtruncatemacro\kviiibCC{(\kviiibT-30)*1.6+6}
+    \fill[bkOrange!\kviiibCC] (7*\j,-7*\i) rectangle ++(7,-7);}}
+  \draw[bkInk!60, line width=0.5pt] (0,0) rectangle (70,-42);
+  \draw[bkInk, line width=0.8pt] (37,-11) rectangle (49,-23);
+  \node[kviiib lab, anchor=west] (h) at (74,-10) {熱くなった部品（約 75 ℃）};
+  \draw[bkInk, line width=0.5pt] (h.west) -- (49.5,-14);
+  \node[kviiib lab, anchor=west] at (74,-36) {まわり（約 30 ℃）};
+\end{tikzpicture}
+\bkfigcaption{基板のサーモグラフィーのようす（模式図）。マスごとの温度を色で表した表。}
+\end{bkfigure}
+
+\end{butsuri}
+
+\begin{column}{等高線をかくのは、なぜ10 m ごと？}
+2万5千分の1の地図では、地図の上の \qty{1}{mm} が本当の \qty{25}{m} です。等高線を \qty{10}{m} ごとにかくと、平均の傾きが1（45°）の坂でも、線の間は地図の上で $\qty{10}{m}\div25=\qty{0.4}{mm}$ になります。これより細かくかくと、線がくっついて読めなくなります。地図の縮尺に合わせて、読める間かくを決めているのです。5万分の1の地図では、等高線は \qty{20}{m} ごとです。
+\end{column}
+
+\begin{butsuri}
+\kviiibbox{ダムの水ぎわは等高線}
+ダムに水をためると、水面は水平になるので、水ぎわの線は、水面と同じ高さの等高線になります。ダムを作る前に、地形図の等高線から、どこまで水がくるか、どれだけの水がためられるかを計算します（体積は 8-6）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \clip (-42,-8) rectangle (42,46);
+    \fill[bkBlue!25, domain=-23.8:23.8, samples=40] (-23.8,8) -- plot (\x,{25-0.03*\x*\x}) -- (23.8,8) -- cycle;
+    \foreach \h in {260,280,...,360} {\draw[kviiibC, line width=0.8pt, domain=-42:42, samples=50] plot (\x,{(\h-250)/2-0.03*\x*\x});}
+    \draw[bkBlue!80!black, line width=1.3pt, domain=-23.8:23.8, samples=40] plot (\x,{25-0.03*\x*\x});
+  \end{scope}
+  \draw[bkLine, line width=0.5pt] (-42,-8) rectangle (42,46);
+  \fill[bkGray!70] (-27,6.6) rectangle (27,9.4);
+  \node[kviiib lab, anchor=west] (d) at (46,2) {ダム};
+  \draw[bkInk, line width=0.5pt] (d.west) -- (27.5,8);
+  \node[kviiib lab, anchor=west, text=bkBlue!80!black, align=left] (w) at (46,24) {水ぎわ＝\\300 m の等高線};
+  \draw[bkBlue!80!black, line width=0.5pt] (w.west) -- (19,14.2);
+  \node[kviiib lab, anchor=south] at (0,46.8) {北（上流）};
+\end{tikzpicture}
+\bkfigcaption{谷をせき止めたダム（模式図）。緑の線は 20 m ごとの等高線。水面の高さを 300 m にすると、水がたまるのは 300 m の等高線より低い所（青）。}
+\end{bkfigure}
+\end{butsuri}
+
+\Needspace{9\baselineskip}
+\begin{motto}[4]
+\kviiibbox{等高線の地図から、山の体積を見つもる}
+高さ $c$ の等高線のだ円の面積は、だ円の面積の公式 $\pi ab$（$a$、$b$ は⑧の半径）から、約 $222.1\times(100-c)$〔m²〕です。山を厚さ \qty{10}{m} の板に切り分け、1枚の体積を「下の等高線の面積×\qty{10}{m}」とすると、合計は $10\times222.1\times550\approx\num{1221600}$ で少し大きめ、「上の等高線の面積×\qty{10}{m}」とすると $10\times222.1\times450\approx\num{999500}$ で少し小さめです。2つの平均は約 \qty{1.11e6}{m^3} で、8-6 で重積分を使って求める値とよく合います。
+\end{motto}
+
+
+
+%% ================= 章末問題 =================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 主役の山で、$h(30,\ 40)$ と $h(40,\ 30)$ を求め、どちらの場所が高いか答えましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$h(30,\ 40)=100-9-32=59$、$h(40,\ 30)=100-16-18=66$。東へ \qty{40}{m}・北へ \qty{30}{m} の所のほうが高い。}
+
+\bkproblem 表\ref{bk:8-1:tab-hyou}で、E2 に入っている式と、E2 の値を答えましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{\texttt{=100-0.01*E\$1\^{}2-0.02*\$A2\^{}2}。E1 は30、A2 は40 なので、$100-9-32=59$。}
+
+\bkproblem 主役の山の、高さ \qty{70}{m} の等高線の式をだ円の形に変形し、東西の半径と南北の半径を求めましょう（小数第2位まで）\mbox{（\bkreidairef{3}）}。
+\bkpans{$0.01x^2+0.02y^2=30$ を30でわって $\dfrac{x^2}{3000}+\dfrac{y^2}{1500}=1$。東西 $\sqrt{3000}\approx54.77$（m）、南北 $\sqrt{1500}\approx38.73$（m）。}
+
+\bkproblem 主役の山で、\qty{60}{m} の等高線から \qty{50}{m} の等高線までの平均の傾きを、真東と真北で求め、どちらが急か答えましょう（\qty{60}{m}：$a=63.25$、$b=44.72$。\qty{50}{m}：$a=70.71$、$b=50.00$）\mbox{（\bkreidairef{4}）}。
+\bkpans{東：$70.71-63.25=7.46$、$10\div7.46\approx1.34$。北：$50.00-44.72=5.28$、$10\div5.28\approx1.89$。北へ進むほうが急。}
+
+\bkproblem 表\ref{bk:8-1:tab-hyou}の4行め（$y=20$）で、\qty{90}{m} の等高線が通る $x$ を、となりのマスの間をまっすぐ結んで見つもりましょう（小数第1位まで）。本当の値は $\sqrt{200}\approx14.14$ です\mbox{（\bkreidairef{5}）}。
+\bkpans{$x=10$ で91、$x=20$ で88。$91-88=3$ 下がる間に、$91-90=1$ 下がる。$10+10\times\dfrac{1}{3}\approx13.3$（m）。本当の値とのちがいは約 \qty{0.8}{m}。}
+
+\bkproblem \qty{4}{hPa} ごとの等圧線で、地点Eでは間が \qty{160}{km}、地点Fでは \qty{80}{km} でした。\qty{100}{km} あたりの気圧の変化を求め、風が強くなりやすいのはどちらか答えましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{E：$4\div160\times100=2.5$（hPa）。F：$4\div80\times100=5$（hPa）。F のほうが風が強くなりやすい。}
+
+\bkproblem 主役の山で、$h(60,\ 10)$ と $h(10,\ 60)$ を求め、どちらの場所が高いか答えましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$h(60,\ 10)=100-36-2=62$、$h(10,\ 60)=100-1-72=27$。東へ \qty{60}{m}・北へ \qty{10}{m} の所のほうが高い。}
+
+\bkproblem 主役の山で、\qty{50}{m} の等高線から \qty{40}{m} の等高線までの平均の傾きを、真東と真北で求め、どちらが急か答えましょう（\qty{50}{m}：$a=70.71$、$b=50.00$。\qty{40}{m}：$a=77.46$、$b=54.77$）\mbox{（\bkreidairef{4}）}。
+\bkpans{東：$77.46-70.71=6.75$、$10\div6.75\approx1.48$。北：$54.77-50.00=4.77$、$10\div4.77\approx2.10$。北へ進むほうが急。}
+
+\bkproblem 表\ref{bk:8-1:tab-hyou}の2行め（$y=40$）で、\qty{60}{m} の等高線が通る $x$ を見つもりましょう（小数第1位まで）。本当の値は $\sqrt{800}\approx28.28$ です\mbox{（\bkreidairef{5}）}。
+\bkpans{$x=20$ で64、$x=30$ で59。$64-59=5$ 下がる間に、$64-60=4$ 下がる。$20+10\times\dfrac{4}{5}=28.0$（m）。本当の値とのちがいは約 \qty{0.3}{m}。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 主役の山について、（1）$y=40$ で切った切り口の式と、高さが \qty{59}{m} になる $x$（$x>0$）、（2）$x=10$ で切った切り口の式と、高さが \qty{67}{m} になる $y$（$y>0$）を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{（1）$h=68-0.01x^2$。$0.01x^2=9$ より $x=30$。（2）$h=99-0.02y^2$。$0.02y^2=32$ より $y=40$。}
+
+\bkproblem （1）部屋の温度が $T=19+1.5z$（℃）のとき、高さ \qty{2}{m} の温度と、\qty{20.5}{℃} の等値面を答えましょう。（2）$f=x^2+y^2+z^2$ の、$f=16$ の等値面はどんな形ですか\mbox{（\bkreidairef{7}）}。
+\bkpans{（1）$19+1.5\times2=22$（℃）。$19+1.5z=20.5$ から $z=1$ なので、床から \qty{1}{m} の高さの水平な面。（2）原点を中心とする、半径4の球の面。}
+
+\bkproblem 別の山の高さが $g(x,\ y)=80-0.005x^2-0.02y^2$〔m〕で表されます。高さ \qty{60}{m} の等高線をだ円の形に変形し、東西の半径と南北の半径を求めましょう（小数第2位まで）。また、この山は、主役の山とくらべて東西に長いか、南北に長いかを答えましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$0.005x^2+0.02y^2=20$ を20でわって $\dfrac{x^2}{4000}+\dfrac{y^2}{1000}=1$。東西 $\sqrt{4000}\approx63.25$（m）、南北 $\sqrt{1000}\approx31.62$（m）。南北の半径が東西の半分なので、主役の山（0.707倍）より東西に長い。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 地図の等高線や天気図の等圧線から、高い所・低い所・急な所を読みとれる。\bkfurref{bk:8-1:kankaku}
+\item 2つの変数の関数を、表・鳥かん図・等高線の3通りで表し、表計算と Python で作れる。\bkfurref{bk:8-1:hyou}
+\item 等高線の式と切り口の関数を求め、3つの変数の関数の等値面を説明できる。\bkfurref{bk:8-1:daen}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{切り口の坂が、東と北で別々にわかれば、山のどの向きの坂もわかりそう。次の章で確かめよう。}

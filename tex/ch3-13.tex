@@ -1,0 +1,935 @@
+%% 3-13 データのちらばり：ヒストグラムと平均（第12回・組 V3-7。ページ数は自由・偶数）
+%% この章の部品（名前は \bkthrn…）
+\makeatletter
+% 本文の中の1行見出し  \bkthrnhead{見出し}
+\newcommand\bkthrnhead[1]{\par\addvspace{5pt}\noindent{\sffamily\bfseries\color{bkTheme!85!black}▶\ #1}\par\nopagebreak\vspace{1pt}}
+% ふりこ  \bkthrnpend{(つるす点)}{糸の長さ}{かたむき（度）}
+\newcommand\bkthrnpend[3]{\begin{scope}[shift={#1}]
+  \draw[bkInk!75, line width=0.6pt] (0,0) -- (-90+#3:#2);
+  \filldraw[fill=bkOrange!70, draw=bkOrange!60!black, line width=0.6pt] (-90+#3:#2) circle (2.6);
+  \fill[white, opacity=0.5] ($(-90+#3:#2)+(-0.8,0.8)$) circle (0.7);
+\end{scope}}
+% ふりこのスタンド  \bkthrnstand{(台の左はし)}{高さ}{うでの長さ}   うでの先が (x+うで, y+高さ)
+\newcommand\bkthrnstand[3]{\begin{scope}[shift={#1}]
+  \fill[bkGray!60, rounded corners=0.6mm] (0,-2.5) rectangle (#3+8,0);
+  \fill[bkGray!75] (1.5,0) rectangle (3.5,#2+1.5);
+  \fill[bkGray!75] (1.5,#2-0.5) rectangle (#3+1,#2+1.5);
+\end{scope}}
+% ストップウォッチ  \bkthrnwatch{(中心)}{表示の文字}
+\newcommand\bkthrnwatch[2]{\begin{scope}[shift={#1}, scale=0.62]
+  \filldraw[fill=bkGray!25, draw=bkInk!70, line width=0.6pt] (-2.4,10.4) rectangle (2.4,12.8);
+  \filldraw[fill=bkOrange!25, draw=bkInk!70, line width=0.8pt] (0,0) circle (10.5);
+  \filldraw[fill=bkInk!85, rounded corners=1mm] (-8.4,-4.2) rectangle (8.4,4.2);
+  \fill[bkGreen!25, rounded corners=0.6mm] (-7.4,-3.2) rectangle (7.4,3.2);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0pt] at (0,0) {#2};
+\end{scope}}
+% 箱ひげ図  \bkthrnbox{y}{1あたりの mm}{左はしの値}{最小}{Q1}{Q2}{Q3}{最大}{色}
+\newcommand\bkthrnbox[9]{%
+  \pgfmathsetmacro\bkthrn@a{(#4-#3)*#2}\pgfmathsetmacro\bkthrn@b{(#5-#3)*#2}%
+  \pgfmathsetmacro\bkthrn@c{(#6-#3)*#2}\pgfmathsetmacro\bkthrn@d{(#7-#3)*#2}\pgfmathsetmacro\bkthrn@e{(#8-#3)*#2}%
+  \draw[bkInk, line width=0.8pt] (\bkthrn@a,#1) -- (\bkthrn@b,#1) (\bkthrn@d,#1) -- (\bkthrn@e,#1);
+  \draw[bkInk, line width=0.8pt] (\bkthrn@a,#1-2.2) -- (\bkthrn@a,#1+2.2) (\bkthrn@e,#1-2.2) -- (\bkthrn@e,#1+2.2);
+  \filldraw[fill=#9!22, draw=#9!80!black, line width=0.9pt] (\bkthrn@b,#1-3.6) rectangle (\bkthrn@d,#1+3.6);
+  \draw[#9!80!black, line width=1.6pt] (\bkthrn@c,#1-3.6) -- (\bkthrn@c,#1+3.6);}
+% 数直線  \bkthrnaxis{y}{1あたりの mm}{左はしの値}{右はしの値}{目もりの間}{数字を書く間}{数字の小数のけた}
+\newcommand\bkthrnaxis[7]{%
+  \pgfmathsetmacro\bkthrn@L{(#4-#3)*#2}%
+  \draw[bkInk, line width=0.7pt] (-2,#1) -- (\bkthrn@L+2,#1);
+  \pgfmathtruncatemacro\bkthrn@n{round((#4-#3)/#5)}%
+  \foreach \k in {0,...,\bkthrn@n} {\pgfmathsetmacro\bkthrn@x{\k*#5*#2}\draw[bkInk, line width=0.5pt] (\bkthrn@x,#1-1) -- (\bkthrn@x,#1+1);}
+  \pgfmathtruncatemacro\bkthrn@m{round((#4-#3)/#6)}%
+  \foreach \k in {0,...,\bkthrn@m} {\pgfmathsetmacro\bkthrn@x{\k*#6*#2}\pgfmathsetmacro\bkthrn@v{#3+\k*#6}%
+    \draw[bkInk, line width=0.7pt] (\bkthrn@x,#1-1.6) -- (\bkthrn@x,#1+1.6);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\bkthrn@x,#1-2.8) {\pgfmathprintnumber[fixed, fixed zerofill, precision=#7, assume math mode=true]{\bkthrn@v}};}}
+% 正の字（数えた印）を、書く順に #1 画まで  \bkthrnsei{1〜5}
+\newcommand\bkthrnsei[1]{\tikz[x=1mm, y=1mm, baseline=0.1mm, line width=0.6pt, line cap=round]{\path (-0.2,-0.2) rectangle (3.8,3.6);
+  \draw (0,3.4) -- (3.6,3.4); \ifnum#1>1 \draw (1.8,3.4) -- (1.8,0);\fi \ifnum#1>2 \draw (1.8,1.7) -- (3.2,1.7);\fi
+  \ifnum#1>3 \draw (0.5,2.0) -- (0.5,0);\fi \ifnum#1>4 \draw (0,0) -- (3.6,0);\fi}}
+\makeatother
+
+\bkchapter{3}{13}{データのちらばり：\\ヒストグラムと\R{平均}{へい|きん}}{\bklevel{2}}{データのちらばり：ヒストグラムと\R{平均}{へい|きん}}
+\bkmichishirube{2-2,2-5,2-6,2-18,3-2}{3-14,3-15,3-17}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace \R{何回}{なん|かい}もはかった\R{値}{あたい}の\R{平均}{へい|きん}を、$\bar{x}$ を\R{使}{つか}って\R{書}{か}き、\R{求}{もと}められる。
+\item \bklevel{2}\enspace \R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}とヒストグラムを\R{作}{つく}り、ちらばりのようすを\R{読}{よ}みとれる。
+\item \bklevel{2}\enspace \R{平均}{へい|きん}・\R{中央値}{ちゅう|おう|ち}・\R{最頻値}{さい|ひん|ち}・\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}め、\R{箱}{はこ}ひげ\R{図}{ず}をかける。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+ふりこが10\R{往復}{おう|ふく}する\R{時間}{じ|かん}を、クラスの20\R{人}{にん}が1\R{回}{かい}ずつ、ストップウォッチではかりました。\R{同}{おな}じふりこなのに、20\R{人}{にん}の\R{数}{かず}はみんな\R{少}{すこ}しずつちがいます。
+
+ほんとうの\R{値}{あたい}に\R{近}{ちか}づくには、どうすればいいのかな？　1\R{回}{かい}より2\R{回}{かい}、2\R{回}{かい}より20\R{回}{かい}はかったほうが、\R{近}{ちか}づけるのかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % スタンドとふりこ
+  \bkthrnstand{(0,0)}{40}{16}
+  \draw[bkGray!50, line width=0.5pt, dash pattern=on 1.2pt off 1pt] (17,40) -- (17,7);
+  \draw[bkGray!50, line width=0.5pt, dash pattern=on 1.2pt off 1pt] (17,40) -- ({17+32*sin(-22)},{40-32*cos(-22)});
+  \bkthrnpend{(17,40)}{32}{22}
+  \draw[bkOrange!80!black, line width=0.7pt, -{Stealth[length=2.6pt]}] ({17+34*sin(-20)},{40-34*cos(-20)}) arc[start angle=-110, end angle=-70, radius=34];
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (12,-4) {\R{糸}{いと}\qty{50}{cm}};
+  % 3つのストップウォッチ
+  \foreach \py/\t in {38/14.37, 22.5/14.29, 7/14.24} {{\bkthrnwatch{(44,\py)}{\t}}}
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (44,-4) {みんなちがう！};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ふりこの10\R{往復}{おう|ふく}を、みんなではかろう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item \qty{50}{cm}の\R{糸}{いと}の\R{先}{さき}におもりをつけてつるし、おもりを\R{横}{よこ}に\R{少}{すこ}し\R{引}{ひ}いて、そっと\R{手}{て}をはなそう。
+\item ふりこがはしで\R{止}{と}まったしゅん\R{間}{かん}にスタートをおし、10\R{往復}{おう|ふく}したらストップをおそう。
+\item 1\R{人}{にん}1\R{回}{かい}ずつ、クラスの20\R{人}{にん}がはかって、\R{表}{ひょう}に\R{書}{か}こう。
+\item はじめの1\R{人}{にん}、2\R{人}{にん}、3\R{人}{にん}……と、\R{数}{かず}をふやしながら\R{平均}{へい|きん}を\R{計算}{けい|さん}しよう。
+\end{enumerate}
+\par\vspace{2pt}
+\noindent ソラさんのクラスがはかった\R{結果}{けっ|か}です（\R{単位}{たん|い}は\R{秒}{びょう}）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=15mm] *{10}{Q[c,m,wd=9.4mm]}}, rowsep=1pt, colsep=1.6pt, cells={font=\footnotesize}, row{1,3}={font=\sffamily\footnotesize, bg=bkGreen!12}}
+\R{番号}{ばん|ごう} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+\R{時間}{じ|かん} & 14.37 & 14.29 & 14.24 & 14.12 & 14.21 & 14.17 & 14.33 & 14.15 & 14.22 & 14.19 \\
+\R{番号}{ばん|ごう} & 11 & 12 & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20 \\
+\R{時間}{じ|かん} & 14.16 & 13.95 & 14.18 & 14.23 & 14.16 & 14.27 & 14.07 & 14.20 & 14.44 & 14.05 \\
+\end{bktable}
+\bktabcaption{ふりこの10\R{往復}{おう|ふく}の\R{時間}{じ|かん}（\R{秒}{びょう}）。20\R{人}{にん}が1\R{回}{かい}ずつはかった}
+\end{bkcenter}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{2-6}{\R{平均}{へい|きん}＝\R{合計}{ごう|けい}÷\R{個数}{こ|すう}。\R{合計}{ごう|けい}を\R{変}{か}えずに、でこぼこをならした\R{数}{かず}。はかった\R{値}{あたい}にはずれがある。}
+\bkrecall{2-2}{「\R{以上}{い|じょう}」はその\R{数}{かず}をふくむ。「\R{未満}{み|まん}」はその\R{数}{かず}をふくまない。}
+\bkrecall{2-5}{\R{割合}{わり|あい}＝くらべる\R{量}{りょう}÷もとにする\R{量}{りょう}。\R{割合}{わり|あい}の0.01が1\%}
+\bkrecall{3-2}{$x_1$ は「エックス・いち」と\R{読}{よ}む。1つめの $x$ という\R{名前}{な|まえ}で、かけ\R{算}{ざん}ではない。}
+\end{omoidasou}
+
+\bkfukidashi{sora}{14.37\R{秒}{びょう}から13.95\R{秒}{びょう}まで、ばらばらだ。20こも\R{数}{かず}があると、どこを\R{見}{み}ればいいのか、わからなくなるね。}
+
+\clearpage
+\bkthrnhead{この\R{章}{しょう}でやること}
+2-6では、\R{同}{おな}じえんぴつを10\R{人}{にん}がはかると、\R{読}{よ}みが\R{少}{すこ}しずつずれることを\R{学}{まな}び、ずれをならすために\R{平均}{へい|きん}を\R{求}{もと}めました。この\R{章}{しょう}では、たくさんの\R{数}{かず}を\textbf{\R{表}{ひょう}}や\textbf{グラフ}にまとめて、「ちらばり」のようすを\R{目}{め}で\R{見}{み}えるようにします。
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{何回}{なん|かい}もはかって、\R{平均}{へい|きん}する}
+
+\leavevmode\label{bk:3-13:heikin}20\R{人}{にん}の\R{数}{かず}は、どれも\R{正}{ただ}しくはかった\R{数}{かず}です。どれか1つを「\R{正}{ただ}しい」と\R{選}{えら}ぶことはできません。そこで、2-6と\R{同}{おな}じように、\R{全部}{ぜん|ぶ}をならした\R{平均}{へい|きん}を\R{求}{もと}めます。
+
+\bkthrnhead{20こ\R{全部}{ぜん|ぶ}の\R{平均}{へい|きん}}
+20この\R{数}{かず}を\R{全部}{ぜん|ぶ}たすと、284.00になります（\R{電卓}{でん|たく}や\R{表計算}{ひょう|けい|さん}を\R{使}{つか}ってよい）。\R{数}{かず}は20こなので、20でわります。
+\[ 284.00\div20=14.20 \]
+\R{平均}{へい|きん}は14.20\R{秒}{びょう}です。
+
+\bkthrnhead{くふう：14.00をこえた\R{部分}{ぶ|ぶん}だけをたす}
+20この\R{数}{かず}は、ほとんどが「14.\R{何}{なん}」です。そこで、2-6のくふうと\R{同}{おな}じように、14.00からどれだけはなれているかだけをたします。
+\[ 14.37-14.00=0.37\qquad\qquad 13.95-14.00=-0.05 \]
+13.95は14.00より\R{小}{ちい}さいので、はなれはマイナスの\R{数}{かず}になります（2-2）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=19mm] *{10}{Q[c,m,wd=9.2mm]}}, rowsep=0.8pt, colsep=1.6pt, cells={font=\footnotesize}, column{1}={font=\sffamily\footnotesize}}
+1〜10 & 0.37 & 0.29 & 0.24 & 0.12 & 0.21 & 0.17 & 0.33 & 0.15 & 0.22 & 0.19 \\
+11〜20 & 0.16 & $-0.05$ & 0.18 & 0.23 & 0.16 & 0.27 & 0.07 & 0.20 & 0.44 & 0.05 \\
+\end{bktable}
+\bktabcaption{14.00からのはなれ（\R{秒}{びょう}）。\R{全部}{ぜん|ぶ}たすと4.00}
+\end{bkcenter}
+はなれを\R{全部}{ぜん|ぶ}たすと4.00です。20でわると、$4.00\div20=0.20$。14.00に0.20をたして14.20。\R{全部}{ぜん|ぶ}たしたときと\R{同}{おな}じ\R{答}{こた}えです。
+
+\noindent\textbf{なぜ\R{同}{おな}じになるの？}\quad どの\R{数}{かず}も「14.00＋はなれ」です。14.00は20こ\R{全部}{ぜん|ぶ}にふくまれているので、ならしても14.00のまま\R{残}{のこ}ります。ならす\R{必要}{ひつ|よう}があるのは、はなれの\R{部分}{ぶ|ぶん}だけなのです。このように\R{計算}{けい|さん}を\R{楽}{らく}にするために\R{決}{き}めた14.00のような\R{数}{かず}を、\textbf{\R{仮}{かり}の\R{平均}{へい|きん}}といいます。
+
+\bkthrnhead{はかる\R{回数}{かい|すう}をふやすと、\R{平均}{へい|きん}はどうなる？}
+はじめの1\R{人}{にん}だけ、2\R{人}{にん}だけ、3\R{人}{にん}だけ……と、\R{人数}{にん|ずう}をふやしながら\R{平均}{へい|きん}を\R{求}{もと}めてみます。たとえば、はじめの3\R{人}{にん}なら、3つをたして3でわります。
+\[ (14.37+14.29+14.24)\div3=42.90\div3=14.30 \]
+
+このふりこは\R{糸}{いと}の\R{長}{なが}さが\qty{50}{cm}なので、\R{物理}{ぶつ|り}の\R{式}{しき}でくわしく\R{計算}{けい|さん}すると、10\R{往復}{おう|ふく}はおよそ14.19\R{秒}{びょう}になります（\R{式}{しき}は\R{物理}{ぶつ|り}シリーズで\R{学}{まな}びます）。これを「ほんとうの\R{値}{あたい}」として、グラフにしてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.7mm]
+  % 横：1人を5.6mm、たて：0.01秒を1mm（13.90秒が0）
+  \foreach \v in {0,10,...,60} {\draw[bkLine, line width=0.3pt] (0,\v) -- (114,\v);}
+  \draw[bkInk, line width=0.7pt] (0,0) -- (116,0);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (0,63);
+  \foreach \v/\l in {0/13.90,10/14.00,20/14.10,30/14.20,40/14.30,50/14.40,60/14.50} {\node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,\v) {\l};}
+  \foreach \k in {1,5,10,15,20} {\draw[bkInk, line width=0.6pt] (\k*5.6,-1.4) -- (\k*5.6,1.4);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k*5.6,-3.4) {\k};}
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (60,-10.6) {\R{何人}{なん|にん}\R{分}{ぶん}か};
+  \node[anchor=south west, font=\sffamily\footnotesize, inner sep=0pt] at (-14,65.5) {\R{時間}{じ|かん}（\R{秒}{びょう}）};
+  % ほんとうの値
+  \draw[bkGreen!70!black, line width=0.9pt, dash pattern=on 3pt off 1.5pt] (0,29) -- (114,29);
+  % 1人ずつの値（灰色の点）
+  \foreach \k/\m/\x in {1/14.3700/14.37,2/14.3300/14.29,3/14.3000/14.24,4/14.2550/14.12,5/14.2460/14.21,6/14.2333/14.17,7/14.2471/14.33,8/14.2350/14.15,9/14.2333/14.22,10/14.2290/14.19,11/14.2227/14.16,12/14.2000/13.95,13/14.1985/14.18,14/14.2007/14.23,15/14.1980/14.16,16/14.2025/14.27,17/14.1947/14.07,18/14.1950/14.20,19/14.2079/14.44,20/14.2000/14.05}
+    {\fill[bkGray!70] (\k*5.6,{(\x-13.9)*100}) circle (0.9mm);}
+  % 平均の折れ線
+  \draw[bkBlue, line width=1.2pt] plot coordinates {(5.6,47) (11.2,43) (16.8,40) (22.4,35.5) (28,34.6) (33.6,33.33) (39.2,34.71) (44.8,33.5) (50.4,33.33) (56,32.9) (61.6,32.27) (67.2,30) (72.8,29.85) (78.4,30.07) (84,29.8) (89.6,30.25) (95.2,29.47) (100.8,29.5) (106.4,30.79) (112,30)};
+  \foreach \k/\m in {1/47,2/43,3/40,4/35.5,5/34.6,6/33.33,7/34.71,8/33.5,9/33.33,10/32.9,11/32.27,12/30,13/29.85,14/30.07,15/29.8,16/30.25,17/29.47,18/29.5,19/30.79,20/30} {\fill[bkBlue] (\k*5.6,\m) circle (1.1mm);}
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black, inner sep=0pt] at (20,52) {\R{青}{あお}：それまでの\R{平均}{へい|きん}};
+  \draw[bkBlue!80!black, line width=0.5pt] (19.2,52) -- (13,44.5);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGray!90!black, inner sep=0pt] at (62,45.5) {\R{灰色}{はい|いろ}：1\R{人}{にん}ずつの\R{値}{あたい}};
+  \draw[bkGray!90!black, line width=0.5pt] (97,47) -- (105.4,53.2);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGreen!50!black, inner sep=0pt] at (4,10) {\R{緑}{みどり}の\R{点線}{てん|せん}：ほんとうの\R{値}{あたい}14.19};
+\end{tikzpicture}
+\bkfigcaption{1\R{人}{にん}ずつの\R{値}{あたい}は\R{上}{うえ}にも\R{下}{した}にもちらばるが、\R{人数}{にん|ずう}をふやした\R{平均}{へい|きん}は、ほんとうの\R{値}{あたい}に\R{近}{ちか}づいていく。}
+\end{bkfigure}
+
+\Needspace{9\baselineskip}
+\R{表}{ひょう}にすると、\R{次}{つぎ}のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{8}{Q[c,m,wd=11mm]}}, rowsep=1pt, colsep=1.4pt, cells={font=\footnotesize}, row{1}={font=\sffamily\footnotesize, bg=bkTheme!12}}
+\R{何人}{なん|にん}\R{分}{ぶん}か & 1 & 2 & 3 & 4 & 5 & 10 & 15 & 20 \\
+\R{合計}{ごう|けい}（\R{秒}{びょう}） & 14.37 & 28.66 & 42.90 & 57.02 & 71.23 & 142.29 & 212.97 & 284.00 \\
+\R{平均}{へい|きん}（\R{秒}{びょう}） & 14.37 & 14.33 & 14.30 & 14.255 & 14.246 & 14.229 & 14.198 & 14.20 \\
+\end{bktable}
+\bktabcaption{\R{人数}{にん|ずう}をふやしながら\R{求}{もと}めた\R{平均}{へい|きん}（\R{小数第}{しょう|すう|だい}3\R{位}{い}まで）}
+\end{bkcenter}
+
+1\R{人}{にん}だけの14.37\R{秒}{びょう}は、ほんとうの\R{値}{あたい}から0.18\R{秒}{びょう}もずれています。ところが、20\R{人}{にん}\R{分}{ぶん}の\R{平均}{へい|きん}14.20\R{秒}{びょう}のずれは、たった0.01\R{秒}{びょう}です。
+
+\noindent\textbf{なぜ\R{近}{ちか}づくの？}\quad ストップウォッチをおすのがおくれたり\R{早}{はや}すぎたりするので、ずれは\R{大}{おお}きいほうにも\R{小}{ちい}さいほうにも\R{出}{で}ます。たくさん\R{集}{あつ}めてならすと、\R{大}{おお}きいほうのずれと\R{小}{ちい}さいほうのずれが\R{打}{う}ち\R{消}{け}しあいます。\R{数}{かず}が\R{多}{おお}いほど、よく\R{打}{う}ち\R{消}{け}しあうので、\R{平均}{へい|きん}はほんとうの\R{値}{あたい}に\R{近}{ちか}づくのです。
+
+\bkhatenaref の\R{答}{こた}え：\R{何回}{なん|かい}もはかって\R{平均}{へい|きん}すると、ほんとうの\R{値}{あたい}に\R{近}{ちか}づけます。1\R{回}{かい}より2\R{回}{かい}、2\R{回}{かい}より20\R{回}{かい}のほうが、ふつうはよく\R{近}{ちか}づきます。「\R{何回}{なん|かい}はかると、どのくらい\R{近}{ちか}づくか」は、3-14で\R{数}{かず}にします。
+
+\bkthrnhead{\R{平均}{へい|きん}を\R{文字}{も|じ}で\R{書}{か}く}
+はかった\R{数}{かず}に、1つめ、2つめ、……と\R{番号}{ばん|ごう}をつけて、$x_1$、$x_2$、$x_3$、……と\R{書}{か}きます（3-2の\R{下}{した}つき\R{文字}{も|じ}）。いまのふりこなら、$x_1=14.37$、$x_2=14.29$、……、$x_{20}=14.05$ です。\R{数}{かず}の\R{個数}{こ|すう}を $n$ とすると、いちばん\R{後}{うし}ろは $x_n$ です。
+
+\R{平均}{へい|きん}は「\R{全部}{ぜん|ぶ}たして、\R{個数}{こ|すう}でわる」のでした。これを\R{文字}{も|じ}で\R{書}{か}くと、\R{次}{つぎ}のようになります。
+\[ \bar{x}=\frac{x_1+x_2+\cdots+x_n}{n} \]
+$\bar{x}$ は「エックス・バー」と\R{読}{よ}み、「$x$ の\R{平均}{へい|きん}」という\R{意味}{い|み}です。\R{文字}{も|じ}の\R{上}{うえ}の\R{横線}{よこ|せん}（バー）が「ならした」というしるしです。「$\cdots$」は、とちゅうを\R{書}{か}くのを\R{省}{はぶ}いたしるしで、$x_3$ から $x_{n-1}$ までも\R{全部}{ぜん|ぶ}たす、という\R{意味}{い|み}です。
+
+ふりこの20\R{人}{にん}\R{分}{ぶん}なら $n=20$ で、
+\[ \bar{x}=\frac{x_1+x_2+\cdots+x_{20}}{20}=\frac{284.00}{20}=14.20 \]
+\noindent\begin{minipage}[c]{0.47\linewidth}
+となります。$\bar{x}$ は、これからの3-14〜3-16でもずっと\R{使}{つか}います。\R{記号}{き|ごう}カードで\R{読}{よ}み\R{方}{かた}と\R{意味}{い|み}を\R{確}{たし}かめておきましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedleft
+\bkkigocard{$\bar{x}$}{エックス・バー}{$x_1$、$x_2$、$\cdots$、$x_n$ の\R{平均}{へい|きん}。\R{合計}{ごう|けい}を\R{個数}{こ|すう} $n$ でわった\R{値}{あたい}}{x bar（mean）}{3-13}
+\end{minipage}
+
+\bksubsection{2}{\R{数}{かず}を\R{区切}{く|ぎ}って\R{数}{かぞ}える：\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}}
+
+\leavevmode\label{bk:3-13:dosuu}\R{平均}{へい|きん}は\R{便利}{べん|り}ですが、1つの\R{数}{かず}にまとめると、「\R{数}{かず}がどのようにちらばっていたか」が\R{見}{み}えなくなります。そこで、20この\R{数}{かず}を\R{数直線}{すう|ちょく|せん}の\R{上}{うえ}に\R{点}{てん}でかいてみましょう。\R{同}{おな}じ\R{数}{かず}が2つあるときは、\R{点}{てん}を\R{上}{うえ}に\R{積}{つ}みます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 0.01秒を2mm、13.90秒が0
+  \bkthrnaxis{0}{200}{13.90}{14.50}{0.05}{0.1}{2}
+  \foreach \v in {14.37,14.29,14.24,14.12,14.21,14.17,14.33,14.15,14.22,14.19,13.95,14.18,14.23,14.27,14.07,14.20,14.44,14.05} {\fill[bkBlue] ({(\v-13.9)*200},2.6) circle (1);}
+  \fill[bkBlue] ({(14.16-13.9)*200},2.6) circle (1) ({(14.16-13.9)*200},5.0) circle (1);
+  \draw[bkOrange, line width=0.9pt, dash pattern=on 2pt off 1pt] (60,-0.6) -- (60,11);
+  \node[anchor=south, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black, inner sep=0pt] at (60,12) {\R{平均}{へい|きん}14.20};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (52,-11) {\R{時間}{じ|かん}（\R{秒}{びょう}）};
+\end{tikzpicture}
+\bkfigcaption{1\R{人}{にん}の\R{数}{かず}を\R{点}{てん}1こでかいた\R{図}{ず}。14.16は2\R{人}{にん}いるので、\R{点}{てん}を\R{積}{つ}んだ。}
+\end{bkfigure}
+
+\R{点}{てん}は、14.20のまわりに\R{多}{おお}く\R{集}{あつ}まり、はなれるほど\R{少}{すく}なくなっています。でも、\R{点}{てん}がとびとびなので、「どのあたりに\R{何人}{なん|にん}いるか」は、まだ\R{読}{よ}みとりにくいですね。そこで、\R{数直線}{すう|ちょく|せん}を0.1\R{秒}{びょう}ごとの\R{区間}{く|かん}に\R{区切}{く|ぎ}って、\R{区間}{く|かん}ごとに\R{人数}{にん|ずう}を\R{数}{かぞ}えます。
+
+\bkthrnhead{\R{区切}{く|ぎ}り\R{方}{かた}と、\R{境目}{さかい|め}の\R{数}{かず}}
+\R{区間}{く|かん}は、「13.90\R{秒}{びょう}\R{以上}{い|じょう}14.00\R{秒}{びょう}\R{未満}{み|まん}」「14.00\R{秒}{びょう}\R{以上}{い|じょう}14.10\R{秒}{びょう}\R{未満}{み|まん}」……のように\R{決}{き}めます。\R{以上}{い|じょう}はその\R{数}{かず}をふくみ、\R{未満}{み|まん}はふくみません（2-2）。だから、ちょうど\R{境目}{さかい|め}の14.20は、「14.10\R{以上}{い|じょう}14.20\R{未満}{み|まん}」ではなく、「14.20\R{以上}{い|じょう}14.30\R{未満}{み|まん}」に\R{入}{はい}ります。こう\R{決}{き}めておけば、どの\R{数}{かず}も、かならずどれか1つの\R{区間}{く|かん}だけに\R{入}{はい}ります。
+
+\bkthrnhead{\R{数}{かぞ}え\R{方}{かた}：\R{正}{せい}の\R{字}{じ}}
+\R{表}{ひょう}の\R{数}{かず}を、\R{番号}{ばん|ごう}の\R{順}{じゅん}に1つずつ\R{見}{み}て、\R{入}{はい}る\R{区間}{く|かん}に「\R{正}{せい}」の\R{字}{じ}を1\R{画}{かく}ずつ\R{書}{か}き\R{足}{た}します（\bkthrnsei{1}\,→\,\bkthrnsei{2}\,→\,\bkthrnsei{3}\,→\,\bkthrnsei{4}\,→\,\bkthrnsei{5}）。\R{正}{せい}の\R{字}{じ}は5\R{画}{かく}なので、\R{正}{せい}1つで5\R{人}{にん}です。\R{数}{かぞ}えたら、\R{表}{ひょう}の\R{数}{かず}に\R{印}{しるし}をつけていくと、\R{数}{かぞ}え\R{忘}{わす}れや2\R{回}{かい}\R{数}{かぞ}えを\R{防}{ふせ}げます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=40mm] Q[c,m,wd=22mm] Q[c,m,wd=14mm] Q[c,m,wd=18mm] Q[c,m,wd=18mm]}, rowsep=1.2pt, colsep=2pt, cells={font=\footnotesize}, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!14}, row{8}={bg=bkGray!10}}
+\R{時間}{じ|かん}（\R{秒}{びょう}） & \R{数}{かぞ}えた\R{印}{しるし} & \R{度数}{ど|すう}（\R{人}{にん}） & \R{相対度数}{そう|たい|ど|すう} & \R{累積度数}{るい|せき|ど|すう}（\R{人}{にん}） \\
+13.90\R{以上}{い|じょう}14.00\R{未満}{み|まん} & \bkthrnsei{1} & 1 & 0.05 & 1 \\
+14.00\R{以上}{い|じょう}14.10\R{未満}{み|まん} & \bkthrnsei{2} & 2 & 0.10 & 3 \\
+14.10\R{以上}{い|じょう}14.20\R{未満}{み|まん} & \bkthrnsei{5}\enspace\bkthrnsei{2} & 7 & 0.35 & 10 \\
+14.20\R{以上}{い|じょう}14.30\R{未満}{み|まん} & \bkthrnsei{5}\enspace\bkthrnsei{2} & 7 & 0.35 & 17 \\
+14.30\R{以上}{い|じょう}14.40\R{未満}{み|まん} & \bkthrnsei{2} & 2 & 0.10 & 19 \\
+14.40\R{以上}{い|じょう}14.50\R{未満}{み|まん} & \bkthrnsei{1} & 1 & 0.05 & 20 \\
+\R{合計}{ごう|けい} & & 20 & 1.00 & \\
+\end{bktable}
+\bktabcaption{ふりこの20\R{回}{かい}の\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}。\R{印}{しるし}は\R{正}{せい}の\R{字}{じ}を1\R{画}{かく}ずつ\R{書}{か}いたもの}
+\end{bkcenter}
+
+このように、\R{数}{かず}を\R{区切}{く|ぎ}った\R{区間}{く|かん}を\textbf{\R{階級}{かい|きゅう}}、\R{区間}{く|かん}のはば（ここでは0.1\R{秒}{びょう}）を\textbf{\R{階級}{かい|きゅう}のはば}、それぞれの\R{階級}{かい|きゅう}に\R{入}{はい}る\R{数}{かず}の\R{個数}{こ|すう}を\textbf{\R{度数}{ど|すう}}といいます。\R{階級}{かい|きゅう}と\R{度数}{ど|すう}をならべた\R{表}{ひょう}を、\textbf{\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}}といいます。\bkidx{どすうぶんぷひょう}{\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}}「\R{分布}{ぶん|ぷ}」は、「どこに、どれだけ\R{分}{わ}かれて\R{散}{ち}らばっているか」という\R{意味}{い|み}です。
+
+\R{度数}{ど|すう}を\R{全部}{ぜん|ぶ}たすと、$1+2+7+7+2+1=20$ で、はかった\R{回数}{かい|すう}と\R{同}{おな}じになります。\R{数}{かぞ}えまちがいがないかを、この\R{合計}{ごう|けい}で\R{確}{たし}かめましょう。
+
+\bkthrnhead{\R{相対度数}{そう|たい|ど|すう}：\R{全体}{ぜん|たい}の\R{何割}{なん|わり}か}
+1\R{組}{くみ}は20\R{人}{にん}、\R{学年}{がく|ねん}\R{全体}{ぜん|たい}は100\R{人}{にん}だったとします。「14.10\R{以上}{い|じょう}14.20\R{未満}{み|まん}が7\R{人}{にん}」と「\R{同}{おな}じ\R{階級}{かい|きゅう}が30\R{人}{にん}」では、どちらが\R{多}{おお}いといえるでしょう。\R{全体}{ぜん|たい}の\R{人数}{にん|ずう}がちがうので、\R{人数}{にん|ずう}のままではくらべられません。
+
+そこで、\R{度数}{ど|すう}を\R{全体}{ぜん|たい}の\R{個数}{こ|すう}でわって、\R{割合}{わり|あい}にします（2-5：\R{割合}{わり|あい}＝くらべる\R{量}{りょう}÷もとにする\R{量}{りょう}）。
+\begin{center}
+\R{相対度数}{そう|たい|ど|すう}＝その\R{階級}{かい|きゅう}の\R{度数}{ど|すう}÷\R{度数}{ど|すう}の\R{合計}{ごう|けい}
+\end{center}
+1\R{組}{くみ}は $7\div20=0.35$（35\%）、\R{学年}{がく|ねん}は $30\div100=0.30$（30\%）。\R{割合}{わり|あい}にすると、1\R{組}{くみ}のほうがこの\R{階級}{かい|きゅう}に\R{多}{おお}く\R{集}{あつ}まっているとわかります。\R{相対度数}{そう|たい|ど|すう}を\R{全部}{ぜん|ぶ}たすと、かならず1（100\%）になります。\R{全体}{ぜん|たい}を、\R{階級}{かい|きゅう}ごとに\R{分}{わ}けただけだからです。
+
+\bkthrnhead{\R{累積度数}{るい|せき|ど|すう}：\R{上}{うえ}から\R{積}{つ}み\R{上}{あ}げる}
+「14.20\R{秒}{びょう}\R{未満}{み|まん}だった\R{人}{ひと}は\R{何人}{なん|にん}？」と\R{聞}{き}かれたら、14.20より\R{下}{した}の\R{階級}{かい|きゅう}の\R{度数}{ど|すう}を\R{全部}{ぜん|ぶ}たします。$1+2+7=10$ で10\R{人}{にん}です。このように、いちばん\R{小}{ちい}さい\R{階級}{かい|きゅう}からその\R{階級}{かい|きゅう}までの\R{度数}{ど|すう}をたした\R{数}{かず}を、\textbf{\R{累積度数}{るい|せき|ど|すう}}といいます。「\R{累積}{るい|せき}」は「\R{積}{つ}み\R{重}{かさ}ねる」という\R{意味}{い|み}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\f/\c in {0/1/1,1/2/3,2/7/10,3/7/17,4/2/19,5/1/20} {
+    \node[draw=bkLine, line width=0.5pt, minimum width=14mm, minimum height=7mm, font=\sffamily\footnotesize, fill=white] at (\k*19,0) {\f};
+    \node[draw=bkBlue!70, line width=0.7pt, minimum width=14mm, minimum height=7mm, font=\sffamily\bfseries\footnotesize, fill=bkBlue!10] at (\k*19,-13) {\c};}
+  \foreach \k in {1,...,5} {\draw[bkOrange!80!black, line width=0.7pt, -{Stealth[length=3pt]}] ({\k*19-15},-11.2) -- ({\k*19-9},-11.2);
+    \node[font=\sffamily\scriptsize, text=bkOrange!80!black, inner sep=0pt] at ({\k*19-12},-8.8) {＋};}
+  \foreach \k in {0,...,5} {\draw[bkGray, line width=0.5pt, -{Stealth[length=2.6pt]}] (\k*19,-4.2) -- (\k*19,-8.8);}
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-9.5,0) {\R{度数}{ど|すう}};
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-9.5,-13) {\R{累積度数}{るい|せき|ど|すう}};
+\end{tikzpicture}
+\bkfigcaption{\R{累積度数}{るい|せき|ど|すう}は、1つ\R{前}{まえ}の\R{累積度数}{るい|せき|ど|すう}に、その\R{階級}{かい|きゅう}の\R{度数}{ど|すう}をたしてつくる。}
+\end{bkfigure}
+
+\R{累積度数}{るい|せき|ど|すう}の\R{最後}{さい|ご}は、かならず\R{度数}{ど|すう}の\R{合計}{ごう|けい}（20）になります。\R{全部}{ぜん|ぶ}の\R{階級}{かい|きゅう}をたしたことになるからです。
+
+\bksubsection{3}{\R{柱}{はしら}のグラフにする：ヒストグラム}
+
+\leavevmode\label{bk:3-13:hist}\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}を、グラフにしてみましょう。\R{横}{よこ}の\R{軸}{じく}に\R{時間}{じ|かん}、たての\R{軸}{じく}に\R{度数}{ど|すう}をとり、\R{階級}{かい|きゅう}ごとに、はばが\R{階級}{かい|きゅう}のはば、\R{高}{たか}さが\R{度数}{ど|すう}の\R{長方形}{ちょう|ほう|けい}をかきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 0.1秒を17mm、度数1を6mm
+  \foreach \v in {1,...,8} {\draw[bkLine, line width=0.3pt] (0,\v*6) -- (104,\v*6);}
+  \foreach \k/\f in {0/1,1/2,2/7,3/7,4/2,5/1} {
+    \filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.7pt] (\k*17,0) rectangle (\k*17+17,\f*6);
+    \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (\k*17+8.5,\f*6+1.5) {\f};}
+  \draw[bkInk, line width=0.7pt] (-1,0) -- (108,0);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (0,52);
+  \foreach \k/\l in {0/13.9,1/14.0,2/14.1,3/14.2,4/14.3,5/14.4,6/14.5} {\draw[bkInk, line width=0.6pt] (\k*17,-1.2) -- (\k*17,0);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k*17,-2.4) {\l};}
+  \foreach \v in {0,2,4,6,8} {\node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,\v*6) {\v};}
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (0,54) {\R{度数}{ど|すう}（\R{人}{にん}）};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (109,0) {\R{時間}{じ|かん}（\R{秒}{びょう}）};
+  % 説明
+  \draw[bkRed!80!black, line width=0.7pt, decorate, decoration={brace, amplitude=1.4mm}] (85,11.6) -- (102,11.6);
+  \node[anchor=south west, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (86,15.2) {はば＝\R{階級}{かい|きゅう}のはば0.1};
+  \draw[bkRed!80!black, line width=0.7pt, decorate, decoration={brace, amplitude=1.4mm}] (68.8,42) -- (68.8,0);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black, align=left, inner sep=0pt] at (72,30) {\R{高}{たか}さ＝\R{度数}{ど|すう}};
+\end{tikzpicture}
+\bkfigcaption{ふりこの20\R{回}{かい}のヒストグラム。\R{柱}{はしら}と\R{柱}{はしら}のあいだはあけない。}
+\end{bkfigure}
+
+このようなグラフを\textbf{ヒストグラム}（\R{柱状}{ちゅう|じょう}グラフ）といいます。\bkidx{ひすとぐらむ}{ヒストグラム}\R{表}{ひょう}の\R{数}{かず}を\R{読}{よ}まなくても、「まん\R{中}{なか}がいちばん\R{高}{たか}く、\R{左右}{さ|ゆう}にいくほど\R{低}{ひく}い\R{山}{やま}の\R{形}{かたち}」が、ひと\R{目}{め}でわかります。
+
+\noindent\textbf{なぜ\R{柱}{はしら}のあいだをあけないの？}\quad 1-18などでかいた\R{棒}{ぼう}グラフは、「りんご」「みかん」のように\R{別々}{べつ|べつ}のものの\R{数}{かず}をならべるので、\R{棒}{ぼう}をはなしてかきました。ヒストグラムの\R{横}{よこ}の\R{軸}{じく}は、\R{時間}{じ|かん}という\R{一続}{ひと|つづ}きの\R{数直線}{すう|ちょく|せん}です。14.10\R{秒}{びょう}と14.20\R{秒}{びょう}のあいだにも\R{時間}{じ|かん}はとぎれずにあるので、\R{柱}{はしら}もすき\R{間}{ま}なくならべます。
+
+\noindent\textbf{\R{面積}{めん|せき}で\R{見}{み}る}\quad どの\R{柱}{はしら}もはばが\R{同}{おな}じなので、\R{柱}{はしら}の\R{面積}{めん|せき}は\R{度数}{ど|すう}に\R{比例}{ひ|れい}します（\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}＝はば×\R{高}{たか}さ）。だから、\R{柱}{はしら}の\R{面積}{めん|せき}を\R{見}{み}れば、どこに\R{何人}{なん|にん}いるかがわかります。まん\R{中}{なか}の2\R{本}{ほん}の\R{面積}{めん|せき}を\R{合}{あ}わせると、\R{全体}{ぜん|たい}の $14\div20=0.7$、つまり7\R{割}{わり}です。この「7\R{割}{わり}」は、3-14でもう\R{一度}{いち|ど}\R{出}{で}てきます。
+
+\bkthrnhead{\R{度数折}{ど|すう|お}れ\R{線}{せん}で、2つの\R{組}{くみ}をくらべる}
+\R{隣}{となり}の2\R{組}{くみ}も、\R{同}{おな}じふりこを20\R{回}{かい}はかりました。ただし2\R{組}{くみ}は、ふりこがはしで\R{止}{と}まったときではなく、\textbf{いちばん\R{下}{した}を\R{通}{とお}るしゅん\R{間}{かん}}にボタンをおしました。2\R{組}{くみ}の\R{度数}{ど|すう}は、\R{小}{ちい}さい\R{階級}{かい|きゅう}から\R{順}{じゅん}に0、1、8、10、1、0\R{人}{にん}でした。
+
+2つのヒストグラムを\R{重}{かさ}ねると、\R{柱}{はしら}がかくれて\R{見}{み}にくくなります。そこで、\R{柱}{はしら}のかわりに、\R{柱}{はしら}の\R{上}{うえ}の\R{辺}{へん}のまん\R{中}{なか}の\R{点}{てん}を\R{線}{せん}で\R{結}{むす}びます。\R{両}{りょう}はしには、\R{度数}{ど|すう}が0の\R{階級}{かい|きゅう}が1つずつあると\R{考}{かんが}えて、\R{線}{せん}を\R{横}{よこ}の\R{軸}{じく}まで\R{下}{お}ろします。これを\textbf{\R{度数折}{ど|すう|お}れ\R{線}{せん}}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 0.1秒を15mm（13.8が0）、度数1を4.4mm
+  \foreach \v in {1,...,11} {\draw[bkLine, line width=0.3pt] (0,\v*4.4) -- (120,\v*4.4);}
+  \foreach \k/\f in {1/1,2/2,3/7,4/7,5/2,6/1} {\filldraw[fill=bkBlue!12, draw=bkBlue!40, line width=0.4pt] (\k*15,0) rectangle (\k*15+15,\f*4.4);}
+  \draw[bkInk, line width=0.7pt] (-1,0) -- (124,0);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (0,52);
+  \foreach \k/\l in {0/13.8,1/13.9,2/14.0,3/14.1,4/14.2,5/14.3,6/14.4,7/14.5,8/14.6} {\draw[bkInk, line width=0.6pt] (\k*15,-1.2) -- (\k*15,0);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k*15,-2.4) {\l};}
+  \foreach \v in {0,2,...,10} {\node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,\v*4.4) {\v};}
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (0,54) {\R{度数}{ど|すう}（\R{人}{にん}）};
+  \node[anchor=north east, font=\sffamily\footnotesize, inner sep=0pt] at (124,-7.4) {\R{時間}{じ|かん}（\R{秒}{びょう}）};
+  % 1組の度数折れ線（13.85〜14.55）
+  \draw[bkBlue, line width=1.2pt] (7.5,0) -- (22.5,4.4) -- (37.5,8.8) -- (52.5,30.8) -- (67.5,30.8) -- (82.5,8.8) -- (97.5,4.4) -- (112.5,0);
+  \foreach \x/\f in {7.5/0,22.5/1,37.5/2,52.5/7,67.5/7,82.5/2,97.5/1,112.5/0} {\fill[bkBlue] (\x,\f*4.4) circle (1.1);}
+  % 2組
+  \draw[bkRed, line width=1.2pt, dash pattern=on 3pt off 1.2pt] (22.5,0) -- (37.5,4.4) -- (52.5,35.2) -- (67.5,44) -- (82.5,4.4) -- (97.5,0);
+  \foreach \x/\f in {22.5/0,37.5/1,52.5/8,67.5/10,82.5/1,97.5/0} {\fill[bkRed] (\x,\f*4.4) +(-1.1,-1.1) rectangle +(1.1,1.1);}
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (74,46.2) {2\R{組}{くみ}（いちばん\R{下}{した}でおす）};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black, inner sep=0pt] at (87,20) {1\R{組}{くみ}（はしでおす）};
+  \draw[bkBlue!80!black, line width=0.5pt] (90,18.6) -- (86,11.2);
+\end{tikzpicture}
+\bkfigcaption{1\R{組}{くみ}（\R{青}{あお}の\R{実線}{じっ|せん}。うすい\R{柱}{はしら}は1\R{組}{くみ}のヒストグラム）と2\R{組}{くみ}（\R{赤}{あか}の\R{点線}{てん|せん}）の\R{度数折}{ど|すう|お}れ\R{線}{せん}}
+\end{bkfigure}
+
+2\R{組}{くみ}の\R{山}{やま}は、1\R{組}{くみ}より\R{細}{ほそ}くて\R{高}{たか}いですね。\R{数}{かず}が14.20のあたりに\R{集}{あつ}まっていて、ちらばりが\R{小}{ちい}さいということです。ふりこは、はしではゆっくりになって\R{止}{と}まるので、「どのしゅん\R{間}{かん}が\R{止}{と}まった\R{時}{とき}か」がはっきりしません。いちばん\R{下}{した}ではいちばん\R{速}{はや}く\R{動}{うご}くので、\R{通}{とお}りすぎるしゅん\R{間}{かん}がはっきりわかり、おすタイミングがそろうのです。\R{理科}{り|か}の\R{実験}{じっ|けん}でも、ふりこの\R{時間}{じ|かん}は、いちばん\R{下}{した}を\R{通}{とお}るときにはかります。
+
+\bksubsection{4}{1つの\R{数}{かず}で\R{代表}{だい|ひょう}させる：\R{平均}{へい|きん}・\R{中央値}{ちゅう|おう|ち}・\R{最頻値}{さい|ひん|ち}}
+
+\leavevmode\label{bk:3-13:daihyou}データ（\R{集}{あつ}めた\R{数}{かず}）の\R{全体}{ぜん|たい}を、1つの\R{数}{かず}で\R{代表}{だい|ひょう}させる\R{値}{あたい}を\textbf{\R{代表値}{だい|ひょう|ち}}といいます。\R{平均}{へい|きん}は\R{代表値}{だい|ひょう|ち}の1つです。でも、\R{平均}{へい|きん}がいつもいちばんよい\R{代表}{だい|ひょう}とはかぎりません。\R{次}{つぎ}のデータで\R{考}{かんが}えてみましょう。
+
+\noindent\begin{minipage}[c]{0.6\linewidth}
+ミナさんが、ものさしキャッチ（2-13）を12\R{回}{かい}しました。\R{友}{とも}だちがはなしたものさしを、ミナさんが\R{指}{ゆび}でつかみます。\R{落}{お}ちた\R{長}{なが}さが\R{短}{みじか}いほど、\R{反応}{はん|のう}が\R{速}{はや}いということです。8\R{回}{かい}めは、よそ\R{見}{み}をしてしまい、\qty{35}{cm}も\R{落}{お}ちてしまいました。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 人さし指（ものさしのうしろ）
+  \filldraw[fill=bkSkin, draw=bkStem!70, line width=0.5pt, rounded corners=1.4mm] (-3,11.6) rectangle (8.6,14.8);
+  % ものさし
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.6pt] (0,0) rectangle (6,40);
+  \foreach \k in {0,...,8} {\draw[bkInk, line width=0.4pt] (0,{\k*5}) -- (2.4,{\k*5});}
+  % 手首と手のひら
+  \filldraw[fill=bkSkin, draw=bkStem!70, line width=0.5pt, rounded corners=1.2mm] (-8.4,0) rectangle (-4.4,5);
+  \filldraw[fill=bkSkin, draw=bkStem!70, line width=0.5pt] (-1.8,13.6) .. controls (-1.4,15.6) and (-4,15.8) .. (-6.4,15.4) .. controls (-9.8,14.8) and (-10,6) .. (-8,3.6) -- (-4.6,3.6) .. controls (-2.6,4.4) and (-2,6) .. (-1.8,7.6) -- cycle;
+  \draw[bkStem!70, line width=0.4pt] (-8.8,12.8) .. controls (-6.6,13.6) and (-4.4,13.4) .. (-3,12.6) (-8.9,10.2) .. controls (-6.8,11) and (-4.8,10.8) .. (-3.4,10.2);
+  % 親指（ものさしの前）
+  \filldraw[fill=bkSkin, draw=bkStem!70, line width=0.5pt, rounded corners=1.4mm] (-3.4,7.6) rectangle (7.6,10.8);
+  \filldraw[fill=white, fill opacity=0.6, draw=bkStem!60, line width=0.3pt, rounded corners=0.6mm] (5,8.3) rectangle (7,10.1);
+  % 矢印
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (13,39) -- (13,16);
+  \node[anchor=west, font=\sffamily\footnotesize, align=left, inner sep=0pt] at (15,28) {\R{落}{お}ちた\\\R{長}{なが}さ};
+  \draw[bkBlue!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (14.6,9.2) -- (9.4,9.2);
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (15.4,9.2) {つかんだ\R{所}{ところ}};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=18mm] *{12}{Q[c,m,wd=7.6mm]}}, rowsep=1pt, colsep=1.4pt, cells={font=\footnotesize}, row{1}={font=\sffamily\footnotesize, bg=bkTheme!12}, cell{2}{9}={bg=bkRed!15}}
+\R{回}{かい} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 & 12 \\
+\R{長}{なが}さ（cm） & 16 & 14 & 18 & 15 & 20 & 15 & 17 & 35 & 13 & 20 & 15 & 18 \\
+\end{bktable}
+\bktabcaption{ものさしキャッチで\R{落}{お}ちた\R{長}{なが}さ（12\R{回}{かい}）}
+\end{bkcenter}
+
+\bkthrnhead{\R{平均}{へい|きん}}
+\R{合計}{ごう|けい}は216なので、$\bar{x}=216\div12=18$ で、\R{平均}{へい|きん}は\qty{18}{cm}です。ところが、12\R{回}{かい}のうち\qty{18}{cm}より\R{短}{みじか}かったのは8\R{回}{かい}もあります。\qty{35}{cm}の1\R{回}{かい}が、\R{平均}{へい|きん}を\R{大}{おお}きいほうへ\R{引}{ひ}っぱっているのです。
+
+\bkthrnhead{\R{中央値}{ちゅう|おう|ち}：\R{小}{ちい}さい\R{順}{じゅん}にならべて、まん\R{中}{なか}}
+データを\R{小}{ちい}さい\R{順}{じゅん}にならべかえます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \v [count=\k] in {13,14,15,15,15,16,17,18,18,20,20,35} {
+    \node[draw=bkBlue!70, line width=0.6pt, fill=white, minimum width=8.4mm, minimum height=7mm, font=\sffamily\footnotesize, inner sep=0pt] at (\k*10,0) {\v};
+    \node[anchor=north, font=\sffamily\scriptsize, text=bkGray!90!black, inner sep=0pt] at (\k*10,-4.6) {\k};}
+  \fill[bkOrange!35] (55.8,-3.5) rectangle (64.2,3.5);
+  \fill[bkOrange!35] (65.8,-3.5) rectangle (74.2,3.5);
+  \node[draw=bkOrange!80!black, line width=0.9pt, minimum width=8.4mm, minimum height=7mm, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (60,0) {16};
+  \node[draw=bkOrange!80!black, line width=0.9pt, minimum width=8.4mm, minimum height=7mm, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (70,0) {17};
+  \draw[bkRed!80!black, line width=1pt, dash pattern=on 2pt off 1pt] (65,-8.5) -- (65,9);
+  \draw[bkGray, line width=0.6pt, decorate, decoration={brace, amplitude=1.2mm}] (5.5,5) -- (64.5,5);
+  \draw[bkGray, line width=0.6pt, decorate, decoration={brace, amplitude=1.2mm}] (65.5,5) -- (124.5,5);
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (35,8.5) {6こ};
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (95,8.5) {6こ};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (65,-10) {まん\R{中}{なか}は、6\R{番}{ばん}めと7\R{番}{ばん}めのあいだ。$(16+17)\div2=16.5$};
+\end{tikzpicture}
+\bkfigcaption{\R{小}{ちい}さい\R{順}{じゅん}にならべたデータ。\R{下}{した}の\R{灰色}{はい|いろ}の\R{数}{かず}は、ならべた\R{順番}{じゅん|ばん}。}
+\end{bkfigure}
+ならべたときにちょうどまん\R{中}{なか}にくる\R{値}{あたい}を、\textbf{\R{中央値}{ちゅう|おう|ち}}（メジアン）といいます。\bkidx{ちゅうおうち}{\R{中央値}{ちゅう|おう|ち}}データが12こ（\R{偶数}{ぐう|すう}）のときは、まん\R{中}{なか}の\R{値}{あたい}が1つに\R{決}{き}まりません。6\R{番}{ばん}めと7\R{番}{ばん}めのあいだがまん\R{中}{なか}なので、2つの\R{値}{あたい}の\R{平均}{へい|きん}をとって、$(16+17)\div2=16.5$ で、\R{中央値}{ちゅう|おう|ち}は\qty{16.5}{cm}です。データが9こ（\R{奇数}{き|すう}）なら、まん\R{中}{なか}の5\R{番}{ばん}めの\R{値}{あたい}が、そのまま\R{中央値}{ちゅう|おう|ち}です（\R{前}{まえ}に4こ、\R{後}{うし}ろに4こ）。
+
+\bkthrnhead{\R{最頻値}{さい|ひん|ち}と\R{範囲}{はん|い}}
+データの\R{中}{なか}で、いちばん\R{多}{おお}く\R{出}{で}てくる\R{値}{あたい}を\textbf{\R{最頻値}{さい|ひん|ち}}（モード）といいます。「\R{頻}{ひん}」は「たびたび」という\R{意味}{い|み}です。15が3\R{回}{かい}でいちばん\R{多}{おお}いので、\R{最頻値}{さい|ひん|ち}は\qty{15}{cm}です。\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}しかないときは、\R{度数}{ど|すう}がいちばん\R{大}{おお}きい\R{階級}{かい|きゅう}のまん\R{中}{なか}の\R{値}{あたい}（\textbf{\R{階級値}{かい|きゅう|ち}}）を\R{最頻値}{さい|ひん|ち}とします。
+
+また、いちばん\R{大}{おお}きい\R{値}{あたい}（\R{最大値}{さい|だい|ち}）からいちばん\R{小}{ちい}さい\R{値}{あたい}（\R{最小値}{さい|しょう|ち}）をひいた\R{差}{さ}を、\textbf{\R{範囲}{はん|い}}（レンジ）といいます。$35-13=22$ で、\R{範囲}{はん|い}は\qty{22}{cm}です。\R{範囲}{はん|い}は、データがどれだけの\R{広}{ひろ}さにちらばっているかを\R{表}{あらわ}します。
+
+\bkthrnhead{\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}のちがいを、\R{図}{ず}で\R{見}{み}る}
+\R{数直線}{すう|ちょく|せん}を\R{長}{なが}い\R{板}{いた}だと\R{思}{おも}い、データの\R{数}{かず}の\R{所}{ところ}に、\R{同}{おな}じ\R{重}{おも}さのおもりを1こずつのせます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1cmを4.4mm、10cmが0
+  \fill[bkStem!35, draw=bkStem!80!black, line width=0.6pt] (-2,0) rectangle (121,2.4);
+  \foreach \v/\c in {13/1,14/1,15/3,16/1,17/1,18/2,20/2,35/1} {\foreach \j in {1,...,\c} {{\filldraw[fill=bkBlue!35, draw=bkBlue!80!black, line width=0.5pt] ({(\v-10)*4.4-1.8},{2.4+(\j-1)*3.8+0.2}) rectangle ({(\v-10)*4.4+1.8},{2.4+\j*3.8});}}}
+  % 支点（平均18）
+  \filldraw[fill=bkOrange!70, draw=bkOrange!60!black, line width=0.6pt] (35.2,0) -- (31,-7) -- (39.4,-7) -- cycle;
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black, inner sep=0pt] at (35.2,-8.4) {\R{平均}{へい|きん}18};
+  % 中央値16.5
+  \draw[bkRed!80!black, line width=0.9pt, dash pattern=on 2pt off 1pt] (28.6,-1) -- (28.6,23);
+  \node[anchor=south, font=\sffamily\bfseries\footnotesize, text=bkRed!80!black, inner sep=0pt] at (28.6,24.2) {\R{中央値}{ちゅう|おう|ち}16.5};
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (26.6,18.5) {←\R{左}{ひだり}に6こ};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (30.6,18.5) {\R{右}{みぎ}に6こ→};
+  \foreach \v in {10,15,20,25,30,35} {\node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({(\v-10)*4.4},-1.2) {\v};}
+  \node[anchor=west, font=\sffamily\footnotesize, align=left, inner sep=0pt] at (70,14) {\qty{35}{cm}の1こは、\\\R{支点}{し|てん}から\R{遠}{とお}いので、\\\R{板}{いた}を\R{強}{つよ}くかたむける};
+\end{tikzpicture}
+\bkfigcaption{\R{平均}{へい|きん}は\R{板}{いた}がつり\R{合}{あ}う\R{点}{てん}。\R{中央値}{ちゅう|おう|ち}は、\R{左右}{さ|ゆう}のおもりの\R{数}{かず}が\R{同}{おな}じになる\R{点}{てん}。}
+\end{bkfigure}
+
+\R{平均}{へい|きん}は、この\R{板}{いた}がちょうどつり\R{合}{あ}う\R{点}{てん}（\R{支点}{し|てん}）にあたります。2-6で\R{見}{み}たように、\R{平均}{へい|きん}より\R{上}{うえ}の\R{出}{で}っぱりと\R{下}{した}のへこみが\R{同}{おな}じになる\R{所}{ところ}だからです。てこ（\R{理科}{り|か}）では、\R{支点}{し|てん}から\R{遠}{とお}いおもりほど\R{板}{いた}を\R{強}{つよ}くかたむけます。だから、\R{遠}{とお}くにぽつんとある\qty{35}{cm}につられて、つり\R{合}{あ}う\R{点}{てん}が\R{右}{みぎ}へずれるのです。
+
+\R{中央値}{ちゅう|おう|ち}は、\R{左右}{さ|ゆう}のおもりの\R{個数}{こ|すう}だけで\R{決}{き}まります。35が100になっても、\R{右}{みぎ}に6こあることは\R{変}{か}わらないので、\R{中央値}{ちゅう|おう|ち}は16.5のままです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] Q[c,m,wd=34mm] Q[c,m,wd=40mm]}, rowsep=1.2pt, colsep=3pt, cells={font=\footnotesize}, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!12}}
+ & 12\R{回}{かい}\R{全部}{ぜん|ぶ} & 35をのぞいた11\R{回}{かい} \\
+\R{平均}{へい|きん} & $216\div12=18$ & $181\div11=16.45\cdots$ \\
+\R{中央値}{ちゅう|おう|ち} & $(16+17)\div2=16.5$ & 6\R{番}{ばん}めの16 \\
+\end{bktable}
+\bktabcaption{1つの\R{大}{おお}きくはなれた\R{値}{あたい}で、\R{平均}{へい|きん}は1.5\R{以上}{い|じょう}\R{動}{うご}くが、\R{中央値}{ちゅう|おう|ち}は0.5しか\R{動}{うご}かない}
+\end{bkcenter}
+
+ミナさんの「ふだんの\R{反応}{はん|のう}」を\R{知}{し}りたいなら、よそ\R{見}{み}の1\R{回}{かい}に\R{引}{ひ}っぱられない\R{中央値}{ちゅう|おう|ち}のほうが\R{向}{む}いています。\R{一方}{いっ|ぽう}、ふりこのように、ずれが\R{左右}{さ|ゆう}に\R{同}{おな}じくらい\R{出}{で}るときは、\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}はほぼ\R{同}{おな}じです（ふりこでは\R{平均}{へい|きん}14.20、\R{中央値}{ちゅう|おう|ち}14.195）。そのときは、\R{全部}{ぜん|ぶ}の\R{数}{かず}を\R{使}{つか}ってならす\R{平均}{へい|きん}を\R{使}{つか}います。
+
+\begin{motto}[2]
+\noindent\textbf{\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}から\R{平均}{へい|きん}を\R{求}{もと}める}\par
+\noindent \R{元}{もと}のデータがなく、\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}しかないときは、「その\R{階級}{かい|きゅう}の\R{数}{かず}は、みんな\R{階級値}{かい|きゅう|ち}だった」とみなして\R{計算}{けい|さん}します。ふりこの\R{表}{ひょう}なら、\R{階級値}{かい|きゅう|ち}は13.95、14.05、14.15、14.25、14.35、14.45です。
+\begin{align*}
+&13.95\times1+14.05\times2+14.15\times7\\
+&\quad+14.25\times7+14.35\times2+14.45\times1=284.00
+\end{align*}
+これを20でわると14.20で、\R{元}{もと}のデータの\R{平均}{へい|きん}と（ここではたまたま）\R{同}{おな}じになりました。ふつうは\R{少}{すこ}しずれるので、およその\R{平均}{へい|きん}と\R{考}{かんが}えます。
+\end{motto}
+
+\bksubsection{5}{4つに\R{分}{わ}けて\R{見}{み}る：\R{四分位数}{し|ぶん|い|すう}と\R{箱}{はこ}ひげ\R{図}{ず}}
+
+\leavevmode\label{bk:3-13:hako}\R{中央値}{ちゅう|おう|ち}は、データを\R{前半}{ぜん|はん}と\R{後半}{こう|はん}の2つに\R{分}{わ}ける\R{値}{あたい}でした。それぞれの\R{半分}{はん|ぶん}を、もう\R{一度}{いち|ど}\R{半分}{はん|ぶん}にすると、データは4つに\R{分}{わ}かれます。ものさしキャッチの12\R{回}{かい}で、\R{順}{じゅん}にやってみましょう。
+
+\Needspace{12\baselineskip}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item データを\R{小}{ちい}さい\R{順}{じゅん}にならべ、\R{中央値}{ちゅう|おう|ち}を\R{求}{もと}める。\R{中央値}{ちゅう|おう|ち}は16.5。
+\item \R{中央値}{ちゅう|おう|ち}より\R{前}{まえ}の6こ（13、14、15、15、15、16）の\R{中央値}{ちゅう|おう|ち}を\R{求}{もと}める。3\R{番}{ばん}めと4\R{番}{ばん}めの\R{平均}{へい|きん}で、$(15+15)\div2=15$。
+\item \R{中央値}{ちゅう|おう|ち}より\R{後}{うし}ろの6こ（17、18、18、20、20、35）の\R{中央値}{ちゅう|おう|ち}を\R{求}{もと}める。9\R{番}{ばん}めと10\R{番}{ばん}めの\R{平均}{へい|きん}で、$(18+20)\div2=19$。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \v [count=\k] in {13,14,15,15,15,16,17,18,18,20,20,35} {
+    \node[draw=bkBlue!70, line width=0.6pt, fill=white, minimum width=8.4mm, minimum height=7mm, font=\sffamily\footnotesize, inner sep=0pt] at (\k*10,0) {\v};}
+  \foreach \x/\t/\v in {35/{\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}}/{\textbf{15}}, 65/{\R{第}{だい}2\R{四分位数}{し|ぶん|い|すう}}/{（\R{中央値}{ちゅう|おう|ち}）\textbf{16.5}}, 95/{\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}}/{\textbf{19}}} {
+    \draw[bkRed!80!black, line width=1pt] (\x,-5.5) -- (\x,5.5);
+    \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black, align=center, inner sep=0pt] at (\x,-7) {\t\\\v};}
+  \foreach \a/\b in {5.5/34.5,35.5/64.5,65.5/94.5,95.5/124.5} {\draw[bkGray, line width=0.6pt, decorate, decoration={brace, amplitude=1.2mm}] (\a,5) -- (\b,5);
+    \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at ({(\a+\b)/2},8.5) {3こ};}
+\end{tikzpicture}
+\bkfigcaption{3つの\R{赤}{あか}い\R{線}{せん}で、12このデータが3こずつの4つの\R{組}{くみ}に\R{分}{わ}かれる。}
+\end{bkfigure}
+
+データを4\R{等分}{とう|ぶん}する3つの\R{値}{あたい}を\textbf{\R{四分位数}{し|ぶん|い|すう}}といい、\R{小}{ちい}さいほうから\textbf{\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}}、\textbf{\R{第}{だい}2\R{四分位数}{し|ぶん|い|すう}}（\R{中央値}{ちゅう|おう|ち}と\R{同}{おな}じ）、\textbf{\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}}とよびます。\bkidx{しぶんいすう}{\R{四分位数}{し|ぶん|い|すう}}「\R{四分位}{し|ぶん|い}」は「4つに\R{分}{わ}けた\R{位置}{い|ち}」という\R{意味}{い|み}です。
+
+\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}から\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}をひいた\R{差}{さ}を、\textbf{\R{四分位範囲}{し|ぶん|い|はん|い}}といいます。$19-15=4$ で、\qty{4}{cm}です。まん\R{中}{なか}の\R{半分}{はん|ぶん}（6こ）のデータが、\qty{4}{cm}のはばの\R{中}{なか}に\R{入}{はい}っているということです。\R{範囲}{はん|い}（22）は\qty{35}{cm}の1\R{回}{かい}で\R{大}{おお}きくなりましたが、\R{四分位範囲}{し|ぶん|い|はん|い}は、はしの\R{値}{あたい}にほとんど\R{引}{ひ}っぱられません。
+
+\noindent\textbf{データが\R{奇数}{き|すう}こなら}\quad たとえば11こなら、\R{中央値}{ちゅう|おう|ち}は6\R{番}{ばん}めです。\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}と\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}は、\R{中央値}{ちゅう|おう|ち}の6\R{番}{ばん}めを\textbf{のぞいた}\R{前}{まえ}の5こと\R{後}{うし}ろの5こで、それぞれの\R{中央値}{ちゅう|おう|ち}（3\R{番}{ばん}めと9\R{番}{ばん}め）を\R{求}{もと}めます（この\R{本}{ほん}では、\R{中学校}{ちゅう|がっ|こう}の\R{教科書}{きょう|か|しょ}と\R{同}{おな}じこの\R{約束}{やく|そく}にします）。
+
+\bkthrnhead{\R{箱}{はこ}ひげ\R{図}{ず}をかく}
+\R{最小値}{さい|しょう|ち}、\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}、\R{中央値}{ちゅう|おう|ち}、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}、\R{最大値}{さい|だい|ち}の5つの\R{値}{あたい}を、1つの\R{図}{ず}にまとめます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \R{数直線}{すう|ちょく|せん}をかき、\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}から\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}までを\R{長方形}{ちょう|ほう|けい}（\textbf{\R{箱}{はこ}}）でかく。
+\item \R{箱}{はこ}の\R{中}{なか}の\R{中央値}{ちゅう|おう|ち}の\R{所}{ところ}に、たての\R{線}{せん}を\R{引}{ひ}く。
+\item \R{箱}{はこ}の\R{左}{ひだり}から\R{最小値}{さい|しょう|ち}まで、\R{右}{みぎ}から\R{最大値}{さい|だい|ち}まで、\R{線}{せん}（\textbf{ひげ}）を\R{引}{ひ}く。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1cmを4.6mm、10cmが0
+  \bkthrnaxis{0}{4.6}{10}{36}{1}{5}{0}
+  \bkthrnbox{17}{4.6}{10}{13}{15}{16.5}{19}{35}{bkBlue}
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({(13-10)*4.6},12.4) {\R{最小値}{さい|しょう|ち}13};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({(35-10)*4.6},12.4) {\R{最大値}{さい|だい|ち}35};
+  \node[anchor=south east, font=\sffamily\footnotesize, inner sep=0pt] at ({(15-10)*4.6+0.6},22.2) {\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}15};
+  \node[anchor=south west, font=\sffamily\footnotesize, inner sep=0pt] at ({(19-10)*4.6-0.6},22.2) {\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}19};
+  \node[anchor=south, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black, inner sep=0pt] at ({(16.5-10)*4.6},29.4) {\R{中央値}{ちゅう|おう|ち}16.5};
+  \draw[bkBlue!80!black, line width=0.5pt] ({(16.5-10)*4.6},28.8) -- ({(16.5-10)*4.6},21.4);
+  \draw[bkGray, line width=0.6pt, decorate, decoration={brace, amplitude=1.2mm, mirror}] ({(15-10)*4.6},12.2) -- ({(19-10)*4.6},12.2);
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({(17-10)*4.6},9.6) {\R{四分位範囲}{し|ぶん|い|はん|い}4};
+  \node[anchor=west, font=\sffamily\footnotesize, align=left, inner sep=0pt] at (76,27) {\R{箱}{はこ}の\R{中}{なか}に、まん\R{中}{なか}の\R{半分}{はん|ぶん}\\（6こ）のデータが\R{入}{はい}る};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (55,-11) {\R{長}{なが}さ（cm）};
+\end{tikzpicture}
+\bkfigcaption{ものさしキャッチの\R{箱}{はこ}ひげ\R{図}{ず}。\R{右}{みぎ}のひげが\R{長}{なが}いのは、35が1つだけ\R{遠}{とお}くにあるから。}
+\end{bkfigure}
+
+このような\R{図}{ず}を\textbf{\R{箱}{はこ}ひげ\R{図}{ず}}といいます。\bkidx{はこひげず}{\R{箱}{はこ}ひげ\R{図}{ず}}\R{箱}{はこ}もひげも、それぞれデータの4\R{分}{ぶん}の1ずつをふくんでいます。\R{左}{ひだり}のひげは\R{短}{みじか}く、\R{右}{みぎ}のひげはとても\R{長}{なが}いですね。\R{同}{おな}じ3こずつのデータが、\R{左}{ひだり}では13から15のせまい\R{所}{ところ}に、\R{右}{みぎ}では19から35の\R{広}{ひろ}い\R{所}{ところ}にちらばっている、ということです。
+
+\bkthrnhead{\R{外}{はず}れ\R{値}{ち}}
+35のように、ほかのデータから\R{大}{おお}きくはなれた\R{値}{あたい}を\textbf{\R{外}{はず}れ\R{値}{ち}}といいます。どこからを\R{外}{はず}れ\R{値}{ち}とするかは、\R{次}{つぎ}の\R{約束}{やく|そく}がよく\R{使}{つか}われます。
+
+\begin{center}
+\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}－\R{四分位範囲}{し|ぶん|い|はん|い}×1.5\enspace より\R{小}{ちい}さい\R{値}{あたい}\\
+\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}＋\R{四分位範囲}{し|ぶん|い|はん|い}×1.5\enspace より\R{大}{おお}きい\R{値}{あたい}
+\end{center}
+
+ものさしキャッチでは、\R{四分位範囲}{し|ぶん|い|はん|い}が4なので、$4\times1.5=6$。\R{小}{ちい}さいほうは $15-6=9$ より\R{小}{ちい}さい\R{値}{あたい}、\R{大}{おお}きいほうは $19+6=25$ より\R{大}{おお}きい\R{値}{あたい}が\R{外}{はず}れ\R{値}{ち}です。35は25より\R{大}{おお}きいので、\R{外}{はず}れ\R{値}{ち}です。
+
+\noindent\textbf{1.5はどこから\R{来}{き}たの？}\quad 1.5は、\R{計算}{けい|さん}で\R{出}{で}てくる\R{数}{かず}ではなく、「\R{箱}{はこ}の\R{長}{なが}さの1.5\R{倍}{ばい}より\R{外}{そと}にとび\R{出}{で}ていたら、ほかとはちがうと\R{考}{かんが}えよう」と\R{人}{ひと}が\R{決}{き}めた\R{目安}{め|やす}です。\R{外}{はず}れ\R{値}{ち}を\R{見}{み}つけたら、すぐに\R{消}{け}すのではなく、「よそ\R{見}{み}をした」「\R{書}{か}きまちがえた」のようなわけがないかを\R{調}{しら}べます（2-6の「ずれ」と「まちがい」）。
+
+\begin{taisetsu}
+\R{平均}{へい|きん} $\bar{x}=\dfrac{x_1+x_2+\cdots+x_n}{n}$。\R{何回}{なん|かい}もはかって\R{平均}{へい|きん}すると、ほんとうの\R{値}{あたい}に\R{近}{ちか}づく。\\
+\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}：\R{階級}{かい|きゅう}ごとに\R{度数}{ど|すう}を\R{数}{かぞ}える。\R{相対度数}{そう|たい|ど|すう}＝\R{度数}{ど|すう}÷\R{合計}{ごう|けい}。ヒストグラムは\R{柱}{はしら}をすき\R{間}{ま}なく。\\
+\R{代表値}{だい|ひょう|ち}：\R{平均}{へい|きん}・\R{中央値}{ちゅう|おう|ち}（まん\R{中}{なか}）・\R{最頻値}{さい|ひん|ち}（いちばん\R{多}{おお}い）。\R{外}{はず}れ\R{値}{ち}に\R{強}{つよ}いのは\R{中央値}{ちゅう|おう|ち}。\\
+\R{四分位数}{し|ぶん|い|すう}でデータを4つに\R{分}{わ}けて、\R{箱}{はこ}ひげ\R{図}{ず}にかく。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{\R{階級}{かい|きゅう}・\R{度数}{ど|すう}}{データを\R{区切}{く|ぎ}った\R{区間}{く|かん}。その\R{区間}{く|かん}に\R{入}{はい}るデータの\R{個数}{こ|すう}。}
+\bkword{\R{相対度数}{そう|たい|ど|すう}・\R{累積度数}{るい|せき|ど|すう}}{\R{度数}{ど|すう}÷\R{合計}{ごう|けい}。いちばん\R{小}{ちい}さい\R{階級}{かい|きゅう}からたした\R{度数}{ど|すう}。}
+\bkword{ヒストグラム・\R{度数折}{ど|すう|お}れ\R{線}{せん}}{\R{度数}{ど|すう}を\R{柱}{はしら}の\R{高}{たか}さにしたグラフ。\R{柱}{はしら}の\R{上}{うえ}のまん\R{中}{なか}を\R{結}{むす}んだ\R{線}{せん}。}
+\bkword{\R{中央値}{ちゅう|おう|ち}・\R{最頻値}{さい|ひん|ち}・\R{範囲}{はん|い}}{まん\R{中}{なか}の\R{値}{あたい}。いちばん\R{多}{おお}い\R{値}{あたい}。\R{最大値}{さい|だい|ち}－\R{最小値}{さい|しょう|ち}。}
+\bkword{\R{四分位数}{し|ぶん|い|すう}・\R{四分位範囲}{し|ぶん|い|はん|い}}{データを4\R{等分}{とう|ぶん}する3つの\R{値}{あたい}。\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}－\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}。}
+\bkword{\R{外}{はず}れ\R{値}{ち}}{ほかから\R{大}{おお}きくはなれた\R{値}{あたい}。\R{箱}{はこ}から\R{四分位範囲}{し|ぶん|い|はん|い}の1.5\R{倍}{ばい}より\R{外}{そと}。}
+\end{kotoba}
+
+\bkfukidashi{delta}{\R{代表値}{だい|ひょう|ち}は3つもあるんだね。ヒストグラムや\R{箱}{はこ}ひげ\R{図}{ず}でデータの\R{形}{かたち}を\R{見}{み}てから、どれを\R{使}{つか}うか\R{選}{えら}ぼう。}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[\R{平均}{へい|きん}を $\bar{x}$ で\R{求}{もと}める]
+ばねに\R{同}{おな}じおもりをつるして、のびを5\R{回}{かい}はかると、8.3、8.1、8.4、8.2、\qty{8.5}{cm}でした。のびの\R{平均}{へい|きん} $\bar{x}$ を\R{求}{もと}めましょう。\par
+\kangaekata $x_1=8.3$、……、$x_5=8.5$、$n=5$ です。\R{仮}{かり}の\R{平均}{へい|きん}を8.0にすると、\R{小}{ちい}さな\R{数}{かず}のたし\R{算}{ざん}ですみます。\par
+\shiki ① 8.0からのはなれ：0.3、0.1、0.4、0.2、0.5\par
+\hspace*{2.6\zw}② はなれの\R{合計}{ごう|けい}：$0.3+0.1+0.4+0.2+0.5=1.5$\par
+\hspace*{2.6\zw}③ はなれの\R{平均}{へい|きん}：$1.5\div5=0.3$。\enspace ④ $\bar{x}=8.0+0.3=8.3$\par
+\hspace*{2.6\zw}\R{確}{たし}かめ：\R{全部}{ぜん|ぶ}たすと41.5。$41.5\div5=8.3$ で\R{同}{おな}じ\par
+\kotae \qty{8.3}{cm}
+\end{reidai}
+
+\begin{jibun}
+\R{水}{すい}そうの\R{水}{みず}の\R{温度}{おん|ど}を5\R{回}{かい}はかると、24.6、24.4、24.9、24.5、\qty{24.6}{\degreeCelsius}でした。\R{仮}{かり}の\R{平均}{へい|きん}を24.0にして、\R{平均}{へい|きん} $\bar{x}$ を\R{求}{もと}めましょう。
+\bkjans{はなれ0.6、0.4、0.9、0.5、0.6の\R{合計}{ごう|けい}3.0、$3.0\div5=0.6$。$\bar{x}=24.0+0.6=24.6$ で\qty{24.6}{\degreeCelsius}}
+\end{jibun}
+
+\begin{reidai}[\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}を\R{作}{つく}る]
+ペットボトルロケットを20\R{回}{かい}とばした\R{距離}{きょ|り}（m）です。\par
+\par\addvspace{2pt}{\footnotesize\noindent 23、31、27、35、29、18、26、33、28、24、30、21、27、38、25、29、22、32、26、36\par}\addvspace{2pt}
+（1）\R{階級}{かい|きゅう}のはばを\qty{5}{m}（15\R{以上}{い|じょう}20\R{未満}{み|まん}から）にして、\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}を\R{作}{つく}りましょう。（2）\R{相対度数}{そう|たい|ど|すう}と\R{累積度数}{るい|せき|ど|すう}を\R{求}{もと}めましょう。（3）\qty{30}{m}\R{未満}{み|まん}だったのは\R{何回}{なん|かい}ですか。\par
+\noindent\begin{minipage}[t]{0.45\linewidth}\vspace{0pt}\raggedright
+\kangaekata \R{順}{じゅん}に1つずつ\R{階級}{かい|きゅう}に\R{入}{い}れて\R{数}{かぞ}えます。30は「30\R{以上}{い|じょう}35\R{未満}{み|まん}」に\R{入}{い}れます。\par
+\shiki（1）（2）\R{右}{みぎ}の\R{表}{ひょう}。\R{相対度数}{そう|たい|ど|すう}は\R{度数}{ど|すう}÷20\par
+\R{確}{たし}かめ：\R{度数}{ど|すう}の\R{合計}{ごう|けい}は20で、20\R{回}{かい}と\R{同}{おな}じ。\par
+（3）25\R{以上}{い|じょう}30\R{未満}{み|まん}までの\R{累積度数}{るい|せき|ど|すう}を\R{読}{よ}む。
+\end{minipage}\hfill
+\begin{minipage}[t]{0.53\linewidth}\vspace{0pt}\centering
+\begin{bktable}{colspec={Q[c,m,wd=27mm] Q[c,m,wd=8mm] Q[c,m,wd=13mm] Q[c,m,wd=13mm]}, rowsep=0.6pt, colsep=2pt, cells={font=\footnotesize}, row{1}={font=\sffamily\footnotesize, bg=white}}
+\R{距離}{きょ|り}（m） & \R{度数}{ど|すう} & {\R{相対}{そう|たい}\\\R{度数}{ど|すう}} & {\R{累積}{るい|せき}\\\R{度数}{ど|すう}} \\
+15\R{以上}{い|じょう}20\R{未満}{み|まん} & 1 & 0.05 & 1 \\
+20\R{以上}{い|じょう}25\R{未満}{み|まん} & 4 & 0.20 & 5 \\
+25\R{以上}{い|じょう}30\R{未満}{み|まん} & 8 & 0.40 & 13 \\
+30\R{以上}{い|じょう}35\R{未満}{み|まん} & 4 & 0.20 & 17 \\
+35\R{以上}{い|じょう}40\R{未満}{み|まん} & 3 & 0.15 & 20 \\
+\R{合計}{ごう|けい} & 20 & 1.00 & \\
+\end{bktable}
+\end{minipage}\par
+\kotae（1）（2）\R{右上}{みぎ|うえ}の\R{表}{ひょう}\quad（3）13\R{回}{かい}
+\end{reidai}
+
+\begin{jibun}
+\R{紙}{かみ}ひこうきを20\R{回}{かい}とばした\R{距離}{きょ|り}（m）です。\R{階級}{かい|きゅう}のはばを\qty{2}{m}（4\R{以上}{い|じょう}6\R{未満}{み|まん}から）にして、（1）\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}（2）\R{相対度数}{そう|たい|ど|すう}と\R{累積度数}{るい|せき|ど|すう}（3）\qty{8}{m}\R{未満}{み|まん}の\R{回数}{かい|すう}を\R{求}{もと}めましょう。\par
+{\footnotesize 7.2、9.5、8.1、5.4、10.3、8.8、6.6、9.0、7.9、11.2、8.4、6.0、9.7、7.5、8.0、12.4、9.1、10.9、8.6、10.0}
+\bkjans{（1）\nobreak 4〜6：1、6〜8：5、8〜10：9、10〜12：4、12〜14：1。（2）\nobreak \R{相対度数}{そう|たい|ど|すう}0.05、0.25、0.45、0.20、0.05。\R{累積度数}{るい|せき|ど|すう}1、6、15、19、20。（3）\nobreak 6\R{回}{かい}}
+\end{jibun}
+
+\begin{reidai}[ヒストグラムを\R{読}{よ}む]
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\noindent\R{工場}{こう|じょう}で\R{焼}{や}いたクッキー40まいの\R{重}{おも}さのヒストグラムです。（1）\R{最頻値}{さい|ひん|ち}は\R{何}{なん}gですか。（2）\qty{10.0}{g}\R{未満}{み|まん}のクッキーは\R{何}{なん}まいで、\R{全体}{ぜん|たい}の\R{何}{なん}\%ですか。（3）\R{中央値}{ちゅう|おう|ち}は、どの\R{階級}{かい|きゅう}に\R{入}{はい}っていますか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \v in {2,4,...,14} {\draw[bkLine, line width=0.3pt] (0,\v*2.4) -- (50,\v*2.4);}
+  \foreach \k/\f in {0/2,1/6,2/11,3/14,4/5,5/2} {\filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.6pt] (\k*8.2,0) rectangle (\k*8.2+8.2,\f*2.4);
+    \node[anchor=south, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2+4.1,\f*2.4+1) {\f};}
+  \draw[bkInk, line width=0.6pt] (-1,0) -- (52,0) (0,0) -- (0,38);
+  \foreach \k/\l in {0/9.4,2/9.8,4/10.2,6/10.6} {\node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2,-1.6) {\l};}
+  \foreach \k in {1,3,5} {\draw[bkInk, line width=0.5pt] (\k*8.2,-1) -- (\k*8.2,0);}
+  \foreach \v in {0,5,10} {\node[anchor=east, font=\sffamily\scriptsize, inner sep=0pt] at (-1.4,\v*2.4) {\v};}
+  \node[anchor=south west, font=\sffamily\scriptsize, inner sep=0pt] at (-2,39) {\R{度数}{ど|すう}（まい）};
+  \node[anchor=north east, font=\sffamily\scriptsize, inner sep=0pt] at (51,-5.6) {\R{重}{おも}さ（g）};
+\end{tikzpicture}
+\end{minipage}\par
+\kangaekata（3）は、\R{軽}{かる}い\R{順}{じゅん}で20\R{番}{ばん}めと21\R{番}{ばん}めがどの\R{階級}{かい|きゅう}にあるかを、\R{累積度数}{るい|せき|ど|すう}で\R{調}{しら}べます。\par
+\shiki（1）いちばん\R{高}{たか}い\R{柱}{はしら}の\R{階級値}{かい|きゅう|ち}：$(10.0+10.2)\div2=10.1$\par
+\hspace*{2.6\zw}（2）$2+6+11=19$（まい）。$19\div40=0.475$ で47.5\%\par
+\hspace*{2.6\zw}（3）\R{累積度数}{るい|せき|ど|すう}は2、8、19、33、……なので、\par
+\hspace*{2.6\zw}\phantom{（3）}20\R{番}{ばん}めから33\R{番}{ばん}めまでが10.0\R{以上}{い|じょう}10.2\R{未満}{み|まん}\par
+\kotae（1）\qty{10.1}{g}\quad（2）19まい、47.5\%\quad（3）10.0\,g\R{以上}{い|じょう}10.2\,g\R{未満}{み|まん}
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+ボルト40\R{本}{ぽん}の\R{長}{なが}さのヒストグラムです。（1）\R{最頻値}{さい|ひん|ち}は\R{何}{なん}mm？（2）\qty{30.0}{mm}\R{未満}{み|まん}は\R{何本}{なん|ぼん}で、\R{何}{なん}\%？（3）\R{中央値}{ちゅう|おう|ち}はどの\R{階級}{かい|きゅう}に\R{入}{はい}っている？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \v in {2,4,...,16} {\draw[bkLine, line width=0.3pt] (0,\v*2.2) -- (50,\v*2.2);}
+  \foreach \k/\f in {0/1,1/5,2/12,3/15,4/6,5/1} {\filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.6pt] (\k*8.2,0) rectangle (\k*8.2+8.2,\f*2.2);
+    \node[anchor=south, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2+4.1,\f*2.2+1) {\f};}
+  \draw[bkInk, line width=0.6pt] (-1,0) -- (52,0) (0,0) -- (0,38);
+  \foreach \k/\l in {0/29.7,2/29.9,4/30.1,6/30.3} {\node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2,-1.6) {\l};}
+  \foreach \k in {1,3,5} {\draw[bkInk, line width=0.5pt] (\k*8.2,-1) -- (\k*8.2,0);}
+  \foreach \v in {0,5,10,15} {\node[anchor=east, font=\sffamily\scriptsize, inner sep=0pt] at (-1.4,\v*2.2) {\v};}
+  \node[anchor=south west, font=\sffamily\scriptsize, inner sep=0pt] at (-2,39) {\R{度数}{ど|すう}（\R{本}{ほん}）};
+  \node[anchor=north east, font=\sffamily\scriptsize, inner sep=0pt] at (51,-5.6) {\R{長}{なが}さ（mm）};
+\end{tikzpicture}
+\end{minipage}
+\bkjans{（1）\nobreak \qty{30.05}{mm}（2）\nobreak $1+5+12=18$ \R{本}{ほん}。$18\div40=0.45$ で45\%（3）\nobreak 30.0\,mm\R{以上}{い|じょう}30.1\,mm\R{未満}{み|まん}（\R{累積度数}{るい|せき|ど|すう}18、33）}
+\end{jibun}
+
+\begin{reidai}[\R{平均}{へい|きん}・\R{中央値}{ちゅう|おう|ち}・\R{最頻値}{さい|ひん|ち}・\R{範囲}{はん|い}]
+ソラさんがものさしキャッチを9\R{回}{かい}すると、\R{落}{お}ちた\R{長}{なが}さは17、14、18、15、34、16、15、18、\qty{15}{cm}でした。（1）\R{平均}{へい|きん}、\R{中央値}{ちゅう|おう|ち}、\R{最頻値}{さい|ひん|ち}、\R{範囲}{はん|い}を\R{求}{もと}めましょう。（2）34をのぞいた8\R{回}{かい}の\R{平均}{へい|きん}を\R{求}{もと}めましょう。（3）ふだんの\R{反応}{はん|のう}を\R{表}{あらわ}すには、\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}のどちらがよいですか。\par
+\kangaekata まず\R{小}{ちい}さい\R{順}{じゅん}にならべます。9こ（\R{奇数}{き|すう}）なので、\R{中央値}{ちゅう|おう|ち}は5\R{番}{ばん}めです。\par
+\shiki ならべると\enspace 14、15、15、15、16、17、18、18、34\par
+\hspace*{2.6\zw}（1）\R{平均}{へい|きん}\enspace $162\div9=18$\par
+\hspace*{2.6\zw}\phantom{（1）}\R{中央値}{ちゅう|おう|ち}\enspace 5\R{番}{ばん}めの16\par
+\hspace*{2.6\zw}\phantom{（1）}\R{最頻値}{さい|ひん|ち}\enspace 15（3\R{回}{かい}でいちばん\R{多}{おお}い）\par
+\hspace*{2.6\zw}\phantom{（1）}\R{範囲}{はん|い}\enspace $34-14=20$\par
+\hspace*{2.6\zw}（2）$162-34=128$、\ $128\div8=16$\par
+\hspace*{2.6\zw}（3）34が、\R{平均}{へい|きん}を18まで\R{引}{ひ}っぱっている\par
+\hspace*{2.6\zw}\phantom{（3）}\R{中央値}{ちゅう|おう|ち}16は、34に\R{引}{ひ}っぱられない\par
+\kotae（1）\R{平均}{へい|きん}\qty{18}{cm}、\R{中央値}{ちゅう|おう|ち}\qty{16}{cm}、\R{最頻値}{さい|ひん|ち}\qty{15}{cm}、\R{範囲}{はん|い}\qty{20}{cm}\quad（2）\qty{16}{cm}\quad（3）\R{中央値}{ちゅう|おう|ち}
+\end{reidai}
+
+\begin{jibun}
+ミナさんが\R{反復横}{はん|ぷく|よこ}とびを9\R{回}{かい}すると、22、25、21、24、22、41、23、22、25\R{回}{かい}でした（41は\R{数}{かぞ}えまちがい）。（1）\R{平均}{へい|きん}、\R{中央値}{ちゅう|おう|ち}、\R{最頻値}{さい|ひん|ち}、\R{範囲}{はん|い}（2）41をのぞいた8\R{回}{かい}の\R{平均}{へい|きん}（3）ふだんの\R{記録}{き|ろく}を\R{表}{あらわ}すのは、\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}のどちら？
+\bkjans{ならべると21、22、22、22、23、24、25、25、41。（1）\nobreak \R{平均}{へい|きん} $225\div9=25$、\R{中央値}{ちゅう|おう|ち}23、\R{最頻値}{さい|ひん|ち}22、\R{範囲}{はん|い} $41-21=20$（2）\nobreak $184\div8=23$（3）\nobreak \R{中央値}{ちゅう|おう|ち}}
+\end{jibun}
+
+\begin{reidai}[\R{四分位数}{し|ぶん|い|すう}と\R{箱}{はこ}ひげ\R{図}{ず}]
+11\R{本}{ぽん}の\R{乾電池}{かん|でん|ち}で、ミニカーが\R{止}{と}まるまで\R{走}{はし}った\R{時間}{じ|かん}（\R{分}{ふん}）です。\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}めて、\R{箱}{はこ}ひげ\R{図}{ず}をかきましょう。\par
+\begin{center}\footnotesize 12、8、14、10、7、17、8、12、11、5、9\end{center}
+\kangaekata 11こ（\R{奇数}{き|すう}）なので、\R{中央値}{ちゅう|おう|ち}は6\R{番}{ばん}め。\R{第}{だい}1・\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}は、6\R{番}{ばん}めをのぞいた\R{前}{まえ}の5こと\R{後}{うし}ろの5この、それぞれのまん\R{中}{なか}（3\R{番}{ばん}めと9\R{番}{ばん}め）です。\par
+\shiki ならべると\enspace 5、7、8、8、9、10、11、12、12、14、17\par
+\hspace*{2.6\zw}\R{中央値}{ちゅう|おう|ち}（\R{第}{だい}2\R{四分位数}{し|ぶん|い|すう}）：6\R{番}{ばん}めの10\par
+\hspace*{2.6\zw}\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}：5、7、8、8、9 のまん\R{中}{なか}で8\par
+\hspace*{2.6\zw}\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}：11、12、12、14、17 のまん\R{中}{なか}で12\par
+\hspace*{2.6\zw}\R{最小値}{さい|しょう|ち}5、\R{最大値}{さい|だい|ち}17。\R{四分位範囲}{し|ぶん|い|はん|い}は $12-8=4$\par
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrnaxis{0}{6}{4}{18}{1}{2}{0}
+  \bkthrnbox{11}{6}{4}{5}{8}{10}{12}{17}{bkBlue}
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (88,0) {（\R{分}{ふん}）};
+\end{tikzpicture}
+\end{center}
+\kotae \R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}8\R{分}{ふん}、\R{中央値}{ちゅう|おう|ち}10\R{分}{ふん}、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}12\R{分}{ふん}。\R{箱}{はこ}ひげ\R{図}{ず}は\R{上}{うえ}のとおり
+\end{reidai}
+
+\begin{jibun}
+11\R{人}{にん}の1\R{週間}{しゅう|かん}の\R{読書時間}{どく|しょ|じ|かん}（\R{時間}{じ|かん}）です。\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}めて、\R{箱}{はこ}ひげ\R{図}{ず}をノートにかきましょう。\par
+{\footnotesize 21、16、25、19、18、23、30、20、17、22、24}
+\bkjans{ならべると16、17、18、19、20、21、22、23、24、25、30。\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}18、\R{中央値}{ちゅう|おう|ち}21、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}24。\R{箱}{はこ}は18から24、\R{中央値}{ちゅう|おう|ち}の\R{線}{せん}は21、ひげは16から30まで}
+\end{jibun}
+
+\begin{reidai}[\R{外}{はず}れ\R{値}{ち}を\R{見}{み}つける]
+\R{温度}{おん|ど}センサーが8\R{回}{かい}はかった\R{値}{あたい}（\unit{\degreeCelsius}）です。\R{外}{はず}れ\R{値}{ち}はありますか。\par
+\begin{center}\footnotesize 24.6、24.8、24.5、24.7、26.9、24.6、24.4、24.7\end{center}
+\kangaekata 8こ（\R{偶数}{ぐう|すう}）なので、\R{前}{まえ}の4こと\R{後}{うし}ろの4こに\R{分}{わ}けます。\R{四分位範囲}{し|ぶん|い|はん|い}の1.5\R{倍}{ばい}を、\R{箱}{はこ}の\R{両}{りょう}はしからのばした\R{外}{そと}が\R{外}{はず}れ\R{値}{ち}です。\par
+\shiki ① ならべると\enspace 24.4、24.5、24.6、24.6\enspace{}｜\enspace{}24.7、24.7、24.8、26.9\par
+\hspace*{2.6\zw}② \R{第}{だい}1\R{四分位数}{し|ぶん|い|すう} $(24.5+24.6)\div2=24.55$\par
+\hspace*{2.6\zw}\phantom{②}\ \R{第}{だい}3\R{四分位数}{し|ぶん|い|すう} $(24.7+24.8)\div2=24.75$\par
+\hspace*{2.6\zw}③ \R{四分位範囲}{し|ぶん|い|はん|い} $24.75-24.55=0.2$、\ $0.2\times1.5=0.3$\par
+\hspace*{2.6\zw}④ \R{小}{ちい}さいほうは $24.55-0.3=24.25$ より\R{小}{ちい}さい\R{値}{あたい}\par
+\hspace*{2.6\zw}\phantom{④}\ \R{大}{おお}きいほうは $24.75+0.3=25.05$ より\R{大}{おお}きい\R{値}{あたい}\par
+\hspace*{2.6\zw}⑤ 26.9は25.05より\R{大}{おお}きい。ほかの7こは24.25〜25.05の\R{中}{なか}\par
+\kotae \qty{26.9}{\degreeCelsius}が\R{外}{はず}れ\R{値}{ち}
+\end{reidai}
+
+\begin{jibun}
+\R{機械}{き|かい}で\R{切}{き}った\R{棒}{ぼう}8\R{本}{ほん}の\R{長}{なが}さ（cm）です。\R{外}{はず}れ\R{値}{ち}はありますか。\par
+{\footnotesize 30.1、29.9、30.0、30.2、30.0、29.1、30.1、30.2}
+\bkjans{ならべると29.1、29.9、30.0、30.0｜30.1、30.1、30.2、30.2。\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}29.95、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}30.15、\R{四分位範囲}{し|ぶん|い|はん|い}0.2、$0.2\times1.5=0.3$。29.65より\R{小}{ちい}さい29.1が\R{外}{はず}れ\R{値}{ち}}
+\end{jibun}
+
+\begin{reidai}[2つの\R{箱}{はこ}ひげ\R{図}{ず}をくらべる]
+\R{機械}{き|かい}Aと\R{機械}{き|かい}Bで\R{作}{つく}ったピンの\R{長}{なが}さ（mm）の\R{箱}{はこ}ひげ\R{図}{ず}です。（1）\R{範囲}{はん|い}と\R{四分位範囲}{し|ぶん|い|はん|い}を、それぞれ\R{求}{もと}めましょう。（2）\R{中央値}{ちゅう|おう|ち}が\R{大}{おお}きいのはどちらですか。（3）\R{長}{なが}さがよくそろっているのは、どちらの\R{機械}{き|かい}ですか。\par
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrnaxis{0}{110}{29.5}{30.5}{0.05}{0.1}{1}
+  \bkthrnbox{20}{110}{29.5}{29.6}{29.9}{30.0}{30.1}{30.4}{bkBlue}
+  \bkthrnbox{9}{110}{29.5}{29.8}{30.0}{30.05}{30.1}{30.3}{bkOrange}
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (-3,20) {A};
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (-3,9) {B};
+\end{tikzpicture}
+\end{center}
+\kangaekata \R{図}{ず}から5つの\R{値}{あたい}を\R{読}{よ}みます。A：29.6、29.9、30.0、30.1、30.4。B：29.8、30.0、30.05、30.1、30.3。\par
+\shiki（1）A\enspace \R{範囲}{はん|い} $30.4-29.6=0.8$、\R{四分位範囲}{し|ぶん|い|はん|い} $30.1-29.9=0.2$\par
+\hspace*{2.6\zw}\phantom{（1）}B\enspace \R{範囲}{はん|い} $30.3-29.8=0.5$、\R{四分位範囲}{し|ぶん|い|はん|い} $30.1-30.0=0.1$\par
+\hspace*{2.6\zw}（2）A は30.0、B は30.05\par
+\hspace*{2.6\zw}（3）\R{範囲}{はん|い}も\R{四分位範囲}{し|ぶん|い|はん|い}も、Bのほうが\R{小}{ちい}さい\par
+\kotae（1）A：\R{範囲}{はん|い}\qty{0.8}{mm}、\R{四分位範囲}{し|ぶん|い|はん|い}\qty{0.2}{mm}。B：\R{範囲}{はん|い}\qty{0.5}{mm}、\R{四分位範囲}{し|ぶん|い|はん|い}\qty{0.1}{mm}\quad（2）B\quad（3）B
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.42\linewidth}
+1\R{班}{ぱん}と2\R{班}{はん}のものさしキャッチ（cm）の\R{箱}{はこ}ひげ\R{図}{ず}です。（1）\R{範囲}{はん|い}と\R{四分位範囲}{し|ぶん|い|はん|い}（2）\R{中央値}{ちゅう|おう|ち}が\R{大}{おお}きいのは？（3）よくそろっているのは？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrnaxis{0}{3.4}{10}{28}{1}{2}{0}
+  \bkthrnbox{19}{3.4}{10}{13}{15}{17}{20}{26}{bkBlue}
+  \bkthrnbox{9}{3.4}{10}{12}{14}{15}{16}{23}{bkOrange}
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-3,19) {1\R{班}{ぱん}};
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-3,9) {2\R{班}{はん}};
+\end{tikzpicture}
+\end{minipage}
+\bkjans{（1）\nobreak 1\R{班}{ぱん}：\R{範囲}{はん|い} $26-13=13$、\R{四分位範囲}{し|ぶん|い|はん|い} $20-15=5$。2\R{班}{はん}：\R{範囲}{はん|い} $23-12=11$、\R{四分位範囲}{し|ぶん|い|はん|い} $16-14=2$（2）\nobreak 1\R{班}{ぱん}（17と15）（3）\nobreak 2\R{班}{はん}}
+\end{jibun}
+
+\begin{column}{\R{平均}{へい|きん}だけでは\R{見}{み}えないもの}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+2つの\R{機械}{き|かい}で、ペットボトルに\R{水}{みず}を\qty{500}{mL}ずつ\R{入}{い}れました。\R{平均}{へい|きん}はどちらも\qty{500}{mL}ちょうどでした。でも、ヒストグラムをかくと、\R{山}{やま}のはばがまったくちがいます。Bの\R{機械}{き|かい}では、\R{少}{すく}なすぎたり\R{多}{おお}すぎたりするボトルがたくさん\R{出}{で}ます。「ちらばりの\R{大}{おお}きさ」を1つの\R{数}{かず}で\R{言}{い}う\R{方法}{ほう|ほう}を、3-14で\R{作}{つく}ります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=1mm]
+  \foreach \k/\f in {2/1,3/6,4/10,5/6,6/1} {\filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.5pt] ({\k*6},20) rectangle ({\k*6+6},{20+\f*1.4});}
+  \foreach \k/\f in {0/1,1/2,2/3,3/4,4/4,5/4,6/3,7/2,8/1} {\filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.5pt] ({\k*6},0) rectangle ({\k*6+6},{\f*1.4});}
+  \draw[bkInk, line width=0.6pt] (-1,20) -- (56,20) (-1,0) -- (56,0);
+  \draw[bkRed!80!black, line width=0.7pt, dash pattern=on 2pt off 1pt] (27,-1) -- (27,37);
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (44,27) {A};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (56,6) {B};
+  \node[anchor=north, font=\sffamily\scriptsize, text=bkRed!80!black, inner sep=0pt] at (27,-1.6) {\R{平均}{へい|きん}500};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\raggedright
+\begin{tsumazuki}{ならべかえずに\R{中央値}{ちゅう|おう|ち}を\R{選}{えら}ぶ}
+16、14、18、15、20 の\R{中央値}{ちゅう|おう|ち}は……
+\bkng{まん\R{中}{なか}の3\R{番}{ばん}めにある18}
+\bkok{ならべかえて 14、15、16、18、20。まん\R{中}{なか}は16}
+\R{中央値}{ちゅう|おう|ち}は「\R{大}{おお}きさの\R{順}{じゅん}」でまん\R{中}{なか}の\R{値}{あたい}です。はかった\R{順番}{じゅん|ばん}でまん\R{中}{なか}の\R{値}{あたい}ではありません。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\raggedright
+\begin{tsumazuki}{\R{偶数}{ぐう|すう}こなのに、1つだけ\R{選}{えら}ぶ}
+12、15、17、20 の\R{中央値}{ちゅう|おう|ち}は……
+\bkng{15（または17）}
+\bkok{$(15+17)\div2=16$}
+4こ（\R{偶数}{ぐう|すう}）のとき、まん\R{中}{なか}は2\R{番}{ばん}めと3\R{番}{ばん}めの\R{間}{あいだ}です。2つの\R{平均}{へい|きん}をとります。
+\end{tsumazuki}
+\end{minipage}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\raggedright
+\begin{tsumazuki}{\R{境目}{さかい|め}の\R{値}{あたい}を\R{下}{した}の\R{階級}{かい|きゅう}に\R{入}{い}れる}
+\R{階級}{かい|きゅう}が「14.10\R{以上}{い|じょう}14.20\R{未満}{み|まん}」「14.20\R{以上}{い|じょう}14.30\R{未満}{み|まん}」のとき、14.20は……
+\bkng{14.10\R{以上}{い|じょう}14.20\R{未満}{み|まん}に\R{入}{い}れる}
+\bkok{14.20\R{以上}{い|じょう}14.30\R{未満}{み|まん}に\R{入}{い}れる}
+\R{未満}{み|まん}はその\R{数}{かず}をふくみません（2-2）。14.20は「14.20\R{未満}{み|まん}」ではないので、\R{上}{うえ}の\R{階級}{かい|きゅう}です。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}\raggedright
+\begin{tsumazuki}{\R{最頻値}{さい|ひん|ち}を、\R{度数}{ど|すう}で\R{答}{こた}える}
+\bkreidairef{3}のクッキーの\R{最頻値}{さい|ひん|ち}は……
+\bkng{14まい\quad（いちばん\R{高}{たか}い\R{柱}{はしら}の\R{度数}{ど|すう}）}
+\bkok{\qty{10.1}{g}\quad（いちばん\R{高}{たか}い\R{柱}{はしら}の\R{階級値}{かい|きゅう|ち}）}
+\R{最頻値}{さい|ひん|ち}は「いちばん\R{多}{おお}く\R{出}{で}てくる\R{値}{あたい}」なので、\R{重}{おも}さ（g）で\R{答}{こた}えます。14は、その\R{値}{あたい}が\R{何}{なん}まいあったかです。
+\end{tsumazuki}
+\end{minipage}
+
+\begin{column}{\R{表計算}{ひょう|けい|さん}で\R{代表値}{だい|ひょう|ち}を\R{求}{もと}める}
+ものさしキャッチの12\R{回}{かい}を、\R{表計算}{ひょう|けい|さん}（2-18）のB2からB13に\R{入}{い}れると、\R{次}{つぎ}の\R{式}{しき}で\R{求}{もと}められます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=46mm] Q[c,m,wd=16mm]}, rowsep=0.8pt, colsep=3pt, row{1}={bg=bkNavy!8, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{求}{もと}めるもの & \R{入}{い}れる\R{式}{しき} & \R{答}{こた}え \\
+\R{平均}{へい|きん} & \texttt{=AVERAGE(B2:B13)} & 18 \\
+\R{中央値}{ちゅう|おう|ち} & \texttt{=MEDIAN(B2:B13)} & 16.5 \\
+\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう} & \texttt{=QUARTILE.INC(B2:B13,3)} & 18.5 \\
+\end{bktable}
+\end{bkcenter}
+\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}は、この\R{本}{ほん}の\R{求}{もと}め\R{方}{かた}では19でした。\R{表計算}{ひょう|けい|さん}は\R{別}{べつ}の\R{約束}{やく|そく}で\R{計算}{けい|さん}するので、\R{少}{すこ}しちがう\R{値}{あたい}になることがあります。どちらもまちがいではありません。
+\end{column}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{\R{部品}{ぶ|ひん}の\R{寸法}{すん|ぽう}\R{検査}{けん|さ}}\par\noindent \R{工場}{こう|じょう}では、\R{作}{つく}った\R{軸}{じく}の\R{太}{ふと}さをはかって、ヒストグラムにします。\R{山}{やま}のまん\R{中}{なか}が\R{決}{き}められた\R{値}{あたい}（\qty{10.00}{mm}）にあるか、\R{山}{やま}のはばが\R{許}{ゆる}されるはば（\R{赤}{あか}い\R{線}{せん}のあいだ）に\R{入}{はい}っているかを\R{見}{み}ます。\R{山}{やま}が\R{左}{ひだり}にずれてきたら、\R{刃物}{は|もの}がすり\R{減}{へ}ってきたなど、\R{機械}{き|かい}の\R{調子}{ちょう|し}が\R{変}{か}わったしるしです。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\f in {1/1,2/3,3/7,4/11,5/12,6/8,7/4,8/2} {\filldraw[fill=bkPurple!25, draw=bkPurple!80!black, line width=0.5pt] (\k*5,0) rectangle (\k*5+5,\f*2);}
+  \draw[bkInk, line width=0.6pt] (0,0) -- (52,0);
+  \draw[bkRed, line width=0.9pt] (2.5,-1) -- (2.5,28) (47.5,-1) -- (47.5,28);
+  \draw[bkInk!70, line width=0.6pt, dash pattern=on 2pt off 1pt] (25,-1) -- (25,28);
+  \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (2.5,-1.8) {9.95};
+  \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (25,-1.8) {10.00};
+  \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (47.5,-1.8) {10.05};
+  \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (25,-6.4) {\R{軸}{じく}の\R{太}{ふと}さ（mm）};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{センサーと\R{中央値}{ちゅう|おう|ち}}\par\noindent \R{温度}{おん|ど}センサーの\R{値}{あたい}には、\R{電気}{でん|き}の\R{雑音}{ざつ|おん}で、ときどき\R{大}{おお}きくとんだ\R{値}{あたい}がまじります。24.6、24.7、31.2、24.5、\qty{24.6}{\degreeCelsius}の\R{平均}{へい|きん}は25.92ですが、\R{中央値}{ちゅう|おう|ち}は24.6です。\R{最近}{さい|きん}の5\R{回}{かい}の\R{中央値}{ちゅう|おう|ち}を\R{表示}{ひょう|じ}するしくみ（メディアンフィルター）を\R{使}{つか}うと、とんだ\R{値}{あたい}に\R{引}{ひ}っぱられません。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt] (0,0) -- (50,0) (0,0) -- (0,30);
+  \foreach \k/\v in {1/24.6,2/24.7,3/31.2,4/24.5,5/24.6} {\fill[bkPurple] (\k*8,{(\v-23)*3.6}) circle (1.1);}
+  \draw[bkPurple!80!black, line width=0.8pt] (8,5.76) -- (16,6.12) -- (24,29.52) -- (32,5.4) -- (40,5.76);
+  \draw[bkGreen!70!black, line width=1.1pt] (4,5.76) -- (44,5.76);
+  \node[anchor=west, font=\sffamily\scriptsize, text=bkGreen!50!black, inner sep=0pt] at (27,12) {\R{中央値}{ちゅう|おう|ち}24.6};
+  \node[anchor=west, font=\sffamily\scriptsize, inner sep=0pt] at (26,27) {\R{雑音}{ざつ|おん}};
+  \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (25,-1.6) {\R{何回}{なん|かい}め};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{\R{光}{ひかり}センサーでふりこをはかる}\par\noindent \R{光}{ひかり}の\R{線}{せん}をふりこがさえぎると、\R{電気}{でん|き}の\R{信号}{しん|ごう}が\R{出}{で}るしくみ（\R{光電}{こう|でん}ゲート）を、いちばん\R{下}{した}に\R{置}{お}きます。\R{人}{ひと}の\R{指}{ゆび}のおくれがないので、ちらばりは\R{人}{ひと}がはかるときよりずっと\R{小}{ちい}さくなり、ヒストグラムの\R{山}{やま}はとても\R{細}{ほそ}くなります。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrnstand{(0,0)}{30}{18}
+  \bkthrnpend{(19,30)}{24}{0}
+  \fill[bkGray!70] (10,1) rectangle (13,10) (25,1) rectangle (28,10);
+  \draw[bkRed, line width=0.9pt] (13,6) -- (25,6);
+  \node[anchor=west, font=\sffamily\scriptsize, align=left, inner sep=0pt] at (31,8) {\R{光}{ひかり}の\R{線}{せん}を\\さえぎると\\\R{信号}{しん|ごう}が\R{出}{で}る};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{2}
+
+\bkproblem ふりこの10\R{往復}{おう|ふく}を5\R{回}{かい}はかると、14.23、14.18、14.25、14.16、14.18\R{秒}{びょう}でした。\R{仮}{かり}の\R{平均}{へい|きん}を14.00にして、\R{平均}{へい|きん} $\bar{x}$ を\R{求}{もと}めましょう。
+\bkpans{はなれ0.23、0.18、0.25、0.16、0.18の\R{合計}{ごう|けい}1.00、$1.00\div5=0.20$。$\bar{x}=14.20$ \R{秒}{びょう}}
+
+\bkproblem 20\R{人}{にん}のハンドボール\R{投}{な}げの\R{記録}{き|ろく}（m）です。\R{階級}{かい|きゅう}のはばを\qty{5}{m}（10\R{以上}{い|じょう}15\R{未満}{み|まん}から）にして、（1）\R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}（2）\R{相対度数}{そう|たい|ど|すう}と\R{累積度数}{るい|せき|ど|すう}（3）\qty{20}{m}\R{未満}{み|まん}の\R{人数}{にん|ずう}を\R{求}{もと}めましょう。\par
+{\small 18、22、15、27、20、24、13、19、21、25、17、23、20、29、16、22、19、26、21、18}
+\bkpans{（1）\nobreak 10〜15：1、15〜20：7、20〜25：8、25〜30：4（2）\nobreak \R{相対度数}{そう|たい|ど|すう}0.05、0.35、0.40、0.20。\R{累積度数}{るい|せき|ど|すう}1、8、16、20（3）\nobreak 8\R{人}{にん}}
+
+\bkproblem ものさしキャッチを9\R{回}{かい}すると、18、16、21、17、16、28、19、16、\qty{20}{cm}でした。\R{平均}{へい|きん}、\R{中央値}{ちゅう|おう|ち}、\R{最頻値}{さい|ひん|ち}、\R{範囲}{はん|い}を\R{求}{もと}めましょう。
+\bkpans{ならべると16、16、16、17、18、19、20、21、28。\R{平均}{へい|きん} $171\div9=19$ で\qty{19}{cm}、\R{中央値}{ちゅう|おう|ち}\qty{18}{cm}、\R{最頻値}{さい|ひん|ち}\qty{16}{cm}、\R{範囲}{はん|い} $28-16=12$ で\qty{12}{cm}}
+
+\bkproblem 11\R{日}{にち}\R{間}{かん}の\R{最高気温}{さい|こう|き|おん}（\unit{\degreeCelsius}）です。\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}めて、\R{箱}{はこ}ひげ\R{図}{ず}をノートにかきましょう。\par
+{\small 28、31、25、30、27、33、29、26、32、30、24}
+\bkpans{ならべると24、25、26、27、28、29、30、30、31、32、33。\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}26、\R{中央値}{ちゅう|おう|ち}29、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}31。\R{箱}{はこ}は26から31、\R{線}{せん}は29、ひげは24から33まで}
+
+\bkproblem \R{電流}{でん|りゅう}センサーが8\R{回}{かい}はかった\R{値}{あたい}（mA）です。\R{外}{はず}れ\R{値}{ち}はありますか。\par
+{\small 52、50、51、49、50、58、51、50}
+\bkpans{ならべると49、50、50、50｜51、51、52、58。\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}50、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}51.5、\R{四分位範囲}{し|ぶん|い|はん|い}1.5、$1.5\times1.5=2.25$。53.75より\R{大}{おお}きい58が\R{外}{はず}れ\R{値}{ち}}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\bkproblem \R{卵}{たまご}40この\R{重}{おも}さのヒストグラムです。（1）\R{最頻値}{さい|ひん|ち}は\R{何}{なん}gですか。（2）\qty{58}{g}\R{未満}{み|まん}の\R{卵}{たまご}は\R{何}{なん}こで、\R{全体}{ぜん|たい}の\R{何}{なん}\%ですか。（3）\R{中央値}{ちゅう|おう|ち}はどの\R{階級}{かい|きゅう}に\R{入}{はい}っていますか。
+\bkpans{（1）\nobreak \qty{59}{g}（2）\nobreak $3+7=10$ こ、$10\div40=0.25$ で25\%（3）\nobreak 58\,g\R{以上}{い|じょう}60\,g\R{未満}{み|まん}（\R{累積度数}{るい|せき|ど|すう}10、23）}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \v in {2,4,...,14} {\draw[bkLine, line width=0.3pt] (0,\v*2.4) -- (50,\v*2.4);}
+  \foreach \k/\f in {0/3,1/7,2/13,3/10,4/5,5/2} {\filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.6pt] (\k*8.2,0) rectangle (\k*8.2+8.2,\f*2.4);
+    \node[anchor=south, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2+4.1,\f*2.4+1) {\f};}
+  \draw[bkInk, line width=0.6pt] (-1,0) -- (52,0) (0,0) -- (0,38);
+  \foreach \k/\l in {0/54,1/56,2/58,3/60,4/62,5/64,6/66} {\node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (\k*8.2,-1.6) {\l};}
+  \foreach \v in {0,5,10} {\node[anchor=east, font=\sffamily\scriptsize, inner sep=0pt] at (-1.4,\v*2.4) {\v};}
+  \node[anchor=south west, font=\sffamily\scriptsize, inner sep=0pt] at (-2,39) {\R{度数}{ど|すう}（こ）};
+  \node[anchor=north east, font=\sffamily\scriptsize, inner sep=0pt] at (51,-5.6) {\R{重}{おも}さ（g）};
+\end{tikzpicture}
+\end{minipage}
+
+\bkproblemgroup{チャレンジ}{2}
+
+\bkproblem 7この\R{乾電池}{かん|でん|ち}の\R{電圧}{でん|あつ}（V）をはかると、1.52、1.51、1.53、1.50、1.52、0.96、1.54でした（0.96は、\R{使}{つか}い\R{終}{お}わった\R{電池}{でん|ち}がまじっていた）。（1）\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}を\R{求}{もと}めましょう。（2）0.96をのぞいた6この\R{平均}{へい|きん}を\R{求}{もと}めましょう。（3）\R{新}{あたら}しい\R{電池}{でん|ち}の\R{電圧}{でん|あつ}を\R{表}{あらわ}すのに、\R{平均}{へい|きん}と\R{中央値}{ちゅう|おう|ち}のどちらがよいですか。
+\bkpans{ならべると0.96、1.50、1.51、1.52、1.52、1.53、1.54。（1）\nobreak \R{平均}{へい|きん} $10.08\div7=1.44$ で\qty{1.44}{V}、\R{中央値}{ちゅう|おう|ち}\qty{1.52}{V}（2）\nobreak $9.12\div6=1.52$ で\qty{1.52}{V}（3）\nobreak \R{中央値}{ちゅう|おう|ち}（0.96に\R{引}{ひ}っぱられない）}
+
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\bkproblem 2つの\R{工場}{こう|じょう}で\R{作}{つく}ったねじの\R{長}{なが}さ（mm）の\R{箱}{はこ}ひげ\R{図}{ず}です。（1）\R{範囲}{はん|い}と\R{四分位範囲}{し|ぶん|い|はん|い}（2）\R{中央値}{ちゅう|おう|ち}が\R{大}{おお}きいのは？（3）\R{長}{なが}さがよくそろっているのは？
+\bkpans{（1）\nobreak P：\R{範囲}{はん|い} $20.6-19.6=1.0$、\R{四分位範囲}{し|ぶん|い|はん|い} $20.2-20.0=0.2$。Q：\R{範囲}{はん|い} $20.4-19.4=1.0$、\R{四分位範囲}{し|ぶん|い|はん|い} $20.2-19.7=0.5$（2）\nobreak P（20.1と19.9）（3）\nobreak P（\R{範囲}{はん|い}は\R{同}{おな}じだが、\R{四分位範囲}{し|ぶん|い|はん|い}がPのほうが\R{小}{ちい}さい）}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrnaxis{0}{40}{19.2}{20.8}{0.1}{0.4}{1}
+  \bkthrnbox{19}{40}{19.2}{19.6}{20.0}{20.1}{20.2}{20.6}{bkBlue}
+  \bkthrnbox{9}{40}{19.2}{19.4}{19.7}{19.9}{20.2}{20.4}{bkOrange}
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (-3,19) {P};
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (-3,9) {Q};
+\end{tikzpicture}
+\end{minipage}
+
+\bkproblem \R{同}{おな}じ\R{抵抗}{てい|こう}を、12\R{回}{かい}はかった\R{値}{あたい}（\unit{\ohm}）です。（1）\R{平均}{へい|きん}、\R{中央値}{ちゅう|おう|ち}、\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}めましょう。（2）\R{外}{はず}れ\R{値}{ち}はありますか。\par
+{\small 99.8、100.1、100.0、99.9、100.2、100.0、99.7、100.1、100.0、99.9、100.3、100.0}
+\bkpans{ならべると99.7、99.8、99.9、99.9、100.0、100.0｜100.0、100.0、100.1、100.1、100.2、100.3。（1）\nobreak \R{平均}{へい|きん} $1200.0\div12=100.0$、\R{中央値}{ちゅう|おう|ち}100.0、\R{第}{だい}1\R{四分位数}{し|ぶん|い|すう}99.9、\R{第}{だい}3\R{四分位数}{し|ぶん|い|すう}100.1（2）\nobreak \R{四分位範囲}{し|ぶん|い|はん|い}0.2、$0.2\times1.5=0.3$。99.6より\R{小}{ちい}さい\R{値}{あたい}も100.4より\R{大}{おお}きい\R{値}{あたい}もないので、ない}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{何回}{なん|かい}もはかった\R{値}{あたい}の\R{平均}{へい|きん}を、$\bar{x}$ を\R{使}{つか}って\R{求}{もと}められる。\bkfurref{bk:3-13:heikin}
+\item \R{度数分布表}{ど|すう|ぶん|ぷ|ひょう}とヒストグラムを\R{作}{つく}り、\R{読}{よ}みとれる。\bkfurref{bk:3-13:dosuu}
+\item \R{中央値}{ちゅう|おう|ち}・\R{最頻値}{さい|ひん|ち}・\R{四分位数}{し|ぶん|い|すう}を\R{求}{もと}め、\R{箱}{はこ}ひげ\R{図}{ず}をかける。\bkfurref{bk:3-13:daihyou}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{たくさんの\R{数}{かず}も、\R{表}{ひょう}や\R{図}{ず}にすると\R{山}{やま}の\R{形}{かたち}が\R{見}{み}えてくるね。\R{山}{やま}のはばを1つの\R{数}{かず}で\R{言}{い}うのが、\R{次}{つぎ}の\R{章}{しょう}だ！}

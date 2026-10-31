@@ -1,0 +1,1448 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-1
+%% p1-02.tex　力-2　力の図から式へ：運動方程式を立てる（★3〜4）
+%% 記号の約束（計画書 C-1、手引き5章）：ベクトルは矢印（太字は専門書をのぞいてみようだけ）。力 \vec{F}（荷重も F）、重力 mg、垂直抗力 N、張力 T、摩擦係数 μ（静止）・μ′（動）、
+%%   抵抗の係数 b（f＝bv）・c（f＝cv²）（ばね定数 k とぶつけない。数学 6-5 も同じ文字）、万有引力定数 G、地球の質量 M・半径 R。
+%%   慣性力は −m\vec{A}（\vec{A} は乗り物の加速度）。運動量 \vec{p}＝m\vec{v}（この章では圧力 p は出てこない）。
+%% 例題の数値：scratchpad/phys1/力-2/calc2.py、シミュレーション：scratchpad/phys1/力-2/sim2.py（g＝9.8 m/s²。宇宙の例題は GM＝3.99×10¹⁴ m³/s² を与える）
+%% 出典（本文の事実・実機の値）
+%%  ・ニュートン『プリンキピア』1687年。キャベンディッシュの実験 1798年。万有引力定数 G＝6.67430×10⁻¹¹ N·m²/kg²（CODATA 2018）
+%%  ・G の測定の食いちがい：NIST の解説（測定値は約6.670〜6.676×10⁻¹¹ にちらばる）、Li ほか「Precision measurement of the Newtonian
+%%    gravitational constant」(National Science Review 2020, PMC8290936)。本文は「0.05 % ほど食いちがう」と書く（言いすぎない）
+%%  ・地球の GM＝3.986×10¹⁴ m³/s²（WGS84）、平均半径 6371 km、赤道半径 6378 km
+%%  ・場所による g：赤道 約9.780、極 約9.832 m/s²（GRS80 の正規重力式）。標準重力 9.80665 m/s²（第3回国際度量衡総会 1901年）
+%%  ・摩擦の法則：アモントン（1699年）、クーロン（1781年）。真実接触面積：F. P. Bowden & D. Tabor,
+%%    The Friction and Lubrication of Solids (1950)
+%%  ・舗装路面のすべり摩擦係数（乾燥 0.5〜1.0、湿潤 0.3〜0.9）：市原・小野田『路面のすべりとその対策』（1997）。力-1 と同じ
+%%  ・MICROSCOPE 衛星：P. Touboul ほか, Phys. Rev. Lett. 129, 121102 (2022)。η＝[−1.5±2.3(統計)±1.5(系統)]×10⁻¹⁵
+%%  ・エレベータの加減速度は乗り心地のため 0.15 g 以下が望ましい：日立評論 1970年5月号「エレベータの運転制御」
+%%  ・空気の粘度 1.81×10⁻⁵ Pa·s（20 ℃。巻末の表は 0.0181 mPa·s）、空気の密度 1.20 kg/m³（例題13は 1.2 を使う）
+%%  ・スカイダイバー（腹ばい）の終端速度 約55 m/s（約200 km/h）：C_D A＝0.43 m² としたモデルの値（計画書 P-R の見積もり）
+%%  ・ISS の高度 約400 km、周期 約92分。GPS 衛星の周期 約12時間（半恒星日）、高度 約2万 km
+\makeatletter
+% ---- 章ごとの絵の部品（力-2 は pxc…）----
+% 力の矢印と名前のスタイル
+\tikzset{pxc f/.style={-{Stealth[length=2.6mm, width=2mm]}, line width=1.3pt},
+         pxc lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+% 箱（荷物）  \pxcbox{(x,y)}{はば}{高さ}{色}   (x,y) は底のまん中
+\newcommand\pxcbox[4]{\filldraw[fill=#4!35, draw=#4!70!black, line width=0.6pt] ($#1+(-#2/2,0)$) rectangle ++(#2,#3);}
+% 床のしるし（斜線）  \pxcfloor{(x1,y)}{長さ}
+\newcommand\pxcfloor[2]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (#2,0);
+  \foreach \k in {0,3,...,#2} {\ifdim\k pt<#2pt\draw[bkGray, line width=0.4pt] (\k,0) -- ++(-2,-2);\fi}
+\end{scope}}
+% 滑車  \pxcpulley{(x,y)}{半径}
+\newcommand\pxcpulley[2]{\filldraw[fill=bkGray!25, draw=bkInk!80, line width=0.7pt] #1 circle (#2); \fill[bkInk] #1 circle (0.7);}
+\newsavebox\pxcplota\newsavebox\pxcplotb\newsavebox\pxcplotc
+\makeatother
+
+\phchapter{2}{力の図から式へ：\\運動方程式を立てる}{エレベータが上へ動き出すと、体が重く感じるのはなぜ？}{\bklevelrange{3}{4}}{力の図から式へ：運動方程式を立てる}
+\bkmichishirube{3-6,4-6,4-11,5-5,6-2,6-5,力-1}{力-3,力-4,力-7,波-1}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 物にはたらく力を見つけて、力の図（自由体図）をかける。
+\item \bklevel{3}\enspace 力の図から運動方程式を立てて、加速度や張力を求められる。
+\item \bklevel{4}\enspace 摩擦・円運動・空気の抵抗がある運動を、式と数値計算で解ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{力の3要素、力の合成と分解}{中学理科}{ph:力-2:sec1}
+\phk{重さと質量のちがい、重力 $W=mg$}{中学理科}{ph:力-2:omosa}
+\phk{慣性の法則、作用・反作用の法則}{中学理科}{ph:力-2:kansei}
+\phk{斜面を下る物・落ちる物の加速度}{中学理科}{ph:力-2:shamen}
+\phk{運動方程式 $ma=F$、垂直抗力・張力}{高校物理基礎}{ph:力-2:undou}
+\phk{摩擦力 $\mu N$・$\mu'N$、終端速度 $mg/b$}{高校物理基礎}{ph:力-2:masatsu}
+\phk{慣性力、向心力 $mv^2/r$、円すい振り子}{高校物理}{ph:力-2:kanseiryoku}
+\phk{万有引力、$g=GM/R^2$、第1宇宙速度}{高校物理}{ph:力-2:banyuu}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}
+エレベータが上へ動き出すと、体がぐっと重く感じます。止まりかけると、ふわっと軽く感じます。数学 5-5 では、体が感じていたのは「加速度」だとわかりました。
+
+でも、加速度があると、なぜ重く感じるのでしょう。もし体重計に乗っていたら、目もりはいくつを指すのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.9pt] (0,0) -- (0,40) (30,0) -- (30,40);
+  \draw[bkInk!80, line width=0.8pt, fill=bkPaper] (3,2) rectangle (27,32);
+  \draw[bkInk, line width=0.9pt] (15,32) -- (15,40);
+  \filldraw[fill=bkGray!30, draw=bkInk!70, line width=0.5pt] (9,2) rectangle (21,4);
+  \bkperson{(15,4)}{20}{bkRoute6}
+  \draw[pxc f, bkOrange] (35,6) -- (35,30);
+  \node[pxc lab, anchor=west, align=left] at (36.5,18) {上へ\\動き出す};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+力-1 では、物の動きを、位置・速度・加速度で書きました。では、その加速度は何によって決まるのでしょう。答えは「力」です。この章では、物にはたらく力を矢印の図にかき、そこから「運動方程式」という式を立てて、動きを計算する手順を学びます。この手順は、エレベータ・車・人工衛星・落ちる雨つぶなど、この本のすべての章で使います。
+
+\begin{yattemiyou}[ばねばかりで、動くおもりをはかろう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item ばねばかりに\qty{200}{g}のおもりをつるし、静かに持ったときの目もりを読もう。
+\item ばねばかりを、急に上へ持ち上げ始めよう。目もりはどうなるかな。
+\item 上へ持ち上げていて、急に止めよう。目もりはどうなるかな。
+\item ゆっくり同じ速さで持ち上げているときや、下へ動かし始めるときも調べよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=16mm] *{5}{Q[c,m,wd=19mm]}}, rowsep=1.5pt, colsep=3pt, cells={font=\small}}
+動き & 静かに持つ & 上へ動き出す & 上へ動いていて止まる & 同じ速さで上へ & 下へ動き出す \\
+目もり & & & & & \\
+\end{bktable}
+\bktabcaption{目もりが「静かに持つ」より大きいか、小さいか、同じかを書こう。}
+\end{bkcenter}
+\end{yattemiyou}
+
+目もりが大きくなるのは、「上へ動き出す」ときと「下へ動いていて止まる」ときです。どちらも、加速度が上向きのときです。ばねばかりは、ばねがおもりを引く力をはかっています。おもりに上向きの加速度をあたえるには、ばねがふだんより強く引かなければならないのです。これが、はてな？の答えの入口です。
+
+\begin{omoidasou}
+\bkrecall{力-1}{加速度は速度の変わる速さ $\vec a=\dfrac{\dd\vec v}{\dd t}$。円運動では中心の向きに $\dfrac{v^2}{r}$。加速度が一定なら $v=v_0+at$ など。}
+\bkrecall{4-11}{力は成分 $(F\cos\theta,\ F\sin\theta)$ に分けられる。つり合っていれば、成分ごとに和が0。}
+\bkrecall{4-6}{斜面の上の物の重力は、斜面にそった $mg\sin\theta$ と、斜面に垂直な $mg\cos\theta$ に分けられる。}
+\bkrecall{3-6}{連立方程式は、代入法か加減法で1つの文字を消して解く。}
+\bkrecall{6-2}{オイラー法：「少しあとの値＝今の値＋変わる速さ×短い時間」をくり返す。}
+\bkrecall{6-5}{空気の抵抗が速さに比例するとき、落ちる物の速さは終端速度に近づく。抵抗の係数は $b$（$f=bv$）、$c$（$f=cv^2$）。}
+\end{omoidasou}
+
+%% ================================================================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{力を見つけて、矢印でかく：力の図}
+
+\leavevmode\label{ph:力-2:sec1}机の上の本を指で押す、ロープで荷物を引く、ばねをのばす。押したり引いたりする働きを\textbf{力}といいます。力には、大きさと向きがあります。さらに、同じ大きさで同じ向きの力でも、ドアのちょうつがいの近くを押すか、ノブを押すかで、はたらきがちがいます。力がはたらく点を\textbf{作用点}といい、作用点を通って力の向きに引いた直線を\textbf{作用線}といいます。
+
+力は、\textbf{大きさ}・\textbf{向き}・\textbf{作用点}の3つで決まります（力の3要素）。そこで力は、作用点から力の向きに、大きさに比例する長さの矢印でかきます。力の単位は N（ニュートン）です（②で決めます）。物を大きさのない点と考えるときは（この部の章）、作用点はその点です。大きさのある物で、作用点のちがいが回る動きにどう効くかは、力-5 で学びます。
+
+\noindent\textbf{力のカタログ}\par
+\noindent 物にはたらく力は、次の2つに分けられます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{はなれていてもはたらく力}：重力（地球が引く力）、電気の力、磁石の力。
+\item \textbf{ふれている物から受ける力}：床・ひも・ばね・空気や水など、ふれている物ごとに1つずつ。
+\end{itemize}
+力学の章で出てくる力を、表にまとめます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] Q[c,m,wd=11mm] Q[l,m,wd=31mm] Q[l,m,wd=40mm]}, rowsep=1.5pt, colsep=3pt, row{1}={font=\sffamily\bfseries\small}, cells={font=\small}}
+力の名前 & 記号 & 向き & 大きさの決まり方 \\
+重力 & $mg$ & 真下 & 質量×重力加速度（③） \\
+垂直抗力 & $N$ & 面に垂直で、面から物へ & 「めりこまない」から決まる \\
+張力 & $T$ & ひもにそって、物から引く向き & 「のびない」から決まる \\
+ばねの力 & $kx$ & のび・縮みをもどす向き & のびに比例（力-8 で導く） \\
+摩擦力 & $f$ & 面にそって、すべりをさまたげる向き & 経験則（④） \\
+空気・水の抵抗 & $bv$、$cv^2$ & 動きと反対 & 速さで変わる（⑧、力-15） \\
+浮力 & & 真上 & 押しのけた水の重さ（力-12） \\
+\end{bktable}
+\bktabcaption{力学の章で出てくる力。電気・磁石の力は、第4巻（電磁気学）で学ぶ。}
+\end{bkcenter}
+
+\noindent\textbf{力の図（自由体図）のかき方}\par
+\noindent 物の動きを計算するときは、まず、\textbf{考える物を1つ選び、まわりから切りはなして、その物にはたらく力だけを矢印でかきます}。この図を\textbf{自由体図}（力の図）といいます。\bkidx{じゆうたいず}{自由体図}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 考える物を1つ選び、その物だけを、まわりから切りはなしてかく。
+\item 重力 $mg$ を、真下にかく（地球の上なら、どの物にもある）。
+\item その物が\textbf{ふれている所}を1か所ずつ見て、そこから受ける力をかく（床なら垂直抗力と摩擦力、ひもなら張力）。
+\item 力ごとに記号をつける。わかっている大きさは数で、わからない大きさは文字で書く。
+\end{enumerate}
+③の「ふれている所を数える」が、力をもれなく見つけるこつです。反対に、ふれていない所からは、重力などのはなれてはたらく力しか受けません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1：机の上の本
+  \pxcfloor{(0,0)}{30}
+  \pxcbox{(15,0)}{16}{5}{bkBlue}
+  \draw[pxc f, bkRed] (15,2.5) -- (15,-12);
+  \draw[pxc f, bkBlue] (15,5) -- (15,18);
+  \fill[bkInk] (15,2.5) circle (0.7);
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (16,-9) {$mg$};
+  \node[pxc lab, text=bkBlue!80!black, anchor=west] at (16,15) {$N$};
+  \node[pxc lab, anchor=north] at (15,-14) {机の上の本};
+  % 2：ひもで引かれる箱
+  \begin{scope}[shift={(42,0)}]
+  \pxcfloor{(0,0)}{38}
+  \pxcbox{(14,0)}{14}{10}{bkOrange}
+  \draw[bkInk, line width=0.7pt] (21,6) -- (34,13.5);
+  \draw[pxc f, bkPurple] (21,6) -- (31,11.8);
+  \draw[pxc f, bkRed] (14,5) -- (14,-12);
+  \draw[pxc f, bkBlue] (14,10) -- (14,22);
+  \draw[pxc f, bkGreen!60!black] (7,0.6) -- (-3,0.6);
+  \fill[bkInk] (14,5) circle (0.7);
+  \node[pxc lab, text=bkPurple, anchor=south] at (27,12.5) {$T$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (15,-9) {$mg$};
+  \node[pxc lab, text=bkBlue!80!black, anchor=west] at (15,19) {$N$};
+  \node[pxc lab, text=bkGreen!50!black, anchor=south] at (-1,1.5) {$f$};
+  \node[pxc lab, anchor=north] at (16,-14) {ひもで引かれる箱};
+  \end{scope}
+  % 3：天井からつるした照明
+  \begin{scope}[shift={(96,0)}]
+  \fill[bkGray!40] (-4,24) rectangle (26,26);
+  \draw[bkInk, line width=0.7pt] (2,24) -- (11,8) -- (20,24);
+  \filldraw[fill=bkYellow!70, draw=bkOrange!70!black, line width=0.5pt] (11,8) circle (2.6);
+  \draw[pxc f, bkPurple] (11,8) -- (6.5,16);
+  \draw[pxc f, bkPurple] (11,8) -- (15.5,16);
+  \draw[pxc f, bkRed] (11,8) -- (11,-8);
+  \node[pxc lab, text=bkPurple, anchor=east] at (6,13) {$T_{\mathrm L}$};
+  \node[pxc lab, text=bkPurple, anchor=west] at (16,13) {$T_{\mathrm R}$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (12,-5) {$mg$};
+  \node[pxc lab, anchor=north] at (11,-14) {2本のひもでつるす};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{自由体図の例。ふれている所ごとに力が1つずつ（床からは垂直抗力 $N$ と摩擦力 $f$）。重力 $mg$ はどの物にもある。}\label{ph:力-2:fig-fbd}
+\end{bkfigure}
+
+\noindent\textbf{垂直抗力と張力は「条件」から決まる}\par
+\noindent\label{ph:力-2:kouryoku}重力は $mg$、ばねの力は $kx$ のように、大きさを決める式があります。でも、垂直抗力 $N$ と張力 $T$ には、決まった式がありません。床は、本がめりこまないように、ちょうど必要なだけ押し返します。ひもは、のびないように、ちょうど必要なだけ引きます。だから、$N$ や $T$ は、運動方程式を立ててから、\textbf{「めりこまない」「のびない」という条件}（拘束条件）といっしょに解いて求めます。机の上で静止した本なら $N=mg$ ですが、エレベータの中や斜面の上では、$N$ は $mg$ ではありません（⑤・⑥）。
+
+\noindent\textbf{力をたす・分ける}\par
+\noindent\label{ph:力-2:gousei}力はベクトルなので、たし算は矢印をつなぐか、平行四辺形をかいて求めます（数学 4-10③）。物にはたらくすべての力の和 $\sum\vec F$（$\sum$ は「すべてたす」の記号、数学 5-10）を\textbf{合力}といいます。反対に、1つの力を、2つの向きの成分に分けることもできます（数学 4-11③）。計算では、ほとんどの場合、成分に分けてから、成分ごとにたします。
+
+\noindent\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk] (0,0) circle (1);
+  \draw[pxc f, bkBlue] (0,0) -- (30,0);
+  \draw[pxc f, bkOrange] (0,0) -- (12,20);
+  \draw[bkGray, dashed, line width=0.5pt] (30,0) -- (42,20) -- (12,20);
+  \draw[pxc f, bkRed] (0,0) -- (41.2,19.4);
+  \node[pxc lab, text=bkBlue!80!black, anchor=north] at (15,-1) {$\vec F_1$};
+  \node[pxc lab, text=bkOrange!80!black, anchor=east] at (5,11) {$\vec F_2$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (43,20) {$\vec F_1+\vec F_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+2人で荷物を引くとき、2つの力 $\vec F_1$、$\vec F_2$ と同じはたらきをする1つの力が、平行四辺形の対角線 $\vec F_1+\vec F_2$ です。これを\textbf{力の合成}といいます。成分で書けば、$x$ 成分どうし、$y$ 成分どうしをたすだけです。
+\end{minipage}
+
+%% ================================================================
+\bksubsection{2}{ニュートンの3つの法則}
+
+\leavevmode\label{ph:力-2:sec2}なめらかな台の上で、台車をばねばかりで引き、加速度をはかる実験を考えます（台車の加速度は、力-1 のように、0.1秒ごとの位置から求められます）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{3}{Q[c,m,wd=10mm]} Q[c,m,wd=2mm] *{3}{Q[c,m,wd=10mm]}}, rowsep=1.5pt, colsep=4pt, cells={font=\small}}
+台車の質量（kg） & 2 & 2 & 2 & & 1 & 2 & 4 \\
+引く力（N） & 1 & 2 & 3 & & 2 & 2 & 2 \\
+加速度（m/s$^2$） & 0.5 & 1.0 & 1.5 & & 2.0 & 1.0 & 0.5 \\
+\end{bktable}
+\bktabcaption{摩擦が無視できるときの実験の結果（理想の値）。左：質量を同じにして力を変える。右：力を同じにして質量を変える。}
+\end{bkcenter}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 質量が同じなら、加速度は力に比例する（力が2倍で、加速度も2倍）。
+\item 力が同じなら、加速度は質量に反比例する（質量が2倍で、加速度は半分）。
+\end{itemize}
+2つをまとめると $a=\dfrac{F}{m}$、つまり $ma=F$ です。どの組でも「質量×加速度＝力」になっています。
+
+\noindent\textbf{力の単位 N}\par
+\noindent 「\qty{1}{kg}の物に \qty{1}{m/s^2} の加速度を生じさせる力」を\qty{1}{N}（ニュートン）と決めます。だから
+\[ \qty{1}{N}=\qty{1}{kg}\times\qty{1}{m/s^2}=\qty{1}{kg.m/s^2} \]
+です。力の単位は、質量と加速度の単位から組み立てた単位です（数学 2-10）。
+
+\noindent\textbf{運動方程式}\par
+\noindent\label{ph:力-2:undou}物にいくつもの力がはたらくときは、それらの合力 $\sum\vec F$ が加速度を決めます。向きまでこめて、ベクトルで書きます。
+\pheq{m\vec a=\sum\vec F}{N ＝ kg × m/s$^2$}
+これを\textbf{運動方程式}といいます。\bkidx{うんどうほうていしき}{運動方程式}加速度は位置の2回微分（力-1）なので、$m\dfrac{\dd^2\vec r}{\dd t^2}=\sum\vec F$ と書けば、位置を求める微分方程式です（数学 6-1）。この式は、計算で導いたものではなく、たくさんの実験から確かめられた\textbf{法則}です（数学 4-1 の「法則」）。
+
+ニュートンは、もとの形を、質量と速度の積 $\vec p=m\vec v$（\textbf{運動量}、力-3）を使って書きました。
+\[ \frac{\dd\vec p}{\dd t}=\sum\vec F \]
+「運動量の変わる速さは、合力に等しい」。質量 $m$ が変わらない物なら、$\dfrac{\dd(m\vec v)}{\dd t}=m\dfrac{\dd\vec v}{\dd t}=m\vec a$ となって、上の運動方程式にもどります。質量が変わるロケットでは、この形が必要になります（力-3）。
+
+\begin{phyomi}[$m\vec a=\sum\vec F$]
+左は「動きの変わり方（質量×加速度）」、右は「原因（はたらく力をすべてたしたもの）」です。力は速度ではなく、\textbf{加速度}を決めます。質量 $m$ は「動かしにくさ（速度の変えにくさ）」を表します。
+\end{phyomi}
+\begin{phmijika}[買い物カート]
+空のカートは軽く押すだけで動き出しますが、荷物をいっぱいに積んだカートは、同じ力で押しても、なかなか速くなりません。止めるときも同じで、重いカートは止めにくいです。質量が大きいほど、速度を変えにくいのです。
+\end{phmijika}
+\begin{lrbox}{\pxcplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=90mm, height=46mm, xmin=0, xmax=4.5, ymin=0, ymax=4.6, xtick={1,2,3,4}, ytick={1,2,3,4}, xlabel={$F$（N）}, ylabel={$a$（m/s$^2$）}]
+  \addplot[bkcurve, domain=0:4.2] {x};
+  \addplot[bkcurve2, domain=0:4.2] {x/2};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south east] at (axis cs:3.6,3.7) {$m=\qty{1}{kg}$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west] at (axis cs:3.2,1.5) {$m=\qty{2}{kg}$};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{質量 $m$}
+同じ力で押すと、質量が2倍なら加速度は半分です。力と加速度のグラフの傾きは $\dfrac{1}{m}$ です。
+\begin{bkcenter}
+\usebox{\pxcplota}
+\end{bkcenter}
+\end{phbaisuru}
+
+\noindent\textbf{第1法則：慣性の法則}\par
+\noindent\label{ph:力-2:kansei}合力が0（$\sum\vec F=\vec 0$）なら、$m\vec a=\vec 0$ なので、加速度が0です。止まっている物は止まったまま、動いている物は同じ速度のまま、まっすぐ進み続けます。これを\textbf{慣性の法則}といいます。物が速度を保とうとする性質が\textbf{慣性}です。氷の上をすべるアイスホッケーのパックがなかなか止まらないのも、急ブレーキで体が前へ投げ出されそうになるのも、慣性のためです。
+
+運動方程式があるのに、なぜ慣性の法則を別に言うのでしょう。それは、運動方程式が成り立つのは、\textbf{加速していない立場（座標）から見たとき}だけだからです。加速する電車の中から見ると、力がはたらいていないのに、つり革が動き出します。慣性の法則は、「運動方程式が使える立場が、どれか」を決める法則でもあるのです（⑥）。
+
+\noindent\textbf{第3法則：作用・反作用の法則}\par
+\noindent\label{ph:力-2:sayou}かべを手で押すと、かべも手を押し返します。物Aが物Bに力 $\vec F_{\mathrm{AB}}$ をおよぼすとき、BもAに、同じ大きさで反対向きの力をおよぼします。
+\[ \vec F_{\mathrm{BA}}=-\vec F_{\mathrm{AB}} \]
+これを\textbf{作用・反作用の法則}といいます。2つの力は、同じ作用線の上にあります。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxcfloor{(0,0)}{50}
+  \bkperson{(18,0)}{24}{bkRoute6}
+  \draw[pxc f, bkBlue] (23,-2.5) -- (35,-2.5);
+  \draw[pxc f, bkRed] (19,-6) -- (7,-6);
+  \node[pxc lab, text=bkBlue!80!black, anchor=west] at (36,-2.5) {地面が足を押す};
+  \node[pxc lab, text=bkRed!80!black, anchor=north] at (13,-7.5) {足が地面を押す};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+人が歩くとき、足は地面を後ろへ押します（作用）。すると地面が足を前へ押します（反作用）。人を前へ進ませているのは、この「地面が足を押す力」です。氷の上で歩きにくいのは、地面を後ろへ押せない（摩擦が小さい）からです。
+\end{minipage}
+
+\par\vspace{3pt}
+作用と反作用は、\textbf{別々の物にはたらく}ので、打ち消し合いません。足が地面を押す力は地面にはたらき、地面が足を押す力は人にはたらきます。1つの物にはたらく2つの力が打ち消し合う「つり合い」とは、ちがうことです（まちがえやすいところ）。
+
+\Needspace{8\baselineskip}\begin{phflow}[運動の法則]
+\phflowrow{$\dfrac{\dd\vec p}{\dd t}=\sum\vec F$}{質量 $m$ が\\変わらない}{$m\vec a=\sum\vec F$\\（$ma=F$）}
+\phflowrow{$m\vec a=\sum\vec F$}{合力が0}{慣性の法則\\（速度は変わらない）}
+\phflowrow{$m\vec a=\sum\vec F$}{加速度が0\\（静止している）}{力のつり合い\\（力-5）}
+\end{phflow}
+
+\begin{seikaku}
+運動方程式が成り立つ、加速していない立場（座標）を\textbf{慣性系}といいます。地面は、地球の自転のためにほんの少し加速していますが（赤道で約\qty{0.034}{m/s^2}、力-1 の桁の感覚）、ふつうの計算では慣性系と考えてかまいません。
+\end{seikaku}
+
+\begin{senmonsho}[運動方程式の書き方]
+\begin{bkhonbun}
+質量 $m$ の質点に力 $\symbf F_1,\ \symbf F_2,\ \cdots,\ \symbf F_n$ がはたらくとき、運動方程式は
+\[ m\ddot{\symbf r}=\sum_{i=1}^{n}\symbf F_i \]
+である。これを直交座標の成分に分けると、$m\ddot x=\sum F_{ix}$、$m\ddot y=\sum F_{iy}$、$m\ddot z=\sum F_{iz}$ の3つの式になる。
+\end{bkhonbun}
+\bkyaku{太字はベクトル（この本の矢印）。$\ddot{\symbf r}$ は位置を時間で2回微分したもの、つまり加速度 $\vec a$（数学 5-5）。$\displaystyle\sum_{i=1}^{n}$ は「1番から $n$ 番までの力をすべてたす」（数学 5-10）。ベクトルの式1本は、成分の式3本と同じ内容（数学 4-11）。}
+\end{senmonsho}
+
+%% ================================================================
+\bksubsection{3}{重力：地球が引く力}
+
+\leavevmode\label{ph:力-2:sec3}\label{ph:力-2:banyuu}ニュートンは、リンゴを落とす力と、月を地球のまわりに回し続ける力が、同じ種類の力だと考えました。そして、\textbf{質量をもつ物どうしは、どれも引き合う}という\textbf{万有引力の法則}を1687年に発表しました。質量 $M$ と $m$ の2つの物が距離 $r$ はなれているとき、引き合う力の大きさは
+\pheq{F=G\frac{Mm}{r^2}}{N ＝ N·m$^2$/kg$^2$ × kg$^2$ ÷ m$^2$}
+です。$G$ は\textbf{万有引力定数}で、$G\approx\qty{6.67e-11}{N.m^2/kg^2}$ です。この式も、導いたものではなく、惑星の動きなどの観測から立てた法則です。$G$ の値は、1798年にキャベンディッシュが、鉛の球どうしが引き合うわずかな力をはかる実験で、はじめて求めました。
+
+\begin{phyomi}[$F=G\dfrac{Mm}{r^2}$]
+引く力は、2つの質量の積に比例し、距離の2乗に反比例します。$G$ がとても小さいので、身のまわりの物どうしの引力は、ふつう感じられないほど小さくなります（\qty{1}{kg}の球2つが\qty{1}{m}はなれていると、$\qty{6.7e-11}{N}$）。
+\end{phyomi}
+
+\noindent\textbf{地面の近くでは：$mg$}\par
+\noindent\label{ph:力-2:omosa}地球は、中の質量が中心からの距離だけで決まる、ほぼ球の形をしています。このような球が外の物を引く力は、全部の質量が中心に集まっているときと同じになります（数学 8-11 のガウスの定理で示せます）。地球の質量を $M$、半径を $R$ とすると、地面の近く（$r\approx R$）では、
+\[ F=G\frac{Mm}{R^2}=m\times\frac{GM}{R^2} \]
+$\dfrac{GM}{R^2}$ は、物によらない数です。地球の値（$GM=\qty{3.986e14}{m^3/s^2}$、半径 $R=\qty{6.371e6}{m}$）を入れると、
+\[ g=\frac{GM}{R^2}=\frac{3.986\times10^{14}}{(6.371\times10^6)^2}\approx\qty{9.82}{m/s^2} \]
+となって、物を落としてはかった重力加速度（約\qty{9.8}{m/s^2}）とほぼ同じです。地面の近くの重力は
+\pheq{W=mg}{N ＝ kg × m/s$^2$}
+です。この重力の大きさを、物の\textbf{重さ}といいます。
+
+\noindent\textbf{重さと質量はちがう}\par
+\noindent \textbf{質量}は物そのものの量（動かしにくさ）で、単位は kg です。どこへ持っていっても変わりません。\textbf{重さ}は、物にはたらく重力の大きさで、単位は N です。場所によって変わります。\qty{100}{g}（\qty{0.1}{kg}）の物の重さは、$0.1\times9.8=\qty{0.98}{N}$、つまり約\qty{1}{N}です。月の上では重力加速度が約\qty{1.6}{m/s^2}なので、同じ物の重さは約6分の1の\qty{0.16}{N}になりますが、質量は\qty{100}{g}のままです。
+
+\noindent\textbf{落ちる物の加速度は、重さによらない}\par
+\noindent\label{ph:力-2:rakka}重力だけで落ちる物の運動方程式は、下向きを $+$ にして
+\[ ma=mg\qquad\text{両辺を } m \text{ でわって}\qquad a=g \]
+重い物ほど重力は大きいのですが、そのぶん動かしにくい（質量が大きい）ので、加速度は質量によらず $g$ です。力-1 ③で「自由落下の加速度は $g$」としたのは、このためです。
+
+\begin{lrbox}{\pxcplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=46mm, xmin=0, xmax=4.4, ymin=0, ymax=11.5, xtick={1,2,3,4}, xticklabels={$R$,$2R$,$3R$,$4R$}, ytick={2.45,4.9,9.8}, yticklabels={2.45,4.9,9.8}, xlabel={$r$}, ylabel={$g$（m/s$^2$）}]
+  \addplot[bkcurve, domain=1:4.2, samples=60] {9.8/x^2};
+  \fill[bkBlue] (axis cs:1,9.8) circle (1.6pt) (axis cs:2,2.45) circle (1.6pt) (axis cs:4,0.6125) circle (1.6pt);
+  \fill[bkRed] (axis cs:1.0628,8.68) circle (1.8pt);
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=west] at (axis cs:1.6,7.6) {ISS（高度約\qty{400}{km}）：約\qty{8.7}{m/s^2}};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{地球の中心からの距離 $r$}
+地球の中心からの距離が2倍（地面から地球の半径ぶん上がる）になると、重力は $\dfrac{1}{2^2}=\dfrac{1}{4}$ になります。
+\begin{bkcenter}
+\usebox{\pxcplota}
+\end{bkcenter}
+国際宇宙ステーション（ISS）の高さでも、重力は地面の約9割あります。中の人がふわふわ浮いて見えるのは、重力がないからではありません。ISS も人も、同じ加速度で地球へ「落ち続けている」からです（⑦）。
+\end{phbaisuru}
+
+\Needspace{8\baselineskip}\begin{phflow}[重力]
+\phflowrow{$F=G\dfrac{Mm}{r^2}$}{地面の近く\\$r\approx R$}{$F=mg$、$g=\dfrac{GM}{R^2}$}
+\phflowrow{$ma=mg$}{空気の抵抗なし\\両辺を $m$ でわる}{$a=g$\\（重さによらない）}
+\end{phflow}
+
+\begin{seikaku}
+地面の上の重力加速度は、場所によって少しちがいます。赤道では約\qty{9.78}{m/s^2}、北極・南極では約\qty{9.83}{m/s^2}です。地球が自転していること（力-7）と、地球が赤道の方向に少しふくらんだ形をしていることのためです。計算の約束として決めた標準の値（標準重力）は\qty{9.80665}{m/s^2}です。この本では、ふつう\qty{9.8}{m/s^2}を使います。
+\end{seikaku}
+
+\begin{column}{てんびんと、ばねばかり}
+重さをはかる道具には、2つの種類があります。てんびんは、はかりたい物と分銅の、地球に引かれる力をくらべます。どちらも同じ割合で重力が変わるので、月の上へ持っていっても、つり合う分銅は同じです。てんびんは\textbf{質量}をはかる道具です。
+
+ばねばかりは、ばねののびで、物にはたらく重力の大きさをはかります。月の上では重力が約6分の1になるので、ばねののびも約6分の1になります。ばねばかりは\textbf{重さ}（力）をはかる道具です。家庭の体重計も、ばねや、力で形が変わる部品を使っているので、本当は力をはかっています。だから、上へ動き出すエレベータの中では、目もりが大きくなるのです（⑥、例題1）。
+\end{column}
+
+\begin{phmada}[重さと動かしにくさが等しいなぞ]
+運動方程式 $ma=mg$ の左の $m$ は「動かしにくさ」（慣性質量）、右の $m$ は「地球に引かれる強さ」（重力質量）で、本当は別の量です。2つがいつも同じ割合だから、どんな物も同じ加速度で落ちるのです。
+
+フランスの人工衛星 MICROSCOPE は、チタンと白金でできた2つの物が、地球のまわりを回りながら同じように落ちるかを調べました（2022年に結果を発表）。落ち方の差は、1000兆分の1（$10^{-15}$）くらいの細かさで調べても見つかりませんでした。一般相対性理論は、2つが等しいことを出発点（仮定）にして作られています。でも、なぜ等しいのかは説明されておらず、物理学の大きななぞの1つとして、今も実験で確かめ続けられています。
+\end{phmada}
+
+%% ================================================================
+
+
+\bksubsection{4}{摩擦：すべりをさまたげる力}
+
+\leavevmode\label{ph:力-2:sec4}床に置いた箱に、ばねばかりをつけて、横に引く力を少しずつ大きくしていきます。
+
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=72mm, height=48mm, xmin=0, xmax=12.5, ymin=0, ymax=7.2, xtick={6}, xticklabels={$F_0$}, ytick={4.5,6}, yticklabels={$F'$,$F_0$}, xlabel={引く力}, ylabel={摩擦力}]
+  \addplot[bkcurve, domain=0:6] {x};
+  \addplot[bkcurve2] coordinates {(6,4.5) (11.6,4.5)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:6,6) -- (axis cs:6,4.5) (axis cs:0,6) -- (axis cs:6,6);
+  \fill[bkBlue] (axis cs:6,6) circle (1.6pt);
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=north west, align=left] at (axis cs:1.6,2.4) {静止摩擦力\\（引く力と同じ）};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south, align=center] at (axis cs:9.2,4.7) {動摩擦力\\（ほぼ一定）};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=1.6\zw, itemsep=2pt, topsep=0pt]
+\item 引く力が小さいうちは、箱は動かない。床が、引く力と同じ大きさの力で、反対向きに箱を押さえている（\textbf{静止摩擦力}）。
+\item 引く力がある大きさ $F_0$ をこえると、箱がすべり出す。
+\item すべっているあいだの摩擦力（\textbf{動摩擦力}）$F'$ は、$F_0$ より少し小さく、ほぼ一定。
+\end{enumerate}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent\label{ph:力-2:masatsu}静止摩擦力の大きさには、上限があります。この上限 $F_0$ を\textbf{最大摩擦力}といいます。いろいろな箱で調べると、$F_0$ と $F'$ は、箱が床を押す強さ（垂直抗力 $N$）にほぼ比例し、ふれ合う面積や、すべる速さにはほとんどよらないことがわかります。
+\pheq{F_0=\mu N,\qquad F'=\mu' N}{N ＝（単位なし）× N}
+比例の定数 $\mu$（ミュー）を\textbf{静止摩擦係数}、$\mu'$ を\textbf{動摩擦係数}といいます。\bkidx{まさつけいすう}{摩擦係数}ふつう $\mu'<\mu$ です。この関係は、アモントン（1699年）とクーロン（1781年）が実験で見つけたもので、\textbf{経験則}です。運動方程式のような基本の法則から導くことはできません。$\mu$ の値は、材料の組み合わせ、表面のあらさ、ぬれているかどうかなどで変わり、実験で決めます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=56mm] Q[c,m,wd=28mm] Q[c,m,wd=28mm]}, rowsep=1.5pt, row{1}={font=\sffamily\bfseries\small}}
+ふれ合う物 & 乾いているとき & ぬれているとき \\
+タイヤと舗装した道（すべり摩擦） & 0.5〜1.0 & 0.3〜0.9 \\
+\end{bktable}
+\bktabcaption{摩擦係数の目安（路面の研究書の値）。同じ「舗装した道」でも、はばがとても広い。}
+\end{bkcenter}
+
+\noindent\textbf{摩擦角：$\tan\theta=\mu$}\par
+\noindent 板の上に物を置き、板を少しずつかたむけます。かたむきの角を $\theta$ とすると、物にはたらく重力の、斜面にそった成分は $mg\sin\theta$、斜面に垂直な成分は $mg\cos\theta$ です（数学 4-6⑥）。斜面に垂直な向きには動かないので、垂直抗力は $N=mg\cos\theta$。すべり出すのは、斜面にそった重力が最大摩擦力に追いついたときです。
+\[ mg\sin\theta=\mu\,mg\cos\theta\qquad\text{両辺を } mg\cos\theta \text{ でわって}\qquad \tan\theta=\mu \]
+すべり出す角 $\theta$ を\textbf{摩擦角}といいます。$m$ も $g$ も消えたので、物の重さによりません。板をかたむけて角をはかれば、$\mu$ がわかります（数学 4-6 の「$\mu=\tan\theta$」）。
+
+\begin{phyomi}[$F_0=\mu N$]
+「押しつける力が2倍になると、すべり出しにくさも2倍」。摩擦力を大きくしたいときは、押しつける力（垂直抗力）を大きくするか、$\mu$ の大きい材料を選びます。
+\end{phyomi}
+\begin{phmijika}[ブレーキと、雨の日の道]
+車のブレーキは、ブレーキパッドを回る円板に強く押しつけて、摩擦力で車輪を止めます。雨の日に車が止まりにくいのは、道とタイヤのあいだの $\mu$ が小さくなるからです。
+\end{phmijika}
+
+\noindent\textbf{なぜ面積によらないの？}\par
+\noindent 箱の底も床も、目で見ると平らですが、ずっと拡大すると、小さなでこぼこがあります。2つの面は、でこぼこの先のごく一部（\textbf{真実接触面積}）でしかふれていません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!25] (0,6) -- plot[smooth, tension=0.7] coordinates {(0,4) (8,2.6) (14,4.6) (20,1.6) (28,4.2) (36,2.2) (44,5) (52,1.5) (60,4.4) (68,2.8) (76,4.6) (84,1.4) (92,3.8) (100,2.4) (110,4.2)} -- (110,6) -- (110,14) -- (0,14) -- cycle;
+  \fill[bkGray!35] (0,0) -- (0,-6) -- (110,-6) -- (110,0) -- plot[smooth, tension=0.7] coordinates {(110,0) (102,1.2) (94,-0.4) (84,1.4) (76,0) (66,0.8) (60,-0.6) (52,1.5) (44,0) (36,0.6) (28,-0.4) (20,1.6) (12,0.2) (4,0.8) (0,0)};
+  \foreach \x in {20,52,84} {\draw[bkRed, line width=1.6pt] (\x-1.6,1.5) -- (\x+1.6,1.5);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (55,14.5) {上の物（箱の底）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (55,-6.5) {下の物（床）};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (112,1.5) {ふれている所};
+\end{tikzpicture}
+\bkfigcaption{2つの面を大きく拡大したようす（たてを強調してかいた）。本当にふれているのは、赤い所だけ。}
+\end{bkfigure}
+押しつける力を大きくすると、でこぼこの先がつぶれて、本当にふれている面積が力に比例してふえます。見かけの面積を広くしても、1つ1つの先にかかる力が小さくなるだけで、本当にふれている面積の合計は変わりません。摩擦力は、本当にふれている所の「くっつき」をはがす力だと考えると、摩擦力が押しつける力に比例し、見かけの面積によらないことが説明できます。この考え方は、1950年に、イギリスのバウデンとテイバーがまとめました。
+
+\begin{phmada}[摩擦係数は計算できる？]
+バウデンとテイバーの考え方で、「なぜ押しつける力に比例するか」は説明できるようになりました。でも、2つの材料の組み合わせから、$\mu$ の値を理論で計算して当てることは、今もできません。原子が並んだ面どうしがふれ合うようす、表面のよごれ・水分・油の薄い膜、こすれて温度が上がることなどが、複雑にからみ合うからです。原子1個1個のレベルで摩擦を調べる研究（ナノトライボロジー）が、今も続いています。
+\end{phmada}
+
+%% ================================================================
+\bksubsection{5}{式を立てる手順：斜面・滑車・連結}
+
+\leavevmode\label{ph:力-2:sec5}運動方程式を使って動きを求めるときは、どんな問題でも、次の手順で式を立てます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item \textbf{物を選んで、力の図をかく}（①の自由体図）。物が2つ以上なら、1つずつ別にかく。
+\item \textbf{軸を決める}。動く向き（斜面なら斜面にそった向き）に1本、それに垂直に1本とると、計算が楽になる。
+\item \textbf{力を成分に分ける}（数学 4-11③）。軸にななめの力だけを分ければよい。
+\item \textbf{成分ごとに運動方程式を書く}。動かない向きの成分は、加速度0とする。
+\item \textbf{拘束条件を加えて、連立方程式を解く}（数学 3-6）。「ひもでつながった物の加速度は同じ大きさ」「面から離れない」など。
+\end{enumerate}
+
+\noindent\textbf{なめらかな斜面}\par
+\noindent\label{ph:力-2:shamen}角 $\theta$ のなめらかな（摩擦のない）斜面の上を、質量 $m$ の物がすべり下ります。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (0,0) -- (50,0) -- (0,28.87) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,28.87) -- (50,0) -- (0,0);
+  \draw[bkGray, line width=0.5pt] (40,0) arc[start angle=180, end angle=150, radius=10];
+  \node[font=\sffamily\scriptsize, anchor=east] at (39,2.6) {$\theta$};
+  \begin{scope}[shift={(20,17.32)}, rotate=-30]
+  \filldraw[fill=bkBlue!35, draw=bkBlue!70!black, line width=0.6pt] (-5,0) rectangle (5,7);
+  \coordinate (G) at (0,3.5);
+  \draw[pxc f, bkBlue] (0,7) -- (0,19);
+  \node[pxc lab, text=bkBlue!80!black, anchor=south] at (0,19.5) {$N$};
+  \draw[pxc f, bkOrange, dashed] (G) -- (8,3.5);
+  \node[pxc lab, text=bkOrange!80!black, anchor=west] at (9,1.6) {$mg\sin\theta$};
+  \draw[pxc f, bkPurple, dashed] (G) -- (0,-10.36);
+  \node[pxc lab, text=bkPurple, anchor=east] at (-1.2,-9) {$mg\cos\theta$};
+  \end{scope}
+  \draw[pxc f, bkRed] (21.75,20.35) -- ++(0,-16);
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (22.3,6.5) {$mg$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.51\linewidth}
+① 力は、重力 $mg$ と垂直抗力 $N$ の2つ。\\
+② 斜面にそって下向きに $x$、斜面に垂直に $y$。\\
+③ 重力を分ける：$x$ 成分 $mg\sin\theta$、$y$ 成分 $-mg\cos\theta$。\\
+④ $x$：$ma=mg\sin\theta$\\
+\phantom{④ }$y$：$0=N-mg\cos\theta$\\
+⑤ 解くと $a=g\sin\theta$、$N=mg\cos\theta$。
+\end{minipage}
+
+\par\vspace{3pt}
+中学校で習う「斜面を下る台車は、速さが一定の割合でふえ、斜面の角度が大きいほど、ふえ方が大きい」のわけが、この $a=g\sin\theta$ です。加速度が一定なので、速さは一定の割合でふえ（力-1 ③）、角度が大きいほど $\sin\theta$ が大きくなります。$\theta=90°$ にすると $a=g$ で、自由落下になります。
+
+\noindent\textbf{摩擦のある斜面}\par
+\noindent 動摩擦係数 $\mu'$ の斜面をすべり下りるときは、斜面にそって上向きに動摩擦力 $\mu'N=\mu'mg\cos\theta$ が加わります。④の $x$ の式は $ma=mg\sin\theta-\mu'mg\cos\theta$ となって、
+\[ a=g(\sin\theta-\mu'\cos\theta) \]
+\begin{lrbox}{\pxcplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=48mm, xmin=0, xmax=96, ymin=0, ymax=11.5, xtick={15,30,45,60,75,90}, ytick={2,4,6,8,9.8}, yticklabels={2,4,6,8,9.8}, xlabel={$\theta$（°）}, ylabel={$a$（m/s$^2$）}]
+  \addplot[bkcurve, domain=0:90, samples=60] {9.8*sin(x)};
+  \addplot[bkcurve2, domain=11.31:90, samples=60] {9.8*(sin(x)-0.2*cos(x))};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south east] at (axis cs:40,7.2) {$\mu'=0$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west] at (axis cs:45,5) {$\mu'=0.2$};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{斜面の角 $\theta$}
+$\mu'=0$（なめらか）と $\mu'=0.2$ で、角と加速度の関係をグラフにします。
+\begin{bkcenter}
+\usebox{\pxcplota}
+\end{bkcenter}
+角が2倍になっても、加速度は2倍になりません（$\sin\theta$ は比例しない）。30°で\qty{4.9}{m/s^2}、60°で約\qty{8.5}{m/s^2}です。摩擦があると、グラフは下にずれ、小さい角ではすべり出しません（このグラフの $\mu'=0.2$ の線は、すべっているときだけの加速度）。
+\end{phbaisuru}
+
+\noindent\textbf{滑車でつないだ2つのおもり：アトウッドの器械}\par
+\noindent 軽くなめらかに回る滑車に、軽くのびないひもをかけ、両はしに質量 $m_1$、$m_2$（$m_1>m_2$）のおもりをつるします。
+
+\noindent\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (0,40) rectangle (24,42);
+  \draw[bkInk, line width=0.7pt] (12,40) -- (12,35);
+  \pxcpulley{(12,30)}{5}
+  \draw[bkInk, line width=0.8pt] (7,30) -- (7,14) (17,30) -- (17,22);
+  \filldraw[fill=bkBlue!35, draw=bkBlue!70!black, line width=0.6pt] (3,6) rectangle (11,14);
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (14,16) rectangle (20,22);
+  \node[pxc lab] at (7,10) {$m_1$};
+  \node[pxc lab] at (17,19) {$m_2$};
+  \draw[pxc f, bkPurple] (7,14) -- (7,22);
+  \draw[pxc f, bkPurple] (17,22) -- (17,28);
+  \draw[pxc f, bkRed] (5,6) -- (5,-4);
+  \draw[pxc f, bkRed] (19,16) -- (19,9);
+  \node[pxc lab, text=bkPurple, anchor=east] at (6.5,19) {$T$};
+  \node[pxc lab, text=bkPurple, anchor=west] at (17.5,26) {$T$};
+  \node[pxc lab, text=bkRed!80!black, anchor=east] at (4.5,-1) {$m_1g$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (19.5,10) {$m_2g$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (-2,12) -- (-2,4);
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (24,14) -- (24,22);
+  \node[pxc lab, text=bkGray, anchor=west] at (24.5,18) {$a$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.63\linewidth}
+① おもりを1つずつ。どちらにも、重力と、ひもの張力 $T$（軽くなめらかな滑車なので、両側で同じ $T$）。\\
+② $m_1$ は下向き、$m_2$ は上向きを $+$（動く向き）。\\
+⑤ ひもはのびないので、加速度の大きさは同じ $a$。\\
+④ $m_1$：$m_1a=m_1g-T$\\
+\phantom{④ }$m_2$：$m_2a=T-m_2g$\\
+2つの式をたすと $T$ が消えて（加減法）、
+\[ a=\frac{m_1-m_2}{m_1+m_2}\,g,\qquad T=\frac{2m_1m_2}{m_1+m_2}\,g \]
+\end{minipage}
+
+\par\vspace{3pt}
+$T$ は、$a$ を $m_2$ の式に入れて求めました。2つのおもりの質量の差が小さいほど、加速度は小さくなります。$m_2=0$（片側に何もない）にすると、$a=g$、$T=0$ で、自由落下になります。
+
+\noindent\textbf{つながった2台の台車}\par
+\noindent なめらかな床の上で、質量 $m_1$ と $m_2$ の台車をつなぎ、前の台車を力 $F$ で引きます。2台をまとめて1つの物と考えると、$(m_1+m_2)a=F$。連結の部分が後ろの台車を引く力を $T$ とすると、後ろの台車だけの運動方程式は $m_2a=T$。だから
+\[ a=\frac{F}{m_1+m_2},\qquad T=\frac{m_2}{m_1+m_2}\,F \]
+2台をまとめて見ると、連結の力 $T$ は、前の台車が後ろを引く力と、後ろが前を引く力（作用・反作用）の組なので、たすと打ち消し合います。このように、まとめた物の中だけではたらく力（\textbf{内力}）は、まとめた物の運動方程式には出てきません（力-3 でくわしく）。
+
+\Needspace{8\baselineskip}\begin{phflow}[斜面と滑車]
+\phflowrow{$a=g(\sin\theta-\mu'\cos\theta)$}{摩擦なし\\$\mu'=0$}{$a=g\sin\theta$}
+\phflowrow{$a=g\sin\theta$}{$\theta=90°$}{$a=g$（自由落下）}
+\phflowrow{$a=\dfrac{m_1-m_2}{m_1+m_2}\,g$}{$m_2=0$}{$a=g$（自由落下）}
+\end{phflow}
+
+%% ================================================================
+\bksubsection{6}{加速する乗り物の中：慣性力}
+
+\leavevmode\label{ph:力-2:sec6}\label{ph:力-2:kanseiryoku}\bkhatenaref に答えましょう。質量 $m$ の人が、エレベータの床（体重計）の上に立っています。エレベータは、上向きに加速度 $a$ で動き出しました。
+
+\noindent\textbf{地面に立った人から見る}\par
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!80, line width=0.8pt, fill=bkPaper] (0,0) rectangle (26,32);
+  \filldraw[fill=bkGray!30, draw=bkInk!70, line width=0.5pt] (7,0) rectangle (19,2);
+  \bkperson{(13,2)}{20}{bkRoute6}
+  \draw[pxc f, bkBlue] (8,2) -- (8,18);
+  \draw[pxc f, bkRed] (18,15) -- (18,3);
+  \node[pxc lab, text=bkBlue!80!black, anchor=east] at (7.5,14) {$N$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (18.5,6) {$mg$};
+  \draw[pxc f, bkOrange] (31,4) -- (31,24);
+  \node[pxc lab, text=bkOrange!80!black, anchor=west] at (32,14) {$a$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.6\linewidth}
+人にはたらく力は、重力 $mg$（下向き）と、床が押し上げる垂直抗力 $N$（上向き）の2つです。人はエレベータといっしょに、上向きに加速度 $a$ で動いています。上向きを $+$ にして運動方程式を立てると、
+\[ ma=N-mg\qquad\text{より}\qquad N=m(g+a) \]
+\end{minipage}
+
+\par\vspace{3pt}
+体重計がはかっているのは、人が体重計を押す力です。これは、体重計が人を押し上げる力 $N$ の反作用なので、同じ大きさ $N=m(g+a)$ です。止まっているとき（$a=0$）の $mg$ より大きくなります。床が足を、ふだんより強く押し上げなければ、体に上向きの加速度をあたえられないのです。足の裏や体の中で、この強い押し上げを感じるのが「重く感じる」ことの正体です。\textbf{これが \bkhatenaref の答えです。}
+
+体重計の目もりは、$N$ を $g$ でわった「見かけの質量」で表示されます。たとえば、\qty{60}{kg}の人が \qty{1.0}{m/s^2} で上へ動き出すエレベータに乗ると、$N=60\times(9.8+1.0)=\qty{648}{N}$ で、目もりは $648\div9.8\approx\qty{66}{kg}$ を指します（例題1）。
+
+\noindent\textbf{エレベータの中の人から見る：慣性力}\par
+\noindent エレベータの中の人から見ると、自分は止まっています。止まっているのに、床が $mg$ より大きい力 $N$ で押し上げているのは、ふしぎに見えます。そこで、加速度 $\vec A$ で動く乗り物の中から見るときは、すべての物に
+\[ \text{慣性力}\quad -m\vec A\qquad\text{（乗り物の加速度と反対向き、大きさ } mA\text{）} \]
+という「見かけの力」がはたらくと考えます。\bkidx{かんせいりょく}{慣性力}エレベータが上向きに $a$ で加速しているなら、慣性力は下向きに $ma$。中の人から見ると、$N$、$mg$、$ma$ の3つの力がつり合っていて、$N=mg+ma$ と、同じ答えになります。慣性力は、ほかの物から受ける力ではないので、反作用がありません。乗り物の中から見るときだけ使う、計算のための力です。
+
+\begin{phyomi}[$N=m(g+a)$]
+「床が押す力＝重力＋加速度をあたえるのに要る力」。上向きに加速するときは $a>0$ で重く、下向きに加速するとき（下へ動き出す・上へ動いていて止まる）は $a<0$ で軽く感じます。
+\end{phyomi}
+\begin{phmijika}[電車のつり革]
+加速度 $A$ で動き出した電車の中では、つり革に、後ろ向きの慣性力 $mA$ と重力 $mg$ がはたらいているように見えます。つり革は、この2つの合力の向きにかたむき、鉛直からの角 $\varphi$ は $\tan\varphi=\dfrac{A}{g}$ です。$A=\qty{0.83}{m/s^2}$（力-1 の桁の感覚）なら、$\tan\varphi=0.085$ で約5°。力-1 のやってみようで、つり革がかたむいたわけです。
+\end{phmijika}
+\begin{lrbox}{\pxcplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=46mm, xmin=-10.5, xmax=4.4, ymin=0, ymax=92, xtick={-9.8,-4,-2,2,4}, xticklabels={$-g$,$-4$,$-2$,2,4}, ytick={30,60,90}, xlabel={$a$（m/s$^2$）}, ylabel={目もり（kg）}]
+  \addplot[bkcurve, domain=-9.8:4] {60*(9.8+x)/9.8};
+  \fill[bkBlue] (axis cs:1,66.1) circle (1.6pt) (axis cs:2,72.2) circle (1.6pt) (axis cs:-9.8,0) circle (1.6pt);
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:0.9,67) {66};
+  \node[font=\sffamily\scriptsize, anchor=west] at (axis cs:-9.3,10) {無重量（0）};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{エレベータの加速度 $a$}
+\qty{60}{kg}の人で、体重計の目もり（$N\div g$）をグラフにします。
+\begin{bkcenter}
+\usebox{\pxcplota}
+\end{bkcenter}
+加速度が2倍（1から2）になっても、目もりは2倍にはならず、ふえる分（6 kg から 12 kg）が2倍になります。$a=-g$（ケーブルが切れて自由落下）なら $N=0$ で、体重計は0を指します（無重量の状態）。
+\end{phbaisuru}
+
+数学 5-5 では、「くわしくは第6巻で」と予告していました。数学 6-5 では、このエレベータのかごの運動を、運動方程式（微分方程式）として調べます。ここでは、力の図と慣性力の両方から、同じ答えが出ることを確かめました。
+
+\Needspace{8\baselineskip}\begin{phflow}[加速する乗り物]
+\phflowrow{$m\vec a=\sum\vec F$\\（地面から見る）}{上向きに加速度 $a$\\力は $N$ と $mg$}{$N=m(g+a)$}
+\phflowrow{$\sum\vec F-m\vec A=\vec 0$\\（乗り物から見る）}{慣性力 $-m\vec A$ を\\加えてつり合い}{$N=mg+ma$\\（同じ答え）}
+\phflowrow{$N=m(g+a)$}{$a=-g$\\（自由落下）}{$N=0$（無重量）}
+\end{phflow}
+
+%% ================================================================
+\bksubsection{7}{円運動の運動方程式：向心力}
+
+\leavevmode\label{ph:力-2:sec7}\label{ph:力-2:koushinryoku}力-1 ⑤で、半径 $r$ の円を速さ $v$ で回る物には、中心の向きに $\dfrac{v^2}{r}$ の加速度があることを学びました。運動方程式の、中心の向きの成分を書くと、
+\pheq{m\frac{v^2}{r}=F_{\text{中心}}}{N ＝ kg × (m/s)$^2$ ÷ m}
+円運動をさせるには、中心の向きに $\dfrac{mv^2}{r}$（$=mr\omega^2$）の合力が要ります。この中心向きの合力を\textbf{向心力}といいます。\bkidx{こうしんりょく}{向心力}向心力は、重力や摩擦力とならぶ「新しい種類の力」ではありません。ひもの張力・摩擦力・重力などが、円の中心を向く役目をしているとき、その合力をよぶ名前です。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item ひもにつけた石を回す：ひもの張力が向心力。
+\item カーブを曲がる車：タイヤと道のあいだの静止摩擦力が向心力。
+\item 地球のまわりを回る人工衛星・月：地球の万有引力が向心力。
+\end{itemize}
+
+\noindent\textbf{カーブを曲がれる速さ}\par
+\noindent 平らなカーブでは、向心力は静止摩擦力です（タイヤは横にすべっていないので静止摩擦）。静止摩擦力は最大摩擦力 $\mu mg$ までしか出せないので、
+\[ m\frac{v^2}{r}\leqq\mu mg\qquad\text{より}\qquad v\leqq\sqrt{\mu gr} \]
+$m$ が消えたので、曲がれる速さの上限は、車の重さによりません。半径\qty{50}{m}、$\mu=0.7$ なら $\sqrt{0.7\times9.8\times50}\approx\qty{18.5}{m/s}$（時速約\qty{67}{km}）です（例題8）。
+
+\noindent\textbf{円すい振り子}\par
+\noindent\label{ph:力-2:ensui}長さ $l$ の糸の先のおもりを、糸が鉛直と角 $\theta$ をなすように、水平な円をえがいて回します。
+
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-10,30) rectangle (14,32);
+  \draw[bkGray, line width=0.4pt, dashed] (0,30) -- (0,4);
+  \draw[bkInk, line width=0.8pt] (0,30) -- (12,9.2);
+  \draw[bkGray, line width=0.5pt, dashed] (0,9.2) ellipse (12 and 3);
+  \filldraw[fill=bkOrange!60, draw=bkOrange!70!black, line width=0.5pt] (12,9.2) circle (1.8);
+  \draw[pxc f, bkPurple] (12,9.2) -- (5.6,20.3);
+  \draw[pxc f, bkRed] (12,9.2) -- (12,-4);
+  \draw[bkGray, line width=0.5pt] (0,24) arc[start angle=-90, end angle=-60, radius=6];
+  \node[pxc lab, anchor=north] at (1.8,23.6) {$\theta$};
+  \node[pxc lab, text=bkPurple, anchor=east] at (7,18) {$T$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (12.5,-2) {$mg$};
+  \node[pxc lab, anchor=south] at (6,22.5) {$l$};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,7.5) -- node[below, pxc lab] {$r$} (12,7.5);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.6\linewidth}
+おもりにはたらく力は、重力 $mg$ と糸の張力 $T$。円の半径は $r=l\sin\theta$。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 鉛直：上下には動かない。$T\cos\theta=mg$
+\item 水平：$T\sin\theta$ が向心力。$T\sin\theta=mr\omega^2$
+\end{itemize}
+2つめを1つめでわると $\tan\theta=\dfrac{r\omega^2}{g}$。$r=l\sin\theta$ を入れて、$\omega^2=\dfrac{g}{l\cos\theta}$。
+\end{minipage}
+\par\vspace{3pt}
+周期は $T_{\text{周}}=\dfrac{2\pi}{\omega}$（力-1）なので、
+\[ T_{\text{周}}=2\pi\sqrt{\frac{l\cos\theta}{g}} \]
+ここでは張力の $T$ と区別するため、周期を $T_{\text{周}}$ と書きました。$l\cos\theta$ は、糸をつるした点から円の面までの高さです。周期は、おもりの質量によりません。
+
+\noindent\textbf{人工衛星：第1宇宙速度}\par
+\noindent\label{ph:力-2:uchuu}地球のまわりを、半径 $r$ の円をえがいて回る人工衛星の向心力は、地球の万有引力です。
+\[ m\frac{v^2}{r}=G\frac{Mm}{r^2}\qquad\text{より}\qquad v=\sqrt{\frac{GM}{r}} \]
+地面すれすれ（$r=R$）を回るとすると、$GM=gR^2$（③）なので、$v=\sqrt{gR}$ です。
+\[ v=\sqrt{9.8\times6.371\times10^6}\approx\qty{7.9e3}{m/s}=\qty{7.9}{km/s} \]
+これを\textbf{第1宇宙速度}といいます。1周の時間は $\dfrac{2\pi R}{v}\approx\qty{5.1e3}{s}$（約84分）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.6mm, y=0.6mm]
+  \fill[bkBlue!12] (0,-40) circle (40);
+  \draw[bkBlue!60!black, line width=0.6pt] (0,-40) circle (40);
+  \fill[bkGreen!50!black] (-3,0) -- (0,5) -- (3,0) -- cycle;
+  \draw[bkOrange, line width=0.9pt] (0,5) .. controls (8,5) and (13,0) .. (15,-3);
+  \draw[bkOrange, line width=0.9pt] (0,5) .. controls (15,5) and (25,-2) .. (30,-10);
+  \draw[bkRed, line width=1.1pt] (0,-40) ++(90:45) arc[start angle=90, end angle=-30, radius=45];
+  \draw[pxc f, bkRed] (0,7.5) -- (12,7.5);
+  \node[pxc lab, anchor=south east] at (-3,4) {速く投げるほど遠くへ};
+  \node[pxc lab, text=bkRed!80!black, anchor=east, align=right] at (-44,-30) {赤：$\sqrt{gR}$ なら、落ちながら\\地面と同じだけ曲がり、\\ずっと地面に着かない};
+  \node[pxc lab, anchor=center] at (0,-40) {地球};
+\end{tikzpicture}
+\bkfigcaption{高い山の上から水平に物を投げる。速くするほど遠くへ落ち、第1宇宙速度に達すると、地球を回り続ける（ニュートンの考えた図をもとにかいた）。}
+\end{bkfigure}
+
+人工衛星は、宇宙で止まって浮いているのではなく、\textbf{横へ速く進みながら、地球へ落ち続けている}のです。落ちる道すじの曲がり方と、丸い地面の曲がり方がちょうど同じなので、いつまでも地面に着きません。中の宇宙飛行士も、衛星といっしょに同じ加速度で落ちているので、衛星から見ると浮いて見えます（力-1 ⑥の相対加速度0）。
+
+\begin{phbaisuru}{軌道の半径 $r$}
+$v=\sqrt{\dfrac{GM}{r}}$ なので、半径が4倍になると、速さは $\dfrac{1}{2}$ 倍になります。1周の道のりは4倍なので、周期は8倍（$4^{3/2}$）です。周期の2乗が半径の3乗に比例する、このきまり（ケプラーの第3法則）は、力-6 でくわしく学びます。
+\end{phbaisuru}
+
+\Needspace{8\baselineskip}\begin{phflow}[円運動の運動方程式]
+\phflowrow{$m\dfrac{v^2}{r}=F_{\text{中心}}$}{向心力が\\静止摩擦力（$\leqq\mu mg$）}{$v\leqq\sqrt{\mu gr}$}
+\phflowrow{$m\dfrac{v^2}{r}=G\dfrac{Mm}{r^2}$}{地面すれすれ\\$r=R$、$GM=gR^2$}{$v=\sqrt{gR}$\\（第1宇宙速度）}
+\phflowrow{鉛直：$T\cos\theta=mg$\\水平：$T\sin\theta=mr\omega^2$}{$r=l\sin\theta$}{$T_{\text{周}}=2\pi\sqrt{\dfrac{l\cos\theta}{g}}$}
+\end{phflow}
+
+回る車の中の人は、外へ押される力（遠心力）を感じます。これは、⑥の慣性力を、回る乗り物の中から見たときのものです。くわしくは力-7 で学びます。
+
+%% ================================================================
+\bksubsection{8}{空気の抵抗と終端速度}
+
+\leavevmode\label{ph:力-2:sec8}雨つぶは、空の高い所から落ちてきますが、地面に着くときの速さは、自由落下の式 $v=\sqrt{2gh}$ から計算した値よりずっとおそくなります。空気の抵抗があるからです。空気や水の中を動く物は、動きと反対向きに抵抗の力を受け、その大きさは速さで変わります。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item ごく小さい物がゆっくり動くとき（霧のつぶ、ほこり）：速さに比例 $f=bv$。
+\item ふつうの大きさの物が速く動くとき（雨つぶ、ボール、車、人）：速さの2乗に比例 $f=cv^2$。
+\end{itemize}
+$b$、$c$ を\textbf{抵抗の係数}といいます。どちらになるか、$b$ や $c$ がいくつになるかは、物の大きさ・形・速さ・空気のねばりけで決まります（力-15）。
+
+\noindent\textbf{速さに比例する抵抗：終端速度}\par
+\noindent\label{ph:力-2:shuutan}下向きを $+$ にして、速さに比例する抵抗を受けて落ちる物の運動方程式を書きます。
+\pheq{m\frac{\dd v}{\dd t}=mg-bv}{N ＝ N － N·s/m × m/s}
+はじめ（$v=0$）は抵抗がないので、加速度は $g$。速くなるほど抵抗がふえて、加速度は小さくなります。やがて抵抗が重力と等しくなると、加速度が0になり、速さはそれ以上ふえません。このときの速さを\textbf{終端速度}といいます。$\dfrac{\dd v}{\dd t}=0$ とおくと、
+\[ 0=mg-bv_{\mathrm f}\qquad\text{より}\qquad v_{\mathrm f}=\frac{mg}{b} \]
+この微分方程式は、数学 6-5 で解き方を学びます。はじめ止まっていたときの答えは、時定数 $\tau=\dfrac{m}{b}$（数学 5-14⑪）を使って
+\[ v=v_{\mathrm f}\bigl(1-e^{-t/\tau}\bigr) \]
+です。$t=\tau$ で終端速度の約63\,\%、$t=3\tau$ で約95\,\%になります。
+
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=46mm, xmin=0, xmax=5.4, ymin=0, ymax=1.18, xtick={1,2,3,4,5}, xticklabels={$\tau$,$2\tau$,$3\tau$,$4\tau$,$5\tau$}, ytick={0.632,1}, yticklabels={$0.63v_{\mathrm f}$,$v_{\mathrm f}$}, xlabel={$t$}, ylabel={$v$}]
+  \addplot[bkcurve, domain=0:5.2, samples=60] {1-exp(-x)};
+  \addplot[bkGray, dashed, line width=0.6pt, domain=0:5.2] {1};
+  \addplot[bkcurve2, dashed, domain=0:1.1] {x};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=east] at (axis cs:0.95,1.07) {抵抗がなければ $v=gt$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{速さに比例する抵抗で落ちる物の速さ。はじめは $v=gt$ にそって速くなり、終端速度 $v_{\mathrm f}$ に近づく。}
+\end{bkcenter}
+
+\noindent\textbf{速さの2乗に比例する抵抗}\par
+\noindent 雨つぶやスカイダイバーでは、$m\dfrac{\dd v}{\dd t}=mg-cv^2$ です。終端速度は、$0=mg-cv_{\mathrm t}^2$ より
+\[ v_{\mathrm t}=\sqrt{\frac{mg}{c}} \]
+空気の抵抗の係数は、$c=\dfrac{1}{2}\rho C_{\mathrm D}A$（$\rho$ は空気の密度、$A$ は前から見た面積、$C_{\mathrm D}$ は形で決まる抗力係数）と書けることが、実験からわかっています（力-15）。この微分方程式は、式でも解けますが（数学 6-11 の双曲線関数を使う）、⑨では、数値で解く方法を学びます。
+
+\begin{phbaisuru}{質量 $m$}
+同じ形・同じ大きさで、質量だけが2倍の物を落とすと、速さに比例する抵抗なら終端速度は2倍（$v_{\mathrm f}=\dfrac{mg}{b}$）、速さの2乗に比例する抵抗なら $\sqrt2\approx1.41$ 倍（$v_{\mathrm t}=\sqrt{\dfrac{mg}{c}}$）です。空気があると、重い物のほうが速く落ちます。空気がないとき（③）とのちがいに注意しましょう。
+\end{phbaisuru}
+
+\begin{motto}[5]
+\phboxhead{速さの2乗に比例する抵抗の運動を、式で解く}
+$m\dfrac{\dd v}{\dd t}=mg-cv^2$ の、はじめ止まっていたときの答えは、双曲線関数 $\tanh$（タンジェント・エイチ、数学 6-11 で学ぶ）を使って
+\[ v=v_{\mathrm t}\tanh\frac{gt}{v_{\mathrm t}}\qquad\Bigl(v_{\mathrm t}=\sqrt{\frac{mg}{c}}\Bigr) \]
+と書けます。本当に答えになっているか、微分して確かめます。$(\tanh u)'=1-\tanh^2u$（数学 6-11）と合成関数の微分（数学 5-6）から、
+\[ \frac{\dd v}{\dd t}=v_{\mathrm t}\times\frac{g}{v_{\mathrm t}}\Bigl(1-\tanh^2\frac{gt}{v_{\mathrm t}}\Bigr)=g\Bigl(1-\frac{v^2}{v_{\mathrm t}^2}\Bigr)=g-\frac{c}{m}v^2 \]
+最後は $v_{\mathrm t}^2=\dfrac{mg}{c}$ を使いました。運動方程式を $m$ でわった式と同じなので、たしかに答えです。スカイダイバー（$v_{\mathrm t}\approx\qty{54.9}{m/s}$）で、空気がないとき（$v=gt$）とくらべると、次のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] *{5}{Q[c,m,wd=11mm]}}, rowsep=1.5pt, colsep=4pt}
+時間（s） & 1 & 2 & 3 & 5 & 10 \\
+空気の抵抗あり（m/s） & 9.70 & 18.8 & 26.9 & 39.1 & 51.9 \\
+空気がないとき（m/s） & 9.8 & 19.6 & 29.4 & 49.0 & 98.0 \\
+\end{bktable}
+\end{bkcenter}
+はじめの1秒ほどは、ほとんど自由落下と同じです。速くなるにつれて差が開き、10秒後には半分ほどになります。
+\end{motto}
+
+\Needspace{8\baselineskip}\begin{phflow}[空気の抵抗]
+\phflowrow{$m\dfrac{\dd v}{\dd t}=mg-bv$}{速さが変わらなく\\なる（$\dfrac{\dd v}{\dd t}=0$）}{$v_{\mathrm f}=\dfrac{mg}{b}$}
+\phflowrow{$m\dfrac{\dd v}{\dd t}=mg-bv$}{抵抗が無視できる\\（$b\to0$）}{$v=gt$\\（自由落下）}
+\phflowrow{$m\dfrac{\dd v}{\dd t}=mg-cv^2$}{$\dfrac{\dd v}{\dd t}=0$}{$v_{\mathrm t}=\sqrt{\dfrac{mg}{c}}$}
+\end{phflow}
+
+%% ================================================================
+\bksubsection{9}{数値で解く：オイラー法とルンゲ・クッタ法}
+
+\leavevmode\label{ph:力-2:sec9}運動方程式は、加速度（速度の変わる速さ）を教えてくれる式です。式で解けないときでも、数学 6-2 のオイラー法で、少しずつ時間を進めれば、答えが求まります。スカイダイバー（質量\qty{80}{kg}、$c=\qty{0.26}{N.s^2/m^2}$）の、飛び出してからの速さを計算します。運動方程式を $m$ でわると、
+\[ \frac{\dd v}{\dd t}=g-\frac{c}{m}v^2=9.8-0.00325\,v^2 \]
+
+\noindent\textbf{オイラー法}\par
+\noindent 「1秒後の速さ＝今の速さ＋今の加速度×1秒」をくり返します。
+\begin{bkcenter}
+\bksheet{3}{30}{%
+1 & $t$（s） & $v$（m/s） & 加速度（m/s$^2$） \\
+2 & 0 & 0 & 9.8 \\
+3 & 1 & 9.8 & 9.488 \\
+4 & 2 & 19.288 & 8.591 \\
+5 & 3 & 27.879 & 7.274 \\
+6 & 4 & 35.153 & 5.784 \\
+7 & 5 & 40.937 & 4.354 \\}
+\bktabcaption{C列は $9.8-0.00325v^2$。B3＝B2＋C2×1 のように、1行ずつ進める。速さがふえるほど、加速度は小さくなる。}
+\end{bkcenter}
+5秒で\qty{40.9}{m/s}になりました。でも、この値は少し大きすぎます。1秒のあいだに加速度はへっていくのに、はじめの（大きい）加速度のまま1秒進めたからです。
+
+\noindent\textbf{ルンゲ・クッタ法}\par
+\noindent 時間の区切りを小さくすれば正確になりますが、計算の回数がふえます。そこで、1歩進む前に、1秒のあいだの加速度を何回か見積もって、うまく平均してから進む方法があります。もっともよく使われるのが、次の\textbf{ルンゲ・クッタ法}（4次）です（数学 6-2 のもっと知りたい）。区切る時間を $h$、加速度を表す式を $f(v)=9.8-0.00325v^2$ とします。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $k_1=f(v)$：はじめの加速度
+\item $k_2=f\Bigl(v+k_1\dfrac{h}{2}\Bigr)$：$k_1$ で半分進んだ所の加速度
+\item $k_3=f\Bigl(v+k_2\dfrac{h}{2}\Bigr)$：$k_2$ で半分進んだ所の加速度（見積もりのやり直し）
+\item $k_4=f(v+k_3h)$：$k_3$ で1歩進んだ所の加速度
+\item 次の速さ ＝ $v+\dfrac{k_1+2k_2+2k_3+k_4}{6}\,h$
+\end{enumerate}
+⑤の平均で、まん中の $k_2$、$k_3$ を2倍に重くしているのは、区間のまん中の値のほうが、区間全体の平均に近いからです（台形より、まん中の高さで長方形をかくほうが、面積が正確になるのと同じ考え方）。
+
+\begin{phcode}
+g = 9.8
+m = 80.0
+c = 0.26              \# 抵抗の係数（N·s²/m²）
+def f(v):             \# 加速度 dv/dt
+    return g - c / m * v * v
+dt = 1.0
+ve, vr = 0.0, 0.0
+for i in range(1, 21):
+    ve = ve + f(ve) * dt                  \# オイラー法
+    k1 = f(vr)
+    k2 = f(vr + k1 * dt / 2)
+    k3 = f(vr + k2 * dt / 2)
+    k4 = f(vr + k3 * dt)
+    vr = vr + (k1 + 2*k2 + 2*k3 + k4) / 6 * dt   \# ルンゲ・クッタ法
+    if i \% 5 == 0:
+        print(i, round(ve, 2), round(vr, 2))
+\end{phcode}
+\begin{phcodeout}
+5 40.94 39.13
+10 53.07 51.9
+15 54.7 54.4
+20 54.89 54.83
+\end{phcodeout}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{4}{Q[c,m,wd=15mm]}}, rowsep=1.5pt}
+時間（s） & 5 & 10 & 15 & 20 \\
+オイラー法（m/s） & 40.94 & 53.07 & 54.70 & 54.89 \\
+ルンゲ・クッタ法（m/s） & 39.13 & 51.90 & 54.40 & 54.83 \\
+式で解いた値（m/s） & 39.13 & 51.90 & 54.40 & 54.83 \\
+\end{bktable}
+\bktabcaption{どちらも区切る時間は1秒。式で解いた値は $v=v_{\mathrm t}\tanh\dfrac{gt}{v_{\mathrm t}}$（数学 6-11）。}
+\end{bkcenter}
+同じ1秒の区切りでも、ルンゲ・クッタ法は、式で解いた値と小数第2位まで合いました。オイラー法で同じ正確さを出すには、区切りをずっと細かくしなければなりません。速さは、終端速度 $v_{\mathrm t}=\sqrt{\dfrac{80\times9.8}{0.26}}\approx\qty{55}{m/s}$（時速約\qty{200}{km}）に近づいていきます。人工衛星の軌道、車のぶつかる計算、天気予報など、運動方程式を数値で解く計算の多くで、ルンゲ・クッタ法やその仲間が使われています。
+
+\begin{phsaki}{ニュートンの法則が使えない世界}
+運動方程式 $m\vec a=\sum\vec F$ は、地上の機械や人工衛星の動きを、とても正確に計算できます。でも、光の速さに近い速さで動く物では、運動量が $m\vec v$ ではなくなり、式を直す必要があります（特殊相対性理論、原-11）。また、原子の中の電子のようなとても小さな物では、「位置と速度が決まった1つの点」という考え方そのものが使えず、量子力学という別の法則に従います（原-3・原-5）。どちらも、大学で学ぶ内容です。
+\end{phsaki}
+
+\begin{phmada}[万有引力定数 $G$ のなぞ]
+光の速さや電子の電荷のような物理の定数は、10けた以上の正確さでわかっています。ところが、万有引力定数 $G$ は、4〜5けたほどしかわかっていません。物どうしの引力がとても弱く、はかりたい力が、まわりの物の引力やわずかな温度の変化にうもれてしまうからです。さらに、世界のいくつもの研究グループが精密にはかった値が、たがいに0.05\,\%ほど食いちがっていて、それぞれの実験が見積もったずれのはばより大きいのです。どこに原因があるのかは、まだはっきりしていません。
+\end{phmada}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[5.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{運動方程式}$m\vec a=\sum\vec F$（力の図をかき、成分ごとに書く）\\[3pt]
+\tsl{重力}$F=G\dfrac{Mm}{r^2}$。地面の近くで $mg$\\[3pt]
+\tsl{摩擦力}最大摩擦力 $\mu N$、動摩擦力 $\mu'N$（経験則）\\[3pt]
+\tsl{慣性力}加速度 $\vec A$ の乗り物の中では $-m\vec A$ を加える\\[3pt]
+\tsl{向心力}円運動では、中心の向きの合力が $\dfrac{mv^2}{r}$\\[3pt]
+\tsl{終端速度}$v_{\mathrm f}=\dfrac{mg}{b}$、$v_{\mathrm t}=\sqrt{\dfrac{mg}{c}}$
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{$\sum\vec F$}{シグマ・エフ}{物にはたらく力を、すべてたしたもの（合力）}{net force}{力-2}}{\bkkigocard{$\mu$、$\mu'$}{ミュー、ミュー・ダッシュ}{静止摩擦係数・動摩擦係数。第4部では粘度に $\mu$ を使う}{coefficient of friction}{力-2}}
+
+\begin{kotoba}\small
+\bkword{自由体図}{考える物を1つ選び、その物にはたらく力だけを矢印でかいた図。}
+\bkword{運動方程式}{質量×加速度＝合力。$m\vec a=\sum\vec F$。}
+\bkword{慣性}{物が、速度を保とうとする性質。}
+\bkword{摩擦係数}{最大摩擦力や動摩擦力と、垂直抗力の比。}
+\bkword{慣性力}{加速する乗り物の中から見るときに加える、見かけの力 $-m\vec A$。}
+\bkword{向心力}{円運動をさせる、中心の向きの合力。}
+\bkword{終端速度}{抵抗が重力とつり合って、それ以上速くならない速さ。}
+\end{kotoba}
+
+%% ================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+力-1 と同じ7つの段で考えます。この章では、③の「図と記号」で必ず力の図（自由体図）をかき、⑤で運動方程式を成分ごとに書きます。
+
+\Needspace{9\baselineskip}\begin{phreidai}[エレベータの中の体重計]
+\label{ph:力-2:ex1}質量\qty{60}{kg}の人が、エレベータの中で体重計に乗っています。（1）エレベータが上向きに \qty{1.0}{m/s^2} の加速度で動き出したとき、（2）上へ動いていたエレベータが、加速度の大きさ \qty{1.0}{m/s^2} で止まるとき、体重計の目もりはそれぞれ何 kg を指しますか（\bkhatenaref）。
+\phbamen
+人は、エレベータといっしょに動きます。体重計がはかるのは、人が体重計を押す力です。目もりは、その力を $g$ でわった値で表示されます。
+\phmushi
+エレベータのケーブルののびとゆれ。人の体のゆれ（人はかごと同じ加速度で動くとする）。
+\phzu
+\noindent\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!30, draw=bkInk!70, line width=0.5pt] (0,0) rectangle (14,2);
+  \bkperson{(7,2)}{20}{bkRoute6}
+  \draw[pxc f, bkBlue] (3,2) -- (3,18);
+  \draw[pxc f, bkRed] (11,13) -- (11,3);
+  \node[pxc lab, text=bkBlue!80!black, anchor=east] at (2.5,14) {$N$};
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (11.5,6) {$mg$};
+  \draw[pxc f, bkOrange] (19,4) -- (19,16);
+  \node[pxc lab, text=bkOrange!80!black, anchor=west] at (19.5,10) {$+$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.67\linewidth}
+人にはたらく力は、重力 $mg$ と、体重計が押し上げる力 $N$。上向きを $+$ にします。$m=\qty{60}{kg}$。加速度は（1）$a=+1.0$、（2）上へ動きながらおそくなるので $a=-1.0$（m/s$^2$）。
+\end{minipage}
+\phriyu
+地面から見て、人の運動方程式を立てます。体重計の目もりは、人が体重計を押す力で、これは $N$ の反作用なので、大きさは $N$ と同じです（作用・反作用の法則）。
+\phtateru
+\[ \text{（1）}\ 60\times1.0=N-60\times9.8 \]
+\[ \text{（2）}\ 60\times(-1.0)=N-60\times9.8 \]
+\phtoku
+\[ \text{（1）}\ N=588+60=\qty{648}{N},\qquad \frac{648}{9.8}\approx\qty{66}{kg} \]
+\[ \text{（2）}\ N=588-60=\qty{528}{N},\qquad \frac{528}{9.8}\approx\qty{54}{kg} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 加速度0（止まっている・同じ速さ）なら、$N=588$ で\qty{60}{kg}。動き出しで6 kg 重く、止まるときに6 kg 軽くなりました。
+\item 大きさ：\qty{1.0}{m/s^2} は $g$ の約10分の1なので、目もりも約1割ふえる・へる。合っています。
+\item 極端な場合：ケーブルが切れて自由落下（$a=-9.8$）なら、$N=0$ で目もりは0。
+\end{itemize}
+\kotae （1）約\qty{66}{kg}　（2）約\qty{54}{kg}
+\end{phreidai}
+\begin{jibun}
+質量\qty{50}{kg}の人が、エレベータの中で体重計に乗っています。（1）上向きに \qty{0.80}{m/s^2} の加速度で動き出したとき、（2）上へ動いていて、加速度の大きさ \qty{0.80}{m/s^2} で止まるとき、目もりはそれぞれ何 kg を指しますか。
+\bkjans{（1）\nobreak $N=50\times(9.8+0.80)=\qty{530}{N}$、約\qty{54}{kg}。（2）\nobreak $N=50\times(9.8-0.80)=\qty{450}{N}$、約\qty{46}{kg}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[なめらかな斜面をすべる台車]
+\label{ph:力-2:ex2}角30°のなめらかな斜面に、質量\qty{2.0}{kg}の台車を置いて、そっと手をはなしました。台車の加速度、斜面が台車を押す垂直抗力の大きさ、2.0秒後の速さを求めましょう。
+\phbamen
+台車は斜面にそって下へ動き出します。斜面に垂直な向きには動きません。
+\phmushi
+摩擦と空気の抵抗、車輪の回転（車輪が回る動きのエネルギーは、力-7 で考える）。
+\phzu
+⑤の斜面の図と同じです。斜面にそって下向きに $x$、斜面に垂直に $y$。力は重力 $mg$ と垂直抗力 $N$。重力を $x$ 成分 $mg\sin30°$、$y$ 成分 $-mg\cos30°$ に分けます。
+\phriyu
+動く向き（$x$）と、動かない向き（$y$）に分けて運動方程式を書けば、加速度と $N$ が別々に求まります。加速度が一定なら、速さは $v=at$（力-1）。
+\phtateru
+\[ x:\ 2.0\,a=2.0\times9.8\times\sin30° \]
+\[ y:\ 0=N-2.0\times9.8\times\cos30° \]
+\phtoku
+\[ a=9.8\times0.5=\qty{4.9}{m/s^2},\qquad N=19.6\times0.866\approx\qty{17}{N} \]
+\[ v=at=4.9\times2.0=\qty{9.8}{m/s} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item $N$ は重力 $mg=\qty{19.6}{N}$ より小さい。斜面では、重力の一部しか斜面を押さないからです。
+\item 極端な場合：$\theta=0°$（水平）なら $a=0$、$N=mg$。$\theta=90°$ なら $a=g$、$N=0$（自由落下）。
+\item 加速度は質量によりません（$m$ が両辺から消えた）。
+\end{itemize}
+\kotae 加速度 \qty{4.9}{m/s^2}、垂直抗力 約\qty{17}{N}、速さ \qty{9.8}{m/s}
+\end{phreidai}
+\begin{jibun}
+角20°のなめらかな斜面に、質量\qty{2.0}{kg}の台車を置いて、そっと手をはなしました。加速度、垂直抗力の大きさ、2.0秒後の速さを求めましょう。
+\bkjans{$a=9.8\sin20°\approx\qty{3.4}{m/s^2}$、$N=19.6\cos20°\approx\qty{18}{N}$、$v=3.35\times2.0\approx\qty{6.7}{m/s}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[すべり台]
+\label{ph:力-2:ex3}角30°のすべり台を、質量\qty{30}{kg}の子どもがすべり下ります。すべり台と服のあいだの動摩擦係数を0.10とすると、加速度と、動摩擦力の大きさはいくらですか。
+\phbamen
+子どもは、すべり台の面にそって下へすべります。すべっているので、摩擦は動摩擦です。
+\phmushi
+空気の抵抗、子どもの体の大きさ（点と考える）。動摩擦係数は、すべる速さによらず一定とします。
+\phzu
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,23) -- (40,0) -- (0,0);
+  \begin{scope}[shift={(18,12.65)}, rotate=-30]
+  \filldraw[fill=bkOrange!40, draw=bkOrange!70!black, line width=0.5pt] (-4,0) rectangle (4,6);
+  \draw[pxc f, bkBlue] (0,6) -- (0,16);
+  \draw[pxc f, bkGreen!60!black] (-4,1) -- (-12,1);
+  \node[pxc lab, text=bkBlue!80!black, anchor=south] at (0,16.5) {$N$};
+  \node[pxc lab, text=bkGreen!50!black, anchor=south] at (-10,1.6) {$\mu'N$};
+  \end{scope}
+  \draw[pxc f, bkRed] (19.5,15.25) -- ++(0,-14);
+  \node[pxc lab, text=bkRed!80!black, anchor=west] at (20,3.5) {$mg$};
+  \draw[bkGray, line width=0.5pt] (32,0) arc[start angle=180, end angle=150, radius=8];
+  \node[font=\sffamily\scriptsize, anchor=east] at (31.5,2.2) {30°};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}
+力は、重力 $mg$、垂直抗力 $N$、動摩擦力 $\mu'N$（すべる向きと反対、斜面にそって上向き）。斜面にそって下向きに $x$、斜面に垂直に $y$。$m=\qty{30}{kg}$、$\mu'=0.10$。
+\end{minipage}
+\phriyu
+すべっているので、摩擦力は $\mu'N$（④）。$N$ は $y$ の式（動かない向き）から求め、それを $x$ の式に入れます。
+\phtateru
+\[ y:\ 0=N-30\times9.8\times\cos30° \]
+\[ x:\ 30\,a=30\times9.8\times\sin30°-0.10\,N \]
+\phtoku
+$N=294\times0.866\approx\qty{255}{N}$、動摩擦力は $0.10\times255\approx\qty{25}{N}$。
+\[ 30\,a=147-25.5\qquad a\approx\frac{121.5}{30}\approx\qty{4.1}{m/s^2} \]
+文字のまま解くと $a=g(\sin30°-\mu'\cos30°)$ で、$9.8\times(0.5-0.0866)\approx4.05$ です。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 摩擦がないとき（例題2）の\qty{4.9}{m/s^2}より小さい。摩擦の分だけおそくなるので、ありそうです。
+\item 加速度は質量によらない：$a=g(\sin\theta-\mu'\cos\theta)$ に $m$ がない。大人も子どもも同じ加速度です（同じ $\mu'$ なら）。
+\end{itemize}
+\kotae 加速度 約\qty{4.1}{m/s^2}、動摩擦力 約\qty{25}{N}
+\end{phreidai}
+\begin{jibun}
+角25°のすべり台（動摩擦係数0.20）を、質量\qty{30}{kg}の子どもがすべり下ります。加速度と、動摩擦力の大きさを求めましょう。
+\bkjans{$a=9.8\times(\sin25°-0.20\cos25°)$ で、約\qty{2.4}{m/s^2}。動摩擦力は $0.20\times30\times9.8\times\cos25°$ で、約\qty{53}{N}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[荷台をかたむける]
+\label{ph:力-2:ex4}ダンプカーの荷台に、砂の入った袋がのっています。袋と荷台のあいだの静止摩擦係数を0.50とすると、荷台を何度までかたむけたとき、袋はすべり出しますか。
+\phbamen
+荷台の角を少しずつ大きくしていき、袋が動き出す直前の角を知りたい場面です。
+\phmushi
+袋の形がくずれること。荷台を動かすときのゆれ（ゆっくりかたむけるとする）。
+\phzu
+角 $\theta$、袋の質量 $m$。力は重力 $mg$、垂直抗力 $N$、静止摩擦力 $f$（斜面にそって上向き）。
+\phriyu
+すべり出す直前は、静止摩擦力が最大摩擦力 $\mu N$ に達したときです（④の摩擦角）。動き出す前なので、加速度は0として、つり合いの式を書きます。
+\phtateru
+\[ y:\ N=mg\cos\theta,\qquad x:\ mg\sin\theta=\mu N=0.50\,mg\cos\theta \]
+\phtoku
+両辺を $mg\cos\theta$ でわると $\tan\theta=0.50$。電卓の $\tan^{-1}$（数学 4-6⑦）で、
+\[ \theta=\tan^{-1}0.50\approx26.6° \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item $m$ も $g$ も消えたので、袋の重さによりません。月の上でも同じ角です。
+\item 極端な場合：$\mu\to0$ なら、少しかたむけただけですべる。$\mu=1$ なら45°。
+\item 電卓が DEG（度）になっているか確かめましょう。
+\end{itemize}
+\kotae 約27°
+\end{phreidai}
+\begin{jibun}
+荷台の上の箱と荷台のあいだの静止摩擦係数が0.30のとき、荷台を何度までかたむけると、箱はすべり出しますか。
+\bkjans{$\tan\theta=0.30$ より約17°}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[エレベータのつり合いおもり]
+\label{ph:力-2:ex5}エレベータのかご（人をふくめて\qty{1000}{kg}）と、つり合いおもり（\qty{1200}{kg}）が、滑車にかけたロープの両はしにつるされています。点検のために、滑車を回すモータの力をなくし、自由に動けるようにしました。かごの加速度とロープの張力を求めましょう。
+\phbamen
+重いおもりが下がり、かごが上がります。2つは1本のロープでつながっています（⑤のアトウッドの器械）。
+\phmushi
+ロープと滑車の質量、滑車の軸の摩擦、ロープののび、かごとレールの摩擦。
+\phzu
+おもり（$m_1=\qty{1200}{kg}$）は下向き、かご（$m_2=\qty{1000}{kg}$）は上向きを $+$。加速度の大きさ $a$、張力 $T$。
+\phriyu
+物が2つあるので、1つずつ運動方程式を立てます。ロープはのびないので、2つの加速度の大きさは同じです（拘束条件）。
+\phtateru
+\[ \text{おもり}:\ 1200\,a=1200\times9.8-T,\qquad \text{かご}:\ 1000\,a=T-1000\times9.8 \]
+\phtoku
+2つの式をたして $T$ を消すと、$2200\,a=200\times9.8$。
+\[ a=\frac{1960}{2200}\approx\qty{0.89}{m/s^2},\qquad T=1000\times(9.8+0.89)\approx\qty{1.07e4}{N} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item ⑤の公式でも：
+\[ a=\frac{1200-1000}{2200}\times9.8\approx0.89 \]
+\[ T=\frac{2\times1200\times1000}{2200}\times9.8\approx\qty{10.7}{kN} \]
+\item $T$ は、かごの重さ\qty{9.8}{kN}とおもりの重さ\qty{11.8}{kN}のあいだ。かごは上へ加速、おもりは下へ加速しているので、正しい向きです。
+\item 極端な場合：おもりとかごが同じ質量なら $a=0$。
+\end{itemize}
+\kotae かごは上向きに約\qty{0.89}{m/s^2}、張力 約\qty{11}{kN}
+\end{phreidai}
+\begin{jibun}
+かご\qty{800}{kg}とつり合いおもり\qty{1000}{kg}を、滑車にかけたロープでつないで、自由に動けるようにしました。かごの加速度とロープの張力を求めましょう。
+\bkjans{$a=\dfrac{200}{1800}\times9.8\approx\qty{1.1}{m/s^2}$。$T=\dfrac{2\times1000\times800}{1800}\times9.8$ で、約\qty{8.7e3}{N}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[2台の台車を引く]
+\label{ph:力-2:ex6}なめらかなレールの上で、質量\qty{1000}{kg}の台車を2台つなぎ、前の台車を\qty{400}{N}の力で引きます。台車の加速度と、連結部が後ろの台車を引く力を求めましょう。
+\phbamen
+2台は連結されているので、いっしょに同じ加速度で動きます。
+\phmushi
+車輪とレールの摩擦（転がりの抵抗）、空気の抵抗、連結部ののび。
+\phzu
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxcfloor{(0,0)}{66}
+  \foreach \x in {4,32} {\filldraw[fill=bkBlue!30, draw=bkBlue!70!black, line width=0.5pt] (\x,2) rectangle ++(22,8); \fill[bkInk] (\x+5,1.5) circle (1.5) (\x+17,1.5) circle (1.5);}
+  \draw[bkInk, line width=1pt] (26,6) -- (32,6);
+  \draw[pxc f, bkRed] (54,6) -- (66,6);
+  \node[pxc lab, text=bkRed!80!black, anchor=south] at (61,7) {400 N};
+  \node[pxc lab] at (15,6) {後ろ};
+  \node[pxc lab] at (43,6) {前};
+  \draw[pxc f, bkPurple] (26,13) -- (32,13);
+  \node[pxc lab, text=bkPurple, anchor=south] at (29,14) {$T$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+進む向きを $+$。加速度 $a$、連結部が後ろの台車を引く力 $T$。
+\end{minipage}
+\phriyu
+まず2台をまとめて1つの物と考えると、連結の力は内力なので式に出てきません。そのあと後ろの台車だけの式を書けば、$T$ が求まります。
+\phtateru
+\[ \text{2台まとめて}:\ 2000\,a=400,\qquad \text{後ろの台車}:\ 1000\,a=T \]
+\phtoku
+\[ a=\frac{400}{2000}=\qty{0.20}{m/s^2},\qquad T=1000\times0.20=\qty{200}{N} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 前の台車だけの式でも確かめる：前の台車には、前へ400 N、後ろへ $T$（連結部が前の台車を引き返す、反作用）。$1000\times0.20=400-200$。合っています。
+\item 連結の力は、引く力の半分（後ろの台車が全体の質量の半分だから）。
+\end{itemize}
+\kotae 加速度 \qty{0.20}{m/s^2}、連結部の力 \qty{200}{N}
+\end{phreidai}
+\begin{jibun}
+なめらかなレールの上で、前に\qty{1200}{kg}、後ろに\qty{800}{kg}の台車をつなぎ、前の台車を\qty{500}{N}で引きます。加速度と、連結部が後ろの台車を引く力を求めましょう。
+\bkjans{$a=500\div2000=\qty{0.25}{m/s^2}$、$T=800\times0.25=\qty{200}{N}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[トラックの荷台の荷物]
+\label{ph:力-2:ex7}トラックの荷台に、荷物が固定しないで置いてあります。荷物と荷台のあいだの静止摩擦係数は0.40です。荷物がすべらないためには、トラックの加速度をいくらまでにしなければなりませんか。
+\phbamen
+荷物は、荷台との摩擦力だけで、トラックといっしょに加速します。摩擦力が足りなくなると、荷台の上をすべります。
+\phmushi
+荷物の大きさ（倒れるかどうかは力-5）、荷台のゆれ、空気の抵抗。
+\phzu
+進む向きを $+$。荷物の質量 $m$、トラックの加速度 $A$。荷物にはたらく力は、重力 $mg$、垂直抗力 $N$、静止摩擦力 $f$（前向き）。
+\phriyu
+すべらないあいだは、荷物の加速度もトラックと同じ $A$。それを生む静止摩擦力は、最大摩擦力 $\mu N$ をこえられません。トラックの中から見る（⑥の慣性力）と、後ろ向きの慣性力 $mA$ を静止摩擦力が支えている、と考えても同じ式になります。
+\phtateru
+\[ \text{たて}:\ N=mg,\qquad \text{横}:\ mA=f\leqq\mu N=0.40\,mg \]
+\phtoku
+両辺を $m$ でわって、$A\leqq0.40\times9.8\approx\qty{3.9}{m/s^2}$。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 荷物の重さによらない（$m$ が消えた）。軽い荷物も重い荷物も、同じ加速度ですべり出します。
+\item 大きさ：急ブレーキ（約\qty{7}{m/s^2}）では、すべってしまいます。荷物をロープで固定するのは、このためです。
+\end{itemize}
+\kotae \qty{3.9}{m/s^2}まで
+\end{phreidai}
+\begin{jibun}
+荷物と荷台のあいだの静止摩擦係数が0.25のとき、荷物がすべらないためのトラックの加速度の上限を求めましょう。
+\bkjans{$A\leqq0.25\times9.8\approx\qty{2.5}{m/s^2}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[カーブを曲がれる速さ]
+\label{ph:力-2:ex8}半径\qty{50}{m}の平らなカーブを、車が曲がります。タイヤと道のあいだの静止摩擦係数を0.70とすると、横にすべらずに曲がれる速さの上限はいくらですか。
+\phbamen
+車が円をえがくための向心力は、タイヤが道から受ける横向きの静止摩擦力です（⑦）。
+\phmushi
+車の大きさ（倒れること）、道のかたむき（実際の道は内側へかたむけてあることが多い）、ブレーキやアクセル（速さは一定）。
+\phzu
+車の質量 $m$、速さ $v$、半径 $r=\qty{50}{m}$。中心の向きの力は静止摩擦力 $f$、たての力は $N$ と $mg$。
+\phriyu
+中心の向きの運動方程式（向心力の式）と、摩擦力の上限 $\mu N$ を組み合わせます。
+\phtateru
+\[ m\frac{v^2}{50}=f\leqq0.70\,N=0.70\,mg \]
+\phtoku
+\[ v^2\leqq0.70\times9.8\times50=343,\qquad v\leqq\sqrt{343}\approx\qty{18.5}{m/s} \]
+\qty{18.5}{m/s}は、$\qty{18.5}{m/s}\times\qty{3600}{s/h}\div\qty{1000}{m/km}\approx\qty{67}{km/h}$ です。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 車の重さによらない（$m$ が消えた）。
+\item 雨で $\mu$ が小さくなると、上限も下がります。道路の設計では、ぬれた道の小さい $\mu$ を使い、さらに余裕をとって制限速度を決めます。
+\end{itemize}
+\kotae 約\qty{19}{m/s}（時速約\qty{67}{km}）
+\end{phreidai}
+\begin{jibun}
+雨の日、同じ半径\qty{50}{m}のカーブで、静止摩擦係数が0.40になりました。すべらずに曲がれる速さの上限を求めましょう。
+\bkjans{$v=\sqrt{0.40\times9.8\times50}=\qty{14}{m/s}$（時速約\qty{50}{km}）}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[回転ブランコ]
+\label{ph:力-2:ex9}遊園地の回転ブランコで、長さ\qty{10}{m}の鎖が、鉛直と30°の角をなして回っています。1周にかかる時間を求めましょう。鎖の上のはしは、回る軸の上にあるとします。
+\phbamen
+いすと人は、水平な円をえがいて回ります（⑦の円すい振り子）。
+\phmushi
+鎖の質量と、鎖の曲がり。いすと人の大きさ（点と考える）。空気の抵抗。
+\phzu
+⑦の円すい振り子の図と同じです。鎖の長さ $l=\qty{10}{m}$、角 $\theta=30°$、張力 $T$、円の半径 $r=l\sin\theta$。
+\phriyu
+鉛直には動かないのでつり合い、水平には向心力の式を書きます。2つから導いた $T_{\text{周}}=2\pi\sqrt{\dfrac{l\cos\theta}{g}}$ が使えます。
+\phtateru
+\[ T_{\text{周}}=2\pi\sqrt{\frac{10\times\cos30°}{9.8}} \]
+\phtoku
+\[ T_{\text{周}}=2\pi\sqrt{\frac{8.66}{9.8}}\approx2\pi\times0.940\approx\qty{5.9}{s} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 単位：$\sqrt{\dfrac{\mathrm m}{\mathrm{m/s^2}}}=\sqrt{\mathrm s^2}=\mathrm s$。
+\item 乗る人の体重によらない（$m$ が消えた）。大人も子どもも同じ角で回ります。
+\item 鎖の張力は $T=\dfrac{mg}{\cos30°}\approx1.15\,mg$。体は、ふだんの約1.15倍の重さを感じます。
+\item 本物の回転ブランコは、鎖の上のはしが軸から少しはなれた所にあるので、周期は少しちがいます。
+\end{itemize}
+\kotae 約\qty{5.9}{s}
+\end{phreidai}
+\begin{jibun}
+長さ\qty{5.0}{m}の鎖が、鉛直と45°の角をなして回る回転ブランコの、1周の時間を求めましょう（鎖の上のはしは軸の上）。
+\bkjans{$2\pi\sqrt{\dfrac{5.0\times\cos45°}{9.8}}\approx\qty{3.8}{s}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[人工衛星の速さと周期]
+\label{ph:力-2:ex10}（1）地面すれすれを回る人工衛星の速さと周期を、$g=\qty{9.8}{m/s^2}$、地球の半径 $R=\qty{6.37e6}{m}$ として求めましょう。（2）高度\qty{400}{km}を回る国際宇宙ステーション（ISS）の速さと周期を、$GM=\qty{3.99e14}{m^3/s^2}$ として求めましょう。
+\phbamen
+衛星は、地球の万有引力を向心力にして、円をえがいて回ります。
+\phmushi
+空気の抵抗（(1) では山や空気を無視する）、地球が完全な球でないこと、月や太陽の引力。
+\phzu
+軌道の半径 $r$、速さ $v$、周期 $T_{\text{周}}$。(1) は $r=R$、(2) は $r=R+\qty{4.0e5}{m}=\qty{6.77e6}{m}$。
+\phriyu
+向心力の式 $m\dfrac{v^2}{r}=G\dfrac{Mm}{r^2}$ から $v=\sqrt{\dfrac{GM}{r}}$。(1) では $GM=gR^2$ なので $v=\sqrt{gR}$。周期は「1周の長さ÷速さ」。
+\phtateru
+\[ \text{(1)}\ v=\sqrt{9.8\times6.37\times10^6}\qquad \text{(2)}\ v=\sqrt{\frac{3.99\times10^{14}}{6.77\times10^6}} \]
+\phtoku
+(1) $v\approx\qty{7.90e3}{m/s}$、$T_{\text{周}}=\dfrac{2\pi\times6.37\times10^6}{7.90\times10^3}\approx\qty{5.07e3}{s}$（約84分）\\
+(2) $v\approx\qty{7.68e3}{m/s}$、$T_{\text{周}}=\dfrac{2\pi\times6.77\times10^6}{7.68\times10^3}\approx\qty{5.54e3}{s}$（約92分）
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 高い軌道ほどおそく、周期は長い（⑦の「2倍にすると」）。ISS は約1時間半で地球を1周し、1日に約16周します。
+\item 衛星の質量 $m$ は消えたので、どんな衛星も同じ高さなら同じ速さです。
+\end{itemize}
+\kotae （1）約\qty{7.9}{km/s}、約84分　（2）約\qty{7.7}{km/s}、約92分
+\end{phreidai}
+\begin{jibun}
+（1）月の表面すれすれを回る衛星の速さと周期を、月の重力加速度 \qty{1.6}{m/s^2}、月の半径 \qty{1.74e6}{m} として求めましょう。（2）高度\qty{800}{km}を回る地球観測衛星の速さと周期を、$GM=\qty{3.99e14}{m^3/s^2}$、地球の半径 \qty{6.37e6}{m} として求めましょう。
+\bkjans{（1）\nobreak $v=\sqrt{1.6\times1.74\times10^6}$ で約\qty{1.7}{km/s}、周期 約\qty{6.6e3}{s}（約1.8時間）。（2）\nobreak $r=\qty{7.17e6}{m}$、$v\approx\qty{7.5}{km/s}$、周期 約\qty{6.0e3}{s}（約101分）}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[静止衛星の高さ]
+\label{ph:力-2:ex11}天気の写真をとる静止衛星は、地球の自転と同じ周期（\qty{86164}{s}：地球が星に対して1回転する時間）で、赤道の上を回っています。軌道の半径と、赤道の地面からの高さを求めましょう。$GM=\qty{3.99e14}{m^3/s^2}$、地球の赤道の半径を\qty{6.38e6}{m}とし、3けたで答えます。
+\phbamen
+周期がわかっていて、半径を知りたい場面です。地面から見ると、空の同じ場所に止まって見えます。
+\phmushi
+月や太陽の引力、地球が完全な球でないこと（実際の衛星は、エンジンで少しずつ位置を直している）。
+\phzu
+軌道の半径 $r$、角速度 $\omega=\dfrac{2\pi}{T_{\text{周}}}$。
+\phriyu
+周期が与えられているので、向心力の式を $\omega$ で書いた $mr\omega^2=G\dfrac{Mm}{r^2}$ を使い、$r$ について解きます。
+\phtateru
+\[ r^3=\frac{GM}{\omega^2}=\frac{GM\,T_{\text{周}}^2}{4\pi^2}=\frac{3.99\times10^{14}\times86164^2}{4\pi^2} \]
+\phtoku
+$r^3\approx7.50\times10^{22}$。電卓で3乗根（$\dfrac{1}{3}$ 乗）を計算して、
+\[ r=(7.50\times10^{22})^{1/3}\approx\qty{4.22e7}{m}=\qty{4.22e4}{km} \]
+\[ \text{高さ}=r-\qty{6.38e6}{m}\approx\qty{3.58e4}{km} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 地球の半径の約6.6倍。月までの距離（約\qty{3.84e5}{km}）の約9分の1です。
+\item 速さは $r\omega=\dfrac{2\pi\times4.22\times10^7}{86164}\approx\qty{3.08}{km/s}$。ISS よりずっとおそい。高いほどおそい（例題10）と合っています。
+\item 周期の2乗が $r^3$ に比例するこの関係は、力-6 でケプラーの第3法則として学びます。
+\end{itemize}
+\kotae 半径 約\qty{4.22e4}{km}、高さ 約\qty{3.58e4}{km}
+\end{phreidai}
+\begin{jibun}
+カーナビに使われる GPS の衛星は、周期\qty{43082}{s}（約12時間）で回っています。軌道の半径と、地面からの高さを、$GM=\qty{3.99e14}{m^3/s^2}$、地球の半径\qty{6.38e6}{m}として3けたで求めましょう（円軌道とする）。
+\bkjans{$r^3=\dfrac{3.99\times10^{14}\times43082^2}{4\pi^2}$ より $r\approx\qty{2.66e4}{km}$、高さ 約\qty{2.02e4}{km}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[霧のつぶが落ちる速さ]
+\label{ph:力-2:ex12}霧のつぶ（半径\qty{10}{\micro m}の水の球）が、空気の中を落ちています。小さなつぶがゆっくり動くときの空気の抵抗は $f=bv$ で、$b=6\pi\times(\text{空気の粘度})\times r$（空気の粘度は \qty{1.81e-5}{Pa.s}、$r$ はつぶの半径）です。終端速度を求めましょう。水の密度は\qty{1000}{kg/m^3}とします。
+\phbamen
+霧のつぶは、とても小さくて軽いので、すぐに終端速度になり、ゆっくり落ちます（$b$ がこの形になるわけは力-15 で学びます）。
+\phmushi
+空気の浮力（空気の密度は水の約800分の1なので小さい）、風、つぶが蒸発して小さくなること。
+\phzu
+下向きを $+$。つぶの質量 $m=\dfrac{4}{3}\pi r^3\rho$（数学 4-5 の球の体積×密度）、抵抗 $bv$（上向き）、重力 $mg$（下向き）。
+\phriyu
+終端速度は、加速度が0になって、抵抗と重力がつり合うときの速さ $v_{\mathrm f}=\dfrac{mg}{b}$ です（⑧）。
+\phtateru
+\[ m=\frac{4}{3}\pi\times(1.0\times10^{-5})^3\times1000 \]
+\[ b=6\pi\times1.81\times10^{-5}\times1.0\times10^{-5} \]
+\phtoku
+\[ m\approx\qty{4.19e-12}{kg},\qquad b\approx\qty{3.41e-9}{N.s/m} \]
+\[ v_{\mathrm f}=\frac{mg}{b}=\frac{4.19\times10^{-12}\times9.8}{3.41\times10^{-9}}\approx\qty{1.2e-2}{m/s} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 単位：$\dfrac{\mathrm{kg\times m/s^2}}{\mathrm{N\cdot s/m}}=\dfrac{\mathrm N}{\mathrm{N\cdot s/m}}=\mathrm{m/s}$。
+\item 1秒に約\qty{1.2}{cm}。霧がなかなか地面に落ちず、ただよって見えるのはこのためです。
+\item $f=bv$ が使えるのは、つぶがとても小さく、ゆっくり動くときだけです。その目安となる数（レイノルズ数、力-14・15）は、このつぶでは約0.016で、十分小さいことがわかっています。
+\item 時定数 $\tau=\dfrac{m}{b}\approx\qty{1.2e-3}{s}$。落ち始めて千分の数秒で、もう終端速度です。
+\end{itemize}
+\kotae 約\qty{1.2}{cm/s}
+\end{phreidai}
+\begin{jibun}
+半径\qty{5.0}{\micro m}の霧のつぶの終端速度を、例題12と同じ条件で求めましょう。
+\bkjans{半径が半分なので、$m$ は $\dfrac{1}{8}$、$b$ は $\dfrac{1}{2}$ 倍。$v_{\mathrm f}$ は $\dfrac{1}{4}$ 倍で約\qty{0.30}{cm/s}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[スカイダイバーの速さを計算する]
+\label{ph:力-2:ex13}質量\qty{80}{kg}のスカイダイバーが、腹ばいの姿勢で飛行機から飛び出しました。空気の抵抗を $cv^2$（$c=\qty{0.26}{N.s^2/m^2}$）とします。（1）終端速度を求めましょう。（2）オイラー法で1秒ごとに計算して、3秒後の速さを求め、式で解いた値\qty{26.9}{m/s}とくらべましょう。
+\phbamen
+飛び出したときの速さは（たての向きには）0です。速くなるほど抵抗が大きくなり、加速度が小さくなります。
+\phmushi
+飛行機の速さ（横の動き）、姿勢の変化、高さによる空気の密度のちがい。$c$ は一定とします（$c=\dfrac{1}{2}\times\qty{1.2}{kg/m^3}\times C_{\mathrm D}A$、$C_{\mathrm D}A=\qty{0.43}{m^2}$ とした値）。
+\phzu
+下向きを $+$。速さ $v$、重力 $mg$（下）、抵抗 $cv^2$（上）。
+\phriyu
+終端速度は $\dfrac{\dd v}{\dd t}=0$ の速さ（⑧）。時間とともにどう速くなるかは、運動方程式 $\dfrac{\dd v}{\dd t}=g-\dfrac{c}{m}v^2$ を、⑨のオイラー法で1秒ずつ進めます。
+\phtateru
+\[ \text{(1)}\ 0=80\times9.8-0.26\,v_{\mathrm t}^2\qquad\text{(2)}\ v_{\text{次}}=v+\Bigl(9.8-\frac{0.26}{80}v^2\Bigr)\times1 \]
+\phtoku
+(1) $v_{\mathrm t}=\sqrt{\dfrac{784}{0.26}}\approx\qty{55}{m/s}$。\\
+(2) ⑨の表と同じ計算です。\\
+\quad 1秒：$0+9.8=9.8$\\
+\quad 2秒：$9.8+9.488=19.288$\\
+\quad 3秒：$19.288+8.591\approx27.9$（m/s）
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item オイラー法の27.9は、式の値26.9より約\qty{1}{m/s}大きい。1秒のあいだに加速度がへるのを無視したからです（⑨）。ルンゲ・クッタ法なら、同じ1秒の区切りで26.88になります。
+\item 大きさ：\qty{55}{m/s}は時速約\qty{200}{km}。腹ばいのスカイダイバーの速さとして知られている値と同じくらいです。
+\end{itemize}
+\kotae （1）約\qty{55}{m/s}　（2）約\qty{27.9}{m/s}（式の値より約\qty{1}{m/s}大きい）
+\end{phreidai}
+\begin{jibun}
+質量\qty{60}{kg}のスカイダイバー（$c=\qty{0.26}{N.s^2/m^2}$）の終端速度を求めましょう。また、オイラー法で1秒ごとに計算して、2秒後の速さを求めましょう。
+\bkjans{$v_{\mathrm t}=\sqrt{\dfrac{60\times9.8}{0.26}}\approx\qty{48}{m/s}$。1秒で9.8、2秒の加速度は $9.8-\dfrac{0.26}{60}\times9.8^2\approx9.38$ なので、$9.8+9.38\approx\qty{19.2}{m/s}$}
+\end{jibun}
+
+%% ================================================================
+\noindent\textbf{例題をふり返る：場面と、使う式の選び方}\par
+\noindent 13の例題は、場面がちがっても、①力の図 → ②軸 → ③成分 → ④運動方程式 → ⑤拘束条件、の同じ手順で解けました。ちがうのは、どの向きの式を使うかと、どんな条件を加えるかです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[l,m,wd=50mm] Q[c,m,wd=18mm]}, rowsep=1.5pt, row{1}={font=\sffamily\bfseries\small}, cells={font=\small}}
+場面（何を知りたいか） & 使う式・考え方 & 例題 \\
+床や体重計が押す力 & たての運動方程式、$N=m(g+a)$ & 1 \\
+斜面をすべる物 & 斜面にそった軸、$a=g(\sin\theta-\mu'\cos\theta)$ & 2・3 \\
+すべり出すかどうか & 静止摩擦力 $\leqq\mu N$、$\tan\theta=\mu$ & 4・7 \\
+ひもや連結でつながった物 & 1つずつの式＋拘束条件、まとめた式 & 5・6 \\
+円をえがく物 & 中心の向きの式 $m\dfrac{v^2}{r}=$（中心向きの合力） & 8〜11 \\
+空気の中を落ちる物 & 終端速度、オイラー法・ルンゲ・クッタ法 & 12・13 \\
+\end{bktable}
+\bktabcaption{例題の場面と、使った式。どの場面も、はじめに力の図をかくことは同じ。}
+\end{bkcenter}
+
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{動いている向きに、力がはたらいている？}
+\bkng{真上に投げたボールが上がっているあいだは、上向きの力がはたらいている。}
+\bkok{手をはなれたあとの力は、下向きの重力だけ。}
+力が決めるのは、速度ではなく加速度です。ボールは、上向きの速度を慣性で保ちながら、重力でおそくなっていくのです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{作用・反作用と、つり合い}
+\bkng{机の上の本にはたらく重力 $mg$ と垂直抗力 $N$ は、作用・反作用。}
+\bkok{$mg$ と $N$ は、どちらも本にはたらく力で、つり合いの関係。}
+作用・反作用は、2つの物のあいだの力の組です。本にはたらく重力の反作用は「本が地球を引く力」、垂直抗力の反作用は「本が机を押す力」です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{垂直抗力は、いつも $mg$？}
+\bkng{垂直抗力は、どんなときも $N=mg$。}
+\bkok{$N$ は、運動方程式と「めりこまない」条件から決まる。}
+斜面の上では $N=mg\cos\theta$（例題2）、上へ動き出すエレベータでは $N=m(g+a)$（例題1）です。$N=mg$ になるのは、水平な面の上で、たての加速度がないときだけです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{kg と N}
+\bkng{体重計が\qty{50}{kg}を指したので、体にはたらく重力は\qty{50}{kg}。}
+\bkok{質量は\qty{50}{kg}、重力は $50\times9.8=\qty{490}{N}$。}
+kg は質量（動かしにくさ）の単位、N は力の単位です。体重計は力をはかって、$g$ でわった値を kg で表示しています（コラム）。式に入れるときは、質量 $m$ と重力 $mg$ を取りちがえないようにしましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{向心力を、もう1本かく}
+\bkng{円運動の力の図に、張力・重力のほかに「向心力」の矢印をもう1本かく。}
+\bkok{向心力は、張力や重力などの「中心の向きの合力」の名前。}
+向心力を別にかくと、同じ力を2回数えることになります。力の図には、ふれている物やはなれてはたらく力から受ける、本物の力だけをかきます。
+\end{tsumazuki}
+
+%% ================================================================
+\bksection{phgear}{工学ではこう使う}
+
+\begin{phkougaku}[エレベータを設計する]
+エレベータのかごは、機械室の滑車（巻き上げ機）にかけたロープでつるされ、ロープの反対側には、つり合いおもりがつるされています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.9pt] (0,0) -- (0,46) (34,0) -- (34,46);
+  \draw[bkGray, line width=0.9pt, fill=bkGray!10] (0,46) rectangle (34,62);
+  \draw[bkInk!70, line width=0.6pt, fill=bkGray!45, rounded corners=0.8] (2,50) rectangle (8,58);
+  \draw[bkInk!70, line width=1pt] (8,54) -- (19,54);
+  \pxcpulley{(19,54)}{6}
+  \draw[bkInk, line width=0.9pt] (13,30) -- (13,54) arc[start angle=180, end angle=0, radius=6] -- (25,34);
+  \draw[bkInk!80, line width=0.8pt, fill=bkPaper] (3,8) rectangle (21,30);
+  \bkperson{(12,8)}{14}{bkRoute6}
+  \draw[bkInk!80, line width=0.7pt, fill=bkGray!55] (22.5,24) rectangle (27.5,34);
+  \node[pxc lab, anchor=north] at (12,7) {かご};
+  \node[pxc lab, anchor=north] at (25,23) {おもり};
+  \node[pxc lab, anchor=west] at (36,58) {巻き上げ機（モータと滑車）};
+  \draw[pxc f, bkPurple] (13,30.5) -- (13,42);
+  \node[pxc lab, text=bkPurple, anchor=east] at (12.5,38) {$T$};
+  \node[pxc lab, anchor=west, align=left] at (40,30) {モータが出すのは、\\かごとおもりの重さの差と、\\加速に要る力だけ};
+\end{tikzpicture}
+\bkfigcaption{つり合いおもりのあるエレベータ。おもりの質量は、ふつう、かごに人が半分ほど乗ったときと同じくらいにする。}
+\end{bkfigure}
+
+\begin{phketa}[力と加速度]
+\phketaline{乗用エレベータの加速度}{約\qty{1}{m/s^2}（$0.15g$ 以下）}
+\phketaline{地面の近くの重力加速度}{\qtyrange{9.78}{9.83}{m/s^2}}
+\phketaline{タイヤと乾いた道の摩擦係数}{0.5〜1.0}
+\phketaline{腹ばいのスカイダイバーの終端速度}{約\qty{55}{m/s}}
+\phboxhead{答えが桁で合っているか}
+乗り物の中の体重計の目もりが、ふだんの1.5倍をこえたり、半分より小さくなったりする答えは、ふつうのエレベータや電車ではありえません（加速度が $0.5g$ をこえる）。ジェットコースターや戦闘機のような特別な場合でなければ、計算を見直しましょう。
+\end{phketa}
+
+\phboxhead{つり合いおもりのはたらき}
+例題5のように、おもりがかごの重さの大部分を受けもつので、モータは、かごとおもりの重さの差と、加速に要る力だけを出せばよくなります。おもりがなければ、モータはかご全体の重さを持ち上げなければなりません。
+
+\phboxhead{乗り心地と加速度}
+例題1のように、加速度が大きいほど、体は重く・軽く感じます。乗り心地のために、エレベータの加速度は $0.15g$（約\qty{1.5}{m/s^2}）以下がよいとされ、ふつうはこれより小さい約\qty{1}{m/s^2}以下にします。さらに、加速度を少しずつ変えて（数学 5-5 の加加速度を小さくして）、がくんとしないようにしています。
+
+\phboxhead{安全のしくみ}
+ロープが切れて自由落下すると、中の人は無重量になり（⑥）、かごは速くなる一方です。そのため、エレベータには、かごが決められた速さをこえて下がると、レールをはさみつけてかごを止める装置（非常止め装置）がつけられています。はさみつける力が大きいほど、摩擦力 $\mu N$ も大きくなります（④）。
+
+
+\end{phkougaku}
+\phstation{機械力学,車両工学,エレベータの設計,数値計算}{自由体図、拘束、慣性力、向心力、摩擦係数、終端速度、オイラー法、ルンゲ・クッタ法}
+
+
+
+%% ================================================================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 質量\qty{40}{kg}の人がエレベータの中で体重計に乗っています。（1）上向きに \qty{1.5}{m/s^2} の加速度で動き出したとき、（2）上へ動いていて加速度の大きさ \qty{1.5}{m/s^2} で止まるとき、目もりはそれぞれ何 kg を指しますか。
+\bkpans{（1）\nobreak $N=40\times(9.8+1.5)=\qty{452}{N}$、約\qty{46}{kg}。（2）\nobreak $N=40\times(9.8-1.5)=\qty{332}{N}$、約\qty{34}{kg}}
+
+\bkproblem 角45°のなめらかな斜面に、質量\qty{2.0}{kg}の物を置いてそっと手をはなしました。加速度、垂直抗力の大きさ、2.0秒後の速さを求めましょう。
+\bkpans{$a=9.8\sin45°\approx\qty{6.9}{m/s^2}$、$N=19.6\cos45°\approx\qty{14}{N}$、$v=6.93\times2.0\approx\qty{14}{m/s}$}
+
+\bkproblem 板の上に置いた物と板のあいだの静止摩擦係数が0.60のとき、板を何度までかたむけると、物はすべり出しますか。
+\bkpans{$\tan\theta=0.60$ より約31°}
+
+\bkproblem なめらかな床の上で、質量\qty{3.0}{kg}の物Aと\qty{2.0}{kg}の物Bを軽いひもでつなぎ、Aを\qty{10}{N}で水平に引きます（Bは後ろ）。加速度と、ひもがBを引く力を求めましょう。
+\bkpans{$a=10\div5.0=\qty{2.0}{m/s^2}$、$T=2.0\times2.0=\qty{4.0}{N}$}
+
+\bkproblem 半径\qty{100}{m}の平らなカーブで、タイヤと道の静止摩擦係数が0.50のとき、すべらずに曲がれる速さの上限を求めましょう。
+\bkpans{$\sqrt{0.50\times9.8\times100}\approx\qty{22}{m/s}$（時速約\qty{80}{km}）}
+
+\bkproblem 半径\qty{20}{\micro m}の霧のつぶの終端速度を、例題12と同じ条件で求めましょう（半径\qty{10}{\micro m}のつぶは約\qty{1.2}{cm/s}）。
+\bkpans{半径が2倍なので、$m$ は8倍、$b$ は2倍。$v_{\mathrm f}$ は4倍で約\qty{4.8}{cm/s}}
+
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 軽くなめらかに回る滑車に軽いひもをかけ、両はしに\qty{3.0}{kg}と\qty{2.0}{kg}のおもりをつるして手をはなしました。加速度とひもの張力を求めましょう。
+\bkpans{$a=\dfrac{3.0-2.0}{5.0}\times9.8\approx\qty{2.0}{m/s^2}$、$T=\dfrac{2\times3.0\times2.0}{5.0}\times9.8\approx\qty{24}{N}$}
+
+\bkproblem 角30°の斜面（動摩擦係数0.30）を、物がすべり下ります。加速度を求めましょう。また、止まった状態からすべり始めて、斜面にそって\qty{5.0}{m}すべるまでの時間を求めましょう（力-1 ③）。
+\bkpans{$a=9.8\times(0.5-0.30\times0.866)$ で、約\qty{2.4}{m/s^2}。$5.0=\dfrac{1}{2}\times2.35\times t^2$ より $t\approx\qty{2.1}{s}$}
+
+\bkproblem 長さ\qty{0.50}{m}の糸の先におもりをつけ、糸が鉛直と60°の角をなすように、水平な円をえがいて回します。1周にかかる時間を求めましょう。
+\bkpans{$2\pi\sqrt{\dfrac{0.50\times\cos60°}{9.8}}\approx\qty{1.0}{s}$}
+
+\bkproblem 月は、地球のまわりを半径\qty{3.84e8}{m}のほぼ円の軌道で回っています。$GM=\qty{3.99e14}{m^3/s^2}$ として、月が1周する時間を求め、日になおしましょう（例題11の式を使う）。
+\bkpans{$T_{\text{周}}=2\pi\sqrt{\dfrac{r^3}{GM}}\approx\qty{2.37e6}{s}$。$\qty{2.37e6}{s}\div\qty{86400}{s/d}\approx27.4$ 日（星に対して1周する周期。満月から満月までの約29.5日とは別）}
+
+\phnyushi
+\bkproblem なめらかな水平面の上に質量 $M$ の板があり、その上に質量 $m$ の小さな物体がのっています。物体と板のあいだの静止摩擦係数を $\mu$、動摩擦係数を $\mu'$、重力加速度を $g$ とします。板を水平に一定の力 $F$ で引きます。（1）物体が板の上ですべらずに、板といっしょに動くとき、加速度と、物体が板から受ける摩擦力の大きさを求めましょう。（2）物体がすべらないための $F$ の最大値を求めましょう。（3）$F$ が（2）より大きいとき、物体と板の加速度をそれぞれ求めましょう。
+\bkpans{（1）\nobreak まとめて $(M+m)a=F$ より $a=\dfrac{F}{M+m}$。物体だけの式 $ma=f$ より $f=\dfrac{mF}{M+m}$。（2）\nobreak $f\leqq\mu mg$ より $F\leqq\mu(M+m)g$。（3）\nobreak 物体は動摩擦力 $\mu'mg$ で前へ加速：$a_1=\mu'g$。板は $Ma_2=F-\mu'mg$ より $a_2=\dfrac{F-\mu'mg}{M}$}
+
+\bkproblem 水平な机の上に質量 $M$ の物体Aを置き、軽い糸をつけて、机のはしの軽くなめらかな滑車を通し、質量 $m$ のおもりBをつるします。Aと机のあいだの静止摩擦係数を $\mu$、動摩擦係数を $\mu'$、重力加速度を $g$ とします。（1）手をはなしてもAが動き出さないための、$m$ の条件を求めましょう。（2）Aが動き出したときの加速度と糸の張力を求めましょう。
+\bkpans{（1）\nobreak Aが静止しているとき張力は $mg$。$mg\leqq\mu Mg$ より $m\leqq\mu M$。（2）\nobreak A：$Ma=T-\mu'Mg$、B：$ma=mg-T$。たして $a=\dfrac{m-\mu'M}{M+m}\,g$、$T=\dfrac{(1+\mu')Mm}{M+m}\,g$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 物にはたらく力を見つけて、力の図（自由体図）をかける。\bkfurref{ph:力-2:sec1}
+\item 力の図から運動方程式を立てて、加速度や張力を求められる。\bkfurref{ph:力-2:sec5}
+\item 摩擦・円運動・空気の抵抗がある運動を、式と数値計算で解ける。\bkfurref{ph:力-2:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{力の図をかいて、成分ごとに $m\vec a=\sum\vec F$。エレベータも人工衛星も、同じ手順だった！ ぶつかるときの大きな力は、どう計算するんだろう？}

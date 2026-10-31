@@ -1,0 +1,956 @@
+%% 8-13 熱と波の伝わり方：偏微分方程式（第14回：組 V8-7。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本が指している形：
+%%   ch6-01:650「変数が場所と時間の2つ以上あるものは偏微分方程式で、8-13で学ぶ」、ch6-15「棒に広がる熱、弦を伝わる波」。
+%%   ch7-back 予告カード 8-13「1歩の行列のくり返しと、こわれない条件（7-10）」→ |1+λΔt|<1 から r≦1/2。
+%%   物理 p1-13・p1-15「D/Dt は物質微分といい、『水のつぶといっしょに動きながら見た変化』（数学 8-13）」。p1-16「となりとの差で式を書く方法を差分法といいます（8-13）」。
+%%   p1-10:779「板・殻の曲げは偏微分方程式（数学 8-13）」「EI ∂⁴y/∂x⁴」。
+%%   決定14：熱方程式・波動方程式は、差分（表計算）と「答えを代入して確かめる」まで。変数分離とフーリエ級数で解くのは 9-3。
+%%   決定9：熱伝導率 k、熱拡散率 α。波数も k と書くので、熱の sin の答えでは a を使い、⑩で「波数 k は熱伝導率の k とは別」と書く。
+%%   組どうしの約束：α=1×10⁻⁴ m²/s、Δx=0.01 m、Δt=0.25 s（r=0.25）。1歩め 40、2歩め 50・25、3歩め 56.25・30・21.25。
+%%     まん中が50℃になるのは表計算で15.5秒（細かくすると15.4秒。右はしを20℃に保つと16.5秒）。r=0.6 でこわれる。
+%%     9×9 の1歩の行列の固有値：r=0.25 で 0.0245〜0.9755、r=0.5 で ±0.9511、r=0.6 で最小 −1.3413。波 c=100 m/s、Δx=0.01 m → Δt≦1×10⁻⁴ s。
+%%     物質微分：川 2 m/s、下流へ 0.5℃/km、その場で −1℃/h → +2.6℃/h。
+%%   数はすべて scratchpad/v8-7/py/c13.py・c13b.py・rod2.py・eig.py で検算。
+\makeatletter
+\newcommand\kviiinhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+\newcommand\kviiinbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+\newcommand\kviiinframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+\newcommand\kviiinq{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 表計算の数式バー（kata8 と同じ）
+\newcommand\kviiinfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=64mm, text width=60mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviiinX}{bkOrange!16}\colorlet{kviiinT}{bkGreen!16}\colorlet{kviiinP}{bkYellow!45}\colorlet{kviiinR}{bkYellow!35}
+% 棒（断熱材でくるんだ金属の棒）  \kviiinrod{(x,y)}{長さ}{マスの数}
+\newcommand\kviiinrod[3]{\begin{scope}[shift={#1}]
+  \fill[bkYellow!25] (-1.5,-3.2) rectangle (#2+1.5,3.2);
+  \fill[bkGray!35] (0,-1.6) rectangle (#2,1.6);
+  \draw[bkInk!70, line width=0.6pt] (0,-1.6) rectangle (#2,1.6);
+  \foreach \k in {1,...,#3} {\draw[bkInk!50, line width=0.4pt] ({#2*\k/#3},-1.6) -- ({#2*\k/#3},1.6);}
+  \draw[bkOrange!70!black, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (-1.5,-3.2) rectangle (#2+1.5,3.2);
+  \end{scope}}
+\makeatother
+
+\bkchapter{8}{13}{熱と波の伝わり方：\\偏微分方程式}{\bklevel{5}}{熱と波の伝わり方：偏微分方程式}
+\bkmichishirube{6-1,6-2,6-3,6-11,6-15,7-10,8-3,8-4,8-9,8-12}{8-14,9-1}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 金属の棒の温度が変わるようすを、「となりとの差」の表計算でくり返し計算できる。
+\item \bklevel{4}\enspace 表計算がこわれない条件 $r\leqq\frac12$ を、1歩の倍率（7-10）で説明できる。
+\item \bklevel{5}\enspace 熱方程式・波動方程式を作り、答えを代入して確かめられる。物質微分を計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.48\linewidth}
+\raggedright
+長さ\qty{10}{cm}のアルミの棒があります。はじめは、どこも20\,℃です。左はしを沸騰したお湯（100\,℃）につけ続けます。棒のまわりと右はしは断熱材でくるんであり、熱は逃げません。\par\vspace{4pt}
+棒の\textbf{まん中}が50\,℃になるのは、何秒後でしょう。10秒？\ 1分？\ 10分？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=0.92mm, y=0.92mm]
+  % なべの水（左はしの棒がつかる）
+  \fill[bkBlue!25] (-17,-10) rectangle (1,7);
+  \foreach \xx in {-14,-9} {\draw[bkBlue!70!black, line width=0.5pt] (\xx,-6) circle (0.9) (\xx+2,-1.5) circle (0.7);}
+  % 棒（断熱材でくるんだ部分は x=2〜46）
+  \fill[bkYellow!25] (2,0.8) rectangle (47.5,7.2);
+  \draw[bkOrange!70!black, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (2,0.8) rectangle (47.5,7.2);
+  \fill[bkGray!45] (-6,2.4) rectangle (46,5.6);
+  \draw[bkInk!70, line width=0.6pt] (-6,2.4) rectangle (46,5.6);
+  \foreach \k in {1,...,9} {\draw[bkInk!50, line width=0.4pt] ({-6+5.2*\k},2.4) -- ({-6+5.2*\k},5.6);}
+  \draw[bkInk!80, line width=0.9pt] (-18,10) -- (-18,-11) -- (2,-11) -- (2,10);
+  \fill[bkInk!75] (0.8,1.6) rectangle (3.2,6.4);
+  \node[font=\sffamily\footnotesize, anchor=north] at (-8,-12) {お湯 100\,℃};
+  \node[font=\sffamily\footnotesize, anchor=north] at (30,-0.5) {断熱材};
+  % 長さとまん中
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (-6,12) -- (46,12);
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (8,12.6) {\qty{10}{cm}};
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2.5pt]}] (20,20) -- (20,8);
+  \node[font=\sffamily\footnotesize\bfseries, anchor=south] at (24,20.5) {まん中：？秒後に50\,℃};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+6-1 で、「変数が場所と時間の2つ以上あるものは偏微分方程式で、8-13で学ぶ」と予告しました。棒の温度は、場所 $x$ によっても、時刻 $t$ によっても変わります。$T(x,\ t)$ のように、入力が2つの関数（8-1）です。この章では、そのような量のきまりを、これまでの2つの道具で読みときます。
+
+1つは、6-2 の\textbf{オイラー法}です。「次の値＝今の値＋今の変わる速さ×$\Delta t$」を表計算で1行ずつ進めました。もう1つは、8-12 の\textbf{まわりの平均との差}です。まわりより冷たい所は温まり、熱い所は冷えました。この2つを組み合わせると、棒の熱の広がり方が表計算で計算できます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1.25mm]
+  \foreach \j in {0,1,2} {\foreach \i in {0,...,5} {\draw[bkLine, line width=0.5pt, fill=white] (\i*14,-\j*9) rectangle ++(14,9);}}
+  \fill[bkOrange!25] (14,0) rectangle ++(42,9);
+  \fill[bkYellow!50] (32,-9) rectangle ++(14,9);
+  \foreach \j in {0,1,2} {\foreach \i in {0,...,5} {\draw[bkLine, line width=0.5pt] (\i*14,-\j*9) rectangle ++(14,9);}}
+  \node[font=\sffamily\footnotesize] at (21,4.5) {左};
+  \node[font=\sffamily\footnotesize] at (35,4.5) {自分};
+  \node[font=\sffamily\footnotesize] at (49,4.5) {右};
+  \node[font=\sffamily\footnotesize] at (35,-4.5) {次の自分};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=3pt]}] (21,1.2) to[bend right=25] (31,-3.5);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=3pt]}] (35,1.2) -- (35,-2);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=3pt]}] (49,1.2) to[bend left=25] (39,-3.5);
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=3pt]}] (-3,9) -- (-3,-18);
+  \node[font=\sffamily\footnotesize, anchor=east, align=center] at (-4.5,-4.5) {時刻\\（行）};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=3pt]}] (0,12) -- (84,12);
+  \node[font=\sffamily\footnotesize, anchor=south] at (42,13) {場所（列）};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left, text width=28mm] at (87,-4.5) {今の行の3つから、次の行の1つを作る};
+\end{tikzpicture}
+\bkfigcaption{この章の表計算のしくみ。6-2 では1つ前の行の自分だけから次の行を作ったが、ここでは左右のとなりも使う（8-12 の「まわりの平均との差」）。}
+\label{bk:8-13:fig-stencil}
+\end{bkfigure}
+
+物理シリーズ『力学』の 力-16 では「となりとの差で式を書く方法を\textbf{差分法}といいます（8-13）」と書きました。天気予報のコンピュータも、空気をマスに分けて、となりとの差で次の時刻を計算しています（8-0）。この章の表計算は、その小さな見本です。
+
+\begin{yattemiyou}[金属の棒の熱を、表計算で進めよう]
+棒を \qty{1}{cm} ごとに区切り、区切りの点の温度を、0.25秒ずつ進めて計算します。A列が時刻 $t$〔s〕、1行めが場所 $x$〔m〕です。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item B1 から右へ場所 0, 0.01, …, 0.1（L1 まで）、A2 から下へ時刻 0, 0.25, 0.5, …を入れる。
+\item 2行め（$t=0$）は、B2 が100、C2 から L2 が20。左はしの B列は、下まで100のまま。
+\item C3 に \texttt{=C2+0.25*(B2-2*C2+D2)} を入れ、K3 まで右へ、さらに下へコピーする。
+\item 右はしの L3 には \texttt{=L2+0.25*(2*K2-2*L2)} を入れ、下へコピーする（わけは③で）。
+\end{enumerate}
+\begin{bkcenter}
+\kviiinfx{C3}{=C2+0.25*(B2-2*C2+D2)}\par\vspace{1mm}
+\bksheet{7}{14}{%
+1 & \SetCell{c} $t$＼$x$ & \SetCell{bg=kviiinX} 0 & \SetCell{bg=kviiinX} 0.01 & \SetCell{bg=kviiinX} 0.02 & \SetCell{bg=kviiinX} 0.03 & \SetCell{bg=kviiinX} 0.04 & \SetCell{bg=kviiinX} 0.05 \\
+2 & \SetCell{bg=kviiinT} 0 & 100 & 20 & 20 & 20 & 20 & 20 \\
+3 & \SetCell{bg=kviiinT} 0.25 & 100 & 40 & 20 & 20 & 20 & 20 \\
+4 & \SetCell{bg=kviiinT} 0.5 & 100 & \SetCell{bg=kviiinR} ア & \SetCell{bg=kviiinR} イ & 20 & 20 & 20 \\
+5 & \SetCell{bg=kviiinT} 0.75 & 100 & \SetCell{bg=kviiinR} ウ & 30 & 21.25 & 20 & 20 \\
+\SetCell[c=8]{c} $\vdots$ & & & & & & & \\
+63 & \SetCell{bg=kviiinT} 15.25 & 100 & 88.59 & 77.56 & 67.26 & 57.97 & 49.91 \\
+64 & \SetCell{bg=kviiinT} 15.5 & 100 & 88.69 & 77.74 & 67.51 & 58.27 & \SetCell{bg=kviiinP} 50.26 \\}
+\bktabcaption{左はしから棒のまん中（$x=0.05$。G列）まで。H列から L列（右半分）は、表のはばの都合で省いた。}
+\end{bkcenter}
+\vspace{2pt}
+アからウをうめよう。まん中（G列）が50\,℃をこえるのは、何行め（何秒後）かな？
+\end{yattemiyou}
+
+\noindent C3 の式 \texttt{=C2+0.25*(B2-2*C2+D2)} は、「1つ上の行（0.25秒前）の自分の温度に、左右のとなりとの差を0.25倍してたす」という計算です。手で確かめます。
+\begin{bkhenkei}[0.7]
+40+0.25\times(100-2\times40+20)=40+10=50 & ア（C4） \\
+20+0.25\times(40-2\times20+20)=20+5=25 & イ（D4） \\
+50+0.25\times(100-2\times50+25)=50+6.25=56.25 & ウ（C5） \\
+\end{bkhenkei}
+1歩めでは $x=0.01$ だけが40\,℃になり、2歩めで $x=0.02$ が25\,℃、3歩めで $x=0.03$ が21.25\,℃になります。熱は、\textbf{1歩に1マスずつ}となりへしみこんでいきます。
+
+下へコピーを続けると、64行め（$t=\qty{15.5}{s}$）で G列が50.26\,℃になり、はじめて50\,℃をこえます。\bkhatenaref の答えは、\textbf{約15秒}です（マスをもっと細かくすると15.4秒。②の Python で）。10分もかかりません。アルミは熱をよく伝えるのです。
+
+なぜ「0.25倍」なのか、なぜ右はしだけ式がちがうのか。0.25をもっと大きくすると、計算が速く進むのでは？\ この章は、この表計算のしくみを1つずつ確かめ、最後に、熱と波の\textbf{偏微分方程式}を作ります。
+
+★★★★★ の章ですが、「目でわかる」「手でわかる」の段は、表計算と電卓だけで読めます。「式でわかる」の段は、1回で分からなくても大丈夫です。
+
+\begin{omoidasou}
+\bkrecall{6-2}{オイラー法：次の値＝今の値＋今の変わる速さ×$\Delta t$。表計算で1行ずつ進める。$\Delta t$ が大きすぎると、ふらふらしてこわれる。}
+\bkrecall{6-3}{熱は、温度の傾きに比例して流れる（フーリエの法則）。両はしの温度（境界条件）で答えが決まる。}
+\bkrecall{7-10}{$\dot x=\lambda x$ をオイラー法で進めると、1歩ごとに $1+\lambda\,\Delta t$ 倍になる。この倍率の大きさが1より小さければ、こわれない。冷めるお湯では、$\Delta t<40$ 分のとき。}
+\bkrecall{8-3}{連鎖律：$x(t)$ の道を歩くと $\tfrac{\dd f}{\dd t}=\tfrac{\partial f}{\partial x}\tfrac{\dd x}{\dd t}+\tfrac{\partial f}{\partial y}\tfrac{\dd y}{\dd t}$。}
+\bkrecall{8-4}{熱の流れの矢印 $\vec q=-k\,\mathrm{grad}\,T$（$k$ は熱伝導率〔W/(m·K)〕）。}
+\bkrecall{8-12}{まわりの平均との差が、温まるか冷えるかを決める。となりとの「差の差」÷$h^2$ は、2階微分の近い値。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{14\baselineskip}
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{熱は、となりへ移っていく}{\bklevel{3}}
+
+\bksubsection{1}{棒をマスに分けて、熱の出入りを数える}
+
+\label{bk:8-13:masu}棒を、はば $\Delta x=\qty{0.01}{m}$ のマスに分けます。マスの中の温度は1つの数で代表させます。となりどうしのマスの間では、6-3 のフーリエの法則のとおり、\textbf{温度の差に比例して}熱が移ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\t/\c in {0/100/bkRed!45, 1/50/bkRed!25, 2/25/bkRed!12, 3/20/bkRed!8} {
+    \filldraw[fill=\c, draw=bkInk!70, line width=0.6pt] (\i*26,0) rectangle ++(22,14);
+    \node[font=\sffamily\small] at (\i*26+11,7) {\t\,℃};}
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-1.5) {左はし};
+  \node[font=\sffamily\footnotesize, anchor=north] at (37,-1.5) {マス1};
+  \node[font=\sffamily\footnotesize, anchor=north] at (63,-1.5) {マス2};
+  \node[font=\sffamily\footnotesize, anchor=north] at (89,-1.5) {マス3};
+  \draw[bkOrange!80!black, line width=1.6pt, -{Stealth[length=3.5pt]}] (19,18) -- (29,18);
+  \node[font=\sffamily\footnotesize, anchor=south] at (24,19.5) {差50};
+  \draw[bkOrange!80!black, line width=1.1pt, -{Stealth[length=3pt]}] (45,18) -- (55,18);
+  \node[font=\sffamily\footnotesize, anchor=south] at (50,19.5) {差25};
+  \draw[bkOrange!80!black, line width=0.7pt, -{Stealth[length=2.5pt]}] (71,18) -- (81,18);
+  \node[font=\sffamily\footnotesize, anchor=south] at (76,19.5) {差5};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left, text width=24mm] at (106,7) {矢印の太さは、\\移る熱の量};
+\end{tikzpicture}
+\bkfigcaption{2歩め（$t=\qty{0.5}{s}$）の棒。となりとの温度の差が大きいほど、たくさんの熱が移る。マス1には左から差50ぶん入り、右へ差25ぶん出ていく。}
+\label{bk:8-13:fig-masu}
+\end{bkfigure}
+
+図\ref{bk:8-13:fig-masu}のマス1（50\,℃）で考えます。左からは「差50」に比例する熱が入り、右へは「差25」に比例する熱が出ていきます。入るほうが多いので、マス1は温まります。差し引きで入る熱は、
+\[ (100-50)-(50-25)=100-2\times50+25=25 \]
+に比例します。これは、8-12 の「となり2点の平均との差」の2倍です（となりの平均は $(100+25)\div2=62.5$ で、自分との差は12.5）。
+
+1歩（$\Delta t$）のあいだにマスの温度が上がる量は、この「差し引き」に、ある数 $r$ をかけたものになります。
+\kviiinframe[112mm]{次の温度＝今の温度＋$r\times$（左の温度 $-2\times$ 自分 $+$ 右の温度）}
+やってみようの0.25は、この $r$ です。\textbf{温度の差の何割が、1歩のあいだに移るか}を表す数です。
+
+\kviiinhead{$r$ は、何で決まる？}
+$r$ の大きさを、6-3 のフーリエの法則から作ります。棒の断面積を $A$、熱伝導率を $k$〔W/(m·K)〕とします。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 左のマスから自分へ、1秒に流れる熱は $kA\times\tfrac{(\text{左の温度}-\text{自分})}{\Delta x}$〔W〕。$\Delta x$ でわるのは、温度の\textbf{傾き}に比例するから（6-3）。
+\item $\Delta t$ 秒のあいだに、左右から差し引きで入る熱は、次のとおり。
+\[ \frac{kA\,\Delta t}{\Delta x}\times(\text{左}-2\times\text{自分}+\text{右})\ \text{〔J〕} \]
+\item マスの体積は $A\,\Delta x$。密度を $\rho$〔kg/m³〕、比熱を $c$〔J/(kg·K)〕とすると、マスの温度を1\,K 上げるのに $\rho c A\,\Delta x$〔J〕の熱が要る。
+\item だから、上がる温度は②÷③で、$\tfrac{k}{\rho c}\times\tfrac{\Delta t}{\Delta x^2}\times(\text{左}-2\times\text{自分}+\text{右})$。
+\end{enumerate}
+④の $\tfrac{k}{\rho c}$ を\textbf{熱拡散率}（ねつかくさんりつ）といい、$\alpha$（アルファ）と書きます。単位は〔m²/s〕です。
+\kviiinframe{$r=\dfrac{\alpha\,\Delta t}{\Delta x^2}$\qquad $\alpha=\dfrac{k}{\rho c}$（熱拡散率）}
+アルミは $k\approx237$、$\rho\approx2700$、$c\approx897$ なので、$\alpha=\tfrac{237}{2700\times897}\approx9.8\times10^{-5}$。この章では、まるめて $\alpha=1\times10^{-4}$〔m²/s〕とします。$\Delta x=\qty{0.01}{m}$、$\Delta t=\qty{0.25}{s}$ なら、
+\[ r=\frac{1\times10^{-4}\times0.25}{0.01^2}=\frac{2.5\times10^{-5}}{1\times10^{-4}}=0.25 \]
+で、やってみようの0.25です。単位は $\tfrac{\unit{m^2/s}\times\unit{s}}{\unit{m^2}}$ で消え、$r$ は単位のない数になります。
+
+$\Delta x$ が2乗で入っているのは、①で1回（傾き）、③で1回（マスの大きさ）、$\Delta x$ でわっているからです。マスを半分の大きさにすると、となりとの温度の傾きを通る熱は2倍になり、それを受け取るマスの熱の入れ物は半分になるので、温度の上がり方は4倍になります。
+
+\bksubsection{2}{グラフで見る：熱が広がり、ならされていく}
+
+\label{bk:8-13:graph}表計算の行（時刻）をいくつか選んで、温度を場所のグラフにします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=118mm, height=66mm, xmin=0, xmax=0.104, ymin=0, ymax=108, xtick={0,0.02,0.04,0.06,0.08,0.1}, xticklabel style={/pgf/number format/fixed}, ytick={0,20,40,60,80,100}, xlabel={$x$（m）}, ylabel={温度（℃）}]
+  \addplot[bkGray, line width=1pt, mark=*, mark size=1.2pt] coordinates {(0,100) (0.01,20) (0.02,20) (0.03,20) (0.04,20) (0.05,20) (0.06,20) (0.07,20) (0.08,20) (0.09,20) (0.1,20)};
+  \addplot[bkBlue!70, line width=1.1pt, mark=*, mark size=1.2pt] coordinates {(0,100) (0.01,60.6) (0.02,34.4) (0.03,23.1) (0.04,20.3) (0.05,20.0) (0.06,20) (0.07,20) (0.08,20) (0.09,20) (0.1,20)};
+  \addplot[bkGreen!60!black, line width=1.1pt, mark=*, mark size=1.2pt] coordinates {(0,100) (0.01,80.4) (0.02,62.6) (0.03,47.9) (0.04,36.9) (0.05,29.4) (0.06,24.8) (0.07,22.2) (0.08,20.9) (0.09,20.4) (0.1,20.2)};
+  \addplot[bkOrange, line width=1.4pt, mark=*, mark size=1.4pt] coordinates {(0,100) (0.01,88.7) (0.02,77.7) (0.03,67.5) (0.04,58.3) (0.05,50.3) (0.06,43.6) (0.07,38.4) (0.08,34.7) (0.09,32.5) (0.1,31.7)};
+  \addplot[bkPurple, line width=1.1pt, mark=*, mark size=1.2pt] coordinates {(0,100) (0.01,92.4) (0.02,85.0) (0.03,78.0) (0.04,71.5) (0.05,65.7) (0.06,60.8) (0.07,56.8) (0.08,53.9) (0.09,52.2) (0.1,51.6)};
+  \addplot[bkRed!80!black, line width=1.1pt, mark=*, mark size=1.2pt] coordinates {(0,100) (0.01,98.7) (0.02,97.3) (0.03,96.1) (0.04,94.9) (0.05,93.9) (0.06,93.0) (0.07,92.3) (0.08,91.8) (0.09,91.5) (0.1,91.4)};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:0.072,18) {0秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:0.026,30) {1秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGreen!50!black, fill=white, inner sep=1pt] at (axis cs:0.058,27) {5秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:0.076,40) {15.5秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkPurple, fill=white, inner sep=1pt] at (axis cs:0.08,57) {30秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:0.08,94) {100秒};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表計算の温度（$\Delta x=\qty{0.01}{m}$、$\Delta t=\qty{0.25}{s}$）。はじめは左はしだけが熱い。時間がたつと、熱が右へ広がり、どこも100\,℃に近づく。}
+\label{bk:8-13:fig-graph}
+\end{bkfigure}
+
+図\ref{bk:8-13:fig-graph}から、3つのことが読みとれます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{でこぼこは、すぐにならされる。}はじめの「左はしだけ100\,℃、となりは20\,℃」という急な段差は、1秒でなめらかな坂になります。
+\item \textbf{遠くへ行くほど、時間がかかる。}1秒では $x=\qty{0.03}{m}$ くらいまでしか温まりませんが、15秒でまん中、30秒で右はしまで熱がとどきます。
+\item \textbf{最後は、どこも100\,℃にそろう。}右はしから熱が逃げないので、棒全体がお湯と同じ温度になって落ち着きます。
+\end{enumerate}
+もし右はしを20\,℃の水につけておく（熱が右から逃げる）と、長い時間のあとの温度は、左100\,℃から右20\,℃への\textbf{直線}になります。6-3 のかべと同じ形です（どの点も、となりの平均と同じ：8-12④）。かべの温度は、この表計算を長く続けて落ち着いた先だったのです。このとき、まん中が50\,℃になるのは約16.5秒後です（図\ref{bk:8-13:fig-kabe}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=54mm, xmin=0, xmax=0.104, ymin=0, ymax=108, xtick={0,0.02,0.04,0.06,0.08,0.1}, xticklabel style={/pgf/number format/fixed}, ytick={0,20,40,60,80,100}, xlabel={$x$（m）}, ylabel={温度（℃）}]
+  \addplot[bkGray, line width=1.6pt, dashed, domain=0:0.1] {100-800*x};
+  \addplot[bkGreen!60!black, line width=1.1pt, mark=*, mark size=1.2pt] coordinates {(0.00,100.0) (0.01,80.4) (0.02,62.6) (0.03,47.9) (0.04,36.9) (0.05,29.4) (0.06,24.8) (0.07,22.2) (0.08,20.9) (0.09,20.3) (0.10,20.0)};
+  \addplot[bkOrange, line width=1.3pt, mark=*, mark size=1.3pt] coordinates {(0.00,100.0) (0.01,88.9) (0.02,78.2) (0.03,68.0) (0.04,58.6) (0.05,50.2) (0.06,42.7) (0.07,36.1) (0.08,30.2) (0.09,25.0) (0.10,20.0)};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkGreen!50!black, fill=white, inner sep=1pt] at (axis cs:0.036,40) {5秒};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:0.056,39) {16.5秒};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:0.062,58) {落ち着いた先（6-3 のかべと同じ直線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{右はしを20\,℃に保ったときの表計算。時間がたつと、灰色の点線（左100\,℃から右20\,℃への直線）に近づいていく。}
+\label{bk:8-13:fig-kabe}
+\end{bkfigure}
+
+\kviiinhead{Python で確かめる}
+表計算と同じ計算を、Python の numpy（2-19・7-1）で書きます。\texttt{T[1:10]} は1番めから9番めの点（中の点）、\texttt{T[0:9]} はその左どなり、\texttt{T[2:11]} は右どなりを、まとめて表します。\par\nobreak
+\Needspace{18\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+T = np.full(11, 20.0)                \# 11点、はじめは全部20℃
+T[0] = 100                           \# 左はしはお湯の100℃
+r = 1e-4 * 0.25 / 0.01**2            \# r = αΔt/Δx²
+t = 0
+while T[5] < 50:                     \# まん中が50℃になるまで
+    U = T.copy()
+    U[1:10] = T[1:10] + r*(T[2:11] - 2*T[1:10] + T[0:9])
+    U[10] = T[10] + 2*r*(T[9] - T[10])   \# 右はし（断熱）
+    T = U
+    t = t + 0.25
+print(r, t)
+print(T.round(1))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+0.25 15.5
+[100.   88.7  77.7  67.5  58.3  50.3  43.6  38.4  34.7  32.5  31.7]
+\end{bkcodeout}
+\texttt{while} は「条件がなり立つあいだ、くり返す」命令です。表計算の64行めと同じ15.5秒が出ました。$\Delta x$ を \qty{0.001}{m}、$\Delta t$ を \qty{0.002}{s}（$r=0.2$）にして同じ計算をすると15.43秒になり、さらに細かくしても15.43秒のままです。本当の答えは約15.4秒、表計算の15.5秒は、それに近い値だったのです。
+
+\Needspace{10\baselineskip}
+\bkstage{te}{手でわかる}{1歩の式と、こわれない条件}{\bklevel{4}}
+
+\bksubsection{3}{1歩の式と、両はしの決まり}
+
+\label{bk:8-13:ippo}①の表計算の1行を、式で書きます。左から $i$ 番めの点の、$n$ 歩めの温度を $T_i^{\,n}$ と書きます。右下の $i$ は\textbf{場所の名札}、右上の $n$ は\textbf{時刻の名札}です（6-2 の $y_n$ に、場所の名札が加わった形。右上の $n$ は $n$ 乗ではありません）。
+\kviiinframe[118mm]{$T_i^{\,n+1}=T_i^{\,n}+r\,\bigl(T_{i+1}^{\,n}-2T_i^{\,n}+T_{i-1}^{\,n}\bigr)$\qquad $r=\dfrac{\alpha\,\Delta t}{\Delta x^2}$}
+やってみようの C3 の式と見くらべると、C2 が $T_i^{\,n}$、B2 が $T_{i-1}^{\,n}$（左どなり）、D2 が $T_{i+1}^{\,n}$（右どなり）、C3 が $T_i^{\,n+1}$（次の時刻の自分）です。
+
+かっこの中は、8-12 の「となり2点の平均との差」の2倍でした。だから、1歩の式は
+\[ T_i^{\,n+1}=T_i^{\,n}+2r\times\bigl(\text{となり2点の平均}-T_i^{\,n}\bigr) \]
+とも書けます。\textbf{1歩ごとに、となりの平均へ向かって、差の $2r$ 倍だけ近づく}。$r=0.25$ なら、差の半分だけ近づきます。
+
+\kviiinhead{両はしは、式でなく条件で決める}
+1歩の式は、左右のとなりがある点にしか使えません。両はしの点は、となりが片方しかないからです。両はしの温度は、6-3 と同じく\textbf{境界条件}で決めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{左はし（お湯につけた所）}：温度が100\,℃に決まっている。だから B列は、いつも100。
+\item \textbf{右はし（断熱材でくるんだ所）}：熱が出ていかない。右はしの点は、左どなりからだけ熱をもらいます。
+\end{itemize}
+右はしの点が受け持つのは、棒のはしからマスの半分（\qty{0.005}{m}）だけです。熱の入れ物が半分なので、同じ熱をもらっても2倍温まります。だから、
+\[ T_{\text{右はし}}^{\,n+1}=T_{\text{右はし}}^{\,n}+2r\times\bigl(T_{\text{左どなり}}^{\,n}-T_{\text{右はし}}^{\,n}\bigr) \]
+です。やってみようの L3 の式 \texttt{=L2+0.25*(2*K2-2*L2)} は、これを書いたものです。
+
+\kviiinhead{はじめの温度も要る}
+もう1つ、表計算の2行め（$t=0$）には、\textbf{はじめの温度}を全部の点に入れました。これを\textbf{初期条件}といいます。6-2 の表計算では「はじめの値」が1つでしたが、ここでは場所ごとに1つずつ、つまり\textbf{はじめの温度の分布}（関数 $T(x,\ 0)$）が要ります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=28mm] Q[l,m,wd=44mm] Q[l,m,wd=40mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+条件 & 何を決めるか & 表計算では \\
+初期条件 & はじめの時刻の、どの場所の温度も & 2行め（$t=0$）の全部 \\
+境界条件 & 両はしの、どの時刻のふるまいも & B列と L列の式 \\
+\end{bktable}
+\bktabcaption{熱の表計算には、2種類の条件が両方とも要る。}
+\end{bkcenter}
+
+\bksubsection{4}{$\Delta t$ を大きくすると、どうなる？}
+
+\label{bk:8-13:kowareru}やってみようでは、0.25秒ずつ進めて、15秒までに62行が必要でした。1歩を大きくすれば、行数がへって楽になりそうです。ためしてみましょう。
+
+\kviiinhead{$\Delta t=\qty{0.5}{s}$（$r=0.5$）}
+$r=0.5$ では、$2r=1$ なので、1歩の式は「\textbf{次の温度＝となり2点の平均}」になります（③）。左の数から順に計算すると、簡単な数が並びます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] *{6}{Q[c,m,wd=13mm]}}, rowsep=1pt, row{1}={font=\sffamily\small}}
+歩 & $x=0$ & 0.01 & 0.02 & 0.03 & 0.04 & 0.05 \\
+0 & 100 & 20 & 20 & 20 & 20 & 20 \\
+1 & 100 & 60 & 20 & 20 & 20 & 20 \\
+2 & 100 & 60 & 40 & 20 & 20 & 20 \\
+3 & 100 & 70 & 40 & 30 & 20 & 20 \\
+4 & 100 & 70 & 50 & 30 & 25 & 20 \\
+\end{bktable}
+\bktabcaption{$r=0.5$ の表計算。どの点も、1つ前の行の左右のとなりの平均になる（$x=0.01$ の1歩めは $(100+20)\div2=60$）。}
+\end{bkcenter}
+1歩ごとに、同じ値が2回続く「階段」のような形になりますが、こわれてはいません。
+
+\kviiinhead{$\Delta t=\qty{0.6}{s}$（$r=0.6$）}
+こんどは $r=0.6$ です。$2r=1.2$ なので、「となりの平均へ、差の1.2倍だけ近づく」、つまり\textbf{平均を通りこして行きすぎます}。
+\begin{bkhenkei}[0.7]
+T_1^{\,1}=20+0.6\times(100-2\times20+20)=20+48=68 & 平均60を行きすぎ \\
+T_1^{\,2}=68+0.6\times(100-2\times68+48.8)=58.4 & $T_2^{\,1}=48.8$ を使う \\
+T_1^{\,3}=77.6,\quad T_1^{\,4}=66.85,\quad T_1^{\,5}=83.51 & 上がり下がり \\
+\end{bkhenkei}
+$x=0.01$ の温度は、68、58.4、77.6、66.85、83.51、…と、上がったり下がったりします。となりの点も、反対向きに上がったり下がったりします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=118mm, height=58mm, xmin=0, xmax=0.104, ymin=0, ymax=108, xtick={0,0.02,0.04,0.06,0.08,0.1}, xticklabel style={/pgf/number format/fixed}, ytick={0,20,40,60,80,100}, xlabel={$x$（m）}, ylabel={温度（℃）}, legend style={at={(axis cs:0.103,106)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine, fill=white}, legend cell align=left]
+  \addplot[bkBlue!70, line width=1.3pt, mark=*, mark size=1.3pt] coordinates {(0,100) (0.01,82.0) (0.02,65.5) (0.03,51.3) (0.04,40.2) (0.05,32.2) (0.06,26.8) (0.07,23.6) (0.08,21.7) (0.09,20.9) (0.1,20.6)};
+  \addlegendentry{$r=0.25$（$\Delta t=\qty{0.25}{s}$）}
+  \addplot[bkRed, line width=1.3pt, dashed, mark=square*, mark size=1.4pt] coordinates {(0,100) (0.01,66.4) (0.02,93.5) (0.03,20.2) (0.04,69.9) (0.05,10.1) (0.06,41.3) (0.07,15.6) (0.08,25.0) (0.09,19.4) (0.1,21.0)};
+  \addlegendentry{$r=0.6$（$\Delta t=\qty{0.6}{s}$）}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{6秒後の温度。$r=0.25$（青）はなめらか。$r=0.6$（赤の点線）は、となりどうしが上と下に交互にとび出すぎざぎざになる。}
+\label{bk:8-13:fig-zigzag}
+\end{bkfigure}
+
+6秒後（10歩め）の温度を、図\ref{bk:8-13:fig-zigzag}にかきました。$r=0.6$ では、となりどうしが交互に上と下にとび出す\textbf{ぎざぎざ}ができています。このぎざぎざは、歩を進めるごとに大きくなり、12秒後（20歩め）には $-410$\,℃から $519$\,℃、120秒後（200歩め）には $10^{28}$ ほど（1のあとに0が28こ）になります。熱いお湯につけた棒が $-410$\,℃になるはずはありません。\textbf{計算がこわれた}のです。
+
+$r=0.5$ では「ちょうど平均」、$r=0.6$ では「平均の行きすぎ」。こわれるかどうかの境目は、$r=0.5$ のあたりにありそうです。⑤で、7-10 の考え方を使って確かめます。
+
+\bksubsection{5}{こわれない条件：$r\leqq\frac12$}
+
+\label{bk:8-13:joken}こわれた計算では、ぎざぎざが育っていました。そこで、\textbf{いちばん細かいでこぼこ}、つまり「$+a$、$-a$、$+a$、$-a$、…」と1点ごとに符号が入れかわる温度の形が、1歩でどうなるかを調べます（温度は、どこかの基準の温度からの差とします）。
+
+自分が $+a$ なら、左右のとなりはどちらも $-a$ です。1歩の式に入れます。
+\begin{bkhenkei}[0.56]
+T_i^{\,n+1}=a+r\,\bigl((-a)-2a+(-a)\bigr) & 1歩の式に入れる \\
+=a+r\times(-4a) & かっこの中をまとめる \\
+=(1-4r)\,a & $a$ でくくる \\
+\end{bkhenkei}
+自分が $-a$ のときも、同じく $(1-4r)\times(-a)$ になります。だから、ぎざぎざの形は形を変えずに、\textbf{1歩ごとに $1-4r$ 倍}されます。これは、7-10④ の「$1\times1$ のくり返し $x_{n+1}=ax_n$」そのものです。
+
+7-10 では、くり返しがこわれないのは、1歩の倍率の大きさが1以下のときでした。
+\begin{bkhenkei}[0.56]
+-1\leqq1-4r\leqq1 & 1歩の倍率の大きさが1以下 \\
+-2\leqq-4r & 左の不等式の両辺から1をひく \\
+r\leqq\frac{1}{2} & 両辺を $-4$ でわる（向きが変わる） \\
+\end{bkhenkei}
+右の $1-4r\leqq1$ は、$r\geqq0$ ならいつもなり立ちます。
+\kviiinframe[104mm]{熱の表計算がこわれない条件\qquad $r=\dfrac{\alpha\,\Delta t}{\Delta x^2}\leqq\dfrac{1}{2}$}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=30mm, y=1mm]
+  \fill[bkGreen!16] (-1,-3) rectangle (1,3);
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] (-1.95,0) -- (1.3,0);
+  \foreach \v/\l in {-1.5/{$-1.5$},-1/{$-1$},-0.5/{$-0.5$},0/0,0.5/0.5,1/1} {\draw[bkInk, line width=0.6pt] (\v,2) -- (\v,-2); \node[font=\sffamily\footnotesize, anchor=north] at (\v,-3.5) {\l};}
+  \foreach \v in {0.6,0,-0.6,-1,-1.4} {\fill[bkRed] (\v,0) circle (1.2mm);}
+  \foreach \v/\t in {0.6/0.1,0/0.25,-0.6/0.4,-1/0.5,-1.4/0.6} {\node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (\v,4) {\t};}
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkRed!80!black] at (-1.6,9) {$r$};
+  \draw[bkGray, line width=0.7pt, -{Stealth[length=3.5pt]}] (0.8,13) -- (-1.5,13);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (-0.35,14) {$r$ をふやすと、$1-4r$ は左へ進む};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (0.5,-9) {ゆれずに消える};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (-0.5,-9) {ゆれながら消える};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!70!black] at (-1.5,-9) {こわれる};
+\end{tikzpicture}
+\bkfigcaption{ぎざぎざの1歩の倍率 $1-4r$。赤い点の上の数は $r$。緑の区間（$-1$ から1）に入っていれば、こわれない（7-10 の図と同じ形）。}
+\label{bk:8-13:fig-suuchoku}
+\end{bkfigure}
+
+$r=0.25$ なら $1-4r=0$ で、ぎざぎざは1歩で消えます。$r=0.4$ なら $-0.6$ 倍で、ゆれながら消えます。$r=0.5$ でちょうど $-1$ 倍（消えも育ちもしない境目）、$r=0.6$ では $-1.4$ 倍で、ゆれながら育ちます。④の表計算で見たとおりです。
+
+\kviiinhead{7-10 の $|1+\lambda\,\Delta t|<1$ と同じこと}
+7-10 では、$\dot x=\lambda x$ のオイラー法の1歩の倍率が $1+\lambda\,\Delta t$ でした。ぎざぎざの形は、1歩の式の「かっこの中」が $-4a$ でした。$\tfrac{\alpha}{\Delta x^2}$ をかけた本当の変わる速さで書くと、
+\[ \frac{\dd a}{\dd t}=\frac{\alpha}{\Delta x^2}\times(-4a)=\lambda a,\qquad \lambda=-\frac{4\alpha}{\Delta x^2} \]
+です。1歩の倍率は $1+\lambda\,\Delta t=1-\tfrac{4\alpha\,\Delta t}{\Delta x^2}=1-4r$。7-10 の予告カードに書いた「1歩の行列のくり返しと、こわれない条件」とは、このことだったのです。
+
+\kviiinhead{細かく計算すると、手間は何倍？}
+こわれない一番大きい $\Delta t$ は、$r=\frac12$ から $\Delta t=\tfrac{\Delta x^2}{2\alpha}$ です。$\Delta x=\qty{0.01}{m}$ なら $\tfrac{0.0001}{2\times0.0001}=\qty{0.5}{s}$。マスを半分の \qty{0.005}{m} にすると、$\Delta t$ は $\frac14$ の \qty{0.125}{s} まで小さくしなければなりません。マスの数は2倍、歩の数は4倍なので、\textbf{計算の量は8倍}になります。細かく正確に計算するのは、思ったより大変なのです。
+
+\Needspace{12\baselineskip}
+\begin{seikaku}
+本当は、1歩の式は「棒の点の温度を並べたベクトルに、1歩の行列をかける」くり返しです（7-10）。中の点が9つなら、1歩の行列は9×9で、ななめに $1-2r$、そのすぐ上とすぐ下に $r$ が並びます。この行列の固有ベクトルは、ぎざぎざではなく $\sin$ の形の温度で、固有値は $1-4r\sin^2\tfrac{m\pi}{20}$（$m=1,\ 2,\ \ldots,\ 9$）です。いちばん小さいのは $m=9$ の $1-4r\times0.9755$ で、ぎざぎざの $1-4r$ にとても近い値です。だから条件は「ほぼ $r\leqq\frac12$」で、点をふやすほど $\frac12$ に近づきます。次の Python で、固有値の最小と最大を確かめます（7-10 の \texttt{eigvalsh} は、対称な行列の固有値を出す命令）。
+\end{seikaku}
+\Needspace{14\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+N = 9                                \# 中の点の数
+for r in [0.25, 0.5, 0.6]:
+    A = (np.eye(N)*(1 - 2*r) + np.eye(N, k=1)*r
+         + np.eye(N, k=-1)*r)        \# 1歩の行列
+    lam = np.linalg.eigvalsh(A)      \# 固有値（小さい順）
+    print(r, lam.min().round(4), lam.max().round(4))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+0.25 0.0245 0.9755
+0.5 -0.9511 0.9511
+0.6 -1.3413 0.9413
+\end{bkcodeout}
+\texttt{np.eye(N, k=1)} は、ななめの1つ上に1が並ぶ行列です。$r=0.6$ では、いちばん小さい固有値の大きさが1.34で1をこえるので、こわれます。$r=0.5$ では大きさが0.95で、こわれません。
+
+\bkkokomade[熱の表計算は「となりとの差の $r$ 倍をたす」のくり返しです。両はしは境界条件、はじめは初期条件で決めます。$r=\frac{\alpha\Delta t}{\Delta x^2}$ が $\frac12$ をこえると、ぎざぎざが育って計算がこわれます。この先は、マスを細かくした先の「偏微分方程式」を作ります。]
+
+\Needspace{10\baselineskip}
+\bkstage{shiki}{式でわかる}{熱方程式と波動方程式}{\bklevel{5}}
+
+\bksubsection{6}{熱方程式}
+
+\label{bk:8-13:netsu}1歩の式を、時間の変化の形に書きなおします。$T_i^{\,n}$ を両辺からひいて $\Delta t$ でわり、$r$ をもとの形にもどします。
+\begin{bkhenkei}[0.6]
+T_i^{\,n+1}-T_i^{\,n}=\frac{\alpha\,\Delta t}{\Delta x^2}\bigl(T_{i+1}^{\,n}-2T_i^{\,n}+T_{i-1}^{\,n}\bigr) & 1歩の式から $T_i^{\,n}$ をひく \\
+\frac{T_i^{\,n+1}-T_i^{\,n}}{\Delta t}=\alpha\,\frac{T_{i+1}^{\,n}-2T_i^{\,n}+T_{i-1}^{\,n}}{\Delta x^2} & 両辺を $\Delta t$ でわる \\
+\end{bkhenkei}
+ここで、$\Delta t$ と $\Delta x$ を小さくしていきます。左辺は「同じ場所で、時間とともに変わる速さ」なので、$x$ を止めて $t$ で微分した $\tfrac{\partial T}{\partial t}$ に近づきます（8-2 の偏微分。5-3）。右辺の分数は、$t$ を止めた「差の差÷$\Delta x^2$」なので、8-12④ の $\tfrac{\partial^2T}{\partial x^2}$ に近づきます。
+\kviiinframe[96mm]{$\displaystyle \frac{\partial T}{\partial t}=\alpha\,\frac{\partial^2T}{\partial x^2}$}
+これを\textbf{熱方程式}（ねつほうていしき）といいます。\bkidx{ねつほうていしき}{熱方程式}においが部屋に広がる、インクが水に広がるなど、ものが「しみ広がる」ようすも同じ形の式になるので、\textbf{拡散方程式}ともいいます。このように、2つ以上の変数での偏微分が入った微分方程式を\textbf{偏微分方程式}といいます（6-1 で予告したもの）。
+
+熱方程式は、ことばで読むと「\textbf{温度が上がる速さは、まわりの平均との差（曲がり方）に比例する}」です。下に凸（$\frac{\partial^2T}{\partial x^2}>0$）の所は温まり、上に凸の所は冷えます。8-12 の「ならす働き」が、時間とともに進んでいく式なのです。
+
+\kviiinhead{熱の流れから作る：8-4・8-9 で}
+もう1つの作り方です。熱の流れは $q=-k\tfrac{\partial T}{\partial x}$（8-4。1次元）。小さな区間に、1秒・\qty{1}{m^3} あたりにたまる熱は、出ていく熱の反対で $-\tfrac{\partial q}{\partial x}$（8-9 の発散の反対）。たまった熱で温度が上がるので、
+\begin{bkhenkei}[0.56]
+\rho c\,\frac{\partial T}{\partial t}=-\frac{\partial q}{\partial x} & たまる熱＝温度を上げる熱 \\
+=-\frac{\partial}{\partial x}\Bigl(-k\frac{\partial T}{\partial x}\Bigr)=k\,\frac{\partial^2T}{\partial x^2} & フーリエの法則を入れる \\
+\frac{\partial T}{\partial t}=\frac{k}{\rho c}\,\frac{\partial^2T}{\partial x^2}=\alpha\,\frac{\partial^2T}{\partial x^2} & 両辺を $\rho c$ でわる \\
+\end{bkhenkei}
+同じ式になりました。3次元なら、$\vec q=-k\,\mathrm{grad}\,T$、たまる熱は $-\mathrm{div}\,\vec q$（8-9）で、$\mathrm{div}\,\mathrm{grad}=\nabla^2$（8-12）なので、
+\kviiinframe{$\dfrac{\partial T}{\partial t}=\alpha\,\nabla^2T$\qquad（3次元の熱方程式）}
+です（積分の形で、箱から出る熱の流束（表8-8）とガウスの定理（8-11）を使って作ることもできます）。
+
+\kviiinhead{これまでの式は、熱方程式の特別な場合}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=34mm] Q[l,m,wd=36mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+場面 & 式 & 学んだ章 \\
+温度が落ち着いた（定常）かべ & $\dfrac{\dd^2T}{\dd x^2}=0$ & 6-3（答えは直線） \\
+落ち着いた板・空間 & $\nabla^2T=0$ & 8-12（ラプラス方程式） \\
+横から熱が逃げる棒（フィン） & $\dfrac{\dd^2\theta}{\dd x^2}=\beta^2\theta$ & 6-11（落ち着いたとき） \\
+\end{bktable}
+\bktabcaption{「時間で変わらない」とき、熱方程式の左辺 $\frac{\partial T}{\partial t}$ は0になり、これまでの式にもどる。}
+\end{bkcenter}
+フィンのように、棒の横（表面）から部屋へ熱が逃げるときは、熱方程式に「逃げる分」が加わって $\tfrac{\partial\theta}{\partial t}=\alpha\Bigl(\tfrac{\partial^2\theta}{\partial x^2}-\beta^2\theta\Bigr)$ になります（$\theta$ は部屋との温度差）。落ち着くと左辺が0で、6-11 の式です。
+
+\kviiinhead{いろいろな物の熱拡散率}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=36mm] Q[l,m,wd=50mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+物 & 熱拡散率 $\alpha$〔m²/s〕 & \qty{10}{cm} に広がる時間のめやす \\
+銅 & $1.2\times10^{-4}$ & 約80秒 \\
+アルミ & $1.0\times10^{-4}$ & 約100秒 \\
+鉄 & $2.3\times10^{-5}$ & 約7分 \\
+ステンレス & $4\times10^{-6}$ & 約40分 \\
+水（動かないとき） & $1.4\times10^{-7}$ & 約20時間 \\
+\end{bktable}
+\bktabcaption{およその値（$\alpha=\frac{k}{\rho c}$ で計算）。時間のめやすは $\frac{L^2}{\alpha}$（$L=\qty{0.1}{m}$）。}
+\end{bkcenter}
+熱方程式の $\alpha$ の単位〔m²/s〕から、「長さ $L$ に熱が広がる時間は、だいたい $\tfrac{L^2}{\alpha}$」とわかります。長さが2倍なら、時間は4倍です。ステンレスのなべの取っ手が熱くなりにくいのは、熱拡散率が小さいからです。お風呂のお湯の上が熱く下がぬるいのは、水の熱拡散率がとても小さく、熱がしみ広がる前に、温かい水が上へ動く（対流）からです。
+
+\bksubsection{7}{答えを代入して確かめる}
+
+\label{bk:8-13:dainyu}熱方程式の答えを、式の形で1つ見つけます。8-12 で、$\sin$ のグラフは「上に凸の所では値が正、下に凸の所では値が負」でした。$\tfrac{\dd^2}{\dd x^2}\sin ax=-a^2\sin ax$ だからです（5-15）。曲がり方が、いつも自分の $-a^2$ 倍です。だから、$\sin$ の形の温度は、\textbf{形を変えずに、全体が同じ割合で小さくなる}と予想できます。
+\[ T=e^{-\alpha a^2t}\sin ax \]
+を熱方程式に代入して確かめます（$a$ は、でこぼこの細かさを表す数〔1/m〕）。
+\begin{bkhenkei}[0.56]
+\frac{\partial T}{\partial t}=-\alpha a^2\,e^{-\alpha a^2t}\sin ax & $x$ を止めて $t$ で微分（5-14） \\
+\frac{\partial T}{\partial x}=a\,e^{-\alpha a^2t}\cos ax & $t$ を止めて $x$ で微分（5-15） \\
+\frac{\partial^2T}{\partial x^2}=-a^2\,e^{-\alpha a^2t}\sin ax & もう一度 $x$ で微分 \\
+\alpha\,\frac{\partial^2T}{\partial x^2}=-\alpha a^2\,e^{-\alpha a^2t}\sin ax & $\alpha$ をかけると、1行めと同じ \\
+\end{bkhenkei}
+左辺と右辺が同じなので、熱方程式をみたします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=s1, axis x line=bottom, axis y line=middle, width=58mm, height=46mm, xmin=0, xmax=0.104, ymin=-11, ymax=12, xtick={0,0.05,0.1}, xticklabel style={/pgf/number format/fixed}, ytick={-10,-5,5,10}, title={$a=\frac{\pi}{0.1}$：7秒で半分}, title style={font=\sffamily\footnotesize, yshift=2mm}]
+  \addplot[bkcurve, domain=0:0.1, samples=50] {10*sin(deg(pi*x/0.1))};
+  \addplot[bkcurve2, dashed, domain=0:0.1, samples=50] {5.01*sin(deg(pi*x/0.1))};
+\end{axis}
+\begin{axis}[bkplot, at={(s1.east)}, anchor=west, xshift=20mm, axis x line=bottom, axis y line=middle, width=58mm, height=46mm, xmin=0, xmax=0.104, ymin=-11, ymax=12, xtick={0,0.05,0.1}, xticklabel style={/pgf/number format/fixed}, ytick={-10,-5,5,10}, xlabel={$x$（m）}, title={$a=\frac{3\pi}{0.1}$：0.78秒で半分}, title style={font=\sffamily\footnotesize, yshift=2mm}]
+  \addplot[bkcurve, domain=0:0.1, samples=80] {10*sin(deg(3*pi*x/0.1))};
+  \addplot[bkcurve2, dashed, domain=0:0.1, samples=80] {5.01*sin(deg(3*pi*x/0.1))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{両はしを基準の温度（0）に保った \qty{0.1}{m} の棒の、$\sin$ の形の温度のでこぼこ（基準からの差、℃）。青が0秒、オレンジの点線が「半分になったとき」。でこぼこが3倍細かいと、9倍速く消える。}
+\label{bk:8-13:fig-sin}
+\end{bkfigure}
+
+\kviiinhead{数を入れると}
+長さ \qty{0.1}{m} の棒の両はしを基準の温度に保ち、まん中が10\,℃高い $\sin$ の形の温度から始めます。$a=\tfrac{\pi}{0.1}\approx31.4$〔1/m〕（$x=0.1$ で $\sin\pi=0$ になるように）。$\alpha a^2=1\times10^{-4}\times31.4^2\approx0.0987$〔1/s〕なので、
+\[ T=10\,e^{-0.0987t}\sin31.4x \]
+です。$e^{-0.0987t}=\frac12$ になるのは、$t=\tfrac{\ln2}{0.0987}=\tfrac{0.693}{0.0987}\approx7.0$ 秒後（3-12・5-14）。7秒ごとに、でこぼこが半分になります。同じ $\Delta x$・$\Delta t$（$r=0.25$）の表計算で、はじめを $\sin$ の形、両はしを0にして計算すると、7秒後のまん中は4.997\,℃で、式の5.011\,℃とよく合います。
+
+でこぼこが3倍細かい $a=\tfrac{3\pi}{0.1}$ なら、$\alpha a^2$ は $3^2=9$ 倍の0.888で、0.78秒ごとに半分になります（図\ref{bk:8-13:fig-sin}）。\textbf{細かいでこぼこほど、$a^2$ に比例して速く消える}。図\ref{bk:8-13:fig-graph}の「急な段差が1秒でならされる」のは、このためです。
+
+\Needspace{8\baselineskip}
+\begin{motto}[5]
+\kviiinbox{第9巻（9-1）の予告：どんな形も、$\sin$ のたし算}
+どんな形の温度でも、いろいろな細かさの $\sin$ の形のたし算で書けることが知られています（フーリエ級数）。熱方程式では、$\sin$ の1つ1つが、それぞれ $e^{-\alpha a^2t}$ の速さで小さくなります。だから、それをたし直せば、どんな初期条件の答えも式で書けます。この「分けて解いて、たし直す」方法（変数分離法とフーリエ級数）は、9-1 で学びます。⑤のぎざぎざは、表計算で表せるいちばん細かいでこぼこでした。本当の答えでは、いちばん速く消えるはずのものが、こわれた計算では逆に育っていたのです。
+\end{motto}
+
+\bksubsection{8}{波動方程式：弦をゆらす}
+
+\label{bk:8-13:nami}こんどは、ぴんと張った弦（ギターの弦や、なわとびのなわ）の波です。弦を小さな玉が並んだものと考え、玉 $i$ の横からのずれ（高さ）を $y_i$ とします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.5pt, dashed] (0,0) -- (110,0);
+  \draw[bkInk, line width=0.9pt] (0,0) -- (20,10) -- (50,22) -- (80,16) -- (110,0);
+  \foreach \p in {(20,10),(50,22),(80,16)} {\fill[bkBlue!70] \p circle (2.2);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,7) {$i-1$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (50,24.5) {$i$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (80,18.5) {$i+1$};
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=3pt]}] (50,22) -- (36,16.4);
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=3pt]}] (50,22) -- (64,19.2);
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkRed!80!black] at (35,18.5) {張力 $F$};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!80!black] at (64,21.5) {張力 $F$};
+  \draw[bkOrange!80!black, line width=1.4pt, -{Stealth[length=3.5pt]}] (50,19.5) -- (50,12);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkOrange!80!black] at (50,10.8) {合わせた力（下向き）};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (20,-4) -- (50,-4);
+  \node[font=\sffamily\footnotesize, anchor=north] at (35,-4.5) {$\Delta x$};
+\end{tikzpicture}
+\bkfigcaption{弦を玉の列と考える。玉 $i$ は、左右の弦から張力 $F$ で引かれる。玉 $i$ がとなり2つの平均より高いと、合わせた力は下向きになる。}
+\label{bk:8-13:fig-gen}
+\end{bkfigure}
+
+玉 $i$ は、左右の弦に張力 $F$〔N〕で引かれます。弦のかたむきが小さいとき、左の弦が玉を引く力のたての成分は、張力×かたむき $=F\times\tfrac{y_{i-1}-y_i}{\Delta x}$、右の弦では $F\times\tfrac{y_{i+1}-y_i}{\Delta x}$ です（4-6 の三角比で、小さい角では $\sin\theta\approx\tan\theta$）。たすと、
+\[ \text{たての力}=\frac{F}{\Delta x}\,\bigl(y_{i+1}-2y_i+y_{i-1}\bigr) \]
+また「となりとの差の差」が出てきました。玉の質量は、弦の1 m あたりの質量を $\mu$〔kg/m〕として $\mu\,\Delta x$ です。運動方程式（質量×加速度＝力）から、
+\begin{bkhenkei}[0.6]
+\mu\,\Delta x\,\frac{\dd^2y_i}{\dd t^2}=\frac{F}{\Delta x}\,\bigl(y_{i+1}-2y_i+y_{i-1}\bigr) & 運動方程式 \\
+\frac{\dd^2y_i}{\dd t^2}=\frac{F}{\mu}\,\frac{y_{i+1}-2y_i+y_{i-1}}{\Delta x^2} & 両辺を $\mu\,\Delta x$ でわる \\
+\end{bkhenkei}
+玉を細かくすると（$\Delta x\to0$）、右の分数は $\tfrac{\partial^2y}{\partial x^2}$ になります。$\tfrac{F}{\mu}$ を $c^2$ と書くと、
+\kviiinframe[100mm]{$\displaystyle \frac{\partial^2y}{\partial t^2}=c^2\,\frac{\partial^2y}{\partial x^2}$\qquad $c=\sqrt{\dfrac{F}{\mu}}$}
+これを\textbf{波動方程式}（はどうほうていしき）といいます。\bkidx{はどうほうていしき}{波動方程式}$c$ は⑨でわかるように、波が伝わる速さです（物理シリーズ『波』でくわしく学びます）。たとえば $F=\qty{100}{N}$、$\mu=\qty{0.01}{kg/m}$ の弦なら、$c=\sqrt{\tfrac{100}{0.01}}=\sqrt{10000}=\qty{100}{m/s}$ です。$c^2$ と2乗で書くのは、⑨で $c$ が速さになるようにするためです。
+
+\kviiinhead{熱とのちがい：1回微分か、2回微分か}
+熱方程式では「まわりの平均との差」が温度の\textbf{変わる速さ}（1回微分）を決めました。だから、でこぼこはならされて消えていきます。波動方程式では、同じ差が\textbf{加速度}（2回微分）を決めます。5-15 のばねと同じで、平均へもどろうとした玉は、勢いあまって通りこし、ゆれ続けます。この「ゆれ」が、となりへとなりへと伝わっていくのが波です。
+
+\kviiinhead{波の表計算}
+時刻も $\Delta t$ ごとに区切ります。加速度は、8-12④ の「差の差」を時間で使って $\tfrac{y_i^{\,n+1}-2y_i^{\,n}+y_i^{\,n-1}}{\Delta t^2}$ です。これを波動方程式の左辺に入れ、$y_i^{\,n+1}$ について解くと、
+\[ y_i^{\,n+1}=2y_i^{\,n}-y_i^{\,n-1}+s^2\bigl(y_{i+1}^{\,n}-2y_i^{\,n}+y_{i-1}^{\,n}\bigr),\qquad s=\frac{c\,\Delta t}{\Delta x} \]
+です。次の行を作るのに、今の行と1つ前の行の2つを使います（2回微分の式だから。6-14 で、2回微分の式に「位置と速度」の2つのはじめの値が要ったのと同じ）。$s=1$ にすると、$2y_i^{\,n}$ と $-2y_i^{\,n}$ が消えて、とても簡単になります。
+\kviiinframe[110mm]{$y_i^{\,n+1}=y_{i+1}^{\,n}+y_{i-1}^{\,n}-y_i^{\,n-1}$\qquad（$s=1$ のとき）}
+はじめに山の形（2、4、2）を作って、そっと手をはなした弦を計算します。手をはなした瞬間は止まっているので、1歩前の行は1歩めの行と同じとみなせます（時間を逆向きにしても同じ動き）。上の式で $y_i^{\,-1}=y_i^{\,1}$ とおくと、$2y_i^{\,1}=y_{i+1}^{\,0}+y_{i-1}^{\,0}$、つまり1歩めの行は「0歩めのとなり2つの平均」になります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] *{11}{Q[c,m,wd=8mm]}}, colsep=1.5pt, rowsep=1pt, row{1}={font=\sffamily\small}}
+歩 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 11 \\
+0 & 0 & 0 & 0 & 0 & 2 & 4 & 2 & 0 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 1 & 2 & 2 & 2 & 1 & 0 & 0 & 0 \\
+2 & 0 & 0 & 1 & 2 & 1 & 0 & 1 & 2 & 1 & 0 & 0 \\
+3 & 0 & 1 & 2 & 1 & 0 & 0 & 0 & 1 & 2 & 1 & 0 \\
+4 & 1 & 2 & 1 & 0 & 0 & 0 & 0 & 0 & 1 & 2 & 1 \\
+\end{bktable}
+\bktabcaption{$s=1$ の波の表計算（1行めの数は玉の番号）。高さ4の山が、高さ2の2つの山に分かれ、1歩に1つずつ左右へ進む。}
+\end{bkcenter}
+たとえば2歩めの玉3は、1歩めの玉4の1と玉2の0をたし、0歩めの玉3の0をひいて1です。山は、2つに分かれて\textbf{1歩に1マス}ずつ左右へ走っていきます。1歩で $\Delta x$ 進むので、速さは $\tfrac{\Delta x}{\Delta t}=c$（$s=1$ だから）。$c$ が波の速さだとわかります。
+
+\kviiinhead{波の表計算がこわれない条件}
+$s$ が1より大きい（1歩で、波が1マスより先へ進む）と、熱の表計算の $r>\frac12$ と同じように、ぎざぎざが育ってこわれます。
+\kviiinframe{$c\,\Delta t\leqq\Delta x$\qquad（$s\leqq1$）}
+「1歩のあいだに、波がマス1つより遠くへ行ってはいけない」。となりのマスしか見ない計算では、2マス先へ一気に進む波を表せないからです。$c=\qty{100}{m/s}$、$\Delta x=\qty{0.01}{m}$ なら、$\Delta t\leqq\tfrac{0.01}{100}=1\times10^{-4}$\,s です（\bkreidairef{5}）。
+
+\bksubsection{9}{ダランベールの解：形を保って走る波}
+
+\label{bk:8-13:dalembert}表計算では、山が形を変えずに走りました。これを式で確かめます。どんな形の関数 $f$ でも、
+\kviiinframe{$y=f(x-ct)$}
+は波動方程式をみたします。8-3 の連鎖律（5-6 の合成関数の微分）で、$u=x-ct$ とおいて計算します。
+\begin{bkhenkei}[0.52]
+\frac{\partial y}{\partial t}=f'(u)\times\frac{\partial u}{\partial t}=-c\,f'(u) & $u$ を $t$ で微分すると $-c$ \\
+\frac{\partial^2y}{\partial t^2}=-c\times(-c)\,f''(u)=c^2f''(u) & もう一度 $t$ で微分 \\
+\frac{\partial y}{\partial x}=f'(u),\quad \frac{\partial^2y}{\partial x^2}=f''(u) & $u$ を $x$ で微分すると1 \\
+\end{bkhenkei}
+1行め・2行めの $c^2f''(u)$ は、3行めの $f''(u)$ の $c^2$ 倍です。だから $\tfrac{\partial^2y}{\partial t^2}=c^2\tfrac{\partial^2y}{\partial x^2}$ がなり立ちます。
+
+$f(x-ct)$ は、時刻 $t$ では、$f(x)$ のグラフを右へ $ct$ だけずらした形です（3-9：$x$ を $x-p$ にすると、グラフは右へ $p$ ずれる）。1秒で $c$ 進むので、\textbf{形を保ったまま速さ $c$ で右へ走る波}です。同じように $g(x+ct)$ は左へ走る波です。2つを合わせた
+\[ y=f(x-ct)+g(x+ct) \]
+を、\textbf{ダランベールの解}といいます。表計算の「山が2つに分かれて左右へ走る」は、$f$ と $g$ がどちらも「はじめの山の半分」の場合でした。
+
+\bksubsection{10}{空間の波：波数 $k$}
+
+\label{bk:8-13:hasu}いちばん大切な波は、$\sin$ の形の波です。
+\[ y=A\sin(\omega t-kx) \]
+$\omega$（オメガ）は角振動数（1秒に進む角〔rad/s〕。5-15）でした。$k$ は、\textbf{1 m 進むごとに角が何ラジアン変わるか}を表す数で、\textbf{波数}（はすう）といいます。\bkidx{はすう}{波数}波長（となりの山までの長さ）を $\lambda$ とすると、$\lambda$ 進むと角が $2\pi$ 変わるので、
+\[ k=\frac{2\pi}{\lambda}\qquad\Bigl(\omega=\frac{2\pi}{T_{\text{周期}}}\ \text{と同じ形}\Bigr) \]
+です。時間の $\omega$ と、場所の $k$ が対になっています。（波数の $k$ は、熱伝導率の $k$ とは別のものです。どちらも $k$ と書く習慣なので、場面で見分けます。）
+
+波動方程式に代入すると、$\tfrac{\partial^2y}{\partial t^2}=-\omega^2y$、$\tfrac{\partial^2y}{\partial x^2}=-k^2y$（5-15）なので、$-\omega^2y=c^2\times(-k^2y)$。だから
+\kviiinframe{$\omega=ck$\qquad（$f\lambda=c$ と同じこと）}
+両辺を $2\pi$ でわると、$\tfrac{\omega}{2\pi}=f$（振動数）、$\tfrac{k}{2\pi}=\tfrac{1}{\lambda}$ なので、中学理科の「波の速さ＝振動数×波長」になります。
+
+6-10 のオイラーの公式を使うと、$\sin$ と $\cos$ の波をまとめて $y=e^{j(\omega t-kx)}$ と書けます（本当の波はその実部）。時間で微分すると $j\omega$ がかかり、場所で微分すると $-jk$ がかかるので、微分が「かけ算」になります。6-13 の強制振動で $e^{j\omega t}$ を使ったのと同じ考えで、電磁波や音の専門書でよく使われる書き方です。
+
+\bksubsection{11}{物質微分：流れといっしょに動いて見る}
+
+\label{bk:8-13:busshitsu}最後に、物理シリーズ『力学』の 力-13・力-15 で「数学 8-13 で学ぶ」と約束した\textbf{物質微分}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \shade[left color=bkBlue!12, right color=bkRed!14] (0,0) rectangle (120,18);
+  \draw[bkInk!70, line width=0.9pt] (0,0) -- (120,0) (0,18) -- (120,18);
+  \foreach \xx in {10,40,70,100} {\draw[bkBlue!80!black, line width=1pt, -{Stealth[length=3pt]}] (\xx,4) -- ++(10,0);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (60,-1.5) {流れの向き（$x$）：\qty{2}{m/s}　下流ほど温かい（\qty{1}{km} で 0.5\,℃）};
+  \fill[bkGreen!60!black] (55,11) ellipse (5 and 2);
+  \draw[bkRed!80!black, line width=1pt] (55,11) -- (55,22);
+  \fill[bkRed] (55,12) circle (1.3);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=3pt]}] (61,11) -- (75,11);
+  \node[font=\sffamily\footnotesize, anchor=south] at (55,22.5) {葉にのせた温度計};
+  \draw[bkInk, line width=0.8pt] (18,18) -- (18,26);
+  \fill[bkInk] (18,12) circle (1.3);
+  \draw[bkInk, line width=0.6pt] (18,12) -- (18,18);
+  \node[font=\sffamily\footnotesize, anchor=south] at (18,26.5) {止めておいた温度計};
+\end{tikzpicture}
+\bkfigcaption{川の水温を2つの温度計ではかる。止めておいた温度計は「その場所」の変化、葉にのせて流れる温度計は「水といっしょに動きながら」の変化をはかる。}
+\label{bk:8-13:fig-kawa}
+\end{bkfigure}
+
+川の水温を考えます。水は下流へ \qty{2}{m/s} で流れています。夕方で、どの場所でも水温は1時間に1\,℃ずつ下がっています。一方、下流ほど水温が高く、\qty{1}{km} 下流へ行くと0.5\,℃高くなっています。葉っぱにのせて流した温度計は、1時間に何\,℃変わるでしょう。
+
+止めておいた温度計は $-1$\,℃/h です。葉の温度計は、時間がたって冷える分に加えて、下流の温かい所へ運ばれる分も変わります。8-3 の連鎖律で、葉の場所 $x(t)$ での温度 $T\bigl(x(t),\ t\bigr)$ を時間で微分します。
+\begin{bkhenkei}[0.62]
+\frac{\dd}{\dd t}T\bigl(x(t),\ t\bigr)=\frac{\partial T}{\partial t}+\frac{\partial T}{\partial x}\,\frac{\dd x}{\dd t} & 連鎖律（8-3）。$t$ は2か所にある \\
+=\frac{\partial T}{\partial t}+v\,\frac{\partial T}{\partial x} & $\frac{\dd x}{\dd t}$ は流れの速さ $v$ \\
+\end{bkhenkei}
+数を入れます。速さを〔km/h〕にそろえます。
+\[ \qty{2}{m/s}\times\qty{3600}{s/h}=\qty{7200}{m/h}=\qty{7.2}{km/h} \]
+\begin{bkhenkei}[0.62]
+v\,\frac{\partial T}{\partial x}=\qty{7.2}{km/h}\times\qty{0.5}{℃/km}=\qty{3.6}{℃/h} & 運ばれて変わる分 \\
+-1+3.6=+2.6 & その場の変化をたす \\
+\end{bkhenkei}
+葉の温度計は、\textbf{1時間に2.6\,℃上がります}。その場では冷えているのに、流れにのると温かくなるのです。
+
+このように、流れといっしょに動きながら見た変化を\textbf{物質微分}といい、$\tfrac{\mathrm DT}{\mathrm Dt}$ と立てた D で書きます。\bkidx{ぶっしつびぶん}{物質微分}力-13 の言い方では「\textbf{水のつぶといっしょに動きながら見た変化}」です。3次元では、流れの矢印 $\vec v$ と温度の勾配の内積（8-4）になります。
+\kviiinframe[118mm]{$\dfrac{\mathrm DT}{\mathrm Dt}=\dfrac{\partial T}{\partial t}+\vec v\cdot\mathrm{grad}\,T=\dfrac{\partial T}{\partial t}+(\vec v\cdot\nabla)\,T$}
+1つめの項は「その場所で時間とともに変わる分」、2つめの項は「流れに運ばれて、温度のちがう場所へ動くことで変わる分」です。$(\vec v\cdot\nabla)$ は、
+\[ (\vec v\cdot\nabla)=v_x\frac{\partial}{\partial x}+v_y\frac{\partial}{\partial y}+v_z\frac{\partial}{\partial z} \]
+という「はたらき」の記号で、$\vec v\cdot\mathrm{grad}$ と同じものです（力-13 は $\mathrm{grad}$、力-15 は $\nabla$ で書いています）。
+
+\kviiinhead{水のつぶの加速度}
+温度 $T$ のかわりに速さ $\vec v$ そのものを入れると、水のつぶの加速度になります（力-13・力-15）。
+\[ \frac{\mathrm D\vec v}{\mathrm Dt}=\frac{\partial\vec v}{\partial t}+(\vec v\cdot\mathrm{grad})\,\vec v \]
+たとえば、ホースの先のノズルで、流れが変わらない（$\tfrac{\partial v}{\partial t}=0$）のに、速さが $v=1+10x$〔m/s〕（$x$ はノズルの入口からの距離〔m〕）と下流ほど速くなっているとします。$x=\qty{0.1}{m}$ では $v=2$、$\tfrac{\partial v}{\partial x}=10$ なので、水のつぶの加速度は $0+2\times10=\qty{20}{m/s^2}$。その場所の速さは時間で変わらないのに、つぶは加速しているのです。
+
+\Needspace{12\baselineskip}
+\begin{motto}[5]
+\kviiinbox{4回の偏微分：板の曲げと、はりの振動}
+物理 力-10 で予告したように、床のような広い板の曲がり方は、たわみ $w(x,\ y)$ の\textbf{4回の偏微分}が入った偏微分方程式で書けます。その中に出てくる
+\[ \frac{\partial^4w}{\partial x^4}+2\frac{\partial^4w}{\partial x^2\,\partial y^2}+\frac{\partial^4w}{\partial y^4}=\nabla^2(\nabla^2w) \]
+は、ラプラシアンを2回はたらかせたものです。はりがゆれるときは、次の形になります（$\rho A$ は1 m あたりの質量。物理『波』）。
+\[ EI\frac{\partial^4y}{\partial x^4}+\rho A\frac{\partial^2y}{\partial t^2}=0 \]
+$\tfrac{\partial^4y}{\partial x^4}$ は「$x$ で4回偏微分」の書き方です。
+\end{motto}
+
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+拡散方程式 $u_t=\kappa u_{xx}$ を，陽的差分スキーム
+\[ u_j^{n+1}=u_j^n+\mu\,(u_{j+1}^n-2u_j^n+u_{j-1}^n),\qquad \mu=\frac{\kappa\,\Delta t}{(\Delta x)^2} \]
+で解く。von Neumann の安定性解析より，安定条件は $\mu\leqq1/2$ である。
+\end{bkhonbun}
+\bkyaku{$u_t$ は $\tfrac{\partial u}{\partial t}$、$u_{xx}$ は $\tfrac{\partial^2u}{\partial x^2}$ の短い書き方（この本では使わない：8-2）。$\kappa$（カッパ）はこの本の $\alpha$、$\mu$ はこの本の $r$、$j$ は場所の名札 $i$。「陽的差分スキーム」は、今の行だけから次の行を作る表計算の方法。「von Neumann の安定性解析」は、⑤のように、でこぼこの形ごとの1歩の倍率を調べる方法。}
+\end{senmonsho}
+
+\Needspace{10\baselineskip}
+\begin{motto}[4]
+\kviiinbox{差分法と有限要素法}
+この章のように、となりとの差で微分を置きかえて計算する方法を\textbf{差分法}といいます（物理 力-16）。\bkidx{さぶんほう}{差分法}形が四角くない物（車の部品、骨、橋）では、物を小さな三角形や四面体に分けて計算する\textbf{有限要素法}がよく使われます。どちらも、最後は「となりどうしの関係」を並べた大きな連立方程式や、1歩の行列のくり返し（7-5・7-10）になります。
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{1歩の式}$T_i^{\,n+1}=T_i^{\,n}+r\bigl(T_{i+1}^{\,n}-2T_i^{\,n}+T_{i-1}^{\,n}\bigr)$、$r=\dfrac{\alpha\Delta t}{\Delta x^2}\leqq\dfrac12$\\[4pt]
+\tsl{熱方程式}$\dfrac{\partial T}{\partial t}=\alpha\dfrac{\partial^2T}{\partial x^2}$（3次元は $\alpha\nabla^2T$）\\[4pt]
+\tsl{波動方程式}$\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$、答え $f(x-ct)+g(x+ct)$、$c\Delta t\leqq\Delta x$\\[4pt]
+\tsl{物質微分}$\dfrac{\mathrm DT}{\mathrm Dt}=\dfrac{\partial T}{\partial t}+\vec v\cdot\mathrm{grad}\,T$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{熱方程式}{$\frac{\partial T}{\partial t}=\alpha\frac{\partial^2T}{\partial x^2}$。拡散方程式ともいう。}
+\bkword{熱拡散率}{$\alpha=\frac{k}{\rho c}$〔m²/s〕。熱のしみ広がりやすさ。}
+\bkword{初期条件}{はじめの時刻の、どの場所の値も決める条件。}
+\bkword{波動方程式}{$\frac{\partial^2y}{\partial t^2}=c^2\frac{\partial^2y}{\partial x^2}$。$c$ は波の速さ。}
+\bkword{波数}{$k=\frac{2\pi}{\lambda}$。1 m で角が何ラジアン変わるか。}
+\bkword{物質微分}{流れといっしょに動きながら見た変化 $\frac{\mathrm D}{\mathrm Dt}$。}
+\bkword{差分法}{となりとの差で微分を置きかえて計算する方法。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$T_i^{\,n}$}{ティー・アイ・エヌ}{$i$ 番めの場所の、$n$ 歩めの値。右上の $n$ は時刻の名札で、$n$ 乗ではない}{grid value}{8-13}}
+{\bkkigocard{$\dfrac{\mathrm DT}{\mathrm Dt}$}{ディー・ティー・ディー・ティー}{物質微分。流れといっしょに動いて見た変化。$\frac{\partial T}{\partial t}+\vec v\cdot\mathrm{grad}\,T$}{material derivative}{8-13}}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[表計算の1歩]
+$r=0.2$ の熱の表計算で、ある時刻の温度が左から80（左はし）、50、30、20（℃）です。左はしは80\,℃のままです。次の時刻の2番め（50\,℃の点）と3番め（30\,℃の点）の温度を求めましょう。\par
+\kangaekata 次の温度＝今の温度＋$r\times$（左 $-2\times$ 自分 $+$ 右）（③）。\par
+\shiki 2番め：$50+0.2\times(80-2\times50+30)=50+0.2\times10=52$\par
+\kviiinq 3番め：$30+0.2\times(50-2\times30+20)=30+0.2\times10=32$\par
+\kotae 52\,℃と32\,℃
+\end{reidai}
+
+\begin{jibun}
+$r=0.3$ の熱の表計算で、ある時刻の温度が左から100（左はし）、60、40、30（℃）です。左はしは100\,℃のままです。次の時刻の2番めと3番めの温度を求めましょう。
+\bkjans{2番め：$60+0.3\times(100-120+40)=60+6=66$\,℃。3番め：$40+0.3\times(60-80+30)=40+3=43$\,℃。}
+\end{jibun}
+
+\begin{reidai}[こわれない $\Delta t$]
+銅の棒（$\alpha=1.2\times10^{-4}$\,m²/s）を $\Delta x=\qty{0.005}{m}$ のマスに分けて、$\Delta t=\qty{0.1}{s}$ で表計算します。（1）$r$ を求め、こわれないか判定しましょう。（2）こわれない一番大きい $\Delta t$ を求めましょう。\par
+\kangaekata $r=\dfrac{\alpha\,\Delta t}{\Delta x^2}$。こわれないのは $r\leqq\frac12$（⑤）。\par
+\shiki（1）$r=\dfrac{1.2\times10^{-4}\times0.1}{0.005^2}=\dfrac{1.2\times10^{-5}}{2.5\times10^{-5}}=0.48$\par
+\kviiinq $0.48\leqq0.5$ なので、こわれない\par
+\kviiinq（2）$\Delta t=\dfrac{\Delta x^2}{2\alpha}=\dfrac{2.5\times10^{-5}}{2.4\times10^{-4}}=0.104$\par
+\kotae（1）$r=0.48$、こわれない。（2）約\qty{0.104}{s}
+\end{reidai}
+
+\begin{jibun}
+ステンレスの板（$\alpha=4\times10^{-6}$\,m²/s）を $\Delta x=\qty{0.002}{m}$ に分け、$\Delta t=\qty{0.6}{s}$ で表計算します。（1）$r$ を求め、こわれないか判定しましょう。（2）こわれない一番大きい $\Delta t$ を求めましょう。
+\bkjans{（1）\nobreak $r=\dfrac{4\times10^{-6}\times0.6}{0.002^2}=0.6$。0.5より大きいので、こわれる。（2）\nobreak $\dfrac{0.002^2}{2\times4\times10^{-6}}=\qty{0.5}{s}$。}
+\end{jibun}
+
+\begin{reidai}[ぎざぎざの1歩の倍率]
+熱の表計算で、温度が $+2$、$-2$、$+2$、$-2$、…と交互になっています（基準からの差）。（1）$r=0.3$ のとき、$+2$ の点は1歩で何になりますか。1歩の倍率も答えましょう。（2）$r=0.55$ のとき、くり返すとどうなりますか。\par
+\kangaekata ぎざぎざは1歩で $1-4r$ 倍（⑤）。大きさが1より大きいとこわれる（7-10）。\par
+\shiki（1）$2+0.3\times\bigl((-2)-2\times2+(-2)\bigr)=2+0.3\times(-8)=-0.4$\par
+\kviiinq 倍率は $1-4\times0.3=-0.2$（$2\times(-0.2)=-0.4$ と合う）\par
+\kviiinq（2）$1-4\times0.55=1-2.2=-1.2$。大きさ1.2は1より大きい\par
+\kotae（1）$-0.4$、$-0.2$ 倍（ゆれながら消える）。（2）$-1.2$ 倍ずつ、ゆれながら育ってこわれる
+\end{reidai}
+
+\begin{jibun}
+熱の表計算で、温度が $+3$、$-3$、$+3$、…と交互になっています。（1）$r=0.1$ のとき、$+3$ の点は1歩で何になりますか。1歩の倍率も答えましょう。（2）$r=0.7$ のとき、くり返すとどうなりますか。
+\bkjans{（1）\nobreak $3+0.1\times(-12)=1.8$。倍率 $1-0.4=0.6$。（2）\nobreak $1-2.8=-1.8$ 倍ずつ、ゆれながら育ってこわれる。}
+\end{jibun}
+
+\begin{reidai}[熱方程式に代入する]
+$\alpha=1\times10^{-4}$\,m²/s の棒で、$T=10\,e^{-0.0987t}\sin31.4x$ が熱方程式をみたすことを確かめ、でこぼこが半分になる時間を求めましょう（$31.4^2=986$、$\ln2=0.693$）。\par
+\kangaekata $t$ で微分した式と、$x$ で2回微分して $\alpha$ をかけた式をくらべる（⑦）。\par
+\shiki $\dfrac{\partial T}{\partial t}=-0.0987\times10\,e^{-0.0987t}\sin31.4x=-0.0987\,T$\par
+\kviiinq $\dfrac{\partial^2T}{\partial x^2}=-31.4^2\,T=-986\,T$\par
+\kviiinq $\alpha\dfrac{\partial^2T}{\partial x^2}=1\times10^{-4}\times(-986\,T)=-0.0986\,T$（丸めのちがいだけで同じ）\par
+\kviiinq 半分：$e^{-0.0987t}=\frac12$ から $t=\dfrac{\ln2}{0.0987}=\dfrac{0.693}{0.0987}=7.0$\par
+\kotae みたす。約7.0秒
+\end{reidai}
+
+\begin{jibun}
+$\alpha=1\times10^{-4}$\,m²/s の棒で、$T=10\,e^{-0.395t}\sin62.8x$ が熱方程式をみたすことを確かめ、でこぼこが半分になる時間を求めましょう（$62.8^2=3944$、$\ln2=0.693$）。
+\bkjans{$\dfrac{\partial T}{\partial t}=-0.395\,T$。$\alpha\dfrac{\partial^2T}{\partial x^2}=10^{-4}\times(-3944\,T)=-0.394\,T$ で同じ。$t=\dfrac{0.693}{0.395}\approx1.75$ 秒。}
+\end{jibun}
+
+\begin{reidai}[波の表計算]
+$s=1$ の波の表計算で、玉1〜7のずれが、1つ前の時刻に 0、1、2、1、0、0、0、今の時刻に 0、0、1、2、1、0、0 でした。（1）次の時刻の玉2〜6のずれを求めましょう（玉1と玉7は0のまま）。（2）$c=\qty{100}{m/s}$、$\Delta x=\qty{0.01}{m}$ のとき、$s=1$ になる $\Delta t$ を求めましょう。\par
+\kangaekata 次＝右どなり（今）＋左どなり（今）－自分（1つ前）（⑧）。$s=\dfrac{c\,\Delta t}{\Delta x}$。\par
+\shiki（1）玉2：$1+0-1=0$\quad 玉3：$2+0-2=0$\quad 玉4：$1+1-1=1$\par
+\kviiinq 玉5：$0+2-0=2$\quad 玉6：$0+1-0=1$\par
+\kviiinq（2）$\Delta t=\dfrac{s\,\Delta x}{c}=\dfrac{1\times0.01}{100}=1\times10^{-4}$\par
+\kotae（1）0、0、1、2、1（山が右へ1マス進んだ）。（2）$1\times10^{-4}$\,s
+\end{reidai}
+
+\begin{jibun}
+$s=1$ の波の表計算で、玉1〜7のずれが、1つ前の時刻に 0、0、0、1、3、1、0、今の時刻に 0、0、1、3、1、0、0 でした。次の時刻の玉2〜6のずれを求めましょう（玉1と玉7は0のまま）。
+\bkjans{玉2：$1+0-0=1$。玉3：$3+0-0=3$。玉4：$1+1-1=1$。玉5：$0+3-3=0$。玉6：$0+1-1=0$。1、3、1、0、0（山が左へ1マス進んだ）。}
+\end{jibun}
+
+\begin{reidai}[形を保って走る波]
+$y=\sin(2x-200t)$ が波動方程式 $\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$ をみたすときの $c$ を求め、波がどちら向きに走るか答えましょう。\par
+\kangaekata $t$ で2回、$x$ で2回微分してくらべる（⑨・⑩）。\par
+\shiki $\dfrac{\partial^2y}{\partial t^2}=-200^2\sin(2x-200t)=-40000\,y$\par
+\kviiinq $\dfrac{\partial^2y}{\partial x^2}=-2^2\sin(2x-200t)=-4\,y$\par
+\kviiinq $-40000\,y=c^2\times(-4\,y)$ から $c^2=10000$、$c=100$\par
+\kviiinq $2x-200t=2(x-100t)$ なので、$f(x-ct)$ の形（$c=100$）\par
+\kotae $c=\qty{100}{m/s}$。右（$x$ がふえる向き）へ走る
+\end{reidai}
+
+\begin{jibun}
+$y=3\sin(5x+1500t)$ が波動方程式をみたすときの $c$ を求め、波がどちら向きに走るか答えましょう。
+\bkjans{$\dfrac{\partial^2y}{\partial t^2}=-1500^2y$、$\dfrac{\partial^2y}{\partial x^2}=-25y$。$c^2=\dfrac{2250000}{25}=90000$、$c=\qty{300}{m/s}$。$5(x+300t)$ なので左へ走る。}
+\end{jibun}
+
+\begin{reidai}[波長・波数・角振動数]
+音の速さを \qty{340}{m/s} とします。440\,Hz の音（ピアノのラの音）の波長 $\lambda$、波数 $k$、角振動数 $\omega$ を求めましょう。\par
+\kangaekata $\lambda=\dfrac{c}{f}$、$k=\dfrac{2\pi}{\lambda}$、$\omega=2\pi f$。確かめに $\omega=ck$（⑩）。\par
+\shiki $\lambda=\dfrac{340}{440}=0.773$\par
+\kviiinq $k=\dfrac{2\pi}{0.773}=8.13$、$\omega=2\pi\times440=2765$\par
+\kviiinq 確かめ：$ck=340\times8.13=2764$（$\omega$ と、丸めのちがいだけで同じ）\par
+\kotae $\lambda\approx\qty{0.773}{m}$、$k\approx8.13$〔1/m〕、$\omega\approx2765$〔rad/s〕
+\end{reidai}
+
+\begin{jibun}
+弦を伝わる波の速さが \qty{100}{m/s} です。200\,Hz の波の波長 $\lambda$、波数 $k$、角振動数 $\omega$ を求めましょう。
+\bkjans{$\lambda=\dfrac{100}{200}=\qty{0.5}{m}$。$k=\dfrac{2\pi}{0.5}\approx12.6$〔1/m〕。$\omega=2\pi\times200\approx1257$〔rad/s〕。$ck=1260$ で、丸めのちがいだけで同じ。}
+\end{jibun}
+
+\begin{reidai}[流れにのった温度計]
+川が下流へ \qty{2}{m/s} で流れています。どの場所でも水温は1時間に1\,℃ずつ下がっていて、\qty{1}{km} 下流へ行くと水温は0.5\,℃高くなります。流れにのった温度計の温度は、1時間に何\,℃変わりますか。\par
+\kangaekata $\dfrac{\mathrm DT}{\mathrm Dt}=\dfrac{\partial T}{\partial t}+v\dfrac{\partial T}{\partial x}$（⑪）。単位を〔km〕と〔h〕にそろえる。\par
+\shiki $v=\qty{2}{m/s}\times\qty{3600}{s/h}=\qty{7200}{m/h}=\qty{7.2}{km/h}$\par
+\kviiinq $v\dfrac{\partial T}{\partial x}=7.2\times0.5=3.6$〔℃/h〕\par
+\kviiinq $\dfrac{\mathrm DT}{\mathrm Dt}=-1+3.6=2.6$〔℃/h〕\par
+\kotae 1時間に2.6\,℃上がる
+\end{reidai}
+
+\begin{jibun}
+西風が東へ \qty{5}{m/s} で吹いています。どの場所でも気温は1時間に0.5\,℃上がっていて、\qty{100}{km} 東へ行くと気温は1\,℃高くなります。風にのった空気の温度は、1時間に何\,℃変わりますか。
+\bkjans{$v=5\times3600=\qty{18000}{m/h}=\qty{18}{km/h}$。$\dfrac{\partial T}{\partial x}=\qty{0.01}{℃/km}$。$0.5+18\times0.01=0.68$。1時間に0.68\,℃上がる。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$\Delta t$ を大きくすれば速く計算できる}
+\bkng{$\Delta t$ を10倍にすれば、10倍速く答えが出る}
+\bkok{$r=\frac{\alpha\Delta t}{\Delta x^2}\leqq\frac12$ をこえると、計算がこわれる}
+こわれた計算は、ぎざぎざが育って意味のない数になります。$\Delta t$ を変えたら、まず $r$ を確かめます（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$r$ の $\Delta x$ を2乗し忘れる}
+\bkng{$r=\dfrac{\alpha\,\Delta t}{\Delta x}=\dfrac{10^{-4}\times0.25}{0.01}=0.0025$}
+\bkok{$r=\dfrac{\alpha\,\Delta t}{\Delta x^2}=\dfrac{10^{-4}\times0.25}{0.01^2}=0.25$}
+単位で確かめます。$\frac{\unit{m^2/s}\times\unit{s}}{\unit{m}}$ では m が残り、$r$ が単位のない数になりません（①）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{はしの点にも1歩の式を使う}
+\bkng{左はしの B列にも \texttt{=B2+0.25*(…)} を入れる}
+\bkok{はしの点は、境界条件（100\,℃のまま、熱が出ないなど）で決める}
+はしの点には、片方のとなりがありません。はしでどうなっているかは、外から決まっています（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\dfrac{\partial T}{\partial t}$ と $\dfrac{\mathrm DT}{\mathrm Dt}$ を取りちがえる}
+\bkng{流れにのった温度計も、その場の変化と同じ $-1$\,℃/h}
+\bkok{流れにのると $\dfrac{\partial T}{\partial t}+v\dfrac{\partial T}{\partial x}=+2.6$\,℃/h}
+$\dfrac{\partial T}{\partial t}$ は「同じ場所」で見た変化、$\dfrac{\mathrm DT}{\mathrm Dt}$ は「水といっしょに動いて」見た変化です（⑪）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{波の式で $c$ と $c^2$ を取りちがえる}
+\bkng{$\dfrac{\partial^2y}{\partial t^2}=c\,\dfrac{\partial^2y}{\partial x^2}$ で、$c=10000$ として速さ \qty{10000}{m/s}}
+\bkok{$c^2=10000$ なので、速さは $c=\qty{100}{m/s}$}
+波動方程式の係数は $c^2$ です。$y=f(x-ct)$ を代入すると $c^2$ が出てくることで確かめられます（⑨）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$T_i^{\,n}$ の右上の $n$ を、$n$ 乗と読む}
+\bkng{$T_3^{\,2}$ は $T_3\times T_3$}
+\bkok{$T_3^{\,2}$ は「3番めの点の、2歩めの温度」}
+右上は時刻の名札です。本によっては $T_3^{(2)}$ とかっこをつけて区別します。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{\bkTT}●}]
+\item \textbf{スマートフォンの熱をにがす}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+スマートフォンの中では、小さな部品が熱を出します。設計では、本体を細かいマスに分けて3次元の熱方程式（熱の生まれる分を加えたもの）をコンピュータで解き、銅の板やシートで熱を広げて、手でさわる面が熱くなりすぎないようにします。8-0 で見た場面です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkInk!80, draw=bkInk, rounded corners=1.5mm] (4,0) rectangle (18,26);
+  \fill[bkBlue!25] (5.2,2.5) rectangle (16.8,23.5);
+  \fill[bkRed!60] (9,15) rectangle (13,19);
+  \foreach \a in {0,60,...,300} {\draw[bkRed!80!black, line width=0.6pt, -{Stealth[length=1.8pt]}] (11,17) ++(\a:2.6) -- ++(\a:3);}
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{地震の波・楽器の弦}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+地震の波は、地下の岩の中を波動方程式にしたがって伝わります。ギターやピアノの弦の音の高さは、⑧の $c=\sqrt{F/\mu}$ と弦の長さで決まります。張力 $F$ を強くすると $c$ が大きくなり、音が高くなります（物理『波』）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (1,10) .. controls (8,18) and (16,18) .. (25,10);
+  \draw[bkGray, line width=0.6pt, dashed] (1,10) .. controls (8,2) and (16,2) .. (25,10);
+  \fill[bkInk] (1,10) circle (1) (25,10) circle (1);
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{天気予報の計算}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+天気予報では、大気を何千万〜何億ものマスに分け、風に運ばれる気温や水蒸気（⑪の物質微分）を、となりのマスとの差で少しずつ先の時刻へ進めます。マスを細かくすると、こわれないように $\Delta t$ も小さくしなければならず、計算の量が大きくふえます（⑤）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.4pt, step=4] (0,0) grid (24,20);
+  \foreach \xx/\yy in {2/6,10/10,18/14} {\draw[bkBlue!80!black, line width=0.9pt, -{Stealth[length=2pt]}] (\xx,\yy) -- ++(4,2);}
+  \draw[bkInk!70, line width=0.6pt] (0,0) rectangle (24,20);
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{こわれない条件に名前をつけた3人}
+波の表計算の条件 $c\,\Delta t\leqq\Delta x$ は、ドイツのクーラン、フリードリッヒス、レヴィの3人が1928年の論文で示したことから、3人の頭文字をとって\textbf{CFL条件}とよばれています。コンピュータがまだない時代に、「となりのマスとの差で計算するとき、答えが正しく近づくのはどんなときか」を調べた研究でした。のちにコンピュータで天気や流れを計算するようになると、この条件は、計算をする人が最初に確かめる決まりになりました。弦の波の式を作ったのはダランベール（1747年）、熱の式を作ったのはフーリエ（1822年の本。6-3）と伝えられています。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $r=0.25$ の熱の表計算で、ある時刻の温度が左から90（左はし）、60、40、30（℃）です。左はしは90\,℃のままです。次の時刻の2番めと3番めの温度を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{2番め：$60+0.25\times(90-120+40)=62.5$\,℃。3番め：$40+0.25\times(60-80+30)=42.5$\,℃。}
+
+\bkproblem アルミの棒（$\alpha=1\times10^{-4}$\,m²/s）を $\Delta x=\qty{0.02}{m}$ に分け、$\Delta t=\qty{1}{s}$ で表計算します。（1）$r$ を求め、こわれないか判定しましょう。（2）こわれない一番大きい $\Delta t$ を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{（1）\nobreak $r=\dfrac{10^{-4}\times1}{0.02^2}=0.25$。こわれない。（2）\nobreak $\dfrac{0.02^2}{2\times10^{-4}}=\qty{2}{s}$。}
+
+\bkproblem 熱の表計算で、温度が $+5$、$-5$、$+5$、…と交互です。（1）$r=0.45$ のときの1歩の倍率を求め、$+5$ の点が1歩で何になるか答えましょう。（2）$r=0.75$ のとき、くり返すとどうなりますか\mbox{（\bkreidairef{3}）}。
+\bkpans{（1）\nobreak $1-1.8=-0.8$ 倍。$5\times(-0.8)=-4$。（2）\nobreak $1-3=-2$ 倍ずつ、ゆれながら育ってこわれる。}
+
+\bkproblem $\alpha=1\times10^{-4}$\,m²/s の棒で、$T=8\,e^{-0.888t}\sin94.2x$ が熱方程式をみたすことを確かめ、でこぼこが半分になる時間を求めましょう（$94.2^2=8874$、$\ln2=0.693$）\mbox{（\bkreidairef{4}）}。
+\bkpans{$\dfrac{\partial T}{\partial t}=-0.888\,T$。$\alpha\dfrac{\partial^2T}{\partial x^2}=10^{-4}\times(-8874\,T)=-0.887\,T$ で同じ。$t=\dfrac{0.693}{0.888}\approx\qty{0.78}{s}$。}
+
+\bkproblem $s=1$ の波の表計算で、玉1〜7のずれが1つ前に 0、2、4、2、0、0、0、今 0、0、2、4、2、0、0 のとき、次の時刻の玉2〜6を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{玉2：$2+0-2=0$。玉3：$4+0-4=0$。玉4：$2+2-2=2$。玉5：$0+4-0=4$。玉6：$0+2-0=2$。0、0、2、4、2。}
+
+\bkproblem $y=\sin(4x-1200t)$ が波動方程式をみたすときの $c$ を求め、波がどちら向きに走るか答えましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$c^2=\dfrac{1200^2}{4^2}=90000$、$c=\qty{300}{m/s}$。$4(x-300t)$ なので右へ走る。}
+
+\bkproblem 音の速さを \qty{340}{m/s} とします。1000\,Hz の音の波長 $\lambda$、波数 $k$、角振動数 $\omega$ を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$\lambda=\dfrac{340}{1000}=\qty{0.34}{m}$。$k=\dfrac{2\pi}{0.34}\approx18.5$〔1/m〕。$\omega=2\pi\times1000\approx6283$〔rad/s〕。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 川が下流へ \qty{1}{m/s} で流れています。どの場所でも水温は1時間に0.5\,℃ずつ上がっていて、\qty{1}{km} 下流へ行くと水温は0.2\,℃低くなります。流れにのった温度計の温度は、1時間に何\,℃変わりますか\mbox{（\bkreidairef{8}）}。
+\bkpans{$v=\qty{3.6}{km/h}$。$v\dfrac{\partial T}{\partial x}=3.6\times(-0.2)=-0.72$。$0.5-0.72=-0.22$。1時間に0.22\,℃下がる。}
+
+\bkproblem 鉄の棒（$\alpha=2.3\times10^{-5}$\,m²/s、$\Delta x=\qty{0.01}{m}$）の、（1）こわれない最大の $\Delta t$、（2）$\Delta t=\qty{3}{s}$ での $r$ と1歩の倍率は？\mbox{（\bkreidairef{2}・\bkreidairef{3}）}。
+\bkpans{（1）\nobreak $\dfrac{0.01^2}{2\times2.3\times10^{-5}}\approx\qty{2.17}{s}$。（2）\nobreak $r=\dfrac{2.3\times10^{-5}\times3}{0.01^2}=0.69$。倍率 $1-2.76=-1.76$（こわれる）。}
+
+\bkproblem 空気の中の音（$c=\qty{340}{m/s}$）を、$\Delta x=\qty{0.017}{m}$ のマスで、$s=1$ の波の表計算にします。$\Delta t$ を何秒にすればよいですか\mbox{（\bkreidairef{5}）}。
+\bkpans{$\Delta t=\dfrac{0.017}{340}=5\times10^{-5}$\,s。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 棒の温度を「となりとの差」の表計算で計算できる。\bkfurref{bk:8-13:masu}
+\item こわれない条件 $r\leqq\frac12$ を1歩の倍率で説明できる。\bkfurref{bk:8-13:joken}
+\item 熱と波の方程式を作り、代入して確かめられる。\bkfurref{bk:8-13:netsu}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{熱はならされて消え、波はゆれながら走る。次の 8-14 では、電気と磁気や水の流れの式を、この巻のことばで読んでみよう。}

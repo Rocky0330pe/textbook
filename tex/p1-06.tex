@@ -1,0 +1,1117 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-3
+%% p1-06.tex  力-6　回る物体：慣性モーメントと角運動量（★4〜5・3段）
+%% 公式の持ち主（計画書 A）：A83（ケプラーの第1〜3法則）・A87（静止衛星）・A88（だ円軌道の近地点・遠地点：入試）・A96（I・L＝Iω・Iα＝N・½Iω²・平行軸）
+%% 数値はすべて Python で計算した：scratchpad/phys1/力-6/calc.py（例題・図・表）、motor.py（本文の phcode と同じ）
+%% 出典：
+%%   地球：近日点 147.095×10⁶ km、遠日点 152.100×10⁶ km、GM＝3.986×10¹⁴ m³/s²、慣性モーメント係数 I/(MR²)＝0.3308、
+%%     質量 5.9722×10²⁴ kg、平均半径 6371 km、恒星日 23.9345 h：NASA Earth Fact Sheet https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+%%   火星：長半径 1.52366 AU、近日点 206.650×10⁶ km、遠日点 249.261×10⁶ km（NASA Mars Fact Sheet）。月：長半径 384400 km、恒星月 27.3217日（NASA Moon Fact Sheet）
+%%   木星：長半径 5.203 AU（NASA Jupiter Fact Sheet）
+%%   小型サーボモータ（100 W、3000 min⁻¹）の定格トルク 0.318 N·m：安川電機 SGM7J-01A の公開仕様（販売店の掲載 https://foxmere.com/en/parts/yaskawa/sgm7j01afa21）
+%%   銀河の回転速度とダークマター：Rubin & Ford（1970、アンドロメダ銀河）、Zwicky（1933、かみのけ座銀河団）
+%%   落ちるねこ：Kane & Scher, Int. J. Solids Structures 5 (1969) 663
+%%   スケーター・回転いすの慣性モーメントは、この章で置いたモデルの値（測定値ではない）
+\makeatletter
+\newcommand\pxgNm[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{N.m}}
+\newcommand\pxgI[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{kg.m^2}}
+\newcommand\pxgu[2]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{#2}}
+\newcommand\pxgunit[1]{\unit[inter-unit-product=\ensuremath{\cdot}]{#1}}
+\newcommand\pxgline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\pxghead[1]{\par\addvspace{5pt}\Needspace{7\baselineskip}\noindent{\sffamily\bfseries\color{bkDeep}#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+\newcommand\pxgstep[2]{\par\addvspace{5pt}\Needspace{6\baselineskip}\noindent
+  {\bkcircled[bkOrange]{#1}\enspace\sffamily\bfseries\color{bkOrange!75!black}#2}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+\tikzset{pxg force/.style={-{Stealth[length=3.2mm, width=2.4mm]}, line width=1.5pt},
+  pxg lab/.style={font=\sffamily\footnotesize, inner sep=1.2pt}}
+% 上から見た人（回転いす）  \pxgtop{(x,y)}{うでの長さ mm}
+\newcommand\pxgtop[2]{\begin{scope}[shift={#1}]
+  \draw[bkInk!60, line width=2.2pt, line cap=round] (-#2,0) -- (#2,0);
+  \filldraw[fill=bkBlue!25, draw=bkBlue!70!black, line width=0.6pt] (0,0) ellipse (6.5 and 4);
+  \filldraw[fill=bkSkin, draw=bkInk!50, line width=0.4pt] (0,0) circle (2.6);
+  \filldraw[fill=bkBlue!35, draw=bkBlue!70!black, line width=0.5pt] (-#2,0) circle (2.2) (#2,0) circle (2.2);\end{scope}}
+% 回る向きの矢印（上から見て左回り）
+\newcommand\pxgspin[2]{\draw[bkRed, line width=1.1pt, -{Stealth[length=3.5pt]}] ($#1+(20:#2)$) arc (20:160:#2);}
+\newcommand\pxgspinfast[2]{\draw[bkRed, line width=1.1pt, -{Stealth[length=3.5pt]Stealth[length=3.5pt]}] ($#1+(20:#2)$) arc (20:160:#2);}
+\makeatother
+
+\phchapter{6}{回る物体：慣性モーメントと角運動量}{スケートの選手が腕をたたむと、速く回るのはなぜ？}{\bklevelrange{4}{5}}{回る物体：慣性モーメントと角運動量}
+\bkmichishirube{4-8,4-14,6-4,8-6,力-5}{力-7,力-13,電-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 細かく分けてたし、慣性モーメントを表計算で求められる。
+\item \bklevel{4}\enspace 回転の運動方程式と角運動量の保存を使える。
+\item \bklevel{5}\enspace 角運動量の保存から、ケプラーの法則を導ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$L=I\omega$、$I=\sum mr^2$、角運動量の保存}{高校物理（発展）}{ph:力-6:LIw}
+\phk{回転の運動方程式 $I\,\dd\omega/\dd t=N$}{高校物理（発展）}{ph:力-6:undou}
+\phk{平行軸の定理 $I=I_{\mathrm G}+Md^2$}{高校物理（発展）}{ph:力-6:heikoujiku}
+\phk{回転の運動エネルギー $\tfrac{1}{2}I\omega^2$}{高校物理（発展）}{ph:力-6:energy}
+\phk{面積速度一定・$r_1v_1=r_2v_2$}{高校物理}{ph:力-6:kepler2}
+\phk{ケプラーの第3法則（$T^2/r^3$ が一定）}{高校物理}{ph:力-6:kepler3}
+\phk{静止衛星の軌道半径（約4.22万 km）}{高校物理}{ph:力-6:seishi}
+\phk{だ円軌道（ケプラーの第1法則）}{高校物理}{ph:力-6:kepler1}
+\phkx{$v=r\omega$・円軌道の速さ}{高校物理}{力-1・2 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+フィギュアスケートの選手は、うでを広げてゆっくり回り始め、うでを胸に引きよせると、目にもとまらない速さで回ります。だれも押していないのに、なぜ速くなるのでしょう。速くなったぶんの勢いは、どこから来たのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.7mm, y=0.7mm]
+  \pxgtop{(0,0)}{18}
+  \pxgspin{(0,0)}{11}
+  \node[pxg lab, anchor=north] at (0,-6) {広げる：ゆっくり};
+  \pxgtop{(38,0)}{8}
+  \pxgspinfast{(38,0)}{11}
+  \node[pxg lab, anchor=north] at (38,-6) {たたむ：速い};
+  \node[pxg lab, text=bkGray, anchor=north] at (19,-12.5) {（上から見た図）};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-5 では、止まっている剛体を調べました。この章では、軸のまわりに回る剛体の動きを調べます。まっすぐ進む物の「動かしにくさ」は質量でした。回る物の「回しにくさ」は、質量だけでは決まりません。それを表す量と、回る勢いを表す量を作ると、スケートの選手から、モータ、地球のまわりの人工衛星まで、同じ式で説明できます。
+
+\begin{yattemiyou}[回転いすで、うでを引きよせる]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item よく回る回転いすにすわり、水を入れた\qty{2}{L}のペットボトル（約\qty{2}{kg}）を両手に1本ずつ持って、うでを横に広げよう。
+\item 友だちにゆっくり回してもらい、足を床からはなそう。
+\item 回りながら、ペットボトルを胸に引きよせよう。回り方はどう変わるかな。もう一度うでを広げると？
+\item 1回転にかかる時間を、スマホの動画で調べよう。
+\end{enumerate}
+\textbf{注意}：まわりに物がない広い所で、大人といっしょにやろう。目が回ったら、すぐにやめよう。
+\par\vspace{4pt}\noindent ミナさんの結果：うでを広げたときは1回転に約\qty{2.0}{s}、引きよせると約\qty{1.0}{s}でした。引きよせると、回る速さが約2倍になりました。
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{4-8}{角速度 $\omega$（rad/s）は1秒に回る角。半径 $r$ の円を回る点の速さは $v=r\omega$。1回転の時間は $T=\dfrac{2\pi}{\omega}$。}
+\bkrecall{4-14}{トルク $\vec N=\vec r\times\vec F$。角運動量 $\vec L=\vec r\times m\vec v$（回る勢い）。}
+\bkrecall{力-5}{力のモーメント $M=Fl$。動いている物では、外力のトルクが角運動量を変える（この章で導く）。}
+\bkrecall{8-6}{面や立体を細かく分けて、かけてたす（重積分）。}
+\bkrecall{6-4}{$\dfrac{\dd y}{\dd t}=\dfrac{y_\infty-y}{\tau}$ の答えは $y=y_\infty(1-e^{-t/\tau})$。$\tau$ は時定数。}
+\bkrecall{力-2}{円軌道の運動方程式 $m\dfrac{v^2}{r}=G\dfrac{Mm}{r^2}$。}
+\end{omoidasou}
+
+\noindent 回転数は「毎分3000回転」のように言います。この本では、これを\qty{3000}{min^{-1}}とも書きます。rad/s に直すには、1回転が $2\pi$ rad、1分が\qty{60}{s}なので、単位つきの1を使って
+\[ \qty{3000}{min^{-1}}=3000\times\frac{2\pi\ \text{rad}}{1\ \text{回転}}\times\frac{1\ \text{min}}{60\ \text{s}}\approx\qty{314}{rad/s} \]
+です。この章では、$\approx$（ほぼ等しい。5-8）と $\sum$（たし算をまとめる。5-10）も使います。
+
+%% ======================================================================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{回しにくさを、体で感じる}{3}
+
+\bksubsection{1}{うでを引きよせると、速く回る}
+
+\leavevmode\label{ph:力-6:sec1}やってみようでは、だれも押していないのに、ペットボトルを引きよせると速く回りました。反対に、広げると遅くなりました。回転いすの軸はよく回るので、外から回す働き（トルク）はほとんどはたらいていません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxgtop{(0,0)}{24}
+  \pxgspin{(0,0)}{13}
+  \draw[bkGray, line width=0.4pt, <->] (0,-6) -- (24,-6);
+  \node[pxg lab, anchor=north] at (12,-6.4) {\qty{0.7}{m}};
+  \node[font=\sffamily\small, anchor=north] at (0,-13) {1回転に約\qty{2.0}{s}};
+  \draw[bk arrow, bkGray, line width=1pt] (34,0) -- (46,0);
+  \node[pxg lab, anchor=south] at (40,1) {引きよせる};
+  \pxgtop{(68,0)}{8}
+  \pxgspinfast{(68,0)}{12}
+  \draw[bkGray, line width=0.4pt, <->] (68,-6) -- (76,-6);
+  \node[pxg lab, anchor=north west] at (70,-6.4) {\qty{0.2}{m}};
+  \node[font=\sffamily\small, anchor=north] at (68,-13) {1回転に約\qty{1.0}{s}};
+\end{tikzpicture}
+\bkfigcaption{上から見た回転いすの人とペットボトル。軸からペットボトルまでの距離が\qty{0.7}{m}から\qty{0.2}{m}になると、回る速さ（角速度）が約2倍になった。}
+\end{bkfigure}
+
+\noindent このことから、次のことが考えられます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 回る物には、外から回す働きがなければ変わらない「回る勢い」のような量がある。
+\item その量は、回る速さ（角速度）だけでなく、重い物が軸からどれだけはなれているかで決まる。重い物が軸から遠いと「回しにくい」ので、ゆっくりしか回れない。
+\end{itemize}
+この「回る勢い」を\textbf{角運動量}、「回しにくさ」を\textbf{慣性モーメント}といいます。②〜④で回しにくさを数で表し、⑤〜⑥で、回る勢いが変わらないわけを導きます。
+
+\bksubsection{2}{同じ質量でも、回しにくさがちがう}
+
+\leavevmode\label{ph:力-6:sec2}
+\noindent\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 輪
+  \fill[bkGray!40] (-1.5,-2) rectangle (1.5,-34);
+  \filldraw[fill=white, draw=bkDeep, line width=3pt] (0,0) circle (11);
+  \draw[bkDeep, line width=0.4pt] (0,0) -- (11,0) (0,0) -- (-11,0) (0,0) -- (0,11) (0,0) -- (0,-11);
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.5pt] (0,0) circle (2);
+  \draw[bkInk, line width=0.6pt] (2,0) -- (2,-22);
+  \filldraw[fill=bkOrange!40, draw=bkOrange!70!black, line width=0.5pt] (0,-22) rectangle (4,-27);
+  \node[pxg lab, anchor=north] at (0,-35) {輪};
+  % 円板
+  \begin{scope}[shift={(32,0)}]
+  \fill[bkGray!40] (-1.5,-2) rectangle (1.5,-34);
+  \filldraw[fill=bkDeep!35, draw=bkDeep, line width=0.8pt] (0,0) circle (11);
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.5pt] (0,0) circle (2);
+  \draw[bkInk, line width=0.6pt] (2,0) -- (2,-22);
+  \filldraw[fill=bkOrange!40, draw=bkOrange!70!black, line width=0.5pt] (0,-22) rectangle (4,-27);
+  \node[pxg lab, anchor=north] at (0,-35) {円板};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+同じ質量（\qty{1}{kg}）、同じ半径（\qty{0.1}{m}）の、輪（質量がふちに集まっている）と円板（質量が一様に広がっている）を用意します。どちらも、半径\qty{2}{cm}の軸にひもを巻き、同じ\qty{200}{g}のおもりをつるして、手をはなします。
+
+おもりが\qty{0.5}{m}下がるまでの時間を、例題7・13と同じ式で計算すると、円板は約\qty{2.5}{s}、輪は約\qty{3.6}{s}。輪のほうが、ゆっくり回り始めます。
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent 質量は同じなのに、輪のほうが「回しにくい」のです。ちがいは、質量が軸からどれだけはなれているかです。軸から遠い所の質量ほど、回しにくさに大きく効きます。
+
+\pxghead{遠いおもりは、なぜ回しにくい？}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+軽い棒の先に質量 $m$ のおもりをつけ、軸のまわりに回し始めることを考えます。おもりの軸からの距離を2倍にすると、どうなるでしょう。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 同じ回り方（同じ角速度）にするには、おもりは2倍の円を回るので、2倍の速さで動かなければならない（$v=r\omega$）。同じ時間で2倍の速さにするには、おもりを押す力も2倍いる。
+\item その力は、軸から2倍遠い所で出さなければならない。軸を回して出すには、回す働き（力×うで）がさらに2倍いる。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk] (0,0) circle (1.2);
+  \draw[bkInk!60, line width=1.4pt] (0,0) -- (12,0);
+  \fill[bkOrange] (12,0) circle (2);
+  \draw[bkOrange!80!black, line width=1pt, -{Stealth[length=3pt]}] (12,2.5) -- (12,9);
+  \node[pxg lab, anchor=west] at (12.6,7) {$v$};
+  \node[pxg lab, anchor=north] at (6,-1.5) {$r$};
+  \begin{scope}[shift={(0,-22)}]
+  \fill[bkInk] (0,0) circle (1.2);
+  \draw[bkInk!60, line width=1.4pt] (0,0) -- (24,0);
+  \fill[bkOrange] (24,0) circle (2);
+  \draw[bkOrange!80!black, line width=1pt, -{Stealth[length=3pt]}] (24,2.5) -- (24,15.5);
+  \node[pxg lab, anchor=west] at (24.6,12) {$2v$};
+  \node[pxg lab, anchor=north] at (12,-1.5) {$2r$};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent 2倍×2倍で、4倍の回す働きがいります。つまり、\textbf{回しにくさは、質量×（軸からの距離）$^2$} です。距離が3倍なら9倍です。これを、質量のつぶ全部についてたしたものが、物全体の回しにくさ（慣性モーメント）です。
+\pxgline{\fbox{慣性モーメント $I=\sum m_ir_i^2$}\qquad（$r_i$ はつぶ $i$ の、軸からの距離）}
+単位は\pxgunit{kg.m^2}です。輪は、全部の質量が軸から半径 $R$ の所にあるので $I=MR^2$。円板は、軸の近くにも質量があるので、それより小さくなります（③④で求めます）。
+
+\begin{phmijika}[回しにくさを変える]
+バトンの両はしにおもりがついているのは、回しにくくして、空中でゆっくり安定して回るようにするため。つな渡りの人が長い棒を持つのも、体と棒全体を回しにくくして、かたむきかけたときに直す時間をかせぐため。
+\end{phmijika}
+
+\Needspace{14\baselineskip}\phstage{te}{細かく分けて、たしてみる}{3}
+
+\bksubsection{3}{棒の回しにくさを、表計算で}
+
+\leavevmode\label{ph:力-6:sec3}長さ\qty{1}{m}、質量\qty{1}{kg}の一様な棒を、まん中を通る軸のまわりに回します。棒を同じ長さの10個の小さな部分（それぞれ\qty{0.1}{kg}）に分け、各部分は、そのまん中の点に質量が集まっていると考えます。軸の左右に5個ずつ、同じ距離の部分が2つずつあります。
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & 軸からの距離 $r$（m） & 質量 $m$（kg） & $m\times r^2$ & 左右2つ分 \\
+2 & 0.05 & 0.1 & 0.00025 & 0.0005 \\
+3 & 0.15 & 0.1 & 0.00225 & 0.0045 \\
+4 & 0.25 & 0.1 & 0.00625 & 0.0125 \\
+5 & 0.35 & 0.1 & 0.01225 & 0.0245 \\
+6 & 0.45 & 0.1 & 0.02025 & 0.0405 \\
+7 & & & 合計 & 0.0825 \\}
+\bktabcaption{C2 に \texttt{=B2*A2\^{}2}、D2 に \texttt{=2*C2}、D7 に \texttt{=SUM(D2:D6)}。}
+\end{bkcenter}
+
+\noindent 分け方を細かくしていくと、合計はある値に近づいていきます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{5}{Q[c,m,wd=18mm]}}, rowsep=1.5pt}
+分ける数 & 2 & 4 & 10 & 100 & 1000 \\
+$\sum m_ir_i^2$（\pxgunit{kg.m^2}） & 0.0625 & 0.0781 & 0.0825 & 0.08333 & 0.083333 \\
+\end{bktable}
+\bktabcaption{細かく分けるほど、$\dfrac{1}{12}=0.08333\cdots$ に近づく。}
+\end{bkcenter}
+
+\noindent 近づいていく先は $\dfrac{1}{12}\approx0.0833$ です。質量 $M$、長さ $L$ の棒では、$I=\dfrac{1}{12}ML^2$ になります（⑦で積分を使って確かめます）。同じ棒を、はしを通る軸のまわりに回すと、10個に分けた計算で0.3325、細かくすると $\dfrac{1}{3}\approx0.333$ に近づきます。まん中のまわりの4倍も回しにくいのです。棒の先を持って振るより、まん中を持って回すほうが楽なのは、このためです。
+
+\bksubsection{4}{はずみ車にたまるエネルギー}
+
+\leavevmode\label{ph:力-6:sec4}回っている物は、運動エネルギーをもっています。質量\qty{10}{kg}、半径\qty{0.3}{m}の一様な円板が、1秒に10回転（角速度 $\omega=2\pi\times10\approx\qty{62.8}{rad/s}$）しているとき、その運動エネルギーを求めます。
+
+円板の場所によって、動く速さがちがいます。軸から $r$ の所の速さは $v=r\omega$ です。そこで、円板を、はば\qty{0.06}{m}の5つの輪に分けます。輪の質量は面積に比例するので、輪 $k$ の質量は $10\times\dfrac{(\text{外の半径})^2-(\text{内の半径})^2}{0.3^2}$。それぞれの輪の運動エネルギー $\dfrac{1}{2}mv^2$ を、輪のまん中の半径の速さで計算して、たします。
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & まん中の半径 $r$（m） & 質量 $m$（kg） & 速さ $v=r\omega$（m/s） & $\dfrac{1}{2}mv^2$（J） \\
+2 & 0.03 & 0.4 & 1.88 & 0.7 \\
+3 & 0.09 & 1.2 & 5.65 & 19.2 \\
+4 & 0.15 & 2.0 & 9.42 & 88.8 \\
+5 & 0.21 & 2.8 & 13.19 & 243.7 \\
+6 & 0.27 & 3.6 & 16.96 & 518.0 \\
+7 & & & 合計 & 870.5 \\}
+\bktabcaption{外がわの輪ほど、速く動くうえに質量も大きいので、エネルギーの大部分をもつ。}
+\end{bkcenter}
+
+\noindent 細かく分けていくと、合計は約\qty{888}{J}に近づきます。同じ質量・同じ半径の輪（全部の質量がふちにある）なら、全部が速さ $0.3\times62.8\approx\qty{18.8}{m/s}$ で動くので、$\dfrac{1}{2}\times10\times18.8^2\approx\qty{1777}{J}$。円板のちょうど2倍です。
+
+ここで、表の計算をよく見ます。$\dfrac{1}{2}mv^2=\dfrac{1}{2}m(r\omega)^2=\dfrac{1}{2}(mr^2)\omega^2$ です。$\omega$ はどの輪でも同じなので、たし算は
+\pxgline{$\displaystyle\sum\frac{1}{2}m_iv_i^2=\frac{1}{2}\Bigl(\sum m_ir_i^2\Bigr)\omega^2$}
+となり、②の「回しにくさ」$\sum m_ir_i^2$ が、また出てきました。回しにくい物ほど、同じ回り方でたくさんのエネルギーをためます。重い円板を速く回して、エネルギーをためる装置を\textbf{はずみ車}（フライホイール）といいます。
+
+\phkokomade
+
+\Needspace{14\baselineskip}\phstage{shiki}{角運動量から導く}{5}
+
+\bksubsection{5}{角運動量と、その変わり方}
+
+\leavevmode\label{ph:力-6:sec5}質量 $m$ の質点が、位置 $\vec r$ を速度 $\vec v$ で動いています。運動量は $\vec p=m\vec v$ です（力-3）。原点のまわりの\textbf{角運動量}を
+\pheq{\vec L=\vec r\times\vec p=\vec r\times m\vec v}{kg·m$^2$/s ＝ m × kg·m/s}
+と決めます（数学 4-14⑦）。\bkidx{かくうんどうりょう}{角運動量}向きは、回る軸の向き（右ねじ）、大きさは $rmv\sin\theta$ です。円の上を回るときは、速度が半径に直角なので $L=rmv$ です。
+
+\pxghead{角運動量の変わり方は、トルク}
+$\vec L$ を時間で微分します。外積の微分も、ふつうのかけ算と同じく「前を微分×後ろ＋前×後ろを微分」の形になります（数学 5-6 の積の微分を、成分ごとに使う）。
+\[ \frac{\dd\vec L}{\dd t}=\frac{\dd\vec r}{\dd t}\times m\vec v+\vec r\times m\frac{\dd\vec v}{\dd t}=\vec v\times m\vec v+\vec r\times m\vec a \]
+1つめは、平行なベクトルの外積なので0です（数学 4-14⑥）。2つめは、運動方程式 $m\vec a=\vec F$（力-2）を入れると $\vec r\times\vec F$、つまりトルク $\vec N$ です。\label{ph:力-6:dLdt}
+\pheq{\frac{\dd\vec L}{\dd t}=\vec N}{kg·m$^2$/s$^2$ ＝ N·m}
+\begin{phyomi}[$\dfrac{\dd\vec L}{\dd t}=\vec N$]
+回る勢い（角運動量）を変えるのは、回す働き（トルク）だけ。まっすぐ進む物の「$\dfrac{\dd\vec p}{\dd t}=\vec F$（運動量を変えるのは力）」の、回る物の版。
+\end{phyomi}
+たくさんのつぶでできた物でも、つぶごとの式をたすと、内力のトルクは組になって消えます（力-5②と同じ理由）。だから、物全体の角運動量 $\vec L=\sum\vec L_i$ について、$\dfrac{\dd\vec L}{\dd t}=$（外力のトルクの和）が成り立ちます。外力のトルクの和が0なら、
+\pxgline{\fbox{$\vec L$ は一定}\qquad（\textbf{角運動量の保存の法則}）}
+\bkidx{かくうんどうりょうのほぞんのほうそく}{角運動量の保存の法則}
+力-5 の「止まっている剛体」は、$\vec L=\vec 0$ のまま変わらない場合でした。
+
+\bksubsection{6}{軸のまわりに回る剛体：$L=I\omega$}
+
+\leavevmode\label{ph:力-6:sec6}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+剛体が、決まった軸（$z$ 軸）のまわりに角速度 $\omega$ で回っています。つぶ $i$ は、軸からの距離 $r_i$ の円の上を、速さ $v_i=r_i\omega$（数学 4-8）で回ります。速度は半径に直角なので、つぶ $i$ の角運動量の $z$ 成分は $r_im_iv_i=m_ir_i^2\omega$。全部たすと、$\omega$ はどのつぶでも同じなので、
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-4) -- (0,30) node[anchor=south, pxg lab] {$z$（軸）};
+  \filldraw[fill=bkTheme!15, draw=bkDeep, line width=0.7pt] (0,10) ellipse (22 and 7);
+  \draw[bkGray, line width=0.4pt, dashed] (0,10) -- (15,5);
+  \fill[bkOrange] (15,5) circle (1.4);
+  \node[pxg lab, anchor=north] at (8,6.4) {$r_i$};
+  \draw[bkOrange!80!black, line width=1pt, -{Stealth[length=3pt]}] (16.5,5.5) -- (24,9);
+  \node[pxg lab, anchor=south] at (23,9.5) {$v_i$};
+  \node[pxg lab, anchor=north west] at (15.5,3.6) {$m_i$};
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=3.5pt]}] ($(0,22)+(-20:8 and 2.5)$) arc (-20:200:8 and 2.5);
+  \node[pxg lab, text=bkRed!80!black, anchor=west] at (8.5,23.5) {$\omega$};
+\end{tikzpicture}
+\end{minipage}
+\label{ph:力-6:LIw}\pheq{L=\Bigl(\sum_im_ir_i^2\Bigr)\omega=I\omega}{kg·m$^2$/s ＝ kg·m$^2$ × rad/s}
+\noindent ②で「回しにくさ」とよんだ $I=\sum m_ir_i^2$ が、ちょうど出てきました。これを\textbf{慣性モーメント}といいます。\bkidx{かんせいもーめんと}{慣性モーメント}質量が連続に広がった物では、たし算を積分にかえて
+\[ I=\int r^2\,\dd m \]
+です（数学 8-6 の重積分。$r$ は軸からの距離）。
+
+\pxghead{回転の運動方程式}
+剛体なので $I$ は変わりません。⑤の $\dfrac{\dd L}{\dd t}=N$（$z$ 成分）に $L=I\omega$ を入れると、\label{ph:力-6:undou}
+\pheq{I\frac{\dd\omega}{\dd t}=N}{kg·m$^2$ × rad/s$^2$ ＝ N·m}
+これが\textbf{回転の運動方程式}です。角速度の変わり方 $\dd\omega/\dd t$ を角加速度といい、$\alpha$ とも書きます（$I\alpha=N$）。
+
+\begin{phyomi}[$I\dfrac{\dd\omega}{\dd t}=N$]
+回す働き $N$ が大きいほど、回り方が速く変わる。回しにくさ $I$ が大きいほど、変わりにくい。$ma=F$ の、回る物の版。
+\end{phyomi}
+\begin{phmijika}[自転車のこぎ出し]
+軽い車輪の自転車は、こぎ出しが軽い。車輪の $I$ が小さいと、同じペダルの力（トルク）で、車輪の回り方が速く変わるから。
+\end{phmijika}
+\begin{phbaisuru}{慣性モーメント $I$}
+同じトルクで、角速度のふえ方は半分になる。同じ回り方にするのに、2倍の時間がかかる（⑨のグラフ）。
+\end{phbaisuru}
+
+\begin{phflow}[回転の運動方程式]
+\phflowrow{$\dfrac{\dd\vec L}{\dd t}=\vec N$}{決まった軸のまわり\\剛体（$I$ が一定）}{$I\dfrac{\dd\omega}{\dd t}=N$}
+\phflowrow{$I\dfrac{\dd\omega}{\dd t}=N$}{質点1つ\\$I=mr^2$、$N=rF$}{$m\,r\dfrac{\dd\omega}{\dd t}=F$（接線の向きの $ma=F$）}
+\phflowrow{$\dfrac{\dd L}{\dd t}=N$}{外からのトルクが0}{$I_1\omega_1=I_2\omega_2$}
+\end{phflow}
+\noindent 2段めは、質点1つなら回転の運動方程式が、円の接線の向きの運動方程式（力-2）にもどることを示しています（$r\dfrac{\dd\omega}{\dd t}$ は、接線の向きの加速度）。
+
+\pxghead{はてな？の答え}
+\label{ph:力-6:hozon}スケートの選手にとって、氷が靴を回す働き（トルク）はとても小さいので、角運動量 $L=I\omega$ はほぼ一定です。うでをたたむと、質量が軸に近づき、$r^2$ で効く $I$ が小さくなります。$I\omega$ が変わらないためには、$\omega$ が大きくならなければなりません。
+\pheq{I_1\omega_1=I_2\omega_2}{kg·m$^2$/s ＝ kg·m$^2$/s}
+うでを広げて $I$ が3分の1になれば、回る速さは3倍です。回転いすの実験も同じです。人と回転いすの $I$ を\pxgI{1.5}（モデルの値）とすると、\qty{2}{kg}のペットボトル2本が\qty{0.7}{m}にあるとき $I_1=1.5+2\times2\times0.7^2=\pxgI{3.46}$、\qty{0.2}{m}では $I_2=1.5+4\times0.2^2=\pxgI{1.66}$。$\dfrac{3.46}{1.66}\approx2.1$ 倍の速さになり、やってみようの「約2倍」と合います。
+\begin{phbaisuru}[半分]{ペットボトルの距離 $r$}
+ペットボトルの分の $I$ は4分の1になる。人と回転いすの分（\pxgI{1.5}）は変わらないので、全体の $I$ は4分の1にはならない。下のグラフは、ペットボトルの距離 $r$ と、うでを\qty{0.7}{m}に広げたときをもとにした回る速さの倍率。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=42mm, xmin=0, xmax=0.8, ymin=0, ymax=2.6, xtick={0.2,0.4,0.6,0.7}, ytick={0.5,1,1.5,2,2.5}, xlabel={距離 $r$（m）}, ylabel={回る速さの倍率}]
+  \addplot[bkcurve, domain=0:0.75] {3.46/(1.5+4*x^2)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(0.2,2.084) (0.7,1)};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\pxghead{速くなったぶんのエネルギーは？}
+角運動量は変わりませんが、回転のエネルギー $\dfrac{1}{2}I\omega^2=\dfrac{1}{2}L\omega$ は、$\omega$ が大きくなったぶんふえます。そのエネルギーは、選手がうでを引きよせる筋肉の仕事から来ています。うでのおもりは、回っていると外へ外へと出ていこうとする（力-7 の遠心力）ので、それに逆らって引きよせる仕事が必要なのです（例題14）。
+
+\pxghead{まっすぐ進む物と、回る物の対応}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=40mm] Q[c,m,wd=44mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ & まっすぐ進む物 & 決まった軸のまわりに回る物 \\
+位置・速さ & $x$、$v=\dfrac{\dd x}{\dd t}$ & 角 $\theta$、$\omega=\dfrac{\dd\theta}{\dd t}$ \\
+動かしにくさ & 質量 $m$ & 慣性モーメント $I=\sum mr^2$ \\
+動かす働き & 力 $F$ & トルク $N$ \\
+勢い & 運動量 $mv$ & 角運動量 $L=I\omega$ \\
+運動方程式 & $m\dfrac{\dd v}{\dd t}=F$ & $I\dfrac{\dd\omega}{\dd t}=N$ \\
+運動エネルギー & $\dfrac{1}{2}mv^2$ & $\dfrac{1}{2}I\omega^2$ \\
+仕事・仕事率 & $Fx$、$Fv$ & $N\theta$、$N\omega$ \\
+\end{bktable}
+\bktabcaption{文字をおきかえるだけで、同じ形の式になる（前付の「保存則と相似の地図」の「慣性」の行）。}
+\end{bkcenter}
+
+\bksubsection{7}{いろいろな形の慣性モーメントと、平行軸の定理}
+
+\leavevmode\label{ph:力-6:sec7}$I=\displaystyle\int r^2\,\dd m$ を、いくつかの形で計算します。
+
+\pxgstep{1}{棒（まん中のまわり）}
+長さ $L$、質量 $M$ の一様な棒。軸からの距離 $x$ の所の、長さ $\dd x$ の部分の質量は $\dd m=\dfrac{M}{L}\dd x$。
+\[ I=\int_{-L/2}^{L/2}x^2\frac{M}{L}\,\dd x=\frac{M}{L}\Bigl[\frac{x^3}{3}\Bigr]_{-L/2}^{L/2}=\frac{M}{L}\times\frac{2}{3}\times\frac{L^3}{8}=\frac{1}{12}ML^2 \]
+③の表計算の答え $\dfrac{1}{12}$ と同じです。はしのまわりなら、積分の範囲を0から $L$ にして $\dfrac{1}{3}ML^2$。
+
+\pxgstep{2}{円板（中心を通り、面に垂直な軸のまわり）}
+半径 $R$、質量 $M$ の一様な円板を、半径 $r$、はば $\dd r$ の細い輪に分けます（④と同じ）。輪の面積は $2\pi r\,\dd r$（数学 5-10 の円の面積の考え）なので、質量は $\dd m=\dfrac{M}{\pi R^2}\times2\pi r\,\dd r$。
+\[ I=\int_0^Rr^2\frac{2M}{R^2}r\,\dd r=\frac{2M}{R^2}\Bigl[\frac{r^4}{4}\Bigr]_0^R=\frac{1}{2}MR^2 \]
+④で、円板のエネルギーが輪のちょうど半分になったのは、このためです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \sx/\nm/\fm in {0/{棒（まん中）}/{$\dfrac{1}{12}ML^2$}, 27/{棒（はし）}/{$\dfrac{1}{3}ML^2$}, 54/{輪}/{$MR^2$}, 81/{円板}/{$\dfrac{1}{2}MR^2$}, 108/{球}/{$\dfrac{2}{5}MR^2$}} {
+    \node[font=\sffamily\small\bfseries, anchor=north] at ({\sx+10},-12) {\nm};
+    \node[font=\small, anchor=north] at ({\sx+10},-17.5) {\fm};}
+  \draw[bkGray, line width=0.5pt, dashed] (10,-9) -- (10,9);
+  \draw[bkDeep, line width=2.4pt, line cap=round] (0,0) -- (20,0);
+  \draw[bkGray, line width=0.5pt, dashed] (28,-9) -- (28,9);
+  \draw[bkDeep, line width=2.4pt, line cap=round] (28,0) -- (48,0);
+  \draw[bkGray, line width=0.5pt, dashed] (64,-9) -- (64,9);
+  \draw[bkDeep, line width=2pt] (64,0) ellipse (9 and 3.5);
+  \draw[bkGray, line width=0.5pt, dashed] (91,-9) -- (91,9);
+  \filldraw[fill=bkDeep!35, draw=bkDeep, line width=0.7pt] (91,0) ellipse (9 and 3.5);
+  \shade[ball color=bkDeep!40] (118,0) circle (8);
+  \draw[bkGray, line width=0.5pt, dashed] (118,-9) -- (118,9);
+\end{tikzpicture}
+\bkfigcaption{代表的な形の慣性モーメント（点線が軸）。$M$ は質量、$L$ は棒の長さ、$R$ は半径。輪・円板は、中心を通り面に垂直な軸。球は中心を通る軸（重積分で求める。数学 8-6）。}
+\end{bkfigure}
+
+\begin{phbaisuru}{半径 $R$}
+輪も円板も球も、$I$ は $R^2$ に比例するので4倍になる。質量が同じでも、大きく広がった物ほど、ずっと回しにくい。
+\end{phbaisuru}
+
+\pxghead{平行軸の定理}
+\label{ph:力-6:heikoujiku}
+\noindent\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkTheme!15, draw=bkDeep, line width=0.7pt, rounded corners=3mm] (-14,-10) rectangle (16,12);
+  \fill[bkInk] (2,1) circle (1);
+  \node[pxg lab, anchor=north] at (2,-0.4) {G};
+  \fill[bkInk] (-8,-5) circle (1);
+  \node[pxg lab, anchor=north] at (-8,-6.2) {O};
+  \draw[bkPurple, line width=1pt] (-8,-5) -- (2,1);
+  \node[pxg lab, text=bkPurple, anchor=south east] at (-3.5,-1.6) {$\vec d$};
+  \fill[bkOrange] (10,7) circle (1.2);
+  \draw[bkOrange!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (2,1) -- (9.2,6.4);
+  \node[pxg lab, anchor=north west] at (6.8,4) {$\vec\rho_i$};
+  \node[pxg lab, anchor=south] at (10,8.4) {$m_i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+重心Gを通る軸のまわりの慣性モーメント $I_{\mathrm G}$ がわかっていれば、それと平行で距離 $d$ はなれた軸Oのまわりの $I$ は、すぐに求まります。図は、軸に垂直な面で見たものです。軸Oからつぶ $i$ までは、$\vec d+\vec\rho_i$（$\vec\rho_i$ は重心Gからの位置）。
+\end{minipage}
+\begin{align*}
+I&=\sum m_i|\vec d+\vec\rho_i|^2=\sum m_i\bigl(d^2+2\vec d\cdot\vec\rho_i+|\vec\rho_i|^2\bigr)\\
+&=Md^2+2\vec d\cdot\sum m_i\vec\rho_i+I_{\mathrm G}
+\end{align*}
+重心から見た位置の、質量で重みをつけた和 $\sum m_i\vec\rho_i$ は0です（重心の決め方そのもの。力-5⑤）。だから
+\pheq{I=I_{\mathrm G}+Md^2}{kg·m$^2$ ＝ kg·m$^2$ ＋ kg × m$^2$}
+これを\textbf{平行軸の定理}といいます。\bkidx{へいこうじくのていり}{平行軸の定理}棒のはしのまわりなら、
+\[ \frac{1}{12}ML^2+M\Bigl(\frac{L}{2}\Bigr)^2=\frac{1}{3}ML^2 \]
+で、①の積分と同じです。重心のまわりが、いちばん回しやすい（$Md^2\geqq0$）こともわかります。
+
+\begin{seikaku}
+モータや機械のカタログでは、慣性モーメントを $J$ と書くことが多く、古い資料では「$GD^2$（ジーディーじじょう）」という量が書かれていることもあります。$GD^2$ の値（単位 kgf·m$^2$）は、$J$ の値（単位 \pxgunit{kg.m^2}）のちょうど4倍です。単位がちがう量なので、カタログを読むときは、どちらで書かれているかを確かめます。この本の第3部（力-10）では、はりの曲げにくさを表す「断面二次モーメント」にも $I$ を使いますが、別の量です。
+\end{seikaku}
+
+\bksubsection{8}{回転のエネルギー・仕事・動力}
+
+\leavevmode\label{ph:力-6:sec8}④で見たとおり、回る剛体の運動エネルギーは、つぶの $\dfrac{1}{2}m_iv_i^2$ をたして、\label{ph:力-6:energy}
+\pheq{K=\frac{1}{2}I\omega^2}{J ＝ kg·m$^2$ × (rad/s)$^2$}
+です。両辺を時間で微分すると（数学 5-6 の合成関数の微分）、回転の運動方程式から
+\[ \frac{\dd K}{\dd t}=I\omega\frac{\dd\omega}{\dd t}=N\omega \]
+回転のエネルギーは、1秒あたり $N\omega$ ずつふえます。これがトルクのする仕事率です。
+\pheq{P=N\omega}{W ＝ N·m × rad/s}
+\noindent 軸から $r$ の所で、接線の向きに力 $F$ を加えて、角 $\theta$ だけ回すと、力の点は弧の長さ $r\theta$（数学 4-2）だけ動くので、仕事は $Fr\theta=N\theta$ です。まっすぐの「力×距離」が、回転では「トルク×角」になります。
+
+\begin{phflow}[回転のエネルギーと動力]
+\phflowrow{$\sum\dfrac{1}{2}m_iv_i^2$}{剛体：$v_i=r_i\omega$}{$K=\dfrac{1}{2}I\omega^2$}
+\phflowrow{$P=\vec F\cdot\vec v$（力-4）}{接線の向きの力\\$v=r\omega$}{$P=N\omega$}
+\end{phflow}
+
+\begin{phbaisuru}{角速度 $\omega$}
+回転のエネルギーは4倍になる。はずみ車は、重くするより速く回すほうが、たくさんためられる（ただし、速く回すと遠心力で円板がこわれやすくなる）。
+\par\vspace{2pt}
+\centering
+\begin{minipage}{\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=42mm, xmin=0, xmax=3500, ymin=0, ymax=4.4, xtick={1000,2000,3000}, ytick={1,2,3,4}, xlabel={回転数（min$^{-1}$）}, ylabel={エネルギー（MJ）}]
+  \addplot[bkcurve, domain=0:3300] {0.5*62.5*(x*2*pi/60)^2/1e6};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(1500,0.771) (3000,3.084)};
+  \node[font=\sffamily\scriptsize, anchor=east, fill=white, inner sep=1pt] at (axis cs:1420,1.3) {2倍の回転数で4倍};
+\end{axis}
+\end{tikzpicture}
+\par{\sffamily\scriptsize 例題4のはずみ車（$I=\pxgI{62.5}$）}\end{minipage}
+\end{phbaisuru}
+
+\bksubsection{9}{モータで回し始めて、決まった速さになるまで}
+
+\leavevmode\label{ph:力-6:sec9}止まっている機械を、モータで回し始めます。モータは一定のトルク $N_{\mathrm m}$ を出し、軸受けや空気から、回る速さに比例した、回転をじゃまするトルク $c_{\mathrm r}\omega$ を受けるとします（$c_{\mathrm r}$ は摩擦の係数。単位 N·m·s）。
+
+\begin{phmodel}[モータで回す機械]
+\phignore{回り始めの、軸受けの静止摩擦。モータのトルクが回転数で変わること。軸のねじれ。}
+\phassume{モータのトルク $N_{\mathrm m}$ は一定。じゃまするトルクは $c_{\mathrm r}\omega$（回る速さに比例）。機械とモータは剛体で、慣性モーメントは $I$。}
+\phlimit{回り始め（静止摩擦がある）。ファンやポンプのように、じゃまするトルクが回転数の2乗に比例するとき。モータの電流に上限があるとき。}
+\end{phmodel}
+
+\noindent 回転の運動方程式は
+\pheq{I\frac{\dd\omega}{\dd t}=N_{\mathrm m}-c_{\mathrm r}\omega}{N·m ＝ N·m － N·m·s × rad/s}
+\pxgstep{1}{最後の速さ}
+十分に時間がたつと、回り方が変わらなくなり（$\dfrac{\dd\omega}{\dd t}=0$）、$N_{\mathrm m}=c_{\mathrm r}\omega$。だから最後の角速度は $\omega_\infty=\dfrac{N_{\mathrm m}}{c_{\mathrm r}}$。
+\pxgstep{2}{そこまでの近づき方}
+式を $\dfrac{\dd\omega}{\dd t}=\dfrac{\omega_\infty-\omega}{\tau}$、$\tau=\dfrac{I}{c_{\mathrm r}}$ と書きかえると、数学 6-4 の「自分に比例してへる」形です（へっていくのは、最後の速さとの差 $\omega_\infty-\omega$）。はじめ止まっている（$\omega=0$）として、
+\pheq{\omega=\omega_\infty\bigl(1-e^{-t/\tau}\bigr),\qquad\tau=\frac{I}{c_{\mathrm r}}}{s ＝ kg·m$^2$ ÷ N·m·s}
+$\tau$ を\textbf{時定数}といいます（数学 5-14）。$t=\tau$ で、最後の速さの約63\,\%に届きます（$1-e^{-1}\approx0.632$）。$t=3\tau$ では約95\,\%です。
+\pxgstep{3}{摩擦がないとき}
+$c_{\mathrm r}=0$ なら、式は $I\dfrac{\dd\omega}{\dd t}=N_{\mathrm m}$ で、両辺を積分して $\omega=\dfrac{N_{\mathrm m}}{I}t$。角速度が時間に比例してふえ続けます（$e^{-t/\tau}\approx1-\dfrac{t}{\tau}$ を使うと、②の式もはじめはこの形）。
+
+\begin{phbaisuru}{慣性モーメント $I$}
+時定数 $\tau=\dfrac{I}{c_{\mathrm r}}$ が2倍になり、決まった速さに近づくまでの時間が2倍になる。最後の速さ $\omega_\infty$ は変わらない。
+\par\vspace{2pt}
+\centering
+\begin{minipage}{\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=90mm, height=46mm, xmin=0, xmax=12.5, ymin=0, ymax=235, xtick={2,4,6,8,10,12}, ytick={50,100,150,200}, xlabel={時間 $t$（s）}, ylabel={角速度 $\omega$（rad/s）}]
+  \addplot[bkthin, dashed, domain=0:12] {200};
+  \addplot[bkcurve, domain=0:12] {200*(1-exp(-x/2))};
+  \addplot[bkcurve2, domain=0:12] {200*(1-exp(-x/4))};
+  \node[font=\sffamily\scriptsize, text=bkBlue, anchor=south east, inner sep=1pt] at (axis cs:11.8,204) {$I=0.02$（$\tau=2$\,s）};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west, inner sep=1pt] at (axis cs:7,160) {$I=0.04$（$\tau=4$\,s）};
+\end{axis}
+\end{tikzpicture}
+\par{\sffamily\scriptsize $N_{\mathrm m}=\pxgNm{2}$、$c_{\mathrm r}=0.01$\,N·m·s。点線は最後の速さ $\omega_\infty=\qty{200}{rad/s}$}\end{minipage}
+\end{phbaisuru}
+
+\pxghead{プログラムで、少しずつ時間を進める}
+式が解けないとき（トルクが回転数で変わるときなど）は、数学 6-2 のオイラー法で、少しずつ時間を進めます。「少しあとの $\omega$＝今の $\omega$＋（今の角加速度）×短い時間」をくり返します。
+\begin{phcode}
+import math
+I, N, c = 0.02, 2.0, 0.01     \# I、トルク、摩擦の係数
+dt = 0.1                      \# 時間のきざみ（s）
+w, t = 0.0, 0.0               \# 角速度（rad/s）と時間（s）
+for k in range(61):
+    if k \% 10 == 0:           \# 1秒ごとに表示する
+        ex = N / c * (1 - math.exp(-t * c / I))
+        print(round(t, 1), round(w, 1), round(ex, 1))
+    w = w + (N - c * w) / I * dt
+    t = t + dt
+\end{phcode}
+\begin{phcodeout}
+0.0 0.0 0.0
+1.0 80.3 78.7
+2.0 128.3 126.4
+3.0 157.1 155.4
+4.0 174.3 172.9
+5.0 184.6 183.6
+6.0 190.8 190.0
+\end{phcodeout}
+左から、時間・オイラー法の答え・式の答えです。オイラー法は少し大きめに出ますが、\texttt{dt} を小さくすると式の答えに近づきます。モータの立ち上がりは、電気回路のコイルと抵抗の回路（RL 回路。電-9）の電流の立ち上がりと、まったく同じ形の式です（$I\leftrightarrow L$、$c_{\mathrm r}\leftrightarrow R$）。
+
+\bksubsection{10}{中心に向かう力と、ケプラーの法則}
+
+\leavevmode\label{ph:力-6:sec10}地球のまわりを回る人工衛星や、太陽のまわりを回る惑星には、中心の星に向かう万有引力（力-2）がはたらきます。力 $\vec F$ が、いつも中心に向かう（$\vec r$ と平行な）とき、中心のまわりのトルクは $\vec N=\vec r\times\vec F=\vec 0$。だから、⑤から\textbf{角運動量 $\vec L=\vec r\times m\vec v$ が一定}です。このことから、ケプラーが観測から見つけた3つの法則（1609年・1619年）を導きます。\bkidx{けぷらーのほうそく}{ケプラーの法則}
+
+\pxghead{惑星は、1つの平面の上を回る}
+$\vec L$ の向きが変わらないので、$\vec L$ に垂直な $\vec r$ と $\vec v$ は、いつも同じ平面の中にあります。
+
+\pxghead{第2法則：面積速度一定}
+\label{ph:力-6:kepler2}惑星と太陽を結ぶ線が、短い時間 $\Delta t$ に通りすぎる面積は、細い三角形の面積で、
+\[ \Delta A=\frac{1}{2}|\vec r\times\vec v\Delta t| \]
+です（数学 4-14⑥の外積と三角形の面積）。$\Delta t$ でわると、
+\pheq{\frac{\dd A}{\dd t}=\frac{1}{2}|\vec r\times\vec v|=\frac{L}{2m}=\text{一定}}{m$^2$/s ＝ kg·m$^2$/s ÷ kg}
+これが\textbf{ケプラーの第2法則（面積速度一定）}です。次の図の2つの色の部分は、同じ時間に通りすぎる面積で、面積は等しくなります。太陽に近い所では速く、遠い所では遅く動きます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 長半径28、短半径24（離心率0.51）。2つの色の部分の面積が等しくなるように、角の範囲を計算した（calc.py）
+  \def\pxga{28}\def\pxgb{24}
+  \pgfmathsetmacro\pxgc{sqrt(\pxga*\pxga-\pxgb*\pxgb)}
+  \fill[bkYellow!50] (\pxgc,0) -- plot[domain=-25:25, samples=20] ({\pxga*cos(\x)},{\pxgb*sin(\x)}) -- cycle;
+  \fill[bkTheme!35] (\pxgc,0) -- plot[domain=171.7:188.3, samples=10] ({\pxga*cos(\x)},{\pxgb*sin(\x)}) -- cycle;
+  \draw[bkDeep, line width=0.8pt] (0,0) ellipse ({\pxga} and {\pxgb});
+  \fill[bkOrange] (\pxgc,0) circle (2.4);
+  \node[pxg lab, anchor=north] at (\pxgc,-3) {太陽};
+  \node[pxg lab, anchor=west, align=left] at (31,0) {近い所：\\速い};
+  \node[pxg lab, anchor=east, align=right] at (-31,0) {遠い所：\\遅い};
+\end{tikzpicture}
+\bkfigcaption{だ円軌道（つぶれ方を大きくしてかいた）。黄色と青の部分は、同じ時間に通りすぎる面積で、面積が等しい。}
+\end{bkfigure}
+
+\pxghead{近い点と遠い点の速さ}
+\label{ph:力-6:kinchiten}太陽にいちばん近い点（近日点）といちばん遠い点（遠日点）では、速度が太陽を結ぶ線に直角なので、$L=mrv$。$L$ が同じなので、
+\pheq{r_1v_1=r_2v_2}{m$^2$/s ＝ m$^2$/s}
+人工衛星では、地球にいちばん近い点を近地点、遠い点を遠地点といいます。
+
+\pxghead{第3法則：周期の2乗は、半径の3乗に比例}
+\label{ph:力-6:kepler3}円軌道（半径 $r$、速さ $v$、周期 $T$）では、万有引力が向心力になります（力-2⑦）。
+\[ m\frac{v^2}{r}=G\frac{Mm}{r^2}\qquad\text{と}\qquad v=\frac{2\pi r}{T}\quad\text{から}\quad\frac{4\pi^2r^2}{T^2}=\frac{GM}{r} \]
+\pheq{T^2=\frac{4\pi^2}{GM}r^3}{s$^2$ ＝ m$^3$ ÷ m$^3$/s$^2$}
+これが\textbf{ケプラーの第3法則}です。右辺の $\dfrac{4\pi^2}{GM}$ は、中心の星の質量 $M$ だけで決まり、回る物の質量によりません。だ円の軌道でも、$r$ をだ円の長半径（長い直径の半分）にかえると、同じ式が成り立ちます（大学の力学で導きます）。
+
+\begin{phyomi}[$T^2=\dfrac{4\pi^2}{GM}r^3$]
+同じ星のまわりを回る物では、「周期の2乗÷半径の3乗」が、みな同じ。遠くを回る物ほど、1周の道のりが長いうえに速さも遅いので、周期がずっと長くなる。
+\end{phyomi}
+\begin{phbaisuru}{軌道の半径 $r$}
+周期は $2^{3/2}=2\sqrt2\approx2.83$ 倍になる。速さ $v=\sqrt{\dfrac{GM}{r}}$ は $\dfrac{1}{\sqrt2}\approx0.71$ 倍。
+\par\vspace{2pt}
+\centering
+\begin{minipage}{\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=88mm, height=44mm, xmin=0, xmax=5.6, ymin=0, ymax=13, xtick={1,2,3,4,5}, ytick={2,4,6,8,10,12}, xlabel={長半径（AU）}, ylabel={周期（年）}]
+  \addplot[bkcurve, domain=0:5.4] {x^1.5};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(0.387,0.241) (0.723,0.615) (1,1) (1.524,1.88) (5.203,11.87)};
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.1,0.7) {地球};
+  \node[font=\sffamily\scriptsize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:1.5,2.2) {火星};
+  \node[font=\sffamily\scriptsize, anchor=east, fill=white, inner sep=1pt] at (axis cs:5.0,11.9) {木星};
+\end{axis}
+\end{tikzpicture}
+\par{\sffamily\scriptsize 1 AU（天文単位）は、太陽と地球の平均の距離（約1.5億 km）。点は水星・金星・地球・火星・木星。}\end{minipage}
+\end{phbaisuru}
+
+\pxghead{静止衛星の高さ}
+\label{ph:力-6:seishi}天気を見る気象衛星や放送衛星は、地球が自転するのと同じ周期で、赤道の上を回っています。地上から見ると、空の同じ場所に止まって見えるので、静止衛星といいます。その周期は、星を基準にした地球の自転の周期（1恒星日、約\qty{86164}{s}）です。第3法則から、
+\[ r=\Bigl(\frac{GMT^2}{4\pi^2}\Bigr)^{1/3}=\Bigl(\frac{3.986\times10^{14}\times86164^2}{4\pi^2}\Bigr)^{1/3}\approx4.216\times10^7\ \text{m} \]
+軌道の半径は約4.22万 km、地球の赤道の半径（約\qty{6378}{km}）を引いた高さは約3.58万 km です。
+
+\begin{phflow}[ケプラーの法則]
+\phflowrow{$\dfrac{\dd\vec L}{\dd t}=\vec r\times\vec F$}{力が中心に向かう}{$\dfrac{\dd A}{\dd t}=$ 一定（第2法則）}
+\phflowrow{$L=mrv$ が一定}{近い点・遠い点\\（速度⊥半径）}{$r_1v_1=r_2v_2$}
+\phflowrow{$m\dfrac{v^2}{r}=G\dfrac{Mm}{r^2}$}{円軌道\\$v=\dfrac{2\pi r}{T}$}{$T^2=\dfrac{4\pi^2}{GM}r^3$（第3法則）}
+\phflowrow{$T^2=\dfrac{4\pi^2}{GM}r^3$}{$T=$1恒星日}{静止衛星 $r\approx4.22$万 km}
+\end{phflow}
+
+\begin{motto}[5]
+\phboxhead{第1法則：軌道は、なぜだ円になる？}
+\label{ph:力-6:kepler1}力-1⑥の極座標の加速度を使うと、中心からの距離 $r$ の向きの運動方程式は
+\[ m\Bigl(\frac{\dd^2r}{\dd t^2}-r\Bigl(\frac{\dd\theta}{\dd t}\Bigr)^2\Bigr)=-\frac{GMm}{r^2} \]
+です。角運動量の保存から $h=r^2\dfrac{\dd\theta}{\dd t}$（$=\dfrac{L}{m}$）は一定です。ここで、$r$ のかわりに $u=\dfrac{1}{r}$ を、時間のかわりに角 $\theta$ の関数として考えます。合成関数の微分（数学 5-6）で $\dfrac{\dd r}{\dd t}=-h\dfrac{\dd u}{\dd\theta}$、$\dfrac{\dd^2r}{\dd t^2}=-h^2u^2\dfrac{\dd^2u}{\dd\theta^2}$ となるので、運動方程式は
+\[ \frac{\dd^2u}{\dd\theta^2}+u=\frac{GM}{h^2} \]
+という、ばねの振動（数学 6-6）と同じ形になります。答えは
+\[ u=\frac{GM}{h^2}+C\cos\theta \]
+です（$C$ は、はじめの速さと位置で決まる数）。$r=1/u$ にもどすと
+\[ r=\frac{p}{1+e\cos\theta}\qquad\Bigl(p=\frac{h^2}{GM},\ e=Cp\Bigr) \]
+これは、数学 4-15⑤で学んだ、焦点を原点とするだ円の極方程式です（$0\leqq e<1$ のとき。$e=0$ なら円）。こうして、惑星の軌道が、太陽を1つの焦点とするだ円になること（ケプラーの第1法則）が導かれます。$e\geqq1$ のときは、放物線や双曲線になり、物は二度ともどってきません。
+\end{motto}
+
+\begin{phmada}[銀河の星は、なぜ速く回っている？]
+ケプラーの第3法則と同じ考えで、銀河のまわりを回る星の速さから、その内がわにある質量を計算できます。1970年代に、ルービンとフォードたちがアンドロメダ銀河などの星やガスの回る速さをはかると、銀河の外がわでも速さが下がらず、光って見える星やガスの質量から計算した速さより、ずっと速いことがわかりました（1933年に、ツビッキーも銀河の集まりで同じようなずれに気づいていました）。そこで、光を出さない「見えない質量（ダークマター）」が、銀河をとりまいていると考えられています。ほかの観測とも合うため、多くの研究者がダークマターがあると考えていますが、その正体が何なのかは、まだわかっていません。重力の法則そのものを少し変えて説明しようとする考えもあり、研究が続いています。
+\end{phmada}
+
+\begin{phsaki}{3次元の剛体の回転}
+この章では、決まった軸のまわりの回転だけを考えました。軸が決まっていない3次元の回転では、慣性モーメントは1つの数ではなく、3×3の行列（慣性テンソル）になり、$\vec L=\mathsf I\vec\omega$ と書きます。$\vec L$ と $\vec\omega$ の向きは、ふつうそろいません。向きがそろう3つの軸（主軸）は、行列の固有ベクトル（数学 7-8）です。こまの首ふり（歳差運動）は力-7 で入口を見ますが、くわしい「オイラーの運動方程式」は、大学の力学・機械力学で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[モータの選定の書き方]
+\begin{bkhonbun}
+負荷を含む回転系の慣性モーメントを $J$\,[kg·m$^2$]、モータの発生トルクを $T_{\mathrm M}$、負荷トルクを $T_{\mathrm L}$ とすると、運動方程式は $J\,\dd\omega/\dd t=T_{\mathrm M}-T_{\mathrm L}$ である。停止から回転速度 $n$\,[min$^{-1}$] まで時間 $t_{\mathrm a}$ で一定加速するのに必要な加速トルクは $T_{\mathrm a}=J\cdot2\pi n/(60\,t_{\mathrm a})$ である。
+\end{bkhonbun}
+\bkyaku{慣性モーメントを $J$、トルクを $T$ と書いている（この章の $I$ と $N$）。「負荷トルク」は機械を回すのにいつも要るトルク（⑨の $c_{\mathrm r}\omega$ にあたる）。$2\pi n/60$ は、毎分 $n$ 回転を rad/s に直したもの。加速トルクの式は、例題5の計算と同じ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{角運動量}$\vec L=\vec r\times m\vec v$、$\dfrac{\dd\vec L}{\dd t}=\vec N$\\[3pt]
+\tsl{慣性モーメント}$I=\sum m_ir_i^2=\displaystyle\int r^2\dd m$、平行軸 $I=I_{\mathrm G}+Md^2$\\[3pt]
+\tsl{固定軸}$L=I\omega$、$I\dfrac{\dd\omega}{\dd t}=N$\\[3pt]
+\tsl{保存}トルクが0なら $I_1\omega_1=I_2\omega_2$\\[3pt]
+\tsl{エネルギー}$K=\dfrac{1}{2}I\omega^2$、仕事 $N\theta$、動力 $P=N\omega$\\[3pt]
+\tsl{立ち上がり}$\omega=\omega_\infty(1-e^{-t/\tau})$、$\tau=\dfrac{I}{c_{\mathrm r}}$\\[3pt]
+\tsl{ケプラー}面積速度一定、$T^2=\dfrac{4\pi^2}{GM}r^3$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{角運動量}{回る勢い。$\vec L=\vec r\times m\vec v$。固定軸のまわりでは $L=I\omega$。}
+\bkword{慣性モーメント}{回しにくさ。$I=\sum mr^2$。軸から遠い質量ほど、2乗で効く。}
+\bkword{回転の運動方程式}{$I\dfrac{\dd\omega}{\dd t}=N$。$ma=F$ の回転の版。}
+\bkword{平行軸の定理}{$I=I_{\mathrm G}+Md^2$。重心の軸から $d$ ずらした軸の慣性モーメント。}
+\bkword{はずみ車}{重い円板を回して、回転のエネルギーをためる装置。フライホイール。}
+\bkword{面積速度}{中心と物を結ぶ線が、1秒に通りすぎる面積。中心力では一定。}
+\end{kotoba}
+
+
+\bkkigocards{\bkkigocard{$I$}{アイ}{慣性モーメント（kg·m$^2$）。モータの本では $J$。力-10 の断面二次モーメント $I$ とは別の量}{moment of inertia}{力-6}}{\bkkigocard{$\vec L$}{エル}{角運動量（kg·m$^2$/s）。この章では、長さを小文字の $l$ で書いて区別する}{angular momentum}{力-6}}
+
+%% ======================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[スケートの選手のスピン]
+\label{ph:力-6:ex1}スケートの選手が、うでを広げて毎秒2回転しています。このときの体の慣性モーメントを\pxgI{3.0}、うでをたたんだときを\pxgI{1.0}とします（体を円柱と棒で表したモデルの値）。うでをたたむと、毎秒何回転になりますか。回転のエネルギーはどう変わりますか。
+\phbamen
+氷の上で回る選手が、うでを引きよせる。だれも外から回していない。
+\phmushi
+氷と靴の摩擦によるトルク。空気の抵抗。うでを引きよせる時間は短い。
+\phzu
+広げたとき $I_1=3.0$、$\omega_1$。たたんだとき $I_2=1.0$、$\omega_2$。回転数（毎秒の回転の数）を $n$ とすると $\omega=2\pi n$。
+\phriyu
+外からのトルクがほぼ0なので、角運動量の保存 $I_1\omega_1=I_2\omega_2$（⑥）。$\omega$ は $n$ に比例するので、回転数のまま計算してよい。
+\phtateru
+\[ 3.0\times2=1.0\times n_2 \]
+\phtoku
+$n_2=6$ で、毎秒6回転。エネルギーは $\dfrac{1}{2}I\omega^2$ で、広げたとき $\dfrac{1}{2}\times3.0\times(2\pi\times2)^2\approx\qty{237}{J}$、たたむと $\dfrac{1}{2}\times1.0\times(2\pi\times6)^2\approx\qty{711}{J}$。
+\phtashikame
+単位：kg·m$^2$×（回転/s）は、両辺で同じ。\quad 大きさ：$I$ が $\dfrac{1}{3}$ なので、速さは3倍。\quad エネルギーは3倍（$\dfrac{1}{2}L\omega$ で、$L$ が同じで $\omega$ が3倍）。ふえた約\qty{474}{J}は、うでを引きよせる筋肉の仕事。
+\kotae 毎秒6回転。回転のエネルギーは約3倍（約\qty{237}{J}→約\qty{711}{J}）
+\end{phreidai}
+\begin{jibun}
+うでを広げて毎秒1.5回転している選手の慣性モーメントが\pxgI{2.5}、うでをたたむと\pxgI{1.0}になるとします。たたんだときの回転数と、回転のエネルギーが何倍になるかを求めましょう。
+\bkjans{$2.5\times1.5=1.0\times n$ より毎秒3.75回転（約3.8回転）。エネルギーは2.5倍}
+\end{jibun}
+
+\begin{phreidai}[棒・円板・輪の慣性モーメント]
+\label{ph:力-6:ex2}次の慣性モーメントを求めましょう。（1）長さ\qty{1.2}{m}、質量\qty{2}{kg}の一様な棒の、まん中のまわりと、はしのまわり。（2）半径\qty{0.3}{m}、質量\qty{10}{kg}の一様な円板と、同じ半径・質量の輪の、中心を通り面に垂直な軸のまわり。
+\phbamen
+機械の部品（うで・円板・リング）の回しにくさを、形から求める。
+\phmushi
+厚さ・太さ（棒は線、円板は厚さが一様、輪は細い）。
+\phzu
+⑦の図。棒 $M=2$、$L=1.2$。円板・輪 $M=10$、$R=0.3$。
+\phriyu
+⑦で積分して求めた式を使う。
+\phtateru
+棒：$\dfrac{1}{12}ML^2$、$\dfrac{1}{3}ML^2$。円板：$\dfrac{1}{2}MR^2$。輪：$MR^2$。
+\phtoku
+（1）$\dfrac{2\times1.44}{12}=\pxgI{0.24}$、$\dfrac{2\times1.44}{3}=\pxgI{0.96}$\par
+（2）円板 $\dfrac{1}{2}\times10\times0.09=\pxgI{0.45}$、輪 $10\times0.09=\pxgI{0.9}$
+\phtashikame
+はしのまわりは、まん中のまわりの4倍。輪は円板の2倍。どちらも「遠くに質量があるほど回しにくい」と合う。\quad 単位：kg×m$^2$。
+\kotae （1）\pxgI{0.24}、\pxgI{0.96}\quad（2）円板\pxgI{0.45}、輪\pxgI{0.9}
+\end{phreidai}
+\begin{jibun}
+（1）長さ\qty{0.6}{m}、質量\qty{3}{kg}の一様な棒の、まん中のまわりとはしのまわり、（2）半径\qty{0.2}{m}、質量\qty{4}{kg}の円板と輪の、慣性モーメントを求めましょう。
+\bkjans{（1）\nobreak \pxgI{0.09}、\pxgI{0.36}。（2）\nobreak 円板\pxgI{0.08}、輪\pxgI{0.16}}
+\end{jibun}
+
+\begin{phreidai}[ドアの慣性モーメント]
+\label{ph:力-6:ex3}はば\qty{0.8}{m}、質量\qty{20}{kg}の一様なドアが、ちょうつがい（はしのたての線）のまわりに回ります。ドアの慣性モーメントを、平行軸の定理で求めましょう。
+\phbamen
+ドアクローザ（ドアをゆっくり閉める装置）を選ぶには、ドアの回しにくさがいる。
+\phmushi
+ドアノブの重さ。ちょうつがいの摩擦。
+\phzu
+上から見ると、ドアは長さ\qty{0.8}{m}の棒と同じ（高さの向きには、どの部分も軸から同じ距離）。重心はまん中で、軸から $d=\qty{0.4}{m}$。
+\phriyu
+重心のまわりは棒と同じ $\dfrac{1}{12}Mw^2$。そこから平行軸の定理 $I=I_{\mathrm G}+Md^2$（⑦）。
+\phtateru
+\[ I=\frac{1}{12}\times20\times0.8^2+20\times0.4^2 \]
+\phtoku
+$I\approx1.07+3.2=\pxgI{4.27}$
+\phtashikame
+$\dfrac{1}{3}Mw^2=\dfrac{20\times0.64}{3}\approx4.27$ と同じ（棒のはしのまわりの式）。\quad 大きさ：重心のまわりの4倍。
+\kotae 約\pxgI{4.3}
+\end{phreidai}
+\begin{jibun}
+半径\qty{0.2}{m}、質量\qty{4}{kg}の一様な円板を、ふちの1点を通り、面に垂直な軸のまわりに回します。慣性モーメントを、平行軸の定理で求めましょう。
+\bkjans{$\dfrac{1}{2}\times4\times0.04+4\times0.2^2=0.08+0.16=\pxgI{0.24}$}
+\end{jibun}
+
+\begin{phreidai}[はずみ車にためるエネルギー]
+\label{ph:力-6:ex4}質量\qty{500}{kg}、半径\qty{0.5}{m}の鋼の円板を、毎分3000回転で回します。慣性モーメントと、たまっている回転のエネルギーを求め、kWh でも答えましょう（$\qty{1}{kWh}=\qty{3.6}{MJ}$）。
+\phbamen
+電気が余ったときに円板を回してエネルギーをため、足りないときに発電機を回して取り出す、エネルギーの貯蔵。
+\phmushi
+円板の中心の穴や軸。軸受けと空気の損失。
+\phzu
+一様な円板 $M=500$、$R=0.5$、回転数\qty{3000}{min^{-1}}。
+\phriyu
+$I=\dfrac{1}{2}MR^2$（⑦）、$K=\dfrac{1}{2}I\omega^2$（⑧）。回転数は rad/s に直す。
+\phtateru
+\[ I=\frac{1}{2}\times500\times0.5^2,\qquad\omega=3000\times\frac{2\pi}{60} \]
+\phtoku
+$I=\pxgI{62.5}$、$\omega\approx\qty{314}{rad/s}$。$K=\dfrac{1}{2}\times62.5\times314.2^2\approx\qty{3.08e6}{J}$。$\dfrac{3.08}{3.6}\approx\qty{0.86}{kWh}$。
+\phtashikame
+単位：kg·m$^2$×(rad/s)$^2$＝J。\quad 大きさ：家庭が1日に使う電気（およそ数〜10 kWh）の1割ほど。\quad 回転数を半分にすると、エネルギーは4分の1。
+\kotae \pxgI{62.5}、約\qty{3.1}{MJ}（約\qty{0.86}{kWh}）
+\end{phreidai}
+\begin{jibun}
+質量\qty{100}{kg}、半径\qty{0.3}{m}の円板を、毎分6000回転で回します。慣性モーメントとエネルギー（J と kWh）を求めましょう。
+\bkjans{$I=\pxgI{4.5}$。$\omega\approx\qty{628}{rad/s}$。$K\approx\qty{8.9e5}{J}$（約\qty{0.25}{kWh}）}
+\end{jibun}
+
+\begin{phreidai}[モータで回し始める（摩擦なし）]
+\label{ph:力-6:ex5}慣性モーメント\pxgI{0.02}の機械を、\pxgNm{2}の一定のトルクで回し始めます。毎分1500回転になるまで、何秒かかりますか。摩擦は無視します。
+\phbamen
+ベルトコンベアやファンを、止まった状態から回し始める。
+\phmushi
+軸受けの摩擦と空気の抵抗（⑨の $c_{\mathrm r}=0$）。
+\phzu
+$I=0.02$、$N=2$、目標 $\omega=1500\times\dfrac{2\pi}{60}\approx\qty{157.1}{rad/s}$。
+\phriyu
+回転の運動方程式 $I\dfrac{\dd\omega}{\dd t}=N$（⑥）。トルクが一定なので、角加速度も一定（⑨の③）。
+\phtateru
+\[ \frac{\dd\omega}{\dd t}=\frac{2}{0.02}=100\ \text{rad/s}^2,\qquad\omega=100t \]
+\phtoku
+$100t=157.1$ より $t\approx\qty{1.57}{s}$。
+\phtashikame
+単位：rad/s ÷ rad/s$^2$ ＝ s。\quad 大きさ：$I$ を2倍にすると約\qty{3.1}{s}。\quad 専門書の加速トルクの式 $T_{\mathrm a}=\dfrac{J\cdot2\pi n}{60t_{\mathrm a}}$ に $t_{\mathrm a}=1.57$ を入れると\pxgNm{2}にもどる。
+\kotae 約\qty{1.6}{s}
+\end{phreidai}
+\begin{jibun}
+慣性モーメント\pxgI{0.01}の機械を、\pxgNm{1}の一定のトルクで回し始めます。毎分1200回転になるまで何秒かかりますか（摩擦なし）。
+\bkjans{角加速度 \qty{100}{rad/s^2}、$\omega\approx\qty{125.7}{rad/s}$。約\qty{1.26}{s}}
+\end{jibun}
+
+\begin{phreidai}[摩擦があるときの立ち上がり]
+\label{ph:力-6:ex6}例題5の機械に、回る速さに比例する摩擦のトルク $c_{\mathrm r}\omega$（$c_{\mathrm r}=\pxgu{0.01}{N.m.s}$）がはたらくとします。（1）時定数と最後の角速度を求めましょう。（2）毎分1500回転になるまで、何秒かかりますか。
+\phbamen
+本物の機械は、回るほどじゃまするトルクが大きくなり、やがて決まった速さに落ち着く。
+\phmushi
+⑨のモデル化の札のとおり。
+\phzu
+$I=0.02$、$N_{\mathrm m}=2$、$c_{\mathrm r}=0.01$。
+\phriyu
+$I\dfrac{\dd\omega}{\dd t}=N_{\mathrm m}-c_{\mathrm r}\omega$ の答え $\omega=\omega_\infty(1-e^{-t/\tau})$（⑨）。
+\phtateru
+\[ \tau=\frac{0.02}{0.01},\qquad\omega_\infty=\frac{2}{0.01},\qquad157.1=\omega_\infty\bigl(1-e^{-t/\tau}\bigr) \]
+\phtoku
+（1）$\tau=\qty{2}{s}$、$\omega_\infty=\qty{200}{rad/s}$（毎分約1910回転）。\par
+（2）$e^{-t/2}=1-\dfrac{157.1}{200}=0.2146$。自然対数をとって（数学 5-14）$t=-2\ln0.2146\approx\qty{3.08}{s}$。
+\phtashikame
+摩擦がないとき（例題5）の\qty{1.57}{s}より長い。\quad $t=\tau=\qty{2}{s}$ では $200\times0.632\approx\qty{126}{rad/s}$ で、⑨のプログラムの2.0秒の値（式の答え126.4）と合う。
+\kotae （1）\qty{2}{s}、\qty{200}{rad/s}\quad（2）約\qty{3.1}{s}
+\end{phreidai}
+\begin{jibun}
+$I=\pxgI{0.005}$、$N_{\mathrm m}=\pxgNm{0.5}$、$c_{\mathrm r}=\pxgu{0.002}{N.m.s}$ のモータと機械で、（1）時定数と最後の角速度、（2）\qty{200}{rad/s}になるまでの時間を求めましょう。
+\bkjans{（1）\nobreak $\tau=\qty{2.5}{s}$、$\omega_\infty=\qty{250}{rad/s}$。（2）\nobreak $e^{-t/2.5}=0.2$ より $t=-2.5\ln0.2\approx\qty{4.0}{s}$}
+\end{jibun}
+
+\begin{phreidai}[巻き上げ機のドラムと荷]
+\label{ph:力-6:ex7}慣性モーメント\pxgI{0.5}、半径\qty{0.1}{m}のドラムにロープを巻き、先に質量\qty{20}{kg}の荷をつるします。ブレーキをはずすと、荷はどんな加速度で下がりますか。ロープの張力も求めましょう。
+\phbamen
+荷が落ちると、ロープがドラムを回す。ドラムが回しにくいほど、荷はゆっくり落ちる。
+\phmushi
+ロープの重さ・のび、軸受けの摩擦、空気の抵抗。
+\phzu
+荷の加速度 $a$（下向き）、ドラムの角加速度 $\dfrac{\dd\omega}{\dd t}$、張力 $T$。ロープはすべらないので $a=R\dfrac{\dd\omega}{\dd t}$（数学 4-2 の $s=r\theta$ を2回微分）。
+\phriyu
+荷にはまっすぐの運動方程式（力-2）、ドラムには回転の運動方程式（⑥）。2つの式を、すべらない条件でつなぐ。
+\phtateru
+\[ 20a=20\times9.8-T,\qquad 0.5\frac{\dd\omega}{\dd t}=T\times0.1,\qquad a=0.1\frac{\dd\omega}{\dd t} \]
+\phtoku
+2つめと3つめから $T=\dfrac{0.5}{0.1^2}a=50a$。1つめに入れて $20a=196-50a$、$a=\dfrac{196}{70}=\qty{2.8}{m/s^2}$。$T=50\times2.8=\qty{140}{N}$。
+\phtashikame
+文字で書くと $a=\dfrac{mg}{m+I/R^2}$。$I=0$ なら $a=g$（自由落下）、$I$ が大きいと $a$ は小さい。\quad 張力は荷の重さ\qty{196}{N}より小さい（荷が下へ加速しているから）。
+\kotae 約\qty{2.8}{m/s^2}、\qty{140}{N}
+\end{phreidai}
+\begin{jibun}
+慣性モーメント\pxgI{0.2}、半径\qty{0.1}{m}のドラムに、質量\qty{10}{kg}の荷をつるしてブレーキをはずします。荷の加速度とロープの張力を求めましょう。
+\bkjans{$10a=98-20a$ より $a\approx\qty{3.3}{m/s^2}$。$T=20a\approx\qty{65}{N}$}
+\end{jibun}
+
+\begin{phreidai}[軸が伝える動力とトルク]
+\label{ph:力-6:ex8}毎分3000回転で\qty{100}{kW}の動力を伝える軸には、どれだけのトルクがかかっていますか。
+\phbamen
+エンジンやモータの動力は、回る軸で機械に伝わる。軸の太さを決める（力-11）には、トルクがいる。
+\phmushi
+軸での損失。回転数は一定。
+\phzu
+$P=\qty{100e3}{W}$、$\omega=3000\times\dfrac{2\pi}{60}\approx\qty{314.2}{rad/s}$。
+\phriyu
+動力とトルクの関係 $P=N\omega$（⑧）。
+\phtateru
+\[ 100\times10^3=N\times314.2 \]
+\phtoku
+$N\approx\pxgNm{318}$
+\phtashikame
+単位：W ÷ rad/s ＝ J/s ÷ 1/s ＝ J ＝ N·m。\quad 同じ動力で回転数を半分にすると、トルクは2倍（歯車で回転を落とすと、トルクがふえる。力-7）。
+\kotae 約\pxgNm{318}
+\end{phreidai}
+\begin{jibun}
+毎分1500回転で\qty{15}{kW}を伝える軸のトルクを求めましょう。
+\bkjans{$\omega\approx\qty{157.1}{rad/s}$。$N=\dfrac{15000}{157.1}\approx\pxgNm{95.5}$}
+\end{jibun}
+
+\begin{phreidai}[月の公転から、静止衛星の高さを見積もる]
+\label{ph:力-6:ex9}月は、地球のまわりを半径約38.44万 km の円軌道で、27.32日で1周します（星を基準にした周期）。ケプラーの第3法則を使って、周期0.9973日（1恒星日）で回る静止衛星の軌道の半径を求めましょう。$G$ や地球の質量の値は使いません。
+\phbamen
+同じ地球のまわりを回る月と人工衛星をくらべる。
+\phmushi
+月の軌道のだ円の形（円とする）。太陽の引力。月の質量（地球の約81分の1）。
+\phzu
+月：$r_1=38.44$万 km、$T_1=27.32$日。静止衛星：$r_2$、$T_2=0.9973$日。
+\phriyu
+同じ中心の星のまわりでは、$\dfrac{T^2}{r^3}$ が同じ（⑩の第3法則）。単位は、比をとるのでそのままでよい。
+\phtateru
+\[ \frac{T_1^2}{r_1^3}=\frac{T_2^2}{r_2^3}\qquad r_2=r_1\Bigl(\frac{T_2}{T_1}\Bigr)^{2/3} \]
+\phtoku
+$\dfrac{0.9973}{27.32}\approx0.03650$。$0.03650^{2/3}\approx0.1100$。$r_2\approx38.44\times0.1100\approx4.23$万 km。
+\phtashikame
+$GM$ を使って⑩で求めた4.216万 km と、0.3\,\% ほどのちがい。月は地球の約81分の1の質量があり、地球と月がたがいに引き合って回るので、月の周期は、質量のない衛星より少し短くなる。そのぶん、月から見積もると少し大きく出る。
+\kotae 約4.23万 km（$GM$ から求めた値は約4.22万 km）
+\end{phreidai}
+\begin{jibun}
+国際宇宙ステーションは、地球のまわりを約92.7分で1周しています。例題9と同じように、月の値（38.44万 km、27.32日）から、その軌道の半径を見積もりましょう。地球の平均の半径（\qty{6371}{km}）を引いて、高度も求めましょう。
+\bkjans{$27.32$日$=\num{39341}$分。$r=38.44\times\Bigl(\dfrac{92.7}{39341}\Bigr)^{2/3}$ 万 km$\approx\qty{6810}{km}$。高度は約\qty{440}{km}（月の質量の分だけ大きめに出る。$GM$ から求めると約\qty{6785}{km}）}
+\end{jibun}
+
+\begin{phreidai}[地球の速さは、1年の中で変わる]
+\label{ph:力-6:ex10}地球は、太陽にいちばん近いとき（近日点）で1.471億 km、いちばん遠いとき（遠日点）で1.521億 km の所を通ります。近日点での速さは、遠日点での速さの何倍ですか。
+\phbamen
+地球の軌道は、少しだけつぶれただ円。太陽との距離で、速さが変わる。
+\phmushi
+月やほかの惑星の引力。
+\phzu
+近日点 $r_1$、$v_1$。遠日点 $r_2$、$v_2$。どちらも速度は太陽を結ぶ線に直角。
+\phriyu
+中心力なので角運動量が一定。近日点と遠日点では $L=mrv$ なので $r_1v_1=r_2v_2$（⑩）。
+\phtateru
+\[ \frac{v_1}{v_2}=\frac{r_2}{r_1}=\frac{1.521}{1.471} \]
+\phtoku
+$\dfrac{v_1}{v_2}\approx1.034$
+\phtashikame
+地球の速さは、近日点で約\qty{30.3}{km/s}、遠日点で約\qty{29.3}{km/s}と観測されていて、比は約1.034で合う。\quad 地球が近日点を通るのは毎年1月の初め。北半球の冬のほうが、地球は少し速く動いている。
+\kotae 約1.034倍
+\end{phreidai}
+\begin{jibun}
+火星は、近日点で2.067億 km、遠日点で2.493億 km の所を通ります。近日点での速さは、遠日点での速さの何倍ですか。
+\bkjans{$\dfrac{2.493}{2.067}\approx1.21$ 倍}
+\end{jibun}
+
+\begin{phreidai}[静止衛星へ移る、だ円の軌道]
+\label{ph:力-6:ex11}高度\qty{300}{km}（地球の中心から\qty{6678}{km}）の円軌道を回る衛星を、近地点がこの高さ、遠地点が静止衛星の軌道（\qty{42164}{km}）のだ円軌道にのせかえます。だ円軌道の近地点と遠地点での速さを求めましょう（$GM=\qty{3.986e14}{m^3/s^2}$）。
+\phbamen
+静止衛星は、まず低い軌道に打ち上げ、だ円軌道を通って高い軌道へ移る。
+\phmushi
+空気の抵抗。月と太陽の引力。地球の形（球とする）。
+\phzu
+近地点 $r_1=6.678\times10^6$ m、速さ $v_1$。遠地点 $r_2=4.2164\times10^7$ m、速さ $v_2$。
+\phriyu
+わからない速さが2つ。1つめの式は角運動量の保存 $r_1v_1=r_2v_2$（⑩）。2つめの式は力学的エネルギーの保存（万有引力の位置エネルギーは $-\dfrac{GMm}{r}$。力-4⑥）。
+\phtateru
+\[ r_1v_1=r_2v_2,\qquad\frac{1}{2}v_1^2-\frac{GM}{r_1}=\frac{1}{2}v_2^2-\frac{GM}{r_2} \]
+\phtoku
+1つめから $v_2=\dfrac{r_1}{r_2}v_1$。2つめに入れて整理すると
+\[ v_1^2\Bigl(1-\frac{r_1^2}{r_2^2}\Bigr)=2GM\Bigl(\frac{1}{r_1}-\frac{1}{r_2}\Bigr)\qquad v_1=\sqrt{\frac{2GMr_2}{r_1(r_1+r_2)}} \]
+数を入れると $v_1\approx\qty{10.15}{km/s}$、$v_2=\dfrac{6678}{42164}\times10.15\approx\qty{1.61}{km/s}$。
+\phtashikame
+もとの円軌道の速さ $\sqrt{\dfrac{GM}{r_1}}\approx\qty{7.73}{km/s}$ より、近地点で約\qty{2.4}{km/s}速くすればよい。遠地点の\qty{1.61}{km/s}は、静止衛星の速さ（約\qty{3.07}{km/s}）より遅いので、遠地点でもう一度加速する。\quad 極端な場合：$r_2=r_1$ なら $v_1=\sqrt{\dfrac{GM}{r_1}}$（円軌道）にもどる。
+\kotae 近地点 約\qty{10.2}{km/s}、遠地点 約\qty{1.6}{km/s}
+\end{phreidai}
+\begin{jibun}
+高度\qty{500}{km}（中心から\qty{6878}{km}）を近地点、\qty{42164}{km}を遠地点とするだ円軌道の、近地点と遠地点での速さを求めましょう。
+\bkjans{$v_1=\sqrt{\dfrac{2GMr_2}{r_1(r_1+r_2)}}\approx\qty{9.98}{km/s}$、$v_2\approx\qty{1.63}{km/s}$}
+\end{jibun}
+
+\begin{phreidai}[回転いすの上で、回る車輪をひっくり返す]
+\label{ph:力-6:ex12}止まった回転いすにすわった人が、回っている自転車の車輪を、軸をたてにして持っています。車輪の慣性モーメントは\pxgI{0.1}、上から見て左回りに\qty{20}{rad/s}で回っています。車輪の軸を180°ひっくり返すと、人と回転いす（慣性モーメント\pxgI{3}）は、どちら向きに何 rad/s で回り出しますか。
+\phbamen
+角運動量がベクトルであることを、体で感じる実験（科学館でよく見られる）。
+\phmushi
+回転いすの軸の摩擦。車輪の軸が人の軸からずれていること。
+\phzu
+上向きを＋とする。はじめの角運動量は、車輪だけで $+0.1\times20=+2$（左回りは右ねじで上向き）。ひっくり返すと車輪は $-2$。人と回転いすの角速度を $\Omega$ とする。
+\phriyu
+回転いすの軸（たて）のまわりには、外からのトルクがない。だから、角運動量のたての成分が保存する（⑤）。
+\phtateru
+\[ 2=-2+3\Omega \]
+\phtoku
+$\Omega=\dfrac{4}{3}\approx\qty{1.3}{rad/s}$。＋なので、上から見て左回り（はじめの車輪と同じ向き）。
+\phtashikame
+車輪の勢いの向きを変えたぶん（$-4$）を、人と回転いすが反対の向きの勢い（$+4$）で受けもった。\quad 大きさ：約5秒で1回転。体で感じられる速さ。
+\kotae 上から見て左回りに、約\qty{1.3}{rad/s}
+\end{phreidai}
+\begin{jibun}
+例題12と同じ人・車輪で、車輪の軸を90°かたむけて、横向き（水平）にしました。人と回転いすは、どちら向きに何 rad/s で回り出しますか。
+\bkjans{車輪のたての角運動量は0になる。$2=0+3\Omega$ より $\Omega\approx\qty{0.67}{rad/s}$、上から見て左回り}
+\end{jibun}
+
+\begin{phreidai}[慣性モーメントを実験で求める]
+\label{ph:力-6:ex13}形が複雑で計算しにくい回転体の慣性モーメントを、実験で求めます。半径\qty{0.02}{m}の軸にひもを巻き、質量\qty{0.2}{kg}のおもりをつるして静かにはなすと、\qty{1.0}{m}下がるのに\qty{4.0}{s}かかりました。
+\phbamen
+②の実験の逆。落ちる時間から、回しにくさを求める。
+\phmushi
+軸受けの摩擦。ひもの重さ・のび。
+\phzu
+例題7と同じ。軸の半径 $R=0.02$、おもり $m=0.2$、下がる距離 $h=1.0$、時間 $t=4.0$。
+\phriyu
+おもりの加速度は一定なので、落ちた距離 $h=\dfrac{1}{2}at^2$（力-1）から $a$ がわかる。例題7の $a=\dfrac{mg}{m+I/R^2}$ を、$I$ について解く。
+\phtateru
+\[ a=\frac{2h}{t^2},\qquad I=mR^2\Bigl(\frac{g}{a}-1\Bigr) \]
+\phtoku
+$a=\dfrac{2\times1.0}{16}=\qty{0.125}{m/s^2}$。
+\[ I=0.2\times0.0004\times\Bigl(\frac{9.8}{0.125}-1\Bigr)=0.00008\times77.4\approx\pxgI{0.0062} \]
+\phtashikame
+単位：kg·m$^2$。\quad 時間 $t$ が2倍なら $a$ は4分の1で、$I$ は約4倍（回しにくいほど遅い）。\quad 摩擦があると時間がのびるので、$I$ が大きめに出る。何回かはかって、平均する。
+\kotae 約\pxgI{6.2e-3}
+\end{phreidai}
+\begin{jibun}
+半径\qty{0.025}{m}の軸にひもを巻き、\qty{0.1}{kg}のおもりをつるすと、\qty{0.8}{m}下がるのに\qty{3.2}{s}かかりました。回転体の慣性モーメントを求めましょう。
+\bkjans{$a=\dfrac{1.6}{10.24}\approx\qty{0.156}{m/s^2}$。$\dfrac{g}{a}-1\approx61.7$ 、$mR^2=0.1\times0.025^2$ なので、$I\approx\pxgI{3.9e-3}$}
+\end{jibun}
+
+\begin{phreidai}[ひもで回る小球を、引きこむ]
+\label{ph:力-6:ex14}なめらかな机の中央の小さな穴にひもを通し、その先の質量\qty{0.1}{kg}の小球を、半径\qty{0.5}{m}、速さ\qty{2}{m/s}で円運動させます。穴の下からひもをゆっくり引いて、半径を\qty{0.25}{m}にしました。小球の速さ、ひもを引いた仕事、最後のひもの張力を求めましょう。
+\phbamen
+スケートの選手がうでを引きよせるのと同じ（例題1の、くわしいしくみ）。
+\phmushi
+机の摩擦。ひもの重さ。穴の大きさ。
+\phzu
+はじめ $r_1=0.5$、$v_1=2$。あと $r_2=0.25$、$v_2$。ひもの力は、いつも穴（中心）に向かう。
+\phriyu
+ひもの力は中心力なので、穴のまわりの角運動量が保存（⑩）。速度は半径に直角なので $mr_1v_1=mr_2v_2$。仕事は運動エネルギーの変化（力-4⑤）。張力は円運動の向心力（力-2⑦）。
+\phtateru
+\[ 0.5\times2=0.25\times v_2,\qquad W=\frac{1}{2}mv_2^2-\frac{1}{2}mv_1^2,\qquad T=m\frac{v_2^2}{r_2} \]
+\phtoku
+$v_2=\qty{4}{m/s}$。$W=\dfrac{1}{2}\times0.1\times(16-4)=\qty{0.6}{J}$。$T=\dfrac{0.1\times16}{0.25}=\qty{6.4}{N}$。
+\phtashikame
+はじめの張力は $\dfrac{0.1\times4}{0.5}=\qty{0.8}{N}$。半径を半分にすると、張力は8倍になった（$v$ が2倍、$r$ が半分で、$\dfrac{v^2}{r}$ は8倍）。引くほど重くなるので、ひもを引く仕事がいる。
+\kotae 速さ\qty{4}{m/s}、仕事\qty{0.6}{J}、張力\qty{6.4}{N}
+\end{phreidai}
+\begin{jibun}
+例題14と同じ小球（\qty{0.1}{kg}）を、半径\qty{0.6}{m}、速さ\qty{1.5}{m/s}で回し、半径を\qty{0.2}{m}まで引きこみました。最後の速さと、ひもを引いた仕事を求めましょう。
+\bkjans{$v_2=\dfrac{0.6\times1.5}{0.2}=\qty{4.5}{m/s}$。$W=\dfrac{1}{2}\times0.1\times(20.25-2.25)=\qty{0.9}{J}$}
+\end{jibun}
+
+\begin{phreidai}[サーボモータのトルク]
+\label{ph:力-6:ex15}ロボットに使う小型のサーボモータのカタログに、「定格出力\qty{100}{W}、定格回転数\qty{3000}{min^{-1}}」と書いてあります。定格トルクはいくらですか。また、このモータが、慣性モーメント\pxgI{2.0e-4}（モータの回転子もふくむ）の負荷を、止まった状態から定格トルクで加速すると、定格回転数まで何秒かかりますか。
+\phbamen
+ロボットの関節のモータを選ぶとき、必要なトルクと、すばやく動けるかを確かめる。
+\phmushi
+負荷トルク（摩擦）。モータは、加速中もずっと定格トルクを出すとする。
+\phzu
+$P=100$、$\omega=3000\times\dfrac{2\pi}{60}\approx\qty{314.2}{rad/s}$、$I=2.0\times10^{-4}$。
+\phriyu
+トルクは $P=N\omega$（⑧）。加速の時間は $I\dfrac{\dd\omega}{\dd t}=N$（例題5と同じ形）。
+\phtateru
+\[ N=\frac{100}{314.2},\qquad t=\frac{I\omega}{N} \]
+\phtoku
+$N\approx\pxgNm{0.318}$。$t=\dfrac{2.0\times10^{-4}\times314.2}{0.318}\approx\qty{0.20}{s}$。
+\phtashikame
+実際のカタログ（安川電機の\qty{100}{W}のサーボモータ）の定格トルクも\pxgNm{0.318}で、合う。\quad 大きさ：0.2秒で毎分3000回転まで上がる。ロボットの腕がすばやく動ける理由。負荷の慣性モーメントが大きいと、時間はそれに比例してのびる。
+\kotae 約\pxgNm{0.32}、約\qty{0.20}{s}
+\end{phreidai}
+\begin{jibun}
+定格出力\qty{400}{W}、定格回転数\qty{3000}{min^{-1}}のモータの定格トルクを求めましょう。慣性モーメント\pxgI{1.0e-3}の負荷を、定格トルクで定格回転数まで加速すると、何秒かかりますか。
+\bkjans{$N=\dfrac{400}{314.2}\approx\pxgNm{1.27}$。$t=\dfrac{1.0\times10^{-3}\times314.2}{1.27}\approx\qty{0.25}{s}$}
+\end{jibun}
+
+%% ======================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{回しにくさは、質量だけで決まる？}
+\bkng{質量が同じなら、慣性モーメントも同じ}
+\bkok{慣性モーメントは、質量が軸からどれだけはなれているかで決まる（$\sum mr^2$）}
+同じ\qty{10}{kg}・半径\qty{0.3}{m}でも、輪は\pxgI{0.9}、円板は\pxgI{0.45}。同じ物でも、軸の場所を変えると変わります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{回転数のまま計算する}
+\bkng{毎分3000回転なので $\omega=3000$}
+\bkok{$\omega=3000\times\dfrac{2\pi}{60}\approx\qty{314}{rad/s}$}
+$K=\dfrac{1}{2}I\omega^2$ や $P=N\omega$ の $\omega$ は、rad/s でなければなりません。比だけを使う式（例題1の $I_1\omega_1=I_2\omega_2$）なら、回転数のままでもかまいません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{平行軸の定理の出発点}
+\bkng{はしのまわりの $I$ に $Md^2$ をたして、別の軸のまわりの $I$ を出す}
+\bkok{$I=I_{\mathrm G}+Md^2$ の $I_{\mathrm G}$ は、重心を通る軸のまわり}
+重心でない軸から出発すると、まちがった答えになります。重心でない軸どうしは、一度、重心の軸にもどってから計算します。
+\end{tsumazuki}
+
+\begin{tsumazuki}{角運動量が保存なら、エネルギーも保存？}
+\bkng{うでをたたんでも、回転のエネルギーは変わらない}
+\bkok{角運動量 $I\omega$ は変わらないが、エネルギー $\dfrac{1}{2}I\omega^2$ はふえる}
+ふえたぶんは、うでを引きよせる筋肉の仕事です（例題1・14）。保存する量と、しない量を区別しましょう。
+\end{tsumazuki}
+
+%% ======================================================================
+\bksection{phgear}{工学ではこう使う}
+
+\begin{phkougaku}[モータの選定]
+\noindent ロボットや工作機械のモータを選ぶときは、次の順で考えます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 動かす物（負荷）の慣性モーメントを、形から計算する（⑦の式と平行軸の定理。複雑なら例題13のような実験や、設計ソフトで求める）。
+\item 決まった時間で決まった回転数まで加速するのに要るトルク（加速トルク）を、回転の運動方程式で求め、いつも要る負荷トルクをたす（例題5・6）。
+\item そのトルクと回転数を出せるモータを、カタログの定格トルク・定格回転数（$P=N\omega$）からえらぶ（例題15）。
+\end{enumerate}
+負荷の慣性モーメントがモータの回転子よりずっと大きいと、止めたい位置でぴたりと止まりにくくなります。そこで、歯車で回転を落として（力-7）、モータから見た負荷の慣性モーメントを小さくします。
+
+\begin{phketa}[回る物の大きさ]
+\phketaline{小型サーボモータ（\qty{100}{W}）の定格トルク}{\pxgNm{0.318}（メーカーの仕様）}
+\phketaline{その回転子（鋼、直径\qty{2}{cm}・長さ\qty{4}{cm}の円柱と見る）の $I$}{約\pxgI{5e-6}（見積もり）}
+\phketaline{自転車の車輪（ふちに約\qty{1}{kg}、半径\qty{0.33}{m}）の $I$}{約\pxgI{0.1}（見積もり）}
+\phketaline{地球の自転の $I$（$0.3308MR^2$）}{約\pxgI{8.0e37}}
+\phboxhead{答えが桁で合っているか}
+慣性モーメントは $MR^2$ の0.3〜1倍くらいです（輪が1、円板が0.5、地球のように中心が重い球は約0.33）。計算した $I$ が $MR^2$ より大きく出たら、どこかでまちがえています。
+\end{phketa}
+
+\pxghead{人工衛星の向きを変える：リアクションホイール}
+宇宙では、押す相手がいないので、人工衛星の向きを変えるのは簡単ではありません。そこで、衛星の中にはずみ車（リアクションホイール）を入れておき、モータでそれを回します。衛星全体の角運動量は変わらないので（外からのトルクがない）、ホイールを左回りに速くすると、衛星本体は右回りに回ります。例題12の回転いすと同じしくみです。宇宙望遠鏡が、遠くの星に向きをぴたりと合わせられるのも、このしくみのおかげです。
+\end{phkougaku}
+\phstation{回転機械,モータの選定,宇宙工学,機械力学}{慣性モーメント（$J$、$GD^2$）、慣性比、加速トルク、負荷トルク、定格トルク、角運動量、リアクションホイール、ケプラー軌道}
+
+\begin{column}{ねこは、なぜ足から着地できる？}
+背中を下にして落とされたねこは、空中で体をひねって、足から着地します。はじめ回っていないので、角運動量は0です。外からのトルクもないので、空中でもずっと0のはずです。それなのに、どうして向きを変えられるのでしょう。1969年に、ケインとシェアーは、ねこの体を「前半分」と「後ろ半分」の2つの部分として、体を曲げたまま2つの部分を逆向きにひねると、全体の角運動量を0にしたまま、向きだけを変えられることを、式で示しました。人工衛星や宇宙飛行士の姿勢を変える研究でも、同じ考えが使われています。
+\end{column}
+
+%% ======================================================================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 長さ\qty{0.8}{m}、質量\qty{3}{kg}の一様な棒の、まん中のまわりとはしのまわりの慣性モーメントを求めましょう。
+\bkpans{$\dfrac{3\times0.64}{12}=\pxgI{0.16}$、$\dfrac{3\times0.64}{3}=\pxgI{0.64}$}
+
+\bkproblem 慣性モーメント\pxgI{4.0}で毎秒1回転している人が、うでをたたんで慣性モーメントを\pxgI{1.6}にしました。毎秒何回転になりますか。
+\bkpans{$4.0\times1=1.6n$ より毎秒2.5回転}
+
+\bkproblem 質量\qty{200}{kg}、半径\qty{0.4}{m}の円板を、毎分3000回転で回します。回転のエネルギーを求めましょう。
+\bkpans{$I=\pxgI{16}$、$\omega\approx\qty{314.2}{rad/s}$。$K\approx\qty{7.9e5}{J}$（約\qty{0.79}{MJ}）}
+
+\bkproblem 慣性モーメント\pxgI{0.05}の機械を、\pxgNm{5}の一定のトルクで回し始めます（摩擦なし）。毎分3000回転になるまで何秒かかりますか。
+\bkpans{角加速度 \qty{100}{rad/s^2}、$\omega\approx\qty{314.2}{rad/s}$。約\qty{3.1}{s}}
+
+\bkproblem 毎分1800回転で\qty{30}{kW}を伝える軸のトルクを求めましょう。
+\bkpans{$\omega\approx\qty{188.5}{rad/s}$。$N=\dfrac{30000}{188.5}\approx\pxgNm{159}$}
+
+\bkproblem 金星の公転周期は0.615年です。地球の軌道の長半径を1 AU として、金星の軌道の長半径を求めましょう。
+\bkpans{$r=1\times0.615^{2/3}\approx0.723 AU$}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem $I=\pxgI{0.04}$、$N_{\mathrm m}=\pxgNm{3}$、$c_{\mathrm r}=\pxgu{0.02}{N.m.s}$ のモータと機械で、時定数、最後の角速度、\qty{100}{rad/s}になるまでの時間を求めましょう。
+\bkpans{$\tau=\qty{2}{s}$、$\omega_\infty=\qty{150}{rad/s}$。$e^{-t/2}=1/3$ より $t=2\ln3\approx\qty{2.2}{s}$}
+
+\bkproblem 慣性モーメント\pxgI{0.3}、半径\qty{0.1}{m}のドラムに、質量\qty{30}{kg}の荷をつるしてブレーキをはずします。荷の加速度とロープの張力を求めましょう。
+\bkpans{$30a=294-30a$ より $a=\qty{4.9}{m/s^2}$。$T=30a=\qty{147}{N}$}
+
+\bkproblem はば\qty{0.9}{m}、質量\qty{30}{kg}の一様なドアの、ちょうつがいのまわりの慣性モーメントを、平行軸の定理で求めましょう。
+\bkpans{$\dfrac{30\times0.81}{12}+30\times0.45^2=2.025+6.075=\pxgI{8.1}$}
+
+\bkproblem 半径\qty{0.03}{m}の軸にひもを巻き、\qty{0.5}{kg}のおもりをつるすと、\qty{1.5}{m}下がるのに\qty{2.0}{s}かかりました。回転体の慣性モーメントを求めましょう。
+\bkpans{$a=\dfrac{3.0}{4.0}=\qty{0.75}{m/s^2}$。$\dfrac{g}{a}-1\approx12.07$ 、$mR^2=0.5\times0.03^2$ なので、$I\approx\pxgI{5.4e-3}$}
+
+\phnyushi
+
+\bkproblem 質量 $M$ の地球のまわりを、人工衛星がだ円軌道で回っています。近地点の地球の中心からの距離は $r$、遠地点は $3r$ です。万有引力定数を $G$ とします。（1）近地点の速さ $v_1$ と遠地点の速さ $v_2$ を、$G$、$M$、$r$ で表しましょう。（2）近地点で、半径 $r$ の円軌道の速さの何倍ですか。
+\bkpans{（1）\nobreak $rv_1=3rv_2$ と $\dfrac{1}{2}v_1^2-\dfrac{GM}{r}=\dfrac{1}{2}v_2^2-\dfrac{GM}{3r}$ から $v_1=\sqrt{\dfrac{3GM}{2r}}$、$v_2=\dfrac{1}{3}\sqrt{\dfrac{3GM}{2r}}$。（2）\nobreak $\sqrt{\dfrac{3}{2}}\approx1.22$ 倍}
+
+\bkproblem なめらかな机の穴に通したひもの先で、質量 $m$ の小球が、半径 $r$、速さ $v$ の円運動をしています。ひもをゆっくり引いて、半径を $\dfrac{r}{3}$ にしました。（1）小球の速さ、（2）ひもを引いた仕事、（3）最後のひもの張力を、$m$、$r$、$v$ で表しましょう。
+\bkpans{（1）\nobreak $3v$。（2）\nobreak $\dfrac{1}{2}m(9v^2-v^2)=4mv^2$。（3）\nobreak $\dfrac{m(3v)^2}{r/3}=\dfrac{27mv^2}{r}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 細かく分けてたし、慣性モーメントを表計算で求められる。\bkfurref{ph:力-6:sec3}
+\item 回転の運動方程式と角運動量の保存を使える。\bkfurref{ph:力-6:sec6}
+\item 角運動量の保存から、ケプラーの法則を導ける。\bkfurref{ph:力-6:sec10}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{質量 $m$ が $I$ に、力 $F$ がトルク $N$ にかわるだけで、回る物も同じ形の式で書けるんだね。}

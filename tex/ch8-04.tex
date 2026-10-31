@@ -1,0 +1,976 @@
+%% 8-4 いちばん急な向き：勾配 grad（第14回：組 V8-3。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   物理 力-4（p1-04:99・316〜318）：grad U=(∂U/∂x, ∂U/∂y, ∂U/∂z)、F=−grad U、「ボールは等高線と直角に、急な向きへ転がる」。
+%%   物理 力-12（p1-12:339〜342）：「勾配は『いちばん急に増える向き』」、等圧面は g に垂直。力-15（p1-15:550）：−∇p（∇ をこの章で導入）。
+%%   第7巻の予告カード 8-4「行と列の内積（7-3）。内積が0なら直角」→ 方向微分＝grad·e、等高線と直角。
+%%   主役の山 h=100−0.01x²−0.02y²（m）、点 (30, 20)：h=83、grad h=(−0.6, −0.8)、大きさ1（brief8-parts 5章の約束）。8-3 の −1.4 と方向微分 −0.990 を結ぶ。
+%%   6-3 のかべ（0.2 m、20 ℃・0 ℃、k=1.6）：q=−k grad T＝160 W/m²（8-13 の出発点）。天気図 4 hPa／200 km → 0.0017 m/s²（コリオリと摩擦で実際の風はそれる）。
+%%   電位は φ（委員会の決定7）、熱伝導率 k（決定9）、grad を主に ∇ を並べる（決定3）。未定乗数は μ（専門書の λ は 7-8 の固有値とは別、と注）。
+%%   矢印の場の図の部品は tools/kata8.md（組 V8-3）。数はすべて Python で確かめた（scratchpad/v8-3/py/c84.py）。
+\usetikzlibrary{decorations.markings}
+\makeatletter
+% ==== 矢印の場の図の部品（kata8 の型。頭文字 kviiie は 8-4）====
+\tikzset{
+  kviiie field/.style={draw=\bkTT, line width=0.9pt, line cap=round, -{Stealth[length=2.0mm, width=1.7mm]}},
+  kviiie grad/.style={draw=bkRed!85!black, line width=1.5pt, line cap=round, -{Stealth[length=2.8mm, width=2.2mm]}},
+  kviiie down/.style={draw=bkOrange!85!black, line width=1.5pt, line cap=round, dash pattern=on 2.4pt off 1.2pt, -{Stealth[length=2.8mm, width=2.2mm]}},
+  kviiie contour/.style={draw=bkGreen!60!black, line width=0.8pt},
+  kviiie stream/.style={draw=bkPurple, line width=1.1pt, line cap=round, postaction={decorate},
+    decoration={markings, mark=at position 0.55 with {\arrow{Stealth[length=2.4mm, width=2mm]}}}},
+  kviiie pt/.style={fill=bkInk!75},
+  kviiie zero/.style={draw=bkInk!75, fill=white, line width=0.6pt},
+  kviiie frame/.style={draw=bkLine, line width=0.6pt},
+  kviiie gridline/.style={draw=bkLine, line width=0.4pt},
+  kviiie lab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1pt},
+  kviiie tick/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0pt},
+}
+% 設定  \kviiieset{xmin=-2, xmax=2, ymin=-2, ymax=2, step=1, scale=0.4, pivot=tail}
+\pgfkeys{/kviiie/.is family, /kviiie,
+  xmin/.initial=-2, xmax/.initial=2, ymin/.initial=-2, ymax/.initial=2, step/.initial=1,
+  scale/.initial=0.4, pivot/.initial=tail, skip/.initial=0, min/.initial=0.03,
+  arrow/.initial={kviiie field}, dot/.initial=1}
+\newcommand\kviiieset[1]{\pgfkeys{/kviiie,#1}}
+\def\kviiie@get#1{\pgfkeysvalueof{/kviiie/#1}}
+% 矢印の場  \kviiiefield[設定]{F_x の式}{F_y の式}（式は \x, \y で書く。三角関数の角は度）
+%   矢印の長さ＝場の大きさ×scale（座標の目もりで）。pivot=tail：根もとがその場所（点をうつ）、mid：まん中がその場所
+%   場が0の所（長さが min より短い）は、白ぬきの丸。skip の式が1になる所はかかない（例：skip={\x*\x+\y*\y<0.1}）
+\newcommand\kviiiefield[3][]{{%
+  \kviiieset{#1}%
+  \pgfmathsetmacro\kviiie@xa{\kviiie@get{xmin}}\pgfmathsetmacro\kviiie@ya{\kviiie@get{ymin}}%
+  \pgfmathsetmacro\kviiie@st{\kviiie@get{step}}\pgfmathsetmacro\kviiie@sc{\kviiie@get{scale}}%
+  \pgfmathtruncatemacro\kviiie@nx{round((\kviiie@get{xmax}-\kviiie@xa)/\kviiie@st)}%
+  \pgfmathtruncatemacro\kviiie@ny{round((\kviiie@get{ymax}-\kviiie@ya)/\kviiie@st)}%
+  \edef\kviiie@pv{\kviiie@get{pivot}}\def\kviiie@mid{mid}%
+  \foreach \kviiie@i in {0,...,\kviiie@nx} {\foreach \kviiie@j in {0,...,\kviiie@ny} {%
+    \pgfmathsetmacro\x{\kviiie@xa+\kviiie@i*\kviiie@st}\pgfmathsetmacro\y{\kviiie@ya+\kviiie@j*\kviiie@st}%
+    \pgfmathtruncatemacro\kviiie@sk{(\kviiie@get{skip}) ? 1 : 0}%
+    \ifnum\kviiie@sk=0
+      \pgfmathsetmacro\kviiie@u{(#2)*\kviiie@sc}\pgfmathsetmacro\kviiie@w{(#3)*\kviiie@sc}%
+      \pgfmathtruncatemacro\kviiie@ok{veclen(\kviiie@u,\kviiie@w)>\kviiie@get{min} ? 1 : 0}%
+      \ifnum\kviiie@ok=1
+        \ifx\kviiie@pv\kviiie@mid
+          \draw[style/.expanded=\kviiie@get{arrow}] ({\x-\kviiie@u/2},{\y-\kviiie@w/2}) -- ++(\kviiie@u,\kviiie@w);%
+        \else
+          \draw[style/.expanded=\kviiie@get{arrow}] (\x,\y) -- ++(\kviiie@u,\kviiie@w);%
+          \ifnum\kviiie@get{dot}=1 \fill[kviiie pt] (\x,\y) circle[radius=0.42mm];\fi
+        \fi
+      \else
+        \filldraw[kviiie zero] (\x,\y) circle[radius=0.6mm];%
+      \fi
+    \fi}}}}
+% 凡例（矢印の長さの物差し）  \kviiiekey[設定]{(x,y)}{場の大きさ}{ことば}  例：\kviiiekey{(2.4,-2)}{1}{＝\qty{1}{m/s}}
+\newcommand\kviiiekey[4][]{{%
+  \kviiieset{#1}\pgfmathsetmacro\kviiie@sc{\kviiie@get{scale}}%
+  \pgfmathsetmacro\kviiie@u{(#3)*\kviiie@sc}%
+  \draw[style/.expanded=\kviiie@get{arrow}] #2 -- ++(\kviiie@u,0) coordinate (kviiie@keyend);
+  \node[kviiie lab, anchor=west] at ([xshift=1.5mm]kviiie@keyend) {#4};}}
+% 方眼  \kviiiegrid[きざみ]{xmin}{xmax}{ymin}{ymax}
+\newcommand\kviiiegrid[5][1]{\draw[kviiie gridline, step=#1] (#2,#4) grid (#3,#5);}
+% 軸（O・x・y の字つき）  \kviiieaxes{xmin}{xmax}{ymin}{ymax}{x の名前}{y の名前}
+\newcommand\kviiieaxes[6]{%
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- (#2,0) node[kviiie lab, anchor=west, xshift=0.6mm] {#5};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,#4) node[kviiie lab, anchor=south, yshift=0.6mm] {#6};}
+% 目もりの数（軸から 1.5 mm はなす）  \kviiieticks{x の目もりの並び}{y の目もりの並び}
+\newcommand\kviiieticks[2]{%
+  \foreach \kviiie@t in {#1} {\draw[bkInk, line width=0.5pt] (\kviiie@t,0) -- ++(0,-0.8mm);
+    \node[kviiie tick, anchor=north] at ([yshift=-2.3mm]\kviiie@t,0) {$\kviiie@t$};}
+  \foreach \kviiie@t in {#2} {\draw[bkInk, line width=0.5pt] (0,\kviiie@t) -- ++(-0.8mm,0);
+    \node[kviiie tick, anchor=east] at ([xshift=-2.3mm]0,\kviiie@t) {$\kviiie@t$};}}
+% 流線・力線（矢印をつないだ線）  \kviiiestream[線の形]{F_x}{F_y}{x0,y0}{歩数}{1歩の長さ}
+%   (x0,y0) から、場の向きに1歩ずつ進んだ点を結ぶ（2次のルンゲ・クッタ。1歩の長さは座標の目もりで）。歩数を負にすると逆向きにたどる
+\newcommand\kviiiestream[6][]{{%
+  \pgfmathsetmacro\kviiie@h{#6}\pgfmathtruncatemacro\kviiie@n{abs(#5)}%
+  \pgfmathsetmacro\kviiie@sg{#5<0 ? -1 : 1}%
+  \def\kviiie@xy##1,##2\relax{\pgfmathsetmacro\kviiie@nx{##1}\pgfmathsetmacro\kviiie@ny{##2}%
+    \xdef\kviiie@px{\kviiie@nx}\xdef\kviiie@py{\kviiie@ny}}\kviiie@xy#4\relax
+  \xdef\kviiie@path{(\kviiie@px,\kviiie@py)}%
+  \foreach \kviiie@k in {1,...,\kviiie@n} {%
+    \pgfmathsetmacro\x{\kviiie@px}\pgfmathsetmacro\y{\kviiie@py}%
+    \pgfmathsetmacro\kviiie@u{#2}\pgfmathsetmacro\kviiie@w{#3}\pgfmathsetmacro\kviiie@L{max(veclen(\kviiie@u,\kviiie@w),1e-6)}%
+    \pgfmathsetmacro\x{\kviiie@px+0.5*\kviiie@sg*\kviiie@h*\kviiie@u/\kviiie@L}\pgfmathsetmacro\y{\kviiie@py+0.5*\kviiie@sg*\kviiie@h*\kviiie@w/\kviiie@L}%
+    \pgfmathsetmacro\kviiie@u{#2}\pgfmathsetmacro\kviiie@w{#3}\pgfmathsetmacro\kviiie@L{max(veclen(\kviiie@u,\kviiie@w),1e-6)}%
+    \pgfmathsetmacro\kviiie@nx{\kviiie@px+\kviiie@sg*\kviiie@h*\kviiie@u/\kviiie@L}\pgfmathsetmacro\kviiie@ny{\kviiie@py+\kviiie@sg*\kviiie@h*\kviiie@w/\kviiie@L}%
+    \xdef\kviiie@px{\kviiie@nx}\xdef\kviiie@py{\kviiie@ny}%
+    \xdef\kviiie@path{\kviiie@path -- (\kviiie@px,\kviiie@py)}}%
+  \draw[kviiie stream, #1] \kviiie@path;}}
+% わくと目もり（場の図の目もりは、わくの外に置く。矢印と数字が重ならない）
+%   \kviiieframe[わくのゆとり]{xmin}{xmax}{ymin}{ymax}{x の目もりの並び}{y の目もりの並び}{x の名前}{y の名前}
+%   わくは、いちばん外の格子点からゆとり（目もりの数。ふつう 0.5、外向きの長い矢印があるときは 0.9）だけ外にかく。0の線（軸）はうすい線
+\newcommand\kviiieframe[9][0.5]{%
+  \draw[kviiie frame, fill=white] ({#2-#1},{#4-#1}) rectangle ({#3+#1},{#5+#1});
+  \draw[bkLine, line width=0.6pt] ({#2-#1},0) -- ({#3+#1},0) (0,{#4-#1}) -- (0,{#5+#1});
+  \foreach \kviiie@t in {#6} {\draw[bkInk, line width=0.5pt] (\kviiie@t,{#4-#1}) -- ++(0,-0.9mm);
+    \node[kviiie tick, anchor=north] at ([yshift=-2.4mm]\kviiie@t,{#4-#1}) {$\kviiie@t$};}
+  \foreach \kviiie@t in {#7} {\draw[bkInk, line width=0.5pt] ({#2-#1},\kviiie@t) -- ++(-0.9mm,0);
+    \node[kviiie tick, anchor=east] at ([xshift=-2.4mm]{#2-#1},\kviiie@t) {$\kviiie@t$};}
+  \node[kviiie lab, anchor=north west] at ([xshift=2mm, yshift=-2.4mm]{#3+#1},{#4-#1}) {#8};
+  \node[kviiie lab, anchor=south east] at ([xshift=-2.4mm, yshift=1.5mm]{#2-#1},{#5+#1}) {#9};}
+% 小さな場の図  \kviiiepanel[設定]{F_x}{F_y}{図に足すもの}{下のことば}（-2〜2 の格子、1目もり 6 mm、わくつき）
+\newcommand\kviiiepanel[5][]{%
+  \begin{tikzpicture}[x=6mm, y=6mm, baseline=(current bounding box.north)]
+    \draw[kviiie frame, fill=white] (-2.6,-2.6) rectangle (2.6,2.6);
+    \draw[bkLine, line width=0.5pt] (-2.6,0) -- (2.6,0) (0,-2.6) -- (0,2.6);
+    \kviiiefield[pivot=mid, dot=0, #1]{#2}{#3}
+    #4
+    \node[kviiie lab, anchor=north, align=center, text width=36mm, font={\sffamily\footnotesize\baselineskip=13pt}] at (0,-2.85) {#5};
+  \end{tikzpicture}}
+% ---- この章の部品 ----
+% 本文の小見出し（太字の1行）
+\newcommand\kviiiehead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiiebox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviiieline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviiiewaku{中身}
+\newcommand\kviiiewaku[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiiea{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiieb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiies{\rightskip=0pt plus 8em\relax}
+% 表計算の数式バー（kata7 の型）  \kviiiefx{セル}{式}
+\newcommand\kviiiefx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=72mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviiieM}{bkTheme!10}\colorlet{kviiieV}{bkGreen!14}\colorlet{kviiieR}{bkYellow!35}
+% 主役の山の等高線（だ円）  \kviiiemt{高さ h}  （0.01x^2+0.02y^2=100-h）
+\newcommand\kviiiemt[2][]{\draw[kviiie contour, #1] (0,0) ellipse ({10*sqrt(100-#2)} and {10*sqrt((100-#2)/2)});}
+% ボール  \kviiieball{(x,y)}{半径 mm}
+\newcommand\kviiieball[2]{\filldraw[fill=bkYellow!60, draw=bkInk, line width=0.7pt] #1 circle[radius=#2];
+  \fill[white] ($#1+(-0.3*#2,0.3*#2)$) circle[radius=0.28*#2];}
+% 直角の印  \kviiieright{(点)}{向き1の角}{向き2の角}
+\newcommand\kviiieright[3]{\draw[bkInk, line width=0.6pt] ($#1+(#2:2.6mm)$) -- ($#1+(#2:2.6mm)+(#3:2.6mm)$) -- ($#1+(#3:2.6mm)$);}
+\makeatother
+
+\bkchapter{8}{4}{いちばん急な向き：\\勾配 grad}{\bklevel{5}}{いちばん急な向き：勾配 grad}
+\bkmichishirube{3-5,4-8,4-12,7-3,8-1,8-2,8-3}{8-5,8-7,8-10,8-12,8-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 等高線の地図に、ボールが転がりはじめる向き（等高線と直角）をかきこめる。
+\item \bklevel{4}\enspace 東の坂と北の坂を並べて勾配 grad を作り、どの向きの坂も内積で計算できる。
+\item \bklevel{5}\enspace 内積の $\cos$ の形から、いちばん急な向きと等高線の向きを説明し、$\vec F=-\mathrm{grad}\,U$ などの物理の式を使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\raggedright
+8-1 から使ってきた主役の山 $h=100-0.01x^2-0.02y^2$ の地図です（$x$ は東へ、$y$ は北へ、単位は m）。\par\vspace{4pt}
+点 P（$x=30$、$y=20$。高さ \qty{83}{m}）の斜面に、ボールをそっと置きます。ボールは、どの向きに転がりはじめるでしょう。頂上と反対の向きへ、まっすぐ転がるでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}
+\centering
+\begin{tikzpicture}[x=0.56mm, y=0.56mm]
+  \fill[bkYellow!10] (-56,-40) rectangle (56,40);
+  \draw[kviiie frame] (-56,-40) rectangle (56,40);
+  \begin{scope}\clip (-56,-40) rectangle (56,40);
+    \foreach \kviiieh in {60,70,80,90} {\kviiiemt{\kviiieh}}
+  \end{scope}
+  \foreach \kviiieh in {80,90} {\node[kviiie lab, text=bkGreen!35!black, fill=bkYellow!10, inner sep=0.5pt] at (0,{-10*sqrt((100-\kviiieh)/2)}) {\kviiieh};}
+  \fill[bkInk] (0,0) circle[radius=0.6mm];
+  \node[kviiie lab, anchor=south, fill=bkYellow!10, inner sep=0.5pt] at (0,2) {頂上 \qty{100}{m}};
+  \kviiieball{(30,20)}{1.5mm}
+  \node[kviiie lab, anchor=south west, fill=bkYellow!10, inner sep=0.5pt] at (32.5,22.5) {P};
+  \node[font=\sffamily\bfseries\large, text=\bkTT] at (43,8) {？};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (40,-35) -- (52,-35) node[kviiie lab, anchor=south east, yshift=0.8mm] {東};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-51,-35) -- (-51,-23) node[kviiie lab, anchor=west, xshift=0.6mm] {北};
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 緑の線は等高線（\qty{10}{m}ごと）。}
+\end{minipage}
+\end{hatena}
+
+\noindent 3-5では、等高線の間がせまい所ほど坂が急だと学びました。8-2では、東へ進むときの坂と北へ進むときの坂を、偏微分で別々に求めました。点 P では、東の坂が $-0.6$、北の坂が $-0.8$ でした。8-3では、東と北に少しずつ進んだときの高さの変化を、2つの坂からたし算で見積もりました。
+
+山の上では、東と北だけでなく、あらゆる向きに歩けます。向きによって、坂の急さはちがいます。この章では、\textbf{いちばん急な向きはどちらか}、\textbf{その坂はどれだけ急か}を、東の坂と北の坂の2つの数から求めます。答えは、東の坂と北の坂を並べた、1本の矢印になります。その矢印は、等高線と直角の向きを向いています。
+
+この矢印は、山の地図だけのものではありません。ボールが転がる向き、熱が流れる向き、電場の向き、風をおす力の向きは、どれも同じ考えで決まります。物理第1巻の力-4に出てきた $\vec F=-\mathrm{grad}\,U$ の grad が、この章で作る矢印です。
+
+
+\begin{omoidasou}
+\bkrecall{3-5}{坂の傾き＝高さの変化÷横に進んだ長さ。等高線の間がせまい所ほど、坂は急。}
+\bkrecall{4-8}{角 $\theta$ の向きの長さ1の矢印は $(\cos\theta,\ \sin\theta)$。$\tan\theta$ は坂の傾き（$\tan45°=1$）。}
+\bkrecall{4-12}{内積 $\vec a\cdot\vec b=a_xb_x+a_yb_y=|\vec a||\vec b|\cos\theta$。直角なら内積は0。}
+\bkrecall{7-3}{行列の積の成分は「行と列の内積」。1行×1列なら、ただの内積。}
+\bkrecall{8-1}{主役の山 $h=100-0.01x^2-0.02y^2$（m）。等高線は、同じ高さの点を結んだ線で、この山ではだ円。}
+\bkrecall{8-2}{偏微分：ほかを止めて1つだけ動かす。主役の山の点 $(30,\ 20)$ で、東の坂 $\dfrac{\partial h}{\partial x}=-0.02x=-0.6$、北の坂 $\dfrac{\partial h}{\partial y}=-0.04y=-0.8$。}
+\bkrecall{8-3}{全微分：東へ $\dd x$、北へ $\dd y$ 進むと、$\dd h=\dfrac{\partial h}{\partial x}\dd x+\dfrac{\partial h}{\partial y}\dd y$。点 $(30,\ 20)$ から東へ\qty{1}{m}、北へ\qty{1}{m}で、$-0.6-0.8=-1.4$（m）。}
+\end{omoidasou}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[坂にボールを置いて、転がる向きを見よう]
+\textbf{用意するもの}\quad 下じき（またはうすい板）、油性ペン、ビー玉、本（2〜3冊）、分度器
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 下じきの左の辺の下に本を入れて、少しだけ傾ける。
+\item 机から同じ高さの所をさがし、油性ペンで線を引く。高さを変えて、3本引こう（これが等高線）。
+\item 下じきの手前の辺の下にも本を入れ、2つの向きに傾ける。②をやり直して、等高線を引き直そう。
+\item ビー玉を等高線の上にそっと置き、手をはなす。転がりはじめた向きと等高線の角を、分度器ではかろう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 横から見た板と本
+  \fill[bkGray!25] (0,0) rectangle (16,6);
+  \fill[bkGray!40] (0,6) rectangle (16,10);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (16,6) (0,6) rectangle (16,10);
+  \draw[bkInk!80, line width=1.6pt] (0,10.4) -- (52,0.6);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (54,0);
+  \kviiieball{(26,6.8)}{1.6mm}
+  \node[kviiie lab, anchor=north] at (26,-2) {横から見たところ};
+  % 上から見た板と等高線
+  \begin{scope}[shift={(62,0)}]
+    \fill[bkBlue!8] (0,0) rectangle (56,34);
+    \draw[bkInk, line width=0.8pt] (0,0) rectangle (56,34);
+    \begin{scope}\clip (0,0) rectangle (56,34);
+      \foreach \kviiiet in {12,24,36,48,60} {\draw[kviiie contour] (\kviiiet,0) -- ++(-16,34);}
+    \end{scope}
+    \draw[kviiie down] (28,17) -- ++(25.2:15);
+    \kviiieright{(28,17)}{25.2}{115.2}
+    \kviiieball{(28,17)}{1.6mm}
+    \node[kviiie lab, anchor=north] at (28,-2) {上から見たところ（緑の線が等高線）};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\end{yattemiyou}
+
+\noindent どの傾け方でも、ビー玉は\textbf{等高線と直角の向き}に転がりはじめます（ビー玉が少し転がりすぎて向きがずれることはあります。はじめの向きを見ます）。等高線の上は同じ高さなので、等高線にそって転がっても、高さは下がりません。下がるには、等高線から\textbf{いちばん早くはなれる向き}、つまり直角に進むのがいちばんです。このわけを、この章で、図と数と式の3通りで確かめます。
+
+★★★★★の章ですが、「目でわかる」の段は等高線の図だけで、「手でわかる」の段は表計算と、内積（4-12）の計算だけで読めるように書きました。「式でわかる」の段は、1回で分からなくても大丈夫です。
+
+
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{等高線と直角に転がる}{\bklevel{3}}
+
+\bksubsection{1}{ボールが転がる向きを、地図にかきこむ}
+
+\leavevmode\label{bk:8-4:chokkaku}主役の山の地図で、方眼の点（\qty{10}{m}ごと）にボールを置いたら、どの向きに転がりはじめるかを、矢印でかきこんでみます。やってみようのとおり、どの点でも、その点を通る等高線と直角に、低いほうへ向けます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \kviiieset{xmin=-50, xmax=50, ymin=-30, ymax=30, step=10, scale=5.2, arrow={kviiie field, draw=bkOrange!85!black, line width=1.1pt}, min=0.5}
+  \fill[bkYellow!10] (-58,-42) rectangle (58,42);
+  \draw[kviiie frame] (-58,-42) rectangle (58,42);
+  \begin{scope}\clip (-58,-42) rectangle (58,42);
+    \foreach \kviiieh in {60,70,80,90} {\kviiiemt{\kviiieh}}
+  \end{scope}
+  \kviiiefield{0.02*\x}{0.04*\y}
+  \fill[bkInk] (0,0) circle[radius=0.7mm];
+  \node[kviiie lab, anchor=north, fill=bkYellow!10, inner sep=0.5pt] at (0,-2.5) {頂上};
+\end{tikzpicture}
+\bkfigcaption{方眼の点（黒い点）に置いたボールが転がりはじめる向き（オレンジの矢印）。坂が急な所ほど長くかいた。等高線（緑の線、\qty{10}{m}ごと）は、はてな？の地図と同じ。どの矢印も、そこを通る等高線と直角に交わる。}
+\label{bk:8-4:fig-down}
+\end{bkfigure}
+図\ref{bk:8-4:fig-down} から、次の3つのことがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{矢印は、どれも等高線と直角。}\par\nobreak\noindent 等高線がだ円なので、矢印は頂上からまっすぐ外へ向かう向き（原点から見た向き）とは、少しずれています。
+\item \textbf{北と南の側の矢印が長い。}\par\nobreak\noindent この山は、東西より南北のほうがせまい（だ円が南北につぶれている）ので、南北の斜面のほうが急です。等高線の間もせまくなっています（3-5）。
+\item \textbf{頂上には矢印がない。}\par\nobreak\noindent 頂上はまわりより高く、どの向きにも坂がありません。置いたボールは転がりません。
+\end{enumerate}
+
+\bksubsection{2}{なぜ、等高線と直角がいちばん急なのか}
+
+\leavevmode\label{bk:8-4:naze}やってみようの下じきのように、平らな坂を考えます。平らな坂の等高線は、等しい間かくの平行な直線になります。となりの等高線との高さの差を\qty{1}{m}、等高線の間かく（直角にはかった長さ）を $d$ とします。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!10] (0,0) rectangle (110,46);
+  \draw[kviiie frame] (0,0) rectangle (110,46);
+  \foreach \kviiiet/\kviiiel in {15/10,55/9,95/8} {\draw[kviiie contour] (\kviiiet,0) -- (\kviiiet,46);
+    \node[kviiie lab, anchor=north west] at ({\kviiiet+1.5},45) {\kviiiel\,m};}
+  \fill[bkInk] (15,12) circle[radius=0.6mm];
+  \draw[kviiie down] (15,12) -- (55,12);
+  \draw[\bkTT, line width=1.2pt, -{Stealth[length=2.6mm]}] (15,12) -- (55,35.09);
+  \draw[bkInk, line width=0.5pt] (24,12) arc (0:30:9);
+  \node[kviiie lab] at (27.2,15.3) {$\theta$};
+  \node[kviiie lab, anchor=north] at (35,10.3) {直角に進む：長さ $d$};
+  \node[kviiie lab, anchor=south west, align=left, fill=bkYellow!10] at (57,30) {角 $\theta$ で進む：\\長さ $\dfrac{d}{\cos\theta}$};
+\end{tikzpicture}
+\bkfigcaption{平らな坂の等高線（緑の線、\qty{1}{m}ごと）。どの道も、次の等高線に着いたときに\qty{1}{m}下がる。直角に進むと、いちばん短い長さ $d$ で次の等高線に着く。角 $\theta$ だけずれて進むと、$\dfrac{d}{\cos\theta}$ 進まないと着かない。}
+\label{bk:8-4:fig-heiko}
+\end{bkfigure}
+次の等高線に着くと、高さはちょうど\qty{1}{m}下がります。どの向きに進んでも、下がる高さは同じ\qty{1}{m}です。ちがうのは、そこまでに進む長さです。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item 等高線と直角に進むと、長さ $d$ で着く。坂の傾きは $\dfrac{1}{d}$。
+\item 直角から角 $\theta$ だけずれて進むと、長さ $\dfrac{d}{\cos\theta}$ で着く（直角三角形の斜めの辺。4-8）。坂の傾きは $\dfrac{\cos\theta}{d}$。
+\item 等高線にそって進むと（$\theta=90°$）、いつまでも次の等高線に着かない。坂の傾きは0。
+\end{itemize}
+$\cos\theta$ は $\theta=0°$ のときがいちばん大きく（1）、$\theta$ が大きくなるほど小さくなります。だから、\textbf{等高線と直角に進むのが、いちばん急}です。そして、そのときの坂の傾き $\dfrac{1}{d}$ は、等高線の間かくがせまいほど大きくなります。3-5の「間がせまいほど急」と同じです。
+
+\noindent 曲がった山の斜面でも、点のまわりのせまい所だけを見れば、8-3で学んだように、平らな板（接平面）とみなせます。せまい所では、等高線もほぼ平行な直線です。だから、山のどの点でも、\textbf{いちばん急に下る向きは、その点を通る等高線と直角}です。ボールは、いちばん急に下る向きに転がりはじめます。
+
+\begin{seikaku}
+ボールが転がりはじめる向きは、いちばん急に下る向きです。でも、転がりだしたボールは、勢い（速度）がつくので、そのあとも等高線と直角の向きに曲がりつづけるとはかぎりません。等高線と直角の向きの線をたどって下るのは、ゆっくり流れる水や、ねばりの強い液体のように、勢いをすぐに失うものです。この章で「転がる向き」というときは、そっと置いたボールが\textbf{転がりはじめる向き}のことです。
+\end{seikaku}
+
+\bkstage{te}{手でわかる}{どの向きの坂も、内積で}{\bklevel{4}}
+
+\bksubsection{3}{東の坂と北の坂を並べた矢印：勾配}
+
+\leavevmode\label{bk:8-4:grad}点 P $(30,\ 20)$ で、東の坂は $-0.6$、北の坂は $-0.8$ でした（8-2）。「東へ\qty{1}{m}進むと\qty{0.6}{m}下がる」「北へ\qty{1}{m}進むと\qty{0.8}{m}下がる」という意味です。この2つの数を並べて、1本の矢印にしてみます。
+\kviiieline{$\Bigl(\dfrac{\partial h}{\partial x},\ \dfrac{\partial h}{\partial y}\Bigr)=(-0.6,\ -0.8)$}
+\begin{bkfigure}
+\begin{tikzpicture}[x=40mm, y=40mm]
+  \fill[bkYellow!10] (-1.25,-1.05) rectangle (1.15,1.0);
+  \draw[kviiie frame] (-1.25,-1.05) rectangle (1.15,1.0);
+  \draw[kviiie contour, line width=1.2pt] (-0.72,0.54) -- (0.88,-0.66);
+  \node[kviiie lab, anchor=north west, fill=bkYellow!10] at (0.5,-0.45) {等高線（\qty{83}{m}）};
+  \draw[bkGray!80!black, line width=1.1pt, -{Stealth[length=2.4mm]}] (0,0) -- (-0.6,0);
+  \draw[bkGray!80!black, line width=1.1pt, -{Stealth[length=2.4mm]}] (-0.6,0) -- (-0.6,-0.8);
+  \draw[kviiie grad] (0,0) -- (-0.6,-0.8);
+  \draw[kviiie down] (0,0) -- (0.6,0.8) ;
+  \node[kviiie lab, anchor=south east] at (-0.13,0.03) {東の坂 $-0.6$};
+  \node[kviiie lab, anchor=east] at (-0.63,-0.68) {北の坂 $-0.8$};
+  \node[kviiie lab, anchor=north west, align=left, text=bkRed!80!black] at (-0.22,-0.6) {$\mathrm{grad}\,h=(-0.6,\ -0.8)$\\いちばん急な上り（長さ1）};
+  \node[kviiie lab, anchor=south east, text=bkOrange!75!black] at (0.55,0.83) {ボールの向き $(0.6,\ 0.8)$};
+  \kviiieright{(0,0)}{-36.87}{-126.87}
+  \kviiieball{(0,0)}{1.7mm}
+  \node[kviiie lab, anchor=south] at (0,0.065) {P};
+  \draw[bkGray, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (0,0) -- (-0.832*0.83,-0.555*0.83);
+  \node[kviiie lab, anchor=south east, text=bkInk] at (-0.71,-0.44) {頂上の向き};
+\end{tikzpicture}
+\bkfigcaption{点 P の東の坂と北の坂（灰色の矢印）を並べると、赤い矢印 $\mathrm{grad}\,h$ になる。赤い矢印は、P を通る等高線と直角で、いちばん急な上りの向き。ボールは、その反対（オレンジの点線）へ転がる。頂上へまっすぐ向かう向き（灰色の点線）とは、少しずれている。}
+\label{bk:8-4:fig-grad}
+\end{bkfigure}
+図\ref{bk:8-4:fig-grad} のように、この矢印は等高線と直角で、ボールが転がる向きのちょうど反対を向いています。つまり、\textbf{いちばん急な上りの向き}です。長さは $\sqrt{0.6^2+0.8^2}=\sqrt{1}=1$ です。
+
+このように、関数 $h$ の偏微分を並べた矢印を、$h$ の\textbf{勾配}（こうばい）といい、$\mathrm{grad}\,h$ と書きます。\bkidx{こうばい}{勾配}「グラッド・エイチ」と読みます（gradient の頭の4文字）。
+\kviiiewaku{$\mathrm{grad}\,h=\Bigl(\dfrac{\partial h}{\partial x},\ \dfrac{\partial h}{\partial y}\Bigr)$}
+勾配ということばは、ふだんは「坂の傾き」の意味で使います（「勾配のきつい坂」）。数学の勾配は、傾きの大きさだけでなく、\textbf{いちばん急な上りの向き}も持った矢印です。高さ $h$ は場所ごとに決まる1つの数ですが、$\mathrm{grad}\,h$ は場所ごとに決まる1本の矢印です。
+
+\noindent ほかの点でも作ってみます。主役の山では、どの点でも次のようになります（8-2）。
+\kviiieline{$\dfrac{\partial h}{\partial x}=-0.02x,\qquad\dfrac{\partial h}{\partial y}=-0.04y,\qquad\mathrm{grad}\,h=(-0.02x,\ -0.04y)$}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=22mm] Q[c,m,wd=34mm] Q[c,m,wd=30mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+点 $(x,\ y)$ & 高さ $h$（m） & $\mathrm{grad}\,h$ & 長さ（坂の急さ） \\
+$(30,\ 20)$ & 83 & $(-0.6,\ -0.8)$ & 1.0 \\
+$(40,\ 0)$ & 84 & $(-0.8,\ 0)$ & 0.8 \\
+$(0,\ 30)$ & 82 & $(0,\ -1.2)$ & 1.2 \\
+$(20,\ 10)$ & 94 & $(-0.4,\ -0.4)$ & 0.566 \\
+$(0,\ 0)$ & 100 & $(0,\ 0)$ & 0 \\
+\end{bktable}
+\bktabcaption{主役の山のいくつかの点の勾配。頂上では $\mathrm{grad}\,h=\vec 0$（どの向きにも坂がない）。}
+\end{bkcenter}
+$(40,\ 0)$ と $(0,\ 30)$ は高さがほぼ同じ（84 m と 82 m）ですが、坂の急さは0.8と1.2で、北側のほうが急です。図\ref{bk:8-4:fig-down} で北と南の矢印が長かったのと同じです。
+
+\kviiiehead{式がないとき：表の地図から、差で grad を求める}
+本物の山の地図や、天気の観測、温度の測定では、高さや温度の式はなく、決まった間かくの点の値（表）だけがあります。そのときは、8-2で学んだように、表のとなりどうしの差で偏微分を見積もります。表計算で、行を北から南へ（行の番号が大きいほど南）、列を西から東へ並べ、点 P のまわりの高さを\qty{10}{m}ごとに入れます。
+\begin{bkcenter}
+\bksheet{4}{20}{%
+1 & 北↑ 東→ & $x=20$ & $x=30$ & $x=40$ \\
+2 & $y=30$ & 78 & \SetCell{bg=kviiieR} 73 & 66 \\
+3 & $y=20$ & \SetCell{bg=kviiieV} 88 & \SetCell{bg=kviiieM} 83 & \SetCell{bg=kviiieV} 76 \\
+4 & $y=10$ & 94 & \SetCell{bg=kviiieR} 89 & 82 \\}
+\bktabcaption{点 P（C3。高さ83 m）のまわりの高さ（m）。東の坂は左右（緑）の差、北の坂は上下（黄）の差から求める。}
+\end{bkcenter}
+点 P の左右のマスは\qty{20}{m}はなれているので、東の坂は \texttt{=(D3-B3)/20}、北の坂は上の行から下の行をひいて \texttt{=(C2-C4)/20} で求めます。
+\kviiieline{東の坂 $(76-88)\div20=-0.6$\qquad 北の坂 $(73-89)\div20=-0.8$}
+$\mathrm{grad}\,h\approx(-0.6,\ -0.8)$ で、式で求めた値と同じです（主役の山は2次式なので、左右の差でちょうど合います）。地図のデータから坂の向きを計算するソフトウェアも、天気予報のコンピュータも、このように差で grad を求めています。
+
+\bksubsection{4}{どの向きの坂も、内積で求まる：方向微分}
+
+\leavevmode\label{bk:8-4:houkou}東でも北でもない向きに進むと、坂はいくつでしょう。進む向きを、長さ1の矢印 $\vec e=(e_x,\ e_y)$ で表します。東から左回りに角 $\theta$ の向きなら、$\vec e=(\cos\theta,\ \sin\theta)$ です（4-8）。たとえば北東は $\theta=45°$ で、$\vec e=(0.707,\ 0.707)$ です。
+
+\noindent この向きに、短い長さ $s$ だけ進みます。すると、東へ $e_xs$、北へ $e_ys$ 進んだことになります。8-3の全微分の式に、$\dd x=e_xs$、$\dd y=e_ys$ を入れます。
+\begin{bkhenkei}[0.5]
+\dd h=\frac{\partial h}{\partial x}\dd x+\frac{\partial h}{\partial y}\dd y & 8-3の全微分 \\
+\dd h=\frac{\partial h}{\partial x}e_xs+\frac{\partial h}{\partial y}e_ys & 東へ $e_xs$、北へ $e_ys$ 進んだ \\
+\frac{\dd h}{s}=\frac{\partial h}{\partial x}e_x+\frac{\partial h}{\partial y}e_y & 進んだ長さ $s$ でわって、1 m あたりにした \\
+\frac{\dd h}{s}=\mathrm{grad}\,h\cdot\vec e & 左の形は、$\mathrm{grad}\,h$ と $\vec e$ の内積（4-12） \\
+\end{bkhenkei}
+3行めで $s$ でわったのは、坂の傾きが「\qty{1}{m}進んだときに高さがどれだけ変わるか」だからです（3-5）。4行めの右辺は、2つの矢印の成分どうしをかけてたした形、つまり内積です。7-3の言い方では「1行（$\mathrm{grad}\,h$）×1列（$\vec e$）」の積です。
+\kviiiewaku{向き $\vec e$（長さ1）へ進むときの坂\qquad $\mathrm{grad}\,h\cdot\vec e=\dfrac{\partial h}{\partial x}e_x+\dfrac{\partial h}{\partial y}e_y$}
+この坂の値を、$\vec e$ の向きの\textbf{方向微分}（ほうこうびぶん）といいます。\bkidx{ほうこうびぶん}{方向微分}東の坂（$x$ での偏微分）は $\vec e=(1,\ 0)$ のときの方向微分、北の坂（$y$ での偏微分）は $\vec e=(0,\ 1)$ のときの方向微分です。勾配は、東と北の2つの坂を覚えておくだけで、\textbf{どの向きの坂でも内積で出せる}ようにした矢印なのです。
+
+\kviiiehead{点 P で、北東の坂を確かめる}
+北東 $\vec e=(0.707,\ 0.707)$ の坂は、次のとおりです。
+\kviiieline{$\mathrm{grad}\,h\cdot\vec e=(-0.6)\times0.707+(-0.8)\times0.707=-0.424-0.566=-0.990$}
+8-3では、東へ\qty{1}{m}、北へ\qty{1}{m}進むと、高さは $-1.4$ m 変わりました。このとき進んだ長さは $\sqrt{1^2+1^2}=\sqrt2=1.414$（m）なので、\qty{1}{m}あたりでは $-1.4\div1.414=-0.990$ です。同じ答えになりました。
+
+\kviiiehead{向きを回して、いちばん急な向きをさがす}
+表計算で、$\theta$ を $0°$ から $15°$ ずつ回して、坂の値の表を作ります。E列には確かめのため、本当に\qty{1}{m}進んだときの高さの差を、主役の山の式で計算します。
+\begin{bkcenter}
+\kviiiefx{D2}{=-0.6*B2-0.8*C2}\par\vspace{1mm}
+\kviiiefx{E2}{=(100-0.01*(30+B2)\^{}2-0.02*(20+C2)\^{}2)-83}\par\vspace{1mm}
+\bksheet{5}{19}{%
+1 & $\theta$（°） & $e_x$ & $e_y$ & 坂 $\mathrm{grad}\,h\cdot\vec e$ & 本当の差（m） \\
+2 & 0 & 1.000 & 0.000 & $-0.600$ & $-0.610$ \\
+5 & 45 & 0.707 & 0.707 & $-0.990$ & $-1.005$ \\
+8 & 90 & 0.000 & 1.000 & $-0.800$ & $-0.820$ \\
+11 & 135 & $-0.707$ & 0.707 & $-0.141$ & $-0.156$ \\
+14 & 180 & $-1.000$ & 0.000 & 0.600 & 0.590 \\
+17 & \SetCell{bg=kviiieR} 225 & $-0.707$ & $-0.707$ & \SetCell{bg=kviiieR} 0.990 & 0.975 \\
+20 & 270 & 0.000 & $-1.000$ & 0.800 & 0.780 \\
+23 & 315 & 0.707 & $-0.707$ & 0.141 & 0.126 \\}
+\bktabcaption{A2 に 0、A3 に \texttt{=A2+15}、B2 に \texttt{=COS(RADIANS(A2))}、C2 に \texttt{=SIN(RADIANS(A2))} と入れ、25行め（$345°$）まで下へコピーした。のせたのは $45°$ ごとの行だけ（北東・北・北西…の8つの向き）。}
+\end{bkcenter}
+D列とE列は、小数第2位までほぼ同じです。E列が少しずれるのは、山の斜面が曲がっているからで、進む長さを短くすると、ずれは小さくなります（8-3）。D列をグラフにすると、次のようになります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=60mm, xmin=0, xmax=372, ymin=-1.4, ymax=1.3, axis x line=bottom, axis y line=left, xtick={0,90,180,270,360}, ytick={-1,-0.5,0,0.5,1}, yticklabels={$-1$,$-0.5$,0,0.5,1}, xlabel={$\theta$（°）}, ylabel={坂}]
+  \draw[bkGray, line width=0.6pt] (axis cs:0,0) -- (axis cs:362,0);
+  \addplot[bkcurve, line width=1.4pt, domain=0:360, samples=121] {cos(x-233.13)};
+  \addplot[only marks, mark=*, mark size=1.5pt, bkInk] coordinates {(0,-0.6) (15,-0.787) (30,-0.92) (45,-0.99) (60,-0.993) (75,-0.928) (90,-0.8) (105,-0.617) (120,-0.393) (135,-0.141) (150,0.12) (165,0.373) (180,0.6) (195,0.787) (210,0.92) (225,0.99) (240,0.993) (255,0.928) (270,0.8) (285,0.617) (300,0.393) (315,0.141) (330,-0.12) (345,-0.373) (360,-0.6)};
+  \addplot[only marks, mark=*, mark size=2.6pt, bkRed] coordinates {(233.13,1)};
+  \addplot[only marks, mark=square*, mark size=2.2pt, bkGreen!60!black] coordinates {(143.13,0) (323.13,0)};
+  \node[kviiie lab, anchor=south, fill=white] at (axis cs:233,1.07) {$233°$：いちばん急な上り（坂1）};
+  \node[kviiie lab, anchor=west, fill=white] at (axis cs:70,-1.22) {$53°$：いちばん急な下り（坂 $-1$）};
+  \node[kviiie lab, anchor=south east, fill=white, text=bkGreen!45!black] at (axis cs:138,0.07) {$143°$：坂0};
+  \node[kviiie lab, anchor=south west, fill=white, text=bkGreen!45!black] at (axis cs:327,0.07) {$323°$：坂0};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{点 P で、向き $\theta$ に進むときの坂。黒い点は表計算の $15°$ ごとの値。いちばん大きいのは $233°$（赤い点）で、$\mathrm{grad}\,h=(-0.6,\ -0.8)$ の向き。坂が0の2つの向き（四角）は、等高線の向き。}
+\label{bk:8-4:fig-cos}
+\end{bkfigure}
+表とグラフから、次のことがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{いちばん急な上りは $233°$ のあたりで、坂はちょうど1。}\par\nobreak\noindent $\mathrm{grad}\,h=(-0.6,\ -0.8)$ の向きの角は $233.13°$ で、長さは1でした。いちばん急な向きは grad の向き、そのときの坂は grad の長さです。
+\item \textbf{いちばん急な下りは、その反対の $53°$ で、坂は $-1$。}\par\nobreak\noindent ボールが転がる向きです。
+\item \textbf{坂が0になる向きが2つある（$143°$ と $323°$）。}\par\nobreak\noindent 坂が0の向きに進んでも、高さは変わりません。等高線の向きです。$233°-143°=90°$、$323°-233°=90°$ なので、等高線の向きは grad と直角です。
+\end{enumerate}
+グラフの形は、$\cos$ のグラフ（4-8）を右へ $233°$ ずらした形に見えます。そのわけは、式でわかるの段で確かめます。
+
+\bkkokomade[等高線の地図にボールの向きをかきこめて、東の坂と北の坂から grad を作り、どの向きの坂も内積で計算できれば十分です。この先は、なぜ grad の向きがいちばん急なのかを、式で確かめます。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{内積の $\cos$ で確かめる}{\bklevel{5}}
+
+\bksubsection{5}{$\mathrm{grad}\,h\cdot\vec e=|\mathrm{grad}\,h|\cos\theta$}
+
+\leavevmode\label{bk:8-4:cos}4-12で、内積は「長さ×長さ×$\cos$（2つの矢印の間の角）」とも書けると学びました。$\vec e$ の長さは1なので、$\mathrm{grad}\,h$ と $\vec e$ の間の角を $\theta$ として、
+\begin{bkhenkei}[0.5]
+\mathrm{grad}\,h\cdot\vec e=|\mathrm{grad}\,h|\,|\vec e|\cos\theta & 内積のもう1つの形（4-12） \\
+\mathrm{grad}\,h\cdot\vec e=|\mathrm{grad}\,h|\cos\theta & $\vec e$ は長さ1なので $|\vec e|=1$ \\
+\end{bkhenkei}
+です。ここで $\theta$ は、東からはかった角ではなく、\textbf{grad の向きからはかった角}です。$|\mathrm{grad}\,h|$ はその点で決まった数なので、坂は $\cos\theta$ だけで変わります。図\ref{bk:8-4:fig-cos} のグラフが $\cos$ の形だったのは、このためです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=20mm, y=20mm]
+  \draw[bkLine, line width=0.6pt] (0,0) circle (1);
+  \draw[kviiie grad] (0,0) -- (1.35,0);
+  \node[kviiie lab, anchor=south, text=bkRed!80!black] at (1.15,0.06) {$\mathrm{grad}\,h$};
+  \draw[\bkTT, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,0) -- (55:1);
+  \node[kviiie lab, anchor=south west] at (55:1.02) {$\vec e$（長さ1）};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (55:1) -- ({cos(55)},0);
+  \draw[\bkTT, line width=2.2pt] (0,0) -- ({cos(55)},0);
+  \node[kviiie lab, anchor=north] at ({cos(55)/2},-0.06) {$\cos\theta$};
+  \draw[bkInk, line width=0.5pt] (0.3,0) arc (0:55:0.3);
+  \node[kviiie lab] at (27:0.42) {$\theta$};
+  \draw[kviiie contour, line width=1.2pt] (0,-1.25) -- (0,1.25);
+  \node[kviiie lab, anchor=west, text=bkGreen!45!black] at (0.05,-1.15) {等高線の向き（$\theta=90°$）};
+  \fill[bkInk] (0,0) circle[radius=0.6mm];
+  \node[kviiie lab, anchor=north east] at (-0.04,-0.04) {P};
+  \begin{scope}[shift={(1.9,-0.7)}]
+  \node[kviiie lab, anchor=south west, align=left] at (0,0) {$\theta=0°$\quad 坂 $=|\mathrm{grad}\,h|$（いちばん急な上り）\\[3pt]$\theta=90°$\quad 坂 $=0$（等高線の向き）\\[3pt]$\theta=180°$\quad 坂 $=-|\mathrm{grad}\,h|$（いちばん急な下り）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{坂は、$\vec e$ を grad の向きに落とした影の長さ（$\cos\theta$）に、$|\mathrm{grad}\,h|$ をかけたもの。影がいちばん長いのは、$\vec e$ が grad と同じ向きのとき。}
+\label{bk:8-4:fig-kage}
+\end{bkfigure}
+$\cos\theta$ は $-1$ から1までの値をとり、$\theta=0°$ でいちばん大きく、$\theta=180°$ でいちばん小さく、$\theta=90°$ で0です。だから、次の3つのことが、どんな山（どんな関数）でもいえます。
+\kviiiewaku{\textbf{いちばん急な上り}は $\mathrm{grad}\,h$ の向きで、その坂は $|\mathrm{grad}\,h|$\\[3pt]\textbf{いちばん急な下り}は $-\mathrm{grad}\,h$ の向き\\[1pt]（ボールは等高線と直角に、急な向きへ転がる）\\[3pt]\textbf{等高線}は $\mathrm{grad}\,h$ と直角（内積が0の向き）}
+\bkhatenaref の答えです。ボールは、$-\mathrm{grad}\,h=(0.6,\ 0.8)$ の向き、つまり等高線と直角の向きに転がりはじめます。頂上から見てまっすぐ外へ向かう向き $(30,\ 20)$ ではありません。主役の山の等高線はだ円で、南北の斜面のほうが急なので、ボールは北側（$y$ の向き）へ少し寄った向きに転がるのです。
+
+\noindent 「等高線と直角」は、目でわかるの段では図で、手でわかるの段では表で見ました。式では、等高線の向き $\vec e$ に進むと高さが変わらない（坂0）ので、$\mathrm{grad}\,h\cdot\vec e=0$ です。\textbf{内積が0なら直角}（4-12・7-3）なので、grad と等高線は直角です。3通りで、同じことがいえました。
+
+\kviiiehead{坂の大きさを、角度で言うと}
+$|\mathrm{grad}\,h|$ は、いちばん急な向きの坂の\textbf{傾き}です。傾きが $m$ の坂の角度を $\alpha$ とすると、$\tan\alpha=m$ です（4-8）。点 P では $|\mathrm{grad}\,h|=1$ なので、$\tan\alpha=1$ で $\alpha=45°$ です。横に\qty{1}{m}進むと\qty{1}{m}上がる、手をつきたくなるほど急な斜面です（主役の山は、計算しやすいように急にしてあります）。$|\mathrm{grad}\,h|=1$ は「$1°$」ではなく「\qty{1}{m}進むと\qty{1}{m}上がる」という意味です。
+
+\bksubsection{6}{3次元の勾配と等値面}
+
+\leavevmode\label{bk:8-4:3d}部屋の中の温度のように、場所 $(x,\ y,\ z)$ で決まる数 $T(x,\ y,\ z)$ にも、勾配があります。偏微分が3つになるだけです。
+\kviiiewaku{$\mathrm{grad}\,T=\Bigl(\dfrac{\partial T}{\partial x},\ \dfrac{\partial T}{\partial y},\ \dfrac{\partial T}{\partial z}\Bigr)$}
+方向微分も同じ形で、長さ1の矢印 $\vec e$ の向きの増え方は、次の式です。
+\kviiieline{$\mathrm{grad}\,T\cdot\vec e=\dfrac{\partial T}{\partial x}e_x+\dfrac{\partial T}{\partial y}e_y+\dfrac{\partial T}{\partial z}e_z$}5と同じ理由で、$\mathrm{grad}\,T$ は\textbf{いちばん急に増える向き}を向き、その長さが増え方の速さです。
+
+\noindent 3次元では、同じ温度の点を結ぶと、線ではなく\textbf{面}になります（8-1：等値面）。等高線と同じ理由で、$\mathrm{grad}\,T$ は等値面と直角です。
+
+\noindent たとえば $f=x^2+y^2+z^2$（原点からの距離の2乗）の等値面は、原点を中心とする球の面です。偏微分すると、
+\kviiieline{$\mathrm{grad}\,f=(2x,\ 2y,\ 2z)=2\,(x,\ y,\ z)$}
+で、原点から外へまっすぐ向かう矢印です。球の面と直角に、外へ向いています。点 $(1,\ 2,\ 2)$ では $\mathrm{grad}\,f=(2,\ 4,\ 4)$、長さは $\sqrt{4+16+16}=6$ です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=7mm, y=7mm]
+  \foreach \kviiier in {1,2,3} {\draw[kviiie contour] (0,0) circle (\kviiier);}
+  \node[kviiie lab, fill=white, inner sep=0.6pt] at (-1,0) {1};
+  \node[kviiie lab, fill=white, inner sep=0.6pt] at (-2,0) {4};
+  \node[kviiie lab, fill=white, inner sep=0.6pt] at (-3,0) {9};
+  \foreach \kviiiea in {20,65,110,155,200,245,290,335} {\draw[kviiie grad] (\kviiiea:2) -- (\kviiiea:3.25);}
+  \fill[bkInk] (0,0) circle[radius=0.6mm];
+  \node[kviiie lab, anchor=north] at (0,-0.12) {原点};
+  \node[kviiie lab, anchor=west, align=left] at (3.6,0.6) {緑の円：$f$ が同じ値の面\\（球の面）を切った切り口};
+  \node[kviiie lab, anchor=west, align=left, text=bkRed!80!black] at (3.6,-1.2) {赤い矢印：$\mathrm{grad}\,f$\\（球の面と直角に、外へ）};
+\end{tikzpicture}
+\bkfigcaption{$f=x^2+y^2+z^2$ の等値面（球の面）を、$z=0$ の平らな面で切った図。数字は $f$ の値。$\mathrm{grad}\,f$ は等値面と直角（矢印は縮めてかいた。半径2の面の上では長さ4）。}
+\label{bk:8-4:fig-kyu}
+\end{bkfigure}
+
+\bksubsection{7}{ナブラ $\nabla$：偏微分を並べた記号}
+
+\leavevmode\label{bk:8-4:nabla}勾配を作るとき、私たちは「$x$ で偏微分する」「$y$ で偏微分する」「$z$ で偏微分する」の3つの操作を、関数に順にほどこして並べました。この「3つの操作を並べたもの」を、1つの記号で書きます。
+\kviiiewaku{$\nabla=\Bigl(\dfrac{\partial}{\partial x},\ \dfrac{\partial}{\partial y},\ \dfrac{\partial}{\partial z}\Bigr)$\qquad$\nabla f=\Bigl(\dfrac{\partial f}{\partial x},\ \dfrac{\partial f}{\partial y},\ \dfrac{\partial f}{\partial z}\Bigr)=\mathrm{grad}\,f$}
+$\nabla$ を\textbf{ナブラ}といいます。\bkidx{なぶら}{ナブラ}形が古いたて琴（ハープ）ににていることから、その名前でよばれるようになった、と伝えられています。$\nabla f$ は「ナブラ・エフ」と読み、$\mathrm{grad}\,f$ とまったく同じものです。
+
+\noindent $\nabla$ は、それだけでは数でも矢印でもありません。「右に関数が来たら、それを $x$・$y$・$z$ で偏微分して並べる」という、\textbf{まだ何も入っていない機械}です。だから、右に関数を置いた $\nabla f$ と、左に置いた $f\nabla$ は、まったくちがうものです（$f\nabla$ は、まだ何も微分していない機械のままです）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[l,m,wd=50mm] Q[c,m,wd=22mm] Q[c,m,wd=16mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+$\nabla$ の書き方 & 意味 & 答え & 学ぶ章 \\
+$\nabla f$ & 勾配 $\mathrm{grad}\,f$ & 矢印 & 8-4 \\
+$\nabla\cdot\vec F$ & 発散 $\mathrm{div}\,\vec F$（わき出し） & 数 & 8-9 \\
+$\nabla\times\vec F$ & 回転 $\mathrm{rot}\,\vec F$（うず） & 矢印 & 8-10 \\
+$\nabla^2f$ & ラプラシアン（まわりの平均との差） & 数 & 8-12 \\
+\end{bktable}
+\bktabcaption{$\nabla$ を使う4つの書き方。この本では、ことばで読める grad・div・rot を主に使い、すぐ横に $\nabla$ の書き方を並べる。物理の本や専門書では $\nabla$ がよく使われる（物理 力-15 の $-\nabla p$ は $-\mathrm{grad}\,p$）。}
+\end{bkcenter}
+
+\bksubsection{8}{物理に出てくる勾配}
+
+\leavevmode\label{bk:8-4:butsuri}物理では、場所ごとに決まる1つの数（位置エネルギー・電位・温度・気圧）から、場所ごとの矢印（力・電場・熱の流れ・空気をおす力）が、勾配で作られます。どれも、\textbf{数が下がる向き}（$-\mathrm{grad}$）に、\textbf{下がり方が急なほど強く}向きます。ボールが転がる向きと同じです。
+
+\kviiiehead{① 位置エネルギーと力：$\vec F=-\mathrm{grad}\,U$}
+物理 力-4では、力 $\vec F$ が小さな移動 $\dd\vec r$ でする仕事が、位置エネルギー $U$ の減った分になる、つまり $\vec F\cdot\dd\vec r=-\dd U$ でした。$\dd U=\mathrm{grad}\,U\cdot\dd\vec r$（4のはじめの式を3次元にしたもの）とくらべると、$\vec F=-\mathrm{grad}\,U$ です。
+
+\noindent 地面の近くの重力の位置エネルギーは、$U=mgz$（$z$ は高さ）です。偏微分すると、次のようになります。
+\kviiieline{$\dfrac{\partial U}{\partial x}=0,\qquad\dfrac{\partial U}{\partial y}=0,\qquad\dfrac{\partial U}{\partial z}=mg$}
+\kviiieline{$\vec F=-\mathrm{grad}\,U=-(0,\ 0,\ mg)=(0,\ 0,\ -mg)$}
+真下向きに大きさ $mg$ の力、つまり重力です。ばねの位置エネルギーが次の式なら、
+\kviiieline{$U=\dfrac12k(x^2+y^2),\qquad\vec F=-\mathrm{grad}\,U=-k\,(x,\ y)$}
+で、いつも原点（ばねの自然な長さの所）へ引きもどす力です（例題6）。
+
+\kviiiehead{② 電位と電場：$\vec E=-\mathrm{grad}\,\phi$}
+電位 $\phi$〔V〕（ファイ。高校物理の電位 $V$ と同じもの）も、場所で決まる1つの数です。電場は $\vec E=-\mathrm{grad}\,\phi$〔V/m〕で、電位の高い所から低い所へ向きます。高校物理の「等電位面と電気力線は直角」は、「等値面と grad は直角」のことです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (0,30) rectangle (60,32.5);
+  \fill[bkGray!35] (0,-2.5) rectangle (60,0);
+  \node[kviiie lab, anchor=west] at (62,31.2) {電位 \qty{100}{V}};
+  \node[kviiie lab, anchor=west] at (62,-1.2) {電位 \qty{0}{V}};
+  \foreach \kviiiey/\kviiiel in {7.5/25,15/50,22.5/75} {\draw[kviiie contour, dash pattern=on 3pt off 1.5pt] (0,\kviiiey) -- (60,\kviiiey);
+    \node[kviiie lab, anchor=west, text=bkGreen!45!black] at (62,\kviiiey) {\kviiiel\,V};}
+  \foreach \kviiiex in {8,22,38,52} {\draw[\bkTT, line width=1.1pt, -{Stealth[length=2.4mm]}] (\kviiiex,28.5) -- (\kviiiex,1.5);}
+  \node[kviiie lab, anchor=west, align=left] at (82,22) {間かく \qty{0.01}{m}\\$\phi=\num{10000}y$};
+  \node[kviiie lab, anchor=west, align=left, text=\bkTT] at (82,9) {電場 $\vec E$：下向き\\\num{10000}\,V/m};
+\end{tikzpicture}
+\bkfigcaption{2まいの平らな板（間かく \qty{0.01}{m}、電位 \qty{0}{V} と \qty{100}{V}）の間の電場（紺の矢印）と等電位面（緑の点線）。電場は等電位面と直角で、電位の低いほうを向く。}
+\label{bk:8-4:fig-ita}
+\end{bkfigure}
+図\ref{bk:8-4:fig-ita} の板の間では、下の板からの高さを $y$〔m〕として $\phi=\num{10000}y$〔V〕です。$\mathrm{grad}\,\phi=(0,\ \num{10000})$ なので、$\vec E=(0,\ -\num{10000})$〔V/m〕。下向きに大きさ $\num{10000}$ V/m で、高校物理の $E=\dfrac{V}{d}=\dfrac{100}{0.01}$ と同じです。
+
+\kviiiehead{③ 温度と熱の流れ：$\vec q=-k\,\mathrm{grad}\,T$}
+6-3では、かべの中を流れる熱は「温度の傾きに比例する」（フーリエの法則）と学びました。熱の流れを矢印 $\vec q$〔W/m²〕（\qty{1}{m^2}を1秒に通る熱）で表すと、3次元では
+\kviiiewaku{$\vec q=-k\,\mathrm{grad}\,T$}
+です。$k$〔W/(m·K)〕は熱伝導率（ばね定数の $k$ とは別のもの）です。熱は、温度の高い所から低い所へ、等温面と直角に、温度の下がり方が急なほど多く流れます。6-3のかべ（厚さ \qty{0.2}{m}、内側 20\,℃、外側 0\,℃、コンクリート $k=1.6$）では、温度は $T=20-100x$ なので、$\mathrm{grad}\,T=(-100,\ 0,\ 0)$〔K/m〕、$\vec q=(160,\ 0,\ 0)$〔W/m²〕です。6-3と同じ\qty{160}{W/m^2}が、外向き（$x$ の向き）に流れます。この式は、8-13の熱方程式の出発点になります。
+
+\noindent 止まった水の中の圧力 $p$〔Pa〕も同じです。8-2で、水の深さの向きの偏微分は $\dfrac{\partial p}{\partial z}=-\rho g$（$z$ は上向き）、横の向きは0でした。だから
+\kviiieline{$\mathrm{grad}\,p=(0,\ 0,\ -\rho g)=\rho\vec g$}
+で、圧力は真下へ向かっていちばん急に増え、同じ圧力の面（等圧面）は水平です（物理 力-12）。
+
+\kviiiehead{④ 気圧と風：空気をおす力 $-\dfrac{1}{\rho}\,\mathrm{grad}\,p$}
+天気図の等圧線は、気圧 $p$ の等高線です。空気は、気圧の高い所から低い所へおされます。空気\qty{1}{kg}あたりにはたらくこの力（気圧傾度力）は、$-\dfrac{1}{\rho}\,\mathrm{grad}\,p$（$\rho$ は空気の密度。約 \qty{1.2}{kg/m^3}）で、等圧線と直角に、低気圧のほうを向きます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!6] (0,0) rectangle (122,38);
+  \draw[kviiie frame] (0,0) rectangle (122,38);
+  \begin{scope}\clip (0,0) rectangle (72,38);
+    \foreach \kviiier in {9,19,29,39} {\draw[kviiie contour] (34,19) circle (\kviiier);}
+  \end{scope}
+  \node[kviiie lab, fill=bkBlue!6, inner sep=0.6pt] at (25,19) {1000};
+  \node[kviiie lab, fill=bkBlue!6, inner sep=0.6pt] at (15,19) {1004};
+  \node[font=\sffamily\bfseries\large, text=\bkTT] at (34,19) {低};
+  \draw[kviiie down] (59,19) -- (47,19);
+  \node[kviiie lab, anchor=north, text=bkOrange!75!black, fill=bkBlue!6, inner sep=0.6pt] at (54,17.2) {気圧傾度力};
+  \draw[\bkTT, line width=1.3pt, -{Stealth[length=2.6mm]}] (59,19) -- ++(120:13);
+  \node[kviiie lab, anchor=west, text=\bkTT, fill=bkBlue!6, inner sep=0.6pt] at (54.5,32.5) {地上の風};
+  \fill[bkInk] (59,19) circle[radius=0.6mm];
+  \draw[bkLine, line width=0.6pt] (74,2) -- (74,36);
+  \node[kviiie lab, anchor=west, align=left] at (77,19) {4\,hPa ごとの等圧線の\\間かくが \qty{200}{km} なら、\\空気 \qty{1}{kg} あたり\\\qty{0.0017}{N}（\qty{0.0017}{m/s^2}）};
+\end{tikzpicture}
+\bkfigcaption{北半球の低気圧のまわり（模式図）。気圧傾度力（オレンジの点線）は等圧線（緑の線）と直角に低気圧へ向くが、地上の風（紺の矢印）は右へそれ、等圧線をななめに横切って吹きこむ。}
+\label{bk:8-4:fig-kiatsu}
+\end{bkfigure}
+4\,hPa（\qty{400}{Pa}）ごとの等圧線の間かくが \qty{200}{km} なら、空気\qty{1}{kg}あたりの加速度は次のとおりです。
+\kviiieline{$|\mathrm{grad}\,p|=400\div\num{200000}=\qty{0.002}{Pa/m},\qquad 0.002\div1.2=\qty{0.0017}{m/s^2}$}小さく見えますが、何時間も続くと強い風になります。
+
+\noindent ただし、実際の風は、この力の向きにまっすぐは吹きません。地球が自転しているので、北半球では動く空気が右へそれます（4-14のコラムのコリオリの力）。上空では、風はほとんど等圧線にそって吹き、地面の近くでは、地面との摩擦で弱められて、等圧線をななめに横切って低気圧へ吹きこみます。等圧線の間がせまい所ほど風が強い、という天気予報の言い方は、$|\mathrm{grad}\,p|$ が大きいほど力が大きい、ということです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm] Q[c,m,wd=26mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+場所で決まる数 & 矢印 & 式 & 等値面 \\
+高さ $h$ & ボールの向き & $-\mathrm{grad}\,h$ & 等高線 \\
+位置エネルギー $U$ & 力 $\vec F$ & $\vec F=-\mathrm{grad}\,U$ & 同じ $U$ の面 \\
+電位 $\phi$ & 電場 $\vec E$ & $\vec E=-\mathrm{grad}\,\phi$ & 等電位面 \\
+温度 $T$ & 熱の流れ $\vec q$ & $\vec q=-k\,\mathrm{grad}\,T$ & 等温面 \\
+気圧 $p$ & 空気をおす力 & $-\dfrac{1}{\rho}\,\mathrm{grad}\,p$ & 等圧面 \\
+\end{bktable}
+\bktabcaption{物理に出てくる勾配。どれも「数が下がる向きに、下がり方が急なほど強く」。矢印は等値面と直角。}
+\end{bkcenter}
+
+\begin{seikaku}
+どんな矢印でも、ある数の勾配（$-\mathrm{grad}$）で書けるわけではありません。たとえば、うずを巻く流れ（8-5）は、どんな数の勾配にもなりません。勾配で書ける力では、物を動かしてもどすと、した仕事の合計が0になります（8-7）。勾配で書けるかどうかは、すきまのない広がりの中なら、$\mathrm{rot}\,\vec F=\vec 0$ かどうかで見分けられます（8-10）。穴のある所では、rot が0でも勾配で書けないことがあります（8-7・8-11）。
+\end{seikaku}
+
+\Needspace{12\baselineskip}
+\begin{motto}[5]
+\kviiiebox{頂上・谷・峠：$\mathrm{grad}\,f=\vec 0$ の点}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+$\mathrm{grad}\,f=\vec 0$ の点では、どの向きにも坂がありません。そのような点には、頂上（まわりより高い）、谷の底（まわりより低い）のほかに、\textbf{峠}（とうげ）の点があります。峠は、ある向きに進むと下がり、それと直角の向きに進むと上がる点です。馬のくらの形ににているので、\textbf{あん点}ともいいます。$f=x^2-y^2$ の原点が峠の点です（図の実線は $f=1,\ 2,\ 3$、点線は $f=-1,\ -2,\ -3$ の等高線）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}
+\centering
+\begin{tikzpicture}[x=7.5mm, y=7.5mm]
+  \draw[kviiie frame, fill=white] (-2.6,-2.1) rectangle (2.6,2.1);
+  \begin{scope}\clip (-2.6,-2.1) rectangle (2.6,2.1);
+  \foreach \kviiiec in {1,2,3} {
+    \draw[kviiie contour, domain=-2.2:2.2, samples=40, variable=\t] plot ({sqrt(\kviiiec+\t*\t)},\t);
+    \draw[kviiie contour, domain=-2.2:2.2, samples=40, variable=\t] plot ({-sqrt(\kviiiec+\t*\t)},\t);
+    \draw[kviiie contour, dash pattern=on 3pt off 1.5pt, domain=-2.7:2.7, samples=40, variable=\t] plot (\t,{sqrt(\kviiiec+\t*\t)});
+    \draw[kviiie contour, dash pattern=on 3pt off 1.5pt, domain=-2.7:2.7, samples=40, variable=\t] plot (\t,{-sqrt(\kviiiec+\t*\t)});}
+  \end{scope}
+  \fill[bkInk] (0,0) circle[radius=0.7mm];
+  \node[kviiie lab, anchor=north, fill=white, inner sep=0.5pt] at (0,-0.15) {峠};
+  \node[kviiie lab, fill=white, inner sep=0.5pt] at (2.2,0) {高};
+  \node[kviiie lab, fill=white, inner sep=0.5pt] at (-2.2,0) {高};
+  \node[kviiie lab, fill=white, inner sep=0.5pt] at (0,1.75) {低};
+  \node[kviiie lab, fill=white, inner sep=0.5pt] at (0,-1.75) {低};
+\end{tikzpicture}
+\end{minipage}\par\vspace{4pt}
+2変数の関数のこのような点がどれになるかは、2回の偏微分（8-2）を並べた行列（ヘッセ行列という）の固有値（7-8）の符号で決まります。2つとも負なら頂上、2つとも正なら谷の底、正と負が1つずつなら峠です。
+\end{motto}
+
+\Needspace{12\baselineskip}
+\begin{motto}[5]
+\kviiiebox{道の上でいちばん高い所：ラグランジュの未定乗数法}
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\raggedright
+主役の山の中腹を、まっすぐな道 $x+y=50$ が通っています。この道の上で、いちばん高い所はどこでしょう。道を歩くと、等高線を横切るあいだは高さが変わります。いちばん高い所では、道は等高線を横切らず、そっと\textbf{接して}います。そこでは、等高線と直角な $\mathrm{grad}\,h$（赤）は、道とも直角です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \draw[kviiie frame, fill=white] (0,-2) rectangle (58,40);
+  \begin{scope}\clip (0,-2) rectangle (58,40);
+    \draw[kviiie contour, line width=1.1pt] (0,0) ellipse (40.82 and 28.87);
+    \draw[kviiie contour, dash pattern=on 3pt off 1.5pt] (0,0) ellipse (31.62 and 22.36);
+    \draw[kviiie contour, dash pattern=on 3pt off 1.5pt] (0,0) ellipse (47.43 and 33.54);
+    \draw[\bkTT, line width=1.4pt] (10,40) -- (52,-2);
+  \end{scope}
+  \draw[kviiie grad] (33.33,16.67) -- ++(-8,-8);
+  \draw[bkInk, line width=1.1pt, -{Stealth[length=2.4mm]}] (33.33,16.67) -- ++(8,8);
+  \fill[bkInk] (33.33,16.67) circle[radius=0.7mm];
+  \node[kviiie lab, anchor=south west, fill=white, inner sep=0.5pt] at (42,25) {$\mathrm{grad}\,g$};
+  \node[kviiie lab, anchor=north east, text=bkRed!80!black, fill=white, inner sep=0.5pt] at (24.5,8) {$\mathrm{grad}\,h$};
+  \node[kviiie lab, anchor=north west, fill=white, inner sep=0.5pt] at (37,14) {接点};
+\end{tikzpicture}
+\end{minipage}\par\vspace{4pt}
+道の式を $g=x+y=50$ と見ると、道と直角な矢印は $\mathrm{grad}\,g=(1,\ 1)$ です。だから接点では、$\mathrm{grad}\,h$ と $\mathrm{grad}\,g$ が平行で、ある数 $\mu$（ミュー）を使って $\mathrm{grad}\,h=\mu\,\mathrm{grad}\,g$ と書けます。成分で書くと $-0.02x=\mu$、$-0.04y=\mu$ なので、$-0.02x=-0.04y$、つまり $x=2y$ です。道の式に入れると $3y=50$ で、$y=16.7$、$x=33.3$、高さは \qty{83.3}{m} です（図の太い緑の線が \qty{83.3}{m} の等高線）。この方法を\textbf{ラグランジュの未定乗数法}といい、$\mu$ を未定乗数といいます。多くの専門書では $\lambda$ と書きますが、7-8の固有値の $\lambda$ とは別のものです。物理では、決まった全体のエネルギーの中で、いちばん起こりやすい分け方をさがすときに使います（物理 熱-15）。
+\end{motto}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+スカラー場 $\phi(x,y,z)$ に対し、$\nabla\phi=\dfrac{\partial\phi}{\partial x}\symbf{i}+\dfrac{\partial\phi}{\partial y}\symbf{j}+\dfrac{\partial\phi}{\partial z}\symbf{k}$ を $\phi$ の勾配といい、$\operatorname{grad}\phi$ とも書く。単位ベクトル $\symbf{e}$ の方向の方向微分係数は $\nabla\phi\cdot\symbf{e}$ で与えられる。$\nabla\phi$ は $\phi$ の増加率が最大となる方向を向き、その大きさは最大の増加率に等しく、等位面 $\phi=\text{一定}$ に垂直である。
+\end{bkhonbun}
+\bkyaku{「スカラー場」は、場所ごとに1つの数が決まるもの（高さ・温度・電位など。ここの $\phi$ は電位にかぎらない）。太字の $\symbf{i}$、$\symbf{j}$、$\symbf{k}$ は $x$・$y$・$z$ の向きの長さ1の矢印 $\vec e_x$、$\vec e_y$、$\vec e_z$（4-13）なので、$\nabla\phi$ はこの本の $\mathrm{grad}\,\phi$ そのもの。「方向微分係数」は方向微分（④）。「増加率が最大となる方向」はいちばん急な上り（⑤）。「等位面」は等値面（⑥）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[9.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{勾配}$\mathrm{grad}\,h=\Bigl(\dfrac{\partial h}{\partial x},\ \dfrac{\partial h}{\partial y}\Bigr)$（3次元は $\dfrac{\partial}{\partial z}$ も）\\[4pt]
+\tsl{方向微分}$\mathrm{grad}\,h\cdot\vec e=|\mathrm{grad}\,h|\cos\theta$（$\vec e$ は長さ1）\\[4pt]
+\tsl{いちばん急な向き}上りは grad、下りは $-\mathrm{grad}$。坂は $|\mathrm{grad}\,h|$\\[4pt]
+\tsl{等高線・等値面}grad と直角（内積0）\\[4pt]
+\tsl{ナブラ}$\nabla f=\mathrm{grad}\,f$\\[4pt]
+\tsl{物理}$\vec F=-\mathrm{grad}\,U$、$\vec E=-\mathrm{grad}\,\phi$、$\vec q=-k\,\mathrm{grad}\,T$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{勾配}{場所で決まる数 $f$ の偏微分を並べた矢印 $\mathrm{grad}\,f$。いちばん急に増える向きを向き、長さはそのときの増え方の速さ。グラディエント。}
+\bkword{方向微分}{長さ1の矢印 $\vec e$ の向きに進むときの、1あたりの変わり方。$\mathrm{grad}\,f\cdot\vec e$。}
+\bkword{等値面}{3次元で、同じ値の点を結んだ面（等温面・等電位面など）。2次元では等値線（等高線・等圧線）。}
+\bkword{ナブラ}{偏微分の3つの操作を並べた記号 $\nabla$。$\nabla f=\mathrm{grad}\,f$。}
+\bkword{峠の点（あん点）}{$\mathrm{grad}\,f=\vec 0$ で、ある向きには上がり、別の向きには下がる点。}
+\bkword{気圧傾度力}{気圧の差で空気がおされる力。等圧線と直角に、低いほうへ向く。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{{\fontsize{17}{19}\selectfont$\mathrm{grad}\,f$}}{グラッド・エフ}{勾配。偏微分を並べた矢印。いちばん急に増える向き}{gradient}{8-4}}
+{\bkkigocard{$\nabla$}{ナブラ}{偏微分を並べた記号。$\nabla f=\mathrm{grad}\,f$。8-9・8-10・8-12でも使う}{nabla, del}{8-4}}
+
+%% ---------------- 例題 ----------------
+\begin{column}{ナブラという名前}
+$\nabla$ の記号は、19世紀のなかごろに、イギリスとアイルランドの数学者・物理学者が使いはじめました。アイルランドのハミルトンは、三角形を横にたおした形の記号を使い、スコットランドのテイトが、いまの逆さの三角形の形で広めた、と伝えられています。「ナブラ」という名前は、1870年ころ、テイトの友人が、形が古いたて琴（ハープ）ににていることから、そのたて琴の名前をとって提案したものだそうです。マクスウェルも、手紙の中でこの名前を使っています。新しい記号は、はじめからいまの形と名前で決まっていたのではなく、たくさんの人が使いながら少しずつ形になっていったのです。
+\end{column}
+
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[主役の山の勾配]
+主役の山 $h=100-0.01x^2-0.02y^2$ の点 $(20,\ 10)$ で、$\mathrm{grad}\,h$、いちばん急な上りの坂の大きさ、ボールが転がりはじめる向きを求めましょう。\par
+\kangaekata ③。偏微分 $-0.02x$、$-0.04y$ に点の値を入れる。坂は grad の長さ、ボールは $-\mathrm{grad}\,h$ の向き（⑤）。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $x$ で偏微分 $-0.02\times20=-0.4$、$y$ で偏微分 $-0.04\times10=-0.4$\par
+\kviiiea 長さ $\sqrt{(-0.4)^2+(-0.4)^2}=\sqrt{0.32}=0.566$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 $\mathrm{grad}\,h=(-0.4,\ -0.4)$、坂0.566、ボールは $(0.4,\ 0.4)$ の向き（北東）
+\end{reidai}
+
+
+
+\begin{reidai}[向きを決めて坂を求める（方向微分）]
+主役の山の点 P $(30,\ 20)$（$\mathrm{grad}\,h=(-0.6,\ -0.8)$）で、（1）北東、（2）南に進むときの坂を求め、上りか下りかを答えましょう。\par
+\kangaekata ④。向きを長さ1の矢印 $\vec e$ にして、$\mathrm{grad}\,h\cdot\vec e$。正なら上り、負なら下り。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 （1）$\vec e=(0.707,\ 0.707)$ で $(-0.6)\times0.707+(-0.8)\times0.707=-0.990$\par
+\kviiiea （2）$\vec e=(0,\ -1)$ で $(-0.6)\times0+(-0.8)\times(-1)=0.8$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 （1）$-0.990$（下り）\quad （2）0.8（上り）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiieEHJ}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+\raggedright 主役の山の点 $(-10,\ 15)$ で、$\mathrm{grad}\,h$、いちばん急な上りの坂の大きさ、ボールが転がりはじめる向きを求めましょう。
+\bkjans{$x$ で偏微分 $-0.02\times(-10)=0.2$、$y$ で偏微分 $-0.04\times15=-0.6$ で、$\mathrm{grad}\,h=(0.2,\ -0.6)$。坂の大きさは $\sqrt{0.04+0.36}=\sqrt{0.4}=0.632$。ボールは $(-0.2,\ 0.6)$ の向き。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+\raggedright 主役の山の点 $(20,\ 10)$ で、（1）北、（2）南西に進むときの坂を求め、上りか下りかを答えましょう（grad は例題1で求めた）。
+\bkjans{（1）\nobreak $\vec e=(0,\ 1)$ で $-0.4$（下り）。（2）\nobreak $\vec e=(-0.707,\ -0.707)$ で $0.283+0.283=0.566$（上り）。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[いちばん急な上りと坂の角度]
+主役の山の点 $(10,\ 20)$ で、いちばん急な上りの向き（長さ1の矢印）、その坂の傾きと角度、ボールの向きを求めましょう。\par
+\kangaekata ⑤。上りは grad の向きで、長さ1にするには grad をその長さでわる。角度は $\tan\alpha=$ 傾き（4-8）。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $\mathrm{grad}\,h=(-0.2,\ -0.8)$、長さ $\sqrt{0.04+0.64}=\sqrt{0.68}=0.825$\par
+\kviiiea 長さ1：$(-0.2\div0.825,\ -0.8\div0.825)=(-0.243,\ -0.970)$\par
+\kviiiea $\tan\alpha=0.825$ より、電卓の $\tan^{-1}$ で $\alpha=39.5°$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 上り $(-0.243,\ -0.970)$、傾き0.825（約 $39.5°$）、ボールは $(0.243,\ 0.970)$ の向き
+\end{reidai}
+
+\begin{jibun}
+主役の山の点 $(20,\ -15)$ で、いちばん急な上りの向き（長さ1の矢印）、その坂の傾きと角度、ボールの向きを求めましょう。
+\bkjans{$\mathrm{grad}\,h=(-0.4,\ 0.6)$、長さ $\sqrt{0.52}=0.721$。上りの向き $(-0.555,\ 0.832)$、傾き0.721（$\tan^{-1}$ で約 $35.8°$）。ボールは $(0.555,\ -0.832)$ の向き。}
+\end{jibun}
+
+\begin{reidai}[等高線の向き]
+主役の山の点 P $(30,\ 20)$（$\mathrm{grad}\,h=(-0.6,\ -0.8)$）を通る等高線の向きを1つの矢印で答え、等高線の接線の傾き $\dfrac{\dd y}{\dd x}$ を求めましょう。\par
+\kangaekata ⑤。等高線は grad と直角。$(a,\ b)$ と直角な矢印の1つは $(b,\ -a)$（入れかえて、片方の符号を変える）。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $(-0.6,\ -0.8)$ と直角：$(-0.8,\ 0.6)$、その反対の $(0.8,\ -0.6)$\par
+\kviiiea 確かめ $(-0.6)\times0.8+(-0.8)\times(-0.6)=0$、傾き $\dfrac{-0.6}{0.8}=-0.75$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 $(0.8,\ -0.6)$（または $(-0.8,\ 0.6)$）。傾き $-0.75$
+\end{reidai}
+
+\begin{jibun}
+主役の山の点 $(20,\ 10)$（$\mathrm{grad}\,h=(-0.4,\ -0.4)$）を通る等高線の向きを1つの矢印で答え、等高線の接線の傾き $\dfrac{\dd y}{\dd x}$ を求めましょう。
+\bkjans{$(-0.4,\ 0.4)$ か、同じ向きの $(-1,\ 1)$、その反対の $(1,\ -1)$。内積 $(-0.4)\times1+(-0.4)\times(-1)=0$。傾きは $-1$。}
+\end{jibun}
+
+\begin{reidai}[式の勾配（2つの変数・3つの変数）]
+次の関数の勾配を、（ ）の点で求めましょう。（2）は長さも求めましょう。\par
+（1）$f=x^2y+3y$\quad $(1,\ 2)$\qquad（2）$T=x^2+2y^2-z$\quad $(1,\ 1,\ 2)$\par
+\kangaekata ③・⑥。ほかの文字を止めて（数と同じに見て）、1つずつ偏微分する（8-2）。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 （1）$x$ で $2xy$（$3y$ は $x$ をふくまないので0）、$y$ で $x^2+3$\par
+\kviiieb 点 $(1,\ 2)$ で $(2\times1\times2,\ 1+3)=(4,\ 4)$\par
+\kviiiea （2）$(2x,\ 4y,\ -1)$ に入れて $(2,\ 4,\ -1)$、長さ $\sqrt{4+16+1}=\sqrt{21}=4.58$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 （1）$\nabla f=(4,\ 4)$\quad （2）$\nabla T=(2,\ 4,\ -1)$、長さ4.58
+\end{reidai}
+
+\begin{jibun}
+次の関数の勾配を、（ ）の点で求めましょう。（2）は長さも求めましょう。\par
+（1）$f=xy^2+2x$\quad $(2,\ 1)$\qquad（2）$T=3x+y^2+z^2$\quad $(1,\ 2,\ 1)$
+\bkjans{（1）\nobreak $\left(y^2+2,\ 2xy\right)$ に入れて $(3,\ 4)$。（2）\nobreak $(3,\ 2y,\ 2z)$ に入れて $(3,\ 4,\ 2)$、長さ $\sqrt{9+16+4}=\sqrt{29}=5.39$。}
+\end{jibun}
+
+\begin{reidai}[位置エネルギーから力を求める]
+ばね定数 $k=\qty{200}{N/m}$ のばねで原点につながれた物の位置エネルギーは $U=\dfrac12k(x^2+y^2)$〔J〕です（$x$、$y$ は m）。点 $(0.03,\ 0.04)$ で物にはたらく力 $\vec F$ と、その大きさを求めましょう。\par
+\kangaekata ⑧の①。$\vec F=-\mathrm{grad}\,U$。$\dfrac12kx^2$ を $x$ で微分すると $kx$。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $\mathrm{grad}\,U=(kx,\ ky)=(200\times0.03,\ 200\times0.04)=(6,\ 8)$\par
+\kviiiea $\vec F=-\mathrm{grad}\,U=(-6,\ -8)$、大きさ $\sqrt{36+64}=10$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 $\vec F=(-6,\ -8)$〔N〕、大きさ\qty{10}{N}（原点のほうへ引きもどす）
+\end{reidai}
+
+\begin{jibun}
+ばね定数 $k=\qty{100}{N/m}$、位置エネルギー $U=\dfrac12k(x^2+y^2)$〔J〕のとき、点 $(0.06,\ -0.08)$ で物にはたらく力 $\vec F$ と、その大きさを求めましょう。
+\bkjans{$\mathrm{grad}\,U=(100\times0.06,\ 100\times(-0.08))=(6,\ -8)$。$\vec F=(-6,\ 8)$〔N〕、大きさ\qty{10}{N}（原点のほうへ引きもどす）。}
+\end{jibun}
+
+\begin{reidai}[温度の地図から熱の流れを求める]
+ステンレスの板（$k=16$\,W/(m·K)）の中の温度が $T=60-300x-400y$〔℃〕です（$x$、$y$ は m）。熱の流れ $\vec q$ と、その大きさを求めましょう。\par
+\kangaekata ⑧の③。$\vec q=-k\,\mathrm{grad}\,T$。温度の差は、℃で数えても K で数えても同じ。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $\mathrm{grad}\,T=(-300,\ -400)$〔K/m〕\par
+\kviiiea $\vec q=-16\times(-300,\ -400)=(\num{4800},\ \num{6400})$、大きさ $\sqrt{4800^2+6400^2}=\num{8000}$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 $\vec q=(\num{4800},\ \num{6400})$〔W/m²〕、大きさ \qty{8000}{W/m^2}（温度が下がる向き）
+\end{reidai}
+
+\begin{jibun}
+コンクリートの板（$k=1.6$\,W/(m·K)）の中の温度が $T=30-60x+80y$〔℃〕です（$x$、$y$ は m）。熱の流れ $\vec q$ と、その大きさを求めましょう。
+\bkjans{$\mathrm{grad}\,T=(-60,\ 80)$〔K/m〕。$\vec q=-1.6\times(-60,\ 80)=(96,\ -128)$〔W/m²〕、大きさ $\sqrt{96^2+128^2}=\qty{160}{W/m^2}$。}
+\end{jibun}
+
+\begin{reidai}[電位から電場を求める]
+平面の上の電位が $\phi=200x+150y$〔V〕です（$x$、$y$ は m）。（1）電場 $\vec E$ とその大きさ、（2）等電位線の向き（1つの矢印）を求め、電場と直角か確かめましょう。\par
+\kangaekata ⑧の②。$\vec E=-\mathrm{grad}\,\phi$。等電位線は grad と直角（例題4のさがし方）。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 （1）$\mathrm{grad}\,\phi=(200,\ 150)$、$\vec E=(-200,\ -150)$、大きさ $\sqrt{200^2+150^2}=250$\par
+\kviiiea （2）$(150,\ -200)$、短くして $(3,\ -4)$。$\vec E\cdot(3,\ -4)=-600+600=0$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 （1）$\vec E=(-200,\ -150)$〔V/m〕、\qty{250}{V/m}\quad （2）$(3,\ -4)$。内積0で直角
+\end{reidai}
+
+\begin{jibun}
+平面の上の電位が $\phi=-120x+160y$〔V〕です（$x$、$y$ は m）。電場 $\vec E$ とその大きさを求め、等電位線の向き（1つの矢印）が電場と直角か確かめましょう。
+\bkjans{$\mathrm{grad}\,\phi=(-120,\ 160)$ なので $\vec E=(120,\ -160)$〔V/m〕、大きさ \qty{200}{V/m}。等電位線の向きは $(160,\ 120)$、短くして $(4,\ 3)$。$\vec E\cdot(4,\ 3)=480-480=0$ で直角。}
+\end{jibun}
+
+\begin{reidai}[坂をゆるくする道の向き]
+主役の山の点 P $(30,\ 20)$ では、$|\mathrm{grad}\,h|=1$、grad の向きは東から左回りに $233.1°$ です。上りの坂が0.5になる道の向きを、東から左回りの角で2つ答えましょう。\par
+\kangaekata ⑤。grad から角 $\theta$ ずれた向きの坂は $|\mathrm{grad}\,h|\cos\theta$。grad の左右にずらす。\par
+\shiki\kviiies\hangindent=2.6\zw\hangafter=1 $1\times\cos\theta=0.5$ より $\theta=60°$\par
+\kviiiea $233.1°+60°=293.1°$、\ $233.1°-60°=173.1°$\par
+\kotae\kviiies\hangindent=2.6\zw\hangafter=1 $173.1°$ と $293.1°$（grad から左右に $60°$ ずつずれた向き）
+\end{reidai}
+
+\begin{jibun}
+主役の山の点 $(0,\ 30)$ では $\mathrm{grad}\,h=(0,\ -1.2)$ で、grad の向きは真南（東から左回りに $270°$）です。上りの坂が0.6になる道の向きを、東から左回りの角で2つ答えましょう。
+\bkjans{$1.2\cos\theta=0.6$ より $\cos\theta=0.5$、$\theta=60°$。$270°-60°=210°$ と $270°+60°=330°$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① grad を1つの数で答える}
+\bkng{点 P で、$\mathrm{grad}\,h=-0.6+(-0.8)=-1.4$}
+\bkok{$\mathrm{grad}\,h=(-0.6,\ -0.8)$（2つの成分を並べた矢印）}
+grad は矢印です。2つの偏微分をたしてはいけません。$-1.4$ は、8-3で東へ\qty{1}{m}・北へ\qty{1}{m}進んだときの高さの変化（全微分）です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② ボールの向きを grad の向きにする}
+\bkng{ボールは $\mathrm{grad}\,h=(-0.6,\ -0.8)$ の向きに転がる}
+\bkok{ボールは $-\mathrm{grad}\,h=(0.6,\ 0.8)$ の向きに転がる}
+grad はいちばん急な\textbf{上り}の向きです。下るボールは、その反対へ転がります。物理の $\vec F=-\mathrm{grad}\,U$ のマイナスも同じ理由です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 長さが1でない矢印で坂を出す}
+\bkng{北東の坂は、$(1,\ 1)$ との内積で $-0.6-0.8=-1.4$}
+\bkok{北東は長さ1の $(0.707,\ 0.707)$ を使って $-0.990$}
+$(1,\ 1)$ の長さは $\sqrt2$ なので、内積は\qty{1.414}{m}進んだときの変化になります。\qty{1}{m}あたりの坂は、長さ1の矢印で出します。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ いちばん急な上りは、頂上へまっすぐ向かうと思う}
+\bkng{点 P でいちばん急な上りは、頂上へ向かう $(-30,\ -20)$ の向き}
+\bkok{いちばん急な上りは $\mathrm{grad}\,h=(-0.6,\ -0.8)$ の向き}
+頂上へまっすぐ向かう向き（長さ1で $(-0.832,\ -0.555)$）の坂は0.943で、1より小さくなります。等高線がだ円の山では、grad は頂上を向きません。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiieEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $|\mathrm{grad}\,h|$ を角度と思う}
+\raggedright\bkng{坂の大きさ1は「$1°$」}
+\bkok{傾き1、角度は $\tan\alpha=1$ で $45°$}
+$|\mathrm{grad}\,h|$ は「\qty{1}{m}進むと何 m 上がるか」という傾きです。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ $f\nabla$ を $\nabla f$ と同じと思う}
+\raggedright\bkng{$f\nabla=\nabla f=\mathrm{grad}\,f$}
+\bkok{$\nabla$ は右にある関数を微分する。$f\nabla$ は何も微分していない}
+$\nabla$ は数ではなく「偏微分する機械」なので、置く場所を入れかえられません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑦ 偏微分で、止めた文字まで微分する}
+\bkng{$f=x^2y+3y$ で、$\dfrac{\partial f}{\partial x}=2xy+x^2+3$}
+\bkok{$\dfrac{\partial f}{\partial x}=2xy$（$y$ は数と同じ。$3y$ は $x$ をふくまないので0）}
+$x$ で偏微分するときは、$y$ を止めて数と同じに見ます（8-2）。$x^2y$ は「$x^2$ の $y$ 倍」、$3y$ は「ただの数」です。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiiebox{登山道のつづら折り}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+急な斜面の登山道は、いちばん急な向き（grad の向き）にまっすぐ登らず、ジグザグに折れ曲がりながら登ります（つづら折り）。grad の向きから角 $\theta$ ずれた道の坂は $|\mathrm{grad}\,h|\cos\theta$ なので、$\theta=60°$ ずらせば坂は半分になります（例題9）。そのかわり、道の長さは2倍になります。山の道路や、車いすで通れるスロープも、同じ考えで坂をゆるくしています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!10] (0,0) rectangle (44,36);
+  \foreach \kviiiet in {4,10,16,22,28,34} {\draw[kviiie contour] (0,\kviiiet) -- (44,\kviiiet);}
+  \draw[\bkTT, line width=1.3pt, line join=round] (8,1) -- (26.8,11.9) -- (8,22.7) -- (26.8,33.5);
+  \draw[kviiie grad] (36,4) -- (36,30);
+  \node[kviiie lab, anchor=south, text=bkRed!80!black] at (36,30.5) {grad};
+  \node[kviiie lab, anchor=north] at (22,-1) {上から見た斜面};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{5pt}
+\kviiiebox{機械学習の「勾配降下法」}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+コンピュータに画像の見分け方などを学ばせるときは、答えのまちがいの大きさを、たくさんの数（パラメータ）の関数として表します。そして、その関数の $-\mathrm{grad}$ の向き（いちばん急に下る向き）に、パラメータを少しずつ動かして、まちがいを小さくしていきます。霧の中で山を下りる人が、足もとのいちばん急な下りの向きに1歩ずつ進むのと同じ考えで、\textbf{勾配降下法}とよばれています。変数が何百万個あっても、勾配は「偏微分を並べた矢印」です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!10] (-22,-15) rectangle (22,15);
+  \foreach \kviiier in {3,6,9,12} {\draw[kviiie contour] (0,0) ellipse ({1.5*\kviiier} and {\kviiier});}
+  \draw[\bkTT, line width=1.1pt, -{Stealth[length=2mm]}] (-17,11) -- (-10.5,4.5);
+  \draw[\bkTT, line width=1.1pt, -{Stealth[length=2mm]}] (-10.5,4.5) -- (-6.5,0.8);
+  \draw[\bkTT, line width=1.1pt, -{Stealth[length=2mm]}] (-6.5,0.8) -- (-3.2,0.1);
+  \fill[bkInk] (0,0) circle[radius=0.6mm];
+  \node[kviiie lab, anchor=north, fill=bkYellow!10, inner sep=0.5pt] at (0,-4.5) {いちばん低い所};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+\begin{column}{熱の通り道を設計する}
+スマートフォンやパソコンの中では、CPU などの部品が熱を出します。熱は $\vec q=-k\,\mathrm{grad}\,T$ の向き、つまり等温線と直角に、温度の高い所から低い所へ流れます（⑧の③）。設計では、コンピュータで板の中の温度の地図を計算し、温度の勾配が大きい所（熱がたくさん流れる所）に、熱を通しやすい銅の板やヒートパイプを置いて、熱をケースの外へ逃がします。サーモグラフィー（温度を色で見るカメラ）の画像は、温度の地図そのものです。その画像から、等温線の間がせまい所を見つければ、熱がたくさん流れている所がわかります。
+\end{column}
+
+\begin{motto}[5]
+\kviiiebox{勾配は「1行のヤコビ行列」}
+8-3では、関数 $x(\theta_1,\ \theta_2)$、$y(\theta_1,\ \theta_2)$ の偏微分を並べてヤコビ行列 $J$ を作り、小さな変化を $\dd\vec p=J\,\dd\vec\theta$（行列×ベクトル）で表しました。出てくる量が高さ $h$ の1つだけなら、偏微分を並べた行列は1行になります。それが勾配です。
+\kviiieline{$\dd h=\Bigl(\dfrac{\partial h}{\partial x}\quad\dfrac{\partial h}{\partial y}\Bigr)\begin{pmatrix}\dd x\\ \dd y\end{pmatrix}=\mathrm{grad}\,h\cdot\dd\vec r$}
+左の1行と右の1列の積が、7-3の「行と列の内積」です。このように、全微分（8-3）・方向微分（④）・ヤコビ行列は、どれも「偏微分を並べたものと、小さな動きの内積」という同じしくみです。8-7の線積分では、この $\mathrm{grad}\,h\cdot\dd\vec r$ を道にそってたし合わせ、「登る仕事は道によらない」ことを確かめます。
+\end{motto}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 主役の山 $h=100-0.01x^2-0.02y^2$ の点 $(-20,\ -10)$ で、$\mathrm{grad}\,h$、いちばん急な上りの坂の大きさ、ボールが転がりはじめる向きを求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$\mathrm{grad}\,h=(-0.02\times(-20),\ -0.04\times(-10))=(0.4,\ 0.4)$。坂の大きさ $\sqrt{0.32}=0.566$。ボールは $(-0.4,\ -0.4)$ の向き（南西）。}
+
+\bkproblem 主役の山の点 $(40,\ 0)$ では $\mathrm{grad}\,h=(-0.8,\ 0)$ です。（1）北東、（2）西に進むときの坂を求め、上りか下りかを答えましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{（1）\nobreak $(-0.8)\times0.707+0\times0.707=-0.566$（下り）。（2）\nobreak $\vec e=(-1,\ 0)$ で $0.8$（上り）。}
+
+\bkproblem 主役の山の点 $(0,\ -25)$ で、いちばん急な上りの向き（長さ1の矢印で）と、その坂の傾き・角度を求めましょう。また、ボールが転がりはじめる向きを答えましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\mathrm{grad}\,h=(0,\ 1)$、$|\mathrm{grad}\,h|=1$。上りの向き $(0,\ 1)$（北）、傾き1（$45°$）。ボールは $(0,\ -1)$ の向き（南）。}
+
+\bkproblem 主役の山の点 $(-30,\ 10)$ を通る等高線の向きを1つの矢印で答え、等高線の接線の傾き $\dfrac{\dd y}{\dd x}$ を求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$\mathrm{grad}\,h=(0.6,\ -0.4)$。直角な矢印は $(-0.4,\ -0.6)$、または $(0.4,\ 0.6)$（$(2,\ 3)$ でもよい）。内積 $0.24-0.24=0$。傾き $\dfrac{0.6}{0.4}=1.5$。}
+
+\bkproblem 次の関数の勾配を、（ ）の点で求めましょう\mbox{（\bkreidairef{5}）}。\par
+（1）$f=x^2y^2$\quad $(1,\ 2)$\par
+（2）$T=x^2+y^2+z^2$\quad $(1,\ -2,\ 2)$（長さも求める）
+\bkpans{（1）\nobreak $\left(2xy^2,\ 2x^2y\right)$ に入れて $(8,\ 4)$。（2）\nobreak $(2x,\ 2y,\ 2z)$ に入れて $(2,\ -4,\ 4)$、長さ $\sqrt{4+16+16}=6$。}
+
+\bkproblem ばね定数 $k=\qty{400}{N/m}$ のばねで、位置エネルギーが $U=\dfrac12k(x^2+y^2)$〔J〕のとき、点 $(0.03,\ -0.04)$ で物にはたらく力 $\vec F$ と、その大きさを求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\mathrm{grad}\,U=(12,\ -16)$。$\vec F=(-12,\ 16)$〔N〕、大きさ\qty{20}{N}。}
+
+\bkproblem れんがのかべ（$k=0.6$\,W/(m·K)）の中の温度が $T=50-30x+40y$〔℃〕です（$x$、$y$ の単位は m）。熱の流れ $\vec q$ とその大きさを求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$\mathrm{grad}\,T=(-30,\ 40)$〔K/m〕。$\vec q=-0.6\times(-30,\ 40)=(18,\ -24)$〔W/m²〕、大きさ \qty{30}{W/m^2}。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 平面の上の電位が $\phi=300x-400y$〔V〕です（$x$、$y$ の単位は m）。電場 $\vec E$ とその大きさを求め、等電位線の向き（1つの矢印）が電場と直角か確かめましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$\mathrm{grad}\,\phi=(300,\ -400)$ なので $\vec E=(-300,\ 400)$〔V/m〕、大きさ \qty{500}{V/m}。等電位線の向きは $(-400,\ -300)$、短くして $(4,\ 3)$。$\vec E\cdot(4,\ 3)=-1200+1200=0$ で直角。}
+
+\bkproblem 主役の山の点 $(40,\ 0)$ では $\mathrm{grad}\,h=(-0.8,\ 0)$ で、grad の向きは真西（東から左回りに $180°$）です。上りの坂が0.4になる道の向きを、東から左回りの角で2つ答えましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$0.8\cos\theta=0.4$ より $\cos\theta=0.5$、$\theta=60°$。$180°-60°=120°$ と $180°+60°=240°$。}
+
+\bkproblem 主役の山の点 $(-30,\ -20)$ について、次の問いに答えましょう。\par
+（1）$\mathrm{grad}\,h$ と、いちばん急な上りの坂の大きさ\par
+（2）北東に進むときの坂\par
+（3）等高線の向き（1つの矢印）\mbox{（\bkreidairef{1}・\bkreidairef{2}・\bkreidairef{4}）}
+\bkpans{（1）\nobreak $\mathrm{grad}\,h=(0.6,\ 0.8)$、大きさ1。（2）\nobreak $0.6\times0.707+0.8\times0.707=0.990$（上り）。（3）\nobreak $(0.8,\ -0.6)$（または $(-0.8,\ 0.6)$）。内積 $0.48-0.48=0$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 等高線の地図に、ボールが転がりはじめる向き（等高線と直角）をかきこめる。\bkfurref{bk:8-4:chokkaku}
+\item 東の坂と北の坂を並べて勾配 grad を作り、どの向きの坂も内積で計算できる。\bkfurref{bk:8-4:houkou}
+\item 内積の $\cos$ の形から、いちばん急な向きと等高線の向きを説明し、$\vec F=-\mathrm{grad}\,U$ などの物理の式を使える。\bkfurref{bk:8-4:cos}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{東の坂と北の坂、たった2つの数で、どの向きの坂もわかるんだね。次の章では、空間のどこにも矢印がある「場」を見にいこう。}

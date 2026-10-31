@@ -1,0 +1,827 @@
+%% 8-5 ベクトル場（第14回：組 V8-3。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   路線⑥「矢印」の駅（座標 3-2 → ベクトル 4-10 → 3次元の回転 7-7 → ベクトル場 8-5）。4-10・4-13・7-7 の「この章の先に」。
+%%   第7巻の予告カード 8-5「3次元の回転と座標の変換（7-7）」→ ⑧「軸を回して見ても矢印は同じ、成分は R^T で変わる」（7-6 の「軸を θ 回して見ると x'=R^T x」）。
+%%   主役の場（平面の6つ）：（ア）(x,y) 広がる・（イ）(−x,−y) 集まる・（ウ）(1,0) そろった・（エ）(−y,x) うず・（オ）(y,0) ずれ・（カ）(x,0) 側溝
+%%     （brief8-parts 5章の約束。8-7・8-9・8-10・8-11 で「8-5 の（エ）」のように指す）。
+%%   池：わき出し S (1.5, 2.5)、吸いこみ K (4.5, 1.5)、Q=4 m²/s（8-9・8-11 と同じ。図は式から計算。古い見本 ch8-9-data の矢印は長さを縮めた別の割合）。
+%%   単位ベクトル e_x, e_y, e_z（主）と i, j, k（同じもの）を⑥で1回。記号カードの e（4-11）・i, j, k（4-13）は作らない。
+%%   矢印の場の図の部品は tools/kata8.md（組 V8-3）。数はすべて Python で確かめた（scratchpad/v8-3/py/c85.py・c85b.py）。
+\usetikzlibrary{decorations.markings}
+\makeatletter
+% ==== 矢印の場の図の部品（kata8 の型。頭文字 kviiif は 8-5）====
+\tikzset{
+  kviiif field/.style={draw=\bkTT, line width=0.9pt, line cap=round, -{Stealth[length=2.0mm, width=1.7mm]}},
+  kviiif grad/.style={draw=bkRed!85!black, line width=1.5pt, line cap=round, -{Stealth[length=2.8mm, width=2.2mm]}},
+  kviiif down/.style={draw=bkOrange!85!black, line width=1.5pt, line cap=round, dash pattern=on 2.4pt off 1.2pt, -{Stealth[length=2.8mm, width=2.2mm]}},
+  kviiif contour/.style={draw=bkGreen!60!black, line width=0.8pt},
+  kviiif stream/.style={draw=bkPurple, line width=1.1pt, line cap=round, postaction={decorate},
+    decoration={markings, mark=at position 0.55 with {\arrow{Stealth[length=2.4mm, width=2mm]}}}},
+  kviiif pt/.style={fill=bkInk!75},
+  kviiif zero/.style={draw=bkInk!75, fill=white, line width=0.6pt},
+  kviiif frame/.style={draw=bkLine, line width=0.6pt},
+  kviiif gridline/.style={draw=bkLine, line width=0.4pt},
+  kviiif lab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1pt},
+  kviiif tick/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0pt},
+}
+% 設定  \kviiifset{xmin=-2, xmax=2, ymin=-2, ymax=2, step=1, scale=0.4, pivot=tail}
+\pgfkeys{/kviiif/.is family, /kviiif,
+  xmin/.initial=-2, xmax/.initial=2, ymin/.initial=-2, ymax/.initial=2, step/.initial=1,
+  scale/.initial=0.4, pivot/.initial=tail, skip/.initial=0, min/.initial=0.03,
+  arrow/.initial={kviiif field}, dot/.initial=1}
+\newcommand\kviiifset[1]{\pgfkeys{/kviiif,#1}}
+\def\kviiif@get#1{\pgfkeysvalueof{/kviiif/#1}}
+% 矢印の場  \kviiiffield[設定]{F_x の式}{F_y の式}（式は \x, \y で書く。三角関数の角は度）
+%   矢印の長さ＝場の大きさ×scale（座標の目もりで）。pivot=tail：根もとがその場所（点をうつ）、mid：まん中がその場所
+%   場が0の所（長さが min より短い）は、白ぬきの丸。skip の式が1になる所はかかない（例：skip={\x*\x+\y*\y<0.1}）
+\newcommand\kviiiffield[3][]{{%
+  \kviiifset{#1}%
+  \pgfmathsetmacro\kviiif@xa{\kviiif@get{xmin}}\pgfmathsetmacro\kviiif@ya{\kviiif@get{ymin}}%
+  \pgfmathsetmacro\kviiif@st{\kviiif@get{step}}\pgfmathsetmacro\kviiif@sc{\kviiif@get{scale}}%
+  \pgfmathtruncatemacro\kviiif@nx{round((\kviiif@get{xmax}-\kviiif@xa)/\kviiif@st)}%
+  \pgfmathtruncatemacro\kviiif@ny{round((\kviiif@get{ymax}-\kviiif@ya)/\kviiif@st)}%
+  \edef\kviiif@pv{\kviiif@get{pivot}}\def\kviiif@mid{mid}%
+  \foreach \kviiif@i in {0,...,\kviiif@nx} {\foreach \kviiif@j in {0,...,\kviiif@ny} {%
+    \pgfmathsetmacro\x{\kviiif@xa+\kviiif@i*\kviiif@st}\pgfmathsetmacro\y{\kviiif@ya+\kviiif@j*\kviiif@st}%
+    \pgfmathtruncatemacro\kviiif@sk{(\kviiif@get{skip}) ? 1 : 0}%
+    \ifnum\kviiif@sk=0
+      \pgfmathsetmacro\kviiif@u{(#2)*\kviiif@sc}\pgfmathsetmacro\kviiif@w{(#3)*\kviiif@sc}%
+      \pgfmathtruncatemacro\kviiif@ok{veclen(\kviiif@u,\kviiif@w)>\kviiif@get{min} ? 1 : 0}%
+      \ifnum\kviiif@ok=1
+        \ifx\kviiif@pv\kviiif@mid
+          \draw[style/.expanded=\kviiif@get{arrow}] ({\x-\kviiif@u/2},{\y-\kviiif@w/2}) -- ++(\kviiif@u,\kviiif@w);%
+        \else
+          \draw[style/.expanded=\kviiif@get{arrow}] (\x,\y) -- ++(\kviiif@u,\kviiif@w);%
+          \ifnum\kviiif@get{dot}=1 \fill[kviiif pt] (\x,\y) circle[radius=0.42mm];\fi
+        \fi
+      \else
+        \filldraw[kviiif zero] (\x,\y) circle[radius=0.6mm];%
+      \fi
+    \fi}}}}
+% 凡例（矢印の長さの物差し）  \kviiifkey[設定]{(x,y)}{場の大きさ}{ことば}  例：\kviiifkey{(2.4,-2)}{1}{＝\qty{1}{m/s}}
+\newcommand\kviiifkey[4][]{{%
+  \kviiifset{#1}\pgfmathsetmacro\kviiif@sc{\kviiif@get{scale}}%
+  \pgfmathsetmacro\kviiif@u{(#3)*\kviiif@sc}%
+  \draw[style/.expanded=\kviiif@get{arrow}] #2 -- ++(\kviiif@u,0) coordinate (kviiif@keyend);
+  \node[kviiif lab, anchor=west] at ([xshift=1.5mm]kviiif@keyend) {#4};}}
+% 方眼  \kviiifgrid[きざみ]{xmin}{xmax}{ymin}{ymax}
+\newcommand\kviiifgrid[5][1]{\draw[kviiif gridline, step=#1] (#2,#4) grid (#3,#5);}
+% 軸（O・x・y の字つき）  \kviiifaxes{xmin}{xmax}{ymin}{ymax}{x の名前}{y の名前}
+\newcommand\kviiifaxes[6]{%
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- (#2,0) node[kviiif lab, anchor=west, xshift=0.6mm] {#5};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,#4) node[kviiif lab, anchor=south, yshift=0.6mm] {#6};}
+% 目もりの数（軸から 1.5 mm はなす）  \kviiifticks{x の目もりの並び}{y の目もりの並び}
+\newcommand\kviiifticks[2]{%
+  \foreach \kviiif@t in {#1} {\draw[bkInk, line width=0.5pt] (\kviiif@t,0) -- ++(0,-0.8mm);
+    \node[kviiif tick, anchor=north] at ([yshift=-2.3mm]\kviiif@t,0) {$\kviiif@t$};}
+  \foreach \kviiif@t in {#2} {\draw[bkInk, line width=0.5pt] (0,\kviiif@t) -- ++(-0.8mm,0);
+    \node[kviiif tick, anchor=east] at ([xshift=-2.3mm]0,\kviiif@t) {$\kviiif@t$};}}
+% 流線・力線（矢印をつないだ線）  \kviiifstream[線の形]{F_x}{F_y}{x0,y0}{歩数}{1歩の長さ}
+%   (x0,y0) から、場の向きに1歩ずつ進んだ点を結ぶ（2次のルンゲ・クッタ。1歩の長さは座標の目もりで）。歩数を負にすると逆向きにたどる
+\newcommand\kviiifstream[6][]{{%
+  \pgfmathsetmacro\kviiif@h{#6}\pgfmathtruncatemacro\kviiif@n{abs(#5)}%
+  \pgfmathsetmacro\kviiif@sg{#5<0 ? -1 : 1}%
+  \def\kviiif@xy##1,##2\relax{\pgfmathsetmacro\kviiif@nx{##1}\pgfmathsetmacro\kviiif@ny{##2}%
+    \xdef\kviiif@px{\kviiif@nx}\xdef\kviiif@py{\kviiif@ny}}\kviiif@xy#4\relax
+  \xdef\kviiif@path{(\kviiif@px,\kviiif@py)}%
+  \foreach \kviiif@k in {1,...,\kviiif@n} {%
+    \pgfmathsetmacro\x{\kviiif@px}\pgfmathsetmacro\y{\kviiif@py}%
+    \pgfmathsetmacro\kviiif@u{#2}\pgfmathsetmacro\kviiif@w{#3}\pgfmathsetmacro\kviiif@L{max(veclen(\kviiif@u,\kviiif@w),1e-6)}%
+    \pgfmathsetmacro\x{\kviiif@px+0.5*\kviiif@sg*\kviiif@h*\kviiif@u/\kviiif@L}\pgfmathsetmacro\y{\kviiif@py+0.5*\kviiif@sg*\kviiif@h*\kviiif@w/\kviiif@L}%
+    \pgfmathsetmacro\kviiif@u{#2}\pgfmathsetmacro\kviiif@w{#3}\pgfmathsetmacro\kviiif@L{max(veclen(\kviiif@u,\kviiif@w),1e-6)}%
+    \pgfmathsetmacro\kviiif@nx{\kviiif@px+\kviiif@sg*\kviiif@h*\kviiif@u/\kviiif@L}\pgfmathsetmacro\kviiif@ny{\kviiif@py+\kviiif@sg*\kviiif@h*\kviiif@w/\kviiif@L}%
+    \xdef\kviiif@px{\kviiif@nx}\xdef\kviiif@py{\kviiif@ny}%
+    \xdef\kviiif@path{\kviiif@path -- (\kviiif@px,\kviiif@py)}}%
+  \draw[kviiif stream, #1] \kviiif@path;}}
+% わくと目もり（場の図の目もりは、わくの外に置く。矢印と数字が重ならない）
+%   \kviiifframe[わくのゆとり]{xmin}{xmax}{ymin}{ymax}{x の目もりの並び}{y の目もりの並び}{x の名前}{y の名前}
+%   わくは、いちばん外の格子点からゆとり（目もりの数。ふつう 0.5、外向きの長い矢印があるときは 0.9）だけ外にかく。0の線（軸）はうすい線
+\newcommand\kviiifframe[9][0.5]{%
+  \draw[kviiif frame, fill=white] ({#2-#1},{#4-#1}) rectangle ({#3+#1},{#5+#1});
+  \draw[bkLine, line width=0.6pt] ({#2-#1},0) -- ({#3+#1},0) (0,{#4-#1}) -- (0,{#5+#1});
+  \foreach \kviiif@t in {#6} {\draw[bkInk, line width=0.5pt] (\kviiif@t,{#4-#1}) -- ++(0,-0.9mm);
+    \node[kviiif tick, anchor=north] at ([yshift=-2.4mm]\kviiif@t,{#4-#1}) {$\kviiif@t$};}
+  \foreach \kviiif@t in {#7} {\draw[bkInk, line width=0.5pt] ({#2-#1},\kviiif@t) -- ++(-0.9mm,0);
+    \node[kviiif tick, anchor=east] at ([xshift=-2.4mm]{#2-#1},\kviiif@t) {$\kviiif@t$};}
+  \node[kviiif lab, anchor=north west] at ([xshift=2mm, yshift=-2.4mm]{#3+#1},{#4-#1}) {#8};
+  \node[kviiif lab, anchor=south east] at ([xshift=-2.4mm, yshift=1.5mm]{#2-#1},{#5+#1}) {#9};}
+% 小さな場の図  \kviiifpanel[設定]{F_x}{F_y}{図に足すもの}{下のことば}（-2〜2 の格子、1目もり 6 mm、わくつき）
+\newcommand\kviiifpanel[5][]{%
+  \begin{tikzpicture}[x=6mm, y=6mm, baseline=(current bounding box.north)]
+    \draw[kviiif frame, fill=white] (-2.6,-2.6) rectangle (2.6,2.6);
+    \draw[bkLine, line width=0.5pt] (-2.6,0) -- (2.6,0) (0,-2.6) -- (0,2.6);
+    \kviiiffield[pivot=mid, dot=0, #1]{#2}{#3}
+    #4
+    \node[kviiif lab, anchor=north, align=center, text width=36mm, font={\sffamily\footnotesize\baselineskip=13pt}] at (0,-2.85) {#5};
+  \end{tikzpicture}}
+% ---- この章の部品 ----
+% 本文の小見出し（太字の1行）
+\newcommand\kviiifhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiifbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviiifline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviiifwaku{中身}
+\newcommand\kviiifwaku[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiifa{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiifb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiifs{\rightskip=0pt plus 8em\relax}
+% 表計算の数式バー（kata7 の型）  \kviiiffx{セル}{式}
+\newcommand\kviiiffx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=72mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviiifM}{bkTheme!10}\colorlet{kviiifV}{bkGreen!14}\colorlet{kviiifR}{bkYellow!35}
+% 棒磁石  \kviiifmagnet{左下 (x,y)}{はば}{高さ}（左が N、右が S。座標の目もりで）
+\newcommand\kviiifmagnet[3]{\begin{scope}[shift={#1}]
+  \fill[bkRed!85!black] (0,0) rectangle ({#2/2},#3);
+  \fill[bkBlue!80!black] ({#2/2},0) rectangle (#2,#3);
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (#2,#3);
+  \node[text=white, font=\sffamily\bfseries\small] at ({#2/4},{#3/2}) {N};
+  \node[text=white, font=\sffamily\bfseries\small] at ({3*#2/4},{#3/2}) {S};
+\end{scope}}
+% 方位磁針  \kviiifneedle{(x,y)}{向きの角}（赤い先が N 極の向き＝磁場の向き）
+\newcommand\kviiifneedle[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=white, draw=bkGray, line width=0.5pt] (0,0) circle[radius=2.6mm];
+  \fill[bkRed!85!black] (2.1mm,0) -- (0,0.55mm) -- (0,-0.55mm) -- cycle;
+  \fill[bkGray!70] (-2.1mm,0) -- (0,0.55mm) -- (0,-0.55mm) -- cycle;
+\end{scope}}
+% 棒磁石のまわりの磁力線（Python で計算した点。N 極 (-0.9, 0)・S 極 (0.9, 0) の2つの極の場。scratchpad/v8-3/py/c85b.py）
+\newcommand\kviiifdipole{%
+  \draw[kviiif stream] (-0.81,0.12) -- (-0.74,0.22) -- (-0.67,0.31) -- (-0.59,0.41) -- (-0.51,0.49) -- (-0.41,0.57) -- (-0.31,0.63) -- (-0.20,0.68) -- (-0.08,0.70) -- (0.04,0.71) -- (0.15,0.69) -- (0.27,0.65) -- (0.37,0.59) -- (0.47,0.52) -- (0.56,0.44) -- (0.64,0.35) -- (0.71,0.26) -- (0.79,0.16) -- (0.82,0.11);
+  \draw[kviiif stream] (-0.85,0.14) -- (-0.81,0.25) -- (-0.76,0.36) -- (-0.71,0.47) -- (-0.65,0.58) -- (-0.58,0.67) -- (-0.50,0.77) -- (-0.41,0.85) -- (-0.31,0.91) -- (-0.20,0.96) -- (-0.09,0.99) -- (0.03,1.00) -- (0.15,0.98) -- (0.26,0.94) -- (0.37,0.88) -- (0.46,0.81) -- (0.54,0.72) -- (0.62,0.62) -- (0.68,0.52) -- (0.73,0.42) -- (0.78,0.31) -- (0.83,0.20) -- (0.85,0.14);
+  \draw[kviiif stream] (-0.89,0.15) -- (-0.89,0.27) -- (-0.88,0.39) -- (-0.86,0.51) -- (-0.84,0.63) -- (-0.81,0.74) -- (-0.78,0.86) -- (-0.73,0.97) -- (-0.68,1.07) -- (-0.61,1.17) -- (-0.53,1.26) -- (-0.44,1.34) -- (-0.34,1.41) -- (-0.23,1.46) -- (-0.11,1.49) -- (0.01,1.50) -- (0.13,1.48) -- (0.24,1.45) -- (0.35,1.40) -- (0.45,1.33) -- (0.54,1.25) -- (0.62,1.16) -- (0.68,1.06) -- (0.74,0.95) -- (0.78,0.84) -- (0.82,0.73) -- (0.85,0.61) -- (0.87,0.49) -- (0.88,0.38) -- (0.89,0.26) -- (0.90,0.14);
+  \draw[kviiif stream] (-0.95,0.14) -- (-0.98,0.26) -- (-1.01,0.37) -- (-1.04,0.49) -- (-1.07,0.61) -- (-1.09,0.72) -- (-1.10,0.84) -- (-1.11,0.96) -- (-1.11,1.08) -- (-1.11,1.20) -- (-1.09,1.32) -- (-1.07,1.44) -- (-1.04,1.56) -- (-1.01,1.67) -- (-0.96,1.78) -- (-0.91,1.89) -- (-0.84,1.99) -- (-0.83,2.01);
+  \draw[kviiif stream] (-1.00,0.11) -- (-1.07,0.21) -- (-1.15,0.30) -- (-1.22,0.40) -- (-1.29,0.49) -- (-1.36,0.59) -- (-1.42,0.69) -- (-1.49,0.80) -- (-1.55,0.90) -- (-1.60,1.01) -- (-1.66,1.11) -- (-1.71,1.22) -- (-1.75,1.33) -- (-1.79,1.45) -- (-1.83,1.56) -- (-1.87,1.67) -- (-1.90,1.79) -- (-1.93,1.91) -- (-1.94,2.01);
+  \draw[kviiif stream] (-1.04,0.06) -- (-1.14,0.11) -- (-1.25,0.17) -- (-1.36,0.22) -- (-1.47,0.27) -- (-1.57,0.33) -- (-1.68,0.39) -- (-1.78,0.44) -- (-1.89,0.50) -- (-1.99,0.56) -- (-2.09,0.63) -- (-2.20,0.69) -- (-2.30,0.75) -- (-2.40,0.82) -- (-2.50,0.89) -- (-2.60,0.95) -- (-2.70,1.02) -- (-2.79,1.09) -- (-2.89,1.17) -- (-2.98,1.24) -- (-3.02,1.26);
+  \draw[kviiif stream] (-1.05,0.00) -- (-1.17,0.00) -- (-1.29,0.00) -- (-1.41,0.00) -- (-1.53,0.00) -- (-1.65,0.00) -- (-1.77,0.00) -- (-1.89,0.00) -- (-2.01,0.00) -- (-2.13,0.00) -- (-2.25,0.00) -- (-2.37,0.00) -- (-2.49,0.00) -- (-2.61,0.00) -- (-2.73,0.00) -- (-2.85,0.00) -- (-2.97,0.00) -- (-3.01,0.00);
+  \draw[kviiif stream] (-0.81,-0.12) -- (-0.74,-0.22) -- (-0.67,-0.31) -- (-0.59,-0.41) -- (-0.51,-0.49) -- (-0.41,-0.57) -- (-0.31,-0.63) -- (-0.20,-0.68) -- (-0.08,-0.70) -- (0.04,-0.71) -- (0.15,-0.69) -- (0.27,-0.65) -- (0.37,-0.59) -- (0.47,-0.52) -- (0.56,-0.44) -- (0.64,-0.35) -- (0.71,-0.26) -- (0.79,-0.16) -- (0.82,-0.11);
+  \draw[kviiif stream] (-0.85,-0.14) -- (-0.81,-0.25) -- (-0.76,-0.36) -- (-0.71,-0.47) -- (-0.65,-0.58) -- (-0.58,-0.67) -- (-0.50,-0.77) -- (-0.41,-0.85) -- (-0.31,-0.91) -- (-0.20,-0.96) -- (-0.09,-0.99) -- (0.03,-1.00) -- (0.15,-0.98) -- (0.26,-0.94) -- (0.37,-0.88) -- (0.46,-0.81) -- (0.54,-0.72) -- (0.62,-0.62) -- (0.68,-0.52) -- (0.73,-0.42) -- (0.78,-0.31) -- (0.83,-0.20) -- (0.85,-0.14);
+  \draw[kviiif stream] (-0.89,-0.15) -- (-0.89,-0.27) -- (-0.88,-0.39) -- (-0.86,-0.51) -- (-0.84,-0.63) -- (-0.81,-0.74) -- (-0.78,-0.86) -- (-0.73,-0.97) -- (-0.68,-1.07) -- (-0.61,-1.17) -- (-0.53,-1.26) -- (-0.44,-1.34) -- (-0.34,-1.41) -- (-0.23,-1.46) -- (-0.11,-1.49) -- (0.01,-1.50) -- (0.13,-1.48) -- (0.24,-1.45) -- (0.35,-1.40) -- (0.45,-1.33) -- (0.54,-1.25) -- (0.62,-1.16) -- (0.68,-1.06) -- (0.74,-0.95) -- (0.78,-0.84) -- (0.82,-0.73) -- (0.85,-0.61) -- (0.87,-0.49) -- (0.88,-0.38) -- (0.89,-0.26) -- (0.90,-0.14);
+  \draw[kviiif stream] (-0.95,-0.14) -- (-0.98,-0.26) -- (-1.01,-0.37) -- (-1.04,-0.49) -- (-1.07,-0.61) -- (-1.09,-0.72) -- (-1.10,-0.84) -- (-1.11,-0.96) -- (-1.11,-1.08) -- (-1.11,-1.20) -- (-1.09,-1.32) -- (-1.07,-1.44) -- (-1.04,-1.56) -- (-1.01,-1.67) -- (-0.96,-1.78) -- (-0.91,-1.89) -- (-0.84,-1.99) -- (-0.83,-2.01);
+  \draw[kviiif stream] (-1.00,-0.11) -- (-1.07,-0.21) -- (-1.15,-0.30) -- (-1.22,-0.40) -- (-1.29,-0.49) -- (-1.36,-0.59) -- (-1.42,-0.69) -- (-1.49,-0.80) -- (-1.55,-0.90) -- (-1.60,-1.01) -- (-1.66,-1.11) -- (-1.71,-1.22) -- (-1.75,-1.33) -- (-1.79,-1.45) -- (-1.83,-1.56) -- (-1.87,-1.67) -- (-1.90,-1.79) -- (-1.93,-1.91) -- (-1.94,-2.01);
+  \draw[kviiif stream] (-1.04,-0.06) -- (-1.14,-0.11) -- (-1.25,-0.17) -- (-1.36,-0.22) -- (-1.47,-0.27) -- (-1.57,-0.33) -- (-1.68,-0.39) -- (-1.78,-0.44) -- (-1.89,-0.50) -- (-1.99,-0.56) -- (-2.09,-0.63) -- (-2.20,-0.69) -- (-2.30,-0.75) -- (-2.40,-0.82) -- (-2.50,-0.89) -- (-2.60,-0.95) -- (-2.70,-1.02) -- (-2.79,-1.09) -- (-2.89,-1.17) -- (-2.98,-1.24) -- (-3.02,-1.26);
+  \draw[kviiif stream] (3.01,0.00) -- (2.89,0.00) -- (2.77,0.00) -- (2.65,0.00) -- (2.53,0.00) -- (2.41,0.00) -- (2.29,0.00) -- (2.17,0.00) -- (2.05,0.00) -- (1.93,0.00) -- (1.81,0.00) -- (1.69,0.00) -- (1.57,0.00) -- (1.45,0.00) -- (1.33,0.00) -- (1.21,0.00) -- (1.09,0.00) -- (1.05,0.00);
+  \draw[kviiif stream] (3.02,1.26) -- (2.92,1.19) -- (2.82,1.12) -- (2.73,1.05) -- (2.63,0.98) -- (2.53,0.91) -- (2.43,0.84) -- (2.33,0.78) -- (2.23,0.71) -- (2.13,0.65) -- (2.03,0.59) -- (1.92,0.52) -- (1.82,0.46) -- (1.71,0.41) -- (1.61,0.35) -- (1.50,0.29) -- (1.40,0.24) -- (1.29,0.18) -- (1.18,0.13) -- (1.07,0.08) -- (1.04,0.06);
+  \draw[kviiif stream] (3.02,-1.26) -- (2.92,-1.19) -- (2.82,-1.12) -- (2.73,-1.05) -- (2.63,-0.98) -- (2.53,-0.91) -- (2.43,-0.84) -- (2.33,-0.78) -- (2.23,-0.71) -- (2.13,-0.65) -- (2.03,-0.59) -- (1.92,-0.52) -- (1.82,-0.46) -- (1.71,-0.41) -- (1.61,-0.35) -- (1.50,-0.29) -- (1.40,-0.24) -- (1.29,-0.18) -- (1.18,-0.13) -- (1.07,-0.08) -- (1.04,-0.06);
+  \draw[kviiif stream] (1.94,2.01) -- (1.92,1.89) -- (1.89,1.77) -- (1.86,1.66) -- (1.83,1.54) -- (1.79,1.43) -- (1.74,1.32) -- (1.70,1.20) -- (1.65,1.10) -- (1.59,0.99) -- (1.54,0.88) -- (1.48,0.78) -- (1.41,0.68) -- (1.35,0.58) -- (1.28,0.48) -- (1.21,0.38) -- (1.13,0.29) -- (1.06,0.19) -- (1.00,0.11);
+  \draw[kviiif stream] (1.94,-2.01) -- (1.92,-1.89) -- (1.89,-1.77) -- (1.86,-1.66) -- (1.83,-1.54) -- (1.79,-1.43) -- (1.74,-1.32) -- (1.70,-1.20) -- (1.65,-1.10) -- (1.59,-0.99) -- (1.54,-0.88) -- (1.48,-0.78) -- (1.41,-0.68) -- (1.35,-0.58) -- (1.28,-0.48) -- (1.21,-0.38) -- (1.13,-0.29) -- (1.06,-0.19) -- (1.00,-0.11);
+}
+% 池（8-9 のはてな？）の流線：わき出し (1.5, 2.5)・吸いこみ (4.5, 1.5)、Q=4 m²/s（Python で計算。py/c85 の池）
+\newcommand\kviiifpondlines{%
+  \draw[kviiif stream] (1.70,2.50) -- (1.82,2.50) -- (1.94,2.49) -- (2.06,2.48) -- (2.18,2.47) -- (2.30,2.45) -- (2.42,2.43) -- (2.53,2.41) -- (2.65,2.38) -- (2.77,2.35) -- (2.88,2.32) -- (3.00,2.29) -- (3.11,2.25) -- (3.23,2.21) -- (3.34,2.17) -- (3.45,2.12) -- (3.56,2.07) -- (3.67,2.02) -- (3.77,1.97) -- (3.88,1.91) -- (3.98,1.85) -- (4.09,1.79) -- (4.19,1.72) -- (4.29,1.66) -- (4.35,1.61);
+  \draw[kviiif stream] (1.67,2.60) -- (1.78,2.65) -- (1.89,2.70) -- (2.01,2.74) -- (2.12,2.77) -- (2.24,2.79) -- (2.36,2.81) -- (2.48,2.82) -- (2.60,2.82) -- (2.72,2.82) -- (2.84,2.81) -- (2.96,2.79) -- (3.07,2.77) -- (3.19,2.74) -- (3.30,2.70) -- (3.41,2.65) -- (3.52,2.60) -- (3.63,2.54) -- (3.73,2.48) -- (3.83,2.41) -- (3.92,2.33) -- (4.01,2.25) -- (4.09,2.17) -- (4.17,2.08) -- (4.24,1.98) -- (4.31,1.88) -- (4.37,1.78) -- (4.43,1.67);
+  \draw[kviiif stream] (1.60,2.67) -- (1.67,2.77) -- (1.75,2.86) -- (1.83,2.95) -- (1.92,3.03) -- (2.02,3.10) -- (2.12,3.16) -- (2.22,3.22) -- (2.33,3.27) -- (2.45,3.31) -- (2.56,3.34) -- (2.68,3.37) -- (2.80,3.38) -- (2.92,3.39) -- (3.04,3.38) -- (3.16,3.37) -- (3.28,3.35) -- (3.39,3.32) -- (3.50,3.28) -- (3.62,3.23) -- (3.72,3.18) -- (3.82,3.11) -- (3.92,3.04) -- (4.01,2.96) -- (4.10,2.88) -- (4.18,2.79) -- (4.25,2.69) -- (4.31,2.59) -- (4.37,2.49) -- (4.42,2.38) -- (4.45,2.26) -- (4.49,2.15) -- (4.51,2.03) -- (4.52,1.91) -- (4.53,1.79) -- (4.52,1.69);
+  \draw[kviiif stream] (1.50,2.70) -- (1.51,2.82) -- (1.53,2.94) -- (1.56,3.05) -- (1.59,3.17) -- (1.64,3.28) -- (1.69,3.39) -- (1.75,3.49) -- (1.82,3.59) -- (1.89,3.69) -- (1.97,3.78) -- (2.06,3.86) -- (2.15,3.94) -- (2.24,4.01);
+  \draw[kviiif stream] (1.40,2.67) -- (1.35,2.78) -- (1.30,2.89) -- (1.26,3.00) -- (1.22,3.12) -- (1.19,3.23) -- (1.16,3.35) -- (1.14,3.47) -- (1.13,3.59) -- (1.12,3.71) -- (1.11,3.83) -- (1.12,3.95) -- (1.12,4.01);
+  \draw[kviiif stream] (1.33,2.60) -- (1.22,2.66) -- (1.12,2.73) -- (1.02,2.79) -- (0.92,2.86) -- (0.82,2.92) -- (0.72,2.99) -- (0.63,3.06) -- (0.53,3.14) -- (0.44,3.21) -- (0.34,3.28) -- (0.25,3.36) -- (0.16,3.44) -- (0.07,3.52) -- (-0.01,3.58);
+  \draw[kviiif stream] (1.30,2.50) -- (1.18,2.50) -- (1.06,2.49) -- (0.94,2.48) -- (0.82,2.47) -- (0.70,2.45) -- (0.58,2.44) -- (0.46,2.42) -- (0.35,2.40) -- (0.23,2.37) -- (0.11,2.34) -- (-0.00,2.31);
+  \draw[kviiif stream] (1.33,2.40) -- (1.23,2.33) -- (1.13,2.26) -- (1.04,2.18) -- (0.95,2.10) -- (0.87,2.01) -- (0.79,1.92) -- (0.72,1.83) -- (0.65,1.73) -- (0.59,1.62) -- (0.54,1.52) -- (0.49,1.41) -- (0.44,1.30) -- (0.40,1.18) -- (0.37,1.07) -- (0.35,0.95) -- (0.33,0.83) -- (0.32,0.71) -- (0.31,0.59) -- (0.31,0.47) -- (0.32,0.35) -- (0.33,0.23) -- (0.35,0.11) -- (0.38,-0.00);
+  \draw[kviiif stream] (1.40,2.33) -- (1.35,2.22) -- (1.31,2.10) -- (1.28,1.99) -- (1.25,1.87) -- (1.24,1.75) -- (1.23,1.63) -- (1.23,1.51) -- (1.24,1.39) -- (1.26,1.28) -- (1.29,1.16) -- (1.32,1.04) -- (1.37,0.93) -- (1.42,0.83) -- (1.48,0.72) -- (1.55,0.62) -- (1.62,0.53) -- (1.70,0.44) -- (1.79,0.36) -- (1.89,0.28) -- (1.98,0.22) -- (2.09,0.15) -- (2.20,0.10) -- (2.31,0.06) -- (2.42,0.02) -- (2.52,-0.00);
+  \draw[kviiif stream] (1.50,2.30) -- (1.51,2.18) -- (1.53,2.06) -- (1.56,1.95) -- (1.60,1.83) -- (1.64,1.72) -- (1.70,1.61) -- (1.76,1.51) -- (1.83,1.41) -- (1.90,1.32) -- (1.99,1.23) -- (2.08,1.15) -- (2.17,1.08) -- (2.27,1.01) -- (2.37,0.95) -- (2.48,0.90) -- (2.59,0.86) -- (2.71,0.82) -- (2.82,0.79) -- (2.94,0.77) -- (3.06,0.76) -- (3.18,0.76) -- (3.30,0.77) -- (3.42,0.79) -- (3.54,0.81) -- (3.65,0.85) -- (3.77,0.89) -- (3.87,0.94) -- (3.98,1.00) -- (4.08,1.07) -- (4.18,1.14) -- (4.26,1.22) -- (4.35,1.30) -- (4.39,1.35);
+  \draw[kviiif stream] (1.60,2.33) -- (1.67,2.23) -- (1.74,2.13) -- (1.82,2.04) -- (1.90,1.95) -- (1.99,1.87) -- (2.08,1.79) -- (2.17,1.72) -- (2.27,1.65) -- (2.37,1.59) -- (2.48,1.53) -- (2.58,1.48) -- (2.70,1.43) -- (2.81,1.39) -- (2.92,1.35) -- (3.04,1.33) -- (3.16,1.30) -- (3.28,1.29) -- (3.40,1.28) -- (3.52,1.28) -- (3.64,1.28) -- (3.76,1.29) -- (3.87,1.30) -- (3.99,1.33) -- (4.11,1.35) -- (4.22,1.39) -- (4.32,1.42);
+  \draw[kviiif stream] (1.67,2.40) -- (1.78,2.34) -- (1.88,2.29) -- (1.99,2.23) -- (2.10,2.18) -- (2.21,2.13) -- (2.32,2.08) -- (2.43,2.03) -- (2.54,1.99) -- (2.65,1.94) -- (2.76,1.90) -- (2.88,1.86) -- (2.99,1.82) -- (3.10,1.79) -- (3.22,1.75) -- (3.33,1.72) -- (3.45,1.69) -- (3.57,1.66) -- (3.68,1.63) -- (3.80,1.61) -- (3.92,1.59) -- (4.04,1.56) -- (4.16,1.54) -- (4.27,1.53) -- (4.31,1.52);
+}
+% 小さな場の図（下のことばを1行に）  \kviiifpanelS[設定]{F_x}{F_y}{図に足すもの}{下のことば}（1目もり 5 mm）
+\newcommand\kviiifpanelS[5][]{%
+  \begin{tikzpicture}[x=5mm, y=5mm, baseline=(current bounding box.north)]
+    \draw[kviiif frame, fill=white] (-2.6,-2.6) rectangle (2.6,2.6);
+    \draw[bkLine, line width=0.5pt] (-2.6,0) -- (2.6,0) (0,-2.6) -- (0,2.6);
+    \kviiiffield[pivot=mid, dot=0, #1]{#2}{#3}
+    #4
+    \node[kviiif lab, anchor=north] at (0,-2.85) {#5};
+  \end{tikzpicture}}
+\makeatother
+
+\bkchapter{8}{5}{ベクトル場}{\bklevel{4}}{ベクトル場}
+\bkmichishirube{4-10,4-13,6-1,6-4,7-6,7-7,8-1,8-4}{8-7,8-8,8-9,8-10,8-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 場所ごとの矢印を計算して、縮める割合をそろえた矢印の場の図にかける。
+\item \bklevel{4}\enspace 主役の6つの場・点電荷の場・勾配の場を見分け、流線（力線）の式を求められる。
+\item \bklevel{4}\enspace 座標の軸を回して見たときの矢印の成分を、回転行列の転置で計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\raggedright
+棒磁石の上に紙をのせ、砂鉄をうすくまいて、紙を指で軽くたたきます。すると、砂鉄は N 極から S 極へ向かう、たくさんの曲線の模様にならびます。\par\vspace{4pt}
+砂鉄の1つぶ1つぶは、小さな方位磁針のようなものです。この模様は、磁石のまわりの、どんなものをなぞっているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}
+\centering
+\begin{tikzpicture}[x=11mm, y=11mm]
+  \fill[bkYellow!10] (-3,-2) rectangle (3,2);
+  \begin{scope}[kviiif stream/.style={draw=bkInk!65, line width=1.3pt, dash pattern=on 1.1pt off 1.5pt}]
+    \clip (-3,-2) rectangle (3,2);
+    \kviiifdipole
+  \end{scope}
+  \draw[kviiif frame] (-3,-2) rectangle (3,2);
+  \kviiifmagnet{(-1.2,-0.3)}{2.4}{0.6}
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 棒磁石のまわりの砂鉄の模様（上から見たところ）}
+\end{minipage}
+\end{hatena}
+
+\noindent 8-1から8-4では、場所を決めると高さや温度が1つ決まる量を調べました。地図の上の1つの点に、1つの数がのっていました。
+
+ところが、風や水の流れ、電気や磁石の力は、場所ごとに\textbf{向きと大きさ}があります。天気予報の風の地図では、場所ごとに矢印が1本ずつかいてあります。4-10・4-13で学んだベクトル（矢印）が、空間のすべての点に1本ずつ置かれているのです。この章では、このような「矢印の地図」の読み方とかき方を学びます。8-7から8-11では、この矢印の地図を、道にそってたしたり（線積分）、面を通る量を数えたり（面積分）、わき出し（発散）やうず（回転）を調べたりします。この章は、その全部の出発点です。図をかいて、矢印を1本ずつ計算していけば、必ずわかるようになります。1回でわからなくても大丈夫です。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[方位磁針で、磁石のまわりの矢印の地図を作ろう]
+\textbf{用意するもの}\quad 棒磁石、方位磁針（小さいもの）、方眼紙、えんぴつ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 方眼紙のまん中に棒磁石を置き、まわりをえんぴつでなぞる。
+\item 方眼の線が交わる点に、1つおきに方位磁針を置き、針の N 極（赤い先）が向いた向きに、短い矢印をかく。
+\item 全部の点にかいたら、矢印を、向きにそってなめらかにつないでみよう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=10mm, y=10mm]
+  \fill[bkBlue!5] (-3.0,-1.9) rectangle (3.0,1.9);
+  \draw[kviiif gridline, step=0.6] (-3.0,-1.8) grid (3.0,1.8);
+  \draw[kviiif frame] (-3.0,-1.9) rectangle (3.0,1.9);
+  \kviiifmagnet{(-1.2,-0.3)}{2.4}{0.6}
+  \kviiifneedle{(-2.4,1.2)}{133.7}
+  \kviiifneedle{(-1.2,1.2)}{91.1}
+  \kviiifneedle{(0,1.2)}{0}
+  \kviiifneedle{(1.2,1.2)}{-91.1}
+  \kviiifneedle{(2.4,1.2)}{-133.7}
+  \kviiifneedle{(-2.4,0)}{180}
+  \kviiifneedle{(2.4,0)}{180}
+  \kviiifneedle{(-2.4,-1.2)}{-133.7}
+  \kviiifneedle{(-1.2,-1.2)}{-91.1}
+  \kviiifneedle{(0,-1.2)}{0}
+  \kviiifneedle{(1.2,-1.2)}{91.1}
+  \kviiifneedle{(2.4,-1.2)}{133.7}
+\end{tikzpicture}
+\end{bkfigure}
+\end{yattemiyou}
+
+\noindent 方位磁針の N 極（赤い先）は、磁石の N 極から遠ざかり、S 極へ近づく向きを向きます。磁石の上の側では右向き、下の側でも右向き、両はしの外では左向きです。ばらばらに見えた12本の針が、③でつなぐと、N 極から出て S 極へ入る曲線になります。\bkhatenaref の砂鉄の模様と同じ形です。
+
+\begin{omoidasou}
+\bkrecall{4-10}{ベクトル（矢印）は向きと大きさを持つ。成分で $(a_x,\ a_y)$ と書き、大きさは $\sqrt{a_x^2+a_y^2}$（三平方）。}
+\bkrecall{4-13}{3次元のベクトル $(a_x,\ a_y,\ a_z)$。$x$・$y$・$z$ の向きの長さ1の矢印 $\vec e_x$、$\vec e_y$、$\vec e_z$ で、$a_x\vec e_x+a_y\vec e_y+a_z\vec e_z$ とも書く。}
+\bkrecall{6-1}{傾きの場：方眼の点ごとに、ルールが決める傾きの短い線をかいた図。線の向きにそって進むと、解のグラフがかける。}
+\bkrecall{6-4}{変数分離：$\dfrac{\dd y}{\dd x}$ の式を、$y$ だけの式 $\dd y$＝$x$ だけの式 $\dd x$ の形にして、両辺を積分する。}
+\bkrecall{7-6}{回転行列 $R(\theta)$ は、1行めが $(\cos\theta,\ -\sin\theta)$、2行めが $(\sin\theta,\ \cos\theta)$。軸を $\theta$ 回して見ると、成分は $R(\theta)^{\mathsf T}\vec x$ になる。}
+\bkrecall{8-4}{勾配 $\mathrm{grad}\,h=\Bigl(\dfrac{\partial h}{\partial x},\ \dfrac{\partial h}{\partial y}\Bigr)$。いちばん急な上りの向きで、等高線と直角。ボールは $-\mathrm{grad}\,h$ の向きへ転がる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{矢印の地図を読む}{\bklevel{3}}
+
+\bksubsection{1}{場所ごとに、矢印が1本：ベクトル場}
+
+\leavevmode\label{bk:8-5:ba}同じ海べの町の、同じ時刻の2つの地図をくらべます。左は気温の地図、右は風の地図です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \fill[bkYellow!10] (0,0) rectangle (54,34);
+    \fill[bkBlue!12] (0,0) -- (54,0) -- (54,4) .. controls (36,7) and (18,2) .. (0,5) -- cycle;
+    \draw[kviiif frame] (0,0) rectangle (54,34);
+    \foreach \kviiifx/\kviiify/\kviiift in {9/27/26,27/27/27,45/27/27,9/18/25,27/18/26,45/18/26,9/10/23,27/10/24,45/10/24} {\node[font=\sffamily\small, text=bkInk] at (\kviiifx,\kviiify) {\kviiift};}
+    \node[kviiif lab, anchor=north] at (27,-1.5) {気温（℃）：場所ごとに数が1つ};
+  \end{scope}
+  \begin{scope}[shift={(66,0)}]
+    \fill[bkYellow!10] (0,0) rectangle (54,34);
+    \fill[bkBlue!12] (0,0) -- (54,0) -- (54,4) .. controls (36,7) and (18,2) .. (0,5) -- cycle;
+    \draw[kviiif frame] (0,0) rectangle (54,34);
+    \foreach \kviiifx/\kviiify/\kviiifu/\kviiifv in {9/26/1/5,27/26/0/5,45/26/-1/5,9/17/1/6,27/17/0/6,45/17/-1/6,9/8/1/7,27/8/0/7,45/8/-1/7} {
+      \fill[kviiif pt] (\kviiifx,\kviiify) circle[radius=0.42mm];
+      \draw[kviiif field, line width=1.1pt] (\kviiifx,\kviiify) -- ++(\kviiifu,\kviiifv);}
+    \node[kviiif lab, anchor=north] at (27,-1.5) {風：場所ごとに矢印が1本};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ町の、夏の昼の気温の地図と風の地図（模式図。下の青い所は海で、海から陸へ海風がふく）。風の矢印の根もとの点が、その風をはかった場所。}
+\label{bk:8-5:fig-kion}
+\end{bkfigure}
+気温の地図では、場所 $(x,\ y)$ を決めると、気温という\textbf{数が1つ}決まります。8-1の山の高さと同じで、場所を入れると数が出てくる関数 $T(x,\ y)$ です。風の地図では、場所を決めると、風の\textbf{矢印が1本}決まります。場所を入れると矢印が出てくる関数です。
+\kviiifwaku{$\vec F(x,\ y)=\bigl(F_x(x,\ y),\ F_y(x,\ y)\bigr)$\\[3pt]{\small 場所 $(x,\ y)$ を入れると、矢印の2つの成分 $F_x$、$F_y$ が出てくる}}
+このように、場所ごとに矢印（ベクトル）が1本ずつ決まっているものを、\textbf{ベクトル場}（べくとるば）といいます。\bkidx{べくとるば}{ベクトル場}これに対して、気温や高さのように、場所ごとに数（スカラー）が1つずつ決まっているものを、\textbf{スカラー場}といいます。\bkidx{すからーば}{スカラー場}「場」は、空間に広がっているものを表すことばです。
+
+\noindent ベクトル場の式では、入れるもの（場所）も出てくるもの（矢印）も、2つの数の組です。取りちがえないように、場所は $(x,\ y)$、矢印の成分は大文字に下つきで $F_x$、$F_y$ と書きます。たとえば $\vec F(x,\ y)=(-y,\ x)$ なら、場所 $(1,\ 2)$ の矢印は $\vec F(1,\ 2)=(-2,\ 1)$ です。
+
+\bksubsection{2}{矢印は、縮めてかく}
+
+\leavevmode\label{bk:8-5:chijimi}風の速さ \qty{8}{m/s} を、地図の上に \qty{8}{m} の矢印でかくことはできません。矢印の場の図では、すべての矢印を\textbf{同じ割合で縮めて}かきます。図\ref{bk:8-5:fig-kion} の風の地図では、\qty{1}{m/s} を \qty{1}{mm} にしています。だから、矢印の長さをくらべれば、どこの風が強いかがわかります。どの割合で縮めたかは、図のすみに\textbf{物差しの矢印}（凡例）をかいて示します。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{1つの図の中では、縮める割合を同じにする。}\par\nobreak\noindent 割合を変えると、長さで強さをくらべられなくなります。
+\item \textbf{いちばん長い矢印が、となりの点にとどかないようにする。}\par\nobreak\noindent 矢印が重なると読めません。点の間かくの8割くらいまでにします。
+\item \textbf{矢印の根もとが、その矢印の場所。}\par\nobreak\noindent この本の大きな図では、根もとに黒い点をうちます。小さな図では、矢印のまん中をその場所に置きます。
+\end{enumerate}
+
+\bksubsection{3}{主役の6つの場}
+
+\leavevmode\label{bk:8-5:shuyaku}この巻では、平面の6つのベクトル場を「主役の場」として、8-7・8-9・8-10・8-11でくり返し使います。どれも、$x$ と $y$ の簡単な式です。
+\begin{bkfigure}
+\begin{tabular}{@{}c@{\hspace{9mm}}c@{\hspace{9mm}}c@{}}
+\kviiifpanelS[scale=0.28]{\x}{\y}{}{（ア）広がる $(x,\ y)$} &
+\kviiifpanelS[scale=0.28]{-\x}{-\y}{}{（イ）集まる $(-x,\ -y)$} &
+\kviiifpanelS[scale=0.56]{1}{0}{}{（ウ）そろった $(1,\ 0)$} \\[1mm]
+\kviiifpanelS[scale=0.28]{-\y}{\x}{}{（エ）うず $(-y,\ x)$} &
+\kviiifpanelS[scale=0.28]{\y}{0}{}{（オ）ずれ $(y,\ 0)$} &
+\kviiifpanelS[scale=0.28]{\x}{0}{}{（カ）側溝 $(x,\ 0)$} \\
+\end{tabular}
+\bkfigcaption{主役の6つの場（$-2\leqq x\leqq2$、$-2\leqq y\leqq2$）。矢印のまん中がその場所。どの図も同じ割合で縮めてある（（ウ）だけは2倍の割合）。白い丸は、矢印の長さが0の場所。}
+\label{bk:8-5:fig-6}
+\end{bkfigure}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=44mm] Q[l,m,wd=46mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\small}}
+場 & ようす & 身近な例 \\
+（ア）$(x,\ y)$ & 外へ。遠いほど速い & 水をそそぐ口のまわり \\
+（イ）$(-x,\ -y)$ & 中へ。遠いほど速い & ふろの栓をぬいた排水口 \\
+（ウ）$(1,\ 0)$ & どこでも同じ矢印 & 広い川のまん中、一様な風 \\
+（エ）$(-y,\ x)$ & 原点のまわりを左回り & 回るターンテーブルの上 \\
+（オ）$(y,\ 0)$ & 上は右へ、下は左へ & 重ねたトランプをずらす \\
+（カ）$(x,\ 0)$ & 右へ行くほど速い & 雨水が流れこむ側溝 \\
+\end{bktable}
+\bktabcaption{主役の6つの場のようす。（エ）は、原点からのきょりに比例する速さで、すべてがいっしょに回る流れ（かたい板の回転と同じ）。}
+\end{bkcenter}
+（ア）と（エ）は、どちらも原点から遠いほど矢印が長い場ですが、向きがちがいます。（ウ）と（カ）は、どちらも横向きの矢印ですが、（カ）は場所で長さが変わります。この見た目のちがいを、数で見分ける道具が、8-9の発散（わき出し）と8-10の回転（うず）です。たとえば（カ）の側溝は、矢印がみな同じ向きなのに、下流ほど水がふえる「わき出し」があり、（オ）のずれは、まっすぐ流れているのに、小さな風車を置くと回ります。
+
+\bksubsection{4}{矢印をつなぐ：流線と力線}
+
+\leavevmode\label{bk:8-5:ryusen}やってみようの③のように、矢印の向きにそって、なめらかにつないだ線をかきます。どの点でも、線の向き（接線の向き）が、その点の矢印の向きになっている線です。水や風の流れなら\textbf{流線}（りゅうせん）、電場や磁場なら\textbf{力線}（りきせん。電気力線・磁力線）といいます。\bkidx{りゅうせん}{流線}\bkidx{りきせん}{力線}6-1の「傾きの場の短い線にそって進むと、解のグラフになる」と同じ考えです。
+
+\noindent \bkhatenaref の答えです。砂鉄の1つぶ1つぶは、その場所の磁場の向きにならびます。だから、砂鉄の模様は、磁石のまわりの磁場（ベクトル場）の\textbf{磁力線}をなぞっているのです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=13mm, y=13mm]
+  \fill[white] (-3,-2) rectangle (3,2);
+  \begin{scope}\clip (-3,-2) rectangle (3,2);
+    \kviiifdipole
+  \end{scope}
+  \draw[kviiif frame] (-3,-2) rectangle (3,2);
+  \kviiifmagnet{(-1.2,-0.3)}{2.4}{0.6}
+  \kviiifneedle{(0,1.2)}{0}
+  \kviiifneedle{(-2.4,1.2)}{133.7}
+  \kviiifneedle{(2.4,-1.2)}{133.7}
+\end{tikzpicture}
+\bkfigcaption{棒磁石のまわりの磁力線（むらさきの線。矢じりは磁場の向き）。方位磁針は、どこでも磁力線の向きを向く。磁力線は N 極から出て S 極に入り、たがいに交わらない。}
+\label{bk:8-5:fig-jiryoku}
+\end{bkfigure}
+流線や力線は、\textbf{たがいに交わりません}。1つの場所には矢印が1本しかないので、そこを通る線の向きも1つに決まるからです（交わってよいのは、矢印の長さが0の場所だけ）。また、線がこみあっている所ほど、場が強いことが多いです。磁石の極の近くで磁力線がこみあっているのは、そこで磁場が強いからです。
+
+\kviiifhead{池の流れ：8-9・8-11で使う場}
+もう1つ、この巻でくり返し使う場を見ておきます。広い池の水面の一部（\qty{6}{m}×\qty{4}{m}）で、点 S $(1.5,\ 2.5)$ の口から水がわき出し、点 K $(4.5,\ 1.5)$ の口に同じ量だけ吸いこまれています（1秒に、深さ\qty{1}{m}あたり\qty{4}{m^3}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=15mm, y=15mm]
+  \kviiifset{xmin=0.25, xmax=5.75, ymin=0.25, ymax=3.75, step=0.5, scale=0.2}
+  \fill[bkBlue!6] (0,0) rectangle (6,4);
+  \begin{scope}\clip (0,0) rectangle (6,4);
+    \begin{scope}[kviiif stream/.style={draw=bkPurple!70, line width=0.9pt, line cap=round, postaction={decorate},
+      decoration={markings, mark=at position 0.5 with {\arrow{Stealth[length=2.2mm, width=1.8mm]}}}}]
+      \kviiifpondlines
+    \end{scope}
+  \end{scope}
+  \kviiiffield{0.6366*((\x-1.5)/((\x-1.5)^2+(\y-2.5)^2)-(\x-4.5)/((\x-4.5)^2+(\y-1.5)^2))}{0.6366*((\y-2.5)/((\x-1.5)^2+(\y-2.5)^2)-(\y-1.5)/((\x-4.5)^2+(\y-1.5)^2))}
+  \draw[bkGray, line width=0.8pt] (0,0) rectangle (6,4);
+  \filldraw[fill=bkOrange, draw=bkInk, line width=0.5pt] (1.5,2.5) circle[radius=1.3mm];
+  \filldraw[fill=bkBlue!60, draw=bkInk, line width=0.5pt] (4.5,1.5) circle[radius=1.3mm];
+  \draw[bkGray, line width=0.6pt, shorten >=1.8mm] (1.5,4.12) -- (1.5,2.5);
+  \node[kviiif lab, anchor=south] at (1.5,4.12) {S（わき出し）};
+  \draw[bkGray, line width=0.6pt, shorten >=1.8mm] (6.12,1.5) -- (4.5,1.5);
+  \node[kviiif lab, anchor=west] at (6.12,1.5) {K（吸いこみ）};
+  \foreach \kviiift in {0,1,...,6} {\node[kviiif tick, anchor=north] at (\kviiift,-0.12) {$\kviiift$};}
+  \foreach \kviiift in {0,1,...,4} {\node[kviiif tick, anchor=east] at (-0.12,\kviiift) {$\kviiift$};}
+  \node[kviiif lab, anchor=west] at (6.15,-0.15) {$x$（m）};
+  \node[kviiif lab, anchor=south] at (0,4.15) {$y$（m）};
+  \kviiifkey{(6.25,3.6)}{1}{＝\qty{1}{m/s}}
+\end{tikzpicture}
+\bkfigcaption{池の流れ（矢印の根もとの点が、その場所。\qty{0.5}{m}ごと）。むらさきの線は流線で、S から出て K に入る。}
+\label{bk:8-5:fig-ike}
+\end{bkfigure}
+S の近くでは矢印が外向きに長く、K の近くでは内向きに長くなります。流線はどれも S から出て K に入り、たがいに交わりません。8-9では、矢印だけがわかっているときに、どこにわき出しや吸いこみがあるかを、数で見つけます。
+
+\Needspace{14\baselineskip}\bkstage{te}{手でわかる}{矢印を計算する・線の式を求める}{\bklevel{4}}
+
+\bksubsection{5}{表計算で、場の矢印を計算する}
+
+\leavevmode\label{bk:8-5:hyo}（エ）のうずの場 $\vec F=(-y,\ x)$ の矢印を、表計算で計算して図にかきます。A列に $x$、B列に $y$ を入れ、C列に $F_x$、D列に $F_y$、E列に矢印の大きさを計算します。
+\begin{bkcenter}
+\kviiiffx{C2}{=-B2}\par\vspace{1mm}
+\kviiiffx{D2}{=A2}\par\vspace{1mm}
+\kviiiffx{E2}{=SQRT(C2\^{}2+D2\^{}2)}\par\vspace{1mm}
+\bksheet{5}{18}{%
+1 & $x$ & $y$ & $F_x$ & $F_y$ & 大きさ \\
+2 & 1 & 0 & 0 & 1 & 1.000 \\
+3 & 1 & 1 & $-1$ & 1 & 1.414 \\
+4 & 0 & 1 & $-1$ & 0 & 1.000 \\
+5 & $-1$ & 0 & 0 & $-1$ & 1.000 \\
+6 & 2 & 0 & 0 & 2 & 2.000 \\
+7 & 2 & 2 & $-2$ & 2 & 2.828 \\}
+\bktabcaption{うずの場 $(-y,\ x)$ の矢印。2行めから下へコピーすれば、どの点でも計算できる。}
+\end{bkcenter}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+矢印の大きさ $\sqrt{(-y)^2+x^2}=\sqrt{x^2+y^2}$ は、原点からのきょりと同じです。だから、原点から2倍はなれると、矢印も2倍の長さになります。\par\vspace{4pt}
+また、矢印と、原点からその点への矢印 $(x,\ y)$ の内積は $x\times(-y)+y\times x=0$ なので、うずの矢印は、いつも原点からの向きと直角です（4-12）。だから、原点のまわりを回るのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\centering
+\begin{tikzpicture}[x=6.4mm, y=6.4mm]
+  \kviiifset{xmin=-3, xmax=3, ymin=-3, ymax=3, step=1, scale=0.22}
+  \kviiifframe[0.9]{-3}{3}{-3}{3}{-3,0,3}{-3,0,3}{$x$}{$y$}
+  \kviiiffield{-\y}{\x}
+  \kviiifkey{(-3.6,-5.4)}{1}{＝大きさ1}
+\end{tikzpicture}
+\bkfigcaption{うずの場 $(-y,\ x)$。原点は長さ0。}
+\label{bk:8-5:fig-uzu}
+\end{minipage}\par\vspace{4pt}
+
+\kviiifhead{Python で矢印の場をかく}
+Python の matplotlib には、矢印の場をかく関数 \texttt{quiver}（クイバー。「矢筒」という意味）があります。
+\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+import matplotlib.pyplot as plt
+x, y = np.meshgrid(np.arange(-3, 4), np.arange(-3, 4))  \# 格子の点
+Fx = -y    \# 矢印の x 成分
+Fy = x     \# 矢印の y 成分
+plt.quiver(x, y, Fx, Fy, angles='xy', scale\_units='xy', scale=4)
+plt.gca().set\_aspect('equal')
+plt.show()
+\end{bkcode}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{3行め}\par\nobreak\noindent \texttt{np.meshgrid} は、$x$ が $-3$〜3、$y$ が $-3$〜3 の格子の点（$7\times7=49$ 個）を作ります。
+\item \textbf{4〜5行め}\par\nobreak\noindent 49個の点の $F_x$、$F_y$ を、表計算のC列・D列と同じ式で、まとめて計算します。
+\item \textbf{6行め}\par\nobreak\noindent 矢印をかきます。\texttt{scale=4} は「大きさ4の矢印を、1目もりの長さにかく」、つまり $\frac14$ に縮めるという意味です。根もとはその点です。
+\end{enumerate}
+実行すると、図\ref{bk:8-5:fig-uzu} と同じ形の矢印の図が、別の窓に出ます。4〜5行めの式を変えれば、どんなベクトル場でもかけます。
+
+\bksubsection{6}{3次元のベクトル場：点電荷と地球}
+
+\leavevmode\label{bk:8-5:3d}空間のベクトル場は、場所 $(x,\ y,\ z)$ を入れると、3つの成分の矢印が出てくる関数です。
+\kviiifline{$\vec F(x,\ y,\ z)=\bigl(F_x,\ F_y,\ F_z\bigr)=F_x\vec e_x+F_y\vec e_y+F_z\vec e_z$}
+$\vec e_x$、$\vec e_y$、$\vec e_z$ は、$x$・$y$・$z$ の向きの長さ1の矢印です（4-13）。$\vec i$、$\vec j$、$\vec k$ と書く本もありますが、同じものです。
+
+\kviiifhead{① 点電荷のまわりの電場}
+原点に電荷 $Q$〔C〕を置くと、そのまわりの点の電場は、原点からまっすぐ外向き（$Q$ が正のとき）です。大きさは、高校物理で学ぶ次の式です（$r$ は原点からのきょり、$k=\num{8.99e9}$\,N·m²/C²）。
+\kviiifline{$E=\dfrac{kQ}{r^2}$〔N/C〕}
+向きの矢印は、原点からその点への矢印 $(x,\ y,\ z)$ を、その長さ $r$ でわって長さ1にしたものです。だから、
+\kviiifwaku{$\vec E(x,\ y,\ z)=\dfrac{kQ}{r^2}\cdot\dfrac{(x,\ y,\ z)}{r}=\dfrac{kQ}{r^3}\,(x,\ y,\ z)$\\[4pt]$r=\sqrt{x^2+y^2+z^2}$}
+です。大きさは、きょりの2乗に反比例します。$Q=\num{1e-9}$\,C（1ナノクーロン）で計算すると、次のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=34mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm]}, rowsep=1.5pt, column{1}={font=\sffamily\small}}
+きょり $r$（m） & 0.1 & 0.2 & 0.3 & 0.5 & 1 \\
+大きさ $E$（N/C） & 899 & 225 & 99.9 & 36.0 & 8.99 \\
+\end{bktable}
+\bktabcaption{点電荷（\num{1e-9}\,C）の電場の大きさ。きょりが2倍になると $\frac14$、3倍になると $\frac19$。}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}[x=8mm, y=8mm]
+  \kviiifset{xmin=-3, xmax=3, ymin=-3, ymax=3, step=1, scale=0.85, skip={\x*\x+\y*\y<0.1}}
+  \kviiifframe[0.7]{-3}{3}{-3}{3}{-3,-2,-1,0,1,2,3}{-3,-2,-1,0,1,2,3}{$x$}{$y$}
+  \foreach \kviiifa in {0,30,...,330} {\kviiifstream{\x/pow(\x*\x+\y*\y,1.5)}{\y/pow(\x*\x+\y*\y,1.5)}{{0.3*cos(\kviiifa)},{0.3*sin(\kviiifa)}}{30}{0.1}}
+  \kviiiffield{\x/pow(\x*\x+\y*\y,1.5)}{\y/pow(\x*\x+\y*\y,1.5)}
+  \filldraw[fill=bkOrange, draw=bkInk, line width=0.5pt] (0,0) circle[radius=1.6mm];
+  \node[font=\sffamily\bfseries\footnotesize, text=white] at (0,0) {＋};
+\end{tikzpicture}
+\bkfigcaption{正の点電荷のまわりの電場を、$z=0$ の平らな面で切った図。紺の矢印は電場（$\frac{1}{r^2}$ の大きさで、遠くではとても短くなる）、むらさきの線は電気力線。}
+\label{bk:8-5:fig-ten}
+\end{bkfigure}
+図\ref{bk:8-5:fig-ten} のように、$\frac{1}{r^2}$ の場は、遠くで矢印がとても短くなり、図だけでは強さがくらべにくくなります。そのときは、表で大きさを見ます。電気力線は、電荷から放射状にまっすぐ出ていき、遠くほど間がまばらになります（8-8では、電気力線の本数を「流束」として数えます）。
+
+\kviiifhead{② 地球の重力の場}
+地球（質量 $M$）のまわりの物にはたらく重力は、地球の中心へ向かい、1\,kg あたりの大きさ $g$ は中心からのきょり $r$ の2乗に反比例します。点電荷の場と同じ形で、向きが反対です。
+\kviiifline{$\vec g=-\dfrac{GM}{r^3}\,(x,\ y,\ z)$}
+地面（$r=R=\num{6371}$\,km）では $g=GM\div R^2=\qty{9.82}{m/s^2}$ です（地球の自転の効果を入れない値）。中心からのきょりが $r$ の所では、$R\div r$ を2乗して9.82にかければ、$g$ が出ます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=58mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+場所 & 中心からのきょり & $g$（m/s²） \\
+地面 & \num{6371}\,km & 9.82 \\
+国際宇宙ステーション（高さ約\qty{400}{km}） & \num{6771}\,km & 8.69 \\
+地面から \num{6371}\,km の高さ & \num{12742}\,km & 2.46 \\
+静止衛星（高さ約\num{35786}\,km） & \num{42157}\,km & 0.224 \\
+\end{bktable}
+\bktabcaption{地球の重力の場の大きさ。$9.82\times\bigl(\frac{6371}{r}\bigr)^2$ で計算した。宇宙ステーションの中で物がうくのは、重力がないからではなく、ステーションといっしょに落ち続けているから（物理 力-2）。}
+\end{bkcenter}
+地面の近くのせまい範囲では、$r$ がほとんど変わらないので、重力の場は $\vec g=(0,\ 0,\ -9.8)$ の一様な場（3次元の（ウ））とみなせます。
+
+\bksubsection{7}{流線の式を求める}
+
+\leavevmode\label{bk:8-5:ryusenshiki}流線は、どの点でも、向きがその点の矢印の向きになっている線でした（④）。矢印 $(F_x,\ F_y)$ の傾きは $\dfrac{F_y}{F_x}$ なので、流線を $y$ を $x$ の関数とみると、次の微分方程式になります（6-1の傾きの場と同じ）。
+\kviiifwaku{$\dfrac{\dd y}{\dd x}=\dfrac{F_y}{F_x}$}
+（エ）のうず $\vec F=(-y,\ x)$ で解きます。6-4の変数分離です。
+\begin{bkhenkei}[0.46]
+\frac{\dd y}{\dd x}=\frac{x}{-y} & 流線の式に $F_x=-y$、$F_y=x$ を入れた \\
+y\,\dd y=-x\,\dd x & 両辺に $-y\,\dd x$ をかけて、$y$ と $x$ を分けた \\
+\frac{y^2}{2}=-\frac{x^2}{2}+C & 両辺を積分した（$C$ は定数） \\
+x^2+y^2=2C & 両辺に2をかけて、$x^2$ を左へうつした \\
+\end{bkhenkei}
+$x^2+y^2$ が一定、つまり原点を中心とする円です（$2C$ は半径の2乗）。点 $(3,\ 4)$ を通る流線なら、$3^2+4^2=25$ で、半径5の円です。うずの流線は、図\ref{bk:8-5:fig-6} の（エ）で見たとおり、ぐるっと1周して元にもどる、閉じた線です。
+
+\noindent （ア）の広がる場 $\vec F=(x,\ y)$ では、$\dfrac{\dd y}{\dd x}=\dfrac{y}{x}$ です。$\dfrac{\dd y}{y}=\dfrac{\dd x}{x}$ と分けて積分すると、$\ln|y|=\ln|x|+C$ で、$y=ax$（$a$ は定数）。原点を通る直線で、原点から放射状に出ていきます。（オ）のずれ $(y,\ 0)$ や（カ）の側溝 $(x,\ 0)$ では、$F_y=0$ なので $\dfrac{\dd y}{\dd x}=0$、流線は横向きの直線 $y=$一定です。
+\begin{seikaku}
+流線は、ある時刻の矢印の場をつないだ線です。川や風の流れが時間で変わらないなら、水のつぶや木の葉は流線にそって動きます。でも、流れが時間で変わる（たとえば、風の向きがだんだん変わる）と、木の葉が実際に通った道（道すじ）は、ある時刻の流線とはちがう線になります。この巻では、とくにことわらないかぎり、時間で変わらない場（定常な場）を考えます。また、流線の式を $\dfrac{\dd x}{F_x}=\dfrac{\dd y}{F_y}$ の形で書く本もあります（$F_x=0$ の所でも使える書き方です）。
+\end{seikaku}
+
+\bksubsection{8}{軸を回して見ても、矢印は同じ}
+
+\leavevmode\label{bk:8-5:kaiten}ドローンが、機首を東から左回りに $30°$ の向きに向けて飛んでいます。地面に固定した軸（$x$ が東、$y$ が北）で見ると、風は $(3,\ 4)$〔m/s〕です。ドローンの軸（$x'$ が機首の向き、$y'$ が機体の左の向き）で見ると、風の成分はいくつでしょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=11mm, y=11mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-0.4,0) -- (4.8,0) node[kviiif lab, anchor=west] {$x$（東）};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,-0.4) -- (0,4.6) node[kviiif lab, anchor=south] {$y$（北）};
+  \draw[bkOrange!85!black, line width=0.9pt, dash pattern=on 4pt off 1.5pt, -{Stealth[length=2.2mm]}] (0,0) -- (30:5.2) node[kviiif lab, anchor=west, text=bkOrange!70!black] {$x'$（機首）};
+  \draw[bkOrange!85!black, line width=0.9pt, dash pattern=on 4pt off 1.5pt, -{Stealth[length=2.2mm]}] (0,0) -- (120:3.2) node[kviiif lab, anchor=south east, text=bkOrange!70!black] {$y'$（左）};
+  \draw[kviiif field, line width=1.6pt, -{Stealth[length=3mm]}] (0,0) -- (3,4);
+  \node[kviiif lab, anchor=south west] at (3.05,4.0) {風 $\vec v$};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (3,4) -- (3,0);
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (3,4) -- ({4.598*cos(30)},{4.598*sin(30)});
+  \node[kviiif lab, anchor=north] at (3,-0.12) {3};
+  \node[kviiif lab, anchor=north west, text=bkOrange!70!black] at ({4.598*cos(30)+0.05},{4.598*sin(30)-0.05}) {4.60};
+  \draw[bkInk, line width=0.5pt] (1.2,0) arc (0:30:1.2);
+  \node[kviiif lab] at (15:1.5) {$30°$};
+\end{tikzpicture}
+\bkfigcaption{同じ風の矢印（紺）を、地面の軸（黒）とドローンの軸（オレンジの点線）で見る。矢印は同じでも、成分（矢印の影の長さ）は軸によってちがう。}
+\label{bk:8-5:fig-drone}
+\end{bkfigure}
+7-6で、軸を $\theta$ 回して見ると、成分は $R(\theta)^{\mathsf T}\vec v$ になると学びました（回転行列の転置は、逆に回す行列）。
+\kviiifline{$\begin{pmatrix}v_{x'}\\v_{y'}\end{pmatrix}=R(30°)^{\mathsf T}\begin{pmatrix}3\\4\end{pmatrix}=\begin{pmatrix}\cos30°&\sin30°\\-\sin30°&\cos30°\end{pmatrix}\begin{pmatrix}3\\4\end{pmatrix}$}
+\kviiifline{$v_{x'}=3\times0.866+4\times0.5=4.598$}
+\kviiifline{$v_{y'}=-3\times0.5+4\times0.866=1.964$}
+ドローンから見ると、風は機首の向きに \qty{4.60}{m/s}、左向きに \qty{1.96}{m/s} の成分を持ちます（後ろから押される、追い風ぎみの風）。大きさは、どちらの軸で計算しても同じです。
+\kviiifline{$\sqrt{4.598^2+1.964^2}=5.00,\qquad\sqrt{3^2+4^2}=5$}
+\kviiifwaku{ベクトル場の矢印そのものは、軸の取り方によらない\\[3pt]軸を回すと、成分だけが $R^{\mathsf T}$ で変わる\\[3pt]（大きさは変わらない）}
+3次元でも同じで、7-7の3次元の回転行列 $R$ を使って $R^{\mathsf T}\vec v$ です。電場や風の「場」は、私たちがどう軸を決めるかとは関係なく、空間にある矢印です。だから、計算しやすい軸を自由に選べます（8-8・8-11で、対称性に合わせて軸や面を選ぶのは、このためです）。
+
+\bksubsection{9}{勾配の場と、そうでない場}
+
+\leavevmode\label{bk:8-5:koubai}8-4で、主役の山の点ごとに、ボールが転がる向き $-\mathrm{grad}\,h=(0.02x,\ 0.04y)$ をかきました。これも、場所ごとに矢印が1本決まるので、ベクトル場です。重力（$-\mathrm{grad}\,U$）、電場（$-\mathrm{grad}\,\phi$）、熱の流れ（$-k\,\mathrm{grad}\,T$）も同じで、ある数の勾配で書けるベクトル場です。このような場の矢印は、いつも等高線（等値面）と直角です。
+
+\noindent では、（エ）のうずの場 $(-y,\ x)$ は、ある山 $h$ の $-\mathrm{grad}\,h$ になっているでしょうか。もしそうなら、矢印にそって進むと、いつも下り坂を下ることになります。ところが、うずの流線は円で、1周すると元の場所にもどります。下り続けて元の高さにもどることはできないので、うずの場は、どんな山の $-\mathrm{grad}$ にもなりません。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[l,m,wd=74mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+場 & 勾配で書けるか \\
+（ア）$(x,\ y)$ & 書ける：$h=-\dfrac{x^2+y^2}{2}$ の $-\mathrm{grad}\,h$ \\
+（ウ）$(1,\ 0)$ & 書ける：$h=-x$ の $-\mathrm{grad}\,h$ \\
+（エ）$(-y,\ x)$ & 書けない：流線が閉じている（1周してもどる） \\
+主役の山の $-\mathrm{grad}\,h$ & 書ける（もとの山 $h$ がある） \\
+\end{bktable}
+\bktabcaption{勾配で書けるベクトル場と、書けない場の例。すきまのない広がりの中なら、回転 rot が0かどうかで、勾配で書けるかを見分けられる（8-10）。}
+\end{bkcenter}
+勾配で書ける力の場では、物を動かしてもとの場所にもどすと、力がした仕事の合計が0になります（8-7）。物理 力-4で学んだ「保存力」です。
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+空間の各点 $\symbf{r}=(x,y,z)$ にベクトル $\symbf{A}(\symbf{r})=A_x\symbf{i}+A_y\symbf{j}+A_z\symbf{k}$ が対応しているとき、$\symbf{A}$ をベクトル場という。曲線上の各点で接線がその点の $\symbf{A}$ に平行であるような曲線を、$\symbf{A}$ の流線（力線）といい、$\dfrac{dx}{A_x}=\dfrac{dy}{A_y}=\dfrac{dz}{A_z}$ をみたす。
+\end{bkhonbun}
+\bkyaku{太字の $\symbf{r}$ は場所を表す矢印（原点からその点への矢印）、太字の $\symbf{A}$ はこの本の $\vec F$ のようなベクトル場。$\symbf{i}$、$\symbf{j}$、$\symbf{k}$ は $\vec e_x$、$\vec e_y$、$\vec e_z$（⑥）。「対応している」は「場所を入れると矢印が出てくる」。最後の式は、⑦の $\dfrac{\dd y}{\dd x}=\dfrac{F_y}{F_x}$ を3次元にした形（せいかくに言うと）。立てない $d$ は、この本の $\dd$ と同じ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[9.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{ベクトル場}場所を入れると矢印：$\vec F=(F_x,\ F_y)$\\[4pt]
+\tsl{スカラー場}場所を入れると数：気温 $T$、高さ $h$\\[4pt]
+\tsl{矢印のかき方}同じ割合で縮める。凡例をかく。根もとがその場所\\[4pt]
+\tsl{流線・力線}矢印をつないだ線。$\dfrac{\dd y}{\dd x}=\dfrac{F_y}{F_x}$。交わらない\\[4pt]
+\tsl{点電荷・重力}大きさは $\dfrac{1}{r^2}$ に比例。電場は外向き、重力は内向き\\[4pt]
+\tsl{軸を回す}矢印は同じ。成分は $R^{\mathsf T}\vec F$ で変わる
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{ベクトル場}{場所ごとに矢印（ベクトル）が1本ずつ決まっているもの。風・水の流れ・電場・磁場・重力など。}
+\bkword{スカラー場}{場所ごとに数が1つずつ決まっているもの。気温・高さ・気圧・電位など。}
+\bkword{流線}{流れのベクトル場で、どの点でも向きがその点の矢印の向きになっている線。}
+\bkword{力線}{電場や磁場の流線。電気力線・磁力線。砂鉄の模様は磁力線をなぞる。}
+\bkword{一様な場}{どの場所でも同じ矢印の場（主役の（ウ）、地面の近くの重力）。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{\scalebox{0.86}{$\vec F(x,\ y)$}}{エフ・エックス・ワイ}{ベクトル場。場所 $(x,\ y)$ を入れると矢印 $(F_x,\ F_y)$ が出てくる}{vector field}{8-5}}{}
+
+\begin{column}{力線を考えたファラデー}
+イギリスのファラデー（1791〜1867年）は、磁石のまわりの砂鉄の模様を見て、磁石や電流のまわりの空間には「力の線」が広がっていると考えました。ファラデーは、数式をほとんど使わずに、力線の図で電気と磁気の実験を説明しました。その考えを、スコットランドのマクスウェルが1850〜1860年代に数式に直し、電気と磁気の基本の式にまとめました。それが、8-14で読むマクスウェル方程式です。矢印の場の図は、いまも、電気や流れを考えるときのいちばんの道具です。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[場の矢印を計算する]
+ベクトル場 $\vec F(x,\ y)=(x-y,\ x+y)$ の、点 $(1,\ 0)$、$(0,\ 1)$、$(1,\ 1)$ での矢印と、その大きさを求めましょう。\par
+\kangaekata ①・⑤。場所の $x$、$y$ を、$F_x=x-y$、$F_y=x+y$ に入れる。大きさは三平方。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 $(1,\ 0)$：$(1-0,\ 1+0)=(1,\ 1)$、大きさ $\sqrt{1+1}=1.41$\par
+\kviiifa $(0,\ 1)$：$(-1,\ 1)$、大きさ1.41\qquad $(1,\ 1)$：$(0,\ 2)$、大きさ2\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 $(1,\ 1)$ と1.41、$(-1,\ 1)$ と1.41、$(0,\ 2)$ と2
+\end{reidai}
+
+\begin{jibun}
+ベクトル場 $\vec F(x,\ y)=(x+y,\ y-x)$ の、点 $(1,\ 0)$、$(0,\ 1)$、$(1,\ 1)$ での矢印と、その大きさを求めましょう。
+\bkjans{$(1,\ 0)$ で $(1,\ -1)$、大きさ1.41。$(0,\ 1)$ で $(1,\ 1)$、大きさ1.41。$(1,\ 1)$ で $(2,\ 0)$、大きさ2。}
+\end{jibun}
+
+\begin{reidai}[うずの回る向きを調べる]
+$\vec F=(y,\ -x)$ の矢印を、点 $(1,\ 0)$、$(0,\ 1)$、$(-1,\ 0)$、$(0,\ -1)$ で求め、左回り・右回りのどちらのうずか答えましょう。\par
+\kangaekata ③・⑤。4つの点の矢印を順に見て、原点のまわりをどちら向きに回るかを読む。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 $(1,\ 0)$ で $(0,\ -1)$ 下向き、$(0,\ 1)$ で $(1,\ 0)$ 右向き\par
+\kviiifa $(-1,\ 0)$ で $(0,\ 1)$ 上向き、$(0,\ -1)$ で $(-1,\ 0)$ 左向き\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 右回り（時計回り）のうず。どの点でも大きさは1
+\end{reidai}
+
+\begin{jibun}
+$\vec F=(-2y,\ 2x)$ の矢印を、点 $(1,\ 0)$、$(0,\ 1)$、$(-1,\ 0)$、$(0,\ -1)$ で求め、左回り・右回りのどちらのうずか答えましょう。
+\bkjans{$(1,\ 0)$ で $(0,\ 2)$、$(0,\ 1)$ で $(-2,\ 0)$、$(-1,\ 0)$ で $(0,\ -2)$、$(0,\ -1)$ で $(2,\ 0)$。左回り（時計と反対回り）のうずで、大きさはどれも2。}
+\end{jibun}
+
+\begin{reidai}[点電荷の電場]
+原点に $Q=\num{1e-9}$\,C の点電荷があります。点 $(0.3,\ 0.4)$（m）での電場の大きさと成分を求めましょう（$k=\num{8.99e9}$\,N·m²/C²）。\par
+\kangaekata ⑥の①。きょり $r$ を三平方で求め、大きさ $kQ\div r^2$ に、向き $(x,\ y)\div r$ をかける。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 $r=\sqrt{0.3^2+0.4^2}=0.5$\par
+\kviiifa 大きさ $\num{8.99e9}\times\num{1e-9}\div0.5^2=8.99\div0.25=36.0$\par
+\kviiifa 向き $(0.3,\ 0.4)\div0.5=(0.6,\ 0.8)$、成分 $(36.0\times0.6,\ 36.0\times0.8)$\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 大きさ \qty{36.0}{N/C}、$\vec E=(21.6,\ 28.8)$〔N/C〕（外向き）
+\end{reidai}
+
+\begin{jibun}
+原点に $Q=\num{2e-9}$\,C の点電荷があります。点 $(0.6,\ 0.8)$（m）での電場の大きさと成分を求めましょう（$k=\num{8.99e9}$\,N·m²/C²）。
+\bkjans{$r=\sqrt{0.36+0.64}=1$。大きさ $\num{8.99e9}\times\num{2e-9}\div1^2=\qty{17.98}{N/C}$（約\qty{18.0}{N/C}）。向き $(0.6,\ 0.8)$ で、$\vec E=(10.8,\ 14.4)$〔N/C〕。}
+\end{jibun}
+
+\begin{reidai}[高い所の重力]
+地面での重力の大きさを \qty{9.82}{m/s^2}、地球の半径を \num{6371}\,km とします。国際宇宙ステーション（高さ \qty{400}{km}）での重力の大きさを求めましょう。\par
+\kangaekata ⑥の②。大きさは中心からのきょりの2乗に反比例。きょりは中心からはかる。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 中心からのきょり $r=\num{6371}+400=\num{6771}$（km）\par
+\kviiifa $9.82\times(6371\div6771)^2=9.82\times0.885=8.69$\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 約 \qty{8.69}{m/s^2}（地面の約89\%）
+\end{reidai}
+
+\begin{jibun}
+地面での重力の大きさを \qty{9.82}{m/s^2}、地球の半径を \num{6371}\,km とします。静止衛星（高さ \num{35786}\,km）での重力の大きさを求めましょう。
+\bkjans{$r=\num{6371}+\num{35786}=\num{42157}$（km）。$9.82\times(6371\div42157)^2=9.82\times0.0228=\qty{0.224}{m/s^2}$。}
+\end{jibun}
+
+\begin{reidai}[流線の式を求める]
+（ ）の点を通る流線の式を求めましょう。\par
+（1）$\vec F=(-y,\ x)$\quad $(3,\ 4)$\qquad（2）$\vec F=(x,\ y)$\quad $(2,\ 1)$\par
+\kangaekata ⑦。$\dfrac{\dd y}{\dd x}=\dfrac{F_y}{F_x}$ を変数分離で解き（6-4）、点を入れて定数を決める。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 （1）$y\,\dd y=-x\,\dd x$ より $x^2+y^2=C$。点を入れて $C=9+16=25$\par
+\kviiifa （2）$\dfrac{\dd y}{y}=\dfrac{\dd x}{x}$ より $y=ax$。点を入れて $1=2a$、$a=0.5$\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 （1）$x^2+y^2=25$（半径5の円）\par
+\kviiifa （2）$y=0.5x$（原点を通る直線）
+\end{reidai}
+
+\begin{jibun}
+（ ）の点を通る流線の式を求めましょう。\par
+（1）$\vec F=(y,\ -x)$\quad $(5,\ 12)$\qquad（2）$\vec F=(2x,\ 2y)$\quad $(1,\ 3)$
+\bkjans{（1）\nobreak $\dfrac{\dd y}{\dd x}=\dfrac{-x}{y}$、$y\,\dd y=-x\,\dd x$ より $x^2+y^2=C$。$C=25+144=169$ で、$x^2+y^2=169$（半径13の円）。（2）\nobreak $\dfrac{\dd y}{\dd x}=\dfrac{2y}{2x}=\dfrac{y}{x}$ より $y=ax$。$3=a$ で、$y=3x$。}
+\end{jibun}
+
+\begin{reidai}[回した軸で見た成分]
+地面の軸（$x$ が東、$y$ が北）で見た風が $(3,\ 4)$〔m/s〕です。東から左回りに $30°$ 回した軸で見た成分を求め、大きさが変わらないことを確かめましょう。\par
+\kangaekata ⑧。成分は $R(30°)^{\mathsf T}\vec v$。行と列の内積で計算する（7-3）。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 $v_{x'}=3\times0.866+4\times0.5=4.598$（1行め $(\cos30°,\ \sin30°)$ と）\par
+\kviiifa $v_{y'}=-3\times0.5+4\times0.866=1.964$（2行め $(-\sin30°,\ \cos30°)$ と）\par
+\kviiifa 大きさ $\sqrt{4.598^2+1.964^2}=5.00$、もとは $\sqrt{3^2+4^2}=5$\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 $(4.60,\ 1.96)$〔m/s〕。大きさはどちらも \qty{5}{m/s}
+\end{reidai}
+
+
+
+\begin{reidai}[勾配の場をかく]
+主役の山 $h=100-0.01x^2-0.02y^2$ の $-\mathrm{grad}\,h$ を、点 $(40,\ 0)$、$(0,\ 30)$、$(-20,\ 20)$ で求め、点 $(-20,\ 20)$ で等高線と直角であることを確かめましょう。\par
+\kangaekata ⑨・8-4。$-\mathrm{grad}\,h=(0.02x,\ 0.04y)$。等高線の向きは grad と直角（8-4 例題4）。\par
+\shiki\kviiifs\hangindent=2.6\zw\hangafter=1 $(40,\ 0)$ で $(0.8,\ 0)$、$(0,\ 30)$ で $(0,\ 1.2)$、$(-20,\ 20)$ で $(-0.4,\ 0.8)$\par
+\kviiifa $\mathrm{grad}\,h=(0.4,\ -0.8)$ と直角な等高線の向き $(-0.8,\ -0.4)$\par
+\kviiifa 内積 $(-0.4)\times(-0.8)+0.8\times(-0.4)=0.32-0.32=0$\par
+\kotae\kviiifs\hangindent=2.6\zw\hangafter=1 $(0.8,\ 0)$、$(0,\ 1.2)$、$(-0.4,\ 0.8)$。内積0で、等高線と直角
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiifEHJ}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+\raggedright 地面の軸で見た風が $(4,\ 2)$〔m/s〕です。東から左回りに $60°$ 回した軸で見た成分を求め、大きさが変わらないことを確かめましょう（$\cos60°=0.5$、$\sin60°=0.866$）。
+\bkjans{$v_{x'}=4\times0.5+2\times0.866=3.732$、$v_{y'}=-4\times0.866+2\times0.5=-2.464$。$(3.73,\ -2.46)$〔m/s〕。大きさ $\sqrt{3.732^2+2.464^2}=4.47$、もとも $\sqrt{16+4}=\sqrt{20}=4.47$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+\raggedright 温度の場 $T=50-x^2-2y^2$ の $-\mathrm{grad}\,T$（熱が流れる向き）を、点 $(2,\ 0)$、$(0,\ -1)$、$(1,\ 1)$ で求め、点 $(1,\ 1)$ で等温線と直角であることを確かめましょう。
+\bkjans{$-\mathrm{grad}\,T=(2x,\ 4y)$ で、$(2,\ 0)$ で $(4,\ 0)$、$(0,\ -1)$ で $(0,\ -4)$、$(1,\ 1)$ で $(2,\ 4)$。$(1,\ 1)$ の $\mathrm{grad}\,T=(-2,\ -4)$ と直角な等温線の向き $(-4,\ 2)$。内積 $2\times(-4)+4\times2=0$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{motto}[4]
+\kviiifbox{まわる場・広がる場は、極座標の矢印で書くと短い}
+4-15の極座標では、点の場所を原点からのきょり $r$ と角 $\theta$ で表しました。その点で、原点から外へ向かう長さ1の矢印を $\vec e_r$、それを左回りに $90°$ 回した長さ1の矢印を $\vec e_\theta$ と書きます。
+\kviiifline{$\vec e_r=(\cos\theta,\ \sin\theta),\qquad\vec e_\theta=(-\sin\theta,\ \cos\theta)$}
+（エ）のうず $(-y,\ x)$ に $x=r\cos\theta$、$y=r\sin\theta$ を入れると、$(-r\sin\theta,\ r\cos\theta)=r\,\vec e_\theta$ です。（ア）の広がる場 $(x,\ y)$ は $r\,\vec e_r$、点電荷の電場は $\dfrac{kQ}{r^2}\,\vec e_r$ です。「どの向きに、どれだけ」が一目でわかります。8-8・8-11で、球や円柱の面を通る量を数えるときは、この書き方を使います。
+\end{motto}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 場所と矢印を取りちがえる}
+\bkng{$\vec F=(-y,\ x)$ の点 $(1,\ 2)$ の矢印は $(1,\ 2)$}
+\bkok{点 $(1,\ 2)$ の矢印は、$F_x=-2$、$F_y=1$ で $(-2,\ 1)$}
+$(x,\ y)$ は矢印を置く場所、$(F_x,\ F_y)$ はその場所の矢印です。場所を式に入れて、はじめて矢印が出てきます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 図の矢印の長さを、本当の大きさと思う}
+\bkng{図の矢印が \qty{5}{mm} だから、風は \qty{5}{m/s}}
+\bkok{凡例（物差しの矢印）で読む。\qty{1}{m/s} が \qty{2}{mm} なら、\qty{2.5}{m/s}}
+矢印の場の図は、同じ割合で縮めてかいてあります。どれだけ縮めたかは、図ごとにちがいます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 軸を回すとき、$R$ をかける}
+\bkng{$30°$ 回した軸で見た成分は $R(30°)\vec v$}
+\bkok{軸を $30°$ 回して見ると、矢印は反対に $30°$ 回って見えるので $R(30°)^{\mathsf T}\vec v$}
+$R(30°)\vec v$ は、矢印そのものを $30°$ 回したものです。軸を回したときは、逆に回す $R^{\mathsf T}$（7-6）をかけます。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiifEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ $\frac{1}{r^2}$ を $\frac{1}{r}$ とする}
+\raggedright\bkng{きょりが2倍なら、電場は半分}
+\bkok{きょりが2倍なら、電場は $\frac14$}
+点電荷の電場も重力も、きょりの2乗に反比例します。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 流線が交わってよいと思う}
+\raggedright\bkng{2本の流線が、とちゅうで交わる}
+\bkok{流線は、長さ0の点のほかでは交わらない}
+1つの場所には、矢印が1本しかないからです。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiifbox{天気予報のコンピュータ}
+天気予報では、地球の大気を、たて・横・高さの細かい格子に分け、格子の点ごとに、風（ベクトル場）と、気温・気圧・水蒸気の量（スカラー場）を記録します。そして、数分ごとの「1歩」のくり返しで、場の変わり方を計算します（6-2のオイラー法の考え）。テレビの天気図の風の矢印は、そのベクトル場の一部を、矢印の場の図にしたものです。
+\par\vspace{5pt}
+\kviiifbox{車のまわりの空気の流れ}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+自動車や新幹線の形を決めるときは、まわりの空気の流れ（速度のベクトル場）をコンピュータで計算し、流線をかいて調べます。流線がなめらかに後ろへぬけるほど、空気の抵抗が小さくなります。風洞（大きな送風機のトンネル）の実験では、細い煙を流して、本物の流線を目で見ます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!6] (0,0) rectangle (44,24);
+  \foreach \kviiify in {4,8,12} {\draw[bkPurple, line width=0.8pt] (0,\kviiify) -- (44,\kviiify);}
+  \draw[bkPurple, line width=0.8pt] (0,16) -- (8,16) .. controls (14,16) and (16,21.5) .. (24,21.5) .. controls (32,21.5) and (34,16) .. (44,16);
+  \draw[bkPurple, line width=0.8pt] (0,20) -- (8,20) .. controls (14,20) and (16,23.2) .. (24,23.2) .. controls (32,23.2) and (34,20) .. (44,20);
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (10,12.6) .. controls (12,18.5) and (20,19.5) .. (28,18.8) .. controls (34,18) and (37,15) .. (38,12.6) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,12.4) -- (44,12.4);
+  \draw[bkPurple, line width=0.8pt, -{Stealth[length=1.8mm]}] (1,8) -- (5,8);
+\end{tikzpicture}
+\end{minipage}
+
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem ベクトル場 $\vec F(x,\ y)=(2x-y,\ x)$ の、点 $(1,\ 0)$、$(0,\ 1)$、$(1,\ 1)$ での矢印と、その大きさを求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$(1,\ 0)$ で $(2,\ 1)$、大きさ $\sqrt5=2.24$。$(0,\ 1)$ で $(-1,\ 0)$、大きさ1。$(1,\ 1)$ で $(1,\ 1)$、大きさ1.41。}
+
+\bkproblem ベクトル場 $\vec F=(3y,\ -3x)$ の矢印を、点 $(1,\ 0)$、$(0,\ 1)$、$(-1,\ 0)$、$(0,\ -1)$ で求め、左回り・右回りのどちらのうずか答えましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$(1,\ 0)$ で $(0,\ -3)$、$(0,\ 1)$ で $(3,\ 0)$、$(-1,\ 0)$ で $(0,\ 3)$、$(0,\ -1)$ で $(-3,\ 0)$。右回り（時計回り）のうずで、大きさはどれも3。}
+
+\bkproblem 原点に $Q=\num{3e-9}$\,C の点電荷があります。点 $(0.3,\ 0.4)$（m）での電場の大きさと成分を求めましょう（$k=\num{8.99e9}$\,N·m²/C²）\mbox{（\bkreidairef{3}）}。
+\bkpans{$r=0.5$。大きさ $\num{8.99e9}\times\num{3e-9}\div0.25=\qty{107.9}{N/C}$（約\qty{108}{N/C}）。$\vec E=(107.9\times0.6,\ 107.9\times0.8)=(64.7,\ 86.3)$〔N/C〕。}
+
+\bkproblem 次のベクトル場の、（ ）の点を通る流線の式を求めましょう\mbox{（\bkreidairef{5}）}。\par
+（1）$\vec F=(-y,\ x)$\quad $(6,\ 8)$\par
+（2）$\vec F=(x,\ y)$\quad $(4,\ 2)$
+\bkpans{（1）\nobreak $x^2+y^2=C$、$C=36+64=100$ で $x^2+y^2=100$（半径10の円）。（2）\nobreak $y=ax$、$2=4a$ より $y=\dfrac12x$。}
+
+\bkproblem 地面の軸で見た風が $(5,\ 0)$〔m/s〕（東向き）です。東から左回りに $30°$ 回した軸で見た、風の成分を求め、大きさが変わらないことを確かめましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$v_{x'}=5\times0.866+0\times0.5=4.33$、$v_{y'}=-5\times0.5+0\times0.866=-2.5$。$(4.33,\ -2.5)$〔m/s〕。大きさ $\sqrt{4.33^2+2.5^2}=5.00$。}
+
+\bkproblem 地面での重力の大きさを \qty{9.82}{m/s^2}、地球の半径を \num{6371}\,km とします。地面からの高さ \num{20200}\,km（GPS 衛星の高さ）での重力の大きさを求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$r=\num{6371}+\num{20200}=\num{26571}$（km）。$9.82\times(6371\div26571)^2=9.82\times0.0575=\qty{0.565}{m/s^2}$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 地面での重力の大きさを \qty{9.82}{m/s^2}、地球の半径を \num{6371}\,km とします。地面から \num{6371}\,km の高さでの重力の大きさを求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$r=\num{12742}$\,km（半径の2倍）。$9.82\times\bigl(\frac12\bigr)^2=\qty{2.46}{m/s^2}$。}
+
+\bkproblem 主役の山で、$-\mathrm{grad}\,h$ を点 $(-40,\ 0)$、$(0,\ -30)$、$(20,\ -20)$ で求めましょう。また、点 $(20,\ -20)$ で、その矢印が等高線と直角であることを確かめましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$(-0.8,\ 0)$、$(0,\ -1.2)$、$(0.4,\ -0.8)$。$(20,\ -20)$ の $\mathrm{grad}\,h=(-0.4,\ 0.8)$ と直角な等高線の向き $(0.8,\ 0.4)$。内積 $0.4\times0.8+(-0.8)\times0.4=0$。}
+
+\bkproblem 温度の場 $T=40-2x^2-y^2$ の $-\mathrm{grad}\,T$（熱が流れる向き）を、点 $(1,\ 0)$、$(0,\ 2)$、$(1,\ 1)$ で求めましょう。また、点 $(1,\ 1)$ で、その矢印が等温線と直角であることを確かめましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$-\mathrm{grad}\,T=(4x,\ 2y)$ で、$(1,\ 0)$ で $(4,\ 0)$、$(0,\ 2)$ で $(0,\ 4)$、$(1,\ 1)$ で $(4,\ 2)$。$(1,\ 1)$ の $\mathrm{grad}\,T=(-4,\ -2)$ と直角な等温線の向き $(2,\ -4)$。内積 $4\times2+2\times(-4)=0$。}
+
+\Needspace{6\baselineskip}
+\bkproblem うずの場 $\vec F=(-y,\ x)$ について、次の問いに答えましょう。\par
+（1）点 $(2,\ 0)$ の矢印と、その点を通る流線の式\par
+（2）（1）の矢印を、東から左回りに $90°$ 回した軸で見た成分（$\cos90°=0$、$\sin90°=1$）\mbox{（\bkreidairef{1}・\bkreidairef{5}・\bkreidairef{6}）}
+\bkpans{（1）\nobreak $(0,\ 2)$。流線は $x^2+y^2=4$（半径2の円）。（2）\nobreak $v_{x'}=0\times0+2\times1=2$、$v_{y'}=-0\times1+2\times0=0$ で $(2,\ 0)$。回した軸（$x'$ が北向き）で見ると、矢印は $x'$ の向き。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 場所ごとの矢印を計算して、縮める割合をそろえた矢印の場の図にかける。\bkfurref{bk:8-5:chijimi}
+\item 主役の6つの場・点電荷の場・勾配の場を見分け、流線（力線）の式を求められる。\bkfurref{bk:8-5:ryusenshiki}
+\item 座標の軸を回して見たときの矢印の成分を、回転行列の転置で計算できる。\bkfurref{bk:8-5:kaiten}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{空間のどこにも矢印がある、っていう見方ができたね。次は、この矢印を道にそってたしてみよう。}

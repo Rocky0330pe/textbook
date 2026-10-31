@@ -1,0 +1,878 @@
+%% 3-15 2つの量の関係：散布図と相関（第12回：組 V3-8 が書いた）
+%% データの数（平均・偏差・共分散・相関係数）は、すべて Python で計算して確かめた（v3-8w/d15*.py）。
+\makeatletter
+% 式を、まん中に1行で置く  \bkthrpline{…}
+\newcommand\bkthrpline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}}
+% 本文の中の段の見出し  \bkthrpstep{見出し}
+\newcommand\bkthrpstep[1]{\par\addvspace{6pt}\noindent{\sffamily\bfseries\color{bkDeep}#1}\par\nobreak\vspace{2pt}}
+% 散布図の小さな絵（ギャラリー用）  \bkthrpmini{題}{点の列}
+\newcommand\bkthrpmini[2]{%
+  \begin{tikzpicture}
+  \begin{axis}[bkplot, axis lines=box, width=38mm, height=38mm, xmin=0, xmax=10, ymin=0, ymax=10,
+    xtick=\empty, ytick=\empty, grid=none, axis line style={-, line width=0.6pt, bkGray},
+    title={\sffamily\footnotesize #1}, title style={yshift=-1mm}]
+    \addplot[only marks, mark=*, mark size=1.3pt, bkBlue] coordinates {#2};
+  \end{axis}
+  \end{tikzpicture}}
+% クラス10\R{人}{にん}のデータ（身長 cm、50 m 走のタイム s）
+\def\bkthrpclass{(146,8.5) (150,8.6) (153,8.9) (156,8.2) (158,7.8) (162,8.2) (164,8.2) (166,8.8) (169,8.1) (176,7.7)}
+% 走る子ども（はてな？用）  \bkthrprunner{(x,y)}{高さ}{服の色}{かみの色}
+\newcommand\bkthrprunner[4]{\begin{scope}[shift={#1}, scale=#2/30]
+  \fill[#4] (0,27) circle (3.4);
+  \fill[bkSkin] (0.4,26.2) circle (2.9);
+  \draw[#3, line width=3.2pt, line cap=round] (0,22) -- (-1,12);
+  \draw[#3!80!black, line width=2pt, line cap=round] (-0.2,20.5) -- (4,16.5) -- (6.5,19);
+  \draw[#3!80!black, line width=2pt, line cap=round] (-0.6,20.5) -- (-4.5,17) -- (-6,13.5);
+  \draw[bkNavy!80, line width=2.4pt, line cap=round] (-1,12) -- (3.5,6.5) -- (2.5,0.5);
+  \draw[bkNavy!80, line width=2.4pt, line cap=round] (-1,12) -- (-5,7) -- (-9,6);
+\end{scope}}
+\makeatother
+
+\bkchapter{3}{15}{2つの\R{量}{りょう}の\R{関係}{かん|けい}：\\ \R{散布図}{さん|ぷ|ず}と\R{相関}{そう|かん}}{\bklevel{3}}{2つの\R{量}{りょう}の\R{関係}{かん|けい}：\R{散布図}{さん|ぷ|ず}と\R{相関}{そう|かん}}
+\bkmichishirube{3-2,3-13,3-14}{3-16,3-17,4-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 2つの\R{量}{りょう}の\R{表}{ひょう}から\R{散布図}{さん|ぷ|ず}をかき、\R{正}{せい}の\R{相関}{そう|かん}・\R{負}{ふ}の\R{相関}{そう|かん}・\R{相関}{そう|かん}なしを\R{見分}{み|わ}けられる。
+\item \bklevel{3}\enspace \R{偏差}{へん|さ}どうしの\R{積}{せき}の\R{平均}{へい|きん}（\R{共分散}{きょう|ぶん|さん}）を\R{計算}{けい|さん}し、その\R{符号}{ふ|ごう}の\R{意味}{い|み}を\R{説明}{せつ|めい}できる。
+\item \bklevel{3}\enspace \R{相関係数}{そう|かん|けい|すう} $r$ を\R{求}{もと}め、「\R{相関}{そう|かん}があっても\R{原因}{げん|いん}とはかぎらない」ことに\R{気}{き}をつけて\R{読}{よ}める。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+クラスの\R{友}{とも}だちを\R{思}{おも}いうかべてみましょう。\R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、50\,m\R{走}{そう}が\R{速}{はや}い\R{気}{き}がしますか？\par
+でも、\R{背}{せ}が\R{低}{ひく}くても、とても\R{速}{はや}い\R{人}{ひと}がいます。\R{背}{せ}が\R{高}{たか}くても、\R{走}{はし}るのが\R{苦手}{にが|て}な\R{人}{ひと}もいます。\par
+「\R{背}{せ}の\R{高}{たか}さ」と「\R{足}{あし}の\R{速}{はや}さ」には、\R{関係}{かん|けい}があるのでしょうか。あるとしたら、その\R{関係}{かん|けい}の\R{強}{つよ}さを、1つの\R{数}{かず}で\R{言}{い}うことはできるでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray!60, line width=0.8pt] (-2,0) -- (42,0);
+  \bkthrprunner{(7,0)}{24}{bkGreen}{bkInk}
+  \bkthrprunner{(21,0)}{29}{bkBlue}{bkHair}
+  \bkthrprunner{(35,0)}{34}{bkOrange}{bkInk}
+  \node[font=\sffamily\bfseries\Large, text=bkOrange!80!black] at (37,42) {?};
+  \node[font=\sffamily\bfseries\Large, text=bkOrange!80!black] at (9,32) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+3-13・3-14では、クラス\R{全員}{ぜん|いん}の\R{身長}{しん|ちょう}のような、\textbf{1つの\R{量}{りょう}}のちらばりを\R{調}{しら}べました。\R{平均}{へい|きん}（3-13）で「だいたいどのくらいか」を、\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma$（3-14）で「だいたいどのくらいずれるか」を、\R{数}{かず}で\R{言}{い}えるようになりました。
+
+この\R{章}{しょう}では、\textbf{2つの\R{量}{りょう}を\R{組}{くみ}にして}\R{調}{しら}べます。「\R{背}{せ}が\R{高}{たか}い\R{人}{ひと}ほど、タイムが\R{短}{みじか}いかな？」のように、\R{一方}{いっ|ぽう}が\R{大}{おお}きいと、もう\R{一方}{いっ|ぽう}はどうなるか、という\R{関係}{かん|けい}です。
+
+2つの\R{量}{りょう}の\R{組}{くみ}は、\R{表}{ひょう}のままでは\R{関係}{かん|けい}が\R{見}{み}えにくいものです。そこで、まず\R{点}{てん}にしてながめます（3-2の\R{座標}{ざ|ひょう}）。それから、\R{関係}{かん|けい}の\R{強}{つよ}さを1つの\R{数}{かず}で\R{表}{あらわ}す\R{方法}{ほう|ほう}を、1\R{段}{だん}ずつ\R{作}{つく}っていきます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[\R{身長}{しん|ちょう}と50\,m\R{走}{そう}のタイムを、\R{点}{てん}にしよう]
+ソラさんのクラスの10\R{人}{にん}が、\R{身長}{しん|ちょう}と50\,m\R{走}{そう}のタイムを\R{記録}{き|ろく}しました。50\,m\R{走}{そう}のタイムは、\textbf{\R{短}{みじか}いほど\R{速}{はや}い}ことに\R{注意}{ちゅう|い}しましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{10}{Q[c,m,wd=8.4mm]}}, rowsep=1.5pt, colsep=2pt, cells={font=\small}}
+\R{人}{ひと} & A & B & C & D & E & F & G & H & I & J \\
+\R{身長}{しん|ちょう}（cm） & 146 & 150 & 153 & 156 & 158 & 162 & 164 & 166 & 169 & 176 \\
+タイム（s） & 8.5 & 8.6 & 8.9 & 8.2 & 7.8 & 8.2 & 8.2 & 8.8 & 8.1 & 7.7 \\
+\end{bktable}
+\bktabcaption{10\R{人}{にん}の\R{身長}{しん|ちょう}と50\,m\R{走}{そう}のタイム（\R{背}{せ}の\R{低}{ひく}い\R{順}{じゅん}にならべた）}
+\end{bkcenter}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item ノートに、\R{横}{よこ}の\R{軸}{じく}を\R{身長}{しん|ちょう}、たての\R{軸}{じく}をタイムにした\R{方眼}{ほう|がん}をかこう。\R{横}{よこ}は145\,cmから180\,cmまで、たては7.5\,sから9.0\,sまであれば、\R{全員}{ぜん|いん}がおさまります。
+\item \R{1人}{ひとり}を1つの\R{点}{てん}でかこう。Aさんなら、\R{横}{よこ}が146、たてが8.5の\R{所}{ところ}です。
+\item 10\R{個}{こ}の\R{点}{てん}は、どんな\R{形}{かたち}に\R{集}{あつ}まったかな？\quad \R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、タイムは\R{短}{みじか}い（\R{速}{はや}い）と\R{言}{い}えそうかな？
+\item 「\R{背}{せ}が\R{高}{たか}いのにタイムが\R{長}{なが}い\R{人}{ひと}」や「\R{背}{せ}が\R{低}{ひく}いのにタイムが\R{短}{みじか}い\R{人}{ひと}」は、だれかな？
+\end{enumerate}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{2-2}{\R{負}{ふ}の\R{数}{かず}×\R{負}{ふ}の\R{数}{かず}は\R{正}{せい}の\R{数}{かず}、\R{負}{ふ}の\R{数}{かず}×\R{正}{せい}の\R{数}{かず}は\R{負}{ふ}の\R{数}{かず}。$(-2)\times(-3)=6$、$(-2)\times3=-6$}
+\bkrecall{3-2}{\R{点}{てん} $(x,\ y)$ は、\R{原点}{げん|てん}から\R{右}{みぎ}へ $x$、\R{上}{うえ}へ $y$ の\R{場所}{ば|しょ}。$x$ \R{軸}{じく}と $y$ \R{軸}{じく}で、\R{平面}{へい|めん}は4つの\R{区画}{く|かく}に\R{分}{わ}かれる。}
+\bkrecall{3-13}{\R{平均}{へい|きん} $\bar{x}$（エックス・バー）＝（\R{値}{あたい}の\R{合計}{ごう|けい}）÷（\R{値}{あたい}の\R{個数}{こ|すう}）}
+\bkrecall{3-14}{\R{偏差}{へん|さ}＝\R{値}{あたい}－\R{平均}{へい|きん}。\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{平均}{へい|きん}が\textbf{\R{分散}{ぶん|さん}}。\R{分散}{ぶん|さん}の $\sqrt{\phantom{x}}$ が\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma$（シグマ）で、「だいたいのずれの\R{大}{おお}きさ」を\R{表}{あらわ}す。}
+\end{omoidasou}
+
+\bkfukidashi{mina}{\R{点}{てん}をかいてみたら、なんとなく\R{右下}{みぎ|さ}がりに\R{見}{み}えたよ。でも「なんとなく」じゃなくて、\R{数}{かず}で\R{言}{い}えたらいいな。}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{2つの\R{量}{りょう}を\R{点}{てん}にする：\R{散布図}{さん|ぷ|ず}}
+
+\leavevmode\label{bk:3-15:sanpu}\R{表}{ひょう}の1つの\R{列}{れつ}は、\R{1人}{ひとり}\R{分}{ぶん}のデータです。\R{1人}{ひとり}について、\R{身長}{しん|ちょう}とタイムの2つの\R{数}{かず}が\R{組}{くみ}になっています。2つの\R{数}{かず}の\R{組}{くみ}は、\R{座標}{ざ|ひょう}の\R{点}{てん} $(x,\ y)$ で\R{表}{あらわ}せます（3-2）。\R{横}{よこ}の\R{軸}{じく}（$x$）に\R{身長}{しん|ちょう}、たての\R{軸}{じく}（$y$）にタイムをとると、Aさんは\R{点}{てん} $(146,\ 8.5)$、Bさんは\R{点}{てん} $(150,\ 8.6)$ です。10\R{人}{にん}\R{分}{ぶん}の\R{点}{てん}をかくと、\R{図}{ず}\ref{bk:3-15:fig-sanpu}のようになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=118mm, height=78mm, xmin=143, xmax=180, ymin=7.5, ymax=9.1,
+  xtick={145,150,...,175}, ytick={7.5,7.8,...,9.0}, minor ytick={7.6,7.7,...,9.0},
+  xlabel={\R{身長}{しん|ちょう}（cm）}, ylabel={タイム（s）},
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1, /pgf/number format/fixed zerofill}]
+  \addplot[bkRed, dashed, line width=0.7pt] coordinates {(146,7.5) (146,8.5) (143,8.5)};
+  \addplot[only marks, mark=*, mark size=2.2pt, bkBlue] coordinates {\bkthrpclass};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:146,8.5) {A};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:150,8.6) {B};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=east, inner sep=2.6pt] at (axis cs:153,8.9) {C};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:156,8.2) {D};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=north, inner sep=2.6pt] at (axis cs:158,7.8) {E};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:162,8.2) {F};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:164,8.2) {G};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west, inner sep=2.6pt] at (axis cs:166,8.8) {H};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=north, inner sep=2.6pt] at (axis cs:169,8.1) {I};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south, inner sep=2.6pt] at (axis cs:176,7.7) {J};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north west, inner sep=1pt] at (axis cs:146.6,8.47) {Aさん $(146,\ 8.5)$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\R{身長}{しん|ちょう}とタイムの\R{散布図}{さん|ぷ|ず}。1つの\R{点}{てん}が\R{1人}{ひとり}。\R{軸}{じく}の\R{目}{め}もりは、データのある\R{所}{ところ}だけをとっている。}\label{bk:3-15:fig-sanpu}
+\end{bkfigure}
+
+このように、2つの\R{量}{りょう}の\R{組}{くみ}を、1つずつ\R{点}{てん}にして\R{表}{あらわ}した\R{図}{ず}を\textbf{\R{散布図}{さん|ぷ|ず}}といいます。\bkidx{さんぷず}{\R{散布図}{さん|ぷ|ず}}「\R{散布}{さん|ぷ}」は「ばらまく」という\R{意味}{い|み}です。\R{点}{てん}が、\R{紙}{かみ}の\R{上}{うえ}にばらまかれたように\R{見}{み}えるからです。
+
+\textbf{\R{目}{め}もりについて}\quad \R{横}{よこ}の\R{軸}{じく}を0\,cmからかくと、\R{点}{てん}が\R{右}{みぎ}のはしに\R{集}{あつ}まって、ちがいが\R{見}{み}えなくなります。そこで、データのある145\,cmから180\,cmまでだけをかいています（3-4の\R{目}{め}もりの\R{取}{と}り\R{方}{かた}）。たての\R{軸}{じく}も\R{同}{おな}じです。
+
+\textbf{\R{何}{なに}が\R{見}{み}えるかな}\quad \R{点}{てん}の\R{集}{あつ}まりを、\R{遠}{とお}くからぼんやりながめてみましょう。\R{左上}{ひだり|うえ}から\R{右下}{みぎ|した}へ、\R{帯}{おび}のように\R{広}{ひろ}がっています。\textbf{\R{全体}{ぜん|たい}として\R{右下}{みぎ|さ}がり}です。\R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、タイムが\R{短}{みじか}い（\R{速}{はや}い）\R{人}{ひと}が\R{多}{おお}いようです。
+
+でも、\R{点}{てん}は1\R{本}{ぽん}の\R{直線}{ちょく|せん}の\R{上}{うえ}にぴったりのってはいません。Hさん（166\,cm）は、\R{背}{せ}が\R{高}{たか}いのにタイムが8.8\,sで、\R{遅}{おそ}いほうです。Eさん（158\,cm）は、\R{背}{せ}が\R{低}{ひく}めなのに7.8\,sで、2\R{番}{ばん}めに\R{速}{はや}い\R{人}{ひと}です。\R{散布図}{さん|ぷ|ず}からは、「\R{全体}{ぜん|たい}としての\R{様子}{よう|す}」と「\R{例外}{れい|がい}」の\R{両方}{りょう|ほう}が\R{見}{み}えます。\R{全体}{ぜん|たい}としての\R{様子}{よう|す}を、\textbf{\R{傾向}{けい|こう}}といいます。
+
+\bksubsection{2}{いっしょに\R{増}{ふ}える・へる：\R{相関}{そう|かん}}
+
+\leavevmode\label{bk:3-15:sokan}\R{散布図}{さん|ぷ|ず}の\R{点}{てん}の\R{集}{あつ}まり\R{方}{かた}には、\R{大}{おお}きく\R{分}{わ}けて3つの\R{形}{かたち}があります。\R{図}{ず}\ref{bk:3-15:fig-3kata}を\R{見}{み}ましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\tt/\col in {0/{\R{右上}{みぎ|あ}がり}/bkBlue, 44/{\R{右下}{みぎ|さ}がり}/bkRed, 88/{どちらでもない}/bkGreen} {
+    \draw[bkGray, line width=0.6pt] (\cx,0) rectangle (\cx+36,36);
+    \node[font=\sffamily\small\bfseries, text=\col!80!black, anchor=south] at (\cx+18,37.5) {\tt};}
+  % 右上がり（r=0.9 のデータを 0〜10 → 0〜36 mm に）
+  \foreach \px/\py in {2.1/4.4, 7.8/6.7, 7.1/7.1, 3.0/3.2, 5.0/5.0, 4.6/5.7, 6.2/6.3, 7.3/6.4, 1.8/1.6, 1.2/3.0, 7.7/6.6, 4.5/5.3, 7.1/6.3, 1.0/3.5, 4.6/4.5, 6.8/6.1, 2.8/4.2, 8.6/5.8, 8.2/6.3, 1.2/1.9}
+    {\fill[bkBlue] ({3.6*\px},{3.6*\py}) circle (0.75);}
+  \foreach \px/\py in {6.0/4.7, 6.9/3.9, 7.4/4.1, 8.5/3.2, 6.9/4.0, 8.4/3.3, 1.2/8.1, 4.7/5.3, 8.5/3.6, 6.2/5.0, 8.2/4.9, 1.9/6.4, 4.8/4.8, 3.0/7.6, 5.4/4.0, 5.6/4.6, 1.1/7.3, 2.7/7.6, 3.2/5.4, 8.3/2.1}
+    {\fill[bkRed] ({44+3.6*\px},{3.6*\py}) circle (0.75);}
+  \foreach \px/\py in {2.9/4.9, 5.4/5.2, 4.0/5.5, 5.8/3.5, 6.0/5.7, 1.5/5.3, 1.1/6.1, 7.7/4.7, 3.1/4.6, 2.9/1.8, 9.0/5.6, 4.8/1.9, 7.7/3.8, 4.8/7.5, 6.1/2.1, 2.2/6.4, 6.1/6.4, 7.9/5.7, 5.2/6.4, 6.9/6.9}
+    {\fill[bkGreen!70!black] ({88+3.6*\px},{3.6*\py}) circle (0.75);}
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (18,-2) {\textbf{\R{正}{せい}の\R{相関}{そう|かん}}\\$x$ が\R{大}{おお}きいほど\\$y$ も\R{大}{おお}きい};
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (62,-2) {\textbf{\R{負}{ふ}の\R{相関}{そう|かん}}\\$x$ が\R{大}{おお}きいほど\\$y$ は\R{小}{ちい}さい};
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (106,-2) {\textbf{\R{相関}{そう|かん}がない}\\$x$ が\R{大}{おお}きくても\\$y$ はどちらとも\R{言}{い}えない};
+\end{tikzpicture}
+\bkfigcaption{\R{散布図}{さん|ぷ|ず}の3つの\R{形}{かたち}。どれも、\R{点}{てん}は20\R{個}{こ}。}\label{bk:3-15:fig-3kata}
+\end{bkfigure}
+
+\begin{itemize}[leftmargin=1.4\zw, itemsep=2pt, topsep=2pt, label={\color{bkBlue}●}]
+\item \R{一方}{いっ|ぽう}が\R{大}{おお}きいほど、もう\R{一方}{いっ|ぽう}も\R{大}{おお}きい\R{傾向}{けい|こう}があるとき、2つの\R{量}{りょう}には\textbf{\R{正}{せい}の\R{相関}{そう|かん}}があるといいます。\R{点}{てん}の\R{集}{あつ}まりは\R{右上}{みぎ|あ}がりです。\par
+\R{例}{れい}：\R{身長}{しん|ちょう}と\R{足}{あし}の\R{大}{おお}きさ、\R{夏}{なつ}の\R{気温}{き|おん}とアイスクリームの\R{売}{う}れた\R{数}{かず}
+\item \R{一方}{いっ|ぽう}が\R{大}{おお}きいほど、もう\R{一方}{いっ|ぽう}は\R{小}{ちい}さい\R{傾向}{けい|こう}があるとき、\textbf{\R{負}{ふ}の\R{相関}{そう|かん}}があるといいます。\R{点}{てん}の\R{集}{あつ}まりは\R{右下}{みぎ|さ}がりです。\par
+\R{例}{れい}：\R{冬}{ふゆ}の\R{気温}{き|おん}と、\R{温}{あたた}かい\R{飲}{の}み\R{物}{もの}の\R{売}{う}れた\R{数}{かず}、\R{身長}{しん|ちょう}と50\,m\R{走}{そう}のタイム（やってみよう）
+\item どちらの\R{傾向}{けい|こう}もないとき、\textbf{\R{相関}{そう|かん}がない}といいます。\par
+\R{例}{れい}：\R{身長}{しん|ちょう}と、\R{誕生日}{たん|じょう|び}の\R{日}{ひ}にち（1から31までの\R{数}{かず}）
+\end{itemize}
+「\R{相関}{そう|かん}」は、「たがいに\R{関係}{かん|けい}しあう」という\R{意味}{い|み}のことばです。\bkidx{そうかん}{\R{相関}{そう|かん}}「\R{正}{せい}の」「\R{負}{ふ}の」は、2-2の\R{正}{せい}の\R{数}{かず}・\R{負}{ふ}の\R{数}{かず}と\R{同}{おな}じで、「\R{同}{おな}じ\R{向}{む}き」と「\R{反対}{はん|たい}の\R{向}{む}き」を\R{表}{あらわ}しています。
+
+\textbf{\R{強}{つよ}い\R{相関}{そう|かん}・\R{弱}{よわ}い\R{相関}{そう|かん}}\quad \R{同}{おな}じ\R{右上}{みぎ|あ}がりでも、\R{点}{てん}が1\R{本}{ぽん}の\R{直線}{ちょく|せん}のまわりに\R{細}{ほそ}く\R{集}{あつ}まっているときと、\R{太}{ふと}い\R{帯}{おび}のようにばらけているときがあります（\R{図}{ず}\ref{bk:3-15:fig-tsuyosa}）。\R{細}{ほそ}く\R{集}{あつ}まっているほど、「\R{一方}{いっ|ぽう}がわかれば、もう\R{一方}{いっ|ぽう}がだいたいわかる」ので、\textbf{\R{相関}{そう|かん}が\R{強}{つよ}い}といいます。ばらけているときは、\textbf{\R{相関}{そう|かん}が\R{弱}{よわ}い}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\tt in {10/{\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}}, 76/{\R{弱}{よわ}い\R{正}{せい}の\R{相関}{そう|かん}}} {
+    \draw[bkGray, line width=0.6pt] (\cx,0) rectangle (\cx+40,40);
+    \node[font=\sffamily\small\bfseries, anchor=south] at (\cx+20,41.5) {\tt};}
+  \foreach \px/\py in {2.1/4.4, 7.8/6.7, 7.1/7.1, 3.0/3.2, 5.0/5.0, 4.6/5.7, 6.2/6.3, 7.3/6.4, 1.8/1.6, 1.2/3.0, 7.7/6.6, 4.5/5.3, 7.1/6.3, 1.0/3.5, 4.6/4.5, 6.8/6.1, 2.8/4.2, 8.6/5.8, 8.2/6.3, 1.2/1.9}
+    {\fill[bkBlue] ({10+4*\px},{4*\py}) circle (0.8);}
+  \foreach \px/\py in {8.6/6.4, 8.6/6.2, 1.5/3.6, 1.7/5.0, 7.7/4.0, 6.9/7.6, 6.4/4.1, 3.5/4.8, 5.8/5.6, 5.9/5.9, 5.6/5.2, 2.3/5.5, 4.4/0.7, 4.1/4.9, 6.8/5.4, 9.0/5.5, 8.6/7.9, 5.4/4.1, 4.6/5.1, 3.1/2.3}
+    {\fill[bkBlue] ({76+4*\px},{4*\py}) circle (0.8);}
+\end{tikzpicture}
+\bkfigcaption{どちらも\R{右上}{みぎ|あ}がり。\R{左}{ひだり}は\R{細}{ほそ}い\R{帯}{おび}、\R{右}{みぎ}は\R{太}{ふと}い\R{帯}{おび}。}\label{bk:3-15:fig-tsuyosa}
+\end{bkfigure}
+
+\bkhatenaref の\R{答}{こた}え（その1）：やってみようの\R{散布図}{さん|ぷ|ず}は\R{右下}{みぎ|さ}がりなので、\R{身長}{しん|ちょう}とタイムには\textbf{\R{負}{ふ}の\R{相関}{そう|かん}}があります。タイムが\R{短}{みじか}いほど\R{速}{はや}いので、「\R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、\R{足}{あし}が\R{速}{はや}い\R{傾向}{けい|こう}がある」と\R{言}{い}えます。でも、\R{帯}{おび}はかなり\R{太}{ふと}いので、\R{強}{つよ}い\R{相関}{そう|かん}ではなさそうです。
+
+では、「どのくらい\R{強}{つよ}いか」を、\R{数}{かず}で\R{言}{い}うにはどうすればよいでしょう。\R{見}{み}た\R{目}{め}にたよると、\R{困}{こま}ったことが\R{起}{お}きます。\R{図}{ず}\ref{bk:3-15:fig-mikake}は、\R{同}{おな}じ10\R{人}{にん}のデータを、たての\R{目}{め}もりだけ\R{変}{か}えてかいたものです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, name=g1, width=60mm, height=46mm, xmin=143, xmax=180, ymin=7.5, ymax=9.0,
+  xtick={150,160,170}, ytick={7.5,8.0,8.5,9.0}, xlabel={cm}, ylabel={s}, title={\sffamily\small たて：7.5〜9.0\,s},
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1, /pgf/number format/fixed zerofill}]
+  \addplot[only marks, mark=*, mark size=1.6pt, bkBlue] coordinates {\bkthrpclass};
+\end{axis}
+\begin{axis}[bkplot, axis lines=left, at={(g1.east)}, anchor=west, xshift=16mm, width=60mm, height=46mm, xmin=143, xmax=180, ymin=0, ymax=16,
+  xtick={150,160,170}, ytick={0,4,...,16}, xlabel={cm}, ylabel={s}, title={\sffamily\small たて：0〜16\,s}]
+  \addplot[only marks, mark=*, mark size=1.6pt, bkBlue] coordinates {\bkthrpclass};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\R{同}{おな}じデータでも、\R{目}{め}もりの\R{取}{と}り\R{方}{かた}で、\R{点}{てん}の\R{帯}{おび}の\R{太}{ふと}さや\R{傾}{かたむ}きの\R{見}{み}え\R{方}{かた}が\R{変}{か}わる。}\label{bk:3-15:fig-mikake}
+\end{bkfigure}
+
+\R{右}{みぎ}の\R{図}{ず}では、\R{点}{てん}がほとんど\R{横}{よこ}\R{一}{いち}\R{列}{れつ}に\R{見}{み}えます。\R{目}{め}もりの\R{取}{と}り\R{方}{かた}で\R{見}{み}え\R{方}{かた}が\R{変}{か}わるのでは、くらべられません（3-4のまちがえやすいところと\R{同}{おな}じです）。\R{目}{め}もりの\R{取}{と}り\R{方}{かた}によらない「\R{強}{つよ}さの\R{数}{かず}」を、③と④で\R{作}{つく}りましょう。
+
+\bksubsection{3}{\R{偏差}{へん|さ}をかけてたす：\R{共分散}{きょう|ぶん|さん}}
+
+\leavevmode\label{bk:3-15:kyobunsan}\R{右上}{みぎ|あ}がりか\R{右下}{みぎ|さ}がりかを、\R{計算}{けい|さん}で\R{決}{き}める\R{方法}{ほう|ほう}を\R{考}{かんが}えます。4つの\R{段}{だん}で\R{進}{すす}みます。
+
+\bkthrpstep{\R{段}{だん}1　\R{平均}{へい|きん}の\R{所}{ところ}に、たてと\R{横}{よこ}の\R{線}{せん}を\R{引}{ひ}く}
+\R{身長}{しん|ちょう}の\R{平均}{へい|きん}とタイムの\R{平均}{へい|きん}を\R{求}{もと}めます（3-13）。
+\R{身長}{しん|ちょう}の\R{合計}{ごう|けい}は
+\[ 146+150+153+156+158+162+164+166+169+176=1600 \]
+なので、\R{身長}{しん|ちょう}の\R{平均}{へい|きん}は $\bar{x}=1600\div10=160$ です。タイムの\R{合計}{ごう|けい}は
+\[ 8.5+8.6+8.9+8.2+7.8+8.2+8.2+8.8+8.1+7.7=83.0 \]
+なので、タイムの\R{平均}{へい|きん}は $\bar{y}=83.0\div10=8.3$ です。
+\R{平均}{へい|きん}は、\textbf{\R{身長}{しん|ちょう}が160\,cm、タイムが8.3\,s}です。\R{散布図}{さん|ぷ|ず}に、\R{身長}{しん|ちょう}160の\R{所}{ところ}にたての\R{線}{せん}、タイム8.3の\R{所}{ところ}に\R{横}{よこ}の\R{線}{せん}を\R{引}{ひ}きます（\R{図}{ず}\ref{bk:3-15:fig-kukaku}）。2\R{本}{ほん}の\R{線}{せん}は、\R{点}{てん} $(160,\ 8.3)$ で\R{交}{まじ}わります。この\R{点}{てん}は、データの「まん\R{中}{なか}」にあたる\R{点}{てん}です。
+
+2\R{本}{ほん}の\R{線}{せん}で、\R{散布図}{さん|ぷ|ず}は4つの\R{区画}{く|かく}に\R{分}{わ}かれます。3-2の、$x$ \R{軸}{じく}と $y$ \R{軸}{じく}で\R{分}{わ}けた4つの\R{区画}{く|かく}と\R{同}{おな}じ\R{形}{かたち}です。ちがうのは、\R{原点}{げん|てん}のかわりに\textbf{\R{平均}{へい|きん}の\R{点}{てん}}を\R{中心}{ちゅう|しん}にしていることです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=112mm, height=74mm, xmin=143, xmax=180, ymin=7.5, ymax=9.1,
+  xtick={145,150,...,175}, ytick={7.5,7.8,...,9.0}, xlabel={\R{身長}{しん|ちょう}（cm）}, ylabel={タイム（s）},
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1, /pgf/number format/fixed zerofill}]
+  \fill[bkBlue!10] (axis cs:160,8.3) rectangle (axis cs:180,9.1);
+  \fill[bkBlue!10] (axis cs:143,7.5) rectangle (axis cs:160,8.3);
+  \fill[bkRed!9] (axis cs:143,8.3) rectangle (axis cs:160,9.1);
+  \fill[bkRed!9] (axis cs:160,7.5) rectangle (axis cs:180,8.3);
+  \addplot[bkInk, dashed, line width=0.8pt] coordinates {(160,7.5) (160,9.1)};
+  \addplot[bkInk, dashed, line width=0.8pt] coordinates {(143,8.3) (180,8.3)};
+  \addplot[only marks, mark=*, mark size=2.2pt, bkInk] coordinates {\bkthrpclass};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:146,8.5) {A};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:150,8.6) {B};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=2.6pt] at (axis cs:153,8.9) {C};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:156,8.2) {D};
+  \node[font=\sffamily\footnotesize, anchor=north, inner sep=2.6pt] at (axis cs:158,7.8) {E};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:162,8.2) {F};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:164,8.2) {G};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=2.6pt] at (axis cs:166,8.8) {H};
+  \node[font=\sffamily\footnotesize, anchor=north, inner sep=2.6pt] at (axis cs:169,8.1) {I};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=2.6pt] at (axis cs:176,7.7) {J};
+  \node[font=\sffamily\small\bfseries, text=bkBlue!80!black, anchor=north east] at (axis cs:179.5,9.08) {\R{右上}{みぎ|うえ}：\R{1人}{ひとり}};
+  \node[font=\sffamily\small\bfseries, text=bkBlue!80!black, anchor=south west] at (axis cs:143.5,7.52) {\R{左下}{ひだり|した}：\R{2人}{ふたり}};
+  \node[font=\sffamily\small\bfseries, text=bkRed!80!black, anchor=north west] at (axis cs:143.5,9.08) {\R{左上}{ひだり|うえ}：3\R{人}{にん}};
+  \node[font=\sffamily\small\bfseries, text=bkRed!80!black, anchor=south west] at (axis cs:160.5,7.52) {\R{右下}{みぎ|した}：4\R{人}{にん}};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:160.4,8.32) {\R{平均}{へい|きん}の\R{点}{てん} $(160,\ 8.3)$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\R{平均}{へい|きん}の\R{線}{せん}で4つの\R{区画}{く|かく}に\R{分}{わ}ける。\R{青}{あお}の\R{区画}{く|かく}（\R{右上}{みぎ|うえ}・\R{左下}{ひだり|した}）と\R{赤}{あか}の\R{区画}{く|かく}（\R{左上}{ひだり|うえ}・\R{右下}{みぎ|した}）。}\label{bk:3-15:fig-kukaku}
+\end{bkfigure}
+
+\bkthrpstep{\R{段}{だん}2　\R{区画}{く|かく}ごとに、\R{点}{てん}の\R{数}{かず}を\R{数}{かぞ}える}
+\R{右上}{みぎ|あ}がりの\R{集}{あつ}まりなら、\R{点}{てん}は\textbf{\R{右上}{みぎ|うえ}と\R{左下}{ひだり|した}}に\R{多}{おお}くなります。\R{背}{せ}が\R{高}{たか}くてタイムも\R{長}{なが}い\R{人}{ひと}、\R{背}{せ}が\R{低}{ひく}くてタイムも\R{短}{みじか}い\R{人}{ひと}が\R{多}{おお}い、ということだからです。\R{右下}{みぎ|さ}がりの\R{集}{あつ}まりなら、\R{点}{てん}は\textbf{\R{左上}{ひだり|うえ}と\R{右下}{みぎ|した}}に\R{多}{おお}くなります。
+
+\R{数}{かぞ}えると、\R{右上}{みぎ|うえ}が\R{1人}{ひとり}（H）、\R{左下}{ひだり|した}が\R{2人}{ふたり}（D、E）で、\R{合}{あ}わせて3\R{人}{にん}。\R{左上}{ひだり|うえ}が3\R{人}{にん}（A、B、C）、\R{右下}{みぎ|した}が4\R{人}{にん}（F、G、I、J）で、\R{合}{あ}わせて7\R{人}{にん}です。\R{赤}{あか}の\R{区画}{く|かく}のほうが\R{多}{おお}いので、\R{右下}{みぎ|さ}がり、つまり\R{負}{ふ}の\R{相関}{そう|かん}だとわかります。
+
+\bkthrpstep{\R{段}{だん}3　\R{区画}{く|かく}を、\R{偏差}{へん|さ}の\R{符号}{ふ|ごう}で\R{言}{い}いかえる}
+\R{平均}{へい|きん}からのずれ、つまり\R{偏差}{へん|さ}（3-14）を\R{使}{つか}います。\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}を $x-\bar{x}$、タイムの\R{偏差}{へん|さ}を $y-\bar{y}$ と\R{書}{か}きます。たとえばAさんは、
+\[ x-\bar{x}=146-160=-14,\qquad y-\bar{y}=8.5-8.3=0.2 \]
+です。\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}が\R{負}{ふ}なら\R{平均}{へい|きん}の\R{線}{せん}より\R{左}{ひだり}、\R{正}{せい}なら\R{右}{みぎ}です。タイムの\R{偏差}{へん|さ}が\R{負}{ふ}なら\R{下}{した}、\R{正}{せい}なら\R{上}{うえ}です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+2つの\R{偏差}{へん|さ}を\textbf{かけ\R{算}{ざん}}すると、\R{符号}{ふ|ごう}は\R{図}{ず}\ref{bk:3-15:fig-fugo}のようになります。\R{右上}{みぎ|うえ}は（\R{正}{せい}）×（\R{正}{せい}）で\R{正}{せい}です。\R{左下}{ひだり|した}は（\R{負}{ふ}）×（\R{負}{ふ}）で、これも\R{正}{せい}です（2-2）。\R{左上}{ひだり|うえ}と\R{右下}{みぎ|した}は、（\R{負}{ふ}）×（\R{正}{せい}）や（\R{正}{せい}）×（\R{負}{ふ}）なので\R{負}{ふ}です。\par\vspace{3pt}
+つまり、\textbf{\R{偏差}{へん|さ}の\R{積}{せき}が\R{正}{せい}なら\R{青}{あお}の\R{区画}{く|かく}、\R{負}{ふ}なら\R{赤}{あか}の\R{区画}{く|かく}}です。\R{区画}{く|かく}を\R{見}{み}なくても、かけ\R{算}{ざん}の\R{符号}{ふ|ごう}だけで、どの\R{区画}{く|かく}かがわかります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (0,0) rectangle (26,20); \fill[bkBlue!12] (-26,-20) rectangle (0,0);
+  \fill[bkRed!10] (-26,0) rectangle (0,20); \fill[bkRed!10] (0,-20) rectangle (26,0);
+  \draw[bkInk, dashed, line width=0.7pt] (-26,0) -- (26,0) (0,-20) -- (0,20);
+  \node[font=\sffamily\footnotesize, align=center] at (13,10) {（\R{正}{せい}）×（\R{正}{せい}）\\$=$\textbf{\R{正}{せい}}};
+  \node[font=\sffamily\footnotesize, align=center] at (-13,-10) {（\R{負}{ふ}）×（\R{負}{ふ}）\\$=$\textbf{\R{正}{せい}}};
+  \node[font=\sffamily\footnotesize, align=center] at (-13,10) {（\R{負}{ふ}）×（\R{正}{せい}）\\$=$\textbf{\R{負}{ふ}}};
+  \node[font=\sffamily\footnotesize, align=center] at (13,-10) {（\R{正}{せい}）×（\R{負}{ふ}）\\$=$\textbf{\R{負}{ふ}}};
+\end{tikzpicture}
+\bkfigcaption{2つの\R{偏差}{へん|さ}の\R{積}{せき}の\R{符号}{ふ|ごう}}\label{bk:3-15:fig-fugo}
+\end{minipage}
+
+\bkthrpstep{\R{段}{だん}4　\R{数}{かぞ}えるかわりに、\R{偏差}{へん|さ}の\R{積}{せき}をたす}
+\R{段}{だん}2では、\R{点}{てん}の\R{数}{かず}を\R{数}{かぞ}えました。でも、\R{数}{かぞ}えるだけでは、\R{平均}{へい|きん}の\R{点}{てん}のすぐそばの\R{点}{てん}も、ずっとはなれた\R{点}{てん}も、\R{同}{おな}じ「\R{1人}{ひとり}」です。はなれた\R{点}{てん}ほど、\R{全体}{ぜん|たい}の\R{傾向}{けい|こう}をはっきり\R{表}{あらわ}しているので、\R{大}{おお}きく\R{数}{かぞ}えたいところです。
+
+そこで、\R{数}{かぞ}えるかわりに、\textbf{\R{偏差}{へん|さ}の\R{積}{せき}そのものをたし}ます。\R{偏差}{へん|さ}の\R{積}{せき}は、\R{平均}{へい|きん}の\R{点}{てん}とその\R{点}{てん}を\R{向}{む}かい\R{合}{あ}う\R{角}{かど}にした\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}です（\R{図}{ず}\ref{bk:3-15:fig-menseki}）。はなれた\R{点}{てん}ほど、\R{長方形}{ちょう|ほう|けい}は\R{大}{おお}きくなります。\R{青}{あお}の\R{区画}{く|かく}の\R{長方形}{ちょう|ほう|けい}は\R{正}{せい}の\R{面積}{めん|せき}、\R{赤}{あか}の\R{区画}{く|かく}の\R{長方形}{ちょう|ほう|けい}は\R{負}{ふ}の\R{面積}{めん|せき}として、\R{全部}{ぜん|ぶ}たし\R{合}{あ}わせるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=118mm, height=80mm, xmin=143, xmax=180, ymin=7.5, ymax=9.1,
+  xtick={145,150,...,175}, ytick={7.5,7.8,...,9.0}, xlabel={\R{身長}{しん|ちょう}（cm）}, ylabel={タイム（s）},
+  yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1, /pgf/number format/fixed zerofill}]
+  \fill[bkBlue!30, draw=bkBlue!80!black, line width=0.5pt, fill opacity=0.8] (axis cs:160,8.3) rectangle (axis cs:156,8.2);
+  \fill[bkBlue!30, draw=bkBlue!80!black, line width=0.5pt, fill opacity=0.8] (axis cs:160,8.3) rectangle (axis cs:158,7.8);
+  \fill[bkBlue!30, draw=bkBlue!80!black, line width=0.5pt, fill opacity=0.8] (axis cs:160,8.3) rectangle (axis cs:166,8.8);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:146,8.5);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:150,8.6);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:153,8.9);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:162,8.2);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:164,8.2);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:169,8.1);
+  \fill[bkRed!25, draw=bkRed!80!black, line width=0.5pt, fill opacity=0.6] (axis cs:160,8.3) rectangle (axis cs:176,7.7);
+  \addplot[bkInk, dashed, line width=0.8pt] coordinates {(160,7.5) (160,9.1)};
+  \addplot[bkInk, dashed, line width=0.8pt] coordinates {(143,8.3) (180,8.3)};
+  \addplot[only marks, mark=*, mark size=2pt, bkInk] coordinates {\bkthrpclass};
+  \node[font=\sffamily\footnotesize, anchor=north, inner sep=2.6pt] at (axis cs:176,7.7) {J};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=2.6pt] at (axis cs:166,8.8) {H};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=2.6pt] at (axis cs:146,8.5) {A};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\R{偏差}{へん|さ}の\R{積}{せき}は、\R{平均}{へい|きん}の\R{点}{てん}と、その\R{人}{ひと}の\R{点}{てん}を\R{向}{む}かい\R{合}{あ}う\R{角}{かど}にした\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}。いちばん\R{大}{おお}きいのは J さんの\R{長方形}{ちょう|ほう|けい}。}\label{bk:3-15:fig-menseki}
+\end{bkfigure}
+
+\textbf{2\R{人}{ひと}の\R{長方形}{ちょう|ほう|けい}を\R{計算}{けい|さん}してみよう}\quad Jさんの\R{点}{てん}は $(176,\ 7.7)$ です。\R{平均}{へい|きん}の\R{点}{てん} $(160,\ 8.3)$ から、\R{右}{みぎ}へ $176-160=16$、\R{下}{した}へ $8.3-7.7=0.6$ はなれています。\R{偏差}{へん|さ}は、\R{身長}{しん|ちょう}が $16$、タイムが $-0.6$（\R{下}{した}だからマイナス）なので、
+\[ 16\times(-0.6)=-9.6 \]
+です。\R{横}{よこ}16、たて0.6の\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}9.6に、「\R{赤}{あか}の\R{区画}{く|かく}だから\R{負}{ふ}」の\R{符号}{ふ|ごう}をつけた\R{数}{かず}になっています。
+
+Hさんの\R{点}{てん}は $(166,\ 8.8)$ で、\R{平均}{へい|きん}の\R{点}{てん}から\R{右}{みぎ}へ6、\R{上}{うえ}へ0.5です。\R{偏差}{へん|さ}はどちらも\R{正}{せい}なので、
+\[ 6\times0.5=3.0 \]
+で、\R{青}{あお}の\R{区画}{く|かく}の\R{正}{せい}の\R{面積}{めん|せき}です。Jさんの\R{長方形}{ちょう|ほう|けい}は、Hさんの\R{長方形}{ちょう|ほう|けい}の3\R{倍}{ばい}\R{以上}{い|じょう}の\R{大}{おお}きさです。\R{平均}{へい|きん}からはなれた\R{人}{ひと}ほど、\R{大}{おお}きく\R{数}{かぞ}えられることがわかります。
+
+10\R{人}{ひと}\R{全員}{ぜん|いん}の\R{偏差}{へん|さ}の\R{積}{せき}を、\R{表}{ひょう}にして\R{計算}{けい|さん}しましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=13mm] Q[c,m,wd=13mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=30mm]}, rowsep=0.8pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+\R{人}{ひと} & \R{身長}{しん|ちょう} $x$ & タイム $y$ & \R{身長}{しん|ちょう}の\R{偏差}{へん|さ} $x-\bar{x}$ & タイムの\R{偏差}{へん|さ} $y-\bar{y}$ & \R{偏差}{へん|さ}の\R{積}{せき} $(x-\bar{x})(y-\bar{y})$ \\
+A & 146 & 8.5 & $-14$ & $0.2$ & \SetCell{bg=bkRed!8}$-2.8$ \\
+B & 150 & 8.6 & $-10$ & $0.3$ & \SetCell{bg=bkRed!8}$-3.0$ \\
+C & 153 & 8.9 & $-7$ & $0.6$ & \SetCell{bg=bkRed!8}$-4.2$ \\
+D & 156 & 8.2 & $-4$ & $-0.1$ & \SetCell{bg=bkBlue!8}$0.4$ \\
+E & 158 & 7.8 & $-2$ & $-0.5$ & \SetCell{bg=bkBlue!8}$1.0$ \\
+F & 162 & 8.2 & $2$ & $-0.1$ & \SetCell{bg=bkRed!8}$-0.2$ \\
+G & 164 & 8.2 & $4$ & $-0.1$ & \SetCell{bg=bkRed!8}$-0.4$ \\
+H & 166 & 8.8 & $6$ & $0.5$ & \SetCell{bg=bkBlue!8}$3.0$ \\
+I & 169 & 8.1 & $9$ & $-0.2$ & \SetCell{bg=bkRed!8}$-1.8$ \\
+J & 176 & 7.7 & $16$ & $-0.6$ & \SetCell{bg=bkRed!8}$-9.6$ \\
+\SetCell[c=5]{r} \R{偏差}{へん|さ}の\R{積}{せき}の\R{合計}{ごう|けい} & & & & & $-17.6$ \\
+\end{bktable}
+\bktabcaption{\R{偏差}{へん|さ}の\R{積}{せき}。\R{青}{あお}の\R{区画}{く|かく}の\R{人}{ひと}は\R{正}{せい}、\R{赤}{あか}の\R{区画}{く|かく}の\R{人}{ひと}は\R{負}{ふ}になる。}
+\end{bkcenter}
+
+\R{合計}{ごう|けい}は $-17.6$ です。\R{人数}{にん|ずう}が\R{多}{おお}いほど\R{合計}{ごう|けい}は\R{大}{おお}きくなってしまうので、\R{人数}{にん|ずう}でわって、\textbf{\R{1人}{ひとり}あたりの\R{平均}{へい|きん}}にします（\R{平均}{へい|きん}を\R{使}{つか}うのは、3-13・3-14と\R{同}{おな}じ\R{考}{かんが}え\R{方}{かた}です）。
+\[ -17.6\div10=-1.76 \]
+\noindent\begin{minipage}[t]{0.46\linewidth}\vspace{0pt}
+このように、\textbf{2つの\R{偏差}{へん|さ}の\R{積}{せき}の\R{平均}{へい|きん}}を、\textbf{\R{共分散}{きょう|ぶん|さん}}といいます。\bkidx{きょうぶんさん}{\R{共分散}{きょう|ぶん|さん}}この\R{本}{ほん}では、$x$ と $y$ の\R{共分散}{きょう|ぶん|さん}を $\sigma_{xy}$（シグマ・エックス・ワイ）と\R{書}{か}きます。\R{下}{した}つきの $xy$ は「$x$ と $y$ の」という\R{印}{しるし}で、かけ\R{算}{ざん}ではありません（3-2の\R{下}{した}つき\R{文字}{も|じ}）。
+\end{minipage}\hfill
+\begin{minipage}[t]{67mm}\vspace{0pt}\bkkigocard{$\sigma_{xy}$}{シグマ・エックス・ワイ}{$x$ と $y$ の\R{共分散}{きょう|ぶん|さん}。\R{偏差}{へん|さ}の\R{積}{せき}の\R{平均}{へい|きん}。}{covariance}{3-15}\end{minipage}\par\vspace{4pt}
+\bkthrpline{$\sigma_{xy}=\{(x_1-\bar{x})(y_1-\bar{y})+(x_2-\bar{x})(y_2-\bar{y})+\cdots+(x_n-\bar{x})(y_n-\bar{y})\}\div n$}
+$x_1$、$y_1$ は\R{1人}{ひとり}めの\R{身長}{しん|ちょう}とタイム、$x_2$、$y_2$ は\R{2人}{ふたり}めの\R{身長}{しん|ちょう}とタイム、…、$n$ は\R{人数}{にん|ずう}です。「$\cdots$」は「\R{同}{おな}じきまりで、とちゅうを\R{省}{はぶ}いた」という\R{印}{しるし}です。
+
+\begin{taisetsu}
+\R{共分散}{きょう|ぶん|さん}が\R{正}{せい} → \R{青}{あお}の\R{区画}{く|かく}（\R{右上}{みぎ|うえ}・\R{左下}{ひだり|した}）が\R{強}{つよ}い → \R{正}{せい}の\R{相関}{そう|かん}\par
+\R{共分散}{きょう|ぶん|さん}が\R{負}{ふ} → \R{赤}{あか}の\R{区画}{く|かく}（\R{左上}{ひだり|うえ}・\R{右下}{みぎ|した}）が\R{強}{つよ}い → \R{負}{ふ}の\R{相関}{そう|かん}\par
+\R{共分散}{きょう|ぶん|さん}が0に\R{近}{ちか}い → どちらでもない → \R{相関}{そう|かん}がない
+\end{taisetsu}
+
+やってみようのデータでは、\R{共分散}{きょう|ぶん|さん}は $-1.76$ で\R{負}{ふ}なので、\R{負}{ふ}の\R{相関}{そう|かん}です。\R{段}{だん}2で\R{数}{かぞ}えた\R{結果}{けっ|か}と\R{合}{あ}っています。
+
+\textbf{「\R{共分散}{きょう|ぶん|さん}」という\R{名前}{な|まえ}のわけ}\quad 3-14の\R{分散}{ぶん|さん}は、\R{偏差}{へん|さ}の2\R{乗}{じょう}、つまり「\R{偏差}{へん|さ}×\R{同}{おな}じ\R{偏差}{へん|さ}」の\R{平均}{へい|きん}でした。\R{共分散}{きょう|ぶん|さん}は、それを「$x$ の\R{偏差}{へん|さ}×$y$ の\R{偏差}{へん|さ}」にかえたものです。「2つの\R{量}{りょう}が\textbf{\R{共}{とも}に}どうちらばっているか」を\R{表}{あらわ}す\R{分散}{ぶん|さん}なので、\R{共分散}{きょう|ぶん|さん}とよびます。$y$ のかわりに $x$ \R{自身}{じ|しん}を\R{入}{い}れると、$(x-\bar{x})(x-\bar{x})=(x-\bar{x})^2$ の\R{平均}{へい|きん}で、ふつうの\R{分散}{ぶん|さん} $\sigma_x^{\,2}$ にもどります（$\sigma_x$ は $x$ の\R{標準偏差}{ひょう|じゅん|へん|さ}）。
+
+\bksubsection{4}{\R{単位}{たん|い}によらない\R{強}{つよ}さの\R{数}{かず}：\R{相関係数}{そう|かん|けい|すう}}
+
+\leavevmode\label{bk:3-15:r}\R{共分散}{きょう|ぶん|さん}で、\R{正}{せい}の\R{相関}{そう|かん}か\R{負}{ふ}の\R{相関}{そう|かん}かはわかりました。でも、\R{共分散}{きょう|ぶん|さん}には2つの\R{困}{こま}ったことがあります。
+
+\bkthrpstep{\R{困}{こま}ったこと1　\R{単位}{たん|い}を\R{変}{か}えると、\R{数}{かず}が\R{変}{か}わる}
+\R{身長}{しん|ちょう}を、cmのかわりにmmではかったとしましょう。1\,cmは10\,mmなので、
+\[ \qty{146}{cm}\times\qty{10}{mm/cm}=\qty{1460}{mm} \]
+のように、\R{身長}{しん|ちょう}は\R{全部}{ぜん|ぶ}10\R{倍}{ばい}になります。\R{平均}{へい|きん}も10\R{倍}{ばい}の1600\,mmになるので、\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}も\R{全部}{ぜん|ぶ}10\R{倍}{ばい}です（$-14$ cm は $-140$ mm）。すると、\R{偏差}{へん|さ}の\R{積}{せき}も10\R{倍}{ばい}、\R{共分散}{きょう|ぶん|さん}も10\R{倍}{ばい}の $-17.6$ になります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=36mm] Q[c,m,wd=36mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+ & \R{身長}{しん|ちょう}をcmではかる & \R{身長}{しん|ちょう}をmmではかる \\
+Aさんの\R{身長}{しん|ちょう}の\R{偏差}{へん|さ} & $-14$ & $-140$\quad（10\R{倍}{ばい}） \\
+Aさんの\R{偏差}{へん|さ}の\R{積}{せき} & $-14\times0.2=-2.8$ & $-140\times0.2=-28$\quad（10\R{倍}{ばい}） \\
+\R{共分散}{きょう|ぶん|さん} & $-1.76$ & $-17.6$\quad（10\R{倍}{ばい}） \\
+\end{bktable}
+\bktabcaption{\R{同}{おな}じ10\R{人}{にん}、\R{同}{おな}じ\R{関係}{かん|けい}なのに、\R{共分散}{きょう|ぶん|さん}は10\R{倍}{ばい}になる。}
+\end{bkcenter}
+
+\R{同}{おな}じ10\R{人}{にん}の、\R{同}{おな}じ\R{関係}{かん|けい}です。なのに、はかる\R{単位}{たん|い}で\R{数}{かず}が\R{変}{か}わってしまいます。
+
+\bkthrpstep{\R{困}{こま}ったこと2　\R{大}{おお}きいのか\R{小}{ちい}さいのか、わからない}
+$-1.76$ という\R{数}{かず}を\R{見}{み}ても、それが\R{強}{つよ}い\R{相関}{そう|かん}なのか\R{弱}{よわ}い\R{相関}{そう|かん}なのか、\R{判断}{はん|だん}できません。\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}は $-14$ や16のように\R{大}{おお}きく、タイムの\R{偏差}{へん|さ}は $0.2$ や $-0.6$ のように\R{小}{ちい}さいので、そもそも\R{積}{せき}の\R{大}{おお}きさの\R{目安}{め|やす}がないからです。
+
+\bkthrpstep{なおし\R{方}{かた}　「σ \R{何個}{なん|こ}\R{分}{ぶん}」で\R{数}{かぞ}える}
+2つの\R{困}{こま}ったことは、どちらも「\R{偏差}{へん|さ}を、cmやsのような\R{単位}{たん|い}で\R{数}{かぞ}えている」ことから\R{起}{お}きています。そこで、\R{偏差}{へん|さ}を、\textbf{その\R{量}{りょう}の\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma$ が\R{何個}{なん|こ}\R{分}{ぶん}か}で\R{数}{かぞ}えなおします。$\sigma$ は「その\R{量}{りょう}のだいたいのずれ」でした（3-14）。$\sigma$ を\R{物差}{もの|さ}しにすれば、\R{身長}{しん|ちょう}もタイムも、\R{同}{おな}じ\R{物差}{もの|さ}しでくらべられます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] (0,0) -- (120,0);
+  \foreach \k/\lab in {-2/{$-2\sigma_x$}, -1/{$-\sigma_x$}, 0/{\R{平均}{へい|きん}}, 1/{$\sigma_x$}, 2/{$2\sigma_x$}} {
+    \draw[bkInk, line width=0.7pt] ({58+25*\k},-1.6) -- ({58+25*\k},1.6);
+    \node[font=\sffamily\footnotesize, anchor=north] at ({58+25*\k},-2.4) {\lab};}
+  \foreach \k/\lab in {-2/{142.6}, -1/{151.3}, 0/{160}, 1/{168.7}, 2/{177.4}} {
+    \node[font=\sffamily\scriptsize, text=bkGray, anchor=north] at ({58+25*\k},-7.6) {\lab};}
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=west] at (115,-8.6) {cm};
+  % Jさん 176 → (176-160)/8.7 = 1.84
+  \fill[bkRed] ({58+25*1.838},0) circle (1.2);
+  \draw[bkRed, line width=0.8pt, -{Stealth[length=3.5pt]}] (58,5) -- ({58+25*1.838},5);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south] at ({58+25*0.92},5.6) {Jさん：$16\div8.7=1.84$（$\sigma_x$ の1.84\R{個}{こ}\R{分}{ぶん}）};
+\end{tikzpicture}
+\bkfigcaption{\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}を、$\sigma_x$（\qty{8.7}{cm}）を\R{物差}{もの|さ}しにして\R{数}{かぞ}える。}
+\end{bkfigure}
+
+\R{身長}{しん|ちょう}の\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma_x$ とタイムの\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma_y$ を、3-14のように\R{計算}{けい|さん}します。\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{平均}{へい|きん}（\R{分散}{ぶん|さん}）を\R{求}{もと}めて、$\sqrt{\phantom{x}}$ をとります。
+\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}を1つずつ2\R{乗}{じょう}してたすと（\R{表}{ひょう}2の\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}を\R{使}{つか}う）、
+\[ (-14)^2+(-10)^2+(-7)^2+\cdots+16^2=196+100+49+\cdots+256=758 \]
+です。10でわって\R{分散}{ぶん|さん}は75.8、$\sqrt{\phantom{x}}$ をとって
+\[ \sigma_x=\sqrt{75.8}=8.706\cdots \]
+タイムも\R{同}{おな}じように、\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{合計}{ごう|けい}は
+\[ 0.2^2+0.3^2+0.6^2+\cdots+(-0.6)^2=0.04+0.09+0.36+\cdots+0.36=1.42 \]
+です。10でわって\R{分散}{ぶん|さん}は0.142、$\sqrt{\phantom{x}}$ をとって
+\[ \sigma_y=\sqrt{0.142}=0.3768\cdots \]
+\R{身長}{しん|ちょう}は\R{平均}{へい|きん}からだいたい\qty{8.7}{cm}、タイムはだいたい\qty{0.38}{s}ずれる、ということです（$\sqrt{\phantom{x}}$ は\R{電卓}{でん|たく}で\R{計算}{けい|さん}します）。
+
+それぞれの\R{偏差}{へん|さ}を $\sigma$ でわってから（「$\sigma$ \R{何個}{なん|こ}\R{分}{ぶん}か」に\R{直}{なお}してから）、かけて\R{平均}{へい|きん}します。\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}を $a$、タイムの\R{偏差}{へん|さ}を $b$ とすると、\R{分数}{ぶん|すう}のかけ\R{算}{ざん}（2-4）で
+\[ \frac{a}{\sigma_x}\times\frac{b}{\sigma_y}=\frac{a\times b}{\sigma_x\times\sigma_y} \]
+です。\R{1人}{ひとり}ずつ $\sigma_x$ と $\sigma_y$ でわるのは、\R{偏差}{へん|さ}の\R{積}{せき}を\R{最後}{さい|ご}にまとめて $\sigma_x\times\sigma_y$ でわるのと\R{同}{おな}じです。だから、
+\bkthrpline{\fbox{$r=\dfrac{\sigma_{xy}}{\sigma_x\,\sigma_y}$}\qquad（\R{共分散}{きょう|ぶん|さん}÷（$x$ の\R{標準偏差}{ひょう|じゅん|へん|さ}×$y$ の\R{標準偏差}{ひょう|じゅん|へん|さ}））}
+\noindent\begin{minipage}[t]{0.46\linewidth}\vspace{0pt}
+となります。この $r$ を\textbf{\R{相関係数}{そう|かん|けい|すう}}といいます。\bkidx{そうかんけいすう}{\R{相関係数}{そう|かん|けい|すう}}\R{英語}{えい|ご}の correlation coefficient の\R{頭文字}{かしら|も|じ}です。\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の\R{単位}{たん|い}が\R{同}{おな}じなので（cm×s と cm×s）、$r$ には\R{単位}{たん|い}がありません。
+\end{minipage}\hfill
+\begin{minipage}[t]{67mm}\vspace{0pt}\bkkigocard{$r$}{アール}{\R{相関係数}{そう|かん|けい|すう}。\R{共分散}{きょう|ぶん|さん}÷（$\sigma_x\times\sigma_y$）。$-1$ から1まで。}{correlation coefficient}{3-15}\end{minipage}\par\vspace{4pt}
+
+やってみようのデータでは、
+\[ r=\frac{-1.76}{8.706\times0.3768}=\frac{-1.76}{3.280}=-0.536\cdots \]
+で、\textbf{およそ $-0.54$} です。
+
+\textbf{\R{単位}{たん|い}を\R{変}{か}えても、$r$ は\R{変}{か}わらない}\quad \R{身長}{しん|ちょう}をmmにすると、\R{共分散}{きょう|ぶん|さん}は10\R{倍}{ばい}の $-17.6$ でした。でも、\R{身長}{しん|ちょう}の\R{標準偏差}{ひょう|じゅん|へん|さ}も10\R{倍}{ばい}の87.06\,mmになります。\R{分子}{ぶん|し}も\R{分母}{ぶん|ぼ}も10\R{倍}{ばい}なので、$r$ は\R{変}{か}わりません。
+\[ r=\frac{-17.6}{87.06\times0.3768}=\frac{-17.6}{32.80}=-0.536\cdots \]
+これで、\R{困}{こま}ったこと1が\R{解決}{かい|けつ}しました。
+
+\textbf{$r$ は、$-1$ から1までの\R{数}{かず}}\quad \R{困}{こま}ったこと2はどうでしょう。\R{点}{てん}が\R{右上}{みぎ|あ}がりの\R{直線}{ちょく|せん}の\R{上}{うえ}に\textbf{ぴったり}のっているときを、\R{計算}{けい|さん}してみます。3つの\R{点}{てん} $(1,\ 2)$、$(2,\ 4)$、$(3,\ 6)$ は、どれも\R{直線}{ちょく|せん} $y=2x$ の\R{上}{うえ}にあります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=8mm] Q[c,m,wd=15mm] Q[c,m,wd=15mm] Q[c,m,wd=15mm] Q[c,m,wd=15mm] Q[c,m,wd=15mm]}, rowsep=0.8pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+$x$ & $y$ & $x-\bar{x}$ & $y-\bar{y}$ & \R{偏差}{へん|さ}の\R{積}{せき} & $(x-\bar{x})^2$ & $(y-\bar{y})^2$ \\
+1 & 2 & $-1$ & $-2$ & 2 & 1 & 4 \\
+2 & 4 & 0 & 0 & 0 & 0 & 0 \\
+3 & 6 & 1 & 2 & 2 & 1 & 4 \\
+\SetCell[c=4]{r} \R{合計}{ごう|けい} & & & & 4 & 2 & 8 \\
+\SetCell[c=4]{r} 3でわる（\R{平均}{へい|きん}） & & & & $\dfrac{4}{3}$ & $\dfrac{2}{3}$ & $\dfrac{8}{3}$ \\
+\end{bktable}
+\bktabcaption{\R{直線}{ちょく|せん} $y=2x$ の\R{上}{うえ}の3\R{点}{てん}。$\bar{x}=2$、$\bar{y}=4$}
+\end{bkcenter}
+\R{共分散}{きょう|ぶん|さん}は $\dfrac{4}{3}$ です。\R{標準偏差}{ひょう|じゅん|へん|さ}は、\R{電卓}{でん|たく}で
+\[ \sigma_x=\sqrt{\frac{2}{3}}=0.8165\cdots,\qquad \sigma_y=\sqrt{\frac{8}{3}}=1.633\cdots \]
+で、$\sigma_x\times\sigma_y=1.333\cdots$ です。これは $\dfrac{4}{3}$ と\R{同}{おな}じ\R{数}{かず}です。だから
+\[ r=\frac{4}{3}\div\frac{4}{3}=1 \]
+となります。$y$ の\R{偏差}{へん|さ}が、いつも $x$ の\R{偏差}{へん|さ}のちょうど2\R{倍}{ばい}だからです。\R{右下}{みぎ|さ}がりの\R{直線}{ちょく|せん}の\R{上}{うえ}にぴったりのっていれば、\R{同}{おな}じように\R{計算}{けい|さん}して $r=-1$ になります。\R{点}{てん}が\R{直線}{ちょく|せん}からずれるほど、$r$ は0に\R{近}{ちか}づきます。$r$ は、いつも $-1$ \R{以上}{い|じょう}1\R{以下}{い|か}です（わけは、このあとの「もっと\R{知}{し}りたい」）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node at (0,0) {\bkthrpmini{$r=0.9$}{(2.1,4.4) (7.8,6.7) (7.1,7.1) (3.0,3.2) (5.0,5.0) (4.6,5.7) (6.2,6.3) (7.3,6.4) (1.8,1.6) (1.2,3.0) (7.7,6.6) (4.5,5.3) (7.1,6.3) (1.0,3.5) (4.6,4.5) (6.8,6.1) (2.8,4.2) (8.6,5.8) (8.2,6.3) (1.2,1.9)}};
+  \node at (27,0) {\bkthrpmini{$r=0.5$}{(8.6,6.4) (8.6,6.2) (1.5,3.6) (1.7,5.0) (7.7,4.0) (6.9,7.6) (6.4,4.1) (3.5,4.8) (5.8,5.6) (5.9,5.9) (5.6,5.2) (2.3,5.5) (4.4,0.7) (4.1,4.9) (6.8,5.4) (9.0,5.5) (8.6,7.9) (5.4,4.1) (4.6,5.1) (3.1,2.3)}};
+  \node at (54,0) {\bkthrpmini{$r=0$}{(2.9,4.9) (5.4,5.2) (4.0,5.5) (5.8,3.5) (6.0,5.7) (1.5,5.3) (1.1,6.1) (7.7,4.7) (3.1,4.6) (2.9,1.8) (9.0,5.6) (4.8,1.9) (7.7,3.8) (4.8,7.5) (6.1,2.1) (2.2,6.4) (6.1,6.4) (7.9,5.7) (5.2,6.4) (6.9,6.9)}};
+  \node at (81,0) {\bkthrpmini{$r=-0.5$}{(2.9,5.1) (1.8,8.0) (4.2,5.1) (2.2,3.2) (1.5,6.7) (4.2,5.0) (8.3,2.4) (7.4,3.1) (7.1,3.6) (2.8,5.8) (5.3,4.4) (3.2,5.8) (2.4,8.6) (1.8,5.0) (2.7,4.7) (8.4,3.7) (7.6,5.9) (7.5,3.3) (7.4,6.5) (2.5,4.0)}};
+  \node at (108,0) {\bkthrpmini{$r=-0.9$}{(6.0,4.7) (6.9,3.9) (7.4,4.1) (8.5,3.2) (6.9,4.0) (8.4,3.3) (1.2,8.1) (4.7,5.3) (8.5,3.6) (6.2,5.0) (8.2,4.9) (1.9,6.4) (4.8,4.8) (3.0,7.6) (5.4,4.0) (5.6,4.6) (1.1,7.3) (2.7,7.6) (3.2,5.4) (8.3,2.1)}};
+\end{tikzpicture}
+\bkfigcaption{\R{相関係数}{そう|かん|けい|すう} $r$ と\R{散布図}{さん|ぷ|ず}の\R{形}{かたち}。$r$ が1や $-1$ に\R{近}{ちか}いほど、\R{点}{てん}は\R{細}{ほそ}い\R{帯}{おび}になる。}\label{bk:3-15:fig-r}
+\end{bkfigure}
+
+\R{相関}{そう|かん}の\R{強}{つよ}さは、$r$ の\textbf{\R{符号}{ふ|ごう}をとった\R{大}{おお}きさ}（\R{絶対値}{ぜっ|たい|ち}、3-2）で\R{決}{き}めます。\R{次}{つぎ}の\R{表}{ひょう}は、よく\R{使}{つか}われる\R{目安}{め|やす}です。きっちりした\R{決}{き}まりではありません。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=40mm] Q[l,m,wd=56mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+$r$ の\R{絶対値}{ぜっ|たい|ち} $|r|$ & \R{相関}{そう|かん}の\R{強}{つよ}さ（\R{目安}{め|やす}） \\
+0.7\R{以上}{い|じょう} & \R{強}{つよ}い\R{相関}{そう|かん}がある \\
+0.4\R{以上}{い|じょう}0.7\R{未満}{み|まん} & \R{中}{なか}くらいの\R{相関}{そう|かん}がある \\
+0.2\R{以上}{い|じょう}0.4\R{未満}{み|まん} & \R{弱}{よわ}い\R{相関}{そう|かん}がある \\
+0.2\R{未満}{み|まん} & ほとんど\R{相関}{そう|かん}がない \\
+\end{bktable}
+\bktabcaption{\R{相関}{そう|かん}の\R{強}{つよ}さの\R{目安}{め|やす}。\R{符号}{ふ|ごう}（＋か－か）は、\R{向}{む}きを\R{表}{あらわ}す。}
+\end{bkcenter}
+
+\bkhatenaref の\R{答}{こた}え（その2）：やってみようの\R{相関係数}{そう|かん|けい|すう}は、$r=-0.54$ でした。\R{符号}{ふ|ごう}をとった\R{大}{おお}きさは0.54なので、\textbf{\R{中}{なか}くらいの\R{負}{ふ}の\R{相関}{そう|かん}}です。「\R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、\R{足}{あし}が\R{速}{はや}い\R{傾向}{けい|こう}は、ある\R{程度}{てい|ど}ある。でも、\R{背}{せ}の\R{高}{たか}さだけで\R{足}{あし}の\R{速}{はや}さが\R{決}{き}まるわけではない」ということです。
+
+\bkthrpstep{\R{表計算}{ひょう|けい|さん}で\R{求}{もと}める}
+\R{人数}{にん|ずう}が\R{多}{おお}いと、\R{手}{て}で\R{計算}{けい|さん}するのは\R{大変}{たい|へん}です。\R{表計算}{ひょう|けい|さん}（2-18）には、\R{相関係数}{そう|かん|けい|すう}を\R{求}{もと}める\R{命令}{めい|れい} \texttt{CORREL}（コリレーション、\R{英語}{えい|ご}で「\R{相関}{そう|かん}」）があります。\R{共分散}{きょう|ぶん|さん}は \texttt{COVARIANCE.P}、\R{標準偏差}{ひょう|じゅん|へん|さ}は \texttt{STDEV.P} で\R{求}{もと}められます（.Pは「\R{人数}{にん|ずう} $n$ でわる」という\R{印}{しるし}です）。
+
+\begin{bkcenter}
+\bksheet{3}{22}{%
+1 & \R{身長}{しん|ちょう} & タイム & \\
+2 & 146 & 8.5 & \\
+3 & 150 & 8.6 & \\
+4 & 153 & 8.9 & \\
+5 & 156 & 8.2 & \\
+6 & 158 & 7.8 & \\
+7 & 162 & 8.2 & \\
+8 & 164 & 8.2 & \\
+9 & 166 & 8.8 & \\
+10 & 169 & 8.1 & \\
+11 & 176 & 7.7 & \\
+12 & & \R{共分散}{きょう|ぶん|さん} & $-1.76$ \\
+13 & & \R{相関係数}{そう|かん|けい|すう} & $-0.536$ \\}
+\bktabcaption{C12 に \texttt{=COVARIANCE.P(A2:A11,B2:B11)}、C13 に \texttt{=CORREL(A2:A11,B2:B11)} と\R{入}{い}れる。}
+\end{bkcenter}
+
+\begin{motto}[3]
+\textbf{$r$ が $-1$ \R{以上}{い|じょう}1\R{以下}{い|か}になるわけ}\par
+$t$ をどんな\R{数}{かず}とします。それぞれの\R{人}{ひと}について「$t\times$（$x$ の\R{偏差}{へん|さ}）＋（$y$ の\R{偏差}{へん|さ}）」を\R{作}{つく}り、2\R{乗}{じょう}して\R{平均}{へい|きん}します。2\R{乗}{じょう}は0\R{以上}{い|じょう}なので、その\R{平均}{へい|きん}も0\R{以上}{い|じょう}です。\R{展開}{てん|かい}して（3-8）まとめると、
+\[ \sigma_x^{\,2}\,t^2+2\sigma_{xy}\,t+\sigma_y^{\,2}\geqq0 \]
+が、どんな $t$ でも\R{成}{な}り\R{立}{た}ちます。\R{左辺}{さ|へん}は $t$ の2\R{次式}{じ|しき}なので、グラフは\R{下}{した}に\R{開}{ひら}かない\R{放物線}{ほう|ぶつ|せん}（3-9）です。どんな $t$ でも0\R{以上}{い|じょう}ということは、\R{放物線}{ほう|ぶつ|せん}が $t$ \R{軸}{じく}より\R{下}{した}に\R{出}{で}ない、つまり $t$ \R{軸}{じく}と2\R{点}{てん}で\R{交}{まじ}わらないということです。だから\R{判別式}{はん|べつ|しき}（3-10）は0\R{以下}{い|か}で、
+\[ (2\sigma_{xy})^2-4\sigma_x^{\,2}\sigma_y^{\,2}\leqq0 \]
+これを4でわって\R{整理}{せい|り}すると、$\sigma_{xy}^{\,2}\leqq\sigma_x^{\,2}\sigma_y^{\,2}$、つまり $r^2\leqq1$ です。2\R{乗}{じょう}して1\R{以下}{い|か}の\R{数}{かず}なので、$r$ は $-1$ \R{以上}{い|じょう}1\R{以下}{い|か}です。
+\end{motto}
+
+
+
+\bksubsection{5}{\R{相関}{そう|かん}があっても、\R{原因}{げん|いん}とはかぎらない}
+
+\leavevmode\label{bk:3-15:inga}\R{相関係数}{そう|かん|けい|すう}を\R{使}{つか}うときに、\R{気}{き}をつけることが3つあります。
+
+\bkthrpstep{\R{気}{き}をつけること1　\R{第}{だい}3の\R{量}{りょう}がかくれていることがある}
+ある\R{町}{まち}で\R{毎日}{まい|にち}、アイスクリームの\R{売}{う}れた\R{数}{かず}と、\R{海}{うみ}や\R{川}{かわ}での\R{水}{みず}の\R{事故}{じ|こ}の\R{数}{かず}を\R{記録}{き|ろく}しました。\R{散布図}{さん|ぷ|ず}をかくと、\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}がありました。では、「アイスクリームを\R{食}{た}べると、\R{水}{みず}の\R{事故}{じ|こ}が\R{起}{お}きやすくなる」のでしょうか。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}
+そうではありません。\R{暑}{あつ}い\R{日}{ひ}ほどアイスはよく\R{売}{う}れ、\R{暑}{あつ}い\R{日}{ひ}ほど\R{泳}{およ}ぎに\R{行}{い}く\R{人}{ひと}がふえるので\R{事故}{じ|こ}もふえます。\textbf{\R{気温}{き|おん}}という\R{第}{だい}3の\R{量}{りょう}が、\R{両方}{りょう|ほう}を\R{大}{おお}きくしていたのです（\R{図}{ず}\ref{bk:3-15:fig-inga}）。アイスと\R{事故}{じ|こ}のあいだには、\R{直接}{ちょく|せつ}の「\R{原因}{げん|いん}と\R{結果}{けっ|か}」の\R{関係}{かん|けい}はありません。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=22mm] (k) at (0,14) {\R{気温}{き|おん}が\R{高}{たか}い};
+  \node[bk node, minimum width=20mm] (a) at (-15,0) {アイスが\R{売}{う}れる};
+  \node[bk node, minimum width=20mm] (j) at (15,0) {\R{水}{みず}の\R{事故}{じ|こ}};
+  \draw[bk link] (k) -- (a);
+  \draw[bk link] (k) -- (j);
+  \draw[bkRed, line width=0.8pt, dashed, {Stealth[length=3.5pt]}-{Stealth[length=3.5pt]}] ([yshift=-1.5mm]a.south) to[bend right=25] node[below, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=1.5pt] {\R{相関}{そう|かん}はあるが、\R{原因}{げん|いん}ではない} ([yshift=-1.5mm]j.south);
+\end{tikzpicture}
+\bkfigcaption{\R{気温}{き|おん}が、\R{両方}{りょう|ほう}を\R{大}{おお}きくしている。}\label{bk:3-15:fig-inga}
+\end{minipage}
+
+\R{一方}{いっ|ぽう}がもう\R{一方}{いっ|ぽう}の\R{原因}{げん|いん}になっている\R{関係}{かん|けい}を、\textbf{\R{因果関係}{いん|が|かん|けい}}（\R{原因}{げん|いん}と\R{結果}{けっ|か}の\R{関係}{かん|けい}）といいます。\bkidx{いんがかんけい}{\R{因果関係}{いん|が|かん|けい}}\textbf{\R{相関}{そう|かん}があっても、\R{因果関係}{いん|が|かん|けい}があるとはかぎりません}。
+
+\bkhatenaref の\R{答}{こた}え（その3）：\R{身長}{しん|ちょう}と\R{足}{あし}の\R{速}{はや}さの\R{相関}{そう|かん}も、「\R{背}{せ}が\R{高}{たか}いから\R{速}{はや}い」とは\R{言}{い}いきれません。クラスの\R{中}{なか}でも、\R{誕生日}{たん|じょう|び}が\R{早}{はや}くて\R{体}{からだ}の\R{成}{な}\R{長}{なが}が\R{進}{すす}んでいる\R{人}{ひと}は、\R{背}{せ}も\R{高}{たか}く、\R{筋肉}{きん|にく}も\R{強}{つよ}いかもしれません。\R{運動部}{うん|どう|ぶ}で\R{練習}{れん|しゅう}している\R{人}{ひと}もいます。かくれた\R{量}{りょう}がいくつもありそうです。
+
+\bkthrpstep{\R{気}{き}をつけること2　はなれた1つの\R{点}{てん}で、$r$ が\R{大}{おお}きく\R{変}{か}わる}
+\R{図}{ず}\ref{bk:3-15:fig-hazure}の\R{左}{ひだり}は、5つの\R{点}{てん}の\R{散布図}{さん|ぷ|ず}で、$r=0.14$ です。ほとんど\R{相関}{そう|かん}がありません。ここに、ほかからずっとはなれた\R{点}{てん}を1つだけ\R{加}{くわ}えると、\R{右}{みぎ}のように $r=0.91$ になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=h1, width=52mm, height=46mm, xmin=0, xmax=13, ymin=0, ymax=13, xtick={0,4,8,12}, ytick={0,4,8,12}, xlabel={$x$}, ylabel={$y$}, title={\sffamily\small 5つの\R{点}{てん}：$r=0.14$}]
+  \addplot[only marks, mark=*, mark size=1.8pt, bkBlue] coordinates {(1,3) (2,1) (3,4) (4,2) (5,3)};
+\end{axis}
+\begin{axis}[bkplot, at={(h1.east)}, anchor=west, xshift=18mm, width=52mm, height=46mm, xmin=0, xmax=13, ymin=0, ymax=13, xtick={0,4,8,12}, ytick={0,4,8,12}, xlabel={$x$}, ylabel={$y$}, title={\sffamily\small 1つ\R{加}{くわ}える：$r=0.91$}]
+  \addplot[only marks, mark=*, mark size=1.8pt, bkBlue] coordinates {(1,3) (2,1) (3,4) (4,2) (5,3)};
+  \addplot[only marks, mark=*, mark size=2.4pt, bkRed] coordinates {(12,12)};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=east, inner sep=3pt] at (axis cs:12,12) {$(12,\ 12)$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はなれた\R{点}{てん}（\R{外}{はず}れ\R{値}{ち}、3-13）が1つあるだけで、$r$ は0.14から0.91になる。}\label{bk:3-15:fig-hazure}
+\end{bkfigure}
+
+はなれた\R{点}{てん}の\R{偏差}{へん|さ}は、$x$ も $y$ もとても\R{大}{おお}きいので、\R{偏差}{へん|さ}の\R{積}{せき}（\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}）がとても\R{大}{おお}きくなり、それだけで\R{共分散}{きょう|ぶん|さん}を\R{決}{き}めてしまうのです。$r$ だけを\R{見}{み}ずに、\textbf{かならず\R{散布図}{さん|ぷ|ず}もかいて}\R{確}{たし}かめましょう。はなれた\R{点}{てん}が、はかりまちがいでないかも\R{調}{しら}べます。
+
+\bkthrpstep{\R{気}{き}をつけること3　\R{曲}{ま}がった\R{関係}{かん|けい}は、$r$ では\R{見}{み}えない}
+5つの\R{点}{てん} $(-2,\ 4)$、$(-1,\ 1)$、$(0,\ 0)$、$(1,\ 1)$、$(2,\ 4)$ は、どれも\R{放物線}{ほう|ぶつ|せん} $y=x^2$（3-9）の\R{上}{うえ}にあります。$x$ がわかれば $y$ はぴったり\R{決}{き}まるので、とても\R{強}{つよ}い\R{関係}{かん|けい}です。ところが、\R{共分散}{きょう|ぶん|さん}を\R{計算}{けい|さん}すると、
+\[ \bar{x}=0,\quad \bar{y}=\frac{4+1+0+1+4}{5}=2 \]
+\R{偏差}{へん|さ}の\R{積}{せき}は、$(-2)\times2$、$(-1)\times(-1)$、$0\times(-2)$、$1\times(-1)$、$2\times2$ で、
+\[ (-4)+1+0+(-1)+4=0 \]
+\R{共分散}{きょう|ぶん|さん}は0、$r=0$ です。\R{左}{ひだり}\R{半分}{はん|ぶん}は\R{右下}{みぎ|さ}がり、\R{右}{みぎ}\R{半分}{はん|ぶん}は\R{右上}{みぎ|あ}がりで、\R{正}{せい}と\R{負}{ふ}が\R{打}{う}ち\R{消}{け}し\R{合}{あ}ったからです。$r$ が\R{表}{あらわ}すのは、\textbf{\R{直線}{ちょく|せん}にどれだけ\R{近}{ちか}いか}という\R{関係}{かん|けい}の\R{強}{つよ}さです。$r=0$ でも、「\R{関係}{かん|けい}がない」とはかぎりません。
+
+\begin{taisetsu}
+\R{散布図}{さん|ぷ|ず}：2つの\R{量}{りょう}の\R{組}{くみ}を\R{点}{てん}にした\R{図}{ず}。\R{右上}{みぎ|あ}がりは\R{正}{せい}の\R{相関}{そう|かん}、\R{右下}{みぎ|さ}がりは\R{負}{ふ}の\R{相関}{そう|かん}。\par\vspace{2pt}
+\R{共分散}{きょう|ぶん|さん} $\sigma_{xy}$ ＝（$x$ の\R{偏差}{へん|さ}×$y$ の\R{偏差}{へん|さ}）の\R{平均}{へい|きん}。\R{符号}{ふ|ごう}が\R{相関}{そう|かん}の\R{向}{む}きを\R{表}{あらわ}す。\par\vspace{2pt}
+\R{相関係数}{そう|かん|けい|すう} $r=\dfrac{\sigma_{xy}}{\sigma_x\,\sigma_y}$。いつも $-1\leqq r\leqq1$。\R{単位}{たん|い}によらない。\par\vspace{2pt}
+\R{相関}{そう|かん}があっても、\R{因果関係}{いん|が|かん|けい}があるとはかぎらない。かならず\R{散布図}{さん|ぷ|ず}も\R{見}{み}る。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{\R{散布図}{さん|ぷ|ず}}{2つの\R{量}{りょう}の\R{組}{くみ}を、1つずつ\R{点}{てん}にして\R{表}{あらわ}した\R{図}{ず}。}
+\bkword{\R{正}{せい}の\R{相関}{そう|かん}・\R{負}{ふ}の\R{相関}{そう|かん}}{\R{一方}{いっ|ぽう}が\R{大}{おお}きいほど、もう\R{一方}{いっ|ぽう}も\R{大}{おお}きい（\R{正}{せい}）・\R{小}{ちい}さい（\R{負}{ふ}）\R{傾向}{けい|こう}。}
+\bkword{\R{共分散}{きょう|ぶん|さん} $\sigma_{xy}$}{$x$ の\R{偏差}{へん|さ}と $y$ の\R{偏差}{へん|さ}の\R{積}{せき}の\R{平均}{へい|きん}。}
+\bkword{\R{相関係数}{そう|かん|けい|すう} $r$}{\R{共分散}{きょう|ぶん|さん}を $\sigma_x\sigma_y$ でわった\R{数}{かず}。$-1$ から1まで。}
+\bkword{\R{因果関係}{いん|が|かん|けい}}{\R{一方}{いっ|ぽう}が\R{原因}{げん|いん}で、もう\R{一方}{いっ|ぽう}が\R{結果}{けっ|か}になっている\R{関係}{かん|けい}。}
+\end{kotoba}
+
+\begin{motto}[3]
+\textbf{\R{相関係数}{そう|かん|けい|すう}は、2\R{本}{ほん}の\R{矢印}{や|じるし}の「\R{向}{む}きのそろいぐあい」}\par
+10\R{人}{ひと}の\R{身長}{しん|ちょう}の\R{偏差}{へん|さ} $-14$、$-10$、…、16 を、10\R{個}{こ}の\R{数}{かず}の\R{組}{くみ}と\R{考}{かんが}えます。タイムの\R{偏差}{へん|さ} 0.2、0.3、…、$-0.6$ も、10\R{個}{こ}の\R{数}{かず}の\R{組}{くみ}です。\R{数}{かず}の\R{組}{くみ}は、\R{向}{む}きと\R{大}{おお}きさをもつ\textbf{\R{矢印}{や|じるし}（ベクトル）}と\R{考}{かんが}えることができます（4-10・4-11）。すると $r$ は、「\R{身長}{しん|ちょう}の\R{矢印}{や|じるし}（\R{青}{あお}）とタイムの\R{矢印}{や|じるし}（\R{赤}{あか}）が、どれだけ\R{同}{おな}じ\R{向}{む}きを\R{向}{む}いているか」を\R{表}{あらわ}す\R{数}{かず}になります。\R{同}{おな}じ\R{向}{む}きなら $r=1$、\R{直角}{ちょっ|かく}なら $r=0$、\R{反対}{はん|たい}\R{向}{む}きなら $r=-1$ です。4-12では、これを「\R{内積}{ない|せき}」という\R{計算}{けい|さん}で\R{学}{まな}びます。\par\vspace{4pt}
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\ang/\lab/\tx in {0/20/{$r=1$}/{\R{同}{おな}じ\R{向}{む}き}, 40/110/{$r=0$}/{\R{直角}{ちょっ|かく}}, 80/200/{$r=-1$}/{\R{反対}{はん|たい}\R{向}{む}き}} {
+    \draw[bkBlue, line width=1.5pt, -{Stealth[length=4.5pt]}] (\cx+14,8) -- ++(20:18);
+    \draw[bkRed, line width=1.5pt, -{Stealth[length=4.5pt]}] (\cx+14,8) -- ++(\ang:12);
+    \fill[bkInk] (\cx+14,8) circle (0.8);
+    \node[font=\sffamily\small\bfseries, anchor=north] at (\cx+16,-3) {\lab};
+    \node[font=\sffamily\footnotesize, anchor=north] at (\cx+16,-8.5) {\tx};}
+\end{tikzpicture}
+\end{center}
+\end{motto}
+
+
+
+
+\begin{column}{\R{相関係数}{そう|かん|けい|すう}を\R{考}{かんが}えた\R{人}{ひと}たち}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+140\R{年}{ねん}ほど\R{前}{まえ}のイギリスで、ゴルトンという\R{学者}{がく|しゃ}が、\R{親}{おや}の\R{身長}{しん|ちょう}（\R{父}{ちち}と\R{母}{はは}の\R{平均}{へい|きん}）と、\R{子}{こ}どもがおとなになったときの\R{身長}{しん|ちょう}の\R{関係}{かん|けい}を\R{調}{しら}べました。たくさんの\R{親子}{おや|こ}のデータを\R{点}{てん}にしてかくと、\R{背}{せ}の\R{高}{たか}い\R{親}{おや}の\R{子}{こ}どもほど、\R{背}{せ}が\R{高}{たか}い\R{傾向}{けい|こう}がありました（\R{図}{ず}\ref{bk:3-15:fig-galton}は、そのようすを\R{表}{あらわ}した\R{例}{れい}です）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=54mm, height=50mm, xmin=155, xmax=180, ymin=155, ymax=180, xtick={160,170,180}, ytick={160,170,180}, xlabel={\R{親}{おや}}, ylabel={\R{子}{こ}ども（cm）}]
+  \addplot[bkGray, dashed, line width=0.8pt, domain=155:180] {x};
+  \addplot[bkRed, line width=1.1pt, domain=156:179] {170+0.5*(x-170)};
+  \addplot[only marks, mark=*, mark size=1.4pt, bkBlue] coordinates {(168,171) (169,168) (164,166) (177,175) (176,174) (172,172) (160,168) (173,173) (160,159) (165,166) (172,171) (173,169) (172,172) (166,174) (173,176) (166,165) (168,169) (174,173) (167,165) (167,173) (165,168) (173,166) (170,175) (158,163)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\R{点線}{てん|せん}は「\R{親}{おや}と\R{同}{おな}じ」。\R{赤}{あか}い\R{線}{せん}はそれよりゆるやか。}\label{bk:3-15:fig-galton}
+\end{minipage}\par\vspace{3pt}
+ゴルトンは、この「いっしょに\R{変}{か}わる」ようすの\R{強}{つよ}さを、1つの\R{数}{かず}で\R{表}{あらわ}そうと\R{考}{かんが}えました。その\R{考}{かんが}えを、なかまのピアソンが、この\R{章}{しょう}の\R{相関係数}{そう|かん|けい|すう} $r$ の\R{式}{しき}にまとめました（130\R{年}{ねん}ほど\R{前}{まえ}）。だから $r$ は、「ピアソンの\R{相関係数}{そう|かん|けい|すう}」ともよばれます。\par
+ゴルトンは、\R{子}{こ}どもの\R{身長}{しん|ちょう}は\R{親}{おや}とぴったり\R{同}{おな}じにはならず、\R{全体}{ぜん|たい}の\R{平均}{へい|きん}のほうへもどる\R{傾向}{けい|こう}があることも\R{見}{み}つけました。\R{図}{ず}\ref{bk:3-15:fig-galton}で、\R{点}{てん}の\R{集}{あつ}まりにそって\R{引}{ひ}いた\R{赤}{あか}い\R{線}{せん}が、「\R{親}{おや}と\R{同}{おな}じ」の\R{点線}{てん|せん}よりゆるやかなのはそのためです。この「もどる」という\R{考}{かんが}えは、\R{次}{つぎ}の3-16で、データに\R{直線}{ちょく|せん}を\R{引}{ひ}くときの「\R{回帰直線}{かい|き|ちょく|せん}」という\R{名前}{な|まえ}に\R{残}{のこ}っています。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[\R{散布図}{さん|ぷ|ず}をかいて、\R{相関}{そう|かん}を\R{読}{よ}みとる]
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\R{冬}{ふゆ}のある\R{自動販売機}{じ|どう|はん|ばい|き}で、\R{6日間}{むいかかん}の\R{昼}{ひる}の\R{気温}{き|おん}と、\R{温}{あたた}かい\R{飲}{の}み\R{物}{もの}の\R{売}{う}れた\R{本数}{ほん|すう}を\R{記録}{き|ろく}しました。\R{散布図}{さん|ぷ|ず}をかき、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。\par\vspace{3pt}
+\begin{bktable}{colspec={Q[l,m,wd=17mm] *{6}{Q[c,m,wd=6.2mm]}}, rowsep=0.5pt, colsep=2pt, cells={font=\small}}
+\R{気温}{き|おん}（℃） & 5 & 8 & 12 & 15 & 20 & 25 \\
+\R{本数}{ほん|すう}（\R{本}{ほん}） & 48 & 41 & 35 & 30 & 22 & 12 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=48mm, height=72mm, xmin=0, xmax=28, ymin=0, ymax=55, xtick={0,10,20}, ytick={0,10,...,50}, xlabel={℃}, ylabel={\R{本}{ほん}}]
+  \addplot[only marks, mark=*, mark size=1.8pt, bkBlue] coordinates {(5,48) (8,41) (12,35) (15,30) (20,22) (25,12)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\par
+\kangaekata \R{横}{よこ}の\R{軸}{じく}に\R{気温}{き|おん}、たての\R{軸}{じく}に\R{本数}{ほん|すう}をとり、\R{1日}{いちにち}を1つの\R{点}{てん}にします。\R{点}{てん}の\R{集}{あつ}まりが\R{右上}{みぎ|あ}がりか\R{右下}{みぎ|さ}がりか、\R{細}{ほそ}い\R{帯}{おび}か\R{太}{ふと}い\R{帯}{おび}かを\R{見}{み}ます。\par
+\shiki \R{点}{てん} $(5,\ 48)$、$(8,\ 41)$、$(12,\ 35)$、$(15,\ 30)$、$(20,\ 22)$、$(25,\ 12)$ をかく（\R{散布図}{さん|ぷ|ず}）。\par
+\hspace*{2.6\zw}\R{点}{てん}は\R{右下}{みぎ|さ}がりで、ほぼ1\R{本}{ぽん}の\R{直線}{ちょく|せん}のまわりに\R{細}{ほそ}く\R{集}{あつ}まっている。\par
+\kotae \R{強}{つよ}い\R{負}{ふ}の\R{相関}{そう|かん}がある（\R{気温}{き|おん}が\R{高}{たか}い\R{日}{ひ}ほど、\R{売}{う}れる\R{本数}{ほん|すう}が\R{少}{すく}ない）
+\end{reidai}
+
+\begin{reidai}[どの\R{相関}{そう|かん}か、\R{考}{かんが}える]
+\R{次}{つぎ}の2つの\R{量}{りょう}には、\R{正}{せい}の\R{相関}{そう|かん}・\R{負}{ふ}の\R{相関}{そう|かん}・\R{相関}{そう|かん}がない、のどれがあると\R{考}{かんが}えられますか。わけも\R{答}{こた}えましょう。\par
+（1）\nobreak \R{自転車}{じ|てん|しゃ}で\R{同}{おな}じ\R{道}{みち}を\R{走}{はし}るときの、\R{速}{はや}さと、かかる\R{時間}{じ|かん}\par
+（2）\nobreak \R{中学}{ちゅう|がく}1\R{年生}{ねん|せい}の、\R{身長}{しん|ちょう}と\R{体重}{たい|じゅう}\par
+（3）\nobreak \R{中学}{ちゅう|がく}1\R{年生}{ねん|せい}の、\R{身長}{しん|ちょう}と、\R{家}{いえ}から\R{学校}{がっ|こう}までの\R{道}{みち}のり\par
+\kangaekata 「\R{一方}{いっ|ぽう}が\R{大}{おお}きいと、もう\R{一方}{いっ|ぽう}はどうなりやすいか」を\R{考}{かんが}えます。そうなる\R{傾向}{けい|こう}があれば\R{相関}{そう|かん}があります。\par
+\shiki（1）\nobreak \R{速}{はや}いほど、かかる\R{時間}{じ|かん}は\R{短}{みじか}い（\R{反比例}{はん|ぴ|れい}、2-15）。\par
+\hspace*{2.6\zw}（2）\nobreak \R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど、\R{体重}{たい|じゅう}も\R{重}{おも}い\R{人}{ひと}が\R{多}{おお}い。\par
+\hspace*{2.6\zw}（3）\nobreak \R{背}{せ}の\R{高}{たか}さと、\R{家}{いえ}の\R{場所}{ば|しょ}は\R{関係}{かん|けい}がない。\par
+\kotae（1）\nobreak \R{負}{ふ}の\R{相関}{そう|かん}\quad（2）\nobreak \R{正}{せい}の\R{相関}{そう|かん}\quad（3）\nobreak \R{相関}{そう|かん}がない
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkthrpjA}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\R{夏}{なつ}のある\R{海}{うみ}の\R{家}{いえ}で、\R{6日間}{むいかかん}の\R{昼}{ひる}の\R{気温}{き|おん}と、アイスクリームの\R{売}{う}れた\R{数}{かず}を\R{記録}{き|ろく}しました。（\R{気温}{き|おん}℃、\R{売}{う}れた\R{数}{かず}）の\R{組}{くみ}は、$(18,\ 12)$、$(22,\ 20)$、$(25,\ 26)$、$(28,\ 31)$、$(30,\ 40)$、$(33,\ 44)$ です。\R{散布図}{さん|ぷ|ず}をノートにかき、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。
+\bkjans{\R{点}{てん}は\R{右上}{みぎ|あ}がりで、\R{細}{ほそ}い\R{帯}{おび}に\R{集}{あつ}まる。\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}がある（\R{気温}{き|おん}が\R{高}{たか}い\R{日}{ひ}ほど、よく\R{売}{う}れる）}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\R{次}{つぎ}の2つの\R{量}{りょう}には、\R{正}{せい}の\R{相関}{そう|かん}・\R{負}{ふ}の\R{相関}{そう|かん}・\R{相関}{そう|かん}がない、のどれがあると\R{考}{かんが}えられますか。（1）\nobreak \R{1日}{いちにち}に\R{読書}{どく|しょ}した\R{時間}{じ|かん}と、その\R{日}{ひ}にゲームをした\R{時間}{じ|かん}（\R{自由}{じ|ゆう}な\R{時間}{じ|かん}は\R{同}{おな}じだけあるとする）（2）\nobreak \R{家庭}{か|てい}の1か\R{月}{げつ}の\R{電気}{でん|き}の\R{使用量}{し|よう|りょう}と、\R{電気}{でん|き}\R{料金}{りょう|きん}（3）\nobreak \R{出席番号}{しゅっ|せき|ばん|ごう}と、テストの\R{点数}{てん|すう}
+\bkjans{（1）\nobreak \R{負}{ふ}の\R{相関}{そう|かん}（\R{読書}{どく|しょ}が\R{長}{なが}いほど、ゲームの\R{時間}{じ|かん}が\R{短}{みじか}くなりやすい）\quad（2）\nobreak \R{正}{せい}の\R{相関}{そう|かん}\quad（3）\nobreak \R{相関}{そう|かん}がない}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[\R{相関}{そう|かん}と\R{因果}{いん|が}を\R{見分}{み|わ}ける]
+ある\R{小学校}{しょう|がっ|こう}で、1\R{年生}{ねん|せい}から6\R{年生}{ねん|せい}までの\R{全員}{ぜん|いん}について、\R{足}{あし}の\R{大}{おお}きさと、\R{読}{よ}める\R{漢字}{かん|じ}の\R{数}{かず}を\R{調}{しら}べると、\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}がありました。「\R{足}{あし}が\R{大}{おお}きくなると、\R{漢字}{かん|じ}がたくさん\R{読}{よ}めるようになる」と\R{言}{い}えますか。\par
+\kangaekata \R{両方}{りょう|ほう}を\R{大}{おお}きくしている、\R{第}{だい}3の\R{量}{りょう}がないかを\R{考}{かんが}えます。\par
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\shiki \R{学年}{がく|ねん}が\R{上}{あ}がるほど、\R{体}{からだ}が\R{成}{な}\R{長}{なが}して\R{足}{あし}は\R{大}{おお}きくなる。\par
+\hspace*{2.6\zw}\R{学年}{がく|ねん}が\R{上}{あ}がるほど、\R{習}{なら}った\R{漢字}{かん|じ}もふえる。\par
+\hspace*{2.6\zw}「\R{学年}{がく|ねん}」が、\R{両方}{りょう|ほう}を\R{大}{おお}きくしている（\R{矢印}{や|じるし}の\R{図}{ず}）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=20mm] (g) at (0,13) {\R{学年}{がく|ねん}が\R{上}{あ}がる};
+  \node[bk node, minimum width=17mm] (a) at (-13,0) {\R{足}{あし}が\R{大}{おお}きい};
+  \node[bk node, minimum width=17mm] (k) at (13,0) {\R{漢字}{かん|じ}が\R{多}{おお}い};
+  \draw[bk link] (g) -- (a);
+  \draw[bk link] (g) -- (k);
+\end{tikzpicture}
+\end{minipage}\par
+\kotae \R{言}{い}えない。\R{学年}{がく|ねん}（\R{年齢}{ねん|れい}）という\R{第}{だい}3の\R{量}{りょう}が、\R{両方}{りょう|ほう}を\R{大}{おお}きくしているから。\R{同}{おな}じ\R{学年}{がく|ねん}の\R{中}{なか}だけで\R{調}{しら}べると、\R{相関}{そう|かん}はほとんどなくなると\R{考}{かんが}えられる
+\end{reidai}
+
+\begin{jibun}
+ある\R{国}{くに}の\R{町}{まち}ごとに、\R{消防車}{しょう|ぼう|しゃ}の\R{数}{かず}と、\R{火事}{か|じ}の\R{数}{かず}を\R{調}{しら}べると、\R{正}{せい}の\R{相関}{そう|かん}がありました。「\R{消防車}{しょう|ぼう|しゃ}がふえると、\R{火事}{か|じ}がふえる」と\R{言}{い}えますか。\R{両方}{りょう|ほう}を\R{大}{おお}きくしている\R{第}{だい}3の\R{量}{りょう}を\R{答}{こた}えましょう。
+\bkjans{\R{言}{い}えない。\R{町}{まち}の\R{大}{おお}きさ（\R{人口}{じん|こう}や\R{建物}{たて|もの}の\R{数}{かず}）が\R{大}{おお}きいほど、\R{消防車}{しょう|ぼう|しゃ}も\R{火事}{か|じ}も\R{多}{おお}くなるから}
+\end{jibun}
+
+\begin{reidai}[\R{共分散}{きょう|ぶん|さん}を\R{求}{もと}める]
+5\R{人}{にん}の\R{身長}{しん|ちょう} $x$〔cm〕と、\R{足}{あし}の\R{大}{おお}きさ $y$〔cm〕を\R{調}{しら}べました。\R{共分散}{きょう|ぶん|さん}を\R{求}{もと}め、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{5}{Q[c,m,wd=11mm]}}, rowsep=1pt, cells={font=\small}}
+\R{身長}{しん|ちょう} $x$（cm） & 150 & 155 & 160 & 165 & 170 \\
+\R{足}{あし} $y$（cm） & 22 & 23 & 25 & 24 & 26 \\
+\end{bktable}
+\end{bkcenter}
+\kangaekata ①\R{平均}{へい|きん}を\R{求}{もと}める。②\R{偏差}{へん|さ}を\R{求}{もと}める。③\R{偏差}{へん|さ}の\R{積}{せき}を\R{求}{もと}める。④\R{積}{せき}の\R{平均}{へい|きん}を\R{求}{もと}める。の\R{順}{じゅん}で、\R{表}{ひょう}にして\R{計算}{けい|さん}します。\par
+\shiki ① $\bar{x}=(150+155+160+165+170)\div5=800\div5=160$\par
+\hspace*{2.6\zw}\phantom{①} $\bar{y}=(22+23+25+24+26)\div5=120\div5=24$\par
+\begin{center}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm] Q[c,m,wd=22mm]}, rowsep=0pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+$x$ & $y$ & ② $x-\bar{x}$ & ② $y-\bar{y}$ & ③ \R{偏差}{へん|さ}の\R{積}{せき} \\
+150 & 22 & $-10$ & $-2$ & 20 \\
+155 & 23 & $-5$ & $-1$ & 5 \\
+160 & 25 & 0 & 1 & 0 \\
+165 & 24 & 5 & 0 & 0 \\
+170 & 26 & 10 & 2 & 20 \\
+\SetCell[c=4]{r} \R{合計}{ごう|けい} & & & & 45 \\
+\end{bktable}
+\end{center}
+\hspace*{2.6\zw}④ $\sigma_{xy}=45\div5=9$\quad \R{正}{せい}の\R{数}{かず}\par
+\kotae \R{共分散}{きょう|ぶん|さん}は9。\R{正}{せい}なので、\R{正}{せい}の\R{相関}{そう|かん}がある
+\end{reidai}
+
+\begin{jibun}
+5つの\R{組}{くみ} $(x,\ y)$ が、$(2,\ 3)$、$(4,\ 4)$、$(6,\ 6)$、$(8,\ 9)$、$(10,\ 8)$ です。\R{共分散}{きょう|ぶん|さん}を\R{求}{もと}め、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。
+\bkjans{$\bar{x}=6$、$\bar{y}=6$。\R{偏差}{へん|さ}の\R{積}{せき}は $12$、$4$、$0$、$6$、$8$ で\R{合計}{ごう|けい}30。$\sigma_{xy}=30\div5=6$。\R{正}{せい}の\R{相関}{そう|かん}}
+\end{jibun}
+
+\begin{reidai}[\R{相関係数}{そう|かん|けい|すう}を\R{求}{もと}める]
+\R{別}{べつ}の5\R{人}{にん}の\R{身長}{しん|ちょう} $x$〔cm〕と、50\,m\R{走}{そう}のタイム $y$〔s〕です。\R{相関係数}{そう|かん|けい|すう} $r$ を、\R{小数第}{しょう|すう|だい}2\R{位}{くらい}まで\R{求}{もと}めましょう。$\sqrt{\phantom{x}}$ は\R{電卓}{でん|たく}で\R{計算}{けい|さん}します。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{5}{Q[c,m,wd=11mm]}}, rowsep=1pt, cells={font=\small}}
+\R{身長}{しん|ちょう} $x$（cm） & 150 & 155 & 160 & 165 & 170 \\
+タイム $y$（s） & 8.6 & 8.4 & 8.0 & 7.8 & 8.2 \\
+\end{bktable}
+\end{bkcenter}
+\kangaekata \R{共分散}{きょう|ぶん|さん}のほかに、\R{偏差}{へん|さ}の2\R{乗}{じょう}も\R{計算}{けい|さん}して、$\sigma_x$ と $\sigma_y$ を\R{求}{もと}めます（3-14）。\R{最後}{さい|ご}に、\R{共分散}{きょう|ぶん|さん}を $\sigma_x\sigma_y$ でわります。\par
+\shiki $\bar{x}=800\div5=160$、$\bar{y}=41.0\div5=8.2$\par
+\begin{center}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=18mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm]}, rowsep=0pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+$x-\bar{x}$ & $y-\bar{y}$ & \R{偏差}{へん|さ}の\R{積}{せき} & $(x-\bar{x})^2$ & $(y-\bar{y})^2$ \\
+$-10$ & $0.4$ & $-4$ & 100 & 0.16 \\
+$-5$ & $0.2$ & $-1$ & 25 & 0.04 \\
+0 & $-0.2$ & 0 & 0 & 0.04 \\
+5 & $-0.4$ & $-2$ & 25 & 0.16 \\
+10 & 0 & 0 & 100 & 0 \\
+\SetCell[c=2]{r} \R{合計}{ごう|けい} & & $-7$ & 250 & 0.40 \\
+\end{bktable}
+\end{center}
+\hspace*{2.6\zw}$\sigma_{xy}=-7\div5=-1.4$\par
+\hspace*{2.6\zw}$\sigma_x=\sqrt{250\div5}=\sqrt{50}=7.071\cdots$\par
+\hspace*{2.6\zw}$\sigma_y=\sqrt{0.40\div5}=\sqrt{0.08}=0.2828\cdots$\par
+\hspace*{2.6\zw}$\sigma_x\sigma_y=7.071\times0.2828=2.000$\quad（\R{電卓}{でん|たく}）\par
+\hspace*{2.6\zw}$r=-1.4\div2.000=-0.70$\par
+\kotae $r=-0.70$（\R{強}{つよ}い\R{負}{ふ}の\R{相関}{そう|かん}。$|r|=0.7$ は\R{目安}{め|やす}の「\R{強}{つよ}い」のさかい\R{目}{め}）
+\end{reidai}
+
+\begin{jibun}
+じぶんでとこう4の5つの\R{組}{くみ} $(2,\ 3)$、$(4,\ 4)$、$(6,\ 6)$、$(8,\ 9)$、$(10,\ 8)$ の\R{相関係数}{そう|かん|けい|すう} $r$ を、\R{小数第}{しょう|すう|だい}2\R{位}{くらい}まで\R{求}{もと}めましょう。
+\bkjans{\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{合計}{ごう|けい}は $x$ が40、$y$ が26。$\sigma_x=\sqrt{8}=2.828\cdots$、$\sigma_y=\sqrt{5.2}=2.280\cdots$。$r=6\div(2.828\times2.280)=6\div6.450=0.93$}
+\end{jibun}
+
+\begin{reidai}[\R{単位}{たん|い}を\R{変}{か}えると、どうなる？]
+\bkreidairef{4}の\R{身長}{しん|ちょう}を、mmではかりなおします（\R{足}{あし}の\R{大}{おお}きさはcmのまま）。\R{共分散}{きょう|ぶん|さん}と\R{相関係数}{そう|かん|けい|すう}は、それぞれどうなりますか。\bkreidairef{4}のデータの\R{相関係数}{そう|かん|けい|すう}は $r=0.9$ です。\par
+\kangaekata $\qty{10}{mm/cm}$ をかけるので、\R{身長}{しん|ちょう}はどれも10\R{倍}{ばい}です。\R{平均}{へい|きん}も10\R{倍}{ばい}なので、\R{身長}{しん|ちょう}の\R{偏差}{へん|さ}も10\R{倍}{ばい}になります。\par
+\shiki \R{身長}{しん|ちょう}の\R{偏差}{へん|さ}は $-100$、$-50$、0、50、100（10\R{倍}{ばい}）\par
+\hspace*{2.6\zw}\R{偏差}{へん|さ}の\R{積}{せき}は200、50、0、0、200で\R{合計}{ごう|けい}450。$\sigma_{xy}=450\div5=90$（10\R{倍}{ばい}）\par
+\hspace*{2.6\zw}$\sigma_x$ も10\R{倍}{ばい}になるので、$r=\dfrac{10\times\sigma_{xy}}{10\times\sigma_x\times\sigma_y}=\dfrac{\sigma_{xy}}{\sigma_x\sigma_y}$\par
+\kotae \R{共分散}{きょう|ぶん|さん}は10\R{倍}{ばい}の90になる。\R{相関係数}{そう|かん|けい|すう}は\R{変}{か}わらず0.9
+\end{reidai}
+
+\begin{jibun}
+じぶんでとこう4・5の5つの\R{組}{くみ}で、$y$ を\R{全部}{ぜん|ぶ}100\R{倍}{ばい}にします（$y$ をm\R{単位}{たん|い}からcm\R{単位}{たん|い}にしたと\R{考}{かんが}える）。\R{共分散}{きょう|ぶん|さん}と\R{相関係数}{そう|かん|けい|すう}は、それぞれいくつになりますか。
+\bkjans{$y$ の\R{偏差}{へん|さ}が100\R{倍}{ばい}になるので、\R{共分散}{きょう|ぶん|さん}は100\R{倍}{ばい}の600。$\sigma_y$ も100\R{倍}{ばい}なので、\R{相関係数}{そう|かん|けい|すう}は\R{変}{か}わらず0.93}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{「\R{速}{はや}い」と「タイムが\R{短}{みじか}い」の\R{向}{む}き}
+\R{身長}{しん|ちょう}と50\,m\R{走}{そう}のタイムで、\R{背}{せ}の\R{高}{たか}い\R{人}{ひと}ほど\R{速}{はや}い\R{傾向}{けい|こう}があるとき\par
+\bkng{\R{背}{せ}が\R{高}{たか}いほど\R{速}{はや}いので、\R{正}{せい}の\R{相関}{そう|かん}}
+\bkok{\R{背}{せ}が\R{高}{たか}いほどタイムは\R{短}{みじか}い（\R{小}{ちい}さい）ので、\R{負}{ふ}の\R{相関}{そう|かん}}
+\R{相関}{そう|かん}の\R{正}{せい}・\R{負}{ふ}は、\R{表}{ひょう}に\R{書}{か}いてある\textbf{\R{数}{かず}}が\R{大}{おお}きくなるか\R{小}{ちい}さくなるかで\R{決}{き}めます。「\R{速}{はや}い」はタイムの\R{数}{かず}が\R{小}{ちい}さいことです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{平均}{へい|きん}をひかずにかける}
+\bkng{\R{共分散}{きょう|ぶん|さん}＝（$x\times y$）の\R{平均}{へい|きん}}
+\bkok{\R{共分散}{きょう|ぶん|さん}＝（$(x-\bar{x})\times(y-\bar{y})$）の\R{平均}{へい|きん}}
+\bkreidairef{4}で $x\times y$ の\R{平均}{へい|きん}を\R{計算}{けい|さん}すると、3849になります。\R{身長}{しん|ちょう}も\R{足}{あし}もいつも\R{正}{せい}なので、\R{積}{せき}はいつも\R{正}{せい}です。これでは\R{区画}{く|かく}の\R{符号}{ふ|ごう}がわかりません。\R{偏差}{へん|さ}（\R{平均}{へい|きん}からのずれ）をかけるから、\R{右上}{みぎ|うえ}・\R{左下}{ひだり|した}が\R{正}{せい}、\R{左上}{ひだり|うえ}・\R{右下}{みぎ|した}が\R{負}{ふ}になるのです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{分散}{ぶん|さん}でわってしまう}
+やってみようのデータで、\R{相関係数}{そう|かん|けい|すう}を\R{求}{もと}めるとき\par
+\bkng{$r=-1.76\div(75.8\times0.142)=-1.76\div10.76=-0.16$}
+\bkok{$r=-1.76\div(8.706\times0.3768)=-1.76\div3.280=-0.54$}
+わるのは、\R{分散}{ぶん|さん}（\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{平均}{へい|きん}）ではなく、その $\sqrt{\phantom{x}}$ の\R{標準偏差}{ひょう|じゅん|へん|さ} $\sigma$ です。\R{分散}{ぶん|さん}でわると、$r$ が $-1$ から1までにおさまらなくなることもあります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$r$ の\R{大}{おお}きさをくらべるとき}
+\bkng{$r=-0.9$ は、$r=0.5$ より\R{小}{ちい}さいので、\R{弱}{よわ}い\R{相関}{そう|かん}}
+\bkok{$|r|=0.9$ は $|r|=0.5$ より\R{大}{おお}きいので、$r=-0.9$ のほうが\R{強}{つよ}い\R{相関}{そう|かん}}
+\R{符号}{ふ|ごう}は\R{向}{む}きを、\R{符号}{ふ|ごう}をとった\R{大}{おお}きさは\R{強}{つよ}さを\R{表}{あらわ}します。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{相関}{そう|かん}がある＝\R{原因}{げん|いん}？\quad $r=0$＝\R{関係}{かん|けい}なし？}
+\bkng{\R{強}{つよ}い\R{相関}{そう|かん}があるので、\R{一方}{いっ|ぽう}がもう\R{一方}{いっ|ぽう}の\R{原因}{げん|いん}だ}
+\bkng{$r=0$ なので、2つの\R{量}{りょう}には\R{関係}{かん|けい}がない}
+\bkok{\R{相関}{そう|かん}は\R{因果関係}{いん|が|かん|けい}とはかぎらない。$r=0$ でも、\R{曲}{ま}がった\R{関係}{かん|けい}があることがある}
+アイスと\R{水}{みず}の\R{事故}{じ|こ}（⑤）、\R{放物線}{ほう|ぶつ|せん}の\R{上}{うえ}の\R{点}{てん}（⑤）を\R{思}{おも}い\R{出}{だ}しましょう。
+\end{tsumazuki}
+
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\par\addvspace{3pt}\textbf{\R{温度}{おん|ど}と\R{電気}{でん|き}\R{抵抗}{てい|こう}：\R{温度}{おん|ど}をはかるセンサー}\par
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\R{金属}{きん|ぞく}の\R{電気}{でん|き}\R{抵抗}{てい|こう}（2-15）は、\R{温度}{おん|ど}が\R{高}{たか}いほど\R{大}{おお}きくなります。\R{工場}{こう|じょう}の\R{温度計}{おん|ど|けい}によく\R{使}{つか}われる\R{白金}{はっ|きん}の\R{抵抗}{てい|こう}は、0\,℃で\qty{100}{\ohm}、1\,℃\R{上}{あ}がるごとに\R{約}{やく}\qty{0.39}{\ohm}ずつふえます。\R{温度}{おん|ど}を\R{変}{か}えて\R{抵抗}{てい|こう}をはかると、\R{点}{てん}は\R{右上}{みぎ|あ}がりの\R{直線}{ちょく|せん}にほぼぴったりのり、$r$ は1.00にとても\R{近}{ちか}くなります。だから、\R{抵抗}{てい|こう}をはかれば\R{温度}{おん|ど}がわかるのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=46mm, height=40mm, xmin=0, xmax=110, ymin=95, ymax=145, xtick={0,50,100}, ytick={100,120,140}, xlabel={℃}, ylabel={Ω}]
+  \addplot[only marks, mark=*, mark size=1.6pt, bkBlue] coordinates {(0,100.0) (20,107.8) (40,115.3) (60,123.2) (80,130.7) (100,138.5)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\par\addvspace{8pt}\textbf{\R{振動}{しん|どう}と\R{温度}{おん|ど}：\R{機械}{き|かい}の\R{健康診断}{けん|こう|しん|だん}}\par
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\R{工場}{こう|じょう}のポンプやモーターには、ゆれの\R{大}{おお}きさ（\R{振動}{しん|どう}）をはかるセンサーと、\R{軸}{じく}を\R{支}{ささ}える\R{部品}{ぶ|ひん}（\R{軸受}{じく|うけ}）の\R{温度}{おん|ど}をはかるセンサーがついています。\R{軸受}{じく|うけ}がいたみ\R{始}{はじ}めると、\R{振動}{しん|どう}が\R{大}{おお}きくなり、こすれて\R{温度}{おん|ど}も\R{上}{あ}がります。たくさんの\R{機械}{き|かい}のデータで\R{散布図}{さん|ぷ|ず}をかくと、\R{正}{せい}の\R{相関}{そう|かん}が\R{見}{み}えます（12\R{台}{だい}で $r=0.94$）。\R{振動}{しん|どう}と\R{温度}{おん|ど}が\textbf{いっしょに}\R{上}{あ}がっている\R{機械}{き|かい}は、こわれる\R{前}{まえ}ぶれかもしれないので、\R{早}{はや}めに\R{点検}{てん|けん}します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=46mm, height=40mm, xmin=0, xmax=8, ymin=35, ymax=75, xtick={0,2,...,8}, ytick={40,50,...,70}, xlabel={mm/s}, ylabel={℃}]
+  \addplot[only marks, mark=*, mark size=1.6pt, bkRed] coordinates {(1.2,42) (1.8,48) (2.1,44) (2.5,51) (2.9,47) (3.4,55) (3.8,50) (4.3,58) (4.9,56) (5.6,63) (6.2,60) (7.0,71)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\end{butsuri}
+\begin{butsuri}
+\par\addvspace{8pt}\textbf{\R{気温}{き|おん}と\R{電気}{でん|き}の\R{使用量}{し|よう|りょう}：あしたの\R{電気}{でん|き}を\R{予想}{よ|そう}する}\par
+\noindent \R{夏}{なつ}は、\R{気温}{き|おん}が\R{高}{たか}い\R{日}{ひ}ほどエアコンを\R{使}{つか}うので、\R{電気}{でん|き}の\R{使用量}{し|よう|りょう}がふえます（\R{正}{せい}の\R{相関}{そう|かん}）。\R{電力会社}{でん|りょく|がい|しゃ}は、\R{天気予報}{てん|き|よ|ほう}の\R{気温}{き|おん}から、あしたの\R{電気}{でん|き}の\R{使用量}{し|よう|りょう}を\R{予想}{よ|そう}して、\R{発電所}{はつ|でん|しょ}の\R{運転}{うん|てん}を\R{計画}{けい|かく}しています。\R{相関}{そう|かん}を\R{知}{し}っていると、\R{一方}{いっ|ぽう}から、もう\R{一方}{いっ|ぽう}を\R{予想}{よ|そう}できるのです。どんな\R{直線}{ちょく|せん}で\R{予想}{よ|そう}すればよいかは、\R{次}{つぎ}の3-16で\R{学}{まな}びます。
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{2}
+
+\bkproblem 6\R{人}{にん}の、1\R{週間}{しゅう|かん}の\R{家}{いえ}での\R{勉強}{べん|きょう}\R{時間}{じ|かん}と、テストの\R{点数}{てん|すう}です。\R{散布図}{さん|ぷ|ず}をノートにかき、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=28mm] *{6}{Q[c,m,wd=10mm]}}, rowsep=1pt, cells={font=\small}}
+\R{勉強}{べん|きょう}\R{時間}{じ|かん}（\R{時間}{じ|かん}） & 2 & 4 & 5 & 7 & 8 & 10 \\
+\R{点数}{てん|すう}（\R{点}{てん}） & 52 & 61 & 58 & 70 & 75 & 80 \\
+\end{bktable}
+\end{bkcenter}
+\bkpans{\R{点}{てん}は\R{右上}{みぎ|あ}がりで、\R{細}{ほそ}い\R{帯}{おび}に\R{集}{あつ}まる。\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}がある}
+
+\bkproblem \R{次}{つぎ}の2つの\R{量}{りょう}には、\R{正}{せい}の\R{相関}{そう|かん}・\R{負}{ふ}の\R{相関}{そう|かん}・\R{相関}{そう|かん}がない、のどれがあると\R{考}{かんが}えられますか。（1）\nobreak \R{走}{はし}った\R{道}{みち}のりと、\R{使}{つか}ったエネルギー（2）\nobreak \R{山}{やま}の\R{高}{たか}さと、そこの\R{気温}{き|おん}（\R{同}{おな}じ\R{日}{ひ}の\R{同}{おな}じ\R{時刻}{じ|こく}）（3）\nobreak \R{生}{う}まれた\R{月}{つき}と、\R{身長}{しん|ちょう}
+\bkpans{（1）\nobreak \R{正}{せい}の\R{相関}{そう|かん}\quad（2）\nobreak \R{負}{ふ}の\R{相関}{そう|かん}\quad（3）\nobreak \R{相関}{そう|かん}がない}
+
+\bkproblem 5つの\R{組}{くみ} $(x,\ y)$ が $(1,\ 9)$、$(2,\ 7)$、$(3,\ 6)$、$(4,\ 4)$、$(5,\ 4)$ です。\R{共分散}{きょう|ぶん|さん}を\R{求}{もと}め、どんな\R{相関}{そう|かん}があるかを\R{答}{こた}えましょう。
+\bkpans{$\bar{x}=3$、$\bar{y}=6$。\R{偏差}{へん|さ}の\R{積}{せき}は $-6$、$-1$、0、$-2$、$-4$ で\R{合計}{ごう|けい} $-13$。$\sigma_{xy}=-13\div5=-2.6$。\R{負}{ふ}の\R{相関}{そう|かん}}
+
+\bkproblem \R{問題}{もん|だい}3の5つの\R{組}{くみ}の\R{相関係数}{そう|かん|けい|すう} $r$ を、\R{小数第}{しょう|すう|だい}2\R{位}{くらい}まで\R{求}{もと}めましょう。
+\bkpans{\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{合計}{ごう|けい}は $x$ が10、$y$ が18。$\sigma_x=\sqrt{2}=1.414\cdots$、$\sigma_y=\sqrt{3.6}=1.897\cdots$。$r=-2.6\div(1.414\times1.897)=-2.6\div2.683=-0.97$}
+
+\bkproblem ある2つの\R{量}{りょう} $x$、$y$ の\R{共分散}{きょう|ぶん|さん}は $-1.5$、\R{相関係数}{そう|かん|けい|すう}は $-0.6$ です。$x$ だけを\R{全部}{ぜん|ぶ}10\R{倍}{ばい}にすると、\R{共分散}{きょう|ぶん|さん}と\R{相関係数}{そう|かん|けい|すう}はいくつになりますか。
+\bkpans{\R{共分散}{きょう|ぶん|さん}は10\R{倍}{ばい}の $-15$。\R{相関係数}{そう|かん|けい|すう}は\R{変}{か}わらず $-0.6$}
+
+\bkproblem \R{小学生}{しょう|がく|せい}の、\R{1日}{いちにち}の\R{家}{いえ}での\R{勉強}{べん|きょう}\R{時間}{じ|かん}と、むし\R{歯}{は}の\R{数}{かず}のあいだに、\R{正}{せい}の\R{相関}{そう|かん}がありました。「\R{勉強}{べん|きょう}するとむし\R{歯}{は}になる」と\R{言}{い}えますか。\R{両方}{りょう|ほう}を\R{大}{おお}きくしている\R{第}{だい}3の\R{量}{りょう}を\R{考}{かんが}えましょう。
+\bkpans{\R{言}{い}えない。\R{学年}{がく|ねん}（\R{年齢}{ねん|れい}）が\R{上}{あ}がるほど、\R{勉強}{べん|きょう}\R{時間}{じ|かん}も\R{長}{なが}くなり、むし\R{歯}{は}の\R{数}{かず}（これまでにできた\R{数}{かず}）もふえるから}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem 4つの\R{組}{くみ} $(1,\ 4)$、$(2,\ 7)$、$(3,\ 10)$、$(4,\ 13)$ の\R{相関係数}{そう|かん|けい|すう}を\R{求}{もと}めましょう。\R{点}{てん}はどんな\R{線}{せん}の\R{上}{うえ}にならんでいますか。
+\bkpans{$\bar{x}=2.5$、$\bar{y}=8.5$。\R{共分散}{きょう|ぶん|さん} $3.75$、$\sigma_x=\sqrt{1.25}$、$\sigma_y=\sqrt{11.25}$、$\sigma_x\sigma_y=\sqrt{14.0625}=3.75$。$r=1$。\R{直線}{ちょく|せん} $y=3x+1$ の\R{上}{うえ}}
+
+\bkproblem 5つの\R{組}{くみ} $(1,\ 4)$、$(2,\ 1)$、$(3,\ 0)$、$(4,\ 1)$、$(5,\ 4)$ の\R{共分散}{きょう|ぶん|さん}を\R{求}{もと}めましょう。また、この5つの\R{点}{てん}はどんな\R{式}{しき}のグラフの\R{上}{うえ}にありますか。「$x$ と $y$ には\R{関係}{かん|けい}がない」と\R{言}{い}えますか。
+\bkpans{$\bar{x}=3$、$\bar{y}=2$。\R{偏差}{へん|さ}の\R{積}{せき}は $-4$、1、0、$-1$、4で\R{合計}{ごう|けい}0。\R{共分散}{きょう|ぶん|さん}は0（$r=0$）。\R{点}{てん}は\R{放物線}{ほう|ぶつ|せん} $y=(x-3)^2$ の\R{上}{うえ}にある。$x$ が\R{決}{き}まると $y$ が\R{決}{き}まるので、\R{関係}{かん|けい}はある（$r$ は\R{直線}{ちょく|せん}にどれだけ\R{近}{ちか}いかしか\R{表}{ひょう}さない）}
+
+\bkproblem 5つの\R{組}{くみ} $(1,\ 2)$、$(2,\ 1)$、$(3,\ 4)$、$(4,\ 3)$、$(5,\ 5)$ の\R{相関係数}{そう|かん|けい|すう} $r$ を\R{求}{もと}め、\R{相関}{そう|かん}の\R{強}{つよ}さを\R{表}{ひょう}5の\R{目安}{め|やす}で\R{答}{こた}えましょう。
+\bkpans{$\bar{x}=3$、$\bar{y}=3$。\R{偏差}{へん|さ}の\R{積}{せき}の\R{合計}{ごう|けい}は8で、\R{共分散}{きょう|ぶん|さん}1.6。\R{偏差}{へん|さ}の2\R{乗}{じょう}の\R{合計}{ごう|けい}は $x$ も $y$ も10で、$\sigma_x=\sigma_y=\sqrt{2}$。$r=1.6\div(\sqrt{2}\times\sqrt{2})=1.6\div2=0.8$。\R{強}{つよ}い\R{正}{せい}の\R{相関}{そう|かん}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{散布図}{さん|ぷ|ず}をかき、\R{相関}{そう|かん}の\R{向}{む}きと\R{強}{つよ}さを\R{見分}{み|わ}けられる。\bkfurref{bk:3-15:sanpu}
+\item \R{共分散}{きょう|ぶん|さん}を\R{計算}{けい|さん}し、その\R{符号}{ふ|ごう}の\R{意味}{い|み}を\R{説明}{せつ|めい}できる。\bkfurref{bk:3-15:kyobunsan}
+\item \R{相関係数}{そう|かん|けい|すう} $r$ を\R{求}{もと}め、\R{相関}{そう|かん}と\R{因果}{いん|が}を\R{区別}{く|べつ}できる。\bkfurref{bk:3-15:r}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{delta}{\R{散布図}{さん|ぷ|ず}の\R{点}{てん}に、いちばんよく\R{合}{あ}う\R{直線}{ちょく|せん}を\R{引}{ひ}けたら、\R{片方}{かた|ほう}からもう\R{片方}{かた|ほう}を\R{予想}{よ|そう}できるね。\R{次}{つぎ}の\R{章}{しょう}で、その\R{直線}{ちょく|せん}の\R{決}{き}め\R{方}{かた}を\R{作}{つく}るよ。}

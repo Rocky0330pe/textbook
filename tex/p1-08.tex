@@ -1,0 +1,1370 @@
+%% 第13回編集委員会（物理第1巻）  力-8 引っぱる・押す：応力とひずみ（★3〜4）  組 P1-5
+%% 第3部（材料の力学）の最初の章。記号は力-10・力-11（組 P1-6）も使う：
+%%   荷重 F（N）、断面積 A（mm^2・m^2）、もとの長さ L、のび ΔL、直径 d、応力 σ＝F/A（Pa、ふつう MPa＝N/mm^2）、
+%%   ひずみ ε＝ΔL/L（単位なし。×10^{-6} を「μ」とよぶことは力-9）、ヤング率 E、せん断応力 τ、せん断ひずみ γ、横弾性係数 G、
+%%   ポアソン比 ν、体積弾性率 K、線膨張係数 α（1/K）、許容応力 σ_a、降伏点 σ_Y、引張強さ σ_B、安全率 S、応力集中係数 K_t。
+%%   引張を正、圧縮を負。標準偏差には記号を使わない（数学 3-14 の σ とぶつかるため）。
+%% 数値はすべて Python で計算した（scratchpad/phys1/力-8/calc.py・calc2.py）。g＝9.8 m/s^2。
+%% 材料の値は巻末 ph1-back.tex の表の値：鋼 E＝205 GPa・ν＝0.3・ρ＝7850 kg/m^3・SS400 の降伏点 245 MPa（厚さ16 mm以下）、
+%%   アルミニウム合金 A6061-T6 E＝69 GPa・ν＝0.33・ρ＝2700・耐力 270 MPa、銅 E＝117 GPa、コンクリート E＝23 GPa、木材 E＝7 GPa。
+%% 出典（巻末の表に足す値・確かめた値）：
+%%   ・線膨張係数：鉄 11.8×10^{-6}/K、アルミニウム 23.1×10^{-6}/K、銅 16.5×10^{-6}/K（CRC Handbook の値。Wikipedia "Thermal expansivities of the elements" で確認）、
+%%     炭素鋼（SGP）11.6×10^{-6}（日本製鉄 鋼管の技術資料 https://www.nipponsteel.com/product/pipe-service/22.html）→ 本文は鋼 約1.2×10^{-5}/K、アルミ 2.3×10^{-5}、銅 1.7×10^{-5}
+%%   ・60 kg レールの断面積 77.50 cm^2・単位質量 60.80 kg/m（日本製鉄 レールのカタログ K003）
+%%   ・SS400 の引張強さ 400〜510 N/mm^2、降伏点 245 N/mm^2 以上（厚さ16 mm以下）：JIS G 3101
+%%   ・異形棒鋼の公称断面積 D19＝286.5 mm^2、D16＝198.6 mm^2：JIS G 3112
+%%   ・玉掛け用ワイヤロープの安全係数 6 以上：クレーン等安全規則 第213条
+%%   ・円い穴のまわりの応力集中（無限に広い板で3倍）：Kirsch（1898）
+%%   ・フックのアナグラム（1676年『ヘリオスコープの説明』、答え 1678年『復元力について』）、ヤング率：T. Young の講義録（1807年）
+%%   ・転位の考え：Taylor・Orowan・Polanyi（1934年）。電子顕微鏡で転位が見えた：Hirsch ら（1956年）
+%%   ・超高サイクル疲労（10^7 回をこえる疲労、介在物を起点とする破壊）：日本材料学会などの研究（研究が続いていると書くだけ）
+\makeatletter
+% 力-8 の絵の部品（頭文字 pxi）
+% 天井のはり（ハッチング）  \pxiceil{(左はし)}{はば}
+\newcommand\pxiceil[2]{\begin{scope}[shift={#1}]
+  \fill[bkLine!70] (0,0) rectangle (#2,2.2);
+  \draw[bkGray, line width=0.8pt] (0,0) -- (#2,0);
+  \foreach \xx in {1,3,...,#2} {\draw[bkGray, line width=0.4pt] (\xx,2.2) -- (\xx+1.6,0.1);}
+\end{scope}}
+% つるしたおもり  \pxiweight{(上のまん中)}{文字}
+\newcommand\pxiweight[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!45, draw=bkGray!90!black, line width=0.6pt, rounded corners=0.8mm] (-4,-7) rectangle (4,0);
+  \node[font=\sffamily\scriptsize, text=bkInk] at (0,-3.5) {#2};
+\end{scope}}
+% たてのばね  \pxispring{(上のはし)}{長さ}
+\newcommand\pxispring[2]{\begin{scope}[shift={#1}]
+  \draw[bkGray!90!black, line width=0.7pt] (0,0) -- (0,-2);
+  \draw[bkGray!90!black, line width=0.7pt, decorate, decoration={coil, aspect=0.45, segment length=1.3mm, amplitude=2mm}] (0,-2) -- (0,{-(#2)+2});
+  \draw[bkGray!90!black, line width=0.7pt] (0,{-(#2)+2}) -- (0,{-(#2)});
+\end{scope}}
+% 横向きの丸棒（側面）  \pxibar{(左下)}{長さ}{太さ}{色}
+\newcommand\pxibar[4]{\begin{scope}[shift={#1}]
+  \shade[top color=#4!25, bottom color=#4!55, middle color=#4!10] (0,0) rectangle (#2,#3);
+  \draw[#4!70!black, line width=0.6pt] (0,0) rectangle (#2,#3);
+\end{scope}}
+% 引っぱる矢印（左右）  \pxipull{(棒の左はしのまん中)}{(右はしのまん中)}{色}
+\newcommand\pxipull[3]{\draw[bk arrow, #3, line width=1.4pt] #1 -- ++(-9,0); \draw[bk arrow, #3, line width=1.4pt] #2 -- ++(9,0);}
+% 章の札（道しるべと同じ形）
+\newcommand\pxipill[1]{\bk@pill{#1}}
+\makeatother
+\tikzset{pxi lab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1pt},
+  pxi small/.style={font=\sffamily\scriptsize, text=bkInk, inner sep=1pt},
+  pxi dim/.style={bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}}}
+
+\phchapter{8}{引っぱる・押す：応力とひずみ}{鉄の棒も、引っぱると少しのびる？}{\bklevelrange{3}{4}}{引っぱる・押す：応力とひずみ}
+\bkmichishirube{2-15,3-16,5-17,力-2,力-4}{力-9,力-10,力-11,熱-1,波-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 応力とひずみを計算して、棒がどれだけのびるか（ちぢむか）を求められる。
+\item \bklevel{3}\enspace 応力-ひずみ線図を読み、許容応力と安全率から、棒の太さを決められる。
+\item \bklevel{4}\enspace 原子のばねから「棒もばね」（$k=\dfrac{EA}{L}$）を導き、熱応力・せん断・ポアソン比を使える。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{ばねののびは力に比例（フックの法則）$F=kx$}{中学理科・高校物理基礎}{ph:力-8:hooke}
+\phk{ばねの直列 $\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$、並列 $k=k_1+k_2$}{高校物理基礎}{ph:力-8:series}
+\phk{応力 $\sigma=\dfrac{F}{A}$、ひずみ $\varepsilon=\dfrac{\Delta L}{L}$、$\sigma=E\varepsilon$}{大学（材料力学）}{ph:力-8:sigmaE}
+\phk{熱応力 $\sigma=-E\alpha\,\Delta T$}{大学（材料力学）}{ph:力-8:thermal}
+\phkx{圧力 $p=\dfrac{F}{S}$}{中学理科}{力-12 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.60\linewidth}\raggedright
+ばねは、おもりをつるすと、目で見てわかるほどのびます。では、鉄の棒はどうでしょう。
+
+直径\qty{10}{mm}、長さ\qty{1}{m}の鉄（鋼）の棒の下に、軽自動車1台くらいの重さ（約\qty{10}{kN}、質量にして約1トン）をつるします。棒は、ほんの少しでも、のびるのでしょうか。のびるとしたら、何 mm でしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxiceil{(-10,0)}{20}
+  \fill[bkGray!60] (-1.3,-36) rectangle (1.3,0);
+  \draw[bkGray!90!black, line width=0.5pt] (-1.3,-36) rectangle (1.3,0);
+  \filldraw[fill=bkOrange!30, draw=bkOrange!70!black, line width=0.6pt, rounded corners=1mm] (-9,-47) rectangle (9,-36);
+  \node[pxi small] at (0,-41.5) {約1トン};
+  \draw[pxi dim] (6,0) -- (6,-36);
+  \node[pxi small, anchor=west] at (7,-18) {\qty{1}{m}};
+  \node[pxi small, anchor=east] at (-2.5,-18) {鋼};
+  \node[font=\sffamily\bfseries\large, text=bkOrange!80!black] at (15,-41) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent この章から、本は第3部「ゆがむ」に入ります。第1部・第2部では、物は「形の変わらないもの（質点・剛体）」と考えてきました。でも本当は、どんなにかたい物も、力を受けると少しだけ形が変わります。その「少し」をはかって、橋やクレーンやボルトが「こわれないか」「のびすぎないか」を決めるのが、この章から始まる\textbf{材料力学}（ざいりょうりきがく）です。
+
+材料の変形には、下の図のような形があります。第3部では、この順に1つずつ調べていきます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 引張・圧縮
+  \begin{scope}[shift={(0,0)}]
+    \pxibar{(0,8)}{18}{4}{bkBlue}
+    \draw[bk arrow, bkRed, line width=1.1pt] (-0.5,10) -- (-6,10); \draw[bk arrow, bkRed, line width=1.1pt] (18.5,10) -- (24,10);
+    \node[pxi lab, anchor=north] at (9,4) {引く・押す};
+    \node[anchor=north] at (9,-1) {\pxipill{力-8}};
+  \end{scope}
+  % せん断
+  \begin{scope}[shift={(30,0)}]
+    \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.6pt] (0,8) -- (14,8) -- (18,16) -- (4,16) -- cycle;
+    \draw[bk arrow, bkRed, line width=1.1pt] (6,18.5) -- (18,18.5); \draw[bk arrow, bkRed, line width=1.1pt] (12,5.8) -- (0,5.8);
+    \node[pxi lab, anchor=north] at (9,4) {ずらす};
+    \node[anchor=north] at (9,-1) {\pxipill{力-8}};
+  \end{scope}
+  % 曲げ
+  \begin{scope}[shift={(60,0)}]
+    \draw[bkBlue!70!black, line width=3pt] (0,12) .. controls (6,7) and (12,7) .. (18,12);
+    \fill[bkInk] (0,10.6) -- (-1.5,8) -- (1.5,8) -- cycle; \fill[bkInk] (18,10.6) -- (16.5,8) -- (19.5,8) -- cycle;
+    \draw[bk arrow, bkRed, line width=1.1pt] (9,18) -- (9,11.5);
+    \node[pxi lab, anchor=north] at (9,4) {曲げる};
+    \node[anchor=north] at (9,-1) {\pxipill{力-10}};
+  \end{scope}
+  % ねじり
+  \begin{scope}[shift={(90,0)}]
+    \pxibar{(0,8)}{18}{4}{bkBlue}
+    \draw[bkBlue!70!black, line width=0.5pt] (3,8) -- (7,12) (8,8) -- (12,12) (13,8) -- (17,12);
+    \draw[bkRed, line width=1.1pt, -{Stealth[length=4pt]}] (-1,14) arc (100:260:1.6 and 4);
+    \draw[bkRed, line width=1.1pt, -{Stealth[length=4pt]}] (19,6) arc (-80:80:1.6 and 4);
+    \node[pxi lab, anchor=north] at (9,4) {ねじる};
+    \node[anchor=north] at (9,-1) {\pxipill{力-11}};
+  \end{scope}
+  % 座屈
+  \begin{scope}[shift={(118,0)}]
+    \draw[bkBlue!70!black, line width=2.4pt] (5,6) .. controls (9,10) and (9,14) .. (5,19);
+    \draw[bk arrow, bkRed, line width=1.1pt] (5,25) -- (5,20); 
+    \node[pxi lab, anchor=north] at (5,4) {上から押す};
+    \node[anchor=north] at (5,-1) {\pxipill{力-11}};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{材料の変形のいろいろと、それを調べる章}
+\end{bkfigure}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[輪ゴムを並べる・つなぐ]
+\textbf{用意するもの}\par
+同じ輪ゴム3本、クリップ、小さなポリぶくろ、10円玉20枚くらい、ものさし
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 輪ゴム1本でふくろをつるし、10円玉を10枚入れて、のびをはかろう。
+\item 輪ゴム2本を\textbf{並べて}（横に2本）つるし、同じ10枚を入れて、のびをはかろう。
+\item 輪ゴム2本を\textbf{つないで}（たてに2本）つるし、同じ10枚を入れて、のびをはかろう。
+\end{enumerate}
+
+\par\noindent ミナさんの結果：1本で\qty{30}{mm}、並べた2本で\qty{15}{mm}、つないだ2本で\qty{60}{mm}のびました。
+\end{yattemiyou}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\lab in {0/{\bkcircled[bkGreen]{1} 1本}, 40/{\bkcircled[bkGreen]{2} 並べる}, 80/{\bkcircled[bkGreen]{3} つなぐ}} {
+    \pxiceil{(\cx-12,0)}{24}
+    \node[pxi lab, anchor=north] at (\cx,-39) {\lab};}
+  % 1本
+  \draw[bkOrange!80!black, line width=1.2pt] (-1.2,0) -- (-1.2,-16) arc (180:360:1.2) -- (1.2,0);
+  \draw[bkGray!80!black, line width=0.6pt] (0,-17.2) -- (0,-18);
+  \pxiweight{(0,-18)}{10枚}
+  % 並べる
+  \draw[bkOrange!80!black, line width=1.2pt] (36.8,0) -- (36.8,-8) arc (180:360:1.2) -- (39.2,0);
+  \draw[bkOrange!80!black, line width=1.2pt] (40.8,0) -- (40.8,-8) arc (180:360:1.2) -- (43.2,0);
+  \draw[bkGray!80!black, line width=0.6pt] (35,-10) -- (45,-10);
+  \pxiweight{(40,-10)}{10枚}
+  \node[pxi small, anchor=west] at (46,-5) {のび？};
+  % つなぐ
+  \draw[bkOrange!80!black, line width=1.2pt] (78.8,0) -- (78.8,-14) arc (180:360:1.2) -- (81.2,0);
+  \draw[bkOrange!80!black, line width=1.2pt] (78.8,-12) -- (78.8,-27) arc (180:360:1.2) -- (81.2,-12);
+  \pxiweight{(80,-29)}{10枚}
+  \node[pxi small, anchor=west] at (86,-15) {のび？};
+\end{tikzpicture}
+\bkfigcaption{輪ゴムを1本・並べて2本・つないで2本。同じ重さで、のびをくらべる。}
+\end{bkfigure}
+
+\noindent 並べると、1本が受けもつ重さは半分なので、のびも半分です。つなぐと、2本のどちらも10枚分の重さで引かれるので、どちらも\qty{30}{mm}のび、合わせて2倍です。この「並べる」「つなぐ」が、この章のかぎになります。（輪ゴムは、大きくのばすと力とのびが比例しなくなります。10円玉の数は、のびすぎない範囲にしよう。）
+
+\begin{omoidasou}
+\bkrecall{2-15}{ばねの力 $F=kx$（$x$ はのび）。ばね定数 $k$ の単位は N/m。力が2倍なら、のびも2倍。}
+\bkrecall{2-10}{$\qty{1}{mm}=\qty{0.001}{m}$、$\qty{1}{mm^2}=\qty{0.000001}{m^2}$。M（メガ）は $10^6$、G（ギガ）は $10^9$。換算は単位つきの1で。}
+\bkrecall{3-16}{原点を通る直線 $y=ax$ を、ずれの2乗の和がいちばん小さくなるように引くと、$a=\dfrac{Q}{P}$（$P$ は $x^2$ の和、$Q$ は $xy$ の和）。}
+\bkrecall{5-17}{$x=a$ のまわりの2次近似：$f(x)\approx f(a)+f'(a)(x-a)+\dfrac{1}{2}f''(a)(x-a)^2$。}
+\bkrecall{力-4}{位置エネルギー $U$ から力を出すには、$F=-\dfrac{\dd U}{\dd x}$（$U$ の坂を下る向きに力がはたらく）。}
+\bkrecall{4-5}{円の面積は $\pi r^2$。直径 $d$ で書くと $\dfrac{\pi d^2}{4}$。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{ばねと鋼の線を、同じおもりで引く}
+\leavevmode\label{ph:力-8:sec1}ばねと、ピアノの弦に使う鋼の線（ピアノ線）に、同じ\qty{2}{kg}のおもりをつるしてみます。ばねは何 cm ものびますが、長さ\qty{2}{m}・直径\qty{0.5}{mm}のピアノ線は、ほとんどのびたように見えません。でも、ものさしの目もりを虫めがねで読んだり、レーザーで細かくはかったりすると、約\qty{1}{mm}のびていることがわかります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxiceil{(-14,0)}{28}
+  \pxispring{(0,0)}{30}
+  \pxiweight{(0,-30)}{\qty{2}{kg}}
+  \draw[pxi dim] (9,-14) -- (9,-30); \node[pxi small, anchor=west] at (10,-22) {何 cm も};
+  \node[pxi lab, anchor=north] at (0,-40) {ばね};
+  \pxiceil{(46,0)}{28}
+  \draw[bkGray!90!black, line width=0.5pt] (60,0) -- (60,-30);
+  \pxiweight{(60,-30)}{\qty{2}{kg}}
+  \draw[pxi dim] (52,0) -- (52,-30); \node[pxi small, anchor=east] at (51,-15) {\qty{2}{m}};
+  \node[pxi lab, anchor=north] at (60,-40) {ピアノ線（直径\qty{0.5}{mm}）};
+  % 拡大
+  \draw[bkGray, line width=0.4pt, dashed] (60,-30) circle (3.2);
+  \draw[bkGray, line width=0.4pt] (63,-28.5) -- (80,-14);
+  \begin{scope}[shift={(90,-14)}]
+    \draw[bkGray, line width=0.6pt] (0,0) circle (13);
+    \draw[bkInk, line width=0.8pt] (-6,8) -- (-6,-5);
+    \draw[bkInk, line width=0.8pt, dashed] (-6,-5) -- (-6,-9);
+    \draw[bkRed, line width=0.6pt] (-9,-5) -- (-3,-5) (-9,-9) -- (-3,-9);
+    \draw[pxi dim, bkRed] (-1,-5) -- (-1,-9);
+    \node[pxi small, anchor=west, text=bkRed!80!black] at (15,-7) {のび 約\qty{1}{mm}};
+    \draw[bkRed, line width=0.4pt] (-0.5,-7) -- (14.6,-7);
+    \node[pxi small] at (4,6) {拡大};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じおもりでも、ばねはよくのび、ピアノ線は約1 mm しかのびない。でも、のびは0ではない。}
+\end{bkfigure}
+
+では、ピアノ線のかわりに、太さや長さのちがう鋼の棒にすると、のびはどう変わるでしょう。くわしくはかった結果（\qty{10}{kN}で引いたとき）を表にします。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=26mm] Q[c,m,wd=26mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+直径 ＼ 長さ & \qty{1}{m} & \qty{2}{m} \\
+\qty{10}{mm} & \qty{0.62}{mm} & \qty{1.24}{mm} \\
+\qty{20}{mm} & \qty{0.16}{mm} & \qty{0.31}{mm} \\
+\end{bktable}
+\bktabcaption{鋼の棒を10 kN で引いたときののび（計算の値。実験でも、ほぼこのとおりになる）}
+\label{ph:力-8:tab-dl}
+\end{bkcenter}
+表から、2つのことに気づきます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 長さが2倍になると、のびも2倍になる（輪ゴムを「つないだ」ときと同じ）。
+\item 直径が2倍になると、のびは4分の1になる。直径が2倍なら、切り口の面積は $2\times2=4$ 倍。つまり、同じ太さの棒を4本「並べた」のと同じ。
+\end{enumerate}
+のびは、材料だけでなく、棒の長さと太さで変わってしまいます。これでは「鋼はどれくらいのびにくいか」を、1つの数で言えません。そこで、長さと太さの影響を取りのぞく工夫をします。
+
+\bksubsection{2}{応力とひずみ：大きさによらない数にする}
+\leavevmode\label{ph:力-8:sec2}輪ゴムの実験を思い出しましょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1本
+  \pxibar{(0,24)}{36}{5}{bkBlue}
+  \pxipull{(0,26.5)}{(36,26.5)}{bkRed}
+  \node[pxi lab, anchor=west] at (48,26.5) {1本：力 $F$、のび $\Delta L$};
+  % 並べる
+  \pxibar{(0,10)}{36}{5}{bkBlue}
+  \pxibar{(0,4)}{36}{5}{bkBlue}
+  \pxipull{(0,9.5)}{(36,9.5)}{bkRed}
+  \node[pxi lab, anchor=west] at (48,9.5) {並べる（面積2倍）：力 $2F$ で、のび $\Delta L$};
+  % つなぐ
+  \pxibar{(0,-12)}{36}{5}{bkBlue}
+  \pxibar{(36,-12)}{36}{5}{bkBlue}
+  \draw[bkBlue!70!black, line width=0.6pt, dashed] (36,-13) -- (36,-6);
+  \pxipull{(0,-9.5)}{(72,-9.5)}{bkRed}
+  \node[pxi lab, anchor=west] at (84,-9.5) {つなぐ（長さ2倍）：};
+  \node[pxi lab, anchor=west] at (84,-15.5) {力 $F$ で、のび $2\Delta L$};
+\end{tikzpicture}
+\bkfigcaption{太い棒は細い棒を並べたもの、長い棒は短い棒をつないだもの。}
+\label{ph:力-8:fig-narabe}
+\end{bkfigure}
+
+\noindent\textbf{面積でわる。}\quad 断面の面積が2倍の棒は、細い棒を2本並べたものです。同じのびにするには2倍の力がいりますが、1本あたりの力は同じです。そこで、力を断面の面積でわった「面積1あたりの力」を考えます。これを\textbf{応力}（おうりょく）といい、$\sigma$（シグマ）で表します。\bkidx{おうりょく}{応力}
+\pheq{\sigma=\frac{F}{A}}{Pa ＝ N ÷ m$^2$}
+\label{ph:力-8:sigmaE}$F$ は棒を引く力（荷重：かじゅう）、$A$ は棒の断面積です。単位は N/m$^2$ で、これを Pa（パスカル）とよびます。1 Pa はとても小さいので、機械では\textbf{MPa（メガパスカル）}を使います。
+\[\qty{1}{MPa}=\qty{1000000}{N/m^2}=\frac{\qty{1000000}{N}}{\qty{1000000}{mm^2}}=\qty{1}{N/mm^2}\]
+つまり「\qty{1}{MPa}は、\qty{1}{mm^2}あたり\qty{1}{N}」です。N と mm で計算すると、答えはそのまま MPa で出ます。
+
+\noindent\textbf{長さでわる。}\quad 長さが2倍の棒は、短い棒を2本つないだものです。のびは2倍になりますが、もとの長さ1あたりののびは同じです。そこで、のびをもとの長さでわった「長さ1あたりののび」を考えます。これを\textbf{ひずみ}といい、$\varepsilon$（イプシロン）で表します。\bkidx{ひずみ}{ひずみ}
+\pheq{\varepsilon=\frac{\Delta L}{L}}{単位なし ＝ m ÷ m}
+$L$ はもとの長さ、$\Delta L$ はのび（2-3 の「あと$-$まえ」）です。m÷m なので、ひずみには単位がありません。ひずみはとても小さい数なので、0.0006 のように書くかわりに $6\times10^{-4}$ と書いたり、百分率で 0.06\,\% と書いたりします。
+
+\begin{phyomi}[$\sigma=\dfrac{F}{A}$、\ $\varepsilon=\dfrac{\Delta L}{L}$]
+「応力は、断面の\qty{1}{mm^2}が受けもつ力」「ひずみは、もとの長さ\qty{1}{mm}あたりののび」。どちらも、棒の大きさを取りのぞいた、材料の中の「1つぶあたり」の量です。引っぱるとき（引張：ひっぱり）は正、押しちぢめるとき（圧縮：あっしゅく）は、のびが負になるので、応力もひずみも負の数で表します。
+\end{phyomi}
+\begin{phmijika}[つり革と、すいている電車]
+つり革1本にぶら下がる人数が同じなら、つり革が多い車両ほど1本あたりの重さは変わりません。応力は「材料の1本1本（1つぶ1つぶ）がどれだけがんばっているか」を表す数です。同じ鋼なら、細い棒でも太い棒でも、同じ応力までなら同じようにたえられます。
+\end{phmijika}
+\begin{phbaisuru}{棒の直径 $d$}
+断面積 $A=\dfrac{\pi d^2}{4}$ は $2\times2=4$ 倍になるので、同じ力なら応力は4分の1になります。下のグラフは、\qty{10}{kN}で引いたときの応力です。細い棒ほど、応力は急に大きくなります。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=80mm, height=46mm, xmin=0, xmax=26, ymin=0, ymax=560,
+  xtick={0,5,...,25}, ytick={0,100,...,500}, xlabel={$d$（mm）}, ylabel={$\sigma$（MPa）}]
+  \addplot[bkOrange!85!black, domain=4.8:25] {10000/(pi*x^2/4)};
+  \fill[bkInk] (axis cs:10,127.3) circle (1.8pt); \fill[bkInk] (axis cs:20,31.8) circle (1.8pt);
+  \node[pxi small, anchor=south west] at (axis cs:10.5,130) {$d=10$：\qty{127}{MPa}};
+  \node[pxi small, anchor=south west] at (axis cs:20.5,36) {$d=20$：\qty{32}{MPa}};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+
+\bksubsection{3}{フックの法則 $\sigma=E\varepsilon$：棒もばね}
+\leavevmode\label{ph:力-8:sec3}こんどは、応力とひずみの関係を調べます。鋼の試験片（引張試験で引っぱる棒）を、試験機で少しずつ強く引き、そのつど応力とひずみをはかります。数学 3-16 の「鉄のかたさ」と同じデータです。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{bktable}{colspec={Q[c,m,wd=17mm] Q[c,m,wd=17mm]}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+ひずみ $\varepsilon$ & 応力 $\sigma$（MPa） \\
+0.0005 & 101 \\
+0.0010 & 199 \\
+0.0015 & 302 \\
+0.0020 & 398 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=70mm, height=48mm, xmin=0, xmax=0.0024, ymin=0, ymax=480,
+  xtick={0,0.0005,0.001,0.0015,0.002}, xticklabels={0,0.0005,0.0010,0.0015,0.0020}, ytick={0,100,...,400},
+  xlabel={$\varepsilon$}, ylabel={$\sigma$（MPa）}, x tick label style={font=\sffamily\scriptsize}]
+  \addplot[bkBlue, domain=0:0.0022] {199800*x};
+  \fill[bkRed] (axis cs:0.0005,101) circle (1.8pt); \fill[bkRed] (axis cs:0.001,199) circle (1.8pt); \fill[bkRed] (axis cs:0.0015,302) circle (1.8pt); \fill[bkRed] (axis cs:0.002,398) circle (1.8pt);
+  \node[pxi small, anchor=north west, text=bkBlue!80!black] at (axis cs:0.00125,200) {傾き $E$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{鋼の引張試験。応力とひずみは原点を通る直線にのる。}
+\label{ph:力-8:fig-ss-line}
+\end{bkfigure}
+点は、原点を通る直線にのっています。応力はひずみに比例するのです。比例定数を $E$ と書くと、
+\pheq{\sigma=E\varepsilon}{Pa ＝ Pa × 単位なし}
+これを\textbf{フックの法則}といい、$E$ を\textbf{ヤング率}（縦弾性係数：じゅうだんせいけいすう）といいます。\bkidx{やんぐりつ}{ヤング率}ひずみには単位がないので、$E$ の単位は応力と同じ Pa です。この表から $E$ を決めるには、数学 3-16 の最小二乗法を使います（\bkreidairef{2}）。答えは約\qty{200000}{MPa}、つまり約\qty{200}{GPa}です。巻末の表では、一般構造用の鋼（SS400）の $E$ は約\qty{205}{GPa}です。この本では、鋼のヤング率に\qty{205}{GPa}を使います。
+
+\begin{phyomi}[$\sigma=E\varepsilon$]
+「ヤング率は、材料をひずみ1（もとの長さの2倍！）までのばすのに要る応力」と読めます。もちろん本物の鋼は、そこまでのびる前にこわれます。$E$ は「グラフの傾き」、つまり\textbf{のびにくさ（かたさ）}を表す数です。鋼は約\qty{205}{GPa}、アルミニウム合金は約\qty{69}{GPa}なので、同じ応力なら、アルミニウムは鋼の約3倍のびます。
+\end{phyomi}
+
+\noindent\textbf{棒は、ばね定数 $\dfrac{EA}{L}$ のばね}\quad
+$\sigma=E\varepsilon$ に、$\sigma=\dfrac{F}{A}$ と $\varepsilon=\dfrac{\Delta L}{L}$ を入れてみましょう。
+\[\frac{F}{A}=E\,\frac{\Delta L}{L}\qquad\text{両辺に $A$ をかけて}\qquad F=\frac{EA}{L}\,\Delta L\]
+力 $F$ が、のび $\Delta L$ に比例しています。ばねの $F=kx$（2-15）と同じ形です。棒は、ばね定数が
+\pheq{k=\frac{EA}{L}}{N/m ＝ Pa × m$^2$ ÷ m}
+のばねなのです。\label{ph:力-8:k}のびを求める形に直すと、
+\pheq{\Delta L=\frac{FL}{EA}}{m ＝ N × m ÷（Pa × m$^2$）}
+です。
+
+\begin{phbaisuru}{長さ $L$ と直径 $d$}
+$\Delta L=\dfrac{FL}{EA}$ で、$L$ を2倍にすると $\Delta L$ も2倍。$d$ を2倍にすると $A$ が4倍なので $\Delta L$ は4分の1。表\ref{ph:力-8:tab-dl}の数は、この式で計算したものです。下のグラフは、長さ\qty{1}{m}の鋼の棒を\qty{10}{kN}で引いたときののびです。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=80mm, height=46mm, xmin=0, xmax=26, ymin=0, ymax=4.4,
+  xtick={0,5,...,25}, ytick={0,1,...,4}, xlabel={$d$（mm）}, ylabel={$\Delta L$（mm）}]
+  \addplot[bkBlue, domain=5:25] {10000*1000/(205000*pi*x^2/4)};
+  \addplot[bkPurple, domain=7.5:25, dashed] {10000*1000/(69000*pi*x^2/4)};
+  \fill[bkInk] (axis cs:10,0.621) circle (1.8pt); \fill[bkInk] (axis cs:20,0.155) circle (1.8pt);
+  \node[pxi small, anchor=west, text=bkBlue!80!black] at (axis cs:11,1.1) {鋼};
+  \node[pxi small, anchor=west, text=bkPurple!80!black] at (axis cs:13,2.4) {アルミニウム合金};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+
+\noindent\textbf{\bkhatenaref の答え}\quad 直径\qty{10}{mm}の鋼の棒を\qty{10}{kN}で引くと（\bkreidairef{1}）、
+\[A=\frac{\pi\times10^2}{4}\approx78.5\ \mathrm{mm^2},\qquad\sigma=\frac{10000\ \mathrm{N}}{78.5\ \mathrm{mm^2}}\approx127\ \mathrm{MPa}\]
+\[\varepsilon=\frac{127}{205000}\approx6.2\times10^{-4},\qquad\Delta L=6.2\times10^{-4}\times1000\ \mathrm{mm}\approx0.62\ \mathrm{mm}\]
+です。約1トンをつるしても、\qty{1}{m}の鋼の棒は\qty{0.6}{mm}ほどしかのびません。でも、たしかにのびています。
+
+\noindent\textbf{ばねをつなぐ・並べる}\quad
+棒がばねなら、やってみようの「つなぐ」「並べる」は、ばねの直列と並列です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxiceil{(-12,0)}{24}
+  \pxispring{(0,0)}{16}
+  \fill[bkInk] (0,-16) circle (0.9);
+  \pxispring{(0,-16)}{16}
+  \pxiweight{(0,-32)}{$F$}
+  \node[pxi small, anchor=west] at (4,-8) {$k_1$};
+  \node[pxi small, anchor=west] at (4,-24) {$k_2$};
+  \node[pxi lab, anchor=north] at (0,-42) {直列（つなぐ）};
+  \pxiceil{(48,0)}{30}
+  \pxispring{(56,0)}{18}
+  \pxispring{(70,0)}{18}
+  \draw[bkGray!90!black, line width=1pt] (52,-18) -- (74,-18);
+  \pxiweight{(63,-18)}{$F$}
+  \node[pxi small, anchor=east] at (53,-9) {$k_1$};
+  \node[pxi small, anchor=west] at (73,-9) {$k_2$};
+  \node[pxi lab, anchor=north] at (63,-42) {並列（並べる）};
+\end{tikzpicture}
+\bkfigcaption{ばねの直列と並列（並列では、2本ののびが同じになるように、軽い棒のまん中につるす）}
+\label{ph:力-8:fig-spring}
+\end{bkfigure}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{bkTheme}●}]
+\item \textbf{直列}：2本とも、同じ力 $F$ で引かれる（間の点のつり合い。力-2）。のびは $x_1=\dfrac{F}{k_1}$、$x_2=\dfrac{F}{k_2}$ で、全体ののびはそのたし算です。
+\[x=x_1+x_2=F\Bigl(\frac{1}{k_1}+\frac{1}{k_2}\Bigr)\qquad\text{だから}\qquad\frac{1}{k}=\frac{1}{k_1}+\frac{1}{k_2}\]
+\label{ph:力-8:series}
+\item \textbf{並列}：2本ののびが同じ $x$。力は $k_1x$ と $k_2x$ に分かれ、合わせて $F$ です。
+\[F=k_1x+k_2x=(k_1+k_2)x\qquad\text{だから}\qquad k=k_1+k_2\]
+\label{ph:力-8:parallel}
+\end{itemize}
+同じばねを2本つなぐと $\dfrac{1}{k}=\dfrac{2}{k_1}$ で $k=\dfrac{k_1}{2}$（のびやすさ2倍）。2本並べると $k=2k_1$（のびにくさ2倍）。やってみようの輪ゴムと同じです。棒の式 $k=\dfrac{EA}{L}$ でも、$L$ が2倍（つなぐ）なら $k$ は半分、$A$ が2倍（並べる）なら $k$ は2倍で、ぴったり合います。
+
+\noindent\textbf{なぜ、のびは力に比例するの？：原子のばね}\quad
+鋼の中では、鉄の原子が約\qty{0.25}{nm}（\qty{1}{nm}は10億分の1 m）の間かくで、きちんと並んでいます。となりどうしの原子は、近づきすぎると反発し、はなれると引き合います。2つの原子の位置エネルギー $U$ を、原子の間の距離 $r$ のグラフにすると、下の図の青い線のような「谷」の形になります。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=70mm, height=54mm, xmin=0.85, xmax=2.3, ymin=-1.25, ymax=0.45,
+  xtick={1,1.5,2}, xticklabels={$r_0$,$1.5r_0$,$2r_0$}, ytick={0}, xlabel={$r$}, ylabel={$U$}, grid=none]
+  \draw[bkGray, line width=0.5pt] (axis cs:0.85,0) -- (axis cs:2.3,0);
+  \addplot[bkBlue, domain=0.885:2.25, samples=200] {(1/x)^12-2*(1/x)^6};
+  \addplot[bkOrange!85!black, dashed, domain=0.87:1.13] {-1+36*(x-1)^2};
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:1,-1.25) -- (axis cs:1,-1);
+  \fill[bkRed] (axis cs:1,-1) circle (1.6pt);
+  \node[pxi small, anchor=south west, text=bkBlue!80!black] at (axis cs:1.5,0.08) {位置エネルギー $U(r)$};
+  \node[pxi small, anchor=west, text=bkOrange!70!black] at (axis cs:1.17,-0.85) {2次近似（放物線）};
+  \node[pxi small, anchor=north west, text=bkRed!80!black] at (axis cs:1.02,-1.04) {谷の底};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\raggedright\small
+谷の底の距離 $r_0$ が、原子が落ち着く間かくです。原子を引きはなす（$r>r_0$）と、$U$ の坂を下る向き、つまり $r_0$ にもどる向きに力がはたらきます（力-4）。谷の底の近くでは、$U$ のグラフは放物線とほとんど重なります。
+\end{minipage}
+\bkfigcaption{2つの原子の位置エネルギー（形をわかりやすくした図）。底の近くは放物線で近似できる。}
+\label{ph:力-8:fig-atom}
+\end{bkfigure}
+谷の底 $r=r_0$ のまわりで、数学 5-17 の2次近似を使います。谷の底では傾きが0（$U'(r_0)=0$）なので、1次の項が消えて、
+\[U(r)\approx U(r_0)+\frac{1}{2}U''(r_0)\,(r-r_0)^2\]
+です。$k_0=U''(r_0)$（谷の曲がりぐあい）とおき、$\Delta r=r-r_0$（原子の間ののび）と書くと、原子にはたらく力は
+\[F=-\frac{\dd U}{\dd r}=-k_0\,\Delta r\]
+です。$\Delta r$ が小さいかぎり、力はのびに比例し、もとにもどる向きです。\textbf{となりどうしの原子の間には、ばね定数 $k_0$ の小さなばねがある}のと同じです。フックの法則は、どんな材料でも「谷の底の近くでは放物線」という、数学の性質から出てきたのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,...,7} {\foreach \j in {0,...,3} {
+    \ifnum\i<7 \draw[bkGray!80, line width=0.5pt, decorate, decoration={coil, aspect=0.4, segment length=1mm, amplitude=0.9mm}] (\i*9+1.6,\j*7) -- (\i*9+7.4,\j*7);\fi
+    \ifnum\j<3 \draw[bkGray!50, line width=0.4pt] (\i*9,\j*7+1.6) -- (\i*9,\j*7+5.4);\fi
+    \shade[ball color=bkBlue!60] (\i*9,\j*7) circle (1.6);}}
+  \draw[pxi dim] (0,-5) -- (63,-5); \node[pxi small, anchor=north] at (31.5,-6) {長さ $L$：ばねが $\dfrac{L}{r_0}$ 個つながる（直列）};
+  \draw[pxi dim] (-6,0) -- (-6,21); \node[pxi small, anchor=east, align=right] at (-7,10.5) {断面 $A$：\\ $\dfrac{A}{r_0^{\,2}}$ 列が\\並ぶ（並列）};
+  \draw[bk arrow, bkRed, line width=1.4pt] (66,10.5) -- (78,10.5); \node[pxi small, anchor=south, text=bkRed!80!black] at (72,11.5) {$F$};
+  \draw[pxi dim] (0,24.5) -- (9,24.5); \node[pxi small, anchor=south] at (4.5,25) {$r_0$};
+\end{tikzpicture}
+\bkfigcaption{棒の中の原子のばね（大ざっぱなモデル：原子を立方体のます目に並べた）}
+\label{ph:力-8:fig-lattice}
+\end{bkfigure}
+棒の中では、このばねが、長さの向きに $\dfrac{L}{r_0}$ 個つながり（直列）、その列が断面に $\dfrac{A}{r_0^{\,2}}$ 列並んでいます（並列：1列が面積 $r_0^{\,2}$ をしめる）。直列で $\dfrac{L}{r_0}$ 分の1、並列で $\dfrac{A}{r_0^{\,2}}$ 倍になるので、棒全体のばね定数は
+\[k=k_0\times\frac{A}{r_0^{\,2}}\times\frac{r_0}{L}=\frac{k_0}{r_0}\times\frac{A}{L}\]
+\label{ph:力-8:hooke}です。これは $k=\dfrac{EA}{L}$ と同じ形で、$E=\dfrac{k_0}{r_0}$ とわかります。\textbf{ヤング率は、原子1つぶのばねの強さで決まる、材料の性質}なのです。反対に、鋼の $E=\qty{205}{GPa}$ と $r_0=\qty{0.25}{nm}$ から見積もると、$k_0=Er_0\approx\qty{51}{N/m}$ です。原子のあいだのばねは、ふつうのばねくらいの強さなのです。
+
+\begin{phflow}[原子のばねからフックの法則へ]
+\phflowrow{$U(r)$ の谷の底のまわり\\（5-17 の2次近似）}{ずれ $\Delta r$ が\\小さい}{$F=-k_0\,\Delta r$\\（原子のばね）}
+\phflowrow{原子のばねが直列に $\dfrac{L}{r_0}$ 個、\\並列に $\dfrac{A}{r_0^{\,2}}$ 列}{一様な材料\\$E=\dfrac{k_0}{r_0}$}{$F=\dfrac{EA}{L}\Delta L$\\（棒もばね）}
+\phflowrow{$F=\dfrac{EA}{L}\Delta L$}{1本のばねで\\$k=\dfrac{EA}{L}$}{$F=kx$\\（フックの法則）}
+\phflowrow{2本のばね：力が同じ、\\のびがたし算}{直列\\（つなぐ）}{$\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$}
+\phflowrow{2本のばね：のびが同じ、\\力がたし算}{並列\\（並べる）}{$k=k_1+k_2$}
+\end{phflow}
+
+\begin{seikaku}
+この「ます目に並べた原子のばね」は、とても大ざっぱなモデルです。本物の鉄の原子は、立方体の角とまん中に並び（体心立方）、ななめの原子ともばねでつながっています。また、原子の間の力は、電子のふるまい（量子力学：原-5）で決まります。量子力学の計算で、ヤング率を原子から計算することもできます。ここで大切なのは、「谷の底の近くなら力はずれに比例する」という形のほうです。
+\end{seikaku}
+
+\begin{column}{フックの暗号と、ヤングの数}
+イギリスのロバート・フックは、1676年に出版した本の中に、「ceiiinosssttuv」という、意味のわからない文字の並びを書きました。2年後の1678年、その答えを明かしました。文字を並べかえると、ラテン語で「ut tensio, sic vis」（のびのとおりに、力がある）。ばねの力はのびに比例する、という発見を、ほかの人に先をこされないように、暗号にしておいたのです。
+
+それから約130年後、トーマス・ヤングは、材料ごとの「のびにくさ」を1つの数で表す考えを、1807年の講義録で示しました。これがヤング率の始まりです。ヤングは、光が波であることを示す実験（波-13）でも知られる人です。
+\end{column}
+
+\bksubsection{4}{ずらす・細くなる・まわりから押す}
+\leavevmode\label{ph:力-8:sec4}材料の変形は、のびちぢみだけではありません。
+
+\noindent\textbf{せん断：ずらす力}\quad
+消しゴムを机に置き、上の面に手のひらを当てて、横にずらすように押してみましょう。消しゴムは、長方形からひし形のようにかたむきます。面にそってずらす力を\textbf{せん断力}（せんだんりょく）、面積1あたりのせん断力を\textbf{せん断応力}といい、$\tau$（タウ）で表します。かたむいた角（ラジアン）を\textbf{せん断ひずみ}といい、$\gamma$（ガンマ）で表します。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkLine!70] (-6,-2.2) rectangle (40,0);
+  \draw[bkGray, line width=0.8pt] (-6,0) -- (40,0);
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) rectangle (30,20);
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.8pt] (0,0) -- (30,0) -- (36,20) -- (6,20) -- cycle;
+  \draw[bk arrow, bkRed, line width=1.4pt] (8,23) -- (30,23); \node[pxi small, anchor=south, text=bkRed!80!black] at (19,23.8) {せん断力 $Q$};
+  \draw[bkInk, line width=0.5pt] (0,14) arc (90:71.6:14); \node[pxi small] at (2.6,16.6) {$\gamma$};
+  \draw[pxi dim] (30,21.5) -- (36,21.5);
+  \node[pxi small, anchor=west] at (37,17) {ずれ};
+  \node[pxi small, anchor=north] at (15,-3) {面積 $A$ の上の面をずらす};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (0,8) rectangle (38,13);
+  \fill[bkGray!35] (0,2) rectangle (38,7);
+  \draw[bkGray!80!black, line width=0.6pt] (0,8) rectangle (38,13) (0,2) rectangle (38,7);
+  \fill[bkOrange!50] (17,1) rectangle (21,14);
+  \draw[bkOrange!70!black, line width=0.6pt] (17,1) rectangle (21,14);
+  \draw[bk arrow, bkRed, line width=1.4pt] (-1,10.5) -- (-12,10.5);
+  \draw[bk arrow, bkRed, line width=1.4pt] (39,4.5) -- (50,4.5);
+  \draw[bkRed, line width=0.8pt, dashed] (14,7.5) -- (24,7.5);
+  \node[pxi small, anchor=north] at (19,0) {ボルトのこの面がずれる};
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{せん断：消しゴムをずらす（左）、2枚の板をつなぐボルト（右）}
+\label{ph:力-8:fig-shear}
+\end{bkfigure}
+\pheq{\tau=\frac{Q}{A},\qquad\tau=G\gamma}{Pa ＝ Pa × rad}
+小さなずれでは、せん断応力はせん断ひずみに比例します。この比例定数 $G$ を\textbf{横弾性係数}（よこだんせいけいすう。せん断弾性係数）といいます。鋼の $G$ は約\qty{79}{GPa}で、$E$ の4割くらいです。$E$ と $G$ と、次のポアソン比 $\nu$ の間には $E=2G(1+\nu)$ という関係があり、それは力-9 で導きます。（せん断力の記号 $Q$ は、はりのせん断力（力-10）と同じです。）
+
+\noindent\textbf{ポアソン比：引っぱると細くなる}\quad
+輪ゴムをのばすと、細くなります。鋼の棒も、目には見えませんが、のびると細くなります。たての向きのひずみ $\varepsilon$ に対して、横の向きのひずみ（太さの変わる割合）が $-\nu\varepsilon$ になるとき、$\nu$（ニュー）を\textbf{ポアソン比}といいます。鋼は約0.3、ゴムは約0.5です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) rectangle (40,14);
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.8pt] (-4,2) rectangle (44,12);
+  \draw[bk arrow, bkRed, line width=1.4pt] (-5,7) -- (-15,7);
+  \draw[bk arrow, bkRed, line width=1.4pt] (45,7) -- (55,7);
+  \node[pxi small, anchor=west] at (58,10) {たて：$\varepsilon$（のびる）};
+  \node[pxi small, anchor=west] at (58,4) {横：$-\nu\varepsilon$（細くなる）};
+  \node[pxi small, anchor=north] at (20,-1.5) {点線がもとの形。変形を大きくかいた};
+\end{tikzpicture}
+\bkfigcaption{引っぱると、のびた向きと直角の向きには、ちぢむ。}
+\label{ph:力-8:fig-poisson}
+\end{bkfigure}
+四角い棒の体積は「たて×横×高さ」です。たてが $(1+\varepsilon)$ 倍、横と高さが $(1-\nu\varepsilon)$ 倍になるので、体積は
+\[(1+\varepsilon)(1-\nu\varepsilon)^2\approx1+\varepsilon-2\nu\varepsilon=1+(1-2\nu)\varepsilon\]
+倍です（$\varepsilon$ はとても小さいので、$\varepsilon^2$ をふくむ項を0とみなした：5-17 の1次近似）。$\nu=0.5$ なら、体積は変わりません。ゴムのポアソン比が約0.5なのは、ゴムがほとんど体積を変えずに形を変える材料だからです（\bkreidairef{8}）。
+
+\noindent\textbf{体積弾性率：まわりから押す}\quad
+物を水の中にしずめると、まわりのすべての向きから押されて、体積が少しへります。まわりから押す圧力（面積1あたりの押す力。力-12）が $\Delta p$ ふえたとき、体積の変わる割合 $\dfrac{\Delta V}{V}$ が
+\pheq{\Delta p=-K\,\frac{\Delta V}{V}}{Pa ＝ Pa × 単位なし}
+となる $K$ を\textbf{体積弾性率}といいます。$-$ がつくのは、押すと体積がへる（$\Delta V<0$）からです。水の $K$ は約\qty{2.2}{GPa}、鋼は約\qty{170}{GPa}です（力-12 で、水が「ほとんどおしちぢめられない」わけとして使います）。
+
+\bksubsection{5}{応力-ひずみ線図：どこまでがばね？}
+\leavevmode\label{ph:力-8:sec5}引張試験で、鋼の試験片を、切れるまで引き続けます。応力とひずみのグラフを\textbf{応力-ひずみ線図}といいます。
+\begin{bkfigure}
+\noindent\begin{minipage}[t]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=60mm, height=56mm, xmin=0, xmax=32, ymin=0, ymax=480,
+  xtick={0,10,20,30}, ytick={0,100,...,400}, xlabel={$\varepsilon$（\%）}, ylabel={$\sigma$（MPa）}, grid=none]
+  \draw[bkBlue, line width=1.4pt, line join=round] (axis cs:0,0) -- (axis cs:0.12,250) -- (axis cs:2,250);
+  \draw[bkBlue, line width=1.4pt, line join=round] plot[smooth] coordinates {(axis cs:2,250) (axis cs:3,275) (axis cs:6,330) (axis cs:10,375) (axis cs:15,400) (axis cs:19,410) (axis cs:22,402) (axis cs:25,380) (axis cs:27,355)};
+  \fill[bkRed] (axis cs:27,355) circle (1.6pt);
+  \fill[bkInk] (axis cs:0.25,250) circle (1.4pt);
+  \fill[bkInk] (axis cs:19,410) circle (1.4pt);
+  \node[pxi small, anchor=north west] at (axis cs:1.5,240) {降伏点};
+  \node[pxi small, anchor=south] at (axis cs:19,418) {引張強さ $\sigma_B$};
+  \node[pxi small, anchor=north east] at (axis cs:27,345) {破断};
+  \node[pxi small, anchor=west, text width=26mm] at (axis cs:4,120) {のびて、くびれて、切れる（延性）};
+\end{axis}
+\end{tikzpicture}
+\par{\sffamily\footnotesize （1）鋼（SS400）の全体}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=54mm, height=56mm, xmin=0, xmax=0.4, ymin=0, ymax=320,
+  xtick={0,0.1,0.2,0.3}, ytick={0,100,200,300}, xlabel={$\varepsilon$（\%）}, ylabel={$\sigma$（MPa）}, grid=none]
+  \draw[bkBlue, line width=1.4pt, line join=round] plot coordinates {(axis cs:0,0) (axis cs:0.1195,245) (axis cs:0.13,262) (axis cs:0.14,248) (axis cs:0.4,250)};
+  \node[pxi small, anchor=west, align=left] at (axis cs:0.085,70) {まっすぐ\\＝ばね（弾性）};
+  \node[pxi small, anchor=south] at (axis cs:0.24,252) {のびが急にふえる};
+  \draw[bk arrow, bkGray, line width=0.6pt] (axis cs:0.3,120) -- (axis cs:0.3,230);
+  \node[pxi small, anchor=north, align=center] at (axis cs:0.3,118) {ここから先は\\もどらない};
+\end{axis}
+\end{tikzpicture}
+\par{\sffamily\footnotesize （2）はじめの部分を拡大}
+\end{minipage}
+\bkfigcaption{鋼の応力-ひずみ線図（形を表した図。数は SS400 の目安）}
+\label{ph:力-8:fig-ss}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{弾性}：はじめは、まっすぐな線です（フックの法則）。力をぬくと、もとの長さにもどります。まっすぐでいられる限界を\textbf{比例限度}、力をぬけばもどる限界を\textbf{弾性限度}といいます。
+\item \textbf{降伏}：ある応力で、力をあまりふやさなくても、のびがぐんぐんふえ始めます。これを\textbf{降伏}（こうふく）、その応力を\textbf{降伏点} $\sigma_Y$ といいます。ここから先は、力をぬいても、のびが残ります（\textbf{塑性}：そせい）。
+\item \textbf{引張強さ}：さらに引くと、また力がいるようになり（加工硬化）、いちばん高い応力 $\sigma_B$ に達します。これを\textbf{引張強さ}といいます。そのあと、試験片の一部がくびれて細くなり、切れます（破断）。
+\end{enumerate}
+SS400 という名前の「400」は、引張強さが\qty{400}{MPa}以上という意味です（JIS では400〜\qty{510}{MPa}）。降伏点は\qty{245}{MPa}以上（厚さ\qty{16}{mm}以下のとき）です。拡大図（2）を見ると、ばねとしてふるまうのは、ひずみが0.12\,\%くらいまでの、ほんの入り口だけだとわかります。
+
+\noindent\textbf{延性とぜい性}\quad 鋼やアルミニウムのように、大きくのびてから切れる性質を\textbf{延性}（えんせい）といいます。チョーク・ガラス・鋳鉄（ちゅうてつ）・コンクリートのように、ほとんどのびずに、急にぽきっと割れる性質を\textbf{ぜい性}といいます。延性の材料は、こわれる前に大きく変形するので「こわれそうだ」と気づけます。橋やクレーンに延性の鋼を使うのは、そのためです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=100mm, height=48mm, xmin=0, xmax=16, ymin=0, ymax=480,
+  xtick={0,5,10,15}, ytick={0,100,...,400}, xlabel={$\varepsilon$（\%）}, ylabel={$\sigma$（MPa）}, grid=none]
+  \draw[bkBlue, line width=1.3pt, line join=round] (axis cs:0,0) -- (axis cs:0.12,250) -- (axis cs:2,250);
+  \draw[bkBlue, line width=1.3pt, line join=round] plot[smooth] coordinates {(axis cs:2,250) (axis cs:3,275) (axis cs:6,330) (axis cs:10,375) (axis cs:15,400)};
+  \draw[bkPurple, line width=1.3pt, line join=round] (axis cs:0,0) -- (axis cs:0.38,260);
+  \draw[bkPurple, line width=1.3pt, line join=round] plot[smooth] coordinates {(axis cs:0.38,260) (axis cs:0.8,280) (axis cs:2,290) (axis cs:5,305) (axis cs:9,310) (axis cs:12,300)};
+  \draw[bkRed, line width=1.3pt, line join=round] plot coordinates {(axis cs:0,0) (axis cs:0.3,130) (axis cs:0.6,200)};
+  \fill[bkRed] (axis cs:0.6,200) circle (1.8pt);
+  \node[pxi small, anchor=west, text=bkBlue!80!black] at (axis cs:15.2,400) {鋼};
+  \node[pxi small, anchor=west, text=bkPurple!80!black] at (axis cs:12.2,295) {アルミ合金};
+  \node[pxi small, anchor=west, text=bkRed!80!black] at (axis cs:0.9,200) {鋳鉄：ほとんどのびずに割れる（ぜい性）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{材料による応力-ひずみ線図のちがい（形を表した図）}
+\label{ph:力-8:fig-ss3}
+\end{bkfigure}
+アルミニウム合金のように、はっきりした降伏点がない材料では、力をぬいたときに0.2\,\%ののびが残る応力を\textbf{耐力}（たいりょく）とよび、降伏点のかわりに使います。
+
+\begin{seikaku}
+引張試験の応力は、ふつう「荷重÷\textbf{はじめの}断面積」で計算します（公称応力）。くびれが始まると断面積が小さくなるので、本当の応力（荷重÷その時の断面積：真応力）はもっと大きく、グラフは下がりません。図\ref{ph:力-8:fig-ss}（1）で、引張強さのあと線が下がって見えるのは、はじめの断面積でわっているからです。
+\end{seikaku}
+
+\begin{phmada}[金属は、なぜ計算よりずっと弱いの？]
+原子のばねを全部いっしょに引きちぎるのに要る応力（理論強度）を見積もると、ヤング率の10分の1くらい、鋼なら約\qty{20}{GPa}になります。ところが、ふつうの鋼の降伏点は\qty{0.25}{GPa}ほどで、100分の1くらいしかありません。この差のおもな理由は、1934年に3人の研究者（テイラー・オロワン・ポラニー）が別々に考えた\textbf{転位}（てんい）です。原子の並びの中の「ずれた線」で、じゅうたんのしわを少しずつ送るように、原子を1列ずつずらしていくので、小さな力ですべりが起こります。転位は1950年代に電子顕微鏡で実際に見えるようになりました。
+
+しかし、転位がたくさんからみ合って動くようすから、材料の降伏点や引張強さを、原子の性質だけから正確に予測することは、今もできていません。新しい合金の強さは、計算で見当をつけたうえで、最後は試験ではかって決めています。
+\end{phmada}
+
+\bksubsection{6}{許容応力と安全率：どこまで使ってよいか}
+\leavevmode\label{ph:力-8:sec6}機械や建物の部品は、降伏点をこえると形が元にもどりません。そこで設計では、降伏点（または引張強さ）を、1より大きい数 $S$ でわった応力までしか使わないことにします。
+\pheq{\sigma_a=\frac{\sigma_Y}{S}}{Pa ＝ Pa ÷ 単位なし}
+$\sigma_a$ を\textbf{許容応力}（きょようおうりょく）、$S$ を\textbf{安全率}（あんぜんりつ）といいます。\bkidx{あんぜんりつ}{安全率}部品の応力が $\sigma_a$ 以下になるように、太さを決めます。
+
+なぜ「ぎりぎり」ではいけないのでしょう。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 材料の強さには、1本1本ばらつきがある（同じ規格の鋼でも、降伏点は少しずつちがう）。
+\item 使うときの荷重は、計算どおりとはかぎらない（急に止まる、風がふく、ゆれる）。
+\item さびて細くなる、くり返しの力で弱る（この章の⑧）。
+\item 計算のモデル（応力が一様、など）が、本物とずれている。
+\end{itemize}
+安全率は、こうした「わからなさ」に対する余裕です。大きくしすぎると、部品が重く高くなります。たとえば、クレーンで荷をつる玉掛け用のワイヤロープは、切れる荷重の6分の1以下で使う（安全係数6以上）と、法令（クレーン等安全規則）で決められています。
+
+\begin{phbaisuru}{安全率 $S$}
+許容応力は半分になるので、同じ荷重を支えるのに要る断面積は2倍、直径は $\sqrt{2}\approx1.41$ 倍になります（$A=\dfrac{\pi d^2}{4}$ だから $d$ は $\sqrt{A}$ に比例）。重さ（体積）は2倍です。安全率は「大きいほどよい」わけではなく、何をどこまで知っているかで決めます。
+\end{phbaisuru}
+
+\bksubsection{7}{熱応力：温めると、のびたがる}
+\leavevmode\label{ph:力-8:sec7}夏の暑い日、鉄道のレールの継ぎ目には、すきまがあいています。物は温まると、少しのびるからです。長さ $L$ の棒の温度が $\Delta T$ 上がったとき、のびは
+\pheq{\Delta L=\alpha L\,\Delta T}{m ＝ 1/K × m × K}
+です。$\alpha$（アルファ）を\textbf{線膨張係数}（せんぼうちょうけいすう）といい、温度が\qty{1}{K}（\qty{1}{\celsius}と同じ大きさ）上がったときのひずみです。鋼は約 $1.2\times10^{-5}$/K、アルミニウムは約 $2.3\times10^{-5}$/K、銅は約 $1.7\times10^{-5}$/K です（熱-1 でもう一度使います）。
+
+では、両はしを動かないように固定した棒を温めたら、どうなるでしょう。棒はのびたいのに、のびられません。のびようとする分を、壁が押しもどしているのです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 自由
+  \fill[bkLine!70] (-2.2,22) rectangle (0,34); \draw[bkGray, line width=0.8pt] (0,22) -- (0,34);
+  \pxibar{(0,25)}{40}{5}{bkBlue}
+  \draw[bkOrange!80!black, line width=0.9pt, dashed] (40,25) rectangle (46,30);
+  \draw[pxi dim] (40,33) -- (46,33); \node[pxi small, anchor=south] at (43,33.5) {$\alpha L\Delta T$};
+  \node[pxi lab, anchor=west] at (52,27.5) {（あ）片方が自由：のびる。応力は0};
+  % 固定
+  \fill[bkLine!70] (-2.2,0) rectangle (0,12); \draw[bkGray, line width=0.8pt] (0,0) -- (0,12);
+  \fill[bkLine!70] (40,0) rectangle (42.2,12); \draw[bkGray, line width=0.8pt] (40,0) -- (40,12);
+  \pxibar{(0,3.5)}{40}{5}{bkRed}
+  \draw[bk arrow, bkRed, line width=1.2pt] (12,6) -- (3,6); \draw[bk arrow, bkRed, line width=1.2pt] (28,6) -- (37,6);
+  \node[pxi lab, anchor=west] at (52,6) {（い）両はし固定：のびられない。押しもどされて圧縮の応力};
+\end{tikzpicture}
+\bkfigcaption{温めた棒。（い）では、（あ）ののびの分だけ、壁が押しちぢめている。}
+\label{ph:力-8:fig-thermal}
+\end{bkfigure}
+考え方は「2つのひずみのたし算」です。棒の全体のひずみ $\varepsilon$ は、応力によるひずみ $\dfrac{\sigma}{E}$ と、温度によるひずみ $\alpha\Delta T$ の和です。
+\[\varepsilon=\frac{\sigma}{E}+\alpha\,\Delta T\]
+両はしを固定すると、長さは変わらないので $\varepsilon=0$ です。だから
+\pheq{\sigma=-E\alpha\,\Delta T}{Pa ＝ Pa × 1/K × K}
+\label{ph:力-8:thermal}です。$-$ は圧縮という意味です。温度の変化でおきる応力を\textbf{熱応力}といいます。\bkidx{ねつおうりょく}{熱応力}
+\begin{phflow}[ひずみのたし算から熱応力へ]
+\phflowrow{$\varepsilon=\dfrac{\sigma}{E}+\alpha\,\Delta T$\\（全体のひずみ）}{応力が0\\（片方が自由）}{$\Delta L=\alpha L\,\Delta T$\\（熱膨張）}
+\phflowrow{$\varepsilon=\dfrac{\sigma}{E}+\alpha\,\Delta T$}{両はし固定\\$\varepsilon=0$}{$\sigma=-E\alpha\,\Delta T$\\（熱応力）}
+\end{phflow}
+\begin{phyomi}[$\sigma=-E\alpha\,\Delta T$]
+この式には、棒の長さ $L$ も太さ $A$ も入っていません。\textbf{熱応力は、長さにも太さにもよらない}のです。長い棒ほど大きくのびたがりますが、そのぶん、押しちぢめられる長さも長いので、ひずみ（長さ1あたり）は同じになるからです。
+\end{phyomi}
+\begin{phbaisuru}{温度の変化 $\Delta T$}
+熱応力も2倍。下のグラフは、両はしを固定した棒の熱応力の大きさです。鋼は $E\alpha=205000\times1.2\times10^{-5}\approx2.5$ で、\qty{1}{K}あたり約\qty{2.5}{MPa}。アルミニウムは $E$ が小さいので、$\alpha$ が大きくても約\qty{1.6}{MPa}です。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=80mm, height=46mm, xmin=0, xmax=55, ymin=0, ymax=150,
+  xtick={0,10,...,50}, ytick={0,50,100,150}, xlabel={$\Delta T$（K）}, ylabel={$|\sigma|$（MPa）}]
+  \addplot[bkBlue, domain=0:50] {205000*1.2e-5*x};
+  \addplot[bkPurple, dashed, domain=0:50] {69000*2.3e-5*x};
+  \node[pxi small, anchor=south east, text=bkBlue!80!black] at (axis cs:44,112) {鋼};
+  \node[pxi small, anchor=north west, text=bkPurple!80!black] at (axis cs:40,62) {アルミニウム};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+\begin{phmijika}[ロングレール]
+新幹線などのレールは、継ぎ目をなくすため、何 km も溶接でつないだ「ロングレール」です。のびられないので、夏には大きな圧縮の熱応力がかかります（\bkreidairef{5}）。まくらぎと砂利（道床）でしっかり押さえて、レールが横に曲がって飛び出さないようにしています。
+\end{phmijika}
+
+\bksubsection{8}{穴のまわり・くり返し・高い温度}
+\leavevmode\label{ph:力-8:sec8}ここまでは「断面に一様に力がかかる」と考えてきました。本物の部品には、そう考えてはいけない所があります。
+
+\noindent\textbf{応力集中}\quad
+はばの広い板に小さな円い穴をあけ、引っぱります。穴の横では、力の通り道がせまくなり、応力がぐっと大きくなります。\textbf{穴のふちの最大の応力は、穴から遠い所の応力の約3倍}です。この倍率を\textbf{応力集中係数} $K_t$ といいます（円い穴なら $K_t\approx3$。穴が板のはばにくらべて小さいとき）。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkBlue!12, draw=bkBlue!70!black, line width=0.7pt] (0,0) rectangle (44,36);
+  \filldraw[fill=white, draw=bkBlue!70!black, line width=0.7pt] (22,18) circle (4);
+  \foreach \yy in {4,10,...,34} {\draw[bk arrow, bkRed, line width=0.9pt] (44.5,\yy) -- (50,\yy); \draw[bk arrow, bkRed, line width=0.9pt] (-0.5,\yy) -- (-6,\yy);}
+  \foreach \yy in {2,...,16} {\draw[bkGray!50, line width=0.3pt] (22,\yy) -- (22,\yy);}
+  \fill[bkRed] (22,22) circle (0.9) (22,14) circle (0.9);
+  \node[pxi small, anchor=south, fill=white] at (22,27) {ここが約3倍};
+  \draw[bkRed, line width=0.5pt] (22,26.5) -- (22,23);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=64mm, height=46mm, xmin=0, xmax=6, ymin=0, ymax=3.4,
+  xtick={1,2,3,4,5}, xticklabels={$a$,$2a$,$3a$,$4a$,$5a$}, ytick={0,1,2,3}, xlabel={穴の中心からの距離}, ylabel={遠い所の何倍},
+  every axis x label/.style={at={(axis description cs:0.5,-0.18)}, anchor=north, font=\sffamily\scriptsize}]
+  \addplot[bkRed, domain=1:6] {0.5*(2+1/x^2+3/x^4)};
+  \addplot[bkGray, dashed, line width=0.8pt, domain=0:6] {1};
+  \fill[bkInk!30] (axis cs:0,0) rectangle (axis cs:1,3.4);
+  \node[pxi small, rotate=90] at (axis cs:0.5,1.7) {穴};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{円い穴の横の応力（はばの広い板、穴の半径 $a$）。穴のふちで3倍、穴の直径くらいはなれると、ほぼもとにもどる。}
+\label{ph:力-8:fig-hole}
+\end{bkfigure}
+段のついた軸の角・ねじ山の谷・溶接のふち・引っかき傷なども、応力集中の場所です。設計では、角に丸みをつけて $K_t$ を小さくします。紙のふくろを手で開けるときの切れ目（ノッチ）は、反対に、応力集中を役立てた例です。
+\begin{column}{静かな港で、船がまっぷたつに}
+1943年1月、アメリカの港の岸壁につながれていた、できたばかりのタンカー「スケネクタディ号」が、大きな音とともに、まっぷたつに割れました。嵐の中ではありません。波のない、おだやかな日でした。
+
+このころ、アメリカでは鋼板を溶接でつないだ船を大量に造っていて、ほかにも何隻もの船で大きな割れが起きました。調べると、いくつかの原因が重なっていたと考えられています。低い温度でもろくなる（延性の材料が、ぜい性のように割れる）質の鋼、溶接のきずや溶接で残った応力、角などの応力集中です。こうした事故から、材料のもろさを試験で調べる方法や、角をまるくする設計、き裂の広がりを計算する破壊力学（この章の「この先は大学で」）が大きく進みました。
+\end{column}
+
+
+\noindent\textbf{疲労}\quad
+針金を何回も曲げたりもどしたりすると、切れてしまいます。1回なら何ともない小さな力でも、何万回・何百万回とくり返すと、き裂（小さな割れ目）ができて広がり、ついには切れます。これを\textbf{疲労}（ひろう）といいます。くり返す応力の大きさと、切れるまでの回数の関係のグラフを \textbf{S-N 曲線}（エスエヌきょくせん）といいます。鋼では、ある応力より小さければ、何回くり返しても切れにくくなります。この応力を\textbf{疲労限度}といい、引張強さのおよそ半分が目安です。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=96mm, height=44mm, xmode=log, xmin=1e3, xmax=1e9, ymin=0, ymax=360,
+  xtick={1e3,1e4,1e5,1e6,1e7,1e8,1e9}, xticklabels={$10^3$,$10^4$,$10^5$,$10^6$,$10^7$,$10^8$,$10^9$}, ytick={0,100,200,300},
+  xlabel={切れるまでの回数}, ylabel={くり返す応力（MPa）}, grid=none,
+  every axis x label/.style={at={(axis description cs:0.5,-0.2)}, anchor=north, font=\sffamily\scriptsize}]
+  \draw[bkBlue, line width=1.3pt, line join=round] plot[smooth] coordinates {(axis cs:1e3,330) (axis cs:1e4,290) (axis cs:1e5,250) (axis cs:1e6,215) (axis cs:2e6,205) (axis cs:1e7,200) (axis cs:1e9,200)};
+  \draw[bkPurple, line width=1.2pt, dashed, line join=round] plot[smooth] coordinates {(axis cs:1e7,200) (axis cs:1e8,185) (axis cs:1e9,170)};
+  \node[pxi small, anchor=south, text=bkBlue!80!black] at (axis cs:1e8,214) {疲労限度};
+  \node[pxi small, anchor=north, text=bkPurple!80!black] at (axis cs:1e8,165) {超高サイクル疲労};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{鋼の S-N 曲線（形を表した図）。横の目もりは10倍ごと（数学 3-12 の対数の目もり）。}
+\label{ph:力-8:fig-sn}
+\end{bkfigure}
+機械の事故の多くは、疲労がきっかけだといわれます。自動車の車軸、飛行機の翼の付け根、鉄道の車輪など、回ったりゆれたりする部品では、疲労の設計がいちばん大切です。
+
+\noindent\textbf{クリープ}\quad
+高い温度で、一定の力をかけ続けると、時間とともに少しずつのびていきます。これを\textbf{クリープ}といいます。発電所のタービンの羽根やボイラの管（数百 \unit{\celsius}）、電子回路のはんだ（室温でも、とける温度に近い）で問題になります。木の本棚の板が、年月で少しずつたわんでいくのも、クリープです（力-10）。
+
+\begin{phmada}[疲労でいつ・どこが割れるかを、予測できる？]
+疲労のき裂は、材料の中の小さなきず・結晶の境目・まじりもの（介在物）などから始まります。でも、どの場所から、何回目に始まるかを、材料の組織から正確に予測する方法は、まだありません。そのため設計では、試験片を実際にくり返し引っぱって S-N 曲線を求め、安全率をかけて使っています。
+
+鋼の疲労限度は「$10^7$ 回まで切れなければ、そのあとも切れない」と考えられてきました。ところが、新幹線の部品のように $10^8$〜$10^9$ 回もくり返し使われる部品で調べると、$10^7$ 回をこえてから、材料の内部の小さなまじりものを起点に割れることがあるとわかってきました（超高サイクル疲労）。どこまでくり返せば安全か、今も研究が続いています。
+\end{phmada}
+
+\begin{phsaki}{弾性論・塑性力学・破壊力学}
+この章では、棒を一方向に引く・押す、面をずらす、をばらばらに考えました。本物の部品の中では、いろいろな向きの応力が同時にはたらきます。その組み合わせ方は、力-9 で行列を使って調べます。3次元のすべての向きを、テンソルという道具で1つにまとめて書く\textbf{弾性論}、降伏したあとの変形を計算する\textbf{塑性力学}、き裂がどう広がるかを計算する\textbf{破壊力学}は、大学の上の学年から大学院で学びます。
+\end{phsaki}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 応力 $\sigma=\dfrac{F}{A}$（Pa。\qty{1}{MPa}＝\qty{1}{N/mm^2}）、ひずみ $\varepsilon=\dfrac{\Delta L}{L}$（単位なし）。
+\item フックの法則 $\sigma=E\varepsilon$。棒はばね定数 $k=\dfrac{EA}{L}$ のばねで、のびは $\Delta L=\dfrac{FL}{EA}$。
+\item ばねの直列 $\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$、並列 $k=k_1+k_2$。
+\item せん断 $\tau=\dfrac{Q}{A}=G\gamma$。ポアソン比 $\nu$：横のひずみは $-\nu\varepsilon$。
+\item 許容応力 $\sigma_a=\dfrac{\sigma_Y}{S}$。熱応力 $\sigma=-E\alpha\Delta T$（長さによらない）。
+\end{itemize}
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{$\sigma$}{シグマ}{応力。面積1あたりの力（Pa）。数学 3-14 の標準偏差とは別の意味}{stress}{力-8}}{\bkkigocard{$\varepsilon$}{イプシロン}{ひずみ。長さ1あたりののび。単位なし}{strain}{力-8}}
+
+\begin{kotoba}\small
+\bkword{応力}{断面の面積1あたりの力。引張は正、圧縮は負。}
+\bkword{ひずみ}{もとの長さ1あたりののび（ちぢみ）。}
+\bkword{ヤング率}{応力÷ひずみ。のびにくさを表す材料の性質。}
+\bkword{せん断応力・横弾性係数}{面をずらす応力 $\tau$ と、$\tau\div\gamma$ の $G$。}
+\bkword{ポアソン比}{横のちぢみ÷たてののび。鋼は約0.3。}
+\bkword{降伏点・引張強さ}{のびが残り始める応力と、いちばん高い応力。}
+\bkword{安全率}{強さ÷使ってよい応力。わからなさへの余裕。}
+\bkword{熱応力・応力集中・疲労}{温度で生まれる応力。穴などで応力が大きくなること。くり返しで割れること。}
+\end{kotoba}
+
+\begin{senmonsho}[材料力学の教科書ふうの書き方]
+\begin{bkhonbun}
+断面積 $A$、長さ $l$ の一様な棒が軸荷重 $P$ を受けるとき、垂直応力は $\sigma=P/A$、縦ひずみは $\varepsilon=\lambda/l$ である。比例限度内では $\sigma=E\varepsilon$ が成り立つから、伸び $\lambda$ は
+\[\lambda=\frac{Pl}{AE}\tag{1.5}\]
+となる。$AE$ を引張剛性という。
+\end{bkhonbun}
+\bkyaku{専門書では、荷重を $P$、長さを小文字の $l$、のびを $\lambda$（ラムダ）で書くことがよくある。この本の $F$、$L$、$\Delta L$ と同じ。「比例限度内」は、まっすぐな線の範囲で、という意味。$EA$ は「引張剛性」とよばれ、大きいほどのびにくい。}
+\end{senmonsho}
+
+\begin{motto}[4]
+\phboxhead{のばした棒にたまるエネルギー：ひずみエネルギー}
+ばねをのばすと、位置エネルギー $U=\dfrac{1}{2}kx^2$ がたまりました（力-4）。棒もばねなので、のばすとエネルギーがたまります。$k=\dfrac{EA}{L}$、$x=\Delta L$ を入れると、
+\[U=\frac{1}{2}\,\frac{EA}{L}\,\Delta L^2=\frac{1}{2}F\,\Delta L\]
+です。さらに $F=\sigma A$、$\Delta L=\varepsilon L=\dfrac{\sigma}{E}L$ を入れると、$U=\dfrac{\sigma^2}{2E}\times AL$ となります。$AL$ は棒の体積なので、\textbf{体積1あたりにたまるエネルギーは $\dfrac{\sigma^2}{2E}$} です。これを\textbf{ひずみエネルギー}といいます。
+
+\bkhatenaref の棒（\qty{10}{kN}、のび\qty{0.621}{mm}）では、$U=\dfrac{1}{2}\times10000\times0.000621\approx\qty{3.1}{J}$。質量\qty{1}{kg}の物を\qty{32}{cm}持ち上げる仕事と同じくらいです。応力が2倍になると、たまるエネルギーは4倍になります。力-11 では、このエネルギーから、はりのたわみを計算する方法（カスティリアーノの定理）を学びます。
+\end{motto}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[鋼の棒は、どれだけのびる？]
+\label{ph:力-8:ex1}直径\qty{10}{mm}、長さ\qty{1}{m}の鋼の棒で、\qty{10}{kN}の荷物をつるします。棒の応力・ひずみ・のびを求めましょう（$E=\qty{205}{GPa}$）。
+\phbamen
+天井から鋼の棒がたれていて、下のはしに荷物がついています。棒は荷物の重さで引っぱられ、少しのびます（\bkhatenaref）。
+\phmushi
+棒の重さ（約\qty{0.6}{kg}で、荷物の1700分の1くらい）を無視します。断面の上で、力は一様にかかるとします。応力が降伏点より小さく、フックの法則が使えるとします（あとで確かめる）。
+\phzu
+\noindent\begin{minipage}[c]{0.30\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxiceil{(-9,0)}{18}
+  \fill[bkGray!60] (-1.2,-26) rectangle (1.2,0);
+  \pxiweight{(0,-26)}{$F$}
+  \draw[pxi dim] (5,0) -- (5,-26); \node[pxi small, anchor=west] at (6,-13) {$L$};
+  \node[pxi small, anchor=east] at (-2,-13) {$d$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.66\linewidth}\raggedright
+荷重 $F=\qty{10000}{N}$、直径 $d=\qty{10}{mm}$、長さ $L=\qty{1000}{mm}$、ヤング率 $E=\qty{205000}{MPa}$。長さを mm、力を N にそろえると、応力が MPa で出ます。
+\end{minipage}
+\phriyu
+知りたいのは応力・ひずみ・のびなので、定義 $\sigma=\dfrac{F}{A}$、フックの法則 $\sigma=E\varepsilon$、ひずみの定義 $\varepsilon=\dfrac{\Delta L}{L}$ を順に使います。
+\phtateru
+\[A=\frac{\pi d^2}{4},\qquad \sigma=\frac{F}{A},\qquad \varepsilon=\frac{\sigma}{E},\qquad \Delta L=\varepsilon L\]
+\phtoku
+\[A=\frac{\pi\times10^2}{4}=78.54\ \mathrm{mm^2},\qquad \sigma=\frac{10000}{78.54}=127.3\ \mathrm{MPa}\]
+\[\varepsilon=\frac{127.3}{205000}=6.21\times10^{-4}\]
+\[\Delta L=6.21\times10^{-4}\times1000=0.621\ \mathrm{mm}\]
+\phtashikame
+単位：N÷mm$^2$＝MPa、MPa÷MPa は単位なし、単位なし×mm＝mm で、そろっています。\\
+大きさ：応力\qty{127}{MPa}は、SS400 の降伏点\qty{245}{MPa}より小さいので、フックの法則を使ってよいことも確かめられました。\\
+別の式で：$\Delta L=\dfrac{FL}{EA}=\dfrac{10000\times1000}{205000\times78.54}=\qty{0.621}{mm}$ で同じ。\\
+極端な場合：$E$ をとても大きくする（のびにくい材料）と、$\Delta L$ は0に近づきます。
+\kotae 応力 約\qty{127}{MPa}、ひずみ 約 $6.2\times10^{-4}$、のび 約\qty{0.62}{mm}
+\end{phreidai}
+\begin{jibun}
+直径\qty{10}{mm}、長さ\qty{2}{m}のアルミニウム合金の棒（$E=\qty{69}{GPa}$）で、\qty{5}{kN}の荷物をつるします。応力・ひずみ・のびを求めましょう。
+\bkjans{$A=\qty{78.54}{mm^2}$、応力 約\qty{64}{MPa}、ひずみ 約 $9.2\times10^{-4}$、のび 約\qty{1.8}{mm}}
+\end{jibun}
+
+\begin{phreidai}[試験のデータからヤング率を決める]
+\label{ph:力-8:ex2}鋼の引張試験で、ひずみ0.0005、0.0010、0.0015、0.0020のとき、応力は101、199、302、\qty{398}{MPa}でした（図\ref{ph:力-8:fig-ss-line}）。ヤング率 $E$ を、原点を通る直線の最小二乗法（数学 3-16）で求めましょう。
+\phbamen
+はかった点は、少しずつ直線からずれています。どの点にもいちばんよく合う傾きを1つ決めたい場面です。
+\phmushi
+試験片の太さはどこも同じで、ひずみは正確にはかれているとします（ずれは応力の側にだけある）。弾性の範囲（まっすぐな部分）のデータだけを使います。
+\phzu
+$x$ をひずみ $\varepsilon$、$y$ を応力 $\sigma$ とし、$y=ax$ の $a$ が $E$ です。
+\phriyu
+フックの法則 $\sigma=E\varepsilon$ は原点を通る直線なので、3-16 の「原点を通る直線 $y=ax$」の形がそのまま使えます。$a=\dfrac{Q}{P}$（$P$ は $x^2$ の和、$Q$ は $xy$ の和）。
+\phtateru
+\[P=0.0005^2+0.0010^2+0.0015^2+0.0020^2\]
+\[Q=0.0005\times101+0.0010\times199+0.0015\times302+0.0020\times398\]
+\phtoku
+\[P=0.00000025+0.000001+0.00000225+0.000004=7.5\times10^{-6}\]
+\[Q=0.0505+0.199+0.453+0.796=1.4985\]
+\[E=\frac{Q}{P}=\frac{1.4985}{7.5\times10^{-6}}=199800\ \mathrm{MPa}\]
+\phtashikame
+単位：$Q$ は MPa、$P$ は単位なしなので、$E$ は MPa。\\
+大きさ：約\qty{200}{GPa}で、鋼の値（巻末の表の約\qty{205}{GPa}）に近い。\\
+1点だけで計算すると、4つめの点では $398\div0.0020=199000$ ですが、1つめの点では $101\div0.0005=202000$ になります。どの点を使うかで変わるので、全部の点を使う最小二乗法がよいのです。
+\kotae 約 \qty{200000}{MPa}（約\qty{200}{GPa}）
+\end{phreidai}
+\begin{jibun}
+アルミニウム合金の引張試験で、ひずみ0.001、0.002、0.003、0.004のとき、応力は70、137、208、\qty{276}{MPa}でした。ヤング率を、原点を通る直線の最小二乗法で求めましょう。
+\bkjans{$P=3.0\times10^{-5}$、$Q=2.072$、$E=\dfrac{Q}{P}\approx\qty{69000}{MPa}$（約\qty{69}{GPa}）}
+\end{jibun}
+
+\begin{phreidai}[安全率から、つり棒の太さを決める]
+\label{ph:力-8:ex3}SS400 の丸棒（降伏点\qty{245}{MPa}）で、\qty{20}{kN}の荷物をつるします。安全率を3にするとき、丸棒の直径を何 mm 以上にすればよいでしょう。
+\phbamen
+荷物をつるす丸棒の太さを決める「設計」の場面です。細すぎると降伏し、太すぎると重く高くなります。
+\phmushi
+棒の重さ、荷物のゆれ（急に止まるときの力）を無視します。そのかわりに安全率3の余裕をとります。
+\phzu
+荷重 $F=\qty{20000}{N}$、降伏点 $\sigma_Y=\qty{245}{MPa}$、安全率 $S=3$、求める直径 $d$。
+\phriyu
+「応力が許容応力 $\sigma_a=\dfrac{\sigma_Y}{S}$ 以下」という条件で、断面積の下限を決めます。
+\phtateru
+\[\sigma=\frac{F}{A}\leqq\sigma_a=\frac{\sigma_Y}{S}\qquad\text{だから}\qquad A\geqq\frac{F}{\sigma_a}\]
+\phtoku
+\[\sigma_a=\frac{245}{3}=81.67\ \mathrm{MPa},\qquad A\geqq\frac{20000}{81.67}=244.9\ \mathrm{mm^2}\]
+\[d\geqq\sqrt{\frac{4A}{\pi}}=\sqrt{\frac{4\times244.9}{3.1416}}=17.66\ \mathrm{mm}\]
+\phtashikame
+単位：N÷MPa＝mm$^2$、$\sqrt{\mathrm{mm^2}}$＝mm。\\
+大きさ：直径\qty{18}{mm}の棒なら $A=\qty{254}{mm^2}$、応力は\qty{79}{MPa}で $\sigma_a$ 以下。\\
+極端な場合：安全率を1にすると $d=\qty{10.2}{mm}$。降伏ぎりぎりで、ゆれや材料のばらつきがあれば危ない太さです。
+\kotae 約\qty{17.7}{mm}以上（実際には、売られている太さから\qty{18}{mm}などを選ぶ）
+\end{phreidai}
+\begin{jibun}
+SS400 の丸棒（降伏点\qty{245}{MPa}）で、\qty{10}{kN}の荷物をつるします。安全率を4にするとき、丸棒の直径を何 mm 以上にすればよいでしょう。
+\bkjans{$\sigma_a=\qty{61.25}{MPa}$、$A\geqq\qty{163.3}{mm^2}$、$d\geqq$ 約\qty{14.4}{mm}}
+\end{jibun}
+
+\begin{phreidai}[レールの継ぎ目のすきま]
+\label{ph:力-8:ex4}長さ\qty{25}{m}の鋼のレールがあります（$\alpha=1.2\times10^{-5}$/K、$E=\qty{205}{GPa}$）。（1）温度が\qty{30}{K}上がると、何 mm のびますか。（2）継ぎ目のすきまが\qty{5}{mm}しかないとき、温度が\qty{40}{K}上がると、レールにどれだけの応力がかかりますか（となりのレールは動かないとする）。
+\phbamen
+冬にしいたレールが、夏の日ざしで温まる場面です。のびがすきまより小さければ、レールは自由にのびます。大きければ、すきまが閉じたあとは、のびられない分だけ押しちぢめられます。
+\phmushi
+レールの温度はどこも同じとします。まくらぎとの摩擦や、レールが横に曲がることは無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxibar{(0,0)}{40}{4}{bkBlue}
+  \fill[bkLine!70] (43,-2) rectangle (46,6); \draw[bkGray, line width=0.7pt] (43,-2) -- (43,6);
+  \fill[bkLine!70] (-3,-2) rectangle (0,6); \draw[bkGray, line width=0.7pt] (0,-2) -- (0,6);
+  \draw[pxi dim] (40,8) -- (43,8); \node[pxi small, anchor=south] at (41.5,8.5) {すきま \qty{5}{mm}};
+  \draw[pxi dim] (0,-4) -- (40,-4); \node[pxi small, anchor=north] at (20,-5) {$L=\qty{25}{m}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}\raggedright
+すきまを $\delta$（デルタ）、自由なときののびを $\Delta L_0=\alpha L\Delta T$ とします。
+\end{minipage}
+\phriyu
+（1）は熱膨張の式。（2）は「全体のひずみ＝応力のひずみ＋温度のひずみ」で、全体ののびがすきま $\delta$ と同じになる、という条件を使います。
+\phtateru
+\[\text{（1）}\ \Delta L_0=\alpha L\,\Delta T\qquad\text{（2）}\ \Bigl(\frac{\sigma}{E}+\alpha\Delta T\Bigr)L=\delta\ \ \text{より}\ \ \sigma=E\,\frac{\delta-\alpha L\Delta T}{L}\]
+\phtoku
+（1）$\Delta L_0=1.2\times10^{-5}\times25000\times30=9.0\ \mathrm{mm}$\par
+（2）自由なら、次のようにのびたい。
+\[1.2\times10^{-5}\times25000\times40=12.0\ \mathrm{mm}\]
+でも、すきまは\qty{5}{mm}しかありません。すきまが閉じるのは $\alpha L\Delta T=5$ のとき、つまり
+\[\Delta T=\frac{5}{1.2\times10^{-5}\times25000}\approx16.7\ \mathrm{K}\]
+上がったときで、そこから先は押しちぢめられます。
+\[\sigma=205000\times\frac{5-12.0}{25000}=205000\times(-2.8\times10^{-4})=-57.4\ \mathrm{MPa}\]
+\phtashikame
+単位：MPa×（mm÷mm）＝MPa。\\
+符号：負なので圧縮。のびたいのに、押しもどされている、という場面と合っています。\\
+極端な場合：すきまが\qty{12}{mm}以上なら $\sigma\geqq0$ になり、押されない（応力0）。すきまが0なら $\sigma=-E\alpha\Delta T=\qty{-98}{MPa}$ で、両はし固定の熱応力と同じです。
+\kotae （1）\qty{9.0}{mm}　（2）約\qty{57}{MPa}の圧縮
+\end{phreidai}
+\begin{jibun}
+長さ\qty{50}{m}の鋼の橋げた（$\alpha=1.2\times10^{-5}$/K、$E=\qty{205}{GPa}$）があります。（1）温度が\qty{40}{K}上がると、何 mm のびますか。（2）はしのすきまが\qty{15}{mm}しかないとき、温度が\qty{50}{K}上がると、どれだけの応力がかかりますか。
+\bkjans{（1）\qty{24}{mm}　（2）自由なら\qty{30}{mm}のびたいので、$\sigma=205000\times\dfrac{15-30}{50000}\approx\qty{-62}{MPa}$（約\qty{62}{MPa}の圧縮）}
+\end{jibun}
+
+\begin{phreidai}[ロングレールの熱応力]
+\label{ph:力-8:ex5}両はしが動かないロングレール（鋼、$E=\qty{205}{GPa}$、$\alpha=1.2\times10^{-5}$/K）の温度が、しいた時より\qty{30}{K}上がりました。レールの応力と、レールを押す力を求めましょう。60\,kg レールの断面積は\qty{7750}{mm^2}です。
+\phbamen
+何 km も続くレールは、まん中の部分では、まわりのレールにはさまれて、のびられません。両はしを固定した棒と同じです。
+\phmushi
+レールの温度は一様、まくらぎに完全に押さえられていて、のびは0とします。
+\phzu
+応力 $\sigma$、温度の変化 $\Delta T=\qty{30}{K}$、断面積 $A=\qty{7750}{mm^2}$、レールを押す力 $F=|\sigma|A$。
+\phriyu
+両はし固定なので、全体のひずみ0から出した熱応力の式 $\sigma=-E\alpha\Delta T$ が使えます。力は応力×面積です。
+\phtateru
+\[\sigma=-E\alpha\,\Delta T,\qquad F=|\sigma|\,A\]
+\phtoku
+\[\sigma=-205000\times1.2\times10^{-5}\times30=-73.8\ \mathrm{MPa}\]
+\[F=73.8\times7750=571950\ \mathrm{N}\approx\qty{570}{kN}\]
+\phtashikame
+単位：MPa×mm$^2$＝N。\\
+大きさ：\qty{570}{kN}は、質量にして約58トンの物の重さ。それほどの力でレールが押されています。応力\qty{74}{MPa}は降伏点より小さいので、レールそのものはこわれませんが、押さえが弱いと横に曲がり出します。\\
+長さ：答えにレールの長さは入っていません（熱応力は長さによらない）。
+\kotae 約\qty{74}{MPa}の圧縮、約\qty{570}{kN}
+\end{phreidai}
+\begin{jibun}
+アルミニウム合金の棒の両はしを、動かない壁に固定しました。棒の温度が\qty{20}{K}上がったときの応力と、壁を押す力を求めましょう。ヤング率は\qty{69}{GPa}、線膨張係数は $2.3\times10^{-5}$/K、断面積は\qty{200}{mm^2}です。
+\bkjans{応力 約\qty{32}{MPa}の圧縮（$69000\times2.3\times10^{-5}\times20=31.74$）、力 約\qty{6.3}{kN}}
+\end{jibun}
+
+\begin{phreidai}[ボルトにかかるせん断応力]
+\label{ph:力-8:ex6}2枚の板を、直径\qty{12}{mm}のボルト1本でつなぎ、\qty{10}{kN}で引きはなすように引きます。（1）2枚の板をつなぐとき（1面せん断）と、（2）3枚の板で、まん中の板を両側の2枚ではさむとき（2面せん断）の、ボルトのせん断応力を求めましょう。
+\phbamen
+板が引かれると、ボルトは板と板の境目の面で、はさみで切られるように「ずらされ」ます。
+\phmushi
+ボルトのしめつけで生まれる板どうしの摩擦は無視し、力はすべてボルトのずれで受けるとします。せん断応力は断面に一様とします。
+\phzu
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1面
+  \fill[bkGray!50] (0,8) rectangle (24,12); \fill[bkGray!35] (0,3) rectangle (24,7);
+  \draw[bkGray!80!black, line width=0.5pt] (0,8) rectangle (24,12) (0,3) rectangle (24,7);
+  \fill[bkOrange!50] (10,2) rectangle (14,13); \draw[bkOrange!70!black, line width=0.5pt] (10,2) rectangle (14,13);
+  \draw[bkRed, line width=0.8pt, dashed] (8,7.5) -- (16,7.5);
+  \node[pxi small, anchor=north] at (12,1) {（1）切れる面1つ};
+  % 2面
+  \fill[bkGray!35] (34,13) rectangle (58,16); \fill[bkGray!50] (34,8) rectangle (58,12); \fill[bkGray!35] (34,4) rectangle (58,7);
+  \draw[bkGray!80!black, line width=0.5pt] (34,13) rectangle (58,16) (34,8) rectangle (58,12) (34,4) rectangle (58,7);
+  \fill[bkOrange!50] (44,3) rectangle (48,17); \draw[bkOrange!70!black, line width=0.5pt] (44,3) rectangle (48,17);
+  \draw[bkRed, line width=0.8pt, dashed] (42,12.5) -- (50,12.5) (42,7.5) -- (50,7.5);
+  \node[pxi small, anchor=north] at (46,1) {（2）切れる面2つ};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}\raggedright
+せん断力 $Q=\qty{10000}{N}$、ボルトの断面積 $A=\dfrac{\pi d^2}{4}$。（2）では、2つの面で力を分けあいます。
+\end{minipage}
+\phriyu
+せん断応力の定義 $\tau=\dfrac{Q}{A}$ を、ずれる面の数で考えます。2面なら、ずれる面の面積の合計は $2A$ です。
+\phtateru
+\[\text{（1）}\ \tau=\frac{Q}{A}\qquad\text{（2）}\ \tau=\frac{Q}{2A}\]
+\phtoku
+\[A=\frac{\pi\times12^2}{4}=113.1\ \mathrm{mm^2}\]
+\[\text{（1）}\ \tau=\frac{10000}{113.1}=88.4\ \mathrm{MPa}\qquad\text{（2）}\ \tau=\frac{10000}{2\times113.1}=44.2\ \mathrm{MPa}\]
+\phtashikame
+単位：N÷mm$^2$＝MPa。\\
+大きさ：2面せん断にすると、同じボルトで応力が半分になります。重い物をつなぐ金具に、はさむ形が多いのはこのためです。
+\kotae （1）約\qty{88}{MPa}　（2）約\qty{44}{MPa}
+\end{phreidai}
+\begin{jibun}
+直径\qty{8}{mm}のピンで、\qty{3}{kN}の力を受けます。（1）1面せん断と、（2）2面せん断のときの、ピンのせん断応力を求めましょう。
+\bkjans{$A=\qty{50.27}{mm^2}$。（1）約\qty{60}{MPa}　（2）約\qty{30}{MPa}}
+\end{jibun}
+
+\begin{phreidai}[パンチで穴をあける力]
+\label{ph:力-8:ex7}厚さ\qty{2}{mm}の鋼板に、直径\qty{10}{mm}の円い穴を、プレスのパンチ（円柱の型）でうちぬきます。板の「せん断で切れる応力（せん断強さ）」を\qty{300}{MPa}とすると、何 kN の力がいるでしょう。
+\phbamen
+パンチを押しこむと、板は、穴のまわりの円筒の面にそって、ずらされて切れます。
+\phmushi
+パンチと板のすきま、刃のかたさ、摩擦を無視します。切れる面の全体で、せん断応力が同時にせん断強さに達するとします。
+\phzu
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-20,0) rectangle (-5,4) (5,0) rectangle (20,4);
+  \fill[bkOrange!30] (-5,0) rectangle (5,4);
+  \draw[bkGray!80!black, line width=0.5pt] (-20,0) rectangle (20,4);
+  \fill[bkBlue!25] (-5,5) rectangle (5,18); \draw[bkBlue!70!black, line width=0.6pt] (-5,5) rectangle (5,18);
+  \draw[bk arrow, bkRed, line width=1.3pt] (0,26) -- (0,19);
+  \draw[bkRed, line width=0.9pt, dashed] (-5,-1) -- (-5,5) (5,-1) -- (5,5);
+  \node[pxi small, anchor=west] at (6,22) {$F$};
+  \draw[pxi dim] (-5,-3) -- (5,-3); \node[pxi small, anchor=north] at (0,-4) {$d$};
+  \draw[pxi dim] (22,0) -- (22,4); \node[pxi small, anchor=west] at (23,2) {$t$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\raggedright
+切れる面は、直径 $d=\qty{10}{mm}$、高さ $t=\qty{2}{mm}$ の円筒の側面（赤い点線）。その面積は、円周×厚さ $=\pi dt$。
+\end{minipage}
+\phriyu
+せん断応力の定義 $\tau=\dfrac{Q}{A}$ で、$A$ は「ずれる面」の面積です。穴の円の面積 $\dfrac{\pi d^2}{4}$ ではありません。
+\phtateru
+\[F=\tau_B\times\pi dt\]
+\phtoku
+\[\pi dt=3.1416\times10\times2=62.83\ \mathrm{mm^2}\]
+\[F=300\times62.83=18850\ \mathrm{N}\]
+\phtashikame
+単位：MPa×mm$^2$＝N。\\
+大きさ：約\qty{19}{kN}は、質量にして約1.9トンの重さ。プレス機械が大きな力を出すわけがわかります。\\
+2倍にすると：厚さ $t$ を2倍にすると力も2倍。直径を2倍にしても2倍（4倍ではない）。切れる面は円周に比例するからです。
+\kotae 約\qty{19}{kN}
+\end{phreidai}
+\begin{jibun}
+厚さ\qty{1}{mm}の板（せん断強さ\qty{250}{MPa}）に、直径\qty{20}{mm}の穴をうちぬく力を求めましょう。
+\bkjans{$\pi dt=\qty{62.83}{mm^2}$、$F=250\times62.83\approx\qty{15.7}{kN}$}
+\end{jibun}
+
+\begin{phreidai}[引っぱると、どれだけ細くなる？]
+\label{ph:力-8:ex8}（1）\bkreidairef{1}の鋼の棒（直径\qty{10}{mm}、ひずみ $6.2\times10^{-4}$、$\nu=0.3$）は、直径が何 mm 細くなり、体積は何倍になりますか。（2）はば\qty{20}{mm}のゴムの板（$\nu=0.5$）を、ひずみ0.02だけのばしたとき、はばは何 mm 細くなり、体積は何倍になりますか。
+\phbamen
+のばすと細くなる。その「細くなり方」と、体積がふえるかへるかを、ポアソン比で計算します。
+\phmushi
+ひずみが小さく、横のひずみは $-\nu\varepsilon$ で決まるとします。体積の計算では、ひずみの2乗の項を無視します（1次近似）。
+\phzu
+直径（はば）の変化 $\Delta d=-\nu\varepsilon d$。体積は $(1+\varepsilon)(1-\nu\varepsilon)^2\approx1+(1-2\nu)\varepsilon$ 倍（≈ は「ほぼ等しい」）。
+\phriyu
+ポアソン比の定義（横のひずみ＝$-\nu\times$たてのひずみ）と、この章の④の体積の式を使います。
+\phtateru
+\[\text{（1）}\ \Delta d=-0.3\times6.2\times10^{-4}\times10,\qquad 1+(1-2\times0.3)\times6.2\times10^{-4}\]
+\[\text{（2）}\ \Delta w=-0.5\times0.02\times20,\qquad 1+(1-2\times0.5)\times0.02\]
+\phtoku
+（1）直径は約\qty{1.9}{\micro m}細くなり、体積は少しふえます。
+\[\Delta d=-0.00186\ \mathrm{mm},\qquad 1+0.4\times6.2\times10^{-4}=1.00025\ \text{倍}\]
+（2）はばは\qty{0.20}{mm}細くなり、体積は変わりません。
+\[\Delta w=-0.20\ \mathrm{mm},\qquad 1+0\times0.02=1\ \text{倍}\]
+\phtashikame
+（1）細くなるのは髪の毛の太さの約40分の1。目では見えません。体積はほんの少し（0.025\,\%）ふえます。\\
+（2）2次の項まで入れても $1.02\times0.99^2=0.9997$ で、ほぼ1。ゴムは形を変えても体積を変えにくいことが、数で確かめられました。
+\kotae （1）約\qty{0.0019}{mm}細くなり、体積は約1.00025倍　（2）\qty{0.20}{mm}細くなり、体積は変わらない
+\end{phreidai}
+\begin{jibun}
+直径\qty{20}{mm}のアルミニウム合金の棒（$\nu=0.33$）を、ひずみ0.001だけのばしました。直径は何 mm 細くなり、体積は何倍になりますか。
+\bkjans{$\Delta d=-0.33\times0.001\times20=\qty{-0.0066}{mm}$、体積は $1+0.34\times0.001=1.00034$ 倍}
+\end{jibun}
+
+\begin{phreidai}[ばねの直列と並列]
+\label{ph:力-8:ex9}ばね定数 $k_1=\qty{20}{N/m}$ と $k_2=\qty{30}{N/m}$ のばねがあります。質量\qty{0.30}{kg}のおもりをつるします。（1）2本を直列につないだとき、全体ののびは何 cm ですか。（2）長さ\qty{0.50}{m}の軽い棒の左はしを $k_1$、右はしを $k_2$ でつるし（並列）、棒が水平のままになるようにおもりをつるします。おもりは左はしから何 m の所につるせばよく、ばねは何 cm のびますか。
+\phbamen
+2本のばねの組み合わせ方で、のびやすさが変わる場面です。（2）では、つるす場所が悪いと棒がかたむきます。
+\phmushi
+ばねと棒の重さを無視します。ばねは、のびに比例する力を出すとします。
+\phzu
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxiceil{(-4,0)}{40}
+  \pxispring{(0,0)}{16}
+  \pxispring{(32,0)}{16}
+  \draw[bkGray!90!black, line width=1pt] (0,-16) -- (32,-16);
+  \pxiweight{(19.2,-16)}{$mg$}
+  \node[pxi small, anchor=west] at (2.5,-8) {$k_1$};
+  \node[pxi small, anchor=east] at (29.5,-8) {$k_2$};
+  \draw[pxi dim] (0,-26) -- (19.2,-26); \node[pxi small, anchor=north] at (9.6,-27) {$a$};
+  \draw[pxi dim] (19.2,-26) -- (32,-26); \node[pxi small, anchor=north] at (25.6,-27) {$l-a$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.50\linewidth}\raggedright
+重さ $F=mg=0.30\times9.8=\qty{2.94}{N}$。（2）の図：棒の長さ $l=\qty{0.50}{m}$、左はしからつるす点までを $a$、2本ののびを $x$ とします。
+\end{minipage}
+\phriyu
+（1）は直列の式 $\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$。（2）は棒が水平なので2本ののびが同じ（並列）。力のつり合いと、左はしのまわりのモーメントのつり合い（力-5）を使います。
+\phtateru
+\[\text{（1）}\ x=F\Bigl(\frac{1}{k_1}+\frac{1}{k_2}\Bigr)\qquad\text{（2）}\ k_1x+k_2x=F,\qquad k_2x\times l=F\times a\]
+\phtoku
+（1）
+\[x=2.94\times\Bigl(\frac{1}{20}+\frac{1}{30}\Bigr)=2.94\times\frac{1}{12}=0.245\ \mathrm{m}\]
+（2）
+\[x=\frac{2.94}{20+30}=0.0588\ \mathrm{m}\]
+モーメントの式を $a$ について解くと、
+\[a=\frac{k_2xl}{F}=\frac{k_2\,l}{k_1+k_2}=\frac{30\times0.50}{50}=0.30\ \mathrm{m}\]
+\phtashikame
+単位：N÷(N/m)＝m。\\
+大きさ：直列は1本のときよりのびやすく（$k=12$）、並列はのびにくい（$k=50$）。\\
+位置：$a=\qty{0.30}{m}$ は、強いばね $k_2$ の側（右）に寄っています。強いばねに多くの力を受けもたせると、2本ののびがそろうからです。$k_1=k_2$ なら $a=\dfrac{l}{2}$（まん中）になります。
+\kotae （1）約\qty{24.5}{cm}　（2）左はしから\qty{0.30}{m}、約\qty{5.9}{cm}
+\end{phreidai}
+\begin{jibun}
+$k_1=\qty{40}{N/m}$、$k_2=\qty{60}{N/m}$ のばねと、質量\qty{0.48}{kg}のおもりがあります。（1）直列につないだときののび、（2）長さ\qty{0.40}{m}の軽い棒の左はしを $k_1$、右はしを $k_2$ でつるして水平にするとき、おもりをつるす位置（左はしから）と、ばねののびを求めましょう。
+\bkjans{（1）$k=\qty{24}{N/m}$、$x=4.704\div24\approx\qty{19.6}{cm}$　（2）左はしから $\dfrac{60\times0.40}{100}=\qty{0.24}{m}$、$x=4.704\div100\approx\qty{4.7}{cm}$}
+\end{jibun}
+
+\begin{phreidai}[鋼とアルミニウムをつないだ棒]
+\label{ph:力-8:ex10}直径\qty{20}{mm}で、長さ\qty{0.6}{m}の鋼の棒（$E=\qty{205}{GPa}$）と、長さ\qty{0.4}{m}のアルミニウム合金の棒（$E=\qty{69}{GPa}$）を、まっすぐにつなぎました。\qty{20}{kN}で引くと、全体で何 mm のびますか。
+\phbamen
+材料のちがう棒をつないだ「段つき棒」です。どちらの棒にも、同じ力がかかります（直列）。
+\phmushi
+つなぎ目の変形と、棒の重さを無視します。どちらの棒も弾性の範囲とします。
+\phzu
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxibar{(0,0)}{30}{5}{bkBlue}
+  \pxibar{(30,0)}{20}{5}{bkPurple}
+  \pxipull{(0,2.5)}{(50,2.5)}{bkRed}
+  \node[pxi small, anchor=south] at (15,6) {鋼 $L_1$};
+  \node[pxi small, anchor=south] at (40,6) {アルミ $L_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}\raggedright
+$L_1=\qty{600}{mm}$、$E_1=\qty{205000}{MPa}$、$L_2=\qty{400}{mm}$、$E_2=\qty{69000}{MPa}$、断面積 $A$ は共通。
+\end{minipage}
+\phriyu
+2本は直列で、同じ力 $F$ を受けます。それぞれのびを $\Delta L=\dfrac{FL}{EA}$ で出して、たします。
+\phtateru
+\[\Delta L=\frac{FL_1}{E_1A}+\frac{FL_2}{E_2A}\]
+\phtoku
+\[A=\frac{\pi\times20^2}{4}=314.2\ \mathrm{mm^2}\]
+\[\frac{20000\times600}{205000\times314.2}=0.186\ \mathrm{mm},\qquad \frac{20000\times400}{69000\times314.2}=0.369\ \mathrm{mm}\]
+\[\Delta L=0.186+0.369=0.555\ \mathrm{mm}\]
+\phtashikame
+大きさ：アルミの部分は短いのに、鋼の部分の約2倍のびます。$E$ が約3分の1だからです。\\
+別の式で：ばね定数にして直列の式を使っても、同じになります。
+\[k_1=\frac{E_1A}{L_1}=107300\ \mathrm{N/mm},\qquad k_2=\frac{E_2A}{L_2}=54190\ \mathrm{N/mm}\]
+\[k=\frac{1}{\dfrac{1}{k_1}+\dfrac{1}{k_2}}=36010\ \mathrm{N/mm},\qquad\Delta L=\frac{20000}{36010}=0.555\ \mathrm{mm}\]
+\kotae 約\qty{0.56}{mm}
+\end{phreidai}
+\begin{jibun}
+直径\qty{10}{mm}で、長さ\qty{1.0}{m}の鋼の棒（$E=\qty{205}{GPa}$）と、長さ\qty{0.5}{m}の銅の棒（$E=\qty{117}{GPa}$）をつなぎ、\qty{5}{kN}で引きました。全体ののびを求めましょう。
+\bkjans{鋼 約\qty{0.311}{mm}、銅 約\qty{0.272}{mm}、合わせて約\qty{0.58}{mm}}
+\end{jibun}
+
+\begin{phreidai}[鉄筋コンクリートの柱]
+\label{ph:力-8:ex11}たて・横\qty{300}{mm}のコンクリートの柱に、鉄筋（D19、1本の断面積\qty{286.5}{mm^2}）が4本、たてに入っています。上から\qty{1000}{kN}で押すとき、コンクリートと鉄筋の応力を求めましょう（$E_c=\qty{23}{GPa}$、$E_s=\qty{205}{GPa}$）。
+\phbamen
+鉄筋とコンクリートはくっついているので、同じだけちぢみます（並列）。力は、2つの材料が分けあいます。でも、どう分けるかは、力のつり合いだけでは決まりません。
+\phmushi
+柱は短く、曲がらないとします。2つの材料はすべらず、ひずみが等しいとします。コンクリートのひびわれや、時間とともにちぢむこと（クリープ）は無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkGray!80!black, line width=0.7pt] (0,0) rectangle (24,24);
+  \foreach \p in {(5,5),(19,5),(5,19),(19,19)} \filldraw[fill=bkRed!60, draw=bkRed!80!black, line width=0.5pt] \p circle (1.8);
+  \draw[pxi dim] (0,-2.5) -- (24,-2.5); \node[pxi small, anchor=north] at (12,-3.5) {\qty{300}{mm}};
+  \node[pxi small, anchor=west] at (25,19) {鉄筋};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.62\linewidth}\raggedright
+鉄筋の面積 $A_s=4\times286.5=\qty{1146}{mm^2}$、コンクリートの面積 $A_c=300\times300-1146=\qty{88854}{mm^2}$。共通のひずみ（ちぢみ）を $\varepsilon$ とします。
+\end{minipage}
+\phriyu
+「同じだけちぢむ」（変形の条件）と「2つの力の和が\qty{1000}{kN}」（つり合い）の2つを組み合わせます。力のつり合いだけで決まらない問題（不静定：ふせいてい）は、変形の条件を足して解きます。
+\phtateru
+\[F=\sigma_cA_c+\sigma_sA_s=(E_cA_c+E_sA_s)\,\varepsilon\]
+\phtoku
+\[E_cA_c+E_sA_s=23000\times88854+205000\times1146=2.279\times10^{9}\ \mathrm{N}\]
+\[\varepsilon=\frac{1000000}{2.279\times10^9}=4.39\times10^{-4}\]
+\[\sigma_c=23000\,\varepsilon=10.1\ \mathrm{MPa},\qquad\sigma_s=205000\,\varepsilon=90.0\ \mathrm{MPa}\]
+\phtashikame
+単位：MPa×mm$^2$＝N。\\
+力の分け方：鉄筋は面積の1.3\,\%しかないのに、$90.0\times1146\approx\qty{103}{kN}$、全体の約10\,\%を受けもちます。$E$ が約9倍だからです。\\
+確かめ：$10.1\times88854+90.0\times1146\approx\qty{1000}{kN}$。
+\kotae コンクリート 約\qty{10}{MPa}、鉄筋 約\qty{90}{MPa}（どちらも圧縮）
+\end{phreidai}
+\begin{jibun}
+たて・横\qty{250}{mm}のコンクリートの柱に、鉄筋（D16、1本\qty{198.6}{mm^2}）が4本入っています。\qty{600}{kN}で押すときの、コンクリートと鉄筋の応力を求めましょう（$E_c=\qty{23}{GPa}$、$E_s=\qty{205}{GPa}$）。
+\bkjans{$A_s=\qty{794.4}{mm^2}$、$A_c=\qty{61705.6}{mm^2}$、$\varepsilon\approx3.79\times10^{-4}$、コンクリート 約\qty{8.7}{MPa}、鉄筋 約\qty{78}{MPa}（圧縮）}
+\end{jibun}
+
+\begin{phreidai}[自分の重さでのびるケーブル]
+\label{ph:力-8:ex12}長さ\qty{1000}{m}の鋼のケーブルを、上のはしでつるします（密度\qty{7850}{kg/m^3}、$E=\qty{205}{GPa}$）。（1）自分の重さで、全体で何 m のびますか。（2）引張強さを\qty{400}{MPa}とすると、何 m より長いと、自分の重さで切れますか。
+\phbamen
+深い立て坑のエレベータや、海の底へおろすケーブルの場面です。ケーブルの各部分は、その下にあるケーブルの重さを支えています。だから、上ほど応力が大きくなります。
+\phmushi
+ケーブルを、一様な太さの棒と考えます（より線の構造を無視）。$g$ は一定、ポアソン比による太さの変化を無視します。
+\phzu
+上のはしから下へ $x$ の所を考えると、その下にある長さは $L-x$。そこの応力は $\sigma(x)=\dfrac{\rho gA(L-x)}{A}=\rho g(L-x)$ で、断面積 $A$ によりません。
+\phriyu
+応力が場所で変わるので、$\Delta L=\varepsilon L$ はそのままは使えません。短い部分に分けて、のびをたします（数学 5-10 の積分）。まず表計算で、次に積分で求めます。
+\phtateru
+\[\Delta L=\int_0^L\frac{\sigma(x)}{E}\,\dd x=\int_0^L\frac{\rho g(L-x)}{E}\,\dd x\]
+\phtoku
+\textbf{表計算で}：ケーブルを\qty{100}{m}ずつ10区間に分け、区間のまん中の応力でのびを計算して、たします。
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & 区間 & 下の長さ（m） & 応力（MPa） & のび（mm） & 合計（mm） \\
+2 & 1 & 950 & 73.1 & 35.65 & 35.65 \\
+3 & 2 & 850 & 65.4 & 31.90 & 67.55 \\
+4 & 3 & 750 & 57.7 & 28.15 & 95.70 \\
+5 & … & … & … & … & … \\
+11 & 10 & 50 & 3.8 & 1.88 & 187.6 \\}
+\end{bkcenter}
+B列は \texttt{=1000-(A2-0.5)*100}、C列は \texttt{=7850*9.8*B2/10\^{}6}、D列は \texttt{=C2/205000*100000}、E列は前の行のE列にD列をたします。\par
+\textbf{プログラムで区間をふやすと}：区間の「上のはし」の応力を使う方法と、「まん中」の応力を使う方法をくらべます。
+\begin{phcode}
+rho, g, E, L = 7850, 9.8, 205e9, 1000.0
+for n in [1, 2, 5, 10, 100]:
+    dx = L / n
+    top = mid = 0.0
+    for i in range(n):
+        top += rho * g * (L - i * dx) / E * dx
+        mid += rho * g * (L - (i + 0.5) * dx) / E * dx
+    print(n, round(top * 1000, 1), round(mid * 1000, 1))
+\end{phcode}
+\begin{phcodeout}
+1 375.3 187.6
+2 281.5 187.6
+5 225.2 187.6
+10 206.4 187.6
+100 189.5 187.6
+\end{phcodeout}
+（左から区間の数、上のはしで計算したのび、まん中で計算したのび。単位は mm。）上のはしの応力を使うと、区間をふやすほど\qty{187.6}{mm}に近づきます。まん中の応力を使うと、区間が1つでも、もう正しい値になります。応力がまっすぐ（1次関数で）変わるからです。\par
+\textbf{積分で}：
+\[\Delta L=\frac{\rho g}{E}\Bigl[Lx-\frac{x^2}{2}\Bigr]_0^L=\frac{\rho gL^2}{2E}=\frac{7850\times9.8\times1000^2}{2\times205\times10^9}=0.188\ \mathrm{m}\]
+（2）いちばん上の応力 $\rho gL$ が引張強さ $\sigma_B$ に等しくなる長さは
+\[L=\frac{\sigma_B}{\rho g}=\frac{400\times10^6}{7850\times9.8}=5200\ \mathrm{m}\]
+\phtashikame
+単位：$\dfrac{\mathrm{kg/m^3}\times\mathrm{m/s^2}\times\mathrm{m^2}}{\mathrm{Pa}}=\dfrac{\mathrm{N/m}}{\mathrm{N/m^2}}=\mathrm{m}$。\\
+2つの方法：表計算（\qty{187.6}{mm}）と積分（\qty{188}{mm}）が合いました。区間のまん中の応力を使うと、応力がまっすぐに変わるときは、ぴったり合います。\\
+見方を変えると：$\dfrac{\rho gL^2}{2E}=\dfrac{(\rho gAL)\,L}{2EA}$ は「ケーブル全体の重さの半分を、下のはしにつるしたときののび」と同じです。\\
+長さを2倍にすると：のびは4倍（$L^2$ に比例）。切れる長さは太さによりません。太くしても、重さも同じ割合でふえるからです。
+\kotae （1）約\qty{0.19}{m}　（2）約\qty{5.2}{km}
+\end{phreidai}
+\begin{jibun}
+アルミニウム合金のケーブル（長さ\qty{500}{m}）を、上のはしでつるします。密度は\qty{2700}{kg/m^3}、ヤング率は\qty{69}{GPa}です。（1）自分の重さによるのびと、（2）上のはしの応力が耐力\qty{270}{MPa}になる長さを求めましょう。
+\bkjans{（1）$\dfrac{2700\times9.8\times500^2}{2\times69\times10^9}\approx\qty{0.048}{m}$　（2）$\dfrac{270\times10^6}{2700\times9.8}\approx\qty{10}{km}$（約\qty{10200}{m}）}
+\end{jibun}
+
+\begin{phreidai}[穴のあいた板の応力集中]
+\label{ph:力-8:ex13}はば\qty{200}{mm}、厚さ\qty{5}{mm}の鋼板のまん中に、直径\qty{10}{mm}の円い穴があいています。\qty{40}{kN}で引くとき、穴から遠い所の応力と、穴のふちの最大の応力を見積もりましょう。
+\phbamen
+ボルトの穴のある板を引っぱる場面です。穴のふちでは、応力が大きくなります。
+\phmushi
+穴は板のはばにくらべて十分小さい（$\dfrac{10}{200}=0.05$）として、応力集中係数 $K_t=3$ を使います。板は弾性の範囲とします。
+\phzu
+遠い所の応力 $\sigma_0=\dfrac{F}{\text{はば}\times\text{厚さ}}$、穴のふちの応力 $\sigma_{\max}=K_t\sigma_0$。
+\phriyu
+円い穴の応力集中係数は約3（この章の⑧）。遠い所の応力に3をかけます。
+\phtateru
+\[\sigma_0=\frac{F}{\text{はば}\times\text{厚さ}},\qquad \sigma_{\max}=3\sigma_0\]
+\phtoku
+\[\sigma_0=\frac{40000}{200\times5}=40\ \mathrm{MPa},\qquad \sigma_{\max}=3\times40=120\ \mathrm{MPa}\]
+\phtashikame
+大きさ：\qty{120}{MPa}は降伏点\qty{245}{MPa}より小さいので、1回引くだけなら大丈夫。でも、くり返し引く部品では、穴のふちから疲労のき裂が始まりやすくなります。\\
+くらべると：穴の所の断面（はば\qty{190}{mm}）でわった平均の応力は、$40000\div(190\times5)\approx\qty{42}{MPa}$ です。「穴でけずられた面積」だけでは、3倍の大きさは説明できません。
+\kotae 遠い所 \qty{40}{MPa}、穴のふち 約\qty{120}{MPa}
+\end{phreidai}
+\begin{jibun}
+はば\qty{120}{mm}、厚さ\qty{4}{mm}の板のまん中に、直径\qty{6}{mm}の円い穴があります。\qty{24}{kN}で引くとき、穴から遠い所の応力と、穴のふちの最大の応力を見積もりましょう。
+\bkjans{遠い所 \qty{50}{MPa}、穴のふち 約\qty{150}{MPa}}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{mm$^2$ と m$^2$ の換算}
+\bkng{$\qty{78.5}{mm^2}=\qty{0.0785}{m^2}$ として、応力を計算する。}
+\bkok{$\qty{1}{mm^2}=\qty{0.000001}{m^2}$ なので、$\qty{78.5}{mm^2}=7.85\times10^{-5}\,\mathrm{m^2}$。}
+\qty{1}{mm}×\qty{1}{mm}は\qty{0.001}{m}×\qty{0.001}{m}です。長さが1000分の1なら、面積は100万分の1です。迷ったら、力を N、長さを mm にそろえれば、応力は MPa で出ます。
+\end{tsumazuki}
+\begin{tsumazuki}{直径と半径}
+\bkng{直径\qty{10}{mm}の棒の断面積を $\pi\times10^2=\qty{314}{mm^2}$ とする。}
+\bkok{$A=\pi r^2=\dfrac{\pi d^2}{4}=\dfrac{\pi\times10^2}{4}\approx\qty{78.5}{mm^2}$。}
+ボルトや丸棒の大きさは、ふつう直径で書かれています。半径にしないで2乗すると、面積が4倍になってしまいます。
+\end{tsumazuki}
+\begin{tsumazuki}{かたさと強さは別のもの}
+\bkng{ヤング率が大きい材料ほど、強い（こわれにくい）。}
+\bkok{ヤング率は「のびにくさ（かたさ）」。強さは降伏点や引張強さで、別の数。}
+SS400 も、とても強い高張力鋼も、$E$ はほとんど同じ（約\qty{205}{GPa}）です。ガラスは $E$ がアルミニウムと同じくらいでも、ぜい性で、小さな傷から割れます。
+\end{tsumazuki}
+\begin{tsumazuki}{熱応力と長さ}
+\bkng{長いレールほど、大きな熱応力がかかる。}
+\bkok{両はしを固定した熱応力 $\sigma=-E\alpha\Delta T$ は、長さによらない。}
+長いと、のびたい長さは大きくなりますが、ひずみ（長さ1あたり）は同じです。長さで変わるのは、「すきまがあるとき、すきまが閉じるかどうか」です（\bkreidairef{4}）。
+\end{tsumazuki}
+\begin{tsumazuki}{せん断で切れる面}
+\bkng{パンチでうちぬく力を、穴の面積 $\dfrac{\pi d^2}{4}$ ×せん断強さ、とする。}
+\bkok{切れるのは穴のまわりの円筒の面。面積は $\pi dt$（円周×厚さ）。}
+せん断応力の「面積」は、ずれる面の面積です。どの面がずれるのか、図をかいて確かめよう（\bkreidairef{7}）。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[ボルトは「のばして」使うばね]
+機械の部品をつなぐボルトは、ナットを回してしめつけると、ボルトがわずかにのび、そのばねの力で部品どうしを押しつけます。この押しつける力を\textbf{軸力}（じくりょく）といいます。たとえば、強度の高い鋼で作った M10 のボルト（ねじの部分の断面積 約\qty{58}{mm^2}）を、\qty{20}{kN}の軸力でしめると、応力は $20000\div58\approx\qty{345}{MPa}$ です。しめる長さが\qty{40}{mm}なら、のびは $345\div205000\times40\approx\qty{0.067}{mm}$ です。この\qty{0.07}{mm}ほどののびが、部品をしっかりとめています。
+
+ボルトのしめすぎは、降伏させて「のびきったばね」にしてしまいます。ゆるすぎると、ゆれでナットが回ってゆるみます。だから、トルクレンチで、決めた強さでしめつけます。
+\begin{phketa}[材料のヤング率（巻末の表）]
+\phketaline{鋼（SS400）}{約\qty{205}{GPa}}
+\phketaline{銅}{約\qty{117}{GPa}}
+\phketaline{アルミニウム合金（A6061-T6）}{約\qty{69}{GPa}}
+\phketaline{コンクリート}{約\qty{23}{GPa}}
+\phketaline{木材（すぎ、繊維の向き）}{約\qty{7}{GPa}}
+\phketaline{ゴム}{約1〜\qty{10}{MPa}（鋼の数万分の1）}
+\phboxhead{答えが桁で合っているか}
+金属の部品が弾性の範囲で使われているなら、ひずみはふつう $10^{-3}$（0.1\,\%）くらいまでです。計算したひずみが0.01をこえたら、降伏していないか、単位の換算をまちがえていないかを確かめよう。
+\end{phketa}
+\end{phkougaku}
+
+\begin{phkougaku}[クレーンのワイヤロープと、橋のすきま]
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+\textbf{ワイヤロープ}：クレーンのワイヤロープは、細い鋼の線を何十本もより合わせたものです。1本の太い棒より曲げやすく、1本の線が切れても全体はすぐには切れません。玉掛け用のワイヤロープは、切れる荷重の6分の1以下で使います（安全係数6以上）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \a in {0,60,...,300} {\filldraw[fill=bkGray!45, draw=bkGray!90!black, line width=0.4pt] (\a:5.4) circle (2.6);}
+  \filldraw[fill=bkGray!45, draw=bkGray!90!black, line width=0.4pt] (0,0) circle (2.6);
+  \draw[bkGray, line width=0.6pt] (0,0) circle (8.6);
+  \node[pxi small, anchor=north] at (0,-10) {ロープの断面（7本よりの例）};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+\textbf{橋の伸縮装置}：鋼の橋げたは、1年の温度の変化（約\qty{60}{K}）で、長さ\qty{50}{m}あたり約\qty{36}{mm}も長さが変わります。橋のはしには、くしの歯をかみ合わせたような金具（伸縮装置）があり、すきまの大きさが変わっても、車が通れるようになっています。橋げたを、片方のはしだけ動けるように支える（可動支承）のも、熱応力をにがすためです。
+\end{phkougaku}
+\phstation{材料力学,機械設計,構造力学,材料強度学}{応力、ひずみ、ヤング率（縦弾性係数）、ポアソン比、許容応力、安全率、降伏点、耐力、熱応力、応力集中係数、S-N 曲線、疲労限度、クリープ}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 直径\qty{2}{mm}、長さ\qty{3}{m}の銅線（$E=\qty{117}{GPa}$）に\qty{100}{N}の荷物をつるします。応力・ひずみ・のびを求めましょう。
+\bkpans{$A=\qty{3.14}{mm^2}$、応力 約\qty{32}{MPa}、ひずみ 約 $2.7\times10^{-4}$、のび 約\qty{0.82}{mm}}
+\bkproblem SS400 の丸棒（降伏点\qty{245}{MPa}）で\qty{5}{kN}の荷物をつるします。安全率を5にするとき、直径を何 mm 以上にすればよいでしょう。
+\bkpans{$\sigma_a=\qty{49}{MPa}$、$A\geqq\qty{102}{mm^2}$、$d\geqq$ 約\qty{11.4}{mm}}
+\bkproblem 長さ\qty{10}{m}の銅管（$\alpha=1.7\times10^{-5}$/K）の温度が\qty{50}{K}上がると、何 mm のびますか。
+\bkpans{$1.7\times10^{-5}\times10000\times50=\qty{8.5}{mm}$}
+\bkproblem 直径\qty{16}{mm}のボルト1本で2枚の板をつなぎ（1面せん断）、\qty{20}{kN}で引きます。ボルトのせん断応力を求めましょう。
+\bkpans{$A=\qty{201}{mm^2}$、$\tau\approx\qty{99}{MPa}$}
+\bkproblem ばね定数\qty{50}{N/m}のばね2本と、質量\qty{0.40}{kg}のおもりがあります。2本を直列につないだときと、並列につないだとき（棒は水平）の、のびをそれぞれ求めましょう。
+\bkpans{重さ\qty{3.92}{N}。直列 $k=\qty{25}{N/m}$ で約\qty{15.7}{cm}、並列 $k=\qty{100}{N/m}$ で約\qty{3.9}{cm}}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 直径\qty{16}{mm}で、長さ\qty{0.5}{m}の鋼の棒（$E=\qty{205}{GPa}$）と、長さ\qty{0.5}{m}のアルミニウム合金の棒（$E=\qty{69}{GPa}$）をつなぎ、\qty{8}{kN}で引きました。全体ののびを求めましょう。
+\bkpans{$A=\qty{201.1}{mm^2}$。鋼 約\qty{0.097}{mm}、アルミ 約\qty{0.288}{mm}、合わせて約\qty{0.39}{mm}}
+\bkproblem 長さ\qty{2000}{m}の鋼のケーブル（密度\qty{7850}{kg/m^3}、$E=\qty{205}{GPa}$）を上のはしでつるしたとき、自分の重さで何 m のびますか。\bkreidairef{12}の\qty{1000}{m}のときの何倍ですか。
+\bkpans{$\dfrac{7850\times9.8\times2000^2}{2\times205\times10^9}\approx\qty{0.75}{m}$。長さが2倍なので4倍}
+\bkproblem はば\qty{150}{mm}、厚さ\qty{6}{mm}の板のまん中に、直径\qty{8}{mm}の円い穴があります。\qty{18}{kN}で引くとき、穴のふちの最大の応力を見積もりましょう。
+\bkpans{遠い所 $\dfrac{18000}{150\times6}=\qty{20}{MPa}$、穴のふち 約\qty{60}{MPa}}
+\bkproblem 厚さ\qty{3}{mm}の板（せん断強さ\qty{250}{MPa}）に、直径\qty{12}{mm}の穴をうちぬく力を求めましょう。
+\bkpans{$\pi dt=\qty{113.1}{mm^2}$、$F\approx\qty{28}{kN}$}
+\bkproblem 直径\qty{20}{mm}の鋼の棒（$\nu=0.3$）を、ひずみ $5\times10^{-4}$ だけのばしました。直径は何 mm 細くなり、体積は何倍になりますか。
+\bkpans{$\Delta d=-0.3\times5\times10^{-4}\times20=\qty{-0.003}{mm}$、体積は $1+0.4\times5\times10^{-4}=1.0002$ 倍}
+\bkproblem ロングレール（$E=\qty{205}{GPa}$、$\alpha=1.2\times10^{-5}$/K、断面積\qty{7750}{mm^2}）の温度が、しいた時より\qty{40}{K}上がりました。応力とレールを押す力を求めましょう。
+\bkpans{$\sigma\approx\qty{-98}{MPa}$（圧縮）、力 $98.4\times7750\approx\qty{760}{kN}$}
+\bkproblem たて・横\qty{400}{mm}のコンクリートの柱に、鉄筋（D22、1本\qty{387.1}{mm^2}）が8本入っています。\qty{2000}{kN}で押すときの、コンクリートと鉄筋の応力を求めましょう（$E_c=\qty{23}{GPa}$、$E_s=\qty{205}{GPa}$）。
+\bkpans{$A_s=\qty{3096.8}{mm^2}$、$A_c=\qty{156903.2}{mm^2}$、$\varepsilon\approx4.71\times10^{-4}$。コンクリート 約\qty{11}{MPa}、鉄筋 約\qty{97}{MPa}（圧縮）}
+\phnyushi
+\bkproblem 長さ\qty{0.60}{m}の軽い棒の左はしを、ばね定数\qty{30}{N/m}のばねで、右はしを\qty{60}{N/m}のばねで天井からつるします。質量\qty{0.90}{kg}のおもりを棒につるして、棒を水平にしたい。（1）おもりは左はしから何 m の所につるせばよいですか。（2）そのとき、ばねは何 cm のびますか。（3）同じ2本のばねを直列につないで、同じおもりをつるすと、全体で何 cm のびますか。
+\bkpans{（1）$\dfrac{60\times0.60}{30+60}=\qty{0.40}{m}$　（2）$\dfrac{8.82}{90}=\qty{0.098}{m}$ で約\qty{9.8}{cm}　（3）$8.82\times\Bigl(\dfrac{1}{30}+\dfrac{1}{60}\Bigr)\approx\qty{0.44}{m}$ で約\qty{44}{cm}}
+\bkproblem 長さ\qty{2.0}{m}、断面積\qty{100}{mm^2}の鋼の棒（$E=\qty{205}{GPa}$、$\alpha=1.2\times10^{-5}$/K）の片はしを壁に固定し、もう一方のはしと別の壁の間に\qty{0.10}{mm}のすきまがあります。（1）温度を何 K 上げると、すきまが閉じますか。（2）温度を\qty{10}{K}上げたとき、棒が壁を押す力を求めましょう（壁は動かないとする）。
+\bkpans{（1）$\dfrac{0.10}{1.2\times10^{-5}\times2000}\approx\qty{4.2}{K}$　（2）自由なら\qty{0.24}{mm}のびたいので、押しちぢめられるのは\qty{0.14}{mm}。$\sigma=205000\times\dfrac{0.14}{2000}\approx\qty{14}{MPa}$（圧縮）、力 約\qty{1.4}{kN}}
+
+
+
+\begin{furikaeri}
+\begin{checklist}
+\item 応力とひずみを計算して、棒がどれだけのびるか（ちぢむか）を求められる。\bkfurref{ph:力-8:sec2}
+\item 応力-ひずみ線図を読み、許容応力と安全率から、棒の太さを決められる。\bkfurref{ph:力-8:sec5}
+\item 原子のばねから「棒もばね」（$k=\tfrac{EA}{L}$）を導き、熱応力・せん断・ポアソン比を使える。\bkfurref{ph:力-8:sec3}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{応力とひずみは、材料の「1つぶあたり」の量。だから、小さな試験片ではかった数で、大きな橋も設計できるんだね。}

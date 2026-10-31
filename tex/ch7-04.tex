@@ -1,0 +1,1241 @@
+%% 7-4 行列式：面積が何倍になるか（第14回：組 V7-3。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   4-14 の箱（(2,0,0)・(0,3,0)・(1,1,4)、体積24）を、3本を列に並べた行列式で回収する。外積の z 成分 a_x b_y - a_y b_x = ad-bc。
+%%   物理 力-7：det J = L1 L2 sinθ2（L1=0.30、L2=0.25、30°・45° で 0.0530）、腕がのびきると0＝特異姿勢。
+%%   物理 力-5：トラスの行列の行列式が0なら動いてしまう。物理 力-15：次元解析の指数の行列の行列式は1。
+%%   4-11 の看板（30°・60°、100 N）の行列の行列式は -sin(30°+60°) = -1。ひもが水平に近いと0に近づき、力が大きくなる。
+%%   委員会の決定6：7-3 の電気の箱（ABCD 行列）の行列式は1、を練習する（抵抗の箱・コイルとコンデンサーの箱）。
+%%   主役の行列 A=(2 1;1 2)：行列式3。記号は det A（本文）、|A| は専門書の書き方。単位行列は I。
+%%   数はすべて Python（numpy）で確かめた（v7-3/py/c4.py・c4b.py）。
+\usetikzlibrary{matrix}
+\makeatletter
+% 本文の小見出し（太字の1行）
+\newcommand\kviiehead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiebox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{2pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviieframe{中身}
+\newcommand\kviieframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（2.6字下げ。折り返しも同じ位置から）
+\newcommand\kviieq{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 小さな行列（図の説明・こたえの中だけで使う）
+\newcommand\kviiesm[1]{\left(\begin{smallmatrix}#1\end{smallmatrix}\right)}
+% 方眼と軸  \kviiegrid{xmin}{xmax}{ymin}{ymax}（tikzpicture の単位で）
+\newcommand\kviiegrid[4]{%
+  \draw[bkLine, line width=0.4pt, step=1] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.6},0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.6}) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \node[below left, font=\sffamily\footnotesize, inner sep=1.2pt] at (0,0) {O};}
+% 1列め（赤）と2列め（緑）の矢印  \kviiecols{a}{b}{c}{d}
+\newcommand\kviiecols[4]{%
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (#1,#3);
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (#2,#4);}
+% 行列の成分のカード（どの成分をかけるか）  \kviiecard{(x,y)}{色}{ぬる成分のリスト i/j,…}{大きさ n}
+\newcommand\kviiecard[4]{\begin{scope}[shift={#1}]
+  \foreach \kviiei/\kviiej in {#3} {\fill[#2!35] ({(\kviiej-1)*4.2},{-(\kviiei-1)*4.2}) rectangle ++(4.2,-4.2);}
+  \draw[bkInk!60, line width=0.4pt, step=4.2] (0,{-#4*4.2}) grid ({#4*4.2},0);
+  \draw[bkInk, line width=0.8pt] (0,{-#4*4.2}) rectangle ({#4*4.2},0);
+\end{scope}}
+% 箱（電気の箱の行列）  \kviiebx{(x,y)}{名前}{中身}
+\newcommand\kviiebx[3]{\node[bk node, draw=bkInk!70, fill=bkPaper, minimum width=26mm, minimum height=13mm, align=center, font=\footnotesize] (#2) at #1 {#3};}
+\makeatother
+
+\bkchapter{7}{4}{行列式：\\面積が何倍になるか}{\bklevel{4}}{行列式：面積が何倍になるか}
+\bkmichishirube{3-6,4-9,4-11,4-14,7-2,7-3}{7-5,7-6,7-8,7-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 行列をかけると方眼の正方形の面積が何倍になるかを、方眼で数えて、また $ad-bc$ で計算できる。
+\item \bklevel{4}\enspace 行列式の符号（裏返し）と0（平らにつぶれる）の意味がわかり、行列式が0になる行列を見分けられる。
+\item \bklevel{4}\enspace 3×3 の行列式をサラスの方法で計算し、ロボットの腕・ひものつり合い・電気の箱の行列式を読める。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+方眼の1マス（面積1）の正方形に、主役の行列
+\[ A=\begin{pmatrix} 2 & 1\\ 1 & 2 \end{pmatrix} \]
+をかけると、正方形は平行四辺形になります（7-2）。この平行四辺形の面積は、いくつでしょう。
+
+また、面積が0になってしまう行列はあるでしょうか。そのとき、絵はどうなるでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=6.5mm, y=6.5mm]
+  \begin{scope}
+    \draw[bkLine, line width=0.4pt] (0,0) grid (1.5,1.5);
+    \filldraw[fill=bkGray!25, draw=bkInk, line width=0.9pt] (0,0) rectangle (1,1);
+    \node[font=\sffamily\footnotesize] at (0.5,0.5) {1};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0.5,-0.25) {正方形};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (1.9,1.2) -- (3.0,1.2);
+  \node[font=\footnotesize, anchor=south] at (2.45,1.35) {$A$};
+  \begin{scope}[shift={(3.4,0)}]
+    \draw[bkLine, line width=0.4pt] (0,0) grid (3.5,3.5);
+    \filldraw[fill=bkTheme!22, draw=\bkTT, line width=1.1pt] (0,0) -- (2,1) -- (3,3) -- (1,2) -- cycle;
+    \node[font=\sffamily\bfseries\small] at (1.5,1.5) {？};
+    \node[font=\sffamily\footnotesize, anchor=north] at (1.75,-0.25) {平行四辺形};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-2・7-3では、行列をかけると、方眼にかいた絵がのびたり、ずれたり、回ったりするのを見ました。絵の形は変わりますが、\textbf{面積が何倍になったか}は、たった1つの数で言い表せます。この数を、その行列の\textbf{行列式}といいます。
+
+行列式を見ると、その行列が「絵を裏返すか」「平らにつぶしてしまうか」もわかります。平らにつぶす行列では、連立方程式の答えが1つに決まりません（7-5）。ロボットの腕が急に動きにくくなる姿勢や、ひもに大きな力がかかるつり方も、行列式でわかります。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[方眼で面積を数えよう]
+\textbf{用意するもの}\par
+方眼紙（1\,cm の方眼）、えんぴつ、定規、色えんぴつ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 方眼紙に $x$ 軸と $y$ 軸をかき、1マスの正方形（頂点 O、$(1,\ 0)$、$(1,\ 1)$、$(0,\ 1)$）をかこう。
+\item 行列の1列めの矢印（赤）と、2列めの矢印（緑）を、O からかこう。
+\item 2本の矢印を2辺とする平行四辺形をかこう。4つめの頂点は、2本の矢印をたした点だよ。
+\item 平行四辺形を、方眼の線にそった長方形でかこもう。長方形の面積から、まわりの三角形と長方形の面積をひくと、平行四辺形の面積が出るよ。
+\item 下の表の行列で①〜④をくり返し、面積を表にしよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] *{5}{Q[c,m,wd=16mm]}}, rowsep=2pt, colsep=3pt}
+行列 & $\begin{pmatrix}2&0\\0&1\end{pmatrix}$ & $\begin{pmatrix}1&1\\0&1\end{pmatrix}$ & $\begin{pmatrix}2&1\\1&2\end{pmatrix}$ & $\begin{pmatrix}3&1\\1&2\end{pmatrix}$ & $\begin{pmatrix}2&1\\2&3\end{pmatrix}$ \\
+何をする？ & 横に2倍 & ずらし & 主役 & & \\
+数えた面積 & 2 & 1 & 3 & 5 & 4 \\
+\end{bktable}
+\bktabcaption{ソラさんが方眼で数えた面積。ずらしでは、底辺も高さも1のままなので、面積は1のまま。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent 主役の行列で、④の数え方を見ておきましょう（図\ref{bk:7-4:fig-kazoeru}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=10mm, y=10mm]
+  \kviiegrid{0}{3.5}{0}{3.5}
+  \fill[bkOrange!22] (0,0) -- (2,0) -- (2,1) -- cycle;
+  \fill[bkOrange!22] (1,2) -- (1,3) -- (3,3) -- cycle;
+  \fill[bkYellow!35] (0,0) -- (1,2) -- (0,2) -- cycle;
+  \fill[bkYellow!35] (2,1) -- (3,1) -- (3,3) -- cycle;
+  \fill[bkGreen!20] (2,0) rectangle (3,1);
+  \fill[bkGreen!20] (0,2) rectangle (1,3);
+  \draw[bkInk, line width=0.8pt, dashed] (0,0) rectangle (3,3);
+  \filldraw[fill=bkTheme!22, draw=\bkTT, line width=1.1pt] (0,0) -- (2,1) -- (3,3) -- (1,2) -- cycle;
+  \kviiecols{2}{1}{1}{2}
+  \node[font=\sffamily\footnotesize] at (1.4,0.3) {1};
+  \node[font=\sffamily\footnotesize] at (1.6,2.7) {1};
+  \node[font=\sffamily\footnotesize] at (0.3,1.4) {1};
+  \node[font=\sffamily\footnotesize] at (2.7,1.6) {1};
+  \node[font=\sffamily\footnotesize] at (2.5,0.5) {1};
+  \node[font=\sffamily\footnotesize] at (0.5,2.5) {1};
+  \node[font=\sffamily\bfseries\small] at (1.5,1.5) {？};
+  \node[font=\sffamily\footnotesize, anchor=north west, align=left] at (4.3,3.2) {外側の長方形\quad $3\times3=9$\\[2pt]まわりの6つ\quad 1が6つで 6\\[2pt]平行四辺形\quad $9-6=3$};
+\end{tikzpicture}
+\bkfigcaption{主役の行列 $A$ で数えた例。1列め $(2,\ 1)$ と2列め $(1,\ 2)$ の平行四辺形を、$3\times3$ の長方形でかこむ。まわりは、三角形4つ（どれも面積1）と、1マスの正方形2つ。}
+\label{bk:7-4:fig-kazoeru}
+\end{bkfigure}
+
+\noindent 面積と、行列の4つの数をくらべてみましょう。主役の行列なら、\textbf{左上×右下}は $2\times2=4$、\textbf{右上×左下}は $1\times1=1$ です。その差 $4-1=3$ が、数えた面積と同じです。ほかの行列でも、確かめてみましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=28mm] *{5}{Q[c,m,wd=17mm]}}, rowsep=1.5pt, colsep=3pt}
+行列 & 横に2倍 & ずらし & 主役 & 4つめ & 5つめ \\
+左上×右下 & $2\times1=2$ & $1\times1=1$ & $2\times2=4$ & $3\times2=6$ & $2\times3=6$ \\
+右上×左下 & $0\times0=0$ & $1\times0=0$ & $1\times1=1$ & $1\times1=1$ & $1\times2=2$ \\
+その差 & 2 & 1 & 3 & 5 & 4 \\
+数えた面積 & 2 & 1 & 3 & 5 & 4 \\
+\end{bktable}
+\bktabcaption{どの行列でも、「左上×右下－右上×左下」が、数えた面積と同じになった。}
+\end{bkcenter}
+どの行列でも、ぴったり同じになりました。偶然ではありません。数学の道具②で、なぜこうなるのかを確かめます。
+
+\begin{omoidasou}
+\bkrecall{7-2}{行列×ベクトルは「入れると出てくる機械」。1列めは $(1,\ 0)$ の行き先、2列めは $(0,\ 1)$ の行き先。まっすぐな線はまっすぐなまま、平行な線は平行なまま、原点は動かない。}
+\bkrecall{7-3}{$AB\vec x$ は、$B$ を先にかけ、次に $A$ をかける。$AB$ と $BA$ は、ふつうはちがう。単位行列 $I$ は、かけても何も変わらない行列。}
+\bkrecall{4-14}{外積の大きさは、2本のベクトルがつくる平行四辺形の面積。$z$ 成分は $a_xb_y-a_yb_x$。3本のベクトルがつくる箱の体積は $(\vec a\times\vec b)\cdot\vec c$。}
+\bkrecall{4-11}{平行でない2本のベクトルがあれば、平面のどんなベクトルも、その2本の何倍かの和で作れる（ななめの2本の物差し）。}
+\bkrecall{3-6}{連立方程式の2本の直線が平行なら答えはなく、重なれば答えは無数にある。}
+\bkrecall{4-9}{加法定理：$\sin(\alpha+\beta)=\sin\alpha\cos\beta+\cos\alpha\sin\beta$、\\$\sin(\alpha-\beta)=\sin\alpha\cos\beta-\cos\alpha\sin\beta$}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{正方形は、いつも平行四辺形になる}
+
+\leavevmode\label{bk:7-4:menseki}やってみようでは、どの行列でも、正方形が平行四辺形になりました。なぜ、いつも平行四辺形になるのでしょう。行列を
+\[ A=\begin{pmatrix}a&b\\c&d\end{pmatrix} \]
+として、正方形の4つの頂点の行き先を順に調べます（7-2）。ここでは、たて書きのベクトルを、文の中で $(x,\ y)$ と横に書きます（7-2）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] Q[c,m,wd=26mm] X[l,m]}, rowsep=1.5pt}
+正方形の頂点 & 行き先 & わけ \\
+O $(0,\ 0)$ & $(0,\ 0)$ & 原点は動かない \\
+$(1,\ 0)$ & $(a,\ c)$ & 1列め（赤い矢印の先） \\
+$(0,\ 1)$ & $(b,\ d)$ & 2列め（緑の矢印の先） \\
+$(1,\ 1)$ & $(a+b,\ c+d)$ & $(1,\ 1)=(1,\ 0)+(0,\ 1)$ なので、行き先も「1列め＋2列め」（7-2の線形） \\
+\end{bktable}
+\bktabcaption{正方形の4つの頂点に、行列 $A$ をかけた行き先。}
+\end{bkcenter}
+4つめの頂点は、2本の矢印をたした点です。2本の矢印をたすと、その2本がつくる平行四辺形の対角線になります（4-10）。だから、正方形は、\textbf{1列めと2列めの矢印がつくる平行四辺形}になります。
+
+\kviiehead{どのマスも、同じ倍率でのびる}
+となりのマスはどうなるでしょう。$(1,\ 0)$、$(2,\ 0)$、$(2,\ 1)$、$(1,\ 1)$ のマスは、1つめのマスを $(1,\ 0)$ だけずらしたものです。行列をかけると、1つめの平行四辺形を1列めの矢印だけずらした、\textbf{同じ形の平行四辺形}になります（7-2：平行は平行のまま、たしてからかけても、かけてからたしても同じ）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=5.5mm, y=5.5mm]
+  \begin{scope}
+    \kviiegrid{0}{2.5}{0}{2.5}
+    \filldraw[fill=bkRed!25, draw=bkInk, line width=0.7pt] (0,0) rectangle (1,1);
+    \filldraw[fill=bkBlue!25, draw=bkInk, line width=0.7pt] (1,0) rectangle (2,1);
+    \filldraw[fill=bkGreen!25, draw=bkInk, line width=0.7pt] (0,1) rectangle (1,2);
+    \filldraw[fill=bkYellow!50, draw=bkInk, line width=0.7pt] (1,1) rectangle (2,2);
+    \node[font=\sffamily\footnotesize, anchor=north] at (1.25,-0.6) {4マス（面積4）};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (4.2,2) -- (6.6,2);
+  \node[font=\footnotesize, anchor=south] at (5.4,2.2) {$A$ をかける};
+  \begin{scope}[shift={(8.6,0)}]
+    \kviiegrid{0}{6.5}{0}{6.5}
+    \filldraw[fill=bkRed!25, draw=bkInk, line width=0.7pt] (0,0) -- (2,1) -- (3,3) -- (1,2) -- cycle;
+    \filldraw[fill=bkBlue!25, draw=bkInk, line width=0.7pt] (2,1) -- (4,2) -- (5,4) -- (3,3) -- cycle;
+    \filldraw[fill=bkGreen!25, draw=bkInk, line width=0.7pt] (1,2) -- (3,3) -- (4,5) -- (2,4) -- cycle;
+    \filldraw[fill=bkYellow!50, draw=bkInk, line width=0.7pt] (3,3) -- (5,4) -- (6,6) -- (4,5) -- cycle;
+    \node[font=\sffamily\footnotesize, anchor=north] at (3.25,-0.6) {同じ平行四辺形が4つ（面積12）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{4つのマスは、同じ形の平行四辺形4つになり、すきまなくならぶ。面積は $4\times3=12$。}\label{bk:7-4:fig-masu}
+\end{bkfigure}
+
+\noindent 図\ref{bk:7-4:fig-masu}のように、どのマスも、同じ形で同じ面積の平行四辺形になります。マスを何個か集めた絵の面積は、マスの数×（1マスの面積の倍率）倍になります。たとえば、7-2の家の絵（面積5）に主役の行列をかけると、面積は $5\times3=15$ です。丸い形でも、細かいマスでうめて考えれば同じです（5-9の積分の考え方）。
+
+\noindent つまり、行列をかけると、\textbf{どんな絵の面積も、同じ倍率で変わります}。その倍率は、1マスの正方形が何倍になるかを見ればわかります。\bkhatenaref の1つめの答えは、やってみようで数えたとおり、\textbf{面積3}です。主役の行列は、どんな絵の面積も3倍にします。
+
+\bksubsection{2}{面積の倍率を式で作る：$ad-bc$}
+
+\leavevmode\label{bk:7-4:adbc}やってみようで気づいた「左上×右下－右上×左下」が、なぜ面積になるのかを確かめます。2通りで考えます。
+
+\kviiehead{考え方1：長方形から、まわりの6つをひく}
+1列め $(a,\ c)$ と2列め $(b,\ d)$ の平行四辺形を、横 $a+b$、たて $c+d$ の長方形でかこみます（$a$、$b$、$c$、$d$ がどれもプラスで、図\ref{bk:7-4:fig-adbc}のような形のとき）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=8.5mm, y=8.5mm]
+  \fill[bkOrange!22] (0,0) -- (4,0) -- (4,1.5) -- cycle;
+  \fill[bkOrange!22] (2,3.5) -- (2,5) -- (6,5) -- cycle;
+  \fill[bkYellow!35] (0,0) -- (2,3.5) -- (0,3.5) -- cycle;
+  \fill[bkYellow!35] (4,1.5) -- (6,1.5) -- (6,5) -- cycle;
+  \fill[bkGreen!20] (4,0) rectangle (6,1.5);
+  \fill[bkGreen!20] (0,3.5) rectangle (2,5);
+  \draw[bkInk, line width=0.8pt, dashed] (0,0) rectangle (6,5);
+  \filldraw[fill=bkTheme!22, draw=\bkTT, line width=1.1pt] (0,0) -- (4,1.5) -- (6,5) -- (2,3.5) -- cycle;
+  \kviiecols{4}{2}{1.5}{3.5}
+  \node[font=\footnotesize] at (2.75,0.45) {$\frac{1}{2}ac$};
+  \node[font=\footnotesize] at (3.3,4.55) {$\frac{1}{2}ac$};
+  \node[font=\footnotesize] at (0.62,2.5) {$\frac{1}{2}bd$};
+  \node[font=\footnotesize] at (5.4,2.5) {$\frac{1}{2}bd$};
+  \node[font=\footnotesize] at (5,0.75) {$bc$};
+  \node[font=\footnotesize] at (1,4.25) {$bc$};
+  \node[font=\sffamily\small] at (3,2.5) {面積 $S$};
+  \node[font=\sffamily\footnotesize, below left, inner sep=1.5pt] at (0,0) {O};
+  \node[font=\footnotesize, anchor=south east, inner sep=1.5pt] at (3.95,1.7) {$(a,\ c)$};
+  \node[font=\footnotesize, anchor=north west, inner sep=1.5pt] at (2.15,3.45) {$(b,\ d)$};
+  \node[font=\footnotesize, anchor=south west, inner sep=1.5pt] at (6,5) {$(a+b,\ c+d)$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (0,-0.45) -- (4,-0.45);
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (4,-0.45) -- (6,-0.45);
+  \node[font=\footnotesize, anchor=north] at (2,-0.55) {$a$};
+  \node[font=\footnotesize, anchor=north] at (5,-0.55) {$b$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (6.45,0) -- (6.45,1.5);
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (6.45,1.5) -- (6.45,5);
+  \node[font=\footnotesize, anchor=west] at (6.55,0.75) {$c$};
+  \node[font=\footnotesize, anchor=west] at (6.55,3.25) {$d$};
+\end{tikzpicture}
+\bkfigcaption{長方形（点線）から、三角形4つと長方形2つをひくと、平行四辺形が残る。}\label{bk:7-4:fig-adbc}
+\end{bkfigure}
+
+\noindent まわりの6つの面積は、次のとおりです。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 下と上の三角形（オレンジ）：底辺 $a$、高さ $c$。1つ $\dfrac{1}{2}ac$ で、2つある。
+\item 左と右の三角形（黄色）：底辺 $b$、高さ $d$。1つ $\dfrac{1}{2}bd$ で、2つある。
+\item 右下と左上の長方形（緑）：横 $b$、たて $c$。1つ $bc$ で、2つある。
+\end{itemize}
+平行四辺形の面積 $S$ を、1行ずつ計算します。
+\begin{bkhenkei}[0.5]
+S=(a+b)(c+d)-ac-bd-2bc & 長方形から、まわりの6つをひく（三角形は2つで $ac$ と $bd$） \\
+S=ac+ad+bc+bd-ac-bd-2bc & $(a+b)(c+d)$ のかっこを開く（3-8） \\
+S=ad+bc-2bc & $ac$ と $bd$ は、たしてひくので消える \\
+S=ad-bc & $bc$ を1つたして2つひくと、1つひいたことになる \\
+\end{bkhenkei}
+「左上×右下－右上×左下」が、たしかに面積になりました。主役の行列で確かめると、$(2+1)(1+2)-2\times1-1\times2-2\times1\times1=9-2-2-2=3$ で、やってみようと同じです。
+
+\kviiehead{考え方2：外積の $z$ 成分（4-14）}
+4-14で、外積の大きさは、2本のベクトルがつくる平行四辺形の面積でした。平面のベクトル $\vec a=(a_x,\ a_y,\ 0)$ と $\vec b=(b_x,\ b_y,\ 0)$ の外積は、$z$ 成分だけが残り、
+\[ a_xb_y-a_yb_x \]
+でした。1列め $(a,\ c)$ を $\vec a$、2列め $(b,\ d)$ を $\vec b$ とすると、$a_x=a$、$a_y=c$、$b_x=b$、$b_y=d$ なので、
+\[ a_xb_y-a_yb_x=a\times d-c\times b=ad-bc \]
+考え方1と同じ式になりました。考え方2では、$a$、$b$、$c$、$d$ がマイナスのときも、矢印がどんな向きのときも、同じ式が使えます。
+
+\kviiehead{行列式という名前}
+この数 $ad-bc$ を、行列 $A$ の\textbf{行列式}（ぎょうれつしき）といい、$\det A$ と書きます。\bkidx{ぎょうれつしき}{行列式}$\det$ は英語の determinant（デターミナント、「決めるもの」）の頭の3文字です。連立方程式の答えが1つに決まるかどうかを、この数が決めるからです（④・7-5）。
+\kviieframe{$\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$\qquad （面積の倍率）}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiecard{(0,8.4)}{bkBlue}{1/1,2/2}{2}
+  \node[font=\small] at (2.1,6.3) {$a$};\node[font=\small] at (6.3,6.3) {$b$};
+  \node[font=\small] at (2.1,2.1) {$c$};\node[font=\small] at (6.3,2.1) {$d$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (4.2,-1.5) {左上×右下};
+  \node[font=\Large] at (16,4.2) {$-$};
+  \kviiecard{(24,8.4)}{bkRed}{1/2,2/1}{2}
+  \node[font=\small] at (26.1,6.3) {$a$};\node[font=\small] at (30.3,6.3) {$b$};
+  \node[font=\small] at (26.1,2.1) {$c$};\node[font=\small] at (30.3,2.1) {$d$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (28.2,-1.5) {右上×左下};
+  \node[font=\Large] at (40,4.2) {$=$};
+  \node[font=\normalsize, anchor=west] at (44,4.2) {$ad-bc$};
+\end{tikzpicture}
+\bkfigcaption{青のななめの2つをかけ、赤のななめの2つをかけて、ひく。「たすきにかけてひく」と覚える。}
+\end{bkfigure}
+
+\Needspace{11\baselineskip}
+\begin{motto}[4]
+\textbf{土地の面積を、行列式で計算する}\par
+\noindent\begin{minipage}[c]{0.7\linewidth}
+三角形 O、P、Q の面積は、P $(x_1,\ y_1)$、Q $(x_2,\ y_2)$ なら $\dfrac{1}{2}(x_1y_2-y_1x_2)$ です（平行四辺形の半分。左回りならプラス）。多角形は、原点からの三角形に分けて、となりあう頂点の組ごとにこの数をたせば、面積になります。7-2の家の絵なら、O をふくまない3組で
+\end{minipage}\hfill
+\begin{minipage}[c]{0.26\linewidth}\centering
+\begin{tikzpicture}[x=6.5mm, y=6.5mm]
+  \kviiegrid{0}{2.5}{0}{3.3}
+  \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkInk!60, line width=0.4pt, dashed] (0,0) -- (2,2) (0,0) -- (1,3);
+\end{tikzpicture}
+\end{minipage}
+\[ \frac{1}{2}\{(2\times2-0\times2)+(2\times3-2\times1)+(1\times2-3\times0)\}=\frac{1}{2}(4+4+2)=5 \]
+です。境界の点の座標から土地の面積を求めるこの方法は、測量で「座標法」とよばれています。
+\end{motto}
+
+\begin{seikaku}
+専門書では、行列式を $|A|$ や $\left|\begin{smallmatrix}a&b\\c&d\end{smallmatrix}\right|$（たての棒ではさむ）とも書きます。この $|\ \ |$ は、絶対値（3-2）やベクトルの大きさ（4-10）とは別の意味です。行列式はマイナスにもなります（③）。まちがえないように、この本では $\det A$ と書きます。行列式は、たて・横の数が同じ行列（正方行列、7-1）だけに決めます。2×3 の行列には行列式はありません。
+\end{seikaku}
+
+\bksubsection{3}{マイナスは「裏返し」}
+
+\leavevmode\label{bk:7-4:fugou}行列式は「左上×右下－右上×左下」なので、マイナスになることもあります。たとえば、上下を裏返す行列（7-2）では、
+\[ \det\begin{pmatrix}1&0\\0&-1\end{pmatrix}=1\times(-1)-0\times0=-1 \]
+面積が $-1$ 倍、とはどういうことでしょう。図\ref{bk:7-4:fig-ura}で、正方形にかいた「F」の字がどうなるかを見ます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=9mm, y=9mm]
+  \begin{scope}
+    \draw[bkLine, line width=0.4pt] (-0.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-0.5,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.5) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \fill[bkGray!15] (0,0) rectangle (1,1);
+    \node[font=\sffamily\bfseries, scale=1.6, text=bkInk!80] at (0.62,0.6) {F};
+    \kviiecols{1}{0}{0}{1}
+    \draw[bkPurple, line width=0.9pt, -{Stealth[length=2mm]}] (0.3,0.05) arc (10:80:0.3);
+    \node[font=\sffamily\footnotesize, text=bkPurple!80!black, anchor=north] at (0.5,-1.6) {赤から緑へ：左回り};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (2.3,0) -- (3.6,0);
+  \node[font=\footnotesize, anchor=south] at (2.95,0.15) {上下を裏返す};
+  \begin{scope}[shift={(4.8,0)}]
+    \draw[bkLine, line width=0.4pt] (-0.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-0.5,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.5) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \fill[bkTheme!22] (0,0) rectangle (1,-1);
+    \begin{scope}[cm={1,0,0,-1,(0,0)}]
+      \node[font=\sffamily\bfseries, scale=1.6, text=\bkTT, transform shape] at (0.62,0.6) {F};
+    \end{scope}
+    \kviiecols{1}{0}{0}{-1}
+    \draw[bkPurple, line width=0.9pt, -{Stealth[length=2mm]}] (0.3,-0.05) arc (-10:-80:0.3);
+    \node[font=\sffamily\footnotesize, text=bkPurple!80!black, anchor=north] at (0.5,-1.6) {赤から緑へ：右回り};
+  \end{scope}
+  \begin{scope}[shift={(9.4,0)}]
+    \draw[bkLine, line width=0.4pt] (-0.5,-1.5) grid (1.5,1.5);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-0.5,0) -- (1.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.5) -- (0,1.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \fill[bkGray!15] (0,0) rectangle (1,1);
+    \begin{scope}[cm={-1,0,0,-1,(1,1)}]
+      \node[font=\sffamily\bfseries, scale=1.6, text=bkInk!80, transform shape] at (0.62,0.6) {F};
+    \end{scope}
+    \node[font=\sffamily\footnotesize, text=bkInk, anchor=north, align=center] at (0.5,-1.6) {回しても、裏返しの\\形にはならない};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：はじめの正方形。中：上下を裏返す行列（1行め $(1,\ 0)$、2行め $(0,\ -1)$）をかけたあと。「F」は鏡にうつした形になり、赤（1列め）から緑（2列め）へ回る向きが逆になる。右：「F」を180°回しても、まん中の形にはならない。}\label{bk:7-4:fig-ura}
+\end{bkfigure}
+
+\noindent 面積の大きさは変わっていません（1マスのまま）。変わったのは\textbf{向き}です。はじめは、赤い矢印（1列め）から緑の矢印（2列め）へ、左回りに回っていました。裏返したあとは、右回りです。「F」の字は、鏡にうつした形になりました。紙の上でどう回しても、この形にはなりません。紙を裏返さないと作れない形です。
+\kviieframe{$\det A>0$：向きはそのまま\qquad $\det A<0$：裏返し\\[2pt]面積の倍率は、行列式の大きさ}
+
+\noindent これは、4-14の外積の向きと同じ考え方です。外積の $z$ 成分は、$\vec a$ から $\vec b$ へ左回り（180°より小さく）に回るときプラス、右回りに回るときマイナスでした（右ねじの向き）。行列式でも、1列めから2列めへ左回りならプラス、右回りならマイナスです。
+
+\kviiehead{列を入れかえると、符号が変わる}
+1列めと2列めを入れかえると、回る向きが逆になります。式でも確かめられます。
+\[ \det\begin{pmatrix}b&a\\d&c\end{pmatrix}=bc-ad=-(ad-bc) \]
+たとえば、次の行列は、$x$ と $y$ を入れかえる行列です。
+\[ \begin{pmatrix}0&1\\1&0\end{pmatrix} \]
+単位行列 $I$ の列を入れかえたものなので、行列式は $-1$ です。直線 $y=x$ を鏡にした裏返しになります。なお、7-6で学ぶ回転の行列は、どれも行列式が1です。回しても裏返しにはならないからです。
+
+\bksubsection{4}{0なら、平らにつぶれる}
+
+\leavevmode\label{bk:7-4:zero}行列式が0になる行列を考えます。
+\[ A=\begin{pmatrix}1&2\\2&4\end{pmatrix},\qquad \det A=1\times4-2\times2=0 \]
+1列めは $(1,\ 2)$、2列めは $(2,\ 4)$ です。2列めは、1列めのちょうど2倍です。2本の矢印は\textbf{同じ直線の上}にのっていて、平行四辺形が作れません。正方形は、つぶれて線分になります（図\ref{bk:7-4:fig-tsubure}の左）。面積は0です。
+
+\noindent つぶれるのは正方形だけではありません。どんな点 $(x,\ y)$ も、
+\[ A\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}x+2y\\2x+4y\end{pmatrix}=(x+2y)\begin{pmatrix}1\\2\end{pmatrix} \]
+になります（2行めは1行めのちょうど2倍だから）。どの点も、1列めの矢印 $(1,\ 2)$ の何倍か、つまり直線 $y=2x$ の上へ行きます。\textbf{平面全体が、1本の直線に平らにつぶれる}のです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \begin{scope}
+    \kviiegrid{-1}{4}{-1}{6.5}
+    \draw[bkTheme, line width=0.6pt, dashed] (-0.5,-1) -- (3.25,6.5);
+    \fill[bkGray!25] (0,0) rectangle (1,1);
+    \draw[\bkTT, line width=2.4pt] (0,0) -- (3,6);
+    \kviiecols{1}{2}{2}{4}
+    \fill[bkInk] (3,6) circle (0.12);
+    \node[font=\footnotesize, anchor=west] at (3.15,5.7) {$(3,\ 6)$};
+    \node[font=\sffamily\footnotesize, anchor=north west, align=left, fill=white, inner sep=1pt] at (1.4,1.9) {正方形は\\線分になる};
+  \end{scope}
+  \begin{scope}[shift={(10,0)}]
+    \kviiegrid{-1}{4}{-1}{6.5}
+    \draw[\bkTT, line width=1.4pt] (-0.5,-1) -- (3.25,6.5);
+    \node[font=\sffamily\footnotesize, text=\bkTT, anchor=west, align=left] at (4.5,2.4) {出てくる点は\\全部この直線の上};
+    \fill[bkGreen!60!black] (3,6) circle (0.16);
+    \node[font=\footnotesize, text=bkGreen!50!black, anchor=west, fill=white, inner sep=1pt] at (3.3,6.3) {$(3,\ 6)$：とどく};
+    \fill[bkRed] (3,5) circle (0.16);
+    \node[font=\footnotesize, text=bkRed!80!black, anchor=west, fill=white, inner sep=1pt] at (3.3,4.7) {$(3,\ 5)$：とどかない};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：1行め $(1,\ 2)$、2行め $(2,\ 4)$ の行列では、1列め（赤）と2列め（緑）が同じ直線にのり、正方形は線分（太い線）になる。右：どの点に行列をかけても、直線 $y=2x$ の上に出てくる。}\label{bk:7-4:fig-tsubure}
+\end{bkfigure}
+
+\kviiehead{つぶれた絵は、元にもどせない}
+ちがう点をこの行列に入れても、同じ点が出てくることがあります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=34mm] Q[c,m,wd=26mm]}, rowsep=1.5pt}
+入れた点 $(x,\ y)$ & 計算 $(x+2y,\ 2x+4y)$ & 出てきた点 \\
+$(2,\ 0)$ & $(2+0,\ 4+0)$ & $(2,\ 4)$ \\
+$(0,\ 1)$ & $(0+2,\ 0+4)$ & $(2,\ 4)$ \\
+$(4,\ -1)$ & $(4-2,\ 8-4)$ & $(2,\ 4)$ \\
+\end{bktable}
+\bktabcaption{3つのちがう点が、どれも $(2,\ 4)$ に行く。}
+\end{bkcenter}
+出てきた $(2,\ 4)$ だけを見ても、入れた点が $(2,\ 0)$ だったのか、$(0,\ 1)$ だったのか、わかりません。つぶれた絵は、\textbf{元にもどすことができない}のです。7-5で学ぶ「元にもどす行列（逆行列）」は、行列式が0の行列にはありません。
+
+\kviiehead{連立方程式では：答えがないか、無数にあるか}
+行列式が0の行列で、連立方程式 $A\vec x=\vec b$ を考えます。
+\[ \begin{cases} x+2y=p\\ 2x+4y=q \end{cases} \]
+左辺は、どの $x$、$y$ でも直線 $y=2x$ の上の点になります（図\ref{bk:7-4:fig-tsubure}の右）。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $\vec b=(3,\ 6)$ のように、右辺が直線の上にあるとき：入れると $(3,\ 6)$ が出てくる点は、$(3,\ 0)$、$(1,\ 1)$、$(5,\ -1)$、…といくつもある。\textbf{答えは無数}。
+\item $\vec b=(3,\ 5)$ のように、右辺が直線の上にないとき：どんな $x$、$y$ でもとどかない。\textbf{答えはない}。
+\end{itemize}
+これは、3-6で学んだことと同じです。$x+2y=3$ と $2x+4y=6$ は、2倍すると同じ式なので、2本の直線が重なります（答えは無数）。$x+2y=3$ と $2x+4y=5$ は、2本の直線が平行で、交わりません（答えはない）。行列式が0でなければ、正方形は本当の平行四辺形になり、平面全体が平面全体にうつります。そのときは、どの点にも、ちょうど1つの点からとどきます。だから、\textbf{答えはちょうど1つ}です（7-5）。
+\kviieframe{$\det A\neq0$：答えはちょうど1つ\\[2pt]$\det A=0$：答えがないか、無数にある}
+\bkhatenaref の2つめの答えです。面積が0になる行列は、あります。行列式が0の行列です。そのとき、絵は平らにつぶれて1本の直線（または1点）になり、元にもどすことはできません。
+
+
+\kviiehead{0になるのは、2つの列が平行なとき}
+$ad-bc=0$ は、$ad=bc$ ということです。$c$ と $d$ が0でなければ、両辺を $cd$ でわって $\dfrac{a}{c}=\dfrac{b}{d}$ です。1列め $(a,\ c)$ と2列め $(b,\ d)$ の、横とたての比が同じ、つまり2本の矢印が同じ直線の上にあるということです。4-11で「平行でない2本のベクトルがあれば、平面のどんなベクトルも作れる」と学びました。行列式が0のときは、その裏返しで、2本の列が平行なので、平面の全部は作れないのです。
+
+\begin{seikaku}
+「2つの列が平行」には、片方の列が $\vec0$（0倍）のときもふくめます。たとえば、1行め $(1,\ 0)$、2行め $(0,\ 0)$ の行列は、7-2の影の行列と同じように、高さ（ここでは $y$）を0にする行列です。2列めが $\vec0$ で、行列式は0です。平面全体を $x$ 軸にうつします。行列式が0になるのは、\textbf{片方の列が、もう片方の列の何倍か（0倍もふくむ）になっているとき、そのときだけ}です。また、このとき、2つの行も同じように何倍かの関係になっています（④の行列では、2行め $(2,\ 4)$ は1行め $(1,\ 2)$ の2倍）。
+\end{seikaku}
+
+\bksubsection{5}{つないだ変換の行列式は、かけ算}
+
+\leavevmode\label{bk:7-4:seki}7-3で、2つの行列をかけると、2つの変換をつないだ行列になることを学びました。面積の倍率はどうなるでしょう。横に2倍する行列 $S$（$\det S=2$）をかけてから、主役の行列 $A$（$\det A=3$）をかけてみます。
+\[ S=\begin{pmatrix}2&0\\0&1\end{pmatrix},\qquad A=\begin{pmatrix}2&1\\1&2\end{pmatrix} \]
+\begin{bkfigure}
+\begin{tikzpicture}[x=5.5mm, y=5.5mm]
+  \begin{scope}
+    \kviiegrid{0}{2.5}{0}{2.5}
+    \filldraw[fill=bkGray!25, draw=bkInk, line width=0.9pt] (0,0) rectangle (1,1);
+    \node[font=\sffamily\footnotesize, anchor=north] at (1,-0.7) {面積1};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (3.3,1.5) -- (5.3,1.5);
+  \node[font=\footnotesize, anchor=south] at (4.3,1.7) {$S$：2倍};
+  \begin{scope}[shift={(6.3,0)}]
+    \kviiegrid{0}{2.5}{0}{2.5}
+    \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=0.9pt] (0,0) rectangle (2,1);
+    \node[font=\sffamily\footnotesize, anchor=north] at (1,-0.7) {面積2};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (9.6,1.5) -- (11.6,1.5);
+  \node[font=\footnotesize, anchor=south] at (10.6,1.7) {$A$：3倍};
+  \begin{scope}[shift={(12.6,0)}]
+    \kviiegrid{0}{5.5}{0}{4.5}
+    \filldraw[fill=bkTheme!22, draw=\bkTT, line width=0.9pt] (0,0) -- (4,2) -- (5,4) -- (1,2) -- cycle;
+    \node[font=\sffamily\footnotesize, anchor=north] at (2.5,-0.7) {面積 $2\times3=6$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{$S$ で面積が2倍になり、そのあと $A$ で3倍になる。つないだ行列 $AS$ では、$2\times3=6$ 倍。}
+\end{bkfigure}
+$S$ をかけると、どんな絵の面積も2倍になります。そのあと $A$ をかけると、その2倍になった面積が、さらに3倍になります。つないだ行列 $AS$ では、面積は $2\times3=6$ 倍のはずです。計算で確かめます。
+\[ AS=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}2&0\\0&1\end{pmatrix}=\begin{pmatrix}4&1\\2&2\end{pmatrix} \]
+積の成分は、行と列の内積です（7-3）。たとえば1行1列めは $2\times2+1\times0=4$ です。
+\begin{bkhenkei}[0.5]
+\det(AS)=4\times2-1\times2=6 & たすきにかけてひく \\
+\det A\times\det S=3\times2=6 & 同じになった \\
+\end{bkhenkei}
+\kviieframe{$\det(AB)=\det A\times\det B$}
+
+\noindent かける順番を変えた $SA$ は、$AS$ とはちがう行列です（7-3）。
+\[ SA=\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}=\begin{pmatrix}4&2\\1&2\end{pmatrix} \]
+でも、行列式は $4\times2-2\times1=6$ で同じです。$\det(SA)=\det S\times\det A$ も、数のかけ算なので $2\times3=3\times2$ だからです。符号もかけ算です。裏返し（$-1$）を2回すると、$(-1)\times(-1)=1$ で、元の向きにもどります。
+
+\kviiehead{かけ算のきまりから、わかること}
+\begin{itemize}[leftmargin=1.6\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 単位行列 $I$ は何も変えないので、$\det I=1\times1-0\times0=1$。
+\item 行列を2倍した $2A$ は、たても横も2倍にする $2I$ と、$A$ をつないだものです（$2A=(2I)A$）。
+$\det(2I)=2\times2=4$ なので、$\det(2A)=4\det A$ です。主役の行列なら、$2A$ は成分がどれも2倍の行列で、行列式は $4\times4-2\times2=12=4\times3$。たても横も2倍になるので、面積は4倍です（2倍ではない）。
+\item 2×2 の行列を $k$ 倍すると、行列式は $k^2$ 倍。
+\item 行列のたし算には、このようなきまりはありません。$A+S$（成分ごとにたした行列）は、1行め $(4,\ 1)$、2行め $(1,\ 3)$ で、行列式は $12-1=11$ です。これは$\det A+\det S=3+2=5$ とはちがいます。
+\item 転置（7-1）しても、行列式は変わりません。転置した行列は1行め $(a,\ c)$、2行め $(b,\ d)$ で、行列式は $ad-cb$。同じ式だからです。
+\end{itemize}
+
+\bksubsection{6}{3×3 の行列式は、体積の倍率}
+
+\leavevmode\label{bk:7-4:sanjigen}3×3 の行列は、3次元の点を動かします（7-2）。1辺1の立方体（体積1）に3×3 の行列をかけると、3本の列の矢印がつくる、ななめにかたむいた箱（平行六面体）になります。2次元と同じ考え方で、立方体の3本の辺 $(1,\ 0,\ 0)$、$(0,\ 1,\ 0)$、$(0,\ 0,\ 1)$ は、1列め・2列め・3列めへ行くからです。だから、\textbf{3×3 の行列式は、体積の倍率}です。
+
+\noindent 4-14の「もっと知りたい」で、3本のベクトル
+\[ \vec a=\begin{pmatrix}2\\0\\0\end{pmatrix},\qquad \vec b=\begin{pmatrix}0\\3\\0\end{pmatrix},\qquad \vec c=\begin{pmatrix}1\\1\\4\end{pmatrix} \]
+がつくる箱の体積を、$(\vec a\times\vec b)\cdot\vec c=24$ と求めました。「7-4の行列式で、もう一度出会います」と約束した箱です。3本を列にならべた行列を $M$ とします。
+\[ M=\begin{pmatrix}2&0&1\\0&3&1\\0&0&4\end{pmatrix} \]
+\begin{bkfigure}
+\begin{tikzpicture}[x={(8mm,0mm)}, y={(3.6mm,2.5mm)}, z={(0mm,8mm)}]
+  \begin{scope}
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (1.8,0,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,0,1.7) node[above, font=\footnotesize, inner sep=1pt] {$z$};
+    \draw[bkInk!70, line width=0.5pt, dashed] (1,1,0) -- (0,1,0) -- (0,1,1);
+    \filldraw[fill=bkGray!20, draw=bkInk, line width=0.8pt] (0,0,0) -- (1,0,0) -- (1,0,1) -- (0,0,1) -- cycle;
+    \filldraw[fill=bkGray!35, draw=bkInk, line width=0.8pt] (1,0,0) -- (1,1,0) -- (1,1,1) -- (1,0,1) -- cycle;
+    \filldraw[fill=bkGray!10, draw=bkInk, line width=0.8pt] (0,0,1) -- (1,0,1) -- (1,1,1) -- (0,1,1) -- cycle;
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,1,0) -- (0,2.4,0) node[above right, font=\footnotesize, inner sep=1pt] {$y$};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0.7,0,-0.35) {体積1};
+  \end{scope}
+  \draw[bk arrow, bkGray, line width=0.9pt] (2.3,0,1) -- (3.6,0,1);
+  \node[font=\footnotesize, anchor=south] at (2.95,0,1.15) {$M$};
+  \begin{scope}[shift={(4.5,0,0)}]
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (3.6,0,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,4.2,0) node[above right, font=\footnotesize, inner sep=1pt] {$y$};
+    \draw[bkInk!70, line width=0.5pt, dashed] (2,3,0) -- (0,3,0) -- (0,0,0) (0,3,0) -- (1,4,4);
+    \filldraw[fill=bkTheme!14, draw=\bkTT, line width=0.8pt] (0,0,0) -- (2,0,0) -- (3,1,4) -- (1,1,4) -- cycle;
+    \filldraw[fill=bkTheme!26, draw=\bkTT, line width=0.8pt] (2,0,0) -- (2,3,0) -- (3,4,4) -- (3,1,4) -- cycle;
+    \filldraw[fill=bkTheme!8, draw=\bkTT, line width=0.8pt] (1,1,4) -- (3,1,4) -- (3,4,4) -- (1,4,4) -- cycle;
+    \draw[bkRed, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (2,0,0);
+    \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (0,3,0);
+    \draw[bkBlue, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (1,1,4);
+    \node[font=\footnotesize, text=bkRed!80!black, anchor=north] at (1,0,-0.1) {$\vec a$};
+    \node[font=\footnotesize, text=bkGreen!50!black, anchor=north west] at (0.3,2.2,0) {$\vec b$};
+    \node[font=\footnotesize, text=\bkTT, anchor=east] at (0.45,0.45,2.2) {$\vec c$};
+    \node[font=\sffamily\footnotesize, anchor=west] at (3.9,2,2) {体積24};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{1辺1の立方体（左）は、行列 $M$ をかけると、3本の列 $\vec a$（赤）、$\vec b$（緑）、$\vec c$（青）がつくる箱（右）になる。底面積 $2\times3=6$、高さ4で、体積24。}
+\end{bkfigure}
+
+\kviiehead{体積の式を、行列の成分で書く}
+3本の列を $\vec a=(a_1,\ a_2,\ a_3)$、$\vec b=(b_1,\ b_2,\ b_3)$、$\vec c=(c_1,\ c_2,\ c_3)$ と書きます。行列は次の形です。
+\[ M=\begin{pmatrix}a_1&b_1&c_1\\a_2&b_2&c_2\\a_3&b_3&c_3\end{pmatrix} \]
+箱の体積 $(\vec a\times\vec b)\cdot\vec c$ を、4-14の外積の成分の式で計算します。まず、外積は
+\[ \vec a\times\vec b=(a_2b_3-a_3b_2,\ \ a_3b_1-a_1b_3,\ \ a_1b_2-a_2b_1) \]
+です（4-14）。これと $\vec c=(c_1,\ c_2,\ c_3)$ の内積は、成分どうしをかけてたしたものです（4-12）。
+\[ (\vec a\times\vec b)\cdot\vec c=(a_2b_3-a_3b_2)c_1+(a_3b_1-a_1b_3)c_2+(a_1b_2-a_2b_1)c_3 \]
+かっこを開き、プラスの3つを前に、マイナスの3つを後ろにならべかえます。
+\[ (\vec a\times\vec b)\cdot\vec c=a_1b_2c_3+a_2b_3c_1+a_3b_1c_2-a_3b_2c_1-a_1b_3c_2-a_2b_1c_3 \]
+6つの項が出てきました。どの項も、\textbf{どの行からも1つずつ、どの列からも1つずつ}成分をえらんでかけたものです。この6つの項の和を、3×3 の行列 $M$ の行列式 $\det M$ とよびます。2×2 の $ad-bc$（2つの項）と同じく、体積の倍率で、マイナスは裏返し（右手系が左手系になる：4-13）です。
+
+\kviiehead{サラスの方法}
+6つの項は、次のようにえらぶと、もれなく見つけられます。この見つけ方を\textbf{サラスの方法}といいます。\bkidx{さらすのほうほう}{サラスの方法}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiecard{(0,12.6)}{bkBlue}{1/1,2/2,3/3}{3}
+  \kviiecard{(19,12.6)}{bkBlue}{1/2,2/3,3/1}{3}
+  \kviiecard{(38,12.6)}{bkBlue}{1/3,2/1,3/2}{3}
+  \kviiecard{(68,12.6)}{bkRed}{1/3,2/2,3/1}{3}
+  \kviiecard{(87,12.6)}{bkRed}{1/1,2/3,3/2}{3}
+  \kviiecard{(106,12.6)}{bkRed}{1/2,2/1,3/3}{3}
+  \node[font=\footnotesize, anchor=north] at (6.3,-1.5) {$+a_1b_2c_3$};
+  \node[font=\footnotesize, anchor=north] at (25.3,-1.5) {$+b_1c_2a_3$};
+  \node[font=\footnotesize, anchor=north] at (44.3,-1.5) {$+c_1a_2b_3$};
+  \node[font=\footnotesize, anchor=north] at (74.3,-1.5) {$-c_1b_2a_3$};
+  \node[font=\footnotesize, anchor=north] at (93.3,-1.5) {$-a_1c_2b_3$};
+  \node[font=\footnotesize, anchor=north] at (112.3,-1.5) {$-b_1a_2c_3$};
+  \node[font=\sffamily\footnotesize, text=\bkTT, anchor=south] at (25.3,14) {右下へのななめ（たす）};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south] at (93.3,14) {左下へのななめ（ひく）};
+\end{tikzpicture}
+\bkfigcaption{3×3 の行列のマス。ぬったマスの3つの成分をかける。右下へ向かうななめ（はみ出した分は左はしへもどる）の3つをたし、左下へ向かうななめの3つをひく。}\label{bk:7-4:fig-sarrus}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 左上から右下へのななめ（$a_1$、$b_2$、$c_3$）をかける。
+\item その線を1つ右にずらす。右はしからはみ出した分は、左はしにもどる（$b_1$、$c_2$、$a_3$）。もう1つずらす（$c_1$、$a_2$、$b_3$）。この3つの積を\textbf{たす}。
+\item 右上から左下へのななめ（$c_1$、$b_2$、$a_3$）と、それをずらした2本の積を\textbf{ひく}。
+\end{enumerate}
+図\ref{bk:7-4:fig-sarrus}の6つの項は、上の体積の式の6つの項と、かける順番がちがうだけで同じです（$b_1c_2a_3=a_3b_1c_2$ など）。行列の右に1列め・2列めをもう一度書きたしておくと、ななめの線がまっすぐ引けて、見つけやすくなります。
+
+\noindent 4-14の箱で確かめます。$a_1=2$、$b_1=0$、$c_1=1$、$a_2=0$、$b_2=3$、$c_2=1$、$a_3=0$、$b_3=0$、$c_3=4$ です。
+\[ \text{たす3つ：}\ a_1b_2c_3+b_1c_2a_3+c_1a_2b_3=2\times3\times4+0\times1\times0+1\times0\times0=24 \]
+\[ \text{ひく3つ：}\ c_1b_2a_3+a_1c_2b_3+b_1a_2c_3=1\times3\times0+2\times1\times0+0\times0\times4=0 \]
+\[ \det M=24-0=24 \]
+4-14の約束どおり、箱の体積24が、行列式として出てきました。
+
+\kviiehead{3×3 でも、0なら平らにつぶれる}
+3×3 の行列式が0になるのは、3本の列の矢印が、原点を通る1つの平面（または1本の直線）の上にのってしまうときです。箱がつぶれて、厚さが0になるからです。たとえば、次の行列の3列めは、1列めと2列めの和になっています。
+\[ N=\begin{pmatrix}1&0&1\\0&1&1\\1&1&2\end{pmatrix}\qquad\text{（3列め}=\text{1列め}+\text{2列め）} \]
+サラスの方法で計算すると、たす3つは $1\times1\times2+0\times1\times1+1\times0\times1=2$、ひく3つは $1\times1\times1+1\times1\times1+0\times0\times2=2$ で、$\det N=2-2=0$ です。3本の矢印は、1列めと2列めがつくる平面の上にあります。3次元の空間全体が、1つの平面に平らにつぶれるのです。2×2 と同じく、つぶれた空間は元にもどせず、3つの文字の連立方程式の答えは、ないか無数にあるかのどちらかになります。
+\begin{bkfigure}
+\begin{tikzpicture}[x={(17mm,0mm)}, y={(8mm,5.5mm)}, z={(0mm,15mm)}]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (1.9,0,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,1.6,0) node[right, font=\footnotesize, inner sep=1.5pt] {$y$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,0,2.5) node[above, font=\footnotesize, inner sep=1pt] {$z$};
+  \filldraw[fill=bkTheme!18, draw=\bkTT, line width=0.6pt, dashed] (0,0,0) -- (1,0,1) -- (1,1,2) -- (0,1,1) -- cycle;
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (1,0,1);
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (0,1,1);
+  \draw[bkBlue, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (1,1,2);
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=west] at (1.05,0,0.95) {1列め $(1,\ 0,\ 1)$};
+  \node[font=\footnotesize, text=bkGreen!50!black, anchor=east] at (-0.3,1,1.0) {2列め $(0,\ 1,\ 1)$};
+  \node[font=\footnotesize, text=\bkTT, anchor=west] at (1.05,1,2.05) {3列め $(1,\ 1,\ 2)$};
+\end{tikzpicture}
+\bkfigcaption{3列め（青）は、1列め（赤）と2列め（緑）がつくる平行四辺形の対角線。3本とも同じ平面（色をぬった面）の上にあり、箱の厚さは0。}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{tikzpicture}
+\node[draw=bkRed, line width=1pt, fill=bkRedBg, rounded corners=1.5mm, inner xsep=4mm, inner ysep=2mm, text width=110mm, align=left, font=\small]{\textbf{サラスの方法は、3×3 だけ}\\[2pt]4×4 の行列で同じようにななめを引いても、行列式にはなりません（4×4 の行列式は24個の項がありますが、ななめは8本しかありません）。4×4 より大きい行列式は、コンピュータで計算します（⑧）。};
+\end{tikzpicture}
+\end{bkcenter}
+
+\Needspace{14\baselineskip}
+\begin{motto}[5]
+\textbf{3×3 の行列式を、2×2 の行列式で書く}\par
+体積の式 $(\vec a\times\vec b)\cdot\vec c$ を、1行めの成分 $a_1$、$b_1$、$c_1$ でまとめると、次の形にもなります。
+\[ \det M=a_1\det\begin{pmatrix}b_2&c_2\\b_3&c_3\end{pmatrix}-b_1\det\begin{pmatrix}a_2&c_2\\a_3&c_3\end{pmatrix}+c_1\det\begin{pmatrix}a_2&b_2\\a_3&b_3\end{pmatrix} \]
+1行めの成分に、「その成分の行と列を消した残りの2×2 の行列式」をかけ、符号を＋、－、＋と変えてたします。4-14の箱なら、$2\times(3\times4-1\times0)-0+1\times(0\times0-3\times0)=24$ です。このまとめ方を\textbf{余因子展開}（よいんしてんかい）といいます。\bkidx{よいんしてんかい}{余因子展開}4×4 の行列式も、同じように3×3 の行列式4つで書けます。ただ、大きな行列では手間がとても多くなるので、コンピュータは7-5の掃き出し法を使って計算します。
+\end{motto}
+
+\bksubsection{7}{工学で働く行列式}
+
+\leavevmode\label{bk:7-4:kougaku}行列式は、工学の機械やしくみが「うまく働くか」「どこでこまったことが起きるか」を教えてくれます。3つの例を見ます。
+
+\kviiehead{（ア）ひもが水平に近いと、大きな力がいる}
+4-11で、重さ \qty{100}{N} の看板を、左は水平から30°、右は水平から60°の2本のひもでつるしました。左のひもの力を $T_1$〔N〕、右を $T_2$〔N〕として、横とたての力のつり合いは
+\[ \begin{cases} -T_1\cos30°+T_2\cos60°=0\\ \ \ \,T_1\sin30°+T_2\sin60°=100 \end{cases} \]
+でした。行列で書くと（7-1）、
+\[ \begin{pmatrix}-\cos30°&\cos60°\\ \sin30°&\sin60°\end{pmatrix}\begin{pmatrix}T_1\\T_2\end{pmatrix}=\begin{pmatrix}0\\100\end{pmatrix} \]
+1列めは、左のひもが引く向きの矢印（長さ1）、2列めは、右のひもが引く向きの矢印（長さ1）です。行列式を計算します。
+\begin{bkhenkei}[0.6]
+\det=-\cos30°\sin60°-\cos60°\sin30° & たすきにかけてひく（右上×左下をひく） \\
+\det=-(\sin60°\cos30°+\cos60°\sin30°) & マイナスでくくり、かける順を入れかえた \\
+\det=-\sin(60°+30°)=-\sin90° & 加法定理（4-9） \\
+\det=-1 & $\sin90°=1$ \\
+\end{bkhenkei}
+同じように計算すると、左のひもが水平から $\theta_1$、右が $\theta_2$ のとき、行列式は $-\sin(\theta_1+\theta_2)$ です。
+
+\noindent 4-11の電灯（\qty{40}{N}、左右とも水平から $\theta$）では、行列式は $-\sin2\theta$ です。$\theta$ を小さくして、ひもを水平に近づけていくと、どうなるでしょう。4-11と同じく、たての力のつり合い $2T\sin\theta=40$ から $T=\dfrac{40}{2\sin\theta}$ で、ひもの力 $T$ を求めます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=16mm]}}, rowsep=1.5pt}
+ひもの角 $\theta$ & 45° & 30° & 20° & 10° & 5° \\
+行列式 $-\sin2\theta$ & $-1$ & $-0.866$ & $-0.643$ & $-0.342$ & $-0.174$ \\
+ひもの力 $T$〔N〕 & 28.3 & 40 & 58.5 & 115 & 229 \\
+\end{bktable}
+\bktabcaption{行列式が0に近づくほど、ひもの力は大きくなる。5°では、電灯の重さの5倍以上。}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiet/\kviiexx/\kviiename in {30/0/30°, 10/66/10°} {
+    \begin{scope}[shift={(\kviiexx,0)}]
+      \filldraw[fill=bkTheme!22, draw=\bkTT, line width=0.9pt] (25,0) -- ++({180-\kviiet}:20) -- ++(\kviiet:20) -- ++({-\kviiet}:20) -- cycle;
+      \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (25,0) -- ++({180-\kviiet}:20);
+      \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] (25,0) -- ++(\kviiet:20);
+      \fill[bkInk] (25,0) circle (0.8);
+      \node[font=\sffamily\footnotesize, anchor=north] at (25,-2.5) {ひもの角 \kviiename};
+    \end{scope}}
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (25,22) {平行四辺形の面積 0.866};
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (91,10) {平行四辺形の面積 0.342};
+\end{tikzpicture}
+\bkfigcaption{2本のひもが引く向きの矢印（長さ1）。2本がつくる平行四辺形の面積が、行列式の大きさ。ひもが水平に近いと、2本の矢印は反対向きに近くなり、平行四辺形はうすくつぶれる。}
+\end{bkfigure}
+2本のひもで、上向き \qty{40}{N} の力を作らなければなりません。これは、4-11の「ななめの2本の物差し」で、たて向きの矢印 $(0,\ 40)$ を、2本の矢印の何倍かの和で作ることです。2本の矢印がほとんど反対向き（平行四辺形がうすい）だと、上向きの成分が小さいので、それぞれをとても長くしないと届きません。\textbf{行列式が0に近いと、答えがとても大きくなる}のです。7-5で、連立方程式の答えは行列式でわる形になることを学びます。0に近い数でわるので、答えが大きくなるのです。
+
+\kviiehead{（イ）ロボットの腕がのびきると、動けない向きができる}
+\label{bk:7-4:robot}7-2で、2つの関節をもつロボットの腕（物理 力-7と同じ：肩からひじ $L_1=\qty{0.30}{m}$、ひじから手先 $L_2=\qty{0.25}{m}$、$\theta_1=30°$、$\theta_2=45°$）の手の速度を、ヤコビ行列 $J$ で求めました。
+\[ \dot{\vec p}=J\dot{\vec\theta},\qquad \dot{\vec\theta}=\begin{pmatrix}\dot\theta_1\\ \dot\theta_2\end{pmatrix},\qquad J=\begin{pmatrix}-0.391&-0.241\\0.325&0.065\end{pmatrix} \]
+$\dot{\vec p}$〔m/s〕は手の速度、$\dot\theta_1$、$\dot\theta_2$〔rad/s〕は肩とひじの角速度です（7-2と同じ書き方）。
+$J$ の列にも意味があります（7-2：列は行き先）。1列めは「肩だけを \qty{1}{rad/s} で回したときの手の速度」、2列めは「ひじだけを \qty{1}{rad/s} で回したときの手の速度」です。$J$ の行列式を計算します（成分は物理 力-7の、丸める前の値を使う）。
+\[ \det J=(-0.3915)\times0.0647-(-0.2415)\times0.3245 \]
+ひく数がマイナスなので、たし算になり、$-0.0253+0.0784=0.0530$ です。この数は、$L_1L_2\sin\theta_2$ を計算した値と同じです。
+\[ L_1L_2\sin\theta_2=0.30\times0.25\times\sin45°=0.30\times0.25\times0.7071=0.0530 \]
+偶然ではありません。
+
+\noindent 肩だけを回すと、手先は肩を中心とする円の上を動きます。だから手の速度は、\textbf{肩から手先までの矢印を90°回した向き}で、大きさは「肩から手先までの距離×角速度」です（4-15）。手先の位置を $(x,\ y)$ とすると、1列めは $(-y,\ x)$ です（4-8：90°回すと $(x,\ y)\to(-y,\ x)$）。同じように、2列めは、ひじから手先までの矢印 $\bigl(L_2\cos(\theta_1+\theta_2),\ L_2\sin(\theta_1+\theta_2)\bigr)$ を90°回したものです。
+\[ J=\begin{pmatrix}-y&-L_2\sin(\theta_1+\theta_2)\\ x&L_2\cos(\theta_1+\theta_2)\end{pmatrix} \]
+ここで、手先の位置は4-7の順運動学の式です。
+\[ x=L_1\cos\theta_1+L_2\cos(\theta_1+\theta_2),\qquad y=L_1\sin\theta_1+L_2\sin(\theta_1+\theta_2) \]
+行列式を1行ずつ計算します。式を短くするため、$\theta_1+\theta_2$ を $\theta_{12}$ と書きます。
+\begin{bkhenkei}[0.6]
+\det J=-yL_2\cos\theta_{12}+L_2\sin\theta_{12}\times x & たすきにかけてひく \\
+\det J=L_2(x\sin\theta_{12}-y\cos\theta_{12}) & $L_2$ でくくった \\
+x\sin\theta_{12}-y\cos\theta_{12} & かっこの中だけを計算する \\
+=L_1\cos\theta_1\sin\theta_{12}-L_1\sin\theta_1\cos\theta_{12} & $x$、$y$ を入れる（$L_2$ の項は消える） \\
+=L_1\sin(\theta_{12}-\theta_1) & 加法定理（4-9）の $\sin(\alpha-\beta)$ \\
+\det J=L_1L_2\sin\theta_2 & $\theta_{12}-\theta_1=\theta_2$ \\
+\end{bkhenkei}
+\kviieframe{$\det J=L_1L_2\sin\theta_2$}
+行列式は、ひじの角 $\theta_2$ だけで決まります。$\theta_2=90°$ でいちばん大きく（$0.30\times0.25=0.075$）、腕がまっすぐにのびきる $\theta_2=0°$ で0になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \fill[bkGray!40] (-6,-3) rectangle (6,0);
+    \coordinate (s) at (0,0);
+    \coordinate (e) at ({80*0.30*cos(30)},{80*0.30*sin(30)});
+    \coordinate (h) at ({80*(0.30*cos(30)+0.25*cos(75))},{80*(0.30*sin(30)+0.25*sin(75))});
+    \draw[bkGray!80!black, line width=3.2pt, line cap=round] (s) -- (e) -- (h);
+    \fill[bkInk] (s) circle (1.3) (e) circle (1.1);
+    \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (h) -- ++({-50*0.3915},{50*0.3245});
+    \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] (h) -- ++({-50*0.2415},{50*0.0647});
+    \node[font=\footnotesize, text=bkRed!80!black, anchor=south] at ($(h)+({-50*0.3915},{50*0.3245})$) {1列め};
+    \node[font=\footnotesize, text=bkGreen!50!black, anchor=north east] at ($(h)+({-50*0.2415},{50*0.0647})+(0,-0.6)$) {2列め};
+    \node[font=\sffamily\footnotesize, anchor=north] at (14,-4) {$\theta_2=45°$：行列式 0.053};
+  \end{scope}
+  \begin{scope}[shift={(54,0)}]
+    \fill[bkGray!40] (-6,-3) rectangle (6,0);
+    \coordinate (s) at (0,0);
+    \coordinate (e) at ({80*0.30*cos(30)},{80*0.30*sin(30)});
+    \coordinate (h) at ({80*0.55*cos(30)},{80*0.55*sin(30)});
+    \draw[bkGray!80!black, line width=3.2pt, line cap=round] (s) -- (e) -- (h);
+    \fill[bkInk] (s) circle (1.3) (e) circle (1.1);
+    \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (h) -- ++(120:{50*0.55});
+    \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] ($(h)+(30:3)$) -- ++(120:{50*0.25});
+    \draw[bkInk, line width=0.5pt, dashed] (h) -- ++(30:10);
+    \node[font=\footnotesize, anchor=north, align=center] at ($(h)+(30:5)+(4,-3)$) {この向き\\には動けない};
+    \node[font=\sffamily\footnotesize, anchor=north] at (20,-4) {$\theta_2=0°$：行列式 0};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{手先の矢印は、$J$ の1列め（赤：肩だけ回す）と2列め（緑：ひじだけ回す）。右のようにのびきると、2本とも腕に直角な同じ向きになり、平行四辺形がつぶれる。腕の向き（点線）には、どんなに関節を回しても手先を動かせない。}
+\end{bkfigure}
+
+\noindent のびきった腕では、肩を回しても、ひじを回しても、手先は腕に直角な向きにしか動きません。2つの列が平行なので、行列式は0です（④）。手先を腕の向きに動かすことは、どう関節を回してもできません。このように、行列式が0になって、動けない向きができてしまう姿勢を、\textbf{特異姿勢}（とくいしせい）といいます。\bkidx{とくいしせい}{特異姿勢}のびきる少し手前でも、行列式は0に近いので、手先を腕の向きに少し動かすだけで、関節をとても速く回さなければなりません（（ア）と同じ理由）。本物のロボットを動かすプログラムは、行列式を見て、特異姿勢に近づかないように気をつけています。
+
+\kviiehead{（ウ）電気の箱の行列式は、いつも1}
+\label{bk:7-4:hako}7-3で、電気の箱を、\textbf{出口の電圧と電流を入れると、入口の電圧と電流が出てくる}2×2 の行列で表しました。抵抗 $R$〔Ω〕を直列に入れた箱と、並列に入れた箱の行列は、次の形でした。
+\[ \text{直列の箱}\ \begin{pmatrix}1&R\\0&1\end{pmatrix},\qquad \text{並列の箱}\ \begin{pmatrix}1&0\\ \dfrac{1}{R}&1\end{pmatrix} \]
+どちらも、行列式は $1\times1-R\times0=1$、$1\times1-0\times\dfrac{1}{R}=1$ です。2つの箱をつないだ行列は、2つの行列の積でした（7-3）。⑤の $\det(AB)=\det A\times\det B$ から、つないだ箱の行列式も $1\times1=1$ です。7-3の例題で作った行列で確かめます。
+直列 \qty{2}{\ohm} のあとに並列 \qty{2}{\ohm} をつないだ箱と、つなぐ順を逆にした箱です（行列はちがう）。
+\[ \det\begin{pmatrix}2&2\\0.5&1\end{pmatrix}=2\times1-2\times0.5=1 \]
+\[ \det\begin{pmatrix}1&2\\0.5&2\end{pmatrix}=1\times2-2\times0.5=1 \]
+つなぐ順で行列は変わりますが、行列式はどちらも1です。箱を何個つないでも、行列式は $1\times1\times\cdots\times1=1$ のままです。
+
+コイルとコンデンサーの箱（7-3。6-10・6-13の複素数のインピーダンス）でも同じです。コイル $j\omega L$ を直列に、コンデンサーを並列に入れた箱の行列は、
+\[ \begin{pmatrix}1&j\omega L\\0&1\end{pmatrix}\begin{pmatrix}1&0\\j\omega C&1\end{pmatrix}=\begin{pmatrix}1-\omega^2LC&j\omega L\\j\omega C&1\end{pmatrix} \]
+です（1行1列めは $1+j\omega L\times j\omega C=1+j^2\omega^2LC=1-\omega^2LC$）。行列式は、
+\begin{bkhenkei}[0.6]
+(1-\omega^2LC)\times1-j\omega L\times j\omega C & たすきにかけてひく \\
+=1-\omega^2LC-j^2\omega^2LC & $j\omega L\times j\omega C=j^2\omega^2LC$ \\
+=1-\omega^2LC+\omega^2LC=1 & $j^2=-1$ \\
+\end{bkhenkei}
+$j^2=-1$（6-8）のおかげで、ちょうど1になりました。
+
+\noindent 電気の本では、この箱の行列の4つの数を $A$、$B$、$C$、$D$（四端子定数）とよび、抵抗・コイル・コンデンサーだけでできた箱では、いつも $AD-BC=1$ になることを、計算を確かめるのに使います（物理シリーズの電磁気学、7-11）。$AD-BC$ は、この章の行列式 $ad-bc$ そのものです。
+
+\bksubsection{8}{表計算と Python で行列式を求める}
+
+\leavevmode\label{bk:7-4:computer}表計算では、\texttt{MDETERM}（エム・デターム）という関数で行列式を求めます。行列を左上から入れ、空いたマスに式を書きます。
+\begin{bkcenter}
+\bksheet{4}{16}{%
+1 & \SetCell[c=2]{c} 行列 $A$ & & & 行列式 \\
+2 & \SetCell{bg=bkTheme!12} 2 & \SetCell{bg=bkTheme!12} 1 & & \SetCell{bg=bkYellow!35} 3 \\
+3 & \SetCell{bg=bkTheme!12} 1 & \SetCell{bg=bkTheme!12} 2 & & \\}
+\bktabcaption{D2のマスに \texttt{=MDETERM(A2:B3)} と入れると、3が出る。3×3 なら \texttt{=MDETERM(A2:C4)} のように、行列のはんいを書く。}
+\end{bkcenter}
+Python では、\texttt{numpy} の \texttt{np.linalg.det} を使います（\texttt{linalg} は linear algebra（線形代数）の略）。
+\Needspace{11\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1],
+              [1, 2]])           \# 主役の行列（1行ずつ書く）
+M = np.array([[2, 0, 1],
+              [0, 3, 1],
+              [0, 0, 4]])        \# 4-14の箱（3本を列にならべた）
+print(np.linalg.det(A))          \# 行列式
+print(np.linalg.det(M))
+print(round(np.linalg.det(A), 6))   \# 小数第6位までに丸める
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+2.9999999999999996
+23.999999999999993
+3.0
+\end{bkcodeout}
+答えが3や24ぴったりにならず、2.9999999999999996 のように出ました。まちがいではありません。コンピュータは、たすきにかけてひくのではなく、7-5で学ぶ掃き出し法で行列式を計算します。その途中で、わり算をして小数を2進法で表すので、ごくわずかなずれが出るのです（2-19の「0.1を10回たすと…」と同じ理由）。小数第6位までに丸めれば、3.0になります。
+
+\noindent コンピュータを使うと、4×4 やもっと大きな行列の行列式も、すぐに求められます。たとえば
+\[ \begin{pmatrix}2&1&0&0\\1&2&1&0\\0&1&2&1\\0&0&1&2\end{pmatrix} \]
+の行列式は、\texttt{np.linalg.det} で 4.999999999999999、つまり5です。
+
+\kviiehead{表計算で、ひもの角と行列式と力を一覧にする}
+⑦（ア）の電灯（\qty{40}{N}）で、ひもの角をもっと小さくするとどうなるかを、表計算で調べます。A列に角を入れ、B列で行列式、C列でひもの力を計算します。
+\begin{bkcenter}
+\bksheet{3}{24}{%
+1 & 角 $\theta$（°） & 行列式 & 力 $T$（N） \\
+2 & 45 & $-1.000$ & 28.3 \\
+3 & 30 & $-0.866$ & 40.0 \\
+4 & 20 & $-0.643$ & 58.5 \\
+5 & 10 & $-0.342$ & 115.2 \\
+6 & 5 & $-0.174$ & 229.5 \\
+7 & 2 & $-0.070$ & 573.1 \\
+8 & 1 & $-0.035$ & 1146.0 \\}
+\bktabcaption{B2の式は \texttt{=-SIN(RADIANS(2*A2))}（行列式 $-\sin2\theta$）、C2の式は \texttt{=40/(2*SIN(RADIANS(A2)))}（$T=\frac{40}{2\sin\theta}$）。\texttt{RADIANS} は度をラジアンに直す関数（6-9）。}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=50mm, xmin=0, xmax=1.08, ymin=0, ymax=640, xtick={0.2,0.4,0.6,0.8,1}, ytick={100,200,300,400,500,600}, xlabel={行列式の大きさ}, ylabel={$T$（N）}]
+  \addplot[bkcurve, domain=0.066:1, samples=80] {20/sin(asin(x)/2)};
+  \addplot[only marks, mark=*, mark size=1.7pt, bkOrange] coordinates {(1,28.3) (0.866,40.0) (0.643,58.5) (0.342,115.2) (0.174,229.5) (0.0698,573.1)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.12,560) {角2°：\qty{573}{N}};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.66,75) {角20°：\qty{58.5}{N}};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{行列式の大きさ（横）と、ひもの力（たて）。行列式が0に近づくと、力は急に大きくなる。角1°（行列式0.035）では \qty{1146}{N} で、電灯の重さの約29倍。}
+\end{bkfigure}
+ひもをぴんと水平に張って物をつるすことはできない、とよく言われます。水平に近づくほど行列式が0に近づき、ひもの力が限りなく大きくなるからです。物干しのロープや電線が、少したるませて張ってあるのは、このためでもあります。
+
+%% ---------------- 専門書・まとめ ----------------
+\begin{senmonsho}[線形代数の教科書ふうの書き方]
+\begin{bkhonbun}
+2次の正方行列
+\[ A=\begin{pmatrix}a&b\\c&d\end{pmatrix} \]
+に対し、$|A|=ad-bc$ を $A$ の行列式という。$A$ の表す線形変換によって、図形の面積は $\bigl||A|\bigr|$ 倍される。また、$|AB|=|A||B|$ が成り立つ。
+\end{bkhonbun}
+\bkyaku{$|A|$ はこの章の $\det A$（絶対値ではない）。「2次の正方行列」は2×2 の行列、「線形変換」は行列をかける変換（7-2）。$\bigl||A|\bigr|$ は、行列式の絶対値（大きさ）で、外側のたての棒だけが絶対値の記号。面積の倍率は、行列式の大きさ（③）ということ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{2×2 の行列式}$\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$（たすきにかけてひく）\\[4pt]
+\tsl{意味}面積の倍率。マイナスは裏返し\\[4pt]
+\tsl{0のとき}2つの列が平行で、平らにつぶれる。元にもどせない\\[4pt]
+\tsl{連立方程式}$\det A\neq0$ なら答えは1つ。0なら、ないか無数\\[4pt]
+\tsl{積と数倍}$\det(AB)=\det A\times\det B$、$\det(kA)=k^2\det A$（2×2）\\[4pt]
+\tsl{3×3}体積の倍率。サラスの方法（3×3 だけ）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{行列式}{正方行列から決まる1つの数。2×2 では $ad-bc$。面積（3×3 では体積）の倍率。}
+\bkword{サラスの方法}{3×3 の行列式の6つの項を、ななめの線で見つける方法。3×3 だけに使える。}
+\bkword{余因子展開}{3×3 の行列式を、2×2 の行列式3つで書く方法。}
+\bkword{特異姿勢}{ロボットの腕のヤコビ行列 $J$ の行列式が0になり、動けない向きができる姿勢。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\det A$}{デターミナント・エー}{行列 $A$ の行列式。2×2 なら $ad-bc$。面積・体積の倍率}{determinant}{7-4}}
+{\bkkigocard{$|A|$}{デターミナント・エー}{行列式の、専門書での書き方。絶対値ではないので、マイナスにもなる}{determinant}{7-4}}
+
+\begin{column}{関孝和とライプニッツ}
+行列式の考えは、「行列」という名前ができる（1850年ごろ）よりも、ずっと前に生まれました。日本の数学者、関孝和は、1683年にまとめた本の中で、文字をいくつもふくむ方程式から文字を消していく計算に、行列式と同じ考えを使っていたと伝えられています。ドイツのライプニッツも、1693年の手紙の中で、3つの式から2つの文字を消すときの「たすきにかけてひく」形の計算を書いています。2人は、まったく別々に、ほぼ同じころ、同じ考えにたどりついたのです。どちらも、連立方程式を解く計算の中から、この数を見つけました。この章では面積から入りましたが、歴史では連立方程式のほうが先だったのです。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[方眼で面積を数える]
+次の行列をかけると、1マスの正方形は平行四辺形になります。平行四辺形の面積を、方眼で数えて求め、行列式とくらべましょう。
+\[ \begin{pmatrix}3&1\\1&2\end{pmatrix} \]
+\kangaekata 1列め $(3,\ 1)$ と2列め $(1,\ 2)$ の平行四辺形を、横 $3+1$、たて $1+2$ の長方形でかこむ。まわりの6つ（三角形4つ、長方形2つ）をひく。\par
+\shiki 長方形：$(3+1)\times(1+2)=4\times3=12$\kviieq
+下と上の三角形（底辺3、高さ1）：$\dfrac{1}{2}\times3\times1\times2=3$\kviieq
+左と右の三角形（底辺1、高さ2）：$\dfrac{1}{2}\times1\times2\times2=2$\kviieq
+右下と左上の長方形（横1、たて1）：$1\times1\times2=2$\kviieq
+平行四辺形：$12-3-2-2=5$\kviieq
+行列式：$3\times2-1\times1=6-1=5$\par
+\kotae 面積は5で、行列式の5と同じ
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=9mm, y=9mm]
+  \kviiegrid{0}{4.5}{0}{3.5}
+  \fill[bkOrange!22] (0,0) -- (3,0) -- (3,1) -- cycle;
+  \fill[bkOrange!22] (1,2) -- (1,3) -- (4,3) -- cycle;
+  \fill[bkYellow!35] (0,0) -- (1,2) -- (0,2) -- cycle;
+  \fill[bkYellow!35] (3,1) -- (4,1) -- (4,3) -- cycle;
+  \fill[bkGreen!20] (3,0) rectangle (4,1);
+  \fill[bkGreen!20] (0,2) rectangle (1,3);
+  \draw[bkInk, line width=0.8pt, dashed] (0,0) rectangle (4,3);
+  \filldraw[fill=bkTheme!22, draw=\bkTT, line width=1.1pt] (0,0) -- (3,1) -- (4,3) -- (1,2) -- cycle;
+  \kviiecols{3}{1}{1}{2}
+  \node[font=\sffamily\footnotesize] at (2.1,0.3) {1.5};
+  \node[font=\sffamily\footnotesize] at (2.0,2.7) {1.5};
+  \node[font=\sffamily\footnotesize] at (0.3,1.4) {1};
+  \node[font=\sffamily\footnotesize] at (3.7,1.6) {1};
+  \node[font=\sffamily\footnotesize] at (3.5,0.5) {1};
+  \node[font=\sffamily\footnotesize] at (0.5,2.5) {1};
+  \node[font=\sffamily\small] at (2,1.5) {5};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+例題1の平行四辺形を方眼にかきました。まわりの6つの面積は、1.5、1.5、1、1、1、1 で、合わせて7です。長方形12から7をひいた5が、まん中の平行四辺形の面積です。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+次の行列をかけると、1マスの正方形は平行四辺形になります。平行四辺形の面積を、方眼で数えて求め、行列式とくらべましょう。
+\[ \begin{pmatrix}3&1\\2&2\end{pmatrix} \]
+\bkjans{長方形 $4\times4=16$ から、三角形 $\frac{1}{2}\times3\times2\times2=6$、三角形 $\frac{1}{2}\times1\times2\times2=2$、長方形 $1\times2\times2=4$ をひいて $16-6-2-4=4$。行列式 $3\times2-1\times2=4$ と同じ。}
+\end{jibun}
+
+\begin{reidai}[行列式を計算して、意味を読む]
+次の行列の行列式を求めましょう。また、行列をかけると、面積は何倍になりますか。裏返しになりますか。\par
+\[ \text{（1）}\ \begin{pmatrix}4&1\\2&3\end{pmatrix}\qquad\qquad \text{（2）}\ \begin{pmatrix}1&3\\2&1\end{pmatrix} \]
+\kangaekata たすきにかけてひく。面積の倍率は行列式の大きさ、マイナスなら裏返し（③）。\par
+\shiki（1）$4\times3-1\times2=12-2=10$\kviieq
+（2）$1\times1-3\times2=1-6=-5$\par
+\kotae（1）\nobreak 行列式10。面積は10倍、裏返しにはならない。（2）\nobreak 行列式 $-5$。面積は5倍、裏返しになる。
+\end{reidai}
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=5.2mm, y=5.2mm]
+  \begin{scope}
+    \kviiegrid{0}{5.5}{0}{5.5}
+    \filldraw[fill=bkTheme!22, draw=\bkTT, line width=0.9pt] (0,0) -- (4,2) -- (5,5) -- (1,3) -- cycle;
+    \kviiecols{4}{1}{2}{3}
+    \draw[bkPurple, line width=0.9pt, -{Stealth[length=2mm]}] (26.6:1.1) arc (26.6:71.6:1.1);
+    \node[font=\sffamily\footnotesize, anchor=north] at (2.75,-0.7) {（1）左回り：10};
+  \end{scope}
+  \begin{scope}[shift={(7.5,0)}]
+    \kviiegrid{0}{4.5}{0}{3.5}
+    \filldraw[fill=bkRed!15, draw=bkRed!80!black, line width=0.9pt] (0,0) -- (1,2) -- (4,3) -- (3,1) -- cycle;
+    \kviiecols{1}{3}{2}{1}
+    \draw[bkPurple, line width=0.9pt, -{Stealth[length=2mm]}] (63.4:1.1) arc (63.4:18.4:1.1);
+    \node[font=\sffamily\footnotesize, anchor=north] at (2.25,-0.7) {（2）右回り：$-5$};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\raggedright
+例題2の行列の列を、方眼にかきました。赤（1列め）から緑（2列め）へ回る向きを見ると、（1）は左回り、（2）は右回りです。（2）の面積は $-5$ 倍ではなく5倍で、形が裏返しになります。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+次の行列の行列式を求めましょう。また、行列をかけると、面積は何倍になりますか。裏返しになりますか。\par
+\[ \text{（1）}\ \begin{pmatrix}2&-1\\3&1\end{pmatrix}\qquad\qquad \text{（2）}\ \begin{pmatrix}0&2\\1&3\end{pmatrix} \]
+\bkjans{（1）\nobreak $2\times1-(-1)\times3=5$。面積は5倍、裏返しにならない。（2）\nobreak $0\times3-2\times1=-2$。面積は2倍、裏返しになる。}
+\end{jibun}
+
+\begin{reidai}[行列式が0になる数をさがす]
+次の行列の行列式が0になるのは、$k$ がいくつのときですか。また、そのとき、この行列をかけると、平面の点はどこへ行きますか。
+\[ \begin{pmatrix}1&k\\2&4\end{pmatrix} \]
+\kangaekata 行列式を $k$ の式で書いて、0とおく。0のとき2つの列は平行で、点は1列めの矢印の直線の上へ行く（④）。\par
+\shiki 行列式：$1\times4-k\times2=4-2k$\kviieq
+$4-2k=0$ より $2k=4$、$k=2$\kviieq
+$k=2$ のとき、1列めは $(1,\ 2)$、2列めは $(2,\ 4)$ で、2列めは1列めの2倍\kviieq
+どの点も $(1,\ 2)$ の何倍かになるので、直線 $y=2x$ の上へ行く\par
+\kotae $k=2$。平面のすべての点が、直線 $y=2x$ の上へ行く（平らにつぶれる）
+\end{reidai}
+\Needspace{8\baselineskip}
+\noindent $k$ をいろいろに変えて、行列式 $4-2k$ がどうなるかを見ておきましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=1.5pt}
+$k$ & 0 & 1 & 2 & 3 & 4 \\
+行列式 $4-2k$ & 4 & 2 & 0 & $-2$ & $-4$ \\
+面積の倍率 & 4 & 2 & 0 & 2 & 4 \\
+\end{bktable}
+\bktabcaption{$k$ が2より小さいと向きはそのまま、2で平らにつぶれ、2より大きいと裏返しになる。}
+\end{bkcenter}
+2列め $(k,\ 4)$ の矢印は、$k$ がふえると右へたおれていきます。$k=2$ でちょうど1列め $(1,\ 2)$ と重なり、それをこえると1列めの右側へまわりこみます。だから、行列式は0を通ってマイナスに変わるのです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=8.5mm, y=8.5mm]
+  \kviiegrid{-0.5}{4.6}{-0.5}{4.6}
+  \draw[bkRed!50, line width=0.5pt, dashed] (0,0) -- (2.3,4.6);
+  \foreach \kviiek in {0,1,3,4} {\draw[bkGreen!60!black, line width=1.1pt, -{Stealth[length=2.2mm]}] (0,0) -- (\kviiek,4);}
+  \draw[bkPurple, line width=1.5pt, -{Stealth[length=2.4mm]}] (0,0) -- (2,4);
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=2.4mm]}] (0,0) -- (1,2);
+  \foreach \kviiek in {0,1,2,3,4} {\node[font=\footnotesize, anchor=south west, inner sep=1.5pt, fill=white] at (\kviiek,4.05) {\kviiek};}
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (5.3,4.1) {矢印の先の数は $k$};
+\end{tikzpicture}
+\bkfigcaption{2列め $(k,\ 4)$ の矢印（緑）と、1列め $(1,\ 2)$ の矢印（赤）。$k=2$ のとき（むらさき）、2列めは1列めと同じ直線（点線）の上にのる。}
+\end{bkfigure}
+
+\begin{jibun}
+次の行列の行列式が0になるのは、$k$ がいくつのときですか。また、そのとき、この行列をかけると、平面の点はどこへ行きますか。
+\[ \begin{pmatrix}k&3\\2&6\end{pmatrix} \]
+\bkjans{$6k-6=0$ より $k=1$。1列め $(1,\ 2)$、2列め $(3,\ 6)$ で平行。平面のすべての点が直線 $y=2x$ の上へ行く。}
+\end{jibun}
+
+\begin{reidai}[積の行列式と、数倍の行列式]
+次の行列 $A$、$B$ について答えましょう。
+\[ A=\begin{pmatrix}2&1\\1&2\end{pmatrix},\qquad B=\begin{pmatrix}1&1\\0&1\end{pmatrix} \]
+（1）$AB$ を計算して $\det(AB)$ を求め、$\det A\times\det B$ とくらべましょう。\par
+（2）$\det(2A)$ を求めましょう。\par
+\kangaekata（1）積の成分は、行と列の内積（7-3）。（2）2×2 の行列を2倍すると、行列式は $2^2=4$ 倍（⑤）。\par
+\shiki（1）1行1列め $2\times1+1\times0=2$、1行2列め $2\times1+1\times1=3$\kviieq
+2行1列め $1\times1+2\times0=1$、2行2列め $1\times1+2\times1=3$\kviieq
+$AB=\begin{pmatrix}2&3\\1&3\end{pmatrix}$\kviieq
+$\det(AB)=2\times3-3\times1=3$\kviieq
+$\det A\times\det B=(4-1)\times(1-0)=3\times1=3$\kviieq
+（2）$\det(2A)=2^2\times\det A=4\times3=12$\kviieq
+確かめ：$2A$ は1行め $(4,\ 2)$、2行め $(2,\ 4)$ なので $16-4=12$\par
+\kotae（1）\nobreak $\det(AB)=3$ で、$\det A\times\det B=3$ と同じ。（2）\nobreak 12
+\end{reidai}
+\noindent ずらしの行列 $B$ は、面積を変えません（行列式1）。だから、$B$ をかけてから $A$ をかけても、面積は3倍のままです。
+
+\begin{jibun}
+次の行列 $A$、$S$、$B$ について答えましょう。
+\[ A=\begin{pmatrix}2&1\\1&2\end{pmatrix},\qquad S=\begin{pmatrix}2&0\\0&1\end{pmatrix},\qquad B=\begin{pmatrix}1&1\\0&1\end{pmatrix} \]
+（1）$SA$ を計算して $\det(SA)$ を求め、$\det S\times\det A$ とくらべましょう。\par
+（2）$\det(3B)$ を求めましょう。
+\bkjans{（1）\nobreak $SA$ は1行め $(4,\ 2)$、2行め $(1,\ 2)$。$\det(SA)=8-2=6$。$\det S\times\det A=2\times3=6$ と同じ。（2）\nobreak $3^2\times1=9$（$3B$ は1行め $(3,\ 3)$、2行め $(0,\ 3)$で、$9-0=9$）。}
+\end{jibun}
+
+\begin{reidai}[3×3 の行列式]
+サラスの方法で、行列式を求めましょう。
+\[ \begin{pmatrix}2&1&1\\1&3&2\\1&0&2\end{pmatrix} \]
+\kangaekata 右下へのななめ3本をたし、左下へのななめ3本をひく（図\ref{bk:7-4:fig-sarrus}）。1行めは $a_1=2$、$b_1=1$、$c_1=1$、2行めは $a_2=1$、$b_2=3$、$c_2=2$、3行めは $a_3=1$、$b_3=0$、$c_3=2$。\par
+\shiki たす1つめ：$a_1b_2c_3=2\times3\times2=12$\kviieq
+たす2つめ・3つめ：$b_1c_2a_3=1\times2\times1=2$、$c_1a_2b_3=1\times1\times0=0$\kviieq
+ひく1つめ：$c_1b_2a_3=1\times3\times1=3$\kviieq
+ひく2つめ・3つめ：$a_1c_2b_3=2\times2\times0=0$、$b_1a_2c_3=1\times1\times2=2$\kviieq
+$\det=(12+2+0)-(3+0+2)=14-5=9$\par
+\kotae 9
+\end{reidai}
+
+\begin{jibun}
+サラスの方法で、行列式を求めましょう。
+\[ \begin{pmatrix}1&2&1\\0&1&2\\3&0&1\end{pmatrix} \]
+\bkjans{たす3つ：$1\times1\times1=1$、$2\times2\times3=12$、$1\times0\times0=0$。ひく3つ：$1\times1\times3=3$、$1\times2\times0=0$、$2\times0\times1=0$。$13-3=10$。}
+\end{jibun}
+
+\begin{reidai}[3×3 の行列式が0になる数をさがす]
+次の行列の行列式が0になるのは、$k$ がいくつのときですか。そのとき、3列めは1列めと2列めでどう表せますか。
+\[ \begin{pmatrix}1&2&k\\0&1&1\\1&0&1\end{pmatrix} \]
+\kangaekata サラスの方法で、行列式を $k$ の式で書いて0とおく。0なら、3本の列は1つの平面の上にある（⑥）。\par
+\shiki たす3つ：$1\times1\times1+2\times1\times1+k\times0\times0=1+2+0=3$\kviieq
+ひく3つ：$k\times1\times1+1\times1\times0+2\times0\times1=k+0+0=k$\kviieq
+行列式：$3-k=0$ より $k=3$\kviieq
+3列めは $(3,\ 1,\ 1)$。1列め $(1,\ 0,\ 1)$ と2列め $(2,\ 1,\ 0)$ をたすと $(3,\ 1,\ 1)$\par
+\kotae $k=3$。3列め＝1列め＋2列め（3本の列が1つの平面にのる）
+\end{reidai}
+
+\begin{jibun}
+次の行列の行列式が0になるのは、$k$ がいくつのときですか。そのとき、3列めは1列めと2列めでどう表せますか。
+\[ \begin{pmatrix}1&0&2\\k&1&1\\1&1&1\end{pmatrix} \]
+\bkjans{たす3つ $1+0+2k$、ひく3つ $2+1+0=3$。行列式 $2k-2=0$ より $k=1$。3列め $(2,\ 1,\ 1)$＝1列め $(1,\ 1,\ 1)$ の2倍－2列め $(0,\ 1,\ 1)$。}
+\end{jibun}
+
+\begin{reidai}[ロボットの腕の行列式]
+2つの関節をもつロボットの腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）で、\par
+（1）ひじの角 $\theta_2=10°$ のときの $\det J$ を求めましょう（$\sin10°=0.174$）。\par
+（2）$\det J=0$ になるのは、$\theta_2$ が何度のときですか（$0°\leqq\theta_2\leqq180°$）。\par
+\kangaekata $\det J=L_1L_2\sin\theta_2$（⑦（イ））。肩の角 $\theta_1$ には関係しない。\par
+\shiki（1）$\det J=0.30\times0.25\times0.174=0.075\times0.174=0.013$\kviieq
+（2）$\sin\theta_2=0$ になるのは $\theta_2=0°$ と $180°$\par
+\kotae（1）\nobreak 約0.013。（2）\nobreak $0°$（腕がまっすぐのびきる）と $180°$（腕が折りたたまれる）
+\end{reidai}
+\noindent （1）の0.013は、$\theta_2=45°$ のときの0.053の約4分の1です。腕がのびきる手前で、行列式は0に近づいています。
+
+\begin{jibun}
+肩からひじ $L_1=\qty{0.40}{m}$、ひじから手先 $L_2=\qty{0.30}{m}$ のロボットの腕で、\par
+（1）$\theta_2=30°$ のときの $\det J$ を求めましょう。\par
+（2）$\det J$ がいちばん大きくなるのは、$\theta_2$ が何度のときですか。そのときの $\det J$ も求めましょう。
+\bkjans{（1）\nobreak $0.40\times0.30\times\sin30°=0.12\times0.5=0.06$。（2）\nobreak $\sin\theta_2=1$ の $\theta_2=90°$ で、$0.40\times0.30=0.12$。}
+\end{jibun}
+
+\begin{reidai}[ひもの角と行列式]
+（1）4-11の看板（左のひもは水平から30°、右は60°）のつり合いの行列の行列式を求めましょう。
+\[ \begin{pmatrix}-\cos30°&\cos60°\\ \sin30°&\sin60°\end{pmatrix} \]
+（2）重さ \qty{40}{N} の電灯を、左右とも水平から10°のひもでつるします。つり合いの行列の行列式と、ひもの力 $T$〔N〕を求めましょう（$\sin10°=0.174$、$\sin20°=0.342$）。
+\[ \begin{pmatrix}-\cos10°&\cos10°\\ \sin10°&\sin10°\end{pmatrix} \]
+\kangaekata 行列式は $-\sin(\theta_1+\theta_2)$（⑦（ア））。（2）のひもの力は、たての力のつり合い $2T\sin10°=40$ から。\par
+\shiki（1）$-\cos30°\sin60°-\cos60°\sin30°=-\sin(30°+60°)$\kviieq
+$-\sin(30°+60°)=-\sin90°=-1$\kviieq
+（2）$-\cos10°\sin10°-\cos10°\sin10°=-\sin(10°+10°)$\kviieq
+$-\sin(10°+10°)=-\sin20°=-0.342$\kviieq
+$2T\times0.174=40$ より $T=\dfrac{40}{0.348}=115$\par
+\kotae（1）\nobreak $-1$。（2）\nobreak 行列式 $-0.342$、ひもの力は約 \qty{115}{N}
+\end{reidai}
+\noindent （2）の行列式の大きさ0.342は、（1）の1よりずっと小さく、0に近づいています。ひもの力も、電灯の重さ \qty{40}{N} の約3倍になりました。
+
+\begin{jibun}
+（1）左右とも水平から45°のひもで看板をつるすときの、つり合いの行列の行列式を求めましょう。
+\[ \begin{pmatrix}-\cos45°&\cos45°\\ \sin45°&\sin45°\end{pmatrix} \]
+（2）重さ \qty{40}{N} の電灯を、左右とも水平から20°のひもでつるします。つり合いの行列の行列式と、ひもの力 $T$〔N〕を求めましょう（$\sin20°=0.342$、$\sin40°=0.643$）。
+\[ \begin{pmatrix}-\cos20°&\cos20°\\ \sin20°&\sin20°\end{pmatrix} \]
+\bkjans{（1）\nobreak $-\sin90°=-1$。（2）\nobreak $-\sin40°=-0.643$。$2T\times0.342=40$ より $T\approx\qty{58.5}{N}$。}
+\end{jibun}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiet/\kviiex/\kviieT in {45/0/28.3, 20/44/58.5, 10/88/115} {
+    \begin{scope}[shift={(\kviiex,0)}]
+      \fill[bkGray!40] (0,20) rectangle (36,22.5);
+      \coordinate (L) at ({18-16},20);
+      \coordinate (R) at ({18+16},20);
+      \coordinate (P) at (18,{20-16*tan(\kviiet)});
+      \draw[bkInk!70, line width=0.8pt] (L) -- (P) -- (R);
+      \filldraw[fill=bkYellow!60, draw=bkYellow!50!black, line width=0.5pt] ($(P)+(-3.5,0)$) -- ($(P)+(3.5,0)$) -- ($(P)+(5,-5)$) -- ($(P)+(-5,-5)$) -- cycle;
+      \fill[bkInk] (P) circle (0.7);
+      \node[font=\sffamily\footnotesize, anchor=north, align=center] at (18,-2) {ひもの角 \kviiet°\\$T=\qty{\kviieT}{N}$};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{重さ \qty{40}{N} の電灯をつるすひもの力。行列式の大きさは、左から1、0.643、0.342。ひもが水平に近いほど、行列式は0に近づき、ひもの力は大きくなる。}
+\end{bkfigure}
+
+\begin{reidai}[電気の箱の行列式は1]
+（1）\qty{4}{\ohm} の抵抗を直列に入れた箱（入口側）のあとに、\qty{2}{\ohm} の抵抗を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列を求め、行列式が1になることを確かめましょう。\par
+（2）コイル（$j\omega L=j10$〔Ω〕）を直列に入れた箱（入口側）のあとに、コンデンサー（$j\omega C=j0.05$〔S〕）を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列の行列式を求めましょう。\par
+\kangaekata 直列の箱は1行め $(1,\ R)$、2行め $(0,\ 1)$。並列の箱は1行め $(1,\ 0)$、2行め $(1/R,\ 1)$。入口側の箱を左に書いてかける（7-3）。$j^2=-1$。\par
+\shiki（1）$\begin{pmatrix}1&4\\0&1\end{pmatrix}\begin{pmatrix}1&0\\0.5&1\end{pmatrix}=\begin{pmatrix}3&4\\0.5&1\end{pmatrix}$（1行1列めは $1\times1+4\times0.5=3$）\kviieq
+行列式：$3\times1-4\times0.5=3-2=1$\kviieq
+（2）$\begin{pmatrix}1&j10\\0&1\end{pmatrix}\begin{pmatrix}1&0\\j0.05&1\end{pmatrix}=\begin{pmatrix}0.5&j10\\j0.05&1\end{pmatrix}$\kviieq
+（1行1列め：$1\times1+j10\times j0.05=1+0.5\,j^2=1-0.5=0.5$）\kviieq
+行列式：$0.5\times1-j10\times j0.05=0.5-0.5\,j^2=0.5+0.5=1$\par
+\kotae（1）\nobreak $\begin{pmatrix}3&4\\0.5&1\end{pmatrix}$、行列式1。（2）\nobreak 1
+\end{reidai}
+
+\begin{jibun}
+（1）\qty{1}{\ohm} の抵抗を直列に入れた箱（入口側）のあとに、\qty{4}{\ohm} の抵抗を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列を求め、行列式が1になることを確かめましょう。\par
+（2）コイル（$j4$〔Ω〕）を直列に入れた箱（入口側）のあとに、コンデンサー（$j0.125$〔S〕）を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列の行列式を求めましょう。
+\bkjans{（1）\nobreak 1行め $(1.25,\ 1)$、2行め $(0.25,\ 1)$。行列式 $1.25-0.25=1$。（2）\nobreak 行列は1行め $(0.5,\ j4)$、2行め $(j0.125,\ 1)$。行列式 $0.5-j^2\times0.5=1$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{かける組み合わせ}
+\bkng{$\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ac-bd$（たてにかけた）}
+\bkok{$\det\begin{pmatrix}a&b\\c&d\end{pmatrix}=ad-bc$（ななめにかけた）}
+「左上×右下」と「右上×左下」のように、ななめにかけます。$ac$ は1列めの2つをかけたもので、面積の意味がありません。主役の行列で $ac-bd=2-2=0$ になってしまい、面積3と合いません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{2倍した行列の行列式}
+\bkng{$\det A=3$ なので、$\det(2A)=2\times3=6$}
+\bkok{2×2 では、$\det(2A)=2^2\times3=12$}
+$2A$ は、たても横も2倍にします。正方形の1辺が2倍なら、面積は $2\times2=4$ 倍です。3×3 なら、体積は $2^3=8$ 倍になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{たした行列の行列式}
+\bkng{$\det(A+B)=\det A+\det B$}
+\bkok{$\det(AB)=\det A\times\det B$。たし算にはきまりがない}
+主役の行列 $A$ と、横に2倍する $S$ では、$\det(A+S)=11$ ですが、$\det A+\det S=5$ です。行列式は「つなぐ」とかけ算になりますが、「たす」ときには使えるきまりがありません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{サラスの方法を4×4 に使う}
+\bkng{4×4 の行列でも、ななめにかけてたしひきする}
+\bkok{サラスの方法は3×3 だけ。4×4 はコンピュータか、余因子展開で}
+4×4 の行列式には24個の項がありますが、ななめの線は8本しかありません。項が足りないので、ちがう答えになります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$|A|$ を絶対値と思う}
+\bkng{専門書に $|A|$ と書いてあるから、行列式はいつもプラス}
+\bkok{$|A|$ は行列式の記号。マイナスにもなる}
+専門書の $|A|$ は、行列式 $\det A$ の別の書き方です。例題2（2）の行列なら、$|A|$ は $-5$ です。面積の倍率は、行列式の大きさ（絶対値）の5です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{コンピュータの答えを読む}
+\bkng{\texttt{np.linalg.det} が 2.9999999999999996 と出たから、行列式は3ではない}
+\bkok{2進法で計算したときのずれ。行列式は3}
+コンピュータの小数には、ごくわずかなずれが出ます（2-19）。$10^{-15}$ ほどのずれは、丸めて読みます。成分が整数の行列なら、行列式も整数です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{行列式が0なら、答えはない？}
+\bkng{行列式が0だから、連立方程式の答えはない}
+\bkok{行列式が0なら、答えがないか、無数にあるかのどちらか}
+$x+2y=3$、$2x+4y=6$ は、行列式は0ですが、$(3,\ 0)$、$(1,\ 1)$ など、答えは無数にあります。右辺がつぶれた直線の上にあるかどうかで決まります（④）。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{産業用ロボットの特異姿勢}\par\noindent\begin{minipage}[c]{0.70\linewidth}
+工場で車のボディを組み立てる6つの関節のロボットでは、腕がのびきったときや、手首の2つの回転軸が一直線にならんだときなどに、ヤコビ行列（6×6）の行列式が0になります。この姿勢の近くでは、手先を少し動かすだけで、関節を急に速く回す必要が出てきます。ロボットを動かすプログラムは、行列式を計算して、特異姿勢を通らない道すじを選んだり、速さを落としたりしています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-6,-3) rectangle (6,0);
+  \filldraw[fill=bkGray!25, draw=bkInk!70, line width=0.6pt] (-4,0) rectangle (4,5);
+  \draw[bkGray!80!black, line width=3pt, line cap=round] (0,5) -- (5,19) -- (20,23);
+  \fill[bkInk] (0,5) circle (1.3) (5,19) circle (1.2);
+  \draw[bkInk, line width=1pt] (20,23) -- (23,25) (20,23) -- (23,21);
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{トラスの形がくずれない条件}\par\noindent\begin{minipage}[c]{0.70\linewidth}
+棒をピンでつないだ四角形のわくは、横から押すと、平行四辺形にくずれてしまいます。ななめの棒を1本入れて三角形にすると、くずれなくなります。棒の力のつり合いの式を行列で書くと（7-5・物理 力-5）、くずれる組み方では、その行列の行列式が0になります。力が1つに決まらず、形も1つに決まらないのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkInk!80, line width=1.2pt] (0,0) -- (12,0) -- (15,10) -- (3,10) -- cycle;
+  \draw[bkInk!80, line width=0.5pt, dashed] (0,0) -- (0,10) -- (12,10) -- (12,0);
+  \foreach \p in {(0,0),(12,0),(15,10),(3,10)} \fill[bkInk] \p circle (0.8);
+  \node[font=\sffamily\footnotesize, anchor=north] at (6,-1) {くずれる};
+  \begin{scope}[shift={(20,0)}]
+    \draw[bkInk!80, line width=1.2pt] (0,0) -- (12,0) -- (12,10) -- (0,10) -- cycle;
+    \draw[bkRed, line width=1.2pt] (0,0) -- (12,10);
+    \foreach \p in {(0,0),(12,0),(12,10),(0,10)} \fill[bkInk] \p circle (0.8);
+    \node[font=\sffamily\footnotesize, anchor=north] at (6,-1) {くずれない};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{ゲームの画面：表か裏かを行列式で決める}\par\noindent\begin{minipage}[c]{0.70\linewidth}
+3次元のゲームでは、物の表面を小さな三角形に分けて画面にかきます。三角形の頂点は、表から見たとき左回りになる順番に決めておきます。画面にうつしたあと、2本の辺の矢印で2×2 の行列式を計算し、マイナス（右回り、つまり裏返し）なら、その三角形は物の裏側を向いているので、かかずにとばします。見えない面をかかないことで、計算の手間をへらしているのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkTheme!25, draw=\bkTT, line width=0.8pt] (0,0) -- (14,2) -- (5,13) -- cycle;
+  \draw[bkPurple, line width=0.8pt, -{Stealth[length=2mm]}] (8.2,4.2) arc (-10:250:2.4);
+  \node[font=\sffamily\footnotesize, anchor=north] at (7,-1) {左回り：かく};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{回路の電流は1つに決まる}\par\noindent 3-6の2つの電源の回路の式
+\[ \begin{pmatrix}4&2\\2&4\end{pmatrix}\begin{pmatrix}I_1\\I_2\end{pmatrix}=\begin{pmatrix}9\\6\end{pmatrix} \]
+の行列の行列式は $16-4=12$ で、0ではありません。だから、電流はただ1組（\qty{2}{A} と \qty{0.5}{A}）に決まります。抵抗と電源だけの回路では、正しく式を立てれば、行列式が0にならないことが知られています。もし0になったら、同じ式を2回立てたなど、式の立て方をまちがえたしるしです（7-5）。
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{ヤコビ行列の「ヤコビ」}
+ロボットの腕の行列 $J$ の名前は、ドイツの数学者ヤコビ（1804〜1851年）からきています。ヤコビは、行列式の性質をくわしく調べた論文を書き、とくに「いくつもの量がいっしょに変わるとき、その変わり方を並べた表の行列式」を研究しました。その表がヤコビ行列、その行列式はヤコビアンとよばれます。この章で見たように、ヤコビ行列の行列式は「小さな面積が何倍になるか」を表します。だから、ロボットの特異姿勢だけでなく、第8巻で学ぶ、曲がった座標（極座標など）での積分の計算にも、ヤコビアンが出てきます（8-3）。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 次の行列式を求めましょう。\par
+\[ \text{（1）}\ \det\begin{pmatrix}5&2\\3&4\end{pmatrix}\qquad \text{（2）}\ \det\begin{pmatrix}2&5\\3&1\end{pmatrix}\qquad \text{（3）}\ \det\begin{pmatrix}-1&2\\3&-4\end{pmatrix} \]
+\bkpans{（1）\nobreak $20-6=14$。（2）\nobreak $2-15=-13$。（3）\nobreak $4-6=-2$。}
+
+\bkproblem 次の行列をかけると、1マスの正方形は平行四辺形になります。平行四辺形の面積を方眼で数えて求め、行列式とくらべましょう。
+\[ \begin{pmatrix}2&1\\1&4\end{pmatrix} \]
+\bkpans{長方形 $3\times5=15$ から、三角形 $\frac{1}{2}\times2\times1\times2=2$、三角形 $\frac{1}{2}\times1\times4\times2=4$、長方形 $1\times1\times2=2$ をひいて7。行列式 $8-1=7$ と同じ。}
+
+\bkproblem 次の行列で、面積は何倍になりますか。裏返しになりますか。\par
+\[ \text{（1）}\ \begin{pmatrix}3&2\\1&2\end{pmatrix}\qquad\qquad \text{（2）}\ \begin{pmatrix}1&4\\2&3\end{pmatrix} \]
+\bkpans{（1）\nobreak 行列式 $6-2=4$。4倍、裏返しにならない。（2）\nobreak 行列式 $3-8=-5$。5倍、裏返しになる。}
+
+\bkproblem 次の行列の行列式が0になるのは、$k$ がいくつのときですか。また、そのとき平面の点はどんな直線の上へ行きますか。
+\[ \begin{pmatrix}3&k\\6&4\end{pmatrix} \]
+\bkpans{$12-6k=0$ より $k=2$。1列め $(3,\ 6)$、2列め $(2,\ 4)$ で平行。直線 $y=2x$ の上へ行く。}
+
+\bkproblem 次の行列 $A$、$B$ について答えましょう。
+\[ A=\begin{pmatrix}1&2\\3&4\end{pmatrix},\qquad B=\begin{pmatrix}2&1\\1&1\end{pmatrix} \]
+（1）$AB$ を計算して $\det(AB)$ を求め、$\det A\times\det B$ とくらべましょう。（2）$\det(3A)$ を求めましょう。
+\bkpans{（1）\nobreak $AB$ は1行め $(4,\ 3)$、2行め $(10,\ 7)$。$28-30=-2$。$\det A\times\det B=(-2)\times1=-2$ と同じ。（2）\nobreak $9\times(-2)=-18$。}
+
+\bkproblem サラスの方法で、行列式を求めましょう。
+\[ \begin{pmatrix}1&2&3\\0&1&4\\2&0&1\end{pmatrix} \]
+\bkpans{たす3つ：$1+16+0=17$。ひく3つ：$6+0+0=6$。$17-6=11$。}
+
+\bkproblem \qty{6}{\ohm} の抵抗を直列に入れた箱（入口側）のあとに、\qty{2}{\ohm} の抵抗を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列を求め、行列式が1になることを確かめましょう。
+\bkpans{つないだ箱の行列は1行め $(4,\ 6)$、2行め $(0.5,\ 1)$（1行1列めは $1+6\times0.5=4$）。行列式 $4-3=1$。}
+
+\bkproblem コイル（$j2$〔Ω〕）を直列に入れた箱（入口側）のあとに、コンデンサー（$j0.25$〔S〕）を並列に入れた箱（出口側）をつなぎます。つないだ箱の行列の行列式を求めましょう。
+\bkpans{行列は1行め $(0.5,\ j2)$、2行め $(j0.25,\ 1)$（1行1列めは $1+j2\times j0.25=0.5$）。行列式 $0.5-j2\times j0.25=0.5+0.5=1$。}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem 重さ \qty{40}{N} の電灯を、左右とも水平から15°のひもでつるします。つり合いの行列の行列式と、ひもの力 $T$〔N〕を求め、30°でつるすとき（行列式 $-0.866$、$T=\qty{40}{N}$）とくらべましょう（$\sin15°=0.259$、$\sin30°=0.5$）。
+\[ \begin{pmatrix}-\cos15°&\cos15°\\ \sin15°&\sin15°\end{pmatrix} \]
+\bkpans{行列式 $-\sin30°=-0.5$。$2T\times0.259=40$ より $T\approx\qty{77}{N}$。行列式の大きさが0.866から0.5へ小さくなり、力は約2倍になった。}
+
+\bkproblem ロボットの腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）で、$\theta_2=30°$、$90°$、$0°$ のときの $\det J$ を求めましょう。特異姿勢はどれですか。
+\bkpans{$\theta_2=30°$：$0.075\times0.5=0.0375$。$90°$：0.075。$0°$：0。特異姿勢は $\theta_2=0°$（のびきった腕）。}
+
+\bkproblem 物理の次元解析（物理 力-15）では、次の行列が出てきます。サラスの方法で行列式を求めましょう。
+\[ \begin{pmatrix}1&0&0\\-3&1&1\\0&-1&0\end{pmatrix} \]
+\bkpans{たす3つ：$1\times1\times0+0\times1\times0+0\times(-3)\times(-1)=0$。ひく3つ：$0\times1\times0+1\times1\times(-1)+0\times(-3)\times0=-1$。$0-(-1)=1$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 方眼で面積を数え、$ad-bc$ で行列式を計算できる。\bkfurref{bk:7-4:adbc}
+\item 行列式のマイナス（裏返し）と0（平らにつぶれる）の意味がわかる。\bkfurref{bk:7-4:zero}
+\item 3×3 の行列式をサラスの方法で計算し、工学の行列式を読める。\bkfurref{bk:7-4:sanjigen}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{行列式が0だと、つぶれて元にもどせない。次の7-5では、0でない行列を「元にもどす行列」を作って、連立方程式を一気に解くよ。}

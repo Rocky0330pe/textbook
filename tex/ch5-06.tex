@@ -1,0 +1,731 @@
+%% 5-6 微分の道具箱：積と合成関数（第11回：ページ制限なし。説明・図・例題を書き足した）
+% 第7回：歯車  \bkgear{(中心)}{歯数 z}{モジュール m（mm）}{1つの歯の向き（度）}{ぬり}{線}
+%   ピッチ円の半径 mz/2、歯先 +m、歯元 -1.25m。歯は台形で、外形を1本の線でかく。
+%   かみ合う2つは、中心どうしを (m×(z1+z2)/2) はなし、中心線の上で「片方は歯、もう片方は歯みぞ」にする
+\newcommand\bkgear[6]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bkgR{#3*#2/2}\pgfmathsetmacro\bkgA{\bkgR+#3}%
+  \pgfmathsetmacro\bkgF{\bkgR-1.25*#3}\pgfmathsetmacro\bkgP{360/#2}%
+  \pgfmathsetmacro\bkgT{27*#3/\bkgA}\pgfmathsetmacro\bkgB{54*#3/\bkgF}%
+  \filldraw[fill=#5, draw=#6, line width=0.5pt, line join=round]
+    (#4-\bkgB:\bkgF)
+    \foreach \k [evaluate=\k as \c using #4+\k*\bkgP] in {0,...,\numexpr#2-1\relax}{
+      -- (\c-\bkgB:\bkgF) -- (\c-\bkgT:\bkgA) -- (\c+\bkgT:\bkgA) -- (\c+\bkgB:\bkgF)
+      arc[start angle=\c+\bkgB, end angle=\c+\bkgP-\bkgB, radius=\bkgF]} -- cycle;
+  \filldraw[fill=white, draw=#6, line width=0.5pt] (0,0) circle ({max(0.9,0.22*\bkgR)});
+  \fill[#6] (0,0) circle (0.55);
+\end{scope}}
+\bkchapter{5}{6}{微分の道具箱：\\積と合成関数}{\bklevel{4}}{微分の道具箱：積と合成関数}
+\bkmichishirube{2-5,3-3,5-4}{5-7,5-14,5-15,5-16}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 積の微分を、長方形の面積で説明し、計算できる。
+\item \bklevel{4}\enspace 式の中から「関数の中の関数」（合成関数）を見つけられる。
+\item \bklevel{4}\enspace 合成関数の微分を使って、$(2x+1)^5$ や $\sqrt{x^2+9}$ を微分できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.49\linewidth}
+3つの歯車A・B・Cが、かみ合って回っています。Aが1回転すると、Bは3回転します。Bが1回転すると、Cは2回転します。
+
+Aを1秒に1回転させると、Cは1秒に何回転するでしょう。
+
+回る速さの比が、つながっていくと……？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 第7回：歯数 A 48・B 16・C 8（A→B 3倍、B→C 2倍）。モジュール 0.6 mm、中心距離 19.2 mm・7.2 mm
+  \bkgear{(0,0)}{48}{0.6}{0}{bkBlue!22}{bkBlue!75!black}
+  \bkgear{(19.2,0)}{16}{0.6}{191.25}{bkOrange!28}{bkOrange!75!black}
+  \bkgear{(26.4,0)}{8}{0.6}{180}{bkGreen!25}{bkGreen!75!black}
+  % 回る向き（かみ合うとなりどうしは逆向き）
+  \draw[-{Stealth[length=4pt]}, bkInk!75, line width=0.9pt] (130:10) arc[start angle=130, end angle=50, radius=10];
+  \draw[-{Stealth[length=3.5pt]}, bkInk!75, line width=0.8pt] ([shift={(19.2,0)}]50:7.4) arc[start angle=50, end angle=130, radius=7.4];
+  \draw[-{Stealth[length=3.5pt]}, bkInk!75, line width=0.8pt] ([shift={(26.4,0)}]70:4.4) arc[start angle=70, end angle=-70, radius=4.4];
+  % 文字は歯先の円から 1.5 mm 以上はなす
+  \node[font=\sffamily\small, anchor=north] at (0,-16.2) {\textbf{A}\enspace{\scriptsize 歯48まい}};
+  \node[font=\sffamily\bfseries\small, anchor=north] at (19.2,-6.8) {B};
+  \node[font=\sffamily\scriptsize, anchor=north] at (19.2,-11.2) {歯16まい};
+  \node[font=\sffamily\bfseries\small, anchor=south west] at (32.3,0.2) {C};
+  \node[font=\sffamily\scriptsize, anchor=north west] at (32.3,-0.2) {歯8まい};
+  \node[font=\sffamily\scriptsize, text=bkGray, align=left, anchor=south west] at (13.2,8.6) {A：1回転 → B：3回転\\B：1回転 → C：2回転};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+Aが1回転するあいだに、Bは3回転します。そのBが3回転するあいだに、Cは1回転ごとに2回転するので、$3\times2=6$ 回転です。回る速さの比は、\textbf{かけ算でつながります}。この章の後半で学ぶ「合成関数の微分」は、これとまったく同じしくみです。前半では、かけ算の形をした式の微分（積の微分）を学びます。
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[自転車のギアで、回る速さの比を調べよう]
+\par\addvspace{3pt}\textbf{用意するもの}\par\noindent 変速ギアつきの自転車（大人といっしょに）、メジャー
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 自転車をスタンドで立て、ペダルを手でゆっくり1回転させる。後ろのタイヤは何回転するかな？
+\item 前のギアの歯の数と、後ろのギアの歯の数を数え、①の結果とくらべよう。
+\item タイヤのまわりの長さをはかり、ペダル1回転で何m進むかを計算しよう。
+\item 後ろのギアを変えて、①〜③をくり返そう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent たとえば、前のギアの歯が42枚、後ろが14枚なら、ペダルが1回転するあいだに、チェーンは歯42枚分進みます。後ろのギアは、歯14枚分で1回転なので、$42\div14=3$ 回転します。後ろのギアとタイヤは同じ軸についているので、タイヤも3回転です。タイヤが1回転で\qty{2}{m}進むなら、ペダル1回転で進む距離は、次のように求められます。
+
+\begin{center}
+（ペダル1回転でタイヤが回る回数）×（タイヤ1回転で進む距離）\\
+＝ 3 × \qty{2}{m} ＝ \qty{6}{m}
+\end{center}
+
+「ペダル→タイヤ」と「タイヤ→道」の2つの比を、かけ算でつなぎました。
+
+\begin{omoidasou}
+\bkrecall{5-4}{$(x^n)'=nx^{n-1}$。定数倍・和は1つずつ微分する。}
+\bkrecall{3-3}{関数の出力を、別の関数に入れることができる。$u=3x+1$、$y=u^2$ なら $y=(3x+1)^2$。}
+\bkrecall{2-11}{計算の順番：かっこの中を先に計算する。}
+\bkrecall{2-5}{比はかけ算でつなげる。$\mathrm{A}:\mathrm{B}=1:3$、$\mathrm{B}:\mathrm{C}=1:2$ なら $\mathrm{A}:\mathrm{C}=1:6$。}
+\bkrecall{3-11}{分数の指数：$x^{\frac{1}{2}}=\sqrt{x}$、$x^{-\frac{1}{2}}=\dfrac{1}{\sqrt{x}}$}
+\bkrecall{4-5}{球の体積 $\dfrac{4}{3}\pi r^3$、円の面積 $\pi r^2$。円すいの体積は、底面積×高さ×$\dfrac{1}{3}$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{お店の売り上げで考える}
+
+\leavevmode\label{bk:5-6:mise}かけ算の形をした量が、どうふえるかを考えます。まずは、身近な例からです。
+
+パン屋さんで、1個100円のパンが、1日に50個売れています。売り上げは、$100\times50=5000$ 円です。次の日、値段を2円上げて102円にしたら、51個売れました。売り上げは $102\times51=5202$ 円で、202円ふえました。この202円は、どこからきたのでしょう。
+
+\noindent\begin{minipage}[c]{0.59\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!15] (0,0) rectangle (52,30);
+  \fill[bkOrange!35] (52,0) rectangle (68,30);
+  \fill[bkGreen!30] (0,30) rectangle (52,40);
+  \fill[bkGray!40] (52,30) rectangle (68,40);
+  \draw[bkInk, line width=0.8pt] (0,0) rectangle (68,40);
+  \draw[bkInk, line width=0.5pt] (52,0) -- (52,40) (0,30) -- (68,30);
+  \node[font=\sffamily\small, align=center] at (26,15) {100円×50個\\＝5000円};
+  \node[font=\sffamily\scriptsize, align=center] at (60,15) {2円\\×50個\\＝100円};
+  \node[font=\sffamily\scriptsize] at (26,35) {100円×1個＝100円};
+  \node[font=\sffamily\scriptsize, align=center] at (60,35) {2円×1個\\＝2円};
+  \node[font=\sffamily\scriptsize, anchor=north] at (26,-1.5) {100円};
+  \node[font=\sffamily\scriptsize, anchor=north] at (60,-1.5) {2円};
+  \node[font=\sffamily\scriptsize, anchor=east] at (-1.5,15) {50個};
+  \node[font=\sffamily\scriptsize, anchor=east] at (-1.5,35) {1個};
+  \node[font=\sffamily\footnotesize, anchor=north] at (34,-6.5) {1個の値段（横）と、売れた個数（たて）};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+売り上げ＝値段×個数 を、長方形の面積と考えます。横が値段、たてが個数です（図は、ふえた分を大きくかいている）。
+
+横が2円、たてが1個のびると、ふえた面積は3つの部分に分かれます。
+\end{minipage}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=50mm] Q[c,m,wd=34mm] Q[c,m,wd=20mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+部分 & 計算 & ふえた額 \\
+値上げの分（右の帯） & 2円×50個 & 100円 \\
+ふえた1個の分（上の帯） & 100円×1個 & 100円 \\
+ふえた1個の値上げの分（右上） & 2円×1個 & 2円 \\
+合計 & & 202円 \\
+\end{bktable}
+\bktabcaption{ふえた202円の内わけ。右上の小さな四角だけ、ずっと小さい。}
+\end{bkcenter}
+
+右上の小さな四角は、「値段のふえた分」と「個数のふえた分」をかけたものです。ふえた分どうしをかけるので、とても小さくなります。この「ふえた分×ふえた分」が、積の微分のかぎになります。
+
+\bksubsection{2}{かけ算の微分：長方形の面積で考える}
+
+\leavevmode\label{bk:5-6:seki}$x$ によって変わる2つの量 $f(x)$ と $g(x)$ の積 $f(x)g(x)$ を微分します。お店の例と同じように、横 $f$、たて $g$ の長方形の面積 $S=fg$ だと考えましょう。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 第7回：のびた分の帯を広げ（横 16 mm・たて 8 mm）、帯の中の文字にゆとりをもたせる
+  \fill[bkBlue!15] (0,0) rectangle (36,22);
+  \fill[bkOrange!35] (36,0) rectangle (52,22);
+  \fill[bkGreen!30] (0,22) rectangle (36,30);
+  \fill[bkGray!40] (36,22) rectangle (52,30);
+  \draw[bkInk, line width=0.8pt] (0,0) rectangle (52,30);
+  \draw[bkInk, line width=0.5pt] (36,0) -- (36,30) (0,22) -- (52,22);
+  \node[font=\sffamily\small] at (18,11) {$fg$};
+  \node[font=\sffamily\scriptsize] at (44,11) {$g\,\Delta f$};
+  \node[font=\sffamily\scriptsize] at (18,26) {$f\,\Delta g$};
+  \node[font=\sffamily\scriptsize] at (44,26) {$\Delta f\Delta g$};
+  \node[font=\sffamily\small, anchor=north] at (18,-1) {$f$};
+  \node[font=\sffamily\small, anchor=north] at (44,-1) {$\Delta f$};
+  \node[font=\sffamily\small, anchor=east] at (-1,11) {$g$};
+  \node[font=\sffamily\small, anchor=east] at (-1,26) {$\Delta g$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}
+$x$ が $\Delta x$ だけ変わると、横が $\Delta f$、たてが $\Delta g$ だけのびます。ふえる面積は、お店の例と同じ3つの部分です。
+\[ \Delta S=g\,\Delta f+f\,\Delta g+\Delta f\,\Delta g \]
+\end{minipage}
+
+\vspace{4pt}
+平均変化率 $\dfrac{\Delta S}{\Delta x}$ にするために、両辺を $\Delta x$ でわります。右辺は3つの項を1つずつわります（2-12）。3つめの項は、$\Delta f$ のほうだけを $\Delta x$ でわった形に書きます（$\dfrac{\Delta f\,\Delta g}{\Delta x}=\dfrac{\Delta f}{\Delta x}\times\Delta g$）。
+\[ \frac{\Delta S}{\Delta x}=g\,\frac{\Delta f}{\Delta x}+f\,\frac{\Delta g}{\Delta x}+\frac{\Delta f}{\Delta x}\times\Delta g \]
+ここで $\Delta x$ を0に近づけます。1つめと2つめの項は、$\dfrac{\Delta f}{\Delta x}\to f'$、$\dfrac{\Delta g}{\Delta x}\to g'$ なので、$gf'$ と $fg'$ に近づきます（5-3）。では、3つめの項 $\dfrac{\Delta f}{\Delta x}\times\Delta g$ は、何に近づくでしょう。
+
+\bksubsection{3}{3つめの項は、なぜ0に近づくの？}
+
+\leavevmode\label{bk:5-6:mittsume}3つめの項を、前と後ろに分けて考えます。
+
+\noindent\textbf{前の部分\enspace$\dfrac{\Delta f}{\Delta x}$}\par
+\noindent これは $f$ の平均変化率です。$\Delta x\to0$ で、$f'$ という決まった数に近づきます。たとえば $f=x^2$、$x=1$ なら、$f'=2x=2$ に近づきます。
+
+\noindent\textbf{後ろの部分\enspace$\Delta g$}\par
+\noindent これは「$g$ の変化そのもの」で、$\Delta x$ でわっていません。$x$ の変化 $\Delta x$ が0に近づけば、$g$ の変化 $\Delta g$ も0に近づきます。$x$ がほとんど変わらなければ、$g$ もほとんど変わらないからです。
+
+だから、3つめの項は「2 × ほとんど0」で、0に近づきます。
+
+\noindent\textbf{$\dfrac{\Delta g}{\Delta x}$ とのちがい}\par
+\noindent ここで、「$\Delta g$ が0に近づくなら、$\dfrac{\Delta g}{\Delta x}$ も0に近づくのでは？」と思うかもしれません。でも、そうはなりません。$\dfrac{\Delta g}{\Delta x}$ は、分子の $\Delta g$ も、分母の $\Delta x$ も、どちらも小さくなります。小さい数を小さい数でわるので、わった値は0にならず、$g'$ に近づきます。$f=x^2$、$g=x^3$、$x=1$ で計算してみましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=20mm] Q[c,m,wd=30mm]}, rowsep=1.5pt, cells={font=\small}}
+$\Delta x$ & $\Delta g$ & $\dfrac{\Delta g}{\Delta x}$ & $\dfrac{\Delta f}{\Delta x}$ & $\dfrac{\Delta f}{\Delta x}\times\Delta g$ \\
+0.1 & 0.331 & 3.31 & 2.1 & 0.6951 \\
+0.01 & 0.030301 & 3.0301 & 2.01 & 0.06090501 \\
+0.001 & 0.003003001 & 3.003001 & 2.001 & 0.006009005 \\
+近づく先 & 0 & 3（$g'=3x^2$） & 2（$f'=2x$） & 0 \\
+\end{bktable}
+\bktabcaption{$f=x^2$、$g=x^3$、$x=1$ のとき。$\Delta g$ は0に、$\dfrac{\Delta g}{\Delta x}$ は3に近づく。}
+\end{bkcenter}
+
+$\Delta g$ の列は、$\Delta x$ を $\dfrac{1}{10}$ にするたびに、およそ $\dfrac{1}{10}$ になり、0に近づきます。$\dfrac{\Delta g}{\Delta x}$ の列は、3に近づいて、0にはなりません。いちばん右の列は「2に近い数」×「0に近い数」なので、0に近づきます。
+
+5-2の落ちるボールを思い出しましょう。1秒から1.001秒までの0.001秒のあいだに、ボールは $5\times1.001^2-5=0.010005$（m）しか落ちません。落ちた距離は0に近いのです。でも、落ちた距離÷時間は $0.010005\div0.001=10.005$ で、速さ\qty{10}{m/s}に近づきました。「変化そのもの」と「変化÷時間」は、ちがうものなのです。
+
+\noindent\textbf{図で見ると}\par
+\noindent 長方形の図で、$\Delta x$ を半分、また半分にしていきます。$\Delta x$ が半分になると、横ののび $\Delta f$ も、たてののび $\Delta g$ も、およそ半分になります。下の図は、1ますを1として、のびを4ます、2ます、1ますにしたものです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+\foreach \ox/\d/\lab in {0/4/{はじめ（のび4ます）}, 48.4/2/{$\Delta x$ を半分に（2ます）}, 92/1/{さらに半分に（1ます）}} {
+  \begin{scope}[shift={(\ox,0)}]
+    \fill[bkBlue!15] (0,0) rectangle (28.8,19.2);
+    \fill[bkOrange!40] (28.8,0) rectangle ({28.8+2.4*\d},19.2);
+    \fill[bkGreen!35] (0,19.2) rectangle (28.8,{19.2+2.4*\d});
+    \fill[bkInk!55] (28.8,19.2) rectangle ({28.8+2.4*\d},{19.2+2.4*\d});
+    \draw[bkInk!30, line width=0.2pt, step=2.4] (0,0) grid ({28.8+2.4*\d},{19.2+2.4*\d});
+    \draw[bkInk, line width=0.7pt] (0,0) rectangle ({28.8+2.4*\d},{19.2+2.4*\d});
+    \node[font=\sffamily\scriptsize, anchor=north] at ({(28.8+2.4*\d)/2},-1.5) {\lab};
+  \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{横12ます・たて8ますの長方形を、のばしていく。オレンジ・緑は帯、こい灰色は右上の小さな四角。}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=22mm] Q[c,m,wd=22mm] Q[c,m,wd=22mm]}, rowsep=1.5pt, cells={font=\small}}
+ & はじめ & 半分に & さらに半分に \\
+のび（$\Delta f$ と $\Delta g$） & 4 & 2 & 1 \\
+右の帯（$8\times$ のび） & 32 & 16 & 8 \\
+上の帯（$12\times$ のび） & 48 & 24 & 12 \\
+右上の小さな四角（のび×のび） & 16 & 4 & 1 \\
+\end{bktable}
+\bktabcaption{のびが半分になると、帯は半分に、右上の小さな四角は4分の1になる。}
+\end{bkcenter}
+
+帯の面積は、のびを半分にすると半分になります。右上の小さな四角は、たても横も半分になるので、$\dfrac{1}{2}\times\dfrac{1}{2}=\dfrac{1}{4}$ になります。のびでわってみると、右の帯は $32\div4=8$、$16\div2=8$、$8\div1=8$ でいつも8、上の帯はいつも12です。右上の四角は $16\div4=4$、$4\div2=2$、$1\div1=1$ と、半分ずつになって0に近づきます。右上の小さな四角は、まわりの帯よりずっと速く小さくなり、わり算しても消えていくのです。
+
+\noindent\textbf{積の微分の式}\par
+\noindent これで、3つの項の行き先がわかりました。
+\[ \frac{\Delta S}{\Delta x}=g\,\frac{\Delta f}{\Delta x}+f\,\frac{\Delta g}{\Delta x}+\frac{\Delta f}{\Delta x}\times\Delta g\ \longrightarrow\ gf'+fg'+0 \]
+だから、
+\[ \{f(x)g(x)\}'=f'(x)g(x)+f(x)g'(x) \]
+これを\textbf{積の微分}といいます。「片方ずつ微分して、たす」と覚えましょう。1つめは「$f$ だけが変わった分（右の帯）」、2つめは「$g$ だけが変わった分（上の帯）」です。\bkidx{せきのびぶん}{積の微分}
+
+\noindent\textbf{確かめ}\par
+\noindent $x^2\times x^3=x^5$ なので、5-4のきまりで、答えは $5x^4$ のはずです。積の微分を使うと、
+\[ (x^2)'\times x^3+x^2\times(x^3)'=2x\times x^3+x^2\times3x^2=2x^4+3x^4=5x^4 \]
+合っています。$x=1$ では $2+3=5$ です。上の表の3つの項をたすと、$\Delta x=0.001$ で $2.001+3.003001+0.006009\cdots=5.010010\cdots$ となり、5に近づいています。
+
+\bksubsection{4}{関数の中の関数：合成関数}
+
+\leavevmode\label{bk:5-6:gousei}$y=(3x+1)^2$ を、$x$ に数を入れて計算してみましょう。$x=1$ なら、かっこの中を先に計算して（2-11）、$3\times1+1=4$。それを2乗して $4^2=16$ です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{3}{Q[c,m,wd=14mm]}}, rowsep=1.5pt}
+$x$ & 0 & 1 & 2 \\
+① かっこの中 $u=3x+1$ & 1 & 4 & 7 \\
+② それを2乗 $y=u^2$ & 1 & 16 & 49 \\
+\end{bktable}
+\bktabcaption{$y=(3x+1)^2$ は、①と②の2つのはたらきを、順に行っている。}
+\end{bkcenter}
+
+このように、$y=(3x+1)^2$ は、2つのはたらきを順に行います。まず $x$ を $u=3x+1$ にし、次にその $u$ を2乗して $y=u^2$ にします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, m/.style={draw=bkTheme, line width=1pt, fill=white, rounded corners=2mm, minimum width=30mm, minimum height=11mm, align=center, font=\sffamily\small}]
+  \node[font=\sffamily\bfseries] (x) at (0,0) {$x$};
+  \node[m] (g) at (30,0) {内側の関数\\$u=3x+1$};
+  \node[m] (f) at (76,0) {外側の関数\\$y=u^2$};
+  \node[font=\sffamily\bfseries] (y) at (108,0) {$y$};
+  \draw[bk arrow, bkGray] (x) -- (g);
+  \draw[bk arrow, bkGray] (g) -- node[above, font=\sffamily\small] {$u$} (f);
+  \draw[bk arrow, bkGray] (f) -- (y);
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=north] at (0,-4) {1};
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=north] at (53,-4) {4};
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=north] at (108,-4) {16};
+\end{tikzpicture}
+\bkfigcaption{2つの関数を順につないだものが、合成関数。灰色の数は $x=1$ のとき。}
+\end{bkfigure}
+
+このように、関数の出力を別の関数に入れてつくった関数を、\textbf{合成関数}（ごうせいかんすう）といいます（3-3）。先にはたらくほうを\textbf{内側の関数}、後にはたらくほうを\textbf{外側の関数}とよびます。かっこの中は先に計算するので、多くの場合、かっこの中が内側です。\bkidx{ごうせいかんすう}{合成関数}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=32mm] Q[c,m,wd=32mm] Q[c,m,wd=32mm]}, rowsep=2pt}
+式 & 内側 $u=$ & 外側 $y=$ \\
+$(2x-5)^4$ & $2x-5$ & $u^4$ \\
+$\sqrt{x^2+9}$ & $x^2+9$ & $\sqrt{u}=u^{\frac{1}{2}}$ \\
+$\dfrac{1}{2x+1}$ & $2x+1$ & $\dfrac{1}{u}=u^{-1}$ \\
+\end{bktable}
+\bktabcaption{合成関数を、内側と外側に分ける。「かっこの中」や「ルートの中」や「分母」が内側になることが多い。}
+\end{bkcenter}
+
+\bksubsection{5}{合成関数の微分：変わる速さの比をかけ算でつなぐ}
+
+\leavevmode\label{bk:5-6:chain}$y=(3x+1)^2$ で、$x$ を少しだけ変えてみます。$x$ が変わると $u$ が変わり、$u$ が変わると $y$ が変わります。$x=1$ から $\Delta x=0.01$ だけ変えると、
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \yy/\nm/\len/\col in {30/x/4/bkBlue, 15/u/12/bkGreen, 0/y/96/bkOrange} {
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2.5mm]}] (10,\yy) -- (124,\yy);
+    \node[font=\sffamily\small, anchor=east] at (8,\yy) {$\nm$};
+    \draw[\col, line width=2.4pt] (14,\yy) -- ({14+\len},\yy);
+    \draw[bkInk, line width=0.6pt] (14,{\yy-1.5}) -- (14,{\yy+1.5}) ({14+\len},{\yy-1.5}) -- ({14+\len},{\yy+1.5});}
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (13,32) {1 から 1.01 まで：$\Delta x=0.01$};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (13,17) {4 から 4.03 まで：$\Delta u=0.03$（$\Delta x$ の3倍）};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (13,2) {16 から 16.2409 まで：$\Delta y=0.2409$（$\Delta u$ の約8倍）};
+\end{tikzpicture}
+\bkfigcaption{$x$・$u$・$y$ の変化を、太い線の長さで表した（3本とも、同じ拡大のしかた）。}
+\end{bkfigure}
+
+$u=3x+1$ は、$x$ が変わった分の3倍だけ変わります。$y=u^2$ は、$u=4$ のあたりでは、$u$ が変わった分のおよそ8倍だけ変わります（$u^2$ の微分は $2u$ で、$u=4$ なら $2\times4=8$。5-4のきまりを、文字 $u$ で使った）。だから、$y$ は $x$ が変わった分の、およそ $8\times3=24$ 倍変わります。実際、$\dfrac{\Delta y}{\Delta x}=\dfrac{0.2409}{0.01}=24.09$ で、24に近い数です。歯車の回る速さの比をかけ算でつないだのと同じです。
+
+式で書くと、変化の比は、次のようにかけ算でつながります。
+\[ \frac{\Delta y}{\Delta x}=\frac{\Delta y}{\Delta u}\times\frac{\Delta u}{\Delta x} \]
+右辺は、分数のかけ算で $\Delta u$ を約分すると、左辺になります。$\Delta x$ を0に近づけると、$\Delta u$ も0に近づくので、3つの比はそれぞれ導関数になります。
+\[ \frac{\dd y}{\dd x}=\frac{\dd y}{\dd u}\times\frac{\dd u}{\dd x} \]
+これを\textbf{合成関数の微分}（英語で chain rule：くさりのきまり）といいます。「外側を微分して、内側の微分をかける」と覚えましょう。\bkidx{ごうせいかんすうのびぶん}{合成関数の微分}
+
+\noindent\textbf{手順}\par
+\noindent $y=(3x+1)^2$ を、合成関数の微分で微分します。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 内側と外側に分ける：$u=3x+1$、$y=u^2$
+\item 外側を $u$ で微分する：$\dfrac{\dd y}{\dd u}=2u$
+\item 内側を $x$ で微分する：$\dfrac{\dd u}{\dd x}=3$
+\item かけ算する：$\dfrac{\dd y}{\dd x}=2u\times3=6u$
+\item $u$ を $x$ の式にもどす：$6u=6(3x+1)$
+\end{enumerate}
+⑤を忘れると、答えに $u$ が残ってしまいます。問題は $x$ の式なので、答えも $x$ の式にします。
+
+\noindent\textbf{確かめ}\par
+\noindent 展開すると $(3x+1)^2=9x^2+6x+1$。微分して $18x+6$。合成関数の微分の答え $6(3x+1)=18x+6$ と同じです。$x=1$ なら $6\times4=24$ で、上の図の24.09とも合います。展開できない式や、展開が大変な式でも、合成関数の微分なら同じように計算できます。
+
+\noindent\textbf{表計算でも確かめよう}\par
+\noindent $y=(3x+1)^2$ について、$h=0.001$ の平均変化率と、合成関数の微分の答え $6(3x+1)$ をならべます。
+\begin{bkcenter}
+\bksheet{3}{30}{%
+1 & $x$ & 平均変化率（$h=0.001$） & $6(3x+1)$ \\
+2 & 0 & 6.009 & 6 \\
+3 & 1 & 24.009 & 24 \\
+4 & 2 & 42.009 & 42 \\}
+\end{bkcenter}
+はしたの 0.009 は $h$ が0でない分で、$h$ を小さくすると消えていきます。
+
+\begin{seikaku}
+上の説明では、$\Delta u$ でわっています。$\Delta x$ が0でなくても、$\Delta u$ が0になることがあります（たとえば内側の関数が一定のとき）。大学の数学では、その場合も合わせて、きちんと証明します。結果の式は、どの場合でも正しく成り立ちます。
+\end{seikaku}
+
+\begin{column}{ライプニッツの記号が便利なわけ}
+合成関数の微分 $\dfrac{\dd y}{\dd x}=\dfrac{\dd y}{\dd u}\times\dfrac{\dd u}{\dd x}$ は、分数の約分のように見えます。$\dfrac{\dd y}{\dd x}$ はほんとうの分数ではありませんが、もとは $\dfrac{\Delta y}{\Delta x}$ という分数の極限なので、このように計算してよいのです。ライプニッツは、計算のきまりが自然に見えるように記号を工夫しました。300年以上たったいまでも、工学の専門書ではこの記号が使われています。
+\end{column}
+
+\bksubsection{6}{よく使う形}
+
+\leavevmode\label{bk:5-6:katachi}\textbf{1次式の $n$ 乗}\par
+\noindent 内側が $u=ax+b$ なら $\dfrac{\dd u}{\dd x}=a$ です。外側 $u^n$ の微分は $nu^{n-1}$ なので、
+\[ \{(ax+b)^n\}'=n(ax+b)^{n-1}\times a \]
+たとえば $\{(2x+1)^5\}'=5(2x+1)^4\times2=10(2x+1)^4$。展開すると6つの項が出てくる式でも、1行で微分できます。
+
+\noindent\textbf{ルートの微分}\par
+\noindent $(x^n)'=nx^{n-1}$ は、$n$ が分数のときも成り立ちます。$n$ が $\dfrac{1}{2}$ のときの理由は、下のもっと知りたいで確かめます（ほかの分数は5-14）。$\sqrt{x}=x^{\frac{1}{2}}$ なので、指数の $\dfrac{1}{2}$ を前に出します。そして、指数を1へらして、$\dfrac{1}{2}-1=-\dfrac{1}{2}$ にします。
+\[ (\sqrt{x})'=\frac{1}{2}x^{\frac{1}{2}-1}=\frac{1}{2}x^{-\frac{1}{2}}=\frac{1}{2\sqrt{x}} \]
+表計算で確かめると、$x=4$ では、
+\[ \frac{\sqrt{4.001}-2}{0.001}=0.24998\cdots \]
+で、$\dfrac{1}{2\sqrt{4}}=\dfrac{1}{4}=0.25$ とよく合います。
+
+\begin{motto}[4]
+\textbf{ルートの微分を、極限で確かめる}\par
+\[ \frac{\sqrt{x+h}-\sqrt{x}}{h} \]
+\noindent の分子と分母に $\sqrt{x+h}+\sqrt{x}$ をかけます。分子は $(a-b)(a+b)=a^2-b^2$（3-8）を使うと、$(\sqrt{x+h})^2-(\sqrt{x})^2=(x+h)-x=h$ になります。
+\[ \frac{\sqrt{x+h}-\sqrt{x}}{h}=\frac{h}{h(\sqrt{x+h}+\sqrt{x})}=\frac{1}{\sqrt{x+h}+\sqrt{x}} \]
+$h\to0$ で、分母は $\sqrt{x}+\sqrt{x}=2\sqrt{x}$ に近づくので、$(\sqrt{x})'=\dfrac{1}{2\sqrt{x}}$ です。
+\end{motto}
+
+\noindent\textbf{分数の形}\par
+\noindent $\dfrac{1}{f(x)}=\{f(x)\}^{-1}$ と考えると、外側は $u^{-1}$ で、その微分は $-1\times u^{-2}=-u^{-2}$ です（5-4）。内側の微分 $f'(x)$ をかけて、
+\[ \Bigl\{\frac{1}{f(x)}\Bigr\}'=-\{f(x)\}^{-2}\times f'(x)=-\frac{f'(x)}{\{f(x)\}^2} \]
+
+\bksubsection{7}{つながった変化の速さ}
+
+\leavevmode\label{bk:5-6:rensa}合成関数の微分は、「ある量が時間とともに変わると、それにつながった量がどんな速さで変わるか」を計算するのに使えます。
+
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\textbf{例：風船をふくらませる}\par
+半径が1秒に\qty{2}{cm}ずつ、$r=2t$（cm）でふえていくとき、体積 $V=\dfrac{4}{3}\pi r^3$ のふえる速さを求めます。$V$ は $r$ の関数で、$r$ は $t$ の関数です。$t\to r\to V$ の順につながった合成関数で、内側が $r=2t$、外側が $V=\dfrac{4}{3}\pi r^3$ です。
+\[ \frac{\dd V}{\dd t}=\frac{\dd V}{\dd r}\times\frac{\dd r}{\dd t}=4\pi r^2\times2 \]
+$\dfrac{\dd V}{\dd r}=\dfrac{4}{3}\pi\times3r^2=4\pi r^2$（5-4）、$\dfrac{\dd r}{\dd t}=2$ です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \shade[ball color=bkRed!60] (0,0) circle (8);
+  \draw[bkRed!50!black, line width=0.6pt, dashed] (0,0) circle (12);
+  \draw[bkInk!70, line width=0.8pt] (0,-8) -- (0,-15);
+  \draw[bk arrow, bkGray, line width=0.8pt] (8.5,0) -- (11.5,0);
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{2pt}
+$t=1$ 秒（$r=\qty{2}{cm}$）なら $4\pi\times2^2\times2=32\pi$ で、約\qty{100.5}{cm^3/s}。$t=2$ 秒（$r=\qty{4}{cm}$）なら $4\pi\times4^2\times2=128\pi$ で、約\qty{402}{cm^3/s} です。半径は同じ速さでのびているのに、体積のふえる速さは4倍になりました。$r^2$ が $2^2=4$ から $4^2=16$ へ、4倍になったからです。風船が大きくなるほど、体積はどんどん速くふえます。
+
+\bksubsection{8}{円すい形のタンクの水位}
+
+\leavevmode\label{bk:5-6:tank}\noindent\begin{minipage}[c]{0.64\linewidth}
+先がとがった円すい形のタンクに、毎秒\qty{50}{cm^3}の水を入れます。このタンクは、深さ\qty{40}{cm}の所で水面の半径が\qty{20}{cm}、深さ\qty{20}{cm}の所で\qty{10}{cm}というように、水面の半径がいつも深さの半分になる形です。だから、水の深さが $h$（cm）のとき、水面の半径は $\dfrac{h}{2}$ です。
+
+水の体積は、円すいの体積の公式（4-5）から
+\[ V=\frac{1}{3}\times\pi\Bigl(\frac{h}{2}\Bigr)^2\times h=\frac{1}{3}\times\frac{\pi h^2}{4}\times h=\frac{\pi}{12}h^3 \]
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!25] (0,0) -- (-7,14) -- (7,14) -- cycle;
+  \draw[bkInk, line width=0.9pt] (-14,28) -- (0,0) -- (14,28);
+  \draw[bkInk, line width=0.6pt] (0,28) ellipse (14 and 2.5);
+  \draw[bkBlue!60!black, line width=0.6pt] (0,14) ellipse (7 and 1.3);
+  \draw[bkGray, line width=0.6pt, <->] (10,0) -- (10,14);
+  \node[font=\sffamily\scriptsize, anchor=west] at (11,7) {$h$};
+  \draw[bkGray, line width=0.6pt, <->] (0,15.8) -- (7,15.8);
+  \node[font=\sffamily\scriptsize, anchor=south] at (3.5,16) {$\frac{h}{2}$};
+  \draw[bk arrow, bkBlue, line width=1pt] (-6,36) -- (-2,30);
+  \node[font=\sffamily\scriptsize, anchor=south] at (-6,36) {毎秒\qty{50}{cm^3}};
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{2pt}
+$V$ も $h$ も、時間とともに変わります。$V$ は $h$ の関数で、$h$ は時間 $t$ の関数なので、合成関数の微分が使えます。$\dfrac{\dd V}{\dd h}=\dfrac{\pi}{12}\times3h^2=\dfrac{\pi}{4}h^2$ なので、
+\[ \frac{\dd V}{\dd t}=\frac{\dd V}{\dd h}\times\frac{\dd h}{\dd t}=\frac{\pi}{4}h^2\times\frac{\dd h}{\dd t} \]
+水を毎秒\qty{50}{cm^3}入れるので、$\dfrac{\dd V}{\dd t}=50$ です。両辺を $\dfrac{\pi}{4}h^2$ でわると（2-14）、水位の上がる速さは
+\[ \frac{\dd h}{\dd t}=50\div\frac{\pi}{4}h^2=50\times\frac{4}{\pi h^2}=\frac{200}{\pi h^2} \]
+深さ\qty{10}{cm}では $\dfrac{200}{100\pi}=\dfrac{2}{\pi}$ で約\qty{0.64}{cm/s}、深さ\qty{20}{cm}では $\dfrac{200}{400\pi}=\dfrac{1}{2\pi}$ で約\qty{0.16}{cm/s}です。同じ量の水を入れても、上のほうほど水面が広いので、水位はゆっくり上がります。
+
+\bksubsection{9}{振り子の長さと周期}
+
+\leavevmode\label{bk:5-6:furiko}\noindent\begin{minipage}[c]{0.7\linewidth}
+長さ $L$（m）の振り子が1往復する時間（周期）$T$（s）は、
+\[ T=2\pi\sqrt{\frac{L}{g}}\qquad(g=9.8) \]
+です（2-8で、周期が長さの $\sqrt{\phantom{L}}$ に比例することを表で調べた。この式は6-6で求めます）。振り子時計は、おもりの位置を調整ねじで動かして $L$ を変え、時計の進みおくれを直します。$L$ を変えると、$T$ はどんな速さで変わるでしょう。\bkidx{しゅうき}{周期}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.26\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (-8,0) rectangle (8,2);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (-9,-28);
+  \draw[bkInk!40, line width=0.5pt, dashed] (0,0) -- (0,-30);
+  \shade[ball color=bkOrange] (-9,-28) circle (3);
+  \draw[bkGray, line width=0.5pt, <->] (3,0) -- (3,-28);
+  \node[font=\sffamily\scriptsize, anchor=west] at (4,-14) {$L$};
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{2pt}
+内側を $u=\dfrac{L}{g}$、外側を $T=2\pi\sqrt{u}$ と考えます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 内側の微分：$u=\dfrac{1}{g}\times L$ なので、$\dfrac{\dd u}{\dd L}=\dfrac{1}{g}$
+\item 外側の微分：$2\pi\times\dfrac{1}{2\sqrt{u}}=\dfrac{\pi}{\sqrt{u}}$（ルートの微分）
+\item かけ算して、$u$ をもどす：$\dfrac{\dd T}{\dd L}=\dfrac{\pi}{\sqrt{L/g}}\times\dfrac{1}{g}=\dfrac{\pi}{g\sqrt{L/g}}$
+\end{enumerate}
+分母の $g\sqrt{L/g}$ は、$g=\sqrt{g^2}$ と考えると $\sqrt{g^2\times\dfrac{L}{g}}=\sqrt{gL}$ です。だから、
+\[ \frac{\dd T}{\dd L}=\frac{\pi}{\sqrt{gL}} \]
+$L=\qty{1}{m}$ なら $\dfrac{\pi}{\sqrt{9.8}}=\dfrac{3.14}{3.13}\approx1.0$（s/m）です（$\approx$ は「ほぼ等しい」。5-5・5-8）。長さを\qty{1}{mm}（\qty{0.001}{m}）のばすと、周期は約0.001秒長くなります（この見積もり方は5-8）。長さ\qty{1}{m}の振り子の周期は約2秒なので、1日（86400秒）に約43000回往復します。1回ごとに0.001秒おくれると、1日に約43秒おくれる計算です。調整ねじが細かく作られているのは、このためです。
+
+\bksubsection{10}{どの道具を使う？}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, q/.style={bk node, minimum width=47mm, minimum height=15mm},
+  r/.style={bk node, draw=bkOrange, fill=bkOrange!8, minimum width=51mm, minimum height=15mm}]
+  % 第6回：たてに組み直す（はい は右、いいえ は下）。箱の中の余白を広げ、字を大きくした
+  \node[q] (q1) at (23.5,0) {2つの式の\\かけ算になっている？};
+  \node[r] (a1) at (95,0) {積の微分\\$f'g+fg'$};
+  \node[q] (q2) at (23.5,-30) {かっこやルートの中に\\$x$ の式が入っている？};
+  \node[r] (a2) at (95,-30) {合成関数の微分\\外側の微分×内側の微分};
+  \node[r, minimum width=47mm] (a3) at (23.5,-60) {$(x^n)'=nx^{n-1}$\\定数倍・和のきまり};
+  \draw[bk link] (q1) -- node[bk link label, above] {はい} (a1);
+  \draw[bk link] (q1) -- node[bk link label, right] {いいえ} (q2);
+  \draw[bk link] (q2) -- node[bk link label, above] {はい} (a2);
+  \draw[bk link] (q2) -- node[bk link label, right] {いいえ} (a3);
+  \draw[bk link, dashed] (a1) -- node[bk link label, right, align=left] {かけ算の中に\\かっこがあれば} (a2);
+\end{tikzpicture}
+\bkfigcaption{微分の道具のえらび方。組み合わせて使うことも多い（例題5）。}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=24mm] Q[c,m,wd=16mm] Q[c,m,wd=14mm] Q[c,m,wd=18mm] Q[c,m,wd=14mm] Q[c,m,wd=25mm]}, rowsep=2pt}
+式 & 内側 $u$ & 外側 & 外側の微分 & 内側の微分 & 答え \\
+$(5x+2)^3$ & $5x+2$ & $u^3$ & $3u^2$ & $5$ & $15(5x+2)^2$ \\
+$(x^2+1)^4$ & $x^2+1$ & $u^4$ & $4u^3$ & $2x$ & $8x(x^2+1)^3$ \\
+$\sqrt{3x+1}$ & $3x+1$ & $\sqrt{u}$ & $\dfrac{1}{2\sqrt{u}}$ & $3$ & $\dfrac{3}{2\sqrt{3x+1}}$ \\
+$\dfrac{1}{x^2+4}$ & $x^2+4$ & $u^{-1}$ & $-u^{-2}$ & $2x$ & $-\dfrac{2x}{(x^2+4)^2}$ \\
+\end{bktable}
+\bktabcaption{合成関数の微分の手順。左から順にうめていけば、まちがえない。}
+\end{bkcenter}
+
+\bkkigocards{\bkkigocard{$f\circ g$}{エフ・まる・ジー}{合成関数。先に $g$、次に $f$。$(f\circ g)(x)=f(g(x))$}{composite}{5-6}}
+{\bkkigocard{$x^{\frac{1}{2}}$}{エックスの2分の1乗}{$\sqrt{x}$ のこと。分数の指数}{x to the one-half}{3-11}}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+\par\addvspace{3pt}\textbf{定理 3.4（合成関数の微分法）}\par\noindent 関数 $g$ が $x$ で微分可能で、関数 $f$ が $g(x)$ で微分可能ならば、合成関数 $f\circ g$ も $x$ で微分可能であり、
+\[ (f\circ g)'(x)=f'\bigl(g(x)\bigr)\,g'(x) \tag{3.7} \]
+が成り立つ。これを連鎖律（chain rule）という。
+\end{bkhonbun}
+\bkyaku{$f\circ g$（エフ・まる・ジー）は、「先に $g$、次に $f$」の順につないだ合成関数のことで、$(f\circ g)(x)=f(g(x))$ と書く。内側の $g$ と外側の $f$ がどちらも微分できれば、合成関数も微分できる。その微分は「外側の微分（内側の値のところで）×内側の微分」になる。「微分可能」は「接線が引ける（とがっていない）」こと（5-3）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+積の微分\quad $\{f(x)g(x)\}'=f'(x)g(x)+f(x)g'(x)$\\[2pt]
+合成関数の微分\quad $\dfrac{\dd y}{\dd x}=\dfrac{\dd y}{\dd u}\times\dfrac{\dd u}{\dd x}$\quad（外側の微分×内側の微分）
+\end{taisetsu}
+
+\begin{motto}[4]
+\textbf{商の微分}\par
+$\dfrac{f}{g}=f\times\dfrac{1}{g}$ と考えて、積の微分と分数の形の微分を組み合わせると、
+\[ \Bigl(\frac{f}{g}\Bigr)'=f'\times\frac{1}{g}+f\times\Bigl(-\frac{g'}{g^2}\Bigr)=\frac{f'g}{g^2}-\frac{fg'}{g^2}=\frac{f'g-fg'}{g^2} \]
+となります（3つめの式は、1つめの分数の分子と分母に $g$ をかけて、分母を $g^2$ にそろえた）。新しく覚えなくても、積と合成関数の微分から作れます。
+\end{motto}
+
+\begin{kotoba}
+\small
+\bkword{積の微分}{かけ算の形の関数の微分。片方ずつ微分してたす。}
+\bkword{合成関数}{関数の出力を、別の関数に入れてつくった関数。内側と外側がある。}
+\bkword{合成関数の微分}{外側を微分して、内側の微分をかける。chain rule（チェーン・ルール）ともいう。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[積の微分]
+$y=(2x+1)(x^2-3)$ を微分しましょう。\par
+\kangaekata $f=2x+1$、$g=x^2-3$ の積と見ます。$f'=2$、$g'=2x$ です。$\{fg\}'=f'g+fg'$ に入れます。\par
+\shiki $y'=(2x+1)'(x^2-3)+(2x+1)(x^2-3)'$\par
+\hspace*{2.6\zw}$\phantom{y'}=2(x^2-3)+(2x+1)\times2x$\par
+\hspace*{2.6\zw}$\phantom{y'}=2x^2-6+4x^2+2x=6x^2+2x-6$\par
+\hspace*{2.6\zw}確かめ：展開すると $2x^3+x^2-6x-3$。微分して $6x^2+2x-6$\par
+\kotae $y'=6x^2+2x-6$
+\end{reidai}
+
+\begin{jibun}
+$y=(x+2)(x^2+1)$ を、積の微分で微分しましょう。
+\bkjans{$(x^2+1)+(x+2)\times2x=3x^2+4x+1$}
+\end{jibun}
+
+\begin{reidai}[かっこの $n$ 乗]
+次の関数を微分しましょう。\par
+（1）$(2x-5)^4$\quad（2）$(4-x)^3$\quad（3）$(x^2+1)^4$\par
+\kangaekata かっこの中が内側です。外側 $u^n$ の微分は $nu^{n-1}$。それに内側の微分をかけます。\par
+\shiki（1）内側 $u=2x-5$ の微分は2。$4(2x-5)^3\times2=8(2x-5)^3$\par
+\hspace*{2.6\zw}（2）内側 $u=4-x$ の微分は $-1$。$3(4-x)^2\times(-1)=-3(4-x)^2$\par
+\hspace*{2.6\zw}（3）内側 $u=x^2+1$ の微分は $2x$。$4(x^2+1)^3\times2x=8x(x^2+1)^3$\par
+\kotae （1）$8(2x-5)^3$\quad（2）$-3(4-x)^2$\quad（3）$8x(x^2+1)^3$
+\end{reidai}
+
+\begin{jibun}
+次の関数を微分しましょう。\par
+（1）$(3x+2)^5$\quad（2）$(2-3x)^4$\quad（3）$(x^2+3)^3$
+\bkjans{（1）\nobreak $15(3x+2)^4$\quad（2）\nobreak $-12(2-3x)^3$\quad（3）\nobreak $6x(x^2+3)^2$}
+\end{jibun}
+
+\begin{reidai}[ルートをふくむ式]
+$y=\sqrt{x^2+9}$ を微分し、$x=4$ での値を求めましょう。\par
+\kangaekata 内側 $u=x^2+9$（微分すると $2x$）、外側 $\sqrt{u}$（微分すると $\dfrac{1}{2\sqrt{u}}$）。\par
+\shiki $y'=\dfrac{1}{2\sqrt{x^2+9}}\times2x=\dfrac{2x}{2\sqrt{x^2+9}}=\dfrac{x}{\sqrt{x^2+9}}$\par
+\hspace*{2.6\zw}$x=4$ で $\dfrac{4}{\sqrt{16+9}}=\dfrac{4}{\sqrt{25}}=\dfrac{4}{5}$\par
+\kotae $y'=\dfrac{x}{\sqrt{x^2+9}}$、$x=4$ で $\dfrac{4}{5}$
+\end{reidai}
+
+\begin{jibun}
+$y=\sqrt{2x+1}$ を微分し、$x=4$ での値を求めましょう。
+\bkjans{$\dfrac{1}{2\sqrt{2x+1}}\times2=\dfrac{1}{\sqrt{2x+1}}$。$x=4$ で $\dfrac{1}{3}$}
+\end{jibun}
+
+\begin{reidai}[分数の形]
+次の関数を微分しましょう。\quad（1）$\dfrac{1}{2x+1}$\quad（2）$\dfrac{1}{(x+3)^2}$\par
+\kangaekata 分母を、マイナスの指数で書きなおします（2-7）。指数を1へらすと、$-1$ は $-2$ に、$-2$ は $-3$ になります。\par
+\shiki（1）$y=(2x+1)^{-1}$。内側 $2x+1$ の微分は2\par
+\hspace*{4.3\zw}$y'=-1\times(2x+1)^{-2}\times2=-\dfrac{2}{(2x+1)^2}$\par
+\hspace*{2.6\zw}（2）$y=(x+3)^{-2}$。内側 $x+3$ の微分は1\par
+\hspace*{4.3\zw}$y'=-2\times(x+3)^{-3}\times1=-\dfrac{2}{(x+3)^3}$\par
+\kotae （1）$-\dfrac{2}{(2x+1)^2}$\quad（2）$-\dfrac{2}{(x+3)^3}$
+\end{reidai}
+
+\begin{jibun}
+次の関数を微分しましょう。\quad（1）$\dfrac{1}{x^2+1}$\quad（2）$\dfrac{1}{(2x-1)^2}$
+\bkjans{（1）\nobreak $-(x^2+1)^{-2}\times2x=-\dfrac{2x}{(x^2+1)^2}$\quad（2）\nobreak $-2(2x-1)^{-3}\times2=-\dfrac{4}{(2x-1)^3}$}
+\end{jibun}
+
+\begin{reidai}[積と合成関数の組み合わせ]
+$y=x(x+1)^3$ を微分しましょう。\par
+\kangaekata $x$ と $(x+1)^3$ の積です。$(x+1)^3$ の微分には、合成関数の微分を使います（内側 $x+1$ の微分は1）。\par
+\shiki $\{(x+1)^3\}'=3(x+1)^2\times1=3(x+1)^2$\par
+\hspace*{2.6\zw}$y'=(x)'\times(x+1)^3+x\times3(x+1)^2=(x+1)^3+3x(x+1)^2$\par
+\hspace*{2.6\zw}まとめる：どちらの項にも $(x+1)^2$ があるので、くくり出す\par
+\hspace*{2.6\zw}$(x+1)^2\{(x+1)+3x\}=(x+1)^2(4x+1)$\par
+\kotae $y'=(x+1)^3+3x(x+1)^2$\quad（まとめると $(x+1)^2(4x+1)$）
+\end{reidai}
+
+\begin{jibun}
+$y=x^2(2x-1)^3$ を微分しましょう。
+\bkjans{$2x(2x-1)^3+x^2\times3(2x-1)^2\times2=2x(2x-1)^3+6x^2(2x-1)^2$}
+\end{jibun}
+
+\begin{reidai}[つながった変化の速さ]
+正方形の1辺が $a=3t$（cm）でのびていきます。2秒のとき、面積 $S=a^2$ がふえる速さを求めましょう。\par
+\kangaekata $S$ は $a$ の関数、$a$ は $t$ の関数です。$\dfrac{\dd S}{\dd t}=\dfrac{\dd S}{\dd a}\times\dfrac{\dd a}{\dd t}$ を使います。\par
+\shiki $\dfrac{\dd S}{\dd a}=2a$、$\dfrac{\dd a}{\dd t}=3$ なので、$\dfrac{\dd S}{\dd t}=2a\times3=6a$\par
+\hspace*{2.6\zw}$t=2$ で $a=3\times2=6$ なので、$6\times6=36$\par
+\kotae \qty{36}{cm^2/s}
+\end{reidai}
+
+\begin{jibun}
+円の半径が $r=3t$（cm）でのびていきます。2秒のとき、面積 $S=\pi r^2$ がふえる速さを求めましょう。
+\bkjans{$2\pi r\times3$、$r=6$ で $36\pi\approx\qty{113}{cm^2/s}$}
+\end{jibun}
+
+\begin{reidai}[水位の上がる速さ]
+上の円すい形のタンク（$V=\dfrac{\pi}{12}h^3$）に、毎秒\qty{50}{cm^3}の水を入れます。深さ\qty{10}{cm}のとき、水位の上がる速さを求めましょう。\par
+\kangaekata $\dfrac{\dd V}{\dd t}=\dfrac{\dd V}{\dd h}\times\dfrac{\dd h}{\dd t}$ に、わかっている数を入れて、$\dfrac{\dd h}{\dd t}$ について解きます。\par
+\shiki $\dfrac{\dd V}{\dd h}=\dfrac{\pi}{4}h^2$。$h=10$ で $\dfrac{\pi}{4}\times100=25\pi$\par
+\hspace*{2.6\zw}$50=25\pi\times\dfrac{\dd h}{\dd t}$。両辺を $25\pi$ でわって、$\dfrac{\dd h}{\dd t}=\dfrac{50}{25\pi}=\dfrac{2}{\pi}$\par
+\kotae $\dfrac{2}{\pi}\approx\qty{0.64}{cm/s}$
+\end{reidai}
+
+\begin{jibun}
+同じタンクに毎秒\qty{100}{cm^3}の水を入れます。深さ\qty{20}{cm}のとき、水位の上がる速さを求めましょう。
+\bkjans{$100=\dfrac{\pi}{4}\times400\times\dfrac{\dd h}{\dd t}$ より $\dfrac{1}{\pi}\approx\qty{0.32}{cm/s}$}
+\end{jibun}
+
+\begin{reidai}[振り子の長さと周期]
+振り子の周期 $T=2\pi\sqrt{\dfrac{L}{g}}$ について、$L=\qty{1}{m}$ のときの $\dfrac{\dd T}{\dd L}$ を求めましょう（$g=9.8$）。糸を\qty{1}{cm}のばすと、周期はおよそ何秒のびますか。\par
+\kangaekata 数学の道具9で求めた $\dfrac{\dd T}{\dd L}=\dfrac{\pi}{\sqrt{gL}}$ に、$L=1$ を入れます。のびる時間は、およそ「変わる速さ×のばした長さ」です（5-8）。\par
+\shiki $\dfrac{\dd T}{\dd L}=\dfrac{\pi}{\sqrt{9.8\times1}}=\dfrac{3.14}{3.13}\approx1.0$\par
+\hspace*{2.6\zw}\qty{1}{cm}＝\qty{0.01}{m} なので、$\Delta T\approx1.0\times0.01=0.01$\par
+\kotae 約1.0（s/m）。約0.01秒のびる
+\end{reidai}
+
+\begin{jibun}
+$L=\qty{0.64}{m}$ のときの $\dfrac{\dd T}{\dd L}$ を求めましょう（$\sqrt{9.8\times0.64}=2.50$）。
+\bkjans{$\dfrac{3.14}{2.50}\approx1.3$（s/m）}
+\end{jibun}
+
+\begin{reidai}[分数の形を、積として微分する]
+$y=\dfrac{x}{x+1}$ を微分しましょう。\par
+\kangaekata $x\times(x+1)^{-1}$ と見て、積の微分と合成関数の微分を使います。$\{(x+1)^{-1}\}'=-(x+1)^{-2}$ です。\par
+\shiki $y'=1\times(x+1)^{-1}+x\times\{-(x+1)^{-2}\}=\dfrac{1}{x+1}-\dfrac{x}{(x+1)^2}$\par
+\hspace*{2.6\zw}分母を $(x+1)^2$ にそろえる：$\dfrac{x+1}{(x+1)^2}-\dfrac{x}{(x+1)^2}=\dfrac{(x+1)-x}{(x+1)^2}$\par
+\kotae $y'=\dfrac{1}{(x+1)^2}$
+\end{reidai}
+
+\begin{jibun}
+$y=\dfrac{x}{2x+1}$ を微分しましょう。
+\bkjans{$(2x+1)^{-1}-2x(2x+1)^{-2}=\dfrac{1}{(2x+1)^2}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{積の微分を「微分どうしの積」にしてしまう}
+\bkng{$\{x^2\cdot x^3\}'=(x^2)'(x^3)'=2x\cdot3x^2=6x^3$}\bkok{$2x\cdot x^3+x^2\cdot3x^2=5x^4$}
+長方形の図では、ふえる面積は「横がのびた分」と「たてがのびた分」の和でした。微分どうしをかけると、右上の小さな四角だけを見ていることになります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{内側の微分をかけ忘れる}
+\bkng{$\{(2x-5)^4\}'=4(2x-5)^3$}\bkok{$4(2x-5)^3\times2$}
+歯車の比を1つかけ忘れたのと同じです。必ず内側の微分をかけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{答えに $u$ を残してしまう}
+\bkng{$\{(3x+1)^2\}'=2u\times3=6u$}\bkok{$6u=6(3x+1)$}
+$u$ は、計算のために自分でつけた名前です。最後に $u=3x+1$ をもどして、$x$ の式で答えます。
+\end{tsumazuki}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{変速機と減速機}\\
+車や自転車の変速機、ロボットのモーターにつける減速機は、歯車で回る速さの比を変えています。いくつもの歯車をつないだときの比は、合成関数の微分と同じように、かけ算で計算します。
+\item \textbf{ロボットの腕}\\
+関節のモーターの回る速さから、腕の先が動く速さを求めるのに、合成関数の微分を使います（第7巻）。
+\item \textbf{電力}\\
+電力は電圧と電流の積 $P=VI$ です。電圧も電流も時間とともに変わるとき、電力の変わる速さは積の微分で計算します。\bkidx{でんりょく}{電力}
+\end{itemize}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem $y=(x-1)(x^2+x+1)$ を積の微分で微分し、展開してから微分した結果と同じになることを確かめましょう。
+\bkpans{$(x^2+x+1)+(x-1)(2x+1)=3x^2$。展開すると $x^3-1$ なので、微分して $3x^2$}
+
+\bkproblem 次の関数を微分しましょう。\quad（1）$(4x+1)^3$\quad（2）$(1-x)^5$
+\bkpans{（1）\nobreak $12(4x+1)^2$\quad（2）\nobreak $-5(1-x)^4$}
+
+\bkproblem $y=\sqrt{x^2+16}$ を微分し、$x=3$ での値を求めましょう。
+\bkpans{$y'=\dfrac{x}{\sqrt{x^2+16}}$、$x=3$ で $\dfrac{3}{5}$}
+
+\bkproblem 球の半径が $r=t$（cm）でのびていきます。球の体積は $\mbox{$V=\dfrac{4}{3}\pi r^3$}$ です。3秒のとき、体積がふえる速さを求めましょう。
+\bkpans{$4\pi r^2\times1$、$r=3$ で $36\pi\approx\qty{113}{cm^3/s}$}
+
+\bkproblem $y=\dfrac{1}{4x-3}$ を微分しましょう。
+\bkpans{$-\dfrac{4}{(4x-3)^2}$}
+
+\bkproblem $y=(x^2+1)^3$ を微分しましょう。
+\bkpans{$3(x^2+1)^2\times2x=6x(x^2+1)^2$}
+
+\bkproblem $y=\dfrac{x}{x+2}$ を微分しましょう。
+\bkpans{$(x+2)^{-1}-x(x+2)^{-2}=\dfrac{2}{(x+2)^2}$}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem $y=x(2x+1)^4$ を微分しましょう。
+\bkpans{$(2x+1)^4+8x(2x+1)^3$（まとめると $(2x+1)^3(10x+1)$）}
+
+\bkproblem $y=\dfrac{1}{(3x-1)^2}$ を微分し、$x=1$ での値を求めましょう。
+\bkpans{$y=(3x-1)^{-2}$ より $y'=-6(3x-1)^{-3}=-\dfrac{6}{(3x-1)^3}$。$x=1$ で $-\dfrac{3}{4}$}
+
+\bkproblem 長さ $L$ の振り子の周期は $T=2\pi\sqrt{\dfrac{L}{g}}$ です。$g=9.8$ として、$L=\qty{0.25}{m}$ のときの $\dfrac{\dd T}{\dd L}$ を求めましょう（小数第1位まで）。
+\bkpans{$\dfrac{\pi}{\sqrt{9.8\times0.25}}=\dfrac{\pi}{1.565}\approx2.0$（s/m）}
+
+\bkproblem 立方体の1辺が $a=2t+1$（cm）でのびていきます。1秒のとき、体積 $V=a^3$ がふえる速さを求めましょう。
+\bkpans{$\dfrac{\dd V}{\dd t}=3a^2\times2$。$t=1$ で $a=3$ なので\qty{54}{cm^3/s}}
+
+\bkproblem $y=(x^2+1)(x-2)^2$ を微分しましょう（例題5）。
+\bkpans{$2x(x-2)^2+(x^2+1)\times2(x-2)$（まとめると $2(x-2)(2x^2-2x+1)$）}
+
+\bkproblem 数学の道具8の円すい形のタンク（$V=\dfrac{\pi}{12}h^3$）に、毎秒\qty{30}{cm^3}の水を入れます。深さ\qty{6}{cm}のとき、水位の上がる速さを求めましょう。
+\bkpans{$30=\dfrac{\pi}{4}\times36\times\dfrac{\dd h}{\dd t}$ より $\dfrac{10}{3\pi}\approx\qty{1.06}{cm/s}$}
+
+\bkproblem $y=(2x-1)^3$ のグラフの、$x=1$ の点での接線の式を求めましょう（5-4 例題6と同じ手順）。
+\bkpans{接点 $(1,\ 1)$。$y'=6(2x-1)^2$ より傾き6。$y=6x-5$}
+
+\bkproblem 数学の道具7の風船（半径 $r=2t$ cm）で、3秒のときの体積のふえる速さを求めましょう。1秒のときの何倍ですか。
+\bkpans{$4\pi\times6^2\times2=288\pi\approx\qty{905}{cm^3/s}$。1秒（$32\pi$）の9倍}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 積の微分を、長方形の面積で説明できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-6:seki}ページ}
+\item 合成関数の内側と外側を見分けられる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-6:gousei}ページ}
+\item 合成関数の微分を使って計算できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-6:chain}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{delta}{微分の道具がそろったね。次の章では、微分を使って「いちばん高い所」や「いちばん大きくなる形」を見つけるよ。}

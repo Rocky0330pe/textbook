@@ -1,0 +1,1031 @@
+%% 7-6 回転行列：くるっと回す（第14回：組 V7-4。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本が指している形（このとおりに書く）：
+%%   物理 p1-07・p1-09 の思い出そう「回転行列 R(θ) をかけると、ベクトルは左回りに θ 回る。R(α)R(β)=R(α+β)」
+%%   p1-07:594「p=R(θ1)(L1,0)+R(θ1)R(θ2)(L2,0)、R(θ1)R(θ2)=R(θ1+θ2) なので成分にすると 4-7 の式」（L1=0.30、L2=0.25、30°・45°、手 (0.325, 0.391)）
+%%   p1-07:653〜657「dR/dθ=R(θ)R90、R90=(0 −1;1 0)、R90R90=−I、左から R(−θ) をかける（回す前にもどす）」
+%%   p1-09:382〜384「R^T は R の転置で、逆に θ 回す行列」（R^T σ R は 7-9 で）
+%%   6-9:456「(x cosθ − y sinθ, x sinθ + y cosθ)…この式は、第7巻の回転行列（7-6）でもう一度出てきます」（3+j を60°で 0.634+3.098j）
+%%   4-8 の「90°回すと (x, y)→(−y, x)」
+%% 記号：単位行列 I、転置 A^T（\mathsf T）、ベクトルは矢印・成分はたて書き、行列は細字の大文字（第14回の決定1〜3）
+%% 数はすべて Python で確かめた（scratchpad/v7-4/check76.py）
+\usetikzlibrary{matrix}
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\kviighead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviigbox[1]{\par\addvspace{5pt}\noindent\textbf{#1}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviigline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviigframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行
+\newcommand\kviigq{\par\vspace{1pt}\noindent\hangindent=4.6\zw\hangafter=0\relax}
+% 式の変形の表（共通部品 bkhenkei と同じ使い方。行列が入っても行列の中の行間がのびないようにしたもの）
+\newenvironment{kviighk}[1][0.5]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.55}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle\def\arraystretch{1}}m{#1\linewidth}<{$}@{\hspace{1.5\zw}}>{\small\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.92\linewidth-#1\linewidth\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% 行列の組み方（行と列をなぞる図）
+\tikzset{
+  kviig mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=11mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=1mm, row sep=0pt, inner sep=0.6mm},
+  kviig row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviig col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviig ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm}}
+\newcommand\kviighl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 方眼と軸  \kviiggrid{xmin}{xmax}{ymin}{ymax}
+\newcommand\kviiggrid[4]{%
+  \draw[bkLine, line width=0.4pt] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.6},0) node[right, font=\footnotesize, inner sep=1.5pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.6}) node[above, font=\footnotesize, inner sep=1.5pt] {$y$};
+  \node[below left, font=\sffamily\footnotesize, inner sep=1.5pt] at (0,0) {O};}
+% 表計算の式の札  \kviigfx{セル}{式}
+\newcommand\kviigfx[2]{\tikz[baseline=(c.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=11mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, text width=50mm, align=left, font=\ttfamily\footnotesize] at ([xshift=1mm]c.east) {#2};}}
+% 45°の三角定規（O を中心に #1 度回した形）  \kviigtri{角}{色}{線の形}
+\newcommand\kviigtri[3]{\begin{scope}[rotate=#1]
+  \filldraw[fill=#2!14, draw=#2!80!black, line width=1pt, #3, line join=round] (0,0) -- (4,0) -- (4,4) -- cycle;
+  \draw[#2!80!black, line width=0.6pt] (3.55,0) -- (3.55,0.45) -- (4,0.45);
+  \fill[#2!80!black] (4,0) circle (0.13) (4,4) circle (0.13);
+\end{scope}}
+% 2本の腕（肩 (0,0)、角 #1・#2、長さ #3・#4 は mm）
+\newcommand\kviigarm[4]{%
+  \coordinate (kviigE) at (#1:#3);
+  \coordinate (kviigP) at ($(kviigE)+({#1+#2}:#4)$);
+  \draw[bkGray!60!black, line width=4.2pt, line cap=round] (0,0) -- (kviigE);
+  \draw[bkGray!35, line width=2.6pt, line cap=round] (0,0) -- (kviigE);
+  \draw[bkGray!60!black, line width=3.6pt, line cap=round] (kviigE) -- (kviigP);
+  \draw[bkGray!35, line width=2.1pt, line cap=round] (kviigE) -- (kviigP);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (1.6) (kviigE) circle (1.4);
+  \fill[bkInk] (kviigP) circle (1.1);}
+% 工場のロボット（台・肩・ひじ・手首と、つかむ指）
+\newcommand\kviigrobot{%
+  \fill[bkGray!50] (-10,0) rectangle (10,3);
+  \fill[bkGray!70] (-5,3) rectangle (5,9);
+  \coordinate (kv1) at (0,9); \coordinate (kv2) at ($(kv1)+(62:17)$); \coordinate (kv3) at ($(kv2)+(-8:15)$);
+  \draw[bkOrange!70!black, line width=4.6pt, line cap=round, line join=round] (kv1) -- (kv2) -- (kv3);
+  \draw[bkOrange!35, line width=3pt, line cap=round, line join=round] (kv1) -- (kv2) -- (kv3);
+  \draw[bkInk, line width=1.1pt] (kv3) -- ++(0,-3.5);
+  \draw[bkInk, line width=1.1pt, line join=round] ($(kv3)+(-2.2,-6.5)$) -- ($(kv3)+(-2.2,-3.5)$) -- ($(kv3)+(2.2,-3.5)$) -- ($(kv3)+(2.2,-6.5)$);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (kv1) circle (1.6) (kv2) circle (1.4) (kv3) circle (1.1);}
+\makeatother
+
+\bkchapter{7}{6}{回転行列：\\くるっと回す}{\bklevel{4}}{回転行列：くるっと回す}
+\bkmichishirube{4-6,4-8,4-9,6-9,7-2,7-3,7-5}{7-7,7-8,7-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 回転行列 $R(\theta)$ を「矢印の行き先」から作り、点や図形を回せる。
+\item \bklevel{4}\enspace 回転をつなぐ式 $R(\alpha)R(\beta)=R(\alpha+\beta)$ と、回す前にもどす式 $R(\theta)^{-1}=R(\theta)^{\mathsf T}$ を使える。
+\item \bklevel{4}\enspace 軸を回した座標で点や力を見たり、ロボットの腕の手の位置を求めたりできる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\raggedright
+三角定規を、原点のまわりに30°回し、そこからさらに45°回します。全部で75°回したのと同じ形になるのは、あたりまえに見えます。\par\vspace{4pt}
+では、「30°回す行列」と「45°回す行列」をかけると、本当に「75°回す行列」になるでしょうか。そのかけ算の中には、第4巻で苦労して作った、ある公式がかくれています。どの公式でしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=5mm, y=5mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-3.6,0) -- (5,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.4) -- (0,5.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \begin{scope}[rotate=0]\draw[bkGray, line width=0.8pt, dashed] (0,0) -- (4,0) -- (4,4) -- cycle;\end{scope}
+  \begin{scope}[rotate=30]\draw[bkOrange!80!black, line width=0.9pt] (0,0) -- (4,0) -- (4,4) -- cycle;\end{scope}
+  \begin{scope}[rotate=75]\filldraw[fill=bkBlue!15, draw=bkBlue!80!black, line width=1.1pt] (0,0) -- (4,0) -- (4,4) -- cycle;\end{scope}
+  \draw[bkOrange!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (2.6,0) arc (0:30:2.6);
+  \draw[bkBlue!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (30:4.6) arc (30:75:4.6);
+  \node[font=\footnotesize, text=bkOrange!70!black] at (15:3.4) {30°};
+  \node[font=\footnotesize, text=bkBlue!70!black, fill=white, inner sep=1pt] at (52:5.4) {45°};
+  \fill[bkInk] (0,0) circle (0.12);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-2 で、4つの数の表（行列）をかけると、方眼にかいた絵がのびたり、ずれたり、回ったりすることを見ました。7-3 では、2つの変換を続けて行うことが、行列のかけ算になることを学びました。
+
+この章では、その中の「回す」だけを取り出して、くわしく調べます。回す行列は、ロボットの腕、ゲームの画面、スマホの写真、橋の部材の力の計算など、工学のあらゆる所で使われています。次の 7-7 で3次元の回転に進むための、土台にもなります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=21mm, font=\sffamily\footnotesize] (a) at (0,0) {方眼ごと\\くるっと回す};
+  \node[bk node, text width=21mm, font=\sffamily\footnotesize] (b) at (34,0) {回転行列\\$R(\theta)$ を作る};
+  \node[bk node, text width=21mm, font=\sffamily\footnotesize] (c) at (68,0) {かけ算で\\回転をつなぐ};
+  \node[bk node, text width=21mm, font=\sffamily\footnotesize] (d) at (102,0) {ロボットの腕\\軸を回して見る};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道すじ。}
+\end{bkfigure}
+
+%% ---------------- 思い出そう ----------------
+\begin{omoidasou}
+\bkrecall{4-8}{半径1の円（単位円）の上で、$x$ 軸から左回りに角 $\theta$ の点は $(\cos\theta,\ \sin\theta)$。左回り（時計の針と反対の向き）を＋とする。}
+\bkrecall{4-8}{点を原点のまわりに左回りに90°回すと $(x,\ y)\to(-y,\ x)$。}
+\bkrecall{4-9}{加法定理：$\cos(\alpha+\beta)=\cos\alpha\cos\beta-\sin\alpha\sin\beta$、\\$\sin(\alpha+\beta)=\sin\alpha\cos\beta+\cos\alpha\sin\beta$。}
+\bkrecall{6-9}{複素数に $\cos\theta+j\sin\theta$ をかけると、複素平面の点は原点のまわりに $\theta$ 回る。}
+\bkrecall{7-1}{転置 $A^{\mathsf T}$ は、行列のたてとよこを入れかえたもの。}
+\bkrecall{7-2}{行列×ベクトルの1列めは $\vec e_x=(1,\ 0)$ の行き先、2列めは $\vec e_y=(0,\ 1)$ の行き先。}
+\bkrecall{7-3}{$AB\vec x$ は、右の $B$ が先にはたらく。積の成分は、左の行列の行と、右の行列の列の内積。}
+\bkrecall{7-5}{$A^{-1}$ は $A$ の変換を元にもどす行列。2×2 なら、$ad-bc$ でわり、$a$ と $d$ を入れかえ、$b$ と $c$ の符号を変える。}
+\end{omoidasou}
+
+%% ---------------- やってみよう ----------------
+\begin{yattemiyou}[三角定規を30°ずつ回して、頂点の座標を読もう]
+45°の三角定規の頂点を、O・A・B とします（O が45°の角、A が直角）。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 方眼紙に $x$ 軸と $y$ 軸をかき、1目もりを\qty{1}{cm}とします。
+\item 三角定規を、O が原点、A が $(4,\ 0)$、B が $(4,\ 4)$ に来るように置きます（短い辺が\qty{4}{cm}より長いときは、紙を三角形に切りぬいて使う）。
+\item O を指でおさえ、分度器で30°ずつ、左回りに回します。そのたびに、A と B の座標を目もりで読み、表に書きます。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \kviiggrid{-2}{5}{-1}{6}
+  \kviigtri{0}{bkGray}{dashed}
+  \kviigtri{30}{bkBlue}{}
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (4,-0.25) {A};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (4.15,4) {B};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt, text=bkBlue!70!black] at ($(30:4)+(0.2,-0.2)$) {A$'$};
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt, text=bkBlue!70!black] at ($(75:5.657)+(0,0.2)$) {B$'$};
+  \draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (1.8,0) arc (0:30:1.8);
+  \node[font=\footnotesize, text=bkRed!80!black, fill=white, inner sep=1pt] at (15:2.6) {30°};
+\end{tikzpicture}
+\bkfigcaption{はじめの位置（点線）と、30°回した位置（青）。}
+\label{bk:7-6:fig-jogi}
+\end{bkfigure}
+\end{yattemiyou}
+
+\noindent 頂点の座標を、計算で求めた値を表にしました。目もりで読んだ値と、小数第1位くらいまで合っていれば大成功です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=24mm] *{4}{Q[c,m,wd=19mm]}}, rowsep=1.5pt}
+回した角 $\theta$ & A の $x$ & A の $y$ & B の $x$ & B の $y$ \\
+0° & 4 & 0 & 4 & 4 \\
+30° & 3.46 & 2 & 1.46 & 5.46 \\
+60° & 2 & 3.46 & $-1.46$ & 5.46 \\
+90° & 0 & 4 & $-4$ & 4 \\
+120° & $-2$ & 3.46 & $-5.46$ & 1.46 \\
+\end{bktable}
+\bktabcaption{三角定規の頂点 A・B の座標（小数第2位まで）。}
+\end{bkcenter}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=5.5mm, y=5.5mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-6.2,0) -- (5.2,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.5) -- (0,6.6) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \draw[bkRed!60, line width=0.7pt, dashed] (4,0) arc (0:125:4);
+  \draw[bkGreen!60!black, line width=0.7pt, dashed] (45:5.657) arc (45:170:5.657);
+  \foreach \t in {0,30,60,90,120} {\fill[bkRed] (\t:4) circle (0.16); \fill[bkGreen!60!black] ({\t+45}:5.657) circle (0.16);}
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=north] at (4,-0.2) {A};
+  \node[font=\footnotesize, text=bkGreen!50!black, anchor=west] at ($(45:5.657)+(0.2,0)$) {B};
+  \node[font=\footnotesize, text=bkRed!80!black, fill=white, inner sep=1pt] at (60:2.9) {半径 4};
+  \node[font=\footnotesize, text=bkGreen!50!black, anchor=north west, fill=white, inner sep=1pt] at (-5.9,4.7) {半径 5.66};
+  \fill[bkInk] (0,0) circle (0.12);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\raggedright
+A も B も、O を中心とする円の上を動きます。A は半径4の円の上で、角が $\theta$ の点なので、座標は $(4\cos\theta,\ 4\sin\theta)$ です（4-8）。\par\vspace{3pt}
+B はどうでしょう。B は O から $4\sqrt2\approx5.66$ はなれ、角は $\theta+45°$ です。でも、「45°」をいちいち考えずに、もっとかんたんに B の座標を出す方法があります。それが、この章の回転行列です。
+\end{minipage}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{回転行列を作る：方眼ごと回す}
+
+\label{bk:7-6:tsukuru}三角定規を回すとき、三角定規の下の方眼紙ごと回すことを考えます。方眼は、回しても、正方形が並んだ方眼のままです。この見方で、どんな点でも回せる式を作ります。
+
+\kviighead{点を「矢印の歩数」で読む}
+点 $(3,\ 2)$ は、「$\vec e_x=(1,\ 0)$ の向きに3歩、$\vec e_y=(0,\ 1)$ の向きに2歩」進んだ所です（4-11 の成分の考え方）。
+\kviigline{$\begin{pmatrix}3\\2\end{pmatrix}=3\,\vec e_x+2\,\vec e_y$}
+方眼ごと回すと、2本の矢印 $\vec e_x$、$\vec e_y$ も回ります。回した方眼の上でも、点は「回した $\vec e_x$ の向きに3歩、回した $\vec e_y$ の向きに2歩」の所にあります。方眼といっしょに回ったので、歩数は変わらないのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=8mm, y=8mm]
+  \begin{scope}
+    \clip (-1.2,-1.2) rectangle (4.6,3.6);
+    \draw[bkLine, line width=0.4pt] (-1,-1) grid (4,3);
+  \end{scope}
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-1.2,0) -- (4.6,0) node[right, font=\footnotesize, inner sep=1.5pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,-1.2) -- (0,3.6) node[above, font=\footnotesize, inner sep=1.5pt] {$y$};
+  \draw[bkInk!60, line width=0.8pt, dashed] (1,0) -- (3,0) -- (3,2);
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=2.6mm]}] (0,0) -- (1,0);
+  \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=2.6mm]}] (0,0) -- (0,1);
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=north] at (0.55,-0.1) {$\vec e_x$};
+  \node[font=\footnotesize, text=bkGreen!50!black, anchor=east] at (-0.1,0.6) {$\vec e_y$};
+  \fill[bkBlue] (3,2) circle (0.11);
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (3.08,2.08) {$(3,\ 2)$};
+  \node[font=\sffamily\footnotesize, text=bkGray!70!black, anchor=north] at (2,-0.3) {3歩};
+  \node[font=\sffamily\footnotesize, text=bkGray!70!black, anchor=west] at (3.1,1) {2歩};
+  \node[font=\sffamily\footnotesize, anchor=north] at (1.7,-1.4) {回す前};
+  \begin{scope}[xshift=68mm]
+    \begin{scope}
+      \clip (-2.4,-1.2) rectangle (3.4,4.4);
+      \begin{scope}[rotate=30]\draw[bkLine, line width=0.4pt] (-1,-1) grid (4,4);\end{scope}
+    \end{scope}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-2.4,0) -- (3.4,0) node[right, font=\footnotesize, inner sep=1.5pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,-1.2) -- (0,4.4) node[above, font=\footnotesize, inner sep=1.5pt] {$y$};
+    \begin{scope}[rotate=30]
+      \draw[bkInk!60, line width=0.8pt, dashed] (1,0) -- (3,0) -- (3,2);
+      \draw[bkRed, line width=1.6pt, -{Stealth[length=2.6mm]}] (0,0) -- (1,0);
+      \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=2.6mm]}] (0,0) -- (0,1);
+      \fill[bkBlue] (3,2) circle (0.11);
+    \end{scope}
+    \node[font=\footnotesize, text=bkRed!80!black, anchor=north west, inner sep=1pt] at ($(30:1)+(0.05,-0.05)$) {$\vec e_x{}'$};
+    \node[font=\footnotesize, text=bkGreen!50!black, anchor=east, inner sep=1pt] at ($(120:1)+(-0.05,0)$) {$\vec e_y{}'$};
+    \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (1.75,3.25) {$(1.60,\ 3.23)$};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0.5,-1.4) {30°回した後};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{方眼ごと30°回す。点は、回した矢印 $\vec e_x{}'$ の向きに3歩、$\vec e_y{}'$ の向きに2歩の所へ行く。}
+\label{bk:7-6:fig-hougan}
+\end{bkfigure}
+
+\kviighead{回した2本の矢印は、どこを向く？}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item $\vec e_x=(1,\ 0)$ は、単位円の上の角0°の点です。$\theta$ 回すと、単位円の上の角 $\theta$ の点に行きます（4-8）。だから $\vec e_x{}'=(\cos\theta,\ \sin\theta)$ です。
+\item $\vec e_y=(0,\ 1)$ は、$\vec e_x$ を90°回した矢印です。方眼ごと回すと、この「90°の関係」も変わらないので、$\vec e_y{}'$ は $\vec e_x{}'$ を90°回した矢印です。4-8 の $(x,\ y)\to(-y,\ x)$ に $x=\cos\theta$、$y=\sin\theta$ を入れて、$\vec e_y{}'=(-\sin\theta,\ \cos\theta)$ です。
+\end{enumerate}
+
+\kviighead{歩数をかけてたす}
+点 $(x,\ y)$ は「$\vec e_x$ に $x$ 歩、$\vec e_y$ に $y$ 歩」なので、回した点は「$\vec e_x{}'$ に $x$ 歩、$\vec e_y{}'$ に $y$ 歩」です。1行ずつ計算します。
+\begin{kviighk}[0.5]
+x\,\vec e_x{}'+y\,\vec e_y{}' & 回した矢印で、同じ歩数 \\
+=x\begin{pmatrix}\cos\theta\\\sin\theta\end{pmatrix}+y\begin{pmatrix}-\sin\theta\\\cos\theta\end{pmatrix} & ①と②の矢印を入れた \\
+=\begin{pmatrix}x\cos\theta-y\sin\theta\\x\sin\theta+y\cos\theta\end{pmatrix} & 上の成分どうし、下の成分どうしをたした \\
+\end{kviighk}
+この形は、7-2 で学んだ「行列×ベクトル」そのものです。1列めに $\vec e_x$ の行き先、2列めに $\vec e_y$ の行き先を並べた行列をかけています（7-2 の「列は矢印の行き先」）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (M) at (0,0) [kviig mat, nodes={minimum width=12mm}] {\cos\theta \& -\sin\theta\\ \sin\theta \& \cos\theta\\};
+  \matrix (v) [kviig mat, nodes={minimum width=7mm}, anchor=west] at ([xshift=6mm]M.east) {x\\ y\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]v.east) {$=$};
+  \matrix (r) [kviig mat, nodes={minimum width=30mm}, anchor=west] at ([xshift=3.5mm]eq.east) {x\cos\theta-y\sin\theta\\ x\sin\theta+y\cos\theta\\};
+  \kviighl{kviig row}{M-1-1}{M-1-2}
+  \kviighl{kviig col}{v-1-1}{v-2-1}
+  \kviighl{kviig ans}{r-1-1}{r-1-1}
+  \draw[bkRed!80!black, line width=0.6pt] ([yshift=-1mm]M-2-1.south) -- ++(0,-4);
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkRed!80!black, inner sep=1pt] at ([yshift=-5.2mm, xshift=4mm]M-2-1.south) {1列め：$\vec e_x$ の行き先};
+  \draw[bkGreen!50!black, line width=0.6pt] ([yshift=-1mm]M-2-2.south) -- ++(0,-10);
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkGreen!50!black, inner sep=1pt] at ([yshift=-11.2mm, xshift=-4mm]M-2-2.south) {2列め：$\vec e_y$ の行き先};
+\end{tikzpicture}
+\bkfigcaption{1行め（オレンジ）と、ベクトルの列（青）の内積が、回した点の $x$ 座標（緑）。}
+\end{bkfigure}
+
+\kviigframe{\sffamily\bfseries 原点のまわりに左回りに $\theta$ 回す行列\\[4pt]
+$R(\theta)=\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}$}
+この行列を\textbf{回転行列}（かいてんぎょうれつ）といい、$R(\theta)$ と書きます。\bkidx{かいてんぎょうれつ}{回転行列}$R$ は rotation（回転）の頭文字です。$\theta$ が正なら左回り、負なら右回りに回します。
+
+\kviighead{やってみようの B で確かめる}
+B $(4,\ 4)$ を30°回します（$\cos30°=0.866$、$\sin30°=0.5$）。
+\[R(30°)\begin{pmatrix}4\\4\end{pmatrix}=\begin{pmatrix}0.866&-0.5\\0.5&0.866\end{pmatrix}\begin{pmatrix}4\\4\end{pmatrix}\]
+\[\phantom{R(30°)\begin{pmatrix}4\\4\end{pmatrix}}=\begin{pmatrix}0.866\times4-0.5\times4\\0.5\times4+0.866\times4\end{pmatrix}=\begin{pmatrix}1.464\\5.464\end{pmatrix}\]
+表の $(1.46,\ 5.46)$ と同じです。「B の角は45°だから…」と考えなくても、4つの数をかけてたすだけで出ました。図\ref{bk:7-6:fig-hougan}の点 $(3,\ 2)$ も、同じ計算で $(3\times0.866-2\times0.5,\ 3\times0.5+2\times0.866)=(1.598,\ 3.232)$ です。
+
+\kviighead{知っている角で確かめる}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $\theta=90°$：$\cos90°=0$、$\sin90°=1$ なので、次の行列です。$(x,\ y)$ にかけると $(-y,\ x)$ で、4-8 の「90°回す」と同じです。
+\kviigline{$R(90°)=\begin{pmatrix}0&-1\\1&0\end{pmatrix}$}
+この行列は、これからよく使うので、$R_{90}$ とも書きます。
+\item $\theta=0°$：$\cos0°=1$、$\sin0°=0$ なので、単位行列 $I$ です。0°回す＝何もしない、です。
+\item $\theta=180°$：$\cos180°=-1$、$\sin180°=0$ なので、$(x,\ y)\to(-x,\ -y)$。原点について反対側へ行きます。
+\end{itemize}
+
+\begin{seikaku}
+「方眼ごと回すと、方眼は方眼のまま」というのは、回転が、原点を動かさず、長さと角の大きさを変えない動きだからです。だから、7-2 で学んだ「まっすぐはまっすぐのまま、平行は平行のまま、原点は動かない」をみたし、行列で書けます。原点ではない点（たとえば $(1,\ 1)$）のまわりに回すときは、原点も動くので、行列をかけるだけでは書けません（②のあとのもっと知りたいと 7-7）。
+\end{seikaku}
+
+
+\bksubsection{2}{もう1つの作り方：複素数のかけ算}
+
+\label{bk:7-6:fukuso}6-9 では、複素数 $x+yj$ に $\cos\theta+j\sin\theta$ をかけると、複素平面の点が $\theta$ 回ることを学びました。このかけ算を1行ずつ展開して、回転行列と見くらべます。
+\begin{kviighk}[0.56]
+(x+yj)(\cos\theta+j\sin\theta) & 6-9：$\theta$ 回すかけ算 \\
+=x\cos\theta+jx\sin\theta+jy\cos\theta+j^2y\sin\theta & 分配法則で、4つの項に分けた \\
+=x\cos\theta+jx\sin\theta+jy\cos\theta-y\sin\theta & $j^2=-1$（6-8） \\
+=(x\cos\theta-y\sin\theta)+(x\sin\theta+y\cos\theta)j & $j$ のない項（実部）と、$j$ のつく項（虚部）にまとめた \\
+\end{kviighk}
+実部が $x\cos\theta-y\sin\theta$、虚部が $x\sin\theta+y\cos\theta$ です。①で作った $R(\theta)\vec x$ の上の成分と下の成分に、ぴったり同じです。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+6-9 では、$3+j$ を60°回すと $0.634+3.098j$ になりました。同じ回転を、行列で計算します（$\cos60°=0.5$、$\sin60°=0.866$）。
+\kviigline{$\begin{pmatrix}0.5&-0.866\\0.866&0.5\end{pmatrix}\begin{pmatrix}3\\1\end{pmatrix}=\begin{pmatrix}0.634\\3.098\end{pmatrix}$}
+6-9 と同じ点が出ました。\textbf{複素数のかけ算と回転行列は、同じ回転を2つの書き方で表したもの}です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}[x=11mm, y=11mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-0.4,0) -- (3.6,0) node[right, font=\footnotesize, inner sep=1pt] {実部};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.3) -- (0,3.6) node[above, font=\footnotesize, inner sep=1pt] {虚部};
+  \draw[bkInk!35, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (5:3.162) arc (5:95:3.162);
+  \draw[bkBlue, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (3,1);
+  \draw[bkOrange, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (0.634,3.098);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (18.43:1.1) arc (18.43:78.43:1.1);
+  \node[font=\footnotesize, fill=white, inner sep=1pt] at (48:1.5) {60°};
+  \node[font=\footnotesize, anchor=north] at (3,0.9) {$3+j$};
+  \node[font=\footnotesize, anchor=south west, inner sep=1pt] at (0.68,3.12) {$0.634+3.098j$};
+\end{tikzpicture}
+\end{minipage}\par\vspace{4pt}
+行列のよいところは、3次元でも同じように使えることです（7-7）。複素数のかけ算で回せるのは、平面の回転だけです。
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{motto}[4]
+\kviigbox{原点ではない点のまわりに回す}
+\noindent\begin{minipage}[c]{0.68\linewidth}
+\raggedright
+時計の針は、文字盤の中心 C のまわりに回ります。C が原点でないときは、①C が原点に来るように全体をずらし（$\vec p-\vec c$）、②原点のまわりに $R(\theta)$ で回し、③もとの場所へずらしてもどします（$+\vec c$）。
+\kviigline{$\vec p\,'=R(\theta)(\vec p-\vec c)+\vec c$}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}
+\centering
+\begin{tikzpicture}[x=5mm, y=5mm]
+  \draw[bkLine, line width=0.4pt] (-0.5,-0.5) grid (3.5,3.5);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (-0.5,0) -- (3.8,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.5) -- (0,3.8) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \draw[bkGray, line width=0.8pt, dashed] (1,1) -- (3,1);
+  \draw[bkBlue, line width=1pt] (1,1) -- (1,3);
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (2.2,1) arc (0:90:1.2);
+  \fill[bkInk] (1,1) circle (0.1); \fill[bkGray] (3,1) circle (0.12); \fill[bkBlue] (1,3) circle (0.12);
+  \node[font=\footnotesize, anchor=north east, inner sep=1pt] at (0.95,0.95) {C};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (3.05,0.95) {P};
+  \node[font=\footnotesize, anchor=south west, inner sep=1pt, text=bkBlue!80!black] at (1.1,3.05) {P$'$};
+\end{tikzpicture}
+\end{minipage}\par\vspace{2pt}
+たとえば、P $(3,\ 1)$ を C $(1,\ 1)$ のまわりに90°回すと、①$(2,\ 0)$、②$R_{90}$ をかけて $(0,\ 2)$、③$(1,\ 1)$ をたして $(1,\ 3)$ です。「ずらす」がまざるので、行列を1回かけるだけでは書けません。7-7 では、数を1つふやした「同次座標」で、これも1つの行列にまとめます。
+\end{motto}
+\end{minipage}\par
+
+\bksubsection{3}{表計算と Python で、まとめて回す}
+
+\label{bk:7-6:keisan}三角形の3つの頂点を、1つずつ回すのはたいへんです。7-3 で学んだように、行列×行列は「右の行列の列ごとに、行列×ベクトルをする」計算でした。そこで、\textbf{点を列に並べた行列}を作り、回転行列を左から1回かければ、全部の点がいっぺんに回ります。
+\[R(30°)\begin{pmatrix}0&4&4\\0&0&4\end{pmatrix}=\begin{pmatrix}0&3.464&1.464\\0&2&5.464\end{pmatrix}\]
+1列めが O、2列めが A、3列めが B です。O は原点なので動きません。
+
+\kviighead{表計算}
+回す角を F2 のセルに入れておき、回転行列の4つの成分を COS と SIN で作ります。表計算の COS・SIN はラジアンで計算するので、RADIANS で度をラジアンに直します（4-6・6-9 と同じ注意）。3列の答えは右に入らないので、回した点は表の下（A5 から）に出します。
+\begin{bkcenter}
+\kviigfx{A2}{=COS(RADIANS(F2))}\hspace{3mm}\kviigfx{B2}{=-SIN(RADIANS(F2))}\par\vspace{1mm}
+\kviigfx{A3}{=SIN(RADIANS(F2))}\hspace{3mm}\kviigfx{B3}{=COS(RADIANS(F2))}\par\vspace{1mm}
+\kviigfx{A5}{=MMULT(A2:B3,C2:E3)}\par\vspace{2mm}
+\bksheet{6}{15}{%
+1 & \SetCell[c=2]{c} $R(\theta)$ & & \SetCell[c=3]{c} 点 O・A・B & & & 角（度） \\
+2 & \SetCell{bg=bkTheme!12} 0.866 & \SetCell{bg=bkTheme!12} $-0.5$ & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 4 & \SetCell{bg=bkGreen!14} 4 & 30 \\
+3 & \SetCell{bg=bkTheme!12} 0.5 & \SetCell{bg=bkTheme!12} 0.866 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 4 & \\
+4 & \SetCell[c=3]{c} 回した点 O・A・B & & & & & \\
+5 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 3.464 & \SetCell{bg=bkYellow!35} 1.464 & & & \\
+6 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 2 & \SetCell{bg=bkYellow!35} 5.464 & & & \\}
+\bktabcaption{回した点は、表の下の A5 から（7-1 と同じように確定する）。}
+\end{bkcenter}
+F2 を60、90、120 と書きかえると、やってみようの表の続きが一瞬で出ます。回した点を表計算のグラフ（散布図）にかくと、次の図のように、三角形がくるっと回っていくのが見えます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=5.2mm, y=5.2mm]
+  \draw[bkLine, line width=0.4pt] (-6,-1) grid (5,6);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-6,0) -- (5.6,0) node[right, font=\footnotesize, inner sep=1.5pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,-1) -- (0,6.6) node[above, font=\footnotesize, inner sep=1.5pt] {$y$};
+  \foreach \a/\c in {0/bkGray,30/bkBlue,60/bkGreen,90/bkOrange,120/bkPurple} {
+    \begin{scope}[rotate=\a]\draw[\c!80!black, line width=1pt, line join=round] (0,0) -- (4,0) -- (4,4) -- cycle;\end{scope}
+    \node[font=\footnotesize, text=\c!70!black, fill=white, inner sep=0.8pt] at ({\a+45}:6.25) {\a°};}
+  \fill[bkInk] (0,0) circle (0.12);
+\end{tikzpicture}
+\bkfigcaption{F2 を0、30、60、90、120 にして求めた三角形。数字は回した角で、B の近くに書いた。}
+\end{bkfigure}
+
+\Needspace{16\baselineskip}\kviighead{Python}
+Python では、\texttt{np.radians} で度をラジアンに直してから、\texttt{np.cos}・\texttt{np.sin} を使います。行列×行列は \texttt{@} です（7-1・7-3）。
+\begin{bkcode}[Python]
+import numpy as np
+th = np.radians(30)                  \# 30°をラジアンに直す
+R = np.array([[np.cos(th), -np.sin(th)],
+              [np.sin(th),  np.cos(th)]])
+P = np.array([[0, 4, 4],
+              [0, 0, 4]])            \# 点 O・A・B を列に並べる
+print(np.round(R @ P, 3))           \# 小数第3位まで出す
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[0.    3.464 1.464]
+ [0.    2.    5.464]]
+\end{bkcodeout}
+答えも、点を列に並べた形で出てきます。上の行が $x$ 座標、下の行が $y$ 座標です。
+
+\bksubsection{4}{回転をつなぐ：$R(\alpha)R(\beta)=R(\alpha+\beta)$}
+
+\label{bk:7-6:tsunagu}いよいよ、\bkhatenaref の問いです。7-3 で学んだように、行列は右にあるものが先にはたらくので、あとからはたらく回転を左に書きます。\bkhatenaref の「30°回してから45°回す」は $R(45°)R(30°)$ です。
+
+ここでは先に、⑦のロボットの腕の計算と同じ並びの $R(30°)R(45°)$（45°が先、30°があと）を計算します。順番を入れかえた $R(45°)R(30°)$ も同じになるかどうかは、そのあとで確かめます。
+
+\kviighead{まず、数で確かめる}
+表計算の MMULT か、Python の \texttt{@} で、2つの行列をかけてみます（くわしい手計算は\bkreidairef{2}）。
+\[R(30°)R(45°)=\begin{pmatrix}0.866&-0.5\\0.5&0.866\end{pmatrix}\begin{pmatrix}0.707&-0.707\\0.707&0.707\end{pmatrix}\]
+\[\phantom{R(30°)R(45°)}=\begin{pmatrix}0.259&-0.966\\0.966&0.259\end{pmatrix}\]
+$\cos75°=0.259$、$\sin75°=0.966$ なので、これは $R(75°)$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=20mm, y=20mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-0.3,0) -- (1.6,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.2) -- (0,1.55) node[left, font=\footnotesize, inner sep=2pt] {$y$};
+  \draw[bkInk!30, line width=0.6pt, dashed] (0:1.2) arc (0:90:1.2);
+  \draw[bkGray, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (0:1.2);
+  \draw[bkOrange, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (45:1.2);
+  \draw[bkBlue, line width=1.5pt, -{Stealth[length=2.4mm]}] (0,0) -- (75:1.2);
+  \draw[bkOrange!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (0:0.45) arc (0:45:0.45);
+  \draw[bkBlue!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (45:0.8) arc (45:75:0.8);
+  \node[font=\footnotesize, text=bkOrange!70!black] at (22:0.6) {45°};
+  \node[font=\footnotesize, text=bkBlue!70!black] at (60:0.62) {30°};
+  \node[font=\footnotesize, anchor=north] at (1.2,-0.05) {$(1,\ 0)$};
+  \node[font=\sffamily\footnotesize, text=bkOrange!70!black, anchor=west] at (45:1.26) {① $R(45°)$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!70!black, anchor=south west, inner sep=1pt] at (75:1.24) {② $R(30°)$};
+  \begin{scope}[xshift=64mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-0.3,0) -- (1.6,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.2) -- (0,1.55) node[left, font=\footnotesize, inner sep=2pt] {$y$};
+  \draw[bkInk!30, line width=0.6pt, dashed] (0:1.2) arc (0:90:1.2);
+  \draw[bkGray, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (0:1.2);
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (30:1.2);
+  \draw[bkBlue, line width=1.5pt, -{Stealth[length=2.4mm]}] (0,0) -- (75:1.2);
+  \draw[bkGreen!50!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (0:0.45) arc (0:30:0.45);
+  \draw[bkBlue!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (30:0.8) arc (30:75:0.8);
+  \node[font=\footnotesize, text=bkGreen!50!black] at (15:0.62) {30°};
+  \node[font=\footnotesize, text=bkBlue!70!black] at (53:0.6) {45°};
+  \node[font=\footnotesize, anchor=north] at (1.2,-0.05) {$(1,\ 0)$};
+  \node[font=\sffamily\footnotesize, text=bkGreen!50!black, anchor=west] at (30:1.26) {① $R(30°)$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!70!black, anchor=south west, inner sep=1pt] at (75:1.24) {② $R(45°)$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左は $R(30°)R(45°)$（45°が先）、右は $R(45°)R(30°)$（30°が先）。どちらも、全部で75°回る。}
+\label{bk:7-6:fig-tsunagu}
+\end{bkfigure}
+
+\kviighead{文字で計算すると、加法定理が出てくる}
+数で確かめたことが、どんな角でも成り立つかを調べます。$R(\alpha)R(\beta)$ の4つの成分を、「左の行列の行と、右の行列の列の内積」（7-3）で、1つずつ計算します。
+\[R(\alpha)R(\beta)=\begin{pmatrix}\cos\alpha&-\sin\alpha\\\sin\alpha&\cos\alpha\end{pmatrix}\begin{pmatrix}\cos\beta&-\sin\beta\\\sin\beta&\cos\beta\end{pmatrix}\]
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=19mm] Q[c,m,wd=60mm] Q[c,m,wd=32mm]}, rowsep=2pt}
+成分 & 行と列の内積 & 加法定理（4-9）で \\
+1行1列 & $\cos\alpha\cos\beta+(-\sin\alpha)\sin\beta$ & $\cos(\alpha+\beta)$ \\
+1行2列 & $\cos\alpha(-\sin\beta)+(-\sin\alpha)\cos\beta$ & $-\sin(\alpha+\beta)$ \\
+2行1列 & $\sin\alpha\cos\beta+\cos\alpha\sin\beta$ & $\sin(\alpha+\beta)$ \\
+2行2列 & $\sin\alpha(-\sin\beta)+\cos\alpha\cos\beta$ & $\cos(\alpha+\beta)$ \\
+\end{bktable}
+\bktabcaption{1行2列は、$-(\sin\alpha\cos\beta+\cos\alpha\sin\beta)$ とまとめてから、加法定理を使った。}
+\end{bkcenter}
+右の列を並べると、$R(\alpha+\beta)$ そのものです。
+\kviigframe{\sffamily\bfseries $R(\alpha)R(\beta)=R(\alpha+\beta)$\\[3pt]\normalfont\small 回転をつなぐと、角はたし算になる}
+\bkhatenaref の答えです。\textbf{回転行列のかけ算の中には、4-9 の加法定理がかくれていました。}4-9 では、単位円の図をくふうして加法定理を導きました。行列で考えると、「$\beta$ 回してから $\alpha$ 回すと、$\alpha+\beta$ 回る」というあたりまえのことから、加法定理が出てきます。加法定理を忘れたら、2つの回転行列をかければ、いつでも作り直せます。
+
+\kviighead{回転どうしは、かける順番を変えてもよい}
+$R(\beta)R(\alpha)=R(\beta+\alpha)$ で、$\beta+\alpha=\alpha+\beta$ なので、$R(\alpha)R(\beta)=R(\beta)R(\alpha)$ です（図\ref{bk:7-6:fig-tsunagu}の左と右）。数でも確かめます。\bkhatenaref の並びの $R(45°)R(30°)$ の1行1列は $0.707\times0.866+(-0.707)\times0.5=0.6123-0.3535=0.2588$、2行1列は $0.707\times0.866+0.707\times0.5=0.9658$ で、$R(30°)R(45°)$ と同じ $R(75°)$ になります。だから、\bkhatenaref の答えは「本当に75°回す行列になる」です。7-3 では、「回してのばす」と「のばして回す」はちがいました。\textbf{平面の回転どうしなら、順番を変えても同じ}です。ただし、これは2次元だけの話で、3次元の回転では順番が大事になります（7-7）。
+
+\kviighead{同じ回転をくり返す}
+$R(\theta)$ を $n$ 回かけると、角は $\theta$ が $n$ 個たされて $n\theta$ です。
+\kviigline{$R(\theta)^n=R(n\theta)$}
+たとえば、$R(30°)$ を12回かけると $R(360°)$ で、1周して元にもどるので $I$ です（$30\times12=360$）。$R_{90}$ を2回かけると $R(180°)$ で、すべての点が反対側へ行くので、$-I$ です。
+\kviigline{$R_{90}R_{90}=R(180°)=\begin{pmatrix}-1&0\\0&-1\end{pmatrix}=-I$}
+6-8 では、「$j$ をかけると90°回る。だから $j^2=-1$」と考えました。$R_{90}$ は、行列の世界の $j$ です。
+
+\bksubsection{5}{回す前にもどす：$R(\theta)^{-1}=R(\theta)^{\mathsf T}$}
+
+\label{bk:7-6:modosu}$\theta$ 回したものを元にもどすには、反対に $\theta$、つまり $-\theta$ 回せばよいはずです。これを、7-5 の逆行列の公式と、7-1 の転置の2つで確かめます。
+
+\kviighead{逆行列の公式で}
+$R(\theta)$ の $ad-bc$ は、$\cos\theta\cdot\cos\theta-(-\sin\theta)\cdot\sin\theta=\cos^2\theta+\sin^2\theta=1$ です（単位円の上の点なので、三平方の定理で $\cos^2\theta+\sin^2\theta=1$。4-8）。7-5 の公式で、1行ずつ計算します。
+\begin{kviighk}[0.5]
+R(\theta)^{-1}=\frac{1}{1}\begin{pmatrix}\cos\theta&\sin\theta\\-\sin\theta&\cos\theta\end{pmatrix} & $ad-bc=1$。$a$ と $d$ を入れかえ、$b$ と $c$ の符号を変えた \\
+=\begin{pmatrix}\cos(-\theta)&-\sin(-\theta)\\\sin(-\theta)&\cos(-\theta)\end{pmatrix} & $\cos(-\theta)=\cos\theta$、$\sin(-\theta)=-\sin\theta$（4-8） \\
+=R(-\theta) & 回転行列の形になった \\
+\end{kviighk}
+たしかに、$-\theta$ 回す行列です。
+
+\kviighead{転置と見くらべる}
+$R(\theta)$ のたてとよこを入れかえる（7-1 の転置）と、次のようになります。
+\kviigline{$R(\theta)^{\mathsf T}=\begin{pmatrix}\cos\theta&\sin\theta\\-\sin\theta&\cos\theta\end{pmatrix}$}
+上の逆行列と、まったく同じです。
+\kviigframe{\sffamily\bfseries $R(\theta)^{-1}=R(\theta)^{\mathsf T}=R(-\theta)$\\[3pt]\normalfont\small 回転行列は、転置するだけで逆行列になる}
+ふつうの行列では、逆行列を作るには、行列式でわったり、掃き出し法を使ったりと、手間がかかります（7-5）。回転行列は、\textbf{たてとよこを入れかえるだけ}で逆行列になります。3次元の回転（7-7）でも同じで、ロボットやゲームの計算が速くできる理由の1つです。
+
+\kviighead{長さも面積も変えない}
+回しても、原点からの距離は変わらないはずです。回した点の座標の2乗の和を、1行ずつ計算します。
+\begin{kviighk}[0.58]
+(x\cos\theta-y\sin\theta)^2+(x\sin\theta+y\cos\theta)^2 & 回した点の $x$ 座標の2乗と $y$ 座標の2乗の和 \\
+=x^2\cos^2\theta-2xy\cos\theta\sin\theta+y^2\sin^2\theta & 1つめを展開した \\
+\phantom{=}+x^2\sin^2\theta+2xy\sin\theta\cos\theta+y^2\cos^2\theta & 2つめを展開した \\
+=x^2(\cos^2\theta+\sin^2\theta)+y^2(\sin^2\theta+\cos^2\theta) & $-2xy\cdots$ と $+2xy\cdots$ が消えた \\
+=x^2+y^2 & $\cos^2\theta+\sin^2\theta=1$ \\
+\end{kviighk}
+三平方の定理（4-4）で、距離の2乗は $x^2+y^2$ なので、回しても距離は変わりません。たとえば、$(3,\ 1)$ を60°回した $(0.634,\ 3.098)$ では、次のように、回す前の $3^2+1^2=10$ と同じです。
+\kviigline{$0.634^2+3.098^2=0.402+9.598=10.000$}
+また、行列式は1なので、図形の面積も1倍、つまり変わりません（7-4）。
+
+\begin{seikaku}
+$R^{\mathsf T}R=I$ をみたす行列を、\textbf{直交行列}（ちょっこうぎょうれつ）といいます。\bkidx{ちょっこうぎょうれつ}{直交行列}$R^{\mathsf T}R$ の成分は、$R$ の列どうしの内積（4-12）になります。1行1列は1列めどうしの内積 $\cos^2\theta+\sin^2\theta=1$、1行2列は1列めと2列めの内積 $-\cos\theta\sin\theta+\sin\theta\cos\theta=0$ です。つまり直交行列とは、「2つの列が、どちらも長さ1で、たがいに直角（直交）」な行列です。回転した $\vec e_x{}'$ と $\vec e_y{}'$ は、長さ1で直角なので、回転行列は直交行列です。
+
+7-2 の裏返しの行列（下の式）も、列は長さ1で直角なので直交行列ですが、行列式は $-1$ です（7-4：裏返すと符号が変わる）。
+\kviigline{$\begin{pmatrix}1&0\\0&-1\end{pmatrix}$}
+2×2 の直交行列は、回転（行列式1）か、回転と裏返しを組み合わせたもの（行列式 $-1$）のどちらかです。
+\end{seikaku}
+
+\bksubsection{6}{点を回す・軸を回す}
+
+\label{bk:7-6:jiku}ここまでは、軸を動かさずに、点を回してきました。工学では、反対に「点はそのままで、軸（ものさし）のほうを回して見る」ことがよくあります。坂の上の荷物の力を、坂にそった向きと坂に垂直な向きで見る（4-6）、かたむけたカメラで見る、回っているロボットの腕から見る、などです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=8.5mm, y=8.5mm]
+  % 左：軸を回して見る
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-0.8,0) -- (4.3,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.5) -- (0,4.6) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \begin{scope}[rotate=30]
+    \draw[bkBlue, line width=1pt, -{Stealth[length=2.4mm]}] (-0.4,0) -- (4.4,0);
+    \draw[bkBlue, line width=1pt, -{Stealth[length=2.4mm]}] (0,-0.3) -- (0,3.5);
+    \draw[bkBlue!60, line width=0.7pt, dashed] (3.732,0) -- (3.732,2.464) -- (0,2.464);
+  \end{scope}
+  \node[font=\footnotesize, text=bkBlue!80!black, anchor=south west, inner sep=1pt] at (30:4.45) {$x'$};
+  \node[font=\footnotesize, text=bkBlue!80!black, anchor=east, inner sep=2pt] at (120:3.5) {$y'$};
+  \draw[bkInk!60, line width=0.6pt, dashed] (2,0) -- (2,4) -- (0,4);
+  \fill[bkRed] (2,4) circle (0.09);
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (2.07,4.05) {P};
+  \draw[bkBlue!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (1.3,0) arc (0:30:1.3);
+  \node[font=\footnotesize, text=bkBlue!70!black] at (15:1.7) {30°};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.8,-0.7) {(a) 点はそのまま、軸を30°回す};
+  % 右：点を回す
+  \begin{scope}[xshift=60mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-0.8,0) -- (4.3,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-0.5) -- (0,4.6) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (63.43:4.472) arc (63.43:34.5:4.472);
+  \fill[bkRed!35] (2,4) circle (0.09);
+  \node[font=\footnotesize, text=bkGray, anchor=south west, fill=white, inner sep=1pt] at (2.07,4.05) {P};
+  \draw[bkInk!60, line width=0.6pt, dashed] (3.732,0) -- (3.732,2.464) -- (0,2.464);
+  \fill[bkRed] (3.732,2.464) circle (0.09);
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (3.8,2.42) {$(3.732,\ 2.464)$};
+  \node[font=\footnotesize, text=bkRed!70!black, anchor=south west, inner sep=1pt] at (50:4.6) {$-30°$};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.8,-0.7) {(b) 軸はそのまま、点を $-30°$ 回す};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{(a) と (b) で、点と軸の関係は同じ。だから (a) の新しい座標 $(x',\ y')$ は、(b) の回した点の座標と同じ $(3.732,\ 2.464)$。}
+\label{bk:7-6:fig-jiku}
+\end{bkfigure}
+
+\kviighead{見方1：軸を回すのは、点を反対に回すのと同じ}
+図\ref{bk:7-6:fig-jiku}の (a) のように、点 P $(2,\ 4)$ はそのままで、軸を左回りに30°回します。新しい軸 $x'$、$y'$ で P を読むと、いくつになるでしょう。
+
+(a) の図を、新しい軸がまっすぐ横・たてになるように、紙ごと右に30°回して見てください。すると (b) になります。軸から見ると、\textbf{軸が左に30°回ることは、点が右に30°（$-30°$）回ることと同じ}です。だから、新しい座標は $R(-30°)$ をかけて求められます。そして、⑤で調べたとおり、$R(-30°)=R(30°)^{\mathsf T}$ です。
+\[\begin{pmatrix}x'\\y'\end{pmatrix}=R(30°)^{\mathsf T}\begin{pmatrix}2\\4\end{pmatrix}=\begin{pmatrix}0.866&0.5\\-0.5&0.866\end{pmatrix}\begin{pmatrix}2\\4\end{pmatrix}=\begin{pmatrix}3.732\\2.464\end{pmatrix}\]
+
+\kviighead{見方2：新しい軸の向きの矢印との内積}
+もう1つの見方です。4-12 で学んだように、ある向きの長さ1の矢印との内積は、「その向きに何歩分あるか」でした。新しい $x'$ 軸の向きの長さ1の矢印は $\vec e_x{}'=(\cos30°,\ \sin30°)$、$y'$ 軸は $\vec e_y{}'=(-\sin30°,\ \cos30°)$ です（①）。
+\begin{kviighk}[0.6]
+x'=\vec e_x{}'\cdot\overrightarrow{\mathrm{OP}}=0.866\times2+0.5\times4=3.732 & $x'$ 軸の向きに何歩分か \\
+y'=\vec e_y{}'\cdot\overrightarrow{\mathrm{OP}}=-0.5\times2+0.866\times4=2.464 & $y'$ 軸の向きに何歩分か \\
+\end{kviighk}
+見方1と同じ答えです。$R(\theta)^{\mathsf T}$ の1行めは $\vec e_x{}'$、2行めは $\vec e_y{}'$ です。$R(\theta)$ の列が、そのまま $R(\theta)^{\mathsf T}$ の行になっているからです。
+\kviigframe{\sffamily\bfseries 軸を $\theta$ 回した座標で見ると\quad $\vec x\,'=R(\theta)^{\mathsf T}\vec x$\\[3pt]
+\normalfont\small もとの座標にもどすと\quad $\vec x=R(\theta)\vec x\,'$}
+2つめの式は、1つめの両辺に左から $R(\theta)$ をかけたものです（$R(\theta)R(\theta)^{\mathsf T}=I$）。\bkidx{ざひょうのへんかん}{座標の変換}このように、同じ点を別の軸で表しなおすことを、\textbf{座標の変換}（座標変換）といいます。
+
+\kviighead{物理の本では}
+物理シリーズ第1巻（力学）では、回る台の上の座標で見た位置 $\vec r\,'$ を、地面の座標に直すのに、2つめの式と同じ形の $\vec r=R(\theta)\vec r\,'$ を使います。また、橋の部材の中の力（応力）を、ななめの向きの軸で見るときに $R^{\mathsf T}$ を使います。そちらは 7-9 の「軸を変えて見る」で、もう一度出てきます。
+\begin{seikaku}
+「点を回す」行列と「軸を回して見る」行列は、角の向きが反対です。軸を左に $\theta$ 回して見ると、点は右に $\theta$ 回ったように見えるからです。本や場面によって、どちらの意味で回転行列を使っているかがちがうので、「点を回しているのか、軸を回しているのか」を、いつも図で確かめましょう。この本では、$R(\theta)$ は「点を左に $\theta$ 回す」行列です。
+\end{seikaku}
+
+\bksubsection{7}{ロボットの腕の手の位置}
+
+\label{bk:7-6:ude}4-7 では、2本の腕（2リンク）の手の位置を、三角比で求めました（4-7 の数は $L_1=\qty{40}{cm}$、$L_2=\qty{30}{cm}$）。ここでは、物理シリーズ第1巻の力学（力-7）と同じ腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）を、回転行列で計算します。$\theta_1$ は肩の角（$x$ 軸から）、$\theta_2$ はひじの角（上の腕の向きから）です。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-6,0) -- (58,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-4) -- (0,64) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \fill[bkGray!40] (-5,-4) rectangle (5,-1.8);
+  \kviigarm{30}{45}{45}{37.5}
+  \draw[bkInk!50, line width=0.6pt, dashed] (kviigE) -- ($(kviigE)+(30:16)$);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (12,0) arc (0:30:12);
+  \node[font=\footnotesize] at (15:16) {$\theta_1$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] ($(kviigE)+(30:11)$) arc (30:75:11);
+  \node[font=\footnotesize, anchor=west] at ($(kviigE)+(52:12)$) {$\theta_2$};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at ($(0,0)!0.5!(kviigE)+(1,-1)$) {$L_1$};
+  \node[font=\footnotesize, anchor=east, inner sep=1pt] at ($(kviigE)!0.5!(kviigP)+(-2,0)$) {$L_2$};
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at ($(kviigP)+(0,1.6)$) {手 P};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at ($(kviigE)+(1,-1.4)$) {ひじ};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt] at (-2.5,3.5) {肩};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\raggedright
+上の腕は、$x$ 軸の向きの矢印 $(L_1,\ 0)$ を $\theta_1$ 回したものです。\par\vspace{3pt}
+下の腕は、上の腕から見ると、矢印 $(L_2,\ 0)$ を $\theta_2$ 回したものです。上の腕がさらに $\theta_1$ 回っているので、地面から見ると、それをもう一度 $\theta_1$ 回します（⑥の $\vec x=R(\theta)\vec x\,'$）。
+\end{minipage}\par\vspace{4pt}
+肩から手への矢印 $\vec p$ は、2本の腕の矢印の和なので、次の式になります。
+\kviigframe{\sffamily\bfseries $\vec p=R(\theta_1)\begin{pmatrix}L_1\\0\end{pmatrix}+R(\theta_1)R(\theta_2)\begin{pmatrix}L_2\\0\end{pmatrix}$}
+$R(\theta_1)R(\theta_2)$ では、右の $R(\theta_2)$（ひじ）が先にはたらき、そのあと $R(\theta_1)$（肩）がはたらきます。④より $R(\theta_1)R(\theta_2)=R(\theta_1+\theta_2)$ なので、成分にすると次のようになります。
+\begin{kviighk}[0.56]
+R(\theta_1)\begin{pmatrix}L_1\\0\end{pmatrix}=\begin{pmatrix}L_1\cos\theta_1\\L_1\sin\theta_1\end{pmatrix} & 1列めだけが残る（2つめの成分が0） \\
+R(\theta_1+\theta_2)\begin{pmatrix}L_2\\0\end{pmatrix}=\begin{pmatrix}L_2\cos(\theta_1+\theta_2)\\L_2\sin(\theta_1+\theta_2)\end{pmatrix} & 同じように、1列めに $L_2$ をかけた \\
+\end{kviighk}
+2つをたすと、4-7 の順運動学の式になります。
+\kviigline{$x=L_1\cos\theta_1+L_2\cos(\theta_1+\theta_2)$}
+\kviigline{$y=L_1\sin\theta_1+L_2\sin(\theta_1+\theta_2)$}
+
+\kviighead{数を入れる}
+$\theta_1=30°$、$\theta_2=45°$ では、$\theta_1+\theta_2=75°$ です。手の位置を1 mm（\qty{0.001}{m}）まで正しく出したいので、$\cos$・$\sin$ は5けたで計算します（$\cos30°=0.86603$、$\sin30°=0.5$、$\cos75°=0.25882$、$\sin75°=0.96593$）。
+\begin{kviighk}[0.56]
+R(30°)\begin{pmatrix}0.30\\0\end{pmatrix}=\begin{pmatrix}0.25981\\0.15000\end{pmatrix} & $0.30\times0.86603$、$0.30\times0.5$ \\
+R(75°)\begin{pmatrix}0.25\\0\end{pmatrix}=\begin{pmatrix}0.06470\\0.24148\end{pmatrix} & $0.25\times0.25882$、$0.25\times0.96593$ \\
+\vec p=\begin{pmatrix}0.32451\\0.39148\end{pmatrix}\approx\begin{pmatrix}0.325\\0.391\end{pmatrix} & 2つをたした（m） \\
+\end{kviighk}
+手は、肩から右へ\qty{0.325}{m}、上へ\qty{0.391}{m}の所にあります。手の向き（下の腕の向き）は $x$ 軸から75°です。
+
+\kviighead{関節がふえても、同じ}
+腕の先に、長さ\qty{0.10}{m}の道具をつけ、手首を15°曲げたとします（$\theta_3=15°$）。道具は、肩・ひじ・手首の3つの回転を受けるので、道具の矢印にかかる回転は次のとおりです。
+\kviigline{$R(\theta_1)R(\theta_2)R(\theta_3)=R(30°+45°+15°)=R(90°)$}
+\kviigline{$R(90°)\begin{pmatrix}0.10\\0\end{pmatrix}=\begin{pmatrix}0\\0.10\end{pmatrix}$}
+これを手の位置にたして、道具の先は $(0.325,\ 0.491)$ です。関節が3つ、4つとふえても、回転行列を1つずつかけていけばよいのです。工場のロボットは、関節が6つあるので、3次元の回転行列（7-7）を6つかけていきます。
+
+
+
+\par\noindent\begin{minipage}{\linewidth}
+\begin{motto}[5]
+\kviigbox{回転行列を微分する}
+$R(\theta)$ の4つの成分を、それぞれ $\theta$ で微分します（行列の微分は、成分ごとに微分すると決めます）。$(\cos\theta)'=-\sin\theta$、$(\sin\theta)'=\cos\theta$（5-15）なので、
+\[\frac{\dd R}{\dd\theta}=\begin{pmatrix}-\sin\theta&-\cos\theta\\\cos\theta&-\sin\theta\end{pmatrix}\]
+これは、$R(\theta)$ と $R_{90}$ の積に等しくなります。行と列の内積で確かめます。
+\[R(\theta)R_{90}=\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}\begin{pmatrix}0&-1\\1&0\end{pmatrix}=\begin{pmatrix}-\sin\theta&-\cos\theta\\\cos\theta&-\sin\theta\end{pmatrix}\]
+点 $\vec r_0$ を角速度 $\omega$ で回すと、時刻 $t$ の位置は $\vec r=R(\omega t)\vec r_0$ です。合成関数の微分（5-6）で、速度は次のようになります（回転どうしは順番を変えてよいので、$R(\omega t)R_{90}=R_{90}R(\omega t)$）。
+\kviigline{$\dfrac{\dd\vec r}{\dd t}=\omega R(\omega t)R_{90}\vec r_0=\omega R_{90}R(\omega t)\vec r_0=\omega R_{90}\vec r$}
+つまり、\textbf{速度は、位置の矢印を90°回して $\omega$ 倍したもの}で、大きさは $r\omega$（4-8）、向きは円の接線（4-15）です。物理シリーズ第1巻では、この式から、回る台の上で感じる遠心力とコリオリの力を導きます。
+\end{motto}
+\end{minipage}\par
+
+\begin{senmonsho}[線形代数の教科書ふうの書き方]
+\begin{bkhonbun}
+平面上の原点のまわりの角 $\theta$ の回転は、行列
+\[R(\theta)=\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}\]
+による一次変換で表される。$R(\theta)$ は直交行列であり、${}^t\!R(\theta)R(\theta)=E$、$\det R(\theta)=1$ をみたす。また、$R(\alpha)R(\beta)=R(\alpha+\beta)$ が成り立つ。
+\end{bkhonbun}
+\bkyaku{「一次変換」は、行列をかける変換（7-2）のこと。${}^t\!R$ は転置 $R^{\mathsf T}$ の別の書き方（左上に小さな t を書く）。$E$ は単位行列で、この本の $I$ と同じ。$\det$ は行列式（7-4）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\par\addvspace{3pt}\noindent\hangindent=6.6\zw\hangafter=1\makebox[6.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{回転行列}$R(\theta)=\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}$（左回りに $\theta$）
+\tsl{作り方}1列め＝$\vec e_x$ の行き先、2列め＝$\vec e_y$ の行き先
+\tsl{つなぐ}$R(\alpha)R(\beta)=R(\alpha+\beta)$（中に加法定理）
+\tsl{もどす}$R(\theta)^{-1}=R(\theta)^{\mathsf T}=R(-\theta)$
+\tsl{軸を回す}軸を $\theta$ 回して見ると $\vec x\,'=R(\theta)^{\mathsf T}\vec x$
+\tsl{2本の腕}$\vec p=R(\theta_1)\begin{pmatrix}L_1\\0\end{pmatrix}+R(\theta_1)R(\theta_2)\begin{pmatrix}L_2\\0\end{pmatrix}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{回転行列}{原点のまわりに点を回す行列 $R(\theta)$。}
+\bkword{直交行列}{$R^{\mathsf T}R=I$ をみたす行列。列が長さ1で、たがいに直角。回転と裏返し。}
+\bkword{座標の変換}{同じ点を、別の軸（ものさし）で表しなおすこと。座標変換ともいう。}
+\bkword{順運動学}{関節の角から、手の位置を求めること（4-7）。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$R(\theta)$}{アール・シータ}{原点のまわりに左回りに $\theta$ 回す回転行列。$R(\theta)^{-1}=R(\theta)^{\mathsf T}=R(-\theta)$}{rotation matrix}{7-6}}
+{\bkkigocard{$R_{90}$}{アール・きゅうじゅう}{90°回す回転行列 $R(90°)$。$(x,\ y)\to(-y,\ x)$。$R_{90}R_{90}=-I$（$j^2=-1$ と同じ）}{rotation by 90°}{7-6}}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[点を回す]
+点 $(3,\ 1)$ を、原点のまわりに左回りに60°回した点を、回転行列で求めましょう。\newline
+（$\cos60°=0.5$、$\sin60°=0.866$）\par
+\kangaekata $R(60°)$ をかける。回した点の $x$ 座標は1行めとベクトルの内積、$y$ 座標は2行めとベクトルの内積。\par
+\shiki $R(60°)$ の1行めは $(0.5,\ -0.866)$、2行めは $(0.866,\ 0.5)$\par
+\kviigq $x=0.5\times3+(-0.866)\times1=1.5-0.866=0.634$\par
+\kviigq $y=0.866\times3+0.5\times1=2.598+0.5=3.098$\par
+\kotae $(0.634,\ 3.098)$
+\end{reidai}
+6-9 で、$3+j$ に $\cos60°+j\sin60°$ をかけた答え $0.634+3.098j$ と同じです。
+
+\begin{jibun}
+点 $(4,\ 2)$ を、原点のまわりに左回りに30°回した点を、回転行列で求めましょう。\newline
+（$\cos30°=0.866$、$\sin30°=0.5$）
+\bkjans{$x=0.866\times4-0.5\times2=3.464-1=2.464$、$y=0.5\times4+0.866\times2=2+1.732=3.732$。$(2.464,\ 3.732)$}
+\end{jibun}
+
+\begin{reidai}[回転をつなぐ]
+$R(30°)R(45°)$ を計算し、$R(75°)$ とくらべましょう。\newline
+（$\cos30°=0.866$、$\sin30°=0.5$、$\cos45°=\sin45°=0.707$）\newline
+（$\cos75°=0.259$、$\sin75°=0.966$）\par
+\kangaekata 積の成分は、左の行列の行と、右の行列の列の内積（7-3）。途中は小数第4位まで書き、最後に第3位にまるめる。\par
+\shiki 1行1列：$0.866\times0.707+(-0.5)\times0.707$\par
+\kviigq \phantom{1行1列：}${}=0.6123-0.3535=0.2588$\par
+\kviigq 1行2列：$0.866\times(-0.707)+(-0.5)\times0.707$\par
+\kviigq \phantom{1行2列：}${}=-0.6123-0.3535=-0.9658$\par
+\kviigq 2行1列：$0.5\times0.707+0.866\times0.707$\par
+\kviigq \phantom{2行1列：}${}=0.3535+0.6123=0.9658$\par
+\kviigq 2行2列：$0.5\times(-0.707)+0.866\times0.707$\par
+\kviigq \phantom{2行2列：}${}=-0.3535+0.6123=0.2588$\par
+\kotae 1行めが $(0.259,\ -0.966)$、2行めが $(0.966,\ 0.259)$（小数第3位まで）で、$R(75°)$ と同じ
+\end{reidai}
+
+\begin{jibun}
+$R(20°)R(40°)$ を計算し、$R(60°)$ とくらべましょう。\newline
+（$\cos20°=0.940$、$\sin20°=0.342$、$\cos40°=0.766$、$\sin40°=0.643$）\newline
+（$\cos60°=0.5$、$\sin60°=0.866$）
+\bkjans{1行1列 $0.940\times0.766-0.342\times0.643=0.7200-0.2199=0.5001$。1行2列 $-0.940\times0.643-0.342\times0.766=-0.6044-0.2620=-0.8664$。2行1列 $0.342\times0.766+0.940\times0.643=0.8664$。2行2列 $0.5001$。小数第3位までで、1行めが $(0.500,\ -0.866)$、2行めが $(0.866,\ 0.500)$ で、$R(60°)$ と同じ}
+\end{jibun}
+
+\begin{reidai}[同じ回転をくり返す]
+$\cos45°=\sin45°=\dfrac{\sqrt2}{2}$ を使って、次の問いに答えましょう。\newline
+（1）\nobreak $R(45°)^2=R(45°)R(45°)$ を成分で計算し、何°回す行列か答えましょう。\newline
+（2）\nobreak $R(45°)^4=R(45°)^2R(45°)^2$ を計算しましょう。\newline
+（3）\nobreak $R(45°)$ を何回かけると、はじめて $I$ になりますか。\par
+\kangaekata 行と列の内積で計算する。$\dfrac{\sqrt2}{2}\times\dfrac{\sqrt2}{2}=\dfrac{2}{4}=\dfrac12$。\par
+\shiki （1）\nobreak 1行1列：$\dfrac12-\dfrac12=0$、1行2列：$-\dfrac12-\dfrac12=-1$\par
+\kviigq \phantom{（1）}2行1列：$\dfrac12+\dfrac12=1$、2行2列：$-\dfrac12+\dfrac12=0$\par
+\kviigq \phantom{（1）}1行めが $(0,\ -1)$、2行めが $(1,\ 0)$ で、$R_{90}$\par
+\kviigq （2）\nobreak $R_{90}R_{90}$ を、行と列の内積で計算する\par
+\kviigq \phantom{（2）}1行1列：$0\times0+(-1)\times1=-1$\par
+\kviigq \phantom{（2）}1行2列：$0\times(-1)+(-1)\times0=0$\par
+\kviigq \phantom{（2）}2行1列：$1\times0+0\times1=0$\par
+\kviigq \phantom{（2）}2行2列：$1\times(-1)+0\times0=-1$\par
+\kviigq （3）\nobreak $R(45°)^n=R(45°\times n)$ が $R(360°)=I$ になるのは\par
+\kviigq \phantom{（3）}$45\times n=360$ のとき\par
+\kotae （1）\nobreak $R_{90}$（90°回す）\quad（2）\nobreak $-I$（180°回す）\quad（3）\nobreak 8回
+\end{reidai}
+
+\begin{jibun}
+$\cos30°=\dfrac{\sqrt3}{2}$、$\sin30°=\dfrac12$ を使って、次の問いに答えましょう。\newline
+（1）\nobreak $R(30°)^2$ を成分で計算し、何°回す行列か答えましょう。\newline
+（2）\nobreak $R(30°)^3=R(30°)^2R(30°)$ を計算しましょう。\newline
+（3）\nobreak $R(30°)$ を何回かけると、はじめて $I$ になりますか。
+\bkjans{（1）\nobreak 1行1列 $\frac34-\frac14=\frac12$、1行2列 $-\frac{\sqrt3}{4}-\frac{\sqrt3}{4}=-\frac{\sqrt3}{2}$、2行1列 $\frac{\sqrt3}{2}$、2行2列 $\frac12$。$R(60°)$。（2）\nobreak 1行1列 $\frac{\sqrt3}{4}-\frac{\sqrt3}{4}=0$、1行2列 $-\frac14-\frac34=-1$、2行1列 $\frac34+\frac14=1$、2行2列 $0$。$R_{90}$。（3）\nobreak $30\times n=360$ より12回}
+\end{jibun}
+
+\begin{reidai}[三角形をまとめて回す]
+3点 O $(0,\ 0)$、A $(4,\ 0)$、B $(4,\ 4)$ を頂点とする三角形を、原点のまわりに30°回します。点を列に並べた行列を使って、回した頂点を求めましょう（$\cos30°=0.866$、$\sin30°=0.5$）。\par
+\kangaekata 点を列に並べた行列に、左から $R(30°)$ をかけると、列ごとに回る（7-3）。表計算なら MMULT。\par
+\shiki $R(30°)\begin{pmatrix}0&4&4\\0&0&4\end{pmatrix}$ を、列ごとに計算する\par
+\kviigq 1列め（O）：$(0,\ 0)$ のまま\par
+\kviigq 2列め（A）：$x=0.866\times4-0.5\times0=3.464$\par
+\kviigq \phantom{2列め（A）：}$y=0.5\times4+0.866\times0=2$\par
+\kviigq 3列め（B）：$x=0.866\times4-0.5\times4=1.464$\par
+\kviigq \phantom{3列め（B）：}$y=0.5\times4+0.866\times4=5.464$\par
+\kotae O $(0,\ 0)$、A $(3.464,\ 2)$、B $(1.464,\ 5.464)$
+\end{reidai}
+
+\begin{jibun}
+\bkreidairef{4}の三角形を、原点のまわりに60°回した頂点を、点を列に並べた行列を使って求めましょう（$\cos60°=0.5$、$\sin60°=0.866$）。
+\bkjans{O $(0,\ 0)$。A は $x=0.5\times4=2$、$y=0.866\times4=3.464$ で $(2,\ 3.464)$。B は $x=0.5\times4-0.866\times4=-1.464$、$y=0.866\times4+0.5\times4=5.464$ で $(-1.464,\ 5.464)$}
+\end{jibun}
+
+\begin{reidai}[回す前にもどす]
+ある点を $R(60°)$ で回したら、$(0.634,\ 3.098)$ になりました。\newline
+（1）\nobreak $R(60°)^{-1}$ を、逆行列の公式（7-5）で求め、$R(-60°)$ と $R(60°)^{\mathsf T}$ にくらべましょう（$\cos60°=\dfrac12$、$\sin60°=\dfrac{\sqrt3}{2}$）。\newline
+（2）\nobreak もとの点を求めましょう（$\dfrac{\sqrt3}{2}=0.866$）。\par
+\kangaekata $R(60°)^{-1}$ を左からかけると、回す前にもどる。\par
+\shiki （1）\nobreak $ad-bc=\dfrac14+\dfrac34=1$\par
+\kviigq \phantom{（1）}$a$ と $d$ を入れかえ、$b$ と $c$ の符号を変えて\par
+\kviigq \phantom{（1）}$R(60°)^{-1}=\begin{pmatrix}\dfrac12&\dfrac{\sqrt3}{2}\\[6pt]-\dfrac{\sqrt3}{2}&\dfrac12\end{pmatrix}$\par
+\kviigq \phantom{（1）}$\cos(-60°)=\dfrac12$、$\sin(-60°)=-\dfrac{\sqrt3}{2}$ なので\par
+\kviigq \phantom{（1）}$R(-60°)$ と同じ\par
+\kviigq \phantom{（1）}$R(60°)$ のたてとよこを入れかえた $R(60°)^{\mathsf T}$ とも同じ\par
+\kviigq （2）\nobreak $x=0.5\times0.634+0.866\times3.098$\par
+\kviigq \phantom{（2）$x$}${}=0.317+2.683=3.000$\par
+\kviigq \phantom{（2）}$y=-0.866\times0.634+0.5\times3.098$\par
+\kviigq \phantom{（2）$x$}${}=-0.549+1.549=1.000$\par
+\kotae （1）\nobreak 3つとも同じ行列\quad（2）\nobreak $(3,\ 1)$
+\end{reidai}
+\bkreidairef{1}で回した点が、ちゃんと元にもどりました。
+
+\begin{jibun}
+ある点を $R(30°)$ で回したら、$(2.464,\ 3.732)$ になりました。\newline
+（1）\nobreak $R(30°)^{-1}$ を逆行列の公式で求め、$R(-30°)$ と $R(30°)^{\mathsf T}$ にくらべましょう（$\cos30°=\dfrac{\sqrt3}{2}$、$\sin30°=\dfrac12$）。\newline
+（2）\nobreak もとの点を求めましょう（$\dfrac{\sqrt3}{2}=0.866$）。
+\bkjans{（1）\nobreak $ad-bc=\frac34+\frac14=1$。$R(30°)^{-1}$ の1行めは $(\frac{\sqrt3}{2},\ \frac12)$、2行めは $(-\frac12,\ \frac{\sqrt3}{2})$ で、$R(-30°)$ とも $R(30°)^{\mathsf T}$ とも同じ。（2）\nobreak $x=0.866\times2.464+0.5\times3.732=2.134+1.866=4.000$、$y=-0.5\times2.464+0.866\times3.732=-1.232+3.232=2.000$。$(4,\ 2)$}
+\end{jibun}
+
+\begin{reidai}[回転行列かどうかを見分ける]
+次の行列は、回転行列ですか。回転行列なら、何°回す行列かも答えましょう。
+\[\text{（1）}\begin{pmatrix}0.6&-0.8\\0.8&0.6\end{pmatrix}\qquad\text{（2）}\begin{pmatrix}0.6&0.8\\0.8&-0.6\end{pmatrix}\qquad\text{（3）}\begin{pmatrix}1&-1\\1&1\end{pmatrix}\]
+\kangaekata 回転行列なら、列が長さ1で直角（内積0）、行列式が1（⑤）。行列式が $-1$ なら裏返しがまざる。\par
+\shiki （1）\nobreak 列の長さの2乗：$0.6^2+0.8^2=1$、$(-0.8)^2+0.6^2=1$\par
+\kviigq \phantom{（1）}内積：$0.6\times(-0.8)+0.8\times0.6=0$\par
+\kviigq \phantom{（1）}行列式：$0.6\times0.6-(-0.8)\times0.8=0.36+0.64=1$\par
+\kviigq \phantom{（1）}$\cos\theta=0.6$、$\sin\theta=0.8$、$\tan\theta=\dfrac{0.8}{0.6}$ より $\theta\approx53.1°$\par
+\kviigq （2）\nobreak 列の長さは1、内積 $0.6\times0.8+0.8\times(-0.6)=0$\par
+\kviigq \phantom{（2）}行列式：$0.6\times(-0.6)-0.8\times0.8=-1$\par
+\kviigq （3）\nobreak 1列めの長さの2乗が $1^2+1^2=2$ で、長さが1でない\par
+\kotae （1）\nobreak 回転行列（約53.1°）\quad（2）\nobreak ちがう（裏返しがまざる）\quad（3）\nobreak ちがう（長さを変える）\par
+\vspace{2pt}\noindent{\small （3）は、45°回して長さを $\sqrt2$ 倍にする行列です。}
+\end{reidai}
+
+\begin{jibun}
+次の行列は、回転行列ですか。回転行列なら、何°回す行列かも答えましょう（$\tan36.9°\approx0.75$）。
+\[\text{（1）}\begin{pmatrix}0.8&-0.6\\0.6&0.8\end{pmatrix}\qquad\text{（2）}\begin{pmatrix}2&0\\0&0.5\end{pmatrix}\qquad\text{（3）}\begin{pmatrix}0&1\\1&0\end{pmatrix}\]
+\bkjans{（1）\nobreak 列の長さの2乗は $0.64+0.36=1$、内積 $-0.48+0.48=0$、行列式 $0.64+0.36=1$。回転行列で、$\tan\theta=\frac{0.6}{0.8}=0.75$ より約36.9°。（2）\nobreak 1列めの長さが2なのでちがう（横に2倍・たてに0.5倍）。（3）\nobreak 列の長さは1、内積0だが、行列式は $0-1=-1$ なのでちがう（裏返し）}
+\end{jibun}
+
+\begin{reidai}[ロボットの腕の手の位置]
+2本の腕の長さが $L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$ のロボットで、肩の角が $\theta_1=30°$、ひじの角が $\theta_2=45°$ のとき、手の位置を回転行列で求めましょう。\newline
+（$\cos30°=0.86603$、$\sin30°=0.5$）\newline
+（$\cos75°=0.25882$、$\sin75°=0.96593$）\par
+\kangaekata ⑦のわくの式に入れる。$R(\theta_1)R(\theta_2)=R(\theta_1+\theta_2)$（④）。\par
+\shiki $\theta_1+\theta_2=30°+45°=75°$\par
+\kviigq 上の腕：$R(30°)$ を $(0.30,\ 0)$ にかけて\par
+\kviigq \phantom{上の腕：}$(0.30\times0.86603,\ 0.30\times0.5)$\par
+\kviigq \phantom{上の腕：}${}=(0.25981,\ 0.15000)$\par
+\kviigq 下の腕：$R(75°)$ を $(0.25,\ 0)$ にかけて\par
+\kviigq \phantom{下の腕：}$(0.25\times0.25882,\ 0.25\times0.96593)$\par
+\kviigq \phantom{下の腕：}${}=(0.06470,\ 0.24148)$\par
+\kviigq たす：$x=0.25981+0.06470=0.32451$\par
+\kviigq \phantom{たす：}$y=0.15000+0.24148=0.39148$\par
+\kotae 約 $(0.325,\ 0.391)$（m）
+\end{reidai}
+物理シリーズ第1巻の力-7 では、同じ腕の手の位置を、7-7 の「同次変換行列」でも計算します。
+
+\begin{jibun}
+（1）\nobreak \bkreidairef{7}の腕で、$\theta_1=45°$、$\theta_2=45°$ のときの手の位置を、回転行列で求めましょう（$\cos45°=\sin45°=0.70711$、$\cos90°=0$、$\sin90°=1$）。\newline
+（2）\nobreak \bkreidairef{7}の腕（$\theta_1=30°$、$\theta_2=45°$）の先に、長さ\qty{0.10}{m}の道具をつけ、手首を $\theta_3=15°$ 曲げました。道具の先の位置を求めましょう（⑦の「関節がふえても、同じ」）。
+\bkjans{（1）\nobreak 上の腕 $(0.30\times0.70711,\ 0.30\times0.70711)=(0.21213,\ 0.21213)$。下の腕は $R(90°)$ を $(0.25,\ 0)$ にかけて $(0,\ 0.25)$。たして約 $(0.212,\ 0.462)$（m）。（2）\nobreak 道具の矢印は $R(30°+45°+15°)=R(90°)$ を $(0.10,\ 0)$ にかけて $(0,\ 0.10)$。手 $(0.325,\ 0.391)$ にたして $(0.325,\ 0.491)$（m）}
+\end{jibun}
+
+\begin{column}{電卓は、回転で sin・cos を計算する}
+1959年、アメリカの技術者ボルダーは、飛行機の位置を計算する機械のために、かけ算をほとんど使わずに回転させる方法を発表しました。CORDIC（コーディック）とよばれる方法です。
+\par\vspace{3pt}
+回転行列は、$\sin\theta=\cos\theta\tan\theta$ を使うと、次のように書けます。
+\[R(\theta)=\cos\theta\begin{pmatrix}1&-\tan\theta\\\tan\theta&1\end{pmatrix}\]
+$\tan\theta$ が $1$、$\frac12$、$\frac14$、$\frac18$、…になる角（45°、26.57°、14.04°、7.13°、…）だけを使い、左回り・右回りを選びながら、回したい角に近づけていきます。コンピュータの中の数は2進法なので、$\frac12$ 倍や $\frac14$ 倍は、けたを1つ・2つずらすだけでできます。だから、かけ算の回路がなくても速く回せます。$(1,\ 0)$ をこうして回せば、行き先の座標が $\cos$ と $\sin$ です（最後に、$\cos$ の部分をまとめてかけて直す）。電卓や小さなコンピュータの中では、いまもこの考え方が使われています。
+\end{column}
+
+\begin{reidai}[軸を回して見る]
+（1）\nobreak 点 P $(2,\ 4)$ を、$x$ 軸・$y$ 軸を左回りに30°回した $x'$ 軸・$y'$ 軸で表しましょう。\newline
+（2）\nobreak 質量\qty{1.0}{kg}の荷物が、30°の坂にのっています。荷物にはたらく重力 $(0,\ -9.8)$（N）を、坂にそって上向きの $x'$ 軸と、坂に垂直で上向きの $y'$ 軸の成分で表しましょう。\newline
+（$\cos30°=0.866$、$\sin30°=0.5$）\par
+\kangaekata 軸を $\theta$ 回して見ると $\vec x\,'=R(\theta)^{\mathsf T}\vec x$（⑥）。坂の軸は、$x$ 軸・$y$ 軸を坂の角だけ回したもの。\par
+\shiki $R(30°)^{\mathsf T}$ の1行めは $(0.866,\ 0.5)$、2行めは $(-0.5,\ 0.866)$\par
+\kviigq （1）\nobreak $x'=0.866\times2+0.5\times4=3.732$\par
+\kviigq \phantom{（1）}$y'=-0.5\times2+0.866\times4=2.464$\par
+\kviigq （2）\nobreak $F_{x'}=0.866\times0+0.5\times(-9.8)=-4.9$\par
+\kviigq \phantom{（2）}$F_{y'}=-0.5\times0+0.866\times(-9.8)=-8.49$\par
+\kotae （1）\nobreak $(3.732,\ 2.464)$\quad（2）\nobreak $(-4.9,\ -8.49)$（N）\par\vspace{3pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+（2）は「坂にそって下向きに\qty{4.9}{N}、坂をおす向きに\qty{8.49}{N}」という意味で、4-6 の $mg\sin\theta=4.9$、$mg\cos\theta=8.49$ と同じです。回転行列なら「軸を坂の角だけ回して見る」だけで、どんな向きの力も同じ計算で分けられます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \fill[bkGray!20] (0,0) -- (48,0) -- (48,27.7) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,0) -- (48,0) -- (48,27.7) -- cycle;
+  \begin{scope}[shift={(30:30)}, rotate=30]
+    \filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.8pt] (-4,0) rectangle (4,7);
+    \draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (0,3.5) -- (14,3.5) node[anchor=south, font=\footnotesize, text=bkBlue!80!black, inner sep=1.5pt] {$x'$};
+    \draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (0,3.5) -- (0,15) node[anchor=south, font=\footnotesize, text=bkBlue!80!black, inner sep=1.5pt] {$y'$};
+  \end{scope}
+  \coordinate (G) at ($(30:30)+(120:3.5)$);
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (G) -- ++(0,-14);
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=north, inner sep=1pt] at ($(G)+(0,-14.5)$) {重力};
+  \draw[bkInk, line width=0.6pt] (9,0) arc (0:30:9);
+  \node[font=\footnotesize] at (15:12.5) {30°};
+\end{tikzpicture}
+\end{minipage}
+\end{reidai}
+
+\begin{jibun}
+（1）\nobreak 点 $(4,\ 2)$ を、$x$ 軸・$y$ 軸を左回りに60°回した $x'$ 軸・$y'$ 軸で表しましょう（$\cos60°=0.5$、$\sin60°=0.866$）。\newline
+（2）\nobreak 質量\qty{2.0}{kg}の荷物が、20°の坂にのっています。重力 $(0,\ -19.6)$（N）を、坂にそって上向きの $x'$ 軸と、坂に垂直で上向きの $y'$ 軸の成分で表しましょう（$\cos20°=0.940$、$\sin20°=0.342$）。
+\bkjans{（1）\nobreak $x'=3.732$、$y'=-2.464$。$x'=0.5\times4+0.866\times2$、$y'=-0.866\times4+0.5\times2$。$(3.732,\ -2.464)$。（2）\nobreak $F_{x'}=0.342\times(-19.6)\approx-6.70$、$F_{y'}=0.940\times(-19.6)\approx-18.4$。$(-6.70,\ -18.4)$（N）}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$-\sin\theta$ の場所}
+\bkng{左回りの回転行列の1行めは $(\cos\theta,\ \sin\theta)$}
+\bkok{左回りの回転行列の1行めは $(\cos\theta,\ -\sin\theta)$}
+×は $R(-\theta)$ で、右回りです。$\theta=90°$ を入れて、$(1,\ 0)$ が $(0,\ 1)$ へ行くか確かめましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{かける順番と、回す順番}
+\bkng{$R(30°)R(45°)$ は「30°回してから45°回す」}
+\bkok{$R(30°)R(45°)$ は「45°回してから30°回す」（右の行列が先）}
+平面の回転どうしは、順番を入れかえても答えは同じですが、読み方は大事です。7-7 の3次元の回転では、順番で答えが変わります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{度のまま cos を計算する}
+\bkng{Python で \texttt{np.cos(30)} とすると、$\cos30°=0.154$}
+\bkok{\texttt{np.cos(np.radians(30))} とすると、$\cos30°=0.866$}
+\texttt{np.cos(30)} は「30ラジアン」の cos です。表計算の COS も同じなので、RADIANS で直します（4-6）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{軸を回して見るのに $R(\theta)$ をかける}
+\bkng{軸を30°回して見た座標は $R(30°)\overrightarrow{\mathrm{OP}}$}
+\bkok{軸を30°回して見た座標は $R(30°)^{\mathsf T}\overrightarrow{\mathrm{OP}}$}
+軸が左に回ると、点は右に回ったように見えます（図\ref{bk:7-6:fig-jiku}）。図\ref{bk:7-6:fig-jiku}の (a) と (b) を思い出しましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{下の腕を $R(\theta_2)$ だけで回す}
+\bkng{下の腕の矢印は、$(L_2,\ 0)$ に $R(\theta_2)$ だけをかけたもの}
+\bkok{下の腕の矢印は、$(L_2,\ 0)$ に $R(\theta_1)R(\theta_2)=R(\theta_1+\theta_2)$ をかけたもの}
+$\theta_2$ は上の腕からはかった角で、下の腕も上の腕といっしょに $\theta_1$ 回っています。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\kviigbox{ロボットの腕}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+工場で部品を組み立てるロボットは、関節のモーターについたセンサーで、それぞれの関節の角をはかっています。制御の計算機は、⑦のように回転行列をかけて手先の位置を求め、目標の位置とのずれを直す計算を、1秒に何百〜何千回もくり返します。関節が6つあるロボットでは、3次元の回転行列（7-7）を使います。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviigrobot
+\end{tikzpicture}
+\end{minipage}
+
+\kviigbox{スマホの写真を回す}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+写真は、小さな点（画素）が並んだ数の表です（1-13）。写真を回すアプリは、回した後の画面の1つ1つの画素について、$R(\theta)^{-1}=R(\theta)^{\mathsf T}$ をかけて「回す前の写真のどこの色か」を求め、その色をぬります。数百万個の画素に、同じ4つの数をかけていきます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) rectangle (24,16);
+  \begin{scope}[shift={(12,8)}, rotate=20, shift={(-12,-8)}]
+    \filldraw[fill=bkBlue!10, draw=bkBlue!80!black, line width=0.9pt] (0,0) rectangle (24,16);
+    \fill[bkGreen!50] (0,0) -- (8,7) -- (13,3) -- (19,9) -- (24,4) -- (24,0) -- cycle;
+    \fill[bkYellow!80!black] (18,12) circle (2);
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+
+\kviigbox{橋の部材の力を、ななめの向きで見る}
+橋や機械の部材の中の力（応力）は、切り口の向きで大きさが変わります。いちばんこわれやすい向きをさがすとき、⑥の「軸を回して見る」を使います（物理シリーズ第1巻の力-9、7-9）。
+\end{butsuri}
+
+\begin{column}{ゲームのキャラクターが回るとき}
+7-0 のはてな？で、「ゲームの画面で、キャラクターがくるっと回るとき、コンピュータは何を計算しているのかな？」と問いかけました。答えは、この章の回転行列です。キャラクターの絵は、たくさんの点（頂点）をつないでできています。画面は1秒に60回かきかえられるので、1秒で1回転させるなら、1回のかきかえごとに $360°\div60=6°$ ずつ回します。すべての頂点に $R(6°)$ をかけ、それを60回くり返すと $R(6°)^{60}=R(360°)=I$ で、ちょうど元の向きにもどります（④）。
+\par\vspace{3pt}
+ただし、コンピュータの計算には小さな丸めのずれがあり（2-19）、同じ行列を何千回もかけ続けると、ずれがたまって絵が少しずつゆがむことがあります。そこで、回した角だけを数えておき、毎回 $R(\text{角})$ を作り直してかける、というくふうがよく使われます。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 次の点を、原点のまわりに左回りに、［ ］の角だけ回した点を求めましょう（$\cos30°=0.866$、$\sin30°=0.5$、$\cos45°=\sin45°=0.707$）。\newline
+（1）\nobreak $(2,\ 0)$［90°］\newline
+（2）\nobreak $(1,\ 3)$［30°］\newline
+（3）\nobreak $(2,\ 2)$［45°］
+\bkpans{（1）\nobreak $(0,\ 2)$。（2）\nobreak $(0.866-1.5,\ 0.5+2.598)=(-0.634,\ 3.098)$。（3）\nobreak $(1.414-1.414,\ 1.414+1.414)=(0,\ 2.828)$}
+
+\bkproblem $R(15°)R(45°)$ を計算し、$R(60°)$ とくらべましょう。\newline
+（$\cos15°=0.966$、$\sin15°=0.259$、$\cos45°=\sin45°=0.707$）\newline
+（$\cos60°=0.5$、$\sin60°=0.866$）
+\bkpans{1行1列 $0.966\times0.707-0.259\times0.707=0.6830-0.1831=0.4999$。1行2列 $-0.966\times0.707-0.259\times0.707=-0.8661$。2行1列 $0.8661$。2行2列 $0.4999$。小数第3位までで、1行めが $(0.500,\ -0.866)$、2行めが $(0.866,\ 0.500)$ で、$R(60°)$ と同じ}
+
+\bkproblem $\cos60°=\dfrac12$、$\sin60°=\dfrac{\sqrt3}{2}$ を使って答えましょう。\newline
+（1）\nobreak $R(60°)^2$ を成分で計算し、何°回す行列か答えましょう。\newline
+（2）\nobreak $R(60°)$ を何回かけると、はじめて $I$ になりますか。
+\bkpans{（1）\nobreak 1行1列 $\frac14-\frac34=-\frac12$、1行2列 $-\frac{\sqrt3}{4}-\frac{\sqrt3}{4}=-\frac{\sqrt3}{2}$、2行1列 $\frac{\sqrt3}{2}$、2行2列 $-\frac12$。$R(120°)$。（2）\nobreak $60\times n=360$ より6回}
+
+\bkproblem ある点を $R(90°)$ で回したら、$(-3,\ 5)$ になりました。$R(90°)^{-1}$ を求めて、もとの点を求めましょう。
+\bkpans{$R(90°)^{-1}=R(90°)^{\mathsf T}$ で、1行めが $(0,\ 1)$、2行めが $(-1,\ 0)$。もとの点は $(0\times(-3)+1\times5,\ -1\times(-3)+0\times5)=(5,\ 3)$}
+
+\bkproblem 3点 O $(0,\ 0)$、A $(2,\ 0)$、B $(2,\ 1)$ を頂点とする三角形を、原点のまわりに90°回した頂点を、点を列に並べた行列を使って求めましょう。
+\bkpans{$R_{90}$ の1行めは $(0,\ -1)$、2行めは $(1,\ 0)$。O $(0,\ 0)$、A $(0,\ 2)$、B $(-1,\ 2)$}
+
+\bkproblem $L_1=\qty{0.40}{m}$、$L_2=\qty{0.30}{m}$ の2本の腕で、$\theta_1=30°$、$\theta_2=60°$ のときの手の位置を、回転行列で求めましょう（$\cos30°=0.86603$、$\sin30°=0.5$、$\cos90°=0$、$\sin90°=1$）。
+\bkpans{上の腕 $(0.40\times0.86603,\ 0.40\times0.5)=(0.34641,\ 0.20000)$。下の腕は $R(90°)$ を $(0.30,\ 0)$ にかけて $(0,\ 0.30)$。手は約 $(0.346,\ 0.500)$（m）}
+
+\bkproblem 質量\qty{1.0}{kg}の荷物が、45°の坂にのっています。重力 $(0,\ -9.8)$（N）を、坂にそって上向きの $x'$ 軸と、坂に垂直で上向きの $y'$ 軸の成分で表しましょう（$\cos45°=\sin45°=0.707$）。
+\bkpans{$F_{x'}=0.707\times(-9.8)\approx-6.93$、$F_{y'}=0.707\times(-9.8)\approx-6.93$。$(-6.93,\ -6.93)$（N）}
+
+\bkproblem 次の行列は、回転行列ですか。回転行列なら、何°回す行列かも答えましょう（$\tan73.7°\approx3.43$）。
+\[\begin{pmatrix}0.28&-0.96\\0.96&0.28\end{pmatrix}\]
+\bkpans{列の長さの2乗は $0.0784+0.9216=1$、内積 $0.28\times(-0.96)+0.96\times0.28=0$、行列式 $0.0784+0.9216=1$。回転行列で、$\tan\theta=\frac{0.96}{0.28}\approx3.43$ より約73.7°}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem \bkhatenaref の「30°回してから45°回す」を、行列のかけ算で書きましょう。また、その積を計算し、$R(75°)$ と同じになるか確かめましょう（$\cos30°=0.866$、$\sin30°=0.5$、$\cos45°=\sin45°=0.707$）。
+\bkpans{あとからはたらく回転を左に書いて $R(45°)R(30°)$。1行1列 $0.707\times0.866-0.707\times0.5=0.6123-0.3535=0.2588$、1行2列 $-0.707\times0.5-0.707\times0.866=-0.9658$、2行1列 $0.707\times0.866+0.707\times0.5=0.9658$、2行2列 $-0.3535+0.6123=0.2588$。1行めが $(0.259,\ -0.966)$、2行めが $(0.966,\ 0.259)$ で、$R(75°)$ と同じ}
+
+\bkproblem $R(\theta)R(-\theta)$ を、行と列の内積で成分ごとに計算し、$I$ になることを確かめましょう。
+\bkpans{$R(-\theta)$ の1行めは $(\cos\theta,\ \sin\theta)$、2行めは $(-\sin\theta,\ \cos\theta)$。1行1列 $\cos^2\theta+\sin^2\theta=1$、1行2列 $\cos\theta\sin\theta-\sin\theta\cos\theta=0$、2行1列 $\sin\theta\cos\theta-\cos\theta\sin\theta=0$、2行2列 $\sin^2\theta+\cos^2\theta=1$。よって $I$}
+
+\bkproblem \bkreidairef{7}の腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=30°$、$\theta_2=45°$）の先に、長さ\qty{0.10}{m}の道具をつけ、手首の角を $\theta_3=-75°$ にしました。道具の先の位置を求めましょう。道具はどちらを向いていますか。
+\bkpans{$\theta_1+\theta_2+\theta_3=0°$ なので、道具の矢印は $R(0°)=I$ をかけた $(0.10,\ 0)$。手 $(0.325,\ 0.391)$ にたして $(0.425,\ 0.391)$（m）。道具は $x$ 軸と同じ向き（水平）}
+
+\bkproblem ある点を $R(45°)$ で回したら、$(0,\ 2.828)$ になりました。$R(45°)^{-1}$ を転置で求めて、もとの点を求めましょう（$\cos45°=\sin45°=0.707$）。
+\bkpans{$R(45°)^{-1}=R(45°)^{\mathsf T}$ で、1行めが $(0.707,\ 0.707)$、2行めが $(-0.707,\ 0.707)$。$x=0.707\times2.828=2.000$、$y=0.707\times2.828=2.000$。$(2,\ 2)$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 回転行列 $R(\theta)$ を作り、点や図形を回せる。\bkfurref{bk:7-6:tsukuru}
+\item $R(\alpha)R(\beta)=R(\alpha+\beta)$ と $R(\theta)^{-1}=R(\theta)^{\mathsf T}$ を使える。\bkfurref{bk:7-6:tsunagu}
+\item 軸を回して点や力を見たり、腕の手の位置を求めたりできる。\bkfurref{bk:7-6:jiku}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{平面の回転は、角をたすだけでつなげたね。次の 7-7 では3次元。本を回してみると、順番で向きが変わってしまうんだ。}

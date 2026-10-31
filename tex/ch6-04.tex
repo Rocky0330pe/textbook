@@ -1,0 +1,1151 @@
+%% 6-4 自分に比例してへる：冷めるお湯（第14回：組 V6-3。ページ制限なし。偶数ページ）
+%% ほかの巻が指している形：冷めるお湯 dT/dt=-0.05(T-20)、80℃→50℃は13.9分（5-18・6-1・6-2 と同じ数）、
+%%   目標へ近づく形 dy/dt=(y∞-y)/τ → y=y∞+(y0-y∞)e^{-t/τ}（物理 p1-06）、時定数 τ（5-14⑪・物理 ph1-back）、
+%%   「止まるまでの時間は数学の上では限りなく長い」（物理 p1-14）、RC：E=10 V、R=20 kΩ、C=100 μF、τ=2 s（5-14 の例題）、
+%%   コンデンサーの電圧は同じ時間ごとに同じ割合でへる（3-11）、S9：ポアソン分布と指数分布。
+\makeatletter
+% 本文の小見出し（太字の1行）
+\newcommand\bkviehead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\bkviebox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\noindent\ignorespaces}
+% 大事な式のわく  \bkvieframe{中身}
+\newcommand\bkvieframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（2.6字下げ。折り返しも同じ位置から）
+\newcommand\bkvieq{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 回路の部品（tikzpicture[x=1mm, y=1mm] の中。導線を先にかき、その上に置く）
+%   \bkvieR{(x,y)}{角}：抵抗（長方形）  \bkvieC{(x,y)}{角}：コンデンサー  \bkvieL{(x,y)}{角}：コイル
+%   \bkvieE{(x,y)}{角}：電池（長い線が＋）  \bkvieS{(x,y)}{角}：スイッチ（開いている）  角は導線の向き（0 なら横の導線）
+\newcommand\bkvieR[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (-4.5,-1.6) rectangle (4.5,1.6);\end{scope}}
+\newcommand\bkvieC[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-1.0,-3.6) rectangle (1.0,3.6);
+  \draw[bkInk, line width=1.1pt] (-1.0,-3.4) -- (-1.0,3.4) (1.0,-3.4) -- (1.0,3.4);\end{scope}}
+\newcommand\bkvieL[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-5.2,-0.6) rectangle (5.2,3.0);
+  \draw[bkInk, line width=0.7pt] (-5,0) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25);\end{scope}}
+\newcommand\bkvieE[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-1.2,-4.2) rectangle (1.2,4.2);
+  \draw[bkInk, line width=0.7pt] (-1.0,-4.0) -- (-1.0,4.0);
+  \draw[bkInk, line width=1.8pt] (1.0,-2.0) -- (1.0,2.0);\end{scope}}
+\newcommand\bkvieS[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-3.5,-0.6) rectangle (3.5,3.6);
+  \fill[bkInk] (-3,0) circle (0.6) (3,0) circle (0.6);
+  \draw[bkInk, line width=0.8pt] (-3,0) -- (2.6,3.0);\end{scope}}
+% お湯の入ったカップ  \bkviecup{(x,y)}{大きさ}
+\newcommand\bkviecup[2]{\begin{scope}[shift={#1}, scale=#2]
+  \draw[bkInk!70, line width=0.8pt, fill=white] (0,0) -- (-1,12) -- (13,12) -- (12,0) -- cycle;
+  \fill[bkBlue!25] (-0.75,9) -- (12.75,9) -- (12,0.4) -- (0.05,0.4) -- cycle;
+  \draw[bkInk!70, line width=0.8pt] (12.6,9.5) arc (90:-90:2.6 and 3.4);
+  \foreach \s in {2.5,6,9.5} {\draw[bkGray, line width=0.6pt] (\s,13.5) .. controls (\s-1.2,15.5) and (\s+1.2,16.5) .. (\s,18.5);}
+\end{scope}}
+\makeatother
+
+\bkchapter{6}{4}{自分に比例してへる：\\冷めるお湯}{\bklevel{3}}{自分に比例してへる：冷めるお湯}
+\bkmichishirube{3-11,3-12,5-14,5-16,5-18,6-2}{6-5,6-12,9-5,9-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 「変わる速さが、目標との差に比例する」式を、変数分離で解ける。
+\item \bklevel{3}\enspace 時定数 $\tau$ を使って、冷める・温まる・たまるまでの時間を求められる。
+\item \bklevel{3}\enspace コンデンサーやコイルの回路の式を立てて、時定数 $RC$・$\dfrac{L}{R}$ を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+20\,℃の部屋に、80\,℃のお湯を入れたカップを置きます。熱いうちは速く冷め、ぬるくなると、ゆっくり冷めます。
+
+80\,℃から50\,℃まで冷めるのに、何分かかるでしょう。そのあと、50\,℃から35\,℃まで冷めるのには、もっと長くかかるでしょうか。部屋との温度の差は、どちらも半分になっています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkviecup{(2,0)}{1}
+  \node[font=\sffamily\footnotesize, anchor=north] at (8,-1.5) {80\,℃};
+  \draw[bk arrow, bkGray, line width=0.8pt] (19,6) -- (27,6);
+  \node[font=\sffamily\footnotesize] at (23,10) {？分};
+  \bkviecup{(30,0)}{1}
+  \node[font=\sffamily\footnotesize, anchor=north] at (36,-1.5) {50\,℃};
+  \draw[bk arrow, bkGray, line width=0.8pt] (36,-8) -- (36,-14);
+  \node[font=\sffamily\footnotesize, anchor=west] at (37.5,-11) {？分};
+  \node[font=\sffamily\footnotesize, anchor=north] at (36,-15) {35\,℃};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 6-1 では、冷めるお湯のルール $\dfrac{\dd T}{\dd t}=-0.05(T-20)$ を読み、6-2 では表計算で、5-18 では答えの候補で答えを求めました。この章では、答えを\textbf{自分の手で導く}方法を学びます。そして、同じ形の式が、ヒーター・温度計・電気の回路・放射線にも出てくることを確かめます。どれも「あとどれだけ残っているか」に比例して変わるしくみです。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[冷めるお湯の「差」を調べよう]
+\textbf{用意するもの}\par
+マグカップ、お湯（大人といっしょに用意する）、料理用の温度計、時計、電卓
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 部屋の温度をはかろう。
+\item カップにお湯を入れ、5分ごとに温度をはかって表に書こう。
+\item 「お湯の温度$-$部屋の温度」（差）を計算しよう。
+\item 差を、5分前の差でわろう。どんな数が並ぶかな？
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{7}{Q[c,m,wd=9.6mm]}}, rowsep=1pt, colsep=2.5pt}
+時間（分） & 0 & 5 & 10 & 15 & 20 & 25 & 30 \\
+温度（℃） & 80.0 & 66.8 & 56.3 & 48.4 & 42.0 & 37.3 & 33.3 \\
+差（℃） & 60.0 & 46.8 & 36.3 & 28.4 & 22.0 & 17.3 & 13.3 \\
+差÷5分前の差 & & 0.78 & 0.78 & 0.78 & 0.77 & 0.79 & 0.77 \\
+\end{bktable}
+\bktabcaption{ソラさんがはかった結果（部屋は20.0\,℃）}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent 温度の下がり方は、はじめの5分で13.2\,℃、20分から25分で4.7\,℃と、だんだん小さくなります。ところが④の「差÷5分前の差」は、どこでも約0.78です。\textbf{差は、5分ごとに約0.78倍になる}。下がる「量」はちがっても、下がる「割合」は同じなのです。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=44mm, xmin=0, xmax=34, ymin=0, ymax=90, xtick={0,5,...,30}, ytick={20,40,60,80}, xlabel={$t$（分）}, ylabel={温度（℃）}]
+  \addplot[bkthin, dashed, domain=0:33] {20};
+  \addplot[bkcurve, domain=0:33, samples=60] {20+60*exp(-0.05*x)};
+  \addplot[only marks, mark=*, mark size=1.7pt, bkOrange] coordinates {(0,80) (5,66.8) (10,56.3) (15,48.4) (20,42.0) (25,37.3) (30,33.3)};
+  \foreach \t/\T in {0/80,10/56.3,20/42.0,30/33.3} {\edef\tmp{\noexpand\draw[bkRed, line width=0.9pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (axis cs:\t+0.9,20.6) -- (axis cs:\t+0.9,\T-0.6);}\tmp}
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=west] at (axis cs:1.5,50) {差60.0};
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=west] at (axis cs:11.5,30) {差36.3};
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=west] at (axis cs:21.5,27) {差22.0};
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=west] at (axis cs:31.2,25.5) {差13.3};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (axis cs:29,17) {部屋の温度 20\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はかった温度（オレンジの点）と、部屋との差（赤い矢印）。10分ごとに見ると、差は 60.0→36.3→22.0→13.3 と、どれも前の約0.6倍（$0.78\times0.78$）になっている。}
+\end{bkfigure}
+
+\begin{omoidasou}
+\bkrecall{3-11}{同じ時間ごとに同じ割合でへる量は、指数関数で書ける。}
+\bkrecall{3-12}{片対数グラフ（たて軸を対数目もりにしたグラフ）では、指数関数は直線になる。}
+\bkrecall{5-14}{$(e^{at})'=ae^{at}$。$e^0=1$。$e^{x}=y$ なら $x=\ln y$。\\$e^{-t/\tau}$ の $\tau$ は時定数。$t=\tau$ で約37\,\%、はじめの接線は $t=\tau$ で0に届く。}
+\bkrecall{5-16}{置換積分：$\displaystyle\int(u\text{ の式})\times u'\,\dd t=\int(u\text{ の式})\,\dd u$。$\displaystyle\int\frac{1}{u}\,\dd u=\ln u+C$（$u>0$）}
+\bkrecall{5-18}{答えの候補：$f'=af$ なら $f=Ce^{at}$。部屋との差 $u=T-20$ を主役にする（ずらし）と、冷めるお湯は $T=20+60e^{-0.05t}$。}
+\bkrecall{6-1}{$\dfrac{\dd T}{\dd t}=-0.05(T-20)$：温度の変わる速さ（℃/分）は、部屋との差の0.05倍で、下がる向き。}
+\bkrecall{6-2}{オイラー法：次の値＝今の値＋（今の変わる速さ）×$\Delta t$。10分後は55.92\,℃（$\Delta t=1$ 分）。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{差は「同じ時間で同じ割合」でへる}
+
+\leavevmode\label{bk:6-4:wariai}やってみようで、差が5分ごとに約0.78倍になりました。なぜ、いつも同じ割合なのでしょう。2通りで考えます。
+
+\bkviehead{考え方1：ルールを読む}
+冷めるお湯のルールは、
+\[ \frac{\dd T}{\dd t}=-0.05\,(T-20) \]
+でした（6-1）。右辺は「部屋との差 $T-20$ の0.05倍」です。差が60\,℃なら1分あたり $0.05\times60=3$\,℃の速さで下がり、差が30\,℃なら1分あたり $0.05\times30=1.5$\,℃の速さで下がります。
+
+\noindent\textbf{差が半分なら、下がる速さも半分}です。だから、差が60\,℃のお湯が「60の何\,\%か」をへらすのにかかる時間と、差が30\,℃のお湯が「30の同じ\,\%」をへらすのにかかる時間は同じになります。へらす量も半分、速さも半分だからです。
+
+\bkviehead{考え方2：2つのカップをくらべる}
+差が60\,℃から始めたカップAと、差が30\,℃から始めたカップBを考えます。Bの差は、はじめAの差のちょうど半分です。ルールの右辺は差に比例するので、Bの差は、そのあともずっとAの差の半分のままへっていきます（どの瞬間も、量も速さも半分）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=110mm, height=50mm, xmin=0, xmax=46, ymin=0, ymax=68, xtick={0,13.86,27.73,41.59}, xticklabels={0,13.9,27.7,41.6}, ytick={15,30,60}, xlabel={$t$（分）}, ylabel={差（℃）}]
+  \addplot[bkcurve, domain=0:44, samples=60] {60*exp(-0.05*x)};
+  \addplot[bkcurve2, domain=0:44, samples=60] {30*exp(-0.05*x)};
+  \addplot[only marks, mark=*, mark size=1.5pt, bkInk] coordinates {(0,60) (13.86,30) (27.73,15) (41.59,7.5)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:13.86,0) -- (axis cs:13.86,30) (axis cs:27.73,0) -- (axis cs:27.73,15) (axis cs:41.59,0) -- (axis cs:41.59,7.5);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0,30) -- (axis cs:13.86,30) (axis cs:0,15) -- (axis cs:27.73,15);
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=west] at (axis cs:4,58) {カップA（60\,℃から）};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south west] at (axis cs:33,15) {カップB（30\,℃から）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{Aが30\,℃になった瞬間（13.9分）から先は、Aの曲線とBの曲線は同じ形（Bを右へ13.9分ずらすとAにぴったり重なる）。だから、差が半分になる時間は、何回めでも同じ。}\label{bk:6-4:fig-zurasu}
+\end{bkfigure}
+Aの差が30\,℃になった瞬間、Aは「差30\,℃から始めたカップ」と同じ状態です。ルールは同じなので、その先のAの動きはBとまったく同じになります。図\ref{bk:6-4:fig-zurasu}で、Bを右へずらすと、Aに重なるのはそのためです。
+
+\bkviehead{片対数グラフにかく}
+やってみようの差を、片対数グラフ（3-12）にかきます。たて軸は、10、20、40 のように、2倍ごとに同じ間かくになる目もりです。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=98mm, height=50mm, xmin=0, xmax=34, ymin=0.95, ymax=1.92, xtick={0,10,20,30}, ytick={1,1.30103,1.60206,1.77815}, yticklabels={10,20,40,60}, xlabel={$t$（分）}, ylabel={差（℃）}]
+  \addplot[bkcurve, domain=0:32] {log10(60)-0.05*x/ln(10)};
+  \addplot[only marks, mark=*, mark size=1.7pt, bkOrange] coordinates {(0,1.7782) (5,1.6702) (10,1.5599) (15,1.4533) (20,1.3424) (25,1.2380) (30,1.1239)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:17,1.62) {まっすぐに並ぶ};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{たて軸を対数目もりにすると、差の点（オレンジ）は直線に並ぶ。同じ時間で同じ割合に変わる量（指数関数）のしるし（3-12）。}
+\end{bkfigure}
+点がまっすぐに並びました。差は、指数関数（3-11）でへっています。
+
+\bkviehead{なぜ0.75ではなく0.78なのか}
+「1分で差の5\,\%ずつ下がるのだから、5分なら $5\times5\,\%=25\,\%$ 下がって0.75倍」と考えたくなります。でも、はかった値は0.78倍でした。
+
+1分ごとに計算すると、1分で0.95倍、5分で $0.95^5=0.774$ 倍です。0.75より大きいのは、2分めからは、へった差の5\,\%しか下がらないからです。さらに細かく、いつも少しずつ下がると考えると、5-14の $\Bigl(1+\dfrac{x}{n}\Bigr)^n\to e^x$ と同じしくみで、
+\[ e^{-0.05\times5}=e^{-0.25}=0.7788\cdots \]
+になります。はかった約0.78は、この値です。
+
+\bksubsection{2}{答えを導く方法1：答えの候補を使う}
+
+\leavevmode\label{bk:6-4:kouho}5-18で作った答えの候補を使う方法を、もう一度ふり返ります。
+\begin{bkhenkei}
+\frac{\dd T}{\dd t}=-0.05\,(T-20) & 問題の式（ルール） \\
+u=T-20 & 部屋との差を $u$ とおく（5-18④のずらし） \\
+\frac{\dd u}{\dd t}=\frac{\dd T}{\dd t} & 20は定数なので、微分すると0 \\
+\frac{\dd u}{\dd t}=-0.05\,u & 1行めの左辺と右辺を $u$ で書きかえた \\
+u=Ce^{-0.05t} & 「微分すると自分の $-0.05$ 倍」の候補（5-18） \\
+T=20+Ce^{-0.05t} & $u=T-20$ をもどした \\
+T=20+60e^{-0.05t} & $t=0$ で $T=80$。$e^0=1$ なので $20+C=80$、$C=60$ \\
+\end{bkhenkei}
+
+\bkviehead{代入して確かめる}
+答えが本当にルールに合うか、左辺と右辺を別々に計算します。
+\begin{bkhenkei}
+\frac{\dd T}{\dd t}=-3e^{-0.05t} & 左辺：答えを微分する（5-14） \\
+-0.05\,(T-20)=-3e^{-0.05t} & 右辺：$T-20$ に $60e^{-0.05t}$ を入れる \\
+\end{bkhenkei}
+左辺は $60\times(-0.05)=-3$、右辺は $-0.05\times60=-3$ で、同じになりました。$t=0$ では $T=20+60=80$ で、はじめの温度にも合っています。
+
+\bkviehead{単位で確かめる}
+0.05の単位は「1/分」です。$\dfrac{\dd T}{\dd t}$（℃/分）＝0.05（1/分）×差（℃）で、両辺の単位が合うからです。だから、$e$ の肩の $-0.05t$ は、（1/分）×（分）で単位がなくなります。$e$ の肩には、単位のない数しか入れられません（$e^{3\,\text{分}}$ という数はありません）。
+
+\bkviehead{表計算の答えとくらべる}
+6-2のオイラー法（$\Delta t=1$ 分）と、式の答えをくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] *{5}{Q[c,m,wd=12mm]}}, rowsep=1.5pt}
+時間（分） & 0 & 5 & 10 & 20 & 30 \\
+オイラー法（$\Delta t=1$ 分） & 80 & 66.43 & 55.92 & 41.51 & 32.88 \\
+式 $20+60e^{-0.05t}$ & 80 & 66.73 & 56.39 & 42.07 & 33.39 \\
+\end{bktable}
+\bktabcaption{オイラー法の値は、式の値より少しだけ低い。1分のあいだも下がる速さはおそくなっていくのに、はじめの速さのまま下げているから（6-2）。}
+\end{bkcenter}
+
+この方法は、答えの候補を知っていれば速く解けます。でも、「なぜ $e$ が出てくるのか」は、候補のカードを信じるしかありません。次の③では、候補を知らなくても、式を変形していくだけで答えにたどり着く方法を学びます。
+
+\bksubsection{3}{答えを導く方法2：変数分離}
+
+\leavevmode\label{bk:6-4:bunri}②の式 $\frac{\dd u}{\dd t}=-0.05\,u$ の両辺を、そのまま $t$ で積分しようとすると、右辺が次の形になって止まってしまいます。
+\[ \int(-0.05\,u)\,\dd t \]
+$u$ は $t$ によって変わる、まだわからない関数なので、積分できないのです（6-3で学んだ「積分するだけで解ける形」ではありません）。
+
+そこで、\textbf{$u$ にかかわるものを左辺へ、$t$ にかかわるものを右辺へ}集めます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, draw=bkBlue, fill=bkBlue!8, minimum width=50mm, minimum height=15mm, align=center, font=\small] (a) at (0,0) {$u$ の部屋（左辺）\\[2pt]$\dfrac{1}{u}\cdot\dfrac{\dd u}{\dd t}$};
+  \node[bk node, draw=bkOrange, fill=bkOrange!8, minimum width=50mm, minimum height=15mm, align=center, font=\small] (b) at (70,0) {$t$ の部屋（右辺）\\[2pt]$-0.05$};
+  \node[font=\Large] at (35,0) {$=$};
+\end{tikzpicture}
+\bkfigcaption{両辺を $u$ でわると、左辺は $u$ だけの式×$\frac{\dd u}{\dd t}$、右辺は $t$ だけ（ここでは定数）になる。}
+\end{bkfigure}
+\noindent これで、両辺を $t$ で積分できるようになります。1行ずつ進めます（$u>0$、つまりお湯が部屋より熱いときを考えます）。
+\begin{bkhenkei}
+\frac{\dd u}{\dd t}=-0.05\,u & 問題の式 \\
+\frac{1}{u}\cdot\frac{\dd u}{\dd t}=-0.05 & ① 両辺を $u$ でわる（$u$ を左辺へ集める） \\
+\int\frac{1}{u}\cdot\frac{\dd u}{\dd t}\,\dd t=\int(-0.05)\,\dd t & ② 両辺を $t$ で積分する \\
+\int\frac{1}{u}\,\dd u=\int(-0.05)\,\dd t & ③ 左辺：$\frac{\dd u}{\dd t}\,\dd t$ をまとめて $\dd u$（5-16 の置換積分） \\
+\ln u=-0.05\,t+C & ④ 左辺は $\ln u$（5-14）、右辺は $-0.05t$。積分定数は1つにまとめて $C$ \\
+u=e^{-0.05t+C} & ⑤「$\ln u$ が○」は「$u$ は $e$ の○乗」（5-14） \\
+u=e^{C}\times e^{-0.05t} & ⑥ 指数のきまり $e^{p+q}=e^p\times e^q$（3-11） \\
+u=Ae^{-0.05t} & ⑦ $e^C$ は定数なので、$A$ とおく \\
+\end{bkhenkei}
+$t=0$ で $u=60$ なので $A\times e^0=A=60$。$u=60e^{-0.05t}$ で、方法1と同じ答え $T=20+60e^{-0.05t}$ になりました。今度は、答えの候補を使わずに、$e$ が「$\ln$ をもとにもどす」ところ（⑤）から自然に出てきました。
+
+\bkviehead{③の行が大事}
+③では、5-16の置換積分の形 $\displaystyle\int(u\text{ の式})\times u'\,\dd t=\int(u\text{ の式})\,\dd u$ をそのまま使いました。$u$ の式が $\dfrac{1}{u}$、$u'$ が $\dfrac{\dd u}{\dd t}$ です。$t$ で積分していたものが、$u$ で積分するものに変わります。
+
+\bkviehead{④の $C$ はなぜ1つ？}
+左辺を積分すると $\ln u+C_1$、右辺を積分すると $-0.05t+C_2$ です。$C_1$ を右へ移すと $C_2-C_1$ で、これも決まっていない定数なので、まとめて $C$ と書きます。
+
+\bkviehead{よく見る書き方}
+大学の本では、①〜③を短く、
+\[ \frac{\dd u}{u}=-0.05\,\dd t\qquad\text{両辺に積分記号をつけて}\qquad\int\frac{\dd u}{u}=\int(-0.05)\,\dd t \]
+と書くことがよくあります。$\dfrac{\dd u}{\dd t}$ を分数のように見て、両辺に $\dd t$ をかけた形です（5-16の見方1）。中身は、上の①〜③とまったく同じです。
+
+\begin{seikaku}
+\textbf{「$\dd t$ をかける」は、置換積分を短く書いたもの}\par
+6-1では「$\dfrac{\dd T}{\dd t}$ はひとまとまりの記号。分数として約分しない」と学びました。では、ここで $\dd t$ をかけてよいのはなぜでしょう。じつは、$\dd t$ を本当にかけ算しているのではありません。①〜③で行ったことを、1行ずつ書くと次のとおりです。
+\begin{bkhenkei}
+\frac{1}{u}\cdot\frac{\dd u}{\dd t}=-0.05 & ①：両辺を $u$ でわった式 \\
+\int\frac{1}{u}\cdot\frac{\dd u}{\dd t}\,\dd t=\int(-0.05)\,\dd t & ②：両辺を $t$ で積分する \\
+\int\frac{1}{u}\cdot\frac{\dd u}{\dd t}\,\dd t=\int\frac{1}{u}\,\dd u & ③：左辺だけに置換積分（5-16）を使う \\
+\end{bkhenkei}
+③の行が、置換積分のきまり $\displaystyle\int(u\text{ の式})\times\frac{\dd u}{\dd t}\,\dd t=\int(u\text{ の式})\,\dd u$ そのものです。「$\dfrac{\dd u}{u}=-0.05\,\dd t$」は、この3行の結果だけを短く書く約束で、分数として約分したのではありません。6-1で「約分しない」と書いたのは、$\dd$ と $T$ をばらばらにして $\dfrac{T}{t}$ にしてしまうまちがいのことで、ここでの書き方とは別のことです。$\dd u$・$\dd t$ の1つ1つに意味をつける考え（微分形式）は、大学で学びます。
+\end{seikaku}
+
+このように、変数ごとに左辺と右辺に分けてから積分する解き方を\textbf{変数分離}（へんすうぶんり）といいます。\bkidx{へんすうぶんり}{変数分離}
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 両辺をわったりかけたりして、$u$ を左辺に、$t$ を右辺に集める。
+\item 両辺を積分する（左辺は $u$ で、右辺は $t$ で）。$C$ は片方につける。
+\item $\ln$ が出たら、$e$ の○乗にもどす。
+\item はじめの状態で、定数を決める。
+\end{enumerate}
+
+\begin{seikaku}
+①で $u$ でわったので、$u=0$ のときは使えません。$u=0$（はじめから部屋と同じ20\,℃）なら、$T=20$ のまま変わらないのも答えです（$\frac{\dd u}{\dd t}=0$）。また、$u<0$（お湯が部屋より冷たい）のときは、④の左辺が $\ln(-u)$ になり、答えは $u=-e^Ce^{-0.05t}$ です。$A$ を「正・0・負のどんな数でもよい」とすると、$u=Ae^{-0.05t}$ の1つの式で全部をまとめられます。はじめの値を1つ決めると、答えはただ1つに決まります（6-1）。
+\end{seikaku}
+
+\bkfukidashi{sora}{③は1回で全部わからなくても大丈夫。②の答えの候補で答えが出せれば、先へ進めます。あとで読み返すと、きっとわかるよ。}
+
+\bksubsection{4}{目標の値へ近づく形}
+
+\leavevmode\label{bk:6-4:mokuhyou}0.05は $\dfrac{1}{20}$ なので、冷めるお湯のルールは、次のように書きかえられます。
+\[ \frac{\dd T}{\dd t}=-\frac{1}{20}\,(T-20)=\frac{20-T}{20} \]
+分子の20は「部屋の温度（目標）」、分母の20は「20分（時間）」で、たまたま同じ数ですが、意味のちがう数です。このように書くと、どんな式か読みやすくなります。
+\[ \text{変わる速さ}=\frac{\text{目標}-\text{いま}}{\text{時間の目安}} \]
+「目標までの残り」を、ある時間でわった速さで近づきます。残りが大きいと速く、残りが小さいとゆっくり近づきます。
+
+これを文字で書くと、次の形になります。$y_\infty$ は「目標の値（最後の値）」で、ワイ・インフィニティと読みます（$\infty$ は「限りなく大きい」：5-3。$t$ を限りなく大きくしたときに近づく値という意味です）。$\tau$ は時定数（5-14）です。
+\bkvieframe{$\dfrac{\dd y}{\dd t}=\dfrac{y_\infty-y}{\tau}$\qquad の答えは\qquad $y=y_\infty+(y_0-y_\infty)\,e^{-t/\tau}$}
+$y_0$ は、はじめ（$t=0$）の値です。答えは、①〜③と同じく、目標との差 $u=y-y_\infty$ を主役にして作れます。
+\begin{bkhenkei}
+\frac{\dd y}{\dd t}=\frac{y_\infty-y}{\tau} & 問題の式 \\
+\frac{\dd u}{\dd t}=-\frac{u}{\tau} & $u=y-y_\infty$ とおく（$y_\infty$ は定数なので $\frac{\dd u}{\dd t}=\frac{\dd y}{\dd t}$） \\
+u=Ae^{-t/\tau} & ③の変数分離（0.05 のかわりに $\frac{1}{\tau}$） \\
+A=y_0-y_\infty & $t=0$ で $u=y_0-y_\infty$、$e^0=1$ \\
+y=y_\infty+(y_0-y_\infty)\,e^{-t/\tau} & $y=y_\infty+u$ にもどした \\
+\end{bkhenkei}
+答えの読み方は「\textbf{最後の値}＋\textbf{はじめの差}×\textbf{へり方}」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=82, ymin=0, ymax=92, xtick={20,40,60,80}, xticklabels={$\tau$,40,60,80}, ytick={5,20,50,80}, xlabel={$t$（分）}, ylabel={$T$（℃）}]
+  \addplot[bkthin, dashed, domain=0:80] {20};
+  \addplot[bkcurve, domain=0:80, samples=60] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve2, domain=0:80, samples=60] {20-15*exp(-0.05*x)};
+  \addplot[bkBlue, line width=0.8pt, dashed, domain=0:20] {80-3*x};
+  \addplot[bkOrange, line width=0.8pt, dashed, domain=0:20] {5+0.75*x};
+  \fill[bkInk] (axis cs:20,20) circle (1.5pt);
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=west] at (axis cs:12,62) {冷める（80\,℃から）};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west] at (axis cs:44,10.5) {温まる（5\,℃から）};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:80,21.5) {目標（部屋）20\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ式 $\frac{\dd T}{\dd t}=\frac{20-T}{20}$ で、冷める（青）と温まる（オレンジ）。点線は、$t=0$ の接線（はじめの速さのまま進んだら）。どちらも、ちょうど $t=\tau=20$ 分で目標に届く。}\label{bk:6-4:fig-mokuhyou}
+\end{bkfigure}
+図\ref{bk:6-4:fig-mokuhyou}のように、冷めるときも温まるときも、同じ式で書けます。温まるとき（はじめ5\,℃）は、はじめの差が $5-20=-15$ でマイナスなので、
+\[ T=20+(5-20)\,e^{-t/20}=20-15e^{-t/20} \]
+です。「20から、へっていく15を引く」形で、下から20\,℃に近づきます。
+
+\bkviehead{解かなくても、最後の値がわかる}
+最後には、$y$ はもう変わらなくなります。変わらないということは、$\dfrac{\dd y}{\dd t}=0$ です。式の左辺を0とおくと、
+\[ 0=\frac{y_\infty-y}{\tau}\qquad\text{より}\qquad y=y_\infty \]
+たとえば $\dfrac{\dd y}{\dd t}=6-0.2\,y$ なら、$0=6-0.2\,y$ から $y=30$ が最後の値です。式を解かなくても、「変わらなくなる値」はすぐにわかります。次の6-5の終端速度も、この考えで求めます。
+
+\bkviehead{どんな1階の式も、この形にできる}
+$\dfrac{\dd y}{\dd t}=b-ay$（$a>0$）の形の式は、右辺を $a$ でくくると、
+\[ \frac{\dd y}{\dd t}=a\Bigl(\frac{b}{a}-y\Bigr)=\frac{\dfrac{b}{a}-y}{\dfrac{1}{a}} \]
+なので、$y_\infty=\dfrac{b}{a}$、$\tau=\dfrac{1}{a}$ です。$\dfrac{\dd y}{\dd t}=6-0.2\,y$ なら、$y_\infty=\dfrac{6}{0.2}=30$、$\tau=\dfrac{1}{0.2}=5$ です。
+
+\bksubsection{5}{時定数と半減期}
+
+\leavevmode\label{bk:6-4:tau}答え $y=y_\infty+(y_0-y_\infty)e^{-t/\tau}$ で、「残りの差」は $e^{-t/\tau}$ 倍になります。$\tau$ の何倍たったかで、残りの割合が決まります（5-14⑪）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] *{5}{Q[c,m,wd=13mm]}}, rowsep=1.5pt}
+たった時間 & $\tau$ & $2\tau$ & $3\tau$ & $4\tau$ & $5\tau$ \\
+残りの差 $e^{-t/\tau}$ & 36.8\,\% & 13.5\,\% & 5.0\,\% & 1.8\,\% & 0.7\,\% \\
+目標までに進んだ割合 & 63.2\,\% & 86.5\,\% & 95.0\,\% & 98.2\,\% & 99.3\,\% \\
+\end{bktable}
+\bktabcaption{$e^{-1}=0.368$、$e^{-2}=0.135$、$e^{-3}=0.050$、$e^{-4}=0.018$、$e^{-5}=0.007$。}
+\end{bkcenter}
+冷めるお湯（$\tau=20$ 分）なら、20分で差が36.8\,\%（60\,℃の差が22.1\,℃）、60分（$3\tau$）で5.0\,\%（3.0\,℃）になります。
+
+\bkviehead{半減期：差が半分になる時間}
+差が半分になる時間を $t_{\mathrm h}$ とすると、$e^{-t_{\mathrm h}/\tau}=\dfrac{1}{2}$ です。両辺の自然対数をとります（5-14）。
+\begin{bkhenkei}
+e^{-t_{\mathrm h}/\tau}=\frac{1}{2} & 差が半分になる条件 \\
+-\frac{t_{\mathrm h}}{\tau}=\ln\frac{1}{2}=-\ln2 & 両辺の $\ln$ をとる。$\ln\frac{1}{2}=-\ln2$（3-12） \\
+t_{\mathrm h}=\tau\ln2\approx0.693\,\tau & 両辺に $-\tau$ をかける。$\ln2=0.693$ \\
+\end{bkhenkei}
+半減期は、はじめの差がいくつでも同じです。式の中に $y_0$ が入っていないからです。
+
+\bkviehead{\bkhatenaref の答え}
+冷めるお湯は $\tau=20$ 分なので、差が半分になる時間は
+\[ 20\ \text{分}\times\ln2=20\ \text{分}\times0.693=13.9\ \text{分} \]
+です。80\,℃から50\,℃（差60\,℃→30\,℃）も、50\,℃から35\,℃（差30\,℃→15\,℃）も、同じ約13.9分です。下がる温度は30\,℃と15\,℃でちがいますが、「差が半分になる」時間は同じです（①）。
+
+\bkviehead{目標には、いつ着く？}
+$e^{-t/\tau}$ は、どんなに $t$ が大きくなっても0にはなりません（$e$ を何乗しても正の数）。だから、\textbf{数学の上では、目標にぴったり着くまでには限りなく長い時間がかかります}。でも、$5\tau$ で残りは0.7\,\%なので、工学では「$5\tau$ たてば、ほぼ終わり」とみなします。お湯なら100分で、差は0.4\,℃です。じっさいの温度計では、もう区別できません。
+
+\bkviehead{グラフから $\tau$ を読む3つの方法}
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item はじめの接線が目標の線とまじわる時刻（図\ref{bk:6-4:fig-mokuhyou}の点線）。
+\item 目標までの63\,\%まで進んだ時刻（残りの差が37\,\%になった時刻）。
+\item 差が半分になる時間（半減期）を0.693でわる。
+\end{enumerate}
+はかったデータでは、③のように「何回分か」を使うと、ずれが小さくなります。
+
+\bksubsection{6}{熱：ためる・逃げる}
+
+\leavevmode\label{bk:6-4:netsu}お湯の $\tau=20$ 分は、何で決まっているのでしょう。お湯は「熱をためる」はたらきと、「熱が部屋へ逃げる」はたらきをもっています。
+
+\bkviehead{熱をためる：熱容量 $C_{\mathrm{th}}$}
+物の温度を1\,K（1\,℃と同じ大きさ）上げるのに必要な熱（エネルギー）を\textbf{熱容量}といい、$C_{\mathrm{th}}$〔J/K〕と書きます（th は熱 thermal の頭文字）。水は1\,gあたり約\qty{4.2}{J/K}なので、250\,mL（250\,g）のお湯なら
+\[ C_{\mathrm{th}}=4.2\ \text{J/(g·K)}\times\qty{250}{g}=\qty{1050}{J/K} \]
+です。熱容量が大きいほど、同じ熱を出し入れしても温度が変わりにくくなります。\bkidx{ねつようりょう}{熱容量}
+
+\bkviehead{熱が逃げる：熱抵抗 $R_{\mathrm{th}}$}
+熱は、温度の高い所から低い所へ流れます。1秒に流れる熱（熱流、単位はW＝J/s）は、温度差に比例します。
+\[ \text{熱流}=\frac{\text{温度差}}{R_{\mathrm{th}}} \]
+$R_{\mathrm{th}}$〔K/W〕を\textbf{熱抵抗}といいます。「1\,Wの熱を流すのに、何\,Kの温度差がいるか」で、大きいほど熱が逃げにくくなります。電気のオームの法則 $I=\dfrac{V}{R}$（2-15）と同じ形です。
+
+\bkviehead{式を立てる}
+ヒーター（電力 $P$〔W〕）で温めながら、部屋（温度 $T_{\mathrm a}$）へ熱が逃げている物を考えます。短い時間 $\Delta t$ のあいだの、熱の出入りを書きます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, draw=bkOrange, fill=bkOrange!10, minimum width=26mm, minimum height=12mm, align=center, font=\small] (h) at (0,0) {ヒーター\\$P$〔W〕};
+  \node[bk node, draw=bkRed, fill=bkRed!8, minimum width=34mm, minimum height=16mm, align=center, font=\small] (m) at (50,0) {温める物\\熱容量 $C_{\mathrm{th}}$、温度 $T$};
+  \node[bk node, draw=bkBlue, fill=bkBlue!8, minimum width=26mm, minimum height=12mm, align=center, font=\small] (r) at (104,0) {部屋\\温度 $T_{\mathrm a}$};
+  \draw[bk link, bkOrange, line width=1.2pt] (h) -- (m);
+  \draw[bk link, bkBlue, line width=1.2pt] (m) -- (r);
+  \node[font=\sffamily\footnotesize, anchor=south] at (25,3.5) {入る熱 $P$};
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (79,3.5) {逃げる熱 $\dfrac{T-T_{\mathrm a}}{R_{\mathrm{th}}}$};
+\end{tikzpicture}
+\bkfigcaption{熱の出入り。入る熱と逃げる熱の差が、物にたまり、温度を上げる。}
+\end{bkfigure}
+\begin{bkhenkei}
+C_{\mathrm{th}}\,\Delta T=P\,\Delta t-\frac{T-T_{\mathrm a}}{R_{\mathrm{th}}}\,\Delta t & たまる熱＝入る熱－逃げる熱（$\Delta t$ のあいだ） \\
+C_{\mathrm{th}}\,\frac{\Delta T}{\Delta t}=P-\frac{T-T_{\mathrm a}}{R_{\mathrm{th}}} & 両辺を $\Delta t$ でわる \\
+C_{\mathrm{th}}\,\frac{\dd T}{\dd t}=P-\frac{T-T_{\mathrm a}}{R_{\mathrm{th}}} & $\Delta t$ を0に近づける（5-3） \\
+\frac{\dd T}{\dd t}=\frac{P}{C_{\mathrm{th}}}-\frac{T-T_{\mathrm a}}{C_{\mathrm{th}}R_{\mathrm{th}}} & 両辺を $C_{\mathrm{th}}$ でわる \\
+\frac{\dd T}{\dd t}=\frac{PR_{\mathrm{th}}-(T-T_{\mathrm a})}{C_{\mathrm{th}}R_{\mathrm{th}}} & 右辺を通分する（1つめの分子・分母に $R_{\mathrm{th}}$ をかける） \\
+\frac{\dd T}{\dd t}=\frac{(T_{\mathrm a}+PR_{\mathrm{th}})-T}{C_{\mathrm{th}}R_{\mathrm{th}}} & 分子のかっこをはずし、並べかえる \\
+\end{bkhenkei}
+最後の行は④の形です。だから、
+\bkvieframe{最後の温度\quad $T_\infty=T_{\mathrm a}+PR_{\mathrm{th}}$\qquad 時定数\quad $\tau=C_{\mathrm{th}}R_{\mathrm{th}}$}
+最後の温度は、$\dfrac{\dd T}{\dd t}=0$（入る熱＝逃げる熱）からも求められます：$P=\dfrac{T-T_{\mathrm a}}{R_{\mathrm{th}}}$ より $T=T_{\mathrm a}+PR_{\mathrm{th}}$。
+
+\noindent\textbf{単位の確かめ}\quad $C_{\mathrm{th}}R_{\mathrm{th}}$ の単位は $\dfrac{\text{J}}{\text{K}}\times\dfrac{\text{K}}{\text{W}}=\dfrac{\text{J}}{\text{W}}=\dfrac{\text{J}}{\text{J/s}}=\text{s}$ で、たしかに時間です。
+
+\bkviehead{お湯の0.05の正体}
+ヒーターのないお湯（$P=0$）では、$T_\infty=T_{\mathrm a}=20$\,℃で、$\tau=C_{\mathrm{th}}R_{\mathrm{th}}$ です。250\,mLのお湯（\qty{1050}{J/K}）で $\tau=20$ 分＝\qty{1200}{s} なら、
+\[ R_{\mathrm{th}}=\frac{\tau}{C_{\mathrm{th}}}=\frac{\qty{1200}{s}}{\qty{1050}{J/K}}\approx\qty{1.1}{K/W} \]
+です。差が60\,℃のとき、1秒に約 $60\div1.1\approx\qty{53}{W}$ の熱が逃げています。ルールの0.05（1/分）は $\dfrac{1}{\tau}=\dfrac{1}{20\ \text{分}}$ で、「熱のためやすさ」と「逃げやすさ」で決まる数だったのです。量が2倍（500\,mL）なら $C_{\mathrm{th}}$ が2倍なので、同じカップの形なら冷めるのがおそくなります。
+
+\bkviehead{温度計も追いつくのに時間がかかる}
+温度計の先（感じる部分）も、小さな「熱をためる物」です。熱いお湯に入れても、すぐにはお湯の温度を指しません。お湯の温度を $T_{\mathrm w}$、温度計の示す温度を $T_{\mathrm m}$ とすると、
+\[ \frac{\dd T_{\mathrm m}}{\dd t}=\frac{T_{\mathrm w}-T_{\mathrm m}}{\tau} \]
+の形で追いつきます（目標が $T_{\mathrm w}$）。体温計をわきにはさんで、すぐに取り出してはいけないのは、このためです。
+
+\begin{seikaku}
+「冷める速さは温度差に比例する」（ニュートンの冷却の法則）は、近似です。じっさいのお湯は、湯気（蒸発）や、温度の4乗に関係する熱の放射でも冷めるので、熱いうちは式より少し速く冷めます。それでも、温度差があまり大きくないときは、とてもよく合います。また、ここでは「お湯の中の温度はどこも同じ」と考えました。よくかき混ぜた水や、小さな金属のように、中の温度がすぐにそろう物ほど、よく合います（物理シリーズ『熱学』）。
+\end{seikaku}
+
+\begin{column}{計器の反応のおくれ：1次おくれ}
+工場では、計器でタンクや管の中の温度などをはかり、その値で機械を自動で動かしています。温度をはかる熱電対（ねつでんつい）は、金属の管（保護管）に入れて使うので、⑥の温度計と同じように、時定数 $\tau$ ほどおくれて追いつきます。このような反応を、制御工学では\textbf{1次おくれ}といいます（9-9）。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=36mm, xmin=0, xmax=190, ymin=49, ymax=56.5, xtick={30,60,90,120,150,180}, ytick={50,52,54,56}, xlabel={$t$（s）}, ylabel={温度（℃）}]
+  \addplot[bkcurve2, domain=0:158] {50+x/30};
+  \addplot[bkcurve, domain=0:158, samples=80] {50+(x-30*(1-exp(-x/30)))/30};
+  \draw[bkRed, line width=0.9pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (axis cs:155,54.22) -- (axis cs:155,55.12);
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=west] at (axis cs:167,54.67) {$r\tau=1$\,℃};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south east, fill=bkPaper, inner sep=1pt] at (axis cs:112,54.2) {本当の温度};
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=north west, fill=bkPaper, inner sep=1pt] at (axis cs:100,51.6) {計器の値（$\tau=\qty{30}{s}$）};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+温度が1秒あたり $r$〔℃/s〕の速さで上がり続けると、しばらくして、計器の値も同じ速さ $r$ で上がるようになります。そのときは $\dfrac{\dd T_{\mathrm m}}{\dd t}=r$ なので、⑥の式 $\dfrac{\dd T_{\mathrm m}}{\dd t}=\dfrac{T-T_{\mathrm m}}{\tau}$ から、$T-T_{\mathrm m}=r\tau$。計器は、いつも $r\tau$ だけ低い値を指し続けます。$\tau=\qty{30}{s}$（およその値）の熱電対で、温度が1分に2\,℃（$r=\frac{2}{60}$\,℃/s）上がるなら、おくれは $\frac{2}{60}\times30=1$\,℃です。速く変わる温度をはかるには、時定数の小さい計器を選びます。
+\end{column}
+
+
+
+\bksubsection{7}{電気：コンデンサーとコイルの回路}
+
+\leavevmode\label{bk:6-4:rc}電気の回路にも、「ためる」部品があります。
+
+\bkviehead{コンデンサー：電気をためる部品}
+\textbf{コンデンサー}は、2枚の金属の板を、ごく近づけて向かい合わせた部品です。電池につなぐと、片方の板に $+$ の電気、もう片方に $-$ の電気がたまります。カメラのフラッシュは、コンデンサーにためた電気を一気に流して光ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed!15] (20,0) rectangle (22,24);
+  \fill[bkBlue!15] (30,0) rectangle (32,24);
+  \draw[bkInk, line width=0.8pt] (20,0) rectangle (22,24) (30,0) rectangle (32,24);
+  \foreach \y in {3,8,13,18} {\node[font=\sffamily\footnotesize, text=bkRed] at (24.5,{\y+1.5}) {$+$}; \node[font=\sffamily\footnotesize, text=bkBlue] at (27.5,{\y+1.5}) {$-$};}
+  \draw[bkInk, line width=0.7pt] (21,24) -- (21,30) -- (8,30) -- (8,16);
+  \draw[bkInk, line width=0.7pt] (31,24) -- (31,30) -- (44,30) -- (44,16);
+  \draw[bkInk, line width=0.7pt] (8,8) -- (8,-4) -- (44,-4) -- (44,8);
+  \bkvieE{(8,12)}{-90}
+  \draw[bkInk, line width=0.7pt] (44,8) -- (44,16);
+  \node[font=\sffamily\footnotesize, anchor=east] at (2.5,12) {電池};
+  \node[font=\sffamily\footnotesize, anchor=west] at (48,20) {2枚の金属の板};
+  \node[font=\sffamily\footnotesize, anchor=west] at (48,12) {$+$ と $-$ の電気がたまる};
+  \node[font=\sffamily\footnotesize, anchor=west] at (48,4) {電圧 $V$ が大きいほど、たくさん};
+\end{tikzpicture}
+\bkfigcaption{コンデンサー（2枚の板）を電池につなぐと、板に $+$ と $-$ の電気がたまる。}
+\end{bkfigure}
+\noindent コンデンサーにたまる電気の量 $q$〔C〕は、板のあいだの電圧 $V$〔V〕に比例します。\bkidx{こんでんさー}{コンデンサー}
+\bkvieframe{$q=CV$}
+比例定数 $C$〔F〕を\textbf{静電容量}（せいでんようりょう）といい、単位はファラド（F）です。電気の量の単位はクーロン（C）で、\qty{1}{A}の電流が1秒流れたときの電気の量です（C＝A·s）。文字の $C$（静電容量）と単位の C（クーロン）がまぎらわしいので、この本では単位を〔　〕でくくります。1\,Fはとても大きいので、ふつうは $\qty{1}{\micro F}=\qty{0.000001}{F}$（マイクロファラド）を使います。この本では、$q=CV$ を部品のきまり（法則）として使います。なぜそうなるかは、物理シリーズ『電磁気学』で学びます。
+
+\bkviehead{電流は、電気の量の変わる速さ}
+電流 $i$〔A〕は、1秒あたりに流れる電気の量です（中学の理科）。コンデンサーに流れこむ電流は、たまった電気の量のふえる速さなので、
+\[ i=\frac{\dd q}{\dd t}=C\,\frac{\dd V}{\dd t}\qquad\text{（$q=CV$ を微分。$C$ は定数）} \]
+です。時間とともに変わる電流は、小文字の $i$ で書きます。
+
+\bkviehead{放電：たまった電気を抵抗に流す}
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (30,26);
+  \bkvieC{(0,13)}{90}
+  \bkvieR{(30,13)}{90}
+  \bkvieS{(15,26)}{0}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5.5,13) {$C$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (33.5,13) {$R$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (4.5,16.5) {$+$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (4.5,9.5) {$-$};
+  \draw[bk arrow, bkRed, line width=1pt] (20,30) -- (28,30);
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=south] at (24,31) {$i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}
+はじめ電圧 $V_0$ までためたコンデンサーを、スイッチを入れて抵抗 $R$〔Ω〕につなぎます。電気は $+$ の板から抵抗を通って $-$ の板へ流れ、たまった電気がへっていきます。電流の向きを図の矢印の向きにとります。
+\end{minipage}
+\par\vspace{3pt}
+\begin{bkhenkei}
+i=\frac{V}{R} & 抵抗にかかる電圧はコンデンサーの電圧 $V$（オームの法則 2-15） \\
+\frac{\dd q}{\dd t}=-i & 電流が流れ出た分だけ、たまった電気がへる \\
+C\,\frac{\dd V}{\dd t}=-\frac{V}{R} & 左辺に $q=CV$、右辺に $i=\frac{V}{R}$ を入れた \\
+\frac{\dd V}{\dd t}=-\frac{V}{RC} & 両辺を $C$ でわる \\
+\end{bkhenkei}
+これは、「自分に比例してへる」形で、$y_\infty=0$、$\tau=RC$ です。答えは
+\bkvieframe{放電\qquad $V=V_0\,e^{-t/RC}$\qquad（時定数 $\tau=RC$）}
+3-11で「コンデンサーにためた電気を抵抗に流すと、電圧は同じ時間ごとに同じ割合でへる」と書いたのは、このことです。
+
+\bkviehead{$RC$ の単位は秒}
+単位つきの1を使って確かめます。$\Omega=\text{V/A}$（オームの法則）、$\text{F}=\text{C/V}$（$q=CV$）、$\text{C}=\text{A·s}$ なので、
+\[ \Omega\times\text{F}=\frac{\text{V}}{\text{A}}\times\frac{\text{C}}{\text{V}}=\frac{\text{C}}{\text{A}}=\frac{\text{A·s}}{\text{A}}=\text{s} \]
+たとえば $R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$ なら、
+\[ RC=\qty{20000}{\ohm}\times\qty{0.0001}{F}=\qty{2}{s} \]
+です（5-14の例題の $V=10(1-e^{-t/2})$ と同じ時定数）。k は1000倍、μ は100万分の1倍です（第5巻の巻末の表）。
+
+\bkviehead{充電：電池でコンデンサーに電気をためる}
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (30,26);
+  \bkvieE{(0,13)}{-90}
+  \bkvieR{(15,26)}{0}
+  \bkvieC{(30,13)}{90}
+  \bkvieS{(15,0)}{0}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5.5,13) {$E$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,29.5) {$R$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (34.5,13) {$C$};
+  \draw[bk arrow, bkRed, line width=1pt] (2,30) -- (9,30);
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=south] at (5.5,31) {$i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}
+電圧 $E$〔V〕の電池、抵抗 $R$、はじめ電気のたまっていないコンデンサー $C$ を、1列（直列）につなぎます。直列では、電池の電圧が、抵抗の電圧とコンデンサーの電圧に分かれます（中学の理科）。
+\[ E=Ri+V \]
+\end{minipage}
+\par\vspace{3pt}
+\begin{bkhenkei}
+E=Ri+V & 電池の電圧＝抵抗の電圧＋コンデンサーの電圧 \\
+E=RC\,\frac{\dd V}{\dd t}+V & 電流は $i=C\frac{\dd V}{\dd t}$（流れこむ電気がたまる） \\
+RC\,\frac{\dd V}{\dd t}=E-V & $V$ を左辺へ移し、左右を入れかえる \\
+\frac{\dd V}{\dd t}=\frac{E-V}{RC} & 両辺を $RC$ でわる \\
+\end{bkhenkei}
+④の形で、$y_\infty=E$、$\tau=RC$ です。はじめ $V=0$ なので、
+\bkvieframe{充電\qquad $V=E\,(1-e^{-t/RC})$\qquad 電流\qquad $i=\dfrac{E-V}{R}=\dfrac{E}{R}\,e^{-t/RC}$}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pv, width=58mm, height=44mm, xmin=0, xmax=11, ymin=0, ymax=11.8, xtick={2,4,6,8,10}, ytick={6.32,10}, yticklabels={6.32,10}, xlabel={$t$（s）}, ylabel={$V$（V）}]
+  \addplot[bkthin, dashed, domain=0:10.5] {10};
+  \addplot[bkcurve, domain=0:10.5, samples=60] {10*(1-exp(-x/2))};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:2,0) -- (axis cs:2,6.32) -- (axis cs:0,6.32);
+\end{axis}
+\begin{axis}[bkplot, at={(68mm,0mm)}, width=58mm, height=44mm, xmin=0, xmax=11, ymin=0, ymax=0.59, xtick={2,4,6,8,10}, ytick={0.184,0.5}, yticklabels={0.18,0.5}, xlabel={$t$（s）}, ylabel={$i$（mA）}]
+  \addplot[bkcurve2, domain=0:10.5, samples=60] {0.5*exp(-x/2)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:2,0) -- (axis cs:2,0.184) -- (axis cs:0,0.184);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{充電（$E=\qty{10}{V}$、$R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$、$\tau=\qty{2}{s}$）。左：コンデンサーの電圧は10\,Vに近づく。右：電流ははじめ $\frac{E}{R}=\qty{0.5}{mA}$ で、だんだん0に近づく。}
+\end{bkfigure}
+はじめ、コンデンサーはからっぽで電圧が0なので、電池の電圧は全部抵抗にかかり、電流は $\dfrac{E}{R}$ です。電気がたまるにつれてコンデンサーの電圧が上がり、抵抗にかかる電圧 $E-V$ がへるので、電流もへっていきます。
+
+\bkviehead{表計算でも確かめる}
+6-2のオイラー法で、$\dfrac{\dd V}{\dd t}=\dfrac{10-V}{2}$ を $\Delta t=\qty{0.1}{s}$ で進めます。B列が電圧、C列が変わる速さ（V/s）です。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 今の電圧から、変わる速さ $\dfrac{10-V}{2}$ を計算する（C列）。
+\item 次の電圧＝今の電圧＋変わる速さ×0.1（B列）。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & $t$（s） & $V$（V） & 速さ（V/s） & 式の答え \\
+2 & 0 & 0 & 5.00 & 0 \\
+12 & 1 & 4.01 & 3.00 & 3.93 \\
+22 & 2 & 6.42 & 1.79 & 6.32 \\
+32 & 3 & 7.85 & 1.07 & 7.77 \\
+42 & 4 & 8.71 & 0.64 & 8.65 \\
+52 & 5 & 9.23 & 0.39 & 9.18 \\
+102 & 10 & 9.94 & 0.03 & 9.93 \\}
+\bktabcaption{$\Delta t=\qty{0.1}{s}$ のオイラー法（1秒ごとの行だけ見せた）。C列の式は \texttt{=(10-B2)/2}、B列の式は \texttt{=B2+C2*0.1}。D列は $10(1-e^{-t/2})$。}
+\end{bkcenter}
+表計算の電圧は、式の答えより少しだけ大きく、だんだん近づいていきます。はじめの速さ5\,V/sのまま0.1秒進むと、そのあいだに速さがおそくなる分だけ進みすぎるからです（6-2と同じ理由）。数で解いても、式で解いても、同じ形の曲線になることが確かめられました。
+
+\bkviehead{コイル：電流の変化をきらう部品}
+\label{bk:6-4:rl}\textbf{コイル}は、導線をぐるぐる巻いた部品です。モーターの中の巻き線や、電磁石でスイッチを動かすリレーにも使われています。コイルに流れる電流を変えようとすると、コイルは、その変化をじゃまする向きに電圧を生みます。その大きさは、電流の変わる速さに比例します。\bkidx{こいる}{コイル}
+\bkvieframe{コイルの電圧\qquad $V_L=L\,\dfrac{\dd i}{\dd t}$}
+比例定数 $L$〔H〕を\textbf{インダクタンス}といい、単位はヘンリー（H）です。これも、この本では部品のきまりとして使います（くわしくは物理シリーズ『電磁気学』）。
+
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (30,26);
+  \bkvieE{(0,13)}{-90}
+  \bkvieR{(15,26)}{0}
+  \bkvieL{(30,13)}{-90}
+  \bkvieS{(15,0)}{0}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5.5,13) {$E$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,29.5) {$R$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (35,13) {$L$};
+  \draw[bk arrow, bkRed, line width=1pt] (2,30) -- (9,30);
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=south] at (5.5,31) {$i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}
+電池 $E$、抵抗 $R$、コイル $L$ を直列につなぎ、スイッチを入れます。電池の電圧が、抵抗とコイルに分かれます。
+\[ E=Ri+L\,\frac{\dd i}{\dd t} \]
+\end{minipage}
+\par\vspace{3pt}
+\begin{bkhenkei}
+E=Ri+L\,\frac{\dd i}{\dd t} & 電池の電圧＝抵抗の電圧＋コイルの電圧 \\
+L\,\frac{\dd i}{\dd t}=E-Ri & $Ri$ を右辺へ移す \\
+\frac{\dd i}{\dd t}=\frac{E-Ri}{L} & 両辺を $L$ でわる \\
+\frac{\dd i}{\dd t}=\frac{\dfrac{E}{R}-i}{\dfrac{L}{R}} & 右辺の分子と分母を、どちらも $R$ でわる \\
+\end{bkhenkei}
+④の形で、最後の電流 $i_\infty=\dfrac{E}{R}$（コイルがないときのオームの法則の電流）、時定数 $\tau=\dfrac{L}{R}$ です。はじめ $i=0$ なので、
+\bkvieframe{$i=\dfrac{E}{R}\,(1-e^{-t/\tau})$\qquad $\tau=\dfrac{L}{R}$}
+スイッチを入れた瞬間は、コイルが「急な変化」をきらうので、電流は0から始まり、なめらかに $\dfrac{E}{R}$ へ近づきます。単位は $\dfrac{\text{H}}{\Omega}=\dfrac{\text{V·s/A}}{\text{V/A}}=\text{s}$ です（$V_L=L\frac{\dd i}{\dd t}$ から H＝V·s/A）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=-0.3, xmax=2.8, ymin=0, ymax=36, xtick={0.5,1,1.5,2,2.5}, ytick={18.96,30}, yticklabels={19,30}, xlabel={$t$（ms）}, ylabel={$i$（mA）}]
+  \addplot[bkcurve2, dashed, line width=1.1pt] coordinates {(0,0) (0,30) (2.6,30)};
+  \addplot[bkcurve, domain=0:2.6, samples=60] {30*(1-exp(-x/0.5))};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0.5,0) -- (axis cs:0.5,18.96) -- (axis cs:0,18.96);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.1,31) {コイルがないとき（すぐに30\,mA）};
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=north west, fill=white, inner sep=1pt] at (axis cs:1.0,17) {コイルがあるとき（$\tau=\qty{0.5}{ms}$）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{12\,Vのリレーのコイル（$R=\qty{400}{\ohm}$、$L=\qty{0.2}{H}$、例題9）にスイッチを入れたときの電流。コイルがないと電流はすぐに $\frac{E}{R}=\qty{30}{mA}$ になるが、コイルがあると0から始まり、なめらかに近づく。}
+\end{bkfigure}
+
+\Needspace{16\baselineskip}
+\begin{motto}[4]
+\textbf{スイッチを切ると、火花が出るわけ}\par
+コイルに電流が流れているときにスイッチを切ると、電流は一瞬で0になろうとします。$\dfrac{\dd i}{\dd t}$ がとても大きくなるので、$V_L=L\dfrac{\dd i}{\dd t}$ もとても大きくなり、スイッチのすきまに火花がとぶことがあります。リレーやモーターを動かす回路では、コイルとならべてダイオード（電流を1方向にだけ流す部品）をつなぎ、電流がそこを回って、時定数 $\dfrac{L}{R}$ くらいの時間でゆっくりへるようにします。こうして、電子部品をこわさないように守っています。
+\end{motto}
+
+\bksubsection{8}{同じ形の式の仲間たち}
+
+\leavevmode\label{bk:6-4:soji}この章で出てきた式は、どれも $\dfrac{\dd y}{\dd t}=\dfrac{y_\infty-y}{\tau}$ の形でした。表にまとめます。
+\begin{bkcenter}
+\small
+\begin{tblr}{width=\linewidth, colspec={Q[l,m]Q[c,m]Q[c,m]Q[c,m]X[l,m]}, row{1}={bg=bkTheme!12, font=\sffamily\small}, hline{1,2,Z}={0.6pt,bkGray}, hline{3-7}={0.3pt,bkGray}, rowsep=2.5pt, colsep=4pt}
+しくみ & 変わる量 & 最後の値 & 時定数 & $\tau$ が大きくなるのは \\
+冷めるお湯 & 温度 $T$ & 部屋の温度 & $C_{\mathrm{th}}R_{\mathrm{th}}$ & 量が多い・逃げにくい \\
+ヒーターで温める & 温度 $T$ & $T_{\mathrm a}+PR_{\mathrm{th}}$ & $C_{\mathrm{th}}R_{\mathrm{th}}$ & 量が多い・逃げにくい \\
+RC の充電 & 電圧 $V$ & $E$ & $RC$ & 容量が大きい・流れにくい \\
+RL の電流 & 電流 $i$ & $\dfrac{E}{R}$ & $\dfrac{L}{R}$ & コイルが大きい・抵抗が小さい \\
+モーター（物理 力-6） & 角速度 $\omega$ & $\dfrac{N_{\mathrm m}}{c_{\mathrm r}}$ & $\dfrac{I}{c_{\mathrm r}}$ & 回しにくい・じゃまが小さい \\
+落ちる物（6-5） & 速さ $v$ & $\dfrac{mg}{b}$ & $\dfrac{m}{b}$ & 質量が大きい・抵抗が小さい \\
+\end{tblr}
+\end{bkcenter}
+物はちがっても、式の形が同じなら、答えも同じ形です。だから、1つを解けば全部がわかります。温度で考えたことが電気にも使え、電気で考えたことが機械にも使えます。このような「式の形の仲間」のことを、6-15でもう一度まとめます。
+
+\bksubsection{9}{めったに起きないことの待ち時間}
+
+\leavevmode\label{bk:6-4:poisson}\bklevel{4}\enspace 放射線をはかるガイガーカウンターは、放射線が来るたびに「カチッ」と鳴ります。いつ鳴るかは、まったくの偶然です。でも、長くはかると「10秒に平均3回」のように、平均の回数は決まっています。1秒あたり平均 $\lambda$（ラムダ）回とします。ここでは $\lambda=0.3$ 回/秒です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=4pt]}] (0,0) -- (124,0);
+  \foreach \x in {0,20,...,120} {\draw[bkInk, line width=0.5pt] (\x,0) -- (\x,-1.5);}
+  \foreach \x/\l in {0/0,20/10,40/20,60/30,80/40,100/50,120/60} {\node[font=\sffamily\footnotesize, anchor=north] at (\x,-2.5) {\l};}
+  \node[font=\sffamily\footnotesize, anchor=west] at (124.5,0) {秒};
+  \foreach \x in {3.2,9.8,11.4,27.6,33.0,46.4,48.0,52.2,61.8,77.0,79.2,91.6,103.0,105.2,107.4,117.8} {\fill[bkRed] (\x,4) circle (1.1);}
+  \node[font=\sffamily\footnotesize, anchor=south west] at (0,7) {カチッと鳴った時刻（赤い点）};
+\end{tikzpicture}
+\bkfigcaption{60秒のあいだに鳴った時刻の例（ちょうど10秒ごとに3回ではなく、つまったり空いたりする）。}
+\end{bkfigure}
+
+\bkviehead{まだ1回も鳴らない確率}
+時刻 $t$ までに、まだ1回も鳴っていない確率を $P_0(t)$ とします。はじめ（$t=0$）は、まだ鳴っていないので $P_0(0)=1$ です。とても短い時間 $\Delta t$ のあいだに鳴る確率は $\lambda\Delta t$ です（1秒に平均0.3回なら、0.01秒では0.003回ぶん）。時刻 $t+\Delta t$ までに1回も鳴らないのは、「$t$ までに鳴らず」、「次の $\Delta t$ でも鳴らない」ときなので、確率のかけ算（3-17）で、
+\begin{bkhenkei}
+P_0(t+\Delta t)=P_0(t)\times(1-\lambda\Delta t) & $t$ まで鳴らない×次の $\Delta t$ で鳴らない \\
+\frac{P_0(t+\Delta t)-P_0(t)}{\Delta t}=-\lambda P_0(t) & かっこを開いて $P_0(t)$ を左へ移し、$\Delta t$ でわる \\
+\frac{\dd P_0}{\dd t}=-\lambda P_0 & $\Delta t$ を0に近づける \\
+P_0=e^{-\lambda t} & 自分に比例してへる形（③）。$P_0(0)=1$ \\
+\end{bkhenkei}
+ここでも「自分に比例してへる」式が出てきました。$\tau=\dfrac{1}{\lambda}$ とおくと $P_0=e^{-t/\tau}$ です。$\lambda=0.3$ 回/秒なら $\tau=\dfrac{1}{0.3}=3.3$ 秒で、10秒間1回も鳴らない確率は $e^{-0.3\times10}=e^{-3}=0.050$（5\,\%）です。
+
+\noindent「時刻 $t$ までに1回も鳴らない」は、「次に鳴るまでの待ち時間が $t$ より長い」と同じことです。だから、\textbf{待ち時間が $t$ より長い確率は $e^{-t/\tau}$} です。待ち時間の平均は、ちょうど $\tau=\dfrac{1}{\lambda}$（平均3.3秒に1回なら、待ち時間の平均も3.3秒）になることが、積分で確かめられます。このような待ち時間の分かれ方を\textbf{指数分布}といいます。\bkidx{しすうぶんぷ}{指数分布}
+
+\bkviehead{ちょうど1回、ちょうど $k$ 回の確率}
+10秒（$\lambda t=3$）を $n$ 個の短い区間に分けると、1つの区間で鳴る確率は $p=\dfrac{3}{n}$ です。ちょうど1回鳴るのは「$n$ 個のうち、どれか1つだけで鳴る」ときなので、選び方が $n$ 通り（3-17）で、確率は $np(1-p)^{n-1}$ です。表計算で $n$ を大きくしていきます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{3}{Q[c,m,wd=13.5mm]} Q[c,m,wd=28mm]}, rowsep=1.5pt, colsep=4pt}
+区間の数 $n$ & 10 & 100 & 1000 & 近づく先 \\
+0回の確率 $(1-p)^n$ & 0.028 & 0.048 & 0.0496 & $e^{-3}=0.0498$ \\
+1回の確率 $np(1-p)^{n-1}$ & 0.121 & 0.147 & 0.1491 & $3e^{-3}=0.1494$ \\
+\end{bktable}
+\bktabcaption{$n$ を大きくすると、0回は $e^{-3}$、1回は $3e^{-3}$ に近づく（$(1-\frac{3}{n})^n\to e^{-3}$ は5-14と同じしくみ）。}
+\end{bkcenter}
+同じように考えると、ちょうど $k$ 回鳴る確率は
+\bkvieframe{$P_k=\dfrac{(\lambda t)^k}{k!}\,e^{-\lambda t}$\qquad（$k!=1\times2\times\cdots\times k$、$0!=1$）}
+になります。このような回数の分かれ方を\textbf{ポアソン分布}といいます（フランスのポアソンが1837年に示しました）。\bkidx{ぽあそんぶんぷ}{ポアソン分布}
+
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=68mm, height=42mm, xmin=-0.7, xmax=8.7, ymin=0, ymax=0.27, xtick={0,1,...,8}, ytick={0.1,0.2}, xlabel={$k$}, ylabel={確率}, ybar, bar width=4mm, axis y line=left, xmin=-0.9]
+  \addplot[fill=bkBlue!45, draw=bkBlue, line width=0.6pt] coordinates {(0,0.0498) (1,0.1494) (2,0.2240) (3,0.2240) (4,0.1680) (5,0.1008) (6,0.0504) (7,0.0216) (8,0.0081)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+10秒（$\lambda t=3$）に鳴る回数の確率。平均は3回ですが、2回や3回になることがいちばん多く、0回も5\,\%、6回も5\,\%あります。
+\end{minipage}
+\par\vspace{3pt}
+\noindent 全部の確率をたすと、ちょうど1になります。
+\[ e^{-3}\Bigl(1+3+\frac{3^2}{2!}+\frac{3^3}{3!}+\cdots\Bigr)=e^{-3}\times e^3=1 \]
+かっこの中は、$e^3$ のテイラー展開（5-17）だからです。
+
+\begin{column}{馬にけられた兵士の数}
+ボルトキエヴィッチは1898年の本で、プロイセンの軍隊の10の部隊について、20年間に馬にけられて亡くなった兵士の数を調べました（部隊と年の組が200組、合わせて122人。1組あたり平均0.61人）。「0人だった組」は109組、「1人」は65組、「2人」は22組、「3人」は3組、「4人」は1組でした。ポアソン分布で計算すると、108.7組、66.3組、20.2組、4.1組、0.6組で、よく合います。めったに起きない、おたがいに関係のない出来事の回数は、ポアソン分布になるのです。
+\end{column}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+1階線形微分方程式 $\tau\dot y+y=y_\infty$ の解は
+\[ y(t)=y_\infty+\bigl(y(0)-y_\infty\bigr)e^{-t/\tau} \]
+である。$\tau$ を時定数といい、系の応答の速さを表す。
+\end{bkhonbun}
+\bkyaku{$\dot y$ は $\frac{\dd y}{\dd t}$（5-5）。両辺を $\tau$ でわると④の形。「系」はしくみ、「応答」は入力に対する反応のしかた。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[5.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{変数分離}$\dfrac{\dd u}{\dd t}=-\dfrac{u}{\tau}$ → $\displaystyle\int\frac{\dd u}{u}=\int\Bigl(-\frac{1}{\tau}\Bigr)\dd t$ → $u=Ae^{-t/\tau}$\\[4pt]
+\tsl{目標へ近づく}$\dfrac{\dd y}{\dd t}=\dfrac{y_\infty-y}{\tau}$ → $y=y_\infty+(y_0-y_\infty)\,e^{-t/\tau}$\\[4pt]
+\tsl{時定数}$3\tau$ で95\,\%、$5\tau$ で99.3\,\%。半減期は $\tau\ln2$\\[4pt]
+\tsl{時定数の例}$C_{\mathrm{th}}R_{\mathrm{th}}$（熱）、$RC$・$\dfrac{L}{R}$（電気）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{変数分離}{変数ごとに左辺と右辺に分けてから、両辺を積分する解き方。}
+\bkword{時定数 $\tau$}{目標までの残りが $e^{-1}$（約37\,\%）になる時間。はじめの速さのままなら $\tau$ で目標に届く。}
+\bkword{熱容量・熱抵抗}{温度を1\,K上げる熱 $C_{\mathrm{th}}$〔J/K〕と、熱の逃げにくさ $R_{\mathrm{th}}$〔K/W〕。}
+\bkword{コンデンサー・静電容量}{電気をためる部品。$q=CV$ の $C$〔F〕。}
+\bkword{コイル・インダクタンス}{電流の変化をきらう部品。$V_L=L\frac{\dd i}{\dd t}$ の $L$〔H〕。}
+\bkword{指数分布・ポアソン分布}{偶然起きることの待ち時間（$e^{-t/\tau}$）と、回数の確率。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\tau$}{タウ}{時定数。$e^{-t/\tau}$ の形でへる・近づく速さの目安。単位は s}{time constant}{6-4}}
+{\bkkigocard{$y_\infty$}{ワイ・インフィニティ}{時間がたって変わらなくなった最後の値（目標の値）}{final value}{6-4}}
+
+\begin{column}{ニュートンと冷めるお湯}
+「冷める速さは温度差に比例する」ことを最初に書いたのは、ニュートンです。1701年、名前を出さずに発表した短い論文の中で、熱した鉄が冷めていく時間をはかり、とても高い温度をはかる方法として使いました。温度計で直接はかれないほど熱い物でも、冷めていくようすから、はじめの温度を計算できるというわけです。いまでは、この考えを「ニュートンの冷却の法則」とよんでいます。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[差が半分になる時間]
+部屋の温度は20\,℃。お湯の温度 $T$ が $\dfrac{\dd T}{\dd t}=-0.05(T-20)$（$t$ は分）にしたがって冷めます。はじめ80\,℃のとき、50\,℃になるのは何分後ですか。また、50\,℃から35\,℃になるには何分かかりますか（$\ln2=0.693$）。\par
+\kangaekata ④の形に直して $\tau$ を読む。差が半分になる時間は $\tau\ln2$（⑤）。\par
+\shiki $-0.05(T-20)=\dfrac{20-T}{20}$ なので $\tau=20$ 分\bkvieq
+答え $T=20+(80-20)e^{-t/20}=20+60e^{-t/20}$\bkvieq
+50\,℃は差30\,℃（60\,℃の半分）なので、$e^{-t/20}=\dfrac{1}{2}$\bkvieq
+両辺の $\ln$ をとって $t=20\ln2=20\times0.693=13.9$\bkvieq
+35\,℃は差15\,℃（30\,℃の半分）。半減期は差によらないので、同じく13.9分\par
+\kotae 約13.9分後。50\,℃から35\,℃も約13.9分
+\end{reidai}
+
+\begin{jibun}
+部屋の温度は25\,℃。お湯が $\dfrac{\dd T}{\dd t}=-0.04(T-25)$（$t$ は分）にしたがって冷めます。はじめ85\,℃のとき、55\,℃になるのは何分後ですか。また、55\,℃から40\,℃になるには何分かかりますか（$\ln2=0.693$）。
+\bkjans{$\tau=\dfrac{1}{0.04}=25$\,分。差60\,℃→30\,℃で $25\ln2\approx17.3$\,分後。55\,℃→40\,℃（差30\,℃→15\,℃）も約17.3\,分。}
+\end{jibun}
+
+\begin{reidai}[変数分離で解く]
+放射性の物質の量 $N$（g）が、$\dfrac{\dd N}{\dd t}=-0.2N$（$t$ は日）にしたがってへります。はじめ500\,gのとき、$N$ を $t$ の式で表しましょう。変数分離で解きましょう。\par
+\kangaekata ③の4つの手順。$N$ でわって左辺に集め、両辺を積分する。\par
+\shiki ① $\dfrac{1}{N}\cdot\dfrac{\dd N}{\dd t}=-0.2$（両辺を $N$ でわる）\bkvieq
+② $\displaystyle\int\frac{1}{N}\,\dd N=\int(-0.2)\,\dd t$（両辺を積分。左辺は置換積分）\bkvieq
+\phantom{②} $\ln N=-0.2t+C$（左辺は $\ln N$、右辺は $-0.2t$）\bkvieq
+③ $N=e^{-0.2t+C}=e^C\,e^{-0.2t}=Ae^{-0.2t}$（$e^C=A$ とおく）\bkvieq
+④ $t=0$ で $N=500$。$A\times e^0=A=500$\par
+\kotae $N=500e^{-0.2t}$
+\end{reidai}
+\noindent 微分して確かめます。
+\[ \frac{\dd N}{\dd t}=500\times(-0.2)e^{-0.2t}=-0.2\times(500e^{-0.2t})=-0.2N \]
+時定数は $\tau=\dfrac{1}{0.2}=5$ 日です。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=21.5, ymin=0, ymax=560, xtick={5,10,15,20}, ytick={184,500}, xlabel={$t$（日）}, ylabel={$N$（g）}]
+  \addplot[bkcurve, domain=0:20.5, samples=60] {500*exp(-0.2*x)};
+  \addplot[bkcurve2, line width=0.9pt, dashed, domain=0:5] {500-100*x};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:5,0) -- (axis cs:5,184) -- (axis cs:0,184);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west, fill=white, inner sep=1pt] at (axis cs:3.6,330) {はじめの接線（1日に100\,gずつへる）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$N=500e^{-0.2t}$。はじめの速さ（1日に $0.2\times500=100$\,g）のままなら5日（$\tau$）で0。じっさいは5日で37\,\%（184\,g）残る。}
+\end{bkfigure}
+
+\begin{jibun}
+$\dfrac{\dd y}{\dd t}=-0.5y$、$y(0)=8$ を、変数分離で解きましょう。
+\bkjans{$\displaystyle\int\frac{\dd y}{y}=\int(-0.5)\,\dd t$ より $\ln y=-0.5t+C$。$y=Ae^{-0.5t}$。$y(0)=8$ より $A=8$。$y=8e^{-0.5t}$。}
+\end{jibun}
+
+\begin{reidai}[温まるとき]
+冷蔵庫から出した5\,℃の飲み物を、20\,℃の部屋に置きます。温度 $T$ は $\dfrac{\dd T}{\dd t}=\dfrac{20-T}{10}$（$t$ は分）にしたがいます。$T$ を $t$ の式で表し、15\,℃になるのは何分後か求めましょう（$\ln3=1.099$）。\par
+\kangaekata ④の形で $y_\infty=20$、$\tau=10$、$y_0=5$。はじめの差 $5-20$ はマイナスになる。\par
+\shiki $T=20+(5-20)e^{-t/10}=20-15e^{-t/10}$\bkvieq
+15\,℃のとき $20-15e^{-t/10}=15$ より $15e^{-t/10}=5$、$e^{-t/10}=\dfrac{1}{3}$\bkvieq
+両辺の $\ln$ をとる：$-\dfrac{t}{10}=\ln\dfrac{1}{3}=-\ln3$\bkvieq
+$t=10\ln3=10\times1.099=10.99$\par
+\kotae $T=20-15e^{-t/10}$、約11分後
+\end{reidai}
+15\,℃は、目標20\,℃まであと5\,℃。はじめの差15\,℃の $\dfrac{1}{3}$ が残っている時刻です。$\ln$ をとる前に、$e^{-t/10}$ だけを左辺に残しておくのがこつです。
+
+\begin{jibun}
+4\,℃の牛乳を、24\,℃の部屋に置きます。温度は $\dfrac{\dd T}{\dd t}=\dfrac{24-T}{20}$（$t$ は分）にしたがいます。$T$ を $t$ の式で表し、19\,℃になるのは何分後か求めましょう（$\ln4=1.386$）。
+\bkjans{$T=24-20e^{-t/20}$。$20e^{-t/20}=5$ より $e^{-t/20}=\dfrac{1}{4}$、$t=20\ln4\approx27.7$\,分後。}
+\end{jibun}
+
+\begin{reidai}[$\frac{\dd y}{\dd t}=b-ay$ の形を読む]
+$\dfrac{\dd y}{\dd t}=6-0.2y$、$y(0)=0$ について、最後の値と時定数を求め、$y$ を $t$ の式で表しましょう。\par
+\kangaekata 最後の値は $\dfrac{\dd y}{\dd t}=0$ とおく。右辺を0.2でくくって④の形にすると $\tau$ が読める。\par
+\shiki 最後の値：$0=6-0.2y$ より $y=\dfrac{6}{0.2}=30$\bkvieq
+$6-0.2y=0.2\,(30-y)=\dfrac{30-y}{5}$ なので $\tau=\dfrac{1}{0.2}=5$\bkvieq
+$y=30+(0-30)e^{-t/5}=30-30e^{-t/5}=30(1-e^{-t/5})$\par
+\kotae 最後の値30、時定数5、$y=30(1-e^{-t/5})$
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=42mm, xmin=0, xmax=21, ymin=0, ymax=36, xtick={5,10,15,20}, ytick={19,30}, xlabel={$t$}, ylabel={$y$}]
+  \addplot[bkthin, dashed, domain=0:20.5] {30};
+  \addplot[bkcurve, domain=0:20.5, samples=60] {30*(1-exp(-x/5))};
+  \addplot[bkcurve2, line width=0.9pt, dashed, domain=0:5] {6*x};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:5,0) -- (axis cs:5,18.96) -- (axis cs:0,18.96);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+グラフで確かめます。$t=0$ では $y=0$ なので、変わる速さは $6-0.2\times0=6$ です。この速さのまま進むと（オレンジの点線）、ちょうど $t=5$（$\tau$）で30に届きます。じっさいの $y$ は、$t=5$ で $30\times0.632=19.0$ です。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+$\dfrac{\dd y}{\dd t}=12-3y$、$y(0)=0$ について、最後の値と時定数を求め、$y$ を $t$ の式で表しましょう。
+\bkjans{$0=12-3y$ より $y_\infty=4$。$12-3y=\dfrac{4-y}{1/3}$ なので $\tau=\dfrac{1}{3}$。$y=4(1-e^{-3t})$。}
+\end{jibun}
+
+\begin{reidai}[ヒーターで温める：はんだごて]
+電力 $P=\qty{20}{W}$ のはんだごての先は、熱容量 $C_{\mathrm{th}}=\qty{5}{J/K}$、まわりへの熱抵抗 $R_{\mathrm{th}}=\qty{18}{K/W}$ とします（数はおよその値）。部屋は20\,℃、はじめも20\,℃です。最後の温度と時定数を求め、電源を入れて3分後の温度を求めましょう（$e^{-2}=0.135$）。\par
+\kangaekata ⑥の $T_\infty=T_{\mathrm a}+PR_{\mathrm{th}}$、$\tau=C_{\mathrm{th}}R_{\mathrm{th}}$。3分は $\tau$ の何倍か。\par
+\shiki $T_\infty=20+20\times18=20+360=380$（℃）\bkvieq
+$\tau=\qty{5}{J/K}\times\qty{18}{K/W}=\qty{90}{s}$\bkvieq
+3分＝$\qty{3}{min}\times\qty{60}{s/min}=\qty{180}{s}=2\tau$\bkvieq
+$T=380+(20-380)e^{-180/90}=380-360e^{-2}$\bkvieq
+$=380-360\times0.135=380-48.6=331.4$\par
+\kotae 最後は約380\,℃、時定数90秒、3分後は約331\,℃
+\end{reidai}
+3分では目標の86.5\,\%（$2\tau$）までしか進んでいません。はんだごてを使い始めるまで数分待つのは、このためです。
+
+\begin{jibun}
+電力 $\qty{50}{W}$ で熱を出す電子部品に、熱容量 $\qty{100}{J/K}$、熱抵抗 $\qty{0.8}{K/W}$ の放熱器（ヒートシンク）をつけました。部屋は25\,℃、はじめも25\,℃です。最後の温度と時定数を求め、160秒後の温度を求めましょう（$e^{-2}=0.135$）。
+\bkjans{$T_\infty=25+50\times0.8=65$\,℃。$\tau=100\times0.8=80$\,s。160\,s＝$2\tau$ で $T=65-40e^{-2}\approx65-5.4=59.6$\,℃。}
+\end{jibun}
+
+\begin{reidai}[RC の放電]
+10\,Vまでためた静電容量 $\qty{100}{\micro F}$ のコンデンサーを、$\qty{20}{k\ohm}$ の抵抗につなぎます。時定数、2秒後の電圧、電圧が半分（5\,V）になる時刻を求めましょう（$e^{-1}=0.368$、$\ln2=0.693$）。\par
+\kangaekata ⑦の放電の式 $V=V_0e^{-t/RC}$。k と μ を数になおしてからかける。\par
+\shiki $RC=\qty{20000}{\ohm}\times\qty{0.0001}{F}=\qty{2}{s}$\bkvieq
+$V=10e^{-t/2}$。$t=2$ で $10e^{-1}=10\times0.368=3.68$\bkvieq
+半分：$e^{-t/2}=\dfrac{1}{2}$ より $t=2\ln2=2\times0.693=1.386$\par
+\kotae 時定数2秒、2秒後は約\qty{3.7}{V}、約1.4秒後に半分
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=42mm, xmin=0, xmax=8.6, ymin=0, ymax=11.5, xtick={1.386,2,4,6,8}, xticklabels={,2,4,6,8}, ytick={3.68,5,10}, yticklabels={3.68,5,10}, xlabel={$t$（s）}, ylabel={$V$（V）}]
+  \addplot[bkcurve, domain=0:8.3, samples=60] {10*exp(-x/2)};
+  \draw[bkOrange, dashed, line width=0.6pt] (axis cs:1.386,0) -- (axis cs:1.386,5) -- (axis cs:0,5);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:2,0) -- (axis cs:2,3.68) -- (axis cs:0,3.68);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:1.5,5.4) {1.39\,s で半分};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+放電の電圧のグラフです。1.39秒ごとに半分になります（\mbox{10\,V→5\,V→2.5\,V→1.25\,V}）。2秒（$\tau$）では、半分よりもう少しへって3.68\,V（37\,\%）です。半減期（1.39秒）は時定数（2秒）より短いことに注意しましょう。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+12\,Vまでためた静電容量 $\qty{470}{\micro F}$ のコンデンサーを、$\qty{10}{k\ohm}$ の抵抗につなぎます。時定数、時定数だけたったときの電圧、電圧が半分になる時刻を求めましょう（$e^{-1}=0.368$、$\ln2=0.693$）。
+\bkjans{$RC=10000\times0.00047=\qty{4.7}{s}$。4.7秒後に $12\times0.368\approx\qty{4.4}{V}$。半分は $4.7\ln2\approx3.3$\,秒後。}
+\end{jibun}
+
+\begin{reidai}[RC の充電]
+$E=\qty{10}{V}$ の電池、$R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$（はじめ0\,V）を直列につなぎます。（1）スイッチを入れた直後の電流、（2）6秒後の電圧、（3）10秒後の電圧を求めましょう（$e^{-3}=0.050$、$e^{-5}=0.0067$）。\par
+\kangaekata ⑦の充電の式 $V=E(1-e^{-t/RC})$、$i=\dfrac{E}{R}e^{-t/RC}$。$\tau=\qty{2}{s}$ なので、6秒は $3\tau$、10秒は $5\tau$。\par
+\shiki（1）$t=0$ で $i=\dfrac{E}{R}=\dfrac{\qty{10}{V}}{\qty{20000}{\ohm}}=\qty{0.0005}{A}=\qty{0.5}{mA}$\bkvieq
+（2）$V=10(1-e^{-3})=10\times(1-0.050)=9.50$\bkvieq
+（3）$V=10(1-e^{-5})=10\times(1-0.0067)=9.93$\par
+\kotae（1）\qty{0.5}{mA}、（2）約\qty{9.5}{V}（95\,\%）、（3）約\qty{9.93}{V}（99.3\,\%）
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=42mm, xmin=0, xmax=10.8, ymin=0, ymax=11.8, xtick={2,4,6,8,10}, ytick={5,10}, xlabel={$t$（s）}, ylabel={電圧（V）}]
+  \addplot[fill=bkBlue!30, draw=none, domain=0:10, samples=60] {10*(1-exp(-x/2))} \closedcycle;
+  \addplot[fill=bkOrange!30, draw=none, domain=0:10, samples=60] {10} \closedcycle;
+  \addplot[fill=bkBlue!30, draw=none, domain=0:10, samples=60] {10*(1-exp(-x/2))} \closedcycle;
+  \addplot[bkcurve, line width=1.2pt, domain=0:10, samples=60] {10*(1-exp(-x/2))};
+  \addplot[bkInk, line width=0.8pt, domain=0:10] {10};
+  \node[font=\sffamily\footnotesize, text=bkOrange!60!black] at (axis cs:1.3,7.8) {$Ri$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!70!black] at (axis cs:6.5,4.5) {$V$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+電池の10\,Vは、いつも抵抗の電圧 $Ri$（オレンジ）とコンデンサーの電圧 $V$（青）に分かれています（$E=Ri+V$）。はじめは全部が抵抗にかかり、時間がたつと、だんだんコンデンサーへ移っていきます。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+$E=\qty{5}{V}$ の電池、$R=\qty{1}{k\ohm}$、$C=\qty{1000}{\micro F}$（はじめ0\,V）を直列につなぎます。（1）時定数、（2）スイッチを入れた直後の電流、（3）3秒後の電圧を求めましょう（$e^{-3}=0.050$）。
+\bkjans{（1）\nobreak $1000\times0.001=\qty{1}{s}$。（2）\nobreak $\dfrac{5}{1000}=\qty{5}{mA}$。（3）\nobreak $5\times(1-0.050)\approx\qty{4.75}{V}$。}
+\end{jibun}
+
+\begin{reidai}[$C$ を2倍にすると]
+例題7の回路（$E=\qty{10}{V}$、$R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$）で、コンデンサーを $\qty{200}{\micro F}$ にかえます。（1）時定数、（2）2秒後の電圧、（3）最後の電圧は、それぞれどう変わりますか（$e^{-1}=0.368$、$e^{-0.5}=0.607$）。\par
+\kangaekata $\tau=RC$ は $C$ に比例する。最後の値 $E$ には $C$ が入っていない。\par
+\shiki（1）$\tau=\qty{20000}{\ohm}\times\qty{0.0002}{F}=\qty{4}{s}$（2秒の2倍）\bkvieq
+（2）$C=\qty{100}{\micro F}$：$10(1-e^{-2/2})=10\times(1-0.368)=6.32$\bkvieq
+\hspace*{2.2\zw}$C=\qty{200}{\micro F}$：$10(1-e^{-2/4})=10\times(1-0.607)=3.93$\bkvieq
+（3）どちらも $E=\qty{10}{V}$\par
+\kotae（1）2秒→4秒（2倍）、（2）約\qty{6.3}{V}→約\qty{3.9}{V}、（3）\qty{10}{V}のまま
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=42mm, xmin=0, xmax=21, ymin=0, ymax=11.8, xtick={2,4,8,12,16,20}, ytick={6.32,10}, yticklabels={6.32,10}, xlabel={$t$（s）}, ylabel={$V$（V）}]
+  \addplot[bkthin, dashed, domain=0:20.5] {10};
+  \addplot[bkcurve, domain=0:20.5, samples=60] {10*(1-exp(-x/2))};
+  \addplot[bkcurve2, domain=0:20.5, samples=60] {10*(1-exp(-x/4))};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:2,0) -- (axis cs:2,6.32) (axis cs:4,0) -- (axis cs:4,6.32) (axis cs:0,6.32) -- (axis cs:4,6.32);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+青は $C=\qty{100}{\micro F}$（$\tau=\qty{2}{s}$）、オレンジは $\qty{200}{\micro F}$（$\tau=\qty{4}{s}$）。同じ63\,\%に届く時刻が2秒から4秒になり、グラフは横に2倍のびた形です。たまる「量」の目標 $E$ は同じで、たまる「速さ」だけが変わります。$R$ を2倍にしても、$\tau=RC$ なので同じことが起きます。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+例題7の回路で、抵抗を $\qty{10}{k\ohm}$（半分）にかえます。（1）時定数、（2）2秒後の電圧、（3）最後の電圧は、それぞれどうなりますか（$e^{-2}=0.135$）。
+\bkjans{（1）\nobreak $10000\times0.0001=\qty{1}{s}$（半分）。（2）\nobreak $10\times(1-0.135)\approx\qty{8.65}{V}$。（3）\nobreak \qty{10}{V}のまま。}
+\end{jibun}
+
+\begin{reidai}[RL の電流]
+12\,Vで動くリレーのコイルは、抵抗 $\qty{400}{\ohm}$、インダクタンス $\qty{0.2}{H}$ です。スイッチを入れたとき、最後の電流、時定数、1ミリ秒（ms）後の電流を求めましょう（$e^{-2}=0.135$）。\par
+\kangaekata ⑦の RL の式 $i=\dfrac{E}{R}(1-e^{-t/\tau})$、$\tau=\dfrac{L}{R}$。\par
+\shiki $\dfrac{E}{R}=\dfrac{\qty{12}{V}}{\qty{400}{\ohm}}=\qty{0.03}{A}=\qty{30}{mA}$\bkvieq
+$\tau=\dfrac{\qty{0.2}{H}}{\qty{400}{\ohm}}=\qty{0.0005}{s}=\qty{0.5}{ms}$\bkvieq
+1\,ms＝$2\tau$ なので $i=30\times(1-e^{-2})=30\times0.865=25.9$\par
+\kotae 最後は\qty{30}{mA}、時定数\qty{0.5}{ms}、1\,ms後は約\qty{26}{mA}
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=57mm, height=42mm, xmin=0, xmax=2.7, ymin=0, ymax=35, xtick={0.5,1,1.5,2,2.5}, ytick={19,30}, yticklabels={19.0,30}, xlabel={$t$（ms）}, ylabel={$i$（mA）}]
+  \addplot[bkthin, dashed, domain=0:2.6] {30};
+  \addplot[bkcurve, domain=0:2.6, samples=60] {30*(1-exp(-x/0.5))};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:1,0) -- (axis cs:1,25.94) -- (axis cs:0,25.94);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0.5,0) -- (axis cs:0.5,18.96) -- (axis cs:0,18.96);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+リレーのコイルの電流は、スイッチを入れてから0.5\,msで19\,mA（63\,\%）、1\,msで26\,mA（86\,\%）、2.5\,ms（$5\tau$）でほぼ30\,mAになります。リレーが「カチッ」と動くのは、電流がある大きさをこえたときなので、ほんの少しおくれて動きます。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+$E=\qty{6}{V}$、$R=\qty{20}{\ohm}$、$L=\qty{0.1}{H}$ を直列につなぎ、スイッチを入れます。最後の電流、時定数、時定数だけたったときの電流を求めましょう（$e^{-1}=0.368$）。
+\bkjans{$\dfrac{6}{20}=\qty{0.3}{A}$。$\tau=\dfrac{0.1}{20}=\qty{0.005}{s}=\qty{5}{ms}$。$0.3\times(1-0.368)\approx\qty{0.19}{A}$。}
+\end{jibun}
+
+\begin{reidai}[はかった値から時定数を求める]
+冷めていく物の、部屋との温度差をはかると、はじめ40\,℃、12分後に10\,℃でした。時定数を求めましょう（$\ln4=1.386$）。\par
+\kangaekata 差は $e^{-t/\tau}$ 倍になる（⑤）。12分で $\dfrac{10}{40}=\dfrac{1}{4}$ 倍になったことから $\tau$ を求める。\par
+\shiki $40e^{-12/\tau}=10$ より $e^{-12/\tau}=\dfrac{1}{4}$\bkvieq
+両辺の $\ln$ をとる：$-\dfrac{12}{\tau}=\ln\dfrac{1}{4}=-\ln4$\bkvieq
+$\tau=\dfrac{12}{\ln4}=\dfrac{12}{1.386}=8.66$\par
+\kotae 約8.7分
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=40mm, xmin=0, xmax=20, ymin=0, ymax=46, xtick={6,12,18}, ytick={10,20,40}, xlabel={$t$（分）}, ylabel={差（℃）}]
+  \addplot[bkcurve, domain=0:19, samples=60] {40*exp(-x/8.656)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(0,40) (6,20) (12,10)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:6,0) -- (axis cs:6,20) -- (axis cs:0,20) (axis cs:12,0) -- (axis cs:12,10) -- (axis cs:0,10);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+$\dfrac{1}{4}$ は「半分の半分」なので、12分は半減期の2回分です。半減期は6分（40\,℃→20\,℃→10\,℃）。⑤の③で、$\tau=\dfrac{6}{0.693}=8.66$ 分と求めても同じです。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+部屋との温度差が、はじめ60\,℃、30分後に15\,℃でした。時定数を求めましょう（$\ln4=1.386$）。
+\bkjans{$e^{-30/\tau}=\dfrac{1}{4}$ より $\tau=\dfrac{30}{\ln4}\approx21.6$\,分。}
+\end{jibun}
+
+\begin{reidai}[待ち時間と回数の確率]
+ガイガーカウンターが、平均して10秒に3回鳴ります（$\lambda=0.3$ 回/秒）。（1）10秒間に1回も鳴らない確率、（2）10秒間にちょうど1回鳴る確率、（3）次に鳴るまで5秒より長く待つ確率を求めましょう（$e^{-3}=0.0498$、$e^{-1.5}=0.223$）。\par
+\kangaekata ⑨の $P_0=e^{-\lambda t}$、$P_1=\lambda t\,e^{-\lambda t}$。待ち時間が $t$ より長い確率は $e^{-\lambda t}$。\par
+\shiki（1）$\lambda t=0.3\times10=3$。$P_0=e^{-3}=0.0498$\bkvieq
+（2）$P_1=\dfrac{3^1}{1!}e^{-3}=3\times0.0498=0.149$\bkvieq
+（3）$\lambda t=0.3\times5=1.5$。$e^{-1.5}=0.223$\par
+\kotae（1）約5\,\%、（2）約15\,\%、（3）約22\,\%
+\end{reidai}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=42mm, xmin=0, xmax=11.5, ymin=0, ymax=1.15, xtick={3.33,5,10}, xticklabels={$\tau$,5,10}, ytick={0.223,1}, yticklabels={0.22,1}, xlabel={$t$（s）}, ylabel={確率}]
+  \addplot[bkcurve, domain=0:11, samples=60] {exp(-0.3*x)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:5,0) -- (axis cs:5,0.223) -- (axis cs:0,0.223);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:3.33,0) -- (axis cs:3.33,0.368) -- (axis cs:0,0.368);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+「次に鳴るまで $t$ 秒より長く待つ確率」$e^{-0.3t}$ のグラフです。冷めるお湯の差のグラフと同じ形です。平均の待ち時間 $\tau=3.3$ 秒より長く待つことも、37\,\%あります。
+\end{minipage}
+\par\vspace{4pt}
+
+\begin{jibun}
+ある窓口には、平均して1分に2人がやって来ます（$\lambda=2$ 人/分。来る時刻はばらばら）。（1）1分間にだれも来ない確率、（2）1分間にちょうど1人来る確率、（3）次の人が来るまで30秒より長く待つ確率を求めましょう（$e^{-2}=0.135$、$e^{-1}=0.368$）。
+\bkjans{（1）\nobreak $e^{-2}\approx0.135$（約14\,\%）。（2）\nobreak $2e^{-2}\approx0.271$（約27\,\%）。（3）\nobreak $\lambda t=2\times0.5=1$ で $e^{-1}\approx0.368$（約37\,\%）。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{積分定数を、$e$ の外に足してしまう}
+\bkng{$\ln u=-0.05t+C$ だから $u=e^{-0.05t}+C$}
+\bkok{$\ln u=-0.05t+C$ だから $u=e^{-0.05t+C}=Ae^{-0.05t}$}
+$\ln$ をもどすときは、右辺の全部を $e$ の肩にのせます。$e^{p+q}=e^p\times e^q$ なので、$C$ は「たし算」ではなく「かけ算」の定数 $A=e^C$ になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$e^{-t/\tau}$ と $e^{-\tau t}$ を取りちがえる}
+\bkng{$\tau=\qty{2}{s}$ なので $V=10e^{-2t}$}
+\bkok{$\tau=\qty{2}{s}$ なので $V=10e^{-t/2}$}
+$e$ の肩は単位のない数です。$t$〔s〕を $\tau$〔s〕でわれば単位が消えますが、かけると s$^2$ が残ります。時定数が大きいほどゆっくりへるので、$\tau$ は分母です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$e$ だけにする前に $\ln$ をとる}
+\bkng{$20+60e^{-0.05t}=50$ の両辺の $\ln$ をとって、\\ $\ln20+\ln60-0.05t=\ln50$ とする}
+\bkok{$60e^{-0.05t}=30$、$e^{-0.05t}=\dfrac{1}{2}$ にしてから $\ln$ をとる}
+$\ln(a+b)$ は $\ln a+\ln b$ になりません（5-14）。たし算の20を先に移し、60でわって、$e$ の項だけを残してから $\ln$ をとります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{温まるときの符号}
+\bkng{5\,℃から20\,℃へ温まるので $T=20+15e^{-t/10}$}
+\bkok{$T=20+(5-20)e^{-t/10}=20-15e^{-t/10}$}
+$+15$ にすると、$t=0$ で35\,℃になり、はじめの5\,℃に合いません。「はじめの差」は「はじめ$-$目標」なので、温まるときはマイナスです。$t=0$ を入れて確かめましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{時定数だけたてば終わる？}
+\bkng{$\tau=20$ 分なので、20分たつと部屋の温度になる}
+\bkok{20分では、差の63\,\%がへるだけ（37\,\%が残る）}
+時定数は「はじめの速さのままなら目標に届く時間」です。じっさいには速さがおそくなるので、$\tau$ では届きません。ほぼ終わる（残り1\,\%より少ない）のは $5\tau$ です（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{k や μ を忘れてかける}
+\bkng{$\qty{20}{k\ohm}\times\qty{100}{\micro F}$ なので $RC=20\times100=2000$ 秒}
+\bkok{$\qty{20000}{\ohm}\times\qty{0.0001}{F}=\qty{2}{s}$}
+k は1000倍、μ は100万分の1倍です。数になおしてからかけます。$\text{k}\times\text{μ}=1000\times0.000001=0.001$ なので、「kΩ×μF の答えは ms（ミリ秒）」と覚えておくと、まちがいに気づけます（$20\times100=2000$\,ms＝2\,s）。
+\end{tsumazuki}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{カメラのフラッシュ}\par\noindent\begin{minipage}[c]{0.72\linewidth}
+フラッシュは、電池で大きなコンデンサー（数百\,\mbox{μF}ほど）を数百ボルトまで充電し、1000分の1秒ほどで一気に放電して光ります。充電には抵抗を通すので、時定数 $RC$ の数倍、数秒かかります。続けてフラッシュをたけないのは、このためです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.25\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk!70, line width=0.7pt, rounded corners=1.5mm] (0,0) rectangle (26,15);
+  \filldraw[fill=white, draw=bkInk!70, line width=0.7pt] (16,7.5) circle (5);
+  \filldraw[fill=bkGray!45, draw=bkInk!70, line width=0.5pt] (16,7.5) circle (3);
+  \filldraw[fill=bkYellow!50, draw=bkInk!70, line width=0.6pt] (2.5,10) rectangle (8.5,13.5);
+  \foreach \a in {120,150,180} {\draw[bkYellow!80!black, line width=0.8pt] ($(5.5,13.5)+(\a:2.5)$) -- ($(5.5,13.5)+(\a:5.5)$);}
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{マイコンのリセット回路}\par\noindent\begin{minipage}[c]{0.72\linewidth}
+電子機器の頭脳であるマイコン（小さなコンピュータ）は、電源を入れた直後、電圧が安定するまで動き出してはいけません。そこで、抵抗とコンデンサーで「ゆっくり上がる電圧」を作り、それがある値をこえたら動き出すようにする回路があります。待つ時間は、時定数 $RC$ で決めます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.25\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkInk!80, draw=bkInk, line width=0.5pt] (4,2) rectangle (22,14);
+  \foreach \i in {0,...,5} {\draw[bkGray, line width=0.8pt] (5.5+\i*3,2) -- (5.5+\i*3,-0.5) (5.5+\i*3,14) -- (5.5+\i*3,16.5);}
+  \fill[bkGray!60] (6.5,11.5) circle (1);
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{予測式の体温計}\par\noindent\begin{minipage}[c]{0.72\linewidth}
+体温計の先が体温に追いつくには時間がかかります（⑥）。「予測式」の電子体温計は、はじめの十数秒の温度の上がり方から、最後に落ち着く温度（$T_\infty$）を計算して表示します。どのように計算しているかは製品によってちがいますが、「目標に近づく曲線」の形を知っているから、先を予想できるのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.25\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=white, draw=bkInk!70, line width=0.7pt, rounded corners=2mm] (0,4) rectangle (24,11);
+  \filldraw[fill=bkGray!40, draw=bkInk!70, line width=0.6pt] (24,6) -- (30,7) -- (30,8) -- (24,9) -- cycle;
+  \filldraw[fill=bkTheme!15, draw=bkInk!70, line width=0.5pt] (3,5.5) rectangle (14,9.5);
+  \node[font=\sffamily\footnotesize] at (8.5,7.5) {36.5};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{放射性炭素で年代をはかる}\par\noindent 生き物の体の中の炭素14は、死んだあと、半減期約5730年でへっていきます。時定数は $\tau=\dfrac{5730\ \text{年}}{\ln2}\approx8270$ 年です。残っている割合から、何年前のものかがわかります（物理シリーズ『原子と原子核』）。
+\end{itemize}
+\end{butsuri}
+
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 部屋の温度は25\,℃。お湯が $\dfrac{\dd T}{\dd t}=-0.1(T-25)$（$t$ は分）にしたがって冷めます。はじめ85\,℃です。（1）55\,℃になるのは何分後ですか（$\ln2=0.693$）。（2）10分後の温度を求めましょう（$e^{-1}=0.368$）。
+\bkpans{$\tau=10$\,分。（1）\nobreak 差60\,℃→30\,℃で $10\ln2\approx6.9$\,分後。（2）\nobreak $25+60\times0.368\approx47.1$\,℃。}
+
+\bkproblem $\dfrac{\dd y}{\dd t}=-0.4y$、$y(0)=10$ を、変数分離で解きましょう。
+\bkpans{$\displaystyle\int\frac{\dd y}{y}=\int(-0.4)\,\dd t$ より $\ln y=-0.4t+C$。$y=Ae^{-0.4t}$、$A=10$。$y=10e^{-0.4t}$。}
+
+\bkproblem 6\,℃の飲み物を26\,℃の部屋に置きます。温度は $\dfrac{\dd T}{\dd t}=\dfrac{26-T}{15}$（$t$ は分）にしたがいます。$T$ を $t$ の式で表し、16\,℃になるのは何分後か求めましょう（$\ln2=0.693$）。
+\bkpans{$T=26-20e^{-t/15}$。$20e^{-t/15}=10$ より $t=15\ln2\approx10.4$\,分後。}
+
+\bkproblem 9\,Vまでためた $\qty{20}{\micro F}$ のコンデンサーを、$\qty{50}{k\ohm}$ の抵抗につなぎます。時定数と、2秒後の電圧を求めましょう（$e^{-2}=0.135$）。
+\bkpans{$RC=50000\times0.00002=\qty{1}{s}$。2秒後 $9\times0.135\approx\qty{1.2}{V}$。}
+
+\bkproblem $E=\qty{6}{V}$、$R=\qty{2}{k\ohm}$、$C=\qty{500}{\micro F}$（はじめ0\,V）の RC 回路の、（1）時定数、（2）スイッチを入れた直後の電流、（3）3秒後の電圧は（$e^{-3}=0.050$）？
+\bkpans{（1）\nobreak $2000\times0.0005=\qty{1}{s}$。（2）\nobreak $\dfrac{6}{2000}=\qty{3}{mA}$。（3）\nobreak $6\times(1-0.050)=\qty{5.7}{V}$。}
+
+\bkproblem $E=\qty{10}{V}$、$R=\qty{50}{\ohm}$、$L=\qty{0.5}{H}$ の RL 回路の、最後の電流、時定数、時定数だけたったときの電流は（$e^{-1}=0.368$）？
+\bkpans{\qty{0.2}{A}。$\tau=\qty{0.01}{s}=\qty{10}{ms}$。$0.2\times0.632\approx\qty{0.13}{A}$。}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem 60\,Lの水そうを $\qty{100}{W}$ のヒーターで温めます（熱容量 $\qty{250000}{J/K}$、熱抵抗 $\qty{0.1}{K/W}$、部屋とはじめの水は15\,℃）。（1）最後の温度、（2）時定数（何時間か）、（3）時定数だけたったときの温度は（$e^{-1}=0.368$）？
+\bkpans{（1）\nobreak 25\,℃。（2）\nobreak \qty{25000}{s}＝約6.9時間。（3）\nobreak $25-10\times0.368\approx21.3$\,℃。}
+
+\bkproblem 温度差が、はじめ50\,℃、20分後に12.5\,℃。時定数は（$\ln4=1.386$）？
+\bkpans{$e^{-20/\tau}=\dfrac{1}{4}$ より $\tau=\dfrac{20}{\ln4}\approx14.4$\,分。}
+
+\bkproblem 放射線を数えると、平均して1分に1.5回でした。1分間に（1）1回も数えない確率、（2）ちょうど1回数える確率を求めましょう（$e^{-1.5}=0.223$）。
+\bkpans{（1）\nobreak $e^{-1.5}\approx0.223$（約22\,\%）。（2）\nobreak $1.5\times0.223\approx0.335$（約33\,\%）。}
+
+\bkproblem $\dfrac{\dd y}{\dd t}=8-0.5y$、$y(0)=0$ の、最後の値と時定数、$y$ の式を求めましょう。
+\bkpans{$0=8-0.5y$ より $y_\infty=16$。$\tau=\dfrac{1}{0.5}=2$。$y=16(1-e^{-t/2})$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 変数分離で、自分に比例してへる式を解ける。\bkfurref{bk:6-4:bunri}
+\item 時定数・半減期を使って、かかる時間を求められる。\bkfurref{bk:6-4:tau}
+\item RC・RL の回路の式を立てて、時定数を求められる。\bkfurref{bk:6-4:rc}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{お湯も電気も放射線も、「残りに比例してへる」同じ式だった！　次は、落ちる雨つぶの速さを調べよう。}

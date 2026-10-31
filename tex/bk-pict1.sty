@@ -1,0 +1,363 @@
+%% bk-pict1.sty  第1巻の本文で使う部品（第5回編集委員会で追加）
+%%   座標は TikZ の [x=1mm, y=1mm] で使う前提。すべて \begin{tikzpicture}[x=1mm, y=1mm] の中で使う。
+%%   大きな式・書きこみます・時計・温度計・ます・はかり・てんびん・ブロック・えんぴつ・車・ピザ・方眼・分度器・
+%%   お金・テープ図・表示パネル・草花・あめ・魚・木
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bk-pict1}[2026/10/17]
+\makeatletter
+
+%% ------------------------------------------------------------
+%% 1. 大きな式と書きこみ（1-4の見本から共通の部品にした）
+%% ------------------------------------------------------------
+% 大きな式  \bkbigshiki{式}{よみかた}
+\newcommand\bkbigshiki[2]{\par\addvspace{4pt}\noindent\hfill
+  \tikz[baseline=(s.base)]{\node[draw=bkTheme, line width=1.2pt, fill=white, rounded corners=3mm,
+    inner xsep=7mm, inner ysep=2mm, font=\fontsize{26}{30}\selectfont] (s) {#1};
+   \node[anchor=west, font=\small, text=bkGray, inner sep=0pt] at ([xshift=4mm]s.east) {#2};}\hfill\null\par\addvspace{6pt}}
+% 小さな書きこみのます（数を1つ書く）  \bkkakikomi   \bkkakikomi[はば]
+\newcommand\bkkakikomi[1][11mm]{\tikz[baseline=-0.8ex]\draw[bkTheme, line width=0.9pt, rounded corners=1mm, fill=white] (0,-2.6mm) rectangle (#1,3.6mm);}
+% 答えだけを書くらん（しきのいらない問題）  \bkkotaeran[はば]
+\newcommand\bkkotaeran[1][9\zw]{\par\vspace{2pt}\noindent\hfill
+  \tikz[baseline=(a.base)]{\node[font=\sffamily\bfseries\small, text=bkOrange] (a) {\bkkotaelabel};
+    \draw[bkOrange, line width=1pt, rounded corners=1.5mm] ([xshift=2mm]a.south east) ++(0,-1.2mm) rectangle ++(#1,8.8mm);}\par}
+
+%% ------------------------------------------------------------
+%% 2. 時計  \bkclock{(x,y)}{半径}{時}{分}   ※時は0〜12、分は0〜59
+%%          \bkclock*{…} は数字なし（目もりだけ）
+%% ------------------------------------------------------------
+\newcommand\bkclock{\@ifstar{\bk@clock{0}}{\bk@clock{1}}}
+\newcommand\bk@clock[5]{\begin{scope}[shift={#2}]
+  \fill[bkLine!80] (0.25*#3/10,-0.35*#3/10) circle (#3+0.6);
+  \filldraw[fill=white, draw=bkInk!80, line width=1.2pt] (0,0) circle (#3);
+  \foreach \m in {0,...,59} {\pgfmathsetmacro\bk@a{90-6*\m}\pgfmathtruncatemacro\bk@big{mod(\m,5)==0}
+    \ifnum\bk@big=1 \draw[bkInk, line width=0.9pt] (\bk@a:#3*0.93) -- (\bk@a:#3*0.8);
+    \else\draw[bkInk!70, line width=0.4pt] (\bk@a:#3*0.93) -- (\bk@a:#3*0.87);\fi}
+  \pgfmathsetmacro\bk@ha{90-30*(#4+#5/60)}\pgfmathsetmacro\bk@ma{90-6*#5}
+  % 第11回：針の先をとがらせる。短針は太く短く（数字の手前まで）、長針は細く長く（目もりまで）
+  \begin{scope}[rotate=\bk@ha]
+    \fill[bkInk] (-#3*0.10,0) -- (-#3*0.10,#3*0.075) -- (#3*0.36,#3*0.075) -- (#3*0.50,0)
+      -- (#3*0.36,-#3*0.075) -- (-#3*0.10,-#3*0.075) -- cycle;
+  \end{scope}
+  % 第11回：長針は細く、目もりの中までのばす。数字は白い下じきの上に書くので、ちょうどの時刻でも「12」が読め、針の先も数字の外に見える
+  \begin{scope}[rotate=\bk@ma]
+    \fill[bkRed!85!black] (-#3*0.12,0) -- (-#3*0.12,#3*0.038) -- (#3*0.76,#3*0.038) -- (#3*0.91,0)
+      -- (#3*0.76,-#3*0.038) -- (-#3*0.12,-#3*0.038) -- cycle;
+  \end{scope}
+  \pgfmathsetmacro\bk@fs{#3*0.62}%
+  \ifnum#1=1 \foreach \h in {1,...,12} {\pgfmathsetmacro\bk@a{90-30*\h}
+    \node[font=\sffamily\bfseries\fontsize{\bk@fs}{\bk@fs}\selectfont, text=bkInk, inner sep=0.25pt, fill=white, fill opacity=0.92, text opacity=1] at (\bk@a:#3*0.64) {\h};}\fi
+  \fill[bkInk] (0,0) circle (#3*0.06);
+\end{scope}}
+
+%% ------------------------------------------------------------
+%% 3. 温度計  \bkthermo{(x,y)}{1度の長さmm}{いちばん下}{いちばん上}{数字を書く間}{いまの温度}
+%%    たてに立つ。(x,y) は いちばん下の目もり。数字は左に書く。
+%% ------------------------------------------------------------
+\newcommand\bkthermo[6]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bk@len{(#4-#3)*#2}
+  \fill[white, draw=bkGray, line width=0.8pt, rounded corners=2.5mm] (-4,-9) rectangle (4,\bk@len+5);
+  \fill[bkRed] (0,-5.5) circle (2.6);
+  \fill[bkRed] (-0.9,-4) rectangle (0.9,{(#6-#3)*#2});
+  \foreach \t in {#3,...,#4} {\pgfmathsetmacro\bk@y{(\t-#3)*#2}\pgfmathtruncatemacro\bk@lab{mod(\t-#3,#5)==0}
+    \ifnum\bk@lab=1 \draw[bkInk, line width=0.7pt] (1.6,\bk@y) -- (4,\bk@y);
+      \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkInk] at (-4.6,\bk@y) {\ifnum\t<0 $-$\number-\t\else\t\fi};% 第7回：負の目もりはマイナス記号で
+    \else\draw[bkInk!80, line width=0.4pt] (2.4,\bk@y) -- (4,\bk@y);\fi}
+\end{scope}}
+
+%% ------------------------------------------------------------
+%% 4. ます・コップ（かさ）  \bkcup{(x,y)}{はば}{高さ}{水の高さ（0〜1）}{目もりの数}
+%%    目もりの数が0なら目もりなし。(x,y) は底のまん中。
+%% ------------------------------------------------------------
+\newcommand\bkcup[5]{\begin{scope}[shift={#1}]
+  \fill[bkBlue!30] (-#2/2+0.6,0.6) rectangle (#2/2-0.6,{#3*#4});
+  \draw[bkInk!80, line width=1pt, line join=round] (-#2/2,#3) -- (-#2/2,0) -- (#2/2,0) -- (#2/2,#3);
+  \ifnum#5>0 \foreach \k in {1,...,#5} {\draw[bkInk!70, line width=0.5pt] (#2/2,{#3*\k/#5}) -- (#2/2-2.2,{#3*\k/#5});}\fi
+\end{scope}}
+% 1Lます（たて長の四角います）  \bkmasu{(x,y)}{大きさ（はば mm）}{水の量（0〜1）}{10の目もりを書くか（1/0）}
+\newcommand\bkmasu[4]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bk@h{#2*1.25}
+  \fill[bkBlue!30] (-#2/2+0.6,0.6) rectangle (#2/2-0.6,{\bk@h*#3});
+  \draw[bkInk!80, line width=1.1pt, line join=round] (-#2/2,\bk@h) -- (-#2/2,0) -- (#2/2,0) -- (#2/2,\bk@h);
+  \draw[bkInk!80, line width=1.1pt] (#2/2,\bk@h*0.92) .. controls (#2/2+3,\bk@h*0.92) and (#2/2+3,\bk@h*0.55) .. (#2/2,\bk@h*0.55);
+  \ifnum#4=1 \foreach \k in {1,...,9} {\draw[bkInk!70, line width=0.5pt] (-#2/2,{\bk@h*\k/10}) -- (-#2/2+2.4,{\bk@h*\k/10});}\fi
+\end{scope}}
+
+%% ------------------------------------------------------------
+%% 5. はかり（丸い目もり）  \bkhakari{(x,y)}{半径}{1回りの量}{数字を書く間}{目もりの数}{針の量}{単位}
+%%    例：\bkhakari{(0,0)}{14}{1000}{100}{50}{350}{g}  → 1回り1000 g、100ごとに数字、1目もり20 g、350 g
+%% ------------------------------------------------------------
+\newcommand\bkhakari[7]{\begin{scope}[shift={#1}]
+  \fill[bkGray!35, rounded corners=2mm] (-#2-3,-#2-6) rectangle (#2+3,#2+3);
+  \fill[bkGray!55] (-#2*0.8,#2+3) rectangle (#2*0.8,#2+5.5);
+  \filldraw[fill=white, draw=bkInk!70, line width=0.8pt] (0,0) circle (#2);
+  \foreach \k in {0,...,#5} {\pgfmathsetmacro\bk@v{#3/#5*\k}\pgfmathsetmacro\bk@a{90-\k/#5*360}
+    \pgfmathtruncatemacro\bk@lab{mod(round(\bk@v),#4)==0}
+    \ifnum\bk@lab=1 \draw[bkInk, line width=0.7pt] (\bk@a:#2*0.95) -- (\bk@a:#2*0.8);
+    \else\draw[bkInk!80, line width=0.35pt] (\bk@a:#2*0.95) -- (\bk@a:#2*0.87);\fi}
+  \foreach \k in {0,...,#5} {\pgfmathsetmacro\bk@v{#3/#5*\k}\pgfmathsetmacro\bk@a{90-\k/#5*360}
+    \pgfmathtruncatemacro\bk@lab{and(mod(round(\bk@v),#4)==0, \k<#5)}\pgfmathtruncatemacro\bk@vi{round(\bk@v)}
+    \pgfmathsetmacro\bk@fs{#2*0.36}%
+    \ifnum\bk@lab=1 \node[font=\sffamily\bfseries\fontsize{\bk@fs}{\bk@fs}\selectfont, text=bkInk, inner sep=0pt] at (\bk@a:#2*0.64) {\bk@vi};\fi}
+  \pgfmathsetmacro\bk@fs{#2*0.42}%
+  \node[font=\sffamily\bfseries\fontsize{\bk@fs}{\bk@fs}\selectfont, text=bkGray] at (0,-#2*0.32) {#7};
+  \pgfmathsetmacro\bk@na{90-#6/#3*360}
+  \draw[bkRed, line width=1.2pt, line cap=round] (0,0) -- (\bk@na:#2*0.86);
+  \fill[bkRed] (0,0) circle (1);
+\end{scope}}
+
+%% ------------------------------------------------------------
+%% 6. てんびん  \bkbalance{(x,y)}{かたむき（度、左が下がると正）}
+%%    皿の上の点に名前がつく： (balL) (balR)  ここに物を置く
+%% ------------------------------------------------------------
+\newcommand\bkbalance[2]{\begin{scope}[shift={#1}]
+  \fill[bkGray!70] (-12,0) rectangle (12,3);
+  \fill[bkGray!80] (-1.5,3) rectangle (1.5,30);
+  \begin{scope}[shift={(0,30)}, rotate=#2]
+    \fill[bkInk!75, rounded corners=0.8mm] (-26,-1.2) rectangle (26,1.2);
+    \coordinate (bal@L) at (-24,0); \coordinate (bal@R) at (24,0);
+  \end{scope}
+  \fill[bkRed] (0,30) circle (1.6);
+  \foreach \s in {L,R} {
+    \draw[bkInk!60, line width=0.6pt] (bal@\s) -- ++(-7,-14) (bal@\s) -- ++(7,-14);
+    \fill[bkGray!60] ($(bal@\s)+(-9,-14)$) rectangle ($(bal@\s)+(9,-15.6)$);
+    \coordinate (bal\s) at ($(bal@\s)+(0,-14)$);}
+\end{scope}}
+
+%% ------------------------------------------------------------
+%% 7. ブロック（10のまとまり）
+%%   \bkcube{(x,y)}{1辺}{色}          1こ
+%%   \bkrod{(x,y)}{1辺}{色}           10こ（たて1本）
+%%   \bkflat{(x,y)}{1辺}{色}          100こ（10×10の板）
+%% ------------------------------------------------------------
+\newcommand\bkcube[3]{\colorlet{bk@pc}{#3}\filldraw[fill=bk@pc, draw=bk@pc!60!black, line width=0.5pt] #1 rectangle ++(#2,#2);}
+\newcommand\bkrod[3]{\begin{scope}[shift={#1}]\colorlet{bk@pc}{#3}%
+  \foreach \k in {0,...,9} \filldraw[fill=bk@pc, draw=bk@pc!60!black, line width=0.5pt] (0,\k*#2) rectangle ++(#2,#2);
+  \draw[bk@pc!50!black, line width=0.9pt] (0,0) rectangle (#2,10*#2);\end{scope}}
+\newcommand\bkflat[3]{\begin{scope}[shift={#1}]\colorlet{bk@pc}{#3}%
+  \fill[bk@pc] (0,0) rectangle (10*#2,10*#2);
+  \foreach \k in {1,...,9} \draw[bk@pc!60!black, line width=0.35pt] (\k*#2,0) -- (\k*#2,10*#2) (0,\k*#2) -- (10*#2,\k*#2);
+  \draw[bk@pc!50!black, line width=0.9pt] (0,0) rectangle (10*#2,10*#2);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 8. えんぴつ  \bkpencil{(x,y)}{長さ}{色}   左はしが (x,y)、右がとがる
+%% ------------------------------------------------------------
+\newcommand\bkpencil[3]{\begin{scope}[shift={#1}]
+  \fill[#3] (0,-1.6) rectangle (#2-7,1.6);
+  \fill[#3!70!black] (0,-1.6) rectangle (#2-7,-0.55);
+  \fill[bkSkin] (#2-7,-1.6) -- (#2-1.8,-0.35) -- (#2-1.8,0.35) -- (#2-7,1.6) -- cycle;
+  \fill[bkInk!85] (#2-2.6,-0.55) -- (#2,0) -- (#2-2.6,0.55) -- cycle;
+  \fill[bkRed!60] (-2.2,-1.6) rectangle (0,1.6);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 9. 車（横から）  \bkcar{(x,y)}{大きさ（1で長さ30mm）}{色}   (x,y) は左のタイヤの下
+%% ------------------------------------------------------------
+\newcommand\bkcar[3]{\begin{scope}[shift={#1}, scale=#2]
+  \fill[#3, rounded corners=2.5] (-3,3) rectangle (27,10);
+  \fill[#3, rounded corners=2.5] (3,9) -- (7,16) -- (19,16) -- (23,9) -- cycle;
+  \fill[white, rounded corners=1] (8,10.2) -- (10.4,14.6) -- (12.4,14.6) -- (12.4,10.2) -- cycle (13.6,10.2) -- (13.6,14.6) -- (17.6,14.6) -- (21,10.2) -- cycle;
+  \fill[bkYellow] (24.5,6) rectangle (27,8);
+  \fill[bkInk!85] (3,3) circle (3.2) (21,3) circle (3.2);
+  \fill[bkLine] (3,3) circle (1.3) (21,3) circle (1.3);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 10. ピザ（円をいくつかに分けて、いくつかに色）  \bkpizza{(x,y)}{半径}{分ける数}{色をぬる数}{色}
+%% ------------------------------------------------------------
+\newcommand\bkpizza[5]{\begin{scope}[shift={#1}]
+  \fill[bkYellowBg] (0,0) circle (#2);
+  \ifnum#4>0 \foreach \k in {1,...,#4} {\fill[#5] (0,0) -- ({90-360*(\k-1)/#3}:#2) arc ({90-360*(\k-1)/#3}:{90-360*\k/#3}:#2) -- cycle;}\fi
+  \foreach \k in {1,...,#3} \draw[bkInk!80, line width=0.8pt] (0,0) -- ({90-360*\k/#3}:#2);
+  \draw[bkYellow!60!black, line width=1.3pt] (0,0) circle (#2);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 11. 方眼  \bkgrid{(x,y)}{よこのマス}{たてのマス}{1マス}   線だけ
+%%     マスをぬる  \bkcell{(x,y)}{よこ番号(0〜)}{たて番号(0〜)}{1マス}{色}
+%% ------------------------------------------------------------
+\newcommand\bkgrid[4]{\begin{scope}[shift={#1}]
+  \draw[bkBlue!35, line width=0.4pt] (0,0) grid[step=#4] (#2*#4,#3*#4);
+  \draw[bkBlue!60, line width=0.7pt] (0,0) rectangle (#2*#4,#3*#4);\end{scope}}
+\newcommand\bkcell[5]{\begin{scope}[shift={#1}]\colorlet{bk@pc}{#5}\filldraw[fill=bk@pc, draw=bk@pc!60!black, line width=0.4pt] (#2*#4,#3*#4) rectangle ++(#4,#4);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 12. 分度器  \bkprotractor{(x,y)}{半径}   (x,y) は中心。0°は右
+%% ------------------------------------------------------------
+\newcommand\bkprotractor[2]{\begin{scope}[shift={#1}]
+  \fill[bkBlue!8] (-#2,0) arc (180:0:#2) -- cycle;
+  \draw[bkBlue!70!black, line width=0.8pt] (-#2,0) arc (180:0:#2) -- cycle;
+  \draw[bkBlue!50!black, line width=0.5pt] (0,0) ++(-#2*0.45,0) arc (180:0:#2*0.45);
+  \foreach \d in {0,...,180} {\pgfmathtruncatemacro\bk@t{mod(\d,10)==0}\pgfmathtruncatemacro\bk@f{mod(\d,5)==0}
+    \ifnum\bk@t=1 \draw[bkInk, line width=0.5pt] (\d:#2) -- (\d:#2*0.86);
+    \else\ifnum\bk@f=1 \draw[bkInk, line width=0.35pt] (\d:#2) -- (\d:#2*0.91);
+    \else\draw[bkInk!70, line width=0.25pt] (\d:#2) -- (\d:#2*0.95);\fi\fi}
+  \pgfmathsetmacro\bk@fs{#2*0.2}%
+  \foreach \d in {0,30,...,180} \node[font=\sffamily\bfseries\fontsize{\bk@fs}{\bk@fs}\selectfont, text=bkInk, inner sep=0pt] at (\d:#2*0.74) {\d};
+  \draw[bkInk, line width=0.5pt] (0,-1.6) -- (0,1.6);
+  \fill[bkRed] (0,0) circle (0.7);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 13. お金  \bkcoin{(x,y)}{1|5|10|50|100|500}   \bkbill{(x,y)}{1000}
+%% ------------------------------------------------------------
+\newcommand\bkcoin[2]{\begin{scope}[shift={#1}]
+  \def\bk@cc{bkGray!25}\def\bk@cr{3.2}%
+  \ifnum#2=5 \def\bk@cc{bkYellow!70}\def\bk@cr{3.5}\fi
+  \ifnum#2=10 \def\bk@cc{bkStem!55}\def\bk@cr{3.7}\fi
+  \ifnum#2=50 \def\bk@cc{bkGray!40}\def\bk@cr{3.4}\fi
+  \ifnum#2=100 \def\bk@cc{bkGray!45}\def\bk@cr{3.8}\fi
+  \ifnum#2=500 \def\bk@cc{bkYellow!55}\def\bk@cr{4.2}\fi
+  \filldraw[fill=\bk@cc, draw=bkInk!60, line width=0.6pt] (0,0) circle (\bk@cr);
+  \draw[bkInk!40, line width=0.3pt] (0,0) circle (\bk@cr-0.6);
+  \node[font=\sffamily\bfseries\fontsize{7.5}{8}\selectfont, text=bkInk, inner sep=0pt] at (0,0) {#2};\end{scope}}
+\newcommand\bkbill[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkBlue!12, draw=bkBlue!60!black, line width=0.6pt, rounded corners=0.8mm] (-8,-4) rectangle (8,4);
+  \node[font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkBlue!60!black, inner sep=0pt] at (0,0) {#2};\end{scope}}
+
+%% ------------------------------------------------------------
+%% 14. テープ図  \bktape{(x,y)}{長さ}{色}{中の文字}   高さ7mm
+%% ------------------------------------------------------------
+\newcommand\bktape[4]{\begin{scope}[shift={#1}]\colorlet{bk@pc}{#3}%
+  \filldraw[fill=bk@pc!25, draw=bk@pc!80!black, line width=0.8pt] (0,0) rectangle (#2,7);
+  \node[font=\sffamily\bfseries\small, text=bkInk, inner sep=0pt] at (#2/2,3.5) {#4};\end{scope}}
+% テープ図の上や下の長さの印  \bkbrace{(x1,y)}{(x2,y)}{文字}{上なら1、下なら-1}
+\newcommand\bkbrace[4]{\ifnum#4<0
+  \draw[bkInk!70, line width=0.6pt, decorate, decoration={brace, amplitude=2mm, mirror}]
+    #1 -- #2 node[midway, below=2.2mm, font=\sffamily\bfseries\small, text=bkInk, inner sep=0pt] {#3};
+  \else
+  \draw[bkInk!70, line width=0.6pt, decorate, decoration={brace, amplitude=2mm}]
+    #1 -- #2 node[midway, above=2.2mm, font=\sffamily\bfseries\small, text=bkInk, inner sep=0pt] {#3};
+  \fi}
+
+%% ------------------------------------------------------------
+%% 15. 数字の表示（電卓・メーター・デジタル時計）  \bkdisplay{(x,y)}{はば}{文字}
+%% ------------------------------------------------------------
+\newcommand\bkdisplay[3]{\begin{scope}[shift={#1}]
+  \fill[bkInk!85, rounded corners=1.5mm] (0,0) rectangle (#2,11);
+  \fill[bkGreen!25, rounded corners=0.8mm] (1.5,1.5) rectangle (#2-1.5,9.5);
+  \node[anchor=east, font=\sffamily\bfseries\fontsize{15}{16}\selectfont, text=bkInk, inner sep=0pt] at (#2-3,5.5) {#3};\end{scope}}
+
+%% ------------------------------------------------------------
+%% 16. 小さな絵（数えるもの）
+%% ------------------------------------------------------------
+% あめ  \bkcandy{(x,y)}{大きさ}{色}
+\newcommand\bkcandy[3]{\begin{scope}[shift={#1}, scale=#2]
+  \fill[#3!70] (-1,0) -- (-1.8,0.6) -- (-1.8,-0.6) -- cycle (1,0) -- (1.8,0.6) -- (1.8,-0.6) -- cycle;
+  \fill[#3] (0,0) ellipse (1.05 and 0.75);
+  \fill[white, opacity=0.45] (-0.35,0.25) ellipse (0.25 and 0.15);\end{scope}}
+% 花  \bkflower{(x,y)}{大きさ}{色}   (x,y) は くきの下
+\newcommand\bkflower[3]{\begin{scope}[shift={#1}, scale=#2]
+  \draw[bkLeaf, line width=1.2pt] (0,0) -- (0,3.2);
+  \fill[bkLeaf] (0,1.3) .. controls (0.6,1.9) and (1.1,1.7) .. (1.2,1.4) .. controls (0.8,1.1) and (0.4,1.1) .. (0,1.3);
+  \foreach \a in {0,72,...,288} \fill[#3] ($(0,3.6)+(\a+90:0.62)$) circle (0.45);
+  \fill[bkYellow] (0,3.6) circle (0.38);\end{scope}}
+% 魚  \bkfish{(x,y)}{大きさ}{色}   右を向く
+\newcommand\bkfish[3]{\begin{scope}[shift={#1}, scale=#2]
+  \fill[#3] (-1.2,0) .. controls (-0.6,0.9) and (0.6,0.9) .. (1.3,0) .. controls (0.6,-0.9) and (-0.6,-0.9) .. (-1.2,0) -- cycle;
+  \fill[#3] (-1.0,0) -- (-1.9,0.7) -- (-1.9,-0.7) -- cycle;
+  \fill[white] (0.75,0.15) circle (0.17); \fill[bkInk] (0.78,0.15) circle (0.08);\end{scope}}
+% 木  \bktree{(x,y)}{高さ}   (x,y) は みきの下
+\newcommand\bktree[2]{\begin{scope}[shift={#1}, scale=#2/10]
+  \fill[bkStem] (-0.6,0) rectangle (0.6,4);
+  \fill[bkLeaf] (0,7) circle (3.1); \fill[bkLeaf!80!white] (-1.6,5.4) circle (2.1) (1.7,5.5) circle (2.2);\end{scope}}
+% クッキー（まるいおかし）  \bkcookie{(x,y)}{半径}
+\newcommand\bkcookie[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkStem!35, draw=bkStem!80, line width=0.5pt] (0,0) circle (#2);
+  \foreach \bk@px/\bk@py in {-0.35/0.3,0.3/0.35,0.05/-0.35,-0.4/-0.25,0.42/-0.1} {\fill[bkStem] (\bk@px*#2,\bk@py*#2) circle (0.11*#2);}\end{scope}}
+% ペットボトル  \bkbottle{(x,y)}{高さ}{水の量（0〜1）}
+\newcommand\bkbottle[3]{\begin{scope}[shift={#1}, scale=#2/20]
+  \fill[bkBlue!30] (-3.2,0.4) rectangle (3.2,{0.4+12*#3});
+  \draw[bkBlue!60!black, line width=0.9pt, rounded corners=1.2] (-1.4,20) -- (-1.4,17.5) -- (-3.6,14) -- (-3.6,0) -- (3.6,0) -- (3.6,14) -- (1.4,17.5) -- (1.4,20);
+  \fill[bkRed!70] (-1.7,19.3) rectangle (1.7,21.2);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 17. 草花の高さ（のびる植物）  \bkplant{(x,y)}{高さ}   (x,y) は 植木ばちの土の上
+%% ------------------------------------------------------------
+\newcommand\bkplant[2]{\begin{scope}[shift={#1}]
+  \fill[bkStem!70] (-6,0) -- (6,0) -- (4.6,-8) -- (-4.6,-8) -- cycle;
+  \fill[bkStem!90] (-6.6,-0.2) rectangle (6.6,1.6);
+  \draw[bkLeaf, line width=1.3pt] (0,1.6) -- (0,#2);
+  \pgfmathsetmacro\bk@lh{max(4,#2*0.45)}
+  \fill[bkLeaf] (0,\bk@lh) .. controls (2,\bk@lh+2) and (4,\bk@lh+1.6) .. (4.6,\bk@lh+0.6) .. controls (3,\bk@lh-0.6) and (1.4,\bk@lh-0.6) .. (0,\bk@lh);
+  \fill[bkLeaf] (0,#2) .. controls (-2,#2+2) and (-4,#2+1.6) .. (-4.6,#2+0.6) .. controls (-3,#2-0.6) and (-1.4,#2-0.6) .. (0,#2);
+  \fill[bkLeaf!80!white] (0,#2) .. controls (2,#2+2) and (4,#2+1.6) .. (4.6,#2+0.6) .. controls (3,#2-0.6) and (1.4,#2-0.6) .. (0,#2);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 18. 子ども（顔つき）  \bkkid{(x,y)}{高さ}{服の色}{かみの色}   (x,y) は 足もと
+%% ------------------------------------------------------------
+\newcommand\bkkid[4]{\begin{scope}[shift={#1}, scale=#2/20]
+  \fill[#3, rounded corners=1.5] (-3.4,6) rectangle (3.4,13.2);
+  \fill[bkPants, rounded corners=0.8] (-2.8,0) rectangle (-0.4,6.6) (0.4,0) rectangle (2.8,6.6);
+  \fill[bkSkin] (0,16.4) circle (3.3);
+  \fill[#4] (0,17.2) ++(-3.4,0) arc (180:0:3.4) -- (3.4,16.6) -- (2.2,17.6) -- (-3.4,16.4) -- cycle;
+  \fill[bkInk] (-1.1,16.2) circle (0.32) (1.1,16.2) circle (0.32);
+  \draw[bkInk, line width=0.35pt] (-0.8,14.7) arc (200:340:0.85);\end{scope}}
+
+%% ------------------------------------------------------------
+%% 19. 第1巻の記号カード（字を大きく、見出しをひらがなに）。巻末の一覧に集める仕組みは bk-volume.sty のまま
+%%     \bkkigocard{記号}{よみかた}{いみ}{えいご}{はじめて でた 章}
+%% ------------------------------------------------------------
+\ifnum\bkvol=1\relax
+\renewcommand\bk@kigocardorig[5]{%
+  \begin{tikzpicture}[x=1mm, y=1mm]
+    \draw[bkTheme, line width=0.9pt, fill=white, rounded corners=2.5mm] (0,0) rectangle (67,46);
+    \begin{scope}\clip[rounded corners=2.5mm] (0,0) rectangle (67,46);
+      \fill[bkTheme] (0,38) rectangle (67,46);\end{scope}
+    \node[anchor=west, text=bkOn, font=\sffamily\bfseries\fontsize{10}{12}\selectfont, inner sep=0pt] at (3,42)
+      {\bkicon[1.15em]{card}{bkTheme!70!black}\hspace{0.3em}きごうカード};
+    \node[anchor=east, text=bkOn, font=\sffamily\bfseries\fontsize{9}{11}\selectfont, inner sep=0pt] at (64,42) {#5};
+    \node[text=bkTheme, inner sep=0pt, font=\fontsize{28}{30}\selectfont] at (12,19) {#1};
+    \draw[bkLine, line width=0.6pt] (24,4) -- (24,34);
+    \node[anchor=north west, text width=40mm, align=left, inner sep=0pt,
+      font=\fontsize{10.5}{17}\selectfont] at (26.5,35)
+      {{\sffamily\bfseries\color{bkDeep}よみかた}\enspace #2\par
+       {\sffamily\bfseries\color{bkDeep}いみ}\enspace #3\par
+       {\sffamily\bfseries\color{bkDeep}えいご}\enspace #4};
+  \end{tikzpicture}}
+%% 第1巻の巻末：こたえ（前書きを ひらがなで）・きごうカード（カードを ならべる）
+\renewcommand\bkAnswerPages{%
+  \bkbacktitle{こたえ}%
+  {\small 「じぶんでとこう」は\,\tikz[baseline=(c.base)]\node[draw=bkOrange, text=bkOrange!80!black, rounded corners=0.8mm,
+      inner xsep=0.8mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {じ1};\,、 「もんだい」は\,\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, rounded corners=0.8mm, minimum width=1.3em,
+      inner xsep=0.5mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {1};\,の ように ばんごうが ついて います。 \R{自分}{じ|ぶん}で といてから、 こたえを あわせよう。 わからなかったら、 おなじ かたちの れいだいに もどろう。\par}
+  \vspace{3mm}
+  \begin{multicols}{2}\footnotesize\setlength{\parskip}{1pt}\lineskiplimit=1pt\lineskip=3pt
+  \bk@ansbuf
+  \end{multicols}}
+% きごうカードを 巻末に ならべるために、5つの引数をすべて記録する
+\gdef\bk@kcbuf{}
+\let\bk@kcwrapped\bkkigocard
+\renewcommand\bkkigocard[5]{%
+  \xdef\bk@kcbuf{\unexpanded\expandafter{\bk@kcbuf}\unexpanded{\bkkcitem{#1}{#2}{#3}{#4}{#5}}}%
+  \bk@kcwrapped{#1}{#2}{#3}{#4}{#5}}
+\newcount\bk@kcn
+\newcommand\bkkcitem[5]{\advance\bk@kcn\@ne
+  \ifodd\bk@kcn\noindent\fi
+  \scalebox{0.9}{\bk@kigocardorig{#1}{#2}{#3}{#4}{#5}}%
+  \ifodd\bk@kcn\hfill\else\par\vspace{3mm}\fi}
+\newcommand\bkKigoPagesOne{%
+  \bkbacktitle{きごうカード}%
+  {\small この \R{本}{ほん}で でてきた きごうの カードです。 \R{右}{みぎ}の \R{上}{うえ}の ばんごうは、 はじめて でてきた \R{章}{しょう}です。}\par\vspace{3mm}
+  \global\bk@kcn=0\relax
+  \bk@kcbuf\par}
+\fi
+
+
+%% ------------------------------------------------------------
+%% 消しゴム（第11回：全巻で同じ形にする）  \bkeraser[カバーの色]{(x,y)}{ながさ mm}{たかさ mm}
+%%   左下が (x,y)。白いゴムに、紙のカバー（まん中 56％）。カバーには白い帯と細い線。
+%%   ゴムのはしは少し丸く、左はしは使ってすりへった形（角が大きく丸い）。
+%% ------------------------------------------------------------
+\newcommand\bkeraser[4][bkBlue]{\begin{scope}[shift={#2}]
+  \pgfmathsetmacro\bk@el{#3}\pgfmathsetmacro\bk@eh{#4}%
+  \pgfmathsetmacro\bk@er{min(\bk@eh*0.28,2.2)}\pgfmathsetmacro\bk@es{min(\bk@eh*0.12,0.9)}%
+  % ゴム（左はしはすりへって丸い）
+  \filldraw[fill=white, draw=bkGray!85, line width=0.6pt]
+    (\bk@er,0) -- (\bk@el-\bk@es,0) arc (-90:0:\bk@es) -- (\bk@el,\bk@eh-\bk@es) arc (0:90:\bk@es)
+    -- (\bk@er,\bk@eh) arc (90:180:\bk@er) -- (0,\bk@er) arc (180:270:\bk@er) -- cycle;
+  % ゴムの上の面のつや（細い線）
+  \draw[bkGray!35, line width=0.5pt, line cap=round] (\bk@er+0.3,\bk@eh-0.55) -- (\bk@el*0.2-0.4,\bk@eh-0.55);
+  % 紙のカバー
+  \filldraw[fill=#1, draw=#1!70!black, line width=0.5pt] (\bk@el*0.22,-0.15) rectangle (\bk@el*0.78,\bk@eh+0.15);
+  \fill[white] (\bk@el*0.22,\bk@eh*0.38) rectangle (\bk@el*0.78,\bk@eh*0.62);
+  \draw[#1!60!black, line width=0.35pt] (\bk@el*0.22,\bk@eh*0.34) -- (\bk@el*0.78,\bk@eh*0.34)
+    (\bk@el*0.22,\bk@eh*0.66) -- (\bk@el*0.78,\bk@eh*0.66);
+\end{scope}}
+\makeatother
+\endinput

@@ -1,0 +1,1499 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-1
+%% p1-01.tex　力-1　動きを数で書く：位置・速度・加速度（★3〜4）
+%% 巻の最初の章。記号と、例題の7段の書きぶりの見本になる（ほかの組が読む）。
+%% 記号の約束（計画書 C-1、手引き5章）：ベクトルは本文では矢印（\vec{r}・\vec{v}・\vec{a}。数学第4巻と同じ）、その大きさ（速さ）は矢印のない v・a。太字は「専門書をのぞいてみよう」で読み方として見せるだけ。
+%%   時間で微分は \dfrac{\dd x}{\dd t} か \dot{x}（数学 5-5）。角速度 ω（rad/s）、回転数 n、周期 T、曲率半径 ρ（力-10 と共通）。
+%% 例題の数値：scratchpad/phys1/力-1/calc1.py、シミュレーション：scratchpad/phys1/力-1/sim1.py（どちらも g＝9.8 m/s²）
+%% 出典（本文の事実・実機の値）
+%%  ・徒歩の速さ 80 m/分：不動産の表示に関する公正競争規約施行規則（徒歩の所要時間は、道路距離80 m につき1分）
+%%  ・通勤電車の加速度 3.0 km/h/s（約0.83 m/s²）：JR東日本 E235系の仕様
+%%  ・舗装路面のすべり摩擦係数（乾燥 0.5〜1.0、湿潤 0.3〜0.9）：市原・小野田『路面のすべりとその対策』技術書院（1997）。
+%%    土木研究センターの論文（安藤、pwrc.or.jp 1005-P056）の表-2 による。急ブレーキの 7 m/s² はこの範囲（μ≈0.7）
+%%  ・空走時間 0.75 秒：運転免許の教本でよく使われる目安（人によって0.5〜1秒ほど）。例題では「目安」と書く
+%%  ・GPS 衛星の時計の相対論のずれ 1日に約38マイクロ秒（重力で約46 μs 進み、速さで約7 μs おくれる）：
+%%    N. Ashby, "Relativity and the Global Positioning System", Physics Today 55(5), 41 (2002)；Living Rev. Relativity 6, 1 (2003)。
+%%    38 μs×光速＝約11 km（calc1.py）
+%%  ・ムクドリの群れ：M. Ballerini ほか, PNAS 105, 1232 (2008)（arXiv:0709.1916）。1羽は、距離ではなく、近くの6〜7羽に合わせて動く
+%%    群れのモデル：C. Reynolds（1987）の boids、T. Vicsek ほか（1995）
+%%  ・相対論の速度の合成 (u+v)/(1+uv/c²)：0.5c と 0.5c で 0.8c
+%%  ・ガリレオ『新科学対話』（1638年）：投げた物の道すじは放物線
+%%  ・道路の緩和区間：道路構造令 第18条。緩和区間には、ふつうクロソイド曲線を使う（日本道路協会『道路構造令の解説と運用』）
+%%  ・ISS の高度 約400 km、周期 約92分（力-2 の例題と同じ値）
+\makeatletter
+% ---- 章ごとの絵の部品（力-1 は pxb…）----
+% 上から見た車（右向き）  \pxbcartop{(x,y)}{向きの角（度）}{色}   (x,y) は車のまん中
+\newcommand\pxbcartop[3]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=#3, draw=#3!60!black, line width=0.4pt, rounded corners=1.2] (-4.6,-2.2) rectangle (4.6,2.2);
+  \fill[white, rounded corners=0.6] (0.6,-1.6) rectangle (2.4,1.6);
+  \fill[white!80!#3, rounded corners=0.6] (-3.4,-1.5) rectangle (-2.2,1.5);
+  \fill[bkInk!85] (-3.2,-2.7) rectangle (-1.6,-2.2) (1.6,-2.7) rectangle (3.2,-2.2) (-3.2,2.2) rectangle (-1.6,2.7) (1.6,2.2) rectangle (3.2,2.7);
+\end{scope}}
+% 方位の印  \pxbcompass{(x,y)}
+\newcommand\pxbcompass[1]{\begin{scope}[shift={#1}]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2.4mm]}] (0,-4) -- (0,5);
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=south] at (0,5.4) {北};
+\end{scope}}
+% ベクトルの矢印のスタイル
+\tikzset{pxb vec/.style={-{Stealth[length=2.6mm, width=2mm]}, line width=1.2pt},
+         pxb lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+\newsavebox\pxbplota\newsavebox\pxbplotb\newsavebox\pxbplotc
+\makeatother
+
+\phchapter{1}{動きを数で書く：\\位置・速度・加速度}{カーブを曲がる車は、速さが同じでも加速している？}{\bklevelrange{3}{4}}{動きを数で書く：位置・速度・加速度}
+\bkmichishirube{4-10,4-11,4-15,5-5,5-13}{力-2,力-7,力-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 位置・速度・加速度をベクトルで書き、微分と積分でつなげられる。
+\item \bklevel{3}\enspace 加速度が一定の運動の式を導き、ブレーキや投げ上げの計算に使える。
+\item \bklevel{4}\enspace 投げた物の道すじや、曲がる物の加速度を、成分に分けて求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{速さ＝移動距離÷時間、$x=vt$}{中学理科}{ph:力-1:heikin}
+\phk{落ちる物の速さは、一定の割合でふえる}{中学理科}{ph:力-1:rakka}
+\phk{$v=\dd x/\dd t$、$a=\dd v/\dd t$、$v$-$t$ グラフの面積}{高校物理基礎}{ph:力-1:sokudo}
+\phk{$v=v_0+at$、$v^2-v_0^2=2ax$ など}{高校物理基礎}{ph:力-1:toukasoku}
+\phk{自由落下・投げ上げ、相対速度、有効数字}{高校物理基礎}{ph:力-1:rakka}
+\phk{平面の運動、水平投射・斜方投射}{高校物理}{ph:力-1:shahou}
+\phk{$v=r\omega$、$a=r\omega^2=v^2/r$}{高校物理}{ph:力-1:koushin}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+車でカーブを曲がるとき、スピードメーターは同じ数（たとえば時速\qty{54}{km}）を指したままです。速さは変わっていません。
+
+それなのに、体は外側へ押しつけられるように感じます。速さが変わらないのに、車は「加速」しているのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 上から見たカーブ（中心 C、半径 30 mm の4分の1円）
+  \fill[bkGray!22] (0,0) -- (34,0) arc[start angle=0, end angle=90, radius=34] -- cycle;
+  \fill[white] (0,0) -- (26,0) arc[start angle=0, end angle=90, radius=26] -- cycle;
+  \draw[bkGray, line width=0.5pt, dashed] (30,0) arc[start angle=0, end angle=90, radius=30];
+  \pxbcartop{({30*cos(30)},{30*sin(30)})}{120}{bkBlue}
+  \pxbcartop{({30*cos(65)},{30*sin(65)})}{155}{bkBlue}
+  \draw[pxb vec, bkOrange] ({30*cos(30)},{30*sin(30)}) ++(120:5) -- ++(120:9);
+  \draw[pxb vec, bkOrange] ({30*cos(65)},{30*sin(65)}) ++(155:5) -- ++(155:9);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south west, align=left] at (1.5,1.5) {速さは同じ\\向きが変わる};
+  \fill[bkInk] (0,0) circle (0.8);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この章では、物の動きを「位置」「速度」「加速度」の3つの量で書きます。3つはベクトル（向きと大きさをもつ量）で、微分と積分でつながっています。この書き方を使うと、ブレーキで止まる車も、投げたボールも、カーブを曲がる車も、同じ考え方で計算できます。
+
+\begin{yattemiyou}[電車の中で、加速度をはかろう]
+スマートフォンの加速度センサーと、加速度を表示するアプリ（理科の実験用の無料のものがある）を使います。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 机に平らに置いて、横と前後の表示がほぼ0になることを確かめよう。
+\item 電車の中で平らに持ち、前後の向きを、電車の進む向きにそろえよう。
+\item 下の4つの場面で、前後と横の加速度を記録しよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{4}{Q[c,m,wd=20mm]}}, rowsep=1.5pt, cells={font=\small}}
+ & 動き出す & 同じ速さ & カーブ & 止まる \\
+前後の加速度 & & & & \\
+横の加速度 & & & & \\
+\end{bktable}
+\bktabcaption{単位は m/s$^2$。カーブでは、速さが変わらなくても、横の加速度が出るかな？}
+\end{bkcenter}
+\end{yattemiyou}
+
+アプリがなくても、つり革を見ればわかります。動き出すときは後ろへ、止まるときは前へ、カーブでは外側へかたむきます。まっすぐ同じ速さで走っているときだけ、つり革はまっすぐ下がっています。つり革がかたむくのは、電車に加速度があるときです（なぜかたむくのかは、力-2 で考えます）。
+
+\begin{omoidasou}
+\bkrecall{5-5}{速度は位置を時間で微分したもの $v=\dfrac{\dd x}{\dd t}$。加速度は速度を微分したもの $a=\dfrac{\dd v}{\dd t}$。単位は m/s と m/s$^2$。}
+\bkrecall{5-13}{加速度を2回積分すると位置になる。2つの積分定数は「はじめの速度」と「はじめの位置」。}
+\bkrecall{4-11}{ベクトルは成分 $(a_x,\ a_y)$ で計算できる。速度も $x$ 成分と $y$ 成分に分けて考えられる。}
+\bkrecall{4-10}{速さが同じでも、向きが変われば、速度の変化 $\Delta\vec v$ は $\vec 0$ ではない。}
+\bkrecall{4-13}{ベクトルは矢印 $\vec a$ で書き、その大きさは $|\vec a|$ または $a$。専門書では太字 $\symbf a$ で書く。}
+\bkrecall{4-8}{角速度 $\omega$（rad/s）は、1秒に回る角。周期は $T=\dfrac{2\pi}{\omega}$。}
+\bkrecall{2-6}{はかった数のうち、意味のある数字が有効数字。5.0 は2けたで、ずれは $\pm0.05$ ほど。}
+\end{omoidasou}
+
+%% ================================================================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{場所を矢印で表す：位置ベクトルと変位}
+
+\leavevmode\label{ph:力-1:sec1}カーナビの画面には、地図と、いま車がいる場所が出ています。「車はどこにいるか」を数で言うには、まず、基準にする点（\textbf{原点}）と、東と北の向き（座標の軸）を決めます（数学 3-2）。原点を家にして、東へ $x$（m）、北へ $y$（m）の所にいれば、車の場所は2つの数の組 $(x,\ y)$ で表せます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.8mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid[step=10] (110,50);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.6mm]}] (0,0) -- (114,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.6mm]}] (0,0) -- (0,54);
+  \node[font=\sffamily\footnotesize, anchor=west] at (115,0) {$x$（東）};
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,55) {$y$（北）};
+  \foreach \k in {1,...,5} {\node[font=\sffamily\scriptsize, anchor=north, text=bkGray] at (\k*20,-1.2) {\pgfmathparse{int(\k*200)}\pgfmathresult};}
+  \node[font=\sffamily\scriptsize, anchor=north east, text=bkGray] at (-1,-1.2) {O};
+  % 道（道のり）
+  \draw[bkGray!70, line width=3.2pt, line cap=round] plot[smooth, tension=0.6] coordinates {(0,0) (16,3) (30,12) (42,26) (58,36) (78,40) (100,44)};
+  \draw[white, line width=0.5pt, dashed] plot[smooth, tension=0.6] coordinates {(0,0) (16,3) (30,12) (42,26) (58,36) (78,40) (100,44)};
+  % 位置ベクトル
+  \draw[pxb vec, bkBlue] (0,0) -- (29.2,11.2);
+  \draw[pxb vec, bkOrange] (0,0) -- (77,39.8);
+  \draw[pxb vec, bkRed] (31,12.4) -- (75.6,39.2);
+  \fill[bkInk] (30,12) circle (1.1) (78,40) circle (1.1);
+  \node[pxb lab, text=bkBlue!80!black, anchor=north west] at (17,6.5) {$\vec r_1$};
+  \node[pxb lab, text=bkOrange!80!black, anchor=south east] at (40,22) {$\vec r_2$};
+  \node[pxb lab, text=bkRed!80!black, anchor=north west] at (55,25) {変位 $\Delta\vec r=\vec r_2-\vec r_1$};
+  \node[pxb lab, anchor=north west] at (31,10.5) {P$_1$（$t_1$）};
+  \node[pxb lab, anchor=south] at (78,42) {P$_2$（$t_2$）};
+  \node[pxb lab, text=bkGray, anchor=west, align=left] at (88,32) {灰色の道にそった\\長さが道のり};
+  \pxbcompass{(104,10)}
+\end{tikzpicture}
+\bkfigcaption{原点Oから車への矢印が位置ベクトル。P$_1$ からP$_2$ への矢印（赤）が変位。目もりの数は m。}\label{ph:力-1:fig-ichi}
+\end{bkfigure}
+
+原点から車の場所への矢印を、\textbf{位置ベクトル}といいます（数学 4-11⑥）。この本では、数学の本と同じように、ベクトルを矢印つきの文字で書きます。位置ベクトルは $\vec r$ で、その成分が $(x,\ y)$ です。
+\[ \vec r=(x,\ y) \]
+矢印のない $r$ は、矢印の長さ（原点からの距離）$r=|\vec r|=\sqrt{x^2+y^2}$ を表します（数学 4-4）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] Q[c,m,wd=26mm] Q[l,m,wd=56mm]}, rowsep=1.5pt, row{1}={font=\sffamily\bfseries\small}}
+量 & 書き方 & 意味 \\
+位置ベクトル & $\vec r$ & 原点からの矢印。成分は $(x,\ y)$ \\
+その大きさ & $r$ & 原点からの距離 $|\vec r|$ \\
+速度 & $\vec v$ & 向きと速さ（②で学ぶ） \\
+速さ & $v$ & 速度の大きさ $|\vec v|$ \\
+\end{bktable}
+\bktabcaption{矢印のついた文字はベクトル、矢印のない文字はその大きさ（ふつうの数）。工学の専門書では、ベクトルを太字で書く（②の専門書をのぞいてみよう）。}
+\end{bkcenter}
+
+\noindent\textbf{位置が変わった量：変位}\par
+\noindent 車が、時刻 $t_1$ にP$_1$、時刻 $t_2$ にP$_2$ にいたとします。位置ベクトルの「あと－まえ」
+\[ \Delta\vec r=\vec r_2-\vec r_1 \]
+を\textbf{変位}といいます。\bkidx{へんい}{変位}変位は、P$_1$ からP$_2$ へまっすぐ引いた矢印です（数学 4-10⑤の「ひかれるほうの先へ」）。図\ref{ph:力-1:fig-ichi}では、P$_1$ が $(300,\ 120)$、P$_2$ が $(780,\ 400)$ なので、
+\[ \Delta\vec r=(780-300,\ \ 400-120)=(480,\ 280)\quad\text{（m）} \]
+変位の大きさは $\sqrt{480^2+280^2}\approx\qty{556}{m}$ です。でも、車が実際に走った道の長さ（\textbf{道のり}）は、曲がった道にそった長さなので、これより長くなります。変位は「どこからどこへ動いたか」、道のりは「どれだけ走ったか」です。
+
+\noindent\textbf{3次元と1次元}\par
+\noindent 飛行機やドローンのように高さも変わるときは、高さ $z$ を加えて $\vec r=(x,\ y,\ z)$ にします（数学 4-13）。反対に、まっすぐな線路の上の電車のように、一直線の上しか動かないときは、線路にそって $x$ 軸を1本だけ決めて、位置を1つの数 $x$ で表します。このとき、ベクトルの向きは $x$ の $+$ と $-$ だけになります（数学 2-2）。
+
+\noindent\textbf{有効数字と、計算の答えのけた}\par
+\noindent\label{ph:力-1:yuukou}物理では、はかった数を使って計算します。はかった数には、ずれがあります（数学 2-6）。たとえば、たて\qty{2.3}{cm}、横\qty{4.56}{cm}の長方形の面積は、電卓では $2.3\times4.56=10.488$ です。でも、本当の長さは、たてが\qty{2.25}{cm}から\qty{2.35}{cm}、横が\qty{4.555}{cm}から\qty{4.565}{cm}のどこかです。いちばん小さい場合と大きい場合を計算してみます。
+\[ 2.25\times4.555\approx10.25,\qquad 2.35\times4.565\approx10.73 \]
+面積は10.25から10.73のどこかで、たしかなのは「10」までです。小数第1位の「4」や「5」は、もう決まっていません。たての有効数字が2けたしかないので、答えも2けたまでしか信用できないのです。そこで、\textbf{かけ算とわり算の答えは、使った数の中でいちばん少ない有効数字のけたにそろえる}という約束で書きます。この例では「約\qty{10}{cm^2}」です。
+
+この本では、重力加速度を $g=\qty{9.8}{m/s^2}$（2けた）で計算するので、答えもふつうは2けたにします。計算のとちゅうは1けた多く残し、最後に四捨五入します。3けたで答えたい例題では、はじめに「$g=\qty{9.81}{m/s^2}$ を使う」と書きます。また、数には必ず単位をつけ、単位の換算は「単位つきの1」でします（数学 2-10）。
+\[ \qty{72}{km/h}\times\qty{1000}{m/km}\div\qty{3600}{s/h}=\qty{20}{m/s} \]
+
+%% ================================================================
+\bksubsection{2}{速度と加速度は、位置の微分}
+
+\leavevmode\label{ph:力-1:sec2}\textbf{平均の速さと平均の速度}\par
+\noindent\label{ph:力-1:heikin}家から\qty{1.2}{km}はなれた駅まで、道を歩いて15分かかりました。中学校で習う\textbf{平均の速さ}は、
+\[ \text{平均の速さ}=\frac{\text{移動距離（道のり）}}{\text{かかった時間}}=\frac{\qty{1200}{m}}{\qty{15}{min}}=\qty{80}{m/min} \]
+です。\qty{80}{m/min}は、$\qty{80}{m/min}\div\qty{60}{s/min}\approx\qty{1.3}{m/s}$ です。駅までの「徒歩何分」は、この「1分に\qty{80}{m}」で計算して書く決まりになっています。
+
+平均の速さには、向きがありません。向きまでこめて表すには、道のりのかわりに変位 $\Delta\vec r$ を使います。
+\[ \overline{\vec v}=\frac{\Delta\vec r}{\Delta t} \]
+これを\textbf{平均の速度}といいます（$\overline{\phantom{v}}$ は平均のしるし）。ベクトル $\Delta\vec r$ を、数 $\Delta t$ でわったもの（$\dfrac{1}{\Delta t}$ 倍、数学 4-10④）なので、向きは変位と同じです。
+
+\noindent\textbf{時間を短くすると、瞬間の速度}\par
+\noindent\label{ph:力-1:sokudo}数学 5-1・5-3 で、区切る時間 $\Delta t$ を短くしていくと、平均の速さが「その瞬間の速さ」に近づくことを学びました。平面の上の動きでも同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 道すじ y = 0.0055 x^2
+  \draw[bkGray!70, line width=2.4pt, line cap=round, domain=0:96, samples=60] plot (\x, {0.0055*\x*\x});
+  \coordinate (P) at (24,3.168);
+  \foreach \qx/\col in {90/bkRed!55, 64/bkRed!75, 42/bkRed} {
+    \draw[pxb vec, \col, shorten >=1.3mm] (P) -- (\qx,{0.0055*\qx*\qx});
+    \fill[bkInk] (\qx,{0.0055*\qx*\qx}) circle (0.9);
+  }
+  \node[pxb lab, anchor=west] at (91.5,44.5) {Q$_1$};
+  \node[pxb lab, anchor=west] at (65.5,22.5) {Q$_2$};
+  \node[pxb lab, anchor=north west] at (43,9.6) {Q$_3$};
+  % 接線と速度（P での傾きは 2×0.0055×24＝0.264）
+  \draw[bkBlue, line width=0.5pt, dashed] (4,-2.112) -- (64,13.728);
+  \draw[pxb vec, bkBlue] (P) -- ++(20,5.28);
+  \fill[bkInk] (P) circle (1.1);
+  \node[pxb lab, anchor=north] at (P) [yshift=-1.6mm] {P（時刻 $t$）};
+  \node[pxb lab, text=bkBlue!80!black, anchor=north west] at (52,9.8) {速度 $\vec v$（接線の向き）};
+  \node[font=\sffamily\footnotesize, anchor=north west, align=left] at (0,46) {Q$_1$、Q$_2$、Q$_3$ と $\Delta t$ を短くすると、\\$\Delta\vec r$ の向きが接線の向きに近づく};
+\end{tikzpicture}
+\bkfigcaption{赤い矢印は、時刻 $t$ からの変位 $\Delta\vec r$。時間を短くするほど、道すじの接線の向きに近づく。}\label{ph:力-1:fig-sessen}
+\end{bkfigure}
+
+図\ref{ph:力-1:fig-sessen}のように、$\Delta t$ を短くしていくと、変位の矢印は短くなりながら、その向きは道すじの接線の向きに近づきます。$\Delta t$ を0に近づけた先の $\dfrac{\Delta\vec r}{\Delta t}$ を、その瞬間の\textbf{速度}といいます。
+\pheq{\vec v=\frac{\dd\vec r}{\dd t}=\dot{\vec r}}{m/s ＝ m ÷ s}
+速度の向きは、いつも\textbf{道すじの接線の向き}です。速度の大きさ $v=|\vec v|$ が、ふだん「速さ」とよんでいるものです。
+
+\noindent\textbf{成分で書くと}\par
+\noindent\label{ph:力-1:vec}ベクトルを $\Delta t$ でわったり、$\Delta t$ を0に近づけたりする計算は、成分ごとにできます（数学 4-11②）。だから、
+\[ \vec v=\Bigl(\frac{\dd x}{\dd t},\ \ \frac{\dd y}{\dd t}\Bigr)=(\dot x,\ \dot y),\qquad v=\sqrt{\dot x^2+\dot y^2} \]
+東西の位置 $x$ の変わる速さが速度の $x$ 成分、南北の位置 $y$ の変わる速さが $y$ 成分です（数学 5-15③と同じ考え方）。一直線の上の動きなら、$v=\dfrac{\dd x}{\dd t}$ の1つだけです（数学 5-5）。$v=\dfrac{\Delta x}{\Delta t}$ と書くときは、その区間の平均の速度のことです。
+
+\begin{phyomi}[$\vec v=\dfrac{\dd\vec r}{\dd t}$]
+「位置の矢印の先が、1秒あたりに、どの向きへ、どれだけ動くか」と読みます。分子の $\dd\vec r$ は「とても小さな変位」、分母の $\dd t$ は「とても短い時間」です。
+\end{phyomi}
+\begin{phmijika}[スピードメーターとハンドル]
+車のスピードメーターが表すのは、速さ $v$（大きさ）だけです。速度の向きは、車がそのとき向いている向き（道の接線の向き）です。速度は「スピードメーターの数」と「車の向き」の2つを組にしたものです。
+\end{phmijika}
+\begin{phbaisuru}[半分]{区切る時間 $\Delta t$}
+落ちるボール（$x=4.9t^2$、下向きが $+$）の、1秒の所の平均の速度を、区切る時間を半分にしながら計算します。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{5}{Q[c,m,wd=12.5mm]}}, rowsep=1.5pt}
+区切る時間 $\Delta t$（s） & 1 & 0.5 & 0.25 & 0.125 & $\to0$ \\
+平均の速度（m/s） & 14.7 & 12.25 & 11.03 & 10.41 & 9.8 \\
+\end{bktable}
+\bktabcaption{$\dfrac{4.9(1+\Delta t)^2-4.9}{\Delta t}=9.8+4.9\Delta t$。$\Delta t$ を半分にするたびに、9.8 との差が半分になる。}
+\end{bkcenter}
+\end{phbaisuru}
+
+\noindent\textbf{速度の変わる速さ：加速度}\par
+\noindent\label{ph:力-1:kasokudo}速度が時間 $\Delta t$ のあいだに $\Delta\vec v$ だけ変わったとき、$\dfrac{\Delta\vec v}{\Delta t}$ を\textbf{平均の加速度}、$\Delta t$ を0に近づけた先を\textbf{加速度}といいます。
+\pheq{\vec a=\frac{\dd\vec v}{\dd t}=\frac{\dd^2\vec r}{\dd t^2}=\ddot{\vec r}}{m/s$^2$ ＝ (m/s) ÷ s}
+加速度も、成分ごとに $\vec a=(\ddot x,\ \ddot y)$ と計算できます。単位 m/s$^2$ は、「1秒あたり、速度が何 m/s 変わるか」です（数学 5-5②）。たとえば、止まっていた車が8秒で\qty{20}{m/s}になれば、平均の加速度は $\dfrac{\qty{20}{m/s}}{\qty{8}{s}}=\qty{2.5}{m/s^2}$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, q/.style={bk node, minimum width=32mm, minimum height=13mm}]
+  \node[q] (r) at (0,0) {位置 $\vec r$\\（m）};
+  \node[q] (v) at (50,0) {速度 $\vec v$\\（m/s）};
+  \node[q] (a) at (100,0) {加速度 $\vec a$\\（m/s$^2$）};
+  \draw[bk link] ([yshift=2.5mm]r.east) -- node[bk link label, above] {時間で微分} ([yshift=2.5mm]v.west);
+  \draw[bk link] ([yshift=2.5mm]v.east) -- node[bk link label, above] {時間で微分} ([yshift=2.5mm]a.west);
+  \draw[bk link] ([yshift=-2.5mm]v.west) -- node[bk link label, below] {時間で積分} ([yshift=-2.5mm]r.east);
+  \draw[bk link] ([yshift=-2.5mm]a.west) -- node[bk link label, below] {時間で積分} ([yshift=-2.5mm]v.east);
+\end{tikzpicture}
+\bkfigcaption{右へは微分、左へは積分。積分するときは、はじめの速度・はじめの位置が要る（数学 5-13）。}
+\end{bkfigure}
+
+\Needspace{8\baselineskip}\begin{phflow}[位置・速度・加速度]
+\phflowrow{$\vec v=\dfrac{\dd\vec r}{\dd t}$}{一直線の上で\\区間の平均にする}{$v=\dfrac{\Delta x}{\Delta t}$}
+\phflowrow{$\dfrac{\Delta x}{\Delta t}$ の大きさ}{向きを考えず\\道のりを使う}{速さ＝移動距離÷時間}
+\phflowrow{$\vec a=\dfrac{\dd\vec v}{\dd t}$}{一直線の上で\\区間の平均にする}{$a=\dfrac{\Delta v}{\Delta t}$}
+\end{phflow}
+
+\begin{senmonsho}[質点の運動の書き方]
+\begin{bkhonbun}
+質点の位置ベクトルを $\symbf r(t)$ とすると、速度と加速度は
+\[ \symbf v=\frac{\dd \symbf r}{\dd t}=\dot{\symbf r},\qquad \symbf a=\frac{\dd \symbf v}{\dd t}=\ddot{\symbf r} \]
+で与えられる。速さは $v=|\symbf v|$ である。
+\end{bkhonbun}
+\bkyaku{専門書では、ベクトルを矢印のかわりに太字で書く。太字の $\symbf r$ はこの本の $\vec r$、$\symbf v$ は $\vec v$ のこと。細い字の $v$ は大きさ（速さ）。「質点」は、大きさを考えない点としてあつかう物（力-2 でくわしく）。}
+\end{senmonsho}
+
+%% ================================================================
+\bksubsection{3}{加速度が一定の運動：2回積分する}
+
+\leavevmode\label{ph:力-1:sec3}駅を出る電車は、しばらくのあいだ、1秒ごとにほぼ同じだけ速くなります。ブレーキをかけた車は、1秒ごとにほぼ同じだけおそくなります。手をはなしたボールは、1秒ごとに\qty{9.8}{m/s}ずつ速くなります。どれも「加速度が一定」の運動です。加速度が一定になるのは、はたらく力が一定のときです（そのわけは力-2 の運動方程式で学びます）。
+
+一直線の上を動く場合を考えます。動く向きに $x$ 軸をとり、$+$ の向きを決めます。
+
+\begin{phmodel}[加速度が一定の運動]
+\phignore{物の大きさと回転（点が動くと考える）。加速度の、ごく短い時間の変化（動き出しのがくんとした動き）。}
+\phassume{一直線の上を動く。加速度 $a$ は時間によらず一定。}
+\phlimit{力が速さで変わるとき（空気の抵抗が大きいときなど。力-2 ⑧）。カーブで向きが変わるとき（⑤）。}
+\end{phmodel}
+
+\noindent\textbf{1回めの積分：速度}\par
+\noindent\label{ph:力-1:toukasoku}$\dfrac{\dd v}{\dd t}=a$（一定）なので、$v$ は「微分すると $a$ になる関数」です。$at$ を微分すると $a$ なので（数学 5-4）、積分定数 $C_1$ をつけて $v=at+C_1$。$t=0$ を入れると $v=C_1$ なので、$C_1$ は\textbf{はじめの速度} $v_0$ です（数学 5-13③）。
+\pheq{v=v_0+at}{m/s ＝ m/s ＋ m/s$^2$ × s}
+
+\noindent\textbf{2回めの積分：位置}\par
+\noindent $\dfrac{\dd x}{\dd t}=v_0+at$ を積分します。$v_0t$ を微分すると $v_0$、$\dfrac{1}{2}at^2$ を微分すると $at$ なので、
+\pheq{x=x_0+v_0t+\frac{1}{2}at^2}{m ＝ m/s × s ＋ m/s$^2$ × s$^2$}
+$x_0$ は、2つめの積分定数で、\textbf{はじめの位置}です。$\dfrac{1}{2}$ は、$t^2$ を微分したときに前に出る2を打ち消すためについています。はじめの位置を原点にとれば（$x_0=0$）、$x=v_0t+\dfrac{1}{2}at^2$ です。
+
+\begin{phyomi}[$x=x_0+v_0t+\dfrac{1}{2}at^2$]
+3つの項に分けて読みます。$x_0$ は「はじめにいた所」。$v_0t$ は「はじめの速度のままなら進んだ距離」。$\dfrac{1}{2}at^2$ は「加速したぶん、よけいに進んだ距離」。
+\end{phyomi}
+
+\noindent\textbf{加速度が0なら：等速直線運動}\par
+\noindent\label{ph:力-1:tousoku}$a=0$ を入れると、$v=v_0$（速度は変わらない）、$x=x_0+v_0t$ です。はじめの位置を0、速度を $v$ と書けば、中学校で習う $x=vt$ になります。この動きを\textbf{等速直線運動}といいます。
+
+\noindent\textbf{$v$-$t$ グラフの面積は変位}\par
+\noindent\label{ph:力-1:menseki}数学 5-9 で、速度のグラフの下の面積が進んだ距離になることを学びました。$v=v_0+at$ のグラフは直線なので、$0$ から $t$ までのグラフの下は台形です。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=66mm, height=48mm, xmin=0, xmax=4.9, ymin=0, ymax=14.5, xtick={4}, xticklabels={$t$}, ytick={4,12}, yticklabels={$v_0$,$v$}, xlabel={時間}, ylabel={速度}]
+  \fill[bkBlue!18] (axis cs:0,0) rectangle (axis cs:4,4);
+  \fill[bkOrange!25] (axis cs:0,4) -- (axis cs:4,4) -- (axis cs:4,12) -- cycle;
+  \addplot[bkcurve, domain=0:4.4] {4+2*x};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:4,0) -- (axis cs:4,12) (axis cs:0,12) -- (axis cs:4,12);
+  \node[font=\sffamily\footnotesize, align=center] at (axis cs:2,2) {長方形\\$v_0t$};
+  \node[font=\sffamily\footnotesize, align=center] at (axis cs:2.85,6.3) {三角形\\$\frac{1}{2}at^2$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (axis cs:4.35,4) -- node[right, font=\sffamily\footnotesize] {$at$} (axis cs:4.35,12);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\raggedright
+台形を、長方形と三角形に分けます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 長方形：たて $v_0$、横 $t$ で $v_0t$
+\item 三角形：横 $t$、高さ $at$（$t$ のあいだにふえた速度）で $\dfrac{1}{2}\times t\times at=\dfrac{1}{2}at^2$
+\end{itemize}
+たすと $v_0t+\dfrac{1}{2}at^2$ で、積分で求めた変位と同じです。
+\end{minipage}
+
+\par\vspace{3pt}
+速度が負（$-$ の向きへ動く）の時間は、グラフの下の面積を負として数えます（数学 5-9⑦）。面積の合計が\textbf{変位}、負の部分も正として数えた合計が\textbf{道のり}です。
+
+\noindent\textbf{時間を使わない式：$v^2-v_0^2=2ax$}\par
+\noindent\label{ph:力-1:v2}ブレーキで止まるまでの距離のように、時間は知らなくてよく、速さと距離の関係だけを知りたいことがよくあります。そこで、2つの式から $t$ を消します。$x_0=0$ とします。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item $v=v_0+at$ を $t$ について解く：$t=\dfrac{v-v_0}{a}$
+\item これを $x=v_0t+\dfrac{1}{2}at^2$ に入れる：$x=v_0\cdot\dfrac{v-v_0}{a}+\dfrac{1}{2}a\Bigl(\dfrac{v-v_0}{a}\Bigr)^2$
+\item 両辺に $2a$ をかける：$2ax=2v_0(v-v_0)+(v-v_0)^2$
+\item 右辺を展開する（数学 3-8）：$2v_0v-2v_0^2+v^2-2v_0v+v_0^2=v^2-v_0^2$
+\end{enumerate}
+\pheq{v^2-v_0^2=2ax}{m$^2$/s$^2$ ＝ m/s$^2$ × m}
+グラフでも確かめられます。台形の面積は「（上底＋下底）×高さ÷2」なので、$x=\dfrac{(v_0+v)\,t}{2}$。ここに $t=\dfrac{v-v_0}{a}$ を入れると（数学 3-8 の和と差の積）、
+\[ x=\frac{(v+v_0)(v-v_0)}{2a}=\frac{v^2-v_0^2}{2a} \]
+
+\begin{phyomi}[$v^2-v_0^2=2ax$]
+「速さの2乗の変化は、加速度×距離の2倍」。はじめの速さ $v_0$ で走る車が、加速度 $-b$（$b>0$）でブレーキをかけて止まる（$v=0$）なら、$0-v_0^2=2\times(-b)\times x$ より、止まるまでの距離は $x=\dfrac{v_0^2}{2b}$ です。
+\end{phyomi}
+\begin{phmijika}[止まるまでの距離は、速さの2乗に比例する]
+自動車教習所では、「速さが2倍になると、ブレーキがきき始めてから止まるまでの距離は4倍になる」と教えます。その理由が、この式の $v_0^2$ です。
+\end{phmijika}
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=50mm, xmin=0, xmax=33, ymin=0, ymax=92, xtick={10,20,30}, ytick={20,40,60,80}, xlabel={$v_0$（m/s）}, ylabel={距離（m）}]
+  \addplot[bkcurve2, domain=0:30, samples=40] {0.75*x};
+  \addplot[bkcurve, domain=0:30, samples=40] {0.75*x+x^2/14};
+  \fill[bkBlue] (axis cs:10,14.64) circle (1.6pt) (axis cs:20,43.57) circle (1.6pt) (axis cs:30,86.79) circle (1.6pt);
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:10,16) {14.6};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:20,45) {43.6};
+  \node[font=\sffamily\scriptsize, anchor=east] at (axis cs:29.5,86.8) {86.8};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west] at (axis cs:22,16.2) {空走距離だけ};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=north west] at (axis cs:24.5,62) {止まるまでの距離};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{はじめの速さ $v_0$}
+運転する人が危ないと気づいてからブレーキがきき始めるまで、車はそのままの速さで進みます（この時間を空走時間といい、目安は約0.75秒）。止まるまでの距離は、「空走距離 $0.75v_0$」と「ブレーキの距離 $\dfrac{v_0^2}{2b}$」の和です。$b=\qty{7}{m/s^2}$（乾いた道の急ブレーキ）で計算すると、
+\begin{bkcenter}
+\usebox{\pxbplota}
+\end{bkcenter}
+\qty{10}{m/s}（時速\qty{36}{km}）で\qty{14.6}{m}、\qty{20}{m/s}（時速\qty{72}{km}）で\qty{43.6}{m}、\qty{30}{m/s}（時速\qty{108}{km}）で\qty{86.8}{m}。速さが2倍・3倍になると、止まるまでの距離は2倍・3倍よりずっと長くなります。
+\end{phbaisuru}
+
+\noindent\textbf{落ちる物：自由落下}\par
+\noindent\label{ph:力-1:rakka}空気の抵抗が無視できるとき、手をはなした物は、重さによらず、同じ加速度 $g=\qty{9.8}{m/s^2}$ で落ちます（数学 5-5⑤。なぜ重さによらないかは力-2 ③）。中学校では「落ちる物の速さは、一定の割合でふえる」と習います。その「一定の割合」が $g$ です。手をはなした所を原点に、下向きを $+$ にとると、$a=g$、$v_0=0$ なので、
+\[ v=gt,\qquad y=\frac{1}{2}gt^2,\qquad v^2=2gy \]
+3つめは、$v^2-v_0^2=2ax$ に $v_0=0$、$a=g$ を入れたものです。
+
+\noindent\textbf{真上に投げる：投げ上げ}\par
+\noindent\label{ph:力-1:nageage}上向きを $+$ にとると、重力の加速度は下向きなので $a=-g$ です。はじめの速さ $v_0$ で真上に投げると、
+\[ v=v_0-gt,\qquad y=v_0t-\frac{1}{2}gt^2 \]
+いちばん高い所では、ボールは一瞬止まります（$v=0$）。$v_0-gt=0$ より、そこまでの時間と高さは
+\[ t=\frac{v_0}{g},\qquad h=\frac{v_0^2}{2g}\quad\bigl(0-v_0^2=2\times(-g)\times h\ \text{より}\bigr) \]
+上がる時間と下りる時間は同じで、投げた所にもどるのは $\dfrac{2v_0}{g}$ 秒後です。そのときの速さは、投げた速さと同じ $v_0$（向きは下）です。
+
+\Needspace{8\baselineskip}\begin{phflow}[加速度が一定の運動]
+\phflowrow{$\dfrac{\dd^2x}{\dd t^2}=a$}{$a$ が一定\\1回積分する}{$v=v_0+at$}
+\phflowrow{$\dfrac{\dd x}{\dd t}=v_0+at$}{はじめの位置を\\0にして積分}{$x=v_0t+\dfrac{1}{2}at^2$}
+\phflowrow{上の2つの式}{$t$ を消す}{$v^2-v_0^2=2ax$}
+\phflowrow{$x=v_0t+\dfrac{1}{2}at^2$}{$a=0$\\（力がつり合う）}{$x=vt$}
+\phflowrow{$v=v_0+at$ など}{$a=g$、$v_0=0$\\下向きを $+$}{$v=gt$、$y=\dfrac{1}{2}gt^2$\\$v^2=2gy$}
+\phflowrow{$v=v_0+at$ など}{$a=-g$\\上向きを $+$、$v=0$}{$t=\dfrac{v_0}{g}$、$h=\dfrac{v_0^2}{2g}$}
+\end{phflow}
+
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=48mm, xmin=0, xmax=4.6, ymin=0, ymax=19, xtick={1,2,3,4}, ytick={1,4,9,16}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \addplot[bkcurve, domain=0:4.2, samples=40] {x^2};
+  \fill[bkBlue] (axis cs:1,1) circle (1.6pt) (axis cs:2,4) circle (1.6pt) (axis cs:3,9) circle (1.6pt) (axis cs:4,16) circle (1.6pt);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:2,0) -- (axis cs:2,4) -- (axis cs:0,4) (axis cs:4,0) -- (axis cs:4,16) -- (axis cs:0,16);
+  \node[font=\sffamily\scriptsize, anchor=west, align=left] at (axis cs:2.3,12.5) {時間が2倍（2 s→4 s）で\\距離は4倍（4 m→16 m）};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{時間 $t$}
+止まった所から加速度 $a$ で動き出すと、$x=\dfrac{1}{2}at^2$ です。時間が2倍になると、進む距離は $2^2=4$ 倍、3倍なら9倍です。
+\begin{bkcenter}
+\usebox{\pxbplota}
+\end{bkcenter}
+$a=\qty{2}{m/s^2}$ のときのグラフです。1秒ごとに進む距離は、1、3、5、7（m）と、奇数の列になります。ガリレオが斜面に球を転がして見つけたのが、このきまりです（コラム）。
+\end{phbaisuru}
+
+%% ================================================================
+\bksubsection{4}{投げた物の道すじ：横とたてに分けて考える}
+
+\leavevmode\label{ph:力-1:sec4}机の上を転がってきたボールが、机のはしから飛び出します。同じ瞬間に、もう1つのボールを、机のはしと同じ高さからそっと放します。0.1秒ごとに写真をとって並べると、次のようになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.9mm, y=0.72mm]
+  % 1 m を 50 mm でかく。飛び出す速さ 2.0 m/s、机の高さ 1.25 m
+  \fill[bkOrange!30] (-34,-1.4) rectangle (0,0);
+  \draw[bkOrange!70!black, line width=0.6pt] (-34,0) -- (0,0) -- (0,-1.4) -- (-34,-1.4);
+  \fill[bkOrange!50!black] (-3.5,-1.4) rectangle (-1.5,-62.5) (-32.5,-1.4) rectangle (-30.5,-62.5);
+  \draw[bkInk, line width=1pt] (-38,-62.5) -- (82,-62.5);
+  \foreach \t/\x/\y in {0/0/0, 1/10/2.45, 2/20/9.8, 3/30/22.05, 4/40/39.2, 5/50/61.25} {
+    \draw[bkLine, line width=0.4pt, dashed] (\x,{1.6-\y}) -- (68,{1.6-\y});
+    \fill[bkBlue] (\x,{1.6-\y}) circle (1.6);
+    \fill[bkGreen!70!black] (70,{1.6-\y}) circle (1.6);
+    \ifnum\t=1\else\node[font=\sffamily\scriptsize, anchor=west] at (73,{1.6-\y}) {0.\t\,s};\fi
+  }
+  \foreach \x in {10,20,30,40,50} {\draw[bkGray, line width=0.4pt] (\x,-62.5) -- (\x,-64.5);}
+  \node[font=\sffamily\scriptsize, anchor=north] at (0,-64.5) {0};
+  \node[font=\sffamily\scriptsize, anchor=north] at (50,-64.5) {\qty{1.0}{m}};
+  \node[font=\sffamily\scriptsize, anchor=north] at (25,-64.5) {横に同じ間かく};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south] at (6,4.5) {飛び出したボール};
+  \node[font=\sffamily\footnotesize, text=bkGreen!50!black, anchor=south] at (70,4.5) {そっと放したボール};
+  \draw[pxb vec, bkBlue] (-9,1.6) -- (-3,1.6);
+\end{tikzpicture}
+\bkfigcaption{飛び出す速さ\qty{2.0}{m/s}、机の高さ\qty{1.25}{m}（空気の抵抗を無視した計算の値）。2つのボールは、いつも同じ高さにいて、同時に床に着く。}\label{ph:力-1:fig-strobe}
+\end{bkfigure}
+
+図\ref{ph:力-1:fig-strobe}から、2つのことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{横の動き}：0.1秒ごとに\qty{0.2}{m}ずつ、同じ間かくで進む。横には、飛び出した速さ\qty{2.0}{m/s}のまま進む（等速直線運動）。
+\item \textbf{たての動き}：そっと放したボールと、いつも同じ高さ。たてには、横の動きとは関係なく、自由落下と同じように落ちる。
+\end{itemize}
+横に動いていても、落ち方は変わりません。横の動きとたての動きは、\textbf{おたがいに関係なく、別々に考えてよい}のです。これは、加速度が下向きの $g$ だけで、横には加速度がないからです。
+
+\begin{phmodel}[投げた物]
+\phignore{空気の抵抗。物の大きさと回転。地球が丸いことと、自転。}
+\phassume{加速度は真下に $g$ で一定。横の加速度は0。}
+\phlimit{羽根やピンポン球、速いボール（空気の抵抗が大きい：力-2 ⑧、力-15）。何十 km も飛ぶ物（地面が丸い）。}
+\end{phmodel}
+
+\noindent\textbf{成分ごとに、③の式を使う}\par
+\noindent\label{ph:力-1:shahou}水平に $x$ 軸、真上に $y$ 軸をとり、投げた所を原点にします。地面から角 $\theta$ の向きに、速さ $v_0$ で投げます。加速度は $\vec a=(0,\ -g)$ で一定です。はじめの速度を成分に分けると（数学 4-11③）、$(v_0\cos\theta,\ v_0\sin\theta)$ です。$x$ と $y$ のそれぞれに、③の「加速度が一定の運動の式」を使います。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[c,m,wd=20mm] Q[c,m,wd=34mm] Q[c,m,wd=40mm]}, rowsep=2pt, row{1}={font=\sffamily\bfseries\small}}
+ & 加速度 & 速度 & 位置 \\
+$x$（横） & 0 & $v_x=v_0\cos\theta$ & $x=v_0\cos\theta\cdot t$ \\
+$y$（たて） & $-g$ & $v_y=v_0\sin\theta-gt$ & $y=v_0\sin\theta\cdot t-\dfrac{1}{2}gt^2$ \\
+\end{bktable}
+\bktabcaption{横は等速直線運動、たては投げ上げ。2つを組にしたものが、投げた物の動き。}
+\end{bkcenter}
+
+\noindent\textbf{道すじは放物線}\par
+\noindent $x$ の式から $t=\dfrac{x}{v_0\cos\theta}$。これを $y$ の式に入れて $t$ を消すと、
+\[ y=x\tan\theta-\frac{g}{2v_0^2\cos^2\theta}\,x^2 \]
+$y$ が $x$ の2次関数なので、道すじは放物線です（数学 3-9）。「放物」は「物を放る（投げる）」という意味で、この名前は投げた物の道すじから来ています。
+
+\noindent\textbf{いちばん高い所と、届く距離}\par
+\noindent いちばん高い所では、たての速度が0です。$v_y=v_0\sin\theta-gt=0$ より、そこまでの時間は $t_1=\dfrac{v_0\sin\theta}{g}$。たての動きは投げ上げと同じなので、高さは③の $h=\dfrac{v_0^2}{2g}$ の $v_0$ を、たての成分 $v_0\sin\theta$ にかえて
+\[ H=\frac{v_0^2\sin^2\theta}{2g} \]
+地面（$y=0$）にもどるのは、上がる時間の2倍の $t_2=\dfrac{2v_0\sin\theta}{g}$ です。そのあいだに、横には $v_0\cos\theta$ の速さで進むので、届く距離は
+\[ R=v_0\cos\theta\times\frac{2v_0\sin\theta}{g}=\frac{v_0^2\cdot2\sin\theta\cos\theta}{g}=\frac{v_0^2\sin2\theta}{g} \]
+最後は2倍角の式 $2\sin\theta\cos\theta=\sin2\theta$（数学 4-9④）を使いました。$\sin2\theta$ がいちばん大きい1になる $\theta=45°$ で、いちばん遠くへ届きます（数学 4-9⑤で、$g$ を約10として調べたことを、$g$ のまま確かめた形）。
+\pheq{R=\frac{v_0^2\sin2\theta}{g}}{m ＝ (m/s)$^2$ ÷ m/s$^2$}
+
+\noindent\textbf{水平に投げる：水平投射}\par
+\noindent\label{ph:力-1:suihei}図\ref{ph:力-1:fig-strobe}のボールは、$\theta=0$ で投げた場合です。このときは下向きを $+$ にして $y$ をはかると、
+\[ x=v_0t,\qquad y=\frac{1}{2}gt^2 \]
+横は $x=vt$、たては自由落下そのものです。机の高さ\qty{1.25}{m}なら、$1.25=4.9t^2$ より $t\approx\qty{0.51}{s}$。床に着く所は $x=2.0\times0.51\approx\qty{1.0}{m}$ 先です。
+
+\begin{phyomi}[$R=\dfrac{v_0^2\sin2\theta}{g}$]
+届く距離は「速さの2乗」に比例し、「重力加速度」に反比例します。角の役目は $\sin2\theta$ だけで、$30°$ と $60°$ のように、たすと $90°$ になる2つの角では同じ距離になります（$\sin60°=\sin120°$）。
+\end{phyomi}
+\begin{phmijika}[公園の噴水と、月の上のボール]
+噴水やスプリンクラーの水は、遠くへ届けたいとき45°に近い向きでふき出させます。月の上では重力加速度が約\qty{1.6}{m/s^2}で、地球の約6分の1なので、同じ速さで投げたボールは約6倍遠くへ届きます。
+\end{phmijika}
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=40mm, xmin=0, xmax=11.4, ymin=0, ymax=3.3, xtick={2,4,...,10}, ytick={1,2,3}, xlabel={$x$（m）}, ylabel={$y$（m）}, axis equal image=false]
+  \addplot[bkcurve, domain=0:10.204, samples=60] {x-9.8*x^2/100};
+  \addplot[bkcurve2, domain=0:2.551, samples=40] {x-9.8*x^2/25};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south west] at (axis cs:5.4,2.6) {\qty{10}{m/s}};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west] at (axis cs:2.7,0.3) {\qty{5}{m/s}};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{投げる速さ $v_0$}
+45°で投げるとき、速さ\qty{5}{m/s}と\qty{10}{m/s}の道すじをくらべます。届く距離は\qty{2.55}{m}と\qty{10.2}{m}、高さは\qty{0.64}{m}と\qty{2.55}{m}で、どちらも $2^2=4$ 倍です。
+\begin{bkcenter}
+\usebox{\pxbplota}
+\end{bkcenter}
+\end{phbaisuru}
+
+\begin{lrbox}{\pxbplotb}\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=46mm, xmin=0, xmax=11.4, ymin=0, ymax=4.4, xtick={2,4,...,10}, ytick={1,2,3,4}, xlabel={$x$（m）}, ylabel={$y$（m）}]
+  \addplot[bkcurve2, domain=0:8.837, samples=60] {x*tan(30)-9.8*x^2/(200*cos(30)^2)};
+  \addplot[bkcurve, domain=0:10.204, samples=60] {x-9.8*x^2/100};
+  \addplot[bkcurve3, domain=0:8.837, samples=60] {x*tan(60)-9.8*x^2/(200*cos(60)^2)};
+  \node[font=\sffamily\scriptsize, text=bkGreen!50!black, anchor=west] at (axis cs:5.2,3.9) {60°};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south] at (axis cs:7.6,2.0) {45°};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (axis cs:3.0,1.05) {30°};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}[30°・45°・60°]{投げる角 $\theta$}
+速さ\qty{10}{m/s}のまま、角だけを変えて道すじをくらべます。
+\begin{bkcenter}
+\usebox{\pxbplotb}
+\end{bkcenter}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{3}{Q[c,m,wd=18mm]}}, rowsep=1.5pt}
+角 $\theta$ & 30° & 45° & 60° \\
+届く距離 $R$（m） & 8.84 & 10.2 & 8.84 \\
+いちばん高い所 $H$（m） & 1.28 & 2.55 & 3.83 \\
+飛んでいる時間（s） & 1.02 & 1.44 & 1.77 \\
+\end{bktable}
+\end{bkcenter}
+30°と60°は同じ距離に届きますが、60°のほうが高く上がり、長く飛んでいます。高さは $\sin^2\theta$、飛ぶ時間は $\sin\theta$ に比例して、角が大きいほどふえます。届く距離だけが45°でいちばん大きくなるのは、たての速さ（飛ぶ時間を決める）と横の速さ（進む速さを決める）の積 $\sin\theta\cos\theta$ が、45°でいちばん大きいからです。
+\end{phbaisuru}
+
+\Needspace{8\baselineskip}\begin{phflow}[投げた物の運動]
+\phflowrow{$\dfrac{\dd^2\vec r}{\dd t^2}=\vec a$}{$\vec a=(0,\ -g)$ で一定\\成分ごとに積分}{$x=v_0\cos\theta\cdot t$\\$y=v_0\sin\theta\cdot t-\dfrac{1}{2}gt^2$}
+\phflowrow{上の2つの式}{$v_y=0$ のとき\\$y=0$ にもどるとき}{$H=\dfrac{v_0^2\sin^2\theta}{2g}$\\$R=\dfrac{v_0^2\sin2\theta}{g}$}
+\phflowrow{上の2つの式}{$\theta=0$\\下向きを $+$}{$x=v_0t$、$y=\dfrac{1}{2}gt^2$}
+\end{phflow}
+
+
+
+\noindent\textbf{表計算とプログラムで、道すじを計算する}\par
+\noindent 式を使わなくても、「短い時間ごとに少しずつ進める」計算をくり返せば、道すじが求まります（数学 6-2 のオイラー法）。速さ\qty{10}{m/s}、45°で投げたボールを、0.1秒ごとに計算します。はじめの速度の成分は $10\cos45°\approx7.07$、$10\sin45°\approx7.07$ です。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 0.1秒後のたての速度 ＝ 今のたての速度 $-$ $9.8\times0.1$（B列）
+\item 0.1秒後の横の位置 ＝ 今の横の位置 ＋ $7.07\times0.1$（C列。横の速度は変わらない）
+\item 0.1秒後の高さ ＝ 今の高さ ＋ 今のたての速度 $\times0.1$（D列）
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & $t$（s） & $v_y$（m/s） & $x$（m） & $y$（m） & 式の $y$（m） \\
+2 & 0.0 & 7.071 & 0.000 & 0.000 & 0.000 \\
+3 & 0.1 & 6.091 & 0.707 & 0.707 & 0.658 \\
+4 & 0.2 & 5.111 & 1.414 & 1.316 & 1.218 \\
+5 & 0.3 & 4.131 & 2.121 & 1.827 & 1.680 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+9 & 0.7 & 0.211 & 4.950 & 2.892 & 2.549 \\
+10 & 0.8 & $-0.769$ & 5.657 & 2.913 & 2.521 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+16 & 1.4 & $-6.649$ & 9.899 & 0.981 & 0.295 \\
+17 & 1.5 & $-7.629$ & 10.607 & 0.317 & $-0.418$ \\}
+\bktabcaption{E列は $y=7.07t-4.9t^2$ で計算した値。表計算の $y$ は少し大きく出る。}
+\end{bkcenter}
+表計算の高さは、式の値より少し大きくなりました。0.1秒のあいだに速度はへっていくのに、③で「今の（大きいほうの）速度」のまま進めたからです。区切る時間を短くすると、ずれは小さくなります。プログラムで、区切る時間を0.1秒、0.01秒、0.001秒にして、地面より下になったときの横の位置（届いた距離）をくらべます。
+\begin{phcode}
+import math
+g = 9.8
+v0 = 10.0
+th = math.radians(45)    \# 角度をラジアンにする（数学 4-2）
+for dt in [0.1, 0.01, 0.001]:
+    t, x, y = 0.0, 0.0, 0.0
+    vx, vy = v0 * math.cos(th), v0 * math.sin(th)
+    while True:
+        x = x + vx * dt
+        y = y + vy * dt
+        vy = vy - g * dt
+        t = t + dt
+        if y < 0:          \# 地面より下になったら止める
+            break
+    print(dt, round(x, 2))
+\end{phcode}
+\begin{phcodeout}
+0.1 11.31
+0.01 10.32
+0.001 10.22
+\end{phcodeout}
+区切る時間を短くするほど、式の答え $R=\dfrac{10^2\sin90°}{9.8}\approx\qty{10.2}{m}$ に近づきます。式で解けない運動（空気の抵抗がある場合など。力-2 ⑨）も、この方法なら計算できます。
+
+
+
+%% ================================================================
+\bksubsection{5}{曲がる運動：接線の向きと、中心の向きの加速度}
+
+\leavevmode\label{ph:力-1:sec5}\bkhatenaref に答えましょう。速さ\qty{15}{m/s}（時速\qty{54}{km}）のまま、カーブを曲がる車を考えます。数学 4-10⑤で学んだように、速さが同じでも、向きが変われば速度は変わります（$\Delta\vec v\neq\vec 0$）。速度が変われば、加速度 $\dfrac{\Delta\vec v}{\Delta t}$ は $\vec 0$ ではありません。だから、\textbf{カーブを曲がる車は、速さが同じでも加速しています}。では、その加速度はどの向きに、どれだけの大きさなのでしょう。
+
+\noindent\textbf{加速度を2つに分ける}\par
+\noindent 曲がりながら速さも変わる車の加速度 $\vec a$ を、速度の向き（道の接線の向き）と、それに垂直な向き（カーブの内側の向き）の2つの成分に分けます（数学 4-11③）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 道（中心 C=(0,0)、半径 34 の円の一部）と接する円（点線）
+  \draw[bkGray!35, line width=7pt] (0,0) ++(150:34) arc[start angle=150, end angle=40, radius=34];
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) ++(40:34) arc[start angle=40, end angle=-15, radius=34];
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) ++(150:34) arc[start angle=150, end angle=195, radius=34];
+  \fill[bkInk] (0,0) circle (1);
+  \node[pxb lab, anchor=north] at (0,-1.5) {C（接する円の中心）};
+  \draw[bkGray, line width=0.5pt] (0,0) -- (100:34);
+  \node[pxb lab, text=bkGray, anchor=east] at (100:17) {$\rho$};
+  \coordinate (P) at (100:34);
+  \pxbcartop{(P)}{190}{bkBlue}
+  \draw[pxb vec, bkBlue] ($(P)+(190:5)$) -- ++(190:16);
+  \node[pxb lab, text=bkBlue!80!black, anchor=south] at ($(P)+(190:16)+(0,1.5)$) {速度 $\vec v$};
+  \draw[pxb vec, bkOrange] ($(P)+(10:5)$) -- ++(10:11);
+  \node[pxb lab, text=bkOrange!80!black, anchor=west] at ($(P)+(10:16)+(0.5,0)$) {$a_t$（速さを変える）};
+  \draw[pxb vec, bkRed] ($(P)+(280:4)$) -- ++(280:14);
+  \node[pxb lab, text=bkRed!80!black, anchor=west] at ($(P)+(280:13)+(1.5,0)$) {$a_n$（向きを変える）};
+\end{tikzpicture}
+\bkfigcaption{接線加速度 $a_t$ は速度の向き（ここではブレーキなので反対向き）、法線加速度 $a_n$ はカーブの内側（接する円の中心C）の向き。}\label{ph:力-1:fig-atan}
+\end{bkfigure}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{接線加速度} $a_t$：速度と同じ向きの成分。速さを変える。速さ $v$ の変わる速さ $a_t=\dfrac{\dd v}{\dd t}$。アクセルをふめば $+$、ブレーキなら $-$。
+\item \textbf{法線加速度} $a_n$：速度に垂直で、カーブの内側を向く成分。向きを変える。
+\end{itemize}
+「法線」は、接線に垂直な線のことです。
+
+\noindent\textbf{道に接する円：曲率半径}\par
+\noindent\label{ph:力-1:kyokuritsu0}道の曲がり方は、場所ごとにちがいます。ある場所のすぐ近くだけを見ると、道は円の一部のように見えます。その場所で道とぴったり重なる円（向きも、曲がり方もそろう円）を\textbf{接する円}といい、その半径 $\rho$（ロー）を\textbf{曲率半径}といいます。\bkidx{きょくりつはんけい}{曲率半径}急なカーブほど $\rho$ は小さく、ゆるいカーブほど大きくなります。まっすぐな道は、半径がかぎりなく大きい円と考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 急なカーブ（半径 8）のあと、ゆるいカーブ（半径 20）が続く道
+  \draw[bkGray!35, line width=6pt] (-6,8) -- (0,8) arc[start angle=90, end angle=0, radius=8] -- (8,-4) arc[start angle=180, end angle=270, radius=20] -- (34,-24);
+  \draw[bkBlue, line width=0.6pt, dashed] (0,0) circle (8);
+  \draw[bkOrange, line width=0.6pt, dashed] (28,-4) circle (20);
+  \fill[bkBlue] (0,0) circle (0.9);
+  \fill[bkOrange] (28,-4) circle (0.9);
+  \draw[bkBlue, line width=0.5pt] (0,0) -- (45:8);
+  \draw[bkOrange, line width=0.5pt] (28,-4) -- ++(215:20);
+  \node[pxb lab, text=bkBlue!80!black, anchor=north] at (0,-1.2) {$\rho=8$};
+  \node[pxb lab, text=bkOrange!80!black, anchor=south west] at (28.5,-3.5) {$\rho=20$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (54,0) {急なカーブ：$\rho$ が小さい\\ゆるいカーブ：$\rho$ が大きい\\まっすぐな道：$\rho$ はかぎりなく大きい};
+\end{tikzpicture}
+\bkfigcaption{道の曲がり方に合わせて、ぴったり重なる円をかく。その半径が曲率半径 $\rho$。}
+\end{bkfigure}
+
+\noindent\textbf{法線加速度の大きさ：$a_n=\dfrac{v^2}{\rho}$}\par
+\noindent\label{ph:力-1:koushin}速さ $v$ で、半径 $\rho$ の接する円にそって、短い時間 $\Delta t$ だけ進むとします。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item 進む道のりは $v\Delta t$。円の中心から見て回った角は、「弧の長さ÷半径」（数学 4-2）で $\Delta\theta=\dfrac{v\Delta t}{\rho}$（rad）。
+\item 速度の向き（接線の向き）は、半径に垂直なので、半径と同じ角 $\Delta\theta$ だけ回る。
+\item 速度の矢印の根もとをそろえると、長さ $v$ の矢印が角 $\Delta\theta$ だけ回ったので、矢印の先は半径 $v$ の円の上を動く。その動いた長さが $|\Delta\vec v|$ で、$\Delta\theta$ が小さければ弧の長さ $v\Delta\theta$ とほとんど同じ。
+\item $\Delta\vec v$ の向きは、速度に垂直で、円の中心の向き。大きさを $\Delta t$ でわって、$a_n=\dfrac{v\Delta\theta}{\Delta t}=v\times\dfrac{v}{\rho}$。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：道（半径 ρ の円）の上の2点 P、P′
+  \fill[bkInk] (0,0) circle (0.9);
+  \node[pxb lab, anchor=north] at (0,-1.5) {C};
+  \draw[bkGray!35, line width=5pt] (0,0) ++(62:34) arc[start angle=62, end angle=118, radius=34];
+  \draw[bkGray, line width=0.5pt] (0,0) -- (78:34) (0,0) -- (102:34);
+  \draw[bkGray, line width=0.5pt] (78:10) arc[start angle=78, end angle=102, radius=10];
+  \node[pxb lab, anchor=south] at (90:10.5) {$\Delta\theta$};
+  \node[pxb lab, text=bkGray, anchor=west] at (78:20) {$\rho$};
+  \fill[bkInk] (78:34) circle (0.9) (102:34) circle (0.9);
+  \node[pxb lab, anchor=north west] at (78:34) [xshift=0.5mm, yshift=-1mm] {P};
+  \node[pxb lab, anchor=north east] at (102:34) [xshift=-0.5mm, yshift=-1mm] {P$'$};
+  \draw[pxb vec, bkBlue] (78:34) -- ++(168:12);
+  \draw[pxb vec, bkOrange] (102:34) -- ++(192:12);
+  \node[pxb lab, text=bkBlue!80!black, anchor=south] at ($(78:34)+(168:7)+(0,1)$) {$\vec v$};
+  \node[pxb lab, text=bkOrange!80!black, anchor=north] at ($(102:34)+(192:7)+(0,-1)$) {$\vec v'$};
+  \node[pxb lab, anchor=north] at (0,-6) {道（半径 $\rho$ の円）の上};
+  % 右：速度の矢印の根もとをそろえる
+  \begin{scope}[shift={(92,16)}]
+  \fill[bkInk] (0,0) circle (0.9);
+  \draw[pxb vec, bkBlue] (0,0) -- (168:30);
+  \draw[pxb vec, bkOrange] (0,0) -- (192:30);
+  \draw[pxb vec, bkRed] (168:29.4) -- (192:29.4);
+  \draw[bkGray, line width=0.5pt] (168:9) arc[start angle=168, end angle=192, radius=9];
+  \node[pxb lab, anchor=west] at (1.5,0) {$\Delta\theta$};
+  \node[pxb lab, text=bkBlue!80!black, anchor=south] at (168:16) [yshift=1.6mm] {$\vec v$};
+  \node[pxb lab, text=bkOrange!80!black, anchor=north] at (192:16) [yshift=-1.6mm] {$\vec v'$};
+  \node[pxb lab, text=bkRed!80!black, anchor=east] at (180:31) {$\Delta\vec v$};
+  \node[pxb lab, anchor=north] at (-14,-12) {速度の矢印の根もとをそろえる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{道の上で $\Delta\theta$ 回ると、速度の矢印も $\Delta\theta$ 回る。$\Delta\vec v$（赤）は中心Cの向きで、長さはほぼ $v\Delta\theta$。}\label{ph:力-1:fig-dv}
+\end{bkfigure}
+
+\pheq{a_n=\frac{v^2}{\rho}}{m/s$^2$ ＝ (m/s)$^2$ ÷ m}
+③の「ほとんど同じ」が本当に正しいか、数で確かめます。半径\qty{50}{m}の円を速さ\qty{15}{m/s}で回るとき、$\Delta t$ のあいだの $|\Delta\vec v|$ は、二等辺三角形の底辺 $2v\sin\dfrac{\Delta\theta}{2}$ で正確に計算できます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{4}{Q[c,m,wd=15mm]}}, rowsep=1.5pt}
+$\Delta t$（s） & 1 & 0.5 & 0.1 & 0.01 \\
+$\Delta\theta=\dfrac{15\Delta t}{50}$（rad） & 0.3 & 0.15 & 0.03 & 0.003 \\
+$\dfrac{|\Delta\vec v|}{\Delta t}$（m/s$^2$） & 4.483 & 4.496 & 4.4998 & 4.49999 \\
+\end{bktable}
+\bktabcaption{$\Delta t$ を短くすると、$\dfrac{v^2}{\rho}=\dfrac{15^2}{50}=4.5$ に近づく。}
+\end{bkcenter}
+
+\noindent\textbf{円の上を同じ速さで回る：等速円運動}\par
+\noindent\label{ph:力-1:omega}半径 $r$ の円の上を、同じ速さ $v$ で回る運動を\textbf{等速円運動}といいます。接する円は回っている円そのものなので $\rho=r$、速さが変わらないので $a_t=0$ です。加速度は、いつも円の中心を向き、大きさは
+\pheq{a=\frac{v^2}{r}=r\omega^2}{m/s$^2$ ＝ (m/s)$^2$ ÷ m ＝ m × (rad/s)$^2$}
+です。この中心向きの加速度を\textbf{向心加速度}といいます。\bkidx{こうしんかそくど}{向心加速度}2つめの形は、1秒に回る角（角速度）$\omega$ を使って、速さを $v=r\omega$（弧の長さ＝半径×角、数学 4-2・4-8）と書いたものです。$\dfrac{(r\omega)^2}{r}=r\omega^2$ です。数学 4-15 のもっと知りたいで「速度の矢印の先も円を回る」として求めた $r\omega^2$ や、数学 5-15⑥の「2回微分すると $-\omega^2$ 倍」と同じ結果です。
+
+1周にかかる時間（\textbf{周期}）を $T$、1秒あたりの回転の数を $n$（\textbf{回転数}、単位は 1/s）とすると、1周は $2\pi$ rad なので、
+\[ \omega=\frac{2\pi}{T}=2\pi n,\qquad f=\frac{1}{T} \]
+$f$ は、1秒にくり返す回数（振動数）で、回る物では $n$ と同じです。モータなどの回転数は「毎分3000回転（3000\,min$^{-1}$）」のように1分あたりで書くことが多いので、$\omega=\dfrac{2\pi\times3000}{\qty{60}{s}}\approx\qty{314}{rad/s}$ のように、\qty{60}{s/min}でわって1秒あたりに直します。
+
+\noindent\textbf{\bkhatenaref の答え}\par
+\noindent 半径\qty{50}{m}のカーブを\qty{15}{m/s}で曲がる車の加速度は、カーブの中心の向きに
+\[ a=\frac{15^2}{50}=\qty{4.5}{m/s^2} \]
+です。重力加速度 $g$ の約半分もあります。速さが同じでも、車は中心の向きに大きく加速しているのです。体が外側へ押しつけられるように感じるのは、体がまっすぐ進み続けようとするのに、車が内側へ曲がっていくからです。車に内側向きの加速度を与えている力（タイヤと道のあいだの摩擦の力）と、体が感じる「外向きの力」の正体は、力-2 ⑥・⑦で学びます。
+
+\begin{phyomi}[$a=\dfrac{v^2}{r}$]
+「速いほど、急なカーブほど、中心向きの加速度が大きい」。速さが2乗で効くのは、速いと①の「回る角」が大きくなるうえに、③の「速度の矢印」も長いからです。速さが、2つの所で1回ずつ効いています。
+\end{phyomi}
+\begin{phmijika}[洗濯機の脱水と、カーブの制限速度]
+洗濯機の脱水では、ドラムを速く回して、中心向きの大きな加速度を服にあたえます。服はドラムのかべに支えられて円を回りますが、水は穴からまっすぐ外へ飛び出していきます（例題9）。道路のカーブに制限速度があるのは、$a$ が速さの2乗で大きくなり、タイヤが支えきれなくなるからです（力-2 ⑦）。
+\end{phmijika}
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=50mm, xmin=0, xmax=33, ymin=0, ymax=20.5, xtick={10,20,30}, ytick={2,8,18}, xlabel={$v$（m/s）}, ylabel={$a$（m/s$^2$）}]
+  \addplot[bkcurve, domain=0:30, samples=40] {x^2/50};
+  \addplot[bkcurve2, domain=0:30, samples=40] {x^2/100};
+  \fill[bkBlue] (axis cs:10,2) circle (1.6pt) (axis cs:20,8) circle (1.6pt) (axis cs:30,18) circle (1.6pt);
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=east] at (axis cs:27.5,16) {$r=\qty{50}{m}$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west] at (axis cs:25,6.2) {$r=\qty{100}{m}$};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\begin{phbaisuru}{速さ $v$}
+半径\qty{50}{m}と\qty{100}{m}のカーブで、速さと向心加速度の関係をグラフにします。
+\begin{bkcenter}
+\usebox{\pxbplota}
+\end{bkcenter}
+半径\qty{50}{m}では、\qty{10}{m/s}で\qty{2}{m/s^2}、\qty{20}{m/s}で\qty{8}{m/s^2}。速さが2倍で4倍です。半径を2倍の\qty{100}{m}にすると、同じ速さで加速度は半分になります。
+\end{phbaisuru}
+
+\Needspace{8\baselineskip}\begin{phflow}[曲がる運動]
+\phflowrow{$a_t=\dfrac{\dd v}{\dd t}$、$a_n=\dfrac{v^2}{\rho}$}{同じ速さで\\半径 $r$ の円を回る}{$a=\dfrac{v^2}{r}$\\（中心の向き）}
+\phflowrow{$a=\dfrac{v^2}{r}$}{$v=r\omega$\\（弧＝半径×角）}{$a=r\omega^2$}
+\phflowrow{1周 $2\pi$ rad を\\時間 $T$ で回る}{1秒あたりに\\なおす}{$\omega=\dfrac{2\pi}{T}$、$f=\dfrac{1}{T}$}
+\end{phflow}
+
+\begin{motto}[4]
+\phboxhead{曲がった線の曲率半径を、式から求める}
+\label{ph:力-1:kyokuritsu}道すじが $y=f(x)$ のグラフで、ほとんど平らな所（傾き $f'(x)$ が0に近い所）の曲率半径は、
+\[ \frac{1}{\rho}\approx|f''(x)| \]
+で求まります。わけは、運動で考えるとすぐわかります。グラフの上を、横の速さ $u$ が一定になるように点を動かします（$x=ut$）。傾きが0の所では、速度は真横を向いていて、速さは $u$ です。たての加速度は、$y=f(ut)$ を $t$ で2回微分して（合成関数の微分、数学 5-6）$u^2f''(x)$。速度が真横なので、たての加速度がそのまま法線加速度です。$a_n=\dfrac{u^2}{\rho}$ とくらべて、$\dfrac{1}{\rho}=|f''(x)|$。たとえば、円の底の近く $y\approx\dfrac{x^2}{2R}$ では $f''=\dfrac{1}{R}$ で、$\rho=R$ になり、合っています。力-10 では、この形を使って、はりのたわみを調べます。傾きがあるときの正しい式は $\dfrac{1}{\rho}=\dfrac{|f''|}{\bigl(1+f'^2\bigr)^{3/2}}$ です。
+\end{motto}
+
+\begin{motto}[5]
+\phboxhead{極座標で書いた速度と加速度}
+円や渦巻きのような動きは、極座標 $(r,\ \theta)$ と、場所ごとに向きが変わる単位ベクトル $\vec e_r=(\cos\theta,\ \sin\theta)$、$\vec e_\theta=(-\sin\theta,\ \cos\theta)$ で書くと楽です（数学 4-15）。動く点では $\theta$ が時間で変わるので、$\vec e_r$ と $\vec e_\theta$ も時間で変わります。合成関数の微分（数学 5-6）で、
+\[ \dot{\vec e}_r=\dot\theta(-\sin\theta,\ \cos\theta)=\dot\theta\,\vec e_\theta,\qquad \dot{\vec e}_\theta=\dot\theta(-\cos\theta,\ -\sin\theta)=-\dot\theta\,\vec e_r \]
+位置 $\vec r=r\,\vec e_r$ を積の微分（数学 5-6）で微分すると、
+\[ \vec v=\dot r\,\vec e_r+r\dot\theta\,\vec e_\theta,\qquad \vec a=(\ddot r-r\dot\theta^2)\,\vec e_r+(r\ddot\theta+2\dot r\dot\theta)\,\vec e_\theta \]
+$r$ が一定、$\dot\theta=\omega$ が一定（等速円運動）なら、$\vec v=r\omega\,\vec e_\theta$、$\vec a=-r\omega^2\,\vec e_r$ です。速度は円の接線の向きに $r\omega$、加速度は中心の向き（$-\vec e_r$）に $r\omega^2$ で、⑤の結果と同じです。$2\dot r\dot\theta$ の項は、回る台の上で中心から外へ歩く人が横に押される力（コリオリの力）につながります（力-7）。
+\end{motto}
+
+%% ================================================================
+\bksubsection{6}{動きながら見た動き：相対速度}
+
+\leavevmode\label{ph:力-1:sec6}\label{ph:力-1:soutai}電車Aに乗って、となりの線路の電車Bを見ます。AもBも動いています。Aから見たBの動きを、位置ベクトルで書いてみます。地面に決めた原点から見た、Aの位置を $\vec r_{\mathrm A}$、Bの位置を $\vec r_{\mathrm B}$ とします。Aから見たBの位置は、「Aの先からBの先へ」の矢印なので（数学 4-10⑤）、
+\[ \vec r_{\mathrm{AB}}=\vec r_{\mathrm B}-\vec r_{\mathrm A} \]
+両辺を時間で微分すると、ひき算は1つずつ微分できるので（数学 5-4）、
+\pheq{\vec v_{\mathrm{AB}}=\vec v_{\mathrm B}-\vec v_{\mathrm A}}{m/s ＝ m/s － m/s}
+これが\textbf{相対速度}です（数学 4-10⑦）。自分（A）の速度をひくのは、「自分が止まって見えるように、すべての物から自分の速度を取りのぞく」ことです。もう1回微分すると、\textbf{相対加速度} $\vec a_{\mathrm{AB}}=\vec a_{\mathrm B}-\vec a_{\mathrm A}$ になります。
+
+\noindent\textbf{速度の合成}\par
+\noindent 式を書きかえると $\vec v_{\mathrm B}=\vec v_{\mathrm A}+\vec v_{\mathrm{AB}}$ です。「動く物（A）の上で、さらに動く物（B）の地面に対する速度は、2つの速度の和」と読めます。これを\textbf{速度の合成}といいます。動く歩道（\qty{40}{m/min}、約\qty{0.67}{m/s}）の上を、同じ向きに\qty{1.3}{m/s}で歩くと、地面に対しては約\qty{2.0}{m/s}で進みます。
+
+\noindent\textbf{同じように落ちる2つの物}\par
+\noindent 空気の抵抗を無視すると、投げた物も、そっと放した物も、加速度はどちらも下向きの $g$ です。2つの物の相対加速度は $\vec a_{\mathrm{AB}}=\vec g-\vec g=\vec 0$ です。だから、片方から見ると、もう片方は\textbf{まっすぐ、同じ速さで動いて見えます}。図\ref{ph:力-1:fig-strobe}の2つのボールも、そっと放したボールから見ると、飛び出したボールは真横に\qty{2.0}{m/s}で遠ざかっていくだけです。この考え方を使うと、例題14や入試にチャレンジの問題が、あっというまに解けます。
+
+\begin{phsaki}{光の速さに近いと、速度はたし算にならない}
+速度の合成 $\vec v_{\mathrm B}=\vec v_{\mathrm A}+\vec v_{\mathrm{AB}}$ は、光の速さ $c$（約\qty{3.0e8}{m/s}）よりずっとおそい動きでだけ成り立ちます。光の速さの半分で飛ぶ宇宙船から、前へ光の速さの半分でボールを投げても、地面から見たボールの速さは $c$ にはならず、$0.8c$ です。速さ $u$ と $v$ の合成は、本当は $\dfrac{u+v}{1+uv/c^2}$ で、$u$ も $v$ も $c$ よりずっと小さいときだけ、ほぼ $u+v$ になります。これを説明するのが特殊相対性理論です（原-11）。
+
+身近なところでは、カーナビやスマートフォンの位置を決める GPS の衛星が、この効果を補正しています。衛星の時計は、速く動くことでおくれ、地上より重力が弱いことで進み、合わせると地上の時計より1日に約38マイクロ秒（\qty{38e-6}{s}）進みます。光は38マイクロ秒で約\qty{11}{km}進むので、補正しないと、位置が1日に何 km もずれてしまいます。重力で時計が進むことは一般相対性理論で説明され、大学で学びます。
+\end{phsaki}
+
+\Needspace{8\baselineskip}\begin{phflow}[相対運動]
+\phflowrow{$\vec r_{\mathrm{AB}}=\vec r_{\mathrm B}-\vec r_{\mathrm A}$}{時間で微分}{$\vec v_{\mathrm{AB}}=\vec v_{\mathrm B}-\vec v_{\mathrm A}$}
+\phflowrow{$\vec v_{\mathrm{AB}}=\vec v_{\mathrm B}-\vec v_{\mathrm A}$}{一直線の上\\（$+$ の向きを決める）}{$v_{\mathrm{AB}}=v_{\mathrm B}-v_{\mathrm A}$}
+\phflowrow{$\vec a_{\mathrm{AB}}=\vec a_{\mathrm B}-\vec a_{\mathrm A}$}{どちらも\\加速度が $\vec g$}{$\vec a_{\mathrm{AB}}=\vec 0$\\（まっすぐ見える）}
+\end{phflow}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[5.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{速度}$\vec v=\dfrac{\dd\vec r}{\dd t}$（接線の向き）\qquad\tsl{加速度}$\vec a=\dfrac{\dd\vec v}{\dd t}$\\[3pt]
+\tsl{加速度一定}$v=v_0+at$、$x=v_0t+\dfrac{1}{2}at^2$、$v^2-v_0^2=2ax$\\[3pt]
+\tsl{投げた物}横は等速、たては加速度 $-g$。$R=\dfrac{v_0^2\sin2\theta}{g}$\\[3pt]
+\tsl{曲がる運動}$a_t=\dfrac{\dd v}{\dd t}$、$a_n=\dfrac{v^2}{\rho}$。円なら $a=\dfrac{v^2}{r}=r\omega^2$（中心向き）\\[3pt]
+\tsl{相対速度}$\vec v_{\mathrm{AB}}=\vec v_{\mathrm B}-\vec v_{\mathrm A}$
+\end{taisetsu}
+
+\begin{phmada}[ぶつからない鳥の群れのしくみ]
+何千羽ものムクドリの群れは、ぶつかりもせず、いっせいに向きを変えます。1羽1羽が「近くの仲間と、相対速度をそろえる」「近づきすぎたらはなれる」「はなれすぎたら近づく」という簡単なルールで動くとしてコンピュータで計算すると、本物そっくりの群れの動きができることがわかっています（1987年に作られたモデルがはじまり）。
+
+イタリアの研究グループは、ムクドリの群れを何台ものカメラで同時に撮影し、1羽ずつの位置を立体的に調べました（2008年に発表）。その結果、1羽は、決まった距離の中の仲間ではなく、近くにいる6〜7羽ほどの仲間に合わせて動いているらしいことがわかりました。でも、鳥が目で何を見て、どのように判断して速度を変えているのか、本物の群れがどのルールで動いているのかは、まだ研究が続いています。
+\end{phmada}
+
+\begin{column}{ガリレオと、斜面を転がる球}
+ガリレオ・ガリレイ（1564〜1642年）は、ゆるい斜面に球を転がして、進んだ距離が時間の2乗に比例すること、つまり、同じ時間ごとに進む距離が1、3、5、7、…と奇数の列でふえることを確かめました。斜面を使うと動きがゆっくりになるので、時計のない時代でも、流れ出る水の量で時間をはかることができました。
+
+ガリレオはさらに、横の動きとたての動きを分けて考え、投げた物の道すじが放物線になることを示して、1638年の本（『新科学対話』）に書きました。④の「横とたてに分けて考える」方法は、ここから始まったのです。
+\end{column}
+
+\bkkigocards{\bkkigocard{$\vec v$ と $v$}{ブイ・ベクトル、ブイ}{矢印つきは速度（ベクトル）。矢印なしは速さ（大きさ）。$v=|\vec v|$。専門書では太字 $\symbf v$}{velocity, speed}{力-1}}{\bkkigocard{$\rho$}{ロー}{曲率半径（道に接する円の半径）。第4部では密度に使う}{radius of curvature}{力-1}}
+
+\begin{kotoba}\small
+\bkword{変位}{位置の変化 $\Delta\vec r$。「どこからどこへ」を表す矢印。}
+\bkword{等加速度直線運動}{一直線の上を、加速度が一定で動く運動。}\bkidx{とうかそくどちょくせんうんどう}{等加速度直線運動}
+\bkword{放物運動}{投げた物の運動。道すじは放物線。}\bkidx{ほうぶつうんどう}{放物運動}
+\bkword{接線加速度・法線加速度}{加速度の、速度の向きの成分と、それに垂直な成分。}
+\bkword{曲率半径}{道すじに接する円の半径 $\rho$。}
+\bkword{向心加速度}{円運動の、中心の向きの加速度 $\dfrac{v^2}{r}$。}
+\bkword{相対速度}{動いている物から見た速度。}
+\end{kotoba}
+
+%% ================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+例題は、どれも次の7つの段で考えます。①場面 ②何を無視するか ③図と記号 ④使う式を選ぶ理由 ⑤式を立てる ⑥解く ⑦答えを確かめる。②で無視したことは、⑦で答えが本物とずれたときに、どこを直せばよいかの手がかりになります。
+
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=58mm, height=34mm, xmin=0, xmax=46, ymin=0, ymax=25, xtick={40}, ytick={20}, xlabel={$t$（s）}, ylabel={$v$（m/s）}]
+  \fill[bkYellow!45] (axis cs:0,0) -- (axis cs:40,20) -- (axis cs:40,0) -- cycle;
+  \addplot[bkcurve, domain=0:40] {0.5*x};
+  \node[font=\sffamily\scriptsize] at (axis cs:28,5) {面積＝距離};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\Needspace{9\baselineskip}\begin{phreidai}[電車が動き出す]
+\label{ph:力-1:ex1}止まっていた電車が、一定の加速度で動き出し、40秒で時速\qty{72}{km}になりました。加速度と、そのあいだに進んだ距離を求めましょう。
+\phbamen
+電車は、まっすぐな線路の上で、止まった状態からだんだん速くなります。知りたいのは「加速度」と「40秒で進む距離」です。
+\phmushi
+電車の長さ（電車を1つの点と考える）、線路のカーブと坂。加速度は40秒のあいだ一定とします（実際の電車は、速くなるにつれて加速度が少し小さくなります）。
+\phzu
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\usebox{\pxbplota}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+進む向きを $+$、動き出した所を原点、動き出した時刻を $t=0$ とします。はじめの速度 $v_0=0$、40秒後の速度 $v$、加速度 $a$、進んだ距離 $x$。
+\end{minipage}
+\phriyu
+加速度が一定なので、③の式が使えます。速度と時間がわかっているので、加速度は $v=v_0+at$ から、距離は $x=v_0t+\dfrac{1}{2}at^2$ から求めます。
+\phtateru
+速さを m/s になおします。$\qty{72}{km/h}\times\qty{1000}{m/km}\div\qty{3600}{s/h}=\qty{20}{m/s}$。
+\[ 20=0+a\times40 \]
+\phtoku
+\[ a=\frac{20}{40}=\qty{0.50}{m/s^2},\qquad x=0\times40+\frac{1}{2}\times0.50\times40^2=\qty{400}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 単位：$(\mathrm{m/s})\div\mathrm{s}=\mathrm{m/s^2}$。距離は m。
+\item 大きさ：通勤電車の発車の加速度は約\qty{0.83}{m/s^2}（桁の感覚）。同じくらいの大きさで、ありそうな値です。
+\item 別の方法で：$v$-$t$ グラフの三角形の面積は $\dfrac{1}{2}\times40\times20=400$。同じです。
+\item 極端な場合：加速度を0に近づけると、40秒で速くならず、進む距離も0に近づきます。
+\end{itemize}
+\kotae 加速度 \qty{0.50}{m/s^2}、距離 約\qty{400}{m}
+\end{phreidai}
+\begin{jibun}
+止まっていた電車が、一定の加速度で動き出し、25秒で時速\qty{54}{km}になりました。加速度と、そのあいだに進んだ距離を求めましょう。
+\bkjans{\qty{15}{m/s}。$a=15\div25=\qty{0.60}{m/s^2}$。$x=\dfrac{1}{2}\times0.60\times25^2=187.5$ で、約\qty{190}{m}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[気づいてから止まるまで]
+\label{ph:力-1:ex2}時速\qty{72}{km}で走る車の運転手が、前に危ないものを見つけて、ブレーキをふみました。気づいてからブレーキがきき始めるまでの時間（空走時間）を0.75秒、ブレーキがきいているあいだの加速度の大きさを \qty{7.0}{m/s^2} とします。気づいてから止まるまでに進む距離を求めましょう。
+\phbamen
+2つの段階に分かれます。気づいてからブレーキがきくまでは、同じ速さのまま進みます。ブレーキがきいてからは、一定の加速度でおそくなって止まります。
+\phmushi
+車の長さ、道の坂。ブレーキの加速度は止まるまで一定とします（タイヤと道の状態で決まる値を、1つの数で代表させる）。
+\phzu
+\noindent\begin{minipage}[c]{0.57\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.4mm]}] (0,0) -- (66,0);
+  \node[font=\sffamily\scriptsize, anchor=north] at (66,-1) {$x$};
+  \foreach \x/\l in {0/0, 22/$x_1$, 62/$x_1+x_2$} {\draw[bkInk, line width=0.6pt] (\x,-1.2) -- (\x,1.2); \node[font=\sffamily\scriptsize, anchor=north] at (\x,-1.5) {\l};}
+  \bkcar{(-2,2)}{0.35}{bkBlue}
+  \draw[bkOrange, line width=2pt] (0,6) -- (22,6);
+  \draw[bkRed, line width=2pt] (22,6) -- (62,6);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south] at (11,7) {空走 $x_1$};
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=south] at (42,7) {ブレーキ $x_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+進む向きを $+$ にします。はじめの速度 $v_0=\qty{20}{m/s}$（時速72 km）。空走距離 $x_1$、ブレーキの距離 $x_2$。ブレーキの加速度は $a=\qty{-7.0}{m/s^2}$。
+\end{minipage}
+\phriyu
+空走のあいだは速さが一定なので $x=vt$。ブレーキのあいだは、時間がわからず、速さ（20 → 0）と距離の関係を知りたいので、時間を使わない式 $v^2-v_0^2=2ax$ を選びます。
+\phtateru
+\[ x_1=20\times0.75,\qquad 0^2-20^2=2\times(-7.0)\times x_2 \]
+\phtoku
+\[ x_1=\qty{15}{m},\qquad x_2=\frac{400}{14}\approx\qty{28.6}{m},\qquad x_1+x_2\approx\qty{43.6}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 単位：$\dfrac{(\mathrm{m/s})^2}{\mathrm{m/s^2}}=\mathrm m$。
+\item 別の方法で：止まるまでの時間は $\dfrac{20}{7.0}\approx\qty{2.86}{s}$。そのあいだの平均の速さは $\dfrac{20+0}{2}=10$ なので、$10\times2.86\approx\qty{28.6}{m}$。同じです。
+\item 極端な場合：ブレーキがどれだけ強くても（$a$ の大きさをかぎりなく大きくしても）、空走距離の\qty{15}{m}は残ります。
+\end{itemize}
+\kotae 約\qty{44}{m}（空走\qty{15}{m}、ブレーキ約\qty{29}{m}）
+\end{phreidai}
+\begin{jibun}
+時速\qty{54}{km}で走る車が、例題2と同じ条件（空走時間0.75秒、ブレーキの加速度の大きさ \qty{7.0}{m/s^2}）で止まります。気づいてから止まるまでの距離を求めましょう。
+\bkjans{\qty{15}{m/s}。空走 $15\times0.75=\qty{11.25}{m}$、ブレーキ $\dfrac{15^2}{2\times7.0}\approx\qty{16.1}{m}$。合わせて約\qty{27}{m}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[橋から石を落とす]
+\label{ph:力-1:ex3}橋の上から石をそっと放すと、2.0秒後に水面に着きました。橋から水面までの高さと、水面に着く直前の速さを求めましょう。
+\phbamen
+石は止まった状態から、まっすぐ下へ落ちます。時間がわかっていて、落ちた距離と速さを知りたい場面です。
+\phmushi
+空気の抵抗、石の大きさと回転。重力加速度は $g=\qty{9.8}{m/s^2}$ で一定とします。
+\phzu
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!25] (-6,-30) rectangle (34,-34);
+  \fill[bkGray!50] (-6,0) rectangle (20,3);
+  \fill[bkGray!50] (14,-30) rectangle (18,0);
+  \fill[bkGray] (8,4.6) circle (1.5);
+  \draw[pxb vec, bkInk] (25,3) -- (25,-29);
+  \node[font=\sffamily\scriptsize, anchor=west] at (26,2) {$y=0$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (26,-14) {$y$};
+  \node[font=\sffamily\scriptsize, anchor=west] at (26,-27) {水面};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+放した所を $y=0$、下向きを $+$ にします。落ちた時間 $t=\qty{2.0}{s}$、落ちた距離 $y$、速さ $v$。
+\end{minipage}
+\phriyu
+自由落下（$a=g$、$v_0=0$）なので、流れ図の $y=\dfrac{1}{2}gt^2$ と $v=gt$ を使います。
+\phtateru
+\[ y=\frac{1}{2}\times9.8\times2.0^2,\qquad v=9.8\times2.0 \]
+\phtoku
+\[ y=\qty{19.6}{m},\qquad v=\qty{19.6}{m/s} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 別の式で：$v^2=2gy$ に入れると、
+\[ 19.6^2=384.16,\qquad 2\times9.8\times19.6=384.16 \]
+で、合っています。
+\item 大きさ：\qty{19.6}{m}はビルの6階くらい。\qty{19.6}{m/s}は時速約\qty{71}{km}です。
+\item 有効数字：時間が2けた（2.0）なので、答えも2けたにまるめます。
+\end{itemize}
+\kotae 高さ 約\qty{20}{m}、速さ 約\qty{20}{m/s}
+\end{phreidai}
+\begin{jibun}
+橋の上から石をそっと放すと、1.5秒後に水面に着きました。橋から水面までの高さと、着く直前の速さを求めましょう。
+\bkjans{$y=4.9\times1.5^2\approx\qty{11}{m}$、$v=9.8\times1.5\approx\qty{15}{m/s}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[ボールを真上に投げる]
+\label{ph:力-1:ex4}ボールを真上に\qty{14}{m/s}で投げました。投げた所から、いちばん高い所までの高さと、そこまでの時間を求めましょう。また、投げた所にもどってくるのは何秒後ですか。
+\phbamen
+ボールは上がりながらおそくなり、いちばん高い所で一瞬止まり、落ちてきます。
+\phmushi
+空気の抵抗、ボールの大きさと回転。$g=\qty{9.8}{m/s^2}$ で一定。
+\phzu
+上向きを $+$、投げた所を $y=0$ にします。$v_0=\qty{14}{m/s}$、加速度 $a=-g$。いちばん高い所の高さ $h$、そこまでの時間 $t_1$。
+\phriyu
+いちばん高い所は「速度が0になる所」です。時間を知りたいので $v=v_0-gt$、高さは時間を使わない $v^2-v_0^2=2ax$ が早いです。
+\phtateru
+\[ 0=14-9.8\,t_1,\qquad 0^2-14^2=2\times(-9.8)\times h \]
+\phtoku
+\[ t_1=\frac{14}{9.8}\approx\qty{1.43}{s},\qquad h=\frac{196}{19.6}=\qty{10}{m} \]
+もどるまでの時間は、上がる時間と下りる時間が同じなので $2t_1\approx\qty{2.86}{s}$（$y=14t-4.9t^2=0$ を解いても $t=\dfrac{14}{4.9}\approx2.86$）。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 別の式で：$y=14\times1.43-4.9\times1.43^2\approx10.0$。合っています。
+\item 対称性：高さ\qty{10}{m}から自由落下すると $v^2=2\times9.8\times10=196$、$v=\qty{14}{m/s}$。投げた速さで、もどってきます。
+\end{itemize}
+\kotae 高さ \qty{10}{m}、約\qty{1.4}{s}。もどるのは約\qty{2.9}{s}後
+\end{phreidai}
+\begin{jibun}
+ボールを真上に\qty{9.8}{m/s}で投げました。いちばん高い所までの高さと時間、投げた所にもどるまでの時間を求めましょう。
+\bkjans{$t_1=9.8\div9.8=\qty{1.0}{s}$、$h=\dfrac{9.8^2}{2\times9.8}=\qty{4.9}{m}$、もどるのは\qty{2.0}{s}後}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[机から飛び出すボール]
+\label{ph:力-1:ex5}高さ\qty{1.25}{m}の机の上を\qty{2.0}{m/s}で転がってきたボールが、はしから水平に飛び出しました。床に着くまでの時間と、机のはしの真下から、床に着く所までの距離を求めましょう。
+\phbamen
+図\ref{ph:力-1:fig-strobe}の場面です。横には同じ速さで進み、たてには自由落下します。
+\phmushi
+空気の抵抗、ボールの大きさと回転（転がっていた回転は、飛び出したあとの道すじに効かないとする）。
+\phzu
+飛び出した所を原点、横の向きを $x$、下向きを $y$（$+$）にします。$v_0=\qty{2.0}{m/s}$、高さ $\qty{1.25}{m}$、時間 $t$、横の距離 $x$。
+\phriyu
+水平投射なので、横は $x=v_0t$、たては $y=\dfrac{1}{2}gt^2$。たての動きだけで時間が決まり、その時間で横の距離が決まります。
+\phtateru
+\[ 1.25=\frac{1}{2}\times9.8\times t^2,\qquad x=2.0\times t \]
+\phtoku
+\[ t^2=\frac{1.25}{4.9}\approx0.255,\qquad t\approx\qty{0.505}{s},\qquad x\approx2.0\times0.505\approx\qty{1.01}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 横の速さは時間に関係ないので、速く転がすほど遠くに着きますが、床に着く時間は同じ（約0.5秒）です。
+\item 極端な場合：転がる速さを0に近づけると、真下に落ちます（$x\to0$）。
+\item 床に着く直前のたての速さは $9.8\times0.505\approx\qty{4.9}{m/s}$。速度の大きさは $\sqrt{2.0^2+4.9^2}\approx\qty{5.3}{m/s}$ です。
+\end{itemize}
+\kotae 約\qty{0.51}{s}、約\qty{1.0}{m}
+\end{phreidai}
+\begin{jibun}
+高さ\qty{0.80}{m}の台の上を\qty{3.0}{m/s}で転がってきたボールが、はしから水平に飛び出しました。床に着くまでの時間と、台のはしの真下から着く所までの距離を求めましょう。
+\bkjans{$t=\sqrt{0.80\div4.9}\approx\qty{0.40}{s}$、$x=3.0\times0.404\approx\qty{1.2}{m}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[スプリンクラーの水]
+\label{ph:力-1:ex6}芝生のスプリンクラーが、地面から45°の向きに、\qty{10}{m/s}で水を出しています。水が届く距離と、水のいちばん高い所の高さを求めましょう。ふき出し口の高さは無視します。
+\phbamen
+水のつぶの1つ1つが、投げたボールと同じように飛ぶと考えます。
+\phmushi
+空気の抵抗、水のつぶの分かれ方（実際の水は、空気の中でつぶに分かれ、おそくなります）、ふき出し口の高さ。
+\phzu
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGreen!60!black, line width=1pt] (-3,0) -- (60,0);
+  \draw[bkBlue, line width=1.2pt, domain=0:51, samples=40] plot (\x, {\x-\x*\x/51});
+  \draw[pxb vec, bkOrange] (0,0) -- (9,9);
+  \node[font=\sffamily\scriptsize, anchor=west] at (4,1.6) {45°};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (0,-3) -- node[below, font=\sffamily\scriptsize] {$R$} (51,-3);
+  \draw[bkGray, line width=0.5pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (25.5,0) -- node[right, font=\sffamily\scriptsize] {$H$} (25.5,12.75);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south east] at (8,9) {$v_0$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+ふき出し口を原点、水平に $x$、上に $y$。$v_0=\qty{10}{m/s}$、$\theta=45°$。届く距離 $R$、高さ $H$。
+\end{minipage}
+\phriyu
+横とたてに分けると、④で導いた $R=\dfrac{v_0^2\sin2\theta}{g}$ と $H=\dfrac{v_0^2\sin^2\theta}{2g}$ が使えます。
+\phtateru
+\[ R=\frac{10^2\times\sin90°}{9.8},\qquad H=\frac{10^2\times(\sin45°)^2}{2\times9.8} \]
+\phtoku
+$\sin90°=1$、$(\sin45°)^2=\dfrac{1}{2}$ なので、
+\[ R=\frac{100}{9.8}\approx\qty{10.2}{m},\qquad H=\frac{50}{19.6}\approx\qty{2.55}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 45°のときは $H=\dfrac{R}{4}$ になります（$\dfrac{10.2}{4}\approx2.55$）。
+\item ④のプログラムで、区切る時間を短くした答え（10.22）とも合います。
+\item 大きさ：実際の水は空気の抵抗でおそくなるので、届く距離はこれより短くなります。この答えは「いちばん遠くて、このくらい」という見積もりです。
+\end{itemize}
+\kotae 距離 約\qty{10}{m}、高さ 約\qty{2.6}{m}
+\end{phreidai}
+\begin{jibun}
+地面から30°の向きに、\qty{8.0}{m/s}で水をふき出します。水が届く距離と、いちばん高い所の高さを求めましょう。
+\bkjans{$R=\dfrac{8.0^2\sin60°}{9.8}\approx\qty{5.7}{m}$、$H=\dfrac{8.0^2\times0.5^2}{2\times9.8}\approx\qty{0.82}{m}$}
+\end{jibun}
+
+\begin{lrbox}{\pxbplota}\begin{tikzpicture}
+\begin{axis}[bkplot, width=66mm, height=34mm, xmin=0, xmax=11.4, ymin=0, ymax=2.8, xtick={2,8,10}, ytick={2}, xlabel={$t$（s）}, ylabel={$v$（m/s）}]
+  \fill[bkYellow!45] (axis cs:0,0) -- (axis cs:2,2) -- (axis cs:8,2) -- (axis cs:10,0) -- cycle;
+  \addplot[bkcurve] coordinates {(0,0) (2,2) (8,2) (10,0)};
+\end{axis}
+\end{tikzpicture}\end{lrbox}%
+\Needspace{9\baselineskip}\begin{phreidai}[エレベータの $v$-$t$ グラフ]
+\label{ph:力-1:ex7}エレベータが、止まった状態から2秒で上向きに\qty{2}{m/s}になり、6秒間その速さで上がり、2秒かけて止まりました（数学 5-5 のはてな？のエレベータ）。上がった高さを求めましょう。
+\phbamen
+速度が3つの区間で変わります。区間ごとに加速度は一定です。
+\phmushi
+加速度の、区間の切りかわりでのなめらかな変化（実際のエレベータは、加速度を少しずつ変えます）。かごを点と考えます。
+\phzu
+\noindent\begin{minipage}[c]{0.55\linewidth}\centering
+\usebox{\pxbplota}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}
+上向きを $+$ にします。速度 $v$ のグラフの下の面積が、上がった高さ（変位）です。
+\end{minipage}
+\phriyu
+区間ごとに式を使ってもよいのですが、$v$-$t$ グラフの面積が変位になる（③）ので、台形の面積で一度に求めます。
+\phtateru
+台形の上底は6秒（一定の速さの区間）、下底は10秒（全体）、高さは\qty{2}{m/s}です。
+\[ \text{面積}=\frac{(6+10)\times2}{2} \]
+\phtoku
+\[ \text{面積}=\qty{16}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 区間ごとに：加速 $\dfrac{1}{2}\times1\times2^2=2$、一定 $2\times6=12$、減速 $2$。合わせて\qty{16}{m}。同じです。
+\item 大きさ：建物の1階分の高さを約\qty{3}{m}〜\qty{4}{m}とすると、4〜5階分です。
+\end{itemize}
+\kotae \qty{16}{m}
+\end{phreidai}
+\begin{jibun}
+エレベータが、止まった状態から3秒で上向きに\qty{1.5}{m/s}になり、7秒間その速さで上がり、2秒かけて止まりました。上がった高さを求めましょう。
+\bkjans{台形の面積 $\dfrac{(7+12)\times1.5}{2}=\qty{14.25}{m}$。約\qty{14}{m}}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[カーブを曲がる車の加速度]
+\label{ph:力-1:ex8}半径\qty{50}{m}のカーブを、時速\qty{54}{km}の一定の速さで曲がる車の、加速度の向きと大きさを求めましょう。また、それは重力加速度 $g$ の何倍ですか（\bkhatenaref）。
+\phbamen
+速さは変わらず、向きだけが変わります。
+\phmushi
+車の大きさ（点と考える）。カーブは円の一部とします。
+\phzu
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray!35, line width=5pt] (0,0) ++(20:24) arc[start angle=20, end angle=110, radius=24];
+  \fill[bkInk] (0,0) circle (0.8);
+  \node[font=\sffamily\scriptsize, anchor=north] at (0,-1) {中心};
+  \draw[bkGray, line width=0.5pt] (0,0) -- (65:24);
+  \pxbcartop{(65:24)}{155}{bkBlue}
+  \draw[pxb vec, bkBlue] ($(65:24)+(155:4.5)$) -- ++(155:9);
+  \draw[pxb vec, bkRed] ($(65:24)+(245:3)$) -- ++(245:10);
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=west] at ($(65:24)+(245:9)+(1.5,0)$) {$\vec a$};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south] at ($(65:24)+(155:12)+(0,1)$) {$\vec v$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}
+半径 $r=\qty{50}{m}$、速さ $v=\qty{15}{m/s}$（時速54 km）、加速度 $a$。
+\end{minipage}
+\phriyu
+同じ速さで円の一部を回るので、等速円運動の向心加速度 $a=\dfrac{v^2}{r}$ を使います。向きはカーブの中心の向きです。
+\phtateru
+\[ a=\frac{15^2}{50} \]
+\phtoku
+\[ a=\frac{225}{50}=\qty{4.5}{m/s^2},\qquad \frac{a}{g}=\frac{4.5}{9.8}\approx0.46 \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 単位：$\dfrac{(\mathrm{m/s})^2}{\mathrm m}=\mathrm{m/s^2}$。
+\item 大きさ：$g$ の半分くらい。乾いた道で急ブレーキをかけたときの約\qty{7}{m/s^2}より小さいので、タイヤが支えられる大きさです（力-2 ⑦）。
+\item 極端な場合：半径をかぎりなく大きくすると（まっすぐな道）、加速度は0に近づきます。
+\end{itemize}
+\kotae カーブの中心の向きに\qty{4.5}{m/s^2}。$g$ の約0.46倍
+\end{phreidai}
+\begin{jibun}
+半径\qty{80}{m}のカーブを、時速\qty{72}{km}の一定の速さで曲がる車の、加速度の大きさを求めましょう。$g$ の何倍ですか。
+\bkjans{\qty{20}{m/s}。$a=\dfrac{20^2}{80}=\qty{5.0}{m/s^2}$。$5.0\div9.8\approx0.51$ 倍}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[洗濯機の脱水]
+\label{ph:力-1:ex9}洗濯機の脱水で、半径\qty{0.25}{m}のドラムが毎分800回転しています。ドラムのかべに押しつけられた服の速さと、向心加速度の大きさを求めましょう。向心加速度は $g$ の何倍ですか。
+\phbamen
+服はドラムといっしょに、同じ速さで円を回ります（等速円運動）。回転の速さが「毎分○回転」で与えられています。
+\phmushi
+服の厚さ（服はドラムのかべの上にある点とする）。回り始めと止まるときの、速さの変化。
+\phzu
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=1.2pt, fill=bkGray!8] (0,0) circle (14);
+  \foreach \a in {0,30,...,330} {\fill[white] (\a:11.6) circle (0.7); \draw[bkGray, line width=0.3pt] (\a:11.6) circle (0.7);}
+  \fill[bkInk] (0,0) circle (0.8);
+  \draw[bkGray, line width=0.5pt] (0,0) -- (40:14);
+  \node[font=\sffamily\scriptsize, anchor=south east] at (40:7) {$r$};
+  \fill[bkOrange] (40:13) circle (1.4);
+  \draw[pxb vec, bkBlue] (40:14) -- ++(130:9);
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (200:17) arc[start angle=200, end angle=250, radius=17];
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.6\linewidth}
+半径 $r=\qty{0.25}{m}$、回転数 毎分800回転、角速度 $\omega$、速さ $v$、向心加速度 $a$。
+\end{minipage}
+\phriyu
+回転数から角速度 $\omega$ を出せば、$v=r\omega$ と $a=r\omega^2$ が使えます（⑤）。
+\phtateru
+1回転は $2\pi$ rad なので、毎分800回転は1分に $800\times2\pi$ rad。1秒あたりになおして、
+\[ \omega=\frac{800\times2\pi}{\qty{60}{s}},\qquad v=0.25\,\omega,\qquad a=0.25\,\omega^2 \]
+\phtoku
+\[ \omega\approx\qty{83.8}{rad/s},\qquad v\approx\qty{20.9}{m/s} \]
+\[ a\approx0.25\times83.8^2\approx\qty{1.75e3}{m/s^2} \]
+$\dfrac{a}{g}=\dfrac{1755}{9.8}\approx179$ です。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 別の式で：$\dfrac{v^2}{r}=\dfrac{20.9^2}{0.25}\approx1750$。合っています。
+\item 大きさ：服は時速約\qty{75}{km}で回っています。服の中の水には、ドラムのかべからの力がはたらかないので、穴からまっすぐ飛び出していきます。
+\end{itemize}
+\kotae 速さ 約\qty{21}{m/s}、向心加速度 約\qty{1.8e3}{m/s^2}（$g$ の約180倍）
+\end{phreidai}
+\begin{jibun}
+半径\qty{0.25}{m}のドラムが毎分1200回転しています。かべの服の速さと、向心加速度の大きさを求めましょう。$g$ の何倍ですか。
+\bkjans{$\omega=\dfrac{1200\times2\pi}{60}\approx\qty{126}{rad/s}$、$v\approx\qty{31}{m/s}$、$a=0.25\times126^2\approx\qty{3.9e3}{m/s^2}$、約400倍}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[ブレーキをかけながら曲がる]
+\label{ph:力-1:ex10}半径\qty{100}{m}のカーブを走る車が、速さ\qty{20}{m/s}のとき、ブレーキで速さを1秒に\qty{3.0}{m/s}の割合でへらしています。この瞬間の加速度の大きさを求めましょう。
+\phbamen
+速さと向きの両方が変わっています。加速度を、接線と法線の2つの成分に分けて考えます（⑤）。
+\phmushi
+車の大きさ。カーブは円の一部とします。
+\phzu
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk] (0,0) circle (1);
+  \draw[pxb vec, bkOrange] (0,0) -- (-15,0);
+  \draw[pxb vec, bkRed] (0,0) -- (0,-20);
+  \draw[pxb vec, bkPurple] (0,0) -- (-15,-20);
+  \draw[bkGray, dashed, line width=0.4pt] (-15,0) -- (-15,-20) -- (0,-20);
+  \draw[pxb vec, bkBlue] (2,0) -- (14,0);
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south] at (8,0.8) {$\vec v$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south] at (-7.5,0.8) {$a_t=3.0$};
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=west] at (0.8,-12) {$a_n=4.0$};
+  \node[font=\sffamily\scriptsize, text=bkPurple, anchor=east] at (-9,-11) {$\vec a$};
+  \node[font=\sffamily\scriptsize, anchor=north] at (0,-21) {カーブの中心の向き};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+接線加速度 $a_t$（速度と反対の向き、大きさ\qty{3.0}{m/s^2}）、法線加速度 $a_n$（中心の向き）。2つは直角なので、加速度の大きさは三平方の定理（数学 4-4）で求めます。
+\end{minipage}
+\phriyu
+速さの変わり方は $a_t$、向きの変わり方は $a_n=\dfrac{v^2}{\rho}$ で表されます。ここでは $\rho=\qty{100}{m}$ です。
+\phtateru
+\[ a_n=\frac{20^2}{100},\qquad a=\sqrt{a_t^2+a_n^2} \]
+\phtoku
+\[ a_n=\qty{4.0}{m/s^2},\qquad a=\sqrt{3.0^2+4.0^2}=\qty{5.0}{m/s^2} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 向き：中心の向きから、速度と反対の側へ $\tan^{-1}\dfrac{3.0}{4.0}\approx37°$ かたむいた向きです（数学 4-6⑦）。
+\item 極端な場合：ブレーキをやめると（$a_t=0$）、等速円運動の $a=\qty{4.0}{m/s^2}$ にもどります。
+\end{itemize}
+\kotae \qty{5.0}{m/s^2}
+\end{phreidai}
+\begin{jibun}
+半径\qty{50}{m}のカーブを走る車が、速さ\qty{10}{m/s}のとき、速さを1秒に\qty{1.5}{m/s}の割合でへらしています。この瞬間の法線加速度と、加速度の大きさを求めましょう。
+\bkjans{$a_n=\dfrac{10^2}{50}=\qty{2.0}{m/s^2}$、$a=\sqrt{1.5^2+2.0^2}=\qty{2.5}{m/s^2}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[電車の窓から見た雨]
+\label{ph:力-1:ex11}風のない日、雨つぶが真下に\qty{5.0}{m/s}で落ちています。\qty{10}{m/s}で走る電車の窓から見ると、雨はどの向きに、どれだけの速さで落ちて見えますか。
+\phbamen
+地面から見た雨の速度と、電車の速度がわかっています。電車から見た雨の速度（相対速度）を知りたい場面です。
+\phmushi
+雨つぶの加速（雨つぶはもう一定の速さで落ちているとする）。風。
+\phzu
+\noindent\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[pxb vec, bkBlue] (0,0) -- (0,-15);
+  \draw[pxb vec, bkOrange] (0,-15) -- (-30,-15);
+  \draw[pxb vec, bkRed] (-0.6,-0.6) -- (-29.4,-14.6);
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=west] at (0.8,-7.5) {雨 5.0};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (-15,-16) {$-\vec v_{\text{電車}}$};
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=south east] at (-14,-6) {電車から見た雨};
+  \draw[bkGray, line width=0.5pt] (0,-6) arc[start angle=-90, end angle=-153.4, radius=6];
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (-30,4) -- (-18,4);
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=west] at (-17,4) {電車の進む向き};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+電車の進む向きを $x$、真上を $y$ にします。雨の速度 $\vec v_{\text{雨}}=(0,\ -5.0)$、電車の速度 $\vec v_{\text{電車}}=(10,\ 0)$。
+\end{minipage}
+\phriyu
+「電車から見た雨」なので、相対速度 $\vec v_{\text{電車→雨}}=\vec v_{\text{雨}}-\vec v_{\text{電車}}$ を使います（⑥）。成分ごとにひき算できます。
+\phtateru
+\[ \vec v_{\text{電車→雨}}=(0-10,\ \ -5.0-0)=(-10,\ -5.0) \]
+\phtoku
+\[ |\vec v_{\text{電車→雨}}|=\sqrt{10^2+5.0^2}\approx\qty{11.2}{m/s},\qquad \tan\varphi=\frac{10}{5.0}=2,\quad \varphi\approx63° \]
+$\varphi$ は真下から測った角で、電車の後ろの向きへかたむいています。
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 極端な場合：電車が止まれば（$10\to0$）、雨は真下（$\varphi=0$）に見えます。電車が速いほど、雨のすじは横に寝ていきます。
+\item 窓に、雨が後ろへ流れるななめのすじがつくのは、このためです。
+\end{itemize}
+\kotae 電車の後ろの向きへ、真下から約63°かたむいた向きに、約\qty{11}{m/s}
+\end{phreidai}
+\begin{jibun}
+風のない日、雨つぶが真下に\qty{4.0}{m/s}で落ちています。\qty{3.0}{m/s}で走る自転車から見ると、雨はどの向きに、どれだけの速さで落ちて見えますか。
+\bkjans{$\sqrt{3.0^2+4.0^2}=\qty{5.0}{m/s}$。$\tan\varphi=3.0\div4.0$ より、真下から進む向きと反対へ約37°}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[投げたボールの道すじの曲がり方]
+\label{ph:力-1:ex12}ボールを、地面から60°の向きに\qty{20}{m/s}で投げました。いちばん高い所で、道すじの曲率半径はいくらですか。
+\phbamen
+道すじは放物線です。いちばん高い所の「曲がり方」を、接する円の半径で表します。
+\phmushi
+空気の抵抗、ボールの大きさと回転。
+\phzu
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 道すじ y＝18−0.0357(x−22.4)²：いちばん高い所の曲率半径は 1/(2×0.0357)＝14 mm
+  \draw[bkGreen!60!black, line width=0.8pt] (-2,0) -- (48,0);
+  \draw[bkBlue, line width=1.2pt, domain=0:44.8, samples=50] plot (\x, {18-0.0357*(\x-22.4)*(\x-22.4)});
+  \draw[bkOrange, line width=0.6pt, dashed] (22.4,4) circle (14);
+  \fill[bkInk] (22.4,18) circle (0.9);
+  \draw[pxb vec, bkBlue] (23.6,18) -- (35,18);
+  \draw[pxb vec, bkRed] (22.4,16.8) -- (22.4,9);
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south] at (31,18.6) {$v_x$};
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=west] at (23,11) {$g$};
+  \fill[bkOrange] (22.4,4) circle (0.7);
+  \draw[bkOrange, line width=0.5pt] (22.4,4) -- ++(215:14);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south east] at (16.5,0.6) {$\rho$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+いちばん高い所では、速度は真横（$v_x=v_0\cos60°$）、加速度は真下に $g$ です。接する円（点線）の中心は、真下にあります。
+\end{minipage}
+\phriyu
+いちばん高い所では、加速度 $g$ が速度にちょうど垂直なので、$g$ そのものが法線加速度です。$a_n=\dfrac{v^2}{\rho}$ を、$\rho$ について解きます。
+\phtateru
+\[ v_x=20\cos60°,\qquad g=\frac{v_x^2}{\rho} \]
+\phtoku
+\[ v_x=20\times0.5=\qty{10}{m/s},\qquad \rho=\frac{v_x^2}{g}=\frac{100}{9.8}\approx\qty{10.2}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 別の方法で：道すじの式 $y=x\tan\theta-\dfrac{g}{2v_0^2\cos^2\theta}x^2$ を2回微分すると $|y''|=\dfrac{g}{v_0^2\cos^2\theta}=\dfrac{9.8}{100}$。もっと知りたい（★4）の $\dfrac{1}{\rho}=|y''|$ から $\rho=\dfrac{100}{9.8}$。同じです。
+\item 極端な場合：真上に近い向きで投げると（$\theta\to90°$）、$v_x\to0$ で $\rho\to0$。上がって落ちるだけの、するどい折り返しになります。
+\end{itemize}
+\kotae 約\qty{10}{m}
+\end{phreidai}
+\begin{jibun}
+ボールを、地面から30°の向きに\qty{15}{m/s}で投げました。いちばん高い所での、道すじの曲率半径を求めましょう。
+\bkjans{$v_x=15\cos30°\approx\qty{13.0}{m/s}$。$\rho=\dfrac{13.0^2}{9.8}\approx\qty{17}{m}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[ジャンプ台から飛び出す]
+\label{ph:力-1:ex13}スキーのジャンプで、選手がジャンプ台のはしから水平に\qty{25}{m/s}で飛び出し、傾き30°のまっすぐな斜面に着地するとします。空気の力を無視して、飛んでいる時間と、斜面にそって飛んだ距離を求めましょう。
+\phbamen
+飛び出したあとは、水平投射です。ただし、着地するのは水平な床ではなく、ななめの斜面です。
+\phmushi
+空気の力（本物の選手は、体と板で空気から上向きの力を受けて、もっと遠くまで飛ぶ）。選手の大きさ。斜面の形（本物は曲がっている）。
+\phzu
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1 m を 0.6 mm
+  \fill[bkBlue!10] (0,0) -- (52,-30) -- (0,-30) -- cycle;
+  \draw[bkInk, line width=0.8pt] (-6,0) -- (0,0) -- (52,-30);
+  \draw[bkBlue, line width=1.1pt, domain=0:44.2, samples=40] plot (\x, {-0.013067*\x*\x});
+  \fill[bkOrange] (44.2,-25.5) circle (1.1);
+  \draw[pxb vec, bkOrange] (0,1.6) -- (9,1.6);
+  \node[font=\sffamily\scriptsize, anchor=west] at (9.5,2.4) {$v_0$};
+  \draw[bkGray, line width=0.5pt] (8,0) arc[start angle=0, end angle=-30, radius=8];
+  \node[font=\sffamily\scriptsize, anchor=west] at (8.4,-2.5) {30°};
+  \draw[bkGray, line width=0.5pt, dashed] (0,0) -- (12,0);
+  \node[font=\sffamily\scriptsize, anchor=south west] at (30,-15) {$L$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+飛び出した所を原点、水平に $x$、下向きに $y$。$v_0=\qty{25}{m/s}$。斜面の上の点は $y=x\tan30°$ をみたします。斜面にそった距離 $L$。
+\end{minipage}
+\phriyu
+空中では水平投射の $x=v_0t$、$y=\dfrac{1}{2}gt^2$。着地は「ボールの位置が、斜面の式をみたすとき」です。
+\phtateru
+\[ \frac{1}{2}\times9.8\times t^2=(25t)\times\tan30° \]
+\phtoku
+$t$ は0ではないので、両辺を $t$ でわって、$4.9t=25\tan30°\approx14.43$。
+\[ t\approx\qty{2.95}{s},\qquad x=25\times2.95\approx\qty{73.6}{m} \]
+\[ L=\frac{x}{\cos30°}\approx\frac{73.6}{0.866}\approx\qty{85.0}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 文字のまま解くと $L=\dfrac{2v_0^2\tan\alpha}{g\cos\alpha}$（$\alpha$ は斜面の角）。飛び出す速さが2倍なら、距離は4倍です。
+\item 別の確かめ：たてに落ちた距離 $y=4.9\times2.95^2\approx\qty{42.6}{m}$ は、$x\tan30°\approx42.5$ とほぼ同じ（まるめのずれ）。
+\item 大きさ：本物の選手は空気の力で浮くので、もっと遠くまで飛びます。このモデルは「空気がなければ、ここまで」という見積もりです。
+\end{itemize}
+\kotae 約\qty{3.0}{s}、約\qty{85}{m}
+\end{phreidai}
+\begin{jibun}
+小さなジャンプ台から、水平に\qty{15}{m/s}で飛び出し、傾き30°のまっすぐな斜面に着地します。飛んでいる時間と、斜面にそった距離を求めましょう（空気の力は無視）。
+\bkjans{$4.9t=15\tan30°$ より $t\approx\qty{1.8}{s}$。$x=15\times1.77\approx\qty{26.5}{m}$、$L=\dfrac{26.5}{\cos30°}\approx\qty{31}{m}$}
+\end{jibun}
+
+\Needspace{9\baselineskip}\begin{phreidai}[2つのボールがぶつかる時刻]
+\label{ph:力-1:ex14}地面からボールAを真上に\qty{20}{m/s}で投げ上げると同時に、Aの真上\qty{20}{m}の所からボールBをそっと放しました。2つがぶつかるのは何秒後で、地面から何 m の高さですか。
+\phbamen
+Aは上がり、Bは落ちてきます。どちらも、加速度は下向きの $g$ です。
+\phmushi
+空気の抵抗、ボールの大きさ。
+\phzu
+上向きを $+$、地面を $y=0$ にします。Aは $y_{\mathrm A}=20t-4.9t^2$、Bは $y_{\mathrm B}=20-4.9t^2$。
+\phriyu
+2つの式を連立してもよいのですが、相対運動（⑥）で考えると簡単です。どちらも加速度が $g$ なので、相対加速度は0です。Aから見ると、Bは一定の速さでまっすぐ近づいてきます。
+\phtateru
+Aから見たBの速度は、はじめ $0-20=\qty{-20}{m/s}$（下向きに20）で、ずっと変わりません。はじめの間の距離は\qty{20}{m}なので、
+\[ 20\,t=20 \]
+\phtoku
+\[ t=\qty{1.0}{s},\qquad y_{\mathrm A}=20\times1.0-4.9\times1.0^2=\qty{15.1}{m} \]
+\phtashikame
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 別の方法で：$y_{\mathrm A}=y_{\mathrm B}$ とおくと、$20t-4.9t^2=20-4.9t^2$。$4.9t^2$ が消えて $20t=20$、$t=1.0$。同じです。$y_{\mathrm B}=20-4.9=15.1$ も合います。
+\item $4.9t^2$ が両方から消えたことが、「相対加速度が0」ということの式での表れです。
+\end{itemize}
+\kotae \qty{1.0}{s}後、地面から約\qty{15}{m}
+\end{phreidai}
+\begin{jibun}
+地面からボールAを真上に\qty{10}{m/s}で投げ上げると同時に、Aの真上\qty{15}{m}の所からボールBをそっと放しました。2つがぶつかるのは何秒後で、地面から何 m の高さですか。
+\bkjans{$10t=15$ より\qty{1.5}{s}後。$y=10\times1.5-4.9\times1.5^2\approx\qty{4.0}{m}$}
+\end{jibun}
+
+%% ================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{速さが一定なら、加速度は0？}
+\bkng{同じ速さでカーブを曲がる車の加速度は0。}
+\bkok{向きが変わるので、中心の向きに $\dfrac{v^2}{r}$ の加速度がある。}
+加速度は「速さ」ではなく「速度（向きもこめた量）」の変わる速さです。加速度が0なのは、速さも向きも変わらない、まっすぐ同じ速さの運動だけです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{いちばん高い所では、加速度も0？}
+\bkng{真上に投げたボールは、いちばん高い所で止まるので、加速度も0。}
+\bkok{速度は0でも、加速度はいつも下向きに $g$。}
+もし加速度も0なら、速度は0のまま変わらず、ボールは空中に止まったままになるはずです（数学 5-5 のまちがえやすいところと同じ）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{投げたボールの、いちばん高い所の速さ}
+\bkng{ななめに投げたボールは、いちばん高い所で速さが0になる。}
+\bkok{たての速度だけが0。横の速度 $v_0\cos\theta$ は残る。}
+横には加速度がないので、横の速度は投げたときから変わりません。速さが0になるのは、真上に投げたときだけです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{変位と道のり}
+\bkng{校庭の1周\qty{200}{m}のトラックを1周走ると、変位は\qty{200}{m}。}
+\bkok{もとの場所にもどったので、変位は $\vec 0$。走った道のりが\qty{200}{m}。}
+変位は「はじめの位置から終わりの位置への矢印」で、とちゅうの道すじによりません。平均の速度（変位÷時間）も $\vec 0$ ですが、平均の速さ（道のり÷時間）は0ではありません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$v^2-v_0^2=2ax$ の符号}
+\bkng{ブレーキの加速度の大きさ7.0を、そのまま $a=7.0$ として入れる。}
+\bkok{進む向きを $+$ にしたら、おそくなる加速度は $a=-7.0$。}
+$a=7.0$ を入れると $0-20^2=14x$ で、$x$ が負になってしまいます。はじめに $+$ の向きを決め、速度も加速度も、その向きにそって符号をつけます。
+\end{tsumazuki}
+
+%% ================================================================
+\bksection{phgear}{工学ではこう使う}
+
+\begin{phkougaku}[道路のカーブは、ゆっくり曲がり始める]
+まっすぐな道が、いきなり円のカーブにつながっていたとします。同じ速さで走ると、つなぎ目で、向心加速度が0から $\dfrac{v^2}{r}$ へ一瞬で変わります。運転する人は、ハンドルを一瞬で回さなければならず、乗っている人は、がくんと横にゆさぶられます。
+
+そこで、道路や線路では、まっすぐな所とカーブのあいだに、曲がり方（$\dfrac{1}{\rho}$）が少しずつ大きくなる区間を入れます。これを\textbf{緩和区間}といい、道路の決まり（道路構造令）で、つけることが決められています。道路の緩和区間には、ふつう、進んだ道のりに比例して $\dfrac{1}{\rho}$ が大きくなる曲線（\textbf{クロソイド曲線}）を使います。同じ速さで走れば、向心加速度 $\dfrac{v^2}{\rho}$ は時間に比例してなめらかにふえます。ハンドルも、一定の速さで回していけばよいのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：道の形（まっすぐ → クロソイド → 円）
+  \draw[bkGray!35, line width=5pt] (0,0) -- (20,0);
+  \draw[bkGray!35, line width=5pt, domain=0:1, samples=30] plot ({20+30*\x-1.5*\x^5},{6*\x^3});
+  \draw[bkInk, line width=0.6pt] (0,0) -- (20,0);
+  \draw[bkOrange, line width=1.2pt, domain=0:1, samples=30] plot ({20+30*\x-1.5*\x^5},{6*\x^3});
+  \draw[bkBlue, line width=1.2pt] (48.5,6) arc[start angle=-51.3, end angle=10, radius=18];
+  \node[font=\sffamily\scriptsize, anchor=north] at (10,-2) {まっすぐ};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (34,-2) {緩和区間};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=west] at (63,12) {円のカーブ};
+  % 右：向心加速度のグラフ
+  \begin{scope}[shift={(76,-4)}]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (46,0);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (0,22);
+  \node[font=\sffamily\scriptsize, anchor=north] at (44,-1) {時間};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (0.5,21) {向心加速度};
+  \draw[bkGray, line width=0.6pt, dashed] (0,0.3) -- (12,0.3) -- (12,16) -- (42,16);
+  \draw[bkRed, line width=1.4pt] (0,0.6) -- (12,0.6) -- (26,16) -- (42,16);
+  \node[font=\sffamily\scriptsize, text=bkGray, anchor=south] at (9,16.5) {緩和なし};
+  \node[font=\sffamily\scriptsize, text=bkRed!80!black, anchor=north west] at (20,9) {緩和あり};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{緩和区間（だいだい）があると、向心加速度は0から少しずつふえる（赤）。ないと、いきなり変わる（灰色の点線）。}
+\end{bkfigure}
+
+たとえば、半径\qty{200}{m}のカーブを\qty{20}{m/s}で走ると、向心加速度は $\dfrac{20^2}{200}=\qty{2.0}{m/s^2}$ です。長さ\qty{60}{m}の緩和区間があれば、そこを走る3秒のあいだに、加速度は1秒に約\qty{0.67}{m/s^2}ずつ、なめらかにふえます。加速度の変わる速さ（加加速度、ジャーク。数学 5-5 のもっと知りたい）を小さくおさえることが、乗り心地の設計です。
+
+\begin{phketa}[動きの速さと加速度]
+\phketaline{人が歩く速さ}{約\qty{1.3}{m/s}（\qty{80}{m/min}）}
+\phketaline{通勤電車が動き出すときの加速度}{約\qty{0.8}{m/s^2}}
+\phketaline{乾いた道での車の急ブレーキ}{約\qty{7}{m/s^2}}
+\phketaline{赤道の地面の、地球の自転による向心加速度}{約\qty{0.034}{m/s^2}}
+\phketaline{国際宇宙ステーション（高度約\qty{400}{km}）の向心加速度}{約\qty{8.7}{m/s^2}}
+\phboxhead{答えが桁で合っているか}
+タイヤと道のあいだの摩擦で生み出せる加速度は、乾いた道でも $g$（約\qty{10}{m/s^2}）くらいまでです（力-2 ④）。ふつうの車の加速・ブレーキ・カーブで、答えが\qty{10}{m/s^2}を大きくこえたら、計算か、速さの単位の換算をまちがえていないか確かめましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{機構学,車両運動学,道路と鉄道の設計}{接線加速度、法線加速度、曲率、緩和曲線（クロソイド）、加加速度（ジャーク）、相対運動}
+
+
+
+%% ================================================================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 止まっていた車が、一定の加速度で動き出し、10秒で時速\qty{36}{km}になりました。加速度と、そのあいだに進んだ距離を求めましょう。
+\bkpans{\qty{10}{m/s}。$a=10\div10=\qty{1.0}{m/s^2}$、$x=\dfrac{1}{2}\times1.0\times10^2=\qty{50}{m}$}
+
+\bkproblem 時速\qty{36}{km}で走る車が、空走時間0.75秒、ブレーキの加速度の大きさ \qty{7.0}{m/s^2} で止まります。気づいてから止まるまでの距離を求めましょう。
+\bkpans{\qty{10}{m/s}。空走 $10\times0.75=\qty{7.5}{m}$、ブレーキ $\dfrac{10^2}{2\times7.0}\approx\qty{7.1}{m}$。合わせて約\qty{15}{m}}
+
+\bkproblem 石をそっと放すと、3.0秒後に地面に着きました。落ちた高さと、着く直前の速さを求めましょう。
+\bkpans{$y=4.9\times3.0^2\approx\qty{44}{m}$、$v=9.8\times3.0\approx\qty{29}{m/s}$}
+
+\bkproblem ボールを真上に\qty{19.6}{m/s}で投げました。いちばん高い所までの高さと時間、投げた所にもどるまでの時間を求めましょう。
+\bkpans{$t_1=19.6\div9.8=\qty{2.0}{s}$、$h=\dfrac{19.6^2}{2\times9.8}=\qty{19.6}{m}$（約\qty{20}{m}）、もどるのは\qty{4.0}{s}後}
+
+\bkproblem 高さ\qty{4.9}{m}のがけの上から、ボールを水平に\qty{5.0}{m/s}で投げました。地面に着くまでの時間と、がけの真下から着く所までの距離を求めましょう。
+\bkpans{$4.9=4.9t^2$ より $t=\qty{1.0}{s}$、$x=5.0\times1.0=\qty{5.0}{m}$}
+
+\bkproblem 半径\qty{0.50}{m}の円の上を、1秒に2回転の速さで回る点があります。角速度、速さ、向心加速度の大きさを求めましょう。
+\bkpans{$\omega=2\times2\pi\approx\qty{12.6}{rad/s}$、$v=0.50\times12.6\approx\qty{6.3}{m/s}$、$a=0.50\times12.6^2\approx\qty{79}{m/s^2}$}
+
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 地面から30°の向きに、ボールを\qty{20}{m/s}で投げました。届く距離と、いちばん高い所の高さを求めましょう（空気の抵抗は無視）。
+\bkpans{$R=\dfrac{20^2\sin60°}{9.8}\approx\qty{35}{m}$、$H=\dfrac{20^2\times0.5^2}{2\times9.8}\approx\qty{5.1}{m}$}
+
+\bkproblem 駅を出た電車が、40秒で\qty{20}{m/s}まで一定の加速度で速くなり、60秒その速さで走り、50秒かけて一定の加速度で止まりました。$v$-$t$ グラフをノートにかき、駅から駅までの距離を求めましょう。
+\bkpans{台形の面積 $\dfrac{(60+150)\times20}{2}=\qty{2100}{m}$（\qty{2.1}{km}）}
+
+\bkproblem 半径\qty{200}{m}のカーブを、\qty{30}{m/s}で走る車が、アクセルで速さを1秒に\qty{2.0}{m/s}の割合でふやしています。この瞬間の法線加速度と、加速度の大きさを求めましょう。
+\bkpans{$a_n=\dfrac{30^2}{200}=\qty{4.5}{m/s^2}$、$a=\sqrt{2.0^2+4.5^2}\approx\qty{4.9}{m/s^2}$}
+
+\bkproblem 風のない日、雪が真下に\qty{1.2}{m/s}で落ちています。時速\qty{18}{km}で走る車から見ると、雪はどの向きに、どれだけの速さで来るように見えますか。
+\bkpans{車は\qty{5.0}{m/s}。$\sqrt{5.0^2+1.2^2}\approx\qty{5.1}{m/s}$。$\tan\varphi=5.0\div1.2$ より、真下から車の後ろの向きへ約77°かたむいた向きに動く。ほとんど正面から向かってくるように見える}
+
+\phnyushi
+\bkproblem 水平に速さ $v_0$ で飛び出した物体が、傾きの角 $\alpha$ のまっすぐな斜面に落ちます（例題13）。重力加速度を $g$ とし、空気の抵抗は無視します。（1）飛び出してから斜面に落ちるまでの時間 $t$ を求めましょう。（2）斜面にそって測った、落ちた所までの距離 $L$ を求めましょう。（3）落ちる直前の速度が水平となす角を $\varphi$ とするとき、$\tan\varphi=2\tan\alpha$ を示し、速度と斜面のなす角 $\varphi-\alpha$ が $v_0$ によらないことを説明しましょう。
+\bkpans{（1）\nobreak $\dfrac{1}{2}gt^2=v_0t\tan\alpha$ より $t=\dfrac{2v_0\tan\alpha}{g}$。（2）\nobreak $x=v_0t=\dfrac{2v_0^2\tan\alpha}{g}$、$L=\dfrac{x}{\cos\alpha}=\dfrac{2v_0^2\tan\alpha}{g\cos\alpha}$。（3）\nobreak 落ちる直前の速度は $(v_0,\ gt)$。$\tan\varphi=\dfrac{gt}{v_0}=2\tan\alpha$。右辺に $v_0$ がないので $\varphi$ は $v_0$ によらず、$\varphi-\alpha$ も $v_0$ によらない}
+
+\bkproblem 地面の点Oから、水平と角 $\theta$ をなす向きに、距離 $L$ の所に的Pが木の枝からつり下げてあります。Oから的Pをまっすぐねらって、速さ $v_0$ でボールを投げると同時に、的が枝からはなれて落ち始めました。重力加速度を $g$ とし、空気の抵抗は無視します。（1）的から見ると、ボールはどのように動いて見えますか。（2）ボールが的に当たるのは、投げてから何秒後ですか。（3）的の地面からの高さを $h$ とするとき、ボールが地面に落ちる前に的に当たるための、$v_0$ の条件を求めましょう（的が地面に着くまでに当たればよいとする）。
+\bkpans{（1）\nobreak ボールも的も加速度は $g$ なので、相対加速度は0。的から見ると、ボールは的に向かって、速さ $v_0$ のまままっすぐ近づいてくる。（2）\nobreak $t=\dfrac{L}{v_0}$。（3）\nobreak その時間に的が落ちる距離が $h$ 以下：$\dfrac{1}{2}g\Bigl(\dfrac{L}{v_0}\Bigr)^2\leqq h$ より $v_0\geqq L\sqrt{\dfrac{g}{2h}}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 位置・速度・加速度をベクトルで書き、微分と積分でつなげられる。\bkfurref{ph:力-1:sec2}
+\item 加速度が一定の運動の式を導き、ブレーキや投げ上げの計算に使える。\bkfurref{ph:力-1:sec3}
+\item 投げた物の道すじや、曲がる物の加速度を、成分に分けて求められる。\bkfurref{ph:力-1:sec5}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{速度も加速度も矢印なんだね。横とたて、接線と中心の向きに分ければ、どんな動きも同じ手順で計算できる。次は、その加速度を生む「力」の番だ！}

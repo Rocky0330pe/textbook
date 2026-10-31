@@ -1,0 +1,16 @@
+import numpy as np
+P=np.array([[1,2,0],[0,1,1],[1,0,1]]);Q=np.array([[2,0,1],[1,1,0],[0,3,1]])
+print(P@Q); print(P*Q)
+A=np.array([[2,1],[1,2]]);H=np.array([[1,1],[0,1]]);print('AH',A@H,'HA',H@A)
+print(np.array([[2,-1],[1,3]])@np.array([[0,2],[1,1]]), np.array([[0.5,1],[2,0]])@np.array([[2,4],[1,-2]]))
+B1=np.array([[1,0],[0,2]]);B2=np.array([[0,1],[1,0]]);print(B1@B2,B2@B1)
+S=np.array([[2,0],[0,1]]);F=np.array([[1,0],[0,-1]]);print('SF',S@F,S@F@[1,1])
+C=np.array([[1,0],[1,1]]);print(C@C,C@C@C)
+s4=np.array([[1,4],[0,1]]);p2=np.array([[1,0],[0.5,1]]);print(s4@p2,(s4@p2)@[2,0],p2@s4)
+X=np.array([[1,0,2],[0,1,0],[1,1,0]]);Y=np.array([[1,1,0],[0,1,1],[2,0,1]]);print(X@Y)
+L=np.array([[1,0],[-20,1]]);G=np.array([[1,0.1],[0,1]]);print(L@G,(L@G)@[0.01,0.1])
+R=np.array([[0,-1],[1,0]]);print(R@R)
+D1=np.array([[2,0],[0,3]]);D2=np.array([[3,0],[0,1]]);print(D1@D2,D2@D1)
+print('SRH',(S@R)@H,S@(R@H))
+w=5000;Lc=10e-3;Cc=1e-6
+T=np.array([[1,1j*w*Lc],[0,1]])@np.array([[1,0],[1j*w*Cc,1]]);print(T,1/T[0,0])

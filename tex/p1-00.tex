@@ -1,0 +1,378 @@
+%% 第13回編集委員会（物理第1巻）  p1-00.tex  力-0　序章　クレーンは何トンまで持ち上げられる？（★3）　組 P1-4
+%% 計画書 tools/phys1-plan.md の B「力-0」。全章（力-1〜力-16）を読んで書いた、この巻の地図。
+%% 数値は Python で確かめた（scratchpad/phys1/力-0/calc.py）。g＝9.8 m/s²。
+%% ほかの章とそろえた数値：
+%%   荷 2 t・作業半径 10 m（力-5 例題15：車体 24 t・重心は旋回の中心から 0.5 m 後ろ・荷の側のアウトリガまで 3.0 m。倒れ始める荷 12 t、20 m で約4.9 t）
+%%   2 t を 0.50 m/s で上げる動力 9.8 kW（力-4 例題6）、油圧 30 MPa・直径 12 cm のピストンで約 340 kN（力-12 ⑤）、
+%%   玉掛け用ワイヤロープの安全係数 6 以上（力-8。クレーン等安全規則 第213条）、慣性力 N＝m(g＋a)（力-2 ⑥）
+%% 序章なので、じぶんでとこう・章末問題はない（例題は7段の見本）。
+\makeatletter
+% トラッククレーン  \pxacrane{(x,y)}{倍率}{ブームの長さ(mm)}{ブームの角(°)}{ワイヤの長さ(mm)}
+%   点：(pxaroot) ブームの根もと、(pxatip) ブームの先、(pxahook) フック、(pxaload) 荷のまん中、(pxaQ) 荷の側のアウトリガ、(pxacyl) シリンダの上のはし
+\newcommand\pxacrane[5]{\begin{scope}[shift={#1}, scale=#2, transform shape]
+  \coordinate (pxaroot) at (0,17);
+  \coordinate (pxatip) at ($(pxaroot)+(#4:#3)$);
+  \coordinate (pxahook) at ($(pxatip)+(0,-#5)$);
+  \coordinate (pxaload) at ($(pxahook)+(0,-6.5)$);
+  \coordinate (pxaQ) at (18,0);
+  \coordinate (pxacyl) at ($(pxaroot)!0.35!(pxatip)$);
+  \coordinate (pxacylb) at (-2,12);
+  % アウトリガ
+  \draw[bkInk, line width=1.1pt] (14,6) -- (18,6) -- (18,0) (-22,6) -- (-26,6) -- (-26,0);
+  \fill[bkInk] (16.5,-0.6) rectangle (19.5,0.4) (-27.5,-0.6) rectangle (-24.5,0.4);
+  % 車体
+  \filldraw[fill=bkYellow!60, draw=bkYellow!40!black, line width=0.6pt] (-22,4) rectangle (14,11);
+  \filldraw[fill=bkYellow!60, draw=bkYellow!40!black, line width=0.6pt] (14,4) -- (14,13) -- (19,13) -- (21,8) -- (21,4) -- cycle;
+  \fill[white] (15,9) -- (15,12) -- (18.3,12) -- (19.6,9) -- cycle;
+  \foreach \x in {-16,-8,8} {\filldraw[fill=bkInk!80, draw=bkInk] (\x,4) circle (2.6); \fill[bkGray!40] (\x,4) circle (1);}
+  % 旋回する台
+  \filldraw[fill=bkYellow!80!black, draw=bkYellow!30!black, line width=0.6pt] (-12,11) rectangle (4,18);
+  % 油圧シリンダ
+  \draw[bkGray!70!black, line width=2.4pt] (-2,12) -- (pxacyl);
+  \draw[bkInk, line width=1.2pt] (-2,12) -- ($(-2,12)!0.55!(pxacyl)$);
+  % ブーム
+  \draw[bkOrange!80!black, line width=2.6pt, line cap=round] (pxaroot) -- (pxatip);
+  \fill[bkInk] (pxaroot) circle (0.9);
+  % ワイヤとフックと荷
+  \draw[bkInk, line width=0.6pt] (pxatip) -- (pxahook);
+  \draw[bkInk, line width=0.9pt] ($(pxahook)+(0,0.4)$) arc (90:-180:1.2);
+  \draw[bkInk, line width=0.5pt] ($(pxahook)+(-1.2,-1)$) -- ($(pxaload)+(-4,3.5)$) ($(pxahook)+(1.2,-1)$) -- ($(pxaload)+(4,3.5)$);
+  \filldraw[fill=bkBlue!35, draw=bkBlue!70!black, line width=0.6pt] ($(pxaload)+(-6,-3.5)$) rectangle ($(pxaload)+(6,3.5)$);
+\end{scope}}
+% 会話の1行  \pxatalk{y}{sora|mina|delta}{名前}{せりふ}
+\newcommand\pxatalk[4]{%
+  \bkChar{#2}{(7,#1-6.5)}{12mm}
+  \node[rectangle callout, callout absolute pointer={(15.5,#1)}, anchor=west, draw=bkTheme!80!black, line width=0.8pt,
+    fill=white, rounded corners=2.5mm, inner xsep=3mm, inner ysep=1.8mm, text width=103mm, align=left,
+    font=\small] at (21,#1) {#4};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (7,#1-7.5) {#3};}
+\makeatother
+
+\phchapter{0}{クレーンは何トンまで\\持ち上げられる？}{荷を持ち上げるとき、クレーンのどこに力がかかる？}{\bklevel{3}}{クレーンは何トンまで持ち上げられる？}
+\bkmichishirube{2-10,4-14,5-5}{力-1,力-5,力-8,力-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace クレーンにかかる力を、「動く・回る・ゆがむ・流れる」の4つの顔に分けて言える。
+\item \bklevel{3}\enspace 何を無視したかを書いてから、ワイヤが荷を引く力を、7つの段で求められる。
+\item \bklevel{3}\enspace 身近な「なぜ？」の答えが、この巻のどの章にあるかを探せる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+工事現場で、トラッククレーンが、鉄のはりをつり上げています。運転する人がレバーを動かすと、細いワイヤが、何トンもある荷をするすると持ち上げ、長いうでが、荷を空中で運んでいきます。\par\vspace{3pt}
+荷を持ち上げるとき、クレーンのどこに、どんな力がかかっているのでしょう。そして、クレーンは何トンまで持ち上げられるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (-18,-2) rectangle (36,0);
+  \draw[bkInk, line width=0.8pt] (-18,0) -- (36,0);
+  \pxacrane{(0,0)}{0.6}{62}{42}{18}
+  \node[font=\sffamily\bfseries\Large, text=phHatena!80!black] at (-10,22) {?};
+  \node[font=\sffamily\bfseries\Large, text=phHatena!80!black] at (34,26) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この本は、身のまわりの「なぜ？」に、物理で答える本です。序章では、1台のクレーンを例にして、この本で何を学ぶか、どの順に学ぶかを見ていきます。答えのくわしい計算は、各章でします。いまはわからない式が出てきても、だいじょうぶです。
+
+\begin{yattemiyou}[定規でクレーンを作ろう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \qty{30}{cm}の定規を、机のはしから\qty{20}{cm}つき出して置き、机の上の部分に消しゴムをのせて押さえる（消しゴムがおもり）。
+\item 机のはしから\qty{3}{cm}内側に、印をつける。ここを「回る中心」と考え、印からの距離を「作業半径」とよぶ。
+\item 作業半径\qty{10}{cm}の所に、クリップで小さな袋をつるし、1円玉（1こ\qty{1}{g}）を1こずつ入れる。定規が倒れ始めるのは何こ目かな。
+\item 作業半径を\qty{20}{cm}にして、同じことをしよう。1円玉の数は、半分になるかな。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 作業半径を2倍にすると、のせられる1円玉は、半分よりも少なくなります。なぜ「ちょうど半分」にならないのでしょう。答えは⑤で考えます（くわしくは力-5）。
+
+\begin{omoidasou}
+\bkrecall{2-10}{SI の単位：長さ m、質量 kg、時間 s、力 N。換算は単位つきの1で（1 t は\qty{1000}{kg}）。}
+\bkrecall{4-14}{回す働き（力のモーメント）＝力×うでの長さ。}
+\bkrecall{5-5}{速度は位置を時間で微分したもの、加速度は速度を微分したもの。力＝質量×加速度。}
+\end{omoidasou}
+
+%% ================================================================
+\Needspace{16\baselineskip}
+\bksection{hon}{この巻の地図}
+
+\bksubsection{1}{クレーンの1日：4つの場面}
+\leavevmode\label{ph:力-0:sec1}トラッククレーンの1日を、4つの場面に分けて見てみます。どの場面にも、物理の「なぜ？」がかくれています。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\t in {0/{①荷を持ち上げる}, 1/{②うでを回す}, 2/{③ワイヤとうで}, 3/{④うでを起こす}} {
+    \fill[bkGray!20] ({\i*33-14},-1.5) rectangle ({\i*33+17},0);
+    \node[font=\sffamily\footnotesize, anchor=north] at ({\i*33+2},-2.5) {\t};}
+  \node at (4,34) {\phfaceicon[7mm]{1}};
+  \node at (37,34) {\phfaceicon[7mm]{2}};
+  \node at (70,34) {\phfaceicon[7mm]{3}};
+  \node at (103,34) {\phfaceicon[7mm]{4}};
+  \pxacrane{(0,0)}{0.42}{58}{45}{14}
+  \draw[bk arrow, bkRed, line width=1.1pt] ($(pxaload)+(4.2,-1.5)$) -- ++(0,9);
+  \pxacrane{(33,0)}{0.42}{58}{45}{14}
+  \draw[bkRed, line width=1pt, -{Stealth[length=3pt]}] ($(pxaQ)+(3,0.5)$) arc (0:160:3);
+  \pxacrane{(66,0)}{0.42}{58}{45}{14}
+  \draw[bkRed, line width=0.9pt, dashed] (pxaroot) .. controls ($(pxaroot)!0.4!(pxatip)+(1,-1.5)$) and ($(pxaroot)!0.75!(pxatip)+(1.5,-2.5)$) .. ($(pxatip)+(1.2,-2.6)$);
+  \pxacrane{(99,0)}{0.42}{58}{45}{14}
+  \draw[bkRed, line width=2.6pt, opacity=0.75] (pxacylb) -- (pxacyl);
+\end{tikzpicture}
+\bkfigcaption{クレーンの4つの場面。赤い印が、それぞれの場面で考える所。丸い絵は、この巻の4つの部のしるし（動く・回る・ゆがむ・流れる）。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{荷を持ち上げる（動く）}　止まっている荷を持ち上げ始めるとき、ワイヤには荷の重さより大きな力がかかります。どれだけ大きくなるのでしょう。モータには、どれだけの動力が要るのでしょう。
+\item \textbf{うでを回す（回る）}　うでを長くのばして荷を遠くへ運ぶと、クレーンは荷の側へ倒れそうになります。何トンまでなら倒れないのでしょう。うでを回すと、荷はどう動くのでしょう。
+\item \textbf{ワイヤとうで（ゆがむ）}　鋼のワイヤも、荷の重さで少しのびます。長いうでも、少したわみます。どれだけの重さまでなら、切れたり折れたりしないのでしょう。
+\item \textbf{うでを起こす（流れる）}　重いうでを持ち上げているのは、うでの下の太い筒（油圧シリンダ）です。中の油が押す力は、なぜそんなに大きいのでしょう。
+\end{enumerate}
+この4つは、この巻の4つの部に対応しています。1台のクレーンを説明するのにも、4つの部の物理がすべて必要なのです。
+
+\bksubsection{2}{どの章にも通る背骨：バランス式}
+\leavevmode\label{ph:力-0:sec2}この巻の16の章は、ばらばらの話ではありません。多くの章が、同じ1つの形の式を使います。それは、おこづかい帳と同じ形の式です。
+\begin{bkcenter}
+\tikz\node[fill=bkTheme, text=white, rounded corners=2mm, inner xsep=5mm, inner ysep=2.4mm, font=\sffamily\bfseries]
+  {入る量 \,$-$\, 出る量 \,$+$\, 生じる量 \,$=$\, たまる量};
+\end{bkcenter}
+おこづかい帳なら、「もらったお金−使ったお金＝ふえた貯金」です。物理では、「数える量」を何にするかで、ちがう法則になります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{運動量}を数えると、運動方程式（力-2）や運動量保存（力-3）になる。入るのは「力」です。
+\item \textbf{エネルギー}を数えると、力学的エネルギーの保存（力-4）や、流れのベルヌーイの式（力-13）になる。
+\item \textbf{角運動量}を数えると、回る物の運動方程式（力-6）になる。入るのは「トルク」です。
+\item \textbf{質量}を数えると、流れの連続の式（力-13）になる。
+\end{itemize}
+クレーンなら、モータがワイヤを引く仕事（入るエネルギー）が、荷の位置エネルギー（たまるエネルギー）と、摩擦で出ていく熱になります。全5巻をつらぬくこの背骨は、前付の4ページの「保存則と相似の地図」に、まとめてあります。
+
+\bksubsection{3}{4つの部と、16のなぜ？}
+\leavevmode\label{ph:力-0:sec3}この巻は、序章と4つの部（16の章）でできています。物を「大きさのない点」と考えるところから始め、「回る」「形が変わる」「流れる」へと、考える物を広げていきます。下の表は、それぞれの章で答える身近な「なぜ？」と、その答えがある所です。章の札の横の数は、その章が始まるページです。どの章から読んでもよいのですが、前の章の道具を使うので、はじめは順に読むのがおすすめです。
+\begin{bkcenter}
+\small
+\begin{tblr}{colspec={Q[l,m,wd=19mm] X[l,m] Q[l,m,wd=27mm]}, width=\linewidth, rowsep=1.1pt, colsep=3pt,
+  hlines={0.4pt,bkLine}, row{1}={bg=bkTheme!12, font=\sffamily\bfseries\footnotesize},
+  row{2,7,11,16}={bg=bkTheme!6, font=\sffamily\bfseries\footnotesize}}
+章 & 身近な「なぜ？」 & 答えのある所 \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{1}\enspace 第1部　動く：質点と質点系} & & \\
+\phchapref{力-1} & カーブを曲がる車は、速さが同じでも加速している？ & ⑤ 曲がる運動 \\
+\phchapref{力-2} & エレベータが上へ動き出すと、体が重く感じるのはなぜ？ & ⑥ 慣性力 \\
+\phchapref{力-3} & ロケットは、何もない宇宙でどうやって進む？ & ⑥ ロケットの式 \\
+\phchapref{力-4} & ジェットコースターは、最初の山より高く上がれる？ & ⑦ エネルギーの保存 \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{2}\enspace 第2部　回る：剛体と機構} & & \\
+\phchapref{力-5} & 鉄橋は、なぜ三角形を組み合わせてつくる？ & ⑧ トラス \\
+\phchapref{力-6} & スケートの選手が腕をたたむと、速く回るのはなぜ？ & ⑥ $L=I\omega$ \\
+\phchapref{力-7} & ロボットの手を、ねらった場所へ動かすには？ & ③ 表計算で手を動かす \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{3}\enspace 第3部　ゆがむ：材料の力学} & & \\
+\phchapref{力-8} & 鉄の棒も、引っぱると少しのびる？ & ③ フックの法則 \\
+\phchapref{力-9} & チョークをねじると、ななめに折れるのはなぜ？ & ④ モールの円 \\
+\phchapref{力-10} & 本棚の板は、なぜまん中がいちばんたわむ？ & ⑧ たわみの式 \\
+\phchapref{力-11} & 細い棒を上から押すと、急にぐにゃりと曲がるのはなぜ？ & ⑨ 座屈荷重 \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{4}\enspace 第4部　流れる：流体の力学} & & \\
+\phchapref{力-12} & 鉄でできた大きな船が、なぜ水に浮かぶ？ & ⑦ 浮力 \\
+\phchapref{力-13} & 蛇口から落ちる水は、なぜ下へいくほど細くなる？ & ④ 蛇口の水の太さ \\
+\phchapref{力-14} & 長い水道管の先では、なぜ水の勢いが弱くなる？ & ⑨ 管摩擦係数 \\
+\phchapref{力-15} & 小さな模型の実験で、本物の飛行機にはたらく力がわかる？ & ⑦ 相似則 \\
+\phchapref{力-16} & 車をこわさずに、ぶつかったときのようすを調べるには？ & ⑧ 検証（読みもの） \\
+\end{tblr}
+\bktabcaption{この巻の地図。「答えのある所」の丸数字は、その章の「物理の道具」の節の番号。}
+\end{bkcenter}
+\noindent 序章の\bkhatenaref の答えは、この序章の最後（⑦）にあります。この表のほかにも、身近な疑問から、数学と物理のどの章を順に読めばよいかを示した「なぜ？の道すじ」が、巻末にあります。
+
+\bksubsection{4}{モデルを作る：何を無視するかを決める}
+\leavevmode\label{ph:力-0:sec4}本物のクレーンは、こみ入っています。ワイヤは少しのび、うではたわみ、荷は風でゆれ、地面は少ししずみます。全部を考えると、計算できません。そこで、知りたいことに関係の小さいものを、思い切って無視します。こうして作った、簡単にした物の考え方を\textbf{モデル}といいます。\bkidx{もでる}{モデル}
+
+この本では、式を立てる前に、何を無視したかを、いつも次の「モデル化の札」に書きます。
+\begin{phmodel}[つり上げる荷]
+\phignore{荷の大きさ（荷を1つの点と考える）。ワイヤの重さとのび。空気の抵抗。荷のゆれ。}
+\phassume{荷にはたらく力は、ワイヤが引く力と重力だけ。ワイヤはまっすぐ上を向いている。}
+\phlimit{ワイヤがとても長く、その重さが荷の重さに近づくとき。風で荷が大きくゆれるとき。}
+\end{phmodel}
+何を無視したかを書いておくと、計算の答えが本物とずれたとき、どこを直せばよいかがわかります。また、同じ荷でも、知りたいことが変われば、モデルも変わります。荷が倒れないかを考えるなら、荷の大きさは無視できません（力-5）。
+
+\bksubsection{5}{例題の解き方：7つの段}
+\leavevmode\label{ph:力-0:sec5}この本の例題は、いつも同じ7つの段で解きます。①場面、②何を無視するか（理想化）、③図と記号、④使う式を選ぶ理由、⑤式を立てる、⑥解く、⑦答えを確かめる（単位・大きさ・極端な場合）です。数学の本の例題よりも段が多いのは、式を立てる前の「モデルを作る」部分と、答えを出したあとの「確かめる」部分を、ていねいに書くためです。クレーンの例で、見本を3つ見ておきましょう。
+
+\begin{phreidai}[止まった荷をつるすワイヤ]\label{ph:力-0:ex1}
+質量\qty{2.0}{t}の鉄のはりを、クレーンでつるして、空中で止めています。ワイヤがはりを引く力の大きさを求めましょう。
+\phbamen
+はりは空中で止まっています。知りたいのは、ワイヤの力です。
+\phmushi
+④のモデル化の札のとおり、はりを1つの点と考え、ワイヤの重さとのび、空気の抵抗を無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,22) -- (0,6);
+  \filldraw[fill=bkBlue!35, draw=bkBlue!70!black, line width=0.6pt] (-7,0) rectangle (7,6);
+  \fill[bkInk] (0,3) circle (0.8);
+  \draw[bk arrow, bkRed, line width=1.2pt] (1.5,3) -- (1.5,17);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (2.2,14) {$T$};
+  \draw[bk arrow, bkBlue, line width=1.2pt] (0,3) -- (0,-11);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at (0.8,-8) {$mg$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.68\linewidth}
+はりにはたらく力だけを、矢印でかきます（このような図を\textbf{自由体図}といい、力-2 でくわしく学びます）。ワイヤの力 $T$（上向き）と重力 $mg$（下向き）。質量 $m=\qty{2.0}{t}=\qty{2000}{kg}$、$g=\qty{9.8}{m/s^2}$。
+\end{minipage}
+\phriyu
+はりは止まっているので、力はつり合っています（力-5）。上向きの力と下向きの力が等しくなります。
+\phtateru
+\[T=mg\]
+\phtoku
+\[T=2000\times9.8=\qty{19600}{N}=\qty{19.6}{kN}\]
+\phtashikame
+単位：kg×m/s$^2$＝N。\\
+大きさ：\qty{100}{g}の物にはたらく重力が約\qty{1}{N}（力-2）なので、\qty{2}{t}なら約\qty{20000}{N}。合っています。\\
+極端な場合：荷がなければ（$m=0$）、ワイヤの力も0です。
+\kotae \qty{19.6}{kN}
+\end{phreidai}
+
+\begin{phreidai}[荷を持ち上げ始めるときのワイヤ]\label{ph:力-0:ex2}
+\bkreidairef{1}のはりを、上向きの加速度\qty{0.50}{m/s^2}で持ち上げ始めます。このとき、ワイヤがはりを引く力の大きさを求めましょう。止まっているときの何倍ですか。
+\phbamen
+止まっていたはりが、だんだん速く上がっていきます。
+\phmushi
+\bkreidairef{1}と同じです。加速度は一定とします。
+\phzu
+力は\bkreidairef{1}と同じく $T$（上向き）と $mg$（下向き）。上向きを正とし、加速度 $a=\qty{0.50}{m/s^2}$。
+\phriyu
+はりが加速しているので、力はつり合っていません。力の合計が「質量×加速度」になる運動方程式（力-2）を使います。
+\phtateru
+\[ma=T-mg\qquad\text{より}\qquad T=m(g+a)\]
+\phtoku
+\[T=2000\times(9.8+0.50)=\qty{20600}{N}=\qty{20.6}{kN}\]
+止まっているとき（\qty{19.6}{kN}）の $\dfrac{20.6}{19.6}\approx1.05$ 倍です。
+\phtashikame
+単位：kg×m/s$^2$＝N。\\
+極端な場合：$a=0$（止まっている、または一定の速さ）なら $T=mg$ で、\bkreidairef{1}にもどります。\\
+大きさ：加速度が $g$ の約20分の1なので、力も約5\,\%ふえる。合っています。
+\kotae \qty{20.6}{kN}（約1.05倍）
+\end{phreidai}
+\begin{phflow}
+\phflowrow{$m\vec a=\sum\vec F$\\（力-2）}{たて向き・上向きの\\加速度 $a$}{$T=m(g+a)$}
+\phflowrow{$T=m(g+a)$}{$a=0$\\（止まっている）}{$T=mg$}
+\end{phflow}
+\noindent この本の各章には、このような流れ図があります。左は、どんな場合にも使える一般の式です。矢印の上の条件をおくと、右の、中学・高校で習う簡単な公式が出てきます。ふつうは簡単な公式から習いますが、この本では、一般の式から簡単な公式を導きます。そうすると、公式がどんな場合に使えて、どんな場合に使えないかが、はっきりわかるからです。
+
+\begin{phreidai}[うでの根もとを回す働き]\label{ph:力-0:ex3}
+\bkreidairef{1}のはりを、作業半径（クレーンの回る中心から荷までの水平な距離）\qty{10}{m}の所でつるしています。この荷が、クレーンの回る中心のまわりに回そうとする働き（力のモーメント）の大きさを求めましょう。
+\phbamen
+荷は、クレーンを荷の側へ回そう（倒そう）とします。その働きの大きさを知りたい。
+\phmushi
+うでとワイヤの重さを無視します。荷の重さは、回る中心から\qty{10}{m}の所に、真下向きにかかるとします。
+\phzu
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (-20,-1.5) rectangle (42,0);
+  \pxacrane{(0,0)}{0.62}{64}{38}{14}
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) -- (0,16);
+  \draw[bkGray, line width=0.4pt, <->] (0,-4) -- (pxaload |- 0,-4);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at ($(0,-4.6)!0.5!(pxaload |- 0,-4.6)$) {作業半径 \qty{10}{m}};
+  \draw[bk arrow, bkBlue, line width=1.1pt] ($(pxaload)+(0,-2.3)$) -- ++(0,-10);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at ($(pxaload)+(1,-9)$) {$mg$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+回る中心から荷までのうでの長さ $R=\qty{10}{m}$、荷の重さ $mg=\qty{19.6}{kN}$。力のモーメントを $M$ とします。
+\end{minipage}
+\phriyu
+回す働きは「力×うでの長さ」です（数学 4-14、力-5）。力（重力）は真下向き、うでは水平なので、直角です。
+\phtateru
+\[M=mg\times R\]
+\phtoku
+\[M=19.6\times10=\qty{196}{kN.m}\]
+\phtashikame
+単位：kN×m＝kN·m。\\
+極端な場合：作業半径0（回る中心の真上）なら、回す働きは0です。\\
+本当に倒れるかどうか：クレーンは、回る中心ではなく、荷の側の足（アウトリガ）のはしを軸にして倒れます。倒れるかどうかは、その軸のまわりで考えます（力-5 例題15）。
+\kotae \qty{196}{kN.m}
+\end{phreidai}
+\begin{phbaisuru}{作業半径}
+回る中心のまわりの回す働きは、\qty{196}{kN.m}から\qty{392}{kN.m}へ、ちょうど2倍になります。では、つり上げられる荷は半分になるのでしょうか。力-5 例題15のモデル（荷の側のアウトリガは回る中心から\qty{3.0}{m}）では、倒れ始める荷は、作業半径\qty{10}{m}で\qty{12}{t}、\qty{20}{m}で約\qty{4.9}{t}になり、半分より小さくなります。倒れる軸（アウトリガ）から荷までの距離が、7 m から17 m へと、2倍より大きくのびるからです。やってみようの定規で、1円玉が半分より少なくなったのも、同じ理由です。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=90mm, height=44mm, xmin=0, xmax=23, ymin=0, ymax=30, xtick={5,10,15,20}, ytick={10,20}, xlabel={作業半径（m）}, ylabel={倒れ始める荷（t）}]
+  \addplot[bkcurve, domain=5.9:22] {84/(x-3)};
+  \addplot[bkcurve2, dashed, domain=5.9:22] {120/x};
+  \fill[bkRed] (axis cs:10,12) circle (2pt);
+  \fill[bkRed] (axis cs:20,4.94) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:10.6,13.5) {\qty{12}{t}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:20,7.4) {\qty{4.9}{t}};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west] at (axis cs:11,24) {点線：半径に反比例するとしたら};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{力-5 例題15のモデルで、倒れ始める荷（青）。点線は、作業半径\qty{10}{m}で\qty{12}{t}から、作業半径に反比例するとした場合。}
+\end{bkcenter}
+\end{phbaisuru}
+\begin{phyomi}[力のモーメント $M=FR$]
+物を回そうとする働きは、力が大きいほど、うでが長いほど大きい。どこを中心に回すかで、うでの長さが変わるので、答えも変わる。だから、「どこのまわりのモーメントか」をいつも書く。
+\end{phyomi}
+
+\bksubsection{6}{この本の読み方}
+\leavevmode\label{ph:力-0:sec6}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxatalk{0}{sora}{ソラ}{数学の本を最後まで読んだけど、物理の本は式がもっとむずかしそう……。}
+  \pxatalk{-20}{mina}{ミナ}{★が5つの所もあるね。わたしに読めるかな。}
+  \pxatalk{-44}{delta}{デルタ}{だいじょうぶ。★5つの所は、「目でわかる」「手でわかる」「式でわかる」の3段に分けてあるよ。「ここまでで十分」の旗まで読めば、その章のゴールだよ。わからない数学が出てきたら、札の章にもどろう。}
+\end{tikzpicture}
+\end{bkfigure}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{★の数}：数学の本と同じで、★3は中2〜高1、★4は高2〜高3、★5は大学の工学部の内容のめやすです。
+\item \textbf{章の札}：「4-14」のような札は数学の本の章、「力-5」のような札はこの本の章です。札の色は、その本の色です。
+\item \textbf{物理の本の囲み}：「この式の読み方」「身近な例では」「〇〇を2倍にすると？」「まだわかっていないこと」「この先は大学で」などがあります。見本は、前付の6ページの「この本の使い方」にあります。
+\item \textbf{シミュレーション}：表計算やプログラム（Python）で、式で解けない問題も計算します。数字を変えて、自分でためしてみよう。
+\end{itemize}
+\begin{taisetsu}
+\def\tsl#1{\par\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{重力加速度}この本では $g=\qty{9.8}{m/s^2}$（＝\qty{9.8}{N/kg}）を使う。見当をつけるときは「約10」でよい。
+\tsl{答えのけた}答えは、ふつう2けた（$g=9.8$ が2けたなので）。3けた要るときは、はじめに「$g=\qty{9.81}{m/s^2}$ を使う」と書く。
+\tsl{単位}SI の単位を使う。換算は、単位つきの1で（\qty{1}{t}＝\qty{1000}{kg}、\qty{1}{kN}＝\qty{1000}{N}）。
+\tsl{ベクトル}向きのある量は $\vec F$ のように矢印で書き、大きさは $F$ と書く。
+\end{taisetsu}
+
+\bksubsection{7}{はてな？の答え：クレーンの4つの顔}
+\leavevmode\label{ph:力-0:sec7}\bkhatenaref に答えましょう。荷を持ち上げるとき、クレーンには、次のように、4つの部の物理がはたらいています。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (-26,-2) rectangle (60,0);
+  \draw[bkInk, line width=0.8pt] (-26,0) -- (60,0);
+  \pxacrane{(0,0)}{0.9}{66}{40}{20}
+  \coordinate (t1) at (pxaload); \coordinate (t2) at (pxaQ); \coordinate (t3) at ($(pxaroot)!0.7!(pxatip)$); \coordinate (t4) at (pxacyl);
+  \tikzset{tag/.style={draw=#1, line width=0.9pt, fill=white, rounded corners=1.6mm, text width=30mm, align=left, inner sep=1.6mm, font=\sffamily\footnotesize}}
+  \node[tag=bkBlue] (n1) at (84,4) {\phfaceicon[5mm]{1}\enspace\textbf{動く}\\荷を加速して持ち上げると、ワイヤの力は $m(g+a)$。\enspace\phchapref{力-2}};
+  \node[tag=bkOrange!80!black] (n2) at (-4,-22) {\phfaceicon[5mm]{2}\enspace\textbf{回る}\\倒れるかどうかは、アウトリガのまわりのモーメント。\enspace\phchapref{力-5}};
+  \node[tag=bkGreen!70!black] (n3) at (84,44) {\phfaceicon[5mm]{3}\enspace\textbf{ゆがむ}\\ワイヤは少しのび、うではたわむ。\enspace\phchapref{力-8}\enspace\phchapref{力-10}};
+  \node[tag=bkPurple] (n4) at (-10,44) {\phfaceicon[5mm]{4}\enspace\textbf{流れる}\\油圧シリンダは、小さな力を大きな力に変える。\enspace\phchapref{力-12}};
+  \draw[bkBlue, line width=0.7pt] (n1.west) -- ($(t1)+(5.6,0)$);
+  \draw[bkOrange!80!black, line width=0.7pt] (n2.north) -- (t2);
+  \draw[bkGreen!70!black, line width=0.7pt] (n3.west) -- (t3);
+  \draw[bkPurple, line width=0.7pt] (n4.south) -- (t4);
+\end{tikzpicture}
+\bkfigcaption{はてな？の答え。1台のクレーンに、4つの部の物理がはたらいている。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ワイヤ}：\qty{2}{t}の荷を加速して持ち上げると、ワイヤは\qty{20.6}{kN}で引きます（\bkreidairef{2}）。荷をつり上げる玉掛け用のワイヤロープは、切れる荷重の6分の1以下で使うと決められています（力-8）。一定の速さ\qty{0.50}{m/s}で持ち上げるモータの動力は、約\qty{9.8}{kW}です（力-4）。
+\item \textbf{うでの根もと・足}：荷は、クレーンを倒そうとします（\bkreidairef{3}）。力-5 のモデルのクレーンは、作業半径\qty{10}{m}なら約\qty{12}{t}で倒れ始めます。\qty{2}{t}なら、もどす働きが倒す働きの約6倍あります。
+\item \textbf{うでとワイヤの変形}：鋼のワイヤやうでも、少しのび、少したわみます（力-8・力-10）。細長いうでを押すと急に曲がる座屈（力-11）にも、気をつけて設計します。
+\item \textbf{油圧シリンダ}：約\qty{30}{MPa}の油が直径\qty{12}{cm}のピストンを押すと、約\qty{340}{kN}の力が出ます（力-12）。うでを起こす力は、この油の圧力から来ています。
+\end{enumerate}
+「何トンまで持ち上げられるか」は、1つの数では決まりません。倒れないこと（回る）、ワイヤやうでが切れたり折れたりしないこと（ゆがむ）、油圧が足りること（流れる）の、どれもみたす重さまでです。しかも、その重さは、作業半径によって変わります。本物のクレーンでは、作業半径ごとに余裕をもたせた限界の重さ（定格総荷重）が決められていて、それをこえないように、安全装置が見はっています。
+
+\begin{column}{この本では答えられないこともある}
+強い風がふいたり、地震が起きたりしたとき、クレーンが倒れるかどうかは、この巻だけでは答えられません。風の力は第4部（力-15）で入口だけを学び、ゆれの計算は第3巻『波動』で学びます。それでも、地面のしずみ方や、たくさんの部品のゆれが組み合わさったときのようすを、計算だけで正確に予想するのは、今も難しい問題です（力-5 の「まだわかっていないこと」）。この本では、わかっていることと、まだわかっていないことを、分けて書いていきます。
+\end{column}
+
+\begin{kotoba}\small
+\bkword{作業半径}{クレーンの回る中心から、つった荷までの水平な距離。}
+\bkword{モデル}{知りたいことに関係の小さいものを無視して、簡単にした物の考え方。}
+\bkword{自由体図}{1つの物にはたらく力だけを、矢印でかいた図（力-2）。}
+\bkword{バランス式}{入る量−出る量＋生じる量＝たまる量。全5巻の背骨。}
+\end{kotoba}
+\bkidx{さぎょうはんけい}{作業半径}\bkidx{じゆうたいず}{自由体図}\bkidx{ばらんすしき}{バランス式}
+
+\begin{furikaeri}
+\begin{checklist}
+\item クレーンにかかる力を、「動く・回る・ゆがむ・流れる」の4つの顔に分けて言える。\bkfurref{ph:力-0:sec7}
+\item 何を無視したかを書いてから、ワイヤが荷を引く力を、7つの段で求められる。\bkfurref{ph:力-0:sec5}
+\item 身近な「なぜ？」の答えが、この巻のどの章にあるかを探せる。\bkfurref{ph:力-0:sec3}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{クレーン1台にも、4つの部の物理が全部つまっているんだね。第1部から、1つずつ答えを見つけにいこう。}

@@ -1,0 +1,777 @@
+%% 5-4 表から導関数を見つけよう（第11回：ページ制限なし。説明・図・例題を書き足した）
+% 第11回（X13）：立方体の図を描き直す。斜めから見た箱 \bkvebox{x0}{y0}{z0}{dx}{dy}{dz}{色}
+%   （x は右、y は奥、z は上。見える3つの面＝前・上・右をぬる。奥の物から順に描く）
+\newcommand\bkvebox[7]{%
+  \pgfmathsetmacro\bkveX{#1+#4}\pgfmathsetmacro\bkveY{#2+#5}\pgfmathsetmacro\bkveZ{#3+#6}%
+  \filldraw[fill=#7!42, draw=#7!60!black, line width=0.5pt, line join=round] (#1,#2,#3) -- (\bkveX,#2,#3) -- (\bkveX,#2,\bkveZ) -- (#1,#2,\bkveZ) -- cycle;
+  \filldraw[fill=#7!18, draw=#7!60!black, line width=0.5pt, line join=round] (#1,#2,\bkveZ) -- (\bkveX,#2,\bkveZ) -- (\bkveX,\bkveY,\bkveZ) -- (#1,\bkveY,\bkveZ) -- cycle;
+  \filldraw[fill=#7!68, draw=#7!60!black, line width=0.5pt, line join=round] (\bkveX,#2,#3) -- (\bkveX,\bkveY,#3) -- (\bkveX,\bkveY,\bkveZ) -- (\bkveX,#2,\bkveZ) -- cycle;}
+% 1辺 a の立方体と、それを h だけ大きくしたときにふえる7つの部分 \bkvecube{a}{h}{右のすき間}{前のすき間}{上のすき間}（すき間0なら組み立てた形）
+\newcommand\bkvecube[5]{%
+  \bkvebox{0}{0}{0}{#1}{#1}{#1}{bkBlue}%
+  \bkvebox{#1+#3}{0}{0}{#2}{#1}{#1}{bkOrange}%
+  \bkvebox{0}{0}{#1+#5}{#1}{#1}{#2}{bkOrange}%
+  \bkvebox{0}{-#4-#2}{0}{#1}{#2}{#1}{bkOrange}%
+  \bkvebox{#1+#3}{-#4-#2}{0}{#2}{#2}{#1}{bkGreen}%
+  \bkvebox{0}{-#4-#2}{#1+#5}{#1}{#2}{#2}{bkGreen}%
+  \bkvebox{#1+#3}{0}{#1+#5}{#2}{#1}{#2}{bkGreen}%
+  \bkvebox{#1+#3}{-#4-#2}{#1+#5}{#2}{#2}{#2}{bkPurple}}
+\bkchapter{5}{4}{表から導関数を見つけよう}{\bklevel{3}}{表から導関数を見つけよう}
+\bkmichishirube{2-7,3-8,5-3}{5-5,5-6,5-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 表計算の結果から、微分のきまりを見つけられる。
+\item \bklevel{3}\enspace $(x^n)'=nx^{n-1}$ を使って微分できる。
+\item \bklevel{3}\enspace 定数倍と和のきまりを使って、多項式を微分できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+5-3で、$x^2$ を微分すると $2x$ になることを、極限の計算で確かめました。では、$x^3$ や $x^4$ は、微分するとどうなるでしょう。
+
+1つずつ $\lim$ を計算するのは大変です。何かきまりがあれば、すぐに微分できそうです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[draw=bkTheme, line width=1pt, rounded corners=2mm, minimum width=38mm, minimum height=8mm, font=\sffamily\small] at (0,12) {$x^2$ \ →\ $2x$};
+  \node[draw=bkTheme, line width=1pt, rounded corners=2mm, minimum width=38mm, minimum height=8mm, font=\sffamily\small] at (0,2) {$x^3$ \ →\ ？};
+  \node[draw=bkTheme, line width=1pt, rounded corners=2mm, minimum width=38mm, minimum height=8mm, font=\sffamily\small] at (0,-8) {$x^4$ \ →\ ？};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この章では、表計算で数をたくさん出して、そのならび方からきまりを見つけます。見つけたきまりは、式で確かめます。さらに、立方体の図でも確かめます。「数で見つけて、式と図で確かめる」のは、科学者がいつもしていることです。
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[表計算で接線の傾きをならべよう]
+5-3で、接線の傾き（微分係数）は、平均変化率 $\dfrac{f(x+h)-f(x)}{h}$ の $h$ を0に近づけた値でした。表計算では $h$ を0にはできないので、$h=0.001$ のような小さな数にします。$h$ が小さければ、平均変化率は接線の傾きにとても近くなります（5-2の表で、$\Delta t=0.001$ のとき、平均の速さは10.005で、瞬間の速さ10にとても近かったね）。
+
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列に $x$ の値（0、1、2、3、4）を入れる。
+\item B2に \texttt{=((A2+0.001)\^{}2-A2\^{}2)/0.001} を入れる（式の読み方は下の表）。C2には、2つの \texttt{\^{}2} を \texttt{\^{}3} にかえた式、D2には \texttt{\^{}4} にかえた式を入れる。
+\item B2〜D2の式を、6行めまで下へコピーする（2-18）。
+\end{enumerate}
+\end{yattemiyou}
+
+B2の式は、次のように読みます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] Q[l,m,wd=78mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+式の部分 & 意味 \\
+\texttt{(A2+0.001)\^{}2} & $f(x+h)$。$x$ に $h=0.001$ をたしてから2乗する \\
+\texttt{A2\^{}2} & $f(x)$。$x$ をそのまま2乗する \\
+\texttt{( … - … )/0.001} & ひき算した差を $h=0.001$ でわる（平均変化率） \\
+\end{bktable}
+\end{bkcenter}
+計算の結果は、次のようになります。
+\begin{bkcenter}
+\bksheet{4}{22}{%
+1 & $x$ & $x^2$ の傾き & $x^3$ の傾き & $x^4$ の傾き \\
+2 & 0 & 0.001 & 0.000001 & 0.000000 \\
+3 & 1 & 2.001 & 3.003001 & 4.006004 \\
+4 & 2 & 4.001 & 12.006001 & 32.024008 \\
+5 & 3 & 6.001 & 27.009001 & 108.054012 \\
+6 & 4 & 8.001 & 48.012001 & 256.096016 \\}
+\bktabcaption{計算の結果。小数のはしたを取ると、何に見えるかな？}
+\end{bkcenter}
+たとえば、C4の 12.006001 は、「$x^3$ のグラフの、$x=2$ の所の接線の傾きは、およそ12」という意味です。
+
+\begin{omoidasou}
+\bkrecall{5-3}{導関数 $f'(x)=\displaystyle\lim_{h\to0}\frac{f(x+h)-f(x)}{h}$。$(x^2)'=2x$。}
+\bkrecall{5-2}{$x=5t^2$ の瞬間の速さは $v=10t$。}
+\bkrecall{3-8}{$(x+h)^2=x^2+2xh+h^2$。かっこをかけるときは、全部の組み合わせをかけてたす。}
+\bkrecall{2-7}{$x^0=1$、$x^{-1}=\dfrac{1}{x}$、$x^{-2}=\dfrac{1}{x^2}$。$x^m\times x^n=x^{m+n}$。}
+\bkrecall{2-12}{まとめてわるときは、1つずつわってよい：$(A+B)\div h=A\div h+B\div h$}
+\bkrecall{2-18}{表計算では、式を下へコピーすると、番地がずれて同じ計算をくり返せる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{小数のはしたは、どこから来たの？}
+
+\leavevmode\label{bk:5-4:hyou}やってみようの表には、2.001 や 12.006001 のように、小数のはしたがついています。このはしたは、$h$ を0にできず、0.001 にしたために出たものです。
+
+たしかめてみましょう。$x^3$ の、$x=2$ の傾きを、$h$ をかえて計算します。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=34mm] Q[c,m,wd=30mm]}, rowsep=1.5pt}
+$h$ & 平均変化率 & はした \\
+0.01 & 12.0601 & 0.0601 \\
+0.001 & 12.006001 & 0.006001 \\
+0.0001 & 12.00060001 & 0.00060001 \\
+\end{bktable}
+\bktabcaption{$h$ を10分の1にすると、はしたもおよそ10分の1になる。}
+\end{bkcenter}
+
+$h$ を小さくするほど、はしたは0に近づき、平均変化率は12に近づきます。だから、ほんとうの接線の傾き（$h$ を0に近づけた極限）は12だと考えられます。同じように、表の数のはしたを取ると、次のようになります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] *{5}{Q[c,m,wd=12mm]}}, rowsep=2pt}
+$x$ & 0 & 1 & 2 & 3 & 4 \\
+$x^2$ の傾き & 0 & 2 & 4 & 6 & 8 \\
+$x^3$ の傾き & 0 & 3 & 12 & 27 & 48 \\
+$x^4$ の傾き & 0 & 4 & 32 & 108 & 256 \\
+\end{bktable}
+\bktabcaption{小数のはしたを取った接線の傾き}
+\end{bkcenter}
+
+\bksubsection{2}{ならび方から、きまりを見つける}
+
+\leavevmode\label{bk:5-4:kimari0}この表から、きまりを探しましょう。いきなり全部を見ずに、1か所ずつ見ていきます。
+
+\noindent\textbf{①\enspace $x=1$ の列を見る}\par
+\noindent $x=1$ の列は、上から 2、3、4 です。これは、$x^2$、$x^3$、$x^4$ の右肩の数（\textbf{指数}）とまったく同じです。1は何回かけても1なので、$x=1$ では、$x$ の部分がじゃまをせず、前にかかる数だけが見えているのかもしれません。
+
+\noindent\textbf{②\enspace $x^2$ の行を見る}\par
+\noindent 0、2、4、6、8 は、$x$ の値 0、1、2、3、4 の2倍です。つまり $2\times x$。5-3で求めた $(x^2)'=2x$ と合っています。
+
+\noindent\textbf{③\enspace $x^3$ の行を見る}\par
+\noindent ①から、前にかかる数は3かもしれません。そこで、$x^3$ の行を3でわってみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] *{5}{Q[c,m,wd=15mm]}}, rowsep=1.5pt}
+$x$ & 0 & 1 & 2 & 3 & 4 \\
+$x^3$ の傾き & 0 & 3 & 12 & 27 & 48 \\
+3でわると & 0 & 1 & 4 & 9 & 16 \\
+$x^2$ の値 & $0^2=0$ & $1^2=1$ & $2^2=4$ & $3^2=9$ & $4^2=16$ \\
+\end{bktable}
+\bktabcaption{3でわった行は、$x^2$ の値とぴったり同じ。}
+\end{bkcenter}
+
+3でわると $x^2$ になったので、$x^3$ の傾きは $3\times x^2$ です。
+
+\noindent\textbf{④\enspace $x^4$ の行を見る}\par
+\noindent 同じように4でわると、0、1、8、27、64。これは $0^3$、$1^3$、$2^3$、$3^3$、$4^3$ です。だから $x^4$ の傾きは $4\times x^3$ です。
+
+まとめると、次のようになっていそうです。
+\[ (x^2)'=2x^1,\qquad (x^3)'=3x^2,\qquad (x^4)'=4x^3 \]
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\Large] (a) at (0,0) {$x^{\textcolor{bkOrange}{\mathbf{3}}}$};
+  \node[font=\Large, anchor=west] (b) at (40,0) {$\textcolor{bkOrange}{\mathbf{3}}\,x^{\textcolor{bkBlue}{3-1}}$};
+  \node[font=\Large, anchor=west] (c) at (b.east) {$=3x^2$};
+  \draw[bk link] (a) -- node[bk link label, above] {微分する} (b);
+  \draw[bkOrange!80!black, line width=0.5pt] ([xshift=2.2mm]b.south west) -- ++(0,-3.5) -- ++(-6,0);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=east] at ([xshift=-3.8mm, yshift=-3.5mm]b.south west) {① 指数を前に出す};
+  \draw[bkBlue!80!black, line width=0.5pt] ([xshift=-1.5mm, yshift=-1mm]b.north east) -- ++(0,3) -- ++(6,0);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at ([xshift=4.5mm, yshift=2mm]b.north east) {② 指数を1へらす};
+\end{tikzpicture}
+\bkfigcaption{見えてきたきまり。「前に出す」と「1へらす」の2つを、いつもセットで行う。}
+\end{bkfigure}
+
+まだ「表で見えた」だけです。たまたま0〜4で合っただけかもしれません。次に、式で確かめましょう。
+
+\bksubsection{3}{$x^3$ のきまりを、式で確かめる}
+
+\leavevmode\label{bk:5-4:x3}5-3で $x^2$ を微分したのと同じ手順で、$x^3$ の導関数を極限で求めます。そのために、まず $(x+h)^3$ を展開します。$(x+h)^3=(x+h)^2\times(x+h)$ と考え、$(x+h)^2=x^2+2xh+h^2$（3-8）を使います。
+
+左のかっこの3つの項（$x^2$、$2xh$、$h^2$）の1つずつに、右のかっこの2つの項（$x$、$h$）をかけます。全部で $3\times2=6$ 個の組み合わせができます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=26mm] Q[c,m,wd=26mm]}, rowsep=2pt, cell{1}{1}={bg=white}}
+かける数 & $\times\,x$ & $\times\,h$ \\
+$x^2$ & $x^3$ & $x^2h$ \\
+$2xh$ & $2x^2h$ & $2xh^2$ \\
+$h^2$ & $xh^2$ & $h^3$ \\
+\end{bktable}
+\bktabcaption{6つの組み合わせ。同じ形の項（$x^2h$ どうし、$xh^2$ どうし）をまとめる。}
+\end{bkcenter}
+
+\begin{align*}
+(x+h)^3&=x^3+x^2h+2x^2h+2xh^2+xh^2+h^3\\
+&=x^3+3x^2h+3xh^2+h^3
+\end{align*}
+$x^2h$ が $1+2=3$ 個、$xh^2$ が $2+1=3$ 個あるので、どちらも3がつきます。
+
+これで、平均変化率が計算できます。$x^3$ を引くと、$x^3$ の項が消えます。
+\[ \frac{(x+h)^3-x^3}{h}=\frac{3x^2h+3xh^2+h^3}{h} \]
+分子の3つの項を、1つずつ $h$ でわります（2-12。$h$ は0ではないので、わってよい）。
+\[ \frac{3x^2h}{h}+\frac{3xh^2}{h}+\frac{h^3}{h}=3x^2+3xh+h^2 \]
+最後に、$h$ を0に近づけます。$3xh$ と $h^2$ は、$h$ がかかっているので0に近づきます。たとえば $x=2$ なら、
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=16mm] Q[c,m,wd=18mm] Q[c,m,wd=22mm] Q[c,m,wd=26mm]}, rowsep=1.5pt}
+$h$ & $3x^2$ & $3xh$ & $h^2$ & 合計 \\
+0.1 & 12 & 0.6 & 0.01 & 12.61 \\
+0.01 & 12 & 0.06 & 0.0001 & 12.0601 \\
+0.001 & 12 & 0.006 & 0.000001 & 12.006001 \\
+\end{bktable}
+\bktabcaption{$x=2$ のとき。$3x^2=12$ は $h$ によらず同じで、残りの2つだけが0に近づく。}
+\end{bkcenter}
+
+合計の列は、1つ前の表の「平均変化率」と同じ数です。表計算のはしたの正体は、$3xh+h^2$ だったのです。$h$ を0に近づけると、残るのは $3x^2$ だけです。
+\[ (x^3)'=\lim_{h\to0}(3x^2+3xh+h^2)=3x^2 \]
+表で見つけたきまりのとおりです。
+
+\bksubsection{4}{立方体の図で確かめる}
+
+\leavevmode\label{bk:5-4:cube}$x^3$ は、1辺 $x$ の立方体の体積です。式の計算を、図でも確かめてみましょう。
+
+1辺 $x$ の立方体の、たて・横・高さを、どれも $h$ だけのばします。すると、1辺 $x+h$ の立方体になります（下の図）。ふえた体積は、大きな立方体の体積から、もとの立方体の体積を引いた $(x+h)^3-x^3$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x={(1mm,0mm)}, y={(0.48mm,0.32mm)}, z={(0mm,1mm)}]
+  % 左：もとの立方体（1辺 x）
+  \bkvebox{0}{0}{0}{18}{18}{18}{bkBlue}
+  \node[font=\sffamily\small, anchor=north] at (9,0,-1.6) {$x$};
+  \node[font=\sffamily\small, anchor=east] at (-1.6,0,9) {$x$};
+  \draw[bk arrow, bkGray] (30,9,9) -- (48,9,9);
+  \node[font=\sffamily\scriptsize, text=bkGray, align=center, anchor=south] at (39,9,10.5) {たて・横・高さを\\$h$ ずつのばす};
+  % 右：1辺 x+h の立方体（ふえた部分を色分け）。前の面は y=-6
+  \begin{scope}[shift={(72,0,0)}]
+    \bkvecube{18}{6}{0}{0}{0}
+    \draw[bkInk, line width=0.5pt] (0,-6,-1) -- (0,-6,-2.8) (18,-6,-1) -- (18,-6,-2.8) (24,-6,-1) -- (24,-6,-2.8);
+    \node[font=\sffamily\small, anchor=north] at (9,-6,-2.2) {$x$};
+    \node[font=\sffamily\small, anchor=north] at (21,-6,-2.2) {$h$};
+    \draw[bkInk, line width=0.5pt] (-1,-6,0) -- (-2.8,-6,0) (-1,-6,18) -- (-2.8,-6,18) (-1,-6,24) -- (-2.8,-6,24);
+    \node[font=\sffamily\small, anchor=east] at (-2.6,-6,9) {$x$};
+    \node[font=\sffamily\small, anchor=east] at (-2.6,-6,21) {$h$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：1辺 $x$ の立方体（青）。右：1辺を $x+h$ にした立方体。ふえた部分を色で分けた。}
+\end{bkfigure}
+
+右の立方体では、青い立方体はかくれて見えません。ふえた部分がまわりをおおっているからです。そこで、ふえた部分を、少しずつ引きはなしてみます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x={(1mm,0mm)}, y={(0.48mm,0.32mm)}, z={(0mm,1mm)}]
+  \bkvecube{18}{6}{10}{22}{10}
+  \begin{scope}[x=1mm, y=1mm, lg/.style={font=\sffamily\footnotesize, anchor=west}]
+    \fill[bkBlue!42] (60,30) rectangle (64,34);   \node[lg] at (65.5,32) {もとの立方体（1こ）};
+    \fill[bkOrange!42] (60,22) rectangle (64,26); \node[lg] at (65.5,24) {うすい板（3まい）};
+    \fill[bkGreen!42] (60,14) rectangle (64,18);  \node[lg] at (65.5,16) {細い角柱（3本）};
+    \fill[bkPurple!42] (60,6) rectangle (64,10);  \node[lg] at (65.5,8) {小さな立方体（1こ）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{1辺 $x+h$ の立方体を、色ごとに引きはなした形。青い立方体のまわりに、3種類の部分がついていた。}
+\end{bkfigure}
+
+青い立方体（もとの立方体）のまわりについていた部分は、3種類あります。同じ種類を集めて、ならべてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x={(1mm,0mm)}, y={(0.48mm,0.32mm)}, z={(0mm,1mm)}, lb/.style={font=\sffamily\footnotesize, anchor=north, align=center}]
+  % うすい板 3まい（向きはそろえて、平らに置く）
+  \foreach \k in {2,1,0} {\bkvebox{0}{0}{\k*12}{16}{16}{5}{bkOrange}}
+  % 細い角柱 3本
+  \foreach \k in {2,1,0} {\bkvebox{44}{0}{\k*10}{16}{5}{5}{bkGreen}}
+  % 小さな立方体 1こ
+  \bkvebox{86}{0}{0}{5}{5}{5}{bkPurple}
+  \node[lb] at (12,0,-2.5) {\textbf{うすい板 3まい}\\1まいは $x\times x\times h=x^2h$\\合計 $\textcolor{bkOrange!80!black}{3x^2h}$};
+  \node[lb] at (53,0,-2.5) {\textbf{細い角柱 3本}\\1本は $x\times h\times h=xh^2$\\合計 $\textcolor{bkGreen!60!black}{3xh^2}$};
+  \node[lb] at (90,0,-2.5) {\textbf{小さな立方体 1こ}\\$h\times h\times h=h^3$\\\phantom{合計}};
+\end{tikzpicture}
+\bkfigcaption{ふえた部分を種類ごとにならべた。板3まいは、向きはちがっても同じ形（$x\times x\times h$）。}
+\end{bkfigure}
+
+ふえた体積を全部たすと、
+\[ (x+h)^3-x^3=3x^2h+3xh^2+h^3 \]
+これは、前の小見出しで展開して求めた式と、ぴったり同じです。展開の「3」は、板が3まい、角柱が3本あることだったのです。
+
+\noindent\textbf{$h$ を小さくすると、どうなる？}\par
+\noindent $x=1$ として、$h=0.1$ と $h=0.01$ で、それぞれの体積を計算します。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=26mm]}, rowsep=1.5pt, cells={font=\small}}
+$h$ & 板 $3x^2h$ & 角柱 $3xh^2$ & 小さな立方体 $h^3$ & ふえた体積の合計 \\
+0.1 & 0.3 & 0.03 & 0.001 & 0.331 \\
+0.01 & 0.03 & 0.0003 & 0.000001 & 0.030301 \\
+\end{bktable}
+\bktabcaption{$x=1$ のとき。$h$ を10分の1にすると、板は10分の1、角柱は100分の1、小さな立方体は1000分の1になる。}
+\end{bkcenter}
+
+$h=0.1$ では、板の分が合計のおよそ91\%です。$h=0.01$ では、およそ99\%になります。$h$ を小さくするほど、ふえた体積は、ほとんど板3まいの分だけになります。
+
+なぜ、こんなにちがうのでしょう。板は、厚さだけが $h$ です。$h$ を $\dfrac{1}{10}$ にすると、厚さが $\dfrac{1}{10}$ になるだけなので、体積も $\dfrac{1}{10}$ です。角柱は、たてと横の2つが $h$ なので、$\dfrac{1}{10}\times\dfrac{1}{10}=\dfrac{1}{100}$ になります。小さな立方体は3つとも $h$ なので、$\dfrac{1}{10}\times\dfrac{1}{10}\times\dfrac{1}{10}=\dfrac{1}{1000}$ です。
+
+平均変化率は、ふえた体積を $h$ でわったものです。表の合計を $h$ でわると、$0.331\div0.1=3.31$、$0.030301\div0.01=3.0301$ で、3に近づきます。板の分を $h$ でわった $3x^2h\div h=3x^2$ は、$x=1$ で3のまま変わりません。角柱と小さな立方体の分は、$h$ でわっても0に近づいていきます。
+
+だから、体積のふえる速さ（$x^3$ の導関数）は、板3まい分の $3x^2$ です。式でも、表でも、図でも、同じ答え $(x^3)'=3x^2$ になりました。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[l,m,wd=50mm] Q[l,m,wd=46mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+方法 & したこと & $3x^2$ の「3」の正体 \\
+表 & $h=0.001$ で傾きを計算し、ならべた & 3でわると $x^2$ になった \\
+式 & $(x+h)^3$ を展開し、$h\to0$ にした & $x^2h$ の項が3個あった \\
+図 & 立方体をのばし、ふえた部分を分けた & うすい板が3まいあった \\
+\end{bktable}
+\bktabcaption{3つの方法で、同じきまりを確かめた。}
+\end{bkcenter}
+
+\bksubsection{5}{$x^n$ を微分するきまり}
+
+\leavevmode\label{bk:5-4:kimari}$x^2$、$x^3$、$x^4$ で見つけたきまりは、指数がもっと大きくても成り立ちます（理由は、この章のもっと知りたい）。$n$ を自然数（1、2、3、……）とすると、
+\[ (x^n)'=nx^{n-1} \]
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] *{6}{Q[c,m,wd=13mm]}}, rowsep=2pt}
+関数 & $x$ & $x^2$ & $x^3$ & $x^4$ & $x^5$ & $x^n$ \\
+導関数 & $1$ & $2x$ & $3x^2$ & $4x^3$ & $5x^4$ & $nx^{n-1}$ \\
+\end{bktable}
+\bktabcaption{指数を前に出して、指数を1へらす。}
+\end{bkcenter}
+
+\noindent\textbf{$x$ を微分すると1}\par
+\noindent $x=x^1$ と考えて、きまりを使うと $1\times x^{1-1}=1\times x^0=1\times1=1$ です（$x^0=1$ は2-7）。グラフでも確かめましょう。$y=x$ のグラフは、右へ1進むと上へ1上がる直線なので、どこでも傾きは1です（下の図の左）。
+
+\noindent\textbf{定数を微分すると0}\par
+\noindent $y=5$ のように、$x$ が変わっても変わらない数を\textbf{定数}といいます。$y=5$ のグラフは横にまっすぐな直線で、右へ進んでも上がりも下がりもしないので、傾きは0です（下の図の右）。平均変化率で計算しても、$\dfrac{5-5}{h}=0$ です。だから、\textbf{定数を微分すると0}です。\bkidx{ていすう}{定数}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=g1, width=56mm, height=40mm, xmin=-0.3, xmax=4.4, ymin=-0.3, ymax=4.6, xtick={1,2,3,4}, ytick={1,2,3,4}, xlabel={$x$}, ylabel={$y=x$}]
+  \addplot[bkcurve, domain=0:4.2] {x};
+  \draw[bkOrange!80!black, line width=0.9pt] (axis cs:1.5,1.5) -- (axis cs:2.5,1.5) -- (axis cs:2.5,2.5);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (axis cs:2,1.45) {右へ1};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west] at (axis cs:2.6,2) {上へ1};
+\end{axis}
+\begin{axis}[bkplot, at={($(g1.east)+(16mm,0)$)}, anchor=west, width=56mm, height=40mm, xmin=-0.3, xmax=4.4, ymin=-0.3, ymax=6.6, xtick={1,2,3,4}, ytick={5}, xlabel={$x$}, ylabel={$y=5$}]
+  \addplot[bkcurve, domain=0:4.2] {5};
+  \draw[bkOrange!80!black, line width=0.9pt, -{Stealth[length=2mm]}] (axis cs:1.5,4.1) -- (axis cs:2.5,4.1);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north, align=center] at (axis cs:2,3.6) {右へ1進んでも、\\上へ0};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：$y=x$ はどこでも傾き1。右：$y=5$ はどこでも傾き0。}
+\end{bkfigure}
+
+\noindent\textbf{マイナスの指数でも使える}\par
+\noindent $\dfrac{1}{x}$ は、2-7のきまりで $x^{-1}$ と書けます。この指数 $-1$ にも、きまりを使ってみましょう。前に $-1$ を出して、指数を1へらすと $-1-1=-2$ です。
+\[ \Bigl(\frac{1}{x}\Bigr)'=(x^{-1})'=-1\times x^{-2}=-\frac{1}{x^2} \]
+ほんとうに合っているか、表計算で確かめます。B列の式を、次のようにします。
+\begin{center}\texttt{=(1/(A2+0.001)-1/A2)/0.001}\end{center}
+$x=0$ では $\dfrac{1}{0}$ が計算できない（0ではわれない）ので、$x=1$、2、4 で調べます。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=24mm] Q[c,m,wd=20mm]}, rowsep=1.5pt, cells={font=\small}}
+$x$ & 表計算 & $-\dfrac{1}{x^2}$ \\
+1 & $-0.999000$ & $-1$ \\
+2 & $-0.249875$ & $-0.25$ \\
+4 & $-0.062484$ & $-0.0625$ \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+表計算の値は、$-\dfrac{1}{x^2}$ とよく合っています。答えがマイナスになるのは、$y=\dfrac{1}{x}$ のグラフが右下がりだからです（下の図）。$x$ が大きくなると、$\dfrac{1}{x}$ は小さくなります。
+\end{minipage}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=70mm, height=44mm, xmin=0, xmax=4.4, ymin=0, ymax=2.6, xtick={1,2,3,4}, ytick={1,2}, xlabel={$x$}, ylabel={$y=\dfrac{1}{x}$}]
+  \addplot[bkcurve, domain=0.4:4.3, samples=60] {1/x};
+  \addplot[bkcurve2, line width=1pt, domain=0.25:1.9] {1-(x-1)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(1,1)};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west, inner sep=1.5pt] at (axis cs:2.2,1.9) {オレンジ：$x=1$ での接線（傾き $-1$）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$y=\frac{1}{x}$ のグラフと、$x=1$ での接線。右下がりなので、傾きはマイナス。}
+\end{bkfigure}
+
+このように、$n$ がマイナスの整数でも、きまり $(x^n)'=nx^{n-1}$ は使えます。指数を1へらすときは、$-1$ が $-2$ に、$-2$ が $-3$ になります（0の向きではなく、数直線の左へ1つ進む）。
+
+\bksubsection{6}{定数倍と和の微分}
+
+\leavevmode\label{bk:5-4:wa}\textbf{定数倍}\par
+\noindent 5-2では、$x=5t^2$ の速さが $v=10t$ でした。これは、$(t^2)'=2t$ のちょうど5倍です。表でくらべてみましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{3}{Q[c,m,wd=14mm]}}, rowsep=1.5pt}
+$t$ & 1 & 2 & 3 \\
+$t^2$ の傾き $2t$ & 2 & 4 & 6 \\
+$5t^2$ の傾き $10t$ & 10 & 20 & 30 \\
+\end{bktable}
+\bktabcaption{どの $t$ でも、$5t^2$ の傾きは $t^2$ の傾きの5倍。}
+\end{bkcenter}
+
+なぜ5倍になるのでしょう。$5t^2$ のグラフは、$t^2$ のグラフの高さを全部5倍にしたものです。高さが全部5倍なので、同じだけ右へ進んだときに上がる量も5倍です。下の図は、$t=1$ の所の接線です。$t^2$ の接線は、右へ1進むと上へ2上がります。$5t^2$ の接線は、右へ1進むと上へ10上がります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=c1, width=56mm, height=46mm, xmin=0, xmax=2.2, ymin=0, ymax=5.5, xtick={1,2}, ytick={1,2,3,4,5}, xlabel={$t$}, ylabel={$t^2$}]
+  \addplot[bkcurve, domain=0:2.2] {x^2};
+  \addplot[bkcurve2, line width=1pt, domain=0.5:2.2] {1+2*(x-1)};
+  \addplot[only marks, mark=*, mark size=1.5pt, bkInk] coordinates {(1,1)};
+  \draw[bkOrange!80!black, line width=0.8pt, dashed] (axis cs:1,1) -- (axis cs:2,1) -- (axis cs:2,3);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (axis cs:1.5,0.9) {右へ1};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west] at (axis cs:2.03,2) {上へ2};
+\end{axis}
+\begin{axis}[bkplot, at={($(c1.east)+(16mm,0)$)}, anchor=west, width=56mm, height=46mm, xmin=0, xmax=2.2, ymin=0, ymax=22, xtick={1,2}, ytick={5,10,15,20}, xlabel={$t$}, ylabel={$5t^2$}]
+  \addplot[bkcurve, domain=0:2.1] {5*x^2};
+  \addplot[bkcurve2, line width=1pt, domain=0.6:2.2] {5+10*(x-1)};
+  \addplot[only marks, mark=*, mark size=1.5pt, bkInk] coordinates {(1,5)};
+  \draw[bkOrange!80!black, line width=0.8pt, dashed] (axis cs:1,5) -- (axis cs:2,5) -- (axis cs:2,15);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (axis cs:1.5,4.6) {右へ1};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west] at (axis cs:2.03,10) {上へ10};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$t=1$ での接線（オレンジ）。左：$t^2$ は傾き2。右：$5t^2$ は傾き10で、5倍。}
+\end{bkfigure}
+式でも、平均変化率の5を外に出せます。
+\[ \frac{5(t+h)^2-5t^2}{h}=5\times\frac{(t+h)^2-t^2}{h}\ \longrightarrow\ 5\times2t=10t \]
+このように、\textbf{数をかけた関数を微分するときは、数はそのままにして、残りを微分すればよい}のです。
+
+\noindent\textbf{和}\par
+\noindent 水そうに、2つの蛇口から水を入れることを考えます。Aの蛇口で水位が毎分\qty{2}{cm}、Bの蛇口で毎分\qty{3}{cm}上がるなら、両方を開けると、毎分 $2+3=\qty{5}{cm}$ 上がります。変わる速さは、たし算できます。
+
+式でも確かめましょう。$f(x)=x^2+x$ の平均変化率は、2-12のきまりで2つに分けられます。
+\begin{align*}
+\frac{\{(x+h)^2+(x+h)\}-(x^2+x)}{h}&=\frac{(x+h)^2-x^2}{h}+\frac{(x+h)-x}{h}\\
+&\longrightarrow\ 2x+1
+\end{align*}
+1つめは $x^2$ の平均変化率で $2x$ に、2つめは $x$ の平均変化率で1に近づきます。だから、\textbf{和を微分するときは、1つずつ微分してたせばよい}のです。
+
+\Needspace{4\baselineskip}\noindent\textbf{差}\par
+\noindent ひき算は、「$-1$ をかけてたす」と考えられます。$x^2-x=x^2+(-1)\times x$ なので、定数倍と和のきまりから、$(x^2-x)'=2x+(-1)\times1=2x-1$。ひき算も、1つずつ微分してひけばよいのです。
+
+\begin{taisetsu}
+$(x^n)'=nx^{n-1}$\qquad 定数を微分すると0\\
+定数倍：$\{cf(x)\}'=cf'(x)$\qquad 和：$\{f(x)+g(x)\}'=f'(x)+g'(x)$
+\end{taisetsu}
+
+$3x^3-2x^2+5x-7$ のように、$x^n$ に数をかけたものをたし合わせた式を、\textbf{多項式}といいます。多項式は、1つの項ずつ微分してたせば微分できます。\bkidx{たこうしき}{多項式}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[l,m,wd=58mm] Q[c,m,wd=30mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+項 & 考え方 & 微分すると \\
+$3x^3$ & 3はそのまま、$x^3$ を微分して $3x^2$ & $3\times3x^2=9x^2$ \\
+$-2x^2$ & $-2$ はそのまま、$x^2$ を微分して $2x$ & $-2\times2x=-4x$ \\
+$5x$ & 5はそのまま、$x$ を微分して1 & $5\times1=5$ \\
+$-7$ & 定数なので0 & $0$ \\
+\end{bktable}
+\bktabcaption{$3x^3-2x^2+5x-7$ を、1つの項ずつ微分する。}
+\end{bkcenter}
+\[ (3x^3-2x^2+5x-7)'=9x^2-4x+5 \]
+
+\begin{motto}[3]
+\textbf{くり返し微分する}\par
+微分した式も、また微分できます。
+\[ x^4\ \xrightarrow{\text{微分}}\ 4x^3\ \xrightarrow{\text{微分}}\ 12x^2\ \xrightarrow{\text{微分}}\ 24x\ \xrightarrow{\text{微分}}\ 24\ \xrightarrow{\text{微分}}\ 0 \]
+$4x^3$ の微分は、4はそのままで $x^3$ を微分して $4\times3x^2=12x^2$ です。多項式は、微分するたびに指数が1つずつへるので、いつか定数になり、その次は0になります。2回微分することには、物理で大事な意味があります（5-5）。\bkidx{にかいびぶん}{2回微分}
+\end{motto}
+
+\bksubsection{7}{グラフで見くらべる：$f(x)$ と $f'(x)$}
+
+\leavevmode\label{bk:5-4:graph}\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}
+% 第6回：上下の間を広げ、目もり数字に線や曲線がかからないようにする（±1 の数字は点線の横へ、−2・−3 は曲線のない側へ）
+\begin{axis}[bkplot, name=top, width=62mm, height=38mm, xmin=-2.3, xmax=2.5, ymin=-2.6, ymax=2.8, xtick={-2,-1,1,2}, xticklabels={,,,$2$}, ytick={-2,2}, xlabel={$x$}, ylabel={$f(x)=x^3-3x$}]
+  \addplot[bkcurve, domain=-2.06:2.06] {x^3-3*x};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:-1,-2.6) -- (axis cs:-1,2.6) (axis cs:1,-2.6) -- (axis cs:1,2.6);
+  \node[anchor=north east, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt, xshift=-0.5mm] at (axis cs:-2,0) {$-2$};
+  \node[anchor=north east, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt, xshift=-1mm] at (axis cs:-1,0) {$-1$};
+  \node[anchor=north west, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt, xshift=1mm] at (axis cs:1,0) {$1$};
+\end{axis}
+\begin{axis}[bkplot, at={($(top.south)+(0,-12mm)$)}, anchor=north, width=62mm, height=38mm, xmin=-2.3, xmax=2.5, ymin=-4, ymax=9.5, xtick={-2,-1,1,2}, xticklabels={$-2$,,,$2$}, ytick={-3,3,6,9}, yticklabels={,$3$,$6$,$9$}, xlabel={$x$}, ylabel={$f'(x)=3x^2-3$}]
+  \addplot[bkcurve2, domain=-2.04:2.04] {3*x^2-3};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:-1,-4) -- (axis cs:-1,9.5) (axis cs:1,-4) -- (axis cs:1,9.5);
+  \node[anchor=north east, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt, xshift=-1mm] at (axis cs:-1,0) {$-1$};
+  \node[anchor=north west, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt, xshift=1mm] at (axis cs:1,0) {$1$};
+  \node[anchor=north east, font=\sffamily\footnotesize, text=bkInk, inner sep=1.5pt] at (axis cs:0,-3) {$-3$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\raggedright
+$f(x)=x^3-3x$（青）を、ここまでのきまりで微分すると、$f'(x)=3x^2-3$ です。上下にならべると、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $f'(x)$ が正の所（$x<-1$、$1<x$）では、$f(x)$ は右上がり。
+\item $f'(x)$ が負の所（$-1<x<1$）では、$f(x)$ は右下がり。
+\item $f'(x)=0$ の所（$x=\pm1$）で、$f(x)$ は山のてっぺんや谷の底になる。
+\end{itemize}
+\end{minipage}
+
+\vspace{2pt}
+たとえば $x=2$ では、$f'(2)=3\times4-3=9$ で、$f(x)$ は急な右上がりです。$x=0$ では $f'(0)=-3$ で、右下がりです。$x=1$ では $f'(1)=3-3=0$ で、グラフは一瞬だけ平らになり、谷の底になります。この見方は、5-7で「いちばん高い所」や「いちばん低い所」を見つけるのに使います。
+
+
+
+\begin{motto}[3]
+\textbf{どんな $n$ でも成り立つわけ}\par\vspace{4pt}
+\noindent\begin{minipage}[c]{0.3\linewidth}\centering\small
+$1$\\ $1\quad1$\\ $1\quad2\quad1$\\ $1\quad{\color{bkOrange}\mathbf{3}}\quad3\quad1$\\ $1\quad{\color{bkOrange}\mathbf{4}}\quad6\quad4\quad1$\\[2pt]
+{\footnotesize $(x+h)^n$ の係数}
+\end{minipage}\hfill
+\begin{minipage}[c]{22\zw}
+$(x+h)^n$ を展開したときの係数は、左の三角形のように、上の2つの数をたしてつくれます。たとえば $n=3$ なら、
+\[ (x+h)^3=x^3+3x^2h+3xh^2+h^3 \]
+左から2番めの数（オレンジ）は、いつも $n$ です。
+\end{minipage}\par\vspace{3pt}
+$(x+h)^n$ は、$(x+h)$ を $n$ 個かけたものです。展開すると、$h$ を1つもふくまない項は $x^n$ です。$h$ を1つだけふくむ項は、$n$ 個のかっこのどれか1つから $h$ を、残りから $x$ をえらんだもので、$x^{n-1}h$ が $n$ 個できます（立方体なら、板が3まい）。残りの項は $h^2$ 以上をふくむので、$h$ でわっても $h$ が残り、$h\to0$ で0になります（角柱や小さな立方体）。だから $(x^n)'=nx^{n-1}$ です。
+\end{motto}
+
+\begin{kotoba}
+\small
+\bkword{指数}{$x^3$ の右肩の3のように、何回かけるかを表す数。}
+\bkword{定数}{5や $-7$ のように、$x$ が変わっても変わらない数。微分すると0。}
+\bkword{多項式}{$3x^3-2x^2+5x-7$ のように、$x^n$ に数をかけたものをたし合わせた式。}
+\bkword{$f'(x)$}{「エフ・ダッシュ・エックス」。$f(x)$ の導関数。$\dfrac{\dd f}{\dd x}$ とも書く。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[$x^n$ と定数の微分]
+次の関数を微分しましょう。\quad（1）$x^5$\quad（2）$x$\quad（3）$7$\par
+\kangaekata（1）（2）は $(x^n)'=nx^{n-1}$ を使います。指数を前に出して、指数を1へらします。（3）は定数です。\par
+\shiki（1）指数5を前に出し、指数を $5-1=4$ にする。$5x^4$\par
+\hspace*{2.6\zw}（2）$x=x^1$ なので、$1\times x^{1-1}=1\times x^0=1$\par
+\hspace*{2.6\zw}（3）7は定数なので、微分すると0\par
+\kotae （1）$5x^4$\quad（2）$1$\quad（3）$0$
+\end{reidai}
+
+\begin{jibun}
+次の関数を微分しましょう。\quad（1）$x^6$\quad（2）$x^{10}$\quad（3）$-3$
+\bkjans{（1）\nobreak $6x^5$\quad（2）\nobreak $10x^9$\quad（3）\nobreak $0$}
+\end{jibun}
+
+\begin{reidai}[多項式の微分と微分係数]
+$f(x)=3x^3-2x^2+5x-7$ を微分し、$f'(1)$ と $f'(-1)$ を求めましょう。\par
+\kangaekata 1つの項ずつ微分します。数はそのまま、$x^n$ を微分します。$f'(-1)$ は、$x$ に $-1$ をかっこごと入れます（2-13）。\par
+\shiki $f'(x)=3\times3x^2-2\times2x+5\times1-0=9x^2-4x+5$\par
+\hspace*{2.6\zw}$f'(1)=9\times1^2-4\times1+5=9-4+5=10$\par
+\hspace*{2.6\zw}$f'(-1)=9\times(-1)^2-4\times(-1)+5=9+4+5=18$\par
+\kotae $f'(x)=9x^2-4x+5$、$f'(1)=10$、$f'(-1)=18$
+\end{reidai}
+
+\begin{jibun}
+$f(x)=2x^3+x^2-4x+1$ を微分し、$f'(2)$ と $f'(-1)$ を求めましょう。
+\bkjans{$f'(x)=6x^2+2x-4$、$f'(2)=24$、$f'(-1)=0$}
+\end{jibun}
+
+\begin{reidai}[分数の係数がある多項式]
+$f(x)=\dfrac{1}{3}x^3-x^2+2$ を微分しましょう。\par
+\kangaekata 分数がかかっていても、定数倍のきまりは同じです。分数はそのままにして、$x^n$ を微分し、最後に約分します。\par
+\shiki $\dfrac{1}{3}x^3$ の微分は $\dfrac{1}{3}\times3x^2=x^2$（$\dfrac{1}{3}\times3=1$）\par
+\hspace*{2.6\zw}$-x^2$ の微分は $-2x$、2の微分は0\par
+\kotae $f'(x)=x^2-2x$
+\end{reidai}
+
+\begin{jibun}
+$f(x)=\dfrac{1}{2}x^4-\dfrac{2}{3}x^3+5$ を微分しましょう。
+\bkjans{$\dfrac{1}{2}\times4x^3-\dfrac{2}{3}\times3x^2=2x^3-2x^2$}
+\end{jibun}
+
+\begin{reidai}[位置から速さを求める]
+投げ下ろしたボールの位置が $x=4.9t^2+2t+1$（m）のとき、$t$ 秒の瞬間の速さ $v$ と、3秒の速さを求めましょう。\par
+\kangaekata 瞬間の速さは、位置を時間で微分したもの（$v=\dfrac{\dd x}{\dd t}$、5-3）です。ここでは $x$ が関数の名前で、$t$ が変わる数です。$t$ について、1つの項ずつ微分します。\par
+\shiki $4.9t^2$ の微分は $4.9\times2t=9.8t$、$2t$ の微分は2、1の微分は0\par
+\hspace*{2.6\zw}$v=9.8t+2$\par
+\hspace*{2.6\zw}$t=3$ のとき $v=9.8\times3+2=29.4+2=31.4$\par
+\kotae $v=9.8t+2$、\qty{31.4}{m/s}
+\end{reidai}
+
+\begin{jibun}
+真上に投げたボールの高さが $x=-5t^2+20t$（m）のとき、$v$ を求めましょう。1秒と3秒の速さはいくつですか。
+\bkjans{$v=-10t+20$。1秒：\qty{10}{m/s}、3秒：$\qty{-10}{m/s}$（下向きに\qty{10}{m/s}）}
+\end{jibun}
+
+\begin{reidai}[マイナスの指数]
+$f(x)=\dfrac{1}{x^2}$ を微分し、$f'(1)$ を求めましょう。\par
+\kangaekata $\dfrac{1}{x^2}=x^{-2}$（2-7）と書きなおして、きまりを使います。指数を1へらすと、$-2-1=-3$ です。\par
+\shiki $(x^{-2})'=-2\times x^{-2-1}=-2x^{-3}=-\dfrac{2}{x^3}$\par
+\hspace*{2.6\zw}$f'(1)=-\dfrac{2}{1^3}=-2$\par
+\kotae $f'(x)=-\dfrac{2}{x^3}$、$f'(1)=-2$
+\end{reidai}
+
+\begin{jibun}
+$f(x)=\dfrac{1}{x}$ を微分し、$f'(2)$ を求めましょう。
+\bkjans{$f'(x)=-\dfrac{1}{x^2}$、$f'(2)=-\dfrac{1}{4}$}
+\end{jibun}
+
+\begin{reidai}[接線の式]
+$y=x^3-2x$ のグラフの、$x=1$ の点での接線の式を求めましょう。\par
+\kangaekata 接線の式は $y-f(a)=f'(a)(x-a)$（5-3）。接点の $y$ 座標 $f(1)$ と、傾き $f'(1)$ を順に求めます。\par
+\shiki 接点：$x=1$ のとき $y=1^3-2\times1=1-2=-1$。接点は $(1,\ -1)$\par
+\hspace*{2.6\zw}傾き：$y'=3x^2-2$ なので、$3\times1^2-2=1$\par
+\hspace*{2.6\zw}$y-(-1)=1\times(x-1)$ より $y+1=x-1$。$y=x-2$\par
+\kotae $y=x-2$
+\end{reidai}
+
+\begin{jibun}
+$y=x^3-2x$ のグラフの、$x=2$ の点での接線の式を求めましょう。
+\bkjans{接点 $(2,\ 4)$、傾き $3\times4-2=10$。$y=10x-16$}
+\end{jibun}
+
+\begin{reidai}[展開してから微分する]
+次の関数を微分しましょう。\quad（1）$(x+2)(x-3)$\quad（2）$(2x+1)^2$\par
+\kangaekata かっこのままでは、まだきまりが使えません。展開して $x^n$ の和にしてから、1つの項ずつ微分します（3-8）。\par
+\shiki（1）$(x+2)(x-3)=x^2-3x+2x-6=x^2-x-6$\par
+\hspace*{4.3\zw}微分して $2x-1$\par
+\hspace*{2.6\zw}（2）$(2x+1)^2=(2x)^2+2\times2x\times1+1^2=4x^2+4x+1$\par
+\hspace*{4.3\zw}微分して $4\times2x+4=8x+4$\par
+\kotae （1）$2x-1$\quad（2）$8x+4$
+\end{reidai}
+
+\begin{jibun}
+次の関数を微分しましょう。\quad（1）$(x-1)(x+4)$\quad（2）$(x+3)^2$
+\bkjans{（1）\nobreak $x^2+3x-4$ より $2x+3$\quad（2）\nobreak $x^2+6x+9$ より $2x+6$}
+\end{jibun}
+
+\begin{reidai}[速さが0になるとき]
+真上に投げたボールの高さが $x=-5t^2+30t$（m）です。速さが0になる時刻と、そのときの高さを求めましょう。\par
+\kangaekata ボールは上がりながらおそくなり、いちばん高い所で一瞬止まって、向きが変わります。その瞬間は、速さ $v$ が0です。\par
+\shiki $v=-5\times2t+30=-10t+30$\par
+\hspace*{2.6\zw}$-10t+30=0$ より $10t=30$、$t=3$\par
+\hspace*{2.6\zw}$x=-5\times3^2+30\times3=-45+90=45$\par
+\kotae 3秒後、\qty{45}{m}（いちばん高い所）
+\end{reidai}
+
+\begin{jibun}
+真上に投げたボールの高さが $x=-5t^2+20t$（m）です。速さが0になる時刻と、そのときの高さを求めましょう。
+\bkjans{$v=-10t+20$。2秒後、\qty{20}{m}}
+\end{jibun}
+
+\begin{reidai}[山のてっぺんと谷の底]
+$f(x)=x^3-12x$ について、$f'(x)=0$ となる $x$ を求め、そのときの $f(x)$ の値を答えましょう。それぞれ、グラフの山のてっぺんですか、谷の底ですか。\par
+\kangaekata 数学の道具7のように、$f'(x)=0$ の所で、グラフは一瞬平らになります。その前後で $f'(x)$ の符号（右上がりか右下がりか）を調べます。\par
+\shiki $f'(x)=3x^2-12$。$3x^2-12=0$ より $x^2=4$\par
+\hspace*{2.6\zw}2乗して4になる数は、2と $-2$ の2つ（2-8）\par
+\hspace*{2.6\zw}$f(-2)=(-2)^3-12\times(-2)=-8+24=16$\par
+\hspace*{2.6\zw}$f(2)=2^3-12\times2=8-24=-16$\par
+\hspace*{2.6\zw}$x=0$ では $f'(0)=-12$（右下がり）、$x=3$ では $f'(3)=15$（右上がり）\par
+\hspace*{2.6\zw}右上がり→平ら→右下がりの $x=-2$ は山、右下がり→平ら→右上がりの $x=2$ は谷\par
+\kotae $x=-2$ で $f(x)=16$（山のてっぺん）、$x=2$ で $f(x)=-16$（谷の底）
+\end{reidai}
+
+\begin{jibun}
+$f(x)=x^3-27x$ について、$f'(x)=0$ となる $x$ を求め、そのときの $f(x)$ の値を答えましょう。それぞれ、山のてっぺんですか、谷の底ですか。
+\bkjans{$f'(x)=3x^2-27=0$ より $x=-3,\ 3$。$f(-3)=54$（山のてっぺん）、$f(3)=-54$（谷の底）}
+\end{jibun}
+
+\begin{reidai}[傾きから接点を探す]
+$y=x^3$ のグラフで、接線の傾きが12になる点を、すべて求めましょう。\par
+\kangaekata 接線の傾きは $y'$ の値です（5-3）。$y'=12$ となる $x$ を求めてから、$y$ 座標を計算します。\par
+\shiki $y'=3x^2$。$3x^2=12$ より $x^2=4$、$x=2,\ -2$\par
+\hspace*{2.6\zw}$x=2$ のとき $y=2^3=8$、$x=-2$ のとき $y=(-2)^3=-8$\par
+\kotae $(2,\ 8)$ と $(-2,\ -8)$ の2つ
+\end{reidai}
+
+\begin{jibun}
+$y=x^3$ のグラフで、接線の傾きが3になる点を、すべて求めましょう。
+\bkjans{$3x^2=3$ より $x=1,\ -1$。$(1,\ 1)$ と $(-1,\ -1)$}
+\end{jibun}
+
+\begin{reidai}[文字の定数をふくむ式]
+円の面積 $S=\pi r^2$ を、半径 $r$ で微分しましょう。\par
+\kangaekata $\pi$ は 3.14159… という決まった数（定数）です。文字で書いてあっても、定数倍のきまりで、そのままにしておきます。\par
+\shiki $\dfrac{\dd S}{\dd r}=\pi\times(r^2)'=\pi\times2r=2\pi r$\par
+\kotae $\dfrac{\dd S}{\dd r}=2\pi r$
+\end{reidai}
+
+\begin{jibun}
+1辺 $a$ の正方形の面積 $S=a^2$ と、1辺 $a$ の立方体の体積 $V=a^3$ を、それぞれ $a$ で微分しましょう。
+\bkjans{$\dfrac{\dd S}{\dd a}=2a$、$\dfrac{\dd V}{\dd a}=3a^2$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{指数を前に出し忘れる・1へらし忘れる}
+\bkng{$(x^3)'=x^2$}\bkng{$(x^3)'=3x^3$}\bkok{$(x^3)'=3x^2$}
+「前に出す」と「1へらす」はセット。表の値（$x=2$ で12）で確かめよう。$x^2$ なら $2^2=4$、$3x^3$ なら $3\times8=24$ で、どちらも12になりません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{定数を残してしまう}
+\bkng{$(x^2+5)'=2x+5$}\bkok{$(x^2+5)'=2x$}
+グラフを上に5ずらしても、坂の急さ（傾き）は同じです。たした定数は、微分すると消えます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{マイナスの指数を、0の向きにへらす}
+\bkng{$(x^{-2})'=-2x^{-1}$}\bkok{$(x^{-2})'=-2x^{-3}$}
+「1へらす」は、1をひくことです。$-2-1=-3$ です。$-2$ から1ひくと、数直線の左へ進むので、$-1$ ではなく $-3$ になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{前にかかっている数を忘れる}
+\bkng{$(3x^2)'=2x$}\bkok{$(3x^2)'=3\times2x=6x$}
+前の3はそのまま残して、$x^2$ の微分 $2x$ にかけます。$3x^2$ のグラフは $x^2$ の高さを3倍にしたものなので、傾きも3倍です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$x$ の微分を0にしてしまう}
+\bkng{$(5x)'=0$}\bkok{$(5x)'=5$}
+0になるのは、$x$ をふくまない定数だけです。$5x$ は $x$ が1ふえると5ふえるので、傾きは5です。
+\end{tsumazuki}
+
+\begin{column}{ケプラーも、表からきまりを見つけた}
+400年ほど前、ドイツのケプラーは、惑星が太陽を1周する時間（公転周期 $T$ 年）と、太陽からのきょり（$a$。地球を1とする）の表をながめて、きまりを探しました。何年も計算を続けて、$T^2$ と $a^3$ がいつも同じになることに気づきました（1619年）。火星は $a=1.524$、$T=1.881$ で、$T^2=3.54$、$a^3=3.54$。木星は $a=5.203$、$T=11.86$ で、$T^2=140.7$、$a^3=140.9$ です。その理由は、のちにニュートンが式で説明しました。「数で見つけて、式で確かめる」は、この章でしたことと同じ流れです。
+\end{column}
+
+\begin{butsuri}
+\noindent\begin{minipage}[c]{0.74\linewidth}
+\textbf{体積のふえ方は、表面積}\par
+半径 $r$ の球の体積 $V=\dfrac{4}{3}\pi r^3$（4-5）を $r$ で微分すると、
+\[ \frac{\dd V}{\dd r}=\frac{4}{3}\pi\times3r^2=4\pi r^2 \]
+で、球の表面積（4-5）と同じです。球に、厚さ $h$ のうすいペンキをぬると、ふえる体積は、ほぼ「表面積×厚さ」です。立方体で、ふえた体積がほぼ板3まい（表面の分）だったのと同じわけです。円の面積 $\pi r^2$ の微分が円周 $2\pi r$ になるのも、同じわけです。\bkidx{えんのめんせき}{円の面積}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \shade[ball color=bkBlue!40] (0,0) circle (10);
+  \draw[bkOrange, line width=2.2pt] (0,0) circle (11.2);
+  \draw[bkInk, line width=0.6pt] (0,0) -- (10,0);
+  \node[font=\sffamily\scriptsize, anchor=south, inner sep=1.5pt] at (5,0) {$r$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north] at (0,-13.5) {うすいペンキ};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{column}{コンピュータに微分させる}
+式を文字のまま計算するソフト（数式処理ソフト）を使うと、コンピュータが微分してくれます。たとえば \mbox{\texttt{diff(3*x\^{}3-2*x\^{}2+5*x-7, x)}} と入力すると、\mbox{\texttt{9*x\^{}2-4*x+5}} と答えが出ます。計算のまちがいを確かめるのに便利です。でも、どんな意味の計算なのかがわかっていないと、答えが正しいか判断できません。この巻では、自分の手で計算します。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 次の関数を微分しましょう。\quad（1）$x^8$\quad（2）$4x^3$\quad（3）$x^2+3x-2$
+\bkpans{（1）\nobreak $8x^7$\quad（2）\nobreak $12x^2$\quad（3）\nobreak $2x+3$}
+
+\bkproblem 次の関数を微分しましょう。\quad（1）$\dfrac{1}{4}x^4$\quad（2）$\dfrac{2}{3}x^3-\dfrac{1}{2}x^2+x$
+\bkpans{（1）\nobreak $x^3$\quad（2）\nobreak $2x^2-x+1$}
+
+\bkproblem 次の関数の、$x=2$ での微分係数を求めましょう。\quad（1）$5x^3$\quad（2）$x^3-4x^2+3x$
+\bkpans{（1）\nobreak $15x^2$ より60\quad（2）\nobreak $3x^2-8x+3$ より $-1$}
+
+\bkproblem $f(x)=x^3-6x$ について、$f'(x)$ と $f'(2)$ を求めましょう。
+\bkpans{$f'(x)=3x^2-6$、$f'(2)=6$}
+
+\bkproblem 位置が $x=3t^2-12t+5$（m）の物体について、次を求めましょう。\par
+（1）速さ $v$（$t$ の式）\quad（2）1秒の速さ\quad（3）速さが0になる時刻
+\bkpans{（1）\nobreak $v=6t-12$\quad（2）\nobreak $\qty{-6}{m/s}$\quad（3）\nobreak 2秒}
+
+\bkproblem $f(x)=\dfrac{1}{x^3}$ を微分しましょう。
+\bkpans{$-\dfrac{3}{x^4}$}
+
+\bkproblem 展開してから微分しましょう。\quad（1）$(x+1)(x+5)$\quad（2）$(3x-1)^2$
+\bkpans{（1）\nobreak $2x+6$\quad（2）\nobreak $9x^2-6x+1$ より $18x-6$}
+
+\bkproblem $f(x)=x^4-2x^2$ の $f'(x)$ と、$f'(-1)$、$f'(0)$、$f'(2)$ を求めましょう。
+\bkpans{$f'(x)=4x^3-4x$。$f'(-1)=0$、$f'(0)=0$、$f'(2)=24$}
+
+\bkproblem $y=\dfrac{1}{x}$ のグラフの、$x=1$ の点での接線の式を求めましょう（例題5・6）。
+\bkpans{接点 $(1,\ 1)$、傾き $-1$。$y=-x+2$}
+
+\bkproblem 接線の傾きが、$y=x^2$ のグラフで $-6$、$y=x^3$ のグラフで27になる点を、すべて求めましょう。
+\bkpans{$y=x^2$：$2x=-6$ より $(-3,\ 9)$。$y=x^3$：$3x^2=27$ より $(3,\ 27)$ と $(-3,\ -27)$}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem 半径 $r$ の円の面積 $S=\pi r^2$ を $r$ で微分しましょう。その結果は、円の何を表していますか。
+\bkpans{$\dfrac{\dd S}{\dd r}=2\pi r$。円周の長さ}
+
+\bkproblem $y=x^3$ のグラフの、$x=1$ の点での接線の式を求めましょう（例題6と同じ手順です）。
+\bkpans{接点 $(1,\ 1)$、傾き $3$。$y=3x-2$}
+
+\bkproblem 真上に投げたボールの高さが $x=-4.9t^2+19.6t$（m）です。いちばん高くなる時刻とその高さ、投げた瞬間の速さを求めましょう。
+\bkpans{$v=-9.8t+19.6$。2秒後に\qty{19.6}{m}。投げた瞬間（$t=0$）は\qty{19.6}{m/s}}
+
+\bkproblem $f(x)=x^3-3x$ について、$f'(x)=0$ となる $x$ を2つ求め、そのときの $f(x)$ の値を答えましょう。それぞれ、グラフの山のてっぺんと谷の底のどちらですか（例題9）。
+\bkpans{$f'(x)=3x^2-3=0$ より $x^2=1$、$x=1,\ -1$。$f(-1)=2$（山のてっぺん）、$f(1)=-2$（谷の底）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 表の結果から、微分のきまりを見つけられる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-4:kimari0}ページ}
+\item $(x^n)'=nx^{n-1}$ を使って微分できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-4:kimari}ページ}
+\item 定数倍と和のきまりで、多項式を微分できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-4:wa}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{位置を微分すると速さ。では、速さをもう一度微分すると何になるのかな？}

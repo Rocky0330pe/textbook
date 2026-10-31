@@ -1,0 +1,568 @@
+%% 5-8 短い時間なら、かけ算で近似できる（第11回：書き足し。ページ数は自由・偶数）
+\makeatletter
+% 立方体の図の直方体（前・右・上の3面）  \bkvhbox{色}{x0}{y0}{z0}{x1}{y1}{z1}（x・y・z の向きは scope で決める）
+\newcommand\bkvhbox[7]{%
+  \fill[#1!45, draw=bkInk, line width=0.45pt] (#2,#3,#4) -- (#5,#3,#4) -- (#5,#3,#7) -- (#2,#3,#7) -- cycle;
+  \fill[#1!25, draw=bkInk, line width=0.45pt] (#5,#3,#4) -- (#5,#6,#4) -- (#5,#6,#7) -- (#5,#3,#7) -- cycle;
+  \fill[#1!65, draw=bkInk, line width=0.45pt] (#2,#3,#7) -- (#5,#3,#7) -- (#5,#6,#7) -- (#2,#6,#7) -- cycle;}
+\makeatother
+\bkchapter{5}{8}{短い時間なら、\\かけ算で近似できる}{\bklevel{2}}{短い時間なら、かけ算で近似できる}
+\bkmichishirube{2-6,5-3,5-5}{5-9,5-17,6-2}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 「次の位置$\approx$今の位置＋速度×$\Delta t$」で、少し先を予想できる。
+\item \bklevel{2}\enspace 接線を使って、$f(a+h)\approx f(a)+f'(a)h$ と近似できる。
+\item \bklevel{3}\enspace はかった値のずれが、計算にひびく大きさを見積もれる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+車のカーナビは、人工衛星の電波（GPS）で、いまの位置を知っています。でも、長いトンネルの中では電波がとどきません。
+
+それでも、カーナビの地図の上の車は、トンネルの中をちゃんと進んでいきます。電波がないのに、どうやって位置を決めているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (-2,0) rectangle (50,16);
+  \fill[bkGray!60] (-2,16) arc (180:0:26 and 10) -- (50,16) -- cycle;
+  \fill[bkInk!80] (8,2) rectangle (42,14);
+  \draw[white, line width=0.8pt, dash pattern=on 3pt off 2pt] (8,8) -- (42,8);
+  \fill[bkRoute2] (20,5) rectangle ++(9,5);
+  \fill[bkInk] (22,4.6) circle (1) (27,4.6) circle (1);
+  \draw[bk arrow, bkOrange, line width=1pt] (31,7.5) -- (39,7.5);
+  \node[font=\sffamily\scriptsize] at (24,-3) {トンネルの中};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+カーナビは、トンネルに入る直前の位置と、タイヤの回転からわかる速さを使って、「少し時間がたったら、速さ×時間だけ進んでいるはず」と計算しています。曲がった向きは、回転をはかるセンサー（ジャイロセンサー）でわかります。この章では、「短い時間なら、速さ×時間で進む距離がほぼわかる」という考え方を、微分を使って説明します。
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[速度から、少しずつ位置を予想しよう]
+落ちるボールの速度は $v=10t$（m/s）です（5-2）。位置0から、0.5秒ごとに「次の位置＝今の位置＋今の速度×0.5」と計算します。表計算では、D3に \texttt{=D2+C2*0.5} と入れ、下へコピーします（2-18）。
+\begin{bkcenter}
+\bksheet{4}{22}{%
+1 & $t$（s） & $v=10t$ & 予想した位置 & ほんとう $5t^2$ \\
+2 & 0 & 0 & 0 & 0 \\
+3 & 0.5 & 5 & 0 & 1.25 \\
+4 & 1.0 & 10 & 2.5 & 5 \\
+5 & 1.5 & 15 & 7.5 & 11.25 \\
+6 & 2.0 & 20 & 15 & 20 \\}
+\end{bkcenter}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 0.5秒ごとの表の数を、電卓で1行ずつ確かめよう。
+\item 0.1秒ごとにして、2秒の位置を予想しよう。
+\item 0.01秒ごとにすると、どうなるかな？
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent\textbf{表の読み方}\quad 予想した位置の列は、1つ上の行の「位置＋速度×0.5」です。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 0.5秒：$0+0\times0.5=0$。0秒の速度が0なので、予想では1歩も進みません。
+\item 1.0秒：$0+5\times0.5=2.5$。0.5秒の速度5を使います。
+\item 1.5秒：$2.5+10\times0.5=7.5$。\quad 2.0秒：$7.5+15\times0.5=15$。
+\end{itemize}
+0.5秒ごとでは、2秒の予想は\qty{15}{m}で、ほんとうの\qty{20}{m}より小さくなりました。ボールは、0.5秒のあいだにもどんどん速くなっているのに、予想では区間の\textbf{はじめの速度}のまま進むとしたからです。
+
+0.1秒ごとにすると\qty{19.0}{m}、0.01秒ごとにすると\qty{19.9}{m}になり、ほんとうの値に近づきます。区間を短くするほど、そのあいだに速度が変わる量も小さくなるので、予想は正確になります。
+
+\begin{omoidasou}
+\bkrecall{5-3}{$f'(a)=\displaystyle\lim_{h\to0}\frac{f(a+h)-f(a)}{h}$。接線の式は $y=f(a)+f'(a)(x-a)$。接点の近くでは、接線はグラフにぴったりよりそう。}
+\bkrecall{5-5}{速度は位置を時間で微分したもの。$v=\dfrac{\dd x}{\dd t}$}
+\bkrecall{2-14}{等式の両辺に同じ数をかけても、等式はなりたつ。}
+\bkrecall{2-6}{はかった値にはずれ（誤差）がある。$\qty{5.0}{cm}$ と書けば、およそ $\pm\qty{0.05}{cm}$ のずれをふくむ。}
+\bkrecall{2-18}{表計算では、上の行の結果を使って下の行を計算し、式をコピーしてくり返せる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{次の位置$\approx$今の位置＋速度×$\Delta t$}
+
+\label{bk:5-8:tsugi}速度は $v=\dfrac{\dd x}{\dd t}$ でした（5-5）。これは、「時間 $\Delta t$ のあいだに位置が $\Delta x$ 変わったとき、$\dfrac{\Delta x}{\Delta t}$ は、$\Delta t$ を0に近づけると $v$ に近づく」という意味でした（5-3）。だから、$\Delta t$ がとても小さいときは、
+\[ \frac{\Delta x}{\Delta t}\approx v \]
+です。「$\approx$」は「\textbf{ほぼ等しい}」という記号で、「ニアリーイコール」と読みます。両辺に $\Delta t$ をかけると（2-14）、
+\[ \Delta x\approx v\,\Delta t \]
+となります。短い時間に進む距離（$\Delta x$）は、速度×時間でほぼ求められる、ということです。\bkidx{きんじ}{近似（$\approx$）}
+
+\bkkigocards{\bkkigocard{$\approx$}{ニアリーイコール}{ほぼ等しい（近似）}{nearly equal}{5-8}}
+
+\noindent\textbf{例}\quad 位置\qty{100}{m}の所を\qty{15}{m/s}で走る車は、0.2秒のあいだに $15\times0.2=\qty{3}{m}$ ほど進みます。0.2秒後の位置は、$100+3=\qty{103}{m}$ ほどです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bk axis] (-4,0) -- (100,0);
+  \node[font=\sffamily\small, anchor=west] at (101,0) {m};
+  \foreach \p in {98,...,104} \draw[bkInk, line width=0.5pt] ({14*(\p-98)+5},-1) -- ({14*(\p-98)+5},1);
+  \foreach \p in {98,100,102,104} \node[font=\sffamily\footnotesize, anchor=north] at ({14*(\p-98)+5},-2) {\p};
+  \bkcar{(28.4,2.5)}{0.33}{bkRoute2}
+  \fill[bkBlue] (33,0) circle (1.2);
+  \fill[bkOrange] (75,0) circle (1.2);
+  \draw[bk arrow, bkOrange] (33,-9) -- (75,-9);
+  \node[font=\sffamily\footnotesize, anchor=north] at (54,-10.5) {速度×$\Delta t=15\times0.2=3$};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkBlue] at (33,9.5) {今の位置 100};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkOrange!80!black] at (75,3) {次の位置 103};
+\end{tikzpicture}
+\bkfigcaption{今の位置に「速度×$\Delta t$」をたすと、次の位置が予想できる。}
+\end{bkfigure}
+
+だから、少し先の位置は
+\[ \text{次の位置}\approx\text{今の位置}+\text{今の速度}\times\Delta t \]
+と予想できます。$\Delta t$ のあいだにも速度は変わるので、ぴったりではありません。
+
+\noindent\textbf{$\Delta t$ が小さいほどよいわけ}\quad 落ちるボール（$v=10t$）は、1秒ごとに速度が\qty{10}{m/s}ふえます。$\Delta t=0.5$ 秒なら、そのあいだに速度は\qty{5}{m/s}も変わってしまいます。$\Delta t=0.1$ 秒なら\qty{1}{m/s}、$\Delta t=0.01$ 秒なら\qty{0.1}{m/s}しか変わりません。$\Delta t$ が小さいほど、「速度がずっと同じ」と考えても、ほんとうとのちがいが小さくなるのです。
+
+この計算をくり返して少しずつ先を予想するのが、やってみようの計算です。この方法を\textbf{オイラー法}といいます。第6巻では、この方法でいろいろな運動を計算します（6-2）。\bkidx{おいらーほう}{オイラー法}
+
+\noindent\textbf{$\Delta t$ と予想のずれ}\quad やってみようの結果をまとめると、次のようになります。
+
+\noindent\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=19mm] Q[c,m,wd=12mm]}, rowsep=1.5pt}
+$\Delta t$（s） & {2秒の予想\\（m）} & {ずれ\\（m）} \\
+0.5 & 15 & 5 \\
+0.1 & 19.0 & 1.0 \\
+0.01 & 19.9 & 0.1 \\
+\end{bktable}
+\bktabcaption{$\Delta t$ を $\frac{1}{10}$ にすると、\\ずれもほぼ $\frac{1}{10}$ になる。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.51\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=52mm, height=42mm, xmin=0, xmax=2.3, ymin=0, ymax=22, xtick={0.5,1,1.5,2}, ytick={5,10,15,20}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \addplot[bkcurve, domain=0:2] {5*x^2};
+  \addplot[bkcurve2, line width=1.2pt, mark=*, mark size=1.4pt] coordinates {(0,0) (0.5,0) (1,2.5) (1.5,7.5) (2,15)};
+  \addplot[bkcurve3, line width=1pt] coordinates {(0,0) (0.1,0) (0.2,0.1) (0.3,0.3) (0.4,0.6) (0.5,1) (0.6,1.5) (0.7,2.1) (0.8,2.8) (0.9,3.6) (1,4.5) (1.1,5.5) (1.2,6.6) (1.3,7.8) (1.4,9.1) (1.5,10.5) (1.6,12) (1.7,13.6) (1.8,15.3) (1.9,17.1) (2,19)};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=west] at (axis cs:2.1,13.5) {$0.5$};
+  \node[font=\sffamily\scriptsize, text=bkGreen!70!black, anchor=west] at (axis cs:2.1,18.2) {$0.1$};
+  \node[font=\sffamily\scriptsize, text=bkBlue, anchor=east] at (axis cs:1.7,18) {ほんとう};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{予想（オレンジ・緑、数は $\Delta t$）と\\ほんとうの位置（青）。}
+\end{minipage}
+
+\medskip
+ずれは、どれも $\Delta t$ のちょうど10倍（$0.5\times10=5$、$0.1\times10=1$、$0.01\times10=0.1$）で、$\Delta t$ に比例して小さくなります。10倍正確にしたければ、10倍細かく計算すればよいのです。計算の回数は10倍になりますが、コンピュータなら一瞬です。
+
+\begin{motto}[3]
+\textbf{ずれが $\Delta t$ の10倍になるわけ}
+
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=50mm, height=44mm, xmin=0, xmax=2.4, ymin=0, ymax=23, xtick={0.5,1,1.5,2}, ytick={5,10,15,20}, xlabel={$t$}, ylabel={$v$}, x tick label style={font=\sffamily\scriptsize}]
+  \foreach \k in {1,2,3} {\edef\tmp{\noexpand\fill[bkBlue!25, draw=bkBlue!70, line width=0.4pt] (axis cs:{0.5*\k},0) rectangle (axis cs:{0.5*\k+0.5},{5*\k});}\tmp}
+  \foreach \k in {0,1,2,3} {\edef\tmp{\noexpand\fill[bkOrange!55] (axis cs:{0.5*\k},{5*\k}) -- (axis cs:{0.5*\k+0.5},{5*\k}) -- (axis cs:{0.5*\k+0.5},{5*\k+5}) -- cycle;}\tmp}
+  \addplot[bkcurve, domain=0:2.1] {10*x};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\raggedright
+$\Delta t=0.5$ のときの $v$-$t$ グラフ（$v=10t$）。青い長方形は「はじめの速度×0.5」で、面積をたすと予想の15になります。オレンジのすき間が、予想で足りなかった分です。
+\end{minipage}
+
+\medskip
+速度のグラフ（$v$-$t$ グラフ）で考えます。「速度×$\Delta t$」は、たて（速度）×横（$\Delta t$）の細い長方形の面積です（2-3）。予想は、区間のはじめの速度を使うので、長方形の階段がグラフの直線より少し下になり、すき間（小さな三角形）の分だけ少なくなります。1つのすき間は、底辺 $\Delta t$、高さ $10\times\Delta t$（$\Delta t$ のあいだにふえた速度）の三角形で、面積は $\Delta t\times10\Delta t\div2=5\times\Delta t\times\Delta t$。2秒までに、すき間は $2\div\Delta t$ こあるので、合計は $(2\div\Delta t)\times5\times\Delta t\times\Delta t=10\times\Delta t$ です。グラフの面積と距離の関係は、次の5-9でくわしく学びます。
+\end{motto}
+
+\bksubsection{2}{接線で近似する}
+
+\label{bk:5-8:sessen}同じ考え方を、ふつうの関数 $y=f(x)$ にも使ってみましょう。①では、「位置の変わる速さ（速度）×時間の変化」で、位置の変化を求めました。関数でも、「$y$ の変わる速さ $f'(a)$ × $x$ の変化 $h$」で、$y$ の変化がほぼわかるはずです。
+\[ f(a+h)\approx f(a)+f'(a)\,h \]
+これをグラフで確かめます。$y=f(x)$ のグラフの点 $(a,\ f(a))$ での接線は、$y=f(a)+f'(a)(x-a)$ でした（5-3）。$x=a+h$ とすると $x-a=h$ なので、接線の上では $y=f(a)+f'(a)h$ です。$h$ が小さければ、グラフと接線はほとんど重なっているので、グラフの高さ $f(a+h)$ は、接線の高さ $f(a)+f'(a)h$ にほぼ等しくなります。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=46mm, xmin=0, xmax=4.1, ymin=0, ymax=2.3, xtick={1,3}, xticklabels={$a$,$a+h$}, ytick=\empty, xlabel={$x$}, ylabel={$y$}]
+  \addplot[bkcurve, domain=0.02:3.05] {sqrt(x)};
+  \addplot[bkcurve2, line width=1pt, domain=0.1:3.05] {1+0.5*(x-1)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:1,0) -- (axis cs:1,1) -- (axis cs:3,1) (axis cs:3,0) -- (axis cs:3,1);
+  \draw[bkInk, line width=0.6pt, <->] (axis cs:1,0.25) -- (axis cs:3,0.25);
+  \node[font=\sffamily\scriptsize, anchor=south] at (axis cs:2,0.27) {$h$};
+  \draw[bkInk, line width=0.6pt, <->] (axis cs:3,1) -- (axis cs:3,2);
+  \node[font=\sffamily\scriptsize, anchor=west] at (axis cs:3.12,1.35) {$f'(a)h$};
+  \draw[bkRed, line width=0.7pt, decorate, decoration={brace, amplitude=2.5pt}] (axis cs:3.16,2) -- (axis cs:3.16,1.732);
+  \node[font=\sffamily\scriptsize, anchor=west, text=bkRed] at (axis cs:3.28,1.866) {ずれ};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(1,1)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+図で、青がグラフ、オレンジが接線です。$a$ から $h$ 進むと、接線は $f'(a)\times h$ だけ上がります（傾き×横の長さ）。グラフは、それより少しだけ低い所にあります。このちがいが近似の\textbf{ずれ}です。$h$ が小さくなるほど、ずれは小さくなります。
+\end{minipage}
+
+\medskip
+このように、接線を使って関数の値を求めることを\textbf{1次近似}（いちじきんじ）といいます。「1次」は、$h$ の1乗までしか使わないという意味です。\bkidx{いちじきんじ}{1次近似}
+
+\noindent\textbf{例}\quad $\sqrt{4.1}$ を近似します。4.1は、答えがすぐわかる4（$\sqrt{4}=2$）に近いので、$a=4$、$h=0.1$ とします。
+\begin{enumerate}[leftmargin=2.6\zw, itemsep=1pt, topsep=2pt]
+\item $f(x)=\sqrt{x}$ なので、$f(4)=\sqrt{4}=2$。
+\item $f'(x)=\dfrac{1}{2\sqrt{x}}$（5-6）なので、$f'(4)=\dfrac{1}{2\times2}=\dfrac{1}{4}$。
+\item $\sqrt{4.1}\approx2+\dfrac{1}{4}\times0.1=2+0.025=2.025$
+\end{enumerate}
+電卓では $\sqrt{4.1}=2.02485\cdots$。小数第3位まで合っています。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] Q[c,m,wd=34mm] Q[c,m,wd=30mm] Q[c,m,wd=22mm]}, rowsep=1.5pt}
+$h$ & 1次近似 $2+\frac{1}{4}h$ & ほんとう $\sqrt{4+h}$ & ずれ \\
+0.1 & 2.025 & 2.02485… & 0.00015 \\
+1 & 2.25 & 2.23607… & 0.014 \\
+5 & 3.25 & 3 & 0.25 \\
+\end{bktable}
+\bktabcaption{$h$ が小さいとよく合い、$h$ が大きいとずれる。}
+\end{bkcenter}
+
+\bksubsection{3}{近似のずれは、どれくらい？}
+
+\label{bk:5-8:zure}$f(x)=x^2$ で、近似のずれをくわしく調べましょう。$f'(x)=2x$ なので、ほんとうの値と1次近似は、次のようになります。
+\begin{align*}
+f(a+h)&=(a+h)^2=a^2+2ah+h^2 && \text{（ほんとう。3-8の展開）}\\
+f(a)+f'(a)h&=a^2+2a\times h=a^2+2ah && \text{（1次近似）}
+\end{align*}
+ひき算すると、ずれはちょうど $h^2$ です。
+
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!22] (0,0) rectangle (30,30);
+  \fill[bkOrange!40] (30,0) rectangle (38,30);
+  \fill[bkOrange!40] (0,30) rectangle (30,38);
+  \fill[bkRed!55] (30,30) rectangle (38,38);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (38,38) (30,0) -- (30,38) (0,30) -- (38,30);
+  \node[font=\sffamily\small] at (15,15) {$a^2$};
+  \node[font=\sffamily\footnotesize] at (34,15) {$ah$};
+  \node[font=\sffamily\footnotesize] at (15,34) {$ah$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (15,-1.5) {$a$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (34,-1.5) {$h$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (39.5,34) {$h^2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+図で見ると、1辺 $a+h$ の正方形の面積は、もとの正方形 $a^2$（青）、細い長方形 $ah$ が2つ（オレンジ）、すみの小さな正方形 $h^2$（赤）に分かれます。1次近似は、青とオレンジだけを数えて、赤のすみ $h^2$ を数えていません。$h$ が小さいと、すみの正方形は細い長方形よりずっと小さくなります。
+\end{minipage}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm] Q[c,m,wd=26mm]}, rowsep=1.5pt}
+$h$ & {$3^2+2\times3h$\\（近似）} & {$(3+h)^2$\\（ほんとう）} & ずれ $h^2$ \\
+1 & 15 & 16 & 1 \\
+0.1 & 9.6 & 9.61 & 0.01 \\
+0.01 & 9.06 & 9.0601 & 0.0001 \\
+\end{bktable}
+\bktabcaption{$a=3$ のとき。$h$ を $\frac{1}{10}$ にすると、ずれは $\frac{1}{100}$ になる。}
+\end{bkcenter}
+
+$h$ を10分の1にすると、ずれは $\dfrac{1}{10}\times\dfrac{1}{10}=\dfrac{1}{100}$ になります。ずれは $h$ よりずっと速く小さくなるので、$h$ が小さいときの1次近似はとても正確です。
+
+\bksubsection{4}{よく使う近似}
+
+\label{bk:5-8:yoku}$h$ が1よりずっと小さいとき、次の近似がよく使われます。
+\[ (1+h)^n\approx1+nh,\qquad \sqrt{1+h}\approx1+\frac{h}{2},\qquad \frac{1}{1+h}\approx1-h \]
+どれも、②の1次近似から作れます。
+
+\noindent\textbf{1つめ}\quad $f(x)=x^n$、$a=1$ とします。$f(1)=1^n=1$。$f'(x)=nx^{n-1}$（5-4）なので、$f'(1)=n\times1^{n-1}=n$。だから
+\[ (1+h)^n=f(1+h)\approx f(1)+f'(1)h=1+nh \]
+$n=2$ で確かめると、ほんとうは $(1+h)^2=1+2h+h^2$ で、近似は $1+2h$。すみの $h^2$（③）だけがちがいます。$h=0.01$ なら、$1.01^2=1.0201$ と $1.02$ で、ほぼ同じです。
+
+\noindent\textbf{2つめ・3つめ}\quad $\sqrt{1+h}=(1+h)^{\frac{1}{2}}$（3-11）、$\dfrac{1}{1+h}=(1+h)^{-1}$（2-7・2-12）なので、1つめの $n$ に $\dfrac{1}{2}$ と $-1$ を入れたものです。$(x^n)'=nx^{n-1}$ は、$n$ が分数やマイナスでも成り立つので（5-4・5-6）、そのまま使えます。
+\[ \sqrt{1+h}\approx1+\frac{1}{2}h,\qquad \frac{1}{1+h}\approx1+(-1)\times h=1-h \]
+
+\noindent\textbf{例}\quad 利率1\,\%で10年預けたお金は、何倍になるでしょう。1\,\%の利息がつくと、お金は1年で $1+0.01=1.01$ 倍になります（2-5）。10年なら、1.01を10回かけて $1.01^{10}$ 倍です。$h=0.01$、$n=10$ として近似すると
+\[ 1.01^{10}=(1+0.01)^{10}\approx1+10\times0.01=1.1 \]
+およそ1.1倍です（ほんとうは $1.1046\cdots$ 倍）。1.01を10回かけるより、ずっと楽に見当がつきます。
+
+\bksubsection{5}{はかった値のずれが、計算にひびく大きさ}
+
+\label{bk:5-8:gosa}はかった値には、ずれ（誤差）があります（2-6）。$x$ のずれが $\Delta x$ のとき、それを使って計算した $y=f(x)$ のずれ $\Delta y$ は、1次近似から見積もれます。$f(x+\Delta x)\approx f(x)+f'(x)\Delta x$ なので、$y$ の変わる量は\bkidx{ごさ}{誤差}
+\[ \Delta y=f(x+\Delta x)-f(x)\approx f'(x)\,\Delta x \]
+
+\noindent\textbf{例}\quad 立方体の1辺をはかったら \qty{10.0}{cm} で、$\pm\qty{0.1}{cm}$ のずれがありそうです。体積 $V=x^3$ は、どれくらいずれるでしょう。
+\begin{enumerate}[leftmargin=2.6\zw, itemsep=1pt, topsep=2pt]
+\item $V'=3x^2$。$x=10$ で $3\times10^2=300$。
+\item $\Delta V\approx300\times0.1=\qty{30}{cm^3}$
+\end{enumerate}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+図で見ると、1辺が\qty{0.1}{cm}のびたとき、ふえる部分は、ほぼ $10\times10\times0.1=10$（\unit{cm^3}）の板が3まいで、$10\times3=30$ です（5-4の立方体の図）。電卓で確かめると $10.1^3=1030.301$ で、ふえたのは $30.301$。ほとんど同じです。わずかなちがいは、板と板のあいだのすみの細い部分です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[x={(1mm,0mm)}, y={(0.42mm,0.3mm)}, z={(0mm,1mm)}]
+    \bkvhbox{bkGreen}{0}{30}{0}{22}{33}{22}
+    \bkvhbox{bkBlue}{0}{0}{0}{22}{22}{22}
+    \bkvhbox{bkOrange}{30}{0}{0}{33}{22}{22}
+    \bkvhbox{bkRed}{0}{0}{29}{22}{22}{32}
+  \end{scope}
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-1.5) {10 cm};
+  \node[font=\sffamily\footnotesize, anchor=north] at (31.5,-1.5) {0.1 cm};
+\end{tikzpicture}
+\bkfigcaption{もとの立方体（青）と、ふえる3まいの板。\\板のあつさは大きくかいている。}
+\end{minipage}
+
+\medskip
+\noindent\textbf{ずれを割合で見る}\quad 体積は\qty{1000}{cm^3}なので、ずれの30は $30\div1000=0.03$、つまり3\,\%です。1辺のずれは $0.1\div10=0.01$ で1\,\%なのに、体積では3倍の3\,\%になりました。
+
+これは、たまたまではありません。$V=x^3$ なら、$\Delta V\approx3x^2\Delta x$ なので、
+\[ \frac{\Delta V}{V}\approx\frac{3x^2\,\Delta x}{x^3}=3\times\frac{\Delta x}{x} \]
+（$x^2$ と $x^3$ を約分すると、分母に $x$ が1つ残る）。体積のずれの割合は、いつも1辺のずれの割合の3倍です。同じように、面積 $S=x^2$ なら2倍になります。\textbf{$n$ 乗の量は、ずれの割合が $n$ 倍にふくらむ}のです。
+
+\begin{taisetsu}
+$\Delta t$ が小さいとき\quad 次の位置 $\approx$ 今の位置＋速度×$\Delta t$\\
+1次近似\quad $f(a+h)\approx f(a)+f'(a)\,h$\quad（接線で近似する）\\
+ずれの見積もり\quad $\Delta y\approx f'(x)\,\Delta x$。$x^n$ の量では、ずれの割合が $n$ 倍。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{$\approx$}{「ほぼ等しい」という記号。ニアリーイコール。}
+\bkword{1次近似}{接線を使って、関数の値を近くで近似すること。}
+\bkword{オイラー法}{「次の値＝今の値＋変わる速さ×$\Delta t$」をくり返して、少しずつ先を予想する方法。}
+\bkword{誤差}{はかった値や近似した値と、ほんとうの値とのずれ。}
+\end{kotoba}
+
+\begin{column}{丸い地球も、近くで見れば平ら}
+\noindent\begin{minipage}[c]{0.64\linewidth}\raggedright
+地球は丸いのに、校庭は平らに見えます。地球の半径（約\qty{6400}{km}）にくらべて、校庭の\qty{100}{m}はとても短いからです。100 m先で、まっすぐな線（接線）から地面が下がるのは、わずか約\qty{0.8}{mm}です。曲がったものも、ごく近くだけを見ればまっすぐとみなせる――これが1次近似の考え方です。工学では、本当は曲がった関係をもつ部品（センサーやばね）も、使う範囲がせまいときは直線（比例）とみなして計算します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}\centering
+\begin{tikzpicture}[x=0.72mm, y=0.72mm]
+  \draw[bkBlue, line width=1.4pt] (0,0) arc (90:55:40);
+  \draw[bkBlue, line width=1.4pt] (0,0) arc (90:125:40);
+  \draw[bkOrange, line width=0.9pt] (-24,0) -- (24,0);
+  \fill[bkInk] (0,0) circle (0.9);
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south] at (14,0.8) {接線};
+  \node[font=\sffamily\scriptsize, text=bkBlue, anchor=north] at (0,-6) {地面（円）};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[次の位置を予想する]
+（1）位置\qty{100}{m}の所を、速度\qty{15}{m/s}で走っている車の、0.2秒後の位置を予想しましょう。\par
+（2）位置\qty{100}{m}の所を、速度\qty{-5}{m/s}で動いている物体の、0.4秒後の位置を予想しましょう。\par
+\kangaekata 0.2秒や0.4秒は短いので、そのあいだの速度はほぼ一定と見ます。①の「次の位置$\approx$今の位置＋速度×$\Delta t$」に入れます。速度がマイナスのときは、位置が小さくなる向きに動くので、マイナスのままかけます。\par
+\shiki（1）$100+15\times0.2=100+3=103$\par
+\hspace*{2.6\zw}（2）$100+(-5)\times0.4=100+(-2)=98$\par
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bk axis] (-4,0) -- (104,0);
+  \node[font=\sffamily\small, anchor=west] at (105,0) {m};
+  \foreach \p in {96,...,104} \draw[bkInk, line width=0.5pt] ({12*(\p-96)},-1) -- ({12*(\p-96)},1);
+  \foreach \p in {96,98,100,102,104} \node[font=\sffamily\footnotesize, anchor=north] at ({12*(\p-96)},-2) {\p};
+  \fill[bkInk] (48,0) circle (1.2);
+  \draw[bk arrow, bkBlue] (48,4) -- (84,4);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkBlue] at (66,5) {（1）$+15\times0.2=+3$};
+  \draw[bk arrow, bkRed] (48,-9) -- (24,-9);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!80!black] at (36,-10.5) {（2）$(-5)\times0.4=-2$};
+\end{tikzpicture}
+\end{bkfigure}
+\kotae（1）およそ\qty{103}{m}\quad（2）およそ\qty{98}{m}
+\end{reidai}
+
+\begin{jibun}
+（1）位置\qty{50}{m}の所を、速度\qty{8}{m/s}で走っている自転車の、0.5秒後の位置を予想しましょう。\par
+（2）位置\qty{20}{m}の所を、速度\qty{-6}{m/s}で動いている物体の、0.5秒後の位置を予想しましょう。
+\bkjans{（1）\nobreak $50+8\times0.5=\qty{54}{m}$\quad（2）\nobreak $20+(-6)\times0.5=\qty{17}{m}$}
+\end{jibun}
+
+\begin{reidai}[くり返して予想する]
+速度が $v=2t$（m/s）の物体が、$t=0$ で位置0にいます。1秒ごとに「次の位置＝今の位置＋今の速度×1」と計算して、3秒の位置を予想しましょう。ほんとうの位置 $t^2$ とくらべましょう。\par
+\kangaekata ①の式を、$\Delta t=1$ で3回くり返します。使う速度は、各1秒の\textbf{はじめ}の値です（0秒で0、1秒で2、2秒で4）。\par
+\shiki 1秒の位置：$0+0\times1=0$\par
+\hspace*{2.6\zw}2秒の位置：$0+2\times1=2$\par
+\hspace*{2.6\zw}3秒の位置：$2+4\times1=6$\par
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=24mm] Q[c,m,wd=20mm] Q[c,m,wd=16mm] Q[c,m,wd=18mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+$t$（s） & はじめの速度 $2t$ & 速度×1（m） & 予想（m） & ほんとう $t^2$ \\
+0 & 0 & 0 & 0 & 0 \\
+1 & 2 & 2 & 0 & 1 \\
+2 & 4 & 4 & 2 & 4 \\
+3 & & & 6 & 9 \\
+\end{bktable}
+\end{bkcenter}
+\kotae 予想\qty{6}{m}（ほんとうは $3^2=\qty{9}{m}$。$\Delta t$ を小さくすると近づく）
+\end{reidai}
+
+\begin{jibun}
+\bkreidairef{2}で、0.5秒ごとに計算して、2秒の位置を予想しましょう（ほんとうは\qty{4}{m}）。
+\bkjans{速度は0、1、2、3。0 \mbox{→ 0} \mbox{→ 0.5} \mbox{→ 1.5} \mbox{→ 3}。予想\qty{3}{m}}
+\end{jibun}
+
+\begin{reidai}[速度がへっていくとき]
+速度 $v=20-4t$（m/s）でブレーキをかけている車が、$t=0$ で位置0にいます。1秒ごとに予想して、3秒の位置を求めましょう。ほんとうの位置 $x=20t-2t^2$ とくらべましょう。\par
+\kangaekata 例題2と同じく、①の式を1秒ずつくり返します。各1秒のはじめの速度は、$t=0$ で20、$t=1$ で16、$t=2$ で12です。\par
+\shiki 1秒：$0+20\times1=20$\par
+\hspace*{2.6\zw}2秒：$20+16\times1=36$\par
+\hspace*{2.6\zw}3秒：$36+12\times1=48$\par
+\hspace*{2.6\zw}ほんとう：$20\times3-2\times3^2=60-18=42$\par
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=26mm] Q[c,m,wd=20mm] Q[c,m,wd=16mm] Q[c,m,wd=22mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+$t$（s） & はじめの速度 $20-4t$ & 速度×1（m） & 予想（m） & ほんとう $20t-2t^2$ \\
+0 & 20 & 20 & 0 & 0 \\
+1 & 16 & 16 & 20 & 18 \\
+2 & 12 & 12 & 36 & 32 \\
+3 & & & 48 & 42 \\
+\end{bktable}
+\end{bkcenter}
+\kotae 予想\qty{48}{m}（ほんとうは\qty{42}{m}。速度がへっていくのに、はじめの大きい速度を使ったので、大きめになる）
+\end{reidai}
+
+\begin{jibun}
+速度 $v=10-2t$（m/s）の物体が、$t=0$ で位置0にいます。1秒ごとに予想して3秒の位置を求め、ほんとうの位置 $x=10t-t^2$ とくらべましょう。
+\bkjans{速度は10、8、6。0 \mbox{→ 10} \mbox{→ 18} \mbox{→ 24}。予想\qty{24}{m}、ほんとうは $30-9=\qty{21}{m}$}
+\end{jibun}
+
+\begin{reidai}[接線で近似する]
+$\sqrt{9.2}$ を1次近似で求めましょう。\par
+\kangaekata 9.2に近くて、$\sqrt{\phantom{9}}$ がすぐわかる数は9です。②の1次近似で、$f(x)=\sqrt{x}$、$a=9$、$h=0.2$ とします。\par
+\shiki $f(9)=\sqrt{9}=3$\par
+\hspace*{2.6\zw}$f'(9)=\dfrac{1}{2\sqrt{9}}=\dfrac{1}{2\times3}=\dfrac{1}{6}$\quad（5-6）\par
+\hspace*{2.6\zw}$\sqrt{9.2}\approx3+\dfrac{1}{6}\times0.2=3+0.0333\cdots=3.033$\par
+\kotae およそ3.033（電卓では3.0331…）
+\end{reidai}
+
+\begin{jibun}
+$\sqrt{16.3}$ を1次近似で求めましょう。
+\bkjans{$a=16$、$f'(16)=\dfrac{1}{8}$。$4+\dfrac{1}{8}\times0.3=4.0375$（電卓では4.0373…）}
+\end{jibun}
+
+\begin{reidai}[$(1+h)^n\approx1+nh$]
+$1.02^5$ を近似しましょう。\par
+\kangaekata $1.02=1+0.02$ と見ると、④の $(1+h)^n\approx1+nh$ が使えます。$h=0.02$、$n=5$ を入れます。\par
+\shiki $(1+0.02)^5\approx1+5\times0.02=1+0.1=1.1$\par
+\kotae およそ1.1（ほんとうは1.10408…）
+\end{reidai}
+
+\begin{jibun}
+$0.99^{10}$ を近似しましょう。$0.99=1+(-0.01)$ なので、$h=-0.01$ です。
+\bkjans{$1+10\times(-0.01)=0.9$（ほんとうは0.9043…）}
+\end{jibun}
+
+\begin{reidai}[マイナスや分数の指数でも使える]
+（1）$\dfrac{1}{1.02}$\quad（2）$\sqrt{1.04}$\quad（3）$\dfrac{1}{0.96}$ を、$(1+h)^n\approx1+nh$ で近似しましょう。\par
+\kangaekata $\dfrac{1}{1+h}=(1+h)^{-1}$、$\sqrt{1+h}=(1+h)^{\frac{1}{2}}$ と書きかえます（④）。（3）は $0.96=1+(-0.04)$ なので、$h=-0.04$、$n=-1$ です。まず、$(1+h)^n$ の形に書きかえて、$n$ と $h$ を読みとります。\par
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=34mm] Q[c,m,wd=12mm] Q[c,m,wd=14mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\footnotesize}}
+ & 書きかえ & $n$ & $h$ \\
+（1） & $\dfrac{1}{1.02}=(1+0.02)^{-1}$ & $-1$ & $0.02$ \\
+（2） & $\sqrt{1.04}=(1+0.04)^{\frac{1}{2}}$ & $\dfrac{1}{2}$ & $0.04$ \\
+（3） & $\dfrac{1}{0.96}=(1-0.04)^{-1}$ & $-1$ & $-0.04$ \\
+\end{bktable}
+\end{bkcenter}
+\shiki（1）$n=-1$、$h=0.02$：$1+(-1)\times0.02=0.98$\par
+\hspace*{2.6\zw}（2）$n=\dfrac{1}{2}$、$h=0.04$：$1+\dfrac{1}{2}\times0.04=1.02$\par
+\hspace*{2.6\zw}（3）$n=-1$、$h=-0.04$：$1+(-1)\times(-0.04)=1.04$\par
+\kotae（1）およそ0.98（ほんとうは0.98039…）\par
+\hspace*{2.6\zw}（2）およそ1.02（ほんとうは1.01980…）\par
+\hspace*{2.6\zw}（3）およそ1.04（ほんとうは1.04166…）
+\end{reidai}
+
+\begin{jibun}
+（1）$\dfrac{1}{1.05}$\quad（2）$\sqrt{1.06}$\quad（3）$\sqrt{0.98}$ を近似しましょう。
+\bkjans{（1）\nobreak $1-0.05=0.95$（ほんとうは0.95238…）\quad（2）\nobreak $1+0.03=1.03$（ほんとうは1.02956…）\quad（3）\nobreak $1+\dfrac{1}{2}\times(-0.02)=0.99$（ほんとうは0.98994…）}
+\end{jibun}
+
+\begin{reidai}[ずれの見積もり]
+球の半径をはかったら\qty{5.0}{cm}で、$\pm\qty{0.1}{cm}$ のずれがあります。このとき、球の体積 $V=\dfrac{4}{3}\pi r^3$ のずれを見積もりましょう。\par
+\kangaekata ⑤の $\Delta V\approx V'\,\Delta r$ を使います。まず $V$ を $r$ で微分し（5-4）、$r=5$、$\Delta r=0.1$ を入れます。$\dfrac{4}{3}\times3=4$ なので、$V'=4\pi r^2$ です。\par
+\shiki $V'=4\pi r^2=4\pi\times25=100\pi$\par
+\hspace*{2.6\zw}$\Delta V\approx100\pi\times0.1=10\pi\approx31.4$\par
+\hspace*{2.6\zw}体積：$\dfrac{4}{3}\pi\times125\approx524$。割合：$31.4\div524\approx0.06$\par
+\kotae およそ $\pm\qty{31}{cm^3}$（約6\,\%。半径のずれ2\,\%の3倍）
+\end{reidai}
+
+\begin{jibun}
+正方形の1辺をはかったら\qty{20.0}{cm}で、$\pm\qty{0.2}{cm}$ のずれがあります。面積のずれを見積もりましょう。また、それは面積の何\,\%ですか。
+\bkjans{$S'=2x=40$、$\Delta S\approx40\times0.2=\qty{8}{cm^2}$。$8\div400=0.02$ で2\,\%（1辺のずれ1\,\%の2倍）}
+\end{jibun}
+
+\begin{reidai}[ずれを何\,\%以内にすればよいか]
+1辺がおよそ\qty{20}{cm}の立方体の体積を、ずれ1.5\,\%以内で求めたいと思います。1辺をはかるときのずれは、何cm以内にすればよいでしょう。\par
+\kangaekata ⑤で調べたように、体積（3乗の量）のずれの割合は、1辺のずれの割合の3倍です。逆に考えて、1辺のずれの割合は、体積のずれの割合の $\dfrac{1}{3}$ にすればよいのです。\par
+\shiki $\dfrac{\Delta V}{V}\approx3\times\dfrac{\Delta x}{x}\leqq0.015$ より $\dfrac{\Delta x}{x}\leqq0.005$\par
+\hspace*{2.6\zw}$\Delta x\leqq0.005\times20=0.1$\par
+\kotae \qty{0.1}{cm}以内（\qty{1}{mm}以内）
+\end{reidai}
+
+\begin{jibun}
+半径がおよそ\qty{10}{cm}の円の面積を、ずれ1\,\%以内で求めたいと思います。半径をはかるときのずれは、何cm以内にすればよいでしょう。
+\bkjans{面積（2乗の量）のずれの割合は2倍。$2\times\dfrac{\Delta r}{r}\leqq0.01$ より $\dfrac{\Delta r}{r}\leqq0.005$、$\Delta r\leqq\qty{0.05}{cm}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$h$ が大きくても近似を使ってしまう}
+\bkng{$\sqrt{9}\approx\sqrt{4}+\dfrac{1}{4}\times5=3.25$}
+\bkok{$\sqrt{9}=3$。$h=5$ は大きすぎて、近似が使えない}
+接線がグラフによりそっているのは、接点の近くだけです（②の表）。1次近似は、$h$ が小さいときにだけ使います。目安は、$h$ が $a$ よりずっと小さいときです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{「$\approx$」を「$=$」と書いてしまう}
+\bkng{$\sqrt{4.1}=2.025$}
+\bkok{$\sqrt{4.1}\approx2.025$}
+近似した値は、ほんとうの値とは少しちがうので、「$\approx$」で書きます。どのくらいずれているかを、いつも意識しましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{くり返しの計算で、おわりの速度を使ってしまう}
+\bkng{$v=2t$、1秒ごと：1秒の位置を $0+2\times1=2$}
+\bkok{1秒の位置は $0+0\times1=0$（0秒の速度を使う）}
+「次の位置＝今の位置＋\textbf{今の}速度×$\Delta t$」です。区間のはじめ（今）の速度を使います。表計算なら、1つ上の行の速度を使います。
+\end{tsumazuki}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{カーナビの推測航法}\\
+トンネルの中では、最後にわかった位置に「速度×時間」を少しずつたして、位置を予想しています。向きの変化は、回転の速さをはかる半導体のセンサー（ジャイロセンサー）ではかります。船や飛行機でも、昔から使われてきた方法です。
+\item \textbf{ゲームの物理}\\
+ゲームの中のボールやキャラクターは、1秒に60回ほど、「次の位置＝今の位置＋速度×$\dfrac{1}{60}$秒」と計算して動かしています。オイラー法そのものです。
+\item \textbf{天気予報}\\
+空気の動きや温度を、数十秒〜数分ごとに「次の状態＝今の状態＋変化の速さ×時間」と計算して、明日の天気を予想しています（第6巻）。
+\end{itemize}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{2}
+
+\bkproblem 位置\qty{30}{m}の所を、速度\qty{-4}{m/s}で動いている物体の、0.5秒後の位置を予想しましょう。
+\bkpans{$30+(-4)\times0.5=\qty{28}{m}$}
+
+\bkproblem $\sqrt{25.5}$ を1次近似で求めましょう。
+\bkpans{$f'(25)=\dfrac{1}{10}$。$5+\dfrac{1}{10}\times0.5=5.05$}
+
+\bkproblem $1.03^4$ を近似しましょう。
+\bkpans{$1+4\times0.03=1.12$}
+
+\bkproblem 円の半径をはかったら\qty{10.0}{cm}で、$\pm\qty{0.1}{cm}$ のずれがあります。このとき、円の面積 $S=\pi r^2$ のずれを見積もりましょう。
+\bkpans{$S'=2\pi r=20\pi$、$\Delta S\approx20\pi\times0.1=2\pi\approx\qty{6.3}{cm^2}$}
+
+\bkproblem $\dfrac{1}{0.98}$ と $\sqrt{0.96}$ を、$(1+h)^n\approx1+nh$ で近似しましょう。
+\bkpans{$h=-0.02$、$n=-1$ で1.02。$h=-0.04$、$n=\frac{1}{2}$ で0.98}
+
+\bkproblem 速度 $v=6-2t$（m/s）の物体が、$t=0$ で位置\qty{10}{m}にいます。1秒ごとに予想して2秒の位置を求め、ほんとうの位置 $x=10+6t-t^2$ とくらべましょう。
+\bkpans{速度は6、4。10 \mbox{→ 16} \mbox{→ 20}。予想\qty{20}{m}、ほんとうは $10+12-4=\qty{18}{m}$}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem 速度が $v=3t^2$（m/s）の物体が、$t=0$ で位置0にいます。0.5秒ごとに予想して、2秒の位置を求めましょう。ほんとうの位置は $t^3$ です。
+\bkpans{速度は0、0.75、3、6.75。0 \mbox{→ 0} \mbox{→ 0.375} \mbox{→ 1.875} \mbox{→ 5.25}。予想\qty{5.25}{m}（ほんとうは\qty{8}{m}）}
+
+\bkproblem $f(x)=x^3$ で、$f(2.01)$ を1次近似で求めましょう。ほんとうの値とのずれも計算しましょう。
+\bkpans{$f'(2)=12$。$8+12\times0.01=8.12$。ほんとうは8.120601なので、ずれは0.000601}
+
+\bkproblem 半径およそ\qty{5.0}{cm}の球の体積を、ずれ3\,\%以内で求めたいと思います。半径をはかるときのずれは、何cm以内にすればよいでしょう。
+\bkpans{$\dfrac{\Delta V}{V}\approx\dfrac{3\Delta r}{r}\leqq0.03$ より $\dfrac{\Delta r}{r}\leqq0.01$、$\Delta r\leqq\qty{0.05}{cm}$}
+
+\bkproblem 落ちるボールの速度は $v=10t$（m/s）です。位置0から、0.25秒ごとに「次の位置＝今の位置＋今の速度×0.25」と計算して、1秒の位置を予想しましょう。ほんとうの位置 $5t^2$ とくらべましょう。
+\bkpans{速度は0、2.5、5、7.5。0 \mbox{→ 0} \mbox{→ 0.625} \mbox{→ 1.875} \mbox{→ 3.75}。予想\qty{3.75}{m}（ほんとうは\qty{5}{m}）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 次の位置を、今の位置＋速度×$\Delta t$ で予想できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-8:tsugi}ページ}
+\item 接線を使って、1次近似ができる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-8:sessen}ページ}
+\item 測定のずれが、計算にひびく大きさを見積もれる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:5-8:gosa}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{速度×時間をどんどんたしていくと、進んだ距離がわかる。これって、次の章の「グラフの面積」につながるのかな？}

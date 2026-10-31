@@ -1,0 +1,864 @@
+%% 2-6 はかった数には「ずれ」がある（第11回で書き足し。ページ数は自由・偶数）
+%% この章の部品（名前は \bkiig…）
+\makeatletter
+% 大きくしたものさし  \bkiigruler{(x,y)}{1 mm の長さ（図の mm）}{はじめの mm}{おわりの mm}
+%   (x,y) は「はじめの mm」の目もりの上のはし。目もりは下へ、cm の数字は下に書く
+\newcommand\bkiigruler[4]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bkiig@L{(#4-#3)*#2}
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.7pt] (-3,0) rectangle (\bkiig@L+3,-12);
+  \foreach \m in {#3,...,#4} {\pgfmathsetmacro\bkiig@x{(\m-#3)*#2}%
+    \pgfmathtruncatemacro\bkiig@c{mod(\m,10)==0}\pgfmathtruncatemacro\bkiig@f{mod(\m,5)==0}%
+    \ifnum\bkiig@c=1 \draw[bkInk, line width=0.8pt] (\bkiig@x,0) -- (\bkiig@x,-6);
+      \pgfmathtruncatemacro\bkiig@cm{\m/10}%
+      \node[anchor=north, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (\bkiig@x,-7.3) {\bkiig@cm};
+    \else\ifnum\bkiig@f=1 \draw[bkInk, line width=0.6pt] (\bkiig@x,0) -- (\bkiig@x,-4.5);
+    \else \draw[bkInk, line width=0.6pt] (\bkiig@x,0) -- (\bkiig@x,-3.2);\fi\fi}
+\end{scope}}
+% えんぴつの先（右向き）  \bkiigtip{(先の点)}{長さ}{太さ}
+\newcommand\bkiigtip[3]{\begin{scope}[shift={#1}]
+  \fill[bkStem!35] (-#2,-#3/2) -- (-#2*0.35,-#3*0.16) -- (-#2*0.35,#3*0.16) -- (-#2,#3/2) -- cycle;
+  \fill[bkInk!80] (-#2*0.35,-#3*0.16) -- (0,0) -- (-#2*0.35,#3*0.16) -- cycle;
+  \fill[bkGreen!60] (-#2-6,-#3/2) rectangle (-#2,#3/2);
+  \draw[bkStem!70!black, line width=0.5pt] (-#2-6,-#3/2) -- (-#2,-#3/2) -- (-#2*0.35,-#3*0.16) -- (0,0) -- (-#2*0.35,#3*0.16) -- (-#2,#3/2) -- (-#2-6,#3/2);
+\end{scope}}
+% ブロックのつみ木（平均の図）  \bkiigstack{(左下)}{こ数}{色}   1こは 7 mm 四方
+\newcommand\bkiigstack[3]{\begin{scope}[shift={#1}]
+  \foreach \k in {1,...,#2} {\filldraw[fill=#3!35, draw=#3!75!black, line width=0.6pt, rounded corners=0.6mm] (0,{(\k-1)*7}) rectangle (7,{\k*7-0.6});}
+\end{scope}}
+% 小さな見出し（本文の中の1行見出し）  \bkiighead{見出し}
+\newcommand\bkiighead[1]{\par\addvspace{5pt}\noindent{\sffamily\bfseries\color{bkTheme!85!black}▶\ #1}\par\nopagebreak\vspace{1pt}}
+% ストップウォッチ  \bkiigwatch{(中心)}{表示の文字}
+\newcommand\bkiigwatch[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!25, draw=bkInk!70, line width=0.7pt] (-3,13.5) rectangle (3,16.5);
+  \filldraw[fill=bkGray!40, draw=bkInk!70, line width=0.6pt, rotate=-40] (-1.6,13) rectangle (1.6,15.2);
+  \filldraw[fill=bkOrange!25, draw=bkInk!70, line width=0.9pt] (0,0) circle (13.5);
+  \filldraw[fill=bkInk!85, rounded corners=1.2mm] (-11,-5.5) rectangle (11,5.5);
+  \fill[bkGreen!25, rounded corners=0.7mm] (-9.8,-4.3) rectangle (9.8,4.3);
+  \node[font=\sffamily\bfseries\small, text=bkInk, inner sep=0pt] at (0,0) {#2};
+\end{scope}}
+\makeatother
+
+\bkchapter{2}{6}{はかった\R{数}{かず}には「ずれ」がある}{\bklevelrange{1}{2}}{はかった\R{数}{かず}には「ずれ」がある}
+\bkmichishirube{1-11,1-16,2-1,2-5}{2-13,3-14,5-8}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace \R{最小}{さい|しょう}\R{目}{め}もりの10\R{分}{ぶん}の1まで\R{読}{よ}み、\R{平均}{へい|きん}を\R{求}{もと}められる。
+\item \bklevel{1}\enspace \R{四捨五入}{し|しゃ|ご|にゅう}で、がい\R{数}{すう}をつくれる。
+\item \bklevel{2}\enspace 「\qty{5.0}{cm}」と「\qty{5}{cm}」のちがいを、ずれのはば（$\pm$）で\R{説明}{せつ|めい}できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+クラスの10\R{人}{にん}が、\R{同}{おな}じえんぴつの\R{長}{なが}さを、ものさしではかります。\qty{1}{mm}の\R{目}{め}もりのあいだも、\R{目}{め}でよく\R{見}{み}て\R{細}{こま}かく\R{読}{よ}みます。
+
+10\R{人}{にん}とも、\R{同}{おな}じ\R{数}{かず}になるかな？　ちがう\R{数}{かず}になったら、どれが\R{正}{ただ}しいのかな？
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ものさし（1 cm＝6 mm）
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.7pt, rounded corners=0.8mm] (-3,0) rectangle (99,-9);
+  \foreach \c in {0,...,16} {\draw[bkInk, line width=0.7pt] (\c*6,0) -- (\c*6,-3.6);
+    \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (\c*6,-4.6) {\c};}
+  \foreach \c in {0,...,15} {\draw[bkInk, line width=0.5pt] (\c*6+3,0) -- (\c*6+3,-2.2);}
+  % えんぴつ（0 から 14.63 cm）
+  \fill[bkGreen!60] (0,1.2) rectangle (75.8,7.2);
+  \draw[bkGreen!70!black, line width=0.5pt] (0,1.2) rectangle (75.8,7.2);
+  \fill[bkStem!35] (75.8,1.2) -- (85.4,3.4) -- (85.4,5.0) -- (75.8,7.2) -- cycle;
+  \fill[bkInk!80] (85.4,3.4) -- (87.8,4.2) -- (85.4,5.0) -- cycle;
+  % 虫めがね
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.2pt off 0.8pt] (87.8,4.2) -- (102,14);
+  \begin{scope}[shift={(113,14)}]
+    \begin{scope}
+      \clip (0,0) circle (12);
+      \fill[white] (0,0) circle (12);
+      \fill[bkYellowBg] (-13,-1.5) rectangle (13,-13);
+      \draw[bkYellow!80!black, line width=0.6pt] (-13,-1.5) -- (13,-1.5);
+      \foreach \t/\h in {-10.4/5, -2.4/7, 5.6/7} {\draw[bkInk, line width=0.7pt] (\t,-1.5) -- (\t,-1.5-\h);}
+      \fill[bkStem!35] (-14,1.5) -- (-6,3.6) -- (-6,6.4) -- (-14,8.5) -- cycle;
+      \fill[bkInk!80] (-6,3.6) -- (0,5) -- (-6,6.4) -- cycle;
+    \end{scope}
+    \draw[bkInk!70, line width=1.4pt] (0,0) circle (12);
+    \draw[bkInk!70, line width=2.4pt, line cap=round] (-8.5,-8.5) -- (-13.5,-13.5);
+    \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries\small, inner sep=0pt, minimum size=5mm] at (9.5,9.5) {？};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\end{hatena}
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[\R{同}{おな}じえんぴつを、みんなではかろう]
+\par\addvspace{3pt}\textbf{\R{用意}{よう|い}するもの}\par\noindent えんぴつ1\R{本}{ぽん}、\qty{1}{mm}の\R{目}{め}もりのあるものさし、\R{電卓}{でん|たく}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item ものさしの0の\R{目}{め}もりを、えんぴつのおしりにぴったり\R{合}{あ}わせよう。
+\item \R{先}{さき}が、どの\R{目}{め}もりとどの\R{目}{め}もりのあいだにあるかを\R{見}{み}よう。
+\item \qty{1}{mm}のあいだを10に\R{分}{わ}けたつもりで、いくつ\R{目}{め}かを\R{読}{よ}もう。
+\item \R{班}{はん}の\R{全員}{ぜん|いん}が\R{同}{おな}じえんぴつをはかって、ノートに\R{書}{か}こう。\R{全部}{ぜん|ぶ}\R{同}{おな}じになったかな？
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiigruler{(4,0)}{7}{139}{156}
+  \bkiigtip{(55.1,6.5)}{30}{11}
+  \draw[bkInk!60, line width=0.5pt, dash pattern=on 1.2pt off 0.8pt] (55.1,6.5) -- (55.1,0.6);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGreen!70!black, align=left, inner sep=0pt] at (76,9) {\R{先}{さき}は14.6と14.7の\\あいだ。どのあたり？};
+  \draw[bkGreen!70!black, line width=0.8pt, -{Stealth[length=3pt]}] (75,8) -- (57.2,6.6);
+\end{tikzpicture}
+\bkfigcaption{ものさしを\R{大}{おお}きくした\R{図}{ず}。\R{目}{め}もりは\qty{1}{mm}（\qty{0.1}{cm}）ごと。}
+\end{bkfigure}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{1-11}{\R{目}{め}もりのあいだは、\R{近}{ちか}いほうを\R{読}{よ}んで「だいたい」をつける。}
+\bkrecall{1-16}{\qty{1}{mm}＝\qty{0.1}{cm}。0.1が10こで1。\qty{1}{cm}＝\qty{10}{mm}}
+\bkrecall{2-1}{\R{小数点}{しょう|すう|てん}のすぐ\R{右}{みぎ}が\R{小数第}{しょう|すう|だい}1\R{位}{い}（$\frac{1}{10}$の\R{位}{くらい}）、その\R{右}{みぎ}が\R{小数第}{しょう|すう|だい}2\R{位}{い}（$\frac{1}{100}$の\R{位}{くらい}）。}
+\bkrecall{2-2}{「\R{以上}{い|じょう}」はその\R{数}{かず}をふくむ。「\R{未満}{み|まん}」はその\R{数}{かず}をふくまない。}
+\bkrecall{2-5}{\R{割合}{わり|あい}＝くらべる\R{量}{りょう}÷もとにする\R{量}{りょう}。\R{割合}{わり|あい}の0.01が1\%}
+\end{omoidasou}
+
+\bkfukidashi{sora}{ぼくは14.63、ミナは14.64、デルタは14.62。みんなちがう！　だれがまちがえたのかな？}
+
+\clearpage
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{最小}{さい|しょう}\R{目}{め}もりの10\R{分}{ぶん}の1まで\R{読}{よ}む}
+
+\leavevmode\label{bk:2-6:yomu}ものさしのいちばん\R{小}{ちい}さな\R{目}{め}もりを、\textbf{\R{最小}{さい|しょう}\R{目}{め}もり}といいます。ふつうのものさしの\R{最小}{さい|しょう}\R{目}{め}もりは\qty{1}{mm}、つまり\qty{0.1}{cm}です。えんぴつの\R{先}{さき}は、14.6と14.7のあいだにあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiigruler{(4,0)}{7}{139}{156}
+  % 14.6 と 14.7 のあいだを 10 に分けた目もり（赤）
+  \foreach \k in {1,...,9} {\draw[bkRed!70, line width=0.4pt] ({53+\k*0.7},0) -- ({53+\k*0.7},-1.6);}
+  \bkiigtip{(55.1,6.5)}{30}{11}
+  \draw[bkInk!60, line width=0.5pt, dash pattern=on 1.2pt off 0.8pt] (55.1,6.5) -- (55.1,0.6);
+  \draw[bkRed!80!black, line width=0.7pt, decorate, decoration={brace, amplitude=1.2mm, mirror}] (53,-13.5) -- (60,-13.5);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (56.5,-16.5) {\qty{1}{mm}を10に\R{分}{わ}けて\R{見}{み}る};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkInk, align=left, inner sep=0pt] at (78,9) {14.6から10\R{分}{ぶん}の3ぐらい\R{右}{みぎ}\\→　\textbf{\qty{14.63}{cm}}};
+  \draw[bkInk!60, line width=0.8pt, -{Stealth[length=3pt]}] (77,8) -- (57.2,6.6);
+\end{tikzpicture}
+\bkfigcaption{\R{最後}{さい|ご}の3は、\R{目}{め}で\R{見}{み}て\R{決}{き}めた\R{数}{かず}（\R{目分量}{め|ぶん|りょう}）。}
+\end{bkfigure}
+
+\R{先}{さき}は、14.6から\qty{1}{mm}の10\R{分}{ぶん}の3ぐらい\R{進}{すす}んだところです。だから\qty{14.63}{cm}と\R{読}{よ}みます。このように、\R{最小}{さい|しょう}\R{目}{め}もりの10\R{分}{ぶん}の1まで、\R{目}{め}で\R{見}{み}て\R{読}{よ}むことを、\textbf{\R{目分量}{め|ぶん|りょう}}で\R{読}{よ}むといいます。\bkidx{めぶんりょう}{\R{目分量}{め|ぶん|りょう}}
+
+\bkiighead{「10\R{分}{ぶん}の3」は、どうやって\R{決}{き}めるの？}
+\R{目}{め}もりのない\qty{1}{mm}のあいだを、いきなり10に\R{分}{わ}けるのはむずかしいですね。\R{次}{つぎ}の\R{順}{じゅん}に\R{考}{かんが}えると、\R{決}{き}めやすくなります。\R{下}{した}の\R{図}{ず}は、\qty{1}{mm}のあいだを、はば\qty{100}{mm}にまで\R{大}{おお}きくしたものです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1 mm を 100 mm に
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.7pt] (-6,0) rectangle (106,-11);
+  \draw[bkInk, line width=1pt] (0,0) -- (0,-7) (100,0) -- (100,-7);
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (0,-7.8) {14.6};
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (100,-7.8) {14.7};
+  \foreach \k in {1,2,3,4,6,7,8,9} {\draw[bkRed!55, line width=0.4pt, dash pattern=on 1pt off 1pt] (\k*10,0) -- (\k*10,-4);
+    \node[anchor=north, font=\sffamily\scriptsize, text=bkRed!70!black, inner sep=0pt] at (\k*10,-4.8) {\k};}
+  \draw[bkBlue, line width=0.9pt, dash pattern=on 2pt off 1pt] (50,0) -- (50,-7);
+  \node[anchor=north, font=\sffamily\scriptsize, text=bkBlue, inner sep=0pt] at (50,-7.8) {まん\R{中}{なか}（5）};
+  % えんぴつの先
+  \bkiigtip{(30,6)}{26}{10}
+  \draw[bkInk!60, line width=0.5pt, dash pattern=on 1.2pt off 0.8pt] (30,6) -- (30,0.6);
+  % 手順の札
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (38,13) {\bkcircled[bkBlue]{1}\ まん\R{中}{なか}より\R{左}{ひだり}};
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (38,6.5) {\bkcircled[bkBlue]{2}\ 14.6とまん\R{中}{なか}の、ほぼまん\R{中}{なか}→3};
+\end{tikzpicture}
+\bkfigcaption{\R{赤}{あか}い\R{点線}{てん|せん}は、ほんとうはない\R{目}{め}もり。\R{頭}{あたま}の\R{中}{なか}で\R{引}{ひ}いてみる\R{線}{せん}です。}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item まず、\R{先}{さき}が\textbf{まん\R{中}{なか}}（10\R{分}{ぶん}の5）より\R{左}{ひだり}か\R{右}{みぎ}かを\R{見}{み}ます。\R{左}{ひだり}なら1〜4、\R{右}{みぎ}なら6〜9のどれかです。ちょうどまん\R{中}{なか}なら5です。
+\item \R{左}{ひだり}のとき、「14.6の\R{目}{め}もりのすぐ\R{近}{ちか}く（1か2）」「まん\R{中}{なか}のすぐ\R{近}{ちか}く（4）」「その\R{間}{あいだ}（3）」のどれかを\R{選}{えら}びます。\R{図}{ず}の\R{先}{さき}は、14.6とまん\R{中}{なか}のほぼ\R{真}{ま}ん\R{中}{なか}なので、3です。
+\item \R{読}{よ}んだ\R{数}{かず}を、14.6の\R{後}{うし}ろにつけます。14.6と0.03で、\qty{14.63}{cm}です。
+\end{enumerate}
+
+\noindent\textbf{なぜ10\R{分}{ぶん}の1までで\R{止}{と}めるの？}\quad \R{人}{ひと}の\R{目}{め}は、\qty{1}{mm}のあいだを、だいたい10に\R{分}{わ}けるくらいまでなら\R{見分}{み|わ}けられます。100に\R{分}{わ}けようとしても、\R{細}{こま}かすぎて、もう\R{見}{み}ても\R{決}{き}められません。それは「はかった」のではなく、「あてずっぽう」になってしまいます。だから、\R{見}{み}て\R{決}{き}められるいちばん\R{細}{こま}かいところ、10\R{分}{ぶん}の1まで\R{読}{よ}むのです。
+
+\noindent\textbf{\qty{14.63}{cm}は、\R{何}{なん}mm？}\quad \qty{1}{cm}は\qty{10}{mm}なので、cmの\R{数}{かず}を10\R{倍}{ばい}するとmmの\R{数}{かず}になります（2-1：10\R{倍}{ばい}すると\R{小数点}{しょう|すう|てん}が\R{右}{みぎ}へ1つ）。$14.63\times10=146.3$ で、\qty{146.3}{mm}です。「14\,cm と6\,mm と、さらに\qty{1}{mm}の10\R{分}{ぶん}の3」という\R{意味}{い|み}です。
+
+\R{最後}{さい|ご}のけたの3は、\R{目}{め}で\R{決}{き}めた\R{数}{かず}です。\R{人}{ひと}によって2や4になります。\bkhatenaref の\R{答}{こた}えは、「ぜんぶ\R{同}{おな}じにはならない」です。だれかがまちがえたのではありません。\textbf{はかった\R{数}{かず}には、いつも「ずれ」があるのです}。
+
+\bksubsection{2}{\R{平均}{へい|きん}：でこぼこをならして1つの\R{数}{かず}にする}
+
+\leavevmode\label{bk:2-6:heikin}10\R{人}{にん}がはかった\R{結果}{けっ|か}です。どれも\R{正}{ただ}しい\R{読}{よ}み\R{方}{かた}なので、1つだけを\R{選}{えら}ぶことはできません。みんなの\R{数}{かず}を、1つの\R{数}{かず}にまとめる\R{方法}{ほう|ほう}を\R{考}{かんが}えましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=19mm] *{10}{Q[c,m,wd=10.2mm]}}, rowsep=1.5pt, colsep=2pt, cells={font=\footnotesize}, row{1}={font=\sffamily\bfseries\footnotesize}}
+\R{番号}{ばん|ごう} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+\R{長}{なが}さ（cm） & 14.63 & 14.65 & 14.62 & 14.64 & 14.66 & 14.64 & 14.63 & 14.65 & 14.64 & 14.64 \\
+\end{bktable}
+\bktabcaption{\R{同}{おな}じえんぴつを10\R{人}{にん}がはかった\R{長}{なが}さ}
+\end{bkcenter}
+
+\bkiighead{まず、つみ\R{木}{き}で「ならす」を\R{見}{み}てみよう}
+3つの\R{山}{やま}に、つみ\R{木}{き}が4こ、2こ、3こあります。でこぼこしていますね。いちばん\R{高}{たか}い\R{山}{やま}から1こを、いちばん\R{低}{ひく}い\R{山}{やま}へ\R{動}{うご}かすと、どの\R{山}{やま}も3こになって、たいらになります。これを「ならす」といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!60, line width=0.6pt] (-3,0) -- (36,0);
+  \bkiigstack{(0,0)}{3}{bkBlue}\fill[bkOrange!45] (0,21) rectangle (7,27.4);\draw[bkOrange!80!black, line width=0.6pt, rounded corners=0.6mm] (0,21) rectangle (7,27.4);
+  \bkiigstack{(13,0)}{2}{bkBlue}
+  \bkiigstack{(26,0)}{3}{bkBlue}
+  \draw[bkOrange!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (8,25) .. controls (12,30) and (16,24) .. (16.5,16);
+  \foreach \x/\n in {3.5/4,16.5/2,29.5/3} \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\x,-1.8) {\n こ};
+  \node[font=\sffamily\bfseries\Large, text=bkInk!70] at (46,12) {→};
+  \draw[bkInk!60, line width=0.6pt] (56,0) -- (95,0);
+  \bkiigstack{(59,0)}{3}{bkBlue}
+  \bkiigstack{(72,0)}{2}{bkBlue}\fill[bkOrange!45] (72,14) rectangle (79,20.4);\draw[bkOrange!80!black, line width=0.6pt, rounded corners=0.6mm] (72,14) rectangle (79,20.4);
+  \bkiigstack{(85,0)}{3}{bkBlue}
+  \draw[bkRed!80!black, line width=0.8pt, dash pattern=on 2pt off 1pt] (56,21) -- (95,21);
+  \foreach \x in {62.5,75.5,88.5} \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\x,-1.8) {3こ};
+  \node[anchor=west, font=\sffamily\footnotesize, align=left, inner sep=0pt] at (98,13) {\R{合計}{ごう|けい}は\\どちらも9こ};
+\end{tikzpicture}
+\bkfigcaption{1こを\R{動}{うご}かしても、\R{全部}{ぜん|ぶ}の\R{数}{かず}（\R{合計}{ごう|けい}）は9こで\R{変}{か}わらない。}
+\end{bkfigure}
+
+\R{動}{うご}かしても、\R{全部}{ぜん|ぶ}の\R{数}{かず}は9このままです。たいらにした\R{高}{たか}さは、「9こを3つの\R{山}{やま}に\R{同}{おな}じ\R{数}{かず}ずつ\R{分}{わ}けた\R{数}{かず}」と\R{同}{おな}じです。\R{同}{おな}じ\R{数}{かず}ずつ\R{分}{わ}けるのは、わり\R{算}{ざん}でしたね（1-14）。だから、\R{動}{うご}かさなくても、\R{計算}{けい|さん}で\R{求}{もと}められます。
+\[ (4+2+3)\div3=9\div3=3 \]
+このように、いくつかの\R{数}{かず}を\R{同}{おな}じ\R{大}{おお}きさにならした\R{数}{かず}を\textbf{\R{平均}{へい|きん}}といいます。\bkidx{へいきん}{\R{平均}{へい|きん}}「\R{全部}{ぜん|ぶ}たして（\R{合計}{ごう|けい}）、\R{数}{かず}の\R{個数}{こ|すう}でわる」のは、「\R{合計}{ごう|けい}を\R{変}{か}えずに、みんなを\R{同}{おな}じにする」ためです。
+\begin{center}
+\R{平均}{へい|きん}＝\R{合計}{ごう|けい}÷\R{個数}{こ|すう}
+\end{center}
+
+\bkiighead{えんぴつの\R{長}{なが}さの\R{平均}{へい|きん}}
+10\R{人}{にん}の\R{数}{かず}を\R{全部}{ぜん|ぶ}たすと146.40です（\R{電卓}{でん|たく}を\R{使}{つか}ってよい）。\R{数}{かず}は10こなので、10でわります。
+\[ 146.40\div10=14.64 \]
+10でわると、\R{小数点}{しょう|すう|てん}が\R{左}{ひだり}へ1つ\R{動}{うご}きます（2-1）。\R{平均}{へい|きん}は\qty{14.64}{cm}です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\textbf{くふう：ちがう\R{部分}{ぶ|ぶん}だけたす}\quad 10この\R{数}{かず}は、どれも「14.6\R{何}{なん}」です。14.60をこえた\R{部分}{ぶ|ぶん}だけをたすと、
+\[ 0.03+0.05+0.02+\cdots+0.04=0.40 \]
+これを10でわると0.04。14.60に0.04をたして、14.64。\R{同}{おな}じ\R{答}{こた}えになります。\R{小}{ちい}さな\R{数}{かず}のたし\R{算}{ざん}だけで\R{求}{もと}められます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 点の図（ドットプロット）。14.60〜14.68、0.01 を 7 mm
+  \draw[bkInk, line width=0.7pt] (0,0) -- (56,0);
+  \foreach \k/\l in {0/14.60, 2/14.62, 4/14.64, 6/14.66, 8/14.68} {\draw[bkInk, line width=0.7pt] (\k*7,-1.2) -- (\k*7,1.2);
+    \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at (\k*7,-2.2) {\l};}
+  \foreach \k in {1,3,5,7} {\draw[bkInk, line width=0.5pt] (\k*7,-0.8) -- (\k*7,0.8);}
+  \foreach \k/\n in {2/1, 3/2, 4/4, 5/2, 6/1} {\foreach \j in {1,...,\n} {\fill[bkBlue] (\k*7,\j*3.4) circle (1.3);}}
+  \draw[bkOrange, line width=1pt, dash pattern=on 2pt off 1pt] (28,-1) -- (28,16.5);
+  \node[anchor=south, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black, inner sep=0pt] at (28,17.5) {\R{平均}{へい|きん}14.64};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (28,-6.5) {1\R{人}{にん}の\R{数}{かず}が\R{点}{てん}1こ};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+\R{平均}{へい|きん}は、\R{点}{てん}が\R{集}{あつ}まっているまん\R{中}{なか}あたりにきます。ずれは\R{大}{おお}きいほうにも\R{小}{ちい}さいほうにも\R{出}{で}るので、\R{平均}{へい|きん}すると\R{打}{う}ち\R{消}{け}しあい、ほんとうの\R{長}{なが}さに\R{近}{ちか}い\R{数}{かず}になります。
+
+\bkiighead{\R{平均}{へい|きん}からのずれ}
+それぞれの\R{数}{かず}が、\R{平均}{へい|きん}からどれだけはなれているかは、ひき\R{算}{ざん}でわかります。\R{大}{おお}きいほうから\R{小}{ちい}さいほうをひきます。いちばん\R{大}{おお}きい14.66は $14.66-14.64=0.02$、いちばん\R{小}{ちい}さい14.62は $14.64-14.62=0.02$。どちらも\qty{0.02}{cm}（\qty{0.2}{mm}）しかずれていません。10\R{人}{にん}の\R{読}{よ}みは、\R{平均}{へい|きん}から\qty{0.02}{cm}の\R{中}{なか}に\R{全部}{ぜん|ぶ}\R{入}{はい}っています。\R{平均}{へい|きん}からのずれが\R{小}{ちい}さいほど、みんなの\R{読}{よ}みがそろっている、ということです。
+
+\bksubsection{3}{がい\R{数}{すう}と\R{四捨五入}{し|しゃ|ご|にゅう}}
+
+\leavevmode\label{bk:2-6:gaisuu}\qty{14.64}{cm}を「だいたい\R{何}{なん}cm」と、\R{小数第}{しょう|すう|だい}1\R{位}{い}（0.1の\R{位}{くらい}）まで\R{言}{い}うとどうなるかな？　14.64は、14.6と14.7のどちらに\R{近}{ちか}いでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (-4,0) -- (104,0);
+  \foreach \k in {0,...,10} {\pgfmathsetmacro\bkiigh{(\k==0||\k==10)?2.4:((\k==5)?1.8:1.1)}\draw[bkInk, line width=0.6pt] (\k*10,-\bkiigh) -- (\k*10,\bkiigh);}
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (0,-3.4) {14.6};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (50,-3.4) {14.65};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (100,-3.4) {14.7};
+  \fill[bkBlue!25] (0,3.4) rectangle (49.6,8.6);
+  \fill[bkOrange!30] (50.4,3.4) rectangle (100,8.6);
+  \node[font=\sffamily\footnotesize, inner sep=0pt] at (24.8,6) {14.6に\R{近}{ちか}い（\R{切}{き}り\R{捨}{す}て）};
+  \node[font=\sffamily\footnotesize, inner sep=0pt] at (75.2,6) {14.7に\R{近}{ちか}い（\R{切}{き}り\R{上}{あ}げ）};
+  \fill[bkRed] (40,0) circle (1.4);
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkRed, inner sep=0pt] at (40,-3.4) {14.64};
+\end{tikzpicture}
+\bkfigcaption{\R{小数第}{しょう|すう|だい}2\R{位}{い}が0〜4なら\R{切}{き}り\R{捨}{す}て、5〜9なら\R{切}{き}り\R{上}{あ}げ。}
+\end{bkfigure}
+
+\R{数直線}{すう|ちょく|せん}で\R{見}{み}ると、14.64は14.6に\R{近}{ちか}いので、だいたい\qty{14.6}{cm}です。\R{近}{ちか}いほうの14.6にするときは、\R{小数第}{しょう|すう|だい}2\R{位}{い}の4を\R{捨}{す}てるので、\textbf{\R{切}{き}り\R{捨}{す}て}といいます。14.67なら14.7のほうが\R{近}{ちか}いので、14.6を1つ\R{上}{うえ}の14.7にします。これを\textbf{\R{切}{き}り\R{上}{あ}げ}といいます。
+
+14.60から14.70までの\R{数}{かず}を、\R{全部}{ぜん|ぶ}\R{表}{ひょう}にしてみましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=27mm] *{11}{Q[c,m,wd=8.6mm]}}, rowsep=1.2pt, colsep=1.5pt, cells={font=\footnotesize}, column{1}={font=\sffamily\footnotesize}, cell{2}{2-6}={bg=bkBlue!18}, cell{2}{7-11}={bg=bkOrange!22}}
+もとの\R{数}{かず} & 14.60 & 14.61 & 14.62 & 14.63 & 14.64 & 14.65 & 14.66 & 14.67 & 14.68 & 14.69 & 14.70 \\
+\R{小数第}{しょう|すう|だい}1\R{位}{い}まで & 14.6 & 14.6 & 14.6 & 14.6 & 14.6 & 14.7 & 14.7 & 14.7 & 14.7 & 14.7 & 14.7 \\
+\end{bktable}
+\bktabcaption{\R{青}{あお}は\R{切}{き}り\R{捨}{す}て、だいだいは\R{切}{き}り\R{上}{あ}げ}
+\end{bkcenter}
+
+\R{求}{もと}める\R{位}{くらい}の1つ\R{下}{した}の\R{数字}{すう|じ}が0、1、2、3、4なら\R{切}{き}り\R{捨}{す}て、5、6、7、8、9なら\R{切}{き}り\R{上}{あ}げます。これを\textbf{\R{四捨五入}{し|しゃ|ご|にゅう}}といい、\R{四捨五入}{し|しゃ|ご|にゅう}などで\R{求}{もと}めた、だいたいの\R{数}{かず}を\textbf{がい\R{数}{すう}}といいます。\bkidx{ししゃごにゅう}{\R{四捨五入}{し|しゃ|ご|にゅう}}「4までは\R{捨}{す}て、5からは\R{入}{い}れる（\R{上}{うえ}にくり\R{上}{あ}げる）」という\R{意味}{い|み}の\R{名前}{な|まえ}です。
+
+\noindent\textbf{なぜ5は\R{切}{き}り\R{上}{あ}げなの？}\quad 14.65は、14.6と14.7のちょうどまん\R{中}{なか}です。どちらにも\R{同}{おな}じだけ\R{近}{ちか}いので、\R{近}{ちか}さでは\R{決}{き}められません。そこで、「5は\R{上}{うえ}にする」と\R{約束}{やく|そく}しました。\R{約束}{やく|そく}があれば、だれが\R{計算}{けい|さん}しても\R{同}{おな}じがい\R{数}{すう}になります。\R{表}{ひょう}を\R{見}{み}ると、\R{切}{き}り\R{捨}{す}ても\R{切}{き}り\R{上}{あ}げも5つずつで、ちょうど\R{半分}{はん|ぶん}ずつになっています。
+
+\noindent\textbf{\R{整数}{せい|すう}のがい\R{数}{すう}も\R{同}{おな}じ}\quad \qty{152.3}{g}を\R{一}{いち}の\R{位}{くらい}までのがい\R{数}{すう}にするときは、1つ\R{下}{した}の\R{小数第}{しょう|すう|だい}1\R{位}{い}の3を\R{見}{み}て\R{切}{き}り\R{捨}{す}て、\qty{152}{g}です。
+
+\bksubsection{4}{「\qty{5.0}{cm}」と「\qty{5}{cm}」はちがう}
+
+\leavevmode\label{bk:2-6:yuukou}ある\R{長}{なが}さを\R{小数第}{しょう|すう|だい}1\R{位}{い}まではかったら、ちょうど\qty{5}{cm}の\R{目}{め}もりの\R{上}{うえ}でした。これを「\qty{5.0}{cm}」と\R{書}{か}くか「\qty{5}{cm}」と\R{書}{か}くかで、\R{伝}{つた}わることがちがいます。\R{四捨五入}{し|しゃ|ご|にゅう}を\R{逆}{ぎゃく}から\R{考}{かんが}えてみましょう。
+
+\bkiighead{\R{四捨五入}{し|しゃ|ご|にゅう}して5.0になるのは、どんな\R{長}{なが}さ？}
+\R{小数第}{しょう|すう|だい}2\R{位}{い}まで\R{細}{こま}かくした\R{長}{なが}さを、\R{小数第}{しょう|すう|だい}1\R{位}{い}まで\R{四捨五入}{し|しゃ|ご|にゅう}してみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{6}{Q[c,m,wd=9mm]} Q[c,m,wd=6mm] *{3}{Q[c,m,wd=9mm]}}, rowsep=1.2pt, colsep=1.5pt, cells={font=\footnotesize}, column{1}={font=\sffamily\footnotesize}, cell{2}{3-11}={bg=bkOrange!22}}
+\R{長}{なが}さ（cm） & 4.94 & 4.95 & 4.96 & 4.97 & 4.98 & 4.99 & …… & 5.03 & 5.04 & 5.05 \\
+\R{四捨五入}{し|しゃ|ご|にゅう} & 4.9 & 5.0 & 5.0 & 5.0 & 5.0 & 5.0 & …… & 5.0 & 5.0 & 5.1 \\
+\end{bktable}
+\bktabcaption{5.0になるのは、4.95から5.04……まで（5.05は5.1になる）}
+\end{bkcenter}
+
+4.94は4.9になり、4.95から5.0になります。\R{上}{うえ}のほうは5.04（5.049……もふくむ）までが5.0で、5.05になると5.1です。だから、\R{小数第}{しょう|すう|だい}1\R{位}{い}まで\R{四捨五入}{し|しゃ|ご|にゅう}して\qty{5.0}{cm}になる\R{長}{なが}さは、\textbf{\qty{4.95}{cm}\R{以上}{い|じょう}\qty{5.05}{cm}\R{未満}{み|まん}}です（2-2）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (-2,0) -- (122,0);
+  \foreach \k in {0,...,12} {\draw[bkInk, line width=0.6pt] (\k*10,-1.4) -- (\k*10,1.4);}
+  \foreach \k/\l in {0/4.4, 1/4.5, 6/5, 11/5.5, 12/5.6} {\node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k*10,-2.6) {\l};}
+  % 5 cm：4.5〜5.5
+  \fill[bkBlue!30] (10,4) rectangle (110,8.6);
+  \node[font=\sffamily\footnotesize, inner sep=0pt] at (60,6.3) {「\qty{5}{cm}」：\qty{4.5}{cm}\R{以上}{い|じょう}\qty{5.5}{cm}\R{未満}{み|まん}（$\pm$\qty{0.5}{cm}）};
+  % 5.0 cm：4.95〜5.05
+  \fill[bkOrange!80] (55,10.6) rectangle (65,15.2);
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (67,12.9) {「\qty{5.0}{cm}」：\qty{4.95}{cm}\R{以上}{い|じょう}\qty{5.05}{cm}\R{未満}{み|まん}};
+\end{tikzpicture}
+\bkfigcaption{「\qty{5.0}{cm}」の0は、\R{小数第}{しょう|すう|だい}1\R{位}{い}まではかったしるし。ずれのはばは10\R{分}{ぶん}の1になる。}
+\end{bkfigure}
+
+5.0から\R{下}{した}へ0.05、\R{上}{うえ}へ0.05のはんいです。だから、\qty{5.0}{cm}と\R{書}{か}けば、\textbf{およそ $\pm$\qty{0.05}{cm}のずれをふくみます}。「$\pm$」は「プラスマイナス」と\R{読}{よ}み、「\R{大}{おお}きいほうにも\R{小}{ちい}さいほうにも、それだけずれているかもしれない」という\R{意味}{い|み}です。
+
+\R{同}{おな}じように、「\qty{5}{cm}」とだけ\R{書}{か}くと、\R{一}{いち}の\R{位}{くらい}まで\R{四捨五入}{し|しゃ|ご|にゅう}して5になる\R{長}{なが}さ、つまり\qty{4.5}{cm}\R{以上}{い|じょう}\qty{5.5}{cm}\R{未満}{み|まん}です。ずれは10\R{倍}{ばい}の $\pm$\qty{0.5}{cm}もあります。
+
+\noindent\textbf{0.05はどこから\R{来}{き}たの？}\quad \R{書}{か}いたいちばん\R{下}{した}のけたは、5.0なら\R{小数第}{しょう|すう|だい}1\R{位}{い}で、その1つ\R{分}{ぶん}は0.1です。\R{四捨五入}{し|しゃ|ご|にゅう}は「\R{近}{ちか}いほう」に\R{決}{き}めるので、ずれは0.1の\R{半分}{はん|ぶん}より\R{大}{おお}きくなりません。$0.1\div2=0.05$ です。「5」なら1の\R{半分}{はん|ぶん}で0.5、「14.63」なら0.01の\R{半分}{はん|ぶん}で0.005です。まとめると、\textbf{ずれのはばは、\R{書}{か}いたいちばん\R{下}{した}のけたの1つ\R{分}{ぶん}の\R{半分}{はん|ぶん}}です。\R{覚}{おぼ}えていなくても、\R{表}{ひょう}や\R{数直線}{すう|ちょく|せん}をかけば、いつでも\R{確}{たし}かめられます。
+
+\noindent\begin{minipage}[c]{0.48\linewidth}
+5.0の0は「\R{何}{なに}もない」ではなく、「\R{小数第}{しょう|すう|だい}1\R{位}{い}まではかって0だった」という\R{意味}{い|み}です。このように、はかった\R{数}{かず}のうち\R{意味}{い|み}のある\R{数字}{すう|じ}を\textbf{\R{有効数字}{ゆう|こう|すう|じ}}といいます。\bkidx{ゆうこうすうじ}{\R{有効数字}{ゆう|こう|すう|じ}}5.0は2けた、5は1けた、14.63は4けたです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\raggedleft
+\bkkigocard{$\pm$}{プラスマイナス}{ずれのはば。$50.0\pm0.1$ は、49.9から50.1まで}{plus-minus}{2-6}
+\end{minipage}
+
+\par\vspace{3pt}
+\noindent\textbf{\R{前}{まえ}につく0は\R{数}{かぞ}えない}\quad \qty{0.092}{mm}の、\R{前}{まえ}の2つの0は、\R{小数点}{しょう|すう|てん}の\R{位置}{い|ち}を\R{表}{あらわ}すための0です。はかって\R{決}{き}まった\R{数字}{すう|じ}は9と2なので、\R{有効数字}{ゆう|こう|すう|じ}は2けたです。
+
+\bksubsection{5}{ずれの\R{大}{おお}きさを\R{割合}{わり|あい}でくらべる}
+
+\leavevmode\label{bk:2-6:wariai}はかった\R{値}{あたい}とほんとうの\R{値}{あたい}とのずれを、\textbf{\R{誤差}{ご|さ}}といいます。\bkidx{ごさ}{\R{誤差}{ご|さ}}\qty{5.0}{cm}も\qty{50.0}{cm}も、ずれは $\pm$\qty{0.05}{cm}です。どちらが\R{細}{こま}かくはかれているかな？
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 5.0 cm（1 cm＝2.4 mm）
+  \fill[bkBlue!35] (0,12) rectangle (12,17);
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (14,14.5) {\qty{5.0}{cm}：ずれ0.05は、\R{長}{なが}さの100\R{分}{ぶん}の1（1\%）};
+  % 50.0 cm
+  \fill[bkBlue!35] (0,0) rectangle (120,5);
+  \node[anchor=west, font=\sffamily\footnotesize, inner sep=0pt] at (2,8) {\qty{50.0}{cm}：ずれ0.05は、\R{長}{なが}さの1000\R{分}{ぶん}の1（0.1\%）};
+  \draw[bkRed, line width=1.2pt] (12,11) -- (12,18) (120,-1) -- (120,6);
+\end{tikzpicture}
+\bkfigcaption{\R{赤}{あか}い\R{線}{せん}のあたりが、ずれ（$\pm$\qty{0.05}{cm}）。\R{長}{なが}いほうが、ずれが\R{目}{め}だたない。}
+\end{bkfigure}
+
+ずれの\R{数}{かず}は\R{同}{おな}じでも、\R{短}{みじか}い\R{物}{もの}のずれのほうが\R{目}{め}だちます。そこで、はかった\R{長}{なが}さを\textbf{もとにする\R{量}{りょう}}、ずれを\textbf{くらべる\R{量}{りょう}}にして、ずれの\R{割合}{わり|あい}を\R{求}{もと}めます（2-5：\R{割合}{わり|あい}＝くらべる\R{量}{りょう}÷もとにする\R{量}{りょう}）。\R{割合}{わり|あい}に100をかけると\%になります（\R{割合}{わり|あい}の0.01が1\%だから）。
+\[ 0.05\div5.0=0.01\ \text{（1\%）}\qquad\qquad 0.05\div50.0=0.001\ \text{（0.1\%）} \]
+ずれのはばが\R{同}{おな}じでも、\R{長}{なが}い\R{物}{もの}をはかったほうが、ずれの\R{割合}{わり|あい}は\R{小}{ちい}さくなります。\qty{50.0}{cm}のほうが、10\R{倍}{ばい}\R{細}{こま}かくはかれているのです。
+
+\bksubsection{6}{まとめてはかって、\R{数}{かず}でわる}
+
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\leavevmode\label{bk:2-6:matome}コピー\R{用紙}{よう|し}1まいの\R{厚}{あつ}さは、ものさしでははかれません。\qty{1}{mm}よりずっとうすいからです。そこで100まい\R{重}{かさ}ねてはかると、\qty{9.2}{mm}でした。100まいが\R{同}{おな}じ\R{厚}{あつ}さだとすると、1まい\R{分}{ぶん}は100に\R{等}{ひと}しく\R{分}{わ}けた1つです。
+\[ 9.2\div100=0.092\quad\text{（mm）} \]
+100でわると、\R{小数点}{しょう|すう|てん}は\R{左}{ひだり}へ2つ\R{動}{うご}きます（2-1）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 紙のたば（100まい）とものさし。まん中をはぶいた形（なみ線）でかく
+  \fill[white] (0,0) rectangle (24,17.6);
+  \foreach \k in {0,...,8} {\draw[bkGray!80, line width=0.4pt] (0,{\k*0.75}) -- (24,{\k*0.75});}
+  \foreach \k in {0,...,8} {\draw[bkGray!80, line width=0.4pt] (0,{11.6+\k*0.75}) -- (24,{11.6+\k*0.75});}
+  \fill[white] (-0.5,7.2) -- (24.5,7.2) -- (24.5,10.4) -- (-0.5,10.4) -- cycle;
+  \draw[bkInk!70, line width=0.6pt] (0,7.2) -- (0,0) -- (24,0) -- (24,7.2) (0,10.4) -- (0,17.6) -- (24,17.6) -- (24,10.4);
+  \draw[bkInk!70, line width=0.6pt] (-1,7.2) .. controls (5,8.4) and (8,6) .. (12,7.2) .. controls (16,8.4) and (19,6) .. (25,7.2);
+  \draw[bkInk!70, line width=0.6pt] (-1,10.4) .. controls (5,11.6) and (8,9.2) .. (12,10.4) .. controls (16,11.6) and (19,9.2) .. (25,10.4);
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.6pt] (26,-2) rectangle (32,20);
+  \foreach \k in {0,...,10} {\draw[bkInk, line width=0.4pt] (26,{\k*1.76}) -- (27.6,{\k*1.76});}
+  \draw[bkRed!80!black, line width=0.7pt, decorate, decoration={brace, amplitude=1mm}] (34,17.6) -- (34,0);
+  \node[anchor=west, font=\sffamily\footnotesize, align=left, inner sep=0pt] at (36.5,8.8) {100まい\\\qty{9.2}{mm}};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{3pt}
+\noindent\textbf{なぜ、まとめてはかるとよいの？}\quad ものさしを\R{読}{よ}むときのずれは、\R{何}{なん}まい\R{重}{かさ}ねても、1\R{回}{かい}\R{読}{よ}むかぎり $\pm$\qty{0.05}{mm}ぐらいで\R{同}{おな}じです。\R{下}{した}の\R{表}{ひょう}で、1まいだけはかった\R{場合}{ば|あい}とくらべましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=40mm] Q[c,m,wd=48mm]}, rowsep=1.5pt, colsep=3pt, cells={font=\footnotesize}, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}}
+ & 1まいだけはかる & 100まいはかって100でわる \\
+\R{読}{よ}んだ\R{数}{かず} & \R{約}{やく}\qty{0.1}{mm}（\R{目}{め}もり1つもない） & \qty{9.2}{mm} → 1まいは\qty{0.092}{mm} \\
+ずれ & $\pm$\qty{0.05}{mm} & $\pm$\qty{0.05}{mm}を100でわって $\pm$\qty{0.0005}{mm} \\
+ずれの\R{割合}{わり|あい} & $0.05\div0.1=0.5$（50\%） & $0.0005\div0.092=0.0054\cdots$（\R{約}{やく}0.5\%） \\
+\end{bktable}
+\bktabcaption{まとめてはかると、ずれの\R{割合}{わり|あい}が100\R{分}{ぶん}の1になる}
+\end{bkcenter}
+
+1まいだけだと、ずれが\R{厚}{あつ}さの\R{半分}{はん|ぶん}もあって、ほとんど\R{役}{やく}に\R{立}{た}ちません。100まいまとめてはかると、1まいあたりのずれは100\R{分}{ぶん}の1になります。
+
+\textbf{\R{時間}{じ|かん}も\R{同}{おな}じ}\quad \R{振}{ふ}り\R{子}{こ}の1\R{往復}{おう|ふく}の\R{時間}{じ|かん}は1\R{秒}{びょう}ぐらいと\R{短}{みじか}いので、ストップウォッチをおすときのずれ（0.1\R{秒}{びょう}ぐらい、\pageref{bk:2-6:hannou}ページ）が\R{目}{め}だちます。10\R{往復}{おう|ふく}をはかって10でわると、ずれは10\R{分}{ぶん}の1の0.01\R{秒}{びょう}ぐらいになります。
+
+\noindent\begin{minipage}[c]{0.7\linewidth}
+ストップウォッチの\R{表示}{ひょう|じ}「01:11.50」は、「1\R{分}{ぷん}11.50\R{秒}{びょう}」と\R{読}{よ}みます。「:」の\R{左}{ひだり}が\R{分}{ふん}、\R{右}{みぎ}が\R{秒}{びょう}です。1\R{分}{ぷん}は60\R{秒}{びょう}なので、\R{秒}{びょう}だけで\R{表}{あらわ}すと
+\[ 60\ \text{\R{秒}{びょう}}+11.50\ \text{\R{秒}{びょう}}=71.50\ \text{\R{秒}{びょう}} \]
+\R{分}{ふん}と\R{秒}{びょう}がまざったままでは、わり\R{算}{ざん}ができません。\textbf{\R{単位}{たん|い}を\R{秒}{びょう}にそろえてから\R{計算}{けい|さん}します}（2-10でくわしく\R{学}{まな}びます）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiigwatch{(0,0)}{01:11.50}
+  \draw[bkInk!60, line width=0.5pt] (-5,-6.5) -- (-9,-19);
+  \draw[bkInk!60, line width=0.5pt] (4,-6.5) -- (9,-19);
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (-10,-20) {1\R{分}{ぷん}};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (10,-20) {11.50\R{秒}{びょう}};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{taisetsu}
+\R{最小}{さい|しょう}\R{目}{め}もりの10\R{分}{ぶん}の1まで、\R{目分量}{め|ぶん|りょう}で\R{読}{よ}む。\R{平均}{へい|きん}＝\R{合計}{ごう|けい}÷\R{個数}{こ|すう}\\
+うすい\R{物}{もの}や\R{短}{みじか}い\R{時間}{じ|かん}は、まとめてはかって、\R{数}{かず}でわる。\R{単位}{たん|い}をそろえてから\R{計算}{けい|さん}する。\\
+はかった\R{値}{あたい}にはずれ（\R{誤差}{ご|さ}）がある。\\
+\qty{5.0}{cm}と\R{書}{か}けば、およそ $\pm$\qty{0.05}{cm}のずれをふくむ。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{\R{目分量}{め|ぶん|りょう}}{\R{最小}{さい|しょう}\R{目}{め}もりのあいだを、\R{目}{め}で\R{見}{み}て10に\R{分}{わ}けて\R{読}{よ}むこと。}
+\bkword{\R{平均}{へい|きん}}{いくつかの\R{数}{かず}をならした\R{数}{かず}。\R{合計}{ごう|けい}÷\R{個数}{こ|すう}。}
+\bkword{\R{四捨五入}{し|しゃ|ご|にゅう}・がい\R{数}{すう}}{0〜4は\R{切}{き}り\R{捨}{す}て、5〜9は\R{切}{き}り\R{上}{あ}げ。だいたいの\R{数}{かず}。}
+\bkword{\R{誤差}{ご|さ}・\R{有効数字}{ゆう|こう|すう|じ}}{はかった\R{値}{あたい}のずれ。はかった\R{数}{かず}の、\R{意味}{い|み}のある\R{数字}{すう|じ}。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[\R{目分量}{め|ぶん|りょう}で\R{読}{よ}む]
+\R{消}{け}しゴムを、\qty{3}{cm}の\R{目}{め}もりから\R{置}{お}きました。\R{右}{みぎ}のはしは\R{何}{なん}cmですか。\qty{1}{mm}の10\R{分}{ぶん}の1まで\R{読}{よ}みましょう。\par
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 全体の図（1 cm＝8 mm、2.5 cm〜8 cm）
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.6pt] (-2,0) rectangle (46,-8);
+  \foreach \c in {3,...,8} {\draw[bkInk, line width=0.6pt] ({(\c-2.5)*8},0) -- ({(\c-2.5)*8},-3.4);
+    \node[anchor=north, font=\sffamily\scriptsize, inner sep=0pt] at ({(\c-2.5)*8},-4.2) {\c};}
+  \foreach \c in {3,...,7} {\draw[bkInk, line width=0.4pt] ({(\c-2.5)*8+4},0) -- ({(\c-2.5)*8+4},-2);}
+  \bkeraser[bkBlue]{(4,0.4)}{34.9}{15.2}
+  \draw[bkRed!80!black, line width=0.7pt, dash pattern=on 1.5pt off 1pt] (38.9,1) circle (5.5);
+  \draw[bkRed!80!black, line width=0.7pt, -{Stealth[length=3pt]}] (44.6,3) -- (55.5,6);
+  % 大きくした図
+  \begin{scope}[shift={(60,0)}]
+    \draw[bkRed!80!black, line width=0.7pt, dash pattern=on 1.5pt off 1pt, rounded corners=2mm] (-4,-14.5) rectangle (49,17.5);
+    \bkiigruler{(2,0)}{5.5}{70}{78}
+    \begin{scope}\clip (-1,0.4) rectangle (46,16.5);
+      \bkeraser[bkBlue]{(-218.2,0.4)}{240}{104}
+    \end{scope}
+    \node[anchor=north east, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (47.5,16.3) {\R{大}{おお}きくした\R{図}{ず}};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\kangaekata \R{目}{め}もりの\R{数}{かず}を\R{読}{よ}んでから、\R{最後}{さい|ご}の1けたを\R{目分量}{め|ぶん|りょう}で\R{決}{き}めます。\par
+\shiki ① はしは、7.3と7.4の\R{目}{め}もりのあいだ。\par
+\hspace*{2.6\zw}② まん\R{中}{なか}（10\R{分}{ぶん}の5）より、すこし\R{右}{みぎ}。6ぐらい。\par
+\hspace*{2.6\zw}③ $7.3+0.06=7.36$\kotaenext\qty{7.36}{cm}
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\R{青}{あお}いテープの\R{右}{みぎ}のはしは\R{何}{なん}cm？\qty{1}{mm}の10\R{分}{ぶん}の1まで\R{読}{よ}もう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=0.8mm]
+  \bkiigruler{(2,0)}{5.5}{118}{126}
+  \fill[bkBlue!30] (-3,0.8) rectangle (19.6,7);
+  \draw[bkBlue!70!black, line width=0.6pt] (-3,0.8) -- (19.6,0.8) -- (19.6,7) -- (-3,7);
+\end{tikzpicture}
+\end{minipage}
+\bkjans{\qty{12.12}{cm}（12.11〜12.13ならよい）}
+\end{jibun}
+
+\begin{reidai}[\R{平均}{へい|きん}と、まとめてはかる]
+コピー\R{用紙}{よう|し}100まいの\R{厚}{あつ}さを3\R{回}{かい}はかると、\qty{9.1}{mm}、\qty{9.3}{mm}、\qty{9.2}{mm}でした。（1）\R{平均}{へい|きん}は\R{何}{なん}mm？（2）1まいの\R{厚}{あつ}さは\R{何}{なん}mm？\par
+\kangaekata（1）\R{全部}{ぜん|ぶ}たして、\R{数}{かず}の\R{個数}{こ|すう}（はかった\R{回数}{かい|すう}の3）でわる。（2）100まいの\R{厚}{あつ}さを100\R{等分}{とう|ぶん}するので、\R{平均}{へい|きん}を100でわる。\par
+\shiki（1）$9.1+9.3+9.2=27.6$、\ $27.6\div3=9.2$\par
+\hspace*{2.6\zw}（2）$9.2\div100=0.092$\quad（\R{小数点}{しょう|すう|てん}を\R{左}{ひだり}へ2つ）\par
+\kotae（1）\qty{9.2}{mm}\quad（2）\qty{0.092}{mm}
+\end{reidai}
+
+\begin{jibun}
+\R{振}{ふ}り\R{子}{こ}の10\R{往復}{おう|ふく}を3\R{回}{かい}はかると、14.2、14.5、14.2\R{秒}{びょう}。（1）\R{平均}{へい|きん}は？（2）1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}？
+\bkjans{（1）\nobreak $42.9\div3=14.3$ で14.3\R{秒}{びょう}\quad（2）\nobreak 1.43\R{秒}{びょう}}
+\end{jibun}
+
+\begin{reidai}[\R{単位}{たん|い}をそろえてから、まとめてわる]
+1\R{円玉}{えん|だま}を20まい\R{重}{かさ}ねると、\R{高}{たか}さは\qty{3.0}{cm}でした。1\R{円玉}{えん|だま}1まいの\R{厚}{あつ}さは\R{何}{なん}mmですか。\par
+\kangaekata \R{答}{こた}えはmmで\R{聞}{き}かれているので、\R{先}{さき}にcmをmmになおします。\qty{1}{cm}は\qty{10}{mm}なので、cmの\R{数}{かず}を10\R{倍}{ばい}します。それから20でわります。\par
+\shiki ① \qty{3.0}{cm}は $3.0\times10=30$ で\qty{30}{mm}\par
+\hspace*{2.6\zw}② $30\div20=1.5$\par
+\kotae \qty{1.5}{mm}
+\end{reidai}
+
+\begin{jibun}
+\R{同}{おな}じ\R{大}{おお}きさのクッキーを15まい\R{重}{かさ}ねると、\R{高}{たか}さは\qty{6.0}{cm}でした。クッキー1まいの\R{厚}{あつ}さは\R{何}{なん}mmですか。
+\bkjans{\qty{6.0}{cm}＝\qty{60}{mm}、$60\div15=4$ で\qty{4}{mm}}
+\end{jibun}
+
+\begin{reidai}[ストップウォッチの\R{表示}{ひょう|じ}を\R{秒}{びょう}にする]
+\R{振}{ふ}り\R{子}{こ}の50\R{往復}{おう|ふく}をはかると、ストップウォッチの\R{表示}{ひょう|じ}は「01:11.50」でした。1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}ですか。\par
+\kangaekata 「01:11.50」は1\R{分}{ぷん}11.50\R{秒}{びょう}。1\R{分}{ぷん}は60\R{秒}{びょう}なので、まず\R{全部}{ぜん|ぶ}を\R{秒}{びょう}にそろえます。それから50でわります。\par
+\shiki ① 60\R{秒}{びょう}＋11.50\R{秒}{びょう}＝71.50\R{秒}{びょう}\par
+\hspace*{2.6\zw}② $71.50\div50=1.43$\par
+\kotae 1.43\R{秒}{びょう}
+\end{reidai}
+
+\begin{jibun}
+\R{振}{ふ}り\R{子}{こ}の40\R{往復}{おう|ふく}をはかると、\R{表示}{ひょう|じ}は「01:02.40」でした。1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}ですか。
+\bkjans{60\R{秒}{びょう}＋2.40\R{秒}{びょう}＝62.40\R{秒}{びょう}、$62.40\div40=1.56$ で1.56\R{秒}{びょう}}
+\end{jibun}
+
+\begin{reidai}[\R{四捨五入}{し|しゃ|ご|にゅう}でがい\R{数}{すう}にする]
+（1）\qty{9.96}{cm}を\R{小数第}{しょう|すう|だい}1\R{位}{い}までのがい\R{数}{すう}にしましょう。（2）2.348\R{秒}{びょう}を\R{小数第}{しょう|すう|だい}2\R{位}{い}までのがい\R{数}{すう}にしましょう。（3）\qty{6.45}{kg}を\R{小数第}{しょう|すう|だい}1\R{位}{い}までのがい\R{数}{すう}にしましょう。\par
+\kangaekata \R{求}{もと}める\R{位}{くらい}の、1つ\R{下}{した}の\R{位}{くらい}の\R{数字}{すう|じ}を\R{見}{み}ます。\par
+\shiki（1）\R{小数第}{しょう|すう|だい}2\R{位}{い}は6なので\R{切}{き}り\R{上}{あ}げ。9.9に0.1をたして10.0\par
+\hspace*{2.6\zw}\phantom{（1）}\R{小数第}{しょう|すう|だい}1\R{位}{い}まで\R{書}{か}くので、10.0の0は\R{消}{け}さない\par
+\hspace*{2.6\zw}（2）\R{小数第}{しょう|すう|だい}3\R{位}{い}は8なので\R{切}{き}り\R{上}{あ}げ。$2.348\to2.35$\par
+\hspace*{2.6\zw}（3）\R{小数第}{しょう|すう|だい}2\R{位}{い}は5。5は\R{切}{き}り\R{上}{あ}げなので、$6.45\to6.5$\par
+\kotae（1）\qty{10.0}{cm}\quad（2）2.35\R{秒}{びょう}\quad（3）\qty{6.5}{kg}
+\end{reidai}
+
+\begin{jibun}
+がい\R{数}{すう}にしましょう。（1）\qty{8.27}{m}を\R{小数第}{しょう|すう|だい}1\R{位}{い}まで（2）0.465\R{秒}{びょう}を\R{小数第}{しょう|すう|だい}2\R{位}{い}まで（3）\qty{3.95}{L}を\R{小数第}{しょう|すう|だい}1\R{位}{い}まで
+\bkjans{（1）\nobreak \qty{8.3}{m}\quad（2）\nobreak 0.47\R{秒}{びょう}\quad（3）\nobreak \qty{4.0}{L}}
+\end{jibun}
+
+\begin{reidai}[\R{有効数字}{ゆう|こう|すう|じ}とずれのはば]
+「\qty{8.0}{cm}」と\R{書}{か}いた\R{長}{なが}さは、\R{何}{なん}cm\R{以上}{い|じょう}\R{何}{なん}cm\R{未満}{み|まん}？ずれのはばは？\par
+\kangaekata \R{小数第}{しょう|すう|だい}1\R{位}{い}まで\R{四捨五入}{し|しゃ|ご|にゅう}して8.0になるはんいを\R{考}{かんが}えます。\par
+\shiki 7.94は\R{切}{き}り\R{捨}{す}てて7.9。7.95は\R{切}{き}り\R{上}{あ}げて8.0。\par
+\hspace*{2.6\zw}8.04は\R{切}{き}り\R{捨}{す}てて8.0。8.05は\R{切}{き}り\R{上}{あ}げて8.1。\par
+\hspace*{2.6\zw}ずれのはばは $8.0-7.95=0.05$\quad（0.1の\R{半分}{はん|ぶん}）\par
+\kotae \qty{7.95}{cm}\R{以上}{い|じょう}\qty{8.05}{cm}\R{未満}{み|まん}。$\pm$\qty{0.05}{cm}
+\end{reidai}
+
+\begin{jibun}
+「\qty{3.6}{m}」と\R{書}{か}かれた\R{長}{なが}さは、\R{何}{なん}m\R{以上}{い|じょう}\R{何}{なん}m\R{未満}{み|まん}？ずれのはばは？
+\bkjans{\qty{3.55}{m}\R{以上}{い|じょう}\qty{3.65}{m}\R{未満}{み|まん}、$\pm$\qty{0.05}{m}}
+\end{jibun}
+
+\begin{reidai}[\R{部品}{ぶ|ひん}のずれと、ずれの\R{割合}{わり|あい}]
+\R{部品}{ぶ|ひん}の\R{長}{なが}さが「$50.0\pm0.1$\,mm」と\R{決}{き}められています。（1）\R{何}{なん}mmから\R{何}{なん}mmまでならよいですか。（2）ずれの\R{割合}{わり|あい}は\R{何}{なん}\%ですか。\par
+\kangaekata $\pm0.1$ は「0.1\R{大}{おお}きくても\R{小}{ちい}さくてもよい」。（2）はずれ0.1がくらべる\R{量}{りょう}、50.0がもとにする\R{量}{りょう}。\par
+\shiki（1）\R{小}{ちい}さいほう $50.0-0.1=49.9$、\R{大}{おお}きいほう $50.0+0.1=50.1$\par
+\hspace*{2.6\zw}（2）$0.1\div50.0=0.002$\par
+\hspace*{2.6\zw}\phantom{（2）}\%にするため100をかけて、$0.002\times100=0.2$\par
+\kotae（1）\qty{49.9}{mm}から\qty{50.1}{mm}まで\quad（2）0.2\%
+\end{reidai}
+
+\begin{jibun}
+「$20.0\pm0.5$\,g」のおかし。（1）\R{何}{なん}gから\R{何}{なん}gまで？（2）ずれの\R{割合}{わり|あい}は？
+\bkjans{（1）\nobreak \qty{19.5}{g}から\qty{20.5}{g}まで\quad（2）\nobreak $0.5\div20.0=0.025$ で2.5\%}
+\end{jibun}
+
+\begin{reidai}[はんいに\R{入}{はい}っているかを\R{調}{しら}べる]
+「$25.0\pm0.2$\,mm」の\R{部品}{ぶ|ひん}を4つはかると、24.75、25.18、25.23、\qty{24.81}{mm}でした。\R{決}{き}められたはんいに\R{入}{はい}っているのはどれですか。\par
+\kangaekata まず、はんいの\R{両}{りょう}はしを\R{求}{もと}めます。\R{次}{つぎ}に、1つずつ、はしの\R{数}{かず}と\R{大}{おお}きさをくらべます。\R{数直線}{すう|ちょく|せん}にかくと\R{見}{み}やすくなります。\par
+\shiki ① はんいは $25.0-0.2=24.8$ から $25.0+0.2=25.2$ まで\par
+\hspace*{2.6\zw}② $24.75<24.8$ なので\R{外}{そと}（\R{小}{ちい}さすぎ）\par
+\hspace*{2.6\zw}\phantom{②}\ $25.23>25.2$ なので\R{外}{そと}（\R{大}{おお}きすぎ）\par
+\hspace*{2.6\zw}③ 25.18と24.81は、24.8と25.2の\R{間}{あいだ}なので\R{中}{なか}\par
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGreen!25] (20,-1.8) rectangle (100,1.8);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (120,0);
+  \foreach \k/\l in {0/24.7, 20/24.8, 60/25.0, 100/25.2, 120/25.3} {\draw[bkInk, line width=0.6pt] (\k,-1.4) -- (\k,1.4);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k,-2.6) {\l};}
+  \foreach \v/\c in {24.75/bkRed, 25.18/bkBlue, 25.23/bkRed, 24.81/bkBlue} {\fill[\c] ({(\v-24.7)*200},0) circle (1.3);}
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkRed, inner sep=0pt] at (10,2.6) {24.75};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkBlue, inner sep=0pt] at (25,2.6) {24.81};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkBlue, inner sep=0pt] at (96,2.6) {25.18};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkRed, inner sep=0pt] at (109,2.6) {25.23};
+  \node[font=\sffamily\footnotesize, text=bkGreen!50!black, inner sep=0pt] at (60,5) {よいはんい};
+\end{tikzpicture}
+\end{center}
+\kotae \qty{25.18}{mm}と\qty{24.81}{mm}
+\end{reidai}
+
+\begin{jibun}
+「$10.0\pm0.1$\,g」のおもりを4つはかると、9.95、10.12、9.88、\qty{10.06}{g}でした。はんいに\R{入}{はい}っているのはどれですか。
+\bkjans{はんいは9.9〜\qty{10.1}{g}。\qty{9.95}{g}と\qty{10.06}{g}}
+\end{jibun}
+
+\begin{reidai}[\R{平均}{へい|きん}と、\R{平均}{へい|きん}からのずれ]
+4\R{人}{にん}が\R{同}{おな}じロープの\R{長}{なが}さをはかると、2.31、2.35、2.28、\qty{2.34}{m}でした。（1）\R{平均}{へい|きん}は\R{何}{なん}m？（2）\R{平均}{へい|きん}からいちばんずれているのはどの\R{値}{あたい}で、\R{何}{なん}mずれていますか。\par
+\kangaekata（1）\R{合計}{ごう|けい}÷\R{個数}{こ|すう}。（2）\R{大}{おお}きいほうから\R{小}{ちい}さいほうをひいて、\R{平均}{へい|きん}との\R{差}{さ}を1つずつ\R{求}{もと}め、くらべます。\par
+\shiki（1）$2.31+2.35+2.28+2.34=9.28$、\ $9.28\div4=2.32$\par
+\hspace*{2.6\zw}（2）2.31は $2.32-2.31=0.01$、\ 2.35は $2.35-2.32=0.03$\par
+\hspace*{2.6\zw}\phantom{（2）}2.28は $2.32-2.28=0.04$、\ 2.34は $2.34-2.32=0.02$\par
+\hspace*{2.6\zw}\phantom{（2）}いちばん\R{大}{おお}きいのは、2.28の0.04\par
+\kotae（1）\qty{2.32}{m}\quad（2）\qty{2.28}{m}で、\qty{0.04}{m}
+\end{reidai}
+
+\begin{jibun}
+5\R{回}{かい}はかった\R{重}{おも}さが、0.52、0.47、0.50、0.55、\qty{0.46}{kg}でした。（1）\R{平均}{へい|きん}は？（2）\R{平均}{へい|きん}からいちばんずれているのはどの\R{値}{あたい}で、\R{何}{なん}kg？
+\bkjans{（1）\nobreak $2.50\div5=0.50$ で\qty{0.50}{kg}\quad（2）\nobreak \qty{0.55}{kg}で、\qty{0.05}{kg}}
+\end{jibun}
+
+\begin{column}{\R{身}{み}のまわりの「はかる\R{道具}{どう|ぐ}」の\R{最小}{さい|しょう}\R{目}{め}もり}
+\R{最小}{さい|しょう}\R{目}{め}もり（\R{表示}{ひょう|じ}のいちばん\R{小}{ちい}さなきざみ）は\R{道具}{どう|ぐ}ごとにちがいます。\R{目}{め}もりを\R{読}{よ}む\R{道具}{どう|ぐ}は10\R{分}{ぶん}の1まで\R{目分量}{め|ぶん|りょう}で\R{読}{よ}み、\R{数字}{すう|じ}が\R{出}{で}る\R{道具}{どう|ぐ}は\R{表示}{ひょう|じ}をそのまま\R{読}{よ}みます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=30mm] Q[l,m,wd=46mm]}, rowsep=1.2pt, colsep=4pt, row{1}={bg=bkNavy!8, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{道具}{どう|ぐ} & \R{最小}{さい|しょう}\R{目}{め}もり & \R{読}{よ}み\R{方}{かた}の\R{例}{れい} \\
+ものさし & \qty{1}{mm} & \qty{14.63}{cm}（\R{目分量}{め|ぶん|りょう}） \\
+\R{理科}{り|か}の\R{温度計}{おん|ど|けい} & \qty{1}{\degreeCelsius} & \qty{23.4}{\degreeCelsius}（\R{目分量}{め|ぶん|りょう}） \\
+\R{体重計}{たい|じゅう|けい}（\R{数字}{すう|じ}が\R{出}{で}る） & \qty{0.1}{kg} & \qty{35.2}{kg}（\R{表示}{ひょう|じ}どおり） \\
+ストップウォッチ & 0.01\R{秒}{びょう} & 「00:10.08」で10.08\R{秒}{びょう} \\
+\end{bktable}
+\end{bkcenter}
+\end{column}
+
+\begin{reidai}[まとめてはかったときの、1つあたりのずれ]
+\R{同}{おな}じ\R{消}{け}しゴム20こを\R{重}{かさ}ねて\R{高}{たか}さをはかると、\qty{240.0}{mm}でした。ものさしの\R{読}{よ}みのずれは $\pm$\qty{0.05}{mm}です。（1）1こ\R{分}{ぶん}の\R{高}{たか}さは\R{何}{なん}mmですか。（2）1こあたりのずれは\R{何}{なん}mmですか。\par
+\kangaekata ものさしは1\R{回}{かい}しか\R{読}{よ}んでいないので、20こ\R{分}{ぶん}の\R{高}{たか}さのずれは $\pm$\qty{0.05}{mm}のままです。\R{高}{たか}さも、ずれも、20こで\R{同}{おな}じように\R{分}{わ}けるので、どちらも20でわります。\par
+\shiki（1）$240.0\div20=12.0$\par
+\hspace*{2.6\zw}（2）$0.05\div20=0.0025$\par
+\kotae（1）\qty{12.0}{mm}\quad（2）$\pm$\qty{0.0025}{mm}（1こだけはかるときの20\R{分}{ぶん}の1）
+\end{reidai}
+
+\begin{jibun}
+\R{同}{おな}じ1\R{円玉}{えん|だま}50まいを\R{重}{かさ}ねると、\R{高}{たか}さは\qty{75.0}{mm}でした。\R{読}{よ}みのずれは $\pm$\qty{0.05}{mm}です。（1）1まいの\R{厚}{あつ}さは？（2）1まいあたりのずれは？
+\bkjans{（1）\nobreak $75.0\div50=1.5$ で\qty{1.5}{mm}\quad（2）\nobreak $0.05\div50=0.001$ で $\pm$\qty{0.001}{mm}}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{5.0の0を\R{消}{け}してしまう}
+\R{小数第}{しょう|すう|だい}1\R{位}{い}まではかったら、ちょうど\qty{5}{cm}の\R{目}{め}もりでした。
+\bkng{「\qty{5}{cm}」と\R{書}{か}く\quad（ずれが $\pm$\qty{0.5}{cm}のはかり\R{方}{かた}に\R{見}{み}える）}
+\bkok{「\qty{5.0}{cm}」と\R{書}{か}く\quad（$\pm$\qty{0.05}{cm}まではかったしるし）}
+はかった\R{数}{かず}の0は、「どこまではかったか」を\R{伝}{つた}える\R{大事}{だい|じ}な\R{数字}{すう|じ}です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{四捨五入}{し|しゃ|ご|にゅう}を2\R{回}{かい}してしまう}
+2.348を、\R{小数第}{しょう|すう|だい}1\R{位}{い}までのがい\R{数}{すう}にすると……
+\bkng{$2.348\to2.35\to2.4$\quad（\R{先}{さき}に\R{小数第}{しょう|すう|だい}2\R{位}{い}までにしてから、もう1\R{度}{ど}）}
+\bkok{$2.348\to2.3$\quad（\R{小数第}{しょう|すう|だい}2\R{位}{い}の4を\R{見}{み}て、1\R{回}{かい}で\R{切}{き}り\R{捨}{す}て）}
+\R{四捨五入}{し|しゃ|ご|にゅう}は、\R{求}{もと}める\R{位}{くらい}のすぐ\R{下}{した}の\R{位}{くらい}だけを\R{見}{み}て、1\R{回}{かい}で\R{決}{き}めます。2.348は2.3と2.4のあいだで、2.3のほうが\R{近}{ちか}いですね（2.35より\R{小}{ちい}さい）。
+
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{平均}{へい|きん}で、わる\R{数}{かず}をまちがえる}
+2\R{重}{じゅう}とびの\R{記録}{き|ろく}が、3\R{回}{かい}、0\R{回}{かい}、5\R{回}{かい}、4\R{回}{かい}のとき、\R{平均}{へい|きん}は……
+\bkng{0\R{回}{かい}は\R{数}{かぞ}えない。$12\div3=4$（\R{回}{かい}）}
+\bkok{0\R{回}{かい}もいれて4つ。$12\div4=3$（\R{回}{かい}）}
+0\R{回}{かい}も1\R{回分}{かい|ぶん}の\R{記録}{き|ろく}です。\R{記録}{き|ろく}は4つなので、4でわります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ずれの\R{割合}{わり|あい}で、わる\R{数}{かず}とわられる\R{数}{かず}を\R{逆}{ぎゃく}にする}
+\qty{5.0}{cm}（ずれ $\pm$\qty{0.05}{cm}）のずれの\R{割合}{わり|あい}は……
+\bkng{$5.0\div0.05=100$ で100\%}
+\bkok{$0.05\div5.0=0.01$ で1\%}
+\R{割合}{わり|あい}は、くらべる\R{量}{りょう}（ずれ）÷もとにする\R{量}{りょう}（はかった\R{長}{なが}さ）です（2-5）。ずれが\R{長}{なが}さと\R{同}{おな}じ100\%もあるはずがない、と\R{気}{き}づけば、まちがいを\R{見}{み}つけられます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ストップウォッチの「:」を\R{小数点}{しょう|すう|てん}と\R{思}{おも}う}
+\R{表示}{ひょう|じ}「01:11.50」を\R{秒}{びょう}になおすと……
+\bkng{111.50\R{秒}{びょう}\quad（「:」を\R{消}{け}して、そのままならべた）}
+\bkok{60\R{秒}{びょう}＋11.50\R{秒}{びょう}＝71.50\R{秒}{びょう}}
+「:」の\R{左}{ひだり}は\R{分}{ふん}です。1\R{分}{ぷん}は100\R{秒}{びょう}ではなく60\R{秒}{びょう}なので、\R{数字}{すう|じ}をならべるだけではまちがいます。
+\end{tsumazuki}
+
+\begin{column}{ストップウォッチで「10.00\R{秒}{びょう}ぴったり」をねらおう}
+\R{画面}{が|めん}を\R{見}{み}ないでスタートし、10.00\R{秒}{びょう}だと\R{思}{おも}ったところで\R{止}{と}めます。5\R{回}{かい}の\R{記録}{き|ろく}の\R{例}{れい}です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=0.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+\R{回}{かい} & 1 & 2 & 3 & 4 & 5 \\
+\R{記録}{き|ろく}（\R{秒}{びょう}） & 10.21 & 9.96 & 10.15 & 10.08 & 10.10 \\
+\end{bktable}
+\end{bkcenter}
+5\R{回}{かい}の\R{合計}{ごう|けい}は50.50なので、\R{平均}{へい|きん}は\R{次}{つぎ}のとおりです。
+\[ 50.50\div5=10.10\quad\text{（\R{秒}{びょう}）} \]
+10.00\R{秒}{びょう}からのずれは $10.10-10.00=0.10$ で0.10\R{秒}{びょう}。ずれの\R{割合}{わり|あい}は $0.10\div10.00=0.01$、つまり1\%です。ものさしで\R{反応}{はん|のう}\R{時間}{じ|かん}をはかる\R{方法}{ほう|ほう}は、2-13で\R{式}{しき}から\R{作}{つく}ります。
+\end{column}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{\R{部品}{ぶ|ひん}の\R{寸法}{すん|ぽう}}\par\noindent \R{設計図}{せっ|けい|ず}には、ゆるされるずれ（\R{公差}{こう|さ}）も\R{書}{か}きます。\R{図}{ず}の\R{軸}{じく}の\R{太}{ふと}さが「$50.0\pm0.1$」なら、\R{工場}{こう|じょう}では\R{部品}{ぶ|ひん}をはかって、49.9〜\qty{50.1}{mm}に\R{入}{はい}らないものをはねます。ずれが\R{大}{おお}きいと、\R{軸}{じく}が\R{穴}{あな}に\R{入}{はい}らなかったり、がたついたりするからです。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 軸（シャフト）と、太さの寸法線（たての向き）
+  \fill[bkGray!35] (0,0) rectangle (20,12);
+  \fill[bkGray!20] (0,8.6) rectangle (20,12);
+  \draw[bkInk!70, line width=0.7pt] (0,0) rectangle (20,12);
+  \draw[bkInk!50, line width=0.4pt, dash pattern=on 3pt off 1pt on 0.6pt off 1pt] (-2,6) -- (22,6);
+  \draw[bkInk, line width=0.5pt] (21,0) -- (26,0) (21,12) -- (26,12);
+  \draw[bkInk, line width=0.6pt, {Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}] (24,0) -- (24,12);
+  \node[anchor=west, font=\sffamily\small, inner sep=0pt] at (25.6,6) {$50.0\pm0.1$};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (12,-1.8) {\R{軸}{じく}の\R{太}{ふと}さ（\R{単位}{たん|い}mm）};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+\noindent\begin{minipage}[c]{0.63\linewidth}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{\R{電子}{でん|し}はかり}\par\noindent \R{表示}{ひょう|じ}が0.1\,gずつなので、\R{読}{よ}みのずれは0.1の\R{半分}{はん|ぶん}の $\pm0.05$\,g。そのうえ\R{最後}{さい|ご}のけたが\R{少}{すこ}しゆれるので、およそ $\pm0.1$\,gと\R{考}{かんが}えます。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!30, rounded corners=1.5mm] (0,0) rectangle (40,15);
+  \fill[bkGray!55] (4,15) rectangle (36,17);
+  \bkdisplay{(5,2)}{30}{152.3\,g}
+\end{tikzpicture}
+\end{minipage}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=4pt, label={\color{bkPurple}●}]
+\item \textbf{ストップウォッチと\R{反応}{はん|のう}\R{時間}{じ|かん}}\par\noindent \label{bk:2-6:hannou}\R{人}{ひと}は、\R{見}{み}てからボタンをおすまでに\R{約}{やく}0.2\R{秒}{びょう}かかります（\R{反応}{はん|のう}\R{時間}{じ|かん}）。スタートでもストップでも0.2\R{秒}{びょう}ぐらいおくれるので、おくれの\R{多}{おお}くは\R{打}{う}ち\R{消}{け}しあいます。でも、おくれは\R{毎回}{まい|かい}\R{少}{すこ}しずつちがうので、\R{手}{て}ではかった\R{時間}{じ|かん}には0.1\R{秒}{びょう}ぐらいのずれが\R{残}{のこ}ります。\R{陸上}{りく|じょう}\R{競技}{きょう|ぎ}では\R{電気}{でん|き}で\R{時間}{じ|かん}をはかり、ピストルの\R{音}{おと}から0.1\R{秒}{びょう}より\R{早}{はや}く\R{動}{うご}き\R{出}{だ}すと、フライングになります。\R{音}{おと}を\R{聞}{き}いてから0.1\R{秒}{びょう}より\R{早}{はや}く\R{動}{うご}くことは、\R{人}{ひと}にはできないと\R{考}{かんが}えられているからです。
+\end{itemize}
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{1}
+
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\bkproblem \R{最小}{さい|しょう}\R{目}{め}もりが\qty{1}{mm}のものさしで、\R{物}{もの}のはしが\qty{9.5}{cm}と\qty{9.6}{cm}の\R{目}{め}もりのあいだの、10\R{分}{ぶん}の2ぐらいのところにありました。\R{何}{なん}cmと\R{読}{よ}みますか。
+\bkpans{\qty{9.52}{cm}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiigruler{(2,0)}{5.5}{92}{100}
+  \fill[bkBlue!30] (-3,0.6) rectangle (19.6,7);
+  \draw[bkBlue!70!black, line width=0.6pt] (-3,0.6) -- (19.6,0.6) -- (19.6,7) -- (-3,7);
+\end{tikzpicture}
+\end{minipage}
+
+\bkproblem 50\,mを\R{走}{はし}るタイムを5\R{回}{かい}はかると、8.4\R{秒}{びょう}、8.1\R{秒}{びょう}、8.3\R{秒}{びょう}、8.0\R{秒}{びょう}、8.2\R{秒}{びょう}でした。\R{平均}{へい|きん}は\R{何}{なん}\R{秒}{びょう}ですか。
+\bkpans{$41.0\div5=8.2$ で8.2\R{秒}{びょう}}
+
+\bkproblem コピー\R{用紙}{よう|し}500まいのたばの\R{厚}{あつ}さは\qty{4.6}{cm}でした。1まいの\R{厚}{あつ}さは\R{何}{なん}mmですか。
+\bkpans{\qty{4.6}{cm}＝\qty{46}{mm}、$46\div500=0.092$ で\qty{0.092}{mm}}
+
+\bkproblem \R{振}{ふ}り\R{子}{こ}の20\R{往復}{おう|ふく}をはかると、ストップウォッチの\R{表示}{ひょう|じ}は「01:05.20」でした。1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}ですか。
+\bkpans{60\R{秒}{びょう}＋5.20\R{秒}{びょう}＝65.20\R{秒}{びょう}、$65.20\div20=3.26$ で3.26\R{秒}{びょう}}
+
+\bkproblem \R{四捨五入}{し|しゃ|ご|にゅう}して、（\quad）の\R{位}{くらい}までのがい\R{数}{すう}にしましょう。\par
+（1）\nobreak 3.14（\R{小数第}{しょう|すう|だい}1\R{位}{い}）\quad（2）\nobreak 12.55（\R{小数第}{しょう|すう|だい}1\R{位}{い}）\quad（3）\nobreak 0.506（\R{小数第}{しょう|すう|だい}2\R{位}{い}）\quad（4）\nobreak 19.97（\R{小数第}{しょう|すう|だい}1\R{位}{い}）
+\bkpans{（1）\nobreak 3.1\quad（2）\nobreak 12.6\quad（3）\nobreak 0.51\quad（4）\nobreak 20.0}
+
+\bkproblem 「\qty{6.0}{cm}」と\R{書}{か}かれた\R{長}{なが}さは、\R{何}{なん}cm\R{以上}{い|じょう}\R{何}{なん}cm\R{未満}{み|まん}と\R{考}{かんが}えられますか。また、ずれのはばはおよそ\R{何}{なん}cmですか。
+\bkpans{\qty{5.95}{cm}\R{以上}{い|じょう}\qty{6.05}{cm}\R{未満}{み|まん}、$\pm$\qty{0.05}{cm}}
+
+\bkproblem 「$30.0\pm0.3$\,mm」と\R{決}{き}められた\R{部品}{ぶ|ひん}があります。（1）\R{何}{なん}mmから\R{何}{なん}mmまでならよいですか。（2）ずれの\R{割合}{わり|あい}は\R{何}{なん}\%ですか。
+\bkpans{（1）\nobreak \qty{29.7}{mm}から\qty{30.3}{mm}まで\quad（2）\nobreak $0.3\div30.0=0.01$ で1\%}
+
+\bkproblemgroup{チャレンジ}{2}
+
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\bkproblem 「$12.0\pm0.2$\,mm」の\R{部品}{ぶ|ひん}を4つはかると、11.85、12.15、12.24、\qty{11.79}{mm}でした。\R{決}{き}められたはんいに\R{入}{はい}っているのはどれですか。
+\bkpans{\qty{11.85}{mm}と\qty{12.15}{mm}（はんいは11.8〜\qty{12.2}{mm}）}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ピン（部品）と長さの寸法線
+  \fill[bkGray!35] (0,0) rectangle (30,6);
+  \fill[bkGray!20] (0,4.3) rectangle (30,6);
+  \fill[bkGray!50] (-3,-1.5) rectangle (0,7.5);
+  \draw[bkInk!70, line width=0.7pt] (0,0) rectangle (30,6) (-3,-1.5) rectangle (0,7.5);
+  \draw[bkInk, line width=0.5pt] (-3,9) -- (-3,15) (30,7) -- (30,15);
+  \draw[bkInk, line width=0.6pt, {Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}] (-3,13) -- (30,13);
+  \node[anchor=south, font=\sffamily\small, fill=white, inner sep=1pt] at (13.5,13.8) {$12.0\pm0.2$};
+\end{tikzpicture}
+\end{minipage}
+
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\bkproblem 5\R{人}{にん}が\R{同}{おな}じひもの\R{長}{なが}さをはかると、\qty{1.52}{m}、\qty{1.49}{m}、\qty{1.54}{m}、\qty{1.46}{m}、\qty{1.54}{m}でした。（1）\R{平均}{へい|きん}は\R{何}{なん}mですか。（2）\R{平均}{へい|きん}からいちばんずれているのは、どの\R{値}{あたい}ですか。\R{何}{なん}mずれていますか。
+\bkpans{（1）\nobreak $7.55\div5=1.51$ で\qty{1.51}{m}\quad（2）\nobreak \qty{1.46}{m}。$1.51-1.46=0.05$ で\qty{0.05}{m}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 5つの値の点の図（1.45〜1.55 m、0.01 m を 4.4 mm）
+  \draw[bkInk, line width=0.7pt] (-2,0) -- (46,0);
+  \foreach \k/\l in {0/1.45, 5/1.50, 10/1.55} {\draw[bkInk, line width=0.7pt] (\k*4.4,-1.2) -- (\k*4.4,1.2);
+    \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (\k*4.4,-2.2) {\l};}
+  \foreach \k in {1,2,3,4,6,7,8,9} {\draw[bkInk, line width=0.5pt] (\k*4.4,-0.8) -- (\k*4.4,0.8);}
+  \foreach \k/\n in {1/1, 4/1, 7/1, 9/2} {\foreach \j in {1,...,\n} {\fill[bkBlue] (\k*4.4,\j*3.2) circle (1.2);}}
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=0pt] at (22,9) {\R{長}{なが}さ（m）};
+\end{tikzpicture}
+\end{minipage}
+
+\bkproblem \R{同}{おな}じ\R{紙}{かみ}を、\R{次}{つぎ}の2つの\R{方法}{ほう|ほう}ではかります。ものさしの\R{読}{よ}みのずれは、どちらも $\pm$\qty{0.05}{mm}です。\par
+\hspace*{1\zw}ア\enspace 10まいで\qty{0.9}{mm}\qquad イ\enspace 200まいで\qty{18.4}{mm}\par
+（1）それぞれ、1まいの\R{厚}{あつ}さは\R{何}{なん}mmですか。（2）1まいあたりのずれは、それぞれ\R{何}{なん}mmですか。どちらがより\R{細}{こま}かくはかれていますか。
+\bkpans{（1）\nobreak ア\enspace$0.9\div10=0.09$ で\qty{0.09}{mm}、イ\enspace$18.4\div200=0.092$ で\qty{0.092}{mm}\quad（2）\nobreak ア\enspace$0.05\div10=0.005$ で $\pm$\qty{0.005}{mm}、イ\enspace$0.05\div200=0.00025$ で $\pm$\qty{0.00025}{mm}。イのほうが\R{細}{こま}かい}
+
+\bkproblem \R{振}{ふ}り\R{子}{こ}の20\R{往復}{おう|ふく}を3\R{回}{かい}はかると、\R{表示}{ひょう|じ}は「00:40.20」「00:39.90」「00:40.50」でした。（1）20\R{往復}{おう|ふく}の\R{時間}{じ|かん}の\R{平均}{へい|きん}は\R{何}{なん}\R{秒}{びょう}ですか。（2）1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}ですか。
+\bkpans{（1）\nobreak $40.20+39.90+40.50=120.60$、$120.60\div3=40.20$ で40.20\R{秒}{びょう}\quad（2）\nobreak $40.20\div20=2.01$ で2.01\R{秒}{びょう}}
+
+
+
+\bkproblem \R{電子}{でん|し}はかりの\R{表示}{ひょう|じ}が「\qty{152.3}{g}」でした。（1）\R{小数第}{しょう|すう|だい}1\R{位}{い}まで\R{四捨五入}{し|しゃ|ご|にゅう}して152.3になる\R{重}{おも}さは、\R{何}{なん}g\R{以上}{い|じょう}\R{何}{なん}g\R{未満}{み|まん}ですか。（2）\qty{152.3}{g}を\R{一}{いち}の\R{位}{くらい}までのがい\R{数}{すう}にしましょう。
+\bkpans{（1）\nobreak \qty{152.25}{g}\R{以上}{い|じょう}\qty{152.35}{g}\R{未満}{み|まん}\quad（2）\nobreak \qty{152}{g}}
+
+\bkproblem \R{次}{つぎ}の\R{長}{なが}さの\R{有効数字}{ゆう|こう|すう|じ}は\R{何}{なん}けたですか。\quad（1）\nobreak \qty{8.0}{cm}\quad（2）\nobreak \qty{14.63}{cm}\quad（3）\nobreak \qty{0.092}{mm}
+\bkpans{（1）\nobreak 2けた\quad（2）\nobreak 4けた\quad（3）\nobreak 2けた（\R{前}{まえ}の0は\R{数}{かぞ}えない）}
+
+\bkproblem \R{振}{ふ}り\R{子}{こ}の30\R{往復}{おう|ふく}を3\R{回}{かい}はかると、\R{表示}{ひょう|じ}は「01:01.20」「01:00.90」「01:01.50」でした。1\R{往復}{おう|ふく}は\R{何}{なん}\R{秒}{びょう}ですか。\R{平均}{へい|きん}を\R{求}{もと}めてから30でわりましょう。
+\bkpans{\R{秒}{びょう}にすると61.20、60.90、61.50\R{秒}{びょう}。\R{合計}{ごう|けい}183.60、$183.60\div3=61.20$。$61.20\div30=2.04$ で2.04\R{秒}{びょう}}
+
+\bkproblem 「$40.0\pm0.2$\,mm」のねじがあります。（1）\R{何}{なん}mmから\R{何}{なん}mmまでならよいですか。（2）ずれの\R{割合}{わり|あい}は\R{何}{なん}\%ですか。（3）39.75、40.18、\qty{40.25}{mm}のうち、はんいに\R{入}{はい}っているのはどれですか。
+\bkpans{（1）\nobreak \qty{39.8}{mm}から\qty{40.2}{mm}まで\quad（2）\nobreak $0.2\div40.0=0.005$ で0.5\%\quad（3）\nobreak \qty{40.18}{mm}}
+
+\begin{column}{\R{工場}{こう|じょう}で\R{使}{つか}う、もっと\R{細}{こま}かくはかれる\R{道具}{どう|ぐ}}
+\R{機械}{き|かい}の\R{部品}{ぶ|ひん}は、ものさしよりずっと\R{細}{こま}かくはかります。\R{道具}{どう|ぐ}が\R{細}{こま}かいほど、\R{書}{か}けるけた（\R{有効数字}{ゆう|こう|すう|じ}）がふえます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[c,m,wd=28mm] Q[l,m,wd=44mm]}, rowsep=1.2pt, colsep=4pt, row{1}={bg=bkNavy!8, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{道具}{どう|ぐ} & \R{最小}{さい|しょう}\R{目}{め}もり & \R{書}{か}き\R{方}{かた}の\R{例}{れい} \\
+ものさし & \qty{1}{mm} & \qty{25.3}{mm}（\R{目分量}{め|ぶん|りょう}） \\
+ノギス & \qty{0.05}{mm} & \qty{25.35}{mm} \\
+マイクロメーター & \qty{0.01}{mm} & \qty{25.347}{mm}（\R{目分量}{め|ぶん|りょう}） \\
+\end{bktable}
+\end{bkcenter}
+\end{column}
+
+\begin{column}{「ずれ」と「まちがい」はちがう}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\R{目分量}{め|ぶん|りょう}のずれは、どんなにていねいにはかっても\R{少}{すこ}しは\R{残}{のこ}ります。でも、\R{目}{め}もりをななめから\R{見}{み}たり、ものさしのはしを0とまちがえたりするのは「まちがい」で、\R{気}{き}をつければなくせます。\R{目}{め}もりは、\R{右}{みぎ}の\R{図}{ず}の\R{緑}{みどり}の\R{目}{め}のように、\textbf{\R{真上}{ま|うえ}（\R{真正面}{ま|しょう|めん}）から}\R{読}{よ}みましょう。ななめから\R{見}{み}ると、\R{先}{さき}の\R{下}{した}にある\R{目}{め}もりとちがう\R{目}{め}もりに\R{重}{かさ}なって\R{見}{み}えます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellowBg, draw=bkYellow!80!black, line width=0.6pt] (0,0) rectangle (40,3);
+  \foreach \k in {0,...,8} \draw[bkInk, line width=0.5pt] (\k*5,3) -- (\k*5,1.2);
+  \fill[bkBlue!30] (0,9) rectangle (20,13);
+  \draw[bkBlue!70!black, line width=0.5pt] (0,9) rectangle (20,13);
+  \draw[bkGreen!70!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (20,26) -- (20,3);
+  \draw[bkRed!80!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (6,26) -- (27.5,3);
+  \fill[bkGreen!60!black] (20,28) circle (1.6);
+  \fill[bkRed!80!black] (4.2,28) circle (1.6);
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkGreen!50!black, inner sep=0pt] at (24,30.5) {\R{真上}{ま|うえ}○};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (4.2,30.5) {ななめ×};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+\begin{column}{1つだけ\R{大}{おお}きくちがう\R{値}{あたい}があったら？}
+4\R{人}{にん}がえんぴつをはかると、14.63、14.65、14.64、\qty{15.63}{cm}でした。15.63だけが\qty{1}{cm}も\R{大}{おお}きく、\R{目分量}{め|ぶん|りょう}のずれ（\qty{0.01}{cm}ぐらい）では\R{説明}{せつ|めい}できません。cmの\R{目}{め}もりを1つ\R{読}{よ}みちがえた「まちがい」かもしれません。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=0pt, topsep=2pt, label={\color{bkNavy}●}]
+\item 4つの\R{平均}{へい|きん}：\R{合計}{ごう|けい}は59.55なので、$59.55\div4=14.8875$（\R{約}{やく}14.89）
+\item 15.63をのぞいた3つの\R{平均}{へい|きん}：$43.92\div3=14.64$
+\end{itemize}
+1つのまちがいで、\R{平均}{へい|きん}が\R{約}{やく}\qty{0.25}{cm}も\R{大}{おお}きくなってしまいました。\R{大}{おお}きくちがう\R{値}{あたい}が\R{出}{で}たら、すぐに\R{平均}{へい|きん}に\R{入}{い}れず、もう\R{一度}{いち|ど}はかり\R{直}{なお}して\R{確}{たし}かめましょう。
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{最小}{さい|しょう}\R{目}{め}もりの10\R{分}{ぶん}の1まで\R{読}{よ}み、\R{平均}{へい|きん}を\R{求}{もと}められる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-6:yomu}ページ}
+\item \R{四捨五入}{し|しゃ|ご|にゅう}で、がい\R{数}{すう}をつくれる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-6:gaisuu}ページ}
+\item 「\qty{5.0}{cm}」と「\qty{5}{cm}」のちがいを $\pm$ で\R{説明}{せつ|めい}できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-6:yuukou}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{はかった\R{数}{かず}は、「どこまではかったか」もいっしょに\R{伝}{つた}えているんだね。0も\R{大事}{だい|じ}な\R{数字}{すう|じ}なんだ。}
+

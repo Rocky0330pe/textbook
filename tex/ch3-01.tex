@@ -1,0 +1,794 @@
+%% 3-1 変わる量と変わらない量（第12回：組 V3-1）  % noruby
+%% ①変数と定数（定数＝「x が変わっても変わらない数」5-4 と同じ）・プログラムの変数（2-19）  % noruby
+%% ②物理定数（g・c）と問題ごとに決まる数（k・m・R）③変域を不等号で ④1つ決まると、もう1つが決まる（3-3 への入口）  % noruby
+\makeatletter
+%% ---- この章だけで使う絵の部品（頭文字 \bkthrb…） ----
+% ばね（たて）  \bkthrbspring{(x,上のはし)}{全体の長さ}{色}  % noruby
+\newcommand\bkthrbspring[3]{\begin{scope}[shift={#1}]
+  \draw[#3, line width=0.7pt] (0,0) -- (0,-2);
+  \draw[#3, line width=0.7pt, decorate, decoration={coil, aspect=0.45, segment length=1.3mm, amplitude=2mm}] (0,-2) -- (0,{-(#2)+2});
+  \draw[#3, line width=0.7pt] (0,{-(#2)+2}) -- (0,{-(#2)});
+\end{scope}}
+% おもり  \bkthrbweight{(x,上のはし)}  はば7mm・高さ6mm  % noruby
+\newcommand\bkthrbweight[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!45, draw=bkGray!90!black, line width=0.6pt, rounded corners=0.8mm] (-3.5,-6) rectangle (3.5,0);
+  \fill[white, opacity=0.35] (-2.6,-1.6) rectangle (-1.4,-4.8);
+\end{scope}}
+% 天井の板  \bkthrbceil{(x1,y)}{(x2,y)}  % noruby
+\newcommand\bkthrbceil[2]{\fill[bkGray!35] #1 rectangle ($#2+(0,2.2)$);
+  \draw[bkGray!90!black, line width=0.8pt] #1 -- #2;}
+% 水そう  \bkthrbtank{(左下)}{はば}{高さ}{水の高さ}  % noruby
+\newcommand\bkthrbtank[4]{\begin{scope}[shift={#1}]
+  \ifdim #4pt>0pt \fill[bkBlue!25] (0,0) rectangle (#2,#4); \draw[bkBlue!70!black, line width=0.6pt] (0,#4) -- (#2,#4);\fi
+  \draw[bkInk, line width=0.9pt] (0,#3) -- (0,0) -- (#2,0) -- (#2,#3);
+\end{scope}}
+% 変数の箱（中身が入れかわる）と定数の箱（かぎつき）  \bkthrbbox{(x,y)}{名前}{中身}{色}{かぎ 1/0}  % noruby
+\newcommand\bkthrbbox[5]{\begin{scope}[shift={#1}]
+  \filldraw[fill=white, draw=#4, line width=1pt, rounded corners=0.8mm] (-7,-4.5) rectangle (7,4.5);
+  \node[font=\sffamily\bfseries\large, text=bkInk] at (0,0) {#3};
+  \node[anchor=south, font=\small, text=#4!80!black, inner sep=0pt] at (0,6) {#2};
+  \ifnum#5=1
+    \draw[bkGray!90!black, line width=0.9pt] (5.2,4.5) -- (5.2,6) arc (180:0:1.4) -- (8,4.5);
+    \filldraw[fill=bkGray!60, draw=bkGray!90!black, line width=0.6pt, rounded corners=0.4mm] (4.3,1.6) rectangle (8.9,4.8);
+  \fi
+\end{scope}}
+% エアコン  \bkthrbaircon{(左下)}  はば 34 mm・高さ 12 mm  % noruby
+\newcommand\bkthrbaircon[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=white, draw=bkGray!90!black, line width=0.8pt, rounded corners=2mm] (0,0) rectangle (34,12);
+  \draw[bkGray!80, line width=0.6pt] (2,3) -- (32,3);
+  \foreach \k in {0,...,4} \draw[bkBlue!60, line width=0.7pt, -{Stealth[length=2.5pt]}] ({6+\k*5.5},-1) -- ({4.5+\k*5.5},-6);
+  \fill[bkGreen] (30,8.5) circle (0.8);
+\end{scope}}
+% エレベーターのかご  \bkthrbelevator{(左下)}  はば 26 mm・高さ 34 mm  % noruby
+\newcommand\bkthrbelevator[1]{\begin{scope}[shift={#1}]
+  \draw[bkGray!90!black, line width=1pt] (13,34) -- (13,42);
+  \filldraw[fill=bkGray!12, draw=bkGray!90!black, line width=1pt, rounded corners=1mm] (0,0) rectangle (26,34);
+  \foreach \px/\c in {6/bkBlue, 13/bkOrange, 20/bkGreen} {
+    \fill[\c] (\px,22) circle (2.2);
+    \fill[\c, rounded corners=1mm] (\px-2.6,4) rectangle (\px+2.6,19);}
+\end{scope}}
+% プログラムの囲み（2-19 と同じ形）  % noruby
+{\catcode`\ =\active\gdef\bkthrb@obey{\catcode`\ =\active\def {\leavevmode\nobreak\ }\obeylines\parindent=0pt\parskip=0pt}}
+\newtcolorbox{bkthrbcode}[1][Python]{enhanced, colback=bkPaper, colframe=bkNavy!60, boxrule=0.7pt, arc=1.5mm,
+  left=3mm, right=3mm, top=1.2mm, bottom=1.2mm, before skip=3pt, after skip=3pt,
+  fontupper=\ttfamily\gtfamily\small, before upper={\bkthrb@obey\baselineskip=14.5pt},
+  attach boxed title to top right={xshift=-3mm, yshift*=-\tcboxedtitleheight/2},
+  boxed title style={colback=bkNavy!60, colframe=bkNavy!60, arc=1mm, boxrule=0pt, left=1.5mm, right=1.5mm, top=0.3mm, bottom=0.3mm},
+  fonttitle=\sffamily\bfseries\scriptsize, coltitle=white, title={#1}}
+\newtcolorbox{bkthrbout}[1][\R{実行}{じっ|こう}\R{結果}{けっ|か}]{enhanced, colback=bkInk!85, colframe=bkInk!85, boxrule=0.7pt, arc=1.5mm,
+  left=3mm, right=3mm, top=1.2mm, bottom=1.2mm, before skip=3pt, after skip=3pt, coltext=white,
+  fontupper=\ttfamily\gtfamily\small, before upper={\bkthrb@obey\baselineskip=14.5pt},
+  attach boxed title to top right={xshift=-3mm, yshift*=-\tcboxedtitleheight/2},
+  boxed title style={colback=bkGray, colframe=bkGray, arc=1mm, boxrule=0pt, left=1.5mm, right=1.5mm, top=0.3mm, bottom=0.3mm},
+  fonttitle=\sffamily\bfseries\scriptsize, coltitle=white, title={#1}}
+% 数直線（変域の図）  \bkthrbline{y}{左の数}{右の数}{1目もりの mm}{目もりの数字を書く間}  x=0 の位置が 0  % noruby
+\newcommand\bkthrbline[5]{%
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] ({(#2-0.8)*#4},#1) -- ({(#3+0.8)*#4},#1);
+  \foreach \k in {#2,...,#3} {\draw[bkInk, line width=0.5pt] ({\k*#4},#1-1.2) -- ({\k*#4},#1+1.2);}
+  \foreach \k in {#2,#5,...,#3} {\node[anchor=north, font=\footnotesize, inner sep=0pt] at ({\k*#4},#1-2.4) {$\k$};}}
+% 本文の中の小見出し（それだけで1行。見出しだけがページの最後に残らないように）  % noruby
+\newcommand\bkthrbhead[1]{\par\addvspace{4pt}\Needspace{4\baselineskip}\noindent\textbf{#1}\par\nobreak}
+\makeatother
+
+\bkchapter{3}{1}{\R{変}{か}わる\R{量}{りょう}と\R{変}{か}わらない\R{量}{りょう}}{\bklevel{1}}{\R{変}{か}わる\R{量}{りょう}と\R{変}{か}わらない\R{量}{りょう}}
+\bkmichishirube{2-2,2-11,2-15,2-19}{3-3,3-5,5-4,5-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace \R{式}{しき}の\R{中}{なか}の\R{文字}{も|じ}や\R{数}{かず}を、\R{変}{か}わるもの（\R{変数}{へん|すう}）と\R{変}{か}わらないもの（\R{定数}{てい|すう}）に\R{分}{わ}けられる。
+\item \bklevel{1}\enspace \R{物理定数}{ぶつ|り|てい|すう}（$g$、$c$）と、\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}（$k$、$m$）のちがいを\R{説明}{せつ|めい}できる。
+\item \bklevel{1}\enspace \R{変数}{へん|すう}が\R{動}{うご}ける\R{範囲}{はん|い}（\R{変域}{へん|いき}）を、\R{不等号}{ふ|とう|ごう}を\R{使}{つか}って\R{書}{か}ける。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+2-15 で、ばねの\R{力}{ちから}の\R{式}{しき} $F=kx$ を\R{作}{つく}りました。$F$ はばねを\R{引}{ひ}く\R{力}{ちから}、$x$ はのび、$k$ はばね\R{定数}{てい|すう}です。\par\vspace{2pt}
+この\R{式}{しき}には、3つの\R{文字}{も|じ}が\R{出}{で}てきます。\R{引}{ひ}く\R{力}{ちから}を\R{変}{か}えると、\R{変}{か}わる\R{文字}{も|じ}はどれかな？\quad \R{変}{か}わらない\R{文字}{も|じ}はどれかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbceil{(-1,0)}{(40,0)}
+  \bkthrbspring{(4,0)}{14}{bkGray!90!black}
+  \bkthrbspring{(16,0)}{18}{bkGray!90!black}\bkthrbweight{(16,-18)}
+  \bkthrbspring{(30,0)}{22}{bkGray!90!black}\bkthrbweight{(30,-22)}\bkthrbweight{(30,-28.5)}
+  \node[font=\small, anchor=north] at (16,-26) {$F$};
+  \node[font=\small, anchor=north] at (30,-36.5) {$2F$};
+  \node[font=\sffamily\bfseries\Large, text=bkOrange!80!black] at (38.5,-14) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 3つの\R{文字}{も|じ}は、どれも\R{同}{おな}じように「\R{文字}{も|じ}」です。でも、\R{実験}{じっ|けん}をしてみると、\R{文字}{も|じ}によって\R{性質}{せい|しつ}がちがうことがわかります。
+
+\begin{omoidasou}
+\bkrecall{2-11}{\R{文字}{も|じ}は、どんな\R{数}{かず}でも\R{入}{はい}る\R{箱}{はこ}。\R{道}{みち}のり $x$＝\R{速}{はや}さ $v$×\R{時間}{じ|かん} $t$ のように、きまりを1\R{行}{ぎょう}で\R{書}{か}ける。}
+\bkrecall{2-15}{ばねの\R{力}{ちから} $F=kx$。$k$ はばね\R{定数}{てい|すう}で、\qty{1}{m}のばすのに\R{何}{なん}N いるか。}
+\bkrecall{2-19}{プログラムの\R{変数}{へん|すう}は、\R{数}{かず}を\R{入}{い}れておく\R{名前}{な|まえ}つきの\R{箱}{はこ}。\R{中身}{なか|み}は\R{代入}{だい|にゅう}で\R{入}{い}れかわる。}
+\bkrecall{2-2}{\R{不等号}{ふ|とう|ごう}。$0<x<6$ は「0より\R{大}{おお}きく6より\R{小}{ちい}さい」。$\leqq$ はその\R{数}{かず}もふくむ。}
+\end{omoidasou}
+
+\begin{yattemiyou}[2\R{本}{ほん}のばねを\R{引}{ひ}いてみよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item ばね A を、ばねばかりで \qty{0.5}{N}、\qty{1.0}{N}、\qty{1.5}{N}、\qty{2.0}{N} の\R{力}{ちから}で\R{引}{ひ}き、そのたびにのびをはかろう。
+\item ばね B（A より\R{硬}{かた}いばね）でも、\R{同}{おな}じようにはかろう。
+\item のびを m になおし、「\R{力}{ちから}÷のび」を\R{計算}{けい|さん}しよう（2-15）。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=12mm] Q[l,m,wd=30mm] *{4}{Q[c,m,wd=12mm]}}, rowsep=0.8pt, cells={font=\small}}
+\SetCell[r=3]{l} ばね A & \R{力}{ちから} $F$（N） & 0.5 & 1.0 & 1.5 & 2.0 \\
+ & のび $x$（m） & 0.02 & 0.04 & 0.06 & 0.08 \\
+ & \SetCell{bg=bkYellow!30} $F\div x$（N/m） & 25 & 25 & 25 & 25 \\
+\SetCell[r=3]{l} ばね B & \R{力}{ちから} $F$（N） & 0.5 & 1.0 & 1.5 & 2.0 \\
+ & のび $x$（m） & 0.01 & 0.02 & 0.03 & 0.04 \\
+ & \SetCell{bg=bkYellow!30} $F\div x$（N/m） & 50 & 50 & 50 & 50 \\
+\end{bktable}
+\end{bkcenter}
+\R{表}{ひょう}の\R{中}{なか}で、\R{横}{よこ}に\R{見}{み}て\R{数}{かず}が\R{変}{か}わっていく\R{行}{ぎょう}はどれかな？\quad ずっと\R{同}{おな}じ\R{数}{かず}の\R{行}{ぎょう}はどれかな？
+\end{yattemiyou}
+
+\noindent \R{力}{ちから}の\R{行}{ぎょう}とのびの\R{行}{ぎょう}は、\R{右}{みぎ}へ\R{進}{すす}むにつれて\R{数}{かず}が\R{変}{か}わります。「\R{力}{ちから}÷のび」の\R{行}{ぎょう}は、ばね A ではずっと25、ばね B ではずっと50です。\R{同}{おな}じ\R{表}{ひょう}の\R{中}{なか}に、\R{変}{か}わる\R{数}{かず}と\R{変}{か}わらない\R{数}{かず}がまじっています。この\R{章}{しょう}では、この2つをきちんと\R{見分}{み|わ}けるためのことばを\R{学}{まな}びます。
+
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{変}{か}わる\R{数}{かず}と、\R{変}{か}わらない\R{数}{かず}：\R{変数}{へん|すう}と\R{定数}{てい|すう}}
+
+\leavevmode\label{bk:3-1:hensu}まず、ばねより\R{身近}{み|ぢか}な\R{場面}{ば|めん}で\R{考}{かんが}えます。
+
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\R{水}{みず}そうに、はじめから\qty{5}{L}の\R{水}{みず}が\R{入}{はい}っています。そこへ、じゃ\R{口}{ぐち}から1\R{分}{ぷん}に\qty{2}{L}ずつ\R{水}{みず}を\R{入}{い}れます。$x$ \R{分後}{ふん|ご}の\R{水}{みず}の\R{量}{りょう}を $y$〔L〕とします。
+
+1\R{分}{ぷん}たつごとに\qty{2}{L}ずつふえるので、$x$ \R{分}{ふん}では\qty{2}{L}が $x$ こ\R{分}{ぶん}で $2\times x$（L）ふえます（1-12：1つ\R{分}{ぶん}×いくつ\R{分}{ぶん}）。それに、はじめの\qty{5}{L}をたすので、
+\[ y=2x+5 \]
+と\R{書}{か}けます（×をはぶく\R{書}{か}き\R{方}{かた}は 2-12）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbtank{(0,0)}{36}{30}{9}
+  \foreach \yy/\lab in {9/5, 12.6/7, 16.2/9, 19.8/11} {\draw[bkBlue!60, line width=0.5pt, densely dashed] (0,\yy) -- (36,\yy);
+    \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black, inner sep=0pt] at (38,\yy) {\lab\,L};}
+  % じゃ口
+  \fill[bkGray] (4,35) rectangle (22,38);
+  \fill[bkGray] (4,31.5) rectangle (7.5,38);
+  \draw[bkBlue!60, line width=1.4pt] (5.75,31) -- (5.75,9.5);
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at (18,-2) {1\R{分}{ぷん}ごとに\qty{2}{L}ずつ\R{上}{うえ}の\R{線}{せん}へ};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{2mm}
+\R{時間}{じ|かん}がたつと、\R{式}{しき}の\R{中}{なか}のどの\R{数}{かず}が\R{変}{か}わり、どの\R{数}{かず}が\R{変}{か}わらないでしょう。$x=0$、1、2、3、4 のときを、\R{表}{ひょう}に\R{並}{なら}べてみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=52mm] *{5}{Q[c,m,wd=11mm]}}, rowsep=1pt, cells={font=\small}}
+\R{時間}{じ|かん} $x$（\R{分}{ふん}） & 0 & 1 & 2 & 3 & 4 \\
+\SetCell{bg=bkBlue!10} 1\R{分}{ぷん}にふえる\R{量}{りょう}（L） & \SetCell{bg=bkBlue!10} 2 & \SetCell{bg=bkBlue!10} 2 & \SetCell{bg=bkBlue!10} 2 & \SetCell{bg=bkBlue!10} 2 & \SetCell{bg=bkBlue!10} 2 \\
+\SetCell{bg=bkBlue!10} はじめの\R{量}{りょう}（L） & \SetCell{bg=bkBlue!10} 5 & \SetCell{bg=bkBlue!10} 5 & \SetCell{bg=bkBlue!10} 5 & \SetCell{bg=bkBlue!10} 5 & \SetCell{bg=bkBlue!10} 5 \\
+\R{水}{みず}の\R{量}{りょう} $y=2x+5$（L） & 5 & 7 & 9 & 11 & 13 \\
+\end{bktable}
+\bktabcaption{\R{青}{あお}い2\R{行}{ぎょう}は、\R{時間}{じ|かん}がたっても\R{同}{おな}じ\R{数}{かず}のまま。}
+\end{bkcenter}
+
+$x$ と $y$ は、\R{時間}{じ|かん}がたつにつれて、0、1、2、…や5、7、9、…と\R{変}{か}わっていきます。2と5は、いつまでたっても2と5のままです。
+
+\begin{taisetsu}
+$y=2x+5$ の $x$ や $y$ のように、いろいろな\R{値}{あたい}をとる\R{文字}{も|じ}を\textbf{\R{変数}{へん|すう}}といいます。\par
+2や5のように、$x$ が\R{変}{か}わっても\R{変}{か}わらない\R{数}{かず}を\textbf{\R{定数}{てい|すう}}といいます。
+\end{taisetsu}
+\bkidx{へんすう}{\R{変数}{へん|すう}}\bkidx{ていすう}{\R{定数}{てい|すう}}
+
+\bkthrbhead{\R{箱}{はこ}で\R{考}{かんが}えると}
+2-11 では、\R{文字}{も|じ}を「どんな\R{数}{かず}でも\R{入}{はい}る\R{箱}{はこ}」と\R{考}{かんが}えました。\R{変数}{へん|すう}は、\R{中身}{なか|み}がつぎつぎに\R{入}{い}れかわる\R{箱}{はこ}です。\R{定数}{てい|すう}は、\R{中身}{なか|み}を\R{入}{い}れたら、かぎをかけてしまった\R{箱}{はこ}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbbox{(10,0)}{\R{変数}{へん|すう} $x$}{3}{bkOrange}{0}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkOrange!80!black, align=center] at (10,-7) {0→1→2→3→…\\\R{中身}{なか|み}が\R{入}{い}れかわる};
+  \bkthrbbox{(42,0)}{\R{変数}{へん|すう} $y$}{11}{bkOrange}{0}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkOrange!80!black, align=center] at (42,-7) {5→7→9→11→…\\\R{中身}{なか|み}が\R{入}{い}れかわる};
+  \bkthrbbox{(84,0)}{\R{定数}{てい|すう}}{2}{bkBlue}{1}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkBlue!80!black, align=center] at (84,-7) {いつも2\\かぎがかかっている};
+  \bkthrbbox{(116,0)}{\R{定数}{てい|すう}}{5}{bkBlue}{1}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkBlue!80!black, align=center] at (116,-7) {いつも5\\かぎがかかっている};
+\end{tikzpicture}
+\bkfigcaption{\R{変数}{へん|すう}は\R{中身}{なか|み}が\R{入}{い}れかわる\R{箱}{はこ}、\R{定数}{てい|すう}はかぎのかかった\R{箱}{はこ}。}
+\end{bkfigure}
+
+\bkthrbhead{\R{文字}{も|じ}でも\R{定数}{てい|すう}のことがある}
+\R{定数}{てい|すう}は、2や5のような\R{数字}{すう|じ}だけではありません。$y=ax+b$ と\R{書}{か}いて、「$a$ は1\R{分}{ぷん}にふえる\R{量}{りょう}、$b$ ははじめの\R{量}{りょう}」と\R{決}{き}めると、$a$ と $b$ は\R{文字}{も|じ}ですが、\R{時間}{じ|かん}がたっても\R{変}{か}わらないので\R{定数}{てい|すう}です。2-11 で\R{見}{み}たように、\R{昔}{むかし}のフランスの\R{数学者}{すう|がく|しゃ}デカルトは、わかっている\R{数}{かず}に $a$、$b$、$c$、わからない\R{数}{かず}に $x$、$y$、$z$ を\R{使}{つか}いました。いまでも、\R{定数}{てい|すう}には $a$、$b$、$c$、\R{変数}{へん|すう}には $x$、$y$、$z$ や\R{時間}{じ|かん}の $t$ を\R{使}{つか}うことが\R{多}{おお}いです。ただし、これは\R{習慣}{しゅう|かん}で、きまりではありません。\R{文字}{も|じ}の\R{種類}{しゅ|るい}ではなく、「\R{変}{か}わるか、\R{変}{か}わらないか」で\R{見分}{み|わ}けます。
+
+\bkthrbhead{プログラムの\R{変数}{へん|すう}とくらべる}
+2-19 のプログラムにも「\R{変数}{へん|すう}」がありました。\R{水}{みず}そうの\R{計算}{けい|さん}をプログラムで\R{書}{か}いてみます。
+
+\noindent\begin{minipage}[t]{0.52\linewidth}
+\begin{bkthrbcode}
+RATE = 2
+x = 0
+y = 5
+for k in range(4):
+    x = x + 1
+    y = y + RATE
+    print(x, y)
+\end{bkthrbcode}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\linewidth}
+\begin{bkthrbout}
+1 7
+2 9
+3 11
+4 13
+\end{bkthrbout}
+\end{minipage}
+
+\par\vspace{2pt}
+プログラムの x と y は、\texttt{x = x + 1} や \texttt{y = y + RATE} の\R{代入}{だい|にゅう}が\R{実行}{じっ|こう}されるたびに、\R{中身}{なか|み}が1つずつ\R{入}{い}れかわります。RATE は、\R{最初}{さい|しょ}に2を\R{入}{い}れたあと、\R{一度}{いち|ど}も\R{変}{か}えません。このように、\R{変}{か}えないと\R{決}{き}めた\R{数}{かず}には、\R{名前}{な|まえ}をすべて\R{大文字}{おお|も|じ}にして\R{目印}{め|じるし}にする\R{習慣}{しゅう|かん}があります（プログラムの\R{定数}{てい|すう}）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] Q[l,m,wd=46mm] Q[l,m,wd=46mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+ & プログラムの\R{変数}{へん|すう}（2-19） & \R{数学}{すう|がく}の\R{変数}{へん|すう} \\
+\R{同}{おな}じところ & \SetCell[c=2]{l} どちらも、いろいろな\R{数}{かず}が\R{入}{はい}る「\R{名前}{な|まえ}つきの\R{箱}{はこ}」 & \\
+ちがうところ & \R{代入}{だい|にゅう}するたびに、\R{中身}{なか|み}が1つずつ\R{入}{い}れかわる & \R{入}{はい}りうる\R{数}{かず}を\R{全部}{ぜん|ぶ}まとめて\R{考}{かんが}える \\
+「＝」の\R{意味}{い|み} & \R{右}{みぎ}を\R{計算}{けい|さん}して\R{左}{ひだり}に\R{入}{い}れる（\R{命令}{めい|れい}） & \R{左}{ひだり}と\R{右}{みぎ}が\R{等}{ひと}しい \\
+\end{bktable}
+\bktabcaption{プログラムの\R{変数}{へん|すう}と\R{数学}{すう|がく}の\R{変数}{へん|すう}}
+\end{bkcenter}
+
+\R{数学}{すう|がく}の $y=2x+5$ は、「$x$ がどんな\R{数}{かず}でも、$y$ は $2x+5$ に\R{等}{ひと}しい」という、すべての $x$ についての\R{約束}{やく|そく}です。プログラムは、その\R{約束}{やく|そく}を、$x=1$、2、3、4 と1つずつ\R{順番}{じゅん|ばん}に\R{確}{たし}かめているのだ、と\R{考}{かんが}えることができます。
+
+\bksubsection{2}{\R{自然}{し|ぜん}が\R{決}{き}める\R{数}{かず}と、\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}}
+
+\leavevmode\label{bk:3-1:butsuri}\bkyattemiyouref の\R{表}{ひょう}にもどりましょう。ばね A で\R{実験}{じっ|けん}しているあいだ、\R{力}{ちから} $F$ とのび $x$ は\R{変}{か}わりましたが、$F\div x$ はいつも25でした。この25がばね\R{定数}{てい|すう} $k$ です。だから、ばね A の\R{実験}{じっ|けん}では、
+\[ F=25x \]
+で、$F$ と $x$ が\R{変数}{へん|すう}、$k=25$ が\R{定数}{てい|すう}です。
+
+ところが、ばね B にとりかえると、$k$ は50になりました。$k$ は、1\R{本}{ぽん}のばねの\R{実験}{じっ|けん}の\R{中}{なか}では\R{変}{か}わりませんが、ばねをとりかえると\R{変}{か}わる\R{数}{かず}です。
+
+\bkhatenaref の\R{答}{こた}え：\R{引}{ひ}く\R{力}{ちから}を\R{変}{か}えると、$F$ と $x$ が\R{変}{か}わります（\R{変数}{へん|すう}）。$k$ は\R{変}{か}わりません（\R{定数}{てい|すう}）。ただし $k$ は、ばねごとに\R{決}{き}まる\R{数}{かず}で、ばねをとりかえれば\R{別}{べつ}の\R{値}{あたい}になります。
+
+\bkthrbhead{ボールを\R{取}{と}りかえても\R{変}{か}わらない\R{数}{かず}：$g$}
+こんどは、ボールを\R{落}{お}とす\R{場面}{ば|めん}です。\R{空気}{くう|き}の\R{抵抗}{てい|こう}が\R{小}{ちい}さいとき、\R{落}{お}ちるボールの\R{速}{はや}さは、1\R{秒}{びょう}ごとに\R{約}{やく}\qty{9.8}{m/s}ずつふえます（2-0・2-10）。この「1\R{秒}{びょう}ごとに\R{速}{はや}さがふえる\R{量}{りょう}」を $g$ と\R{書}{か}きます。\R{単位}{たん|い}は m/s$^2$ で、$g=\qty{9.8}{m/s^2}$ です（くわしい\R{名前}{な|まえ}と\R{意味}{い|み}は 5-5 で\R{学}{まな}びます）。はなしてから $t$ \R{秒後}{びょう|ご}の\R{速}{はや}さ $v$ は、9.8 m/s が $t$ こ\R{分}{ぶん}なので、
+\[ v=gt \]
+です。
+
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] *{4}{Q[c,m,wd=8mm]}}, rowsep=0.8pt, cells={font=\small}}
+\R{時間}{じ|かん} $t$（s） & 0 & 1 & 2 & 3 \\
+\SetCell{bg=bkBlue!10} $g$（m/s$^2$） & \SetCell{bg=bkBlue!10} 9.8 & \SetCell{bg=bkBlue!10} 9.8 & \SetCell{bg=bkBlue!10} 9.8 & \SetCell{bg=bkBlue!10} 9.8 \\
+\R{速}{はや}さ $v=gt$（m/s） & 0 & 9.8 & 19.6 & 29.4 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\R{鉄}{てつ}の\R{球}{たま}でも、ゴムのボールでも、\R{重}{おも}くても\R{軽}{かる}くても、$g$ は\R{同}{おな}じ9.8です（\R{空気}{くう|き}の\R{抵抗}{てい|こう}が\R{小}{ちい}さいとき）。
+\end{minipage}
+
+\par\vspace{2mm}
+9.8という\R{数}{かず}は、だれかが\R{計算}{けい|さん}で\R{決}{き}めたものではありません。\R{地球}{ち|きゅう}の\R{上}{うえ}で、たくさんの\R{人}{ひと}が\R{落}{お}ちる\R{物}{もの}をくわしくはかって、\R{見}{み}つけた\R{値}{あたい}です。ばね\R{定数}{てい|すう}とちがって、ボールをとりかえても\R{変}{か}わらず、\R{人}{ひと}が\R{選}{えら}ぶこともできません。
+
+\bkthrbhead{どこではかっても\R{同}{おな}じ\R{数}{かず}：\R{光}{ひかり}の\R{速}{はや}さ $c$}
+\R{光}{ひかり}は、1\R{秒}{びょう}に\R{約}{やく} $3.0\times10^8$\,m \R{進}{すす}みます（2-7）。これを $c$ と\R{書}{か}き、$c=3.0\times10^8$\,m/s です。\R{太陽}{たい|よう}の\R{光}{ひかり}でも、\R{懐中電灯}{かい|ちゅう|でん|とう}の\R{光}{ひかり}でも、\R{宇宙}{う|ちゅう}のどこではかっても、\R{真空}{しん|くう}（\R{空気}{くう|き}もない\R{空間}{くう|かん}）の\R{中}{なか}を\R{進}{すす}む\R{光}{ひかり}の\R{速}{はや}さは\R{同}{おな}じです。
+
+\begin{taisetsu}
+$g$ や $c$ のように、\R{自然}{し|ぜん}が\R{決}{き}めていて、\R{人}{ひと}が\R{選}{えら}んだり\R{変}{か}えたりできない\R{定数}{てい|すう}を\textbf{\R{物理定数}{ぶつ|り|てい|すう}}といいます。\par
+ばね\R{定数}{てい|すう} $k$ や\R{質量}{しつ|りょう} $m$ のように、\R{物}{もの}（\R{問題}{もん|だい}）ごとに\R{決}{き}まり、その\R{問題}{もん|だい}の\R{中}{なか}では\R{変}{か}わらない\R{数}{かず}もある。
+\end{taisetsu}
+\bkidx{ぶつりていすう}{\R{物理定数}{ぶつ|り|てい|すう}}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm,
+  col/.style={draw=#1, line width=1pt, fill=white, rounded corners=2.5mm, minimum width=40mm, minimum height=44mm, anchor=north},
+  hd/.style={anchor=north, fill=#1, text=white, font=\sffamily\bfseries\small, rounded corners=1.2mm, inner xsep=2mm, inner ysep=1mm},
+  bd/.style={anchor=center, text width=35mm, align=left, font=\small, inner sep=0pt}]
+  % 見出しの下（y=-9.5）からカードの下（y=-44）までのまん中（y=-26.75）に本文の中心をそろえる  % noruby
+  \node[col=bkNavy] at (21,0) {};
+  \node[hd=bkNavy] at (21,-2.5) {\R{物理定数}{ぶつ|り|てい|すう}};
+  \node[bd] at (21,-26.75) {\R{自然}{し|ぜん}が\R{決}{き}める。\\\R{物}{もの}をかえても\R{同}{おな}じ。\\[3pt]
+    $g=\qty{9.8}{m/s^2}$（\R{地球}{ち|きゅう}）\\ $c=3.0\times10^8$\,m/s};
+  \node[col=bkOrange] at (66,0) {};
+  \node[hd=bkOrange!90!black] at (66,-2.5) {\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}};
+  \node[bd] at (66,-26.75) {\R{物}{もの}によってちがう。\\\R{問題}{もん|だい}の\R{中}{なか}では\R{定数}{てい|すう}。\\[3pt]
+    ばね\R{定数}{てい|すう} $k$、\R{質量}{しつ|りょう} $m$、\\\R{抵抗}{てい|こう} $R$};
+  \node[col=bkGreen!80!black] at (111,0) {};
+  \node[hd=bkGreen!70!black] at (111,-2.5) {\R{変数}{へん|すう}};
+  \node[bd] at (111,-26.75) {\R{問題}{もん|だい}の\R{中}{なか}で\R{変}{か}わる。\\[3pt]
+    \R{力}{ちから} $F$、のび $x$、\\\R{時間}{じ|かん} $t$、\R{速}{はや}さ $v$};
+\end{tikzpicture}
+\bkfigcaption{\R{式}{しき}に\R{出}{で}てくる\R{文字}{も|じ}の3つのなかま}
+\end{bkfigure}
+
+\bkthrbhead{\R{同}{おな}じ\R{文字}{も|じ}が、\R{変数}{へん|すう}になることも}
+\R{物}{もの}にはたらく\R{重力}{じゅう|りょく}（\R{重}{おも}さ）$W$ は、\R{質量}{しつ|りょう} $m$ に $g$ をかけて $W=mg$ です（2-15 で「\qty{1}{kg}で\R{約}{やく}\qty{10}{N}」と\R{学}{まな}んだ10は、くわしくは9.8）。1つのボールについて\R{考}{かんが}えるなら、$m$ は\R{定数}{てい|すう}です。でも、「いろいろな\R{質量}{しつ|りょう}のボールの\R{重力}{じゅう|りょく}をくらべる」\R{問題}{もん|だい}なら、$m$ は\R{変}{か}わるので\R{変数}{へん|すう}です。\R{変数}{へん|すう}か\R{定数}{てい|すう}かは、\R{文字}{も|じ}で\R{決}{き}まるのではなく、「その\R{問題}{もん|だい}で、\R{何}{なに}を\R{変}{か}えるのか」で\R{決}{き}まります。
+
+\begin{seikaku}
+$g$ は、\R{地球}{ち|きゅう}の\R{上}{うえ}の\R{場所}{ば|しょ}によって\R{少}{すこ}しだけちがいます。\R{赤道}{せき|どう}では\R{約}{やく}\qty{9.78}{m/s^2}、\R{北極}{ほっ|きょく}や\R{南極}{なん|きょく}では\R{約}{やく}\qty{9.83}{m/s^2}です。\R{月}{つき}の\R{上}{うえ}では\R{約}{やく}\qty{1.6}{m/s^2}です（2-0）。だから $g$ は、「\R{地球}{ち|きゅう}の\R{表面}{ひょう|めん}の\R{近}{ちか}くでは、どの\R{物}{もの}にも\R{同}{おな}じ」という\R{意味}{い|み}の\R{物理定数}{ぶつ|り|てい|すう}です。この\R{本}{ほん}では、ふつう9.8を\R{使}{つか}います。\R{光}{ひかり}の\R{速}{はや}さ $c$ は、\R{宇宙}{う|ちゅう}のどこでも\R{同}{おな}じで、ちょうど\qty{299792458}{m/s}と\R{決}{き}められています。
+\end{seikaku}
+
+\bksubsection{3}{\R{変数}{へん|すう}が\R{動}{うご}ける\R{範囲}{はん|い}：\R{変域}{へん|いき}}
+
+\leavevmode\label{bk:3-1:heniki}\noindent\begin{minipage}[c]{0.6\linewidth}
+\R{深}{ふか}さ\qty{30}{cm}の\R{空}{から}の\R{水}{みず}そうに\R{水}{みず}を\R{入}{い}れると、\R{水面}{すい|めん}が1\R{分}{ぷん}に\qty{5}{cm}ずつ\R{上}{あ}がりました。$x$ \R{分後}{ふん|ご}の\R{水}{みず}の\R{深}{ふか}さを $y$〔cm〕とすると、\qty{5}{cm}の $x$ こ\R{分}{ぶん}で、
+\[ y=5x \]
+です。では、$x=8$ を\R{入}{い}れて「8\R{分後}{ぷん|ご}は $5\times8=40$ で、\qty{40}{cm}」と\R{言}{い}ってよいでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbtank{(0,0)}{22}{30}{30}
+  \draw[bkBlue!50, line width=1pt] (22.6,30.6) .. controls (26.5,30.4) and (28,22) .. (28.5,2.6);
+  \draw[bkBlue!50, line width=1pt] (22.6,30.6) .. controls (24.8,30.2) and (25.4,22) .. (25.6,2.6);
+  \fill[bkBlue!25] (23.2,0) rectangle (32,2);
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkRed!80!black, inner sep=0pt] at (11,33) {6\R{分}{ぷん}でいっぱい！};
+  \draw[{Stealth[length=3pt]}-{Stealth[length=3pt]}, bkInk, line width=0.6pt] (-3,0) -- (-3,30);
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-4,15) {\qty{30}{cm}};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{2mm}
+\R{水}{みず}そうの\R{深}{ふか}さは\qty{30}{cm}しかないので、$30\div5=6$ で、6\R{分}{ぷん}でいっぱいになります。それより\R{後}{あと}は\R{水}{みず}があふれて、\R{深}{ふか}さは\qty{30}{cm}のまま\R{変}{か}わりません。\R{式}{しき} $y=5x$ が\R{使}{つか}えるのは、$x$ が0から6までのあいだだけです。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=58mm, height=52mm, xmin=0, xmax=9.5, ymin=0, ymax=46, xtick={0,2,...,8}, ytick={0,10,...,40},
+  xlabel={$x$（\R{分}{ふん}）}, ylabel={$y$（cm）}]
+  \addplot[bkcurve, domain=0:6] {5*x};
+  \addplot[bkGray, dashed, line width=1pt, domain=6:9] {5*x};
+  \addplot[bkOrange, line width=1.4pt] coordinates {(6,30) (9,30)};
+  \addplot[only marks, mark=*, mark size=2pt, bkBlue] coordinates {(0,0) (6,30)};
+  \node[font=\sffamily\footnotesize, text=bkGray, anchor=east] at (axis cs:7.6,41) {\R{式}{しき}のまま};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=north] at (axis cs:7.8,28.5) {あふれる};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+グラフにすると、\R{式}{しき} $y=5x$ の\R{直線}{ちょく|せん}（\R{青}{あお}）は、$x=0$ の\R{点}{てん}から\R{始}{はじ}まり、$x=6$ の\R{点}{てん}で\R{終}{お}わります。そこから\R{先}{さき}の\R{灰色}{はい|いろ}の\R{点線}{てん|せん}は、\R{式}{しき}だけで\R{計算}{けい|さん}した、ほんとうには\R{起}{お}きないことです。
+\end{minipage}
+
+\par\vspace{2mm}
+$x$ が0から6までのあいだにあることを、2-2 の\R{不等号}{ふ|とう|ごう}を2つつないで、
+\[ 0\leqq x\leqq6 \]
+と\R{書}{か}きます。0\R{分}{ふん}（\R{入}{い}れ\R{始}{はじ}めたとき）も、6\R{分}{ぷん}（ちょうどいっぱいになったとき）も\R{式}{しき}が\R{使}{つか}えるので、「ちょうどその\R{数}{かず}もふくむ」$\leqq$ を\R{使}{つか}います。\R{同}{おな}じように、$y$ は0から30までなので、$0\leqq y\leqq30$ です。
+
+\begin{taisetsu}
+\R{変数}{へん|すう}がとることのできる\R{値}{あたい}の\R{範囲}{はん|い}を、\textbf{\R{変域}{へん|いき}}といいます。\par
+\R{水}{みず}そうの\R{例}{れい}では、$x$ の\R{変域}{へん|いき}は $0\leqq x\leqq6$、$y$ の\R{変域}{へん|いき}は $0\leqq y\leqq30$。
+\end{taisetsu}
+\bkidx{へんいき}{\R{変域}{へん|いき}}
+
+\R{数直線}{すう|ちょく|せん}にかくと、\R{変域}{へん|いき}がよく\R{見}{み}えます（2-2 と\R{同}{おな}じで、●はその\R{数}{かず}をふくむ、○はふくまない、という\R{印}{しるし}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 0≦x≦6
+  \bkthrbline{0}{-1}{9}{9}{0}
+  \draw[bkBlue, line width=2.4pt] (0,0) -- (54,0);
+  \fill[bkBlue] (0,0) circle (1.8) (54,0) circle (1.8);
+  \node[anchor=west, font=\small, text=bkBlue!80!black] at (88,0) {$0\leqq x\leqq6$};
+  % x>0
+  \bkthrbline{-16}{-1}{9}{9}{0}
+  \draw[bkOrange, line width=2.4pt] (1.8,-16) -- (86,-16);
+  \draw[bkOrange, line width=1pt, fill=white] (0,-16) circle (1.8);
+  \node[anchor=west, font=\small, text=bkOrange!80!black] at (88,-16) {$x>0$};
+  % 0,1,…,6 の整数
+  \bkthrbline{-32}{-1}{9}{9}{0}
+  \foreach \k in {0,...,6} \fill[bkGreen!80!black] (\k*9,-32) circle (1.8);
+  \node[anchor=west, font=\small, text=bkGreen!50!black, align=left] at (88,-32) {$0\leqq x\leqq6$ の\R{整数}{せい|すう}};
+\end{tikzpicture}
+\bkfigcaption{\R{上}{うえ}から、$0\leqq x\leqq6$、$x>0$、0から6までの\R{整数}{せい|すう}。}
+\end{bkfigure}
+
+\bkthrbhead{はじめに\R{水}{みず}が\R{入}{はい}っているとき}
+\R{同}{おな}じ\qty{30}{cm}の\R{水}{みず}そうに、はじめから\qty{10}{cm}の\R{深}{ふか}さまで\R{水}{みず}が\R{入}{はい}っていたら、どうなるでしょう。1\R{分}{ぷん}に\qty{5}{cm}ずつ\R{上}{あ}がるなら、$y=5x+10$ です。いっぱいまでに\R{上}{あ}がる\R{高}{たか}さは $30-10=20$（cm）なので、$20\div5=4$ で、4\R{分}{ぷん}でいっぱいになります。$x$ の\R{変域}{へん|いき}は $0\leqq x\leqq4$ です。$y$ は、$x=0$ のときもう10なので、$y$ の\R{変域}{へん|いき}は $10\leqq y\leqq30$ です。0からではないことに\R{気}{き}をつけましょう。
+
+\bkthrbhead{ふくまない\R{端}{はし}がある\R{変域}{へん|いき}}
+2-15 では、\qty{1200}{m}の\R{道}{みち}を\R{速}{はや}さ $x$〔m/s〕で\R{行}{い}くと、かかる\R{時間}{じ|かん}は \mbox{$y=\dfrac{1200}{x}$ \R{秒}{びょう}}でした。\R{速}{はや}さ $x$ は0にはできません。\R{止}{と}まっていたら\R{着}{つ}きませんし、0でわる\R{計算}{けい|さん}はできないからです（1-14）。\R{速}{はや}さはマイナスでもないので、$x$ の\R{変域}{へん|いき}は $x>0$ です。0をふくまないので、\R{数直線}{すう|ちょく|せん}では0に○をかきます（\R{上}{うえ}の\R{図}{ず}のまん\R{中}{なか}）。
+
+\R{速}{はや}さを $2\leqq x\leqq6$ にしたとき、$y$ の\R{変域}{へん|いき}はどうなるでしょう。$x=2$ のとき $y=1200\div2=600$、$x=6$ のとき $y=1200\div6=200$ です。\R{速}{はや}いほど\R{時間}{じ|かん}は\R{短}{みじか}いので、$x$ が\R{大}{おお}きい\R{端}{はし}で $y$ は\R{小}{ちい}さい\R{端}{はし}になります。\R{不等号}{ふ|とう|ごう}は\R{小}{ちい}さい\R{数}{かず}を\R{左}{ひだり}に\R{書}{か}くので、$200\leqq y\leqq600$ です。
+
+\bkthrbhead{\R{整数}{せい|すう}しかとらない\R{変域}{へん|いき}}
+ばねにつるすおもりの\R{数}{かず}は、0\R{個}{こ}、1\R{個}{こ}、2\R{個}{こ}、…で、1.5\R{個}{こ}はありません。0\R{個}{こ}から6\R{個}{こ}までなら、「$0\leqq x\leqq6$ の\R{整数}{せい|すう}」と\R{書}{か}きます。\R{数直線}{すう|ちょく|せん}では、\R{線}{せん}ではなく、とびとびの\R{点}{てん}になります（\R{上}{うえ}の\R{図}{ず}のいちばん\R{下}{した}）。
+
+\bksubsection{4}{1つが\R{決}{き}まると、もう1つが\R{決}{き}まる}
+
+\leavevmode\label{bk:3-1:kimaru}\R{水}{みず}そうの $y=5x$ では、$x$ を1つ\R{決}{き}めると、$y$ がただ1つに\R{決}{き}まります。$x=4$ なら、$y=5\times4=20$ で、\R{深}{ふか}さは\qty{20}{cm}。21\,cm になったり19\,cm になったりはしません。$x$ が\R{変}{か}わると、それにつれて $y$ も\R{変}{か}わります。このような2つの\R{変数}{へん|すう}を、「ともなって\R{変}{か}わる\R{量}{りょう}」といいます。
+
+でも、2つの\R{量}{りょう}がいつもそうなるとはかぎりません。\R{下}{した}の2つをくらべましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm,
+  vx/.style={draw=bkOrange, line width=0.9pt, fill=white, rounded corners=1.2mm, minimum width=13mm, minimum height=6.5mm, font=\small},
+  vy/.style={draw=bkBlue, line width=0.9pt, fill=white, rounded corners=1.2mm, minimum width=13mm, minimum height=6.5mm, font=\small}]
+  % 左：正方形の1辺→まわりの長さ（決まる）
+  \node[anchor=south, font=\sffamily\bfseries\small, text=bkGreen!50!black] at (30,26) {\R{決}{き}まる};
+  \node[anchor=south, font=\sffamily\footnotesize] at (8,19.5) {1\R{辺}{ぺん} $x$（cm）};
+  \node[anchor=south, font=\sffamily\footnotesize] at (52,19.5) {まわり $y$（cm）};
+  \foreach \v [count=\k from 0] in {1,2,3} {
+    \node[vx] (a\k) at (8,{14-\k*10}) {\v};
+    \pgfmathtruncatemacro\w{4*\v}
+    \node[vy] (b\k) at (52,{14-\k*10}) {\w};
+    \draw[bk link] (a\k) -- (b\k);}
+  % 右：まわりの長さ→面積（決まらない）
+  \node[anchor=south, font=\sffamily\bfseries\small, text=bkRed!80!black] at (100,26) {\R{決}{き}まらない};
+  \node[anchor=south, font=\sffamily\footnotesize] at (78,19.5) {まわり $x$（cm）};
+  \node[anchor=south, font=\sffamily\footnotesize] at (122,19.5) {\R{面積}{めん|せき} $y$（cm$^2$）};
+  \node[vx] (c0) at (78,4) {20};
+  \node[vy] (d0) at (122,14) {24};
+  \node[vy] (d1) at (122,4) {21};
+  \node[vy] (d2) at (122,-6) {25};
+  \foreach \k in {0,1,2} \draw[bk link] (c0) -- (d\k);
+\end{tikzpicture}
+\bkfigcaption{\R{左}{ひだり}：1つの $x$ から\R{矢印}{や|じるし}が1\R{本}{ぽん}。\R{右}{みぎ}：1つの $x$ から\R{矢印}{や|じるし}が\R{何本}{なん|ぼん}も\R{出}{で}る。}
+\end{bkfigure}
+
+\R{左}{ひだり}は、\R{正方形}{せい|ほう|けい}の1\R{辺}{ぺん} $x$〔cm〕と、まわりの\R{長}{なが}さ $y$〔cm〕です。\R{正方形}{せい|ほう|けい}は4つの\R{辺}{へん}の\R{長}{なが}さが\R{等}{ひと}しいので、$y=4x$。1\R{辺}{ぺん}が\R{決}{き}まれば、まわりの\R{長}{なが}さはただ1つに\R{決}{き}まります。
+
+\R{右}{みぎ}は、まわりの\R{長}{なが}さが\qty{20}{cm}の\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}です。たてと\R{横}{よこ}の\R{和}{わ}は $20\div2=10$（cm）です。たて6\,cm・\R{横}{よこ}4\,cm なら $6\times4=24$、たて7\,cm・\R{横}{よこ}3\,cm なら $7\times3=21$、たて5\,cm・\R{横}{よこ}5\,cm なら $5\times5=25$（cm$^2$）。まわりの\R{長}{なが}さが\R{同}{おな}じでも、\R{面積}{めん|せき}はいろいろで、1つに\R{決}{き}まりません。
+
+「\R{決}{き}まらない」ことを\R{言}{い}うには、\R{同}{おな}じ $x$ で $y$ がちがう\R{例}{れい}を1つ\R{見}{み}せれば\R{十分}{じゅう|ぶん}です。「\R{決}{き}まる」ことを\R{言}{い}うには、$y=4x$ のような\R{式}{しき}や、きまりを\R{示}{しめ}します。$x$ を\R{決}{き}めると $y$ がただ1つに\R{決}{き}まる\R{関係}{かん|けい}は、\R{物理}{ぶつ|り}でとても\R{大事}{だい|じ}です。3-3 で、この\R{関係}{かん|けい}に\R{名前}{な|まえ}をつけて、くわしく\R{調}{しら}べます。
+
+\begin{motto}[1]
+\textbf{\R{数学}{すう|がく}の\R{定数}{てい|すう}と「パラメータ」}\par
+\R{円}{えん}のまわりの\R{長}{なが}さ÷\R{直径}{ちょっ|けい}は、どんな\R{大}{おお}きさの\R{円}{えん}でも $\pi=3.14159\cdots$ です（2-9）。$\pi$ は、はからなくても\R{計算}{けい|さん}で\R{決}{き}まる「\R{数学}{すう|がく}の\R{定数}{てい|すう}」です。\R{物理定数}{ぶつ|り|てい|すう}は、はかって\R{見}{み}つける\R{数}{かず}でした。\par
+また、ばね\R{定数}{てい|すう} $k$ のように「\R{問題}{もん|だい}ごとに\R{決}{き}まり、その\R{問題}{もん|だい}の\R{中}{なか}では\R{変}{か}わらない\R{数}{かず}」を、\R{技術者}{ぎ|じゅつ|しゃ}は\textbf{パラメータ}とよぶことがあります。\R{機械}{き|かい}の\R{設計}{せっ|けい}では、パラメータをいろいろ\R{変}{か}えて\R{計算}{けい|さん}し、いちばんよい\R{値}{あたい}を\R{選}{えら}びます。
+\end{motto}
+
+\begin{kotoba}
+\small
+\bkword{\R{変数}{へん|すう}}{いろいろな\R{値}{あたい}をとる\R{文字}{も|じ}。$y=2x+5$ の $x$ と $y$。}
+\bkword{\R{定数}{てい|すう}}{$x$ が\R{変}{か}わっても\R{変}{か}わらない\R{数}{かず}。$y=2x+5$ の2と5。\R{文字}{も|じ}のこともある。}
+\bkword{\R{物理定数}{ぶつ|り|てい|すう}}{\R{自然}{し|ぜん}が\R{決}{き}めている\R{定数}{てい|すう}。$g=\qty{9.8}{m/s^2}$、$c=3.0\times10^8$\,m/s。}
+\bkword{\R{変域}{へん|いき}}{\R{変数}{へん|すう}がとることのできる\R{値}{あたい}の\R{範囲}{はん|い}。$0\leqq x\leqq6$ のように\R{不等号}{ふ|とう|ごう}で\R{書}{か}く。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$g$}{ジー}{\R{落}{お}ちる\R{物}{もの}の\R{速}{はや}さが、1\R{秒}{びょう}ごとにふえる\R{量}{りょう}。\R{地球}{ち|きゅう}で\R{約}{やく}\qty{9.8}{m/s^2}}{gravity}{3-1}}{\bkkigocard{$c$}{シー}{\R{真空}{しん|くう}の\R{中}{なか}の\R{光}{ひかり}の\R{速}{はや}さ。\R{約}{やく} $3.0\times10^8$\,m/s}{speed of light}{3-1}}
+
+\begin{column}{\R{物理定数}{ぶつ|り|てい|すう}は、だんだんくわしくなる}
+\R{光}{ひかり}の\R{速}{はや}さ $c$ は、\R{昔}{むかし}からいろいろな\R{人}{ひと}が、くふうしてはかってきました。\R{光}{ひかり}はとても\R{速}{はや}いので、ふつうのものさしと\R{時計}{と|けい}では、はかれないからです。
+
+\par\addvspace{3pt}\textbf{① レーマー（1676\R{年}{ねん}）：\R{宇宙}{う|ちゅう}の\R{大}{おお}きさを\R{使}{つか}う}\par\noindent
+\R{木星}{もく|せい}の\R{月}{つき}イオは、\R{木星}{もく|せい}のかげに\R{入}{はい}って\R{見}{み}えなくなる\R{時刻}{じ|こく}が、きちんと\R{決}{き}まっています。ところが、\R{地球}{ち|きゅう}が\R{木星}{もく|せい}から\R{遠}{とお}い\R{時期}{じ|き}には、その\R{時刻}{じ|こく}が\R{予定}{よ|てい}より\R{最大}{さい|だい}で\R{約}{やく}22\R{分}{ふん}おくれて\R{見}{み}えました。デンマークのレーマーは、これを「\R{光}{ひかり}が、\R{地球}{ち|きゅう}の\R{通}{とお}り\R{道}{みち}の\R{直径}{ちょっ|けい}の\R{分}{ぶん}だけ、よけいに\R{進}{すす}む\R{時間}{じ|かん}」と\R{考}{かんが}えました。この\R{考}{かんが}えから、\R{光}{ひかり}の\R{速}{はや}さは\R{秒速}{びょう|そく}\R{約}{やく}22\R{万}{まん}km と\R{見}{み}つもられました。
+
+\par\addvspace{3pt}\textbf{② フィゾー（1849\R{年}{ねん}）：\R{回}{まわ}る\R{歯車}{は|ぐるま}を\R{使}{つか}う}\par\noindent
+フランスのフィゾーは、\R{歯車}{は|ぐるま}のすきまを\R{通}{とお}した\R{光}{ひかり}を、\R{約}{やく}\qty{8.6}{km}はなれた\R{丘}{おか}の\R{上}{うえ}の\R{鏡}{かがみ}ではね\R{返}{かえ}しました。\R{歯車}{は|ぐるま}を\R{速}{はや}く\R{回}{まわ}すと、\R{帰}{かえ}ってきた\R{光}{ひかり}が\R{次}{つぎ}の\R{歯}{は}にさえぎられて\R{見}{み}えなくなります。そのときの\R{回}{まわ}る\R{速}{はや}さと、\R{往復}{おう|ふく}の\R{道}{みち}のり\R{約}{やく}\qty{17}{km}から、\R{秒速}{びょう|そく}\R{約}{やく}31\R{万}{まん}km と\R{計算}{けい|さん}しました。
+
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ① レーマー：太陽・地球の通り道・木星
+  \draw[bkRed, line width=0.7pt, -{Stealth[length=3pt]}] (50.5,0) -- (8.8,0);
+  \draw[bkBlue!60, line width=0.7pt] (16,0) circle (9);
+  \fill[bkYellow] (16,0) circle (2.8);
+  \fill[bkBlue] (25,0) circle (1.6);
+  \fill[bkBlue] (7,0) circle (1.6);
+  \node[anchor=east, font=\sffamily\footnotesize, inner sep=1pt] at (5,0) {\R{遠}{とお}い};
+  \node[anchor=north west, font=\sffamily\footnotesize, inner sep=1pt] at (25.5,-1.5) {\R{近}{ちか}い};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkGray, inner sep=1pt] at (16,10) {\R{地球}{ち|きゅう}の\R{通}{とお}り\R{道}{みち}};
+  \fill[bkOrange!80!black] (54,0) circle (3.2);
+  \fill[bkGray] (59,1.5) circle (0.9);
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=1pt] at (54,-4) {\R{木星}{もく|せい}とイオ};
+  \draw[{Stealth[length=3pt]}-{Stealth[length=3pt]}, bkGreen!70!black, line width=0.8pt] (7,-12) -- (25,-12);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGreen!50!black, inner sep=1pt] at (16,-13) {よけいに\R{進}{すす}む\R{道}{みち}のり};
+  % ② フィゾー：光源・歯車・遠くの鏡
+  % 第14回 A1：歯車らしい形に（台形の歯12枚・リム・肉ぬきの穴・ハブ・軸）。光は歯車のうしろを通り、右の歯のすきま（0°）から出て、同じすきまにもどる
+  \begin{scope}[shift={(67,0)}, xscale=0.95]
+  \fill[bkYellow!80!black] (0,4) circle (2);
+  \node[anchor=south, font=\sffamily\footnotesize, inner sep=1pt] at (0,6.5) {\R{光}{ひかり}};
+  % 光の道（歯車より先にかく。歯車にかくれ、すきまから見える）
+  \draw[bkOrange, line width=0.8pt] (12,0.25) -- (52,0.25);
+  \draw[bkOrange, line width=0.8pt, -{Stealth[length=3pt]}] (15.6,0.25) -- (34,0.25);
+  \draw[bkOrange, line width=0.8pt, dashed] (52,-0.25) -- (12,-0.25);
+  \draw[bkOrange, line width=0.8pt, -{Stealth[length=3pt]}] (34,-0.25) -- (24,-0.25);
+  % 歯車
+  \filldraw[fill=bkGray!45, draw=bkGray!90!black, line width=0.45pt, line join=round, even odd rule]
+    (15.17,0.45) --(16.13,0.77) --(15.96,1.40) --(14.97,1.20) arc[start angle=22.0, end angle=38.0, radius=3.20] --(15.19,2.73) --(14.73,3.19) --(13.97,2.52) arc[start angle=52.0, end angle=68.0, radius=3.20] --(13.40,3.96) --(12.77,4.13) --(12.45,3.17) arc[start angle=82.0, end angle=98.0, radius=3.20] --(11.23,4.13) --(10.60,3.96) --(10.80,2.97) arc[start angle=112.0, end angle=128.0, radius=3.20] --(9.27,3.19) --(8.81,2.73) --(9.48,1.97) arc[start angle=142.0, end angle=158.0, radius=3.20] --(8.04,1.40) --(7.87,0.77) --(8.83,0.45) arc[start angle=172.0, end angle=188.0, radius=3.20] --(7.87,-0.77) --(8.04,-1.40) --(9.03,-1.20) arc[start angle=202.0, end angle=218.0, radius=3.20] --(8.81,-2.73) --(9.27,-3.19) --(10.03,-2.52) arc[start angle=232.0, end angle=248.0, radius=3.20] --(10.60,-3.96) --(11.23,-4.13) --(11.55,-3.17) arc[start angle=262.0, end angle=278.0, radius=3.20] --(12.77,-4.13) --(13.40,-3.96) --(13.20,-2.97) arc[start angle=292.0, end angle=308.0, radius=3.20] --(14.73,-3.19) --(15.19,-2.73) --(14.52,-1.97) arc[start angle=322.0, end angle=338.0, radius=3.20] --(15.96,-1.40) --(16.13,-0.77) --(15.17,-0.45) arc[start angle=352.0, end angle=368.0, radius=3.20]--cycle
+    (13.5,1.5) circle (0.55) (10.5,1.5) circle (0.55) (10.5,-1.5) circle (0.55) (13.5,-1.5) circle (0.55);
+  \draw[bkGray!90!black, line width=0.35pt] (12,0) circle (2.75);
+  \filldraw[fill=bkGray!25, draw=bkGray!90!black, line width=0.45pt] (12,0) circle (1.05);
+  \fill[bkGray!90!black] (12,0) circle (0.42);
+  % 回るしるし
+  \draw[bkGray!90!black, line width=0.6pt, -{Stealth[length=2.2pt]}] (12,0) ++(118:5.1) arc[start angle=118, end angle=62, radius=5.1];
+  % 光の入口（光源から歯車へ）
+  \draw[bkOrange, line width=0.8pt, -{Stealth[length=3pt]}] (2,3) -- (7.4,1.55);
+  \fill[bkNavy] (53,-4) rectangle (54.6,4);
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=1pt] at (12,-4.6) {\R{歯車}{は|ぐるま}};
+  \node[anchor=north, font=\sffamily\footnotesize, inner sep=1pt] at (53.8,-4.5) {\R{鏡}{かがみ}};
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkOrange!80!black, inner sep=1pt] at (34,1.5) {\R{約}{やく}\qty{8.6}{km}};
+  \end{scope}
+\end{tikzpicture}
+\end{bkcenter}
+
+\par\addvspace{3pt}\textbf{③ いま：\R{光}{ひかり}の\R{速}{はや}さが、ものさしになる}\par\noindent
+はかり\R{方}{かた}がよくなるにつれて、\R{値}{あたい}はほんとうの\R{値}{あたい}に\R{近}{ちか}づき、いまでは\R{秒速}{びょう|そく}299792.458\,km（\R{約}{やく}30\R{万}{まん}km）です。1983\R{年}{ねん}からは、この\R{値}{あたい}をちょうどと\R{決}{き}めて、\R{光}{ひかり}が299792458\R{分}{ぶん}の1\R{秒}{びょう}に\R{進}{すす}む\R{長}{なが}さを\qty{1}{m}としています。\R{物理定数}{ぶつ|り|てい|すう}が、\R{長}{なが}さのものさしの\R{元}{もと}になっているのです。\R{物理定数}{ぶつ|り|てい|すう}は「\R{自然}{し|ぜん}が\R{決}{き}めた\R{数}{かず}」ですが、その\R{値}{あたい}を\R{知}{し}るには、\R{人}{ひと}がはかるしかありません。はかる\R{路線}{ろ|せん}（\bkrouteicon[0.9em]{7}）の\R{大事}{だい|じ}な\R{仕事}{し|ごと}です。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[\R{変数}{へん|すう}と\R{定数}{てい|すう}を\R{見分}{み|わ}ける]
+1\R{個}{こ}120\R{円}{えん}のりんごを $x$ \R{個}{こ}と、150\R{円}{えん}のかごを1つ\R{買}{か}います。\R{代金}{だい|きん}を $y$ \R{円}{えん}とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）\R{式}{しき}の\R{中}{なか}の\R{変数}{へん|すう}と\R{定数}{てい|すう}を\R{答}{こた}えましょう。\par
+\kangaekata りんごの\R{代金}{だい|きん}は「1\R{個}{こ}の\R{値段}{ね|だん}×\R{個数}{こ|すう}」です。\R{買}{か}う\R{個数}{こ|すう}を\R{変}{か}えると\R{変}{か}わるものが\R{変数}{へん|すう}、\R{変}{か}わらないものが\R{定数}{てい|すう}です。\par
+\shiki（1）\nobreak りんご\R{代}{だい}は120\R{円}{えん}の $x$ こ\R{分}{ぶん}で $120\times x=120x$\par
+\hspace*{2.6\zw}かご\R{代}{だい}150\R{円}{えん}をたして、$y=120x+150$\par
+\hspace*{2.6\zw}（2）\nobreak $x$ を\R{変}{か}えると $y$ も\R{変}{か}わる。120と150は\R{変}{か}わらない\par
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{4}{Q[c,m,wd=11mm]}}, rowsep=0.5pt, cells={font=\small}}
+\R{個数}{こ|すう} $x$（\R{個}{こ}） & 0 & 1 & 2 & 3 \\
+\SetCell{bg=bkBlue!10} 1\R{個}{こ}の\R{値段}{ね|だん}（\R{円}{えん}） & \SetCell{bg=bkBlue!10} 120 & \SetCell{bg=bkBlue!10} 120 & \SetCell{bg=bkBlue!10} 120 & \SetCell{bg=bkBlue!10} 120 \\
+\SetCell{bg=bkBlue!10} かご\R{代}{だい}（\R{円}{えん}） & \SetCell{bg=bkBlue!10} 150 & \SetCell{bg=bkBlue!10} 150 & \SetCell{bg=bkBlue!10} 150 & \SetCell{bg=bkBlue!10} 150 \\
+\R{代金}{だい|きん} $y$（\R{円}{えん}） & 150 & 270 & 390 & 510 \\
+\end{bktable}
+\end{bkcenter}
+\kotae（1）\nobreak $y=120x+150$\quad（2）\nobreak \R{変数}{へん|すう}は $x$ と $y$、\R{定数}{てい|すう}は120と150
+\end{reidai}
+
+\begin{jibun}
+1\R{冊}{さつ}80\R{円}{えん}のノートを $x$ \R{冊}{さつ}と、200\R{円}{えん}のペンを1\R{本}{ぽん}\R{買}{か}います。\R{代金}{だい|きん}を $y$ \R{円}{えん}とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）\R{変数}{へん|すう}と\R{定数}{てい|すう}を\R{答}{こた}えましょう。
+\bkjans{（1）\nobreak $y=80x+200$\quad（2）\nobreak \R{変数}{へん|すう}は $x$ と $y$、\R{定数}{てい|すう}は80と200}
+\end{jibun}
+
+\begin{reidai}[\R{物理}{ぶつ|り}の\R{式}{しき}の\R{文字}{も|じ}を\R{分}{わ}ける]
+ばね\R{定数}{てい|すう}\qty{40}{N/m}のばねを、いろいろな\R{力}{ちから} $F$〔N〕で\R{引}{ひ}き、のび $x$〔m〕をはかります。\R{式}{しき}は $F=kx$ です。\par
+（1）この\R{実験}{じっ|けん}で、\R{変数}{へん|すう}と\R{定数}{てい|すう}はどれですか。（2）$k$ は、\R{物理定数}{ぶつ|り|てい|すう}と\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}の、どちらですか。（3）\qty{2}{N}で\R{引}{ひ}くと、\R{何}{なん}cm のびますか。\par
+\kangaekata 1\R{本}{ぽん}のばねで\R{力}{ちから}を\R{変}{か}えるので、\R{変}{か}わるのは $F$ と $x$ です。（3）は $F=kx$ の\R{両辺}{りょう|へん}を $k$ でわって、$x=\dfrac{F}{k}$ にします（2-14）。\par
+\shiki（1）\nobreak $F$ と $x$ は\R{変}{か}わる。$k=40$ は\R{変}{か}わらない\par
+\hspace*{2.6\zw}（2）\nobreak ばねをとりかえると $k$ は\R{変}{か}わるので、\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}\par
+\hspace*{2.6\zw}（3）\nobreak $x=\dfrac{2}{40}=0.05$。$\qty{0.05}{m}\times\qty{100}{cm/m}=\qty{5}{cm}$\par
+\R{表}{ひょう}で\R{確}{たし}かめると、$F$ と $x$ は\R{変}{か}わり、$F\div x$ はいつも40です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{4}{Q[c,m,wd=12mm]}}, rowsep=0.5pt, cells={font=\small}}
+\R{力}{ちから} $F$（N） & 1 & 2 & 3 & 4 \\
+のび $x$（m） & 0.025 & 0.05 & 0.075 & 0.1 \\
+\SetCell{bg=bkBlue!10} $k=F\div x$（N/m） & \SetCell{bg=bkBlue!10} 40 & \SetCell{bg=bkBlue!10} 40 & \SetCell{bg=bkBlue!10} 40 & \SetCell{bg=bkBlue!10} 40 \\
+\end{bktable}
+\end{bkcenter}
+\kotae（1）\nobreak \R{変数}{へん|すう}は $F$ と $x$、\R{定数}{てい|すう}は $k$（40）\quad（2）\nobreak \R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}\quad（3）\nobreak \qty{5}{cm}
+\end{reidai}
+
+\begin{jibun}
+\R{抵抗}{てい|こう} \qty{20}{\ohm} の\R{電熱線}{でん|ねつ|せん}に、いろいろな\R{電圧}{でん|あつ} $V$〔V〕をかけて、\R{電流}{でん|りゅう} $I$〔A〕をはかります。\R{式}{しき}は $V=RI$ です。（1）\R{変数}{へん|すう}と\R{定数}{てい|すう}はどれですか。（2）$R$ は、\R{物理定数}{ぶつ|り|てい|すう}と\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}の、どちらですか。（3）\qty{6}{V}をかけると、\R{何}{なん}A \R{流}{なが}れますか。
+\bkjans{（1）\nobreak \R{変数}{へん|すう}は $V$ と $I$、\R{定数}{てい|すう}は $R$（20）\quad（2）\nobreak \R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}（\R{電熱線}{でん|ねつ|せん}をとりかえると\R{変}{か}わる）\quad（3）\nobreak $I=\dfrac{6}{20}=0.3$ で\qty{0.3}{A}}
+\end{jibun}
+
+\begin{reidai}[\R{物理定数}{ぶつ|り|てい|すう}を\R{使}{つか}って\R{計算}{けい|さん}する]
+\R{空気}{くう|き}の\R{抵抗}{てい|こう}が\R{小}{ちい}さいとき、はなしてから $t$ \R{秒後}{びょう|ご}の\R{速}{はや}さは $v=gt$ です（$g=\qty{9.8}{m/s^2}$）。（1）2\R{秒後}{びょう|ご}、（2）3.5\R{秒後}{びょう|ご}の\R{速}{はや}さを\R{求}{もと}めましょう。（3）\R{重}{おも}いボールにとりかえると、$g$ は\R{変}{か}わりますか。\par
+\kangaekata $g$ は\R{物理定数}{ぶつ|り|てい|すう}なので、どの\R{問題}{もん|だい}でも9.8を\R{使}{つか}います。\R{単位}{たん|い}は $\mathrm{m/s^2}\times\mathrm{s}=\mathrm{m/s}$（2-10）。\par
+\shiki（1）\nobreak $v=9.8\times2=19.6$\par
+\hspace*{2.6\zw}（2）\nobreak $v=9.8\times3.5=34.3$\par
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=70mm, height=46mm, xmin=0, xmax=4.3, ymin=0, ymax=42, xtick={0,1,...,4}, ytick={0,10,...,40},
+  xlabel={$t$（s）}, ylabel={$v$（m/s）}]
+  \addplot[bkcurve, domain=0:4] {9.8*x};
+  \addplot[bkGray, dashed, line width=0.8pt] coordinates {(2,0) (2,19.6) (0,19.6)};
+  \addplot[bkGray, dashed, line width=0.8pt] coordinates {(3.5,0) (3.5,34.3) (0,34.3)};
+  \addplot[only marks, mark=*, mark size=2pt, bkRed] coordinates {(2,19.6) (3.5,34.3)};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:2.1,19) {19.6};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:3.6,33.7) {34.3};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\kotae（1）\nobreak \qty{19.6}{m/s}\quad（2）\nobreak \qty{34.3}{m/s}\quad（3）\nobreak \R{変}{か}わらない（\R{物理定数}{ぶつ|り|てい|すう}だから）
+\end{reidai}
+
+\begin{jibun}
+\R{光}{ひかり}が $t$ \R{秒}{びょう}で\R{進}{すす}む\R{道}{みち}のりは $x=ct$ です（$c=3.0\times10^8$\,m/s）。（1）2\R{秒}{びょう}、（2）0.5\R{秒}{びょう}で\R{進}{すす}む\R{道}{みち}のりを\R{求}{もと}めましょう。（3）\R{懐中電灯}{かい|ちゅう|でん|とう}の\R{光}{ひかり}を\R{太陽}{たい|よう}の\R{光}{ひかり}にかえると、$c$ は\R{変}{か}わりますか。
+\bkjans{（1）\nobreak $3.0\times10^8\times2=6.0\times10^8$ で $6.0\times10^8$\,m\quad（2）\nobreak $3.0\times10^8\times0.5=1.5\times10^8$ で $1.5\times10^8$\,m\quad（3）\nobreak \R{変}{か}わらない（\R{物理定数}{ぶつ|り|てい|すう}だから）}
+\end{jibun}
+
+\begin{reidai}[\R{変域}{へん|いき}を\R{不等号}{ふ|とう|ごう}で\R{書}{か}く]
+\R{深}{ふか}さ\qty{40}{cm}の\R{水}{みず}そうに、はじめ\qty{4}{cm}の\R{深}{ふか}さまで\R{水}{みず}が\R{入}{はい}っています。\R{水}{みず}を\R{入}{い}れると、\R{水面}{すい|めん}は1\R{分}{ぷん}に\qty{6}{cm}ずつ\R{上}{あ}がります。$x$ \R{分後}{ふん|ご}の\R{深}{ふか}さを $y$〔cm〕とすると、$y=6x+4$ です。（1）\R{何分後}{なん|ぷん|ご}にいっぱいになりますか。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。\par
+\kangaekata いっぱいになるまでに\R{上}{あ}がる\R{高}{たか}さを、1\R{分}{ぷん}に\R{上}{あ}がる\R{高}{たか}さでわります。$y$ は0からではなく、はじめの4から\R{始}{はじ}まります。\par
+\shiki（1）\nobreak \R{上}{あ}がる\R{高}{たか}さは $40-4=36$。$36\div6=6$\par
+\hspace*{2.6\zw}（2）\nobreak \R{入}{い}れ\R{始}{はじ}め（0\R{分}{ふん}）からいっぱい（6\R{分}{ぷん}）まで。どちらもふくむ\par
+\hspace*{2.6\zw}（3）\nobreak $x=0$ で $y=6\times0+4=4$、$x=6$ で $y=6\times6+4=40$\par
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbline{8}{0}{8}{12}{1}
+  \draw[bkBlue, line width=2.4pt] (0,8) -- (72,8);
+  \fill[bkBlue] (0,8) circle (1.8) (72,8) circle (1.8);
+  \node[anchor=east, font=\small, text=bkBlue!80!black] at (-6,8) {$x$};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] (-4,-8) -- (106,-8);
+  \foreach \k in {0,...,11} {\draw[bkInk, line width=0.5pt] (\k*9,-9.2) -- (\k*9,-6.8);
+    \pgfmathtruncatemacro\v{\k*4}\node[anchor=north, font=\footnotesize, inner sep=0pt] at (\k*9,-10.4) {$\v$};}
+  \draw[bkOrange, line width=2.4pt] (9,-8) -- (90,-8);
+  \fill[bkOrange] (9,-8) circle (1.8) (90,-8) circle (1.8);
+  \node[anchor=east, font=\small, text=bkOrange!80!black] at (-6,-8) {$y$};
+\end{tikzpicture}
+\end{bkcenter}
+$y$ の\R{線}{せん}は0からではなく、4から\R{始}{はじ}まります。
+\kotae（1）\nobreak 6\R{分後}{ぷん|ご}\quad（2）\nobreak $0\leqq x\leqq6$\quad（3）\nobreak $4\leqq y\leqq40$
+\end{reidai}
+
+\begin{jibun}
+\R{深}{ふか}さ\qty{30}{cm}の\R{水}{みず}そうに、はじめ\qty{6}{cm}の\R{深}{ふか}さまで\R{水}{みず}が\R{入}{はい}っています。\R{水面}{すい|めん}は1\R{分}{ぷん}に\qty{3}{cm}ずつ\R{上}{あ}がり、$y=3x+6$ です。（1）\R{何分後}{なん|ぷん|ご}にいっぱいになりますか。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。
+\bkjans{（1）\nobreak $30-6=24$、$24\div3=8$ で8\R{分後}{ふん|ご}\quad（2）\nobreak $0\leqq x\leqq8$\quad（3）\nobreak $6\leqq y\leqq30$}
+\end{jibun}
+
+\begin{reidai}[ふくまない\R{端}{はし}と、へっていく $y$ の\R{変域}{へん|いき}]
+\qty{1200}{m}の\R{道}{みち}を\R{速}{はや}さ $x$〔m/s〕で\R{行}{い}くと、かかる\R{時間}{じ|かん}は $y=\dfrac{1200}{x}$ \R{秒}{びょう}です。（1）$x$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（2）\R{速}{はや}さを $2\leqq x\leqq6$ にするとき、$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。\par
+\kangaekata（1）\R{速}{はや}さは0にできず（0でわれない）、マイナスでもありません。（2）\R{両端}{りょう|はし}の $x$ を\R{代入}{だい|にゅう}して、\R{小}{ちい}さいほうを\R{左}{ひだり}に\R{書}{か}きます。\par
+\shiki（2）\nobreak $x=2$ で $y=1200\div2=600$、$x=6$ で $y=1200\div6=200$\par
+\hspace*{2.6\zw}\R{速}{はや}いほど\R{時間}{じ|かん}は\R{短}{みじか}い。\R{小}{ちい}さいほうの200を\R{左}{ひだり}に\R{書}{か}く\par
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=76mm, height=48mm, xmin=0, xmax=8.6, ymin=0, ymax=1400, xtick={0,1,...,8}, ytick={0,200,...,1200},
+  xlabel={$x$（m/s）}, ylabel={$y$（s）}]
+  \addplot[bkGray, line width=1pt, domain=0.9:8.3] {1200/x};
+  \addplot[bkcurve, domain=2:6] {1200/x};
+  \addplot[bkGray, dashed, line width=0.8pt] coordinates {(2,0) (2,600) (0,600)};
+  \addplot[bkGray, dashed, line width=0.8pt] coordinates {(6,0) (6,200) (0,200)};
+  \addplot[only marks, mark=*, mark size=2pt, bkBlue] coordinates {(2,600) (6,200)};
+  \draw[bkOrange, line width=2.4pt] (axis cs:0,200) -- (axis cs:0,600);
+  \draw[bkBlue, line width=2.4pt] (axis cs:2,0) -- (axis cs:6,0);
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\R{横}{よこ}の\R{軸}{じく}の\R{青}{あお}い\R{範囲}{はん|い}（$2\leqq x\leqq6$）に\R{対}{たい}して、たての\R{軸}{じく}のオレンジの\R{範囲}{はん|い}（$200\leqq y\leqq600$）が $y$ の\R{変域}{へん|いき}です。
+\kotae（1）\nobreak $x>0$\quad（2）\nobreak $200\leqq y\leqq600$
+\end{reidai}
+
+\begin{jibun}
+\qty{2400}{m}の\R{道}{みち}を\R{速}{はや}さ $x$〔m/s〕で\R{行}{い}くと、かかる\R{時間}{じ|かん}は $y=\dfrac{2400}{x}$ \R{秒}{びょう}です。（1）$x$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（2）\R{速}{はや}さを $3\leqq x\leqq8$ にするとき、$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。
+\bkjans{（1）\nobreak $x>0$\quad（2）\nobreak $x=3$ で $y=800$、$x=8$ で $y=300$。$300\leqq y\leqq800$}
+\end{jibun}
+
+\begin{reidai}[\R{整数}{せい|すう}しかとらない\R{変域}{へん|いき}]
+1\R{個}{こ}\qty{30}{g}のおもりを、ばねに8\R{個}{こ}までつるせます。おもりの\R{数}{かず}を $x$ \R{個}{こ}、おもりの\R{重}{おも}さの\R{合計}{ごう|けい}を $y$〔g〕とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）$x$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（3）$y$ のいちばん\R{大}{おお}きい\R{値}{あたい}を\R{答}{こた}えましょう。\par
+\kangaekata おもりの\R{数}{かず}は、0、1、2、…と\R{整数}{せい|すう}だけです。「の\R{整数}{せい|すう}」と\R{書}{か}きそえます。\par
+\shiki（1）\nobreak 30\,g の $x$ こ\R{分}{ぶん}で $y=30x$\par
+\hspace*{2.6\zw}（2）\nobreak 0\R{個}{こ}から8\R{個}{こ}までの\R{整数}{せい|すう}。\R{数直線}{すう|ちょく|せん}では、とびとびの\R{点}{てん}になる\par
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbline{0}{-1}{9}{10}{0}
+  \foreach \k in {0,...,8} \fill[bkGreen!80!black] (\k*10,0) circle (1.8);
+\end{tikzpicture}
+\end{bkcenter}
+\hspace*{2.6\zw}（3）\nobreak $x=8$ のとき $y=30\times8=240$\par
+\kotae（1）\nobreak $y=30x$\quad（2）\nobreak $0\leqq x\leqq8$ の\R{整数}{せい|すう}\quad（3）\nobreak \qty{240}{g}
+\end{reidai}
+
+\begin{jibun}
+1\R{個}{こ}\qty{50}{g}のおもりを、ばねに6\R{個}{こ}までつるせます。おもりの\R{数}{かず}を $x$ \R{個}{こ}、\R{重}{おも}さの\R{合計}{ごう|けい}を $y$〔g〕とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ のいちばん\R{大}{おお}きい\R{値}{あたい}を\R{答}{こた}えましょう。
+\bkjans{（1）\nobreak $y=50x$\quad（2）\nobreak $0\leqq x\leqq6$ の\R{整数}{せい|すう}\quad（3）\nobreak $50\times6=300$ で\qty{300}{g}}
+\end{jibun}
+
+\begin{reidai}[1つが\R{決}{き}まると、もう1つが\R{決}{き}まる？]
+$x$ を\R{決}{き}めると $y$ がただ1つに\R{決}{き}まるものには○、\R{決}{き}まらないものには×をつけましょう。（1）\R{正方形}{せい|ほう|けい}の1\R{辺}{ぺん} $x$〔cm〕と、まわりの\R{長}{なが}さ $y$〔cm〕（2）まわりの\R{長}{なが}さ $x$〔cm〕の\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき} $y$〔cm$^2$〕（3）\R{生}{う}まれてからの\R{年数}{ねん|すう} $x$ \R{年}{ねん}と、\R{身長}{しん|ちょう} $y$〔cm〕\par
+\kangaekata \R{決}{き}まるなら\R{式}{しき}を\R{書}{か}きます。\R{決}{き}まらないなら、\R{同}{おな}じ $x$ で $y$ がちがう\R{例}{れい}を1つ\R{見}{み}つけます。\par
+\shiki（1）\nobreak 4つの\R{辺}{へん}が\R{等}{ひと}しいので $y=4x$\par
+\hspace*{2.6\zw}（2）\nobreak $x=20$ でも、たて6・\R{横}{よこ}4なら24、たて5・\R{横}{よこ}5なら25\par
+\hspace*{2.6\zw}（3）\nobreak \R{同}{おな}じ12\R{年}{ねん}でも、\R{人}{ひと}によって\R{身長}{しん|ちょう}はちがう\par
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm,
+  vx/.style={draw=bkOrange, line width=0.9pt, fill=white, rounded corners=1.2mm, minimum width=13mm, minimum height=6.5mm, font=\small},
+  vy/.style={draw=bkBlue, line width=0.9pt, fill=white, rounded corners=1.2mm, minimum width=15mm, minimum height=6.5mm, font=\small}]
+  \node[anchor=south, font=\sffamily\footnotesize] at (6,8) {（1）1\R{辺}{ぺん}};
+  \node[vx] (a) at (6,0) {3\,cm};
+  \node[vy] (b) at (36,0) {12\,cm};
+  \draw[bk link] (a) -- (b);
+  \node[anchor=south, font=\sffamily\footnotesize] at (66,18) {（3）12\R{年}{ねん}};
+  \node[vx] (c) at (66,10) {12\R{年}{ねん}};
+  \foreach \v/\yy [count=\k] in {145\,cm/18, 150\,cm/10, 156\,cm/2} {\node[vy] (d\k) at (100,\yy) {\v}; \draw[bk link] (c) -- (d\k);}
+\end{tikzpicture}
+\end{bkcenter}
+\kotae（1）\nobreak ○（$y=4x$）\quad（2）\nobreak ×\quad（3）\nobreak ×
+\end{reidai}
+
+\begin{jibun}
+$x$ を\R{決}{き}めると $y$ がただ1つに\R{決}{き}まるものには○、\R{決}{き}まらないものには×をつけましょう。（1）1\R{個}{こ}\qty{50}{g}のおもり $x$ \R{個}{こ}の\R{重}{おも}さの\R{合計}{ごう|けい} $y$〔g〕（2）\R{面積}{めん|せき}が $x$〔cm$^2$〕の\R{長方形}{ちょう|ほう|けい}のまわりの\R{長}{なが}さ $y$〔cm〕（3）テストの\R{勉強}{べん|きょう}をした\R{時間}{じ|かん} $x$ \R{時間}{じ|かん}と、テストの\R{点数}{てん|すう} $y$ \R{点}{てん}
+\bkjans{（1）\nobreak ○（$y=50x$）\quad（2）\nobreak ×（たとえば $x=36$ で、$6\times6$ ならまわり24、$4\times9$ なら26）\quad（3）\nobreak ×}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}\label{bk:3-1:tsuma}
+
+\begin{tsumazuki}{\R{文字}{も|じ}なら、みんな\R{変数}{へん|すう}？}
+\bkng{$y=ax+b$ には\R{文字}{も|じ}が4つあるので、\R{変数}{へん|すう}も4つ}
+\bkok{$a$（ふえる\R{量}{りょう}）と $b$（はじめの\R{量}{りょう}）は、その\R{問題}{もん|だい}の\R{中}{なか}では\R{変}{か}わらないので\R{定数}{てい|すう}}
+\R{文字}{も|じ}かどうかではなく、「その\R{問題}{もん|だい}で\R{変}{か}わるか」で\R{見分}{み|わ}けます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{定数}{てい|すう}は、どんなときでも\R{同}{おな}じ？}
+\bkng{ばね\R{定数}{てい|すう}は\R{定数}{てい|すう}だから、どのばねでも25}
+\bkok{$k$ はばねごとに\R{決}{き}まる\R{数}{かず}。ばね A では25、ばね B では50}
+1\R{本}{ぽん}のばねの\R{実験}{じっ|けん}の\R{中}{なか}で\R{変}{か}わらない、という\R{意味}{い|み}です。どの\R{問題}{もん|だい}でも\R{同}{おな}じなのは、$g$ や $c$ のような\R{物理定数}{ぶつ|り|てい|すう}です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{端}{はし}をふくむ？ ふくまない？}
+\bkng{\R{水}{みず}そうが6\R{分}{ぷん}でいっぱいになるとき、$0<x<6$}
+\bkok{0\R{分}{ふん}も6\R{分}{ぷん}も\R{式}{しき}が\R{使}{つか}えるので、$0\leqq x\leqq6$}
+$<$ は、その\R{数}{かず}をふくみません。\R{端}{はし}の\R{数}{かず}を\R{式}{しき}に\R{入}{い}れて\R{使}{つか}えるかどうかで\R{決}{き}めます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$y$ の\R{変域}{へん|いき}は、いつも0から？}
+\bkng{$y=6x+4$（$0\leqq x\leqq6$）の $y$ の\R{変域}{へん|いき}は $0\leqq y\leqq40$}
+\bkok{$x=0$ のとき $y=4$ なので、$4\leqq y\leqq40$}
+$y$ の\R{変域}{へん|いき}は、$x$ の\R{両端}{りょう|はし}を\R{式}{しき}に\R{代入}{だい|にゅう}して\R{求}{もと}めます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{不等号}{ふ|とう|ごう}の\R{向}{む}きと\R{並}{なら}べ\R{方}{かた}}
+\bkng{$y=\dfrac{1200}{x}$（$2\leqq x\leqq6$）で、$600\leqq y\leqq200$}
+\bkok{\R{小}{ちい}さい\R{数}{かず}を\R{左}{ひだり}に\R{書}{か}いて、$200\leqq y\leqq600$}
+$600\leqq y$ と $y\leqq200$ を\R{両方}{りょう|ほう}みたす $y$ はありません。\R{数直線}{すう|ちょく|せん}と\R{同}{おな}じく、\R{左}{ひだり}が\R{小}{ちい}さい\R{数}{かず}です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{「\R{未満}{み|まん}」と「\R{以下}{い|か}」}
+\bkng{「\R{速}{はや}さは\qty{6}{m/s}\R{未満}{み|まん}」を $x\leqq6$ と\R{書}{か}く}
+\bkok{\R{未満}{み|まん}は6をふくまないので $x<6$。6をふくむ「6\R{以下}{い|か}」が $x\leqq6$}
+ことばと\R{記号}{き|ごう}の\R{組}{く}み\R{合}{あ}わせは 2-2 の\R{表}{ひょう}で\R{確}{たし}かめよう。\R{以上}{い|じょう}・\R{以下}{い|か}はふくむ（$\geqq$・$\leqq$）、より\R{大}{おお}きい・\R{未満}{み|まん}はふくまない（$>$・$<$）。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\par\addvspace{3pt}\textbf{\R{設計}{せっ|けい}で「\R{決}{き}めた\R{値}{あたい}」と「\R{動}{うご}く\R{値}{あたい}」}\par\noindent
+\R{機械}{き|かい}を\R{作}{つく}るとき、\R{技術者}{ぎ|じゅつ|しゃ}はまず、\R{大}{おお}きさ・\R{強}{つよ}さ・\R{使}{つか}える\R{範囲}{はん|い}などの「\R{決}{き}めた\R{値}{あたい}」を\R{決}{き}めます。これを\textbf{\R{仕様}{し|よう}}といいます。\R{仕様}{し|よう}は、その\R{機械}{き|かい}にとっての\R{定数}{てい|すう}です。そのうえで、\R{使}{つか}うときに\R{動}{うご}く\R{値}{あたい}（\R{変数}{へん|すう}）が、どんな\R{範囲}{はん|い}で\R{動}{うご}いても\R{安全}{あん|ぜん}に\R{働}{はたら}くように\R{作}{つく}ります。
+
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\par\addvspace{3pt}\textbf{エアコン}\par\noindent
+\R{設定温度}{せっ|てい|おん|ど}（たとえば \qty{26}{\degreeCelsius}）は、\R{人}{ひと}が\R{決}{き}める\R{値}{あたい}で、\R{運転}{うん|てん}しているあいだは\R{定数}{てい|すう}です。\R{部屋}{へ|や}の\R{温度}{おん|ど}は、\R{外}{そと}の\R{暑}{あつ}さや\R{人}{ひと}の\R{数}{かず}で\R{変}{か}わる\R{変数}{へん|すう}です。エアコンは\R{部屋}{へ|や}の\R{温度}{おん|ど}をはかりつづけ、\R{設定温度}{せっ|てい|おん|ど}との\R{差}{さ}が\R{大}{おお}きいほど\R{強}{つよ}く\R{冷}{ひ}やします（このしくみは\R{第}{だい}9\R{巻}{かん}の\R{制御}{せい|ぎょ}で\R{学}{まな}びます）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbaircon{(0,10)}
+  \bkdisplay{(4,-10)}{26}{26℃}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk] at (17,-11.5) {\R{設定温度}{せっ|てい|おん|ど}};
+\end{tikzpicture}
+\end{minipage}
+
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\par\addvspace{3pt}\textbf{エレベーター}\par\noindent
+「\R{定員}{てい|いん}9\R{名}{めい}・\R{積載量}{せき|さい|りょう}\qty{600}{kg}」のように、のせてよい\R{重}{おも}さは\R{設計}{せっ|けい}で\R{決}{き}めた\R{定数}{てい|すう}です。\R{乗}{の}っている\R{人}{ひと}と\R{荷物}{に|もつ}の\R{重}{おも}さ $W$〔kg〕は\R{変数}{へん|すう}で、その\R{変域}{へん|いき}は $0\leqq W\leqq600$ です。\R{重}{おも}さがこの\R{変域}{へん|いき}をこえると、ブザーが\R{鳴}{な}って\R{動}{うご}きません。\R{定員}{てい|いん}の9は、1\R{人}{にん}を\qty{65}{kg}として $600\div65=9.2\cdots$ の\R{整数}{せい|すう}の\R{部分}{ぶ|ぶん}から\R{決}{き}めた\R{数}{かず}です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkthrbelevator{(0,0)}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkInk] at (13,-2) {9\R{名}{めい}・\qty{600}{kg}};
+\end{tikzpicture}
+\end{minipage}
+
+\par\addvspace{3pt}\textbf{\R{大学}{だい|がく}への\R{種}{たね}}\par\noindent
+\R{大学}{だい|がく}の\R{工学}{こう|がく}では、\R{仕様}{し|よう}の\R{定数}{てい|すう}と、\R{動}{うご}く\R{変数}{へん|すう}と、その\R{変域}{へん|いき}をはっきり\R{分}{わ}けて\R{式}{しき}を\R{書}{か}くことから、\R{設計}{せっ|けい}が\R{始}{はじ}まります。\R{変数}{へん|すう}が\R{変域}{へん|いき}のいちばん\R{端}{はし}になったときでもこわれないか、を\R{必}{かなら}ず\R{確}{たし}かめます。
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{1}
+
+\bkproblem \R{電気}{でん|き}を1か\R{月}{げつ}に $x$〔kWh〕\R{使}{つか}ったときの\R{電気料金}{でん|き|りょう|きん}は、$y=30x+1000$（\R{円}{えん}）でした。この\R{式}{しき}の\R{変数}{へん|すう}と\R{定数}{てい|すう}を\R{答}{こた}えましょう（kWh は\R{電気}{でん|き}の\R{量}{りょう}の\R{単位}{たん|い}）。
+\bkpans{\R{変数}{へん|すう}は $x$ と $y$、\R{定数}{てい|すう}は30と1000}
+
+\bkproblem \R{抵抗}{てい|こう} \qty{50}{\ohm} の\R{電熱線}{でん|ねつ|せん}に、いろいろな\R{電圧}{でん|あつ} $V$〔V〕をかけて\R{電流}{でん|りゅう} $I$〔A〕をはかります（$V=RI$）。（1）\R{変数}{へん|すう}と\R{定数}{てい|すう}はどれですか。（2）$R$ は\R{物理定数}{ぶつ|り|てい|すう}ですか、\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}ですか。（3）\qty{10}{V}をかけると\R{何}{なん}A \R{流}{なが}れますか。
+\bkpans{（1）\nobreak \R{変数}{へん|すう}は $V$ と $I$、\R{定数}{てい|すう}は $R$（50）\quad（2）\nobreak \R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}\quad（3）\nobreak $I=\dfrac{10}{50}=0.2$ で\qty{0.2}{A}}
+
+\bkproblem $v=gt$（$g=\qty{9.8}{m/s^2}$）を\R{使}{つか}って、\R{落}{お}ちるボールの（1）4\R{秒後}{びょう|ご}、（2）1.5\R{秒後}{びょう|ご}の\R{速}{はや}さを\R{求}{もと}めましょう。
+\bkpans{（1）\nobreak $9.8\times4=39.2$ で\qty{39.2}{m/s}\quad（2）\nobreak $9.8\times1.5=14.7$ で\qty{14.7}{m/s}}
+
+\bkproblem \R{深}{ふか}さ\qty{50}{cm}の\R{水}{みず}そうに、はじめ\qty{5}{cm}の\R{深}{ふか}さまで\R{水}{みず}が\R{入}{はい}っています。\R{水面}{すい|めん}は1\R{分}{ぷん}に\qty{9}{cm}ずつ\R{上}{あ}がり、$y=9x+5$ です。（1）\R{何分後}{なん|ぷん|ご}にいっぱいになりますか。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。
+\bkpans{（1）\nobreak $50-5=45$、$45\div9=5$ で5\R{分後}{ふん|ご}\quad（2）\nobreak $0\leqq x\leqq5$\quad（3）\nobreak $5\leqq y\leqq50$}
+
+\bkproblem \qty{1800}{m}の\R{道}{みち}を\R{速}{はや}さ $x$〔m/s〕で\R{行}{い}くと、かかる\R{時間}{じ|かん}は $y=\dfrac{1800}{x}$ \R{秒}{びょう}です。（1）$x$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（2）$3\leqq x\leqq9$ のとき、$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。
+\bkpans{（1）\nobreak $x>0$\quad（2）\nobreak $x=3$ で $y=600$、$x=9$ で $y=200$。$200\leqq y\leqq600$}
+
+\bkproblem $x$ を\R{決}{き}めると $y$ がただ1つに\R{決}{き}まるものには○、\R{決}{き}まらないものには×をつけましょう。（1）1\,L 200\R{円}{えん}の\R{灯油}{とう|ゆ}を $x$〔L〕\R{買}{か}ったときの\R{代金}{だい|きん} $y$ \R{円}{えん}（2）クラスの\R{人}{ひと}の\R{身長}{しん|ちょう} $x$〔cm〕と\R{体重}{たい|じゅう} $y$〔kg〕
+\bkpans{（1）\nobreak ○（$y=200x$）\quad（2）\nobreak ×（\R{同}{おな}じ\R{身長}{しん|ちょう}でも\R{体重}{たい|じゅう}はちがう）}
+
+\bkproblem 1\R{個}{こ}\qty{40}{g}のおもりを、ばねに5\R{個}{こ}までつるせます。おもりの\R{数}{かず}を $x$ \R{個}{こ}、\R{重}{おも}さの\R{合計}{ごう|けい}を $y$〔g〕とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ のいちばん\R{大}{おお}きい\R{値}{あたい}を\R{答}{こた}えましょう。
+\bkpans{（1）\nobreak $y=40x$\quad（2）\nobreak $0\leqq x\leqq5$ の\R{整数}{せい|すう}\quad（3）\nobreak $40\times5=200$ で\qty{200}{g}}
+
+\bkproblemgroup{チャレンジ}{2}
+
+\bkproblem \R{太陽}{たい|よう}を\R{出}{で}た\R{光}{ひかり}は、\R{約}{やく}500\R{秒}{びょう}で\R{地球}{ち|きゅう}に\R{届}{とど}きます。$x=ct$（$c=3.0\times10^8$\,m/s）を\R{使}{つか}って、\R{太陽}{たい|よう}から\R{地球}{ち|きゅう}までの\R{距離}{きょ|り}を\R{求}{もと}めましょう。$10^n$ を\R{使}{つか}って\R{書}{か}きます（2-7）。
+\bkpans{$3.0\times10^8\times500=1500\times10^8=1.5\times10^{11}$ で、\R{約}{やく} $1.5\times10^{11}$\,m（1\R{億}{おく}5000\R{万}{まん}km）}
+
+\bkproblem \R{定員}{てい|いん}9\R{名}{めい}のエレベーターに、1\R{人}{にん}\qty{65}{kg}の\R{人}{ひと}が $x$ \R{人}{にん}\R{乗}{の}ります。\R{乗}{の}っている\R{人}{ひと}の\R{重}{おも}さの\R{合計}{ごう|けい}を $y$〔kg〕とします。（1）$y$ を $x$ の\R{式}{しき}で\R{表}{あらわ}しましょう。（2）$x$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（3）$y$ のいちばん\R{大}{おお}きい\R{値}{あたい}を\R{求}{もと}め、\R{積載量}{せき|さい|りょう}\qty{600}{kg}をこえないか\R{確}{たし}かめましょう。
+\bkpans{（1）\nobreak $y=65x$\quad（2）\nobreak $0\leqq x\leqq9$ の\R{整数}{せい|すう}\quad（3）\nobreak $65\times9=585$ で\qty{585}{kg}。600\,kg をこえない}
+
+\bkproblem \R{深}{ふか}さ\qty{60}{cm}の\R{水}{みず}そうに、はじめ\qty{12}{cm}の\R{深}{ふか}さまで\R{水}{みず}が\R{入}{はい}っています。\R{水面}{すい|めん}は1\R{分}{ぷん}に\qty{8}{cm}ずつ\R{上}{あ}がり、$y=8x+12$ です。（1）\R{何分後}{なん|ぷん|ご}にいっぱいになりますか。（2）$x$ の\R{変域}{へん|いき}と、（3）$y$ の\R{変域}{へん|いき}を\R{答}{こた}えましょう。（4）3.5\R{分後}{ふん|ご}の\R{深}{ふか}さを\R{求}{もと}めましょう。
+\bkpans{（1）\nobreak $60-12=48$、$48\div8=6$ で6\R{分後}{ぷん|ご}\quad（2）\nobreak $0\leqq x\leqq6$\quad（3）\nobreak $12\leqq y\leqq60$\quad（4）\nobreak $8\times3.5+12=40$ で\qty{40}{cm}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{式}{しき}の\R{中}{なか}の\R{変数}{へん|すう}と\R{定数}{てい|すう}を\R{見分}{み|わ}けられる。\bkfurref{bk:3-1:hensu}
+\item \R{物理定数}{ぶつ|り|てい|すう}と、\R{問題}{もん|だい}ごとに\R{決}{き}まる\R{数}{かず}のちがいを\R{説明}{せつ|めい}できる。\bkfurref{bk:3-1:butsuri}
+\item \R{変域}{へん|いき}を\R{不等号}{ふ|とう|ごう}で\R{書}{か}ける。\bkfurref{bk:3-1:heniki}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{delta}{\R{変}{か}わる\R{数}{かず}と\R{変}{か}わらない\R{数}{かず}を\R{分}{わ}けると、\R{式}{しき}が\R{読}{よ}みやすくなるね。\R{次}{つぎ}の\R{章}{しょう}では、\R{変数}{へん|すう}を2つ\R{使}{つか}って、\R{場所}{ば|しょ}を\R{表}{あらわ}すよ。}

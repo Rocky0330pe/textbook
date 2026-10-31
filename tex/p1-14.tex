@@ -1,0 +1,1308 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-8
+%% p1-14.tex　力-14　管の中の流れ：粘性・層流と乱流・圧力損失（★4〜5・3段）
+%% 数値はすべて Python で計算した：scratchpad/phys1/力-14/c14.py（例題・表・グラフ）、moody.py（ムーディ線図の点）
+%% 記号（計画書 C-1）：粘度 μ・動粘度 ν、管摩擦係数 λ・損失係数 ζ、粗さ ε、損失ヘッド h_f、流量 Q、揚程 H、圧力 p（運動量は使わない）。
+%%   管の長さは L（第4部）。断面の平均の流速 v、点の流速 u。水撃の波の速さ a（この章では加速度に a を使わない）。
+%% 水は 20 ℃：ρ＝998.2 kg/m³（例題は 1000 に丸める）、μ＝1.002 mPa·s、ν＝1.004 mm²/s（例題は 1.0×10⁻⁶ m²/s）。巻末の表と同じ。
+%% 出典（まだわかっていないこと・歴史・実機の値）
+%%   ・レイノルズの実験：O. Reynolds, Phil. Trans. R. Soc. Lond. 174, 935 (1883)
+%%   ・「レイノルズ数」の名前：A. Sommerfeld（1908 年、ローマの国際数学者会議での講演）
+%%   ・乱流が続く境目 Re≈2040：K. Avila ら, Science 333, 192 (2011)
+%%   ・Re 約10万まで層流を保った実験：W. Pfenniger (1961)（Boundary Layer and Flow Control, Pergamon）
+%%   ・管の層流（ハーゲン・ポアズイユの流れ）が小さな乱れに安定なことは計算（線形安定性解析）で確かめられているが、数学の証明はない：
+%%     A. Meseguer & L. N. Trefethen, J. Comput. Phys. 186, 178 (2003) ほか
+%%   ・ハーゲン（1839）、ポアズイユ（1840〜1841 の実験、1846 の論文）
+%%   ・ブラジウスの式（1913）：Re＝3000〜100000 で使う
+%%   ・コールブルックの式：C. F. Colebrook, J. Inst. Civil Eng. 11, 133 (1939)。ムーディ線図：L. F. Moody, Trans. ASME 66, 671 (1944)
+%%   ・市販の鋼管の粗さ 0.045 mm：Moody (1944) の表
+%%   ・損失係数の目安：Crane Co., Technical Paper No. 410（Flow of Fluids）：90°エルボ 30 f_T、仕切弁（全開）8 f_T、玉形弁（全開）340 f_T、
+%%     入口（角ばった）0.5、出口 1.0。f_T は管の太さで 0.015〜0.025 くらい（50 mm で約0.019）
+%%   ・水の飽和蒸気圧（20 ℃）2.339 kPa：IAPWS-IF97
+%%   ・ジューコフスキーの式：N. Joukowsky（1898 年の実験、1900 年の論文）
+%%   ・作動油 ISO VG46：40 ℃の動粘度 41.4〜50.6 mm²/s（中心 46）ISO 3448
+\makeatletter
+% 管の部品（力-14 は pxo…）
+% 横の管（内側を水色）  \pxopipe{(左はしの中心)}{長さ}{内径}
+\newcommand\pxopipe[3]{\begin{scope}[shift={#1}]
+  \fill[bkBlue!14] (0,-#3/2) rectangle (#2,#3/2);
+  \draw[bkGray, line width=0.9pt] (0,-#3/2) -- (#2,-#3/2) (0,#3/2) -- (#2,#3/2);
+\end{scope}}
+% 水そう  \pxotank{(左下)}{はば}{高さ}{水の高さ}
+\newcommand\pxotank[4]{\begin{scope}[shift={#1}]
+  \fill[bkBlue!14] (0,0) rectangle (#2,#4);
+  \draw[bkBlue!60, line width=0.6pt] (0,#4) -- (#2,#4);
+  \draw[bkGray, line width=1pt] (0,#3) -- (0,0) -- (#2,0) -- (#2,#3);
+\end{scope}}
+% 蛇口（横から）  \pxofaucet{(口の先)}
+\newcommand\pxofaucet[1]{\begin{scope}[shift={#1}]
+  \fill[bkGray!60] (-14,3) rectangle (-2,7);
+  \fill[bkGray!60] (-4,7) rectangle (0,0);
+  \fill[bkGray!80] (-10,7) rectangle (-8,11);
+  \fill[bkGray!80] (-12,11) rectangle (-6,12.5);
+  \fill[bkLine] (-18,0) rectangle (-14,10);
+\end{scope}}
+% 段落の見出し（それだけで1行。ページの最後に残らないように）
+\newcommand\pxohead[1]{\par\addvspace{5pt}\Needspace{6\baselineskip}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+\makeatother
+\tikzset{pxo lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  pxo arr/.style={-{Stealth[length=4pt, width=3.5pt]}, line width=1.1pt}}
+
+\phchapter{14}{管の中の流れ：\\粘性・層流と乱流・圧力損失}{長い水道管の先では、なぜ水の勢いが弱くなる？}{\bklevelrange{4}{5}}{管の中の流れ：粘性・層流と乱流・圧力損失}
+\bkmichishirube{3-12,6-3,8-6,力-13}{力-15,力-16,熱-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace レイノルズ数を計算して、管の流れが層流か乱流かを見分けられる。
+\item \bklevel{4}\enspace 管摩擦係数と損失係数から、管の圧力損失とポンプの動力を求められる。
+\item \bklevel{5}\enspace 流体の力のつり合いから、ハーゲン・ポアズイユの式を導ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$\tau=\mu\dfrac{\dd u}{\dd y}$（ニュートンの粘性の法則）}{大学（工学部）}{ph:力-14:nendo}
+\phk{$\mathrm{Re}=\dfrac{vd}{\nu}$（レイノルズ数）}{大学（工学部）}{ph:力-14:re}
+\phk{$Q=\dfrac{\pi R^4\Delta p}{8\mu L}$（ハーゲン・ポアズイユの式）}{大学（工学部）}{ph:力-14:hp}
+\phk{$h_f=\lambda\dfrac{L}{d}\dfrac{v^2}{2g}$（管の損失ヘッド）}{大学（工学部）}{ph:力-14:dw}
+\phk{$\Delta p=\rho a\Delta v$（水撃の圧力）}{大学（工学部）}{ph:力-14:jk}
+\phkx{$p+\dfrac{1}{2}\rho v^2+\rho gz=$一定（ベルヌーイの式）}{高校物理（発展）}{力-13 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.60\linewidth}\raggedright
+庭の水まきで、蛇口にホースをつなぎます。短いホースだと、水は勢いよく遠くまで飛びます。同じ蛇口に長いホースをつなぐと、蛇口を同じだけ開いても、先から出る水の勢いが弱くなります。
+
+ホースの先の高さは同じです。力-13 のベルヌーイの式では、高さが同じなら、水の速さは変わらないはずでした。長い管の中で、水のエネルギーはどこへ行ってしまうのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.72mm, y=0.72mm]
+  % 短いホース
+  \pxofaucet{(14,30)}
+  \draw[bkGreen!70!black, line width=2.2pt] (12,30) .. controls (12,24) and (18,22) .. (26,22);
+  \draw[bkBlue!70, line width=1.4pt] (26,22) .. controls (40,22) and (52,18) .. (58,8);
+  \node[pxo lab, anchor=west] at (24,33) {短いホース};
+  % 長いホース
+  \pxofaucet{(14,-2)}
+  \draw[bkGreen!70!black, line width=2.2pt] (12,-2) .. controls (12,-10) and (4,-8) .. (6,-13)
+     .. controls (8,-18) and (20,-18) .. (20,-13) .. controls (20,-8) and (8,-9) .. (10,-14)
+     .. controls (12,-19) and (22,-14) .. (26,-14);
+  \draw[bkBlue!70, line width=1.4pt] (26,-14) .. controls (32,-14) and (36,-17) .. (38,-22);
+  \node[pxo lab, anchor=west] at (24,2) {長いホース};
+  \draw[bkGray, line width=0.6pt] (0,-24) -- (62,-24);
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (52,-10) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-13 では、水を「粘り気のない流体」として、流れの質量・エネルギー・運動量を数えました。でも本物の水には、わずかな粘り気（粘性）があります。この章では、その粘性が管の中の流れをどう変えるのか、そして水道やポンプの設計でどう計算するのかを調べます。
+
+\begin{omoidasou}
+\bkrecall{力-13}{流量 $Q=Av$（$A$ は断面積、$v$ は平均の速さ）。粘性を無視すると、流線にそって $p+\dfrac{1}{2}\rho v^2+\rho gz$ は一定（ベルヌーイの式）。}
+\bkrecall{力-12}{圧力 $p$ の単位は Pa（N/m$^2$）。水の深さ $h$ の所の圧力は $\rho gh$ だけ大きい。ゲージ圧は大気圧からの差。}
+\bkrecall{3-12}{両対数グラフでは、$y=ax^n$ が傾き $n$ の直線になる。目もりは1けたごとに同じ間かく。}
+\bkrecall{6-3}{$\dfrac{\dd u}{\dd r}$＝（$r$ の式）は、積分するだけで解ける。積分定数は、はしの条件で決める。}
+\bkrecall{8-6}{円の上で積分するときは、半径 $r$・はば $\dd r$ の細い輪（面積 $2\pi r\,\dd r$）に分けてたす。}
+\end{omoidasou}
+
+\begin{yattemiyou}[ホースの長さで、流れる量はどう変わる？]
+\textbf{用意するもの}\par
+同じ太さ（内径約\qty{15}{mm}）で長さ\qty{2}{m}と\qty{20}{m}のホース、\qty{10}{L}のバケツ、ストップウォッチ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 蛇口をいっぱいに開いて、\qty{2}{m}のホースでバケツに水をためる。いっぱいになるまでの時間をはかる。
+\item 同じ蛇口・同じ開き方で、\qty{20}{m}のホースに取りかえてはかる（ホースは地面にまっすぐのばし、先の高さを同じにする）。
+\item ホースの先を高さ\qty{1}{m}で水平に持ち、水がとどいた所までの距離もはかる。
+\end{enumerate}
+\par\vspace{3pt}
+ソラさんの結果です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{2}{Q[c,m,wd=26mm]}}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ホースの長さ & \qty{2}{m} & \qty{20}{m} \\
+\qty{10}{L}たまる時間 & \qty{19}{s} & \qty{26}{s} \\
+水のとどいた距離 & \qty{1.3}{m} & \qty{1.0}{m} \\
+\end{bktable}
+\bktabcaption{ホースが長いと、流れる量も、水の勢いも小さくなる。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent やってみようの答え：長さを10倍にすると、\qty{10}{L}たまる時間は\qty{19}{s}から\qty{26}{s}にのびました。1秒に流れる量（流量）が、約4分の3に減ったのです。長さが10倍でも、流量は10分の1にはなりません。蛇口そのものでも水のエネルギーが失われていて、ホースの分はその一部だからです。この数は、例題\ref{ph:力-14:ex12}でモデルを作って、計算で確かめます。
+
+
+
+%% ======================================================================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{ねばりと2つの流れ方}{3}
+
+\bksubsection{1}{長い管では、圧力が少しずつ下がる}
+\label{ph:力-14:sec1}はてな？の答えをさがすために、水道管の中の圧力をはかってみましょう。水そうから横にのびる、まっすぐで太さが同じ管に、たての細いガラス管を何本か立てます。ガラス管の水の高さ（水柱）は、そこの圧力を表します（力-12）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!14] (0,0) rectangle (22,46);
+  \draw[bkBlue!60, line width=0.6pt] (0,46) -- (22,46);
+  \draw[bkGray, line width=1pt] (0,52) -- (0,0) -- (22,0) -- (22,3) (22,9) -- (22,52);
+  \pxopipe{(22,6)}{100}{6}
+  % ガラス管と水柱（46 → 38, 30, 22, 14 のように直線で下がる）
+  \foreach \x/\hh in {38/38.76,60/31.96,82/25.16,104/18.36} {
+    \fill[bkBlue!30] (\x-1.5,9) rectangle (\x+1.5,\hh);
+    \draw[bkGray, line width=0.6pt] (\x-1.5,9) -- (\x-1.5,46) (\x+1.5,9) -- (\x+1.5,46);
+    \draw[bkBlue!70, line width=0.8pt] (\x-1.5,\hh) -- (\x+1.5,\hh);
+    \fill[bkRed] (\x,\hh) circle (0.9);
+  }
+  \draw[bkRed, line width=0.8pt, dashed] (22,43.7) -- (122,12.8);
+  \draw[bkGray, line width=0.6pt, densely dotted] (22,46) -- (126,46);
+  \node[pxo lab, anchor=west, text=bkGray] at (112,48.5) {水そうの水面};
+  \draw[pxo arr, bkBlue!80!black] (114,6) -- (126,6);
+  \node[pxo lab, anchor=north] at (118,2) {流れ};
+  \node[pxo lab, anchor=north west, text=bkRed!80!black] at (30,0.5) {水柱の高さは、同じ長さごとに同じだけ下がる};
+\end{tikzpicture}
+\bkfigcaption{管にそって立てたガラス管の水の高さ。圧力は、管の長さに比例して下がっていく}
+\label{ph:力-14:fig-head}
+\end{bkfigure}
+
+\noindent 水を止めているときは、どのガラス管の水面も、水そうの水面と同じ高さです（力-12 の静水圧）。水を流すと、下流のガラス管ほど水面が低くなります。しかも、となりどうしの差は同じで、水面を結ぶと1本の直線になります。
+
+管の太さは同じなので、流量 $Q=Av$ から、どこでも速さ $v$ は同じです。高さも同じです。それなのに圧力が下がっていく、ということは、ベルヌーイの式の「一定」がくずれています。流れる水のエネルギーの一部が、管を進むたびに少しずつ失われているのです。この失われた分を\textbf{圧力損失}といいます。
+
+長いホースの先で勢いが弱くなるのは、この圧力損失のためです。では、なぜエネルギーが失われるのでしょう。その正体が、次の「ねばり」です。
+
+\bksubsection{2}{水のねばり：粘性}
+\label{ph:力-14:sec2}スプーンですくったはちみつを落とすと、細い糸のように、ゆっくり落ちます。水は、さっと落ちます。はちみつは「ねばり」が大きく、水は小さい。でも、水にもねばりはあります。このねばりを\textbf{粘性}（ねんせい）といいます。
+
+ねばりの正体を見るために、2枚の板の間に油をはさみ、下の板を止めて、上の板を横に動かしてみます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：板と油
+  \fill[bkYellow!30] (0,0) rectangle (60,20);
+  \fill[bkGray!70] (0,-3) rectangle (62,0);
+  \fill[bkOrange!50] (6,20) rectangle (56,23);
+  \draw[pxo arr, bkOrange!80!black] (58,21.5) -- (70,21.5);
+  \node[pxo lab, anchor=west] at (71,21.5) {$U$};
+  \foreach \y in {2.5,6,9.5,13,16.5} {\draw[pxo arr, bkBlue!80!black, line width=0.9pt] (20,\y) -- (20+\y*1.6,\y);}
+  \draw[bkBlue!50, line width=0.5pt, dashed] (20,0) -- (52,20);
+  \node[pxo lab, anchor=north] at (30,-4) {止めた板};
+  \node[pxo lab, anchor=south] at (30,24) {動かす板};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (-3,0) -- (-3,20);
+  \node[pxo lab, anchor=east] at (-4,10) {$h$};
+  \node[pxo lab, anchor=west] at (41,9) {油の速さ};
+  % 右：トランプのたば
+  \begin{scope}[shift={(78,0)}]
+    \foreach \k in {0,...,6} {\filldraw[fill=white, draw=bkRed!70, line width=0.6pt, rounded corners=0.8mm] (\k*1.8,\k*2.8) rectangle (\k*1.8+22,\k*2.8+2.4);}
+    \draw[pxo arr, bkOrange!80!black] (36,18.4) -- (44,18.4);
+    \node[pxo lab, anchor=north] at (16,-2) {トランプのたばをずらす};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{上の板を速さ $U$ で動かすと、油は層ごとに少しずつずれて流れる（左）。トランプのたばをずらすのに似ている（右）}
+\label{ph:力-14:fig-plates}
+\end{bkfigure}
+
+\noindent 板にふれている油は、板にくっついて、板と同じ速さで動きます。下の板にふれている油は止まったままです。その間の油は、トランプのたばをずらすように、層ごとに少しずつずれて流れます。速さは、下の板からの距離に比例します。
+
+層と層がずれるとき、となりの層を引きずる力がはたらきます。これが粘性による力です。上の板を動かし続けるには、この力に逆らって押し続けなければなりません。押した仕事は、油の中で熱に変わります。管の中の水も同じです。壁にふれている水は止まり、まん中の水は速く流れます。層がずれるたびに、流れのエネルギーが少しずつ熱に変わります。これが、圧力損失の正体です。
+
+\begin{seikaku}
+「壁にふれている流体は、壁と同じ速さで動く」ことを、\textbf{すべりなしの条件}といいます。水や油、空気のふつうの流れで、実験でよく合うことが確かめられています。非常にうすい気体や、とても細い管（髪の毛の太さの1000分の1くらい）では、少しすべることが知られています。
+\end{seikaku}
+
+\bksubsection{3}{まっすぐな流れと、乱れた流れ}
+\label{ph:力-14:sec3}1883年、イギリスのレイノルズは、ガラスの管に水を流し、管の入口に細い管から色水を入れて、色の線のようすを見ました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \row/\name/\yy in {0/{ゆっくり：まっすぐな線（層流）}/0, 1/{少し速く：線がゆれはじめる}/-20, 2/{速い：すぐに混ざる（乱流）}/-40} {
+    \begin{scope}[shift={(0,\yy)}]
+      \fill[bkBlue!8] (0,-5) rectangle (100,5);
+      \draw[bkGray, line width=0.8pt] (0,-5) -- (100,-5) (0,5) -- (100,5);
+      \draw[bkGray, line width=0.8pt] (-6,0) -- (2,0);
+      \node[pxo lab, anchor=south west] at (0,6.5) {\name};
+    \end{scope}
+  }
+  % 層流
+  \draw[bkRed, line width=1pt] (2,0) -- (100,0);
+  % ゆれる
+  \draw[bkRed, line width=1pt, domain=2:100, samples=120, smooth] plot (\x,{-20+ (\x>40 ? 1.8*sin(\x*28)*(\x-40)/60 : 0)});
+  % 乱流
+  \draw[bkRed, line width=1pt] (2,-40) -- (14,-40);
+  \fill[bkRed!35] (14,-40) .. controls (22,-36) and (30,-35.2) .. (40,-35.2) -- (100,-35.2) -- (100,-44.8) -- (40,-44.8) .. controls (30,-44.8) and (22,-44) .. (14,-40);
+  \foreach \x/\y in {20/-38,26/-42.5,33/-37,41/-43,48/-38.5,57/-41.5,64/-37.5,73/-42,82/-38,91/-41} {\draw[bkRed!70, line width=0.6pt] (\x,\y) circle (1.6);}
+  \draw[pxo arr, bkBlue!80!black] (84,9) -- (100,9);
+  \node[pxo lab, anchor=east] at (83,9) {流れ};
+\end{tikzpicture}
+\bkfigcaption{レイノルズの実験。色水の線のようすで、流れ方が2つに分かれる}
+\label{ph:力-14:fig-reynolds}
+\end{bkfigure}
+
+\noindent ゆっくり流すと、色水はまっすぐな1本の線のまま流れます。水が、層になってすべるように流れているからです。このような流れを\textbf{層流}（そうりゅう）といいます。速くしていくと、ある所で線がゆれはじめ、さらに速くすると、色水はすぐに管いっぱいに混ざってしまいます。小さなうずが次々にでき、水があちこちへ動き回っているのです。このような流れを\textbf{乱流}（らんりゅう）といいます。\bkidx{そうりゅう}{層流}\bkidx{らんりゅう}{乱流}
+
+レイノルズは、管の太さや水の温度（ねばりの大きさ）を変えて実験しました。そして、層流から乱流に変わる所は、速さだけでも、太さだけでもなく、「速さ×太さ÷ねばり」の組み合わせで決まることを見つけました。この組み合わせが、⑦で作るレイノルズ数です。
+
+\begin{phmijika}[層流と乱流]
+蛇口を少しだけ開くと、水は透明なガラスの棒のように、すき通って出てきます。これが層流です。大きく開くと、白くにごった、表面がざらざらした流れになります。これが乱流です。線香のけむりも、はじめはまっすぐ立ちのぼり（層流）、少し上で、ゆらゆらと乱れはじめます（乱流）。
+\end{phmijika}
+
+%% ----------------------------------------------------------------------
+\phstage{te}{表計算で損失を計算する}{3}
+
+\bksubsection{4}{損失ヘッドの式を使って、表で計算する}
+\label{ph:力-14:sec4}①の図\ref{ph:力-14:fig-head}で、水柱の高さが下がった分を\textbf{損失ヘッド}といい、$h_f$ と書きます（単位は m）。たくさんの実験から、まっすぐな管の損失ヘッドは、次の式で表せることがわかっています。
+
+\pheq{h_f=\lambda\,\frac{L}{d}\,\frac{v^2}{2g}}{m ＝ 1 × $\dfrac{\text{m}}{\text{m}}$ × $\dfrac{\text{m}^2/\text{s}^2}{\text{m/s}^2}$}
+
+\noindent $L$ は管の長さ、$d$ は管の内径（内側の直径）、$v$ は平均の速さです。$\lambda$（ラムダ）は\textbf{管摩擦係数}という単位のない数で、ふつうの水道管では0.02〜0.03くらいです。$\lambda$ の値の決め方は、⑧と⑨で調べます。いまは、表やグラフから読む数と考えておきます。\bkidx{かんまさつけいすう}{管摩擦係数}
+
+\begin{phyomi}[$h_f=\lambda\dfrac{L}{d}\dfrac{v^2}{2g}$]
+$\dfrac{v^2}{2g}$ は、速さ $v$ の水が真上に飛び上がれる高さです（力-1 の $v^2=2gy$）。損失ヘッドは、この「速さの高さ」の $\lambda\dfrac{L}{d}$ 倍です。$\dfrac{L}{d}$ は「管の長さが、太さの何倍か」。細くて長い管ほど、損失が大きくなります。
+\end{phyomi}
+
+\begin{phmijika}[家の水道管]
+内径\qty{20}{mm}の水道管に、毎分\qty{20}{L}の水（シャワー1つ分くらい）を流すと、平均の速さは約\qty{1.06}{m/s}です。$\lambda=0.026$ として、長さ\qty{30}{m}の管の損失ヘッドを計算すると、約\qty{2.3}{m}です。圧力にすると約\qty{22}{kPa}（例題\ref{ph:力-14:ex1}）。水道の圧力（約\qty{200}{kPa}）の1割くらいが、30 m の管で失われます。
+\end{phmijika}
+
+表計算で、管の長さと太さを変えて、損失ヘッドを計算してみましょう（毎分\qty{20}{L}、水\qty{20}{\celsius}）。$\lambda$ は⑨のブラジウスの式で計算した値を、先に入れておきます。
+
+\begin{bkcenter}
+\bksheet{3}{27}{%
+1 & 長さ $L$（m） & 速さ $v$（m/s） & 損失 $h_f$（m） \\
+2 & 10 & 1.061 & 0.75 \\
+3 & 20 & 1.061 & 1.51 \\
+4 & 30 & 1.061 & 2.26 \\
+5 & 40 & 1.061 & 3.01 \\
+6 & 50 & 1.061 & 3.77 \\}
+\bktabcaption{内径\qty{20}{mm}の管で長さを変える（$\lambda=0.0262$）。C2 の式は \texttt{=0.0262*A2/0.02*B2\^{}2/(2*9.8)}}
+\end{bkcenter}
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & 内径 $d$（mm） & 速さ $v$（m/s） & $\lambda$ & 損失 $h_f$（m） \\
+2 & 13 & 2.511 & 0.0236 & 17.5 \\
+3 & 16 & 1.658 & 0.0248 & 6.53 \\
+4 & 20 & 1.061 & 0.0262 & 2.26 \\
+5 & 25 & 0.679 & 0.0277 & 0.78 \\
+6 & 30 & 0.472 & 0.0290 & 0.33 \\}
+\bktabcaption{長さ\qty{30}{m}で内径を変える（流量は同じ毎分\qty{20}{L}）}
+\end{bkcenter}
+
+\begin{phbaisuru}{管の長さ $L$}
+損失ヘッドも2倍になります（表の10 m→20 m、20 m→40 m）。$h_f$ は $L$ に比例するからです。①の図\ref{ph:力-14:fig-head}で、水柱が直線で下がったのと同じことです。
+\end{phbaisuru}
+
+\begin{phbaisuru}{管の内径 $d$（流量は同じ）}
+流量が同じなら、断面積が4倍になるので、速さは4分の1です。$v^2$ は16分の1、$\dfrac{L}{d}$ は2分の1。$\lambda$ が変わらないとすると、損失は $\dfrac{1}{16}\times\dfrac{1}{2}=\dfrac{1}{32}$ になります。表の13 mm→25 mm（約2倍）で、17.5 m→0.78 m と、約22分の1に減りました（$\lambda$ が少しふえるので32分の1より少し小さい）。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=50mm, xmin=10, xmax=33, ymin=0, ymax=20, xtick={10,15,20,25,30}, ytick={0,5,10,15,20},
+  xlabel={内径（mm）}, ylabel={損失ヘッド（m）}]
+  \addplot[bkcurve, smooth] coordinates {(13,17.50) (14,12.6) (16,6.53) (18,3.79) (20,2.26) (22,1.42) (25,0.783) (28,0.452) (30,0.329) (32,0.245)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(13,17.50) (16,6.53) (20,2.26) (25,0.783) (30,0.329)};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+太さを少し変えるだけで、損失は大きく変わります。水道やポンプの管の太さを決めるとき、いちばん大事な数です。
+\end{phbaisuru}
+
+\bksubsection{5}{ポンプと管の「つり合う点」をさがす}
+\label{ph:力-14:sec5}ポンプで水を高い所のタンクへ送ります。ポンプが水を持ち上げられる高さ（\textbf{揚程}、力-13）は、流量がふえるほど下がります。一方、管のほうは、流量がふえるほど損失がふえるので、必要な高さが上がります。ポンプは、この2つが等しくなる流量で動きます。この点を\textbf{運転点}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=62mm, xmin=0, xmax=21, ymin=0, ymax=48, xtick={0,5,10,15,20}, ytick={0,10,20,30,40},
+  xlabel={流量 $Q$（L/s）}, ylabel={高さ（m）}]
+  \addplot[bkcurve, domain=0:20] {40-0.1*x^2};
+  \addplot[bkcurve2, domain=0:20] {20+0.05*x^2};
+  \addplot[only marks, mark=*, mark size=2.2pt, bkRed] coordinates {(11.55,26.67)};
+  \draw[bkRed, line width=0.6pt, densely dashed] (axis cs:11.55,0) -- (axis cs:11.55,26.67) -- (axis cs:0,26.67);
+  \node[pxo lab, anchor=west, text=bkBlue!80!black, fill=white] at (axis cs:0.8,44.8) {ポンプの性能 $H=40-0.1Q^2$};
+  \node[pxo lab, anchor=south east, text=bkOrange!80!black, align=right] at (axis cs:20.6,43.3) {管の抵抗 $H=20+0.05Q^2$};
+  \node[pxo lab, anchor=west, text=bkRed!80!black] at (axis cs:13.2,25.6) {運転点};
+  \node[pxo lab, anchor=south west, text=bkGray, fill=white] at (axis cs:0.5,15) {持ち上げる高さ 20 m};
+  \draw[bkGray, line width=0.6pt, densely dotted] (axis cs:0,20) -- (axis cs:21,20);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ポンプの性能曲線（青）と、管の抵抗曲線（だいだい）の交わる点が、運転点}
+\label{ph:力-14:fig-unten}
+\end{bkfigure}
+
+\noindent 管の抵抗曲線は「持ち上げる高さ\qty{20}{m}」＋「損失」です。損失は⑨で見るように、乱流ではほぼ $v^2$、つまり $Q^2$ に比例するので、放物線になります（3-9）。表計算で $Q$ を0.5 L/s ずつ変えて2つの高さを計算すると、$Q$ が11.5〜12 L/s の間で、大小が入れかわります。式で解くと、$40-0.1Q^2=20+0.05Q^2$ から $Q^2=\dfrac{20}{0.15}$、$Q\approx\qty{11.5}{L/s}$、$H\approx\qty{26.7}{m}$ です（例題\ref{ph:力-14:ex8}）。
+
+\begin{phbaisuru}{管の損失（弁を少し閉める）}
+弁を閉めて管の損失を2倍（$20+0.1Q^2$）にすると、だいだいの線が急になり、運転点は左へ動きます。$40-0.1Q^2=20+0.1Q^2$ から $Q=\qty{10}{L/s}$、$H=\qty{30}{m}$。流量は約\qty{13}{\%}減ります。弁で流量を調整するのは、このしくみです。
+\end{phbaisuru}
+
+\phkokomade
+
+%% ----------------------------------------------------------------------
+\phstage{shiki}{力のつり合いから導く}{5}
+
+\bksubsection{6}{粘性の法則と、粘度}
+\label{ph:力-14:sec6}②の2枚の板（図\ref{ph:力-14:fig-plates}）で、上の板を動かすのに要る力を、数で表しましょう。油の層をずらす力を、面積1 m$^2$ あたりで表したものを\textbf{せん断応力}といい、$\tau$（タウ）と書きます（単位 Pa。力-8 で固体にも使った量）。実験すると、次のことがわかります。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 速さ $U$ を2倍にすると、$\tau$ も2倍。
+\item すき間 $h$ を2倍にすると、$\tau$ は半分。
+\end{itemize}
+つまり $\tau$ は $\dfrac{U}{h}$ に比例します。$\dfrac{U}{h}$ は「上へ1 m 進むごとに、速さがどれだけふえるか」、つまり速さのグラフの傾きです。速さが直線でないときも、細かく見ればいつも直線なので、傾きを微分で書きます（5-3）。\label{ph:力-14:nendo}
+\pheq{\tau=\mu\,\frac{\dd u}{\dd y}}{Pa ＝ Pa·s × $\dfrac{\text{m/s}}{\text{m}}$}
+
+\noindent $u$ はその高さ $y$ での流体の速さ、比例の定数 $\mu$（ミュー）は\textbf{粘度}といい、流体の種類と温度で決まる数です。これを\textbf{ニュートンの粘性の法則}といい、この法則にしたがう流体（水・空気・油など）を\textbf{ニュートン流体}といいます。\bkidx{ねんど}{粘度}
+
+\begin{phyomi}[$\tau=\mu\dfrac{\dd u}{\dd y}$]
+層と層の速さの差が急なほど（傾きが大きいほど）、ずらす力が大きい。粘度 $\mu$ は「ずらしにくさ」。単位は Pa·s（パスカル秒）。
+\end{phyomi}
+
+\noindent 粘度を密度でわった $\nu=\dfrac{\mu}{\rho}$（ニュー）を\textbf{動粘度}といいます（単位 m$^2$/s）。流れの計算では、こちらがよく出てきます（⑦）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[c,m,wd=24mm] Q[c,m,wd=26mm] Q[c,m,wd=28mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+流体（\qty{20}{\celsius}） & 密度（kg/m$^3$） & 粘度（mPa·s） & 動粘度（m$^2$/s） \\
+水 & 998 & 1.0 & \num{1.0e-6} \\
+空気（1気圧） & 1.2 & 0.018 & \num{1.5e-5} \\
+作動油（VG46、\qty{40}{\celsius}） & 870 & 40 & \num{4.6e-5} \\
+はちみつ（目安） & 約1400 & 約\num{10000} & 約\num{7e-3} \\
+\end{bktable}
+\bktabcaption{いろいろな流体の粘度。1 mPa·s＝0.001 Pa·s。空気は粘度が水の約55分の1だが、密度がもっと小さいので、動粘度は水の15倍}
+\end{bkcenter}
+
+\begin{phbaisuru}{水の温度（\qty{20}{\celsius}→\qty{40}{\celsius}）}
+水の粘度は、約\qty{1.0}{mPa.s}から約\qty{0.65}{mPa.s}へ、約3分の2になります。温かい水ほど、さらさら流れます。反対に、空気の粘度は、温度が上がると少し大きくなります。液体と気体では、ねばりの原因がちがうからです（液体は分子どうしが引き合う力、気体は分子が層の間を行き来して運動量を運ぶこと。熱-14）。
+\end{phbaisuru}
+
+\begin{motto}[4]
+\phboxhead{ニュートン流体でない流体}
+マヨネーズやケチャップは、静かに置くと形を保つのに、強くふると流れます。ずらす速さによって、ねばりが変わるのです。血液も、細い血管の中では水とちがうふるまいをします。このような流体を\textbf{非ニュートン流体}といいます。この章では、ニュートン流体だけをあつかいます。
+\end{motto}
+
+\bksubsection{7}{レイノルズ数：層流か乱流かを決める数}
+\label{ph:力-14:sec7}レイノルズの実験で、流れ方を決めていたのは「速さ×太さ÷ねばり」でした。なぜこの組み合わせなのかを、力の比べっこで考えます。
+
+管の中の水の小さなかたまりには、2種類の力がはたらいています。
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{慣性の力}：速さ $v$ の水が向きを変えたり、うずを作ったりするときの「勢い」。運動量を運ぶ量で、面積あたり $\rho v^2$ の大きさ（力-13 の運動量の法則の $\rho Av^2$ を、面積でわった形）。
+\item \textbf{粘性の力}：層をずらす力。面積あたり $\tau=\mu\dfrac{\dd u}{\dd y}$。速さは太さ $d$ くらいの間に0から $v$ まで変わるので、傾きは約 $\dfrac{v}{d}$、力は約 $\mu\dfrac{v}{d}$。
+\end{enumerate}
+\label{ph:力-14:re}この2つの比をとると、
+\pheq{\frac{\text{慣性の力}}{\text{粘性の力}}\approx\frac{\rho v^2}{\mu\,\dfrac{v}{d}}=\frac{\rho vd}{\mu}=\frac{vd}{\nu}=\mathrm{Re}}{1 ＝ $\dfrac{\text{m/s}\times\text{m}}{\text{m}^2/\text{s}}$}
+\noindent この数を\textbf{レイノルズ数}といい、Re と書きます（≈ は「ほぼ等しい」。5-8）。単位が全部消える、単位のない数です。この名前は、のちにドイツのゾンマーフェルトが、レイノルズの名をとってつけました（1908年）。\bkidx{れいのるずすう}{レイノルズ数}
+
+\begin{phyomi}[$\mathrm{Re}=\dfrac{vd}{\nu}$]
+Re が小さい：ねばりが勝つ。乱れようとしても粘性がならしてしまうので、層流になる。Re が大きい：勢いが勝つ。小さな乱れが育ってうずになるので、乱流になる。円い管では、Re が約2300より小さければ層流です。それより大きいと乱流になりやすく、約4000をこえると、ふつうは乱流です。
+\end{phyomi}
+
+\begin{phmijika}[家の水道管と、油圧の管]
+内径\qty{20}{mm}の水道管に\qty{1}{m/s}で水を流すと、$\mathrm{Re}=\dfrac{1\times0.02}{1.0\times10^{-6}}=\num{20000}$ で、乱流です。家の水道管は、ほとんど乱流です。水道管で層流にするには、$\mathrm{Re}=2300$ から $v=\dfrac{2300\times1.0\times10^{-6}}{0.02}\approx\qty{0.12}{m/s}$ 以下と、かなりゆっくり流す必要があります。一方、ねばりの大きい作動油が細い管を流れる油圧の配管では、Re が数十〜数百の層流がよくあります（例題\ref{ph:力-14:ex3}）。
+\end{phmijika}
+
+\begin{phbaisuru}{管の太さ $d$（速さは同じ）}
+Re も2倍。太い管ほど乱流になりやすい。川や大気の流れは、太さ（大きさ）がけたちがいに大きいので、ほとんどが乱流です。
+\end{phbaisuru}
+
+\begin{phmada}[乱流は、どこから始まるの？]
+レイノルズの実験から140年以上たった今も、管の流れが乱流に変わるしくみは、すべてはわかっていません。わかっていることと、わかっていないことを分けてみます。
+\phboxhead{わかっていること}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phMada}●}]
+\item 管の層流は、とても小さな乱れに対しては、どんなに Re が大きくても乱れが消えていく（安定）と、計算で確かめられています。入口を工夫して静かに流した実験では、Re が約10万でも層流のままだった例があります（1961年）。
+\item 実際の管では、ある大きさの乱れがあると、乱流のかたまりが生まれます。乱流がとぎれずに続くようになる境目は、Re が約2040であることが、2011年に実験とコンピュータの計算を組み合わせて示されました。
+\end{itemize}
+\phboxhead{わかっていないこと}
+小さな乱れに安定なことを、数学として証明した人はまだいません。また、乱流の中のうずが、どのように生まれ、こわれ、エネルギーを熱に変えていくのかを、式から予想する一般の理論もありません（力-15 でもう一度ふれます）。
+\end{phmada}
+
+\bksubsection{8}{層流の管の流れ：ハーゲン・ポアズイユの式}
+\label{ph:力-14:sec8}層流なら、管の中の速さの分布と損失を、力のつり合いだけで導けます。
+
+\begin{phmodel}[円い管の中の層流]
+\phignore{管の入口の近くの流れ（入口から十分はなれた所だけを見る）。重力（管は水平）。}
+\phassume{流れは層流で、時間がたっても変わらない（定常）。流体はニュートン流体で、密度と粘度は一定。壁ではすべらない。}
+\phlimit{Re が約2300をこえて乱流になるとき。管が曲がっていたり、太さが変わったりするとき。}
+\end{phmodel}
+
+\noindent 半径 $R$、長さ $L$ の管を考えます。左の圧力を $p_1$、右の圧力を $p_2$、差を $\Delta p=p_1-p_2$ とします。管の中心から半径 $r$ の所までの、細い円柱の部分の水に目をつけます（図\ref{ph:力-14:fig-cyl}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!8] (0,-16) rectangle (100,16);
+  \draw[bkGray, line width=1.2pt] (0,-16) -- (100,-16) (0,16) -- (100,16);
+  \draw[bkGray, line width=0.5pt, dash dot] (-4,0) -- (104,0);
+  \fill[bkBlue!25] (22,-8) rectangle (78,8);
+  \draw[bkBlue!80!black, line width=0.8pt] (22,-8) rectangle (78,8);
+  \draw[bkBlue!80!black, line width=0.8pt] (22,0) ellipse (2.4 and 8);
+  \draw[pxo arr, bkRed] (8,0) -- (20.5,0);
+  \node[pxo lab, anchor=south, fill=white] at (11,1.5) {$p_1\pi r^2$};
+  \draw[pxo arr, bkRed] (92,0) -- (79.5,0);
+  \node[pxo lab, anchor=south, fill=white] at (89,1.5) {$p_2\pi r^2$};
+  \foreach \x in {32,46,60} {\draw[pxo arr, bkOrange!80!black] (\x+8,8.8) -- (\x,8.8); \draw[pxo arr, bkOrange!80!black] (\x+8,-8.8) -- (\x,-8.8);}
+  \node[pxo lab, anchor=south, text=bkOrange!80!black, fill=white] at (50,10.5) {まわりの水が引きもどす力 $\tau\times2\pi rL$};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (82,0) -- (82,8);
+  \node[pxo lab, anchor=west] at (82.5,4.5) {$r$};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (104,0) -- (104,16);
+  \node[pxo lab, anchor=west] at (105,8) {$R$};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (22,-12) -- (78,-12);
+  \node[pxo lab, anchor=north, fill=bkBlue!8] at (50,-12.5) {$L$};
+\end{tikzpicture}
+\bkfigcaption{管の中の、半径 $r$ の円柱の部分にはたらく力。圧力の差で押され、側面で粘性の力に引きもどされる}
+\label{ph:力-14:fig-cyl}
+\end{bkfigure}
+
+
+
+\pxohead{手順1　力のつり合い}
+流れは定常で、水は加速していません。だから、円柱にはたらく力はつり合っています（力-2 の $m\vec a=\vec F$ で $\vec a=\vec 0$）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 両はしの面を押す力の差：$(p_1-p_2)\times\pi r^2=\Delta p\,\pi r^2$（流れの向き）
+\item 側面で、外側の水が引きもどす力：$\tau\times$（側面の面積 $2\pi rL$）（流れと逆向き）
+\end{itemize}
+\[\Delta p\,\pi r^2=\tau\times2\pi rL\qquad\text{より}\qquad\tau=\frac{\Delta p}{2L}\,r\]
+せん断応力は、中心で0、外へ行くほど $r$ に比例して大きくなります。
+
+\pxohead{手順2　粘性の法則を入れる}
+外へ行くほど（$r$ がふえるほど）速さ $u$ は小さくなるので、$\dfrac{\dd u}{\dd r}$ はマイナスです。ずらす力の大きさは $\tau=-\mu\dfrac{\dd u}{\dd r}$ です。手順1と等しいとおくと
+\[-\mu\frac{\dd u}{\dd r}=\frac{\Delta p}{2L}\,r\qquad\text{より}\qquad\frac{\dd u}{\dd r}=-\frac{\Delta p}{2\mu L}\,r\]
+これは、右辺が $r$ だけの式なので、積分するだけで解けます（6-3）。
+
+\pxohead{手順3　積分して、壁の条件で定数を決める}
+\[u=-\frac{\Delta p}{4\mu L}\,r^2+C\]
+壁（$r=R$）では、すべりなしの条件で $u=0$ です。$0=-\dfrac{\Delta p}{4\mu L}R^2+C$ から $C=\dfrac{\Delta p}{4\mu L}R^2$。よって
+\pheq{u=\frac{\Delta p}{4\mu L}\left(R^2-r^2\right)}{m/s ＝ $\dfrac{\text{Pa}}{\text{Pa·s}\times\text{m}}$ × m$^2$}
+
+\noindent 速さの分布は放物線（3-9）です。中心がいちばん速く、$u_{\max}=\dfrac{\Delta p R^2}{4\mu L}$。壁で0です。
+
+\pxohead{手順4　流量を積分で求める}
+断面を、半径 $r$・はば $\dd r$ の細い輪に分けます（8-6）。輪の面積は $2\pi r\,\dd r$ で、そこを速さ $u$ で水が通るので、輪を通る流量は $u\times2\pi r\,\dd r$。全部たすと\label{ph:力-14:hp}
+\[Q=\int_0^R\frac{\Delta p}{4\mu L}\left(R^2-r^2\right)2\pi r\,\dd r=\frac{\pi\Delta p}{2\mu L}\left[\frac{R^2r^2}{2}-\frac{r^4}{4}\right]_0^R=\frac{\pi\Delta p}{2\mu L}\cdot\frac{R^4}{4}\]
+\pheq{Q=\frac{\pi R^4\,\Delta p}{8\mu L}}{m$^3$/s ＝ $\dfrac{\text{m}^4\times\text{Pa}}{\text{Pa·s}\times\text{m}}$}
+これを\textbf{ハーゲン・ポアズイユの式}といいます。ドイツのハーゲン（1839年）と、血液の流れを調べたフランスのポアズイユ（1840年ごろの実験）が、それぞれ実験で見つけた関係です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \fill[bkBlue!8] (0,-15) rectangle (40,15);
+  \draw[bkGray, line width=1.2pt] (0,-15) -- (40,-15) (0,15) -- (40,15);
+  \draw[bkGray, line width=0.5pt] (8,-15) -- (8,15);
+  \foreach \y in {-12,-8,-4,0,4,8,12} {\pgfmathsetmacro\uu{24*(1-(\y/15)^2)}\draw[pxo arr, bkBlue!80!black, line width=0.8pt] (8,\y) -- (8+\uu,\y);}
+  \draw[bkRed, line width=1pt, domain=-15:15, samples=40] plot ({8+24*(1-(\x/15)^2)},\x);
+  \node[pxo lab, anchor=north] at (20,-17) {層流：放物線};
+  \end{scope}
+  \begin{scope}[shift={(60,0)}]
+  \fill[bkBlue!8] (0,-15) rectangle (40,15);
+  \draw[bkGray, line width=1.2pt] (0,-15) -- (40,-15) (0,15) -- (40,15);
+  \draw[bkGray, line width=0.5pt] (8,-15) -- (8,15);
+  \foreach \y in {-12,-8,-4,0,4,8,12} {\pgfmathsetmacro\uu{19.5*(1-abs(\y)/15)^(1/7)}\draw[pxo arr, bkBlue!80!black, line width=0.8pt] (8,\y) -- (8+\uu,\y);}
+  \draw[bkRed, line width=1pt, domain=-14.99:14.99, samples=80] plot ({8+19.5*(1-abs(\x)/15)^(1/7)},\x);
+  \node[pxo lab, anchor=north] at (20,-17) {乱流（時間の平均）：平ら};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ流量の、層流と乱流の速さの分布。乱流では、うずが混ぜるので、まん中が平らになり、壁の近くで急に0になる}
+\label{ph:力-14:fig-profile}
+\end{bkfigure}
+
+\begin{phyomi}[$Q=\dfrac{\pi R^4\Delta p}{8\mu L}$]
+流量は、圧力の差 $\Delta p$ に比例し、ねばり $\mu$ と長さ $L$ に反比例する。そして、半径の4乗に比例する。4乗のうち2乗は「断面積が $R^2$ に比例」から、もう2乗は「壁から遠い水ほど速く流れられる（$u_{\max}$ が $R^2$ に比例）」から来ています。
+\end{phyomi}
+
+\begin{phbaisuru}{半径 $R$}
+流量は $2^4=16$ 倍！　反対に、血管の内側に脂がついて半径が2割細くなる（0.8倍）と、同じ圧力では流量が $0.8^4\approx0.41$ 倍に減ります。同じ流量を流すには、心臓は約2.4倍の圧力の差を作らなければなりません（例題\ref{ph:力-14:ex4}）。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=78mm, height=48mm, xmin=0, xmax=2.2, ymin=0, ymax=18, xtick={0.5,1,1.5,2}, ytick={0,4,8,12,16},
+  xlabel={半径（倍）}, ylabel={流量（倍）}]
+  \addplot[bkcurve, domain=0:2.05] {x^4};
+  \addplot[bkcurve2, domain=0:2.05] {x^2};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(1,1) (2,16) (2,4) (0.8,0.41)};
+  \node[pxo lab, anchor=east, text=bkBlue!80!black, fill=white] at (axis cs:1.88,14) {$Q\propto R^4$};
+  \node[pxo lab, anchor=west, text=bkOrange!80!black] at (axis cs:2.08,4.0) {$R^2$};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+
+\noindent 平均の速さ $v=\dfrac{Q}{\pi R^2}=\dfrac{R^2\Delta p}{8\mu L}$ は、$u_{\max}$ のちょうど半分です。この式を $\Delta p$ について解き、$R=\dfrac{d}{2}$ を入れると $\Delta p=\dfrac{32\mu Lv}{d^2}$。これを④の損失ヘッドの形（$\Delta p=\rho gh_f=\lambda\dfrac{L}{d}\dfrac{\rho v^2}{2}$）に書きかえると、
+\[\lambda=\frac{\Delta p}{\dfrac{L}{d}\cdot\dfrac{\rho v^2}{2}}=\frac{32\mu Lv}{d^2}\cdot\frac{2d}{L\rho v^2}=\frac{64\mu}{\rho vd}=\frac{64}{\mathrm{Re}}\]
+層流の管摩擦係数は $\lambda=\dfrac{64}{\mathrm{Re}}$ で、理論だけで決まります。
+
+\begin{phflow}[層流の管]
+\phflowrow{円柱のつり合い\\$\Delta p\,\pi r^2=\tau\,2\pi rL$}{ニュートン流体\\壁ですべらない}{$u=\dfrac{\Delta p}{4\mu L}(R^2-r^2)$}
+\phflowrow{$Q=\displaystyle\int_0^R u\,2\pi r\,\dd r$}{輪に分けて\\たす（8-6）}{$Q=\dfrac{\pi R^4\Delta p}{8\mu L}$}
+\phflowrow{$\Delta p=\dfrac{32\mu Lv}{d^2}$}{損失ヘッドの\\形にそろえる}{$\lambda=\dfrac{64}{\mathrm{Re}}$}
+\end{phflow}
+
+\bksubsection{9}{乱流の管：管摩擦係数とムーディ線図}
+\label{ph:力-14:sec9}家の水道管のように Re が数万の乱流では、⑧のような式は導けません。うずが不規則に動くので、速さの分布を式で決められないからです。そこで、④の形の式を使い、$\lambda$ を実験で決めます。
+
+\pxohead{なぜ $h_f=\lambda\dfrac{L}{d}\dfrac{v^2}{2g}$ の形なのか}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 長さに比例：同じ管が続けば、同じ損失がたまっていく（①の直線）。
+\item $\dfrac{1}{2}\rho v^2$ に比例：乱流では、勢い（慣性の力）でうずが作られ、そのエネルギーが失われるので、損失は運動のエネルギー $\dfrac{1}{2}\rho v^2$（力-13 の動圧）を目安にはかるのが自然。
+\item そのほかの効き方（Re と、壁のざらざらの程度）は、全部 $\lambda$ に入れる。
+\end{itemize}
+この形が次元から決まることは、力-15 の例題で確かめます。$\Delta p=\rho gh_f$ で圧力にすると、$\Delta p=\lambda\dfrac{L}{d}\dfrac{\rho v^2}{2}$ です。この式を\textbf{ダルシー・ワイスバッハの式}といいます。\label{ph:力-14:dw}
+
+\pxohead{損失のある、ベルヌーイの式}
+力-13 のベルヌーイの式を、$\rho g$ でわって、高さ（ヘッド）の形にします。点1から点2まで流れる間に $h_f$ だけ失われるとすると
+\pheq{\frac{p_1}{\rho g}+\frac{v_1^2}{2g}+z_1=\frac{p_2}{\rho g}+\frac{v_2^2}{2g}+z_2+h_f}{m ＝ m}
+\noindent 左から順に、圧力ヘッド・速度ヘッド・位置ヘッドです（力-13⑦）。
+
+\begin{phflow}[損失のある流れ]
+\phflowrow{損失のあるベルヌーイの式}{粘性を無視\\$h_f=0$}{ベルヌーイの式（力-13）}
+\phflowrow{同じ太さ・同じ高さの管}{$v_1=v_2$、\\$z_1=z_2$}{$p_1-p_2=\rho gh_f$}
+\end{phflow}
+
+\pxohead{$\lambda$ の決め方}
+$\lambda$ は Re と、管の内側のざらざらの高さ $\varepsilon$（イプシロン）を内径でわった $\dfrac{\varepsilon}{d}$（相対粗さ）で決まります。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item なめらかな管で Re が3000〜\num{100000}のとき：\textbf{ブラジウスの式}（1913年）$\lambda=\dfrac{0.3164}{\mathrm{Re}^{1/4}}$
+\item 一般の乱流：\textbf{コールブルックの式}（1939年）
+\[\frac{1}{\sqrt\lambda}=-2\log_{10}\left(\frac{\varepsilon/d}{3.7}+\frac{2.51}{\mathrm{Re}\sqrt\lambda}\right)\]
+両辺に $\lambda$ があるので、代入をくり返して解きます（2-13⑤。例題\ref{ph:力-14:ex5}）。
+\end{itemize}
+これをグラフにしたものが\textbf{ムーディ線図}（1944年）です。両対数グラフ（3-12）で読みます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=124mm, height=78mm, xmin=2.8, xmax=8, ymin=-2.1, ymax=-0.98,
+  xtick={3,4,5,6,7,8}, xticklabels={$10^3$,$10^4$,$10^5$,$10^6$,$10^7$,$10^8$},
+  ytick={-2.0,-1.8239,-1.699,-1.5229,-1.3979,-1.301,-1.0}, yticklabels={0.01,0.015,0.02,0.03,0.04,0.05,0.1},
+  minor xtick={3.301,3.477,3.699,3.845,4.301,4.477,4.699,4.845,5.301,5.477,5.699,5.845,6.301,6.477,6.699,6.845,7.301,7.477,7.699,7.845},
+  xminorgrids=true, minor grid style={bkLine, line width=0.2pt}, minor tick length=0pt,
+  xlabel={Re}, ylabel={$\lambda$}, every axis x label/.style={at={(axis description cs:1,0)}, anchor=west, xshift=1.5mm, font=\sffamily\small}]
+  \fill[bkYellow!25] (axis cs:3.362,-2.1) rectangle (axis cs:3.602,-0.98);
+  \node[pxo lab, rotate=90, text=bkGray] at (axis cs:3.48,-1.75) {変わり目};
+  \addplot[bkcurve2, domain=2.8:3.362] {1.8062-x};
+  \addplot[bkRed, line width=1.4pt, smooth] coordinates {(3.60,-1.3087) (3.80,-1.3407) (4.00,-1.3653) (4.20,-1.3833) (4.40,-1.3961) (4.60,-1.4048) (4.80,-1.4107) (5.00,-1.4145) (5.40,-1.4186) (6.00,-1.4206) (7.00,-1.4212) (8.00,-1.4213)};
+  \addplot[bkPurple, line width=1.4pt, smooth] coordinates {(3.60,-1.3876) (3.80,-1.4410) (4.00,-1.4897) (4.20,-1.5335) (4.40,-1.5721) (4.60,-1.6052) (4.80,-1.6325) (5.00,-1.6541) (5.20,-1.6706) (5.40,-1.6825) (5.60,-1.6908) (6.00,-1.7002) (6.60,-1.7052) (7.00,-1.7063) (8.00,-1.7069)};
+  \addplot[bkGreen!70!black, line width=1.4pt, smooth] coordinates {(3.60,-1.3972) (3.80,-1.4543) (4.00,-1.5081) (4.20,-1.5588) (4.40,-1.6066) (4.60,-1.6515) (4.80,-1.6935) (5.00,-1.7325) (5.20,-1.7682) (5.40,-1.8003) (5.60,-1.8284) (5.80,-1.8522) (6.00,-1.8716) (6.20,-1.8866) (6.40,-1.8978) (6.60,-1.9057) (6.80,-1.9112) (7.00,-1.9148) (7.40,-1.9188) (8.00,-1.9209)};
+  \addplot[bkBlue, line width=1.4pt, smooth] coordinates {(3.60,-1.3983) (3.80,-1.4559) (4.00,-1.5103) (4.20,-1.5619) (4.40,-1.6110) (4.60,-1.6577) (4.80,-1.7023) (5.00,-1.7450) (5.20,-1.7858) (5.40,-1.8250) (5.60,-1.8627) (5.80,-1.8989) (6.00,-1.9339) (6.20,-1.9675) (6.40,-2.0001) (6.60,-2.0315) (6.80,-2.0619) (7.00,-2.0914) (7.20,-2.1)};
+  \node[pxo lab, anchor=north west, text=bkOrange!80!black] at (axis cs:3.68,-1.0) {層流 $\lambda=\dfrac{64}{\mathrm{Re}}$};
+  \draw[bkOrange!80!black, line width=0.5pt] (axis cs:3.68,-1.06) -- (axis cs:3.12,-1.28);
+  \node[pxo lab, anchor=south west, text=bkRed!80!black] at (axis cs:6.4,-1.405) {$\varepsilon/d=0.01$};
+  \node[pxo lab, anchor=south west, text=bkPurple!80!black] at (axis cs:6.4,-1.69) {$\varepsilon/d=0.001$};
+  \node[pxo lab, anchor=south west, text=bkGreen!50!black] at (axis cs:6.4,-1.89) {$\varepsilon/d=0.0001$};
+  \node[pxo lab, anchor=west, text=bkBlue!80!black] at (axis cs:5.2,-2.05) {なめらかな管};
+  \addplot[only marks, mark=*, mark size=2pt, bkInk] coordinates {(4.325,-1.581) (5.301,-1.7314)};
+  \node[pxo lab, anchor=south west] at (axis cs:4.36,-1.565) {例題1};
+  \draw[bkInk, line width=0.4pt] (axis cs:5.33,-1.738) -- (axis cs:5.68,-1.80);
+  \node[pxo lab, anchor=west] at (axis cs:5.70,-1.80) {例題5};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ムーディ線図（コールブルックの式で計算した）。たてと横の目もりは対数}
+\label{ph:力-14:fig-moody}
+\end{bkfigure}
+
+\begin{phyomi}[ムーディ線図]
+左の直線は層流の $\dfrac{64}{\mathrm{Re}}$（両対数で傾き $-1$ の直線）。Re が2300〜4000は、層流と乱流が入れかわる、決まらない所。乱流では、なめらかな管の $\lambda$ は Re がふえるとゆっくり下がります。ざらざらした管では、Re が大きくなると線が平らになり、$\lambda$ は $\dfrac{\varepsilon}{d}$ だけで決まります。
+\end{phyomi}
+
+\pxohead{\bkhatenaref の答え}
+長い水道管やホースの先で水の勢いが弱くなるのは、水の粘性のためです。壁にふれた水は止まり、まん中の水は速く流れるので、層がずれたり、うずができたりして、流れのエネルギーが少しずつ熱に変わります。その損失ヘッド $h_f=\lambda\dfrac{L}{d}\dfrac{v^2}{2g}$ は管の長さ $L$ に比例するので、長い管ほど、先に残る圧力（勢い）が小さくなるのです。
+
+\pxohead{曲がり・弁などの損失}
+管の曲がり・弁・入口・出口では、流れがはがれてうずができ、損失が生まれます。これは長さによらず、速度ヘッドの何倍かで表します。
+\pheq{h=\zeta\,\frac{v^2}{2g}}{m ＝ 1 × m}
+\noindent $\zeta$（ゼータ）を\textbf{損失係数}といいます。管全体の損失ヘッドは、まっすぐな部分と、曲がり・弁の分を合わせて $\left(\lambda\dfrac{L}{d}+\sum\zeta\right)\dfrac{v^2}{2g}$ です。
+
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\name/\z in {0/{入口}/{0.5},1/{90°の曲がり}/{約0.6},2/{仕切弁（全開）}/{約0.15},3/{玉形弁（全開）}/{約6},4/{出口}/{1.0}} {
+    \begin{scope}[shift={(\k*26,0)}]
+      \draw[bkLine, line width=0.6pt, rounded corners=1.5mm] (0,0) rectangle (24,26);
+      \node[pxo lab, anchor=north] at (12,8.6) {\name};
+      \node[font=\sffamily\bfseries\small, text=bkDeep] at (12,3) {$\zeta$ \z};
+    \end{scope}}
+  % 入口
+  \begin{scope}[shift={(0,0)}]
+    \fill[bkBlue!14] (3,10) rectangle (10,24); \draw[bkGray, line width=0.8pt] (10,24) -- (10,19) -- (21,19) (10,10) -- (10,15) -- (21,15);
+    \fill[bkBlue!14] (10,15) rectangle (21,19);
+    \draw[pxo arr, bkBlue!80!black, line width=0.8pt] (12,17) -- (20,17);
+  \end{scope}
+  % 曲がり
+  \begin{scope}[shift={(26,0)}]
+    \fill[bkBlue!14] (3,11) -- (10,11) arc (-90:0:7) -- (17,24) -- (13,24) -- (13,18) arc (0:-90:3) -- (3,15) -- cycle;
+    \draw[bkGray, line width=0.8pt] (3,11) -- (10,11) arc (-90:0:7) -- (17,24) (3,15) -- (10,15) arc (-90:0:3) -- (13,24);
+  \end{scope}
+  % 仕切弁
+  \begin{scope}[shift={(52,0)}]
+    \fill[bkBlue!14] (2,14) rectangle (22,18); \draw[bkGray, line width=0.8pt] (2,14) -- (22,14) (2,18) -- (22,18);
+    \fill[bkGray!60] (10.5,18) rectangle (13.5,24); \draw[bkGray, line width=0.8pt] (9,24) -- (15,24);
+  \end{scope}
+  % 玉形弁
+  \begin{scope}[shift={(78,0)}]
+    \fill[bkBlue!14] (2,14) rectangle (22,18); \draw[bkGray, line width=0.8pt] (2,14) -- (22,14) (2,18) -- (22,18);
+    \fill[bkGray!60] (10,16) rectangle (14,17.2);
+    \draw[bkGray, line width=0.9pt] (8,14) -- (8,16) -- (16,16) (16,18) -- (16,16);
+    \draw[bkBlue!80!black, line width=0.7pt, -{Stealth[length=2.5pt]}] (4,15) .. controls (7,15) and (7,19.5) .. (10,19.5) .. controls (13,19.5) and (12,15) .. (20,15);
+    \fill[bkGray!60] (11.3,17.2) rectangle (12.7,24);
+  \end{scope}
+  % 出口
+  \begin{scope}[shift={(104,0)}]
+    \fill[bkBlue!14] (3,15) rectangle (12,19); \draw[bkGray, line width=0.8pt] (3,15) -- (12,15) -- (12,10) (3,19) -- (12,19) -- (12,24);
+    \fill[bkBlue!14] (12,10) rectangle (21,24);
+    \draw[bkBlue!60, line width=0.6pt] (15,17) circle (1.5) (18,14.5) circle (1.2) (18,20) circle (1);
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{損失係数の目安（管の太さ・形・会社で変わり、±50\,\%くらいちがうことがある。設計では、部品の会社の資料の値を使う）}
+\label{ph:力-14:fig-zeta}
+\end{bkcenter}
+
+\noindent 出口の $\zeta=1$ は、管から出た水の速さ（速度ヘッド $\dfrac{v^2}{2g}$）が、タンクの中でうずになって全部失われる、という意味です。
+
+\bksubsection{10}{ポンプに必要な動力}
+\label{ph:力-14:sec10}ポンプは、流れに高さ（揚程 $H$）を与えます。流量 $Q$ の水を高さ $H$ だけ持ち上げる仕事率は、1秒に持ち上げる水の重さ $\rho gQ$ に高さ $H$ をかけた $\rho gQH$ です（力-4 の仕事率、力-13⑪の水力発電の式の逆向き）。ポンプの中でも、羽根車の摩擦やうずでエネルギーが失われるので、ポンプの効率を $\eta$（イータ）とすると、モータがポンプの軸に与えなければならない動力は
+\pheq{P=\frac{\rho gQH}{\eta}}{W ＝ kg/m$^3$ × m/s$^2$ × m$^3$/s × m}
+\noindent 揚程 $H$ は、持ち上げる高さに、管の損失ヘッドを足したもの（全揚程）です。損失が大きいほど、電気代がかかります。
+
+\begin{phbaisuru}{流量 $Q$（同じ管で）}
+持ち上げる高さの分は2倍ですが、損失は $Q^2$ に比例して4倍になるので、損失の分の動力は8倍になります。たくさん流したいときは、管を太くするほうが得になることがあります。
+\end{phbaisuru}
+
+\bksubsection{11}{水がわき立つ：キャビテーション}
+\label{ph:力-14:sec11}水は、ふつう\qty{100}{\celsius}でわき立ちます。でも、まわりの圧力を下げると、もっと低い温度でもわき立ちます。水がわき立つ圧力を\textbf{飽和蒸気圧}といい、\qty{20}{\celsius}の水では約\qty{2.3}{kPa}（絶対圧）です（熱-8）。
+
+ポンプが水を吸い上げるとき、吸いこみ口の圧力は大気圧より下がります。そこで圧力が飽和蒸気圧より下がると、水の中に蒸気のあわができます。このあわが、圧力の高い所へ運ばれて一気につぶれると、大きな音とふるえが生まれ、羽根車の表面がけずられます。これを\textbf{キャビテーション}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!14] (0,0) rectangle (40,14); \draw[bkGray, line width=1pt] (0,22) -- (0,0) -- (40,0) -- (40,22);
+  \draw[bkBlue!60, line width=0.6pt] (0,14) -- (40,14);
+  \fill[bkBlue!14] (18,4) rectangle (22,48);
+  \fill[bkBlue!14] (22,44) rectangle (39.4,48);
+  \draw[bkGray, line width=0.9pt] (18,4) -- (18,48) -- (39.4,48) (22,4) -- (22,44) -- (39.4,44);
+  \filldraw[fill=bkGray!25, draw=bkGray, line width=0.9pt] (48,46) circle (9);
+  \foreach \a in {0,60,...,300} {\draw[bkInk!70, line width=1pt] (48,46) -- ++(\a:7);}
+  \fill[bkInk] (48,46) circle (1.2);
+  \foreach \p in {(41.5,45),(43.5,48.5),(44,43.5)} {\draw[bkRed, line width=0.5pt, fill=white] \p circle (0.9);}
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (-4,14) -- (-4,46);
+  \node[pxo lab, anchor=east] at (-5,30) {$z_s$};
+  \fill[bkBlue!14] (50,54.4) rectangle (54,66);
+  \draw[bkGray, line width=0.9pt] (50,54.6) -- (50,66) (54,53.9) -- (54,66);
+  \draw[pxo arr, bkBlue!80!black] (52,63) -- (52,70);
+  \node[pxo lab, anchor=west] at (56,64) {送り出す};
+  \node[pxo lab, anchor=west] at (58,50) {ポンプ};
+  \node[pxo lab, anchor=west, text=bkRed!80!black, align=left] at (60,40) {吸いこみ口で圧力が\\下がりすぎると、あわができる};
+  \node[pxo lab, anchor=north] at (20,-1.5) {水そう（大気圧）};
+\end{tikzpicture}
+\bkfigcaption{水面より高い所にあるポンプ。吸い上げる高さ $z_s$ と吸いこみの管の損失の分だけ、吸いこみ口の圧力が下がる}
+\label{ph:力-14:fig-npsh}
+\end{bkfigure}
+
+\noindent あわができないための余裕を、高さで表したものを\textbf{NPSH}（正味吸いこみヘッド）といいます。水面が大気圧 $p_a$、吸い上げる高さ $z_s$、吸いこみの管の損失 $h_{fs}$ のとき、使える余裕は
+\pheq{\text{NPSH}=\frac{p_a-p_v}{\rho g}-z_s-h_{fs}}{m ＝ $\dfrac{\text{Pa}}{\text{kg/m}^3\times\text{m/s}^2}$}
+\noindent です（$p_v$ は飽和蒸気圧。圧力はどちらも絶対圧）。これが、ポンプの会社が決めた「必要な NPSH」より大きくなるように、ポンプの高さや管を決めます。
+
+\begin{phyomi}[NPSH]
+大気圧は、水を約\qty{10.3}{m}持ち上げる力しかありません（力-12 の水柱\qty{10}{m}）。そこから、蒸気圧の分（約\qty{0.24}{m}）、吸い上げる高さ、管の損失を引いた残りが、あわを作らないための余裕です。ポンプを水面より高く置きすぎると、余裕がなくなります。
+\end{phyomi}
+
+\bksubsection{12}{弁を急に閉めると：水撃}
+\label{ph:力-14:sec12}水道の蛇口を急に閉めると、「ドン」と管が鳴ることがあります。流れていた水が急に止められて、圧力が一気に上がるのです。これを\textbf{水撃}（ウォーターハンマー）といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxopipe{(0,0)}{110}{10}
+  \fill[bkRed!25] (70,-5) rectangle (110,5);
+  \fill[bkGray!70] (110,-7) rectangle (113,7);
+  \draw[bkRed, line width=1.2pt] (70,-7) -- (70,7);
+  \draw[pxo arr, bkRed] (68,9) -- (50,9);
+  \node[pxo lab, anchor=south, text=bkRed!80!black] at (59,10) {速さ $a$ でもどる};
+  \foreach \x in {10,25,40,55} {\draw[pxo arr, bkBlue!80!black] (\x,0) -- (\x+9,0);}
+  \node[pxo lab, anchor=north] at (35,-7) {まだ速さ $v$ で流れている};
+  \node[pxo lab, anchor=north] at (90,-7) {止まって、圧力が $\Delta p$ 上がった};
+  \node[pxo lab, anchor=west] at (114,0) {弁};
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (70,-14) -- (110,-14);
+  \node[pxo lab, anchor=north] at (90,-14.5) {$\Delta t$ の間に $a\Delta t$};
+\end{tikzpicture}
+\bkfigcaption{弁を急に閉めると、「止まった水」の部分が、圧力の波として上流へ広がる}
+\label{ph:力-14:fig-suigeki}
+\end{bkfigure}
+
+\noindent 弁を閉めた瞬間、弁のすぐ前の水が止まります。その水が少し縮み、管が少しふくらむので、止まった部分は、速さ $a$ で上流へ広がっていきます。$a$ は圧力の波の速さで、鋼の水道管ではおよそ\qty{1000}{m/s}〜\qty{1300}{m/s}です（水の中の音の速さ約\qty{1480}{m/s}より、管がふくらむ分おそい）。
+
+短い時間 $\Delta t$ の間に止まる水は、長さ $a\Delta t$ の部分で、質量は $\rho Aa\Delta t$ です。その運動量は $\rho Aa\Delta t\times v$ から0になります。これを止める力は、上がった圧力 $\Delta p$ が断面積 $A$ を押す力です。運動量の変化＝力積（力-3）より
+\[\Delta p\,A\,\Delta t=\rho Aa\Delta t\times v\qquad\text{より}\qquad\Delta p=\rho av\]\label{ph:力-14:jk}
+速さが $\Delta v$ だけ変わるときは、一般に
+\pheq{\Delta p=\rho a\,\Delta v}{Pa ＝ kg/m$^3$ × m/s × m/s}
+\noindent これを\textbf{ジューコフスキーの式}といいます（ロシアのジューコフスキー、1898年の実験）。$\rho$ は1000、$a$ は1000くらいなので、速さが\qty{1}{m/s}変わるだけで、約\qty{1}{MPa}（約10気圧）も圧力が上がります。
+
+\begin{phbaisuru}[ゆっくり]{弁を閉める時間}
+波が弁から管のはしまで行って、もどってくる時間 $\dfrac{2L}{a}$ より長くかけて閉めると、もどってきた波が圧力を下げるので、上がり方は小さくなります。長い管の弁をゆっくり閉めるのは、このためです。
+\end{phbaisuru}
+
+\begin{phsaki}{乱流を計算する・ねばりの変わる流体}
+乱流の速さは、時間とともに不規則にゆれます。その平均だけを計算する方法（乱流モデル）は、大学院で学ぶ内容です。工学部では、この章の $\lambda$ や $\zeta$ を使う管路の計算や、たくさんの管がつながった管路網の計算、川や水路のような水面のある流れ（開水路）を学びます。マヨネーズや血液のような非ニュートン流体の性質を調べる学問を、レオロジーといいます。
+\end{phsaki}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.0\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{粘性の法則}$\tau=\mu\dfrac{\dd u}{\dd y}$。動粘度 $\nu=\dfrac{\mu}{\rho}$\\[3pt]
+\tsl{レイノルズ数}$\mathrm{Re}=\dfrac{vd}{\nu}$。約2300より小さいと層流、4000より大きいと乱流\\[3pt]
+\tsl{層流}$Q=\dfrac{\pi R^4\Delta p}{8\mu L}$、$\lambda=\dfrac{64}{\mathrm{Re}}$\\[3pt]
+\tsl{管の損失}$h_f=\left(\lambda\dfrac{L}{d}+\sum\zeta\right)\dfrac{v^2}{2g}$。乱流の $\lambda$ はムーディ線図で\\[3pt]
+\tsl{ポンプ}$P=\dfrac{\rho gQH}{\eta}$。NPSH の余裕を確かめる\\[3pt]
+\tsl{水撃}$\Delta p=\rho a\Delta v$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{粘性・粘度}{流体のねばり。層をずらす力 $\tau$ と速さの傾きの比が粘度 $\mu$（Pa·s）。}
+\bkword{層流・乱流}{層になってすべるように流れる流れと、うずで混ざりながら流れる流れ。}
+\bkword{レイノルズ数}{慣性の力と粘性の力の比 $\dfrac{vd}{\nu}$。流れ方を決める単位のない数。}
+\bkword{損失ヘッド}{粘性やうずで失われたエネルギーを、水の高さで表したもの $h_f$（m）。}
+\bkword{管摩擦係数・損失係数}{まっすぐな管の損失を表す $\lambda$ と、曲がり・弁などの損失を表す $\zeta$。}
+\bkword{キャビテーション・水撃}{圧力が下がって水があわになる現象と、流れを急に止めて圧力が上がる現象。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{Re}{レイノルズ数}{$\dfrac{vd}{\nu}$。慣性と粘性の比。単位なし。名前なので立体で書く}{Reynolds number}{力-14}}
+{\bkkigocard{$\lambda$}{ラムダ}{管摩擦係数。英語の本の $f$ と同じ（4分の1の $f$ を使う本もある）}{friction factor}{力-14}}
+
+%% ======================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[家の水道管の損失]\label{ph:力-14:ex1}
+内径\qty{20}{mm}、長さ\qty{30}{m}のまっすぐな水道管に、毎分\qty{20}{L}の水（\qty{20}{\celsius}）を流します。流れは層流か乱流かを調べ、損失ヘッドと、失われる圧力を求めましょう。
+\phbamen
+蛇口からシャワーまでの、家の中の水道管です。知りたいのは、管の中で失われる圧力です。
+\phmushi
+管の曲がりや継ぎ目の損失は、ここでは考えません。管はなめらかとします。水の動粘度は\qty{1.0e-6}{m^2/s}、密度は\qty{1000}{kg/m^3}とします。
+\phzu
+内径 $d=\qty{0.020}{m}$、長さ $L=\qty{30}{m}$、流量 $Q$、平均の速さ $v$、損失ヘッド $h_f$。
+\phriyu
+まず Re で流れ方を決めます。乱流なら、なめらかな管で Re が\num{100000}より小さいので、ブラジウスの式で $\lambda$ を求め、ダルシー・ワイスバッハの式で損失を求めます。
+\phtateru
+\[Q=\frac{\qty{20}{L/min}}{\qty{60}{s/min}}\times\frac{\qty{1}{m^3}}{\qty{1000}{L}}=\qty{3.33e-4}{m^3/s}\]
+\[A=\frac{\pi d^2}{4},\qquad v=\frac{Q}{A}\]
+\[\mathrm{Re}=\frac{vd}{\nu},\qquad\lambda=\frac{0.3164}{\mathrm{Re}^{1/4}},\qquad h_f=\lambda\frac{L}{d}\frac{v^2}{2g},\qquad\Delta p=\rho gh_f\]
+\phtoku
+\[A=\frac{3.14\times0.020^2}{4}=\qty{3.14e-4}{m^2}\]
+\[v=\frac{3.33\times10^{-4}}{3.14\times10^{-4}}\approx\qty{1.06}{m/s}\]
+\[\mathrm{Re}=\frac{1.06\times0.020}{1.0\times10^{-6}}\approx\num{21000}\quad\text{（4000より大きいので乱流）}\]
+\[\lambda=\frac{0.3164}{\num{21000}^{1/4}}=\frac{0.3164}{12.1}\approx0.026\]
+\[h_f=0.026\times\frac{30}{0.020}\times\frac{1.06^2}{2\times9.8}=0.026\times1500\times0.0574\approx\qty{2.3}{m}\]
+\[\Delta p=1000\times9.8\times2.3\approx\qty{22}{kPa}\]
+\phtashikame
+単位：$\dfrac{L}{d}$ は単位なし、$\dfrac{v^2}{2g}$ は m なので、$h_f$ は m。\\
+大きさ：ムーディ線図（図\ref{ph:力-14:fig-moody}）で Re＝\num{21000} のなめらかな管を読むと、$\lambda$ は約0.026。合っています。水道の圧力約\qty{200}{kPa}の1割くらいで、ありそうな値です。\\
+極端な場合：流量を0にすると $v=0$ で、損失も0。止めているときは圧力が下がらない（①）ことと合います。
+\kotae 乱流（Re 約\num{21000}）、損失ヘッド約\qty{2.3}{m}、約\qty{22}{kPa}
+\end{phreidai}
+\begin{jibun}
+内径\qty{20}{mm}、長さ\qty{20}{m}のなめらかな水道管に、毎分\qty{15}{L}の水を流します（速さ約\qty{0.80}{m/s}）。Re、$\lambda$（ブラジウスの式）、損失ヘッドを求めましょう。$\nu=\qty{1.0e-6}{m^2/s}$ とします。
+\bkjans{$\mathrm{Re}=\dfrac{0.80\times0.020}{1.0\times10^{-6}}=\num{16000}$。$\lambda=\dfrac{0.3164}{11.2}\approx0.028$。$h_f=0.028\times1000\times\dfrac{0.80^2}{19.6}\approx\qty{0.92}{m}$}
+\end{jibun}
+
+\begin{phreidai}[層流か、乱流か]\label{ph:力-14:ex2}
+次の流れの Re を計算して、層流か乱流かを答えましょう。（1）内径\qty{6}{mm}の油圧の管を流れる作動油（$\nu=\qty{4.6e-5}{m^2/s}$）、平均の速さ\qty{0.6}{m/s}。（2）内径\qty{0.2}{m}の換気のダクトを流れる空気（$\nu=\qty{1.5e-5}{m^2/s}$）、平均の速さ\qty{5}{m/s}。
+\phbamen
+機械の中の2つの流れです。流れ方によって、損失の計算に使う式が変わります。
+\phmushi
+管はまっすぐで、入口から十分はなれた所を考えます。
+\phzu
+内径 $d$、平均の速さ $v$、動粘度 $\nu$。
+\phriyu
+流れ方を決めるのは、慣性と粘性の比の Re です（⑦）。2300と4000を目安にします。
+\phtateru
+\[\mathrm{Re}=\frac{vd}{\nu}\]
+\phtoku
+（1）\nobreak\ $\mathrm{Re}=\dfrac{0.6\times0.006}{4.6\times10^{-5}}=\dfrac{0.0036}{0.000046}\approx78$\par
+（2）\nobreak\ $\mathrm{Re}=\dfrac{5\times0.2}{1.5\times10^{-5}}=\dfrac{1}{0.000015}\approx\num{67000}$
+\phtashikame
+単位：$\dfrac{\text{m/s}\times\text{m}}{\text{m}^2/\text{s}}$ で単位なし。\\
+大きさ：（1）は2300よりずっと小さいので層流、（2）は4000よりずっと大きいので乱流。ねばりの大きい油の細い管は層流、空気の太いダクトは乱流、というのは⑦の話と合います。
+\kotae （1）Re 約78で層流、（2）Re 約\num{67000}で乱流
+\end{phreidai}
+\begin{jibun}
+内径\qty{10}{mm}の管を、平均の速さ\qty{0.15}{m/s}で水（$\nu=\qty{1.0e-6}{m^2/s}$）が流れています。Re を求め、層流か乱流かを答えましょう。
+\bkjans{$\mathrm{Re}=\dfrac{0.15\times0.010}{1.0\times10^{-6}}=1500$。2300より小さいので層流}
+\end{jibun}
+
+\begin{phreidai}[油圧の細い管の圧力損失]\label{ph:力-14:ex3}
+内径\qty{6}{mm}、長さ\qty{2}{m}の油圧の管に、作動油（VG46、\qty{40}{\celsius}：$\nu=\qty{4.6e-5}{m^2/s}$、密度\qty{870}{kg/m^3}）を毎分\qty{1}{L}流します。管の両はしの圧力の差を求めましょう。
+\phbamen
+ショベルカーなどの油圧の機械では、細い管で作動油を送ります。管で失われる圧力が大きいと、機械の力が弱くなります。
+\phmushi
+管はまっすぐで水平。入口の近くの流れのちがいは無視します。
+\phzu
+$d=\qty{0.006}{m}$（$R=\qty{0.003}{m}$）、$L=\qty{2}{m}$、$Q$、$\mu=\rho\nu$、圧力の差 $\Delta p$。
+\phriyu
+まず Re を確かめます。層流なら、ハーゲン・ポアズイユの式（⑧）がそのまま使えます。
+\phtateru
+\[Q=\frac{1\times10^{-3}}{60}=\qty{1.67e-5}{m^3/s},\qquad v=\frac{Q}{\pi R^2},\qquad\mathrm{Re}=\frac{vd}{\nu}\]
+\[\Delta p=\frac{8\mu LQ}{\pi R^4}\quad\text{（ハーゲン・ポアズイユの式を }\Delta p\text{ について解いた形）}\]
+\phtoku
+\[v=\frac{1.67\times10^{-5}}{3.14\times0.003^2}\approx\qty{0.59}{m/s},\qquad\mathrm{Re}=\frac{0.59\times0.006}{4.6\times10^{-5}}\approx77\quad\text{（層流）}\]
+\[\mu=870\times4.6\times10^{-5}\approx\qty{0.040}{Pa.s}\]
+\[\Delta p=\frac{8\times0.040\times2\times1.67\times10^{-5}}{3.14\times0.003^4}=\frac{1.07\times10^{-5}}{2.54\times10^{-10}}\]
+\[\Delta p\approx\qty{4.2e4}{Pa}=\qty{42}{kPa}\]
+\phtashikame
+単位：$\dfrac{\text{Pa·s}\times\text{m}\times\text{m}^3/\text{s}}{\text{m}^4}=\text{Pa}$。\\
+別の式で：$\lambda=\dfrac{64}{77}\approx0.83$ として
+\[\Delta p=0.83\times\frac{2}{0.006}\times\frac{870\times0.59^2}{2}\approx\qty{42}{kPa}\]
+同じ値になりました。\\
+大きさ：油圧の機械の圧力（数 MPa〜\qty{30}{MPa}）にくらべて小さく、管の太さは足りています。
+\kotae 約\qty{42}{kPa}（Re 約77の層流）
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex3}の管の長さを\qty{5}{m}にし、流量を毎分\qty{2}{L}にすると、圧力の差は何 kPa になりますか。層流のままであることも確かめましょう。
+\bkjans{Re は2倍の約150で層流。$\Delta p$ は $L$ と $Q$ に比例するので $42\times\dfrac{5}{2}\times2\approx\qty{210}{kPa}$}
+\end{jibun}
+
+\begin{phreidai}[細くなった血管]\label{ph:力-14:ex4}
+血管の内側に脂がたまり、半径が2割細くなりました（0.8倍）。（1）同じ圧力の差なら、流れる血液の量は何倍になりますか。（2）同じ量を流すには、圧力の差を何倍にする必要がありますか。
+\phbamen
+動脈硬化で血管が細くなると、心臓の負担がふえるといわれます。どれくらいかを見積もります。
+\phmushi
+血液をニュートン流体と考えます（本当は赤血球があるので、細い血管では少しちがう）。血管はまっすぐな円い管で、流れは層流とし、脈を打つことも無視します。
+\phzu
+はじめの半径 $R$、細くなった半径 $0.8R$、流量 $Q$、圧力の差 $\Delta p$。
+\phriyu
+層流の流量はハーゲン・ポアズイユの式で、$R^4$ に比例します。比だけを求めるので、ほかの数は消えます。
+\phtateru
+（1）流量の比は
+\[\frac{Q'}{Q}=\frac{(0.8R)^4}{R^4}=0.8^4\]
+（2）$Q$ を同じにするには、$\Delta p\times R^4$ が同じであればよいので
+\[\Delta p'\times(0.8R)^4=\Delta p\times R^4\]
+\phtoku
+（1）\nobreak\ $0.8^4=0.8\times0.8\times0.8\times0.8=0.4096\approx0.41$ 倍\par
+（2）\nobreak\ $\dfrac{\Delta p'}{\Delta p}=\dfrac{1}{0.4096}\approx2.4$ 倍
+\phtashikame
+極端な場合：半径をそのまま（1倍）にすると、どちらも1倍。半径が半分なら16分の1で、少し細くなるだけで大きく効く、という4乗の性質が出ています。
+\kotae （1）約0.41倍、（2）約2.4倍
+\end{phreidai}
+\begin{jibun}
+細い管の半径を1.5倍にすると、同じ圧力の差で流量は何倍になりますか（層流とします）。
+\bkjans{$1.5^4=5.0625$ で約5.1倍}
+\end{jibun}
+
+\begin{phreidai}[鋼管の管摩擦係数を、くり返して求める]\label{ph:力-14:ex5}
+内径\qty{100}{mm}の市販の鋼管（粗さ $\varepsilon=\qty{0.045}{mm}$）に、水を平均の速さ\qty{2}{m/s}で流します。コールブルックの式で $\lambda$ を求め、長さ\qty{100}{m}あたりの損失ヘッドを求めましょう（$\nu=\qty{1.0e-6}{m^2/s}$）。
+\phbamen
+工場の配管です。ざらざらした管なので、ブラジウスの式は使えません。
+\phmushi
+管はまっすぐで、粗さは管の内側全体で同じとします。
+\phzu
+$d=\qty{0.1}{m}$、$\dfrac{\varepsilon}{d}=\dfrac{0.045}{100}=0.00045$、$v=\qty{2}{m/s}$。
+\phriyu
+Re と $\dfrac{\varepsilon}{d}$ がわかれば、コールブルックの式で $\lambda$ が決まります。両辺に $\lambda$ があるので、$\lambda$ を仮に決めて右辺に入れ、出てきた値をまた入れる、をくり返します（2-13⑤）。
+\phtateru
+\[\mathrm{Re}=\frac{2\times0.1}{1.0\times10^{-6}}=\num{200000}\]
+\[\lambda_{\text{新}}=\left[-2\log_{10}\left(\frac{0.00045}{3.7}+\frac{2.51}{\mathrm{Re}\sqrt{\lambda}}\right)\right]^{-2}\]
+\phtoku
+Python で、はじめを $\lambda=0.02$ にしてくり返します。
+\begin{phcode}
+import math
+Re, ed, lam = 200000, 0.00045, 0.02
+for i in range(4):
+    x = ed/3.7 + 2.51/(Re*math.sqrt(lam))
+    lam = (-2*math.log10(x))**-2
+    print(i+1, round(lam, 5))
+\end{phcode}
+\begin{phcodeout}
+1 0.01849
+2 0.01856
+3 0.01856
+4 0.01856
+\end{phcodeout}
+2回めで、もう値が変わらなくなりました。$\lambda\approx0.0186$ です。
+\[h_f=0.0186\times\frac{100}{0.1}\times\frac{2^2}{2\times9.8}=0.0186\times1000\times0.204\approx\qty{3.8}{m}\]
+\phtashikame
+大きさ：ムーディ線図で Re＝$2\times10^5$、$\dfrac{\varepsilon}{d}$ が0.0001と0.001の間を読むと、約0.019。合っています。なめらかな管なら約0.0156なので、ざらざらの分だけ大きくなりました。\\
+単位：$h_f$ は m。100 m で約\qty{37}{kPa}の圧力が失われます。
+\kotae $\lambda$ 約0.0186、損失ヘッド約\qty{3.8}{m}（100 m あたり）
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex5}の管で、長さが\qty{250}{m}のとき、損失ヘッドを求めましょう（$\lambda=0.0186$）。
+\bkjans{$0.0186\times2500\times0.204\approx\qty{9.5}{m}$}
+\end{jibun}
+
+\begin{phreidai}[曲がりと弁のある管路]\label{ph:力-14:ex6}
+例題\ref{ph:力-14:ex5}の鋼管（$\lambda=0.0186$、内径\qty{0.1}{m}、長さ\qty{100}{m}、$v=\qty{2}{m/s}$）で、水そうAから水そうBへ水を流します。管路には、入口（$\zeta=0.5$）、90°の曲がり4つ（1つ $\zeta=0.6$）、全開の仕切弁（$\zeta=0.15$）、出口（$\zeta=1.0$）があります。2つの水そうの水面の高さの差は、何 m 必要ですか。
+\phbamen
+上のタンクから下のタンクへ、ポンプを使わずに水を落として送ります。高さの差が、損失をちょうどまかなう分だけあれば、この流量で流れます。
+\phmushi
+水そうの水面の速さは0（水そうが大きい）。$\lambda$ と $\zeta$ は一定とします。
+\phzu
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxotank{(0,10)}{16}{26}{22}
+  \fill[bkBlue!14] (94,0) rectangle (110,17); \draw[bkBlue!60, line width=0.6pt] (94,17) -- (110,17);
+  \draw[bkGray, line width=1pt] (94,22) -- (94,14) (94,11) -- (94,0) -- (110,0) -- (110,22);
+  \fill[bkBlue!14] (16,11) rectangle (94,14);
+  \draw[bkGray, line width=0.8pt] (16,11) -- (94,11) (16,14) -- (94,14);
+  \draw[bkGray, line width=0.5pt, densely dotted] (16,32) -- (120,32) (110,17) -- (120,17);
+  \draw[bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (118,17) -- (118,32);
+  \node[pxo lab, anchor=west] at (119,24.5) {$H$};
+  \node[pxo lab, anchor=south] at (8,36.5) {A};
+  \node[pxo lab, anchor=south] at (102,22.5) {B};
+  \node[pxo lab, anchor=north] at (55,10) {管路（入口・曲がり4つ・弁・出口）};
+\end{tikzpicture}
+\end{center}
+水面の高さの差 $H$。
+\phriyu
+損失のあるベルヌーイの式を、Aの水面からBの水面まで使います。どちらも大気圧で、速さは0なので、高さの差が損失の合計に等しくなります。
+\phtateru
+\[H=\left(\lambda\frac{L}{d}+\sum\zeta\right)\frac{v^2}{2g}\]
+\phtoku
+\[\sum\zeta=0.5+4\times0.6+0.15+1.0=4.05\]
+\[\lambda\frac{L}{d}=0.0186\times1000=18.6\]
+\[H=(18.6+4.05)\times\frac{2^2}{2\times9.8}=22.65\times0.204\approx\qty{4.6}{m}\]
+\phtashikame
+大きさ：まっすぐな管の分（約\qty{3.8}{m}）が大部分で、曲がりや弁の分は約2割です。長い管路では、まっすぐな部分の損失が主役になります。\\
+極端な場合：弁を玉形弁（$\zeta\approx6$）にかえると、$H\approx\qty{5.8}{m}$ に上がります。
+\kotae 約\qty{4.6}{m}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex6}の管路で、曲がりを2つに減らし（ほかは同じ）、長さを\qty{60}{m}にすると、必要な高さの差は何 m ですか。
+\bkjans{$\sum\zeta=0.5+1.2+0.15+1.0=2.85$、$\lambda\dfrac{L}{d}=11.16$。$H=14.01\times0.204\approx\qty{2.9}{m}$}
+\end{jibun}
+
+\begin{phreidai}[ポンプの所要動力]\label{ph:力-14:ex7}
+毎秒\qty{0.01}{m^3}の水を、全揚程\qty{30}{m}（持ち上げる高さと管の損失の合計）で送るポンプがあります。ポンプの効率を0.7とすると、ポンプを回すのに必要な動力は何 kW ですか。
+\phbamen
+ビルの屋上のタンクへ水をくみ上げるポンプです。モータの大きさを決めるために、動力を求めます。
+\phmushi
+水の密度は\qty{1000}{kg/m^3}。効率は一定とします。
+\phzu
+$Q=\qty{0.01}{m^3/s}$、$H=\qty{30}{m}$、$\eta=0.7$、動力 $P$。
+\phriyu
+水に与える仕事率は $\rho gQH$。効率でわれば、軸に要る動力です（⑩）。
+\phtateru
+\[P=\frac{\rho gQH}{\eta}\]
+\phtoku
+\[\rho gQH=1000\times9.8\times0.01\times30=\qty{2940}{W}\]
+\[P=\frac{2940}{0.7}=\qty{4200}{W}=\qty{4.2}{kW}\]
+\phtashikame
+単位：$\text{kg/m}^3\times\text{m/s}^2\times\text{m}^3/\text{s}\times\text{m}=\text{N·m/s}=\text{W}$。\\
+大きさ：家庭用のエアコン数台分。ビルの給水ポンプとしてありそうな値です。失われた\qty{1260}{W}は、熱や音になります。
+\kotae 約\qty{4.2}{kW}
+\end{phreidai}
+\begin{jibun}
+毎秒\qty{0.005}{m^3}の水を、全揚程\qty{40}{m}で送るポンプ（効率0.8）の所要動力を求めましょう。
+\bkjans{$\dfrac{1000\times9.8\times0.005\times40}{0.8}=\qty{2450}{W}\approx\qty{2.5}{kW}$}
+\end{jibun}
+
+\begin{phreidai}[ポンプの運転点]\label{ph:力-14:ex8}
+あるポンプの揚程は $H=40-0.1Q^2$（$H$ は m、$Q$ は L/s）です。このポンプで、高さ\qty{20}{m}のタンクへ水を送ります。管の損失は $0.05Q^2$（m）です。運転点の流量と揚程を求めましょう。
+\phbamen
+ポンプと管をつないだとき、実際に何 L/s 流れるかを知りたい場面です。
+\phmushi
+ポンプの性能と管の損失は、式のとおりとします。水そうの水面の高さは変わらないとします。
+\phzu
+図\ref{ph:力-14:fig-unten}の2つの曲線。
+\phriyu
+ポンプが与える高さ＝管が必要とする高さ（持ち上げる高さ＋損失）となる流量で動きます（⑤）。
+\phtateru
+\[40-0.1Q^2=20+0.05Q^2\]
+\phtoku
+\[0.15Q^2=20,\qquad Q^2=133.3,\qquad Q\approx\qty{11.5}{L/s}\]
+\[H=40-0.1\times133.3\approx\qty{26.7}{m}\]
+\phtashikame
+グラフで：図\ref{ph:力-14:fig-unten}の交点と同じ。\\
+極端な場合：管の損失が0なら、$40-0.1Q^2=20$ から $Q\approx\qty{14.1}{L/s}$。損失があると流量は減る、という向きも正しい。
+\kotae 約\qty{11.5}{L/s}、約\qty{26.7}{m}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex8}のポンプで、高さ\qty{25}{m}のタンクへ送ります（管の損失は同じ $0.05Q^2$）。運転点の流量と揚程を求めましょう。
+\bkjans{$0.15Q^2=15$、$Q=\qty{10}{L/s}$、$H=\qty{30}{m}$}
+\end{jibun}
+
+\begin{phreidai}[ポンプを置く高さと NPSH]\label{ph:力-14:ex9}
+\qty{20}{\celsius}の水を、水面より\qty{3}{m}上にあるポンプで吸い上げます。吸いこみの管の損失ヘッドは\qty{1}{m}です。大気圧を\qty{101.3}{kPa}、\qty{20}{\celsius}の水の飽和蒸気圧を\qty{2.3}{kPa}として、NPSH を求めましょう。ポンプの必要な NPSH が\qty{3}{m}なら、使えますか。
+\phbamen
+井戸や水そうからポンプで吸い上げる場面です。キャビテーションが起きないかを調べます。
+\phmushi
+吸いこみ口での速度ヘッドは、損失ヘッドにふくめて考えます。水の密度は\qty{1000}{kg/m^3}。
+\phzu
+図\ref{ph:力-14:fig-npsh}。$z_s=\qty{3}{m}$、$h_{fs}=\qty{1}{m}$、$p_a$、$p_v$（どちらも絶対圧）。
+\phriyu
+あわができない余裕は、⑪の NPSH の式で求めます。大気圧と蒸気圧は、絶対圧のまま使います。
+\phtateru
+\[\text{NPSH}=\frac{p_a-p_v}{\rho g}-z_s-h_{fs}\]
+\phtoku
+\[\frac{(101.3-2.3)\times10^3}{1000\times9.8}=\frac{\num{99000}}{9800}\approx\qty{10.1}{m}\]
+\[\text{NPSH}\approx10.1-3-1=\qty{6.1}{m}\]
+\phtashikame
+大きさ：大気圧で持ち上げられる約\qty{10}{m}から、置く高さと損失を引いた残り。必要な\qty{3}{m}より大きいので、使えます。\\
+極端な場合：ポンプを水面から\qty{9.1}{m}上に置くと NPSH が0になり、水がわき立って吸い上げられません。
+\kotae 約\qty{6.1}{m}。必要な\qty{3}{m}より大きいので、使える
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex9}で、ポンプを水面より\qty{5}{m}上に置き、吸いこみの損失ヘッドが\qty{1.5}{m}になりました。NPSH を求め、必要な NPSH が\qty{3}{m}のポンプが使えるかを答えましょう。
+\bkjans{$10.1-5-1.5=\qty{3.6}{m}$。\qty{3}{m}より大きいので使えるが、余裕は少ない}
+\end{jibun}
+
+\begin{phreidai}[弁を急に閉めたときの圧力]\label{ph:力-14:ex10}
+鋼管の中を、水が\qty{2}{m/s}で流れています。弁を一瞬で閉めると、圧力はどれだけ上がりますか。圧力の波の速さは\qty{1200}{m/s}とします。
+\phbamen
+工場の配管で、弁を急に閉めた場面です。配管がこわれないかを確かめます。
+\phmushi
+弁は一瞬で閉まり、波がもどってくる前の、いちばん大きな圧力を考えます。管の損失は無視します。
+\phzu
+図\ref{ph:力-14:fig-suigeki}。$\rho=\qty{1000}{kg/m^3}$、$a=\qty{1200}{m/s}$、$\Delta v=\qty{2}{m/s}$。
+\phriyu
+止まった部分の運動量の変化と、圧力の力積のつり合い（⑫）から、ジューコフスキーの式を使います。
+\phtateru
+\[\Delta p=\rho a\Delta v\]
+\phtoku
+\[\Delta p=1000\times1200\times2=\num{2400000}\,\text{Pa}=\qty{2.4}{MPa}\]
+\phtashikame
+単位：$\text{kg/m}^3\times\text{m/s}\times\text{m/s}=\text{N/m}^2=\text{Pa}$。\\
+大きさ：約24気圧。水道の圧力（約0.2 MPa）の10倍以上で、配管や継ぎ目をこわすこともある大きさです。だから、長い管の弁はゆっくり閉めます。
+\kotae 約\qty{2.4}{MPa}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex10}の管で、流れの速さを\qty{0.5}{m/s}にしておけば、弁を一瞬で閉めたときの圧力の上がりは何 MPa になりますか。
+\bkjans{$1000\times1200\times0.5=\qty{0.6}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[ホースの先をつまむと、遠くへ飛ぶのはなぜ？]\label{ph:力-14:ex11}
+蛇口の手前の水道の圧力を\qty{200}{kPa}（ゲージ圧）とします。蛇口とホースの損失をまとめて、ホースの中の速さ $v_h$ に対する損失係数 $K=30$ で表します（損失ヘッド $K\dfrac{v_h^2}{2g}$）。（1）ホースの先をそのまま、（2）ホースの先をつまんで出口の面積を9分の1にしたとき、出口の速さと、真上に向けたときにとどく高さの見当を求めましょう。
+\phbamen
+力-13 では、「つまむと出口が細くなって速くなる」と考えました。でも、つまむと流量も減ります。本当に速くなるのかを、損失まで入れて調べます。
+\phmushi
+空気の抵抗と、水のつぶに分かれることを無視します。$K$ は流量によらず一定とします（本当は Re で少し変わる）。水の密度は\qty{1000}{kg/m^3}。
+\phzu
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxofaucet{(14,8)}
+  \fill[bkBlue!14] (14,3) -- (14,8) -- (80,8) -- (80,3) -- cycle;
+  \draw[bkGreen!70!black, line width=1.4pt] (14,3) -- (80,3) (14,8) -- (80,8);
+  \draw[bkGreen!70!black, line width=1.4pt] (80,8) -- (88,6.3) (80,3) -- (88,4.7);
+  \draw[pxo arr, bkBlue!80!black] (89,5.5) -- (104,5.5);
+  \node[pxo lab, anchor=south] at (47,9) {ホースの中の速さ $v_h$};
+  \node[pxo lab, anchor=west] at (105,5.5) {$v_e$};
+  \node[pxo lab, anchor=north] at (84,1.5) {つまんだ所};
+  \node[pxo lab, anchor=south] at (2,14) {\qty{200}{kPa}};
+\end{tikzpicture}
+\end{center}
+ホースの中の速さ $v_h$、出口の速さ $v_e$。（2）では、流量が同じなので $v_e=9v_h$。
+\phriyu
+蛇口の手前（圧力 $p_0$、速さはほぼ0）から出口（大気圧）まで、損失のあるベルヌーイの式を使います。損失はホースの中の速さで決まるので、出口の速さと区別します。
+\phtateru
+\[\frac{p_0}{\rho}=\frac{v_e^2}{2}+K\frac{v_h^2}{2}\]
+（1）\nobreak\ $v_e=v_h$\qquad（2）\nobreak\ $v_e=9v_h$
+\phtoku
+（1）\nobreak\ $\dfrac{\num{200000}}{1000}=\dfrac{v_h^2}{2}(1+30)$ から $v_h^2=\dfrac{400}{31}\approx12.9$、$v_e=v_h\approx\qty{3.6}{m/s}$。高さ $\dfrac{v_e^2}{2g}=\dfrac{12.9}{19.6}\approx\qty{0.66}{m}$\par
+（2）\nobreak\ $200=\dfrac{v_h^2}{2}(81+30)$ から $v_h^2=\dfrac{400}{111}\approx3.60$、$v_h\approx\qty{1.9}{m/s}$、$v_e=9\times1.9\approx\qty{17}{m/s}$。高さ $\dfrac{17.1^2}{19.6}\approx\qty{15}{m}$\par
+流量は、ホースの中の速さの比で $\dfrac{1.9}{3.6}\approx0.53$ 倍に減ります。
+\phtashikame
+極端な場合：損失がない（$K=0$）なら、つまんでもつままなくても $v_e=\sqrt{2\times200}=\qty{20}{m/s}$ で、つまむ意味はありません。つまむと遠くへ飛ぶのは、流量が減って、ホースの中の損失 $K\dfrac{v_h^2}{2}$ が小さくなり、残ったエネルギーが出口の速さになるからです。\\
+大きさ：（2）の\qty{15}{m}は空気の抵抗を無視した見当で、本当はもっと低くなります。
+\kotae （1）約\qty{3.6}{m/s}、約\qty{0.66}{m}、（2）約\qty{17}{m/s}、約\qty{15}{m}（流量は約半分）
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex11}で、出口の面積を4分の1にしたとき（$v_e=4v_h$）の、出口の速さを求めましょう。
+\bkjans{$200=\dfrac{v_h^2}{2}(16+30)$ から $v_h\approx\qty{2.95}{m/s}$、$v_e\approx\qty{11.8}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[やってみようのホースを、モデルで説明する]\label{ph:力-14:ex12}
+やってみようでは、\qty{2}{m}のホースで\qty{10}{L}たまるのに\qty{19}{s}、\qty{20}{m}のホースで\qty{26}{s}かかりました。蛇口の手前の圧力を\qty{150}{kPa}（ゲージ圧）、ホースの内径を\qty{15}{mm}、$\lambda=0.022$ として、（1）\qty{2}{m}の結果から蛇口の損失係数 $\zeta$ を求め、（2）その $\zeta$ を使って\qty{20}{m}のときの時間を予想しましょう。
+\phbamen
+はかった結果を、モデルで説明できるかを確かめます。わからない数（蛇口の $\zeta$）を1つの実験で決め、もう1つの実験を予想して比べるのは、工学でよく使う方法です。
+\phmushi
+ホースはまっすぐで、高さは同じ。$\lambda$ は一定。蛇口の手前の圧力は、流量によらず一定とします。水の密度は\qty{1000}{kg/m^3}。
+\phzu
+ホースの速さ $v$、断面積 $A=\dfrac{\pi\times0.015^2}{4}=\qty{1.77e-4}{m^2}$、蛇口の $\zeta$、出口の $\zeta=1$（出た水の速さの分）。
+\phriyu
+損失のあるベルヌーイの式で、蛇口の手前から出口まで考えます。圧力が全部、損失と出口の速さに使われます。
+\phtateru
+\[\frac{p_0}{\rho}=\left(1+\zeta+\lambda\frac{L}{d}\right)\frac{v^2}{2},\qquad v=\frac{Q}{A}\]
+\phtoku
+（1）\nobreak\ $Q=\dfrac{0.010}{19}=\qty{5.26e-4}{m^3/s}$、$v=\dfrac{5.26\times10^{-4}}{1.77\times10^{-4}}\approx\qty{2.98}{m/s}$\par
+\[1+\zeta+0.022\times\frac{2}{0.015}=\frac{2\times150}{2.98^2}\approx33.8\qquad\zeta\approx33.8-1-2.9\approx30\]
+（2）\nobreak\ $\lambda\dfrac{L}{d}=0.022\times\dfrac{20}{0.015}\approx29.3$。$v^2=\dfrac{2\times150}{1+30+29.3}\approx4.98$、$v\approx\qty{2.23}{m/s}$\par
+$Q=2.23\times1.77\times10^{-4}\approx\qty{3.95e-4}{m^3/s}$、時間 $\dfrac{0.010}{3.95\times10^{-4}}\approx\qty{25}{s}$
+\phtashikame
+大きさ：はかった\qty{26}{s}に近い予想ができました。少しのずれは、$\lambda$ を一定にしたこと（本当は速さが落ちると $\lambda$ が少し大きくなる）などのためです。\\
+わかったこと：蛇口の損失（$\zeta\approx30$）は、\qty{20}{m}のホースの損失（約29）と同じくらい大きい。だから、長さを10倍にしても流量は10分の1にならなかったのです。
+\kotae （1）$\zeta$ 約30、（2）約\qty{25}{s}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex12}のモデル（$\zeta=30$、$\lambda=0.022$、\qty{150}{kPa}、内径\qty{15}{mm}）で、ホースの長さが\qty{10}{m}のとき、\qty{10}{L}たまる時間を予想しましょう。
+\bkjans{$\lambda\dfrac{L}{d}\approx14.7$。$v^2=\dfrac{300}{45.7}\approx6.56$、$v\approx\qty{2.56}{m/s}$。$Q\approx\qty{4.53e-4}{m^3/s}$、約\qty{22}{s}}
+\end{jibun}
+
+\begin{phreidai}[油の膜の上をすべる板が止まるまで]\label{ph:力-14:ex13}
+質量\qty{2}{kg}、面積\qty{0.1}{m^2}の板が、厚さ\qty{0.5}{mm}の油の膜（粘度\qty{0.04}{Pa.s}）の上を、はじめ\qty{1}{m/s}ですべっています。油の粘性の力だけを受けるとき、板が止まるまでにすべる距離を求めましょう。
+\phbamen
+工作機械の台は、油の膜の上をすべります。押すのをやめたとき、どこまですべるかを知りたい場面です。
+\phmushi
+油の膜の厚さは一定で、油の中の速さは直線の分布（②の図）とします。空気の抵抗とほかの摩擦は無視します。
+\phzu
+板の速さ $v$、すべった距離 $x$、油の厚さ $h$、面積 $A$。粘性の力は $f=\tau A=\mu\dfrac{v}{h}A$ で、動きと逆向き。$b=\dfrac{\mu A}{h}$ とおくと $f=bv$（力-2 の、速さに比例する抵抗と同じ形）。
+\phriyu
+運動方程式を立てます。知りたいのは時間でなく距離なので、$\dfrac{\dd v}{\dd t}=\dfrac{\dd v}{\dd x}\dfrac{\dd x}{\dd t}=v\dfrac{\dd v}{\dd x}$（5-6 の合成関数の微分）を使って、$x$ の式にします。
+\phtateru
+\[m\frac{\dd v}{\dd t}=-bv\qquad\text{より}\qquad mv\frac{\dd v}{\dd x}=-bv\]
+両辺を $v$ でわって
+\[m\frac{\dd v}{\dd x}=-b\]
+\phtoku
+$\dfrac{\dd v}{\dd x}=-\dfrac{b}{m}$ は一定なので、$v$ は $x$ の1次関数で、$v=v_0-\dfrac{b}{m}x$（6-3）。$v=0$ になる所は $x=\dfrac{mv_0}{b}$。
+\[b=\frac{0.04\times0.1}{0.0005}=\qty{8}{N.s/m},\qquad x=\frac{2\times1}{8}=\qty{0.25}{m}\]
+\phtashikame
+単位：$\dfrac{\text{kg}\times\text{m/s}}{\text{N·s/m}}=\dfrac{\text{kg·m/s}}{\text{kg/s}}=\text{m}$。\\
+極端な場合：油の膜を厚くすると $b$ が小さくなり、遠くまですべる。粘度を0にすると、どこまでもすべる（止まらない）。どちらも正しい向きです。\\
+注意：速さは時間がたつほどゆっくり減っていき、止まるまでの時間は数学の上では限りなく長くなります（6-4）。でも、すべる距離は有限の\qty{0.25}{m}です。
+\kotae 約\qty{0.25}{m}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex13}で、油の膜の厚さを\qty{1.0}{mm}にすると、板はどこまですべりますか。
+\bkjans{$b=\dfrac{0.04\times0.1}{0.001}=\qty{4}{N.s/m}$、$x=\dfrac{2\times1}{4}=\qty{0.5}{m}$}
+\end{jibun}
+
+\begin{phreidai}[枝分かれした2本の管に、水はどう分かれる？]\label{ph:力-14:ex14}
+点Pで枝分かれして、点Qでまた合流する2本の管があります。管Aは内径\qty{50}{mm}・長さ\qty{100}{m}、管Bは内径\qty{25}{mm}・長さ\qty{100}{m}です。PからQへ全部で毎秒\qty{4}{L}の水を流すとき、それぞれの管に何 L/s ずつ流れますか。どちらの管も $\lambda=0.020$ とし、曲がりなどの損失は無視します。
+\phbamen
+工場やビルの配管は、枝分かれしてまた合流することがよくあります。水は、流れやすい管に多く流れます。どれだけ流れるかを求めます。
+\phmushi
+$\lambda$ は2本とも一定（本当は Re で少し変わる）。点P・Qでの曲がりの損失と、管の高さの差は無視します。
+\phzu
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=3.2pt] (0,0) -- (14,0);
+  \draw[bkGray, line width=3.2pt] (14,0) -- (22,8) -- (76,8) -- (84,0);
+  \draw[bkGray, line width=1.6pt] (14,0) -- (22,-8) -- (76,-8) -- (84,0);
+  \draw[bkGray, line width=3.2pt] (84,0) -- (98,0);
+  \fill[bkInk] (14,0) circle (1.1) (84,0) circle (1.1);
+  \node[pxo lab, anchor=south] at (12,2) {P};
+  \node[pxo lab, anchor=south] at (86,2) {Q};
+  \node[pxo lab, anchor=south] at (49,10) {管A（内径 50 mm、100 m）};
+  \node[pxo lab, anchor=north] at (49,-10) {管B（内径 25 mm、100 m）};
+  \draw[pxo arr, bkBlue!80!black] (0,4) -- (10,4);
+  \node[pxo lab, anchor=south] at (5,5) {\qty{4}{L/s}};
+\end{tikzpicture}
+\end{center}
+管Aの速さ $v_A$、管Bの速さ $v_B$、断面積 $A_A$、$A_B$。
+\phriyu
+P と Q の圧力の差は、どちらの管を通っても同じです。だから、2本の管の損失ヘッドは等しくなります。これと、流量の合計（連続の式。力-13）の2つの式を連立させます（3-6）。電気の回路で、並列につないだ抵抗の電圧が等しいのと同じ考え方です。
+\phtateru
+\[\lambda\frac{L_A}{d_A}\frac{v_A^2}{2g}=\lambda\frac{L_B}{d_B}\frac{v_B^2}{2g},\qquad A_Av_A+A_Bv_B=\qty{0.004}{m^3/s}\]
+\phtoku
+$\dfrac{L_A}{d_A}=\dfrac{100}{0.05}=2000$、$\dfrac{L_B}{d_B}=\dfrac{100}{0.025}=4000$ なので、1つめの式から
+\[2000\,v_A^2=4000\,v_B^2\qquad\text{より}\qquad v_A=\sqrt2\,v_B\approx1.41v_B\]
+$A_A=\dfrac{3.14\times0.05^2}{4}\approx\qty{1.96e-3}{m^2}$、$A_B\approx\qty{4.91e-4}{m^2}$ を2つめの式に入れて
+\[(1.41\times1.96\times10^{-3}+4.91\times10^{-4})\,v_B=0.004\]
+\[v_B\approx\qty{1.22}{m/s},\qquad v_A\approx\qty{1.73}{m/s}\]
+流量は
+\[Q_A=1.96\times10^{-3}\times1.73\approx\qty{3.4}{L/s}\]
+\[Q_B=4.91\times10^{-4}\times1.22\approx\qty{0.6}{L/s}\]
+\phtashikame
+確かめ：$Q_A+Q_B=\qty{4.0}{L/s}$。損失ヘッドは
+\[\text{管A}：0.02\times2000\times\frac{1.73^2}{19.6}\approx\qty{6.1}{m}\]
+\[\text{管B}：0.02\times4000\times\frac{1.22^2}{19.6}\approx\qty{6.1}{m}\]
+で等しい。\\
+大きさ：断面積は4分の1なのに、流量は約6分の1。細い管は流れにくいうえ、速さも小さくなるからです。\\
+極端な場合：管Bを閉じれば、全部の\qty{4}{L/s}が管Aを流れる。
+\kotae 管A 約\qty{3.4}{L/s}、管B 約\qty{0.6}{L/s}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-14:ex14}で、管Bの長さを\qty{50}{m}にすると（ほかは同じ）、それぞれの管に何 L/s 流れますか。
+\bkjans{$\dfrac{L}{d}$ が2本とも2000で $v_A=v_B$。流量は断面積の比 $4:1$ で、管A \qty{3.2}{L/s}、管B \qty{0.8}{L/s}}
+\end{jibun}
+
+%% ======================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{Re の長さに、半径を入れる}
+\bkng{内径\qty{20}{mm}の管で、$\mathrm{Re}=\dfrac{v\times0.010}{\nu}$ と計算した。}
+\bkok{円い管の Re は内径（直径）$d$ で計算する。$\mathrm{Re}=\dfrac{v\times0.020}{\nu}$。}
+半径で計算すると Re が半分になり、乱流なのに層流と判断してしまいます。2300の目安は、直径で計算した Re の値です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{動粘度の単位を直し忘れる}
+\bkng{水の動粘度を「1.0」として、$\mathrm{Re}=\dfrac{1\times0.02}{1.0}=0.02$（層流）とした。}
+\bkok{表の1.0は mm$^2$/s。$\qty{1.0}{mm^2/s}=\qty{1.0e-6}{m^2/s}$ に直して、$\mathrm{Re}=\num{20000}$（乱流）。}
+$\qty{1}{mm^2}=(\qty{e-3}{m})^2=\qty{e-6}{m^2}$ です。面積の換算は、長さの換算の2乗です（2-10）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{乱流に $\lambda=\dfrac{64}{\mathrm{Re}}$ を使う}
+\bkng{Re＝\num{20000}だから、$\lambda=\dfrac{64}{20000}=0.0032$。}
+\bkok{$\dfrac{64}{\mathrm{Re}}$ は層流（Re が約2300より小さい）だけ。乱流はブラジウスの式かムーディ線図で、約0.026。}
+$\dfrac{64}{\mathrm{Re}}$ は、層流の放物線の分布から導いた式です。乱流では、うずが運ぶ分だけ、損失がずっと大きくなります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{NPSH にゲージ圧を入れる}
+\bkng{大気圧はゲージ圧で0なので、$\text{NPSH}=\dfrac{0-p_v}{\rho g}-z_s-h_{fs}$ はマイナス。}
+\bkok{NPSH は絶対圧で計算する。$\dfrac{101.3-2.3}{9.8}\approx\qty{10.1}{m}$ から引く。}
+飽和蒸気圧は絶対圧の値です。ゲージ圧と絶対圧をまぜて使うと、まちがえます（力-12）。
+\end{tsumazuki}
+
+%% ======================================================================
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[配管の太さを決める]
+工場やビルの配管では、流量が決まっているとき、管の太さを選びます。細い管は安く作れますが、流速が大きくなり、損失（ポンプの電気代）と水撃がふえます。太い管は損失が小さいけれど、管そのものが高くなります。そこで、流速の目安を決めて太さを選び、損失とポンプの動力を確かめます。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=54mm, xmin=0, xmax=210, ymin=0, ymax=105, xtick={50,100,150,200}, ytick={0,20,40,60,80,100},
+  xlabel={内径（mm）}, ylabel={費用（目安）}]
+  \addplot[bkcurve, domain=40:200] {0.30*x};
+  \addplot[bkcurve2, domain=57:200, samples=120] {6.3*(100/x)^4.75};
+  \addplot[bkRed, line width=1.4pt, domain=62:200, samples=120] {0.30*x+6.3*(100/x)^4.75};
+  \node[pxo lab, anchor=north west, text=bkBlue!80!black] at (axis cs:150,40) {管の値段};
+  \node[pxo lab, anchor=west, text=bkOrange!80!black] at (axis cs:64,96) {電気代（損失）};
+  \node[pxo lab, anchor=west, text=bkRed!80!black] at (axis cs:160,62) {合計};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\noindent 合計がいちばん小さくなる太さが、いちばん経済的な太さです（グラフの形は考え方を示すための目安）。損失は内径の約5乗に反比例するので、細すぎると急に高くなります（④）。
+\begin{phketa}[管の流れ]
+\phketaline{水（\qty{20}{\celsius}）の動粘度}{約\qty{1.0e-6}{m^2/s}}
+\phketaline{空気（\qty{20}{\celsius}）の動粘度}{約\qty{1.5e-5}{m^2/s}}
+\phketaline{水道管・工場の配管の流速の目安}{約\qtyrange{1}{3}{m/s}}
+\phketaline{ふつうの管の管摩擦係数}{約0.01〜0.05}
+\phketaline{鋼管の中の水撃の波の速さ}{約\qtyrange{1000}{1300}{m/s}}
+\phboxhead{答えが桁で合っているか}
+水道や工場の配管なら、Re は $10^4$〜$10^6$ で乱流、$\lambda$ は0.01〜0.05です。計算した $\lambda$ がこの外にあれば、単位の換算（mm と m、mm$^2$/s と m$^2$/s）を見直そう。
+\end{phketa}
+\phboxhead{水撃を防ぐくふう}
+弁をゆっくり閉める・逆止弁の閉まり方をくふうする・管の途中に空気の入った部屋（エアチャンバ）をつけて圧力の波を吸収する、などの方法があります。高い所にある発電所の水路では、「サージタンク」という大きな水そうで圧力の変化をやわらげます。
+\end{phkougaku}
+\phstation{配管設計,ポンプの選定,流体機械,伝熱工学}{管摩擦係数、損失ヘッド、ムーディ線図、運転点、NPSH、キャビテーション、水撃}
+
+\begin{senmonsho}[配管の損失の書き方]
+\begin{bkhonbun}
+十分に発達した円管内流れの圧力損失は $\Delta p=\lambda\dfrac{L}{d}\dfrac{\rho\bar u^2}{2}$ で与えられる。層流では $\lambda=64/\mathrm{Re}$ であり、乱流では $\lambda$ は $\mathrm{Re}$ と相対粗さ $\varepsilon/d$ の関数として Colebrook の式またはムーディ線図から求める。管継手および弁による局所損失は $\zeta\bar u^2/2g$ として加算する。
+\end{bkhonbun}
+\bkyaku{「十分に発達した」は、入口から十分はなれた所（⑧）。$\bar u$（ユーバー）は平均の速さで、この章の $v$。「局所損失」は曲がりや弁の損失（⑨）。}
+\end{senmonsho}
+
+%% ======================================================================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 内径\qty{25}{mm}の管を、水（$\nu=\qty{1.0e-6}{m^2/s}$）が平均の速さ\qty{0.8}{m/s}で流れています。Re を求め、層流か乱流かを答えましょう。
+\bkpans{$\mathrm{Re}=\dfrac{0.8\times0.025}{1.0\times10^{-6}}=\num{20000}$。乱流}
+
+\bkproblem 内径\qty{20}{mm}、長さ\qty{50}{m}のなめらかな水道管に、毎分\qty{20}{L}の水を流します（速さ約\qty{1.06}{m/s}、Re 約\num{21000}）。ブラジウスの式で $\lambda$ を求め、損失ヘッドを求めましょう。
+\bkpans{$\lambda=\dfrac{0.3164}{12.1}\approx0.026$。$h_f=0.026\times2500\times0.0574\approx\qty{3.7}{m}$}
+
+\bkproblem 内径\qty{4}{mm}、長さ\qty{1}{m}の細い管に、粘度\qty{0.05}{Pa.s}の油を流します。管の両はしの圧力の差が\qty{20}{kPa}のとき、流量は毎分何 mL ですか（層流とします）。
+\bkpans{$R=\qty{0.002}{m}$ をハーゲン・ポアズイユの式に入れて、$Q\approx\qty{2.51e-6}{m^3/s}$。毎分約\qty{151}{mL}}
+
+\bkproblem 毎秒\qty{0.02}{m^3}の水を、全揚程\qty{25}{m}で送るポンプ（効率0.75）の所要動力を求めましょう。
+\bkpans{$\dfrac{1000\times9.8\times0.02\times25}{0.75}\approx\qty{6.5}{kW}$}
+
+\bkproblem 水が\qty{1.5}{m/s}で流れている鋼管（波の速さ\qty{1200}{m/s}）の弁を一瞬で閉めました。圧力の上がりは何 MPa ですか。
+\bkpans{$1000\times1200\times1.5=\qty{1.8}{MPa}$}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 例題\ref{ph:力-14:ex6}の管路（$\lambda=0.0186$、$L=\qty{100}{m}$、$d=\qty{0.1}{m}$、$\sum\zeta=4.05$）で、水面の高さの差が\qty{10}{m}あるとき、流速と流量を求めましょう（$\lambda$ は変わらないとします）。
+\bkpans{$10=22.65\times\dfrac{v^2}{19.6}$ から $v\approx\qty{2.94}{m/s}$。$Q=2.94\times0.00785\approx\qty{0.023}{m^3/s}$}
+
+\bkproblem ポンプの揚程が $H=50-0.2Q^2$、管路が $H=30+0.05Q^2$（$H$ は m、$Q$ は L/s）のとき、運転点を求め、効率0.7としてポンプの所要動力を求めましょう。
+\bkpans{$0.25Q^2=20$、$Q\approx\qty{8.9}{L/s}$、$H=\qty{34}{m}$。$P=\dfrac{\rho gQH}{0.7}$、約\qty{4.3}{kW}}
+
+\bkproblem 半径を1.2倍にした管に、同じ流量の油を層流で流します。必要な圧力の差は、もとの何倍ですか。
+\bkpans{$\dfrac{1}{1.2^4}=\dfrac{1}{2.0736}\approx0.48$ 倍}
+
+\phnyushi
+\bkproblem なめらかな水平面の上で、質量 $m$ の物体を、水平に速さ $v_0$ で打ち出しました。物体は、速さに比例する抵抗力 $bv$（$b$ は正の定数）を受けます。（1）物体の速さが $\dfrac{v_0}{2}$ になるまでに進んだ距離を求めましょう。（2）物体が進むことのできる距離は、ある値をこえません。その値を求めましょう。
+\bkpans{（1）\nobreak $m\dfrac{\dd v}{\dd x}=-b$ より $v=v_0-\dfrac{b}{m}x$。$\dfrac{v_0}{2}$ になるのは $x=\dfrac{mv_0}{2b}$。（2）\nobreak $\dfrac{mv_0}{b}$}
+
+\Needspace{16\baselineskip}
+\begin{furikaeri}
+\begin{checklist}
+\item レイノルズ数を計算して、管の流れが層流か乱流かを見分けられる。\bkfurref{ph:力-14:sec7}
+\item 管摩擦係数と損失係数から、管の圧力損失とポンプの動力を求められる。\bkfurref{ph:力-14:sec9}
+\item 流体の力のつり合いから、ハーゲン・ポアズイユの式を導ける。\bkfurref{ph:力-14:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{長いホースで勢いが弱いのは、水のねばりで、エネルギーが少しずつ熱になっていたからなんだね。}

@@ -1,0 +1,609 @@
+%% 1-15 あまりの ある わり算（10ページ、p.150〜159）
+%% 第1巻のきまり：15 pt・行送り28 pt、分かち書き（文節の間に半角の空白）、漢字はすべてルビ、式は全角の ÷ × ＋ ＝ で書く
+
+%% ---------------- この章だけの絵の部品（\bkqn…） ----------------
+\makeatletter
+% 曜日の字（0:日 1:月 2:火 3:水 4:木 5:金 6:土）
+\def\bkqnwd#1{\ifcase#1 \R{日}{にち}\or\R{月}{げつ}\or\R{火}{か}\or\R{水}{すい}\or\R{木}{もく}\or\R{金}{きん}\or\R{土}{ど}\fi}
+% おさらに 同じ数ずつ のせた おはじきと、のこり  \bkqnplates{(x,y)}{さらの数}{1さらの数}{のこり}{色}
+%   さらの間は24 mm。のこりは さらの右に ならべる
+\newcommand\bkqnplates[5]{\begin{scope}[shift={#1}]
+  \foreach \i in {1,...,#2} {
+    \bkplate{({(\i-1)*24+11},0)}{22}
+    \foreach \j in {1,...,#3} {\bkohajiki{({(\i-1)*24+11+(\j-(#3+1)/2)*5.4},0.9)}{2.3}{#5}}}
+  \ifnum#4>0 \foreach \j in {1,...,#4} {\bkohajiki{({#2*24+2+\j*5.6},0.9)}{2.3}{bkRoute4}}\fi
+\end{scope}}
+% 長いすに すわった 人  \bkqnbench{(x,y)}{すわっている人数(0〜4)}{色}   はば15 mm
+\newcommand\bkqnbench[3]{\begin{scope}[shift={#1}]
+  \fill[bkStem!80] (1.2,0) rectangle (2.4,3.2) (12.6,0) rectangle (13.8,3.2);
+  \ifnum#2>0 \foreach \k in {1,...,#2} {
+    \fill[#3, rounded corners=0.8mm] ({\k*3.6-2.95},4.4) rectangle ++(2.9,4.6);
+    \fill[#3] ({\k*3.6-1.5},10.6) circle (1.35);}\fi
+  \fill[bkStem!65, rounded corners=0.5mm] (0,3) rectangle (15,4.6);
+\end{scope}}
+% 曜日の わ  \bkqnring{(x,y)}{半径}{きょうの曜日(0〜6)}{すすむ日数(-1で矢印なし)}{色}
+\newcommand\bkqnring[5]{\begin{scope}[shift={#1}]
+  \draw[#5!30, line width=3.2pt] (0,0) circle (#2);
+  \ifnum#4>0 \foreach \k in {1,...,#4} {
+    \pgfmathsetmacro\bkqn@a{90-360*(\k-1)/7-10}\pgfmathsetmacro\bkqn@b{90-360*\k/7+10}
+    \draw[#5, line width=1.4pt, -{Stealth[length=4.5pt]}] (\bkqn@a:#2+4.8) arc (\bkqn@a:\bkqn@b:#2+4.8);}\fi
+  \foreach \k in {0,...,6} {
+    \pgfmathtruncatemacro\bkqn@d{mod(#3+\k,7)}\pgfmathsetmacro\bkqn@a{90-360*\k/7}
+    \ifnum\k=#4\relax
+      \node[circle, draw=#5, line width=1.4pt, fill=#5!25, minimum size=7.6mm, inner sep=0pt, font=\sffamily\bfseries\small] at (\bkqn@a:#2) {\bkqnwd{\bkqn@d}};
+    \else
+      \node[circle, draw=bkInk!55, line width=0.7pt, fill=white, minimum size=7.6mm, inner sep=0pt, font=\sffamily\bfseries\small] at (\bkqn@a:#2) {\bkqnwd{\bkqn@d}};
+    \fi}
+  \draw[bkTheme, line width=1.4pt] (90:#2) circle (4);
+  \node[anchor=east, fill=bkTheme, text=white, rounded corners=1mm, font=\sffamily\bfseries\fontsize{9}{10}\selectfont, inner sep=1.5pt] at (-4.6,#2+3.4) {きょう};
+\end{scope}}
+% かんがえかたの 2行めを、 1行めの 書きだしに そろえる 字下げ
+\newcommand\bkqnkindent{\setbox0=\hbox{\tikz\node[font=\sffamily\bfseries\small, inner xsep=5pt, inner ysep=2.5pt]{かんがえかた};}\hspace*{\dimexpr\wd0+0.6\zw\relax}}
+% かきこみの 線（しき・たしかめ）  \bkqnline{ラベル}
+\newcommand\bkqnline[1]{\par\vspace{2pt}\noindent
+  \begin{tikzpicture}
+    \path[use as bounding box] (0,-0.55) rectangle (\linewidth,0.4);
+    \node[anchor=west, fill=bkOrange, text=white, rounded corners=1.2mm, font=\sffamily\bfseries\small,
+      inner xsep=5pt, inner ysep=2.5pt] (s) at (0,0) {#1};
+    \coordinate (e) at (\linewidth,0);
+    \draw[bkLine, line width=0.6pt, dash pattern=on 2pt off 2pt] ([xshift=2mm]s.south east) -- (s.south east -| e);
+  \end{tikzpicture}\par}
+% 大きな しき（よみかたは 下に）  \bkqnbig{しき}{よみかた}
+\newcommand\bkqnbig[2]{\par\addvspace{4pt}\noindent\hspace*{\fill}%
+  \tikz[baseline=(s.base)]{\node[draw=bkTheme, line width=1.2pt, fill=white, rounded corners=3mm,
+    inner xsep=6mm, inner ysep=1.6mm, font=\fontsize{24}{28}\selectfont] (s) {#1};
+   \node[anchor=north, font=\small, text=bkGray, inner sep=0pt] at ([yshift=-1.6mm]s.south) {#2};}\hspace*{\fill}\par\addvspace{5pt}}
+\makeatother
+
+\bkchapter{1}{15}{あまりの ある わり\R{算}{ざん}}{\bklevel{1}}{あまりの ある わりざん}
+\bkmichishirube{1-10,1-13,1-14}{1-20,2-3,4-8}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item あまりの ある わり\R{算}{ざん}が できる。
+\item わり\R{算}{ざん}の こたえを たしかめられる。
+\item くり\R{返}{かえ}す ものを、 わり\R{算}{ざん}で しらべられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：きょうの カレンダー
+  \fill[white, rounded corners=3mm] (0,0) rectangle (48,54);
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkTheme] at (24,53.5) {きょう：\mbox{\R{月曜日}{げつ|よう|び}}};
+  \filldraw[fill=white, draw=bkInk!55, line width=0.8pt] (4,3) rectangle (44,41);
+  \fill[bkTheme!85] (4,35.5) rectangle (44,41);
+  \foreach \x in {12,36} {\draw[bkInk!70, line width=1.4pt, line cap=round] (\x,38) -- (\x,43.5);}
+  \foreach \c [count=\i from 0] in {1,2,3,4,5,6,0} {
+    \node[font=\sffamily\bfseries\fontsize{10}{11}\selectfont, text=bkInk, inner sep=0pt] at ({4+(\i+0.5)*40/7},30.5) {\bkqnwd{\c}};}
+  \foreach \r in {0,...,3} {\foreach \i in {0,...,6} {
+    \draw[bkLine, line width=0.5pt] ({4+\i*40/7},{3+\r*6.1}) rectangle ++({40/7},6.1);}}
+  \draw[bkTheme, line width=1.5pt] ({4+0.5*40/7},{3+2.5*6.1}) circle (2.7);
+  % まんなか：100日 すすむ
+  \foreach \k in {0,...,4} {\filldraw[fill=white, draw=bkInk!35, line width=0.6pt, rotate around={{-8+\k*4}:({54+\k*4},25)}] ({50+\k*4},17) rectangle ++(9,13);}
+  \draw[bk arrow, bkTheme, line width=2pt] (50,10) -- (76,10);
+  \node[font=\sffamily\bfseries\small, text=bkTheme] at (63,38) {\mbox{100\R{日}{にち}\R{後}{ご}}};
+  \node[font=\sffamily\fontsize{9}{10}\selectfont, text=bkGray] at (63,4.5) {1、2、3、…};
+  % 右：たんじょうび
+  \fill[white, rounded corners=3mm] (78,0) rectangle (122,54);
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkInk] at (100,53.5) {ミナの たんじょうび};
+  \fill[bkStem!35] (87,5) rectangle (113,19);
+  \fill[bkStem!35] (100,5) ellipse (13 and 2.8);
+  \fill[white] (100,19) ellipse (13 and 3);
+  \foreach \x in {92,100,108} {\fill[bkAppleRed] (\x,20.5) circle (1.8);}
+  \foreach \x in {96,104} {\fill[bkBlue!60] (\x-0.7,21) rectangle ++(1.4,7.5); \fill[bkOrange] (\x,30.3) ellipse (1 and 1.7);}
+  \node[font=\sffamily\bfseries\small, text=bkInk] at (96,40) {\mbox{\R{何曜日}{なん|よう|び}}？};
+  \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries\Large, minimum size=9mm, inner sep=0pt] at (115,30) {？};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent きょうは \mbox{\R{月曜日}{げつ|よう|び}}。 ミナの たんじょうびは \mbox{100\R{日}{にち}\R{後}{ご}}。\\
+たんじょうびは \mbox{\R{何曜日}{なん|よう|び}}かな？\\
+\mbox{1\R{日}{にち}}ずつ かぞえないで、 わかるかな？
+\end{hatena}
+
+\clearpage
+%% ---------------- p.151 やってみよう ----------------
+\begin{yattemiyou}[おはじきを \R{分}{わ}けて みよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt]
+\item おはじき 12こを、 3こずつ おさらに \R{分}{わ}けよう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqnplates{(0,0)}{4}{3}{0}{bkRoute2}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkGreen!70!black] at (98,1) {ぴったり！};
+\end{tikzpicture}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt, start=2]
+\item こんどは おはじきを 14こに して、 3こずつ \R{分}{わ}けよう。 3こ のせられなく なったら やめよう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,...,6} {\bkohajiki{({\i*5.6},3)}{2.3}{bkRoute2}\bkohajiki{({\i*5.6},-2.6)}{2.3}{bkRoute2}}
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkGreen!70!black] at (16.8,-6.5) {14こ};
+  \draw[bk arrow, bkGreen, line width=1.2pt] (39,0.3) -- (50,0.3);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkGreen!70!black] at (44.5,5.5) {3こずつ};
+  \foreach \x in {62,84,106} {\bkplate{(\x,0)}{20}}
+  \node[font=\sffamily\bfseries\small, text=bkGray] at (119,0) {…};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent おさらは \R{何}{なん}まい できた？ のこりは \R{何}{なん}こ？\par\vspace{3pt}
+\noindent\hspace*{1\zw}おさら\enspace\bkkakikomi\enspace まい\hspace{3\zw}のこり\enspace\bkkakikomi\enspace こ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=4pt, start=3]
+\item おはじきを 1こずつ ふやして、 3こずつ \R{分}{わ}けよう。 のこりは \R{何}{なん}こに なるかな？
+\end{enumerate}
+\par\vspace{3pt}
+\noindent\hspace*{\fill}\begin{tblr}{colspec={Q[c,m,wd=17mm]*{7}{Q[c,m,wd=12.5mm]}}, hlines={0.6pt,bkLine}, vlines={0.6pt,bkLine},
+  row{1}={bg=bkGreen!12}, column{1}={bg=bkGreen!12, font=\sffamily\bfseries\small}, rowsep=3pt, colsep=1pt}
+おはじき & 12 & 13 & 14 & 15 & 16 & 17 & 18 \\
+のこり & 0 & \bkkakikomi[8mm] & \bkkakikomi[8mm] & \bkkakikomi[8mm] & \bkkakikomi[8mm] & \bkkakikomi[8mm] & \bkkakikomi[8mm] \\
+\end{tblr}\hspace*{\fill}
+\end{yattemiyou}
+
+\bkfukidashi{sora}{14こでは 2こ のこったよ！ のこりは 0、 1、 2、 0、 1、 2… と くり\R{返}{かえ}すね。 3こには ならないよ。}
+
+\clearpage
+%% ---------------- p.152〜153 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の \mbox{\R{道具}{どう|ぐ}}}
+
+\bksubsection{1}{あまりの ある わり\R{算}{ざん}}
+
+\label{bk:1-15:amari}14こを 3こずつ \R{分}{わ}けると、 4さらと、 のこりが 2こ。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqnplates{(0,0)}{4}{3}{2}{bkRoute2}
+  \foreach \i in {0,...,3} {\node[font=\sffamily\bfseries\footnotesize, text=bkRoute2!80!black] at ({\i*24+11},7) {3こ};}
+  \draw[bkRoute4, line width=1pt, rounded corners=2mm] (99,-4) rectangle (114,5);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkRoute4!80!black] at (106.5,8.5) {あまり};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent のこった 2こを 「あまり」と いいます。\bkidx{あまり}{あまり}
+\bkqnbig{14 ÷ 3 ＝ 4 あまり 2}{14 わる 3 は 4 あまり 2}
+
+\noindent では、 4と 2は どう やって もとめるのかな？ 2つの やりかたが あります。
+
+\noindent{\sffamily\bfseries\color{bkTheme}やりかた ア：ひき\R{算}{ざん}を くりかえす}\par
+3こずつ おさらに のせる たびに、 おはじきは 3こ へります（1-14）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (-3,0) -- (115,0);
+  \foreach \i in {0,...,14} {\draw[bkInk, line width=0.6pt] ({\i*8},-1.6) -- ({\i*8},1.6);
+    \node[anchor=north, font=\sffamily\small, text=bkInk, inner sep=0pt] at ({\i*8},-3) {\i};}
+  \foreach \a/\k in {112/1,88/2,64/3,40/4} {
+    \draw[bkRoute2, line width=1.3pt, -{Stealth[length=5pt]}] ({\a-1},2.5) .. controls ({\a-6},10) and ({\a-18},10) .. ({\a-23},2.7);
+    \node[font=\sffamily\bfseries\footnotesize, text=bkRoute2!85!black] at ({\a-12},11.5) {\k まいめ};}
+  \fill[bkRoute2] (112,0) circle (1.5);
+  \draw[bkRoute4, line width=1.2pt, rounded corners=1mm] (-2.5,-8.5) rectangle (18.5,2.8);
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkRoute4!80!black] at (8,-9) {のこり 2こ};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent \mbox{14 － 3 ＝ 11}、 \mbox{11 － 3 ＝ 8}、 \mbox{8 － 3 ＝ 5}、 \mbox{5 － 3 ＝ 2}。 4かい ひけて、 2が のこりました。 2からは もう 3を ひけません。 だから 4 あまり 2 です。
+
+\noindent{\sffamily\bfseries\color{bkTheme}やりかた イ：\R{九九}{く|く}で さがす}\par
+\noindent\begin{minipage}[c]{0.5\linewidth}
+3のだんで、 14を こえない いちばん \R{大}{おお}きい ものを さがします。 \mbox{3 × 4 ＝ 12} です。 4さらで 12こ つかったので、 のこりは \mbox{14 － 12 ＝ 2}。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\begin{tblr}{colspec={Q[l,m]Q[l,m]}, rowsep=0pt, colsep=3pt, row{2}={bg=bkTheme!10}}
+3 × 3 ＝ 9 & {\footnotesize\color{bkGray}まだ くばれる}\\
+3 × 4 ＝ 12 & {\footnotesize\color{bkTheme}\bfseries ← これ}\\
+3 × 5 ＝ 15 & {\footnotesize\color{bkGray}14を こえる}\\
+\end{tblr}
+\end{minipage}
+
+\bksubsection{2}{あまりは わる\R{数}{かず}より \R{小}{ちい}さい}
+
+\label{bk:1-15:chiisai}÷の うしろの 3を 「わる\R{数}{かず}」と いいます。\bkidx{わるかず}{わる\R{数}{かず}}\\
+\mbox{14 ÷ 3} を \mbox{「3 あまり 5」}と したら どう かな？
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqnplates{(0,0)}{3}{3}{0}{bkRoute2}
+  \foreach \j in {1,...,5} {\bkohajiki{({71+\j*5.6},0.9)}{2.3}{bkRoute4}}
+  \draw[bkRed, line width=1pt, rounded corners=2mm] (73.5,-4) rectangle (91.5,5);
+  \draw[bkGray, line width=0.9pt, dash pattern=on 2pt off 1.5pt] (114,0) ellipse (10 and 3.1);
+  \draw[bk arrow, bkRed, line width=1.2pt] (85,6.5) .. controls (95,13) and (105,12) .. (110,5);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkRed] at (99,15.5) {まだ 3こ くばれる！};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent 3こ いじょう のこって いたら、 もう 1さら できます。 だから、 あまりは わる\R{数}{かず}の 3より \R{小}{ちい}さく なります。
+
+\noindent やってみようの \R{表}{ひょう}も \R{見}{み}て みよう。 おはじきが 1こ ふえると、 あまりも 1 ふえます。 でも、 あまりが 3に なる ときは、 その 3こで もう 1さら できるので、 あまりは 0に もどります。 だから あまりは 0、 1、 2、 0、 1、 2、 … と くりかえすのです。
+\begin{bkfigure}
+\begin{tblr}{colspec={Q[c,m,wd=22mm]*{7}{Q[c,m,wd=12.5mm]}}, hlines={0.6pt,bkLine}, vlines={0.6pt,bkLine},
+  column{1}={bg=bkGreen!12, font=\sffamily\bfseries\small}, rowsep=2pt, colsep=1pt, cells={font=\small}}
+おはじき & 12 & 13 & 14 & 15 & 16 & 17 & 18 \\
+おさら & 4 & 4 & 4 & {\color{bkTheme}\bfseries 5} & 5 & 5 & {\color{bkTheme}\bfseries 6} \\
+あまり & 0 & 1 & 2 & {\color{bkTheme}\bfseries 0} & 1 & 2 & {\color{bkTheme}\bfseries 0} \\
+\end{tblr}
+\end{bkfigure}
+
+\bksubsection{3}{たしかめの しき}
+
+\label{bk:1-15:tashikame}もとの 14こに もどるか、 たしかめよう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqnplates{(0,0)}{4}{3}{2}{bkRoute2}
+  \bkbrace{(1,5)}{(93,5)}{3 × 4 ＝ 12}{1}
+  \bkbrace{(101,5)}{(114,5)}{＋ 2}{1}
+\end{tikzpicture}
+\end{bkfigure}
+\bkqnbig{3 × 4 ＋ 2 ＝ 14}{わる\R{数}{かず} × こたえ ＋ あまり}
+\noindent 14に もどれば、 こたえは せいかいです。\bkidx{たしかめのしき}{たしかめの しき}
+
+\noindent この しきは、 \mbox{3 × 4} を さきに けいさん します。 \mbox{3 × 4} は 「おさらに のって いる おはじき ぜんぶ」と いう 1つの かず（12）だからです。 その あとで、 あまりの 2を たします。 \mbox{4 ＋ 2} を さきに すると \mbox{3 × 6 ＝ 18} に なり、 14に もどりません。
+
+\bksubsection{4}{なんしゅうと あと いくつ}
+
+\label{bk:1-15:shuu}\mbox{\R{曜日}{よう|び}}は、 \R{月}{げつ}・\R{火}{か}・\R{水}{すい}・\R{木}{もく}・\R{金}{きん}・\R{土}{ど}・\R{日}{にち}の 7つ。 \mbox{\R{7日}{なのか}}で 1しゅう して、 また \R{同}{おな}じ \mbox{\R{曜日}{よう|び}}に もどります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \path[use as bounding box] (-22,-17) rectangle (62,21);
+  \bkqnring{(0,0)}{13}{1}{-1}{bkBlue}
+  \foreach \k in {1,...,7} {\pgfmathsetmacro\bkqnA{90-360*(\k-1)/7-12}\pgfmathsetmacro\bkqnB{90-360*\k/7+12}
+    \draw[bkBlue, line width=1.1pt, -{Stealth[length=3.5pt]}] (\bkqnA:7.6) arc (\bkqnA:\bkqnB:7.6);}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkBlue!80!black, align=left] at (22,0) {1\R{日}{にち}ずつ 7かい すすむと、\\また \R{月曜日}{げつ|よう|び}に もどる};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent だから、 \mbox{\R{7日}{なのか}\R{後}{ご}}も、 \mbox{\R{14日}{じゅうよっか}\R{後}{ご}}も、 \mbox{\R{月曜日}{げつ|よう|び}}。 \R{7日}{なのか}の まとまりが いくつ あっても \R{曜日}{よう|び}は かわりません。 かわるのは、 まとまりに ならない 「あまりの \R{日}{ひ}」の ぶんだけ です。 \mbox{\R{7日}{なのか}}ずつ 1だんに ならべて みよう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \c [count=\i from 0] in {1,2,3,4,5,6,0} {
+    \node[font=\sffamily\bfseries\small, text=bkInk, inner sep=0pt] at ({\i*11+5.5},2.2) {\bkqnwd{\c}};}
+  \fill[bkTheme!10] (0,-1.5) rectangle (11,-23.5);
+  \foreach \r/\y in {0/-1.5,1/-7.5} {\foreach \i in {0,...,6} {
+    \pgfmathtruncatemacro\bkqnn{\r*7+\i}
+    \draw[bkLine, line width=0.6pt] ({\i*11},\y) rectangle ++(11,-6);
+    \ifnum\bkqnn=0 \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkTheme] at (5.5,{\y-3}) {きょう};
+    \else \node[font=\sffamily\bfseries\small, text=bkInk] at ({\i*11+5.5},{\y-3}) {\bkqnn};\fi}}
+  \foreach \i in {0,...,6} {\foreach \d in {0,1.1,2.2} {\fill[bkGray] ({\i*11+5.5},{-14.4-\d}) circle (0.4);}}
+  \foreach \i/\n in {0/98,1/99,2/100} {\draw[bkLine, line width=0.6pt] ({\i*11},-17.5) rectangle ++(11,-6);
+    \node[font=\sffamily\bfseries\small, text=bkInk] at ({\i*11+5.5},-20.5) {\n};}
+  \draw[bkTheme, line width=1.6pt, rounded corners=1mm] (22.4,-17.9) rectangle (32.6,-23.1);
+  % 右の せつめい（かっこは 1だんめから 14だんめまで）
+  \draw[bkGray, line width=0.7pt] (78.5,-1.5) -- (80.5,-1.5) -- (80.5,-17.5) -- (78.5,-17.5);
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkInk, align=left, inner sep=0pt] at (82,-9.5) {14だんで \mbox{98\R{日}{にち}}\\（14しゅう）};
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkTheme] at (82,-20.5) {あと \mbox{\R{2日}{ふつか}}で \mbox{100\R{日}{にち}}};
+  \draw[bkTheme, line width=0.7pt, -{Stealth[length=3.5pt]}] (81.5,-20.5) -- (34,-20.5);
+\end{tikzpicture}
+\end{bkfigure}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {1,...,14} {\pgfmathtruncatemacro\bkqnn{7*\i}
+    \ifnum\i<10 \def\bkqnc{bkRoute2!14}\else\def\bkqnc{bkTheme!12}\fi
+    \ifnum\i=14 \def\bkqnc{bkYellow!45}\fi
+    \filldraw[fill=\bkqnc, draw=bkLine, line width=0.6pt] ({(\i-1)*8.4},0) rectangle ++(8.4,9.6);
+    \node[anchor=base, font=\sffamily\fontsize{8}{9}\selectfont, text=bkInk!70] at ({(\i-0.5)*8.4},6.5) {{\i}こ};
+    \node[anchor=base, font=\sffamily\bfseries\footnotesize, text=bkInk] at ({(\i-0.5)*8.4},1.5) {\bkqnn};}
+  \node[anchor=base, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkTheme, fill=bkYellow!45, inner sep=0.6pt] at (113.4,6.5) {14こ};
+  \draw[bkTheme, line width=1.4pt, rounded corners=1mm] (109.6,0.3) rectangle (117.3,9.3);
+  \bkbrace{(0.6,-1.2)}{(75,-1.2)}{7の だん（\R{九九}{く|く}）}{-1}
+  \bkbrace{(76.2,-1.2)}{(117,-1.2)}{7ずつ たす（1-7）}{-1}
+\end{tikzpicture}
+\end{bkfigure}
+\bkqnbig{100 ÷ 7 ＝ 14 あまり 2}{14しゅうと あと \mbox{\R{2日}{ふつか}}}
+\noindent 14しゅう たつと、 また \mbox{\R{月曜日}{げつ|よう|び}}。 そこから あまりの \mbox{\R{2日}{ふつか}}だけ すすむと、 \R{火}{か}、 \R{水}{すい}。 \bkhatenaref の こたえは、 \mbox{\R{水曜日}{すい|よう|び}}です。\bkidx{なんしゅうとあといくつ}{なんしゅうと あと いくつ}
+
+\bksubsection{5}{あまりを どう するか}
+
+\label{bk:1-15:dousuru}あまりの ある わり\R{算}{ざん}では、 さいごに 「あまりを どう するか」を ばめんで きめます。 \mbox{26 ÷ 4 ＝ 6 あまり 2} の 2つの ばめんを くらべよう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlueBg, rounded corners=2.5mm] (0,0) rectangle (59,40);
+  \node[anchor=north west, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black, align=left] at (2.5,38.5) {A：4こずつ ふくろに つめる};
+  \foreach \i in {0,...,5} {\filldraw[fill=bkRoute6!20, draw=bkRoute6!80!black, line width=0.6pt, rounded corners=1mm] ({4+\i*8.6},14) rectangle ++(6.6,12);
+    \foreach \j in {0,1} {\foreach \k in {0,1} {\fill[bkRoute2] ({5.9+\i*8.6+\k*2.8},{17.2+\j*4.4}) circle (1.1);}}}
+  \fill[bkRoute4] (25,8) circle (1.3) (29,8) circle (1.3);
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk, align=center] at (29.5,5.5) {6ふくろ できる};
+  \begin{scope}[shift={(63,0)}]
+  \fill[bkBlueBg, rounded corners=2.5mm] (0,0) rectangle (59,40);
+  \node[anchor=north west, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black, align=left] at (2.5,38.5) {B：26\R{人}{にん}が 4\R{人}{にん}ずつ すわる};
+  \begin{scope}[scale=0.5, shift={(6,30)}]
+  \foreach \i in {0,...,5} {\bkqnbench{({\i*16},0)}{4}{bkRoute6}}
+  \bkqnbench{(96,0)}{2}{bkRoute4}
+  \end{scope}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk, align=center] at (29.5,5.5) {7きゃく いる};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\noindent A では、 あまりの 2こでは 1ふくろに ならないので、 こたえは 6ふくろ。 B では、 あまりの \mbox{2\R{人}{にん}}も すわる いすが いるので、 \mbox{6 ＋ 1 ＝ 7} で 7きゃく。 \R{同}{おな}じ しきでも、 こたえが ちがうのです。
+
+\begin{taisetsu}
+あまりは、 わる\R{数}{かず}より \R{小}{ちい}さい。\\
+くり\R{返}{かえ}す ものは、 わり\R{算}{ざん}で しらべられる。\\
+あまりを どう するかは、 ばめんで きめる。
+\end{taisetsu}
+
+%% ---------------- p.154〜155 例題 ----------------
+
+\begin{reidai}[わり\R{算}{ざん}の しかた]
+17 ÷ 5 を けいさんしよう。
+
+\kangaekata 5の だんで さがす。 5 × 3 ＝ 15、\\ のこりは 17 － 15 ＝ 2
+
+\shiki 17 ÷ 5 ＝ 3 あまり 2
+\end{reidai}
+
+\begin{jibun}
+けいさんしよう。\hspace{2\zw}25 ÷ 4 ＝ \bkkakikomi\enspace あまり\enspace\bkkakikomi
+\bkjans{6 あまり 1}
+\end{jibun}
+
+\begin{reidai}[\mbox{\R{何人}{なん|にん}}に \R{分}{わ}けられる？]
+カード 22まいを、 ひとりに 4まいずつ くばります。 \mbox{\R{何人}{なん|にん}}に くばれて、 \R{何}{なん}まい あまる？
+
+\shiki 22 ÷ 4 ＝ 5 あまり 2\par
+\kotae \mbox{5\R{人}{にん}}に くばれて、 2まい あまる。\par
+\bkstep[bkGreen]{たしかめ} 4 × 5 ＋ 2 ＝ 22\quad{\small\color{bkGreen!60!black}22に もどった！}
+\end{reidai}
+
+\begin{jibun}
+あめ 20こを、 ひとりに 6こずつ \R{分}{わ}けます。 \mbox{\R{何人}{なん|にん}}に \R{分}{わ}けられて、 \R{何}{なん}こ あまる？
+\bkshikiran[9\zw]
+\bkjans{\mbox{20 ÷ 6 ＝ 3 あまり 2}\quad \mbox{3\R{人}{にん}}に \R{分}{わ}けられて、 2こ あまる}
+\end{jibun}
+
+\begin{reidai}[あまりを どう する？]
+\mbox{26\R{人}{にん}}が、 \mbox{4\R{人}{にん}}ずつ \R{長}{なが}いすに すわります。 みんなが すわるには、 \R{長}{なが}いすは \R{何}{なん}きゃく いる？
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[scale=0.72]
+  \foreach \i in {0,...,5} {\bkqnbench{({\i*15.6},0)}{4}{bkRoute6}}
+  \bkqnbench{(96,0)}{2}{bkRoute4}
+  \draw[bkRoute4, line width=1pt, rounded corners=2mm, dash pattern=on 2.5pt off 1.5pt] (94.5,-1.5) rectangle (112,13.5);
+  \end{scope}
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkRoute4!80!black, align=left] at (84,4.8) {あまりの\\\mbox{2\R{人}{にん}}の ぶん};
+\end{tikzpicture}
+\end{bkfigure}
+
+\shiki 26 ÷ 4 ＝ 6 あまり 2 \kotaenext 7きゃく
+\end{reidai}
+
+\begin{jibun}
+\mbox{15\R{人}{にん}}が、 \mbox{4\R{人}{にん}}ずつ ボートに のります。 みんなが のるには、 ボートは \R{何}{なん}そう いる？
+\bkshikiran[9\zw]
+\bkjans{\mbox{15 ÷ 4 ＝ 3 あまり 3}\quad 4そう}
+\end{jibun}
+
+\begin{reidai}[あまりは つかえない]
+あめが 26こ あります。 4こずつ ふくろに つめると、 4こ \R{入}{はい}りの ふくろは \R{何}{なん}ふくろ できる？
+
+\kangaekata \mbox{26 ÷ 4 ＝ 6 あまり 2}。 のこりの 2こでは、 4こ \R{入}{はい}りの ふくろは できない。
+
+\kotae 6ふくろ
+\end{reidai}
+
+\begin{jibun}
+ケーキが 20こ。 6こ \R{入}{はい}りの はこに つめると、 6こ \R{入}{はい}りの はこは \R{何}{なん}はこ できる？
+\bkshikiran[9\zw]
+\bkjans{\mbox{20 ÷ 6 ＝ 3 あまり 2}\quad 3はこ}
+\end{jibun}
+
+\begin{reidai}[なんしゅうと あと いくつ]
+\noindent\begin{minipage}[c]{0.64\linewidth}
+きょうは \mbox{\R{火曜日}{か|よう|び}}。 \mbox{30\R{日}{にち}\R{後}{ご}}は \mbox{\R{何曜日}{なん|よう|び}}？
+
+\kangaekata \mbox{\R{7日}{なのか}}で 1しゅう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \path[use as bounding box] (-16.2,-14) rectangle (16.2,16.6);
+  \bkqnring{(0,0)}{10.8}{2}{2}{bkBlue}
+  \node[font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkBlue!80!black, align=center, inner sep=0pt] at (0,0) {4しゅう\\＋2};
+\end{tikzpicture}
+\end{minipage}
+
+\shiki 30 ÷ 7 ＝ 4 あまり 2 \kotaenext \mbox{\R{木曜日}{もく|よう|び}}
+\end{reidai}
+
+\begin{jibun}
+きょうは \mbox{\R{水曜日}{すい|よう|び}}。 \mbox{\R{24日}{にじゅうよっか}\R{後}{ご}}は \mbox{\R{何曜日}{なん|よう|び}}？
+\bkshikiran[9\zw]
+\bkjans{\mbox{24 ÷ 7 ＝ 3 あまり 3}\quad \mbox{\R{土曜日}{ど|よう|び}}}
+\end{jibun}
+
+\begin{reidai}[\R{時計}{と|けい}の はりも くりかえす]
+\noindent\begin{minipage}[c]{0.66\linewidth}
+いま \mbox{2\R{時}{じ}}。 \mbox{15\R{時間}{じ|かん}} たつと、 \mbox{\R{時計}{と|けい}}の \R{短}{みじか}い はりは \mbox{\R{何時}{なん|じ}}を さす？
+
+\kangaekata \R{短}{みじか}い はりは \mbox{12\R{時間}{じ|かん}}で 1しゅう して、 \R{同}{おな}じ ところに もどる。\\
+\bkqnkindent\mbox{15 ÷ 12 ＝ 1 あまり 3}\\
+\bkqnkindent 1しゅう して 2\R{時}{じ}、 あと 3\R{時間}{じ|かん}。\\
+\bkqnkindent\mbox{2 ＋ 3 ＝ 5}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkclock{(0,0)}{14}{2}{0}
+  \node[font=\sffamily\bfseries\footnotesize] at (0,-18.5) {いま};
+\end{tikzpicture}
+\end{minipage}
+
+\kotae \mbox{5\R{時}{じ}}
+\end{reidai}
+
+\begin{jibun}
+いま \mbox{4\R{時}{じ}}。 \mbox{14\R{時間}{じ|かん}} たつと、 \R{短}{みじか}い はりは \mbox{\R{何時}{なん|じ}}を さす？
+\bkshikiran[9\zw]
+\bkjans{\mbox{14 ÷ 12 ＝ 1 あまり 2}、 \mbox{4 ＋ 2 ＝ 6}\quad \mbox{6\R{時}{じ}}}
+\end{jibun}
+
+%% ---------------- p.156 まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすい ところ}
+
+\begin{tsumazuki}{あまりが わる\R{数}{かず}より \R{大}{おお}きい}
+14 ÷ 3 ＝\enspace\bkbatsu\enspace 3 あまり 5\hspace{2\zw}\bkmaru\enspace 4 あまり 2\par
+あまりの 5こから、 まだ 3こ くばれるよ。
+\end{tsumazuki}
+
+\begin{tsumazuki}{あまった \R{人}{ひと}を わすれる}
+\mbox{26\R{人}{にん}}が \mbox{4\R{人}{にん}}ずつ \R{長}{なが}いすに すわる。\\
+\bkbatsu\enspace 6きゃく\hspace{3\zw}\bkmaru\enspace 7きゃく\par
+あまりの \mbox{2\R{人}{にん}}にも、 いすが いるね。
+\end{tsumazuki}
+
+\begin{tsumazuki}{きょうを 1と かぞえる}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\mbox{\R{月曜日}{げつ|よう|び}}の \mbox{\R{2日}{ふつか}\R{後}{ご}}は？\\
+\bkbatsu\enspace\R{火曜日}{か|よう|び}\hspace{1.5\zw}\bkmaru\enspace\R{水曜日}{すい|よう|び}\par
+つぎの \R{日}{ひ}が \mbox{1\R{日}{にち}\R{後}{ご}}だよ。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \c/\i in {1/0,2/1,3/2} {\node[circle, draw=bkInk!55, line width=0.7pt, fill=white, minimum size=9mm, inner sep=0pt, font=\sffamily\bfseries\small] at ({\i*14},0) {\bkqnwd{\c}};}
+  \draw[bkTheme, line width=1.4pt] (0,0) circle (4.5);
+  \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkTheme] at (0,-7.5) {きょう};
+  \foreach \i in {0,1} {\draw[bkRed, line width=1.3pt, -{Stealth[length=4pt]}] ({\i*14+3},5) .. controls ({\i*14+6},9) and ({\i*14+8},9) .. ({\i*14+11},5);
+    \pgfmathtruncatemacro\bkqnn{\i+1}\node[font=\sffamily\bfseries\footnotesize, text=bkRed] at ({\i*14+7},11) {\bkqnn};}
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{たしかめの じゅんばん}
+14 ÷ 3 ＝ 4 あまり 2 の たしかめ。\\
+\bkbatsu\enspace 3 × 4 ＋ 2 を、 4 ＋ 2 から して 3 × 6 ＝ 18\par
+\bkmaru\enspace 3 × 4 ＝ 12 が さき。 12 ＋ 2 ＝ 14\par
+3 × 4 は 「おさらの おはじき ぜんぶ」の 1つの かず。 さきに けいさん しよう。
+\end{tsumazuki}
+
+\begin{column}{\R{曜日}{よう|び}の \mbox{\R{名前}{な|まえ}}の ひみつ}
+「\R{日}{にち}」は おひさま、 「\R{月}{げつ}」は お\R{月}{つき}さま。 「\R{火}{か}・\R{水}{すい}・\R{木}{もく}・\R{金}{きん}・\R{土}{ど}」は、 \R{夜}{よる}の \R{空}{そら}に \R{見}{み}える \R{星}{ほし}（\mbox{\R{火星}{か|せい}}・\mbox{\R{水星}{すい|せい}}・\mbox{\R{木星}{もく|せい}}・\mbox{\R{金星}{きん|せい}}・\mbox{\R{土星}{ど|せい}}）から きた \mbox{\R{名前}{な|まえ}}です。
+\end{column}
+
+\begin{column}{たんじょうびの \R{曜日}{よう|び}は、 \R{毎年}{まい|とし} 1つ ずれる}
+1\R{年}{ねん}は 365\R{日}{にち}です。 \R{7日}{なのか}ずつ まとめると、 \mbox{7 × 52 ＝ 364} で 52しゅう、 あまりが 1\R{日}{にち}。 \mbox{365 ÷ 7 ＝ 52 あまり 1} です。 だから、 ことしの たんじょうびが \R{月曜日}{げつ|よう|び}なら、 らいねんは 1つ ずれて \R{火曜日}{か|よう|び}に なります（2\R{月}{がつ}が 29\R{日}{にち}まで ある 「うるう\R{年}{どし}」を はさむと、 2つ ずれます）。
+\end{column}
+
+\begin{yattemiyou}[カレンダーで たしかめよう]
+きょうの \R{曜日}{よう|び}を かいて、 わり\R{算}{ざん}で よそうしよう。 そのあと カレンダーで たしかめよう。
+\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+{\small （れい）きょうが \R{月曜日}{げつ|よう|び}なら、 \R{10日}{とおか}\R{後}{ご}は \mbox{10 ÷ 7 ＝ 1 あまり 3}。 1しゅう して \R{月曜日}{げつ|よう|び}に もどり、 あまりの \R{3日}{みっか}だけ すすんで \R{木曜日}{もく|よう|び}。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \path[use as bounding box] (-17,-15) rectangle (17,18);
+  \bkqnring{(0,0)}{11}{1}{3}{bkGreen}
+  \node[font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkGreen!60!black, align=center] at (0,0) {あまり\\3};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+\noindent\hfill\begin{tblr}{colspec={Q[c,m,wd=19mm]Q[c,m,wd=48mm]Q[c,m,wd=22mm]Q[c,m,wd=22mm]}, hlines={0.6pt,bkLine}, vlines={0.6pt,bkLine},
+  row{1}={bg=bkGreen!12, font=\sffamily\bfseries\small}, rowsep=3pt, colsep=2pt, cells={font=\small}}
+なん\R{日}{にち}\R{後}{ご} & わり\R{算}{ざん} & よそう & カレンダー \\
+\R{10日}{とおか}\R{後}{ご} & \mbox{10 ÷ 7 ＝ 1 あまり 3} & \bkkakikomi[18mm] & \bkkakikomi[18mm] \\
+\R{20日}{はつか}\R{後}{ご} & \mbox{20 ÷ 7 ＝} \bkkakikomi[16mm] & \bkkakikomi[18mm] & \bkkakikomi[18mm] \\
+30\R{日}{にち}\R{後}{ご} & \mbox{30 ÷ 7 ＝} \bkkakikomi[16mm] & \bkkakikomi[18mm] & \bkkakikomi[18mm] \\
+40\R{日}{にち}\R{後}{ご} & \mbox{40 ÷ 7 ＝} \bkkakikomi[16mm] & \bkkakikomi[18mm] & \bkkakikomi[18mm] \\
+\end{tblr}\hfill\null
+\par\vspace{2pt}
+{\small きょうの \R{曜日}{よう|び}：\bkkakikomi[18mm]\quad あまりの \R{日}{ひ}の ぶんだけ、 きょうから すすめよう。}
+\end{yattemiyou}
+
+\bkfukidashi{mina}{よそうと カレンダーが \R{同}{おな}じに なったら、 わり\R{算}{ざん}の ちからを じっかん できるね。 ちがったら、 「きょうを 1と かぞえて いないか」 たしかめよう。}
+
+\clearpage
+%% ---------------- p.157 つかわれているところ ----------------
+\begin{butsuri}
+まわる もの、 くり\R{返}{かえ}す ものを \R{見}{み}て みよう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 時計
+  \fill[white, rounded corners=3mm] (0,0) rectangle (44,40);
+  \bkclock{(22,25)}{12}{10}{8}
+  \node[font=\sffamily\bfseries\small] at (22,4.5) {\R{時計}{と|けい}};
+  % タイヤ（半径7 mm → 1回転で 2π×7 ≒ 44 mm すすむ。地面の目もりも 44 mm）
+  \begin{scope}[shift={(48,0)}]
+  \fill[white, rounded corners=3mm] (0,0) rectangle (74,40);
+  \draw[bkInk!70, line width=1pt] (3,12) -- (71,12);
+  \foreach \x/\t in {12/0,56/2} {\draw[bkInk!70, line width=0.8pt] (\x,12) -- (\x,9.5);
+    \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkInk] at (\x,6) {\t\,m};}
+  \draw[bkInk!30, line width=0.8pt, dash pattern=on 1.5pt off 1.5pt] (12,19) circle (7);
+  \fill[bkRed!35] (12,12) circle (1.3);
+  \fill[bkInk!85] (56,19) circle (7); \fill[bkLine] (56,19) circle (3.8);
+  \foreach \a in {30,90,...,330} {\draw[bkInk!60, line width=0.6pt] (56,19) -- ++(\a:3.8);}
+  \fill[bkRed] (56,12) circle (1.3);
+  \draw[bk arrow, bkRed, line width=1.1pt] (17,28.5) .. controls (27,34) and (41,34) .. (51,28.5);
+  \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkRed] at (34,36.5) {1\R{回転}{かい|てん}で 2\,m};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\begin{itemize}[label={\color{bkPurple}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item \mbox{\R{時計}{と|けい}}の \R{短}{みじか}い はりは、 \mbox{12\R{時間}{じ|かん}}で 1しゅう します。
+\item \mbox{\R{自転車}{じ|てん|しゃ}}の メーターは、 タイヤの \mbox{\R{回転}{かい|てん}}を かぞえて います。 \mbox{1\R{回転}{かい|てん}}で 2\,m なら、 15\,m では \mbox{15 ÷ 2 ＝ 7 あまり 1}。 \mbox{7\R{回転}{かい|てん}}と あと 1\,m です。
+\item \mbox{\R{大学}{だい|がく}}の \mbox{\R{工学}{こう|がく}}では、 1しゅうに かかる \mbox{\R{時間}{じ|かん}}を 「しゅうき」と いって、 モーターや \R{音}{おと}を しらべます。
+\end{itemize}
+\end{butsuri}
+
+\bkfukidashi{delta}{くり\R{返}{かえ}す ものは、 あまりを \R{見}{み}れば すぐ わかるね。 \mbox{「\mbox{\R{回転}{かい|てん}}と} \R{波}{なみ}の \mbox{\R{路線}{ろ|せん}}」に のって いこう！}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkRoute4, line width=3pt, line cap=round] (10,0) -- (122,0);
+  \node[anchor=west, inner sep=0pt] at (0,12) {\bkrouteicon[1.4em]{4}\hspace{0.3em}{\sffamily\bfseries\small\color{bkRoute4!80!black}\mbox{\R{回転}{かい|てん}}と \R{波}{なみ}の \mbox{\R{路線}{ろ|せん}}}};
+  \foreach \x/\c/\t/\s in {10/bkVol1/{1-15}/{なんしゅう},38/bkVol1/{1-19}/{\R{円}{えん}},66/bkVol1/{1-20}/{\R{角}{かく}},94/bkVol4/{4-8}/{まわる かげ},122/bkVol5/{5-15}/{\R{波}{なみ}の びぶん}} {
+    \fill[white, draw=\c, line width=1.6pt] (\x,0) circle (2.6);
+    \node[anchor=base, font=\sffamily\bfseries\footnotesize, text=\c!85!black] at (\x,-6.8) {\t};
+    \node[anchor=base, font=\sffamily\footnotesize, text=bkInk] at (\x,-13.6) {\s};}
+  \node[fill=bkTheme, text=white, rounded corners=1mm, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, inner sep=1.5pt] at (10,5.5) {いま ここ};
+\end{tikzpicture}
+\end{bkfigure}
+
+\clearpage
+%% ---------------- p.158〜159 もんだい ----------------
+\bkendproblems
+
+\bkproblemgroup{きほん}{1}
+
+\bkproblem わり\R{算}{ざん}を しましょう。
+\par\vspace{2pt}
+\noindent\hspace*{1\zw}\begin{tblr}{colspec={Q[l,m]}, colsep=0pt, rowsep=2pt}
+（1）13 ÷ 4 ＝ \bkkakikomi\enspace あまり\enspace\bkkakikomi \\
+（2）20 ÷ 3 ＝ \bkkakikomi\enspace あまり\enspace\bkkakikomi \\
+（3）38 ÷ 5 ＝ \bkkakikomi\enspace あまり\enspace\bkkakikomi \\
+（4）50 ÷ 7 ＝ \bkkakikomi\enspace あまり\enspace\bkkakikomi \\
+\end{tblr}
+\bkpans{\mbox{（1）3 あまり 1}\quad\mbox{（2）6 あまり 2}\quad\mbox{（3）7 あまり 3}\quad\mbox{（4）7 あまり 1}}
+
+\bkproblem あめ 23こを、 ひとりに 5こずつ \R{分}{わ}けます。 \mbox{\R{何人}{なん|にん}}に \R{分}{わ}けられて、 \R{何}{なん}こ あまる？
+\bkshikiran[9\zw]
+\bkpans{\mbox{23 ÷ 5 ＝ 4 あまり 3}\quad \mbox{4\R{人}{にん}}に \R{分}{わ}けられて、 3こ あまる}
+
+\bkproblem カード 30まいを、 ひとりに 4まいずつ くばります。 \mbox{\R{何人}{なん|にん}}に くばれて、 \R{何}{なん}まい あまる？ たしかめも しよう。
+\bkshikiran[9\zw]
+\bkqnline{たしかめ}
+\bkpans{\mbox{30 ÷ 4 ＝ 7 あまり 2}\quad \mbox{7\R{人}{にん}}に くばれて、 2まい あまる。 たしかめ\enspace \mbox{4 × 7 ＋ 2 ＝ 30}}
+
+\bkproblem きょうは \mbox{\R{月曜日}{げつ|よう|び}}。 \mbox{15\R{日}{にち}\R{後}{ご}}は \mbox{\R{何曜日}{なん|よう|び}}？
+\bkshikiran[9\zw]
+\bkpans{\mbox{15 ÷ 7 ＝ 2 あまり 1}\quad \mbox{\R{火曜日}{か|よう|び}}}
+
+\clearpage
+
+\bkproblemgroup{チャレンジ}{1}
+
+\bkproblem \mbox{34\R{人}{にん}}が、 \mbox{6\R{人}{にん}}ずつ \R{長}{なが}いすに すわります。 みんなが すわるには、 \R{長}{なが}いすは \R{何}{なん}きゃく いる？
+\bkshikiran[9\zw]
+\bkpans{\mbox{34 ÷ 6 ＝ 5 あまり 4}\quad 6きゃく}
+
+\bkproblem きょうは \mbox{\R{金曜日}{きん|よう|び}}。 \mbox{50\R{日}{にち}\R{後}{ご}}は \mbox{\R{何曜日}{なん|よう|び}}？
+\bkshikiran[9\zw]
+\bkpans{\mbox{50 ÷ 7 ＝ 7 あまり 1}\quad \mbox{\R{土曜日}{ど|よう|び}}}
+
+\bkproblem \mbox{\R{時計}{と|けい}}の \R{短}{みじか}い はりは \mbox{12\R{時間}{じ|かん}}で 1しゅう。 いま \mbox{3\R{時}{じ}}。 \mbox{25\R{時間}{じ|かん}}たつと、 \mbox{\R{何時}{なん|じ}}を さす？\enspace{\small\color{bkOrange!80!black}\mbox{ヒント：れいだい6}}
+\bkshikiran[9\zw]
+\bkpans{\mbox{25 ÷ 12 ＝ 2 あまり 1}\quad \mbox{4\R{時}{じ}}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item あまりの ある わり\R{算}{ざん}が できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-15:amari}ページ}
+\item わり\R{算}{ざん}の こたえを たしかめられる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-15:tashikame}ページ}
+\item くり\R{返}{かえ}す ものを わり\R{算}{ざん}で しらべられる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-15:shuu}ページ}
+\end{checklist}
+チェックが つかなかったら、 →の ページに もどろう。
+\end{furikaeri}
+
+\bkfukidashi{sora}{\R{自分}{じ|ぶん}の たんじょうびは \mbox{\R{何曜日}{なん|よう|び}}かな？ わり\R{算}{ざん}で よそうして みよう！}
+\clearpage

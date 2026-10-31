@@ -1,0 +1,990 @@
+%% 6-12 減衰振動を式で解く：特性方程式（第14回：組 V6-7。ページ制限なし。偶数ページ）
+%% ほかの巻が指している形：3-10 の $s^2+3s+2=0$（ゆれずにもどる）と $s^2+2s+5=0$（ゆれながらもどる）、
+%%   $x(0)=1$、$\dot x(0)=0$ で $2e^{-t}-e^{-2t}$ と $e^{-t}(\cos2t+\frac12\sin2t)$。「ゆれずにいちばん早くもどるのは $D=0$」
+%%   「実際の車は、ほんの少しだけゆれるように設計することが多い」（ch3-10:859〜863）。文字は $s$。
+%%   5-16 の約束：$\int e^{x}\sin x\,\dd x$ を減衰振動の計算で使う（もっと知りたい）。
+%%   6-7 の $\zeta=\dfrac{c}{2\sqrt{mk}}$（表計算で見つけた臨界の $c=2\sqrt{mk}$）の理由をここで書く。
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\bkvimhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\bkvimbox[1]{\par\addvspace{4pt}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\bkvimline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく（はばは中身に合わせる）
+\newcommand\bkvimframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（そろえた位置から）
+\newcommand\bkvimq{\par\vspace{1pt}\noindent\hangindent=4.6\zw\hangafter=0\relax}
+% 式の変形の表（左の式の列を広くしたもの。共通部品 bkhenkei と同じ使い方）  \begin{bkvimhk}[左の列のはば（\linewidth に対する割合）]
+\newenvironment{bkvimhk}[1][0.6]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.5}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle}m{#1\linewidth}<{$}@{\hspace{1.5\zw}}>{\footnotesize\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.97\linewidth-#1\linewidth-2.5\zw\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% N·s/m
+\newcommand\bkvimNsm[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{N.s/m}}
+% ばね（2点のあいだのぎざぎざ）  \bkvimspring{(a)}{(b)}
+\newcommand\bkvimspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=2.2mm, amplitude=1.7mm, pre length=2.5mm, post length=2.5mm}] #1 -- #2;}
+% ダンパー（横向き。左はしを #1、長さ #2 mm）  油の入った筒と、穴のあいた板（ピストン）
+\newcommand\bkvimdamper[2]{\begin{scope}[shift={#1}]
+  \fill[bkYellow!30] (2.5,-2.6) rectangle ({0.66*#2},2.6);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (2.5,0) (2.5,-2.6) -- (2.5,2.6) (2.5,2.6) -- ({0.66*#2},2.6) (2.5,-2.6) -- ({0.66*#2},-2.6);
+  \draw[bkInk, line width=1.3pt] ({0.42*#2},-2) -- ({0.42*#2},2);
+  \draw[bkInk, line width=0.8pt] ({0.42*#2},0) -- (#2,0);
+\end{scope}}
+\makeatother
+
+\bkchapter{6}{12}{減衰振動を式で解く：\\特性方程式}{\bklevel{5}}{減衰振動を式で解く：特性方程式}
+\bkmichishirube{3-10,5-16,5-18,6-7,6-8,6-10}{6-13,6-14,9-7,9-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace ばね・質量・ダンパーの式に $e^{st}$ を入れて、特性方程式を作れる。
+\item \bklevel{5}\enspace 特性方程式の解（2つ・重解・複素数）から、動きの式を組み立てられる。
+\item \bklevel{5}\enspace 減衰比 $\zeta$ で動き方を見分け、車や RLC 回路の数を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+3-10 で、車の動きの式から $s^2+3s+2=0$ や $s^2+2s+5=0$ のような2次方程式が出てきて、判別式の符号で「ゆれずにもどる」か「ゆれながらもどる」かが決まる、と予告しました。\par\vspace{4pt}
+車の動きは、時間で変わる「関数」です。それなのに、なぜ「数」を求める2次方程式が出てくるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=0.76mm, y=0.76mm]
+  \fill[bkBlue!16, rounded corners=1.5mm] (0,26) rectangle (46,37);
+  \draw[bkBlue!70!black, line width=0.9pt, rounded corners=1.5mm] (0,26) rectangle (46,37);
+  \node[font=\sffamily\footnotesize, text=bkInk] at (23,31.5) {車体（1輪分）};
+  \draw[bkInk, line width=1.2pt] (8,9) -- (38,9);
+  \bkvimspring{(15,9.6)}{(15,25.4)}
+  \begin{scope}[shift={(31,9)}, rotate=90]\bkvimdamper{(0,0)}{17}\end{scope}
+  \fill[bkInk!80] (23,3) circle (5.2);
+  \fill[bkGray!40] (23,3) circle (2.2);
+  \draw[bkInk, line width=0.8pt] (23,3) -- (23,9);
+  \node[font=\sffamily\footnotesize, anchor=east] at (11.5,17.5) {ばね};
+  \node[font=\sffamily\footnotesize, anchor=west] at (35,17.5) {ダンパー};
+  \draw[bkGray, line width=1pt] (-4,-2.2) -- (52,-2.2);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 6-7 では、ばね・質量・ダンパーの動きを、表計算で少しずつ進めて求めました。ゆれながら止まる・ちょうどよく止まる・ゆっくりもどる、の3つの動き方があり、その境め（臨界）が $c=2\sqrt{mk}$ のあたりにあることも、表計算で見つけました。
+
+この章では、同じ動きを「1本の式」で求めます。かぎになるのは、たった1つのアイデア「$e^{st}$ を入れてみる」です。すると、微分方程式が2次方程式に変わり、その解が動き方を教えてくれます。第9巻のラプラス変換と制御は、この考え方をそのまま使います。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=27mm, font=\sffamily\footnotesize] (a) at (0,0) {微分方程式\\$m\ddot x+c\dot x+kx=0$};
+  \node[bk node, text width=15mm, font=\sffamily\footnotesize] (b) at (33,0) {$e^{st}$ を\\入れてみる};
+  \node[bk node, text width=27mm, font=\sffamily\footnotesize] (c) at (66,0) {2次方程式\\$ms^2+cs+k=0$};
+  \node[bk node, text width=15mm, font=\sffamily\footnotesize] (d) at (99,0) {解 $s$ で\\動きがわかる};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道すじ。}
+\end{bkfigure}
+この章では、時間で微分したものを $\dot x=\frac{\dd x}{\dd t}$（速度）、$\ddot x=\frac{\dd^2x}{\dd t^2}$（加速度）と、点で書きます（5-5 の記号カード）。
+
+%% ---------------- 思い出そう・やってみよう ----------------
+\begin{omoidasou}
+\bkrecall{3-10}{$as^2+bs+c=0$ の解は $s=\dfrac{-b\pm\sqrt{b^2-4ac}}{2a}$。判別式 $D=b^2-4ac$ が正なら解は2つ、0なら1つ（重解）、負なら（実数の）解はない。}
+\bkrecall{5-6}{積の微分 $(fg)'=f'g+fg'$。}
+\bkrecall{5-14}{$(e^{at})'=ae^{at}$。$e^0=1$。$e$ の何乗も、かならず正の数（0にならない）。}
+\bkrecall{5-18}{線形：答えどうしをたしても、答えを何倍しても答え。2回微分の式の答えには数が2つあり、はじめの位置と速度で決める。}
+\bkrecall{6-7}{ばね・質量・ダンパーの式 $m\ddot x+c\dot x+kx=0$。減衰比 $\zeta=\dfrac{c}{2\sqrt{mk}}$。$\zeta<1$ でゆれる、$\zeta=1$ でちょうど、$\zeta>1$ でゆっくり。}
+\bkrecall{6-8}{$s^2+3s+2=0$ の解は $s=-1$、$-2$。$s^2+2s+5=0$ の解は $s=-1\pm2j$（$j^2=-1$）。判別式で、解が2つ・1つ・複素数を見分けた。}
+\bkrecall{6-10}{$e^{(\sigma+j\omega)t}=e^{\sigma t}(\cos\omega t+j\sin\omega t)$。$e^{j\theta}$ の大きさはいつも1。}
+\end{omoidasou}
+
+\begin{yattemiyou}[3-10 の2台の車を、表計算で動かそう]
+3-10 の2つの式は、質量 $m=\qty{1}{kg}$ の「おもちゃの車」の、ばね・質量・ダンパーの動きを表しています。どちらも、はじめに車体を少しおし下げて、その位置を $x=1$ とし、静かに手をはなします（$\dot x=0$）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=32mm] Q[c,m,wd=34mm] Q[c,m,wd=34mm]}, rowsep=1.5pt}
+ & 式 & ばね定数・ダンパー & 3-10 の2次方程式 \\
+車A & $\ddot x+3\dot x+2x=0$ & $k=2$、\ $c=3$ & $s^2+3s+2=0$ \\
+車B & $\ddot x+2\dot x+5x=0$ & $k=5$、\ $c=2$ & $s^2+2s+5=0$ \\
+\end{bktable}
+\end{bkcenter}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 6-7 と同じ型の表を作ろう。$\Delta t$ はE2のセルに0.01と書く。加速度は、式を $\ddot x=-3\dot x-2x$ と変形して計算する（車A）。
+\item 速度を先に新しくし、その新しい速度で位置を進める（6-2 の「速度を先に進めるオイラー法」）。
+\item $t=0.5$、1、2、3 の $x$ を読もう。車Bは、D2の式を \texttt{=-2*C2-5*B2} に変えて、もう一度。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & $t$ & $x$ & $v$ & $a$ & $\Delta t$ \\
+2 & 0 & 1 & 0 & \texttt{=-3*C2-2*B2} & 0.01 \\
+3 & \texttt{=A2+\$E\$2} & \texttt{=B2+C3*\$E\$2} & \texttt{=C2+D2*\$E\$2} & （上をコピー） & \\
+4 & （下へコピー） & & & & \\}
+\bktabcaption{車Aの表。B3は、同じ行の新しい速度C3を使う（速度を先に進める）。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=1.5pt}
+$t$（s） & 0 & 0.5 & 1 & 2 & 3 \\
+車A の $x$ & 1 & 0.841 & 0.596 & 0.251 & 0.097 \\
+車B の $x$ & 1 & 0.574 & 0.008 & $-0.135$ & 0.041 \\
+\end{bktable}
+\bktabcaption{表計算の結果（$\Delta t=\qty{0.01}{s}$）。車Bは0の線をこえて、反対側へ行きすぎる。}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=112mm, height=54mm, xmin=0, xmax=5.3, ymin=-0.35, ymax=1.15, xtick={1,2,3,4,5}, ytick={0.5,1}, xlabel={$t$（s）}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.6pt, domain=0:5.1] {0};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (axis cs:-0.08,0) {0};
+  \addplot[bkcurve, domain=0:5, samples=120] {2*exp(-x)-exp(-2*x)};
+  \addplot[bkRed, line width=1.6pt, domain=0:5, samples=160] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:1.35,0.58) {車A：ゆれずにもどる};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north west, fill=white, inner sep=1pt] at (axis cs:2.5,-0.13) {車B：ゆれながらもどる};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表計算でかいた2台の車の動き。3-10 の図と同じ形になった。}
+\end{bkfigure}
+
+\noindent 3-10 で予告したとおりの2つの動き方が、表計算で出てきました。表計算は、どんな式でも答えの「数」を出せる強い道具です。でも、「なぜ車Aはゆれず、車Bはゆれるのか」「どんな $c$ ならゆれないのか」は、表を何回見ても、なかなかわかりません。それを教えてくれるのが、この章の「式で解く」方法です。
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{3つの動き方をもう一度}{\bklevel{3}}
+
+\bksubsection{1}{6-7 の3本のグラフ}
+
+\label{bk:6-12:mitsu}5-15 と 6-6 のばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$）に、ダンパーをつけたときの動きを、6-7 では表計算で調べました。はじめに $\qty{0.1}{m}$ 引いて、静かにはなします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=120mm, height=58mm, xmin=0, xmax=4.3, ymin=-0.085, ymax=0.118, xtick={1,2,3,4}, ytick={-0.05,0.05,0.1}, yticklabels={$-0.05$,0.05,0.1}, xlabel={$t$（s）}, ylabel={$x$（m）},
+  legend style={at={(axis cs:4.25,0.117)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine, fill=white, row sep=1pt}, legend cell align=left]
+  \addplot[bkRed, line width=1.5pt, domain=0:4.1, samples=240] {exp(-0.4*x)*(0.1*cos(deg(3.97995*x))+0.0100504*sin(deg(3.97995*x)))};
+  \addlegendentry{$c=0.4$：ゆれながら止まる}
+  \addplot[bkcurve, domain=0:4.1, samples=120] {(0.1+0.4*x)*exp(-4*x)};
+  \addlegendentry{$c=4$：ちょうど}
+  \addplot[bkOrange, line width=1.6pt, domain=0:4.1, samples=120] {0.104554*exp(-0.834849*x)-0.004554*exp(-19.16515*x)};
+  \addlegendentry{$c=10$：ゆっくりもどる}
+  \addplot[bkGray, line width=0.6pt, domain=0:4.2, forget plot] {0};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (axis cs:-0.06,0) {0};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$ のばねに、3通りのダンパー（$c$ の単位は N·s/m）をつけたときの動き。}
+\label{bk:6-12:fig-mitsu}
+\end{bkfigure}
+
+6-7 では、表計算をくり返して、次のことに気づきました。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $c$ が小さいと、ゆれながら止まる。山の高さは、1周期ごとに同じ割合（$c=0.4$ では0.532倍）でへる。山をなぞる線（つつみ）は $e^{-\alpha t}$ で、$\alpha=\frac{c}{2m}$ だった。
+\item $c$ を大きくしていくと、$c=4$ のあたりで、行きすぎずに止まるようになる。$4=2\sqrt{0.5\times8}$ で、ほかの $m$、$k$ でも、境めはいつも $c=2\sqrt{mk}$ だった。
+\item $c$ をもっと大きくすると、かえってゆっくりもどる（オレンジ）。
+\end{enumerate}
+この章では、次の3つの「なぜ」に、式で答えます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item なぜ、山の高さは同じ割合でへるのか。なぜ $\alpha=\frac{c}{2m}$ なのか。
+\item なぜ、境めは $2\sqrt{mk}$ なのか。なぜ、2がつくのか。
+\item なぜ、ダンパーを強くしすぎると、かえってゆっくりになるのか。
+\end{itemize}
+
+\Needspace{14\baselineskip}\bkstage{te}{手でわかる}{$e^{st}$ を入れてみる}{\bklevel{4}}
+
+\bksubsection{2}{なぜ $e^{st}$ と置くのか}
+
+\label{bk:6-12:oku}まず、式をもう一度ことばで読みます。
+\bkvimline{$m\ddot x\ +\ c\dot x\ +\ kx\ =\ 0$}
+「（2回微分したもの）の $m$ 倍と、（1回微分したもの）の $c$ 倍と、（もとの関数）の $k$ 倍をたすと、いつでも0」です。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+3つの項がいつでも打ち消しあうには、3つが「同じ形」をしていないと困ります。形がちがうと、ある時刻では打ち消しあっても、別の時刻ではずれてしまうからです。
+
+そこで、\textbf{微分しても形が変わらない関数}をさがします。5-18 の答えの候補リストで、それは $e^{st}$（$s$ は定数）でした。微分するたびに $s$ が1つ前に出るだけで、$e^{st}$ の形は残ります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=20mm] (x) at (0,30) {$e^{st}$};
+  \node[bk node, minimum width=20mm] (x1) at (0,15) {$s\,e^{st}$};
+  \node[bk node, minimum width=20mm] (x2) at (0,0) {$s^2e^{st}$};
+  \draw[bk link] (x) -- node[bk link label, right, xshift=1mm] {微分} (x1);
+  \draw[bk link] (x1) -- node[bk link label, right, xshift=1mm] {微分} (x2);
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkInk] at (-13,30) {$x$};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkInk] at (-13,15) {$\dot x$};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkInk] at (-13,0) {$\ddot x$};
+\end{tikzpicture}\par\vspace{3pt}
+{\footnotesize 微分するたびに $s$ が1つかかる。}
+\end{minipage}
+
+\bkvimhead{ためしに、ほかの関数を入れてみる}
+「形が同じでないと困る」ことを、車A（$\ddot x+3\dot x+2x=0$）で確かめます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{$x=t^2$ を入れると}\quad $\dot x=2t$、$\ddot x=2$ なので、左辺は
+\bkvimline{$2+3\times2t+2t^2=2t^2+6t+2$}
+$t=0$ でも2になり、0になりません。$t^2$ は微分すると $t$ になり、形が変わるので、打ち消しあえないのです。
+\item \textbf{$x=\sin t$ を入れると}\quad $\dot x=\cos t$、$\ddot x=-\sin t$ なので、左辺は
+\bkvimline{$-\sin t+3\cos t+2\sin t=\sin t+3\cos t$}
+$t=0$ で3になり、0になりません。$\sin$ は2回微分すると $\sin$ にもどりますが、1回微分の項（ダンパー）だけ $\cos$ になって、残ってしまいます。
+\end{itemize}
+ダンパーのない 6-6 のばねでは、1回微分の項がないので、$\sin$ でうまくいきました。
+
+\bkvimhead{$e^{st}$ を入れると}
+$x=e^{st}$ とすると、$\dot x=se^{st}$、$\ddot x=s^2e^{st}$ です（5-14）。$m\ddot x+c\dot x+kx=0$ に入れて、1行ずつ変形します。
+\begin{bkvimhk}[0.5]
+m\ddot x+c\dot x+kx=0 & 6-7 の式 \\
+m\,s^2e^{st}+c\,se^{st}+k\,e^{st}=0 & $x$、$\dot x$、$\ddot x$ を入れた \\
+(ms^2+cs+k)\,e^{st}=0 & 3つの項に共通の $e^{st}$ でくくった \\
+ms^2+cs+k=0 & $e^{st}$ は0にならないので、両辺を $e^{st}$ でわった \\
+\end{bkvimhk}
+\textbf{$t$ が消えて、$s$ の2次方程式になりました。}$e^{st}$ は、どの時刻でも0にならない（5-14）ので、わってもかまいません。この2次方程式をみたす $s$ を選べば、$e^{st}$ は、どの時刻でも式をみたします。
+
+この2次方程式を\textbf{特性方程式}（とくせいほうていしき）といいます。\bkidx{とくせいほうていしき}{特性方程式}「特性」は、その物（ばね・質量・ダンパーの組）の性質という意味です。$m$、$c$、$k$ だけで決まり、はじめの位置や速度には関係しません。文字 $s$ は、3-10 で使ったものと同じで、第9巻のラプラス変換でも同じ $s$ を使います。
+
+\bkvimframe{\sffamily\bfseries $m\ddot x+c\dot x+kx=0$\quad →\quad 特性方程式\quad $ms^2+cs+k=0$\\[3pt]
+\normalfont\small 作り方：\ $\ddot x$ を $s^2$ に、\ $\dot x$ を $s$ に、\ $x$ を1におきかえる}
+
+\bkvimhead{数で確かめる}
+車A（$m=1$、$c=3$、$k=2$）の特性方程式は $s^2+3s+2=0$ です。3-10 と 6-8 で解いた式で、$(s+1)(s+2)=0$ と因数分解して、解は $s=-1$ と $s=-2$ でした。$s=-1$ なら $x=e^{-t}$ です。本当に式をみたすか、$t=0.5$ の数で確かめます（$e^{-0.5}=0.6065$）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] Q[c,m,wd=32mm] Q[c,m,wd=14mm] Q[c,m,wd=30mm]}, rowsep=1.5pt}
+ & 式 & 係数 & 係数をかけた値 \\
+$\ddot x$ & $(-1)^2e^{-t}=e^{-t}$ & 1 & $0.6065$ \\
+$\dot x$ & $-e^{-t}$ & 3 & $-1.8196$ \\
+$x$ & $e^{-t}$ & 2 & $1.2131$ \\
+\SetCell[c=3]{r} 3つの合計 & & & $0$ \\
+\end{bktable}
+\bktabcaption{$x=e^{-t}$ を車Aの式に入れた。$0.6065-1.8196+1.2131=0$ で、3つの項がぴったり打ち消しあう。}
+\end{bkcenter}
+どの時刻でも、3つの項は $e^{-t}$ に $1$、$-3$、$2$ をかけたものになり、$1-3+2=0$ だから、いつでも打ち消しあいます。この $1-3+2$ は、特性方程式の左辺 $s^2+3s+2$ に $s=-1$ を入れた値そのものです。
+
+\bksubsection{3}{場合1：解が2つあるとき}
+
+\label{bk:6-12:ba1}車Aでは、$e^{-t}$ も $e^{-2t}$ も式をみたします。でも、どちらか1つだけでは、はじめの状態（$x(0)=1$、$\dot x(0)=0$）に合わせられません。$e^{-t}$ は $t=0$ で速度が $-1$、$e^{-2t}$ は速度が $-2$ で、どちらも0ではないからです。
+
+\bkvimhead{2つをまぜる：線形だからできる}
+5-18 で学んだように、この式は線形です。答えを何倍しても、答えどうしをたしても答えになります。だから、$A$、$B$ を定数として
+\bkvimline{$x=Ae^{-t}+Be^{-2t}$}
+も答えです。代入して確かめます。$\dot x=-Ae^{-t}-2Be^{-2t}$、$\ddot x=Ae^{-t}+4Be^{-2t}$ を入れて、$e^{-t}$ の項と $e^{-2t}$ の項に分けると、
+\begin{bkvimhk}[0.62]
+\ddot x+3\dot x+2x & 左辺 \\
+=(A-3A+2A)e^{-t}+(4B-6B+2B)e^{-2t} & 2つの項に分けた \\
+=0\times Ae^{-t}+0\times Be^{-2t}=0 & $1-3+2=0$、\ $4-6+2=0$ \\
+\end{bkvimhk}
+$A$、$B$ の2つがあるので、はじめの位置と速度の2つに合わせられます（2回微分の式には数が2つ：5-18）。
+
+\bkvimhead{はじめの状態で $A$、$B$ を決める}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item はじめの位置：$t=0$ を入れると、$e^0=1$ なので $x(0)=A+B$。これが1なので $A+B=1$。
+\item はじめの速度：まず微分して $\dot x=-Ae^{-t}-2Be^{-2t}$。ここに $t=0$ を入れると $\dot x(0)=-A-2B$ で、これが0なので $-A-2B=0$。
+\item ①と②の式をたすと $-B=1$、つまり $B=-1$。①から $A=1-B=2$。
+\end{enumerate}
+\bkvimframe{\sffamily\bfseries 車A：\quad $x=2e^{-t}-e^{-2t}$}
+これが、3-10 の図の青い曲線の式です。表計算の結果とくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=38mm] *{5}{Q[c,m,wd=13mm]}}, rowsep=1.5pt}
+$t$（s） & 0 & 0.5 & 1 & 2 & 3 \\
+式 $2e^{-t}-e^{-2t}$ & 1 & 0.845 & 0.600 & 0.252 & 0.097 \\
+表計算（$\Delta t=0.01$） & 1 & 0.841 & 0.596 & 0.251 & 0.097 \\
+\end{bktable}
+\bktabcaption{小数第3位の小さなずれは、$\Delta t$ が0でないため（6-2）。$\Delta t=0.001$ にすると、表計算も0.845、0.600になる。}
+\end{bkcenter}
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.54\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=74mm, height=52mm, xmin=0, xmax=4.4, ymin=-1.15, ymax=2.25, xtick={1,2,3,4}, ytick={-1,1,2}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.6pt, domain=0:4.3] {0};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (axis cs:-0.06,0) {0};
+  \addplot[bkOrange, line width=1.2pt, dashed, domain=0:4.2, samples=80] {2*exp(-x)};
+  \addplot[bkGreen!70!black, line width=1.2pt, dashed, domain=0:4.2, samples=80] {-exp(-2*x)};
+  \addplot[bkcurve, domain=0:4.2, samples=80] {2*exp(-x)-exp(-2*x)};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west] at (axis cs:0.75,1.4) {$2e^{-t}$};
+  \node[font=\sffamily\footnotesize, text=bkGreen!50!black, anchor=west] at (axis cs:0.75,-0.62) {$-e^{-2t}$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south west] at (axis cs:2.15,0.35) {たしたもの};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}
+\raggedright
+答えを2つの部分に分けて見ます。$-e^{-2t}$（緑）は速く0に近づき、$t=2$ ではほとんど0です。そのあとは $2e^{-t}$（オレンジ）だけが残り、ゆっくり0に近づきます。
+
+ゆっくりなほう（$s=-1$）が、もどる速さを決めるのです。
+\end{minipage}
+
+\bkvimhead{なぜ、どちらの $s$ も負になるのか}
+$s$ が負なので、$e^{st}$ は時間とともに0に近づき、車はもとの高さにもどります。もし $s$ が正なら、$e^{st}$ はどんどん大きくなって、車はどこかへ飛んでいってしまいます。ばねとダンパーなら、そんなことはおこりません。
+
+2つの解を $s_1$、$s_2$ とすると、特性方程式は $m(s-s_1)(s-s_2)=0$ と書けます（3-10 の「解から因数分解の形を作る」）。展開してもとの式とくらべると、次の関係があります（2次方程式の解と係数の関係）。
+\bkvimline{$s_1+s_2=-\dfrac{c}{m}$\qquad $s_1s_2=\dfrac{k}{m}$}
+$m$、$c$、$k$ はどれも正なので、積 $s_1s_2$ は正、和 $s_1+s_2$ は負です。積が正なら2つは同じ符号、和が負なら、それは負。だから、\textbf{ばねとダンパーなら、$s$ はかならず両方とも負}です。車Aで確かめると、和は $(-1)+(-2)=-3$ で $-\frac31$ と同じ、積は $(-1)\times(-2)=2$ で $\frac21$ と同じです。
+
+\bkkokomade[ここまでわかれば、ゴールです。この先は、式でくわしく調べます。]
+
+\Needspace{16\baselineskip}\bkstage{shiki}{式でわかる}{解が複素数のとき・1つのとき}{\bklevel{5}}
+
+\bksubsection{4}{場合3：解が複素数になるとき}
+
+\label{bk:6-12:ba3}車B（$\ddot x+2\dot x+5x=0$）の特性方程式は $s^2+2s+5=0$ です。判別式は $D=2^2-4\times1\times5=-16$ で負です。3-10 では「解はない」としましたが、6-8 で、2乗して負になる数 $j$ を学び、この式を解きました（6-8 で解いた式）。解の公式で、$\sqrt{-16}=4j$ として、
+\bkvimline{$s=\dfrac{-2\pm4j}{2}=-1\pm2j$}
+
+\bkvimhead{$e^{(-1+2j)t}$ は、どんな関数？}
+$s$ が複素数でも、$e^{st}$ を微分すると $s$ が前に出るでしょうか。6-10 で確かめたのは、$e^{j\omega t}$（実部が0）のときだけでした。そこで、$s=\sigma+j\omega$（$\sigma$、$\omega$ は実数）として、積の微分（5-6）で1行ずつ確かめます。
+\begin{bkvimhk}[0.56]
+e^{(\sigma+j\omega)t}=e^{\sigma t}\,e^{j\omega t} & 指数法則（3-11）で、2つのかけ算に分けた \\
+\frac{\dd}{\dd t}\bigl(e^{\sigma t}e^{j\omega t}\bigr)=(e^{\sigma t})'\,e^{j\omega t}+e^{\sigma t}\,(e^{j\omega t})' & 積の微分（5-6） \\
+\phantom{\frac{\dd}{\dd t}\bigl(e^{\sigma t}e^{j\omega t}\bigr)}=\sigma e^{\sigma t}e^{j\omega t}+e^{\sigma t}\cdot j\omega e^{j\omega t} & $(e^{\sigma t})'=\sigma e^{\sigma t}$（5-14）、$(e^{j\omega t})'=j\omega e^{j\omega t}$（6-10） \\
+\phantom{\frac{\dd}{\dd t}\bigl(e^{\sigma t}e^{j\omega t}\bigr)}=(\sigma+j\omega)\,e^{\sigma t}e^{j\omega t} & 共通の $e^{\sigma t}e^{j\omega t}$ でくくった \\
+\phantom{\frac{\dd}{\dd t}\bigl(e^{\sigma t}e^{j\omega t}\bigr)}=s\,e^{st} & $\sigma+j\omega=s$、指数法則でもとにもどした \\
+\end{bkvimhk}
+たしかに、$s$ が複素数でも「微分すると $s$ が前に出る」が成り立ちます。だから、②の変形はそのまま使えて、$e^{(-1+2j)t}$ と $e^{(-1-2j)t}$ は、どちらも式をみたします。でも、虚数が入った関数を車の高さと言われても困ります。そこで、6-10 のオイラーの公式で、ばらしてみます。
+\begin{bkvimhk}[0.5]
+e^{(-1+2j)t}=e^{-t}\,e^{j2t} & 指数法則 $e^{a+b}=e^ae^b$（3-11）\\
+\phantom{e^{(-1+2j)t}}=e^{-t}(\cos2t+j\sin2t) & オイラーの公式（6-10）で $\theta=2t$ \\
+e^{(-1-2j)t}=e^{-t}(\cos2t-j\sin2t) & 同じように $\theta=-2t$ とした。$\sin(-2t)=-\sin2t$ \\
+\end{bkvimhk}
+どちらにも「$e^{-t}$（へっていく）」と「$\cos2t$、$\sin2t$（ゆれる）」が入っています。\textbf{解の実部 $-1$ が「へる速さ」、虚部 $2$ が「ゆれの角振動数」を決めている}のです。
+
+\bkvimhead{実数の答えを組み立てる}
+線形なので、2つの答えをたしても、何倍しても答えです。2つをたして2でわると、$j$ の項が消えます。
+\begin{bkvimhk}[0.6]
+\frac12\bigl\{e^{(-1+2j)t}+e^{(-1-2j)t}\bigr\} & 2つをたして2でわった \\
+=\frac12\bigl\{e^{-t}(\cos2t+j\sin2t) & 上の2行を入れた \\
+\phantom{=\frac12\bigl\{}+e^{-t}(\cos2t-j\sin2t)\bigr\} & \\
+=\frac12\times2e^{-t}\cos2t=e^{-t}\cos2t & $+j\sin2t$ と $-j\sin2t$ が消えた \\
+\end{bkvimhk}
+同じように、ひき算して $2j$ でわると $e^{-t}\sin2t$ が出てきます。どちらも実数の関数で、どちらも答えです。だから、車Bの答えは次の形です。
+\bkvimframe{\sffamily\bfseries $x=e^{-t}(A\cos2t+B\sin2t)$}
+これが、5-18 で予告した「ゆれながら止まる（$e^{at}$ と $\sin$ のかけ算）」の正体です。
+
+\bkvimhead{複素数を使わずに確かめる}
+本当に答えになっているか、$x=e^{-t}\cos2t$ を積の微分（5-6）で微分して、式に入れてみます。
+\begin{bkvimhk}[0.56]
+\dot x=-e^{-t}\cos2t-2e^{-t}\sin2t & $(e^{-t})'\cos2t+e^{-t}(\cos2t)'$ \\
+\ddot x=\bigl(e^{-t}\cos2t+2e^{-t}\sin2t\bigr) & $-e^{-t}\cos2t$ を微分した \\
+\phantom{\ddot x=}+\bigl(2e^{-t}\sin2t-4e^{-t}\cos2t\bigr) & $-2e^{-t}\sin2t$ を微分した \\
+\phantom{\ddot x}=-3e^{-t}\cos2t+4e^{-t}\sin2t & 同じ形の項をまとめた \\
+\end{bkvimhk}
+$\ddot x+2\dot x+5x$ を、$e^{-t}\cos2t$ の項と $e^{-t}\sin2t$ の項に分けて計算します。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $e^{-t}\cos2t$ の項：$\ddot x$ から $-3$、$2\dot x$ から $2\times(-1)=-2$、$5x$ から $5$。合計 $-3-2+5=0$。
+\item $e^{-t}\sin2t$ の項：$\ddot x$ から $4$、$2\dot x$ から $2\times(-2)=-4$。合計 $4-4=0$。
+\end{itemize}
+たしかに0になります。\textbf{複素数は、答えを「見つける」ための道具で、見つかった答えは、実数だけで確かめられます。}（ばねや回路では、はかれるのは実数の量なので、こう考えます。量子力学では、複素数の波そのものが自然を表します：物理シリーズ。）
+
+\bkvimhead{はじめの状態で $A$、$B$ を決める}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item はじめの位置：$t=0$ で $e^0=1$、$\cos0=1$、$\sin0=0$ なので $x(0)=A$。これが1なので $A=1$。
+\item はじめの速度：積の微分で
+\bkvimline{$\dot x=-e^{-t}(A\cos2t+B\sin2t)+e^{-t}(-2A\sin2t+2B\cos2t)$}
+$t=0$ を入れると $\dot x(0)=-A+2B$。これが0なので、$2B=A=1$、$B=\frac12$。
+\end{enumerate}
+\bkvimframe{\sffamily\bfseries 車B：\quad $x=e^{-t}\Bigl(\cos2t+\dfrac12\sin2t\Bigr)$}
+②で、$e^{-t}$ を微分した $-e^{-t}$ の部分を忘れると、$\dot x(0)=2B$ となって、$B=0$ とまちがえます（まちがえやすいところ）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{5}{Q[c,m,wd=13.5mm]}}, rowsep=1.5pt}
+$t$（s） & 0 & 0.5 & 1 & 2 & 3 \\
+式（上のわく） & 1 & 0.583 & 0.014 & $-0.140$ & 0.041 \\
+表計算（$\Delta t=0.01$） & 1 & 0.574 & 0.008 & $-0.135$ & 0.041 \\
+\end{bktable}
+\bktabcaption{車Bも、表計算と式がほぼ同じになった（ずれは $\Delta t$ の分）。}
+\end{bkcenter}
+
+\bkvimhead{山の高さは、なぜ同じ割合でへるのか}
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.52\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=72mm, height=50mm, xmin=0, xmax=4.4, ymin=-1.25, ymax=1.3, xtick={1,2,3,4}, ytick={-1,1}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.6pt, domain=0:4.3] {0};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (axis cs:-0.06,0) {0};
+  \addplot[bkGray, line width=1pt, dashed, domain=0:4.2, samples=60] {1.118*exp(-x)};
+  \addplot[bkGray, line width=1pt, dashed, domain=0:4.2, samples=60] {-1.118*exp(-x)};
+  \addplot[bkRed, line width=1.5pt, domain=0:4.2, samples=200] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+  \node[font=\sffamily\footnotesize, text=bkGray!80!black, anchor=west] at (axis cs:1.15,0.72) {$1.12e^{-t}$};
+  \node[font=\sffamily\footnotesize, text=bkGray!80!black, anchor=west] at (axis cs:1.75,-0.62) {$-1.12e^{-t}$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\raggedright
+$\cos2t+\frac12\sin2t$ は、4-9 の合成で、大きさ $\sqrt{1^2+(\frac12)^2}\approx1.12$ の1つの波にまとめられます。だから、ゆれは点線 $\pm1.12e^{-t}$ のあいだにおさまり、点線にふれながら小さくなります。この点線を、ゆれの「つつみの線」といいます。
+\end{minipage}\par\vspace{3pt}
+ゆれの周期は、$\cos2t$ の周期 $\frac{2\pi}{2}=\pi\approx\qty{3.14}{s}$ です。1周期たつと、つつみの線 $e^{-t}$ は $e^{-\pi}\approx0.043$ 倍になります。どこから1周期はかっても、$e^{-t}$ の性質（3-11 の倍々：同じ時間で同じ割合）から、同じ0.043倍です。\textbf{これが「山の高さが同じ割合でへる」理由}です。6-7 の $c=0.4$ のばねでは、6-7 で見つけた $\alpha=\frac{c}{2m}=0.4$ と、周期 $\qty{1.579}{s}$ から、$e^{-0.4\times1.579}=e^{-0.632}\approx0.532$ 倍で、6-7 の表計算と同じです。
+
+\bksubsection{5}{場合2：解が1つ（重解）のとき}
+
+\label{bk:6-12:ba2}$\ddot x+4\dot x+4x=0$ を考えます。特性方程式は $s^2+4s+4=0$、因数分解すると $(s+2)^2=0$ で、解は $s=-2$ の1つだけ（重解）です。判別式は $D=16-16=0$ です。
+
+\bkvimhead{答えが1つ足りない}
+$e^{-2t}$ は答えです。でも、2回微分の式には、はじめの位置と速度に合わせる数が2つ必要です。「$Ae^{-2t}+Be^{-2t}$」としても、これは $(A+B)e^{-2t}$ で、数は $A+B$ の1つにまとまってしまいます。$e^{-2t}$ とはちがう形の、もう1つの答えがほしいのです。
+
+\bkvimhead{見つけ方1：2つの解を近づける}
+特性方程式の解が少しだけはなれていて、$s_1=-2+\varepsilon$、$s_2=-2-\varepsilon$（$\varepsilon$ は小さい正の数。イプシロンと読む）だったとします。解が2つなら、$e^{s_1t}$ と $e^{s_2t}$ が答えです。線形だから、そのひき算を $s_1-s_2=2\varepsilon$ でわったものも答えです。
+\bkvimline{$\dfrac{e^{s_1t}-e^{s_2t}}{s_1-s_2}$}
+$\varepsilon$ を小さくして、2つの解を $-2$ に近づけると、これは何に近づくでしょう。$t=1$ で計算します。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=48mm] Q[c,m,wd=20mm]}, rowsep=3pt}
+$\varepsilon$ & $t=1$ での $\dfrac{e^{s_1t}-e^{s_2t}}{s_1-s_2}$ & 値 \\
+0.5 & $\dfrac{e^{-1.5}-e^{-2.5}}{1}$ & 0.1410 \\
+0.1 & $\dfrac{e^{-1.9}-e^{-2.1}}{0.2}$ & 0.1356 \\
+0.01 & $\dfrac{e^{-1.99}-e^{-2.01}}{0.02}$ & 0.1353 \\
+\end{bktable}
+\bktabcaption{$\varepsilon$ を小さくすると、$te^{-2t}=1\times e^{-2}=0.1353$ に近づく。}
+\end{bkcenter}
+この式は「$e^{st}$ の、$s$ をほんの少し変えたときの変化÷$s$ の変化」、つまり 5-3 の微分の定義そのものです。$e^{st}$ を（$t$ ではなく）$s$ で微分すると、$t$ が前に出て $te^{st}$ になります。だから、近づく先は $te^{-2t}$ です。\textbf{重解のときの、もう1つの答えは $te^{-2t}$} です。
+\begin{seikaku}
+「答えを近づけた先も、答えになる」のは、答えの式が $s_1$、$s_2$ についてなめらかに変わるので、近づけた先（極限）も、もとの式をみたすからです。極限をとってよいことのくわしい説明は大学で学びます。ここでは、見つけた $te^{-2t}$ が本当に答えかどうかを、次の見つけ方2で、式に入れて確かめます。
+\end{seikaku}
+
+\bkvimhead{見つけ方2：入れて確かめる}
+$x=te^{-2t}$ を、積の微分（5-6）で2回微分します。
+\begin{bkvimhk}[0.56]
+\dot x=e^{-2t}-2te^{-2t} & $(t)'e^{-2t}+t(e^{-2t})'$ \\
+\ddot x=-2e^{-2t}+\bigl(-2e^{-2t}+4te^{-2t}\bigr) & $e^{-2t}$ と $-2te^{-2t}$ を、それぞれ微分した \\
+\phantom{\ddot x}=-4e^{-2t}+4te^{-2t} & 同じ形の項をまとめた \\
+\end{bkvimhk}
+$\ddot x+4\dot x+4x$ を、$e^{-2t}$ の項と $te^{-2t}$ の項に分けて計算します。$e^{-2t}$ の項は $-4+4\times1=0$ です。$te^{-2t}$ の項は $4+4\times(-2)+4=0$ です。たしかに答えです。
+
+\bkvimhead{はじめの状態で決める}
+答えの形は $x=(A+Bt)e^{-2t}$ です。$x(0)=1$、$\dot x(0)=0$ とします。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item はじめの位置：$x(0)=(A+0)\times1=A$。これが1なので $A=1$。
+\item はじめの速度：$\dot x=Be^{-2t}-2(A+Bt)e^{-2t}$ より $\dot x(0)=B-2A$。これが0なので $B=2A=2$。
+\end{enumerate}
+\bkvimframe{\sffamily\bfseries $x=(1+2t)e^{-2t}$}
+$t$ がかかっていても、$e^{-2t}$ が速く0に近づくので、$x$ は0に近づきます（5-18⑤：$e^{-t}$ がかかると、$t^n$ がかかっていても、やがて0に近づく）。$t=0.5$、1、2 では、0.736、0.406、0.092 です。
+
+\bksubsection{6}{3つの場合を1つにまとめる：減衰比 $\zeta$}
+
+\label{bk:6-12:zeta}ここまでの3つの場合を、ばね・質量・ダンパーの文字のままで、まとめます。
+
+\bkvimhead{判別式で分ける}
+6-8 の例題では、判別式で解の種類（2つ・1つ・複素数）を見分けました。その3つが、ここまでの3つの場合です。特性方程式 $ms^2+cs+k=0$ の判別式は $D=c^2-4mk$ です。
+\begin{bkcenter}
+\begin{bktable}{width=\linewidth, colspec={Q[c,m,wd=13mm] Q[c,m,wd=20mm] X[c,m] Q[c,m,wd=27mm]}, rowsep=2pt, cells={font=\small}}
+判別式 & $c$ の大きさ & 特性方程式の解と、答えの形 & 動き方 \\
+$D>0$ & $c>2\sqrt{mk}$ & {負の解が2つ\\$Ae^{s_1t}+Be^{s_2t}$} & {ゆっくりもどる\\（過減衰）} \\
+$D=0$ & $c=2\sqrt{mk}$ & {負の重解\\$(A+Bt)e^{st}$} & {ちょうど\\（臨界減衰）} \\
+$D<0$ & $c<2\sqrt{mk}$ & {複素数の解 $-\alpha\pm j\omega_{\mathrm d}$\\$e^{-\alpha t}(A\cos\omega_{\mathrm d}t+B\sin\omega_{\mathrm d}t)$} & {ゆれながら止まる\\（減衰振動）} \\
+\end{bktable}
+\bktabcaption{判別式の符号で、動き方が決まる。}
+\end{bkcenter}
+$D=0$ は $c^2=4mk$、つまり $c=2\sqrt{mk}$ のときです（$c$ は正）。\textbf{6-7 の表計算で見つけた境め $2\sqrt{mk}$ は、特性方程式の判別式が0になる所だったのです。}2がつくのは、判別式の「$4mk$」の4の平方根だからです。\bkhatenaref の答えは、ここにあります。判別式の符号が、ゆれ方を決めているのです。\bkidx{りんかいげんすい}{臨界減衰}\bkidx{かげんすい}{過減衰}
+
+それぞれの場合に、名前があります。大学の機械の本では「過減衰（かげんすい）・臨界減衰（りんかいげんすい）・減衰振動（げんすいしんどう）」、電気の本では「過制動・臨界制動・不足制動」といいます。減衰振動は「不足減衰」ともいいます。
+
+\bkvimhead{6-7 で見つけた $\alpha=c/2m$ のわけ}
+両辺を $m$ でわると、次の式になります。
+\bkvimline{$s^2+\dfrac cm s+\dfrac km=0$}
+解の公式（3-10）で解きます。$s$ の係数 $\frac cm$ の半分を $\alpha=\frac{c}{2m}$ と書き、$\frac km=\omega_{\mathrm n}^2$（6-6）を使います。
+\begin{bkvimhk}[0.58]
+s=\frac{-\frac cm\pm\sqrt{\bigl(\frac cm\bigr)^2-4\frac km}}{2} & 解の公式（$a=1$、$b=\frac cm$、$c$ の所は $\frac km$） \\
+\phantom{s}=-\frac{c}{2m}\pm\sqrt{\Bigl(\frac{c}{2m}\Bigr)^2-\frac km} & 分子の2つの項を2でわった（√ の中は $4$ でわる） \\
+\phantom{s}=-\alpha\pm\sqrt{\alpha^2-\omega_{\mathrm n}^2} & $\alpha=\frac{c}{2m}$、$\omega_{\mathrm n}^2=\frac km$ \\
+\end{bkvimhk}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $\alpha<\omega_{\mathrm n}$ なら、√ の中が負なので $s=-\alpha\pm j\sqrt{\omega_{\mathrm n}^2-\alpha^2}$。答えは $e^{-\alpha t}(\cdots)$ で、\textbf{6-7 で表計算から見つけた「つつみ $e^{-\alpha t}$、$\alpha=\frac{c}{2m}$」は、解の実部だった}のです。$m=0.5$、$c=0.4$ なら $\alpha=\frac{0.4}{2\times0.5}=0.4$ です。
+\item 境めは √ の中が0、つまり $\alpha=\omega_{\mathrm n}$ のときです。$\frac{c}{2m}=\sqrt{\frac km}$ の両辺に $2m$ をかけると、$c=2m\sqrt{\frac km}=2\sqrt{\frac{m^2k}{m}}=2\sqrt{mk}$。6-7 の臨界の $c_{\mathrm c}=2\sqrt{mk}$ と同じです。
+\end{itemize}
+
+\bkvimhead{$\zeta$ と $\omega_{\mathrm n}$ で書く}
+6-7 で紹介した標準の形 $\ddot x+2\zeta\omega_{\mathrm n}\dot x+\omega_{\mathrm n}^2x=0$ も、ここから導けます。固有角振動数 $\omega_{\mathrm n}=\sqrt{\frac km}$ と、減衰比 $\zeta=\frac{c}{2\sqrt{mk}}$ を使って、係数を書きかえます。
+\begin{bkvimhk}[0.58]
+\frac km=\omega_{\mathrm n}^2 & $\omega_{\mathrm n}=\sqrt{\frac km}$ の両辺を2乗した \\
+\frac cm=\frac{c}{2\sqrt{mk}}\times\frac{2\sqrt{mk}}{m} & $\frac{2\sqrt{mk}}{2\sqrt{mk}}=1$ をかけた \\
+\phantom{\frac cm}=\zeta\times2\sqrt{\frac km}=2\zeta\omega_{\mathrm n} & $\frac{\sqrt{mk}}{m}=\sqrt{\frac{mk}{m^2}}=\sqrt{\frac km}$ \\
+s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2=0 & 特性方程式に入れた \\
+\end{bkvimhk}
+これを解の公式（3-10）で解くと、次のようになります。
+\bkvimline{$s=-\zeta\omega_{\mathrm n}\pm\omega_{\mathrm n}\sqrt{\zeta^2-1}$}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $\zeta>1$ なら √ の中が正で、負の解が2つ（ゆっくり）。$\zeta=1$ なら √ の中が0で、重解（ちょうど）。
+\item $\zeta<1$ なら √ の中が負です。$\sqrt{\zeta^2-1}=j\sqrt{1-\zeta^2}$ として、次の形になります。
+\bkvimline{$s=-\alpha\pm j\omega_{\mathrm d}$\qquad $\alpha=\zeta\omega_{\mathrm n}=\dfrac{c}{2m}$、\quad $\omega_{\mathrm d}=\omega_{\mathrm n}\sqrt{1-\zeta^2}$}
+$\alpha$ は、へる速さ（単位は 1/s）、$\omega_{\mathrm d}$ は、減衰があるときのゆれの角振動数（rad/s）です。
+\end{itemize}
+$\omega_{\mathrm d}$ は $\omega_{\mathrm n}$ より少し小さいので、ダンパーをつけると、ゆれの周期 $T_{\mathrm d}=\frac{2\pi}{\omega_{\mathrm d}}$（6-7 と同じ書き方）は少し長くなります。6-7 の表計算で「山と山の時間が少しだけ長くなった」のは、このためです。
+
+\bkkigocards{\bkkigocard{$s$}{エス}{特性方程式の文字。$x=e^{st}$ と置くと、微分が「$s$ をかける」になる}{characteristic root}{6-12}}
+{\bkkigocard{$\omega_{\mathrm d}$}{オメガ・ディー}{減衰があるときのゆれの角振動数。$\omega_{\mathrm n}\sqrt{1-\zeta^2}$}{damped natural frequency}{6-12}}
+
+\bkvimhead{6-7 のばねを式で解く}
+$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$ では、$\omega_{\mathrm n}=\sqrt{8\div0.5}=4$\,rad/s、境めの $c$ は $2\sqrt{0.5\times8}=\bkvimNsm{4}$ です。はじめ $x(0)=0.1$、$\dot x(0)=0$ で、3つの $c$ を解きます。
+\begin{bkcenter}
+\begin{bktable}{width=\linewidth, colspec={Q[c,m,wd=9mm] Q[c,m,wd=8mm] Q[c,m,wd=34mm] X[c,m]}, rowsep=2pt, cells={font=\small}}
+$c$ & $\zeta$ & {特性方程式（$\div m$）\\と解} & 答え \\
+0.4 & 0.1 & {$s^2+0.8s+16=0$\\$s=-0.4\pm3.980j$} & $e^{-0.4t}(0.1\cos3.980t+0.0101\sin3.980t)$ \\
+4 & 1 & {$s^2+8s+16=0$\\$s=-4$（重解）} & $(0.1+0.4t)e^{-4t}$ \\
+10 & 2.5 & {$s^2+20s+16=0$\\$s=-0.835$、\ $-19.17$} & $0.1046e^{-0.835t}-0.0046e^{-19.17t}$ \\
+\end{bktable}
+\bktabcaption{\pageref{bk:6-12:fig-mitsu}ページの3本の曲線は、この3つの式でかいた。}
+\end{bkcenter}
+$c=10$ を見ると、なぜ「強くしすぎると、かえってゆっくりになる」かがわかります。2つの解 $-0.835$ と $-19.17$ のうち、$-19.17$ の部分はすぐ消えますが、$-0.835$ の部分はゆっくりしかへりません。解の和は $-\frac cm=-20$、積は $\frac km=16$ と決まっています。$c$ を大きくすると和の大きさがふえ、積は16のままなので、片方の解はどんどん0に近づき、そのぶんゆっくりになるのです（$-19.17\times(-0.835)\approx16$）。
+
+\bksubsection{7}{ゆれずにいちばん早いのは $\zeta=1$。でも…}
+
+\label{bk:6-12:hayai}3-10 では「ゆれずに、いちばん早くもとにもどるのは $D=0$ のとき。実際の車は、ほんの少しだけゆれるように設計することが多い」と書きました。このわけを、数で確かめます。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=70mm, height=54mm, xmin=0, xmax=3.3, ymin=-0.65, ymax=1.12, xtick={1,2,3}, ytick={-0.5,0.5,1}, xlabel={$t$（s）}, ylabel={$x$},
+  legend style={at={(axis cs:3.25,1.1)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine, fill=white, row sep=0pt}, legend cell align=left]
+  \fill[bkGreen!14] (axis cs:0,-0.05) rectangle (axis cs:3.2,0.05);
+  \addplot[bkPurple, line width=1.3pt, domain=0:3.2, samples=200] {exp(-0.8*x)*(cos(deg(3.9192*x))+0.20412*sin(deg(3.9192*x)))};
+  \addlegendentry{$\zeta=0.2$}
+  \addplot[bkRed, line width=1.5pt, domain=0:3.2, samples=200] {exp(-2.8*x)*(cos(deg(2.85657*x))+0.98020*sin(deg(2.85657*x)))};
+  \addlegendentry{$\zeta=0.7$}
+  \addplot[bkcurve, domain=0:3.2, samples=100] {(1+4*x)*exp(-4*x)};
+  \addlegendentry{$\zeta=1$}
+  \addplot[bkOrange, line width=1.5pt, domain=0:3.2, samples=100] {1.04554*exp(-0.834849*x)-0.04554*exp(-19.16515*x)};
+  \addlegendentry{$\zeta=2.5$}
+  \addplot[bkGray, line width=0.6pt, domain=0:3.2, forget plot] {0};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (axis cs:-0.05,0) {0};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\raggedright
+\footnotesize
+$\omega_{\mathrm n}=4$\,rad/s のばねで、$\zeta$ だけを変えた（はじめ $x=1$、$\dot x=0$）。緑の帯は、もとの位置から $\pm5$\,\% の範囲。\par\vspace{3pt}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=14mm] Q[c,m,wd=17mm]}, rowsep=1pt, cells={font=\footnotesize}}
+$\zeta$ & 行きすぎ & 帯に入るまで \\
+0.2 & 53\,\% & 3.44\,s \\
+0.4 & 25\,\% & 1.90\,s \\
+0.7 & 4.6\,\% & 0.72\,s \\
+1 & 0 & 1.19\,s \\
+2.5 & 0 & 3.64\,s \\
+\end{bktable}
+\end{minipage}\par\vspace{4pt}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{行きすぎない}ものの中では、$\zeta=1$ がいちばん早く帯に入ります（1.19\,s）。3-10 の「$D=0$ がいちばん早い」は、このことです。
+\item ところが、\textbf{少し行きすぎてもよい}なら、$\zeta=0.7$ のほうがずっと早く帯に入ります（0.72\,s）。行きすぎは4.6\,\%だけです。いきおいよくもどって、少し行きすぎてから帯におさまるからです。
+\end{itemize}
+早く落ち着かせたい計器や機械では、$\zeta$ を0.7くらいにすることがよくあります。車では、さらに「乗り心地」も考えます。ダンパーを強くする（$c$ を大きくする）と、道のでこぼこで車輪がおし上げられたとき、その力がダンパーを通して車体にそのまま伝わり、ごつごつした乗り心地になります。そこで、ふつうの乗用車では、$\zeta$ を1よりかなり小さくして、ほんの少しゆれるようにします。
+
+\bksubsection{8}{電気の回路でも同じ：RLC 回路}
+
+\label{bk:6-12:rlc}6-7 では、コイル $L$〔H〕・抵抗 $R$〔Ω〕・コンデンサー $C$〔F〕をつないだ回路で、コンデンサーにためた電気を流したときの、電荷 $q$〔C〕の式を作りました。$\dot q=i$ は電流です。
+\bkvimline{$L\ddot q+R\dot q+\dfrac1Cq=0$}
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,8) (0,16) -- (0,24) -- (8,24);
+  \draw[bkInk, line width=0.9pt] (8,24) to[out=90, in=90, looseness=1.6] (12,24) to[out=90, in=90, looseness=1.6] (16,24) to[out=90, in=90, looseness=1.6] (20,24) to[out=90, in=90, looseness=1.6] (24,24);
+  \draw[bkInk, line width=0.9pt] (24,24) -- (36,24) -- (36,18);
+  \draw[bkInk, line width=0.9pt, fill=white] (33.5,6) rectangle (38.5,18);
+  \draw[bkInk, line width=0.9pt] (36,6) -- (36,0) -- (0,0);
+  \fill[white] (-4.5,8.8) rectangle (4.5,15.2);
+  \draw[bkInk, line width=1.4pt] (-4,8) -- (4,8) (-4,16) -- (4,16);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-6,12) {$C$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (16,29) {$L$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (40,12) {$R$};
+  \draw[bk arrow, bkRed, line width=1pt] (22,-3.5) -- (12,-3.5);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (23.5,-3.5) {$i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+ばね・質量・ダンパーの式と見くらべると、次のように対応します。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 質量 $m$\quad と\quad コイル $L$
+\item ダンパー $c$\quad と\quad 抵抗 $R$
+\item ばね定数 $k$\quad と\quad $\frac1C$
+\end{itemize}
+だから、特性方程式も同じ作り方で、$Ls^2+Rs+\frac1C=0$ です。
+\end{minipage}\par\vspace{4pt}
+対応を使えば、ばねで作った式をそのまま使えます。
+\bkvimline{$\omega_{\mathrm n}=\dfrac{1}{\sqrt{LC}}$\qquad 境めの抵抗 $R=2\sqrt{\dfrac LC}$\qquad $\zeta=\dfrac R2\sqrt{\dfrac CL}$}
+$\omega_{\mathrm n}=\sqrt{\frac km}$ の $k$ を $\frac1C$ に、$m$ を $L$ におきかえました。境めの $2\sqrt{mk}$ も、同じようにおきかえています。
+\bkvimline{$\sqrt{\dfrac km}\ \to\ \sqrt{\dfrac{1/C}{L}}=\dfrac{1}{\sqrt{LC}}$\qquad $2\sqrt{mk}\ \to\ 2\sqrt{L\times\dfrac1C}=2\sqrt{\dfrac LC}$}
+
+6-7 の数（$L=\qty{10}{mH}=\qty{0.01}{H}$、$C=\qty{1}{\micro F}=\qty{1e-6}{F}$）で計算します。
+\begin{bkvimhk}[0.6]
+\omega_{\mathrm n}=\frac{1}{\sqrt{0.01\times10^{-6}}}=\frac{1}{\sqrt{10^{-8}}}=\frac{1}{10^{-4}}=10^4 & 単位は rad/s（振動数は\qty{1592}{Hz}）\\
+2\sqrt{\frac LC}=2\sqrt{\frac{0.01}{10^{-6}}}=2\sqrt{10^4}=2\times100=200 & 境めの抵抗は\qty{200}{\ohm} \\
+\end{bkvimhk}
+$R=\qty{20}{\ohm}$ なら $\zeta=\frac{20}{200}=0.1$ でゆれながら止まり、$R=\qty{1}{k\ohm}$ なら $\zeta=5$ でゆっくり止まります。6-7 の表計算と同じです。
+
+\bkvimhead{単位で確かめる}
+$\sqrt{\frac LC}$ が本当に Ω になるかを、単位で確かめます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item コイルのきまり $V=L\frac{\dd i}{\dd t}$ から、$\qty{1}{H}=\qty{1}{V.s/A}$。
+\item コンデンサーのきまり $q=CV$ から、$\qty{1}{F}=\qty{1}{C/V}=\qty{1}{A.s/V}$。電荷 $\qty{1}{C}$ は、$\qty{1}{A}$ の電流が $\qty{1}{s}$ 流れたときの量だからです。
+\end{itemize}
+\bkvimline{$\dfrac{\mathrm{H}}{\mathrm{F}}=\dfrac{\mathrm{V\cdot s/A}}{\mathrm{A\cdot s/V}}=\dfrac{\mathrm{V^2}}{\mathrm{A^2}}$\qquad $\sqrt{\dfrac{\mathrm{H}}{\mathrm{F}}}=\dfrac{\mathrm{V}}{\mathrm{A}}=\Omega$}
+オームの法則 $R=\frac VI$ の単位と同じ Ω になりました。
+
+\bksubsection{9}{1階の式も、同じ方法で解ける}
+
+\label{bk:6-12:ikkai}6-4 の、コンデンサーの放電の式は $RC\dot V+V=0$ でした（$\tau=RC$）。これにも $V=e^{st}$ を入れてみます。
+\begin{bkvimhk}[0.46]
+RC\,se^{st}+e^{st}=0 & $V=e^{st}$、$\dot V=se^{st}$ を入れた \\
+RC\,s+1=0 & $e^{st}$ でわった（特性方程式は1次方程式） \\
+s=-\frac{1}{RC}=-\frac1\tau & $s$ について解いた \\
+\end{bkvimhk}
+答えは $V=Ae^{-t/\tau}$ で、6-4 と同じです。1階の式では、特性方程式は1次方程式になり、解は1つ。2階の式では2次方程式で、解は2つ。\textbf{式の階数と、特性方程式の次数は同じ}です。
+
+\bksubsection{10}{$s$ の場所で、動きがわかる}
+
+\label{bk:6-12:basho}特性方程式の解 $s$ を、6-9 の複素平面（横が実部、たてが虚部）に点で打ってみます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 複素平面（実部1が11mm、虚部1が9mm）
+  \fill[bkGreen!9] (-35,-25) rectangle (0,25);
+  \fill[bkRed!7] (0,-25) rectangle (19,25);
+  \node[font=\sffamily\footnotesize, text=bkGreen!40!black, anchor=north] at (-17.5,-26.5) {落ち着く};
+  \node[font=\sffamily\footnotesize, text=bkRed!70!black, anchor=north] at (9.5,-26.5) {大きくなる};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=3.5pt]}] (-35,0) -- (22,0);
+  \node[font=\sffamily\footnotesize, anchor=north east] at (22,-1.5) {実部};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=3.5pt]}] (0,-25) -- (0,28);
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,28.5) {虚部};
+  \foreach \u in {-22,-11,11} {\draw[bkInk, line width=0.5pt] (\u,-0.8) -- (\u,0.8);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (-22,-2) {$-2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (-11,-2) {$-1$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-2) {$1$};
+  \foreach \v in {-18,18} {\draw[bkInk, line width=0.5pt] (-0.8,\v) -- (0.8,\v);}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1.8,18) {$2j$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1.8,-18) {$-2j$};
+  % 点
+  \fill[bkBlue] (-22,0) circle (1.3) (-11,0) circle (1.3);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black, anchor=south] at (-16.5,1.6) {A};
+  \fill[bkRed] (-11,18) circle (1.3) (-11,-18) circle (1.3);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkRed!80!black, anchor=east] at (-12.8,18) {B};
+  \node[font=\sffamily\bfseries\footnotesize, text=bkRed!80!black, anchor=east] at (-12.8,-18) {B};
+  \fill[bkGray] (0,18) circle (1.3) (0,-18) circle (1.3);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkInk, anchor=west] at (1.8,20.2) {C};
+  \node[font=\sffamily\bfseries\footnotesize, text=bkInk, anchor=west] at (1.8,-20.2) {C};
+  \fill[bkPurple] (11,18) circle (1.3) (11,-18) circle (1.3);
+  \node[font=\sffamily\bfseries\footnotesize, text=bkPurple, anchor=west] at (12.8,18) {D};
+  \node[font=\sffamily\bfseries\footnotesize, text=bkPurple, anchor=west] at (12.8,-18) {D};
+  % 小さなグラフ（2×2）
+  \foreach \px/\py/\nm/\ttl/\sub/\col/\kind in {
+      30/7/A/{車A　$s=-1,\ -2$}/{ゆれずにもどる}/bkBlue/1,
+      70/7/B/{車B　$s=-1\pm2j$}/{ゆれながら止まる}/bkRed/2,
+      30/-24/C/{$s=\pm2j$（6-6）}/{ゆれ続ける}/bkInk!70/3,
+      70/-24/D/{$s=1\pm2j$}/{ゆれがふくらむ}/bkPurple/4} {
+    \begin{scope}[shift={(\px,\py)}]
+      \node[font=\sffamily\footnotesize, anchor=south west, inner sep=0pt, align=left] at (0,14) {{\bfseries\nm}\enspace\ttl\\\sub};
+      \draw[bkGray, line width=0.4pt] (0,6) -- (32,6) (0,0) -- (0,12);
+      \ifcase\kind\or
+        \draw[\col, line width=1.1pt, domain=0:31, samples=50] plot (\x, {6+5*(2*exp(-\x/6)-exp(-\x/3))});
+      \or
+        \draw[\col, line width=1.1pt, domain=0:31, samples=90] plot (\x, {6+5*exp(-\x/8)*cos(deg(\x*0.75))});
+      \or
+        \draw[\col, line width=1.1pt, domain=0:31, samples=90] plot (\x, {6+4.5*cos(deg(\x*0.75))});
+      \or
+        \draw[\col, line width=1.1pt, domain=0:31, samples=90] plot (\x, {6+1.1*exp(\x/19)*cos(deg(\x*0.75))});
+      \fi
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{特性方程式の解 $s$ を複素平面に打つ（左）と、そのときの動き（右）。左半分（実部が負）なら落ち着き、右半分（実部が正）なら大きくなる。虚部があれば、ゆれる。}
+\label{bk:6-12:fig-basho}
+\end{bkfigure}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{実部}は、へる速さを決めます（実部が $-\alpha$ なら $e^{-\alpha t}$ でへる）。虚軸から左へ遠いほど、早く落ち着きます。
+\item \textbf{虚部}は、ゆれの角振動数です。横軸の上なら、ゆれません。
+\item 虚軸の上（実部が0）は、ダンパーのない 6-6 のばね（$s=\pm j\omega_{\mathrm n}$）です。ゆれがへりも、ふえもしません。
+\item 右半分に1つでも解があると、動きはどんどん大きくなります。5-18 の「たおれる棒」（$\ddot\theta=4\theta$、$s=\pm2$）は、$s=2$ が右半分にあるので、たおれていきました。
+\end{itemize}
+ばね・質量・ダンパーの解は、いつも左半分にあります（③の解と係数の関係）。でも、エンジンやモーターで力を加える機械（ロボット、飛行機、ロケット）では、つくり方しだいで右半分に解ができて、ゆれがどんどん大きくなることがあります。そうならないように、解を左半分に置くことが、第9巻の制御工学の大きな目標です（9-9 では、この点を「極」とよびます）。
+
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+定数係数の2階線形同次微分方程式 $ay''+by'+cy=0$ に $y=e^{\lambda x}$ を代入すると、特性方程式 $a\lambda^2+b\lambda+c=0$ を得る。その根を $\lambda_1,\lambda_2$ とすると、一般解は、(i) $\lambda_1\neq\lambda_2$（実根）のとき $y=C_1e^{\lambda_1x}+C_2e^{\lambda_2x}$、(ii) 重根 $\lambda$ のとき $y=(C_1+C_2x)e^{\lambda x}$、(iii) $\lambda=p\pm qi$ のとき $y=e^{px}(C_1\cos qx+C_2\sin qx)$ である。
+\end{bkhonbun}
+\bkyaku{この章の $s$ を $\lambda$（ラムダ）、時間 $t$ を $x$、虚数単位 $j$ を $i$ と書いている。$a$、$b$、$c$ は $m$、$c$、$k$ のこと（$c$ の使い方が、この章とちがう）。「同次」は右辺が0、「根」は解、「一般解」は数 $C_1$、$C_2$ が決まっていない答え。第7巻では、行列の固有値も同じ $\lambda$ で書く。}
+\end{senmonsho}
+
+\begin{motto}[5]
+\bkvimbox{ダンパーが熱にしたエネルギーを、5-16 の積分で求める}
+$m=\qty{1}{kg}$、$c=\bkvimNsm{2}$、$k=\qty{2}{N/m}$ のおもりを、ハンマーでたたいて速さ $\qty{1}{m/s}$ をあたえます（$x(0)=0$、$\dot x(0)=1$）。$s^2+2s+2=0$ の解は $s=-1\pm j$ で、$A=0$、$B=1$ より $x=e^{-t}\sin t$、$\dot x=e^{-t}(\cos t-\sin t)$ です。
+
+ダンパーが1秒あたりにうばうエネルギー（仕事率、5-12）は「力×速さ」$=c\dot x\times\dot x=c\dot x^2$ なので、止まるまでの合計は $\int_0^\infty c\dot x^2\,\dd t$ です。
+\begin{bkvimhk}[0.62]
+\dot x^2=e^{-2t}(1-\sin2t) & 展開して $\sin^2t+\cos^2t=1$、$2\sin t\cos t=\sin2t$ \\
+\int_0^\infty2\dot x^2\,\dd t=2\int_0^\infty e^{-2t}\dd t & $c=2$。2つに分けた \\
+\phantom{\int_0^\infty2\dot x^2\,\dd t=}-2\int_0^\infty e^{-2t}\sin2t\,\dd t & \\
+\end{bkvimhk}
+1つめは $2\times\frac12=1$（5-14）。2つめは、$u=2t$ とおきかえる（5-16）と $\int_0^\infty e^{-u}\sin u\,\dd u$ になります。5-16 で $\int e^{x}\sin x\,\dd x$・$\int e^{x}\cos x\,\dd x$ を求めたのと同じ部分積分2回で $\int e^{-u}\sin u\,\dd u=-\frac12e^{-u}(\sin u+\cos u)+C$（微分してもどるか確かめられる）なので、その値は $0-\bigl(-\frac12\bigr)=\frac12$。合計は
+\bkvimline{$\displaystyle\int_0^\infty2\dot x^2\,\dd t=1-\frac12=\frac12$\quad（J）}
+はじめの運動エネルギー $\frac12mv^2=\frac12$\,J と、ぴったり同じです。あたえたエネルギーは、全部ダンパーの中で熱に変わったのです。
+\end{motto}
+
+
+\begin{taisetsu}
+\def\tsl#1{\par\addvspace{3pt}\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{作り方}$m\ddot x+c\dot x+kx=0$ に $x=e^{st}$ を入れる
+\tsl{}→\ 特性方程式 $ms^2+cs+k=0$
+\tsl{解が2つ}$x=Ae^{s_1t}+Be^{s_2t}$（ゆっくりもどる）
+\tsl{重解}$x=(A+Bt)e^{st}$（ちょうど。$c=2\sqrt{mk}$、$\zeta=1$）
+\tsl{複素数の解}$s=-\alpha\pm j\omega_{\mathrm d}$ なら
+\tsl{}$x=e^{-\alpha t}(A\cos\omega_{\mathrm d}t+B\sin\omega_{\mathrm d}t)$
+\tsl{数の決め方}$A$、$B$ は、はじめの位置と速度で決める
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{特性方程式}{微分方程式に $e^{st}$ を入れて $e^{st}$ でわった、$s$ の方程式。}
+\bkword{重解}{2次方程式の2つの解が重なって、1つになったもの（$D=0$）。\bkidx{じゅうかい}{重解}}
+\bkword{減衰振動・臨界減衰・過減衰}{ゆれながら止まる・ちょうど止まる・ゆっくりもどる動き。電気では不足制動・臨界制動・過制動。\bkidx{げんすいしんどう}{減衰振動}}
+\bkword{つつみの線}{ゆれの山をなぞった線。減衰振動では $e^{-\alpha t}$ の形。}
+\end{kotoba}
+
+\bkvimhead{特性方程式で解く手順}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (a) at (0,24) {① $\ddot x\to s^2$、$\dot x\to s$、$x\to1$\\で特性方程式を作る};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (b) at (64,24) {② 解く（判別式で\\2つ・重解・複素数を見分ける）};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (c) at (0,0) {③ 答えの形を書く\\$Ae^{s_1t}+Be^{s_2t}$ など};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (d) at (64,0) {④ はじめの位置と速度で\\$A$、$B$ を決める};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b.south) -- (c.north east); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{例題は、どれもこの4つの手順で解く。最後に、答えを式に入れて確かめるとよい。}
+\end{bkfigure}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[解が2つのとき]
+$\ddot x+5\dot x+6x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。\par
+\kangaekata $e^{st}$ を入れて特性方程式を作る（②）。\par
+\bkvimq 解が2つなら $Ae^{s_1t}+Be^{s_2t}$。$A$、$B$ は、はじめの位置と速度で決める（③）。\par
+\shiki 特性方程式：$s^2+5s+6=0$、$(s+2)(s+3)=0$ で $s=-2$、$-3$\par
+\bkvimq 答えの形：$x=Ae^{-2t}+Be^{-3t}$。位置：$x(0)=A+B=1$\par
+\bkvimq 速度：$\dot x=-2Ae^{-2t}-3Be^{-3t}$ より $\dot x(0)=-2A-3B=0$\par
+\bkvimq 位置の式を2倍して、速度の式にたす：$-B=2$\par
+\bkvimq よって $B=-2$、$A=1-B=3$\par
+\kotae $x=3e^{-2t}-2e^{-3t}$
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+4\dot x+3x=0$、$x(0)=2$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkjans{$s^2+4s+3=0$ で $s=-1$、$-3$。$x=Ae^{-t}+Be^{-3t}$。$A+B=2$、$-A-3B=0$ より $A=3$、$B=-1$。$x=3e^{-t}-e^{-3t}$}
+\end{jibun}
+
+\begin{reidai}[解が複素数のとき]
+$\ddot x+2\dot x+10x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。\par
+\kangaekata 判別式が負なら、解は $-\alpha\pm j\omega_{\mathrm d}$ の形。\par
+\bkvimq 答えは $e^{-\alpha t}(A\cos\omega_{\mathrm d}t+B\sin\omega_{\mathrm d}t)$（④）。速度は積の微分で。\par
+\shiki 特性方程式：$s^2+2s+10=0$、$D=4-40=-36$\par
+\bkvimq $s=\dfrac{-2\pm\sqrt{-36}}{2}=\dfrac{-2\pm6j}{2}=-1\pm3j$\par
+\bkvimq 答えの形：$x=e^{-t}(A\cos3t+B\sin3t)$。位置：$x(0)=A=1$\par
+\bkvimq 速度：$\dot x=-e^{-t}(A\cos3t+B\sin3t)$\par
+\bkvimq \phantom{速度：$\dot x$}${}+e^{-t}(-3A\sin3t+3B\cos3t)$\par
+\bkvimq $\dot x(0)=-A+3B=0$ より $B=\frac A3=\frac13$\par
+\kotae $x=e^{-t}\Bigl(\cos3t+\dfrac13\sin3t\Bigr)$
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+4\dot x+13x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう（6-8 の $s^2+4s+13=0$）。
+\bkjans{$s=-2\pm3j$。$x=e^{-2t}(A\cos3t+B\sin3t)$。$A=1$。$-2A+3B=0$ より $B=\frac23$。$x=e^{-2t}\bigl(\cos3t+\frac23\sin3t\bigr)$}
+\end{jibun}
+
+
+\begin{reidai}[重解のとき]
+$\ddot x+6\dot x+9x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。\par
+\kangaekata 重解 $s$ なら、答えは $(A+Bt)e^{st}$（⑤）。$Ae^{st}+Be^{st}$ では数が1つしかない。\par
+\shiki 特性方程式：$s^2+6s+9=0$、$(s+3)^2=0$ で $s=-3$（重解）\par
+\bkvimq 答えの形：$x=(A+Bt)e^{-3t}$。位置：$x(0)=A=1$\par
+\bkvimq 速度：$\dot x=Be^{-3t}-3(A+Bt)e^{-3t}$ より $\dot x(0)=B-3A=0$、$B=3$\par
+\kotae $x=(1+3t)e^{-3t}$
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+2\dot x+x=0$、$x(0)=2$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkjans{$(s+1)^2=0$ で $s=-1$（重解）。$x=(A+Bt)e^{-t}$。$A=2$、$B-A=0$ より $B=2$。$x=(2+2t)e^{-t}$}
+\end{jibun}
+
+\begin{reidai}[車の1輪分のゆれ]
+車の1輪分を、質量 $m=\qty{300}{kg}$、ばね定数 $k=\qty{30000}{N/m}$、ダンパー $c=\bkvimNsm{1800}$ のばね・質量・ダンパーと考えます。$\omega_{\mathrm n}$、$\zeta$、$\omega_{\mathrm d}$、ゆれの周期を求めましょう。また、1周期でゆれの山は何倍になりますか（$\sqrt{0.91}=0.954$、$e^{-1.976}=0.139$）。\par
+\kangaekata $\omega_{\mathrm n}=\sqrt{\frac km}$、$\zeta=\frac{c}{2\sqrt{mk}}$、$\alpha=\zeta\omega_{\mathrm n}$、$\omega_{\mathrm d}=\omega_{\mathrm n}\sqrt{1-\zeta^2}$（⑥）。1周期で、つつみの線 $e^{-\alpha t}$ が何倍になるかを見る（④）。\par
+\shiki $\omega_{\mathrm n}=\sqrt{\num{30000}\div300}=\sqrt{100}=10$\,rad/s\par
+\bkvimq $2\sqrt{mk}=2\sqrt{300\times\num{30000}}=2\sqrt{\num{9000000}}$\par
+\bkvimq \phantom{$2\sqrt{mk}$}${}=2\times3000=6000$\par
+\bkvimq $\zeta=\frac{1800}{6000}=0.3$（1より小さいので、ゆれながら止まる）\par
+\bkvimq $\alpha=0.3\times10=3$\,/s\par
+\bkvimq $\omega_{\mathrm d}=10\sqrt{1-0.09}=10\times0.954=9.54$\,rad/s\par
+\bkvimq 周期：$\frac{2\pi}{\omega_{\mathrm d}}=\frac{6.283}{9.54}=\qty{0.659}{s}$\par
+\bkvimq 1周期で：$e^{-3\times0.659}=e^{-1.976}=0.139$\par
+\kotae $\omega_{\mathrm n}=10$\,rad/s、$\zeta=0.3$、$\omega_{\mathrm d}=9.54$\,rad/s、周期 約\qty{0.66}{s}、1周期で約0.14倍
+\end{reidai}
+1周期（約\qty{0.66}{s}）で、ゆれは7分の1ほどになります。2回ほど上下すると、ほとんどわからなくなります。$\omega_{\mathrm n}=10$\,rad/s は、振動数にすると $\frac{10}{2\pi}\approx\qty{1.6}{Hz}$ です。乗用車の車体の上下のゆれ（約1〜1.5\,Hz）に近い振動数です。
+
+\begin{jibun}
+$m=\qty{400}{kg}$、$k=\qty{40000}{N/m}$、$c=\bkvimNsm{4000}$ のとき、$\omega_{\mathrm n}$、$\zeta$、$\omega_{\mathrm d}$、ゆれの周期を求めましょう。また、1周期でゆれの山は何倍になりますか（$\sqrt{0.75}=0.866$、$e^{-3.628}=0.027$）。
+\bkjans{$\omega_{\mathrm n}=10$\,rad/s。$2\sqrt{mk}=8000$、$\zeta=0.5$。$\alpha=5$\,/s、$\omega_{\mathrm d}=8.66$\,rad/s。周期 約\qty{0.726}{s}。$e^{-5\times0.726}\approx0.027$ 倍}
+\end{jibun}
+
+\begin{reidai}[ちょうどよいダンパー]
+$m=\qty{2}{kg}$、$k=\qty{50}{N/m}$ のばねに、ゆれずにいちばん早くもどるダンパーをつけます。$c$ を求めましょう。また、$x(0)=0.1$、$\dot x(0)=0$ のときの $x$ を求めましょう。\par
+\kangaekata ゆれずにいちばん早いのは $\zeta=1$、つまり $c=2\sqrt{mk}$（⑥⑦）。そのとき重解なので、答えは $(A+Bt)e^{st}$（⑤）。\par
+\shiki $c=2\sqrt{2\times50}=2\sqrt{100}=20$\par
+\bkvimq 特性方程式：$2s^2+20s+50=0$。2でわって $s^2+10s+25=0$、$(s+5)^2=0$、$s=-5$\par
+\bkvimq 答えの形：$x=(A+Bt)e^{-5t}$。位置：$A=0.1$。速度：$\dot x(0)=B-5A=0$ より $B=0.5$\par
+\kotae $c=\bkvimNsm{20}$、$x=(0.1+0.5t)e^{-5t}$
+\end{reidai}
+
+\begin{jibun}
+$m=\qty{1}{kg}$、$k=\qty{16}{N/m}$ のばねに、ゆれずにいちばん早くもどるダンパーをつけます。$c$ と、$x(0)=0.2$、$\dot x(0)=0$ のときの $x$ を求めましょう。
+\bkjans{$c=2\sqrt{16}=8$\,N·s/m。$s^2+8s+16=0$ で $s=-4$。$x=(A+Bt)e^{-4t}$、$A=0.2$、$B=4A=0.8$。$x=(0.2+0.8t)e^{-4t}$}
+\end{jibun}
+
+\begin{reidai}[RLC 回路の境めの抵抗]
+$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$ の RLC 回路について、ゆれずにいちばん早く電気がなくなる抵抗 $R$ を求めましょう。また、$R=\qty{20}{\ohm}$ のときの $\zeta$ と $\omega_{\mathrm d}$、ゆれの振動数を求めましょう（$\sqrt{0.99}=0.995$）。\par
+\kangaekata $m$ を $L$、$c$ を $R$、$k$ を $\frac1C$ におきかえて、境めは $R=2\sqrt{\frac LC}$、$\zeta=\frac R2\sqrt{\frac CL}$（⑧）。振動数は $\omega_{\mathrm d}\div2\pi$。\par
+\shiki $\frac LC=\frac{0.01}{10^{-6}}=10^4$、$\sqrt{10^4}=100$、$R=2\times100=\qty{200}{\ohm}$\par
+\bkvimq $\sqrt{\frac CL}=\frac{1}{100}$ なので、$\zeta=\frac{20}{2}\times\frac{1}{100}=0.1$\par
+\bkvimq $\omega_{\mathrm n}=\frac{1}{\sqrt{LC}}=\frac{1}{\sqrt{10^{-8}}}=10^4$\par
+\bkvimq $\omega_{\mathrm d}=10^4\times0.995=9950$\,rad/s\par
+\bkvimq 振動数：$9950\div6.283=\qty{1584}{Hz}$\par
+\kotae 境めは\qty{200}{\ohm}。$R=\qty{20}{\ohm}$ では $\zeta=0.1$、$\omega_{\mathrm d}=9950$\,rad/s、約\qty{1580}{Hz}
+\end{reidai}
+
+\begin{jibun}
+$L=\qty{4}{mH}$、$C=\qty{0.1}{\micro F}$ の RLC 回路で、境めの抵抗を求めましょう。また、$R=\qty{40}{\ohm}$ のときの $\zeta$ と $\omega_{\mathrm d}$、ゆれの振動数を求めましょう（$\sqrt{0.99}=0.995$）。
+\bkjans{$\frac LC=\num{40000}$、境めは\qty{400}{\ohm}。$\zeta=0.1$。$\omega_{\mathrm n}=\num{50000}$、$\omega_{\mathrm d}\approx\num{49750}$\,rad/s。振動数 約\qty{7920}{Hz}}
+\end{jibun}
+
+\begin{reidai}[RLC 回路の放電を式で解く]
+$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{200}{\ohm}$（境めの抵抗）の回路で、はじめにコンデンサーを\qty{10}{V}にしておき（電荷 $q(0)=CV=\qty{1e-5}{C}$）、スイッチを入れます（電流 $\dot q(0)=0$）。電荷 $q$ の式を求めましょう。また、$t=\qty{0.5}{ms}$ で、電荷ははじめの何倍になっていますか（$e^{-5}=0.00674$）。\par
+\kangaekata $L\ddot q+R\dot q+\frac1Cq=0$ に $q=e^{st}$ を入れて特性方程式を作る（⑧）。境めの抵抗なので重解になり、答えは $(A+Bt)e^{st}$（⑤）。\par
+\shiki 特性方程式：$0.01s^2+200s+10^6=0$。両辺を $0.01$ でわって\par
+\bkvimq $s^2+2\times10^4s+10^8=0$、$(s+10^4)^2=0$ で $s=-10^4$（重解）\par
+\bkvimq 答えの形：$q=(A+Bt)e^{-10^4t}$。はじめ：$A=10^{-5}$\par
+\bkvimq 電流：$\dot q(0)=B-10^4A=0$ より $B=10^4\times10^{-5}=0.1$\par
+\bkvimq $q=10^{-5}(1+10^4t)e^{-10^4t}$\par
+\bkvimq $t=\qty{0.5}{ms}=5\times10^{-4}$\,s では $10^4t=5$ なので\par
+\bkvimq $(1+5)e^{-5}=6\times0.00674\approx0.040$\par
+\kotae $q=10^{-5}(1+10^4t)e^{-10^4t}$（C）、約0.04倍
+\end{reidai}
+\qty{0.5}{ms}（2000分の1秒）で、電気の96\,\%がなくなります。$R$ を小さくすると、電荷はゆれながら（＋と−を行ったり来たりしながら）へります。
+
+\begin{jibun}
+$L=\qty{1}{mH}$、$C=\qty{0.1}{\micro F}$、$R=\qty{200}{\ohm}$ の回路で、はじめ $q(0)=\qty{1e-6}{C}$、$\dot q(0)=0$ のときの電荷 $q$ の式を求めましょう。また、$t=\qty{50}{\micro s}$ で、電荷ははじめの何倍ですか（$e^{-5}=0.00674$）。
+\bkjans{$0.001s^2+200s+10^7=0$、$s^2+2\times10^5s+10^{10}=0$、$s=-10^5$（重解）。$A=10^{-6}$、$B=10^5A=0.1$。$q=10^{-6}(1+10^5t)e^{-10^5t}$。$t=5\times10^{-5}$ で $6e^{-5}\approx0.040$ 倍}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{特性方程式で $s$ を落とす}
+\bkng{$\ddot x+3\dot x+2x=0$ の特性方程式は $s^2+3+2=0$}
+\bkok{$\ddot x+3\dot x+2x=0$ の特性方程式は $s^2+3s+2=0$}
+$\dot x$ は $se^{st}$ なので、$\dot x$ の項には $s$ が1つ残ります。$x$ の項は $e^{st}$ でわると1になり、$s$ はつきません。$\ddot x$ は $s^2$、$\dot x$ は $s$、$x$ は1と、項ごとに確かめましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{重解で $Ae^{st}+Be^{st}$ と書く}
+\bkng{$s=-2$（重解）なので $x=Ae^{-2t}+Be^{-2t}$}
+\bkok{$s=-2$（重解）なので $x=(A+Bt)e^{-2t}$}
+$Ae^{-2t}+Be^{-2t}=(A+B)e^{-2t}$ で、数は実は1つです。はじめの位置と速度の2つには合わせられません。2つめの答えは $te^{-2t}$ です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{速度を求めるとき、$e^{-\alpha t}$ の微分を忘れる}
+\bkng{$x=e^{-t}(A\cos2t+B\sin2t)$ なので $\dot x(0)=2B$}
+\bkok{積の微分で $\dot x(0)=-A+2B$}
+$e^{-t}$ も時間で変わるので、積の微分（5-6）を使います。$-A$ の部分を忘れると、$B$ がまちがった値になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{答えに $j$ を残す}
+\bkng{$x=Ae^{(-1+2j)t}$}
+\bkok{$x=e^{-t}(A\cos2t+B\sin2t)$}
+車の高さや電荷は、実数でしか表せません。複素数の解は「答えを見つける道具」です。オイラーの公式でばらして、$\cos$ と $\sin$ の実数の形に組み立ててから、$A$、$B$ を決めます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\omega_{\mathrm d}$ と $\omega_{\mathrm n}$ を取りちがえる}
+\bkng{$\zeta=0.5$ のゆれの周期は $\dfrac{2\pi}{\omega_{\mathrm n}}$}
+\bkok{$\zeta=0.5$ のゆれの周期は $\dfrac{2\pi}{\omega_{\mathrm d}}$、$\omega_{\mathrm d}=\omega_{\mathrm n}\sqrt{1-\zeta^2}$}
+ダンパーがあると、ゆれは少しゆっくりになります。$\zeta=0.5$ なら $\sqrt{0.75}=0.866$ で、周期は15\,\%ほど長くなります。$\zeta$ が0.1くらいなら、ちがいは0.5\,\%ほどで、ほとんど同じです。
+\end{tsumazuki}
+
+\begin{column}{$e^{st}$ と置くアイデア}
+「微分方程式に $e^{st}$ を入れて、$s$ の代数方程式にする」方法は、オイラーが1743年に、定数係数の線形微分方程式の解き方としてまとめました。重解のときに $t$ をかける工夫も、そのころに知られていました。約150年後、イギリスの電気技術者ヘビサイドは、「微分を $s$ のような文字の『かけ算』として計算する」方法で、電信の回路の過渡現象を次々に計算しました。この方法を、数学として正しく整えたものが、第9巻のラプラス変換です。
+\end{column}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\bkvimbox{車のサスペンション}
+\vspace{2pt}\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+ばね（コイルばね）と、ショックアブソーバー（ダンパー）が、車輪ごとについています。ショックアブソーバーは、油の入った筒の中を、小さな穴のあいた板が動くしくみで、油が穴を通りぬけるときの抵抗が、速さに比例するような力になります。例題4に近く、車体の上下のゆれの $\omega_{\mathrm n}$ は6〜9\,rad/s（約1〜1.5\,Hz）で、$\zeta$ は1よりかなり小さくして、乗り心地とゆれのおさまりの速さのかね合いをとります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=1.1pt] (10,22) -- (10,36);
+  \node[font=\sffamily\footnotesize, anchor=south] at (10,36.5) {車体へ};
+  \fill[bkYellow!35] (4,0) rectangle (16,26);
+  \draw[bkInk, line width=0.9pt] (4,26) -- (4,0) -- (16,0) -- (16,26);
+  \draw[bkInk, line width=0.9pt] (4,26) -- (8.6,26) (11.4,26) -- (16,26);
+  \fill[bkInk] (4.3,20.6) rectangle (15.7,22.4);
+  \foreach \xx in {6.8,10,13.2} {\fill[bkYellow!35] (\xx-0.6,20.6) rectangle (\xx+0.6,22.4);}
+  \draw[bkInk, line width=1.1pt] (10,0) -- (10,-4);
+  \node[font=\sffamily\footnotesize, anchor=north] at (10,-4.5) {車輪へ};
+  \draw[bkGray, line width=0.5pt] (16.5,21.5) -- (19,24);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (18.5,25.5) {穴のある\\板};
+  \node[font=\sffamily\footnotesize, anchor=center] at (10,9) {油};
+\end{tikzpicture}
+\end{minipage}\par\vspace{2pt}
+
+\bkvimbox{電子回路のリンギング}
+コンピュータの基板の配線にも、小さなコイル（配線の $L$）とコンデンサー（配線と地面のあいだの $C$）があります。スイッチが切りかわった瞬間、電圧が目標より行きすぎて、ゆれながら落ち着くことがあり、これをリンギングといいます。配線に小さな抵抗を入れて $\zeta$ を大きくし、ゆれをおさえます（物理シリーズ『電磁気学』の過渡現象）。
+
+\bkvimbox{制御工学の「2次遅れ」}
+モーターでロボットの腕を動かすとき、腕の角度 $\theta$ の式も、ばね・質量・ダンパーと同じ形になります。設計する人は、⑦の表のように、行きすぎと速さのかね合いで $\zeta$ を選びます（9-9）。
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 次の式の特性方程式を作り、判別式で「ゆっくりもどる・ちょうど・ゆれながら止まる」のどれかを答えましょう。\newline
+（1）\nobreak $\ddot x+7\dot x+12x=0$\quad（2）\nobreak $2\ddot x+4\dot x+10x=0$\quad（3）\nobreak $\ddot x+8\dot x+16x=0$
+\bkpans{（1）\nobreak $s^2+7s+12=0$、$D=1>0$ でゆっくりもどる。（2）\nobreak $2s^2+4s+10=0$、$D=16-80<0$ でゆれながら止まる。（3）\nobreak $s^2+8s+16=0$、$D=0$ でちょうど}
+
+\bkproblem $\ddot x+6\dot x+8x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$s=-2$、$-4$。$A+B=1$、$-2A-4B=0$ より $A=2$、$B=-1$。$x=2e^{-2t}-e^{-4t}$}
+
+\bkproblem $\ddot x+6\dot x+25x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$s=-3\pm4j$。$x=e^{-3t}(A\cos4t+B\sin4t)$、$A=1$、$-3A+4B=0$ より $B=\frac34$。$x=e^{-3t}\bigl(\cos4t+\frac34\sin4t\bigr)$}
+
+\bkproblem $\ddot x+10\dot x+25x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$s=-5$（重解）。$x=(A+Bt)e^{-5t}$、$A=1$、$B=5$。$x=(1+5t)e^{-5t}$}
+
+\bkproblem $m=\qty{2}{kg}$、$k=\qty{200}{N/m}$、$c=\bkvimNsm{8}$ のばね・質量・ダンパーの $\omega_{\mathrm n}$、$\zeta$、$\omega_{\mathrm d}$ を求めましょう（$\sqrt{0.96}=0.980$）。
+\bkpans{$\omega_{\mathrm n}=\sqrt{100}=10$\,rad/s。$2\sqrt{mk}=2\times20=40$、$\zeta=8\div40=0.2$。$\omega_{\mathrm d}=10\times0.980=9.80$\,rad/s}
+
+\bkproblem $L=\qty{20}{mH}$、$C=\qty{0.5}{\micro F}$ の RLC 回路で、ゆれずにいちばん早く電気がなくなる抵抗を求めましょう。
+\bkpans{$\frac LC=\frac{0.02}{5\times10^{-7}}=\num{40000}$。$R=2\times200=\qty{400}{\ohm}$}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 車の1輪分を、$m=\qty{200}{kg}$、$k=\qty{20000}{N/m}$、$c=\bkvimNsm{1200}$ と考えます。$\zeta$、$\omega_{\mathrm d}$、ゆれの周期を求め、1周期でゆれの山が何倍になるか求めましょう（$\sqrt{0.91}=0.954$、$e^{-1.976}=0.139$）。
+\bkpans{$\omega_{\mathrm n}=10$\,rad/s。$2\sqrt{mk}=2\times2000=4000$、$\zeta=0.3$。$\alpha=3$\,/s、$\omega_{\mathrm d}=9.54$\,rad/s、周期 約\qty{0.659}{s}。$e^{-3\times0.659}\approx0.139$ 倍}
+
+\bkproblem $m=\qty{1}{kg}$、$k=\qty{4}{N/m}$ のばねに、ゆれずにいちばん早くもどるダンパーをつけます。$c$ を求め、$x(0)=1$、$\dot x(0)=0$ のときの $x$ を求めましょう。また、$t=1$ での $x$ を求めましょう（$e^{-2}=0.135$）。
+\bkpans{$c=2\sqrt4=4$\,N·s/m。$s^2+4s+4=0$、$s=-2$。$x=(1+2t)e^{-2t}$。$t=1$ で $3\times0.135\approx0.41$}
+
+\bkproblem $L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{100}{\ohm}$ の RLC 回路の $\zeta$ と $\omega_{\mathrm d}$、ゆれの振動数を求めましょう（$\sqrt{0.75}=0.866$）。
+\bkpans{$\zeta=\frac{100}{2}\times\frac{1}{100}=0.5$。$\omega_{\mathrm n}=10^4$、$\omega_{\mathrm d}=8660$\,rad/s。振動数 $8660\div6.283\approx\qty{1378}{Hz}$}
+
+\bkproblem $m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\bkvimNsm{0.4}$（6-7 のばね）の $\zeta$、$\alpha$、$\omega_{\mathrm d}$、ゆれの周期を求め、1周期でゆれの山が何倍になるか求めましょう（$\sqrt{0.99}=0.995$、$e^{-0.632}=0.532$）。
+\bkpans{$\omega_{\mathrm n}=4$\,rad/s、$\zeta=\frac{0.4}{4}=0.1$。$\alpha=0.4$\,/s、$\omega_{\mathrm d}=4\times0.995=3.98$\,rad/s。周期 $6.283\div3.98\approx\qty{1.58}{s}$。約0.532倍}
+
+\bkproblem $\ddot x+2\dot x+17x=0$、$x(0)=1$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$s=-1\pm4j$。$x=e^{-t}(A\cos4t+B\sin4t)$、$A=1$、$-A+4B=0$ より $B=\frac14$。$x=e^{-t}\bigl(\cos4t+\frac14\sin4t\bigr)$}
+
+\bkproblem $\ddot x+8\dot x+12x=0$、$x(0)=2$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$s=-2$、$-6$。$A+B=2$、$-2A-6B=0$ より $A=3$、$B=-1$。$x=3e^{-2t}-e^{-6t}$}
+
+\bkproblem $L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{50}{\ohm}$ の RLC 回路の $\zeta$ と $\omega_{\mathrm d}$ を求めましょう（$\sqrt{0.9375}=0.968$）。
+\bkpans{$\zeta=\frac{50}{2}\times\frac{1}{100}=0.25$。$\omega_{\mathrm d}=10^4\times0.968=9680$\,rad/s}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 式に $e^{st}$ を入れて、特性方程式を作れる。\bkfurref{bk:6-12:oku}
+\item 解が2つ・複素数・重解のとき、答えを組み立てられる。\bkfurref{bk:6-12:ba3}
+\item $\zeta$ で動き方を見分け、車や RLC 回路の数を求められる。\bkfurref{bk:6-12:zeta}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{「$e^{st}$ を入れてみる」だけで、微分方程式が2次方程式になった！　次の 6-13 では、外からゆすり続けるとどうなるかを調べよう。}

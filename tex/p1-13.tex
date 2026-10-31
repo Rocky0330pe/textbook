@@ -1,0 +1,1033 @@
+%% 力-13 流れを数える：質量・エネルギー・運動量（第13回編集委員会 物理第1巻：組 P1-7）
+%% 記号と言い方（力-12 を受けつぎ、力-14・力-15 も使う）：
+%%   圧力 p（ゲージ圧・絶対圧をことばで書き分ける）、密度 ρ、流速 v（管の断面の平均の速さ）、速度ベクトル \vec v（本文は矢印。BRIEF-phys1 5章）、
+%%   断面積 A、体積流量 Q（m^3/s）、質量流量 m-dot（kg/s）、高さ z（上向き）、深さ h。
+%%   静圧 p・動圧 ½ρv^2・全圧 p+½ρv^2。ヘッド（水頭）：圧力ヘッド p/(ρg)・速度ヘッド v^2/(2g)・位置ヘッド z、全ヘッド H（力-14 の損失ヘッド h_f はここから）。
+%%   運動量は「運動量 m v」「運動量の流れ m-dot v」とことばで書き、記号 p は使わない（p は圧力）。
+%%   ポンプ：羽根の周速 u、流れの速度の回る向きの成分 c_u、揚程 H、回転数は「毎分3000回転（3000 min^-1）」。
+%%   検査体積（control volume）。バランス式「入る−出る＋生じる＝たまる」。
+%% 数値はすべて Python で確かめた：scratchpad/phys1/力-13/c13.py、tank.py（シミュレーションの出力はそのまま写した）
+%% ほかの章との約束：
+%%   力-4 の例題「水力発電 Q=10 m^3/s・H=100 m・η=0.85 → 8.3 MW」を ⑪ と例題12 で名指しして使う（数値をそろえた）。
+%%   力-3 の例題「ホースの水 10 m/s・断面 2 cm^2 が壁に当たる → 20 N」を ③ と例題9 で名指しして使う（数値をそろえた）。
+%%   「ホースの先をつまむと遠くまで飛ぶ」は力-14 の例題（第9回の指摘 No.1）。この章では、連続の式だけでは答えられないことだけを書く。
+%%   物質微分 D/Dt は数学 8-13（S21）を指す。
+%% 出典：
+%%   プラトー『液体の静力学』1873年、レイリー「噴流の不安定性について」Proc. London Math. Soc. 10, 4 (1878)：水の柱が粒に分かれるしくみ。
+%%   ちぎれる瞬間（くびれの太さが0になる所）の研究：J. Eggers, Phys. Rev. Lett. 71, 3458 (1993) ほか。今も研究が続く。
+%%   ベルヌーイ『流体力学（Hydrodynamica）』1738年。オイラーの流体の運動方程式 1757年（1755年に書いた論文）。
+%%   ピトー 1732年（セーヌ川の流れの速さ）。ベンチュリ 1797年。ハーシェルのベンチュリ流量計 1887年。
+%%   オリフィスの流出係数 約0.6（角の鋭いオリフィス。JIS Z 8762-2 / ISO 5167-2 の実験式で、β＝0.5 ではほぼ0.60〜0.61）。
+%%   ベンチュリ管の流出係数 約0.98（JIS Z 8762-4 / ISO 5167-4 の範囲 0.985 前後）。
+%%   等時間通過説がまちがいであること：NASA Glenn Research Center の教材 "Incorrect Lift Theory"。
+%%   家の給水管の流速 1〜2 m/s の程度（設計の目安。自治体の給水装置工事の指針で要確認）。
+\makeatletter
+% 水の流れの帯（管の断面）  \pxnpipe：使わずに直接かく
+% 蛇口  \pxnfaucet{(x,y)}  口の中心の下の点を (x,y) とする
+\newcommand\pxnfaucet[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt, rounded corners=1mm] (-14,10) rectangle (6,16);
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (-3,0) rectangle (3,10.4);
+  \filldraw[fill=bkGray!65, draw=bkInk, line width=0.6pt] (-6,16) rectangle (2,19);
+\end{scope}}
+\makeatother
+\tikzset{pxn f/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.3pt},
+  pxn v/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkBlue!80!black},
+  pxn lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  pxn dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{13}{流れを数える：\\質量・エネルギー・運動量}{蛇口から落ちる水は、なぜ下へいくほど細くなる？}{\bklevelrange{4}{5}}{流れを数える：質量・エネルギー・運動量}
+\bkmichishirube{5-12,8-8,8-9,8-11,力-3,力-4,力-12}{力-14,力-15,熱-4}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 連続の式で、管や蛇口の水の速さと太さを求められる。
+\item \bklevel{4}\enspace ベルヌーイの式で、速さ・圧力・高さの関係を計算できる。
+\item \bklevel{5}\enspace バランス式で、噴流・曲がり管・ポンプの力を計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{物は形を変えても重さは変わらない}{小学校理科}{ph:力-13:mass}
+\phk{$A_1v_1=A_2v_2$（連続の式）}{高校物理（発展）}{ph:力-13:renzoku}
+\phk{$p+\frac{1}{2}\rho v^2+\rho gz$ が一定（ベルヌーイの式）}{高校物理（発展）}{ph:力-13:bernoulli}
+\phk{$v=\sqrt{2gh}$（トリチェリの定理）}{高校物理（発展）}{ph:力-13:torricelli}
+\phkx{$p=p_0+\rho gh$（静水圧）}{高校物理基礎}{力-12 で導く}
+\phkx{$v^2-v_0^2=2ax$}{高校物理基礎}{力-1 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+蛇口を少しだけ開けて、水を細く出してみましょう。出口では太かった水の柱が、下へいくほど、だんだん細くなっていきます。
+
+水は、とちゅうで消えたりしません。それなのに、なぜ細くなるのでしょう。どれだけ細くなるかを、計算で予想できるかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxnfaucet{(0,36)}
+  \fill[bkBlue!30] (-3,36) .. controls (-2.2,24) and (-1.6,12) .. (-1.4,0) -- (1.4,0) .. controls (1.6,12) and (2.2,24) .. (3,36) -- cycle;
+  \draw[bkBlue!70!black, line width=0.6pt] (-3,36) .. controls (-2.2,24) and (-1.6,12) .. (-1.4,0);
+  \draw[bkBlue!70!black, line width=0.6pt] (3,36) .. controls (2.2,24) and (1.6,12) .. (1.4,0);
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (14,14) {?};
+  \draw[pxn dim] (-6,33) -- (6,33);
+  \draw[pxn dim] (-4.5,3) -- (4.5,3);
+  \node[pxn lab, anchor=west] at (7,33) {太い};
+  \node[pxn lab, anchor=west] at (5.5,3) {細い};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-12 では、止まっている水の圧力を調べました。この章では、水が\textbf{流れる}ときを考えます。流れを調べるには、「ある場所を1秒に通りぬける量」を数えます。数える量は3つ、質量・エネルギー・運動量です。どれも「入る量－出る量＋生じる量＝たまる量」という同じ形の式（\textbf{バランス式}）で書けます。この3つの式で、蛇口の水も、流量計も、ホースの反動も、ポンプも水力発電も計算できます。\bkidx{ばらんすしき}{バランス式}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[蛇口の水の太さをはかろう]
+\textbf{用意するもの}\par
+\qty{1}{L}の計量カップ、ストップウォッチ、定規（\qty{30}{cm}）、スマートフォン
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 蛇口を少し開け、水の柱がなめらかで、つぶに分かれないくらいにする。
+\item 計量カップに\qty{1}{L}たまる時間をはかり、1分あたりの水の量（流量）を出す。
+\item 水の柱のうしろに定規を立てて写真をとり、出口、\qty{10}{cm}下、\qty{20}{cm}下の水の太さを読む。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 結果は、④で計算した値と比べます。流量がわかれば、太さを計算で予想できます。
+
+\begin{omoidasou}
+\bkrecall{5-12}{流量は1秒（1分）あたりに流れる水の量。流量を時間で積分すると、たまった量。}
+\bkrecall{力-1}{加速度 $a$ が一定なら $v^2-v_0^2=2ax$。落ちる水なら $a=g$。}
+\bkrecall{力-3}{力積＝運動量の変化。$F\Delta t=\Delta(mv)$。噴流が壁を押す力は $\rho Qv$。}
+\bkrecall{力-4}{運動エネルギー $\dfrac{1}{2}mv^2$、位置エネルギー $mgz$。仕事＝力×力の向きに動いた距離。}
+\bkrecall{力-12}{止まった水の圧力 $p=p_0+\rho gh$。ゲージ圧と絶対圧。$\rho$ は密度。}
+\bkrecall{8-9}{発散 $\operatorname{div}\vec{v}$ は、小さな箱から1秒あたりに出ていく量（わき出し）。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{流れを目で見る}{3}
+
+\bksubsection{1}{1秒に通る量は、どこでも同じ：連続の式}
+
+\leavevmode\label{ph:力-13:sec1}駅の改札を思いうかべましょう。改札を通る人の数は、1分あたり決まっています。改札の先で通路がせまくなっても、人がとちゅうで消えたりたまったりしなければ、せまい所を1分に通る人の数も同じです。そのかわり、せまい所では人は速く歩かないと、うしろがつかえてしまいます。水の流れも同じです。
+
+\noindent\textbf{流量 $Q=Av$}\par\nobreak
+断面積 $A$ の管を、水が平均の速さ $v$ で流れています。1秒の間に、ある断面を通りぬける水は、底面積 $A$、長さ $v\times\qty{1}{s}$ の柱です。だから、1秒あたりの体積（\textbf{体積流量}、ふつうは単に流量）は\bkidx{りゅうりょう}{流量}
+\pheq{Q=Av}{m$^3$/s ＝ m$^2$ × m/s}
+です。1秒あたりの質量（\textbf{質量流量}）は、体積に密度をかけた $\dot m=\rho Q=\rho Av$（kg/s）です。$\dot m$ は「エムドット」と読み、上の点は「1秒あたり」のしるしです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 太い管 → 細い管
+  \fill[bkBlue!13] (0,-10) rectangle (50,10);
+  \fill[bkBlue!13] (50,-10) -- (62,-5) -- (120,-5) -- (120,5) -- (62,5) -- (50,10) -- cycle;
+  \draw[bkInk, line width=1pt] (0,10) -- (50,10) -- (62,5) -- (120,5);
+  \draw[bkInk, line width=1pt] (0,-10) -- (50,-10) -- (62,-5) -- (120,-5);
+  % 1秒に通る水の柱
+  \fill[bkBlue!40] (14,-10) rectangle (30,10);
+  \fill[bkBlue!40] (76,-5) rectangle (108,5);
+  \draw[pxn dim] (14,13) -- (30,13);
+  \node[pxn lab, anchor=south] at (22,13.6) {$v_1\times\qty{1}{s}$};
+  \draw[pxn dim] (76,8) -- (108,8);
+  \node[pxn lab, anchor=south] at (92,8.6) {$v_2\times\qty{1}{s}$};
+  \draw[pxn v] (2,0) -- (12,0);
+  \node[pxn lab, anchor=north] at (7,-1.2) {$v_1$};
+  \draw[pxn v] (110,0) -- (119,0);
+  \node[pxn lab, anchor=north west] at (110,-5.8) {$v_2$};
+  \node[pxn lab, anchor=north] at (22,-11.5) {断面積 $A_1$};
+  \node[pxn lab, anchor=north] at (92,-6.5) {断面積 $A_2$};
+\end{tikzpicture}
+\bkfigcaption{1秒に通りぬける水の柱（こい青）。どちらも同じ体積なので、細い所の柱は長い（速い）。}
+\end{bkfigure}
+
+\noindent\textbf{細い所ほど速い}\par\nobreak
+水はほとんどおし縮められない（力-12②）ので、管のとちゅうで水が増えたり減ったりしません。1秒に断面1を通る水と、断面2を通る水は同じです。
+\pheq{A_1v_1=A_2v_2}{m$^3$/s ＝ m$^3$/s}
+\label{ph:力-13:renzoku}これを\textbf{連続の式}といいます。\bkidx{れんぞくのしき}{連続の式}
+
+\begin{phyomi}[$A_1v_1=A_2v_2$]
+「1秒に通る体積は、どの断面でも同じ」。だから速さは断面積に反比例します。$v_2=\dfrac{A_1}{A_2}v_1$。
+\end{phyomi}
+\begin{phmijika}[ホースの先・川の流れ]
+川はばがせまい所や浅い瀬では、流れが速くなります。広く深い所では、ゆっくり流れます。どちらも1秒に流れる水の量は同じだからです。
+\end{phmijika}
+\begin{phbaisuru}{管の直径}
+断面積は直径の2乗に比例するので4倍になり、速さは4分の1になります。グラフは、流量\qty{6}{L/min}（$10^{-4}$\,m$^3$/s）の水が、いろいろな直径の管を流れるときの速さです。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=42, ymin=0, ymax=5.6, xtick={5,10,20,30,40}, ytick={1,2,3,4,5}, xlabel={直径（mm）}, ylabel={$v$（m/s）}]
+  \addplot[bkcurve, domain=4.8:41, samples=120] {0.0001/(pi*(x/1000)^2/4)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(10,1.273) (20,0.318)};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:10.8,1.35) {\qty{10}{mm}：\qty{1.27}{m/s}};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:20.8,0.45) {2倍の\qty{20}{mm}：4分の1の\qty{0.32}{m/s}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\noindent\textbf{蛇口の水が細くなるわけ}\par\nobreak
+\bkhatenaref の水の柱を考えます。蛇口を出た水は、重力で落ちながら速くなります（自由落下と同じ）。速くなっても、1秒に通る水の量は、出口でも\qty{20}{cm}下でも同じです。だから、速くなった所ほど断面積が小さく、細くなるのです。どれだけ細くなるかは④で計算します。
+
+\noindent ②から先は、次のモデルで式を立てます。
+\begin{phmodel}[理想的な流れ（この章の基本のモデル）]
+\phignore{流体どうし・流体と壁のまさつ（粘性）。流れの乱れ（乱流）。圧力による密度の変化。}
+\phassume{流れは時間で変わらない（定常）。密度 $\rho$ は一定（非圧縮）。管の断面では、速さは平均の速さ $v$ でそろっている。}
+\phlimit{長い管や細い管（まさつで圧力が下がる：力-14）。物のうしろにうずができる流れ（力-15）。空気の速さが約\qty{100}{m/s}（音の速さの約3割）をこえるとき（密度が変わる：熱-4）。}
+\end{phmodel}
+
+\bksubsection{2}{速い所は、圧力が低い：ベルヌーイの式}
+
+\leavevmode\label{ph:力-13:sec2}太い管のとちゅうに細い所（のど）を作り、上に透明な細い管を立てて水を流します。細い管の水の高さは、その場所の水の圧力を表します（力-12⑨のマノメータ）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!13] (0,-8) -- (40,-8) -- (52,-4) -- (68,-4) -- (80,-8) -- (120,-8) -- (120,8) -- (80,8) -- (68,4) -- (52,4) -- (40,8) -- (0,8) -- cycle;
+  \draw[bkInk, line width=1pt] (0,8) -- (18,8) (22,8) -- (40,8) -- (52,4) -- (58,4) (62,4) -- (68,4) -- (80,8) -- (98,8) (102,8) -- (120,8);
+  \draw[bkInk, line width=1pt] (0,-8) -- (40,-8) -- (52,-4) -- (68,-4) -- (80,-8) -- (120,-8);
+  % 立てた管
+  \foreach \x/\hh in {20/34, 60/18, 100/31} {
+    \fill[bkBlue!30] (\x-2,8) rectangle (\x+2,\hh);
+    \draw[bkInk, line width=0.7pt] (\x-2,4) -- (\x-2,40) (\x+2,4) -- (\x+2,40);
+    \draw[bkBlue!70!black, line width=0.7pt] (\x-2,\hh) -- (\x+2,\hh);}
+  \draw[bkInk, line width=0.7pt] (58,4) -- (58,40) (62,4) -- (62,40);
+  \draw[bkGray, dashed, line width=0.4pt] (22,34) -- (98,34);
+  \draw[pxn dim] (66,18) -- (66,34);
+  \node[pxn lab, anchor=west] at (67,26) {下がった};
+  \draw[pxn v] (4,0) -- (14,0);
+  \draw[pxn v, line width=1.4pt] (53,0) -- (67,0);
+  \node[pxn lab, anchor=north] at (9,-9.5) {ゆっくり};
+  \node[pxn lab, anchor=north] at (60,-5.5) {速い};
+  \node[pxn lab, anchor=north] at (100,-9.5) {ゆっくり};
+\end{tikzpicture}
+\bkfigcaption{ベンチュリ管。のど（細い所）の上の管だけ、水面が低い。出口側の水面が入口側より少し低いのは、とちゅうの損失のため（力-14）。}
+\end{bkfigure}
+のどでは、連続の式のとおり水が速くなっています。そこの水面が低いので、\textbf{速い所ほど、圧力が低い}ことがわかります。ふしぎに思えますが、エネルギーで考えると納得できます。
+
+\noindent\textbf{1 m$^3$ の水のエネルギーを数える}\par\nobreak
+流れにそって、密度 $\rho$ の水が、断面1（圧力 $p_1$、速さ $v_1$、高さ $z_1$）から断面2（$p_2$、$v_2$、$z_2$）へ進みます。体積 $V$ の水のかたまりが1から2へ進む間を、力-4 の「仕事とエネルギーの関係」で考えます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{うしろの水が押す仕事}：断面1では、うしろの水が圧力 $p_1$ で押しながら、体積 $V$ を押しこみます。力×距離＝（$p_1A_1$）×（$V/A_1$）$=p_1V$ の仕事です。断面2では、前の水を $p_2$ で押しのけるので、$p_2V$ の仕事をとられます。差し引き $(p_1-p_2)V$ の仕事をもらいます。
+\item \textbf{運動エネルギーの増え方}：質量は $\rho V$ なので $\dfrac{1}{2}\rho V(v_2^2-v_1^2)$。
+\item \textbf{位置エネルギーの増え方}：$\rho Vg(z_2-z_1)$。
+\end{enumerate}
+水どうしのまさつ（粘性。力-14）でエネルギーが熱になることを無視すると、もらった仕事＝エネルギーの増え方です。
+\[ (p_1-p_2)V=\frac{1}{2}\rho V(v_2^2-v_1^2)+\rho Vg(z_2-z_1) \]
+両辺を $V$ でわって、1の量を左に、2の量を右に集めると
+\pheq{p_1+\frac{1}{2}\rho v_1^2+\rho gz_1=p_2+\frac{1}{2}\rho v_2^2+\rho gz_2}{Pa ＝ J/m$^3$}
+\label{ph:力-13:bernoulli}つまり、流れにそって $p+\dfrac{1}{2}\rho v^2+\rho gz$ は一定です。これを\textbf{ベルヌーイの式}といいます。\bkidx{べるぬーいのしき}{ベルヌーイの式}スイスのダニエル・ベルヌーイが、1738年の本『流体力学』で、この考えを示しました。
+
+\begin{phyomi}[$p+\dfrac{1}{2}\rho v^2+\rho gz$ が一定]
+3つの項は、どれも「\qty{1}{m^3}の水が持つエネルギー」（J/m$^3$＝N·m/m$^3$＝N/m$^2$＝Pa で、圧力と同じ単位）。$\dfrac{1}{2}\rho v^2$ は運動エネルギー、$\rho gz$ は位置エネルギー、$p$ は「押されて流れこむことでもらえる仕事」の分。合計が一定なので、速くなれば（$\dfrac{1}{2}\rho v^2$ が増えれば）、そのぶん $p$ か $z$ が減ります。
+\end{phyomi}
+\begin{phmijika}[速い流れのそばは、圧力が低い]
+電車がホームを高速で通過すると、ホームの人は電車のほうへ引かれるように感じます（電車のそばの空気が速く動き、圧力が下がる）。霧ふきは、速い空気の流れで管の先の圧力を下げ、液を吸い上げています。
+\end{phmijika}
+\begin{phbaisuru}{速さ $v$}
+$\dfrac{1}{2}\rho v^2$ は4倍になります。高さが同じ所では、圧力の下がり方も4倍です。グラフは空気（\qty{1.2}{kg/m^3}）の $\dfrac{1}{2}\rho v^2$ です。風速\qty{10}{m/s}で\qty{60}{Pa}、\qty{20}{m/s}で\qty{240}{Pa}、台風の\qty{40}{m/s}では約\qty{960}{Pa}（\qty{1}{m^2}あたり約\qty{100}{kg}の物の重さ）です。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=44, ymin=0, ymax=1150, xtick={10,20,30,40}, ytick={240,500,960}, xlabel={$v$（m/s）}, ylabel={$\tfrac{1}{2}\rho v^2$（Pa）}]
+  \addplot[bkcurve, domain=0:42] {0.6*x^2};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(10,60) (20,240) (40,960)};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:9.5,70) {60};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:19.5,250) {240（4倍）};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:39.5,970) {960（16倍）};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\noindent\textbf{タンクの穴から出る水：トリチェリの定理}\par\nobreak
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!13] (0,0) rectangle (28,30);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,30) -- (28,30);
+  \draw[bkInk, line width=1pt] (0,38) -- (0,0) -- (28,0) -- (28,2.5) (28,5.5) -- (28,38);
+  \draw[bkBlue!80!black, line width=1.6pt] (28,4) .. controls (36,4) and (40,0) .. (43,-6);
+  \fill[bkRed!75!black] (14,30) circle (0.9);
+  \node[pxn lab, anchor=south] at (14,31) {1};
+  \fill[bkRed!75!black] (29.5,4) circle (0.9);
+  \node[pxn lab, anchor=south] at (31,5) {2};
+  \draw[pxn dim] (-3,4) -- (-3,30);
+  \node[pxn lab, anchor=east] at (-3.6,17) {$h$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+大きなタンクの、水面から深さ $h$ の所に小さな穴があります。水面の点1と、穴を出たすぐの点2に、ベルヌーイの式を使います。
+\end{minipage}
+\par\vspace{3pt}
+どちらも大気に接しているので $p_1=p_2=p_0$。タンクが大きいので、水面が下がる速さ $v_1$ はほぼ0です。$z_1-z_2=h$ なので
+\[ p_0+0+\rho gz_1=p_0+\frac{1}{2}\rho v_2^2+\rho gz_2\qquad\text{より}\qquad v_2^2=2g(z_1-z_2)=2gh \]
+\pheq{v=\sqrt{2gh}}{m/s ＝ $\sqrt{\text{m/s}^2\times\text{m}}$}
+\label{ph:力-13:torricelli}これを\textbf{トリチェリの定理}といいます。高さ $h$ から自由落下した物の速さ（力-1 の $v^2=2gh$）と同じです。水面にある水が、穴のところまで「落ちてきた」分の位置エネルギーが、そのまま運動エネルギーになったからです。力-12 のやってみようで、深い穴ほど水が勢いよく出たわけが、これでわかりました。
+\begin{phbaisuru}{深さ $h$}
+速さは $\sqrt2\approx1.41$ 倍にしかなりません（$v$ は $h$ の平方根に比例）。速さを2倍にするには、深さを4倍にしなければなりません。\qty{1}{m}で約\qty{4.4}{m/s}、\qty{2}{m}で約\qty{6.3}{m/s}、\qty{4}{m}で約\qty{8.9}{m/s}です。
+\end{phbaisuru}
+
+\bksubsection{3}{流れは板を押す：運動量の流れ}
+
+\leavevmode\label{ph:力-13:sec3}ホースの水を板に当てると、板は押されます。力-3 の例題では、速さ\qty{10}{m/s}・断面\qty{2}{cm^2}の水が壁に当たって横へ流れるとき、壁が受ける力は\qty{20}{N}でした。もう一度、「1秒に何が運ばれてくるか」で考えます。
+
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (40,-16) rectangle (44,16);
+  \draw[bkInk, line width=0.7pt] (40,-16) rectangle (44,16);
+  \fill[bkBlue!35] (0,-2.5) -- (36,-2.5) .. controls (39,-2.5) and (39.6,-6) .. (39.6,-14) -- (36.6,-14) .. controls (36.6,-6) and (36,-4) .. (32,-4) -- (32,4) .. controls (36,4) and (36.6,6) .. (36.6,14) -- (39.6,14) .. controls (39.6,6) and (39,2.5) .. (36,2.5) -- (0,2.5) -- cycle;
+  \draw[pxn v] (6,0) -- (18,0);
+  \node[pxn lab, anchor=south] at (12,3) {$v$};
+  \draw[pxn v] (38,-8) -- (38,-15.5);
+  \draw[pxn v] (38,8) -- (38,15.5);
+  \draw[pxn f, bkRed!75!black] (44.5,0) -- (56,0);
+  \node[pxn lab, anchor=south] at (51,1) {$F$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+1秒に板に届く水の質量は $\dot m=\rho Q$ で、その水は右向きの運動量 $\dot m v$ を持っています。板に当たると、水は上下に分かれて、右向きの速さを失います。
+\end{minipage}
+\par\vspace{3pt}
+1秒ごとに、右向きの運動量 $\dot m v$ が水から取り去られます。運動量の変化は力積に等しい（力-3）ので、板は水を左向きに $\dot mv$ の力で押しとめ、反作用で板は右向きに
+\pheq{F=\dot m v=\rho Qv=\rho Av^2}{N ＝ kg/s × m/s}
+の力を受けます。$\rho Av^2=1000\times(2\times10^{-4})\times10^2=\qty{20}{N}$ で、力-3 の例題と同じです。「1秒に運ばれてくる運動量」（\textbf{運動量の流れ}）が、力になるのです。
+\begin{phbaisuru}{水の速さ $v$}
+同じホースなら流量も2倍になるので、力は $2\times2=4$ 倍になります。1秒に届く水が2倍、その1つ1つが持つ運動量も2倍だからです。
+\end{phbaisuru}
+\begin{phmijika}[ホースの反動・ロケット]
+ホースの先から水を勢いよく出すと、ホースはうしろへ押し返されます。水に運動量を与えた反作用です。消防士が2人でノズルを持つのは、この反動が大きいからです（\bkreidairef{10}）。ロケットが何もない宇宙で進めるのも同じしくみです（力-3）。
+\end{phmijika}
+
+
+
+\Needspace{12\baselineskip}
+\phstage{te}{表計算とプログラムで流れを追う}{3}
+
+\bksubsection{4}{表計算：蛇口の水の太さ}
+
+\leavevmode\label{ph:力-13:sec4}\bkhatenaref に数で答えましょう。流量 $Q=\qty{6}{L/min}$、出口の水の直径 $d_0=\qty{10}{mm}$ とします。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 流量を m$^3$/s に直す：$\qty{6}{L/min}=\dfrac{6\times10^{-3}\,\mathrm{m^3}}{\qty{60}{s}}=10^{-4}$\,m$^3$/s。
+\item 出口の速さ：$v_0=\dfrac{Q}{A_0}=\dfrac{10^{-4}}{\pi\times0.010^2/4}\approx\qty{1.27}{m/s}$。
+\item 出口から $z$ だけ下の速さ：水は重力だけで加速するので、力-1 の $v^2=v_0^2+2gz$。（ベルヌーイの式で $p$ がどこも大気圧としても、同じ式になります。）
+\item その所の直径：連続の式 $A_0v_0=Av$ で、面積は直径の2乗に比例するので、$d=d_0\sqrt{\dfrac{v_0}{v}}$。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{3}{30}{%
+1 & 下へのきょり $z$（m） & 速さ $v$（m/s） & 直径 $d$（mm） \\
+2 & 0 & 1.27 & 10.0 \\
+3 & 0.05 & 1.61 & 8.9 \\
+4 & 0.10 & 1.89 & 8.2 \\
+5 & 0.15 & 2.14 & 7.7 \\
+6 & 0.20 & 2.35 & 7.3 \\
+7 & 0.30 & 2.74 & 6.8 \\}
+\bktabcaption{B2 は \texttt{=SQRT(1.273\^{}2+2*9.8*A2)}、C2 は \texttt{=10*SQRT(1.273/B2)}。下へコピーする。}
+\end{bkcenter}
+\label{ph:力-13:jaguchi}\bkhatenaref の答え：落ちるほど速くなり、1秒に通る水の量は同じなので、細くなります。この流量では、\qty{10}{cm}下で直径約\qty{8.2}{mm}、\qty{20}{cm}下で約\qty{7.3}{mm}です。やってみようではかった値と比べましょう。出口のすぐ下では、水の柱の形が落ち着かないので、少しずれることがあります。
+
+\begin{phbaisuru}{流量 $Q$}
+出口の速さ $v_0$ が2倍になるので、同じ\qty{20}{cm}下でも、細くなり方はゆるやかになります。流量\qty{12}{L/min}（同じ\qty{10}{mm}の出口）では、\qty{20}{cm}下の直径は約\qty{8.9}{mm}です（$v_0=\qty{2.55}{m/s}$、$v=\sqrt{2.55^2+2\times9.8\times0.20}\approx\qty{3.22}{m/s}$、$d=10\sqrt{2.55/3.22}\approx\qty{8.9}{mm}$）。勢いよく出る水ほど、落ちて増える速さの「割合」が小さいからです。
+\end{phbaisuru}
+
+\bksubsection{5}{プログラム：タンクの水がぬけるまで}
+
+\leavevmode\label{ph:力-13:sec5}底面積\qty{1.0}{m^2}のタンクに、深さ\qty{2.0}{m}まで水が入っています。底に面積\qty{1}{cm^2}の穴をあけると、水が空になるまで何分かかるでしょう。穴から出る速さはトリチェリの定理で $\sqrt{2gh}$ ですが、水が減ると $h$ が小さくなり、速さも小さくなります。そこで、時間を1分ずつに区切って、「1分の間は速さが一定」として水面の高さを追いかけます（数学 6-2 のオイラー法）。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 今の深さ $h$ から、穴を出る速さ $v=\sqrt{2gh}$。
+\item 1分（\qty{60}{s}）に出る水の体積は $a\times v\times60$（$a$ は穴の面積）。
+\item タンクの水面は、その体積を底面積 $A$ でわった分だけ下がる。新しい $h$ は「$h-av\times60\div A$」。
+\end{enumerate}
+\begin{phcode}[Python]
+from math import sqrt
+g = 9.8
+A, a = 1.0, 0.0001       \# タンクの底面積・穴の面積（m2）
+h, t, dt = 2.0, 0.0, 60.0
+while h > 0:
+    if t \% 1200 == 0:
+        print(t, round(h, 3))
+    v = sqrt(2 * g * h)      \# 穴から出る速さ
+    h = h - a * v / A * dt   \# 1分でへる高さ
+    t = t + dt
+print('空になる時刻', t)
+\end{phcode}
+\begin{phcodeout}
+0.0 2.0
+1200.0 1.316
+2400.0 0.774
+3600.0 0.374
+4800.0 0.117
+6000.0 0.004
+空になる時刻 6240.0
+\end{phcodeout}
+20分（\qty{1200}{s}）ごとに深さを表示しました。はじめの20分で約\qty{0.7}{m}下がるのに、終わりのほうはゆっくりしか下がりません。水が少なくなると、押し出す圧力が小さくなるからです。空になるのは約\qty{6240}{s}（約104分）です。区切りの時間 \texttt{dt} を10秒にすると\qty{6360}{s}、1秒にすると\qty{6384}{s}になり、⑤の終わりで式から求める本当の値（\qty{6389}{s}、約106分）に近づきます。
+
+\phkokomade
+
+\Needspace{12\baselineskip}
+\phstage{shiki}{バランス式から導く}{5}
+
+\bksubsection{6}{検査体積とバランス式：質量}
+
+\leavevmode\label{ph:力-13:sec6}流れる水は、どの1かたまりを追いかけても、すぐに形が変わり、まわりの水とまざってしまいます。そこで工学では、水を追いかけるのをやめて、\textbf{空間に固定した囲み}を考え、その囲みに「何が入り、何が出て、何がたまったか」を数えます。この囲みを\textbf{検査体積}といいます。\bkidx{けんさたいせき}{検査体積}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkTheme, line width=1.2pt, dashed, rounded corners=3mm] (20,-14) rectangle (90,14);
+  \node[pxn lab, text=bkDeep, anchor=south] at (55,14.8) {検査体積（空間に固定した囲み）};
+  \draw[pxn f, bkBlue!80!black] (0,0) -- (19,0);
+  \node[pxn lab, anchor=south] at (9,1) {入る};
+  \draw[pxn f, bkBlue!80!black] (91,4) -- (112,4);
+  \draw[pxn f, bkBlue!80!black] (91,-6) -- (112,-6);
+  \node[pxn lab, anchor=south] at (102,5) {出る};
+  \node[font=\sffamily\small, align=center] at (55,1) {中の量の変化（たまる）\\＝ 入る － 出る ＋ 生じる};
+\end{tikzpicture}
+\bkfigcaption{バランス式。質量・エネルギー・運動量のどれも、この形で数える。}
+\end{bkfigure}
+\pheq{\text{たまる量}=\text{入る量}-\text{出る量}+\text{生じる量}}{1秒あたりで数える}
+質量は、生まれも消えもしません（生じる量＝0）。
+
+\noindent\textbf{閉じた物：出入りがない}\par\nobreak
+\label{ph:力-13:mass}出入りもないとき（たとえば、ふたをした容器の中で、ねん土の形を変えたり、食塩を水にとかしたりする）、入る量も出る量も0なので、たまる量（中の質量の変化）も0です。小学校理科の「物は形を変えても重さは変わらない」「水にとかしても全体の重さは変わらない」は、このバランス式の、いちばん簡単な場合です。
+
+\noindent\textbf{流れのバランス式}\par\nobreak
+検査体積 $V$ の中の質量は $\displaystyle\int_V\rho\,\dd V$ です。表面の小さな面 $\dd S$（外向きの単位ベクトル $\vec{n}$）から1秒に出ていく質量は、流束（数学 8-8）を使って $\rho\,\vec{v}\cdot\vec{n}\,\dd S$ です（内向きに流れていれば負になり、入る量を表す）。だから
+\[ \frac{\dd}{\dd t}\int_V\rho\,\dd V=-\oint_S\rho\,\vec{v}\cdot\vec{n}\,\dd S \]
+右辺にガウスの定理（数学 8-11）を使うと $-\displaystyle\int_V\operatorname{div}(\rho\vec{v})\,\dd V$ です。検査体積はどこにどんな大きさでとってもよいので、中身どうしが等しくなり、
+\pheq{\frac{\partial\rho}{\partial t}+\operatorname{div}(\rho\vec{v})=0}{kg/(m$^3$·s)}
+これが、流れの各点で成り立つ\textbf{連続の式}の一般の形です。「その点の密度が増える速さ＋その点からのわき出し＝0」と読みます（数学 8-9 の発散）。
+
+\noindent\textbf{定常で、縮まない流れ}\par\nobreak
+時間で変わらない（定常：$\dfrac{\partial\rho}{\partial t}=0$）、密度が一定（非圧縮）なら、$\rho$ をくくり出して
+\[ \operatorname{div}\vec{v}=\frac{\partial v_x}{\partial x}+\frac{\partial v_y}{\partial y}+\frac{\partial v_z}{\partial z}=0 \]
+どの点にも、わき出しも吸いこみもありません。管の一部（入口の断面1から出口の断面2まで、横は管の壁）を検査体積にとると、壁からは出入りがないので、入る $\rho A_1v_1$ と出る $\rho A_2v_2$ が等しく、$A_1v_1=A_2v_2$ にもどります。
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\dfrac{\partial\rho}{\partial t}+\operatorname{div}(\rho\vec{v})=0$}{定常・非圧縮}{$\operatorname{div}\vec{v}=0$}
+\phflowrow{$\operatorname{div}\vec{v}=0$}{管で、断面の\\平均の速さを使う}{$A_1v_1=A_2v_2$}
+\phflowrow{入る－出る＋生じる\\＝たまる（質量）}{出入りがない\\（閉じた物）}{形を変えても\\重さは変わらない}
+\end{phflow}
+
+\bksubsection{7}{エネルギー：流れにそって運動方程式を足す}
+
+\leavevmode\label{ph:力-13:sec7}②では、エネルギーの考えでベルヌーイの式を作りました。ここでは、流体の小さなかたまりの運動方程式から、もう一度導きます。どんな条件で成り立つ式なのかが、はっきりします。
+
+流れの各点で、速度の向きにそってつないだ線を\textbf{流線}といいます。定常な流れでは、水のつぶは流線にそって進みます。流線にそって、長さ $\Delta s$、断面積 $\Delta A$ の小さな円柱の水を考えます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkBlue!60!black, line width=0.6pt, dashed] (-8,-8) .. controls (20,0) and (50,14) .. (80,20);
+  \begin{scope}[shift={(36,6)}, rotate=20]
+    \filldraw[fill=bkBlue!30, draw=bkBlue!70!black, line width=0.8pt] (0,-4) rectangle (24,4);
+    \draw[pxn f, bkRed!75!black] (-10,0) -- (-0.6,0);
+    \node[pxn lab, anchor=south east] at (-3,1) {$p\,\Delta A$};
+    \draw[pxn f, bkRed!75!black] (34,0) -- (24.6,0);
+    \node[pxn lab, anchor=north west] at (27,-1.2) {$(p+\Delta p)\Delta A$};
+    \draw[pxn dim] (0,-6.5) -- (24,-6.5);
+    \node[pxn lab, anchor=north] at (12,-7.2) {$\Delta s$};
+  \end{scope}
+  \draw[pxn f, bkOrange!85!black] (47.3,10.1) -- (47.3,-6);
+  \node[pxn lab, anchor=west] at (48.2,-4) {重力 $\rho\,\Delta A\,\Delta s\,g$};
+  \node[pxn lab, anchor=south] at (78,21) {流線 $s$};
+\end{tikzpicture}
+\bkfigcaption{流線にそった小さな円柱。流線の向きの力は、前後の圧力の差と、重力の流線の向きの成分。}
+\end{bkfigure}
+流線の向きの力は、うしろから押す $p\Delta A$、前から押す $(p+\Delta p)\Delta A$、重力の流線の向きの成分です。円柱が $\Delta s$ 進む間に高さが $\Delta z$ 上がるとすると、重力の成分は $-\rho\,\Delta A\,\Delta s\,g\dfrac{\Delta z}{\Delta s}=-\rho g\,\Delta A\,\Delta z$（4-6 の斜面と同じ考え）。
+
+加速度は、定常な流れでは、場所が変わることで速さが変わる分だけです。合成関数の微分（数学 5-6）で
+\[ a=\frac{\dd v}{\dd t}=\frac{\dd v}{\dd s}\cdot\frac{\dd s}{\dd t}=v\frac{\dd v}{\dd s} \]
+質量 $\rho\,\Delta A\,\Delta s$ に運動方程式（力-2）を書いて、$\Delta A$ でわり、$\Delta s$ を小さくすると
+\[ \rho v\frac{\dd v}{\dd s}=-\frac{\dd p}{\dd s}-\rho g\frac{\dd z}{\dd s} \]
+$\rho$ が一定なら、$\rho v\dfrac{\dd v}{\dd s}=\dfrac{\dd}{\dd s}\Bigl(\dfrac{1}{2}\rho v^2\Bigr)$ なので、全部を左に集めると
+\[ \frac{\dd}{\dd s}\Bigl(p+\frac{1}{2}\rho v^2+\rho gz\Bigr)=0 \]
+流線にそって微分して0なので、$p+\dfrac{1}{2}\rho v^2+\rho gz$ は流線にそって一定です。②と同じベルヌーイの式が出ました。使った条件は、\textbf{定常・密度一定・粘性なし・同じ流線の上}の4つです。
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\rho\dfrac{\mathrm{D}\vec{v}}{\mathrm{D}t}=-\operatorname{grad}p+\rho\vec{g}$\\（オイラーの式）}{定常・非圧縮・非粘性\\流線にそって積分}{$p+\frac{1}{2}\rho v^2+\rho gz$\\＝一定}
+\phflowrow{$p+\frac{1}{2}\rho v^2+\rho gz$\\＝一定}{水面と穴で $p=p_0$\\水面の速さ $\approx0$}{$v=\sqrt{2gh}$}
+\phflowrow{$p+\frac{1}{2}\rho v^2+\rho gz$\\＝一定}{流れが止まっている\\（$v=0$）}{$p=p_0+\rho gh$\\（力-12）}
+\end{phflow}
+\begin{motto}[5]
+\phboxhead{3次元のオイラーの式と物質微分}
+流れの中の小さな立方体に運動方程式を書くと、力-12 のもっと知りたいの $\operatorname{grad}p=\rho\vec{g}$ に、加速度の項が加わった\textbf{オイラーの式}になります。
+\[ \rho\frac{\mathrm{D}\vec{v}}{\mathrm{D}t}=-\operatorname{grad}p+\rho\vec{g},\qquad \frac{\mathrm{D}\vec{v}}{\mathrm{D}t}=\frac{\partial\vec{v}}{\partial t}+(\vec{v}\cdot\operatorname{grad})\vec{v} \]
+$\dfrac{\mathrm{D}}{\mathrm{D}t}$ は\textbf{物質微分}といい、「水のつぶといっしょに動きながら見た変化」を表します（数学 8-13 で学ぶ）。1つめの項はその場所で時間とともに変わる分、2つめの項は、つぶが速さのちがう場所へ動くことで変わる分です。流線の上で2つめの項を書くと、上で使った $v\dfrac{\dd v}{\dd s}$ になります。オイラーが1757年に発表しました。これに粘性の力を加えたのが、力-15 で読むナビエ・ストークス方程式です。
+\end{motto}
+
+\noindent 流れ図の3段めのとおり、流れが止まると、ベルヌーイの式は力-12 の静水圧の式になります。
+
+\noindent\textbf{ヘッド（水頭）で書く}\par\nobreak
+ベルヌーイの式の両辺を $\rho g$ でわると、どの項も長さ（m）の単位になります。
+\pheq{\frac{p}{\rho g}+\frac{v^2}{2g}+z=H\ (\text{一定})}{m ＝ m}
+左から\textbf{圧力ヘッド}・\textbf{速度ヘッド}・\textbf{位置ヘッド}といい、和 $H$ を\textbf{全ヘッド}といいます。\bkidx{へっど}{ヘッド（水頭）}「水の柱なら何 m の高さにあたるか」で、エネルギーを表したものです。ポンプが水を何 m 上げられるか（揚程、⑨）や、管の損失（力-14 の損失ヘッド $h_{\mathrm{f}}$）も、この単位で数えます。
+
+
+
+\bksubsection{8}{運動量の法則：曲がり管と噴流の力}
+
+\leavevmode\label{ph:力-13:sec8}③の「運動量の流れが力になる」を、検査体積のバランス式で一般の形にします。
+
+検査体積の中の流体に、ある時刻にふくまれている水のかたまりを考えます。短い時間 $\Delta t$ の間に、かたまりは少し下流へずれます。定常な流れなら、検査体積の中に残った部分の運動量は変わりません。変わったのは、出口から出ていった水（質量 $\dot m\Delta t$、速度 $\vec{v}_{\text{出}}$）が加わり、入口から入ってきた水（質量 $\dot m\Delta t$、速度 $\vec{v}_{\text{入}}$）の分がぬけたことだけです。かたまりの運動量の変化は、はたらいた力の力積に等しい（力-3）ので
+\[ \Sigma\vec{F}\,\Delta t=\dot m\Delta t\,\vec{v}_{\text{出}}-\dot m\Delta t\,\vec{v}_{\text{入}} \]
+$\Delta t$ でわって
+\pheq{\Sigma\vec{F}=\dot m(\vec{v}_{\text{出}}-\vec{v}_{\text{入}})}{N ＝ kg/s × m/s}
+\label{ph:力-13:undouryou}これを\textbf{運動量の法則}といいます。\bkidx{うんどうりょうのほうそく}{運動量の法則}$\Sigma\vec{F}$ は、検査体積の中の流体にはたらく力の全部（入口と出口で押す圧力の力、壁が押す力、重力）です。流体が壁を押す力は、その反作用で、壁が流体を押す力と反対向きです。入口や出口がいくつもあるときは、出口ごとの $\dot m\vec{v}$ をたし、入口ごとの $\dot m\vec{v}$ を引きます。力も速度もベクトルなので、$x$ と $y$ の成分ごとに書きます（数学 4-11）。
+
+\noindent\textbf{90°の曲がり管}\par\nobreak
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!13] (0,-5) -- (20,-5) arc (-90:0:15) -- (35,30) -- (25,30) -- (25,10) arc (0:-90:5) -- (0,5) -- cycle;
+  \draw[bkInk, line width=1pt] (0,5) -- (20,5) arc (-90:0:5) -- (25,30);
+  \draw[bkInk, line width=1pt] (0,-5) -- (20,-5) arc (-90:0:15) -- (35,30);
+  \draw[pxn v] (2,0) -- (12,0);
+  \node[pxn lab, anchor=north] at (7,-6) {$\vec{v}_{\text{入}}$};
+  \draw[pxn v] (30,20) -- (30,29);
+  \node[pxn lab, anchor=west] at (36,25) {$\vec{v}_{\text{出}}$};
+  \draw[pxn f, bkRed!75!black] (-9,0) -- (-0.6,0);
+  \node[pxn lab, anchor=south] at (-5,1) {$pA$};
+  \draw[pxn f, bkRed!75!black] (30,39) -- (30,30.6);
+  \node[pxn lab, anchor=west] at (31,36) {$pA$};
+  \draw[pxn f, bkInk, line width=1.8pt] (36,-6) -- (45,-15);
+  \node[pxn lab, anchor=north, align=center] at (38,-16) {流体が管を\\押す力};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+水平な管が90°曲がっています。入口は右向き（$+x$）、出口は上向き（$+y$）、断面積はどちらも $A$、速さ $v$、圧力（ゲージ圧）$p$ とします。
+\end{minipage}
+\par\vspace{3pt}
+流体にはたらく力：入口の圧力 $pA$（$+x$ 向き）、出口の圧力 $pA$（出口では外から中へ押すので $-y$ 向き）、管が流体を押す力 $\vec{R}=(R_x,\ R_y)$。運動量の法則を成分で書くと
+\[ x:\ pA+R_x=\dot m(0-v),\qquad y:\ -pA+R_y=\dot m(v-0) \]
+\[ R_x=-(pA+\dot mv),\qquad R_y=pA+\dot mv \]
+流体が管を押す力はこの反対で、$(pA+\dot mv,\ -(pA+\dot mv))$。右下向き（曲がり角の外側、45°の向き）に、大きさ $\sqrt2\,(pA+\dot mv)$ です。配管の曲がり角が、外へ押し出されるのはこのためです。だから曲がり角は、支えの金具（アンカー）でしっかり固定します（\bkreidairef{11}）。
+
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\Sigma\vec{F}=\dot m(\vec{v}_{\text{出}}-\vec{v}_{\text{入}})$}{平らな板に当たり\\横へ流れる（大気圧）}{$F=\rho Qv$\\（力-3）}
+\phflowrow{$\Sigma\vec{F}=\dot m(\vec{v}_{\text{出}}-\vec{v}_{\text{入}})$}{板が $u$ で遠ざかる\\（板から見る）}{$F=\rho A(v-u)^2$}
+\phflowrow{$\Sigma\vec{F}=\dot m(\vec{v}_{\text{出}}-\vec{v}_{\text{入}})$}{ノズルから\\大気へ出る}{反動 $F=\rho Q(v_{\text{出}}-v_{\text{入}})$}
+\end{phflow}
+2段めの「動く板」では、板といっしょに動きながら見ると、水は $v-u$ の速さで当たり、1秒に当たる水も $\rho A(v-u)$ に減ります。だから力は $\rho A(v-u)^2$ です（\bkreidairef{9}）。
+
+\bksubsection{9}{角運動量の法則：ポンプと水車}
+
+\leavevmode\label{ph:力-13:sec9}ポンプや水車は、羽根車を回して、水にエネルギーを与えたり、水からエネルギーをもらったりします。回る物の運動方程式は「トルク＝角運動量の変化の速さ」（力-6）でした。運動量の法則と同じ考えで、検査体積に入る・出る\textbf{角運動量の流れ}を数えると、
+\pheq{T=\dot m(r_2c_{u2}-r_1c_{u1})}{N·m ＝ kg/s × m × m/s}
+になります。$T$ は羽根車が水に与えるトルク、$r_1$・$r_2$ は入口・出口の半径、$c_{u1}$・$c_{u2}$ は水の速度の「回る向きの成分」です。1点の物の角運動量が $m\times r\times(\text{回る向きの速さ})$ だったこと（力-6）を、1秒あたりに直したものです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.8pt] (0,0) circle (24);
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt] (0,0) circle (7);
+  \foreach \a in {0,60,...,300} {\draw[bkInk, line width=1.2pt] (\a:7) .. controls (\a-20:15) .. (\a-50:24);}
+  \fill[bkInk] (0,0) circle (1.2);
+  \draw[-{Stealth[length=4pt]}, bkRed!75!black, line width=1pt] (30:30) arc (30:70:30);
+  \node[pxn lab, anchor=south west] at (55:31) {回る向き $\omega$};
+  % 出口の点
+  \coordinate (O2) at (-50:24);
+  \fill[bkRed!75!black] (O2) circle (1);
+  \draw[pxn v, bkOrange!85!black] (O2) -- ++(40:12);
+  \node[pxn lab, anchor=south west] at ($(O2)+(40:12)+(0,-1)$) {周速 $u_2=r_2\omega$};
+  \draw[pxn v] (O2) -- ++(10:16);
+  \node[pxn lab, anchor=west] at ($(O2)+(10:16)$) {水の速度 $c_2$};
+  \draw[bkGray, dashed, line width=0.4pt] (0,0) -- (O2);
+  \node[pxn lab, anchor=east] at (-50:13) {$r_2$};
+\end{tikzpicture}
+\bkfigcaption{ポンプの羽根車（上から見た図）。出口で水の速度 $c_2$ の、回る向き（周速 $u_2$ の向き）の成分が $c_{u2}$。}
+\end{bkfigure}
+羽根車が回る角速度を $\omega$ とすると、水に与える動力は $T\omega$（力-6）です。$r\omega=u$（羽根の周速。力-1）を使うと、$T\omega=\dot m(u_2c_{u2}-u_1c_{u1})$。これを、1秒に流れる水の重さ $\dot mg$ でわると、水1 N あたりに与えたエネルギー、つまりヘッド（⑦）で表した\textbf{理論の揚程}になります。
+\pheq{H=\frac{u_2c_{u2}-u_1c_{u1}}{g}}{m ＝ （m/s）$^2$ ÷ m/s$^2$}
+\label{ph:力-13:euler}これを\textbf{ポンプのオイラーの式}といいます。入口で水が回っていなければ（$c_{u1}=0$）、$H=\dfrac{u_2c_{u2}}{g}$ です。
+\begin{phbaisuru}{回転数}
+周速 $u_2$ も、水の回る速さ $c_{u2}$ も2倍になるので、揚程は4倍になります。流量も2倍になるので、ポンプの動力は $4\times2=8$ 倍です（力-15 の相似則でくわしく）。
+\end{phbaisuru}
+じっさいのポンプでは、羽根の枚数が有限であることや、水のまさつのため、本当の揚程は理論の揚程より小さくなります。水車は、この反対に、水の回る勢いを羽根車がもらって回ります。
+
+\bksubsection{10}{流量計：ピトー管・ベンチュリ管・オリフィス}
+
+\leavevmode\label{ph:力-13:sec10}工場の配管を流れる水やガスの量は、ベルヌーイの式で「速さ」を「圧力の差」に直してはかります。
+
+\noindent\textbf{静圧・動圧・全圧とピトー管}\par\nobreak
+流れの中に、先に小さな穴のある管を、流れに向けて置きます。管の先では流れがせき止められて、速さが0になります（よどみ点）。流線にそってベルヌーイの式を書くと、高さが同じなら
+\[ p+\frac{1}{2}\rho v^2=p_{\mathrm t}\quad(\text{よどみ点の圧力}) \]
+$p$ を\textbf{静圧}、$\dfrac{1}{2}\rho v^2$ を\textbf{動圧}、和の $p_{\mathrm t}$ を\textbf{全圧}といいます。\bkidx{どうあつ}{動圧・静圧・全圧}管の先の穴で全圧を、横の穴で静圧をはかり、その差 $\Delta p$ から
+\pheq{v=\sqrt{\frac{2\Delta p}{\rho}}}{m/s ＝ $\sqrt{\text{Pa}\div\text{kg/m}^3}$}
+を求めます。この管を\textbf{ピトー管}といいます。フランスのピトーが1732年に、川の流れの速さをはかるのに使ったのが始まりで、今は飛行機の速さをはかるのにも使われます。
+
+\noindent\textbf{ベンチュリ管}\par\nobreak
+②の管の、太い所（断面積 $A_1$）とのど（$A_2$）の圧力の差 $\Delta p=p_1-p_2$ をはかります。連続の式 $v_1=\dfrac{A_2}{A_1}v_2$ をベルヌーイの式 $p_1+\dfrac{1}{2}\rho v_1^2=p_2+\dfrac{1}{2}\rho v_2^2$ に入れると
+\[ \Delta p=\frac{1}{2}\rho v_2^2\left\{1-\Bigl(\frac{A_2}{A_1}\Bigr)^2\right\},\qquad v_2=\sqrt{\frac{2\Delta p}{\rho\{1-(A_2/A_1)^2\}}} \]
+流量は $Q=A_2v_2$ です。まさつの分を直す係数（\textbf{流出係数} $C$。ベンチュリ管では約0.98）をかけて使います。
+
+\noindent\textbf{オリフィス}\par\nobreak
+管の中に、まん中に丸い穴をあけた板（\textbf{オリフィス}）をはさみ、板の前後の圧力の差をはかります。ベンチュリ管より簡単で安いので、工場で多く使われます。ただし、穴を通った流れは穴よりさらに細くしぼられ、そのあとうずを作ってエネルギーを失うので、ベルヌーイの式だけでは流量が決まりません。そこで、ベンチュリ管と同じ形の式に、実験で決めた流出係数 $C$ をかけて
+\pheq{Q=C\,A_2\sqrt{\frac{2\Delta p}{\rho\{1-(A_2/A_1)^2\}}}}{m$^3$/s}
+とします（$A_2$ は穴の面積）。角の鋭いオリフィスでは $C$ は約0.6です。$C$ を求める実験の式は、規格（JIS Z 8762）に決められています。
+
+\begin{phbaisuru}{差圧 $\Delta p$}
+流量は $\sqrt2$ 倍（約1.4倍）にしかなりません。流量は差圧の平方根に比例するからです。反対に、流量を2倍にすると、差圧は4倍になります。差圧式の流量計の信号から流量を出すとき、計器の中で「平方根をとる計算」（開平演算）をするのはこのためです。
+\end{phbaisuru}
+
+\begin{column}{家の水道メーターは、何を数えている？}
+家の水道メーターの多くは、管の中に小さな羽根車が入っていて、流れる水で回ります（羽根車式）。羽根車の回る速さは流速、つまり流量 $Q$ にほぼ比例するので、回った回数を歯車で数えれば、流れた水の体積（流量を時間で積分した量。5-12）がわかります。差圧式（⑩）のように平方根の計算はいりません。そのかわり、流量がとても少ないと羽根車が回りださず、多すぎると羽根車がすりへるので、使える流量の範囲が決まっています。電気のスマートメーターと同じように、回った回数を電気の信号にして、遠くから読む水道メーターも使われはじめています。
+\end{column}
+
+\bksubsection{11}{水力発電の出力 $P=\rho gQH\eta$}
+
+\leavevmode\label{ph:力-13:sec11}ダムの水面から、発電所の水車までの高さの差を $H$（落差）、1秒に流す水を $Q$（m$^3$/s）とします。1秒に流れる水の質量は $\rho Q$ なので、1秒に失う位置エネルギーは $\rho Q\times g\times H$ です（力-4 の $mgh$）。これが1秒あたりのエネルギー、つまり仕事率です。水車と発電機で電気に変わる割合（効率）$\eta$ をかけて
+\pheq{P=\rho gQH\eta}{W ＝ kg/m$^3$ × m/s$^2$ × m$^3$/s × m}
+水の密度\qty{1000}{kg/m^3}と $g=9.8$ を入れると $P=9800QH\eta$（W）＝ $9.8QH\eta$（kW）です。力-4 の例題の発電所（$Q=\qty{10}{m^3/s}$、$H=\qty{100}{m}$、$\eta=0.85$）なら、$9.8\times10\times100\times0.85\approx\num{8330}$\,kW、約\qty{8.3}{MW}です。
+\begin{phbaisuru}{落差 $H$}
+出力も2倍です（比例）。流量 $Q$ を2倍にしても2倍。同じ出力を出すのに、落差の大きい山のダムでは流量が少なくてよく、落差の小さい川の発電所では大きな流量がいります。
+\end{phbaisuru}
+
+\begin{phmada}[蛇口の水は、なぜつぶに分かれる？]
+④の水の柱は、さらに下へいくと、ゆらゆらとくびれて、つぶに分かれます。水の表面には、表面積を小さくしようとする力（表面張力。力-12 の「この先は大学で」）がはたらいています。細長い柱は、同じ体積のつぶの列になったほうが表面積が小さいので、少しのくびれが育ってしまうのです。このしくみは、プラトー（1873年の本）の実験と、レイリー（1878年）の計算で説明され、くびれが育ちやすい波の長さ（柱の太さの約4.5倍）も予想できるようになりました。
+
+ところが、くびれがどんどん細くなり、太さが0になって切れる「最後の一瞬」は、ふつうの流れの式がそのままでは使えない、とても特別な場面です。この一瞬のふるまいは、1990年代から計算と高速度カメラの実験で研究が進み、多くのことがわかってきました。それでも、粘りの強い液体や、まわりの空気の影響、主なつぶの間にできる小さなつぶ（サテライト）の大きさをふくめて、すべてを予想できるわけではなく、インクジェットプリンタや薬の製造の工学と結びついて、今も研究が続いています。
+\end{phmada}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item バランス式：たまる量＝入る量－出る量＋生じる量。質量・エネルギー・運動量をこの形で数える。
+\item 質量：流量 $Q=Av$、$\dot m=\rho Q$。連続の式 $A_1v_1=A_2v_2$（一般には $\dfrac{\partial\rho}{\partial t}+\operatorname{div}(\rho\vec{v})=0$）。
+\item エネルギー：流線にそって $p+\dfrac{1}{2}\rho v^2+\rho gz$ が一定（定常・非圧縮・粘性なし）。$v=\sqrt{2gh}$、ピトー管 $v=\sqrt{2\Delta p/\rho}$。水力 $P=\rho gQH\eta$。
+\item 運動量：$\Sigma\vec{F}=\dot m(\vec{v}_{\text{出}}-\vec{v}_{\text{入}})$。角運動量：$T=\dot m(r_2c_{u2}-r_1c_{u1})$、揚程 $H=\dfrac{u_2c_{u2}}{g}$。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{流量・質量流量}{1秒に断面を通る体積 $Q$（m$^3$/s）と質量 $\dot m$（kg/s）。$\dot m=\rho Q$。}
+\bkword{検査体積}{空間に固定した囲み。出入りを数えてバランス式を立てる。}
+\bkword{流線}{各点の速度の向きをつないだ線。定常な流れでは、水のつぶの通り道。}
+\bkword{静圧・動圧・全圧}{流れの圧力 $p$、$\dfrac{1}{2}\rho v^2$、その和（流れをせき止めた所の圧力）。}
+\bkword{ヘッド（水頭）}{エネルギーを水の柱の高さで表したもの。圧力・速度・位置ヘッドの和が全ヘッド。}
+\bkword{揚程}{ポンプが水に与えるエネルギーを、ヘッド（m）で表したもの。}
+\bkword{流出係数}{理想の流れで計算した流量に、実際の流量の割合としてかける係数。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$Q$}{キュー}{体積流量（m$^3$/s）。力-10 のせん断力 $Q$ とは別の量（部がちがう）}{volume flow rate}{力-13}}{\bkkigocard{$\dot m$}{エムドット}{質量流量（kg/s）。上の点は「1秒あたり」（時間で微分した量）}{mass flow rate}{力-13}}
+
+\begin{senmonsho}[運動量の法則とベルヌーイの定理]
+\begin{bkhonbun}
+定常流れにおいて、検査体積 CV に対する運動量の式は
+\[ \sum\symbf F=\int_{\mathrm{CS}}\rho\,\symbf v\,(\symbf v\cdot\symbf n)\,\mathrm{d}A \]
+と表される。一様な流れの入口 1 と出口 2 が一つずつであれば、右辺は $\dot m(\symbf v_2-\symbf v_1)$ となる。また、非粘性・非圧縮の定常流れでは、流線に沿って
+\[ \frac{p}{\rho g}+\frac{v^2}{2g}+z=H=\text{const.} \]
+が成り立つ（ベルヌーイの定理）。
+\end{bkhonbun}
+\bkyaku{太字はベクトル（この本の矢印。数学 4-13）。CV は control volume（検査体積）、CS はその表面（control surface）。$\symbf v\cdot\symbf n$ は面を外へ通りぬける速さ（内積。数学 4-12）で、$\rho\symbf v(\symbf v\cdot\symbf n)\,\mathrm dA$ は面 $\mathrm dA$ から1秒に出ていく運動量。入口では $\symbf v\cdot\symbf n<0$ なので、入る分は引き算になる。const. は「一定」。「定理」と書く本と「式」と書く本がある。}
+\end{senmonsho}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 水の密度は\qty{1000}{kg/m^3}、空気の密度は\qty{1.2}{kg/m^3}、$g=\qty{9.8}{m/s^2}$ とします。とくにことわりがなければ、この章の基本のモデル（定常・非圧縮・粘性なし）を使います。
+
+\begin{phreidai}[蛇口の水は、どこまで細くなる？]
+\label{ph:力-13:ex1}蛇口から、流量\qty{6.0}{L/min}の水が、出口で直径\qty{10}{mm}の柱になって真下に出ています。出口から\qty{10}{cm}下と\qty{20}{cm}下の、水の柱の直径を求めましょう。
+\phbamen
+\bkhatenaref の場面です。水は落ちながら速くなり、細くなります。
+\phmushi
+空気の抵抗、表面張力（柱がつぶに分かれる前を考える）、柱の中の速さのちがい（断面でそろっているとする）を無視します。
+\phzu
+出口の速さ $v_0$・直径 $d_0$・断面積 $A_0$、出口から $z$ 下の速さ $v$・直径 $d$・断面積 $A$。下向きを正。
+\phriyu
+速さは、重力だけで加速するので力-1 の $v^2=v_0^2+2gz$。太さは、どこでも流量が同じなので連続の式 $A_0v_0=Av$。
+\phtateru
+\[ Q=\frac{6.0\times10^{-3}}{60},\qquad v_0=\frac{Q}{\pi d_0^2/4} \]
+\[ v=\sqrt{v_0^2+2gz},\qquad d=d_0\sqrt{\frac{v_0}{v}} \]
+\phtoku
+$Q=1.0\times10^{-4}$\,m$^3$/s、$v_0=\dfrac{1.0\times10^{-4}}{7.85\times10^{-5}}\approx\qty{1.27}{m/s}$。
+$z=\qty{0.10}{m}$ では
+\[ v=\sqrt{1.27^2+2\times9.8\times0.10}\approx\qty{1.89}{m/s} \]
+\[ d=10\sqrt{\frac{1.27}{1.89}}\approx\qty{8.2}{mm} \]
+$z=\qty{0.20}{m}$ では
+\[ v=\sqrt{1.27^2+2\times9.8\times0.20}\approx\qty{2.35}{m/s} \]
+\[ d=10\sqrt{\frac{1.27}{2.35}}\approx\qty{7.3}{mm} \]
+\phtashikame
+単位：mm×（無次元）＝mm。大きさ：下へいくほど細くなるが、細くなり方はだんだんゆるやか（④の表）。極端な場合：$g=0$（無重力）なら、速さも太さも変わらない。上向きに噴き出す噴水では $v^2=v_0^2-2gz$ となり、上へいくほど遅く、太くなる。
+\kotae \qty{10}{cm}下で約\qty{8.2}{mm}、\qty{20}{cm}下で約\qty{7.3}{mm}
+\end{phreidai}
+\begin{jibun}
+直径\qty{10}{mm}のノズルから、真上に\qty{5.0}{m/s}で水が噴き出しています。水はどの高さまで上がりますか。ノズルから\qty{1.0}{m}上の、水の柱の直径を求めましょう。
+\bkjans{$\dfrac{5.0^2}{2\times9.8}\approx\qty{1.3}{m}$。$v=\sqrt{25-19.6}\approx\qty{2.32}{m/s}$、$d=10\sqrt{5.0/2.32}\approx\qty{15}{mm}$}
+\end{jibun}
+
+\begin{reidai}[細くなる管]
+\label{ph:力-13:ex2}内径\qty{50}{mm}の管が、とちゅうで内径\qty{25}{mm}に細くなります。太い所の流速が\qty{1.0}{m/s}のとき、細い所の流速を求めましょう。
+\par\kangaekata 水は縮まないので連続の式 $A_1v_1=A_2v_2$。断面積は直径の2乗に比例するので、$v_2=\Bigl(\dfrac{d_1}{d_2}\Bigr)^2v_1$。
+\par\shiki $v_2=\Bigl(\dfrac{50}{25}\Bigr)^2\times1.0=4\times1.0$
+\par\kotae \qty{4.0}{m/s}（直径が半分なので、速さは4倍）
+\end{reidai}
+\begin{jibun}
+内径\qty{100}{mm}の管（流速\qty{1.5}{m/s}）が、内径\qty{40}{mm}に細くなります。細い所の流速を求めましょう。
+\bkjans{$\Bigl(\dfrac{100}{40}\Bigr)^2\times1.5=6.25\times1.5\approx\qty{9.4}{m/s}$}
+\end{jibun}
+
+\begin{reidai}[家の給水管の流速]
+\label{ph:力-13:ex3}内径\qty{20}{mm}の給水管に、毎分\qty{20}{L}の水が流れています。管の中の平均の流速と、質量流量を求めましょう。
+\par\kangaekata 流量を m$^3$/s に直し（\qty{1}{L}＝$10^{-3}$\,m$^3$、\qty{1}{min}＝\qty{60}{s}）、$v=\dfrac{Q}{A}$。質量流量は $\dot m=\rho Q$。
+\par\shiki
+\[ Q=\frac{20\times10^{-3}}{60}\approx3.33\times10^{-4}\,\mathrm{m^3/s} \]
+\[ A=\frac{\pi\times0.020^2}{4}\approx3.14\times10^{-4}\,\mathrm{m^2} \]
+\[ v=\frac{Q}{A}\approx\qty{1.06}{m/s},\qquad \dot m=\rho Q\approx\qty{0.33}{kg/s} \]
+\par\kotae 約\qty{1.1}{m/s}、$\dot m\approx\qty{0.33}{kg/s}$（家の給水管の流速は、ふつう\qtyrange{1}{2}{m/s}の程度）
+\end{reidai}
+\begin{jibun}
+内径\qty{13}{mm}の給水管に、毎分\qty{12}{L}の水が流れています。平均の流速を求めましょう。
+\bkjans{$Q=2.0\times10^{-4}$\,m$^3$/s、$A\approx1.33\times10^{-4}$\,m$^2$、$v\approx\qty{1.5}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[タンクの穴から出る水]
+\label{ph:力-13:ex4}大きなタンクの、水面から\qty{2.0}{m}下の側面に、面積\qty{1.0}{cm^2}の小さな穴があります。穴から出る水の速さと、1秒あたりに出る水の量（L/s）を求めましょう。
+\phbamen
+水面の水が、穴の高さまで「下りてきて」出ていく流れです。
+\phmushi
+穴の縁でのまさつ、穴を出た流れがさらに細くしぼられること（実際の量は計算の約6割になる）、水面が下がることを無視します（タンクが大きい）。
+\phzu
+水面の点1（$p_0$、$v_1\approx0$、高さ $h$ 上）、穴を出たすぐの点2（$p_0$、$v_2$）。穴の面積 $a$。
+\phriyu
+同じ流線にそった点1と点2なので、ベルヌーイの式。両方とも大気圧なので、トリチェリの定理 $v=\sqrt{2gh}$ になる。流量は $Q=av$。
+\phtateru
+\[ v=\sqrt{2\times9.8\times2.0},\qquad Q=a v=1.0\times10^{-4}\times v \]
+\phtoku
+\[ v=\sqrt{39.2}\approx\qty{6.3}{m/s},\qquad Q\approx6.3\times10^{-4}\,\mathrm{m^3/s}\approx\qty{0.63}{L/s} \]
+\phtashikame
+単位：$\sqrt{\text{m/s}^2\times\text{m}}=$ m/s。大きさ：\qty{2}{m}から物を落としたときの速さと同じ（約\qty{23}{km/h}）。極端な場合：$h=0$（穴が水面）なら $v=0$。
+\kotae 約\qty{6.3}{m/s}、約\qty{0.63}{L/s}
+\end{phreidai}
+\begin{jibun}
+水面から\qty{5.0}{m}下にある、面積\qty{2.0}{cm^2}の穴から出る水の速さと、1秒あたりの量を求めましょう。
+\bkjans{$\sqrt{2\times9.8\times5.0}\approx\qty{9.9}{m/s}$、$2.0\times10^{-4}\times9.9\approx2.0\times10^{-3}$\,m$^3$/s（約\qty{2.0}{L/s}）}
+\end{jibun}
+
+\begin{phreidai}[タンクが空になるまでの時間]
+\label{ph:力-13:ex5}⑤のタンク（底面積 $A=\qty{1.0}{m^2}$、はじめの深さ $h_0=\qty{2.0}{m}$、底の穴の面積 $a=\qty{1.0}{cm^2}$）が空になるまでの時間を、式で求めましょう。
+\phbamen
+深さが減ると、穴から出る速さも小さくなります。⑤ではプログラムで追いかけました。ここでは式で答えを出します。
+\phmushi
+⑤と同じ（穴の縁のまさつ、しぼられること、水面の速さの分）。水面がゆっくり下がるので、どの瞬間もトリチェリの定理が使えるとします。
+\phzu
+時刻 $t$ の深さ $h(t)$、穴から出る速さ $v=\sqrt{2gh}$。
+\phriyu
+タンクを検査体積にした質量のバランス式（⑥）：たまる量の変化（$A\dfrac{\dd h}{\dd t}$）＝ 出る量（$-av$）。そこにトリチェリの定理を入れる。
+\phtateru
+\[ A\frac{\dd h}{\dd t}=-a\sqrt{2gh} \]
+\phtoku
+$\sqrt h$ の変わり方を考えます。合成関数の微分（数学 5-6）で
+\[ \frac{\dd}{\dd t}\sqrt h=\frac{1}{2\sqrt h}\cdot\frac{\dd h}{\dd t}=\frac{1}{2\sqrt h}\cdot\Bigl(-\frac{a}{A}\sqrt{2g}\sqrt h\Bigr)=-\frac{a}{A}\sqrt{\frac{g}{2}} \]
+右辺は一定なので、$\sqrt h$ は一定の速さで減ります（数学 6-3）。$\sqrt h=\sqrt{h_0}-\dfrac{a}{A}\sqrt{\dfrac{g}{2}}\,t$。$\sqrt h=0$ になる時刻は
+\[ t=\frac{A}{a}\sqrt{\frac{2h_0}{g}}=\frac{1.0}{1.0\times10^{-4}}\times\sqrt{\frac{2\times2.0}{9.8}}\approx\qty{6389}{s} \]
+\phtashikame
+⑤のプログラム（\texttt{dt} を小さくすると\qty{6384}{s}）と合う。約106分。$\sqrt{\dfrac{2h_0}{g}}$ は、高さ $h_0$ から物が落ちる時間（力-1）で、それを面積の比 $\dfrac{A}{a}$ 倍したもの。極端な場合：穴を大きくすると時間は短くなる（反比例）。じっさいの穴では流量が約6割になるので、約3時間かかる。
+\kotae 約\qty{6400}{s}（約106分）
+\end{phreidai}
+\begin{jibun}
+底面積\qty{0.50}{m^2}、深さ\qty{1.8}{m}の水そうの底に、面積\qty{2.0}{cm^2}の穴をあけました。空になるまでの時間を、例題と同じモデルで求めましょう。
+\bkjans{$\dfrac{0.50}{2.0\times10^{-4}}=2500$、$\sqrt{\dfrac{2\times1.8}{9.8}}\approx0.606$。$2500\times0.606\approx\qty{1500}{s}$（約25分）}
+\end{jibun}
+
+\begin{phreidai}[ベンチュリ流量計]
+\label{ph:力-13:ex6}内径\qty{100}{mm}の水の配管に、のどの内径\qty{50}{mm}のベンチュリ管をつけました。入口とのどの圧力の差が\qty{15}{kPa}でした。のどの流速と流量を求めましょう（流出係数は1とする）。
+\phbamen
+圧力の差だけから、管を流れる水の量を知る場面です。
+\phmushi
+まさつ（流出係数1）、入口とのどの高さの差、断面の中の速さのちがいを無視します。
+\phzu
+入口：$A_1$、$v_1$、$p_1$。のど：$A_2$、$v_2$、$p_2$。$\Delta p=p_1-p_2$。
+\phriyu
+同じ流れの上流と下流なので、連続の式とベルヌーイの式を連立します（⑩）。
+\phtateru
+\[ \frac{A_2}{A_1}=\Bigl(\frac{50}{100}\Bigr)^2=\frac{1}{4},\qquad v_2=\sqrt{\frac{2\Delta p}{\rho\{1-(A_2/A_1)^2\}}},\qquad Q=A_2v_2 \]
+\phtoku
+\[ v_2=\sqrt{\frac{2\times\num{15000}}{1000\times(1-1/16)}}=\sqrt{32}\approx\qty{5.66}{m/s} \]
+\[ Q=\frac{\pi\times0.050^2}{4}\times5.66\approx1.96\times10^{-3}\times5.66\approx0.0111\,\mathrm{m^3/s} \]
+\phtashikame
+入口の速さは $\dfrac{5.66}{4}\approx\qty{1.41}{m/s}$ で、配管の流速としてふつうの大きさ。ベルヌーイの式にもどすと $\dfrac{1}{2}\times1000\times(5.66^2-1.41^2)\approx\qty{15000}{Pa}$ で合う。単位：$\sqrt{\text{Pa}/(\text{kg/m}^3)}=\sqrt{\text{m}^2/\text{s}^2}$＝m/s。
+\kotae のど 約\qty{5.7}{m/s}、流量 約\qty{11}{L/s}（\qty{0.011}{m^3/s}）
+\end{phreidai}
+\begin{jibun}
+内径\qty{80}{mm}の配管に、のどの内径\qty{40}{mm}のベンチュリ管をつけたら、圧力の差が\qty{9.0}{kPa}でした。のどの流速と流量を求めましょう（流出係数1）。
+\bkjans{$v_2=\sqrt{\dfrac{18000}{1000\times15/16}}\approx\qty{4.4}{m/s}$、$Q\approx1.26\times10^{-3}\times4.38\approx\qty{5.5}{L/s}$}
+\end{jibun}
+
+\begin{reidai}[ピトー管で風速をはかる]
+\label{ph:力-13:ex7}送風機のダクトにピトー管を入れると、全圧と静圧の差が\qty{60}{Pa}でした。風速を求めましょう。
+\par\kangaekata 全圧－静圧＝動圧 $\dfrac{1}{2}\rho v^2$ なので、$v=\sqrt{\dfrac{2\Delta p}{\rho}}$（⑩）。空気の速さが小さいので、密度は一定（\qty{1.2}{kg/m^3}）とみてよい。
+\par\shiki $v=\sqrt{\dfrac{2\times60}{1.2}}=\sqrt{100}$
+\par\kotae \qty{10}{m/s}（20 ℃の\qty{1.204}{kg/m^3}を使っても\qty{9.98}{m/s}で、2けたでは同じ）
+\end{reidai}
+\begin{jibun}
+ピトー管の全圧と静圧の差が\qty{150}{Pa}のときの風速を求めましょう（空気の密度\qty{1.2}{kg/m^3}）。
+\bkjans{$\sqrt{\dfrac{300}{1.2}}=\sqrt{250}\approx\qty{16}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[オリフィス流量計]
+\label{ph:力-13:ex8}\bkreidairef{6}と同じ内径\qty{100}{mm}の配管に、ベンチュリ管の代わりに、穴の直径\qty{50}{mm}のオリフィスをつけました。前後の圧力の差は同じ\qty{15}{kPa}でした。流出係数を0.60として、流量を求めましょう。
+\phbamen
+同じ差圧でも、オリフィスでは、流れがしぼられうずを作るので、流量が小さくなります。
+\phmushi
+流出係数 $C$ に、まさつ・しぼられ方の効果をまとめて入れ、そのほかの理想化は\bkreidairef{6}と同じにします。
+\phzu
+配管の断面積 $A_1$、穴の面積 $A_2$、差圧 $\Delta p$、流出係数 $C$。
+\phriyu
+ベルヌーイの式だけでは流量が決まらないので、⑩の、流出係数をかけた式を使います。
+\phtateru
+\[ Q=C\,A_2\sqrt{\frac{2\Delta p}{\rho\{1-(A_2/A_1)^2\}}}=0.60\times A_2\times5.66 \]
+\phtoku
+\[ Q=0.60\times1.96\times10^{-3}\times5.66\approx6.7\times10^{-3}\,\mathrm{m^3/s} \]
+\phtashikame
+理想の流れ（\bkreidairef{6}の\qty{11.1}{L/s}）の0.60倍で、\qty{6.7}{L/s}。同じ流量を流すと、オリフィスのほうが大きな差圧が生じ、そのぶんエネルギーも多く失われる（ポンプの動力が増える）。簡単で安いかわりの「損」である。
+\kotae 約\qty{6.7}{L/s}
+\end{phreidai}
+\begin{jibun}
+例題のオリフィスで、前後の圧力の差が\qty{6.0}{kPa}のときの流量を求めましょう（流出係数0.60）。
+\bkjans{$\sqrt{\dfrac{12000}{1000\times15/16}}\approx3.58$。$Q=0.60\times1.96\times10^{-3}\times3.58\approx\qty{4.2}{L/s}$}
+\end{jibun}
+
+\begin{phreidai}[噴流が板を押す・動く板]
+\label{ph:力-13:ex9}断面積\qty{2.0}{cm^2}、速さ\qty{10}{m/s}の水の噴流が、垂直な板に当たって、上下に分かれて流れます。(1) 板が止まっているとき、板が受ける力は？　(2) 板が噴流と同じ向きに\qty{4.0}{m/s}で遠ざかっているときは？
+\phbamen
+力-3 の例題と同じホースの水です。(2) は、水車の羽根のように、押される物が動いている場面です。
+\phmushi
+重力、板の上の水のまさつ、空気の抵抗を無視します。水は大気中を流れるので、まわりの圧力はどこも大気圧（圧力の力は打ち消す）。
+\phzu
+噴流の断面積 $A$、速さ $v$、板の速さ $u$。噴流の向きを $+x$。板が受ける力 $F$。
+\phriyu
+板のまわりを検査体積にして、運動量の法則（⑧）。水は板にそって上下に出ていくので、出口の $x$ の速さは0（板から見て）。(2) は板から見ると、流れは時間で変わらない（定常）ので、板から見た速さで法則を使う。
+\phtateru
+(1) $-F=\dot m(0-v)$、$\dot m=\rho Av$ より $F=\rho Av^2$。\par
+(2) 板から見た水の速さは $v-u$、1秒に板に届く水は $\rho A(v-u)$。$F=\rho A(v-u)^2$。
+\phtoku
+(1) $F=1000\times2.0\times10^{-4}\times10^2=\qty{20}{N}$\par
+(2) $F=1000\times2.0\times10^{-4}\times(10-4.0)^2=\qty{7.2}{N}$
+\phtashikame
+(1) は力-3 の例題の\qty{20}{N}と同じ。(2) 極端な場合：$u=v$ なら水は板に追いつけず、力は0。$u=0$ なら (1) にもどる。単位：kg/m$^3$×m$^2$×（m/s）$^2$＝N。
+\kotae (1) \qty{20}{N}　(2) \qty{7.2}{N}
+\end{phreidai}
+\begin{jibun}
+断面積\qty{1.0}{cm^2}、速さ\qty{15}{m/s}の噴流が、垂直な板に当たって横へ流れます。板が止まっているときと、同じ向きに\qty{5.0}{m/s}で遠ざかっているときの力を求めましょう。
+\bkjans{$1000\times10^{-4}\times15^2=\qty{22.5}{N}$（約\qty{23}{N}）、$1000\times10^{-4}\times10^2=\qty{10}{N}$}
+\end{jibun}
+
+\begin{reidai}[消防のノズルの反動]
+\label{ph:力-13:ex10}消防のノズルから、流量\qty{0.010}{m^3/s}の水が\qty{30}{m/s}で噴き出しています。ノズルを持つ人が受ける反動の力を求めましょう。ホースの中の水の速さは、ノズルの出口に比べて小さいとして無視します。
+\par\kangaekata ノズルを検査体積にした運動量の法則。水は、ほぼ0の速さで入り、$v$ で出ていくので、ノズルは水を前へ $\dot mv$ で押している。反作用で、ノズルは後ろへ $\dot mv=\rho Qv$ で押される。
+\par\shiki $F=1000\times0.010\times30$
+\par\kotae \qty{300}{N}（約\qty{31}{kg}の物の重さ。ホースの中の速さ（内径\qty{65}{mm}で約\qty{3.0}{m/s}）を入れると約\qty{270}{N}）。1人では支えにくいので、2人で持つ
+\end{reidai}
+\begin{jibun}
+流量\qty{0.0050}{m^3/s}の水が\qty{25}{m/s}で噴き出すノズルの反動を求めましょう（ホースの中の速さは無視）。
+\bkjans{$1000\times0.0050\times25=\qty{125}{N}$（約\qty{1.3e2}{N}）}
+\end{jibun}
+
+\begin{phreidai}[配管の曲がり角を支える力]
+\label{ph:力-13:ex11}内径\qty{0.10}{m}の水平な配管が90°曲がっています。水は流速\qty{3.0}{m/s}で流れ、圧力（ゲージ圧）は曲がり角の前後とも\qty{200}{kPa}です。水が曲がり角を押す力の大きさと向きを求めましょう。
+\phbamen
+配管の曲がり角には、水の圧力と運動量の両方で、大きな力がかかります。支えの金具の強さを決めるのに必要な計算です。
+\phmushi
+曲がり角でのまさつ・圧力の損失（前後で圧力が同じ）、水と管の重さ（水平な面の中だけ考える）、管の外の大気（ゲージ圧で考える）を無視します。
+\phzu
+⑧の図と同じ。入口の向き $+x$、出口の向き $+y$。断面積 $A$、$\dot m=\rho Av$。
+\phriyu
+曲がり角の中の水を検査体積にして、運動量の法則を成分で書きます（⑧の計算そのもの）。
+\phtateru
+\[ A=\frac{\pi\times0.10^2}{4},\qquad pA,\qquad \dot mv=\rho Av^2,\qquad |\vec{F}|=\sqrt2\,(pA+\dot mv) \]
+\phtoku
+\[ A\approx7.85\times10^{-3}\,\mathrm{m^2},\qquad pA=2.0\times10^5\times7.85\times10^{-3}\approx\qty{1571}{N} \]
+\[ \dot mv=1000\times7.85\times10^{-3}\times3.0^2\approx\qty{71}{N} \]
+\[ |\vec{F}|=\sqrt2\times(1571+71)\approx\qty{2320}{N} \]
+\phtashikame
+向きは、曲がり角の外側（入口の流れの向きと、出口の流れと反対の向きの間、45°）。圧力の分（\qty{1571}{N}）が運動量の分（\qty{71}{N}）よりずっと大きい。だから水を止めていても（$v=0$）、圧力だけで約\qty{2.2}{kN}かかる。単位：N。
+\kotae 約\qty{2.3}{kN}、曲がり角の外側に向かって45°の向き
+\end{phreidai}
+\begin{jibun}
+内径\qty{50}{mm}の水平な配管が90°曲がっています。流速\qty{4.0}{m/s}、圧力（ゲージ圧）\qty{300}{kPa}のとき、水が曲がり角を押す力の大きさを求めましょう（損失は無視）。
+\bkjans{$A\approx1.96\times10^{-3}$\,m$^2$、$pA\approx\qty{589}{N}$、$\dot mv\approx\qty{31}{N}$。$\sqrt2\times620\approx\qty{880}{N}$}
+\end{jibun}
+
+\begin{reidai}[水力発電所の出力]
+\label{ph:力-13:ex12}(1) 力-4 の例題の発電所（流量\qty{10}{m^3/s}、落差\qty{100}{m}、効率0.85）の出力を、$P=9.8QH\eta$ で確かめましょう。(2) 流量\qty{100}{m^3/s}、落差\qty{50}{m}、効率0.90 の発電所の出力を求めましょう。
+\par\kangaekata 1秒に流れる水の位置エネルギー $\rho gQH$ に効率をかける（⑪）。$Q$ を m$^3$/s、$H$ を m で入れると、$9.8QH\eta$ は kW。
+\par\shiki
+\[ (1)\quad 9.8\times10\times100\times0.85\approx\qty{8330}{kW} \]
+\[ (2)\quad 9.8\times100\times50\times0.90=\qty{44100}{kW} \]
+\par\kotae (1) 約\qty{8.3}{MW}（力-4 と同じ）　(2) 約\qty{44}{MW}
+\end{reidai}
+\begin{jibun}
+流量\qty{20}{m^3/s}、落差\qty{150}{m}、効率0.88の水力発電所の出力を求めましょう。
+\bkjans{$9.8\times20\times150\times0.88\approx\num{25900}$\,kW、約\qty{26}{MW}}
+\end{jibun}
+
+\begin{phreidai}[ポンプの理論の揚程]
+\label{ph:力-13:ex13}羽根車の出口の半径が\qty{0.10}{m}のポンプが、毎分3000回転（\qty{3000}{min^{-1}}）で回っています。羽根車の出口で、水の速度の回る向きの成分は\qty{25}{m/s}です。入口では水は回っていません。理論の揚程を求めましょう。
+\phbamen
+ポンプが水を何 m の高さまで持ち上げる力を持つかを、羽根車の大きさと回る速さから見積もります。
+\phmushi
+羽根の枚数が有限であることによる差、水のまさつ・うずによる損失を無視します（だから「理論の」揚程）。
+\phzu
+出口の半径 $r_2$、角速度 $\omega$、周速 $u_2=r_2\omega$、水の回る向きの速さ $c_{u2}$。入口 $c_{u1}=0$。
+\phriyu
+角運動量の法則から導いたポンプのオイラーの式 $H=\dfrac{u_2c_{u2}-u_1c_{u1}}{g}$（⑨）を使います。
+\phtateru
+回転数を角速度に直す：$\omega=3000\times\dfrac{2\pi}{60}$（1回転＝$2\pi$\,rad、\qty{1}{min}＝\qty{60}{s}）。
+\[ u_2=r_2\omega,\qquad H=\frac{u_2c_{u2}}{g} \]
+\phtoku
+\[ \omega\approx\qty{314}{rad/s},\qquad u_2=0.10\times314\approx\qty{31.4}{m/s} \]
+\[ H=\frac{31.4\times25}{9.8}\approx\qty{80}{m} \]
+\phtashikame
+単位：（m/s）$^2$÷m/s$^2$＝m。大きさ：実際のポンプの揚程は、損失のため理論の揚程の7〜8割くらい。それでも約\qty{60}{m}で、20階建てのビルの上まで水を送れる。極端な場合：止まっている（$\omega=0$）と揚程0。
+\kotae 約\qty{80}{m}
+\end{phreidai}
+\begin{jibun}
+羽根車の出口の半径\qty{0.15}{m}、毎分1500回転、出口の水の回る向きの速さ\qty{18}{m/s}のポンプの理論の揚程を求めましょう（入口では回っていない）。
+\bkjans{$u_2=0.15\times1500\times\dfrac{2\pi}{60}\approx\qty{23.6}{m/s}$、$H=\dfrac{23.6\times18}{9.8}\approx\qty{43}{m}$}
+\end{jibun}
+
+\begin{phreidai}[回るスプリンクラー]
+\label{ph:力-13:ex14}回転するスプリンクラーに、まん中から流量\qty{0.20}{L/s}の水が入り、2本のうでの先（中心から\qty{0.15}{m}）にある、面積\qty{10}{mm^2}のノズル2つから、うでに垂直な向きに噴き出します。(1) スプリンクラーを手でおさえて止めておくのに必要なトルクは？　(2) まさつがなければ、何 rad/s で回りますか。
+\phbamen
+噴き出す水の反動で回る機械です。水車やジェット機のタービンと同じ考え方です。
+\phmushi
+回る軸のまさつ、空気の抵抗、うでの中の水の重さを無視します。ノズルの水は、うでの回る向きと反対の向きに出るとします。
+\phzu
+ノズル1つの流量 $\dfrac{Q}{2}$、ノズルの面積 $a$、うでから見た噴き出す速さ $w=\dfrac{Q/2}{a}$、半径 $r$、角速度 $\omega$。
+\phriyu
+回る物とトルクなので、角運動量の法則（⑨）。水はまん中（$r\approx0$）から角運動量なしで入り、半径 $r$ で、回る向きと反対に、地面から見て $w-r\omega$ の速さで出ていく。
+\phtateru
+水がスプリンクラーを回すトルク：$T=\rho Q\,r\,(w-r\omega)$。\par
+(1) $\omega=0$ なので $T=\rho Q r w$。(2) $T=0$ なので $w=r\omega$。
+\phtoku
+\[ w=\frac{1.0\times10^{-4}}{10\times10^{-6}}=\qty{10}{m/s} \]
+\[ T=1000\times2.0\times10^{-4}\times0.15\times10=\qty{0.30}{N.m} \]
+\[ \omega=\frac{w}{r}=\frac{10}{0.15}\approx\qty{67}{rad/s}\quad(\text{毎分約640回転}) \]
+\phtashikame
+(2) のとき、地面から見た水の回る向きの速さは $w-r\omega=0$。水は角運動量を持たずに出ていくので、スプリンクラーに力を残さない。本当は軸のまさつがあるので、もっとゆっくり回る。単位：kg/s×m×m/s＝N·m。
+\kotae (1) \qty{0.30}{N.m}　(2) 約\qty{67}{rad/s}
+\end{phreidai}
+\begin{jibun}
+流量\qty{0.30}{L/s}、うでの長さ\qty{0.20}{m}、ノズル2つ（それぞれ\qty{15}{mm^2}）のスプリンクラーで、止めておくトルクと、まさつがないときの角速度を求めましょう。
+\bkjans{$w=\dfrac{1.5\times10^{-4}}{15\times10^{-6}}=\qty{10}{m/s}$、$T=1000\times3.0\times10^{-4}\times0.20\times10=\qty{0.60}{N.m}$、$\omega=\dfrac{10}{0.20}=\qty{50}{rad/s}$}
+\end{jibun}
+
+\begin{phreidai}[壁に向かう流れ：よどみ点の流れ]
+\label{ph:力-13:ex15}水平な壁（$y=0$）に、上から水が当たって左右に分かれる流れが、壁の近くで $\vec{v}=(x,\ -y)$（m/s。$x$・$y$ は m）と表されます。(1) この流れは、水が縮まない流れの条件をみたしますか。(2) 流線の形を求めましょう。(3) 点 $(1,\ 1)$ の圧力は、よどみ点（原点）の圧力より何 Pa 低いですか。
+\phbamen
+噴流が板に当たる所（③）や、物の前の流れを、壁の近くだけ式で表したものです。原点で流れが止まる点を\textbf{よどみ点}といいます。
+\phmushi
+粘性（壁の近くのうすい層の中のまさつ：力-15 の境界層）と重力を無視します。流れは定常とします。
+\phzu
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-24,-3) rectangle (24,0);
+  \draw[bkInk, line width=1pt] (-24,0) -- (24,0);
+  \foreach \c in {20,60,140} {
+    \draw[bkBlue!80!black, line width=0.9pt, domain=\c/26:24, samples=60, smooth] plot (\x,{\c/\x});
+    \draw[bkBlue!80!black, line width=0.9pt, domain=-24:-\c/26, samples=60, smooth] plot (\x,{-\c/\x});}
+  \draw[pxn v] (6.4,22) -- (8.6,16.4);
+  \draw[pxn v] (14,10) -- (19.5,7.2);
+  \draw[pxn v] (-14,10) -- (-19.5,7.2);
+  \fill[bkRed!75!black] (0,0) circle (1);
+  \node[pxn lab, anchor=north] at (0,-3.5) {よどみ点};
+  \node[pxn lab, anchor=south west] at (12,18) {$xy=$一定};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+速度 $\vec{v}=(v_x,\ v_y)=(x,\ -y)$。よどみ点の圧力を $p_{\mathrm s}$ とする。図の青い線が流線（(2) の答え）。
+\end{minipage}
+\phriyu
+(1) は、⑥の $\operatorname{div}\vec{v}=0$ を確かめる。(2) は、流線にそって動く点で何が一定かを調べる。(3) は、よどみ点を通る流線にそってベルヌーイの式（このような流れでは、じつはどの流線でも同じ一定値になる）。
+\phtateru
+(1) $\operatorname{div}\vec{v}=\dfrac{\partial x}{\partial x}+\dfrac{\partial(-y)}{\partial y}$。\par
+(2) 流線にそって動く点 $(x(t),\ y(t))$ では $\dfrac{\dd x}{\dd t}=x$、$\dfrac{\dd y}{\dd t}=-y$。積 $xy$ の変わり方は（数学 5-6 の積の微分）
+\[ \frac{\dd}{\dd t}(xy)=\frac{\dd x}{\dd t}y+x\frac{\dd y}{\dd t}=xy-xy \]
+(3) $p+\dfrac{1}{2}\rho(x^2+y^2)=p_{\mathrm s}$。
+\phtoku
+(1) $1+(-1)=0$。条件をみたす。\par
+(2) $\dfrac{\dd}{\dd t}(xy)=0$ なので、流線の上では $xy$ が一定。流線は $xy=C$（直角双曲線。数学 3-7 の反比例のグラフ）。\par
+(3) $p_{\mathrm s}-p=\dfrac{1}{2}\times1000\times(1^2+1^2)=\qty{1000}{Pa}$。
+\phtashikame
+(2) 壁 $y=0$ も流線（$C=0$）で、水は壁をつきぬけない。(3) よどみ点がいちばん圧力が高い（速さ0）。噴流が板を押す力（③）は、この高い圧力が板を押しているもの。単位：kg/m$^3$×（m/s）$^2$＝Pa。
+\kotae (1) みたす（$\operatorname{div}\vec{v}=0$）　(2) $xy=$一定　(3) \qty{1000}{Pa}低い
+\end{phreidai}
+\begin{jibun}
+$\vec{v}=(2x,\ -2y)$ の流れで、(1) $\operatorname{div}\vec{v}$ を求め、(2) 点 $(1,\ 0.5)$ の速さと、その点の圧力がよどみ点の圧力より何 Pa 低いかを求めましょう（水）。
+\bkjans{(1) $2-2=0$　(2) $\sqrt{2^2+1^2}\approx\qty{2.2}{m/s}$、$\dfrac{1}{2}\times1000\times5=\qty{2500}{Pa}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{つばさの上と下を、空気は同じ時間で通る？}
+\bkng{つばさの上は道のりが長いので、下と同じ時間で後ろのはしに着くには速く流れる。だから上の圧力が低い。}
+\bkok{上と下の空気が「同じ時間で着く」理由はない。じっさいには上の空気のほうがずっと早く後ろに着く。}
+つばさの上が速いことと、上の圧力が低いことの関係はベルヌーイの式のとおりですが、「同じ時間で通る」は根拠のない思いこみです。つばさが空気を下へ曲げ、その反作用で持ち上げられる、という運動量の見方もあわせて、力-15 で学びます。
+\end{tsumazuki}
+\begin{tsumazuki}{ベルヌーイの式を、どこでも使ってしまう}
+\bkng{ホースから出た速い水の中は、ベルヌーイの式で圧力が低いはずなので、大気圧より低い。}
+\bkok{大気中に出た水の柱の圧力は、まわりの大気圧と同じ。速さのちがいは、ホースの中で圧力が下がった分から来ている。}
+ベルヌーイの式は、同じ流線の上の2点を、まさつなしで比べる式です。大気中に出た噴流の中の圧力は、まわりの圧力で決まります（ここで $p=p_0$ とおいたのが、トリチェリの定理でした）。
+\end{tsumazuki}
+\begin{tsumazuki}{ホースの先をつまむと遠くへ飛ぶのは、連続の式だけで説明できる？}
+\bkng{つまむと断面積が小さくなるので、連続の式で速さが何倍にもなる。}
+\bkok{つまむと流量 $Q$ も変わるので、連続の式だけでは決まらない。ホースや水道管の損失まで考える必要がある（力-14）。}
+連続の式 $A_1v_1=A_2v_2$ は、流量が同じ2つの断面を比べる式です。蛇口とホースの先のように、出口をしぼると流量そのものが減ります。答えは力-14 の例題で出します。
+\end{tsumazuki}
+\begin{tsumazuki}{L/min を m$^3$/s に直すとき、60をかけてしまう}
+\bkng{$\qty{6}{L/min}=6\times10^{-3}\times60$\,m$^3$/s}
+\bkok{$\qty{6}{L/min}=\dfrac{6\times10^{-3}\,\mathrm{m^3}}{\qty{60}{s}}=10^{-4}$\,m$^3$/s}
+1分間に流れる量を、1秒あたりに直すので、60でわります。単位つきの1（$\dfrac{\qty{1}{min}}{\qty{60}{s}}$）をかけて確かめましょう（2-10）。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[工場の流量計と、流れが生む力]
+\phboxhead{① 差圧式の流量計}
+化学工場では、オリフィスやベンチュリ管の前後の差圧を差圧計（力-12⑨）ではかり、流量に直して、原料の量や反応の進み方を見はっています。流量は差圧の平方根に比例するので、計器の中で平方根をとります。差圧が小さい所（流量が少ない所）では、差圧の小さな誤差が流量の大きな誤差になるので、ふつうは最大流量の3割くらいより下では精度が落ちます。また、流出係数は配管の前後のまっすぐな長さ（流れの乱れ）でも変わるので、オリフィスの前後には、決められた長さのまっすぐな管をとります。
+
+\phboxhead{② 配管の支え}
+\bkreidairef{11}のように、曲がり角や行き止まりには、圧力と運動量の力が集まります。ポンプを急に止めたときの圧力の変化（水撃：力-14）も加わるので、支えの金具は余裕をもって決めます。
+
+\phboxhead{③ ポンプと水車・水力発電}
+ポンプ・水車・送風機のように、羽根車で流体とエネルギーをやりとりする機械を\textbf{ターボ機械}といいます。設計の出発点は、⑨の角運動量の法則です。
+
+\begin{phketa}[流れの速さ・圧力・力]
+\phketaline{家の給水管の流速}{約\qtyrange{1}{2}{m/s}}
+\phketaline{風速\qty{10}{m/s}の空気の動圧}{約\qty{60}{Pa}}
+\phketaline{台風（\qty{40}{m/s}）の空気の動圧}{約\qty{960}{Pa}}
+\phketaline{新幹線（\qty{300}{km/h}）の空気の動圧}{約\qty{4.2}{kPa}}
+\phketaline{消防のノズルの反動}{数百 N}
+\phketaline{大きなダムの水力発電所の出力}{数十〜数百 MW}
+\phboxhead{答えが桁で合っているか}
+水の速度ヘッド $\dfrac{v^2}{2g}$ は、\qty{1}{m/s}で約\qty{5}{cm}、\qty{3}{m/s}で約\qty{0.46}{m}、\qty{10}{m/s}で約\qty{5.1}{m}。配管の中の速さ（数 m/s）では、速度ヘッドは圧力ヘッド（数十 m）よりずっと小さいのがふつうです。
+\end{phketa}
+\end{phkougaku}
+\phstation{流体工学,流量計測,ターボ機械（ポンプ・水車）,水力発電}{検査体積、連続の式、ベルヌーイの式、全圧・静圧・動圧、ヘッド、流出係数、運動量の法則、揚程、オイラーの式}
+
+\begin{phsaki}{速い気体の流れ}
+この章では、流体の密度が変わらないとしました。空気でも、速さが音の速さの約3割（約\qty{100}{m/s}）より小さければ、密度の変化は数\,\% 以下で、この章の式が使えます。ところが、ジェットエンジンやロケットのノズルのように、音の速さに近い・こえる流れでは、圧力とともに密度と温度も大きく変わります。そのときは、ベルヌーイの式の代わりに、熱のエネルギーもふくめたバランス式（熱-4 の定常流動のエネルギーの式）を使います。音の速さをこえるには、ノズルをいったん細くしてから広げる、という意外な形が必要になります。くわしくは熱-4 と、大学の圧縮性流体力学で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 内径\qty{30}{mm}の管が内径\qty{15}{mm}に細くなります。太い所の流速が\qty{2.0}{m/s}のとき、細い所の流速を求めましょう（\bkreidairef{2}）。
+\bkpans{$\Bigl(\dfrac{30}{15}\Bigr)^2\times2.0=\qty{8.0}{m/s}$}
+\bkproblem 内径\qty{40}{mm}の管に、毎秒\qty{5.0}{L}の水が流れています。平均の流速を求めましょう（\bkreidairef{3}）。
+\bkpans{$\dfrac{5.0\times10^{-3}}{\pi\times0.040^2/4}\approx\qty{4.0}{m/s}$}
+\bkproblem 水面から\qty{3.2}{m}下にある小さな穴から出る水の速さを求めましょう（\bkreidairef{4}）。
+\bkpans{$\sqrt{2\times9.8\times3.2}\approx\qty{7.9}{m/s}$}
+\bkproblem 水の流れにピトー管を入れると、全圧と静圧の差が\qty{2.0}{kPa}でした。流速を求めましょう（\bkreidairef{7}）。
+\bkpans{$\sqrt{\dfrac{2\times2000}{1000}}=\qty{2.0}{m/s}$}
+\bkproblem 流量\qty{5.0}{m^3/s}、落差\qty{30}{m}、効率0.80の水力発電所の出力を求めましょう（\bkreidairef{12}）。
+\bkpans{$9.8\times5.0\times30\times0.80=\num{1176}$\,kW、約\qty{1.2}{MW}}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 断面積\qty{0.50}{cm^2}、速さ\qty{20}{m/s}の噴流が、止まっている垂直な板に当たって横へ流れます。板が受ける力を求めましょう（\bkreidairef{9}）。
+\bkpans{$1000\times0.50\times10^{-4}\times20^2=\qty{20}{N}$}
+\bkproblem 内径\qty{120}{mm}の配管に、のどの内径\qty{60}{mm}のベンチュリ管をつけたら、圧力の差が\qty{20}{kPa}でした。のどの流速と流量を求めましょう（流出係数1。\bkreidairef{6}）。
+\bkpans{$v_2=\sqrt{\dfrac{40000}{1000\times15/16}}\approx\qty{6.5}{m/s}$、$Q\approx2.83\times10^{-3}\times6.53\approx\qty{18}{L/s}$}
+\bkproblem 底面積\qty{0.20}{m^2}、深さ\qty{0.80}{m}の水そうの底に、面積\qty{0.50}{cm^2}の穴をあけました。空になるまでの時間を求めましょう（\bkreidairef{5}）。
+\bkpans{$\dfrac{0.20}{0.50\times10^{-4}}=4000$、$\sqrt{\dfrac{2\times0.80}{9.8}}\approx0.404$。$4000\times0.404\approx\qty{1600}{s}$（約27分）}
+\bkproblem 羽根車の出口の半径\qty{0.12}{m}、毎分2400回転、出口の水の回る向きの速さ\qty{20}{m/s}のポンプの理論の揚程を求めましょう（入口では回っていない。\bkreidairef{13}）。
+\bkpans{$u_2=0.12\times2400\times\dfrac{2\pi}{60}\approx\qty{30.2}{m/s}$、$H=\dfrac{30.2\times20}{9.8}\approx\qty{62}{m}$}
+\phnyushi
+\bkproblem 地面にある直径\qty{2.0}{cm}のノズルから、水が真上に\qty{10}{m/s}で噴き出しています（空気の抵抗は無視）。(1) 水は何 m の高さまで上がりますか。(2) 高さ\qty{4.0}{m}の所の水の速さと、水の柱の直径を求めましょう（\bkreidairef{1}）。
+\bkpans{(1) $\dfrac{10^2}{2\times9.8}\approx\qty{5.1}{m}$。(2) $v=\sqrt{100-78.4}\approx\qty{4.6}{m/s}$、$d=2.0\sqrt{\dfrac{10}{4.65}}\approx\qty{2.9}{cm}$}
+\bkproblem なめらかな水平な床の上に、質量\qty{2.0}{kg}の台車があり、台車には垂直な板がついています。断面積\qty{2.0}{cm^2}、速さ\qty{10}{m/s}の水平な噴流を板に当てます（水は板にそって上下に流れる）。(1) 台車が止まっている瞬間の加速度を求めましょう。(2) 台車の速さが\qty{5.0}{m/s}になったときの加速度を求めましょう。台車にたまる水は無視します（\bkreidairef{9}）。
+\bkpans{(1) $F=1000\times2.0\times10^{-4}\times10^2=\qty{20}{N}$、$a=\dfrac{20}{2.0}=\qty{10}{m/s^2}$。(2) $F=1000\times2.0\times10^{-4}\times5.0^2=\qty{5.0}{N}$、$a=\qty{2.5}{m/s^2}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 流量 $Q=Av$ と連続の式で、管や蛇口の水の速さと太さを求められる。\bkfurref{ph:力-13:sec1}
+\item ベルヌーイの式で、速さ・圧力・高さの関係を計算できる（流量計の読みも）。\bkfurref{ph:力-13:sec2}
+\item バランス式（運動量の法則）で、噴流・曲がり管・ポンプの力を計算できる。\bkfurref{ph:力-13:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{この章では、まさつのない「理想の流れ」で数えたね。長い管では、水の勢いがだんだん弱くなる。その「まさつ」を数えるのが、次の力-14 だよ。}

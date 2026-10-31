@@ -1,0 +1,1154 @@
+%% 7-1 数の表で計算する：行列（第14回：組 V7-1。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   1-13 の「行・列・ななめ・入れかえても同じ」、3-6⑥ の「係数の表を、大学の数学では行列とよび、7-1で学びます」、
+%%   6-14⑥ の係数の表、4-11⑧ の「たくさんの数の組を行列でまとめて計算」、物理 力-16 の「u でまとめて行列で書く」を回収する。
+%%   くだもの屋（りんご120円・みかん60円、個数 (2 3; 2 1)、合計 420・300）は 3-6 と同じ数。主役の行列 (2 1; 1 2) は 7-2 から。
+%%   型（行と列をなぞる図・表計算の画面・Python）は tools/kata7.md に書いて全組に配った。
+%%   記号カード：a_ij、A^T（I は 7-3 のカード）。単位行列は I、零行列は O（第14回の決定）。
+\usetikzlibrary{matrix}
+\makeatletter
+%% ---- この章だけで使う部品（頭文字 \kviib…） ----
+% 小見出し（太字の1行）  \kviibhead{見出し}
+\newcommand\kviibhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviibbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiba{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviibs{\rightskip=0pt plus 8em\relax}
+% 行列の図（tools/kata7.md の型）
+\tikzset{
+  kviib mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=8mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=0pt, row sep=0pt, inner sep=0.6mm},
+  kviib row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviib col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviib ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm},
+  kviib lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  kviib cell/.style={draw=bkInk!60, line width=0.5pt, minimum width=9mm, minimum height=6.5mm, inner sep=0pt, font=\small}}
+% 帯をうしろに敷く  \kviibhl{スタイル}{左上のセル}{右下のセル}
+\newcommand\kviibhl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 数式バー  \kviibfx{D2}{=MMULT(A2:B3,C2:C3)}
+\newcommand\kviibfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=46mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviibM}{bkTheme!12}\colorlet{kviibV}{bkGreen!14}\colorlet{kviibR}{bkYellow!35}
+% 方眼と軸（tikzpicture[x=5mm, y=5mm] の中で）  \kviibgrid{xmin}{xmax}{ymin}{ymax}
+\newcommand\kviibgrid[4]{%
+  \draw[bkLine, line width=0.4pt, step=1] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.7},0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.7}) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \node[below left, font=\sffamily\footnotesize, inner sep=1.2pt] at (0,0) {O};}
+% ばね（たて）  \kviibspring{(上のはし)}{長さ}
+\newcommand\kviibspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.5mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] #1 -- ++(0,-#2);}
+% 小さな表（tikz）の1マス  \kviibc{(x,y)}{中身}
+\newcommand\kviibc[2]{\node[kviib cell] at #1 {#2};}
+\makeatother
+
+\bkchapter{7}{1}{数の表で計算する：\\行列}{\bklevel{3}}{数の表で計算する：行列}
+\bkmichishirube{1-13,2-18,3-6,4-11,4-12,6-14}{7-2,7-3,7-5,7-6}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 数の表を行列として読み、成分 $a_{ij}$ を言える。和・差・実数倍を計算できる。
+\item \bklevel{3}\enspace 行列×ベクトル・行列×行列を、行と列をなぞって「かけて、たす」で計算できる。
+\item \bklevel{3}\enspace 連立方程式を $A\vec x=\vec b$ の形に書き、表計算や Python で行列の計算を確かめられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.4\linewidth}
+\raggedright
+ソラさんは、りんご2個とみかん3個、ミナさんは、りんご2個とみかん1個を買います。くだもの屋とスーパーでは、値段がちがいます。\par\vspace{3pt}
+2人がそれぞれの店で買うと、合計はいくらかな？\enspace 4つの合計を、「表のかけ算」1回で出せないかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm, kviib cell/.append style={minimum width=9.5mm}]
+  \node[kviib lab, anchor=south] at (15,8.5) {個数（個）};
+  \foreach \x/\t in {10.5/りんご, 20/みかん} {\node[kviib lab] at (\x,4) {\t};}
+  \foreach \y/\t in {-2.5/ソラ, -9/ミナ} {\node[kviib lab, anchor=east] at (4.5,\y) {\t};}
+  \kviibc{(10.5,-2.5)}{2}\kviibc{(20,-2.5)}{3}\kviibc{(10.5,-9)}{2}\kviibc{(20,-9)}{1}
+  \begin{scope}[shift={(29,0)}, kviib cell/.append style={minimum width=14.5mm}]
+  \node[kviib lab, anchor=south] at (22,8.5) {値段（円）};
+  \node[kviib lab] at (15,4) {くだもの屋};
+  \node[kviib lab] at (29.5,4) {スーパー};
+  \foreach \y/\t in {-2.5/りんご, -9/みかん} {\node[kviib lab, anchor=east] at (7,\y) {\t};}
+  \kviibc{(15,-2.5)}{120}\kviibc{(29.5,-2.5)}{100}\kviibc{(15,-9)}{60}\kviibc{(29.5,-9)}{80}
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent この章では、数を表の形に並べたまま計算する道具「\textbf{行列}」を学びます。行列は、第7巻のすべての章で使う、いちばん大切な道具です。使う計算は、かけ算とたし算だけです。そのかわり、新しいことばと書き方がたくさん出てきます。1つずつ、買い物の数で確かめながら進みましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[4つの合計を表にしよう]
+\kviibbox{用意するもの}
+電卓、紙とえんぴつ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item ソラさんがくだもの屋で買うと、合計は何円かな？\enspace りんごは1個120円、みかんは1個60円です。
+\item スーパーでは、りんごが1個100円、みかんが1個80円です。4つの合計を出して、下の表をうめよう。
+\item 1つのマスを出すのに、個数の表と値段の表の、どこの数を使ったかな？\enspace 指でなぞってみよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+合計（円） & くだもの屋 & スーパー \\
+ソラさん & ？ & ？ \\
+ミナさん & ？ & ？ \\
+\end{bktable}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent ①は、りんご2個で $2\times120=240$ 円、みかん3個で $3\times60=180$ 円です。合わせて $240+180=420$ で、420円です。同じように計算すると、4つの合計は次の表になります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[c,m,wd=44mm] Q[c,m,wd=44mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+合計（円） & くだもの屋 & スーパー \\
+ソラさん & $2\times120+3\times60=420$ & $2\times100+3\times80=440$ \\
+ミナさん & $2\times120+1\times60=300$ & $2\times100+1\times80=280$ \\
+\end{bktable}
+\bktabcaption{4つの合計。かけ算を8回、たし算を4回した。}
+\label{bk:7-1:tab-goukei}
+\end{bkcenter}
+
+③の答えは、表の「ソラさん・スーパー」のマスで見るとわかります。使った数は、個数の表のソラさんの\textbf{よこのならび}「2、3」と、値段の表のスーパーの\textbf{たてのならび}「100、80」です。この2組を、1番めどうし（$2\times100$）、2番めどうし（$3\times80$）かけて、たしました。
+
+どのマスも同じです。合計の表の1つのマスは、個数の表の1つの「よこのならび」と、値段の表の1つの「たてのならび」で決まります。1-13 の九九の表で、3×4 の答えが「3の行」と「4の列」の出会うマスにあったのと、よくにています。この章では、この計算を「表と表のかけ算」として決めていきます。
+
+\begin{omoidasou}
+\bkrecall{1-13}{九九の表で、よこのならびを行、たてのならびを列という。3×4 の答えは、3の行と4の列が出会うマス。}
+\bkrecall{2-18}{表計算のセルの番地 B3 は「B列の3行め」。式をコピーすると、式の中の番地もずれる。}
+\bkrecall{3-6}{くだもの屋の連立方程式 $2x+3y=420$、$2x+y=300$ を、係数の表だけで加減法で解いた（$x=120$、$y=60$）。}
+\bkrecall{4-11}{数の組はベクトルと考えられる。和・差・実数倍は、成分ごとに計算する。}
+\bkrecall{4-12}{内積 $\vec a\cdot\vec b=a_xb_x+a_yb_y$。成分がいくつでも「同じ番号の成分どうしの積の和」。}
+\bkrecall{6-14}{ばねでつながった2つの台車の式の係数を、表の形に並べた。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{数の表を「行列」とよぶ}
+
+\label{bk:7-1:gyoretsu}やってみようの個数の表から、「ソラ」「りんご」などのことばをとって、数だけを残します。数の並び方はそのままにして、まわりを大きなかっこでくくります。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix} \]
+このように、数を長方形の形に並べて、かっこでくくったものを\textbf{行列}（ぎょうれつ）といいます。\bkidx{ぎょうれつ}{行列}かっこは、「この数たちは、ひとまとまりの1つのもの」という目じるしです。
+
+\kviibhead{行と列}
+1-13 の九九の表と同じように、よこのならびを\textbf{行}（ぎょう）、たてのならびを\textbf{列}（れつ）といいます。行は上から1行め、2行め、…と数えます。列は左から1列め、2列め、…と数えます。
+
+くだものをもう1つふやして、ソラさんとミナさんがバナナも買うことにします。ソラさんはバナナ1本、ミナさんはバナナ4本です。個数の行列は、行が2つ、列が3つになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (P) at (4,0) [kviib mat, nodes={minimum width=10.5mm}] {2 \& 3 \& 1\\ 2 \& 1 \& 4\\};
+  \kviibhl{kviib row}{P-1-1}{P-1-3}
+  \node[kviib lab, anchor=north, text=bkOrange!80!black] at ([yshift=-3.5mm]P.south) {1行め（よこのならび）};
+  \matrix (Q) at (48,0) [kviib mat, nodes={minimum width=10.5mm}] {2 \& 3 \& 1\\ 2 \& 1 \& 4\\};
+  \kviibhl{kviib col}{Q-1-2}{Q-2-2}
+  \node[kviib lab, anchor=north, text=\bkTT] at ([yshift=-3.5mm]Q.south) {2列め（たてのならび）};
+  \matrix (R) at (92,0) [kviib mat, nodes={minimum width=10.5mm}] {2 \& 3 \& 1\\ 2 \& 1 \& 4\\};
+  \kviibhl{kviib ans}{R-1-2}{R-1-2}
+  \node[kviib lab, anchor=north, text=bkGreen!50!black] at ([yshift=-3.5mm]R.south) {1行め2列めの成分};
+  \foreach \m in {P,Q,R} {
+    \node[kviib lab, anchor=south, text=bkGray] at ([yshift=1.5mm]\m-1-1.north) {りんご};
+    \node[kviib lab, anchor=south, text=bkGray] at ([yshift=1.5mm]\m-1-2.north) {みかん};
+    \node[kviib lab, anchor=south, text=bkGray] at ([yshift=1.5mm]\m-1-3.north) {バナナ};}
+  \node[kviib lab, anchor=east, text=bkGray] at ([xshift=-3.5mm]P-1-1.west) {ソラ};
+  \node[kviib lab, anchor=east, text=bkGray] at ([xshift=-3.5mm]P-2-1.west) {ミナ};
+\end{tikzpicture}
+\bkfigcaption{行（オレンジ）・列（青）・成分（緑）。上と左の灰色の字は、もとの表のことば（行列には書かない）。}
+\label{bk:7-1:fig-bubun}
+\end{bkfigure}
+
+行と列は、どちらがよこで、どちらがたてか、まぎれやすいことばです。漢字の形で覚える方法があります。「行」の字の右がわの上には、\textbf{よこ}の線が2本あります。「列」の字の右がわ（りっとう）には、\textbf{たて}の線が2本あります。
+
+\kviibhead{行列の大きさ}
+行が2つ、列が3つの行列を、\textbf{2行3列の行列}、または\textbf{2×3 行列}（に・かける・さん ぎょうれつ）といいます。いつも\textbf{行の数を先}に言います。はじめの個数の行列は、2×2 行列です。行の数と列の数が同じ行列を、\textbf{正方行列}といいます。「正方」は正方形の正方です。1-13 の九九の表は、9×9 の正方行列と考えられます。
+
+\kviibhead{成分と $a_{ij}$}
+行列の中の1つ1つの数を、\textbf{成分}（せいぶん）といいます。\bkidx{せいぶん（ぎょうれつの）}{成分（行列の）}2×3 行列には、成分が $2\times3=6$ 個あります。図\ref{bk:7-1:fig-bubun}の緑の成分3は、1行めと2列めが出会う所にあるので、「1行め2列めの成分」です。
+
+行列には、大文字の名前をつけます。たとえば
+\[ A=\begin{pmatrix} 2 & 3 & 1\\ 2 & 1 & 4 \end{pmatrix} \]
+です。行列 $A$ の成分は、小文字の $a$ に、行の番号と列の番号を下につけて書きます。1行め2列めの成分は $a_{12}$ で、「エー・いち・に」と読みます。この $A$ では、$a_{12}=3$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (G) at (0,0) [kviib mat, nodes={minimum width=11.5mm, minimum height=7.5mm}] {a_{11} \& a_{12} \& a_{13}\\ a_{21} \& a_{22} \& a_{23}\\};
+  \kviibhl{kviib ans}{G-2-3}{G-2-3}
+  \node[kviib lab, anchor=east, text=bkOrange!80!black] at ([xshift=-5mm]G-1-1.west) {1行め};
+  \node[kviib lab, anchor=east, text=bkOrange!80!black] at ([xshift=-5mm]G-2-1.west) {2行め};
+  \foreach \j in {1,2,3} {\node[kviib lab, anchor=south, text=\bkTT] at ([yshift=1.5mm]G-1-\j.north) {\j 列め};}
+  % 下つきの読み方
+  \node[font=\huge, inner sep=0pt] (a) at (40,1) {$a$};
+  \node[draw=bkOrange!80!black, fill=bkOrange!20, line width=0.9pt, rounded corners=1mm, minimum size=6.5mm, font=\large, anchor=north west] (i) at ([xshift=0.8mm, yshift=-0.5mm]a.south east) {2};
+  \node[draw=bkBlue!80!black, fill=bkBlue!14, line width=0.9pt, rounded corners=1mm, minimum size=6.5mm, font=\large, anchor=west] (j) at ([xshift=1mm]i.east) {3};
+  \node[kviib lab, anchor=west, text=bkOrange!80!black] (li) at (64,4) {行の番号（よこの何番め）};
+  \node[kviib lab, anchor=west, text=\bkTT] (lj) at (64,-8) {列の番号（たての何番め）};
+  \draw[bkOrange!80!black, line width=0.7pt] (i.north) |- (li.west);
+  \draw[\bkTT, line width=0.7pt] (j.south) |- (lj.west);
+\end{tikzpicture}
+\bkfigcaption{2×3 行列の成分の名前。$a_{23}$ は「2行め3列め」。下つきの数は、行の番号が先。}
+\label{bk:7-1:fig-aij}
+\end{bkfigure}
+
+一般に、$i$ 行め $j$ 列めの成分を $a_{ij}$ と書き、\textbf{$(i,\ j)$ 成分}といいます。下つきの数は、\textbf{行が先、列があと}です。ことばの「行列」と同じ順番だと覚えましょう。$a_{21}$ は2行め1列めの成分で、上の $A$ では2です。$a_{12}$ とはちがう場所なので、気をつけましょう。
+
+\par\medskip\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+時間わりで考えると、順番を覚えやすくなります。右のように、行を曜日、列を時間めにした時間わりでは、「水曜日の2時間め」は3行め2列めのマスです。ふだんの話し方でも、曜日（行）を先に、時間め（列）をあとに言います。$a_{32}$ と同じ順番です。$a_{21}$ なら2行め1列め、つまり「火曜日の1時間め」です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \j in {1,...,4} {\node[kviib lab, text=\bkTT] at ({9+10*\j},2.5) {\j};}
+  \node[kviib lab, text=\bkTT, anchor=south] at (34,5) {時間め};
+  \foreach \i/\d in {1/月, 2/火, 3/水} {\node[kviib lab, text=bkOrange!80!black, anchor=east] at (12,{-7*\i+3.5}) {\d};
+    \foreach \j in {1,...,4} {\draw[bkInk!50, line width=0.5pt] ({4+10*\j},{-7*\i}) rectangle ++(10,7);}}
+  \fill[bkGreen!20] (24.3,-20.7) rectangle (33.7,-14.3);
+  \draw[bkGreen!60!black, line width=0.9pt] (24,-21) rectangle (34,-14);
+  \node[font=\footnotesize] at (29,-17.5) {$a_{32}$};
+  \draw[bkInk!50, line width=0.5pt] (24,-21) rectangle (34,-14);
+  \node[kviib lab, anchor=north, text=bkGreen!50!black] at (29,-22.5) {水曜日の2時間め};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{seikaku}
+表計算のセルの番地 B3 は、「B列の3行め」でした（2-18）。列の文字が先です。行列の成分 $a_{32}$ は「3行め2列め」で、行の番号が先です。順番が反対なので、表計算で行列をあつかうときは、とくに気をつけましょう。また、成分が10個以上の大きな行列では、$a_{1\,12}$ のように番号の間をあけたり、$a_{1,12}$ とコンマを入れたりします。
+\end{seikaku}
+
+\bksubsection{2}{たてに並べた数の組：列ベクトル}
+
+\label{bk:7-1:vector}4-11 では、数の組 $(3,\ 2)$ を、横に3、たてに2進む矢印（ベクトル）と考えました。この巻では、ベクトルの成分を\textbf{たてに}並べて書きます。
+\[ \vec x=\begin{pmatrix} 3\\ 2 \end{pmatrix} \]
+これは、4-11 の $\vec x=(3,\ 2)$ と\textbf{同じベクトル}です。上が $x$ 成分、下が $y$ 成分です。書き方がちがうだけで、矢印は同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \kviibgrid{-1}{4}{-1}{3}
+  \draw[bkRed, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- (3,2);
+  \draw[bkGray, line width=0.6pt, dashed] (3,0) -- (3,2);
+  \node[kviib lab, anchor=north] at (3,-0.15) {3};
+  \node[kviib lab, anchor=east] at (-0.15,2) {2};
+  \draw[bkGray, line width=0.6pt, dashed] (0,2) -- (3,2);
+  \node[kviib lab, anchor=south east, text=bkRed!80!black] at (1.4,1.1) {$\vec x$};
+  \node[anchor=west, align=left, font=\small] at (6.2,1.6) {4-11 の書き方\quad $\vec x=(3,\ 2)$};
+  \node[anchor=west, align=left, font=\small] at (6.2,-0.2) {この巻の書き方\quad $\vec x=\begin{pmatrix} 3\\ 2 \end{pmatrix}$};
+\end{tikzpicture}
+\bkfigcaption{同じ矢印を、2通りに書く。たてに書いても、横に書いても、同じベクトル。}
+\end{bkfigure}
+
+たてに1列だけの行列（$n\times1$ 行列）を、\textbf{列ベクトル}といいます。\bkidx{れつべくとる}{列ベクトル}横に1行だけの行列（$1\times n$ 行列）を、\textbf{行ベクトル}といいます。ベクトルは、行列のなかまなのです。だから、ベクトルの1つ1つの数も、行列と同じく「成分」とよびます（4-11 の成分と同じことば）。
+
+なぜ、わざわざたてに書くのでしょう。理由は\textbf{④の行列とベクトルのかけ算}でわかります。行列の右に、たてに並べた値段をくっつけて計算するからです。この巻では、計算に使うベクトルは、いつもたてに書きます。ただし、文の中では場所をとるので、$(3,\ 2)$ と横に書くこともあります。どちらも同じものです。
+
+\Needspace{12\baselineskip}\bksubsection{3}{和・差・実数倍は、成分ごとに}
+
+\label{bk:7-1:wa}ソラさんとミナさんは、土曜日と日曜日に、くだもの屋でりんごとみかんを買いました。2日間に買った個数を、行列で表します（行はソラ・ミナ、列はりんご・みかん）。
+\[ \text{土曜}\ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix},\qquad \text{日曜}\ \begin{pmatrix} 1 & 2\\ 3 & 0 \end{pmatrix} \]
+2日間で、それぞれ何個買ったでしょう。ソラさんのみかんなら、土曜の3個と日曜の2個で $3+2=5$ 個です。同じ場所の成分どうしをたせばよいのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (S) at (0,0) [kviib mat] {2 \& 3\\ 2 \& 1\\};
+  \node (p) at ([xshift=6mm]S.east) {$+$};
+  \matrix (U) [kviib mat, anchor=west] at ([xshift=4mm]p.east) {1 \& 2\\ 3 \& 0\\};
+  \node[anchor=west] (e) at ([xshift=3.5mm]U.east) {$=$};
+  \matrix (W) [kviib mat, anchor=west, nodes={minimum width=13mm}] at ([xshift=3.5mm]e.east) {2+1 \& 3+2\\ 2+3 \& 1+0\\};
+  \node[anchor=west] (e2) at ([xshift=3.5mm]W.east) {$=$};
+  \matrix (Z) [kviib mat, anchor=west] at ([xshift=3.5mm]e2.east) {3 \& 5\\ 5 \& 1\\};
+  \kviibhl{kviib ans}{S-1-2}{S-1-2}\kviibhl{kviib ans}{U-1-2}{U-1-2}\kviibhl{kviib ans}{W-1-2}{W-1-2}\kviibhl{kviib ans}{Z-1-2}{Z-1-2}
+  \node[kviib lab, anchor=north] at ([yshift=-3mm]S.south) {土曜};
+  \node[kviib lab, anchor=north] at ([yshift=-3mm]U.south) {日曜};
+  \node[kviib lab, anchor=north] at ([yshift=-3mm]Z.south) {2日間};
+\end{tikzpicture}
+\bkfigcaption{行列の和。同じ場所の成分どうしをたす（緑は、ソラさんのみかん）。}
+\end{bkfigure}
+
+差も同じです。日曜のほうが土曜より何個多いかは、成分ごとにひいて求めます。
+\[ \begin{pmatrix} 1 & 2\\ 3 & 0 \end{pmatrix}-\begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}=\begin{pmatrix} 1-2 & 2-3\\ 3-2 & 0-1 \end{pmatrix}=\begin{pmatrix} -1 & -1\\ 1 & -1 \end{pmatrix} \]
+マイナスは「日曜のほうが少ない」ことを表します。ミナさんのりんご（2行め1列め）だけが、日曜のほうが1個多かったことがわかります。
+
+\kviibhead{実数倍}
+次は値段です。くだもの屋とスーパーの値段を、行列にします（行はりんご・みかん、列はくだもの屋・スーパー）。両方の店が、すべての値段を1割（10\,\%）上げることになりました。1割上げると、値段は1.1倍です。だから、すべての成分を1.1倍します。
+\[ 1.1\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 1.1\times120 & 1.1\times100\\ 1.1\times60 & 1.1\times80 \end{pmatrix}=\begin{pmatrix} 132 & 110\\ 66 & 88 \end{pmatrix} \]
+行列に数をかけることを、行列の\textbf{実数倍}といいます。すべての成分に、同じ数をかけます。
+
+\begin{taisetsu}
+\centering
+$\begin{pmatrix} a & b\\ c & d \end{pmatrix}+\begin{pmatrix} e & f\\ g & h \end{pmatrix}=\begin{pmatrix} a+e & b+f\\ c+g & d+h \end{pmatrix}$\qquad
+$k\begin{pmatrix} a & b\\ c & d \end{pmatrix}=\begin{pmatrix} ka & kb\\ kc & kd \end{pmatrix}$\par\vspace{3pt}
+{\small 和・差・実数倍は、成分ごとに計算する（4-11 のベクトルと同じ）。}
+\end{taisetsu}
+
+この決め方は、4-11 でベクトルの和・差・実数倍を「成分ごと」に決めたのと同じです。$-A$ は $(-1)A$ のことで、$A-B$ は $A+(-1)B$ と同じです。
+
+大きさのちがう行列は、たしたりひいたりできません。2×2 行列と2×3 行列をたそうとすると、2×3 行列の3列めには、たす相手がいないからです。「バナナを買った表」と「バナナのない表」はたせない、と考えるとわかりやすいでしょう。
+
+\bksubsection{4}{行列×ベクトル：1行ずつ「かけて、たす」}
+
+\label{bk:7-1:kakeru}いよいよ、行列のかけ算です。まず、くだもの屋の値段だけを考えます。値段を列ベクトルにします。上がりんご、下がみかんの値段です。
+\[ \vec p=\begin{pmatrix} 120\\ 60 \end{pmatrix} \]
+やってみようで、くだもの屋の合計は、ソラさんが $2\times120+3\times60=420$、ミナさんが $2\times120+1\times60=300$ でした。これを、次のように書くことにします。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 120\\ 60 \end{pmatrix}=\begin{pmatrix} 2\times120+3\times60\\ 2\times120+1\times60 \end{pmatrix}=\begin{pmatrix} 420\\ 300 \end{pmatrix} \]
+左の行列の\textbf{1つの行}と、右のベクトルの\textbf{列}を使って、答えの1つの成分を作ります。図\ref{bk:7-1:fig-nazoru}のように、行と列を色でなぞって確かめましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (N) at (0,0) [kviib mat] {2 \& 3\\ 2 \& 1\\};
+  \matrix (p) [kviib mat, anchor=west] at ([xshift=6mm]N.east) {120\\ 60\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]p.east) {$=$};
+  \matrix (b) [kviib mat, anchor=west] at ([xshift=3.5mm]eq.east) {420\\ 300\\};
+  \kviibhl{kviib row}{N-1-1}{N-1-2}
+  \kviibhl{kviib col}{p-1-1}{p-2-1}
+  \kviibhl{kviib ans}{b-1-1}{b-1-1}
+  \node[anchor=north, font=\small] at ([yshift=-4mm]p.south) {$\textcolor{bkOrange!80!black}{2}\times\textcolor{\bkTT}{120}+\textcolor{bkOrange!80!black}{3}\times\textcolor{\bkTT}{60}=\textcolor{bkGreen!50!black}{420}$};
+  \node[kviib lab, anchor=south] at ([yshift=2mm]p.north) {① 1行めと列};
+  \begin{scope}[xshift=66mm]
+  \matrix (N2) at (0,0) [kviib mat] {2 \& 3\\ 2 \& 1\\};
+  \matrix (p2) [kviib mat, anchor=west] at ([xshift=6mm]N2.east) {120\\ 60\\};
+  \node[anchor=west] (eq2) at ([xshift=3.5mm]p2.east) {$=$};
+  \matrix (b2) [kviib mat, anchor=west] at ([xshift=3.5mm]eq2.east) {420\\ 300\\};
+  \kviibhl{kviib row}{N2-2-1}{N2-2-2}
+  \kviibhl{kviib col}{p2-1-1}{p2-2-1}
+  \kviibhl{kviib ans}{b2-2-1}{b2-2-1}
+  \node[anchor=north, font=\small] at ([yshift=-4mm]p2.south) {$\textcolor{bkOrange!80!black}{2}\times\textcolor{\bkTT}{120}+\textcolor{bkOrange!80!black}{1}\times\textcolor{\bkTT}{60}=\textcolor{bkGreen!50!black}{300}$};
+  \node[kviib lab, anchor=south] at ([yshift=2mm]p2.north) {② 2行めと列};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{行（オレンジ）を左から右へ、列（青）を上から下へ、同時になぞる。1番めどうし、2番めどうしをかけて、たすと、答えの成分（緑）になる。}
+\label{bk:7-1:fig-nazoru}
+\end{bkfigure}
+
+手を動かすときは、指を2本使います。左手の指で行列の行を左から右へ、右手の指でベクトルの列を上から下へ、同時になぞります。指が同じときに止まった2つの数をかけて、たしていきます。1-13 の「ゆびを2本つかって、行と列をたどろう」と同じ動きです。
+
+このように計算することを、行列 $A$ とベクトル $\vec x$ の\textbf{積}（かけ算）と決めて、$A\vec x$ と書きます。行列が左、ベクトルが右です。文字で書くと、次のようになります。
+
+\begin{taisetsu}
+\centering
+$\begin{pmatrix} \textcolor{bkOrange!80!black}{a} & \textcolor{bkOrange!80!black}{b}\\ c & d \end{pmatrix}\begin{pmatrix} \textcolor{\bkTT}{x}\\ \textcolor{\bkTT}{y} \end{pmatrix}=\begin{pmatrix} \textcolor{bkOrange!80!black}{a}\textcolor{\bkTT}{x}+\textcolor{bkOrange!80!black}{b}\textcolor{\bkTT}{y}\\ cx+dy \end{pmatrix}$\par\vspace{3pt}
+{\small 答えの $i$ 番めの成分は、行列の $i$ 行めと、ベクトルの列の「同じ番号どうしの積の和」。}
+\end{taisetsu}
+
+\kviibhead{1行の計算は、内積}
+答えの1つの成分の計算 $2\times120+3\times60$ は、「同じ番号の成分どうしの積の和」です。これは、4-12 の\textbf{内積}と同じ計算です。行 $(2,\ 3)$ と列 $(120,\ 60)$ を2つのベクトルと見ると、その内積が420です。つまり、
+
+\begin{center}
+\textbf{答えの $i$ 番めの成分}\enspace ＝\enspace \textbf{行列の $i$ 行め}と\textbf{ベクトル}の内積
+\end{center}
+
+です。物理の本では、この言い方がよく出てきます（物理 力-7 は「行と列の内積」と書いている）。
+
+\kviibhead{行がいくつあっても、1行ずつ}
+3人めのお客さんが、りんご5個とみかん5個のセットを買うとします。個数の行列は3行になります。計算は、行が1つふえるだけです。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1\\ 5 & 5 \end{pmatrix}\begin{pmatrix} 120\\ 60 \end{pmatrix}=\begin{pmatrix} 2\times120+3\times60\\ 2\times120+1\times60\\ 5\times120+5\times60 \end{pmatrix}=\begin{pmatrix} 420\\ 300\\ 900 \end{pmatrix} \]
+1000人分の表でも、することは同じです。行列×ベクトルの書き方なら、1000人分の計算を1行で書けます。これが、表のまま計算することのよさです。
+
+\kviibhead{かけられるのは、数の個数がそろうとき}
+バナナまで入った2×3 行列に、りんごとみかんの値段だけの $\vec p$ をかけることはできません。行列の1行には数が3個あるのに、ベクトルの成分は2個しかないからです。バナナの個数にかける値段がありません。
+
+\begin{center}
+\textbf{行列の列の数}\enspace ＝\enspace \textbf{ベクトルの成分の数}\enspace のときだけ、かけられる
+\end{center}
+
+答えのベクトルの成分の数は、行列の行の数（買う人の数）と同じになります。
+
+\bkfukidashi{mina}{1行ずつ、行と列を指でなぞればいいんだね。「かけて、たす」をくり返すだけ！}
+
+\bksubsection{5}{連立方程式を $A\vec x=\vec b$ の形に書く}
+
+\label{bk:7-1:renritsu}3-6 で、くだもの屋の値段を求める問題を解きました。りんご1個を $x$ 円、みかん1個を $y$ 円として、次の連立方程式を作りました。
+\[ \begin{cases} 2x+3y=420\\ 2x+y=300 \end{cases} \]
+左辺をよく見ましょう。④の買い物の計算で、値段 120 と 60 のかわりに $x$ と $y$ を入れたものです。だから、行列とベクトルで次のように書けます。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} x\\ y \end{pmatrix}=\begin{pmatrix} 420\\ 300 \end{pmatrix} \]
+左辺を④のとおりに計算すると、次のようになります。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} x\\ y \end{pmatrix}=\begin{pmatrix} 2x+3y\\ 2x+y \end{pmatrix} \]
+2つのベクトルが等しいのは、上の成分どうし、下の成分どうしが等しいときです。だから、この1行は、もとの2つの式とまったく同じことを言っています。
+
+④では、値段から合計を求めました。3-6 では、合計から値段を求めました。同じ式を、反対の向きに使ったのです。
+
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=30mm, minimum height=11mm, font=\sffamily\small] (n) at (0,0) {値段 $\vec x$};
+  \node[bk node, minimum width=30mm, minimum height=11mm, font=\sffamily\small] (g) at (96,0) {合計 $\vec b$};
+  \draw[bk link] ([yshift=2.5mm]n.east) -- node[bk link label, above=1mm] {$A$ をかける（④）} ([yshift=2.5mm]g.west);
+  \draw[bk link] ([yshift=-2.5mm]g.west) -- node[bk link label, below=1mm] {わからない値段を求める（3-6・7-5）} ([yshift=-2.5mm]n.east);
+\end{tikzpicture}
+\end{bkcenter}
+
+左の行列 $A$ を\textbf{係数行列}、わからない数を並べたベクトルを $\vec x$、右辺の数を並べたベクトルを $\vec b$ とすると、連立方程式は
+\[ A\vec x=\vec b \]
+とたった1つの式で書けます。数の方程式 $2x=6$ とそっくりの形です。$2x=6$ は両辺を2でわって解きました。行列の「わり算」にあたるもの（逆行列）は、7-5 で学びます。
+
+\kviibhead{連立方程式を行列で書く手順}
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item わからない数の順番を決めて、たてに並べる。これが $\vec x$ になる。
+\item 1つ1つの式を、「左辺に文字の項を①の順に、右辺に数だけ」の形に整える。ない文字の係数は0と考える。
+\item 式ごとに係数を1行に並べて行列 $A$ を作る。右辺の数をたてに並べて $\vec b$ を作る。
+\end{enumerate}
+
+\kviibhead{例：3-6 の回路}
+3-6 の回路では、2つの電流 $I_1$、$I_2$〔A〕について、$4I_1+2I_2=9$、$2I_1+4I_2=6$ という式を作りました（9\,V と6\,V の電源、\qty{2}{\ohm}の抵抗3つ。輪ごとに、電源の電圧＝抵抗の電圧の和）。①わからない数を $I_1$、$I_2$ の順に並べます。②式はもう整っています。③係数を並べると、
+\[ \begin{pmatrix} 4 & 2\\ 2 & 4 \end{pmatrix}\begin{pmatrix} I_1\\ I_2 \end{pmatrix}=\begin{pmatrix} 9\\ 6 \end{pmatrix} \]
+です。3-6 で求めた答え $I_1=\qty{2}{A}$、$I_2=\qty{0.5}{A}$ を入れて確かめます。1行め $4\times2+2\times0.5=9$、2行め $2\times2+4\times0.5=6$ で、右辺と同じになります。
+
+\kviibhead{例：4-11 の看板}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+4-11 では、重さ\qty{100}{N}の看板を、水平から30°と60°の2本のひもでつるしました。ひもの力を $T_1$、$T_2$〔N〕とします。ひもの結び目で、横の成分の和と、たての成分の和がどちらも0になる、というつり合いの式は、次の2つでした。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-32,24) rectangle (20,27);
+  \draw[bkInk!70, line width=0.8pt] (-29.4,24) -- (0,7) -- (9.8,24);
+  \filldraw[fill=bkGreen!40, draw=bkGreen!50!black, line width=0.5pt] (-7,7) rectangle (7,-1);
+  \fill[bkInk] (0,7) circle (0.9);
+  \draw[bkBlue, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,7) -- ++(150:15);
+  \draw[bkOrange, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,7) -- ++(60:15);
+  \draw[bkPurple, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,3) -- (0,-13);
+  \draw[bkGray, line width=0.4pt, dashed] (-14,7) -- (14,7);
+  \node[font=\sffamily\footnotesize] at ($(0,7)+(165:10.5)$) {30°};
+  \node[font=\sffamily\footnotesize] at ($(0,7)+(28:9.5)$) {60°};
+  \node[kviib lab, text=bkBlue!80!black, anchor=south east] at ($(0,7)+(150:15)$) {$T_1$};
+  \node[kviib lab, text=bkOrange!80!black, anchor=west] at ($(0,7)+(60:15)+(0.8,0)$) {$T_2$};
+  \node[kviib lab, text=bkPurple!80!black, anchor=west] at (1.2,-11) {\qty{100}{N}};
+\end{tikzpicture}
+\end{minipage}
+\[ -T_1\cos30^\circ+T_2\cos60^\circ=0,\qquad T_1\sin30^\circ+T_2\sin60^\circ-100=0 \]
+②の手順で、2つめの式の $-100$ を右辺へ移して「$=100$」にします。③係数を並べると、
+\[ \begin{pmatrix} -\cos30^\circ & \cos60^\circ\\ \sin30^\circ & \sin60^\circ \end{pmatrix}\begin{pmatrix} T_1\\ T_2 \end{pmatrix}=\begin{pmatrix} 0\\ 100 \end{pmatrix} \]
+です。行列の成分は、ひもの向きで決まる数です。1列めは左のひも、2列めは右のひもの「1\,N あたりの横と上の成分」になっています。この行列は、7-4 と 7-5 でもう一度使います。
+
+\kviibhead{例：3つのばね（物理 力-16）}
+\noindent\begin{minipage}[c]{0.27\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (-10,0) rectangle (10,3);
+  \draw[bkInk, line width=0.8pt] (-10,0) -- (10,0);
+  \kviibspring{(0,0)}{9}
+  \kviibspring{(0,-12)}{9}
+  \kviibspring{(0,-24)}{9}
+  \foreach \y/\n in {-10.5/1, -22.5/2, -34.5/3} {
+    \node[circle, draw=bkInk, fill=white, line width=0.7pt, inner sep=0.6pt, font=\sffamily\footnotesize] at (0,\y) {\n};
+    \draw[bkInk, line width=0.5pt] (2,\y) -- (6.5,\y); \fill[bkOrange] (8.2,\y) circle (1.7);}
+  \node[kviib lab, anchor=east] at (-3,-4.8) {$k$};
+  \node[kviib lab, anchor=east] at (-3,-16.8) {$k$};
+  \node[kviib lab, anchor=east] at (-3,-28.8) {$k$};
+  \node[kviib lab, anchor=west] at (10.5,-34.5) {$W$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.7\linewidth}\raggedright
+天井から、ばね定数 $k$〔N/m〕のばね3本をたてにつなぎ、3つの節点①②③に、重さ $W$〔N〕の球を1つずつつるします。節点が下がる量を $u_1$、$u_2$、$u_3$〔m〕とします。物理 力-16 は、節点ごとのつり合いを、次の3つの式にしています（下向きを正）。
+\end{minipage}
+\begin{gather*}
+\text{節点①}:\ -ku_1+k(u_2-u_1)+W=0\\
+\text{節点②}:\ -k(u_2-u_1)+k(u_3-u_2)+W=0\\
+\text{節点③}:\ -k(u_3-u_2)+W=0
+\end{gather*}
+手順②で、それぞれを「$u_1$、$u_2$、$u_3$ の順の項＝数」の形に整えます。①の式で、1行ずつ見せます。
+\begin{bkhenkei}
+-ku_1+k(u_2-u_1)+W=0 & ①の式 \\
+-ku_1+ku_2-ku_1+W=0 & かっこをはずす \\
+-2ku_1+ku_2+W=0 & $u_1$ の項をまとめる \\
+-2ku_1+ku_2=-W & $W$ を右辺へ移す \\
+2ku_1-ku_2+0u_3=W & 両辺に $-1$ をかけ、ない $u_3$ を0で書く \\
+\end{bkhenkei}
+②と③も同じように整えると、次の2つの式になります。
+\[ -ku_1+2ku_2-ku_3=W,\qquad 0u_1-ku_2+ku_3=W \]
+手順③で係数を並べます。
+\[ \begin{pmatrix} 2k & -k & 0\\ -k & 2k & -k\\ 0 & -k & k \end{pmatrix}\begin{pmatrix} u_1\\ u_2\\ u_3 \end{pmatrix}=\begin{pmatrix} W\\ W\\ W \end{pmatrix} \]
+物理の本では、この行列を\textbf{剛性行列}（変形しにくさの行列）とよび、$K\vec u=\vec F$ と書きます。ばねの式 $F=kx$ の $k$ が行列 $K$ に、$x$ がベクトル $\vec u$ になったのです。ばねが100本あっても、同じ手順で書けます。この連立方程式を解く方法は、7-5 で学びます。
+
+\kviibhead{例：6-14 の台車}
+6-14 では、ばねでつながった2つの台車の式（$m=\qty{1}{kg}$、$k=\qty{100}{N/m}$、$K=\qty{10}{N/m}$）を、
+\[ \ddot x_1=-110x_1+10x_2,\qquad \ddot x_2=10x_1-110x_2 \]
+と書き、係数を表に並べました。行列とベクトルで書くと、次のようになります。
+\[ \begin{pmatrix} \ddot x_1\\ \ddot x_2 \end{pmatrix}=\begin{pmatrix} -110 & 10\\ 10 & -110 \end{pmatrix}\begin{pmatrix} x_1\\ x_2 \end{pmatrix} \]
+6-14 の係数の表は、この行列でした。7-8 では、この行列から2つの振動モードを見つけます。
+
+\bksubsection{6}{行列×行列：右の行列の列ごとに④をする}
+
+\label{bk:7-1:seki}\bkhatenaref にもどります。値段をくだもの屋とスーパーの2列にした行列 $P$ を作ります。
+\[ P=\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix} \]
+1列めがくだもの屋、2列めがスーパーです。くだもの屋の合計は、個数の行列に $P$ の1列めをかけて求めました（④）。スーパーの合計は、$P$ の2列めをかけます。
+\[ \text{くだもの屋}\ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 120\\ 60 \end{pmatrix}=\begin{pmatrix} 420\\ 300 \end{pmatrix} \]
+\[ \text{スーパー}\ \ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 100\\ 80 \end{pmatrix}=\begin{pmatrix} 440\\ 280 \end{pmatrix} \]
+スーパーの計算の1行めと2行めは、それぞれ次のとおりです。
+\[ 2\times100+3\times80=440,\qquad 2\times100+1\times80=280 \]
+2つの答えの列を、もとの順に横に並べたものを、個数の行列と $P$ の\textbf{積}と決めます。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 420 & 440\\ 300 & 280 \end{pmatrix} \]
+答えは、表\ref{bk:7-1:tab-goukei}の4つの合計と同じ並びになりました。
+
+\Needspace{8\baselineskip}
+\noindent\textbf{\bkhatenaref の答え}\par
+個数の行列と値段の行列の積が、4つの合計の行列になります。8回のかけ算と4回のたし算は、「行列×行列」の1回の計算として書けるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (N) at (0,0) [kviib mat] {2 \& 3\\ 2 \& 1\\};
+  \matrix (P) [kviib mat, anchor=west, nodes={minimum width=10.5mm}] at ([xshift=6mm]N.east) {120 \& 100\\ 60 \& 80\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]P.east) {$=$};
+  \matrix (T) [kviib mat, anchor=west, nodes={minimum width=10.5mm}] at ([xshift=3.5mm]eq.east) {420 \& 440\\ 300 \& 280\\};
+  \kviibhl{kviib row}{N-1-1}{N-1-2}
+  \kviibhl{kviib col}{P-1-2}{P-2-2}
+  \kviibhl{kviib ans}{T-1-2}{T-1-2}
+  \node[anchor=north, font=\small] at ([yshift=-4mm]P.south) {$\textcolor{bkOrange!80!black}{2}\times\textcolor{\bkTT}{100}+\textcolor{bkOrange!80!black}{3}\times\textcolor{\bkTT}{80}=\textcolor{bkGreen!50!black}{440}$};
+  \node[kviib lab, anchor=west, align=left] at ([xshift=6mm]T.east) {(1, 2) 成分\\＝1行めと2列めの内積\\（ソラさん・スーパー）};
+\end{tikzpicture}
+\bkfigcaption{積の (1, 2) 成分。左の行列の1行め（オレンジ）と、右の行列の2列め（青）をなぞる。}
+\label{bk:7-1:fig-seki}
+\end{bkfigure}
+
+\begin{taisetsu}
+\centering
+\textbf{積 $AB$ の $(i,\ j)$ 成分}\enspace ＝\enspace \textbf{$A$ の $i$ 行め}と\textbf{$B$ の $j$ 列め}の内積\par\vspace{3pt}
+$\begin{pmatrix} a & b\\ c & d \end{pmatrix}\begin{pmatrix} e & f\\ g & h \end{pmatrix}=\begin{pmatrix} ae+bg & af+bh\\ ce+dg & cf+dh \end{pmatrix}$
+\end{taisetsu}
+
+文字の式は覚えなくてかまいません。(1, 2) 成分なら「1行めと2列め」と、指でなぞればいつでも作れます。図\ref{bk:7-1:fig-seki}で、ほかの3つの成分も、なぞって確かめましょう。
+
+\kviibhead{かけられる大きさ・答えの大きさ}
+3人めのお客さん（りんご5個・みかん5個）も入れると、個数の行列は3×2 になります。値段の行列 $P$ は2×2 です。積は、3人それぞれの2つの店での合計なので、3×2 行列になります。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1\\ 5 & 5 \end{pmatrix}\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 420 & 440\\ 300 & 280\\ 900 & 900 \end{pmatrix} \]
+左の行列の1行の数の個数（くだものの種類）と、右の行列の1列の数の個数（くだものの種類）が同じでないと、なぞったときに相手のいない数が出ます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \def\cs{5}
+  % 左 3×2
+  \foreach \i in {0,1,2} {\foreach \j in {0,1} {\draw[bkOrange!80!black, fill=bkOrange!15, line width=0.6pt] ({\j*\cs},{-\i*\cs}) rectangle ++(\cs,-\cs);}}
+  \node[kviib lab, anchor=north] at (5,-17) {$3\times2$};
+  \node at (15,-7.5) {$\times$};
+  \begin{scope}[shift={(20,0)}]
+  \foreach \i in {0,1} {\foreach \j in {0,1} {\draw[bkBlue!80!black, fill=bkBlue!12, line width=0.6pt] ({\j*\cs},{-\i*\cs}) rectangle ++(\cs,-\cs);}}
+  \node[kviib lab, anchor=north] at (5,-17) {$2\times2$};
+  \end{scope}
+  \node at (35,-7.5) {$=$};
+  \begin{scope}[shift={(40,0)}]
+  \foreach \i in {0,1,2} {\foreach \j in {0,1} {\draw[bkGreen!60!black, fill=bkGreen!15, line width=0.6pt] ({\j*\cs},{-\i*\cs}) rectangle ++(\cs,-\cs);}}
+  \node[kviib lab, anchor=north] at (5,-17) {$3\times2$};
+  \end{scope}
+  % 説明
+  \node[anchor=west, align=left, font=\small] (r) at (62,-7.5) {$(m\times\textcolor{bkRed!80!black}{\symbfit{n}})(\textcolor{bkRed!80!black}{\symbfit{n}}\times p)\ \to\ m\times p$\\[1mm]
+    {\footnotesize 内側の2つ（\textcolor{bkRed!80!black}{$n$}）が同じなら、かけられる。}\\
+    {\footnotesize 外側の2つ（$m$ と $p$）が、答えの大きさ。}};
+\end{tikzpicture}
+\bkfigcaption{行列の大きさ。左の行列の列の数と、右の行列の行の数が同じときだけ、かけられる。}
+\label{bk:7-1:fig-ookisa}
+\end{bkfigure}
+
+大きさを $m\times n$ と $n\times p$ のように並べて書くと、内側の2つの数が同じときだけかけられます。答えの大きさは、外側の2つの数で $m\times p$ です。④の行列×ベクトルも、ベクトルを $n\times1$ 行列と見ると、$(m\times n)(n\times1)$ で答えは $m\times1$（列ベクトル）です。同じきまりです。
+
+\kviibhead{かける順番を入れかえると？}
+数のかけ算では、$3\times5=5\times3$ でした。行列ではどうでしょう。値段の行列 $P$ を左に、個数の行列を右において計算すると、次のようになります。
+\[ \begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}\begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}=\begin{pmatrix} 440 & 460\\ 280 & 260 \end{pmatrix} \]
+大きさは合うので、計算はできます。でも、答えは合計の行列とちがいます。(1, 1) 成分の440は「りんごの値段の行（120、100）」と「ソラさんの列（2、2）」の内積で、買い物の意味がありません。行列のかけ算は、\textbf{順番を入れかえると、答えが変わることがある}のです。このことは、7-3 でくわしく調べます。
+
+\begin{seikaku}
+積の決め方は、ここでは「買い物の合計」の意味から決めました。でも、行列のかけ算は、たまたま買い物に合うように決めたのではありません。7-3 で、「2つの変換をつなぐ」と、ちょうどこの決め方になることを確かめます。また、成分を記号で書くと、$m\times n$ 行列 $A$ と $n\times p$ 行列 $B$ の積 $AB$ の $(i,\ j)$ 成分は
+\[ a_{i1}b_{1j}+a_{i2}b_{2j}+\cdots+a_{in}b_{nj}=\sum_{k=1}^{n}a_{ik}b_{kj} \]
+です。$\sum$ の中の $k$ が1から $n$ まで動くことが、「行と列を同時になぞる」ことにあたります。
+\end{seikaku}
+
+\bksubsection{7}{転置：たてとよこを入れかえる}
+
+\label{bk:7-1:tenchi}個数の行列は、行が人、列がくだものでした。これを、行がくだもの、列が人の表に書きかえてみます。ソラさんの行（2、3）は、ソラさんの列になります。
+\[ \begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\ \longrightarrow\ \begin{pmatrix} 2 & 2\\ 3 & 1 \end{pmatrix} \]
+数はそのままで、「人ごとの表」が「くだものごとの表」になりました。行列 $A$ の行と列を入れかえた行列を、$A$ の\textbf{転置}（てんち）といい、$A^{\mathsf T}$ と書きます。\bkidx{てんち}{転置}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (A) at (0,0) [kviib mat] {2 \& 3 \& 1\\ 2 \& 1 \& 4\\};
+  \kviibhl{kviib row}{A-1-1}{A-1-3}
+  \node[kviib lab, anchor=north] at ([yshift=-3mm]A.south) {$A$（2×3）};
+  \draw[bk arrow, line width=1pt] ([xshift=6mm]A.east) -- node[kviib lab, above=0.5mm] {行と列を入れかえる} ++(34,0);
+  \matrix (B) [kviib mat, anchor=west] at ([xshift=46mm]A.east) {2 \& 2\\ 3 \& 1\\ 1 \& 4\\};
+  \kviibhl{kviib row}{B-1-1}{B-3-1}
+  \node[kviib lab, anchor=north] at ([yshift=-3mm]B.south) {$A^{\mathsf T}$（3×2）};
+  \node[kviib lab, anchor=west, text=bkOrange!80!black, align=left] at ([xshift=5mm]B.east) {$A$ の1行めが\\$A^{\mathsf T}$ の1列めになる};
+\end{tikzpicture}
+\bkfigcaption{転置。$A$ の1行め（2、3、1）が、$A^{\mathsf T}$ の1列めになる。2×3 行列の転置は3×2 行列。}
+\end{bkfigure}
+
+$A^{\mathsf T}$ の $(i,\ j)$ 成分は、$A$ の $(j,\ i)$ 成分です。$\mathsf T$ は、英語の transpose（入れかえる）の頭文字で、少し形のちがう立てた字で書きます。$T$ 乗の意味ではありません。列ベクトルを転置すると、行ベクトルになります。
+
+\kviibhead{対角成分と対称な行列}
+正方行列の左上から右下へのななめの線の上にある成分 $a_{11}$、$a_{22}$、…を、\textbf{対角成分}といいます。1-13 の九九の表の「ななめのきまり」（1×1、2×2、…）の場所です。転置は、このななめの線を折り目にして、行列を裏返すことです。だから、対角成分は転置しても動きません。
+
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {1,...,4} {\foreach \j in {1,...,4} {
+    \pgfmathtruncatemacro\v{\i*\j}
+    \ifnum\i=\j \def\cc{bkGreen!20}\else\def\cc{white}\fi
+    \node[draw=bkInk!50, fill=\cc, line width=0.5pt, minimum size=8mm, inner sep=0pt, font=\small] at ({8*\j},{-8*\i}) {\v};}}
+  \foreach \k in {1,...,4} {\node[kviib lab, text=bkGray] at ({8*\k},-1.5) {\k}; \node[kviib lab, text=bkGray] at (1.5,{-8*\k}) {\k};}
+  \draw[bkOrange!80!black, line width=1.2pt, rounded corners=1mm] (28.2,-20.2) rectangle (35.8,-27.8);
+  \draw[bkOrange!80!black, line width=1.2pt, rounded corners=1mm] (20.2,-28.2) rectangle (27.8,-35.8);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+九九の表の4×4 の部分です。緑のななめのマスが対角成分です。3行め4列めの12と、4行め3列めの12（オレンジのわく）は、緑のななめを折り目にして向かい合っています。$3\times4=4\times3$ なので、どこでも、向かい合う成分は同じです。だから、九九の表は転置しても変わりません（1-13 の「入れかえても同じ」）。
+\end{minipage}
+
+\medskip
+転置しても変わらない行列（$A^{\mathsf T}=A$）を、\textbf{対称な行列}（対称行列）といいます。$a_{ij}=a_{ji}$ がすべての $i$、$j$ で成り立つ正方行列です。⑤の回路の行列、ばねの剛性行列、台車の行列は、どれも対称な行列です。
+\[ \begin{pmatrix} 4 & 2\\ 2 & 4 \end{pmatrix},\qquad \begin{pmatrix} 2k & -k & 0\\ -k & 2k & -k\\ 0 & -k & k \end{pmatrix},\qquad \begin{pmatrix} -110 & 10\\ 10 & -110 \end{pmatrix} \]
+回路の行列の (1, 2) 成分の2は、「右の輪の電流 $I_2$ が、まん中の抵抗を通って、左の輪の式に効く強さ」です。(2, 1) 成分の2は、その反対向きです。まん中の抵抗は両方の輪に同じように入っているので、2つは等しくなります。物理や工学に出てくる行列は、このように「おたがいさま」で対称になることがよくあります。対称な行列は、7-6・7-8・7-9 で大切な役をします。
+
+\begin{column}{九章算術の「方程」：2000年前の行列}
+中国の数学の本『九章算術』（きゅうしょうさんじゅつ）は、紀元1世紀ごろまでにまとめられたと考えられています。その第8章「方程」には、連立方程式の問題が並んでいます。最初の問題は、3種類の稲の束の数と、とれる米の量から、1束あたりの米の量を求めるものです。今の書き方では、左下の式です。\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+$\begin{aligned} 3x+2y+z&=39\\ 2x+3y+z&=34\\ x+2y+3z&=26 \end{aligned}$
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \c/\a/\b/\d/\e in {0/1/2/3/26, 1/2/3/1/34, 2/3/2/1/39} {
+    \foreach \v [count=\r] in {\a,\b,\d} {\node[draw=bkInk!50, fill=bkYellow!15, line width=0.5pt, minimum width=9mm, minimum height=6mm, font=\small] at ({11*\c},{-6.5*\r}) {\v};}
+    \node[draw=bkInk!50, fill=bkOrange!15, line width=0.5pt, minimum width=9mm, minimum height=6mm, font=\small] at ({11*\c},-28) {\e};}
+  \foreach \t [count=\r] in {上の稲,中の稲,下の稲} {\node[kviib lab, anchor=west] at (27,{-6.5*\r}) {\t};}
+  \node[kviib lab, anchor=west] at (27,-28) {米の量};
+  \node[kviib lab, anchor=south] at (22,-2.3) {1つめ};
+  \node[kviib lab, anchor=south] at (11,-2.3) {2つめ};
+  \node[kviib lab, anchor=south] at (0,-2.3) {3つめ};
+  \draw[bk arrow, line width=0.8pt] (25,-34) -- (-3,-34);
+  \node[kviib lab, anchor=north] at (11,-35.5) {右から順に並べる};
+\end{tikzpicture}
+\end{minipage}\par\vspace{3pt}
+係数は、算木（計算に使う小さな棒）で計算板の上に並べました。1つの式を\textbf{たての1列}にして、右から順に並べます（コラムの図）。そして、列に数をかけたり、列どうしをひいたりして、答えを出しました。3-6⑥ の「表の行どうしをひく」加減法と同じで、7-5 の掃き出し法と同じ考えです。答えは、1束あたり $9\frac14$、$4\frac14$、$2\frac34$ 斗（斗は量の単位）です。この並べ方は、この章の係数行列を転置して、さらに左右の順も逆にしたものです。2000年前の中国でも、係数だけを表に並べて計算していたのです。
+\end{column}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{motto}[3]
+\kviibbox{内積は、行ベクトル×列ベクトル}
+4-12 の内積は、$\vec a$ を転置した行ベクトルと、列ベクトル $\vec b$ の積です。
+\[ \vec a^{\mathsf T}\vec b=\begin{pmatrix} a_x & a_y \end{pmatrix}\begin{pmatrix} b_x\\ b_y \end{pmatrix}=a_xb_x+a_yb_y \]
+大きさは $(1\times2)(2\times1)\to1\times1$ で、答えは数1つです。専門書では、内積を $\vec a^{\mathsf T}\vec b$ と書くことがよくあります。
+\end{motto}
+\end{minipage}
+
+\Needspace{14\baselineskip}\bksubsection{8}{単位行列 $I$ と零行列 $O$}
+
+\label{bk:7-1:tan-i}数の1は、かけても相手を変えない数です（$1\times5=5$）。行列で、同じ働きをするものをさがします。次の行列 $I$ を、ベクトルにかけてみましょう。④のとおりに計算します。
+\[ I=\begin{pmatrix} 1 & 0\\ 0 & 1 \end{pmatrix},\qquad \begin{pmatrix} 1 & 0\\ 0 & 1 \end{pmatrix}\begin{pmatrix} x\\ y \end{pmatrix}=\begin{pmatrix} 1\times x+0\times y\\ 0\times x+1\times y \end{pmatrix}=\begin{pmatrix} x\\ y \end{pmatrix} \]
+ベクトルは変わりません。行列にかけても、$IA=A$、$AI=A$ です。買い物で言うと、$I$ は「ソラさんはりんご1個だけ、ミナさんはみかん1個だけ」の個数の行列です。$I$ と値段の行列 $P$ の積は、値段の行列そのものになります。
+\[ \begin{pmatrix} 1 & 0\\ 0 & 1 \end{pmatrix}\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix} \]
+対角成分がすべて1で、ほかの成分がすべて0の正方行列を、\textbf{単位行列}といい、$I$ と書きます。\bkidx{たんいぎょうれつ}{単位行列}3×3 の単位行列は、ななめに1が3つ並びます。$I$ は英語の identity（同じもの）の頭文字です。高校の古い教科書や、多くの大学の本では $E$ と書きます。この本では、$E$ を電池の電圧などに使うので、$I$ と書きます。
+
+すべての成分が0の行列を\textbf{零行列}（れいぎょうれつ）といい、$O$ と書きます。数の0と同じで、たしても相手を変えません（$A+O=A$）。かけると、答えはすべて0になります（$AO=O$）。
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+$m\times n$ 行列 $A=(a_{ij})$ と $n\times l$ 行列 $B=(b_{jk})$ に対し、積 $AB$ を、その $(i,\ k)$ 成分が $\sum_{j=1}^{n}a_{ij}b_{jk}$ で与えられる $m\times l$ 行列と定義する。一般に $AB\neq BA$ である。$A$ の転置行列を ${}^tA$ と書く。単位行列を $E$ で表す。
+\end{bkhonbun}
+\bkyaku{$A=(a_{ij})$ は「成分が $a_{ij}$ の行列 $A$」。この章の $p$ を $l$、$j$ を $k$ と書いているだけで、⑥の決め方と同じ。「一般に」は「いつもとは限らない」の意味。${}^tA$ は、この巻の $A^{\mathsf T}$（転置の t を左上に書く本もある）。$E$ は、この巻の単位行列 $I$。}
+\end{senmonsho}
+
+\bksubsection{9}{表計算と Python で確かめる}
+
+\label{bk:7-1:keisan}行列が大きくなると、手で計算するのは大変です。表計算（2-18）と Python（2-19）には、行列のかけ算をする道具があります。第7巻では、どちらも何回も使います。ここで使い方の型を決めておきます。
+
+\kviibhead{表計算：MMULT}
+行列は\textbf{A2 から}（1行めは見出し）、ベクトルは\textbf{そのすぐ右の列}、答えは\textbf{さらにその右の列}に置きます。
+
+\begin{bkcenter}
+\kviibfx{D2}{=MMULT(A2:B3,C2:C3)}\par\vspace{1mm}
+\bksheet{4}{15}{%
+1 & \SetCell[c=2]{c} 個数の行列 & & \SetCell{c} 値段 & \SetCell{c} 合計 \\
+2 & \SetCell{bg=kviibM} 2 & \SetCell{bg=kviibM} 3 & \SetCell{bg=kviibV} 120 & \SetCell{bg=kviibR} 420 \\
+3 & \SetCell{bg=kviibM} 2 & \SetCell{bg=kviibM} 1 & \SetCell{bg=kviibV} 60 & \SetCell{bg=kviibR} 300 \\}
+\bktabcaption{行列×ベクトル。行列は A2:B3、ベクトルは C2:C3、答えは D2:D3。}
+\label{bk:7-1:tab-mmult}
+\end{bkcenter}
+
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item A2:B3 に個数の行列、C2:C3 に値段のベクトルを入れる。「A2:B3」は、A2 を左上、B3 を右下とする長方形のセルの集まり（範囲）のこと。
+\item 答えの左上のセル D2 に \texttt{=MMULT(A2:B3,C2:C3)} と入れる。MMULT は、matrix（行列）の multiply（かけ算）。かっこの中は、\textbf{左の行列の範囲、右の行列（ベクトル）の範囲}の順。
+\item Enter キーで確定する。新しい Excel（Microsoft 365）や Google スプレッドシートでは、答えが D3 にも自動で広がる。広がらないソフト（古い Excel や LibreOffice）では、先に答えのマス全部 D2:D3 をえらんでから式を入れ、Ctrl＋Shift＋Enter で確定する。
+\end{enumerate}
+
+行列×行列も同じです。値段の行列を C2:D3 に入れ、答えのマス E2 に \texttt{=MMULT(A2:B3,C2:D3)} と入れると、E2:F3 に合計の行列が出ます。左の行列の列の数と、右の行列の行の数が合わないと、\texttt{\#VALUE!} と出ます（⑥の「かけられる大きさ」）。範囲に空いたセルや文字が入っていても、\texttt{\#VALUE!} になります。転置は \texttt{=TRANSPOSE(A2:B3)} です。
+
+\begin{motto}[3]
+\kviibbox{MMULT の中身を、ふつうの式で作ってみる}
+表\ref{bk:7-1:tab-mmult}の D2 に、MMULT を使わずに \texttt{=A2*C2+B2*C3} と入れても、420 が出ます。A2、B2 は行列の1行め、C2、C3 はベクトルの列です。行と列を「なぞって、かけて、たす」計算を、そのまま式にしたものです。
+\begin{bkcenter}
+\bksheet{4}{15}{%
+1 & \SetCell[c=2]{c} 個数の行列 & & \SetCell{c} 値段 & \SetCell{c} 合計 \\
+2 & \SetCell{bg=bkOrange!20} 2 & \SetCell{bg=bkOrange!20} 3 & \SetCell{bg=bkBlue!14} 120 & \SetCell{bg=bkGreen!20} 420 \\
+3 & 2 & 1 & \SetCell{bg=bkBlue!14} 60 & 300 \\}
+\bktabcaption{D2 の \texttt{=A2*C2+B2*C3} は、1行め（オレンジ）と列（青）の内積。}
+\end{bkcenter}
+D3 には \texttt{=A3*C2+B3*C3} と入れます。D2 の式を下へコピーすると、\texttt{=A3*C3+B3*C4} となってしまい、値段の列がずれて、まちがった答えになります（2-18 の番地のずれ）。ずらしたくない値段の番地に \texttt{\$} をつけて \texttt{=A2*\$C\$2+B2*\$C\$3} とすれば、コピーしても正しく計算できます。行列が大きくなると、このような式を全部のマスに書くのは大変です。MMULT は、この計算をまとめてしてくれる関数なのです。
+\end{motto}
+
+\kviibhead{Python：numpy}
+Python では、\textbf{numpy}（ナムパイ）という道具を使います。行列やベクトルの計算をまとめてする道具で、大学や会社でもよく使われています。
+
+\Needspace{22\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np              \# numpy を np という短い名前で使う
+N = np.array([[2, 3],
+              [2, 1]])          \# 個数の行列：1行ずつ [ ] でくくる
+p = np.array([120, 60])         \# 値段のベクトル
+P = np.array([[120, 100],
+              [60, 80]])        \# 値段の行列
+print(N @ p)                    \# 行列×ベクトル
+print(N @ P)                    \# 行列×行列
+print(N.T)                      \# 転置
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[420 300]
+[[420 440]
+ [300 280]]
+[[2 2]
+ [3 1]]
+\end{bkcodeout}
+
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \texttt{np.array([[2, 3], [2, 1]])} は、行列を「行のリスト」で書く。外側の [ ] の中に、1行めの [2, 3] と2行めの [2, 1] が入っている。プログラムでは、行ごとに改行してたてに並べると、行列の形が見やすい。
+\item ベクトルは \texttt{np.array([120, 60])} と横に書く。表示も \texttt{[420 300]} と横1行になる。でも中身は、数学のたて書きの列ベクトルと同じ。
+\item 行列のかけ算は \texttt{@}（アット）。行列は \texttt{[[420 440]} と \texttt{[300 280]]} のように、1行ずつ表示される。
+\item \texttt{N.T} は転置。単位行列は \texttt{np.eye(2)}（2×2）で作れる。
+\end{enumerate}
+
+ここで、とても大切な注意があります。\texttt{N * P} と \texttt{*} を使うと、行列のかけ算ではなく、\textbf{同じ場所の成分どうしのかけ算}になります。表計算で \texttt{=A2*C2} と入れて、となりにコピーしたときも同じです（まちがえやすいところ④）。
+
+\Needspace{7\baselineskip}
+\begin{bkcode}[Python]
+print(N * P)                    \# 成分どうしのかけ算（行列の積ではない）
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[240 300]
+ [120  80]]
+\end{bkcodeout}
+$2\times120=240$、$3\times100=300$、…と、同じ場所どうしをかけただけです。合計の行列（420、440、…）とはちがいます。行列の積は、かならず \texttt{@}、表計算では MMULT を使います。
+
+%% ---------------- まとめ ----------------
+\begin{taisetsu}
+\def\tsl#1{\makebox[5.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\raggedright
+\tsl{行列}$m\times n$ 行列は $m$ 行 $n$ 列。$a_{ij}$ は $i$ 行め $j$ 列めの成分\\[0pt]
+\tsl{和・実数倍}成分ごとに計算する（同じ大きさどうし）\\[0pt]
+\tsl{積}$AB$ の $(i,\ j)$ 成分 ＝ $A$ の $i$ 行めと $B$ の $j$ 列めの内積\\[0pt]
+\tsl{大きさ}$(m\times n)(n\times p)\to m\times p$\quad $AB\neq BA$ のことがある\\[0pt]
+\tsl{連立方程式}$A\vec x=\vec b$（$A$ は係数行列）\\[0pt]
+\tsl{転置}$A^{\mathsf T}$\quad 行と列を入れかえる。$A^{\mathsf T}=A$ なら対称\\[0pt]
+\tsl{$I$・$O$}単位行列（対角成分が1）・零行列（すべて0）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{行列}{数を長方形の形に並べて、かっこでくくったもの。よこのならびが行、たてのならびが列。}
+\bkword{成分}{行列の中の1つ1つの数。$i$ 行め $j$ 列めの成分を $(i,\ j)$ 成分という。}
+\bkword{正方行列}{行の数と列の数が同じ行列。}
+\bkword{列ベクトル・行ベクトル}{たてに1列だけの行列と、横に1行だけの行列。}
+\bkword{係数行列}{連立方程式の係数を、式ごとに1行に並べた行列。}
+\bkword{転置}{行と列を入れかえること。$A^{\mathsf T}$ と書く。}
+\bkword{対角成分・対称な行列}{左上から右下へのななめの成分。転置しても変わらない行列が対称な行列。}
+\bkword{単位行列・零行列}{対角成分が1でほかが0の正方行列 $I$。すべての成分が0の行列 $O$。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$a_{ij}$}{エー・アイ・ジェイ}{行列 $A$ の $i$ 行め $j$ 列めの成分。下つきは行が先、列があと}{entry}{7-1}}
+{\bkkigocard{$A^{\mathsf T}$}{エー・トランスポーズ}{$A$ の転置。行と列を入れかえた行列。$T$ 乗ではない}{transpose}{7-1}}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[成分を読む]
+\noindent\begin{minipage}[c]{0.64\linewidth}\raggedright
+右の行列 $B$ について答えましょう。\par
+（1）$B$ は何行何列の行列ですか。\par
+（2）$b_{12}$、$b_{21}$、$b_{23}$ を答えましょう。\par
+（3）成分 $-1$ は、何行め何列めにありますか。\par
+\phantom{（3）}記号でも答えましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+$B=\begin{pmatrix} 4 & 0 & -1\\ 7 & 3 & 5 \end{pmatrix}$
+\end{minipage}\par
+\kangaekata よこのならびが行、たてのならびが列。$b_{ij}$ は「$i$ 行め $j$ 列め」で、行の番号が先。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）行は上から2つ、列は左から3つある。\par
+\kviiba（2）$b_{12}$ は1行め2列め、$b_{21}$ は2行め1列め、$b_{23}$ は2行め3列め。\par
+\kviiba（3）$-1$ は上の行（1行め）の、左から3番め（3列め）。\par
+\kotae\kviibs\hangindent=2.6\zw\hangafter=1 （1）2行3列（2×3 行列）\quad （2）$b_{12}=0$、$b_{21}=7$、$b_{23}=5$\par
+\kviiba（3）1行め3列め。$b_{13}=-1$
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.7\linewidth}\raggedright
+右の行列 $C$ について答えましょう。\par
+（1）$C$ は何行何列の行列ですか。\par
+（2）$c_{12}$、$c_{31}$、$c_{22}$ を答えましょう。\par
+（3）成分9は、何行め何列めにありますか。記号でも答えましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}\centering
+$C=\begin{pmatrix} 6 & -2\\ 1 & 8\\ 0 & 9 \end{pmatrix}$
+\end{minipage}
+\bkjans{（1）\nobreak 3行2列（3×2 行列）。（2）\nobreak $c_{12}=-2$、$c_{31}=0$、$c_{22}=8$。（3）\nobreak 3行め2列め。$c_{32}=9$。}
+\end{jibun}
+
+\begin{reidai}[和・差・実数倍]
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+右の行列 $P$、$Q$ について、次の行列を求めましょう。\par
+（1）$P+Q$\quad （2）$P-Q$\quad （3）$3P$\quad （4）$2P-Q$
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+$P=\begin{pmatrix} 3 & 1\\ 0 & 2 \end{pmatrix}$\par\vspace{2pt}$Q=\begin{pmatrix} 1 & 4\\ 5 & -1 \end{pmatrix}$
+\end{minipage}\par
+\kangaekata 同じ場所の成分どうしを、左上・右上・左下・右下の順に計算する。（4）は、先に $2P$ を作ってから $Q$ をひく。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）$3+1=4$、\ $1+4=5$、\ $0+5=5$、\ $2+(-1)=1$\par
+\kviiba（2）$3-1=2$、\ $1-4=-3$、\ $0-5=-5$、\ $2-(-1)=3$\par
+\kviiba（3）$3\times3=9$、\ $3\times1=3$、\ $3\times0=0$、\ $3\times2=6$\par
+\kviiba（4）$2P$ の成分は6、2、0、4。そこから $Q$ をひく：\par
+\kviiba\phantom{（4）}$6-1=5$、\ $2-4=-2$、\ $0-5=-5$、\ $4-(-1)=5$\par
+\kotae
+\[ \text{（1）}\begin{pmatrix} 4 & 5\\ 5 & 1 \end{pmatrix}\quad \text{（2）}\begin{pmatrix} 2 & -3\\ -5 & 3 \end{pmatrix}\quad \text{（3）}\begin{pmatrix} 9 & 3\\ 0 & 6 \end{pmatrix}\quad \text{（4）}\begin{pmatrix} 5 & -2\\ -5 & 5 \end{pmatrix} \]
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+右の行列 $P$、$Q$ について、次の行列を求めましょう。\par
+（1）$P+Q$\quad （2）$P-Q$\quad （3）$2Q$\quad （4）$3P-Q$
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+$P=\begin{pmatrix} 2 & 5\\ -1 & 0 \end{pmatrix}$\par\vspace{2pt}$Q=\begin{pmatrix} 3 & 1\\ 4 & 2 \end{pmatrix}$
+\end{minipage}
+\bkjans{（1）\nobreak 1行め $(5,\ 6)$、2行め $(3,\ 2)$。（2）\nobreak 1行め $(-1,\ 4)$、2行め $(-5,\ -2)$。（3）\nobreak 1行め $(6,\ 2)$、2行め $(8,\ 4)$。（4）\nobreak $3P$ は1行め $(6,\ 15)$、2行め $(-3,\ 0)$。$Q$ をひいて、1行め $(3,\ 14)$、2行め $(-7,\ -2)$。}
+\end{jibun}
+
+\begin{reidai}[行列×ベクトル]
+次の積を求めましょう。
+\[ \text{（1）}\begin{pmatrix} 3 & 1\\ 2 & 4 \end{pmatrix}\begin{pmatrix} 5\\ 2 \end{pmatrix}\qquad \text{（2）}\begin{pmatrix} 1 & -2\\ 3 & 0 \end{pmatrix}\begin{pmatrix} 4\\ -1 \end{pmatrix} \]
+\kangaekata 答えの1番めは1行めとベクトル、2番めは2行めとベクトルを、なぞって「かけて、たす」。負の数はかっこをつけてかける。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）1行め：$3\times5+1\times2=15+2=17$\par
+\kviiba \phantom{（1）}2行め：$2\times5+4\times2=10+8=18$\par
+\kviiba （2）1行め：$1\times4+(-2)\times(-1)=4+2=6$\par
+\kviiba \phantom{（2）}2行め：$3\times4+0\times(-1)=12+0=12$\par
+\kotae
+\[ \text{（1）}\begin{pmatrix} 17\\ 18 \end{pmatrix}\qquad \text{（2）}\begin{pmatrix} 6\\ 12 \end{pmatrix} \]
+\end{reidai}
+
+\begin{jibun}
+次の積を求めましょう。
+\[ \text{（1）}\begin{pmatrix} 2 & 5\\ 1 & 3 \end{pmatrix}\begin{pmatrix} 4\\ 1 \end{pmatrix}\qquad \text{（2）}\begin{pmatrix} -1 & 2\\ 4 & -3 \end{pmatrix}\begin{pmatrix} 3\\ -2 \end{pmatrix} \]
+\bkjans{（1）\nobreak $2\times4+5\times1=13$、$1\times4+3\times1=7$ で $(13,\ 7)$。（2）\nobreak $-3+(-4)=-7$、$12+6=18$ で $(-7,\ 18)$。}
+\end{jibun}
+
+\begin{reidai}[行の多い行列・3×3 の行列]
+\noindent\begin{minipage}[c]{0.66\linewidth}\raggedright
+（1）3人が、りんごとみかんを右の個数だけ買います（行は1人め・2人め・3人め、列はりんご・みかん）。りんご1個120円、みかん1個60円のとき、3人の合計を行列×ベクトルで求めましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+$\begin{pmatrix} 2 & 3\\ 2 & 1\\ 5 & 5 \end{pmatrix}$
+\end{minipage}\par\vspace{2pt}
+（2）3-6 の連立方程式 $x+y+z=9$、$x-y=1$、$y-z=1$ の答え $x=4$、$y=3$、$z=2$ を並べたベクトルを、係数行列にかけて確かめましょう。\par
+\kangaekata 行が3つなら、答えの成分も3つ。（2）は、ない文字の係数を0にして係数行列を作る。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）$2\times120+3\times60=420$、\ $2\times120+1\times60=300$、\ $5\times120+5\times60=900$\par
+\kviiba （2）係数行列の2行めは（1, $-1$, 0）、3行めは（0, 1, $-1$）。
+\[ \begin{pmatrix} 1 & 1 & 1\\ 1 & -1 & 0\\ 0 & 1 & -1 \end{pmatrix}\begin{pmatrix} 4\\ 3\\ 2 \end{pmatrix}=\begin{pmatrix} 4+3+2\\ 4-3+0\\ 0+3-2 \end{pmatrix}=\begin{pmatrix} 9\\ 1\\ 1 \end{pmatrix} \]
+\kotae\kviibs\hangindent=2.6\zw\hangafter=1 （1）420円、300円、900円\quad （2）右辺の9、1、1になった
+\end{reidai}
+
+\begin{jibun}
+（1）3人が、りんごとみかんを、1人めから順に（1個、4個）、（3個、2個）、（0個、6個）買います。りんご1個100円、みかん1個50円のとき、3人の合計を行列×ベクトルで求めましょう。\par
+（2）連立方程式 $2x+y=4$、$y+3z=11$、$x+z=4$ の答えは $x=1$、$y=2$、$z=3$ です。係数行列を作り、答えを並べたベクトルをかけて確かめましょう。
+\bkjans{（1）\nobreak $1\times100+4\times50=300$、$3\times100+2\times50=400$、$0\times100+6\times50=300$。300円、400円、300円。（2）\nobreak 係数行列は1行め $(2,\ 1,\ 0)$、2行め $(0,\ 1,\ 3)$、3行め $(1,\ 0,\ 1)$。$(1,\ 2,\ 3)$ にかけると、$2+2+0=4$、$0+2+9=11$、$1+0+3=4$ で、右辺と同じ。}
+\end{jibun}
+
+\begin{reidai}[連立方程式を行列で書く]
+次の連立方程式を、$A\vec x=\vec b$ の形に書きましょう。わからない数は、$x$、$y$（、$z$）の順に並べます。\par
+（1）$3x+2y=12$、\ $y=4x-5$\qquad （2）$x+2z=7$、\ $3y-z=1$、\ $x+y+z=6$\par
+\kangaekata 手順①②③。（1）の2つめの式は、文字を左辺に $x$、$y$ の順に集める。（2）は、ない文字の係数を0にする。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）$y=4x-5$ の $4x$ を左辺へ移す：$-4x+y=-5$\par
+\kviiba （2）$x+0y+2z=7$、\ $0x+3y-z=1$、\ $x+y+z=6$\par
+\kotae
+\[ \text{（1）}\begin{pmatrix} 3 & 2\\ -4 & 1 \end{pmatrix}\begin{pmatrix} x\\ y \end{pmatrix}=\begin{pmatrix} 12\\ -5 \end{pmatrix}\qquad \text{（2）}\begin{pmatrix} 1 & 0 & 2\\ 0 & 3 & -1\\ 1 & 1 & 1 \end{pmatrix}\begin{pmatrix} x\\ y\\ z \end{pmatrix}=\begin{pmatrix} 7\\ 1\\ 6 \end{pmatrix} \]
+\kviiba 確かめ：（1）の答え $x=2$、$y=3$ を入れると、$3\times2+2\times3=12$、$-4\times2+1\times3=-5$。（2）の答え $x=3$、$y=1$、$z=2$ を入れると、$3+0+4=7$、$0+3-2=1$、$3+1+2=6$。
+\end{reidai}
+
+\begin{jibun}
+次の連立方程式を、$A\vec x=\vec b$ の形に書きましょう（$x$、$y$（、$z$）の順）。\par
+（1）$5x-y=7$、\ $2y=x+4$\qquad （2）$2x+z=5$、\ $y+3z=11$、\ $x-y=-1$
+\bkjans{（1）\nobreak $2y=x+4$ を $-x+2y=4$ にする。$A$ は1行め $(5,\ -1)$、2行め $(-1,\ 2)$、$\vec x=(x,\ y)$、$\vec b=(7,\ 4)$。（2）\nobreak $A$ は1行め $(2,\ 0,\ 1)$、2行め $(0,\ 1,\ 3)$、3行め $(1,\ -1,\ 0)$、$\vec x=(x,\ y,\ z)$、$\vec b=(5,\ 11,\ -1)$。（答えは（1）$x=2$、$y=3$、（2）$x=1$、$y=2$、$z=3$）}
+\end{jibun}
+
+\begin{reidai}[行列×行列と、かけられる大きさ]
+（1）次の積を求めましょう。
+\[ \begin{pmatrix} 1 & 2\\ 3 & 4 \end{pmatrix}\begin{pmatrix} 5 & 6\\ 7 & 8 \end{pmatrix} \]
+（2）2×3 行列と3×2 行列の積、3×2 行列と3×2 行列の積は、かけられますか。かけられるなら、答えの大きさを答えましょう。\par
+\kangaekata （1）$(i,\ j)$ 成分は、左の $i$ 行めと右の $j$ 列めをなぞる。（2）大きさを並べて、内側の2つの数をくらべる。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）(1, 1)：$1\times5+2\times7=19$\qquad (1, 2)：$1\times6+2\times8=22$\par
+\kviiba \phantom{（1）}(2, 1)：$3\times5+4\times7=43$\qquad (2, 2)：$3\times6+4\times8=50$\par
+\kviiba （2）$(2\times\textbf{3})(\textbf{3}\times2)$ は内側が3と3で同じ。$(3\times\textbf{2})(\textbf{3}\times2)$ は内側が2と3でちがう。\par
+\kotae\kviibs\hangindent=2.6\zw\hangafter=1 （1）$\displaystyle\begin{pmatrix} 19 & 22\\ 43 & 50 \end{pmatrix}$\par
+\kviiba （2）2×3 と3×2 はかけられて、答えは2×2。3×2 と3×2 はかけられない。
+\end{reidai}
+
+\begin{jibun}
+（1）次の積を求めましょう。
+\[ \begin{pmatrix} 2 & 0\\ 1 & 3 \end{pmatrix}\begin{pmatrix} 4 & 1\\ 2 & 5 \end{pmatrix} \]
+（2）3×2 行列と2×4 行列の積、2×3 行列と2×3 行列の積は、かけられますか。かけられるなら、答えの大きさを答えましょう。
+\bkjans{（1）\nobreak 1行め $(8,\ 2)$、2行め $(10,\ 16)$（(1, 1) は $2\times4+0\times2=8$、(2, 2) は $1\times1+3\times5=16$）。（2）\nobreak 3×2 と2×4 はかけられて3×4。2×3 と2×3 はかけられない。}
+\end{jibun}
+
+\begin{reidai}[積の成分の意味を読む]
+個数の行列 $N$（行はソラ・ミナ、列はりんご・みかん）と、値段の行列 $P$（行はりんご・みかん、列はくだもの屋・スーパー）があります。
+\[ N=\begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix},\qquad P=\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix} \]
+積 $NP$ の (2, 1) 成分は、何を表していますか。また、その値を求めましょう。\par
+\kangaekata (2, 1) 成分は、$N$ の2行めと $P$ の1列めの内積。$N$ の2行めは「ミナさん」、$P$ の1列めは「くだもの屋」。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 $N$ の2行め（2, 1）は、ミナさんのりんごとみかんの個数。\par
+\kviiba $P$ の1列め（120, 60）は、くだもの屋のりんごとみかんの値段。\par
+\kviiba 内積：$2\times120+1\times60=240+60=300$\par
+\kotae ミナさんがくだもの屋で買うときの合計。300円
+\end{reidai}
+
+\begin{jibun}
+朝食・昼食に食べた量の行列 $M$（行は朝食・昼食、列はごはん・卵、100\,g 単位）と、100\,g あたりの栄養の行列 $F$（行はごはん・卵、列はエネルギー〔kcal〕・たんぱく質〔g〕）があります。積 $MF$ の (2, 1) 成分と (1, 2) 成分は、それぞれ何を表していますか。値も求めましょう。
+\[ M=\begin{pmatrix} 1.5 & 0.5\\ 2 & 1 \end{pmatrix},\qquad F=\begin{pmatrix} 156 & 2.5\\ 142 & 12.2 \end{pmatrix} \]
+\bkjans{(2, 1) 成分は昼食のエネルギーで、$2\times156+1\times142=454$\,kcal。(1, 2) 成分は朝食のたんぱく質で、$1.5\times2.5+0.5\times12.2=3.75+6.1=9.85$\,g。}
+\end{jibun}
+
+\begin{reidai}[転置と対称な行列]
+（1）例題1の行列 $B$ の転置 $B^{\mathsf T}$ を求めましょう。\par
+（2）下のア〜ウのうち、対称な行列はどれですか。\par
+（3）下の行列 $G$ が対称な行列になるのは、$a$ がいくつのときですか。
+\[ \text{ア}\ \begin{pmatrix} 1 & 5\\ 5 & 2 \end{pmatrix}\quad \text{イ}\ \begin{pmatrix} 1 & 5\\ -5 & 2 \end{pmatrix}\quad \text{ウ}\ \begin{pmatrix} 3 & 0 & 2\\ 0 & 1 & 4\\ 2 & 4 & 6 \end{pmatrix}\qquad G=\begin{pmatrix} 4 & a\\ -2 & 1 \end{pmatrix} \]
+\kangaekata （1）$B$ の1行めを $B^{\mathsf T}$ の1列めにする。（2）（3）対角成分をはさんで向かい合う成分（$a_{12}$ と $a_{21}$ など）が、すべて等しいか見る。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）1列め（4, 0, $-1$）、2列め（7, 3, 5）。2×3 の転置は3×2。\par
+\kviiba （2）ア：$a_{12}=a_{21}=5$。イ：$a_{12}=5$、$a_{21}=-5$ でちがう。\par
+\kviiba \phantom{（2）}ウ：$a_{12}=a_{21}=0$、$a_{13}=a_{31}=2$、$a_{23}=a_{32}=4$。\par
+\kviiba （3）$g_{12}=a$、$g_{21}=-2$ なので、$a=-2$ のとき等しくなる。\par
+\kotae\kviibs\hangindent=2.6\zw\hangafter=1 （1）$\displaystyle B^{\mathsf T}=\begin{pmatrix} 4 & 7\\ 0 & 3\\ -1 & 5 \end{pmatrix}$\qquad （2）アとウ\qquad （3）$a=-2$
+\end{reidai}
+
+\begin{jibun}
+（1）じぶんでとこう1の行列 $C$ の転置 $C^{\mathsf T}$ を求めましょう。\par
+（2）下のア〜ウのうち、対称な行列はどれですか。\par
+（3）下の行列 $H$ が対称な行列になるのは、$b$ がいくつのときですか。
+\[ \text{ア}\ \begin{pmatrix} 2 & 3\\ 4 & 2 \end{pmatrix}\quad \text{イ}\ \begin{pmatrix} 0 & -1\\ -1 & 5 \end{pmatrix}\quad \text{ウ}\ \begin{pmatrix} 1 & 2 & 3\\ 2 & 1 & 2\\ 3 & 2 & 1 \end{pmatrix}\qquad H=\begin{pmatrix} 0 & 6\\ b & 3 \end{pmatrix} \]
+\bkjans{（1）\nobreak $C^{\mathsf T}$ は1行め $(6,\ 1,\ 0)$、2行め $(-2,\ 8,\ 9)$ の2×3 行列。（2）\nobreak イとウ（アは $a_{12}=3$、$a_{21}=4$ でちがう）。（3）\nobreak $h_{21}=b$ が $h_{12}=6$ と等しいので、$b=6$。}
+\end{jibun}
+
+\begin{reidai}[表計算と Python]
+\noindent\begin{minipage}[t]{0.48\linewidth}\vspace{0pt}\raggedright
+（1）右のプログラムを実行すると、何が表示されますか。\par\vspace{3pt}
+（2）表計算で、A2:B3 に行列 $A$、C2:D3 に行列 $B$ を入れました。積 $AB$ を E2:F3 に出すには、E2 に何と入れますか。
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}\vspace{0pt}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1],
+              [1, 2]])
+B = np.array([[1, 0],
+              [3, 1]])
+print(A @ B)
+print(A * B)
+\end{bkcode}
+\end{minipage}\par
+\kangaekata \texttt{@} は行列の積、\texttt{*} は同じ場所の成分どうしの積。MMULT は（左の範囲, 右の範囲）の順。\par
+\shiki\kviibs\hangindent=2.6\zw\hangafter=1 （1）\texttt{A @ B}：(1, 1) $2\times1+1\times3=5$、(1, 2) $2\times0+1\times1=1$、\par
+\kviiba \phantom{（1）}(2, 1) $1\times1+2\times3=7$、(2, 2) $1\times0+2\times1=2$\par
+\kviiba \phantom{（1）}\texttt{A * B}：$2\times1=2$、$1\times0=0$、$1\times3=3$、$2\times1=2$\par
+\kotae\kviibs\hangindent=2.6\zw\hangafter=1 （1）\mbox{\texttt{[[5 1]}\enspace\texttt{[7 2]]}} と \mbox{\texttt{[[2 0]}\enspace\texttt{[3 2]]}}（それぞれ2行で表示）\par
+\kviiba （2）\texttt{=MMULT(A2:B3,C2:D3)}
+\end{reidai}
+
+\begin{jibun}
+（1）例題9のプログラムで、\texttt{A} を \texttt{[[3, 1], [0, 2]]}、\texttt{B} を \texttt{[[1, 2], [4, 1]]} にかえると、何が表示されますか。\par
+（2）表計算で、A2:C4 に3×3 行列、D2:D4 にベクトルを入れました。積を E2:E4 に出すには、E2 に何と入れますか。
+\bkjans{（1）\nobreak \texttt{A @ B} は \mbox{\texttt{[[7 7]}\enspace\texttt{[8 2]]}}、\texttt{A * B} は \mbox{\texttt{[[3 2]}\enspace\texttt{[0 2]]}}。（2）\nobreak \texttt{=MMULT(A2:C4,D2:D4)}。}
+\end{jibun}
+
+
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① $a_{ij}$ の順番}
+\bkng{$a_{12}$ は「2行め1列め」}
+\bkok{$a_{12}$ は「1行め2列め」。行の番号が先}
+表計算の番地 B3（列が先）と反対です。「行列」ということばの順\mbox{（行→列）}で覚えましょう。
+\end{tsumazuki}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② かけられない大きさ}
+\raggedright\bkng{2×3 行列×2×2 行列を計算する}
+\bkok{内側の3と2がちがうので、かけられない}
+なぞると、行の3番めの数に、相手がいなくなります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 値段を横に書く}
+\raggedright\bkng{個数の行列の右に、値段を行ベクトルでおく}
+\bkok{値段は列ベクトル（たて）でおく}
+$(2\times2)(1\times2)$ は、内側の2と1がちがいます。
+\end{tsumazuki}
+\end{minipage}
+
+\begin{tsumazuki}{④ 行列の積を、成分どうしのかけ算にする}
+\bkng{$\begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 240 & 300\\ 120 & 80 \end{pmatrix}$}
+\bkok{$\begin{pmatrix} 2 & 3\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 120 & 100\\ 60 & 80 \end{pmatrix}=\begin{pmatrix} 420 & 440\\ 300 & 280 \end{pmatrix}$（行と列をなぞる）}
+×は、同じ場所の数をかけただけです。ソラさんの合計に、みかんの値段が入っていません。表計算で \texttt{=A2*C2} をコピーしたときや、Python の \texttt{*} も、この×になります。
+\end{tsumazuki}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 大きさのちがう行列をたす}
+\raggedright\bkng{2×2 行列と2×3 行列をたして、3列めはそのまま書く}
+\bkok{大きさがちがう行列は、たせない}
+3列めには、たす相手がありません。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ ベクトルを左に書く}
+\raggedright\bkng{合計を $\vec p\,N$ と書く}
+\bkok{$N\vec p$（行列が左、ベクトルが右）}
+$\vec p$ は2×1 行列なので、$(2\times1)(2\times2)$ はかけられません。
+\end{tsumazuki}
+\end{minipage}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviibbox{写真は、数の行列}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+カメラの中には、光を電気に変える小さなセンサー（画素）が、たてと横に何百万個も並んでいます。1つの画素は、光の強さを0（まっ黒）から255（まっ白）までの数にします。だから、白黒の写真は数の行列です（1-13 の「画面は点の表」）。写真全体を明るくするのは行列の実数倍、2まいの写真を重ねるのは行列の和です（255をこえた所は255にする）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.31\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \row [count=\r] in {{40,40,200,40,40},{40,200,200,200,40},{200,200,200,200,200},{40,200,120,200,40},{40,200,120,200,40}} {
+    \foreach \v [count=\c] in \row {
+      \pgfmathtruncatemacro\g{100-\v/2.55}
+      \fill[bkInk!\g!white] ({6.4*\c},{-6.4*\r}) rectangle ++(6.1,6.1);
+      \pgfmathtruncatemacro\tc{\v>128 ? 1 : 0}
+      \ifnum\tc=1 \node[font=\sffamily\footnotesize, text=bkInk, inner sep=0pt] at ({6.4*\c+3.05},{-6.4*\r+3.05}) {\v};
+      \else \node[font=\sffamily\footnotesize, text=white, inner sep=0pt] at ({6.4*\c+3.05},{-6.4*\r+3.05}) {\v};\fi}}
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviibbox{栄養の計算：行列×行列}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+100\,g あたりの栄養は、ごはんが156\,kcal・たんぱく質2.5\,g、卵（生）が142\,kcal・12.2\,g です（日本食品標準成分表 八訂）。朝食と昼食で食べた量（100\,g 単位）の行列と、栄養の行列の積が、食事ごとの栄養の行列になります。学校給食の献立も、こうした計算で、栄養がたりるように決めています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\centering
+$\begin{pmatrix} 1.5 & 0.5\\ 2 & 1 \end{pmatrix}\begin{pmatrix} 156 & 2.5\\ 142 & 12.2 \end{pmatrix}$\par\vspace{2pt}
+$=\begin{pmatrix} 305 & 9.85\\ 454 & 17.2 \end{pmatrix}$\par\vspace{3pt}
+{\footnotesize 行は朝食・昼食。左の列はごはん・卵、右の列は kcal・g。}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviibbox{カメラのレンズと光の道すじ}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+レンズを通る光の道すじは、「軸からの高さ $y$」と「軸とのかたむき $\theta$」の2つの数の組で表せます。光がまっすぐ進む区間も、レンズを通るところも、それぞれ1つの2×2 行列をこの組にかけて計算できます。何まいものレンズを組み合わせたカメラのレンズは、行列を次々にかけて計算します（7-3・物理 波-12）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkGray, line width=0.5pt, dashed] (0,0) -- (58,0);
+  \node[kviib lab, anchor=west, text=bkGray] at (58.5,0) {軸};
+  \filldraw[fill=bkBlue!15, draw=bkBlue!70!black, line width=0.8pt] (30,0) ellipse (2.4 and 13);
+  \draw[bkRed, line width=1.1pt] (2,4) -- (30,9) -- (56,-3.4);
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=2.2mm]}] (2,4) -- (16,6.5);
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (8,0) -- (8,5.07);
+  \node[kviib lab, anchor=west] at (8.8,1.8) {$y$};
+  \draw[bkInk, line width=0.5pt] (20,7.2) -- (25,7.2);
+  \draw[bkInk, line width=0.5pt] (24,7.2) arc (0:10:4);
+  \node[kviib lab, anchor=north west] at (19,6.6) {$\theta$};
+  \node[kviib lab, anchor=south] at (30,13.5) {レンズ};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+
+\begin{butsuri}
+\kviibbox{ロボットの腕も、行列で計算する}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+1-13 では「ロボットのうでのうごきも、コンピュータがかずの表でけいさんしている」と書きました。2つの関節をもつロボットの腕（4-7）では、肩とひじの関節が回る速さを2つ並べたベクトルに、ある2×2 行列をかけると、手の動く速度（横とたての2つの数）が出ます。この行列はヤコビ行列とよばれ、7-2 で実際に計算します。関節が6つある産業用ロボットでは、6×6 の行列になります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (-8,-3) rectangle (8,0);
+  \draw[bkInk, line width=0.8pt] (-8,0) -- (8,0);
+  \draw[bkOrange!80!black, line width=3.2pt, line cap=round] (0,0) -- ++(30:22) coordinate (E);
+  \draw[bkBlue!80!black, line width=3.2pt, line cap=round] (E) -- ++(75:16) coordinate (H);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (1.6) (E) circle (1.6);
+  \fill[bkInk] (H) circle (1.3);
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=2.2mm]}] (H) -- ++(165:10);
+  \node[kviib lab, anchor=north] at (0,-3.5) {肩};
+  \node[kviib lab, anchor=west] at ([xshift=2mm]E) {ひじ};
+  \node[kviib lab, anchor=south, text=bkRed!80!black] at ([shift={(-6,3)}]H) {手の速度};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 次の行列 $D$ について答えましょう\mbox{（\bkreidairef{1}）}。
+\[ D=\begin{pmatrix} 5 & -3\\ 0 & 2\\ 8 & 1 \end{pmatrix} \]
+（1）何行何列の行列ですか。\newline（2）$d_{21}$、$d_{12}$、$d_{31}$ を答えましょう。
+\bkpans{（1）\nobreak 3行2列（3×2 行列）。（2）\nobreak $d_{21}=0$、$d_{12}=-3$、$d_{31}=8$。}
+
+\bkproblem 次の $P$、$Q$ について、$P+Q$、$P-Q$、$2P-3Q$ を求めましょう。$2P-3Q$ は、先に $2P$ と $3Q$ を作ってからひきます\mbox{（\bkreidairef{2}）}。
+\[ P=\begin{pmatrix} 4 & -1\\ 2 & 3 \end{pmatrix},\qquad Q=\begin{pmatrix} 1 & 2\\ -2 & 5 \end{pmatrix} \]
+\bkpans{$P+Q$ は1行め $(5,\ 1)$、2行め $(0,\ 8)$。$P-Q$ は1行め $(3,\ -3)$、2行め $(4,\ -2)$。$2P$ は1行め $(8,\ -2)$、2行め $(4,\ 6)$、$3Q$ は1行め $(3,\ 6)$、2行め $(-6,\ 15)$ で、$2P-3Q$ は1行め $(5,\ -8)$、2行め $(10,\ -9)$。}
+
+\bkproblem 次の積を求めましょう\mbox{（\bkreidairef{3}）}。
+\[ \text{（1）}\begin{pmatrix} 4 & 1\\ 3 & 2 \end{pmatrix}\begin{pmatrix} 2\\ 5 \end{pmatrix}\qquad \text{（2）}\begin{pmatrix} -2 & 1\\ 0 & 3 \end{pmatrix}\begin{pmatrix} 3\\ -4 \end{pmatrix} \]
+\bkpans{（1）\nobreak $(13,\ 16)$。（2）\nobreak $(-10,\ -12)$。}
+
+\bkproblem 3人が、りんごとみかんを（3個、1個）、（0個、5個）、（2個、2個）買います。りんご1個150円、みかん1個40円のとき、3人の合計を行列×ベクトルで求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$3\times150+1\times40=490$、$0\times150+5\times40=200$、$2\times150+2\times40=380$。490円、200円、380円。}
+
+\bkproblem 次の連立方程式を、$A\vec x=\vec b$ の形に書きましょう（$x$、$y$（、$z$）の順）\mbox{（\bkreidairef{5}）}。\newline（1）$2x-3y=1$、\ $x=4y-2$\newline（2）$x-z=2$、\ $2y+z=7$、\ $x+y=5$
+\bkpans{（1）\nobreak $x=4y-2$ を $x-4y=-2$ にする。$A$ は1行め $(2,\ -3)$、2行め $(1,\ -4)$、$\vec b=(1,\ -2)$。（2）\nobreak $A$ は1行め $(1,\ 0,\ -1)$、2行め $(0,\ 2,\ 1)$、3行め $(1,\ 1,\ 0)$、$\vec b=(2,\ 7,\ 5)$。}
+
+\bkproblem （1）次の積を求めましょう。
+\[ \begin{pmatrix} 3 & 1\\ 2 & 0 \end{pmatrix}\begin{pmatrix} 1 & 4\\ 2 & -1 \end{pmatrix} \]
+（2）4×2 行列と2×3 行列の積は、かけられますか。かけられるなら、答えの大きさを答えましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{（1）\nobreak 1行め $(5,\ 11)$、2行め $(2,\ 8)$。（2）\nobreak かけられて、4×3 行列。}
+
+\bkproblem 次の行列 $E$ の転置を求めましょう。また、行列 $F$ が対称な行列になるのは、$a$ がいくつのときですか\mbox{（\bkreidairef{8}）}。
+\[ E=\begin{pmatrix} 1 & 4 & 0\\ -2 & 3 & 6 \end{pmatrix},\qquad F=\begin{pmatrix} 7 & a\\ 3 & 1 \end{pmatrix} \]
+\bkpans{$E^{\mathsf T}$ は1行め $(1,\ -2)$、2行め $(4,\ 3)$、3行め $(0,\ 6)$。$F$ が対称になるのは $a=3$ のとき。}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem 朝食にごはん200\,g と卵50\,g、夕食にごはん150\,g と卵100\,g を食べました。100\,g あたりの栄養は、ごはんが156\,kcal・たんぱく質2.5\,g、卵が142\,kcal・12.2\,g です。食べた量を100\,g 単位にして（200\,g は2、50\,g は0.5）行列を作り、栄養の行列との積で、朝食と夕食のエネルギーとたんぱく質を求めましょう\mbox{（\bkreidairef{6}・\bkreidairef{7}）}。
+\bkpans{食べた量の行列は1行め $(2,\ 0.5)$、2行め $(1.5,\ 1)$。積は1行め $(383,\ 11.1)$、2行め $(376,\ 15.95)$。朝食 383\,kcal・11.1\,g、夕食 376\,kcal・15.95\,g。}
+
+\bkproblem 文房具店で、ノートが1さつ $x$ 円、ペンが1本 $y$ 円、消しゴムが1個 $z$ 円です。ノート2さつとペン1本で380円、ペン2本と消しゴム1個で280円、ノート1さつと消しゴム2個で300円でした。\newline（1）連立方程式を $A\vec x=\vec b$ の形に書きましょう\mbox{（\bkreidairef{5}）}。\newline（2）$x=140$、$y=100$、$z=80$ が答えであることを、$A$ にかけて確かめましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{（1）\nobreak $A$ は1行め $(2,\ 1,\ 0)$、2行め $(0,\ 2,\ 1)$、3行め $(1,\ 0,\ 2)$、$\vec x=(x,\ y,\ z)$、$\vec b=(380,\ 280,\ 300)$。（2）\nobreak $2\times140+1\times100+0\times80=380$、$0\times140+2\times100+1\times80=280$、$1\times140+0\times100+2\times80=300$ で、右辺と同じ。}
+
+\bkproblem \begin{minipage}[t]{0.44\linewidth}\vspace{0pt}\raggedright
+右のプログラムを実行すると、何が表示されますか。また、\texttt{A @ B} と \texttt{B @ A} は同じですか\mbox{（\bkreidairef{9}）}。
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}\vspace{0pt}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[1, 2],
+              [0, 1]])
+B = np.array([[3, 0],
+              [1, 2]])
+print(A @ B)
+print(B @ A)
+print(A.T)
+\end{bkcode}
+\end{minipage}
+\bkpans{\texttt{A @ B} は \mbox{\texttt{[[5 4]}\enspace\texttt{[1 2]]}}、\texttt{B @ A} は \mbox{\texttt{[[3 6]}\enspace\texttt{[1 4]]}} で、同じではない（かける順で変わる）。\texttt{A.T} は \mbox{\texttt{[[1 0]}\enspace\texttt{[2 1]]}}。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 数の表を行列として読み、成分 $a_{ij}$ を言える。和・差・実数倍を計算できる。\bkfurref{bk:7-1:gyoretsu}
+\item 行列×ベクトル・行列×行列を、行と列をなぞって計算できる。\bkfurref{bk:7-1:kakeru}
+\item 連立方程式を $A\vec x=\vec b$ の形に書き、表計算や Python で確かめられる。\bkfurref{bk:7-1:renritsu}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{表のまま計算すると、1000人分の買い物も1行で書けるね。次は、この行列が「形を変える機械」になるよ。}

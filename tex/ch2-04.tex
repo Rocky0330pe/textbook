@@ -1,0 +1,935 @@
+%% 2-4 分数と小数の計算  第7回：題名を変えた章（比は 2-5 へ移した。2-4 では比を扱わない）  % noruby
+%% 第11回（X10）：分数のわり算に「⑥ なぜ逆数をかけるの？（分数の中に分数）」と「⑦ いろいろなわり算と確かめ」を足した。  % noruby
+%%   ⑤ の数直線の説明は残し、「逆数」という名前は ⑥ で初めて出す。ページ制限がなくなったので、各節に「なぜ」の段と図を足した。  % noruby
+%% 分数はわり算の答え → 約分・通分 → たし算・ひき算 → かけ算 → わり算（⑤数直線・⑥分数の中に分数・⑦いろいろな数）→ 0と1のあいだの数。  % noruby
+%% 帯分数は紹介だけで、計算は仮分数。文字は使わない（2-11 から）。  % noruby
+
+%% ---------------- この章だけで使う絵の部品（\bkiie…） ----------------
+\makeatletter
+% ピザの1切れ（扇形）  \bkiiesector{(x,y)}{半径}{何番目(1〜)}{分ける数}{色}   1番目は真上から時計回り  % noruby
+\newcommand\bkiiesector[5]{\begin{scope}[shift={#1}]
+  \fill[#5] (0,0) -- ({90-360*(#3-1)/#4}:#2) arc ({90-360*(#3-1)/#4}:{90-360*#3/#4}:#2) -- cycle;
+\end{scope}}
+% ピザのふちと切れ目  \bkiiepizzaline{(x,y)}{半径}{分ける数}  % noruby
+\newcommand\bkiiepizzaline[3]{\begin{scope}[shift={#1}]
+  \foreach \bkiie@k in {1,...,#3} {\draw[bkInk!80, line width=0.8pt] (0,0) -- ({90-360*\bkiie@k/#3}:#2);}
+  \draw[bkYellow!60!black, line width=1.3pt] (0,0) circle (#2);
+\end{scope}}
+% 長さ1のテープを n 等分して k こぬる  \bkiietape{(x,y)}{長さ}{n}{k}{色}   高さ 6 mm  % noruby
+\newcommand\bkiietape[5]{\begin{scope}[shift={#1}]
+  \fill[#5!15] (0,0) rectangle (#2,6);
+  \ifnum#4>0 \fill[#5!70] (0,0) rectangle ({#2*#4/#3},6);\fi
+  \ifnum#3>1 \foreach \bkiie@k in {1,...,\numexpr#3-1\relax} {\draw[#5!80!black, line width=0.5pt] ({#2*\bkiie@k/#3},0) -- ({#2*\bkiie@k/#3},6);}\fi
+  \draw[#5!80!black, line width=0.8pt] (0,0) rectangle (#2,6);
+\end{scope}}
+% 歯車（2-5 の \bkiifgear と同じ形。歯をつないだ1つの閉じた形）  % noruby
+%   \bkiiegear{(中心)}{歯の数}{モジュール mm}{1つの歯の向き（度）}{色}   基準円の半径＝モジュール×歯の数÷2  % noruby
+%   かみ合わせ：モジュールを同じにし、中心のあいだ＝モジュール×(歯の数1＋歯の数2)÷2。相手の歯の向きは 180＋(360÷歯の数)÷2  % noruby
+\newcommand\bkiiegear[5]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bkiie@R{#3*#2/2}\pgfmathsetmacro\bkiie@A{\bkiie@R+#3}%
+  \pgfmathsetmacro\bkiie@F{\bkiie@R-1.25*#3}\pgfmathsetmacro\bkiie@P{360/#2}%
+  \pgfmathsetmacro\bkiie@T{27*#3/\bkiie@A}\pgfmathsetmacro\bkiie@B{54*#3/\bkiie@F}%
+  \filldraw[fill=#5!35, draw=#5!80!black, line width=0.5pt, line join=round]
+    (#4-\bkiie@B:\bkiie@F)
+    \foreach \bkiie@k [evaluate=\bkiie@k as \bkiie@c using #4+\bkiie@k*\bkiie@P] in {0,...,\numexpr#2-1\relax}{
+      -- (\bkiie@c-\bkiie@B:\bkiie@F) -- (\bkiie@c-\bkiie@T:\bkiie@A) -- (\bkiie@c+\bkiie@T:\bkiie@A) -- (\bkiie@c+\bkiie@B:\bkiie@F)
+      arc[start angle=\bkiie@c+\bkiie@B, end angle=\bkiie@c+\bkiie@P-\bkiie@B, radius=\bkiie@F]} -- cycle;
+  \filldraw[fill=white, draw=#5!80!black, line width=0.5pt] (0,0) circle ({max(0.9,0.22*\bkiie@R)});
+  \fill[#5!80!black] (0,0) circle (0.55);
+\end{scope}}
+% ぐの のったピザ（はてな？用）  \bkiiepizzatop{(x,y)}{半径}  % noruby
+\newcommand\bkiiepizzatop[2]{\begin{scope}[shift={#1}]
+  \fill[bkStem!45] (0,0) circle (#2);
+  \fill[bkYellow!40] (0,0) circle ({#2*0.86});
+  \foreach \bkiie@a/\bkiie@d in {25/0.55,110/0.52,205/0.58,300/0.5,160/0.22,345/0.25} {\fill[bkAppleRed!80] (\bkiie@a:{#2*\bkiie@d}) circle ({#2*0.12});}
+  \foreach \bkiie@a/\bkiie@d in {65/0.66,175/0.66,250/0.7,330/0.68,10/0.8} {\fill[bkLeaf] (\bkiie@a:{#2*\bkiie@d}) circle ({#2*0.065});}
+\end{scope}}
+% ことばの式を枠で囲んで中央に置く  \bkiieshiki{ことばの式}  % noruby
+\newcommand\bkiieshiki[1]{\par\addvspace{3pt}\noindent\hfill
+  \tikz[baseline=(s.base)]\node[draw=bkTheme, line width=1pt, fill=white, rounded corners=2mm,
+    inner xsep=5mm, inner ysep=1.8mm, font=\sffamily\bfseries] (s) {#1};\hfill\null\par\addvspace{4pt}}
+% 第11回：説明の段の見出し（丸数字＋太字の1行）  \bkiiestep{番号}{見出し}  % noruby
+\newcommand\bkiiestep[2]{\par\addvspace{6pt}\Needspace{4\baselineskip}\noindent
+  {\bkcircled[bkOrange]{#1}\enspace\sffamily\bfseries\color{bkOrange!75!black}#2}\par\nobreak\vspace{2pt}}
+% 第11回：クッキーをもらう子ども（わり算のきまりの図）  \bkiiekidcookie{(x,y)}  子ども1人とクッキー3まい  % noruby
+\newcommand\bkiiekidcookie[2]{\begin{scope}[shift={#1}]
+  \bkkid{(0,0)}{13}{#2}{bkHair}
+  \bkcookie{(6.2,2.3)}{2.1}\bkcookie{(6.2,6.9)}{2.1}\bkcookie{(6.2,11.5)}{2.1}
+\end{scope}}
+\makeatother
+
+\bkchapter{2}{4}{\R{分数}{ぶん|すう}と\R{小数}{しょう|すう}の\R{計算}{けい|さん}}{\bklevelrange{1}{2}}{\R{分数}{ぶん|すう}と\R{小数}{しょう|すう}の\R{計算}{けい|さん}}
+\bkmichishirube{1-14,1-15,1-16,2-1,2-3}{2-5,2-9,2-12,2-15}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace わり\R{算}{ざん}の\R{答}{こた}えを\R{分数}{ぶん|すう}で\R{書}{か}き、\R{約分}{やく|ぶん}・\R{通分}{つう|ぶん}ができる。
+\item \bklevel{2}\enspace \R{分数}{ぶん|すう}のたし\R{算}{ざん}・ひき\R{算}{ざん}・かけ\R{算}{ざん}・わり\R{算}{ざん}ができ、わり\R{算}{ざん}で\R{逆数}{ぎゃく|すう}をかけるわけを\R{説明}{せつ|めい}できる。
+\item \bklevel{2}\enspace 0と1のあいだの\R{数}{かず}をかけた・わった\R{答}{こた}えの\R{大}{おお}きさがわかる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.57\linewidth}
+ピザが2\R{枚}{まい}あります。3\R{人}{にん}で\R{同}{おな}じ\R{大}{おお}きさずつ\R{分}{わ}けると、1\R{人分}{にん|ぶん}は\R{何枚}{なん|まい}かな？\par
+\R{式}{しき}は $2\div3$。でも、1\R{人分}{にん|ぶん}は1\R{枚}{まい}より\R{少}{すく}なくて、\R{九九}{く|く}ではわりきれません。こんなわり\R{算}{ざん}の\R{答}{こた}えは、どう\R{書}{か}けばいいのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiiepizzatop{(12,26)}{10}
+  \bkiiepizzatop{(38,26)}{10}
+  \foreach \x/\c in {5/bkRoute2,25/bkRoute4,45/bkRoute5} {
+    \bkkid{(\x,0)}{13}{\c}{bkHair}
+    \node[font=\sffamily\bfseries\large, text=bkYellow!80!black] at (\x+5.5,10) {？};}
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{2pt}
+{\small \R{第}{だい}1\R{巻}{かん}の\R{最後}{さい|ご}のカード「ピザを3\R{人}{にん}で\R{分}{わ}けると？」の\R{続}{つづ}きです。}
+\end{hatena}
+
+\begin{omoidasou}
+\bkrecall{1-14}{わり\R{算}{ざん}は、\R{同}{おな}じ\R{数}{かず}ずつ\R{分}{わ}けた1つ\R{分}{ぶん}を\R{求}{もと}める。0ではわれない。$6\div2=3$ なら $3\times2=6$。}
+\bkrecall{1-15}{$7\div3=2$ あまり1。3こずつ2つ\R{分}{ぶん}とれて、1こあまる。}
+\bkrecall{1-16}{\R{同}{おな}じ\R{大}{おお}きさに2つに\R{分}{わ}けた1つ\R{分}{ぶん}が $\dfrac{1}{2}$、4つに\R{分}{わ}けた1つ\R{分}{ぶん}が $\dfrac{1}{4}$。}
+\bkrecall{2-1}{0.1は1を10に\R{分}{わ}けた1つ\R{分}{ぶん}。0.01は1を100に\R{分}{わ}けた1つ\R{分}{ぶん}。}
+\bkrecall{2-3}{\R{単位}{たん|い}をそろえてからたす。1あたりの\R{量}{りょう}は、わり\R{算}{ざん}で\R{求}{もと}める。}
+\end{omoidasou}
+
+%% ---------------- やってみよう ----------------
+
+\begin{yattemiyou}[\R{紙}{かみ}のピザを\R{分}{わ}けてみよう]
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item \R{紙}{かみ}で\R{同}{おな}じ\R{大}{おお}きさの\R{円}{えん}を2\R{枚}{まい}つくり、それぞれ\R{同}{おな}じ\R{大}{おお}きさに3つに\R{切}{き}ろう。
+\item 3\R{人}{にん}に、\R{同}{おな}じ\R{数}{かず}ずつくばろう。1\R{人分}{にん|ぶん}は\R{何切}{なん|き}れかな？
+\item \R{電卓}{でん|たく}で $2\div3$ を\R{計算}{けい|さん}しよう。\R{表示}{ひょう|じ}はどうなるかな？
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!70, rounded corners=2mm] (0,0) rectangle (40,46);
+  \bkdisplay{(3,32)}{34}{0.6666666}
+  \foreach \i in {0,...,3} {\foreach \j in {0,...,3} {\fill[white, rounded corners=0.8mm] (4+\i*8.5,3+\j*6.8) rectangle ++(6.5,5);}}
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent 1\R{枚}{まい}を3つに\R{切}{き}った1\R{切}{き}れずつ、2\R{切}{き}れもらえました。\R{電卓}{でん|たく}では「0.6666666」と、6がずっと\R{続}{つづ}いてしまいます（\R{画面}{が|めん}に\R{入}{はい}りきらないので、とちゅうで\R{切}{き}れています）。
+
+\bkfukidashi{sora}{2\R{切}{き}れなのはわかるけど、「\R{何枚}{なん|まい}」かを1つの\R{数}{かず}で\R{言}{い}いたいな。}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{分数}{ぶん|すう}は、わり\R{算}{ざん}の\R{答}{こた}え}
+
+\leavevmode\label{bk:2-4:wari}ピザ1\R{枚}{まい}を3つに\R{分}{わ}けた1\R{切}{き}れは、1\R{枚}{まい}の $\dfrac{1}{3}$（3\R{分}{ぶん}の1）です。1\R{人}{にん}は、2\R{枚}{まい}のピザのそれぞれから1\R{切}{き}れずつもらうので、$\dfrac{1}{3}$ が2つで、$\dfrac{2}{3}$（3\R{分}{ぶん}の2）\R{枚}{まい}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx in {12,40} {
+    \bkiiesector{(\cx,0)}{11}{1}{3}{bkRoute2!55}\bkiiesector{(\cx,0)}{11}{2}{3}{bkRoute4!55}\bkiiesector{(\cx,0)}{11}{3}{3}{bkRoute5!45}
+    \bkiiepizzaline{(\cx,0)}{11}{3}}
+  \draw[bk arrow, bkGray] (56,0) -- (68,0);
+  \fill[bkYellowBg] (86,0) circle (11);
+  \bkiiesector{(86,0)}{11}{1}{3}{bkRoute2!55}\bkiiesector{(86,0)}{11}{2}{3}{bkRoute2!55}
+  \bkiiepizzaline{(86,0)}{11}{3}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkRoute2!80!black, align=left] at (100,0) {1\R{人分}{にん|ぶん}\\$\dfrac{2}{3}$\R{枚}{まい}};
+  \node[anchor=north, font=\sffamily\footnotesize] at (26,-12.5) {1\R{枚}{まい}ずつ3つに\R{分}{わ}ける（\R{色}{いろ}は3\R{人}{にん}）};
+  \node[anchor=north, font=\sffamily\footnotesize] at (86,-12.5) {1\R{人}{にん}が\R{集}{あつ}めた2\R{切}{き}れ};
+\end{tikzpicture}
+\end{bkfigure}
+
+$2\div3$ の\R{答}{こた}えが $\dfrac{2}{3}$ です。わられる\R{数}{かず}の2が\textbf{\R{分子}{ぶん|し}}（\R{線}{せん}の\R{上}{うえ}）、わる\R{数}{かず}の3が\textbf{\R{分母}{ぶん|ぼ}}（\R{線}{せん}の\R{下}{した}）になります。\bkidx{ぶんすう}{\R{分数}{ぶん|すう}}つまり、\R{分数}{ぶん|すう}の\R{横}{よこ}の\R{線}{せん}は「÷」と\R{同}{おな}じ\R{働}{はたら}きをしています。
+\bkiieshiki{2÷3＝$\dfrac{2}{3}$\qquad 1÷4＝$\dfrac{1}{4}$\qquad 7÷3＝$\dfrac{7}{3}$\qquad 6÷2＝$\dfrac{6}{2}$＝3}
+\R{最後}{さい|ご}の $\dfrac{6}{2}$ のように、わりきれるときは、\R{分数}{ぶん|すう}のままにしないで $6\div2=3$ と\R{計算}{けい|さん}できます。
+
+\textbf{もう1つの\R{見方}{み|かた}（テープで）}\quad \qty{2}{m}のリボンを3\R{人}{にん}で\R{等}{ひと}しく\R{分}{わ}けても、\R{同}{おな}じことがわかります。\R{下}{した}の\R{図}{ず}のように、\qty{1}{m}を3つに\R{分}{わ}けた1つ\R{分}{ぶん}が $\dfrac{1}{3}$\,m です。\qty{2}{m}の\R{中}{なか}には $\dfrac{1}{3}$\,m が6つあるので、3\R{人}{にん}で\R{分}{わ}けると1\R{人}{にん}2つずつ。1\R{人分}{にん|ぶん}は $\dfrac{2}{3}$\,m です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\c in {0/bkRoute2,1/bkRoute4,2/bkRoute5} {\fill[\c!45] (\k*36,0) rectangle (\k*36+36,7);}
+  \foreach \k in {1,...,5} {\draw[bkInk!60, line width=0.5pt] (\k*18,0) -- (\k*18,7);}
+  \draw[bkInk, line width=1.4pt] (36,0) -- (36,7) (72,0) -- (72,7);
+  \draw[bkInk!80, line width=0.9pt] (0,0) rectangle (108,7);
+  \draw[bkInk!80, line width=0.9pt] (54,-0.8) -- (54,7.8);
+  \draw[decorate, decoration={brace, amplitude=3pt}, line width=0.7pt] (0,9) -- (54,9) node[midway, above=2mm, font=\sffamily\footnotesize] {\qty{1}{m}};
+  \draw[decorate, decoration={brace, amplitude=3pt}, line width=0.7pt] (54,9) -- (108,9) node[midway, above=2mm, font=\sffamily\footnotesize] {\qty{1}{m}};
+  \foreach \k in {0,...,5} {\node[font=\footnotesize] at (\k*18+9,-5) {$\tfrac{1}{3}$};}
+  \foreach \k/\c in {0/bkRoute2,1/bkRoute4,2/bkRoute5} {\node[font=\sffamily\bfseries\footnotesize, text=\c!80!black] at (\k*36+18,3.5) {$\dfrac{2}{3}$\,m};}
+\end{tikzpicture}
+\bkfigcaption{\R{太}{ふと}い\R{線}{せん}で3\R{人分}{にん|ぶん}に\R{分}{わ}けた。1\R{人分}{にん|ぶん}は $\dfrac{1}{3}$\,m が2つで $\dfrac{2}{3}$\,m。}
+\end{bkfigure}
+
+\R{電卓}{でん|たく}では $2\div3=0.6666\cdots$ と\R{終}{お}わりませんが（わけは2-9で\R{学}{まな}びます）、\R{分数}{ぶん|すう}ならぴったり\R{書}{か}けます。\bkhatenaref の\R{答}{こた}えは $\dfrac{2}{3}$ \R{枚}{まい}です。\R{反対}{はん|たい}に、\R{分数}{ぶん|すう}を\R{小数}{しょう|すう}にするには、\R{分子}{ぶん|し}÷\R{分母}{ぶん|ぼ}を\R{計算}{けい|さん}します（$\dfrac{1}{4}=1\div4=0.25$）。
+
+\textbf{1より\R{大}{おお}きい\R{分数}{ぶん|すう}}\quad ピザ7\R{枚}{まい}を3\R{人}{にん}で\R{分}{わ}けると、1\R{人分}{にん|ぶん}は $7\div3=\dfrac{7}{3}$ \R{枚}{まい}です。$\dfrac{3}{3}$ や $\dfrac{7}{3}$ のように、\R{分子}{ぶん|し}が\R{分母}{ぶん|ぼ}と\R{同}{おな}じか、\R{分母}{ぶん|ぼ}より\R{大}{おお}きい\R{分数}{ぶん|すう}を\textbf{\R{仮分数}{か|ぶん|すう}}といいます。$\dfrac{3}{3}$ は $3\div3=1$ なので、ちょうど1です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\n in {0/3,24/3,48/1} {
+    \fill[bkYellowBg] (\cx,0) circle (9.5);
+    \foreach \k in {1,...,\n} {\bkiiesector{(\cx,0)}{9.5}{\k}{3}{bkRoute2!55}}
+    \bkiiepizzaline{(\cx,0)}{9.5}{3}}
+  \node[font=\sffamily\bfseries\small] at (0,-13) {1};
+  \node[font=\sffamily\bfseries\small] at (24,-13) {1};
+  \node[font=\small] at (48,-13.5) {$\dfrac{1}{3}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}
+$\dfrac{1}{3}$ \R{枚}{まい}の\R{切}{き}れが7\R{切}{き}れ。3\R{切}{き}れで1\R{枚}{まい}になるので、$7\div3=2$ あまり1（1-15）。1\R{枚}{まい}が2つと、$\dfrac{1}{3}$ \R{枚}{まい}が1つです。
+\end{minipage}
+\par\vspace{2pt}
+これを $\dfrac{7}{3}=2\dfrac{1}{3}$（2と3\R{分}{ぶん}の1）とも\R{書}{か}きます。この\R{書}{か}き\R{方}{かた}を\textbf{\R{帯分数}{たい|ぶん|すう}}といいます。\R{反対}{はん|たい}に\R{帯分数}{たい|ぶん|すう}を\R{仮分数}{か|ぶん|すう}にするには、1が $\dfrac{3}{3}$ なので、2は $\dfrac{6}{3}$。それに $\dfrac{1}{3}$ をたして $2\dfrac{1}{3}=\dfrac{6}{3}+\dfrac{1}{3}=\dfrac{7}{3}$ です。\R{帯分数}{たい|ぶん|すう}は\R{大}{おお}きさがすぐわかる\R{書}{か}き\R{方}{かた}ですが、\R{計算}{けい|さん}するときは\R{仮分数}{か|ぶん|すう}にしてから\R{使}{つか}います。
+
+\begin{column}{\R{弦}{げん}の\R{長}{なが}さと\R{音}{おと}の\R{高}{たか}さ}
+ギターの\R{弦}{げん}をおさえて、ふるえる\R{長}{なが}さを $\dfrac{1}{2}$ にすると、\R{音}{おと}は1オクターブ\R{高}{たか}くなります。$\dfrac{2}{3}$ にすると、ドの\R{音}{おと}がソの\R{音}{おと}になります。2500\R{年}{ねん}ほど\R{前}{まえ}のギリシャの\R{人}{ひと}たちは、きれいにひびく\R{音}{おと}の\R{長}{なが}さが、かんたんな\R{分数}{ぶん|すう}になっていることを\R{見}{み}つけました。
+\end{column}
+
+\bksubsection{2}{\R{大}{おお}きさの\R{同}{おな}じ\R{分数}{ぶん|すう}：\R{約分}{やく|ぶん}と\R{通分}{つう|ぶん}}
+
+\leavevmode\label{bk:2-4:yaku}\noindent\begin{minipage}[c]{0.52\linewidth}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiietape{(0,20)}{56}{2}{1}{bkBlue}
+  \bkiietape{(0,10)}{56}{4}{2}{bkBlue}
+  \bkiietape{(0,0)}{56}{6}{3}{bkBlue}
+  \foreach \y/\t in {20/{\dfrac{1}{2}},10/{\dfrac{2}{4}},0/{\dfrac{3}{6}}} {\node[anchor=west, font=\small] at (58,\y+3) {$\t$};}
+  \draw[bkRed, line width=0.9pt, dash pattern=on 2pt off 1.5pt] (28,-2) -- (28,28);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+$\dfrac{1}{2}$、$\dfrac{2}{4}$、$\dfrac{3}{6}$ は、ぬった\R{長}{なが}さが\R{同}{おな}じです。\R{上}{うえ}のテープの1\R{切}{き}れを2つに\R{切}{き}ると、2\R{段}{だん}めのテープになります。
+\end{minipage}
+
+\par\vspace{2pt}
+\R{切}{き}れを2つずつに\R{切}{き}ると、\R{全部}{ぜん|ぶ}の\R{切}{き}れの\R{数}{かず}（\R{分母}{ぶん|ぼ}）も、ぬった\R{切}{き}れの\R{数}{かず}（\R{分子}{ぶん|し}）も2\R{倍}{ばい}になります。でも、ぬった\R{部分}{ぶ|ぶん}の\R{長}{なが}さは\R{変}{か}わりません。だから $\dfrac{1}{2}=\dfrac{1\times2}{2\times2}=\dfrac{2}{4}$ です。3つずつに\R{切}{き}れば $\dfrac{3}{6}$ です。
+\begin{taisetsu}
+\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}に\R{同}{おな}じ\R{数}{かず}をかけても、\R{同}{おな}じ\R{数}{かず}でわっても、\R{分数}{ぶん|すう}の\R{大}{おお}きさは\R{変}{か}わらない（0はのぞく）。
+\end{taisetsu}
+
+\textbf{\R{約分}{やく|ぶん}}\quad \R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{同}{おな}じ\R{数}{かず}でわって、\R{小}{ちい}さな\R{数}{かず}の\R{分数}{ぶん|すう}にすることを\textbf{\R{約分}{やく|ぶん}}といいます。\bkidx{やくぶん}{\R{約分}{やく|ぶん}}たとえば $\dfrac{12}{18}$ は、12も18も6でわりきれるので、$\dfrac{12\div6}{18\div6}=\dfrac{2}{3}$ です。このように\R{両方}{りょう|ほう}をわりきれる\R{数}{かず}を\textbf{\R{公約数}{こう|やく|すう}}といいます。
+
+では、どの\R{数}{かず}でわればよいかは、どう\R{見}{み}つけるのでしょう。1と、その\R{数}{かず}\R{自身}{じ|しん}でしかわりきれない\R{数}{かず}（1はのぞく。2、3、5、7、11…）を\textbf{\R{素数}{そ|すう}}といいます。\bkidx{そすう}{\R{素数}{そ|すう}}\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を、\R{素数}{そ|すう}のかけ\R{算}{ざん}に\R{分}{わ}けてみます。\R{小}{ちい}さい\R{素数}{そ|すう}（2、3、5…）から\R{順}{じゅん}に、わりきれる\R{間}{あいだ}わっていきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{fz/.style={font=\small, inner sep=1.5pt}, fp/.style={font=\small\bfseries, text=bkBlue!80!black, inner sep=1.5pt}}
+  % 12 = 2×2×3  % noruby
+  \node[fz] (a0) at (0,18) {$12$};
+  \node[fp] (a1) at (-6,9) {$2$};  \node[fz] (a2) at (6,9) {$6$};
+  \node[fp] (a3) at (0,0) {$2$};   \node[fp] (a4) at (12,0) {$3$};
+  \draw[bkInk!60, line width=0.6pt] (a0) -- (a1) (a0) -- (a2) (a2) -- (a3) (a2) -- (a4);
+  \node[anchor=west, font=\small] at (20,9) {$12=2\times2\times3$};
+  % 18 = 2×3×3  % noruby
+  \begin{scope}[shift={(68,0)}]
+  \node[fz] (b0) at (0,18) {$18$};
+  \node[fp] (b1) at (-6,9) {$2$};  \node[fz] (b2) at (6,9) {$9$};
+  \node[fp] (b3) at (0,0) {$3$};   \node[fp] (b4) at (12,0) {$3$};
+  \draw[bkInk!60, line width=0.6pt] (b0) -- (b1) (b0) -- (b2) (b2) -- (b3) (b2) -- (b4);
+  \node[anchor=west, font=\small] at (20,9) {$18=2\times3\times3$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{12は2でわると6、6は2でわると3。3は\R{素数}{そ|すう}なので、ここで\R{終}{お}わり。\R{青}{あお}い\R{数}{かず}が\R{素数}{そ|すう}。}
+\end{bkfigure}
+
+\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}の\R{両方}{りょう|ほう}にある2と3を\R{消}{け}します。
+\[ \frac{12}{18}=\frac{\cancel{2}\times2\times\cancel{3}}{\cancel{2}\times\cancel{3}\times3}=\frac{2}{3} \]
+2と3を\R{消}{け}すのは、$2\times3=6$ でわるのと\R{同}{おな}じです。こうすると、わる\R{数}{かず}を\R{探}{さが}さなくても、のこさず\R{約分}{やく|ぶん}できます。
+
+\R{小数}{しょう|すう}も\R{分数}{ぶん|すう}にできます。0.25は0.01が25こ（2-1）なので $\dfrac{25}{100}$。$25=5\times5$、$100=2\times2\times5\times5$ だから、5を2つ\R{消}{け}して $\dfrac{1}{4}$ です。
+
+\textbf{\R{通分}{つう|ぶん}}\quad $\dfrac{1}{2}$ と $\dfrac{1}{3}$ は、1\R{切}{き}れの\R{大}{おお}きさ（\R{単位}{たん|い}）がちがいます。2-3で\R{長}{なが}さの\R{単位}{たん|い}をそろえてからたしたように、\R{分母}{ぶん|ぼ}をそろえると、くらべたりたしたりできます。これを\textbf{\R{通分}{つう|ぶん}}といいます。\bkidx{つうぶん}{\R{通分}{つう|ぶん}}
+
+そろえる\R{分母}{ぶん|ぼ}は、2にも3にもなれる\R{数}{かず}です。2に1、2、3…をかけた\R{数}{かず}（2の\textbf{\R{倍数}{ばい|すう}}）と、3の\R{倍数}{ばい|すう}を\R{並}{なら}べると、\R{両方}{りょう|ほう}に\R{出}{で}てくる\R{数}{かず}（\textbf{\R{公倍数}{こう|ばい|すう}}）の\R{中}{なか}で、いちばん\R{小}{ちい}さいのは6です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{6}{Q[c,m,wd=9mm]}}, rowsep=1.5pt, row{1}={bg=white, font=\normalfont}, cells={font=\small}}
+2の\R{倍数}{ばい|すう} & 2 & 4 & \SetCell{bg=bkYellow!40}\textbf{6} & 8 & 10 & \SetCell{bg=bkYellow!40}\textbf{12} \\
+3の\R{倍数}{ばい|すう} & 3 & \SetCell{bg=bkYellow!40}\textbf{6} & 9 & \SetCell{bg=bkYellow!40}\textbf{12} & 15 & 18 \\
+\end{bktable}
+\bktabcaption{\R{両方}{りょう|ほう}に\R{出}{で}てくるのは6、12…。いちばん\R{小}{ちい}さい6にそろえる。}
+\end{bkcenter}
+
+$\dfrac{1}{2}$ の\R{分母}{ぶん|ぼ}を6にするには3をかけ、$\dfrac{1}{3}$ の\R{分母}{ぶん|ぼ}を6にするには2をかけます。\R{分子}{ぶん|し}にも\R{同}{おな}じ\R{数}{かず}をかけるので、\R{大}{おお}きさは\R{変}{か}わりません。
+\[ \frac{1}{2}=\frac{1\times3}{2\times3}=\frac{3}{6},\qquad \frac{1}{3}=\frac{1\times2}{3\times2}=\frac{2}{6} \]
+12にそろえてもまちがいではありませんが、\R{数}{かず}が\R{大}{おお}きくなり、あとで\R{約分}{やく|ぶん}が\R{必要}{ひつ|よう}になります。
+
+\bksubsection{3}{たし\R{算}{ざん}・ひき\R{算}{ざん}は、\R{通分}{つう|ぶん}してから}
+
+\leavevmode\label{bk:2-4:tasu}\noindent\begin{minipage}[c]{0.5\linewidth}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiietape{(0,20)}{60}{2}{1}{bkBlue}
+  \bkiietape{(0,10)}{60}{3}{1}{bkOrange}
+  \fill[bkBlue!15] (0,0) rectangle (60,6);
+  \fill[bkBlue!70] (0,0) rectangle (30,6);
+  \fill[bkOrange!70] (30,0) rectangle (50,6);
+  \foreach \k in {1,...,5} {\draw[bkInk!70, line width=0.5pt] (\k*10,0) -- (\k*10,6);}
+  \draw[bkInk!80, line width=0.8pt] (0,0) rectangle (60,6);
+  \node[anchor=west, font=\small] at (62,23) {$\dfrac{1}{2}$};
+  \node[anchor=west, font=\small] at (62,13) {$\dfrac{1}{3}$};
+  \node[anchor=west, font=\small] at (62,3) {$\dfrac{5}{6}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+$\dfrac{1}{2}+\dfrac{1}{3}$ は、\R{通分}{つう|ぶん}すると $\dfrac{1}{6}$ が3こと2こで、あわせて5こ。$\dfrac{1}{6}$ を\R{単位}{たん|い}にして\R{分子}{ぶん|し}どうしをたし、\R{分母}{ぶん|ぼ}はそのままです。
+\end{minipage}
+\[ \frac{1}{2}+\frac{1}{3}=\frac{3}{6}+\frac{2}{6}=\frac{3+2}{6}=\frac{5}{6} \]
+\R{分母}{ぶん|ぼ}をたさないのは、\qty{3}{cm}＋\qty{2}{cm}＝\qty{5}{cm} で「cm」をたさないのと\R{同}{おな}じです。\R{分母}{ぶん|ぼ}の6は「$\dfrac{1}{6}$ という1\R{切}{き}れの\R{大}{おお}きさ」を\R{表}{あらわ}す\R{単位}{たん|い}のようなもので、\R{何切}{なん|き}れあるかは\R{分子}{ぶん|し}が\R{表}{あらわ}しています。
+
+ひき\R{算}{ざん}も\R{同}{おな}じで、$\dfrac{1}{2}-\dfrac{1}{3}=\dfrac{3}{6}-\dfrac{2}{6}=\dfrac{1}{6}$ です。\R{答}{こた}えが\R{約分}{やく|ぶん}できるときは、\R{約分}{やく|ぶん}しておきます（$\dfrac{1}{6}+\dfrac{1}{3}=\dfrac{1}{6}+\dfrac{2}{6}=\dfrac{3}{6}=\dfrac{1}{2}$）。
+
+\bksubsection{4}{かけ\R{算}{ざん}は、\R{面積図}{めん|せき|ず}で}
+
+\leavevmode\label{bk:2-4:kake}\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.86mm, y=0.86mm]
+  \fill[bkGreen!10] (0,0) rectangle (36,40);
+  \fill[bkGreen!55] (0,0) rectangle (24,32);
+  \foreach \i in {1,2} {\draw[bkGreen!70!black, line width=0.5pt] (\i*12,0) -- (\i*12,40);}
+  \foreach \j in {1,...,4} {\draw[bkGreen!70!black, line width=0.5pt] (0,\j*8) -- (36,\j*8);}
+  \draw[bkInk, line width=0.9pt] (0,0) rectangle (36,40);
+  \draw[decorate, decoration={brace, amplitude=3pt, mirror}, line width=0.7pt] (0,-1.5) -- (24,-1.5) node[midway, below=1.5mm, font=\small] {$\dfrac{2}{3}$\,m};
+  \draw[decorate, decoration={brace, amplitude=3pt}, line width=0.7pt] (-1.5,0) -- (-1.5,32) node[midway, left=1.5mm, font=\small] {$\dfrac{4}{5}$\,m};
+  \node[anchor=south, font=\sffamily\footnotesize] at (18,40.5) {1\,m};
+  \node[anchor=west, font=\sffamily\footnotesize] at (36.5,20) {1\,m};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}
+たて $\dfrac{4}{5}$\,m、よこ $\dfrac{2}{3}$\,m の\R{長方形}{ちょう|ほう|けい}の\R{面積}{めん|せき}は \mbox{$\dfrac{4}{5}\times\dfrac{2}{3}$} です（1-21：たて×よこ）。1\,m\R{四方}{し|ほう}の\R{正方形}{せい|ほう|けい}を、たて5つ、よこ3つに\R{分}{わ}けると、\R{全部}{ぜん|ぶ}で $5\times3=15$ マス。1マスは\R{正方形}{せい|ほう|けい}の $\dfrac{1}{15}$ なので、$\dfrac{1}{15}$\,\unit{m^2}です。\R{色}{いろ}のマスは、たて4つ×よこ2つで8こ。だから $\dfrac{8}{15}$\,\unit{m^2}です。
+\end{minipage}
+\[ \frac{4}{5}\times\frac{2}{3}=\frac{4\times2}{5\times3}=\frac{8}{15} \]
+\R{分子}{ぶん|し}どうしのかけ\R{算}{ざん}が\R{色}{いろ}のマスの\R{数}{かず}、\R{分母}{ぶん|ぼ}どうしのかけ\R{算}{ざん}が\R{全部}{ぜん|ぶ}のマスの\R{数}{かず}です。\R{整数}{せい|すう}は $3=\dfrac{3}{1}$（$3\div1=3$）と\R{考}{かんが}えれば、\R{同}{おな}じやり\R{方}{かた}でかけられます：$\dfrac{2}{5}\times3=\dfrac{2}{5}\times\dfrac{3}{1}=\dfrac{6}{5}$。
+
+\bksubsection{5}{わり\R{算}{ざん}（その1）：\R{数直線}{すう|ちょく|せん}で\R{考}{かんが}える}
+
+\leavevmode\label{bk:2-4:waru}$\dfrac{3}{4}$\,dL のペンキで、かべが $\dfrac{2}{5}$\,\unit{m^2} ぬれました。1\,dL では\R{何}{なん}\unit{m^2} ぬれるかな？　1あたりの\R{量}{りょう}を\R{求}{もと}めるので、わり\R{算}{ざん}の $\dfrac{2}{5}\div\dfrac{3}{4}$ です（2-3：\R{速}{はや}さ＝\R{道}{みち}のり÷\R{時間}{じ|かん} と\R{同}{おな}じ\R{形}{かたち}）。でも、「$\dfrac{3}{4}$ でわる」とは、どう\R{計算}{けい|さん}すればよいのでしょう。ペンキの\R{量}{りょう}と\R{面積}{めん|せき}を、2\R{本}{ほん}の\R{数直線}{すう|ちょく|せん}に\R{並}{なら}べて\R{考}{かんが}えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (104,0);
+  \draw[bkInk, line width=0.8pt] (0,12) -- (104,12);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-2,12) {\R{面積}{めん|せき}（\unit{m^2}）};
+  \node[anchor=east, font=\sffamily\footnotesize] at (-2,0) {ペンキ（dL）};
+  \foreach \k/\t in {0/0,1/{\dfrac{1}{4}},2/{\dfrac{2}{4}},3/{\dfrac{3}{4}},4/1} {
+    \draw[bkInk, line width=0.7pt] (\k*24,-1.5) -- (\k*24,1.5);
+    \node[anchor=north, font=\small] at (\k*24,-2) {$\t$};
+    \draw[bkInk, line width=0.7pt] (\k*24,10.5) -- (\k*24,13.5);}
+  \node[anchor=south, font=\small] at (0,14) {$0$};
+  \node[anchor=south, font=\small, text=bkOrange!80!black] at (24,14) {$\dfrac{2}{15}$};
+  \node[anchor=south, font=\small] at (72,14) {$\dfrac{2}{5}$};
+  \node[anchor=south, font=\small, text=bkRed] at (96,14) {？};
+  \fill[bkOrange!60] (0,10.8) rectangle (24,13.2);
+\end{tikzpicture}
+\bkfigcaption{ペンキが $\dfrac{1}{4}$\,dL ふえるごとに、ぬれる\R{面積}{めん|せき}も\R{同}{おな}じだけふえる。}
+\end{bkfigure}
+
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\begin{enumerate}[label={\bkcircled[bkTheme]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item まず、$\dfrac{1}{4}$\,dL でぬれる\R{面積}{めん|せき}を\R{求}{もと}めます。$\dfrac{3}{4}$\,dL は $\dfrac{1}{4}$\,dL が3つなので、$\dfrac{1}{4}$\,dL では $\dfrac{2}{5}$\,\unit{m^2} の3つに1つ\R{分}{ぶん}。$\dfrac{2}{5}$ を3でわります。\R{右}{みぎ}の\R{図}{ず}のように、$\dfrac{2}{5}$ をさらに3つに\R{分}{わ}けると、1マスは $\dfrac{1}{15}$ で、それが2つ\R{分}{ぶん}です。
+\[ \frac{2}{5}\div3=\frac{2}{5\times3}=\frac{2}{15} \]
+\item 1\,dL は $\dfrac{1}{4}$\,dL の4つ\R{分}{ぶん}なので、4をかけます。$\dfrac{2}{15}\times4=\dfrac{8}{15}$ で、$\dfrac{8}{15}$\,\unit{m^2}です。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.31\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!8] (0,0) rectangle (30,30);
+  \fill[bkBlue!30] (0,0) rectangle (12,30);
+  \fill[bkOrange!70] (0,0) rectangle (12,10);
+  \foreach \i in {1,...,4} {\draw[bkBlue!60!black, line width=0.5pt] (\i*6,0) -- (\i*6,30);}
+  \foreach \j in {1,2} {\draw[bkBlue!60!black, line width=0.5pt] (0,\j*10) -- (30,\j*10);}
+  \draw[bkInk, line width=0.9pt] (0,0) rectangle (30,30);
+  \draw[decorate, decoration={brace, amplitude=2.5pt}, line width=0.6pt] (0,31.5) -- (12,31.5) node[midway, above=1.6mm, font=\small] {$\dfrac{2}{5}$};
+  \node[anchor=north, font=\sffamily\footnotesize, align=center] at (15,-1.8) {\R{全体}{ぜん|たい}が1\,\unit{m^2}\\\R{全部}{ぜん|ぶ}で15マス};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+①で3でわり、②で4をかけました。この2つをまとめて1つの\R{式}{しき}にすると、
+\begin{align*}
+\frac{2}{5}\div3\times4&=\frac{2}{5\times3}\times4\\
+&=\frac{2\times4}{5\times3}=\frac{2}{5}\times\frac{4}{3}
+\end{align*}
+「3でわって4をかける」は、「$\dfrac{4}{3}$ をかける」のと\R{同}{おな}じになりました。
+\[ \frac{2}{5}\div\frac{3}{4}=\frac{2}{5}\times\frac{4}{3}=\frac{8}{15} \]
+わる\R{数}{かず}の $\dfrac{3}{4}$ の\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{入}{い}れかえた $\dfrac{4}{3}$ が\R{出}{で}てきました。これは、たまたまでしょうか。どんな\R{分数}{ぶん|すう}でわっても、いつもこうなるのでしょうか。⑥で、ちがう\R{考}{かんが}え\R{方}{かた}から\R{確}{たし}かめてみましょう。
+
+\bkfukidashi{mina}{ペンキの\R{問題}{もん|だい}では、たしかに\R{入}{い}れかえた\R{数}{かず}をかけていたね。でも、どうしていつもそうなるのかな？}
+
+\bksubsection{6}{わり\R{算}{ざん}（その2）：なぜ、\R{上}{うえ}と\R{下}{した}を\R{入}{い}れかえた\R{数}{かず}をかけるの？}
+
+\leavevmode\label{bk:2-4:naze}こんどは、ペンキの\R{場面}{ば|めん}を\R{使}{つか}わずに、①〜④で\R{学}{まな}んだきまりだけを\R{使}{つか}って、$\dfrac{2}{5}\div\dfrac{3}{4}$ を\R{計算}{けい|さん}します。4つの\R{段}{だん}に\R{分}{わ}けて、1つずつ\R{進}{すす}みます。
+
+\bkiiestep{1}{わり\R{算}{ざん}を、\R{分数}{ぶん|すう}の\R{形}{かたち}で\R{書}{か}く}
+①で、$2\div3=\dfrac{2}{3}$ のように、わり\R{算}{ざん}は\R{分数}{ぶん|すう}で\R{書}{か}けることを\R{学}{まな}びました。わられる\R{数}{かず}が\R{分子}{ぶん|し}（\R{線}{せん}の\R{上}{うえ}）、わる\R{数}{かず}が\R{分母}{ぶん|ぼ}（\R{線}{せん}の\R{下}{した}）です。わられる\R{数}{かず}やわる\R{数}{かず}が\R{分数}{ぶん|すう}のときも、\R{同}{おな}じように\R{書}{か}けます。すると、\textbf{\R{分数}{ぶん|すう}の\R{中}{なか}に\R{分数}{ぶん|すう}が\R{入}{はい}った\R{形}{かたち}}になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 上の段：2÷3 → 2/3  % noruby
+  \node[font=\large] (o1) at (0,30) {$2\div3$};
+  \node[font=\large] (f1) at (40,30) {$\dfrac{2}{3}$};
+  \draw[bk link] (o1) -- (f1);
+  % 下の段：2/5÷3/4 → 分数の中に分数  % noruby
+  \node[font=\large] (o2) at (0,0) {$\dfrac{2}{5}\div\dfrac{3}{4}$};
+  \node[font=\large, inner sep=1pt] (n2) at (40,7.5) {$\dfrac{2}{5}$};
+  \draw[bkInk, line width=1.1pt] (33,0) -- (47,0);
+  \node[font=\large, inner sep=1pt] (d2) at (40,-7.5) {$\dfrac{3}{4}$};
+  \coordinate (lt) at (31.5,0);
+  \draw[bk link] (o2) -- (lt);
+  % ラベル  % noruby
+  \node[bk node, draw=bkOrange, font=\sffamily\footnotesize] (ln) at (82,9) {わられる\R{数}{かず}（\R{分子}{ぶん|し}）};
+  \node[bk node, draw=bkBlue, font=\sffamily\footnotesize] (ld) at (82,-9) {わる\R{数}{かず}（\R{分母}{ぶん|ぼ}）};
+  \draw[bk link, bkOrange] (ln) -- (n2);
+  \draw[bk link, bkBlue] (ld) -- (d2);
+  \node[font=\sffamily\footnotesize, text=bkGray!70!black] at (82,30) {÷のしるしが、\R{分数}{ぶん|すう}の\R{線}{せん}になる};
+\end{tikzpicture}
+\bkfigcaption{わる\R{数}{かず}が\R{分数}{ぶん|すう}でも、わり\R{算}{ざん}は\R{分数}{ぶん|すう}の\R{形}{かたち}で\R{書}{か}ける。}
+\end{bkfigure}
+\[ \frac{2}{5}\div\frac{3}{4}=\dfrac{\;\dfrac{2}{5}\;}{\;\dfrac{3}{4}\;} \]
+\R{分母}{ぶん|ぼ}が「$\dfrac{3}{4}$」という\R{分数}{ぶん|すう}なので、このままでは\R{計算}{けい|さん}しにくい\R{形}{かたち}です。\R{分母}{ぶん|ぼ}を、もっとかんたんな\R{数}{かず}にしたいですね。
+
+\bkiiestep{2}{\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に\R{同}{おな}じ\R{数}{かず}をかけても、\R{答}{こた}えは\R{変}{か}わらない}
+②で、\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に\R{同}{おな}じ\R{数}{かず}をかけても\R{分数}{ぶん|すう}の\R{大}{おお}きさは\R{変}{か}わらないことを、テープで\R{確}{たし}かめました。ここでは、そのわけを2つの\R{見方}{み|かた}でもう\R{一度}{いち|ど}\R{確}{たし}かめます。
+
+\textbf{\R{見方}{み|かた}1：わり\R{算}{ざん}の\R{場面}{ば|めん}で}\quad クッキー6まいを2\R{人}{にん}で\R{分}{わ}けると、1\R{人}{にん}3まい。クッキーも\R{人数}{にん|ずう}も2\R{倍}{ばい}にして、12まいを4\R{人}{にん}で\R{分}{わ}けても、やっぱり1\R{人}{にん}3まいです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize] at (-3,29) {6まいを2\R{人}{にん}で};
+  \foreach \i/\c in {0/bkRoute2,1/bkRoute4} {\bkiiekidcookie{(\i*16,22)}{\c}}
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize] at (-3,7) {12まいを4\R{人}{にん}で};
+  \foreach \i/\c in {0/bkRoute2,1/bkRoute4,2/bkRoute5,3/bkRoute1} {\bkiiekidcookie{(\i*16,0)}{\c}}
+  \node[anchor=west, font=\small] at (64,29) {$6\div2=3$};
+  \node[anchor=west, font=\small] at (64,7) {$12\div4=3$};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGray!70!black] at (64,18) {\R{両方}{りょう|ほう}2\R{倍}{ばい}};
+  \draw[bk arrow, bkGray] (62,25) -- (62,11);
+\end{tikzpicture}
+\bkfigcaption{わられる\R{数}{かず}もわる\R{数}{かず}も2\R{倍}{ばい}にしても、1\R{人分}{にん|ぶん}は3まいのまま。}
+\end{bkfigure}
+
+$6\div2=3$、$12\div4=3$、$60\div20=3$。わられる\R{数}{かず}とわる\R{数}{かず}に\R{同}{おな}じ\R{数}{かず}をかけても、わり\R{算}{ざん}の\R{答}{こた}えは\R{変}{か}わりません。\R{分数}{ぶん|すう}の\R{形}{かたち}で\R{書}{か}けば、$\dfrac{6}{2}=\dfrac{12}{4}=\dfrac{60}{20}$ で、\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に\R{同}{おな}じ\R{数}{かず}をかけたことになります。
+
+\textbf{\R{見方}{み|かた}2：「1をかける」と\R{考}{かんが}える}\quad \R{同}{おな}じ\R{数}{かず}どうしのわり\R{算}{ざん}の\R{答}{こた}えは、いつも1です。
+\[ 1\div1=1,\qquad 4\div4=1,\qquad \frac{4}{3}\div\frac{4}{3}=1 \]
+$\dfrac{4}{3}\div\dfrac{4}{3}$ が1なのは、「$\dfrac{4}{3}$\,m のテープの\R{中}{なか}に、$\dfrac{4}{3}$\,m のテープは\R{何本分}{なん|ぼん|ぶん}ある？」と\R{考}{かんが}えると、ちょうど1\R{本分}{ぽん|ぶん}だからです。だから、\R{次}{つぎ}の2つは、どちらも\R{大}{おお}きさが1です。
+\[ \frac{4}{4}=1,\qquad \frac{\;\dfrac{4}{3}\;}{\;\dfrac{4}{3}\;}=1 \]
+
+\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に\R{同}{おな}じ\R{数}{かず}をかけることは、\R{分数}{ぶん|すう}\R{全体}{ぜん|たい}に「1」をかけることと\R{同}{おな}じです。たとえば $\dfrac{2}{3}$ の\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に4をかけると、④のかけ\R{算}{ざん}のきまりから、
+\[ \frac{2\times4}{3\times4}=\frac{2}{3}\times\frac{4}{4}=\frac{2}{3}\times1=\frac{2}{3} \]
+どんな\R{数}{かず}に1をかけても、\R{大}{おお}きさは\R{変}{か}わりません（$5\times1=5$）。②の\R{約分}{やく|ぶん}・\R{通分}{つう|ぶん}で\R{使}{つか}ったきまりは、じつは「1をかける」ことだったのです。
+
+\bkiiestep{3}{\R{分母}{ぶん|ぼ}を1にしたい。$\dfrac{3}{4}$ に\R{何}{なに}をかけると1になる？}
+なぜ\R{分母}{ぶん|ぼ}を1にしたいのでしょう。\R{分母}{ぶん|ぼ}が1の\R{分数}{ぶん|すう}は、\R{分子}{ぶん|し}そのものだからです。1でわっても\R{数}{かず}は\R{変}{か}わりません（$5\div1=\dfrac{5}{1}=5$）。
+
+では、$\dfrac{3}{4}$ に\R{何}{なに}をかけると1になるでしょう。いくつかためしてみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] Q[c,m,wd=38mm] Q[l,m,wd=34mm]}, rowsep=2pt, cells={font=\small}}
+かける\R{数}{かず} & \R{計算}{けい|さん} & 1になった？ \\
+4 & $\dfrac{3}{4}\times4=\dfrac{12}{4}=3$ & \R{大}{おお}きすぎる \\
+$\dfrac{1}{3}$ & $\dfrac{3}{4}\times\dfrac{1}{3}=\dfrac{3}{12}=\dfrac{1}{4}$ & \R{小}{ちい}さすぎる \\
+\SetCell{bg=bkYellow!35}$\dfrac{4}{3}$ & \SetCell{bg=bkYellow!35}$\dfrac{3}{4}\times\dfrac{4}{3}=\dfrac{12}{12}=1$ & \SetCell{bg=bkYellow!35}\textbf{ちょうど1} \\
+\end{bktable}
+\bktabcaption{$\dfrac{3}{4}$ の\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{入}{い}れかえた $\dfrac{4}{3}$ をかけると、ちょうど1。}
+\end{bkcenter}
+
+$\dfrac{3}{4}\times\dfrac{4}{3}$ は、\R{分子}{ぶん|し}が $3\times4$、\R{分母}{ぶん|ぼ}が $4\times3$ で、\R{同}{おな}じ12になります。だから1です。テープでも\R{確}{たし}かめましょう。$\dfrac{4}{3}$ をかけるのは、⑤と\R{同}{おな}じく「3でわって、4をかける」ことです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiietape{(0,26)}{72}{4}{3}{bkBlue}
+  \bkiietape{(0,13)}{72}{4}{1}{bkBlue}
+  \bkiietape{(0,0)}{72}{4}{4}{bkBlue}
+  \node[anchor=west, font=\small] at (75,29) {$\dfrac{3}{4}$};
+  \node[anchor=west, font=\small] at (75,16) {$\dfrac{1}{4}$\quad（3つに\R{分}{わ}けた1つ\R{分}{ぶん}）};
+  \node[anchor=west, font=\small] at (75,3) {$\dfrac{4}{4}=1$\quad（その4つ\R{分}{ぶん}）};
+  \draw[bk arrow, bkOrange, line width=1pt] (-3,27.5) to[bend right=40] node[left=1mm, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black] {÷3} (-3,17.5);
+  \draw[bk arrow, bkOrange, line width=1pt] (-3,14.5) to[bend right=40] node[left=1mm, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black] {×4} (-3,4.5);
+\end{tikzpicture}
+\bkfigcaption{$\dfrac{3}{4}$ を3でわると $\dfrac{1}{4}$。それを4\R{倍}{ばい}すると、ちょうど1。}
+\end{bkfigure}
+
+\bkiiestep{4}{\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の\R{両方}{りょう|ほう}に $\dfrac{4}{3}$ をかける}
+\R{段}{だん}2で\R{確}{たし}かめたように、\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に\R{同}{おな}じ\R{数}{かず}をかけても、\R{大}{おお}きさは\R{変}{か}わりません。そこで、\R{分母}{ぶん|ぼ}が1になる $\dfrac{4}{3}$ を、\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の\R{両方}{りょう|ほう}にかけます。1\R{行}{ぎょう}ずつ\R{見}{み}ていきましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=46mm] Q[l,m,wd=58mm]}, rowsep=3pt, cells={font=\small}}
+ & \R{式}{しき} & この\R{行}{ぎょう}でしたこと \\
+1 & $\dfrac{2}{5}\div\dfrac{3}{4}=\dfrac{\;\dfrac{2}{5}\;}{\;\dfrac{3}{4}\;}$\rule[-5ex]{0pt}{11ex} & わり\R{算}{ざん}を\R{分数}{ぶん|すう}の\R{形}{かたち}で\R{書}{か}いた（\R{段}{だん}1） \\
+2 & $=\dfrac{\;\dfrac{2}{5}\times\dfrac{4}{3}\;}{\;\dfrac{3}{4}\times\dfrac{4}{3}\;}$\rule[-5ex]{0pt}{11ex} & \R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}に、\R{同}{おな}じ $\dfrac{4}{3}$ をかけた（\R{段}{だん}2・3） \\
+3 & $=\dfrac{\;\dfrac{2}{5}\times\dfrac{4}{3}\;}{1}$\rule[-4ex]{0pt}{9.5ex} & \R{分母}{ぶん|ぼ}は $\dfrac{3}{4}\times\dfrac{4}{3}=1$ になった \\
+4 & $=\dfrac{2}{5}\times\dfrac{4}{3}$\rule[-2.5ex]{0pt}{6.5ex} & 1でわっても\R{変}{か}わらないので、\R{分母}{ぶん|ぼ}の1を\R{消}{け}した \\
+5 & $=\dfrac{8}{15}$\rule[-2.5ex]{0pt}{6.5ex} & ④のかけ\R{算}{ざん}（\R{分子}{ぶん|し}どうし・\R{分母}{ぶん|ぼ}どうし） \\
+\end{bktable}
+\bktabcaption{⑤のペンキの\R{答}{こた}え $\dfrac{8}{15}$ と、ぴったり\R{同}{おな}じになった。}
+\end{bkcenter}
+
+2\R{行}{ぎょう}めから4\R{行}{ぎょう}めまでをふり\R{返}{かえ}ると、わる\R{数}{かず} $\dfrac{3}{4}$ は\R{分母}{ぶん|ぼ}から\R{消}{き}えて、そのかわり $\dfrac{4}{3}$ が\R{分子}{ぶん|し}にかけ\R{算}{ざん}で\R{残}{のこ}りました。つまり、
+\[ \frac{2}{5}\div\frac{3}{4}=\frac{2}{5}\times\frac{4}{3} \]
+わる\R{数}{かず}の\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{入}{い}れかえた\R{数}{かず}を、もとの\R{数}{かず}の\textbf{\R{逆数}{ぎゃく|すう}}といいます。\bkidx{ぎゃくすう}{\R{逆数}{ぎゃく|すう}}$\dfrac{3}{4}$ の\R{逆数}{ぎゃく|すう}は $\dfrac{4}{3}$ です。\R{分数}{ぶん|すう}でわるときは、\textbf{わる\R{数}{かず}の\R{逆数}{ぎゃく|すう}をかければよい}のです。
+
+\textbf{いつでも\R{使}{つか}えるわけ}\quad この\R{方法}{ほう|ほう}が\R{使}{つか}えたのは、「\R{分母}{ぶん|ぼ}を1にする\R{数}{かず}」が\R{見}{み}つかったからです。どんな\R{分数}{ぶん|すう}でも、その\R{逆数}{ぎゃく|すう}をかけると、\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}が\R{同}{おな}じ\R{数}{かず}になって1になります（$\dfrac{5}{7}\times\dfrac{7}{5}=\dfrac{35}{35}=1$）。だから、わる\R{数}{かず}がどんな\R{分数}{ぶん|すう}でも、\R{同}{おな}じ4つの\R{段}{だん}で「\R{逆数}{ぎゃく|すう}をかける」になります。⑤の\R{数直線}{すう|ちょく|せん}の\R{考}{かんが}え\R{方}{かた}と、⑥の\R{分数}{ぶん|すう}の\R{中}{なか}に\R{分数}{ぶん|すう}の\R{考}{かんが}え\R{方}{かた}。ちがう2つの\R{道}{みち}から、\R{同}{おな}じきまりにたどりつきました。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] *{4}{Q[c,m,wd=20mm]}}, rowsep=2pt, cells={font=\small}}
+もとの\R{数}{かず} & $\dfrac{3}{4}$ & $\dfrac{1}{5}$ & $3\ \bigl(=\dfrac{3}{1}\bigr)$ & $\dfrac{7}{2}$ \\
+\R{逆数}{ぎゃく|すう} & $\dfrac{4}{3}$ & $\dfrac{5}{1}=5$ & $\dfrac{1}{3}$ & $\dfrac{2}{7}$ \\
+かけると & $1$ & $1$ & $1$ & $1$ \\
+\end{bktable}
+\bktabcaption{\R{整数}{せい|すう}は、\R{分母}{ぶん|ぼ}が1の\R{分数}{ぶん|すう}と\R{考}{かんが}えて\R{入}{い}れかえる。もとの\R{数}{かず}と\R{逆数}{ぎゃく|すう}をかけると、いつも1。}
+\end{bkcenter}
+
+0には\R{逆数}{ぎゃく|すう}がありません。0に\R{何}{なに}をかけても0で、1にならないからです。0ではわれない（1-14）ことと、ぴったり\R{合}{あ}っています。
+
+\bksubsection{7}{いろいろなわり\R{算}{ざん}と、\R{答}{こた}えの\R{確}{たし}かめ}
+
+\leavevmode\label{bk:2-4:iroiro}\R{整数}{せい|すう}・\R{小数}{しょう|すう}・\R{帯分数}{たい|ぶん|すう}でわるときも、まず\R{分数}{ぶん|すう}（\R{仮分数}{か|ぶん|すう}）の\R{形}{かたち}にすれば、\R{同}{おな}じ「\R{逆数}{ぎゃく|すう}をかける」で\R{計算}{けい|さん}できます。
+
+\textbf{\R{整数}{せい|すう}でわる}\quad $\dfrac{2}{5}\div3$ は、$3=\dfrac{3}{1}$ と\R{考}{かんが}えると、\R{逆数}{ぎゃく|すう}は $\dfrac{1}{3}$ です。
+\[ \frac{2}{5}\div3=\frac{2}{5}\times\frac{1}{3}=\frac{2}{15} \]
+⑤の①で、\R{図}{ず}を\R{使}{つか}って\R{出}{だ}した $\dfrac{2}{15}$ と\R{同}{おな}じです。
+
+\textbf{\R{小数}{しょう|すう}でわる}\quad $1.2\div0.4$ は、\R{小数}{しょう|すう}を\R{分数}{ぶん|すう}にします。1.2は0.1が12こなので $\dfrac{12}{10}$、0.4は $\dfrac{4}{10}$ です（2-1）。
+\begin{align*}
+1.2\div0.4&=\frac{12}{10}\div\frac{4}{10}=\frac{12}{10}\times\frac{10}{4}\\
+&=\frac{120}{40}=3
+\end{align*}
+\R{段}{だん}2の\R{見方}{み|かた}1（わられる\R{数}{かず}とわる\R{数}{かず}に\R{同}{おな}じ\R{数}{かず}をかける）を\R{使}{つか}って、\R{両方}{りょう|ほう}を10\R{倍}{ばい}しても、$12\div4=3$ で\R{同}{おな}じ\R{答}{こた}えです。
+
+\textbf{\R{帯分数}{たい|ぶん|すう}でわる}\quad $2\dfrac{1}{3}\div1\dfrac{3}{4}$ は、まず\R{両方}{りょう|ほう}を\R{仮分数}{か|ぶん|すう}にします（①）。
+\[ 2\frac{1}{3}=\frac{6}{3}+\frac{1}{3}=\frac{7}{3},\qquad 1\frac{3}{4}=\frac{4}{4}+\frac{3}{4}=\frac{7}{4} \]
+\[ 2\frac{1}{3}\div1\frac{3}{4}=\frac{7}{3}\div\frac{7}{4}=\frac{7}{3}\times\frac{4}{7}=\frac{28}{21}=\frac{4}{3} \]
+\R{最後}{さい|ご}は、28と21を\R{両方}{りょう|ほう}7でわって\R{約分}{やく|ぶん}しました。
+
+\textbf{\R{答}{こた}えの\R{確}{たし}かめ}\quad $6\div2=3$ なら $3\times2=6$ のように、「\R{答}{こた}え×わる\R{数}{かず}＝わられる\R{数}{かず}」になります（1-14）。\R{分数}{ぶん|すう}でも\R{同}{おな}じです。
+\[ \frac{8}{15}\times\frac{3}{4}=\frac{24}{60}=\frac{2}{5} \]
+わられる\R{数}{かず}の $\dfrac{2}{5}$ にもどりました。
+もし、まちがえて $\dfrac{5}{2}\times\dfrac{3}{4}=\dfrac{15}{8}$ と\R{計算}{けい|さん}していたら、$\dfrac{15}{8}\times\dfrac{3}{4}=\dfrac{45}{32}$ で、$\dfrac{2}{5}$ にもどりません。\R{確}{たし}かめをすると、まちがいに\R{自分}{じ|ぶん}で\R{気}{き}づけます。
+
+\bksubsection{8}{0と1のあいだの\R{数}{かず}をかける・わる}
+
+\leavevmode\label{bk:2-4:chiisai}1\,m あたり300\R{円}{えん}のリボンの\R{代金}{だい|きん}は、「1あたり×いくつ\R{分}{ぶん}」です（2-3）。0.5\,m は1\,m の\R{半分}{はん|ぶん}なので、\R{代金}{だい|きん}も\R{半分}{はん|ぶん}の150\R{円}{えん}になるはずです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{4}{Q[c,m,wd=24mm]}}, rowsep=1.5pt, colsep=4pt, cells={font=\small}}
+\R{長}{なが}さ（m） & 2 & 1 & 0.5 & 0.2 \\
+\R{代金}{だい|きん}の\R{式}{しき} & $300\times2$ & $300\times1$ & $300\times0.5$ & $300\times0.2$ \\
+\R{代金}{だい|きん}（\R{円}{えん}） & 600 & 300 & 150 & 60 \\
+\end{bktable}
+\bktabcaption{かける\R{数}{かず}が1より\R{小}{ちい}さいと、\R{代金}{だい|きん}は300\R{円}{えん}より\R{少}{すく}ない。}
+\end{bkcenter}
+
+0と1のあいだの\R{数}{かず}をかけると、\R{答}{こた}えは300より\R{小}{ちい}さくなります。「かけ\R{算}{ざん}の\R{答}{こた}えはいつも\R{大}{おお}きくなる」とはかぎりません。1より\R{大}{おお}きい\R{数}{かず}をかけたときだけ、\R{大}{おお}きくなります。
+\bkng{$300\times0.5$ は、かけ\R{算}{ざん}だから300より\R{大}{おお}きい}
+\bkok{$300\times0.5=150$ で、300より\R{小}{ちい}さい（0.5\,m は1\,m より\R{短}{みじか}いから）}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\R{反対}{はん|たい}に、0.5\,m で150\R{円}{えん}のリボンの1\,m あたりの\R{値段}{ね|だん}は、$150\div0.5$ です。\R{右}{みぎ}の\R{図}{ず}のように、1\,m は0.5\,m の2つ\R{分}{ぶん}だから、\R{値段}{ね|だん}も2つ\R{分}{ぶん}の300\R{円}{えん}。$0.5=\dfrac{1}{2}$ でわるのは、\R{逆数}{ぎゃく|すう}の2をかけるのと\R{同}{おな}じです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (56,0);
+  \draw[bkInk, line width=0.8pt] (0,12) -- (56,12);
+  \fill[bkOrange!55] (0,10.8) rectangle (24,13.2);
+  \fill[bkOrange!25] (24,10.8) rectangle (48,13.2);
+  \foreach \k/\a/\b in {0/0/0,1/{0.5}/150,2/1/300} {
+    \draw[bkInk, line width=0.7pt] (\k*24,-1.5) -- (\k*24,1.5) (\k*24,10.5) -- (\k*24,13.5);
+    \node[anchor=north, font=\small] at (\k*24,-2) {\a};
+    \node[anchor=south, font=\small] at (\k*24,14) {\b};}
+  \node[anchor=west, font=\sffamily\footnotesize] at (57,12) {\R{円}{えん}};
+  \node[anchor=west, font=\sffamily\footnotesize] at (57,0) {m};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{3pt}
+0と1のあいだの\R{数}{かず}でわると、\R{答}{こた}えは\R{大}{おお}きくなります。1より\R{大}{おお}きい\R{数}{かず}でわると、\R{答}{こた}えは\R{小}{ちい}さくなります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] *{4}{Q[c,m,wd=22mm]}}, rowsep=1.5pt, colsep=4pt, cells={font=\small}}
+わる\R{数}{かず} & 2 & 1 & 0.5 & 0.2 \\
+\R{式}{しき} & $300\div2$ & $300\div1$ & $300\div0.5$ & $300\div0.2$ \\
+\R{答}{こた}え & 150 & 300 & 600 & 1500 \\
+\end{bktable}
+\bktabcaption{わる\R{数}{かず}が1より\R{小}{ちい}さいと、\R{答}{こた}えは300より\R{大}{おお}きい。}
+\end{bkcenter}
+
+\begin{taisetsu}
+\R{分数}{ぶん|すう}はわり\R{算}{ざん}の\R{答}{こた}え：\quad 2÷3＝$\dfrac{2}{3}$\\
+たし\R{算}{ざん}・ひき\R{算}{ざん}：\R{通分}{つう|ぶん}して、\R{分子}{ぶん|し}どうしを\R{計算}{けい|さん}する\\
+かけ\R{算}{ざん}：\R{分子}{ぶん|し}どうし、\R{分母}{ぶん|ぼ}どうしをかける\\
+わり\R{算}{ざん}：わる\R{数}{かず}の\R{逆数}{ぎゃく|すう}をかける（\R{分母}{ぶん|ぼ}を1にする\R{数}{かず}を、\\
+\hspace*{1.5\zw}\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の\R{両方}{りょう|ほう}にかけたから）\\
+0と1のあいだの\R{数}{かず}をかけると\R{小}{ちい}さく、わると\R{大}{おお}きくなる
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{\R{分子}{ぶん|し}・\R{分母}{ぶん|ぼ}}{\R{分数}{ぶん|すう}の\R{線}{せん}の\R{上}{うえ}が\R{分子}{ぶん|し}、\R{下}{した}が\R{分母}{ぶん|ぼ}。}
+\bkword{\R{仮分数}{か|ぶん|すう}・\R{帯分数}{たい|ぶん|すう}}{$\dfrac{7}{3}$ のように\R{分子}{ぶん|し}が\R{分母}{ぶん|ぼ}\R{以上}{い|じょう}の\R{分数}{ぶん|すう}・$2\dfrac{1}{3}$ のような\R{書}{か}き\R{方}{かた}。}
+\bkword{\R{約分}{やく|ぶん}・\R{通分}{つう|ぶん}}{\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{同}{おな}じ\R{数}{かず}でわる・\R{分母}{ぶん|ぼ}をそろえる。}
+\bkword{\R{素数}{そ|すう}}{1とその\R{数}{かず}\R{自身}{じ|しん}でしかわりきれない\R{数}{かず}（1はのぞく）。}
+\bkword{\R{逆数}{ぎゃく|すう}}{\R{分母}{ぶん|ぼ}と\R{分子}{ぶん|し}を\R{入}{い}れかえた\R{数}{かず}。もとの\R{数}{かず}とかけると1。$\dfrac{3}{4}$ の\R{逆数}{ぎゃく|すう}は $\dfrac{4}{3}$。}
+\end{kotoba}
+
+\begin{motto}[2]
+\textbf{もう1つの\R{方法}{ほう|ほう}：\R{通分}{つう|ぶん}してからわる}\par
+⑤・⑥とはちがう\R{方法}{ほう|ほう}でも、$\dfrac{2}{5}\div\dfrac{3}{4}$ を\R{計算}{けい|さん}できます。\R{分母}{ぶん|ぼ}を20にそろえると（\R{通分}{つう|ぶん}）、$\dfrac{2}{5}=\dfrac{8}{20}$、$\dfrac{3}{4}=\dfrac{15}{20}$ です。$\dfrac{1}{20}$ を1\R{切}{き}れとすると、わられる\R{数}{かず}は8\R{切}{き}れ、わる\R{数}{かず}は15\R{切}{き}れ。\R{同}{おな}じ\R{単位}{たん|い}どうしなので、\qty{8}{cm}÷\qty{15}{cm} と\R{同}{おな}じように、\R{切}{き}れの\R{数}{かず}どうしでわれます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!10] (0,8) rectangle (100,14);
+  \fill[bkBlue!60] (0,8) rectangle (40,14);
+  \fill[bkOrange!10] (0,0) rectangle (100,6);
+  \fill[bkOrange!60] (0,0) rectangle (75,6);
+  \foreach \k in {1,...,19} {\draw[bkInk!50, line width=0.4pt] (\k*5,8) -- (\k*5,14) (\k*5,0) -- (\k*5,6);}
+  \draw[bkInk!80, line width=0.8pt] (0,8) rectangle (100,14) (0,0) rectangle (100,6);
+  \node[anchor=west, font=\small] at (102,11) {$\dfrac{8}{20}$};
+  \node[anchor=west, font=\small] at (102,3) {$\dfrac{15}{20}$};
+\end{tikzpicture}
+\bkfigcaption{1マスが $\dfrac{1}{20}$。\R{上}{うえ}は8マス、\R{下}{した}は15マス。}
+\end{bkfigure}
+\[ \frac{2}{5}\div\frac{3}{4}=\frac{8}{20}\div\frac{15}{20}=8\div15=\frac{8}{15} \]
+\R{逆数}{ぎゃく|すう}をかけた\R{答}{こた}えと、やっぱり\R{同}{おな}じになりました。ただ、\R{通分}{つう|ぶん}は\R{手間}{て|ま}がかかるので、ふだんは\R{逆数}{ぎゃく|すう}をかける\R{方法}{ほう|ほう}を\R{使}{つか}います。
+\end{motto}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[\R{分数}{ぶん|すう}と\R{小数}{しょう|すう}、\R{約分}{やく|ぶん}]
+\R{分数}{ぶん|すう}に（1）\nobreak $3\div5$\enspace（2）\nobreak 0.6\quad \R{小数}{しょう|すう}に（3）\nobreak $\dfrac{3}{4}$\quad \R{約分}{やく|ぶん}（4）\nobreak $\dfrac{18}{24}$\par
+\R{帯分数}{たい|ぶん|すう}に（5）\nobreak $\dfrac{11}{4}$\quad \R{仮分数}{か|ぶん|すう}に（6）\nobreak $3\dfrac{2}{5}$\par
+\kangaekata （1）わられる\R{数}{かず}が\R{分子}{ぶん|し}、わる\R{数}{かず}が\R{分母}{ぶん|ぼ}。（2）0.6は0.1が6こ。（3）\R{分子}{ぶん|し}÷\R{分母}{ぶん|ぼ}。（4）\R{素数}{そ|すう}のかけ\R{算}{ざん}に\R{分}{わ}けて、\R{上下}{じょう|げ}にある\R{同}{おな}じ\R{数}{かず}を\R{消}{け}す。（5）$11\div4$ のあまりを\R{使}{つか}う。（6）1は $\dfrac{5}{5}$。\par
+\shiki （1）\nobreak $3\div5=\dfrac{3}{5}$\quad（2）\nobreak $0.6=\dfrac{6}{10}=\dfrac{6\div2}{10\div2}=\dfrac{3}{5}$\par
+\hspace*{2.6\zw}（3）\nobreak $\dfrac{3}{4}=3\div4=0.75$\rule{0pt}{5.4ex}\par
+\hspace*{2.6\zw}（4）\nobreak $\dfrac{18}{24}=\dfrac{\cancel{2}\times\cancel{3}\times3}{\cancel{2}\times2\times2\times\cancel{3}}=\dfrac{3}{4}$\par
+\hspace*{2.6\zw}（5）\nobreak $11\div4=2$ あまり3 なので、$\dfrac{11}{4}=2\dfrac{3}{4}$\par
+\hspace*{2.6\zw}（6）\nobreak $3=\dfrac{15}{5}$ なので、$3\dfrac{2}{5}=\dfrac{15}{5}+\dfrac{2}{5}=\dfrac{17}{5}$\par
+\kotae （1）\nobreak $\dfrac{3}{5}$\quad（2）\nobreak $\dfrac{3}{5}$\quad（3）\nobreak 0.75\quad（4）\nobreak $\dfrac{3}{4}$\quad（5）\nobreak $2\dfrac{3}{4}$\quad（6）\nobreak $\dfrac{17}{5}$
+\end{reidai}
+
+\begin{jibun}
+\R{分数}{ぶん|すう}に（1）\nobreak $4\div7$\enspace（2）\nobreak 0.75\quad \R{小数}{しょう|すう}に（3）\nobreak $\dfrac{2}{5}$\quad \R{約分}{やく|ぶん}（4）\nobreak $\dfrac{20}{30}$\par
+\R{帯分数}{たい|ぶん|すう}に（5）\nobreak $\dfrac{9}{2}$\quad \R{仮分数}{か|ぶん|すう}に（6）\nobreak $2\dfrac{3}{4}$
+\bkjans{（1）\nobreak $\dfrac{4}{7}$\quad（2）\nobreak $\dfrac{75}{100}=\dfrac{3}{4}$\quad（3）\nobreak $2\div5=0.4$\quad（4）\nobreak $\dfrac{2}{3}$\quad（5）\nobreak $4\dfrac{1}{2}$\quad（6）\nobreak $\dfrac{11}{4}$}
+\end{jibun}
+
+\begin{reidai}[\R{通分}{つう|ぶん}してたす・ひく]
+（1）\nobreak $\dfrac{2}{3}+\dfrac{1}{4}$\qquad（2）\nobreak $\dfrac{5}{6}-\dfrac{1}{2}$\qquad（3）\nobreak $\dfrac{3}{4}+\dfrac{5}{6}$\par
+\kangaekata そろえる\R{分母}{ぶん|ぼ}は、\R{両方}{りょう|ほう}の\R{分母}{ぶん|ぼ}の\R{公倍数}{こう|ばい|すう}でいちばん\R{小}{ちい}さい\R{数}{かず}。（1）3の\R{倍数}{ばい|すう}3、6、9、\textbf{12}と、4の\R{倍数}{ばい|すう}4、8、\textbf{12}から12。（2）6は2の\R{倍数}{ばい|すう}でもあるので6。（3）4の\R{倍数}{ばい|すう}4、8、\textbf{12}と、6の\R{倍数}{ばい|すう}6、\textbf{12}から12。\R{答}{こた}えが\R{約分}{やく|ぶん}できたら\R{約分}{やく|ぶん}し、1より\R{大}{おお}きければ\R{帯分数}{たい|ぶん|すう}でも\R{表}{あらわ}してみる。\par
+\shiki （1）\nobreak $\dfrac{2}{3}+\dfrac{1}{4}=\dfrac{2\times4}{3\times4}+\dfrac{1\times3}{4\times3}=\dfrac{8}{12}+\dfrac{3}{12}=\dfrac{11}{12}$\par
+\hspace*{2.6\zw}（2）\nobreak $\dfrac{5}{6}-\dfrac{1}{2}=\dfrac{5}{6}-\dfrac{1\times3}{2\times3}=\dfrac{5}{6}-\dfrac{3}{6}=\dfrac{2}{6}=\dfrac{1}{3}$\par
+\hspace*{2.6\zw}（3）\nobreak $\dfrac{3}{4}+\dfrac{5}{6}=\dfrac{3\times3}{4\times3}+\dfrac{5\times2}{6\times2}=\dfrac{9}{12}+\dfrac{10}{12}=\dfrac{19}{12}$\par
+\hspace*{2.6\zw}\phantom{（3）}$19\div12=1$ あまり7 なので、$\dfrac{19}{12}=1\dfrac{7}{12}$\par
+\kotae （1）\nobreak $\dfrac{11}{12}$\hspace{2\zw}（2）\nobreak $\dfrac{1}{3}$\hspace{2\zw}（3）\nobreak $\dfrac{19}{12}$（$1\dfrac{7}{12}$）
+\end{reidai}
+
+\begin{jibun}
+（1）\nobreak $\dfrac{1}{2}+\dfrac{2}{5}$\quad（2）\nobreak $\dfrac{3}{4}-\dfrac{2}{3}$\quad（3）\nobreak $\dfrac{2}{3}+\dfrac{3}{4}$\quad（4）\nobreak 1\,V の\R{電池}{でん|ち}に、3\,Ω と6\,Ω の\R{抵抗}{てい|こう}を\R{並列}{へい|れつ}につなぐと、それぞれに $\dfrac{1}{3}$\,A と $\dfrac{1}{6}$\,A の\R{電流}{でん|りゅう}が\R{流}{なが}れます。\R{電流}{でん|りゅう}は\R{全部}{ぜん|ぶ}で\mbox{\R{何}{なん}A？}（\R{並列}{へい|れつ}は→\pageref{bk:2-4:heiretsu}ページ）
+\bkjans{（1）\nobreak $\dfrac{5}{10}+\dfrac{4}{10}=\dfrac{9}{10}$\quad（2）\nobreak $\dfrac{9}{12}-\dfrac{8}{12}=\dfrac{1}{12}$\quad（3）\nobreak $\dfrac{8}{12}+\dfrac{9}{12}=\dfrac{17}{12}$（$1\dfrac{5}{12}$）\quad（4）\nobreak $\dfrac{1}{3}+\dfrac{1}{6}=\dfrac{2}{6}+\dfrac{1}{6}=\dfrac{3}{6}=\dfrac{1}{2}$\quad $\dfrac{1}{2}$\,A}
+\end{jibun}
+
+\begin{reidai}[1あたりのかけ\R{算}{ざん}・わり\R{算}{ざん}]
+（1）\nobreak 1\,m で $\dfrac{3}{4}$\,kg の\R{棒}{ぼう}、$\dfrac{2}{5}$\,m では\R{何}{なん}kg？\quad（2）\nobreak $\dfrac{2}{3}$\,dL で $\dfrac{4}{9}$\,\unit{m^2} ぬれるペンキ、1\,dL では\R{何}{なん}\unit{m^2}？\par
+\kangaekata （1）1あたり（1\,m の\R{重}{おも}さ）×いくつ\R{分}{ぶん}（\R{長}{なが}さ）なので、かけ\R{算}{ざん}。（2）1あたり（1\,dL でぬれる\R{面積}{めん|せき}）を\R{求}{もと}めるので、\R{全体}{ぜん|たい}÷いくつ\R{分}{ぶん}のわり\R{算}{ざん}。わる\R{数}{かず}の\R{逆数}{ぎゃく|すう}をかける。\par
+\shiki （1）\nobreak $\dfrac{3}{4}\times\dfrac{2}{5}=\dfrac{3\times2}{4\times5}=\dfrac{6}{20}=\dfrac{3}{10}$\par
+\hspace*{2.6\zw}（2）\nobreak $\dfrac{4}{9}\div\dfrac{2}{3}=\dfrac{4}{9}\times\dfrac{3}{2}=\dfrac{12}{18}=\dfrac{2}{3}$\quad \R{確}{たし}かめ：$\dfrac{2}{3}\times\dfrac{2}{3}=\dfrac{4}{9}$\par
+\kotae （1）\nobreak $\dfrac{3}{10}$\,kg\hspace{2\zw}（2）\nobreak $\dfrac{2}{3}$\,\unit{m^2}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % (2) の2本の数直線：0, 1/3, 2/3, 1 dL  % noruby
+  \draw[bkInk, line width=0.8pt] (0,0) -- (78,0);
+  \draw[bkInk, line width=0.8pt] (0,12) -- (78,12);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-2,12) {\R{面積}{めん|せき}（\unit{m^2}）};
+  \node[anchor=east, font=\sffamily\footnotesize] at (-2,0) {ペンキ（dL）};
+  \fill[bkBlue!45] (0,10.8) rectangle (48,13.2);
+  \foreach \k/\t in {0/0,1/{\dfrac{1}{3}},2/{\dfrac{2}{3}},3/1} {
+    \draw[bkInk, line width=0.7pt] (\k*24,-1.5) -- (\k*24,1.5) (\k*24,10.5) -- (\k*24,13.5);
+    \node[anchor=north, font=\small] at (\k*24,-2) {$\t$};}
+  \node[anchor=south, font=\small] at (0,14) {$0$};
+  \node[anchor=south, font=\small] at (48,14) {$\dfrac{4}{9}$};
+  \node[anchor=south, font=\small, text=bkRed] at (72,14) {？};
+  \node[anchor=west, font=\sffamily\footnotesize, align=left] at (82,6) {1\,dL は $\dfrac{2}{3}$\,dL の\\$\dfrac{3}{2}$\R{倍}{ばい}（\R{逆数}{ぎゃく|すう}）};
+\end{tikzpicture}
+\end{bkfigure}
+\end{reidai}
+
+\begin{jibun}
+（1）\nobreak 1\,\unit{m^2} あたり $\dfrac{5}{6}$\,dL のペンキ。$\dfrac{3}{5}$\,\unit{m^2} では\R{何}{なん}dL？\quad（2）\nobreak $\dfrac{3}{4}$\,m で $\dfrac{3}{5}$\,kg の\R{針金}{はり|がね}。1\,m では\R{何}{なん}kg？\quad（3）\nobreak $\dfrac{5}{6}$\,dL で $\dfrac{5}{8}$\,\unit{m^2} ぬれるペンキ。1\,dL では\R{何}{なん}\unit{m^2}？
+\bkjans{（1）\nobreak $\dfrac{5}{6}\times\dfrac{3}{5}=\dfrac{15}{30}=\dfrac{1}{2}$\quad $\dfrac{1}{2}$\,dL\quad（2）\nobreak $\dfrac{3}{5}\times\dfrac{4}{3}=\dfrac{12}{15}=\dfrac{4}{5}$\quad $\dfrac{4}{5}$\,kg\quad（3）\nobreak $\dfrac{5}{8}\times\dfrac{6}{5}=\dfrac{30}{40}=\dfrac{3}{4}$\quad $\dfrac{3}{4}$\,\unit{m^2}}
+\end{jibun}
+
+\begin{reidai}[\R{整数}{せい|すう}・\R{小数}{しょう|すう}・\R{帯分数}{たい|ぶん|すう}でわる]
+（1）\nobreak $\dfrac{4}{9}\div2$\quad（2）\nobreak $0.9\div0.6$\quad（3）\nobreak $1\dfrac{1}{2}\div2\dfrac{1}{4}$\quad（4）\nobreak $\dfrac{3}{5}\div1.2$\quad \R{答}{こた}えは\R{確}{たし}かめもしよう。\par
+\kangaekata まず\R{分数}{ぶん|すう}（\R{仮分数}{か|ぶん|すう}）の\R{形}{かたち}にしてから、\R{逆数}{ぎゃく|すう}をかける。（1）$2=\dfrac{2}{1}$ の\R{逆数}{ぎゃく|すう}は $\dfrac{1}{2}$。（2）0.9は0.1が9こ、0.6は0.1が6こ。（3）$1=\dfrac{2}{2}$、$2=\dfrac{8}{4}$。（4）\R{分数}{ぶん|すう}と\R{小数}{しょう|すう}がまざっていたら、\R{小数}{しょう|すう}を\R{分数}{ぶん|すう}にそろえる。$1.2=\dfrac{12}{10}$。\par
+\shiki （1）\nobreak $\dfrac{4}{9}\div2=\dfrac{4}{9}\times\dfrac{1}{2}=\dfrac{4}{18}=\dfrac{2}{9}$\quad \R{確}{たし}かめ：$\dfrac{2}{9}\times2=\dfrac{4}{9}$\par
+\hspace*{2.6\zw}（2）\nobreak $0.9\div0.6=\dfrac{9}{10}\times\dfrac{10}{6}=\dfrac{90}{60}=\dfrac{3}{2}$\quad \R{確}{たし}かめ：$\dfrac{3}{2}\times\dfrac{6}{10}=\dfrac{18}{20}=\dfrac{9}{10}$\par
+\hspace*{2.6\zw}（3）\nobreak $1\dfrac{1}{2}\div2\dfrac{1}{4}=\dfrac{3}{2}\div\dfrac{9}{4}=\dfrac{3}{2}\times\dfrac{4}{9}=\dfrac{12}{18}=\dfrac{2}{3}$\par
+\hspace*{2.6\zw}\phantom{（3）}\R{確}{たし}かめ：$\dfrac{2}{3}\times\dfrac{9}{4}=\dfrac{18}{12}=\dfrac{3}{2}=1\dfrac{1}{2}$\par
+\hspace*{2.6\zw}（4）\nobreak $\dfrac{3}{5}\div1.2=\dfrac{3}{5}\times\dfrac{10}{12}=\dfrac{30}{60}=\dfrac{1}{2}$\quad \R{確}{たし}かめ：$\dfrac{1}{2}\times\dfrac{12}{10}=\dfrac{12}{20}=\dfrac{3}{5}$\par
+\kotae （1）\nobreak $\dfrac{2}{9}$\quad（2）\nobreak $\dfrac{3}{2}$（1.5）\quad（3）\nobreak $\dfrac{2}{3}$\quad（4）\nobreak $\dfrac{1}{2}$
+\end{reidai}
+
+\begin{jibun}
+\R{答}{こた}えを\R{確}{たし}かめもしよう。\quad（1）\nobreak $\dfrac{6}{7}\div3$\quad（2）\nobreak $0.8\div0.6$\quad（3）\nobreak $2\dfrac{1}{2}\div1\dfrac{2}{3}$\quad（4）\nobreak $\dfrac{9}{10}\div1.5$
+\bkjans{（1）\nobreak $\dfrac{6}{7}\times\dfrac{1}{3}=\dfrac{6}{21}=\dfrac{2}{7}$\quad（2）\nobreak $\dfrac{8}{10}\times\dfrac{10}{6}=\dfrac{80}{60}=\dfrac{4}{3}$\quad（3）\nobreak $\dfrac{5}{2}\times\dfrac{3}{5}=\dfrac{15}{10}=\dfrac{3}{2}$\quad（4）\nobreak $\dfrac{9}{10}\times\dfrac{10}{15}=\dfrac{90}{150}=\dfrac{3}{5}$}
+\end{jibun}
+
+\begin{reidai}[\R{答}{こた}えは\R{大}{おお}きくなる？\R{小}{ちい}さくなる？]
+60より\R{大}{おお}きくなるのは？\enspace ア\enspace$60\times0.8$\enspace イ\enspace$60\div0.8$\enspace ウ\enspace$60\times1.5$\enspace エ\enspace$60\div1.2$\par
+\kangaekata 0と1のあいだの\R{数}{かず}をかけると\R{小}{ちい}さく、わると\R{大}{おお}きくなる。1より\R{大}{おお}きい\R{数}{かず}をかけると\R{大}{おお}きく、わると\R{小}{ちい}さくなる。\par
+\shiki ア\enspace$60\times0.8=48$（\R{小}{ちい}さくなる）\par
+\hspace*{2.6\zw}イ\enspace$60\div0.8=75$（\R{大}{おお}きくなる）\par
+\hspace*{2.6\zw}ウ\enspace$60\times1.5=90$（\R{大}{おお}きくなる）\par
+\hspace*{2.6\zw}エ\enspace$60\div1.2=50$（\R{小}{ちい}さくなる）\kotaenext イ、ウ
+\begin{bkfigure}
+\begin{tikzpicture}[x=1.1mm, y=1mm]
+  % 数直線：もとの 60 から、ア 48・エ 50（左）、イ 75・ウ 90（右）  % noruby
+  \draw[bk axis] (-2,0) -- (104,0);
+  \foreach \v in {0,10,...,100} {\draw[bkInk, line width=0.5pt] (\v,-1.2) -- (\v,1.2);}
+  \foreach \v in {0,20,40,80,100} {\node[bk tick, font=\sffamily\footnotesize, below=1.6mm] at (\v,0) {\v};}
+  \node[font=\sffamily\bfseries\footnotesize, below=1.6mm] at (60,0) {60（もと）};
+  \draw[bkInk, line width=1.2pt] (60,-1.2) -- (60,13);
+  \draw[bk arrow, bkOrange, line width=1.3pt] (60,4.5) -- (48,4.5);
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black] at (46.5,4.5) {ア\,48};
+  \draw[bk arrow, bkOrange, line width=1.3pt] (60,10.5) -- (50,10.5);
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkOrange!80!black] at (48.5,10.5) {エ\,50};
+  \draw[bk arrow, bkBlue, line width=1.3pt] (60,4.5) -- (75,4.5);
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black] at (76.5,4.5) {イ\,75};
+  \draw[bk arrow, bkBlue, line width=1.3pt] (60,10.5) -- (90,10.5);
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black] at (91.5,10.5) {ウ\,90};
+  \node[anchor=east, font=\sffamily\footnotesize, text=bkInk] at (58,16) {\R{小}{ちい}さくなる ←};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkInk] at (62,16) {→ \R{大}{おお}きくなる};
+\end{tikzpicture}
+\end{bkfigure}
+\end{reidai}
+
+\begin{jibun}
+40より\R{小}{ちい}さくなるのは？\enspace ア\enspace$40\times0.5$\enspace イ\enspace$40\div0.5$\enspace ウ\enspace$40\times1.2$\enspace エ\enspace$40\div1.25$
+\bkjans{ア（20）、エ（32）。イは80、ウは48}
+\end{jibun}
+
+\bkfukidashi{delta}{\R{分数}{ぶん|すう}の\R{計算}{けい|さん}は、「1\R{切}{き}れの\R{大}{おお}きさ（\R{分母}{ぶん|ぼ}）」と「\R{何切}{なん|き}れ（\R{分子}{ぶん|し}）」を\R{分}{わ}けて\R{考}{かんが}えるとわかりやすいよ。}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{\R{分母}{ぶん|ぼ}どうしもたしてしまう}
+\bkng{$\dfrac{1}{2}+\dfrac{1}{3}=\dfrac{1+1}{2+3}=\dfrac{2}{5}$\rule[-2ex]{0pt}{5.6ex}}
+\bkok{$\dfrac{1}{2}+\dfrac{1}{3}=\dfrac{3}{6}+\dfrac{2}{6}=\dfrac{5}{6}$\rule[-2ex]{0pt}{5.6ex}}
+\R{分母}{ぶん|ぼ}は1\R{切}{き}れの\R{大}{おお}きさ。たすのは\R{分子}{ぶん|し}（\R{何切}{なん|き}れ）だけです。$\dfrac{2}{5}$ は $\dfrac{1}{2}$ より\R{小}{ちい}さいので、「たしたのにへった」ことになり、おかしいとわかります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{わられる\R{数}{かず}のほうを\R{逆数}{ぎゃく|すう}にする}
+\bkng{$\dfrac{2}{5}\div\dfrac{3}{4}=\dfrac{5}{2}\times\dfrac{3}{4}$\rule[-2ex]{0pt}{5.6ex}}
+\bkok{$\dfrac{2}{5}\div\dfrac{3}{4}=\dfrac{2}{5}\times\dfrac{4}{3}=\dfrac{8}{15}$\rule[-2ex]{0pt}{5.6ex}}
+\R{逆数}{ぎゃく|すう}にするのは、÷のうしろの「わる\R{数}{かず}」だけです。⑥で、\R{分母}{ぶん|ぼ}（わる\R{数}{かず}）を1にするために $\dfrac{4}{3}$ をかけたことを\R{思}{おも}い\R{出}{だ}しましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{かけ\R{算}{ざん}でも\R{逆数}{ぎゃく|すう}にしてしまう}
+\bkng{$\dfrac{2}{5}\times\dfrac{3}{4}=\dfrac{2}{5}\times\dfrac{4}{3}$\rule[-2ex]{0pt}{5.6ex}}
+\bkok{$\dfrac{2}{5}\times\dfrac{3}{4}=\dfrac{2\times3}{5\times4}=\dfrac{6}{20}=\dfrac{3}{10}$\rule[-2ex]{0pt}{5.6ex}}
+\R{逆数}{ぎゃく|すう}をかけるのは、わり\R{算}{ざん}のときだけ。かけ\R{算}{ざん}は、そのまま\R{分子}{ぶん|し}どうし・\R{分母}{ぶん|ぼ}どうしをかけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{逆数}{ぎゃく|すう}にしたのに、÷のままにする}
+\bkng{$\dfrac{2}{5}\div\dfrac{3}{4}=\dfrac{2}{5}\div\dfrac{4}{3}$\rule[-2ex]{0pt}{5.6ex}}
+\bkok{$\dfrac{2}{5}\div\dfrac{3}{4}=\dfrac{2}{5}\times\dfrac{4}{3}$\rule[-2ex]{0pt}{5.6ex}}
+「\R{逆数}{ぎゃく|すう}にする」と「÷を×にする」は、いつも\R{同}{おな}じときにします。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{帯分数}{たい|ぶん|すう}のまま\R{逆数}{ぎゃく|すう}にする}
+\bkng{$2\dfrac{1}{3}$ の\R{逆数}{ぎゃく|すう}は $2\dfrac{3}{1}$\rule[-2ex]{0pt}{5.6ex}}
+\bkok{$2\dfrac{1}{3}=\dfrac{7}{3}$ なので、\R{逆数}{ぎゃく|すう}は $\dfrac{3}{7}$\rule[-2ex]{0pt}{5.6ex}}
+\R{先}{さき}に\R{仮分数}{か|ぶん|すう}にしてから\R{入}{い}れかえます。\R{確}{たし}かめ：$\dfrac{7}{3}\times\dfrac{3}{7}=\dfrac{21}{21}=1$。
+\end{tsumazuki}
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\noindent\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=0.85mm, y=0.85mm]
+  % 並列回路：電池と2本の抵抗。電流は電池の＋（長い線）から出て、抵抗を上から下へ流れる  % noruby
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,30) -- (38,30) -- (38,0) -- cycle;
+  \draw[bkInk, line width=0.9pt] (17,30) -- (17,0);
+  \filldraw[fill=white, draw=bkInk, line width=0.9pt] (14.5,7) rectangle (19.5,23);
+  \filldraw[fill=white, draw=bkInk, line width=0.9pt] (35.5,7) rectangle (40.5,23);
+  \node[anchor=west, font=\sffamily\footnotesize] at (21,15) {2\,Ω};
+  \node[anchor=west, font=\sffamily\footnotesize] at (42,15) {3\,Ω};
+  \fill[bkPurpleBg] (-3.5,13) rectangle (3.5,17);
+  \draw[bkInk, line width=1.4pt] (-3.5,16.5) -- (3.5,16.5);
+  \draw[bkInk, line width=0.9pt] (-1.8,13.5) -- (1.8,13.5);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-4.5,15) {1\,V};
+  \draw[bkRed, line width=1pt, -{Stealth[length=4pt]}] (13,20) -- (13,10);
+  \draw[bkRed, line width=1pt, -{Stealth[length=4pt]}] (34,20) -- (34,10);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}
+\textbf{\R{並列}{へい|れつ}につないだ\R{抵抗}{てい|こう}}\label{bk:2-4:heiretsu}\par
+\R{抵抗}{てい|こう}は\R{電流}{でん|りゅう}の\R{流}{なが}れにくさで、\R{単位}{たん|い}は Ω（オーム）です。1\,V（ボルト）の\R{電池}{でん|ち}に2\,Ω の\R{抵抗}{てい|こう}をつなぐと、\R{電流}{でん|りゅう}は $\dfrac{1}{2}$\,A（アンペア）、3\,Ω なら $\dfrac{1}{3}$\,A \R{流}{なが}れます（\R{電流}{でん|りゅう}＝\R{電圧}{でん|あつ}÷\R{抵抗}{てい|こう}。くわしくは2-15）。2つを\R{並}{なら}べてつなぐと（\R{並列}{へい|れつ}）、\R{電流}{でん|りゅう}は\R{両方}{りょう|ほう}の\R{道}{みち}に\R{分}{わ}かれて\R{流}{なが}れるので、\R{電池}{でん|ち}から\R{出}{で}る\R{電流}{でん|りゅう}は $\dfrac{1}{2}+\dfrac{1}{3}=\dfrac{5}{6}$\,A。\R{電気}{でん|き}の\R{回路}{かい|ろ}の\R{設計}{せっ|けい}では、よく\R{分数}{ぶん|すう}のたし\R{算}{ざん}をします。
+\end{minipage}
+
+\par\vspace{6pt}
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % モジュール 0.8：基準円の半径 12 と 4.8、中心のあいだ 16.8。大の歯（0°）が小のすき間（180°）に入る  % noruby
+  \bkiiegear{(0,0)}{30}{0.8}{0}{bkBlue}
+  \bkiiegear{(16.8,0)}{12}{0.8}{195}{bkOrange}
+  \draw[bkBlue!80!black, line width=1pt, -{Stealth[length=4pt]}] (-6,15.5) arc (110:70:16);
+  \draw[bkOrange!80!black, line width=1pt, -{Stealth[length=4pt]}] (19.8,8.6) arc (60:120:6);
+  \node[font=\sffamily\footnotesize] at (0,-16) {\R{歯}{は}\,30};
+  \node[font=\sffamily\footnotesize] at (16.8,-16) {\R{歯}{は}\,12};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.6\linewidth}
+\textbf{\R{歯車}{は|ぐるま}}\label{bk:2-4:haguruma}\par
+かみ\R{合}{あ}ったところでは、2つの\R{歯車}{は|ぐるま}の\R{歯}{は}が1こずつ\R{同}{おな}じ\R{数}{かず}だけ\R{送}{おく}られます。\R{歯}{は}の\R{数}{かず}が30の\R{歯車}{は|ぐるま}が1\R{回転}{かい|てん}すると、\R{歯}{は}が30こ\R{送}{おく}られます。\R{歯}{は}の\R{数}{かず}が12の\R{歯車}{は|ぐるま}は、\R{歯}{は}12こで1\R{回転}{かい|てん}なので、30こ\R{分}{ぶん}では $30\div12=\dfrac{30}{12}=\dfrac{5}{2}$\R{回転}{かい|てん}（$2\dfrac{1}{2}$\R{回転}{かい|てん}）します。かみ\R{合}{あ}った\R{歯車}{は|ぐるま}は、\R{反対}{はん|たい}の\R{向}{む}きに\R{回}{まわ}ります。
+\end{minipage}
+\end{butsuri}
+
+\begin{column}{2つの\R{抵抗}{てい|こう}を1つにまとめると？（\R{逆数}{ぎゃく|すう}の\R{出番}{で|ばん}）}
+\pageref{bk:2-4:heiretsu}ページの\R{並列}{へい|れつ}の\R{回路}{かい|ろ}では、1\,V の\R{電池}{でん|ち}から $\dfrac{5}{6}$\,A の\R{電流}{でん|りゅう}が\R{出}{で}ていました。この2つの\R{抵抗}{てい|こう}を、\R{電池}{でん|ち}から\R{見}{み}て\R{同}{おな}じ\R{電流}{でん|りゅう}が\R{流}{なが}れる「1つの\R{抵抗}{てい|こう}」におきかえると、\R{何}{なん}Ω になるでしょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.85mm, y=0.85mm]
+  % 左：並列の2つ  % noruby
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,30) -- (38,30) -- (38,0) -- cycle;
+  \draw[bkInk, line width=0.9pt] (17,30) -- (17,0);
+  \filldraw[fill=white, draw=bkInk, line width=0.9pt] (14.5,7) rectangle (19.5,23);
+  \filldraw[fill=white, draw=bkInk, line width=0.9pt] (35.5,7) rectangle (40.5,23);
+  \node[anchor=west, font=\sffamily\footnotesize] at (21,15) {2\,Ω};
+  \node[anchor=west, font=\sffamily\footnotesize] at (42,15) {3\,Ω};
+  \fill[bkPaper] (-3.5,13) rectangle (3.5,17);
+  \draw[bkInk, line width=1.4pt] (-3.5,16.5) -- (3.5,16.5);
+  \draw[bkInk, line width=0.9pt] (-1.8,13.5) -- (1.8,13.5);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-4.5,15) {1\,V};
+  \node[anchor=north, font=\sffamily\footnotesize] at (19,-2) {\R{電流}{でん|りゅう} $\dfrac{5}{6}$\,A};
+  \draw[bk arrow, bkGray, line width=1pt] (54,15) -- (70,15);
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkGray!80!black] at (62,17) {\R{同}{おな}じ\R{電流}{でん|りゅう}};
+  % 右：1つにまとめた抵抗  % noruby
+  \begin{scope}[shift={(84,0)}]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,30) -- (22,30) -- (22,0) -- cycle;
+  \filldraw[fill=white, draw=bkInk, line width=0.9pt] (19.5,7) rectangle (24.5,23);
+  \node[anchor=west, font=\sffamily\footnotesize] at (26,15) {？Ω};
+  \fill[bkPaper] (-3.5,13) rectangle (3.5,17);
+  \draw[bkInk, line width=1.4pt] (-3.5,16.5) -- (3.5,16.5);
+  \draw[bkInk, line width=0.9pt] (-1.8,13.5) -- (1.8,13.5);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-4.5,15) {1\,V};
+  \node[anchor=north, font=\sffamily\footnotesize] at (11,-2) {\R{電流}{でん|りゅう} $\dfrac{5}{6}$\,A};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+「\R{電流}{でん|りゅう}＝\R{電圧}{でん|あつ}÷\R{抵抗}{てい|こう}」でした。「\R{答}{こた}え×わる\R{数}{かず}＝わられる\R{数}{かず}」（⑦）なので、\R{電流}{でん|りゅう}×\R{抵抗}{てい|こう}＝\R{電圧}{でん|あつ}。だから「\R{抵抗}{てい|こう}＝\R{電圧}{でん|あつ}÷\R{電流}{でん|りゅう}」で\R{求}{もと}められます。
+\[ 1\div\frac{5}{6}=1\times\frac{6}{5}=\frac{6}{5}=1\frac{1}{5}\ (\Omega) \]
+\R{分数}{ぶん|すう}でわるので、\R{逆数}{ぎゃく|すう}をかけました。まとめた\R{抵抗}{てい|こう} $\dfrac{6}{5}$\,Ω（1.2\,Ω）は、2\,Ω よりも\R{小}{ちい}さくなります。\R{電流}{でん|りゅう}の\R{通}{とお}り\R{道}{みち}がふえて、\R{流}{なが}れやすくなったからです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] Q[c,m,wd=48mm] Q[c,m,wd=26mm]}, rowsep=2pt, cells={font=\small}}
+\R{並列}{へい|れつ}につなぐ\R{抵抗}{てい|こう} & 1\,V で\R{流}{なが}れる\R{電流}{でん|りゅう}（A） & まとめると \\
+2\,Ω と 2\,Ω & $\dfrac{1}{2}+\dfrac{1}{2}=1$ & $1\div1=1$\,Ω \\
+2\,Ω と 3\,Ω & $\dfrac{1}{2}+\dfrac{1}{3}=\dfrac{5}{6}$ & $\dfrac{6}{5}$\,Ω \\
+3\,Ω と 6\,Ω & $\dfrac{1}{3}+\dfrac{1}{6}=\dfrac{1}{2}$ & $2$\,Ω \\
+\end{bktable}
+\bktabcaption{\R{電流}{でん|りゅう}をたして、その\R{逆数}{ぎゃく|すう}をとると、まとめた\R{抵抗}{てい|こう}になる。}
+\end{bkcenter}
+\R{電気}{でん|き}の\R{回路}{かい|ろ}を\R{設計}{せっ|けい}する\R{人}{ひと}は、「\R{逆数}{ぎゃく|すう}をたして、また\R{逆数}{ぎゃく|すう}にもどす」\R{計算}{けい|さん}を、いつも\R{使}{つか}っています（くわしくは2-15）。
+\end{column}
+
+
+
+\clearpage
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{1}
+
+\bkproblem わり\R{算}{ざん}の\R{答}{こた}えを\R{分数}{ぶん|すう}で\R{書}{か}きましょう。\quad（1）\nobreak $2\div5$\quad（2）\nobreak $7\div4$\quad（3）\nobreak $1\div6$
+\bkpans{（1）\nobreak $\dfrac{2}{5}$\quad（2）\nobreak $\dfrac{7}{4}$\quad（3）\nobreak $\dfrac{1}{6}$}
+
+\bkproblem ピザ5\R{枚}{まい}を4\R{人}{にん}で\R{同}{おな}じ\R{大}{おお}きさずつ\R{分}{わ}けると、1\R{人分}{にん|ぶん}は\R{何枚}{なん|まい}でしょう。\R{分数}{ぶん|すう}と\R{小数}{しょう|すう}で\R{答}{こた}えましょう。
+\bkpans{$5\div4=\dfrac{5}{4}$\quad $\dfrac{5}{4}$\R{枚}{まい}（1.25\R{枚}{まい}）}
+
+\bkproblem \R{約分}{やく|ぶん}しましょう。\quad（1）\nobreak $\dfrac{8}{12}$\quad（2）\nobreak $\dfrac{15}{25}$\quad（3）\nobreak $\dfrac{14}{21}$
+\bkpans{（1）\nobreak $\dfrac{2}{3}$\quad（2）\nobreak $\dfrac{3}{5}$\quad（3）\nobreak $\dfrac{2}{3}$}
+
+\bkproblem \R{分数}{ぶん|すう}は\R{小数}{しょう|すう}に、\R{小数}{しょう|すう}は\R{分数}{ぶん|すう}にしましょう。\quad（1）\nobreak $\dfrac{3}{4}$\quad（2）\nobreak $\dfrac{2}{5}$\quad（3）\nobreak 0.4\quad（4）\nobreak 0.25
+\bkpans{（1）\nobreak 0.75\quad（2）\nobreak 0.4\quad（3）\nobreak $\dfrac{2}{5}$\quad（4）\nobreak $\dfrac{1}{4}$}
+
+\bkproblem （1）\nobreak $\dfrac{13}{5}$ を\R{帯分数}{たい|ぶん|すう}に、（2）\nobreak $4\dfrac{2}{3}$ を\R{仮分数}{か|ぶん|すう}にしましょう。
+\bkpans{（1）\nobreak $2\dfrac{3}{5}$\quad（2）\nobreak $\dfrac{14}{3}$}
+
+\bkproblem \R{計算}{けい|さん}しましょう。\quad（1）\nobreak \mbox{$\dfrac{1}{3}+\dfrac{1}{6}$}\quad（2）\nobreak \mbox{$\dfrac{3}{4}-\dfrac{1}{3}$}\quad（3）\nobreak \mbox{$\dfrac{2}{3}\times\dfrac{3}{4}$}\quad（4）\nobreak \mbox{$\dfrac{3}{5}\div\dfrac{9}{10}$}
+\bkpans{（1）\nobreak $\dfrac{1}{2}$\quad（2）\nobreak $\dfrac{5}{12}$\quad（3）\nobreak $\dfrac{1}{2}$\quad（4）\nobreak $\dfrac{2}{3}$}
+
+\bkproblem わり\R{算}{ざん}をして、「\R{答}{こた}え×わる\R{数}{かず}」で\R{確}{たし}かめましょう。\quad（1）\nobreak \mbox{$\dfrac{5}{6}\div\dfrac{5}{9}$}\quad（2）\nobreak \mbox{$\dfrac{3}{4}\div6$}\quad（3）\nobreak \mbox{$1\dfrac{1}{3}\div0.8$}
+\bkpans{（1）\nobreak $\dfrac{5}{6}\times\dfrac{9}{5}=\dfrac{3}{2}$\quad（2）\nobreak $\dfrac{3}{4}\times\dfrac{1}{6}=\dfrac{1}{8}$\quad（3）\nobreak $\dfrac{4}{3}\times\dfrac{10}{8}=\dfrac{5}{3}$}
+
+\bkproblem 1\,m の\R{重}{おも}さが $\dfrac{4}{5}$\,kg の\R{棒}{ぼう}があります。（1）\nobreak $\dfrac{3}{8}$\,m では\R{何}{なん}kg？\quad（2）\nobreak べつの\R{棒}{ぼう}は、$\dfrac{2}{3}$\,m で $\dfrac{1}{2}$\,kg です。1\,m では\R{何}{なん}kg？
+\bkpans{（1）\nobreak $\dfrac{4}{5}\times\dfrac{3}{8}=\dfrac{12}{40}=\dfrac{3}{10}$\quad $\dfrac{3}{10}$\,kg\quad（2）\nobreak $\dfrac{1}{2}\div\dfrac{2}{3}=\dfrac{1}{2}\times\dfrac{3}{2}=\dfrac{3}{4}$\quad $\dfrac{3}{4}$\,kg}
+
+\bkproblem \R{計算}{けい|さん}しましょう。1より\R{大}{おお}きい\R{答}{こた}えは、\R{帯分数}{たい|ぶん|すう}でも\R{表}{あらわ}しましょう。\quad（1）\nobreak \mbox{$\dfrac{5}{6}+\dfrac{2}{9}$}\quad（2）\nobreak \mbox{$\dfrac{7}{8}+\dfrac{1}{2}$}
+\bkpans{（1）\nobreak $\dfrac{15}{18}+\dfrac{4}{18}=\dfrac{19}{18}=1\dfrac{1}{18}$\quad（2）\nobreak $\dfrac{7}{8}+\dfrac{4}{8}=\dfrac{11}{8}=1\dfrac{3}{8}$}
+
+\bkproblem \R{計算}{けい|さん}しましょう。\quad（1）\nobreak \mbox{$\dfrac{7}{10}-\dfrac{1}{4}$}\quad（2）\nobreak \mbox{$\dfrac{4}{7}\times\dfrac{7}{8}$}\quad（3）\nobreak \mbox{$\dfrac{5}{9}\div\dfrac{10}{3}$}\quad（4）\nobreak \mbox{$2\dfrac{2}{3}\div4$}\quad（5）\nobreak \mbox{$0.75\div\dfrac{3}{8}$}
+\bkpans{（1）\nobreak $\dfrac{9}{20}$\quad（2）\nobreak $\dfrac{1}{2}$\quad（3）\nobreak $\dfrac{1}{6}$\quad（4）\nobreak $\dfrac{2}{3}$\quad（5）\nobreak 2}
+
+\bkproblem （1）\nobreak $\dfrac{2}{3}$\R{分}{ぷん}で\qty{50}{m}\R{歩}{ある}きました。1\R{分}{ぷん}あたり\R{何}{なん}m\R{歩}{ある}いたでしょう。\quad（2）\nobreak 1\,m あたり $\dfrac{2}{5}$\,kg の\R{鉄}{てつ}の\R{棒}{ぼう}があります。$\dfrac{7}{4}$\,m では\R{何}{なん}kg でしょう。
+\bkpans{（1）\nobreak $50\div\dfrac{2}{3}=50\times\dfrac{3}{2}=75$\quad\qty{75}{m}\quad（2）\nobreak $\dfrac{2}{5}\times\dfrac{7}{4}=\dfrac{14}{20}=\dfrac{7}{10}$\quad $\dfrac{7}{10}$\,kg}
+
+\bkproblemgroup{チャレンジ}{2}
+
+\bkproblem ミナは、$\dfrac{3}{5}\div\dfrac{2}{7}=\dfrac{6}{35}$ と\R{計算}{けい|さん}しました。「\R{答}{こた}え×わる\R{数}{かず}」で\R{確}{たし}かめて、まちがいかどうかを\R{調}{しら}べましょう。まちがっていたら、どこでまちがえたかを\R{書}{か}き、\R{正}{ただ}しい\R{答}{こた}えを\R{求}{もと}めましょう。
+\bkpans{$\dfrac{6}{35}\times\dfrac{2}{7}=\dfrac{12}{245}$ で $\dfrac{3}{5}$ にもどらないのでまちがい。\R{逆数}{ぎゃく|すう}にせず、そのままかけていた。$\dfrac{3}{5}\times\dfrac{7}{2}=\dfrac{21}{10}$}
+
+\bkproblem \R{答}{こた}えが、わられる\R{数}{かず}やかけられる\R{数}{かず}の $\dfrac{3}{4}$ より\R{大}{おお}きくなるものをすべてえらびましょう。\R{計算}{けい|さん}しないで\R{考}{かんが}え、あとで\R{計算}{けい|さん}して\R{確}{たし}かめよう。\par
+ア\enspace\mbox{$\dfrac{3}{4}\times\dfrac{2}{3}$}\quad イ\enspace\mbox{$\dfrac{3}{4}\div\dfrac{2}{3}$}\quad ウ\enspace\mbox{$\dfrac{3}{4}\times\dfrac{5}{4}$}\quad エ\enspace\mbox{$\dfrac{3}{4}\div\dfrac{5}{4}$}
+\bkpans{イ（$\dfrac{9}{8}$）、ウ（$\dfrac{15}{16}$）。アは $\dfrac{1}{2}$、エは $\dfrac{3}{5}$}
+
+\bkproblem $1\dfrac{1}{2}$\,dL のペンキで、かべが $2\dfrac{1}{4}$\,\unit{m^2} ぬれました。1\,dL では\R{何}{なん}\unit{m^2} ぬれますか。\R{答}{こた}えを\R{確}{たし}かめてから、\R{帯分数}{たい|ぶん|すう}で\R{答}{こた}えましょう。
+\bkpans{$\dfrac{9}{4}\div\dfrac{3}{2}=\dfrac{9}{4}\times\dfrac{2}{3}=\dfrac{18}{12}=\dfrac{3}{2}$\quad $1\dfrac{1}{2}$\,\unit{m^2}}
+
+\bkproblem \R{答}{こた}えが120より\R{大}{おお}きくなるものをすべてえらびましょう。\R{計算}{けい|さん}しないで\R{考}{かんが}え、あとで\R{電卓}{でん|たく}で\R{確}{たし}かめよう。\par
+ア\enspace\mbox{$120\times0.9$}\quad イ\enspace\mbox{$120\div0.9$}\quad ウ\enspace\mbox{$120\times1.1$}\quad エ\enspace\mbox{$120\div1.1$}\quad オ\enspace\mbox{$120\div\dfrac{1}{3}$}
+\bkpans{イ（$133.3\cdots$）、ウ（132）、オ（360）}
+
+\bkproblem $\dfrac{3}{8}\div\dfrac{3}{4}$ がなぜ $\dfrac{3}{8}\times\dfrac{4}{3}$ になるのかを、「\R{分数}{ぶん|すう}の\R{中}{なか}に\R{分数}{ぶん|すう}」の\R{形}{かたち}に\R{書}{か}いて、\R{分母}{ぶん|ぼ}を1にする\R{方法}{ほう|ほう}で、1\R{行}{ぎょう}ずつノートに\R{説明}{せつ|めい}しましょう。\R{答}{こた}えも\R{求}{もと}めましょう。
+\bkpans{\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の\R{両方}{りょう|ほう}に $\dfrac{4}{3}$ をかけると、\R{分母}{ぶん|ぼ}は $\dfrac{3}{4}\times\dfrac{4}{3}=1$ になり、$\dfrac{3}{8}\times\dfrac{4}{3}$ がのこる。\R{答}{こた}えは $\dfrac{12}{24}=\dfrac{1}{2}$}
+
+\Needspace{62mm}\bkproblem \R{図}{ず}のように、1\,V の\R{電池}{でん|ち}に、2\,Ω、3\,Ω、6\,Ω の\R{抵抗}{てい|こう}を\R{並列}{へい|れつ}につなぎました。\par
+\noindent\begin{minipage}[c]{0.56\linewidth}
+それぞれの\R{抵抗}{てい|こう}に $\dfrac{1}{2}$\,A、$\dfrac{1}{3}$\,A、$\dfrac{1}{6}$\,A の\R{電流}{でん|りゅう}が\R{流}{なが}れます。\par
+（1）\nobreak \R{電池}{でん|ち}から\R{流}{なが}れ\R{出}{で}る\R{電流}{でん|りゅう}は、\R{全部}{ぜん|ぶ}で\R{何}{なん}A でしょう。\par
+（2）\nobreak 6\,Ω の\R{抵抗}{てい|こう}をはずすと、\R{全部}{ぜん|ぶ}で\R{何}{なん}A になるでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\raggedleft
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,26) -- (54,26) -- (54,0) -- cycle;
+  \draw[bkInk, line width=0.9pt] (18,26) -- (18,0);
+  \draw[bkInk, line width=0.9pt] (36,26) -- (36,0);
+  \foreach \x/\r in {18/2,36/3,54/6} {
+    \filldraw[fill=white, draw=bkInk, line width=0.9pt] (\x-2.5,6) rectangle (\x+2.5,20);
+    \node[anchor=east, font=\sffamily\footnotesize] at (\x-3.5,13) {\r\,Ω};}
+  \fill[white] (-3.5,11) rectangle (3.5,15);
+  \draw[bkInk, line width=1.4pt] (-3.5,14.5) -- (3.5,14.5);
+  \draw[bkInk, line width=0.9pt] (-1.8,11.5) -- (1.8,11.5);
+  \node[anchor=east, font=\sffamily\footnotesize] at (-4.5,13) {1\,V};
+\end{tikzpicture}
+\end{minipage}
+\bkpans{（1）\nobreak $\dfrac{1}{2}+\dfrac{1}{3}+\dfrac{1}{6}=\dfrac{3}{6}+\dfrac{2}{6}+\dfrac{1}{6}=\dfrac{6}{6}=1$\quad 1\,A\quad（2）\nobreak $\dfrac{1}{2}+\dfrac{1}{3}=\dfrac{3}{6}+\dfrac{2}{6}=\dfrac{5}{6}$\quad $\dfrac{5}{6}$\,A}
+
+\bkproblem \R{歯}{は}の\R{数}{かず}が36の\R{歯車}{は|ぐるま}が1\R{回転}{かい|てん}すると、かみ\R{合}{あ}った\R{歯}{は}の\R{数}{かず}が24の\R{歯車}{は|ぐるま}は\R{何回転}{なん|かい|てん}するでしょう。\R{分数}{ぶん|すう}で\R{答}{こた}え、\R{約分}{やく|ぶん}しましょう。\par
+\noindent\begin{minipage}[c]{0.54\linewidth}
+ヒント：かみ\R{合}{あ}ったところでは、2つの\R{歯車}{は|ぐるま}の\R{歯}{は}が\R{同}{おな}じ\R{数}{かず}ずつ\R{進}{すす}みます。\R{小}{ちい}さい\R{歯車}{は|ぐるま}は\R{歯}{は}36こ\R{分}{ぶん}\R{回}{まわ}り、1\R{回転}{かい|てん}は\R{歯}{は}24こ\R{分}{ぶん}なので、$36\div24$ です（→\pageref{bk:2-4:haguruma}ページ）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\raggedleft
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % モジュール 0.7：基準円の半径 12.6 と 8.4、中心のあいだ 21。大の歯（0°）が小のすき間（180°）に入る  % noruby
+  \bkiiegear{(0,0)}{36}{0.7}{0}{bkBlue}
+  \bkiiegear{(21,0)}{24}{0.7}{187.5}{bkOrange}
+  \node[font=\sffamily\footnotesize] at (0,-16.8) {\R{歯}{は}\,36};
+  \node[font=\sffamily\footnotesize] at (21,-16.8) {\R{歯}{は}\,24};
+\end{tikzpicture}
+\end{minipage}
+\bkpans{$36\div24=\dfrac{36}{24}=\dfrac{3}{2}$\quad $\dfrac{3}{2}$\R{回転}{かい|てん}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item わり\R{算}{ざん}の\R{答}{こた}えを\R{分数}{ぶん|すう}で\R{書}{か}き、\R{約分}{やく|ぶん}・\R{通分}{つう|ぶん}ができる。\unskip\nobreak\hfill\penalty50\hskip1em\null\nobreak\hfill\mbox{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-4:wari}ページ}
+\item \R{分数}{ぶん|すう}の＋－×÷ができ、わり\R{算}{ざん}で\R{逆数}{ぎゃく|すう}をかけるわけを\R{説明}{せつ|めい}できる。\unskip\nobreak\hfill\penalty50\hskip1em\null\nobreak\hfill\mbox{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-4:naze}ページ}
+\item 0と1のあいだの\R{数}{かず}をかけた・わった\R{答}{こた}えの\R{大}{おお}きさがわかる。\unskip\nobreak\hfill\penalty50\hskip1em\null\nobreak\hfill\mbox{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-4:chiisai}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{つぎの2-5では、\R{比}{ひ}と\R{割合}{わり|あい}を\R{学}{まな}ぶよ。\R{分数}{ぶん|すう}がそのまま\R{使}{つか}えるよ。}

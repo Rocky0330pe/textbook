@@ -1,0 +1,1080 @@
+%% 8-10 うず：回転 rot（第14回：組 V8-6。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   物理 力-4（p1-04:380〜383）「8-10で学んだように、F=−grad U と書ける力では rot F=0 になり、反対に（すきまのない広がりの中なら）
+%%   rot F=0 の力は −grad U と書けます。平面の力なら、確かめるのは ∂F_y/∂x−∂F_x/∂y=0 かどうか」→ ⑥の平面の rot・もっと知りたい（S12）。
+%%   物理 力-4 の F1=(y,x)（rot 0、U=−xy）、F2=(−y,x)（rot 2）、F3=(2x,2y)、F4=(y,−x)（rot −2）と道A・道B → ④・例題6。
+%%   4-14:642「電流のまわりの磁場…くわしい式（外積が出てきます）は、物理シリーズの電磁気学と8-10で学びます」→ ⑪。
+%%   4-14 のコラム「台風の渦は、なぜ左回り？」→ 物理・工学ではこう使う。7-back 予告カード「外積（4-14）と、3×3 の行列式（7-4）」→ ⑧。
+%%   8-5 の主役の場（6つ）、8-7 の場合A（軸に平行な道）・場合E（区間に分ける）、8-9 の div（マスの出入り）を使う。
+%%   8-11 へ：「マスのまわりを1周」はストークスの定理（S1）の小さい版。うずなし流れの穴（S3）は 8-11 で。
+%%   数はすべて Python で確かめた（scratchpad/v8-6/py/c10.py）。
+\makeatletter
+% ---- この章の部品（頭文字 kviiik）----
+% 本文の小見出し（太字の1行）
+\newcommand\kviiikhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiikbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviiikframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiikq{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+% 矢印の場の矢印
+\tikzset{kviiik arrow/.style={-{Stealth[length=3.2pt, width=3pt]}, line width=0.9pt, bkBlue!70!black},
+  kviiik turn/.style={-{Stealth[length=2.2mm, width=2mm]}, line width=1.1pt, bkRed!85!black}}
+% 風車  \kviiikmill{(x,y)}{羽根の長さ}{羽根の向き（度）}：羽根4枚、1枚の先にオレンジの印
+\newcommand\kviiikmill[3]{\begin{scope}[shift={#1}, rotate=#3]
+  \foreach \kviiika in {0,90,180,270} {\draw[bkInk, line width=1.1pt, line cap=round] (0,0) -- (\kviiika:#2);}
+  \fill[bkOrange!90!black] (0:#2) circle ({0.2*#2});
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (0,0) circle ({0.14*#2});
+\end{scope}}
+% 回る向きの矢印  \kviiikccw{(x,y)}{半径}（左回り）、\kviiikcw{(x,y)}{半径}（右回り）
+\newcommand\kviiikccw[2]{\draw[kviiik turn] #1 ++(20:#2) arc (20:290:#2);}
+\newcommand\kviiikcw[2]{\draw[kviiik turn] #1 ++(160:#2) arc (160:-110:#2);}
+% 矢印の場の小さな図  \kviiikpanel[1目もり]{Fx の式}{Fy の式}{足すもの}（\kviiikx, \kviiiky を使う。−2〜2 の格子。(1〜2, 1〜2) の4点は風車の場所なのでかかない）
+%   \kviiikpanelfull は、全部の点に矢印をかく（例題用）
+\newif\ifkviiikskip
+\newcommand\kviiikpanelbody[4]{%
+  \begin{tikzpicture}[x=#1, y=#1]
+    \fill[white] (-2.6,-2.6) rectangle (2.6,2.6);
+    \draw[bkLine, line width=0.4pt] (-2.6,0) -- (2.6,0) (0,-2.6) -- (0,2.6);
+    \draw[bkGray, line width=0.6pt] (-2.6,-2.6) rectangle (2.6,2.6);
+    \foreach \kviiikx in {-2,...,2} {\foreach \kviiiky in {-2,...,2} {%
+      \pgfmathsetmacro\kviiiku{#2}\pgfmathsetmacro\kviiikw{#3}%
+      \ifkviiikskip\pgfmathtruncatemacro\kviiikok{and((abs(\kviiiku)+abs(\kviiikw))>0.02, or(\kviiikx<1, \kviiiky<1))}%
+      \else\pgfmathtruncatemacro\kviiikok{(abs(\kviiiku)+abs(\kviiikw))>0.02}\fi
+      \ifnum\kviiikok=1 \draw[kviiik arrow] ({\kviiikx-\kviiiku/2},{\kviiiky-\kviiikw/2}) -- ++(\kviiiku,\kviiikw);\fi}}
+    #4
+  \end{tikzpicture}}
+\newcommand\kviiikpanel[4][6.6mm]{\kviiikskiptrue\kviiikpanelbody{#1}{#2}{#3}{#4}}
+\newcommand\kviiikpanelfull[4][5mm]{\kviiikskipfalse\kviiikpanelbody{#1}{#2}{#3}{#4}}
+% 用水路（はば70 mm、1 m＝14 mm）と排水口のうず（半径23 mm）  #1 に足すもの
+\newcommand\kviiikriver[1]{%
+  \fill[bkBlueBg] (0,-14) rectangle (70,14);
+  \fill[bkGreen!25] (0,14) rectangle (70,18) (0,-18) rectangle (70,-14);
+  \draw[bkGray!80!black, line width=1pt] (0,14) -- (70,14) (0,-14) -- (70,-14);
+  \foreach \kviiikc in {2,26,50} {\foreach \kviiiky in {-11,-5.5,0,5.5,11} {%
+    \pgfmathsetmacro\kviiikL{14*(1-(\kviiiky/14)^2)}%
+    \draw[kviiik arrow, line width=1.1pt] (\kviiikc,\kviiiky) -- ++(\kviiikL,0);}}
+  \kviiikmill{(21,0)}{3.2}{20}
+  \kviiikmill{(45,8.5)}{3.2}{20}
+  \kviiikmill{(45,-8.5)}{3.2}{20}
+  \node[font=\sffamily\bfseries\small, inner sep=0.5pt] at (21,6.8) {A};
+  \node[font=\sffamily\bfseries\small, inner sep=0.5pt] at (45,16) {B};
+  \node[font=\sffamily\bfseries\small, inner sep=0.5pt] at (45,-16) {C};
+  #1}
+\newcommand\kviiikvortex[1]{%
+  \fill[bkBlueBg] (0,0) circle (23);
+  \draw[bkGray!80!black, line width=1pt] (0,0) circle (23);
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (0,0) circle (6.5);
+  \foreach \kviiika in {0,60,...,300} {%
+    \draw[kviiik arrow, line width=1.1pt] (\kviiika:12) ++(\kviiika-90:2.4) -- ++(\kviiika+90:4.8);
+    \draw[kviiik arrow, line width=1.1pt] (\kviiika:19.5) ++(\kviiika-90:1.5) -- ++(\kviiika+90:3);}
+  \foreach \kviiika in {90,210,330} {\draw[kviiik arrow, line width=1.1pt] (\kviiika:4.6) ++(\kviiika-90:1.9) -- ++(\kviiika+90:3.8);}
+  \kviiikmill{(0,0)}{2.3}{20}
+  \kviiikmill{(-30:15.5)}{3.2}{20}
+  \draw[bkInk, line width=0.4pt] (150:2.9) -- (150:8.1);\node[font=\sffamily\bfseries\small, inner sep=0.5pt] at (150:9.6) {D};
+  \node[font=\sffamily\bfseries\small, inner sep=0.5pt] at (-45:21) {E};
+  #1}
+% 1周するマス（辺にそって進む向き）
+\newcommand\kviiiksq[3]{% (左下), 1辺, 色
+  \draw[#3, line width=0.9pt, dash pattern=on 2.5pt off 1.5pt] #1 rectangle ++(#2,#2);
+  \draw[#3, line width=1.1pt, -{Stealth[length=2mm]}] #1 ++({0.3*#2},0) -- ++({0.4*#2},0);
+  \draw[#3, line width=1.1pt, -{Stealth[length=2mm]}] #1 ++(#2,{0.3*#2}) -- ++(0,{0.4*#2});
+  \draw[#3, line width=1.1pt, -{Stealth[length=2mm]}] #1 ++({0.7*#2},#2) -- ++({-0.4*#2},0);
+  \draw[#3, line width=1.1pt, -{Stealth[length=2mm]}] #1 ++(0,{0.7*#2}) -- ++(0,{-0.4*#2});}
+% ---- 「名前と操作」の型（tools/kata8-int.md。kviiig を kviiik に置きかえた）----
+\colorlet{kviiikNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kviiikSc}{bkTheme}% ふつうの定積分の枠の線（実線）
+\colorlet{kviiikSb}{bkTheme!8}% ふつうの定積分の地
+\tikzset{
+  kviiik dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kviiik dan1/.style={kviiik dan, draw=kviiikNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kviiik dan2/.style={kviiik dan, draw=kviiikSc, fill=kviiikSb, text=bkInk},
+  kviiik dan3/.style={kviiik dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kviiik name/.style={draw=kviiikNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kviiik seki/.style={draw=kviiikSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kviiikSb},
+  kviiik tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kviiik q/.style={diamond, aspect=2.4, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=center, inner sep=0.3mm, text=bkInk},
+  kviiik do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kviiik go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kviiik yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 段の札（例題の中で）  \kviiikdan{1|2|3}
+\newcommand\kviiikdan[1]{\tikz[baseline=(d.base)]\node[kviiik dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 段の見出し（本文で）  \kviiikdanhead{1|2|3}{見出し}
+\newcommand\kviiikdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kviiik dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kviiikcase{C}（′ は \kviiikcase{A$'$}）
+\newcommand\kviiikcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kviiikbaai{ことば}{8-6}{C}（場合が2つなら {C,G}）
+\newcommand\kviiikbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kviiik@cases#3,\@nil）}
+\def\kviiik@cases#1,#2\@nil{\kviiikcase{#1}\ifx\relax#2\relax\else と\kviiik@cases#2\@nil\fi}
+% 式の中の「名前」と「ふつうの定積分」
+\newcommand\kviiikN[1]{\tikz[baseline=(n.base)]\node[kviiik name] (n) {$\displaystyle #1$};}
+\newcommand\kviiikS[1]{\tikz[baseline=(n.base)]\node[kviiik seki] (n) {$\displaystyle #1$};}
+\newcommand\kviiikNt[1]{\tikz[baseline=(n.base)]{\node[kviiik name] (n) {$\displaystyle #1$};\node[kviiik tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kviiikSt[1]{\tikz[baseline=(n.base)]{\node[kviiik seki] (n) {$\displaystyle #1$};\node[kviiik tag, anchor=north] at ([yshift=-0.8mm]n.south) {ふつうの定積分};}}
+% 場合分けの表の題の帯  \kviiikcasetitle{8-6}{題}
+\newcommand\kviiikcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+\colorlet{kviiikM}{bkTheme!12}\colorlet{kviiikV}{bkGreen!14}\colorlet{kviiikR}{bkYellow!35}
+\makeatother
+
+\bkchapter{8}{10}{うず：回転 rot}{\bklevel{5}}{うず：回転 rot}
+\bkmichishirube{4-14,7-4,8-2,8-5,8-7,8-9}{8-11,8-12,8-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 矢印の場の図から、小さな風車が回るかどうかと、その向きを見分けられる。
+\item \bklevel{4}\enspace マスのまわりを1周してたす量（循環）を表計算で求め、面積でわって回転を見積もれる。
+\item \bklevel{5}\enspace 平面と3次元の rot を偏微分で計算し、保存力の見分けや、電流のまわりの磁場に使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+紙の風車を水にうかべると、水といっしょに流れていきます。風車 A〜E のうち、くるくる回るのはどれでしょう。回るとしたら、どちら向きでしょう（左は用水路で、まん中ほど速い。右は排水口のうずで、点線の円の外では、中心に近いほど速い。D はうずのまん中）。
+\begin{bkcenter}
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \kviiikriver{}
+  \node[font=\sffamily\footnotesize, anchor=north] at (35,-24.5) {用水路（上から見た図）};
+  \begin{scope}[shift={(98,0)}]
+    \kviiikvortex{}
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-24.5) {排水口のうず（上から見た図）};
+  \end{scope}
+\end{tikzpicture}
+\end{bkcenter}
+\end{hatena}
+
+\noindent 8-9 では、矢印の場の中に小さなマスを置き、「出る量－入る量」でわき出し（発散 div）を調べました。でも、矢印の場には、わき出しのほかに、もう1つ大事な形があります。8-5 の主役の場の（エ）うず $(-y,\ x)$ は、発散が0なのに、ぐるぐる回っていました。この章では、水や風の「回り方」を数で表します。
+
+道具は、小さな風車です。風車は、まわりの流れが「回す働き」をもっているときだけ回ります。その回す働きを、場所ごとの数（3次元では矢印）にしたものが、この章の\textbf{回転}（rot）です。台風のうず、川の岸近くの流れ、電流のまわりの磁場、そして物理第1巻（力-4）で使った「保存力の見分け方」が、すべてこの1つの考えでつながります。
+
+★★★★★の章ですが、「目でわかる」「手でわかる」の段は、風車の絵と、表計算のかけ算・たし算だけで読めるように書きました。「式でわかる」の段は、8-2 の偏微分を使います。1回で分からなくても大丈夫です。
+
+\begin{omoidasou}
+\bkrecall{8-5}{矢印の場：場所 $(x,\ y)$ を入れると矢印 $\vec F=(F_x,\ F_y)$ が出てくる。主役の場は（ア）広がる $(x,\ y)$、（イ）集まる $(-x,\ -y)$、（ウ）そろった $(1,\ 0)$、（エ）うず $(-y,\ x)$、（オ）ずれ $(y,\ 0)$、（カ）側溝 $(x,\ 0)$。}
+\bkrecall{8-9}{発散 div：小さなマスの「出る量－入る量」を面積でわる。マスの4辺で「右－左＋上－下」。式では $\dfrac{\partial F_x}{\partial x}+\dfrac{\partial F_y}{\partial y}$。}
+\bkrecall{8-7}{線積分 $\displaystyle\int_C\vec F\cdot\dd\vec r$：道を小さな1歩に分け、1歩ごとの内積 $\vec F\cdot\Delta\vec r$ をたす。横に進む区間は $F_x\,\dd x$、たてに進む区間は $F_y\,\dd y$（場合A）。閉じた道は $\displaystyle\oint_C$。}
+\bkrecall{8-2}{偏微分 $\dfrac{\partial f}{\partial x}$：ほかを止めて1つだけ動かしたときの変化の割合。2回の偏微分は、順番によらない。}
+\bkrecall{4-14}{外積 $\vec a\times\vec b$ の成分は $(a_yb_z-a_zb_y,\ a_zb_x-a_xb_z,\ a_xb_y-a_yb_x)$。向きは右ねじ。}
+\bkrecall{7-4}{3×3 の行列式は、サラスの方法で6つの項をたしひきする。}
+\end{omoidasou}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[紙の風車をうかべてみよう]
+\textbf{用意するもの}\par
+厚紙（牛乳パックを切ったものがよい）、つまようじ、油性ペン、洗面器、雨どいのような細長い入れ物（なければ、細長い食品の容器）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 厚紙を、長さ \qty{3}{cm}・はば \qty{5}{mm} の細長い板2枚に切り、十字に重ねて、まん中につまようじをさす。1枚の羽根の先に、油性ペンで印をつける。
+\item 細長い入れ物をかたむけて水をゆっくり流し、風車をまん中にうかべる。印の羽根の向きが変わるかを見よう。
+\item こんどは、風車を岸（入れ物のかべ）の近くにうかべる。右岸と左岸で、回る向きをくらべよう。
+\item 洗面器の水をスプーンで大きくかきまぜ、まん中と外側に風車をうかべよう。かきまぜるのをやめてしばらくしたら、もう一度見よう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 風車の作り方
+  \begin{scope}[shift={(14,10)}]
+    \draw[bkInk, line width=0.6pt, fill=white, rotate=20] (-12,-1.6) rectangle (12,1.6);
+    \draw[bkInk, line width=0.6pt, fill=white, rotate=110] (-12,-1.6) rectangle (12,1.6);
+    \fill[bkOrange!90!black, rotate=20] (9,-1.6) rectangle (12,1.6);
+    \fill[bkInk] (0,0) circle (0.9);
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-12) {① 羽根を十字に};
+  \end{scope}
+  % 細長い入れ物
+  \begin{scope}[shift={(40,0)}]
+    \fill[bkBlueBg] (0,2) rectangle (52,22);
+    \draw[bkGray!80!black, line width=1pt] (0,22) -- (52,22) (0,2) -- (52,2);
+    \foreach \kviiiky/\kviiikL in {5/5,9/10,12/12,15/10,19/5} {\draw[kviiik arrow, line width=1pt] (2,\kviiiky) -- ++(\kviiikL,0);}
+    \kviiikmill{(32,12)}{3.5}{20}
+    \kviiikmill{(44,18.5)}{2.6}{20}
+    \node[font=\sffamily\footnotesize, anchor=north] at (26,-2) {②③ 細長い入れ物};
+  \end{scope}
+  % 洗面器
+  \begin{scope}[shift={(118,12)}]
+    \fill[bkBlueBg] (0,0) circle (13);
+    \draw[bkGray!80!black, line width=1pt] (0,0) circle (13);
+    \foreach \kviiika in {0,90,180,270} {\draw[kviiik arrow, line width=1pt] (\kviiika:9) ++(\kviiika-90:3) -- ++(\kviiika+90:6);}
+    \kviiikmill{(0,0)}{2.6}{20}
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-14) {④ 洗面器};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\end{yattemiyou}
+
+\noindent ②のまん中の風車は、流れていくだけで、ほとんど回りません。③の岸の近くでは、風車は回りながら流れていきます。右岸と左岸では、回る向きが反対です。④でかきまぜた直後は、水全体がコップごと回すように回り、風車もどこでも回ります。しばらくすると、外側の風車は、ぐるっと回っていくのに、印の向きがあまり変わらなくなることがあります（水の動き方によって、少しずつ回ることもあります）。
+
+「流れていること」と「回ること」は、別のことのようです。なぜ岸の近くでは回るのでしょう。
+
+
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{小さな風車を置いてみる}{\bklevel{3}}
+
+\bksubsection{1}{風車が回るわけ：両側の速さのちがい}
+
+\leavevmode\label{bk:8-10:fusha}風車の羽根は、まわりの水に押されて動きます。羽根4枚が同じ速さで同じ向きに押されれば、風車は回らずに、そのまま流されるだけです。風車が回るのは、\textbf{羽根によって、押される強さがちがうとき}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：同じ速さ
+  \begin{scope}[shift={(22,0)}]
+    \fill[bkBlueBg] (-20,-16) rectangle (20,16);
+    \foreach \kviiiky in {-12,-6,0,6,12} {\draw[kviiik arrow, line width=1.1pt] (-18,\kviiiky) -- ++(9,0);}
+    \kviiikmill{(4,0)}{9}{0}
+    \foreach \kviiiky in {9,-9} {\draw[bkRed!85!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,\kviiiky) -- ++(8,0);}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (0,-17.5) {上も下も同じ強さ\\→ 回らない};
+  \end{scope}
+  % 中：下が速い
+  \begin{scope}[shift={(68,0)}]
+    \fill[bkBlueBg] (-20,-16) rectangle (20,16);
+    \foreach \kviiiky/\kviiikL in {12/4,6/7,0/10,-6/13,-12/16} {\draw[kviiik arrow, line width=1.1pt] (-19,\kviiiky) -- ++(\kviiikL,0);}
+    \kviiikmill{(4,0)}{9}{0}
+    \draw[bkRed!85!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,9) -- ++(4,0);
+    \draw[bkRed!85!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,-9) -- ++(12,0);
+    \kviiikccw{(4,0)}{13.5}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (0,-17.5) {下が強い\\→ 左回り};
+  \end{scope}
+  % 右：上が速い
+  \begin{scope}[shift={(114,0)}]
+    \fill[bkBlueBg] (-20,-16) rectangle (20,16);
+    \foreach \kviiiky/\kviiikL in {12/16,6/13,0/10,-6/7,-12/4} {\draw[kviiik arrow, line width=1.1pt] (-19,\kviiiky) -- ++(\kviiikL,0);}
+    \kviiikmill{(4,0)}{9}{0}
+    \draw[bkRed!85!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,9) -- ++(12,0);
+    \draw[bkRed!85!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,-9) -- ++(4,0);
+    \kviiikcw{(4,0)}{13.5}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (0,-17.5) {上が強い\\→ 右回り};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{青い矢印は水の流れ、赤い矢印は上と下の羽根が押される強さ。流れの向きがみな同じでも、上と下で速さがちがうと風車は回る。}\label{bk:8-10:fig-ryousoku}
+\end{bkfigure}
+
+図\ref{bk:8-10:fig-ryousoku}のまん中では、下の羽根が強く右へ押され、上の羽根は弱く右へ押されます。下を右へ、上を（くらべると）左へ押されるので、風車は\textbf{左回り}（時計の針と反対の向き）に回ります。右の図はその反対で、\textbf{右回り}です。
+
+\noindent つまり、風車が回るかどうかは、流れの向きではなく、\textbf{となりどうしの速さのちがい}で決まります。たての羽根（左と右の羽根）でも同じです。右の羽根が上へ強く押され、左の羽根が上へ弱く押されれば、やはり左回りです。
+
+\kviiikhead{「回る」と「回らない」は、はじめての人がよくまちがえる}
+「流れが曲がっているから回る」「まっすぐ流れているから回らない」と考えたくなります。でも、図\ref{bk:8-10:fig-ryousoku}のまん中と右の流れは、どれもまっすぐ右向きなのに、風車は回ります。反対に、ぐるっと曲がって流れていても、回らない風車もあります（\bkhatenaref の E。⑨で調べます）。風車が回るかどうかは、羽根1枚1枚が押される強さで考えます。
+
+\bksubsection{2}{主役の6つの場に、風車を置く}
+
+\leavevmode\label{bk:8-10:roku}8-5 の主役の6つの場に、風車を置いてみます。風車は、どの図も右上（$x=1.5$、$y=1.5$）の場所に置きました（その近くの4本の矢印は、風車が見えるように省いています）。
+
+\begin{bkfigure}
+\begin{tabular}{@{}c@{\hspace{5mm}}c@{\hspace{5mm}}c@{}}
+\kviiikpanel{0.3*\kviiikx}{0.3*\kviiiky}{\kviiikmill{(1.5,1.5)}{0.42}{20}} &
+\kviiikpanel{-0.3*\kviiikx}{-0.3*\kviiiky}{\kviiikmill{(1.5,1.5)}{0.42}{20}} &
+\kviiikpanel{0.7}{0}{\kviiikmill{(1.5,1.5)}{0.42}{20}} \\[1mm]
+{\sffamily\bfseries\small（ア）広がる $(x,\ y)$} & {\sffamily\bfseries\small（イ）集まる $(-x,\ -y)$} & {\sffamily\bfseries\small（ウ）そろった $(1,\ 0)$} \\
+{\sffamily\small 回らない} & {\sffamily\small 回らない} & {\sffamily\small 回らない} \\[3mm]
+\kviiikpanel{-0.3*\kviiiky}{0.3*\kviiikx}{\kviiikmill{(1.5,1.5)}{0.42}{20}\kviiikccw{(1.5,1.5)}{0.62}} &
+\kviiikpanel{0.3*\kviiiky}{0}{\kviiikmill{(1.5,1.5)}{0.42}{20}\kviiikcw{(1.5,1.5)}{0.62}} &
+\kviiikpanel{0.3*\kviiikx}{0}{\kviiikmill{(1.5,1.5)}{0.42}{20}} \\[1mm]
+{\sffamily\bfseries\small（エ）うず $(-y,\ x)$} & {\sffamily\bfseries\small（オ）ずれ $(y,\ 0)$} & {\sffamily\bfseries\small（カ）側溝 $(x,\ 0)$} \\
+{\sffamily\small\bfseries 左回り} & {\sffamily\small\bfseries 右回り} & {\sffamily\small 回らない} \\
+\end{tabular}
+\bkfigcaption{主役の6つの場と、右上に置いた風車。赤い矢印は回る向き。回るのは（エ）と（オ）だけ。}\label{bk:8-10:fig-roku}
+\end{bkfigure}
+
+1つずつ、羽根の押され方で確かめます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{（ア）広がる}\quad 上の羽根も下の羽根も右上へ押されますが、横向きの押され方（$x$ 成分）は、上と下で同じです（$x$ 成分は $x$ だけで決まり、上と下で $x$ は同じ）。たての羽根も、上向きの押され方が左右で同じです。だから回りません。
+\item \textbf{（イ）集まる}・\textbf{（ウ）そろった}・\textbf{（カ）側溝}\quad どれも、上と下の羽根の横向きの押され方が同じで、左と右の羽根のたて向きの押され方も同じです。回りません。（カ）は右へ行くほど速くなりますが、それは左右の羽根の\textbf{横向き}の押され方のちがいで、回す働きにはなりません（8-9 では、これがわき出しになりました）。
+\item \textbf{（エ）うず}\quad 上の羽根は左へ、下の羽根は右へ押されます。右の羽根は上へ、左の羽根は下へ押されます。4枚とも左回りの向きに押されるので、よく回ります。
+\item \textbf{（オ）ずれ}\quad 流れはまっすぐ右向きなのに、上ほど速いので、上の羽根が強く右へ押されます。右回りです。
+\end{itemize}
+
+\begin{taisetsu}
+風車が回るかどうかは、流れの向きではなく、\textbf{羽根の両側の速さのちがい}で決まる。\\
+・上下の羽根では、\textbf{横向きの速さ}のちがい\\
+・左右の羽根では、\textbf{たて向きの速さ}のちがい
+\end{taisetsu}
+
+\bksubsection{3}{1周して、流れにそって進む量をたす：循環}
+
+\leavevmode\label{bk:8-10:junkan}風車の羽根を見るかわりに、もう1つの見方をします。小さなマスのふちを、左回りに1周する道を考えます。1周しながら、「流れが、進む向きにどれだけ押してくれるか」をたし合わせます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：うず
+  \begin{scope}[shift={(4,0)}]
+    \kviiiksq{(0,0)}{30}{bkGray!80!black}
+    \draw[kviiik arrow, line width=1.3pt] (8,-6) -- (22,-6);
+    \draw[kviiik arrow, line width=1.3pt] (36,8) -- (36,22);
+    \draw[kviiik arrow, line width=1.3pt] (22,36) -- (8,36);
+    \draw[kviiik arrow, line width=1.3pt] (-6,22) -- (-6,8);
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-9) {うず：4つの辺とも\\進む向きに押される};
+  \end{scope}
+  % 中：そろった流れ
+  \begin{scope}[shift={(54,0)}]
+    \kviiiksq{(0,0)}{30}{bkGray!80!black}
+    \draw[kviiik arrow, line width=1.3pt] (8,-6) -- (22,-6);
+    \draw[kviiik arrow, line width=1.3pt] (8,36) -- (22,36);
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-9) {そろった流れ：下で＋\\上で－（打ち消す）};
+  \end{scope}
+  % 右：ずれ
+  \begin{scope}[shift={(102,0)}]
+    \kviiiksq{(0,0)}{30}{bkGray!80!black}
+    \draw[kviiik arrow, line width=1.3pt] (11,-6) -- (19,-6);
+    \draw[kviiik arrow, line width=1.3pt] (5,36) -- (25,36);
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-9) {ずれ：上の辺の－が大きい\\合計は負};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{灰色の点線と矢印は、マスのふちを左回りに1周する道。青い矢印は、辺のまん中での流れ。}\label{bk:8-10:fig-isshu}
+\end{bkfigure}
+
+うずでは、4つの辺のどこでも、流れが進む向きに押してくれます。1周の合計は大きな正の数です。そろった流れでは、下の辺（右へ進む）では進む向きに押されますが、上の辺（左へ進む）では同じだけ逆に押され、合計は0です。ずれでは、上の辺の逆向きのほうが大きいので、合計は負です。
+
+1周の合計が正なら左回り、負なら右回り、0なら回らない。風車の結果（図\ref{bk:8-10:fig-roku}）と、ぴったり合っています。この「1周して、流れにそって進む量をたしたもの」を\textbf{循環}（じゅんかん）といいます。\bkidx{じゅんかん}{循環}8-7 の言葉でいえば、閉じた道 $C$ にそった線積分 $\displaystyle\oint_C\vec F\cdot\dd\vec r$ です。
+
+\begin{seikaku}
+羽根で見る見方（①）と、1周する見方（③）は、同じことを見ています。マスの下の辺で「進む向きに押される」のは、下の羽根が右へ押されるのと同じです。上の辺では、左へ進むので、上の羽根が右へ押されると、進む向きには逆になります。だから「1周の合計」は、「下の羽根を右へ押す強さ－上の羽根を右へ押す強さ＋右の羽根を上へ押す強さ－左の羽根を上へ押す強さ」と同じ形になり、風車を左回りに回す働きそのものになります。
+\end{seikaku}
+
+\bkstage{te}{手でわかる}{マスのまわりを1周して数える}{\bklevel{4}}
+
+\bksubsection{4}{マスの4辺で、循環を計算する}
+
+\leavevmode\label{bk:8-10:masu}1辺 $h$ のマスを左回りに1周します。辺が短いので、1つの辺の上では、流れはほぼ同じとみて、\textbf{辺のまん中の値}で代表させます（8-9 で、辺を通りぬける量を計算したときと同じ考え）。1つの辺で「進む向きに押す量」は、8-7 の場合A（軸に平行な道）のとおり、進む向きの成分×辺の長さ $h$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiiksq{(40,6)}{40}{\bkTT}
+  \node[font=\small, anchor=north] at (60,4) {下の辺：右へ進む\quad $+F_x(\text{下})\times h$};
+  \node[font=\small, anchor=west] at (83,26) {右の辺：上へ進む};
+  \node[font=\small, anchor=west] at (83,20) {$+F_y(\text{右})\times h$};
+  \node[font=\small, anchor=south] at (60,48) {上の辺：左へ進む\quad $-F_x(\text{上})\times h$};
+  \node[font=\small, anchor=east] at (37,26) {左の辺：下へ進む};
+  \node[font=\small, anchor=east] at (37,20) {$-F_y(\text{左})\times h$};
+  \node[font=\sffamily\small] at (60,26) {面積 $h^2$};
+\end{tikzpicture}
+\bkfigcaption{1辺 $h$ のマスを左回りに1周する。上の辺は左へ、左の辺は下へ進むので、そこでは成分にマイナスがつく。}\label{bk:8-10:fig-yonhen}
+\end{bkfigure}
+\kviiikframe{循環 \quad ＝\quad $\bigl\{F_x(\text{下})+F_y(\text{右})-F_x(\text{上})-F_y(\text{左})\bigr\}\times h$}
+上の辺でマイナスがつくのは、上の辺では左（$x$ の負の向き）へ進むからです。流れの $x$ 成分が正（右向き）なら、進む向きとは逆なので、引かれます。左の辺も、下へ進むのでマイナスです。8-9 の発散では「右－左＋上－下」でしたが、循環では「下＋右－上－左」です。発散は辺を\textbf{通りぬける}成分（辺に直角な成分）、循環は辺に\textbf{そう}成分（辺に平行な成分）を使います。
+
+\kviiikhead{面積でわって、「回る強さ」にそろえる}
+循環は、マスが大きいほど大きくなります（辺が長くなるから）。そこで、8-9 と同じように、マスの面積 $h^2$ でわって、\textbf{1平方メートルあたり}の量にそろえます。この値を、その場所の\textbf{回転}（かいてん）といい、$\mathrm{rot}\,\vec F$ と書きます。\bkidx{かいてん}{回転（rot）}「ローテーション」と読みます（rotation は「回転」という意味）。
+\kviiikframe{$\mathrm{rot}\,\vec F\ \approx\ \dfrac{\text{循環}}{h^2}$\qquad（正なら左回り、負なら右回り）}
+流れの速さ（m/s）の矢印なら、循環の単位は（m/s）×m＝m²/s、回転の単位は m²/s÷m²＝1/s です。
+
+\kviiikhead{主役の6つの場を、表計算で}
+1辺 $h=1$ のマス（$0\leqq x\leqq1$、$0\leqq y\leqq1$）で、6つの場の循環を計算します。下の辺のまん中は $(0.5,\ 0)$、右の辺は $(1,\ 0.5)$、上の辺は $(0.5,\ 1)$、左の辺は $(0,\ 0.5)$ です。たとえば（エ）うず $(-y,\ x)$ では、下の辺のまん中の $F_x$ は $-0=0$、右の辺の $F_y$ は $x=1$、上の辺の $F_x$ は $-1$、左の辺の $F_y$ は $x=0$ です。
+\begin{bkcenter}
+\bksheet{7}{13.5}{%
+1 & 場 & 下 $F_x$ & 右 $F_y$ & 上 $F_x$ & 左 $F_y$ & 循環 & 回転 \\
+2 & （ア） & 0.5 & 0.5 & 0.5 & 0.5 & 0 & 0 \\
+3 & （イ） & $-0.5$ & $-0.5$ & $-0.5$ & $-0.5$ & 0 & 0 \\
+4 & （ウ） & 1 & 0 & 1 & 0 & 0 & 0 \\
+5 & （エ） & 0 & 1 & $-1$ & 0 & \SetCell{bg=kviiikR} 2 & \SetCell{bg=kviiikR} 2 \\
+6 & （オ） & 0 & 0 & 1 & 0 & \SetCell{bg=kviiikR} $-1$ & \SetCell{bg=kviiikR} $-1$ \\
+7 & （カ） & 0.5 & 0 & 0.5 & 0 & 0 & 0 \\}
+\bktabcaption{F2 に \texttt{=(B2+C2-D2-E2)*1}（$h=1$）、G2 に \texttt{=F2/1}（面積 $h^2=1$）と入れ、下へコピーした。回転が0でないのは（エ）と（オ）だけで、風車の結果と同じ。}
+\end{bkcenter}
+（エ）の回転は2で正（左回り）、（オ）は $-1$ で負（右回り）です。風車の絵（図\ref{bk:8-10:fig-roku}）と同じ結果が、数で出てきました。
+
+\kviiikhead{物理第1巻の道A・道Bと同じ計算}
+（エ）の場 $(-y,\ x)$ は、物理第1巻（力-4）の $\vec F_2=(-y,\ x)$ と同じです。力-4 では、$(0,\ 0)$ から $(1,\ 1)$ まで、道A（右へ進んでから上へ）と道B（上へ進んでから右へ）で仕事を計算し、Aは \qty{1}{J}、Bは \qty{-1}{J} でした。マスを左回りに1周する道は、「道Aで行って、道Bを逆にもどる」道です。逆にもどると符号が変わるので（8-7）、
+\[ \text{循環}=1-(-1)=2 \]
+で、表の（エ）の循環2と同じです。力-4 で「rot の値2×囲んだ面積1」と書いたのは、このことです。\par
+\noindent 一方、$\vec F_1=(y,\ x)$ では、道Aも道Bも \qty{1}{J} なので、循環は $1-1=0$ です。辺のまん中の値で計算しても、下 $F_x=0$、右 $F_y=1$、上 $F_x=1$、左 $F_y=0$ で、$0+1-1-0=0$ になります。
+
+\kviiikhead{「循環」は名前。計算するときは、ふつうの定積分に直す}
+循環 $\oint_C\vec F\cdot\dd\vec r$ は、8-7 で学んだ「閉じた道の線積分」の\textbf{名前}です。記号を見ただけでは、まだ計算できません。正方形の道なら、4つの辺に分け（表8-7のE）、それぞれを軸に平行な道（表8-7のA）として、ふつうの定積分に直します。1辺1、左下の角が原点の正方形では、次のようになります。
+\[ \kviiikNt{\oint_C\vec F\cdot\dd\vec r}=\kviiikSt{\int_0^1F_x(x,\,0)\,\dd x+\int_0^1F_y(1,\,y)\,\dd y} \]
+\[ \qquad\qquad\qquad-\kviiikSt{\int_0^1F_x(x,\,1)\,\dd x+\int_0^1F_y(0,\,y)\,\dd y} \]
+下の辺では $y=0$ に止めて $x$ を0から1へ、右の辺では $x=1$ に止めて $y$ を0から1へ進みます。上の辺は $x$ を1から0へ（左へ）進むので、$\int_1^0=-\int_0^1$ でマイナスがつきます。左の辺も同じです。（エ）の場 $(-y,\ x)$ なら、
+\[ \int_0^1 0\,\dd x+\int_0^1 1\,\dd y-\int_0^1(-1)\,\dd x-\int_0^1 0\,\dd y=0+1+1-0=2 \]
+で、表の循環2とぴったり同じです。④の「辺のまん中の値×はば」は、この4つの定積分を、長方形1つで見積もったものだったのです（5-10 の細い長方形と同じ考え）。（エ）の場は1次式なので、まん中の値でちょうど同じ値になりました。
+
+\bksubsection{5}{用水路の回転の地図}
+
+\leavevmode\label{bk:8-10:yousui}\bkhatenaref の用水路を、数で調べます。用水路のはばは \qty{2}{m} で、まん中を $y=0$、北の岸を $y=1$、南の岸を $y=-1$ とします。水の速さは、まん中で \qty{1}{m/s}、岸で0とし、次の式で表されるとします。
+\[ \vec v=(1-y^2,\ \ 0)\quad\text{（m/s）} \]
+$y=0$ で1、$y=\pm1$ で0です。岸では、水が岸にくっついて止まるからです（水のねばりのため。くわしくは物理 力-14）。
+
+\noindent たての辺では $v_y=0$ なので、循環は上と下の辺だけで決まります。
+\[ \text{循環}=\bigl\{v_x(\text{下})-v_x(\text{上})\bigr\}\times h \]
+$h=\qty{0.5}{m}$ のマスで、北の岸から南の岸まで計算します。表計算では、行を北から南へ並べます（上の行が北）。
+\begin{bkcenter}
+\bksheet{4}{21}{%
+1 & $y$（m） & $v_x$（m/s） & 循環（m²/s） & 回転（1/s） \\
+2 & 1.0 & 0 & & \\
+3 & 0.5 & 0.75 & 0.375 & \SetCell{bg=kviiikR} 1.5 \\
+4 & 0 & 1 & 0.125 & \SetCell{bg=kviiikR} 0.5 \\
+5 & $-0.5$ & 0.75 & $-0.125$ & \SetCell{bg=kviiikV} $-0.5$ \\
+6 & $-1.0$ & 0 & $-0.375$ & \SetCell{bg=kviiikV} $-1.5$ \\}
+\bktabcaption{B2 に \texttt{=1-A2\^{}2}。C3 に \texttt{=(B3-B2)*0.5}（B3 がマスの下の辺、B2 が上の辺）、D3 に \texttt{=C3/0.25}（面積 $0.5^2$）。3行め・4行め…は、その行と1つ上の行のあいだのマス。}
+\end{bkcenter}
+北の半分のマスでは回転が正（左回り）、南の半分では負（右回り）です。そして、岸に近いほど回転が大きくなります。D列の数は、どれもマスのまん中の $y$ の2倍になっています（たとえば3行めのマスは $y=0.5$ と1のあいだで、まん中は0.75、その2倍が1.5）。マスを $h=\qty{0.25}{m}$ と細かくしても、やはり「マスのまん中の $y$ の2倍」になります（北の岸のマスで1.75）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiikriver{\kviiikccw{(45,8.5)}{4.4}\kviiikcw{(45,-8.5)}{4.4}}
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (74,9) {北の岸 $y=1$\\B：左回り};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (74,0) {A：回らない};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (74,-9) {南の岸 $y=-1$\\C：右回り};
+\end{tikzpicture}
+\bkfigcaption{\bkhatenaref の答え（用水路）。まん中の A は回らない。北の岸に近い B は左回り、南の岸に近い C は右回り。}\label{bk:8-10:fig-yousui}
+\end{bkfigure}
+\bkhatenaref の答えの前半です。まん中の風車 A は回りません（$y=0$ をはさむマスは、上と下で速さが同じ）。北の岸に近い B は左回り、南の岸に近い C は右回りです。岸の近くでは、岸側がおそく、まん中側が速いので、風車は「まん中側の羽根が強く押される」向きに回るのです。やってみようの③で、右岸と左岸で回る向きが反対だったのは、このためです。
+
+\begin{column}{雨どいでは、岸の近くほどよく回る}
+用水路の流れは、岸で0、まん中でいちばん速くなります。速さのグラフは、岸の近くでいちばん急です。回転の大きさは、この「速さのグラフの傾き」で決まるので、岸に近いほど風車はよく回ります。川を下る木の葉が、岸の近くでくるくる回りながら流れていくのを見たことがあるでしょうか。あれも同じしくみです。
+\end{column}
+
+\bkkokomade[風車が回るかを羽根の押され方で見分け、マスの4辺で循環を計算して面積でわれば、回転の大きさと向きがわかります。ここまでで十分です。この先は、偏微分の式で、回転をぴったり求めます。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{偏微分で書く}{\bklevel{5}}
+
+\bksubsection{6}{マスを小さくすると：平面の rot}
+
+\leavevmode\label{bk:8-10:heimen}左下の角が $(x,\ y)$、1辺 $h$ のマスで、循環を式で書きます。辺のまん中の点は、下 $(x+\frac{h}{2},\ y)$、右 $(x+h,\ y+\frac{h}{2})$、上 $(x+\frac{h}{2},\ y+h)$、左 $(x,\ y+\frac{h}{2})$ です。たての辺どうし（右と左）、横の辺どうし（上と下）をまとめます。
+\begin{bkhenkei}[0.64]
+\text{循環}\approx\bigl\{F_x(\text{下})+F_y(\text{右})-F_x(\text{上})-F_y(\text{左})\bigr\}h & ④の式 \\
+=\bigl\{F_y(\text{右})-F_y(\text{左})\bigr\}h-\bigl\{F_x(\text{上})-F_x(\text{下})\bigr\}h & 組にした \\
+\frac{\text{循環}}{h^2}\approx\frac{F_y(\text{右})-F_y(\text{左})}{h}-\frac{F_x(\text{上})-F_x(\text{下})}{h} & 面積 $h^2$ でわった \\
+\end{bkhenkei}
+右の辺と左の辺のまん中は、$y$ が同じ $y+\frac{h}{2}$ で、$x$ だけが $h$ ちがいます。だから、1つめの分数は「$y$ を止めて、$x$ を $h$ だけ動かしたときの $F_y$ の変化の割合」です。$h$ を小さくした先は、8-2 の偏微分 $\dfrac{\partial F_y}{\partial x}$ です。2つめの分数は、$x$ を止めて $y$ を動かしたときの $F_x$ の変化の割合で、$\dfrac{\partial F_x}{\partial y}$ になります。
+\kviiikframe{平面の回転\qquad $\mathrm{rot}\,\vec F=\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$}
+物理第1巻（力-4）で「平面の力なら、確かめるのは $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}=0$ かどうか」と書いたのは、この式です。
+
+\noindent ①の風車の言葉で読むと、1つめの項 $\dfrac{\partial F_y}{\partial x}$ は「左右の羽根のたて向きの速さのちがい」、2つめの項 $\dfrac{\partial F_x}{\partial y}$ は「上下の羽根の横向きの速さのちがい」です。上の羽根のほうが右へ強く押されると右回りなので、2つめの項にはマイナスがつきます。
+
+\kviiikhead{6つの場と用水路で確かめる}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=31mm] Q[c,m,wd=13mm] Q[c,m,wd=13mm] Q[c,m,wd=24mm] Q[c,m,wd=22mm]}, rowsep=1.5pt}
+場 $\vec F=(F_x,\ F_y)$ & $\dfrac{\partial F_y}{\partial x}$ & $\dfrac{\partial F_x}{\partial y}$ & $\mathrm{rot}\,\vec F$ & 風車 \\
+（ア）$(x,\ y)$ & 0 & 0 & $0-0=0$ & 回らない \\
+（イ）$(-x,\ -y)$ & 0 & 0 & $0-0=0$ & 回らない \\
+（ウ）$(1,\ 0)$ & 0 & 0 & $0-0=0$ & 回らない \\
+（エ）$(-y,\ x)$ & 1 & $-1$ & $1-(-1)=2$ & 左回り \\
+（オ）$(y,\ 0)$ & 0 & 1 & $0-1=-1$ & 右回り \\
+（カ）$(x,\ 0)$ & 0 & 0 & $0-0=0$ & 回らない \\
+用水路 $(1-y^2,\ 0)$ & 0 & $-2y$ & $2y$ & 北：左、南：右 \\
+\end{bktable}
+\bktabcaption{偏微分で計算した回転。④の表計算と同じ値（用水路は、マスのまん中の $y$ の2倍）。}
+\end{bkcenter}
+（ア）の $F_y=y$ を $x$ で偏微分すると、$y$ は止めた数なので0です（8-2）。（エ）の $F_x=-y$ を $y$ で偏微分すると $-1$ なので、引くと $+1$ になり、2つの項がたし合わさって2になります。用水路の $F_x=1-y^2$ を $y$ で偏微分すると $-2y$ です。回転は $2y$ で、表計算の「マスのまん中の $y$ の2倍」とぴったり合います。（この場は $y$ の2次式なので、辺のまん中の値で計算しても、ちょうど同じ値になります。）
+
+\begin{seikaku}
+回転は、次のように決めます。点 $\mathrm P$ をかこむ小さな道 $C$ をとり、その道でかこまれた面積を $\Delta S$ とします。
+\[ \mathrm{rot}\,\vec F(\mathrm P)=\lim_{\Delta S\to0}\frac{1}{\Delta S}\oint_C\vec F\cdot\dd\vec r \]
+道は左回りに1周します。$\vec F$ がなめらかに変わる場なら、道が正方形でも円でも、小さくした先は同じ値になり、それが $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$ に等しいことが知られています。8-9 の発散が「出入り÷面積」の極限だったのと同じ形の決め方です。
+\end{seikaku}
+
+\bksubsection{7}{風車の回る速さは、rot の半分}
+
+\leavevmode\label{bk:8-10:hanbun}水が、コップごと回すように、全体がいっしょに回っているとします。回転台にのせた水そうの水が、台といっしょに回るときです。角速度を $\omega$〔rad/s〕とすると、点 $(x,\ y)$ の水の速度は、次のとおりです。
+\[ \vec v=\omega\,(-y,\ \ x) \]
+点 $(x,\ y)$ は、原点から距離 $r$ の円の上を回ります。速さは $r\omega$ で（4-8 の円運動）、向きは位置の矢印 $(x,\ y)$ を左に $90°$ 回した $(-y,\ x)$ の向きです（7-6：$90°$ 回す行列）。$(-y,\ x)$ の長さは $r$ なので、$\omega$ 倍すれば、ちょうど速さ $r\omega$ になります。
+
+\noindent 回転を計算します。
+\begin{bkhenkei}[0.44]
+\frac{\partial v_y}{\partial x}=\frac{\partial}{\partial x}(\omega x)=\omega & $v_y=\omega x$、$\omega$ は定数 \\
+\frac{\partial v_x}{\partial y}=\frac{\partial}{\partial y}(-\omega y)=-\omega & $v_x=-\omega y$ \\
+\mathrm{rot}\,\vec v=\omega-(-\omega)=2\omega & 2つの項が同じだけ効く \\
+\end{bkhenkei}
+水そうの水は角速度 $\omega$ で回っているのに、回転は $2\omega$ です。なぜ2倍なのでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(8,4)}]
+    \kviiiksq{(0,0)}{34}{bkGray!80!black}
+    \draw[kviiik arrow, line width=1.3pt] (36,6) -- (36,28);
+    \draw[kviiik arrow, line width=1.3pt] (-2,28) -- (-2,6);
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (17,-3) {たての2辺：\\$\dfrac{\partial v_y}{\partial x}=\omega$ の分};
+  \end{scope}
+  \begin{scope}[shift={(66,4)}]
+    \kviiiksq{(0,0)}{34}{bkGray!80!black}
+    \draw[kviiik arrow, line width=1.3pt] (6,-2) -- (28,-2);
+    \draw[kviiik arrow, line width=1.3pt] (28,36) -- (6,36);
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (17,-4) {横の2辺：\\$-\dfrac{\partial v_x}{\partial y}=\omega$ の分};
+  \end{scope}
+  \node[font=\Large] at (57,21) {＋};
+  \node[font=\sffamily\small, anchor=west, align=left] at (106,21) {合わせて\\$2\omega$};
+\end{tikzpicture}
+\bkfigcaption{全体がいっしょに回る水の中の、原点のまわりのマス。たての2辺の分と横の2辺の分が、どちらも $\omega$ ずつ、左回りに効く（どこに置いたマスでも同じ）。}\label{bk:8-10:fig-nibai}
+\end{bkfigure}
+
+回転は、「たての2辺の分」と「横の2辺の分」の和です。全体がいっしょに回る水では、どちらの分も $\omega$ ずつ左回りに効くので、たして $2\omega$ になります。一方、風車（水といっしょに回る小さな板）が回る角速度は、水そのものの角速度 $\omega$ です。だから、
+\kviiikframe{風車が回る角速度\quad ＝\quad$\dfrac{1}{2}\,\mathrm{rot}\,\vec v$}
+です。この関係は、全体がいっしょに回る水でなくても、小さな風車なら成り立ちます（たての羽根の回り方と横の羽根の回り方の平均が、風車の回り方になるため）。たとえば（オ）ずれ $(y,\ 0)$ の回転は $-1$ なので、そこに置いた風車は、\qty{0.5}{rad/s} で右回りに回ります。
+
+\begin{seikaku}
+（オ）ずれでは、横の羽根（上下の羽根）だけが強く右回りに押され、たての羽根（左右の羽根）は押されません。このとき、横の羽根は角速度 $1$ で回されようとし、たての羽根は回されようとしません。十字の風車は1つのかたまりなので、その平均の $0.5$ で回ります。「$\dfrac{1}{2}\,\mathrm{rot}$」の $\dfrac{1}{2}$ は、この「2組の羽根の平均」の $\dfrac{1}{2}$ です。
+\end{seikaku}
+
+\bksubsection{8}{3次元の rot：3つの軸のまわりの回り方}
+
+\leavevmode\label{bk:8-10:sanjigen}3次元の流れ $\vec F=(F_x,\ F_y,\ F_z)$ では、風車を置く向きが3通りあります。軸を $z$ 軸に平行にして置くと（羽根は $xy$ の面の中）、$z$ 軸のまわりの回り方がわかります。それは、平面の回転と同じ $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$ です。軸を $x$ 軸、$y$ 軸に平行にして置いても、同じように計算できます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiikc/\kviiikh/\kviiikv/\kviiikn/\kviiikf in {0/y/z/x/{$\dfrac{\partial F_z}{\partial y}-\dfrac{\partial F_y}{\partial z}$}, 46/z/x/y/{$\dfrac{\partial F_x}{\partial z}-\dfrac{\partial F_z}{\partial x}$}, 92/x/y/z/{$\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$}} {%
+    \begin{scope}[shift={(\kviiikc,0)}]
+      \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (2,6) -- (36,6) node[right, font=\footnotesize, inner sep=1pt] {$\kviiikh$};
+      \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (6,2) -- (6,36) node[above, font=\footnotesize, inner sep=1pt] {$\kviiikv$};
+      \draw[bkInk, line width=0.6pt] (6,6) circle (2);
+      \fill[bkInk] (6,6) circle (0.7);
+      \node[font=\footnotesize, anchor=north east, inner sep=1pt] at (4.5,4.5) {$\kviiikn$};
+      \draw[bkGray!80!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt, fill=bkTheme!8] (13,13) rectangle (29,29);
+      \kviiikccw{(21,21)}{6}
+      \node[font=\small, anchor=north] at (20,-1) {\kviiikf};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{左から、$x$ 軸・$y$ 軸・$z$ 軸のまわりの回り方。どの図も、残りの軸（原点の $\odot$）が紙の手前に向かっている。手前から見て左回りが正（右ねじが手前に進む向き：4-14）。}\label{bk:8-10:fig-sanjiku}
+\end{bkfigure}
+
+図\ref{bk:8-10:fig-sanjiku}の3つの図は、文字が $x\to y\to z\to x$ と1つずつずれているだけです。右へのびる軸を「横の軸」、上へのびる軸を「たての軸」とすると、どの図でも
+\[ \frac{\partial(\text{たての軸の成分})}{\partial(\text{横の軸})}-\frac{\partial(\text{横の軸の成分})}{\partial(\text{たての軸})} \]
+です。3つの回り方を、それぞれの軸の向きの成分として並べた矢印を、3次元の\textbf{回転} $\mathrm{rot}\,\vec F$ とします。
+\kviiikframe{$\mathrm{rot}\,\vec F=\begin{pmatrix}\dfrac{\partial F_z}{\partial y}-\dfrac{\partial F_y}{\partial z}\\[10pt]\dfrac{\partial F_x}{\partial z}-\dfrac{\partial F_z}{\partial x}\\[10pt]\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}\end{pmatrix}$\quad\begin{tabular}{l}← $x$ 成分\\[16pt]← $y$ 成分\\[16pt]← $z$ 成分\end{tabular}}
+矢印 $\mathrm{rot}\,\vec F$ の\textbf{向き}は、そこに置いた風車がいちばんよく回る軸の向き（右ねじの進む向き）、\textbf{長さ}は、その軸で回したときの回転の強さです。3次元の回転は、数ではなく\textbf{矢印}です。平面の流れ（$F_z=0$ で、$F_x$、$F_y$ が $z$ によらない）なら、$x$ 成分と $y$ 成分は0になり、$z$ 成分だけが残ります。平面の回転は、3次元の回転の $z$ 成分なのです。
+
+\kviiikhead{外積と行列式の形で覚える}
+この3つの成分は、4-14 の外積 $\vec a\times\vec b$ の成分
+\[ (a_yb_z-a_zb_y,\ \ a_zb_x-a_xb_z,\ \ a_xb_y-a_yb_x) \]
+と、まったく同じ形です。$\vec a$ のかわりに 8-4 のナブラ $\nabla=\Bigl(\dfrac{\partial}{\partial x},\ \dfrac{\partial}{\partial y},\ \dfrac{\partial}{\partial z}\Bigr)$ を、$\vec b$ のかわりに $\vec F$ を入れ、「$\dfrac{\partial}{\partial y}$ と $F_z$ をかける」を「$F_z$ を $y$ で偏微分する」と読みかえると、$\mathrm{rot}\,\vec F$ になります。そこで、
+\kviiikframe{$\mathrm{rot}\,\vec F=\nabla\times\vec F$\qquad（ナブラ・クロス・エフ）}
+とも書きます。また、7-4 の3×3 の行列式の形でも覚えられます。1行めに $x$・$y$・$z$ の向きの長さ1の矢印 $\vec e_x$、$\vec e_y$、$\vec e_z$（4-13 の $\vec i$、$\vec j$、$\vec k$ と同じもの）、2行めに $\nabla$ の3つ、3行めに $\vec F$ の3つの成分を並べます。
+\[ \mathrm{rot}\,\vec F=\det\begin{pmatrix}\vec e_x&\vec e_y&\vec e_z\\[2pt]\dfrac{\partial}{\partial x}&\dfrac{\partial}{\partial y}&\dfrac{\partial}{\partial z}\\[8pt]F_x&F_y&F_z\end{pmatrix} \]
+サラスの方法（7-4）で6つの項を作ると、次のようになります。2行めと3行めをかけるところは、「3行めの成分を、2行めの文字で偏微分する」と読みます。
+\begin{bkhenkei}[0.5]
++\vec e_x\frac{\partial F_z}{\partial y}+\vec e_y\frac{\partial F_x}{\partial z}+\vec e_z\frac{\partial F_y}{\partial x} & 右下へ向かうななめの3つ（たす） \\
+-\vec e_z\frac{\partial F_x}{\partial y}-\vec e_x\frac{\partial F_y}{\partial z}-\vec e_y\frac{\partial F_z}{\partial x} & 左下へ向かうななめの3つ（ひく） \\
+\end{bkhenkei}
+$\vec e_x$ の項を集めると $\dfrac{\partial F_z}{\partial y}-\dfrac{\partial F_y}{\partial z}$ で、$x$ 成分です。$\vec e_y$、$\vec e_z$ の項も、上の式の $y$ 成分・$z$ 成分になります。
+
+\begin{seikaku}
+この「行列式」は、覚えるための形です。本当の行列式ではありません。1行めは矢印、2行めは「偏微分せよ」という命令で、ふつうの数ではないからです。とくに、かける順番を入れかえてはいけません。$\dfrac{\partial}{\partial y}F_z$ は「$F_z$ を $y$ で偏微分する」ですが、$F_z\dfrac{\partial}{\partial y}$ と書くと、「$F_z$ に、あとで何かを偏微分したものをかける」という別の意味になります。かならず「2行めの命令を、3行めの成分にはたらかせる」順で書きます。
+\end{seikaku}
+
+\kviiikhead{3次元で、全体がいっしょに回る流れ}
+全体が、角速度の矢印 $\vec\omega=(\omega_x,\ \omega_y,\ \omega_z)$ のまわりに回っているとき、点 $\vec r=(x,\ y,\ z)$ の速度は、外積を使って $\vec v=\vec\omega\times\vec r$ と書けます（4-14：回る向きを右ねじの軸の矢印で表す）。$\vec\omega=(0,\ 0,\ \omega)$ なら、
+\[ \vec v=\vec\omega\times\vec r=(0\times z-\omega y,\ \ \omega x-0\times z,\ \ 0\times y-0\times x)=(-\omega y,\ \ \omega x,\ \ 0) \]
+で、⑦の流れと同じです。回転は、3つの成分を1つずつ計算して $(0,\ 0,\ 2\omega)$ になります。どんな向きの $\vec\omega$ でも、同じように計算すると、
+\kviiikframe{$\mathrm{rot}\,(\vec\omega\times\vec r)=2\vec\omega$}
+となります（例題6で、$\vec\omega=(1,\ 1,\ 0)$ のときを確かめます）。回転の矢印は、回る軸の向きで、長さは角速度の2倍です。
+
+\bksubsection{9}{回りながら流れても回らない：うずなし流れ}
+
+\leavevmode\label{bk:8-10:uzunashi}\bkhatenaref の排水口のうずを調べます。お風呂の栓をぬいたときのうずや、竜巻のまわりの風は、中心に近いほど速く回ります。中心から距離 $r$ の所の速さが $\dfrac{k}{r}$（$k$ は定数）のように、距離に反比例しているとします。向きは $(-y,\ x)$ の向きで、その長さは $r$ なので、
+\[ \vec v=\frac{k}{r}\times\frac{(-y,\ x)}{r}=k\left(\frac{-y}{x^2+y^2},\ \ \frac{x}{x^2+y^2}\right) \]
+です（$r^2=x^2+y^2$）。この場の回転を、$k=1$ として計算します。分数の偏微分は、5-6 の商の微分（$y$ を止めて $x$ で微分）で求めます。
+\begin{bkhenkei}[0.5]
+\frac{\partial}{\partial x}\Bigl(\frac{x}{x^2+y^2}\Bigr)=\frac{(x^2+y^2)-x\times2x}{(x^2+y^2)^2} & 商の微分。$y$ は止めた数 \\
+=\frac{y^2-x^2}{(x^2+y^2)^2} & 分子を整理した \\
+\frac{\partial}{\partial y}\Bigl(\frac{-y}{x^2+y^2}\Bigr)=-\frac{(x^2+y^2)-y\times2y}{(x^2+y^2)^2} & 商の微分。$x$ は止めた数 \\
+=\frac{y^2-x^2}{(x^2+y^2)^2} & 分子を整理した（符号に注意） \\
+\mathrm{rot}\,\vec v=\frac{y^2-x^2}{(x^2+y^2)^2}-\frac{y^2-x^2}{(x^2+y^2)^2}=0 & 引くと0 \\
+\end{bkhenkei}
+ぐるぐる回っている流れなのに、回転は（中心以外の）どこでも0です。このような流れを\textbf{うずなし流れ}といいます。\bkidx{うずなしながれ}{うずなし流れ}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(32,0)}]
+    \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (0,0) circle (20);
+    \fill[bkInk] (0,0) circle (0.9);
+    \foreach \kviiika in {0,90,180,270} {\kviiikmill{(\kviiika:20)}{4.5}{\kviiika+180}}
+    \foreach \kviiika in {45,135,225,315} {\draw[kviiik arrow, line width=1.2pt] (\kviiika:20) ++(\kviiika-90:4) -- ++(\kviiika+90:8);}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (0,-27) {コップごと回す流れ\\印はいつも中心を向く（回る）};
+  \end{scope}
+  \begin{scope}[shift={(100,0)}]
+    \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (0,0) circle (20);
+    \fill[bkInk] (0,0) circle (0.9);
+    \foreach \kviiika in {0,90,180,270} {\kviiikmill{(\kviiika:20)}{4.5}{90}}
+    \foreach \kviiika in {45,135,225,315} {\draw[kviiik arrow, line width=1.2pt] (\kviiika:20) ++(\kviiika-90:4) -- ++(\kviiika+90:8);}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (0,-27) {うずなし流れ\\印はいつも上を向く（回らない）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ風車が、円にそって1周するあいだのようす（4か所をかいた）。左は、コップごと回す流れ。風車は1周するあいだに1回転する。右は、うずなし流れ。風車はぐるっと回っていくが、印の羽根の向きは変わらない。}\label{bk:8-10:fig-uzunashi}
+\end{bkfigure}
+
+\kviiikhead{なぜ回らないのか：おうぎ形のマスで考える}
+マスを、正方形のかわりに、中心のまわりのおうぎ形の一部（図\ref{bk:8-10:fig-ougi}）にして、循環を計算します。まっすぐな2辺は、流れに直角なので、進む向きに押す量は0です。外側の弧では左回りに進み、内側の弧では右回りにもどります。
+\begin{bkfigure}
+\begin{minipage}[c]{0.42\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk] (0,0) circle (0.9);
+  \draw[bkGray!80!black, line width=0.9pt, dash pattern=on 2.5pt off 1.5pt, fill=bkTheme!8] (10:22) arc (10:50:22) -- (50:42) arc (50:10:42) -- cycle;
+  \draw[bkGray!80!black, line width=0.5pt] (0,0) -- (10:22) (0,0) -- (50:22);
+  \draw[bkRed!85!black, line width=1.2pt, -{Stealth[length=2mm]}] (22:42) arc (22:38:42);
+  \draw[bkRed!85!black, line width=1.2pt, -{Stealth[length=2mm]}] (38:22) arc (38:22:22);
+  \node[font=\footnotesize, anchor=south east, inner sep=1pt] at (52:43) {外の弧：長い・おそい};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (8:20) {内の弧：短い・速い};
+  \node[font=\footnotesize, anchor=north, inner sep=1pt] at (0,-2) {中心};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+半径 $r_1$ の内の弧と、半径 $r_2$ の外の弧のあいだのマスで、角を $\Delta\theta$ とします。弧の長さは、半径×角（4-2）です。\par\vspace{3pt}
+外の弧：速さ $\dfrac{k}{r_2}$ × 長さ $r_2\Delta\theta=k\Delta\theta$\par
+内の弧：速さ $\dfrac{k}{r_1}$ × 長さ $r_1\Delta\theta=k\Delta\theta$\par\vspace{3pt}
+循環 $=k\Delta\theta-k\Delta\theta=0$\par\vspace{2mm}
+\end{minipage}
+\bkfigcaption{おうぎ形のマス。外の弧は長いがおそく、内の弧は短いが速い。「速さ×長さ」がちょうど同じになり、循環は0。}\label{bk:8-10:fig-ougi}
+\end{bkfigure}
+外の弧は長いけれどおそく、内の弧は短いけれど速いので、「速さ×長さ」はどちらも $k\Delta\theta$ で、ちょうど打ち消し合います。速さが $\dfrac{k}{r}$（距離に反比例）だからこそ、ぴったり0になるのです。コップごと回す流れ（速さ $r\omega$）なら、外の弧は $r_2\omega\times r_2\Delta\theta$、内の弧は $r_1\omega\times r_1\Delta\theta$ で、外の弧のほうが大きく、循環は正になります。
+
+\noindent 風車の羽根で言えば、うずなし流れでは2つの働きが打ち消し合っています。1つは、流れが曲がっていくので、風車も向きを変えようとする働き（左回り）。もう1つは、中心側の羽根が速く、外側の羽根がおそいので、右回りに回そうとする働きです。
+
+\noindent \bkhatenaref の答えの後半です。排水口のうずの外側にある風車 E は、ぐるっと回っていきますが、羽根の向きは変わりません（回らない）。うずの中心にある D は、中心の近く（点線の円の中）が、コップごと回すように回っているので、左回りに回ります。本物のうずでは、中心の近くはコップごと回す流れ、外側はうずなし流れに近くなっていることが多いのです。
+
+\begin{seikaku}
+うずなし流れの式は、中心（原点）では分母が0になり、矢印が決まりません。原点をかこむ道を1周すると、循環は0ではなく、半径によらず $2\pi k$ になります（8-7）。「回転はどこでも0なのに、1周の循環は0でない」のは、原点という「穴」があるためです。この穴のふしぎは、8-11 で調べます。本物のうずでは、中心にコップごと回す部分があり、そこに回転が集まっています。
+\end{seikaku}
+
+\kviiikhead{Python で、マスを小さくして確かめる}
+④・⑤の表計算と同じ計算を、Python でします。前半は用水路（$h=0.25$）、後半はうずなし流れの中の、左下の角が $(1,\ 0.5)$ のマスです。
+\Needspace{16\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+h = 0.25
+y = np.arange(1, -1.01, -h)      \# 北の岸から南の岸へ
+vx = 1 - y**2
+circ = (vx[1:] - vx[:-1]) * h    \# 下の辺 − 上の辺
+print(circ / h**2)               \# 回転
+
+def F(x, y):                     \# うずなし流れ
+    r2 = x*x + y*y
+    return -y/r2, x/r2
+for h in [0.1, 0.01]:
+    x0, y0 = 1.0, 0.5            \# マスの左下の角
+    c = (F(x0+h/2, y0)[0] + F(x0+h, y0+h/2)[1]
+         - F(x0+h/2, y0+h)[0] - F(x0, y0+h/2)[1]) * h
+    print(h, c / h**2)
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[ 1.75  1.25  0.75  0.25 -0.25 -0.75 -1.25 -1.75]
+0.1 0.0008905181312857111
+0.01 8.986314903314252e-06
+\end{bkcodeout}
+用水路の回転は、マスのまん中の $y$ の2倍（1.75、1.25、…）です。\texttt{vx[1:]} は2番め以降（マスの下の辺）、\texttt{vx[:-1]} は最後をのぞいたもの（マスの上の辺）で、ひき算が1回で全部のマスについてできます。うずなし流れのマスでは、回転の見積もりは $h=0.1$ で約0.0009、$h=0.01$ で約0.000009 と、マスを10分の1にすると100分の1になり、0に近づいていきます（\texttt{e-06} は $\times10^{-6}$）。辺のまん中の値で代表させた分のずれが、マスを小さくすると消えていくのです。
+
+
+\bksubsection{10}{坂をくだる流れには、うずがない}
+
+\leavevmode\label{bk:8-10:rotgrad}8-4 で、高さ $h$ の地図から、いちばん急な上りの向き $\mathrm{grad}\,h$ を作りました。ボールが転がる向きの矢印 $-\mathrm{grad}\,h$ の場に、風車を置くと回るでしょうか。主役の山 $h=100-0.01x^2-0.02y^2$ で計算します。
+\begin{bkhenkei}[0.62]
+-\mathrm{grad}\,h=\Bigl(-\frac{\partial h}{\partial x},\ -\frac{\partial h}{\partial y}\Bigr)=(0.02x,\ \ 0.04y) & 8-4 の勾配に $-$ \\
+\mathrm{rot}=\frac{\partial}{\partial x}(0.04y)-\frac{\partial}{\partial y}(0.02x)=0-0=0 & 止めた文字の式 \\
+\end{bkhenkei}
+回りません。じつは、\textbf{どんな関数 $f$ でも、$\mathrm{grad}\,f$ の回転は0}です。平面なら、次のとおりです。
+\begin{bkhenkei}[0.52]
+\mathrm{grad}\,f=\Bigl(\frac{\partial f}{\partial x},\ \frac{\partial f}{\partial y}\Bigr) & 8-4 \\
+\mathrm{rot}\,(\mathrm{grad}\,f)=\frac{\partial}{\partial x}\Bigl(\frac{\partial f}{\partial y}\Bigr)-\frac{\partial}{\partial y}\Bigl(\frac{\partial f}{\partial x}\Bigr) & 平面の rot の式に入れた \\
+=\frac{\partial^2f}{\partial x\,\partial y}-\frac{\partial^2f}{\partial y\,\partial x}=0 & 2回の偏微分は順番によらない（8-2） \\
+\end{bkhenkei}
+3次元でも、3つの成分のどれも、同じ理由で0になります。
+\kviiikframe{$\mathrm{rot}\,(\mathrm{grad}\,f)=\vec0$\qquad（坂の矢印の場には、うずがない）}
+物理第1巻（力-4）で「$\vec F=-\mathrm{grad}\,U$ と書ける力では $\mathrm{rot}\,\vec F=\vec0$ になり」と書いたのは、このことです。
+
+\kviiikhead{うずの矢印の場には、わき出しがない}
+反対の組み合わせも調べます。どんな $\vec F$ でも、回転の矢印 $\mathrm{rot}\,\vec F$ の場の発散（8-9）は0です。
+\[ \mathrm{div}\,(\mathrm{rot}\,\vec F)=\frac{\partial}{\partial x}\Bigl(\frac{\partial F_z}{\partial y}-\frac{\partial F_y}{\partial z}\Bigr)+\frac{\partial}{\partial y}\Bigl(\frac{\partial F_x}{\partial z}-\frac{\partial F_z}{\partial x}\Bigr) \]
+\[ \qquad\qquad+\frac{\partial}{\partial z}\Bigl(\frac{\partial F_y}{\partial x}-\frac{\partial F_x}{\partial y}\Bigr) \]
+かっこを開くと6つの項が出ます。$\dfrac{\partial^2F_z}{\partial x\,\partial y}$ と $-\dfrac{\partial^2F_z}{\partial y\,\partial x}$ のように、同じ2回の偏微分が＋と－で1組ずつ出てきて、8-2 の「順番によらない」で、3組とも打ち消し合います。
+\kviiikframe{$\mathrm{div}\,(\mathrm{rot}\,\vec F)=0$\qquad（うずの矢印の場には、わき出しがない）}
+8-14 で読む電気と磁気の式で、この2つの関係が大事な役目をします。
+
+\bksubsection{11}{電流のまわりの磁場}
+
+\leavevmode\label{bk:8-10:jiba}4-14 のもっと知りたいで、まっすぐな導線のまわりの磁場は「くわしい式（外積が出てきます）は、8-10で学びます」と約束しました。導線を $z$ 軸にとり、電流 $I$〔A〕が $z$ の正の向き（紙の手前に向かう向き）に流れているとします。導線から距離 $r$ の所の磁場（磁束密度）$\vec B$ の大きさは、物理の実験から
+\[ B=\frac{\mu_0I}{2\pi r} \]
+とわかっています（高校物理の $H=\dfrac{I}{2\pi r}$ に、真空の透磁率 $\mu_0$ をかけたもの）。$\mu_0\approx4\pi\times10^{-7}$ N/A²（＝T·m/A。2019年の SI の改定からは測って決める値で、ほぼこの値）です。向きは右ねじの法則で、電流の向きに右ねじが進むとき、ねじを回す向きです。この向きは、導線から見た点の向き $\vec e_r=\dfrac{(x,\ y,\ 0)}{r}$ と、電流の向き $\vec e_z=(0,\ 0,\ 1)$ の外積で書けます。
+\[ \vec e_z\times\vec e_r=\frac{(0\times0-1\times y,\ \ 1\times x-0\times0,\ \ 0\times y-0\times x)}{r}=\frac{(-y,\ x,\ 0)}{r} \]
+\kviiikframe{$\vec B=\dfrac{\mu_0I}{2\pi r}\,\vec e_z\times\vec e_r=\dfrac{\mu_0I}{2\pi}\left(\dfrac{-y}{x^2+y^2},\ \ \dfrac{x}{x^2+y^2},\ \ 0\right)$}
+これは、⑨のうずなし流れと同じ形（$k=\dfrac{\mu_0I}{2\pi}$）です。だから、\textbf{導線の外では $\mathrm{rot}\,\vec B=\vec0$} です。磁場は導線のまわりをぐるっと回っているのに、導線の外のどこにも「うず」はありません。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiikr in {12,22} {\draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (0,0) circle (\kviiikr);}
+  \fill[bkOrange!25] (0,0) circle (4);
+  \draw[bkOrange!80!black, line width=1pt] (0,0) circle (4);
+  \fill[bkOrange!80!black] (0,0) circle (1.2);
+  \foreach \kviiika in {0,90,180,270} {\draw[kviiik arrow, line width=1.2pt] (\kviiika:12) ++(\kviiika-90:4.5) -- ++(\kviiika+90:9);}
+  \foreach \kviiika in {45,135,225,315} {\draw[kviiik arrow, line width=1.2pt] (\kviiika:22) ++(\kviiika-90:2.5) -- ++(\kviiika+90:5);}
+  \node[font=\footnotesize, anchor=north, inner sep=1pt] at (0,-25) {導線（電流は手前へ）と $\vec B$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+上から見た図（電流は紙の手前に向かう）。磁場の向きは左回りで、導線から遠いほど弱い（$\dfrac{1}{r}$ に比例）。\par\vspace{3pt}
+\qty{10}{A} の電流から \qty{5}{cm}（\qty{0.05}{m}）の所では、
+\[ B=\frac{4\pi\times10^{-7}\times10}{2\pi\times0.05}=4\times10^{-5}\ \text{T} \]
+で、地球の磁場（日本ではおよそ $4.5\times10^{-5}$ T）と同じくらいです。\par\vspace{2mm}
+\end{minipage}
+\bkfigcaption{まっすぐな導線のまわりの磁場。形は、⑨のうずなし流れと同じ。}\label{bk:8-10:fig-jiba}
+\end{bkfigure}
+
+\kviiikhead{導線の中では、回転は電流の強さ}
+導線の中（半径 $a$ の円の中）を、電流が一様に流れているとします。半径 $r$（$r<a$）の円の内側を流れる電流は、面積の割合で $I\times\dfrac{r^2}{a^2}$ です。磁場の大きさは、この内側の電流だけで決まり（8-11 で、その理由を学びます）、
+\[ B=\frac{\mu_0}{2\pi r}\times\frac{Ir^2}{a^2}=\frac{\mu_0I}{2\pi a^2}\,r \]
+となります。距離 $r$ に比例するので、導線の中の磁場は「コップごと回す流れ」と同じ形 $\vec B=\dfrac{\mu_0I}{2\pi a^2}(-y,\ x,\ 0)$ です。⑦から、回転は $z$ の向きに
+\[ 2\times\frac{\mu_0I}{2\pi a^2}=\mu_0\times\frac{I}{\pi a^2} \]
+です。$\dfrac{I}{\pi a^2}$ は、導線の断面 $1\ \text{m}^2$ あたりの電流で、\textbf{電流密度} $j$〔A/m²〕といいます。
+\kviiikframe{導線の中では\quad $\mathrm{rot}\,\vec B=\mu_0\,\vec j$\qquad 導線の外では\quad $\mathrm{rot}\,\vec B=\vec0$}
+磁場のうずは、電流が流れている所にだけあり、その強さと向きは電流そのものです。これが、8-11 のアンペールの法則と、8-14 で読む電気と磁気の式の1つになります。
+
+\begin{senmonsho}[ベクトル解析・流体力学の教科書ふうの書き方]
+\begin{bkhonbun}
+ベクトル場 $\symbf A$ の回転を $\operatorname{curl}\symbf A=\nabla\times\symbf A$ で定める。速度場 $\symbf v$ に対し $\symbf\omega=\nabla\times\symbf v$ を渦度という。$\symbf\omega=\symbf0$ である流れを渦なし流れという。任意のスカラー場 $\varphi$ に対し $\nabla\times\nabla\varphi=\symbf0$、任意のベクトル場 $\symbf A$ に対し $\nabla\cdot(\nabla\times\symbf A)=0$ が成り立つ。
+\end{bkhonbun}
+\bkyaku{太字の $\symbf A$ はこの本の $\vec A$。curl（カール）は rot の別の書き方で、英語の本で多い（「巻き毛・うず巻き」という意味）。渦度（うずど）は、速度の場の回転のこと。「渦なし流れ」は⑨のうずなし流れ。2つの式は⑩の $\mathrm{rot}\,(\mathrm{grad}\,f)=\vec0$ と $\mathrm{div}\,(\mathrm{rot}\,\vec F)=0$ で、$\nabla\varphi$ は $\mathrm{grad}\,\varphi$（この $\varphi$ は球座標の角ではなく、ただの関数の名前）。}
+\end{senmonsho}
+
+\Needspace{14\baselineskip}
+\begin{motto}[5]
+\textbf{rot $=\vec0$ なら、力は $-\mathrm{grad}\,U$ と書ける（すきまのない広がりの中なら）}\par
+⑩で、$\vec F=-\mathrm{grad}\,U$ と書ける力（保存力）では $\mathrm{rot}\,\vec F=\vec0$ になることを見ました。反対に、$\mathrm{rot}\,\vec F=\vec0$ なら、どんな閉じた道の循環も0になり、線積分は道によらず、$-\mathrm{grad}\,U$ と書けます。閉じた道でかこまれた面を小さなマスに分けると、となりどうしのマスの共通の辺は、逆向きに1回ずつ通るので打ち消し合い、「マスの循環の合計＝外の1周の循環」になるからです（くわしくは 8-11 のストークスの定理）。どのマスの循環も0なら、外の1周も0です。\par\vspace{2pt}
+ただし、この話は、道でかこまれた所がすべて場の中にあるとき（\textbf{すきまのない広がりの中}）だけです。⑨のうずなし流れのように、原点に「穴」があると、原点をかこむ道は、マスで埋めつくせません。だから、回転が0でも、原点をかこむ1周の循環は $2\pi k$ になれるのです（8-11）。物理第1巻（力-4）の「（すきまのない広がりの中なら）」は、このことです。
+\end{motto}
+
+
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{循環}左回りに1周して、辺にそう成分×長さをたす（$\oint_C\vec F\cdot\dd\vec r$）\\[4pt]
+\tsl{回転}循環÷面積。正なら左回り、負なら右回り\\[4pt]
+\tsl{平面}$\mathrm{rot}\,\vec F=\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$\\[4pt]
+\tsl{3次元}$\mathrm{rot}\,\vec F=\nabla\times\vec F$（矢印。向きは回る軸）\\[4pt]
+\tsl{風車}角速度は $\frac{1}{2}\,\mathrm{rot}\,\vec v$。$\mathrm{rot}\,(\vec\omega\times\vec r)=2\vec\omega$\\[4pt]
+\tsl{いつも0}$\mathrm{rot}\,(\mathrm{grad}\,f)=\vec0$、$\mathrm{div}\,(\mathrm{rot}\,\vec F)=0$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{循環}{閉じた道を1周しながら、流れ（矢印の場）が進む向きに押す量をたしたもの。閉じた道の線積分。}
+\bkword{回転（rot）}{小さなマスの循環を面積でわったもの。その場所に置いた風車を回す働きの強さ。3次元では、回る軸の向きの矢印。}
+\bkword{うずなし流れ}{回転がどこでも0の流れ。ぐるぐる回っていても、風車は向きを変えない。}
+\bkword{電流密度}{導線の断面1 m²あたりに流れる電流。単位は A/m²。}
+\bkword{curl}{rot の別の書き方（英語の本で多い）。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\mathrm{rot}\,\vec F$}{ローテーション・エフ}{回転。小さなマスの循環÷面積。3次元では矢印。英語の本では curl}{rotation, curl}{8-10}}{\bkkigocard{$\nabla\times\vec F$}{ナブラ・クロス・エフ}{$\mathrm{rot}\,\vec F$ と同じもの。外積の形で書いた}{curl, del cross}{8-10}}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[図から、風車が回るかを読む]
+次の（1）〜（3）の場に風車を置くと、回りますか。回るなら、向きも答えましょう。
+\begin{bkcenter}
+\begin{tabular}{@{}c@{\hspace{4mm}}c@{\hspace{4mm}}c@{}}
+\kviiikpanelfull{0}{0.3*\kviiikx}{} & \kviiikpanelfull{-0.3*\kviiikx}{0.3*\kviiiky}{} & \kviiikpanelfull{0.3*\kviiiky}{0.3*\kviiikx}{} \\
+{\sffamily\small（1）$(0,\ x)$} & {\sffamily\small（2）$(-x,\ y)$} & {\sffamily\small（3）$(y,\ x)$} \\
+\end{tabular}
+\end{bkcenter}
+\kangaekata 上下の羽根では横向きの速さのちがい、左右の羽根ではたて向きの速さのちがいを見る（①）。\par
+\shiki（1）横向きの速さはどこも0。たて向きの速さは、右ほど上向きに大きい。右の羽根が上へ強く押されるので、左回り。\kviiikq
+（2）横向きの速さは $-x$ で、上と下で同じ。たて向きの速さは $y$ で、左と右で同じ。どちらもちがいがないので、回らない。\kviiikq
+（3）上ほど右向きに速い（右回りの働き）。右ほど上向きに速い（左回りの働き）。同じ強さで打ち消し合うので、回らない。\par
+\kotae（1）\nobreak 左回り\quad（2）\nobreak 回らない\quad（3）\nobreak 回らない
+\end{reidai}
+\noindent 式で確かめると、（1）は $1-0=1$、（2）は $0-0=0$、（3）は $1-1=0$ です。（3）は物理第1巻の $\vec F_1=(y,\ x)$ です。
+
+\begin{jibun}
+次の（1）〜（3）の場に風車を置くと、回りますか。回るなら、向きも答えましょう。
+\begin{bkcenter}
+\begin{tabular}{@{}c@{\hspace{4mm}}c@{\hspace{4mm}}c@{}}
+\kviiikpanelfull{-0.3*\kviiiky}{0}{} & \kviiikpanelfull{0.3*\kviiikx}{-0.3*\kviiiky}{} & \kviiikpanelfull{0}{-0.3*\kviiikx}{} \\
+{\sffamily\small（1）$(-y,\ 0)$} & {\sffamily\small（2）$(x,\ -y)$} & {\sffamily\small（3）$(0,\ -x)$} \\
+\end{tabular}
+\end{bkcenter}
+\bkjans{（1）\nobreak 下ほど右向きに速い（上ほど左向き）ので、左回り。（2）\nobreak 横は上下で同じ、たては左右で同じなので、回らない。（3）\nobreak 右ほど下向きに速いので、右回り。}
+\end{jibun}
+
+\begin{reidai}[マスのまわりを1周して数える]
+1辺 \qty{0.5}{m} のマスの4つの辺のまん中で、水の速度をはかると、下の辺の $v_x$ が \qty{1.2}{m/s}、右の辺の $v_y$ が \qty{0.3}{m/s}、上の辺の $v_x$ が \qty{0.8}{m/s}、左の辺の $v_y$ が \qty{0.1}{m/s} でした。循環と回転を求め、そこに置いた風車の回る向きと角速度を答えましょう。\par
+\kangaekata 循環＝（下＋右－上－左）×辺の長さ（④）。回転＝循環÷面積。風車の角速度は回転の半分（⑦）。\par
+\shiki 循環 $=(1.2+0.3-0.8-0.1)\times0.5=0.6\times0.5=0.3$〔m²/s〕\kviiikq
+回転 $\approx\dfrac{0.3}{0.5^2}=\dfrac{0.3}{0.25}=1.2$〔1/s〕（正なので左回り）\kviiikq
+風車の角速度 $=\dfrac{1}{2}\times1.2=0.6$〔rad/s〕\par
+\kotae 循環 \qty{0.3}{m^2/s}、回転 1.2（1/s）。風車は左回りに \qty{0.6}{rad/s}
+\end{reidai}
+
+\begin{jibun}
+1辺 \qty{0.2}{m} のマスの4つの辺のまん中で、下の辺の $v_x$ が \qty{0.6}{m/s}、右の辺の $v_y$ が \qty{-0.2}{m/s}、上の辺の $v_x$ が \qty{1.0}{m/s}、左の辺の $v_y$ が \qty{0.2}{m/s} でした。循環と回転を求め、風車の回る向きと角速度を答えましょう。
+\bkjans{循環は $(0.6-0.2-1.0-0.2)\times0.2=-0.16$〔m²/s〕。回転は $-0.16\div0.04=-4$〔1/s〕。風車は右回りに \qty{2}{rad/s}。}
+\end{jibun}
+
+\begin{reidai}[平面の rot を式で計算する]
+次の場の回転を求めましょう。（2）は、点 $(2,\ 1)$ での値も求めましょう。\par
+（1）\nobreak $\vec F=(-2y,\ \ 3x)$\qquad（2）\nobreak $\vec F=(xy,\ \ x^2+y)$\par
+\kangaekata $\mathrm{rot}\,\vec F=\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$（⑥）。$F_y$ を先に $x$ で、$F_x$ を $y$ で偏微分する。止めた文字は数と同じ。\par
+\shiki（1）$\dfrac{\partial F_y}{\partial x}=\dfrac{\partial}{\partial x}(3x)=3$、$\dfrac{\partial F_x}{\partial y}=\dfrac{\partial}{\partial y}(-2y)=-2$\kviiikq
+$\mathrm{rot}\,\vec F=3-(-2)=5$\kviiikq
+（2）$\dfrac{\partial F_y}{\partial x}=\dfrac{\partial}{\partial x}(x^2+y)=2x$（$y$ は止めた数なので、微分すると0）\kviiikq
+$\dfrac{\partial F_x}{\partial y}=\dfrac{\partial}{\partial y}(xy)=x$（$x$ は止めた数）\kviiikq
+$\mathrm{rot}\,\vec F=2x-x=x$。点 $(2,\ 1)$ では2\par
+\kotae（1）\nobreak 5（どこでも左回り）\quad（2）\nobreak $x$、点 $(2,\ 1)$ で2
+\end{reidai}
+
+\begin{jibun}
+次の場の回転を求めましょう。（2）は、点 $(2,\ 3)$ での値も求めましょう。\par
+（1）\nobreak $\vec F=(4y,\ \ -x)$\qquad（2）\nobreak $\vec F=(x^2y,\ \ y^2+x)$
+\bkjans{（1）\nobreak $-1-4=-5$。（2）\nobreak $\dfrac{\partial F_y}{\partial x}=1$、$\dfrac{\partial F_x}{\partial y}=x^2$ で、回転は $1-x^2$。点 $(2,\ 3)$ で $-3$。}
+\end{jibun}
+
+\begin{reidai}[用水路の風車]
+はば \qty{4}{m} の用水路で、まん中を $y=0$、岸を $y=\pm2$（m）とします。水の速度が $\vec v=\Bigl(1.2\Bigl(1-\dfrac{y^2}{4}\Bigr),\ \ 0\Bigr)$〔m/s〕のとき、（1）回転を $y$ の式で表しましょう。（2）$y=\qty{1}{m}$ の所に置いた風車は、どちら向きに何 rad/s で回りますか。1回転するのに何秒かかりますか。\par
+\kangaekata $v_y=0$ なので、回転は $-\dfrac{\partial v_x}{\partial y}$ だけ。風車の角速度は回転の半分。1回転は $2\pi$ rad。\par
+\shiki（1）$v_x=1.2-0.3y^2$。$\dfrac{\partial v_x}{\partial y}=-0.6y$\kviiikq
+$\mathrm{rot}\,\vec v=0-(-0.6y)=0.6y$〔1/s〕\kviiikq
+（2）$y=1$ で回転は0.6（正なので左回り）。風車の角速度 $=\dfrac{0.6}{2}=0.3$〔rad/s〕\kviiikq
+1回転の時間 $=\dfrac{2\pi}{0.3}=20.9$〔s〕\par
+\kotae（1）\nobreak $0.6y$〔1/s〕\quad（2）\nobreak 左回りに \qty{0.3}{rad/s}、1回転に約21秒
+\end{reidai}
+
+\begin{jibun}
+はば \qty{6}{m} の用水路（岸は $y=\pm3$）で、水の速度が $\vec v=\Bigl(0.8\Bigl(1-\dfrac{y^2}{9}\Bigr),\ \ 0\Bigr)$〔m/s〕のとき、（1）回転を $y$ の式で表しましょう。（2）$y=\qty{-2.25}{m}$ の所に置いた風車は、どちら向きに何 rad/s で回りますか。1回転するのに何秒かかりますか。
+\bkjans{（1）\nobreak $\dfrac{1.6}{9}y$（約 $0.178y$）〔1/s〕。（2）\nobreak 回転は $-0.4$ なので、右回りに \qty{0.2}{rad/s}。1回転に $2\pi\div0.2=31.4$ 秒。}
+\end{jibun}
+
+\begin{reidai}[3次元の rot]
+次の場の回転を求めましょう。\par
+（1）\nobreak $\vec F=(y,\ \ z,\ \ x)$\qquad（2）\nobreak $\vec F=(yz,\ \ xz,\ \ xy)$\par
+\kangaekata ⑧の式で、成分を1つずつ。$x$ 成分は $\dfrac{\partial F_z}{\partial y}-\dfrac{\partial F_y}{\partial z}$、あとは文字を $x\to y\to z\to x$ とずらす。\par
+\shiki（1）$x$ 成分：$\dfrac{\partial x}{\partial y}-\dfrac{\partial z}{\partial z}=0-1=-1$\kviiikq
+$y$ 成分：$\dfrac{\partial y}{\partial z}-\dfrac{\partial x}{\partial x}=0-1=-1$\kviiikq
+$z$ 成分：$\dfrac{\partial z}{\partial x}-\dfrac{\partial y}{\partial y}=0-1=-1$\kviiikq
+（2）$x$ 成分：$\dfrac{\partial(xy)}{\partial y}-\dfrac{\partial(xz)}{\partial z}=x-x=0$\kviiikq
+$y$ 成分：$\dfrac{\partial(yz)}{\partial z}-\dfrac{\partial(xy)}{\partial x}=y-y=0$\kviiikq
+$z$ 成分：$\dfrac{\partial(xz)}{\partial x}-\dfrac{\partial(yz)}{\partial y}=z-z=0$\par
+\kotae（1）\nobreak $(-1,\ -1,\ -1)$\quad（2）\nobreak $(0,\ 0,\ 0)$
+\end{reidai}
+\noindent （1）の回転の矢印は、どこでも $(-1,\ -1,\ -1)$ の向きです。この場は、$(1,\ 1,\ 1)$ の向きの軸のまわりに、右ねじの逆向きに回っています。（2）は、$f=xyz$ の勾配 $\mathrm{grad}\,f=(yz,\ xz,\ xy)$ なので、⑩から回転は0になるはずで、そのとおりになりました。
+
+\begin{jibun}
+次の場の回転を求めましょう。\par
+（1）\nobreak $\vec F=(z,\ \ x,\ \ y)$\qquad（2）\nobreak $\vec F=(y^2z,\ \ 2xyz,\ \ xy^2)$
+\bkjans{（1）\nobreak $x$ 成分 $1-0=1$、$y$ 成分 $1-0=1$、$z$ 成分 $1-0=1$ で $(1,\ 1,\ 1)$。（2）\nobreak $x$ 成分 $2xy-2xy=0$、$y$ 成分 $y^2-y^2=0$、$z$ 成分 $2yz-2yz=0$ で $(0,\ 0,\ 0)$。}
+\end{jibun}
+
+\begin{reidai}[全体がいっしょに回る流れ]
+（1）回転台が6秒で1回転し、台の上の水そうの水がいっしょに回っています。水の速度 $\vec v=\omega(-y,\ x)$ の $\omega$ と回転を求めましょう。\par
+（2）$\vec\omega=(1,\ 1,\ 0)$〔rad/s〕のとき、$\vec v=\vec\omega\times\vec r$ を成分で書き、回転が $2\vec\omega$ になることを確かめましょう。そこに置いた小さな風車は、どの向きの軸のまわりに、何 rad/s で回りますか。\par
+\kangaekata（1）1回転は $2\pi$ rad。平面の回転は $2\omega$（⑦）。（2）4-14 の外積の成分で $\vec v$ を1成分ずつ作り、⑧の式で回転を計算する。風車の軸は回転の矢印の向き、角速度は回転の大きさ（4-10：矢印の長さ）の半分。\par
+\shiki（1）$\omega=\dfrac{2\pi}{6}=1.047$〔rad/s〕。回転 $=2\omega=2.09$〔1/s〕\kviiikq
+（2）$\vec v$ の $x$ 成分：$\omega_yz-\omega_zy=1\times z-0\times y=z$\kviiikq
+$\vec v$ の $y$ 成分：$\omega_zx-\omega_xz=0\times x-1\times z=-z$\kviiikq
+$\vec v$ の $z$ 成分：$\omega_xy-\omega_yx=1\times y-1\times x=y-x$\kviiikq
+回転の $x$ 成分：$\dfrac{\partial(y-x)}{\partial y}-\dfrac{\partial(-z)}{\partial z}=1-(-1)=2$\kviiikq
+回転の $y$ 成分：$\dfrac{\partial z}{\partial z}-\dfrac{\partial(y-x)}{\partial x}=1-(-1)=2$\kviiikq
+回転の $z$ 成分：$\dfrac{\partial(-z)}{\partial x}-\dfrac{\partial z}{\partial y}=0-0=0$\kviiikq
+回転は $(2,\ 2,\ 0)=2\vec\omega$。大きさは $\sqrt{2^2+2^2+0^2}=2\sqrt2$\kviiikq
+風車は $(1,\ 1,\ 0)$ の向きの軸のまわりに、$\dfrac{2\sqrt2}{2}=\sqrt2\approx1.41$〔rad/s〕で回る\par
+\kotae（1）\nobreak $\omega=\qty{1.05}{rad/s}$、回転 2.09（1/s）\quad（2）\nobreak $\vec v=(z,\ -z,\ y-x)$、回転 $(2,\ 2,\ 0)=2\vec\omega$、風車は $(1,\ 1,\ 0)$ の向きの軸のまわりに約 \qty{1.41}{rad/s}
+\end{reidai}
+\noindent（1）の水そうにうかべた風車は、回転 2.09 の半分の \qty{1.047}{rad/s}、つまり水そうと同じ角速度で回り、6秒で1回転します。風車は、水そうのどこに置いても同じように回ります（回転はどこでも $2\omega$）。（2）の回転の矢印 $(2,\ 2,\ 0)$ は、$\vec\omega=(1,\ 1,\ 0)$ と同じ向き（$x$ 軸と $y$ 軸のまん中の向き）です。回転の矢印は、いつも回る軸の向きを指しているのです。
+
+\begin{jibun}
+（1）ドラム式洗濯機のドラムが、1分に1200回転しています。中の水と洗たく物がドラムといっしょに回るとして、$\omega$ と回転を求めましょう。（2）$\vec\omega=(0,\ 2,\ 2)$〔rad/s〕のとき、$\vec v=\vec\omega\times\vec r$ を成分で書き、回転を求めましょう。そこに置いた小さな風車は、どの向きの軸のまわりに何 rad/s で回りますか。
+\bkjans{（1）\nobreak 1秒に $1200\div60=20$ 回転なので、$\omega=20\times2\pi=125.7$〔rad/s〕、回転は $2\omega=251$〔1/s〕。（2）\nobreak $\vec v=(2z-2y,\ 2x,\ -2x)$。回転は $x$ 成分 $0-0=0$、$y$ 成分 $2-(-2)=4$、$z$ 成分 $2-(-2)=4$ で $(0,\ 4,\ 4)=2\vec\omega$。大きさ $4\sqrt2$。風車は $(0,\ 1,\ 1)$ の向きの軸のまわりに $2\sqrt2\approx\qty{2.83}{rad/s}$。}
+\end{jibun}
+
+\begin{reidai}[保存力かを調べて、位置エネルギーを作る]
+物理第1巻（力-4）の力 $\vec F_1=(y,\ x)$ と $\vec F_2=(-y,\ x)$〔N〕について、（1）回転を求め、保存力かどうかを答えましょう。（2）保存力のほうについて、$\vec F=-\mathrm{grad}\,U$ となる $U$ を作り、$(0,\ 0)$ から $(1,\ 1)$（m）まで動かすときの仕事を求めましょう。\par
+\kangaekata 回転が0なら（すきまのない広がりの中なので）保存力（もっと知りたい）。$-\dfrac{\partial U}{\partial x}=F_x$ を $x$ で積分して、残りの $y$ の式を $F_y$ で決める。仕事は $U(\text{はじめ})-U(\text{おわり})$（8-7）。\par
+\shiki（1）$\vec F_1$：$\dfrac{\partial x}{\partial x}-\dfrac{\partial y}{\partial y}=1-1=0$。$\vec F_2$：$\dfrac{\partial x}{\partial x}-\dfrac{\partial(-y)}{\partial y}=1-(-1)=2$\kviiikq
+（2）$\vec F_1$ で、$-\dfrac{\partial U}{\partial x}=y$ より $\dfrac{\partial U}{\partial x}=-y$\kviiikq
+$y$ を止めて $x$ で積分：$U=-xy+g(y)$（$g(y)$ は $y$ だけの式。$x$ で微分すると0）\kviiikq
+$-\dfrac{\partial U}{\partial y}=x-g'(y)$。これが $F_y=x$ と等しいので、$g'(y)=0$、$g$ は定数（0にとる）\kviiikq
+$U=-xy$。仕事 $=U(0,\ 0)-U(1,\ 1)=0-(-1)=1$〔J〕\par
+\kotae（1）\nobreak $\vec F_1$ は回転0で保存力、$\vec F_2$ は回転2で保存力ではない。（2）\nobreak $U=-xy$、仕事 \qty{1}{J}（力-4 の道A・道B と同じ）
+\end{reidai}
+
+\begin{jibun}
+力 $\vec F_3=(2x+y,\ \ x+2y)$ と $\vec F_4=(y,\ -x)$〔N〕について、（1）回転を求め、保存力かどうかを答えましょう。（2）保存力のほうについて $U$ を作り、$(0,\ 0)$ から $(1,\ 1)$（m）まで動かすときの仕事を求めましょう。
+\bkjans{（1）\nobreak $\vec F_3$ は $1-1=0$ で保存力、$\vec F_4$ は $-1-1=-2$ で保存力ではない。（2）\nobreak $U=-x^2-xy+g(y)$、$-\dfrac{\partial U}{\partial y}=x-g'(y)=x+2y$ より $g=-y^2$。$U=-(x^2+xy+y^2)$。仕事は $0-(-3)=\qty{3}{J}$。}
+\end{jibun}
+
+\begin{reidai}[$\mathrm{rot}\,(\mathrm{grad}\,f)=\vec0$ を確かめる]
+$f=x^2y+y^3$ について、$\mathrm{grad}\,f$ を求め、その回転が0になることを確かめましょう。また、例題5（1）の場 $(y,\ z,\ x)$ の回転 $(-1,\ -1,\ -1)$ の発散を求めましょう。\par
+\kangaekata grad は2つの偏微分を並べた矢印（8-4）。その回転を⑥の式で。発散は8-9 の式。\par
+\shiki $\mathrm{grad}\,f=\Bigl(\dfrac{\partial f}{\partial x},\ \dfrac{\partial f}{\partial y}\Bigr)=(2xy,\ \ x^2+3y^2)$\kviiikq
+回転 $=\dfrac{\partial}{\partial x}(x^2+3y^2)-\dfrac{\partial}{\partial y}(2xy)=2x-2x=0$\kviiikq
+$\mathrm{div}\,(-1,\ -1,\ -1)=\dfrac{\partial(-1)}{\partial x}+\dfrac{\partial(-1)}{\partial y}+\dfrac{\partial(-1)}{\partial z}=0$\par
+\kotae $\mathrm{grad}\,f=(2xy,\ x^2+3y^2)$、回転0。回転の矢印の発散も0
+\end{reidai}
+
+\begin{jibun}
+$f=x^3+xy^2$ について、$\mathrm{grad}\,f$ を求め、その回転が0になることを確かめましょう。また、場 $(z,\ x,\ y)$ の回転 $(1,\ 1,\ 1)$ の発散を求めましょう。
+\bkjans{$\mathrm{grad}\,f=(3x^2+y^2,\ 2xy)$。回転は $2y-2y=0$。$(z,\ x,\ y)$ の回転は $(1,\ 1,\ 1)$ で、発散は $0+0+0=0$。}
+\end{jibun}
+
+\begin{reidai}[電流のまわりの磁場と、その回転]
+まっすぐな導線（半径 \qty{1}{mm}）に、\qty{10}{A} の電流が $z$ の正の向きに一様に流れています。（1）導線の中心から \qty{5}{cm} はなれた点 $(0.05,\ 0,\ 0)$（m）の磁場の大きさと向きを求めましょう。（2）その点と、導線の中の回転 $\mathrm{rot}\,\vec B$ を求めましょう（$\mu_0=4\pi\times10^{-7}$ T·m/A）。\par
+\kangaekata 大きさは $\dfrac{\mu_0I}{2\pi r}$、向きは $\vec e_z\times\vec e_r$（⑪）。導線の外はうずなし流れの形で回転0、中は $\mu_0j$。\par
+\shiki（1）$B=\dfrac{4\pi\times10^{-7}\times10}{2\pi\times0.05}=\dfrac{2\times10^{-6}}{0.05}=4\times10^{-5}$〔T〕\kviiikq
+$\vec e_r=(1,\ 0,\ 0)$ なので、向きは $\vec e_z\times\vec e_r=(0,\ 1,\ 0)$（$y$ の正の向き）\kviiikq
+（2）点 $(0.05,\ 0,\ 0)$ は導線の外なので、$\mathrm{rot}\,\vec B=\vec0$\kviiikq
+導線の中：$j=\dfrac{10}{\pi\times(0.001)^2}=3.18\times10^{6}$〔A/m²〕\kviiikq
+$\mu_0j=4\pi\times10^{-7}\times\dfrac{10}{\pi\times10^{-6}}=\dfrac{4\times10^{-6}}{10^{-6}}=4$〔T/m〕\par
+\kotae（1）\nobreak $4\times10^{-5}$ T、$y$ の正の向き。（2）\nobreak その点では $\vec0$、導線の中では $z$ の向きに \qty{4}{T/m}
+\end{reidai}
+
+\begin{jibun}
+まっすぐな導線（半径 \qty{0.5}{mm}）に、\qty{5}{A} の電流が $z$ の正の向きに一様に流れています。（1）導線から \qty{2}{cm} はなれた点 $(0,\ 0.02,\ 0)$（m）の磁場の大きさと向きを求めましょう。（2）その点と、導線の中の回転を求めましょう。
+\bkjans{（1）\nobreak $B=\dfrac{4\pi\times10^{-7}\times5}{2\pi\times0.02}=5\times10^{-5}$ T。$\vec e_r=(0,\ 1,\ 0)$ で、向きは $\vec e_z\times\vec e_r=(-1,\ 0,\ 0)$（$x$ の負の向き）。（2）\nobreak その点では $\vec0$。導線の中では $\mu_0j=4\pi\times10^{-7}\times\dfrac{5}{\pi\times(0.0005)^2}=\qty{8}{T/m}$（$z$ の向き）。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① ぐるぐる回る流れは、回転があると思う}
+\bkng{うずなし流れ $\dfrac{(-y,\ x)}{x^2+y^2}$ は回っているので、回転は正}
+\bkok{中心以外では回転は0（風車は向きを変えない）}
+回転は「流れが回っているか」ではなく、「マスの1周の循環」で決まります。外がおそく内が速いので、打ち消し合います（⑨）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② まっすぐな流れは、回転が0だと思う}
+\bkng{$(y,\ 0)$ はまっすぐ右へ流れるので、回転は0}
+\bkok{上ほど速いので、回転は $-1$（右回り）}
+向きがそろっていても、となりどうしの速さがちがえば、風車は回ります（①）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 引く順番を逆にする}
+\bkng{$\mathrm{rot}\,\vec F=\dfrac{\partial F_x}{\partial y}-\dfrac{\partial F_y}{\partial x}$}
+\bkok{$\mathrm{rot}\,\vec F=\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$}
+逆にすると、左回りと右回りが入れかわります。「$y$ 成分を $x$ で」が先です。うず $(-y,\ x)$ で2（正、左回り）になるかで確かめられます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ 3次元の回転を数で答える}
+\bkng{$\vec F=(y,\ z,\ x)$ の回転は $-3$}
+\bkok{回転は $(-1,\ -1,\ -1)$（矢印）}
+3次元の回転は、3つの軸のまわりの回り方を並べた矢印です。成分をたしてはいけません。数で答えるのは、平面のときだけです（それは $z$ 成分）。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiikEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 行列式の形で順番を変える}
+\raggedright\bkng{$F_z\dfrac{\partial}{\partial y}$ と書いて計算する}
+\bkok{$\dfrac{\partial F_z}{\partial y}$（2行めの命令を3行めに）}
+行列式の形は覚えるための形です。偏微分の記号は、かならず成分の左に書きます（⑧）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ div と rot を取りちがえる}
+\raggedright\bkng{rot は $\dfrac{\partial F_x}{\partial x}+\dfrac{\partial F_y}{\partial y}$}
+\bkok{rot は $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$}
+div は「同じ文字」どうし（$F_x$ を $x$ で）のたし算、rot は「ちがう文字」どうしの引き算です。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑦ 循環（名前）を、そのままかけ算にする}
+\bkng{用水路のマスの循環 $=$（流れの速さ）$\times$（マスの周の長さ）}
+\bkok{4つの辺に分け、辺にそう成分×長さを、向きの符号をつけてたす}
+$\oint_C\vec F\cdot\dd\vec r$ は「1周してたす」という名前です。計算するときは、4つの辺のふつうの定積分（または辺のまん中の値×はば）に直します（④）。上の辺と左の辺では、進む向きが逆なのでマイナスがつきます。速さ×周の長さでは、回らない（ウ）そろった流れでも0になりません。
+\end{tsumazuki}
+
+\begin{column}{お風呂のうずは、北半球ならいつも左回り？}
+「北半球では、お風呂の栓をぬいたときのうずは、地球の自転のためにいつも左回りになる」という話を聞いたことがあるかもしれません。地球の自転は、台風のように何百 km もの大きなうずの向きは決めますが（4-14 のコラム）、お風呂のような小さなうずでは、その働きはとても小さく、水を入れたときに残った流れのほうがずっと強く効きます。だから、ふつうのお風呂では、右回りにも左回りにもなります。水を1日近くも静かに置いて、残った流れをなくしてから注意深く栓をぬいた実験では、北半球で左回りになったと報告されています（1960年代のアメリカの実験など）。小さな回転を見るには、それほどの注意が必要なのです。
+\end{column}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiikbox{台風と天気図の「渦度」}
+\noindent\begin{minipage}[c]{0.70\linewidth}
+\raggedright
+北半球の台風は、上から見て左回りのうずです（4-14 のコラム）。風の速度の回転は、気象では\textbf{渦度}（うずど）とよばれ、左回りのうずの所で正です。気象庁は、上空の風から計算した渦度の天気図を作っていて、低気圧や台風の発達を調べるのに使われています。中心から \qty{50}{km} の所で風速 \qty{40}{m/s} の台風の中心部が、コップごと回すように回っているとすると、渦度は $2\times\dfrac{40}{\num{50000}}=1.6\times10^{-3}$〔1/s〕です（およその例）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!12] (0,0) circle (15);
+  \foreach \kviiika in {0,72,144,216,288} {\draw[bkGray!80!black, line width=1.6pt, -{Stealth[length=2.4mm]}] (\kviiika:13) arc (\kviiika:\kviiika+50:13);}
+  \foreach \kviiika in {36,156,276} {\draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2mm]}] (\kviiika:7) arc (\kviiika:\kviiika+70:7);}
+  \fill[bkInk] (0,0) circle (1.2);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-16) {台風（上から）};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kviiikbox{飛行機の翼と循環}
+翼の上側の空気は下側より速く流れるので、翼をかこむ道の循環は0になりません。翼の長さ1 m あたりの揚力（もち上げる力）は、空気の密度×飛行機の速さ×循環で計算できます（クッタ・ジュコーフスキーの定理、物理 力-15）。「1周の線積分」が、飛行機をうかせる力を決めているのです。
+\par\vspace{4pt}
+\kviiikbox{モーターと電磁石：$\mathrm{rot}\,\vec B=\mu_0\vec j$}
+\noindent\begin{minipage}[c]{0.70\linewidth}
+\raggedright
+磁場のうずは、電流そのものでした（⑪）。導線を巻いたコイルでは、たくさんの導線の磁場が重なり、中に強い磁場ができます。モーター・電磁石・スピーカーは、このしくみを使っています。コイルの中の磁場の強さは、$\mathrm{rot}\,\vec B=\mu_0\vec j$ から計算できます（8-11 のアンペールの法則、物理 電-6）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiikx in {0,4,...,20} {\draw[bkOrange!80!black, line width=1.2pt] (\kviiikx,0) ellipse (1.6 and 7);}
+  \draw[kviiik arrow, line width=1.3pt] (-6,0) -- (26,0);
+  \node[font=\footnotesize, anchor=south] at (10,8) {コイル};
+  \node[font=\footnotesize, anchor=north] at (10,-8) {中に強い $\vec B$};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 次の（1）〜（3）の場に風車を置くと、回りますか。回るなら、向きも答えましょう\mbox{（\bkreidairef{1}）}。\par
+（1）\nobreak $(2y,\ 0)$\par
+（2）\nobreak $(0,\ 2x)$\par
+（3）\nobreak $(-y,\ -x)$
+\bkpans{（1）\nobreak 上ほど右向きに速いので、右回り（回転 $-2$）。（2）\nobreak 右ほど上向きに速いので、左回り（回転2）。（3）\nobreak 上ほど左向き（左回りの働き）、右ほど下向き（右回りの働き）で打ち消し、回らない（回転 $-1-(-1)=0$）。}
+
+\bkproblem 1辺 \qty{0.4}{m} のマスの4つの辺のまん中で、下の辺の $v_x$ が \qty{0.9}{m/s}、右の辺の $v_y$ が \qty{0.4}{m/s}、上の辺の $v_x$ が \qty{0.5}{m/s}、左の辺の $v_y$ が \qty{0}{m/s} でした。循環と回転を求め、風車の回る向きと角速度を答えましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{循環は $(0.9+0.4-0.5-0)\times0.4=0.32$〔m²/s〕。回転は $0.32\div0.16=2.0$〔1/s〕。左回りに \qty{1.0}{rad/s}。}
+
+\bkproblem 次の場の回転を求めましょう。（2）は点 $(1,\ 2)$ での値も求めましょう\mbox{（\bkreidairef{3}）}。\par
+（1）\nobreak $\vec F=(5y,\ \ -2x)$\par
+（2）\nobreak $\vec F=(xy^2,\ \ x^3)$
+\bkpans{（1）\nobreak $-2-5=-7$。（2）\nobreak $\dfrac{\partial F_y}{\partial x}=3x^2$、$\dfrac{\partial F_x}{\partial y}=2xy$ で、回転は $3x^2-2xy$。点 $(1,\ 2)$ で $3-4=-1$。}
+
+\bkproblem はば \qty{2}{m} の用水路（岸は $y=\pm1$）で、水の速度が $\vec v=\bigl(0.5(1-y^2),\ 0\bigr)$〔m/s〕です。（1）回転を $y$ の式で表しましょう。（2）$y=\qty{-0.6}{m}$ の所の風車は、どちら向きに何 rad/s で回りますか\mbox{（\bkreidairef{4}）}。
+\bkpans{（1）\nobreak $v_x=0.5-0.5y^2$ で、回転は $-(-y)=y$〔1/s〕。（2）\nobreak 回転は $-0.6$ なので、右回りに \qty{0.3}{rad/s}。}
+
+\bkproblem 次の場の回転を求めましょう\mbox{（\bkreidairef{5}）}。\par
+（1）\nobreak $\vec F=(-z,\ \ 0,\ \ x)$\par
+（2）\nobreak $\vec F=(2x,\ \ 3z,\ \ 3y)$
+\bkpans{（1）\nobreak $x$ 成分 $0-0=0$、$y$ 成分 $-1-1=-2$、$z$ 成分 $0-0=0$ で $(0,\ -2,\ 0)$。（2）\nobreak $x$ 成分 $3-3=0$、$y$ 成分 $0-0=0$、$z$ 成分 $0-0=0$ で $(0,\ 0,\ 0)$。}
+
+\bkproblem 回転台が \qty{4}{s} で1回転し、水そうの水がいっしょに回っています。（1）$\omega$ と回転を求めましょう。（2）$\vec\omega=(0,\ 0,\ 5)$〔rad/s〕のとき、$\vec v=\vec\omega\times\vec r$ を成分で書き、回転を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{（1）\nobreak $\omega=2\pi\div4=1.57$〔rad/s〕、回転は $3.14$〔1/s〕。（2）\nobreak $\vec v=(-5y,\ 5x,\ 0)$。回転は $(0,\ 0,\ 5-(-5))=(0,\ 0,\ 10)$。}
+
+\bkproblem 力 $\vec F=(3y,\ \ 3x+2y)$〔N〕の回転を求めて保存力かどうかを答え、保存力なら $U$ を作って、$(0,\ 0)$ から $(2,\ 1)$（m）まで動かすときの仕事を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{回転は $3-3=0$ で保存力。$U=-3xy+g(y)$、$-\dfrac{\partial U}{\partial y}=3x-g'(y)=3x+2y$ より $g=-y^2$。$U=-3xy-y^2$。仕事は $0-(-6-1)=\qty{7}{J}$。}
+
+\bkproblem まっすぐな導線（半径 \qty{2}{mm}）に \qty{20}{A} の電流が $z$ の正の向きに一様に流れています。（1）導線から \qty{10}{cm} の点 $(0,\ -0.1,\ 0)$（m）の磁場の大きさと向きを求めましょう。（2）導線の中の回転を求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{（1）\nobreak $B=\dfrac{4\pi\times10^{-7}\times20}{2\pi\times0.1}=4\times10^{-5}$ T。$\vec e_r=(0,\ -1,\ 0)$ で、向きは $\vec e_z\times\vec e_r=(1,\ 0,\ 0)$（$x$ の正の向き）。（2）\nobreak $\mu_0j=4\pi\times10^{-7}\times\dfrac{20}{\pi\times(0.002)^2}=\qty{2}{T/m}$（$z$ の向き）。}
+
+\bkproblem はば \qty{3}{m} の用水路（岸は $y=\pm1.5$）で、水の速度が $\vec v=(0.9-0.4y^2,\ 0)$〔m/s〕です（まん中で \qty{0.9}{m/s}、岸で0）。$y=\qty{1}{m}$ の所の風車は、どちら向きに何 rad/s で回りますか。1回転するのに何秒かかりますか\mbox{（\bkreidairef{4}）}。
+\bkpans{$v_x=0.9-0.4y^2$ で、回転は $0.8y$。$y=1$ で0.8なので、左回りに \qty{0.4}{rad/s}。1回転に $2\pi\div0.4=15.7$ 秒。}
+
+\bkproblem 1辺 \qty{0.3}{m} のマスの4つの辺のまん中で、下の辺の $v_x$ が \qty{0.5}{m/s}、右の辺の $v_y$ が \qty{0.2}{m/s}、上の辺の $v_x$ が \qty{0.8}{m/s}、左の辺の $v_y$ が \qty{-0.1}{m/s} でした。循環と回転を求め、風車が回るかを答えましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{循環は $\{0.5+0.2-0.8-(-0.1)\}\times0.3=0\times0.3=0$。回転も0で、風車は回らない。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem $f=x^2y^2+2xy$ について、$\mathrm{grad}\,f$ を求め、その回転が0になることを確かめましょう。また、例題6（2）の回転 $(2,\ 2,\ 0)$ の発散を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$\mathrm{grad}\,f=(2xy^2+2y,\ 2x^2y+2x)$。回転は $(4xy+2)-(4xy+2)=0$。$(2,\ 2,\ 0)$ の発散は $0+0+0=0$。}
+
+\bkproblem $\vec\omega=(2,\ 0,\ 2)$〔rad/s〕のとき、$\vec v=\vec\omega\times\vec r$ を成分で書き、回転が $2\vec\omega$ になることを確かめましょう。また、そこに置いた小さな風車は、どの向きの軸のまわりに、何 rad/s で回りますか\mbox{（\bkreidairef{6}）}。
+\bkpans{$\vec v=(-2y,\ 2x-2z,\ 2y)$（$x$ 成分 $\omega_yz-\omega_zy=0-2y$、$y$ 成分 $\omega_zx-\omega_xz=2x-2z$、$z$ 成分 $\omega_xy-\omega_yx=2y$）。回転は $x$ 成分 $2-(-2)=4$、$y$ 成分 $0-0=0$、$z$ 成分 $2-(-2)=4$ で $(4,\ 0,\ 4)=2\vec\omega$。大きさ $4\sqrt2$。風車は $(1,\ 0,\ 1)$ の向きの軸のまわりに $2\sqrt2\approx\qty{2.83}{rad/s}$。}
+
+\bkproblem 力 $\vec F=(2xy+y^2,\ \ x^2+2xy)$〔N〕の回転を求めて保存力かどうかを答え、保存力なら $U$ を作って、$(0,\ 0)$ から $(1,\ 2)$（m）まで動かすときの仕事を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{回転は $(2x+2y)-(2x+2y)=0$ で保存力。$U=-x^2y-xy^2+g(y)$、$-\dfrac{\partial U}{\partial y}=x^2+2xy-g'(y)=x^2+2xy$ より $g$ は定数（0）。$U=-(x^2y+xy^2)$。仕事は $0-\{-(2+4)\}=\qty{6}{J}$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 矢印の場の図から、小さな風車が回るかどうかと、その向きを見分けられる。\bkfurref{bk:8-10:fusha}
+\item マスのまわりを1周してたす量（循環）を表計算で求め、面積でわって回転を見積もれる。\bkfurref{bk:8-10:masu}
+\item 平面と3次元の rot を偏微分で計算し、保存力の見分けや、電流のまわりの磁場に使える。\bkfurref{bk:8-10:heimen}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{風車1つで、川の流れも、台風も、磁場も読めるんだね。次は、マスの循環を全部たして、大きな1周とつなげてみよう。}

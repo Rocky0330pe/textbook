@@ -1,0 +1,1699 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-3
+%% p1-05.tex  力-5　橋を支える三角形：つり合いとトラス（★3〜4）
+%% 公式の持ち主（計画書 A）：A6・A7・A11・A16（③の側）・A25（力の側）・A26・A43・A58・A59・A60・A61・A62（剛体）・A63
+%% 数値はすべて Python で計算した：scratchpad/phys1/力-5/calc.py（例題・図・グラフ）、truss.py（ワーレントラスのプログラム。本文の phcode と同じ）
+%% 出典：
+%%   E-ディフェンス（防災科学技術研究所の実大三次元震動破壊実験施設。兵庫県三木市、2005年完成、最大搭載質量 1200 t、世界最大級）
+%%     三木市の資料 https://www.city.miki.lg.jp/uploaded/attachment/34518.pdf 、防災科研 https://www.bosai.go.jp/
+%%   SS400 の降伏点 245 N/mm²（厚さ16 mm 以下）：JIS G 3101（巻末の表と同じ値。巻末では要確認の印）
+%%   クレーンの例・トラス橋の部材力の桁は、この章で置いたモデルの計算（実在の機種・橋の値ではない）
+\makeatletter
+\newcommand\pxfNm[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{N.m}}
+\newcommand\pxfkNm[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{kN.m}}
+\newcommand\pxfunitNm{\unit[inter-unit-product=\ensuremath{\cdot}]{N.m}}
+% 式を、まん中に1行で置く
+\newcommand\pxfline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 本文の小見出し（それだけで1行）
+\newcommand\pxfhead[1]{\par\addvspace{5pt}\Needspace{7\baselineskip}\noindent{\sffamily\bfseries\color{bkDeep}#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 段の見出し（丸数字＋太字の1行）
+\newcommand\pxfstep[2]{\par\addvspace{5pt}\Needspace{6\baselineskip}\noindent
+  {\bkcircled[bkOrange]{#1}\enspace\sffamily\bfseries\color{bkOrange!75!black}#2}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+\tikzset{pxf bar/.style={bkInk!55, line width=2.4pt, line cap=round},
+  pxf force/.style={-{Stealth[length=3.2mm, width=2.4mm]}, line width=1.5pt},
+  pxf lab/.style={font=\sffamily\footnotesize, inner sep=1.2pt}}
+% 地面  \pxfground{(x,y)}{はば}
+\newcommand\pxfground[2]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (#2,0);
+  \foreach \gx in {1.6,3.6,...,#2} {\draw[bkGray, line width=0.4pt] (\gx,0) -- ++(-1.5,-1.5);}\end{scope}}
+% 回転支点（ピン）：三角の上の頂点が支える点
+\newcommand\pxfpin[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!30, draw=bkInk, line width=0.6pt] (0,0) -- (-2.6,-4.2) -- (2.6,-4.2) -- cycle;
+  \draw[bkInk, line width=0.8pt] (-4,-4.2) -- (4,-4.2);
+  \foreach \gx in {-2.4,-0.4,...,4.2} {\draw[bkGray, line width=0.4pt] (\gx,-4.2) -- ++(-1.4,-1.4);}
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (0,0) circle (0.9);\end{scope}}
+% 移動支点（ローラ）
+\newcommand\pxfroll[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!30, draw=bkInk, line width=0.6pt] (0,0) -- (-2.6,-3.2) -- (2.6,-3.2) -- cycle;
+  \draw[bkInk, line width=0.6pt] (-1.4,-3.95) circle (0.7) (1.4,-3.95) circle (0.7);
+  \draw[bkInk, line width=0.8pt] (-4,-4.7) -- (4,-4.7);
+  \foreach \gx in {-2.4,-0.4,...,4.2} {\draw[bkGray, line width=0.4pt] (\gx,-4.7) -- ++(-1.4,-1.4);}
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (0,0) circle (0.9);\end{scope}}
+% トラスの節点
+\newcommand\pxfjoint[1]{\filldraw[fill=white, draw=bkInk, line width=0.7pt] #1 circle (1.0);}
+% 10円玉の山  \pxfcoins{(x,y)}{枚数}
+\newcommand\pxfcoins[2]{\begin{scope}[shift={#1}]
+  \foreach \k in {1,...,#2} {\filldraw[fill=bkOrange!45, draw=bkOrange!70!black, line width=0.4pt] (-2.6,{(\k-1)*1.3}) rectangle (2.6,{\k*1.3});}\end{scope}}
+\makeatother
+
+\phchapter{5}{橋を支える三角形：つり合いとトラス}{鉄橋は、なぜ三角形を組み合わせてつくる？}{\bklevelrange{3}{4}}{橋を支える三角形：つり合いとトラス}
+\bkmichishirube{4-7,4-11,4-14,7-5,力-2}{力-7,力-10,電-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace モーメントで、てこ・滑車・輪軸の力を計算できる。
+\item \bklevel{3}\enspace つり合いの式で、反力や倒れる条件を求められる。
+\item \bklevel{4}\enspace トラスの部材の力を求め、静定か見分けられる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{てこのつり合い $F_1l_1=F_2l_2$・てこの道具}{小学校理科}{ph:力-5:teko}
+\phk{2力のつり合い・3力のつり合い}{中学理科}{ph:力-5:niryoku}
+\phk{動滑車・仕事の原理（力の側から）}{中学理科}{ph:力-5:kassha}
+\phk{力のつり合い $\sum\vec F=\vec 0$}{高校物理基礎}{ph:力-5:tsuriai}
+\phk{力のモーメント $M=Fl=rF\sin\theta$}{高校物理}{ph:力-5:moment}
+\phk{剛体のつり合い（力とモーメント）}{高校物理}{ph:力-5:goutai}
+\phk{偶力 $M=Fd$・平行な2力の合成}{高校物理}{ph:力-5:guuryoku}
+\phk{重心 $x_{\mathrm G}=\sum mx/\sum m$・倒れる条件}{高校物理}{ph:力-5:juushin}
+\phkx{最大摩擦力 $F_0=\mu N$}{高校物理基礎}{力-2 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+川をわたる鉄橋や、送電線の鉄塔、工事現場のクレーンのうでをよく見てみましょう。細い鋼の棒が、たくさんの三角形に組まれています。
+
+四角形に組んだほうが、棒の数は少なくてすみそうです。なぜ、わざわざ三角形にするのでしょう。それぞれの棒には、どれくらいの力がかかっているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkBlue!18] (-4,-9) rectangle (66,-4);
+  \draw[bkBlue!50, line width=0.5pt] (-4,-4) -- (66,-4);
+  \fill[bkGray!40] (-6,-9) rectangle (0,0) (62,-9) rectangle (68,0);
+  \foreach \k in {0,...,5} {\draw[pxf bar, line width=1.6pt] ({\k*10+2},0) -- ({\k*10+7},10) -- ({\k*10+12},0);}
+  \draw[pxf bar, line width=1.6pt] (0,0) -- (62,0);
+  \draw[pxf bar, line width=1.6pt] (7,10) -- (57,10);
+  \draw[pxf bar, line width=1.6pt] (0,0) -- (2,0) (60,0) -- (62,0);
+  \fill[bkOrange!40] (22,0) -- (27,10) -- (32,0) -- cycle;
+  \draw[bkOrange!80!black, line width=0.8pt] (22,0) -- (27,10) -- (32,0) -- cycle;
+  \node[pxf lab, anchor=south] at (27,11.5) {三角形がならぶ};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 第1部では、物を大きさのない「点」と考えて、その動きを調べました。でも、橋やクレーンのように大きさのある物は、押す場所によって、ずれるだけでなく回ります。この章では、大きさのある物が「ずれもせず、回りもせず、止まっている」ための条件を式にします。その条件を使うと、橋の1本1本の棒にかかる力まで計算できます。
+
+\begin{omoidasou}
+\bkrecall{4-14}{回す働き（力のモーメント）は「力×うでの長さ」。平面では $M=xF_y-yF_x$（左回りが＋）。空間ではトルク $\vec N=\vec r\times\vec F$。}
+\bkrecall{4-11}{力のつり合いは、成分ごとに和が0。重心は、位置ベクトルの平均。}
+\bkrecall{4-7}{3つの力がつり合うとき、力の矢印をつなぐと三角形になる（正弦定理が使える）。}
+\bkrecall{4-1}{3辺の長さが決まると、三角形は1つに決まる（合同条件）。}
+\bkrecall{7-5}{連立方程式 $A\vec x=\vec b$ は、逆行列で $\vec x=A^{-1}\vec b$ と解ける。}
+\bkrecall{力-2}{物にはたらく力を全部書き出した図（自由体図）をかいてから、式を立てる。作用・反作用の2つの力は、同じ大きさで逆向き。}
+\end{omoidasou}
+
+\begin{yattemiyou}[ものさしのてこ]
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\textbf{用意するもの}\par
+\qty{30}{cm}のものさし、えんぴつ（丸いもの）、10円玉10枚、セロハンテープ
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkInk, line width=0.8pt] (-34,-1.6) -- (34,-1.6);
+  \fill[bkInk!70] (0,0) circle (1.6);
+  \fill[bkYellow!50] (-30,1.6) rectangle (30,4);
+  \draw[bkYellow!50!black, line width=0.5pt] (-30,1.6) rectangle (30,4);
+  \foreach \x in {-28,-26,...,28} {\draw[bkYellow!50!black, line width=0.3pt] (\x,4) -- (\x,3.2);}
+  \pxfcoins{(-20,4)}{3}
+  \draw[bkOrange!70!black, line width=0.5pt, dashed] (17.4,4) rectangle (22.6,10);
+  \node[pxf lab] at (20,13) {？枚};
+  \draw[bkGray, line width=0.4pt, <->] (-20,-5) -- (0,-5);
+  \draw[bkGray, line width=0.4pt, <->] (0,-5) -- (20,-5);
+  \node[pxf lab, anchor=north] at (-10,-5.6) {\qty{10}{cm}};
+  \node[pxf lab, anchor=north] at (10,-5.6) {？};
+  \node[pxf lab, anchor=north] at (0,-11) {えんぴつ（支点）};
+\end{tikzpicture}
+\end{minipage}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item えんぴつを机にテープでとめ、ものさしのまん中（\qty{15}{cm}の目もり）をのせて、つり合わせよう。
+\item まん中から左へ\qty{10}{cm}の所に、10円玉を3枚重ねてのせよう。
+\item 右の\qty{5}{cm}、\qty{6}{cm}、\qty{10}{cm}、\qty{15}{cm}の所では、何枚のせるとつり合うかな。
+\end{enumerate}
+\par\vspace{6pt}\noindent ソラさんの結果です。10円玉はどれも同じ重さ（約\qty{4.5}{g}）です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] *{4}{Q[c,m,wd=13mm]}}, rowsep=1.5pt}
+右の、まん中からの距離（cm） & 5 & 6 & 10 & 15 \\
+つり合ったときの枚数 & 6 & 5 & 3 & 2 \\
+枚数×距離 & & & & \\
+\end{bktable}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent 3行めを計算すると、$6\times5=30$、$5\times6=30$、$3\times10=30$、$2\times15=30$。左の「3枚×\qty{10}{cm}」も30です。\textbf{つり合うのは、左と右で「重さ×まん中からの距離」が等しいとき}です。距離が2倍になると、つり合う枚数は半分になりました。これが小学校で学んだ「てこのつり合い」です。この章では、このきまりが「なぜ」成り立つのかを、運動の法則から導きます。
+
+
+
+\noindent この章では、$\approx$（「ほぼ等しい」。5-8）と、$\sum$（たし算をまとめて書く記号。5-10）も使います。$\sum F$ は「物にはたらく力をすべてたしたもの」と読みます。
+
+%% ======================================================================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{回す働き：力のモーメント}
+
+\leavevmode\label{ph:力-5:sec1}やってみようの「重さ×距離」は、物を回す働きの大きさでした。数学 4-14 では、これを\textbf{力のモーメント}とよびました。もう一度、言葉と式を確かめます。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-4,-3) rectangle (0,3);
+  \fill[bkOrange!30] (0,-1.5) rectangle (50,1.5);
+  \draw[bkOrange!70!black, line width=0.6pt] (0,-1.5) rectangle (50,1.5);
+  \fill[bkInk] (0,0) circle (1.3);
+  % 力（ななめ）と作用線
+  \draw[bkGray, line width=0.5pt, dashed] ($(40,1.5)+(240:20)$) -- ($(40,1.5)+(60:22)$);
+  \draw[pxf force, bkRed] (40,1.5) -- ++(60:16);
+  \node[pxf lab, text=bkRed!80!black, anchor=west] at ($(40,1.5)+(60:14)+(1,0)$) {$F$};
+  % うでの長さ（作用線への垂線）
+  \coordinate (P1) at (40,1.5); \coordinate (P2) at ($(40,1.5)+(60:10)$);
+  \coordinate (H) at ($(P1)!(0,0)!(P2)$);
+  \draw[bkPurple, line width=1.3pt] (0,0) -- (H);
+  \node[pxf lab, text=bkPurple, anchor=east] at ($(0,0)!0.55!(H)+(-0.8,0.6)$) {$l$};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=4pt]}] (16,3) arc (10:50:16);
+  \node[pxf lab, anchor=south] at (8,14.5) {回る};
+  \node[pxf lab, anchor=north] at (0,-3.6) {中心O};
+  \node[pxf lab, anchor=north] at (40,-2.2) {作用点};
+  \draw[bkInk, line width=0.5pt] (46,1.5) arc (0:60:6);
+  \node[pxf lab] at (49.5,5) {$\theta$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+回転の中心Oから、力の矢印をまっすぐのばした線（\textbf{作用線}）までの距離 $l$ を\textbf{うでの長さ}といいます。力のモーメントは
+\pxfline{\fbox{$M=Fl$}}
+です。単位は\unit[inter-unit-product=\ensuremath{\cdot}]{N.m}（ニュートンメートル）です。
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent 中心から作用点までの長さを $r$、うでと力のなす角を $\theta$ とすると、$l=r\sin\theta$ なので $M=rF\sin\theta$ とも書けます（数学 4-14②）。$\theta=90°$ のときが一番大きく、$\theta=0°$（中心に向かって押す）では0です。
+
+\pxfhead{一般の式から：$\vec N=\vec r\times\vec F$}
+回す働きを、いちばん一般の形で書くと、数学 4-14 の外積です。中心から作用点へのベクトルを $\vec r$ として、
+\pheq{\vec N=\vec r\times\vec F}{N·m ＝ m × N}
+この $\vec N$ を\textbf{トルク}（力のモーメントのベクトル）といいます。向きは回す軸の向き（右ねじの進む向き）、大きさは $rF\sin\theta$ です。力も $\vec r$ も平面（$xy$ 平面）の中にあるときは、$\vec N$ は $z$ 成分だけになり、
+\pxfline{$M=xF_y-yF_x$\qquad（＋なら左回り、－なら右回り）}
+です。これが平面の力のモーメント $M$ です。\label{ph:力-5:moment}
+
+\begin{phflow}[力のモーメント]
+\phflowrow{$\vec N=\vec r\times\vec F$}{力と $\vec r$ が\\平面の中}{$M=xF_y-yF_x$}
+\phflowrow{$M=xF_y-yF_x$}{うでと力の\\なす角 $\theta$}{$M=rF\sin\theta$}
+\phflowrow{$M=rF\sin\theta$}{$l=r\sin\theta$\\（うでの長さ）}{$M=Fl$}
+\end{phflow}
+
+\begin{phyomi}[$M=Fl$]
+「回す働き」は、力の大きさと、うでの長さのかけ算。どちらを2倍にしても、回す働きは2倍になる。
+\end{phyomi}
+\begin{phmijika}[ドアのノブとスパナ]
+ドアのノブは、ちょうつがいから遠い所にある。ボルトをしめるスパナは、柄の先を持つ。どちらも、うでの長さ $l$ を長くして、小さな力で大きな $M$ を出すため。
+\end{phmijika}
+
+\pxfhead{力を作用線にそってずらしても、回す働きは同じ}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+同じ力 $F$ を、作用線の上のどこにかけても、うでの長さ $l$（中心から作用線までの距離）は変わりません。だから $M=Fl$ も変わりません。数学 4-14⑤の外積で言うと、$\vec r$ に力と平行なベクトル $k\vec F$ をたしても、$k\vec F\times\vec F=\vec 0$ なので、$(\vec r+k\vec F)\times\vec F=\vec r\times\vec F$ です。
+
+中学校では、力の3要素を「大きさ・向き・作用点」と学びました。大きさのある物（このあとの剛体）では、正確には「作用点がどの作用線の上にあるか」が大切です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkTheme!12] (0,0) rectangle (36,24);
+  \draw[bkDeep, line width=0.6pt] (0,0) rectangle (36,24);
+  \fill[bkInk] (6,6) circle (1.1);
+  \node[pxf lab, anchor=north] at (6,4.6) {O};
+  \draw[bkGray, line width=0.5pt, dashed] (-4,18) -- (44,18);
+  \draw[pxf force, bkRed] (10,18) -- (20,18);
+  \draw[pxf force, bkRed!70] (24,18) -- (34,18);
+  \draw[bkPurple, line width=1.2pt] (6,6) -- (6,18);
+  \node[pxf lab, text=bkPurple, anchor=east] at (5.4,12) {$l$};
+  \node[pxf lab, anchor=south] at (15,19) {$F$};
+  \node[pxf lab, anchor=south] at (29,19) {$F$};
+  \node[pxf lab, anchor=north, text=bkGray] at (25,-1) {作用線（点線）};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{seikaku}
+\textbf{モーメント・トルク・ねじりモーメント}\par
+回す働きを表す量は、分野によって名前と文字が変わります。この本では、平面のつり合いでは「力のモーメント $M$」、回る物の運動（力-6・7）では「トルク $\vec N$」、軸をねじる働き（力-11）では「ねじりモーメント $T$」と書きます。3つとも同じ種類の量で、単位はどれも\pxfunitNm です。仕事の単位 J（＝\pxfunitNm）と同じ次元ですが、回す働きには J を使いません。
+\end{seikaku}
+
+%% ----------------------------------------------------------------------
+\bksubsection{2}{剛体のつり合い：ずれない・回らない}
+
+\leavevmode\label{ph:力-5:sec2}机の上に置いた定規の両はしを、同じ大きさの力で、反対向きに押してみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：同じ作用線
+  \fill[bkYellow!50] (0,0) rectangle (44,4);
+  \draw[bkYellow!50!black, line width=0.5pt] (0,0) rectangle (44,4);
+  \draw[pxf force, bkRed] (-14,2) -- (-1.5,2);
+  \draw[pxf force, bkBlue] (58,2) -- (45.5,2);
+  \node[pxf lab, anchor=south] at (-8,3) {$F$};
+  \node[pxf lab, anchor=south] at (52,3) {$F$};
+  \node[font=\sffamily\small, anchor=north, align=center] at (22,-4) {同じ作用線の上：\\動かない};
+  % 右：作用線がずれる
+  \begin{scope}[shift={(80,0)}]
+  \fill[bkYellow!50] (0,0) rectangle (44,4);
+  \draw[bkYellow!50!black, line width=0.5pt] (0,0) rectangle (44,4);
+  \draw[pxf force, bkRed] (2,16) -- (2,5.5);
+  \draw[pxf force, bkBlue] (42,-10) -- (42,-1.5);
+  \node[pxf lab, anchor=west] at (3,12) {$F$};
+  \node[pxf lab, anchor=east] at (41,-7) {$F$};
+  \draw[bkInk, line width=0.9pt, -{Stealth[length=4pt]}] (32,12) arc (60:120:20);
+  \node[font=\sffamily\small, anchor=north, align=center] at (16,-4) {作用線がずれている：\\左回りに回り出す};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{どちらも、力をたすと $\vec F+(-\vec F)=\vec 0$。それでも、右の定規は回り出す。}
+\label{ph:力-5:fig-futatsu}
+\end{bkfigure}
+
+\noindent 左も右も、2つの力をたすと0です。それなのに、右の定規は回り出します。力の和が0なら「ずれて動き出さない」ことはわかりますが、「回り出さない」ことは言えないのです。止まっているには、もう1つ、回す働きについての条件がいります。
+
+\pxfhead{剛体}
+力を受けても形が変わらない（と考えてよい）物を\textbf{剛体}（ごうたい）といいます。\bkidx{ごうたい}{剛体}本物の鉄の棒も、力を受けると少しのび縮みしますが（力-8）、そののび縮みが全体の大きさに比べてとても小さいとき、剛体と考えます。
+
+\pxfhead{つぶの運動方程式から、つり合いの式を導く}
+剛体を、小さなつぶ1、2、3、…、$n$ に分けて考えます。つぶ $i$ には、物の外からの力 $\vec F_i$（重力・支える力など。\textbf{外力}）と、となりのつぶ $j$ からの力 $\vec f_{ij}$（\textbf{内力}）がはたらきます。つぶ $i$ の運動方程式（力-2）は
+\pheq{m_i\vec a_i=\vec F_i+\sum_j\vec f_{ij}}{N ＝ kg × m/s$^2$}
+物が止まっているので、どのつぶも $\vec a_i=\vec 0$ です。
+
+\pxfstep{1}{全部のつぶについてたす}
+左辺は0です。右辺の内力は、つぶ $i$ が $j$ から受ける力 $\vec f_{ij}$ と、$j$ が $i$ から受ける力 $\vec f_{ji}$ が、作用・反作用（力-2）で $\vec f_{ji}=-\vec f_{ij}$ なので、2つずつ組になって消えます。残るのは外力だけで、\label{ph:力-5:tsuriai}
+\pxfline{\fbox{$\displaystyle\sum_i\vec F_i=\vec 0$}\qquad（外力の和が0）}
+
+\pxfstep{2}{位置ベクトルとの外積をとってから、たす}
+つぶ $i$ の式の両辺に、左から $\vec r_i\times$ をかけて（数学 4-14）、全部のつぶでたします。内力の組 $(i,\ j)$ は
+\[ \vec r_i\times\vec f_{ij}+\vec r_j\times\vec f_{ji}=(\vec r_i-\vec r_j)\times\vec f_{ij} \]
+となります。つぶどうしの力は、2つのつぶを結ぶ線の向きにはたらくので、$\vec r_i-\vec r_j$ と $\vec f_{ij}$ は平行です。平行なベクトルの外積は0（数学 4-14⑥）なので、内力のモーメントも消えます。残るのは、\label{ph:力-5:goutai}
+\pxfline{\fbox{$\displaystyle\sum_i\vec r_i\times\vec F_i=\vec 0$}\qquad（外力のモーメントの和が0）}
+
+\begin{phyomi}[$\sum\vec F=\vec 0$、$\sum\vec N=\vec 0$]
+1つめは「ずれて動き出さない」、2つめは「回り出さない」条件。剛体が止まっているには、両方がいる。図\ref{ph:力-5:fig-futatsu}の右の定規は、1つめはみたすが、2つめをみたさない。
+\end{phyomi}
+
+\noindent 空間では、ベクトルの式2つが、成分で6つの式になります（$x$・$y$・$z$ の力と、$x$・$y$・$z$ 軸のまわりのモーメント）。橋やクレーンのように、力がすべて1つの平面（紙の面）の中にあるときは、残るのは次の3つです。
+\pxfline{\fbox{$\sum F_x=0,\qquad\sum F_y=0,\qquad\sum M=0$}}
+
+\pxfhead{モーメントの中心は、どこにとってもよい}
+外力の和が0なら、どの点Pのまわりでモーメントを計算しても、答えは同じです。点Pの位置ベクトルを $\vec p$ とすると、
+\[ \sum_i(\vec r_i-\vec p)\times\vec F_i=\sum_i\vec r_i\times\vec F_i-\vec p\times\sum_i\vec F_i=\sum_i\vec r_i\times\vec F_i \]
+だからです（最後の $\sum\vec F_i$ が0）。そこで、\textbf{わからない力が通る点を中心にえらぶ}と、その力のモーメントは0になり、式からその力が消えます。この「うまい中心のえらび方」を、この章でくり返し使います。
+
+\begin{phmijika}[机の上の本]
+本にはたらく力は、下向きの重力と、机が押し上げる垂直抗力。2つは同じ大きさで、同じ作用線（真上と真下）にある。だから、ずれも回りもしない。
+\end{phmijika}
+
+\pxfhead{2つの力だけでつり合うとき}
+\label{ph:力-5:niryoku}外力が2つ（点1の $\vec F_1$ と点2の $\vec F_2$）だけのとき、1つめの式から $\vec F_2=-\vec F_1$（同じ大きさで逆向き）。点1を中心にした2つめの式は $(\vec r_2-\vec r_1)\times\vec F_2=\vec 0$ なので、$\vec F_2$ は、点1と点2を結ぶ線と平行です。つまり、2つの力は\textbf{同じ直線の上にある}。中学校で学んだ「2力のつり合い」は、剛体のつり合いの式に「力が2つ」という条件をおいたものです。
+
+\begin{phflow}[剛体のつり合い]
+\phflowrow{$m_i\vec a_i=\vec F_i+\sum_j\vec f_{ij}$}{止まっている\\内力は組で消える}{$\sum\vec F=\vec 0$}
+\phflowrow{$\sum\vec r_i\times\vec F_i=\vec 0$}{力がすべて\\同じ平面の中}{$\sum F_x=0$、$\sum F_y=0$、$\sum M=0$}
+\phflowrow{$\sum\vec F=\vec 0$、$\sum\vec N=\vec 0$}{力が2つだけ}{同じ直線の上、逆向き、同じ大きさ}
+\end{phflow}
+
+\begin{seikaku}
+ここでは、止まっている物だけを考えました。動いている物では、2つの式は「運動量の変わり方＝外力の和」（力-3）と「角運動量の変わり方＝外力のトルクの和」（力-6）になります。止まっている（どちらも変わらない）ときに、この章の2つの式にもどります。
+\end{seikaku}
+
+%% ----------------------------------------------------------------------
+\bksubsection{3}{てこ：支点のまわりのモーメントのつり合い}
+
+\leavevmode\label{ph:力-5:sec3}やってみようのものさしに、つり合いの式を使ってみます。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (0,0) -- (-4,-7) -- (4,-7) -- cycle;
+  \fill[bkYellow!50] (-30,0) rectangle (30,2.4);
+  \draw[bkYellow!50!black, line width=0.5pt] (-30,0) rectangle (30,2.4);
+  \draw[pxf force, bkRed] (-20,2.4) -- (-20,-10);
+  \draw[pxf force, bkRed] (20,2.4) -- (20,-6);
+  \draw[pxf force, bkBlue] (0,-14) -- (0,-1);
+  \node[pxf lab, text=bkRed!80!black, anchor=east] at (-21,-8) {$F_1$};
+  \node[pxf lab, text=bkRed!80!black, anchor=west] at (21,-4) {$F_2$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=west] at (1,-12) {$R$};
+  \draw[bkGray, line width=0.4pt, <->] (-20,6) -- (0,6);
+  \draw[bkGray, line width=0.4pt, <->] (0,6) -- (20,6);
+  \node[pxf lab, anchor=south] at (-10,6.4) {$l_1$};
+  \node[pxf lab, anchor=south] at (10,6.4) {$l_2$};
+  \node[pxf lab, anchor=north] at (5,-1) {O};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+てこ（ものさし）の重さは無視します。はたらく力は、左のおもりの重力 $F_1$、右の $F_2$、支点が押し上げる力 $R$ の3つです。
+\end{minipage}
+
+\par\vspace{4pt}
+\pxfstep{1}{たての力の和}
+$R-F_1-F_2=0$ なので、$R=F_1+F_2$。支点は、2つの重さの合計を支えています。
+\pxfstep{2}{支点Oのまわりのモーメントの和}
+$R$ は支点Oを通るので、うでの長さが0で、モーメントは0です（中心のうまいえらび方）。$F_1$ は左回りに $F_1l_1$、$F_2$ は右回りに $F_2l_2$ なので、\label{ph:力-5:teko}
+\pheq{F_1l_1-F_2l_2=0\qquad\text{つまり}\qquad F_1l_1=F_2l_2}{N·m ＝ N·m}
+
+\begin{phflow}[てこ]
+\phflowrow{$\sum F_y=0$、$\sum M=0$}{力はすべて平行\\支点のまわり}{$F_1l_1=F_2l_2$}
+\end{phflow}
+
+\begin{phyomi}[$F_1l_1=F_2l_2$]
+左回りのモーメントと右回りのモーメントが等しい。うでが長いほうは、小さな力でつり合う。
+\end{phyomi}
+\begin{phbaisuru}{右のうでの長さ $l_2$}
+$F_2=\dfrac{F_1l_1}{l_2}$ なので、$F_2$ は半分になる。$l_2$ と $F_2$ は反比例（数学 2-15）。下のグラフは、やってみようの「左に3枚×\qty{10}{cm}」のときの、右の距離と枚数。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=44mm, xmin=0, xmax=16.5, ymin=0, ymax=13, xtick={5,10,15}, ytick={2,4,6,8,10,12}, xlabel={右の距離 $l_2$（cm）}, ylabel={つり合う枚数}]
+  \addplot[bkcurve, domain=2.4:16] {30/x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(5,6) (6,5) (10,3) (15,2)};
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:5.6,9) {$l_2$ が2倍で、枚数は半分};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\pxfhead{3種類のてこ}
+\label{ph:力-5:dougu}小学校では、てこの3つの点を、\textbf{支点}（支える点）、\textbf{力点}（力を加える点）、\textbf{作用点}（物に力がはたらく点）とよびました。3つの点の並び方で、てこは3種類に分けられます。どの種類でも、成り立つ式は $F_1l_1=F_2l_2$（支点のまわりのモーメントのつり合い）だけです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % \px：支点、\fx：力点、\ax：作用点の位置。\fu=1 なら力点の力は上向き（第2種・第3種）
+  \foreach \sx/\px/\fx/\ax/\fu/\ttl/\ex in {0/12/2/34/0/{第1種：支点がまん中}/{くぎぬき・シーソー}, 46/2/34/14/1/{第2種：作用点がまん中}/{せんぬき・一輪車}, 92/2/16/34/1/{第3種：力点がまん中}/{ピンセット・トング}} {
+    \begin{scope}[shift={(\sx,0)}]
+    \fill[bkYellow!50] (0,0) rectangle (36,2.4);
+    \draw[bkYellow!50!black, line width=0.5pt] (0,0) rectangle (36,2.4);
+    \fill[bkGray!50] (\px,0) -- ({\px-3},-5) -- ({\px+3},-5) -- cycle;
+    \node[pxf lab, anchor=north] at (\px,-5.5) {支点};
+    \node[pxf lab, anchor=south, text=bkRed!80!black] at (\ax,9.5) {作用点};
+    \draw[pxf force, bkRed] (\ax,9) -- (\ax,3);
+    \ifnum\fu=1
+      \draw[pxf force, bkBlue] (\fx,-9) -- (\fx,-0.6);
+      \node[pxf lab, anchor=north, text=bkBlue!80!black] at (\fx,-9.5) {力点};
+    \else
+      \node[pxf lab, anchor=south, text=bkBlue!80!black] at (\fx,9.5) {力点};
+      \draw[pxf force, bkBlue] (\fx,9) -- (\fx,3);
+    \fi
+    \node[font=\sffamily\small\bfseries, anchor=north] at (18,-15) {\ttl};
+    \node[font=\sffamily\footnotesize, anchor=north] at (18,-20.5) {\ex};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{矢印は、てこが受ける力の向き（青が手の力、赤が物から押し返される力）。第1種は力点と作用点が支点の反対がわにあり、2つの力は同じ向き。第2種・第3種は同じがわにあり、2つの力は逆向き。}
+\label{ph:力-5:fig-sanshu}
+\end{bkfigure}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{第1種}（支点がまん中）：うでの長さの比で、力を大きくも小さくもできる。
+\item \textbf{第2種}（作用点がまん中）：力点のうでがいつも長いので、いつも小さな力ですむ。
+\item \textbf{第3種}（力点がまん中）：作用点のうでがいつも長いので、力は大きくなってしまう。そのかわり、先が大きく動くので、細かい物を素早く・やさしくつまめる。人のうで（ひじが支点、筋肉の付け根が力点）も第3種のてこです。
+\end{itemize}
+「力が小さくなるなら、そのぶん何かで損をしているのでは？」と思った人は鋭いです。その答えは⑦の「仕事の原理」です。
+
+%% ----------------------------------------------------------------------
+\bksubsection{4}{偶力と、平行な力をまとめる}
+
+\leavevmode\label{ph:力-5:sec4}図\ref{ph:力-5:fig-futatsu}の右の定規のように、同じ大きさで逆向き、作用線がずれた2つの力の組を\textbf{偶力}（ぐうりょく）といいます。\bkidx{ぐうりょく}{偶力}力の和は0なので、物はずれ動きませんが、回り出します。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-4,0) -- (50,0) node[anchor=west, pxf lab] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-4) -- (0,26) node[anchor=south, pxf lab] {$y$};
+  \node[pxf lab, anchor=north east] at (-0.5,-0.5) {P};
+  \fill[bkYellow!50] (12,9) rectangle (44,12);
+  \draw[pxf force, bkBlue] (14,-2) -- (14,8);
+  \draw[pxf force, bkRed] (42,23) -- (42,13);
+  \node[pxf lab, anchor=west] at (15,1) {$F$};
+  \node[pxf lab, anchor=west] at (43,20) {$F$};
+  \draw[bkGray, line width=0.4pt, dashed] (14,-2) -- (14,-6) (42,-2) -- (42,-6);
+  \draw[bkGray, line width=0.4pt, <->] (14,-5) -- (42,-5);
+  \node[pxf lab, anchor=north] at (28,-5.4) {$d$};
+  \node[pxf lab, anchor=north] at (14,-6.5) {$x_1$};
+  \node[pxf lab, anchor=north] at (42,-6.5) {$x_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+上向きの $F$ が $x=x_1$ に、下向きの $F$ が $x=x_2$ にはたらいています。原点Pのまわりのモーメントは、$M=xF_y-yF_x$ から、
+\[ M=x_1F+x_2\times(-F)=-(x_2-x_1)F \]
+2つの作用線の距離を $d=x_2-x_1$ とすると、大きさは $Fd$（右回り）です。
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent この計算に、点Pの場所は出てきませんでした。$x_1$ と $x_2$ の差 $d$ だけで決まるからです。空間でも、$\vec r_1\times\vec F+\vec r_2\times(-\vec F)=(\vec r_1-\vec r_2)\times\vec F$ で、中心の位置ベクトルは消えます。\label{ph:力-5:guuryoku}
+\pheq{M=Fd\qquad\text{（どの点のまわりでも同じ）}}{N·m ＝ N × m}
+
+\begin{phyomi}[$M=Fd$]
+偶力は「回すだけで、ずらさない」力の組。回す働きは、力の大きさと、2本の作用線の間のはば $d$ のかけ算。
+\end{phyomi}
+\begin{phmijika}[蛇口とペットボトルのふた]
+蛇口の取っ手を、親指と人さし指ではさんで回すとき、指は偶力を加えている。はば\qty{6}{cm}の取っ手の両はしを、\qty{20}{N}ずつの力で回すと、回す働きは
+\[ M=20\times0.06=\pxfNm{1.2} \]
+\end{phmijika}
+\begin{phbaisuru}{手の間のはば $d$}
+同じ力でも、回す働きは2倍。大型のバスやトラックのハンドルが大きいのは、はばを広げて、小さな力で大きな偶力を出すため（今はパワーステアリングが助けている）。
+\end{phbaisuru}
+
+\pxfhead{平行な2つの力を、1つの力にまとめる}
+\label{ph:力-5:heikou}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!50] (0,0) rectangle (54,2.4);
+  \draw[bkYellow!50!black, line width=0.5pt] (0,0) rectangle (54,2.4);
+  \draw[pxf force, bkRed] (2,0) -- (2,-9);
+  \draw[pxf force, bkRed] (52,0) -- (52,-18);
+  \draw[pxf force, bkInk, line width=2pt] (35.3,0) -- (35.3,-27);
+  \node[pxf lab, anchor=west] at (3,-6) {\qty{3}{N}};
+  \node[pxf lab, anchor=east] at (51,-14) {\qty{6}{N}};
+  \node[pxf lab, anchor=west] at (36.3,-24) {合力 \qty{9}{N}};
+  \draw[bkGray, line width=0.4pt, <->] (2,5) -- (35.3,5);
+  \draw[bkGray, line width=0.4pt, <->] (35.3,5) -- (52,5);
+  \node[pxf lab, anchor=south] at (18.6,5.4) {\qty{0.6}{m}};
+  \node[pxf lab, anchor=south] at (43.6,5.4) {\qty{0.3}{m}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+長さ\qty{0.9}{m}の軽い棒の左はしに\qty{3}{N}、右はしに\qty{6}{N}の荷物をつるします。2つの重力を、1本の力（\textbf{合力}）にまとめます。合力の大きさは $3+6=\qty{9}{N}$ です。では、合力の作用線はどこでしょう。
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent まとめた1本の力は、もとの2本と同じ「ずらす働き」と同じ「回す働き」をもたなければなりません。左はしのまわりのモーメントで考えると、もとの2本では $3\times0+6\times0.9=5.4$、合力では $9\times x$ です。$9x=5.4$ から $x=\qty{0.6}{m}$。合力は、左はしから\qty{0.6}{m}、重いほうに近い所を通ります。2つの力 $F_1$（$x_1$）、$F_2$（$x_2$）なら、
+\pxfline{\fbox{合力 $F_1+F_2$ の作用線は\quad $x=\dfrac{F_1x_1+F_2x_2}{F_1+F_2}$}}
+天びん棒で2つの荷物をかつぐとき、肩をこの点に当てると、棒は傾きません（③のてこでもあります）。
+
+%% ----------------------------------------------------------------------
+\bksubsection{5}{重心と、倒れる・すべる}
+
+\leavevmode\label{ph:力-5:sec5}④の「平行な力をまとめる」を、物のすべてのつぶの重力に使います。つぶ $i$（質量 $m_i$、位置 $x_i$）の重力 $m_ig$ を全部まとめると、合力は $\sum m_ig=Mg$（$M$ は全体の質量）、作用線は
+\[ x=\frac{\sum m_igx_i}{\sum m_ig}=\frac{\sum m_ix_i}{\sum m_i} \]
+を通ります。分母と分子の $g$ は、どのつぶでも同じなので消えます。$y$ や $z$ も同じです。この点を\textbf{重心}といい、G と書きます。\label{ph:力-5:juushin}
+\pheq{x_{\mathrm G}=\frac{\sum m_ix_i}{\sum m_i},\qquad\vec r_{\mathrm G}=\frac{\sum m_i\vec r_i}{M}}{m ＝ kg·m ÷ kg}
+\noindent つまり、\textbf{物のすべての重力は、重心に $Mg$ が1本はたらくのと同じ}です。数学 4-11 の「重心は位置ベクトルの平均」に、質量で重みをつけたものです。つぶを無限に細かくすると、たし算は積分 $\vec r_{\mathrm G}=\dfrac{1}{M}\displaystyle\int\vec r\,\dd m$ になります（数学 8-6 の重積分）。力-3 では、たくさんの物の重心の動きを調べました。ここでは、1つの剛体の重心です。
+
+\begin{phflow}[重心]
+\phflowrow{$\vec r_{\mathrm G}=\dfrac{1}{M}\displaystyle\int\vec r\,\dd m$}{小さな部分に\\分けて数える}{$x_{\mathrm G}=\dfrac{\sum m_ix_i}{\sum m_i}$}
+\phflowrow{$x_{\mathrm G}=\dfrac{\sum m_ix_i}{\sum m_i}$}{厚さが同じ\\一様な板}{$x_{\mathrm G}=\dfrac{\sum A_ix_i}{\sum A_i}$（面積で重み）}
+\end{phflow}
+
+\begin{phmijika}[重心を見つける]
+厚紙を1つの点でつるし、その点から真下に糸（おもりつき）を下ろして線を引く。別の点でつるしてもう1本引く。2本の線が交わる点が重心。つるした物が止まるのは、重心が、つるした点の真下に来たとき（重力と糸の力が同じ作用線に乗る2力のつり合い）だから。
+\end{phmijika}
+
+\pxfhead{倒れる条件と、すべる条件}
+\label{ph:力-5:taoreru}
+\noindent\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxfground{(-8,0)}{50}
+  \fill[bkOrange!25] (0,0) rectangle (16,40);
+  \draw[bkOrange!70!black, line width=0.7pt] (0,0) rectangle (16,40);
+  \fill[bkInk] (8,20) circle (1);
+  \node[pxf lab, anchor=south west] at (8.6,20.4) {G};
+  \draw[pxf force, bkRed] (-14,40) -- (-1.5,40);
+  \node[pxf lab, anchor=south] at (-8,40.8) {$F$};
+  \draw[pxf force, bkInk] (8,19) -- (8,6);
+  \node[pxf lab, anchor=west] at (8.8,9) {$mg$};
+  \draw[pxf force, bkBlue] (16,-12) -- (16,-1.2);
+  \node[pxf lab, anchor=west, text=bkBlue!80!black] at (17,-9) {$N$};
+  \draw[pxf force, bkGreen!60!black] (28,-2) -- (17.5,-2);
+  \node[pxf lab, anchor=north, text=bkGreen!50!black] at (24,-3) {$f$};
+  \fill[bkInk] (16,0) circle (0.9);
+  \node[pxf lab, anchor=south west] at (16.5,0.5) {Q};
+  \draw[bkGray, line width=0.4pt, <->] (-4,0) -- (-4,40);
+  \node[pxf lab, anchor=east] at (-4.6,24) {$h$};
+  \draw[bkGray, line width=0.4pt, <->] (0,44) -- (16,44);
+  \node[pxf lab, anchor=south] at (8,44.4) {$w$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+はば $w$、高さ $h$ の箱（質量 $m$、重心はまん中）の上のはしを、横向きに $F$ で押します。床からは、上向きの垂直抗力 $N$ と、押す向きと逆向きの摩擦力 $f$ がはたらきます。
+
+垂直抗力は、床と箱がふれている底面全体にはたらきますが、まとめると1本の力 $N$ になります（④）。押す力が大きくなると、その作用線は、倒れる向きのはしQへ移っていきます。
+\end{minipage}
+
+\par\vspace{4pt}
+\pxfstep{1}{すべり出すのは}
+横の力のつり合いは $f=F$、たては $N=mg$。摩擦力には上限 $\mu N$ があります（最大摩擦力。力-2）。$F$ がこれをこえると、すべり出します。
+\pxfline{すべり出す力\quad $F_{\text{すべる}}=\mu mg$}
+\pxfstep{2}{倒れ出すのは}
+$N$ の作用線がちょうどはしQに来たとき、箱は倒れる直前です。そのとき、Qのまわりのモーメントを考えます（$N$ と $f$ はQを通るので消える）。$F$ は右回りに $Fh$、重力は左回り（もどす向き）に $mg\times\dfrac{w}{2}$。つり合いの限界は $Fh=mg\dfrac{w}{2}$ なので、
+\pxfline{倒れ出す力\quad $F_{\text{倒れる}}=\dfrac{mgw}{2h}$}
+\pxfstep{3}{どちらが先か}
+押す力を少しずつ大きくしていくと、$F_{\text{すべる}}$ と $F_{\text{倒れる}}$ の小さいほうに先に届きます。$\dfrac{w}{2h}<\mu$ なら倒れるのが先、$\dfrac{w}{2h}>\mu$ ならすべるのが先です。
+
+\begin{phbaisuru}{押す高さ $h$}
+$F_{\text{倒れる}}$ は半分になる。すべる力 $\mu mg$ は高さによらない。下のグラフは、はば\qty{0.4}{m}の箱で、押す高さを変えたときの2つの力（$mg$ を1とする）。$\mu=0.3$ の線より下に $F_{\text{倒れる}}$ が来ると、倒れるのが先。背の高い本棚やたんすが、地震で倒れやすいのはこのため。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=90mm, height=46mm, xmin=0, xmax=1.65, ymin=0, ymax=1.1, xtick={0.4,0.8,1.2,1.6}, ytick={0.2,0.4,0.6,0.8,1.0}, xlabel={押す高さ $h$（m）}, ylabel={力 ÷ $mg$}]
+  \addplot[bkcurve, domain=0.18:1.6] {0.2/x};
+  \addplot[bkcurve2, domain=0:1.6] {0.3};
+  \node[font=\sffamily\scriptsize, text=bkBlue, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.32,0.85) {倒れ出す力 $\dfrac{w}{2h}$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=south, fill=white, inner sep=1pt] at (axis cs:1.25,0.33) {すべり出す力 $\mu=0.3$};
+  \draw[bkGray, line width=0.4pt, dashed] (axis cs:0.667,0) -- (axis cs:0.667,0.3);
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.70,0.07) {$h>0.67$\,m で倒れが先};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+%% ----------------------------------------------------------------------
+\bksubsection{6}{支点と反力：はり・はしご・3つの力}
+
+\leavevmode\label{ph:力-5:sec6}橋やたなの板は、両はしを何かで支えています。支える所を\textbf{支点}、支点が物を押し返す力を\textbf{反力}といいます。\bkidx{はんりょく}{反力}力-2 の垂直抗力も反力の1つですが、この章では支点の力をまとめて $R$ と書きます（$R_{\mathrm A}$ は点Aの反力）。支点には3つの種類があり、出せる反力の数がちがいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \sx/\nm/\ds [count=\k] in {0/{回転支点（ピン）}/{横とたての2つ}, 44/{移動支点（ローラ）}/{面に垂直な1つ}, 88/{固定端}/{横・たて・モーメントの3つ}} {
+    \node[font=\sffamily\small\bfseries, anchor=north] at ({\sx+18},-13) {\nm};
+    \node[font=\sffamily\footnotesize, anchor=north] at ({\sx+18},-18.5) {反力：\ds};}
+  \draw[pxf bar] (6,0) -- (24,0);
+  \pxfpin{(10,0)}
+  \draw[pxf force, bkBlue] (-4,0) -- (8.6,0);
+  \draw[pxf force, bkBlue] (10,-14) -- (10,-1.4);
+  \node[pxf lab, text=bkBlue!80!black, anchor=south] at (-1,0.6) {$R_x$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=east] at (9.4,-8) {$R_y$};
+  \draw[pxf bar] (50,0) -- (68,0);
+  \pxfroll{(54,0)}
+  \draw[pxf force, bkBlue] (54,-15) -- (54,-1.4);
+  \node[pxf lab, text=bkBlue!80!black, anchor=east] at (53.4,-9) {$R_y$};
+  \fill[bkGray!40] (92,-8) rectangle (96,8);
+  \foreach \yy in {-7,-4,...,8} {\draw[bkGray, line width=0.4pt] (92,\yy) -- (90,\yy-2);}
+  \draw[bkInk, line width=0.8pt] (96,-8) -- (96,8);
+  \draw[pxf bar] (96,0) -- (118,0);
+  \draw[pxf force, bkBlue] (104,-11) -- (104,-1.4);
+  \draw[pxf force, bkBlue] (110,4) -- (100,4);
+  \draw[bkBlue, line width=1.2pt, -{Stealth[length=3mm]}] (99,-5) arc (-90:-250:3.4);
+  \node[pxf lab, text=bkBlue!80!black, anchor=west] at (104.6,-8) {$R_y$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=south] at (106,4.6) {$R_x$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=north] at (99.5,-8.8) {$M$};
+\end{tikzpicture}
+\bkfigcaption{支点の種類と、出せる反力。ローラは横にころがって動けるので、横の反力は出せない。かべにうめこんだ固定端は、回すこともできないので、モーメントの反力も出す。}
+\end{bkfigure}
+
+\noindent 長い橋は、片方をピン、もう片方をローラで支えることがよくあります。鋼は温度が上がるとのびるので（力-8）、両はしをピンでがっちり止めると、のびようとする橋に大きな力がかかってしまうからです。
+
+\pxfhead{はりの反力を求める手順}
+長さ\qty{6}{m}の橋（\textbf{はり}）に、\qty{2}{kN}と\qty{4}{kN}の荷重がかかっています。はりの重さは無視します。Aはピン、Bはローラです。横の力がないので、Aの横の反力は0です。たての反力を $R_{\mathrm A}$、$R_{\mathrm B}$ とします（図の青い矢印は、見やすいように支点の下にずらしてかいた。どちらも上向きの力）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (0,0) rectangle (72,3);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (72,3);
+  \pxfpin{(0,0)}
+  \pxfroll{(72,0)}
+  \draw[pxf force, bkRed] (12,14) -- (12,3.6);
+  \draw[pxf force, bkRed] (48,20) -- (48,3.6);
+  \node[pxf lab, anchor=west] at (13,12) {\qty{2}{kN}};
+  \node[pxf lab, anchor=west] at (49,16) {\qty{4}{kN}};
+  \draw[pxf force, bkBlue] (0,-20) -- (0,-7.5);
+  \node[pxf lab, text=bkBlue!80!black, anchor=east] at (-1,-16) {$R_{\mathrm A}$};
+  \draw[pxf force, bkBlue] (72,-20) -- (72,-8);
+  \node[pxf lab, text=bkBlue!80!black, anchor=west] at (73,-16) {$R_{\mathrm B}$};
+  \node[pxf lab, anchor=south east] at (-1,3.5) {A};
+  \node[pxf lab, anchor=south west] at (73,3.5) {B};
+  \foreach \a/\b/\t in {0/12/1, 12/48/3, 48/72/2} {\draw[bkGray, line width=0.4pt, <->] (\a,25) -- (\b,25); \node[pxf lab, anchor=south, fill=white] at ({(\a+\b)/2},25.4) {\qty{\t}{m}};}
+  \draw[bkGray, line width=0.3pt, densely dotted] (0,3) -- (0,25) (12,14) -- (12,25) (48,20) -- (48,25) (72,3) -- (72,25);
+\end{tikzpicture}
+\bkfigcaption{はりの自由体図。荷重（赤）と反力（青）を全部かく。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{自由体図をかく}：はりだけを取り出し、荷重と反力を全部かく（上の図）。
+\item \textbf{わからない力が通る点を、モーメントの中心にする}：Aを中心にすると $R_{\mathrm A}$ が消える。左回りを＋として
+\[ R_{\mathrm B}\times6-2\times1-4\times4=0\qquad R_{\mathrm B}=\frac{2+16}{6}=\qty{3}{kN} \]
+\item \textbf{たての力の和}：$R_{\mathrm A}+R_{\mathrm B}-2-4=0$ から $R_{\mathrm A}=\qty{3}{kN}$。
+\item \textbf{別の式で確かめる}：Bのまわりでは
+\[ -R_{\mathrm A}\times6+2\times5+4\times2=-18+18=0 \]
+合っている。
+\end{enumerate}
+荷重の合計\qty{6}{kN}を、2つの支点が分けて支えています。荷重が近い支点ほど、多く受けもちます。
+
+\pxfhead{はしご：摩擦が足りないと、すべる}
+\label{ph:力-5:hashigo}
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (40,0) rectangle (44,48);
+  \draw[bkInk, line width=0.8pt] (40,0) -- (40,48);
+  \pxfground{(-6,0)}{46}
+  \draw[bkOrange!70!black, line width=2.2pt, line cap=round] (12,0) -- (40,42);
+  \foreach \t in {0.15,0.3,...,0.9} {\fill[bkOrange!70!black] ($(12,0)!\t!(40,42)$) circle (0.7);}
+  \fill[bkInk] (26,21) circle (1);
+  \node[pxf lab, anchor=south east] at (25.4,21.6) {G};
+  \draw[pxf force, bkInk] (26,20) -- (26,6);
+  \node[pxf lab, anchor=west] at (26.6,9) {$mg$};
+  \draw[pxf force, bkBlue] (12,-14) -- (12,-1.2);
+  \node[pxf lab, text=bkBlue!80!black, anchor=east] at (11.4,-10) {$N_1$};
+  \draw[pxf force, bkGreen!60!black] (0,-3) -- (10.6,-3);
+  \node[pxf lab, text=bkGreen!50!black, anchor=north] at (4,-3.6) {$f$};
+  \draw[pxf force, bkBlue] (54,42) -- (41.4,42);
+  \node[pxf lab, text=bkBlue!80!black, anchor=south] at (50,42.6) {$N_2$};
+  \draw[bkInk, line width=0.5pt] (19,0) arc (0:56.3:7);
+  \node[pxf lab] at (21.5,4) {$\theta$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+長さ $L$、質量 $m$ のはしご（重心はまん中）を、なめらかな（摩擦のない）壁に立てかけます。床との角を $\theta$、床の静止摩擦係数を $\mu$ とします。はたらく力は、重力 $mg$、床の垂直抗力 $N_1$、床の摩擦力 $f$、壁の垂直抗力 $N_2$ の4つです。
+\par\vspace{2pt}
+横：$f=N_2$\qquad たて：$N_1=mg$\par
+床の点のまわり（$N_1$ と $f$ が消える）：
+\[ N_2L\sin\theta-mg\frac{L}{2}\cos\theta=0 \]
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent 3つめの式から $N_2=\dfrac{mg}{2\tan\theta}$。だから $f=\dfrac{mg}{2\tan\theta}$ です。すべらないためには、$f$ が最大摩擦力 $\mu N_1=\mu mg$ 以下でなければなりません。
+\[ \frac{mg}{2\tan\theta}\leqq\mu mg\qquad\text{より}\qquad\tan\theta\geqq\frac{1}{2\mu} \]
+はしごが寝るほど（$\theta$ が小さいほど）$\tan\theta$ が小さくなり、必要な摩擦力が大きくなります。$L$ も $m$ も答えに残りません。
+
+\begin{phbaisuru}{床の摩擦係数 $\mu$}
+すべらない最小の角 $\theta=\tan^{-1}\dfrac{1}{2\mu}$ は小さくなる（寝かせても大丈夫）。$\mu=0.25$ では63°、$\mu=0.5$ では45°、$\mu=1$ では27°。ぬれた床（$\mu$ が小さい）では、はしごを立てて使わなければ危ない。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=88mm, height=44mm, xmin=0, xmax=1.1, ymin=0, ymax=90, xtick={0.25,0.5,0.75,1}, ytick={30,45,60,90}, xlabel={摩擦係数 $\mu$}, ylabel={すべらない最小の角（°）}]
+  \addplot[bkcurve, domain=0.1:1.05] {atan(1/(2*x))};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(0.25,63.43) (0.5,45) (1,26.57)};
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.55,68) {この線より上の角なら、すべらない};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\pxfhead{3つの力のつり合い：作用線は1点で交わる}
+\label{ph:力-5:sanryoku}平行でない3つの力でつり合うとき、2つの力の作用線の交点Pを、モーメントの中心にえらびます。2つの力のモーメントは0なので、3つめの力のモーメントも0でなければなりません。つまり、\textbf{3つめの力の作用線も点Pを通ります}。3つの作用線は1点で交わるのです。そして、力のつり合い $\vec F_1+\vec F_2+\vec F_3=\vec 0$ から、3つの力の矢印をつなぐと三角形になります（数学 4-7⑦）。中学校で学んだ「力の合成と分解」は、この三角形（平行四辺形の半分）のことです。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 半径15、段差3（例題16の 0.25 m・0.05 m と同じ比）。中心は角Kから左へ9、上へ12
+  \pxfground{(-28,0)}{56}
+  \fill[bkGray!40] (0,0) rectangle (26,3);
+  \draw[bkInk, line width=0.6pt] (0,0) -- (0,3) -- (26,3);
+  \fill[bkTheme!20] (-9,15) circle (15);
+  \draw[bkDeep, line width=0.8pt] (-9,15) circle (15);
+  \fill[bkInk] (-9,15) circle (0.9);
+  \fill[bkInk] (0,3) circle (0.9);
+  \node[pxf lab, anchor=north west] at (0.6,2.6) {K};
+  \draw[bkGray, line width=0.4pt, dashed] (-9,15) -- (0,3);
+  \draw[pxf force, bkInk] (-9,14) -- (-9,-3);
+  \node[pxf lab, anchor=east] at (-9.6,7) {$mg$};
+  \draw[pxf force, bkRed] (-9,15) -- (11,15);
+  \node[pxf lab, anchor=south] at (8,15.6) {$F$};
+  \draw[pxf force, bkBlue] (0,3) -- (-5.4,10.2);
+  \node[pxf lab, anchor=west, text=bkBlue!80!black] at (-3.4,10.6) {$R$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+重いローラ（円柱）を、段差の角Kに当てて、中心を横に引っぱります。持ち上がる直前、床からの力はなくなり、力は重力 $mg$、引く力 $F$、角からの力 $R$ の3つです。$mg$ と $F$ の作用線は中心で交わるので、$R$ も中心を通ります（角Kと中心を結ぶ線の向き）。$F$ を求めるには、角Kのまわりのモーメントを使えば、$R$ が消えます（例題で計算します）。
+\end{minipage}
+
+%% ----------------------------------------------------------------------
+\bksubsection{7}{滑車と輪軸：力を変える道具}
+
+\leavevmode\label{ph:力-5:sec7}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+滑車も、回る剛体です。軸がなめらかで、滑車とひもが軽いと考えます。
+
+\textbf{定滑車}（軸が天井に固定）：両側のひもの力を $T_1$、$T_2$、滑車の半径を $r$ とすると、軸のまわりのモーメントのつり合いは $T_1r=T_2r$。だから $T_1=T_2$ で、\textbf{力の向きを変えるだけ}です。
+
+\textbf{動滑車}（荷物と一緒に動く）：滑車と荷物（質量 $m$）をまとめて1つの物と考えると、上向きにひもが2本、下向きに重力。$2T=mg$ から\label{ph:力-5:kassha}
+\pxfline{\fbox{$T=\dfrac{mg}{2}$}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-12,40) rectangle (18,43);
+  \draw[bkInk, line width=0.6pt] (-12,40) -- (18,40);
+  \draw[bkInk, line width=0.8pt] (-6,40) -- (-6,20);
+  \draw[bkInk, line width=0.8pt] (6,20) -- (6,34);
+  \filldraw[fill=bkTheme!20, draw=bkDeep, line width=0.8pt] (0,20) circle (6);
+  \fill[bkInk] (0,20) circle (0.9);
+  \draw[bkInk, line width=0.8pt] (0,20) -- (0,10);
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (-5,2) rectangle (5,10);
+  \node[pxf lab] at (0,6) {$m$};
+  \draw[pxf force, bkBlue] (6,34) -- (6,42);
+  \node[pxf lab, text=bkBlue!80!black, anchor=west] at (6.6,38) {$T$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=east] at (-6.6,32) {$T$};
+  \draw[pxf force, bkInk] (0,1.5) -- (0,-8);
+  \node[pxf lab, anchor=west] at (0.6,-5) {$mg$};
+  \node[pxf lab, anchor=west] at (7,16) {動滑車};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent ひもを引く長さはどうでしょう。荷物を $h$ だけ上げるには、両側のひもを $h$ ずつ、合わせて $2h$ 短くしなければなりません。だから、ひもの先を $2h$ 引きます。力は半分、引く長さは2倍。「力×引く長さ」は
+\pxfline{$\dfrac{mg}{2}\times2h=mg\times h$}
+で、道具を使わずにまっすぐ持ち上げたときと同じです。これが中学校で学んだ\textbf{仕事の原理}です（道具を使っても、仕事は得にも損にもならない）。\label{ph:力-5:genri}この章では、つり合いの式（力）から仕事の原理を確かめました。エネルギーの側からの説明は力-4 です。③のてこでも、力点が動く距離と作用点が動く距離の比は、うでの長さの比 $l_1:l_2$ と同じなので（相似な三角形。数学 4-3）、$F_1\times(\text{力点の動き})=F_2\times(\text{作用点の動き})$ が成り立ちます。
+
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\textbf{組滑車}：荷物をつり下げている動滑車の組を、$n$ 本のひもが支えるとき、$nT=mg$ で $T=\dfrac{mg}{n}$。ひもを引く長さは $n$ 倍です。
+
+\textbf{輪軸}：半径 $R$ の輪と半径 $r$ の軸が一体になって回る道具です。輪を $F$ で回して、軸に巻いたひもで重さ $W$ の物をつるすと、軸のまわりのモーメントのつり合いは $FR=Wr$ なので、
+\pxfline{$F=W\times\dfrac{r}{R}$}
+ドアノブ・ドライバー・水道の取っ手・自転車のハンドルは、輪軸のなかまです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkTheme!12, draw=bkDeep, line width=0.8pt] (0,0) circle (14);
+  \filldraw[fill=bkTheme!35, draw=bkDeep, line width=0.8pt] (0,0) circle (5);
+  \fill[bkInk] (0,0) circle (0.9);
+  \draw[bkInk, line width=0.8pt] (-5,0) -- (-5,-18);
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (-9,-26) rectangle (-1,-18);
+  \node[pxf lab] at (-5,-22) {$W$};
+  \draw[bkInk, line width=0.8pt] (14,0) -- (14,-12);
+  \draw[pxf force, bkBlue] (14,-12) -- (14,-22);
+  \node[pxf lab, text=bkBlue!80!black, anchor=west] at (14.6,-18) {$F$};
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=3pt]}] (0,0) -- (40:14);
+  \node[pxf lab, anchor=south east] at (40:9.5) {$R$};
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=3pt]}] (0,0) -- (-5,0);
+  \node[pxf lab, anchor=east] at (-6,2.5) {$r$};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{phflow}[滑車・輪軸]
+\phflowrow{$\sum F_y=0$、$\sum M=0$}{滑車は軽い\\軸はなめらか}{定滑車 $T_1=T_2$}
+\phflowrow{$\sum F_y=0$（滑車＋荷物）}{ひもが2本で\\支える}{動滑車 $T=\dfrac{mg}{2}$}
+\phflowrow{$\sum M=0$（軸のまわり）}{輪と軸が一体}{輪軸 $FR=Wr$}
+\end{phflow}
+
+\begin{phbaisuru}{ひもの本数 $n$}
+引く力 $T=\dfrac{mg}{n}$ は半分になり、ひもを引く長さは2倍になる。「力×引く長さ」は変わらない。工事用のクレーンのフックが、何本ものワイヤで支えられているのは、このため（ワイヤ1本にかかる力を小さくし、巻き上げ機の力を小さくする）。
+\end{phbaisuru}
+
+%% ----------------------------------------------------------------------
+\bksubsection{8}{トラス：三角形で組む}
+
+\leavevmode\label{ph:力-5:sec8}細い棒（\textbf{部材}）の両はしを、自由に回れるピンでつないだ骨組みを\textbf{トラス}といいます。\bkidx{とらす}{トラス}つなぎ目を\textbf{節点}（せってん）といいます。はてな？の2つの問いに、ここで答えます。
+
+\pxfhead{わけ1：三角形は、形が変わらない}
+4本の棒をピンでつないだ四角形は、横から押すと、辺の長さを変えずに平行四辺形につぶれます。4辺の長さだけでは、四角形の形は1つに決まらないからです。3本の棒の三角形は、3辺の長さが決まると、形が1つに決まります（数学 4-1⑥の合同条件）。だから、棒がのび縮みしないかぎり、押しても形が変わりません。四角形も、ななめの棒（筋かい）を1本入れて2つの三角形に分けると、形が変わらなくなります。家の壁の筋かいも、同じ理由で入れます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[pxf bar] (0,0) -- (20,0) -- (20,20) -- (0,20) -- cycle;
+  \foreach \p in {(0,0),(20,0),(20,20),(0,20)} {\pxfjoint{\p}}
+  \draw[bk arrow, bkGray, line width=1pt] (23,10) -- (29,10);
+  \draw[pxf bar] (32,0) -- (52,0) -- (62,17.3) -- (42,17.3) -- cycle;
+  \foreach \p in {(32,0),(52,0),(62,17.3),(42,17.3)} {\pxfjoint{\p}}
+  \draw[pxf force, bkRed] (31,17.3) -- (40.6,17.3);
+  \node[pxf lab, anchor=north, align=center] at (31,-3) {四角形：横から押すと\\平行四辺形につぶれる};
+  \begin{scope}[shift={(76,0)}]
+  \draw[pxf bar] (0,0) -- (22,0) -- (11,19) -- cycle;
+  \foreach \p in {(0,0),(22,0),(11,19)} {\pxfjoint{\p}}
+  \draw[pxf force, bkRed] (0,19) -- (9.6,19);
+  \draw[pxf bar] (32,0) -- (52,0) -- (52,20) -- (32,20) -- cycle;
+  \draw[pxf bar] (32,0) -- (52,20);
+  \foreach \p in {(32,0),(52,0),(52,20),(32,20)} {\pxfjoint{\p}}
+  \draw[pxf force, bkRed] (22,20) -- (30.6,20);
+  \node[pxf lab, anchor=north, align=center] at (26,-3) {三角形・筋かいを入れた四角形：\\押しても形が変わらない};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ピンでつないだ骨組みを、横から押す。}
+\end{bkfigure}
+
+\pxfhead{わけ2：部材には、引く力か押す力しかかからない}
+トラスの部材1本を取り出して、はたらく力を考えます。
+\noindent このあとのモデル化の札の仮定をおくと、部材1本にはたらく力は、両はしのピンからの2つだけです。②の「2力のつり合い」から、2つの力は\textbf{部材の両はしを結ぶ線の上}にあり、同じ大きさで逆向きです。つまり、部材は両はしから「引っぱられる」か「押される」かのどちらかで、曲げられることはありません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[pxf bar] (0,0) -- (40,0);
+  \pxfjoint{(0,0)}\pxfjoint{(40,0)}
+  \draw[pxf force, bkBlue] (1.5,0) -- (-11,0);
+  \draw[pxf force, bkBlue] (38.5,0) -- (51,0);
+  \node[font=\sffamily\small\bfseries, text=bkBlue!80!black, anchor=north] at (20,-3) {引張（引っぱられる）：$N>0$};
+  \begin{scope}[shift={(72,0)}]
+  \draw[pxf bar] (0,0) -- (40,0);
+  \pxfjoint{(0,0)}\pxfjoint{(40,0)}
+  \draw[pxf force, bkOrange!90!black] (-12,0) -- (-1.5,0);
+  \draw[pxf force, bkOrange!90!black] (52,0) -- (41.5,0);
+  \node[font=\sffamily\small\bfseries, text=bkOrange!70!black, anchor=north] at (20,-3) {圧縮（押される）：$N<0$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{部材の力 $N$ は、引っぱられる（引張）とき＋、押される（圧縮）とき－と決める。}
+\end{bkfigure}
+
+\noindent 鋼の棒は、引っぱったり押したりする力にはとても強いのですが、曲げる力には弱く、すぐたわみます（力-10）。トラスは、細い部材を、いちばん強い使い方（引くか押すか）だけで使う、むだのない形なのです。
+
+\begin{column}{\bkhatenaref の答え：鉄橋が三角形でできているわけ}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{bkNavy}●}]
+\item 三角形は、3辺の長さで形が1つに決まるので、ピンでつないでも形が変わらない（四角形はつぶれる）。
+\item 部材の両はしをピンでつなぎ、荷重を節点にかけると、どの部材も「引く力」か「押す力」しか受けない。鋼のいちばん強い使い方なので、少ない材料で重い荷重を支えられる。
+\item 部材の力は、節点ごとの力のつり合いで計算できる（このあとの節点法・切断法・行列）。
+\end{itemize}
+\end{column}
+
+\begin{phmodel}[トラス]
+\phignore{部材の重さ（重いときは、両はしの節点に半分ずつ分けて荷重に入れる）。節点の摩擦。部材ののび縮みによる形の変化（力-8）。}
+\phassume{節点は自由に回れるピン。荷重は節点にだけかかる。部材はまっすぐで、剛体。}
+\phlimit{節点を溶接やたくさんのボルトでがっちり止めたとき（部材が曲げも受ける。力-10）。部材の途中に重い物がのるとき。細長い部材を強く押したとき（ぐにゃりと曲がる座屈。力-11）。}
+\end{phmodel}
+
+
+
+\pxfhead{節点法：節点ごとに、力のつり合い}
+節点のピンは小さな点と考えられるので、節点ごとに「$x$ 成分の和0、$y$ 成分の和0」の2つの式が立ちます（モーメントの式は、力がみな1点を通るので出てきません）。この方法を\textbf{節点法}といいます。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[pxf bar] (0,0) -- (40,0) -- (20,34.64) -- cycle;
+  \pxfpin{(0,0)}\pxfroll{(40,0)}
+  \pxfjoint{(20,34.64)}
+  \draw[pxf force, bkRed] (20,48) -- (20,36.2);
+  \node[pxf lab, anchor=west] at (20.6,45) {\qty{10}{kN}};
+  \node[pxf lab, anchor=east] at (-1.4,1.6) {A};
+  \node[pxf lab, anchor=west] at (41.4,1.6) {B};
+  \node[pxf lab, anchor=east] at (18.6,36) {C};
+  \node[pxf lab, anchor=south east] at (9,17) {AC};
+  \node[pxf lab, anchor=south west] at (31,17) {BC};
+  \node[pxf lab, anchor=north, fill=white] at (20,-1.2) {AB（\qty{2}{m}）};
+  \draw[bkInk, line width=0.5pt] (6,0) arc (0:60:6);
+  \node[pxf lab] at (8.5,3.4) {60°};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+1辺\qty{2}{m}の正三角形のトラスの頂点Cに、\qty{10}{kN}の荷重がかかっています。部材の力を、わからないうちは全部「引張（＋）」と仮定して $N_{\mathrm{AC}}$、$N_{\mathrm{BC}}$、$N_{\mathrm{AB}}$ とおきます。答えがマイナスなら圧縮です。
+\end{minipage}
+
+\par\vspace{4pt}
+\pxfstep{1}{全体のつり合いで、反力を求める}
+左右対称なので $R_{\mathrm A}=R_{\mathrm B}=\qty{5}{kN}$（上向き）。Aの横の反力は0。
+\pxfstep{2}{節点A}
+節点Aには、反力 $R_{\mathrm A}$（上向き）、部材ACの力、部材ABの力がはたらきます。引張と仮定した部材の力は、節点を部材の向こうがわへ引っぱる向きです。ACの向きは $(\cos60°,\ \sin60°)=(0.5,\ 0.866)$、ABの向きは $(1,\ 0)$。
+\[ y\text{：}\ 5+0.866\,N_{\mathrm{AC}}=0\qquad N_{\mathrm{AC}}=-\frac{5}{0.866}\approx\qty{-5.77}{kN} \]
+\[ x\text{：}\ 0.5\,N_{\mathrm{AC}}+N_{\mathrm{AB}}=0\qquad N_{\mathrm{AB}}=-0.5\times(-5.77)\approx\qty{2.89}{kN} \]
+\pxfstep{3}{答えを読む}
+$N_{\mathrm{AC}}$ はマイナスなので圧縮（\qty{5.77}{kN}で押されている）、$N_{\mathrm{AB}}$ はプラスなので引張です。左右対称なので $N_{\mathrm{BC}}=N_{\mathrm{AC}}$。ななめの部材が荷重を押して支え、下の部材が「足が開かないように」引っぱっています。節点Cで確かめると、たて：$-0.866\times(-5.77)\times2-10\approx0$ で、合っています。
+
+\pxfhead{切断法：知りたい部材を、切って調べる}
+大きなトラスで、1本の部材の力だけを知りたいときは、節点を1つずつ解いていくのは大変です。そこで、知りたい部材を通るように、トラス全体を（3本以下の部材で）2つに切り、片がわを1つの剛体と考えて、つり合いの3つの式を使います。これを\textbf{切断法}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \def\h{25.98}
+  \foreach \a/\b in {0/30,30/60,60/90} {\draw[pxf bar] (\a,0) -- (\b,0);}
+  \draw[pxf bar] (15,\h) -- (75,\h);
+  \foreach \a/\b/\c in {0/15/30,30/45/60,60/75/90} {\draw[pxf bar] (\a,0) -- (\b,\h) -- (\c,0);}
+  \draw[pxf bar] (15,\h) -- (30,0) (45,\h) -- (60,0);
+  \pxfpin{(0,0)}\pxfroll{(90,0)}
+  \foreach \p in {(30,0),(60,0),(15,\h),(45,\h),(75,\h)} {\pxfjoint{\p}}
+  \foreach \p/\n/\an in {(0,0)/A/south east, (30,0)/B/south, (60,0)/C/south, (90,0)/D/south west, (15,\h)/E/south, (45,\h)/F/south, (75,\h)/G/south} {\node[pxf lab, anchor=\an, inner sep=2.6pt] at \p {\n};}
+  \draw[pxf force, bkRed] (30,-1.5) -- (30,-15);
+  \draw[pxf force, bkRed] (60,-1.5) -- (60,-11);
+  \node[pxf lab, anchor=west, text=bkRed!80!black] at (31,-12) {\qty{12}{kN}};
+  \node[pxf lab, anchor=west, text=bkRed!80!black] at (61,-9) {\qty{6}{kN}};
+  \draw[bkPurple, line width=1.2pt, dashed] (37.5,\h+8) -- (37.5,-6);
+  \node[pxf lab, text=bkPurple, anchor=south] at (37.5,\h+8.2) {ここで切る};
+\end{tikzpicture}
+\bkfigcaption{1辺\qty{2}{m}の正三角形を並べたトラス（ワーレントラス）。下の節点Bに\qty{12}{kN}、Cに\qty{6}{kN}の荷重（赤の矢印）。紫の点線で、部材EF・BF・BCを切る。}
+\label{ph:力-5:fig-warren}
+\end{bkfigure}
+
+\noindent 上の図のトラスの、上の部材EFの力を求めます。トラスの高さは、1辺\qty{2}{m}の正三角形の高さなので、$2\sin60°=\sqrt3\approx\qty{1.73}{m}$ です。
+\pxfstep{1}{反力}
+Aのまわりのモーメント：$R_{\mathrm D}\times6-12\times2-6\times4=0$ から $R_{\mathrm D}=\qty{8}{kN}$。たて：$R_{\mathrm A}=12+6-8=\qty{10}{kN}$。
+\pxfstep{2}{切って、左がわだけを考える}
+左がわには、$R_{\mathrm A}$、Bの荷重\qty{12}{kN}、切った3本の部材の力 $N_{\mathrm{EF}}$、$N_{\mathrm{BF}}$、$N_{\mathrm{BC}}$ がはたらきます。
+\pxfstep{3}{2本の部材が交わる点のまわりのモーメント}
+$N_{\mathrm{BF}}$ と $N_{\mathrm{BC}}$ は、どちらも節点Bを通ります。そこでBのまわりのモーメントを考えると、この2つと、Bの荷重が消えます。$N_{\mathrm{EF}}$（引張と仮定すると右向き、高さ $\sqrt3$）は右回り、$R_{\mathrm A}$（うで\qty{2}{m}）も右回りです。
+\[ -N_{\mathrm{EF}}\times\sqrt3-10\times2=0\qquad N_{\mathrm{EF}}=-\frac{20}{\sqrt3}\approx\qty{-11.5}{kN} \]
+上の部材EFは、\qty{11.5}{kN}の圧縮です。わからない力が3つあっても、うまい中心をえらぶと、1つの式で1つの力が求まりました。
+
+%% ----------------------------------------------------------------------
+\bksubsection{9}{行列でまとめて解く}
+
+\leavevmode\label{ph:力-5:sec9}節点法の式は、全部の節点で書くと、連立1次方程式になります。正三角形のトラスでは、わからない量は部材の力3つと反力3つ（$R_{\mathrm{A}x}$、$R_{\mathrm{A}y}$、$R_{\mathrm B}$）の6つ、式は節点3つ×2＝6つです。$\sin60°\approx0.866$、$\cos60°=0.5$ として、
+\[
+\begin{pmatrix}
+0.5 & 0 & 1 & 1 & 0 & 0\\
+0.866 & 0 & 0 & 0 & 1 & 0\\
+0 & -0.5 & -1 & 0 & 0 & 0\\
+0 & 0.866 & 0 & 0 & 0 & 1\\
+-0.5 & 0.5 & 0 & 0 & 0 & 0\\
+-0.866 & -0.866 & 0 & 0 & 0 & 0
+\end{pmatrix}
+\begin{pmatrix} N_{\mathrm{AC}}\\ N_{\mathrm{BC}}\\ N_{\mathrm{AB}}\\ R_{\mathrm{A}x}\\ R_{\mathrm{A}y}\\ R_{\mathrm B}\end{pmatrix}
+=\begin{pmatrix}0\\0\\0\\0\\0\\10\end{pmatrix}
+\]
+上から、節点Aの $x$・$y$、節点Bの $x$・$y$、節点Cの $x$・$y$ の式です。最後の行は、Cにかかる下向きの荷重\qty{10}{kN}を右辺に移したものです。この形 $A\vec x=\vec b$ は、数学 7-5 の逆行列で $\vec x=A^{-1}\vec b$ と解けます。
+
+\begin{bkcenter}
+\bksheet{7}{13}{%
+1 & $N_{\mathrm{AC}}$ & $N_{\mathrm{BC}}$ & $N_{\mathrm{AB}}$ & $R_{\mathrm{A}x}$ & $R_{\mathrm{A}y}$ & $R_{\mathrm B}$ & 右辺 \\
+2 & 0.5 & 0 & 1 & 1 & 0 & 0 & 0 \\
+3 & 0.866 & 0 & 0 & 0 & 1 & 0 & 0 \\
+4 & 0 & $-0.5$ & $-1$ & 0 & 0 & 0 & 0 \\
+5 & 0 & 0.866 & 0 & 0 & 0 & 1 & 0 \\
+6 & $-0.5$ & 0.5 & 0 & 0 & 0 & 0 & 0 \\
+7 & $-0.866$ & $-0.866$ & 0 & 0 & 0 & 0 & 10 \\
+8 & \SetCell[c=7]{l} 空いた列のたて6マスをえらび \texttt{=MMULT(MINVERSE(A2:F7),G2:G7)} & & & & & & \\
+9 & $-5.77$ & $-5.77$ & 2.89 & 0 & 5 & 5 & ← 答え \\}
+\bktabcaption{表計算で、逆行列とかけ算をまとめて計算する。9行めは、8行めの式の答えを横に並べ直したもの。節点法と同じ答えになる。}
+\end{bkcenter}
+
+\noindent 節点が100個、部材が200本の大きなトラスでも、手順は同じです。行列の大きさが変わるだけです。次のプログラムは、図\ref{ph:力-5:fig-warren}のワーレントラスの全部の部材の力を、一度に計算します。はじめに、トラスの形と荷重を書きます。節点の座標、部材、支点、荷重を書きかえれば、どんなトラスにも使えます。
+
+\begin{phcode}
+import numpy as np
+r3 = 3 ** 0.5                     \# 3 の平方根
+P = \{'A': (0, 0), 'B': (2, 0), 'C': (4, 0), 'D': (6, 0),
+     'E': (1, r3), 'F': (3, r3), 'G': (5, r3)\}  \# 節点（m）
+M = ['AB', 'BC', 'CD', 'EF', 'FG', 'AE', 'EB',
+     'BF', 'FC', 'CG', 'GD']        \# 部材
+R = [('A', 0), ('A', 1), ('D', 1)]  \# 反力（0は横、1はたて）
+W = \{'B': (0, -12), 'C': (0, -6)\}   \# 荷重（kN）
+\end{phcode}
+次に、節点ごとのつり合いの式を、行列 \texttt{K} と右辺 \texttt{b} にならべて、解きます。部材 $i$–$k$ の力は、節点 $i$ を $k$ の向きへ、節点 $k$ を $i$ の向きへ引きます（引張を＋と仮定）。
+\begin{phcode}
+nd = list(P)
+K = np.zeros((2 * len(nd), len(M) + len(R)))
+b = np.zeros(2 * len(nd))
+for j, (i, k) in enumerate(M):      \# 部材の力（引張が＋）
+    e = np.subtract(P[k], P[i])
+    e = e / np.hypot(e[0], e[1])    \# i から k への単位ベクトル
+    a, c = 2 * nd.index(i), 2 * nd.index(k)
+    K[a:a+2, j] += e                \# 節点 i は k の向きへ引かれる
+    K[c:c+2, j] -= e                \# 節点 k は i の向きへ引かれる
+for j, (i, d) in enumerate(R):
+    K[2 * nd.index(i) + d, len(M) + j] = 1
+for i, f in W.items():              \# 荷重は右辺へ（符号をかえる）
+    a = 2 * nd.index(i)
+    b[a:a+2] = -np.array(f)
+x = np.linalg.solve(K, b)           \# 連立方程式を解く（7-5）
+for s, v in zip(M + ['RAx', 'RAy', 'RD'], x):
+    print(s, round(v, 2))
+\end{phcode}
+\begin{phcodeout}
+AB 5.77
+BC 10.39
+CD 4.62
+EF -11.55
+FG -9.24
+AE -11.55
+EB 11.55
+BF 2.31
+FC -2.31
+CG 9.24
+GD -9.24
+RAx 0.0
+RAy 10.0
+RD 8.0
+\end{phcodeout}
+切断法で求めた $N_{\mathrm{EF}}\approx\qty{-11.5}{kN}$ と同じです。上の部材（上弦材）はどれも圧縮、下の部材（下弦材）はどれも引張になっています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \def\h{25.98}
+  % 引張は青、圧縮はだいだい。線の太さは力の大きさ
+  \foreach \a/\b/\c/\w in {0/0/30/5.77, 30/0/60/10.39, 60/0/90/4.62} {\draw[bkBlue, line width={0.25*\w pt+0.8pt}, line cap=round] (\a,\b) -- (\c,\b);}
+  \draw[bkOrange!90!black, line width={0.25*11.55pt+0.8pt}, line cap=round] (15,\h) -- (45,\h);
+  \draw[bkOrange!90!black, line width={0.25*9.24pt+0.8pt}, line cap=round] (45,\h) -- (75,\h);
+  \draw[bkOrange!90!black, line width={0.25*11.55pt+0.8pt}, line cap=round] (0,0) -- (15,\h);
+  \draw[bkBlue, line width={0.25*11.55pt+0.8pt}, line cap=round] (15,\h) -- (30,0);
+  \draw[bkBlue, line width={0.25*2.31pt+0.8pt}, line cap=round] (30,0) -- (45,\h);
+  \draw[bkOrange!90!black, line width={0.25*2.31pt+0.8pt}, line cap=round] (45,\h) -- (60,0);
+  \draw[bkBlue, line width={0.25*9.24pt+0.8pt}, line cap=round] (60,0) -- (75,\h);
+  \draw[bkOrange!90!black, line width={0.25*9.24pt+0.8pt}, line cap=round] (75,\h) -- (90,0);
+  \foreach \p in {(0,0),(30,0),(60,0),(90,0),(15,\h),(45,\h),(75,\h)} {\pxfjoint{\p}}
+  \foreach \x/\y/\t/\an in {15/-1.5/5.77/north, 45/-1.5/10.39/north, 75/-1.5/4.62/north, 30/{\h+2}/$-11.55$/south, 60/{\h+2}/$-9.24$/south} {\node[pxf lab, anchor=\an] at (\x,\y) {\t};}
+  \foreach \x/\y/\t/\an in {5/13/$-11.55$/east, 20.5/20/11.55/west, 35/6/2.31/west, 50/20/$-2.31$/west, 65/6/9.24/west, 85/16/$-9.24$/west} {\node[pxf lab, anchor=\an] at (\x,\y) {\t};}
+  \draw[bkBlue, line width=2.4pt] (100,16) -- (110,16); \node[pxf lab, anchor=west] at (111,16) {引張};
+  \draw[bkOrange!90!black, line width=2.4pt] (100,8) -- (110,8); \node[pxf lab, anchor=west] at (111,8) {圧縮};
+\end{tikzpicture}
+\bkfigcaption{プログラムの答えを、色と太さで表した図（単位 kN）。荷重の重いBの近くの部材ほど、大きな力を受けている。}
+\end{bkfigure}
+
+%% ----------------------------------------------------------------------
+\bksubsection{10}{静定と不静定}
+
+\leavevmode\label{ph:力-5:sec10}トラスの部材の数を $m$、支点の反力の数を $r$、節点の数を $j$ とします。わからない量は $m+r$ 個、節点法の式は $2j$ 個です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $m+r=2j$：式と未知数の数が同じ。つり合いの式だけで、全部の力が求まる。これを\textbf{静定}（せいてい）といいます。\bkidx{せいてい}{静定}
+\item $m+r<2j$：式のほうが多く、ふつうは全部をみたせない。形が変わって動いてしまう（\textbf{不安定}）。
+\item $m+r>2j$：未知数のほうが多く、つり合いの式だけでは力が決まらない。これを\textbf{不静定}といいます。
+\end{itemize}
+正三角形のトラスは $m=3$、$r=3$、$j=3$ で $6=6$、静定です。ワーレントラスは $m=11$、$r=3$、$j=7$ で $14=14$、これも静定です。
+
+\begin{phmijika}[3本足と4本足]
+3本足のいすは、でこぼこの床でもがたつかない。4本足のテーブルは、床が少しでもでこぼこだと、がたつく。4本の足が床を押す力は、つり合いの式（たての力と、2つの軸のまわりのモーメント：3つ）だけでは決まらない不静定だから。どの足が浮くかは、床と足のわずかな高さのちがいで決まる。
+\end{phmijika}
+
+\noindent では、不静定は悪いことでしょうか。実際の橋やビルは、わざと不静定にしてあることが多いのです。部材が1本こわれても、ほかの部材が力を受けもてば、すぐにはくずれないからです。不静定の力は、部材ののび縮み（変形）も考えると求められます（力-10・11）。
+
+\begin{seikaku}
+$m+r=2j$ は、静定であるために「必要な」条件ですが、それだけでは足りません。部材の数が合っていても、つけ方が悪いと、一部分が四角形のまま残って動いてしまうことがあります。行列で言うと、⑨の行列 $A$ の逆行列がないとき（数学 7-4 の行列式が0のとき）が、これにあたります。
+\end{seikaku}
+
+\begin{phsaki}{不静定の構造を解く}
+不静定の構造は、「つり合いの式」に、「部材ののびと力の関係（力-8）」と「つないだ所でのびがそろう条件」を加えて解きます。部材の数が多くなると、これを行列で書いた「マトリクス法」でコンピュータに解かせます（力-16）。大学の構造力学で、くわしく学びます。
+\end{phsaki}
+
+\begin{phmada}[地震で建物がこわれていくようす]
+部材が力を受けて変形し、やがて曲がったり、つなぎ目がはずれたりしながら、建物全体がこわれていくまでを、計算だけで正確に予測するのは、今も難しい問題です。材料が「元にもどらない変形」をしたり、壁や家具まで含めたたくさんの部分がたがいに影響したりするからです。そこで、兵庫県三木市にある防災科学技術研究所の「E-ディフェンス」（2005年完成）のように、実物大の建物を大きな台にのせて地震と同じようにゆらす実験施設で、本物をこわしてみて、計算の方法を確かめ、改良する研究が続いています。
+\end{phmada}
+
+%% ----------------------------------------------------------------------
+\begin{senmonsho}[構造力学の書き方]
+\begin{bkhonbun}
+平面トラスの節点 $i$ における力のつり合い式は $\sum_j N_{ij}\symbf e_{ij}+\symbf P_i=\symbf 0$ である。ここで $N_{ij}$ は部材 $ij$ の軸力（引張を正）、$\symbf e_{ij}$ は節点 $i$ から $j$ へ向かう単位ベクトル、$\symbf P_i$ は節点荷重である。全節点についてまとめると $\symbf A\symbf N=-\symbf P$ を得る。$\symbf A$ が正方かつ正則であれば、トラスは静定である。
+\end{bkhonbun}
+\bkyaku{太字はベクトルと行列（数学 4-13）。「軸力」は、部材の向きにはたらく力（この章の $N$）。「節点荷重」は節点にかかる荷重。「正方かつ正則」は「行列がたて・横同じ大きさで、逆行列がある」こと。⑨の表計算とプログラムは、これを解いていた。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{力のモーメント}$M=Fl=rF\sin\theta$。一般には $\vec N=\vec r\times\vec F$\\[3pt]
+\tsl{剛体のつり合い}$\sum F_x=0$、$\sum F_y=0$、$\sum M=0$\\[3pt]
+\tsl{てこ}$F_1l_1=F_2l_2$\\[3pt]
+\tsl{偶力}$M=Fd$（どの点のまわりでも同じ）\\[3pt]
+\tsl{重心}$x_{\mathrm G}=\dfrac{\sum m_ix_i}{\sum m_i}$\\[3pt]
+\tsl{滑車・輪軸}動滑車 $T=\dfrac{mg}{2}$、輪軸 $FR=Wr$\\[3pt]
+\tsl{トラス}部材は引張か圧縮だけ。節点法・切断法・行列\\[3pt]
+\tsl{静定}$m+r=2j$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{剛体}{力を受けても形が変わらない（と考えてよい）物。}
+\bkword{外力・内力}{物の外からはたらく力と、物の中のつぶどうしがおよぼし合う力。}
+\bkword{偶力}{同じ大きさで逆向き、作用線がずれた2つの力の組。回すだけで、ずらさない。}
+\bkword{反力}{支点が物を押し返す力。ピンは2つ、ローラは1つ、固定端は3つ。}
+\bkword{トラス}{細い部材の両はしをピンでつないだ、三角形の骨組み。}
+\bkword{節点法・切断法}{節点ごとのつり合いで解く方法と、切った片がわのつり合いで解く方法。}
+\bkword{静定・不静定}{つり合いの式だけで力が決まる構造と、決まらない構造。}
+\end{kotoba}
+
+
+\bkkigocards{\bkkigocard{$M$}{エム}{平面の力のモーメント。トルクは $\vec N$、ねじりは $T$。単位はどれも N·m}{moment}{力-5}}{\bkkigocard{$R_{\mathrm A}$}{アール・エー}{点Aの反力。垂直抗力 $N$ と区別して $R$ と書く}{reaction force}{力-5}}
+
+%% ======================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[スパナでボルトをしめる]
+\label{ph:力-5:ex1}自動車のボルトを\pxfNm{30}のトルクでしめるように決められています。長さ（ボルトの中心から手で押す所まで）\qty{0.2}{m}のスパナで、スパナに直角に押すとき、何Nの力がいりますか。
+\phbamen
+手で押すとスパナが回り、ボルトがしまる。決められた「回す働き」を出すための力を知りたい。
+\phmushi
+スパナの重さ。手の力は1点にかかり、スパナに直角とする。
+\phzu
+回転の中心はボルトの中心。うでの長さ $l=\qty{0.2}{m}$、力 $F$、モーメント $M=\pxfNm{30}$。
+\phriyu
+回す働きを決めるのは力のモーメント $M=Fl$（①）。直角に押すので、中心から押す所までの長さが、そのままうでの長さになる。
+\phtateru
+\[ F\times0.2=30 \]
+\phtoku
+\[ F=\frac{30}{0.2}=\qty{150}{N} \]
+\phtashikame
+単位：N·m ÷ m＝N。\quad 大きさ：\qty{150}{N}は、約\qty{15}{kg}の物の重さ。大人が片手で出せる力。\quad 極端な場合：スパナを2倍の長さにすると\qty{75}{N}に減る。
+\kotae \qty{150}{N}
+\end{phreidai}
+\begin{jibun}
+ボルトを\pxfNm{40}でしめます。長さ\qty{0.25}{m}のスパナに直角に押すとき、何Nの力がいりますか。
+\bkjans{$F=\dfrac{40}{0.25}=\qty{160}{N}$}
+\end{jibun}
+
+\begin{phreidai}[3種類のてこの道具]
+\label{ph:力-5:ex2}次の道具で、手の力の何倍の力が物にはたらきますか。力はどれもてこに直角とします。\par
+（1）くぎぬき（第1種）：支点から手まで\qty{0.30}{m}、支点からくぎまで\qty{0.03}{m}\par
+（2）せんぬき（第2種）：支点から手まで\qty{0.10}{m}、支点からせんをひっかける所まで\qty{0.02}{m}\par
+（3）ピンセット（第3種）：支点から指まで\qty{0.04}{m}、支点から先まで\qty{0.12}{m}
+\phbamen
+どれも支点のまわりに回る道具。手の力 $F_1$ と、物にはたらく力 $F_2$ の比を知りたい。
+\phmushi
+道具の重さ。支点の摩擦。
+\phzu
+手のうでの長さを $l_1$、物のうでの長さを $l_2$ とする（図\ref{ph:力-5:fig-sanshu}）。
+\phriyu
+どの種類のてこでも、支点のまわりのモーメントのつり合い $F_1l_1=F_2l_2$ が成り立つ（③）。
+\phtateru
+\[ \frac{F_2}{F_1}=\frac{l_1}{l_2} \]
+\phtoku
+（1）$\dfrac{0.30}{0.03}=10$倍\qquad（2）$\dfrac{0.10}{0.02}=5$倍\qquad（3）$\dfrac{0.04}{0.12}=\dfrac{1}{3}$倍
+\phtashikame
+単位：m÷m で、倍を表す数（単位なし）。\quad 大きさ：くぎぬきは\qty{200}{N}の手の力で\qty{2000}{N}（約\qty{200}{kg}の重さ）。くぎが抜けるのも納得。ピンセットは力が $\dfrac13$ になるので、こわれやすい物をやさしくつまめる。
+\kotae （1）10倍\quad（2）5倍\quad（3）$\dfrac{1}{3}$倍
+\end{phreidai}
+\begin{jibun}
+手の力の何倍の力が物にはたらきますか。（1）はさみ：支点から手まで\qty{0.15}{m}、支点から切る所まで\qty{0.03}{m}。（2）穴あけパンチ：支点から手まで\qty{0.08}{m}、支点から刃まで\qty{0.02}{m}。（3）トング：支点から手まで\qty{0.05}{m}、支点から先まで\qty{0.20}{m}。
+\bkjans{（1）\nobreak 5倍。（2）\nobreak 4倍。（3）\nobreak $\dfrac{1}{4}$倍}
+\end{jibun}
+
+\begin{phreidai}[シーソーに2人で乗る]
+\label{ph:力-5:ex3}シーソーの支点から左へ\qty{2.0}{m}の所に、質量\qty{30}{kg}の子がすわっています。質量\qty{60}{kg}の大人は、右の何mの所にすわればつり合いますか。また、そのとき支点が板を支える力は何Nですか。
+\phbamen
+2人の重さで、シーソーは左右に回ろうとする。回らない位置をさがす。
+\phmushi
+板の重さ（板の重心が支点の真上にあれば、つり合いに関係しない）。人は点と考える。
+\phzu
+左の重力 $30g$（うで\qty{2.0}{m}）、右の重力 $60g$（うで $x$）、支点の力 $R$（上向き）。
+\phriyu
+回らない条件は、支点のまわりのモーメントのつり合い（③）。支点の力は、たての力の和から（②）。
+\phtateru
+\[ 30g\times2.0=60g\times x,\qquad R=30g+60g \]
+\phtoku
+$g$ は両辺で消えて $x=\dfrac{30\times2.0}{60}=\qty{1.0}{m}$。$R=90\times9.8=\qty{882}{N}$。
+\phtashikame
+大きさ：2倍重い人は、半分の距離。\quad 別の点で：右の人の位置のまわりでも $R\times1.0-30g\times3.0=882-882=0$ で合っている。
+\kotae \qty{1.0}{m}の所。支点の力は約\qty{880}{N}
+\end{phreidai}
+\begin{jibun}
+支点から左へ\qty{1.8}{m}の所に\qty{25}{kg}の子がいます。\qty{45}{kg}の人は右の何mにすわればつり合いますか。支点が支える力も求めましょう。
+\bkjans{$x=\dfrac{25\times1.8}{45}=\qty{1.0}{m}$。$R=70\times9.8=\qty{686}{N}$（約\qty{690}{N}）}
+\end{jibun}
+
+\begin{phreidai}[信号機を2本のワイヤでつるす]
+\label{ph:力-5:ex4}重さ\qty{200}{N}の信号機を、左右対称に張った2本のワイヤでつるします。ワイヤは水平から30°上向きです。ワイヤ1本の張力を求めましょう。
+\phbamen
+信号機は止まっている。2本のワイヤが上へ引き、重力が下へ引く。
+\phmushi
+ワイヤの重さとのび。信号機の大きさ（ワイヤが1点につながっているとする）。
+\phzu
+\noindent\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!70, line width=0.8pt] (-24,13.86) -- (0,0) -- (24,13.86);
+  \fill[bkGray!50] (-26,12) rectangle (-24,18) (24,12) rectangle (26,18);
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.5pt] (-7,-6) rectangle (7,-1);
+  \foreach \x/\c in {-4/bkGreen, 0/bkYellow, 4/bkRed} {\fill[\c] (\x,-3.5) circle (1.4);}
+  \draw[pxf force, bkBlue] (0,0) -- (150:14);
+  \draw[pxf force, bkBlue] (0,0) -- (30:14);
+  \draw[pxf force, bkInk] (0,-6) -- (0,-17);
+  \node[pxf lab, text=bkBlue!80!black, anchor=south] at (150:15) {$T_{\mathrm L}$};
+  \node[pxf lab, text=bkBlue!80!black, anchor=south] at (30:15) {$T_{\mathrm R}$};
+  \node[pxf lab, anchor=west] at (0.6,-14) {\qty{200}{N}};
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) -- (12,0);
+  \draw[bkInk, line width=0.5pt] (8,0) arc (0:30:8);
+  \node[pxf lab] at (11,2.6) {30°};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+左右の張力を $T_{\mathrm L}$、$T_{\mathrm R}$（数学 4-7 の書き方）。左右対称なので $T_{\mathrm L}=T_{\mathrm R}=T$。
+\end{minipage}
+\phriyu
+3つの力がつり合っている。2つの力の向きがわかっていて、大きさがわからないので、成分ごとの和を0にする（②、数学 4-11⑨）。
+\phtateru
+\[ x\text{：}\ T\cos30°-T\cos30°=0\qquad y\text{：}\ T\sin30°+T\sin30°-200=0 \]
+\phtoku
+$2T\times0.5=200$ より $T=\qty{200}{N}$。
+\phtashikame
+大きさ：2本で支えているのに、1本が信号機の重さと同じ。ワイヤがねているほど上向きの成分が小さいので、そのぶん大きな張力がいる。\quad 極端な場合：ワイヤを真上に張れば（90°）1本\qty{100}{N}、水平に近づけると、張力はいくらでも大きくなる（下のグラフ）。
+\kotae \qty{200}{N}
+\end{phreidai}
+\begin{phbaisuru}[半分]{ワイヤの角 $\theta$}
+$T=\dfrac{W}{2\sin\theta}$ で、$\theta$ を30°から15°に半分にすると、$T$ は約1.9倍の\qty{386}{N}になる。電線や洗たく物のロープを、まっすぐぴんと張れないのはこのため。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=88mm, height=44mm, xmin=0, xmax=95, ymin=0, ymax=1200, xtick={15,30,45,60,90}, ytick={200,400,600,800,1000}, xlabel={角 $\theta$（°）}, ylabel={張力 $T$（N）}]
+  \addplot[bkcurve, domain=4.8:90] {200/(2*sin(x))};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(15,386.4) (30,200) (90,100)};
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:32,500) {水平に近いほど、張力は急に大きくなる};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+\begin{jibun}
+重さ\qty{300}{N}の看板を、左右対称に張った2本のワイヤでつるします。ワイヤは水平から45°上向きです。ワイヤ1本の張力を求めましょう。
+\bkjans{$2T\sin45°=300$ より $T=\dfrac{300}{2\times0.707}\approx\qty{212}{N}$}
+\end{jibun}
+
+\begin{phreidai}[橋の支点の反力]
+\label{ph:力-5:ex5}長さ\qty{4}{m}の小さな橋（はり）の左はしAはピン、右はしBはローラで支えられています。Aから\qty{1}{m}の所に\qty{10}{kN}の荷物がのりました。A・Bの反力を求めましょう。
+\phbamen
+橋は止まっていて、荷物の重さを2つの支点が分けて支える。それぞれの受けもちを知りたい。
+\phmushi
+橋の重さ。橋のたわみ（剛体と考える）。荷物は1点にのる。
+\phzu
+上向きの反力 $R_{\mathrm A}$（Aから0 m）、$R_{\mathrm B}$（\qty{4}{m}）、下向きの荷重\qty{10}{kN}（\qty{1}{m}）。Aの横の反力は0（横の力がない）。
+\phriyu
+わからない力が2つ。Aのまわりのモーメントを使うと $R_{\mathrm A}$ が消えて、$R_{\mathrm B}$ だけの式になる（⑥の手順）。
+\phtateru
+\[ R_{\mathrm B}\times4-10\times1=0,\qquad R_{\mathrm A}+R_{\mathrm B}-10=0 \]
+\phtoku
+$R_{\mathrm B}=\dfrac{10}{4}=\qty{2.5}{kN}$、$R_{\mathrm A}=10-2.5=\qty{7.5}{kN}$。
+\phtashikame
+Bのまわり：$-7.5\times4+10\times3=0$ で合っている。\quad 大きさ：荷物に近いAが多く受けもつ（$3:1$）。\quad 極端な場合：荷物をAの真上に置くと $R_{\mathrm A}=\qty{10}{kN}$、$R_{\mathrm B}=0$。
+\kotae $R_{\mathrm A}=\qty{7.5}{kN}$、$R_{\mathrm B}=\qty{2.5}{kN}$
+\end{phreidai}
+\begin{jibun}
+長さ\qty{6}{m}のはりの、Aから\qty{2}{m}の所に\qty{12}{kN}の荷重がかかっています（Aはピン、Bはローラ）。A・Bの反力を求めましょう。
+\bkjans{$R_{\mathrm B}=\dfrac{12\times2}{6}=\qty{4}{kN}$、$R_{\mathrm A}=\qty{8}{kN}$}
+\end{jibun}
+
+\begin{phreidai}[はしごが、すべらない角]
+\label{ph:力-5:ex6}一様なはしごを壁に立てかけます。床の静止摩擦係数は0.4です。（1）壁がなめらかなとき、（2）壁にも静止摩擦係数0.4の摩擦があるとき、すべらないための、床とはしごの角 $\theta$ の最小の値を求めましょう。
+\phbamen
+角が小さい（はしごが寝る）ほど、すべりやすい。すべり出す直前の角を求める。
+\phmushi
+はしごの太さ。人は乗っていない。
+\phzu
+⑥の図の力に、（2）では壁の摩擦力 $f_2$（上向き。はしごの上のはしが下へすべろうとするのをとめる）を加える。長さ $L$、質量 $m$。
+\phriyu
+4つ（5つ）の力の剛体のつり合い。床の点のまわりのモーメントで、床の2つの力を消す。すべり出す直前は、摩擦力がどちらも最大（$f=\mu N_1$、$f_2=\mu N_2$）。
+\phtateru
+（1）は⑥で導いた $\tan\theta\geqq\dfrac{1}{2\mu}$。（2）は、横：$f=N_2$、たて：$N_1+f_2=mg$、床の点のまわり：$N_2L\sin\theta+f_2L\cos\theta=mg\dfrac{L}{2}\cos\theta$。
+\phtoku
+（1）$\tan\theta\geqq\dfrac{1}{0.8}=1.25$ より $\theta\geqq51.3°$。\par
+（2）$f=\mu N_1$、$f_2=\mu N_2$ を入れる。横の式から $N_2=\mu N_1$。たての式から $N_1(1+\mu^2)=mg$。モーメントの式を $L\cos\theta$ でわって
+\[ N_2\tan\theta+\mu N_2=\frac{mg}{2}\qquad \tan\theta=\frac{mg}{2N_2}-\mu=\frac{1+\mu^2}{2\mu}-\mu=\frac{1-\mu^2}{2\mu} \]
+$\mu=0.4$ では $\tan\theta=\dfrac{0.84}{0.8}=1.05$ で $\theta=46.4°$。
+\phtashikame
+（2）は（1）より小さい角までだいじょうぶ（壁の摩擦が助ける）。\quad 極端な場合：$\mu=1$ なら（2）は $\tan\theta=0$ で、どんな角でもすべらない。（2）で壁の摩擦を0にすると（1）にもどる。
+\kotae （1）約51°\quad（2）約46°
+\end{phreidai}
+\begin{jibun}
+床の静止摩擦係数が0.5のとき、（1）壁がなめらか、（2）壁の静止摩擦係数も0.5、の2つの場合について、はしごがすべらない最小の角を求めましょう。
+\bkjans{（1）\nobreak $\tan\theta\geqq1$ より45°。（2）\nobreak $\tan\theta\geqq\dfrac{1-0.25}{1}=0.75$ より約37°}
+\end{jibun}
+
+\begin{phreidai}[押した箱は、倒れる？　すべる？]
+\label{ph:力-5:ex7}はば\qty{0.4}{m}、高さ\qty{1.2}{m}の一様な箱が床に立っています。床の静止摩擦係数は0.3です。箱の上のはしを横に押して、力を少しずつ大きくすると、倒れるのとすべるのと、どちらが先ですか。
+\phbamen
+背の高い箱を上のほうで押す。重いたなや冷蔵庫を動かすときに起こる。
+\phmushi
+箱の中の物のかたより（重心はまん中とする）。床の変形。
+\phzu
+⑤の図と同じ。$w=0.4$、$h=1.2$、$\mu=0.3$。
+\phriyu
+すべる条件は最大摩擦力、倒れる条件は、垂直抗力がはしに来たときの、はしのまわりのモーメントのつり合い（⑤）。2つの力をくらべる。
+\phtateru
+\[ F_{\text{すべる}}=\mu mg,\qquad F_{\text{倒れる}}\times h=mg\times\frac{w}{2} \]
+\phtoku
+$F_{\text{すべる}}=0.3mg$、$F_{\text{倒れる}}=\dfrac{0.2}{1.2}mg\approx0.17mg$。$0.17mg<0.3mg$ なので、倒れるほうが先。
+\phtashikame
+単位：どちらも $mg$ の何倍か（$m$ によらない）。\quad 大きさ：上のはしを押すと、すべらせるのに要る力の約半分で倒れる。\quad 極端な場合：床の近く（$h$ が小さい所）を押すと $F_{\text{倒れる}}$ が大きくなり、すべるのが先になる。重い物は、低い所を押そう。
+\kotae 倒れるのが先（$0.17mg$ で倒れ出し、すべるには $0.3mg$ がいる）
+\end{phreidai}
+\begin{jibun}
+はば\qty{0.6}{m}、高さ\qty{0.9}{m}の一様な箱（床の静止摩擦係数0.3）の上のはしを横に押します。倒れるのとすべるのと、どちらが先ですか。
+\bkjans{$F_{\text{倒れる}}=\dfrac{0.3}{0.9}mg\approx0.33mg$、$F_{\text{すべる}}=0.3mg$。すべるのが先}
+\end{jibun}
+
+\begin{phreidai}[動滑車と組滑車]
+\label{ph:力-5:ex8}質量\qty{60}{kg}の荷物を、（1）動滑車1つ、（2）4本のひもで支える組滑車でゆっくり持ち上げます。ひもを引く力を求めましょう。また、荷物を\qty{1}{m}上げるには、ひもを何m引きますか。
+\phbamen
+工事現場や倉庫で、重い物を小さな力で持ち上げる。
+\phmushi
+滑車とひもの重さ。軸の摩擦。ゆっくり上げるので、加速度は0（つり合い）。
+\phzu
+荷物と動滑車をまとめた物を、上向きのひも $n$ 本（$n=2$、4）と、下向きの重力 $60g$ がつり合わせる。
+\phriyu
+定滑車ではひもの力は変わらず、動滑車をまとめた物のたての力のつり合い $nT=mg$ を使う（⑦）。
+\phtateru
+\[ 2T=60\times9.8,\qquad 4T=60\times9.8 \]
+\phtoku
+（1）$T=\qty{294}{N}$\quad（2）$T=\qty{147}{N}$。荷物を\qty{1}{m}上げるには、ひもを（1）\qty{2}{m}、（2）\qty{4}{m}引く。
+\phtashikame
+仕事の原理：（1）$294\times2=588$、（2）$147\times4=588$。どちらも $mg\times1=588$（J）と同じ。\quad 大きさ：\qty{147}{N}は約\qty{15}{kg}の重さで、子どもでも引ける。
+\kotae （1）約\qty{290}{N}、\qty{2}{m}\quad（2）約\qty{150}{N}、\qty{4}{m}
+\end{phreidai}
+\begin{jibun}
+質量\qty{40}{kg}の荷物を、（1）動滑車1つ、（2）4本のひもで支える組滑車で持ち上げます。ひもを引く力と、荷物を\qty{0.5}{m}上げるためにひもを引く長さを求めましょう。
+\bkjans{（1）\nobreak \qty{196}{N}、\qty{1}{m}。（2）\nobreak \qty{98}{N}、\qty{2}{m}}
+\end{jibun}
+
+\begin{phreidai}[井戸の輪軸]
+\label{ph:力-5:ex9}ハンドルの半径\qty{0.3}{m}、軸の半径\qty{0.05}{m}の輪軸で、質量\qty{30}{kg}の水入りのおけをゆっくり引き上げます。ハンドルを回す力は何Nですか。力は何分の1になりますか。
+\phbamen
+井戸やウインチのように、ハンドルを回して軸にロープを巻きとる。
+\phmushi
+輪軸とロープの重さ。軸の摩擦。ハンドルにはいつも直角に力をかける。
+\phzu
+⑦の輪軸の図。$R=0.3$、$r=0.05$、$W=30g$。
+\phriyu
+輪と軸は一体なので、軸の中心のまわりのモーメントのつり合い $FR=Wr$（⑦）。
+\phtateru
+\[ F\times0.3=30\times9.8\times0.05 \]
+\phtoku
+$F=\dfrac{14.7}{0.3}=\qty{49}{N}$。$\dfrac{0.05}{0.3}=\dfrac{1}{6}$ なので、力は6分の1。
+\phtashikame
+仕事の原理：ハンドルを1回転させると手は $2\pi\times0.3$、おけは $2\pi\times0.05$ 動く。$49\times2\pi\times0.3=294\times2\pi\times0.05$ で等しい。
+\kotae 約\qty{49}{N}（6分の1）
+\end{phreidai}
+\begin{jibun}
+ハンドルの半径\qty{0.25}{m}、軸の半径\qty{0.05}{m}の輪軸で、\qty{20}{kg}の物を引き上げます。ハンドルを回す力は何Nですか。
+\bkjans{$F=20\times9.8\times\dfrac{0.05}{0.25}=\qty{39.2}{N}$（約\qty{39}{N}。5分の1）}
+\end{jibun}
+
+\begin{phreidai}[L字形の板の重心]
+\label{ph:力-5:ex10}厚さが同じ一様な板で、L字形を作りました。横の部分は\qty{40}{cm}×\qty{10}{cm}、たての部分は\qty{10}{cm}×\qty{30}{cm}です（図）。重心の位置を求めましょう。
+\phbamen
+形がこみいった板も、長方形に分ければ、重心が計算できる。
+\phmushi
+板の厚さのちがい（一様とする）。
+\phzu
+\noindent\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-3,0) -- (48,0) node[anchor=west, pxf lab] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-3) -- (0,46) node[anchor=south, pxf lab] {$y$};
+  \fill[bkTheme!20] (0,0) rectangle (40,10);
+  \fill[bkOrange!25] (0,10) rectangle (10,40);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (40,0) -- (40,10) -- (10,10) -- (10,40) -- (0,40) -- cycle;
+  \draw[bkInk, line width=0.4pt, dashed] (0,10) -- (10,10);
+  \fill[bkInk] (20,5) circle (0.9) (5,25) circle (0.9);
+  \fill[bkRed] (13.6,13.6) circle (1.2);
+  \node[pxf lab, text=bkRed!80!black, anchor=south west] at (14,14) {G};
+  \node[pxf lab, anchor=north] at (40,-1) {40};
+  \node[pxf lab, anchor=east] at (-1,40) {40};
+  \node[pxf lab, anchor=east] at (-1,10) {10};
+  \node[pxf lab, anchor=north] at (10,-1) {10};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}
+左下のかどを原点にする（単位 cm）。横の長方形①（面積 $40\times10=400$、重心 $(20,\ 5)$）と、たての長方形②（面積 $10\times30=300$、重心 $(5,\ 25)$）に分ける。
+\end{minipage}
+\phriyu
+一様な板の重さは面積に比例するので、面積で重みをつけた平均（⑤の流れ図の2段め）。
+\phtateru
+\[ x_{\mathrm G}=\frac{400\times20+300\times5}{400+300},\qquad y_{\mathrm G}=\frac{400\times5+300\times25}{400+300} \]
+\phtoku
+$x_{\mathrm G}=\dfrac{9500}{700}\approx13.6$、$y_{\mathrm G}=\dfrac{9500}{700}\approx13.6$。
+\phtashikame
+L字は、左下から右上への対角線について対称なので、$x_{\mathrm G}=y_{\mathrm G}$ になるはず。合っている。\quad 重心は、2つの長方形の重心を結ぶ線の上の、面積の大きい①に近い所にある。\quad 気づき：点 $(13.6,\ 13.6)$ は板の外（すきまの所）。重心は、物の外にあることもある。
+\kotae $(13.6,\ 13.6)$（cm）。板の外の点
+\end{phreidai}
+\begin{jibun}
+横の部分が\qty{30}{cm}×\qty{10}{cm}、たての部分が\qty{10}{cm}×\qty{20}{cm}（横の部分の左はしの上にのる）のL字形の板の重心を、左下のかどを原点として求めましょう。
+\bkjans{面積300（重心 $(15,\ 5)$）と200（重心 $(5,\ 20)$）。$x_{\mathrm G}=\dfrac{4500+1000}{500}=11$、$y_{\mathrm G}=\dfrac{1500+4000}{500}=11$。$(11,\ 11)$（cm）}
+\end{jibun}
+
+\begin{phreidai}[三角トラスを節点法で解く]
+\label{ph:力-5:ex11}はば（スパン）\qty{4}{m}、高さ\qty{2}{m}の二等辺三角形のトラスの頂点Cに、\qty{10}{kN}の荷重がかかっています。Aはピン、Bはローラです。3本の部材の力を求め、引張か圧縮かを答えましょう。
+\phbamen
+小さな屋根や看板を支える三角形の骨組み。
+\phmushi
+部材の重さ。節点はピン（⑧のモデル化の札）。
+\phzu
+A$(0,\ 0)$、B$(4,\ 0)$、C$(2,\ 2)$。ななめの部材は水平から45°（$\tan$ が $\dfrac{2}{2}=1$）。部材の力は引張と仮定して $N_{\mathrm{AC}}$、$N_{\mathrm{BC}}$、$N_{\mathrm{AB}}$。
+\phriyu
+静定（$m+r=3+3=6=2\times3$）なので、つり合いだけで解ける。まず全体で反力、次に節点Aで2つの部材の力（⑧の節点法）。
+\phtateru
+左右対称なので $R_{\mathrm A}=R_{\mathrm B}=\qty{5}{kN}$。節点A：
+\[ y\text{：}\ 5+N_{\mathrm{AC}}\sin45°=0,\qquad x\text{：}\ N_{\mathrm{AC}}\cos45°+N_{\mathrm{AB}}=0 \]
+\phtoku
+$N_{\mathrm{AC}}=-\dfrac{5}{0.707}\approx\qty{-7.07}{kN}$、$N_{\mathrm{AB}}=-(-7.07)\times0.707=\qty{5}{kN}$。対称なので $N_{\mathrm{BC}}=N_{\mathrm{AC}}$。
+\phtashikame
+節点C：たて $-2\times(-7.07)\times0.707-10\approx0$。\quad 正三角形（60°）の\qty{5.77}{kN}より大きい：屋根がゆるい（角が小さい）ほど、ななめの部材の力は大きい（④の信号機と同じ理由）。
+\kotae ななめの部材AC・BC：\qty{7.07}{kN}の圧縮。下の部材AB：\qty{5}{kN}の引張
+\end{phreidai}
+\begin{jibun}
+スパン\qty{6}{m}、高さ\qty{2}{m}の二等辺三角形のトラスの頂点に\qty{12}{kN}の荷重がかかっています（Aはピン、Bはローラ）。部材の力を求めましょう（ななめの部材の水平からの角を $\alpha$ とすると、$\tan\alpha=\dfrac{2}{3}$、$\sin\alpha\approx0.555$、$\cos\alpha\approx0.832$）。
+\bkjans{反力は\qty{6}{kN}ずつ。ななめの部材 $N=-\dfrac{6}{0.555}\approx\qty{-10.8}{kN}$（圧縮）。下の部材 $10.8\times0.832\approx\qty{9.0}{kN}$（引張）}
+\end{jibun}
+
+\begin{phreidai}[ワーレントラスの下の部材を切断法で]
+\label{ph:力-5:ex12}図\ref{ph:力-5:fig-warren}のトラス（Bに\qty{12}{kN}、Cに\qty{6}{kN}）の、下のまん中の部材BCの力を、切断法で求めましょう。
+\phbamen
+1本の部材の力だけを、すばやく知りたい（点検でひずみをはかった部材と、計算をくらべるときなど）。
+\phmushi
+⑧のモデル化の札と同じ。
+\phzu
+⑧と同じく、EF・BF・BCを切って左がわを考える。反力は $R_{\mathrm A}=\qty{10}{kN}$。Fの座標は $(3,\ \sqrt3)$。
+\phriyu
+BCだけを残すには、ほかの2本（EFとBF）が交わる点Fのまわりのモーメントを使う。
+\phtateru
+左がわにはたらく力のFのまわりのモーメント（左回りを＋）。$R_{\mathrm A}$（Fから左へ\qty{3}{m}、上向き）は右回り、Bの荷重（Fから左へ\qty{1}{m}、下向き）は左回り、$N_{\mathrm{BC}}$（引張と仮定すると右向き、Fより $\sqrt3$ 下）は左回り。
+\[ -10\times3+12\times1+N_{\mathrm{BC}}\times\sqrt3=0 \]
+\phtoku
+\[ N_{\mathrm{BC}}=\frac{30-12}{\sqrt3}=\frac{18}{1.732}\approx\qty{10.4}{kN} \]
+\phtashikame
+プラスなので引張。⑨のプログラムの答え10.39と合っている。\quad 大きさ：Fの真下での「はり全体を曲げようとする働き」$18\,$kN·m を、上下の部材の間の高さ $\sqrt3$ でわった値。高いトラスほど、部材の力は小さくてすむ。
+\kotae \qty{10.4}{kN}の引張
+\end{phreidai}
+\begin{jibun}
+同じワーレントラスで、Bに\qty{10}{kN}、Cに\qty{10}{kN}の荷重がかかるとき、下のまん中の部材BCの力を、切断法で求めましょう。
+\bkjans{$R_{\mathrm A}=\qty{10}{kN}$。$-10\times3+10\times1+N\sqrt3=0$ より $N=\dfrac{20}{\sqrt3}\approx\qty{11.5}{kN}$（引張）}
+\end{jibun}
+
+\begin{phreidai}[ワーレントラスをプログラムで解く]
+\label{ph:力-5:ex13}⑨のプログラムで、ワーレントラスの荷重を、Bに\qty{6}{kN}、Cに\qty{12}{kN}に変えます。上の部材EFとFGの力を求め、例題12の荷重のときとくらべましょう。
+\phbamen
+荷物の位置が変わると、どの部材の力が大きくなるかを、まとめて調べたい。
+\phmushi
+⑧のモデル化の札と同じ。
+\phzu
+図\ref{ph:力-5:fig-warren}。荷重の行だけを書きかえる。
+\phriyu
+部材が11本、反力が3つで、14元の連立方程式（⑨）。手で解くより、行列で一度に解く。
+\phtateru
+プログラムの荷重の行を、\texttt{W = \{'B': (0, -6), 'C': (0, -12)\}} にする。
+\phtoku
+実行すると、\texttt{EF -9.24}、\texttt{FG -11.55}（ほかに \texttt{RAy 8.0}、\texttt{RD 10.0}）。
+\phtashikame
+もとの荷重（Bに12、Cに6）では EF が $-11.55$、FG が $-9.24$。荷重を左右入れかえると、答えも左右入れかわった。トラスが左右対称だから、こうなるはず。\quad 切断法でも：Cのまわり（FGを求める）$-N_{\mathrm{FG}}\sqrt3-10\times2=0$ より $-11.55$。
+\kotae EF：\qty{9.24}{kN}の圧縮、FG：\qty{11.55}{kN}の圧縮（例題12の荷重のときと、左右が入れかわる）
+\end{phreidai}
+\begin{jibun}
+⑨のプログラムで、荷重をBに\qty{9}{kN}、Cに\qty{9}{kN}にすると、上の部材EFとFGの力はいくらになりますか（プログラムで計算するか、切断法で求めましょう）。
+\bkjans{反力は\qty{9}{kN}ずつ。EF・FGとも $-\dfrac{18}{\sqrt3}\approx\qty{-10.39}{kN}$（圧縮）}
+\end{jibun}
+
+\begin{phreidai}[静定か、不静定か]
+\label{ph:力-5:ex14}次の3つの骨組みは、静定・不安定・不静定のどれですか。どれも左はしはピン、右はしはローラで支えます。\par
+（1）三角形（部材3本）\quad（2）四角形（部材4本）\quad（3）四角形に対角線を2本入れたもの（部材6本）
+\phbamen
+骨組みを設計するとき、つり合いの式だけで解けるかを、はじめに確かめる。
+\phmushi
+部材のつけ方のかたより（形はふつうの三角形・四角形）。
+\phzu
+\noindent\begin{minipage}[c]{\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[pxf bar] (0,0) -- (20,0) -- (10,16) -- cycle;
+  \foreach \p in {(0,0),(20,0),(10,16)} {\pxfjoint{\p}}
+  \node[pxf lab, anchor=north] at (10,-2) {（1）};
+  \draw[pxf bar] (40,0) -- (60,0) -- (60,16) -- (40,16) -- cycle;
+  \foreach \p in {(40,0),(60,0),(60,16),(40,16)} {\pxfjoint{\p}}
+  \node[pxf lab, anchor=north] at (50,-2) {（2）};
+  \draw[pxf bar] (80,0) -- (100,0) -- (100,16) -- (80,16) -- cycle;
+  \draw[pxf bar] (80,0) -- (100,16) (100,0) -- (80,16);
+  \foreach \p in {(80,0),(100,0),(100,16),(80,16)} {\pxfjoint{\p}}
+  \node[pxf lab, anchor=north] at (90,-2) {（3）};
+\end{tikzpicture}
+\end{minipage}
+\phriyu
+未知数 $m+r$ と、式の数 $2j$ をくらべる（⑩）。
+\phtateru
+（1）$m+r=3+3$、$2j=6$\quad（2）$m+r=4+3$、$2j=8$\quad（3）$m+r=6+3$、$2j=8$
+\phtoku
+（1）$6=6$\quad（2）$7<8$\quad（3）$9>8$
+\phtashikame
+（2）は⑧で見たとおり、平行四辺形につぶれる。（3）は、対角線を1本ぬいても（1本で $8=8$）形が変わらない。1本よけいなので、不静定。
+\kotae （1）静定\quad（2）不安定\quad（3）不静定
+\end{phreidai}
+\begin{jibun}
+左はしをピン、右はしもピン（ローラではない）で支えた三角形のトラス（部材3本）は、静定・不安定・不静定のどれですか。
+\bkjans{$m+r=3+4=7>2j=6$ なので不静定}
+\end{jibun}
+
+\begin{phreidai}[クレーンは何トンまでつり上げられる？]
+\label{ph:力-5:ex15}トラッククレーンが、アウトリガ（車体の横に張り出す足）を出して荷をつり上げます。モデルでは、旋回の中心から荷の側のアウトリガまで\qty{3.0}{m}、車体（おもりを含む）の質量は\qty{24}{t}で、その重心は旋回の中心から荷と反対がわへ\qty{0.5}{m}の所にあるとします。作業半径（旋回の中心から荷までの水平距離）\qty{10}{m}で、何tの荷をつると、クレーンは倒れ始めますか。序章の\qty{2}{t}の荷では、どれくらい余裕がありますか。
+\phbamen
+荷が重すぎたり、うでをのばしすぎたりすると、クレーンは荷の側へ倒れる。倒れる限界の荷を知りたい。
+\phmushi
+ブーム（うで）の重さ。荷のゆれ。地面のしずみこみ。車体は剛体。
+\phzu
+\noindent\begin{minipage}[c]{\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxfground{(-30,0)}{124}
+  \fill[bkYellow!60] (-22,4) rectangle (14,12);
+  \draw[bkYellow!40!black, line width=0.6pt] (-22,4) rectangle (14,12);
+  \fill[bkYellow!80!black] (-12,12) rectangle (2,19);
+  \draw[bkInk!60, line width=0.6pt] (-16,4) circle (2.8) (-6,4) circle (2.8) (8,4) circle (2.8);
+  \draw[bkInk, line width=1.2pt] (14,6) -- (18,6) -- (18,0);
+  \draw[bkInk, line width=1.2pt] (-22,6) -- (-26,6) -- (-26,0);
+  \fill[bkInk] (18,0) circle (1.1);
+  \node[pxf lab, anchor=north west] at (18.5,-0.5) {Q（倒れる軸）};
+  \draw[bkOrange!80!black, line width=2.2pt] (0,18) -- (78,62);
+  \draw[bkInk, line width=0.6pt] (78,62) -- (78,30);
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (73,22) rectangle (83,30);
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) -- (0,24);
+  \node[pxf lab, anchor=south] at (0,24) {旋回の中心};
+  \fill[bkInk] (-4,10) circle (1);
+  \node[pxf lab, anchor=south east] at (-4.4,10.4) {G};
+  \draw[pxf force, bkInk] (-4,9) -- (-4,-11);
+  \node[pxf lab, anchor=east] at (-4.6,-8) {$24g$};
+  \draw[pxf force, bkRed] (78,21) -- (78,8);
+  \node[pxf lab, anchor=west, text=bkRed!80!black] at (78.6,12) {$mg$};
+  \foreach \a/\b/\t/\yy in {-4/0/0.5/-15, 0/18/3.0/-15, 18/78/7.0/-15} {\draw[bkGray, line width=0.4pt, <->] (\a,\yy) -- (\b,\yy); \node[pxf lab, anchor=north, fill=white] at ({(\a+\b)/2},\yy-0.4) {\qty{\t}{m}};}
+  \draw[bkGray, line width=0.4pt, <->] (0,-22) -- (78,-22);
+  \node[pxf lab, anchor=north, fill=white] at (39,-22.4) {作業半径 \qty{10}{m}};
+\end{tikzpicture}
+\end{minipage}
+倒れる直前には、荷と反対がわのアウトリガは地面から浮き、地面の力はすべて荷の側のアウトリガQにかかる。
+\phriyu
+Qのまわりのモーメントで、Qにかかる地面の力（わからない）を消す（⑤の倒れる条件と同じ考え）。
+\phtateru
+車体はQのまわりに「もどす向き」に $24g\times(3.0+0.5)$、荷は「倒す向き」に $mg\times(10-3.0)$。限界は
+\[ mg\times7.0=24g\times3.5 \]
+\phtoku
+$m=\dfrac{24\times3.5}{7.0}=\qty{12}{t}$。\qty{2}{t}の荷の倒す働きは $2\times9.8\times7.0=\pxfkNm{137}$、もどす働きは $24\times9.8\times3.5=\pxfkNm{823}$。もどす働きが6倍ある。
+\phtashikame
+単位：t のまま比をとってよい（$g$ が消える）。\quad 極端な場合：作業半径を\qty{3}{m}（Qの真上）に近づけると、倒れる荷はいくらでも大きくなる（そのかわり、ブームや地面がもたない）。\quad 序章とのちがい：序章では「旋回の中心のまわり」で $2\times9.8\times10=\pxfkNm{196}$ と見積もった。倒れるかどうかは、本当は倒れる軸Qのまわりで考える。
+\kotae 約\qty{12}{t}で倒れ始める。\qty{2}{t}なら、もどす働きが倒す働きの6倍
+\end{phreidai}
+\begin{phbaisuru}{作業半径 $R$}
+倒れ始める荷 $m=\dfrac{84}{R-3.0}$（t）は、\qty{10}{m}から\qty{20}{m}にすると\qty{12}{t}から約\qty{4.9}{t}へ、半分より小さくなる。倒れる軸Qまでの距離 $R-3.0$ が、7から17へと2倍より大きくのびるから。実際のクレーンは、余裕をもたせた「定格総荷重」までしかつらないように、国の規格（移動式クレーン構造規格）で決められていて、運転席の表示や安全装置が、作業半径ごとの限界を知らせる。
+\par\vspace{2pt}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=88mm, height=44mm, xmin=0, xmax=22, ymin=0, ymax=45, xtick={5,10,15,20}, ytick={10,20,30,40}, xlabel={作業半径 $R$（m）}, ylabel={倒れ始める荷（t）}]
+  \addplot[bkcurve, domain=4.9:21] {84/(x-3)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(5,42) (10,12) (20,4.94)};
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white, inner sep=1pt] at (axis cs:10.6,14) {\qty{12}{t}};
+  \node[font=\sffamily\scriptsize, anchor=south, fill=white, inner sep=1pt] at (axis cs:20,6.5) {\qty{4.9}{t}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+\begin{jibun}
+例題15と同じクレーンで、作業半径を\qty{8}{m}にすると、何tの荷で倒れ始めますか。\qty{3}{t}の荷をつるとき、もどす働きは倒す働きの何倍ですか。
+\bkjans{$m=\dfrac{24\times3.5}{8-3.0}=\qty{16.8}{t}$（約\qty{17}{t}）。倒す働き $3\times9.8\times5=\pxfkNm{147}$、もどす働き\pxfkNm{823}で、約5.6倍}
+\end{jibun}
+
+\begin{phreidai}[段差にローラを引き上げる]
+\label{ph:力-5:ex16}質量\qty{50}{kg}、半径\qty{0.25}{m}のローラ（円柱）を、高さ\qty{0.05}{m}の段差に当て、中心を引いて乗り上げさせます。（1）水平に引くとき、何N以上の力がいりますか。（2）引く向きを変えると、いちばん小さい力ですむのはどの向きで、何Nですか。
+\phbamen
+台車や車いすの車輪で段差をこえるときと同じ。
+\phmushi
+ローラと段差の角の変形・摩擦（角ですべらないとする）。ゆっくり引く。
+\phzu
+⑥の3つの力の図。中心から段差の角Kまでは半径 $r=0.25$。中心の高さは角より $r-h=0.25-0.05=\qty{0.20}{m}$ 上。角から中心までの水平距離は、三平方の定理（数学 4-4）で $d=\sqrt{0.25^2-0.20^2}=\qty{0.15}{m}$。
+\phriyu
+持ち上がる直前、床の力は0で、力は $mg$、$F$、角の力 $R$ の3つ。角Kのまわりのモーメントで $R$ を消す（⑥）。
+\phtateru
+（1）$F$（水平、うでの長さは高さの差 $0.20$）が持ち上げる向き、$mg$（うでの長さは水平距離 $0.15$）がもどす向き。
+\[ F\times0.20=50\times9.8\times0.15 \]
+（2）では、$mg$ のもどす働き $490\times0.15=\pxfNm{73.5}$ は同じ。$F$ のうでの長さ（角Kから $F$ の作用線までの距離）がいちばん長いとき、$F$ がいちばん小さい。$F$ は中心を通るので、うでの長さは、Kから中心までの長さ $r=0.25$ より長くならない。うでが $r$ になるのは、$F$ が「Kと中心を結ぶ線」に垂直なとき。
+\[ F_{\text{最小}}\times0.25=73.5 \]
+\phtoku
+（1）$F=\dfrac{73.5}{0.20}\approx\qty{368}{N}$\par
+（2）$F_{\text{最小}}=\dfrac{73.5}{0.25}=\qty{294}{N}$。向きは、Kと中心を結ぶ線（鉛直から $\sin^{-1}\dfrac{0.15}{0.25}\approx37°$ かたむいている）に垂直なので、水平から約37°上向き。
+\phtashikame
+大きさ：（1）は重さ\qty{490}{N}の0.75倍、（2）は0.6倍。少し上向きに引くほうが楽。\quad 極端な場合：段差が0なら $d=0$ で $F=0$（転がすだけ）。段差が半径に近いと $r-h$ が0に近づき、水平に引いてもほとんど上がらない（大きな車輪ほど段差をこえやすい）。
+\kotae （1）約\qty{370}{N}以上\quad（2）水平から約37°上向きに、約\qty{290}{N}
+\end{phreidai}
+\begin{jibun}
+質量\qty{40}{kg}、半径\qty{0.30}{m}のローラを、高さ\qty{0.06}{m}の段差に当てます。（1）中心を水平に引くとき、何N以上の力がいりますか。（2）いちばん小さい力ですむ向きと、その力を求めましょう。
+\bkjans{$d=\sqrt{0.30^2-0.24^2}=\qty{0.18}{m}$。（1）\nobreak $F\times0.24=40\times9.8\times0.18$ より $F=\qty{294}{N}$（約\qty{290}{N}）。（2）\nobreak $F\times0.30=70.56$ より約\qty{235}{N}。向きは水平から約37°上向き（$\sin^{-1}0.6$）}
+\end{jibun}
+
+%% ======================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{うでの長さ}
+\bkng{うでの長さは、回転の中心から力の作用点までの長さ}
+\bkok{うでの長さは、回転の中心から力の作用線までの距離（垂線の長さ）}
+力が作用点とうでに直角なときだけ、2つは同じです。ななめの力では、作用点までの長さ $r$ に $\sin\theta$ をかけた $r\sin\theta$ がうでの長さです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ローラの反力}
+\bkng{ローラの支点にも、横の反力 $R_x$ がある}
+\bkok{ローラは横にころがるので、面に垂直な反力1つだけ}
+反力の数をまちがえると、静定の判定も、つり合いの式も全部くるいます。図の支点の記号から数えましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{部材の力の符号}
+\bkng{はじめから「この部材は押されている」と決めて、向きを勝手にかく}
+\bkok{全部の部材を引張（＋）と仮定して式を立て、答えがマイナスなら圧縮}
+向きを勘で決めると、節点ごとに向きがそろわず、まちがえやすくなります。仮定をそろえれば、符号が答えを教えてくれます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{2力のつり合いと、作用・反作用}
+\bkng{本にはたらく重力と、机が本を押す力は、作用・反作用}
+\bkok{2つとも「本にはたらく」力なので、つり合いの2力。作用・反作用は「本が机を押す力」と「机が本を押す力」}
+作用・反作用の2力は、別々の物にはたらきます。つり合いの2力は、同じ1つの物にはたらきます。
+\end{tsumazuki}
+
+%% ======================================================================
+\bksection{phgear}{工学ではこう使う}
+
+\begin{phkougaku}[トラス橋の部材の力]
+\noindent 鉄道や道路のトラス橋も、この章のワーレントラスと同じ考えで、部材の力を計算します。橋全体を1本のはりと見ると、まん中の上下の部材の力は、およそ「はりを曲げようとする働き÷トラスの高さ」になります（例題12の確かめと同じ）。
+
+たとえば、長さ\qty{60}{m}、高さ\qty{8}{m}のトラス橋に、1 m あたり\qty{50}{kN}（橋の自重と列車の重さを合わせた、仮の値）が一様にかかるとします。まん中で橋を曲げようとする働きは、はりの公式（力-10）で $\dfrac{50\times60^2}{8}=\pxfkNm{22500}$。これを高さ\qty{8}{m}でわると、まん中の上下の部材の力は約\qty{2800}{kN}（約\qty{2.8}{MN}）です。
+
+\begin{phketa}[構造の力の大きさ]
+\phketaline{鋼の降伏点（SS400、厚さ\qty{16}{mm}以下）}{\qty{245}{N/mm^2}以上（JIS G 3101）}
+\phketaline{上の仮のトラス橋の、まん中の部材の力}{約\qty{2.8}{MN}（モデルの計算）}
+\phketaline{その力を受けるのに要る断面積（降伏点の半分まで使う）}{約\qty{23000}{mm^2}}
+\phboxhead{答えが桁で合っているか}
+\qty{2.8}{MN}を、降伏点の半分の約\qty{120}{N/mm^2}でわると、約\qty{23000}{mm^2}（たとえば\qty{40}{cm}×\qty{6}{cm}ほど）。実際の大きなトラス橋の部材が、太い箱形の鋼材でできているのと、桁が合います。計算した部材の力が、ほかの部材より何桁も大きく（小さく）出たら、単位（kN と N、m と mm）を見直そう。
+\end{phketa}
+
+\pxfhead{クレーンのアウトリガ}
+例題15のように、クレーンが倒れるかどうかは、倒れる軸のまわりのモーメントで決まります。アウトリガを大きく張り出すと、倒れる軸Qが荷の側へ移り、荷の「倒す働き」のうでが短く、車体の「もどす働き」のうでが長くなります。実際のクレーンには、作業半径とブームの角度から、モーメントがどれだけ限界に近いかを計算して知らせる安全装置がついています。
+
+\pxfhead{送電線の鉄塔・タワー}
+送電線の鉄塔や東京タワーも、細い鋼材をトラスに組んだものです。強い風が横から当たると、風上の柱は引張、風下の柱は圧縮になります。設計では、風・雪・電線の重さを荷重として、節点法と同じ計算を、立体のトラスでコンピュータを使って行います（力-16）。
+\end{phkougaku}
+\phstation{構造力学,機械設計,建築構造,移動式クレーン}{自由体図、支点反力、ピン支点・ローラ支点・固定端、軸力、節点法、切断法、静定・不静定、安定モーメント、転倒モーメント}
+
+\begin{column}{自転車のフレームは、2つの三角形}
+ふつうの自転車のフレームは、前の三角形と後ろの三角形を組み合わせた形をしていて、「ダイヤモンドフレーム」とよばれます。人の体重やペダルをふむ力を、細くて軽いパイプで支えるために、トラスと同じ三角形が使われているのです。ただし、自転車のフレームは節点を溶接でがっちり止めているので、本当はトラス（ピン）ではなく、パイプは曲げも少し受けています（モデル化の札の「仮定がくずれるのは」にあたります）。それでも、三角形に組むと形が変わりにくいことは同じです。
+\end{column}
+
+%% ======================================================================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 長さ\qty{0.3}{m}のスパナに直角に押して、\pxfNm{45}のトルクでボルトをしめます。何Nの力がいりますか。
+\bkpans{$F=\dfrac{45}{0.3}=\qty{150}{N}$}
+
+\bkproblem くぎぬきで、支点から手まで\qty{0.25}{m}、支点からくぎまで\qty{0.025}{m}です。手で\qty{150}{N}の力を加えると、くぎには何Nの力がはたらきますか。
+\bkpans{$150\times\dfrac{0.25}{0.025}=\qty{1500}{N}$（10倍）}
+
+\bkproblem 支点から左へ\qty{1.5}{m}の所に\qty{40}{kg}の人がいます。\qty{50}{kg}の人は右の何mにすわればシーソーがつり合いますか。
+\bkpans{$x=\dfrac{40\times1.5}{50}=\qty{1.2}{m}$}
+
+\bkproblem 長さ\qty{5}{m}のはり（Aはピン、Bはローラ）の、Aから\qty{2}{m}の所に\qty{20}{kN}の荷重がかかっています。A・Bの反力を求めましょう。
+\bkpans{$R_{\mathrm B}=\dfrac{20\times2}{5}=\qty{8}{kN}$、$R_{\mathrm A}=\qty{12}{kN}$}
+
+\bkproblem 重さ\qty{100}{N}の電灯を、左右対称な2本のひもでつるします。ひもは水平から30°上向きです。ひも1本の張力を求めましょう。
+\bkpans{$2T\sin30°=100$ より $T=\qty{100}{N}$}
+
+\bkproblem （1）質量\qty{50}{kg}の荷物を動滑車1つで持ち上げるとき、ひもを引く力は何Nですか。（2）ハンドルの半径\qty{0.4}{m}、軸の半径\qty{0.08}{m}の輪軸で、同じ荷物を持ち上げるとき、ハンドルを回す力は何Nですか。
+\bkpans{（1）\nobreak $\dfrac{50\times9.8}{2}=\qty{245}{N}$。（2）\nobreak $490\times\dfrac{0.08}{0.4}=\qty{98}{N}$}
+
+\bkproblem 横の部分が\qty{20}{cm}×\qty{10}{cm}、たての部分が\qty{10}{cm}×\qty{10}{cm}（横の部分の左はしの上にのる）のL字形の一様な板の重心を、左下のかどを原点として求めましょう。
+\bkpans{面積200（重心 $(10,\ 5)$）と100（重心 $(5,\ 15)$）。$x_{\mathrm G}=\dfrac{2000+500}{300}\approx8.3$、$y_{\mathrm G}=\dfrac{1000+1500}{300}\approx8.3$。約 $(8.3,\ 8.3)$（cm）}
+
+\bkproblem （1）質量\qty{80}{kg}の荷物を、4本のひもで支える組滑車で持ち上げます。ひもを引く力と、荷物を\qty{1}{m}上げるためにひもを引く長さを求めましょう。（2）支点から指まで\qty{0.03}{m}、支点から先まで\qty{0.09}{m}のピンセットを、指で\qty{6}{N}の力ではさみます。先にはたらく力は何Nですか。
+\bkpans{（1）\nobreak $\dfrac{80\times9.8}{4}=\qty{196}{N}$、\qty{4}{m}。（2）\nobreak $6\times\dfrac{0.03}{0.09}=\qty{2}{N}$}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem 床の静止摩擦係数が0.3のとき、なめらかな壁に立てかけた一様なはしごがすべらない、床との最小の角を求めましょう。
+\bkpans{$\tan\theta\geqq\dfrac{1}{0.6}\approx1.67$ より約59°}
+
+\bkproblem はば\qty{0.5}{m}、高さ\qty{1.0}{m}の一様な箱（床の静止摩擦係数0.4）の上のはしを横に押します。倒れるのとすべるのと、どちらが先ですか。
+\bkpans{$F_{\text{倒れる}}=\dfrac{0.25}{1.0}mg=0.25mg$、$F_{\text{すべる}}=0.4mg$。倒れるのが先}
+
+\bkproblem スパン\qty{2}{m}、高さ\qty{1}{m}の二等辺三角形のトラス（Aはピン、Bはローラ）の頂点に\qty{8}{kN}の荷重がかかっています。3本の部材の力を求め、引張か圧縮かを答えましょう。
+\bkpans{反力\qty{4}{kN}ずつ。ななめの部材は45°で $-\dfrac{4}{0.707}\approx\qty{-5.66}{kN}$（圧縮）。下の部材 $5.66\times0.707=\qty{4}{kN}$（引張）}
+
+\bkproblem 図\ref{ph:力-5:fig-warren}のワーレントラスで、Bに\qty{6}{kN}、Cに\qty{6}{kN}の荷重がかかるとき、上の部材EFの力を切断法で求めましょう。
+\bkpans{$R_{\mathrm A}=\qty{6}{kN}$。Bのまわり $-N\sqrt3-6\times2=0$ より $N=-\dfrac{12}{\sqrt3}\approx\qty{-6.9}{kN}$（圧縮）}
+
+\bkproblem 部材5本の骨組み（四角形に対角線1本）を、左はしピン・右はしローラで支えます。静定・不安定・不静定のどれですか。
+\bkpans{$m+r=5+3=8=2j=8$ なので静定}
+
+\bkproblem 例題15のクレーンで、作業半径\qty{15}{m}では何tの荷で倒れ始めますか。作業半径\qty{6}{m}ではどうですか。
+\bkpans{\qty{15}{m}：$m=\dfrac{24\times3.5}{15-3.0}=\qty{7}{t}$。\qty{6}{m}：$m=\dfrac{84}{3.0}=\qty{28}{t}$}
+
+\bkproblem ⑨のプログラムで、ワーレントラスの荷重をBに\qty{12}{kN}、Cに\qty{12}{kN}にすると、上の部材EFとFGの力はいくらになりますか（プログラムで計算するか、切断法で求めましょう）。
+\bkpans{反力は\qty{12}{kN}ずつ。EF・FGとも $-\dfrac{24}{\sqrt3}\approx\qty{-13.9}{kN}$（圧縮）}
+
+\bkproblem 質量\qty{30}{kg}、半径\qty{0.50}{m}の車輪を、高さ\qty{0.10}{m}の段差に当て、中心を水平に引いて乗り上げさせます。何N以上の力がいりますか。
+\bkpans{$d=\sqrt{0.50^2-0.40^2}=\qty{0.30}{m}$。$F\times0.40=30\times9.8\times0.30$ より $F=\qty{220.5}{N}$（約\qty{220}{N}）}
+
+\phnyushi
+
+\bkproblem 一様なはしご（質量 $m$）を、鉛直な壁に立てかけます。床と壁の静止摩擦係数はどちらも $\mu$（$\mu<1$）です。（1）すべり出す直前の、床とはしごの角を $\theta$ とするとき、$\tan\theta$ を $\mu$ で表しましょう。（2）$\mu=0.3$ のとき、すべらない最小の角を求めましょう。
+\bkpans{（1）\nobreak $\tan\theta=\dfrac{1-\mu^2}{2\mu}$。（2）\nobreak $\tan\theta=\dfrac{0.91}{0.6}\approx1.52$ より約57°}
+
+\bkproblem 質量 $m$、半径 $r$ の円柱を、高さ $h$（$h<r$）の段差に当てて乗り上げさせます。引く力は円柱の中心にかけ、向きは自由にえらべます。（1）水平に引くときに必要な力と、いちばん小さい力を、$m$、$g$、$r$、$h$ で表しましょう。（2）$m=\qty{60}{kg}$、$r=\qty{0.20}{m}$、$h=\qty{0.04}{m}$ のとき、2つの力を求めましょう。
+\bkpans{（1）\nobreak 角から中心までの水平距離 $d=\sqrt{r^2-(r-h)^2}=\sqrt{2rh-h^2}$。水平：$\dfrac{mg\sqrt{2rh-h^2}}{r-h}$。最小：$\dfrac{mg\sqrt{2rh-h^2}}{r}$（角と中心を結ぶ線に垂直に引く）。（2）\nobreak $d=0.12$。水平 $\dfrac{588\times0.12}{0.16}=\qty{441}{N}$、最小 $\dfrac{588\times0.12}{0.20}\approx\qty{353}{N}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item モーメントで、てこ・滑車・輪軸の力を計算できる。\bkfurref{ph:力-5:sec1}
+\item つり合いの式で、反力や倒れる条件を求められる。\bkfurref{ph:力-5:sec6}
+\item トラスの部材の力を求め、静定か見分けられる。\bkfurref{ph:力-5:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{わからない力が通る点を中心にえらぶと、式から力が1つ消える。この「うまい中心」が、つり合いの問題をとくかぎだよ。}

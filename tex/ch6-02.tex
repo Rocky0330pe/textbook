@@ -1,0 +1,984 @@
+%% 6-2 表計算で解こう：オイラー法（第14回：組 V6-2。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本が指している形：
+%%   2-18 の冷めるお湯の表（部屋20℃、はじめ80℃、1分ごとに差の5%ずつ下がる。10分後55.92℃）＝ Δt＝1分のオイラー法（2-18:512）
+%%   5-8「この方法をオイラー法…第6巻では、この方法でいろいろな運動を計算します（6-2）」
+%%   物理 力-2⑨：ルンゲ・クッタ法の手順と「まん中の値のほうが区間全体の平均に近い」（数学 6-2 のもっと知りたい）
+%%   第14回の決まり：ばね・ダンパーの表計算は「速度を先に進めるオイラー法」（5-15⑩の順）。表の型は t｜x｜v｜a、Δt はセル1つ
+\makeatletter
+% 本文の小見出し（太字の1行）  \bkvichead{見出し}
+\newcommand\bkvichead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\bkvicbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\noindent\ignorespaces}
+% 例題の途中式の行（「式」の札のあとにそろえる）
+\newcommand\bkvicl{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 大事な式のわく  \bkvicframe[はば]{中身}
+\newcommand\bkvicframe[2][108mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=5mm, inner ysep=2.5mm, align=center, text width=#1]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 回路の部品（横向きの抵抗・電池・コンデンサー）。座標は mm
+\newcommand\bkvicres[2]{\filldraw[fill=white, draw=bkInk, line width=0.9pt] (#1-6,#2-2) rectangle (#1+6,#2+2);}% 横向きの抵抗（まん中が (#1,#2)）
+\newcommand\bkviccapv[2]{\draw[bkInk, line width=1.4pt] (#1-5,#2+1.2) -- (#1+5,#2+1.2) (#1-5,#2-1.2) -- (#1+5,#2-1.2);}% たての線の上のコンデンサー
+\newcommand\bkvicbatv[2]{\draw[bkInk, line width=0.9pt] (#1-5,#2+1.2) -- (#1+5,#2+1.2);\draw[bkInk, line width=2.2pt] (#1-2.6,#2-1.2) -- (#1+2.6,#2-1.2);}% たての線の上の電池（上が＋）
+% ばね（横向き）  \bkvicspring{x0}{x1}{y}
+\newcommand\bkvicspring[3]{\draw[bkInk, line width=0.8pt, line join=round, decorate, decoration={coil, aspect=0.45, segment length=2.6mm, amplitude=2.3mm, pre length=2mm, post length=2mm}] (#1,#3) -- (#2,#3);}
+\makeatother
+
+\bkchapter{6}{2}{表計算で解こう：\\オイラー法}{\bklevel{2}}{表計算で解こう：オイラー法}
+\bkmichishirube{2-16,2-18,2-19,5-8,5-13,6-1}{6-5,6-7,6-14,7-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 「次の値＝今の値＋今の変わる速さ×$\Delta t$」をくり返して、微分方程式を表計算で解ける。
+\item \bklevel{2}\enspace $\Delta t$ を小さくすると答えが正確になることを、表とグラフで確かめられる。
+\item \bklevel{3}\enspace ばねのような2回微分の式を、位置と速度の2つの列で、正しい順に解ける。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+熱いお湯は、部屋との温度の差が大きいほど速く冷めます。6-1 では、このきまりを $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ と書きました（$T$ は温度〔℃〕、$t$ は時刻〔分〕、部屋は20\,℃）。80\,℃のお湯は、10分後に何℃でしょう。ルールが教えてくれるのは「今の冷める速さ」だけです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  % 左：今（80℃）
+  \bkcup{(10,0)}{16}{18}{0.75}{0}
+  \foreach \s in {6,10,14} {\draw[bkGray, line width=0.7pt] (\s,20) .. controls (\s-1.5,22.5) and (\s+1.5,24.5) .. (\s,27);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (10,-1.5) {今};
+  \node[font=\sffamily\bfseries\small, text=bkRed!80!black, anchor=north] at (10,-5.5) {80\,℃};
+  % 矢印
+  \draw[bk arrow, bkInk, line width=1pt] (21,9) -- (35,9);
+  \node[font=\sffamily\footnotesize, anchor=south] at (28,10.5) {10分};
+  % 右：10分後（？）
+  \bkcup{(46,0)}{16}{18}{0.6}{0}
+  \draw[bkGray, line width=0.7pt] (46,20) .. controls (44.5,22.5) and (47.5,24.5) .. (46,27);
+  \node[font=\sffamily\footnotesize, anchor=north] at (46,-1.5) {10分後};
+  \node[font=\sffamily\bfseries\small, text=bkBlue, anchor=north] at (46,-5.5) {？\,℃};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+5-18 では、このルールに合う関数を「答えの候補リスト」から見つけました。でも、世の中のルールには、候補リストにない形のものがたくさんあります。空気の抵抗が速さの2乗に比例する落下（6-5）、大きくゆれる振り子（6-6）、そして天気です。
+
+この章では、\textbf{どんなルールにも使える方法}を学びます。5-8 で出てきた「少しずつ時間を進める方法」（オイラー法）です。答えの式を知らなくても、表計算と電卓だけで未来が計算できます。最後に、式の答えとくらべて、どれくらい正確かも確かめます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[電卓で、1分ずつ冷ましてみよう]
+ルールは $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、はじめの温度は80\,℃です。電卓を用意しましょう。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 今の温度80を右辺に入れて、$-0.05\times(80-20)$ を計算しよう。これが「今の冷める速さ」〔℃/分〕です。
+\item 1分のあいだ、ずっとこの速さで冷めるとして、1分後の温度＝$80+(\text{①の速さ})\times1$ を計算しよう。
+\item 1分後の温度を「今の温度」にして、①②をくり返そう。3分後まで、下の表をノートにうめよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{4}{Q[c,m,wd=14mm]}}, rowsep=1.5pt}
+時刻 $t$〔分〕 & 0 & 1 & 2 & 3 \\
+温度 $T$〔℃〕 & 80 & ア & イ & ウ \\
+今の冷める速さ〔℃/分〕 & $-3$ & エ & オ & \\
+\end{bktable}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent 1行ずつ確かめます。どの行も「右辺を計算する」→「速さ×1分をたす」の2つの手順です。
+\begin{bkhenkei}
+-0.05\times(80-20)=-3 & ① 0分の冷める速さ \\
+80+(-3)\times1=77 & ② 1分後の温度（ア） \\
+-0.05\times(77-20)=-2.85 & ① 1分の冷める速さ（エ） \\
+77+(-2.85)\times1=74.15 & ② 2分後の温度（イ） \\
+-0.05\times(74.15-20)=-2.7075 & ① 2分の冷める速さ（オ） \\
+74.15+(-2.7075)\times1=71.4425 & ② 3分後の温度（ウ） \\
+\end{bkhenkei}
+答えは、ア77、イ74.15、ウ71.44（小数第3位を四捨五入）、エ$-2.85$、オ$-2.71$ です。温度が下がるにつれて、冷める速さも小さくなっていきます（3.00 → 2.85 → 2.71）。ルールのとおり、部屋との差が小さくなったからです。
+
+この計算をあと7回くり返せば、10分後の温度がわかります。ルールが教えてくれるのは「今の速さ」だけなのに、くり返すことで、先へ先へと進んでいけるのです。
+
+\begin{omoidasou}
+\bkrecall{6-1}{$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ は「温度の変わる速さ〔℃/分〕は、部屋との差の0.05倍で、下がる向き」。}
+\bkrecall{5-8}{次の位置 $\approx$ 今の位置＋今の速度×$\Delta t$ をくり返す方法がオイラー法。ずれは $\Delta t$ に比例。}
+\bkrecall{2-18}{表計算は、上の行から下の行を計算し、式をコピーしてくり返す。\texttt{\$D\$2} はコピーしても動かない番地。}
+\bkrecall{5-15}{ばね（$\ddot x=-x$）を、速度と位置の2つの列で表計算した（5-13 の投げ上げも2つの列）。}
+\bkrecall{5-14}{コンデンサーの電圧 $V=10\,(1-e^{-t/2})$。$e^{-1}=0.368$。}
+\bkrecall{2-19}{\texttt{for i in range(5):} の下の行を5回くり返す。0.1を10回たしても、ぴったり1にはならない。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{今の速さで、$\Delta t$ だけ進む}
+
+\leavevmode\label{bk:6-2:ippo}ルールの左辺 $\dfrac{\dd T}{\dd t}$ は、温度の「今の変わる速さ」でした（5-3・6-1）。単位は℃/分です。
+
+短い時間 $\Delta t$ のあいだなら、変わる速さはほとんど変わりません。だから、そのあいだに温度が変わる量 $\Delta T$ は、
+\[ \Delta T\approx\text{今の変わる速さ}\times\Delta t \]
+です。5-8 で「進む距離 $\approx$ 速度×$\Delta t$」としたのと同じ考えです。速度は「位置の変わる速さ」でした。ここでは、それが「温度の変わる速さ」に変わっただけです。
+
+今の温度に $\Delta T$ をたせば、少しあとの温度になります。
+\[ \text{次の温度}\approx\text{今の温度}+\text{今の変わる速さ}\times\Delta t \]
+「今の変わる速さ」は、ルールの右辺に今の温度を入れれば計算できます。やってみようの①が、その計算でした。
+
+\bkvichead{グラフで見ると：接線にそって1歩}
+このことをグラフで見てみましょう。グラフの傾きは「変わる速さ」です（3-5・5-3）。だから「今の変わる速さで $\Delta t$ 進む」は、今いる点で接線を引き、接線の上を横に $\Delta t$ だけ進むことです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=62mm, xmin=0, xmax=5.6, ymin=64, ymax=83, xtick={0,1,2,3,4,5}, ytick={66,70,74,78,82}, xlabel={$t$（分）}, ylabel={$T$（℃）}, axis x line=bottom, axis y line=left, axis x line shift=0]
+  \addplot[bkcurve, domain=0:5.3, samples=40] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve2, line width=1.3pt, mark=*, mark size=1.6pt] coordinates {(0,80) (1,77) (2,74.15) (3,71.4425) (4,68.8704) (5,66.4269)};
+  % 1歩めの三角形
+  \draw[bkInk, line width=0.6pt, dashed] (axis cs:0,80) -- (axis cs:1,80) -- (axis cs:1,77);
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:0.5,80.15) {$\Delta t=1$};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.08,78.6) {速さ×$\Delta t=-3$};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue, fill=white, inner sep=1pt] at (axis cs:3.3,71.2) {ほんとうの温度};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:2.9,71.2) {1歩ずつ進めた温度};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{オレンジの点が、1分ごとに進めた温度。1歩は、その点での接線の向きに進む（はじめの1歩は、横に1分、たてに $-3$\,℃）。青い線は、5-18 で求めた式の答え。}
+\label{bk:6-2:fig-ippo}
+\end{bkfigure}
+
+図\ref{bk:6-2:fig-ippo}のオレンジの点は、どれも、1つ前の点での接線の上にあります。点をつないだ折れ線は、青い線（ほんとうの温度）のすぐ近くを通っています。
+
+\bkvichead{いつでも使える形に書く}
+冷めるお湯だけでなく、いろいろなルールで使えるように、文字で書いておきます。6-1 のように、ルールを
+\[ \frac{\dd y}{\dd t}=f(y)\qquad\text{（$y$ の変わる速さは、今の $y$ で決まる）} \]
+と書きます。お湯なら $y$ が温度 $T$、$f(y)$ が $-0.05\,(T-20)$ です。
+
+はじめの値を $y_0$、1歩進んだ値を $y_1$、2歩進んだ値を $y_2$、…と書きます。右下の小さな数は「何歩めか」を表す名札です（3-2 の $x_1$ と同じ。かけ算ではありません）。$n$ 歩めの値 $y_n$ は、時刻 $t=n\,\Delta t$ のときの値です。すると、1歩の計算は次の1行になります。
+\bkvicframe[96mm]{$\displaystyle y_{n+1}=y_n+f(y_n)\,\Delta t$\\[3pt]{\small 次の値 ＝ 今の値 ＋ 今の変わる速さ × $\Delta t$}}
+$n=0$ とすれば $y_1=y_0+f(y_0)\,\Delta t$（はじめから1歩め）、$n=1$ とすれば $y_2=y_1+f(y_1)\,\Delta t$（1歩めから2歩め）です。この1行を何回もくり返して、少しずつ先の値を求める方法を\textbf{オイラー法}といいます。5-8 で名前だけ出てきた方法です。\bkidx{おいらーほう}{オイラー法}
+
+このように、式で解かずに、数の計算をくり返して答えを求めることを\textbf{数値計算}（すうちけいさん）といいます。2-16 で「表でためして答えに近づく方法は、大学では数値計算として学ぶ」と予告したものです。\bkidx{すうちけいさん}{数値計算}
+
+\bkkigocards{\bkkigocard{$y_n$}{ワイ・エヌ}{$n$ 歩めの $y$ の値（時刻 $n\,\Delta t$ の値）。$y_{n+1}$ はその次の値}{y sub n}{6-2}}{}
+
+\begin{seikaku}
+右辺に時刻 $t$ も入るルール $\dfrac{\dd y}{\dd t}=f(t,\ y)$ でも、同じように $y_{n+1}=y_n+f(t_n,\ y_n)\,\Delta t$（$t_n=n\,\Delta t$）と進めます。右辺が $t$ だけのルール（6-3 の形）でも、右辺に $y$ が入るルール（6-4 の形）でも、オイラー法は使えます。
+\end{seikaku}
+
+\bksubsection{2}{2-18 の表は、オイラー法だった}
+
+\label{bk:6-2:2-18}やってみようの計算を、10分後まで続けます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=9mm] Q[c,m,wd=13mm] Q[c,m,wd=13mm] Q[c,m,wd=14mm]}, rowsep=0.5pt, cells={font=\small}, row{1}={font=\sffamily\footnotesize}}
+$t$ & $T$ & 速さ & ほんとう \\
+0 & 80 & $-3$ & 80 \\
+1 & 77 & $-2.85$ & 77.07 \\
+2 & 74.15 & $-2.71$ & 74.29 \\
+3 & 71.44 & $-2.57$ & 71.64 \\
+4 & 68.87 & $-2.44$ & 69.12 \\
+5 & 66.43 & $-2.32$ & 66.73 \\
+\end{bktable}\hspace{4mm}%
+\begin{bktable}{colspec={Q[c,m,wd=9mm] Q[c,m,wd=13mm] Q[c,m,wd=13mm] Q[c,m,wd=14mm]}, rowsep=0.5pt, cells={font=\small}, row{1}={font=\sffamily\footnotesize}}
+$t$ & $T$ & 速さ & ほんとう \\
+6 & 64.11 & $-2.21$ & 64.45 \\
+7 & 61.90 & $-2.10$ & 62.28 \\
+8 & 59.81 & $-1.99$ & 60.22 \\
+9 & 57.82 & $-1.89$ & 58.26 \\
+10 & {\bfseries 55.92} & $-1.80$ & {\bfseries 56.39} \\
+ & & & \\
+\end{bktable}
+\bktabcaption{1分ごとに進めた温度 $T$〔℃〕と、今の速さ〔℃/分〕（小数第3位を四捨五入）。$t$ は時刻〔分〕。「ほんとう」は5-18 の式 $T=20+60e^{-0.05t}$ の値〔℃〕。}
+\end{bkcenter}
+
+10分後は55.92\,℃です。この数に見覚えはありませんか。第2巻の 2-18 で、表計算で作った「冷めるお湯の表」の10分後も、55.92\,℃でした。2-18 では、「1分ごとに、部屋との温度の差の5\,\%ずつ下がる」として計算しました。式で書くと、
+\[ \text{次の温度}=\text{今の温度}-0.05\times(\text{今の温度}-20) \]
+です。これは、オイラー法の1行で $\Delta t=1$ 分としたもの
+\[ T_{n+1}=T_n+\bigl(-0.05\,(T_n-20)\bigr)\times1 \]
+と、まったく同じです。\textbf{2-18 の表は、$\Delta t=1$ 分のオイラー法だった}のです。
+
+\bkvichead{差は、毎回同じ割合でへる}
+オイラー法の1行を、部屋との差で見なおします。5-18④と同じように、差を $u_n=T_n-20$ と書きます。オイラー法の1行の両辺から20をひくと、左辺は $T_{n+1}-20=u_{n+1}$、右辺の $T_n-20$ は $u_n$ になります。
+\begin{bkhenkei}
+T_{n+1}=T_n-0.05\,(T_n-20) & オイラー法の1行（$\Delta t=1$） \\
+u_{n+1}=u_n-0.05\,u_n & 両辺から20をひいて、差 $u$ で書く \\
+u_{n+1}=(1-0.05)\,u_n & $u_n$ でくくる（3-8） \\
+u_{n+1}=0.95\,u_n & $1-0.05=0.95$ \\
+\end{bkhenkei}
+部屋との差は、1歩ごとに0.95倍になります。差60\,℃が、57、54.15、…とへっていきます。同じ割合でへるので、10歩で $0.95^{10}$ 倍です（3-11 の倍々）。$0.95^{10}=0.5987$ なので、10分後の差は $60\times0.5987=35.92$\,℃、温度は $20+35.92=55.92$\,℃。表と同じ数が、1回の計算で出てきました。
+
+\bksubsection{3}{なぜ、少しずれるのか}
+
+\label{bk:6-2:naze}表の10分後は55.92\,℃、ほんとうは56.39\,℃でした。オイラー法の温度は、ほんとうより0.47\,℃低くなっています。なぜでしょう。2通りの見方で考えます。
+
+\bkvichead{見方1：グラフの曲がり方}
+図\ref{bk:6-2:fig-ippo}の青い線は、時間がたつにつれて傾きがゆるやかになっていきます。下へ下がり方が、だんだん小さくなるからです。このように曲がっている線では、接線は線より下にあります。オイラー法の1歩は接線の上を進むので、1歩ごとに、ほんとうの線より少し下に着いてしまいます。
+
+\bkvichead{見方2：冷める速さのグラフの面積}
+冷める速さ（下がる速さの大きさ）を、たて軸にとったグラフで考えます。5-9 で学んだように、速さのグラフの面積は「変わった量」です。ここでは、下がった温度です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=48mm, xmin=0, xmax=4.6, ymin=0, ymax=3.6, xtick={1,2,3,4}, ytick={1,2,3}, xlabel={$t$（分）}, ylabel={冷める速さ（℃/分）}, every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south west, xshift=-3mm, yshift=1mm, font=\sffamily\footnotesize, text=bkInk}]
+  \foreach \k/\h in {0/3,1/2.85,2/2.7075,3/2.5721} {\edef\tmp{\noexpand\fill[bkOrange!22, draw=bkOrange!80!black, line width=0.4pt] (axis cs:\k,0) rectangle (axis cs:{\k+1},\h);}\tmp}
+  \addplot[bkcurve, domain=0:4.3, samples=40] {3*exp(-0.05*x)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright
+青い線が、ほんとうの冷める速さ。1分のあいだにも、少しずつ小さくなっていきます。オレンジの長方形は、オイラー法が使った速さ。どの1分も、\textbf{はじめ}の速さのまま1分間冷めるとしています。長方形の上のはしは、青い線より少し上に出ます。
+\end{minipage}
+
+\medskip
+はじめの1分で、数でくらべます。ほんとうの温度は、1分で2.93\,℃下がります（$80-77.07=2.93$）。オイラー法は、はじめの速さ3\,℃/分のまま1分進めたので、3\,℃下げました。下げすぎた分は $3-2.93=0.07$\,℃で、長方形が青い線の上に出た部分の面積です。この下げすぎが、1歩ごとに少しずつたまって、10分で0.47\,℃のずれになりました。
+
+\bksubsection{4}{表計算で：$\Delta t$ を1つのセルに}
+
+\label{bk:6-2:hyou}表計算で、$\Delta t$ を自由に変えられる表を作ります。$\Delta t$ の値を1つのセル（D2）に入れておき、式からはその番地を使います。\bkidx{きざみはば}{刻み幅（$\Delta t$）}
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & $t$〔分〕 & $T$〔℃〕 & 変わる速さ & $\Delta t$ \\
+2 & 0 & 80 & $-3$ & 0.5 \\
+3 & 0.5 & 78.5 & $-2.925$ & \\
+4 & 1 & 77.0375 & $-2.8519$ & \\
+5 & 1.5 & 75.6116 & $-2.7806$ & \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & \\
+22 & 10 & 56.1613 & $-1.8081$ & \\}
+\bktabcaption{D2 に $\Delta t=0.5$ を入れた表（数は小数第4位まで）。$\Delta t=0.5$ なら20歩で10分。}
+\end{bkcenter}
+入れる式は、次の3つです。どれも、1つ上の行（今）から、その行（次）を作ります。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item C2 に \texttt{=-0.05*(B2-20)}\quad ルールの右辺。今の温度 B2 から、今の変わる速さを出す。
+\item B3 に \texttt{=B2+C2*\$D\$2}\quad オイラー法の1行。今の温度＋今の速さ×$\Delta t$。
+\item A3 に \texttt{=A2+\$D\$2}\quad 時刻を $\Delta t$ だけ進める。
+\end{enumerate}
+C2 を C3 から下へ、B3 と A3 を B4・A4 から下へコピーします。D2 に \texttt{\$} をつけるのは、コピーしても $\Delta t$ のセルを指したままにするためです（2-18）。\texttt{\$} がないと、1行下では D3 を指してしまいます。D3 は空なので0とみなされ、温度がまったく変わらない表になります。
+
+D2 の数を変えるだけで、表全体が新しい $\Delta t$ で計算しなおされます。これが、$\Delta t$ を1つのセルに置くよさです。表ができたら、A列とB列を選んで「散布図」のグラフを作ると、⑤の図のように、時刻と温度のグラフが見られます。
+
+\bksubsection{5}{$\Delta t$ を小さくすると、ずれも小さくなる}
+
+\label{bk:6-2:zure}D2 の $\Delta t$ を、5・2・1・0.5・0.1・0.01 に変えて、10分後の温度をくらべます。ほんとうの値は56.39\,℃です（5-18）。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=12mm] Q[c,m,wd=17mm] Q[c,m,wd=11mm]}, rowsep=0.8pt, cells={font=\small}}
+$\Delta t$〔分〕 & 歩数 & 10分後〔℃〕 & ずれ \\
+5 & 2 & 53.75 & 2.64 \\
+2 & 5 & 55.43 & 0.96 \\
+1 & 10 & 55.92 & 0.47 \\
+0.5 & 20 & 56.16 & 0.23 \\
+0.1 & 100 & 56.35 & 0.05 \\
+0.01 & 1000 & 56.387 & 0.005 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=56mm, height=44mm, xmin=0, xmax=2.4, ymin=0, ymax=1.15, xtick={0.5,1,1.5,2}, ytick={0.5,1}, xlabel={$\Delta t$}, ylabel={ずれ（℃）}]
+  \addplot[bkthin, dashed, domain=0:2.2] {0.47*x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(2,0.9624) (1,0.4676) (0.5,0.2306) (0.1,0.0456)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\medskip
+表とグラフから、次のことがわかります。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $\Delta t$ を半分にすると（2→1→0.5）、ずれもほぼ半分になる（0.96、0.47、0.23）。
+\item 点は、原点を通る直線（点線）にほぼのる。ずれは $\Delta t$ に比例する（2-15）。
+\end{itemize}
+5-8 の落ちるボールでも、ずれは $\Delta t$ に比例しました。オイラー法では、いつもこうなります。わけは、③の見方2の図にあります。下げすぎた1つの部分（長方形が線の上に出た部分）は、横が $\Delta t$、たても $\Delta t$ に比例する小さな三角形に近い形なので、面積はおよそ $\Delta t\times\Delta t$ に比例します。$\Delta t$ を半分にすると、1つの部分の面積は $\frac{1}{4}$ になりますが、歩数は2倍になります。合計は $\frac{1}{4}\times2=\frac{1}{2}$ で、半分になるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=32, ymin=20, ymax=86, xtick={0,5,10,15,20,25,30}, ytick={30,40,50,60,70,80}, xlabel={$t$（分）}, ylabel={$T$（℃）}, axis x line=bottom, axis y line=left]
+  \addplot[bkcurve, domain=0:30, samples=50] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve2, line width=1.1pt, mark=*, mark size=1.7pt] coordinates {(0,80) (5,65) (10,53.75) (15,45.312) (20,38.984) (25,34.238) (30,30.679)};
+  \addplot[bkcurve3, line width=1.1pt, mark=square*, mark size=1.4pt] coordinates {(0,80) (2,74) (4,68.6) (6,63.74) (8,59.366) (10,55.429) (12,51.886) (14,48.698) (16,45.828) (18,43.245) (20,40.921) (22,38.829) (24,36.952) (26,35.257) (28,33.732) (30,32.359)};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue, fill=white, inner sep=1pt] at (axis cs:19,44.8) {ほんとう};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkGreen!60!black, fill=white, inner sep=1pt] at (axis cs:14.6,44.6) {$\Delta t=2$};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:12.4,37.5) {$\Delta t=5$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$\Delta t=5$ 分（オレンジ）と $\Delta t=2$ 分（緑）の結果を、ほんとうの温度（青）とくらべた。$\Delta t$ が小さいほど、青い線に近い。}
+\end{bkfigure}
+
+$\Delta t$ を小さくすればするほど、答えは正確になります。そのかわり、計算の回数（歩数）がふえます。ずれを $\frac{1}{10}$ にしたければ、歩数を10倍にすればよいのです。$\Delta t$ を半分にするとずれもほぼ半分になる方法を、\textbf{1次の方法}といいます。
+
+\bkhatenaref の答え：10分後のお湯は、約\textbf{56.4\,℃}です。$\Delta t$ を小さくしていくと、56.16、56.35、56.387…と、56.39\,℃に近づいていきます。式の答え（5-18）を知らなくても、表計算だけで、ここまで正確に求められました。
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+初期値問題 $\dfrac{\dd y}{\dd t}=f(t,y)$，$y(t_0)=y_0$ に対し，刻み幅を $h$ として $t_n=t_0+nh$ における近似値 $y_n$ を
+\[ y_{n+1}=y_n+h\,f(t_n,y_n)\qquad(n=0,1,2,\ldots) \]
+により順に定める方法をオイラー法という。オイラー法の大域誤差は $O(h)$ であり，1次の方法である。
+\end{bkhonbun}
+\bkyaku{「初期値問題」は、ルールとはじめの値の組。「刻み幅 $h$」は、この章の $\Delta t$。$f(t,y)$ は「右辺は時刻 $t$ と今の値 $y$ で決まる」という書き方。「大域誤差」は、何歩も進めたあとのずれ。$O(h)$（オー・エイチ）は「ずれが $h$ に比例するくらいの大きさ」という意味で、⑤の「$\Delta t$ を半分にするとずれも半分」のこと。}
+\end{senmonsho}
+
+\bksubsection{6}{$\Delta t$ を大きくしすぎると、ふらふらする}
+
+\label{bk:6-2:okisugi}では、計算を楽にしようとして、$\Delta t$ を大きくするとどうなるでしょう。$\Delta t=30$ 分にしてみます。
+\[ T_1=80+\bigl(-0.05\times(80-20)\bigr)\times30=80+(-3)\times30=80-90=-10 \]
+30分後のお湯が $-10$\,℃になりました。20\,℃の部屋で、お湯が部屋より冷たくなることはありません。この答えは、まちがいです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=60mm, xmin=0, xmax=196, ymin=-24, ymax=92, xtick={0,30,60,90,120,150,180}, ytick={-20,0,20,40,60,80}, xlabel={$t$（分）}, ylabel={$T$（℃）}, axis x line=bottom, axis y line=left]
+  \addplot[bkthin, line width=0.5pt, domain=0:190] {0};
+  \addplot[bkthin, dashed, domain=0:185] {20};
+  \addplot[bkcurve, domain=0:185, samples=60] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve3, line width=1.1pt, mark=square*, mark size=1.4pt] coordinates {(0,80) (10,50) (20,35) (30,27.5) (40,23.75) (50,21.875) (60,20.938) (70,20.469) (80,20.234) (90,20.117)};
+  \addplot[bkRed, line width=1.2pt, mark=*, mark size=1.7pt] coordinates {(0,80) (30,-10) (60,35) (90,12.5) (120,23.75) (150,18.125) (180,20.938)};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:36,-15) {$\Delta t=30$：部屋より冷たくなった！};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGreen!60!black, fill=white, inner sep=1pt] at (axis cs:42,41) {$\Delta t=10$};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkGray, fill=white, inner sep=1pt] at (axis cs:165,26) {部屋 20\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$\Delta t=30$ 分（赤）では、部屋の温度の上と下を、ふらふら行き来する。$\Delta t=10$ 分（緑）は、ずれは大きいが、ふらふらはしない。}
+\end{bkfigure}
+
+$\Delta t=30$ では、はじめの冷める速さ3\,℃/分のまま、30分も進めてしまいました。ほんとうは、30分のあいだに差はどんどん小さくなり、冷める速さもおそくなります。それを無視して90\,℃も下げたので、部屋の温度を通りこしたのです。
+
+②と同じように差で見ると、1歩ごとに差は $(1-0.05\,\Delta t)$ 倍になります。$\Delta t=30$ なら $1-1.5=-0.5$ 倍です。差の向き（＋と－）が毎回入れかわるので、ふらふらします。$\Delta t=50$ なら $-1.5$ 倍で、ふらふらしながら差が大きくなり、計算がこわれます。
+
+\Needspace{8\baselineskip}
+\begin{seikaku}
+このルールでオイラー法がふらふらしないのは、$1-0.05\,\Delta t$ が0以上のとき、つまり $\Delta t\leqq20$ 分のときです。こわれない（差が大きくならない）のは、$-1<1-0.05\,\Delta t$ のとき、つまり $\Delta t<40$ 分のときです。数値計算がこわれることを、\textbf{数値の不安定}といいます。
+\end{seikaku}
+
+$\Delta t$ は、ようすが大きく変わるのにかかる時間よりも、ずっと短くしなければいけません。このお湯では、その目安は $1\div0.05=20$ 分です（6-4 で「時定数」という名前で学びます）。$\Delta t=1$ 分なら、その $\frac{1}{20}$ なので安心です。
+
+\bksubsection{7}{プログラムで、何万回でも}
+
+\label{bk:6-2:python}$\Delta t$ を0.001分にすると、10分まで1万歩です。表計算でも1万行コピーすればできますが、プログラム（2-19）なら数行で書けます。$\Delta t=0.1$ 分（100歩）で書いてみます。\par\nobreak
+\begin{bkcode}[Python]
+T = 80.0          \# はじめの温度（℃）
+t = 0.0           \# 時刻（分）
+dt = 0.1          \# Δt（分）
+for i in range(100):                  \# 100回くり返す
+    T = T + (-0.05 * (T - 20)) * dt   \# オイラー法の1行
+    t = t + dt
+print(t, T)
+\end{bkcode}
+\begin{bkcodeout}
+9.99999999999998 56.34622618944369
+\end{bkcodeout}
+5行めが、オイラー法の1行です。\texttt{(-0.05 * (T - 20))} がルールの右辺（今の変わる速さ）、\texttt{* dt} が「×$\Delta t$」です。\texttt{T =} の右側では今の温度を使い、計算が終わってから T を次の温度に入れかえます（2-19 の代入）。
+
+\texttt{dt = 0.001} と \texttt{range(10000)} に変えると、次のようになります。
+\begin{bkcodeout}
+9.999999999999897 56.391384672442726
+\end{bkcodeout}
+ほんとうの56.391840…と、小数第3位まで合いました。
+
+\bkvichead{2種類のずれ}
+この結果には、2種類のずれが見えています。
+\begin{itemize}[leftmargin=1.6\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{温度のずれ（56.346 と56.392）}\quad $\Delta t$ のあいだ速さを一定とみなしたことによるずれです。$\Delta t$ を小さくすると小さくなります。これを\textbf{打ち切りのずれ}（打ち切り誤差）といいます。
+\item \textbf{時刻のずれ（10ではなく9.99999999999998）}\quad コンピュータが0.1をぴったり覚えられないこと（2-19）によるずれです。これを\textbf{丸めのずれ}（丸め誤差）といいます。1回ごとにはとても小さく、ふつうは問題になりません。
+\end{itemize}
+数値計算のずれのほとんどは、打ち切りのずれです。$\Delta t$ を小さくすると打ち切りのずれはへりますが、歩数がふえて丸めのずれが少しずつたまります。ふつうの計算では、打ち切りのずれのほうがずっと大きいので、まず $\Delta t$ を小さくすることを考えます。
+
+\bksubsection{8}{電気の回路：コンデンサーの充電}
+
+\label{bk:6-2:rc}オイラー法は、温度だけでなく、電気の回路にも使えます。電池・抵抗・コンデンサーを1列につなぎ、スイッチを入れた瞬間からの、コンデンサーの電圧の変わり方を計算します（5-14 の例題と同じ回路です）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % わく（導線）
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,15.8) (0,18.2) -- (0,34) -- (6,34);
+  \draw[bkInk, line width=0.9pt] (16,34) -- (26,34) (38,34) -- (48,34) -- (48,18.2) (48,15.8) -- (48,0) -- (0,0);
+  % スイッチ
+  \fill[bkInk] (6,34) circle (0.9) (16,34) circle (0.9);
+  \draw[bkInk, line width=0.9pt] (6,34) -- (15.5,35.2);
+  % 部品
+  \bkvicbatv{0}{17}
+  \bkvicres{32}{34}
+  \bkviccapv{48}{17}
+  % 名前
+  \node[font=\sffamily\footnotesize, anchor=east] at (-6.5,17) {$E=\qty{10}{V}$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (32,37) {$R=\qty{20}{k\ohm}$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (54.5,17) {$C=\qty{100}{\micro F}$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (11,36.5) {スイッチ};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (-1.5,19) {＋};
+  % 電流の矢印
+  \draw[bk arrow, bkRed, line width=0.9pt] (20,30) -- (25,30);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north] at (22.5,28.5) {$i$};
+  % 電圧
+  \draw[bkBlue, line width=0.7pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (41,22) -- (41,12);
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=east] at (40,17) {$V$};
+\end{tikzpicture}
+\bkfigcaption{電池・抵抗・コンデンサーを1列につないだ回路（RC 回路）。$i$ は流れる電流、$V$ はコンデンサーの電圧。}
+\end{bkfigure}
+コンデンサーは、電気をためる部品です（カメラのフラッシュは、コンデンサーにためた電気を一気に流して光ります）。スイッチを入れると、電池から抵抗を通って電流 $i$ が流れ、コンデンサーに電気がたまっていきます。たまるにつれて、コンデンサーの電圧 $V$ が上がります。
+
+ルールを、1行ずつ組み立てます。使うきまりは、中学校の理科のオームの法則と、6-1 のコンデンサーのきまりです。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 1列につないだ回路では、電池の電圧 $E$ を、抵抗とコンデンサーで分け合います。コンデンサーが $V$ を受けもつので、抵抗にかかる電圧は $E-V$ です。
+\item オームの法則（電圧＝抵抗×電流）から、抵抗を流れる電流は $i=\dfrac{E-V}{R}$。
+\item コンデンサーのきまり：たまった電気の量 $q$〔C〕は電圧に比例し、$q=CV$。$C$ は静電容量〔F〕です。
+\item たまった電気の量の変わる速さが、流れこむ電流です：$\dfrac{\dd q}{\dd t}=i$（電流は「1秒あたりに流れる電気の量」だから）。
+\item $q=CV$ で $C$ は変わらないので、$\dfrac{\dd q}{\dd t}=C\dfrac{\dd V}{\dd t}$（定数倍は前に出せる。5-4）。②・④とあわせて、
+\[ C\frac{\dd V}{\dd t}=\frac{E-V}{R}\qquad\text{両辺を $C$ でわって}\qquad \frac{\dd V}{\dd t}=\frac{E-V}{RC} \]
+\end{enumerate}
+「電圧の変わる速さは、あとどれだけたまれるか（$E-V$）に比例する」というルールです。
+
+\noindent\textbf{$RC$ を計算する}\quad 単位の接頭語は、k が1000倍、μ（マイクロ）が $\frac{1}{\num{1000000}}$ 倍です（第5巻の巻末）。
+\[ RC=(20\times1000)\,\unit{\ohm}\times\frac{100}{\num{1000000}}\,\unit{F}=\num{20000}\times0.0001=\qty{2}{s} \]
+Ω×F が s（秒）になるのは、Ω＝V/A、F＝C/V（$q=CV$ から）、C＝A·s（電流×時間）なので、$\dfrac{\unit{V}}{\unit{A}}\times\dfrac{\unit{A.s}}{\unit{V}}=\unit{s}$ となるからです。だから、ルールは
+\[ \frac{\dd V}{\dd t}=\frac{10-V}{2}\qquad\text{（$V$ は電圧〔V〕、$t$ は時刻〔s〕）} \]
+です。はじめ（スイッチを入れた瞬間）は、コンデンサーに電気がないので $V_0=0$ です。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\bksheet{3}{14.5}{%
+1 & $t$〔s〕 & $V$〔V〕 & 変わる速さ \\
+2 & 0 & 0 & 5 \\
+3 & 0.5 & 2.5 & 3.75 \\
+4 & 1 & 4.375 & 2.8125 \\
+5 & 1.5 & 5.7813 & 2.1094 \\
+6 & 2 & 6.8359 & 1.5820 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+14 & 6 & 9.6832 & 0.1584 \\}
+\par\vspace{2pt}{\footnotesize\sffamily $\Delta t=0.5$\,s。C2 は \texttt{=(10-B2)/2}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=46mm, xmin=0, xmax=6.8, ymin=0, ymax=11.5, xtick={1,2,3,4,5,6}, ytick={2,4,6,8,10}, xlabel={$t$（s）}, ylabel={$V$（V）}]
+  \addplot[bkthin, dashed, domain=0:6.3] {10};
+  \addplot[bkcurve, domain=0:6.2, samples=40] {10*(1-exp(-x/2))};
+  \addplot[bkcurve2, line width=1.1pt, mark=*, mark size=1.4pt] coordinates {(0,0) (0.5,2.5) (1,4.375) (1.5,5.7813) (2,6.8359) (2.5,7.627) (3,8.2202) (3.5,8.6652) (4,8.9989) (4.5,9.2492) (5,9.4369) (5.5,9.5776) (6,9.6832)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\medskip
+オレンジの点がオイラー法、青い線が5-14 の式 $V=10\,(1-e^{-t/2})$ です。2秒後の値は、オイラー法で6.84\,V、式で $10\times(1-0.368)=6.32$\,V。今度は、オイラー法のほうが大きくなりました。電圧のふえる速さは時間とともに小さくなるのに、はじめの大きい速さのまま0.5秒進めたからです（③の見方2と同じ理由。下げすぎの代わりに、上げすぎになる）。$\Delta t=0.1$\,s にすると、2秒後は6.42\,V になり、6.32\,V に近づきます。
+
+ルールの形を、冷めるお湯とならべてみましょう。
+\[ \frac{\dd T}{\dd t}=\frac{20-T}{20},\qquad \frac{\dd V}{\dd t}=\frac{10-V}{2} \]
+お湯のルール $-0.05\,(T-20)$ は、$\dfrac{20-T}{20}$ と書きなおせます（$0.05=\frac{1}{20}$ で、$-(T-20)=20-T$）。どちらも「目標の値（20\,℃・10\,V）との差に比例して、目標に近づく」形です。温度と電気という、まったくちがう物なのに、ルールの形は同じです。6-4 では、この形を式で解きます。
+
+\Needspace{14\baselineskip}
+\begin{motto}[2]
+\textbf{電気をためたあとで：放電も同じ方法で}\par
+10\,V までたまったコンデンサーを、電池を外して抵抗だけにつなぐと、電気が流れ出て電圧が下がります（放電）。6-1 で読んだように、ルールは $\dfrac{\dd V}{\dd t}=-\dfrac{V}{RC}=-\dfrac{V}{2}$ です。$\Delta t=0.5$\,s で進めると、
+\begin{bkhenkei}
+10+\Bigl(-\frac{10}{2}\Bigr)\times0.5=7.5 & 0.5秒後 \\
+7.5+\Bigl(-\frac{7.5}{2}\Bigr)\times0.5=5.625 & 1秒後 \\
+\end{bkhenkei}
+1歩ごとに $1-0.5\div2=0.75$ 倍になるので、2秒後（4歩）は $10\times0.75^4=3.16$\,V です。ほんとうの値は $10e^{-1}=3.68$\,V で（6-4 で式を求めます）、オイラー法は少し下げすぎています。冷めるお湯と同じ理由です。
+\end{motto}
+
+\bksubsection{9}{2回微分の式は、2つの列で：ばね}
+
+\label{bk:6-2:bane}次は、ばねにつけたおもりの動きです。なめらかな床の上で、質量 $m=\qty{0.5}{kg}$ のおもりを、ばね定数 $k=\qty{8}{N/m}$ のばねにつけます。つり合いの位置から \qty{0.1}{m} 引いて、静かに手をはなします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (-4,-2) rectangle (0,16);
+  \draw[bkInk, line width=0.9pt] (0,-2) -- (0,16);
+  \fill[bkGray!25] (0,-4) rectangle (96,-2);
+  \draw[bkInk, line width=0.9pt] (0,-2) -- (96,-2);
+  \bkvicspring{0}{58}{5}
+  \filldraw[fill=bkBlue!30, draw=bkBlue!70!black, line width=0.8pt] (58,-2) rectangle (70,12);
+  \node[font=\sffamily\footnotesize] at (64,5) {$m$};
+  \draw[bkGray, dashed, line width=0.6pt] (48,-6) -- (48,20);
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkGray] at (46.5,16) {つり合いの位置};
+  \draw[bk arrow, bkInk, line width=0.8pt] (48,-9) -- (86,-9) node[anchor=west, font=\sffamily\footnotesize] {$x$};
+  \draw[bkInk, line width=0.6pt] (48,-8) -- (48,-10);
+  \node[font=\sffamily\footnotesize, anchor=north] at (48,-10.5) {0};
+  \draw[bkInk, line width=0.6pt] (58,-8) -- (58,-10);
+  \node[font=\sffamily\footnotesize, anchor=north] at (58,-10.5) {0.1};
+  \draw[bk arrow, bkRed, line width=1pt] (68,15) -- (58,15);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (69.5,15) {ばねの力 $-kx$};
+\end{tikzpicture}
+\bkfigcaption{ばねとおもり。おもりが右（$x>0$）にあると、ばねは左向きに引きもどす。}
+\end{bkfigure}
+
+6-1 で読んだように、運動のルールは $m\dfrac{\dd^2x}{\dd t^2}=-kx$ です。両辺を $m$ でわると、加速度 $a=\dfrac{\dd^2x}{\dd t^2}$ は
+\[ a=-\frac{k}{m}\,x=-\frac{8}{0.5}\,x=-16x \]
+です（5-15 で $\omega^2=16$、$\omega=4$、周期約1.57\,s と求めたばね）。
+
+ここで困ったことがあります。オイラー法で位置 $x$ を進めるには、「位置の今の変わる速さ」が必要です。でも、このルールが教えてくれるのは加速度（2回微分）だけです。
+
+そこで、5-13・5-15 と同じように、\textbf{位置と速度の2つの列}を使います。ルールを、1回微分の式2つに分けるのです。
+\begin{align*}
+\frac{\dd x}{\dd t}&=v &&\text{（位置の変わる速さは速度。5-5）}\\
+\frac{\dd v}{\dd t}&=-16x &&\text{（速度の変わる速さは加速度。ルール）}
+\end{align*}
+$x$ の列は「今の速度」で進め、$v$ の列は「今の加速度」で進めます。はじめの値も2つ必要です。はじめの位置 $x_0=0.1$ と、はじめの速度 $v_0=0$（静かに手をはなした）です。2回微分の式には、はじめの状態が2つ要る（5-18）ことが、ここでは「2つの列のはじめの値」になって表れています。
+
+\bkvichead{ふつうのオイラー法で進める}
+まず、どちらの列も「今の値」だけで進めてみます。列は $t$｜$x$｜$v$｜$a$ の順、$\Delta t$ は E2 に置きます（第6巻では、ばねの表をいつもこの型で作ります）。
+\begin{bkcenter}
+\bksheet{5}{17}{%
+1 & $t$〔s〕 & $x$〔m〕 & $v$〔m/s〕 & $a$〔m/s$^2$〕 & $\Delta t$ \\
+2 & 0 & 0.1 & 0 & $-1.6$ & 0.02 \\
+3 & 0.02 & 0.1 & $-0.032$ & $-1.6$ & \\
+4 & 0.04 & 0.09936 & $-0.064$ & $-1.5898$ & \\
+5 & 0.06 & 0.09808 & $-0.0958$ & $-1.5693$ & \\}
+\bktabcaption{D2 は \texttt{=-16*B2}、C3 は \texttt{=C2+D2*\$E\$2}、B3 は \texttt{=B2+C2*\$E\$2}（今の速度 C2 で位置を進める）。}
+\end{bkcenter}
+
+これを5秒まで続けたのが、次の図のオレンジの線です。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=58mm, xmin=0, xmax=5.3, ymin=-0.24, ymax=0.25, xtick={0,1,2,3,4,5}, ytick={-0.2,-0.1,0,0.1,0.2}, yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={$x$（m）}, axis x line=bottom, axis y line=left]
+  \addplot[bkInk, line width=0.5pt, domain=0:5.2] {0};
+  \addplot[bkthin, domain=0:5, samples=150] {0.1*cos(deg(4*x))};
+  \addplot[bkcurve2, line width=1.2pt] coordinates {(0.00,0.1000) (0.08,0.0962) (0.16,0.0824) (0.24,0.0598) (0.32,0.0304) (0.40,-0.0028) (0.48,-0.0365) (0.56,-0.0674) (0.64,-0.0922) (0.72,-0.1082) (0.80,-0.1135) (0.88,-0.1072) (0.96,-0.0899) (1.04,-0.0628) (1.12,-0.0286) (1.20,0.0094) (1.28,0.0474) (1.36,0.0815) (1.44,0.1082) (1.52,0.1245) (1.60,0.1284) (1.68,0.1192) (1.76,0.0976) (1.84,0.0654) (1.92,0.0257) (2.00,-0.0177) (2.08,-0.0604) (2.16,-0.0980) (2.24,-0.1265) (2.32,-0.1428) (2.40,-0.1449) (2.48,-0.1321) (2.56,-0.1055) (2.64,-0.0674) (2.72,-0.0213) (2.80,0.0281) (2.88,0.0759) (2.96,0.1171) (3.04,0.1475) (3.12,0.1634) (3.20,0.1631) (3.28,0.1459) (3.36,0.1134) (3.44,0.0684) (3.52,0.0152) (3.60,-0.0409) (3.68,-0.0942) (3.76,-0.1393) (3.84,-0.1713) (3.92,-0.1865) (4.00,-0.1830) (4.08,-0.1606) (4.16,-0.1212) (4.24,-0.0683) (4.32,-0.0071) (4.40,0.0565) (4.48,0.1159) (4.56,0.1650) (4.64,0.1984) (4.72,0.2123) (4.80,0.2048) (4.88,0.1761) (4.96,0.1286)};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:1.75,0.21) {ふつうのオイラー法};
+  \draw[bkGray, line width=0.5pt] (axis cs:0.3,0.158) -- (axis cs:0.15,0.104);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:0.25,0.158) {ほんとう};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$\Delta t=0.02$\,s のふつうのオイラー法（オレンジ）。灰色の線は、5-18 の式の答え $x=0.1\cos4t$。山の高さが、1回ごとに大きくなっていく。}
+\label{bk:6-2:fig-fukuramu}
+\end{bkfigure}
+
+ゆれの山が、0.1、0.129、0.165、0.212 m と、1周ごとに約1.29倍に大きくなっていきます。でも、床になめらかで、空気の抵抗もないばねなら、ゆれはずっと0.1\,m のままのはずです。ゆれが勝手に大きくなるのは、計算のずれです。
+
+\bksubsection{10}{なぜゆれがふくらむのか：円で見る}
+
+\label{bk:6-2:en}わけを、4-8・5-15 の「円運動の影」で考えます。ほんとうの動きは $x=0.1\cos4t$ です。速度を4でわった $\dfrac{v}{4}$ は、$\dfrac{v}{4}=-0.1\sin4t$ です（$v=\dot x=-0.4\sin4t$。5-15）。そこで、横に $x$、たてに $\dfrac{v}{4}$ をとった点を考えると、
+\[ x^2+\Bigl(\frac{v}{4}\Bigr)^2=0.1^2\cos^24t+0.1^2\sin^24t=0.1^2 \]
+で（4-8 の $\sin^2+\cos^2=1$）、点は半径0.1の円の上を回ります。ゆれの山の高さは、この円の半径です。
+
+\noindent\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-8,0) -- (44,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-22) -- (0,30) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {$v/4$};
+  \draw[bkBlue, line width=1pt] (30,0) arc (0:100:30);
+  \draw[bkBlue, line width=1pt] (30,0) arc (0:-38:30);
+  \fill[bkInk] (0,0) circle (0.8);
+  \node[font=\sffamily\footnotesize, anchor=north east] at (-0.8,-0.8) {O};
+  \draw[bkInk, line width=0.8pt] (0,0) -- (30,0);
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,0.8) {$r$};
+  \draw[bkOrange, line width=1.4pt, -{Stealth[length=4pt]}] (30,0) -- (30,-12);
+  \draw[bkRed, line width=0.8pt, dashed] (0,0) -- (30,-12);
+  \fill[bkInk] (30,0) circle (1.1);
+  \fill[bkOrange] (30,-12) circle (1.1);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (31.5,-6) {1歩};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!80!black, fill=white, inner sep=1pt] at (14,-9.5) {新しい半径};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (31,0.8) {P};
+  \draw[bkInk, line width=0.5pt] (27.5,0) -- (27.5,-2.5) -- (30,-2.5);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}\raggedright
+はしの点Pで手をはなした所から、1歩だけ進めます。ふつうのオイラー法の1歩は、円の接線の向き（半径に垂直）にまっすぐ進みます（5-15① の「円の上を回る点の速度は、半径に垂直」と同じ）。接線は円の外側へ出ていくので、1歩進むたびに、点は円の少し外に出てしまいます。（図は、わかりやすいように1歩を大きくかいています。）
+\end{minipage}
+
+\medskip
+数で確かめます。$\Delta t=0.02$ の1歩めで、点は $(0.1,\ 0)$ から $(0.1,\ -0.008)$ へ動きます（表の3行め：$x=0.1$、$\frac{v}{4}=\frac{-0.032}{4}=-0.008$）。真下に動いたので、直角三角形ができます。新しい半径は、三平方の定理（4-4）で、
+\[ \sqrt{0.1^2+0.008^2}=\sqrt{0.010064}=0.10032 \]
+1歩で、半径が1.0032倍になりました。どの1歩でも同じ形の直角三角形ができるので、毎回1.0032倍です。1周は $1.571\div0.02\approx79$ 歩なので、1周で $1.0032^{79}\approx1.29$ 倍。表計算で見た1.29倍と、ぴったり合いました。
+
+\Needspace{14\baselineskip}
+\begin{motto}[3]
+\textbf{1歩で何倍になるかを、文字で}\par
+半径を $r$、1歩の長さを $s$ とすると、新しい半径は $\sqrt{r^2+s^2}$ です。1歩の長さは、円の上を回る点の速さ（半径×$\omega$。4-8 の $v=r\omega$）に $\Delta t$ をかけた $s=r\,\omega\,\Delta t$ です。だから、
+\[ \sqrt{r^2+(r\,\omega\,\Delta t)^2}=r\sqrt{1+(\omega\,\Delta t)^2} \]
+で、1歩ごとに $\sqrt{1+(\omega\,\Delta t)^2}$ 倍にふくらみます。$\omega=4$、$\Delta t=0.02$ なら $\omega\,\Delta t=0.08$、$\sqrt{1.0064}=1.0032$ です。$\Delta t$ を小さくすれば1よりわずかに大きいだけになりますが、1より大きいことは変わらないので、長い時間計算すると、いつかはふくらみが目立ってきます。
+\end{motto}
+
+\bksubsection{11}{速度を先に進めるオイラー法}
+
+\label{bk:6-2:saki}5-15 でばねを動かしたときは、順番を少し変えていました。\textbf{先に速度を新しくし、その新しい速度で位置を進める}のです。表計算では、B3 の式の C2 を C3 にかえるだけです。
+
+\begin{bkcenter}
+\bksheet{5}{17}{%
+1 & $t$〔s〕 & $x$〔m〕 & $v$〔m/s〕 & $a$〔m/s$^2$〕 & $\Delta t$ \\
+2 & 0 & 0.1 & 0 & $-1.6$ & 0.02 \\
+3 & 0.02 & 0.09936 & $-0.032$ & $-1.5898$ & \\
+4 & 0.04 & 0.09808 & $-0.0638$ & $-1.5693$ & \\
+5 & 0.06 & 0.09618 & $-0.0952$ & $-1.5389$ & \\}
+\bktabcaption{C3 は \texttt{=C2+D2*\$E\$2}（同じ）、B3 は \texttt{=B2+{\bfseries C3}*\$E\$2}（新しい速度 C3 で位置を進める）。}
+\end{bkcenter}
+1歩の手順は、次の3つです。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 今の位置から、今の加速度を出す：$a=-16x$
+\item 速度を進める：新しい $v$＝今の $v$＋$a\times\Delta t$
+\item 位置を進める：新しい $x$＝今の $x$＋\textbf{新しい} $v\times\Delta t$
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=48mm, xmin=0, xmax=5.3, ymin=-0.14, ymax=0.14, xtick={0,1,2,3,4,5}, ytick={-0.1,0,0.1}, yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={$x$（m）}, axis x line=bottom, axis y line=left]
+  \addplot[bkInk, line width=0.5pt, domain=0:5.2] {0};
+  \addplot[bkthin, line width=2.6pt, bkGray!45, domain=0:5, samples=150] {0.1*cos(deg(4*x))};
+  \addplot[bkcurve, line width=1.2pt] coordinates {(0.00,0.1000) (0.08,0.0937) (0.16,0.0778) (0.24,0.0541) (0.32,0.0248) (0.40,-0.0070) (0.48,-0.0380) (0.56,-0.0652) (0.64,-0.0858) (0.72,-0.0977) (0.80,-0.0996) (0.88,-0.0914) (0.96,-0.0739) (1.04,-0.0490) (1.12,-0.0190) (1.20,0.0129) (1.28,0.0434) (1.36,0.0696) (1.44,0.0887) (1.52,0.0988) (1.60,0.0988) (1.68,0.0888) (1.76,0.0698) (1.84,0.0437) (1.92,0.0132) (2.00,-0.0187) (2.08,-0.0487) (2.16,-0.0737) (2.24,-0.0913) (2.32,-0.0996) (2.40,-0.0977) (2.48,-0.0859) (2.56,-0.0655) (2.64,-0.0383) (2.72,-0.0073) (2.80,0.0245) (2.88,0.0538) (2.96,0.0776) (3.04,0.0936) (3.12,0.1000) (3.20,0.0963) (3.28,0.0828) (3.36,0.0609) (3.44,0.0328) (3.52,0.0013) (3.60,-0.0302) (3.68,-0.0587) (3.76,-0.0812) (3.84,-0.0955) (3.92,-0.1001) (4.00,-0.0945) (4.08,-0.0793) (4.16,-0.0560) (4.24,-0.0271) (4.32,0.0046) (4.40,0.0358) (4.48,0.0634) (4.56,0.0845) (4.64,0.0971) (4.72,0.0998) (4.80,0.0924) (4.88,0.0755) (4.96,0.0510)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{速度を先に進めるオイラー法（青、$\Delta t=0.02$\,s）。太い灰色の線（ほんとう）とほとんど重なり、山の高さは5秒たっても0.1\,m のまま。}
+\end{bkfigure}
+
+山の高さは、何周しても0.1\,m のままです。同じ $\Delta t$ なのに、順番を変えただけで、ゆれがふくらまなくなりました。この方法を、この本では\textbf{速度を先に進めるオイラー法}とよびます。第6巻のばね・ダンパーの表計算（6-6・6-7・6-13・6-14）は、いつもこの方法で計算します。\bkidx{そくどをさきにすすめるおいらーほう}{速度を先に進めるオイラー法}
+
+なぜうまくいくのでしょう。⑩の円の図で考えると、位置を進めるときに「新しい速度」を使うので、1歩の向きが、接線から少しだけ円の内側にかたむきます。円の外へ出ようとする分と、内側にかたむく分が、1周のあいだに打ち消し合うのです。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=0.62mm, y=0.62mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-44,0) -- (46,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-40) -- (0,44) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {$v/4$};
+  \draw[bkOrange, line width=1pt] plot[smooth] coordinates {(25.0,0.0) (24.5,-6.0) (22.6,-11.7) (19.4,-16.9) (14.9,-21.2) (9.6,-24.4) (3.5,-26.2) (-2.8,-26.6) (-9.1,-25.4) (-15.0,-22.7) (-20.2,-18.7) (-24.3,-13.5) (-27.0,-7.4) (-28.3,-0.8) (-27.9,6.0) (-26.0,12.6) (-22.5,18.6) (-17.6,23.6) (-11.6,27.3) (-4.8,29.6) (2.3,30.2) (9.5,29.0) (16.3,26.2) (22.3,21.8) (27.1,16.0) (30.4,9.3) (32.0,1.8) (31.8,-5.9) (29.8,-13.4) (26.0,-20.3) (20.7,-26.1) (14.0,-30.6) (6.4,-33.3) (-1.7,-34.2) (-9.9,-33.2) (-17.6,-30.2) (-24.5,-25.4) (-30.1,-19.0) (-34.1,-11.5) (-36.2,-3.1) (-36.2,5.7) (-34.2,14.2) (-30.1,22.1) (-24.2,28.9) (-16.8,34.2) (-8.3,37.5) (0.8,38.8) (10.1,37.9) (19.0,34.7) (26.9,29.5) (33.5,22.5) (38.2,14.1) (40.9,4.6)};
+  \draw[bkBlue, line width=1.4pt] (0,0) circle (25);
+  \fill[bkInk] (25,0) circle (1);
+  \node[font=\sffamily\footnotesize, anchor=south east] at (23.5,1) {スタート};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedright
+$\Delta t=0.02$\,s で2周（約3.1秒）計算したときの、点 $\bigl(x,\ \frac{v}{4}\bigr)$ の動き。オレンジはふつうのオイラー法で、うずまきのように外へ広がります。青は速度を先に進めるオイラー法で、半径0.1の円の上をほぼ回り続けます。
+\end{minipage}
+
+\Needspace{8\baselineskip}
+\begin{seikaku}
+速度を先に進めるオイラー法は、大学の本では半陰的（はんいんてき）オイラー法、またはシンプレクティック・オイラー法とよばれます。1歩のあいだに、点 $\bigl(x,\ \frac{v}{4}\bigr)$ が円から少し出たり入ったりすることはありますが（$\Delta t=0.02$ では半径が0.098〜0.102のあいだ）、長い時間たってもふくらんだり、しぼんだりしません。ただし、ゆれの周期は少しずれるので、$\Delta t$ は周期よりずっと短く（周期の数十分の1ほどに）します。
+\end{seikaku}
+
+\bkvichead{プログラムで、ばねを動かす}
+⑦と同じように、プログラムでも書けます。くり返す中の3行が、⑪の手順①②③です。\par\nobreak
+\begin{bkcode}[Python]
+x = 0.1           \# 位置（m）
+v = 0.0           \# 速度（m/s）
+dt = 0.02         \# Δt（s）
+for i in range(1, 251):          \# 250歩で5秒
+    a = -16 * x                  \# ① 今の加速度
+    v = v + a * dt               \# ② 速度を先に進める
+    x = x + v * dt               \# ③ 新しい速度で位置を進める
+    if i \% 50 == 0:              \# 50歩（1秒）ごとに表示
+        print(round(i * dt, 2), round(x, 4))
+\end{bkcode}
+\begin{bkcodeout}
+1.0 -0.0623
+2.0 -0.0187
+3.0 0.0867
+4.0 -0.0945
+5.0 0.0367
+\end{bkcodeout}
+\texttt{range(1, 251)} は、\texttt{i} を1から250まで変えてくり返す書き方です。\texttt{i \% 50} は「\texttt{i} を50でわったあまり」で、それが0のとき（50歩ごと）だけ表示します。式の答え $0.1\cos4t$ は、1秒ごとに $-0.0654$、$-0.0146$、$0.0844$、$-0.0958$、$0.0408$ なので、小数第2位くらいまで合っています。②と③の行を入れかえて、位置を先に（古い速度で）進めると、ふつうのオイラー法になり、ゆれがふくらんでいきます。
+
+\begin{motto}[4]
+\textbf{ルンゲ・クッタ法}\par
+オイラー法は、区間のはじめの速さだけを使うので、ずれが $\Delta t$ に比例しました。そこで、1歩進む前に、区間のあいだの変わる速さを何回か見積もって、うまく平均してから進む方法があります。もっともよく使われるのが、次の\textbf{ルンゲ・クッタ法}（4次）です。区切る時間を $h$、変わる速さを表す式を $f(y)$ とします（物理シリーズ『力学』力-2 と同じ手順です）。
+\begin{enumerate}[label={\bkcircled[bkGray]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $k_1=f(y)$：はじめの変わる速さ
+\item $k_2=f\Bigl(y+k_1\dfrac{h}{2}\Bigr)$：$k_1$ で半分進んだ所の変わる速さ
+\item $k_3=f\Bigl(y+k_2\dfrac{h}{2}\Bigr)$：$k_2$ で半分進んだ所の変わる速さ（見積もりのやり直し）
+\item $k_4=f(y+k_3h)$：$k_3$ で1歩進んだ所の変わる速さ
+\item 次の値 ＝ $y+\dfrac{k_1+2k_2+2k_3+k_4}{6}\,h$
+\end{enumerate}
+⑤の平均で、まん中の $k_2$、$k_3$ を2倍に重くしているのは、区間のまん中の値のほうが、区間全体の平均に近いからです（台形より、まん中の高さで長方形をかくほうが、面積が正確になるのと同じ考え方）。重さの合計が $1+2+2+1=6$ なので、6でわって平均にします。
+
+冷めるお湯（$f(T)=-0.05\,(T-20)$、$h=1$ 分）で、はじめの1歩を計算します。
+\begin{bkhenkei}
+k_1=f(80)=-3 & はじめの速さ \\
+k_2=f(78.5)=-2.925 & $80+k_1\times0.5=78.5$ の所 \\
+k_3=f(78.5375)=-2.926875 & $80+k_2\times0.5=78.5375$ の所 \\
+k_4=f(77.073125)=-2.853656 & $80+k_3\times1=77.073125$ の所 \\
+k_1+2k_2+2k_3+k_4=-17.55741 & 重みをつけてたす \\
+-17.55741\div6=-2.92623 & 6でわる（重みつきの平均） \\
+80+(-2.92623)\times1=77.07377 & 次の温度 \\
+\end{bkhenkei}
+ほんとうの1分後は77.07377\,℃（5-18 の式。$20+60e^{-0.05}$）で、小数第5位まで合っています。10分後まで $h=1$ で進めると56.391841\,℃で、ほんとうとのずれはわずか0.000001\,℃です。オイラー法（$\Delta t=1$）のずれ0.47\,℃とくらべると、約47万分の1です。$h$ を半分にすると、ずれは $\frac{1}{16}$ になります（$\frac{1}{2}$ を4回かけた数。「4次」の名前のわけ）。ドイツのルンゲ（1895年）とクッタ（1901年）が考えた方法で、今も、天気予報やロケットの計算、回路のシミュレーターなどで広く使われています。
+\end{motto}
+
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{オイラー法}$y_{n+1}=y_n+f(y_n)\,\Delta t$\\[3pt]
+\tsl{}次の値 ＝ 今の値 ＋ 今の変わる速さ × $\Delta t$\\[3pt]
+\tsl{ずれ}$\Delta t$ を半分にすると、ずれもほぼ半分（1次の方法）\\[3pt]
+\tsl{$\Delta t$ の大きさ}ようすが変わる時間よりずっと短く\\[3pt]
+\tsl{2回微分の式}位置と速度の2つの列で。ばねは速度を先に
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{オイラー法}{「次の値＝今の値＋今の変わる速さ×$\Delta t$」をくり返して、微分方程式の答えを数で求める方法。}
+\bkword{数値計算}{式で解かずに、数の計算をくり返して答えを求めること。}
+\bkword{刻み幅}{1歩で進める時間 $\Delta t$。専門書では $h$ と書くことが多い。}
+\bkword{打ち切りのずれ}{$\Delta t$ のあいだ変わる速さを一定とみなしたことによるずれ。$\Delta t$ を小さくするとへる。}
+\bkword{丸めのずれ}{コンピュータが数をぴったり覚えられないことによるずれ（2-19）。}
+\bkword{速度を先に進めるオイラー法}{ばねなどで、先に速度を新しくし、その新しい速度で位置を進める方法。ゆれがふくらまない。}
+\end{kotoba}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[オイラー法の1歩をくり返す]
+部屋の温度が20\,℃で、お茶の温度 $T$〔℃〕が $\dfrac{\dd T}{\dd t}=-0.1\,(T-20)$（$t$ は分）にしたがって冷めます。はじめは60\,℃です。$\Delta t=0.5$ 分のオイラー法で、1分後の温度を求めましょう。\par
+\kangaekata ①の手順を2回くり返す。毎回「右辺を計算する（今の速さ）」→「今の速さ×0.5 をたす」。$\Delta t=0.5$ なので、1分は2歩。\par
+\shiki 0分の速さ：$-0.1\times(60-20)=-0.1\times40=-4$\par
+\bkvicl 0.5分後：$60+(-4)\times0.5=60-2=58$\par
+\bkvicl 0.5分の速さ：$-0.1\times(58-20)=-0.1\times38=-3.8$\par
+\bkvicl 1分後：$58+(-3.8)\times0.5=58-1.9=56.1$\par
+\kotae 約56.1\,℃
+\end{reidai}
+
+\begin{reidai}[$\Delta t$ を変えて、ずれをくらべる]
+$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、はじめ80\,℃のお湯の4分後の温度を、（1）$\Delta t=2$ 分、（2）$\Delta t=1$ 分のオイラー法で求め、ほんとうの値 $20+60e^{-0.2}$ とのずれをくらべましょう（$e^{-0.2}=0.8187$）。\par
+\kangaekata （1）は2歩、（2）は4歩。どちらも①の手順。ずれ＝ほんとう－オイラー法。\par
+\shiki（1）$80+(-3)\times2=74$。$74+\bigl(-0.05\times54\bigr)\times2=74-5.4=68.6$\par
+\bkvicl（2）$80\to77\to74.15\to71.44\to68.87$（②の表と同じ）\par
+\bkvicl ほんとう：$20+60\times0.8187=20+49.12=69.12$\par
+\bkvicl ずれ：（1）$69.12-68.6=0.52$、（2）$69.12-68.87=0.25$\par
+\kotae（1）68.6\,℃、ずれ0.52\,℃\par
+\bkvicl（2）68.87\,℃、ずれ0.25\,℃（$\Delta t$ を半分にすると、ずれもほぼ半分）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkvicjA}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 部屋の温度が25\,℃で、スープの温度 $T$〔℃〕が $\dfrac{\dd T}{\dd t}=-0.1\,(T-25)$（$t$ は分）にしたがって冷めます。はじめは90\,℃です。$\Delta t=0.5$ 分のオイラー法で、1分後の温度を求めましょう。
+\bkjans{0分の速さ $-0.1\times65=-6.5$。0.5分後 $90-3.25=86.75$。速さ $-0.1\times61.75=-6.175$。1分後 $86.75-3.0875\approx83.66\,\text{℃}$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $\dfrac{\dd T}{\dd t}=-0.1\,(T-20)$、はじめ60\,℃のお湯の2分後の温度を、（1）$\Delta t=2$ 分、（2）$\Delta t=1$ 分のオイラー法で求め、ほんとうの値 $20+40e^{-0.2}$ とのずれをくらべましょう（$e^{-0.2}=0.8187$）。
+\bkjans{（1）\nobreak $60+(-4)\times2=52$。（2）\nobreak $60\to56\to52.4$。ほんとう $20+40\times0.8187\approx52.75$。ずれは（1）0.75、（2）0.35で、ほぼ半分。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[表計算の式を書く]
+ルール $\dfrac{\dd T}{\dd t}=-0.08\,(T-25)$ を、④と同じ表（A列 $t$、B列 $T$、C列 変わる速さ、D2 に $\Delta t$）で解きます。C2、B3、A3 に入れる式を書きましょう。また、B3 の式で D2 に \texttt{\$} をつけるのはなぜですか。\par
+\kangaekata C2 はルールの右辺を、今の温度 B2 で計算する。B3 は「今の温度＋今の速さ×$\Delta t$」。A3 は時刻を $\Delta t$ 進める。\par
+\shiki C2：\texttt{=-0.08*(B2-25)}\par
+\bkvicl B3：\texttt{=B2+C2*\$D\$2}\par
+\bkvicl A3：\texttt{=A2+\$D\$2}\par
+\kotae 上の3つ。\texttt{\$} がないと、下へコピーしたとき D3、D4…（空のセル）を指してしまい、$\Delta t$ が0になるから。
+\end{reidai}
+
+\begin{reidai}[コンデンサーの充電]
+電池 $E=\qty{10}{V}$、抵抗 $R=\qty{20}{k\ohm}$、コンデンサー $C=\qty{100}{\micro F}$ の回路（⑧）で、ルールは $\dfrac{\dd V}{\dd t}=\dfrac{E-V}{RC}$ です。はじめ $V=0$ のとき、$\Delta t=\qty{0.5}{s}$ のオイラー法で、1秒後の電圧を求めましょう。また、5-14 の式 $V=10\,(1-e^{-t/2})$ の値とくらべましょう（$e^{-0.5}=0.607$）。\par
+\kangaekata まず $RC$ を秒で出す（⑧）。あとは①の手順を2回。\par
+\shiki $RC=\num{20000}\,\unit{\ohm}\times0.0001\,\unit{F}=\qty{2}{s}$。ルールは $\dfrac{\dd V}{\dd t}=\dfrac{10-V}{2}$\par
+\bkvicl 0秒の速さ：$\dfrac{10-0}{2}=5$。0.5秒後：$0+5\times0.5=2.5$\par
+\bkvicl 0.5秒の速さ：$\dfrac{10-2.5}{2}=3.75$。1秒後：$2.5+3.75\times0.5=4.375$\par
+\bkvicl 式：$10\times(1-0.607)=3.93$\par
+\kotae 約4.38\,V（式では3.93\,V。オイラー法のほうが大きい）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkvicjB}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright ルール $\dfrac{\dd T}{\dd t}=-0.02\,(T-15)$ を、④と同じ表で解きます。C2、B3、A3 に入れる式を書きましょう。
+\bkjans{C2 \texttt{=-0.02*(B2-15)}、B3 \texttt{=B2+C2*\$D\$2}、A3 \texttt{=A2+\$D\$2}。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 電池 $E=\qty{6}{V}$、抵抗 $R=\qty{10}{k\ohm}$、コンデンサー $C=\qty{100}{\micro F}$ の回路で、はじめ $V=0$ のとき、$\Delta t=\qty{0.25}{s}$ のオイラー法で、0.5秒後の電圧を求めましょう。
+\bkjans{$RC=\num{10000}\times0.0001=\qty{1}{s}$。ルールは $\dfrac{\dd V}{\dd t}=6-V$。0.25秒後 $0+6\times0.25=1.5$。0.5秒後 $1.5+4.5\times0.25=\qty{2.625}{V}$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[ばねを2つの列で進める]
+$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$ のばね（⑨）で、はじめ $x=\qty{0.1}{m}$、$v=0$ です。速度を先に進めるオイラー法（⑪）で、$\Delta t=\qty{0.05}{s}$ として、0.1秒後の位置と速度を求めましょう。\par
+\kangaekata 加速度は $a=-\dfrac{k}{m}x=-16x$。⑪の①②③の順を2回。③では\textbf{新しい}速度を使う。\par
+\shiki 1歩め：$a=-16\times0.1=-1.6$\par
+\bkvicl $v=0+(-1.6)\times0.05=-0.08$\par
+\bkvicl $x=0.1+(-0.08)\times0.05=0.1-0.004=0.096$\par
+\bkvicl 2歩め：$a=-16\times0.096=-1.536$\par
+\bkvicl $v=-0.08+(-1.536)\times0.05=-0.08-0.0768=-0.1568$\par
+\bkvicl $x=0.096+(-0.1568)\times0.05=0.096-0.00784=0.08816$\par
+\kotae 位置約 \qty{0.0882}{m}、速度約 \qty{-0.157}{m/s}
+\end{reidai}
+
+\begin{reidai}[ふつうのオイラー法のふくらみ]
+$\omega=4$（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$）のばねを、ふつうのオイラー法で $\Delta t=\qty{0.02}{s}$ として計算します。1歩で、ゆれの円（⑩）の半径は何倍になりますか。また、1周（約79歩）で何倍になりますか（$1.0032^{79}=1.29$）。\par
+\kangaekata ⑩のように、1歩は接線の向きに、半径の $\omega\,\Delta t$ 倍の長さだけ進む。三平方の定理で新しい半径を出す。\par
+\noindent\begin{minipage}[c]{0.66\linewidth}\raggedright
+\shiki $\omega\,\Delta t=4\times0.02=0.08$\par
+\bkvicl 半径を1とすると、1歩の長さは0.08\par
+\bkvicl 1歩のあとの半径（三平方の定理）：\par
+\bkvicl $\sqrt{1^2+0.08^2}=\sqrt{1.0064}\approx1.0032$\par
+\bkvicl 1周：$1.0032^{79}\approx1.29$ 倍\par
+\kotae 1歩で約1.0032倍、1周で約1.3倍
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \draw[bkBlue, line width=0.9pt] (30,0) arc (0:60:30);
+  \draw[bkBlue, line width=0.9pt] (30,0) arc (0:-25:30);
+  \fill[bkInk] (0,0) circle (0.8);
+  \draw[bkInk, line width=0.8pt] (0,0) -- node[above, font=\sffamily\footnotesize] {1} (30,0);
+  \draw[bkOrange, line width=1.3pt, -{Stealth[length=3.5pt]}] (30,0) -- (30,-9);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (31.2,-4.5) {0.08};
+  \draw[bkRed, line width=0.8pt, dashed] (0,0) -- (30,-9);
+  \draw[bkInk, line width=0.5pt] (27.6,0) -- (27.6,-2.4) -- (30,-2.4);
+  \node[font=\sffamily\footnotesize, text=bkGray, anchor=north, align=center] at (15,-12) {（1歩は\\大きくかいた）};
+\end{tikzpicture}
+\end{minipage}
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkvicjC}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $m=\qty{2}{kg}$、$k=\qty{50}{N/m}$ のばねで、はじめ $x=\qty{0.2}{m}$、$v=0$ です。速度を先に進めるオイラー法で、$\Delta t=\qty{0.1}{s}$ として、0.2秒後の位置と速度を求めましょう。
+\bkjans{$a=-25x$。1歩め $a=-5$、$v=-0.5$、$x=0.2-0.05=0.15$。2歩め $a=-3.75$、$v=-0.875$、$x=0.15-0.0875=\qty{0.0625}{m}$。速度 \qty{-0.875}{m/s}。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $\omega=1$ のばね（5-15）を、ふつうのオイラー法で $\Delta t=0.1$ として計算します。1歩で、ゆれの円の半径は何倍になりますか。1周（約63歩）では何倍ですか（$1.005^{63}=1.37$）。
+\bkjans{$\omega\,\Delta t=0.1$。$\sqrt{1+0.01}=\sqrt{1.01}\approx1.005$ 倍。1周で約1.37倍。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+
+\begin{reidai}[$\Delta t$ が大きすぎると]
+$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、はじめ80\,℃のお湯を、$\Delta t=30$ 分のオイラー法で計算します。30分後と60分後の温度を求めましょう。また、部屋との差は1歩ごとに何倍になっていますか。\par
+\kangaekata ①の手順を2回。差の倍率は、⑥のように $1-0.05\,\Delta t$。\par
+\shiki 30分後：$80+\bigl(-0.05\times60\bigr)\times30=80-90=-10$\par
+\bkvicl 60分後：$-10+\bigl(-0.05\times(-30)\bigr)\times30=-10+45=35$\par
+\bkvicl 差：$60\to-30\to15$。倍率 $1-0.05\times30=-0.5$\par
+\kotae 30分後 $-10$\,℃、60分後35\,℃（差は毎回 $-0.5$ 倍で、部屋の温度の上と下をふらふらする。$\Delta t$ が大きすぎる）
+\end{reidai}
+
+\begin{reidai}[プログラムを読む]
+次のプログラムで表示される数を答えましょう。\par\vspace{2pt}
+\begin{bkcode}
+T = 50.0
+dt = 0.5
+for i in range(2):
+    T = T + (-0.2 * (T - 30)) * dt
+print(T)
+\end{bkcode}
+\kangaekata 4行めはオイラー法の1行。ルールは $\dfrac{\dd T}{\dd t}=-0.2\,(T-30)$、$\Delta t=0.5$。\texttt{range(2)} なので2歩。\par
+\shiki 1回め：$50+(-0.2\times20)\times0.5=50-2=48$\par
+\bkvicl 2回め：$48+(-0.2\times18)\times0.5=48-1.8=46.2$\par
+\kotae 46.2
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkvicjD}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright $\dfrac{\dd T}{\dd t}=-0.1\,(T-20)$、はじめ60\,℃のお湯を、$\Delta t=15$ 分のオイラー法で計算します。15分後と30分後の温度と、差の倍率を求めましょう。
+\bkjans{15分後 $60+(-4)\times15=0\,\text{℃}$。30分後 $0+(-0.1\times(-20))\times15=30\,\text{℃}$。倍率 $1-0.1\times15=-0.5$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 次のプログラムで表示される数を答えましょう。\par\vspace{2pt}
+\begin{bkcode}
+V = 0.0
+dt = 0.5
+for i in range(3):
+    V = V + (10-V)/2*dt
+print(V)
+\end{bkcode}
+\bkjans{V は 0 \mbox{→ 2.5} \mbox{→ 4.375} \mbox{→ 5.78125}。表示は5.78125。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$\Delta t$ をかけ忘れる}
+\bkng{$\Delta t=0.5$ のとき、$80+(-3)=77$}
+\bkok{$\Delta t=0.5$ のとき、$80+(-3)\times0.5=78.5$}
+$-3$ は「1分あたり」の変わる速さです。0.5分で変わる量は、その0.5倍です。$\Delta t=1$ のときは、かけ忘れても答えが変わらないので、気づきにくいまちがいです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{次の行の速さを使う}
+\bkng{1分後の温度を、1分のときの速さ $-2.85$ で $80+(-2.85)\times1$}
+\bkok{1分後の温度は、0分のときの速さ $-3$ で $80+(-3)\times1=77$}
+1分のときの速さは、1分後の温度がわかってから計算できるものです。オイラー法では、いつも「今」（1つ上の行）の速さを使います。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\Delta t$ を大きくしすぎる}
+\bkng{計算を楽にしようと $\Delta t=30$ 分にしたら、お湯が $-10$\,℃になった}
+\bkok{$\Delta t$ は、ようすが変わる時間（このお湯なら20分）よりずっと短く}
+$\Delta t$ が大きいと、そのあいだに速さが大きく変わるのに、はじめの速さのまま進んでしまいます（⑥）。答えが部屋より冷たくなるなど、ありえない数が出たら、$\Delta t$ を小さくして計算しなおします。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ばねの表で、位置を古い速度で進める}
+\bkng{B3 に \texttt{=B2+C2*\$E\$2}（ゆれがふくらむ）}
+\bkok{B3 に \texttt{=B2+C3*\$E\$2}（新しい速度 C3 で進める）}
+ふつうのオイラー法では、ばねのゆれが1周ごとに大きくなります（⑩）。ばねが勝手に大きくゆれだしたら、計算の順番をうたがいましょう。
+\end{tsumazuki}
+
+\begin{column}{オイラーと「目で見ない計算」}
+この章の方法に名前を残したオイラー（1707〜1783年）は、スイスに生まれた数学者です。1768年に出した積分の本の中で、この方法を書きました。オイラーは、30代で右目の視力を失い、60歳ごろには左目もほとんど見えなくなりました。それでも、頭の中で長い計算をし、助手に書き取らせて、たくさんの本や論文を残しました。第5巻の $e$ や、6-10 の「オイラーの公式」も、オイラーの名前がついています。
+\end{column}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{天気予報}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+地球のまわりの空気を細かい箱に分け、それぞれの箱の気温・風・水蒸気の量を「次の状態＝今の状態＋変わる速さ×$\Delta t$」で数分ごとに進めます。スーパーコンピュータがこれを何百回もくり返して、明日の天気を計算します（6-0）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!20] (0,0) circle (11);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,0) circle (11);
+  \foreach \a in {-60,-30,0,30,60} {\draw[bkBlue!70!black, line width=0.4pt] (0,0) ellipse ({11*cos(\a)} and 11);}
+  \foreach \b in {-7,-3.5,0,3.5,7} {\draw[bkBlue!70!black, line width=0.4pt] ({-sqrt(121-\b*\b)},\b) -- ({sqrt(121-\b*\b)},\b);}
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{ゲームの中の物の動き}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+画面を1秒に60回かきかえるたびに、物の速度と位置を $\Delta t=\frac{1}{60}$ 秒のオイラー法で進めます（5-13 のコラム）。ゆれる物が勝手に大きくゆれださないよう、速度を先に進めるオイラー法がよく使われます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkInk!85, draw=bkInk, rounded corners=1.5mm] (0,0) rectangle (26,17);
+  \fill[bkGreen!25] (2,2) rectangle (24,15);
+  \foreach \k in {0,...,8} {\fill[bkOrange] ({4+2.2*\k},{3+1.55*\k-0.17*\k*\k}) circle (0.7);}
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{電気回路のシミュレーター}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+電子回路は、作る前にコンピュータの中で動かして確かめます。⑧のような回路のルールを数値計算で解くプログラム（1973年にアメリカのカリフォルニア大学で生まれた SPICE とその仲間）が、世界中で使われています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt, rounded corners=1mm] (1,3) rectangle (25,18);
+  \fill[bkInk!80] (0,0) -- (26,0) -- (25,3) -- (1,3) -- cycle;
+  \draw[bkBlue, line width=0.9pt, domain=0:18, samples=30] plot ({4+\x}, {6+9*(1-exp(-\x/5))});
+  \draw[bkGray, line width=0.4pt] (4,6) -- (23,6) (4,6) -- (4,16);
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{2}
+
+\bkproblem $\dfrac{\dd T}{\dd t}=-0.04\,(T-20)$（$t$ は分）、はじめ70\,℃のお湯の3分後の温度を、$\Delta t=1$ 分のオイラー法で求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$70\to68\to66.08\to64.2368$。約64.24\,℃。}
+
+\bkproblem $\dfrac{\dd T}{\dd t}=-0.1\,(T-15)$、はじめ75\,℃のお湯の2分後の温度を、（1）$\Delta t=2$ 分、（2）$\Delta t=1$ 分のオイラー法で求め、ほんとうの値 $15+60e^{-0.2}$ とのずれをくらべましょう（$e^{-0.2}=0.8187$）\mbox{（\bkreidairef{2}）}。
+\bkpans{（1）\nobreak $75+(-6)\times2=63$。（2）\nobreak $75\to69\to63.6$。ほんとう $15+60\times0.8187\approx64.12$。ずれは（1）1.12、（2）0.52で、ほぼ半分。}
+
+\bkproblem ルール $\dfrac{\dd y}{\dd t}=-0.3\,(y-5)$ を、④と同じ表（A列 $t$、B列 $y$、C列 変わる速さ、D2 に $\Delta t$）で解きます。C2、B3、A3 に入れる式を書きましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{C2 \texttt{=-0.3*(B2-5)}、B3 \texttt{=B2+C2*\$D\$2}、A3 \texttt{=A2+\$D\$2}。}
+
+\bkproblem 電池 $E=\qty{5}{V}$、抵抗 $R=\qty{10}{k\ohm}$、コンデンサー $C=\qty{200}{\micro F}$ の回路で、はじめ $V=0$ です。$RC$ を求め、$\Delta t=\qty{0.5}{s}$ のオイラー法で1秒後の電圧を求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$RC=\num{10000}\times0.0002=\qty{2}{s}$。ルールは $\dfrac{\dd V}{\dd t}=\dfrac{5-V}{2}$。0.5秒後 1.25、1秒後 $1.25+1.875\times0.5=2.1875$。約 \qty{2.19}{V}。}
+
+\bkproblem $m=\qty{1}{kg}$、$k=\qty{16}{N/m}$ のばねで、はじめ $x=\qty{0.05}{m}$、$v=0$ です。速度を先に進めるオイラー法で、$\Delta t=\qty{0.1}{s}$ として0.2秒後の位置と速度を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$a=-16x$。1歩め $a=-0.8$、$v=-0.08$、$x=0.05-0.008=0.042$。2歩め $a=-0.672$、$v=-0.1472$、$x=0.042-0.01472=\qty{0.02728}{m}$。速度 \qty{-0.1472}{m/s}。}
+
+\bkproblem 次のプログラムで表示される数を答えましょう\mbox{（\bkreidairef{8}）}。\par\vspace{2pt}
+\begin{bkcode}
+T = 40.0
+dt = 0.5
+for i in range(2):
+    T = T + (-0.1 * (T - 20)) * dt
+print(T)
+\end{bkcode}
+\bkpans{1回め $40+(-2)\times0.5=39$。2回め $39+(-1.9)\times0.5=38.05$。表示は38.05。}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、はじめ80\,℃のお湯を、$\Delta t=60$ 分のオイラー法で計算します。60分後と120分後の温度を求め、差の倍率から、この計算がどうなっていくかを説明しましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{60分後 $80+(-3)\times60=-100\,\text{℃}$。120分後 $-100+6\times60=260\,\text{℃}$。差の倍率は $1-0.05\times60=-2$ で、差が毎回 $-2$ 倍になり、ふらふらしながら大きくなって計算がこわれる。}
+
+\bkproblem $\omega=5$ のばねを、ふつうのオイラー法で $\Delta t=0.04$ として計算します。1歩で、ゆれの円の半径は何倍になりますか。1周（約31歩）では何倍ですか（$1.0198^{31}=1.84$）\mbox{（\bkreidairef{6}）}。
+\bkpans{$\omega\,\Delta t=0.2$。$\sqrt{1+0.04}=\sqrt{1.04}\approx1.0198$ 倍。1周で約1.84倍。}
+
+\bkproblem 電池 $E=\qty{10}{V}$、$RC=\qty{2}{s}$ の回路（⑧）で、ルールは $\dfrac{\dd V}{\dd t}=\dfrac{10-V}{2}$、はじめ $V=0$ です。$\Delta t=\qty{5}{s}$ のオイラー法で、5秒後と10秒後の電圧を求めましょう。また、目標の10\,V との差 $10-V$ は、1歩ごとに何倍になっていますか\mbox{（\bkreidairef{7}）}。
+\bkpans{5秒後 $0+5\times5=\qty{25}{V}$（電池の10\,V をこえた）。10秒後 $25+(-7.5)\times5=\qty{-12.5}{V}$。差は $10\to-15\to22.5$ で、毎回 $1-\dfrac{5}{2}=-1.5$ 倍。$\Delta t$ が大きすぎる。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 「次の値＝今の値＋今の変わる速さ×$\Delta t$」で、表計算で解ける。\bkfurref{bk:6-2:ippo}
+\item $\Delta t$ を小さくすると正確になることを確かめられる。\bkfurref{bk:6-2:zure}
+\item ばねの式を、位置と速度の2つの列で、正しい順に解ける。\bkfurref{bk:6-2:bane}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{ルールが教えてくれるのは「今の速さ」だけなのに、くり返すと未来がわかった！　次は、表計算をしなくても、積分するだけで式の答えが出る形を探してみよう。}

@@ -1,0 +1,1087 @@
+%% 7-2 行列×ベクトル：形を変える機械（第14回：組 V7-2。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   ベクトルは矢印 \vec x、成分はたて書き（4-13 の約束）。文中の (x, y) と同じものだと①で1回ていねいに見せる。
+%%   「入れると出てくる機械」（物理 力-9：向きを入れると力が出てくる機械 t=σn）。σ は物理の本と同じ太字（決定2）。
+%%   列は「物差しの矢印（基本ベクトル）の行き先」→ 7-4（平行四辺形）・7-6（回転行列の作り方）・7-9（ななめの物差し）。
+%%   ずらし（平行移動）は行列のかけ算ではできない → 7-7 の同次座標。
+%%   5-6 の「ロボットの腕の速さ（第7巻）」：ヤコビ行列 J の数をかけると手の速度（物理 力-7 と同じ L1=0.30, L2=0.25, 30°・45°）。
+%%     J の作り方（偏微分）は 8-3。ここでは「1つの関節だけを 1 rad/s で回したときの手の速度＝列」（4-15 の rω）で作る。
+%%   主役の行列 A=(2 1;1 2)、横に2倍 S、裏返し、ずらし (1 1;0 1)、R90（組どうしの約束1）。
+%%   方眼の家の絵・行と列をなぞる図・表計算・Python は tools/kata7.md（V7-1 の型）に合わせた。
+\usetikzlibrary{matrix}
+\makeatletter
+% 行と列をなぞる図（kata7 の型）
+\tikzset{
+  kviic mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=8mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=0pt, row sep=0pt, inner sep=0.6mm},
+  kviic row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviic col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviic ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm}}
+\newcommand\kviichl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 数式バー（kata7 の型）  \kviicfx{セル}{式}
+\newcommand\kviicfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=46mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviicM}{bkTheme!12}\colorlet{kviicV}{bkGreen!14}\colorlet{kviicR}{bkYellow!35}
+% 小見出し（太字の1行）
+\newcommand\kviichead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviicbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviicline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviicframe{中身}
+\newcommand\kviicframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviica{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviicb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+% 例題の式の段の1行め（行の右をそろえない）
+\newcommand\kviics{\rightskip=0pt plus 8em\relax}
+% 例題の中で、式（行列）を1行に立てる
+\newcommand\kviicm[1]{\par\vspace{2pt}{\centering $\displaystyle #1$\par}\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+% 問題文を左、式（行列）を右に置く  \kviicq{文}{式}
+\newcommand\kviicq[2]{\par\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright #1\end{minipage}\hfill\begin{minipage}[c]{0.38\linewidth}\centering $\displaystyle #2$\end{minipage}\par\vspace{3pt}}
+% 大きなかっこ（図の中で、行列・ベクトルのかっこをかく）  \kviicparen{高さ}{( か )}
+\newcommand\kviicparen[2]{$\left#2\vcenter{\hbox{\rule{0pt}{#1}}}\right.$}
+% 方眼と軸  \kviicaxes{xmin}{xmax}{ymin}{ymax}（tikzpicture の x、y の単位で）
+\newcommand\kviicaxes[4]{%
+  \draw[bkLine, line width=0.3pt] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] ({#1-0.2},0) -- ({#2+0.7},0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (0,{#3-0.2}) -- (0,{#4+0.7});
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at ({#2+0.8},0) {$x$};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (0,{#4+0.8}) {$y$};}
+% 家の絵（kata7 の型。かど (0,0)(2,0)(2,2)(1,3)(0,2)、右によせた戸）に行列 (a b; c d) をかけたもの
+%   \kviichouse[色]{a}{b}{c}{d}（行列を行の順に）
+\newcommand\kviichouse[5][bkOrange]{%
+  \begin{scope}[cm={#2,#4,#3,#5,(0,0)}]
+    \filldraw[fill=#1!25, draw=#1!80!black, line width=1.1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+    \filldraw[fill=white, draw=#1!80!black, line width=0.8pt] (1.25,0) -- (1.75,0) -- (1.75,1) -- (1.25,1) -- cycle;
+  \end{scope}}
+% もとの家（灰色の点線。kata7 の型）
+\newcommand\kviicghost{%
+  \filldraw[fill=bkGray!12, draw=bkGray, line width=0.8pt, dashed, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkGray, line width=0.6pt, dashed] (1.25,0) -- (1.25,1) -- (1.75,1) -- (1.75,0);}
+% 1列め（赤）と2列め（緑）の矢印  \kviicbasis{a}{b}{c}{d}
+\newcommand\kviicbasis[4]{%
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (#1,#3);
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.4mm]}] (0,0) -- (#2,#4);}
+% 6つの方眼の1つ  \kviicpanel{m11}{m12}{m21}{m22}{色}{下の説明}
+\newcommand\kviicpanel[6]{%
+  \kviicaxes{-3}{7}{-3}{7}
+  \kviicghost
+  \kviichouse[#5]{#1}{#2}{#3}{#4}
+  \node[font=\footnotesize, anchor=north, align=center, inner sep=1pt] at (2,-3.6) {#6};}
+% 方眼なしの軸だけ
+\newcommand\kviicaxesonly[4]{%
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] ({#1-0.2},0) -- ({#2+0.7},0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (0,{#3-0.2}) -- (0,{#4+0.7});
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at ({#2+0.8},0) {$x$};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (0,{#4+0.8}) {$y$};}
+% 応力の行列（物理の本と同じ太字）
+\newcommand\kviicsig{\symbf{\sigma}}
+% 式の変形の表（共通部品 bkhenkei と同じ使い方。左の列の中の行列は、行の間を広げない）
+\newenvironment{kviichk}[1][0.48]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.4}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle\def\arraystretch{1}}m{#1\linewidth}<{$}@{\hspace{2\zw}}>{\small\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.90\linewidth-#1\linewidth\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% ロボットの腕の関節（丸）
+\newcommand\kviicjoint[1]{\filldraw[fill=white, draw=bkInk, line width=0.8pt] #1 circle (1.6);}
+\makeatother
+
+\bkchapter{7}{2}{行列×ベクトル：\\形を変える機械}{\bklevel{4}}{行列×ベクトル：形を変える機械}
+\bkmichishirube{4-8,4-10,4-11,4-12,4-15,5-18,7-1}{7-3,7-4,7-6,7-7,7-8,7-11,8-3}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 行列×ベクトルを、行と列を指でなぞりながら、成分で1つずつ計算できる。
+\item \bklevel{4}\enspace 方眼の絵に行列をかけたときの形の変わり方を、列（物差しの矢印の行き先）から読みとれる。行き先から行列を作れる。
+\item \bklevel{4}\enspace ロボットの腕のヤコビ行列や、部材の応力の行列を、「入れると出てくる機械」として計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+方眼に、家の絵をかきました。家の5つのかどの点に、同じ4つの数の表をかけて、出てきた点を同じ順に結びます。
+
+家は、どんな形になるでしょう。大きくなる？　かたむく？　回る？　それとも、家ではなくなってしまう？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\centering
+\begin{tikzpicture}[x=4.2mm, y=4.2mm]
+  \kviicaxes{0}{3}{0}{3}
+  \kviichouse[bkGray]{1}{0}{0}{1}
+  \node[font=\footnotesize, anchor=west] at (4.6,1.5) {$\begin{pmatrix}2&1\\1&2\end{pmatrix}$};
+  \draw[bkInk, line width=0.9pt, -{Stealth[length=4pt]}] (4.8,-0.3) -- (8.6,-0.3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (6.7,-0.6) {かける};
+  \node[font=\sffamily\bfseries\Huge, text=\bkTT] at (11.2,1.5) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-1 では、行列×ベクトルの計算を「個数の表×値段の組＝合計の組」として学びました。この章では、同じ計算を、まったくちがう目で見ます。
+
+\textbf{行列は、ベクトルを入れると、別のベクトルが出てくる機械}です。点を入れれば点が出てくるので、絵のすべての点を入れると、形の変わった絵が出てきます。4つの数を変えるだけで、絵をのばしたり、裏返したり、かたむけたり、回したりできます。この見方ができると、ロボットの腕の速さや、建物の柱の中の力まで、同じ1つの計算で扱えるようになります。
+
+この章は★★★★です。はじめて読んで分からない所があっても大丈夫です。方眼紙と電卓で手を動かせば、かならず見えてきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (a) at (0,0) {①②\\行と列で\\なぞって計算};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (b) at (33,0) {③④\\方眼の絵を変える\\列は行き先};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize] (c) at (66,0) {⑤⑥⑦\\線形・3×3\\コンピュータ};
+  \node[bk node, text width=25mm, minimum height=15mm, align=center, font=\sffamily\footnotesize, fill=bkTheme!12] (d) at (99,0) {⑧⑨\\ロボットの手\\部材の中の力};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道のり。計算のしかた → 形の変わり方 → 性質と道具 → 工学の機械。}
+\end{bkfigure}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{omoidasou}
+\bkrecall{7-1}{行列×ベクトル：答えの1つめは「行列の1行め」と「ベクトル」の、同じ番めの数どうしをかけてたしたもの。答えの2つめは2行めで同じことをする。個数の表×値段の組＝合計の組。}
+\bkrecall{4-11}{ベクトルは成分で $(a_x,\ a_y)=a_x\vec e_x+a_y\vec e_y$。$\vec e_x=(1,\ 0)$、$\vec e_y=(0,\ 1)$ は長さ1の物差しの矢印（4-13 の基本ベクトル）。平行でない2本の矢印 $\vec a$、$\vec b$ があれば、どんなベクトルも $s\vec a+t\vec b$（ななめの物差し）。}
+\bkrecall{4-12}{内積 $\vec a\cdot\vec b=a_xb_x+a_yb_y$（同じ向きの成分どうしをかけて、たす）。}
+\bkrecall{4-8}{左回りに90°回すと $(x,\ y)\to(-y,\ x)$。}
+\bkrecall{4-15}{角速度 $\omega$ で回る点の速度は、位置の矢印を左回りに90°回した向きで、大きさは $r\omega$。}
+\bkrecall{5-18}{線形：答えどうしをたしても、答えを何倍しても、また答えになる性質。}
+\end{omoidasou}
+
+\begin{yattemiyou}[方眼の家を、行列で変身させよう]
+\kviicbox{用意するもの}
+方眼紙（\qty{5}{mm}方眼）、色えんぴつ、電卓（または表計算ソフト）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 方眼紙のまん中あたりに $x$ 軸と $y$ 軸をかく。5つのかど $(0,\ 0)$、$(2,\ 0)$、$(2,\ 2)$、$(1,\ 3)$、$(0,\ 2)$ をこの順に結んで、家をかく。右によせて戸（かど $(1.25,\ 0)$、$(1.75,\ 0)$、$(1.75,\ 1)$、$(1.25,\ 1)$）をかいておく。
+\item 次の行列を、5つのかどの1つ1つにかける（計算のしかたは 7-1 と同じ）。
+\kviicline{$S=\begin{pmatrix}2&0\\0&1\end{pmatrix}$\qquad たとえば $(2,\ 2)$ は\quad $\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}2\\2\end{pmatrix}=\begin{pmatrix}2\times2+0\times2\\0\times2+1\times2\end{pmatrix}=\begin{pmatrix}4\\2\end{pmatrix}$}
+\item 出てきた5つの点を、もとと同じ順に結ぶ。戸のかども同じように計算してかく。
+\item ほかの4つの行列でもやってみる（下の表）。家はどう変わったかな？　ことばで言ってみよう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=17mm] *{5}{Q[c,m,wd=17.5mm]}}, rowsep=1pt, colsep=1.5pt, row{1}={font=\footnotesize}, hline{2}={0.5pt,bkLine}}
+もとのかど & $\begin{pmatrix}2&0\\0&1\end{pmatrix}$ & $\begin{pmatrix}1&0\\0&-1\end{pmatrix}$ & $\begin{pmatrix}1&1\\0&1\end{pmatrix}$ & $\begin{pmatrix}0&-1\\1&0\end{pmatrix}$ & $\begin{pmatrix}2&1\\1&2\end{pmatrix}$ \\
+$(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ & $(0,\ 0)$ \\
+$(2,\ 0)$ & $(4,\ 0)$ & $(2,\ 0)$ & $(2,\ 0)$ & $(0,\ 2)$ & $(4,\ 2)$ \\
+$(2,\ 2)$ & $(4,\ 2)$ & $(2,\ -2)$ & $(4,\ 2)$ & $(-2,\ 2)$ & $(6,\ 6)$ \\
+$(1,\ 3)$ & $(2,\ 3)$ & $(1,\ -3)$ & $(4,\ 3)$ & $(-3,\ 1)$ & $(5,\ 7)$ \\
+$(0,\ 2)$ & $(0,\ 2)$ & $(0,\ -2)$ & $(2,\ 2)$ & $(-2,\ 0)$ & $(2,\ 4)$ \\
+\end{bktable}
+\bktabcaption{ソラさんが計算した、かどの行き先}
+\end{bkcenter}
+\end{yattemiyou}
+
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{ベクトルをたてに書く：入れると出てくる機械}
+\label{bk:7-2:kikai}
+
+\kviichead{たて書きと横書きは、同じもの}
+4-11 では、ベクトルを $(3,\ 2)$ のように横に書きました。7-1 では、値段の組を行列の右に、たてに並べました。この巻では、計算するときは、ベクトルをたてに書きます。
+\[ \vec x=\begin{pmatrix}3\\2\end{pmatrix} \]
+これは、4-11 の $\vec x=(3,\ 2)$ と\textbf{まったく同じもの}です。原点から点 $(3,\ 2)$ へ向かう矢印（位置ベクトル、4-10）と考えても同じです。変わったのは並べる向きだけで、2つの数と、その順番（$x$ 成分が上、$y$ 成分が下）は変わりません。文の中では、これからも $(3,\ 2)$ と横に書くことがあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=5mm, y=5mm]
+  \kviicaxes{0}{4}{0}{3}
+  \draw[bkBlue, line width=1.5pt, -{Stealth[length=5pt]}] (0,0) -- (3,2);
+  \fill[bkBlue] (3,2) circle (0.16);
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=2pt] at (3,2) {点 $(3,\ 2)$};
+  \node[font=\footnotesize, anchor=west, align=left] at (7,2.6) {横に書く（4-11）\quad $\vec x=(3,\ 2)$};
+  \node[font=\footnotesize, anchor=west, align=left] at (7,0.6) {たてに書く（この巻）\quad $\vec x=\begin{pmatrix}3\\2\end{pmatrix}$};
+\end{tikzpicture}
+\bkfigcaption{同じベクトルの、2つの書き方。上が $x$ 成分、下が $y$ 成分。}
+\end{bkfigure}
+
+なぜ、たてに書くのでしょう。行列の行は\textbf{横}に並び、ベクトルの成分を\textbf{たて}に並べると、「行を横になぞる指」と「ベクトルをたてになぞる指」が、同じ数ずつ進んで、1つずつ出会うからです（②でくわしく見ます）。たてに書いたベクトルを、7-1 のことばで\textbf{列ベクトル}といいます。
+
+\kviichead{行列は「入れると出てくる機械」}
+コピー機の「拡大」を思い出してください。どんな絵を入れても、同じきまりで（たても横も1.41倍に）大きくした絵が出てきます。行列×ベクトルも、これと同じ「機械」です。ベクトル $\vec x$ を入れると、行列 $A$ のきまりで計算した新しいベクトル $A\vec x$ が出てきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=30mm, minimum height=9mm, align=center] (i) at (0,0) {入れる\\$\vec x=\begin{pmatrix}x\\y\end{pmatrix}$};
+  \node[bk node, minimum width=24mm, minimum height=14mm, fill=bkTheme!12, draw=\bkTT, line width=1pt, align=center] (m) at (52,0) {機械\\行列 $A$};
+  \node[bk node, minimum width=30mm, minimum height=9mm, align=center] (o) at (104,0) {出てくる\\$A\vec x$};
+  \draw[bk link] (i) -- (m);
+  \draw[bk link] (m) -- (o);
+\end{tikzpicture}
+\bkfigcaption{行列 $A$ は、ベクトルを入れると、ベクトルが出てくる機械。同じ機械に、ちがうベクトルを入れれば、ちがうベクトルが出てくる。}
+\end{bkfigure}
+
+工学の本には、この機械がたくさん出てきます。入れるものと出てくるものは、点とはかぎりません。
+
+\begin{bkcenter}
+\begin{bktable}{width=\linewidth, colspec={Q[l,m,wd=33mm] X[l,m] Q[c,m,wd=16mm] X[l,m]}, rowsep=2pt, row{1}={font=\sffamily\small}, hline{2}={0.5pt,bkLine}}
+場面 & 入れるもの & 機械 & 出てくるもの \\
+方眼の絵（③） & 絵の点の位置 & 行列 $A$ & 動いたあとの点の位置 \\
+ロボットの腕（⑧） & 2つの関節の回る速さ & 行列 $J$ & 手の速度 \\
+建物の柱やはり（⑨） & 切り口の向き & 行列 $\kviicsig$ & 切り口にはたらく力 \\
+ばねの網（物理の本） & 各点のずれ & 行列 $K$ & 各点にはたらく力 \\
+\end{bktable}
+\bktabcaption{「入れると出てくる機械」の例。行列 $\kviicsig$ だけ太字なのは、物理の本の書き方に合わせたため（⑨）。}
+\end{bkcenter}
+
+\bksubsection{2}{行と列を、指でなぞる}
+\label{bk:7-2:nazoru}
+
+7-1 の計算を、文字でもう一度書きます。行列の4つの数を $a$、$b$、$c$、$d$、ベクトルを $(x,\ y)$ とします。
+\kviicframe{$\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}ax+by\\cx+dy\end{pmatrix}$}
+左手の指で行列の\textbf{行を横に}、右手の指でベクトルを\textbf{たてに}なぞります。2本の指が同時に1つめの数にいるとき「$a$ と $x$ をかける」、同時に2つめにいるとき「$b$ と $y$ をかける」。最後に、かけたものをたします。1行めでなぞると答えの1つめ、2行めでなぞると答えの2つめです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (L) at (0,0) [kviic mat] {a \& b\\ c \& d\\};
+  \matrix (v) [kviic mat, anchor=west] at ([xshift=6mm]L.east) {x\\ y\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]v.east) {$=$};
+  \matrix (r) [kviic mat, nodes={minimum width=15mm}, anchor=west] at ([xshift=3.5mm]eq.east) {ax+by\\ cx+dy\\};
+  \kviichl{kviic row}{L-1-1}{L-1-2}
+  \kviichl{kviic col}{v-1-1}{v-2-1}
+  \kviichl{kviic ans}{r-1-1}{r-1-1}
+  \node[anchor=north, font=\sffamily\footnotesize] at ([yshift=-3mm]v.south) {1行めでなぞる：答えの1つめ};
+  \begin{scope}[yshift=-30mm]
+  \matrix (L2) at (0,0) [kviic mat] {a \& b\\ c \& d\\};
+  \matrix (v2) [kviic mat, anchor=west] at ([xshift=6mm]L2.east) {x\\ y\\};
+  \node[anchor=west] (eq2) at ([xshift=3.5mm]v2.east) {$=$};
+  \matrix (r2) [kviic mat, nodes={minimum width=15mm}, anchor=west] at ([xshift=3.5mm]eq2.east) {ax+by\\ cx+dy\\};
+  \kviichl{kviic row}{L2-2-1}{L2-2-2}
+  \kviichl{kviic col}{v2-1-1}{v2-2-1}
+  \kviichl{kviic ans}{r2-2-1}{r2-2-1}
+  \node[anchor=north, font=\sffamily\footnotesize] at ([yshift=-3mm]v2.south) {2行めでなぞる：答えの2つめ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{行（オレンジ）と列（青）が出会う所が、答えの成分（緑）。上：1行めとベクトルで $ax+by$。下：2行めとベクトルで $cx+dy$。ベクトルは2回とも同じものを使う。}
+\label{bk:7-2:fig-nazoru}
+\end{bkfigure}
+
+この巻でくり返し使う「主役の行列」
+\kviicline{$A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$}
+に、ベクトル $(1,\ 2)$ を入れてみます。\par
+\begin{kviichk}
+\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\2\end{pmatrix} & 行列を左、ベクトルを右に置く \\
+=\begin{pmatrix}2\times1+1\times2\\1\times1+2\times2\end{pmatrix} & 1行めでなぞって上、2行めでなぞって下 \\
+=\begin{pmatrix}4\\5\end{pmatrix} & かけて、たした \\
+\end{kviichk}
+点 $(1,\ 2)$ を入れると、点 $(4,\ 5)$ が出てきました。この $(4,\ 5)$ は、④でもう一度、別の方法で求めます。
+
+\kviichead{1行ずつの計算は、内積}
+1行めの計算 $2\times1+1\times2$ は、行の数を横に並べたベクトル $(2,\ 1)$ と、入れたベクトル $(1,\ 2)$ の\textbf{内積}（4-12）です。同じ番めの数どうしをかけてたすのが内積だからです。行列×ベクトルは、「行ごとに内積をとって、たてに並べる」計算です。
+\kviicline{答えの1つめ＝（1行め）$\cdot\,\vec x$\qquad 答えの2つめ＝（2行め）$\cdot\,\vec x$}
+
+\kviichead{かけられる形と、出てくる形}
+なぞる2本の指が、最後に同時に終わるためには、\textbf{行列の横の数の個数（列の数）と、ベクトルの数の個数が同じ}でなければなりません。2×2 の行列には、2つの数のベクトルを入れます。答えは、行列の行の数だけ出てくるので、2つの数のベクトルです。また、行列はいつも\textbf{左}、ベクトルは\textbf{右}に置きます。左右を入れかえると、指が出会わず、かけられません（まちがえやすいところ②）。
+
+\bksubsection{3}{方眼の絵を変える}
+\label{bk:7-2:hogan}
+
+やってみようの5つの行列で、家の絵がどう変わったかを、図\ref{bk:7-2:fig-hogan}の方眼にかきました。点線はもとの家です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=3.3mm, y=3.3mm]
+  \begin{scope}[xshift=0mm]
+    \kviicaxes{-3}{7}{-3}{7}
+    \kviichouse[bkGray]{1}{0}{0}{1}
+    \node[font=\footnotesize, anchor=north, align=center] at (2,-3.6) {もとの家\\（戸は右によっている）};
+  \end{scope}
+  \begin{scope}[xshift=44mm]\kviicpanel{2}{0}{0}{1}{bkRed}{$S=\begin{pmatrix}2&0\\0&1\end{pmatrix}$\\横に2倍にのびる}\end{scope}
+  \begin{scope}[xshift=88mm]\kviicpanel{1}{0}{0}{-1}{bkRed}{$\begin{pmatrix}1&0\\0&-1\end{pmatrix}$\\上下に裏返る（$x$ 軸で折り返す）}\end{scope}
+  \begin{scope}[yshift=-60mm]\kviicpanel{1}{1}{0}{1}{bkPurple}{$\begin{pmatrix}1&1\\0&1\end{pmatrix}$\\上ほど右へずれる（ずらし）}\end{scope}
+  \begin{scope}[xshift=44mm, yshift=-60mm]\kviicpanel{0}{-1}{1}{0}{bkGreen}{$R_{90}=\begin{pmatrix}0&-1\\1&0\end{pmatrix}$\\左回りに90°回る}\end{scope}
+  \begin{scope}[xshift=88mm, yshift=-60mm]\kviicpanel{2}{1}{1}{2}{bkOrange}{$A=\begin{pmatrix}2&1\\1&2\end{pmatrix}$\\ななめにのびて、かたむく}\end{scope}
+\end{tikzpicture}
+\bkfigcaption{5つの行列で変わった家。どの絵でも、原点 $(0,\ 0)$ は動かない。まっすぐなかべは、まっすぐなまま。}
+\label{bk:7-2:fig-hogan}
+\end{bkfigure}
+
+まず1つずつ、なぜそうなるかを、成分で確かめます。どの行列も、$(x,\ y)$ を入れたときに出てくる点を書けば、わけがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=3pt]
+\item \textbf{横に2倍}\quad $S$ に $(x,\ y)$ を入れると $(2x+0y,\ 0x+1y)=(2x,\ y)$。横の位置だけが2倍になり、高さはそのままです。
+\item \textbf{上下に裏返る}\quad $(x,\ -y)$ になります。高さの符号だけが変わるので、$x$ 軸を折り目にして折り返した形です。屋根が下を向きました。
+\item \textbf{ずらし}\quad $(x+y,\ y)$ になります。高さ $y$ の分だけ、右へずれます。高い所ほど大きくずれるので、トランプの山を横から押したように、家がかたむきます。床（$y=0$）は動きません。
+\item \textbf{左回りに90°}\quad $(0x-1y,\ 1x+0y)=(-y,\ x)$。4-8 で作った「90°回すと $(x,\ y)\to(-y,\ x)$」と同じです。この行列を $R_{90}$ と書くことにします（7-6 で、どんな角でも回す行列を作ります）。
+\item \textbf{主役の行列 $A$}\quad $(2x+y,\ x+2y)$。$x$ も $y$ もまざるので、成分の式だけでは形が想像しにくいですね。これは、④の見方ですっきりわかります。
+\end{enumerate}
+
+
+\begin{taisetsu}
+行列×ベクトルは、点を別の点に動かす。絵のすべての点に同じ行列をかけると、絵の形が変わる。このような点の動かし方を\textbf{変換}（へんかん）という。
+\end{taisetsu}
+\bkidx{へんかん}{変換}
+
+\bksubsection{4}{列は「物差しの矢印」の行き先}
+\label{bk:7-2:retsu}
+
+主役の行列 $A$ の変わり方を、別の見方で調べます。4-11 で、どんなベクトルも、長さ1の物差しの矢印 $\vec e_x=(1,\ 0)$ と $\vec e_y=(0,\ 1)$ を使って $x\vec e_x+y\vec e_y$ と書けました。そこで、まず物差しの矢印2本だけを機械に入れてみます。
+\begin{kviichk}[0.7]
+A\vec e_x=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}2\times1+1\times0\\1\times1+2\times0\end{pmatrix}=\begin{pmatrix}2\\1\end{pmatrix} & 0をかけた所が消えて、1列めだけが残る \\
+A\vec e_y=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}0\\1\end{pmatrix}=\begin{pmatrix}2\times0+1\times1\\1\times0+2\times1\end{pmatrix}=\begin{pmatrix}1\\2\end{pmatrix} & 2列めだけが残る \\
+\end{kviichk}
+出てきたのは、行列の\textbf{1列め $(2,\ 1)$} と\textbf{2列め $(1,\ 2)$} そのものです。$\vec e_x$ の「1」が1列めだけを拾い、「0」が2列めを消したからです。文字で書いても同じです。
+\kviicline{$\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=\begin{pmatrix}a\\c\end{pmatrix}$（1列め）\qquad $\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}0\\1\end{pmatrix}=\begin{pmatrix}b\\d\end{pmatrix}$（2列め）}
+\begin{taisetsu}
+行列の1列めは、物差しの矢印 $\vec e_x$ の行き先。2列めは、$\vec e_y$ の行き先。
+\end{taisetsu}
+
+\kviichead{物差しが変われば、方眼ごと変わる}
+では、点 $(1,\ 2)$ はどこへ行くでしょう。$(1,\ 2)=1\vec e_x+2\vec e_y$ は「$\vec e_x$ を1本、$\vec e_y$ を2本つないだ所」です。機械を通ったあとは、物差しが $(2,\ 1)$ と $(1,\ 2)$ に変わります。だから、行き先は「新しい物差し $(2,\ 1)$ を1本、$(1,\ 2)$ を2本つないだ所」です。
+\kviicline{$1\begin{pmatrix}2\\1\end{pmatrix}+2\begin{pmatrix}1\\2\end{pmatrix}=\begin{pmatrix}2+2\\1+4\end{pmatrix}=\begin{pmatrix}4\\5\end{pmatrix}$}
+②で、行と列をなぞって求めた $(4,\ 5)$ と同じになりました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=4.4mm, y=4.4mm]
+  \begin{scope}
+    \kviicaxes{0}{2}{0}{2}
+    \fill[bkGray!35] (0,0) rectangle (1,1);
+    \draw[bkRed, line width=1.6pt, -{Stealth[length=5pt]}] (0,0) -- (1,0);
+    \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=5pt]}] (1,0) -- (1,1);
+    \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=5pt]}] (1,1) -- (1,2);
+    \fill[bkInk] (1,2) circle (0.15);
+    \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!80!black] at (0.5,-0.35) {$\vec e_x$};
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkGreen!60!black] at (1.2,0.5) {$\vec e_y$};
+    \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt, fill=white] at (1.15,2.15) {$(1,\ 2)$};
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.3,-1.8) {もとの方眼\\物差しは $\vec e_x$、$\vec e_y$};
+  \end{scope}
+  \draw[bkInk, line width=1pt, -{Stealth[length=5pt]}] (4.4,2) -- (7.8,2);
+  \node[font=\footnotesize, anchor=south] at (6.1,2.3) {$A$ をかける};
+  \begin{scope}[xshift=44mm]
+    \kviicaxesonly{0}{6}{0}{6}
+    \fill[bkOrange!25] (0,0) -- (2,1) -- (3,3) -- (1,2) -- cycle;
+    \foreach \kviici in {0,1,2} {\draw[bkOrange!70, line width=0.6pt] ({2*\kviici},\kviici) -- ({2*\kviici+2},{\kviici+4});
+      \draw[bkOrange!70, line width=0.6pt] (\kviici,{2*\kviici}) -- ({4+\kviici},{2+2*\kviici});}
+    \draw[bkRed, line width=1.6pt, -{Stealth[length=5pt]}] (0,0) -- (2,1);
+    \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=5pt]}] (2,1) -- (3,3);
+    \draw[bkGreen!60!black, line width=1.6pt, -{Stealth[length=5pt]}] (3,3) -- (4,5);
+    \fill[bkInk] (4,5) circle (0.15);
+    \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!80!black, inner sep=1pt, fill=white] at (1.9,0.5) {$(2,\ 1)$};
+    \node[font=\sffamily\footnotesize, anchor=west, text=bkGreen!60!black, inner sep=1pt, fill=white] at (3.9,2.6) {$(1,\ 2)$};
+    \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt, fill=white] at (3.7,5.3) {$(4,\ 5)$};
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (3,-1.8) {新しい方眼\\物差しは1列め $(2,\ 1)$、2列め $(1,\ 2)$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：$(1,\ 2)$ は「$\vec e_x$ を1本、$\vec e_y$ を2本」。右：$A$ をかけると、物差しが $(2,\ 1)$ と $(1,\ 2)$ に変わり、方眼の正方形（灰色）はすべて、この2本がつくる平行四辺形（オレンジ）になる。図\ref{bk:7-2:fig-hogan}の家は、この新しい方眼の上に、同じようにかかれていた。}
+\label{bk:7-2:fig-retsu}
+\end{bkfigure}
+
+これが、\bkhatenaref の答えです。主役の行列 $A$ は、方眼の正方形1つ1つを、$(2,\ 1)$ と $(1,\ 2)$ の2本がつくる平行四辺形に変えます。家は、もとの方眼のどのマスにどうかかれていたかを保ったまま、ななめの方眼の上にかき直されます。だから、ななめにのびて、かたむいた家になりました。戸は右によったままで、家の形は「ゆがんだ家」として残ります。
+
+同じことを、どんな点 $(x,\ y)$ でも確かめます。$(x,\ y)=x\vec e_x+y\vec e_y$ の行き先は、新しい物差しを $x$ 本と $y$ 本です。
+\kviicline{$x\begin{pmatrix}a\\c\end{pmatrix}+y\begin{pmatrix}b\\d\end{pmatrix}=\begin{pmatrix}ax+by\\cx+dy\end{pmatrix}$}
+②の「行でなぞる」計算と、ぴったり同じ式になりました。行列×ベクトルには、次の2つの見方があり、どちらも同じ答えになります。
+
+\begin{bkcenter}
+\begin{bktable}{width=\linewidth, colspec={Q[l,m,wd=30mm] X[l,m]}, rowsep=2pt, hline{2}={0.5pt,bkLine}, row{1}={font=\sffamily\small}}
+見方 & 何をしているか \\
+行で見る（②） & 行ごとに、ベクトルとの内積をとる。数を計算するときに便利。 \\
+列で見る（④） & 1列めを $x$ 本、2列めを $y$ 本つなぐ。形の変わり方を想像するときに便利。 \\
+\end{bktable}
+\bktabcaption{行列×ベクトルの2つの見方}
+\end{bkcenter}
+
+\begin{motto}[4]
+\kviicbox{2つの見方を、1つの式で}
+$(x,\ y)=(1,\ 2)$ を主役の行列に入れたとき、「行で見る」と「列で見る」が同じになるのは、たまたまではありません。行で見たときの1つめの答え $2\times1+1\times2$ の、「$2\times1$」は1列めを1本とった分の $x$ 成分、「$1\times2$」は2列めを2本とった分の $x$ 成分です。同じ4つのかけ算を、横に（行ごとに）まとめてたすか、たてに（列ごとに）まとめてたすかのちがいだけなのです。
+\kviicline{$\begin{pmatrix}2\times1+1\times2\\1\times1+2\times2\end{pmatrix}=1\begin{pmatrix}2\\1\end{pmatrix}+2\begin{pmatrix}1\\2\end{pmatrix}$}
+左辺を横に読むと「行で見る」、右辺は同じ4つの数を列ごとにまとめた「列で見る」です。
+\end{motto}
+
+\kviichead{行き先から、行列を作る}
+列で見ると、逆向きの問いにも答えられます。「$\vec e_x$ をここへ、$\vec e_y$ をここへ動かす行列は？」と聞かれたら、行き先をそのまま\textbf{たてに}1列め・2列めに書けばよいのです。たとえば、左回りに90°回すと、$\vec e_x=(1,\ 0)$ は $(0,\ 1)$ へ、$\vec e_y=(0,\ 1)$ は $(-1,\ 0)$ へ行きます（4-8）。だから
+\kviicline{$R_{90}=\begin{pmatrix}0&-1\\1&0\end{pmatrix}$\qquad（1列めが $(0,\ 1)$、2列めが $(-1,\ 0)$）}
+③の $R_{90}$ と同じ行列ができました。行き先を\textbf{行}に並べてしまうのは、よくあるまちがいです（まちがえやすいところ③）。
+
+\kviichead{4-11 のななめの物差しは、行列×ベクトル}
+4-11 のもっと知りたいで、$\vec a=(2,\ 1)$、$\vec b=(1,\ 3)$ をななめの物差しにして、$(5,\ 5)=2\vec a+1\vec b$ と表しました。この $s\vec a+t\vec b$ は、$\vec a$ と $\vec b$ を列に並べた行列に、$(s,\ t)$ を入れたものです。
+\kviicline{$s\vec a+t\vec b=\begin{pmatrix}2&1\\1&3\end{pmatrix}\begin{pmatrix}s\\t\end{pmatrix}$\qquad たとえば\quad $\begin{pmatrix}2&1\\1&3\end{pmatrix}\begin{pmatrix}2\\1\end{pmatrix}=\begin{pmatrix}5\\5\end{pmatrix}$}
+4-11 では、$(5,\ 5)$ から $s=2$、$t=1$ を連立方程式で求めました。これは、出てきたものから入れたものを求める問いで、7-5 の逆行列で解きます。また 7-9 では、行列にいちばんぴったりのななめの物差しを見つけます。
+
+\bksubsection{5}{まっすぐはまっすぐ、原点は動かない}
+\label{bk:7-2:senkei}
+
+図\ref{bk:7-2:fig-hogan}の5つの家を、もう一度見てください。どの絵にも、共通することが3つあります。
+\begin{enumerate}[label={（\textsf{\textbf{\Alph*}}）}, leftmargin=3\zw, itemsep=2pt, topsep=2pt]
+\item まっすぐなかべは、まっすぐなまま（曲がらない）。
+\item 平行なかべは、平行なまま（図\ref{bk:7-2:fig-retsu}の方眼の線も、平行なまま）。
+\item 原点 $(0,\ 0)$ は、動かない。
+\end{enumerate}
+（C）は、$(0,\ 0)$ を入れると、どの行が相手でも「0をかけてたす」ので、$(0,\ 0)$ しか出てこないからです。（A）と（B）は、次の2つのきまりから出てきます。
+
+\kviicframe{$A(\vec u+\vec v)=A\vec u+A\vec v$\qquad $A(k\vec v)=kA\vec v$\quad （$k$ は数）}
+1つめは「たしてから機械に入れても、別々に入れてから出てきたものをたしても同じ」、2つめは「何倍かしてから入れても、入れてから何倍かしても同じ」という意味です。主役の行列で、$\vec u=(1,\ 0)$、$\vec v=(1,\ 1)$ として確かめます。\par
+\begin{kviichk}
+A(\vec u+\vec v)=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}2\\1\end{pmatrix}=\begin{pmatrix}5\\4\end{pmatrix} & 先にたした $(1,\ 0)+(1,\ 1)=(2,\ 1)$ を入れた \\
+A\vec u+A\vec v=\begin{pmatrix}2\\1\end{pmatrix}+\begin{pmatrix}3\\3\end{pmatrix}=\begin{pmatrix}5\\4\end{pmatrix} & 別々に入れてから、出てきたものをたした \\
+\end{kviichk}
+同じになりました。成分で見ると、$ax+by$ のどの項も「数×成分」の形で、2乗やかけ算どうしがないからです。④の「新しい物差しを $x$ 本と $y$ 本」が、そのままこのきまりを表しています。
+
+このきまりは、5-18 の\textbf{線形}と同じ考えです（答えどうしをたしても答え、何倍しても答え）。行列をかける変換は、線形な変換です。まっすぐな線は、1つの点から同じ向きの矢印を $t$ 倍して並べた点の集まり（4-11 の $\vec p=\vec p_0+t\vec v$）なので、行き先も $A\vec p_0+tA\vec v$ という「点から同じ向きの矢印を $t$ 倍して並べたもの」、つまり、まっすぐな線になります。向きの矢印が同じ2本の平行な線は、行き先でも向きの矢印が同じ $A\vec v$ なので、平行なままです。
+
+\kviichead{平行移動は、行列のかけ算ではできない}
+家を、形も向きも変えずに、そのまま右へ3だけ動かす（\textbf{平行移動}する）ことはできるでしょうか。③の「ずらし」は床を止めたままかたむける変換で、平行移動とは別のものです。右へ3動かすと、家の左下のかど $(0,\ 0)$ は $(3,\ 0)$ へ行かなければなりません。ところが、行列は原点を動かせません（（C））。だから、\textbf{どんな2×2 の行列をかけても、平行移動はできない}のです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=4mm, y=4mm]
+  \kviicaxes{0}{6}{0}{3}
+  \kviicghost
+  \begin{scope}[xshift=12mm]\kviichouse[bkBlue]{1}{0}{0}{1}\end{scope}
+  \fill[bkRed] (0,0) circle (0.18); \fill[bkRed] (3,0) circle (0.18);
+  \draw[bkRed, line width=1pt, -{Stealth[length=4pt]}] (0.4,-0.7) -- (2.6,-0.7);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north] at (1.5,-0.9) {$(0,0)\to(3,0)$ は行列ではむり};
+  \node[font=\footnotesize, anchor=west, align=left] at (9,1.5) {平行移動は、原点も動かしてしまう。\\行列のかけ算だけではできない。\\→ 7-7 で、数を1つふやす工夫をする};
+\end{tikzpicture}
+\bkfigcaption{右へ3の平行移動。③の「ずらし」とは別のもの（ずらしでは、床の点は動かない）。}
+\end{bkfigure}
+ロボットの腕は、「回して、腕の長さだけ進む」をくり返します。この「進む」は平行移動です。7-7 では、点 $(x,\ y)$ に1を加えた $(x,\ y,\ 1)$ を使って、平行移動も行列のかけ算にしてしまう方法（同次座標）を学びます。
+
+\begin{seikaku}
+「$A(\vec u+\vec v)=A\vec u+A\vec v$ と $A(k\vec v)=kA\vec v$ をみたす機械」を、大学の本では\textbf{線形写像}（せんけいしゃぞう）または\textbf{線形変換}、昔の高校の教科書では\textbf{一次変換}（いちじへんかん）とよびます。平面の線形写像は、かならず2×2 の行列をかける形で書けます。$\vec e_x$ と $\vec e_y$ の行き先さえ決まれば、ほかの点の行き先は④の「新しい物差しを $x$ 本と $y$ 本」で全部決まってしまい、その2つの行き先を列に並べたものが行列だからです。
+\end{seikaku}
+\bkidx{せんけいしゃぞう}{線形写像}\bkidx{いちじへんかん}{一次変換}
+
+\bksubsection{6}{3つの数のベクトル：3×3 と 2×3 の行列}
+\label{bk:7-2:sanji}
+
+空間の点 $(x,\ y,\ z)$ のように、数が3つのベクトルには、3×3 の行列をかけます。なぞり方は同じで、1行に3つの数をかけてたします。3-6 のもっと知りたいの連立方程式 $x+y+z=9$、$x-y=1$、$y-z=1$ は、文字のない所に0を書くと、次のように書けます（$x-y$ は $1x-1y+0z$）。
+\kviicline{$\begin{pmatrix}1&1&1\\1&-1&0\\0&1&-1\end{pmatrix}\begin{pmatrix}x\\y\\z\end{pmatrix}=\begin{pmatrix}9\\1\\1\end{pmatrix}$}
+答え $(x,\ y,\ z)=(4,\ 3,\ 2)$ を入れて、確かめます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \matrix (L) at (0,0) [kviic mat] {1 \& 1 \& 1\\ 1 \& -1 \& 0\\ 0 \& 1 \& -1\\};
+  \matrix (v) [kviic mat, anchor=west] at ([xshift=6mm]L.east) {4\\ 3\\ 2\\};
+  \node[anchor=west] (eq) at ([xshift=3.5mm]v.east) {$=$};
+  \matrix (r) [kviic mat, anchor=west] at ([xshift=3.5mm]eq.east) {9\\ 1\\ 1\\};
+  \kviichl{kviic row}{L-2-1}{L-2-3}
+  \kviichl{kviic col}{v-1-1}{v-3-1}
+  \kviichl{kviic ans}{r-2-1}{r-2-1}
+  \node[anchor=west, font=\small] at ([xshift=6mm]r.east) {$\textcolor{bkOrange!80!black}{1}\times\textcolor{\bkTT}{4}+\textcolor{bkOrange!80!black}{(-1)}\times\textcolor{\bkTT}{3}+\textcolor{bkOrange!80!black}{0}\times\textcolor{\bkTT}{2}=\textcolor{bkGreen!50!black}{1}$};
+\end{tikzpicture}
+\bkfigcaption{3×3 でも、なぞり方は同じ。2行め（オレンジ）と列（青）で、答えの2つめ（緑）。1行めは $4+3+2=9$、3行めは $3-2=1$。どの行も右辺 $(9,\ 1,\ 1)$ と合うので、$(4,\ 3,\ 2)$ は答え。}
+\end{bkfigure}
+
+列の見方も同じです。1列め・2列め・3列めは、空間の物差しの矢印（4-13 の基本ベクトル $\vec i$、$\vec j$、$\vec k$ と同じもの）
+\kviicline{$\vec e_x=(1,\ 0,\ 0)$、\quad $\vec e_y=(0,\ 1,\ 0)$、\quad $\vec e_z=(0,\ 0,\ 1)$}
+の行き先です。たとえば
+\kviicline{$\begin{pmatrix}2&0&0\\0&1&0\\0&0&3\end{pmatrix}$}
+は、$x$ の向きに2倍、$z$ の向きに3倍のばす変換で、1辺1の立方体を、$x$・$y$・$z$ の向きの長さが2・1・3の箱に変えます。
+
+\kviichead{3つ入れて2つ出てくる：2×3 の行列}
+行列は、たてと横の数がちがってもかまいません。立体の絵を紙（平面）にかくときは、空間の点 $(x,\ y,\ z)$ を入れると、紙の上の点 $(X,\ Y)$ が出てくる機械を使います。たとえば、$x$ が1ふえるごとに、紙の上で左へ0.5、下へ0.5 ずらしてかく見取り図（斜投影という、図面でよく使うかき方の1つ）は、次の計算です。
+\kviicline{$\begin{pmatrix}X\\Y\end{pmatrix}=\begin{pmatrix}-0.5&1&0\\-0.5&0&1\end{pmatrix}\begin{pmatrix}x\\y\\z\end{pmatrix}$}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+1列め $(-0.5,\ -0.5)$ は、$x$ の物差し $\vec e_x$ が、紙の上では左へ0.5・下へ0.5 の矢印（ななめ左下）としてかかれることを表します。2列め $(1,\ 0)$ は $y$ が右向き、3列め $(0,\ 1)$ は $z$ が上向きです（④の「列は物差しの行き先」）。1辺2の立方体のかど $(2,\ 2,\ 2)$ は、$X=-1+2=1$、$Y=-1+2=1$ で、紙の $(1,\ 1)$ にかかれます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkLine, line width=0.3pt] (-2,-2) grid (3,3);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (-2.2,0) -- (3.4,0) node[anchor=west, font=\sffamily\footnotesize, inner sep=1pt] {$X$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (0,-2.2) -- (0,3.4) node[anchor=south, font=\sffamily\footnotesize, inner sep=1pt] {$Y$};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.2pt] (0,0) -- (-1,-1) (0,0) -- (2,0) (0,0) -- (0,2);
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (-1,-1) -- (1,-1) -- (1,1) -- (-1,1) -- cycle;
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (1,-1) -- (2,0) -- (2,2) -- (1,1);
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (-1,1) -- (0,2) -- (2,2);
+  \fill[bkRed] (1,1) circle (0.12);
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt, fill=white] at (1.05,0.95) {$(2,2,2)$};
+  \draw[bkOrange, line width=1.4pt, -{Stealth[length=4pt]}] (0,0) -- (-0.5,-0.5);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=east, inner sep=1pt] at (-1.1,-1.3) {$x$ の向き};
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{4pt}
+行列の横の数（3）は入れる数の個数、たての数（2）は出てくる数の個数です。②で見た「行列の横の数の個数と、入れるベクトルの数の個数が同じ」きまりは、ここでも守られています。
+
+\bksubsection{7}{表計算と Python で、たくさんの点をまとめて}
+\label{bk:7-2:pc}
+
+絵の点が何百もあるときは、コンピュータに計算させます。Python（2-19）では、行列もベクトルも \texttt{np.array} で作り（行列は1行ずつ \texttt{[ ]} で書く）、\texttt{@} でかけます（行列×ベクトル）。
+
+\noindent\begin{minipage}[t]{0.64\linewidth}\vspace{0pt}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1],
+              [1, 2]])
+ie = [(0, 0), (2, 0), (2, 2),
+      (1, 3), (0, 2)]     \# 家のかど
+for p in ie:
+    print(A @ np.array(p))
+\end{bkcode}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}\vspace{0pt}
+\begin{bkcodeout}[実行結果]
+[0 0]
+[4 2]
+[6 6]
+[5 7]
+[2 4]
+\end{bkcodeout}
+\end{minipage}\par\vspace{3pt}
+表計算と同じ行き先が出ました。Python は、ベクトルを横に書いて表示しますが、中身は同じです（①）。\texttt{A * np.array(p)} と書くと、\texttt{@} とはまったく別の計算になるので注意しましょう（まちがえやすいところ⑤）。
+
+表計算では、7-1 と同じおき方で、行列を A2 から入れ、そのすぐ右に、点を\textbf{たてに}1列に1つずつ並べます（①のたて書き）。
+
+\begin{bkcenter}
+\kviicfx{C5}{=MMULT(\$A\$2:\$B\$3,C2:C3)}\par\vspace{1mm}
+\bksheet{7}{13}{%
+1 & \SetCell[c=2]{c} 行列 $A$ & & \SetCell[c=5]{c} 家のかど（1列に1つ） & & & & \\
+2 & \SetCell{bg=kviicM} 2 & \SetCell{bg=kviicM} 1 & \SetCell{bg=kviicV} 0 & \SetCell{bg=kviicV} 2 & \SetCell{bg=kviicV} 2 & \SetCell{bg=kviicV} 1 & \SetCell{bg=kviicV} 0 \\
+3 & \SetCell{bg=kviicM} 1 & \SetCell{bg=kviicM} 2 & \SetCell{bg=kviicV} 0 & \SetCell{bg=kviicV} 0 & \SetCell{bg=kviicV} 2 & \SetCell{bg=kviicV} 3 & \SetCell{bg=kviicV} 2 \\
+4 & & & \SetCell[c=5]{c} 行き先 & & & & \\
+5 & & & \SetCell{bg=kviicR} 0 & \SetCell{bg=kviicR} 4 & \SetCell{bg=kviicR} 6 & \SetCell{bg=kviicR} 5 & \SetCell{bg=kviicR} 2 \\
+6 & & & \SetCell{bg=kviicR} 0 & \SetCell{bg=kviicR} 2 & \SetCell{bg=kviicR} 6 & \SetCell{bg=kviicR} 7 & \SetCell{bg=kviicR} 4 \\}
+\bktabcaption{A2:B3 に主役の行列、C〜G 列の2・3行めに家のかど（上が $x$、下が $y$）、5・6行めに行き先。}
+\end{bkcenter}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item C5 に \texttt{=MMULT(\$A\$2:\$B\$3,C2:C3)} を入れ、7-1 と同じように確定する（C5:C6 に1つめのかどの行き先が出る）。
+\item C5:C6 を、G 列まで右へコピーする。
+\end{enumerate}
+行列の範囲には \$ をつけて、コピーしても動かないようにします（2-18 の絶対参照）。かどの範囲 C2:C3 には \$ をつけないので、1列右へコピーすると D2:D3（次のかど）に変わります。家のかどの数を書きかえると、行き先もすぐに計算し直されるので、いろいろな絵で試してみましょう。
+
+
+\Needspace{15\baselineskip}
+\begin{motto}[4]
+\kviicbox{5つの点を、1度にかける（7-3 の予告）}
+5つのかどを、たてに書いたベクトルとして横に5本並べると、2行5列の表ができます。この表に、左から $A$ をかけてみます。
+\kviicline{$\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}0&2&2&1&0\\0&0&2&3&2\end{pmatrix}=\begin{pmatrix}0&4&6&5&2\\0&2&6&7&4\end{pmatrix}$}
+右の表の1列めは $(0,\ 0)$ の行き先、2列めは $(2,\ 0)$ の行き先…と、列ごとに行列×ベクトルをしただけです。表計算なら、C5:G6 をえらんで \texttt{=MMULT(A2:B3,C2:G3)} の1つの式で、この表が1度に出てきます。Python なら、5つのかどを2行5列の \texttt{np.array} にまとめて \texttt{A @} をつけるだけです。このように「行列×（ベクトルを並べた表）」が、次の 7-3 で学ぶ行列×行列です。
+\end{motto}
+
+\bksubsection{8}{ロボットの手の速さ：ヤコビ行列}
+\label{bk:7-2:jacobi}
+
+4-7 の2本のうでのロボットを思い出しましょう。肩の関節が角 $\theta_1$、ひじの関節が角 $\theta_2$ だけ回っています（$\theta_2$ は、1本めのうでの向きから測った角）。ここでは物理の本と同じ、$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=30°$、$\theta_2=45°$ とします。ひじと手の位置は、4-7 の順運動学の式から
+\kviicline{ひじ E $(L_1\cos30°,\ L_1\sin30°)=(0.260,\ 0.150)$}
+\kviicline{手 P $(0.260+L_2\cos75°,\ 0.150+L_2\sin75°)=(0.325,\ 0.391)$}
+です（単位は m。2本めのうでは、横から $30°+45°=75°$ の向き）。
+
+5-6 で、「関節のモーターの回る速さから、腕の先が動く速さを求めるのに、第7巻を使う」と予告しました。肩のモーターが $\dot\theta_1=\qty{0.50}{rad/s}$、ひじのモーターが $\dot\theta_2=\qty{1.0}{rad/s}$ で回るとき、手の速度はどうなるでしょう。（$\dot\theta$ は $\theta$ の時間微分、つまり角の変わる速さ＝角速度です。5-5。）
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 腕（1 m を 160 mm）
+  \fill[bkInk!35] (-8,-3) rectangle (8,0);
+  \draw[bkInk!70, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (0,0) -- (40,0);
+  \draw[bkBlue!70!black, line width=4pt, line cap=round] (0,0) -- (41.6,24);
+  \draw[bkOrange!80!black, line width=4pt, line cap=round] (41.6,24) -- (51.9,62.6);
+  \draw[bkInk!70, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (41.6,24) -- (57.2,33);
+  \kviicjoint{(0,0)}\kviicjoint{(41.6,24)}
+  \fill[bkInk] (51.9,62.6) circle (1.4);
+  \draw[bkInk, line width=0.6pt] (14,0) arc (0:30:14);
+  \node[font=\sffamily\footnotesize, anchor=west] at (15.5,3.2) {$\theta_1=30°$};
+  \draw[bkInk, line width=0.6pt] ({41.6+12*cos(30)},{24+12*sin(30)}) arc (30:75:12);
+  \node[font=\sffamily\footnotesize, anchor=west] at (51.5,39) {$\theta_2=45°$};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkBlue!70!black] at (19,13) {$L_1=0.30$\,m};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkOrange!70!black] at (44,46) {$L_2=0.25$\,m};
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-4) {肩 O};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (43,22) {ひじ E};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (53,63) {手 P};
+  % 速度の図（1 m/s を 80 mm）
+  \begin{scope}[shift={(114,14)}]
+    \fill[bkPaper, rounded corners=2mm] (-44,-10) rectangle (16,34);
+    \node[font=\sffamily\footnotesize, anchor=north west] at (-42,32.5) {手 P での速度（拡大）};
+    \fill[bkInk] (0,0) circle (1.2);
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-2) {手 P};
+    \draw[bkRed, line width=1.5pt, -{Stealth[length=5pt]}] (0,0) -- (-15.66,13.0);
+    \draw[bkPurple, line width=1.5pt, -{Stealth[length=5pt]}] (-15.66,13.0) -- (-34.92,18.2);
+    \draw[bkInk, line width=1.8pt, -{Stealth[length=6pt]}] (0,0) -- (-34.92,18.2);
+    \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west, align=left] at (-6,12) {肩だけ\\$\times0.50$};
+    \node[font=\sffamily\footnotesize, text=bkPurple!80!black, anchor=south] at (-24,17.5) {ひじだけ $\times1.0$};
+    \node[font=\sffamily\footnotesize, anchor=north] at (-23,6.5) {手の速度};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：2本のうでのロボット（物理 力-7 と同じ数）。右：手の速度（黒）は、肩だけを回したときの速度（赤）と、ひじだけを回したときの速度（紫）のたし算。}
+\label{bk:7-2:fig-robot}
+\end{bkfigure}
+
+1度に2つの関節を考えると、むずかしく感じます。そこで、④の「物差しの矢印の行き先」の考えを使い、1つずつ回してみます。
+
+\kviichead{手順1　肩だけを 1\,rad/s で回す}
+ひじを固めたまま、肩だけを回すと、腕全体が1本の棒のように、肩 O のまわりを回ります。手 P は、O を中心とする円の上を、角速度 1\,rad/s で動きます。4-15 で、回る点の速度は「位置の矢印を左回りに90°回した向きで、大きさ $r\omega$」でした。$\omega=1$ なので、手の位置の矢印 $\overrightarrow{\mathrm{OP}}=(0.325,\ 0.391)$ を90°回したもの、$(x,\ y)\to(-y,\ x)$ で
+\kviicline{手順1の速度\quad $(-0.391,\ 0.325)$\quad 〔m/s〕}
+
+\kviichead{手順2　ひじだけを 1\,rad/s で回す}
+肩を止めて、ひじだけを回すと、2本めのうでだけが、ひじ E のまわりを回ります。手 P は、E を中心とする円の上を動きます。ひじから手への矢印 $\overrightarrow{\mathrm{EP}}=(0.325-0.260,\ 0.391-0.150)=(0.065,\ 0.241)$ を90°回して
+\kviicline{手順2の速度\quad $(-0.241,\ 0.065)$\quad 〔m/s〕}
+
+\kviichead{手順3　2つを同時に回す}
+肩を $\dot\theta_1$〔rad/s〕、ひじを $\dot\theta_2$〔rad/s〕で同時に回すと、手の速度は、手順1の速度を $\dot\theta_1$ 倍したものと、手順2の速度を $\dot\theta_2$ 倍したもののたし算です（図\ref{bk:7-2:fig-robot}の右）。回る速さが2倍なら、手の速度も2倍。2つの動きは、それぞれの速度をたし合わせればよいのです。これは、④の「1列めを $x$ 本、2列めを $y$ 本」と同じ形です。手順1の速度を1列め、手順2の速度を2列めに並べた行列を $J$ とすると、
+\kviicframe{$\dot{\vec p}=J\dot{\vec\theta}$\\[4pt] $J=\begin{pmatrix}-0.391&-0.241\\0.325&0.065\end{pmatrix}$\qquad $\dot{\vec\theta}=\begin{pmatrix}\dot\theta_1\\\dot\theta_2\end{pmatrix}$}
+$\dot{\vec p}$ は手の位置 $\vec p$ の時間微分、つまり手の速度です。$\dot\theta_1=0.50$、$\dot\theta_2=1.0$ を入れます。\par
+\begin{kviichk}[0.58]
+\begin{pmatrix}-0.391&-0.241\\0.325&0.065\end{pmatrix}\begin{pmatrix}0.50\\1.0\end{pmatrix} & $J$ に、関節の角速度を入れる \\
+=\begin{pmatrix}-0.391\times0.50+(-0.241)\times1.0\\0.325\times0.50+0.065\times1.0\end{pmatrix} & 行でなぞる \\
+=\begin{pmatrix}-0.1955-0.241\\0.1625+0.065\end{pmatrix}=\begin{pmatrix}-0.4365\\0.2275\end{pmatrix} & かけて、たした \\
+\end{kviichk}
+手は、左上へ、速度 約 $(-0.44,\ 0.23)$（m/s）で動きます。速さは三平方の定理（4-4）で $\sqrt{0.4365^2+0.2275^2}\approx\qty{0.49}{m/s}$ です。（$J$ を丸めずに計算すると $(-0.437,\ 0.227)$ になります。小さなちがいは丸めのためです。）
+
+この行列 $J$ を、\textbf{ヤコビ行列}（Jacobian）といいます。\bkidx{やこびぎょうれつ}{ヤコビ行列}関節の角速度を入れると、手の速度が出てくる機械です。$J$ の数は、腕の形（$\theta_1$、$\theta_2$）が変わると変わるので、ロボットのコンピュータは、動きながら $J$ を何度も計算し直します。ここでは、4-15 の円運動の速度を使って $J$ を作りました。5-6 で予告した「合成関数の微分」を使う作り方は、8-3 で学びます。「ヤコビ」という名前の由来は、7-4 のコラムで紹介します。
+
+\begin{seikaku}
+手順3で「速度をたし合わせればよい」としたのは、2つの関節の角の小さな変化による手の小さな動きが、たし算で合わさるからです。角がほんの少しずつしか変わらない短い時間では、手の位置の変化は角の変化に比例し（5-18 の線形の考え）、2つの変化はたし算になります。このことを、微分を使ってきちんと確かめるのが 8-3 です。
+\end{seikaku}
+
+\bksubsection{9}{建物の部材の中の力：応力の行列}
+\label{bk:7-2:ouryoku}
+
+橋のはりや建物の柱の中には、力がはたらいています。部材を頭の中で切ってみると、切り口の両側は、たがいに押したり引いたりしあっています。切り口\qty{1}{m^2}あたりにはたらく力を\textbf{応力}といいます（物理 力-9）。おもしろいのは、同じ点でも、\textbf{切る向きによって、切り口にはたらく力の大きさも向きもちがう}ことです。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+物理の本では、切り口の向きを、切り口に直角な長さ1の矢印 $\vec n$ で表します。すると、その切り口にはたらく力（\qty{1}{m^2}あたり）$\vec t$ は、
+\kviicline{$\vec t=\kviicsig\vec n$}
+と、行列×ベクトルで求められます。行列 $\kviicsig$（シグマ）は、「切り口の向き $\vec n$ を入れると、その切り口の力 $\vec t$ が出てくる機械」です。物理の本では、成分の $\sigma_x$ と区別するために、この行列だけ太字で書きます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!18] (0,0) -- (40,0) -- (40,40) -- (0,40) -- cycle;
+  \fill[bkBlue!20] (0,0) -- (40,0) -- (40,10) -- (0,40) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,0) rectangle (40,40);
+  \draw[bkBlue!80!black, line width=1.2pt] (0,40) -- (40,10);
+  \draw[bkInk, line width=1.3pt, -{Stealth[length=4pt]}] (20,25) -- (29.6,37.8);
+  \node[font=\sffamily\footnotesize, anchor=south] at (29.6,38.2) {$\vec n$};
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=5pt]}] (20,25) -- (39,25.5);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (40.5,25.5) {$\vec t$};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (20,-1.5) {部材の中の小さな四角を\\ななめに切った切り口};
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{4pt}
+たとえば、ある点の応力の行列が
+\kviicline{$\kviicsig=\begin{pmatrix}80&30\\30&-20\end{pmatrix}$\quad 〔MPa〕}
+のとき（MPa は \unit{N/mm^2}。1\,mm² あたりの力の大きさ（N））、$x$ の向きに直角な切り口（$\vec n=\vec e_x$）の力は、④のとおり1列めの $(80,\ 30)$、$y$ の向きに直角な切り口の力は2列めの $(30,\ -20)$ です。物理の本で「1列めは $x$ の面の力」と読むのは、④の「列は物差しの行き先」そのものです。ななめの切り口の力は、例題7で計算します。
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{計算}行ごとに、ベクトルとの内積をとって、たてに並べる\\[2pt]
+\hspace*{6.6\zw}$\begin{pmatrix}a&b\\c&d\end{pmatrix}\begin{pmatrix}x\\y\end{pmatrix}=\begin{pmatrix}ax+by\\cx+dy\end{pmatrix}$\\[3pt]
+\tsl{列の意味}1列めは $\vec e_x$ の行き先、2列めは $\vec e_y$ の行き先\\[3pt]
+\tsl{線形}$A(\vec u+\vec v)=A\vec u+A\vec v$、\ $A(k\vec v)=kA\vec v$。原点は動かない\\[3pt]
+\tsl{機械}ヤコビ行列 $\dot{\vec p}=J\dot{\vec\theta}$、応力 $\vec t=\kviicsig\vec n$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{列ベクトル}{数をたてに並べたベクトル。中身は、横に書いたベクトルと同じ。}
+\bkword{変換}{点を、きまりにしたがって別の点に動かすこと。行列をかける変換は、線形な変換。}
+\bkword{線形写像・一次変換}{たし算と何倍を保つ機械（大学の本・昔の高校の本の名前）。平面では2×2 の行列をかけることと同じ。}
+\bkword{ヤコビ行列}{ロボットの関節の角速度を入れると、手の速度が出てくる行列。列は「その関節だけを 1\,rad/s で回したときの手の速度」。}
+\bkword{応力}{部材の切り口\qty{1}{m^2}あたりにはたらく力。切り口の向きを入れると力が出てくる行列で表す。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$A\vec x$}{エー・エックス}{行列 $A$ に、ベクトル $\vec x$ を右からかけたもの。$\vec x$ を入れると出てくるベクトル}{matrix-vector product}{7-2}}
+{\bkkigocard{$\dot{\vec\theta}$}{シータ・ドット}{関節の角速度を並べたベクトル。点は時間微分（5-5）。$J\dot{\vec\theta}$ は手の速度}{joint velocity}{7-2}}
+
+
+\begin{senmonsho}[線形代数の本の書き方]
+\begin{bkhonbun}
+写像 $f:\mathbb R^2\to\mathbb R^2$ が線形であるとは、任意の $\symbf{x},\ \symbf{y}\in\mathbb R^2$ と実数 $c$ に対して $f(\symbf{x}+\symbf{y})=f(\symbf{x})+f(\symbf{y})$、$f(c\symbf{x})=cf(\symbf{x})$ が成り立つことをいう。線形写像 $f$ に対して $f(\symbf{x})=A\symbf{x}$ をみたす2次正方行列 $A$ がただ1つ存在し、$A$ の第 $j$ 列は標準基底 $\symbf{e}_j$ の像 $f(\symbf{e}_j)$ である。
+\end{bkhonbun}
+\bkyaku{「写像」は機械、「$\mathbb R^2$」は2つの数の組（平面の点）全部、「任意の」は「どんな〜でも」。太字の $\symbf{x}$ は、この本の $\vec x$。「2次正方行列」は2×2 の行列、「標準基底」は物差しの矢印 $\vec e_x$、$\vec e_y$（$\symbf{e}_1$、$\symbf{e}_2$）、「像」は行き先。つまり⑤のきまりと、④の「列は物差しの行き先」を書いている。}
+\end{senmonsho}
+
+\begin{column}{ゲームの画面の点を、まとめて動かす}
+3次元のゲームでは、キャラクターや建物の形を、たくさんの小さな三角形を組み合わせて作ります。キャラクター1人で、かどの点が何千から何万もあります。キャラクターが体の向きを変えるたびに、コンピュータは、そのすべての点に、同じ行列をかけ直します。画面は1秒に60回ほどかきかえられるので、1秒に何百万回もの行列×ベクトルを計算していることになります。
+
+この計算を速くするために、ゲーム機やパソコンには、行列×ベクトルのようなかけ算とたし算を、同時にたくさん行う専用の部品（GPU、画像処理装置）が入っています。ゲームの画面を作る部品が、いまでは人工知能の計算にも使われているのは、人工知能の計算の多くも、行列のかけ算だからです。
+\end{column}
+
+\begin{column}{「ずらし」と、地震でゆれる建物}
+③の「ずらし」の行列 $\begin{pmatrix}1&k\\0&1\end{pmatrix}$ は、工学では\textbf{せん断}（せんだん）とよばれる変形を表します。消しゴムを机に置いて、上の面だけを横に押すと、底は動かず、上ほど横にずれて、四角がひし形のようにかたむきます。これがせん断です。
+
+地震で地面が横にゆれると、建物の各階も、床が横にずれて、かべや柱がかたむきます。このかたむきの大きさ（$k$ にあたる、横のずれ÷階の高さ）を、建築では層間変形角といいます。日本の建物の設計では、中くらいの地震のときに、これをおよそ $\frac{1}{200}$（高さ\qty{3}{m}の階で横に約\qty{1.5}{cm}）以内におさえることが決められています。かべやガラス、配管がこわれないようにするためです。小さな $k$ でも、建物にとっては大切な数なのです。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[行列×ベクトルを成分で]
+次の計算をしましょう。
+\kviicline{$\begin{pmatrix}3&-1\\2&4\end{pmatrix}\begin{pmatrix}2\\5\end{pmatrix}$}
+\kangaekata 1行めで上の数、2行めで下の数。負の数はかっこをつけてかける。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 1行め：$3\times2+(-1)\times5=6-5=1$\par
+\kviica 2行め：$2\times2+4\times5=4+20=24$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 $(1,\ 24)$
+\end{reidai}
+
+\begin{reidai}[3×3 の行列×ベクトル]
+\kviicq{右の計算をして、$(x,\ y,\ z)=(4,\ 3,\ 2)$ が、3-6 の連立方程式 $x+y+z=9$、$x-y=1$、$y-z=1$ の答えであることを確かめましょう。}{\begin{pmatrix}1&1&1\\1&-1&0\\0&1&-1\end{pmatrix}\begin{pmatrix}4\\3\\2\end{pmatrix}}
+\kangaekata 1行に3つずつかけてたし、右辺 $(9,\ 1,\ 1)$ とくらべる。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 1行め：$1\times4+1\times3+1\times2=9$\par
+\kviica 2行め：$1\times4+(-1)\times3+0\times2=1$\par
+\kviica 3行め：$0\times4+1\times3+(-1)\times2=1$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 $(9,\ 1,\ 1)$ で、右辺と同じ。$(4,\ 3,\ 2)$ は答え。
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+次の計算をしましょう。
+\kviicline{$\begin{pmatrix}2&-3\\1&5\end{pmatrix}\begin{pmatrix}4\\2\end{pmatrix}$}
+\bkjans{1行め $2\times4+(-3)\times2=2$、2行め $1\times4+5\times2=14$。答えは $(2,\ 14)$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}
+次の計算をしましょう。
+\kviicline{$\begin{pmatrix}2&0&1\\1&3&0\\0&1&4\end{pmatrix}\begin{pmatrix}1\\2\\3\end{pmatrix}$}
+\bkjans{1行め $2+0+3=5$、2行め $1+6+0=7$、3行め $0+2+12=14$。答えは $(5,\ 7,\ 14)$。}
+\end{jibun}
+\end{minipage}
+
+\begin{reidai}[家の変わり方を、ことばで言う]
+\kviicq{方眼の家（かど $(0,\ 0)$、$(2,\ 0)$、$(2,\ 2)$、$(1,\ 3)$、$(0,\ 2)$）に、右の行列をかけます。5つのかどの行き先を求め、家がどう変わるかを、ことばで言いましょう。}{\begin{pmatrix}-1&0\\0&1\end{pmatrix}}
+\kangaekata $(x,\ y)$ を入れて、何が出てくるかを成分で見る。列（$\vec e_x$、$\vec e_y$ の行き先）でも確かめる。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 $(x,\ y)$ を入れると $(-1\times x+0\times y,\ 0\times x+1\times y)=(-x,\ y)$\par
+\kviica 行き先：$(0,\ 0)$、$(-2,\ 0)$、$(-2,\ 2)$、$(-1,\ 3)$、$(0,\ 2)$\par
+\kviica 列で：$\vec e_x$ は $(-1,\ 0)$（左向き）へ、$\vec e_y$ は $(0,\ 1)$ のまま\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 横の位置の符号だけが変わる。$y$ 軸を折り目にした左右の裏返し（戸が左によった家になる）
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=4.4mm, y=4.4mm]
+  \kviicaxes{-3}{3}{0}{3}
+  \kviicghost
+  \kviichouse[bkRed]{-1}{0}{0}{1}
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (4.4,1.5) {点線がもとの家。\\$y$ 軸で左右に折り返した。};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+\kviicq{同じ家に、右の行列をかけます。5つのかどの行き先を求め、家がどう変わるかを、ことばで言いましょう。}{\begin{pmatrix}1&0\\0&2\end{pmatrix}}
+\bkjans{$(x,\ y)\to(x,\ 2y)$。行き先は $(0,\ 0)$、$(2,\ 0)$、$(2,\ 4)$、$(1,\ 6)$、$(0,\ 4)$。たて（高さ）だけが2倍にのびた家。}
+\end{jibun}
+
+\begin{reidai}[行き先から行列を作る]
+$\vec e_x$ を $(3,\ 1)$ へ、$\vec e_y$ を $(-1,\ 2)$ へ動かす行列 $M$ を作りましょう。また、$M$ で点 $(2,\ 1)$ はどこへ行きますか。行と列の2通りで求めましょう。\par
+\kangaekata ④のとおり、行き先を\textbf{たてに}、1列め・2列めに書く。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 1列めに $(3,\ 1)$、2列めに $(-1,\ 2)$ をたてに書く
+\kviicm{M=\begin{pmatrix}3&-1\\1&2\end{pmatrix}}
+\kviica 行で：$3\times2+(-1)\times1=5$、\ $1\times2+2\times1=4$\par
+\kviica 列で：$2\begin{pmatrix}3\\1\end{pmatrix}+1\begin{pmatrix}-1\\2\end{pmatrix}=\begin{pmatrix}6-1\\2+2\end{pmatrix}=\begin{pmatrix}5\\4\end{pmatrix}$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 $M=\begin{pmatrix}3&-1\\1&2\end{pmatrix}$、点 $(5,\ 4)$
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=4.4mm, y=4.4mm]
+  \kviicaxes{-2}{6}{0}{4}
+  \draw[bkRed, line width=1.5pt, -{Stealth[length=5pt]}] (0,0) -- (3,1);
+  \draw[bkRed, line width=1.5pt, -{Stealth[length=5pt]}] (3,1) -- (6,2);
+  \draw[bkGreen!60!black, line width=1.5pt, -{Stealth[length=5pt]}] (6,2) -- (5,4);
+  \draw[bkGreen!60!black, line width=1.5pt, -{Stealth[length=5pt]}] (0,0) -- (-1,2);
+  \fill[bkInk] (5,4) circle (0.15);
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt, fill=white] at (2.2,1.0) {1列め $(3,\ 1)$};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt, fill=white] at (-1.2,2) {2列め $(-1,\ 2)$};
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt, fill=white] at (4.8,4.1) {$(5,\ 4)$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (7.6,2.4) {1列めを2本、\\2列めを1本つなぐ};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\vec e_x$ を $(1,\ 2)$ へ、$\vec e_y$ を $(4,\ -1)$ へ動かす行列を作りましょう。また、その行列で点 $(3,\ 2)$ はどこへ行きますか。行と列の2通りで求めましょう。
+\bkjans{1列め $(1,\ 2)$、2列め $(4,\ -1)$ の行列。行で：$1\times3+4\times2=11$、$2\times3+(-1)\times2=4$。列で：$3(1,\ 2)+2(4,\ -1)=(11,\ 4)$。点 $(11,\ 4)$。}
+\end{jibun}
+
+\begin{reidai}[線形のきまりを使う]
+ある2×2 の行列 $A$ について、$A\vec u=(3,\ 1)$、$A\vec v=(-1,\ 2)$ であることがわかっています。$A(2\vec u+3\vec v)$ を求めましょう。\par
+\kangaekata ⑤のきまり $A(\vec u+\vec v)=A\vec u+A\vec v$、$A(k\vec v)=kA\vec v$ を使う。$A$ の成分がわからなくても求められる。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 $A(2\vec u+3\vec v)=A(2\vec u)+A(3\vec v)$\quad（たし算のきまり）\par
+\kviicb $=2A\vec u+3A\vec v$\quad（何倍のきまり）\par
+\kviicb $=2\begin{pmatrix}3\\1\end{pmatrix}+3\begin{pmatrix}-1\\2\end{pmatrix}=\begin{pmatrix}6-3\\2+6\end{pmatrix}=\begin{pmatrix}3\\8\end{pmatrix}$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 $(3,\ 8)$
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=3.6mm, y=3.6mm]
+  \kviicaxes{-1}{7}{0}{8}
+  \draw[bkOrange, line width=1.5pt, -{Stealth[length=5pt]}] (0,0) -- (3,1);
+  \draw[bkOrange, line width=1.5pt, -{Stealth[length=5pt]}] (3,1) -- (6,2);
+  \draw[bkGreen!80!black, line width=1.5pt, -{Stealth[length=5pt]}] (6,2) -- (5,4);
+  \draw[bkGreen!80!black, line width=1.5pt, -{Stealth[length=5pt]}] (5,4) -- (4,6);
+  \draw[bkGreen!80!black, line width=1.5pt, -{Stealth[length=5pt]}] (4,6) -- (3,8);
+  \fill[bkInk] (3,8) circle (0.18);
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt, fill=white] at (3.4,1.3) {$A\vec u$ を2本};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt, fill=white] at (5.6,5) {$A\vec v$ を3本};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt, fill=white] at (3.4,8) {$(3,\ 8)$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (11,3) {$A$ の成分を知らなくても、\\出てきた矢印をつなぐだけで\\答えが求められる};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+ある2×2 の行列 $A$ について、$A\vec u=(1,\ 4)$、$A\vec v=(2,\ -1)$ です。$A(3\vec u-\vec v)$ を求めましょう。
+\bkjans{$A(3\vec u-\vec v)=3A\vec u-A\vec v=(3,\ 12)-(2,\ -1)=(1,\ 13)$。}
+\end{jibun}
+
+\begin{reidai}[ロボットの手の速度]
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+2本のうでのロボットで、$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=0°$、$\theta_2=90°$ です（右の図）。\par
+（1）ヤコビ行列 $J$ を、⑧の手順1・2の方法で作りましょう。\par
+（2）$\dot\theta_1=\qty{0.4}{rad/s}$、$\dot\theta_2=\qty{0.8}{rad/s}$ のときの手の速度と速さを求めましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk!35] (-6,-2.5) rectangle (6,0);
+  \draw[bkBlue!70!black, line width=3pt, line cap=round] (0,0) -- (30,0);
+  \draw[bkOrange!80!black, line width=3pt, line cap=round] (30,0) -- (30,25);
+  \kviicjoint{(0,0)}\kviicjoint{(30,0)}
+  \fill[bkInk] (30,25) circle (1.2);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-3) {肩 O};
+  \node[font=\sffamily\footnotesize, anchor=north] at (30,-2.5) {ひじ E};
+  \node[font=\sffamily\footnotesize, anchor=west] at (31.5,25) {手 P};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkBlue!70!black] at (15,1.5) {0.30\,m};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!70!black] at (32,12.5) {0.25\,m};
+  \draw[bkInk, line width=0.6pt] (30,6) -- (24,6) -- (24,0);
+\end{tikzpicture}
+\end{minipage}\par\vspace{3pt}
+\kangaekata 1列め＝手の位置 $\overrightarrow{\mathrm{OP}}$ を90°回したもの。2列め＝ひじから手への $\overrightarrow{\mathrm{EP}}$ を90°回したもの。90°回すと $(x,\ y)\to(-y,\ x)$。\par
+\shiki\kviics\hangindent=4.3\zw\hangafter=1 （1）ひじ E $=(0.30,\ 0)$。2本めのうでは $0°+90°=90°$ の向き（真上）なので、手 P $=(0.30,\ 0.25)$\par
+\kviicb 1列め：$\overrightarrow{\mathrm{OP}}=(0.30,\ 0.25)$ を90°回して $(-0.25,\ 0.30)$\par
+\kviicb 2列め：$\overrightarrow{\mathrm{EP}}=(0,\ 0.25)$ を90°回して $(-0.25,\ 0)$
+\kviicm{J=\begin{pmatrix}-0.25&-0.25\\0.30&0\end{pmatrix}}
+\kviica （2）$\begin{pmatrix}-0.25&-0.25\\0.30&0\end{pmatrix}\begin{pmatrix}0.4\\0.8\end{pmatrix}=\begin{pmatrix}-0.1-0.2\\0.12+0\end{pmatrix}=\begin{pmatrix}-0.30\\0.12\end{pmatrix}$\par
+\kviicb 速さ：$\sqrt{0.30^2+0.12^2}=\sqrt{0.1044}\approx0.32$\par
+\kotae\kviics\hangindent=4.3\zw\hangafter=1 （1）式の段の $J$\quad （2）速度 $(-0.30,\ 0.12)$（m/s）、速さ約\qty{0.32}{m/s}\par\vspace{2pt}\noindent{\small メモ：$J$ のある行が全部0だと、その行の成分（たとえば1行めなら手の速度の $x$ 成分）は、関節をどう回してもいつも0です。手はその向きには動けません（章末問題9）。\par}
+
+\end{reidai}
+
+\begin{jibun}
+同じロボット（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）で、$\theta_1=90°$、$\theta_2=-90°$ です（ひじから右へ曲がって、2本めのうでは真横を向く）。\newline
+（1）ヤコビ行列 $J$ を作りましょう。\newline
+（2）$\dot\theta_1=\qty{0.5}{rad/s}$、$\dot\theta_2=\qty{-1.0}{rad/s}$ のときの手の速度を求めましょう。
+\bkjans{（1）\nobreak ひじ $(0,\ 0.30)$、手 $(0.25,\ 0.30)$。1列め：$(0.25,\ 0.30)$ を90°回して $(-0.30,\ 0.25)$。2列め：$\overrightarrow{\mathrm{EP}}=(0.25,\ 0)$ を90°回して $(0,\ 0.25)$。$J$ は1行め $-0.30$、0、2行め 0.25、0.25。（2）\nobreak $-0.30\times0.5+0=-0.15$、$0.25\times0.5+0.25\times(-1.0)=-0.125$。手の速度は $(-0.15,\ -0.125)$（m/s）。}
+\end{jibun}
+
+\begin{reidai}[ななめの切り口の力]
+\kviicq{応力の行列が右のような点で、向き $\vec n=(0.6,\ 0.8)$ の切り口にはたらく力 $\vec t$（\unit{MPa}）を求めましょう。}{\kviicsig=\begin{pmatrix}80&30\\30&-20\end{pmatrix}\ \text{〔MPa〕}}
+\kangaekata ⑨の $\vec t=\kviicsig\vec n$。$\vec n$ は長さ1（$0.6^2+0.8^2=1$）になっている。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 1行め：$80\times0.6+30\times0.8=48+24=72$\par
+\kviica 2行め：$30\times0.6+(-20)\times0.8=18-16=2$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 $\vec t=(72,\ 2)$（MPa）。ほとんど $x$ の向きの力。
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!18] (0,0) rectangle (32,32);
+  \fill[bkBlue!20] (0,0) -- (32,0) -- (32,8) -- (0,32) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,0) rectangle (32,32);
+  \draw[bkBlue!80!black, line width=1.2pt] (0,32) -- (32,8);
+  \draw[bkInk, line width=1.3pt, -{Stealth[length=4pt]}] (16,20) -- (25.6,32.8);
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (25.6,32.8) {$\vec n=(0.6,\ 0.8)$};
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=5pt]}] (16,20) -- (44.8,20.8);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (46,20.8) {$\vec t=(72,\ 2)$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (66,8) {切り口はななめでも、\\力はほぼ真横};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+同じ点で、向き $\vec n=(0.8,\ 0.6)$ の切り口にはたらく力 $\vec t$ を求めましょう。
+\bkjans{$80\times0.8+30\times0.6=82$、$30\times0.8+(-20)\times0.6=12$。$\vec t=(82,\ 12)$（MPa）。}
+\end{jibun}
+
+\begin{reidai}[立体の点を、紙にかく]
+\kviicq{⑥の見取り図の行列（右）で、空間の点 $(2,\ 4,\ 3)$ は、紙のどこにかかれますか。また、入れる数と出てくる数は、それぞれいくつですか。}{\begin{pmatrix}-0.5&1&0\\-0.5&0&1\end{pmatrix}}
+\kangaekata 2×3 の行列には3つの数を入れ、2つの数が出てくる。1行に3つずつかけてたす。\par
+\shiki\kviics\hangindent=2.6\zw\hangafter=1 $X=-0.5\times2+1\times4+0\times3=-1+4=3$\par
+\kviica $Y=-0.5\times2+0\times4+1\times3=-1+3=2$\par
+\kotae\kviics\hangindent=2.6\zw\hangafter=1 紙の $(3,\ 2)$。入れる数は3つ、出てくる数は2つ。
+\par\vspace{3pt}{\centering\begin{tikzpicture}[x=5.5mm, y=5.5mm]
+  \draw[bkLine, line width=0.3pt] (-2,-2) grid (5,4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (-2.2,0) -- (5.4,0) node[anchor=west, font=\sffamily\footnotesize, inner sep=1pt] {$X$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (0,-2.2) -- (0,4.4) node[anchor=south, font=\sffamily\footnotesize, inner sep=1pt] {$Y$};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.2pt] (0,0) -- (-1,-1) (0,0) -- (4,0) (0,0) -- (0,3);
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (-1,-1) -- (3,-1) -- (3,2) -- (-1,2) -- cycle;
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (3,-1) -- (4,0) -- (4,3) -- (3,2);
+  \draw[bkBlue!80!black, line width=1pt, line join=round] (-1,2) -- (0,3) -- (4,3);
+  \fill[bkRed] (3,2) circle (0.13);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (6.4,1.5) {奥行き2・横4・高さ3の箱。\\赤い点のかど $(2,\ 4,\ 3)$ が、\\紙の $(3,\ 2)$。};
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+\kviicq{同じ見取り図の行列（右）で、空間の点 $(4,\ 2,\ 1)$ は、紙のどこにかかれますか。}{\begin{pmatrix}-0.5&1&0\\-0.5&0&1\end{pmatrix}}
+\bkjans{$X=-0.5\times4+1\times2+0\times1=0$、$Y=-0.5\times4+0\times2+1\times1=-1$。紙の $(0,\ -1)$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 列でなぞってしまう}
+\bkng{$\begin{pmatrix}1&2\\3&4\end{pmatrix}\begin{pmatrix}5\\6\end{pmatrix}=\begin{pmatrix}1\times5+3\times6\\2\times5+4\times6\end{pmatrix}=\begin{pmatrix}23\\34\end{pmatrix}$}
+\bkok{$\begin{pmatrix}1\times5+2\times6\\3\times5+4\times6\end{pmatrix}=\begin{pmatrix}17\\39\end{pmatrix}$}
+×は、行列を\textbf{たて}に読んでベクトルとかけています。行列は\textbf{横}（行）、ベクトルは\textbf{たて}になぞります。
+\end{tsumazuki}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② ベクトルを左に置く}
+\raggedright\bkng{$\begin{pmatrix}1\\2\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}$ と書いて計算する}
+\bkok{$\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\2\end{pmatrix}$（行列が左、ベクトルが右）}
+たてのベクトルを左に置くと、左の「行」は1つの数しかなく、右の行列の列（2つの数）と指が出会いません。機械（行列）に、右から入れると覚えましょう。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 行き先を行に並べる}
+\raggedright\bkng{$\vec e_x\to(3,\ 1)$、$\vec e_y\to(-1,\ 2)$ の行列を $\begin{pmatrix}3&1\\-1&2\end{pmatrix}$ とする}
+\bkok{$\begin{pmatrix}3&-1\\1&2\end{pmatrix}$（行き先は\textbf{たて}に、列として書く）}
+×の行列に $\vec e_x=(1,\ 0)$ を入れると $(3,\ -1)$ が出てきて、ほしい $(3,\ 1)$ になりません。$\vec e_x$ を入れると拾われるのは1列めです。
+\end{tsumazuki}
+\end{minipage}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 平行移動を行列で作る}
+\raggedright
+\bkng{「右へ3動かす行列」を探す}
+\bkok{原点が動く変換は、2×2 の行列ではできない}
+行列は $(0,\ 0)$ を動かせません（⑤の（C））。平行移動は 7-7 の方法で。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ Python で $*$ を使う}
+\raggedright
+\bkng{\texttt{A * p}}
+\bkok{\texttt{A @ p}}
+\texttt{*} は、行列の各行に、ベクトルを成分ごとにかけるだけで、行列×ベクトルになりません（たしてくれない）。
+\end{tsumazuki}
+\end{minipage}
+
+\begin{tsumazuki}{⑥ 大きさの合わないものをかける}
+\bkng{$\begin{pmatrix}-0.5&1&0\\-0.5&0&1\end{pmatrix}\begin{pmatrix}2\\4\end{pmatrix}$ を計算しようとする}
+\bkok{2×3 の行列には、3つの数のベクトルを入れる（$(2,\ 4,\ 3)$ など）}
+1行に3つの数があるのに、ベクトルの数が2つしかないので、3つめの数とかけるものがありません。行列の横の数の個数と、ベクトルの数の個数を、かける前にくらべましょう（②）。表計算の \texttt{MMULT} では \texttt{\#VALUE!}、Python ではエラーになります。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviicbox{ななめの文字：ずらしの行列}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+文書を作るソフトで、まっすぐな文字をななめにするとき、文字の形の点1つ1つに、ずらしの行列（図の上）をかける方法があります。高さ $y$ の点が $ky$ だけ右へずれ、上ほど右へかたむきます。12°かたむけるなら $k=\tan12°\approx0.21$ です（4-6）。下の線（$y=0$）は動かないので、ななめの文字も同じ行に並びます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=4.4mm, y=4.4mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid (10,5);
+  \filldraw[fill=bkGray!25, draw=bkGray, line width=0.8pt, line join=round] (0.5,0) -- (0.5,5) -- (1.5,5) -- (1.5,1) -- (3.5,1) -- (3.5,0) -- cycle;
+  \begin{scope}[xshift=22mm, cm={1,0,0.21,1,(0,0)}]
+    \filldraw[fill=bkPurple!30, draw=bkPurple!80!black, line width=0.8pt, line join=round] (0.5,0) -- (0.5,5) -- (1.5,5) -- (1.5,1) -- (3.5,1) -- (3.5,0) -- cycle;
+  \end{scope}
+  \draw[bkInk, line width=0.8pt] (-0.3,0) -- (10.3,0);
+  \node[font=\footnotesize, anchor=south] at (5,5.3) {$\begin{pmatrix}1&k\\0&1\end{pmatrix}$\ をかける};
+  \node[font=\sffamily\footnotesize, anchor=north] at (2,-0.4) {もとの文字};
+  \node[font=\sffamily\footnotesize, anchor=north] at (7.6,-0.4) {$k=0.21$};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviicbox{ロボットを、手の速度で動かす}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+工場のロボットを動かす人は、「手をまっすぐ右へ\qty{0.1}{m/s}で」のように、手の速度で指示したいものです。ところが、モーターに伝えられるのは、関節の回る速さだけです。そこでコンピュータは、ヤコビ行列 $J$ の機械を逆向きに使い、ほしい手の速度から、関節の角速度を求めます。出てきたものから入れたものを求めるこの計算は、7-5 の逆行列で学びます。ロボットの全体の計算は 7-11 で読みます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=34mm, align=center, font=\sffamily\footnotesize] (v) at (0,14) {ほしい手の速度\\$\dot{\vec p}$};
+  \node[bk node, minimum width=34mm, align=center, font=\sffamily\footnotesize] (w) at (0,-14) {関節の角速度\\$\dot{\vec\theta}$};
+  \draw[bk link] ([xshift=-6mm]w.north) -- node[bk link label, left] {$J$} ([xshift=-6mm]v.south);
+  \draw[bk link] ([xshift=6mm]v.south) -- node[bk link label, right] {逆向き（7-5）} ([xshift=6mm]w.north);
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviicbox{影：高さをなくす行列}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+真上から光が当たると、空中の点 $(x,\ y,\ z)$ の影は、地面の $(x,\ y,\ 0)$ にできます。これは、図の上の行列をかけることと同じです。3列めが $(0,\ 0,\ 0)$、つまり高さの物差し $\vec e_z$ の行き先が0なので、立体は平らにつぶれ、影から元の高さはわかりません。行列が「つぶす」かどうかを1つの数で見分ける方法は、7-4（行列式）で学びます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkGray!20] (-4,-6) -- (44,-6) -- (52,6) -- (4,6) -- cycle;
+  \fill[bkInk!45] (10,-2) -- (28,-2) -- (32,3) -- (14,3) -- cycle;
+  \filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.7pt] (10,18) -- (28,18) -- (32,23) -- (14,23) -- cycle;
+  \foreach \kviicx/\kviicy in {10/-2, 28/-2, 32/3, 14/3} {\draw[bkYellow!70!black, line width=0.6pt, dash pattern=on 1.5pt off 1.2pt] (\kviicx,{\kviicy+20}) -- (\kviicx,{\kviicy+0.6});}
+  \foreach \kviicx in {6,22,38} {\draw[bkYellow!80!black, line width=1pt, -{Stealth[length=3.5pt]}] (\kviicx,36) -- (\kviicx,28);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (22,36.5) {真上からの光};
+  \node[font=\sffamily\footnotesize, anchor=north] at (24,-7) {地面の影};
+  \node[font=\footnotesize, anchor=south] at (24,44) {$\begin{pmatrix}1&0&0\\0&1&0\\0&0&0\end{pmatrix}$};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{butsuri}
+\kviicbox{ばねの網：ずれを入れると、力が出てくる}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+かべにばね定数\qty{100}{N/m}のばね2本を直列につなぎ、つなぎ目を点1、はしを点2とします。点1・点2を $u_1$、$u_2$〔m〕だけ右へずらしておく力 $F_1$、$F_2$〔N〕は、ばねの力（のび×ばね定数）をたして
+\kviicline{$\begin{pmatrix}F_1\\F_2\end{pmatrix}=\begin{pmatrix}200&-100\\-100&100\end{pmatrix}\begin{pmatrix}u_1\\u_2\end{pmatrix}$}
+です。$u_1=0.01$、$u_2=0.03$ なら $F_1=-1$、$F_2=2$（点1は左へ\qty{1}{N}、点2は右へ\qty{2}{N}）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,-6) -- (0,8);
+  \foreach \kviicy in {-6,-3.5,...,8} {\draw[bkInk!60, line width=0.4pt] (0,\kviicy) -- (-1.6,{\kviicy+1.6});}
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.3mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] (0,1) -- (22,1);
+  \filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.8pt] (22,1) circle (1.8);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.3mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] (23.8,1) -- (46,1);
+  \filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.8pt] (46,1) circle (1.8);
+  \node[font=\sffamily\footnotesize, anchor=south] at (22,3.5) {点1};
+  \node[font=\sffamily\footnotesize, anchor=south] at (46,3.5) {点2};
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=4pt]}] (22,-4) -- (15,-4);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north] at (18.5,-5.5) {$F_1$};
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=4pt]}] (46,-4) -- (56,-4);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=north] at (51,-5.5) {$F_2$};
+\end{tikzpicture}
+\par\vspace{2pt}{\footnotesize\raggedright 行列 $K$ は「ずれを入れると力が出てくる機械」。橋や建物の計算（物理 力-16）では何万行にもなる。\par}
+\end{minipage}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 次の計算をしましょう\mbox{（\bkreidairef{1}）}。\newline
+\kviicline{（1）\ $\begin{pmatrix}4&1\\-2&3\end{pmatrix}\begin{pmatrix}3\\-1\end{pmatrix}$\qquad （2）\ $\begin{pmatrix}0.5&2\\1&-1\end{pmatrix}\begin{pmatrix}4\\1.5\end{pmatrix}$}
+\bkpans{（1）\nobreak $4\times3+1\times(-1)=11$、$-2\times3+3\times(-1)=-9$ で $(11,\ -9)$。（2）\nobreak $0.5\times4+2\times1.5=5$、$1\times4+(-1)\times1.5=2.5$ で $(5,\ 2.5)$。}
+
+\bkproblem 方眼の家（かど $(0,\ 0)$、$(2,\ 0)$、$(2,\ 2)$、$(1,\ 3)$、$(0,\ 2)$）に、次の行列をかけます。
+\kviicline{$\begin{pmatrix}-1&0\\0&-1\end{pmatrix}$}
+5つのかどの行き先を求め、家がどう変わるかを、ことばで言いましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$(x,\ y)\to(-x,\ -y)$。行き先は $(0,\ 0)$、$(-2,\ 0)$、$(-2,\ -2)$、$(-1,\ -3)$、$(0,\ -2)$。原点のまわりに180°回った（さかさまで、左右も反対の）家。}
+
+\bkproblem $\vec e_x$ を $(2,\ -1)$ へ、$\vec e_y$ を $(1,\ 3)$ へ動かす行列を作りましょう。また、その行列で点 $(1,\ 2)$ はどこへ行きますか\mbox{（\bkreidairef{4}）}。
+\bkpans{1列め $(2,\ -1)$、2列め $(1,\ 3)$ の行列（1行め 2、1、2行め $-1$、3）。$1(2,\ -1)+2(1,\ 3)=(4,\ 5)$。}
+
+\bkproblem ある2×2 の行列 $A$ について、$A\vec u=(2,\ 0)$、$A\vec v=(1,\ 3)$ です。$A(\vec u+2\vec v)$ と $A(4\vec u-3\vec v)$ を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$A(\vec u+2\vec v)=(2,\ 0)+(2,\ 6)=(4,\ 6)$。$A(4\vec u-3\vec v)=(8,\ 0)-(3,\ 9)=(5,\ -9)$。}
+
+\bkproblem 次の計算をしましょう\mbox{（\bkreidairef{2}）}。
+\kviicline{$\begin{pmatrix}1&2&0\\0&1&-1\\3&0&1\end{pmatrix}\begin{pmatrix}2\\1\\4\end{pmatrix}$}
+\bkpans{1行め $2+2+0=4$、2行め $0+1-4=-3$、3行め $6+0+4=10$。答えは $(4,\ -3,\ 10)$。}
+
+\bkproblem ⑧のロボット（$J$ は1行め $-0.391$、$-0.241$、2行め 0.325、0.065）で、$\dot\theta_1=\qty{1.0}{rad/s}$、$\dot\theta_2=\qty{-0.5}{rad/s}$ のとき、手の速度を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$-0.391\times1.0+(-0.241)\times(-0.5)=-0.2705$、$0.325\times1.0+0.065\times(-0.5)=0.2925$。手の速度は約 $(-0.27,\ 0.29)$（m/s）（$J$ の丸めのため、小数第3位は決めない）。}
+
+\bkproblem ⑥の見取り図の行列（下）で、空間の点 $(2,\ 2,\ 4)$ と $(0,\ 3,\ 1)$ は、それぞれ紙のどこにかかれますか\mbox{（\bkreidairef{8}）}。
+\kviicline{$\begin{pmatrix}-0.5&1&0\\-0.5&0&1\end{pmatrix}$}
+\bkpans{$(2,\ 2,\ 4)$：$X=-1+2+0=1$、$Y=-1+0+4=3$ で紙の $(1,\ 3)$。$(0,\ 3,\ 1)$：$X=0+3+0=3$、$Y=0+0+1=1$ で紙の $(3,\ 1)$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem ⑨の応力の行列 $\kviicsig$（1行め 80、30、2行め 30、$-20$、単位 MPa）で、向き $\vec n=(0.6,\ -0.8)$ の切り口にはたらく力 $\vec t$ を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$80\times0.6+30\times(-0.8)=24$、$30\times0.6+(-20)\times(-0.8)=34$。$\vec t=(24,\ 34)$（MPa）。}
+
+\bkproblem ⑧のロボット（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）の腕を、まっすぐ横にのばしました（$\theta_1=0°$、$\theta_2=0°$）\mbox{（\bkreidairef{6}）}。\newline
+（1）ヤコビ行列 $J$ を作りましょう。\newline
+（2）$\dot\theta_1=\dot\theta_2=\qty{1}{rad/s}$ のときの手の速度を求めましょう。\newline
+（3）この姿勢のまま、関節をどんな速さで回しても、手を $x$ の向き（腕ののびる向き）には動かせません。その理由を、$J$ の1行めから説明しましょう。
+\bkpans{（1）\nobreak ひじ $(0.30,\ 0)$、手 $(0.55,\ 0)$。1列め $(0,\ 0.55)$、2列め $(0,\ 0.25)$。$J$ は1行め 0、0、2行め 0.55、0.25。（2）\nobreak $(0,\ 0.55+0.25)=(0,\ 0.80)$（m/s）。（3）\nobreak 手の速度の $x$ 成分は、$J$ の1行めとの内積 $0\times\dot\theta_1+0\times\dot\theta_2$ で、いつも0だから（7-4 で学ぶ特異姿勢）。}
+
+\bkproblem 物理・工学ではこう使うの「ななめの文字」と同じずらしの行列
+\kviicline{$\begin{pmatrix}1&0.2\\0&1\end{pmatrix}$}
+を、文字「L」のかど $(0,\ 0)$、$(0,\ 5)$、$(1,\ 5)$、$(1,\ 1)$、$(3,\ 1)$、$(3,\ 0)$ にかけます。6つのかどの行き先を求め、文字がどう変わるかを、ことばで言いましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$(x,\ y)\to(x+0.2y,\ y)$。行き先は $(0,\ 0)$、$(1,\ 5)$、$(2,\ 5)$、$(1.2,\ 1)$、$(3.2,\ 1)$、$(3,\ 0)$。下の線は動かず、上ほど右へずれた、ななめの「L」。}
+
+\bkproblem 方眼の家（かど $(0,\ 0)$、$(2,\ 0)$、$(2,\ 2)$、$(1,\ 3)$、$(0,\ 2)$）に、次の行列をかけます。5つのかどの行き先を求め、家がどう変わるかを、ことばで言いましょう。ヒント：直線 $y=x$ を考えてみよう\mbox{（\bkreidairef{3}）}。
+\kviicline{$\begin{pmatrix}0&1\\1&0\end{pmatrix}$}
+\bkpans{$(x,\ y)\to(y,\ x)$。行き先は $(0,\ 0)$、$(0,\ 2)$、$(2,\ 2)$、$(3,\ 1)$、$(2,\ 0)$。直線 $y=x$ を折り目にして折り返した、横にねた家（屋根が右を向く）。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 行列×ベクトルを、行と列をなぞって計算できる。\bkfurref{bk:7-2:nazoru}
+\item 列（物差しの矢印の行き先）から、絵の変わり方を読みとり、行き先から行列を作れる。\bkfurref{bk:7-2:retsu}
+\item ヤコビ行列や応力の行列を、「入れると出てくる機械」として計算できる。\bkfurref{bk:7-2:jacobi}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{4つの数で、絵も、ロボットの手も動かせるんだね。次の 7-3 では、機械を2つつないでみよう。}

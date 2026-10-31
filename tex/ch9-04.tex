@@ -1,0 +1,1372 @@
+%% 9-4 スペクトル：フーリエ変換（第15回：組 V9-3。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md）で書く。場合分けの表9-4（A〜G）と流れ図はこの章（見開き）。
+%% ほかの章との約束：予告カード 9-4（−∞〜∞ の積分とガウス積分 √π：8-6）→ e^{-t^2/2} → √(2π)e^{-ω^2/2}、
+%%   3-14・3-17（標準偏差・正規分布）→ はば σ と 1/σ、路線⑦の終点（計測と診断）、440・880・1320 Hz（1・0.5・0.25）、
+%%   8点の DFT（X_2=−4j）、7 kHz→1 kHz、動画の車輪（24コマ・8本・2.75回転→−3.75°）。デルタ関数の名前と記号は 9-6。
+%%   数はすべて Python で検算した（scratchpad/v9-3/chk94.py・fft94.py）。
+
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixe は章ごとに置きかえる =====
+\colorlet{kixeNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixeSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixeSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixe dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixe dan1/.style={kixe dan, draw=kixeNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixe dan2/.style={kixe dan, draw=kixeSc, fill=kixeSb, text=bkInk},
+  kixe dan3/.style={kixe dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixe name/.style={draw=kixeNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixe seki/.style={draw=kixeSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixeSb},
+  kixe tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixe q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixe do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixe go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixe yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixe@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixedan{1|2|3}
+\newcommand\kixedan[1]{\tikz[baseline=(d.base)]\node[kixe dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixenaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixenaosu[1]{\tikz[baseline=(d.base)]\node[kixe dan2] (d) {\vphantom{あ}直す：\kixe@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixeop{1|2|3|4}
+\newcommand\kixeop[1]{\tikz[baseline=(d.base)]\node[kixe dan2] (d) {\vphantom{あ}\kixe@op{#1}};}
+% 段の見出し（本文で）  \kixedanhead{1|2|3}{見出し}
+\newcommand\kixedanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixe dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixecase{C}（′ は \kixecase{A$'$}）
+\newcommand\kixecase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixebaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixebaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixe@cases#3,\@nil）}
+\def\kixe@cases#1,#2\@nil{\kixecase{#1}\ifx\relax#2\relax\else と\kixe@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixeN[1]{\tikz[baseline=(n.base)]\node[kixe name] (n) {$\displaystyle #1$};}
+\newcommand\kixeNt[1]{\tikz[baseline=(n.base)]{\node[kixe name] (n) {$\displaystyle #1$};\node[kixe tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixeS[1]{\tikz[baseline=(n.base)]\node[kixe seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixeSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixeSt[2]{\tikz[baseline=(n.base)]{\node[kixe seki] (n) {$\displaystyle #2$};\node[kixe tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixe@op{#1}};}}
+% 場合分けの表の題の帯  \kixecasetitle{9-2}{題}
+\newcommand\kixecasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixepic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixepic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixex/\kixey in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixex-1},{\kixey-1}) -- ({\kixex+1},{\kixey+1}) ({\kixex-1},{\kixey+1}) -- ({\kixex+1},{\kixey-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixex/\kixey in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixex,\kixey) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+%% ===== この章の部品（9-4、組 V9-3）=====
+\makeatletter
+%% ----- 2つの世界の図の型（tools/kata9.md、組 V9-1。kixa→kixe）-----
+
+\colorlet{kixeW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixeF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixeP}{bkRed!80!black}% s の世界の点（×）
+% グラフのスタイル（どれも scale only axis：はばと高さは軸の箱の大きさ）
+\pgfplotsset{
+  kixe base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixe wave/.style={kixe base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixe spec/.style={kixe base, ymin=0},
+  kixe splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixe sig/.style={kixeW, line width=1.4pt, no markers, samples=241, smooth},
+  kixe part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth},
+  kixe bar/.style={ycomb, draw=kixeF, line width=3pt, no markers},
+  kixe dot/.style={only marks, mark=*, mark size=1.3pt, kixeW}}
+% 2つの世界の見出しと、行き来の矢印  \kixeworlds[見出しの高さ]{左の題}{右の題}{上の矢印（→）}{下の矢印（←）}
+%     左の軸は at={(0mm,0mm)}、右の軸は at={(76mm,0mm)}（はば 47 mm）に置く。見出しは軸の上（ふつう 42 mm）
+\tikzset{
+  kixe world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixe bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixe blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixeworlds[5][42mm]{%
+  \node[kixe world, draw=kixeW] (kixeL) at (23.5mm,#1) {#2};
+  \node[kixe world, draw=kixeF] (kixeR) at (99.5mm,#1) {#3};
+  \draw[kixe bridge] ([yshift=1.3mm, xshift=1.5mm]kixeL.east) -- node[kixe blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixeR.west);
+  \draw[kixe bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixeR.west) -- node[kixe blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixeL.east);}
+% s の世界の点（axis の中で）  \kixepole[色]{実部}{虚部}（×）  \kixezero[色]{実部}{虚部}（○）
+\newcommand\kixepole[3][kixeP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixezero[3][kixeP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+%% ----- ここから 9-4 だけの部品 -----
+% 小見出し（太字の1行）
+\newcommand\kixehead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixebox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式・ことばを、まん中に1行で置く
+\newcommand\kixeline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixeframe[はば]{中身}
+\newcommand\kixeframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixea{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixeb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixes{\rightskip=0pt plus 8em\relax}
+% 線スペクトルの棒  \kixestem{x(mm)}{高さ(mm)}{色}
+\newcommand\kixestem[3]{\draw[#3, line width=1.5pt] (#1,0) -- (#1,#2); \fill[#3] (#1,#2) circle (0.85);}
+% 2つの世界の図の矢印（左の図と右の図の間）  \kixeworld{上の字}{下の字}
+\newcommand\kixeworld[2]{\begin{tikzpicture}[baseline={(0,-1mm)}]
+  \draw[bkInk!75, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,1.2mm) -- (11mm,1.2mm);
+  \draw[bkInk!75, line width=1.2pt, -{Stealth[length=2.4mm]}] (11mm,-1.6mm) -- (0,-1.6mm);
+  \node[font=\footnotesize, anchor=south, inner sep=1pt] at (5.5mm,2mm) {#1};
+  \node[font=\footnotesize, anchor=north, inner sep=1pt] at (5.5mm,-2.4mm) {#2};
+  \end{tikzpicture}}
+\makeatother
+
+\bkchapter{9}{4}{スペクトル：\\フーリエ変換}{\bklevel{5}}{スペクトル：フーリエ変換}
+\bkmichishirube{3-12,3-14,3-17,5-14,6-10,8-6,9-3}{9-5,9-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 口笛・声・手をたたく音のスペクトルのちがいを説明でき、短いパルスほどスペクトルが広がることを言える。
+\item \bklevel{4}\enspace フーリエ変換 $F(\omega)$ の記号を読み、方形パルスの変換をふつうの定積分で求め、表計算の和で確かめられる。
+\item \bklevel{5}\enspace 場合分けの表を使って変換を求め、DFT・FFT の結果を読み、サンプリング定理とエイリアシングを説明できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.46\linewidth}
+\raggedright
+手を1回たたいた「パン」という音や、だんだん消えていくかねの音は、くり返しません。\par\vspace{4pt}
+\textbf{くり返さない音にも、スペクトル（周波数の成分）はあるのでしょうか。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (0,12) -- (60,12) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-1mm] {時刻};
+  \draw[bkBlue, line width=1.1pt, domain=24:30, samples=90] plot (\x,{12+9*exp(-2*(\x-24))*sin(1800*(\x-24))});
+  \draw[bkBlue, line width=1.1pt] (0,12) -- (24,12);
+  \node[font=\footnotesize, anchor=south west] at (0,22) {手をたたく音（とても短い）};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (0,-12) -- (60,-12) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-1mm] {時刻};
+  \draw[bkOrange!85!black, line width=1.1pt, domain=4:58, samples=500] plot (\x,{-12+8*exp(-0.06*(\x-4))*sin(80*(\x-4))});
+  \draw[bkOrange!85!black, line width=1.1pt] (0,-12) -- (4,-12);
+  \node[font=\footnotesize, anchor=south west] at (0,-2.5) {かねの音（だんだん消える）};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 9-1〜9-3 では、くり返す波を、基本の周波数の1倍・2倍・3倍…の成分に分け、その成分を $c_n$ で表しました。くり返す波のスペクトルは、とびとびの位置に立つ棒（線）でした。この章では、くり返さない波の成分の表し方を作ります。それが\textbf{フーリエ変換}です。名前は「変換」ですが、することは 9-3 と同じ「かけて、たす」です。
+
+フーリエ変換は、音声の分析、スマホの音や画像の処理、機械の故障の見つけ方、電波の通信など、身のまわりの多くの機械の中で使われています。それらの機械の中では、録音した音のような「とびとびの数のデータ」を、FFT とよばれる速い計算で変換しています。この章の後半では、データを変換する方法（DFT と FFT）と、データをとるときの大事な約束（サンプリング定理）を学びます。
+
+この章は、第9巻の第1部のまとめで、新しいことがたくさん出てきます。1回で全部わからなくても大丈夫です。まず「目でわかる」の図をながめて、全体の形をつかみましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[スマホで、いろいろな音のスペクトルを見よう]
+スマホには、マイクで拾った音のスペクトルを表示するアプリがあります（「スペクトラムアナライザー」「周波数分析」などの名前）。横軸が周波数（Hz）、たて軸がその成分の大きさです。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 静かな部屋でアプリを開き、何も音を出さないときの画面を見ておく（まわりの小さな音）。
+\item 口笛を、同じ高さで3秒くらい続けてふく。
+\item 「あー」と声を出す。次に「いー」と声を出して、ちがいを見る。
+\item 手を1回たたく。画面を止められるアプリなら、たたいた直後で止める。
+\item ②〜④で、成分が「1本の線」「等間隔に並ぶ線」「広い帯」のどれに近いかを書きとめる。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 結果は、だいたい図\ref{bk:9-4:fig-oto}のようになります。数は人や部屋によってちがうので、自分の結果と形だけくらべましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixex/\kixel in {0/口笛,44/声「あー」,88/手をたたく} {%
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (\kixex,0) -- ({\kixex+40},0);
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (\kixex,0) -- (\kixex,24);
+    \node[font=\footnotesize, anchor=north] at ({\kixex+20},-4.5) {\kixel};
+    \node[font=\footnotesize, anchor=north east, inner sep=1pt] at ({\kixex+40},-0.8) {Hz};}
+  \kixestem{20}{19}{bkBlue}
+  \foreach \kixek/\kixeh in {1/9,2/14,3/17,4/13,5/8,6/5,7/7,8/9,9/6,10/3.5,11/2.5,12/1.5} {\kixestem{{44+2.8*\kixek}}{\kixeh}{bkOrange!85!black}}
+  \fill[bkGreen!35] (90,0) -- plot[smooth, domain=90:126, samples=30] (\x,{14*exp(-((\x-104)/13)^2)+2}) -- (126,0) -- cycle;
+  \draw[bkGreen!50!black, line width=1.2pt, smooth, domain=90:126, samples=30] plot (\x,{14*exp(-((\x-104)/13)^2)+2});
+\end{tikzpicture}
+\bkfigcaption{いろいろな音のスペクトル（形を見るための作った例。数は書いていない）。口笛は1本の線。声は等間隔に並ぶ線で、線の高さに山（フォルマント）がある。手をたたく音は、線ではなく広い帯になる。}
+\label{bk:9-4:fig-oto}
+\end{bkfigure}
+
+\begin{omoidasou}
+\bkrecall{9-3}{くり返す波は $\sum c_ne^{jn\omega_0t}$。$c_n=\dfrac{1}{T}\displaystyle\int_0^Tf(t)\,e^{-jn\omega_0t}\,\dd t$（かけて平均）。}
+\bkrecall{5-14}{$\displaystyle\int_0^{\infty}e^{-at}\,\dd t=\frac{1}{a}$（$a>0$）。$\infty$ までの積分は、上のはしを大きくした先。}
+\bkrecall{8-6}{ガウス積分 $\displaystyle\int_{-\infty}^{\infty}e^{-x^2}\,\dd x=\sqrt\pi$。}
+\bkrecall{3-14}{標準偏差 $\sigma$ は、ばらつきのはば。}
+\bkrecall{3-17}{正規分布のグラフは、つりがねの形。はばは標準偏差で決まる。}
+\bkrecall{3-8}{平方完成：$x^2+2bx=(x+b)^2-b^2$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{10\baselineskip}\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{線がつながって帯になる}{\bklevel{3}}
+
+\bksubsection{1}{3つの音のスペクトルのちがい}
+
+\label{bk:9-4:oto}やってみようの3つの音は、スペクトルの形がはっきりちがいました。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{口笛}は、$\sin$ の波に近い音です。1つの周波数だけなので、スペクトルは1本の線になります（9-3 の $\sin\omega t$ の線を、正の周波数の側だけ見たもの）。
+\item \textbf{声}は、のどの声帯が同じ間かくでふるえて出る、くり返す波です。くり返す波は、基本の周波数の1倍・2倍・3倍…の成分の和（9-1）なので、スペクトルは等間隔の線です。線の間かくが、声の高さ（基本の周波数）です。線の高さの山（フォルマント）は、口の形で変わり、「あ」と「い」のちがいになります。
+\item \textbf{手をたたく音}は、くり返しません。スペクトルは線ではなく、すきまのない\textbf{広い帯}になります。
+\end{itemize}
+くり返さない音のスペクトルは、なぜ「帯」になるのでしょうか。それを、次の②で見ていきます。
+
+\bksubsection{2}{くり返す間かくをのばしていくと}
+
+\label{bk:9-4:nobasu}高さ1、はば2（$-1<t<1$）のパルスが、周期 $T$ ごとにくり返す波を考えます。パルスとパルスの間かくをのばしていき、最後は「1回しかないパルス」にします。
+
+9-3 の $c_n$ を求めます。1周期の中で0でないのは $-1<t<1$ だけなので、そこだけ積分します（$n\neq0$、$\omega_0=\frac{2\pi}{T}$）。
+\begin{bkhenkei}[0.58]
+Tc_n=\int_{-1}^{1}e^{-jn\omega_0t}\,\dd t=\Bigl[\,\frac{e^{-jn\omega_0t}}{-jn\omega_0}\,\Bigr]_{-1}^{1} & 9-3 の式の両辺に $T$ をかけた \\
+=\frac{e^{jn\omega_0}-e^{-jn\omega_0}}{jn\omega_0} & 上のはし－下のはし。符号を整理 \\
+=\frac{2\sin n\omega_0}{n\omega_0} & 6-10 の $e^{j\theta}-e^{-j\theta}=2j\sin\theta$ \\
+\end{bkhenkei}
+ここでは、$c_n$ ではなく、$T$ をかけた $Tc_n$ を棒の高さにします。なぜ $T$ をかけるのかは、③で説明します。$n\omega_0$ を $\omega$ と書くと、$Tc_n$ は「$\tfrac{2\sin\omega}{\omega}$ という1つの曲線の、$\omega=n\omega_0$ の所の値」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixeT/\kixey in {4/0,8/-30,16/-60} {%
+    \begin{scope}[yshift=\kixey mm]
+    \draw[bkInk, line width=0.6pt] (0,0) -- (36,0);
+    \foreach \kixec in {-2,-1,0,1,2} {\pgfmathsetmacro\kixeu{\kixec*\kixeT}%
+      \ifdim\kixeu pt<9.5pt\ifdim\kixeu pt>-9.5pt
+      \draw[bkBlue, line width=1.1pt] ({18+(\kixeu-1)*1.7},0) -- ({18+(\kixeu-1)*1.7},9) -- ({18+(\kixeu+1)*1.7},9) -- ({18+(\kixeu+1)*1.7},0);
+      \fi\fi}
+    \node[font=\footnotesize, anchor=north] at (18,-1.5) {周期 $T=\kixeT$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (50,0) -- (124,0) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-1mm] {$\omega$};
+    \draw[bkInk, line width=0.5pt] (50,-6) -- (50,21);
+    \draw[bkGray, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0.02:9.5, samples=120] plot ({50+7.4*\x},{18*sin(deg(\x))/\x});
+    \draw[bkOrange!85!black, line width=1.3pt] (50,0) -- (50,18);
+    \foreach \kixen in {1,2,...,40} {%
+      \pgfmathsetmacro\kixew{\kixen*2*pi/\kixeT}%
+      \ifdim\kixew pt<9.5pt
+        \pgfmathsetmacro\kixeh{18*sin(deg(\kixew))/\kixew}%
+        \draw[bkOrange!85!black, line width=1.3pt] ({50+7.4*\kixew},0) -- ({50+7.4*\kixew},\kixeh);
+      \fi}
+    \end{scope}}
+  \node[font=\footnotesize, anchor=west] at (84,15) {点線：$\dfrac{2\sin\omega}{\omega}$};
+  \foreach \kixex/\kixel in {0/0,3.1416/\pi,6.2832/2\pi} {\node[font=\footnotesize, anchor=north] at ({50+7.4*\kixex},-61.5) {$\kixel$};}
+\end{tikzpicture}
+\bkfigcaption{左：はば2のパルスが、周期 $T=4$、8、16 でくり返す波。右：$Tc_n$ の棒（オレンジ）を、角周波数 $\omega=n\omega_0$ の所に立てた。棒の先は、いつも同じ曲線（灰色の点線）の上にある。周期をのばすと、棒の間かく $\omega_0=\frac{2\pi}{T}$ がつまっていく。}
+\label{bk:9-4:fig-nobasu}
+\end{bkfigure}
+
+図\ref{bk:9-4:fig-nobasu}を見ると、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 棒の先は、周期を変えても、いつも同じ曲線 $2\sin\omega/\omega$ の上にある。曲線の形は、パルス1つの形で決まっている。
+\item 周期を2倍にすると、棒の間かく $\omega_0=2\pi/T$ は半分になり、棒の数が2倍になる。
+\item 周期を限りなく長くした先（くり返さない、1回だけのパルス）では、棒の間かくが0になり、棒が曲線をすきまなくうめる。
+\end{itemize}
+くり返さない波のスペクトルは、とびとびの棒ではなく、すきまのない\textbf{曲線}になるのです。やってみようの手をたたく音が「帯」に見えたのは、このためです。
+
+\Needspace{10\baselineskip}\bkstage{te}{手でわかる}{定義と、方形パルス}{\bklevel{4}}
+
+\bksubsection{3}{フーリエ変換の定義}
+
+\label{bk:9-4:teigi}②の $Tc_n$ は、周期を限りなく長くした先で、$\omega$ の関数になりました。この関数を $F(\omega)$ と書き、$f(t)$ の\textbf{フーリエ変換}（フーリエへんかん）といいます。\bkidx{ふーりえへんかん}{フーリエ変換}9-3 の式の両辺に $T$ をかけ、周期を限りなく長くすると、積分の区間「1周期」は「$-\infty$ から $\infty$ まで」になり、$n\omega_0$ は $\omega$ になります。
+\[ \kixeNt{F(\omega)}=\kixeSt{1}{\int_{-\infty}^{\infty}f(t)\,e^{-j\omega t}\,\dd t} \]
+
+\kixedanhead{1}{記号を読む：何に・何をかけて・どこからどこまで}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何に}：$f(t)$ は、くり返さなくてよい、時間の関数（音・電圧・振動など）です。
+\item \textbf{何をかけて}：右回りの矢印 $e^{-j\omega t}$。9-3 と同じく、角周波数 $\omega$ の成分を「止める」ための矢印です。
+\item \textbf{どこからどこまで}：$-\infty$ から $\infty$ まで。すべての時刻でたします。
+\item \textbf{何でわるか}：わらない（9-3 の $\frac1T$ がない）。
+\end{enumerate}
+
+\kixehead{なぜ $\frac{1}{T}$ をつけないのか}
+9-3 の $c_n$ は「1周期の平均」でした。②のパルスでは、周期 $T$ を長くするほど、1周期の中でパルスがある時間の割合が小さくなるので、$c_n$ はどんどん0に近づきます。$T=4$ の $c_1$ は $0.318$、$T=16$ の $c_1$ は $0.122$ です。平均をとると、長くした先ではすべて0になってしまい、形が見えません。だから $T$ をかけて、「平均」ではなく「1周期の合計」の大きさで見ます。
+
+\kixehead{$F(\omega)$ は名前}
+$F(\omega)$ は、「$-\infty$ から $\infty$ まで、$f$ に $e^{-j\omega t}$ をかけてたす」という操作の\textbf{名前}です。$-\infty$ から $\infty$ までといっても、実際には $f$ が0でない所だけを積分すればよいことが多く、ふつうの定積分に\textbf{直して}計算します。どう直すかは、$f$ の形で決まります（⑥の表）。
+
+$F(\omega)$ は、ふつうは複素数です。大きさ $|F(\omega)|$ が「角周波数 $\omega$ の成分がどれだけあるか」、角が「その成分の山の位置」を表します。スペクトルのグラフは、ふつう大きさ $|F(\omega)|$ をかきます。また、$f$ が実数なら、9-3 と同じく $F(-\omega)$ は $F(\omega)$ の共役です。だから、大きさのグラフは $\omega=0$ について左右対称で、正の側だけを見れば十分です。
+
+\bksubsection{4}{方形パルスの変換}
+
+\label{bk:9-4:pulse}②のパルス1つ（高さ1、$-1<t<1$ で1、それ以外は0）を変換します。
+
+\kixedanhead{2}{ふつうの定積分に直す}
+$-1<t<1$ の外では $f=0$ なので、そこは積分しても0です。$-\infty$ から $\infty$ までの積分は、$-1$ から1までのふつうの定積分になります（$\omega\neq0$）。
+\begin{bkhenkei}[0.58]
+F(\omega)=\int_{-1}^{1}1\cdot e^{-j\omega t}\,\dd t & 0でない区間だけ \\
+=\Bigl[\,\frac{e^{-j\omega t}}{-j\omega}\,\Bigr]_{-1}^{1}=\frac{e^{-j\omega}-e^{j\omega}}{-j\omega} & $e^{at}$ の積分（$a=-j\omega$） \\
+=\frac{e^{j\omega}-e^{-j\omega}}{j\omega}=\frac{2j\sin\omega}{j\omega} & 分子と分母に $-1$ をかける。6-10 \\
+=\frac{2\sin\omega}{\omega} & $j$ を約分 \\
+\end{bkhenkei}
+②の点線の曲線と同じ式になりました。$\omega=0$ のときは、$F(0)=\int_{-1}^{1}1\,\dd t=2$ です（$\tfrac{2\sin\omega}{\omega}$ も、$\omega$ を0に近づけると2に近づく：5-15）。
+
+
+\kixehead{グラフから読めること}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $F(0)=2$ は、パルスのグラフの\textbf{面積}（高さ1×はば2）です。$e^{-j0t}=1$ なので、$F(0)$ はいつも「$f$ のグラフの面積」になります。
+\item はじめて0になるのは $\sin\omega=0$ となる $\omega=\pi$（約3.14\,rad/s）です。
+\item はばを半分（$-0.5<t<0.5$）にすると、同じ計算で $F(\omega)=\tfrac{2\sin0.5\omega}{\omega}$ になり、$F(0)=1$、はじめて0になるのは $\omega=2\pi$ です。グラフのはばが2倍に広がります。
+\end{itemize}
+
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixeworlds{時間の世界}{周波数の世界}{変換する}{もどす}
+\begin{axis}[kixe base, at={(0mm,0mm)}, xmin=-2, xmax=2, ymin=0, ymax=1.3, xtick={-2,-1,0,1,2}, ytick={1}, xlabel={時間 $t$}, ylabel={$f(t)$}]
+  \addplot[kixeW, line width=1.4pt] coordinates {(-2,0) (-1,0) (-1,1) (1,1) (1,0) (2,0)};
+  \addplot[kixeF, line width=1.4pt, dash pattern=on 4pt off 2pt] coordinates {(-2,0.015) (-0.5,0.015) (-0.5,0.985) (0.5,0.985) (0.5,0.015) (2,0.015)};
+\end{axis}
+\begin{axis}[kixe wave, at={(76mm,0mm)}, xmin=-8, xmax=8, ymin=-0.6, ymax=2.3, xtick={-6.2832,-3.1416,0,3.1416,6.2832}, xticklabels={$-2\pi$,$\vphantom{2}-\pi$,$\vphantom{2}0$,$\vphantom{2}\pi$,$2\pi$}, ytick={1,2}, extra y tick labels={}, xlabel={角周波数 $\omega$}, ylabel={$F(\omega)$}]
+  \addplot[kixe sig, domain=-8:8, samples=240] {2*sin(deg(x))/x};
+  \addplot[kixeF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, smooth, domain=-8:8, samples=240] {2*sin(deg(0.5*x))/x};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2つの世界で見た方形パルス。左（時間の世界）：高さ1、はば2のパルス（青の実線）と、はば1のパルス（オレンジの破線）。右（周波数の世界）：それぞれのフーリエ変換 $2\sin\omega/\omega$（青の実線。$\omega=0$ で2）と $2\sin0.5\omega/\omega$（オレンジの破線。$\omega=0$ で1）。時間のはばを半分にすると、スペクトルのはばは2倍に広がる。}
+\label{bk:9-4:fig-pulse}
+\end{bkfigure}
+
+\textbf{はてな？の答え}：くり返さない音にも、スペクトルはあります。くり返さないので、とびとびの線ではなく、すきまのない曲線（帯）になります。手をたたく音は、とても短いパルスに近い音です。パルスは短いほど、スペクトルが広い周波数に広がるので、手をたたく音のスペクトルは広い帯になります。かねの音は、1つの周波数でゆれながら、長い時間かけて消えていくので、その周波数の所に、細い山ができます（⑧の図\ref{bk:9-4:fig-kane}）。
+
+\kixehead{短いほど広い}
+図\ref{bk:9-4:fig-pulse}のように、時間の世界でせまい（短い）ものは、周波数の世界で広くなり、時間の世界で広い（長い）ものは、周波数の世界でせまくなります。これは、どんな形の波でも成り立つ大事な性質で、⑨でもう一度確かめます。
+
+\bksubsection{5}{表計算で、かけてたす}
+
+\label{bk:9-4:hyou}④の答えを、表計算で確かめます。$-1<t<1$ を、はば $\Delta t=0.25$ の8つの区間に分け、区間のまん中の時刻 $t_i$ で $f(t_i)\,e^{-j\omega t_i}\,\Delta t$ を計算してたします（5-10 の細かく分けてたす方法）。$\omega=1$ とします。
+
+$e^{-jt}=\cos t-j\sin t$ なので、実部は $\cos t_i$、虚部は $-\sin t_i$ の和です。虚部は、左右対称な場所の $-\sin t_i$ と $-\sin(-t_i)=\sin t_i$ が打ち消しあうので0になります。だから実部だけを計算します。B2 に \texttt{=COS(1*A2)*0.25} と入れて、B9 までコピーし、B10 に合計を出します。
+
+\begin{bkcenter}
+\bksheet{2}{30}{%
+1 & 時刻 $t_i$（区間のまん中） & $\cos(1\times t_i)\times0.25$ \\
+2 & $-0.875$ & 0.1601 \\
+3 & $-0.625$ & 0.2024 \\
+4 & $-0.375$ & 0.2326 \\
+5 & $-0.125$ & 0.2480 \\
+6 & 0.125 & 0.2480 \\
+7 & 0.375 & 0.2326 \\
+8 & 0.625 & 0.2024 \\
+9 & 0.875 & 0.1601 \\
+10 & 合計 & 1.6873 \\}
+\bktabcaption{方形パルスのフーリエ変換 $F(1)$ を、8つの区間の和で近づけた。式の値 $2\sin1=1.6829$ に近い。}
+\label{bk:9-4:tab-sheet}
+\end{bkcenter}
+
+合計は 1.6873 で、④の式の値 $F(1)=2\sin1\approx1.6829$ に近い値です。区間を20こ（$\Delta t=0.1$）にすると 1.6836 になり、さらに近づきます。式で求めた値と、細かく分けてたした値が一致しました。
+
+\bkkokomade[くり返さない波のスペクトルはすきまのない曲線になること、フーリエ変換 $F(\omega)$ は「$e^{-j\omega t}$ をかけて、すべての時刻でたす」操作の名前で、方形パルスなら0でない区間のふつうの定積分に直せること、短いパルスほどスペクトルが広がることがわかれば十分です。この先は、いろいろな形の変換と、データの変換です。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{形で直し方を選ぶ・データの変換}{\bklevel{5}}
+
+\bksubsection{6}{もとの波にもどす式}
+
+\label{bk:9-4:modosu}9-3 では、$c_n$ をたせば、もとの波にもどりました。フーリエ変換も、もとにもどせます。9-3 のもどす式を、$Tc_n$ を使って書きなおします。
+\begin{bkhenkei}[0.58]
+f(t)=\sum_{n}c_n\,e^{jn\omega_0t}=\sum_{n}Tc_n\,e^{jn\omega_0t}\cdot\frac{1}{T} & 9-3 の式。$T$ をかけて $T$ でわる \\
+\frac{1}{T}=\frac{\omega_0}{2\pi} & $\omega_0=\dfrac{2\pi}{T}$ から \\
+f(t)=\frac{1}{2\pi}\sum_{n}Tc_n\,e^{jn\omega_0t}\cdot\omega_0 & 入れる \\
+\end{bkhenkei}
+$\omega_0$ は、となりの棒との間かく（$\omega$ のきざみ）です。周期を長くすると、「高さ×きざみ」の和は、5-10 と同じく積分になります。$Tc_n$ は $F(\omega)$ に近づくので、次の式になります。
+\kixeframe[104mm]{\Large $f(t)=\dfrac{1}{2\pi}\displaystyle\int_{-\infty}^{\infty}F(\omega)\,e^{j\omega t}\,\dd\omega$}
+この式を\textbf{逆フーリエ変換}（ぎゃくフーリエへんかん）といいます。かける矢印は左回り $e^{j\omega t}$（マイナスがない）で、前に $\tfrac{1}{2\pi}$ がつきます。
+
+\kixehead{もどす式で、方形パルスにもどるか確かめる}
+④の方形パルスの $F(\omega)=2\sin\omega/\omega$ を、もどす式に入れます。ただし、$\omega$ を $-\infty$〜$\infty$ まで全部たさずに、$-W$ から $W$ までだけたしてみます（積分は Python で数値で計算した）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixe wave, width=100mm, height=30mm, xmin=-2.5, xmax=2.5, ymin=-0.25, ymax=1.3, xtick={-2,-1,0,1,2}, ytick={1}, xlabel={時間 $t$}, ylabel={もどした値}]
+  \addplot[bkGray, line width=1pt, dash pattern=on 1pt off 1.2pt] coordinates {(-2.5,0) (-1,0) (-1,1) (1,1) (1,0) (2.5,0)};
+  \addplot[kixeF, line width=1.3pt, dash pattern=on 4pt off 2pt, no markers, smooth] coordinates {(-2.50,-0.010) (-2.45,-0.016) (-2.40,-0.023) (-2.35,-0.030) (-2.30,-0.036) (-2.25,-0.042) (-2.20,-0.047) (-2.15,-0.052) (-2.10,-0.055) (-2.05,-0.058) (-2.00,-0.058) (-1.95,-0.057) (-1.90,-0.055) (-1.85,-0.050) (-1.80,-0.042) (-1.75,-0.032) (-1.70,-0.020) (-1.65,-0.005) (-1.60,0.014) (-1.55,0.035) (-1.50,0.059) (-1.45,0.087) (-1.40,0.117) (-1.35,0.150) (-1.30,0.186) (-1.25,0.225) (-1.20,0.267) (-1.15,0.310) (-1.10,0.356) (-1.05,0.404) (-1.00,0.453) (-0.95,0.504) (-0.90,0.555) (-0.85,0.607) (-0.80,0.659) (-0.75,0.711) (-0.70,0.761) (-0.65,0.811) (-0.60,0.859) (-0.55,0.905) (-0.50,0.948) (-0.45,0.989) (-0.40,1.026) (-0.35,1.060) (-0.30,1.090) (-0.25,1.116) (-0.20,1.138) (-0.15,1.155) (-0.10,1.167) (-0.05,1.174) (0.00,1.177) (0.05,1.174) (0.10,1.167) (0.15,1.155) (0.20,1.138) (0.25,1.116) (0.30,1.090) (0.35,1.060) (0.40,1.026) (0.45,0.989) (0.50,0.948) (0.55,0.905) (0.60,0.859) (0.65,0.811) (0.70,0.761) (0.75,0.711) (0.80,0.659) (0.85,0.607) (0.90,0.555) (0.95,0.504) (1.00,0.453) (1.05,0.404) (1.10,0.356) (1.15,0.310) (1.20,0.267) (1.25,0.225) (1.30,0.186) (1.35,0.150) (1.40,0.117) (1.45,0.087) (1.50,0.059) (1.55,0.035) (1.60,0.014) (1.65,-0.005) (1.70,-0.020) (1.75,-0.032) (1.80,-0.042) (1.85,-0.050) (1.90,-0.055) (1.95,-0.057) (2.00,-0.058) (2.05,-0.058) (2.10,-0.055) (2.15,-0.052) (2.20,-0.047) (2.25,-0.042) (2.30,-0.036) (2.35,-0.030) (2.40,-0.023) (2.45,-0.016) (2.50,-0.010)};
+  \addplot[kixeW, line width=1.4pt, no markers, smooth] coordinates {(-2.50,-0.007) (-2.45,0.003) (-2.40,0.012) (-2.35,0.020) (-2.30,0.023) (-2.25,0.020) (-2.20,0.013) (-2.15,0.001) (-2.10,-0.012) (-2.05,-0.023) (-2.00,-0.029) (-1.95,-0.029) (-1.90,-0.022) (-1.85,-0.008) (-1.80,0.010) (-1.75,0.027) (-1.70,0.040) (-1.65,0.045) (-1.60,0.038) (-1.55,0.021) (-1.50,-0.006) (-1.45,-0.037) (-1.40,-0.065) (-1.35,-0.082) (-1.30,-0.081) (-1.25,-0.054) (-1.20,0.003) (-1.15,0.091) (-1.10,0.207) (-1.05,0.344) (-1.00,0.493) (-0.95,0.644) (-0.90,0.785) (-0.85,0.906) (-0.80,1.000) (-0.75,1.063) (-0.70,1.095) (-0.65,1.098) (-0.60,1.079) (-0.55,1.046) (-0.50,1.008) (-0.45,0.974) (-0.40,0.949) (-0.35,0.937) (-0.30,0.940) (-0.25,0.956) (-0.20,0.980) (-0.15,1.008) (-0.10,1.032) (-0.05,1.050) (0.00,1.056) (0.05,1.050) (0.10,1.032) (0.15,1.008) (0.20,0.980) (0.25,0.956) (0.30,0.940) (0.35,0.937) (0.40,0.949) (0.45,0.974) (0.50,1.008) (0.55,1.046) (0.60,1.079) (0.65,1.098) (0.70,1.095) (0.75,1.063) (0.80,1.000) (0.85,0.906) (0.90,0.785) (0.95,0.644) (1.00,0.493) (1.05,0.344) (1.10,0.207) (1.15,0.091) (1.20,0.003) (1.25,-0.054) (1.30,-0.081) (1.35,-0.082) (1.40,-0.065) (1.45,-0.037) (1.50,-0.006) (1.55,0.021) (1.60,0.038) (1.65,0.045) (1.70,0.040) (1.75,0.027) (1.80,0.010) (1.85,-0.008) (1.90,-0.022) (1.95,-0.029) (2.00,-0.029) (2.05,-0.023) (2.10,-0.012) (2.15,0.001) (2.20,0.013) (2.25,0.020) (2.30,0.023) (2.35,0.020) (2.40,0.012) (2.45,0.003) (2.50,-0.007)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{もどす式の $\omega$ を $-W$〜$W$ までだけたした値。灰色の点線がもとのパルス、オレンジの破線が $W=3$、青の実線が $W=10$。たす $\omega$ の範囲を広げるほど、もとのパルスに近づく（角の近くの小さな山は、9-1 のギブズ現象と同じ）。}
+\label{bk:9-4:fig-modosu}
+\end{bkfigure}
+たす範囲を広げるほど、もとのパルスに近づきました。高い周波数の成分ほど、角のような急な変化を作ります。9-1 で、方形波の角を作るには細かい $\sin$ がたくさん必要だったのと同じです。
+
+\kixehead{$2\pi$ の置き場所は、本によってちがう}
+変換する式に $\frac{1}{2\pi}$ をつけないかわりに、もどす式に $\frac{1}{2\pi}$ がつきました。この本では、電気・制御の本に多いこの形を使います。数学や物理の本には、2つの式の両方に $\frac{1}{\sqrt{2\pi}}$ をつけたり、$\omega$ のかわりに周波数（Hz）を使って $2\pi$ を肩に入れたりする書き方もあります（専門書をのぞいてみようの表）。どの形でも、変換してもどすと、もとの $f$ にもどります。ほかの本の式を使うときは、$2\pi$ がどこにあるかを、はじめに確かめましょう。
+
+\Needspace{12\baselineskip}
+\bksubsection{7}{場合分けの表と流れ図}
+
+\label{bk:9-4:basho}フーリエ変換を求める方法は、$f$ の形によって変わります。9-2・9-3 と同じく、「こんなときは、こう求める」を表9-4（記号 A〜G）と流れ図にまとめました。A〜D がふつうの定積分に直す場合、E は性質の表を引く場合、F・G は積分しないで楽をする場合です。E の性質の表は⑩にあります。
+
+\kixehead{流れ図の使い方：方形パルス}
+④の方形パルス（$-1<t<1$ で1）を、図\ref{bk:9-4:fig-flow}の流れ図でたどります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：$f$＝高さ1、はば2のパルス。$-\infty$ から $\infty$ まで $e^{-j\omega t}$ をかけてたす。
+\item 式がなく、はかった値だけ？\enspace いいえ（式で書ける）。\enspace くり返す波？\enspace いいえ（1回だけ）。
+\item 知っている形を、ずらした・$\cos$ をかけた？\enspace いいえ（まん中が $t=0$ で、$\cos$ もかかっていない）。
+\item 0でない所が有限の区間？\enspace はい（$-1<t<1$ だけ）。
+\end{enumerate}
+こうして場合 \kixecase{A} に決まります。④でしたとおりです。
+
+\kixecasetitle{9-4}{フーリエ変換：どんなときに、どう求める？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixecase{G} & 式がなく、はかった値だけ（録音・測定したとびとびの値） & \kixedan{3}\enspace 積分しない。DFT $X_k=\sum x_me^{-j2\pi km/N}$。計算は FFT（⑫・⑬） & 8・9・10 \\
+\kixecase{F} & くり返す波（$\sin$・$\cos$ の和、方形波など） & \kixedan{3}\enspace 積分しない。9-3 の $c_n$ で、$\pm n\omega_0$ に立つ線のスペクトル（⑪） & 7 \\
+\kixecase{E} & 知っている形を、ずらした・$\cos$ をかけた & \kixedan{3}\enspace 性質の表を引く（⑩。のばした・微分したときも表を使える）。このあと下の問いへ（もとの形の変換を求める） & 5・6 \\
+\kixecase{A} & 0でない所が有限の区間だけ（パルス） & \kixeop{1}\enspace その区間のふつうの定積分。$F(0)$＝面積 & 1・5 \\
+\kixecase{D} & ガウスの形 $e^{-t^2/(2\sigma^2)}$ & \kixeop{1}\enspace 肩を平方完成し、ガウス積分 $\sqrt\pi$（8-6） & 4・6 \\
+\kixecase{B} & $t\geqq0$ だけの $e^{-at}$（だんだん消える） & \kixeop{1}\enspace $\displaystyle\int_0^{\infty}e^{-(a+j\omega)t}\dd t=\frac{1}{a+j\omega}$（5-14 の広義積分） & 2 \\
+\kixecase{C} & 両側の $e^{-a|t|}$ & \kixeop{1}\enspace $t<0$ と $t>0$ に分けて B を2回：$\dfrac{2a}{a^2+\omega^2}$ & 3 \\
+\end{bktable}
+\end{bkcenter}
+{\small 流れ図の最後の「いいえ」（どの形でもない）は、式があっても、表計算で細かく分けてたす（⑤の方法。G と同じ考え）。}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixe do, text width=100mm] (s) at (58,0) {記号を読む（名前の段）：どの波 $f$ か\\$F(\omega)$ は「$-\infty$〜$\infty$ で $e^{-j\omega t}$ をかけてたす」の名前};
+  \node[kixe q] (q1) at (33,-20) {式がなく、はかった値だけ？};
+  \node[kixe do, text width=40mm, anchor=west] (rG) at (71,-20) {DFT・FFT\enspace\kixecase{G}};
+  \node[kixe q] (q2) at (33,-38) {くり返す波？};
+  \node[kixe do, text width=40mm, anchor=west] (rF) at (71,-38) {9-3 の $c_n$ で線\enspace\kixecase{F}};
+  \node[kixe q, aspect=2.3] (q3) at (33,-62) {知っている形を、\\ずらした・$\cos$ をかけた？};
+  \node[kixe do, text width=40mm, anchor=west] (rE) at (71,-62) {性質の表を引き、\\下の問いへ\enspace\kixecase{E}};
+  \node[kixe q] (q4) at (33,-88) {0でない所が有限の区間？};
+  \node[kixe do, text width=40mm, anchor=west] (rA) at (71,-88) {その区間の定積分\enspace\kixecase{A}};
+  \node[kixe q] (q5) at (33,-106) {ガウスの形 $e^{-t^2}$？};
+  \node[kixe do, text width=40mm, anchor=west] (rD) at (71,-106) {平方完成と $\sqrt\pi$\enspace\kixecase{D}};
+  \node[kixe q] (q6) at (33,-124) {$t\geqq0$ だけの $e^{-at}$？};
+  \node[kixe do, text width=40mm, anchor=west] (rB) at (71,-124) {$\dfrac{1}{a+j\omega}$\enspace\kixecase{B}};
+  \node[kixe q] (q7) at (33,-142) {両側の $e^{-a|t|}$？};
+  \node[kixe do, text width=40mm, anchor=west] (rC) at (71,-142) {B を2回\enspace\kixecase{C}};
+  \node[kixe do, text width=52mm] (rT) at (33,-160) {表計算で細かく分けてたす\enspace\kixecase{G}};
+  \node[kixe do, text width=106mm] (end) at (61,-178) {確かめ：$F(0)$ がグラフの面積か。表計算で細かく分けてたした値と同じか};
+  \draw[kixe go] (s.south -| q1) -- (q1);
+  \foreach \kixeq/\kixer in {q1/rG,q2/rF,q3/rE,q4/rA,q5/rD,q6/rB,q7/rC} {\draw[kixe go] (\kixeq) -- node[kixe yn, above] {はい} (\kixer);}
+  \foreach \kixeq/\kixer in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6,q6/q7,q7/rT} {\draw[kixe go] (\kixeq) -- node[kixe yn, left=1mm] {いいえ} (\kixer);}
+  \draw[kixe go, shorten >=0.4mm] (rE.south) |- (33.8,-79.5);
+  \foreach \kixen in {rG,rF,rA,rD,rB,rC,rT} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixen.east) -- (\kixen.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-20) -- (127,-178);
+  \draw[kixe go, shorten <=0pt] (127,-178) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{フーリエ変換の流れ図。ひし形は問い、四角はすること。上の3つの問い（G・F・E）が楽をする段、その下が直す段。E のあとは左の列の次の問いへもどる。計算した四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:9-4:fig-flow}
+\end{bkfigure}
+
+\kixehead{どの場合かな？}
+次のフーリエ変換は、どの場合でしょう。流れ図を上からたどって考えましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item マイクで録音した声のデータのスペクトル\par\nobreak\noindent 答え：\kixecase{G}。式がなく、はかった値だけ。
+\item $t\geqq0$ で $5e^{-0.1t}$、$t<0$ で0の電圧\par\nobreak\noindent 答え：\kixecase{B}。$t\geqq0$ だけの $e^{-at}$。
+\item $1<t<2$ で1、それ以外で0のパルス\par\nobreak\noindent 答え：\kixecase{E}→\kixecase{A}。$-0.5<t<0.5$ のパルスをずらした形。
+\item $e^{-t^2}$\par\nobreak\noindent 答え：\kixecase{D}。ガウスの形。
+\end{enumerate}
+
+
+\bksubsection{8}{場合 B：だんだん消える音}
+
+\label{bk:9-4:katagawa}$t\geqq0$ で $f(t)=e^{-at}$（$a>0$）、$t<0$ で $f=0$ の波は、スイッチを入れた瞬間から、だんだん小さくなる電圧や音です。$t<0$ の部分は0なので、0から $\infty$ までの積分になります。
+\begin{bkhenkei}[0.58]
+F(\omega)=\int_0^{\infty}e^{-at}e^{-j\omega t}\,\dd t & $t<0$ の部分は0 \\
+=\int_0^{\infty}e^{-(a+j\omega)t}\,\dd t & 肩のたし算（6-10） \\
+=\Bigl[\,\frac{e^{-(a+j\omega)t}}{-(a+j\omega)}\,\Bigr]_0^{\infty} & $e^{bt}$ の積分（$b=-(a+j\omega)$） \\
+=0-\frac{1}{-(a+j\omega)}=\frac{1}{a+j\omega} & $t\to\infty$ で $e^{-at}\to0$（5-14） \\
+\end{bkhenkei}
+$t\to\infty$ で0になるのは、$e^{-(a+j\omega)t}=e^{-at}e^{-j\omega t}$ の大きさが $e^{-at}$（回る矢印 $e^{-j\omega t}$ の大きさは1）で、$a>0$ なら0に近づくからです。大きさは
+\kixeline{$|F(\omega)|=\dfrac{1}{|a+j\omega|}=\dfrac{1}{\sqrt{a^2+\omega^2}}$}
+で、$\omega=0$ で最大の $\frac{1}{a}$、$\omega=a$ でその $\frac{1}{\sqrt2}$ 倍です。速く消える（$a$ が大きい）ほど、スペクトルは広くなります（④の「短いほど広い」と同じ）。9-3 のローパスフィルターの倍率 $\tfrac{1}{1+j\omega\tau}$ と同じ形が出てきたのは、偶然ではありません（9-6・9-8 で学びます）。
+
+\kixehead{かねの音：ゆれながら消える}
+かねの音のように、角周波数 $\omega_1$ でゆれながら消える音 $e^{-at}\sin\omega_1t$（$t\geqq0$）は、$\sin\omega_1t=(e^{j\omega_1t}-e^{-j\omega_1t})/(2j)$ と分けると、$e^{-(a-j\omega_1)t}$ と $e^{-(a+j\omega_1)t}$ の2つになり、それぞれ B と同じ計算ができます。大きさのグラフをかくと、図\ref{bk:9-4:fig-kane}のように、$\omega_1$ の所に山ができます。ゆっくり消える（$a$ が小さい）ほど、山は細く高くなります。長く鳴るかねほど、音の高さがはっきり聞こえるのは、このためです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixeworlds{時間の世界}{周波数の世界}{変換する}{もどす}
+\begin{axis}[kixe wave, at={(0mm,0mm)}, xmin=0, xmax=6.3, ymin=-1.15, ymax=1.15, xtick={0,2,4,6}, ytick={-1,1}, xlabel={時間 $t$}, ylabel={$f(t)$}]
+  \addplot[kixeW, line width=1.1pt, no markers, domain=0:6.3, samples=400] {exp(-x)*sin(deg(10*x))};
+  \addplot[kixeF, line width=1.1pt, dash pattern=on 4pt off 2pt, no markers, domain=0:6.3, samples=400] {exp(-0.3*x)*sin(deg(10*x))};
+\end{axis}
+\begin{axis}[kixe spec, at={(76mm,0mm)}, xmin=0, xmax=20, ymax=1.9, xtick={0,5,10,15,20}, ytick={0.5,1,1.5}, xlabel={角周波数 $\omega$}, ylabel={$|F(\omega)|$}]
+  \addplot[kixe sig, domain=0:20, samples=300] {10/sqrt((1-x^2+100)^2+(2*x)^2)};
+  \addplot[kixeF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, smooth, domain=0:20, samples=400] {10/sqrt((0.09-x^2+100)^2+(0.6*x)^2)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ゆれながら消える音 $e^{-at}\sin10t$。青の実線は $a=1$（速く消える）、オレンジの破線は $a=0.3$（ゆっくり消える）。左（時間の世界）：波形。右（周波数の世界）：スペクトルの大きさ。どちらも $\omega=10$ の近くに山ができ、ゆっくり消えるほど山は細く高い（青の山の高さは0.50、オレンジは1.67）。}
+\label{bk:9-4:fig-kane}
+\end{bkfigure}
+
+\begin{seikaku}
+\kixebox{図\ref{bk:9-4:fig-kane}の右のグラフは、この式の大きさ（$\omega_1=10$）}
+$e^{-at}\sin\omega_1t=\tfrac{1}{2j}\bigl(e^{-(a-j\omega_1)t}-e^{-(a+j\omega_1)t}\bigr)$ に、B の $\tfrac{1}{a+j\omega}$ を2回使います。
+\begin{bkhenkei}[0.6]
+F(\omega)=\frac{1}{2j}\Bigl(\frac{1}{a-j\omega_1+j\omega}-\frac{1}{a+j\omega_1+j\omega}\Bigr) & B の $a$ を $a\mp j\omega_1$ にする \\
+=\frac{1}{2j}\cdot\frac{2j\omega_1}{(a+j\omega)^2+\omega_1^2}=\frac{\omega_1}{(a+j\omega)^2+\omega_1^2} & 通分する \\
+\end{bkhenkei}
+\end{seikaku}
+
+\Needspace{10\baselineskip}\bksubsection{9}{場合 C・D：左右に広がる形}
+
+\label{bk:9-4:gauss}\kixehead{場合 C：両側の指数 $e^{-a|t|}$}
+$t=0$ で山になり、左右に $e^{-a|t|}$ でへる形です。$t<0$ では $|t|=-t$ なので $e^{at}$、$t>0$ では $e^{-at}$ です。2つに分けて、B の計算を2回します。
+\begin{bkhenkei}[0.58]
+\int_0^{\infty}e^{-at}e^{-j\omega t}\,\dd t=\frac{1}{a+j\omega} & $t>0$ の部分（B と同じ） \\
+\int_{-\infty}^{0}e^{at}e^{-j\omega t}\,\dd t=\Bigl[\,\frac{e^{(a-j\omega)t}}{a-j\omega}\,\Bigr]_{-\infty}^{0} & $t<0$ の部分 \\
+=\frac{1}{a-j\omega} & $t\to-\infty$ で $e^{at}\to0$ \\
+F(\omega)=\frac{1}{a+j\omega}+\frac{1}{a-j\omega} & 2つをたす \\
+=\frac{(a-j\omega)+(a+j\omega)}{a^2+\omega^2}=\frac{2a}{a^2+\omega^2} & 通分。$(a+j\omega)(a-j\omega)=a^2+\omega^2$ \\
+\end{bkhenkei}
+答えは実数になりました。$f$ が左右対称（偶関数、9-2）なので、$\sin$ の部分が打ち消しあうからです（9-2 の「偶関数なら $\cos$ だけ」と同じ）。
+
+\kixehead{場合 D：ガウスの形 $e^{-t^2/2}$}
+3-17 の正規分布の形（つりがねの形）です。予告カードで約束したとおり、8-6 のガウス積分を使います。
+\begin{bkhenkei}[0.66]
+F(\omega)=\int_{-\infty}^{\infty}e^{-t^2/2}e^{-j\omega t}\,\dd t=\int_{-\infty}^{\infty}e^{-(t^2+2j\omega t)/2}\,\dd t & 肩をまとめる \\
+t^2+2j\omega t=(t+j\omega)^2-(j\omega)^2=(t+j\omega)^2+\omega^2 & 平方完成（3-8）。$(j\omega)^2=-\omega^2$ \\
+\end{bkhenkei}
+平方完成した肩を入れて、$t$ によらない部分を積分の外へ出し、ガウス積分の形にします。
+\begin{bkhenkei}[0.66]
+F(\omega)=e^{-\omega^2/2}\int_{-\infty}^{\infty}e^{-\frac{1}{2}(t+j\omega)^2}\,\dd t & $t$ によらない $e^{-\omega^2/2}$ を外に出す \\
+=e^{-\omega^2/2}\int_{-\infty}^{\infty}e^{-u^2/2}\,\dd u & $u=t+j\omega$（せいかくに言うと） \\
+=e^{-\omega^2/2}\sqrt2\int_{-\infty}^{\infty}e^{-v^2}\,\dd v & $u=\sqrt2\,v$（5-16） \\
+=\sqrt{2\pi}\,e^{-\omega^2/2} & ガウス積分 $\sqrt\pi$（8-6） \\
+\end{bkhenkei}
+ガウスの形を変換すると、またガウスの形になりました。$\omega=0$ で $\sqrt{2\pi}\approx2.507$、$\omega=1$ で $2.507\times e^{-0.5}\approx1.520$、$\omega=2$ で $2.507\times e^{-2}\approx0.339$ です。
+
+\begin{seikaku}
+\kixebox{複素数だけずらしてもよいわけ}
+$u=t+j\omega$ と置くと、$u$ は実数の軸から $j\omega$ だけ上にずれた横の線の上を動きます。そのような線の上の積分でも、$e^{-u^2/2}$ の積分の値は、実数の軸の上の積分と同じになることが、複素関数論という分野で確かめられます（この本では、その結果を使う）。表計算で $F(1)$ を細かく分けてたすと 1.5203 になり、式の値 1.5203 と一致します。
+\end{seikaku}
+
+\kixehead{時間のはば $\sigma$ と、周波数のはば $\tfrac{1}{\sigma}$}
+3-17 の正規分布のように、はばを標準偏差 $\sigma$（3-14）で表した $e^{-t^2/(2\sigma^2)}$ を変換すると、同じ計算で次のようになります（$t=\sigma v$ と置けば、上の計算にもどる）。
+\kixeframe[110mm]{\large $e^{-t^2/(2\sigma^2)}$ を変換すると $\sigma\sqrt{2\pi}\,e^{-\sigma^2\omega^2/2}$\\[3pt]\normalsize\sffamily 時間のはば $\sigma$ $\longrightarrow$ 周波数のはば $\dfrac{1}{\sigma}$}
+右の式は $e^{-\omega^2/(2\cdot(1/\sigma)^2)}$ と書けるので、周波数の世界でも正規分布の形で、そのはば（標準偏差）は $\tfrac{1}{\sigma}$ です。時間のはば×周波数のはば＝1 で、いつも一定です。④の「短いほど広い」が、ここでは式ではっきり出ました。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixeworlds{時間の世界}{周波数の世界}{変換する}{もどす}
+\begin{axis}[kixe base, at={(0mm,0mm)}, xmin=-6, xmax=6, ymin=0, ymax=1.25, xtick={-6,-4,-2,0,2,4,6}, ytick={1}, xlabel={時間 $t$}, ylabel={$f(t)$}]
+  \addplot[kixe sig, domain=-6:6] {exp(-x^2/2)};
+  \addplot[kixeF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, smooth, samples=241, domain=-6:6] {exp(-x^2/8)};
+\end{axis}
+\begin{axis}[kixe spec, at={(76mm,0mm)}, xmin=-4, xmax=4, ymax=5.6, xtick={-4,-2,0,2,4}, ytick={2.5,5}, xlabel={角周波数 $\omega$}, ylabel={$F(\omega)$}]
+  \addplot[kixe sig, domain=-4:4] {sqrt(2*pi)*exp(-x^2/2)};
+  \addplot[kixeF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, smooth, samples=241, domain=-4:4] {2*sqrt(2*pi)*exp(-2*x^2)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ガウスの形の変換。青の実線は $\sigma=1$、オレンジの破線は $\sigma=2$。時間の世界で2倍広いオレンジは、周波数の世界では半分のはばで、2倍の高さになる（$F(0)$ はどちらもグラフの面積）。}
+\label{bk:9-4:fig-gauss}
+\end{bkfigure}
+
+\bksubsection{10}{場合 E：性質の表で、積分しない}
+
+\label{bk:9-4:seishitsu}知っている形を少し変えた波は、もう一度積分しなくても、変換の性質（表\ref{bk:9-4:tab-seishitsu}）を使って求められます。
+
+\kixehead{ずらすと、$e^{-j\omega t_0}$ がかかる}
+$f(t-t_0)$ は、$f$ のグラフを右へ $t_0$ ずらしたものです（3-9）。$u=t-t_0$ と置くと（5-16 の置換積分。$\dd t=\dd u$）、
+\begin{bkhenkei}[0.64]
+\int_{-\infty}^{\infty}f(t-t_0)\,e^{-j\omega t}\,\dd t=\int_{-\infty}^{\infty}f(u)\,e^{-j\omega(u+t_0)}\,\dd u & $t=u+t_0$ \\
+=e^{-j\omega t_0}\int_{-\infty}^{\infty}f(u)\,e^{-j\omega u}\,\dd u & 肩を分けて、$u$ によらないものを外へ \\
+=e^{-j\omega t_0}F(\omega) & 残りは $F(\omega)$ そのもの \\
+\end{bkhenkei}
+$|e^{-j\omega t_0}|=1$ なので、大きさ $|F(\omega)|$ は変わりません。同じ音を1秒おくれて鳴らしても、成分の大きさは同じで、山の位置（角）だけが変わります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,22mm] Q[l,m,46mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+時間の世界 & 周波数の世界 & 意味 \\
+$af(t)+bg(t)$ & $aF(\omega)+b\times$（$g$ の変換） & 線形（たしたものの変換は、変換の和） \\
+$f(t-t_0)$ & $e^{-j\omega t_0}F(\omega)$ & ずらす：$t_0$ おくらせても、大きさは同じ。角だけ変わる \\
+$f(kt)$ & $\dfrac{1}{k}F\Bigl(\dfrac{\omega}{k}\Bigr)$ & ちぢめる（$k>0$）：時間を $\frac{1}{k}$ にちぢめると、スペクトルは $k$ 倍に広がる \\
+$f(t)\cos\omega_ct$ & $\dfrac{F(\omega-\omega_c)+F(\omega+\omega_c)}{2}$ & $\cos$ をかける：スペクトルが $\pm\omega_c$ へ移る（変調） \\
+$f'(t)$ & $j\omega F(\omega)$ & 微分は $j\omega$ のかけ算（6-10・9-3） \\
+\end{bktable}
+\bktabcaption{フーリエ変換の性質の表（場合 E）。}
+\label{bk:9-4:tab-seishitsu}
+\end{bkcenter}
+
+\kixehead{$\cos$ をかけると、スペクトルが移る}
+$\cos\omega_ct=\tfrac{e^{j\omega_ct}+e^{-j\omega_ct}}{2}$（9-3 の①）なので、$f(t)\cos\omega_ct$ の変換は、$f\,e^{j\omega_ct}$ の変換と $f\,e^{-j\omega_ct}$ の変換の和の半分です。$f\,e^{j\omega_ct}$ の変換は、肩が $-j(\omega-\omega_c)t$ になるので $F(\omega-\omega_c)$ です。
+\kixeline{$f(t)\cos\omega_ct$ の変換 $=\dfrac{F(\omega-\omega_c)+F(\omega+\omega_c)}{2}$}
+$F$ のグラフを右へ $\omega_c$ と左へ $\omega_c$ ずらして、半分ずつたしたものです。AM ラジオは、声の波（低い周波数）に、放送局の高い周波数 $\cos\omega_ct$ をかけて送ります。声のスペクトルは、放送局の周波数のまわりへ移されます。局ごとに $\omega_c$ がちがうので、たくさんの局の電波がまざらずに届きます（物理の波-14）。
+
+\kixehead{ちぢめる・微分する}
+$f(kt)$ は、$u=kt$ と置くと $\dd t=\tfrac{\dd u}{k}$、肩は $-j\tfrac{\omega}{k}u$ なので、$\tfrac{1}{k}F\Bigl(\tfrac{\omega}{k}\Bigr)$ です。④のはばを半分にしたパルスは、$k=2$ の場合です。微分の行は、⑥のもどす式を $t$ で微分すると、$e^{j\omega t}$ の微分で $j\omega$ が出てくることからわかります。
+
+\bksubsection{11}{場合 F：くり返す波は、線のスペクトル}
+
+\label{bk:9-4:kurikaesu}$\cos\omega_0t$ のようにいつまでもくり返す波は、$-\infty$ から $\infty$ までたしても、値が決まりません（$\omega=\omega_0$ のときは $e^{-j\omega t}\cos\omega_0t$ の平均が $\frac12$ で、限りなく大きくなる）。だから、くり返す波は、9-3 の $c_n$ で表します。スペクトルは、$\pm n\omega_0$ の所に立つ線です。くり返さない波の曲線のスペクトルと、くり返す波の線のスペクトルは、②の図\ref{bk:9-4:fig-nobasu}の両はし（周期が有限と、限りなく長い）にあたります。
+
+\begin{seikaku}
+\kixebox{くり返す波のフーリエ変換は、「とても細くて高い山」}
+くり返す波も、無理にフーリエ変換すると、$\pm\omega_0$ の所だけにある「はばが0で、高さが限りなく大きく、面積が決まっている山」になります。この山の名前と記号は、9-6 で学びます。$\cos\omega_0t$ の変換は、$\omega_0$ と $-\omega_0$ の所に、面積 $\pi$ の山が1つずつ立ったものです。9-3 の $c_{\pm1}=\frac12$ に $2\pi$ をかけた面積です（⑥のもどす式の $\frac{1}{2\pi}$ と組になる）。
+\end{seikaku}
+
+\bksubsection{12}{場合 G：データの変換 DFT}
+
+\label{bk:9-4:dft}録音した音や、センサーでとった振動は、式ではなく、とびとびの時刻の値（データ）です。時間のきざみ $\Delta t$〔s〕ごとに値をとることを\textbf{サンプリング}（標本化、ひょうほんか）といい、1秒にとる回数 $f_{\mathrm s}=\tfrac{1}{\Delta t}$〔Hz〕を\textbf{サンプリング周波数}といいます。\bkidx{さんぷりんぐしゅうはすう}{サンプリング周波数}
+
+\kixehead{$c_n$ の積分を、データの和にする}
+9-2⑦では、データだけのときの係数を「値×$\sin$ の平均の2倍」の和で求め、「9-4 の DFT につながる」と予告しました。その和を、9-3 の $c_n$ の形で書いたものが DFT です。$N$ 個の値 $x_0,\ x_1,\ \dots,\ x_{N-1}$（$x_m$ は時刻 $m\Delta t$ の値）を、長さ $N\Delta t$ の1周期と考えます。9-3 の $c_k$ の積分を、5-10 と同じく「値×きざみ」の和にします。
+\begin{bkhenkei}[0.62]
+c_k=\frac{1}{T}\int_0^Tf(t)\,e^{-jk\omega_0t}\,\dd t & 9-3 の式 \\
+\approx\frac{1}{N\Delta t}\sum_{m=0}^{N-1}x_m\,e^{-jk\omega_0m\Delta t}\,\Delta t & $T=N\Delta t$、$t=m\Delta t$、「値×きざみ」の和 \\
+k\omega_0m\Delta t=k\cdot\frac{2\pi}{N\Delta t}\cdot m\Delta t=\frac{2\pi km}{N} & $\Delta t$ が消える \\
+c_k\approx\frac{1}{N}\sum_{m=0}^{N-1}x_m\,e^{-j2\pi km/N} & $\Delta t$ を約分 \\
+\end{bkhenkei}
+この和（$\frac{1}{N}$ をつけない形）を、\textbf{離散フーリエ変換}（DFT）といいます。\bkidx{りさんふーりえへんかん}{離散フーリエ変換（DFT）}
+\kixeframe[104mm]{\Large $X_k=\displaystyle\sum_{m=0}^{N-1}x_m\,e^{-j2\pi km/N}$\\[3pt]\normalsize\sffamily $X_k$ の周波数は $k\times\dfrac{f_{\mathrm s}}{N}$〔Hz〕、振幅は $\dfrac{2|X_k|}{N}$}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $X_k$ は $Nc_k$ に近い値です。振幅は $2|c_k|$（9-3 の④）なので、$2|X_k|/N$ です（$k=0$ は平均で、$X_0/N$）。
+\item $X_k$ の周波数は、角周波数で $k\omega_0=2\pi k/(N\Delta t)$、Hz で $k/(N\Delta t)$、つまり $k\times f_{\mathrm s}/N$ です。$f_{\mathrm s}/N$ が、周波数の目もりのきざみです。
+\item $k$ が $N/2$ より大きい所は、負の周波数（$k-N$ 番め）の成分です。$e^{-j2\pi Nm/N}=e^{-j2\pi m}=1$ なので、$e^{-j2\pi km/N}$ と $e^{-j2\pi(k-N)m/N}$ は同じ値だからです。
+\end{itemize}
+
+\kixehead{8点の DFT を手で計算する}
+$x_m=\sin\tfrac{2\pi\times2m}{8}$（1周期 8 点の中で2回ゆれる $\sin$）の8つの値は、$0$、$1$、$0$、$-1$、$0$、$1$、$0$、$-1$ です。$k=2$ のとき、かける矢印は $e^{-j2\pi\cdot2m/8}=e^{-j\pi m/2}$ で、$m$ がふえるごとに右回りに90°ずつ回ります。
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & $m$ & $x_m$ & $e^{-j\pi m/2}$ & $x_m\times e^{-j\pi m/2}$ \\
+2 & 0 & 0 & 1 & 0 \\
+3 & 1 & 1 & $-j$ & $-j$ \\
+4 & 2 & 0 & $-1$ & 0 \\
+5 & 3 & $-1$ & $j$ & $-j$ \\
+6 & 4 & 0 & 1 & 0 \\
+7 & 5 & 1 & $-j$ & $-j$ \\
+8 & 6 & 0 & $-1$ & 0 \\
+9 & 7 & $-1$ & $j$ & $-j$ \\
+10 & & & 合計 $X_2$ & $-4j$ \\}
+\bktabcaption{8点の DFT の $X_2$ を、1行ずつ計算した。}
+\label{bk:9-4:tab-dft}
+\end{bkcenter}
+$X_2=-4j$ で、振幅は $\tfrac{2\times|-4j|}{8}=1$、もとの $\sin$ の振幅1と合います。ほかの $k$ も同じように計算すると、$X_6=4j$（$k=6$ は $6-8=-2$ 番め、負の周波数の側で、$X_2$ の共役）、残りはすべて0です。9-3 の $\sin$ の両側スペクトル（$c_{\pm1}=\mp\frac{j}{2}$）と同じ形です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixeworlds{時間の世界（8点）}{周波数の世界}{DFT}{もどす}
+\begin{axis}[kixe wave, at={(0mm,0mm)}, xmin=0, xmax=8, ymin=-1.3, ymax=1.3, xtick={0,1,...,7}, ytick={-1,1}, xlabel={点の番号 $m$}, ylabel={$x_m$}]
+  \addplot[kixe part, domain=0:8] {sin(90*x)};
+  \addplot[kixe dot, mark size=1.8pt] coordinates {(0,0) (1,1) (2,0) (3,-1) (4,0) (5,1) (6,0) (7,-1)};
+\end{axis}
+\begin{axis}[kixe spec, at={(76mm,0mm)}, xmin=-0.5, xmax=7.5, ymax=4.8, xtick={0,1,...,7}, ytick={2,4}, xlabel={番号 $k$}, ylabel={$|X_k|$}]
+  \addplot[kixe bar] coordinates {(0,0) (1,0) (2,4) (3,0) (4,0) (5,0) (6,4) (7,0)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{8点のデータ（左の点。細い破線はもとの波）と、その DFT の大きさ（右の棒）。$k=2$ の棒は「8点で2回くり返す成分」。$k=6$ の棒は $k=2$ の鏡うつし（9-3 の負の周波数）。}
+\label{bk:9-4:fig-dft}
+\end{bkfigure}
+
+手で計算した $|X_k|$ を、numpy の \texttt{np.fft.fft}（$N$ 点の DFT を、FFT で計算する命令）で確かめます。
+\Needspace{11\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+m = np.arange(8)                \# 点の番号 0, 1, …, 7
+x = np.sin(2*np.pi*2*m/8)       \# 8点で2回くり返す sin
+X = np.fft.fft(x)               \# 8点の DFT
+print(np.round(np.abs(X), 3))   \# 大きさ |X\_k|（k = 0〜7）
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[0. 0. 4. 0. 0. 0. 4. 0.]
+\end{bkcodeout}
+表\ref{bk:9-4:tab-dft}の手計算と同じく、$k=2$ と $k=6$ だけが4になりました。
+
+
+\bksubsection{13}{速く計算する FFT}
+
+\label{bk:9-4:fft}DFT を式のとおりに計算すると、$X_k$ 1つに $N$ 回のかけ算（とたし算）、それを $N$ 個求めるので、およそ $N^2$ 回の計算が必要です。録音した音1秒分（$N$ が数千〜数万）では、とても大きな数になります。
+
+\kixehead{半分ずつに分けて、くり返す}
+$N$ 個の値を、番号が偶数のもの（$x_0,\ x_2,\ \dots$）と奇数のもの（$x_1,\ x_3,\ \dots$）に分けます。偶数番は $m=2r$、奇数番は $m=2r+1$ と書けます（$r$ は0から $\frac{N}{2}-1$ まで。下の $\sum_r$ はこの和）。それぞれの $\frac{N}{2}$ 点の DFT に名前をつけます。
+\kixeline{$E_k=\sum_r x_{2r}\,e^{-j2\pi kr/(N/2)},\qquad O_k=\sum_r x_{2r+1}\,e^{-j2\pi kr/(N/2)}$}
+$X_k$ の和を、偶数番と奇数番に分けて書き直します。
+\begin{bkhenkei}[0.62]
+X_k=\sum_{m=0}^{N-1}x_m\,e^{-j2\pi km/N} & DFT の定義（⑫） \\
+=\sum_r x_{2r}\,e^{-j2\pi k(2r)/N} & 偶数番 $m=2r$ と \\
+\qquad+\sum_r x_{2r+1}\,e^{-j2\pi k(2r+1)/N} & 奇数番 $m=2r+1$ に分ける \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+=\sum_r x_{2r}\,e^{-j2\pi kr/(N/2)} & $\frac{2r}{N}=\frac{r}{N/2}$ \\
+\qquad+e^{-j2\pi k/N}\sum_r x_{2r+1}\,e^{-j2\pi kr/(N/2)} & 奇数番の肩から $e^{-j2\pi k/N}$ をくくる \\
+=E_k+e^{-j2\pi k/N}\,O_k & $E_k$・$O_k$ の名前を使う \\
+\end{bkhenkei}
+次に、後ろの半分の $X_{k+N/2}$ です。$E_k$・$O_k$ は $\frac{N}{2}$ 点の DFT なので、$k$ が $\frac{N}{2}$ ふえても同じ値です（肩が $-j2\pi r$ だけふえ、$e^{-j2\pi r}=1$）。
+\begin{bkhenkei}[0.62]
+X_{k+N/2}=E_k+e^{-j2\pi(k+N/2)/N}\,O_k & 上の式の $k$ を $k+\frac{N}{2}$ に \\
+=E_k+e^{-j2\pi k/N}\,e^{-j\pi}\,O_k & 肩を分ける：$\frac{2\pi}{N}\cdot\frac{N}{2}=\pi$ \\
+=E_k-e^{-j2\pi k/N}\,O_k & $e^{-j\pi}=-1$ \\
+\end{bkhenkei}
+後ろの半分の $X$ は、前の半分と同じ $E_k$・$O_k$ を使い回せて、符号が変わるだけです。$E_k$ と $O_k$ も、さらに半分ずつに分けられます。これを $N$ が1になるまでくり返すと、計算の回数はおよそ $N\log_2N$ 回になります。この計算の方法を\textbf{高速フーリエ変換}（FFT）といいます。\bkidx{こうそくふーりえへんかん}{高速フーリエ変換（FFT）}8点なら、図\ref{bk:9-4:fig-fftbunkatsu}のように3回半分に分けます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+\draw[bkInk!70, line width=0.5pt, fill=white] (10.5,-2.6) rectangle (18.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (14.5,0.0) {$x_0$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (18.5,-2.6) rectangle (26.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (22.5,0.0) {$x_1$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (26.5,-2.6) rectangle (34.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (30.5,0.0) {$x_2$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (34.5,-2.6) rectangle (42.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (38.5,0.0) {$x_3$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (42.5,-2.6) rectangle (50.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (46.5,0.0) {$x_4$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (50.5,-2.6) rectangle (58.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (54.5,0.0) {$x_5$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (58.5,-2.6) rectangle (66.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (62.5,0.0) {$x_6$};
+\draw[bkInk!70, line width=0.5pt, fill=white] (66.5,-2.6) rectangle (74.5,2.6); \node[font=\footnotesize, inner sep=0pt] at (70.5,0.0) {$x_7$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (4.5,-13.6) rectangle (12.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (8.5,-11.0) {$x_0$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (12.5,-13.6) rectangle (20.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (16.5,-11.0) {$x_2$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (20.5,-13.6) rectangle (28.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (24.5,-11.0) {$x_4$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (28.5,-13.6) rectangle (36.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (32.5,-11.0) {$x_6$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (48.5,-13.6) rectangle (56.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (52.5,-11.0) {$x_1$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (56.5,-13.6) rectangle (64.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (60.5,-11.0) {$x_3$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (64.5,-13.6) rectangle (72.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (68.5,-11.0) {$x_5$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (72.5,-13.6) rectangle (80.5,-8.4); \node[font=\footnotesize, inner sep=0pt] at (76.5,-11.0) {$x_7$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (1.5,-24.6) rectangle (9.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (5.5,-22.0) {$x_0$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (9.5,-24.6) rectangle (17.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (13.5,-22.0) {$x_4$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (23.5,-24.6) rectangle (31.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (27.5,-22.0) {$x_2$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (31.5,-24.6) rectangle (39.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (35.5,-22.0) {$x_6$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (45.5,-24.6) rectangle (53.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (49.5,-22.0) {$x_1$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (53.5,-24.6) rectangle (61.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (57.5,-22.0) {$x_5$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (67.5,-24.6) rectangle (75.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (71.5,-22.0) {$x_3$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (75.5,-24.6) rectangle (83.5,-19.4); \node[font=\footnotesize, inner sep=0pt] at (79.5,-22.0) {$x_7$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (0.0,-35.6) rectangle (8.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (4.0,-33.0) {$x_0$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (11.0,-35.6) rectangle (19.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (15.0,-33.0) {$x_4$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (22.0,-35.6) rectangle (30.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (26.0,-33.0) {$x_2$};
+\draw[bkInk!70, line width=0.5pt, fill=bkBlue!14] (33.0,-35.6) rectangle (41.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (37.0,-33.0) {$x_6$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (44.0,-35.6) rectangle (52.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (48.0,-33.0) {$x_1$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (55.0,-35.6) rectangle (63.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (59.0,-33.0) {$x_5$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (66.0,-35.6) rectangle (74.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (70.0,-33.0) {$x_3$};
+\draw[bkInk!70, line width=0.5pt, fill=bkOrange!18] (77.0,-35.6) rectangle (85.0,-30.4); \node[font=\footnotesize, inner sep=0pt] at (81.0,-33.0) {$x_7$};
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (42.5,-3.0) -- (20.5,-7.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (42.5,-3.0) -- (64.5,-7.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (20.5,-14.0) -- (9.5,-18.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (20.5,-14.0) -- (31.5,-18.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (64.5,-14.0) -- (53.5,-18.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (64.5,-14.0) -- (75.5,-18.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (9.5,-25.0) -- (4.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (9.5,-25.0) -- (15.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (31.5,-25.0) -- (26.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (31.5,-25.0) -- (37.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (53.5,-25.0) -- (48.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (53.5,-25.0) -- (59.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (75.5,-25.0) -- (70.0,-29.8);
+\draw[bkInk!60, line width=0.6pt, -{Stealth[length=1.5mm]}] (75.5,-25.0) -- (81.0,-29.8);
+\node[font=\footnotesize, anchor=west, align=left] at (92,0.0) {8点の DFT が1つ};
+\node[font=\footnotesize, anchor=west, align=left] at (92,-11.0) {4点の DFT が2つ（$E_k$・$O_k$）};
+\node[font=\footnotesize, anchor=west, align=left] at (92,-22.0) {2点の DFT が4つ};
+\node[font=\footnotesize, anchor=west, align=left] at (92,-33.0) {1点（値そのもの）が8つ};
+
+\end{tikzpicture}
+\bkfigcaption{8点の FFT の分け方。偶数番（青）と奇数番（オレンジ）に分け、それをまた半分に分ける。$\log_28=3$ 回分けると1点になる。下から上へ、1つの段で約8回の計算をして $E_k$・$O_k$ から $X_k$ をつくるので、全部で約 $8\times3=24$ 回（表\ref{bk:9-4:tab-fft}）。}
+\label{bk:9-4:fig-fftbunkatsu}
+\end{bkfigure}
+
+
+\kixehead{Python で FFT}
+numpy の \texttt{np.fft.rfft} は、FFT で正の周波数の側の $X_k$ を求めます。9-0 で使ったプログラムを、もう一度見てみましょう。440\,Hz・880\,Hz・1320\,Hz の音を、振幅1・0.5・0.25 でたした音を、1秒に8000回はかったデータです。
+\Needspace{17\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+fs = 8000                       \# 1秒に何回はかるか
+t = np.arange(fs) / fs          \# 1/8000 秒ごとの 8000 個の時刻
+x = (np.sin(2*np.pi*440*t) + 0.5*np.sin(2*np.pi*880*t)
+     + 0.25*np.sin(2*np.pi*1320*t))   \# 3つの成分をたした音
+X = np.fft.rfft(x)              \# FFT（周波数の世界へ）
+freq = np.fft.rfftfreq(len(x), 1/fs)  \# 1つ1つの成分の周波数
+A = 2*np.abs(X) / len(x)        \# 成分の大きさ（振幅）にそろえる
+print(freq[A > 0.1])            \# 大きさが 0.1 より大きい周波数
+print(np.round(A[A > 0.1], 3))  \# その大きさ（小数第3位まで）
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[ 440.  880. 1320.]
+[1.   0.5  0.25]
+\end{bkcodeout}
+9-0 では「なぜ \texttt{2*np.abs(X)/len(x)} の形になるかは 9-4」と書きました。その答えが、⑫の DFT です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{\texttt{len(x)} でわる}：$X_k$ は $N$ 個の値の\textbf{和}で、$Nc_k$ に近い値でした。$N$（\texttt{len(x)}、ここでは8000）でわると、9-3 の $c_k$ になります。
+\item \textbf{2をかける}：\texttt{rfft} は正の周波数の側だけを出します。9-3 の④で見たように、1つの成分の振幅は、正の周波数の $|c_k|$ と負の周波数の $|c_{-k}|$ の和、つまり $2|c_k|$ です。
+\end{itemize}
+周波数のきざみは $f_{\mathrm s}/N=8000/8000=1$\,Hz です。3つの成分の周波数と振幅が、正しく取り出せました。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixeworlds{時間の世界}{周波数の世界}{FFT}{もどす}
+\begin{axis}[kixe wave, at={(0mm,0mm)}, xmin=0, xmax=5, ymin=-1.6, ymax=1.6, xtick={0,1,...,5}, ytick={-1,1}, xlabel={時間 $t$（ms）}, ylabel={$x$}]
+  \addplot[kixe sig, domain=0:5] {sin(158.4*x)+0.5*sin(316.8*x)+0.25*sin(475.2*x)};
+  \addplot[kixe dot, mark size=1pt] coordinates {(0,0) (0.125,0.873) (0.25,1.348) (0.375,1.307) (0.5,0.955) (0.625,0.610) (0.75,0.438) (0.875,0.372) (1,0.252)};
+\end{axis}
+\begin{axis}[kixe spec, at={(76mm,0mm)}, xmin=0, xmax=2000, ymax=1.2, xtick={0,440,880,1320,2000}, ytick={0.25,0.5,1}, xlabel={周波数（Hz）}, ylabel={振幅}]
+  \addplot[kixe bar] coordinates {(440,1) (880,0.5) (1320,0.25)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{FFT の入口と出口。左（時間の世界）：はかった音の波形（はじめの 1\,ms だけ、はかった点を 0.125\,ms ごとに点でかいた）。右（周波数の世界）：FFT で求めた振幅 $2|X_k|/N$（Python で出した値を、本の形にかき直したもの。0〜2000\,Hz の所だけ）。}
+\label{bk:9-4:fig-fft}
+\end{bkfigure}
+
+\begin{seikaku}
+\kixebox{きざみの間の周波数は、となりにもれる}
+FFT は、とった $N$ 個のデータを「1周期」とみなして、きざみ $f_{\mathrm s}/N$ の整数倍の周波数の成分に分けます（⑫）。上の例では、どの音もちょうど1\,Hz の整数倍だったので、1本ずつの棒になりました。もし 440.5\,Hz のように、きざみの間の周波数の音だと、1秒のデータのはしで波がつながらず、成分が 440\,Hz と 441\,Hz に0.637ずつ、そのとなりの 439\,Hz・442\,Hz にも0.21ずつというように、まわりにもれて出ます（Python で確かめた値）。このことを\textbf{もれ}（リーケージ）といいます。もれを小さくするために、データの両はしをなめらかに0にしてから FFT をする方法（窓関数）があり、物理の本（波-11）で学びます。
+\end{seikaku}
+
+FFT を使うと、計算の回数はどれくらいへるのでしょう。表\ref{bk:9-4:tab-fft}のように、点の数が多いほど差が大きくなります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,26mm] Q[c,m,36mm] Q[c,m,36mm] Q[c,m,20mm]}, row{2-Z}={font=\small}}
+点の数 $N$ & DFT（$N^2$ 回） & FFT（およそ $N\log_2N$ 回） & FFT÷DFT \\
+8 & 64 & 24 & 約0.4 \\
+1024 & 約105万 & 約1万 & 約100分の1 \\
+\end{bktable}
+\bktabcaption{計算の回数のくらべ。点の数が多いほど、FFT の速さがきく。}
+\label{bk:9-4:tab-fft}
+\end{bkcenter}
+
+\begin{column}{FFT を見つけた人たち}
+FFT は1965年にクーリーとテューキーが発表し、広く使われるようになりました。後に調べると、ガウスが1805年ごろ、小惑星の軌道の計算で同じ「半分ずつに分ける」考えを使っていました。発表しなかったので、150年以上知られていなかったのです（8-6 のガウス積分のガウス）。
+\end{column}
+
+\bksubsection{14}{サンプリング定理と、エイリアシング}
+
+\label{bk:9-4:sampling}9-0 では、「はかる回数が少なすぎると、成分を取りちがえる」と予告しました。そのしくみを見ます。1秒に8000回とったデータで、7000\,Hz の音と 1000\,Hz の音をくらべます。$\cos$ の値を、とった時刻 $\tfrac{m}{8000}$ 秒で計算します。
+\begin{bkhenkei}[0.62]
+\cos\Bigl(2\pi\times7000\times\frac{m}{8000}\Bigr)=\cos\Bigl(2\pi m-\frac{2\pi m}{8}\Bigr) & $\dfrac{7000}{8000}=1-\dfrac18$ \\
+=\cos\Bigl(-\frac{2\pi m}{8}\Bigr)=\cos\frac{2\pi m}{8} & $2\pi m$ は何周しても同じ。$\cos$ は偶関数 \\
+=\cos\Bigl(2\pi\times1000\times\frac{m}{8000}\Bigr) & 1000\,Hz の音の値 \\
+\end{bkhenkei}
+とった点の値は、7000\,Hz でも 1000\,Hz でも、まったく同じです（図\ref{bk:9-4:fig-alias}）。データだけを見て、どちらの音かは区別できません。「サンプリング周波数－もとの周波数」（$8000-7000=1000$）の音は、もとの音と同じ点を通るのです。高い周波数の音が、とり方のせいで低い周波数の音に化けることを、\textbf{エイリアシング}（折り返し）といいます。\bkidx{えいりあしんぐ}{エイリアシング}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixe wave, width=112mm, height=30mm, xmin=0, xmax=1.05, ymin=-1.25, ymax=1.3, xtick={0,0.25,0.5,0.75,1}, ytick={-1,1}, xlabel={時間 $t$（ms）}]
+  \addplot[bkGray, line width=0.9pt, domain=0:1, samples=600] {cos(deg(2*pi*7*x))};
+  \addplot[bkBlue, line width=1.6pt, domain=0:1, samples=120] {cos(deg(2*pi*1*x))};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkRed] coordinates {(0,1) (0.125,0.7071) (0.25,0) (0.375,-0.7071) (0.5,-1) (0.625,-0.7071) (0.75,0) (0.875,0.7071) (1,1)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{1秒に8000回（0.125\,ms ごと）とった点（赤）。細い灰色の線が 7000\,Hz、太い青の線が 1000\,Hz の $\cos$。どちらの線も、赤の点を全部通る。}
+\label{bk:9-4:fig-alias}
+\end{bkfigure}
+
+\kixehead{サンプリング定理}
+もとの音に、$f_{\mathrm s}/2$ より高い周波数の成分がなければ、この取りちがえはおきません。$f_{\mathrm s}/2$ より低い成分 $f$ なら、同じ点を通る相手（$f_{\mathrm s}$ の整数倍だけずらした $f_{\mathrm s}\pm f$、$2f_{\mathrm s}\pm f$、…）は、どれも $f_{\mathrm s}/2$ より高いので、とりちがえる相手がいないからです。そして、とった点から、もとの音を完全にもどすことができます。
+\kixeframe[110mm]{\large いちばん高い周波数の2倍より大きい\\サンプリング周波数でとれば、\\とったデータから、もとの波をもどせる}
+これを\textbf{サンプリング定理}（標本化定理）といいます。ナイキスト（1928年）やシャノン（1949年）らの研究で知られています。音楽の CD は、1秒に \num{44100} 回とります。その半分の \qty{22050}{Hz} は、人が聞こえる高い音の上限（若い人で約 \qty{20000}{Hz}。年れいとともに下がる）より少し上です。だから、聞こえる音はすべて正しく記録できます。そのかわり、録音する前に、\qty{22050}{Hz} より高い音をフィルターで取り除いておきます。
+
+\kixehead{動画の車輪が、逆に回って見える}
+動画は、1秒に24まいなどの写真（コマ）を続けて見せます。これもサンプリングです。スポークが8本（45°ごと）の車輪が、1秒に2.75回転しているとします。1コマの間に回る角は、$2.75\times360°\div24=41.25°$ です。スポークは45°ごとに同じ形なので、41.25°進むのは、$41.25°-45°=-3.75°$、つまり「少しもどった」のと区別がつきません。画面では、車輪は1秒に $-3.75°\times24=-90°$、ゆっくり逆に回って見えます。
+
+\begin{motto}[5]
+\kixebox{無限に長い棒の熱は、ガウスの形で広がる}
+とても長い金属の棒のまん中を、一瞬だけ熱したとします。8-13 で学んだように、温度の $\sin$（ここでは回る矢印 $e^{jkx}$）の成分は、それぞれ $e^{-\alpha k^2t}$ でへります（$k$ は波数、$\alpha$〔m²/s〕は熱拡散率）。一瞬の熱は、とても短いパルスに近いので、はじめはすべての $k$ の成分を同じだけもっています。時間 $t$ がたつと、成分は $e^{-\alpha k^2t}$ 倍、つまり $k$ について\textbf{ガウスの形}になります。⑨から、ガウスの形をもどすと、場所 $x$ についてもガウスの形です。温度は、つりがねの形のまま広がり、そのはば（標準偏差）は $\sqrt{2\alpha t}$ です。$\alpha=\qty{1e-4}{m^2/s}$ なら、1秒で約1.4\,cm、10秒で約4.5\,cm、100秒で約14\,cm。はばは時間の2乗根に比例するので、2倍の距離に広がるには4倍の時間がかかります。この形の答えは、ラプラスも1809年に使っていて、フーリエの『熱の解析的理論』（1822年）にも、長い棒の熱の広がりの章があります。
+\end{motto}
+
+
+
+
+
+
+
+\begin{taisetsu}
+\kixebox{フーリエ変換の3つの段}
+\kixedan{1}\enspace 記号を読む：何に（$f$）・何をかけて（$e^{-j\omega t}$）・$-\infty$〜$\infty$・わらない\par
+\kixedan{3}\enspace 直す前に：はかった値だけ？　くり返す？　知っている形をずらした・$\cos$ をかけた？\par
+\kixedan{2}\enspace 0でない区間のふつうの定積分。$e^{-at}$・ガウスは広義積分\par
+\[ \kixeNt{F(\omega)}=\kixeSt{1}{\int_{-1}^{1}e^{-j\omega t}\,\dd t}=\frac{2\sin\omega}{\omega} \]
+\kixebox{場合分けの表9-4（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,42mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kixecase{G} & 式がなく、はかった値だけ & DFT・FFT。振幅 $\frac{2|X_k|}{N}$ \\
+\kixecase{F} & くり返す & 9-3 の $c_n$（線） \\
+\kixecase{E} & 知っている形を、ずらした・$\cos$ をかけた & 性質の表 \\
+\kixecase{A} & 有限の区間 & その区間の定積分 \\
+\kixecase{D} & ガウス & 平方完成と $\sqrt\pi$ \\
+\kixecase{B} & $t\geqq0$ の $e^{-at}$ & $\frac{1}{a+j\omega}$ \\
+\kixecase{C} & 両側の $e^{-a|t|}$ & $\frac{2a}{a^2+\omega^2}$ \\
+\end{bktable}
+\kixebox{短いほど広い}
+時間の世界でせまいものは、周波数の世界で広い（ガウスでは、はば $\sigma$ と $\frac{1}{\sigma}$）。データは、いちばん高い周波数の2倍より大きい $f_{\mathrm s}$ でとる。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{フーリエ変換}{$F(\omega)=\int_{-\infty}^{\infty}f(t)e^{-j\omega t}\dd t$。くり返さない波の成分。操作の名前。}
+\bkword{逆フーリエ変換}{$f(t)=\frac{1}{2\pi}\int_{-\infty}^{\infty}F(\omega)e^{j\omega t}\dd\omega$。スペクトルから波にもどす。}
+\bkword{サンプリング}{とびとびの時刻で値をとること。1秒にとる回数がサンプリング周波数 $f_{\mathrm s}$。}
+\bkword{DFT・FFT}{DFT はデータの成分 $X_k=\sum x_me^{-j2\pi km/N}$。FFT はその速い計算の方法。}
+\bkword{サンプリング定理}{いちばん高い周波数の2倍より大きい $f_{\mathrm s}$ でとれば、もとの波をもどせる。}
+\bkword{エイリアシング}{$f_{\mathrm s}/2$ より高い成分が、低い周波数に化けること。}
+\end{kotoba}
+
+\begin{senmonsho}[フーリエ変換の専門書ふうの書き方]
+\begin{bkhonbun}
+$\displaystyle\mathcal{F}[f](\xi)=\hat f(\xi)=\int_{-\infty}^{\infty}f(x)e^{-2\pi ix\xi}\,dx$，$\displaystyle f(x)=\int_{-\infty}^{\infty}\hat f(\xi)e^{2\pi ix\xi}\,d\xi$．
+\end{bkhonbun}
+\bkyaku{$\mathcal F$（筆記体のエフ）はフーリエ変換の名前の記号。$\hat f$ は $F$ と同じ。$i$ はこの本の $j$。この本では角周波数 $\omega$ を使い、もどす式に $\frac{1}{2\pi}$ をつけたが、この書き方は周波数 $\xi$（Hz）を使い、$2\pi$ を肩に入れたので、どちらの式にも前の数がつかない。}
+\begin{bktable}{colspec={Q[l,m,26mm] X[l,m] X[l,m]}, row{2-Z}={font=\small}, rowsep=1pt, colsep=3pt}
+書き方 & 変換の式 & もどす式 \\
+この本（電気・制御） & $\int fe^{-j\omega t}\dd t$ & $\frac{1}{2\pi}\int Fe^{j\omega t}\dd\omega$ \\
+両方に $\frac{1}{\sqrt{2\pi}}$ & $\frac{1}{\sqrt{2\pi}}\int fe^{-j\omega t}\dd t$ & $\frac{1}{\sqrt{2\pi}}\int Fe^{j\omega t}\dd\omega$ \\
+周波数で書く & $\int fe^{-j2\pi\xi t}\dd t$ & $\int Fe^{j2\pi\xi t}\dd\xi$ \\
+\end{bktable}
+\bkyaku{制御の本では、9-5 のラプラス変換の $s$ に $j\omega$ を入れた形として、$F(j\omega)$ と書くことも多い。}
+\end{senmonsho}
+
+
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、場合分けの表9-4のどの場合かを書きました。$\omega$ の単位は rad/s、$t$ の単位は s です。
+
+\kixehead{例題を、流れ図でたどってみよう}
+例題1〜10を、図\ref{bk:9-4:fig-flow}の流れ図の上から順にたどると、次のようになります（書いていない問いは「いいえ」）。どれも、考え方の1行めの場合に着きます。じぶんでとこうも同じ道すじです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,16mm]}, row{2-Z}={font=\small}, rowsep=0.8pt, colsep=3pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 方形パルス & 0でない所が有限の区間？ & \kixecase{A} \\
+2 & だんだん消える波 & $t\geqq0$ だけの $e^{-at}$？ & \kixecase{B} \\
+3 & 両側の指数 & 両側の $e^{-a|t|}$？ & \kixecase{C} \\
+4 & ガウスの形 & ガウスの形 $e^{-t^2}$？ & \kixecase{D} \\
+5 & ずらしたパルス & 知っている形を、ずらした・$\cos$ をかけた？ → 0でない所が有限の区間？ & \kixecase{E}\kixecase{A} \\
+6 & $\cos$ をかけたガウス & 知っている形を、ずらした・$\cos$ をかけた？ → ガウスの形 $e^{-t^2}$？ & \kixecase{E}\kixecase{D} \\
+7 & くり返す波 & くり返す波？ & \kixecase{F} \\
+8 & 8点の DFT & 式がなく、はかった値だけ？ & \kixecase{G} \\
+9 & FFT の結果を読む & 式がなく、はかった値だけ？ & \kixecase{G} \\
+10 & エイリアシング & 式がなく、はかった値だけ？ & \kixecase{G} \\
+\end{bktable}
+\bktabcaption{例題1〜10の流れ図の道すじ。}
+\end{bkcenter}
+
+\bkkigocards{\bkkigocard{$F(\omega)$}{エフ・オメガ}{$f(t)$ のフーリエ変換。角周波数 $\omega$ の成分。ふつうは複素数で、大きさがスペクトル}{Fourier transform}{9-4}}
+{\bkkigocard{$f_{\mathrm s}$}{エフ・エス}{サンプリング周波数〔Hz〕。1秒に値をとる回数。$1/\Delta t$}{sampling frequency}{9-4}}
+
+
+\begin{reidai}[方形パルスの変換]
+$-0.5<t<0.5$ で $f=2$、それ以外で $f=0$ のパルスのフーリエ変換 $F(\omega)$ を求めましょう。また、$F(0)$ と、$F(\omega)$ がはじめて0になる正の $\omega$ を求めましょう。\par
+\kangaekata \kixebaai{0でない所が有限の区間だけ}{9-4}{A}\par
+\kixedan{1}\enspace $F(\omega)$：$-\infty$ から $\infty$ まで、$f$ に $e^{-j\omega t}$ をかけてたす。\par
+\kixenaosu{1}\enspace 0でないのは $-0.5<t<0.5$ だけ。そこのふつうの定積分（$\omega\neq0$）。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $F(\omega)=\displaystyle\int_{-0.5}^{0.5}2e^{-j\omega t}\,\dd t=2\Bigl[\,\frac{e^{-j\omega t}}{-j\omega}\,\Bigr]_{-0.5}^{0.5}$\par
+\kixeb $=\dfrac{2\bigl(e^{j0.5\omega}-e^{-j0.5\omega}\bigr)}{j\omega}=\dfrac{2\times2j\sin0.5\omega}{j\omega}=\dfrac{4\sin0.5\omega}{\omega}$\par
+\kixea $F(0)=\displaystyle\int_{-0.5}^{0.5}2\,\dd t=2$（グラフの面積：高さ2×はば1）\par
+\kixea はじめて0：$\sin0.5\omega=0$ で $0.5\omega=\pi$、$\omega=2\pi\approx6.28$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=34mm, xmin=-1.2, xmax=1.2, ymin=0, ymax=2.5, xtick={-0.5,0.5}, ytick={2}, xlabel={$t$}]
+\addplot[bkBlue, line width=1.5pt] coordinates {(-1.2,0) (-0.5,0) (-0.5,2) (0.5,2) (0.5,0) (1.2,0)};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}\kixeworld{変換}{もどす}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=52mm, xmin=-16, xmax=16, ymin=-0.6, ymax=2.4, xtick={-6.2832,6.2832}, xticklabels={$-2\pi$,$2\pi$}, ytick={2}, xlabel={$\omega$}]
+\addplot[bkBlue, line width=1.5pt, domain=-16:16, samples=200] {4*sin(deg(0.5*x))/x};
+\end{axis}
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $F(\omega)=\dfrac{4\sin0.5\omega}{\omega}$。$F(0)=2$、はじめて0になるのは $\omega=2\pi$
+\end{reidai}
+
+\begin{jibun}
+$-2<t<2$ で $f=1$、それ以外で $f=0$ のパルスのフーリエ変換を求め、$F(0)$ と、はじめて0になる正の $\omega$ を求めましょう。
+\bkjans{$F(\omega)=\frac{e^{j2\omega}-e^{-j2\omega}}{j\omega}=\frac{2\sin2\omega}{\omega}$。$F(0)=4$。$2\omega=\pi$ で $\omega=\frac{\pi}{2}\approx1.57$。}
+\end{jibun}
+
+\begin{reidai}[だんだん消える波の変換]
+$t\geqq0$ で $f(t)=e^{-3t}$、$t<0$ で $f=0$ の波のフーリエ変換を求め、$F(4)$ と、大きさ $|F(0)|$・$|F(3)|$ を求めましょう。\par
+\kangaekata \kixebaai{$t\geqq0$ だけの $e^{-at}$}{9-4}{B}\par
+\kixedan{1}\enspace $F(\omega)$：$e^{-j\omega t}$ をかけてたす。$t<0$ は0なので、$0$ から $\infty$ まで。\par
+\kixenaosu{1}\enspace 肩をまとめて $e^{-(3+j\omega)t}$ の広義積分（5-14）。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $F(\omega)=\displaystyle\int_0^{\infty}e^{-(3+j\omega)t}\,\dd t=\Bigl[\,\frac{e^{-(3+j\omega)t}}{-(3+j\omega)}\,\Bigr]_0^{\infty}=\frac{1}{3+j\omega}$\par
+\kixea $F(4)=\dfrac{1}{3+4j}=\dfrac{3-4j}{(3+4j)(3-4j)}=\dfrac{3-4j}{25}=0.12-0.16j$\par
+\kixea $|F(0)|=\dfrac{1}{3}\approx0.333$、\quad $|F(3)|=\dfrac{1}{\sqrt{9+9}}=\dfrac{1}{3\sqrt2}\approx0.236$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=34mm, xmin=-0.5, xmax=2.2, ymin=0, ymax=1.25, xtick={1,2}, ytick={1}, xlabel={$t$}]
+\addplot[bkBlue, line width=1.5pt] coordinates {(-0.5,0) (0,0)};
+\addplot[bkBlue, line width=1.5pt, domain=0:2.2, samples=60] {exp(-3*x)};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}\kixeworld{変換}{もどす}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=52mm, xmin=0, xmax=10.5, ymin=0, ymax=0.4, xtick={3,6,9}, ytick={0.1,0.2,0.3}, xlabel={$\omega$}, ylabel={$|F(\omega)|$}]
+\addplot[bkBlue, line width=1.5pt, domain=0:10.5, samples=80] {1/sqrt(9+x^2)};
+\addplot[only marks, mark=*, mark size=1.6pt, bkRed] coordinates {(3,0.2357)};
+\end{axis}
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $F(\omega)=\dfrac{1}{3+j\omega}$、$F(4)=0.12-0.16j$。$|F(0)|\approx0.333$、$|F(3)|\approx0.236$（$|F(0)|$ の $\frac{1}{\sqrt2}$ 倍）
+\end{reidai}
+
+\begin{jibun}
+$t\geqq0$ で $f(t)=e^{-t}$、$t<0$ で $f=0$ の波のフーリエ変換を求め、$F(1)$ と $|F(1)|$ を求めましょう。
+\bkjans{$F(\omega)=\frac{1}{1+j\omega}$。$F(1)=\frac{1}{1+j}=\frac{1-j}{2}=0.5-0.5j$。$|F(1)|=\frac{1}{\sqrt2}\approx0.707$。}
+\end{jibun}
+
+
+\begin{reidai}[両側の指数の変換]
+$f(t)=e^{-2|t|}$ のフーリエ変換を求め、$F(0)$ と $F(2)$ を求めましょう。\par
+\kangaekata \kixebaai{両側の $e^{-a|t|}$}{9-4}{C}\par
+\kixedan{1}\enspace $F(\omega)$：$-\infty$ から $\infty$ まで、$e^{-j\omega t}$ をかけてたす。\par
+\kixenaosu{1}\enspace $t>0$（$e^{-2t}$）と $t<0$（$e^{2t}$）に分けて、B の計算を2回。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $t>0$：$\displaystyle\int_0^{\infty}e^{-(2+j\omega)t}\,\dd t=\frac{1}{2+j\omega}$\par
+\kixea $t<0$：$\displaystyle\int_{-\infty}^{0}e^{(2-j\omega)t}\,\dd t=\Bigl[\,\frac{e^{(2-j\omega)t}}{2-j\omega}\,\Bigr]_{-\infty}^{0}=\frac{1}{2-j\omega}$\par
+\kixea $F(\omega)=\dfrac{1}{2+j\omega}+\dfrac{1}{2-j\omega}=\dfrac{(2-j\omega)+(2+j\omega)}{4+\omega^2}=\dfrac{4}{4+\omega^2}$\par
+\kixea $F(0)=\dfrac{4}{4}=1$、\quad $F(2)=\dfrac{4}{4+4}=0.5$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=34mm, xmin=-2.2, xmax=2.2, ymin=0, ymax=1.25, xtick={-2,2}, ytick={1}, xlabel={$t$}]
+\addplot[bkBlue, line width=1.5pt, domain=-2.2:2.2, samples=81] {exp(-2*abs(x))};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}\kixeworld{変換}{もどす}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=52mm, xmin=-6.5, xmax=6.5, ymin=0, ymax=1.25, xtick={-4,-2,2,4}, ytick={0.5,1}, xlabel={$\omega$}]
+\addplot[bkBlue, line width=1.5pt, domain=-6.5:6.5, samples=81] {4/(4+x^2)};
+\end{axis}
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $F(\omega)=\dfrac{4}{4+\omega^2}$。$F(0)=1$、$F(2)=0.5$
+\end{reidai}
+
+\begin{jibun}
+$f(t)=e^{-3|t|}$ のフーリエ変換を求め、$F(0)$ と $F(3)$ を求めましょう。
+\bkjans{$\frac{1}{3+j\omega}+\frac{1}{3-j\omega}=\frac{6}{9+\omega^2}$。$F(0)=\frac{2}{3}\approx0.667$、$F(3)=\frac{6}{18}=\frac{1}{3}\approx0.333$。}
+\end{jibun}
+
+\begin{reidai}[ガウスの形の変換]
+$f(t)=e^{-t^2/8}$ のフーリエ変換を求め、$F(0)$ と $F(0.5)$ を求めましょう。また、時間の世界と周波数の世界のはば（標準偏差）を答えましょう。\par
+\kangaekata \kixebaai{ガウスの形 $e^{-t^2/(2\sigma^2)}$}{9-4}{D}\par
+\kixedan{1}\enspace $F(\omega)$：$-\infty$ から $\infty$ まで、$e^{-j\omega t}$ をかけてたす。\par
+\kixenaosu{1}\enspace $\dfrac{t^2}{8}=\dfrac{t^2}{2\times2^2}$ なので $\sigma=2$。⑨の平方完成とガウス積分の結果 $\sigma\sqrt{2\pi}\,e^{-\sigma^2\omega^2/2}$ を使う。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $F(\omega)=2\sqrt{2\pi}\,e^{-4\omega^2/2}=2\sqrt{2\pi}\,e^{-2\omega^2}$\par
+\kixea $F(0)=2\sqrt{2\pi}\approx2\times2.507=5.013$\par
+\kixea $F(0.5)=5.013\times e^{-2\times0.25}=5.013\times e^{-0.5}$\par
+\kixeb $\approx5.013\times0.6065\approx3.041$\par
+\kixea $e^{-2\omega^2}=e^{-\omega^2/(2\times0.5^2)}$ なので、周波数のはばは $0.5=\dfrac{1}{2}$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=34mm, xmin=-7, xmax=7, ymin=0, ymax=1.25, xtick={-4,-2,2,4}, ytick={1}, xlabel={$t$}]
+\addplot[bkBlue, line width=1.5pt, domain=-7:7, samples=100] {exp(-x^2/8)};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}\kixeworld{変換}{もどす}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=52mm, xmin=-2.2, xmax=2.2, ymin=0, ymax=5.8, xtick={-1,-0.5,0.5,1}, ytick={5}, xlabel={$\omega$}]
+\addplot[bkBlue, line width=1.5pt, domain=-2.2:2.2, samples=100] {5.013*exp(-2*x^2)};
+\end{axis}
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $F(\omega)=2\sqrt{2\pi}\,e^{-2\omega^2}$。$F(0)\approx5.01$、$F(0.5)\approx3.04$。はばは、時間で2、周波数で $\dfrac12$
+\end{reidai}
+
+\begin{jibun}
+$f(t)=e^{-2t^2}$ のフーリエ変換を求め、$F(0)$ と $F(2)$ を求めましょう。
+\bkjans{$2t^2=\frac{t^2}{2\times0.5^2}$ で $\sigma=0.5$。$F(\omega)=0.5\sqrt{2\pi}\,e^{-\omega^2/8}$。$F(0)\approx1.253$、$F(2)=1.253\times e^{-0.5}\approx0.760$。}
+\end{jibun}
+
+
+\begin{reidai}[ずらしたパルスの変換]
+$1<t<3$ で $f=1$、それ以外で $f=0$ のパルスのフーリエ変換を求めましょう。また、$F\bigl(\frac{\pi}{2}\bigr)$ と、その大きさを求めましょう。\par
+\kangaekata \kixebaai{パルスを2だけずらした形}{9-4}{E,A}\par
+\kixedan{1}\enspace $F(\omega)$：$-\infty$ から $\infty$ まで、$e^{-j\omega t}$ をかけてたす。\par
+\kixedan{3}\enspace この波は、④の $-1<t<1$ のパルスを、右へ $t_0=2$ ずらしたもの。性質の表のずらす行で、$e^{-j2\omega}$ をかける。\par
+\kixenaosu{1}\enspace もとのパルスの変換は、④のふつうの定積分で $\dfrac{2\sin\omega}{\omega}$。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $F(\omega)=e^{-j2\omega}\times\dfrac{2\sin\omega}{\omega}$\par
+\kixea $F\Bigl(\dfrac{\pi}{2}\Bigr)=e^{-j\pi}\times\dfrac{2\times1}{\pi/2}=(-1)\times\dfrac{4}{\pi}\approx-1.273$\par
+\kixea 大きさ $|e^{-j\pi}|\times1.273=1.273$（ずらす前と同じ）\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=80mm, xmin=-1.6, xmax=4, ymin=0, ymax=1.3, xtick={-1,1,2,3}, ytick={1}, xlabel={$t$}]
+  \addplot[bkGray, line width=1.1pt, dash pattern=on 3pt off 1.5pt] coordinates {(-1.6,0.02) (-1,0.02) (-1,0.98) (1,0.98) (1,0.02) (1.2,0.02)};
+  \addplot[bkBlue, line width=1.5pt] coordinates {(-1.6,0) (1,0) (1,1) (3,1) (3,0) (4,0)};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=2mm]}] (axis cs:-0.2,1.12) -- (axis cs:1.8,1.12);
+  \node[font=\footnotesize, anchor=south, fill=white, inner sep=1pt] at (axis cs:0.8,1.13) {2 ずらす};
+\end{axis}
+\end{tikzpicture}\hspace{3mm}{\footnotesize\begin{minipage}[b]{30mm}\raggedright 灰色の破線が④のパルス、青がずらしたパルス。\end{minipage}}
+\par}\vspace{2pt}
+\kotae $F(\omega)=e^{-j2\omega}\dfrac{2\sin\omega}{\omega}$。$F\bigl(\frac{\pi}{2}\bigr)\approx-1.273$、大きさ1.273
+\end{reidai}
+
+\begin{jibun}
+$0<t<2$ で $f=1$、それ以外で $f=0$ のパルスのフーリエ変換を求め、$F\bigl(\frac{\pi}{2}\bigr)$ を求めましょう。
+\bkjans{④のパルスを1ずらした形。$F(\omega)=e^{-j\omega}\frac{2\sin\omega}{\omega}$。$F\bigl(\frac{\pi}{2}\bigr)=e^{-j\pi/2}\times\frac{4}{\pi}=-\frac{4}{\pi}j\approx-1.273j$。}
+\end{jibun}
+
+\begin{reidai}[$\cos$ をかけたガウスの形]
+$f(t)=e^{-t^2/2}\cos10t$ のフーリエ変換を求め、$F(10)$ と $F(9)$ を求めましょう。\par
+\kangaekata \kixebaai{ガウスの形に $\cos$ をかけた}{9-4}{E,D}\par
+\kixedan{1}\enspace $F(\omega)$：$-\infty$ から $\infty$ まで、$e^{-j\omega t}$ をかけてたす。\par
+\kixedan{3}\enspace 性質の表の $\cos$ の行：$e^{-t^2/2}$ の変換を、右と左へ10ずらして、半分ずつたす。\par
+\kixenaosu{1}\enspace もとの $e^{-t^2/2}$ の変換は、⑨の平方完成とガウス積分で $\sqrt{2\pi}\,e^{-\omega^2/2}$。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $F(\omega)=\dfrac{\sqrt{2\pi}}{2}\Bigl(e^{-(\omega-10)^2/2}+e^{-(\omega+10)^2/2}\Bigr)$\par
+\kixea $F(10)=1.2533\times\bigl(e^{0}+e^{-200}\bigr)\approx1.253$（$e^{-200}$ はほぼ0）\par
+\kixea $F(9)=1.2533\times\bigl(e^{-0.5}+e^{-180.5}\bigr)\approx1.2533\times0.6065\approx0.760$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=34mm, xmin=-3.3, xmax=3.3, ymin=-1.1, ymax=1.15, xtick={-2,2}, ytick={1}, xlabel={$t$}]
+\addplot[bkGray, line width=0.9pt, dash pattern=on 2pt off 1.2pt, domain=-3.3:3.3, samples=60] {exp(-x^2/2)};
+\addplot[bkBlue, line width=1.2pt, domain=-3.3:3.3, samples=300] {exp(-x^2/2)*cos(deg(10*x))};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}\kixeworld{変換}{もどす}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=52mm, xmin=-14, xmax=14, ymin=0, ymax=1.5, xtick={-10,10}, ytick={1.25}, yticklabels={1.25}, xlabel={$\omega$}]
+\addplot[bkBlue, line width=1.5pt, domain=-14:14, samples=200] {1.2533*(exp(-(x-10)^2/2)+exp(-(x+10)^2/2))};
+\end{axis}
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $F(10)\approx1.253$、$F(9)\approx0.760$（$\omega=\pm10$ の所に、ガウスの形の山が2つ）
+\end{reidai}
+
+\begin{jibun}
+$f(t)=e^{-t^2/2}\cos20t$ のフーリエ変換を求め、$F(20)$ と $F(21)$ を求めましょう。
+\bkjans{$F(\omega)=\frac{\sqrt{2\pi}}{2}\bigl(e^{-(\omega-20)^2/2}+e^{-(\omega+20)^2/2}\bigr)$。$F(20)\approx1.253$、$F(21)\approx1.253\times0.6065\approx0.760$。}
+\end{jibun}
+
+
+\begin{reidai}[くり返す波のスペクトル]
+$f(t)=4\cos100t+2\sin300t$ のスペクトルを、両側スペクトルの線で表しましょう。どの角周波数に、どんな高さの線が立ちますか。\par
+\kangaekata \kixebaai{くり返す波}{9-4}{F}\par
+\kixedan{1}\enspace 名前は $F(\omega)$ だが、ここでは積分しない（くり返す波は値が決まらない）。\par
+\kixedan{3}\enspace 9-3 の $c_n$ で表す。$\omega_0=100$\,rad/s とすると、$a_1=4$、$b_3=2$。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $c_{\pm1}=\dfrac{a_1}{2}=2$（$\omega=\pm100$）\par
+\kixea $c_3=\dfrac{0-2j}{2}=-j$、\quad $c_{-3}=j$（$\omega=\pm300$）\par
+\kixea 線の高さ：$|c_{\pm1}|=2$、$|c_{\pm3}|=1$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (-40,0) -- (44,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$\omega$};
+  \foreach \kixex/\kixeh/\kixel in {-36/7/-300,-12/14/-100,12/14/100,36/7/300} {\kixestem{\kixex}{\kixeh}{bkBlue} \node[font=\footnotesize, anchor=north] at (\kixex,-1.2) {$\kixel$};}
+  \node[font=\footnotesize, anchor=south] at (-12,15) {2}; \node[font=\footnotesize, anchor=south] at (12,15) {2};
+  \node[font=\footnotesize, anchor=south] at (-36,8) {1}; \node[font=\footnotesize, anchor=south] at (36,8) {1};
+  \draw[bkInk, line width=0.5pt] (0,0) -- (0,1.2); \node[font=\footnotesize, anchor=north] at (0,-1.2) {0};
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae $\omega=\pm100$ に高さ2、$\omega=\pm300$ に高さ1の線（ほかの所は0）
+\end{reidai}
+
+\begin{jibun}
+$f(t)=6\cos50t+3\sin150t$ のスペクトルを、両側スペクトルの線で表しましょう。
+\bkjans{$c_{\pm1}=3$（$\omega=\pm50$）、$c_3=-1.5j$、$c_{-3}=1.5j$（$\omega=\pm150$）。$\omega=\pm50$ に高さ3、$\omega=\pm150$ に高さ1.5の線。}
+\end{jibun}
+
+\begin{reidai}[8点の DFT]
+1\,ms ごとにとった8つの値 $x_m=1,\ 0,\ -1,\ 0,\ 1,\ 0,\ -1,\ 0$ の DFT の $X_2$ を求めましょう。$X_2$ 以外の $X_k$ は、$X_6$ だけが0でなく $X_6=X_2$ です。この波は、何 Hz で、振幅はいくつの成分ですか。\par
+\kangaekata \kixebaai{式がなく、はかった値だけ}{9-4}{G}\par
+\kixedan{1}\enspace 名前は $F(\omega)$ だが、データなので積分しない。DFT の和を計算する。\par
+\kixedan{3}\enspace $N=8$、$k=2$ なので、かける矢印は $e^{-j\pi m/2}$。\par
+\kixeb $m=0$ から順に $1$、$-j$、$-1$、$j$、$1$、$-j$、$-1$、$j$\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 $X_2=1\times1+0+(-1)\times(-1)+0$\par
+\kixeb $\quad+1\times1+0+(-1)\times(-1)+0=4$\par
+\kixea $f_{\mathrm s}=\dfrac{1}{0.001}=1000$\,Hz、きざみ $\dfrac{1000}{8}=125$\,Hz\par
+\kixea 周波数 $2\times125=250$\,Hz、振幅 $\dfrac{2\times|4|}{8}=1$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixe base, height=20mm, width=80mm, xmin=-0.3, xmax=8.3, ymin=-1.3, ymax=1.3, xtick={1,2,...,7}, ytick={-1,1}, xlabel={$m$}]
+  \addplot[bkGray, line width=0.9pt, dash pattern=on 2pt off 1.2pt, domain=0:8, samples=100] {cos(deg(pi*x/2))};
+  \addplot[ycomb, bkBlue, line width=1.4pt, mark=*, mark size=1.6pt] coordinates {(0,1) (1,0) (2,-1) (3,0) (4,1) (5,0) (6,-1) (7,0)};
+\end{axis}
+\end{tikzpicture}\hspace{3mm}{\footnotesize\begin{minipage}[b]{30mm}\raggedright 8つの値（青）と、それを通る 250\,Hz の $\cos$（灰色の破線）。\end{minipage}}
+\par}\vspace{2pt}
+\kotae $X_2=4$。250\,Hz で振幅1の成分（$\cos$ の波）
+\end{reidai}
+
+\begin{jibun}
+1\,ms ごとにとった8つの値 $1,\ 1,\ -1,\ -1,\ 1,\ 1,\ -1,\ -1$ の DFT の $X_2$ を求め、その成分の周波数と振幅を答えましょう。
+\bkjans{$X_2=1-j+1-j+1-j+1-j=4-4j$。$|X_2|=4\sqrt2$。250\,Hz で振幅 $\frac{2\times4\sqrt2}{8}=\sqrt2\approx1.41$。}
+\end{jibun}
+
+
+\begin{reidai}[FFT の結果を読む]
+1秒に8000回（$f_{\mathrm s}=8000$\,Hz）、1秒間とった音のデータを FFT しました。（1）点の数 $N$ と周波数のきざみはいくつですか。（2）440\,Hz の所の $|X_k|$ が4000でした。この成分の振幅はいくつですか。（3）正しく調べられる、いちばん高い周波数は何 Hz ですか。\par
+\kangaekata \kixebaai{式がなく、はかった値だけ}{9-4}{G}\par
+\kixedan{1}\enspace 名前は $F(\omega)$ だが、データなので FFT で $X_k$ を求めた。\par
+\kixedan{3}\enspace きざみ $f_{\mathrm s}/N$、振幅 $2|X_k|/N$、上限 $f_{\mathrm s}/2$。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 （1）$N=8000\times1=8000$、きざみ $\dfrac{8000}{8000}=1$\,Hz\par
+\kixea （2）$\dfrac{2\times4000}{8000}=1$\par
+\kixea （3）$\dfrac{8000}{2}=4000$\,Hz\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (100,0) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-4.5mm] {Hz};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (0,22);
+  \foreach \kixex/\kixeh/\kixel/\kixev in {11/18/440/1.0,22/9/880/0.5,33/4.5/1320/0.25} {\kixestem{\kixex}{\kixeh}{bkBlue} \node[font=\footnotesize, anchor=north] at (\kixex,-1.2) {\kixel}; \node[font=\footnotesize, anchor=west] at ({\kixex+1},{\kixeh+1}) {\kixev};}
+  \draw[bkInk, line width=0.5pt] (100*0.92,0) -- (100*0.92,1.2); \node[font=\footnotesize, anchor=north] at (92,-1.2) {4000};
+  \node[font=\footnotesize, anchor=west, align=left] at (45,15) {振幅 $\frac{2|X_k|}{N}$ の棒\\（上限は $f_{\mathrm s}/2=4000$\,Hz）};
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae （1）$N=8000$、1\,Hz　（2）1　（3）4000\,Hz
+\end{reidai}
+
+\begin{jibun}
+$f_{\mathrm s}=8000$\,Hz で0.5秒間とった音を FFT しました。点の数ときざみを求め、880\,Hz の所の $|X_k|$ が1000のときの振幅を求めましょう。
+\bkjans{$N=8000\times0.5=4000$。きざみ $\frac{8000}{4000}=2$\,Hz。振幅 $\frac{2\times1000}{4000}=0.5$。}
+\end{jibun}
+
+\begin{reidai}[エイリアシング]
+1秒に8000回（$f_{\mathrm s}=8000$\,Hz）音をはかり、はかった値だけを残します。（1）7000\,Hz の音、（2）9000\,Hz の音をはかった値は、何 Hz の音と同じ点になりますか。$\cos$ の波で考えましょう。（3）9000\,Hz までの音を正しくとるには、$f_{\mathrm s}$ を何 Hz より大きくすればよいですか。\par
+\kangaekata \kixebaai{式がなく、はかった値（とった点）だけ}{9-4}{G}\par
+\kixedan{1}\enspace 名前は $F(\omega)$ だが、データの点の値だけをくらべる。\par
+\kixedan{3}\enspace とった時刻 $\dfrac{m}{8000}$ 秒で、肩の $2\pi m$ は何周しても同じ（⑭）。\par
+\shiki\kixes\hangindent=2.6\zw\hangafter=1 （1）$\cos\Bigl(2\pi\times7000\times\dfrac{m}{8000}\Bigr)=\cos\Bigl(2\pi m-\dfrac{2\pi m}{8}\Bigr)=\cos\dfrac{2\pi m}{8}$\par
+\kixeb これは $\cos\Bigl(2\pi\times1000\times\dfrac{m}{8000}\Bigr)$。8000$-$7000$=1000$\par
+\kixea （2）$\cos\Bigl(2\pi\times9000\times\dfrac{m}{8000}\Bigr)=\cos\Bigl(2\pi m+\dfrac{2\pi m}{8}\Bigr)=\cos\dfrac{2\pi m}{8}$\par
+\kixeb これも 1000\,Hz。9000$-$8000$=1000$\par
+\kixea （3）サンプリング定理：高い方の2倍で $9000\times2=\num{18000}$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=0.72mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.6mm]}] (0,0) -- (104,0) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-4.5mm] {Hz};
+  \foreach \kixex/\kixel in {0/0,10/1000,40/4000,70/7000,90/9000} {\draw[bkInk, line width=0.5pt] (\kixex,0) -- (\kixex,-1.2); \node[font=\footnotesize, anchor=north] at (\kixex,-1.5) {\kixel};}
+  \fill[bkGreen!25] (0,0.6) rectangle (40,3);
+  \draw[kixeF, line width=1.1pt, -{Stealth[length=2mm]}] (70,1) .. controls (60,10) and (25,10) .. (11.5,3.2);
+  \draw[kixeW, line width=1.1pt, dash pattern=on 3pt off 1.2pt, -{Stealth[length=2mm]}] (90,1) .. controls (78,14) and (20,14) .. (9.5,3.2);
+\end{tikzpicture}\hspace{3mm}{\footnotesize\begin{minipage}[b]{42mm}\raggedright うすい緑：正しくとれる範囲（4000\,Hz まで）。7000\,Hz（実線）と 9000\,Hz（破線）は 1000\,Hz に化ける。\end{minipage}}
+\par}\vspace{2pt}
+\kotae （1）（2）どちらも 1000\,Hz（低い音に化ける）　（3）\num{18000}\,Hz より大きく
+\end{reidai}
+
+\begin{jibun}
+$f_{\mathrm s}=8000$\,Hz でとるとき、（1）6000\,Hz、（2）\num{10000}\,Hz の $\cos$ の音は、何 Hz の音と同じ点になりますか。（3）\num{10000}\,Hz までを正しくとるには、$f_{\mathrm s}$ を何 Hz より大きくしますか。
+\bkjans{（1）\nobreak $8000-6000=2000$\,Hz。（2）\nobreak $10000-8000=2000$\,Hz。（3）\nobreak \num{20000}\,Hz より大きく。}
+\end{jibun}
+
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 名前の式の $-\infty$〜$\infty$ を、そのまま計算しようとする}
+\bkng{パルスの $F(\omega)$ を、$\int_{-\infty}^{\infty}$ のまま計算しようとして、はしが決まらない}
+\bkok{0でない区間だけの、ふつうの定積分に直す}
+\[ \kixeN{F(\omega)}=\kixeS{\int_{-1}^{1}e^{-j\omega t}\,\dd t}=\frac{2\sin\omega}{\omega} \]
+$-\infty$〜$\infty$ は、名前の上の「すべての時刻」という意味です。$f=0$ の所は、たしても0です。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixeEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② $\omega$ と Hz を取りちがえる}
+\raggedright\bkng{$F(\omega)$ の山が $\omega=10$ だから、10\,Hz の音}
+\bkok{$\omega=10$\,rad/s は $\frac{10}{2\pi}\approx1.6$\,Hz}
+$\omega$ は角周波数〔rad/s〕で、Hz の $2\pi$ 倍です（$\omega=2\pi\times$周波数）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ $2\pi$ の置き場所をまぜる}
+\raggedright\bkng{別の本のもどす式（$\frac{1}{\sqrt{2\pi}}$）を、この本の変換と組にする}
+\bkok{変換ともどす式は、同じ本の組で使う}
+組がちがうと、もとの波にもどらず、$\sqrt{2\pi}$ 倍ずれます。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixeEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ FFT の $|X_k|$ を、そのまま振幅と読む}
+\raggedright\bkng{440\,Hz の $|X_k|=4000$ だから、振幅4000}
+\bkok{振幅は $\frac{2|X_k|}{N}=\frac{8000}{8000}=1$}
+$N$ 個の値の和なので $N$ でわり、負の周波数の分の2をかけます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $f_{\mathrm s}/2$ より上を、そのまま読む}
+\raggedright\bkng{7000\,Hz の音が、FFT でも 7000\,Hz に出る}
+\bkok{1000\,Hz に化けて出る}
+$f_{\mathrm s}=8000$\,Hz なら、とる前に4000\,Hz より上を取り除きます。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixeEHV}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ $F(\omega)$ の複素数を、そのままグラフにする}
+\raggedright\bkng{$F(4)=0.12-0.16j$ を、たて軸の値としてかく}
+\bkok{大きさ $|F(4)|=0.2$ をかく}
+成分の大きさは $|F(\omega)|$、山の位置（位相）は角で見ます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑦ くり返す波を、$-\infty$〜$\infty$ で積分する}
+\raggedright\bkng{$\cos t$ の $F(\omega)$ を、名前の式で計算する}
+\bkok{9-3 の $c_n$ で線（場合 F）}
+$-\infty$〜$\infty$ では値が決まりません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixebox{機械の振動で、故障を見つける}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\raggedright
+工場のモーターやポンプには、振動をはかるセンサーがつけられています。とった振動のデータを FFT すると、スペクトルの線の位置と高さがわかります。1分に1800回転（1秒に30回転）の軸なら、30\,Hz（回転と同じ）の成分や、その2倍・3倍の成分が出ます。回転する部分のつりあいがずれると1倍の成分が、軸のつなぎ目がずれると2倍の成分が大きくなることが多く、故障の目安として使われます（物理 波-10）。軸受けにきずがあると、回転数とはちがう、きずの位置で決まる周波数の線が現れます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (42,0) node[anchor=north east, font=\footnotesize, inner sep=1pt, yshift=-1mm] {Hz};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (0,22);
+  \kixestem{8}{16}{bkBlue}\kixestem{16}{6}{bkBlue}\kixestem{24}{3}{bkBlue}
+  \foreach \kixex/\kixel in {8/30,16/60,24/90} {\node[font=\footnotesize, anchor=north] at (\kixex,-1) {\kixel};}
+  \node[font=\footnotesize, anchor=south, align=center] at (21,22.5) {回転の1倍・2倍・3倍};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixebox{雑音を消す・声を聞き分ける}
+録音した音を FFT し、雑音の成分（たとえば、電源から入る 50\,Hz や 60\,Hz の「ブーン」という音）の所だけを小さくして、もとにもどすと、雑音がへった音になります。スマホの音声入力も、声を短い時間に区切ってスペクトルを求め、フォルマントの並び方から、どの音（「あ」「い」…）かを調べることから始まります。
+\par\vspace{4pt}
+\kixebox{画像のフーリエ変換}
+写真のような2次元の画像も、横と縦の2つの向きでフーリエ変換できます。画像のなめらかな部分は低い周波数、細かいもようは高い周波数の成分です。病院の MRI という装置は、体の中からの電波の信号を、2次元のフーリエ変換で画像にもどしていることが知られています（9-12 で、写真の圧縮とあわせて読みます）。
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $-1<t<1$ で $f=3$、それ以外で $f=0$ のパルスのフーリエ変換を求め、$F(0)$ と $F\bigl(\frac{\pi}{2}\bigr)$ を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$F(\omega)=\frac{6\sin\omega}{\omega}$。$F(0)=6$。$F\bigl(\frac{\pi}{2}\bigr)=\frac{6}{\pi/2}=\frac{12}{\pi}\approx3.82$。}
+
+\bkproblem $t\geqq0$ で $f(t)=e^{-4t}$、$t<0$ で $f=0$ の波のフーリエ変換を求め、$|F(0)|$ と $|F(4)|$ を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$F(\omega)=\frac{1}{4+j\omega}$。$|F(0)|=0.25$、$|F(4)|=\frac{1}{4\sqrt2}\approx0.177$。}
+
+\bkproblem $f(t)=e^{-|t|}$ のフーリエ変換を求め、$F(0)$・$F(1)$・$F(3)$ を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$F(\omega)=\frac{2}{1+\omega^2}$。$F(0)=2$、$F(1)=1$、$F(3)=0.2$。}
+
+\bkproblem 1\,ms ごとにとった8つの値 $2,\ 0,\ -2,\ 0,\ 2,\ 0,\ -2,\ 0$ の DFT の $X_2$ を求め、その成分の周波数と振幅を答えましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$X_2=2+2+2+2=8$。250\,Hz で振幅 $\frac{2\times8}{8}=2$。}
+
+\bkproblem 音楽の CD と同じ $f_{\mathrm s}=\num{44100}$\,Hz で1秒間とった音を FFT しました。点の数、周波数のきざみ、正しく調べられるいちばん高い周波数を求めましょう。また、ある成分の $|X_k|$ が \num{22050} のとき、振幅はいくつですか\mbox{（\bkreidairef{9}）}。
+\bkpans{$N=\num{44100}$、きざみ1\,Hz、上限 \num{22050}\,Hz。振幅 $\frac{2\times22050}{44100}=1$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem $f(t)=e^{-t^2/18}$ のフーリエ変換を求め、$F(0)$ と、周波数の世界のはばを求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$\sigma=3$。$F(\omega)=3\sqrt{2\pi}\,e^{-9\omega^2/2}$。$F(0)\approx7.52$。はばは $\frac13$。}
+
+\bkproblem $2<t<4$ で $f=1$、それ以外で $f=0$ のパルスのフーリエ変換を求め、$F\bigl(\frac{\pi}{2}\bigr)$ と、その大きさを求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{④のパルスを3ずらした形。$F(\omega)=e^{-j3\omega}\frac{2\sin\omega}{\omega}$。$F\bigl(\frac{\pi}{2}\bigr)=e^{-j3\pi/2}\times\frac{4}{\pi}=\frac{4}{\pi}j\approx1.273j$。大きさ1.273。}
+
+\bkproblem $f(t)=e^{-t^2/2}\cos5t$ のフーリエ変換を求め、$F(5)$ と $F(4)$ を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$F(\omega)=\frac{\sqrt{2\pi}}{2}\bigl(e^{-(\omega-5)^2/2}+e^{-(\omega+5)^2/2}\bigr)$。$F(5)\approx1.253$（$e^{-50}$ はほぼ0）。$F(4)\approx1.253\times e^{-0.5}\approx0.760$。}
+
+\bkproblem $f_{\mathrm s}=1000$\,Hz でとるとき、900\,Hz と 1100\,Hz の $\cos$ の音は、それぞれ何 Hz の音と同じ点になりますか。また、どちらも正しくとるには、$f_{\mathrm s}$ を何 Hz より大きくすればよいですか\mbox{（\bkreidairef{10}）}。
+\bkpans{900\,Hz は $1000-900=100$\,Hz、1100\,Hz は $1100-1000=100$\,Hz。いちばん高い 1100\,Hz の2倍の 2200\,Hz より大きくする。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 口笛・声・手をたたく音のスペクトルのちがいを説明でき、短いパルスほどスペクトルが広がることを言える。\bkfurref{bk:9-4:oto}
+\item フーリエ変換 $F(\omega)$ の記号を読み、方形パルスの変換をふつうの定積分で求め、表計算の和で確かめられる。\bkfurref{bk:9-4:teigi}
+\item 場合分けの表を使って変換を求め、DFT・FFT の結果を読み、サンプリング定理とエイリアシングを説明できる。\bkfurref{bk:9-4:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{くり返さない音も、すきまのない曲線のスペクトルになるんだね。次の第2部では、$e^{-j\omega t}$ を $e^{-st}$ にかえたラプラス変換で、微分方程式を解くよ。}

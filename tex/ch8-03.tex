@@ -1,0 +1,927 @@
+%% 8-3 全微分：少し動いたときの変化（第14回：組 V8-2。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   7-2（ch7-02:618・621）「合成関数の微分を使う作り方は 8-3」「2つの変化はたし算になる…微分を使ってきちんと確かめるのが 8-3」→ ⑦で全微分から dp = J dθ。
+%%   物理 力-7（p1-07:614）「ヤコビ行列 J（偏微分を並べた行列。8-3 で学ぶ）」、7-11:211「J の作り方（偏微分）は 8-3」、7-back 予告カード 8-3。
+%%     同じ数：L1=0.30、L2=0.25（m）、θ1=30°、θ2=45°、J=(−0.3915 −0.2415; 0.3245 0.0647)、det J=0.0530=L1L2 sin45°。
+%%   7-4（ch7-04:1182）「曲がった座標（極座標など）での積分にもヤコビアンが出てくる（8-3）」→ ⑧でヤコビアン＝面積の倍率、極座標で det J=r（8-6 の r dr dθ へ）。
+%%   主役の山（brief8 5章の約束1）：ななめに1 m で −1.4（本当は −1.43）、0.1 m ずつで −0.140（−0.1403）。
+%%   S3（熱-2・熱-10）：(∂U/∂T)_V、完全微分と状態量、δQ → 専門書をのぞいてみよう＋例題9。
+%%   型は tools/kata8.md（V8-1）。数はすべて Python（numpy 2.5）で確かめた（scratchpad/v8-2/py/c3.py・book83.py・book83b.py）。
+\makeatletter
+% ---- kata8 の型（V8-1。頭文字 kviiid に置きかえ）----
+\colorlet{kviiidX}{bkOrange!16}\colorlet{kviiidY}{bkGreen!16}\colorlet{kviiidP}{bkYellow!45}
+\colorlet{kviiidC}{bkGreen!60!black}
+\newcommand\kviiidfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=64mm, text width=60mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+% ---- この章の部品 ----
+% 本文の小見出し（太字の1行）
+\newcommand\kviiidhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiidbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{2pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviiidframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（2.6字下げ。折り返しも同じ位置から）
+\newcommand\kviiidq{\par\vspace{3pt}\noindent\rightskip=0pt plus 6em\relax\hangindent=2.6\zw\hangafter=0\relax}
+% 表計算のマス（2×2 など）  \kviiidcell{(x,y)}{色}{数}
+\newcommand\kviiidcell[3]{\filldraw[fill=#2, draw=bkLine, line width=0.6pt] #1 rectangle ++(24,12); \node[font=\small] at ($#1+(12,6)$) {#3};}
+% ロボットの関節（7-2 と同じ形）
+\newcommand\kviiidjoint[1]{\filldraw[fill=white, draw=bkInk, line width=0.8pt] #1 circle (1.6);}
+\colorlet{kviiidE}{bkRed!80!black}% 東
+\colorlet{kviiidN}{bkGreen!55!black}% 北
+\colorlet{kviiidD}{bkPurple!80!black}% ななめ
+\colorlet{kviiidQ}{bkPurple!14}
+\makeatother
+
+\bkchapter{8}{3}{全微分：\\少し動いたときの変化}{\bklevel{5}}{全微分：少し動いたときの変化}
+\bkmichishirube{3-14,4-9,5-6,5-8,5-17,7-2,7-4,7-11,8-2}{8-4,8-6,8-7,8-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace ななめに少し進んだときの変化を、東の変化と北の変化のたし算で見積もれる。
+\item \bklevel{4}\enspace 全微分で、近似の値と、はかった値のずれ（誤差）の伝わり方を計算できる。
+\item \bklevel{5}\enspace 連鎖律と、偏微分を並べたヤコビ行列を使って、ロボットの手の動きや面積の倍率（ヤコビアン）を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+8-2 で、主役の山の P$(30,\ 20)$ では、東の坂が $-0.6$、北の坂が $-0.8$ だとわかりました。\par\vspace{4pt}
+では、P から\textbf{東へ \qty{1}{m}、北へ \qty{1}{m}}、つまり北東へななめに進むと、高さはどれだけ変わるでしょう。2つの坂から、計算で予想できるでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiidcell{(0,0)}{kviiidP}{83.00}
+  \kviiidcell{(24,0)}{white}{?}
+  \kviiidcell{(0,12)}{white}{?}
+  \kviiidcell{(24,12)}{white}{?}
+  \draw[kviiidE, line width=1.3pt, -{Stealth[length=2.2mm]}] (12,2.5) -- (34,2.5);
+  \draw[kviiidN, line width=1.3pt, -{Stealth[length=2.2mm]}] (4,4.5) -- (4,19.5);
+  \draw[kviiidD, line width=1.3pt, -{Stealth[length=2.2mm]}] (16,8) -- (31,16);
+  \node[font=\sffamily\footnotesize, anchor=north] at (12,-1) {P$(30,\ 20)$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (36,-1) {東へ \qty{1}{m}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (36,25) {北東へ};
+  \node[font=\sffamily\footnotesize, anchor=south] at (12,25) {北へ \qty{1}{m}};
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 東の坂 $-0.6$、北の坂 $-0.8$。北東のマスは？}
+\end{minipage}
+\end{hatena}
+
+\noindent 8-2 では、「ほかを止めて1つだけ動かす」ことで、東の坂と北の坂を別々に求めました。でも、本当に山を歩くときは、東と北に同時に進むことがほとんどです。ロボットの腕は、肩とひじが同時に回ります。工場ではかる部品の長さは、たての長さも横の長さも、同時に少しずつずれています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % (a) 山道をななめに
+  \foreach \kviiidr in {6,11,16} {\draw[kviiidC, line width=0.7pt] (16,14) ellipse ({1.4*\kviiidr} and {\kviiidr});}
+  \draw[kviiidD, line width=1.3pt, -{Stealth[length=2.2mm]}] (24,18) -- (34,26);
+  \fill[bkRed] (24,18) circle (1);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (16,-5) {山道を、東と北に\\同時に進む};
+  % (b) ロボットの腕
+  \begin{scope}[shift={(54,0)}]
+    \fill[bkInk!35] (-5,-2) rectangle (5,0);
+    \draw[bkBlue!70!black, line width=3pt, line cap=round] (0,0) -- (16,10);
+    \draw[bkOrange!80!black, line width=3pt, line cap=round] (16,10) -- (20,25);
+    \kviiidjoint{(0,0)}\kviiidjoint{(16,10)}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=1.6mm]}] (8,0) arc (0:28:8);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=1.6mm]}] ($(16,10)+(32:6)$) arc (32:70:6);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (10,-5) {肩とひじが\\同時に回る};
+  \end{scope}
+  % (c) 円柱をはかる
+  \begin{scope}[shift={(102,2)}]
+    \fill[bkBlue!10] (0,0) arc (180:360:9 and 2.5) -- (18,22) arc (0:180:9 and 2.5) -- cycle;
+    \draw[bkInk, line width=0.7pt] (0,0) arc (180:360:9 and 2.5) -- (18,22) (0,22) -- (0,0);
+    \draw[bkInk, line width=0.7pt] (9,22) ellipse (9 and 2.5);
+    \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.6mm]}] (9,22) -- (18,22) node[midway, above, font=\footnotesize] {$r$};
+    \draw[bkOrange!80!black, line width=1pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}] (21,0) -- (21,22) node[midway, right, font=\footnotesize] {$h$};
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (10,-7) {半径も高さも\\少しずつずれる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{いくつもの量が、同時に少しずつ変わる場面。}
+\end{bkfigure}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ななめのマスへの変化を、表で調べよう]
+8-2 の主役の山の表から、P のまわりの4マスだけを取り出します（1行めに東の $x$、A列に北の $y$。北が上）。\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.54\linewidth}\raggedright
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.0\zw, itemsep=1pt, topsep=0pt]
+\item P（B3）から東へ1マス（C3）。差 \texttt{=C3-B3} を求めよう。
+\item C3 から北へ1マス（C2）。差 \texttt{=C2-C3} を求めて、①とたそう。
+\item P から北東のマス（C2）への差 \texttt{=C2-B3} を、②とくらべよう。
+\item 東の坂 $-0.6$ と北の坂 $-0.8$ の和 $-1.4$ とも、くらべよう。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}\centering
+\bksheet{3}{13}{%
+1 & \SetCell{c} $y$＼$x$ & \SetCell{bg=kviiidX} 30 & \SetCell{bg=kviiidX} 31 \\
+2 & \SetCell{bg=kviiidY} 21 & 82.18 & \SetCell{bg=kviiidQ} 81.57 \\
+3 & \SetCell{bg=kviiidY} 20 & \SetCell{bg=kviiidP} 83.00 & \SetCell{bg=kviiidX} 82.39 \\}\par\vspace{1mm}
+{\footnotesize B2 に \texttt{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2} を入れ、C3 までコピー（8-2 と同じ式）。P は B3（黄）。}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent ①は $82.39-83.00=-0.61$、②は $81.57-82.39=-0.82$ で、たすと $-1.43$ です。③の北東のマスとの差も、$81.57-83.00=-1.43$ で、②とまったく同じです。④の $-1.4$ とは、0.03 しかちがいません。
+
+この章では、\textbf{いくつもの量が同時に少しずつ変わったとき}の変化を、8-2 の偏微分を組み合わせて求めます。答えは、とても簡単な「たし算」です。そのたし算から、第7巻で約束した「ヤコビ行列の作り方」も出てきます。
+
+★★★★★の章ですが、「目でわかる」「手でわかる」の段は、8-2 の偏微分と、たし算・かけ算だけで読めるように書きました。「式でわかる」の段は、1回で分からなくても大丈夫です。
+
+
+\begin{omoidasou}
+\bkrecall{8-2}{偏微分：ほかを止めて1つだけ動かして微分する。主役の山 $h=100-0.01x^2-0.02y^2$ の P$(30,\ 20)$ では、東の坂 $-0.6$、北の坂 $-0.8$。}
+\bkrecall{5-8}{短い時間（少しの変化）なら、変化はかけ算で近似できる：$\Delta y\approx f'(x)\,\Delta x$。}
+\bkrecall{5-6}{合成関数の微分：$\dfrac{\dd y}{\dd t}=\dfrac{\dd y}{\dd u}\dfrac{\dd u}{\dd t}$（歯車をつなぐと、回る速さはかけ算）。}
+\bkrecall{7-2}{ロボットの腕 $L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、30°・45°：手の速度 $\dot{\vec p}=J\dot{\vec\theta}$。1列めは肩だけ、2列めはひじだけを回したときの手の速度。}
+\bkrecall{7-4}{行列式は面積の倍率。ロボットの $\det J=0.0530$。}
+\bkrecall{3-14}{標準偏差：はかった値のばらつきを1つの数で表したもの。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{ななめの動きを、東と北に分ける}{\bklevel{3}}
+
+\bksubsection{1}{ななめに進むのは、東へ進んでから北へ進むのと同じ}
+
+\leavevmode\label{bk:8-3:kaidan}P から北東のマスへ、ななめにまっすぐ進んでも、東へ1マス進んでから北へ1マス進んでも、最後に着く場所は同じです。高さは場所だけで決まるので、\textbf{着いた場所の高さは、どの道を通っても同じ}です。だから、ななめの変化は、階段のように「東への変化」と「北への変化」に分けて、たし算すればよいのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiidcell{(0,0)}{kviiidP}{83.00}
+  \kviiidcell{(24,0)}{kviiidX}{82.39}
+  \kviiidcell{(0,12)}{white}{82.18}
+  \kviiidcell{(24,12)}{kviiidQ}{81.57}
+  \draw[kviiidE, line width=1.4pt, -{Stealth[length=2.2mm]}] (13,2.2) -- (35,2.2);
+  \draw[kviiidN, line width=1.4pt, -{Stealth[length=2.2mm]}] (45,4) -- (45,20);
+  \draw[kviiidD, line width=1.2pt, dash pattern=on 3pt off 1.5pt, -{Stealth[length=2.2mm]}] (16,8.5) -- (30.5,16);
+  \node[font=\sffamily\footnotesize, text=kviiidE, anchor=north] at (24,-1) {① 東へ：$82.39-83.00=-0.61$};
+  \node[font=\sffamily\footnotesize, text=kviiidN, anchor=west, align=left] at (51,12) {② 北へ：$81.57-82.39=-0.82$\\（$x=31$ の列で）};
+  \node[font=\sffamily\footnotesize, text=kviiidD, anchor=south, align=center] at (24,25.5) {③ ななめ：$81.57-83.00=-1.43$\\（$-0.61-0.82$ と同じ）};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-2,6) {P};
+\end{tikzpicture}
+\bkfigcaption{表の4つのマス。ななめの変化（むらさきの点線）は、東への変化（赤）と北への変化（緑）のたし算に、ぴったり等しい。}\label{bk:8-3:fig-kaidan}
+\end{bkfigure}
+
+\noindent つぎに、①と②のそれぞれを、8-2 の坂で見積もります。8-2 で学んだように、東へ \qty{1}{m} 進んだときの変化は「東の坂×\qty{1}{m}」でだいたい求められます（5-8 の「少しならかけ算」）。北へも同じです。
+\begin{bkhenkei}[0.56]
+\text{東への変化}\approx-0.6\times1=-0.6 & 東の坂×東へ進んだ長さ（本当は $-0.61$） \\
+\text{北への変化}\approx-0.8\times1=-0.8 & 北の坂×北へ進んだ長さ（本当は $-0.82$） \\
+\text{ななめの変化}\approx-0.6+(-0.8)=-1.4 & 2つをたす（本当は $-1.43$） \\
+\end{bkhenkei}
+\bkhatenaref の答えは、「\textbf{東の坂×東へ進んだ長さ＋北の坂×北へ進んだ長さ}で、およそ $-1.4$。つまり約 \qty{1.4}{m} 下がる（本当は \qty{1.43}{m}）」です。
+
+\kviiidhead{少しずれる、2つのわけ}
+本当の値 $-1.43$ と、0.03 だけちがいます。わけは2つあります。1つめは、坂が P からはなれると少しずつ変わることです（8-2 の坂の地図）。\qty{1}{m} 進むあいだに、東の坂は $-0.6$ から $-0.62$ に変わっていきます。2つめは、②の北への1歩は、P の列（$x=30$）ではなく、東へ1マス進んだ列（$x=31$）で歩いていることです。どちらも、進む長さを短くすれば、小さくなります（③で確かめます）。
+
+\bksubsection{2}{山の面を、小さな平らな板とみる}
+
+\leavevmode\label{bk:8-3:ita}地球は丸いのに、校庭は平らに見えます。同じように、曲がった山の面も、P のすぐ近くだけを見れば、\textbf{平らな板}とみなせます。その板のかたむきは、東の坂と北の坂の2つで決まります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ななめから見た図：東は右、北は右上の奥、高さは上（高さの変化は 1 につき 10 mm）
+  \coordinate (P) at (0,30);
+  \coordinate (E) at (44,24);
+  \coordinate (N) at (24,{30+14-8});
+  \coordinate (Q) at (68,{30+14-14});
+  \draw[bkGray, line width=0.6pt, dashed] (P) -- (44,30) -- (68,44) -- (24,44) -- cycle;
+  \filldraw[fill=bkGreen!14, draw=kviiidC, line width=1pt] (P) -- (E) -- (Q) -- (N) -- cycle;
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (E) -- (44,30) (N) -- (24,44) (Q) -- (68,44);
+  \draw[kviiidE, line width=1.4pt, -{Stealth[length=2.2mm]}] (P) -- (E);
+  \draw[kviiidN, line width=1.4pt, -{Stealth[length=2.2mm]}] (P) -- (N);
+  \fill[bkRed] (P) circle (1.3);
+  \node[font=\sffamily\footnotesize, anchor=east] at ($(P)+(-1.5,0)$) {P};
+  \node[font=\sffamily\footnotesize, text=kviiidE, anchor=north] at ($(E)+(0,-2)$) {東へ1：$-0.6$};
+  \node[font=\sffamily\footnotesize, text=kviiidN, anchor=south east] at ($(24,44)+(-2,1)$) {北へ1：$-0.8$};
+  \node[font=\sffamily\footnotesize, text=kviiidD, anchor=west, align=left] at ($(Q)+(3,-2)$) {東へ1、北へ1：\\$-0.6+(-0.8)=-1.4$};
+  \node[font=\sffamily\footnotesize, text=bkGray, anchor=west] at (72,44) {点線は、P と同じ高さの平面};
+\end{tikzpicture}
+\bkfigcaption{P の近くの、平らな板（緑）。板の上では、東へ1と北へ1の変化をたすと、北東のかどの変化に「ちょうど」なる（板の各辺はまっすぐだから）。}\label{bk:8-3:fig-ita}
+\end{bkfigure}
+
+\noindent 平らな板の上では、東へ進むと、進んだ長さに比例して下がり（傾き $-0.6$）、北へ進むと比例して下がります（傾き $-0.8$）。東へ $\Delta x$、北へ $\Delta y$ 進んだときの変化は、
+\[ \Delta h=-0.6\,\Delta x+(-0.8)\,\Delta y \]
+で、\textbf{板の上ならぴったり}です。本物の山の面は少し曲がっているので、板とのずれの分だけ、少しずれます。でも、P に近い所ほど、山の面と板はよく重なります。
+
+\noindent この板を、P での\textbf{接平面}（せっへいめん）\bkidx{せっへいめん}{接平面}といいます。第5巻で、曲線にいちばんよくそう直線を「接線」とよびました（5-3）。接線の2次元版が、接平面です。
+
+\bkstage{te}{手でわかる}{近似の当たりと、誤差の伝わり方}{\bklevel{4}}
+
+\bksubsection{3}{進む長さを短くすると、近似はどんどん当たる}
+
+\leavevmode\label{bk:8-3:atari}東にも北にも同じ長さ $d$ だけ進み、「東の坂×$d$＋北の坂×$d$」の予想と、本当の変化をくらべます。表計算でも Python でも計算できます。ここでは Python で、$d$ を1、0.1、0.01と短くしてみます。
+\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+def h(x, y):                       \# 主役の山の高さ（m）
+    return 100 - 0.01*x**2 - 0.02*y**2
+for d in [1, 0.1, 0.01]:           \# 東へも北へも d m 進む
+    approx = -0.6*d + (-0.8)*d     \# 東の坂×d ＋ 北の坂×d
+    real = h(30 + d, 20 + d) - h(30, 20)   \# 本当の変化
+    gap = real - approx            \# ずれ
+    print(d, round(approx, 6), round(real, 6), round(gap, 6))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+1 -1.4 -1.43 -0.03
+0.1 -0.14 -0.1403 -0.0003
+0.01 -0.014 -0.014003 -3e-06
+\end{bkcodeout}
+\texttt{def} は、自分で関数を作る書き方で、\texttt{h(30, 20)} とすると高さ83が返ってきます（3-3 の「入れると出てくる」）。\texttt{round(…, 6)} は小数第6位までに丸める命令です。\texttt{-3e-06} は $-3\times10^{-6}$、つまり $-0.000003$ のことです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] Q[c,m,wd=28mm] Q[c,m,wd=28mm] Q[c,m,wd=30mm]}, rowsep=1.5pt}
+進む長さ $d$（m） & 予想（2つの坂） & 本当の変化 & ずれ \\
+1 & $-1.4$ & $-1.43$ & $-0.03$ \\
+0.1 & $-0.14$ & $-0.1403$ & $-0.0003$ \\
+0.01 & $-0.014$ & $-0.014003$ & $-0.000003$ \\
+\end{bktable}
+\bktabcaption{$d$ を $\frac{1}{10}$ にすると、予想と本当の変化は $\frac{1}{10}$ に、ずれは $\frac{1}{100}$ になる。}
+\end{bkcenter}
+\noindent 表の大事な点は、\textbf{ずれのへり方}です。$d$ を $\tfrac{1}{10}$ にすると、変化そのものは $\tfrac{1}{10}$ になりますが、ずれは $\tfrac{1}{100}$ になります。ずれは $d$ の2乗に比例して、ずっと速く小さくなるのです。だから、少しの変化なら、「坂×進んだ長さ」のたし算で、ほとんどぴったり求められます。
+
+\kviiidhead{ほかの向きでも}
+東と北の進み方を変えても、同じたし算で予想できます（\qty{1}{m} ずつ。西や南へ進むときは、進んだ長さをマイナスにする）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] Q[c,m,wd=48mm] Q[c,m,wd=26mm]}, rowsep=1.5pt}
+進み方 $(\Delta x,\ \Delta y)$ & 予想 $-0.6\,\Delta x-0.8\,\Delta y$ & 本当の変化 \\
+北東 $(1,\ 1)$ & $-0.6-0.8=-1.4$ & $-1.43$ \\
+南東 $(1,\ -1)$ & $-0.6+0.8=0.2$ & $0.17$ \\
+北西 $(-1,\ 1)$ & $0.6-0.8=-0.2$ & $-0.23$ \\
+南西 $(-1,\ -1)$ & $0.6+0.8=1.4$ & $1.37$ \\
+\end{bktable}
+\bktabcaption{4つのななめの向き。南東へ進むと少し上がり、南西へ進むといちばん上がる（頂上 $(0,\ 0)$ は南西のほう）。}
+\end{bkcenter}
+どの向きでも、ずれは $-0.03$ です。主役の山の式では、ずれをきちんと計算すると、次のようになります（もっと知りたいで確かめます）。
+\[ \text{ずれ}=-0.01\,\Delta x^2-0.02\,\Delta y^2 \]
+ずれは、$\Delta x$、$\Delta y$ の2乗の大きさしかないのです。
+
+\bksubsection{4}{はかった値のずれは、どう伝わるか}
+
+\leavevmode\label{bk:8-3:gosa}いくつもの量が同時に少しずつ変わる、身近な例が「はかった値のずれ（誤差）」です。円柱の形をした容器の体積を、半径と高さをはかって求めます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!10] (0,0) arc (180:360:15 and 4) -- (30,30) arc (0:180:15 and 4) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,0) arc (180:360:15 and 4) -- (30,30) (0,30) -- (0,0);
+  \draw[bkInk, line width=0.8pt] (15,30) ellipse (15 and 4);
+  \draw[bkInk!50, line width=0.6pt, dashed] (0,0) arc (180:0:15 and 4);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (15,30) -- (30,30) node[midway, above, font=\footnotesize] {$r$};
+  \draw[bkOrange!80!black, line width=1pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (35,0) -- (35,30) node[midway, right, font=\footnotesize] {$h$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (44,22) {半径 $r=\qty{5.0}{cm}$（ずれ \qty{0.05}{cm}、1\,\%）};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (44,12) {高さ $h=\qty{20.0}{cm}$（ずれ \qty{0.2}{cm}、1\,\%）};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (44,2) {体積 $V=\pi r^2h$ は、何\,\% ずれる？};
+\end{tikzpicture}
+\bkfigcaption{半径も高さも、1\,\% ずつ大きくはかってしまったとき、体積はどれだけずれるか。}\label{bk:8-3:fig-entyu}
+\end{bkfigure}
+体積は $V=\pi r^2h=\pi\times5.0^2\times20.0\approx\qty{1570.8}{cm^3}$ です。半径と高さを、それぞれ「ほかを止めて」少し変えたときの変わり方（8-2 の偏微分、感度）を先に求めます。
+\begin{bkhenkei}[0.58]
+\frac{\partial V}{\partial r}=2\pi rh=2\pi\times5.0\times20.0\approx628.3 & $h$ を止めて $r$ で偏微分（cm²） \\
+\frac{\partial V}{\partial h}=\pi r^2=\pi\times5.0^2\approx78.54 & $r$ を止めて $h$ で偏微分（cm²） \\
+\Delta V\approx628.3\times0.05+78.54\times0.2 & ①と同じ：感度×ずれ、を2つたす \\
+\Delta V\approx31.42+15.71=47.13 & 体積のずれ（cm³） \\
+\frac{\Delta V}{V}\approx\frac{47.13}{1570.8}\approx0.030 & もとの体積でわる（3.0\,\%） \\
+\end{bkhenkei}
+半径と高さを両方 1\,\% 大きくして、本当に計算してみます。
+\[ \pi\times5.05^2\times20.2\approx\qty{1618.4}{cm^3} \]
+ずれは \qty{47.6}{cm^3}（3.03\,\%）で、予想とよく合っています。
+
+\kviiidhead{ずれの向きの組み合わせ}
+半径も高さも、大きくずれることも小さくずれることもあります。4つの組み合わせを表計算で計算してみます（A列に半径、B列に高さ、C列に \texttt{=PI()*A2\^{}2*B2}）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=24mm] Q[c,m,wd=28mm] Q[c,m,wd=24mm]}, rowsep=1.5pt}
+半径（cm） & 高さ（cm） & 体積（cm³） & ずれの割合 \\
+5.05（+1\,\%） & 20.2（+1\,\%） & 1618.4 & $+3.03$\,\% \\
+5.05（+1\,\%） & 19.8（$-$1\,\%） & 1586.3 & $+0.99$\,\% \\
+4.95（$-$1\,\%） & 20.2（+1\,\%） & 1554.9 & $-1.01$\,\% \\
+4.95（$-$1\,\%） & 19.8（$-$1\,\%） & 1524.1 & $-2.97$\,\% \\
+\end{bktable}
+\bktabcaption{もとの体積は 1570.8 cm³。いちばん大きいずれは、2つとも同じ向きにずれたとき（約 ±3\,\%）。向きがちがうと、打ち消し合って約1\,\% になる。}
+\end{bkcenter}
+全微分の式 $2\,\dfrac{\Delta r}{r}+\dfrac{\Delta h}{h}$ でも、$2\times1+1=3$、$2\times1-1=1$、$-2+1=-1$、$-2-1=-3$（\%）と、表とほぼ同じ値が出ます。
+
+\kviiidhead{割合で書くと、もっと簡単}
+いまの計算を、文字のまま $V=\pi r^2h$ でわってみます。
+\begin{bkhenkei}[0.46]
+\Delta V\approx2\pi rh\,\Delta r+\pi r^2\,\Delta h & 感度×ずれ、を2つたす \\
+\frac{\Delta V}{V}\approx\frac{2\pi rh\,\Delta r}{\pi r^2h}+\frac{\pi r^2\,\Delta h}{\pi r^2h} & 両辺を $V=\pi r^2h$ でわる \\
+\frac{\Delta V}{V}\approx2\,\frac{\Delta r}{r}+\frac{\Delta h}{h} & 約分した \\
+\end{bkhenkei}
+$\dfrac{\Delta r}{r}$ は「半径のずれの割合」（1\,\%）、$\dfrac{\Delta h}{h}$ は「高さのずれの割合」（1\,\%）です。体積のずれの割合は $2\times1+1=3$（\%）。\textbf{2乗で効く半径は、ずれも2倍に効く}のです。だから、円柱の体積を正確に求めたいときは、高さより半径をていねいにはかります。
+
+\begin{motto}[4]
+\kviiidbox{ずれが「ばらつき」のときは、2乗してたしてから √}
+いまの3\,\% は、半径も高さも「同じ向きに」最大までずれたときの、いちばん大きなずれです。何回もはかったときのばらつき（3-14 の標準偏差）のように、ずれの向きがでたらめなら、ずれがたまたま打ち消し合うこともあります。そのときは、それぞれの割合を2乗してたしてから√をとると、全体のばらつきの割合になることが知られています。円柱なら $\sqrt{2^2+1^2}=\sqrt5\approx2.24$（\%）です。理科の実験や工場の検査で「誤差の伝わり方」として使われます（くわしい理由は、大学の統計の本で）。
+\end{motto}
+
+\bkkokomade[ななめの変化を「東の坂×東へ進んだ長さ＋北の坂×北へ進んだ長さ」で見積もり、誤差の伝わり方を計算できれば十分です。この先は、このたし算を式で書き、ロボットの腕に使います。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{全微分・連鎖律・ヤコビ行列}{\bklevel{5}}
+
+\bksubsection{5}{全微分：小さな変化のたし算を、式で書く}
+
+\leavevmode\label{bk:8-3:zenbibun}①〜④で使ったたし算を、どんな関数にも使える形で書きます。第5巻（5-8）では、ほんの少しの変化を $\dd x$、$\dd y$ と書き、$\dd y=f'(x)\,\dd x$ と表しました。2つの変数 $x$、$y$ で決まる $f(x,\ y)$ では、$x$ が $\dd x$、$y$ が $\dd y$ だけ同時に変わったときの $f$ の変化を、次のように書きます。
+\kviiidframe{$\dd f=\dfrac{\partial f}{\partial x}\,\dd x+\dfrac{\partial f}{\partial y}\,\dd y$}
+これを $f$ の\textbf{全微分}（ぜんびぶん）\bkidx{ぜんびぶん}{全微分}といいます。「全」は、すべての変数を同時に動かす、という意味です。8-2 の偏微分は「1つだけ動かす」、全微分は「全部動かす」です。
+
+\noindent 式の読み方を、1つずつ確かめます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item $\dfrac{\partial f}{\partial x}\,\dd x$ は、$x$ だけを $\dd x$ 動かしたときの $f$ の変化（東の坂×東へ進んだ長さ）。
+\item $\dfrac{\partial f}{\partial y}\,\dd y$ は、$y$ だけを $\dd y$ 動かしたときの $f$ の変化（北の坂×北へ進んだ長さ）。
+\item 2つを同時に動かしたときの変化は、2つのたし算（①の階段、②の平らな板）。
+\end{enumerate}
+主役の山なら、$\dd h=-0.02x\,\dd x-0.04y\,\dd y$ で、P では $\dd h=-0.6\,\dd x-0.8\,\dd y$ です。$\dd x=\dd y=1$ を入れると $-1.4$ です。
+
+\noindent また、P での接平面（②の板）の式は、高さを $z$ として、
+\[ z=83-0.6(x-30)-0.8(y-20) \]
+です。P から $(x-30,\ y-20)$ だけ進んだときの高さを、全微分のたし算で書いたものです。
+
+\kviiidhead{変数が3つでも}
+3つの変数の関数 $f(x,\ y,\ z)$ なら、項が1つふえるだけです。
+\[ \dd f=\frac{\partial f}{\partial x}\,\dd x+\frac{\partial f}{\partial y}\,\dd y+\frac{\partial f}{\partial z}\,\dd z \]
+
+\begin{seikaku}
+$\dd x$、$\dd y$ を「ほんの少しの変化」と読むとき、全微分の式は「$\Delta f\approx\cdots$」という近似の式です。くわしくは、$\Delta f$ と $\dfrac{\partial f}{\partial x}\Delta x+\dfrac{\partial f}{\partial y}\Delta y$ のずれが、進んだ距離 $\sqrt{\Delta x^2+\Delta y^2}$ よりも速く0に近づくとき、$f$ は「全微分できる」といいます（③の表で、ずれは距離の2乗の速さで0に近づいた）。偏微分 $\dfrac{\partial f}{\partial x}$、$\dfrac{\partial f}{\partial y}$ が場所について切れ目なく変わる関数（この本で出てくる関数はすべてそう）は、全微分できます。
+\end{seikaku}
+
+\bksubsection{6}{連鎖律：道を歩くときの、高さの変わる速さ}
+
+\leavevmode\label{bk:8-3:rensa}ソラさんが、主役の山の P$(30,\ 20)$ から、頂上 $(0,\ 0)$ へまっすぐ歩きます。1分に、西へ \qty{3}{m}、南へ \qty{2}{m} 進む速さです。出発してから $t$ 分後の場所は、
+\[ x=30-3t,\qquad y=20-2t \]
+です。ソラさんの高さは、1分あたり何 m の速さで変わっていくでしょう。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, clip=true, axis equal image, grid=none, axis lines=box, axis line style={-, line width=0.6pt, bkInk}, width=92mm, xmin=-5, xmax=50, ymin=-5, ymax=35, xtick distance=10, ytick distance=10, tick align=outside, xlabel={$x$（m）}, ylabel={$y$（m）}]
+  \pgfplotsinvokeforeach{80,85,90,95}{\addplot[kviiidC, line width=0.8pt, no markers, samples=181, domain=0:360] ({sqrt((100-(#1))/0.01)*cos(x)},{sqrt((100-(#1))/0.02)*sin(x)});}
+  \addplot[kviiidD, line width=1.3pt, -{Stealth[length=2.2mm]}] coordinates {(30,20) (1.5,1)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkRed] coordinates {(30,20) (15,10)};
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=1pt, anchor=west] at (axis cs:31,21.5) {P（$t=0$、\qty{83}{m}）};
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=1pt, anchor=north west] at (axis cs:16,9) {$t=5$（\qty{95.75}{m}）};
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=1pt, anchor=south west] at (axis cs:0.5,0.5) {▲頂上};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ソラさんの歩く道（むらさき）。線は \qty{5}{m} ごとの等高線。頂上に近づくほど等高線の間が広がり、坂はゆるくなる。}\label{bk:8-3:fig-michi}
+\end{bkfigure}
+
+\noindent 時間 $\dd t$ のあいだに、$x$ は $\dd x=\dfrac{\dd x}{\dd t}\,\dd t$、$y$ は $\dd y=\dfrac{\dd y}{\dd t}\,\dd t$ だけ変わります（5-8）。これを全微分の式に入れて、両辺を $\dd t$ でわります。
+\begin{bkhenkei}[0.5]
+\dd h=\frac{\partial h}{\partial x}\,\dd x+\frac{\partial h}{\partial y}\,\dd y & 全微分 \\
+\dd h=\frac{\partial h}{\partial x}\frac{\dd x}{\dd t}\,\dd t+\frac{\partial h}{\partial y}\frac{\dd y}{\dd t}\,\dd t & $\dd x$、$\dd y$ を、$\dd t$ のあいだの変化で書いた \\
+\frac{\dd h}{\dd t}=\frac{\partial h}{\partial x}\frac{\dd x}{\dd t}+\frac{\partial h}{\partial y}\frac{\dd y}{\dd t} & 両辺を $\dd t$ でわった \\
+\end{bkhenkei}
+\kviiidframe{$\dfrac{\dd h}{\dd t}=\dfrac{\partial h}{\partial x}\dfrac{\dd x}{\dd t}+\dfrac{\partial h}{\partial y}\dfrac{\dd y}{\dd t}$}
+これを\textbf{連鎖律}（れんさりつ）\bkidx{れんさりつ}{連鎖律}といいます（英語で chain rule）。5-6 の合成関数の微分（歯車をつなぐとかけ算）が、2組になったものです。$t$ から $x$ を通って $h$ へ行く歯車と、$t$ から $y$ を通って $h$ へ行く歯車の、2つの道の分をたします。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, draw=bkGray, fill=bkGray!10, minimum width=16mm, font=\small] (t) at (0,0) {$t$（時間）};
+  \node[bk node, draw=kviiidE, fill=bkRed!8, minimum width=18mm, font=\small] (x) at (46,11) {$x$（東）};
+  \node[bk node, draw=kviiidN, fill=bkGreen!10, minimum width=18mm, font=\small] (y) at (46,-11) {$y$（北）};
+  \node[bk node, draw=\bkTT, fill=bkTheme!10, minimum width=16mm, font=\small] (h) at (92,0) {$h$（高さ）};
+  \draw[bk link] (t) -- (x) node[bk link label, midway, above, sloped] {$\frac{\dd x}{\dd t}$};
+  \draw[bk link] (t) -- (y) node[bk link label, midway, below, sloped] {$\frac{\dd y}{\dd t}$};
+  \draw[bk link] (x) -- (h) node[bk link label, midway, above, sloped] {$\frac{\partial h}{\partial x}$};
+  \draw[bk link] (y) -- (h) node[bk link label, midway, below, sloped] {$\frac{\partial h}{\partial y}$};
+\end{tikzpicture}
+\bkfigcaption{連鎖律の2つの道。上の道は「$\frac{\dd x}{\dd t}\times\frac{\partial h}{\partial x}$」、下の道は「$\frac{\dd y}{\dd t}\times\frac{\partial h}{\partial y}$」。道ごとにかけて、2つの道をたす。}\label{bk:8-3:fig-rensa}
+\end{bkfigure}
+ソラさんの場合、$\dfrac{\dd x}{\dd t}=-3$、$\dfrac{\dd y}{\dd t}=-2$ です。出発のとき（$t=0$、P）は、
+\begin{bkhenkei}[0.5]
+\frac{\dd h}{\dd t}=(-0.6)\times(-3)+(-0.8)\times(-2) & P での2つの坂と、2つの速さ \\
+=1.8+1.6=3.4 & 1分に \qty{3.4}{m} 上がる \\
+\end{bkhenkei}
+確かめに、$x$、$y$ を山の式に入れてから、$t$ で微分します（5-6）。
+\begin{bkhenkei}[0.56]
+h=100-0.01(30-3t)^2-0.02(20-2t)^2 & $t$ だけの式になった \\
+\frac{\dd h}{\dd t}=0.06(30-3t)+0.08(20-2t) & 合成関数の微分（中身の微分 $-3$、$-2$ をかけた） \\
+t=0\text{ で }0.06\times30+0.08\times20=3.4 & 連鎖律と同じ \\
+\end{bkhenkei}
+2通りで同じ答えになりました。連鎖律を使えば、式を入れて展開しなくても、坂と速さのかけ算だけで計算できます。頂上に近づくと坂がゆるくなるので、5分後（$x=15$、$y=10$）には $0.06\times15+0.08\times10=1.7$ で、1分に \qty{1.7}{m} と、半分になります。
+
+\begin{seikaku}
+$x$、$y$ が、$t$ 1つではなく、2つの変数 $u$、$v$ で決まるときは、$v$ を止めて $u$ で偏微分した形で、同じ式が成り立ちます。
+\[ \frac{\partial h}{\partial u}=\frac{\partial h}{\partial x}\frac{\partial x}{\partial u}+\frac{\partial h}{\partial y}\frac{\partial y}{\partial u} \]
+これも連鎖律とよびます。8-6 や 8-12 で、座標を取りかえる（$x$、$y$ を極座標 $r$、$\theta$ で書く）ときに使います。
+\end{seikaku}
+
+\bksubsection{7}{ヤコビ行列：偏微分を並べた行列}
+
+\leavevmode\label{bk:8-3:jacobi}第7巻（7-2）と物理第1巻（力-7）で使った、2つの関節のロボットの腕を考えます。肩の角を $\theta_1$、ひじの角を $\theta_2$ とすると、手の位置 $(x,\ y)$ は次の式で決まります（4-7・物理 力-7 の順運動学）。
+\[ x=L_1\cos\theta_1+L_2\cos(\theta_1+\theta_2),\qquad y=L_1\sin\theta_1+L_2\sin(\theta_1+\theta_2) \]
+$x$ も $y$ も、$\theta_1$ と $\theta_2$ の2つの変数の関数です。7-2 で「8-3 で学ぶ」と約束した作り方で、$x$ と $y$ をそれぞれ偏微分します。角はラジアンではかります（5-15：$\sin$ の微分が $\cos$ になるのは、ラジアンのとき）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkInk!35] (-8,-3) rectangle (8,0);
+  \draw[bkInk!70, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (0,0) -- (40,0);
+  \draw[bkBlue!70!black, line width=4pt, line cap=round] (0,0) -- (41.6,24);
+  \draw[bkOrange!80!black, line width=4pt, line cap=round] (41.6,24) -- (51.9,62.6);
+  \draw[bkInk!70, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (41.6,24) -- (57.2,33);
+  \kviiidjoint{(0,0)}\kviiidjoint{(41.6,24)}
+  \fill[bkInk] (51.9,62.6) circle (1.4);
+  \draw[bkInk, line width=0.6pt] (14,0) arc (0:30:14);
+  \node[font=\sffamily\footnotesize, anchor=west] at (15.5,3.2) {$\theta_1=30°$};
+  \draw[bkInk, line width=0.6pt] ({41.6+12*cos(30)},{24+12*sin(30)}) arc (30:75:12);
+  \node[font=\sffamily\footnotesize, anchor=west] at (51.5,39) {$\theta_2=45°$};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkBlue!70!black] at (19,13) {$L_1=\qty{0.30}{m}$};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkOrange!70!black] at (44,46) {$L_2=\qty{0.25}{m}$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-4) {肩};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (43,22) {ひじ};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (53,63) {手 $(x,\ y)$};
+  % 列の矢印（1 m/rad を 60 mm）
+  \draw[bkRed, line width=1.5pt, -{Stealth[length=2.4mm]}] (51.9,62.6) -- ++(-23.5,19.5);
+  \draw[bkPurple, line width=1.5pt, -{Stealth[length=2.4mm]}] (51.9,62.6) -- ++(-14.5,3.9);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=east, align=right] at (27,82) {1列め：肩だけ回す\\$(-0.3915,\ 0.3245)$};
+  \node[font=\sffamily\footnotesize, text=bkPurple!80!black, anchor=east, align=right] at (36,66) {2列め：ひじだけ回す\\$(-0.2415,\ 0.0647)$};
+\end{tikzpicture}
+\bkfigcaption{2つの関節のロボットの腕（7-2・物理 力-7 と同じ数）。手から出る赤の矢印は肩だけを、紫の矢印はひじだけを1ラジアンあたり回したときの手の動き（ヤコビ行列の2つの列）。}\label{bk:8-3:fig-robot}
+\end{bkfigure}
+
+\kviiidhead{4つの偏微分}
+$\theta_{12}=\theta_1+\theta_2$ と書きます。$\theta_2$ を止めて $\theta_1$ で偏微分するとき、$\theta_{12}$ の中身を $\theta_1$ で偏微分すると1です（合成関数の微分）。
+\begin{bkhenkei}[0.52]
+\frac{\partial x}{\partial\theta_1}=-L_1\sin\theta_1-L_2\sin\theta_{12} & $\theta_2$ を止める。$(\cos u)'=-\sin u$ \\
+\frac{\partial x}{\partial\theta_2}=-L_2\sin\theta_{12} & $\theta_1$ を止める。$L_1\cos\theta_1$ は数なので0 \\
+\frac{\partial y}{\partial\theta_1}=L_1\cos\theta_1+L_2\cos\theta_{12} & $\theta_2$ を止める。$(\sin u)'=\cos u$ \\
+\frac{\partial y}{\partial\theta_2}=L_2\cos\theta_{12} & $\theta_1$ を止める。$L_1\sin\theta_1$ は数なので0 \\
+\end{bkhenkei}
+
+\kviiidhead{全微分を、行列で書く}
+肩を $\dd\theta_1$、ひじを $\dd\theta_2$ だけ同時に少し回すと、手の位置の変化は全微分です。
+\[ \dd x=\frac{\partial x}{\partial\theta_1}\,\dd\theta_1+\frac{\partial x}{\partial\theta_2}\,\dd\theta_2,\qquad \dd y=\frac{\partial y}{\partial\theta_1}\,\dd\theta_1+\frac{\partial y}{\partial\theta_2}\,\dd\theta_2 \]
+2つの式は、7-1・7-2 の「行列×ベクトル」の形そのものです。
+\kviiidframe{$\begin{pmatrix}\dd x\\ \dd y\end{pmatrix}=J\begin{pmatrix}\dd\theta_1\\ \dd\theta_2\end{pmatrix},\qquad J=\begin{pmatrix}\dfrac{\partial x}{\partial\theta_1}&\dfrac{\partial x}{\partial\theta_2}\\[10pt]\dfrac{\partial y}{\partial\theta_1}&\dfrac{\partial y}{\partial\theta_2}\end{pmatrix}$}
+この、\textbf{偏微分を並べた行列} $J$ が、7-2・物理 力-7 の\textbf{ヤコビ行列}です。\textbf{行は出てくる量}（1行めが $x$、2行めが $y$）、\textbf{列は動かす量}（1列めが $\theta_1$、2列めが $\theta_2$）です。1列めは「肩だけを回したときの手の動き」、2列めは「ひじだけを回したときの手の動き」で、7-2 の言い方と同じです。
+
+\kviiidhead{同じ数が出るか、確かめる}
+$\theta_1=30°$、$\theta_2=45°$（$\theta_{12}=75°$）を入れます。$\sin30°=0.5$、$\cos30°=0.8660$、$\sin75°=0.9659$、$\cos75°=0.2588$ です。
+\begin{bkhenkei}[0.68]
+\frac{\partial x}{\partial\theta_1}=-0.30\times0.5-0.25\times0.9659=-0.3915 & 1行め1列め \\
+\frac{\partial x}{\partial\theta_2}=-0.25\times0.9659=-0.2415 & 1行め2列め \\
+\frac{\partial y}{\partial\theta_1}=0.30\times0.8660+0.25\times0.2588=0.3245 & 2行め1列め \\
+\frac{\partial y}{\partial\theta_2}=0.25\times0.2588=0.0647 & 2行め2列め \\
+\end{bkhenkei}
+\[ J=\begin{pmatrix}-0.3915&-0.2415\\0.3245&0.0647\end{pmatrix} \]
+7-2 で「手の位置の矢印を90°回す」方法で作った $J$、物理 力-7 の $J$ と、ぴったり同じです。7-2 では図（円運動の速度）から、ここでは式（偏微分）から作りました。2通りの作り方で、同じ行列が出てきたのです。
+
+\kviiidhead{7-2 の約束：「2つの変化はたし算になる」}
+7-2 のせいかくに言うとでは、「2つの関節の角の小さな変化による手の小さな動きは、たし算で合わさる。このことを微分を使ってきちんと確かめるのが 8-3」と約束しました。いま作った $\dd\vec p=J\,\dd\vec\theta$ は、全微分の式（たし算）そのものです。これで約束が果たせました。両辺を時間 $\dd t$ でわれば、7-2・物理 力-7 の $\dot{\vec p}=J\dot{\vec\theta}$（手の速度＝$J$×関節の角速度）になります（⑥の連鎖律と同じ）。
+
+\noindent 数でも確かめます。肩もひじも \qty{0.01}{rad}（約0.57°）回すと、
+\[ J\begin{pmatrix}0.01\\0.01\end{pmatrix}=\begin{pmatrix}-0.3915\times0.01+(-0.2415)\times0.01\\0.3245\times0.01+0.0647\times0.01\end{pmatrix}=\begin{pmatrix}-0.00633\\0.00389\end{pmatrix} \]
+です。順運動学の式で本当に計算した手の動きは $(-0.00636,\ 0.00384)$（m）で、よく合っています。
+
+\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+L1, L2 = 0.30, 0.25                \# うでの長さ（m）
+t1, t2 = np.radians(30), np.radians(45)   \# 肩とひじの角（rad）
+s1, c1 = np.sin(t1), np.cos(t1)
+s12, c12 = np.sin(t1 + t2), np.cos(t1 + t2)
+J = np.array([[-L1*s1 - L2*s12, -L2*s12],   \# 1行め：x の偏微分
+              [ L1*c1 + L2*c12,  L2*c12]])  \# 2行め：y の偏微分
+print(J.round(4))                  \# ヤコビ行列（小数第4位まで）
+print(round(np.linalg.det(J), 4))  \# ヤコビアン（⑧）
+print(J @ np.array([0.01, 0.01]))  \# 両方を少し回したとき
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[-0.3915 -0.2415]
+ [ 0.3245  0.0647]]
+0.053
+[-0.00632963  0.00389217]
+\end{bkcodeout}
+\texttt{np.radians} は度をラジアンに直す関数です（6-9）。\texttt{0.053} は 0.0530 のことです（最後の0は表示されない）。7-11 の逆運動学（ニュートン・ラフソン法）では、この $J$ を、腕の角が変わるたびに計算し直して使います。
+
+\bksubsection{8}{ヤコビアン：小さな面積の倍率}
+
+\leavevmode\label{bk:8-3:jacobian}7-4 で、行列式は「面積が何倍になるか」を表すと学びました。ヤコビ行列の行列式は、何の面積の倍率でしょう。
+
+\noindent 角の組 $(\theta_1,\ \theta_2)$ を、たて横の方眼の上の点と考えます。小さな長方形（横 $\dd\theta_1$、たて $\dd\theta_2$）の中の角の組で腕を動かすと、手は、$J$ の1列めを $\dd\theta_1$ 倍した矢印と、2列めを $\dd\theta_2$ 倍した矢印がつくる、小さな平行四辺形の中を動きます（全微分 $\dd\vec p=J\,\dd\vec\theta$）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (34,0) node[anchor=north, font=\footnotesize] {$\theta_1$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,30) node[anchor=east, font=\footnotesize] {$\theta_2$};
+  \filldraw[fill=bkOrange!20, draw=bkOrange!80!black, line width=1pt] (8,8) rectangle (24,22);
+  \node[font=\footnotesize, anchor=north] at (16,7.5) {$\dd\theta_1$};
+  \node[font=\footnotesize, anchor=west] at (24.5,15) {$\dd\theta_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,-5) {角の方眼（面積 $\dd\theta_1\,\dd\theta_2$）};
+  \draw[bk arrow, line width=1.2pt] (40,15) -- (56,15);
+  \node[font=\footnotesize, anchor=south] at (48,16) {$J$};
+  \begin{scope}[shift={(100,4)}]
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-36,0) -- (6,0) node[anchor=north, font=\footnotesize] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2) -- (0,28) node[anchor=east, font=\footnotesize] {$y$};
+    \filldraw[fill=bkTheme!18, draw=\bkTT, line width=1pt] (-4,4) -- ++(-23.5,19.5) -- ++(-14.5,3.9) -- ++(23.5,-19.5) -- cycle;
+    \draw[bkRed, line width=1.3pt, -{Stealth[length=2mm]}] (-4,4) -- ++(-23.5,19.5);
+    \draw[bkPurple, line width=1.3pt, -{Stealth[length=2mm]}] (-4,4) -- ++(-14.5,3.9);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (-18,-5) {手の平行四辺形\\（面積 $|\det J|\,\dd\theta_1\,\dd\theta_2$）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{角の方眼の小さな長方形（左）は、手の場所では、$J$ の2つの列（赤と紫、図では大きく引きのばした）がつくる平行四辺形（右）にうつる。}\label{bk:8-3:fig-menseki}
+\end{bkfigure}
+7-4 のとおり、2本の列がつくる平行四辺形の面積は、もとの長方形の面積の $|\det J|$ 倍です。
+\kviiidframe{手が動ける小さな面積 $\approx|\det J|\times\dd\theta_1\,\dd\theta_2$}
+ヤコビ行列の行列式 $\det J$ を\textbf{ヤコビアン}\bkidx{やこびあん}{ヤコビアン}といいます。ヤコビアンは、「動かす量の小さな面積が、出てくる量の小さな面積の何倍になるか」の倍率です。
+
+\noindent ロボットでは、次のとおりです。
+\[ \det J=(-0.3915)\times0.0647-(-0.2415)\times0.3245=0.0530 \]
+肩とひじを \qty{0.01}{rad} ずつの範囲で動かすと、手が動く範囲の面積は、次のとおりです。
+\[ 0.0530\times0.01\times0.01=5.30\times10^{-6}\ \text{（m²）} \]
+約 \qty{5.3}{mm^2} です（4つのかどを本当に計算して面積を求めると $5.33\times10^{-6}$ m²）。
+
+\noindent 文字のまま計算すると、$\det J=L_1L_2\sin\theta_2$ になります（加法定理 4-9 を使う。例題6）。物理 力-7 で見たとおり、ひじがのびきって $\theta_2$ が0に近づくと、ヤコビアンは0に近づき、手の平行四辺形はつぶれます（7-4 の特異姿勢）。
+
+\kviiidhead{極座標のヤコビアンは $r$}
+平面の点を、原点からの距離 $r$ と角 $\theta$ で表す極座標（4-15）でも、同じように考えます。
+\[ x=r\cos\theta,\qquad y=r\sin\theta \]
+\begin{bkhenkei}[0.6]
+\frac{\partial x}{\partial r}=\cos\theta,\quad \frac{\partial x}{\partial\theta}=-r\sin\theta & 1行め（$x$ を $r$、$\theta$ で偏微分） \\
+\frac{\partial y}{\partial r}=\sin\theta,\quad \frac{\partial y}{\partial\theta}=r\cos\theta & 2行め（$y$ を $r$、$\theta$ で偏微分） \\
+\det J=\cos\theta\times r\cos\theta-(-r\sin\theta)\times\sin\theta & たすきにかけてひく（7-4） \\
+\det J=r(\cos^2\theta+\sin^2\theta)=r & $\cos^2\theta+\sin^2\theta=1$（4-8） \\
+\end{bkhenkei}
+ヤコビアンは $r$ です。だから、$r$ を $\dd r$、$\theta$ を $\dd\theta$ だけ変えてできる小さなタイルの面積は、$r\,\dd r\,\dd\theta$ です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (62,0) node[anchor=north, font=\footnotesize] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,44) node[anchor=east, font=\footnotesize] {$y$};
+  \filldraw[fill=bkTheme!18, draw=\bkTT, line width=1pt] (30:40) arc (30:45:40) -- (45:52) arc (45:30:52) -- cycle;
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) -- (30:40) (0,0) -- (45:40);
+  \draw[bkInk, line width=0.6pt] (12,0) arc (0:30:12);
+  \node[font=\footnotesize, anchor=west] at (13,3) {$\theta$};
+  \draw[bkInk, line width=0.6pt] (30:22) arc (30:45:22);
+  \node[font=\footnotesize, anchor=south west, inner sep=1pt] at (37.5:22.5) {$\dd\theta$};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (30:46) {$\dd r$};
+  \node[font=\footnotesize, inner sep=1pt] at (37.5:34.5) {$r\,\dd\theta$};
+  \node[font=\footnotesize, anchor=north west] at (30:20) {$r$};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (66,26) {たて $\dd r$、横 $r\,\dd\theta$ の\\ほぼ長方形};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (66,12) {面積 $\approx r\,\dd r\,\dd\theta$};
+\end{tikzpicture}
+\bkfigcaption{極座標の小さなタイル。外へ $\dd r$、回る向きに弧の長さ $r\,\dd\theta$（4-2 のおうぎ形の弧）。外側のタイルほど、同じ $\dd\theta$ でも横が長い。}\label{bk:8-3:fig-kyoku}
+\end{bkfigure}
+図\ref{bk:8-3:fig-kyoku}でも、タイルは、たてが $\dd r$、横が弧の長さ $r\,\dd\theta$ の、ほぼ長方形です。図で考えても、ヤコビアンで考えても、面積は $r\,\dd r\,\dd\theta$ です。この $r$ が、8-6 の重積分で、円や球の面積・体積を求めるときに大事な役目をします（$r$ を忘れると、円の面積が正しく出ない）。7-4 のコラムで「曲がった座標での積分にもヤコビアンが出てくる（8-3）」と約束したのは、このことです。
+
+\begin{motto}[5]
+\kviiidbox{2つの変数のテイラー展開}
+③のずれ $-0.03$ も、5-17 のテイラー展開を2変数にすると、2回の偏微分（8-2）を使って書けます。
+\[ \Delta f\approx\frac{\partial f}{\partial x}\Delta x+\frac{\partial f}{\partial y}\Delta y+(\text{2次の項}) \]
+\[ (\text{2次の項})=\frac{1}{2}\Bigl(\frac{\partial^2f}{\partial x^2}\Delta x^2+2\frac{\partial^2f}{\partial x\,\partial y}\Delta x\Delta y+\frac{\partial^2f}{\partial y^2}\Delta y^2\Bigr) \]
+主役の山では、$\dfrac{\partial^2h}{\partial x^2}=-0.02$、$\dfrac{\partial^2h}{\partial x\,\partial y}=0$、$\dfrac{\partial^2h}{\partial y^2}=-0.04$ なので、かっこの中の分は $\dfrac{1}{2}(-0.02\Delta x^2-0.04\Delta y^2)=-0.01\Delta x^2-0.02\Delta y^2$ です。$\Delta x=\Delta y=1$ なら $-0.03$ で、$-1.4-0.03=-1.43$ と、本当の値にぴったり合います（主役の山は2次式なので、ここで終わり）。
+\end{motto}
+
+%% ---------------- 専門書・まとめ ----------------
+\begin{senmonsho}[熱力学の教科書ふうの書き方]
+\begin{bkhonbun}
+内部エネルギー $U$ は状態量であり、$T$ と $V$ の関数として $\dd U=\left(\dfrac{\partial U}{\partial T}\right)_V\dd T+\left(\dfrac{\partial U}{\partial V}\right)_T\dd V$ と表される。$\dd U$ は完全微分であるが、熱 $\delta Q$ と仕事 $\delta W$ は完全微分ではない。変数変換 $(u,\ v)\to(x,\ y)$ のヤコビアンを $\dfrac{\partial(x,\ y)}{\partial(u,\ v)}$ と書く。
+\end{bkhonbun}
+\bkyaku{右下の $V$ は「止めておく量」（例題9）。「状態量」は、いまの状態だけで決まる量で、その小さな変化は全微分 $\dd U$ になる（完全微分）。熱や仕事は、状態の変え方（道すじ）で値が変わるので、全微分ではない印に $\delta$ を使う（8-7、物理 熱-2）。$\dfrac{\partial(x,\ y)}{\partial(u,\ v)}$ は、この本の $\det J$。}
+\end{senmonsho}
+
+\Needspace{16\baselineskip}
+\begin{motto}[5]
+\kviiidbox{全微分になっているかを見分ける}
+$y\,\dd x+x\,\dd y$ は、$f=xy$ の全微分 $\dd f$ です（$\dfrac{\partial f}{\partial x}=y$、$\dfrac{\partial f}{\partial y}=x$）。一方、$y\,\dd x$ だけでは、どんな $f$ の全微分にもなりません。もし $\dd f=M\,\dd x+N\,\dd y$ なら、$M=\dfrac{\partial f}{\partial x}$、$N=\dfrac{\partial f}{\partial y}$ なので、8-2 の「2回の偏微分は順番によらない」から、次の式が成り立つはずだからです。
+\[ \frac{\partial M}{\partial y}=\frac{\partial^2f}{\partial y\,\partial x}=\frac{\partial^2f}{\partial x\,\partial y}=\frac{\partial N}{\partial x} \]
+$y\,\dd x$ では $M=y$、$N=0$ で、$\dfrac{\partial M}{\partial y}=1$、$\dfrac{\partial N}{\partial x}=0$ なので、成り立ちません。全微分なら、小さな変化を道にそってたした合計は「はじめとおわりの $f$ の差」になり、道によりません。全微分でなければ、道で変わります。物理 力-4 の $\vec F_1=(y,\ x)$ の仕事 $y\,\dd x+x\,\dd y$ は道によらず、$\vec F_2=(-y,\ x)$ の仕事は道で変わったのは、このためです（8-7・8-10 でくわしく）。
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{全微分}$\dd f=\dfrac{\partial f}{\partial x}\,\dd x+\dfrac{\partial f}{\partial y}\,\dd y$（1つずつの変化をたす）\\[4pt]
+\tsl{誤差}$\dfrac{\Delta V}{V}\approx2\dfrac{\Delta r}{r}+\dfrac{\Delta h}{h}$（$V=\pi r^2h$ のとき）\\[4pt]
+\tsl{連鎖律}$\dfrac{\dd h}{\dd t}=\dfrac{\partial h}{\partial x}\dfrac{\dd x}{\dd t}+\dfrac{\partial h}{\partial y}\dfrac{\dd y}{\dd t}$（道ごとにかけて、たす）\\[4pt]
+\tsl{ヤコビ行列}偏微分を並べた行列（行＝出てくる量、列＝動かす量）\\[4pt]
+\tsl{行列で}$\dd\vec p=J\,\dd\vec\theta$（全微分を行列×ベクトルで）\\[4pt]
+\tsl{ヤコビアン}$\det J$＝小さな面積の倍率。極座標では $r$（タイル $r\,\dd r\,\dd\theta$）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{全微分}{すべての変数を同時に少し動かしたときの変化 $\dd f=\frac{\partial f}{\partial x}\dd x+\frac{\partial f}{\partial y}\dd y$。}
+\bkword{接平面}{曲がった面の1点のすぐ近くで、面にいちばんよくそう平らな面。接線の2次元版。}
+\bkword{連鎖律}{変数が別の変数で決まるときの微分のきまり。道ごとにかけて、たす。}
+\bkword{ヤコビ行列}{出てくる量を動かす量で偏微分して並べた行列。行が出てくる量、列が動かす量。}
+\bkword{ヤコビアン}{ヤコビ行列の行列式。小さな面積（体積）が何倍になるか。}
+\end{kotoba}
+
+
+
+
+
+\bkkigocards{\bkkigocard{$\dd f$}{ディー エフ}{全微分。$x$、$y$ を同時に少し動かしたときの $f$ の変化}{total differential}{8-3}}{\bkkigocard{$\det J$}{デターミナント ジェイ}{ヤコビアン。ヤコビ行列の行列式で、小さな面積の倍率}{Jacobian}{8-3}}
+
+\begin{column}{ものさしでも「ずれの伝わり方」}
+長方形の紙の面積 $S=ab$ を、ものさしではかって求めます。たて $a=\qty{10.0}{cm}$、横 $b=\qty{20.0}{cm}$ で、どちらも \qty{0.1}{cm} までしか読めないとします。ずれの割合は、たてが1\,\%、横が0.5\,\% です。全微分 $\dd S=b\,\dd a+a\,\dd b$ を $S=ab$ でわると、$\dfrac{\dd S}{S}=\dfrac{\dd a}{a}+\dfrac{\dd b}{b}$ なので、面積のずれは、いちばん大きくて $1+0.5=1.5$（\%）です。同じ \qty{0.1}{cm} のずれでも、\textbf{短い辺のほうが、割合では大きく効く}のです。理科の実験で「はかりにくい小さな量ほど、ていねいにはかる」のは、このためです。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[全微分で、高さの変化を見積もる]
+主役の山 $h=100-0.01x^2-0.02y^2$ の P$(30,\ 20)$ から、東へ \qty{0.5}{m}、南へ \qty{0.3}{m} 進みます。高さの変化を全微分で見積もり、本当の変化とくらべましょう。\par
+\kangaekata 2つの変数が同時に変わるので、全微分 $\dd h=\dfrac{\partial h}{\partial x}\dd x+\dfrac{\partial h}{\partial y}\dd y$ に、P での坂と $\dd x=0.5$、$\dd y=-0.3$（南はマイナス）を入れる。\par
+\shiki P での坂：$\dfrac{\partial h}{\partial x}=-0.6$、$\dfrac{\partial h}{\partial y}=-0.8$\kviiidq
+$\dd h=(-0.6)\times0.5+(-0.8)\times(-0.3)=-0.30+0.24=-0.06$\kviiidq
+本当：$h(30.5,\ 19.7)=100-9.3025-7.7618=82.9357$、差は $-0.0643$\par
+\kotae 約 \qty{0.06}{m} 下がる（本当は \qty{0.0643}{m}）
+\end{reidai}
+
+\begin{reidai}[全微分の式を作って使う]
+$f(x,\ y)=x^2y$ の全微分を求め、$(2,\ 3)$ から $x$ が0.01ふえ、$y$ が0.02へったときの $f$ の変化を見積もりましょう。\par
+\kangaekata まず2つの偏微分を求め、全微分の式に入れる。\par
+\shiki $\dfrac{\partial f}{\partial x}=2xy$、$\dfrac{\partial f}{\partial y}=x^2$ なので、$\dd f=2xy\,\dd x+x^2\,\dd y$\kviiidq
+$(2,\ 3)$ では $\dd f=12\,\dd x+4\,\dd y$\kviiidq
+$\dd f=12\times0.01+4\times(-0.02)=0.12-0.08=0.04$\kviiidq
+本当：$2.01^2\times2.98-2^2\times3=12.0395-12=0.0395$\par
+\kotae $\dd f=2xy\,\dd x+x^2\,\dd y$。変化は約0.04（本当は0.0395）
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+主役の山の点 $(10,\ 30)$ から、東へ \qty{1}{m}、北へ \qty{0.5}{m} 進みます。高さの変化を全微分で見積もり、本当の変化とくらべましょう。
+\bkjans{坂は $\dfrac{\partial h}{\partial x}=-0.2$、$\dfrac{\partial h}{\partial y}=-1.2$。$\dd h=-0.2\times1+(-1.2)\times0.5=-0.8$。本当は $h(11,\ 30.5)-h(10,\ 30)=80.185-81=-0.815$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+$f(x,\ y)=xy^3$ の全微分を求め、$(1,\ 2)$ から $x$ が0.02、$y$ が0.01ふえたときの $f$ の変化を見積もりましょう。
+\bkjans{$\dd f=y^3\,\dd x+3xy^2\,\dd y$。$(1,\ 2)$ では $8\,\dd x+12\,\dd y$。$8\times0.02+12\times0.01=0.28$（本当は0.2830）。}
+\end{jibun}
+\end{minipage}\par
+
+\begin{reidai}[誤差の伝わり方（かけ算の式）]
+円柱の体積 $V=\pi r^2h$ で、半径を2\,\%、高さを3\,\% 大きくはかってしまいました。体積は、約何\,\% 大きく計算されますか。\par
+\kangaekata かけ算の式なので、全微分を $V$ でわって、ずれの割合の式にする（④）。\par
+\shiki $\dd V=2\pi rh\,\dd r+\pi r^2\,\dd h$\kviiidq
+両辺を $V=\pi r^2h$ でわると、$\dfrac{\dd V}{V}=2\,\dfrac{\dd r}{r}+\dfrac{\dd h}{h}$\kviiidq
+$\dfrac{\dd V}{V}=2\times2+3=7$（\%）\par
+\kotae 約7\,\% 大きくなる
+\end{reidai}
+\noindent 本当に計算すると $1.02^2\times1.03=1.0716$ で、7.16\,\% です。
+
+\begin{reidai}[誤差の伝わり方（わり算の式）]
+電力 $P=\dfrac{V^2}{R}$ で、電圧 $V$ のはかり方に ±1\,\%、抵抗 $R$ に ±2\,\% のずれがありえます。電力のずれは、いちばん大きくて何\,\% ですか。\par
+\kangaekata わり算の式では、わる量は、割合の式でマイナスになる。いちばん大きいずれは、2つのずれが同じ向きに効くとき。\par
+\shiki $\dd P=\dfrac{2V}{R}\dd V-\dfrac{V^2}{R^2}\dd R$\kviiidq
+両辺を $P=\dfrac{V^2}{R}$ でわると、$\dfrac{\dd P}{P}=2\,\dfrac{\dd V}{V}-\dfrac{\dd R}{R}$\kviiidq
+いちばん大きいのは、$V$ が +1\,\%、$R$ が $-2$\,\% のとき：$2\times1-(-2)=4$（\%）\par
+\kotae いちばん大きくて約4\,\%
+\end{reidai}
+\noindent $V=\qty{12}{V}$、$R=\qty{6}{\ohm}$ で本当に計算すると、$12.12^2\div5.88=24.98$〔W〕で、もとの \qty{24}{W} より4.1\,\% 大きくなります。
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+円すいの体積 $V=\dfrac{1}{3}\pi r^2h$ で、半径が2\,\%、高さが1\,\% 大きくずれているとき、体積は約何\,\% ずれますか。
+\bkjans{$\dfrac{\dd V}{V}=2\,\dfrac{\dd r}{r}+\dfrac{\dd h}{h}=2\times2+1=5$（\%）。$\frac{1}{3}\pi$ は数なので、割合には効かない。約5\,\%（本当は5.08\,\%）。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+密度 $\rho=\dfrac{m}{V}$ で、質量 $m$ に ±0.5\,\%、体積 $V$ に ±1\,\% のずれがありえます。密度のずれは、いちばん大きくて何\,\% ですか。
+\bkjans{$\dfrac{\dd\rho}{\rho}=\dfrac{\dd m}{m}-\dfrac{\dd V}{V}$。$m$ が +0.5\,\%、$V$ が $-1$\,\% のとき $0.5+1=1.5$（\%）。いちばん大きくて約1.5\,\%。}
+\end{jibun}
+\end{minipage}\par
+
+\begin{reidai}[連鎖律で、高さの変わる速さ]
+主役の山の上を、$x=30-3t$、$y=20-2t$（$t$ は分）と歩きます。$t=5$ のときの、高さの変わる速さ $\dfrac{\dd h}{\dd t}$ を、連鎖律で求めましょう。\par
+\kangaekata 場所が時間で変わるので、連鎖律 $\dfrac{\dd h}{\dd t}=\dfrac{\partial h}{\partial x}\dfrac{\dd x}{\dd t}+\dfrac{\partial h}{\partial y}\dfrac{\dd y}{\dd t}$。坂はその時刻の場所で求める。\par
+\shiki $t=5$ の場所：$x=30-15=15$、$y=20-10=10$\kviiidq
+坂：$\dfrac{\partial h}{\partial x}=-0.02\times15=-0.3$、$\dfrac{\partial h}{\partial y}=-0.04\times10=-0.4$\kviiidq
+速さ：$\dfrac{\dd x}{\dd t}=-3$、$\dfrac{\dd y}{\dd t}=-2$\kviiidq
+$\dfrac{\dd h}{\dd t}=(-0.3)\times(-3)+(-0.4)\times(-2)=0.9+0.8=1.7$\par
+\kotae 1分に約 \qty{1.7}{m} の速さで上がる
+\end{reidai}
+
+\begin{jibun}
+主役の山の上を、$x=10+2t$、$y=30-3t$（$t$ は分）と歩きます。$t=0$ のときの高さの変わる速さを、連鎖律で求めましょう。
+\bkjans{$t=0$ で $(10,\ 30)$。坂は $-0.2$ と $-1.2$。$\frac{\dd h}{\dd t}=(-0.2)\times2+(-1.2)\times(-3)=-0.4+3.6=3.2$。1分に約 \qty{3.2}{m} 上がる。}
+\end{jibun}
+
+\noindent 例題5の道を、時刻ごとに表にしてみます（高さは山の式に入れて、速さは連鎖律で求めた）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{3}{Q[c,m,wd=20mm]}}, rowsep=1pt}
+時刻 $t$（分） & 0 & 5 & 10 \\
+場所 $(x,\ y)$（m） & $(30,\ 20)$ & $(15,\ 10)$ & $(0,\ 0)$ \\
+高さ $h$（m） & 83 & 95.75 & 100 \\
+高さの変わる速さ（m/分） & 3.4 & 1.7 & 0 \\
+\end{bktable}
+\bktabcaption{頂上に近づくほど坂がゆるくなり、上がる速さはへっていく。頂上（$t=10$）では0。}
+\end{bkcenter}
+
+\begin{reidai}[ロボットのヤコビ行列を作る]
+2つの関節のロボットの腕について、次の問いに答えましょう。\par
+（1）$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=0°$、$\theta_2=90°$ のときのヤコビ行列 $J$ と、ヤコビアン $\det J$ を求めましょう。\par
+（2）文字のまま $\det J$ を計算し、$L_1L_2\sin\theta_2$ になることを確かめましょう。\par
+\kangaekata（1）⑦の4つの偏微分の式に入れる。$\theta_{12}=90°$。行は $x$、$y$、列は $\theta_1$、$\theta_2$。（2）たすきにかけてひき（7-4）、加法定理（4-9）$\sin(A-B)=\sin A\cos B-\cos A\sin B$ でまとめる。$\sin\theta_1$ を $s_1$、$\cos\theta_{12}$ を $c_{12}$ のように短く書く。\par
+\shiki（1）$\sin0°=0$、$\cos0°=1$、$\sin90°=1$、$\cos90°=0$\kviiidq
+1行め：$-0.30\times0-0.25\times1=-0.25$、\ $-0.25\times1=-0.25$\kviiidq
+2行め：$0.30\times1+0.25\times0=0.30$、\ $0.25\times0=0$\kviiidq
+$\det J=(-0.25)\times0-(-0.25)\times0.30=0.075$\kviiidq
+（2）$\det J=(-L_1s_1-L_2s_{12})L_2c_{12}-(-L_2s_{12})(L_1c_1+L_2c_{12})$\kviiidq
+$\phantom{\det J}=-L_1L_2s_1c_{12}-L_2^{\,2}s_{12}c_{12}+L_1L_2s_{12}c_1+L_2^{\,2}s_{12}c_{12}$\kviiidq
+$\phantom{\det J}=L_1L_2(s_{12}c_1-c_{12}s_1)$（$L_2^{\,2}$ の2つの項は消える）\kviiidq
+$\phantom{\det J}=L_1L_2\sin(\theta_{12}-\theta_1)=L_1L_2\sin\theta_2$（加法定理）\par
+\kotae（1）\nobreak $J$ は1行め $(-0.25,\ -0.25)$、2行め $(0.30,\ 0)$。$\det J=0.075$。（2）\nobreak $\det J=L_1L_2\sin\theta_2$
+\end{reidai}
+\noindent このとき手は $(0.30,\ 0.25)$（m）にあり、ひじは直角に曲がっています。（2）の式でも $\det J=L_1L_2\sin90°=0.30\times0.25=0.075$ で、ヤコビアンがいちばん大きい（手がいちばん自由に動ける）姿勢です。
+
+\begin{jibun}
+同じロボットの腕で、$\theta_1=90°$、$\theta_2=90°$ のときのヤコビ行列 $J$ と、ヤコビアン $\det J$ を求めましょう。
+\bkjans{$\theta_{12}=180°$（$\sin180°=0$、$\cos180°=-1$）。1行め $(-0.30,\ 0)$、2行め $(-0.25,\ -0.25)$。$\det J=(-0.30)\times(-0.25)-0\times(-0.25)=0.075$。}
+\end{jibun}
+
+\begin{jibun}
+うで2の向きを、水平からの角 $\varphi$ で表すと、手の位置は次の式になります。
+\[ x=L_1\cos\theta_1+L_2\cos\varphi,\qquad y=L_1\sin\theta_1+L_2\sin\varphi \]
+$\theta_1$ と $\varphi$ で偏微分したヤコビ行列 $J$ を作り、文字のまま $\det J$ を計算して、$\sin$ 1つにまとめましょう。
+\bkjans{$J$ は1行め $(-L_1\sin\theta_1,\ -L_2\sin\varphi)$、2行め $(L_1\cos\theta_1,\ L_2\cos\varphi)$。$\det J$ は、$-L_1\sin\theta_1\times L_2\cos\varphi$ から、$-L_2\sin\varphi\times L_1\cos\theta_1$ をひいたもの。まとめると $L_1L_2$ に $(\sin\varphi\cos\theta_1-\cos\varphi\sin\theta_1)$ をかけたもの。加法定理で $L_1L_2\sin(\varphi-\theta_1)$。$\varphi-\theta_1$ はひじの角なので、例題6と同じ。}
+\end{jibun}
+
+\begin{motto}[5]
+\kviiidbox{ひじの角と、ヤコビアン}
+例題6（2）の式に、いろいろなひじの角を入れます（$L_1L_2=0.075$）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=1pt}
+ひじの角 $\theta_2$ & 0° & 45° & 90° & 135° & 180° \\
+$\det J$ & 0 & 0.0530 & 0.075 & 0.0530 & 0 \\
+\end{bktable}
+\end{bkcenter}
+直角（90°）でいちばん大きく、のびきったとき（0°）と折りたたんだとき（180°）に0です。0の姿勢では、手はある向きにどうしても動けません（7-4 の特異姿勢）。
+\end{motto}
+
+\begin{reidai}[$\dd\vec p=J\,\dd\vec\theta$ で、手の動きを予想する]
+$\theta_1=30°$、$\theta_2=45°$ のロボットの腕（$J$ は1行め $(-0.3915,\ -0.2415)$、2行め $(0.3245,\ 0.0647)$）で、肩を \qty{0.02}{rad}、ひじを \qty{-0.01}{rad} 回します。手はどれだけ動きますか。\par
+\kangaekata 2つの関節を同時に少し回すので、全微分の行列の形 $\dd\vec p=J\,\dd\vec\theta$ で、行と列の内積（7-2）。\par
+\shiki $\dd x=-0.3915\times0.02+(-0.2415)\times(-0.01)$\kviiidq
+$\phantom{\dd x}=-0.00783+0.00242=-0.00541$\kviiidq
+$\dd y=0.3245\times0.02+0.0647\times(-0.01)$\kviiidq
+$\phantom{\dd y}=0.00649-0.00065=0.00584$\par
+\kotae 手は約 $(-0.0054,\ 0.0058)$（m）動く（本当に計算すると $(-0.0055,\ 0.0058)$）
+\end{reidai}
+
+\begin{reidai}[極座標のタイルの面積]
+極座標で、$r$ が2から2.1まで、$\theta$ が $\theta_0$ から $\theta_0+0.05$〔rad〕までの小さなタイルの面積を、ヤコビアンを使って見積もりましょう。\par
+\kangaekata 座標を取りかえたときの小さな面積は、ヤコビアン×$\dd r\,\dd\theta$。極座標のヤコビアンは $r$ なので、面積 $\approx r\,\dd r\,\dd\theta$。\par
+\shiki $\dd r=0.1$、$\dd\theta=0.05$、$r=2$\kviiidq
+面積 $\approx r\,\dd r\,\dd\theta=2\times0.1\times0.05=0.01$\kviiidq
+確かめ：おうぎ形の面積（4-2）の差で、$\dfrac{1}{2}\times(2.1^2-2^2)\times0.05=0.01025$\par
+\kotae 約0.01（本当は0.01025）
+\end{reidai}
+\noindent タイルのまん中の $r=2.05$ を使うと、$2.05\times0.1\times0.05=0.01025$ で、ぴったり合います。$\dd r$ を細かくするほど、どの $r$ を使ってもちがいは小さくなります。
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+同じロボットの腕（$\theta_1=30°$、$\theta_2=45°$）で、肩を \qty{0.01}{rad}、ひじを \qty{0.02}{rad} 回します。手はどれだけ動くと予想できますか。
+\bkjans{$\dd x=-0.3915\times0.01+(-0.2415)\times0.02=-0.00392-0.00483=-0.00875$。$\dd y=0.3245\times0.01+0.0647\times0.02=0.00325+0.00129=0.00454$。約 $(-0.0087,\ 0.0045)$（m）。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+$x=3r\cos\theta$、$y=2r\sin\theta$（だ円の座標）のヤコビアンを求め、$r=1$、$\dd r=0.1$、$\dd\theta=0.1$ のタイルの面積を見積もりましょう。
+\bkjans{$\frac{\partial x}{\partial r}=3\cos\theta$、$\frac{\partial x}{\partial\theta}=-3r\sin\theta$、$\frac{\partial y}{\partial r}=2\sin\theta$、$\frac{\partial y}{\partial\theta}=2r\cos\theta$。$\det J=6r\cos^2\theta+6r\sin^2\theta=6r$。面積 $\approx6\times1\times0.1\times0.1=0.06$。}
+\end{jibun}
+\end{minipage}\par
+
+\begin{reidai}[止めておく量を書く偏微分（熱力学）]
+理想気体の圧力は、次の式で表されます（物質量 $n$〔mol〕、温度 $T$〔K〕、体積 $V$〔m³〕、$R=\qty{8.31}{J/(mol.K)}$）。
+\[ p=\frac{nRT}{V} \]
+$n=1$、$V=0.0224$ のときの $\left(\dfrac{\partial p}{\partial T}\right)_V$ を求め、意味を言いましょう。\par
+\kangaekata 右下の $V$ は「$V$ を止めておく」という印。$V$ を数とみて $T$ で偏微分する。\par
+\shiki $\left(\dfrac{\partial p}{\partial T}\right)_V=\dfrac{nR}{V}=\dfrac{1\times8.31}{0.0224}\approx371$（$\dfrac{nR}{V}$ が $T$ にかかる数）\par
+\kotae 約 \qty{371}{Pa/K}。体積を変えずに温度を \qty{1}{K} 上げると、圧力は約 \qty{371}{Pa} 上がる
+\end{reidai}
+
+\begin{reidai}[3つの変数の全微分（誤差）]
+直方体の箱の体積 $V=abc$ で、たて $a$ を1\,\%、横 $b$ を2\,\%、高さ $c$ を0.5\,\% 大きくはかってしまいました。体積は約何\,\% 大きく計算されますか。\par
+\kangaekata 3つの変数でも、全微分は項が1つふえるだけ（⑤）。$V$ でわって割合の式にする。\par
+\shiki $\dd V=bc\,\dd a+ac\,\dd b+ab\,\dd c$\kviiidq
+両辺を $V=abc$ でわると、$\dfrac{\dd V}{V}=\dfrac{\dd a}{a}+\dfrac{\dd b}{b}+\dfrac{\dd c}{c}$\kviiidq
+$\dfrac{\dd V}{V}=1+2+0.5=3.5$（\%）\par
+\kotae 約3.5\,\% 大きくなる（本当は $1.01\times1.02\times1.005=1.0354$ で3.54\,\%）
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+例題9の理想気体（$n=1$）で、$T=273$、$V=0.0224$ のときの $\left(\dfrac{\partial p}{\partial V}\right)_T$ を求め、意味を言いましょう。
+\bkjans{$\left(\frac{\partial p}{\partial V}\right)_T=-\frac{nRT}{V^2}=-\frac{8.31\times273}{0.0224^2}\approx\qty{-4.52e6}{Pa/m^3}$。温度を変えずに体積を \qty{0.001}{m^3}（\qty{1}{L}）ふやすと、圧力は約 \qty{4520}{Pa} 下がる。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+直方体の鉄のかたまりの質量 $m=\rho abc$ で、密度 $\rho$ が1\,\%、$a$、$b$、$c$ がそれぞれ0.5\,\% 大きくずれているとき、質量は約何\,\% ずれますか。
+\bkjans{$\dfrac{\dd m}{m}=\dfrac{\dd\rho}{\rho}+\dfrac{\dd a}{a}+\dfrac{\dd b}{b}+\dfrac{\dd c}{c}=1+0.5+0.5+0.5=2.5$（\%）。約2.5\,\%。}
+\end{jibun}
+\end{minipage}\par
+
+
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{全微分を、偏微分の和と書く}
+\bkng{$\dd f=\dfrac{\partial f}{\partial x}+\dfrac{\partial f}{\partial y}$}
+\bkok{$\dd f=\dfrac{\partial f}{\partial x}\,\dd x+\dfrac{\partial f}{\partial y}\,\dd y$}
+坂だけをたしても、変化にはなりません。「坂×進んだ長さ」をたします。$\dd x$、$\dd y$ を忘れると、進む向きや長さが答えに入らなくなります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{わり算の誤差を、ひき算で打ち消す}
+\bkng{$\rho=\dfrac{m}{V}$ で、$m$ も $V$ も1\,\% ずれるので、$1-1=0$\,\%}
+\bkok{いちばん大きいずれは $1+1=2$\,\%}
+ずれは、大きくはかることも小さくはかることもあります。$m$ が +1\,\%、$V$ が $-1$\,\% だと、2つのずれは同じ向き（密度を大きくする向き）に効きます。いちばん大きいずれは、割合の大きさをたして求めます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ヤコビ行列の行と列}
+\bkng{1行めに $\dfrac{\partial x}{\partial\theta_1}$、$\dfrac{\partial y}{\partial\theta_1}$ を並べる}
+\bkok{1行めは $x$ の偏微分 $\dfrac{\partial x}{\partial\theta_1}$、$\dfrac{\partial x}{\partial\theta_2}$}
+行は出てくる量（$x$、$y$）、列は動かす量（$\theta_1$、$\theta_2$）です。入れかえると、$J\,\dd\vec\theta$ の計算がまちがいます。「1列めは肩だけを回したときの手の動き」と覚えておくと、たしかめられます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{角を度のまま使う}
+\bkng{肩を1°回すので、$\dd\theta_1=1$}
+\bkok{$\dd\theta_1=1°=\dfrac{\pi}{180}\approx0.0175$\,rad}
+$\sin$ の偏微分が $\cos$ になるのは、角をラジアンではかるときです（5-15）。度のまま入れると、手の動きが約57倍も大きく出てしまいます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{連鎖律で、片方の道を忘れる}
+\bkng{$\dfrac{\dd h}{\dd t}=\dfrac{\partial h}{\partial x}\dfrac{\dd x}{\dd t}$ だけ}
+\bkok{$\dfrac{\dd h}{\dd t}=\dfrac{\partial h}{\partial x}\dfrac{\dd x}{\dd t}+\dfrac{\partial h}{\partial y}\dfrac{\dd y}{\dd t}$}
+$x$ も $y$ も時間で変わるときは、$t$ から $h$ への道が2つあります（図\ref{bk:8-3:fig-rensa}）。両方の道の分をたします。
+\end{tsumazuki}
+
+\begin{tsumazuki}{極座標のタイルの $r$ を忘れる}
+\bkng{極座標のタイルの面積は $\dd r\,\dd\theta$}
+\bkok{極座標のタイルの面積は $r\,\dd r\,\dd\theta$（ヤコビアンが $r$）}
+同じ $\dd\theta$ でも、外側ほどタイルの横（弧の長さ $r\,\dd\theta$）が長くなります。$r$ を忘れると、8-6 で円の面積を求めるときに、正しい値になりません。単位でも気づけます：$\dd r\,\dd\theta$ は m（長さ）で、面積の m² になりません。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{ロボットは、ヤコビ行列を計算しつづけている}\par\noindent 工場のロボットの手を、まっすぐな線にそって動かすとき、コンピュータは、そのときの関節の角からヤコビ行列 $J$ を作り、ほしい手の速度から関節の角速度を $\dot{\vec\theta}=J^{-1}\dot{\vec p}$（7-5）で求めます。角が変わると $J$ も変わるので、この計算を1秒に何百〜何千回もくり返します。関節が6つの産業用ロボットでは、手の位置と向き（6つの量）を6つの関節の角で偏微分した、6行6列のヤコビ行列を使います。ヤコビアンが0に近い特異姿勢（⑧）を通らないように、動く道すじを決めます。
+\item \textbf{はかる・作るときの「ずれの予算」}\par\noindent 部品を作るときは、寸法ごとに「ここまでのずれは許す」という幅（公差）を決めます。たとえば円柱の部品の体積や重さを、ある範囲に入れたいなら、④の $\dfrac{\Delta V}{V}\approx2\dfrac{\Delta r}{r}+\dfrac{\Delta h}{h}$ から、半径の公差を高さの公差よりきびしくすればよいとわかります。全微分は、どの寸法をていねいに作るべきかを決める道具です。電気の計測でも、電圧計と電流計のずれから、計算した抵抗や電力のずれを、同じ方法で見積もります。
+\end{itemize}
+\end{butsuri}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{エンジンの気体：何を止めて偏微分するか（物理 熱-2・熱-10）}\par\noindent 自動車のエンジンの中の気体は、圧力 $p$、体積 $V$、温度 $T$ が同時に変わります。理想気体なら $pV=nRT$ の関係があるので、3つのうち2つを決めると残りが決まります。だから熱力学では、「体積を止めて温度で偏微分」$\left(\dfrac{\partial p}{\partial T}\right)_V$ のように、何を止めたかを右下に書きます（例題9）。たとえば、体積を止めて温度を上げるとき（なべにふたをして熱する）と、圧力を止めて温度を上げるとき（風船をあたためる）では、温度を \qty{1}{K} 上げるのに必要な熱の量（定積比熱と定圧比熱）がちがいます。圧力を止めたときは、気体がふくらんで外へ仕事をする分だけ、多くの熱がいるのです。物理シリーズの熱力学では、全微分と、止めておく量を書いた偏微分を、たくさん使います。
+\item \textbf{完全微分と「道によらない量」（8-7 への予告）}\par\noindent 山の高さ $h$ の変化 $\dd h$ は全微分なので、P から頂上まで、どの道を通っても、高さの変化の合計は同じ $\qty{100}{m}-\qty{83}{m}=\qty{17}{m}$ です（①で見た「高さは場所だけで決まる」）。一方、歩いた道のりは道で変わります。物理 力-4 の力 $\vec F_1=(y,\ x)$ では、仕事 $y\,\dd x+x\,\dd y$ は $xy$ の全微分なので道によらず、$\vec F_2=(-y,\ x)$ では全微分ではないので道で変わりました。この見分け方を、8-7・8-10 で学びます。
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{同じ腕でも、ヤコビ行列は角の選び方で変わる}
+じぶんでとこう7では、うで2の向きを、ひじの角 $\theta_2$ ではなく、水平からの角 $\varphi$（$=\theta_1+\theta_2$）で表しました。同じ腕、同じ姿勢でも、動かす量の選び方を変えると、ヤコビ行列 $J$ の中の数は変わります。30°・45° の姿勢（$\varphi=75°$）なら、$\theta_1$ と $\varphi$ で偏微分した $J$ は、1行め $(-0.150,\ -0.2415)$、2行め $(0.2598,\ 0.0647)$ です。⑦の $J$ の2列めは同じで、1列めだけがちがいます。$\theta_1$ だけを回すとき、$\varphi$ を止める（うで2は向きを変えずに平行に動く）か、$\theta_2$ を止める（うで2もいっしょに回る）かがちがうからです。
+
+それでも、ヤコビアンはどちらも $L_1L_2\sin(\text{ひじの角})=0.0530$ です。手が動ける小さな面積の倍率は、角の選び方によらず、腕の形だけで決まるのです。偏微分では、「何を止めたか」がいつも大切です（専門書の $\left(\frac{\partial U}{\partial T}\right)_V$ と同じ）。
+\end{column}
+
+
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 主役の山の点 $(20,\ -10)$ から、西へ \qty{0.5}{m}、北へ \qty{1}{m} 進みます。高さの変化を全微分で見積もりましょう。
+\bkpans{坂は $\frac{\partial h}{\partial x}=-0.4$、$\frac{\partial h}{\partial y}=0.4$。$\dd x=-0.5$、$\dd y=1$。$\dd h=(-0.4)\times(-0.5)+0.4\times1=0.6$。約 \qty{0.6}{m} 上がる（本当は \qty{0.5775}{m}）。}
+
+\bkproblem $f(x,\ y)=x^3y$ の全微分を求め、$(1,\ 2)$ から $x$ が0.01、$y$ が0.03ふえたときの $f$ の変化を見積もりましょう。
+\bkpans{$\dd f=3x^2y\,\dd x+x^3\,\dd y$。$(1,\ 2)$ では $6\,\dd x+\dd y$。$6\times0.01+0.03=0.09$（本当は0.0915）。}
+
+\bkproblem 円柱の体積 $V=\pi r^2h$ で、半径が0.5\,\%、高さが2\,\% 大きくずれているとき、体積は約何\,\% ずれますか。
+\bkpans{$\frac{\dd V}{V}=2\times0.5+2=3$（\%）。約3\,\%（本当は3.02\,\%）。}
+
+\bkproblem 電流 $I=\dfrac{V}{R}$ で、電圧 $V$ に ±1\,\%、抵抗 $R$ に ±1\,\% のずれがありえます。電流のずれは、いちばん大きくて何\,\% ですか。
+\bkpans{$\frac{\dd I}{I}=\frac{\dd V}{V}-\frac{\dd R}{R}$。$V$ が +1\,\%、$R$ が $-1$\,\% のとき $1+1=2$（\%）。約2\,\%。}
+
+\bkproblem 主役の山の上を、$x=-20+4t$、$y=10+t$（$t$ は分）と歩きます。$t=0$ のときの高さの変わる速さを、連鎖律で求めましょう。
+\bkpans{$t=0$ で $(-20,\ 10)$。坂は $0.4$ と $-0.4$。$0.4\times4+(-0.4)\times1=1.2$。1分に約 \qty{1.2}{m} 上がる。}
+
+\bkproblem ロボットの腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$）で、$\theta_1=60°$、$\theta_2=30°$ のときのヤコビ行列と、ヤコビアンを求めましょう（$\sin60°=0.866$、$\cos60°=0.5$）。
+\bkpans{$\theta_{12}=90°$。1行め $(-0.30\times0.866-0.25,\ -0.25)=(-0.510,\ -0.25)$、2行め $(0.30\times0.5+0,\ 0)=(0.15,\ 0)$。$\det J=0-(-0.25)\times0.15=0.0375$（$=0.075\times\sin30°$）。}
+
+\bkproblem 三角柱の体積 $V=\dfrac{1}{2}abh$ で、底の三角形の $a$ と $b$ が1\,\% ずつ、高さ $h$ が2\,\% 大きくずれているとき、体積は約何\,\% ずれますか。
+\bkpans{$\frac{\dd V}{V}=\frac{\dd a}{a}+\frac{\dd b}{b}+\frac{\dd h}{h}=1+1+2=4$（\%）。$\frac{1}{2}$ は数なので割合には効かない。約4\,\%。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 問題6のロボットの腕（$\theta_1=60°$、$\theta_2=30°$）で、肩を \qty{0.02}{rad}、ひじを \qty{0.04}{rad} 回すと、手はどれだけ動くと予想できますか。
+\bkpans{$\dd x=-0.510\times0.02+(-0.25)\times0.04=-0.0102-0.0100=-0.0202$。$\dd y=0.15\times0.02+0\times0.04=0.0030$。約 $(-0.020,\ 0.003)$（m）。}
+
+\bkproblem 例題6（2）にならって、ロボットの腕のヤコビアンが $\det J=L_1L_2\sin\theta_2$ になることを、⑦の4つの偏微分から、何も見ずに計算して確かめましょう。次の加法定理（4-9）を使います。
+\[ \sin(A-B)=\sin A\cos B-\cos A\sin B \]
+\bkpans{$\det J$ は、$(-L_1\sin\theta_1-L_2\sin\theta_{12})\times L_2\cos\theta_{12}$ から、$(-L_2\sin\theta_{12})$ と $(L_1\cos\theta_1+L_2\cos\theta_{12})$ の積をひいたもの。展開すると $L_2^{\,2}$ の項は消えて、$L_1L_2\sin\theta_{12}\cos\theta_1$ $-L_1L_2\cos\theta_{12}\sin\theta_1$ が残る。加法定理で $L_1L_2\sin(\theta_{12}-\theta_1)$、つまり $L_1L_2\sin\theta_2$。}
+
+\bkproblem 理想気体の体積は $V=\dfrac{nRT}{p}$ です。$n=1$、$R=8.31$、$p=\qty{101300}{Pa}$ のときの $\left(\dfrac{\partial V}{\partial T}\right)_p$ を求め、意味を言いましょう。
+\bkpans{$\left(\frac{\partial V}{\partial T}\right)_p=\frac{nR}{p}=\frac{8.31}{101300}\approx\qty{8.2e-5}{m^3/K}$。圧力を変えずに温度を \qty{1}{K} 上げると、体積は約 \qty{0.082}{L} ふえる。}
+
+\bkproblem 直方体の金属のかたまりの密度を $\rho=\dfrac{m}{abc}$ で求めます。質量 $m$ に ±0.5\,\%、たて $a$・横 $b$・高さ $c$ に ±1\,\% ずつのずれがありえます。密度のずれは、いちばん大きくて何\,\% ですか（例題4と例題10の考え方を組み合わせる）。
+\bkpans{$\frac{\dd\rho}{\rho}=\frac{\dd m}{m}-\frac{\dd a}{a}-\frac{\dd b}{b}-\frac{\dd c}{c}$。$m$ が +0.5\,\%、$a$、$b$、$c$ が $-1$\,\% ずつのとき、$0.5+1+1+1=3.5$（\%）。いちばん大きくて約3.5\,\%。}
+
+\bkproblem 例題5の道（$x=30-3t$、$y=20-2t$）で、$t=10$ のときの $\dfrac{\dd h}{\dd t}$ を連鎖律で求め、その意味を言いましょう。
+\bkpans{$t=10$ で $(0,\ 0)$。坂はどちらも0なので、$0\times(-3)+0\times(-2)=0$。頂上に着いて、そこは平らなので、高さは（その瞬間）変わらない。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ななめの変化を、東の変化と北の変化のたし算で見積もれる。\bkfurref{bk:8-3:kaidan}
+\item 全微分で、近似の値と誤差の伝わり方を計算できる。\bkfurref{bk:8-3:zenbibun}
+\item 連鎖律とヤコビ行列で、手の動きと面積の倍率（ヤコビアン）を求められる。\bkfurref{bk:8-3:jacobi}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{全微分は「1つずつの変化のたし算」だったね。8-4 では、どの向きに進むと、このたし算がいちばん大きくなるかを考えるよ。}

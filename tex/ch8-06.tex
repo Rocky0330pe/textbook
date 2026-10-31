@@ -1,0 +1,1338 @@
+%% 8-6 面や立体でたし合わせる：重積分（第14回：組 V8-4。ページ制限なし。偶数ページ）
+%% 依頼者の指示（10月29日 13:34）を形にする「名前と操作」の型（tools/kata8-int.md）の最初の章。
+%%   名前の段（記号を読む）→ 直す段（ふつうの定積分に直す）→ 楽をする段（対称性・分ける・データ）、
+%%   場合分けの表8-6（A・A′・B・C・C′・D・E・F・G・H）と流れ図、例題の1行めに「場合：…（表8-6の…）」。
+%% ほかの巻・物理の本との約束：
+%%   7-4（ch7-04:1182）「曲がった座標での積分にもヤコビアン（8-3）」→ ⑦と せいかくに言うと で det J = r、ab r。
+%%   物理 p1-03・p1-05（重心 1/M ∫ r dm を板なら面で）、p1-06（I=∫r^2 dm、球は 2/5 MR^2）、
+%%   p1-10（dA ごとにかけてたす、円の I=πd^4/64、細い輪 2πr dr）、p1-12（∫y dA）、p1-14（Q=∫u 2πr dr）、
+%%   4-15（ch4-15:468「円柱座標や球座標で、パイプの中の流れ」）。数はすべて Python で検算した
+%%   （scratchpad/v8-4/check.py）。主役の山 h=100−0.01x²−0.02y² の体積 1.11×10^6 m³。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata8-int.md、組 V8-4）。頭文字 kviiig は章ごとに置きかえる =====
+\colorlet{kviiigNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kviiigSc}{bkTheme}% ふつうの定積分の枠の線（実線）
+\colorlet{kviiigSb}{bkTheme!8}% ふつうの定積分の地
+\tikzset{
+  kviiig dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kviiig dan1/.style={kviiig dan, draw=kviiigNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kviiig dan2/.style={kviiig dan, draw=kviiigSc, fill=kviiigSb, text=bkInk},
+  kviiig dan3/.style={kviiig dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kviiig name/.style={draw=kviiigNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kviiig seki/.style={draw=kviiigSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kviiigSb},
+  kviiig tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kviiig q/.style={diamond, aspect=2.4, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=center, inner sep=0.3mm, text=bkInk},
+  kviiig do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kviiig go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kviiig yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 段の札（例題の中で）  \kviiigdan{1|2|3}
+\newcommand\kviiigdan[1]{\tikz[baseline=(d.base)]\node[kviiig dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 段の見出し（本文で）  \kviiigdanhead{1|2|3}{見出し}
+\newcommand\kviiigdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kviiig dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kviiigcase{C}
+\newcommand\kviiigcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kviiigbaai{ことば}{8-6}{C}（場合が2つなら {C,G}）
+\newcommand\kviiigbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kviiig@cases#3,\@nil）}
+\def\kviiig@cases#1,#2\@nil{\kviiigcase{#1}\ifx\relax#2\relax\else と\kviiig@cases#2\@nil\fi}
+% 式の中の「名前」と「ふつうの定積分」
+\newcommand\kviiigN[1]{\tikz[baseline=(n.base)]\node[kviiig name] (n) {$\displaystyle #1$};}
+\newcommand\kviiigS[1]{\tikz[baseline=(n.base)]\node[kviiig seki] (n) {$\displaystyle #1$};}
+\newcommand\kviiigNt[1]{\tikz[baseline=(n.base)]{\node[kviiig name] (n) {$\displaystyle #1$};\node[kviiig tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kviiigSt[1]{\tikz[baseline=(n.base)]{\node[kviiig seki] (n) {$\displaystyle #1$};\node[kviiig tag, anchor=north] at ([yshift=-0.8mm]n.south) {ふつうの定積分};}}
+% 場合分けの表の題の帯  \kviiigcasetitle{8-6}{題}
+\newcommand\kviiigcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% タイルの小さな絵（対応表の左の列）  \kviiigpic{1〜7}
+\newcommand\kviiigpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkInk, line width=0.6pt] (0,0) -- (14,0);
+  \foreach \kviiigx/\kviiigh in {3/3.9,5/4.6,7/4.6,9/4.5,11/5.1} {\filldraw[fill=bkTheme!25, draw=bkTheme, line width=0.4pt] ({\kviiigx-1},0) rectangle ({\kviiigx+1},\kviiigh);}
+  \draw[bkInk!80, line width=0.7pt] (1,3.2) .. controls (5,6) and (9,3) .. (13,5.6);
+  \or
+  \draw[bkGray, line width=0.4pt, step=2.5] (0,0) grid (12.5,7.5);
+  \fill[bkTheme!45] (5,2.5) rectangle (7.5,5);
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (12.5,7.5);
+  \or
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (9,6) (0,6) -- (3,8.5) -- (12,8.5) -- (9,6) (12,8.5) -- (12,2.5) -- (9,0);
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (3.5,1.5) rectangle (5.5,3.5) (3.5,3.5) -- (4.3,4.2) -- (6.3,4.2) -- (5.5,3.5) (6.3,4.2) -- (6.3,2.2) -- (5.5,1.5);
+  \or
+  \draw[bkInk, line width=0.7pt] (0,1) .. controls (4,8) and (8,-1) .. (13,6);
+  \draw[bkTheme, line width=1.8pt] (5.2,3.75) -- (7.4,2.9);
+  \or
+  \draw[bkInk, line width=0.7pt] (0,1) .. controls (4,8) and (8,-1) .. (13,6);
+  \draw[bkTheme, line width=1.3pt, -{Stealth[length=1.8mm]}] (4.6,3.95) -- (7.8,2.85);
+  \or
+  \draw[bkInk, line width=0.6pt] (0,1) .. controls (4,4) and (8,4) .. (12,1) -- (13,6) .. controls (9,9) and (5,9) .. (1,6) -- cycle;
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (5,3.6) -- (7.4,3.6) -- (7.8,5.8) -- (5.4,5.8) -- cycle;
+  \or
+  \draw[bkInk, line width=0.6pt] (0,1) .. controls (4,4) and (8,4) .. (12,1) -- (13,6) .. controls (9,9) and (5,9) .. (1,6) -- cycle;
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (5,3.6) -- (7.4,3.6) -- (7.8,5.8) -- (5.4,5.8) -- cycle;
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=1.8mm]}] (6.4,4.7) -- (6.4,10.5);
+  \fi
+\end{tikzpicture}}
+%% ===== この章の部品 =====
+% 小見出し（太字の1行）
+\newcommand\kviiighead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiigbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviiigline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviiigframe[はば]{中身}
+\newcommand\kviiigframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiiga{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiigb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiigs{\rightskip=0pt plus 8em\relax}
+% 板（2 m × 1 m）を n×m のタイルに分け、σ の大きさでぬる  \kviiigplate{(原点)}{1 m の長さ(mm)}{横の数}{たての数}
+\newcommand\kviiigplate[4]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\kviiigdx{2*#2/#3}\pgfmathsetmacro\kviiigdy{#2/#4}
+  \foreach \kviiigi in {1,...,#3} {\foreach \kviiigj in {1,...,#4} {%
+    \pgfmathsetmacro\kviiigs{10+5*(\kviiigi-0.5)*2/#3+2*(\kviiigj-0.5)/#4}%
+    \pgfmathtruncatemacro\kviiigc{8+3.1*(\kviiigs-10)}%
+    \fill[bkTheme!\kviiigc] ({(\kviiigi-1)*\kviiigdx},{(\kviiigj-1)*\kviiigdy}) rectangle ++(\kviiigdx,\kviiigdy);}}
+  \draw[bkTheme!60!black, line width=0.4pt, xstep=\kviiigdx, ystep=\kviiigdy] (0,0) grid ({2*#2},#2);
+  \draw[bkInk, line width=0.9pt] (0,0) rectangle ({2*#2},#2);
+\end{scope}}
+\makeatother
+
+\bkchapter{8}{6}{面や立体でたし合わせる：\\重積分}{\bklevel{5}}{面や立体でたし合わせる：重積分}
+\bkmichishirube{4-5,4-11,4-15,5-10,5-11,5-16,7-4,8-2,8-3}{8-7,8-8,8-11,8-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 板を小さなタイルに分けて重さを表計算でたし、重積分の記号を「何を・どこで・1枚の量」で読める。
+\item \bklevel{4}\enspace 長方形の範囲の重積分を、ふつうの定積分を2回くり返す形に直して計算できる。
+\item \bklevel{5}\enspace 場合分けの表を使って、三角形・円・立体の重積分を、正しいふつうの定積分（極座標・球座標）に直して計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+はばが \qty{2}{m}、奥行きが \qty{1}{m} の鉄の板があります。板の厚さは場所によってちがい、右の奥ほど厚くなっています。\par\vspace{4pt}
+厚さが同じ板なら、「\qty{1}{m^2} あたりの質量×面積」で全体の質量がわかります。でも、この板は場所ごとに「\qty{1}{m^2} あたりの質量」がちがいます。\par\vspace{4pt}
+\textbf{この板全体の重さ（質量）は、何 kg でしょう。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiigplate{(0,0)}{24}{8}{4}
+  \node[font=\footnotesize, anchor=north] at (0,-1.5) {10};
+  \node[font=\footnotesize, anchor=north] at (48,-1.5) {20};
+  \node[font=\footnotesize, anchor=south] at (0,25.5) {12};
+  \node[font=\footnotesize, anchor=south] at (48,25.5) {22};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (12,-5.5) -- (24,-5.5) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (-5,6) -- (-5,18) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 色がこいほど厚い。角の数は\\\qty{1}{m^2} あたりの質量（kg）。}
+\end{minipage}
+\end{hatena}
+
+\noindent 第5巻の 5-10 では、グラフの下の面積を「細い長方形に分けてたす」ことで求め、それを定積分とよびました。この章では、同じ考えを\textbf{面のタイル}で行います。板の重さ、山の土の量、パイプを流れる水の量、回る物の回りにくさ。どれも「小さく分けて、1つずつ量をかけて、たす」で求められます。
+
+積分の記号は「どんな操作をするか」の\textbf{名前}です。答えを出すには、名前を第5巻のふつうの定積分に\textbf{直す}必要があり、どう直すかは形によってちがいます。この章では「こんな形のときは、こう直す」を、場合ごとにていねいに見ていきます（8-7・8-8・8-11 も同じやり方）。
+
+★★★★★の章ですが、「目でわかる」「手でわかる」の段は、表計算と第5巻の定積分だけで読めます。「式でわかる」の段は、場合分けの表と流れ図を見ながら1つずつ進めば大丈夫です。1回で分からなくても、何度ももどってきてください。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[板をタイルに分けて、表計算で重さをたそう]
+板を、1辺 \qty{0.5}{m} の正方形のタイル8枚（横に4枚、たてに2枚）に分けます。タイルのまん中の場所で「\qty{1}{m^2} あたりの質量」$\sigma=10+5x+2y$ を計算し、タイルの面積 $0.5\times0.5=\qty{0.25}{m^2}$ をかけて、全部たします。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 1行めの B1〜E1 に、タイルのまん中の $x$（\texttt{0.25}、\texttt{0.75}、\texttt{1.25}、\texttt{1.75}）を入れる。
+\item A列の A2・A3 に、タイルのまん中の $y$ を入れる。地図と同じく北（奥）を上にするので、A2 に \texttt{0.75}、A3 に \texttt{0.25}。
+\item B2 に \texttt{=(10+5*B\$1+2*\$A2)*0.25} と入れ、B2〜E3 の8つのセルにコピーする。
+\item F2 に \texttt{=SUM(B2:E2)}（行の合計）、B4 に \texttt{=SUM(B2:B3)}（列の合計）と入れ、それぞれ F3、C4〜E4 にコピーする。
+\item F4 に \texttt{=SUM(B2:E3)} と入れて、8枚の合計を出す。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ③の \texttt{B\$1} の「\$」は、「コピーしても1行めのまま動かさない」という印です。\texttt{\$A2} は「A列のまま動かさない」。こうすると、どのセルでも「その列の1行めの $x$」と「その行のA列の $y$」が使われます（2-18 の表計算と同じ使い方）。0.25 をかけるのは、タイル1枚の面積が \qty{0.25}{m^2} だからです。
+
+\begin{bkcenter}
+\bksheet{6}{15}{%
+1 & $y$＼$x$ & 0.25 & 0.75 & 1.25 & 1.75 & 行の合計 \\
+2 & 0.75 & 3.1875 & 3.8125 & 4.4375 & 5.0625 & 16.5 \\
+3 & 0.25 & 2.9375 & 3.5625 & 4.1875 & 4.8125 & 15.5 \\
+4 & 列の合計 & 6.125 & 7.375 & 8.625 & 9.875 & 32 \\}
+\bktabcaption{表計算の結果。B2〜E3 は、タイル1枚の質量（kg）。F4 が8枚の合計 \qty{32}{kg}。}
+\label{bk:8-6:tab-sheet}
+\end{bkcenter}
+
+\begin{omoidasou}
+\bkrecall{5-10}{グラフの下の面積は、細い長方形に分けて「高さ×はば」をたし、はばを0に近づけた先で求める。これが定積分 $\displaystyle\int_a^b f(x)\,\dd x$。}
+\bkrecall{5-11}{$F(x)$ を微分して $f(x)$ になるなら、$\displaystyle\int_a^b f(x)\,\dd x=F(b)-F(a)$。}
+\bkrecall{8-2}{偏微分は「ほかを止めて1つだけ動かす」。止めた文字は、ただの数と同じにあつかう。}
+\bkrecall{4-15}{極座標：中心からの距離 $r$ と角 $\theta$ で場所を表す。$x=r\cos\theta$、$y=r\sin\theta$。}
+\bkrecall{8-3}{ヤコビ行列 $J$ の行列式（ヤコビアン）は、小さな面積が何倍になるかを表す（7-4 の「行列式は面積の倍率」）。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{タイルに分けてたす}{\bklevel{3}}
+
+\bksubsection{1}{タイルに分けて、1枚ずつかけて、たす}
+
+\label{bk:8-6:tile}やってみようでは、板を8枚のタイルに分けました。1枚ずつ、「まん中の場所の $\sigma$」に「タイルの面積」をかけて、そのタイルの質量を出しました。それを全部たすと \qty{32}{kg} になりました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiigplate{(0,0)}{50}{4}{2}
+  \foreach \kviiigi/\kviiigx in {1/0.25,2/0.75,3/1.25,4/1.75} {\foreach \kviiigj/\kviiigy in {1/0.25,2/0.75} {%
+    \pgfmathsetmacro\kviiigs{10+5*\kviiigx+2*\kviiigy}\pgfmathsetmacro\kviiigm{\kviiigs*0.25}%
+    \filldraw[fill=white, draw=bkInk, line width=0.4pt] ({(\kviiigi-0.5)*25},{(\kviiigj-0.5)*25+2}) circle (1);
+    \node[font=\footnotesize, fill=white, rounded corners=0.6mm, inner sep=0.8mm] at ({(\kviiigi-0.5)*25},{(\kviiigj-0.5)*25-4.5}) {$\pgfmathprintnumber[fixed, precision=2]{\kviiigs}$};
+}}
+  \foreach \kviiigx in {0,1,2} {\node[font=\footnotesize, anchor=north] at ({\kviiigx*50},-1.5) {$\kviiigx$};}
+  \node[font=\footnotesize, anchor=east] at (-1.5,0) {0};
+  \node[font=\footnotesize, anchor=east] at (-1.5,50) {1};
+  \node[font=\footnotesize, anchor=west] at (101.5,-3) {$x$（m）};
+  \node[font=\footnotesize, anchor=south] at (0,52) {$y$（m）};
+\end{tikzpicture}
+\bkfigcaption{8枚のタイルと、まん中の点（白い丸）の $\sigma$（kg/m$^2$）。たとえば右上のタイルは、$x=1.75$、$y=0.75$ で $\sigma=10+5\times1.75+2\times0.75=20.25$、質量は $20.25\times0.25\approx\qty{5.06}{kg}$。}
+\label{bk:8-6:fig-tile8}
+\end{bkfigure}
+
+\kviiighead{まん中ではなく、角の値を使うと？}
+タイルの $\sigma$ に、まん中ではなく左下の角の値を使ってみます。左下の角は $\sigma$ がいちばん小さい所なので、合計は少なめに出ます。タイルを細かくしていくと、次の表のようになりました。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,30mm] Q[c,m,24mm] Q[c,m,30mm] Q[c,m,30mm]}, row{2-Z}={font=\small}}
+分け方（横×たて） & タイルの数 & 左下の角の値で（kg） & まん中の値で（kg） \\
+4×2 & 8 & 28.5 & 32 \\
+8×4 & 32 & 30.25 & 32 \\
+16×8 & 128 & 31.125 & 32 \\
+40×20 & 800 & 31.65 & 32 \\
+400×200 & \num{80000} & 31.965 & 32 \\
+\end{bktable}
+\bktabcaption{タイルを細かくしていくと、角の値の合計も 32 に近づく。}
+\label{bk:8-6:tab-hosoku}
+\end{bkcenter}
+
+左下の角の値で計算した合計は、タイルを細かくするほど 32 に近づきます。5-10 で、細い長方形を細くしていくと、面積がある値に近づいたのと同じです。
+
+まん中の値を使うと、はじめから 32 ぴったりです。これは、$\sigma=10+5x+2y$ が1次式（平らな坂の形）だからです。1次式なら、タイルの左半分で少なすぎる分と、右半分で多すぎる分が、ちょうど打ち消し合います。$\sigma$ が1次式でないときは、まん中の値を使っても少しずれます。それでも、タイルを細かくすれば、どの点の値を使っても同じ値に近づきます。
+
+\kviiighead{5-10 の細い長方形との比べ}
+5-10 では、$x$ だけが変わる関数 $f(x)$ を、細い長方形に分けてたしました。この章では、場所が $x$ と $y$ の2つの数で決まる量 $\sigma(x,\ y)$ を、面のタイルに分けてたします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (52,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,32);
+    \foreach \kviiigx in {0,6,...,42} {\pgfmathsetmacro\kviiigh{8+0.012*(\kviiigx+3)*(\kviiigx+3)}\filldraw[fill=bkTheme!22, draw=bkTheme, line width=0.5pt] (\kviiigx+3,0) rectangle ++(6,\kviiigh);}
+    \draw[bkInk, line width=1.1pt, domain=2:50, samples=40] plot (\x,{8+0.012*\x*\x});
+    \node[font=\footnotesize, anchor=north] at (26,-2) {5-10：細い長方形（はば $\dd x$）};
+  \end{scope}
+  \begin{scope}[xshift=70mm]
+    \kviiigplate{(0,4)}{24}{8}{4}
+    \fill[bkOrange] (30,22) rectangle (36,28);
+    \draw[bkInk, line width=0.6pt] (30,22) rectangle (36,28);
+    \node[font=\footnotesize, anchor=north] at (24,-2) {8-6：面のタイル（面積 $\dd A$）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左は第5巻の細い長方形、右はこの章のタイル。どちらも「小さく分けて、1つずつ量をかけて、たす」。オレンジのタイル1枚の質量は「その場所の $\sigma$ × タイルの面積」。}
+\label{bk:8-6:fig-hikaku}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,30mm] Q[l,m,44mm] Q[l,m,44mm]}, row{2-Z}={font=\small}}
+ & 5-10（定積分） & 8-6（この章） \\
+分けるもの & 区間 $a\leqq x\leqq b$ & 板の形（面の範囲） \\
+小さな1つ & 細い長方形（はば $\Delta x$） & タイル（面積 $\Delta A$） \\
+1つの量 & 高さ×はば $f(x)\,\Delta x$ & $\sigma$×面積 $\sigma(x,\ y)\,\Delta A$ \\
+たした先 & 面積 & 板の質量 \\
+\end{bktable}
+\bktabcaption{細い長方形とタイルの比べ。}
+\end{bkcenter}
+
+\bksubsection{2}{名前の段：重積分の記号を読む}
+
+\label{bk:8-6:namae}タイルを細かくした先の値を、記号で次のように書き、\textbf{重積分}（じゅうせきぶん）とよびます。\bkidx{じゅうせきぶん}{重積分}2つの数で場所が決まる面の上の積分なので、\textbf{2重積分}（にじゅうせきぶん）ともいいます。
+\kviiigframe[90mm]{\Large $\displaystyle\iint_D\sigma(x,\ y)\,\dd A$\\[3pt]\normalsize\sffamily 「範囲 $D$ の上で、$\sigma$×タイルの面積 $\dd A$ をたし合わせた先」}
+読み方は「ダブル・インテグラル、ディーの上で、シグマ、ディー・エー」などです。$\sigma$ はギリシャ文字で「シグマ」と読みます。
+
+\kviiigdanhead{1}{記号を読む：何を・どこで・1枚の量}
+この記号には、「何を」「どこで」「1枚の量」の3つが書いてあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\LARGE, inner sep=0.5mm] (I) at (56,0) {$\displaystyle\iint$};
+  \node[font=\Large, inner sep=0.5mm, anchor=north west] (D) at ([xshift=-2.6mm, yshift=1.2mm]I.south east) {$D$};
+  \node[font=\LARGE, inner sep=0.5mm, anchor=west] (s) at ([xshift=3mm]I.east) {$\sigma(x,\ y)$};
+  \node[font=\LARGE, inner sep=0.5mm, anchor=west] (A) at ([xshift=1.5mm]s.east) {$\dd A$};
+  \node[bk node, font=\sffamily\footnotesize, text width=38mm, anchor=west] (l1) at (0,15) {∫が2つ：場所を表す数が\\2つ（$x$ と $y$）の面だから};
+  \node[bk node, font=\sffamily\footnotesize, text width=38mm, anchor=west] (l2) at (0,-15) {どこで：たし合わせる範囲\\（板の形）};
+  \node[bk node, font=\sffamily\footnotesize, text width=33mm, anchor=west] (l3) at (95,15) {何を：1\,m$^2$ あたりの\\質量（場所でちがう）};
+  \node[bk node, font=\sffamily\footnotesize, text width=33mm, anchor=west] (l4) at (95,-15) {1枚の量：小さな\\タイルの面積};
+  \draw[bk link] (l1.east) -- (I.north west);
+  \draw[bk link] (l2.east) -- (D.west);
+  \draw[bk link] (l3.west) -- (s.north east);
+  \draw[bk link] (l4.west) -- (A.south east);
+\end{tikzpicture}
+\bkfigcaption{重積分の記号の読み方。}
+\label{bk:8-6:fig-yomi}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{どこで}：∬ の右下の $D$ は、たし合わせる範囲（板の形）です。$D$ は英語の domain（範囲）の頭文字です。はてな？の板なら、「$0\leqq x\leqq2$、$0\leqq y\leqq1$ の長方形」が $D$ です。
+\item \textbf{何を}：$\sigma(x,\ y)$ は、場所 $(x,\ y)$ での\qty{1}{m^2} あたりの質量です。場所ごとに値がちがうので、$(x,\ y)$ をつけて書きます。
+\item \textbf{1枚の量}：$\dd A$ は、とても小さなタイルの面積です。$A$ は英語の area（面積）の頭文字です。$\sigma\,\dd A$ が、タイル1枚の質量です。
+\end{enumerate}
+
+\kviiighead{なぜ ∫ が2つなのか}
+5-10 の定積分 $\int_a^b f(x)\,\dd x$ では、場所は $x$ の1つの数で決まりました（数直線の上）。板の上の場所は、$x$ と $y$ の2つの数で決まります。そこで、∫ を2つ重ねて書きます。この巻では、次の約束を使います。
+
+\kviiigframe[110mm]{\sffamily ∫ の数 ＝ 場所を表す数の数\\[2pt]\normalsize 道（線）は1つ：$\displaystyle\int_C$\qquad 面は2つ：$\displaystyle\iint_D$\qquad 立体は3つ：$\displaystyle\iiint_V$}
+
+\kviiighead{記号は「操作の名前」}
+ここで、とても大事なことがあります。$\iint_D\sigma\,\dd A$ という記号は、「タイルに分けて、$\sigma$×面積をたし、細かくした先」という\textbf{操作の名前}です。この記号を見ただけでは、まだ計算はできません。
+
+5-10 の定積分 $\int_0^2 x^2\,\dd x$ なら、「$x$ を0から2まで動かす」と、範囲が数で書いてありました。だから、原始関数を使って計算できました（5-11）。ところが $\iint_D$ には、$D$ という名前しか書いてありません。$x$ と $y$ をどの順に、どこからどこまで動かすかは、書いてないのです。
+
+そこで、重積分の答えを出すには、次の②の段で、名前を\textbf{ふつうの定積分}（第5巻の、範囲が数で書いてある定積分）に\textbf{直し}ます。この本では、式の中の「名前」と「ふつうの定積分」を、次のように枠で見分けます。
+
+\[ \kviiigNt{\iint_D\sigma\,\dd A}=\kviiigSt{\int_0^1\!\!\Bigl(\int_0^2(10+5x+2y)\,\dd x\Bigr)\dd y} \]
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,30mm] Q[l,m,44mm] Q[l,m,44mm]}, row{2-Z}={font=\small}}
+ & 名前 & ふつうの定積分 \\
+枠 & \textbf{点線}の枠・白い地 & \textbf{実線}の枠・うすい色の地 \\
+書いてあること & 何を・どこで・1枚の量 & 何を・どの文字を・何から何まで \\
+計算 & まだできない & 原始関数（5-11）や表計算でできる \\
+\end{bktable}
+\bktabcaption{「名前」と「ふつうの定積分」の見分け方。点線は「まだ名前だけ」、実線は「ここで計算できる」の印。}
+\label{bk:8-6:tab-waku}
+\end{bkcenter}
+
+左の名前と右のふつうの定積分は、同じ値（\qty{32}{kg}）を表しています。右の形にどう直すのかを、③からていねいに見ていきます。
+
+\kviiighead{ほかの積分の名前も、同じ考え}
+この巻では、重積分のほかに、道にそってたす積分（8-7）、曲がった面でたす積分（8-8）が出てきます。どれも「小さく分けて、1つずつ量をかけて、たす」の名前で、ふつうの定積分に直して計算します。次の表は、この巻に出てくる積分の名前の一覧です。まだ学んでいない行は、いまは読みとばしてかまいません。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,17mm] Q[c,m,30mm] Q[l,m,31mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+タイル & 名前（記号） & 何をたすか（1枚の量） & ふつうの定積分に直した形 \\
+\kviiigpic{1} & $\displaystyle\int_a^b f\,\dd x$ & $f$×細い長方形のはば $\dd x$ & そのまま（第5巻） \\
+\kviiigpic{2} & $\displaystyle\iint_D f\,\dd A$ & $f$×タイルの面積 $\dd A$ & 場所を2つの数で表し、定積分を2回（8-6） \\
+\kviiigpic{3} & $\displaystyle\iiint_V f\,\dd V$ & $f$×小さな箱の体積 $\dd V$ & 場所を3つの数で表し、定積分を3回（8-6） \\
+\kviiigpic{4} & $\displaystyle\int_C f\,\dd s$ & $f$×1歩の長さ $\dd s$ & 道を1つの数で表し、定積分を1回（8-7） \\
+\kviiigpic{5} & $\displaystyle\int_C\vec F\cdot\dd\vec r$ & 力と1歩の矢印 $\dd\vec r$ の内積 & 道を1つの数で表し、定積分を1回（8-7） \\
+\kviiigpic{6} & $\displaystyle\iint_S f\,\dd S$ & $f$×曲がったタイルの面積 $\dd S$ & 面を2つの数で表し、重積分に（8-8） \\
+\kviiigpic{7} & $\displaystyle\iint_S\vec F\cdot\vec n\,\dd S$ & 矢印と、向きのついたタイル $\vec n\,\dd S$ の内積 & 面を2つの数で表し、重積分に（8-8） \\
+ & $\displaystyle\oint_C$\quad $\displaystyle\oiint_S$ & ◯は「閉じている」という印 & 上と同じ。定理で取りかえられる（8-11） \\
+\end{bktable}
+\bktabcaption{この巻の積分の名前と、ふつうの定積分に直した形。最後の行の ◯ は、道や面が「閉じている」という印で、円の形や面積を表すのではない。}
+\label{bk:8-6:tab-namae}
+\end{bkcenter}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 重積分 $\iint_D f\,\dd A$ は、「範囲 $D$ をタイルに分け、$f$×タイルの面積をたし、細かくした先」という\textbf{操作の名前}。
+\item 記号から、「何を（$f$）」「どこで（$D$）」「1枚の量（$\dd A$）」を読みとる（①名前の段）。
+\item 答えを出すには、ふつうの定積分に直す（②直す段）。直す前に、楽な道をさがす（③楽をする段）。
+\end{itemize}
+\end{taisetsu}
+
+\bkstage{te}{手でわかる}{ふつうの定積分を2回くり返す}{\bklevel{4}}
+
+\bksubsection{3}{表の合計は、行からでも列からでも同じ}
+
+\label{bk:8-6:gyouretsu}表1 では、8枚の合計 \qty{32}{kg} を、2通りに出しました。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{行ごとにたしてから、行の合計をたす}\par\nobreak\noindent $16.5+15.5=32$
+\item \textbf{列ごとにたしてから、列の合計をたす}\par\nobreak\noindent $6.125+7.375+8.625+9.875=32$
+\end{enumerate}
+どちらも同じ32です。表の数を全部たすのですから、どの順番でたしても同じになります（1-13・2-18 の表の合計と同じ）。
+
+
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \kviiigplate{(0,0)}{25}{4}{2}
+    \draw[bkOrange!85!black, line width=1.6pt, rounded corners=1mm] (0.6,25.6) rectangle (49.4,49.4);
+    \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=2.4mm]}] (4,37.5) -- (46,37.5);
+    \node[font=\footnotesize, anchor=north] at (25,-2) {行の合計：$y$ を止めて、$x$ の向きにたす};
+    \node[font=\footnotesize, anchor=west] at (51,37.5) {16.5};
+    \node[font=\footnotesize, anchor=west] at (51,12.5) {15.5};
+  \end{scope}
+  \begin{scope}[xshift=72mm]
+    \kviiigplate{(0,0)}{25}{4}{2}
+    \draw[bkGreen!60!black, line width=1.6pt, rounded corners=1mm] (25.6,0.6) rectangle (36.9,49.4);
+    \draw[bkGreen!60!black, line width=1.2pt, -{Stealth[length=2.4mm]}] (31.25,4) -- (31.25,46);
+    \node[font=\footnotesize, anchor=north] at (25,-2) {列の合計：$x$ を止めて、$y$ の向きにたす};
+    \foreach \kviiigx/\kviiigv in {6.25/6.125,18.75/7.375,31.25/8.625,43.75/9.875} {\node[font=\footnotesize, anchor=south] at (\kviiigx,50.5) {\kviiigv};}
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{行の合計（オレンジのわく）は、$y$ を1つに止めて、横にならんだタイルをたしたもの。列の合計（緑のわく）は、$x$ を止めて、たてにたしたもの。}
+\label{bk:8-6:fig-gyouretsu}
+\end{bkfigure}
+
+\kviiighead{行の合計は、$y$ を止めた定積分}
+行の合計は、「$y$ を1つの値に止めて、$x$ だけを0から2まで動かしてたす」ことです。8-2 の偏微分で「ほかを止めて1つだけ動かす」としたのと同じ「止める」です。
+
+タイルを横にどんどん細くすると、行の合計は、$y$ を止めた $x$ の定積分になります。$y=0.75$ の行なら、$\sigma=10+5x+2\times0.75=11.5+5x$ を、$x$ で0から2まで積分します。
+\begin{bkhenkei}
+\int_0^2(11.5+5x)\,\dd x & $y=0.75$ に止めた $\sigma$ を、$x$ で積分する \\
+=\Bigl[\,11.5x+\frac{5}{2}x^2\,\Bigr]_0^2 & 原始関数（5-11） \\
+=23+10=33 & $x=2$ を入れ、$x=0$ の0をひく \\
+\end{bkhenkei}
+この33は、「$y=0.75$ の所の、横1列の帯の、奥行き \qty{1}{m} あたりの質量」（kg/m）です。帯の奥行きは \qty{0.5}{m} なので、$33\times0.5=16.5$ kg。表1 の2行めの合計 16.5 とぴったり同じです。
+
+\kviiighead{$y$ を文字のまま止めておく}
+$y=0.75$ のかわりに、$y$ を文字のまま止めて計算すると、どの行にも使える式ができます。
+\begin{bkhenkei}
+\int_0^2(10+5x+2y)\,\dd x & $y$ は止めてあるので、ただの数と同じ \\
+=\Bigl[\,10x+\frac{5}{2}x^2+2y\,x\,\Bigr]_0^2 & $2y$ は定数なので、原始関数は $2y\,x$ \\
+=20+10+4y=30+4y & $x=2$ を入れる（$x=0$ では0） \\
+\end{bkhenkei}
+$30+4y$ は、「高さ $y$ の所の帯の、奥行き1\,m あたりの質量」です。$y=0.75$ を入れると33、$y=0.25$ を入れると31。どちらも上で求めた値と同じです。
+
+最後に、この帯を、奥行きの向き（$y$）に0から1までたします。
+\begin{bkhenkei}
+\int_0^1(30+4y)\,\dd y & 帯の質量を、$y$ で0から1までたす \\
+=\Bigl[\,30y+2y^2\,\Bigr]_0^1 & 原始関数 \\
+=30+2=32 & $y=1$ を入れる \\
+\end{bkhenkei}
+表計算と同じ \qty{32}{kg} が、ふつうの定積分を2回くり返して出てきました。
+
+\bksubsection{4}{直す段：長方形なら、ふつうの定積分を2回}
+
+\label{bk:8-6:naosu}③でしたことを、手順にまとめます。これが「名前」を「ふつうの定積分」に直す方法です。
+
+\kviiigdanhead{2}{場所を数で表し、範囲を決め、内側から1つずつ}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{場所を数で表す}：板の上の場所を $(x,\ y)$ で表す。
+\item \textbf{1枚の量をその数で書く}：タイルを、横 $\dd x$・たて $\dd y$ の小さな長方形にとると、面積は $\dd A=\dd x\,\dd y$。
+\item \textbf{数の範囲を決める}：$0\leqq x\leqq2$、$0\leqq y\leqq1$。
+\item \textbf{内側から計算する}：内側の定積分では $y$ を止めて $x$ で積分し、出てきた $y$ の式を、外側で $y$ で積分する。
+\end{enumerate}
+
+\[ \kviiigN{\iint_D\sigma\,\dd A}=\kviiigS{\int_0^1\!\!\Bigl(\int_0^2(10+5x+2y)\,\dd x\Bigr)\dd y}=\int_0^1(30+4y)\,\dd y=32 \]
+
+かっこの中の積分を\textbf{内側の積分}、外の積分を\textbf{外側の積分}といいます。内側の $\int_0^2\dots\dd x$ は「$x$ を0から2まで」、外側の $\int_0^1\dots\dd y$ は「$y$ を0から1まで」です。∫ と $\dd$ は、内側どうし、外側どうしで組になります。このように、ふつうの定積分を何回かくり返す形を、\textbf{累次積分}（るいじせきぶん）といいます。\bkidx{るいじせきぶん}{累次積分}かっこを省いて $\int_0^1\!\int_0^2(10+5x+2y)\,\dd x\,\dd y$ と書くこともあります。
+
+\kviiighead{順番を変えても同じ}
+列の合計からたしても32だったように、先に $y$ で積分してもかまいません。
+\begin{bkhenkei}
+\int_0^1(10+5x+2y)\,\dd y & こんどは $x$ を止めて、$y$ で積分する \\
+=\Bigl[\,10y+5x\,y+y^2\,\Bigr]_0^1=11+5x & $5x$ は定数なので、原始関数は $5x\,y$ \\
+\int_0^2(11+5x)\,\dd x=\Bigl[\,11x+\frac{5}{2}x^2\,\Bigr]_0^2 & 外側は $x$ で0から2まで \\
+=22+10=32 & 同じ32 \\
+\end{bkhenkei}
+範囲が長方形なら、どちらの順番でも同じ答えになります。計算が楽なほうを選べます。
+
+\kviiighead{\bkhatenaref の答え}
+場所ごとの「\qty{1}{m^2} あたりの質量」$\sigma$ を、\textbf{面密度}（めんみつど）といいます。\bkidx{めんみつど}{面密度}
+はてな？の板の質量は、\qty{32}{kg} です。表計算でタイル8枚のまん中の値をたしても、ふつうの定積分を2回くり返しても、同じ32が出ます。平らな鉄の板（厚さ一定）なら、$\sigma$ が一定なので「$\sigma$×面積」ですが、厚さが場所でちがうときは、重積分で求めます。
+
+\kviiighead{かけ算に分かれる形}
+$f(x,\ y)=x\,y^2$ のように、$f$ が「$x$ だけの式」と「$y$ だけの式」のかけ算になっているときは、もっと楽です。範囲 $0\leqq x\leqq2$、$0\leqq y\leqq3$ で計算します。
+\begin{bkhenkei}
+\int_0^2 x\,y^2\,\dd x & 内側：$y$ を止めると $y^2$ はただの数 \\
+=y^2\int_0^2 x\,\dd x=y^2\times2=2y^2 & 数 $y^2$ は積分の外に出せる \\
+\int_0^3 2y^2\,\dd y=\Bigl[\,\frac{2}{3}y^3\,\Bigr]_0^3=18 & 外側：$y$ で0から3まで \\
+\end{bkhenkei}
+内側の積分で、$y^2$ は外に出ました。だから答えは、2つのふつうの定積分のかけ算になります。
+\kviiigline{$\displaystyle\int_0^3\!\!\int_0^2 x\,y^2\,\dd x\,\dd y=\Bigl(\int_0^2x\,\dd x\Bigr)\Bigl(\int_0^3y^2\,\dd y\Bigr)=2\times9=18$}
+これが使えるのは、範囲が長方形で、$f$ が「$x$ だけ」×「$y$ だけ」に分かれるときだけです。
+
+\bkkokomade[板をタイルに分けて表計算でたし、長方形の範囲なら、ふつうの定積分を2回くり返して計算できれば十分です。この先は、三角形・円・立体のときの直し方です。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{形ごとに、直し方を選ぶ}{\bklevel{5}}
+
+\bksubsection{5}{場合分けの表と流れ図}
+
+\label{bk:8-6:basho}長方形でない形では、④の手順③「数の範囲を決める」が、そのままではできません。たとえば円の板では、$x$ の範囲が $y$ によって変わります。また、立体なら $\dd A$ ではなく、小さな箱の体積 $\dd V$ をたします。
+
+どう直すかは、形によってちがいます。そこで、「こんなときは、こう直す」を、次の見開きの左のページに表（場合分けの表8-6）にまとめ、右のページに、どの順で問いかければよいかを流れ図にしました。表と流れ図は同じ記号（A〜H）を使っています。この章の例題は、どれもこの記号を1行めに書いてあります。
+
+表の A〜E が、②の\textbf{直す段}の手順です。F・G・H は、③の\textbf{楽をする段}です。楽をする段は、直す前に確かめます。だから流れ図では、楽をする段の問い（H・F・G）が上にあり、そのあとに直す段の問い（形の問い）がならびます。段の番号は①②③ですが、使う順は「①→③→②」です。
+
+\kviiighead{流れ図の使い方：はてな？の板の場合}
+はてな？の板 $\iint_D(10+5x+2y)\,\dd A$（$D$ は \qty{2}{m}×\qty{1}{m} の長方形）で、流れ図をたどってみます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：何を＝$\sigma=10+5x+2y$、どこで＝長方形 $D$、1枚の量＝$\dd A$。
+\item データだけ？\enspace いいえ（式がある）。\enspace 簡単な形の和・差？\enspace いいえ（1つの長方形）。
+\item 折り返し・回転で0や同じになる？\enspace いいえ（$\sigma$ は右の奥ほど大きく、折り返すと値が変わる）。
+\item 立体？\enspace いいえ。\enspace 円の形？\enspace いいえ。
+\item 長方形？\enspace はい。\enspace $f=g(x)\,h(y)$？\enspace いいえ（$10+5x+2y$ は、かけ算に分かれない）。
+\end{enumerate}
+こうして、場合 \kviiigcase{A}（定積分を2回、順番は自由）に決まります。④でしたとおりです。計算したら、流れ図のいちばん下の「確かめ」で、表計算の32 kg と同じかを見ます。
+
+1回で全部の場合を覚えなくても大丈夫です。問題を解くたびに、表と流れ図にもどって、どの場合かを確かめましょう。
+
+\kviiighead{どの場合かな？}
+次の積分は、場合分けの表8-6のどの場合でしょう。流れ図を上からたどって、先に自分で考えてから答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item 半径2の円の板で $\iint(x^2+y^2)\,\dd A$\par\nobreak\noindent 答え：\kviiigcase{C$'$}。円で、$x^2+y^2=r^2$ は中心からの距離 $r$ だけで決まる。
+\item 頂点が $(0,\ 0)$、$(2,\ 0)$、$(0,\ 2)$ の三角形の板で $\iint x\,\dd A$\par\nobreak\noindent 答え：\kviiigcase{B}。境目がななめの線。
+\item $0\leqq x\leqq1$、$0\leqq y\leqq2$ の長方形で $\iint x\,e^{y}\,\dd A$\par\nobreak\noindent 答え：\kviiigcase{A$'$}。長方形で、$x\,e^{y}$ は「$x$ だけ」×「$y$ だけ」。
+\item 1辺 \qty{1}{m} の立方体の中で $\iiint(x+y+z)\,\dd V$\par\nobreak\noindent 答え：\kviiigcase{E}。直方体なので、A の定積分を3回。
+\item 町を \qty{100}{m} 四方のマスに分け、マスごとに数えた人の数から、町の人口を出す\par\nobreak\noindent 答え：\kviiigcase{H}。式がなく、データだけ。
+\item 中心が原点の円の板で $\iint x\,\dd A$\par\nobreak\noindent 答え：\kviiigcase{G}。左右対称で、$x$ は $-x$ にすると符号が変わるので0。
+\end{enumerate}
+
+\kviiigcasetitle{8-6}{重積分：どんなときに、どう直す？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=2.2pt, colsep=4pt}
+記号 & こんなとき & 手順（ふつうの定積分に直す） & 例題 \\
+\kviiigcase{A} & 範囲が長方形 & $\displaystyle\int_c^d\Bigl(\int_a^b f\,\dd x\Bigr)\dd y$。内側は $y$ を止めて $x$ で積分。順番は自由 & 1 \\
+\kviiigcase{A$'$} & 長方形で、$f$ が「$x$ だけ」×「$y$ だけ」 & 2つのふつうの定積分のかけ算 & 2 \\
+\kviiigcase{B} & 境目がななめの線・曲線（三角形など） & たて線で切り、内側の範囲を外側の文字の式で書く。順番を変えるときは図をかき直す & 3・4 \\
+\kviiigcase{C} & 円の形（円・おうぎ形・輪） & 極座標 $x=r\cos\theta$、$y=r\sin\theta$。タイルは $\dd A=r\,\dd r\,\dd\theta$ & 5 \\
+\kviiigcase{C$'$} & 円・輪で、$f$ が中心からの距離 $r$ だけで決まる & 細い輪に分ける：$\dd A=2\pi r\,\dd r$。定積分1回 & 6・7 \\
+\kviiigcase{D} & 立体の体積で、切り口の面積 $A(z)$ がわかる & 体積 $=\int A(z)\,\dd z$（内側の2回が切り口の面積） & 8 \\
+\kviiigcase{E} & 立体（直方体・円柱・球など） & 範囲を内側から決めて定積分を3回（直方体なら A を3回）。円柱座標 $\dd V=r\,\dd r\,\dd\theta\,\dd z$、球座標 $\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$ & 9 \\
+\kviiigcase{F} & 簡単な形の和・差（穴あき・L字） & 分けて、それぞれ A〜E で計算し、たす・ひく & 10 \\
+\kviiigcase{G} & 折り返し・回転で、0になる・同じになる部分がある & 計算の前に使う。左右対称で $x$ の奇関数なら0。円なら $\iint x^2\,\dd A=\iint y^2\,\dd A$ & 5・6 \\
+\kviiigcase{H} & 式がない（データだけ） & 表計算で「マスの値×マスの面積」をたす & 11 \\
+\end{bktable}
+\end{bkcenter}
+{\small A$'$・C$'$ の「$'$」は「A のなかま」「C のなかま」という印です。微分の印ではありません。}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.93mm, kviiig q/.append style={aspect=3.4}]
+  \node[kviiig do, text width=62mm] (s) at (40,0) {記号を読む（名前の段）\\何を・どこで・1枚の量};
+  \node[kviiig q] (q1) at (22,-19) {データだけ？};
+  \node[kviiig do, text width=40mm, anchor=west] (rH) at (54,-19) {表計算でマスの和\enspace\kviiigcase{H}};
+  \node[kviiig q] (q2) at (22,-36) {簡単な形の和・差？};
+  \node[kviiig do, text width=48mm, anchor=west] (rF) at (54,-36) {分けて、1つずつ下の問いへ\enspace\kviiigcase{F}};
+  \node[kviiig q] (q3) at (22,-57) {折り返し・回転で\\0や同じになる？};
+  \node[kviiig do, text width=48mm, anchor=west] (rG) at (54,-57) {先に使う。残りがあれば\\下の問いへ\enspace\kviiigcase{G}};
+  \node[kviiig q] (q4) at (22,-77) {立体？};
+  \node[kviiig q] (q4a) at (68,-77) {体積で、切り口の\\面積がわかる？};
+  \node[kviiig do, text width=17mm, anchor=west] (rD) at (102,-77) {$\int A(z)\,\dd z$\\\kviiigcase{D}};
+  \node[kviiig q] (q4b) at (68,-94) {円柱・球の形？};
+  \node[kviiig do, text width=17mm, anchor=west] (rE1) at (102,-94) {円柱座標・\\球座標\enspace\kviiigcase{E}};
+  \node[kviiig do, text width=50mm] (rE2) at (68,-109) {直方体・ほかの形：範囲を内側\\から決めて定積分を3回\enspace\kviiigcase{E}};
+  \node[kviiig q] (q5) at (22,-126) {円の形？};
+  \node[kviiig q] (q5a) at (68,-126) {$f$ は中心からの\\距離 $r$ だけ？};
+  \node[kviiig do, text width=17mm, anchor=west] (rC2) at (102,-126) {$2\pi r\,\dd r$\\\kviiigcase{C$'$}};
+  \node[kviiig do, text width=34mm] (rC) at (68,-141) {$r\,\dd r\,\dd\theta$ で2回\enspace\kviiigcase{C}};
+  \node[kviiig q] (q6) at (22,-157) {長方形？};
+  \node[kviiig q] (q6a) at (68,-157) {$f=g(x)\,h(y)$？};
+  \node[kviiig do, text width=17mm, anchor=west] (rA2) at (102,-157) {かけ算\\\kviiigcase{A$'$}};
+  \node[kviiig do, text width=36mm] (rA) at (68,-172) {2回（順番は自由）\enspace\kviiigcase{A}};
+  \node[kviiig do, text width=36mm] (rB) at (22,-172) {たて線か横線で切る\enspace\kviiigcase{B}};
+  \node[kviiig do, text width=100mm] (end) at (58,-190) {確かめ：表計算のタイルの和や、順番を変えた計算で、同じ答えか};
+  % 問いの矢印（「いいえ」は下へ。札は線の左）
+  \draw[kviiig go] (s) -- (q1);
+  \draw[kviiig go] (q1) -- node[kviiig yn, above] {はい} (rH);
+  \draw[kviiig go] (q1) -- node[kviiig yn, left=1mm] {いいえ} (q2);
+  \draw[kviiig go] (q2) -- node[kviiig yn, above] {はい} (rF);
+  \draw[kviiig go] (q2) -- node[kviiig yn, left=1mm] {いいえ} (q3);
+  \draw[kviiig go] (q3) -- node[kviiig yn, above] {はい} (rG);
+  \draw[kviiig go] (q3) -- node[kviiig yn, left=1mm] {いいえ} (q4);
+  \draw[kviiig go] (q4) -- node[kviiig yn, above] {はい} (q4a);
+  \draw[kviiig go] (q4a) -- node[kviiig yn, above] {はい} (rD);
+  \draw[kviiig go] (q4a) -- node[kviiig yn, right=1mm] {いいえ} (q4b);
+  \draw[kviiig go] (q4b) -- node[kviiig yn, above] {はい} (rE1);
+  \draw[kviiig go] (q4b) -- node[kviiig yn, right=1mm] {いいえ} (rE2);
+  \draw[kviiig go] (q4) -- node[kviiig yn, left=1mm, pos=0.25] {いいえ} (q5);
+  \draw[kviiig go] (q5) -- node[kviiig yn, above] {はい} (q5a);
+  \draw[kviiig go] (q5a) -- node[kviiig yn, above] {はい} (rC2);
+  \draw[kviiig go] (q5a) -- node[kviiig yn, right=1mm] {いいえ} (rC);
+  \draw[kviiig go] (q5) -- node[kviiig yn, left=1mm] {いいえ} (q6);
+  \draw[kviiig go] (q6) -- node[kviiig yn, above] {はい} (q6a);
+  \draw[kviiig go] (q6a) -- node[kviiig yn, above] {はい} (rA2);
+  \draw[kviiig go] (q6a) -- node[kviiig yn, right=1mm] {いいえ} (rA);
+  \draw[kviiig go] (q6) -- node[kviiig yn, left=1mm] {いいえ} (rB);
+  % F・G のあとは、左の列の次の問いへもどる
+  \draw[kviiig go, shorten >=0.4mm] (rF.south) |- (22.8,-47.5);
+  \draw[kviiig go, shorten >=0.4mm] (rG.south) |- (22.8,-69.5);
+  % 計算した四角からは、右の線をたどって「確かめ」へ
+  \foreach \kviiign in {rH,rG,rD,rE1,rC2,rA2,rE2,rC,rA} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kviiign.east) -- (\kviiign.east -| 130,0);}
+  \draw[bkInk!60, line width=0.7pt] (130,-19) -- (130,-190);
+  \draw[kviiig go, shorten <=0pt] (130,-190) -- (end.east);
+  \draw[kviiig go] (rB) -- (rB |- end.north);
+\end{tikzpicture}
+\bkfigcaption{重積分の流れ図。ひし形は問い、四角はすること。上の3つの問い（H・F・G）が楽をする段、下が直す段。F・G のあとは左の列の次の問いへもどる（G で答えが全部決まったときは、右の線へ）。計算した四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:8-6:fig-flow}
+\end{bkfigure}
+
+\bksubsection{6}{場合 B：境目がななめの線や曲線のとき}
+
+\label{bk:8-6:sankaku}3つの頂点が $(0,\ 0)$、$(3,\ 0)$、$(0,\ 2)$ の三角形の板を考えます（長さの単位は m）。ななめの辺は、$(3,\ 0)$ と $(0,\ 2)$ を通る直線なので、式は次のとおりです（$x=0$ で2、$x=3$ で0になることで確かめられます）。
+\kviiigline{$y=2-\dfrac{2}{3}x$}
+
+まず、この三角形の面積を、重積分で求めてみます。面積は、「1\,m$^2$ あたり1」をたしたもの、つまり $\iint_D 1\,\dd A$ です。答えは $3\times2\div2=3$ になるはずです。
+
+\kviiighead{たて線で切る}
+場所 $x$ でたてに切ると、切り口は $y=0$ から $y=2-\tfrac{2}{3}x$ までの線分です。$x$ によって、上の境目の高さが変わります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \draw[bkLine, line width=0.4pt, step=10] (0,0) grid (34,24);
+    \filldraw[fill=bkTheme!15, draw=bkInk, line width=1pt] (0,0) -- (30,0) -- (0,20) -- cycle;
+    \fill[bkOrange!45] (11,0) rectangle (13,{20-2/3*13});
+    \draw[bkOrange!85!black, line width=0.8pt] (11,0) rectangle (13,{20-2/3*11});
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (38,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,28) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \node[font=\footnotesize, anchor=north] at (30,-1.5) {3};
+    \node[font=\footnotesize, anchor=east] at (-1.5,20) {2};
+    \node[font=\footnotesize, anchor=north] at (12,-1.5) {$x$};
+    \node[font=\footnotesize, anchor=south west, fill=white, inner sep=0.8pt] at (17,13) {$y=2-2x/3$};
+    \node[font=\footnotesize, anchor=north] at (17,-8) {たて線で切る：$0\leqq y\leqq2-2x/3$};
+  \end{scope}
+  \begin{scope}[xshift=70mm]
+    \draw[bkLine, line width=0.4pt, step=10] (0,0) grid (34,24);
+    \filldraw[fill=bkTheme!15, draw=bkInk, line width=1pt] (0,0) -- (30,0) -- (0,20) -- cycle;
+    \fill[bkGreen!40] (0,7) rectangle ({30-1.5*9},9);
+    \draw[bkGreen!60!black, line width=0.8pt] (0,7) rectangle ({30-1.5*7},9);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (38,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,28) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \node[font=\footnotesize, anchor=north] at (30,-1.5) {3};
+    \node[font=\footnotesize, anchor=east] at (-1.5,20) {2};
+    \node[font=\footnotesize, anchor=east] at (-1.5,8) {$y$};
+    \node[font=\footnotesize, anchor=south west, fill=white, inner sep=0.8pt] at (17,13) {$x=3-3y/2$};
+    \node[font=\footnotesize, anchor=north] at (17,-8) {横線で切る：$0\leqq x\leqq3-3y/2$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{三角形の板を、たて線で切る（左）・横線で切る（右）。切り口の長さが、場所によって変わる。}
+\label{bk:8-6:fig-sankaku}
+\end{bkfigure}
+
+\begin{bkhenkei}
+\int_0^3\Bigl(\int_0^{2-\frac{2}{3}x}1\,\dd y\Bigr)\dd x & 内側：$x$ を止めて、$y$ を0から上の境目まで \\
+=\int_0^3\Bigl(2-\frac{2}{3}x\Bigr)\dd x & 内側の答えは切り口の長さ。$x$ の式が残る \\
+=\Bigl[\,2x-\frac{1}{3}x^2\,\Bigr]_0^3=6-3=3 & 外側：$x$ で0から3まで \\
+\end{bkhenkei}
+三角形の面積3と同じになりました。
+
+ここで大事なのは、\textbf{内側の範囲（上のはし）に、外側の文字 $x$ が入っている}ことです。内側の積分では $x$ を止めているので、上のはしはその $x$ で決まる数です。内側の積分が終わると $x$ の式が残り、それを外側で積分します。
+
+\kviiighead{横線で切る（順番を変える）}
+先に $x$ で積分したいときは、横線で切ります。高さ $y$ で横に切ると、切り口は $x=0$ から $x=3-\tfrac{3}{2}y$ まで（ななめの辺の式を $x$ について解いた形）です。
+\begin{bkhenkei}
+\int_0^2\Bigl(\int_0^{3-\frac{3}{2}y}1\,\dd x\Bigr)\dd y & 内側：$y$ を止めて、$x$ を0から右の境目まで \\
+=\int_0^2\Bigl(3-\frac{3}{2}y\Bigr)\dd y=\Bigl[\,3y-\frac{3}{4}y^2\,\Bigr]_0^2 & 外側：$y$ で0から2まで \\
+=6-3=3 & 同じ3 \\
+\end{bkhenkei}
+順番を変えると、範囲の式も変わりました。長方形のときのように、∫ を入れかえるだけではだめです。\textbf{順番を変えるときは、図をかき直して、範囲を作り直します。}外側の範囲には、いつもただの数（0と2など）が入り、内側の範囲には、外側の文字の式が入ることがあります。
+
+\bksubsection{7}{場合 C・C$'$：円は極座標で}
+
+\label{bk:8-6:kyoku}半径 $R$ の円の板を考えます。$(x,\ y)$ で範囲を書くと、たて線の上のはしは $y=\sqrt{R^2-x^2}$、下のはしは $y=-\sqrt{R^2-x^2}$ です（三平方の定理、4-4）。ルートの入った範囲で積分するのは、たいへんです。
+
+そこで、4-15 の\textbf{極座標}を使います。場所を、中心からの距離 $r$ と、角 $\theta$ で表します。すると円の板は、次のように書けます。
+\kviiigline{$0\leqq r\leqq R$、\quad $0\leqq\theta\leqq2\pi$}
+範囲が、ただの数で書けました。$r$ と $\theta$ を横・たてにとった表で見ると、円の板は長方形になります。
+
+\kviiighead{極座標のタイルは、$r\,\dd r\,\dd\theta$}
+極座標では、タイルを「$r$ を少し（$\dd r$）、$\theta$ を少し（$\dd\theta$）ふやした所」で区切ります。すると、タイルは、おうぎ形の一部（輪のかけら）になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \foreach \kviiigr in {8,16,24,32,40,44} {\draw[bkLine, line width=0.4pt] (\kviiigr,0) arc (0:90:\kviiigr);}
+    \foreach \kviiiga in {0,15,...,90} {\draw[bkLine, line width=0.4pt] (0,0) -- (\kviiiga:44);}
+    \filldraw[fill=bkOrange!40, draw=bkOrange!85!black, line width=0.8pt] (30:16) arc (30:45:16) -- (45:24) arc (45:30:24) -- cycle;
+    \filldraw[fill=bkTheme!35, draw=bkTheme, line width=0.8pt] (30:36) arc (30:45:36) -- (45:44) arc (45:30:44) -- cycle;
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (46,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,46) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \node[font=\footnotesize, anchor=north east] at (0,0) {O};
+    \node[font=\footnotesize, fill=white, inner sep=0.6pt, anchor=east] at (20:19) {$r=1$};
+    \node[font=\footnotesize, fill=white, inner sep=0.6pt, anchor=west] at (20:45.5) {$r=2$};
+  \end{scope}
+  \begin{scope}[xshift=64mm, yshift=4mm]
+    \filldraw[fill=bkOrange!25, draw=bkOrange!85!black, line width=0.8pt] (20:28) arc (20:50:28) -- (50:40) arc (50:20:40) -- cycle;
+    \draw[bkInk, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (0,0) -- (20:40) (0,0) -- (50:40);
+    \draw[bkInk, line width=0.5pt] (20:8) arc (20:50:8);
+    \node[font=\footnotesize, anchor=west] at (35:9.5) {$\dd\theta$};
+    \fill[bkInk] (0,0) circle (0.6);
+    \node[font=\footnotesize, anchor=north] at (0,-1) {O};
+    \draw[bkRed, line width=1.2pt] (20:28) -- (20:40);
+    \node[font=\footnotesize, text=bkInk, anchor=north west] at (20:34) {たて $\dd r$};
+    \draw[bkGreen!60!black, line width=1.2pt] (20:28) arc (20:50:28);
+    \node[font=\footnotesize, anchor=east, fill=white, inner sep=0.8pt] at (40:25) {横 $r\,\dd\theta$};
+    \node[font=\footnotesize, anchor=south] at (35:43.5) {面積 $\approx r\,\dd r\,\dd\theta$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：極座標のタイル。同じ $\dd r$・$\dd\theta$ でも、中心から遠いタイル（紺）は、近いタイル（オレンジ）より大きい。右：タイル1枚を大きくした図。たては $\dd r$、横は半径 $r$ の円の弧で $r\,\dd\theta$。}
+\label{bk:8-6:fig-kyoku}
+\end{bkfigure}
+
+タイルの、中心へ向かう向きの辺の長さは $\dd r$ です。円にそった向きの辺は、半径 $r$・中心角 $\dd\theta$ の弧なので、長さは $r\,\dd\theta$ です（4-2 の「弧の長さ＝半径×角」。角はラジアン）。とても小さなタイルは、ほぼ長方形とみなせるので、
+\kviiigframe[86mm]{\Large $\dd A=r\,\dd r\,\dd\theta$}
+です。$r$ がかかっているのは、\textbf{中心から遠いほど、同じ $\dd\theta$ でもタイルの横はばが広い}からです。図\ref{bk:8-6:fig-kyoku}の左では、$r=2$ の所のタイル（紺）は、$r=1$ の所のタイル（オレンジ）のちょうど2倍の面積です。
+
+\kviiighead{もう1つの見方：ヤコビアンは $r$}
+8-3 で、ヤコビアン（ヤコビ行列の行列式）は「小さな面積が何倍になるか」を表すと学びました。$x=r\cos\theta$、$y=r\sin\theta$ を、$r$ と $\theta$ でそれぞれ偏微分して並べます（1列めが $r$ で、2列めが $\theta$ で偏微分したもの）。
+\[ J=\begin{pmatrix}\dfrac{\partial x}{\partial r}&\dfrac{\partial x}{\partial\theta}\\[8pt]\dfrac{\partial y}{\partial r}&\dfrac{\partial y}{\partial\theta}\end{pmatrix}=\begin{pmatrix}\cos\theta&-r\sin\theta\\\sin\theta&r\cos\theta\end{pmatrix} \]
+\begin{bkhenkei}[0.62]
+\det J=\cos\theta\times r\cos\theta-(-r\sin\theta)\times\sin\theta & 7-4 の $ad-bc$ \\
+=r(\cos^2\theta+\sin^2\theta)=r & $\cos^2\theta+\sin^2\theta=1$（4-8） \\
+\end{bkhenkei}
+$(r,\ \theta)$ の表の小さな長方形 $\dd r\,\dd\theta$ は、$(x,\ y)$ の平面では $r$ 倍の面積になります。図で考えても、行列式で考えても、同じ $r$ が出てきました。
+
+\kviiighead{円の面積を確かめる}
+半径 $R$ の円の面積を、極座標の重積分で求めます。
+\begin{bkhenkei}
+\iint_D 1\,\dd A=\int_0^{2\pi}\Bigl(\int_0^R r\,\dd r\Bigr)\dd\theta & $\dd A=r\,\dd r\,\dd\theta$、範囲はただの数 \\
+=\int_0^{2\pi}\frac{R^2}{2}\,\dd\theta & 内側：$\Bigl[\frac{1}{2}r^2\Bigr]_0^R=\frac{R^2}{2}$ \\
+=\frac{R^2}{2}\times2\pi=\pi R^2 & 外側：$\frac{R^2}{2}$ は定数 \\
+\end{bkhenkei}
+4-5 で学んだ円の面積 $\pi R^2$ と同じです。もし $r$ を忘れて $\int_0^{2\pi}\int_0^R\dd r\,\dd\theta$ とすると、答えは $2\pi R$ になります。これは円周の長さで、単位も m で、面積（m$^2$）になりません（まちがえやすいところ①）。
+
+\kviiighead{場合 C$'$：$f$ が $r$ だけなら、細い輪に分ける}
+はかる量 $f$ が、中心からの距離 $r$ だけで決まるときは、$\theta$ の積分はいつも $2\pi$ になります。
+\[ \int_0^{2\pi}\Bigl(\int_0^R f(r)\,r\,\dd r\Bigr)\dd\theta=2\pi\int_0^R f(r)\,r\,\dd r=\int_0^R f(r)\,2\pi r\,\dd r \]
+$2\pi r\,\dd r$ は、半径 $r$・はば $\dd r$ の\textbf{細い輪}の面積です（輪を切って広げると、長さ $2\pi r$・はば $\dd r$ の細長い帯になる。4-5）。だから、円の板を「同じ中心の細い輪」に分けて、「$f$×輪の面積」をたせば、ふつうの定積分1回で答えが出ます。物理の本の管の流れ（力-14）は、この形で計算しています。
+
+\Needspace{16\baselineskip}\begin{motto}[5]
+\kviiigbox{ガウス積分：$\displaystyle\int_{-\infty}^{\infty}e^{-x^2}\,\dd x=\sqrt\pi$}
+$e^{-x^2}$ の原始関数は、知っている関数では書けません。ところが、全体の範囲の積分なら、重積分を使って答えが出ます。$\iint e^{-(x^2+y^2)}\,\dd A$（平面全体）を2通りに計算します。\par\vspace{3pt}
+\textbf{場合 A$'$ として}：$e^{-(x^2+y^2)}=e^{-x^2}\times e^{-y^2}$ なので、かけ算に分かれます。求めたい値を $I=\int_{-\infty}^{\infty}e^{-x^2}\,\dd x$ とすると、重積分は $I\times I=I^2$ です。\par\vspace{3pt}
+\textbf{場合 C$'$ として}：$x^2+y^2=r^2$ なので、$f=e^{-r^2}$ は $r$ だけで決まります。
+\begin{bkhenkei}
+\int_0^{\infty}e^{-r^2}\,2\pi r\,\dd r & 細い輪に分ける \\
+=\pi\int_0^{\infty}e^{-u}\,\dd u & $u=r^2$、$\dd u=2r\,\dd r$（5-16 の置換積分） \\
+=\pi\Bigl[-e^{-u}\Bigr]_0^{\infty}=\pi\times(0+1)=\pi & $u$ が大きいと $e^{-u}$ は0に近づく \\
+\end{bkhenkei}
+正方形の範囲を広げた先と、円の範囲を広げた先は、同じ値になります（$e^{-(x^2+y^2)}$ は遠くでとても小さいので、広げ方のちがう角の部分は効かない）。だから $I^2=\pi$、$I=\sqrt\pi\approx1.7725$ です。この値は、ちらばりの計算（3-14 の標準偏差）に出てくる正規分布や、気体の分子の速さ（物理 熱-14）で使います。「$\infty$ まで」は、「範囲をどんどん広げた先」という意味です。
+\end{motto}
+
+\bksubsection{8}{場合 D・E：立体は3重積分}
+
+\label{bk:8-6:rittai}立体の中で量をたすときは、小さな箱（体積 $\dd V$）に分けます。場所は $x$・$y$・$z$ の3つの数で決まるので、∫ を3つ重ねて書き、\textbf{3重積分}（さんじゅうせきぶん）とよびます。\bkidx{さんじゅうせきぶん}{3重積分}
+\kviiigline{$\displaystyle\iiint_V f\,\dd V$\qquad 「立体 $V$ の中で、$f$×小さな箱の体積 $\dd V$ をたし合わせた先」}
+直方体なら、$\dd V=\dd x\,\dd y\,\dd z$ として、場合 A の定積分を3回くり返します。たとえば、たて・横・高さが1・2・3の直方体の体積は、次のとおりです。
+\kviiigline{$\displaystyle\int_0^3\!\!\int_0^2\!\!\int_0^1 1\,\dd x\,\dd y\,\dd z=1\times2\times3=6$}
+
+\kviiighead{場合 D：切り口の面積がわかる立体}
+3重積分のうち、内側の2回（$x$ と $y$）を先にすませると、高さ $z$ の\textbf{切り口の面積} $A(z)$ になります。だから、切り口の面積がわかる立体なら、体積は1回の定積分です。
+\kviiigline{$\displaystyle\iiint_V\dd V=\int A(z)\,\dd z$}
+これは、4-5 の「うすく切ってたす」、5-10 の CT スキャンの考えと同じです。
+
+主役の山 $h$〔m〕$=100-0.01x^2-0.02y^2$ で考えます。高さ $z$ の所で水平に切ると、切り口は、地図の上で $h\geqq z$ になる所、つまり $0.01x^2+0.02y^2\leqq100-z$ の所です。これは、等高線 $h=z$（8-1 のだ円）の内側です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \fill[bkGreen!18] plot[domain=-32:32, samples=41] (\x,{(100-0.01*(3.125*\x)^2)*0.4}) -- cycle;
+    \draw[bkGreen!60!black, line width=1.1pt] plot[domain=-32:32, samples=41] (\x,{(100-0.01*(3.125*\x)^2)*0.4});
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-35,0) -- (36,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,47) node[above, font=\footnotesize, inner sep=1pt] {$z$（m）};
+    \draw[bkOrange!85!black, line width=1.4pt] (-22.63,20) -- (22.63,20);
+    \node[font=\footnotesize, anchor=west, fill=white, inner sep=0.8pt] at (24,22) {高さ $z$};
+    \node[font=\footnotesize, anchor=west] at (1,43) {100};
+    \node[font=\footnotesize, anchor=north] at (0,-3) {横から見た図（$y=0$）};
+  \end{scope}
+  \begin{scope}[xshift=72mm, yshift=20mm]
+    \draw[bkGreen!60!black, line width=0.8pt] (0,0) ellipse (20 and 14.14);
+    \filldraw[fill=bkOrange!30, draw=bkOrange!85!black, line width=1.1pt] (0,0) ellipse (14.14 and 10);
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (-23,0) -- (25,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,-17) -- (0,19) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \node[font=\footnotesize, anchor=north] at (0,-23) {上から見た図（切り口はだ円）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{主役の山を高さ $z$ で切ると、切り口（オレンジ）は、等高線 $h=z$ のだ円の内側。緑の外側のだ円はふもと（$h=0$）。}
+\label{bk:8-6:fig-yama}
+\end{bkfigure}
+
+だ円 $0.01x^2+0.02y^2=100-z$ の、横の半径（$y=0$ のとき）を $a$、たての半径（$x=0$ のとき）を $b$ とします。
+\kviiigline{$a=\sqrt{\dfrac{100-z}{0.01}}=10\sqrt{100-z}$、\quad $b=\sqrt{\dfrac{100-z}{0.02}}=\sqrt{50}\sqrt{100-z}$}
+だ円は、半径 $a$ の円を、たてに $b/a$ 倍にちぢめた形です。面積も $b/a$ 倍になる（7-4 の面積の倍率）ので、だ円の面積は次のようになります。
+\kviiigline{$\pi a^2\times\dfrac{b}{a}=\pi ab$}
+\begin{bkhenkei}[0.5]
+A(z)=\pi ab=\pi\times10\sqrt{50}\times(100-z) & $\sqrt{100-z}\times\sqrt{100-z}=100-z$ \\
+\approx222.1\times(100-z) & $\pi\times10\sqrt{50}\approx222.1$ \\
+\end{bkhenkei}
+ふもと（$z=0$）では $A=\num{22210}$ m$^2$ ほど、頂上（$z=100$）では0です。体積は、これを $z$ で0から100までたします。この計算は例題8で行います。
+
+\kviiighead{場合 E：円柱座標と球座標}
+円柱の形には、極座標に高さ $z$ を加えた\textbf{円柱座標}（4-15）を使います。小さな箱は、極座標のタイル $r\,\dd r\,\dd\theta$ に高さ $\dd z$ をかけたものです。
+\kviiigline{円柱座標：$\dd V=r\,\dd r\,\dd\theta\,\dd z$}
+
+球の形には、\textbf{球座標} $(r,\ \theta,\ \varphi)$\bkidx{きゅうざひょう}{球座標（重積分）} を使います（4-15 と同じく、$r$ は中心からの距離、$\theta$ は真上（$z$ 軸）からの角、$\varphi$ は床の上で $x$ 軸から回った角）。小さな箱の3つの辺は、次のとおりです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \draw[bkGray, line width=0.6pt] (0,0) circle (26);
+    \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (0,0) ellipse (26 and 7);
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,34) node[above, font=\footnotesize, inner sep=1pt] {$z$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (34,0) node[right, font=\footnotesize, inner sep=1pt] {$y$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (-19.8,-13.2) node[below left, font=\footnotesize, inner sep=1pt] {$x$};
+    \coordinate (P) at (6.99,13.65); \coordinate (Q) at (6.99,-4.73);
+    \draw[bkInk, line width=1pt] (0,0) -- (P);
+    \fill[bkOrange!85!black] (P) circle (1);
+    \draw[bkInk, line width=0.5pt, dash pattern=on 1.2pt off 1pt] (P) -- (Q) -- (0,0);
+    \draw[bkInk, line width=0.6pt] (0,8) arc (90:62.9:8);
+    \node[font=\footnotesize] at (2.4,10.6) {$\theta$};
+    \draw[bkInk, line width=0.6pt] plot[domain=0:50, samples=12] ({7*(-0.6*cos(\x)+sin(\x))},{7*(-0.4*cos(\x))});
+    \node[font=\footnotesize, anchor=north] at (0.5,-5.2) {$\varphi$};
+    \node[font=\footnotesize, anchor=north west, inner sep=0.8pt] at (4.2,5.2) {$r$};
+    \node[font=\footnotesize, anchor=north] at (0,-30) {場所 $(r,\ \theta,\ \varphi)$};
+  \end{scope}
+  \begin{scope}[xshift=52mm, yshift=-6mm]
+    \filldraw[fill=bkOrange!18, draw=bkInk, line width=0.7pt] (0,0) rectangle (32,20);
+    \filldraw[fill=bkOrange!30, draw=bkInk, line width=0.7pt] (0,20) -- (12,28) -- (44,28) -- (32,20) -- cycle;
+    \filldraw[fill=bkOrange!40, draw=bkInk, line width=0.7pt] (32,0) -- (44,8) -- (44,28) -- (32,20) -- cycle;
+    \draw[bkGreen!60!black, line width=1.8pt] (0,0) -- (32,0);
+    \draw[bkRed, line width=1.8pt] (0,0) -- (0,20);
+    \draw[bkBlue, line width=1.8pt] (32,0) -- (44,8);
+    \node[font=\footnotesize, anchor=north] at (16,-1.5) {横の円にそって $r\sin\theta\,\dd\varphi$};
+    \node[font=\footnotesize, anchor=east, align=right] at (-1.5,10) {たての円\\にそって\\$r\,\dd\theta$};
+    \node[font=\footnotesize, anchor=west, align=left] at (45.5,4) {外へ\\$\dd r$};
+    \node[font=\footnotesize, anchor=north] at (22,-9) {小さな箱（大きくした図）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{球座標の小さな箱。3つの辺の長さをかけると、体積 $\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$。}
+\label{bk:8-6:fig-kyuza}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 中心から外へ向かう辺：長さ $\dd r$。
+\item 真上から下へ（たての円にそって）回る辺：半径 $r$ の円の弧なので、長さ $r\,\dd\theta$。
+\item 床と平行に（横の円にそって）回る辺：この横の円の半径は、$z$ 軸からの距離 $r\sin\theta$ です（4-15）。だから弧の長さは $r\sin\theta\,\dd\varphi$。
+\end{enumerate}
+3つをかけて、
+\kviiigframe[100mm]{\Large $\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$}
+球全体は、$0\leqq r\leqq R$、$0\leqq\theta\leqq\pi$（真上から真下まで）、$0\leqq\varphi\leqq2\pi$（1周）です。$\theta$ が $\pi$（半周）までで、$\varphi$ が $2\pi$（1周）までなのに注意します。$\theta$ も1周させると、球を2回数えてしまいます。上半分の半球なら、$\theta$ は0から $\dfrac{\pi}{2}$（真上から横まで）です。
+
+\kviiighead{球の体積を確かめる}
+\begin{bkhenkei}[0.64]
+\int_0^{2\pi}\!\!\int_0^{\pi}\!\!\int_0^R r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi & かけ算に分かれる（場合 A$'$ と同じ考え） \\
+=\Bigl(\int_0^R r^2\,\dd r\Bigr)\Bigl(\int_0^{\pi}\sin\theta\,\dd\theta\Bigr)\Bigl(\int_0^{2\pi}\dd\varphi\Bigr) & 3つのふつうの定積分のかけ算 \\
+=\frac{R^3}{3}\times2\times2\pi=\frac{4}{3}\pi R^3 & まん中の積分は2（下の式） \\
+\end{bkhenkei}
+（まん中の積分は $\int_0^{\pi}\sin\theta\,\dd\theta=\Bigl[-\cos\theta\Bigr]_0^{\pi}=-(-1)-(-1)=2$ です。）
+4-5 で学んだ球の体積 $\dfrac{4}{3}\pi R^3$ と同じです。$f$ が中心からの距離 $r$ だけで決まるときは、$\theta$ と $\varphi$ の積分が $2\times2\pi=4\pi$ になり、うすい球の殻 $4\pi r^2\,\dd r$ に分けた1回の定積分になります（場合 C$'$ の立体版）。
+
+\Needspace{9\baselineskip}\bksubsection{9}{楽をする段：対称性・分ける・データ}
+
+\label{bk:8-6:raku}\kviiigdanhead{3}{計算する前に、楽な道をさがす}
+直す前に、流れ図の上の3つの問いを確かめます。答えが「はい」なら、計算がずっと楽になります。
+
+\kviiighead{場合 G：対称性で、0になる・同じになる}
+中心が原点の円の板で、$\iint_D x\,\dd A$ を考えます。点 $(x,\ y)$ のタイルと、$y$ 軸で折り返した点 $(-x,\ y)$ のタイルは、同じ面積で、$x$ の値は反対の符号です。だから2つのタイルの「$x$×面積」は打ち消し合い、全部たすと0になります。
+\kviiigline{$\displaystyle\iint_D x\,\dd A=0$\qquad （範囲が $y$ 軸について左右対称で、$f$ が $x$ を $-x$ にすると符号が変わる関数のとき）}
+これで、左右対称な板の重心が、対称の軸の上にあることもわかります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \filldraw[fill=bkTheme!12, draw=bkInk, line width=0.9pt] (0,0) circle (20);
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (-24,0) -- (25,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,-24) -- (0,25) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \filldraw[fill=bkOrange!50, draw=bkOrange!85!black, line width=0.6pt] (9,5) rectangle (13,9);
+    \filldraw[fill=bkGreen!45, draw=bkGreen!60!black, line width=0.6pt] (-13,5) rectangle (-9,9);
+    \node[font=\footnotesize, anchor=north] at (11,4) {$+x$};
+    \node[font=\footnotesize, anchor=north] at (-11,4) {$-x$};
+    \node[font=\footnotesize, anchor=north] at (0,-27) {$x$ の積分は打ち消し合って0};
+  \end{scope}
+  \begin{scope}[xshift=64mm]
+    \filldraw[fill=bkTheme!12, draw=bkInk, line width=0.9pt] (0,0) circle (20);
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (-24,0) -- (25,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,-24) -- (0,25) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \filldraw[fill=bkOrange!50, draw=bkOrange!85!black, line width=0.6pt] (12,2) rectangle (16,6);
+    \filldraw[fill=bkPurple!40, draw=bkPurple!80!black, line width=0.6pt] (-2,12) rectangle (-6,16);
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (14,9) arc (30:80:14);
+    \node[font=\footnotesize, anchor=south west, fill=white, inner sep=0.8pt] at (11,14) {90° 回す};
+    \node[font=\footnotesize, anchor=north] at (0,-27) {$\iint x^2\,\dd A=\iint y^2\,\dd A$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{円の板の対称性。左：$y$ 軸で折り返すと $x$ の符号が変わるので、$x$ をたすと0。右：90° 回すと $x$ と $y$ が入れかわるので、$x^2$ をたしても $y^2$ をたしても同じ。}
+\label{bk:8-6:fig-taisho}
+\end{bkfigure}
+
+また、円の板を90° 回すと、$x$ の役目と $y$ の役目が入れかわります。だから $\iint_D x^2\,\dd A=\iint_D y^2\,\dd A$ です。この2つをたすと $\iint_D(x^2+y^2)\,\dd A=\iint_D r^2\,\dd A$ なので、
+\kviiigline{$\displaystyle\iint_D y^2\,\dd A=\frac{1}{2}\iint_D r^2\,\dd A$}
+となります。右辺は $f$ が $r$ だけの形（場合 C$'$）なので、1回の定積分で計算できます。物理の本（力-10）で円の棒の曲がりにくさを求めるときに使う考えです（例題6）。
+
+\kviiighead{場合 F：簡単な形の和・差に分ける}
+穴のあいた円（輪）の板は、「大きい円」から「小さい円」をひいた形です。L字の板は、2つの長方形を合わせた形です。重積分は「タイルをたしたもの」なので、範囲を分ければ、それぞれの重積分の和や差になります。
+\kviiigline{$\displaystyle\iint_{\text{輪}}f\,\dd A=\iint_{\text{大きい円}}f\,\dd A-\iint_{\text{小さい円}}f\,\dd A$}
+パイプ（中が空の丸棒）の曲がりにくさを求めるときに使います（例題10）。
+
+\kviiighead{場合 H：データだけのときは、表計算でたす}
+雨の量、地下の水の深さ、畑の肥料の量などは、式ではなく、マスごとにはかった値（データ）で与えられることが多いです。そのときは、やってみようと同じように、「マスの値×マスの面積」を表計算でたします。これも重積分（の近い値）です。気象庁の雨のデータ（解析雨量）は、1\,km 四方のマスごとに出ています。川の流域に降った雨の量は、マスの雨量（m）×マスの面積（m$^2$）を、流域のマスについてたして求めます（例題11）。
+
+\begin{seikaku}
+\kviiigbox{一般の座標の変え方：$\dd A=|\det J|\,\dd u\,\dd v$}
+場所を $(x,\ y)$ のかわりに、別の2つの数 $(u,\ v)$ で表すとき（$x=x(u,\ v)$、$y=y(u,\ v)$）、小さな長方形 $\dd u\,\dd v$ は、$(x,\ y)$ の平面では、ヤコビ行列 $J$ の行列式の大きさ倍の面積になります（8-3・7-4）。
+\[ J=\begin{pmatrix}\dfrac{\partial x}{\partial u}&\dfrac{\partial x}{\partial v}\\[8pt]\dfrac{\partial y}{\partial u}&\dfrac{\partial y}{\partial v}\end{pmatrix},\qquad \dd A=|\det J|\,\dd u\,\dd v \]
+行列式が負になるのは、向きが裏返るときです。面積は正なので、大きさ（絶対値）をとります。極座標では $\det J=r$ でした。
+
+\textbf{だ円の座標で、主役の山の体積を求める}：主役の山は、$a=100$、$b=\sqrt{5000}\approx70.71$ として $h=100\Bigl(1-\dfrac{x^2}{a^2}-\dfrac{y^2}{b^2}\Bigr)$ と書けます。$x=a\,r\cos\theta$、$y=b\,r\sin\theta$ とおくと、$h=100(1-r^2)$、ふもとのだ円は $r=1$ です。
+\begin{bkhenkei}[0.6]
+\det J=a\cos\theta\times b\,r\cos\theta+a\,r\sin\theta\times b\sin\theta & $J$ の1列めは $r$、2列めは $\theta$ で偏微分 \\
+=ab\,r(\cos^2\theta+\sin^2\theta)=ab\,r & $\cos^2\theta+\sin^2\theta=1$ \\
+V=\int_0^{2\pi}\!\!\int_0^1 100(1-r^2)\,ab\,r\,\dd r\,\dd\theta & 高さ×タイルをたす \\
+=100ab\times2\pi\times\Bigl(\frac{1}{2}-\frac{1}{4}\Bigr)=50\pi ab & $\int_0^1(r-r^3)\,\dd r=\frac{1}{4}$ \\
+=50\pi\times100\times70.71\approx1.11\times10^6 & 単位は m$^3$ \\
+\end{bkhenkei}
+例題8の切り口の方法（場合 D）と同じ答えになります（2通りで確かめられる）。
+\end{seikaku}
+
+\begin{senmonsho}[重積分の専門書ふうの書き方]
+\begin{bkhonbun}
+$D=[a,b]\times[c,d]$ 上の連続関数 $f$ に対し，$\displaystyle\iint_D f(x,y)\,dxdy=\int_c^d dy\int_a^b f(x,y)\,dx$ が成り立つ．変数変換 $x=x(u,v)$，$y=y(u,v)$ により $D$ が $E$ に対応するとき，$\displaystyle\iint_D f\,dxdy=\iint_E f\,\Bigl|\frac{\partial(x,y)}{\partial(u,v)}\Bigr|\,dudv$．
+\end{bkhonbun}
+\bkyaku{$[a,b]\times[c,d]$ は長方形 $a\leqq x\leqq b$、$c\leqq y\leqq d$。「連続関数」はとぎれのない関数。$\int_c^d dy\int_a^b f\,dx$ は、この本の $\int_c^d\Bigl(\int_a^b f\,\dd x\Bigr)\dd y$ を、$\dd y$ を前に出して書いたもの（右の積分から先に計算する）。$\dfrac{\partial(x,y)}{\partial(u,v)}$ はヤコビアン $\det J$。専門書は $\mathrm{d}$ を立てずに $dx$ と書くことが多い。物理の本では、∫ を1つだけ書いて $\displaystyle\int_D f\,\dd A$、$\displaystyle\int_V\rho\,\dd V$ と書くことも多い（物理第1巻もこの書き方）。どれも同じもの。}
+\end{senmonsho}
+
+\begin{kotoba}
+\small
+\bkword{重積分}{範囲をタイルに分け、「量×タイルの面積（体積）」をたし、細かくした先。面なら2重積分 ∬、立体なら3重積分 ∭。操作の名前。}
+\bkword{累次積分}{ふつうの定積分を何回かくり返す形。重積分は、累次積分に直して計算する。}
+\bkword{極座標のタイル}{$\dd A=r\,\dd r\,\dd\theta$。たて $\dd r$、横 $r\,\dd\theta$。$r$ はヤコビアン。}
+\bkword{円柱座標・球座標}{円柱は $\dd V=r\,\dd r\,\dd\theta\,\dd z$、球は $\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$。}
+\bkword{面密度}{\qty{1}{m^2} あたりの質量（kg/m$^2$）。板の場所ごとの重さの濃さ。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\displaystyle\iint_D$}{ダブル・インテグラル}{範囲 $D$ の上で、量×タイルの面積 $\dd A$ をたした先（重積分）。∫ の数は場所を表す数の数}{double integral}{8-6}}
+{\bkkigocard{$r\,\dd r\,\dd\theta$}{アール・ディーアール・ディーシータ}{極座標の小さなタイルの面積。$r$ は、遠いほどタイルが広い分（ヤコビアン）}{area element in polar coordinates}{8-6}}
+
+\begin{column}{CT スキャンと積分}
+病院の CT スキャンは、X 線を体のいろいろな向きから通し、出てきた X 線の弱まり方をはかります。弱まり方は、X 線が通った道にそって「場所ごとの吸収の強さ」をたしたもの（次の 8-7 の線積分）です。コンピュータは、たくさんの向きの線積分から、体の切り口の「場所ごとの吸収の強さ」の地図を作ります。その地図のマスをたしていけば（場合 H）、臓器の体積などもわかります。
+\end{column}
+
+
+\begin{taisetsu}
+\kviiigbox{重積分の3つの段}
+\kviiigdan{1}\enspace 記号を読む：何を（$f$）・どこで（$D$・$V$）・1枚の量（$\dd A$・$\dd V$）\par
+\kviiigdan{3}\enspace 直す前に：データだけ？　和・差？　対称性？\par
+\kviiigdan{2}\enspace 形に合う場所の数を選び、ふつうの定積分を2回・3回\par
+\kviiigbox{場合分けの表8-6（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,46mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 1枚の量・直し方 \\
+\kviiigcase{A} & 長方形 & $\dd x\,\dd y$。2回、順番は自由 \\
+\kviiigcase{A$'$} & 長方形で $f=g(x)\,h(y)$ & 2つの定積分のかけ算 \\
+\kviiigcase{B} & 境目が曲線・ななめ & たて線で切る。内側の範囲は外側の文字の式 \\
+\kviiigcase{C} & 円・おうぎ形・輪 & $r\,\dd r\,\dd\theta$（$r$ を忘れない） \\
+\kviiigcase{C$'$} & 円で $f$ が $r$ だけ & 細い輪 $2\pi r\,\dd r$ で1回 \\
+\kviiigcase{D} & 切り口の面積がわかる & $\int A(z)\,\dd z$ \\
+\kviiigcase{E} & 円柱・球 & $r\,\dd r\,\dd\theta\,\dd z$、$r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$ \\
+\kviiigcase{F} & 和・差 & 分けて、たす・ひく \\
+\kviiigcase{G} & 対称性 & 先に使う（0・同じ） \\
+\kviiigcase{H} & データだけ & 表計算でマスの和 \\
+\end{bktable}
+\end{taisetsu}
+
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、場合分けの表8-6のどの場合かを書きました。そのあとの札は、\kviiigdan{1} が名前の段、\kviiigdan{3} が楽をする段、\kviiigdan{2} が直す段です。
+
+\kviiighead{例題を、流れ図でたどってみよう}
+例題1〜11を、図\ref{bk:8-6:fig-flow}の流れ図の上から順にたどると、次のようになります（書いていない問いは「いいえ」）。どれも、考え方の1行めの場合に着きます。じぶんでとこうも同じ道すじです。例題を読む前に、どの道すじになるか予想してみましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,30mm] X[l,m] Q[c,m,14mm]}, row{2-Z}={font=\small}, rowsep=0.8pt, colsep=3pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 厚さがちがう板 & 長方形？ & \kviiigcase{A} \\
+2 & かけ算に分かれる & 長方形？ → $f=g(x)\,h(y)$？ & \kviiigcase{A$'$} \\
+3 & 順番を変える & （長方形？はいいえ） & \kviiigcase{B} \\
+4 & 三角形の重心 & （長方形？はいいえ） & \kviiigcase{B} \\
+5 & 半円の重心 & 折り返しで0（$\iint x\,\dd A$）→ 円の形？（$f=r\sin\theta$ は $r$ だけでない） & \kviiigcase{G}\kviiigcase{C} \\
+6 & 丸い棒の $I$ & 回転で同じ（$\iint y^2=\iint x^2$）→ 円の形？ → $r$ だけ？ & \kviiigcase{G}\kviiigcase{C$'$} \\
+7 & 管の流量 & 円の形？ → $r$ だけ？ & \kviiigcase{C$'$} \\
+8 & 山の体積 & 立体？ → 体積で切り口？ & \kviiigcase{D} \\
+9 & 球の $I$ & 立体？ → 円柱・球？ & \kviiigcase{E} \\
+10 & パイプの $I$ & 和・差？（それぞれの円で、もう一度上から） & \kviiigcase{F} \\
+11 & 流域の雨 & データだけ？ & \kviiigcase{H} \\
+\end{bktable}
+\bktabcaption{例題1〜11の流れ図の道すじ（G のあとは左の列の次の問いへ）。}
+\end{bkcenter}
+
+\begin{reidai}[厚さがちがう板の重さ]
+はば \qty{2}{m}、奥行き \qty{1}{m} の板（$0\leqq x\leqq2$、$0\leqq y\leqq1$）があります。場所 $(x,\ y)$ での面密度 $\sigma$〔kg/m$^2$〕は $\sigma=12+6x+4y$ です。板の質量を、2つの順番で求めましょう。\par
+\kangaekata \kviiigbaai{範囲が長方形}{8-6}{A}\par
+\kviiigdan{1}\enspace $\iint_D\sigma\,\dd A$：板の上で「$\sigma$×タイルの面積」をたす。\par
+\kviiigdan{2}\enspace $\dd A=\dd x\,\dd y$。内側は1つを止めて、もう1つで積分。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 【$x$ が先】内側：$y$ を止める：$\displaystyle \int_0^2(12+6x+4y)\,\dd x=\Bigl[\,12x+3x^2+4y\,x\,\Bigr]_0^2$\par
+\kviiiga $x=2$ を入れる：$\displaystyle =24+12+8y=36+8y$\par
+\kviiiga 外側：$y$ で0から1：$\displaystyle \int_0^1(36+8y)\,\dd y=\Bigl[\,36y+4y^2\,\Bigr]_0^1=40$\par
+\kviiiga 【$y$ が先】内側：$x$ を止める：$\displaystyle \int_0^1(12+6x+4y)\,\dd y=\Bigl[\,12y+6x\,y+2y^2\,\Bigr]_0^1=14+6x$\par
+\kviiiga 外側：$x$ で0から2：$\displaystyle \int_0^2(14+6x)\,\dd x=\Bigl[\,14x+3x^2\,\Bigr]_0^2=28+12=40$\par
+\kotae \qty{40}{kg}（どちらの順番でも同じ）
+\end{reidai}
+
+\begin{jibun}
+$0\leqq x\leqq2$、$0\leqq y\leqq1$ の板で、面密度が $\sigma=8+3x+4y$〔kg/m$^2$〕のとき、板の質量を2つの順番で求めましょう。
+\bkjans{$x$ が先：$\int_0^2(8+3x+4y)\,\dd x=22+8y$、$\int_0^1(22+8y)\,\dd y=26$。$y$ が先：$\int_0^1(8+3x+4y)\,\dd y=10+3x$、$\int_0^2(10+3x)\,\dd x=26$。\qty{26}{kg}。}
+\end{jibun}
+
+\begin{reidai}[かけ算に分かれる重積分]
+$0\leqq x\leqq3$、$0\leqq y\leqq4$ の長方形 $D$ で、$\iint_D x^2y\,\dd A$ を求めましょう。\par
+\kangaekata \kviiigbaai{長方形で、$f$ が「$x$ だけ」×「$y$ だけ」}{8-6}{A$'$}\par
+\kviiigdan{1}\enspace 長方形の上で「$x^2y$×タイル」をたす。\par
+\kviiigdan{2}\enspace 内側（$x$ で積分）では $y$ は数なので外に出る。2つの定積分のかけ算になる。\par
+\begin{center}\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkLine, line width=0.4pt, step=6] (0,0) grid (18,24);
+  \draw[bkInk, line width=0.9pt] (0,0) rectangle (18,24);
+  \fill[bkOrange!45] (0,14) rectangle (18,16);
+  \draw[bkOrange!85!black, line width=0.8pt] (0,14) rectangle (18,16);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (22,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (0,28) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \node[font=\footnotesize, anchor=north] at (18,-1.5) {3};
+  \node[font=\footnotesize, anchor=east] at (-1.5,24) {4};
+  \node[font=\footnotesize, anchor=east] at (-1.5,15) {$y$};
+  \node[font=\footnotesize, anchor=west, align=left] at (27,17) {オレンジの帯の上では $y$ は同じ数。};
+  \node[font=\footnotesize, anchor=west, align=left] at (27,10) {帯の積分は $y\times\int_0^3x^2\,\dd x=9y$};
+\end{tikzpicture}\end{center}
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 内側：$y$ は数なので外へ：$\displaystyle \int_0^4\Bigl(\int_0^3x^2y\,\dd x\Bigr)\dd y=\int_0^4 y\Bigl(\int_0^3x^2\,\dd x\Bigr)\dd y$\par
+\kviiiga $x$ の定積分：$\displaystyle \int_0^3x^2\,\dd x=\Bigl[\,\dfrac{1}{3}x^3\,\Bigr]_0^3=9$\par
+\kviiiga 外側：$\displaystyle \int_0^4 9y\,\dd y=9\times\Bigl[\,\dfrac{1}{2}y^2\,\Bigr]_0^4=9\times8=72$\par
+\kotae 72
+\end{reidai}
+
+\begin{jibun}
+$0\leqq x\leqq2$、$0\leqq y\leqq2$ の正方形 $D$ で、$\iint_D x\,y^3\,\dd A$ を求めましょう。
+\bkjans{$\Bigl(\int_0^2x\,\dd x\Bigr)\Bigl(\int_0^2y^3\,\dd y\Bigr)=2\times4=8$。}
+\end{jibun}
+
+\begin{reidai}[積分の順番を変える]
+$0\leqq y\leqq x\leqq1$ の三角形 $D$（頂点 $(0,\ 0)$、$(1,\ 0)$、$(1,\ 1)$）で、$\iint_D x\,y\,\dd A$ を、たて線で切る順番と、横線で切る順番の2通りで求めましょう。\par
+\kangaekata \kviiigbaai{境目がななめの線（三角形）}{8-6}{B}\par
+\kviiigdan{1}\enspace 三角形の上で「$xy$×タイル」をたす。\par
+\kviiigdan{2}\enspace たて線：$x$ で止めると $0\leqq y\leqq x$。横線：$y$ で止めると $y\leqq x\leqq1$。図をかいて範囲を作り直す。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 【たて線】内側：$x$ を止めて $y$ で：$\displaystyle \int_0^x x\,y\,\dd y=x\Bigl[\,\dfrac{y^2}{2}\,\Bigr]_0^x=\dfrac{x^3}{2}$\par
+\kviiiga 外側：$x$ で0から1：$\displaystyle \int_0^1\dfrac{x^3}{2}\,\dd x=\Bigl[\,\dfrac{x^4}{8}\,\Bigr]_0^1=\dfrac{1}{8}$\par
+\kviiiga 【横線】内側：$y$ を止めて $x$ で：$\displaystyle \int_y^1 x\,y\,\dd x=y\Bigl[\,\dfrac{x^2}{2}\,\Bigr]_y^1=\dfrac{y-y^3}{2}$\par
+\kviiiga 外側：$y$ で0から1：$\displaystyle \int_0^1\dfrac{y-y^3}{2}\,\dd y=\dfrac{1}{2}\Bigl[\,\dfrac{y^2}{2}-\dfrac{y^4}{4}\,\Bigr]_0^1$\par
+\kviiiga 同じ答え：$\displaystyle =\dfrac{1}{2}\Bigl(\dfrac{1}{2}-\dfrac{1}{4}\Bigr)=\dfrac{1}{8}$\par
+\kotae $\dfrac{1}{8}$（どちらの順番でも同じ）
+\end{reidai}
+
+\begin{jibun}
+$0\leqq y\leqq x\leqq2$ の三角形 $D$ で、$\iint_D x\,y\,\dd A$ を、たて線で切る順番と、横線で切る順番の2通りで求めましょう。
+\bkjans{たて線：内側 $\frac{x^3}{2}$、$\int_0^2\frac{x^3}{2}\,\dd x=\Bigl[\frac{x^4}{8}\Bigr]_0^2=2$。横線：内側 $\frac{y(4-y^2)}{2}$、$\int_0^2\Bigl(2y-\frac{y^3}{2}\Bigr)\dd y=4-2=2$。答えは2。}
+\end{jibun}
+
+\begin{reidai}[三角形の板の重心]
+3つの頂点が $(0,\ 0)$、$(3,\ 0)$、$(0,\ 2)$ の三角形の板（厚さは一定）の重心を求めましょう（長さの単位は m）。重心の $x$ 座標は「$x$×タイルの面積」の合計を面積でわったもの、$y$ 座標も同じです。\par
+\kangaekata \kviiigbaai{境目がななめの線（三角形）}{8-6}{B}\par
+\kviiigdan{1}\enspace $\bar x=\dfrac{1}{3}\iint_D x\,\dd A$、$\bar y=\dfrac{1}{3}\iint_D y\,\dd A$（面積は⑥で3）。\par
+\kviiigdan{2}\enspace たて線で切る：$0\leqq x\leqq3$、$0\leqq y\leqq g$（$g=2-\tfrac{2}{3}x$）。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 内側：止めた $x$×切り口の長さ：$\displaystyle \int_0^{g}x\,\dd y=x\,g=2x-\dfrac{2}{3}x^2$\par
+\kviiiga 外側：$x$ で0から3：$\displaystyle \iint_D x\,\dd A=\Bigl[\,x^2-\dfrac{2}{9}x^3\,\Bigr]_0^3=9-6=3$\par
+\kviiiga 内側：$\dfrac12\Bigl(2-\dfrac23x\Bigr)^2$ を展開：$\displaystyle \int_0^{g}y\,\dd y=\dfrac{g^2}{2}=2-\dfrac{4}{3}x+\dfrac{2}{9}x^2$\par
+\kviiiga 外側：$6-6+2$：$\displaystyle \iint_D y\,\dd A=\Bigl[\,2x-\dfrac{2}{3}x^2+\dfrac{2}{27}x^3\,\Bigr]_0^3=2$\par
+\kviiiga 面積3でわる：$\displaystyle \bar x=\dfrac{3}{3}=1,\quad \bar y=\dfrac{2}{3}$\par
+\kotae $\Bigl(1,\ \dfrac{2}{3}\Bigr)$（m）。3つの頂点の平均 $\Bigl(\dfrac{0+3+0}{3},\ \dfrac{0+0+2}{3}\Bigr)$ と同じ（4-11）\par
+\vspace{2pt}{\small 物理の本（力-3・力-5）では、重心を $\vec r_{\mathrm G}=\tfrac{1}{M}\int\vec r\,\dd m$ と書きます。板なら $\dd m=\sigma\,\dd A$、$M=\iint\sigma\,\dd A$ で、厚さが一定なら $\sigma$ が約分されて、この例題の式になります。力-12 の「$\iint y\,\dd A$＝重心の高さ×面積」も、$\bar y$ の式を面積倍したものです。}
+\end{reidai}
+
+\begin{jibun}
+3つの頂点が $(0,\ 0)$、$(6,\ 0)$、$(0,\ 3)$ の三角形の板（厚さは一定）の面積と重心を、重積分で求めましょう（長さの単位は m）。
+\bkjans{ななめの辺は $y=3-\frac{1}{2}x$。面積 $\int_0^6\Bigl(3-\frac{1}{2}x\Bigr)\dd x=9$。$\iint x\,\dd A=\int_0^6x\Bigl(3-\frac{1}{2}x\Bigr)\dd x=54-36=18$、$\iint y\,\dd A=\int_0^6\frac{1}{2}\Bigl(3-\frac{1}{2}x\Bigr)^2\dd x=9$。重心 $(2,\ 1)$（m）。}
+\end{jibun}
+
+\begin{reidai}[半円の板の重心]
+半径 $R$ の半円の板（$x^2+y^2\leqq R^2$、$y\geqq0$。厚さは一定）の重心を求めましょう。また、$R=\qty{0.15}{m}$ のときの重心を求めましょう。\par
+\kangaekata \kviiigbaai{左右対称で、範囲が半円}{8-6}{G,C}\par
+\kviiigdan{1}\enspace $\bar x=\dfrac{1}{S}\iint_D x\,\dd A$、$\bar y=\dfrac{1}{S}\iint_D y\,\dd A$（面積 $S=\dfrac{\pi R^2}{2}$）。\par
+\kviiigdan{3}\enspace $y$ 軸で左右対称で、$x$ は折り返すと符号が変わるので $\iint_D x\,\dd A=0$、$\bar x=0$。\par
+\kviiigdan{2}\enspace 残りの $\iint y\,\dd A$ は極座標：$0\leqq r\leqq R$、$0\leqq\theta\leqq\pi$（上半分）、$y=r\sin\theta$、$\dd A=r\,\dd r\,\dd\theta$。$f=r\sin\theta$ は $\theta$ もふくむので C。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 $y=r\sin\theta$、タイル $r\,\dd r\,\dd\theta$：$\displaystyle \iint_D y\,\dd A=\int_0^{\pi}\Bigl(\int_0^R r\sin\theta\times r\,\dd r\Bigr)\dd\theta$\par
+\kviiiga 内側：$\theta$ を止めて $r$ で：$\displaystyle \int_0^R r^2\sin\theta\,\dd r=\dfrac{R^3}{3}\sin\theta$\par
+\kviiiga 外側：$[-\cos\theta]_0^{\pi}=2$：$\displaystyle \int_0^{\pi}\dfrac{R^3}{3}\sin\theta\,\dd\theta=\dfrac{R^3}{3}\Bigl[-\cos\theta\Bigr]_0^{\pi}=\dfrac{2R^3}{3}$\par
+\kviiiga 面積でわる：$\displaystyle \bar y=\dfrac{2R^3}{3}\div\dfrac{\pi R^2}{2}=\dfrac{4R}{3\pi}$\par
+\kviiiga $\displaystyle R=0.15\ \text{のとき}\ \bar y=\dfrac{4\times0.15}{3\pi}\approx0.0637$\par
+\kotae $\Bigl(0,\ \dfrac{4R}{3\pi}\Bigr)$（中心から約 $0.42R$ 上）。$R=\qty{0.15}{m}$ なら $(0,\ 0.0637)$（m）
+\end{reidai}
+
+\begin{jibun}
+半径 \qty{0.3}{m} の半円の板（$x^2+y^2\leqq0.3^2$、$y\geqq0$。厚さは一定）の重心を求めましょう。
+\bkjans{対称性で $\bar x=0$。$\iint y\,\dd A=\frac{2R^3}{3}=0.018$、面積 $\frac{\pi R^2}{2}\approx0.1414$。$\bar y=\frac{4R}{3\pi}\approx0.127$。重心 $(0,\ 0.127)$（m）。}
+\end{jibun}
+
+\begin{reidai}[丸い棒の断面二次モーメント]
+直径 $d=\qty{0.04}{m}$ の丸い棒の切り口（円）で、$I=\iint_D y^2\,\dd A$ を求めましょう。$I$ は、棒の曲がりにくさを決める量で、\textbf{断面二次モーメント}といいます（物理 力-10）。\bkidx{だんめんにじもーめんと}{断面二次モーメント}\par
+\kangaekata \kviiigbaai{円で、対称性を使うと $f$ が $r$ だけになる}{8-6}{G,C$'$}\par
+\kviiigdan{1}\enspace 円の上で「$y^2$×タイル」をたす（中心を原点にとる）。\par
+\kviiigdan{3}\enspace 90° 回すと $x$ と $y$ が入れかわるので $\iint y^2\,\dd A=\iint x^2\,\dd A=\dfrac{1}{2}\iint r^2\,\dd A$。\par
+\kviiigdan{2}\enspace $f=\dfrac{r^2}{2}$ は $r$ だけなので、細い輪 $\dd A=2\pi r\,\dd r$、$0\leqq r\leqq R$（$R=d\div2$）。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 細い輪に分ける：$\displaystyle I=\dfrac{1}{2}\int_0^R r^2\times2\pi r\,\dd r=\pi\int_0^R r^3\,\dd r$\par
+\kviiiga 原始関数：$\displaystyle =\pi\Bigl[\,\dfrac{r^4}{4}\,\Bigr]_0^R=\dfrac{\pi R^4}{4}$\par
+\kviiiga $R=\dfrac{d}{2}$：$\displaystyle =\dfrac{\pi}{4}\times\dfrac{d^4}{16}=\dfrac{\pi d^4}{64}$\par
+\kviiiga 数を入れる：$\displaystyle =\dfrac{\pi\times0.04^4}{64}=\dfrac{\pi\times\num{2.56e-6}}{64}\approx\num{1.257e-7}$\par
+\kotae $\dfrac{\pi d^4}{64}\approx\qty{1.26e-7}{m^4}$（物理の本の式と同じ）
+\end{reidai}
+
+\begin{jibun}
+直径 $d=\qty{0.06}{m}$ の丸い棒の切り口で、断面二次モーメント $I=\iint_D y^2\,\dd A$ を求めましょう。
+\bkjans{対称性で $I=\frac{1}{2}\iint r^2\,\dd A$。細い輪で $\frac{1}{2}\int_0^R r^2\times2\pi r\,\dd r=\frac{\pi R^4}{4}=\frac{\pi d^4}{64}$。$\frac{\pi\times0.06^4}{64}\approx\qty{6.36e-7}{m^4}$。}
+\end{jibun}
+
+\begin{reidai}[管を流れる水の量]
+半径 $R=\qty{1}{cm}$ の細い管の中を、水がゆっくり流れています。中心からの距離 $r$ の所の速さ $u$〔m/s〕は $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$、中心の速さは $u_{\max}=\qty{0.2}{m/s}$ です（物理 力-14）。1秒に流れる水の体積（流量）$Q$ と、平均の速さを求めましょう。\par
+\kangaekata \kviiigbaai{円で、$u$ が $r$ だけで決まる}{8-6}{C$'$}\par
+\kviiigdan{1}\enspace $Q=\iint_D u\,\dd A$（切り口の上で「速さ×タイルの面積」をたす。1秒に、タイルを通る水は、タイルを底面、$u$ を高さとする柱）。\par
+\kviiigdan{2}\enspace 細い輪に分ける：$\dd A=2\pi r\,\dd r$、$0\leqq r\leqq R$。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 速さ×輪の面積をたす：$\displaystyle Q=\int_0^R u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)2\pi r\,\dd r$\par
+\kviiiga 定数を外へ出す：$\displaystyle =2\pi u_{\max}\int_0^R\Bigl(r-\dfrac{r^3}{R^2}\Bigr)\dd r$\par
+\kviiiga 原始関数：$\displaystyle =2\pi u_{\max}\Bigl(\dfrac{R^2}{2}-\dfrac{R^2}{4}\Bigr)=\dfrac{\pi u_{\max}R^2}{2}$\par
+\kviiiga $R=\qty{0.01}{m}$：$\displaystyle =\dfrac{\pi\times0.2\times0.01^2}{2}\approx\num{3.14e-5}$\par
+\kviiiga mL に直す：$\displaystyle \qty{3.14e-5}{m^3/s}\times\qty{1e6}{mL/m^3}=\qty{31.4}{mL/s}$\par
+\kviiiga 平均の速さ：$\displaystyle \dfrac{Q}{\pi R^2}=\dfrac{u_{\max}}{2}=\qty{0.1}{m/s}$\par
+\kotae 流量 約 \qty{31.4}{mL/s}（約 \qty{1.9}{L/min}）、平均の速さ \qty{0.1}{m/s}（中心の速さの半分）
+\end{reidai}
+
+\begin{jibun}
+半径 $R=\qty{2}{cm}$ の管で、速さが $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$、$u_{\max}=\qty{0.5}{m/s}$ のとき、流量と平均の速さを求めましょう。
+\bkjans{$Q=\frac{\pi u_{\max}R^2}{2}=\frac{\pi\times0.5\times0.02^2}{2}\approx\qty{3.14e-4}{m^3/s}$、つまり約 \qty{314}{mL/s}。平均の速さは $\frac{u_{\max}}{2}=\qty{0.25}{m/s}$。}
+\end{jibun}
+
+\begin{reidai}[主役の山の体積]
+主役の山 $h$〔m〕$=100-0.01x^2-0.02y^2$ の、地面（$h=0$）より上の体積を求めましょう。高さ $z$ の切り口の面積 $A(z)$〔m$^2$〕は、⑧で求めたように $A(z)=\pi\times10\sqrt{50}\times(100-z)$ です。\par
+\kangaekata \kviiigbaai{立体の体積で、切り口の面積がわかる}{8-6}{D}\par
+\kviiigdan{1}\enspace $V=\iiint_V\dd V$（山の中の小さな箱の体積をたす）。\par
+\kviiigdan{2}\enspace 内側の2回は切り口の面積。$V=\int_0^{100}A(z)\,\dd z$。\par
+\begin{center}\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGreen!18] plot[domain=-30:30, samples=31] (\x,{(100-0.01*(10/3*\x)^2)*0.3}) -- cycle;
+  \draw[bkGreen!60!black, line width=1pt] plot[domain=-30:30, samples=31] (\x,{(100-0.01*(10/3*\x)^2)*0.3});
+  \foreach \kviiigz in {6,12,18,24} {\pgfmathsetmacro\kviiigw{0.3*sqrt((100-\kviiigz/0.3)/0.01)}\draw[bkOrange!85!black, line width=1pt] (-\kviiigw,\kviiigz) -- (\kviiigw,\kviiigz);}
+  \draw[bkInk, line width=0.7pt] (-33,0) -- (33,0);
+  \node[font=\footnotesize, anchor=west] at (34,15) {うすい切り口（面積 $A(z)$、厚さ $\dd z$）を};
+  \node[font=\footnotesize, anchor=west] at (34,8) {ふもとから頂上までたす};
+\end{tikzpicture}\end{center}
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 定数を外へ出す：$\displaystyle V=\pi\times10\sqrt{50}\int_0^{100}(100-z)\,\dd z$\par
+\kviiiga $\num{10000}-\num{5000}$：$\displaystyle \int_0^{100}(100-z)\,\dd z=\Bigl[\,100z-\dfrac{1}{2}z^2\,\Bigr]_0^{100}=\num{5000}$\par
+\kviiiga かける：$\displaystyle V=\pi\times10\sqrt{50}\times\num{5000}\approx222.1\times\num{5000}\approx\num{1.11e6}$\par
+\kotae 約 \qty{1.11e6}{m^3}（せいかくに言うとの、だ円の座標の計算と同じ）
+\end{reidai}
+
+\begin{jibun}
+山の形が $h$〔m〕$=40-0.01x^2-0.04y^2$ のとき、高さ $z$ の切り口（だ円）の面積 $A(z)$ と、地面より上の体積を求めましょう。
+\bkjans{横の半径 $a=10\sqrt{40-z}$、たての半径 $b=5\sqrt{40-z}$ で、$A(z)=\pi ab=50\pi(40-z)$。$V=50\pi\int_0^{40}(40-z)\,\dd z=50\pi\times800=\num{40000}\pi\approx\qty{1.26e5}{m^3}$。}
+\end{jibun}
+
+\begin{reidai}[球の慣性モーメント]
+半径 $R$、密度 $\rho$ が一定の球の、$z$ 軸（中心を通る軸）のまわりの慣性モーメント $I=\iiint_V\rho\,(x^2+y^2)\,\dd V$ を、球の質量 $M$ と $R$ で表しましょう。また、鋼（密度 \qty{7850}{kg/m^3}）の球（$R=\qty{5}{cm}$）の $I$ を求めましょう。\par
+\kangaekata \kviiigbaai{立体が球}{8-6}{E}\par
+\kviiigdan{1}\enspace 球の中で「$\rho$×軸からの距離の2乗×箱の体積」をたす（物理 力-6）。\par
+\kviiigdan{2}\enspace 球座標。軸からの距離は $r\sin\theta$ なので $x^2+y^2=r^2\sin^2\theta$。$\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$。球全体は $0\leqq r\leqq R$、$0\leqq\theta\leqq\pi$、$0\leqq\varphi\leqq2\pi$（上半分の半球なら $\theta$ は0から $\frac{\pi}{2}$）。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 $\displaystyle I=\rho\int_0^{2\pi}\!\!\int_0^{\pi}\!\!\int_0^R r^2\sin^2\theta\times r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$\par
+\kviiiga かけ算に分かれる：$\displaystyle I=\rho\Bigl(\int_0^R r^4\,\dd r\Bigr)\Bigl(\int_0^{\pi}\sin^3\theta\,\dd\theta\Bigr)\Bigl(\int_0^{2\pi}\dd\varphi\Bigr)$\par
+\kviiiga 3つの定積分：$\displaystyle \frac{R^5}{5}$、$\displaystyle \frac{4}{3}$（下の注）、$2\pi$\par
+\kviiiga かける：$\displaystyle I=\rho\times\frac{R^5}{5}\times\frac{4}{3}\times2\pi=\frac{8\pi\rho R^5}{15}$\par
+\kviiiga $M=\rho\times\dfrac43\pi R^3$ でわる：$\displaystyle \frac{I}{M}=\frac{8\pi\rho R^5}{15}\div\frac{4\pi\rho R^3}{3}=\frac{2}{5}R^2$\par
+\kviiiga 鋼の球：$\displaystyle M=7850\times\frac{4}{3}\pi\times0.05^3\approx4.11$、$\displaystyle I=\frac{2}{5}\times4.11\times0.05^2\approx\num{4.11e-3}$\par
+\kotae $I=\dfrac{2}{5}MR^2$。鋼の球は約 \qty{4.11e-3}{kg.m^2}\par
+\vspace{2pt}{\small 注：$\sin^3\theta=(1-\cos^2\theta)\sin\theta$。$u=\cos\theta$ とおくと $\dd u=-\sin\theta\,\dd\theta$、$\theta$ が0から $\pi$ で $u$ は1から $-1$（5-16 の置換積分）。$\int_{-1}^{1}(1-u^2)\,\dd u=2-\frac{2}{3}=\frac{4}{3}$。}
+\end{reidai}
+
+\begin{jibun}
+半径 $R$、密度 $\rho$ が一定の半球（$z\geqq0$ の部分）の、$z$ 軸のまわりの慣性モーメント $I=\iiint_V\rho\,(x^2+y^2)\,\dd V$ を、半球の質量 $M$ と $R$ で表しましょう。
+\bkjans{$\theta$ は0から $\frac{\pi}{2}$。$\int_0^{\pi/2}\sin^3\theta\,\dd\theta=\int_0^1(1-u^2)\,\dd u=\frac{2}{3}$。$I=\rho\times\frac{R^5}{5}\times\frac{2}{3}\times2\pi=\frac{4\pi\rho R^5}{15}$、$M=\frac{2}{3}\pi\rho R^3$ なので $I=\frac{2}{5}MR^2$（球と同じ形）。}
+\end{jibun}
+
+\begin{reidai}[パイプの断面二次モーメント]
+外の直径 $D=\qty{40}{mm}$、内の直径 $d=\qty{30}{mm}$ のパイプ（中が空の丸い棒）の切り口で、断面二次モーメント $I=\iint y^2\,\dd A$ を求めましょう。また、同じ外の直径の丸い棒（例題6）とくらべましょう。\par
+\kangaekata \kviiigbaai{穴のあいた円（和・差）}{8-6}{F}\par
+\kviiigdan{1}\enspace 輪の上で「$y^2$×タイル」をたす。\par
+\kviiigdan{3}\enspace 輪＝大きい円－小さい円。それぞれ例題6の $\dfrac{\pi d^4}{64}$（G と C$'$）。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 大きい円－小さい円：$\displaystyle I=\dfrac{\pi D^4}{64}-\dfrac{\pi d^4}{64}=\dfrac{\pi(D^4-d^4)}{64}$\par
+\kviiiga $D=\qty{0.04}{m}$、$d=\qty{0.03}{m}$：$\displaystyle D^4-d^4=\num{2.56e-6}-\num{8.1e-7}=\num{1.75e-6}$\par
+\kviiiga $\displaystyle I=\dfrac{\pi\times\num{1.75e-6}}{64}\approx\num{8.59e-8}$\par
+\kviiiga 丸い棒との比：$\displaystyle \num{8.59e-8}\div\num{1.257e-7}\approx0.68$\par
+\kviiiga 切り口の面積の比：$\displaystyle \dfrac{D^2-d^2}{D^2}=\dfrac{16-9}{16}\approx0.44$\par
+\kotae 約 \qty{8.59e-8}{m^4}。材料は約44\%なのに、曲がりにくさは約68\% 残る
+\end{reidai}
+
+\begin{jibun}
+外の直径 $D=\qty{60}{mm}$、内の直径 $d=\qty{40}{mm}$ のパイプの切り口で、断面二次モーメントを求めましょう。
+\bkjans{$D^4-d^4=\num{1.296e-5}-\num{2.56e-6}=\num{1.04e-5}$。$I=\frac{\pi\times\num{1.04e-5}}{64}\approx\qty{5.11e-7}{m^4}$。}
+\end{jibun}
+
+\begin{reidai}[川の流域に降った雨の量]
+1\,km 四方のマスが、たて3つ・横3つの9つならぶ流域があります。ある日の雨の量（mm）は、マスごとに次のとおりでした。流域に降った雨の体積を求めましょう。\par
+\begin{center}\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiigi/\kviiigj/\kviiigv in {0/2/10,1/2/20,2/2/30,0/1/20,1/1/30,2/1/40,0/0/30,1/0/40,2/0/50} {%
+    \pgfmathtruncatemacro\kviiigc{10+\kviiigv}%
+    \filldraw[fill=bkBlue!\kviiigc, draw=bkInk, line width=0.6pt] ({\kviiigi*14},{\kviiigj*12}) rectangle ++(14,12);
+    \node[font=\footnotesize, fill=white, rounded corners=0.6mm, inner sep=0.8mm] at ({\kviiigi*14+7},{\kviiigj*12+6}) {\kviiigv};}
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (0,-3.5) -- (14,-3.5);
+  \node[font=\footnotesize, anchor=north] at (7,-4.5) {1\,km};
+  \node[font=\footnotesize, anchor=west, align=left] at (46,24) {マスの数は雨の量（mm）};
+  \node[font=\footnotesize, anchor=west, align=left] at (46,16) {1マスは 1\,km 四方};
+  \node[font=\footnotesize, anchor=west, align=left] at (46,8) {色がこいほど多い};
+\end{tikzpicture}\end{center}
+\kangaekata \kviiigbaai{式がない（データだけ）}{8-6}{H}\par
+\kviiigdan{1}\enspace 流域の上で「雨の深さ×タイルの面積」をたす。\par
+\kviiigdan{3}\enspace マスごとに「雨の深さ×マスの面積」をたす（表計算の SUM）。\par
+\shiki\kviiigs\hangindent=2.6\zw\hangafter=1 マスの面積：$\qty{1000}{m}\times\qty{1000}{m}=\qty{1e6}{m^2}$\par
+\kviiiga 1\,mm $=\qty{0.001}{m}$ なので、1\,mm の雨は1マスに $0.001\times\num{1e6}=\qty{1000}{m^3}$\par
+\kviiiga 雨の量の合計：$10+20+30+20+30+40+30+40+50=270$（mm）\par
+\kviiiga 体積：$270\times\qty{1000}{m^3}=\qty{2.7e5}{m^3}$\par
+\kotae 約 \qty{2.7e5}{m^3}（流域の平均の雨は $270\div9=\qty{30}{mm}$）
+\end{reidai}
+
+\begin{jibun}
+1\,km 四方のマス9つ（たて3つ・横3つ）の流域で、雨の量（mm）が、1行めから順に「5、10、15」「10、20、25」「15、25、35」でした。流域に降った雨の体積と、平均の雨の量を求めましょう。
+\bkjans{行ごとに $5+10+15=30$、$10+20+25=55$、$15+25+35=75$。合計 $30+55+75=160$（mm）。体積 $160\times\qty{1000}{m^3}=\qty{1.6e5}{m^3}$。平均 $160\div9\approx\qty{17.8}{mm}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 極座標で $r$ を忘れる}
+\bkng{円の面積 $=\int_0^{2\pi}\!\int_0^R\dd r\,\dd\theta=2\pi R$}
+\bkok{円の面積 $=\int_0^{2\pi}\!\int_0^R r\,\dd r\,\dd\theta=\pi R^2$}
+タイルの横はばは $r\,\dd\theta$ です。$r$ を忘れると答えが長さ（m）になり、面積（m$^2$）になりません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 順番を変えたのに、範囲をそのままにする}
+\bkng{$\int_0^3\!\int_0^{2-\frac{2}{3}x}\dd y\,\dd x$ の順番を変えて、$\int_0^{2-\frac{2}{3}x}\!\int_0^3\dd x\,\dd y$}
+\bkok{図をかき直して、$\int_0^2\!\int_0^{3-\frac{3}{2}y}\dd x\,\dd y$}
+外側の範囲に文字 $x$ が残ると、答えが数になりません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 止めた文字の項に、はばをかけ忘れる}
+\bkng{$\int_0^2(10+5x+2y)\,\dd x=20+10+2y$}
+\bkok{$\int_0^2(10+5x+2y)\,\dd x=20+10+4y$}
+$x$ で積分するとき $2y$ は定数で、0から2まで積分すると $2\times2y=4y$ です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ 名前をそのまま計算する}
+\bkng{$\iint_D\sigma\,\dd A=\sigma\times$（板の面積）$=(10+5x+2y)\times2$}
+\bkok{$\sigma$ が場所で変わるときは、ふつうの定積分に直して計算する}
+\[ \kviiigNt{\iint_D\sigma\,\dd A}=\kviiigSt{\int_0^1\!\!\Bigl(\int_0^2\sigma\,\dd x\Bigr)\dd y}=32 \]
+$\iint_D\sigma\,\dd A$ は操作の名前です。「$\sigma$×面積」は、$\sigma$ がどこでも同じときだけです。答えに $x$ や $y$ が残ったら、まちがいです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{⑤ 内側の範囲に、内側の文字を入れる}
+\bkng{$\int_0^1\!\Bigl(\int_0^{y}x\,y\,\dd y\Bigr)\dd x$（$y$ で積分するのに、上のはしが $y$）}
+\bkok{$\int_0^1\!\Bigl(\int_0^{x}x\,y\,\dd y\Bigr)\dd x$（上のはしは外側の文字 $x$）}
+内側の範囲は、止めている外側の文字で決まります。内側で動かしている文字を範囲に入れると、意味のない式になります。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiigEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 球座標の $\sin\theta$ と範囲}
+\raggedright\bkng{$\dd V=r^2\,\dd r\,\dd\theta\,\dd\varphi$、\\$0\leqq\theta\leqq2\pi$、$0\leqq\varphi\leqq\pi$}
+\bkok{$\dd V=r^2\sin\theta\,\dd r\,\dd\theta\,\dd\varphi$、\\$0\leqq\theta\leqq\pi$、$0\leqq\varphi\leqq2\pi$}
+$\theta$ は真上から真下まで（半周）、$\varphi$ は床の上で1周です。$\sin\theta$ は、横の円の半径 $r\sin\theta$ から出てきます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑦ どの ∫ とどの $\dd$ が組か}
+\raggedright\bkng{$\int_0^1\!\int_0^2 f\,\dd x\,\dd y$ の内側の「0から2」を $y$ の範囲と読む}
+\bkok{内側の ∫ と内側の $\dd x$ が組。「0から2」は $x$ の範囲}
+∫ と $\dd$ は、かっこと同じように、内側どうし・外側どうしで組になります。まよったら、かっこをつけて書きます。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑧ ∬ を「2つの積分のかけ算」と思いこむ}
+\bkng{三角形 $0\leqq y\leqq x\leqq1$ でも $\iint x\,y\,\dd A=\Bigl(\int_0^1x\,\dd x\Bigr)\Bigl(\int_0^1y\,\dd y\Bigr)=\frac{1}{4}$}
+\bkok{三角形では範囲が $x$ によるので、例題3のとおり $\frac{1}{8}$}
+かけ算に分かれるのは、範囲が長方形で、$f$ が「$x$ だけ」×「$y$ だけ」のとき（場合 A$'$）だけです。
+\end{tsumazuki}
+
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiigbox{曲がりにくい形：パイプと H 形鋼}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+はりや柱の曲がりにくさは、切り口の断面二次モーメント $\iint y^2\,\dd A$ で決まります（物理 力-10）。$y^2$ がかかるので、中心から遠い所の材料ほど、曲がりにくさに強くききます。だから、自転車のフレームはパイプにし、ビルや橋の鉄骨は、上と下に材料を集めた H 形鋼にして、軽くて曲がりにくい形にしています（例題10）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!40, draw=bkInk, line width=0.7pt] (0,0) circle (7);
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (0,0) circle (5);
+  \filldraw[fill=bkGray!40, draw=bkInk, line width=0.7pt] (13,-7) rectangle (29,-5) (20,-5) rectangle (22,5) (13,5) rectangle (29,7);
+  \node[font=\footnotesize, anchor=north] at (0,-8.5) {パイプ};
+  \node[font=\footnotesize, anchor=north] at (21,-8.5) {H 形鋼};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kviiigbox{回りにくさ：フライホイール}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+回る物の回りにくさ（慣性モーメント）は、$\iiint\rho\,r^2\,\dd V$ です（$r$ は軸からの距離。物理 力-6）。エンジンや発電機の軸につける重い円板（フライホイール、はずみ車）は、外側に材料を集めて慣性モーメントを大きくし、回る速さのむらを小さくします。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (0,0) circle (11);
+  \filldraw[fill=bkGray!12, draw=bkInk, line width=0.7pt] (0,0) circle (8);
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.6pt] (0,0) circle (2.2);
+  \foreach \kviiiga in {0,60,...,300} {\draw[bkInk, line width=1.2pt] (\kviiiga:2.2) -- (\kviiiga:8);}
+  \draw[bkOrange!85!black, line width=0.9pt, -{Stealth[length=2mm]}] (60:13.5) arc (60:120:13.5);
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kviiigbox{管を流れる量：水道管から血管まで}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+細い管をゆっくり流れる水や油は、まん中が速く、かべの近くはほとんど止まっています。流量は切り口の上の $\iint u\,\dd A$ で、細い輪に分けて求めます（例題7、物理 力-14）。平均の速さは中心の速さの半分です。水道や油の配管、化学工場のパイプの設計に使います。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=1pt] (0,8) -- (26,8) (0,-8) -- (26,-8);
+  \foreach \kviiigy in {-6,-3,0,3,6} {\pgfmathsetmacro\kviiigl{14*(1-(\kviiigy/8)^2)}\draw[bkBlue, line width=0.9pt, -{Stealth[length=1.8mm]}] (4,\kviiigy) -- ({4+\kviiigl},\kviiigy);}
+  \draw[bkBlue!70!black, line width=0.6pt, dash pattern=on 1.2pt off 1pt, domain=-8:8, samples=17] plot ({4+14*(1-(\x/8)^2)},\x);
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $0\leqq x\leqq3$、$0\leqq y\leqq1$ の板で、面密度が $\sigma=12+4x+6y$〔kg/m$^2$〕のとき、板の質量を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$\int_0^3(12+4x+6y)\,\dd x=36+18+18y=54+18y$。$\int_0^1(54+18y)\,\dd y=54+9=63$。\qty{63}{kg}。}
+
+\bkproblem $0\leqq x\leqq3$、$0\leqq y\leqq1$ の長方形 $D$ で、$\iint_D x^2y^2\,\dd A$ を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$\Bigl(\int_0^3x^2\,\dd x\Bigr)\Bigl(\int_0^1y^2\,\dd y\Bigr)=9\times\frac{1}{3}=3$。}
+
+\bkproblem 3つの頂点が $(0,\ 0)$、$(4,\ 0)$、$(0,\ 3)$ の三角形の板（厚さは一定）の面積と重心を、重積分で求めましょう（長さの単位は m）\mbox{（\bkreidairef{4}）}。
+\bkpans{ななめの辺は $y=3-\frac{3}{4}x$。面積 $\int_0^4\Bigl(3-\frac{3}{4}x\Bigr)\dd x=6$。$\iint x\,\dd A=8$、$\iint y\,\dd A=6$。重心 $\Bigl(\frac{4}{3},\ 1\Bigr)$（m）。}
+
+\bkproblem 半径 \qty{0.6}{m} の半円の板（$x^2+y^2\leqq0.6^2$、$y\geqq0$。厚さは一定）の重心を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{対称性で $\bar x=0$。$\bar y=\frac{4R}{3\pi}=\frac{4\times0.6}{3\pi}\approx0.255$。重心 $(0,\ 0.255)$（m）。}
+
+\bkproblem 直径 $d=\qty{0.1}{m}$ の丸い棒の切り口で、断面二次モーメント $\iint y^2\,\dd A$ を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\frac{\pi d^4}{64}=\frac{\pi\times0.1^4}{64}\approx\qty{4.91e-6}{m^4}$。}
+
+\bkproblem 半径 $R=\qty{0.5}{cm}$ の管で、速さが $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$、$u_{\max}=\qty{0.4}{m/s}$ のとき、流量（mL/s）と平均の速さを求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$Q=\frac{\pi u_{\max}R^2}{2}=\frac{\pi\times0.4\times0.005^2}{2}\approx\qty{1.57e-5}{m^3/s}$、約 \qty{15.7}{mL/s}。平均の速さ \qty{0.2}{m/s}。}
+
+\bkproblem 1\,km 四方のマス6つ（たて2つ・横3つ）の流域で、雨の量（mm）が、1行めから順に「10、15、20」「25、30、35」でした。流域に降った雨の体積を求めましょう\mbox{（\bkreidairef{11}）}。
+\bkpans{合計 $10+15+20+25+30+35=135$（mm）。$135\times\qty{1000}{m^3}=\qty{1.35e5}{m^3}$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem $0\leqq y\leqq x\leqq3$ の三角形 $D$ で、$\iint_D y\,\dd A$ を、たて線で切る順番と、横線で切る順番の2通りで求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{たて線：$\int_0^3\frac{x^2}{2}\,\dd x=4.5$。横線：$\int_0^3 y(3-y)\,\dd y=13.5-9=4.5$。答えは4.5。}
+
+\bkproblem 山の形が $h$〔m〕$=60-0.01x^2-0.04y^2$ のとき、高さ $z$ の切り口の面積と、地面より上の体積を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$a=10\sqrt{60-z}$、$b=5\sqrt{60-z}$ で、$A(z)=50\pi(60-z)$。$V=50\pi\times1800=\num{90000}\pi\approx\qty{2.83e5}{m^3}$。}
+
+\bkproblem 半径 $R=\qty{0.1}{m}$ の鋼（密度 \qty{7850}{kg/m^3}）の球の、中心を通る軸のまわりの慣性モーメントを求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$M=7850\times\frac{4}{3}\pi\times0.1^3\approx\qty{32.9}{kg}$。$I=\frac{2}{5}MR^2$ で、$I\approx\frac{2}{5}\times32.9\times0.01\approx\qty{0.132}{kg.m^2}$。}
+
+\bkproblem 外の直径 \qty{50}{mm}、内の直径 \qty{40}{mm} のパイプの切り口で、断面二次モーメントを求めましょう\mbox{（\bkreidairef{10}）}。
+\bkpans{$D^4-d^4=0.05^4-0.04^4=\num{3.69e-6}$。$I=\frac{\pi\times\num{3.69e-6}}{64}\approx\qty{1.81e-7}{m^4}$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 板を小さなタイルに分けて重さを表計算でたし、重積分の記号を「何を・どこで・1枚の量」で読める。\bkfurref{bk:8-6:tile}
+\item 長方形の範囲の重積分を、ふつうの定積分を2回くり返す形に直して計算できる。\bkfurref{bk:8-6:naosu}
+\item 場合分けの表を使って、三角形・円・立体の重積分を、正しいふつうの定積分に直して計算できる。\bkfurref{bk:8-6:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{∬ は操作の名前で、計算するのはふつうの定積分なんだね。次は、道にそってたす「線積分」。同じ3つの段で読んでいこう。}

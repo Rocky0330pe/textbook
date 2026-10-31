@@ -1,0 +1,1154 @@
+%% 8-11 中と外をつなぐ：ガウスの定理とストークスの定理（第14回：組 V8-6。ページ制限なし。偶数ページ）
+%% 依頼者の指示（10月29日 13:34）：「名前」と「実際の操作」の違いを丁寧に。この章では、定理は「どちらの側の積分が楽か」を選ぶ道具（楽をする段）。
+%%   型は tools/kata8-int.md（V8-4）：3つの段の札・場合分けの表（G1〜G7・S1〜S6）・流れ図（ひし形と四角だけ、1ページに1つ）・例題の1行め「場合：…（表8-11の G1）」。
+%% ほかの巻・物理の本との約束：
+%%   物理 力-4（p1-04:951）「Aで行ってBでもどる1周の仕事は 1-(-1)=2 で、『rot の値2×囲んだ面積1』と同じです（8-11 のストークスの定理）」→ ③。
+%%   物理 力-2（p1-02:327）「全部の質量が中心に集まっているときと同じ（数学 8-11 のガウスの定理で示せます）」→ ⑦・例題4。
+%%   物理 力-12（p1-12:668）「ガウスの定理（8-11）の形の1つ $\oint$p n dS = $\int$grad p dV」→ もっと知りたい（G7）・例題9。
+%%   物理 力-13（p1-13:386）「検査体積はどこにどんな大きさでとってもよいので、中身どうしが等しくなり」→ せいかくに言うと（積分形と微分形）。
+%%   8-9（V8-5）：「マスの発散の合計が、外まわりから出る量に等しい…8-11」「なぜ 2π でわるのか…8-11」「点のわき出しは…くりぬく」「積分形は 8-11 で」→ ①・⑧。
+%%   8-10：うずなし流れの穴（S3）、導線の中の磁場「8-11 で、その理由を学びます」→ ⑫・⑬。8-12：「点電荷の電場の流束はどの半径の球でも同じ」→ ④・⑦。
+%%   第14回の決定1：閉じた面は $\oiint$、専門書の欄に「物理の本や多くの専門書では、閉じた面にも $\oint$ を1つ書く。どちらも◯は『閉じている』という印」。
+%%   数はすべて Python で確かめた（scratchpad/v8-6/py/c11.py）。
+\makeatletter
+% ---- 「名前と操作」の型（tools/kata8-int.md。kviiig を kviiil に置きかえた）----
+\colorlet{kviiilNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kviiilSc}{bkTheme}% ふつうの定積分の枠の線（実線）
+\colorlet{kviiilSb}{bkTheme!8}% ふつうの定積分の地
+\tikzset{
+  kviiil dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kviiil dan1/.style={kviiil dan, draw=kviiilNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kviiil dan2/.style={kviiil dan, draw=kviiilSc, fill=kviiilSb, text=bkInk},
+  kviiil dan3/.style={kviiil dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kviiil name/.style={draw=kviiilNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kviiil seki/.style={draw=kviiilSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kviiilSb},
+  kviiil tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kviiil q/.style={diamond, aspect=2.4, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=center, inner sep=0.3mm, text=bkInk},
+  kviiil do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kviiil go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kviiil yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 段の札（例題の中で）  \kviiildan{1|2|3}
+\newcommand\kviiildan[1]{\tikz[baseline=(d.base)]\node[kviiil dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 段の見出し（本文で）  \kviiildanhead{1|2|3}{見出し}
+\newcommand\kviiildanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kviiil dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kviiilcase{C}（′ は \kviiilcase{A$'$}）
+\newcommand\kviiilcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kviiilbaai{ことば}{8-6}{C}（場合が2つなら {C,G}）
+\newcommand\kviiilbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kviiil@cases#3,\@nil）}
+\def\kviiil@cases#1,#2\@nil{\kviiilcase{#1}\ifx\relax#2\relax\else と\kviiil@cases#2\@nil\fi}
+% 式の中の「名前」と「ふつうの定積分」
+\newcommand\kviiilN[1]{\tikz[baseline=(n.base)]\node[kviiil name] (n) {$\displaystyle #1$};}
+\newcommand\kviiilS[1]{\tikz[baseline=(n.base)]\node[kviiil seki] (n) {$\displaystyle #1$};}
+\newcommand\kviiilNt[1]{\tikz[baseline=(n.base)]{\node[kviiil name] (n) {$\displaystyle #1$};\node[kviiil tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kviiilSt[1]{\tikz[baseline=(n.base)]{\node[kviiil seki] (n) {$\displaystyle #1$};\node[kviiil tag, anchor=north] at ([yshift=-0.8mm]n.south) {ふつうの定積分};}}
+% 場合分けの表の題の帯  \kviiilcasetitle{8-6}{題}
+\newcommand\kviiilcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% ---- この章の部品（頭文字 kviiil）----
+\newcommand\kviiilhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+\newcommand\kviiilbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+\newcommand\kviiilframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+\newcommand\kviiilq{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\tikzset{kviiil arrow/.style={-{Stealth[length=3.2pt, width=3pt]}, line width=0.9pt, bkBlue!70!black},
+  kviiil out/.style={-{Stealth[length=2.2mm]}, line width=1.2pt, bkRed!85!black},
+  kviiil in/.style={-{Stealth[length=2.2mm]}, line width=1.2pt, bkBlue!70!black},
+  kviiil turn/.style={-{Stealth[length=2mm, width=1.8mm]}, line width=1pt, bkRed!85!black}}
+% 立方体の見取り図（斜めに見た図）  \kviiilcube{(左下手前)}{1辺}{色}
+\newcommand\kviiilcube[3]{\begin{scope}[shift={#1}]
+  \draw[#3, line width=0.5pt, dash pattern=on 1.5pt off 1.2pt] (0,0) -- ({0.4*#2},{0.3*#2}) -- ({0.4*#2},{1.3*#2}) ({0.4*#2},{0.3*#2}) -- ({1.4*#2},{0.3*#2});
+  \draw[#3, line width=0.9pt, line join=round] (0,0) rectangle (#2,#2);
+  \draw[#3, line width=0.9pt, line join=round] (0,#2) -- ({0.4*#2},{1.3*#2}) -- ({1.4*#2},{1.3*#2}) -- ({1.4*#2},{0.3*#2}) -- (#2,0);
+  \draw[#3, line width=0.9pt] (#2,#2) -- ({1.4*#2},{1.3*#2});
+\end{scope}}
+% 点の電荷（＋の丸）
+\newcommand\kviiilcharge[1]{\filldraw[fill=bkRed!80!black, draw=white, line width=0.5pt] #1 circle (1.6); \node[text=white, font=\sffamily\bfseries\footnotesize, inner sep=0pt] at #1 {＋};}
+% マスの出入りの図の小さな矢印（辺のまん中から、外向き）
+\newcommand\kviiilcellout[3]{% (左下), 1辺, 色
+  \draw[#3, line width=1pt, -{Stealth[length=1.6mm]}] #1 ++({0.5*#2},{0.12*#2}) -- ++(0,{-0.3*#2});
+  \draw[#3, line width=1pt, -{Stealth[length=1.6mm]}] #1 ++({0.88*#2},{0.5*#2}) -- ++({0.3*#2},0);
+  \draw[#3, line width=1pt, -{Stealth[length=1.6mm]}] #1 ++({0.5*#2},{0.88*#2}) -- ++(0,{0.3*#2});
+  \draw[#3, line width=1pt, -{Stealth[length=1.6mm]}] #1 ++({0.12*#2},{0.5*#2}) -- ++({-0.3*#2},0);}
+\colorlet{kviiilM}{bkTheme!12}\colorlet{kviiilV}{bkGreen!14}\colorlet{kviiilR}{bkYellow!35}
+\makeatother
+
+\bkchapter{8}{11}{中と外をつなぐ：\\ガウスの定理とストークスの定理}{\bklevel{5}}{中と外をつなぐ：ガウスの定理とストークスの定理}
+\bkmichishirube{4-14,8-6,8-7,8-8,8-9,8-10}{8-12,8-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace マスごとのわき出し（うず）を全部たすと、外のふちから出る量（外の1周）になることを、表計算で確かめられる。
+\item \bklevel{4}\enspace 閉じた面や閉じた道の積分を、2つの定理で「計算が楽な側」の積分に取りかえて求められる。
+\item \bklevel{5}\enspace 対称性に合った袋や道を選び、ガウスの法則・アンペールの法則で、場の大きさを求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+8-9 の池の発散の地図では、わき出す口のマスは $+4$、吸いこむ口のマスは $-4$、ほかは0でした（1秒あたりの m²）。\par\vspace{3pt}
+（1）24マスの発散を全部たすと？\par
+（2）池のふち（オレンジの点線）から、1秒間に外へ出ていく水の量は？\par
+（3）わき出す口だけを円（緑の点線）でかこむと、その円から出ていく量は？ 円を大きくすると？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=7mm, y=7mm]
+  \foreach \kviiili in {0,...,5} {\foreach \kviiilj in {0,...,3} {\draw[bkLine, line width=0.5pt, fill=white] (\kviiili,\kviiilj) rectangle ++(1,1); \node[font=\sffamily\footnotesize] at (\kviiili+0.5,\kviiilj+0.5) {0};}}
+  \fill[bkOrange!35] (1.03,2.03) rectangle (1.97,2.97); \node[font=\sffamily\bfseries\footnotesize] at (1.5,2.5) {$+4$};
+  \fill[bkBlue!25] (4.03,1.03) rectangle (4.97,1.97); \node[font=\sffamily\bfseries\footnotesize] at (4.5,1.5) {$-4$};
+  \draw[bkOrange!90!black, line width=1.5pt, dash pattern=on 3pt off 2pt] (0,0) rectangle (6,4);
+  \draw[bkGreen!50!black, line width=1.2pt, dash pattern=on 2pt off 1.5pt] (1.5,2.5) circle (0.64);
+  \node[font=\sffamily\footnotesize, anchor=north] at (3,-0.15) {池の発散の地図（8-9）};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 8-9 の発散 div と 8-10 の回転 rot は、どちらも「小さなマスの出入り（または1周）を、マスの大きさでわったもの」でした。場所ごとに決まる、小さな量です。この章では、反対に、小さなマスの量を\textbf{全部たし合わせる}と何が起きるかを調べます。
+
+答えは、とても簡単です。中のマスのわき出しを全部たすと、外のふちから出ていく量になります（ガウスの定理）。中のマスのうずを全部たすと、外のふちを1周する循環になります（ストークスの定理）。中と外が、1本の式でつながるのです。
+
+この2つの定理は、計算の\textbf{道具}としても大切です。8-6〜8-8 で見たように、$\iint$・$\iiint$・$\oint$・$\oiint$ は「タイルに分けてたし合わせる」という\textbf{名前}で、実際の値は、ふつうの定積分に直して求めます。定理は、「閉じた面の積分」と「中の体積の積分」のように、2つの名前を等号で結びます。だから、\textbf{どちらの側を直すほうが楽か}を選べるのです。電気の力の大きさを求めるガウスの法則では、「袋の形を変えても答えは中の電荷だけで決まる」ことを使い、計算がいちばん楽な袋を選びます。
+
+この章は、路線②「たし合わせ」（細かく分けてたす 4-5 → 定積分 5-10 → 重積分・線積分・面積分 8-6〜8-8）の終点です。★★★★★の章ですが、「目でわかる」「手でわかる」の段は、マスの図と、表計算のたし算・ひき算だけで読めます。「式でわかる」の段は、1回で分からなくても大丈夫です。例題を流れ図でたどりながら、何度でも読み返してください。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[マスの出入りを、全部たしてみよう]
+流れ $\vec F=(x^2,\ y)$ の中の、はば3・高さ2の長方形（$0\leqq x\leqq3$、$0\leqq y\leqq2$）を、1辺1のマス6つに分けます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item たての辺を右向きに通る量は $F_x=x^2$ です。$x=0,\ 1,\ 2,\ 3$ の辺で、0、1、4、9。横の辺を上向きに通る量は $F_y=y$ です。$y=0,\ 1,\ 2$ の辺で、0、1、2（どれも辺の長さは1）。
+\item 6つのマスそれぞれで、「右－左＋上－下」（8-9）を計算し、表にしよう。
+\item 6つのマスの値を、全部たそう（\texttt{SUM}）。
+\item こんどは、長方形の外のふちだけを見て、外へ出ていく量をたそう。右のふち（$x=3$）、上のふち（$y=2$）、左のふち（$x=0$）、下のふち（$y=0$）。
+\item ③と④をくらべよう。
+\end{enumerate}
+たとえば左上のマス（$x$ が0〜1、$y$ が1〜2）は、右 $1$ － 左 $0$ ＋ 上 $2$ － 下 $1=2$ です。
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & 段 & $x$：0〜1 & $x$：1〜2 & $x$：2〜3 & 段の合計 \\
+2 & $y$：1〜2 & 2 & 4 & 6 & 12 \\
+3 & $y$：0〜1 & 2 & 4 & 6 & 12 \\
+4 & & & & 全部の合計 & \SetCell{bg=kviiilR} 24 \\}
+\bktabcaption{マスごとの「右－左＋上－下」。E2 に \texttt{=SUM(B2:D2)}、E4 に \texttt{=SUM(E2:E3)}。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent ④の外のふちは、右のふちが $9\times2=18$（1の長さの辺2つ）、上のふちが $2\times3=6$、左のふちと下のふちは0なので、合計 $18+6+0+0=24$ です。③の「マスの合計」と、④の「外のふちから出る量」が、ぴったり同じ24になりました。どうしてでしょう。
+
+\begin{omoidasou}
+\bkrecall{8-9}{発散 div：小さなマスの「出る量－入る量」を面積（体積）でわる。マスの4辺で「右－左＋上－下」。$\mathrm{div}\,\vec F=\dfrac{\partial F_x}{\partial x}+\dfrac{\partial F_y}{\partial y}+\dfrac{\partial F_z}{\partial z}$。}
+\bkrecall{8-10}{回転 rot：小さなマスの循環（左回りに1周）を面積でわる。平面では $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}$。風車の角速度はその半分。}
+\bkrecall{8-8}{流束 $\displaystyle\iint_S\vec F\cdot\vec n\,\dd S$。閉じた面は $\displaystyle\oiint_S$ で、$\vec n$ は外向きの単位ベクトル。場合D：場が面に直角で大きさが一定なら「大きさ×面積」。場合G：箱は面ごとに。}
+\bkrecall{8-7}{線積分 $\displaystyle\int_C\vec F\cdot\dd\vec r$。閉じた道は $\displaystyle\oint_C$。場合A：軸に平行な道。場合D：円は角 $\theta$ で。}
+\bkrecall{8-6}{重積分 $\iint$・$\iiint$ は、場所を数で表して、ふつうの定積分を2回・3回。場合C：円は極座標、場合E：球は球座標。}
+\bkrecall{4-14}{右ねじ：左回りに回すと、手前に進む。外積の向き。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{となりどうしが打ち消し合う}{\bklevel{3}}
+
+\bksubsection{1}{マスの出入りを全部たすと、外のふちだけが残る}
+
+\leavevmode\label{bk:8-11:uchikeshi}やってみようの2つのマスを、ならべて見ます。左のマスの右の辺は、右のマスの左の辺と同じ辺です。この辺を右向きに通る水は、左のマスから見ると「出る」、右のマスから見ると「入る」です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(4,4)}]
+    \fill[bkOrange!12] (0,0) rectangle (30,30);
+    \fill[bkGreen!12] (30,0) rectangle (60,30);
+    \draw[bkGray!80!black, line width=0.9pt] (0,0) rectangle (60,30) (30,0) -- (30,30);
+    \draw[kviiil out] (24,17) -- (36,17);
+    \node[font=\sffamily\footnotesize, anchor=south] at (30,19) {共通の辺};
+    \node[font=\sffamily\footnotesize, align=center] at (13,8) {左のマス：\\「出る」に $+1$};
+    \node[font=\sffamily\footnotesize, align=center] at (47,8) {右のマス：\\「入る」に $-1$};
+  \end{scope}
+  \node[font=\sffamily\small, align=left, anchor=west] at (72,19) {2つのマスの「出－入」をたすと\\$(+1)+(-1)=0$ で、共通の辺の分は\\消える。残るのは、外のふちの辺だけ。};
+\end{tikzpicture}
+\bkfigcaption{となりどうしのマスの共通の辺。片方の「出る」は、もう片方の「入る」で、たすと打ち消し合う。}\label{bk:8-11:fig-tonari}
+\end{bkfigure}
+
+マスが6つでも、24でも、1000でも同じです。中の辺は、どれも2つのマスにはさまれていて、片方で $+$、もう片方で $-$ に数えられます。全部のマスの「出－入」をたすと、中の辺の分はすべて消え、\textbf{外のふちの辺だけが残ります}。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(10,4)}]
+    \foreach \kviiili in {0,1,2} {\foreach \kviiilj in {0,1} {\draw[bkGray!80!black, line width=0.8pt] (\kviiili*22,\kviiilj*22) rectangle ++(22,22);
+      \kviiilcellout{(\kviiili*22,\kviiilj*22)}{22}{bkGray!70}}}
+    \node[font=\sffamily\footnotesize, anchor=north] at (33,-8) {マスごとに数える};
+  \end{scope}
+  \draw[bk arrow, bkInk] (92,26) -- (102,26);
+  \begin{scope}[shift={(108,4)}]
+    \draw[bkOrange!90!black, line width=1.4pt] (0,0) rectangle (24,16);
+    \foreach \kviiila/\kviiilb/\kviiilc/\kviiild in {12/0/0/-6, 24/8/6/0, 12/16/0/6, 0/8/-6/0} {\draw[kviiil out] (\kviiila,\kviiilb) -- ++(\kviiilc,\kviiild);}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (12,-8) {外のふちだけ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{6つのマスの「出－入」（灰色の矢印）を全部たすと、中の辺の矢印は2本ずつ向きが反対で消え、外のふち（オレンジ）を出る分だけが残る。}\label{bk:8-11:fig-zenbu}
+\end{bkfigure}
+\kviiilframe{中のマスの「出－入」の合計\quad ＝\quad 外のふちから出ていく量}
+これが、やってみようで「マスの合計」と「外のふち」が同じ24になったわけです。
+
+\noindent \bkhatenaref の池でも同じです。（1）24マスの発散の合計は、口のマスの $4$ と $-4$ をたし、ほかは0なので、0です。（2）だから、池のふちを通って外へ出ていく量も0です。わき出す口から出た水は、すべて吸いこむ口へ流れこみ、池のふちから出ていく水と入ってくる水が、ちょうど同じなのです。8-9 の表計算で、外まわりの辺の数をたしても0になりました。（3）は⑧で答えます。
+
+\bksubsection{2}{マスのうずを全部たすと、外の1周が残る}
+
+\leavevmode\label{bk:8-11:isshu}8-10 の循環（マスのふちを左回りに1周して、流れにそって進む量をたしたもの）でも、同じことが起きます。となりどうしのマスの共通の辺は、左のマスでは上へ進み、右のマスでは下へ進みます。進む向きが反対なので、たすと打ち消し合います。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(10,4)}]
+    \foreach \kviiili in {0,1,2} {\foreach \kviiilj in {0,1} {\draw[bkGray!80!black, line width=0.8pt] (\kviiili*22,\kviiilj*22) rectangle ++(22,22);
+      \draw[kviiil turn, bkGray!70] (\kviiili*22+11,\kviiilj*22+11) ++(15:6) arc (15:325:6);}}
+    \node[font=\sffamily\footnotesize, anchor=north] at (33,-8) {マスごとに左回りに1周};
+  \end{scope}
+  \draw[bk arrow, bkInk] (92,26) -- (102,26);
+  \begin{scope}[shift={(108,10)}]
+    \draw[bkOrange!90!black, line width=1.4pt] (0,0) rectangle (24,16);
+    \draw[kviiil turn, line width=1.3pt] (4,0) -- (20,0);
+    \draw[kviiil turn, line width=1.3pt] (24,3) -- (24,13);
+    \draw[kviiil turn, line width=1.3pt] (20,16) -- (4,16);
+    \draw[kviiil turn, line width=1.3pt] (0,13) -- (0,3);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (12,-14) {外の1周だけ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{6つのマスの循環を全部たすと、中の辺は2回ずつ反対向きに通るので消え、外のふちを1周する分だけが残る。}\label{bk:8-11:fig-junkan}
+\end{bkfigure}
+\kviiilframe{中のマスの循環の合計\quad ＝\quad 外のふちを1周する循環}
+たとえば、流れ $\vec F=(0,\ x^2)$ の同じ長方形（はば3・高さ2）で確かめます。マスの循環は「下＋右－上－左」（8-10）で、$F_x=0$ なので「右－左」だけが残ります。$x$ が0〜1、1〜2、2〜3 の列のマスでは、$1-0=1$、$4-1=3$、$9-4=5$ です。2段あるので、合計は $(1+3+5)\times2=18$ です。外の1周では、右のふち（$x=3$）を上へ進む分 $9\times2=18$ だけが残り（ほかのふちでは0）、やはり18になります。
+
+\begin{taisetsu}
+中の小さなマスの量を全部たすと、\textbf{となりどうしの共通の辺が打ち消し合い}、外のふちの分だけが残る。\\
+・わき出し（div）の合計 ＝ 外のふちから出る量\\
+・うず（rot）の合計 ＝ 外のふちを1周する循環
+\end{taisetsu}
+
+\bkstage{te}{手でわかる}{両側を計算して、くらべる}{\bklevel{4}}
+
+\bksubsection{3}{物理第1巻の正方形と、8-8 の立方体}
+
+\leavevmode\label{bk:8-11:ryougawa}①・②の「中の合計＝外のふち」を、マスを細かくした式の形で、2つの例で確かめます。どちらも、すでに前の章で一方の側を計算してあります。
+
+\kviiilhead{正方形の1周（物理第1巻 力-4 の約束）}
+力 $\vec F_2=(-y,\ x)$ で、1辺1の正方形（$0\leqq x\leqq1$、$0\leqq y\leqq1$）を左回りに1周する仕事を考えます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{外の1周}\quad 物理第1巻（力-4）で、道A（右へ進んでから上へ）の仕事は \qty{1}{J}、道B（上へ進んでから右へ）は \qty{-1}{J} でした。1周は「道Aで行って、道Bを逆にもどる」ので、$1-(-1)=2$ です（8-10 でも、4つの辺の定積分で2を出しました）。
+\item \textbf{中のうずの合計}\quad 8-10 で、$\vec F_2$ の回転はどこでも $1-(-1)=2$ でした。1平方メートルあたりの循環が2で、面積が1なので、中の合計は $2\times1=2$ です。
+\end{itemize}
+両側が同じ2です。物理第1巻で「Aで行ってBでもどる1周の仕事は $1-(-1)=2$ で、『rot の値2×囲んだ面積1』と同じです（8-11 のストークスの定理）」と書いたのは、このことです。
+
+\kviiilhead{立方体の6つの面（8-8 の場合G）}
+流れ $\vec F=(x^2,\ xy,\ -z)$ で、1辺1の立方体（$0\leqq x,\ y,\ z\leqq1$）から出ていく量を考えます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{外の面から出る量}\quad 8-8 で、面ごとに計算しました。$x=1$ の面で1、$y=1$ の面で0.5、$z=1$ の面で $-1$、残りの3つの面（$x=0$、$y=0$、$z=0$）で0。合計 $1+0.5-1=0.5$ です。
+\item \textbf{中のわき出しの合計}\quad 8-9 で、この流れの発散は次のとおりでした。\[ \mathrm{div}\,\vec F=\frac{\partial(x^2)}{\partial x}+\frac{\partial(xy)}{\partial y}+\frac{\partial(-z)}{\partial z}=2x+x-1=3x-1 \]立方体の中で、これを全部たします（8-6 の3重積分）。
+\end{itemize}
+\begin{bkhenkei}[0.6]
+\iiint(3x-1)\,\dd V=\int_0^1\!\!\int_0^1\!\!\int_0^1(3x-1)\,\dd x\,\dd y\,\dd z & 定積分を3回（8-6 の場合E） \\
+=\int_0^1(3x-1)\,\dd x\times1\times1 & $y$・$z$ の積分は1ずつ \\
+=\Bigl[\,\frac{3}{2}x^2-x\,\Bigr]_0^1=\frac{3}{2}-1=0.5 & 原始関数に1と0を入れてひく \\
+\end{bkhenkei}
+外の面の合計も、中の合計も0.5です。立方体の6つの面を1つずつ計算するより、発散を1回積分するほうが楽でした。これが、定理を「楽な側を選ぶ道具」として使う考え方です。
+
+\bksubsection{4}{袋の形を変えても、中の量は同じ}
+
+\leavevmode\label{bk:8-11:fukurokae}①で、「外のふちから出る量」は「中のわき出しの合計」で決まることを見ました。ということは、\textbf{わき出しのない所で袋（閉じた面）の形を変えても、出ていく量は変わりません}。この考えを、電気の力で確かめます。
+
+\noindent 電気の力の矢印（電場 $\vec E$）は、＋の電荷からわき出しています。1つの点の電荷 $Q$〔C〕から出る電場の流束 $\Phi_E$〔N·m²/C〕は、8-8 で、どんな半径の球でも $\dfrac{Q}{\varepsilon_0}$ でした（$\varepsilon_0$ は真空の誘電率 $8.85\times10^{-12}$〔C²/(N·m²)〕）。電荷のない所では、電場の発散は0です（8-9）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(6,6)}]
+    \kviiilcube{(0,0)}{22}{\bkTT}
+    \kviiilcharge{(15.4,14.3)}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-3) {まん中\\どの面も $\dfrac{1}{6}$};
+  \end{scope}
+  \begin{scope}[shift={(48,6)}]
+    \kviiilcube{(0,0)}{22}{\bkTT}
+    \kviiilcharge{(8,8)}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-3) {中でずらす\\6つの面の合計は1};
+  \end{scope}
+  \begin{scope}[shift={(88,6)}]
+    \kviiilcube{(0,0)}{22}{\bkTT}
+    \kviiilcharge{(38,10)}
+    \node[font=\sffamily\footnotesize, align=center, anchor=north] at (15,-3) {外に出す\\6つの面の合計は0};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{立方体の袋と点の電荷。数は、全体の流束 $\Phi_E=\dfrac{Q}{\varepsilon_0}$ のうち、袋を通って出ていく割合。}\label{bk:8-11:fig-cube}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{電荷が立方体の袋のまん中にあるとき}\par\nobreak\noindent 電荷を中心とする大きな球の袋と、立方体の袋のあいだには、電荷がありません。だから、立方体の袋から出る電場の流束も $\dfrac{Q}{\varepsilon_0}$ です。立方体の6つの面は、電荷から見てまったく同じ形なので、1つの面を通るのは、ちょうど $\dfrac{1}{6}$ です。面の上の積分を1回もしないで、答えが出ました。
+\item \textbf{電荷を袋の中でずらしたとき}\par\nobreak\noindent 電荷に近い面を通る量はふえ、遠い面ではへります。でも、袋の中に電荷が $Q$ あることは変わらないので、6つの面の合計は $\dfrac{Q}{\varepsilon_0}$ のままです。
+\item \textbf{電荷を袋の外に出したとき}\par\nobreak\noindent 袋の中には、わき出しがありません。電場の矢印は、袋のどこかから入って、どこかから出ていきます。入る量と出る量が同じなので、合計は0です。
+\end{enumerate}
+袋の形は、答えには関係しません。\textbf{答えを決めるのは、袋の中にある電荷だけ}です。だから、計算するときは、いちばん楽な形の袋を選んでよいのです。
+
+\kviiilhead{数値でたしても、$\tfrac{1}{6}$}
+8-8 の⑫では、1辺2の立方体のまん中に電荷を置き、上の面（$z=1$）をタイルに分けて、流束を Python でたしました。タイル1枚の流束は、電場の大きさ（距離の2乗に反比例して $\tfrac{1}{r^2}$）に、面に直角な成分の割合 $\cos=\tfrac{z}{r}$ をかけた $\tfrac{z}{r^3}$ に、タイルの面積をかけたものでした。答えは1つの面で約2.0944、全体（どの方向にも出る量）は $4\pi\approx12.566$ でした。
+\[ \frac{2.0944}{4\pi}=\frac{2.0944}{12.566}=0.1667 \]
+で、ちょうど $\tfrac{1}{6}=0.16666\cdots$ です。面の積分をまじめに計算すると大変ですが、「袋の形を変えても同じ」と「6つの面は同じ形」の2つの考えを使えば、計算なしで $\tfrac{1}{6}$ がわかります。
+
+\bkkokomade[マスの出入りを全部たすと外のふちだけが残ること、うずを全部たすと外の1周だけが残ること、袋の形を変えても中の量で決まることがわかれば、ここまでで十分です。この先は、2つの定理を式で書き、計算の道具として使います。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{2つの定理と、楽な側の選び方}{\bklevel{5}}
+
+\bksubsection{5}{ガウスの定理}
+
+\leavevmode\label{bk:8-11:gauss}①を、3次元の立体で、マスを小さくした形に書きます。立体 $V$ を、小さな箱に分けます。1つの箱の「出－入」は、8-9 の発散の決め方から、
+\[ \text{箱の「出－入」}\approx\mathrm{div}\,\vec F\times\Delta V \]
+です（$\Delta V$ は箱の体積）。全部の箱についてたすと、となりどうしの共通の面は打ち消し合い、$V$ をつつむ外の面 $S$ から出る量だけが残ります。箱を小さくした先は、左が8-8 の閉じた面の流束、右が8-6 の3重積分です。
+\kviiilframe{ガウスの定理\qquad $\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S=\iiint_V\mathrm{div}\,\vec F\,\dd V$\\[6pt]{\small（$S$ は $V$ をつつむ閉じた面、$\vec n$ は外向きの単位ベクトル）}}
+この式を\textbf{ガウスの定理}（または\textbf{発散定理}）といいます。\bkidx{がうすのていり}{ガウスの定理}左は「外の面から出ていく量」、右は「中のわき出しの合計」です。平面（2次元）なら、閉じた面が閉じた道 $C$ に、体積が面積に、$\dd S$ が道の長さ $\dd s$ になります。
+\kviiilframe{平面のガウスの定理\qquad $\displaystyle\oint_C\vec F\cdot\vec n\,\dd s=\iint_D\mathrm{div}\,\vec F\,\dd A$}
+やってみようで確かめたのは、この平面の形です（$\vec n$ は道の外向きの単位ベクトル）。
+
+\kviiilhead{両側とも「名前」。どちらを直すかを選ぶ}
+ガウスの定理の左も右も、$\oiint$・$\iiint$ の\textbf{名前}です。等号は、「どちらの名前で計算しても、同じ値になる」という意味です。だから、計算するときは、次の3つの段で考えます。
+\[ \kviiilNt{\oiint_S\vec F\cdot\vec n\,\dd S}\ =\ \kviiilNt{\iiint_V\mathrm{div}\,\vec F\,\dd V} \]
+\kviiildanhead{1}{記号を読む}
+何を（$\vec F\cdot\vec n$ と $\mathrm{div}\,\vec F$）、どこで（閉じた面 $S$ と、その中の立体 $V$）、1枚の量（向きのついたタイル $\vec n\,\dd S$ と、小さな箱 $\dd V$）を読みます。$\oiint$ の◯は「閉じている」という印で、形（球）を表すのではありません。どの面かは、下の $S$ が決めます。
+\kviiildanhead{3}{楽な側を選ぶ（直す前に）}
+面が曲がっていて面の積分が大変でも、$\mathrm{div}\,\vec F$ が定数なら、右は「div×体積」で終わりです。反対に、$\mathrm{div}\,\vec F$ が複雑でも、面が平らな箱なら左が楽なこともあります。
+\kviiildanhead{2}{選んだ側を、ふつうの定積分に直す}
+左を選んだら8-8 の表、右を選んだら8-6 の表の場合で、ふつうの定積分に直します。
+
+\noindent ③の立方体では、左（6つの面）より右（3重積分1つ）が楽でした。\[ \kviiilNt{\oiint_S\vec F\cdot\vec n\,\dd S}=\kviiilNt{\iiint_V(3x-1)\,\dd V}=\kviiilSt{\int_0^1\!\!\int_0^1\!\!\int_0^1(3x-1)\,\dd x\,\dd y\,\dd z}=0.5 \]
+
+\kviiilhead{ガウスの定理の場合分け}
+ガウスの定理は、どんなときに、どう使えばよいでしょう。場合ごとに表にしました。この章の例題は、1行めにこの表の記号を書いてあります。
+
+\kviiilcasetitle{8-11}{ガウスの定理：どんなときに、どう使う？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,13mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順（楽な側に取りかえて、直す） & 例題 \\
+\kviiilcase{G1} & div は簡単（閉じた面の流束がほしい。面は曲がっていて大変） & 面の積分を体積の積分に取りかえる。div が定数なら「div×体積」。体積の積分は8-6 の表で & 1・2 \\
+\kviiilcase{G2} & 開いた面（ドーム・おわんの流束がほしい） & ふたをして閉じ、G1 で全体を出す。ふたの分（平らな面：8-8 の場合B）をひく & 3 \\
+\kviiilcase{G3} & 対称な場の\textbf{大きさ}を知りたい（球・円柱・平らな板の対称で、袋の上で一定） & 対称に合った袋を選ぶ（球・円柱・平らな箱）。流束＝大きさ×面積（8-8 の場合D）＝中の量 & 4・5 \\
+\kviiilcase{G4} & 袋の\textbf{一部}の面の流束（同じ形の面の1つ） & 袋全体の流束は中の量だけで決まる（袋の形によらない）。同じ形の面に等分する。楽な袋に取りかえる & 6 \\
+\kviiilcase{G5} & div が決まらない点がある（閉じた袋の中に点のわき出し） & その点を小さな球（平面なら円）でくりぬく。外の袋の流束＝小さな球の流束 & 7 \\
+\kviiilcase{G6} & 平面（2次元）の流れ（ふちの線を通る量） & $\displaystyle\oint_C\vec F\cdot\vec n\,\dd s=\iint_D\mathrm{div}\,\vec F\,\dd A$ & 8 \\
+\kviiilcase{G7} & 圧力のような数の面の積分（数で決まる量＝スカラー） & $\displaystyle\oiint_S p\,\vec n\,\dd S=\iiint_V\mathrm{grad}\,p\,\dd V$（もっと知りたい） & 9 \\
+\end{bktable}
+\end{bkcenter}
+
+\noindent 表の G1・G2 は「計算を楽にする」使い方、G3・G4 は「計算しないで答えを出す」使い方、G5 は「定理が使えない点をよける」使い方、G6・G7 は形を変えた使い方です。どの順で問いかければよいかを、図\ref{bk:8-11:fig-flowg}の流れ図にしました。どの問いも、はい・いいえが1つに決まるように書いてあります。たとえば③の立方体 $\oiint\vec F\cdot\vec n\,\dd S$（$\vec F=(x^2,\ xy,\ -z)$）なら、開いた面？\enspace いいえ。対称な場の大きさを知りたい？\enspace いいえ（ほしいのは流束）。袋の一部の面の流束？\enspace いいえ（6つの面の全部）。div が決まらない点がある？\enspace いいえ（矢印は全部の点で決まる）。圧力のような数の面の積分？\enspace いいえ。平面（2次元）の流れ？\enspace いいえ。div は簡単？\enspace はい（$3x-1$）。こうして \kviiilcase{G1} に着き、③で計算したとおり、体積の積分に取りかえるのが楽でした。
+
+\begin{yattemiyou}[流れ図でたどってみよう]
+次の（ア）〜（エ）は、図\ref{bk:8-11:fig-flowg}の流れ図のどの四角に着くでしょう。いちばん上の問いから順に、はい・いいえを答えてみましょう。
+\begin{itemize}
+\item[（ア）] 球の面から出ていく流れ $\oiint\vec F\cdot\vec n\,\dd S$（$\vec F=(2x,\ 3y,\ z)$）
+\item[（イ）] 地球の外の、重力の場の大きさ
+\item[（ウ）] 原点に水の出る口がある池で、原点をかこむ曲線から出ていく水の量
+\item[（エ）] 水の中の物体にはたらく、圧力の力の合計
+\end{itemize}
+{\small 答え：（ア）div は簡単？\enspace はい（$\mathrm{div}\,\vec F=6$）で \kviiilcase{G1}。（イ）対称な場の大きさを知りたい？\enspace はいで \kviiilcase{G3}。（ウ）div が決まらない点がある？\enspace はい（口の点）で \kviiilcase{G5}。（エ）圧力のような数の面の積分？\enspace はいで \kviiilcase{G7}。\par}
+\end{yattemiyou}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, kviiil q/.append style={aspect=3, inner sep=0.6pt}]
+  \node[kviiil do] (s) at (30,0) {記号を読む（名前の段）\\何を・どこで（閉じた面か）・1枚の量};
+  \node[kviiil q] (q1) at (30,-18) {開いた面？};
+  \node[kviiil do, anchor=west] (r1) at (72,-18) {ふたをして閉じ、ふたの分をひく\enspace\kviiilcase{G2}\\（閉じた全体は、下の問いへ）};
+  \node[kviiil q] (q2) at (30,-38) {対称な場の大きさを知りたい？};
+  \node[kviiil do, anchor=west] (r2) at (72,-38) {対称な袋（球・円柱・箱）\enspace\kviiilcase{G3}};
+  \node[kviiil q] (q3) at (30,-58) {袋の一部の面の流束？};
+  \node[kviiil do, anchor=west] (r3) at (72,-58) {中の量で決まる。等分する\enspace\kviiilcase{G4}};
+  \node[kviiil q] (q4) at (30,-78) {div が決まらない点がある？};
+  \node[kviiil do, anchor=west] (r4) at (72,-78) {小さな球でくりぬく\enspace\kviiilcase{G5}};
+  \node[kviiil q] (q5) at (30,-98) {圧力のような数の面の積分？};
+  \node[kviiil do, anchor=west] (r5) at (72,-98) {$\oiint p\,\vec n\,\dd S=\iiint\mathrm{grad}\,p\,\dd V$\enspace\kviiilcase{G7}};
+  \node[kviiil q] (q6) at (30,-118) {平面（2次元）の流れ？};
+  \node[kviiil do, anchor=west] (r6) at (72,-118) {$\oint\vec F\cdot\vec n\,\dd s=\iint\mathrm{div}\,\vec F\,\dd A$\enspace\kviiilcase{G6}};
+  \node[kviiil q] (q7) at (30,-138) {div は簡単？};
+  \node[kviiil do, anchor=west] (r7) at (72,-138) {体積の積分に取りかえる\enspace\kviiilcase{G1}};
+  \node[kviiil do] (rd) at (30,-156) {面ごとに直接（8-8 の場合G）};
+  \node[kviiil do] (end) at (72,-171) {確かめ：両側を別々に計算しても、同じ答えか};
+  \draw[kviiil go] (s) -- (q1);
+  \draw[kviiil go] (q1) -- node[kviiil yn, above] {はい} (r1);
+  \draw[kviiil go] (q1) -- node[kviiil yn, right=1mm] {いいえ} (q2);
+  \draw[kviiil go] (q2) -- node[kviiil yn, above] {はい} (r2);
+  \draw[kviiil go] (q2) -- node[kviiil yn, right=1mm] {いいえ} (q3);
+  \draw[kviiil go] (q3) -- node[kviiil yn, above] {はい} (r3);
+  \draw[kviiil go] (q3) -- node[kviiil yn, right=1mm] {いいえ} (q4);
+  \draw[kviiil go] (q4) -- node[kviiil yn, above] {はい} (r4);
+  \draw[kviiil go] (q4) -- node[kviiil yn, right=1mm] {いいえ} (q5);
+  \draw[kviiil go] (q5) -- node[kviiil yn, above] {はい} (r5);
+  \draw[kviiil go] (q5) -- node[kviiil yn, right=1mm] {いいえ} (q6);
+  \draw[kviiil go] (q6) -- node[kviiil yn, above] {はい} (r6);
+  \draw[kviiil go] (q6) -- node[kviiil yn, right=1mm] {いいえ} (q7);
+  \draw[kviiil go] (q7) -- node[kviiil yn, above] {はい} (r7);
+  \draw[kviiil go] (q7) -- node[kviiil yn, right=1mm] {いいえ} (rd);
+  \draw[kviiil go] (rd.south) |- (end.west);
+  \coordinate (m) at (30,-29);
+  \draw[kviiil go, shorten >=0pt] (r1.south) |- (m);
+  \foreach \kviiilr in {r2,r3,r4,r5,r6,r7} {\draw[bkGray, line width=0.6pt] (\kviiilr.east) -- (129,0 |- \kviiilr.east);}
+  \draw[kviiil go] (129,-38) -- (129,-171) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{ガウスの定理を使うときの流れ図。ひし形は問い、四角はすること。上から順に答えて、はいなら右の四角へ。どの四角からも、最後は「確かめ」へ進む。}
+\label{bk:8-11:fig-flowg}
+\end{bkfigure}
+
+\bksubsection{6}{G1・G2：面の積分を、体積の積分に取りかえる}
+
+\leavevmode\label{bk:8-11:g1}\textbf{G1}\quad 流れ $\vec F=(x,\ y,\ z)$ が、半径 $R=2$ の球の面から出ていく量を、両側で計算します。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{左（面の積分）}\quad 球の面の上では、$\vec F=(x,\ y,\ z)$ は中心から外向きで、長さは $R$ です。外向きの単位ベクトル $\vec n$ と同じ向きなので、$\vec F\cdot\vec n=R$（どこでも同じ）。8-8 の場合D（対称性で外に出す）で、$R\times4\pi R^2=4\pi R^3=32\pi$。
+\item \textbf{右（体積の積分）}\quad $\mathrm{div}\,\vec F=1+1+1=3$（定数）。$3\times\dfrac{4}{3}\pi R^3=4\pi R^3=32\pi$。
+\end{itemize}
+両側とも $32\pi\approx100.5$ です。この例では両側とも楽でしたが、$\vec F=(2x,\ 3y,\ z)$ のように球の上で $\vec F\cdot\vec n$ が場所で変わると、左は8-8 の場合F（球面を2つの角で表す）で重積分をしなければなりません。右なら、$\mathrm{div}\,\vec F=2+3+1=6$ で、すぐ「$6\times$体積」です（例題1）。
+
+\noindent\textbf{G2}\quad 開いた面（ドーム）には、ガウスの定理をそのまま使えません。閉じた面ではないからです。そこで、\textbf{ふたをして閉じます}。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(40,6)}]
+    \fill[bkTheme!8] (-26,0) arc (180:0:26 and 26) -- cycle;
+    \draw[\bkTT, line width=1.2pt] (-26,0) arc (180:0:26);
+    \draw[bkOrange!90!black, line width=1.4pt] (-26,0) -- (26,0);
+    \draw[bkOrange!90!black, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (0,0) ellipse (26 and 5);
+    \draw[kviiil out] (0,26) -- (0,34);
+    \draw[kviiil out] (45:26) -- (45:34);
+    \draw[kviiil out] (135:26) -- (135:34);
+    \draw[kviiil out] (-10,0) -- (-10,-8);
+    \draw[kviiil out] (10,0) -- (10,-8);
+    \node[font=\sffamily\footnotesize, anchor=west] at (24,22) {ドーム（ほしい面）};
+    \node[font=\sffamily\footnotesize, anchor=north west] at (14,-3) {ふた（底の円）：外向きは下};
+  \end{scope}
+  \node[font=\sffamily\small, align=left, anchor=west] at (92,14) {ドームの流束\\$=$（閉じた全体）$-$（ふた）\\全体は G1、ふたは平らな面};
+\end{tikzpicture}
+\bkfigcaption{ドームに、底の円でふたをする。閉じた全体の外向きは、ドームでは外側、ふたでは下向き。}\label{bk:8-11:fig-dome}
+\end{bkfigure}
+\begin{bkhenkei}[0.5]
+\text{ドーム}+\text{ふた}=\iiint_V\mathrm{div}\,\vec F\,\dd V & 閉じた全体に G1 \\
+\text{ドーム}=\iiint_V\mathrm{div}\,\vec F\,\dd V-\text{ふた} & ふたの分を右へ移す \\
+\end{bkhenkei}
+ふたは平らな面なので、8-8 の場合B（軸に直角な平らな面）で簡単に計算できます。\textbf{ふたの外向きは下向き}であることに気をつけます（例題3）。
+
+\bksubsection{7}{G3：ガウスの法則は、袋を選ぶ}
+
+\leavevmode\label{bk:8-11:hosoku}電荷 $Q$ のまわりの電場について、ガウスの定理と④の考えをまとめると、次のようになります。袋の中の電荷の合計を $Q_{\text{中}}$ とします。
+\kviiilframe{ガウスの法則\qquad $\displaystyle\oiint_S\vec E\cdot\vec n\,\dd S=\frac{Q_{\text{中}}}{\varepsilon_0}$}
+これを\textbf{ガウスの法則}といいます。\bkidx{がうすのほうそく}{ガウスの法則}どんな形の袋でも成り立ちます。この法則を使うと、場の\textbf{大きさ}を、積分をほとんどしないで求められることがあります。こつは、\textbf{袋の形を選ぶ}ことです。
+
+\kviiilhead{袋を選ぶ3つの条件}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 袋の面の上で、場の矢印が面に\textbf{直角}（または平行で流束0）。
+\item 直角な所では、場の\textbf{大きさが同じ}。
+\item そのような袋を、対称性から見つける：\textbf{点（球対称）なら同じ中心の球、まっすぐな線なら同じ軸の円柱、広い平らな板なら板をはさむ平らな箱}。
+\end{enumerate}
+①②がそろうと、8-8 の場合D のとおり、流束は「大きさ×面積」になり、積分が消えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(20,20)}]
+    \draw[\bkTT, line width=1pt, fill=bkTheme!8] (0,0) circle (14);
+    \draw[\bkTT, line width=0.5pt, dash pattern=on 1.5pt off 1.2pt] (0,0) ellipse (14 and 4);
+    \kviiilcharge{(0,0)}
+    \foreach \kviiila in {0,45,...,315} {\draw[kviiil out] (\kviiila:14) -- (\kviiila:20);}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-21) {点の電荷\\→ 同じ中心の球};
+  \end{scope}
+  \begin{scope}[shift={(66,20)}]
+    \draw[bkOrange!80!black, line width=2pt] (0,-19) -- (0,19);
+    \fill[bkTheme!8] (-9,-12) rectangle (9,12);
+    \draw[\bkTT, line width=1pt] (0,12) ellipse (9 and 2.5) (-9,-12) -- (-9,12) (9,-12) -- (9,12);
+    \draw[\bkTT, line width=1pt] (-9,-12) arc (180:360:9 and 2.5);
+    \draw[\bkTT, line width=0.5pt, dash pattern=on 1.5pt off 1.2pt] (9,-12) arc (0:180:9 and 2.5);
+    \draw[bkOrange!80!black, line width=2pt] (0,-19) -- (0,19);
+    \foreach \kviiily in {-6,0,6} {\draw[kviiil out] (9,\kviiily) -- (16,\kviiily); \draw[kviiil out] (-9,\kviiily) -- (-16,\kviiily);}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-21) {まっすぐな線の電荷\\→ 同じ軸の円柱};
+  \end{scope}
+  \begin{scope}[shift={(110,20)}]
+    \fill[bkOrange!25] (-14,-1) rectangle (14,1);
+    \draw[bkOrange!80!black, line width=0.8pt] (-14,-1) rectangle (14,1);
+    \draw[\bkTT, line width=1pt, fill=bkTheme!8, fill opacity=0.6] (-6,-8) rectangle (6,8);
+    \draw[kviiil out] (0,8) -- (0,15);
+    \draw[kviiil out] (0,-8) -- (0,-15);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-21) {広い平らな板\\→ はさむ平らな箱};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{対称性に合った袋（青）。赤い矢印は電場。どの袋でも、矢印は面に直角（円柱の上下の面と、箱の横の面は平行で、流束0）。}\label{bk:8-11:fig-fukuro}
+\end{bkfigure}
+
+\kviiilhead{点の電荷：高校物理の「電気力線の本数」}
+点の電荷 $Q$ を中心に、半径 $r$ の球の袋を選びます。対称性から、電場は中心から外向きで、球の上ではどこでも同じ大きさ $E$ です。
+\begin{bkhenkei}[0.46]
+\oiint_S\vec E\cdot\vec n\,\dd S=E\times4\pi r^2 & 直角で大きさが同じ（8-8 の場合D） \\
+E\times4\pi r^2=\frac{Q}{\varepsilon_0} & ガウスの法則 \\
+E=\frac{Q}{4\pi\varepsilon_0r^2} & $4\pi r^2$ でわる \\
+\end{bkhenkei}
+高校物理のクーロンの法則の定数 $k=\dfrac{1}{4\pi\varepsilon_0}\approx9.0\times10^9$〔N·m²/C²〕を使うと $E=\dfrac{kQ}{r^2}$ で、高校物理と同じ式です。高校物理で「電荷 $Q$ から出る電気力線の本数は $4\pi kQ$ 本」と習ったのは、電場の流束 $\Phi_E=\dfrac{Q}{\varepsilon_0}=4\pi kQ$ のことです。どの半径の球でも同じ本数なので、球の面積 $4\pi r^2$ が大きくなるほど、1 m² あたりの本数（電場の強さ）は $\dfrac{1}{r^2}$ でへっていくのです。
+
+\kviiilhead{地球の重力：全部の質量が中心にあるのと同じ（物理第1巻 力-2 の約束）}
+重力の矢印 $\vec g$ についても、同じ形の法則があります。質量 $M$ の点のまわりの重力は、中心向きで大きさ $\dfrac{GM}{r^2}$（$G$ は万有引力定数）なので、球の袋の流束は $-\dfrac{GM}{r^2}\times4\pi r^2=-4\pi GM$（内向きなのでマイナス）で、半径によりません。これをたし合わせて、どんな袋でも
+\kviiilframe{$\displaystyle\oiint_S\vec g\cdot\vec n\,\dd S=-4\pi G\,M_{\text{中}}$\qquad（$M_{\text{中}}$ は袋の中の質量）}
+です。地球が「中心からの距離だけで密度が決まる球」なら、重力は中心向きで、同じ半径の球の上では同じ大きさです。半径 $r$ の球の袋を選ぶと、
+\[ g\times4\pi r^2=4\pi G\,M_{\text{中}}\qquad\text{より}\qquad g=\frac{G\,M_{\text{中}}}{r^2} \]
+地球の外（$r\geqq R$）では、$M_{\text{中}}$ は地球全体の質量 $M$ です。だから、\textbf{地球の外では、全部の質量が中心の1点に集まっているときと同じ}重力になります。物理第1巻（力-2）で「数学 8-11 のガウスの定理で示せます」と書いたのは、このことです。地面（$r=R$）では、$GM=\qty{3.986e14}{m^3/s^2}$、$R=\qty{6.371e6}{m}$ から $g=\dfrac{GM}{R^2}=\qty{9.82}{m/s^2}$ です（地球の自転の効果は入れない値）。
+
+\noindent 地球の中ではどうでしょう。もし地球の密度がどこでも同じなら、半径 $r$ の球の中の質量は、体積の割合で $M_{\text{中}}=M\times\dfrac{r^3}{R^3}$ です。$g=\dfrac{GM}{R^3}\,r$ となり、中心からの距離に比例します。半分の深さ（$r=\frac{R}{2}$）では $9.82\div2=\qty{4.91}{m/s^2}$ です。ただし、本物の地球は中心ほど密度が高い（中心の核は、重い鉄が多い）ので、このようにはなりません。地面から深くもぐっても、$g$ はほぼ同じか、むしろ少し大きくなると考えられています。
+
+\kviiilhead{まっすぐな線の電荷と、広い平らな板}
+長いまっすぐな導線に、1 m あたり $\lambda$〔C/m〕の電荷があるとき、導線を軸とする半径 $r$・長さ $L$ の円柱の袋を選びます。電場は軸から外向きで、側面に直角です。上下の面では電場が面に平行なので、流束は0です。
+\[ E\times2\pi rL=\frac{\lambda L}{\varepsilon_0}\qquad\text{より}\qquad E=\frac{\lambda}{2\pi\varepsilon_0r}=\frac{2k\lambda}{r} \]
+広い平らな板に、1 m² あたり $\sigma$〔C/m²〕の電荷があるときは、板をはさむ平らな箱（上下の面の面積 $A$）を選ぶと、$E\times2A=\dfrac{\sigma A}{\varepsilon_0}$ で、$E=\dfrac{\sigma}{2\varepsilon_0}$ になります。板からの距離によりません（コンデンサーの中の電場が一様なのは、このためです：物理 電-3）。
+
+\begin{seikaku}
+ガウスの法則の左の流束には、袋の外の電荷は効きません（④の③）。でも、袋の上の電場 $\vec E$ そのものには、外の電荷も効きます。「流束＝大きさ×面積」が使えるのは、外の電荷もふくめて、場全体が袋の形と同じ対称性をもつときだけです。対称でないときは、ガウスの法則は正しくても、それだけでは場の大きさは決まりません。
+\end{seikaku}
+
+\bksubsection{8}{G5・G6：点のわき出しは、くりぬく}
+
+\leavevmode\label{bk:8-11:kurinuku}\bkhatenaref の（3）を考えます。池の流れは、わき出す口と吸いこむ口の2点で、矢印が決まりません（8-9 の点のわき出し）。口の上では発散を計算できないので、ガウスの定理の右（中のわき出しの合計）を、そのままでは計算できません。8-9 でも、口をふくむマスの「出－入」は、マスをどんなに小さくしても4のままでした。
+
+\noindent そこで、口のまわりを小さな円で\textbf{くりぬきます}。くりぬいた残り（外の道と小さな円のあいだ）には、口がふくまれないので、どこでも発散は0です。残りの部分に平面のガウスの定理を使うと、
+\[ （\text{外の道から出る量}）-（\text{小さな円から出る量}）=0 \]
+\[ \text{外の道から出る量}=\text{小さな円から出る量} \]
+1つめの式の左は、残りの部分から出る量です。小さな円の上では、残りの部分の外向きは口のほう（内向き）なので、小さな円から（口から見て外へ）出る量をひきます。右の0は、残りの中の発散が0だからです。
+外の道の形がどうであっても、小さな円から出る量と同じです。口をかこんでいれば、どんな道でも、出ていく量は同じ $Q=4$〔m²/s〕なのです。これが（3）の答えです。円を大きくしても、小さくしても、4のままです（ただし、吸いこむ口までかこむと、$4+(-4)=0$ になります）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(34,22)}]
+    \fill[bkTheme!8] plot[smooth cycle, tension=0.8] coordinates {(-26,-6) (-18,16) (4,20) (24,10) (22,-12) (0,-19)};
+    \draw[\bkTT, line width=1.1pt] plot[smooth cycle, tension=0.8] coordinates {(-26,-6) (-18,16) (4,20) (24,10) (22,-12) (0,-19)};
+    \fill[white] (0,0) circle (5);
+    \draw[bkOrange!90!black, line width=1.1pt] (0,0) circle (5);
+    \fill[bkOrange!90!black] (0,0) circle (1);
+    \foreach \kviiila in {0,90,180,270} {\draw[kviiil out] (\kviiila+45:5) -- (\kviiila+45:10);}
+    \node[font=\sffamily\footnotesize, anchor=west] at (25,14) {外の道};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-21) {口をくりぬいた残り（青）：発散は0};
+  \end{scope}
+  \node[font=\sffamily\small, align=left, anchor=west] at (78,24) {外の道から出る量\\$=$ 小さな円から出る量\\$=Q$（口から出る量）};
+\end{tikzpicture}
+\bkfigcaption{わき出す口のまわりを小さな円でくりぬく。残りの青い所には口がないので、発散は0。}\label{bk:8-11:fig-kurinuku}
+\end{bkfigure}
+
+\kviiilhead{8-9 の池の式の「$2\pi$」}
+口だけがある池（吸いこむ口がないとき）を考えます。口を中心とする半径 $r$ の円を道に選ぶと、対称性から、流れは中心から外向き（道に直角）で、円の上では同じ速さ $v$ です（G3 と同じ考え）。円から1秒に出る量は、速さ×円周の長さです。
+\[ v\times2\pi r=Q\qquad\text{より}\qquad v=\frac{Q}{2\pi r} \]
+8-9 の Python で、池の流れの式を $2\pi$ でわっていたのは、このためです（池の流れは、わき出す口の流れと、吸いこむ口の流れのたし算）。たとえば $Q=4$ なら、口から \qty{0.5}{m} の所の速さは $\dfrac{4}{2\pi\times0.5}=\qty{1.27}{m/s}$ です。3次元の点のわき出し（点の電荷）なら、円周 $2\pi r$ のかわりに球の面積 $4\pi r^2$ でわるので、$\dfrac{1}{r^2}$ でへります。
+
+\noindent このように、平面では「閉じた道から出る量」が「中の面のわき出しの合計」と等しくなります（G6）。
+\[ \oint_C\vec F\cdot\vec n\,\dd s=\iint_D\mathrm{div}\,\vec F\,\dd A \]
+$\vec n\,\dd s$ は、道の小さな1歩（長さ $\dd s$）の外向きの単位ベクトルです。長方形の道なら、辺ごとに「辺に直角な成分×長さ」をたせば左になります（やってみようの④）。
+
+\bksubsection{9}{ストークスの定理とグリーンの定理}
+
+\leavevmode\label{bk:8-11:stokes}②を、マスを小さくした形に書きます。面 $S$ を小さなマスに分けると、1つのマスの循環は、8-10 の回転の決め方から「（回転の、面に直角な成分）×マスの面積」です。全部のマスについてたすと、共通の辺は打ち消し合い、面のふちの道 $C$ を1周する循環だけが残ります。
+\kviiilframe{ストークスの定理\qquad $\displaystyle\oint_C\vec F\cdot\dd\vec r=\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S$\\[6pt]{\small（$C$ は面 $S$ のふち。$C$ を回る向きと $\vec n$ の向きは右ねじ）}}
+これを\textbf{ストークスの定理}といいます。\bkidx{すとーくすのていり}{ストークスの定理}右の $\mathrm{rot}\,\vec F\cdot\vec n$ は、3次元の回転の矢印（8-10）のうち、面に直角な成分です。
+
+\kviiilhead{向きの約束：右ねじ}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(40,12)}]
+    \fill[bkTheme!8] (0,0) ellipse (28 and 9);
+    \draw[\bkTT, line width=1.2pt] (0,0) ellipse (28 and 9);
+    \draw[kviiil turn, line width=1.4pt] (-60:28 and 9) arc (-60:-20:28 and 9);
+    \draw[kviiil turn, line width=1.4pt] (120:28 and 9) arc (120:160:28 and 9);
+    \draw[bkInk, line width=1.3pt, -{Stealth[length=2.6mm]}] (0,0) -- (0,22);
+    \node[font=\footnotesize, anchor=west] at (1,20) {$\vec n$};
+    \node[font=\sffamily\footnotesize, anchor=west] at (29,0) {道 $C$};
+    \node[font=\sffamily\footnotesize] at (-12,-2) {面 $S$};
+  \end{scope}
+  \node[font=\sffamily\small, align=left, anchor=west] at (78,14) {上（$\vec n$ の先）から見て、$C$ を左回り。\\右ねじを左回りに回すと、\\$\vec n$ の向きに進む（4-14）。};
+\end{tikzpicture}
+\bkfigcaption{道 $C$ を回る向きと、面 $S$ の向き $\vec n$ は、右ねじの関係にとる。}\label{bk:8-11:fig-migineji}
+\end{bkfigure}
+道を逆向きに回ると、左の線積分は符号が変わります（8-7）。そのときは、$\vec n$ も逆向き（下向き）にとります。平らな面（$xy$ の面）の上で、$\vec n$ を真上の $(0,\ 0,\ 1)$ にとると、$\mathrm{rot}\,\vec F\cdot\vec n$ は回転の $z$ 成分、つまり平面の回転です。
+\kviiilframe{グリーンの定理\qquad $\displaystyle\oint_C(F_x\,\dd x+F_y\,\dd y)=\iint_D\Bigl(\frac{\partial F_y}{\partial x}-\frac{\partial F_x}{\partial y}\Bigr)\dd A$\\[6pt]{\small（$C$ は $D$ のふちを左回り）}}
+これを\textbf{グリーンの定理}といいます。\bkidx{ぐりーんのていり}{グリーンの定理}ストークスの定理の、平面の場合です（左の $F_x\,\dd x+F_y\,\dd y$ は、$\vec F\cdot\dd\vec r$ を成分で書いたもの）。
+
+\kviiilhead{ここでも、両側とも「名前」}
+\[ \kviiilNt{\oint_C\vec F\cdot\dd\vec r}\ =\ \kviiilNt{\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S} \]
+左は閉じた道の線積分（8-7 の表で直す）、右は面積分（8-8 の表、平らなら8-6 の表で直す）です。どちらが楽かを選んでから直します。
+
+\kviiilcasetitle{8-11}{ストークスの定理：どんなときに、どう使う？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,13mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順（楽な側に取りかえて、直す） & 例題 \\
+\kviiilcase{S1} & rot は簡単（閉じた道の線積分がほしい。道は面倒） & 線積分を面積分に取りかえる。rot が一定なら「rot×面積」 & 10 \\
+\kviiilcase{S2} & 面積を知りたい（ふちの道で求める） & $A=\dfrac{1}{2}\displaystyle\oint_C(x\,\dd y-y\,\dd x)$。多角形は、くつひもの式 & 11 \\
+\kviiilcase{S3} & rot＝0（穴の点をのぞく）。その場の1周 & 穴（場が決まらない点）をかこまなければ0。穴をかこむときは、穴のまわりの小さな円の1周と同じ & 12 \\
+\kviiilcase{S4} & 軸対称な場の\textbf{大きさ}を知りたい（円の上で一定） & 同じ軸の円を道に選ぶ。$B\times2\pi r=\mu_0I$（アンペールの法則） & 13 \\
+\kviiilcase{S5} & 面の積分がほしい（ふちの道は同じで、面は自由に選べる） & 計算が楽な面（平らな円板など）を選ぶ & 14 \\
+\kviiilcase{S6} & 時間で変わる磁場がある（そのまわりの電場。読むだけ） & $\displaystyle\oint_C\vec E\cdot\dd\vec r=-\frac{\dd\Phi}{\dd t}$（ファラデーの法則）。対称なら S4 と同じ考え & 15 \\
+\end{bktable}
+\end{bkcenter}
+
+\noindent 表の S1・S5 は「計算を楽にする」使い方、S4 は「計算しないで場の大きさを出す」使い方、S3 は「穴をよける」使い方、S2 は「定理を反対向きに使う」使い方です。たとえば物理第1巻の正方形の1周 $\oint\vec F_2\cdot\dd\vec r$ なら、図\ref{bk:8-11:fig-flows}の流れ図で、時間で変わる磁場がある？\enspace いいえ。軸対称な場の大きさを知りたい？\enspace いいえ（ほしいのは1周の線積分）。面積を知りたい？\enspace いいえ。rot＝0（穴の点をのぞく）？\enspace いいえ（どこでも2）。面の積分がほしい？\enspace いいえ。rot は簡単？\enspace はい。こうして \kviiilcase{S1} に着き、「$2\times$面積1$=2$」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, kviiil q/.append style={aspect=3, inner sep=0.6pt}]
+  \node[kviiil do] (s) at (30,0) {記号を読む（名前の段）\\何を・どの道で（閉じた道 $\oint$ か）};
+  \node[kviiil q] (q1) at (30,-18) {時間で変わる磁場がある？};
+  \node[kviiil do, anchor=west] (r1) at (72,-18) {$\oint\vec E\cdot\dd\vec r=-\dfrac{\dd\Phi}{\dd t}$\enspace\kviiilcase{S6}};
+  \node[kviiil q] (q2) at (30,-38) {軸対称な場の大きさを知りたい？};
+  \node[kviiil do, anchor=west] (r2) at (72,-38) {対称な円の道を選ぶ\enspace\kviiilcase{S4}};
+  \node[kviiil q] (q3) at (30,-58) {面積を知りたい？};
+  \node[kviiil do, anchor=west] (r3) at (72,-58) {$\frac{1}{2}\oint(x\,\dd y-y\,\dd x)$\enspace\kviiilcase{S2}};
+  \node[kviiil q] (q4) at (30,-78) {rot＝0（穴の点をのぞく）？};
+  \node[kviiil do, anchor=west] (r4) at (72,-78) {穴をかこまなければ0\\かこめば小さな円と同じ\enspace\kviiilcase{S3}};
+  \node[kviiil q] (q5) at (30,-98) {面の積分がほしい？};
+  \node[kviiil do, anchor=west] (r5) at (72,-98) {ふちが同じ楽な面を選ぶ\enspace\kviiilcase{S5}};
+  \node[kviiil q] (q6) at (30,-118) {rot は簡単？};
+  \node[kviiil do, anchor=west] (r6) at (72,-118) {面の積分に取りかえる\enspace\kviiilcase{S1}};
+  \node[kviiil do] (rd) at (30,-136) {道のまま直接（8-7 の表）};
+  \node[kviiil do] (end) at (72,-151) {確かめ：両側を別々に計算しても、同じ答えか};
+  \draw[kviiil go] (s) -- (q1);
+  \draw[kviiil go] (q1) -- node[kviiil yn, above] {はい} (r1);
+  \draw[kviiil go] (q1) -- node[kviiil yn, right=1mm] {いいえ} (q2);
+  \draw[kviiil go] (q2) -- node[kviiil yn, above] {はい} (r2);
+  \draw[kviiil go] (q2) -- node[kviiil yn, right=1mm] {いいえ} (q3);
+  \draw[kviiil go] (q3) -- node[kviiil yn, above] {はい} (r3);
+  \draw[kviiil go] (q3) -- node[kviiil yn, right=1mm] {いいえ} (q4);
+  \draw[kviiil go] (q4) -- node[kviiil yn, above] {はい} (r4);
+  \draw[kviiil go] (q4) -- node[kviiil yn, right=1mm] {いいえ} (q5);
+  \draw[kviiil go] (q5) -- node[kviiil yn, above] {はい} (r5);
+  \draw[kviiil go] (q5) -- node[kviiil yn, right=1mm] {いいえ} (q6);
+  \draw[kviiil go] (q6) -- node[kviiil yn, above] {はい} (r6);
+  \draw[kviiil go] (q6) -- node[kviiil yn, right=1mm] {いいえ} (rd);
+  \draw[kviiil go] (rd.south) |- (end.west);
+  \foreach \kviiilr in {r1,r2,r3,r4,r5,r6} {\draw[bkGray, line width=0.6pt] (\kviiilr.east) -- (129,0 |- \kviiilr.east);}
+  \draw[kviiil go] (129,-18) -- (129,-151) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{ストークスの定理を使うときの流れ図。ひし形は問い、四角はすること。どの四角からも、最後は「確かめ」へ進む。時間で変わる磁場（S6）の意味は 8-14 で読む。}
+\label{bk:8-11:fig-flows}
+\end{bkfigure}
+
+\bksubsection{10}{S1・S5：道の積分を、楽な面の積分に取りかえる}
+
+\leavevmode\label{bk:8-11:s1}\textbf{S1}\quad 力 $\vec F_2=(-y,\ x)$ で、半径3の円を左回りに1周する仕事を求めます。8-7 では、道を角 $\theta$ で表して（場合D）、ふつうの定積分に直しました。
+\[ \oint_C\vec F_2\cdot\dd\vec r=\int_0^{2\pi}\bigl\{(-3\sin\theta)(-3\sin\theta)+(3\cos\theta)(3\cos\theta)\bigr\}\dd\theta \]
+\[ =\int_0^{2\pi}9\,\dd\theta=18\pi \]
+グリーンの定理を使えば、回転はどこでも2なので、
+\[ \oint_C\vec F_2\cdot\dd\vec r=\iint_D2\,\dd A=2\times(\text{円の面積}\ 9\pi)=18\pi \]
+で、積分をしなくても「回転×面積」で終わりです。8-7 で「半径3で $18\pi$（＝2×面積）」と書いたのは、このことです。道が正方形でも、三角形でも、だ円でも、$\vec F_2$ の1周は「$2\times$囲んだ面積」です。
+
+\noindent\textbf{S5}\quad ストークスの定理の右の面 $S$ は、ふちが $C$ でありさえすれば、どんな面でもかまいません（ふちが同じ2つの面のうち、片方の $\vec n$ を逆向きにして合わせると、外向きの閉じた面になります。8-10 の「回転の矢印には、わき出しがない」から、その閉じた面の流束は0です。だから、同じ向きにそろえた2つの面の流束は等しいのです）。だから、計算が楽な面を選べます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(32,8)}]
+    \fill[bkTheme!8] (-22,0) arc (180:0:22) -- cycle;
+    \draw[\bkTT, line width=1pt] (-22,0) arc (180:0:22);
+    \draw[bkOrange!90!black, line width=1.4pt] (0,0) ellipse (22 and 5);
+    \draw[kviiil turn, line width=1.3pt] (-70:22 and 5) arc (-70:-30:22 and 5);
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-7) {半球の面};
+  \end{scope}
+  \node[font=\Large] at (68,10) {$=$};
+  \begin{scope}[shift={(104,8)}]
+    \fill[bkTheme!8] (0,0) ellipse (22 and 5);
+    \draw[bkOrange!90!black, line width=1.4pt] (0,0) ellipse (22 and 5);
+    \draw[kviiil turn, line width=1.3pt] (-70:22 and 5) arc (-70:-30:22 and 5);
+    \draw[bkInk, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,0) -- (0,16);
+    \node[font=\footnotesize, anchor=west] at (1,14) {$\vec n$};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-7) {平らな円板};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ふち（オレンジの円）が同じなら、半球の面でも平らな円板でも、$\mathrm{rot}\,\vec F$ の流束は同じ。平らな円板のほうが計算が楽。}\label{bk:8-11:fig-s5}
+\end{bkfigure}
+たとえば $\vec F=(-y,\ x,\ 0)$ の回転は、どこでも $(0,\ 0,\ 2)$ です（8-10）。半径1の円をふちとする半球の面で流束を計算すると、8-8 の場合F（球面を2つの角で表す）の重積分になります。平らな円板なら、$\vec n=(0,\ 0,\ 1)$ で $\mathrm{rot}\,\vec F\cdot\vec n=2$ が一定なので、$2\times\pi=2\pi$ で終わりです（例題14で、半球でも同じになることを確かめます）。
+
+\bksubsection{11}{S2：面積を、ふちの道で求める}
+
+\leavevmode\label{bk:8-11:menseki}グリーンの定理を、反対向きに使います。回転がどこでも1になる場、たとえば $\vec F=\Bigl(-\dfrac{y}{2},\ \dfrac{x}{2}\Bigr)$（回転は $\dfrac{1}{2}-\Bigl(-\dfrac{1}{2}\Bigr)=1$）を選ぶと、右は「$1\times$面積」です。
+\kviiilframe{$\text{面積}\ A=\dfrac{1}{2}\displaystyle\oint_C(x\,\dd y-y\,\dd x)$\qquad（$C$ は左回り）}
+ふちの道の上の点の座標だけで、面積がわかります。
+
+\kviiilhead{くつひもの式}
+多角形のふちは、まっすぐな辺の集まりです。点 $(x_1,\ y_1)$ から $(x_2,\ y_2)$ へのまっすぐな辺を、$x=x_1+t(x_2-x_1)$、$y=y_1+t(y_2-y_1)$（$0\leqq t\leqq1$。8-7 の場合B）で表します。
+\begin{bkhenkei}[0.56]
+x\,\dd y-y\,\dd x=\bigl\{x(y_2-y_1)-y(x_2-x_1)\bigr\}\dd t & $\dd x=(x_2-x_1)\dd t$、$\dd y=(y_2-y_1)\dd t$ \\
+=\bigl\{x_1(y_2-y_1)-y_1(x_2-x_1)\bigr\}\dd t & $x$、$y$ に入れると、$t$ の項は消える \\
+\int_0^1(\cdots)\,\dd t=x_1y_2-x_2y_1 & 定数を0から1まで積分 \\
+\end{bkhenkei}
+1つの辺の分は、$x_1y_2-x_2y_1$（たすきにかけてひく：7-4 の行列式と同じ形）です。多角形の頂点を左回りに $(x_1,\ y_1)$、$(x_2,\ y_2)$、…、$(x_n,\ y_n)$ とすると、
+\kviiilframe{$A=\dfrac{1}{2}\bigl\{(x_1y_2-x_2y_1)+(x_2y_3-x_3y_2)+\cdots+(x_ny_1-x_1y_n)\bigr\}$}
+です。頂点の座標をたすきにかけていく形が、くつひもを交差させて通すようすに似ているので、\textbf{くつひもの式}とよばれます。測量で土地の面積を計算するときに、今でも使われています（座標法）。
+
+\begin{column}{面積計（プラニメーター）}
+地図の上の池や土地の面積を、ふちをなぞるだけではかる機械があります。\textbf{面積計}（プラニメーター）といいます。腕の先の針でふちを1周なぞると、腕についた小さな車輪が、なぞった道にそって回ります。車輪の回った量は、ふちにそった線積分になっていて、グリーンの定理によって、それが中の面積に比例するのです。コンピュータがなかった時代、設計図や地図の面積をはかるのに広く使われました。
+\end{column}
+
+\bksubsection{12}{S3：回転が0でも、穴をかこむと0にならない}
+
+\leavevmode\label{bk:8-11:ana}8-10 のうずなし流れ $\vec F=\dfrac{(-y,\ x)}{x^2+y^2}$ は、原点以外では回転が0でした。でも、原点をかこむ円を1周すると、8-7 では半径によらず $2\pi$ でした。グリーンの定理で「回転0×面積＝0」にならないのは、なぜでしょう。
+
+\noindent 原点では、$\vec F$ の分母が0になり、矢印が決まりません。円の中の面には、この「穴」がふくまれるので、グリーンの定理の右を計算できないのです（G5 の点のわき出しと同じ）。そこで、G5 と同じように、原点のまわりを小さな円でくりぬきます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item くりぬいた残りの面には穴がなく、回転は0です。だから、「外の道の1周」＝「小さな円の1周」です。原点をかこむ道なら、正方形でも三角形でも、1周は $2\pi$ です。
+\item 原点をかこまない道なら、中に穴がないので、1周は「回転0×面積＝0」です。
+\end{itemize}
+8-10 のもっと知りたいで、「回転が0なら、力は $-\mathrm{grad}\,U$ と書ける（すきまのない広がりの中なら）」と書きました。「すきまのない広がり」とは、どんな閉じた道でも、その中の面に穴がない広がりのことです。物理第1巻（力-4）の「（すきまのない広がりの中なら）」も、この意味です。
+
+\bksubsection{13}{S4・S6：アンペールの法則は、道を選ぶ}
+
+\leavevmode\label{bk:8-11:ampere}8-10 で、電流のまわりの磁場の回転は、導線の外では0でした。導線の中では、回転は電流密度の $\mu_0$ 倍（$\mathrm{rot}\,\vec B=\mu_0\vec j$）でした。ストークスの定理を使うと、道 $C$ が囲む面を通る電流の合計を $I_{\text{中}}$ として、
+\[ \oint_C\vec B\cdot\dd\vec r=\iint_S\mathrm{rot}\,\vec B\cdot\vec n\,\dd S=\mu_0\iint_S\vec j\cdot\vec n\,\dd S=\mu_0I_{\text{中}} \]
+\kviiilframe{アンペールの法則\qquad $\displaystyle\oint_C\vec B\cdot\dd\vec r=\mu_0I_{\text{中}}$}
+です。これを\textbf{アンペールの法則}といいます。\bkidx{あんぺーるのほうそく}{アンペールの法則}ガウスの法則で袋を選んだように、ここでは\textbf{道を選びます}。まっすぐな導線なら、導線を中心とする円の道を選ぶと、対称性から、磁場は道にそっていて、円の上ではどこでも同じ大きさ $B$ です。
+\[ B\times2\pi r=\mu_0I\qquad\text{より}\qquad B=\frac{\mu_0I}{2\pi r} \]
+8-10 で「物理の実験からわかっている」とした式が、アンペールの法則から出てきました。高校物理の $H=\dfrac{I}{2\pi r}$（$H=\dfrac{B}{\mu_0}$）の $2\pi r$ は、円の道の長さだったのです。導線の中（半径 $r<a$）では、道が囲む電流が $I\times\dfrac{r^2}{a^2}$ なので、$B=\dfrac{\mu_0I}{2\pi a^2}\,r$ です（8-10 で「8-11 で、その理由を学びます」と書いた式）。
+
+\kviiilhead{S6：変わる磁場のまわりの電場（8-14 で読む）}
+磁場が時間で変わると、そのまわりに電場のうずができます。面 $S$ を通る磁場の流束（磁束）を $\Phi$ とすると、
+\[ \oint_C\vec E\cdot\dd\vec r=-\frac{\dd\Phi}{\dd t} \]
+です（ファラデーの電磁誘導の法則）。左は、道にそって電荷を1周運ぶときの仕事を電荷でわったもので、コイルに生まれる電圧（起電力）です。IH 調理器や発電機は、このしくみを使っています。この式の意味は 8-14 で読みます。磁場が円の中で一様で、円の道を選べば、S4 と同じ考えで、道の上の電場の大きさが求められます（例題15）。
+
+\begin{motto}[5]
+\textbf{圧力の面の積分と浮力（G7）}\par
+水の中の物には、まわりの水から圧力 $p$ がはたらきます。小さな面 $\dd S$ には、外向きの $\vec n$ と反対向き（物を押す向き）に $p\,\dd S$ の力がはたらくので、物全体にかかる力は $-\displaystyle\oiint_S p\,\vec n\,\dd S$ です。ガウスの定理には、数（スカラー）$p$ の形もあります。
+\[ \oiint_S p\,\vec n\,\dd S=\iiint_V\mathrm{grad}\,p\,\dd V \]
+（成分ごとに見ると、$x$ 成分は $\vec F=(p,\ 0,\ 0)$ のガウスの定理そのもの。）止まった水の中では、深いほど圧力が大きく、$\mathrm{grad}\,p=\rho\vec g$（$\rho$ は水の密度、$\vec g=(0,\ 0,\ -g)$）でした（物理 力-12）。だから、物全体にかかる力は
+\[ -\oiint_S p\,\vec n\,\dd S=-\iiint_V\rho\vec g\,\dd V=-\rho\vec gV=(0,\ 0,\ \rho gV) \]
+で、上向きに $\rho gV$、つまり「物がおしのけた水の重さ」です。これが\textbf{浮力}（アルキメデスの原理）です。物理第1巻（力-12）で「ガウスの定理（8-11）の形の1つ」と書いたのは、この式です。物の形がどんなに複雑でも、面の積分をしないで、体積 $V$ だけで浮力がわかります（例題9）。
+\end{motto}
+
+\begin{seikaku}
+\textbf{積分形と微分形}\par
+ガウスの定理を電場に使うと、ガウスの法則（袋の形）と 8-9 の場所ごとの式が、同じことの2つの書き方だとわかります。電荷の密度（1 m³ あたりの電荷）を $\rho$ とすると、どんな袋でも、
+\[ \iiint_V\mathrm{div}\,\vec E\,\dd V=\oiint_S\vec E\cdot\vec n\,\dd S=\frac{Q_{\text{中}}}{\varepsilon_0}=\iiint_V\frac{\rho}{\varepsilon_0}\,\dd V \]
+が成り立ちます（1つめの等号がガウスの定理、2つめがガウスの法則）。袋は、どこに、どんなに小さくとってもよいので、両はしの中身が等しくなければなりません。小さな箱の中で $\mathrm{div}\,\vec E$ と $\dfrac{\rho}{\varepsilon_0}$ がちがうと、その箱だけで両はしがちがってしまうからです。こうして $\mathrm{div}\,\vec E=\dfrac{\rho}{\varepsilon_0}$（8-9 の微分形）が出てきます。物理第1巻（力-13）で、連続の式を「検査体積はどこにどんな大きさでとってもよいので、中身どうしが等しくなり」と導いたのも、同じ考えです。袋全体で書いた形を\textbf{積分形}、場所ごとの形を\textbf{微分形}といいます。
+\end{seikaku}
+
+
+
+\begin{senmonsho}[ベクトル解析の教科書ふうの書き方]
+\begin{bkhonbun}
+有界領域 $V$ の境界を $\partial V$ とし、その外向き単位法線を $\symbf n$ とする。ベクトル場 $\symbf A$ に対し、$\displaystyle\int_V\nabla\cdot\symbf A\,\dd V=\oint_{\partial V}\symbf A\cdot\dd\symbf S$（ガウスの発散定理）。曲面 $S$ の境界 $\partial S$ に $S$ の向きと整合的な向きを入れるとき、$\displaystyle\int_S(\nabla\times\symbf A)\cdot\dd\symbf S=\oint_{\partial S}\symbf A\cdot\dd\symbf r$（ストークスの定理）。
+\end{bkhonbun}
+\bkyaku{$\partial V$ は「$V$ の境目（ふち）」という意味で、偏微分の $\partial$ とは別の使い方。$\dd\symbf S$ はこの本の $\vec n\,\dd S$。「向きと整合的」は「右ねじの関係」。物理の本や多くの専門書では、閉じた面にも $\oint$ を1つ書き、$\int$ 1つで体積の積分を書く。この本の $\oiint$・$\iiint$ と同じもので、◯はどちらも「閉じている」という印。}
+\end{senmonsho}
+
+\begin{column}{定理の名前と、それを見つけた人たち}
+ガウスの定理（発散定理）は、ラグランジュ（1762年ごろ）やガウス（1813年ごろ）が、とくべつな場合を使っていたことが知られています。どんな立体でも成り立つ形で示したのは、ロシアのオストログラツキー（1826年ごろ）だと伝えられています。イギリスのグリーンは、1828年に自分で出版した本に、グリーンの定理につながる式を書きました。ストークスの定理は、トムソン（のちのケルビン）が1850年にストークスへの手紙で伝え、ストークスが1854年に大学の賞の試験問題に出したと伝えられています。そのときの受験者の中に、のちに電気と磁気の4つの式（8-14）をまとめるマクスウェルがいました。
+\end{column}
+
+\begin{taisetsu}
+\kviiilbox{使うときの3つの段（ガウスもストークスも、両側とも名前）}
+\kviiildan{1}\enspace 記号を読む：何を・どこで（閉じた面・閉じた道か）・1枚の量\par
+\kviiildan{3}\enspace 楽な側を選ぶ：流れ図の問いを上から順に\par
+\kviiildan{2}\enspace 選んだ側を、8-6・8-7・8-8 の表の場合で、ふつうの定積分に直す
+\kviiilbox{場合分けの表8-11（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,50mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=1pt, colsep=3pt}
+記号 & こんなとき & 使い方 \\
+\kviiilcase{G1} & div は簡単 & 体積の積分に。定数なら div×体積 \\
+\kviiilcase{G2} & 開いた面 & ふたをして閉じ、ふたの分をひく \\
+\kviiilcase{G3} & 対称な場の大きさを知りたい & 対称な袋：大きさ×面積＝中の量 \\
+\kviiilcase{G4} & 袋の一部の面の流束 & 全体は中の量で決まる。等分する \\
+\kviiilcase{G5} & div が決まらない点がある & 小さな球でくりぬく \\
+\kviiilcase{G6} & 平面（2次元）の流れ & $\oint\vec F\cdot\vec n\,\dd s=\iint\mathrm{div}\,\vec F\,\dd A$ \\
+\kviiilcase{G7} & 圧力のような数の面の積分 & $\oiint p\,\vec n\,\dd S=\iiint\mathrm{grad}\,p\,\dd V$ \\
+\kviiilcase{S1} & rot は簡単 & 面の積分に。一定なら rot×面積 \\
+\kviiilcase{S2} & 面積を知りたい & $\frac{1}{2}\oint(x\,\dd y-y\,\dd x)$、くつひもの式 \\
+\kviiilcase{S3} & rot＝0（穴の点をのぞく） & かこまなければ0、かこめば小円と同じ \\
+\kviiilcase{S4} & 軸対称な場の大きさを知りたい & 円の道：$B\times2\pi r=\mu_0I_{\text{中}}$ \\
+\kviiilcase{S5} & 面の積分がほしい & 楽な面（平らな円板）を選ぶ \\
+\kviiilcase{S6} & 時間で変わる磁場がある & $\oint\vec E\cdot\dd\vec r=-\frac{\dd\Phi}{\dd t}$ \\
+\end{bktable}
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{ガウスの定理}{閉じた面から出る量＝中のわき出し（div）の合計。発散定理ともいう。}
+\bkword{ストークスの定理}{閉じた道の1周の循環＝その道をふちとする面の、回転（rot）の流束。}
+\bkword{グリーンの定理}{ストークスの定理の、平面の場合。}
+\bkword{ガウスの法則}{閉じた面の電場の流束 $\Phi_E$＝中の電荷 $\div\,\varepsilon_0$。袋の形によらない。}
+\bkword{アンペールの法則}{閉じた道にそった磁場の線積分＝$\mu_0\times$道が囲む電流。}
+\bkword{くつひもの式}{多角形の面積を、頂点の座標から求める式。}
+\bkword{積分形・微分形}{袋全体で書いた形と、場所ごとの形。同じことの2つの書き方。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、この章の場合分けの表（G1〜G7、S1〜S6）のどの場合かを書きました。そのあとの札は、\kviiildan{1} が名前の段、\kviiildan{3} が楽をする段（どちらの側を使うか）、\kviiildan{2} が直す段（選んだ側を、ふつうの定積分に直す）です。
+
+\begin{reidai}[div が定数なら、div×体積]
+流れ $\vec F=(2x,\ 3y,\ z)$ が、原点を中心とする半径1の球の面から出ていく量を求めましょう。\par
+\kangaekata \kviiilbaai{閉じた面（球）で、div が定数}{8-11}{G1}\par
+\kviiildan{1}\enspace $\oiint_S\vec F\cdot\vec n\,\dd S$：球の面で「$\vec F$ の外向きの成分×タイル」をたす。\par
+\kviiildan{3}\enspace 球の上で $\vec F\cdot\vec n$ は場所で変わるので、面の積分は大変。div を調べると定数なので、体積の積分に取りかえる。\par
+\kviiildan{2}\enspace 定数×球の体積（8-6 の場合E：$\frac{4}{3}\pi R^3$）。\par
+\shiki $\mathrm{div}\,\vec F=\dfrac{\partial(2x)}{\partial x}+\dfrac{\partial(3y)}{\partial y}+\dfrac{\partial z}{\partial z}=2+3+1=6$\kviiilq
+$\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S=\iiint_V6\,\dd V=6\times\frac{4}{3}\pi\times1^3=8\pi$\par
+\kotae $8\pi$（約25.1）
+\end{reidai}
+
+\begin{jibun}
+流れ $\vec F=(x,\ 2y,\ 3z)$ が、原点を中心とする半径2の球の面から出ていく量を求めましょう。
+\bkjans{$\mathrm{div}\,\vec F=1+2+3=6$。$6\times\frac{4}{3}\pi\times2^3=64\pi$（約201）。}
+\end{jibun}
+
+\begin{reidai}[立方体の両側を計算する]
+流れ $\vec F=(x^2,\ y^2,\ z^2)$ が、1辺1の立方体（$0\leqq x,\ y,\ z\leqq1$）から出ていく量を、面ごとの計算と、ガウスの定理の両方で求めましょう。\par
+\kangaekata \kviiilbaai{閉じた面（立方体）}{8-11}{G1}\par
+\kviiildan{1}\enspace 左：6つの面で「外向きの成分×面積」をたす。右：立方体の中で div をたす。\par
+\kviiildan{2}\enspace 左は8-8 の場合G（面ごと）。右は8-6 の場合E（定積分を3回）。\par
+\shiki 左：$x=1$ の面は $\vec n=(1,\ 0,\ 0)$、$F_x=1^2=1$ で $1\times1=1$。$x=0$ の面は $F_x=0$ で0\kviiilq
+$y$・$z$ の面も同じで、1と0。合計 $1+1+1=3$\kviiilq
+右：$\mathrm{div}\,\vec F=2x+2y+2z$\kviiilq
+$\displaystyle\iiint(2x+2y+2z)\,\dd V=\int_0^12x\,\dd x+\int_0^12y\,\dd y+\int_0^12z\,\dd z$\kviiilq
+$=1+1+1=3$\par
+\kotae どちらも3
+\end{reidai}
+\noindent 右の3重積分では、たとえば $2x$ の項は $y$・$z$ によらないので、$y$ と $z$ の積分はそれぞれ1（立方体のはば）になり、$\int_0^12x\,\dd x=1$ だけが残ります。
+
+\begin{jibun}
+流れ $\vec F=(xy,\ yz,\ zx)$ が、1辺1の立方体（$0\leqq x,\ y,\ z\leqq1$）から出ていく量を、面ごとの計算と、ガウスの定理の両方で求めましょう。
+\bkjans{左：$x=1$ の面で $F_x=y$、$\iint y\,\dd y\,\dd z=0.5$。$y=1$ の面で $F_y=z$ で0.5、$z=1$ の面で $F_z=x$ で0.5。$x=0$・$y=0$・$z=0$ の面は0。合計1.5。右：$\mathrm{div}\,\vec F=y+z+x$、$\iiint(x+y+z)\,\dd V=0.5+0.5+0.5=1.5$。}
+\end{jibun}
+
+\begin{reidai}[ドームに、ふたをする]
+流れ $\vec F=(x,\ y,\ z+1)$ が、半径2の半球のドーム（$z\geqq0$。底はふくまない）を内側から外側へ通りぬける量を求めましょう。\par
+\kangaekata \kviiilbaai{開いた面（ドーム）}{8-11}{G2}\par
+\kviiildan{1}\enspace $\iint_{\text{ドーム}}\vec F\cdot\vec n\,\dd S$。閉じていないので、ガウスの定理はそのままでは使えない。\par
+\kviiildan{3}\enspace 底の円でふたをして閉じる。閉じた全体は G1、ふたは平らな面（8-8 の場合B）。\par
+\kviiildan{2}\enspace ふたの外向きは下向き $\vec n=(0,\ 0,\ -1)$。\par
+\shiki 閉じた全体：$\mathrm{div}\,\vec F=1+1+1=3$、$3\times\dfrac{2}{3}\pi\times2^3=16\pi$\kviiilq
+ふた（$z=0$）：$\vec F\cdot\vec n=-(z+1)=-1$。$-1\times(\text{円の面積}\ 4\pi)=-4\pi$\kviiilq
+ドーム $=16\pi-(-4\pi)=20\pi$\par
+\kotae $20\pi$（約62.8）
+\end{reidai}
+\noindent 半球の体積は、球の体積の半分 $\dfrac{1}{2}\times\dfrac{4}{3}\pi R^3=\dfrac{2}{3}\pi R^3$ です。ドームの面の上で直接重積分をしても（8-8 の場合F）、同じ $20\pi$ になります（Python で確かめた）。
+
+\begin{jibun}
+流れ $\vec F=(x,\ y,\ z)$ が、放物面 $z=1-x^2-y^2$（$z\geqq0$ の部分。底はふくまない）を下から上へ通りぬける量を、ふたをする方法で求めましょう。放物面の下の立体の体積は $\dfrac{\pi}{2}$ です（8-6 の場合D：高さ $z$ の切り口は半径 $\sqrt{1-z}$ の円）。
+\bkjans{閉じた全体は $3\times\frac{\pi}{2}=\frac{3\pi}{2}$。ふた（$z=0$、下向き）では $\vec F\cdot\vec n=-z=0$ で0。放物面は $\frac{3\pi}{2}-0=\frac{3\pi}{2}$（約4.71）。}
+\end{jibun}
+
+\begin{reidai}[地球の重力を、袋を選んで求める]
+地球を半径 $R=\qty{6.371e6}{m}$ の球とし、$GM=\qty{3.986e14}{m^3/s^2}$ とします。（1）地面での重力の大きさ $g$ を求めましょう。（2）地球の密度がどこでも同じだとすると、半分の深さ（中心から $\frac{R}{2}$）での $g$ はいくつでしょう。\par
+\kangaekata \kviiilbaai{場の大きさを知りたい、球対称}{8-11}{G3}\par
+\kviiildan{1}\enspace $\oiint\vec g\cdot\vec n\,\dd S=-4\pi G\,M_{\text{中}}$。名前は $\oiint$ だが、ここでは積分しない（対称で外に出す）。\par
+\kviiildan{3}\enspace 同じ中心の球の袋を選ぶ。$\vec g$ は面に直角で、大きさは同じ（8-8 の場合D）。\par
+\kviiildan{2}\enspace 流束 $=-g\times4\pi r^2$ なので、$g=\dfrac{G\,M_{\text{中}}}{r^2}$。\par
+\shiki（1）$r=R$ で $M_{\text{中}}=M$。$g=\dfrac{GM}{R^2}=\dfrac{3.986\times10^{14}}{(6.371\times10^6)^2}=9.82$\kviiilq
+（2）$M_{\text{中}}=M\times\Bigl(\dfrac{1}{2}\Bigr)^3=\dfrac{M}{8}$、$r=\dfrac{R}{2}$\kviiilq
+$g=\dfrac{G\times\frac{M}{8}}{\bigl(\frac{R}{2}\bigr)^2}=\dfrac{GM}{R^2}\times\dfrac{4}{8}=9.82\times\dfrac{1}{2}=4.91$\par
+\kotae（1）\nobreak \qty{9.82}{m/s^2}\quad（2）\nobreak \qty{4.91}{m/s^2}（本物の地球は中心ほど密度が高いので、実際はこれより大きい）
+\end{reidai}
+
+\begin{jibun}
+月を半径 $R=\qty{1.737e6}{m}$ の球とし、$GM=\qty{4.90e12}{m^3/s^2}$ とします。（1）月の表面での重力の大きさを求めましょう。（2）月の密度がどこでも同じだとすると、中心から $\frac{R}{2}$ の所での重力の大きさはいくつでしょう。
+\bkjans{（1）\nobreak $\dfrac{4.90\times10^{12}}{(1.737\times10^6)^2}=\qty{1.62}{m/s^2}$。（2）\nobreak $M_{\text{中}}=\frac{M}{8}$、$r=\frac{R}{2}$ で、表面の $\frac{1}{2}$ の \qty{0.81}{m/s^2}。}
+\end{jibun}
+
+\begin{reidai}[点の電荷と、まっすぐな線の電荷]
+$k=\dfrac{1}{4\pi\varepsilon_0}=9.0\times10^9$〔N·m²/C²〕とします。（1）点の電荷 $Q=\qty{1.0e-9}{C}$ から \qty{0.1}{m} の所の電場の大きさを求めましょう。（2）長いまっすぐな導線に、1 m あたり $\lambda=\qty{1.0e-9}{C/m}$ の電荷があるとき、導線から \qty{0.1}{m} の所の電場の大きさを求めましょう。\par
+\kangaekata \kviiilbaai{場の大きさを知りたい、球対称と軸対称}{8-11}{G3}\par
+\kviiildan{1}\enspace ガウスの法則 $\oiint\vec E\cdot\vec n\,\dd S=\frac{Q_{\text{中}}}{\varepsilon_0}$。名前は $\oiint$ だが、ここでは積分しない（対称で外に出す）。\par
+\kviiildan{3}\enspace（1）は同じ中心の球、（2）は導線を軸とする半径 $r$・長さ $L$ の円柱を袋に選ぶ。\par
+\kviiildan{2}\enspace（1）$E\times4\pi r^2=\dfrac{Q}{\varepsilon_0}$。（2）上下の面は流束0、側面で $E\times2\pi rL=\dfrac{\lambda L}{\varepsilon_0}$。\par
+\shiki（1）$E=\dfrac{Q}{4\pi\varepsilon_0r^2}=\dfrac{kQ}{r^2}=\dfrac{9.0\times10^9\times1.0\times10^{-9}}{0.1^2}=\dfrac{9.0}{0.01}=900$\kviiilq
+（2）$E=\dfrac{\lambda}{2\pi\varepsilon_0r}=\dfrac{2k\lambda}{r}=\dfrac{2\times9.0\times10^9\times1.0\times10^{-9}}{0.1}=\dfrac{18}{0.1}=180$\par
+\kotae（1）\nobreak \qty{900}{N/C}\quad（2）\nobreak \qty{180}{N/C}
+\end{reidai}
+\noindent（2）の $\dfrac{\lambda}{2\pi\varepsilon_0r}$ を $k$ で書くと、$\dfrac{1}{2\pi\varepsilon_0}=2\times\dfrac{1}{4\pi\varepsilon_0}=2k$ なので $\dfrac{2k\lambda}{r}$ です。点の電荷は $\dfrac{1}{r^2}$、線の電荷は $\dfrac{1}{r}$ でへります。袋の面積が、球では $r^2$ に、円柱の側面では $r$ に比例するからです。
+
+\begin{jibun}
+$k=9.0\times10^9$〔N·m²/C²〕とします。（1）点の電荷 $Q=\qty{2.0e-9}{C}$ から \qty{0.2}{m} の所の電場の大きさを求めましょう。（2）長いまっすぐな導線に、1 m あたり $\lambda=\qty{2.0e-9}{C/m}$ の電荷があるとき、導線から \qty{0.05}{m} の所の電場の大きさを求めましょう。
+\bkjans{（1）\nobreak $\dfrac{9.0\times10^9\times2.0\times10^{-9}}{0.2^2}=\dfrac{18}{0.04}=\qty{450}{N/C}$。（2）\nobreak $\dfrac{2\times9.0\times10^9\times2.0\times10^{-9}}{0.05}=\dfrac{36}{0.05}=\qty{720}{N/C}$。}
+\end{jibun}
+
+\begin{reidai}[立方体の袋の、1つの面]
+1辺 \qty{0.2}{m} の立方体の袋のまん中に、点の電荷 $Q=\qty{1.0e-9}{C}$ があります（$\varepsilon_0=8.85\times10^{-12}$ C²/(N·m²)）。（1）袋の1つの面を通る電場の流束を求めましょう。（2）電荷を袋の中で、まん中から少しずらしました。6つの面の電場の流束の合計はいくつでしょう。（3）電荷を袋の外に出すと、合計はいくつでしょう。\par
+\kangaekata \kviiilbaai{袋の形を変えても、中の量は同じ}{8-11}{G4}\par
+\kviiildan{1}\enspace $\oiint\vec E\cdot\vec n\,\dd S=\frac{Q_{\text{中}}}{\varepsilon_0}$（ガウスの法則）。名前は $\oiint$ だが、ここでは積分しない（同じ形の面に分ける）。\par
+\kviiildan{3}\enspace 全体は、袋の形によらず $\dfrac{Q_{\text{中}}}{\varepsilon_0}$。6つの面は、まん中の電荷から見て同じ形なので、6等分。面の積分はしない。\par
+\shiki 全体：$\dfrac{1.0\times10^{-9}}{8.85\times10^{-12}}=113$\kviiilq
+（1）$113\div6=18.8$\kviiilq
+（2）中の電荷は $Q$ のままなので、113\kviiilq
+（3）中の電荷は0なので、0\par
+\kotae（1）\nobreak 約18.8 N·m²/C\quad（2）\nobreak 約113 N·m²/C\quad（3）\nobreak 0
+\end{reidai}
+
+\begin{jibun}
+正四面体（4つの面が同じ正三角形の立体）の袋のまん中に、点の電荷 $Q=\qty{1.0e-9}{C}$ があります。（1）袋の1つの面を通る電場の流束を求めましょう。（2）電荷を袋の外に出すと、4つの面の電場の流束の合計はいくつでしょう（$\varepsilon_0=8.85\times10^{-12}$ C²/(N·m²)）。
+\bkjans{（1）\nobreak 全体113を4等分して約 \qty{28.2}{N.m^2/C}。（2）\nobreak 中に電荷がないので0。}
+\end{jibun}
+
+\begin{reidai}[池の口を、くりぬいてかこむ]
+8-9 の池（わき出す口から $Q=4$〔m²/s〕、吸いこむ口へ $-4$）で、次の量を求めましょう。（1）わき出す口だけをかこむ半径 \qty{0.5}{m} の円と、半径 \qty{1}{m} の円から出ていく量。（2）池のふち（6 m×4 m の長方形）から出ていく量。（3）吸いこむ口だけをかこむ円から出ていく量。（4）口だけがある池（吸いこむ口がない）で、口から \qty{0.5}{m} の所の水の速さ。\par
+\kangaekata \kviiilbaai{中に点のわき出し（口）}{8-11}{G5}\par
+\kviiildan{1}\enspace $\oint_C\vec v\cdot\vec n\,\dd s$：道で「外向きの成分×1歩の長さ」をたす。名前は $\oint$ だが、ここでは積分しない。\par
+\kviiildan{3}\enspace 口のまわりを小さな円でくりぬく。残りは発散0なので、口をかこむ道なら、形と大きさによらず、口から出る量と同じ。\par
+\kviiildan{2}\enspace（4）は対称な円の道を選び、「速さ×円周の長さ＝$Q$」。\par
+\shiki（1）どちらの円も、口から出る量 $Q=4$\kviiilq
+（2）2つの口をかこむので、$4+(-4)=0$\kviiilq
+（3）吸いこむ口から出る量は $-4$\kviiilq
+（4）$v\times2\pi\times0.5=4$ より $v=\dfrac{4}{\pi}=1.27$\par
+\kotae（1）\nobreak どちらも \qty{4}{m^2/s}\quad（2）\nobreak 0\quad（3）\nobreak \qty{-4}{m^2/s}（4 だけ入ってくる）\quad（4）\nobreak \qty{1.27}{m/s}
+\end{reidai}
+
+\begin{jibun}
+1秒に $Q=6$〔m²/s〕わき出す口と、6吸いこむ口がある池で、次の量を求めましょう。（1）わき出す口だけをかこむ正方形の道から出ていく量。（2）2つの口をどちらもかこむ道から出ていく量。（3）口だけがある池（吸いこむ口がない）で、口から \qty{1}{m} の所の水の速さ。
+\bkjans{（1）\nobreak \qty{6}{m^2/s}（形によらない）。（2）\nobreak $6+(-6)=0$。（3）\nobreak $v\times2\pi\times1=6$ より $v=\dfrac{3}{\pi}=\qty{0.955}{m/s}$。}
+\end{jibun}
+
+\begin{reidai}[平面のガウスの定理]
+流れ $\vec F=(x^2,\ y)$ で、長方形 $0\leqq x\leqq3$、$0\leqq y\leqq2$ のふちから出ていく量を、ふちの積分と、中の発散の積分の両方で求めましょう。\par
+\kangaekata \kviiilbaai{平面の流れ}{8-11}{G6}\par
+\kviiildan{1}\enspace 左 $\oint_C\vec F\cdot\vec n\,\dd s$：ふちで「外向きの成分×長さ」。右 $\iint_D\mathrm{div}\,\vec F\,\dd A$。\par
+\kviiildan{2}\enspace 左は4つの辺ごと（8-7 の場合E）。右は長方形で定積分を2回（8-6 の場合A）。\par
+\shiki 左：右の辺 $x=3$ は $\vec n=(1,\ 0)$、$F_x=9$、$\int_0^29\,\dd y=18$\kviiilq
+上の辺 $y=2$ は $\vec n=(0,\ 1)$、$F_y=2$、$\int_0^32\,\dd x=6$\kviiilq
+左の辺 $x=0$ は $F_x=0$、下の辺 $y=0$ は $F_y=0$ で、どちらも0。合計24\kviiilq
+右：$\mathrm{div}\,\vec F=2x+1$、$\int_0^2\Bigl(\int_0^3(2x+1)\,\dd x\Bigr)\dd y=\int_0^2(9+3)\,\dd y=24$\par
+\kotae どちらも24（やってみようの表計算と同じ）
+\end{reidai}
+
+\begin{jibun}
+流れ $\vec F=(xy,\ y^2)$ で、正方形 $0\leqq x\leqq2$、$0\leqq y\leqq2$ のふちから出ていく量を、ふちの積分と、中の発散の積分の両方で求めましょう。
+\bkjans{左：右の辺 $x=2$ で $F_x=2y$、$\int_0^22y\,\dd y=4$。上の辺 $y=2$ で $F_y=4$、$\int_0^24\,\dd x=8$。左と下の辺は0。合計12。右：$\mathrm{div}\,\vec F=y+2y=3y$、$\int_0^2\int_0^23y\,\dd x\,\dd y=2\times6=12$。}
+\end{jibun}
+
+\begin{reidai}[浮力を、面の積分なしで求める]
+水（密度 \qty{1000}{kg/m^3}、$g=\qty{9.8}{m/s^2}$）の中で、（1）1辺 \qty{0.1}{m} の立方体（上の面の深さ \qty{0.5}{m}）にかかる浮力を、上と下の面の圧力から求め、$\rho gV$ とくらべましょう。（2）半径 \qty{0.1}{m} の球にかかる浮力を求めましょう。\par
+\kangaekata \kviiilbaai{圧力の面の積分（スカラーの形）}{8-11}{G7}\par
+\kviiildan{1}\enspace 浮力は $-\oiint_S p\,\vec n\,\dd S$（面を押す力の合計）。名前は $\oiint$ だが、球では面の積分をしない。\par
+\kviiildan{3}\enspace G7 で $-\iiint\mathrm{grad}\,p\,\dd V=\rho gV$（上向き）。球の面の積分はしない。\par
+\shiki（1）横の4つの面の力は、向かい合う面どうしで打ち消し合う\kviiilq
+上の面は下向きに $(p_0+\rho g\times0.5)\times0.01$、下の面は上向きに $(p_0+\rho g\times0.6)\times0.01$（$p_0$ は大気圧）\kviiilq
+上向きの合計 $=\rho g\times(0.6-0.5)\times0.01=1000\times9.8\times0.001=9.8$\kviiilq
+$\rho gV=1000\times9.8\times0.1^3=9.8$（同じ）\kviiilq
+（2）$\rho gV=1000\times9.8\times\dfrac{4}{3}\pi\times0.1^3=41.0$\par
+\kotae（1）\nobreak \qty{9.8}{N}（$\rho gV$ と同じ）\quad（2）\nobreak \qty{41.0}{N}
+\end{reidai}
+
+\begin{jibun}
+水（密度 \qty{1000}{kg/m^3}、$g=\qty{9.8}{m/s^2}$）の中で、（1）1辺 \qty{0.2}{m} の立方体（上の面の深さ \qty{1}{m}）にかかる浮力を、上と下の面の圧力から求め、$\rho gV$ とくらべましょう。（2）半径 \qty{0.05}{m} の球にかかる浮力を求めましょう。
+\bkjans{（1）\nobreak 上向きの合計は $1000\times9.8\times(1.2-1)\times0.04=\qty{78.4}{N}$。$\rho gV=1000\times9.8\times0.008=\qty{78.4}{N}$ で同じ。（2）\nobreak $1000\times9.8\times\frac{4}{3}\pi\times0.05^3=\qty{5.13}{N}$。}
+\end{jibun}
+
+\begin{reidai}[道の1周を、rot×面積で]
+力 $\vec F=(-3y,\ 2x)$ について、（1）正方形 $0\leqq x\leqq2$、$0\leqq y\leqq2$ のふちを左回りに1周する線積分を、4つの辺の計算と、グリーンの定理の両方で求めましょう。（2）原点を中心とする半径1の円を、左回りに1周する線積分を求めましょう。\par
+\kangaekata \kviiilbaai{閉じた道で、rot が一定}{8-11}{S1}\par
+\kviiildan{1}\enspace $\oint_C\vec F\cdot\dd\vec r$：1周して「力×1歩」をたす。\par
+\kviiildan{3}\enspace 回転 $\dfrac{\partial F_y}{\partial x}-\dfrac{\partial F_x}{\partial y}=2-(-3)=5$ が一定なので、「$5\times$面積」。\par
+\kviiildan{2}\enspace（1）の確かめは、4つの辺ごとに8-7 の場合A。\par
+\shiki（1）下の辺（$y=0$、右へ）：$F_x=0$ で0。右の辺（$x=2$、上へ）：$\int_0^2 4\,\dd y=8$\kviiilq
+上の辺（$y=2$、左へ）：$F_x=-6$、$-\int_0^2(-6)\,\dd x=12$。左の辺（$x=0$、下へ）：$F_y=0$ で0\kviiilq
+合計 $0+8+12+0=20$。グリーンの定理：$5\times(2\times2)=20$\kviiilq
+（2）$5\times(\pi\times1^2)=5\pi$\par
+\kotae（1）\nobreak 20（どちらでも同じ）\quad（2）\nobreak $5\pi$（約15.7）
+\end{reidai}
+
+\begin{jibun}
+力 $\vec F=(-2y,\ 2x)$ について、（1）正方形 $0\leqq x\leqq3$、$0\leqq y\leqq3$ のふちを左回りに1周する線積分を、4つの辺の計算と、グリーンの定理の両方で求めましょう。（2）原点を中心とする半径2の円を、左回りに1周する線積分を求めましょう。
+\bkjans{回転は $2-(-2)=4$。（1）\nobreak 右の辺 $\int_0^36\,\dd y=18$、上の辺 $-\int_0^3(-6)\,\dd x=18$、下と左の辺は0で、合計36。$4\times9=36$。（2）\nobreak $4\times4\pi=16\pi$（約50.3）。}
+\end{jibun}
+
+\begin{reidai}[面積を、ふちの道で求める]
+（1）頂点が $(0,\ 0)$、$(4,\ 0)$、$(4,\ 3)$ の三角形の面積を、$A=\dfrac{1}{2}\oint_C(x\,\dd y-y\,\dd x)$ で求めましょう。（2）だ円 $x=3\cos t$、$y=2\sin t$（$0\leqq t\leqq2\pi$）の面積を求めましょう。\par
+\kangaekata \kviiilbaai{面積を、ふちの道で}{8-11}{S2}\par
+\kviiildan{1}\enspace 回転が1の場 $\Bigl(-\dfrac{y}{2},\ \dfrac{x}{2}\Bigr)$ のグリーンの定理で、右が「$1\times$面積」。\par
+\kviiildan{2}\enspace（1）は辺ごとに、くつひもの式の1つの辺の分 $x_1y_2-x_2y_1$。（2）は $t$ で表した道（8-7 の場合D と同じ考え）。\par
+\shiki（1）$(0,\ 0)\to(4,\ 0)$：$0\times0-4\times0=0$\kviiilq
+$(4,\ 0)\to(4,\ 3)$：$4\times3-4\times0=12$。$(4,\ 3)\to(0,\ 0)$：$4\times0-0\times3=0$\kviiilq
+$A=\dfrac{1}{2}(0+12+0)=6$\kviiilq
+（2）$\dd x=-3\sin t\,\dd t$、$\dd y=2\cos t\,\dd t$\kviiilq
+$x\,\dd y-y\,\dd x=(6\cos^2t+6\sin^2t)\,\dd t=6\,\dd t$\kviiilq
+$A=\dfrac{1}{2}\int_0^{2\pi}6\,\dd t=6\pi$\par
+\kotae（1）\nobreak 6（底辺4×高さ3÷2 と同じ）\quad（2）\nobreak $6\pi$（約18.8）
+\end{reidai}
+\noindent だ円の面積は、半径 $a$・$b$ のとき $\pi ab$ で、（2）は $\pi\times3\times2=6\pi$ です（8-6 のだ円の座標と同じ答え）。
+
+\begin{jibun}
+（1）頂点が $(0,\ 0)$、$(5,\ 0)$、$(5,\ 2)$、$(0,\ 4)$ の四角形の面積を、くつひもの式で求めましょう。（2）だ円 $x=4\cos t$、$y=\sin t$（$0\leqq t\leqq2\pi$）の面積を求めましょう。
+\bkjans{（1）\nobreak $0\times0-5\times0=0$、$5\times2-5\times0=10$、$5\times4-0\times2=20$、$0\times0-0\times4=0$。$A=\frac{1}{2}\times30=15$。（2）\nobreak $x\,\dd y-y\,\dd x=4\,\dd t$、$A=\frac{1}{2}\times4\times2\pi=4\pi$。}
+\end{jibun}
+
+\begin{reidai}[穴をかこむ道、かこまない道]
+$\vec F=\Bigl(\dfrac{-y}{x^2+y^2},\ \dfrac{x}{x^2+y^2}\Bigr)$ について、左回りに1周する線積分を求めましょう。（1）原点を中心とする半径2の円。（2）4つの頂点が $(\pm1,\ \pm1)$ の正方形。（3）中心 $(3,\ 0)$、半径1の円。\par
+\kangaekata \kviiilbaai{rot＝0（原点以外）の場の1周}{8-11}{S3}\par
+\kviiildan{1}\enspace $\oint_C\vec F\cdot\dd\vec r$：道を1周して「$\vec F$×1歩」をたす。\par
+\kviiildan{3}\enspace 原点（穴）をかこむかどうかを先に見る。かこむなら、小さな円の1周と同じ。かこまなければ0。\par
+\kviiildan{2}\enspace（1）は円を角 $\theta$ で表す（8-7 の場合D）。\par
+\shiki（1）$x=2\cos\theta$、$y=2\sin\theta$ で、$\vec F=\dfrac{(-2\sin\theta,\ 2\cos\theta)}{4}$、$\dd\vec r=(-2\sin\theta,\ 2\cos\theta)\,\dd\theta$\kviiilq
+$\vec F\cdot\dd\vec r=\dfrac{4\sin^2\theta+4\cos^2\theta}{4}\,\dd\theta=\dd\theta$。$\int_0^{2\pi}\dd\theta=2\pi$\kviiilq
+（2）原点をかこむので、（1）と同じ $2\pi$\kviiilq
+（3）原点をかこまない。中の回転は0なので0\par
+\kotae（1）\nobreak $2\pi$\quad（2）\nobreak $2\pi$\quad（3）\nobreak 0
+\end{reidai}
+
+\begin{jibun}
+$\vec F=5\times\Bigl(\dfrac{-y}{x^2+y^2},\ \dfrac{x}{x^2+y^2}\Bigr)$ について、左回りに1周する線積分を求めましょう。（1）原点を中心とする半径1の円。（2）原点をかこむ三角形。（3）中心 $(0,\ 4)$、半径1の円。
+\bkjans{（1）\nobreak $5\times2\pi=10\pi$。（2）\nobreak 原点をかこむので $10\pi$。（3）\nobreak 原点をかこまないので0。}
+\end{jibun}
+
+\begin{reidai}[アンペールの法則で、磁場を求める]
+半径 \qty{2}{mm} のまっすぐな導線に、\qty{10}{A} の電流が一様に流れています（$\mu_0=4\pi\times10^{-7}$ T·m/A）。（1）導線の中心から \qty{5}{cm} の所、（2）導線の中で中心から \qty{1}{mm} の所の、磁場の大きさを求めましょう。\par
+\kangaekata \kviiilbaai{場の大きさを知りたい、軸対称}{8-11}{S4}\par
+\kviiildan{1}\enspace $\oint_C\vec B\cdot\dd\vec r=\mu_0I_{\text{中}}$（アンペールの法則）。名前は $\oint$ だが、ここでは積分しない（対称で外に出す）。\par
+\kviiildan{3}\enspace 導線を中心とする円を道に選ぶ。$\vec B$ は道にそっていて、大きさは同じ。\par
+\kviiildan{2}\enspace 線積分 $=B\times2\pi r$。\par
+\shiki（1）$I_{\text{中}}=10$。$B=\dfrac{\mu_0I}{2\pi r}=\dfrac{4\pi\times10^{-7}\times10}{2\pi\times0.05}=4\times10^{-5}$\kviiilq
+（2）$I_{\text{中}}=10\times\Bigl(\dfrac{1}{2}\Bigr)^2=2.5$（面積の割合）\kviiilq
+$B=\dfrac{4\pi\times10^{-7}\times2.5}{2\pi\times0.001}=5\times10^{-4}$\par
+\kotae（1）\nobreak $4\times10^{-5}$ T\quad（2）\nobreak $5\times10^{-4}$ T
+\end{reidai}
+
+\begin{jibun}
+半径 \qty{2}{mm} のまっすぐな導線に、\qty{20}{A} の電流が一様に流れています。（1）導線の中心から \qty{10}{cm} の所、（2）導線の中で中心から \qty{1}{mm} の所の、磁場の大きさを求めましょう（$\mu_0=4\pi\times10^{-7}$ T·m/A）。
+\bkjans{（1）\nobreak $\dfrac{4\pi\times10^{-7}\times20}{2\pi\times0.1}=4\times10^{-5}$ T。（2）\nobreak $I_{\text{中}}=20\times\frac{1}{4}=5$、$\dfrac{4\pi\times10^{-7}\times5}{2\pi\times0.001}=1\times10^{-3}$ T。}
+\end{jibun}
+
+\begin{reidai}[面の選び方を変えても同じ]
+$\vec F=(-y,\ x,\ 0)$ の回転は $(0,\ 0,\ 2)$ です。$xy$ の面の上の、原点を中心とする半径1の円 $C$（上から見て左回り）について、$\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S$ を、（1）平らな円板、（2）上半分の半球の面（$\vec n$ は外向き）で求めましょう。\par
+\kangaekata \kviiilbaai{ふちは同じで、面は自由}{8-11}{S5}\par
+\kviiildan{1}\enspace $\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S$：面で「回転の、面に直角な成分×タイル」をたす。\par
+\kviiildan{3}\enspace ふちが同じなら、どの面でも同じ値。平らな円板が楽。\par
+\kviiildan{2}\enspace（2）は球面を2つの角で表す（8-8 の場合F）：$\vec n=(\sin\theta\cos\varphi,\ \sin\theta\sin\varphi,\ \cos\theta)$、$\dd S=\sin\theta\,\dd\theta\,\dd\varphi$。\par
+\shiki（1）$\vec n=(0,\ 0,\ 1)$、$\mathrm{rot}\,\vec F\cdot\vec n=2$。$2\times\pi\times1^2=2\pi$\kviiilq
+（2）$\mathrm{rot}\,\vec F\cdot\vec n=2\cos\theta$\kviiilq
+$\int_0^{2\pi}\Bigl(\int_0^{\frac{\pi}{2}}2\cos\theta\sin\theta\,\dd\theta\Bigr)\dd\varphi=\int_0^{2\pi}\Bigl[\,\sin^2\theta\,\Bigr]_0^{\frac{\pi}{2}}\dd\varphi=\int_0^{2\pi}1\,\dd\varphi=2\pi$\par
+\kotae（1）\nobreak $2\pi$\quad（2）\nobreak $2\pi$（どちらも同じ。8-7 で円を1周した $2\pi$ とも同じ）
+\end{reidai}
+\noindent（2）の内側の積分は、$2\cos\theta\sin\theta$ が $\sin^2\theta$ の微分であること（5-6 の合成関数の微分）を使いました。半球では計算がふえますが、答えは同じです。
+
+\begin{jibun}
+$\vec F=(-y,\ x,\ 0)$ で、$xy$ の面の上の原点を中心とする半径2の円（上から見て左回り）について、$\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S$ を、（1）平らな円板、（2）上半分の半球の面で求めましょう。
+\bkjans{（1）\nobreak $2\times4\pi=8\pi$。（2）\nobreak $\dd S=4\sin\theta\,\dd\theta\,\dd\varphi$ で、$\int_0^{2\pi}\int_0^{\frac{\pi}{2}}2\cos\theta\times4\sin\theta\,\dd\theta\,\dd\varphi=2\pi\times4=8\pi$。}
+\end{jibun}
+
+\begin{reidai}[変わる磁場のまわりの電場]
+半径 \qty{0.05}{m} の円の中に、一様な磁場が面に直角にあり、1秒に \qty{0.4}{T} ずつ強くなっています。（1）この円にそって1周する電場の線積分（起電力）の大きさを求めましょう。（2）円の上の電場の大きさを求めましょう。\par
+\kangaekata \kviiilbaai{時間で変わる磁場、軸対称}{8-11}{S6}\par
+\kviiildan{1}\enspace $\oint_C\vec E\cdot\dd\vec r=-\dfrac{\dd\Phi}{\dd t}$。磁束 $\Phi=B\times$円の面積。\par
+\kviiildan{3}\enspace 対称性から、電場は円にそっていて、大きさは同じ（S4 と同じ考え）。\par
+\shiki（1）$\Bigl|\dfrac{\dd\Phi}{\dd t}\Bigr|=\pi\times0.05^2\times0.4=3.14\times10^{-3}$\kviiilq
+（2）$E\times2\pi\times0.05=3.14\times10^{-3}$ より $E=\dfrac{3.14\times10^{-3}}{0.314}=0.01$\par
+\kotae（1）\nobreak 約 $3.14\times10^{-3}$ V\quad（2）\nobreak \qty{0.01}{V/m}
+\end{reidai}
+
+\begin{jibun}
+半径 \qty{0.1}{m} の円の中に、一様な磁場が面に直角にあり、1秒に \qty{0.2}{T} ずつ強くなっています。（1）この円にそって1周する電場の線積分（起電力）の大きさを求めましょう。（2）円の上の電場の大きさを求めましょう。
+\bkjans{（1）\nobreak $\pi\times0.1^2\times0.2=6.28\times10^{-3}$ V。（2）\nobreak $E=\dfrac{6.28\times10^{-3}}{2\pi\times0.1}=\qty{0.01}{V/m}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 開いた面に、ガウスの定理をそのまま使う}
+\bkng{ドームの流束 $=\mathrm{div}\,\vec F\times$（半球の体積）$=16\pi$}
+\bkok{ふたの分をひいて、$16\pi-(-4\pi)=20\pi$}
+ガウスの定理は、閉じた面だけの式です。開いた面は、ふたをして閉じてから使い、ふたの分をひきます（例題3）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 点のわき出しがあるのに「div は0」とする}
+\bkng{点の電荷のまわりでは $\mathrm{div}\,\vec E=0$ なので、球の袋の電場の流束は0}
+\bkok{電荷の点で div は決まらない。くりぬいて、電場の流束は $\dfrac{Q}{\varepsilon_0}$}
+div が0なのは、電荷の点以外です。袋の中に、場が決まらない点があるときは、小さな球でくりぬきます（G5）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ ふたや道の向きを逆にする}
+\bkng{ドームのふたの $\vec n$ を上向きにして、ふたの分を $+4\pi$ とする}
+\bkok{閉じた面の外向きなので、ふたの $\vec n$ は下向き。$-4\pi$}
+閉じた面では、どの面も外向きです。ストークスの定理では、道の向きと $\vec n$ を右ねじの関係にそろえます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ 対称でないのに「大きさ×面積」にする}
+\bkng{電荷が2つあっても、袋の上の電場は $\dfrac{Q_{\text{中}}}{4\pi\varepsilon_0r^2}$}
+\bkok{場全体が球対称のときだけ、大きさは一定}
+袋の外の電荷は流束には効きませんが、袋の上の電場の大きさには効きます。ガウスの法則はいつも正しいのですが、場の大きさを出せるのは対称なときだけです。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiilEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $\oiint$ を「球の面」と思う}
+\raggedright\bkng{立方体の袋は球ではないので、$\oiint$ は使えない}
+\bkok{◯は「閉じている」印。どの面かは下の $S$}
+$\oiint$ は、どんな形の閉じた面にも使います（例題6）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 名前を、そのままかけ算にする}
+\raggedright\bkng{$\oiint\vec F\cdot\vec n\,\dd S=(\vec F\cdot\vec n)\times$（面積）}
+\bkok{$\vec F\cdot\vec n$ が面の上で一定のときだけ}
+一定でなければ、ふつうの定積分に直すか、定理で取りかえます。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiilbox{電気と磁気の4つの式（8-14 へ）}
+この章で出てきた、ガウスの法則（電場）・アンペールの法則・ファラデーの法則に、「磁場の流束は、どんな閉じた面でも0（N極だけの磁石はない）」を加えた4つの式が、電気と磁気のすべての現象のもとになる式です（マクスウェル方程式）。積分形は「袋や道を選んで計算する」ための形、微分形（div と rot）は「場所ごとに何が起きているか」を見るための形です。8-14 で、この4つを読みます。
+\par\vspace{4pt}
+\kviiilbox{流れの検査体積と、熱の出入り}
+\noindent\begin{minipage}[c]{0.70\linewidth}
+\raggedright
+物理第1巻（力-13）では、流れの中に「検査体積」という袋を置き、ガウスの定理で連続の式を導きました。同じ考えで、熱の流れ $\vec q$〔W/m²〕の袋から出る量は、袋の中で1秒に生まれる熱になります（温度が変わらないとき）。パソコンの中で \qty{10}{W} の熱を出す部品を袋でかこめば、袋のどんな面からも、合計 \qty{10}{W} の熱が出ていきます。冷やす設計は、この「袋から出る量」を、どの面から、どう逃がすかを考えることです（物理 熱-11）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[\bkTT, line width=0.9pt, dash pattern=on 2pt off 1.5pt, rounded corners=2mm] (0,0) rectangle (22,16);
+  \fill[bkOrange!60] (5,5) rectangle (17,11);
+  \node[font=\sffamily\footnotesize] at (11,8) {10 W};
+  \foreach \kviiila/\kviiilb/\kviiilc/\kviiild in {11/16/0/4.5, 22/8/4.5/0, 11/0/0/-4.5, 0/8/-4.5/0} {\draw[kviiil out] (\kviiila,\kviiilb) -- ++(\kviiilc,\kviiild);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-5.5) {袋から出る熱};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 流れ $\vec F=(4x,\ y,\ z)$ が、原点を中心とする半径3の球の面から出ていく量を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$\mathrm{div}\,\vec F=6$。$6\times\frac{4}{3}\pi\times27=216\pi$（約679）。}
+
+\bkproblem 流れ $\vec F=(x+y,\ y+z,\ z+x)$ が、1辺1の立方体（$0\leqq x,\ y,\ z\leqq1$）から出ていく量を、面ごとの計算と、ガウスの定理の両方で求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{左：$x=1$ の面で $\iint(1+y)\,\dd y\,\dd z=1.5$、$x=0$ の面（外向きは $-x$）で $-\iint y\,\dd y\,\dd z=-0.5$。$y$・$z$ の面も同じで、合計 $(1.5-0.5)\times3=3$。右：$\mathrm{div}\,\vec F=3$、$3\times1=3$。}
+
+\bkproblem 流れ $\vec F=(x,\ y,\ z+2)$ が、半径1の半球のドーム（$z\geqq0$。底はふくまない）を内側から外側へ通りぬける量を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{閉じた全体は $3\times\frac{2}{3}\pi=2\pi$。ふた（下向き）は $\vec F\cdot\vec n=-2$ で $-2\pi$。ドームは $2\pi-(-2\pi)=4\pi$（約12.6）。}
+
+\bkproblem 火星を半径 $R=\qty{3.39e6}{m}$ の球とし、$GM=\qty{4.28e13}{m^3/s^2}$ とします。（1）表面での重力の大きさを求めましょう。（2）密度がどこでも同じだとすると、中心から $\frac{R}{2}$ の所での重力の大きさはいくつでしょう\mbox{（\bkreidairef{4}）}。
+\bkpans{（1）\nobreak $\dfrac{4.28\times10^{13}}{(3.39\times10^6)^2}=\qty{3.72}{m/s^2}$。（2）\nobreak その半分の \qty{1.86}{m/s^2}。}
+
+\bkproblem $k=9.0\times10^9$〔N·m²/C²〕とします。（1）点の電荷 $Q=\qty{4.0e-9}{C}$ から \qty{0.3}{m} の所の電場の大きさを求めましょう。（2）長いまっすぐな導線に1 m あたり $\lambda=\qty{3.0e-9}{C/m}$ の電荷があるとき、導線から \qty{0.2}{m} の所の電場の大きさを求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{（1）\nobreak $\dfrac{9.0\times10^9\times4.0\times10^{-9}}{0.09}=\qty{400}{N/C}$。（2）\nobreak $\dfrac{2\times9.0\times10^9\times3.0\times10^{-9}}{0.2}=\qty{270}{N/C}$。}
+
+\bkproblem 立方体の袋のまん中に、点の電荷 $Q=\qty{2.0e-9}{C}$ があります（$\varepsilon_0=8.85\times10^{-12}$ C²/(N·m²)）。（1）袋の1つの面を通る電場の流束を求めましょう。（2）電荷を袋の外に出すと、6つの面の電場の流束の合計はいくつでしょう\mbox{（\bkreidairef{6}）}。
+\bkpans{（1）\nobreak 全体は $\dfrac{2.0\times10^{-9}}{8.85\times10^{-12}}=226$ で、その $\frac{1}{6}$ の約 \qty{37.7}{N.m^2/C}。（2）\nobreak 0。}
+
+\bkproblem 1秒に $Q=2$〔m²/s〕わき出す口だけがある池で、（1）口をかこむ半径 \qty{0.25}{m} の円から出ていく量と、（2）口から \qty{0.25}{m} の所の水の速さを求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{（1）\nobreak \qty{2}{m^2/s}。（2）\nobreak $v\times2\pi\times0.25=2$ より $v=\dfrac{4}{\pi}=\qty{1.27}{m/s}$。}
+
+\bkproblem 流れ $\vec F=(x^2,\ 2y)$ で、長方形 $0\leqq x\leqq2$、$0\leqq y\leqq1$ のふちから出ていく量を、ふちの積分と、中の発散の積分の両方で求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{左：右の辺 $x=2$ で $F_x=4$、$4\times1=4$。上の辺 $y=1$ で $F_y=2$、$2\times2=4$。左と下は0。合計8。右：$\mathrm{div}\,\vec F=2x+2$、$\int_0^1\int_0^2(2x+2)\,\dd x\,\dd y=8$。}
+
+\bkproblem 力 $\vec F=(-y,\ 3x)$ で、原点を中心とする半径3の円を左回りに1周する線積分を求めましょう\mbox{（\bkreidairef{10}）}。
+\bkpans{回転は $3-(-1)=4$。$4\times9\pi=36\pi$（約113）。}
+
+\bkproblem 頂点が $(0,\ 0)$、$(6,\ 0)$、$(0,\ 4)$ の三角形の面積を、くつひもの式で求めましょう\mbox{（\bkreidairef{11}）}。
+\bkpans{$0\times0-6\times0=0$、$6\times4-0\times0=24$、$0\times0-0\times4=0$。$A=\frac{1}{2}\times24=12$。}
+
+\bkproblem まっすぐな導線に \qty{5}{A} の電流が流れています。導線から \qty{1}{cm} の所の磁場の大きさを、アンペールの法則で求めましょう（$\mu_0=4\pi\times10^{-7}$ T·m/A）\mbox{（\bkreidairef{13}）}。
+\bkpans{$B\times2\pi\times0.01=4\pi\times10^{-7}\times5$ より $B=1\times10^{-4}$ T。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 半径 \qty{0.2}{m} の球が、水（密度 \qty{1000}{kg/m^3}、$g=\qty{9.8}{m/s^2}$）の中に全部しずんでいます。球にかかる浮力を求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$1000\times9.8\times\frac{4}{3}\pi\times0.2^3=\qty{328}{N}$。}
+
+\bkproblem $\vec F=2\times\Bigl(\dfrac{-y}{x^2+y^2},\ \dfrac{x}{x^2+y^2}\Bigr)$ について、左回りに1周する線積分を求めましょう。（1）原点を中心とする半径3の円。（2）長方形 $1\leqq x\leqq3$、$1\leqq y\leqq2$ のふち\mbox{（\bkreidairef{12}）}。
+\bkpans{（1）\nobreak 原点をかこむので $2\times2\pi=4\pi$。（2）\nobreak 原点をかこまないので0。}
+
+\bkproblem $\vec F=(-y,\ x,\ 0)$ で、$xy$ の面の上の原点を中心とする半径3の円（上から見て左回り）について、$\iint_S\mathrm{rot}\,\vec F\cdot\vec n\,\dd S$ を、平らな円板と、上半分の半球の面の両方で求めましょう\mbox{（\bkreidairef{14}）}。
+\bkpans{円板：$2\times9\pi=18\pi$。半球：$\dd S=9\sin\theta\,\dd\theta\,\dd\varphi$ で、$\int_0^{2\pi}\int_0^{\frac{\pi}{2}}2\cos\theta\times9\sin\theta\,\dd\theta\,\dd\varphi=2\pi\times9=18\pi$。}
+
+\bkproblem 半径 \qty{0.2}{m} の円の中に、一様な磁場が面に直角にあり、1秒に \qty{0.05}{T} ずつ強くなっています。（1）円にそって1周する起電力の大きさと、（2）円の上の電場の大きさを求めましょう\mbox{（\bkreidairef{15}）}。
+\bkpans{（1）\nobreak $\pi\times0.04\times0.05=6.28\times10^{-3}$ V。（2）\nobreak $\dfrac{6.28\times10^{-3}}{2\pi\times0.2}=\qty{0.005}{V/m}$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item マスごとのわき出し（うず）を全部たすと、外のふちから出る量（外の1周）になることを、表計算で確かめられる。\bkfurref{bk:8-11:uchikeshi}
+\item 閉じた面や閉じた道の積分を、2つの定理で「計算が楽な側」の積分に取りかえて求められる。\bkfurref{bk:8-11:gauss}
+\item 対称性に合った袋や道を選び、ガウスの法則・アンペールの法則で、場の大きさを求められる。\bkfurref{bk:8-11:hosoku}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{中のわき出しを全部たすと、外へ出る量になる。袋の形を自由に選べるから、計算がこんなに楽になるんだね。}

@@ -1,0 +1,935 @@
+%% 7-7 3次元の回転と座標の変換（第14回：組 V7-4。ページ制限なし。偶数ページ。★5の3段）
+%% ほかの巻・物理の本が指している形（このとおりに書く）：
+%%   物理 p1-07:599〜601「『回して、進む』を1つの行列にまとめる方法があります（7-7）。(x, y) に1を加えた (x, y, 1)…
+%%     A(θ, L) = (cosθ −sinθ Lcosθ; sinθ cosθ Lsinθ; 0 0 1)。左上の2×2が回転、右の列が『回った向きに L 進む』移動。
+%%     この行列を同次変換行列」「6つの関節をもつ産業用ロボットでは、3次元の4×4の同次変換行列を6つかけて」
+%%   物理 p1-07 例題7：A(30°, 0.30)A(45°, 0.25) の右の列 → (0.325, 0.392)、左上の2×2 は R(75°)
+%%   4-13:1029 VR ゴーグル「場所の3つと向きの3つで6つの数…この『向き』の表し方は、第7巻の行列で学びます」
+%%   6-9:877 クォータニオン（思い出そうで1行）、7-2④「ずらしは行列でできない」の回収
+%% 委員会の決定：姿勢の角はロール φ・ピッチ θ・ヨー ψ、R=R_z(ψ)R_y(θ)R_x(φ)。記号カードに「6-6 の初期位相 φ とは別」。
+%%   1本の腕の同次変換行列は物理と同じ A(θ, L)、つないだ全体を T。
+%% 図の軸：右手系（4-13）。この章の図は x を右、y を奥、z を上にかく。ドローンは x が前（機首）、y が左、z が上。
+%% 数はすべて Python で確かめた（scratchpad/v7-4/check77.py）
+\usetikzlibrary{matrix}
+\makeatletter
+\newcommand\kviihhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+\newcommand\kviihbox[1]{\par\addvspace{5pt}\noindent\textbf{#1}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+\newcommand\kviihline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\kviihframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+\newcommand\kviihq{\par\vspace{1pt}\noindent\hangindent=4.6\zw\hangafter=0\relax}
+% 式の変形の表（bkhenkei と同じ使い方。行列の中の行間がのびないもの）
+\newenvironment{kviihhk}[1][0.5]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.55}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle\def\arraystretch{1}}m{#1\linewidth}<{$}@{\hspace{1.5\zw}}>{\small\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.92\linewidth-#1\linewidth\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% 表計算の数式バー（型 4-2）
+\newcommand\kviihfx[2]{\tikz[baseline=(c.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=11mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, text width=50mm, align=left, font=\ttfamily\footnotesize] at ([xshift=1mm]c.east) {#2};}}
+% 空間の図：x を右、y を奥（右上へななめ）、z を上にかく（右手系）  [kviih3d=1目もりの長さ]
+\tikzset{kviih3d/.style={x={(#1,0)}, y={({0.42*#1},{0.30*#1})}, z={(0,#1)}}}
+% 3本の軸  \kviihaxes{x の長さ}{y の長さ}{z の長さ}
+\newcommand\kviihaxes[3]{%
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (#1,0,0) node[anchor=west, inner sep=1.5pt, font=\footnotesize, text=bkInk] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,#2,0) node[anchor=south west, inner sep=1pt, font=\footnotesize, text=bkInk] {$y$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,0,#3) node[anchor=south, inner sep=1.5pt, font=\footnotesize, text=bkInk] {$z$};}
+% 軸のまわりの回る向き（右ねじ）の矢印  \kviiharcX{軸の上の位置}{半径}{色}
+\newcommand\kviiharcX[3]{\draw[#3, line width=1pt, -{Stealth[length=2.2mm]}, variable=\t, domain=40:330, samples=40] plot ({#1},{#2*cos(\t)},{#2*sin(\t)});}
+\newcommand\kviiharcY[3]{\draw[#3, line width=1pt, -{Stealth[length=2.2mm]}, variable=\t, domain=40:330, samples=40] plot ({#2*sin(\t)},{#1},{#2*cos(\t)});}
+\newcommand\kviiharcZ[3]{\draw[#3, line width=1pt, -{Stealth[length=2.2mm]}, variable=\t, domain=40:330, samples=40] plot ({#2*cos(\t)},{#2*sin(\t)},{#1});}
+% スマホ（上のはしの向き u、はばの向き v、画面の向き n を「a,b,c」で）  \kviihphone{u}{v}{n}
+\newcommand\kviihphone[3]{%
+  \filldraw[fill=bkGray!22, draw=bkInk, line width=0.8pt, line join=round] ($(0,0,0)+1.0*(#1)+0.5*(#2)$) -- ($(0,0,0)+1.0*(#1)-0.5*(#2)$) -- ($(0,0,0)-1.0*(#1)-0.5*(#2)$) -- ($(0,0,0)-1.0*(#1)+0.5*(#2)$) -- cycle;
+  \draw[bkRed, line width=2.2pt, line cap=round] ($(0,0,0)+1.0*(#1)+0.5*(#2)$) -- ($(0,0,0)+1.0*(#1)-0.5*(#2)$);
+  \draw[bkOrange!90!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (0,0,0) -- ($(0,0,0)+1.0*(#3)$);}
+% ドローン（機首は x の向き。中心は原点）
+\newcommand\kviihdrone{%
+  \foreach \sx/\sy in {1/1,-1/1} {\draw[bkInk!70, line width=1.2pt] (0,0,0) -- (\sx*1.1,\sy*1.1,0);
+    \filldraw[fill=bkGray!25, draw=bkInk!60, line width=0.6pt, variable=\t, domain=0:360, samples=36] plot ({\sx*1.1+0.5*cos(\t)},{\sy*1.1+0.5*sin(\t)},{0.08}) -- cycle;}
+  \filldraw[fill=bkNavy!80, draw=bkNavy, line width=0.6pt, line join=round] (0.55,0.38,0) -- (-0.55,0.38,0) -- (-0.55,-0.38,0) -- (0.55,-0.38,0) -- cycle;
+  \fill[bkRed] (0.55,0,0) circle (1.2pt);
+  \foreach \sx/\sy in {1/-1,-1/-1} {\draw[bkInk!70, line width=1.2pt] (0,0,0) -- (\sx*1.1,\sy*1.1,0);
+    \filldraw[fill=bkGray!25, draw=bkInk!60, line width=0.6pt, variable=\t, domain=0:360, samples=36] plot ({\sx*1.1+0.5*cos(\t)},{\sy*1.1+0.5*sin(\t)},{0.08}) -- cycle;}}
+% 2本の腕（肩 (0,0)、角 #1・#2、長さ #3・#4 は mm）
+\newcommand\kviiharm[4]{%
+  \coordinate (kviihE) at (#1:#3);
+  \coordinate (kviihP) at ($(kviihE)+({#1+#2}:#4)$);
+  \draw[bkGray!60!black, line width=4.2pt, line cap=round] (0,0) -- (kviihE);
+  \draw[bkGray!35, line width=2.6pt, line cap=round] (0,0) -- (kviihE);
+  \draw[bkGray!60!black, line width=3.6pt, line cap=round] (kviihE) -- (kviihP);
+  \draw[bkGray!35, line width=2.1pt, line cap=round] (kviihE) -- (kviihP);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (1.6) (kviihE) circle (1.4);
+  \fill[bkInk] (kviihP) circle (1.1);}
+% 小さな座標の軸（2次元、角 #2 の向き、名前 #3・#4）  \kviihframe2d{(点)}{角}{x の名前}{y の名前}
+\newcommand\kviihfr[4]{\begin{scope}[shift={#1}, rotate=#2]
+  \draw[bkRed, line width=1pt, -{Stealth[length=1.8mm]}] (0,0) -- (9,0) node[anchor=west, font=\footnotesize, inner sep=1pt, text=bkRed!80!black] {#3};
+  \draw[bkGreen!60!black, line width=1pt, -{Stealth[length=1.8mm]}] (0,0) -- (0,9) node[anchor=south, font=\footnotesize, inner sep=1pt, text=bkGreen!50!black] {#4};
+\end{scope}}
+\makeatother
+
+\bkchapter{7}{7}{3次元の回転と\\座標の変換}{\bklevel{5}}{3次元の回転と座標の変換}
+\bkmichishirube{4-13,4-14,6-9,7-2,7-3,7-6}{7-11,8-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace $x$・$y$・$z$ 軸のまわりの回転を3×3の行列 $R_x$・$R_y$・$R_z$ で表し、点を回せる。
+\item \bklevel{5}\enspace ロール・ピッチ・ヨーの3つの回転から機体の向きを求め、順番で向きが変わることを説明できる。
+\item \bklevel{5}\enspace 同次変換行列で「回して進む」を1つの行列にまとめ、ロボットの手やカメラの見た物の位置を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+机の上に、画面を上にしてスマホを置きます。次の2つの回し方をくらべます。\par\vspace{3pt}
+\textbf{①}\ 奥のはしを持ち上げて手前に起こす（90°）→ 上から見て左回りに90°回す\par
+\textbf{②}\ 上から見て左回りに90°回す → 奥のはしを持ち上げて手前に起こす（90°）\par\vspace{3pt}
+回す動きは同じ2つで、順番だけがちがいます。最後のスマホは、同じ向きになるでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[kviih3d=16mm]
+  \kviihaxes{1.7}{1.5}{1.4}
+  \kviihphone{1,0,0}{0,1,0}{0,0,1}
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=north west, inner sep=1pt] at (1.05,-0.55,0) {上のはし};
+  \node[font=\footnotesize, text=bkOrange!70!black, anchor=east, inner sep=3pt] at (-0.05,0,0.75) {画面};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-6 では、平面の中の回転を学びました。平面の回転は、順番を変えても同じで、角をたせば何回でもつなげられました。
+
+この章では、空間の中の回転を調べます。ドローン・飛行機・人工衛星の向き（姿勢）、6つの関節をもつロボットの腕、ゲームや VR の3次元の画面は、どれも3次元の回転の計算で動いています。3次元になると、回転の軸が3本になり、順番が大事になります。最後に、7-2 で「行列ではできない」とわかった「ずらす」動きも、行列にまとめる方法を学びます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=22mm, font=\sffamily\footnotesize] (a) at (0,0) {3本の軸の\\まわりの回転};
+  \node[bk node, text width=22mm, font=\sffamily\footnotesize] (b) at (34,0) {$R_x$・$R_y$・$R_z$\\と順番};
+  \node[bk node, text width=22mm, font=\sffamily\footnotesize] (c) at (68,0) {ロール・ピッチ\\・ヨー};
+  \node[bk node, text width=22mm, font=\sffamily\footnotesize] (d) at (102,0) {回して進む：\\同次変換行列};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道すじ。}
+\end{bkfigure}
+
+%% ---------------- 思い出そう ----------------
+\begin{omoidasou}
+\bkrecall{4-13}{空間の点は $(x,\ y,\ z)$ の3つの数で表す。3本の軸は右手系に並べる（親指 $x$、人さし指 $y$、中指 $z$）。}
+\bkrecall{4-14}{右ねじ：$x$ 軸を $y$ 軸のほうへ回すと、右ねじは $z$ 軸の＋の向きへ進む。}
+\bkrecall{7-2}{行列の列は、物差しの矢印の行き先。行列をかけても原点は動かないので、「ずらす」は行列ではできない。}
+\bkrecall{7-3}{$AB\vec x$ は、右の $B$ が先にはたらく。}
+\bkrecall{7-6}{回転行列 $R(\theta)$ は、1行めが $(\cos\theta,\ -\sin\theta)$、2行めが $(\sin\theta,\ \cos\theta)$ で、左回りに $\theta$ 回す。$R(\theta)^{-1}=R(\theta)^{\mathsf T}$。軸を $\theta$ 回して見ると $\vec x\,'=R(\theta)^{\mathsf T}\vec x$。}
+\bkrecall{7-6}{2本の腕（$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、30°・45°）の手は $(0.325,\ 0.391)$。}
+\bkrecall{6-9}{3次元の回転には、複素数を広げた「クォータニオン」も使われる。}
+\end{omoidasou}
+
+%% ---------------- やってみよう ----------------
+\begin{yattemiyou}[スマホや本を回して、順番で向きが変わるか確かめよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 机の上に、$x$ 軸（右）・$y$ 軸（奥）・$z$ 軸（上）をかいた紙を置きます。スマホ（本でもよい）を、画面を上、上のはし（カメラのある方）を右にして、原点に置きます。
+\item \bkhatenaref の①の順に回し、上のはしと画面がどちらを向いたかを書きます。回す軸は、いつも紙にかいた軸（動かない軸）です。
+\item もとにもどして、②の順に回し、同じように書きます。
+\item スマホに、かたむきの角を表示するアプリ（水準器のアプリなど）があれば、回しながら数がどう変わるかも見てみましょう。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] Q[c,m,wd=34mm] Q[c,m,wd=34mm]}, rowsep=1.5pt}
+ & 上のはしの向き & 画面の向き \\
+①の順に回した後 & & \\
+②の順に回した後 & & \\
+\end{bktable}
+\bktabcaption{結果を書きこむ表。}
+\end{bkcenter}
+\end{yattemiyou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{3本の軸と、回す順番}{\bklevel{3}}
+
+\bksubsection{1}{3本の軸のまわりの回転}
+
+\label{bk:7-7:jiku}平面の回転は、原点のまわりに回すだけでした。空間では、どの軸のまわりに回すかを決めなければなりません。まず、$x$ 軸・$y$ 軸・$z$ 軸の3本のまわりの回転を考えます。
+
+\kviihhead{回る向きは、右ねじで決める}
+平面では「左回りが＋」でした。空間では、見る向きによって左回りか右回りかが変わってしまいます。そこで、4-14 の右ねじを使って決めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{右ねじが軸の＋の向きへ進むように回す向きを、＋とする。}
+\item 同じことを、軸の矢印の先から原点のほうを見て言うと、「左回りが＋」です。
+\end{itemize}
+\begin{bkfigure}
+\begin{tikzpicture}[kviih3d=10mm]
+  \begin{scope}
+    \kviihaxes{2.4}{2.0}{2.0}
+    \kviiharcX{1.6}{0.55}{bkRed!80!black}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.0,0,-0.9) {$x$ 軸のまわり\\$y\to z$ の向きが＋};
+  \end{scope}
+  \begin{scope}[xshift=45mm]
+    \kviihaxes{2.0}{2.4}{2.0}
+    \kviiharcY{1.9}{0.55}{bkGreen!60!black}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.0,0,-0.9) {$y$ 軸のまわり\\$z\to x$ の向きが＋};
+  \end{scope}
+  \begin{scope}[xshift=90mm]
+    \kviihaxes{2.0}{2.0}{2.4}
+    \kviiharcZ{1.7}{0.55}{bkBlue!80!black}
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (1.0,0,-0.9) {$z$ 軸のまわり\\$x\to y$ の向きが＋};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{3本の軸のまわりの回転。どれも、右ねじが軸の＋の向きへ進む向きが＋。$x\to y\to z\to x$ の順に、ぐるっと回っている。}
+\label{bk:7-7:fig-jiku}
+\end{bkfigure}
+図\ref{bk:7-7:fig-jiku}の下の文を見てください。$z$ 軸のまわりは「$x$ を $y$ のほうへ」、$x$ 軸のまわりは「$y$ を $z$ のほうへ」、$y$ 軸のまわりは「$z$ を $x$ のほうへ」回すのが＋です。$x\to y\to z\to x\to\cdots$ という、ぐるっと回る順番になっています。$y$ 軸のまわりだけ「$x$ を $z$ のほうへ」ではないことに注意しましょう。あとで、行列の $\sin$ の符号に関係してきます。
+
+\kviihhead{この章の図のかき方}
+この章の図は、$x$ 軸を右、$y$ 軸を奥（右上へななめ）、$z$ 軸を上にかきます。4-13 の図とは見る向きがちがいますが、同じ右手系です（$x$ を $y$ のほうへ回すと、右ねじは上へ進む）。
+
+\bksubsection{2}{飛行機・ドローンの向き：ロール・ピッチ・ヨー}
+
+\label{bk:7-7:rpy}飛行機やドローンには、機体についた3本の軸を考えます。$x$ 軸は機首の向き（前）、$y$ 軸は左のつばさの向き（左）、$z$ 軸は上です。この3本も右手系になっています（前を左のほうへ回すと、右ねじは上へ進む）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[kviih3d=15mm]
+  \kviihdrone
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=2.4mm]}] (0.6,0,0) -- (3.0,0,0) node[anchor=west, font=\footnotesize, text=bkRed!80!black, inner sep=1.5pt] {$x$（前・機首）};
+  \draw[bkGreen!60!black, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,0.5,0) -- (0,3.4,0) node[anchor=south, font=\footnotesize, text=bkGreen!50!black, inner sep=1.5pt] {$y$（左）};
+  \draw[bkBlue, line width=1.2pt, -{Stealth[length=2.4mm]}] (0,0,0.15) -- (0,0,2.3) node[anchor=south, font=\footnotesize, text=bkBlue!80!black, inner sep=1.5pt] {$z$（上）};
+  \kviiharcX{2.5}{0.4}{bkRed!80!black}
+  \kviiharcY{2.7}{0.4}{bkGreen!60!black}
+  \kviiharcZ{1.8}{0.4}{bkBlue!80!black}
+  \node[font=\sffamily\footnotesize\bfseries, text=bkRed!80!black, anchor=north, inner sep=1pt] at (2.5,0,-0.5) {ロール $\phi$};
+  \node[font=\sffamily\footnotesize\bfseries, text=bkGreen!50!black, anchor=west, inner sep=1pt] at (0.5,2.7,0) {ピッチ $\theta$};
+  \node[font=\sffamily\footnotesize\bfseries, text=bkBlue!80!black, anchor=east, inner sep=1pt] at (-0.5,0,1.8) {ヨー $\psi$};
+\end{tikzpicture}
+\bkfigcaption{ドローンの3本の軸と、3つの回転。赤い点が機首。}
+\label{bk:7-7:fig-drone}
+\end{bkfigure}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=22mm] Q[l,m,wd=66mm]}, rowsep=2pt}
+名前（文字） & まわりの軸 & どんな動き（＋の向き） \\
+ロール $\phi$ & $x$（前） & 左のつばさが上がり、右へかたむく \\
+ピッチ $\theta$ & $y$（左） & 機首が上がったり下がったりする（＋は機首が下がる向き） \\
+ヨー $\psi$ & $z$（上） & 上から見て機首の向きが変わる（＋は左を向く向き） \\
+\end{bktable}
+\bktabcaption{ロール・ピッチ・ヨー。$\phi$・$\theta$・$\psi$ はファイ・シータ・プサイと読む。}
+\end{bkcenter}
+ピッチの＋が「機首が下がる向き」なのは、$y$ 軸のまわりの＋が「$z$ を $x$ のほうへ」、つまり上を前のほうへたおす向きだからです。だから、機首を上げるときは、ピッチは負の角になります。\bkidx{ろーる・ぴっち・よー}{ロール・ピッチ・ヨー}
+
+\kviihhead{VR ゴーグルの6つの数}
+4-13 のコラムでは、VR ゴーグルが「頭の場所の3つの数と、向きの3つの角」の、合わせて6つの数をはかっていると書きました。この「向きの3つの角」が、ロール（首をかしげる）・ピッチ（うなずく）・ヨー（首を横にふる）です。
+
+\begin{seikaku}
+飛行機の本では、機体の $y$ 軸を右のつばさの向き、$z$ 軸を下向きにとることが多く、そのときは「機首を上げる」「右を向く」が＋になります。軸の向きの決め方がちがうだけで、この章の行列の形や考え方は同じです。本を読むときは、まず軸の向きを図で確かめましょう。
+\end{seikaku}
+
+\bksubsection{3}{順番を変えると、向きが変わる}
+
+\label{bk:7-7:junban}\bkhatenaref のスマホを、図で確かめます。スマホの上のはし（赤）を $x$ の向き、画面（オレンジの矢印）を $z$ の向きにして置きます。「奥のはしを持ち上げて手前に起こす」は、右を向いた $x$ 軸のまわりの＋90°（$y\to z$）です。「上から見て左回り」は、$z$ 軸のまわりの＋90°（$x\to y$）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[kviih3d=8mm]
+  \foreach \row/\yy in {1/0,2/-44} {\node[font=\sffamily\small\bfseries, anchor=east] at ($(-1.5,0,0.3)+(0,\yy mm)$) {\ifnum\row=1 ①\else ②\fi};}
+  \begin{scope}
+    \begin{scope}\kviihaxes{2.2}{2.0}{1.9}\kviihphone{1,0,0}{0,1,0}{0,0,1}
+      \node[font=\sffamily\footnotesize, anchor=north] at (0.4,0,-1.2) {はじめ};\end{scope}
+    \draw[bk link, bkGray] (2.9,0,0.3) -- (4.4,0,0.3) node[midway, above, font=\footnotesize, text=bkInk] {$x$ 軸で90°};
+    \begin{scope}[xshift=48mm]\kviihaxes{2.2}{2.0}{1.9}\kviihphone{1,0,0}{0,0,1}{0,-1,0}
+      \node[font=\sffamily\footnotesize, anchor=north] at (0.4,0,-1.2) {起こした};\end{scope}
+    \draw[bk link, bkGray] (8.9,0,0.3) -- (10.4,0,0.3) node[midway, above, font=\footnotesize, text=bkInk] {$z$ 軸で90°};
+    \begin{scope}[xshift=96mm]\kviihaxes{2.2}{2.0}{1.9}\kviihphone{0,1,0}{0,0,1}{1,0,0}
+      \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0.4,0,-1.2) {上のはし：奥\\画面：右};\end{scope}
+  \end{scope}
+  \begin{scope}[yshift=-44mm]
+    \begin{scope}\kviihaxes{2.2}{2.0}{1.9}\kviihphone{1,0,0}{0,1,0}{0,0,1}
+      \node[font=\sffamily\footnotesize, anchor=north] at (0.4,0,-1.2) {はじめ};\end{scope}
+    \draw[bk link, bkGray] (2.9,0,0.3) -- (4.4,0,0.3) node[midway, above, font=\footnotesize, text=bkInk] {$z$ 軸で90°};
+    \begin{scope}[xshift=48mm]\kviihaxes{2.2}{2.0}{1.9}\kviihphone{0,1,0}{-1,0,0}{0,0,1}
+      \node[font=\sffamily\footnotesize, anchor=north] at (0.4,0,-1.2) {左回りに回した};\end{scope}
+    \draw[bk link, bkGray] (8.9,0,0.3) -- (10.4,0,0.3) node[midway, above, font=\footnotesize, text=bkInk] {$x$ 軸で90°};
+    \begin{scope}[xshift=96mm]\kviihaxes{2.2}{2.0}{1.9}\kviihphone{0,0,1}{-1,0,0}{0,-1,0}
+      \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0.4,0,-1.2) {上のはし：上\\画面：手前};\end{scope}
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ2つの回転でも、順番を変えると最後の向きがちがう。赤い線が上のはし、オレンジの矢印が画面の向き。}
+\label{bk:7-7:fig-junban}
+\end{bkfigure}
+\bkhatenaref の答えは、「\textbf{同じ向きにはならない}」です。①では上のはしが奥を、画面が右を向いて、横向きに立ちます。②では上のはしが真上を、画面が手前を向いて立ちます。
+
+7-6 では、平面の回転は順番を変えても同じでした。平面では、回す軸がいつも同じ（紙に垂直な軸）だからです。空間では、回す軸がちがう回転をつなぐと、\textbf{順番で結果が変わります}。7-3 の「回してのばす」と「のばして回す」と同じで、行列のかけ算の順番を変えると答えが変わるのです。この「順番」を、行列の計算で確かめられるようにするのが、次の段です。
+
+\Needspace{14\baselineskip}\bkstage{te}{手でわかる}{3×3の回転行列}{\bklevel{4}}
+
+\bksubsection{4}{$z$ 軸のまわりの回転 $R_z(\psi)$}
+
+\label{bk:7-7:rz}7-2 と 7-6 では、行列の列は「物差しの矢印の行き先」でした。空間では、物差しの矢印が $\vec e_x=(1,\ 0,\ 0)$、$\vec e_y=(0,\ 1,\ 0)$、$\vec e_z=(0,\ 0,\ 1)$ の3本になり、行列は3×3になります。1列めが $\vec e_x$ の行き先、2列めが $\vec e_y$ の行き先、3列めが $\vec e_z$ の行き先です。
+
+$z$ 軸のまわりに角 $\psi$ 回すとき、3本の矢印はどこへ行くでしょう。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item $\vec e_z$ は回す軸そのものなので、動きません。行き先は $(0,\ 0,\ 1)$。
+\item $\vec e_x$ と $\vec e_y$ は、$x$-$y$ 平面（床）の中で、7-6 と同じように回ります。上から見ると、$x$ を右、$y$ を上にした、いつもの平面です。だから $\vec e_x\to(\cos\psi,\ \sin\psi,\ 0)$、$\vec e_y\to(-\sin\psi,\ \cos\psi,\ 0)$。高さ（$z$ 成分）は0のままです。
+\end{enumerate}
+3本の行き先を、列に並べます。
+\kviihframe{\sffamily\bfseries $z$ 軸のまわりに $\psi$ 回す\\[3pt]
+$R_z(\psi)=\begin{pmatrix}\cos\psi&-\sin\psi&0\\\sin\psi&\cos\psi&0\\0&0&1\end{pmatrix}$}
+\textbf{左上の2×2は、7-6 の $R(\psi)$ そのもの}です。回らない $z$ の行と列は「0と1」で、$z$ 座標がそのまま残ることを表しています。
+
+\bksubsection{5}{$x$ 軸のまわりの回転 $R_x(\phi)$}
+
+\label{bk:7-7:rx}$x$ 軸のまわりに $\phi$ 回すときは、$\vec e_x$ が動かず、$y$-$z$ 平面の中で回ります。$x$ 軸の先から見ると、$y$ が右、$z$ が上に見え、$y\to z$ が左回りです。だから、7-6 の「$x$ を右・$y$ を上」の平面と同じに考えて、$\vec e_y\to(0,\ \cos\phi,\ \sin\phi)$、$\vec e_z\to(0,\ -\sin\phi,\ \cos\phi)$ です。
+\kviihframe{\sffamily\bfseries $x$ 軸のまわりに $\phi$ 回す\\[3pt]
+$R_x(\phi)=\begin{pmatrix}1&0&0\\0&\cos\phi&-\sin\phi\\0&\sin\phi&\cos\phi\end{pmatrix}$}
+今度は、回らない $x$ の行と列が「1と0」で、右下の2×2が $R(\phi)$ です。
+
+\bksubsection{6}{$y$ 軸のまわりの回転 $R_y(\theta)$：符号に注意}
+
+\label{bk:7-7:ry}$y$ 軸のまわりの回転は、まちがえやすいので、ていねいに見ます。①で調べたように、$y$ 軸のまわりの＋は「$z$ を $x$ のほうへ」です。$y$ 軸の先から原点のほうを見ると、$z$ が右、$x$ が上に見えます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \px/\hx/\hy/\tt/\col in {0/y/z/{$x$ 軸の先から見る}/bkRed, 45/z/x/{$y$ 軸の先から見る}/bkGreen!60!black, 90/x/y/{$z$ 軸の先から見る}/bkBlue} {
+    \begin{scope}[xshift=\px mm]
+      \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-3,0) -- (24,0) node[anchor=west, font=\footnotesize, text=bkInk, inner sep=1pt] {$\hx$};
+      \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-3) -- (0,24) node[anchor=south, font=\footnotesize, text=bkInk, inner sep=1pt] {$\hy$};
+      \draw[\col, line width=1pt, -{Stealth[length=2.2mm]}] (14,0) arc (0:90:14);
+      \draw[bkInk, line width=0.6pt] (0,0) circle (1.6); \fill[bkInk] (0,0) circle (0.6);
+      \node[font=\sffamily\footnotesize, anchor=north] at (11,-4) {\tt};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{軸の先から見ると、その軸のまわりの＋の回転は、どれも左回り。まん中の $\odot$ は、見ている軸がこちらを向いていること。$y$ 軸の先から見ると、横が $z$、たてが $x$ になる。}
+\label{bk:7-7:fig-mieru}
+\end{bkfigure}
+まん中の図で、$z$ を右・$x$ を上にした平面で、左回りに $\theta$ 回します。7-6 と同じように考えて、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 右を向いていた $\vec e_z$ は、$(z,\ x)$ で言うと $(\cos\theta,\ \sin\theta)$ へ行く。ふつうの順 $(x,\ y,\ z)$ に直すと、$\vec e_z\to(\sin\theta,\ 0,\ \cos\theta)$。
+\item 上を向いていた $\vec e_x$ は、$(z,\ x)$ で言うと $(-\sin\theta,\ \cos\theta)$ へ行く。$(x,\ y,\ z)$ に直すと、$\vec e_x\to(\cos\theta,\ 0,\ -\sin\theta)$。
+\item $\vec e_y$ は軸なので動かない。
+\end{itemize}
+\kviihframe{\sffamily\bfseries $y$ 軸のまわりに $\theta$ 回す\\[3pt]
+$R_y(\theta)=\begin{pmatrix}\cos\theta&0&\sin\theta\\0&1&0\\-\sin\theta&0&\cos\theta\end{pmatrix}$}
+$R_x$ や $R_z$ とくらべると、\textbf{$-\sin$ が左下に、$+\sin$ が右上にあり、逆になったように見えます}。これは、$R_y$ だけ、行列の中での並び $(x,\ z)$ と、左回りの並び $(z,\ x)$ が入れかわっているからです。まちがいではありません。
+
+\kviihhead{数で確かめる：90°回すと}
+$\theta=90°$ なら $R_y(90°)$ は次の行列で、$\vec e_x=(1,\ 0,\ 0)$ は $(0,\ 0,\ -1)$、つまり真下へ行きます。
+\kviihline{$R_y(90°)=\begin{pmatrix}0&0&1\\0&1&0\\-1&0&0\end{pmatrix}$}
+「$z$ を $x$ のほうへ」たおす向きに90°回すと、上（$z$）は前（$x$）へ、前（$x$）は下（$-z$）へ行きます。ドローンなら、ピッチ＋90°で機首が真下を向くことになり、②の表の「＋は機首が下がる向き」と合っています。
+
+\begin{seikaku}
+3本とも、行列式は1です。たとえば $R_z(\psi)$ の行列式は、右下の1をかけて $\cos^2\psi+\sin^2\psi=1$ です。どの列も長さ1で、たがいに直角（内積0）なので、7-6 と同じく直交行列で、$R^{\mathsf T}R=I$、つまり $R^{-1}=R^{\mathsf T}$ です。空間でも、回転は長さも体積も変えず、逆に回すには転置すればよいのです。
+\end{seikaku}
+
+\bksubsection{7}{順番の計算：右から先にはたらく}
+
+\label{bk:7-7:keisan}\bkhatenaref の①は「$x$ 軸で90°回してから、$z$ 軸で90°回す」でした。7-3 で学んだように、先にはたらく行列を右に書くので、①は $R_z(90°)R_x(90°)$、②は $R_x(90°)R_z(90°)$ です。
+
+\kviihhead{上のはし $\vec e_x$ の行き先を、右から1つずつ}
+①：まず $R_x(90°)$ を $(1,\ 0,\ 0)$ にかけると、$x$ 軸のまわりなので $(1,\ 0,\ 0)$ のまま。次に $R_z(90°)$ をかけると、$x$ が $y$ へ行くので $(0,\ 1,\ 0)$。上のはしは $y$（奥）を向きます。\par
+②：まず $R_z(90°)$ をかけると $(0,\ 1,\ 0)$。次に $R_x(90°)$ をかけると、$y$ が $z$ へ行くので $(0,\ 0,\ 1)$。上のはしは $z$（上）を向きます。\par
+\kviihline{$R_z(90°)R_x(90°)\vec e_x=\begin{pmatrix}0\\1\\0\end{pmatrix}\qquad R_x(90°)R_z(90°)\vec e_x=\begin{pmatrix}0\\0\\1\end{pmatrix}$}
+図\ref{bk:7-7:fig-junban}と同じ結果です。
+
+\kviihhead{行列のかけ算で確かめる}
+2つの積を、行と列の内積（7-3）で計算すると、次のようになります。$R_x(90°)$ と $R_z(90°)$ の成分は、0・1・$-1$ だけです。
+\[R_z(90°)R_x(90°)=\begin{pmatrix}0&-1&0\\1&0&0\\0&0&1\end{pmatrix}\begin{pmatrix}1&0&0\\0&0&-1\\0&1&0\end{pmatrix}=\begin{pmatrix}0&0&1\\1&0&0\\0&1&0\end{pmatrix}\]
+\[R_x(90°)R_z(90°)=\begin{pmatrix}1&0&0\\0&0&-1\\0&1&0\end{pmatrix}\begin{pmatrix}0&-1&0\\1&0&0\\0&0&1\end{pmatrix}=\begin{pmatrix}0&-1&0\\0&0&-1\\1&0&0\end{pmatrix}\]
+2つの答えはちがう行列です。それぞれの1列め（$\vec e_x$ の行き先）は、$(0,\ 1,\ 0)$ と $(0,\ 0,\ 1)$ で、1つずつ計算した結果と同じです。3列め（$\vec e_z$、画面の行き先）は $(1,\ 0,\ 0)$（右）と $(0,\ -1,\ 0)$（手前）で、これも図と合っています。
+
+\kviihhead{表計算と Python}
+3×3 の積も、表計算の MMULT でできます（型のとおり、左の行列を A2:C4、右の行列を D2:F4 に入れ、答えは下の A6:C8 に出す）。
+\begin{bkcenter}
+\kviihfx{A6}{=MMULT(A2:C4,D2:F4)}\par\vspace{2mm}
+\bksheet{6}{13}{%
+1 & \SetCell[c=3]{c} $R_z(90°)$ & & & \SetCell[c=3]{c} $R_x(90°)$ & & \\
+2 & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkTheme!12} $-1$ & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkGreen!14} 1 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 0 \\
+3 & \SetCell{bg=bkTheme!12} 1 & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} $-1$ \\
+4 & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkTheme!12} 0 & \SetCell{bg=bkTheme!12} 1 & \SetCell{bg=bkGreen!14} 0 & \SetCell{bg=bkGreen!14} 1 & \SetCell{bg=bkGreen!14} 0 \\
+5 & \SetCell[c=3]{c} 積（答え） & & & & & \\
+6 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 1 & & & \\
+7 & \SetCell{bg=bkYellow!35} 1 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 0 & & & \\
+8 & \SetCell{bg=bkYellow!35} 0 & \SetCell{bg=bkYellow!35} 1 & \SetCell{bg=bkYellow!35} 0 & & & \\}
+\bktabcaption{3×3の積。答えは A6 から（7-1 と同じように確定する）。左右の行列を入れかえると、②の答えになる。}
+\end{bkcenter}
+\Needspace{14\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+def Rx(deg):                         \# x 軸のまわりに deg 度回す行列
+    t = np.radians(deg); c, s = np.cos(t), np.sin(t)
+    return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+def Rz(deg):                         \# z 軸のまわりに deg 度回す行列
+    t = np.radians(deg); c, s = np.cos(t), np.sin(t)
+    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+ex = np.array([1, 0, 0])
+print(np.round(Rz(90) @ Rx(90) @ ex, 3) + 0)   \# +0 は -0. を 0. に
+print(np.round(Rx(90) @ Rz(90) @ ex, 3) + 0)
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[0. 1. 0.]
+[0. 0. 1.]
+\end{bkcodeout}
+\texttt{def} は、何回も使う計算に名前をつける書き方です（2-19）。\texttt{Rz(90) @ Rx(90) @ ex} は右から計算され、$R_x$ が先にはたらきます。
+
+\bkkokomade[ここまでわかれば、ゴールです。この先は、飛行機の向きの式と、「回して進む」行列を調べます。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{オイラー角と同次変換行列}{\bklevel{5}}
+
+\bksubsection{8}{機体の向きを3つの角で表す：オイラー角}
+
+\label{bk:7-7:euler}ドローンの向きは、ロール $\phi$・ピッチ $\theta$・ヨー $\psi$ の3つの角で表します。この3つから回転行列を作るきまりが、次の式です。
+\kviihframe{\sffamily\bfseries $R=R_z(\psi)\,R_y(\theta)\,R_x(\phi)$\\[3pt]
+\normalfont\small 機体の座標で表した矢印を、地面の座標に直す行列}
+このように、3つの軸のまわりの回転の角で向きを表したものを、\textbf{オイラー角}といいます。\bkidx{おいらーかく}{オイラー角}6-10 のオイラーの公式と同じオイラーが、18世紀に、かたい物の向きを3つの角で表すことを考えました。オイラーが使ったのは、$z$・$x$・$z$ の順に回す角です。この本のように3本のちがう軸で回す角は、タイト・ブライアン角ともよびますが、工学ではどちらもオイラー角とよぶことが多いのです。
+
+\kviihhead{行列の意味：機体の矢印を、地面の矢印に直す}
+機体の上で「前」は、いつも $(1,\ 0,\ 0)$ です。でも、地面から見た「機首の向き」は、機体の姿勢によって変わります。$R$ は、機体の座標で書いた矢印 $\vec v_{\text{機体}}$ を、地面の座標の矢印に直します（7-6⑥ の「もとの座標にもどす」$\vec x=R(\theta)\vec x\,'$ と同じ形）。
+\kviihline{$\vec v_{\text{地面}}=R\,\vec v_{\text{機体}}$}
+いちばん右の $R_x(\phi)$ が先にはたらくので、地面に置いたドローンを「まずロール、次にピッチ、最後にヨー」と、地面の軸のまわりに回したのと同じ向きになります。
+
+\kviihhead{機首の向きを求める}
+機首の向きは、$R$ に $\vec e_x=(1,\ 0,\ 0)$ をかけたもの、つまり $R$ の1列めです。右から1つずつかけます。
+\begin{kviihhk}[0.52]
+R_x(\phi)\begin{pmatrix}1\\0\\0\end{pmatrix}=\begin{pmatrix}1\\0\\0\end{pmatrix} & ロールは $x$ 軸のまわりなので、機首は動かない \\
+R_y(\theta)\begin{pmatrix}1\\0\\0\end{pmatrix}=\begin{pmatrix}\cos\theta\\0\\-\sin\theta\end{pmatrix} & $R_y$ の1列め（⑥） \\
+R_z(\psi)\begin{pmatrix}\cos\theta\\0\\-\sin\theta\end{pmatrix}=\begin{pmatrix}\cos\psi\cos\theta\\\sin\psi\cos\theta\\-\sin\theta\end{pmatrix} & $R_z$ をかけた。$x$・$y$ 成分だけが $\psi$ 回る \\
+\end{kviihhk}
+\kviihframe{\sffamily\bfseries 機首の向き\quad $(\cos\psi\cos\theta,\ \ \sin\psi\cos\theta,\ \ -\sin\theta)$}
+\textbf{機首の向きは、ヨーとピッチだけで決まり、ロールには関係しません。}ロールは、機首を軸にした回転だからです。たとえば、ヨー30°・ピッチ0°なら $(\cos30°,\ \sin30°,\ 0)=(0.866,\ 0.5,\ 0)$ で、水平のまま左に30°向いています。ピッチ $-30°$（機首を30°上げる）なら、$z$ 成分は $-\sin(-30°)=0.5$ で、上を向きます。
+
+\begin{seikaku}
+$R=R_z(\psi)R_y(\theta)R_x(\phi)$ は、2通りに読めます。\par
+(a) 地面の軸（動かない軸）のまわりに、右から順に「ロール→ピッチ→ヨー」と回す。\par
+(b) 機体の軸（いっしょに動く軸）のまわりに、左から順に「ヨー→ピッチ→ロール」と回す。つまり、まず機首の向きを左右に決め（ヨー）、次に機体の左右の軸で機首を上下させ（ピッチ）、最後に機首の軸で機体をかたむける（ロール）。\par
+2つの読み方は、いつも同じ向きになります（Python で、いろいろな角で確かめられる）。飛行機の本は (b) の読み方で説明することが多く、この本の①・やってみようは (a) の読み方です。どちらの読み方かを取りちがえると、順番が逆になるので注意しましょう。
+\end{seikaku}
+
+\kviihhead{9つの成分と、逆の回転}
+$R$ の9つの成分を、先に $R_y(\theta)R_x(\phi)$ を計算し、それに $R_z(\psi)$ をかけて求めると、表\ref{bk:7-7:tab-R}になります（$\cos$ を c、$\sin$ を s と短く書いた）。$R_z$ をかけると、1行めと2行めだけが、7-6 の回転のようにまざります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=26mm] Q[c,m,wd=38mm] Q[c,m,wd=38mm]}, rowsep=2pt, cells={font=\small}}
+ & 1列め & 2列め & 3列め \\
+1行 & $\mathrm c\psi\,\mathrm c\theta$ & $\mathrm c\psi\,\mathrm s\theta\,\mathrm s\phi-\mathrm s\psi\,\mathrm c\phi$ & $\mathrm c\psi\,\mathrm s\theta\,\mathrm c\phi+\mathrm s\psi\,\mathrm s\phi$ \\
+2行 & $\mathrm s\psi\,\mathrm c\theta$ & $\mathrm s\psi\,\mathrm s\theta\,\mathrm s\phi+\mathrm c\psi\,\mathrm c\phi$ & $\mathrm s\psi\,\mathrm s\theta\,\mathrm c\phi-\mathrm c\psi\,\mathrm s\phi$ \\
+3行 & $-\mathrm s\theta$ & $\mathrm c\theta\,\mathrm s\phi$ & $\mathrm c\theta\,\mathrm c\phi$ \\
+\end{bktable}
+\bktabcaption{$R=R_z(\psi)R_y(\theta)R_x(\phi)$ の成分。たとえば c$\psi$ は $\cos\psi$。1列めが機首の向き。}
+\label{bk:7-7:tab-R}
+\end{bkcenter}
+3つの回転行列はどれも直交行列で、行列式は1なので、$R$ も直交行列で、行列式は $1\times1\times1=1$ です（7-4 の $\det(AB)=\det A\det B$）。逆の回転は、7-5 の「くつ下とくつ」のように順番が逆になり、角は反対になります。
+\kviihline{$R^{-1}=R^{\mathsf T}=R_x(-\phi)\,R_y(-\theta)\,R_z(-\psi)$}
+
+\bksubsection{9}{ピッチが ±90° になると：ジンバルロック}
+
+\label{bk:7-7:gimbal}ドローンが機首を真上に向けたとき（この本の軸ではピッチ $\theta=-90°$）を考えます。機首が真下を向く $\theta=+90°$ でも、ロールの軸とヨーの軸が重なるので、同じことが起きます（そのときは $\psi-\phi$ だけで決まる）。表\ref{bk:7-7:tab-R}に $\cos(-90°)=0$、$\sin(-90°)=-1$ を入れて、1つずつまとめます。
+\begin{kviihhk}[0.64]
+\text{1行2列}=-\cos\psi\sin\phi-\sin\psi\cos\phi & $\mathrm s\theta=-1$ を入れた \\
+\phantom{\text{1行2列}}=-\sin(\psi+\phi) & 加法定理（4-9） \\
+\text{2行2列}=-\sin\psi\sin\phi+\cos\psi\cos\phi & $\mathrm s\theta=-1$ を入れた \\
+\phantom{\text{2行2列}}=\cos(\psi+\phi) & 加法定理 \\
+\text{1行3列}=-\cos(\psi+\phi) & 同じようにまとめた \\
+\text{2行3列}=-\sin(\psi+\phi) & 同じようにまとめた \\
+\end{kviihhk}
+1列めは $(0,\ 0,\ 1)$（機首は真上）、3行めは $(1,\ 0,\ 0)$ です。まとめると、次の行列です。
+\kviihframe{\sffamily\bfseries ピッチ $-90°$ のとき\quad $R=\begin{pmatrix}0&-\sin(\psi+\phi)&-\cos(\psi+\phi)\\0&\cos(\psi+\phi)&-\sin(\psi+\phi)\\1&0&0\end{pmatrix}$}
+\textbf{ヨー $\psi$ とロール $\phi$ が、和 $\psi+\phi$ の形でしか出てきません。}たとえば「ヨー30°・ロール0°」と「ヨー0°・ロール30°」は、どちらも $\psi+\phi=30°$ なので、まったく同じ向きです。3つの角があるのに、自由に決められる向きが2つ分になってしまいます。
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+図で見ると、わけがわかります。機首が真上を向くと、機首の軸（ロールの軸）が、上下の軸（ヨーの軸）とぴったり重なります。だから、ロールで回しても、ヨーで回しても、同じ軸のまわりの回転になってしまうのです。このことを\textbf{ジンバルロック}といいます。\bkidx{じんばるろっく}{ジンバルロック}
+\par\vspace{3pt}
+ジンバルロックの近くでは、少し向きが変わっただけで、3つの角が大きく変わってしまい、制御の計算がうまくいきません。そこで、ドローンや宇宙船、ゲームの3次元の画面では、向きを回転行列そのものや、6-9 で名前の出たクォータニオンで持ち、角は表示に使うだけにすることが多いのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[kviih3d=9mm]
+  \draw[bkGray, line width=0.5pt] (-1.2,-0.8,0) -- (1.2,-0.8,0) -- (1.2,1.4,0) -- (-1.2,1.4,0) -- cycle;
+  \filldraw[fill=bkNavy!75, draw=bkNavy, line width=0.6pt, rounded corners=1.5pt] (-0.25,0,0) -- (0.25,0,0) -- (0.25,0,1.6) -- (0,0,1.95) -- (-0.25,0,1.6) -- cycle;
+  \fill[bkRed] (0,0,1.95) circle (1.4pt);
+  \draw[bkInk, line width=0.6pt, dashed] (0,0,0) -- (0,0,-0.6);
+  \draw[bkInk, line width=0.6pt, dashed] (0,0,2.0) -- (0,0,2.6);
+  \kviiharcZ{2.3}{0.45}{bkRed!80!black}
+  \kviiharcZ{-0.35}{0.55}{bkBlue!80!black}
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west, inner sep=1pt] at (0.55,0,2.35) {ロール};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west, inner sep=1pt] at (0.65,0,-0.4) {ヨー};
+\end{tikzpicture}\par
+{\footnotesize 機首が真上：ロールの軸とヨーの軸が重なる。}
+\end{minipage}
+
+\bksubsection{10}{「回して進む」を1つの行列に：同次座標}
+
+\label{bk:7-7:doji}7-2 で、行列をかけても原点は動かないので、「ずらす（平行移動）」は行列のかけ算ではできないとわかりました。7-6 のもっと知りたいの「原点ではない点のまわりに回す」でも、「ずらす」がまざるので、行列1回では書けませんでした。ここで、それを解決する方法を学びます。
+
+\kviihhead{数を1つふやす}
+平面の点 $(x,\ y)$ に、3つめの数として1をつけた $(x,\ y,\ 1)$ を考えます。そして、次の3×3の行列をかけてみます。
+\begin{kviihhk}[0.56]
+\begin{pmatrix}1&0&a\\0&1&b\\0&0&1\end{pmatrix}\begin{pmatrix}x\\y\\1\end{pmatrix} & ずらす量 $a$、$b$ を右の列に入れた行列 \\
+=\begin{pmatrix}1\times x+0\times y+a\times1\\0\times x+1\times y+b\times1\\0\times x+0\times y+1\times1\end{pmatrix} & 行と列の内積 \\
+=\begin{pmatrix}x+a\\y+b\\1\end{pmatrix} & $x$ に $a$、$y$ に $b$ がたされた \\
+\end{kviihhk}
+3つめの1が、右の列の $a$、$b$ を「たし算」として取り出してくれました。\textbf{行列のかけ算で、ずらすことができたのです。}3つめの数は、かけた後も1のままです。
+
+このように、数を1つふやして1をつけた座標を\textbf{同次座標}（どうじざひょう）といいます。\bkidx{どうじざひょう}{同次座標}同次座標の考えは、1827年ごろのメビウス（メビウスの帯の人）の本にさかのぼるといわれています。
+
+\kviihhead{位置には1、向きには0}
+「向き」を表す矢印（ドローンの機首の向き、速度など）は、ずらしても変わってほしくありません。そこで、向きの矢印には3つめの数として0をつけます。たとえば、ずらす量が $a=3$、$b=2$ のとき、次のようになります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 点 $(1,\ 1)$ は $(1,\ 1,\ 1)$ と書き、行列をかけると $(4,\ 3,\ 1)$。点 $(4,\ 3)$ へずれた。
+\item 向き $(1,\ 1)$ は $(1,\ 1,\ 0)$ と書き、行列をかけると $(1,\ 1,\ 0)$。向きは変わらない。
+\end{itemize}
+3つめが0だと、右の列の $a$、$b$ に0がかかって、たし算されないからです。
+
+\kviihhead{回して、進む：$A(\theta,\ L)$}
+7-6 の2本の腕を思い出します。腕1本の動きは、「関節で $\theta$ 回して、回った向きに長さ $L$ 進む」です。これを同次座標で書きます。「回す」は、左上の2×2に7-6 の $R(\theta)$ を入れた行列、「進む」は、$x$ の向きに $L$ ずらす行列です。進む向きは、回った後の腕の向きなので、7-6⑥ の「腕といっしょに回る座標」で $x$ の向きに $L$ ずらし、それを回します。右から先にはたらくので、ずらす行列を右に置きます。
+\begin{kviihhk}[0.6]
+\begin{pmatrix}\cos\theta&-\sin\theta&0\\\sin\theta&\cos\theta&0\\0&0&1\end{pmatrix}\begin{pmatrix}1&0&L\\0&1&0\\0&0&1\end{pmatrix} & 回す行列 × $x$ に $L$ ずらす行列 \\
+=\begin{pmatrix}\cos\theta&-\sin\theta&L\cos\theta\\\sin\theta&\cos\theta&L\sin\theta\\0&0&1\end{pmatrix} & 右の列は、1行めと $(L,\ 0,\ 1)$ の内積 $L\cos\theta$ など \\
+\end{kviihhk}
+\kviihframe{\sffamily\bfseries $A(\theta,\ L)=\begin{pmatrix}\cos\theta&-\sin\theta&L\cos\theta\\\sin\theta&\cos\theta&L\sin\theta\\0&0&1\end{pmatrix}$\\[3pt]
+\normalfont\small 左上の2×2が回転、右の列が「回った向きに $L$ 進む」移動}
+これを\textbf{同次変換行列}（どうじへんかんぎょうれつ）といいます。\bkidx{どうじへんかんぎょうれつ}{同次変換行列}物理シリーズ第1巻（力学）の力-7 と同じ文字・同じ形です。右の列 $(L\cos\theta,\ L\sin\theta)$ は、4-6・4-8 の「長さ $L$、角 $\theta$ の腕の先の座標」そのものです。
+
+\bksubsection{11}{2本の腕を、同次変換行列のかけ算で}
+
+\label{bk:7-7:ude}肩からひじまでが $A(\theta_1,\ L_1)$、ひじから手までが $A(\theta_2,\ L_2)$ です。肩から手までは、2つをかけた1つの行列 $T$ になります。
+\kviihline{$T=A(\theta_1,\ L_1)\,A(\theta_2,\ L_2)$}
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (-5,0) -- (52,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,-4) -- (0,58) node[anchor=south, font=\footnotesize, inner sep=1pt] {$y$};
+  \kviiharm{30}{45}{45}{37.5}
+  \kviihfr{(kviihE)}{30}{$x_1$}{$y_1$}
+  \kviihfr{(kviihP)}{75}{$x_2$}{$y_2$}
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at ($(kviihE)+(1.5,-1.5)$) {ひじ};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt] at ($(kviihP)+(-2,0)$) {手};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt] at (-2.5,3.5) {肩};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+ひじには、上の腕にそった軸 $x_1$・$y_1$、手には、下の腕にそった軸 $x_2$・$y_2$ を考えます。$A(\theta_2,\ L_2)$ は、手の軸で見た点を、ひじの軸で見た点に直します。$A(\theta_1,\ L_1)$ は、ひじの軸で見た点を、肩（地面）の軸で見た点に直します。\par\vspace{3pt}
+手は、手の軸で見ると原点 $(0,\ 0,\ 1)$ です。$T$ に $(0,\ 0,\ 1)$ をかけると $T$ の右の列だけが残るので、\textbf{$T$ の右の列の上の2つが、手の位置}です。
+\end{minipage}
+
+\kviihhead{数を入れる}
+$L_1=0.30$、$L_2=0.25$（m）、$\theta_1=30°$、$\theta_2=45°$ です。成分は小数第3位まで（物理 力-7 の例題と同じ）にします。
+\[A(30°,\ 0.30)=\begin{pmatrix}0.866&-0.5&0.260\\0.5&0.866&0.150\\0&0&1\end{pmatrix}\]
+\[A(45°,\ 0.25)=\begin{pmatrix}0.707&-0.707&0.177\\0.707&0.707&0.177\\0&0&1\end{pmatrix}\]
+積の右の列だけを、「1つめの行列の行と、2つめの行列の右の列の内積」（7-3）で計算します。
+\begin{kviihhk}[0.66]
+x=0.866\times0.177+(-0.5)\times0.177+0.260\times1 & 1行めと右の列の内積 \\
+\phantom{x}=0.1533-0.0885+0.260=0.3248\approx0.325 & \\
+y=0.5\times0.177+0.866\times0.177+0.150\times1 & 2行めと右の列の内積 \\
+\phantom{y}=0.0885+0.1533+0.150=0.3918\approx0.392 & \\
+\end{kviihhk}
+7-6 で回転行列を5けたで計算した $(0.325,\ 0.391)$ と、ほぼ同じです（小数第3位の小さなちがいは、成分を途中で3けたに丸めたため）。積の左上の2×2を計算すると、1行1列は $0.866\times0.707+(-0.5)\times0.707=0.259=\cos75°$ などで、$R(75°)$ になります。\textbf{$T$ は、手の位置（右の列）と手の向き（左上の2×2）を、いっしょに表している}のです。
+
+\kviihhead{関節がいくつあっても、かけるだけ}
+関節が3つなら $T=A_1A_2A_3$、6つなら $T=A_1A_2\cdots A_6$ と、腕の根もとから順に行列をかけるだけです。7-6 の回転行列の方法では、「回転をかける」と「腕の矢印をたす」の2つの計算が必要でしたが、同次変換行列なら、かけ算だけで済みます。コンピュータにとって、同じ計算をくり返すのは得意なことです。
+
+\bksubsection{12}{3次元では4×4の同次変換行列}
+
+\label{bk:7-7:yon}空間の点 $(x,\ y,\ z)$ には、1をつけて $(x,\ y,\ z,\ 1)$ とし、4×4の行列を使います。左上の3×3に回転行列 $R$、右の列の上の3つに移動 $\vec p=(p_x,\ p_y,\ p_z)$、いちばん下の行に $0,\ 0,\ 0,\ 1$ を入れます。
+\kviihline{$\begin{pmatrix}R&\vec p\\0\quad0\quad0&1\end{pmatrix}$\quad（左上の $R$ は3×3、右上の $\vec p$ はたての3つ）}
+たとえば、2本の腕を、高さ\qty{0.10}{m}の台の上に置きます。腕は床に平行な平面の中で動くとし、関節は $z$ 軸のまわりに回るとします。腕の2つの4×4の行列は、左上に $R_z(\theta)$、右の列に $(L\cos\theta,\ L\sin\theta,\ 0)$ を入れたものです。その前に、台の高さの分だけ上へずらす行列をかけます。
+\kviihline{$T=\begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&1&0.10\\0&0&0&1\end{pmatrix}A_1A_2$}
+腕の2つの行列の積 $A_1A_2$ の右の列は、平面のときと同じで、$x=0.325$、$y=0.391$、$z=0$、4つめが1です。これに台の行列をかけると $z$ に0.10がたされて、手の位置は次のようになります（m）。
+\kviihline{$(0.325,\ \ 0.391,\ \ 0.10)$}
+
+6つの関節をもつ工場のロボットは、関節ごとに1つずつ、4×4の同次変換行列を6つかけて、手の位置と向きを求めます。1955年に、デナビットとハーテンバーグが、機械の関節を4×4の行列で表すきまりを発表し、いまもロボットの本で使われています（専門書をのぞいてみよう）。
+
+\bksubsection{13}{座標の変換：ドローンのカメラで見た物の位置}
+
+\label{bk:7-7:camera}空を飛ぶドローンのカメラで、地面の上の物を見つけました。カメラ（ドローン）から見た物の位置は、ドローンの座標（$x$ は機首の向き）でわかります。地面の座標では、どこにあるでしょう。
+
+\par\vspace{2pt}\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+ドローンの位置を $\vec d$、ドローンの姿勢の回転行列を $R$、ドローンから見た物の位置を $\vec p_{\text{機体}}$ とします。7-6⑥ と⑧の考えで、ドローンから物への矢印を地面の向きに直すと $R\vec p_{\text{機体}}$。それにドローンの位置をたします。
+\kviihline{$\vec p_{\text{地面}}=R\,\vec p_{\text{機体}}+\vec d$}
+これは、「回して、ずらす」なので、同次変換行列1つで書けます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[kviih3d=2.4mm]
+  \foreach \i in {0,5,...,20} {\draw[bkLine, line width=0.4pt] (\i,0,0) -- (\i,12,0);}
+  \foreach \j in {0,4,8,12} {\draw[bkLine, line width=0.4pt] (0,\j,0) -- (20,\j,0);}
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (22,0,0) node[anchor=west, font=\footnotesize, text=bkInk, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,14,0) node[anchor=south west, font=\footnotesize, text=bkInk, inner sep=1pt] {$y$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=2mm]}] (0,0,0) -- (0,0,23) node[anchor=south, font=\footnotesize, text=bkInk, inner sep=1pt] {$z$};
+  \draw[bkGray!70, line width=0.6pt, dashed] (10,5,0) -- (10,5,20);
+  \draw[bkGray, line width=1pt, -{Stealth[length=2mm]}] (0,0,0) -- (10,5,20);
+  \node[font=\footnotesize, text=bkGray!80!black, anchor=east, inner sep=1.5pt] at (5,2.5,10) {$\vec d$};
+  \draw[bkOrange!90!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (10,5,20) -- (16.93,9,0);
+  \draw[bkBlue, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0,0) -- (16.93,9,0);
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=1.8mm]}] (10,5,20) -- ($(10,5,20)+(3.46,2,0)$);
+  \fill[bkNavy] (10,5,20) circle (1.6pt);
+  \fill[bkGreen!60!black] (16.93,9,0) circle (1.8pt);
+  \node[font=\footnotesize, anchor=south east, inner sep=1pt] at (10,5,20.5) {ドローン};
+  \node[font=\footnotesize, anchor=west, inner sep=2pt, text=bkGreen!50!black] at (16.93,9,0) {物};
+  \node[font=\footnotesize, anchor=west, inner sep=2pt, text=bkOrange!80!black] at (13.6,7,10) {$R\vec p_{\text{機体}}$};
+  \node[font=\footnotesize, anchor=north, inner sep=2pt, text=bkBlue!80!black] at (9,4,0) {$\vec p_{\text{地面}}$};
+\end{tikzpicture}
+\end{minipage}
+
+\kviihhead{数で確かめる}
+ドローンが地面の点 $(10,\ 5,\ 20)$（m）にいて、ロール0°・ピッチ0°・ヨー30°（水平のまま、左に30°向いている）とします。カメラは、物が「機首の向きに\qty{8}{m}、真下へ\qty{20}{m}」、つまり $\vec p_{\text{機体}}=(8,\ 0,\ -20)$ の所にあると知らせてきました。$R=R_z(30°)$ です。
+\begin{kviihhk}[0.62]
+R_z(30°)\begin{pmatrix}8\\0\\-20\end{pmatrix}=\begin{pmatrix}0.866\times8-0.5\times0\\0.5\times8+0.866\times0\\-20\end{pmatrix} & 機体の矢印を、地面の向きに直す \\
+\phantom{R_z(30°)\begin{pmatrix}8\\0\\-20\end{pmatrix}}=\begin{pmatrix}6.928\\4\\-20\end{pmatrix} & 計算した \\
+\vec p_{\text{地面}}=\begin{pmatrix}6.928+10\\4+5\\-20+20\end{pmatrix}=\begin{pmatrix}16.93\\9\\0\end{pmatrix} & ドローンの位置をたした \\
+\end{kviihhk}
+物は地面の点 $(16.93,\ 9,\ 0)$ にあります。$z$ が0になったので、たしかに地面の上です。
+
+\kviihhead{反対に、地面の点がカメラからどう見えるか}
+3次元のゲームの画面を作るときは、反対に、地面（ゲームの世界）の座標の点が、カメラからどう見えるかを計算します。上の式を $\vec p_{\text{機体}}$ について解きます。両辺から $\vec d$ をひき、左から $R^{-1}=R^{\mathsf T}$ をかけます（7-6⑥ の「軸を回して見る」）。
+\kviihline{$\vec p_{\text{機体}}=R^{\mathsf T}(\vec p_{\text{地面}}-\vec d)$}
+さっきの物で確かめます。$\vec p_{\text{地面}}-\vec d=(6.928,\ 4,\ -20)$ で、$R_z(30°)^{\mathsf T}$ の1行めは $(0.866,\ 0.5,\ 0)$、2行めは $(-0.5,\ 0.866,\ 0)$、3行めは $(0,\ 0,\ 1)$ です。
+\begin{kviihhk}[0.7]
+x=0.866\times6.928+0.5\times4=6.000+2=8.000 & 1行めとの内積 \\
+y=-0.5\times6.928+0.866\times4=-3.464+3.464=0 & 2行めとの内積 \\
+z=-20 & 3行めとの内積 \\
+\end{kviihhk}
+もとの $(8,\ 0,\ -20)$ にもどりました。ゲームの画面では、何万もの点に、1秒に何十回もこの計算をします。
+
+\begin{taisetsu}
+\def\tsl#1{\par\addvspace{3pt}\noindent\hangindent=6.6\zw\hangafter=1\makebox[6.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{3本の軸}回らない軸の行と列は「1と0」、残りは 7-6 の $R$。$R_y$ だけ $\sin$ の符号が逆に見える
+\tsl{順番}$R_z(90°)R_x(90°)\neq R_x(90°)R_z(90°)$。右から先にはたらく
+\tsl{オイラー角}$R=R_z(\psi)R_y(\theta)R_x(\phi)$（ヨー・ピッチ・ロール）
+\tsl{機首の向き}$R$ の1列め $(\cos\psi\cos\theta,\ \sin\psi\cos\theta,\ -\sin\theta)$
+\tsl{同次座標}位置は $(x,\ y,\ 1)$、向きは $(x,\ y,\ 0)$。「ずらす」も行列のかけ算に
+\tsl{同次変換}$A(\theta,\ L)$：左上が回転、右の列が移動。$T=A_1A_2\cdots$ の右の列が手の位置
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{ロール・ピッチ・ヨー}{前後の軸・左右の軸・上下の軸のまわりの回転の角。}
+\bkword{オイラー角}{3つの軸のまわりの回転の角で、物の向きを表したもの。}
+\bkword{ジンバルロック}{2つの回転の軸が重なり、向きの自由が1つへってしまうこと。}
+\bkword{同次座標}{点の座標に1（向きなら0）を加えたもの。ずらす動きも行列で書ける。}
+\bkword{同次変換行列}{回転と移動を1つにまとめた行列。平面は3×3、空間は4×4。}
+\end{kotoba}
+
+\begin{senmonsho}[ロボット工学の教科書ふうの書き方]
+\begin{bkhonbun}
+リンク $i-1$ の座標系から見たリンク $i$ の座標系の位置と姿勢を、同次変換行列 ${}^{i-1}\symbf{T}_i$ で表す。手先の位置・姿勢は ${}^0\symbf{T}_n={}^0\symbf{T}_1\,{}^1\symbf{T}_2\cdots{}^{n-1}\symbf{T}_n$ で与えられる（Denavit--Hartenberg 記法）。姿勢は ZYX オイラー角 $(\psi,\ \theta,\ \phi)$ で表すことが多いが、$\theta=\pm\pi/2$ で特異となるため、四元数を用いることもある。
+\end{bkhonbun}
+\bkyaku{${}^{i-1}\symbf{T}_i$ は、この章の $A(\theta_i,\ L_i)$ のこと。左上の小さな数は「どの座標から見たか」、太字は専門書の行列の書き方。${}^0\symbf{T}_n$ はこの章の $T$。「ZYX オイラー角」は $R_z(\psi)R_y(\theta)R_x(\phi)$ の順のこと。「$\theta=\pm\pi/2$ で特異」はピッチ±90°のジンバルロック。「四元数」はクォータニオン。}
+\end{senmonsho}
+
+\bkkigocards{\bkkigocard{\fontsize{14}{16}\selectfont$R_x\ R_y\ R_z$}{アール・エックス、アール・ワイ、アール・ゼット}{$x$・$y$・$z$ 軸のまわりに回す3×3の回転行列。回らない軸の行と列は1と0}{rotation about an axis}{7-7}}
+{\bkkigocard{\fontsize{14}{16}\selectfont$\phi\ \theta\ \psi$}{ファイ、シータ、プサイ}{ロール・ピッチ・ヨーの角。$\phi$ は、6-6 の初期位相の $\phi$ とは別のもの}{roll, pitch, yaw}{7-7}}
+
+\begin{column}{アポロ宇宙船とジンバルロック}
+アポロ宇宙船は、宇宙船の向きを、3つの輪（ジンバル）で支えた、回り続けるこま（ジャイロ）ではかっていました。こまは、宇宙船がどう回っても向きを変えないので、輪の角を読めば宇宙船の向きがわかります。ところが、まん中の輪の角が90°に近づくと、2つの輪の軸が重なってしまい（⑨のジンバルロック）、向きがわからなくなるおそれがありました。そこで、宇宙飛行士は、その向きに近づかないように注意して飛んでいた、と伝えられています。いまのドローンは、向きを計算の中で回転行列やクォータニオンとして持つので、この心配はありません。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[軸のまわりに点を回す]
+点 $(2,\ 1,\ 3)$ を、次のように回した点を求めましょう。\newline
+（1）\nobreak $z$ 軸のまわりに90°\quad（2）\nobreak $y$ 軸のまわりに90°\par
+\kangaekata $\cos90°=0$、$\sin90°=1$ を、$R_z$・$R_y$ に入れる。回らない軸の座標は変わらない。\par
+\shiki （1）\nobreak $R_z(90°)$ の行は $(0,\ -1,\ 0)$、$(1,\ 0,\ 0)$、$(0,\ 0,\ 1)$\par
+\kviihq \phantom{（1）}$x=-1\times1=-1$、$y=1\times2=2$、$z=3$（そのまま）\par
+\kviihq （2）\nobreak $R_y(90°)$ の行は $(0,\ 0,\ 1)$、$(0,\ 1,\ 0)$、$(-1,\ 0,\ 0)$\par
+\kviihq \phantom{（2）}$x=1\times3=3$、$y=1$（そのまま）、$z=-1\times2=-2$\par
+\kotae （1）\nobreak $(-1,\ 2,\ 3)$\quad（2）\nobreak $(3,\ 1,\ -2)$
+\end{reidai}
+（2）は、「$z$ を $x$ のほうへ」たおす回転なので、高さ3だった点が $x$ の側へ、$x$ が2だった点が下（$z$ が負）へ行きました。
+
+\begin{jibun}
+点 $(1,\ 2,\ 4)$ を、次のように回した点を求めましょう。\newline
+（1）\nobreak $x$ 軸のまわりに90°\quad（2）\nobreak $y$ 軸のまわりに90°
+\bkjans{（1）\nobreak $R_x(90°)$ の行は $(1,\ 0,\ 0)$、$(0,\ 0,\ -1)$、$(0,\ 1,\ 0)$。$(1,\ -4,\ 2)$。（2）\nobreak $R_y(90°)$ で $x=4$、$y=2$、$z=-1$。$(4,\ 2,\ -1)$}
+\end{jibun}
+
+\begin{reidai}[回す順番を変える]
+$\vec e_x=(1,\ 0,\ 0)$ に、$R_z(90°)R_y(90°)$ と $R_y(90°)R_z(90°)$ をそれぞれかけ、行き先をくらべましょう。\par
+\kangaekata 右から1つずつかける（右の行列が先）。\par
+\shiki ①\ $R_z(90°)R_y(90°)\vec e_x$\par
+\kviihq まず $R_y(90°)\vec e_x=(0,\ 0,\ -1)$（$R_y$ の1列め）\par
+\kviihq 次に $R_z(90°)$ をかける。$z$ 軸のまわりなので $(0,\ 0,\ -1)$ のまま\par
+\kviihq ②\ $R_y(90°)R_z(90°)\vec e_x$\par
+\kviihq まず $R_z(90°)\vec e_x=(0,\ 1,\ 0)$（$R_z$ の1列め）\par
+\kviihq 次に $R_y(90°)$ をかける。$y$ 軸のまわりなので $(0,\ 1,\ 0)$ のまま\par
+\kotae ①は $(0,\ 0,\ -1)$、②は $(0,\ 1,\ 0)$ で、ちがう
+\end{reidai}
+
+\begin{jibun}
+$\vec e_x=(1,\ 0,\ 0)$ に、$R_x(90°)R_y(90°)$ と $R_y(90°)R_x(90°)$ をそれぞれかけ、行き先をくらべましょう。
+\bkjans{$R_x(90°)R_y(90°)\vec e_x$：$R_y(90°)\vec e_x=(0,\ 0,\ -1)$、それに $R_x(90°)$ をかけて $(0,\ 1,\ 0)$。$R_y(90°)R_x(90°)\vec e_x$：$R_x(90°)\vec e_x=(1,\ 0,\ 0)$、それに $R_y(90°)$ をかけて $(0,\ 0,\ -1)$。ちがう}
+\end{jibun}
+
+\begin{bkfigure}
+\begin{tikzpicture}[kviih3d=10mm]
+  \begin{scope}
+    \kviihaxes{2.0}{2.0}{1.6}
+    \draw[bkGray!60, line width=0.6pt] (0,0,0) -- (0,0,-1.5);
+    \draw[bkRed, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0,0) -- (1.2,0,0);
+    \draw[bkOrange!90!black, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0,0) -- (0,0,-1.2);
+    \draw[bkInk!60, line width=0.7pt, -{Stealth[length=1.8mm]}] (1.2,0,-0.12) to[bend left=20] (0.12,0,-1.15);
+    \node[font=\footnotesize, anchor=west, inner sep=1.5pt] at (0.95,0,-0.75) {$R_y(90°)$};
+    \node[font=\footnotesize, anchor=west, text=bkOrange!70!black, inner sep=1.5pt] at (0.25,0,-1.55) {$R_z(90°)$ でもこのまま};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0.8,0,-1.9) {① $R_z(90°)R_y(90°)\vec e_x$};
+  \end{scope}
+  \begin{scope}[xshift=62mm]
+    \kviihaxes{2.0}{2.0}{1.6}
+    \draw[bkGray!60, line width=0.6pt] (0,0,0) -- (0,0,-1.5);
+    \draw[bkRed, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0,0) -- (1.2,0,0);
+    \draw[bkOrange!90!black, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0,0) -- (0,1.2,0);
+    \draw[bkInk!60, line width=0.7pt, -{Stealth[length=1.8mm]}] (1.2,0.1,0) to[bend right=18] (0.15,1.2,0);
+    \node[font=\footnotesize, anchor=north west, inner sep=1.5pt] at (1.05,0.3,-0.35) {$R_z(90°)$};
+    \node[font=\footnotesize, anchor=west, text=bkOrange!70!black, inner sep=2pt] at (0.75,1.6,0.45) {$R_y(90°)$ でもこのまま};
+    \node[font=\sffamily\footnotesize, anchor=north] at (0.8,0,-1.9) {② $R_y(90°)R_z(90°)\vec e_x$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{\bkreidairef{2}を図で見る。赤が $\vec e_x$、オレンジが行き先。①は真下へ、②は奥（$y$ の向き）へ行く。}
+\end{bkfigure}
+
+\begin{reidai}[オイラー角から機首の向きを求める]
+ドローンが、ヨー $\psi=60°$、ピッチ $\theta=-30°$、ロール $\phi=10°$ の姿勢です。地面の座標で、機首はどちらを向いていますか。\newline
+（$\cos60°=0.5$、$\sin60°=0.866$）\newline
+（$\cos(-30°)=0.866$、$\sin(-30°)=-0.5$）\par
+\kangaekata 機首の向きは、⑧のわくの式。ロールは関係しない。\par
+\shiki $x$ 成分：$\cos60°\cos(-30°)=0.5\times0.866=0.433$\par
+\kviihq $y$ 成分：$\sin60°\cos(-30°)=0.866\times0.866=0.750$\par
+\kviihq $z$ 成分：$-\sin(-30°)=-(-0.5)=0.5$\par
+\kotae $(0.433,\ 0.750,\ 0.5)$。左に60°向いて、機首を30°上げている
+\end{reidai}
+
+\begin{jibun}
+ドローンが、ヨー $\psi=30°$、ピッチ $\theta=-60°$、ロール $\phi=20°$ の姿勢です。地面の座標で、機首の向きを求めましょう。\newline
+（$\cos30°=0.866$、$\sin30°=0.5$）\newline
+（$\cos(-60°)=0.5$、$\sin(-60°)=-0.866$）
+\bkjans{$x$ 成分 $0.866\times0.5=0.433$、$y$ 成分 $0.5\times0.5=0.25$、$z$ 成分 $-(-0.866)=0.866$。$(0.433,\ 0.25,\ 0.866)$。ロールは関係しない}
+\end{jibun}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}[kviih3d=24mm]
+  \kviihaxes{1.5}{1.8}{1.3}
+  \draw[bkGray, line width=0.7pt, dashed] (0,0,0) -- (0.606,1.05,0) -- (0.606,1.05,0.7);
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=2.8mm]}] (0,0,0) -- (0.606,1.05,0.7);
+  \draw[bkBlue!80!black, line width=0.8pt, -{Stealth[length=1.8mm]}, variable=\t, domain=0:60, samples=20] plot ({0.5*cos(\t)},{0.5*sin(\t)},{0});
+  \node[font=\footnotesize, text=bkBlue!80!black, anchor=north, inner sep=2pt] at (0.55,0,0) {ヨー60°};
+  \node[font=\footnotesize, text=bkRed!80!black, anchor=south east, inner sep=2pt] at (0.5,0.85,0.6) {機首};
+  \node[font=\footnotesize, text=bkGreen!50!black, anchor=west, inner sep=3pt] at (0.606,1.05,0.35) {30°上げる};
+  \node[font=\footnotesize, text=bkGray!80!black, anchor=north west, inner sep=2pt] at (0.606,1.05,0) {真上から見た影};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\raggedright
+\bkreidairef{3}の機首の向きを図にしました（ななめから見た図なので、角は本当の大きさには見えません）。点線は真上から見た影で、$x$ 軸から60°（ヨー）。機首は影から30°上を向きます。$0.433^2+0.750^2+0.5^2=1$ で、長さは1です。
+\end{minipage}
+
+\begin{reidai}[ジンバルロックを確かめる]
+ピッチ $\theta=-90°$（機首が真上）のとき、次の2つの姿勢は同じ向きですか。⑨のわくの行列を使って調べましょう。\newline
+（1）\nobreak ヨー30°・ロール0° と、ヨー0°・ロール30°\newline
+（2）\nobreak ヨー30°・ロール0° と、ヨー30°・ロール30°\par
+\kangaekata ピッチ $-90°$ では、行列は $\psi+\phi$ だけで決まる。$\psi+\phi$ が同じなら同じ向き。\par
+\shiki （1）\nobreak どちらも $\psi+\phi=30°$\par
+\kviihq \phantom{（1）}どちらの行列も、1行めが $(0,\ -0.5,\ -0.866)$\par
+\kviihq \phantom{（1）}2行めが $(0,\ 0.866,\ -0.5)$、3行めが $(1,\ 0,\ 0)$\par
+\kviihq （2）\nobreak $\psi+\phi$ は $30°$ と $60°$ でちがう\par
+\kviihq \phantom{（2）}2つめの行列の1行めは $(0,\ -0.866,\ -0.5)$\par
+\kviihq \phantom{（2）}1つめの $(0,\ -0.5,\ -0.866)$ とちがう\par
+\kotae （1）\nobreak 同じ向き\quad（2）\nobreak ちがう向き
+\end{reidai}
+
+\begin{jibun}
+ピッチ $\theta=-90°$ のとき、次の2つの姿勢は同じ向きですか。⑨のわくの行列を使って調べましょう。\newline
+（1）\nobreak ヨー50°・ロール $-20°$ と、ヨー20°・ロール10°\newline
+（2）\nobreak ヨー20°・ロール10° と、ヨー20°・ロール40°
+\bkjans{（1）\nobreak $\psi+\phi$ はどちらも30°なので、同じ向き。（2）\nobreak 30°と60°でちがうので、ちがう向き}
+\end{jibun}
+
+\begin{reidai}[ずらす行列と、位置・向き]
+$x$ に3、$y$ に2ずらす同次座標の行列を、次のものにかけましょう。\newline
+（1）\nobreak 点 $(1,\ 1)$\quad（2）\nobreak 向きの矢印 $(1,\ 1)$\par
+\kangaekata 行列の右の列に $(3,\ 2)$ を入れる。点には3つめに1、向きには0をつける（⑩）。\par
+\shiki 行列の行は $(1,\ 0,\ 3)$、$(0,\ 1,\ 2)$、$(0,\ 0,\ 1)$\par
+\kviihq （1）\nobreak $(1,\ 1,\ 1)$ にかけて、$(1+3,\ 1+2,\ 1)=(4,\ 3,\ 1)$\par
+\kviihq （2）\nobreak $(1,\ 1,\ 0)$ にかけて、$(1+3\times0,\ 1+2\times0,\ 0)=(1,\ 1,\ 0)$\par
+\kotae （1）\nobreak 点 $(4,\ 3)$\quad（2）\nobreak 向き $(1,\ 1)$ のまま
+\end{reidai}
+
+\begin{jibun}
+$x$ に $-2$、$y$ に5ずらす同次座標の行列を、次のものにかけましょう。\newline
+（1）\nobreak 点 $(4,\ 1)$\quad（2）\nobreak 向きの矢印 $(0,\ 3)$
+\bkjans{（1）\nobreak $(4,\ 1,\ 1)$ にかけて $(2,\ 6,\ 1)$。点 $(2,\ 6)$。（2）\nobreak $(0,\ 3,\ 0)$ にかけて $(0,\ 3,\ 0)$。向きは $(0,\ 3)$ のまま}
+\end{jibun}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkLine, line width=0.4pt] (-0.5,-0.5) grid (6.5,4.5);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (-0.5,0) -- (7,0) node[right, font=\footnotesize, inner sep=1.5pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,-0.5) -- (0,5) node[above, font=\footnotesize, inner sep=1.5pt] {$y$};
+  \draw[bkGray, line width=0.9pt, dashed, -{Stealth[length=2mm]}] (1.15,1.1) -- (3.85,2.9);
+  \fill[bkBlue] (1,1) circle (0.12); \fill[bkBlue] (4,3) circle (0.12);
+  \node[font=\footnotesize, anchor=north, inner sep=2pt] at (1,0.9) {点 $(1,\ 1)$};
+  \node[font=\footnotesize, anchor=north west, inner sep=2pt] at (4.05,2.95) {点 $(4,\ 3)$};
+  \draw[bkOrange!90!black, line width=1.4pt, -{Stealth[length=2.2mm]}] (1,1) -- (2,2);
+  \draw[bkOrange!90!black, line width=1.4pt, -{Stealth[length=2.2mm]}] (4,3) -- (5,4);
+  \node[font=\footnotesize, text=bkOrange!70!black, anchor=east, inner sep=2pt] at (1.5,1.9) {向き $(1,\ 1)$};
+  \node[font=\footnotesize, text=bkOrange!70!black, anchor=west, inner sep=2pt] at (5,4) {向きは同じ};
+\end{tikzpicture}
+\bkfigcaption{\bkreidairef{5}を図で見る。点は $(3,\ 2)$ だけずれるが、向きの矢印は、ずらしても変わらない。}
+\end{bkfigure}
+
+\begin{reidai}[同次変換行列で手の位置]
+$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=30°$、$\theta_2=45°$ の2本の腕の手の位置を、$T=A(30°,\ 0.30)A(45°,\ 0.25)$ の右の列から求めましょう（成分は小数第3位まで）。\par
+\kangaekata ⑪の行列を使う。右の列の上の2つが手の位置。右の列だけを、行と右の列の内積で計算する。\par
+\shiki $A(30°,\ 0.30)$ の1行めは $(0.866,\ -0.5,\ 0.260)$、2行めは $(0.5,\ 0.866,\ 0.150)$\par
+\kviihq $A(45°,\ 0.25)$ の右の列は $(0.177,\ 0.177,\ 1)$\par
+\kviihq $x=0.866\times0.177+(-0.5)\times0.177+0.260\times1$\par
+\kviihq \phantom{$x$}${}=0.1533-0.0885+0.260=0.3248$\par
+\kviihq $y=0.5\times0.177+0.866\times0.177+0.150\times1$\par
+\kviihq \phantom{$y$}${}=0.0885+0.1533+0.150=0.3918$\par
+\kotae 約 $(0.325,\ 0.392)$（m）
+\end{reidai}
+物理シリーズ第1巻の力-7 の例題と同じ計算です（7-6 の $(0.325,\ 0.391)$ とのちがいは、途中の丸めのため）。
+
+\begin{jibun}
+$L_1=\qty{0.30}{m}$、$L_2=\qty{0.25}{m}$、$\theta_1=45°$、$\theta_2=45°$ の腕の手の位置を求めましょう。$A(45°,\ 0.30)A(45°,\ 0.25)$ の右の列から求めます（$\cos45°=\sin45°=0.707$。成分は小数第3位まで）。
+\bkjans{$A(45°,\ 0.30)$ の1行めは $(0.707,\ -0.707,\ 0.212)$、2行めは $(0.707,\ 0.707,\ 0.212)$。$A(45°,\ 0.25)$ の右の列は $(0.177,\ 0.177,\ 1)$。$x$ は $0.707\times0.177$ がひき算で消えて0.212。$y$ は $0.707\times0.177=0.125$ が2つと0.212をたして、$0.250+0.212=0.462$。約 $(0.212,\ 0.462)$（m）}
+\end{jibun}
+
+\begin{reidai}[カメラで見た物の位置を、地面の座標に直す]
+ドローンが地面の点 $(10,\ 5,\ 20)$（m）にいて、ロール0°・ピッチ0°・ヨー30°の姿勢です（$\cos30°=0.866$、$\sin30°=0.5$）。\newline
+（1）\nobreak カメラで見た物の位置が、機体の座標で $(8,\ 0,\ -20)$ でした。地面の座標で求めましょう。\newline
+（2）\nobreak 地面の点 $(16.93,\ 9,\ 0)$ は、機体の座標ではどこですか。\par
+\kangaekata （1）$\vec p_{\text{地面}}=R\vec p_{\text{機体}}+\vec d$、（2）$\vec p_{\text{機体}}=R^{\mathsf T}(\vec p_{\text{地面}}-\vec d)$、$R=R_z(30°)$（⑬）。\par
+\shiki （1）\nobreak $R_z(30°)$ をかけて $(0.866\times8,\ 0.5\times8,\ -20)$\par
+\kviihq \phantom{（1）}${}=(6.928,\ 4,\ -20)$\par
+\kviihq \phantom{（1）}$\vec d$ をたして $(16.928,\ 9,\ 0)$\par
+\kviihq （2）\nobreak $\vec p_{\text{地面}}-\vec d=(6.93,\ 4,\ -20)$\par
+\kviihq \phantom{（2）}$x=0.866\times6.93+0.5\times4=6.00+2=8.00$\par
+\kviihq \phantom{（2）}$y=-0.5\times6.93+0.866\times4=-3.47+3.46\approx0$、$z=-20$\par
+\kotae （1）\nobreak 約 $(16.93,\ 9,\ 0)$（m）\quad（2）\nobreak 約 $(8,\ 0,\ -20)$（m）
+\end{reidai}
+
+\begin{jibun}
+ドローンが地面の点 $(0,\ 0,\ 30)$（m）にいて、ロール0°・ピッチ0°・ヨー90°の姿勢です。\newline
+（1）\nobreak カメラで見た物の位置が、機体の座標で $(10,\ 5,\ -30)$ でした。地面の座標で求めましょう。\newline
+（2）\nobreak 地面の点 $(-5,\ 10,\ 0)$ は、機体の座標ではどこですか。
+\bkjans{（1）\nobreak $R_z(90°)$ をかけて $(-5,\ 10,\ -30)$、$\vec d$ をたして $(-5,\ 10,\ 0)$（m）。（2）\nobreak $\vec p_{\text{地面}}-\vec d=(-5,\ 10,\ -30)$。$R_z(90°)^{\mathsf T}$ の行は $(0,\ 1,\ 0)$、$(-1,\ 0,\ 0)$、$(0,\ 0,\ 1)$ なので $(10,\ 5,\ -30)$（m）}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{かける順番と、回す順番}
+\bkng{$R_z(90°)R_x(90°)$ は、先に $z$ 軸で回してから $x$ 軸で回す}
+\bkok{$R_z(90°)R_x(90°)$ は、先に $x$ 軸で回してから $z$ 軸で回す}
+ベクトルは右におくので、右の行列から先にはたらきます（7-3）。空間では順番で答えが変わるので、とくに大事です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$R_y$ の $\sin$ の符号}
+\bkng{$R_y(\theta)$ の1行めは $(\cos\theta,\ 0,\ -\sin\theta)$}
+\bkok{$R_y(\theta)$ の1行めは $(\cos\theta,\ 0,\ \sin\theta)$}
+$y$ 軸のまわりの＋は「$z$ を $x$ のほうへ」です。$\theta=90°$ で $\vec e_z$ が $\vec e_x$ へ行くか（3列めが $(1,\ 0,\ 0)$ か）で確かめましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{回す軸を、スマホといっしょに動かしてしまう}
+\bkng{①の2つめの「左回り」を、たおしたスマホの軸のまわりに回す}
+\bkok{①の2つめの「左回り」は、紙にかいた（動かない）$z$ 軸のまわりに回す}
+行列を右から順にかけるときは、動かない軸のまわりに回します。動く軸で考えるときは、かける順番が逆になります（⑧のせいかくに言うと）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{同次座標の最後の数}
+\bkng{向きの矢印（速度など）にも、最後に1をつける}
+\bkok{位置には1、向きには0をつける}
+1をつけると、向きまでずれてしまいます。向きは、場所を移しても変わりません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{腕の行列のかける順番}
+\bkng{手の位置は $A(\theta_2,\ L_2)A(\theta_1,\ L_1)$ の右の列}
+\bkok{手の位置は $A(\theta_1,\ L_1)A(\theta_2,\ L_2)$ の右の列（根もとの行列が左）}
+$A(\theta_2,\ L_2)$ が手の軸をひじの軸に直し、そのあと $A(\theta_1,\ L_1)$ がひじの軸を肩の軸に直します。
+\end{tsumazuki}
+
+\begin{tsumazuki}{逆の回転の順番}
+\bkng{$R=R_z(\psi)R_y(\theta)R_x(\phi)$ の逆は $R_z(-\psi)R_y(-\theta)R_x(-\phi)$}
+\bkok{$R$ の逆は $R_x(-\phi)R_y(-\theta)R_z(-\psi)$（$=R^{\mathsf T}$）}
+もどすときは、最後に回したものから先にもどします（7-5 のくつ下とくつ）。順番も、角の符号も、両方逆になります。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\kviihbox{ドローンの姿勢の制御}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+ドローンの中のジャイロセンサーと加速度センサーは、1秒に何百〜何千回も、機体の回る速さとかたむきをはかります。計算機は、それをもとに回転行列（またはクォータニオン）で機体の向きを求め、かたむきを直すように、4つのプロペラの回る速さを少しずつ変えます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[kviih3d=7mm]
+  \kviihdrone
+  \draw[bkRed, line width=1pt, -{Stealth[length=2mm]}] (0.6,0,0) -- (1.9,0,0);
+\end{tikzpicture}
+\end{minipage}
+
+\kviihbox{6つの関節のロボット}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+自動車の工場で、車体を溶接したり、色をぬったりするロボットは、6つの関節をもっています。関節の角から4×4の同次変換行列を6つ作ってかけ、手先の位置と向き（⑫）を求めます。手先を目標へ動かす角を求める「逆運動学」は、7-11 で読みます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (-10,0) rectangle (10,3);
+  \fill[bkGray!70] (-5,3) rectangle (5,9);
+  \coordinate (k1) at (0,9); \coordinate (k2) at ($(k1)+(70:15)$); \coordinate (k3) at ($(k2)+(-10:14)$); \coordinate (k4) at ($(k3)+(-60:6)$);
+  \draw[bkOrange!70!black, line width=4.4pt, line cap=round, line join=round] (k1) -- (k2) -- (k3) -- (k4);
+  \draw[bkOrange!35, line width=2.9pt, line cap=round, line join=round] (k1) -- (k2) -- (k3) -- (k4);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (k1) circle (1.6) (k2) circle (1.4) (k3) circle (1.2) (k4) circle (1);
+\end{tikzpicture}
+\end{minipage}
+
+\kviihbox{3次元のゲームと VR}
+ゲームの世界の物の点は、まず物の向きと位置の4×4の行列で世界の座標に直され、次にカメラ（VR ゴーグルなら頭）の向きと位置の行列の逆（⑬の $R^{\mathsf T}(\vec p-\vec d)$）で、カメラから見た座標に直されます。何万もの点に、1秒に何十回も4×4の行列をかけて、画面を作っています。
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 点 $(3,\ 1,\ 2)$ を、次のように回した点を求めましょう。\newline
+（1）\nobreak $z$ 軸のまわりに90°\newline
+（2）\nobreak $x$ 軸のまわりに90°\newline
+（3）\nobreak $y$ 軸のまわりに90°
+\bkpans{（1）\nobreak $(-1,\ 3,\ 2)$。（2）\nobreak $(3,\ -2,\ 1)$。（3）\nobreak $(2,\ 1,\ -3)$}
+
+\bkproblem $\vec e_y=(0,\ 1,\ 0)$ に、$R_z(90°)R_x(90°)$ と $R_x(90°)R_z(90°)$ をそれぞれかけ、行き先をくらべましょう。
+\bkpans{$R_z(90°)R_x(90°)\vec e_y$：$R_x(90°)\vec e_y=(0,\ 0,\ 1)$、それに $R_z(90°)$ をかけて $(0,\ 0,\ 1)$。$R_x(90°)R_z(90°)\vec e_y$：$R_z(90°)\vec e_y=(-1,\ 0,\ 0)$、それに $R_x(90°)$ をかけて $(-1,\ 0,\ 0)$。ちがう}
+
+\bkproblem ドローンが、ヨー $\psi=90°$、ピッチ $\theta=-45°$、ロール $\phi=30°$ の姿勢です。地面の座標で、機首の向きを求めましょう（$\cos(-45°)=0.707$、$\sin(-45°)=-0.707$）。
+\bkpans{$x$ 成分 $\cos90°\times0.707=0$、$y$ 成分 $\sin90°\times0.707=0.707$、$z$ 成分 $-(-0.707)=0.707$。$(0,\ 0.707,\ 0.707)$。左を向いて、機首を45°上げている}
+
+\bkproblem ピッチ $\theta=-90°$ のとき、「ヨー40°・ロール20°」と「ヨー70°・ロール $-10°$」は同じ向きですか。
+\bkpans{$\psi+\phi$ はどちらも60°なので、同じ向き（ジンバルロック）}
+
+\bkproblem $L_1=\qty{0.40}{m}$、$L_2=\qty{0.30}{m}$、$\theta_1=90°$、$\theta_2=-90°$ の腕の手の位置を、$A(90°,\ 0.40)A(-90°,\ 0.30)$ の右の列から求めましょう。
+\bkpans{$A(90°,\ 0.40)$ の1行めは $(0,\ -1,\ 0)$、2行めは $(1,\ 0,\ 0.40)$。$A(-90°,\ 0.30)$ の右の列は $(0,\ -0.30,\ 1)$。$x=-1\times(-0.30)=0.30$、$y=0.40$。手は $(0.30,\ 0.40)$（m）}
+
+\bkproblem $x$ に4、$y$ に $-1$ ずらす同次座標の行列を、点 $(2,\ 3)$ と、向きの矢印 $(2,\ 3)$ にかけましょう。
+\bkpans{点は $(2,\ 3,\ 1)$ にかけて $(6,\ 2,\ 1)$、点 $(6,\ 2)$。向きは $(2,\ 3,\ 0)$ にかけて $(2,\ 3,\ 0)$ のまま}
+
+\bkproblem ドローンが地面の点 $(20,\ 10,\ 15)$（m）にいて、ロール0°・ピッチ0°・ヨー0°の姿勢です。カメラで見た物の位置が、機体の座標で $(5,\ -2,\ -15)$ でした。地面の座標で求めましょう。
+\bkpans{ヨー0°なので $R=I$。$(5,\ -2,\ -15)+(20,\ 10,\ 15)=(25,\ 8,\ 0)$（m）}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem \bkhatenaref のスマホの画面の向き $\vec e_z=(0,\ 0,\ 1)$ に、$R_z(90°)R_x(90°)$ と $R_x(90°)R_z(90°)$ をそれぞれかけ、図\ref{bk:7-7:fig-junban}の画面の向きと合っているか確かめましょう。
+\bkpans{$R_x(90°)\vec e_z=(0,\ -1,\ 0)$、それに $R_z(90°)$ をかけて $(1,\ 0,\ 0)$（①：右）。$R_z(90°)\vec e_z=(0,\ 0,\ 1)$、それに $R_x(90°)$ をかけて $(0,\ -1,\ 0)$（②：手前）。図と合っている}
+
+\bkproblem ドローンが地面の点 $(0,\ 0,\ 30)$（m）にいて、ロール0°・ピッチ0°・ヨー90°の姿勢です。地面の点 $(10,\ 10,\ 0)$ は、機体の座標ではどこですか。また、それはドローンから見て、前・後ろ・左・右のどちらの側ですか。
+\bkpans{$\vec p_{\text{地面}}-\vec d=(10,\ 10,\ -30)$。$R_z(90°)^{\mathsf T}$ の行は $(0,\ 1,\ 0)$、$(-1,\ 0,\ 0)$、$(0,\ 0,\ 1)$ なので $(10,\ -10,\ -30)$。$x$ が正で $y$ が負なので、前の右側（下に30 m）}
+
+\bkproblem ドローンが、ヨー $\psi=45°$、ピッチ $\theta=-30°$、ロール $\phi=50°$ の姿勢です。機首の向きを求め、その長さが1であることを確かめましょう（$\cos45°=\sin45°=0.707$、$\cos(-30°)=0.866$、$\sin(-30°)=-0.5$）。
+\bkpans{$x$ 成分 $0.707\times0.866=0.612$、$y$ 成分 $0.612$、$z$ 成分 $0.5$。長さの2乗 $0.612^2+0.612^2+0.5^2=0.375+0.375+0.25=1.000$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 3本の軸のまわりの回転を $R_x$・$R_y$・$R_z$ で表し、点を回せる。\bkfurref{bk:7-7:rz}
+\item ロール・ピッチ・ヨーから機首の向きを求め、順番で向きが変わることを説明できる。\bkfurref{bk:7-7:euler}
+\item 同次変換行列で、腕の手の位置やカメラで見た物の位置を求められる。\bkfurref{bk:7-7:doji}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{空間では、回す順番で向きが変わるんだね。次の 7-8 では、行列をかけても向きが変わらない、特別な矢印をさがそう。}

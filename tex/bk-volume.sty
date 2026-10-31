@@ -1,0 +1,261 @@
+%% bk-volume.sty  1冊を通して組むための仕組み（第4回編集委員会で追加）
+%%   ・思い出そう（前の巻で学んだことの確認）
+%%   ・こたえの自動あつめ  \bkjans{…}（じぶんでとこう）  \bkpans{…}（章末問題）
+%%   ・記号カードの一覧、さくいん（\bkidx{よみ}{語}）
+%%   ・巻末のページ（こたえ・記号カード・定数と単位・さくいん・奥付）
+%%   ・表計算の画面（bksheet）、グラフ（pgfplots の bkplot スタイル）
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bk-volume}[2026/10/17]
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\RequirePackage{multicol}
+\makeatletter
+
+%% ------------------------------------------------------------
+%% 1. 思い出そう
+%% ------------------------------------------------------------
+\newcommand\bk@icon@omoidasu{% まわる矢印
+  \draw[white, line width=0.1*\bk@iu, -{Stealth[length=0.2*\bk@iu, width=0.24*\bk@iu]}] (0.5,0.05) arc (5:290:0.48);
+  \fill[white] (0,0) circle (0.12);}
+\newtcolorbox{omoidasou}{bk base, unbreakable, colframe=bkGray!60, colback=bkPaper, boxrule=0.7pt, arc=2mm,
+  title={\bkicon[1.25em]{omoidasu}{bkGray}\hspace{0.4\zw}\R{思}{おも}い\R{出}{だ}そう\hspace{0.8\zw}{\mdseries\small この\R{章}{しょう}で\R{使}{つか}う、\R{前}{まえ}に\R{学}{まな}んだこと}},
+  colbacktitle=bkPaper, coltitle=bkInk, titlerule=0pt, fonttitle=\sffamily\bfseries, top=1.5mm, bottom=2mm,
+  left=3.5mm, right=3.5mm, fontupper=\small}
+% \bkrecall{章}{内容}  章の札（その巻の色）と1行の説明
+\newcommand\bkrecall[2]{\par\noindent\hangindent=3.4em\hangafter=1
+  \makebox[3.4em][l]{\bk@pill{#1}}#2\par\addvspace{1pt}}
+
+%% ------------------------------------------------------------
+%% 2. こたえの自動あつめ
+%% ------------------------------------------------------------
+\gdef\bk@ansbuf{}\gdef\bk@anslast{}
+\newcommand\bk@ansappend[1]{\xdef\bk@ansbuf{\unexpanded\expandafter{\bk@ansbuf}\unexpanded{#1}}}
+\newcommand\bk@anschap{%
+  \ifx\bk@anslast\bk@chapnum\else
+    \xdef\bk@anslast{\bk@chapnum}%
+    \edef\bk@tmp{\noexpand\bkanschap{\bk@chapnum}}\expandafter\bk@ansappend\expandafter{\bk@tmp}%
+  \fi}
+% じぶんでとこうの答え
+\newcommand\bkjans[1]{\bk@anschap
+  \edef\bk@tmp{\noexpand\bkansitem{j}{\thebkjibun}}\expandafter\bk@ansappend\expandafter{\bk@tmp}%
+  \bk@ansappend{{#1}}}
+% 章末問題の答え
+\newcommand\bkpans[1]{\bk@anschap
+  \edef\bk@tmp{\noexpand\bkansitem{p}{\thebkmondai}}\expandafter\bk@ansappend\expandafter{\bk@tmp}%
+  \bk@ansappend{{#1}}}
+% 答えの組み方
+\newcommand\bkanschap[1]{\par\addvspace{8pt}\noindent
+  \tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, rounded corners=1mm, inner xsep=1.6mm, inner ysep=0.7mm,
+    font=\sffamily\bfseries\footnotesize] (c) {#1};\par\nobreak\vspace{2pt}}
+\newcommand\bkansitem[3]{\par\ifnum\bkvol>1\relax\addvspace{1pt}\fi\noindent\hangindent=3.1em\hangafter=1
+  \makebox[3.1em][l]{\if#1j\tikz[baseline=(c.base)]\node[draw=bkOrange, text=bkOrange!80!black, rounded corners=0.8mm,
+      inner xsep=0.8mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {じ#2};%
+    \else\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, rounded corners=0.8mm, minimum width=1.3em,
+      inner xsep=0.5mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {#2};\fi}%
+  #3\par}
+
+%% ------------------------------------------------------------
+%% 3. 記号カードの一覧（\bkkigocard を使うと、巻末の一覧にも入る）
+%% ------------------------------------------------------------
+\gdef\bk@kigobuf{}
+\let\bk@kigocardorig\bkkigocard
+\renewcommand\bkkigocard[5]{%
+  \xdef\bk@kigobuf{\unexpanded\expandafter{\bk@kigobuf}\unexpanded{\bkkigorow{#1}{#2}{#3}{#5}}}%
+  \bk@kigocardorig{#1}{#2}{#3}{#4}{#5}}
+
+%% ------------------------------------------------------------
+%% 4. さくいん  \bkidx{よみ（ひらがな）}{語}
+%%   ページ番号はページを組んだとき（shipout）に決まる。1回前の組版の結果を読んで並べる。
+%% ------------------------------------------------------------
+\directlua{
+  bk = bk or {}
+  bk.idx = {}
+  function bk.loadidx(fn)
+    local f = io.open(fn, 'r'); if not f then return end
+    for line in f:lines() do
+      local y, w, p = line:match('^(.-)|(.*)|(\@percentchar d+)$')
+      if y then table.insert(bk.idx, {y = y, w = w, p = tonumber(p)}) end
+    end
+    f:close()
+  end
+  local voiced = {}
+  local pairs_ = {'がか','ぎき','ぐく','げけ','ごこ','ざさ','じし','ずす','ぜせ','ぞそ','だた','ぢち','づつ','でて','どと',
+    'ばは','びひ','ぶふ','べへ','ぼほ','ぱは','ぴひ','ぷふ','ぺへ','ぽほ','ぁあ','ぃい','ぅう','ぇえ','ぉお','ゃや','ゅゆ','ょよ','っつ'}
+  for _, s in ipairs(pairs_) do
+    local cs = {}; for _, c in utf8.codes(s) do cs[rawlen(cs) + 1] = c end
+    voiced[cs[1]] = cs[2]
+  end
+  % のばす音「ー」は、前の字の母音として並べる（めーとる → めえとる）
+  local vowel = {}
+  local vrows = {'あかさたなはまやらわがざだばぱぁゃ', 'いきしちにひみりぎじぢびぴぃ', 'うくすつぬふむゆるぐずづぶぷぅゅっ', 'えけせてねへめれげぜでべぺぇ', 'おこそとのほもよろをごぞどぼぽぉょ'}
+  local vchar = {0x3042, 0x3044, 0x3046, 0x3048, 0x304A}
+  for i, r in ipairs(vrows) do for _, c in utf8.codes(r) do vowel[c] = vchar[i] end end
+  local function key(y)
+    local out = {}
+    local prev = nil
+    for _, c in utf8.codes(y) do
+      if c >= 0x30A1 and c <= 0x30F6 then c = c - 0x60 end
+      if c == 0x30FC and prev and vowel[prev] then c = vowel[prev] end
+      prev = c
+      c = voiced[c] or c
+      out[rawlen(out) + 1] = utf8.char(c)
+    end
+    return table.concat(out)
+  end
+  local rows = {{'あ','あいうえお'},{'か','かきくけこ'},{'さ','さしすせそ'},{'た','たちつてと'},{'な','なにぬねの'},
+    {'は','はひふへほ'},{'ま','まみむめも'},{'や','やゆよ'},{'ら','らりるれろ'},{'わ','わをん'}}
+  local function rowof(k)
+    local c = utf8.codepoint(k, 1)
+    for _, r in ipairs(rows) do
+      for _, d in utf8.codes(r[2]) do if d == c then return r[1] end end
+    end
+    return '記号・英字'
+  end
+  function bk.printidx()
+    local merged, order = {}, {}
+    for _, e in ipairs(bk.idx) do
+      local id = e.y .. '|' .. e.w
+      if not merged[id] then merged[id] = {y = e.y, w = e.w, k = key(e.y), ps = {}}; table.insert(order, merged[id]) end
+      merged[id].ps[e.p] = true
+    end
+    table.sort(order, function(a, b)
+      local ra, rb = rowof(a.k) == '記号・英字', rowof(b.k) == '記号・英字'
+      if ra ~= rb then return ra end
+      if a.k ~= b.k then return a.k < b.k end
+      return a.y < b.y end)
+    local cur = nil
+    for _, e in ipairs(order) do
+      local r = rowof(e.k)
+      if r ~= cur then tex.sprint('\string\\bkidxgroup{' .. r .. '}'); cur = r end
+      local ps = {}
+      for p, _ in pairs(e.ps) do table.insert(ps, p) end
+      table.sort(ps)
+      local s = {}
+      for i, p in ipairs(ps) do s[i] = tostring(p) end
+      tex.sprint('\string\\bkidxline{' .. e.w .. '}{' .. table.concat(s, ', ') .. '}')
+    end
+  end
+}
+\newwrite\bk@idxout
+\AtBeginDocument{%
+  \directlua{bk.loadidx('\jobname.bkidx')}%
+  \immediate\openout\bk@idxout=\jobname.bkidx}
+\newcommand\bkidx[2]{\write\bk@idxout{\unexpanded{#1}|\unexpanded{#2}|\thepage}}
+\newcommand\bkidxgroup[1]{\par\addvspace{6pt}\noindent
+  {\sffamily\bfseries\small\color{bkDeep}#1}\par\nobreak\vspace{1pt}{\color{bkVol}\hrule height 0.6pt}\nobreak\vspace{3pt}}
+\newcommand\bkidxline[2]{\par\noindent\hangindent=1em\hangafter=1 {\ltjsetruby{mode=9}#1}\dotfill{\sffamily #2}\par}% mode=9: 行頭のルビのはみ出しで項目の頭が右へずれないように（第12回）
+
+%% ------------------------------------------------------------
+%% 5. 部のはじめ（つめ・柱を部に合わせる）  \bkpartbegin{番号}{部の名前}
+%% ------------------------------------------------------------
+\newcommand\bkpartbegin[2]{%
+  \gdef\bk@partlabel{\R{第}{だい}#1\R{部}{ぶ}}\gdef\bk@partname{#2}\gdef\bk@tabpos{#1}%
+  \pdfbookmark[0]{第#1部　#2}{bkpart#1}}
+
+%% ------------------------------------------------------------
+%% 6. 巻末のページ
+%% ------------------------------------------------------------
+% 巻末の見出し  \bkbacktitle{見出し}
+\newcommand\bkbacktitle[1]{%
+  \clearpage\global\bk@decotrue\bkfolio{true}%
+  \colorlet{bkTheme}{bkVol}%
+  \bksetrunning{}{#1}{#1}\gdef\bk@tabpos{0}%
+  % 第7回：見出しにルビ（\R）があっても、しおりと BKPAGE の名前は親字だけにする
+  {\def\R##1##2{##1}\pdfbookmark[0]{#1}{bkback-#1}\typeout{BKPAGE back #1 \thepage}}%
+  \noindent{\sffamily\bfseries\fontsize{24}{30}\selectfont\color{bkDeep}#1}\par\vspace{1mm}
+  {\color{bkVol}\hrule height 1.4pt}\vspace{4mm}}
+% こたえ
+\newcommand\bkAnswerPages{%
+  \bkbacktitle{こたえ}%
+  {\small 「じぶんでとこう」は\,\tikz[baseline=(c.base)]\node[draw=bkOrange, text=bkOrange!80!black, rounded corners=0.8mm,
+      inner xsep=0.8mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {じ1};\,、\R{章末問題}{しょう|まつ|もん|だい}は\,\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, rounded corners=0.8mm, minimum width=1.3em,
+      inner xsep=0.5mm, inner ysep=0.3mm, font=\sffamily\bfseries\scriptsize] (c) {1};\,のように\R{番号}{ばん|ごう}をつけています。とき\R{方}{かた}は、\R{同}{おな}じ\R{形}{かたち}の\R{例題}{れい|だい}にもどって\R{確}{たし}かめよう。\par}
+  \vspace{3mm}
+  \begin{multicols}{2}\footnotesize\setlength{\parskip}{1pt}\raggedright
+  \ifnum\bkvol>1\relax\bk@anseqbreak\fi
+  \bk@ansbuf
+  \end{multicols}}
+% 第6回：こたえのページでは、長い式を「＝」の前で折り返す（行末に「＝」を残さず、次の行を「＝」から始める）。
+% 数式の中の「＝」だけを、改行してよい印（\penalty）＋もとの「＝」に置きかえる（第2巻から）
+\newcommand\bk@anseqbreak{\Umathcharnumdef\bk@eqchar=\Umathcodenum`\=\relax\mathcode`\=="8000\relax}
+\begingroup\lccode`\~=`\=\lowercase{\endgroup\def~}{\penalty50 \bk@eqchar}
+% 記号カードの一覧
+\newcommand\bkkigorow[4]{#1 & #2 & #3 & #4 \\}
+%% longtblr の見出し・つづきの文字を日本語にする（英語の Continued などを出さない）
+\DefTblrTemplate{caption}{bk}{}
+\DefTblrTemplate{capcont}{bk}{}
+\DefTblrTemplate{contfoot-text}{bk}{\footnotesize\sffamily\color{bkGray}つぎのページへつづく}
+\DefTblrTemplate{conthead-text}{bk}{}
+\SetTblrTemplate{caption}{bk}
+\SetTblrTemplate{capcont}{bk}
+\SetTblrTemplate{contfoot-text}{bk}
+\SetTblrTemplate{conthead-text}{bk}
+\newcommand\bkKigoPages[1]{% #1 = 前の巻の記号の行（\bkkigorow…）
+  \bkbacktitle{\R{記号}{き|ごう}カード}%
+  {\small この\R{巻}{かん}で\R{出}{で}てきた\R{記号}{き|ごう}と、この\R{巻}{かん}でよく\R{使}{つか}う\R{前}{まえ}の\R{巻}{かん}の\R{記号}{き|ごう}です。}\par\vspace{3mm}
+  \begingroup
+  \def\bkkigorow##1##2##3##4{\unexpanded{##1 & ##2 & ##3 & ##4 \\}}%
+  \edef\bk@kigobody{#1\bk@kigobuf}%
+  \footnotesize
+  \begin{longtblr}[expand=\bk@kigobody]{colspec={Q[c,m,wd=18mm] Q[l,m,wd=37mm] Q[l,m,wd=55mm] Q[c,m,wd=12mm]}, rowhead=1,
+    row{1}={bg=bkVol!14, font=\sffamily\bfseries}, rowsep=1.2pt, hlines={0.4pt,bkLine}}
+  \R{記号}{き|ごう} & \R{読}{よ}み\R{方}{かた} & \R{意味}{い|み} & \R{章}{しょう} \\
+  \bk@kigobody
+  \end{longtblr}
+  \endgroup}
+
+%% ------------------------------------------------------------
+%% 7. 表計算の画面  \bksheet{列の数}{列幅（mm）}{行 \\ 行 \\ …}
+%%    1行目に列の名前（A, B, C…）をつける。各行のはじめに行番号を書く（例：1 & t & x \\）
+%% ------------------------------------------------------------
+\NewDocumentCommand\bksheet{m m +m}{%
+  \def\bk@colsp{Q[c,m,wd=5mm,bg=bkLine!45,font=\sffamily\scriptsize]}%
+  \def\bk@sw{#2}\def\bk@sn{#1}\@tempcnta=0\relax
+  \loop\advance\@tempcnta\@ne\edef\bk@colsp{\unexpanded\expandafter{\bk@colsp} Q[r,m,wd=\bk@sw mm]}\ifnum\@tempcnta<\bk@sn\repeat
+  \edef\bk@sheetspec{colspec={\unexpanded\expandafter{\bk@colsp}}, rowsep=0.6pt, colsep=1.6mm, vlines={0.4pt,bkLine}, hlines={0.4pt,bkLine},
+    row{1}={bg=bkLine!45, font=\noexpand\sffamily\noexpand\scriptsize, halign=c}, cells={font=\noexpand\sffamily\noexpand\footnotesize}}%
+  \edef\bk@sheethead{\ifcase#1\or & A\or & A & B\or & A & B & C\or & A & B & C & D\or & A & B & C & D & E\or & A & B & C & D & E & F\or & A & B & C & D & E & F & G\fi}%
+  \expandafter\bk@sheet\expandafter{\bk@sheetspec}{#3}}
+\newcommand\bk@sheet[2]{\expandafter\bk@sheetb\expandafter{\bk@sheethead}{#1}{#2}}
+\newcommand\bk@sheetb[3]{\begin{tblr}{#2}#1\\#3\end{tblr}}
+
+%% ------------------------------------------------------------
+%% 8. グラフ（pgfplots）の共通スタイル
+%% ------------------------------------------------------------
+% 第7回：「axis on top」の層の組では格子が線や面の上に出てしまうので、格子を main（線・面）の下、
+% 軸・目もり・目もり数字を main の上に置く層の組 bk を作って使う
+\pgfplotsset{/pgfplots/layers/bk/.define layer set={axis background,axis grid,pre main,main,axis ticks,axis lines,axis tick labels,axis descriptions,axis foreground}{/pgfplots/layers/standard}}
+\pgfplotsset{
+  bkplot/.style={axis lines=middle, axis line style={-{Stealth[length=5pt]}, line width=0.8pt, bkInk},
+    % 第6回：目もりの数字の上を格子の線や色の面が通らないように、数字のうしろを白くうすく敷く
+    tick label style={font=\sffamily\footnotesize, text=bkInk}, label style={font=\sffamily\small, text=bkInk},
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=west, xshift=1mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk},
+    % 第6回・第7回：軸・目もり数字は面や線の上に出し、格子の線だけは線や面のうしろに置く（層の組 bk）
+    set layers=bk, grid=major, grid style={bkLine, line width=0.3pt}, major tick length=2pt,
+    every axis plot/.append style={line width=1.6pt}, samples=100, clip=false,
+    enlargelimits=false, scaled ticks=false,
+    % 第7回：目もりの数字に千の位のカンマをつけない（本文・表と同じ書き方）
+    /pgf/number format/1000 sep={}},
+  bkcurve/.style={bkBlue, line width=1.7pt},
+  bkcurve2/.style={bkOrange, line width=1.7pt},
+  bkcurve3/.style={bkGreen, line width=1.7pt},
+  bkthin/.style={bkGray, line width=0.9pt},
+}
+
+%% ------------------------------------------------------------
+%% 9. 序章は \bkchapter{巻}{0}{題名}{★}{柱} で書く（番号の丸に「序章」と出る）
+%% ------------------------------------------------------------
+%% 10. 数式でよく使う書き方
+%% ------------------------------------------------------------
+\newcommand\dd{\mathrm{d}}
+\newcommand\diff[2]{\frac{\dd #1}{\dd #2}}
+\newcommand\difft[2]{\frac{\dd^2 #1}{\dd #2^2}}
+\newcommand\eval[3]{\Bigl[\,#1\,\Bigr]_{#2}^{#3}}
+\newcommand\bkbig[1]{\par\addvspace{3pt}\noindent\hfill{\large$\displaystyle #1$}\hfill\null\par\addvspace{3pt}}
+
+% 仮の章（ページ数だけ確保する）
+\newcommand\bkstubpages[1]{\par\vspace{1cm}\noindent{\Large（仮）}\par
+  \@tempcnta=1\relax\loop\ifnum\@tempcnta<#1\relax\clearpage\null\advance\@tempcnta\@ne\repeat\clearpage}
+\makeatother
+\endinput

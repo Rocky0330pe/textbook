@@ -1,0 +1,1417 @@
+%% 8-8 面を通りぬける量：面積分と流束（第14回：組 V8-5。ページ制限なし。偶数ページ）
+%% 依頼者の指示（10月29日 13:34）の中心の章。「名前と操作」の型（tools/kata8-int.md、kviiig → kviiii）で書いた：
+%%   名前の段・直す段・楽をする段、場合分けの表8-8（A〜J）と流れ図、例題の1行めに「場合：…（表8-8の…）」。
+%%   ∯ の◯は「閉じている」印（⑪・まちがえやすいところ⑥・専門書）。袋の形を変えても同じ（⑫・例題11）。
+%% ほかの巻・物理の本との約束：
+%%   4-13（ch4-13:623）平面 2x+y+2z=6 の三角形：面積 13.5、(1,1,1) の流束 22.5（④）。
+%%   物理 p1-12:668・p1-13:384「外向きの単位ベクトル n」「ρ v・n dS（流束）」（②③）。
+%%   8-6 のパイプ（R=1 cm、u_max=0.2 m/s、31.4 mL/s）（⑥）。立方体 (x^2, xy, -z) の 0.5（⑪、8-9・8-11 と同じ）。
+%%   数はすべて Python で検算した（scratchpad/v8-5/c88.py・face.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata8-int.md、組 V8-4）。頭文字 kviiii =====
+\colorlet{kviiiiNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kviiiiSc}{bkTheme}% ふつうの定積分の枠の線（実線）
+\colorlet{kviiiiSb}{bkTheme!8}% ふつうの定積分の地
+\tikzset{
+  kviiii dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kviiii dan1/.style={kviiii dan, draw=kviiiiNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kviiii dan2/.style={kviiii dan, draw=kviiiiSc, fill=kviiiiSb, text=bkInk},
+  kviiii dan3/.style={kviiii dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kviiii name/.style={draw=kviiiiNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kviiii seki/.style={draw=kviiiiSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kviiiiSb},
+  kviiii tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kviiii q/.style={diamond, aspect=2.4, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=center, inner sep=0.3mm, text=bkInk},
+  kviiii do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kviiii go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kviiii yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 段の札（例題の中で）  \kviiiidan{1|2|3}
+\newcommand\kviiiidan[1]{\tikz[baseline=(d.base)]\node[kviiii dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 段の見出し（本文で）  \kviiiidanhead{1|2|3}{見出し}
+\newcommand\kviiiidanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kviiii dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kviiiicase{C}（′ は \kviiiicase{A$'$}）
+\newcommand\kviiiicase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kviiiibaai{ことば}{8-6}{C}（場合が2つなら {C,G}）
+\newcommand\kviiiibaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kviiii@cases#3,\@nil）}
+\def\kviiii@cases#1,#2\@nil{\kviiiicase{#1}\ifx\relax#2\relax\else と\kviiii@cases#2\@nil\fi}
+% 式の中の「名前」と「ふつうの定積分」
+\newcommand\kviiiiN[1]{\tikz[baseline=(n.base)]\node[kviiii name] (n) {$\displaystyle #1$};}
+\newcommand\kviiiiS[1]{\tikz[baseline=(n.base)]\node[kviiii seki] (n) {$\displaystyle #1$};}
+\newcommand\kviiiiNt[1]{\tikz[baseline=(n.base)]{\node[kviiii name] (n) {$\displaystyle #1$};\node[kviiii tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kviiiiSt[1]{\tikz[baseline=(n.base)]{\node[kviiii seki] (n) {$\displaystyle #1$};\node[kviiii tag, anchor=north] at ([yshift=-0.8mm]n.south) {ふつうの定積分};}}
+% 場合分けの表の題の帯  \kviiiicasetitle{8-6}{題}
+\newcommand\kviiiicasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% タイルの小さな絵（対応表の左の列）  \kviiiipic{1〜7}
+\newcommand\kviiiipic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkInk, line width=0.6pt] (0,0) -- (14,0);
+  \foreach \kviiiix/\kviiiih in {3/3.9,5/4.6,7/4.6,9/4.5,11/5.1} {\filldraw[fill=bkTheme!25, draw=bkTheme, line width=0.4pt] ({\kviiiix-1},0) rectangle ({\kviiiix+1},\kviiiih);}
+  \draw[bkInk!80, line width=0.7pt] (1,3.2) .. controls (5,6) and (9,3) .. (13,5.6);
+  \or
+  \draw[bkGray, line width=0.4pt, step=2.5] (0,0) grid (12.5,7.5);
+  \fill[bkTheme!45] (5,2.5) rectangle (7.5,5);
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (12.5,7.5);
+  \or
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (9,6) (0,6) -- (3,8.5) -- (12,8.5) -- (9,6) (12,8.5) -- (12,2.5) -- (9,0);
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (3.5,1.5) rectangle (5.5,3.5) (3.5,3.5) -- (4.3,4.2) -- (6.3,4.2) -- (5.5,3.5) (6.3,4.2) -- (6.3,2.2) -- (5.5,1.5);
+  \or
+  \draw[bkInk, line width=0.7pt] (0,1) .. controls (4,8) and (8,-1) .. (13,6);
+  \draw[bkTheme, line width=1.8pt] (5.2,3.75) -- (7.4,2.9);
+  \or
+  \draw[bkInk, line width=0.7pt] (0,1) .. controls (4,8) and (8,-1) .. (13,6);
+  \draw[bkTheme, line width=1.3pt, -{Stealth[length=1.8mm]}] (4.6,3.95) -- (7.8,2.85);
+  \or
+  \draw[bkInk, line width=0.6pt] (0,1) .. controls (4,4) and (8,4) .. (12,1) -- (13,6) .. controls (9,9) and (5,9) .. (1,6) -- cycle;
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (5,3.6) -- (7.4,3.6) -- (7.8,5.8) -- (5.4,5.8) -- cycle;
+  \or
+  \draw[bkInk, line width=0.6pt] (0,1) .. controls (4,4) and (8,4) .. (12,1) -- (13,6) .. controls (9,9) and (5,9) .. (1,6) -- cycle;
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.4pt] (5,3.6) -- (7.4,3.6) -- (7.8,5.8) -- (5.4,5.8) -- cycle;
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=1.8mm]}] (6.4,4.7) -- (6.4,10.5);
+  \fi
+\end{tikzpicture}}
+%% ===== この章の部品 =====
+\tikzset{
+  kviiii flow/.style={-{Stealth[length=5pt, width=4.4pt]}, line width=1.2pt, bkTheme},
+  kviiii nv/.style={-{Stealth[length=6pt, width=5pt]}, line width=1.5pt, bkRed!85!black},
+  kviiii comp/.style={-{Stealth[length=5pt, width=4.4pt]}, line width=1.2pt, bkOrange!85!black, dash pattern=on 3pt off 1.5pt},
+  kviiii net/.style={bkInk, line width=1.6pt},
+  kviiii lab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1pt},
+  kviiii 3d/.style={x={(-2.6mm,-1.9mm)}, y={(5mm,0mm)}, z={(0mm,5mm)}},
+}
+% 小見出し（太字の1行）
+\newcommand\kviiiihead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiiibox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviiiiline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviiiiframe[はば]{中身}
+\newcommand\kviiiiframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviiiia{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviiiib{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviiiis{\rightskip=0pt plus 8em\relax}
+% 上から見た川と網  \kviiiinet{(原点)}{網の角（法線と流れの角、度）}{下のことば}
+\newcommand\kviiiinet[3]{\begin{scope}[shift={#1}]
+  \fill[bkBlueBg] (0,0) rectangle (52,34);
+  \draw[bkGray, line width=0.9pt] (0,0) -- (52,0) (0,34) -- (52,34);
+  \foreach \kviiiiy in {6,13,21,28} {\draw[kviiii flow] (2,\kviiiiy) -- (12,\kviiiiy); \draw[kviiii flow] (40,\kviiiiy) -- (50,\kviiiiy);}
+  \begin{scope}[shift={(26,17)}, rotate=#2]
+    \draw[kviiii net] (0,-11) -- (0,11);
+    \foreach \kviiiiw in {-9,-6,...,9} {\draw[bkInk!50, line width=0.4pt] (-0.9,\kviiiiw) -- (0.9,\kviiiiw);}
+  \end{scope}
+  \node[kviiii lab, anchor=north, align=center] at (26,-1.5) {#3};
+\end{scope}}
+\makeatother
+
+\bkchapter{8}{8}{面を通りぬける量：\\面積分と流束}{\bklevel{5}}{面を通りぬける量：面積分と流束}
+\bkmichishirube{4-12,4-13,4-14,4-15,5-12,8-5,8-6}{8-9,8-11,8-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 網を通る水の量が、流れの「面に直角な成分」×面積で決まることを説明できる。
+\item \bklevel{4}\enspace 平らな面の流束を、法線ベクトルの内積と重積分で求められる。
+\item \bklevel{5}\enspace 場合分けの表で、曲がった面や閉じた面の面積分をふつうの定積分に直せる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+川の流れの中に、虫とりに使う四角い網（面積 \qty{0.5}{m^2}）を入れます。水はどこでも同じ速さ \qty{2}{m/s} で、まっすぐ流れています。網を流れに正面から向けたときと、網を回して \ang{60} かたむけたときでは、1秒間に網を通りぬける水の量はどうちがうでしょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiiinet{(0,0)}{0}{正面に向けた網}
+  \kviiiinet{(66,0)}{60}{\ang{60} 回した網}
+\end{tikzpicture}
+\end{bkfigure}
+\end{hatena}
+
+\noindent 8-5 では、場所ごとに矢印がある「ベクトル場」を学びました。8-6 では、面を小さなタイルに分けて量をたす「重積分」を学びました。この章では、2つを合わせて、\textbf{矢印の場が、面を通りぬける量}を求めます。
+
+川を流れる水の量、電線を流れる電流、窓から入る風、太陽電池のパネルに当たる光、コイルを通りぬける磁場。どれも「面を通りぬける量」です。
+
+この章の記号 $\iint_S\vec F\cdot\vec n\,\dd S$（面積分）も、8-6 と同じく\textbf{操作の名前}です。答えを出すには、ふつうの定積分に\textbf{直す}必要があります。どう直すかは、面の形と場のようすで決まります。「こんな面のときは、こう直す」を、場合ごとにていねいに見ていきます。
+
+★★★★★の章ですが、「目でわかる」「手でわかる」の段は、図と、内積（4-12）・8-6 の重積分だけで読めるように書きました。1回で分からなくても大丈夫です。図と数にもどりながら、ゆっくり進みましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[かたむけると、受ける水がへる？]
+\textbf{用意するもの}\quad 平らなトレイ（四角いバットなど）、シャワー（または、じょうろ）、計量カップ、分度器、時計
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item シャワーを真下に向けて、同じ強さで出し続ける。
+\item トレイを水平にして、シャワーの下で 30 秒間水を受ける。たまった水を計量カップではかる。
+\item トレイを \ang{30}、\ang{60} かたむけて同じようにはかり、水平のときの何倍かを計算しよう（ふちの高いトレイで）。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiiio/\kviiiia/\kviiiil in {0/0/水平, 44/30/\ang{30}, 88/60/\ang{60}} {
+  \begin{scope}[shift={(\kviiiio,0)}]
+    \filldraw[fill=bkGray!25, draw=bkInk, line width=0.7pt, rounded corners=1mm] (12,22) rectangle (28,25);
+    \foreach \kviiiix in {13,16,...,28} {\draw[bkBlue!70!black, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (\kviiiix,20.5) -- (\kviiiix,10);}
+    \draw[bkInk, line width=2pt, rotate around={\kviiiia:(20,7)}] (12,7) -- (28,7);
+    \node[kviiii lab, anchor=north] at (20,0) {\kviiiil};
+  \end{scope}}
+\end{tikzpicture}
+\end{bkfigure}
+\end{yattemiyou}
+
+\noindent たとえば、次のような結果になります（シャワーの強さで数は変わります）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,38mm] Q[c,m,22mm] Q[c,m,20mm] Q[c,m,20mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+トレイのかたむき & \ang{0}（水平） & \ang{30} & \ang{60} \\
+30 秒でたまった水 & \qty{300}{mL} & \qty{260}{mL} & \qty{150}{mL} \\
+水平のときの何倍か & 1 & 0.87 & 0.5 \\
+\end{bktable}
+\bktabcaption{トレイをかたむけると、受ける水がへる。\ang{60} では、ちょうど半分。}
+\label{bk:8-8:tab-tray}
+\end{bkcenter}
+
+トレイの大きさは同じなのに、かたむけると受ける水がへりました。真上から見ると、かたむいたトレイは小さく見えます。雨つぶ（シャワーの水）は真上から落ちてくるので、トレイが受けるのは、「\textbf{真上から見たときの大きさ}」の分だけなのです。0.87 と 0.5 という数は、$\cos\ang{30}\approx0.87$、$\cos\ang{60}=0.5$ です。なぜ $\cos$ が出てくるのかを、これから調べます。
+
+\begin{omoidasou}
+\bkrecall{4-12}{内積 $\vec a\cdot\vec b=|\vec a||\vec b|\cos\theta=a_xb_x+a_yb_y+a_zb_z$。$\theta$ は2つの矢印のなす角。直角なら0。}
+\bkrecall{4-13}{平面 $ax+by+cz=d$ の向きは、平面に直角な矢印（法線ベクトル）$(a,\ b,\ c)$ で表す。}
+\bkrecall{4-14}{外積 $\vec a\times\vec b$ は、$\vec a$ と $\vec b$ の両方に直角な矢印で、長さは2つがつくる平行四辺形の面積。}
+\bkrecall{8-6}{重積分 $\iint_D f\,\dd A$ は操作の名前。場所を2つの数で表して、ふつうの定積分を2回くり返す形に直して計算する。円は極座標で $\dd A=r\,\dd r\,\dd\theta$。}
+\bkrecall{5-12}{パイプを流れる水の量（流量）は、速さ×断面積。1秒間に通る体積で、単位は \unit{m^3/s}。}
+\bkrecall{4-15}{球座標：原点からの距離 $r$、真上（$z$ 軸）からの角 $\theta$、床の上の角 $\varphi$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{面に直角な成分だけが通りぬける}{\bklevel{3}}
+
+\bksubsection{1}{通りぬけるのは、面に直角な成分}
+
+\label{bk:8-8:chokkaku}\bkhatenaref の網で考えます。網を正面に向けると、水は網にまっすぐ当たり、1秒間に「速さ×面積」$=2\times0.5=\qty{1.0}{m^3}$ の水が通りぬけます（5-12 の流量と同じ）。
+
+では、網をかたむけるとどうなるでしょう。流れの矢印 $\vec v$ を、網に\textbf{直角な成分}と、網に\textbf{そった成分}の2つに分けてみます（4-12 で、力を2つの向きに分けたのと同じ）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：成分に分ける
+  \begin{scope}[scale=1.25]
+    \draw[kviiii net] (14.72,-8.5) -- (-14.72,8.5);
+    \foreach \kviiiit in {-14,-10,...,14} {\draw[bkInk!50, line width=0.4pt] ({-0.866*\kviiiit-0.45},{0.5*\kviiiit-0.78}) -- ++(0.9,1.56);}
+    \draw[kviiii flow, bkGray!80!black, line width=1.4pt] (0,0) -- (24,0);
+    \draw[kviiii nv] (-10.4,6) -- ++(5,8.66);
+    \draw[kviiii comp] (0,0) -- (6,10.39);
+    \draw[kviiii comp] (0,0) -- (18,-10.39);
+    \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (6,10.39) -- (24,0) -- (18,-10.39);
+    \draw[bkInk, line width=0.6pt] (4,0) arc (0:60:4);
+    \node[kviiii lab, anchor=west] at (4.6,2.4) {$\theta$};
+    \node[kviiii lab, anchor=west] at (25,0) {$\vec v$};
+    \node[kviiii lab, anchor=south] at (-5.4,15.2) {$\vec n$};
+    \node[kviiii lab, anchor=south west, align=left] at (7,11.5) {直角な成分 $v\cos\theta$};
+    \node[kviiii lab, anchor=west] at (19,-10.5) {そった成分};
+    \node[kviiii lab, anchor=north] at (5,-14) {① 成分に分ける};
+  \end{scope}
+  % 右：見かけの大きさ
+  \begin{scope}[shift={(90,0)}]
+    \fill[bkGray!15] (-24,-8.5) rectangle (-20,8.5);
+    \draw[bkInk, line width=1pt] (-22,-8.5) -- (-22,8.5);
+    \foreach \kviiiiy in {-6,-2,2,6} {\draw[kviiii flow] (-19,\kviiiiy) -- ({-2-\kviiiiy*1.732},\kviiiiy);}
+    \draw[kviiii net] (14.72,-8.5) -- (-14.72,8.5);
+    \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (-22,8.5) -- (-14.72,8.5) (-22,-8.5) -- (14.72,-8.5);
+    \node[kviiii lab, anchor=north, align=center] at (-22,-10) {見かけ\\$A\cos\theta$};
+    \node[kviiii lab, anchor=north] at (12,-11) {網（面積 $A$）};
+    \node[kviiii lab, anchor=south] at (0,11) {② 流れの向きから見た大きさ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{網を横から見た図。流れ $\vec v$ と、網に直角な向き $\vec n$ のなす角を $\theta$ とする。①網を通りぬけるのは、網に直角な成分 $v\cos\theta$ だけ。②流れの向きから見ると、網は $A\cos\theta$ の大きさにしか見えない。}
+\label{bk:8-8:fig-seibun}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item \textbf{成分に分けて考える}\par\nobreak\noindent 網にそった成分は、網の面にそって流れるだけで、網を通りぬけません。通りぬけるのは、網に直角な成分 $v\cos\theta$ だけです（$\theta$ は、流れと「網に直角な向き」のなす角）。だから、1秒間に通る量は $(v\cos\theta)\times A$ です。
+\item \textbf{見かけの大きさで考える}\par\nobreak\noindent 流れの向きから見ると、かたむいた網は、はばが $A\cos\theta$ の網と同じに見えます。網の外を通る水は、通りぬけません。だから、通る量は $v\times(A\cos\theta)$ です。やってみようのトレイと同じ考えです。
+\end{enumerate}
+どちらで考えても、同じ式になります。
+\kviiiiframe[96mm]{1秒間に面を通りぬける量 $=vA\cos\theta$\\[2pt]\normalsize\sffamily（$\theta$ は、流れと「面に直角な向き」のなす角）}
+
+\kviiiihead{\bkhatenaref の答え}
+網を \ang{60} 回すと、流れと「網に直角な向き」のなす角も \ang{60} になります。
+\begin{bkhenkei}[0.5]
+vA\cos\ang{0}=2\times0.5\times1=1.0 & 正面に向けた網 \\
+vA\cos\ang{60}=2\times0.5\times0.5=0.5 & \ang{60} 回した網 \\
+\end{bkhenkei}
+正面なら1秒間に \qty{1.0}{m^3}、\ang{60} 回すと \qty{0.5}{m^3} で、ちょうど半分になります。網をどんどん回して \ang{90}（網が流れと平行）にすると、$\cos\ang{90}=0$ で、水はまったく通りぬけません。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,40mm] Q[c,m,13mm] Q[c,m,13mm] Q[c,m,13mm] Q[c,m,13mm] Q[c,m,13mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+網の角 $\theta$ & \ang{0} & \ang{30} & \ang{45} & \ang{60} & \ang{90} \\
+$\cos\theta$ & 1 & 0.866 & 0.707 & 0.5 & 0 \\
+通る量（\unit{m^3/s}） & 1.0 & 0.87 & 0.71 & 0.5 & 0 \\
+\end{bktable}
+\bktabcaption{\bkhatenaref の網（\qty{2}{m/s}、\qty{0.5}{m^2}）の角を変えたとき。}
+\end{bkcenter}
+
+\bksubsection{2}{面の向きを、矢印で表す}
+
+\label{bk:8-8:muki}「面に直角な向き」は、面ごとに決まります。4-13 で、平面の向きを、平面に直角な矢印（\textbf{法線ベクトル}）で表しました。ここでは、長さを1にそろえた法線ベクトルを $\vec n$（エヌ）と書きます。物理の本と同じ文字です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 平らな面と表・裏
+  \begin{scope}
+    \filldraw[fill=bkTheme!12, draw=bkInk, line width=0.8pt] (0,0) -- (30,0) -- (40,12) -- (10,12) -- cycle;
+    \draw[kviiii nv] (20,6) -- (20,24);
+    \draw[bkRed!85!black, line width=1.2pt, dash pattern=on 2pt off 1.5pt, -{Stealth[length=5pt]}] (20,4.5) -- (20,-10);
+    \node[kviiii lab, anchor=west] at (21,22) {$\vec n$（こちらを「表」に決めた）};
+    \node[kviiii lab, anchor=west] at (21.5,-8) {$-\vec n$（裏）};
+    \node[kviiii lab, anchor=north] at (20,-13) {① 平らな面：どちらかを表に決める};
+  \end{scope}
+  % 閉じた面と外向き
+  \begin{scope}[shift={(96,4)}]
+    \filldraw[fill=bkTheme!12, draw=bkInk, line width=0.8pt] (0,0) ellipse (14 and 11);
+    \foreach \kviiiia in {0,45,...,315} {\draw[kviiii nv, line width=1.2pt] (\kviiiia:14 and 11) -- ++(\kviiiia:7);}
+    \node[kviiii lab, anchor=north] at (0,-17) {② 閉じた面：外向きに決める};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{面の向きを表す法線ベクトル $\vec n$（長さ1）。平らな面や開いた面では、どちらを表（正）にするかを先に決める。閉じた面では、いつも外向きにとる。}
+\label{bk:8-8:fig-hyouri}
+\end{bkfigure}
+
+面には表と裏があります。どちらの向きに通りぬけた量を正（プラス）にするかを、先に決めておかなければなりません。
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{開いた面}（網、窓、ドームの屋根）では、問題に合わせて「上向き」「流れの向き」などと決めます。反対向きに通る量は負（マイナス）になります。
+\item \textbf{閉じた面}（ボール、箱、袋の表面）では、いつも\textbf{外向き}にとります。物理の本（力-12・力-13）の「物の表面の外向きの単位ベクトル $\vec n$」は、これのことです。外へ出る量が正、中へ入る量が負になります。
+\end{itemize}
+
+\kviiiihead{内積を使うと、$\cos$ が自動で出てくる}
+流れ $\vec v$ と $\vec n$ の内積は、$|\vec n|=1$ なので $\vec v\cdot\vec n=|\vec v|\times1\times\cos\theta=v\cos\theta$ です。これは、ちょうど「面に直角な成分」です。だから、通りぬける量は
+\kviiiiframe[80mm]{$(\vec v\cdot\vec n)\times A$}
+と書けます。内積なら、成分どうしをかけてたすだけで、角度を測らなくても計算できます。
+
+たとえば\bkhatenaref の \ang{60} の網なら、流れは $\vec v=(2,\ 0,\ 0)$、網の $\vec n=(\cos\ang{60},\ \sin\ang{60},\ 0)=(0.5,\ 0.866,\ 0)$ です。
+\kviiiiline{$\vec v\cdot\vec n=2\times0.5+0\times0.866+0\times0=1.0$\qquad $1.0\times0.5=\qty{0.5}{m^3/s}$}
+図を見なくても、同じ答えが出ました。$\vec n$ に面積 $A$ をかけた矢印 $A\vec n$ を、\textbf{面積ベクトル}とよぶこともあります。向きが面の向き、長さが面積です。
+
+\bksubsection{3}{流束：面を通りぬける量の名前}
+
+\label{bk:8-8:ryusoku}1秒間に面を通りぬける量を、\textbf{流束}（りゅうそく）といいます。\bkidx{りゅうそく}{流束}英語では flux（フラックス：流れ）です。流束は、水の流れだけのことばではありません。「1\,m$^2$ を1秒間に通る量」の矢印の場があれば、どれにでも使えます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,30mm] Q[l,m,46mm] Q[l,m,40mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+矢印の場 & その場の流束 & 単位 \\
+水の速さ $\vec v$ & 1秒間に通る水の体積（流量） & \unit{m^3/s} \\
+$\rho\vec v$（密度×速さ） & 1秒間に通る質量（物理 力-13） & \unit{kg/s} \\
+電流密度 $\vec j$ & 電流 & \unit{A} \\
+熱の流れ $\vec q$（8-4） & 1秒間に通る熱（熱の流れの量） & \unit{W} \\
+電場 $\vec E$ & 電場の流束 $\Phi_E$（電気力線の本数のもと） & \unit{N.m^2/C} \\
+磁場 $\vec B$ & 磁束（コイルを通る磁場） & \unit{Wb}（ウェーバ） \\
+\end{bktable}
+\bktabcaption{いろいろな流束。どれも「矢印の場の、面に直角な成分×面積」をたしたもの。}
+\label{bk:8-8:tab-ryusoku}
+\end{bkcenter}
+
+電場や磁場は、本当に何かが流れているわけではありません。それでも、同じ計算をするので、同じ「束」の字を使います。電場の流束 $\Phi_E$ は 8-11 のガウスの法則で、磁場の流束（磁束）は 8-14 の発電の式で使います。なお、電気工学の本では、電束密度 $\vec D=\varepsilon_0\vec E$ の流束を「電束」（単位 C）とよびます。そのときガウスの法則は $\oiint\vec D\cdot\vec n\,\dd S=Q$ です。
+
+%% ---------------- 手でわかる ----------------
+\Needspace{8\baselineskip}
+\bkstage{te}{手でわかる}{平らな面なら、内積と重積分}{\bklevel{4}}
+
+\bksubsection{4}{平らな面で、場がどこでも同じとき}
+
+\label{bk:8-8:taira}\kviiiidanhead{3}{積分しない：場がどこでも同じなら}
+場がどこでも同じ（一様）で、面が平らなら、面の上のどこでも $\vec v\cdot\vec n$ は同じです。だから、たし合わせる必要はなく、
+\kviiiiframe[96mm]{流束 $=(\vec F\cdot\vec n)\times A=\vec F\cdot(A\vec n)$}
+で求められます。むずかしいのは、面が空間の中でななめのときに、$\vec n$ と面積 $A$ を求めることです。外積（4-14）を使います。
+
+\kviiiihead{4-13 の平面を通りぬける量}
+4-13 で、平面 $2x+y+2z=6$ の法線ベクトルは $(2,\ 1,\ 2)$ だと学び、「平面を通りぬける水や電気の量を計算するときに使う」と予告しました。この平面の、座標軸で切りとられた三角形を考えます。頂点は、軸と交わる3つの点 $\mathrm A(3,\ 0,\ 0)$、$\mathrm B(0,\ 6,\ 0)$、$\mathrm C(0,\ 0,\ 3)$ です（$y=z=0$ を入れると $2x=6$ で $x=3$。ほかも同じ）。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x={(-3.2mm,-2.4mm)}, y={(6.6mm,0mm)}, z={(0mm,7mm)}]
+  \draw[bk axis] (0,0,0) -- (5,0,0) node[anchor=north east, bk label, inner sep=1pt] {$x$};
+  \draw[bk axis] (0,0,0) -- (0,7.4,0) node[anchor=west, bk label] {$y$};
+  \draw[bk axis] (0,0,0) -- (0,0,4.5) node[anchor=south, bk label] {$z$};
+  \filldraw[fill=bkTheme!18, draw=bkInk, line width=0.8pt] (3,0,0) -- (0,6,0) -- (0,0,3) -- cycle;
+  \draw[kviiii comp, bkOrange!85!black] (3,0,0) -- (0,6,0);
+  \draw[kviiii comp, bkGreen!60!black] (3,0,0) -- (0,0,3);
+  \draw[kviiii nv] (1,2,1) -- (2.2,2.6,2.2);
+  \node[kviiii lab, anchor=north] at (3,0,0) {A};
+  \node[kviiii lab, anchor=north] at (0,6,0) {B};
+  \node[kviiii lab, anchor=east] at (0,0,3) {C};
+  \node[kviiii lab, anchor=south west] at (2.2,2.6,2.2) {$\vec n$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\raggedright
+三角形の2つの辺を矢印にします。
+\[ \overrightarrow{\mathrm{AB}}=(-3,\ 6,\ 0) \]
+\[ \overrightarrow{\mathrm{AC}}=(-3,\ 0,\ 3) \]
+この2本がつくる平行四辺形の、ちょうど半分が三角形です。
+\end{minipage}
+\bkfigcaption{平面 $2x+y+2z=6$ の、座標軸で切りとられた三角形。オレンジと緑の矢印が2つの辺、赤い矢印が面の向き。}
+\label{bk:8-8:fig-sankaku}
+\end{bkfigure}
+
+外積 $\overrightarrow{\mathrm{AB}}\times\overrightarrow{\mathrm{AC}}$ は、2本の両方に直角（つまり面に直角）で、長さが平行四辺形の面積の矢印でした（4-14）。成分で計算します。
+\begin{bkhenkei}[0.52]
+x\text{ 成分}=6\times3-0\times0=18 & 2つめ×3つめ－3つめ×2つめ \\
+y\text{ 成分}=0\times(-3)-(-3)\times3=9 & 3つめ×1つめ－1つめ×3つめ \\
+z\text{ 成分}=(-3)\times0-6\times(-3)=18 & 1つめ×2つめ－2つめ×1つめ \\
+\end{bkhenkei}
+外積は $(18,\ 9,\ 18)$ です。三角形は平行四辺形の半分なので、半分にした $(9,\ 4.5,\ 9)$ が、三角形の面積ベクトル $A\vec n$ です。
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item 向きは $(9,\ 4.5,\ 9)=4.5\times(2,\ 1,\ 2)$ で、4-13 の法線ベクトル $(2,\ 1,\ 2)$ と同じ向きです。
+\item 長さ（三角形の面積）は $\sqrt{9^2+4.5^2+9^2}=\sqrt{182.25}=13.5$ です。
+\end{itemize}
+どこでも同じ流れ $\vec F=(1,\ 1,\ 1)$（\unit{m/s}）がこの三角形を通りぬける量は、内積で
+\kviiiiline{$\vec F\cdot(A\vec n)=1\times9+1\times4.5+1\times9=\qty{22.5}{m^3/s}$}
+です。面積 13.5 や角度を別に出さなくても、外積の矢印と内積だけで求められました。
+
+\kviiiihead{屋根に降る雨：かたむきによらない}
+真下に降る雨を受ける屋根を考えます。屋根は、上から見ると \qty{10}{m}×\qty{6}{m} の長方形で、\ang{30} かたむいています。雨は1時間に \qty{5}{mm}（\qty{0.005}{m}）の速さで降るとします（1時間に \qty{5}{mm} たまる雨。傘がないとぬれる、ふつうの雨）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!15] (0,-1.5) rectangle (60,0);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (60,0);
+  \filldraw[fill=bkOrange!20, draw=bkInk, line width=1.4pt] (0,10) -- (60,44.64) -- (60,42.6) -- (0,8) -- cycle;
+  \foreach \kviiiix in {6,14,...,54} {\draw[bkBlue!70!black, line width=0.7pt, -{Stealth[length=3pt]}] (\kviiiix,{60}) -- (\kviiiix,{12+0.577*\kviiiix});}
+  \draw[kviiii nv] (30,27.3) -- ++(-5,8.66);
+  \node[kviiii lab, anchor=south] at (25,36.5) {$\vec n$};
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (0,8) -- (0,0) (60,42.6) -- (60,0);
+  \draw[bkInk, line width=0.6pt, <->] (0,-5) -- (60,-5);
+  \node[kviiii lab, anchor=north] at (30,-6) {上から見たはば \qty{10}{m}};
+  \node[kviiii lab, anchor=west, align=left] at (64,30) {屋根の本当の面積は\\$60\div\cos\ang{30}\approx\qty{69.3}{m^2}$\\雨と $\vec n$ の角も \ang{30}};
+\end{tikzpicture}
+\bkfigcaption{\ang{30} かたむいた屋根（横から見た図）。屋根の本当の面積は大きいが、雨は面にななめに当たる。}
+\label{bk:8-8:fig-yane}
+\end{bkfigure}
+
+屋根の本当の面積は、上から見た面積 $10\times6=\qty{60}{m^2}$ より大きく、次のようになります（かたむいた辺は、上から見た長さの $\tfrac{1}{\cos\ang{30}}$ 倍だから）。
+\[ \frac{60}{\cos\ang{30}}\approx\qty{69.3}{m^2} \]
+いっぽう、雨（真下向き）と屋根の $\vec n$ のなす角も \ang{30} です（屋根を \ang{30} かたむけると、$\vec n$ も真上から \ang{30} かたむく）。だから、
+\begin{bkhenkei}[0.5]
+0.005\times\frac{60}{\cos\ang{30}}\times\cos\ang{30} & 雨の速さ×本当の面積×$\cos\theta$ \\
+=0.005\times60=0.3 & $\cos\ang{30}$ が約分されて消える \\
+\end{bkhenkei}
+1時間に \qty{0.3}{m^3}（\qty{300}{L}）の雨水が、屋根に集まります。かたむきが何度でも、$\cos$ は約分されて消えます。屋根が受ける雨は、\textbf{上から見た面積}だけで決まるのです。トレイの実験と同じ考えです。雨どいの太さは、この考えで決めます。
+
+\bksubsection{5}{平らな面で、場が場所ごとにちがうとき}
+
+\label{bk:8-8:mado}場所ごとに流れの強さがちがうときは、一度に「$\vec v\cdot\vec n$×面積」とはできません。8-6 と同じように、面を小さなタイルに分けます。
+
+\kviiiihead{窓を通りぬける風}
+はば \qty{1}{m}、高さ \qty{2}{m} の窓に、外から風が直角に吹きこんでいます。地面の近くは建物や木にさえぎられるので、風は高い所ほど強く、窓の下の辺からの高さ $z$〔m〕の所で $v=1+0.5z$〔m/s〕でした。1秒間に窓を通る空気の量を求めます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \fill[bkBlueBg] (0,0) rectangle (16,32);
+    \draw[bkInk, line width=1pt] (0,0) rectangle (16,32);
+    \foreach \kviiiiz in {4,12,20,28} {\draw[bkGray, line width=0.4pt] (0,{\kviiiiz+4}) -- (16,{\kviiiiz+4});}
+    \foreach \kviiiiz in {4,12,20,28} {\draw[kviiii flow] ({-6-6*(1+0.5*\kviiiiz/16)},\kviiiiz) -- (-1.5,\kviiiiz);}
+    \node[kviiii lab, anchor=west] at (17.5,0) {$z=0$};
+    \node[kviiii lab, anchor=west] at (17.5,32) {$z=2$};
+    \node[kviiii lab, anchor=north] at (0,-2) {窓（横から見た図）};
+  \end{scope}
+  \begin{scope}[shift={(54,0)}]
+    \foreach \kviiiij/\kviiiiv in {0/1.125,1/1.375,2/1.625,3/1.875} {
+      \pgfmathtruncatemacro\kviiiic{12+25*(\kviiiiv-1)}
+      \fill[bkTheme!\kviiiic] (0,{8*\kviiiij}) rectangle (16,{8*\kviiiij+8});
+      \node[kviiii lab] at (8,{8*\kviiiij+4}) {\kviiiiv};}
+    \draw[bkInk, line width=1pt] (0,0) rectangle (16,32);
+    \foreach \kviiiiz in {8,16,24} {\draw[bkInk, line width=0.5pt] (0,\kviiiiz) -- (16,\kviiiiz);}
+    \node[kviiii lab, anchor=west, align=left] at (19,16) {はば \qty{0.5}{m} の\\横長のタイル4枚。\\数は、タイルの\\まん中の風の速さ\\（m/s）};
+    \node[kviiii lab, anchor=north] at (8,-2) {窓（正面から見た図）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{高い所ほど風が強い窓。正面の図は、窓を高さ \qty{0.5}{m} ずつの4枚のタイルに分けたところ。}
+\label{bk:8-8:fig-mado}
+\end{bkfigure}
+
+\textbf{表計算でタイルをたす}\quad 窓を、高さ \qty{0.5}{m}（はば \qty{1}{m}）の横長のタイル4枚に分けます。1枚の面積は \qty{0.5}{m^2}。タイルのまん中の高さで風の速さを計算して、面積をかけてたします。風は窓に直角なので、$\vec v\cdot\vec n$ は風の速さそのものです。
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & まん中の高さ $z$ & 速さ \texttt{=1+0.5*A2} & 面積 & 通る量 \texttt{=B2*C2} \\
+2 & 1.75 & 1.875 & 0.5 & 0.9375 \\
+3 & 1.25 & 1.625 & 0.5 & 0.8125 \\
+4 & 0.75 & 1.375 & 0.5 & 0.6875 \\
+5 & 0.25 & 1.125 & 0.5 & 0.5625 \\
+6 & & & 合計 & 3 \\}
+\bktabcaption{窓のタイル4枚の表計算（上の行ほど高い所。D6 は \texttt{=SUM(D2:D5)}）。}
+\label{bk:8-8:tab-mado}
+\end{bkcenter}
+
+合計は1秒間に \qty{3}{m^3} です。タイルを8枚、16枚と細かくしても、答えは 3 のまま変わりません（風の速さが高さの1次式なので、まん中の値がちょうど平均になるから。8-6 の板の表計算と同じ）。
+
+\kviiiidanhead{1}{記号を読む：何を・どこで・1枚の量}
+タイルを細かくした先を、次の記号で書き、\textbf{面積分}（めんせきぶん）とよびます。\bkidx{めんせきぶん}{面積分}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\LARGE, inner sep=0.5mm] (I) at (52,0) {$\displaystyle\iint$};
+  \node[font=\Large, inner sep=0.5mm, anchor=north west] (S) at ([xshift=-2.6mm, yshift=1.2mm]I.south east) {$S$};
+  \node[font=\LARGE, inner sep=0.5mm, anchor=west] (F) at ([xshift=3mm]I.east) {$\vec F\cdot\vec n$};
+  \node[font=\LARGE, inner sep=0.5mm, anchor=west] (A) at ([xshift=1.5mm]F.east) {$\dd S$};
+  \node[bk node, font=\sffamily\footnotesize, text width=38mm, anchor=west] (l1) at (0,15) {∫が2つ：面の上の場所は\\2つの数で決まる};
+  \node[bk node, font=\sffamily\footnotesize, text width=38mm, anchor=west] (l2) at (0,-15) {どこで：面 $S$（窓・網・\\曲がった面）};
+  \node[bk node, font=\sffamily\footnotesize, text width=36mm, anchor=west] (l3) at (92,15) {何を：場の、面に\\直角な成分};
+  \node[bk node, font=\sffamily\footnotesize, text width=36mm, anchor=west] (l4) at (92,-15) {1枚の量：小さな\\タイルの面積};
+  \draw[bk link] (l1.east) -- (I.north west);
+  \draw[bk link] (l2.east) -- (S.west);
+  \draw[bk link] (l3.west) -- (F.north east);
+  \draw[bk link] (l4.west) -- (A.south east);
+\end{tikzpicture}
+\bkfigcaption{面積分（流束）の記号の読み方。$\vec n\,\dd S$ をまとめて「向きのついたタイル」と読んでもよい。}
+\label{bk:8-8:fig-yomi}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{どこで}：∬ の右下の $S$ は、たし合わせる面です。$S$ は英語の surface（面）の頭文字です。窓なら「はば \qty{1}{m}・高さ \qty{2}{m} の長方形」が $S$ です。
+\item \textbf{何を}：$\vec F\cdot\vec n$ は、場 $\vec F$ の、面に直角な成分です（①②）。$\vec F$ のところには、水の速さ $\vec v$ も、電場 $\vec E$ も入ります。
+\item \textbf{1枚の量}：$\dd S$ は、面の上の小さなタイルの面積です。$\vec F\cdot\vec n\,\dd S$ が、タイル1枚を通りぬける量です。
+\end{enumerate}
+タイルに向き $\vec n$ をつけて、$\vec n\,\dd S$ を「\textbf{向きのついたタイル}」とよぶこともあります。∫ が2つなのは、8-6 の約束（∫ の数＝場所を表す数の数）のとおりです。面は曲がっていても、場所は2つの数で表せます（地球の上の場所は、緯度と経度の2つ）。
+
+\kviiiihead{記号は「操作の名前」}
+$\iint_S\vec F\cdot\vec n\,\dd S$ は、「面 $S$ をタイルに分け、1枚ずつ『場の直角な成分×面積』を求めて、たし合わせ、細かくした先」という\textbf{操作の名前}です。8-6 の重積分と同じく、この記号を見ただけでは、まだ計算できません。$S$ という名前しか書いてないからです。どの文字を、どこからどこまで動かすのかは、書いてありません。
+
+\kviiiidanhead{2}{直す段：窓の面積分を、ふつうの定積分に}
+窓の場合に、名前をふつうの定積分に直します。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{場所を数で表す}：窓の上の場所を、横 $x$（0〜1）と高さ $z$（0〜2）で表す。
+\item \textbf{1枚の量をその数で書く}：窓は平らで、軸にそった長方形なので、タイルは横 $\dd x$・たて $\dd z$ の長方形。$\dd S=\dd x\,\dd z$。$\vec n$ は窓に直角な向き（風の向き）で、$\vec v\cdot\vec n=1+0.5z$。
+\item \textbf{数の範囲を決める}：$0\leqq x\leqq1$、$0\leqq z\leqq2$。
+\item \textbf{ふつうの定積分を計算する}：8-6 の長方形（場合A）と同じ。
+\end{enumerate}
+\[ \kviiiiNt{\iint_S\vec v\cdot\vec n\,\dd S}=\kviiiiSt{\int_0^2\!\!\Bigl(\int_0^1(1+0.5z)\,\dd x\Bigr)\dd z} \]
+\begin{bkhenkei}[0.5]
+\int_0^1(1+0.5z)\,\dd x=1+0.5z & 内側：$z$ を止めると、ただの数×はば1 \\
+\int_0^2(1+0.5z)\,\dd z=\Bigl[\,z+0.25z^2\,\Bigr]_0^2 & 外側：$z$ で0から2まで \\
+=2+1=3 & 表計算と同じ \qty{3}{m^3/s} \\
+\end{bkhenkei}
+\textbf{平らで、軸に直角な面}なら、面積分は8-6 の重積分そのものです。面の向き $\vec n$ が場所によらないので、$\vec F\cdot\vec n$ という数の重積分になるからです。
+
+\bksubsection{6}{円の面：パイプを流れる水}
+
+\label{bk:8-8:pipe}8-6 で、パイプ（半径 $R=\qty{1}{cm}$）の断面を細い輪に分けて、流量を求めました。水の速さは、まん中で $u_{\max}=\qty{0.2}{m/s}$、中心から $r$ の所で $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$ でした（壁で0）。これは「断面という円の面を、水が通りぬける量」なので、面積分です。
+
+断面は平らで、水は断面に直角に流れるので、$\vec v\cdot\vec n=u$。円の面なので、8-6 の極座標（場合C$'$：$f$ が $r$ だけなら細い輪 $2\pi r\,\dd r$）に直します。
+\[ \kviiiiN{\iint_S\vec v\cdot\vec n\,\dd S}=\kviiiiS{\int_0^R u_{\max}\Bigl(1-\frac{r^2}{R^2}\Bigr)2\pi r\,\dd r}=\frac{\pi R^2u_{\max}}{2} \]
+$R=0.01$、$u_{\max}=0.2$ を入れると $\dfrac{\pi\times0.0001\times0.2}{2}\approx\qty{3.14e-5}{m^3/s}$、つまり1秒間に \qty{31.4}{mL} です（8-6・物理 力-14 と同じ数）。積分の計算は例題5でていねいにします。
+
+\bkkokomade[面に直角な成分×面積で流束を求め、平らな面なら、内積・外積と 8-6 の重積分で計算できれば十分です。この先は、曲がった面と閉じた面です。]
+
+%% ---------------- 式でわかる ----------------
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{面の形ごとに、直し方を選ぶ}{\bklevel{5}}
+
+\bksubsection{7}{場合分けの表と流れ図}
+
+\label{bk:8-8:basho}ここまでの面は、平らな面でした。ボールの表面やドームの屋根のような\textbf{曲がった面}では、場所ごとに面の向き $\vec n$ が変わります。また、箱や袋の表面のような\textbf{閉じた面}もあります。面積分の名前 $\iint_S\vec F\cdot\vec n\,\dd S$ は同じでも、ふつうの定積分への直し方は、面の形と場のようすで、大きくちがいます。
+
+そこで、「こんな面のときは、こう直す」を表にしました。この章の例題は、どれもこの表の記号（A〜J）を1行めに書いてあります。
+
+\kviiiicasetitle{8-8}{面積分：どんなときに、どう直す？（開いた面）}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,12mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順（ふつうの定積分に直す） & 例題 \\
+\kviiiicase{A} & 平らな面で、場がどこでも同じ & 積分しない：$(\vec F\cdot\vec n)\times A=\vec F\cdot(A\vec n)$。ななめの面の $A\vec n$ は外積（4-14）で & 1・2・3 \\
+\kviiiicase{B} & 平らで、軸に直角な面（窓・床）。場は場所で変わる & $\vec n$ は軸の向き、$\dd S=\dd x\,\dd z$ など。8-6 の重積分そのもの（長方形なら定積分を2回） & 4 \\
+\kviiiicase{C} & 平らな円の面（パイプの断面） & 8-6 の極座標 $\dd S=r\,\dd r\,\dd\theta$。$\vec F\cdot\vec n$ が $r$ だけなら細い輪 $2\pi r\,\dd r$ で1回 & 5 \\
+\kviiiicase{D} & 球面・円柱面で、$\vec F\cdot\vec n$（向きのいらないときは $f$）が面の上で一定 & 積分の外に出す：（一定の値）×（面積。球面 $4\pi R^2$、半球 $2\pi R^2$、円柱面 $2\pi RL$） & 6・9 \\
+\kviiiicase{E} & 曲がった面が $z=g(x,\ y)$ のグラフ & $\vec n\,\dd S=\Bigl(-\dfrac{\partial g}{\partial x},\ -\dfrac{\partial g}{\partial y},\ 1\Bigr)\dd x\,\dd y$（上向き）。床に落とした影の範囲で重積分 & 7 \\
+\kviiiicase{F} & 球面・円柱面など、2つの数で表せる曲がった面 & $\vec n\,\dd S=(\vec r_u\times\vec r_v)\,\dd u\,\dd v$。球面は $\dd S=R^2\sin\theta\,\dd\theta\,\dd\varphi$、円柱面は $\dd S=R\,\dd\theta\,\dd z$。向きのない $\iint f\,\dd S$ も同じ $\dd S$ で & 8・9 \\
+\end{bktable}
+\end{bkcenter}
+
+\kviiiicasetitle{8-8}{（つづき）閉じた面・立体角・データ}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,12mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順（ふつうの定積分に直す） & 例題 \\
+\kviiiicase{G} & 閉じた面が、平らな面の組み合わせ（箱） & 面ごとに B で求めて、たす。どの面も外向きが正 & 10 \\
+\kviiiicase{H} & 閉じた面で、わき出しが点電荷1つだけ。または形が計算しにくい & 袋を取りかえる：電荷が中なら同じ中心の球（D へ）、外なら0。そのほかはガウスの定理（8-11）で体積の積分に & 11 \\
+\kviiiicase{I} & 点から見た、面の見かけの大きさ（立体角） & $\displaystyle\Omega=\iint_S\frac{\vec e_r\cdot\vec n}{r^2}\,\dd S$。円すいの口なら $2\pi(1-\cos\alpha)$ & 12 \\
+\kviiiicase{J} & 式がない（データだけ） & 表計算で「$\vec F\cdot\vec n$×タイルの面積」をたす & 13 \\
+\end{bktable}
+\end{bkcenter}
+
+表の場合を、3つの段に分けると次のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,30mm] Q[c,m,26mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=4pt}
+段 & 場合 & すること \\
+\kviiiidan{3}\ 楽をする & A・D・H・J & 積分しない・一定なら外に出す・袋を取りかえる・数でたす \\
+\kviiiidan{3}\ 楽をする（分ける） & G & 閉じた箱を、平らな面に分ける（1つずつは B） \\
+\kviiiidan{2}\ 直す & B・C・E・F & 面を2つの数で表し、ふつうの定積分を2回 \\
+（別の量） & I & 流束と同じ形でたす、点から見た見かけの大きさ \\
+\end{bktable}
+\bktabcaption{場合と3つの段。楽をする段は、直す前に確かめる。}
+\end{bkcenter}
+楽をする段は、直す前に確かめます。どの順で問いかければよいかを、図\ref{bk:8-8:fig-flow}の流れ図にしました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, kviiii q/.append style={aspect=6}]
+  \coordinate (bus) at (128,0);
+  \node[kviiii do, text width=58mm] (s) at (34,0) {記号を読む（名前の段）\\何を・どこで・1枚の量};
+  \node[kviiii q] (q1) at (34,-13.0) {データだけ？};
+  \node[kviiii do, text width=38mm, anchor=west] (rJ) at (80,-13.0) {表計算でタイルの和\enspace\kviiiicase{J}};
+  \draw[kviiii go] (s) -- (q1);
+  \draw[kviiii go] (q1) -- node[kviiii yn, above] {はい} (rJ);
+  \node[kviiii q] (q2) at (34,-26.0) {立体角を求める？};
+  \node[kviiii do, text width=38mm, anchor=west] (rI) at (80,-26.0) {$2\pi(1-\cos\alpha)$ など\enspace\kviiiicase{I}};
+  \draw[kviiii go] (q1) -- node[kviiii yn, right=1mm] {いいえ} (q2);
+  \draw[kviiii go] (q2) -- node[kviiii yn, above] {はい} (rI);
+  \node[kviiii q] (q3) at (34,-39.0) {平らな面で、場が一様？};
+  \node[kviiii do, text width=38mm, anchor=west] (rA) at (80,-39.0) {$(\vec F\cdot\vec n)\times A$\enspace\kviiiicase{A}};
+  \draw[kviiii go] (q2) -- node[kviiii yn, right=1mm] {いいえ} (q3);
+  \draw[kviiii go] (q3) -- node[kviiii yn, above] {はい} (rA);
+  \node[kviiii q] (q4) at (34,-52.0) {球面・円柱面で、$\vec F\cdot\vec n$ が一定？};
+  \node[kviiii do, text width=38mm, anchor=west] (rD) at (80,-52.0) {一定の値×面積\enspace\kviiiicase{D}};
+  \draw[kviiii go] (q3) -- node[kviiii yn, right=1mm] {いいえ} (q4);
+  \draw[kviiii go] (q4) -- node[kviiii yn, above] {はい} (rD);
+  \node[kviiii q] (q5) at (34,-65.0) {閉じた面で、点電荷1つの場？};
+  \node[kviiii do, text width=38mm, anchor=west] (rH1) at (80,-65.0) {袋を球に取りかえる\enspace\kviiiicase{H}};
+  \draw[kviiii go] (q4) -- node[kviiii yn, right=1mm] {いいえ} (q5);
+  \draw[kviiii go] (q5) -- node[kviiii yn, above] {はい} (rH1);
+  \node[kviiii q] (q6) at (34,-78.0) {閉じた面で、箱の形？};
+  \node[kviiii do, text width=38mm, anchor=west] (rG) at (80,-78.0) {面ごとにたす\enspace\kviiiicase{G}};
+  \draw[kviiii go] (q5) -- node[kviiii yn, right=1mm] {いいえ} (q6);
+  \draw[kviiii go] (q6) -- node[kviiii yn, above] {はい} (rG);
+  \node[kviiii q] (q7) at (34,-91.0) {そのほかの閉じた面？};
+  \node[kviiii do, text width=38mm, anchor=west] (rH2) at (80,-91.0) {ガウスの定理（8-11）\enspace\kviiiicase{H}};
+  \draw[kviiii go] (q6) -- node[kviiii yn, right=1mm] {いいえ} (q7);
+  \draw[kviiii go] (q7) -- node[kviiii yn, above] {はい} (rH2);
+  \node[kviiii q] (q8) at (34,-104.0) {平らな円の面？};
+  \node[kviiii do, text width=38mm, anchor=west] (rC) at (80,-104.0) {極座標\enspace\kviiiicase{C}};
+  \draw[kviiii go] (q7) -- node[kviiii yn, right=1mm] {いいえ} (q8);
+  \draw[kviiii go] (q8) -- node[kviiii yn, above] {はい} (rC);
+  \node[kviiii q] (q9) at (34,-117.0) {平らな面（円でない）？};
+  \node[kviiii do, text width=38mm, anchor=west] (rB) at (80,-117.0) {8-6 の重積分\enspace\kviiiicase{B}};
+  \draw[kviiii go] (q8) -- node[kviiii yn, right=1mm] {いいえ} (q9);
+  \draw[kviiii go] (q9) -- node[kviiii yn, above] {はい} (rB);
+  \node[kviiii q] (q10) at (34,-130.0) {球面・円柱面？};
+  \node[kviiii do, text width=38mm, anchor=west] (rF1) at (80,-130.0) {球面・円柱面のタイル\enspace\kviiiicase{F}};
+  \draw[kviiii go] (q9) -- node[kviiii yn, right=1mm] {いいえ} (q10);
+  \draw[kviiii go] (q10) -- node[kviiii yn, above] {はい} (rF1);
+  \node[kviiii q] (q11) at (34,-143.0) {$z=g(x,\ y)$ のグラフ？};
+  \node[kviiii do, text width=38mm, anchor=west] (rE) at (80,-143.0) {影の範囲で重積分\enspace\kviiiicase{E}};
+  \draw[kviiii go] (q10) -- node[kviiii yn, right=1mm] {いいえ} (q11);
+  \draw[kviiii go] (q11) -- node[kviiii yn, above] {はい} (rE);
+  \node[kviiii do, text width=50mm] (rF2) at (34,-156.0) {2つの数で $\vec r_u\times\vec r_v$\enspace\kviiiicase{F}};
+  \draw[kviiii go] (q11) -- node[kviiii yn, right=1mm] {いいえ} (rF2);
+  \node[kviiii do, text width=100mm] (end) at (62,-169.4) {確かめ：面の向き（外向き・上向き）と符号、ちがう方法（表計算・8-11 の定理）で同じ答えか};
+  \draw[kviiii go] (rH1.north) -- (rD.south);
+  % どの四角からも「確かめ」へ（右はしの線に集めて、下へ）
+  \foreach \kviiiib in {rJ,rI,rA,rD,rG,rH2,rC,rB,rF1,rE,rF2} {\draw[bkInk!75, line width=0.9pt, shorten <=1.5mm] (\kviiiib.east) -- (\kviiiib.east -| bus);}
+  \draw[bkInk!75, line width=0.9pt] (bus |- rJ.east) -- (bus |- end.east);
+  \draw[kviiii go, shorten <=0mm] (bus |- end.east) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{面積分の流れ図。ひし形は問い、四角はすること。上の問い（J・I・A・D・H・G）で楽な道をさがし、下の問い（C・B・F・E）で面の形から直し方を選ぶ。向きのいらない量では「$f$ が一定？」と読む。「点電荷1つの場」は、わき出しが1点の電荷だけの場（電荷が中なら球に取りかえて D、外なら0）。どの四角からも、右はしの線を通って「確かめ」へ。}
+\label{bk:8-8:fig-flow}
+\end{bkfigure}
+
+\kviiiihead{流れ図の使い方：窓の風の場合}
+⑤の窓 $\iint_S\vec v\cdot\vec n\,\dd S$ で、流れ図をたどってみます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：何を＝風の直角な成分 $1+0.5z$、どこで＝窓 $S$、1枚の量＝$\dd S$。
+\item データだけ？\enspace いいえ（式がある）。\enspace 立体角を求める？\enspace いいえ。
+\item 平らな面で、場が一様？\enspace いいえ（高さで風がちがう）。\enspace 球面・円柱面で、$\vec F\cdot\vec n$ が一定？\enspace いいえ（窓は平らな長方形）。
+\item 閉じた面で、点電荷1つの場？\enspace 閉じた面で、箱の形？\enspace そのほかの閉じた面？\enspace どれも、いいえ（窓は開いた面）。
+\item 平らな円の面？\enspace いいえ（長方形）。\enspace 平らな面（円でない）？\enspace はい。
+\end{enumerate}
+こうして、場合 \kviiiicase{B}（8-6 の重積分そのもの）に決まります。⑤でしたとおりです。
+
+\bksubsection{8}{曲がった面のタイル：外積で、向きと面積を一度に}
+
+\label{bk:8-8:magari}曲がった面では、タイルごとに向きがちがいます。そこで、面の上の場所を2つの数で表し、その2つの数を少しずつ動かして、小さなタイルを作ります。
+
+\kviiiidanhead{2}{曲がった面を2つの数で表し、タイルを外積で作る}
+面の上の場所を、2つの数 $u$・$v$ で $\vec r(u,\ v)$ と表します（地球の上の場所を、緯度と経度で表すのと同じ）。$u$ だけを少し（$\dd u$）動かすと、場所は $\vec r_u\,\dd u$ だけ動きます。$\vec r_u$ は「$v$ を止めて $u$ で偏微分した矢印」$\dfrac{\partial\vec r}{\partial u}$ です（8-2。成分ごとに偏微分する）。同じように、$v$ だけを動かすと $\vec r_v\,\dd v$ 動きます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkTheme!8, draw=bkInk, line width=0.8pt] (0,4) .. controls (20,14) and (44,14) .. (64,4) -- (72,34) .. controls (52,46) and (28,46) .. (8,36) -- cycle;
+  \foreach \kviiiis in {0.25,0.5,0.75} {\draw[bkGray, line width=0.4pt] ({0+8*\kviiiis},{4+32*\kviiiis}) .. controls ({20+8*\kviiiis},{14+32*\kviiiis}) and ({44+8*\kviiiis},{14+32*\kviiiis}) .. ({64+8*\kviiiis},{4+30*\kviiiis});}
+  \foreach \kviiiis in {16,32,48} {\draw[bkGray, line width=0.4pt] (\kviiiis,{11.5}) .. controls ({\kviiiis+3},22) and ({\kviiiis+5},32) .. ({\kviiiis+8},{43.5});}
+  \filldraw[fill=bkTheme!40, draw=bkTheme, line width=0.6pt] (34,22) -- (46,23.5) -- (49,33.5) -- (37,32) -- cycle;
+  \draw[kviiii comp, bkOrange!85!black, dash pattern=] (34,22) -- (46,23.5);
+  \draw[kviiii comp, bkGreen!60!black, dash pattern=] (34,22) -- (37,32);
+  \draw[kviiii nv] (41.5,27.8) -- (38,47);
+  \node[kviiii lab, anchor=north] at (42,21.6) {$\vec r_u\,\dd u$};
+  \node[kviiii lab, anchor=east] at (34.5,28) {$\vec r_v\,\dd v$};
+  \node[kviiii lab, anchor=south] at (38,47.5) {$\vec r_u\times\vec r_v$（面に直角）};
+  \node[kviiii lab, anchor=west, align=left] at (80,30) {小さな平行四辺形\\・面積＝外積の長さ\\・向き＝外積の向き\\（4-14）};
+  \node[kviiii lab, anchor=west] at (80,10) {$u$ と $v$ の線で区切った面};
+\end{tikzpicture}
+\bkfigcaption{曲がった面を、$u$ の線と $v$ の線で区切ると、小さな平行四辺形のタイルができる。2本の辺の矢印の外積が、タイルの向きと面積を一度に表す。}
+\label{bk:8-8:fig-tile}
+\end{bkfigure}
+
+小さなタイルは、2本の矢印 $\vec r_u\,\dd u$ と $\vec r_v\,\dd v$ がつくる平行四辺形と見なせます（とても小さいので、曲がりは無視できる）。4-14 で、外積の長さは平行四辺形の面積、向きは両方に直角だと学びました。だから、
+\kviiiiframe[110mm]{$\vec n\,\dd S=(\vec r_u\,\dd u)\times(\vec r_v\,\dd v)=(\vec r_u\times\vec r_v)\,\dd u\,\dd v$}
+これで、向き $\vec n$ と面積 $\dd S$ が一度に $u$・$v$ の式になり、面積分は $u$・$v$ の重積分に直ります。$u$ と $v$ の順を入れかえると、外積は反対向きになります（4-14）。だから、計算の前に「どちらを表にするか」と合っているかを確かめます。
+
+\kviiiihead{場合E：面が $z=g(x,\ y)$ のグラフのとき}
+ドームやおわんの形のように、面が $z=g(x,\ y)$ と書けるときは、$u=x$、$v=y$ にとります。
+\begin{bkhenkei}[0.56]
+\vec r(x,\ y)=(x,\ y,\ g(x,\ y)) & 床の $(x,\ y)$ の真上の点 \\
+\vec r_x=\Bigl(1,\ 0,\ \frac{\partial g}{\partial x}\Bigr) & $y$ を止めて $x$ で偏微分 \\
+\vec r_y=\Bigl(0,\ 1,\ \frac{\partial g}{\partial y}\Bigr) & $x$ を止めて $y$ で偏微分 \\
+\vec r_x\times\vec r_y=\Bigl(-\frac{\partial g}{\partial x},\ -\frac{\partial g}{\partial y},\ 1\Bigr) & 外積（$z$ 成分が $+1$ で上向き） \\
+\end{bkhenkei}
+4行めの外積の $x$ 成分は $0\times\dfrac{\partial g}{\partial y}-\dfrac{\partial g}{\partial x}\times1$、$y$ 成分は $\dfrac{\partial g}{\partial x}\times0-1\times\dfrac{\partial g}{\partial y}$、$z$ 成分は $1\times1-0\times0$ です（4-14 の「2つめ×3つめ－3つめ×2つめ」の順）。
+\kviiiiframe[110mm]{$\vec n\,\dd S=\Bigl(-\dfrac{\partial g}{\partial x},\ -\dfrac{\partial g}{\partial y},\ 1\Bigr)\dd x\,\dd y$\\[2pt]\normalsize\sffamily（上向き）}
+面積分は、面を床に落とした影の範囲 $D$ での重積分に直ります（$\vec F$ の中の $z$ には $g(x,\ y)$ を入れる）。
+\[ \kviiiiN{\iint_S\vec F\cdot\vec n\,\dd S}=\iint_D\vec F\cdot\Bigl(-\frac{\partial g}{\partial x},\ -\frac{\partial g}{\partial y},\ 1\Bigr)\dd x\,\dd y \]
+
+
+\textbf{注意}：タイルの面積 $\dd S$ は、$\dd x\,\dd y$ ではありません。外積の長さの
+\[ \dd S=\sqrt{1+\Bigl(\frac{\partial g}{\partial x}\Bigr)^2+\Bigl(\frac{\partial g}{\partial y}\Bigr)^2}\,\dd x\,\dd y \]
+で、かたむいた所ほど大きくなります（屋根の本当の面積が、上から見た面積より大きかったのと同じ）。流束では、この大きさと $\cos$ が約分されて、上の形にまとまります。
+
+\bksubsection{9}{場合F：球面と円柱面のタイル}
+
+\label{bk:8-8:kyuumen}球面は $z=g(x,\ y)$ の1つの式では書けません（上半分と下半分で2つの式が要る）。そこで、4-15 の球座標の角 $\theta$（真上からの角）と $\varphi$（床の上の角）の2つで表します。半径 $R$ の球面の上の場所は
+\kviiiiline{$\vec r(\theta,\ \varphi)=(R\sin\theta\cos\varphi,\ R\sin\theta\sin\varphi,\ R\cos\theta)$}
+です。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,0) circle (22);
+  \draw[bkGray, line width=0.5pt] (-22,0) arc (180:360:22 and 6);
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (22,0) arc (0:180:22 and 6);
+  \draw[bkGray, line width=0.5pt] (-15.6,15.6) arc (180:360:15.6 and 4.2);
+  \draw[bkGray, line width=0.5pt] (-11,19) arc (180:360:11 and 3);
+  \draw[bkGray, line width=0.5pt] (0,22) .. controls (8,18) and (11,8) .. (11,-1.5);
+  \draw[bkGray, line width=0.5pt] (0,22) .. controls (13,18) and (17,8) .. (17.5,-3);
+  \filldraw[fill=bkTheme!45, draw=bkTheme, line width=0.6pt] (7.4,14.7) -- (11.6,13.2) -- (12.6,9.8) -- (8.3,11.2) -- cycle;
+  \draw[kviiii nv] (10,12.2) -- (16,22.5);
+  \draw[bk axis] (0,0) -- (0,30) node[anchor=south, bk label] {$z$};
+  \node[kviiii lab, anchor=north] at (0,-24) {球面の上のタイル};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,-4) arc (-10:100:26);
+  \draw[bk axis] (-25.6,0) -- (-25.6,32) node[anchor=south, bk label] {$z$};
+  \coordinate (O) at (-25.6,0.5);
+  \draw[bkInk, line width=0.6pt] (O) -- ++(45:26) coordinate (P);
+  \draw[bkInk, line width=0.6pt] (O) -- ++(55:26) coordinate (Q);
+  \draw[bkOrange!85!black, line width=1.6pt] (P) arc (45:55:26);
+  \draw[bkGreen!60!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (P) -- (P -| O);
+  \node[kviiii lab, anchor=south, fill=white] at ($(P)!0.5!(P -| O)$) {$R\sin\theta$};
+  \draw[bkInk, line width=0.5pt] ($(O)+(0,6)$) arc (90:50:6);
+  \node[kviiii lab] at ($(O)+(4.5,9.5)$) {$\theta$};
+  \node[kviiii lab, anchor=south west] at (Q) {$R\,\dd\theta$};
+  \node[kviiii lab, anchor=north] at (-12,-6) {横から見た切り口};
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{球面のタイル。たては、半径 $R$ の円の弧で $R\,\dd\theta$（4-2 の弧の長さ）。横は、高さ $\theta$ の所の緯線の円（半径 $R\sin\theta$）の弧で $R\sin\theta\,\dd\varphi$。}
+\label{bk:8-8:fig-kyuumen}
+\end{bkfigure}
+
+タイルの面積は、2通りで求められます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{図で}：たての辺は、半径 $R$ の円の弧なので $R\,\dd\theta$。横の辺は、真上から $\theta$ の所の緯線（半径 $R\sin\theta$ の円）の弧なので $R\sin\theta\,\dd\varphi$。小さなタイルはほぼ長方形なので、$\dd S=R\,\dd\theta\times R\sin\theta\,\dd\varphi=R^2\sin\theta\,\dd\theta\,\dd\varphi$。
+\end{enumerate}
+\noindent\textbf{② 外積で}\par\nobreak\noindent $\vec r(\theta,\ \varphi)$ を成分ごとに偏微分します（8-2。$\sin\theta$ を $\theta$ で微分すると $\cos\theta$、$\cos\theta$ は $-\sin\theta$、$\cos\varphi$ を $\varphi$ で微分すると $-\sin\varphi$。$z$ 成分 $R\cos\theta$ に $\varphi$ はないので、$\varphi$ で微分すると0）。
+\begin{bkhenkei}[0.66]
+\vec r_\theta=(R\cos\theta\cos\varphi,\ R\cos\theta\sin\varphi,\ -R\sin\theta) & $\varphi$ を止めて $\theta$ で \\
+\vec r_\varphi=(-R\sin\theta\sin\varphi,\ R\sin\theta\cos\varphi,\ 0) & $\theta$ を止めて $\varphi$ で \\
+\end{bkhenkei}
+外積を、4-14 の順に1成分ずつ計算します（$x$ 成分は「2つめ×3つめ－3つめ×2つめ」、$y$ 成分は「3つめ×1つめ－1つめ×3つめ」、$z$ 成分は「1つめ×2つめ－2つめ×1つめ」）。
+\begin{bkhenkei}[0.78]
+x\text{ 成分}=R\cos\theta\sin\varphi\times0-(-R\sin\theta)\times R\sin\theta\cos\varphi & \\
+\phantom{x\text{ 成分}}=R^2\sin^2\theta\cos\varphi & \\
+y\text{ 成分}=(-R\sin\theta)\times(-R\sin\theta\sin\varphi)-R\cos\theta\cos\varphi\times0 & \\
+\phantom{y\text{ 成分}}=R^2\sin^2\theta\sin\varphi & \\
+z\text{ 成分}=R\cos\theta\cos\varphi\times R\sin\theta\cos\varphi & \\
+\phantom{z\text{ 成分}=}-R\cos\theta\sin\varphi\times(-R\sin\theta\sin\varphi) & \\
+\phantom{z\text{ 成分}}=R^2\sin\theta\cos\theta\,(\cos^2\varphi+\sin^2\varphi) & くくった \\
+\phantom{z\text{ 成分}}=R^2\sin\theta\cos\theta & （4-8） \\
+\end{bkhenkei}
+（4-8）は $\cos^2\varphi+\sin^2\varphi=1$ です。3つの成分を $R^2\sin\theta$ でくくると、
+\[ \vec r_\theta\times\vec r_\varphi=R^2\sin\theta\,(\sin\theta\cos\varphi,\ \sin\theta\sin\varphi,\ \cos\theta) \]
+かっこの中は、中心から外へ向かう長さ1の矢印 $\vec e_r$ です（球面の上の点 $\vec r$ を $R$ でわったもの）。だから、外積の向きは外向き、長さは $R^2\sin\theta$ で、①と同じです。
+
+\kviiiiframe[100mm]{球面：$\vec n=\vec e_r$（外向き）\\[2pt]$\dd S=R^2\sin\theta\,\dd\theta\,\dd\varphi$\\[2pt]\normalsize $\theta$ は 0〜$\pi$、$\varphi$ は 0〜$2\pi$}
+$\sin\theta$ がつくのは、北極・南極に近いほど緯線の円が小さく、タイルが細くなるからです。たとえば、球面全体の面積は
+\[ \kviiiiN{\iint_S\dd S}=\kviiiiS{\int_0^{2\pi}\!\!\Bigl(\int_0^{\pi}R^2\sin\theta\,\dd\theta\Bigr)\dd\varphi} \]
+\begin{bkhenkei}[0.5]
+\int_0^{\pi}R^2\sin\theta\,\dd\theta=R^2\Bigl[-\cos\theta\Bigr]_0^{\pi} & 内側：$\theta$ で0から $\pi$ まで \\
+=R^2\{-\cos\pi-(-\cos0)\}=2R^2 & $\cos\pi=-1$、$\cos0=1$ \\
+\int_0^{2\pi}2R^2\,\dd\varphi=4\pi R^2 & 外側：$\varphi$ で0から $2\pi$ まで \\
+\end{bkhenkei}
+よく知られた球の表面積の公式 $4\pi R^2$ が出てきました。
+
+\kviiiihead{円柱面のタイル}
+半径 $R$ の円柱の側面は、角 $\theta$ と高さ $z$ の2つで表せます。
+\[ \vec r(\theta,\ z)=(R\cos\theta,\ R\sin\theta,\ z) \]
+タイルは、横が弧 $R\,\dd\theta$、たてが $\dd z$ の長方形です。
+\kviiiiframe[100mm]{円柱面：$\vec n=(\cos\theta,\ \sin\theta,\ 0)$（軸から外向き）\\[2pt]$\dd S=R\,\dd\theta\,\dd z$}
+
+\kviiiihead{向きのいらない面積分 $\iint_S f\,\dd S$}
+ペンキのぬる量、ボールの皮の質量、面にかかる圧力の力の大きさのように、向きがいらない量は、$\vec F\cdot\vec n$ のかわりに数 $f$ をかけてたします。タイルの面積 $\dd S$ は同じです。$f=1$ なら面積そのもので、上の $4\pi R^2$ がその例です（例題9）。
+
+\bksubsection{10}{場合D：対称なら、積分の外に出す}
+
+\label{bk:8-8:taishou}\kviiiidanhead{3}{対称なら、積分の外に出す}
+原点に置いた点電荷のまわりの電場は、原点から外向き（面に直角）で、大きさは原点からの距離 $r$ だけで決まります（8-5）。原点を中心とする半径 $R$ の球面の上では、どこでも
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item 電場は面に直角（外向き）なので、$\vec E\cdot\vec n=|\vec E|$（$\cos\ang{0}=1$）。
+\item その大きさは、同じ $r=R$ なのでどこでも同じ。
+\end{itemize}
+です。だから、$\vec E\cdot\vec n$ は球面の上で一定の数で、積分の外に出せます。
+\begin{bkhenkei}[0.52]
+\iint_S\vec E\cdot\vec n\,\dd S=|\vec E(R)|\iint_S\dd S & 一定の数は外に出せる（5-11 の定数倍と同じ） \\
+=|\vec E(R)|\times4\pi R^2 & 残りは球面の面積（⑨） \\
+=\frac{Q}{4\pi\varepsilon_0R^2}\times4\pi R^2=\frac{Q}{\varepsilon_0} & 点電荷の電場の大きさ（クーロンの法則） \\
+\end{bkhenkei}
+$R^2$ が約分されて、\textbf{球の半径によらず}$\dfrac{Q}{\varepsilon_0}$ になりました。電場は遠くほど $R^2$ に反比例して弱くなりますが、球面の面積は $R^2$ に比例して広くなるので、ちょうど打ち消し合うのです。（$\varepsilon_0$ は真空の誘電率という決まった数。高校物理の $k$ とは $k=\dfrac{1}{4\pi\varepsilon_0}$ の関係です。）
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed] (0,0) circle (2.2); \node[text=white, font=\bfseries\footnotesize] at (0,0) {＋};
+  \foreach \kviiiia in {0,30,...,330} {\draw[bk arrow, bkTheme, line width=0.9pt] (\kviiiia:3.5) -- (\kviiiia:30);}
+  \draw[bkOrange!85!black, line width=1.2pt] (0,0) circle (11);
+  \draw[bkGreen!60!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt] (0,0) circle (22);
+  \node[kviiii lab, anchor=west, align=left] at (34,8) {小さな球（半径 $R$）も、大きな球（半径 $2R$）も、\\電気力線を12本ずつ受ける。};
+  \node[kviiii lab, anchor=west, align=left] at (34,-6) {大きな球では、場は $\frac14$ に弱く、面積は4倍。};
+\end{tikzpicture}
+\bkfigcaption{点電荷のまわりの電気力線（12本だけかいた）。どの球も、同じ本数の線を受ける。流束が半径によらないのは、このため。}
+\label{bk:8-8:fig-gauss}
+\end{bkfigure}
+
+この「流束は、中の電荷だけで決まり、球の大きさによらない」ことが、8-11 で学ぶ\textbf{ガウスの法則}の出発点です。高校物理の「電気力線の本数 $N=4\pi kQ$」は、この $\dfrac{Q}{\varepsilon_0}$ のことです（$4\pi kQ=4\pi\times\dfrac{1}{4\pi\varepsilon_0}\times Q=\dfrac{Q}{\varepsilon_0}$）。
+
+\bksubsection{11}{場合G：閉じた面と記号 $\oiint$}
+
+\label{bk:8-8:tojita}箱やボールの表面のように、ぐるりと閉じた面の流束は、中から外へ出る量の合計です。閉じた面の面積分を、次の記号で書きます。
+\[ \kviiiiNt{\oiint_S\vec F\cdot\vec n\,\dd S} \]
+∬ に重なった◯は、「\textbf{面 $S$ が閉じている}」という\textbf{印}です。8-7 の $\oint$（閉じた道）と同じ考えです。◯は、球の形や円の面積を表すのではありません。どの面かは、下の $S$ が決めます。立方体の箱でも、ジャガイモのような形の袋でも、閉じていれば同じ $\oiint$ を使います。閉じた面の $\vec n$ は、いつも\textbf{外向き}です。
+
+\kviiiihead{箱の6つの面を、1つずつ}
+1辺1の立方体の箱（$0\leqq x\leqq1$、$0\leqq y\leqq1$、$0\leqq z\leqq1$）から、場 $\vec F=(x^2,\ xy,\ -z)$ が外へ出る量を求めます。8-9 の発散の章でも使う場です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x={(-8mm,-6mm)}, y={(18mm,0mm)}, z={(0mm,18mm)}]
+  \draw[bk axis] (0,0,0) -- (1.9,0,0) node[anchor=north east, bk label, inner sep=1pt] {$x$};
+  \draw[bk axis] (0,0,0) -- (0,2.2,0) node[anchor=west, bk label] {$y$};
+  \draw[bk axis] (0,0,0) -- (0,0,1.9) node[anchor=south, bk label] {$z$};
+  \filldraw[fill=bkTheme!10, draw=bkInk, line width=0.8pt] (1,0,0) -- (1,1,0) -- (1,1,1) -- (1,0,1) -- cycle;
+  \filldraw[fill=bkTheme!18, draw=bkInk, line width=0.8pt] (1,1,0) -- (0,1,0) -- (0,1,1) -- (1,1,1) -- cycle;
+  \filldraw[fill=bkTheme!26, draw=bkInk, line width=0.8pt] (1,0,1) -- (1,1,1) -- (0,1,1) -- (0,0,1) -- cycle;
+  \draw[kviiii nv] (1,0.5,0.5) -- (1.8,0.5,0.5);
+  \draw[kviiii nv] (0.5,1,0.5) -- (0.5,1.7,0.5);
+  \draw[kviiii nv] (0.5,0.5,1) -- (0.5,0.5,1.7);
+  \node[kviiii lab, anchor=north] at (1.85,0.5,0.5) {$x=1$ の面の $\vec n$};
+  \node[kviiii lab, anchor=west] at (0.5,1.75,0.5) {$y=1$ の面の $\vec n$};
+  \node[kviiii lab, anchor=south] at (0.5,0.5,1.75) {$z=1$ の面の $\vec n$};
+\end{tikzpicture}
+\bkfigcaption{立方体の箱。見えている3つの面（$x=1$・$y=1$・$z=1$）の外向きの $\vec n$ は、それぞれ $x$・$y$・$z$ の正の向き。見えない3つの面（$x=0$・$y=0$・$z=0$）の $\vec n$ は、負の向き。}
+\label{bk:8-8:fig-hako}
+\end{bkfigure}
+
+\kviiiidanhead{3}{分ける：閉じた面を、平らな面に}
+$\oiint_S$ は、6つの平らな面の面積分の和に分けられます。どの面も軸に直角なので、1つずつは場合 \kviiiicase{B} です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,12mm] Q[c,m,22mm] Q[c,m,21mm] X[l,m]}, rowsep=1.5pt, colsep=4pt, row{1}={font=\sffamily\small}}
+面 & 外向きの $\vec n$ & $\vec F\cdot\vec n$ & 面積分（その面から出る量） \\
+$x=1$ & $(1,\ 0,\ 0)$ & $x^2=1$ & $1\times\text{面積}1=1$ \\
+$x=0$ & $(-1,\ 0,\ 0)$ & $-x^2=0$ & 0 \\
+$y=1$ & $(0,\ 1,\ 0)$ & $xy=x$ & $\int_0^1\!\!\int_0^1x\,\dd x\,\dd z=0.5$ \\
+$y=0$ & $(0,\ -1,\ 0)$ & $-xy=0$ & 0 \\
+$z=1$ & $(0,\ 0,\ 1)$ & $-z=-1$ & $-1\times1=-1$（入ってくる） \\
+$z=0$ & $(0,\ 0,\ -1)$ & $z=0$ & 0 \\
+\end{bktable}
+\bktabcaption{立方体の6つの面。$\vec F$ の中の文字には、その面の値（$x=1$ の面なら $x=1$）を入れる。}
+\label{bk:8-8:tab-hako}
+\end{bkcenter}
+6つをたすと、$1+0+0.5+0+(-1)+0=0.5$ です。
+\[ \kviiiiN{\oiint_S\vec F\cdot\vec n\,\dd S}=\underbrace{1+0}_{x\text{ の面}}+\underbrace{0.5+0}_{y\text{ の面}}+\underbrace{(-1)+0}_{z\text{ の面}}=0.5 \]
+箱からは、差し引き 0.5 が外へ出ています。$y=1$ の面では、$x$ によって出る量がちがうので、ふつうの定積分を2回しました（内側 $\int_0^1x\,\dd x=0.5$、外側 $\int_0^1 0.5\,\dd z=0.5$）。8-9 では、この同じ場の発散が $3x-1$ になり、8-11 では、$3x-1$ を箱の中でたし合わせた値がこの 0.5 と同じになることを確かめます。
+
+\bksubsection{12}{場合H：袋の形を変えても、答えは同じ}
+
+\label{bk:8-8:fukuro}\kviiiidanhead{3}{袋を、計算が楽な形に取りかえる}
+⑩では、点電荷を囲む球の流束が、球の大きさによらず $\dfrac{Q}{\varepsilon_0}$ になりました。では、袋を球ではなく、\textbf{立方体}にしたらどうでしょう。
+
+ここからは、$\dfrac{Q}{4\pi\varepsilon_0}=1$ になるように数をそろえた、次の場で考えます。
+\[ \vec F=\frac{(x,\ y,\ z)}{r^3}\qquad（r=\sqrt{x^2+y^2+z^2}） \]
+半径 $R$ の球なら、⑩と同じく $\dfrac{1}{R^2}\times4\pi R^2=4\pi\approx12.566$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed] (0,0) circle (1.8);
+  \foreach \kviiiia in {0,30,...,330} {\draw[bk arrow, bkTheme, line width=0.8pt] (\kviiiia:3) -- (\kviiiia:27);}
+  \draw[bkOrange!85!black, line width=1.2pt] (0,0) circle (9);
+  \draw[bkGreen!60!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt] (-16,-16) rectangle (16,16);
+  \draw[bkPurple!80!black, line width=1.2pt, dash pattern=on 1pt off 1.5pt] (0,0) ellipse (24 and 19);
+  \node[kviiii lab, anchor=west, align=left] at (32,12) {球（実線）・立方体（点線）・だ円の袋（細かい点線）};
+  \node[kviiii lab, anchor=west, align=left] at (32,2) {どの袋も、電荷から出る線を全部受ける。};
+  \node[kviiii lab, anchor=west, align=left] at (32,-8) {だから、流束はどれも同じ $4\pi$。};
+\end{tikzpicture}
+\bkfigcaption{点電荷を囲む、形のちがう3つの袋（切り口）。袋の形を変えても、電荷から出る線はすべて袋を通りぬける。}
+\label{bk:8-8:fig-fukuro}
+\end{bkfigure}
+
+\kviiiihead{立方体の袋を、対称性とコンピュータで}
+中心が原点、1辺2の立方体（$-1\leqq x,\ y,\ z\leqq1$）を袋にします。6つの面は、原点から見てどれも同じ形・同じ距離なので、6つの面の流束は等しくなります（対称性）。そこで、上の面（$z=1$）だけを計算して6倍します。
+
+上の面は $z=1$ で平らなので場合 \kviiiicase{B} で、$\vec n=(0,\ 0,\ 1)$ です。だから、
+\[ \vec F\cdot\vec n=F_z=\frac{1}{(x^2+y^2+1)^{3/2}} \]
+です。これをふつうの定積分で計算するのは大変なので、表計算と同じく、面を小さなタイルに分けてたします（場合 \kviiiicase{J} の数値のたし算）。
+
+\Needspace{11\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+n = 100                                \# 1辺を100こに分ける
+t = (np.arange(n) + 0.5) / n * 2 - 1   \# タイルのまん中（-1〜1）
+X, Y = np.meshgrid(t, t)
+Fz = 1 / (X**2 + Y**2 + 1)**1.5        \# 上の面（z=1）での z 成分
+one = (Fz * (2/n)**2).sum()            \# 「Fz×タイルの面積」をたす
+print(round(one, 4), round(6 * one, 4))
+print(round(4 * np.pi, 4))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+2.0944 12.5667
+12.5664
+\end{bkcodeout}
+
+1つの面は約 2.0944 で、6つの面で約 12.5667 です。球の $4\pi\approx12.5664$ とほぼ同じです（ちがいの 0.0003 は、タイルが有限の大きさだから。タイルを細かくすると近づく）。\textbf{袋を球から立方体に変えても、流束は同じ}でした。1つの面は、ちょうど全体の $\frac16$ です。
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{どんな形の袋でも}\par\nobreak\noindent 電荷が中にあれば、流束は $4\pi$（$\dfrac{Q}{\varepsilon_0}$）。中の電荷だけで決まります。
+\item \textbf{電荷が外にあれば}\par\nobreak\noindent 袋の中に電荷がなければ、入ってきた線は必ず反対側から出ていくので、流束は0です。
+\item \textbf{だから、計算が楽な袋を選んでよい}\par\nobreak\noindent 答えが変わらないなら、⑩の球のように「場が面に直角で一定」になる袋を選びます。これが、場合 \kviiiicase{H}「袋を楽な形に取りかえる」です。
+\end{enumerate}
+なぜ袋の形によらないのかは、8-9 の発散（点電荷の場は電荷の外で発散が0）と、8-11 のガウスの定理で、きちんと説明します。
+
+\bksubsection{13}{場合I：立体角――点から見た見かけの大きさ}
+
+\label{bk:8-8:rittaikaku}懐中電灯やスポットライトの光は、円すいの形に広がります。点から見て、面が「どれだけの広がりを占めて見えるか」を表すのが\textbf{立体角}（りったいかく）です。\bkidx{りったいかく}{立体角}平面の角（ラジアン）が「半径1の円の弧の長さ」だったように（4-2）、立体角は「\textbf{半径1の球面の上で、その面が占める面積}」です。単位は \unit{sr}（ステラジアン）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt] (0,0) circle (24);
+  \fill[bkYellow!40] (0,0) -- (60:24) arc (60:120:24) -- cycle;
+  \draw[bkInk, line width=0.8pt] (0,0) -- (60:28) (0,0) -- (120:28);
+  \draw[bkOrange!85!black, line width=2pt] (60:24) arc (60:120:24);
+  \draw[bkInk, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (0,0) -- (0,30);
+  \draw[bkInk, line width=0.5pt] (0,8) arc (90:60:8);
+  \node[kviiii lab] at (75:11) {$\alpha$};
+  \fill[bkInk] (0,0) circle (1);
+  \node[kviiii lab, anchor=north] at (0,-1.5) {光の出る点};
+  \node[kviiii lab, anchor=west, align=left] at (34,14) {オレンジの部分：半径1の球面の上で、\\円すいが切りとる「おわん」の面積};
+  \node[kviiii lab, anchor=west, align=left] at (34,0) {$\alpha$：円すいの中心の線からの角（半分の角）};
+\end{tikzpicture}
+\bkfigcaption{円すいの立体角。光の出る点を中心とする半径1の球面のうち、円すいの中にある「おわん」の部分の面積が、立体角。}
+\label{bk:8-8:fig-rittai}
+\end{bkfigure}
+
+半分の角が $\alpha$ の円すいなら、半径1の球面の、真上から $\alpha$ までの部分の面積です。⑨の球面のタイル（$R=1$）で直します。
+\begin{bkhenkei}[0.5]
+\Omega=\int_0^{2\pi}\!\!\Bigl(\int_0^{\alpha}\sin\theta\,\dd\theta\Bigr)\dd\varphi & $R=1$ の球面で、$\theta$ は 0 から $\alpha$ まで \\
+=2\pi\Bigl[-\cos\theta\Bigr]_0^{\alpha}=2\pi(1-\cos\alpha) & 外側の $\varphi$ の積分は $2\pi$ \\
+\end{bkhenkei}
+$\Omega$ はギリシャ文字の大文字で「オメガ」と読みます。$\alpha=\ang{90}$（半球）なら $2\pi$、$\alpha=\ang{180}$（全体）なら $4\pi$ です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,32mm] Q[c,m,15mm] Q[c,m,20mm] Q[c,m,20mm] Q[c,m,22mm]}, rowsep=1.5pt, colsep=4pt, row{1}={font=\sffamily\small}}
+半分の角 $\alpha$ & \ang{30} & \ang{60} & \ang{90} & \ang{180} \\
+立体角（\unit{sr}） & 0.842 & $\pi\approx3.14$ & $2\pi\approx6.28$ & $4\pi\approx12.57$ \\
+全体（$4\pi$）の何倍か & 0.067 & 0.25 & 0.5 & 1 \\
+\end{bktable}
+\bktabcaption{円すいの立体角。\ang{60} の円すいは、まわり全体のちょうど $\frac14$。}
+\label{bk:8-8:tab-rittai}
+\end{bkcenter}
+
+半径1でない面や、ななめの面のときは、面のタイルを「点から見た向き」に直して $r^2$ でわります：$\displaystyle\Omega=\iint_S\frac{\vec e_r\cdot\vec n}{r^2}\,\dd S$。これは、⑫の場 $\dfrac{\vec r}{r^3}=\dfrac{\vec e_r}{r^2}$ の流束と同じ形です。だから、点を囲む閉じた面の立体角は、いつも $4\pi$ になります（⑫の答え）。
+
+\bksubsection{14}{場合J：データだけのとき――川の流量}
+
+\label{bk:8-8:kawa}\kviiiidanhead{3}{式がなければ、数でたす}
+川の流量（1秒間に流れる水の量）は、式ではわかりません。そこで、川のはばをいくつかの区間に分け、区間ごとに深さと流れの速さを測って、「速さ×深さ×はば」をたします。川の流量の観測で実際に使われている方法です（ふだんは流速計を使い、区間ごとにたして求める）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlueBg] (0,0) -- (0,-5) -- (20,-10) -- (40,-15) -- (60,-10) -- (80,-5) -- (100,0) -- cycle;
+  \draw[bkInk, line width=0.8pt] (-4,2) -- (0,0) -- (0,-5) -- (20,-10) -- (40,-15) -- (60,-10) -- (80,-5) -- (100,0) -- (104,2);
+  \draw[bkGray, line width=0.6pt] (0,0) -- (100,0);
+  \foreach \kviiiix in {20,40,60,80} {\draw[bkGray, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (\kviiiix,0) -- (\kviiiix,{-17});}
+  \foreach \kviiiix/\kviiiid/\kviiiiv in {10/0.5/0.4,30/1.0/0.8,50/1.5/1.0,70/1.0/0.8,90/0.5/0.4} {\node[kviiii lab, align=center] at (\kviiiix,6) {\kviiiid m\\\kviiiiv\,m/s};}
+  \node[kviiii lab, anchor=north] at (50,-19) {はば \qty{10}{m} を、\qty{2}{m} ずつ5つの区間に分けた（上の数は、区間の深さと平均の速さ）};
+\end{tikzpicture}
+\bkfigcaption{川の断面（深さは見やすいように大きくかいた）。区間ごとに、深さと平均の速さを測る。}
+\label{bk:8-8:fig-kawa}
+\end{bkfigure}
+
+1つの区間を通る量は「速さ×（深さ×はば）」です。流れは断面に直角なので、$\vec v\cdot\vec n$ は速さそのものです。
+\begin{bkhenkei}[0.56]
+0.5\times0.4+1.0\times0.8+1.5\times1.0 & はば1\,m あたり。左の3つの区間 \\
+\quad+1.0\times0.8+0.5\times0.4 & 右の2つの区間 \\
+=0.2+0.8+1.5+0.8+0.2=3.5 & 5つの区間をたした \\
+2\times3.5=7.0 & はば \qty{2}{m} をかけた（\unit{m^3/s}） \\
+\end{bkhenkei}
+区間を細かくするほど、本当の面積分 $\iint_S\vec v\cdot\vec n\,\dd S$ に近づきます。式がわからなくても、面積分の考え（タイルに分けて、直角な成分×面積をたす）は、そのまま使えるのです。
+
+\begin{seikaku}
+\kviiiibox{表と裏が決められない面}
+流束は、面の表（正の向き）を決めてはじめて計算できます。ところが、細長い紙を1回ねじってはり合わせた「メビウスの帯」には、表と裏の区別がありません。帯にそって1周すると、表だったはずの側が裏につながってしまうのです。このような面では、どの場所でもなめらかにつながる $\vec n$ を選べないので、流束は決められません。この本で考える面（平らな面、球面、円柱面、箱の表面など）は、どれも表と裏が決められる面です。
+
+\kviiiibox{$\vec n\,\dd S$ の向きと、$u$・$v$ の順}
+$\vec n\,\dd S=(\vec r_u\times\vec r_v)\,\dd u\,\dd v$ は、$u$ と $v$ の順を入れかえると、外積が反対向きになります。球面で $(\theta,\ \varphi)$ の順にとると外向きになりますが、$(\varphi,\ \theta)$ の順にとると内向きになります。だから、計算の最後に「決めた表の向きと合っているか」を必ず確かめます。
+\end{seikaku}
+
+\begin{kotoba}
+\small
+\bkword{流束（flux）}{1秒間に面を通りぬける量。$\iint_S\vec F\cdot\vec n\,\dd S$。}
+\bkword{面積分}{面をタイルに分け、1枚ずつ量をかけてたし合わせ、細かくした先。操作の名前。}
+\bkword{法線ベクトル $\vec n$}{面に直角な、長さ1の矢印。閉じた面では外向き。}
+\bkword{面積ベクトル}{面積を長さ、面の向きを向きとする矢印 $A\vec n$。}
+\bkword{立体角}{点から見た、面の見かけの大きさ。半径1の球面の上の面積。単位はステラジアン（sr）。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\vec n\,\dd S$}{エヌ・ディー・エス}{向きのついた小さなタイル。$\vec n$ は外向き（表向き）の長さ1の矢印、$\dd S$ はタイルの面積}{vector area element}{8-8}}%
+{\bkkigocard{$\displaystyle\oiint_S$}{閉じた面の面積分}{◯は「面が閉じている」という印。形や面積ではない。どの面かは $S$ で決める}{closed surface integral}{8-8}}
+
+\begin{column}{夏が暑く、冬が寒いわけ}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+太陽の光は、遠くからほぼ平行にやってくる「一様な流れ」です。地面が受ける光の量は、場合Aのとおり「光の強さ×面積×$\cos\theta$」で、$\theta$ は光と地面の $\vec n$（真上）のなす角です。東京（北緯約 \ang{35.7}）では、昼の太陽の高さが、夏至のころは約 \ang{78}、冬至のころは約 \ang{31} です（地球の軸のかたむき \ang{23.4} から計算した値）。光と真上のなす角は \ang{12} と \ang{59} なので、$\cos\ang{12}\approx0.98$、$\cos\ang{59}\approx0.51$。同じ \qty{1}{m^2} の地面が受ける光は、冬は夏のおよそ半分です（空気の層での弱まりは考えない）。季節があるのは、太陽までの距離ではなく、この $\cos\theta$ のちがいが大きな理由の1つです（昼の長さのちがいも効きます）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.33\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (0,0) rectangle (38,2);
+  \foreach \kviiiix in {6,12,18} {\draw[bkOrange!85!black, line width=1pt, -{Stealth[length=3pt]}] ({\kviiiix+4.3},22) -- (\kviiiix,2.5);}
+  \foreach \kviiiix in {24,30,36} {\draw[bkBlue!70!black, line width=1pt, -{Stealth[length=3pt]}, dash pattern=on 2pt off 1pt] ({\kviiiix-12},9.7) -- (\kviiiix,2.5);}
+  \node[kviiii lab, anchor=south] at (12,22.5) {夏の光};
+  \node[kviiii lab, anchor=south east] at (13,10.5) {冬の光};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+\begin{taisetsu}
+\kviiiibox{面積分の3つの段}
+\kviiiidan{1}\enspace 記号を読む：何を（$\vec F\cdot\vec n$ か $f$）・どの面で（$S$ と表の向き。閉じた面は外向き）・1枚の量（$\vec n\,\dd S$）\par
+\kviiiidan{3}\enspace 直す前に：データだけ？　立体角？　平らで一様？　球面で一定？　閉じた面？\par
+\kviiiidan{2}\enspace 面を2つの数で表し、$\vec n\,\dd S=(\vec r_u\times\vec r_v)\,\dd u\,\dd v$ で、ふつうの定積分を2回\par
+\[ \kviiiiNt{\iint_S\vec F\cdot\vec n\,\dd S}=\kviiiiSt{\int_{v_1}^{v_2}\!\!\Bigl(\int_{u_1}^{u_2}\vec F\cdot(\vec r_u\times\vec r_v)\,\dd u\Bigr)\dd v} \]
+\kviiiibox{場合分けの表8-8（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,40mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kviiiicase{A} & 平らで、場が一様 & $(\vec F\cdot\vec n)\times A=\vec F\cdot(A\vec n)$。$A\vec n$ は外積で \\
+\kviiiicase{B} & 平らで、軸に直角 & 8-6 の重積分（長方形なら定積分を2回） \\
+\kviiiicase{C} & 平らな円 & 極座標 $r\,\dd r\,\dd\theta$、$r$ だけなら $2\pi r\,\dd r$ \\
+\kviiiicase{D} & 球面・円柱面で一定 & 一定の値×面積（$4\pi R^2$、$2\pi R^2$、$2\pi RL$） \\
+\kviiiicase{E} & $z=g(x,\ y)$ & $\Bigl(-\frac{\partial g}{\partial x},\ -\frac{\partial g}{\partial y},\ 1\Bigr)\dd x\,\dd y$。影の範囲で \\
+\kviiiicase{F} & 球面・円柱面など & 球面 $R^2\sin\theta\,\dd\theta\,\dd\varphi$、円柱面 $R\,\dd\theta\,\dd z$ \\
+\kviiiicase{G} & 閉じた箱 & 面ごとに B でたす。どの面も外向き \\
+\kviiiicase{H} & 点電荷1つの袋 & 中なら球に取りかえ（D）、外なら0。ほかは 8-11 \\
+\kviiiicase{I} & 立体角 & $2\pi(1-\cos\alpha)$、全体は $4\pi$ \\
+\kviiiicase{J} & データだけ & 表計算で「$\vec F\cdot\vec n$×タイルの面積」をたす \\
+\end{bktable}
+\end{taisetsu}
+
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+閉曲面 $S$ を貫く電場の流束は、
+\[ \Phi_E=\oint_S\symbf{E}\cdot\dd\symbf{S}=\int_S\symbf{E}\cdot\symbf{n}\,\dd A \tag{2.8} \]
+で与えられる。ただし $\dd\symbf{S}=\symbf{n}\,\dd A$ は外向きの面素ベクトルである。
+\end{bkhonbun}
+\bkyaku{「閉曲面」は閉じた面、「貫く」は通りぬける。$\Phi_E$（ファイ・イー）は電場の流束。物理の本や多くの専門書では、閉じた面にも $\oint$ を1つだけ書き、∫ も1つで書く。どちらも◯は「閉じている」という印で、この本の $\oiint_S\vec E\cdot\vec n\,\dd S$ と同じもの。太字の $\dd\symbf{S}$（面素ベクトル）は、この本の $\vec n\,\dd S$。$\dd\vec A$ と書く本もある。$\dd A$ はタイルの面積（この本の $\dd S$）。}
+\end{senmonsho}
+
+\begin{motto}[5]
+\textbf{電場の流束と「電束」（電気工学の本を読むとき）}\par
+この本と物理シリーズでは、$\displaystyle\oiint_S\vec E\cdot\vec n\,\dd S$ を\textbf{電場の流束} $\Phi_E$〔\unit{N.m^2/C}〕とよびます。電気工学の本では、電場に $\varepsilon_0$ をかけた\textbf{電束密度} $\vec D=\varepsilon_0\vec E$〔\unit{C/m^2}〕を使い、その流束を\textbf{電束}〔C〕とよびます（この $\vec D$ は、場合分けの表の D とは別のものです）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,27mm] Q[c,m,42mm] Q[c,m,42mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ & この本・物理シリーズ & 電気工学の本 \\
+閉じた面の積分 & $\displaystyle\oiint_S\vec E\cdot\vec n\,\dd S=\frac{Q}{\varepsilon_0}$ & $\displaystyle\oiint_S\vec D\cdot\vec n\,\dd S=Q$ \\
+よび名と単位 & 電場の流束〔\unit{N.m^2/C}〕 & 電束〔C〕 \\
+\qty{1.0e-9}{C} を囲む袋 & 約 \qty{113}{N.m^2/C} & \qty{1.0e-9}{C} \\
+\end{bktable}
+\end{bkcenter}
+両辺に $\varepsilon_0$ をかけただけで、同じ法則です。電束を使うと、右辺が中の電荷 $Q$ そのものになるので、電気工学ではこの形がよく使われます。
+\end{motto}
+
+
+\bkfukidashi{sora}{書き方がちがっても、「何を・どこで・1枚の量」を読めば同じだね。}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[網を通る水の量]
+川の水がどこでも \qty{1.5}{m/s} で流れています。面積 \qty{0.4}{m^2} の網を入れ、網に直角な向き $\vec n$ と流れのなす角 $\theta$ を、（1）\ang{0}、（2）\ang{60}、（3）\ang{90} にしました。それぞれ、1秒間に網を通る水の量を求めましょう。\par
+\kangaekata \kviiiibaai{平らな網で、流れはどこでも同じ}{8-8}{A}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec v\cdot\vec n\,\dd S$：網 $S$ の上で「直角な成分×タイル」をたす。ここでは積分しないで済む。\par
+\kviiiidan{3}\enspace 積分しない：通る量 $=vA\cos\theta$（①）。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$1.5\times0.4\times\cos\ang{0}=1.5\times0.4\times1=0.6$\par
+\kviiiia （2）$1.5\times0.4\times\cos\ang{60}=1.5\times0.4\times0.5=0.3$\par
+\kviiiia （3）$1.5\times0.4\times\cos\ang{90}=1.5\times0.4\times0=0$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）\qty{0.6}{m^3/s}\quad （2）\qty{0.3}{m^3/s}\quad （3）0（網が流れと平行で、通りぬけない）
+\end{reidai}
+
+\begin{jibun}
+水がどこでも \qty{3}{m/s} で流れる水路に、面積 \qty{0.2}{m^2} の網を入れます。網に直角な向きと流れのなす角が（1）\ang{45}、（2）\ang{90} のとき、1秒間に網を通る水の量を求めましょう（$\cos\ang{45}\approx0.707$）。
+\bkjans{（1）$3\times0.2\times0.707\approx\qty{0.42}{m^3/s}$。（2）$3\times0.2\times0=0$。}
+\end{jibun}
+
+\begin{reidai}[ななめの平面を通る量：外積で面積ベクトル]
+平面 $x+2y+2z=4$ の、座標軸で切りとられた三角形を、どこでも同じ流れ $\vec F=(1,\ 1,\ 1)$〔m/s〕が通りぬけます。三角形の面積と、1秒間に通りぬける量を求めましょう（三角形の向きは、原点から遠ざかる向きを正とする）。\par
+\kangaekata \kviiiibaai{平らな三角形で、流れはどこでも同じ}{8-8}{A}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec F\cdot\vec n\,\dd S$：三角形 $S$ の上でたす。ここでは積分しないで済む。\par
+\kviiiidan{3}\enspace 積分しない：$\vec F\cdot(A\vec n)$。$A\vec n$ は2つの辺の外積の半分（④）。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 頂点：A$(4,\ 0,\ 0)$、B$(0,\ 2,\ 0)$、C$(0,\ 0,\ 2)$\par
+\kviiiia $\overrightarrow{\mathrm{AB}}=(-4,\ 2,\ 0)$、$\overrightarrow{\mathrm{AC}}=(-4,\ 0,\ 2)$\par
+\kviiiia 外積の $x$ 成分：$2\times2-0\times0=4$\par
+\kviiiia 外積の $y$ 成分：$0\times(-4)-(-4)\times2=8$\par
+\kviiiia 外積の $z$ 成分：$(-4)\times0-2\times(-4)=8$\par
+\kviiiia 半分にして $A\vec n=(2,\ 4,\ 4)$（法線 $(1,\ 2,\ 2)$ と同じ向き）\par
+\kviiiia 面積：$\sqrt{2^2+4^2+4^2}=\sqrt{36}=6$\par
+\kviiiia 通りぬける量：$(1,\ 1,\ 1)\cdot(2,\ 4,\ 4)=2+4+4=10$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 面積 \qty{6}{m^2}、通りぬける量 \qty{10}{m^3/s}
+\end{reidai}
+
+\begin{jibun}
+平面 $2x+2y+z=4$ の、座標軸で切りとられた三角形を、どこでも同じ流れ $\vec F=(1,\ 2,\ 3)$〔m/s〕が通りぬけます。三角形の面積と、1秒間に通りぬける量を求めましょう（原点から遠ざかる向きを正とする）。
+\bkjans{頂点 $(2,\ 0,\ 0)$、$(0,\ 2,\ 0)$、$(0,\ 0,\ 4)$。辺 $(-2,\ 2,\ 0)$ と $(-2,\ 0,\ 4)$ の外積 $(8,\ 8,\ 4)$ の半分で $A\vec n=(4,\ 4,\ 2)$。面積 $\sqrt{16+16+4}=\qty{6}{m^2}$。通りぬける量 $4+8+6=\qty{18}{m^3/s}$。}
+\end{jibun}
+
+\begin{reidai}[屋根に降る雨]
+上から見ると \qty{8}{m}×\qty{5}{m} の長方形で、\ang{30} かたむいた屋根があります。雨が真下に、1時間に \qty{4}{mm} の強さで降っています。（1）屋根の本当の面積、（2）1時間に屋根が受ける雨水の量を求めましょう（$\cos\ang{30}\approx0.866$）。\par
+\kangaekata \kviiiibaai{平らな屋根で、雨はどこでも同じ}{8-8}{A}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec v\cdot\vec n\,\dd S$：屋根 $S$ の上で、雨の直角な成分×タイルをたす。\par
+\kviiiidan{3}\enspace 積分しない。雨と $\vec n$ のなす角も \ang{30}（④の屋根）。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$\dfrac{8\times5}{\cos\ang{30}}=\dfrac{40}{0.866}\approx46.2$\par
+\kviiiia （2）$\qty{4}{mm}=\qty{0.004}{m}$。$0.004\times\dfrac{40}{\cos\ang{30}}\times\cos\ang{30}=0.004\times40=0.16$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）約 \qty{46.2}{m^2}\quad （2）\qty{0.16}{m^3}（\qty{160}{L}。上から見た面積だけで決まる）
+\end{reidai}
+
+\begin{jibun}
+上から見ると \qty{12}{m}×\qty{5}{m} の長方形で、\ang{45} かたむいた屋根に、雨が真下に1時間に \qty{6}{mm} の強さで降っています。（1）屋根の本当の面積、（2）1時間に受ける雨水の量を求めましょう（$\cos\ang{45}\approx0.707$）。
+\bkjans{（1）$60\div0.707\approx\qty{84.9}{m^2}$。（2）$0.006\times60=\qty{0.36}{m^3}$（\qty{360}{L}）。}
+\end{jibun}
+
+\begin{reidai}[高さで強さが変わる風が、窓を通る量]
+はば \qty{2}{m}、高さ \qty{1.5}{m} の窓に、風が直角に吹きこんでいます。窓の下の辺からの高さ $z$〔m〕の所で、風の速さは $v=0.8+0.4z$〔m/s〕です。1秒間に窓を通る空気の量を求めましょう。\par
+\kangaekata \kviiiibaai{平らで軸に直角な窓。風は高さで変わる}{8-8}{B}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec v\cdot\vec n\,\dd S$：窓の上で「直角な成分×タイル」をたす。\par
+\kviiiidan{2}\enspace 場所は横 $x$（0〜2）と高さ $z$（0〜1.5）。$\dd S=\dd x\,\dd z$、$\vec v\cdot\vec n=0.8+0.4z$。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 内側：$\displaystyle\int_0^2(0.8+0.4z)\,\dd x=2(0.8+0.4z)=1.6+0.8z$\par
+\kviiiia 外側：$\displaystyle\int_0^{1.5}(1.6+0.8z)\,\dd z=\Bigl[\,1.6z+0.4z^2\,\Bigr]_0^{1.5}$\par
+\kviiiib $=2.4+0.9=3.3$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 \qty{3.3}{m^3/s}
+\end{reidai}
+
+\begin{jibun}
+はば \qty{1.5}{m}、高さ \qty{2}{m} の窓に、風が直角に吹きこんでいます。窓の下の辺からの高さ $z$〔m〕の所で、風の速さは $v=0.5+0.5z$〔m/s〕です。1秒間に窓を通る空気の量を求めましょう。
+\bkjans{内側 $\displaystyle\int_0^{1.5}(0.5+0.5z)\,\dd x=0.75+0.75z$。外側 $\displaystyle\int_0^2(0.75+0.75z)\,\dd z=\Bigl[\,0.75z+0.375z^2\,\Bigr]_0^2=1.5+1.5=\qty{3.0}{m^3/s}$。}
+\end{jibun}
+
+\begin{reidai}[パイプの断面を通る水]
+半径 $R=\qty{2}{cm}$ のパイプの中を、水がまん中で $u_{\max}=\qty{0.1}{m/s}$、中心から $r$ の所で $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$ の速さで流れています。1秒間に断面を通る水の量（流量）を求めましょう。また、平均の速さを求めましょう。\par
+\kangaekata \kviiiibaai{平らな円の断面。速さは $r$ だけで決まる}{8-8}{C}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec v\cdot\vec n\,\dd S$：断面の円 $S$ の上で、速さ×タイルをたす。\par
+\kviiiidan{2}\enspace 細い輪に分ける：$\dd S=2\pi r\,\dd r$（8-6 の場合C$'$）。$r$ は0から $R$ まで。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 $\displaystyle\int_0^R u_{\max}\Bigl(1-\frac{r^2}{R^2}\Bigr)2\pi r\,\dd r=2\pi u_{\max}\int_0^R\Bigl(r-\frac{r^3}{R^2}\Bigr)\dd r$\par
+\kviiiib $=2\pi u_{\max}\Bigl[\,\frac{r^2}{2}-\frac{r^4}{4R^2}\,\Bigr]_0^R=2\pi u_{\max}\Bigl(\frac{R^2}{2}-\frac{R^2}{4}\Bigr)=\frac{\pi R^2u_{\max}}{2}$\par
+\kviiiia $R=0.02$、$u_{\max}=0.1$：$\dfrac{\pi\times0.0004\times0.1}{2}\approx6.28\times10^{-5}$\par
+\kviiiia 平均の速さ：流量÷断面積 $=\dfrac{\pi R^2u_{\max}/2}{\pi R^2}=\dfrac{u_{\max}}{2}=0.05$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 約 \qty{6.28e-5}{m^3/s}（1秒間に \qty{62.8}{mL}）。平均の速さは \qty{0.05}{m/s}（まん中の半分）
+\end{reidai}
+
+\begin{jibun}
+半径 $R=\qty{1.5}{cm}$ のパイプの中を、水がまん中で $u_{\max}=\qty{0.4}{m/s}$、中心から $r$ の所で $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$ の速さで流れています。流量（mL/s）と平均の速さを求めましょう。
+\bkjans{流量 $\dfrac{\pi R^2u_{\max}}{2}$ に $R=0.015$、$u_{\max}=0.4$ を入れて $\dfrac{\pi\times0.000225\times0.4}{2}$、約 \qty{1.41e-4}{m^3/s}（1秒間に約 \qty{141}{mL}）。平均の速さ \qty{0.2}{m/s}。}
+\end{jibun}
+
+\begin{reidai}[対称な場：球面を通りぬける量]
+（1）場 $\vec F=(x,\ y,\ z)$ が、原点を中心とする半径2の球面を外へ通りぬける量を求めましょう。\par
+（2）$Q=\qty{1.0e-9}{C}$ の点電荷を中心に置いた、半径 \qty{0.1}{m} の球面と半径 \qty{1}{m} の球面を通りぬける電場の流束を求めましょう（$\varepsilon_0=\qty{8.85e-12}{F/m}$）。\par
+\kangaekata \kviiiibaai{球面で、場が面に直角、大きさが一定}{8-8}{D}\par
+\kviiiidan{1}\enspace $\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S$：球面（閉じた面）全体で、外向きの成分×タイルをたす。\par
+\kviiiidan{3}\enspace 一定の $\vec F\cdot\vec n$ を積分の外に出し、球面の面積 $4\pi R^2$ をかける（⑩）。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$\vec F=(x,\ y,\ z)$ は原点から外向きで、長さは $r$。球面の上では $\vec F\cdot\vec n=r=2$\par
+\kviiiib $2\times4\pi\times2^2=32\pi\approx100.5$\par
+\kviiiia （2）どちらの球も $\dfrac{Q}{\varepsilon_0}=\dfrac{1.0\times10^{-9}}{8.85\times10^{-12}}\approx113$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$32\pi\approx100.5$\quad （2）どちらも約 \qty{113}{N.m^2/C}（半径によらない）
+\end{reidai}
+
+\begin{jibun}
+（1）場 $\vec F=(x,\ y,\ z)$ が、原点を中心とする半径3の球面を外へ通りぬける量を求めましょう。（2）$Q=\qty{2.0e-9}{C}$ の点電荷を囲む半径 \qty{0.5}{m} の球面を通りぬける電場の流束を求めましょう（$\varepsilon_0=\qty{8.85e-12}{F/m}$）。
+\bkjans{（1）$3\times4\pi\times3^2=108\pi\approx339.3$。（2）$\dfrac{2.0\times10^{-9}}{8.85\times10^{-12}}\approx\qty{226}{N.m^2/C}$（半径によらない）。}
+\end{jibun}
+
+\begin{reidai}[グラフの形の曲がった面：おわんを伏せた面]
+面 $z=1-x^2-y^2$（$z\geqq0$ の部分。おわんを伏せた形）を、場 $\vec F=(x,\ y,\ z)$ が上向きに通りぬける量を求めましょう。\par
+\kangaekata \kviiiibaai{面が $z=g(x,\ y)$ のグラフ}{8-8}{E}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec F\cdot\vec n\,\dd S$：$S$ は曲がった面。$\vec n$ は場所で変わる。\par
+\kviiiidan{2}\enspace $\vec n\,\dd S=\Bigl(-\dfrac{\partial g}{\partial x},\ -\dfrac{\partial g}{\partial y},\ 1\Bigr)\dd x\,\dd y$。影の範囲は $x^2+y^2\leqq1$（$z=0$ になる円）なので、極座標に。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 $g=1-x^2-y^2$ より $\dfrac{\partial g}{\partial x}=-2x$、$\dfrac{\partial g}{\partial y}=-2y$。$\vec n\,\dd S=(2x,\ 2y,\ 1)\,\dd x\,\dd y$\par
+\kviiiia $\vec F\cdot(2x,\ 2y,\ 1)=2x^2+2y^2+z$。$z$ に $1-x^2-y^2$ を入れて $x^2+y^2+1$\par
+\kviiiia 極座標で $x^2+y^2=r^2$、$\dd x\,\dd y=r\,\dd r\,\dd\theta$\par
+\kviiiia $\displaystyle\int_0^{2\pi}\!\!\Bigl(\int_0^1(r^2+1)\,r\,\dd r\Bigr)\dd\theta=2\pi\Bigl[\,\frac{r^4}{4}+\frac{r^2}{2}\,\Bigr]_0^1=2\pi\times\frac34$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 $\dfrac{3\pi}{2}\approx4.71$（8-11 で、ガウスの定理を使って同じ答えになることを確かめる）
+\end{reidai}
+
+\begin{jibun}
+面 $z=4-x^2-y^2$（$z\geqq0$ の部分）を、場 $\vec F=(0,\ 0,\ z)$ が上向きに通りぬける量を求めましょう。
+\bkjans{$\vec n\,\dd S=(2x,\ 2y,\ 1)\,\dd x\,\dd y$。$\vec F\cdot(2x,\ 2y,\ 1)=z=4-r^2$。影は $r\leqq2$ の円。$\displaystyle\int_0^{2\pi}\!\!\int_0^2(4-r^2)\,r\,\dd r\,\dd\theta=2\pi\Bigl[\,2r^2-\frac{r^4}{4}\,\Bigr]_0^2=2\pi\times4=8\pi\approx25.1$。}
+\end{jibun}
+
+\begin{reidai}[球面の一部：半球のドームを通る量]
+原点を中心とする半径 $R=2$ の上半分の球面（ドーム）を、場 $\vec F=(0,\ 0,\ z)$ が外向きに通りぬける量を求めましょう。\par
+\kangaekata \kviiiibaai{球面の一部}{8-8}{F}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec F\cdot\vec n\,\dd S$：ドーム $S$ の上で、外向きの成分×タイルをたす。$\vec n$ は場所で変わる。\par
+\kviiiidan{2}\enspace 球面のタイル：$\vec n=\vec e_r$、$\dd S=R^2\sin\theta\,\dd\theta\,\dd\varphi$（⑨）。上半分なので $\theta$ は0〜$\dfrac{\pi}{2}$、$\varphi$ は0〜$2\pi$。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 面の上では $z=R\cos\theta$。$\vec e_r$ の $z$ 成分は $\cos\theta$\par
+\kviiiia $\vec F\cdot\vec n=z\times\cos\theta=R\cos^2\theta$\par
+\kviiiia $\displaystyle\int_0^{2\pi}\!\!\Bigl(\int_0^{\pi/2}R\cos^2\theta\times R^2\sin\theta\,\dd\theta\Bigr)\dd\varphi$\par
+\kviiiib $\displaystyle=2\pi R^3\int_0^{\pi/2}\cos^2\theta\sin\theta\,\dd\theta$（$\varphi$ の積分は $2\pi$）\par
+\kviiiia $u=\cos\theta$ とおくと $\dd u=-\sin\theta\,\dd\theta$（5-16 の置換積分）。$\theta$ が0〜$\frac{\pi}{2}$ で $u$ は1〜0\par
+\kviiiib $\displaystyle\int_0^{\pi/2}\cos^2\theta\sin\theta\,\dd\theta=\int_0^1u^2\,\dd u=\frac13$\par
+\kviiiia $2\pi\times2^3\times\dfrac13=\dfrac{16\pi}{3}$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 $\dfrac{16\pi}{3}\approx16.76$
+\end{reidai}
+
+\begin{jibun}
+原点を中心とする半径 $R=3$ の上半分の球面を、場 $\vec F=(0,\ 0,\ z)$ が外向きに通りぬける量を求めましょう。
+\bkjans{$\vec F\cdot\vec n=R\cos^2\theta$、$\dd S=R^2\sin\theta\,\dd\theta\,\dd\varphi$。$\dfrac{2\pi R^3}{3}=\dfrac{2\pi\times27}{3}=18\pi\approx56.5$。}
+\end{jibun}
+
+\begin{reidai}[向きのいらない面積分：ドームの屋根をぬるペンキ]
+半径 \qty{10}{m} の半球のドーム屋根の外側を、ペンキでぬります。\par
+（1）\qty{1}{m^2} あたり \qty{0.2}{L} のペンキが要るとき、全部で何Lのペンキが要るでしょう。\par
+（2）ドームの面積は、ドームの床（半径 \qty{10}{m} の円）の面積の何倍でしょう。\par
+\kangaekata \kviiiibaai{球面の一部で、ぬる量は一定。面積は球面のタイルで}{8-8}{D,F}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S0.2\,\dd S$：$\vec F\cdot\vec n$ のかわりに数 0.2 をかけてたす。\par
+\kviiiidan{3}\enspace 0.2 は一定なので外に出す。残りは面積 $\iint_S\dd S$。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 面積：$\displaystyle\int_0^{2\pi}\!\!\Bigl(\int_0^{\pi/2}R^2\sin\theta\,\dd\theta\Bigr)\dd\varphi=2\pi R^2\Bigl[-\cos\theta\Bigr]_0^{\pi/2}=2\pi R^2$\par
+\kviiiia $2\pi\times10^2\approx628.3$\par
+\kviiiia （1）ペンキ：$0.2\times628.3\approx125.7$\par
+\kviiiia （2）床の面積は $\pi R^2$。$\dfrac{2\pi R^2}{\pi R^2}=2$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）約 \qty{126}{L}（ドームの面積は約 \qty{628}{m^2}）\quad （2）2倍（半径によらない）
+\end{reidai}
+
+\begin{jibun}
+半径 \qty{3}{m} の球形のタンクの外側を、\qty{1}{m^2} あたり \qty{0.15}{L} のペンキでぬります。（1）全部で何Lのペンキが要るでしょう。（2）タンクの表面積は、半径 \qty{3}{m} の円の面積の何倍でしょう。
+\bkjans{（1）面積 $4\pi R^2=4\pi\times9\approx\qty{113.1}{m^2}$（$\theta$ は0〜$\pi$）。ペンキ $0.15\times113.1\approx\qty{17.0}{L}$。（2）$\dfrac{4\pi R^2}{\pi R^2}=4$ 倍。}
+\end{jibun}
+
+\begin{reidai}[閉じた箱から出る量]
+1辺1の立方体の箱（$0\leqq x,\ y,\ z\leqq1$）から、場 $\vec F=(xy,\ y^2,\ z)$ が外へ出る量 $\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S$ を求めましょう。\par
+\kangaekata \kviiiibaai{閉じた面が6つの平らな面}{8-8}{G}\par
+\kviiiidan{1}\enspace $\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S$：箱の表面全体で、外向きの成分×タイルをたす。\par
+\kviiiidan{3}\enspace 6つの面に分ける。どの面も軸に直角なので、1つずつは場合B。外向きの $\vec n$ に気をつける。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 $x=1$：$\vec F\cdot\vec n=xy=y$。$\displaystyle\int_0^1\!\!\int_0^1y\,\dd y\,\dd z=0.5$\par
+\kviiiia $x=0$：$\vec F\cdot\vec n=-xy=0$。0\par
+\kviiiia $y=1$：$\vec F\cdot\vec n=y^2=1$。$1\times1=1$\par
+\kviiiia $y=0$：$\vec F\cdot\vec n=-y^2=0$。0\par
+\kviiiia $z=1$：$\vec F\cdot\vec n=z=1$。$1\times1=1$\par
+\kviiiia $z=0$：$\vec F\cdot\vec n=-z=0$。0\par
+\kviiiia 合計 $0.5+0+1+0+1+0=2.5$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 2.5（8-9 の例題5と同じ場。8-11 で、発散 $3y+1$ を箱の中でたした値と同じになる）
+\end{reidai}
+
+\begin{jibun}
+1辺1の立方体の箱（$0\leqq x,\ y,\ z\leqq1$）から、場 $\vec F=(x+y,\ 2y,\ z^2)$ が外へ出る量を求めましょう。
+\bkjans{$x=1$：$\displaystyle\int_0^1\!\!\int_0^1(1+y)\,\dd y\,\dd z=1.5$。$x=0$：$-(0+y)=-y$ で $-0.5$。$y=1$：$2\times1=2$。$y=0$：0。$z=1$：1。$z=0$：0。合計 $1.5-0.5+2+0+1+0=4$。}
+\end{jibun}
+
+\begin{reidai}[袋の形を変えても同じ：点電荷の場]
+原点にある点電荷の場を、数をそろえて次のようにします。
+\[ \vec F=\frac{(x,\ y,\ z)}{r^3}\qquad（r=\sqrt{x^2+y^2+z^2}） \]
+（1）原点を中心とする半径1の球面と、半径3の球面を外へ通りぬける量を、それぞれ求めましょう。\par
+（2）原点を中心とする1辺2の立方体の袋の、1つの面を通りぬける量と、6つの面の合計を求めましょう。\par
+（3）原点が外にある袋（たとえば、中心が $(5,\ 0,\ 0)$ で半径1の球面）を通りぬける量は、いくつでしょう。\par
+\kangaekata \kviiiibaai{閉じた面。わき出しは点電荷1つだけ}{8-8}{H}\par
+\kviiiidan{1}\enspace $\displaystyle\oiint_S\vec F\cdot\vec n\,\dd S$：袋の表面全体でたす。名前は同じでも、袋の形はいろいろ。\par
+\kviiiidan{3}\enspace （1）は場合Dで外に出す。（2）は対称性で6つの面が等しいことを使う（⑫）。（3）は、中に電荷がない袋。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 （1）球面の上で $\vec F\cdot\vec n=\dfrac{1}{R^2}$。$\dfrac{1}{R^2}\times4\pi R^2=4\pi$（$R=1$ でも $R=3$ でも）\par
+\kviiiia （2）立方体の袋も、中の電荷は同じなので、合計は球と同じ $4\pi$\par
+\kviiiib 6つの面は対称で等しいので、1つの面は $\dfrac{4\pi}{6}=\dfrac{2\pi}{3}\approx2.094$\par
+\kviiiib （⑫の Python の 2.0944 と一致）\par
+\kviiiia （3）袋の中に電荷がないので、入ってきた分は全部出ていく。0\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）どちらも $4\pi\approx12.57$\quad （2）1つの面 $\dfrac{2\pi}{3}\approx2.09$、合計 $4\pi$\quad （3）0
+\end{reidai}
+
+\begin{jibun}
+点電荷の場を $\vec F=\dfrac{3(x,\ y,\ z)}{r^3}$ とします（例題11の3倍の強さ）。（1）原点を中心とする半径2の球面を外へ通りぬける量、（2）原点を中心とする1辺4の立方体の袋の、1つの面を通りぬける量を求めましょう。
+\bkjans{（1）$\dfrac{3}{R^2}\times4\pi R^2=12\pi\approx37.7$（半径によらない）。（2）合計も $12\pi$ なので、1つの面は $\dfrac{12\pi}{6}=2\pi\approx6.28$。}
+\end{jibun}
+
+\begin{reidai}[立体角：ライトの光が届く広がり]
+小さな電球が、どの向きにも同じ強さで、全部で \qty{2}{W} の光を出しています。この電球を、半分の角 $\alpha=\ang{60}$ の円すいの形の穴から見ると、（1）穴の立体角、（2）全体の何倍か、（3）穴から出ていく光の量を求めましょう。\par
+\kangaekata \kviiiibaai{点から見た見かけの大きさ}{8-8}{I}\par
+\kviiiidan{1}\enspace $\displaystyle\Omega=\iint_S\frac{\vec e_r\cdot\vec n}{r^2}\,\dd S$：穴の口の面を、点から見た向きでたす。\par
+\kviiiidan{2}\enspace 半径1の球面で、$\theta$ が0〜$\alpha$ の部分の面積：$2\pi(1-\cos\alpha)$（⑬）。全体は $4\pi$。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$2\pi(1-\cos\ang{60})=2\pi(1-0.5)=\pi$\par
+\kviiiia （2）$\dfrac{\pi}{4\pi}=\dfrac14$\par
+\kviiiia （3）$2\times\dfrac14=0.5$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 （1）$\pi\approx\qty{3.14}{sr}$\quad （2）$\dfrac14$\quad （3）\qty{0.5}{W}
+\end{reidai}
+
+\begin{jibun}
+例題12 の電球（全部で \qty{2}{W}）を、半分の角 $\alpha=\ang{30}$ の円すいの穴から見ます。（1）穴の立体角、（2）全体の何倍か、（3）穴から出ていく光の量を求めましょう（$\cos\ang{30}\approx0.866$）。
+\bkjans{（1）$2\pi(1-0.866)\approx\qty{0.842}{sr}$。（2）$\dfrac{0.842}{4\pi}\approx0.067$。（3）$2\times0.067\approx\qty{0.13}{W}$。}
+\end{jibun}
+
+\begin{reidai}[データから川の流量を求める]
+はば \qty{8}{m} の川を、\qty{2}{m} ずつ4つの区間に分けて測ったところ、深さは岸から順に \qty{0.4}{m}、\qty{0.8}{m}、\qty{0.8}{m}、\qty{0.4}{m}、平均の速さは \qty{0.3}{m/s}、\qty{0.6}{m/s}、\qty{0.6}{m/s}、\qty{0.3}{m/s} でした。川の流量を求めましょう。\par
+\kangaekata \kviiiibaai{式がなく、データだけ}{8-8}{J}\par
+\kviiiidan{1}\enspace $\displaystyle\iint_S\vec v\cdot\vec n\,\dd S$：川の断面 $S$ の上でたす。式がないので、区間に分けて数でたす。\par
+\kviiiidan{3}\enspace 区間ごとに「速さ×（深さ×はば）」を求めて、たす（⑭）。流れは断面に直角。\par
+\shiki\kviiiis\hangindent=2.6\zw\hangafter=1 区間ごと：$0.4\times0.3=0.12$、$0.8\times0.6=0.48$、$0.48$、$0.12$（はば1\,m あたり）\par
+\kviiiia はば \qty{2}{m} をかけて、たす：$2\times(0.12+0.48+0.48+0.12)=2\times1.2=2.4$\par
+\kotae\kviiiis\hangindent=2.6\zw\hangafter=1 \qty{2.4}{m^3/s}
+\end{reidai}
+
+\begin{jibun}
+はば \qty{6}{m} の川を、\qty{2}{m} ずつ3つの区間に分けて測ったところ、深さは \qty{0.6}{m}、\qty{1.2}{m}、\qty{0.6}{m}、平均の速さは \qty{0.5}{m/s}、\qty{1.0}{m/s}、\qty{0.5}{m/s} でした。川の流量を求めましょう。
+\bkjans{$2\times(0.6\times0.5+1.2\times1.0+0.6\times0.5)=2\times1.8=\qty{3.6}{m^3/s}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 「名前」のまま、場×面積とする}
+\bkng{窓の風の流束は、$\iint_S\vec v\cdot\vec n\,\dd S=v\times\text{面積}=1\times2=2$}
+\bkok{風が高さで変わるので、ふつうの定積分に直す（⑤）}
+\[ \kviiiiN{\iint_S\vec v\cdot\vec n\,\dd S}=\kviiiiS{\int_0^2\!\!\int_0^1(1+0.5z)\,\dd x\,\dd z}=3 \]
+「場×面積」でよいのは、場が面の上で一定のとき（場合A・D）だけです。場所で変わるときは、名前をふつうの定積分に直します。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② $\vec F\cdot\vec n$ のかわりに $|\vec F|$ をかける}
+\bkng{\ang{60} 回した網を通る量は、$2\times0.5=1.0$}
+\bkok{$\vec v\cdot\vec n\times A=2\times\cos\ang{60}\times0.5=0.5$}
+面にそった成分は通りぬけません。かけるのは、面に直角な成分 $\vec F\cdot\vec n$ です。網を流れと平行に置けば、どんなに大きな網でも、通りぬける量は0です。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviiiiEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 閉じた面の $\vec n$ を内向きにする}
+\raggedright\bkng{$x=0$ の面の $\vec n$ を $(1,\ 0,\ 0)$}
+\bkok{外向きの $(-1,\ 0,\ 0)$}
+閉じた面の $\vec n$ は、どの面も外へ。逆だと符号が逆になります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 曲がった面で $\dd S=\dd x\,\dd y$ とする}
+\raggedright\bkng{曲がった面のタイルを $\dd x\,\dd y$}
+\bkok{外積で作る（場合E）}
+$\dd x\,\dd y$ は影の面積。かたむいた所のタイルは影より大きい。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kviiiiEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 球面で $R^2\sin\theta$ を忘れる}
+\raggedright\bkng{球面の面積を $\dd\theta\,\dd\varphi$ でたす}
+\bkok{$\dd S=R^2\sin\theta\,\dd\theta\,\dd\varphi$}
+角は長さではありません。辺は $R\,\dd\theta$ と $R\sin\theta\,\dd\varphi$（単位が m$^2$ かで気づける）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ $\oiint$ の◯を「球の面」と思う}
+\raggedright\bkng{$\oiint_S$ は球面の上の積分}
+\bkok{◯は「閉じている」印}
+どの面かは下の $S$ で決めます。箱の流束も $\oiint$ で書きます（⑪）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviiiibox{太陽電池パネルの向き}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+晴れた日の昼、地面に届く太陽の光は、光に直角な面 \qty{1}{m^2} あたりおよそ \qty{1000}{W} です。面積 \qty{1.6}{m^2}、光を電気に変える割合 20\% のパネルを光に直角に向けると、$1000\times1.6\times0.2=\qty{320}{W}$。光と $\vec n$ の角が \ang{60} になると、$\cos\ang{60}=0.5$ で \qty{160}{W} にへります。パネルを南に向け、地域ごとに決めた角度でかたむけるのは、1年を通して $\cos\theta$ を大きくするためです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (0,0) rectangle (36,2);
+  \filldraw[fill=bkBlue!35, draw=bkInk, line width=0.9pt] (6,6) -- (30,20) -- (30,18) -- (6,4) -- cycle;
+  \draw[bkInk, line width=0.8pt] (26,17.5) -- (26,2) (10,6.5) -- (10,2);
+  \foreach \kviiiis in {0,6,12} {\draw[bkOrange!85!black, line width=1pt, -{Stealth[length=3pt]}] ({4+\kviiiis},34) -- ({12+\kviiiis},21);}
+  \draw[kviiii nv, line width=1.1pt] (18,12) -- (13,20.6);
+  \node[kviiii lab, anchor=east] at (13,21) {$\vec n$};
+  \node[kviiii lab] at (30,31) {光};
+\end{tikzpicture}
+\end{minipage}
+
+\kviiiibox{発電機と磁束}
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\raggedright
+磁場 $\vec B$ の中でコイルを回すと、コイルを通りぬける磁場の流束（磁束）$\Phi=BA\cos\theta$ が、回る角 $\theta$ とともに変わります。磁束が変わると、コイルに電圧が生まれます（電磁誘導。8-14、物理 電-8）。発電所の発電機も、自転車のライトの発電機も、この「流束の変化」を利用しています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed!70] (0,4) rectangle (6,22); \node[text=white, font=\sffamily\bfseries\footnotesize] at (3,13) {N};
+  \fill[bkBlue!70] (32,4) rectangle (38,22); \node[text=white, font=\sffamily\bfseries\footnotesize] at (35,13) {S};
+  \foreach \kviiiiy in {7,13,19} {\draw[bkPurple!80!black, line width=0.7pt, -{Stealth[length=3pt]}] (7,\kviiiiy) -- (31,\kviiiiy);}
+  \draw[bkInk, line width=1.4pt] (19,13) ellipse (3.2 and 10);
+  \draw[bkInk, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (19,1) -- (19,25);
+  \node[kviiii lab, anchor=south] at (19,25.5) {回る軸};
+\end{tikzpicture}
+\end{minipage}
+
+\kviiiibox{電線を流れる電流}
+電線の中の電流は、電流密度 $\vec j$（\qty{1}{m^2} あたりの電流の矢印）の流束です。断面積 \qty{2}{mm^2} の銅線に、電流密度 \qty{5}{A/mm^2} が断面に直角に一様に流れていれば、電流は $5\times2=\qty{10}{A}$ です（場合A）。電線の太さは、電流密度が大きくなりすぎて熱くならないように決めます。
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 水がどこでも \qty{2.5}{m/s} で流れています。面積 \qty{0.6}{m^2} の網を入れ、網に直角な向きと流れのなす角が（1）\ang{0}、（2）\ang{60} のとき、1秒間に網を通る水の量を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{（1）$2.5\times0.6\times1=\qty{1.5}{m^3/s}$。（2）$2.5\times0.6\times0.5=\qty{0.75}{m^3/s}$。}
+
+\bkproblem 平面 $3x+2y+z=6$ の、座標軸で切りとられた三角形を、どこでも同じ流れ $\vec F=(1,\ 1,\ 1)$〔m/s〕が通りぬけます。面積ベクトル $A\vec n$（原点から遠ざかる向き）と、1秒間に通りぬける量を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{頂点 $(2,\ 0,\ 0)$、$(0,\ 3,\ 0)$、$(0,\ 0,\ 6)$。辺 $(-2,\ 3,\ 0)$ と $(-2,\ 0,\ 6)$ の外積 $(18,\ 12,\ 6)$ の半分で $A\vec n=(9,\ 6,\ 3)$。通りぬける量 $9+6+3=\qty{18}{m^3/s}$。}
+
+\bkproblem 上から見ると \qty{15}{m}×\qty{8}{m} の長方形で、\ang{20} かたむいた屋根に、雨が真下に1時間に \qty{2}{mm} の強さで降っています。1時間に受ける雨水の量を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{上から見た面積だけで決まる。$0.002\times120=\qty{0.24}{m^3}$（\qty{240}{L}）。}
+
+\bkproblem はば \qty{1}{m}、高さ \qty{3}{m} の窓に、風が直角に吹きこんでいます。窓の下の辺からの高さ $z$〔m〕の所で、風の速さは $v=0.6+0.2z$〔m/s〕です。1秒間に窓を通る空気の量を求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$\displaystyle\int_0^3(0.6+0.2z)\,\dd z=\Bigl[\,0.6z+0.1z^2\,\Bigr]_0^3=1.8+0.9=\qty{2.7}{m^3/s}$（はばは1）。}
+
+\bkproblem 半径 $R=\qty{0.5}{cm}$ のパイプの中を、水が中心で $u_{\max}=\qty{0.6}{m/s}$、中心から $r$ の所で $u=u_{\max}\Bigl(1-\dfrac{r^2}{R^2}\Bigr)$ の速さで流れています。流量（mL/s）を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$\dfrac{\pi R^2u_{\max}}{2}$ に $R=0.005$、$u_{\max}=0.6$ を入れて $\dfrac{\pi\times0.000025\times0.6}{2}$、約 \qty{2.36e-5}{m^3/s}。1秒間に約 \qty{23.6}{mL}。}
+
+\bkproblem 場 $\vec F=(x,\ y,\ z)$ が、原点を中心とする半径1.5の球面を外へ通りぬける量を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$1.5\times4\pi\times1.5^2=13.5\pi\approx42.4$。}
+
+\bkproblem 1辺1の立方体の箱（$0\leqq x,\ y,\ z\leqq1$）から、場 $\vec F=(2x,\ y^2,\ -z)$ が外へ出る量を求めましょう\mbox{（\bkreidairef{10}）}。
+\bkpans{$x=1$ で2、$x=0$ で0、$y=1$ で1、$y=0$ で0、$z=1$ で $-1$、$z=0$ で0。合計 $2+1-1=2$。}
+
+\bkproblem はば \qty{9}{m} の川を、\qty{3}{m} ずつ3つの区間に分けて測ったところ、深さは \qty{1.0}{m}、\qty{2.0}{m}、\qty{1.0}{m}、平均の速さは \qty{0.5}{m/s}、\qty{0.9}{m/s}、\qty{0.5}{m/s} でした。川の流量を求めましょう\mbox{（\bkreidairef{13}）}。
+\bkpans{$3\times(1.0\times0.5+2.0\times0.9+1.0\times0.5)=3\times2.8=\qty{8.4}{m^3/s}$。}
+
+\bkproblem 半分の角 $\alpha=\ang{45}$ の円すいの立体角と、それが全体の何倍かを求めましょう（$\cos\ang{45}\approx0.707$）\mbox{（\bkreidairef{12}）}。
+\bkpans{$2\pi(1-0.707)\approx\qty{1.84}{sr}$。全体の $\dfrac{1.84}{4\pi}\approx0.146$ 倍。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 面 $z=2-x^2-y^2$（$z\geqq0$ の部分）を、場 $\vec F=(x,\ y,\ 0)$ が上向きに通りぬける量を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$\vec n\,\dd S=(2x,\ 2y,\ 1)\,\dd x\,\dd y$。$\vec F\cdot(2x,\ 2y,\ 1)=2x^2+2y^2=2r^2$。影は $r\leqq\sqrt2$。$\displaystyle\int_0^{2\pi}\!\!\int_0^{\sqrt2}2r^2\cdot r\,\dd r\,\dd\theta=2\pi\Bigl[\,\frac{r^4}{2}\,\Bigr]_0^{\sqrt2}=2\pi\times2=4\pi\approx12.6$。}
+
+\bkproblem 原点を中心とする半径 $R=4$ の上半分の球面を、場 $\vec F=(0,\ 0,\ z)$ が外向きに通りぬける量を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$\dfrac{2\pi R^3}{3}=\dfrac{2\pi\times64}{3}=\dfrac{128\pi}{3}\approx134.0$。}
+
+\bkproblem 点電荷の場を $\vec F=\dfrac{2(x,\ y,\ z)}{r^3}$ とします。（1）原点を中心とする半径5の球面を外へ通りぬける量、（2）原点を中心とする1辺2の立方体の袋の1つの面を通りぬける量、（3）原点が外にある袋を通りぬける量を求めましょう\mbox{（\bkreidairef{11}）}。
+\bkpans{（1）$\dfrac{2}{R^2}\times4\pi R^2=8\pi\approx25.1$。（2）$\dfrac{8\pi}{6}=\dfrac{4\pi}{3}\approx4.19$。（3）0。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 網を通る水の量が、流れの「面に直角な成分」×面積で決まることを説明できる。\bkfurref{bk:8-8:chokkaku}
+\item 平らな面の流束を、法線ベクトルの内積と重積分で求められる。\bkfurref{bk:8-8:taira}
+\item 場合分けの表で、曲がった面や閉じた面の面積分をふつうの定積分に直せる。\bkfurref{bk:8-8:basho}
+\end{checklist}
+\end{furikaeri}
+

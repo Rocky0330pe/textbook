@@ -1,0 +1,1072 @@
+%% 第13回編集委員会（物理第1巻）  力-9 向きで変わる応力：組み合わせ応力とモールの円（★5・3段）  組 P1-5
+%% 記号（力-8 と同じ。力-10・力-11 も使う）：応力の行列 σ（太字の立体 \boldsymbol{\sigma}）、成分 σ_x・σ_y・τ（＝τ_xy＝τ_yx）、
+%%   切り口（法線が x 軸から左回りに θ）の垂直応力 σ_θ・せん断応力 τ_θ（τ_θ の向きは、法線を右回りに90°回した向きを正）、
+%%   主応力 σ_1≧σ_2（≧σ_3）、主方向の角 θ_p、モールの円の中心 c・半径 R、相当応力（ミーゼス）σ_eq、ひずみゲージのひずみ ε_0・ε_45・ε_90。
+%%   この向きの決め方で、モールの円の上の点は (σ_θ, τ_θ)、x の面は (σ_x, −τ)、y の面は (σ_y, τ)。面を左回りに θ 回すと、点は円の上を左回りに 2θ 回る（τ の軸は上が正）。
+%% 数値はすべて Python で計算した（scratchpad/phys1/力-9/calc.py）。E＝205 GPa、ν＝0.3、SS400 の降伏点 245 MPa、アルミ合金 E＝69 GPa・ν＝0.33、銅 E＝117 GPa・ν＝0.34（巻末の表）。
+%% 出典：
+%%   ・モールの応力円：O. Mohr（1882年）。最大せん断応力説：H. Tresca（1864年、金属を押し出す実験から）。
+%%     ミーゼスの説：R. von Mises（1913年）。M. T. Huber（1904年）も同じ形を示し、H. Hencky（1924年）が「形を変えるエネルギー」の意味を与えた。
+%%   ・World-Wide Failure Exercise：Hinton・Kaddour・Soden 編『Failure Criteria in Fibre-Reinforced-Polymer Composites』（Elsevier、2004年。約12年、19の理論、14の問題）。
+%%     「多くの理論の予測は実験と大きくちがい、10倍ちがう場合もめずらしくなかった」：C. G. Dávila・P. P. Camanho, NASA/TM-2003-212663（LaRC03）。
+%%   ・ひずみゲージのゲージ率は金属はくで約2（ゲージのメーカーの資料による一般的な値）。
+\makeatletter
+% 力-9 の絵の部品（頭文字 pxj）
+% チョーク（横向きの円柱）  \pxjchalk{(左下)}{長さ}
+\newcommand\pxjchalk[2]{\begin{scope}[shift={#1}]
+  \shade[top color=white, bottom color=bkLine, middle color=white] (0,0) rectangle (#2,6);
+  \draw[bkGray, line width=0.5pt] (0,0) rectangle (#2,6);
+  \draw[bkGray, line width=0.5pt] (0,3) ellipse (1 and 3);
+\end{scope}}
+% 小さな正方形の要素と応力の矢印  \pxjelem{(中心)}{半分の大きさ}{σx の矢印の長さ}{σy}{τ}
+\newcommand\pxjelem[5]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkBlue!12, draw=bkBlue!70!black, line width=0.7pt] (-#2,-#2) rectangle (#2,#2);
+  \ifdim #3pt>0pt \draw[bk arrow, bkRed, line width=1.2pt] (#2+0.8,0) -- ++(#3,0); \draw[bk arrow, bkRed, line width=1.2pt] (-#2-0.8,0) -- ++(-#3,0);\fi
+  \ifdim #4pt>0pt \draw[bk arrow, bkRed, line width=1.2pt] (0,#2+0.8) -- ++(0,#4); \draw[bk arrow, bkRed, line width=1.2pt] (0,-#2-0.8) -- ++(0,-#4);\fi
+  \ifdim #5pt>0pt
+    \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (#2+1.5,-#2+1) -- (#2+1.5,#2-1);
+    \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (-#2-1.5,#2-1) -- (-#2-1.5,-#2+1);
+    \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (-#2+1,#2+1.5) -- (#2-1,#2+1.5);
+    \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (#2-1,-#2-1.5) -- (-#2+1,-#2-1.5);\fi
+\end{scope}}
+\makeatother
+\tikzset{pxj lab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=1pt},
+  pxj small/.style={font=\sffamily\scriptsize, text=bkInk, inner sep=1pt},
+  pxj dim/.style={bkGray, line width=0.5pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}}}
+
+\phchapter{9}{向きで変わる応力：組み合わせ応力とモールの円}{チョークをねじると、ななめに折れるのはなぜ？}{\bklevel{5}}{向きで変わる応力：組み合わせ応力とモールの円}
+\bkmichishirube{4-6,4-9,7-6,7-8,力-8}{力-10,力-11,電-4,波-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 引っぱった棒のななめの切り口にかかる、垂直応力とせん断応力を計算できる。
+\item \bklevel{4}\enspace モールの円をかいて、主応力と最大せん断応力を求められる。
+\item \bklevel{5}\enspace 応力を行列で表して主応力を固有値として求め、ミーゼス応力で安全率を確かめられる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phkx{力の分解（平行四辺形の法則）}{中学理科}{力-2 で導く}
+\phk{ななめの切り口 $\sigma_\theta=\sigma\cos^2\theta$、$\tau_\theta=\sigma\sin\theta\cos\theta$}{大学（材料力学）}{ph:力-9:naname}
+\phk{主応力 $\sigma_{1,2}=\dfrac{\sigma_x+\sigma_y}{2}\pm\sqrt{\Bigl(\dfrac{\sigma_x-\sigma_y}{2}\Bigr)^2+\tau^2}$}{大学（材料力学）}{ph:力-9:shu}
+\phk{ミーゼス応力 $\sigma_{\mathrm{eq}}=\sqrt{\sigma_1^{\,2}-\sigma_1\sigma_2+\sigma_2^{\,2}}$}{大学（材料力学）}{ph:力-9:mises}
+\phk{$E=2G(1+\nu)$}{大学（材料力学）}{ph:力-9:EG}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+チョークを両手で持って、ぽきっと曲げて折ると、切り口は棒にまっすぐ直角です。ところが、両はしをつまんで、ぞうきんをしぼるようにねじると、チョークはななめに、らせんの形に割れます。
+
+引っぱっても曲げてもまっすぐ割れるのに、ねじると、なぜななめに割れるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxjchalk{(0,0)}{40}
+  \draw[bkRed!80!black, line width=0.9pt] (15,0) .. controls (18,2) and (21,4) .. (24,6);
+  \draw[bkRed!80!black, line width=0.7pt, dashed] (24,6) .. controls (26,4.5) and (27,2) .. (28,0.6);
+  \draw[bkOrange!85!black, line width=1.1pt, -{Stealth[length=4pt]}] (-2,10) arc (110:250:2 and 7);
+  \draw[bkOrange!85!black, line width=1.1pt, -{Stealth[length=4pt]}] (42,-4) arc (-70:70:2 and 7);
+  \node[pxj small, anchor=north] at (20,-4) {ねじると、ななめに割れる};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-8 では、棒を1つの向きに引く・押す、面をずらす、を別々に考えました。本物の部品では、それらが同時に起こります。車の駆動軸は、ねじられながら曲げられています。ガスボンベの壁は、周の向きにも軸の向きにも引っぱられています。この章では、「応力は、切り口の向きによって変わる」ことを調べ、いろいろな応力が組み合わさったとき、材料のどの向きが一番きびしいかを見つける方法を学びます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[チョークを折る：曲げる・ねじる]
+\textbf{用意するもの}\par
+チョーク3本（使い古しでよい）、紙、ペン、新聞紙（粉を受ける）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item チョークに、軸にそって1本、まっすぐな線を引いておこう。
+\item 1本めを、両手で曲げて折ろう。切り口の向きを、線とくらべよう。
+\item 2本めの両はしを指でしっかりつまみ、ねじって折ろう。切り口は、線に対して何度くらいかたむいているかな？
+\end{enumerate}
+\par\vspace{2pt}
+{\small 折れた破片がとぶことがあるので、顔から遠ざけて折ろう。粉はすわないように。}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{4-6}{直角三角形で、斜辺を1とすると、となりの辺は $\cos\theta$、向かいの辺は $\sin\theta$。力は $F\cos\theta$ と $F\sin\theta$ に分けられる。}
+\bkrecall{4-9}{2倍角：$\cos^2\theta=\dfrac{1+\cos2\theta}{2}$、$\sin^2\theta=\dfrac{1-\cos2\theta}{2}$、$\sin\theta\cos\theta=\dfrac{\sin2\theta}{2}$。}
+\bkrecall{4-4}{中心 $(a,\ 0)$、半径 $r$ の円の式は $(x-a)^2+y^2=r^2$。}
+\bkrecall{7-6}{左回りに $\theta$ 回す回転行列 $R=\begin{pmatrix}\cos\theta&-\sin\theta\\\sin\theta&\cos\theta\end{pmatrix}$。}
+\bkrecall{7-8}{$A\vec v=\lambda\vec v$ となる $\lambda$ が固有値、$\vec v$ が固有ベクトル。$\det(A-\lambda I)=0$ を解いて求める。対称な行列なら固有値は実数で、固有ベクトルは直交する。}
+\bkrecall{力-8}{応力 $\sigma=\dfrac{F}{A}$（引張が正）、せん断応力 $\tau=\dfrac{Q}{A}$、ポアソン比 $\nu$、横弾性係数 $G$。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{割れ方を見る}{3}
+\leavevmode\label{ph:力-9:sec1}\textbf{① 力のかけ方で、割れる面の向きが変わる}\par\nobreak
+やってみようの結果を、図にまとめます。チョークのように、ほとんどのびずに割れる材料（ぜい性材料。力-8）と、鋼のように大きくのびてから切れる材料（延性材料）で、割れ方がちがいます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 引く
+  \pxjchalk{(0,24)}{30}
+  \draw[bkRed!80!black, line width=0.9pt] (15,24) -- (15,30);
+  \draw[bk arrow, bkRed, line width=1.1pt] (-1.5,27) -- (-8,27); \draw[bk arrow, bkRed, line width=1.1pt] (31.5,27) -- (38,27);
+  \node[pxj small, anchor=north] at (15,22.5) {チョークを引く：直角に割れる};
+  % 曲げる
+  \pxjchalk{(48,24)}{30}
+  \draw[bkRed!80!black, line width=0.9pt] (63,24) -- (63,30);
+  \draw[bk arrow, bkRed, line width=1.1pt] (63,37) -- (63,31.5);
+  \draw[bk arrow, bkRed, line width=1.1pt] (50,19) -- (50,23); \draw[bk arrow, bkRed, line width=1.1pt] (76,19) -- (76,23);
+  \node[pxj small, anchor=north] at (63,18) {チョークを曲げる：直角に割れる};
+  % ねじる
+  \pxjchalk{(96,24)}{30}
+  \draw[bkRed!80!black, line width=0.9pt] (106,24) .. controls (109,26) and (112,28) .. (115,30);
+  \draw[bkOrange!85!black, line width=1.1pt, -{Stealth[length=4pt]}] (94,33) arc (110:250:1.8 and 6);
+  \draw[bkOrange!85!black, line width=1.1pt, -{Stealth[length=4pt]}] (128,21) arc (-70:70:1.8 and 6);
+  \node[pxj small, anchor=north] at (111,18) {チョークをねじる：45°に割れる};
+  % 鋼
+  \begin{scope}[shift={(8,0)}]
+    \fill[bkBlue!25] (0,0) rectangle (20,6); \fill[bkBlue!25] (20,1.5) -- (24,2.6) -- (24,3.4) -- (20,4.5) -- cycle;
+    \draw[bkBlue!70!black, line width=0.6pt] (0,0) -- (20,0) -- (20,1.5) -- (24,2.6) -- (24,3.4) -- (20,4.5) -- (20,6) -- (0,6) -- cycle;
+    \fill[bkBlue!25] (34,2.4) -- (37,1) -- (37,0) -- (55,0) -- (55,6) -- (37,6) -- (37,5) -- (34,3.6) -- cycle;
+    \draw[bkBlue!70!black, line width=0.6pt] (34,2.4) -- (37,1) -- (37,0) -- (55,0) -- (55,6) -- (37,6) -- (37,5) -- (34,3.6) -- cycle;
+    \node[pxj small, anchor=west, align=left] at (60,3) {鋼を引く：くびれて、\\約45°のななめの面ですべって切れる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{割れ方・切れ方のちがい。チョーク（ぜい性）と鋼（延性）}
+\label{ph:力-9:fig-crack}
+\end{bkfigure}
+ここから、2つの「ふしぎ」が出てきます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item まっすぐ引いているのに、鋼は45°の面ですべって切れる。45°の面には、何がはたらいているのか。
+\item ねじっているのに、チョークは45°の面で割れる。ねじる（ずらす）力が、45°の面では何に変わっているのか。
+\end{enumerate}
+どちらも、「同じ応力でも、切り口の向きを変えると、ちがう量に見える」ことが鍵です。
+
+\begin{phmodel}[板の中の応力]
+\phignore{板の厚さの向きの応力（うすい板の表面を考える）。材料の中の小さなきずや結晶のつぶ。}
+\phassume{応力は、1つの平面の中だけにある（平面応力）。材料はどこも同じで、向きによって性質が変わらない（均質・等方）。変形は小さい。}
+\phlimit{木材や炭素繊維の複合材料のように、繊維の向きで強さが大きくちがう材料。厚い部品の内部（3次元の応力）。降伏したあと。}
+\end{phmodel}
+
+\textbf{② ゴムの板にかいた正方形}\par\nobreak
+\label{ph:力-9:sec2}うすいゴムの板に、ふつうの正方形と、45°かたむけた正方形をかいて、引っぱったり、ずらしたりしてみます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 引く
+  \begin{scope}[shift={(0,0)}]
+    \filldraw[fill=bkYellow!20, draw=bkYellow!70!black, line width=0.6pt] (0,0) rectangle (52,24);
+    \draw[bkBlue!70!black, line width=0.9pt] (6,7) rectangle (20,17);
+    \draw[bkRed!70!black, line width=0.9pt] (37,4.5) -- (44,12) -- (37,19.5) -- (30,12) -- cycle;
+    \draw[bk arrow, bkRed, line width=1.2pt] (-1,12) -- (-8,12); \draw[bk arrow, bkRed, line width=1.2pt] (53,12) -- (60,12);
+    \node[pxj small, anchor=north, align=center] at (26,-1.5) {（1）横に引く：正方形は長方形に、\\45°の正方形はひし形に（角が変わる＝ずれ）};
+  \end{scope}
+  % ずらす
+  \begin{scope}[shift={(72,0)}]
+    \filldraw[fill=bkYellow!20, draw=bkYellow!70!black, line width=0.6pt] (0,0) -- (48,0) -- (56,24) -- (8,24) -- cycle;
+    \draw[bkBlue!70!black, line width=0.9pt] (8,7) -- (20,7) -- (23.3,17) -- (11.3,17) -- cycle;
+    \draw[bkRed!70!black, line width=0.9pt] (38,3.3) -- (47.5,13) -- (40.6,20.6) -- (31.1,11) -- cycle;
+    \draw[bk arrow, bkOrange!85!black, line width=1.2pt] (14,26.5) -- (44,26.5); \draw[bk arrow, bkOrange!85!black, line width=1.2pt] (40,-2.5) -- (10,-2.5);
+    \node[pxj small, anchor=north, align=center] at (28,-5) {（2）ずらす：正方形はひし形に、\\45°の正方形は長方形に（のびとちぢみ）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ゴムの板にかいた2つの正方形。どちらの向きから見るかで、「のび」にも「ずれ」にも見える。}
+\label{ph:力-9:fig-rubber}
+\end{bkfigure}
+（1）引っぱると、ふつうの正方形は長方形になります（のびるだけ）。でも45°の正方形は、角が90°でなくなり、ひし形になります。つまり45°の面から見ると、「ずれ」が起きているのです。（2）ずらすと、ふつうの正方形はひし形になります。でも45°の正方形は、一方の対角線の向きにのび、もう一方の向きにちぢんで、長方形になります。\textbf{ずれは、45°の向きから見ると、のびとちぢみ}なのです。
+
+
+
+\phstage{te}{表計算で切り口を回す}{3}
+\leavevmode\label{ph:力-9:sec3}\textbf{③ 引っぱった棒の、ななめの切り口}\par\nobreak
+断面積 $A$ の棒を、力 $F$ で引っぱります。ふつうの断面（軸に直角）の応力は $\sigma=\dfrac{F}{A}$ です。こんどは、この断面から角 $\theta$ だけかたむいた、ななめの切り口を考えます。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.50\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!15] (0,0) -- (31.24,0) -- (22,16) -- (0,16) -- cycle;
+  \draw[bkBlue!70!black, line width=0.7pt] (0,0) -- (31.24,0) -- (22,16) -- (0,16) -- cycle;
+  \draw[bk arrow, bkRed, line width=1.3pt] (-1,8) -- (-10,8);
+  \draw[bkGray, line width=0.4pt, dashed] (26.6,8) -- (42,8);
+  % 切り口の法線と、ずらす向き
+  \draw[bk arrow, bkInk, line width=1.1pt] (26.6,8) -- ++(30:13);
+  \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (26.6,8) -- ++(-60:8.5);
+  \draw[bkInk, line width=0.5pt] (35,8) arc (0:30:8.4);
+  \node[pxj small] at (37.6,10.4) {$\theta$};
+  \node[pxj small, anchor=west] at (38.4,15.2) {法線};
+  \node[pxj small, anchor=north west, text=bkOrange!70!black] at (32,0.5) {ずらす向き};
+  \draw[bkGray, line width=0.4pt, dashed] (22,0) -- (22,16);
+  \node[pxj small, anchor=south] at (11,16.5) {断面積 $A$ の棒};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright\small
+ななめの切り口の面積は $\dfrac{A}{\cos\theta}$ にふえます（点線の直角の断面より長い）。切り口には、右の部分から力 $F$ がかかり、それを切り口に垂直な成分 $F\cos\theta$ と、切り口にそった成分 $F\sin\theta$ に分けます（4-6）。
+\end{minipage}
+\bkfigcaption{ななめの切り口と、力の分け方。$\theta$ は、切り口の法線が棒の軸となす角。}
+\label{ph:力-9:fig-cut}
+\end{bkfigure}
+面積1あたりにすると、
+\pheq{\sigma_\theta=\frac{F\cos\theta}{A/\cos\theta}=\sigma\cos^2\theta,\qquad \tau_\theta=\frac{F\sin\theta}{A/\cos\theta}=\sigma\sin\theta\cos\theta}{Pa ＝ Pa × 単位なし}
+\label{ph:力-9:naname}$\sigma_\theta$ は切り口を引きはなす応力（垂直応力）、$\tau_\theta$ は切り口をずらす応力（せん断応力）です。$\cos$ が2回かかるのは、力が $\cos\theta$ 倍に「減り」、面積が $\dfrac{1}{\cos\theta}$ 倍に「ふえる」からです。
+\begin{phyomi}[$\sigma_\theta=\sigma\cos^2\theta$、\ $\tau_\theta=\sigma\sin\theta\cos\theta$]
+同じ1本の棒の、同じ1つの点でも、切り口の向き $\theta$ を変えると、引きはなす応力とずらす応力の大きさが変わる、と読みます。$\theta=0$（ふつうの断面）では $\sigma_\theta=\sigma$、$\tau_\theta=0$。$\theta=90°$（軸にそった面）では、どちらも0です。
+\end{phyomi}
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=100mm, height=52mm, xmin=0, xmax=95, ymin=0, ymax=1.12,
+  xtick={0,15,...,90}, ytick={0,0.25,0.5,0.75,1}, yticklabels={0,$0.25\sigma$,$0.5\sigma$,$0.75\sigma$,$\sigma$}, xlabel={$\theta$（°）}]
+  \addplot[bkBlue, domain=0:90] {cos(x)^2};
+  \addplot[bkOrange!85!black, domain=0:90] {sin(x)*cos(x)};
+  \draw[bkGray, dashed, line width=0.6pt] (axis cs:45,0) -- (axis cs:45,0.5);
+  \fill[bkOrange!85!black] (axis cs:45,0.5) circle (1.8pt);
+  \node[pxj small, anchor=south west, text=bkBlue!80!black] at (axis cs:22,0.97) {$\sigma_\theta$（引きはなす）};
+  \node[pxj small, anchor=south west, text=bkOrange!70!black] at (axis cs:70,0.36) {$\tau_\theta$（ずらす）};
+  \node[pxj small, anchor=south west, text=bkOrange!70!black] at (axis cs:50,0.6) {最大 $0.5\sigma$（45°）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{切り口の角と応力。ずらす応力は45°でいちばん大きい。}
+\end{bkcenter}
+\begin{phbaisuru}{引っぱる応力 $\sigma$}
+どの向きの切り口でも、$\sigma_\theta$ も $\tau_\theta$ も2倍になります。グラフの形（どの角で最大になるか）は変わりません。いちばんずらされる面が45°なのは、材料や力の大きさによらず、「1つの向きに引っぱる」という形だけで決まるのです。
+\end{phbaisuru}
+\begin{phmijika}[鋼の棒が45°ですべるわけ]
+延性の材料は、原子の面がずれる（すべる）ことで降伏します（力-8 の転位）。すべりを起こすのは、ずらす応力です。棒を引っぱると、ずらす応力は45°の面でいちばん大きく、引っぱる応力の半分になります。だから、引っぱった鋼は45°の向きにすべって、くびれ、切れるのです（\bkreidairef{1}）。これが、①のふしぎ1の答えです。
+\end{phmijika}
+\par\addvspace{3pt}\noindent\textbf{2倍角で書くと（4-9 の式を使える人へ）}\par\nobreak
+2倍角の式（4-9）
+\[\cos^2\theta=\frac{1+\cos2\theta}{2},\qquad\sin\theta\cos\theta=\frac{\sin2\theta}{2}\]
+を使うと、
+\[\sigma_\theta=\frac{\sigma}{2}+\frac{\sigma}{2}\cos2\theta,\qquad\tau_\theta=\frac{\sigma}{2}\sin2\theta\]
+となります。$\sin2\theta$ は $2\theta=90°$、つまり $\theta=45°$ で最大の1になるので、$\tau_\theta$ の最大は $\dfrac{\sigma}{2}$ です。グラフで見つけたことが、式でも確かめられました。
+
+\noindent\textbf{2つの向きの応力とせん断が同時にあるとき}\par\nobreak
+板の中の小さな正方形を考えます。正方形の面には、横の向きの応力 $\sigma_x$、たての向きの応力 $\sigma_y$、面をずらすせん断応力 $\tau$ がはたらいているとします。この正方形を、ななめの切り口で切った三角形のつり合いを考えます。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxjelem{(14,14)}{8}{6}{6}{1}
+  \node[pxj small, anchor=west, text=bkRed!80!black] at (29,14) {$\sigma_x$};
+  \node[pxj small, anchor=south, text=bkRed!80!black] at (14,29.5) {$\sigma_y$};
+  \node[pxj small, anchor=west, text=bkOrange!70!black] at (24,20) {$\tau$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkBlue!12, draw=bkBlue!70!black, line width=0.7pt] (0,0) -- (0,24) -- (13.86,0) -- cycle;
+  \node[pxj small, anchor=east] at (-6,12) {面積 $\cos\theta$};
+  \node[pxj small, anchor=north] at (6.9,-6) {面積 $\sin\theta$};
+  \draw[bk arrow, bkRed, line width=1.1pt] (-0.8,12) -- (-6,12);
+  \draw[bk arrow, bkRed, line width=1.1pt] (6.9,-0.8) -- (6.9,-6);
+  \draw[bk arrow, bkOrange!85!black, line width=1.0pt] (-1.8,18) -- (-1.8,6);
+  \draw[bk arrow, bkOrange!85!black, line width=1.0pt] (11,-1.8) -- (2,-1.8);
+  % 切り口の力
+  \draw[bk arrow, bkInk, line width=1.1pt] (6.93,12) -- ++(30:12);
+  \draw[bk arrow, bkOrange!85!black, line width=1.1pt] (6.93,12) -- ++(-60:9);
+  \node[pxj small, anchor=west] at (17.5,18.5) {$\sigma_\theta$};
+  \node[pxj small, anchor=west, text=bkOrange!70!black] at (12,4.5) {$\tau_\theta$};
+  \node[pxj small, anchor=south west] at (9,22) {切り口の面積 1};
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{小さな正方形の応力（左）と、ななめに切った三角形（右）。厚さは1とする。}
+\label{ph:力-9:fig-wedge}
+\end{bkfigure}
+切り口の面積を1とすると、たての面の面積は $\cos\theta$、横の面の面積は $\sin\theta$ です。三角形にはたらく力がつり合うことから、切り口の力は、たての面と横の面の力を打ち消すもの、つまり
+\[\text{横の向き：}\ \sigma_x\cos\theta+\tau\sin\theta,\qquad\text{たての向き：}\ \tau\cos\theta+\sigma_y\sin\theta\]
+です。これを、切り口に垂直な向き（法線）と、切り口にそった向き（法線を右回りに90°回した向き）に分けると（4-11 の成分）、
+\begin{align*}
+\sigma_\theta&=\sigma_x\cos^2\theta+\sigma_y\sin^2\theta+2\tau\sin\theta\cos\theta\\
+\tau_\theta&=(\sigma_x-\sigma_y)\sin\theta\cos\theta-\tau(\cos^2\theta-\sin^2\theta)
+\end{align*}
+\label{ph:力-9:general}となります。$\sigma_y=\tau=0$ とおくと、さきほどの棒の式にもどります。
+
+\noindent\textbf{表計算で回してみる}\quad $\sigma_x=\qty{80}{MPa}$、$\sigma_y=\qty{-20}{MPa}$（圧縮）、$\tau=\qty{30}{MPa}$ の点で、$\theta$ を15°ずつ変えて計算します。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\bksheet{3}{12}{%
+1 & $\theta$ & $\sigma_\theta$ & $\tau_\theta$ \\
+2 & 0 & 80.0 & $-30.0$ \\
+3 & 15 & 88.3 & $-1.0$ \\
+4 & 30 & 81.0 & 28.3 \\
+5 & 45 & 60.0 & 50.0 \\
+6 & 60 & 31.0 & 58.3 \\
+7 & 75 & 1.7 & 51.0 \\
+8 & 90 & $-20.0$ & 30.0 \\
+9 & 105 & $-28.3$ & 1.0 \\
+10 & 120 & $-21.0$ & $-28.3$ \\
+11 & 135 & 0.0 & $-50.0$ \\
+12 & 150 & 29.0 & $-58.3$ \\
+13 & 165 & 58.3 & $-51.0$ \\
+14 & 180 & 80.0 & $-30.0$ \\}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=middle, width=70mm, height=62mm, xmin=0, xmax=200, ymin=-70, ymax=105,
+  xtick={45,90,135,180}, ytick={-50,50,100}, xlabel={$\theta$（°）}, ylabel={MPa}]
+  \addplot[bkBlue, domain=0:180, samples=91] {30+50*cos(2*x)+30*sin(2*x)};
+  \addplot[bkOrange!85!black, domain=0:180, samples=91] {50*sin(2*x)-30*cos(2*x)};
+  \node[pxj small, anchor=south, text=bkBlue!80!black] at (axis cs:28,90) {$\sigma_\theta$};
+  \node[pxj small, anchor=north, text=bkOrange!70!black] at (axis cs:150,-60) {$\tau_\theta$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{切り口を回すと、応力は波のように変わる。180°で1まわり。}
+\label{ph:力-9:fig-sheet}
+\end{bkfigure}
+B列には、次の式を入れて下へコピーします（表計算の SIN・COS はラジアンで計算するので、RADIANS で度をラジアンに直す：4-2）。C列も同じように作ります。
+\begin{phcode}[表計算（B2）]
+=80*COS(RADIANS(A2))\^{}2+(-20)*SIN(RADIANS(A2))\^{}2
+ +2*30*SIN(RADIANS(A2))*COS(RADIANS(A2))
+\end{phcode}
+（実際には1行で入力します。）表とグラフから、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item $\sigma_\theta$ のいちばん大きい値は約\qty{88}{MPa}（$\theta$ が15°くらい）、いちばん小さい値は約\qty{-28}{MPa}（105°くらい）。その2つの角は90°はなれている。
+\item $\sigma_\theta$ が最大・最小になる角では、$\tau_\theta$ がほぼ0。
+\item $\tau_\theta$ の大きさがいちばん大きいのは約\qty{58}{MPa}で、$\sigma_\theta$ が最大の角から45°はなれた所。
+\end{itemize}
+
+\leavevmode\label{ph:力-9:sec4}\textbf{④ 点をとると、円になる}\par\nobreak
+表の $(\sigma_\theta,\ \tau_\theta)$ の組を、横の軸を $\sigma$、たての軸を $\tau$ とする平面に、点としてとってみましょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.55mm, y=0.55mm]
+  \draw[bkLine, line width=0.3pt] (-40,-70) grid[step=20] (100,70);
+  \draw[bk arrow, bkInk, line width=0.8pt] (-45,0) -- (110,0) node[anchor=west, pxj lab] {$\sigma$（MPa）};
+  \draw[bk arrow, bkInk, line width=0.8pt] (0,-72) -- (0,76) node[anchor=south, pxj lab] {$\tau$};
+  \foreach \x in {-40,-20,20,40,60,80,100} \node[pxj small, anchor=north, fill=white] at (\x,-1.5) {\x};
+  \foreach \y in {-60,-40,-20,20,40,60} \node[pxj small, anchor=east, fill=white] at (-1.5,\y) {\y};
+  \draw[bkPurple, line width=1.2pt] (30,0) circle (58.31);
+  \foreach \s/\t in {80.0/-30.0, 88.3/-1.0, 81.0/28.3, 60.0/50.0, 31.0/58.3, 1.7/51.0, -20.0/30.0, -28.3/1.0, -21.0/-28.3, 0.0/-50.0, 29.0/-58.3, 58.3/-51.0} {\fill[bkRed] (\s,\t) circle (1.6mm);}
+  \fill[bkInk] (30,0) circle (1.4mm);
+  \node[pxj small, anchor=south, fill=white] at (30,3) {中心};
+  \node[pxj small, anchor=west, fill=white] at (82,-33) {$\theta=0$};
+  \node[pxj small, anchor=west, fill=white] at (90,6) {$\theta=15°$};
+  \node[pxj small, anchor=east, fill=white] at (-22,34) {$\theta=90°$};
+\end{tikzpicture}
+\bkfigcaption{表の点 $(\sigma_\theta,\ \tau_\theta)$ は、中心 $(30,\ 0)$、半径約58.3の円の上にならぶ（モールの円）。}
+\label{ph:力-9:fig-mohrpts}
+\end{bkfigure}
+点は、中心が $(30,\ 0)$ の円の上に、きれいにならびます。切り口を回すと、点は円の上を回るのです。この円を\textbf{モールの応力円}（モールの円）といいます。\bkidx{もーるのえん}{モールの円}ドイツの技術者オットー・モールが1882年に考えました。円は、1つの点の「すべての向きの切り口の応力」を、1枚の絵にしたものです。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 円のいちばん右の点（$\tau=0$）：引きはなす応力が最大。これを\textbf{最大主応力} $\sigma_1$ といいます。
+\item 円のいちばん左の点（$\tau=0$）：引きはなす応力が最小。\textbf{最小主応力} $\sigma_2$ です。
+\item 円のいちばん上・下の点：ずらす応力が最大。大きさは円の半径です。
+\end{itemize}
+$\sigma_1$ と $\sigma_2$ の点は、円の上で180°はなれています。表では、切り口の角は90°はなれていました。\textbf{円の上の角は、切り口の角の2倍}なのです（この章の⑧で確かめます）。
+
+\noindent\textbf{\bkhatenaref の答え}\quad ねじったチョークの表面の小さな正方形には、ずらす応力 $\tau$ だけがはたらき、$\sigma_x=\sigma_y=0$ です（純粋せん断）。モールの円は、中心が原点、半径 $\tau$ の円になります。いちばん右の点は $\sigma_1=\tau$、左の点は $\sigma_2=-\tau$ で、円の上で原点から90°回った所（切り口では45°）にあります。つまり、45°の切り口には、ねじりの応力と同じ大きさの\textbf{引きはなす応力}がはたらきます（②のゴムの板と同じ）。チョークは引っぱりにとても弱いので、この45°の向きの引っぱりで割れます。ねじると割れ目は、棒のまわりを45°の向きにぐるりと進むので、らせんになるのです（\bkreidairef{2}）。これが①のふしぎ2の答えです。鋼の棒をねじると、反対に、ずらす応力が最大の面（軸に直角な面）ですべって、まっすぐ切れます。
+
+\phkokomade[ここまでわかれば、この章のゴールです。この先は行列で確かめます。]
+
+\phstage{shiki}{行列で応力を書く}{5}
+\leavevmode\label{ph:力-9:sec5}\textbf{⑤ 応力は、対称な行列}\par\nobreak
+③の式は、行列を使うと、すっきり書けます。小さな正方形の応力を、行列にまとめます。
+\pheq{\boldsymbol{\sigma}=\begin{pmatrix}\sigma_x&\tau\\\tau&\sigma_y\end{pmatrix}}{各成分 Pa}
+1列めは「$x$ の面（法線が $x$ の向きの面）にはたらく応力の横・たての成分」、2列めは「$y$ の面の応力の成分」です。切り口の法線の単位ベクトルを $\vec n=(\cos\theta,\ \sin\theta)$ とすると、③で求めた「切り口の力（面積1あたり）」は、行列×ベクトル（7-2）で
+\[\vec t=\boldsymbol{\sigma}\,\vec n=\begin{pmatrix}\sigma_x\cos\theta+\tau\sin\theta\\\tau\cos\theta+\sigma_y\sin\theta\end{pmatrix}\]
+と書けます。③の三角形のつり合いと、まったく同じ式です。行列 $\boldsymbol{\sigma}$ は「切り口の向き $\vec n$ を入れると、その切り口の力 $\vec t$ が出てくる機械」なのです。この考えは、フランスの数学者コーシーが1820年代に作りました。
+
+\noindent\textbf{なぜ、右上と左下が同じ $\tau$ なの？}\quad
+正方形の右の面には上向きのせん断 $\tau_{xy}$、上の面には右向きのせん断 $\tau_{yx}$ がはたらきます。もし $\tau_{xy}$ と $\tau_{yx}$ の大きさがちがうと、正方形の中心のまわりのモーメント（力-5）がつり合わず、小さな正方形が、くるくる回り出してしまいます。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxjelem{(14,14)}{9}{0}{0}{1}
+  \node[pxj small, anchor=west, text=bkOrange!70!black] at (25,14) {$\tau_{xy}$};
+  \node[pxj small, anchor=south, text=bkOrange!70!black] at (14,25) {$\tau_{yx}$};
+  \draw[pxj dim] (5,1) -- (23,1); \node[pxj small, anchor=north] at (14,0.5) {$a$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\raggedright\small
+1辺 $a$、厚さ1の正方形。右と左の面のせん断の力（$\tau_{xy}a$）は、左回りに回そうとし、モーメントは $\tau_{xy}a\times a$。上と下の面の力は右回りに回そうとし、モーメントは $\tau_{yx}a\times a$。つり合うには $\tau_{xy}=\tau_{yx}$。
+\end{minipage}
+\bkfigcaption{せん断応力は、となりの面に、同じ大きさで必ずペアで現れる。}
+\label{ph:力-9:fig-pair}
+\end{bkfigure}
+だから $\tau_{xy}=\tau_{yx}$ で、この本では両方を $\tau$ と書きます。応力の行列は、右上と左下が等しい\textbf{対称な行列}です。
+
+\leavevmode\label{ph:力-9:sec6}\textbf{⑥ 座標を回す：回転行列}\par\nobreak
+切り口を $\theta$ だけ回すことは、座標の軸を $\theta$ だけ回すことと同じです。新しい軸 $x'$ を法線 $\vec n$ の向きに、$y'$ をそれを左回りに90°回した向きにとると、新しい座標で見た応力の行列は、回転行列 $R$（7-6）を使って
+\pheq{\boldsymbol{\sigma}'=R^{\mathsf T}\boldsymbol{\sigma}R}{各成分 Pa}
+と書けます（7-9 の「軸を変えて見る」形。$R^{\mathsf T}$ は $R$ の転置で、逆に $\theta$ 回す行列）。計算すると、$\boldsymbol{\sigma}'$ の左上は③の $\sigma_\theta$、右上は $-\tau_\theta$ になります。（$-$ がつくのは、③で、ずらす向きを「法線を\textbf{右}回りに90°」と決めたからです。$y'$ は左回りなので、向きが反対です。）
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxjelem{(14,14)}{8}{6}{4}{1}
+  \draw[bk arrow, bkGray, line width=0.8pt] (40,14) -- (52,14) node[midway, above, pxj small] {軸を $\theta$ 回す};
+  \begin{scope}[shift={(78,14)}, rotate=30]
+    \filldraw[fill=bkBlue!12, draw=bkBlue!70!black, line width=0.7pt] (-8,-8) rectangle (8,8);
+    \draw[bk arrow, bkRed, line width=1.2pt] (8.8,0) -- ++(8,0); \draw[bk arrow, bkRed, line width=1.2pt] (-8.8,0) -- ++(-8,0);
+    \draw[bk arrow, bkRed, line width=1.2pt] (0,8.8) -- ++(0,2.5); \draw[bk arrow, bkRed, line width=1.2pt] (0,-8.8) -- ++(0,-2.5);
+    \draw[bkGray, line width=0.4pt, dashed] (-14,0) -- (14,0) (0,-14) -- (0,14);
+    \node[pxj small, anchor=west] at (18,-1) {$x'$};
+    \node[pxj small, anchor=south] at (0,14) {$y'$};
+  \end{scope}
+  \node[pxj small, anchor=west, text width=28mm] at (100,14) {主方向にそろえると、せん断が0になり、引く・押すだけになる};
+\end{tikzpicture}
+\bkfigcaption{座標の軸を回して、正方形を回す。ちょうどよい角（主方向）では、せん断応力が消える。}
+\label{ph:力-9:fig-rotate}
+\end{bkfigure}
+
+\leavevmode\label{ph:力-9:sec7}\textbf{⑦ 主応力は固有値、主方向は固有ベクトル}\par\nobreak
+③の表で、$\sigma_\theta$ が最大・最小になる角では、$\tau_\theta$ が0でした。その向きでは、切り口の力 $\vec t$ が、法線 $\vec n$ とちょうど同じ向きを向いています。式で書くと、
+\[\boldsymbol{\sigma}\,\vec n=\lambda\,\vec n\]
+です。これは、7-8 の固有値と固有ベクトルの式そのものです。$\boldsymbol{\sigma}$ の固有値 $\lambda$ が主応力、固有ベクトル $\vec n$ が\textbf{主方向}（せん断のない切り口の法線）です。\bkidx{しゅおうりょく}{主応力}固有値は $\det(\boldsymbol{\sigma}-\lambda I)=0$ から求めます。
+\[(\sigma_x-\lambda)(\sigma_y-\lambda)-\tau^2=0\qquad\text{つまり}\qquad\lambda^2-(\sigma_x+\sigma_y)\lambda+\sigma_x\sigma_y-\tau^2=0\]
+2次方程式の解の公式（3-10）で解いて、整理すると
+\pheq{\sigma_{1,2}=\frac{\sigma_x+\sigma_y}{2}\pm\sqrt{\Bigl(\frac{\sigma_x-\sigma_y}{2}\Bigr)^2+\tau^2}}{Pa ＝ Pa}
+\label{ph:力-9:shu}です。根号の中は2乗の和で0以上なので、主応力はかならず実数です。対称な行列の固有値は実数で、2つの固有ベクトルは直交する（7-8）ので、2つの主方向は90°はなれています。表で見つけたとおりです。主方向の角 $\theta_p$ は
+\pheq{\tan2\theta_p=\frac{2\tau}{\sigma_x-\sigma_y}}{単位なし}
+で決まります（$2\theta_p$ を求めてから2でわる）。$\sigma_x=80$、$\sigma_y=-20$、$\tau=30$ なら、中心 $30$、根号 $\sqrt{50^2+30^2}=58.3$ で、$\sigma_1=88.3$、$\sigma_2=-28.3$、$\tan2\theta_p=0.6$ から $\theta_p=15.5°$。表とぴったり合います（\bkreidairef{3}・\bkreidairef{4}）。
+\begin{phflow}[応力の行列から、いろいろな場合へ]
+\phflowrow{$\boldsymbol{\sigma}=\begin{pmatrix}\sigma_x&\tau\\\tau&\sigma_y\end{pmatrix}$\\を $\theta$ 回す}{1つの向きに引く\\$\sigma_y=\tau=0$}{$\sigma_\theta=\sigma\cos^2\theta$\\$\tau_\theta=\sigma\sin\theta\cos\theta$}
+\phflowrow{$\boldsymbol{\sigma}$ の固有値}{ねじり（純粋せん断）\\$\sigma_x=\sigma_y=0$}{主応力 $\pm\tau$\\主方向は45°}
+\phflowrow{$\boldsymbol{\sigma}$ の固有値}{一般の場合}{$\sigma_{1,2}=c\pm R$\\（モールの円）}
+\end{phflow}
+
+\leavevmode\label{ph:力-9:sec8}\textbf{⑧ モールの円を式で確かめる}\par\nobreak
+③の式を、2倍角（4-9）で書きかえます。円の中心を $c=\dfrac{\sigma_x+\sigma_y}{2}$、$a=\dfrac{\sigma_x-\sigma_y}{2}$ とおくと、
+\[\sigma_\theta-c=a\cos2\theta+\tau\sin2\theta,\qquad\tau_\theta=a\sin2\theta-\tau\cos2\theta\]
+2つの式をそれぞれ2乗してたすと、$\sin^2+\cos^2=1$（4-8）で、$\theta$ をふくむ項が消えて、
+\pheq{(\sigma_\theta-c)^2+\tau_\theta^{\,2}=a^2+\tau^2=R^2}{Pa$^2$ ＝ Pa$^2$}
+です。中心 $(c,\ 0)$、半径 $R=\sqrt{a^2+\tau^2}$ の円の式（4-4）です。点はかならずこの円の上にあります。さらに $a=R\cos2\theta_p$、$\tau=R\sin2\theta_p$ とおくと、加法定理（4-9）で
+\[\sigma_\theta=c+R\cos(2\theta-2\theta_p),\qquad\tau_\theta=R\sin(2\theta-2\theta_p)\]
+となり、\textbf{切り口を左回りに $\theta$ 回すと、円の上の点は左回りに $2\theta$ 回る}ことがわかります。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=0.44mm, y=0.44mm]
+  \draw[bk arrow, bkInk, line width=0.8pt] (-45,0) -- (105,0) node[anchor=west, pxj lab] {$\sigma$};
+  \draw[bk arrow, bkInk, line width=0.8pt] (0,-68) -- (0,72) node[anchor=south, pxj lab] {$\tau$};
+  \draw[bkPurple, line width=1.2pt] (30,0) circle (58.31);
+  \draw[bkGray, line width=0.6pt] (80,-30) -- (-20,30);
+  \fill[bkRed] (80,-30) circle (1.4mm); \fill[bkRed] (-20,30) circle (1.4mm);
+  \fill[bkInk] (30,0) circle (1.2mm);
+  \fill[bkBlue] (88.31,0) circle (1.4mm); \fill[bkBlue] (-28.31,0) circle (1.4mm);
+  \draw[bkInk, line width=0.5pt] (50,0) arc (0:-30.96:20);
+  \node[pxj small, anchor=west] at (51,-6) {$2\theta_p$};
+  \node[pxj small, anchor=north west] at (80,-31) {X $(\sigma_x,\ -\tau)$};
+  \node[pxj small, anchor=south east] at (-21,31) {Y $(\sigma_y,\ \tau)$};
+  \node[pxj small, anchor=south west, text=bkBlue!80!black] at (89,1) {$\sigma_1$};
+  \node[pxj small, anchor=south east, text=bkBlue!80!black] at (-29,1) {$\sigma_2$};
+  \node[pxj small, anchor=north] at (30,-2) {$c$};
+  \draw[pxj dim] (30,0) -- (30,58.31); \node[pxj small, anchor=west] at (31,40) {$R$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\raggedright\small
+\textbf{モールの円のかき方}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=1.8\zw, itemsep=1pt, topsep=1pt]
+\item 点 X $(\sigma_x,\ -\tau)$ と点 Y $(\sigma_y,\ \tau)$ をとる。
+\item XY を結ぶ。$\sigma$ 軸と交わる点が中心 $c$。
+\item $c$ を中心に、X を通る円をかく。
+\item 円と $\sigma$ 軸の交点が $\sigma_1$・$\sigma_2$。X から $\sigma_1$ まで回る角が $2\theta_p$。
+\end{enumerate}
+\end{minipage}
+\bkfigcaption{モールの円のかき方（$\sigma_x=80$、$\sigma_y=-20$、$\tau=30$ MPa）}
+\label{ph:力-9:fig-mohr}
+\end{bkfigure}
+X から $\sigma_1$ の点へは、円の上を左回りに $2\theta_p=31°$ 回ります。切り口では、$x$ の面から左回りに $\theta_p=15.5°$ 回した面が、$\sigma_1$ の面です。
+\begin{phbaisuru}{せん断応力 $\tau$}
+$\sigma_x$ と $\sigma_y$ はそのままで $\tau$ だけを大きくすると、円の中心は動かず、半径 $R=\sqrt{a^2+\tau^2}$ が大きくなります。$\sigma_1$ は大きく、$\sigma_2$ は小さく（圧縮が強く）なり、主方向は45°に近づきます。下のグラフは $\sigma_x=80$、$\sigma_y=-20$ のときです。$\tau$ を30から60に2倍にしても、$\sigma_1$ は88.3から108.1で、2倍にはなりません（2乗をたしてから根号をとるから）。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=86mm, height=48mm, xmin=0, xmax=105, ymin=-90, ymax=150,
+  xtick={0,20,...,100}, ytick={-80,-40,0,40,80,120}, xlabel={$\tau$（MPa）}, ylabel={MPa}]
+  \addplot[bkBlue, domain=0:100] {30+sqrt(2500+x^2)};
+  \addplot[bkRed, domain=0:100] {30-sqrt(2500+x^2)};
+  \fill[bkInk] (axis cs:30,88.31) circle (1.6pt); \fill[bkInk] (axis cs:60,108.10) circle (1.6pt);
+  \node[pxj small, anchor=south east, text=bkBlue!80!black] at (axis cs:95,126) {$\sigma_1$};
+  \node[pxj small, anchor=north east, text=bkRed!80!black] at (axis cs:95,-70) {$\sigma_2$};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+
+\begin{seikaku}
+本当の材料は3次元なので、応力は3×3の対称な行列で、主応力は3つ（$\sigma_1\geqq\sigma_2\geqq\sigma_3$）あります。モールの円も3つかけ、いちばん大きな円の半径 $\dfrac{\sigma_1-\sigma_3}{2}$ が、本当の最大せん断応力です。うすい板の表面（平面応力）では、3つめの主応力が0なので、$\sigma_1$ と $\sigma_2$ が両方とも正のときは、最大せん断応力は $\dfrac{\sigma_1-\sigma_2}{2}$ ではなく $\dfrac{\sigma_1}{2}$ です（\bkreidairef{8}）。
+\begin{bkcenter}
+\begin{tikzpicture}[x=0.55mm, y=0.55mm]
+  \draw[bk arrow, bkInk, line width=0.7pt] (-6,0) -- (62,0) node[anchor=west, pxj small] {$\sigma$};
+  \draw[bk arrow, bkInk, line width=0.7pt] (0,-28) -- (0,30) node[anchor=south, pxj small] {$\tau$};
+  \draw[bkPurple, line width=1.1pt] (25,0) circle (25);
+  \draw[bkBlue, line width=1pt, dashed] (37.5,0) circle (12.5);
+  \draw[bkBlue, line width=1pt, dashed] (12.5,0) circle (12.5);
+  \fill[bkInk] (0,0) circle (0.8mm) (25,0) circle (0.8mm) (50,0) circle (0.8mm);
+  \node[pxj small, anchor=north east, fill=white, inner sep=0.5pt] at (-1,-2) {$\sigma_3=0$}; \node[pxj small, anchor=north, fill=white, inner sep=0.5pt] at (25,-2) {$\sigma_2$}; \node[pxj small, anchor=north west, fill=white, inner sep=0.5pt] at (51,-2) {$\sigma_1$};
+  \node[pxj small, anchor=west, text=bkPurple!80!black] at (52,20) {いちばん大きな円};
+\end{tikzpicture}
+\end{bkcenter}
+\end{seikaku}
+
+\leavevmode\label{ph:力-9:sec9}\textbf{⑨ いつ壊れるか：破損の条件}\par\nobreak
+引張試験では、1つの向きの応力だけで、降伏点や引張強さをはかりました（力-8）。いろいろな応力が組み合わさったとき、どうなったら壊れる（降伏する）のでしょう。これは、材料のこわれ方によって考え方がちがいます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{bkTheme}●}]
+\item \textbf{最大主応力説}（ぜい性の材料）：チョーク・鋳鉄・ガラスは、引きはなす応力で割れます。最大主応力 $\sigma_1$ が引張強さに達したら割れる、と考えます。
+\item \textbf{最大せん断応力説}（トレスカの説、1864年）：延性の材料はすべりで降伏するので、最大せん断応力が、引張試験で降伏したときの値 $\dfrac{\sigma_Y}{2}$ に達したら降伏する、と考えます。平面応力では、$\sigma_1-\sigma_2$（または $|\sigma_1|$・$|\sigma_2|$ の大きいほう）を $\sigma_Y$ とくらべます。
+\item \textbf{ミーゼスの説}（1913年）：延性の材料で、実験にいちばんよく合うとされる考えです。次の\textbf{相当応力}（ミーゼス応力）$\sigma_{\mathrm{eq}}$ が $\sigma_Y$ に達したら降伏する、と考えます。\bkidx{みーぜすおうりょく}{ミーゼス応力}
+\end{itemize}
+\pheq{\sigma_{\mathrm{eq}}=\sqrt{\sigma_1^{\,2}-\sigma_1\sigma_2+\sigma_2^{\,2}}=\sqrt{\sigma_x^{\,2}-\sigma_x\sigma_y+\sigma_y^{\,2}+3\tau^2}}{Pa ＝ $\sqrt{\text{Pa}^2}$}
+\label{ph:力-9:mises}1つの向きに引くだけ（$\sigma_2=0$）なら $\sigma_{\mathrm{eq}}=\sigma_1$ で、引張試験と同じになります。ミーゼス応力は、材料にたまるひずみのエネルギーのうち、「体積を変える分」を取りのぞいた「形を変える分」の大きさで決まる、と説明されます（ヘンキー、1924年）。安全率は $S=\dfrac{\sigma_Y}{\sigma_{\mathrm{eq}}}$ です。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.50\linewidth}\centering
+\begin{tikzpicture}[x=13mm, y=13mm]
+  \draw[bk arrow, bkInk, line width=0.7pt] (-1.6,0) -- (1.7,0) node[anchor=west, pxj small] {$\dfrac{\sigma_1}{\sigma_Y}$};
+  \draw[bk arrow, bkInk, line width=0.7pt] (0,-1.6) -- (0,1.7) node[anchor=south, pxj small] {$\dfrac{\sigma_2}{\sigma_Y}$};
+  \draw[bkRed, line width=1pt, dashed] (-1,-1) rectangle (1,1);
+  \draw[bkOrange!85!black, line width=1.2pt] (1,0) -- (1,1) -- (0,1) -- (-1,0) -- (-1,-1) -- (0,-1) -- cycle;
+  \draw[bkBlue, line width=1.2pt, rotate=45] (0,0) ellipse ({sqrt(2)} and {sqrt(2/3)});
+  \node[pxj small, anchor=north west] at (1,-0.02) {1};
+  \node[pxj small, anchor=south east] at (-0.02,1) {1};
+  \node[pxj small, anchor=west, text=bkBlue!80!black] at (1.05,1.25) {ミーゼス};
+  \node[pxj small, anchor=north west, text=bkOrange!70!black] at (0.15,-1.05) {トレスカ};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright\small
+内側なら安全、線の上で降伏。トレスカの六角形は、ミーゼスのだ円の内側にあり、少し安全側（きびしめ）です。2つが最もちがうのは、ねじり（$\sigma_1=-\sigma_2$）のとき。点線の正方形は最大主応力説です。
+\end{minipage}
+\bkfigcaption{主応力の平面で見た、3つの説の「降伏する境目」}
+\label{ph:力-9:fig-yield}
+\end{bkfigure}
+\begin{phyomi}[$\sigma_{\mathrm{eq}}=\sqrt{\sigma_x^{\,2}-\sigma_x\sigma_y+\sigma_y^{\,2}+3\tau^2}$]
+いろいろな応力の組を「引張試験なら何 MPa にあたるか」という1つの数に直したもの、と読みます。だから、引張試験の降伏点とそのままくらべられます。$\tau$ に3がかかるので、せん断応力は、同じ大きさの引張よりも $\sqrt3\approx1.7$ 倍きびしくききます。
+\end{phyomi}
+
+\begin{phmada}[壊れる条件の理論は、まだ完成していない]
+ミーゼスの説もトレスカの説も、原子から導いたものではありません。金属の実験によく合う形として選ばれた式です。金属では、ミーゼスの説が実験によく合うことが多く、トレスカの説とのちがいは、いちばん大きい所でも約15\,\%です。
+
+ところが、炭素繊維の複合材料のように、向きによって強さが大きくちがう材料では、話がちがいます。1990年代から約12年かけて、世界の研究者が19の理論で、同じ14の問題の「どこで壊れるか」を予測し、実験とくらべる国際的なとりくみ（World-Wide Failure Exercise）が行われました。多くの理論の予測は実験と大きくずれ、10倍ちがう場合もめずらしくありませんでした。飛行機の翼のように、炭素繊維の材料を使う部品が増えた今も、より良い理論の研究が続いていて、設計では実験で確かめることが欠かせません。
+\end{phmada}
+
+\leavevmode\label{ph:力-9:sec10}\textbf{⑩ ひずみゲージで、応力をはかる}\par\nobreak
+材料の中の応力は、直接見ることはできません。そこで、表面のひずみをはかって、応力を計算します。\textbf{ひずみゲージ}は、うすいフィルムに細い金属のはくをジグザグにはったものです。\bkidx{ひずみげーじ}{ひずみゲージ}部品にはりつけると、部品といっしょにのびちぢみし、金属のはくが細長くなって電気の抵抗がわずかにふえます（電-4）。抵抗の変わる割合は、ひずみのおよそ2倍です（ゲージ率約2）。\qty{120}{\ohm}のゲージなら、ひずみ $500\times10^{-6}$ で、抵抗は $120\times2\times500\times10^{-6}=\qty{0.12}{\ohm}$ だけ変わります。この小さな変化を、ブリッジ回路（電-5）ではかります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ゲージ1枚
+  \filldraw[fill=bkYellow!25, draw=bkYellow!70!black, line width=0.5pt] (0,0) rectangle (26,14);
+  \draw[bkOrange!80!black, line width=0.6pt] (4,3) -- ++(18,0) -- ++(0,1) -- ++(-18,0) -- ++(0,1) -- ++(18,0) -- ++(0,1) -- ++(-18,0) -- ++(0,1) -- ++(18,0) -- ++(0,1) -- ++(-18,0) -- ++(0,1) -- ++(18,0) -- ++(0,1) -- ++(-18,0);
+  \draw[bk arrow, bkRed, line width=1.1pt] (-1,7) -- (-7,7); \draw[bk arrow, bkRed, line width=1.1pt] (27,7) -- (33,7);
+  \node[pxj small, anchor=north] at (13,-1.5) {ひずみゲージ（はかる向き＝横）};
+  % ロゼット
+  \begin{scope}[shift={(70,6)}]
+    \fill[bkYellow!25] (-2,-2) rectangle (22,22);
+    \draw[bkYellow!70!black, line width=0.5pt] (-2,-2) rectangle (22,22);
+    \draw[bkOrange!80!black, line width=2.6pt] (4,0) -- (18,0);
+    \draw[bkOrange!80!black, line width=2.6pt] (0,4) -- (0,18);
+    \draw[bkOrange!80!black, line width=2.6pt] (5,5) -- (16,16);
+    \node[pxj small, anchor=north] at (11,-3) {0°};
+    \node[pxj small, anchor=east] at (-3,11) {90°};
+    \node[pxj small, anchor=west] at (17,17) {45°};
+    \node[pxj small, anchor=west] at (24,8) {ロゼット（3つの向き）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ひずみゲージ（左）とロゼットゲージ（右。0°・45°・90°の3枚を重ねたもの）}
+\label{ph:力-9:fig-gauge}
+\end{bkfigure}
+ひずみはとても小さいので、$10^{-6}$ を単位にして「$500\times10^{-6}$ を500マイクロストレイン（$500\,\mu\varepsilon$）」のようによびます。
+
+\noindent\textbf{3つの向きではかる：ロゼット}\quad
+主方向がわからないときは、0°・45°・90°の3つの向きのひずみ $\varepsilon_0$・$\varepsilon_{45}$・$\varepsilon_{90}$ をはかります。ひずみも応力と同じように、対称な行列 $\begin{pmatrix}\varepsilon_x&\gamma/2\\\gamma/2&\varepsilon_y\end{pmatrix}$（$\gamma$ はせん断ひずみ）で表され、③と同じ式で回せます。そこから、
+\[\varepsilon_x=\varepsilon_0,\qquad\varepsilon_y=\varepsilon_{90},\qquad\gamma=2\varepsilon_{45}-\varepsilon_0-\varepsilon_{90}\]
+主ひずみは、主応力と同じ形の
+\[\varepsilon_{1,2}=\frac{\varepsilon_x+\varepsilon_y}{2}\pm\sqrt{\Bigl(\frac{\varepsilon_x-\varepsilon_y}{2}\Bigr)^2+\Bigl(\frac{\gamma}{2}\Bigr)^2}\]
+です。主応力は、ポアソン比をふくむフックの法則（力-8 の「のびると横に細くなる」を2つの向きに使う）
+\[\varepsilon_1=\frac{\sigma_1-\nu\sigma_2}{E},\qquad\varepsilon_2=\frac{\sigma_2-\nu\sigma_1}{E}\]
+を、$\sigma_1$・$\sigma_2$ について解いて、
+\[\sigma_1=\frac{E}{1-\nu^2}(\varepsilon_1+\nu\varepsilon_2),\qquad\sigma_2=\frac{E}{1-\nu^2}(\varepsilon_2+\nu\varepsilon_1)\]
+で求めます（\bkreidairef{10}）。
+
+\noindent\textbf{$E$ と $G$ と $\nu$ をつなぐ式}\quad
+力-8 で予告した関係を導きます。正方形にせん断応力 $\tau$ だけをかけます（純粋せん断）。
+\begin{bkfigure}
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) rectangle (24,24);
+  \filldraw[fill=bkBlue!12, draw=bkBlue!70!black, line width=0.8pt] (0,0) -- (24,0) -- (28,24) -- (4,24) -- cycle;
+  \draw[bkRed, line width=1pt] (0,0) -- (28,24);
+  \draw[bkGray, line width=0.6pt, dashed] (0,0) -- (24,24);
+  \draw[bkInk, line width=0.5pt] (0,10) arc (90:80.5:10); \node[pxj small] at (2.2,12.4) {$\gamma$};
+  \node[pxj small, anchor=west, text=bkRed!80!black] at (29,21) {対角線がのびる};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\raggedright\small
+1辺1の正方形が $\gamma$ だけかたむくと、対角線は $(1,\ 1)$ から $(1+\gamma,\ 1)$ になり、長さは $\sqrt{(1+\gamma)^2+1}\approx\sqrt2\Bigl(1+\dfrac{\gamma}{2}\Bigr)$。対角線のひずみは $\dfrac{\gamma}{2}$ です（5-17 の1次近似）。
+\end{minipage}
+\bkfigcaption{せん断で、45°の対角線がのびる。}
+\label{ph:力-9:fig-diag}
+\end{bkfigure}
+同じ対角線のひずみを、2通りに計算します。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=1pt]
+\item 形から：$\gamma=\dfrac{\tau}{G}$（力-8）なので、対角線のひずみは $\dfrac{\gamma}{2}=\dfrac{\tau}{2G}$。
+\item 主応力から：純粋せん断の主応力は45°の向きに $\sigma_1=\tau$、$\sigma_2=-\tau$（④）。対角線の向きのひずみは、フックの法則とポアソン比で
+\[\frac{\sigma_1-\nu\sigma_2}{E}=\frac{\tau(1+\nu)}{E}\]
+\end{enumerate}
+2つは同じひずみなので $\dfrac{\tau}{2G}=\dfrac{\tau(1+\nu)}{E}$、つまり
+\pheq{E=2G(1+\nu)}{Pa ＝ Pa × 単位なし}
+\label{ph:力-9:EG}です。$E$ と $\nu$ がわかれば $G$ が決まり、3つのうち自由に決められるのは2つだけ、とわかります（等方な材料のとき）。
+
+\begin{phsaki}{3次元の応力・弾性論・塑性力学}
+この章では、板の中の2次元の応力（2×2の行列）を中心に考えました。3次元の応力は3×3の対称行列で、主応力を3次方程式で求めます。応力の行列を「テンソル」という道具で書き、ひずみとの関係を一般の形で扱う弾性論、降伏したあとの変形を、ミーゼスの条件などを使って計算する塑性力学は、大学の上の学年で学びます。
+\end{phsaki}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 応力は切り口の向きで変わる。1つの向きに引くと $\sigma_\theta=\sigma\cos^2\theta$、$\tau_\theta=\sigma\sin\theta\cos\theta$。ずらす応力は45°で最大 $\dfrac{\sigma}{2}$。
+\item 応力は対称な行列 $\begin{pmatrix}\sigma_x&\tau\\\tau&\sigma_y\end{pmatrix}$。主応力は固有値、主方向は固有ベクトル（直交する）。
+\item 主応力 $\sigma_{1,2}=c\pm R$。ここで
+\[c=\frac{\sigma_x+\sigma_y}{2},\qquad R=\sqrt{\Bigl(\frac{\sigma_x-\sigma_y}{2}\Bigr)^2+\tau^2}\]
+主方向は $\tan2\theta_p=\dfrac{2\tau}{\sigma_x-\sigma_y}$。
+\item モールの円：切り口を $\theta$ 回すと、円の上の点は $2\theta$ 回る。
+\item 延性の材料はミーゼス応力 $\sigma_{\mathrm{eq}}$ を降伏点とくらべる。$E=2G(1+\nu)$。
+\end{itemize}
+\end{taisetsu}
+
+
+\begin{kotoba}\small
+\bkword{垂直応力・せん断応力}{切り口を引きはなす応力と、ずらす応力。切り口の向きで変わる。}
+\bkword{主応力・主方向}{せん断が0になる切り口の垂直応力と、その法線の向き。}
+\bkword{モールの円}{すべての向きの切り口の応力 $(\sigma_\theta,\ \tau_\theta)$ をならべた円。}
+\bkword{平面応力}{応力が1つの平面の中だけにある状態（うすい板）。}
+\bkword{相当応力（ミーゼス応力）}{組み合わさった応力を、引張試験の応力に直した値。}
+\bkword{ひずみゲージ・ロゼット}{ひずみを電気の抵抗の変化ではかるセンサー。3つの向きを組にしたもの。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\sigma_1,\ \sigma_2$}{シグマ・ワン、シグマ・ツー}{主応力。せん断が0になる向きの応力。$\sigma_1\geqq\sigma_2$}{principal stress}{力-9}}{\bkkigocard{$\sigma_{\mathrm{eq}}$}{シグマ・イーキュー}{相当応力（ミーゼス応力）。引張試験の何 MPa にあたるか}{equivalent stress}{力-9}}
+
+
+\begin{senmonsho}[材料力学の教科書ふうの書き方]
+\begin{bkhonbun}
+平面応力状態において、$x$ 軸から角 $\theta$ をなす面上の垂直応力およびせん断応力は
+\[\sigma_n=\frac{\sigma_x+\sigma_y}{2}+\frac{\sigma_x-\sigma_y}{2}\cos2\theta+\tau_{xy}\sin2\theta\tag{3.4}\]
+で与えられる。$d\sigma_n/d\theta=0$ より主応力面は $\tan2\theta_p=2\tau_{xy}/(\sigma_x-\sigma_y)$ を満たし、互いに直交する。
+\end{bkhonbun}
+\bkyaku{専門書では、垂直応力を $\sigma_n$（n は法線の normal）、せん断応力を $\tau_{xy}$ と書くことが多い。「$d\sigma_n/d\theta=0$ より」は、「$\sigma_n$ を $\theta$ で微分して0になる所が最大・最小（5-7）」という意味。この章の⑦で、固有値から出した主方向の式と同じになる。}
+\end{senmonsho}
+
+\begin{column}{モールの円は、計算機のかわりだった}
+オットー・モール（1835〜1918年）は、ドイツで鉄道の橋をつくった技術者で、のちに大学で教えました。モールの円が考え出された1882年ごろには、電卓もコンピュータもありません。三角関数の表を引きながら、何度も同じ計算をするのは大変でした。円をかけば、コンパスと定規だけで、主応力も主方向も、すぐに読みとれます。今はコンピュータで固有値を計算するのが当たり前ですが、モールの円は「応力が向きでどう変わるか」を一目で見せてくれるので、今も材料力学の教科書には必ずのっています。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[引っぱった棒のななめの切り口]
+\label{ph:力-9:ex1}断面積\qty{100}{mm^2}の鋼の棒を、\qty{10}{kN}で引っぱります。（1）法線が軸と30°をなす切り口に、垂直な力・平行な力は何 N ですか。また、垂直応力とせん断応力は何 MPa ですか。（2）せん断応力がいちばん大きくなる切り口の角と、その大きさを求めましょう。
+\phbamen
+1本の棒の中の同じ点でも、ななめの切り口では、引きはなす応力とずらす応力の両方がはたらきます。延性の材料がどの面ですべるかを知りたい場面です。
+\phmushi
+棒の太さは一様で、断面に応力が一様にかかっているとします。棒の重さは無視します。
+\phzu
+棒の応力 $\sigma=\dfrac{F}{A}$、切り口の角 $\theta$（図\ref{ph:力-9:fig-cut}）、切り口の面積 $\dfrac{A}{\cos\theta}$。
+\phriyu
+力を切り口に垂直・平行に分け（4-6）、それぞれを切り口の面積でわります。（2）は2倍角の形 $\tau_\theta=\dfrac{\sigma}{2}\sin2\theta$ で最大を見つけます。
+\phtateru
+\[F\cos\theta,\quad F\sin\theta,\qquad\sigma_\theta=\sigma\cos^2\theta,\quad\tau_\theta=\sigma\sin\theta\cos\theta=\frac{\sigma}{2}\sin2\theta\]
+\phtoku
+（1）
+\[\sigma=\frac{10000}{100}=100\ \mathrm{MPa}\]
+\[\text{垂直な力}\ \ 10000\times\cos30°=8660\ \mathrm{N}\]
+\[\text{平行な力}\ \ 10000\times\sin30°=5000\ \mathrm{N}\]
+\[\text{切り口の面積}\ \ \frac{100}{\cos30°}=115.5\ \mathrm{mm^2}\]
+\[\sigma_\theta=\frac{8660}{115.5}=75.0\ \mathrm{MPa},\qquad\tau_\theta=\frac{5000}{115.5}=43.3\ \mathrm{MPa}\]
+（$100\times\cos^2 30°=75$、$100\times\sin30°\cos30°=43.3$ と同じ。）\par
+（2）$\sin2\theta$ がいちばん大きく（1に）なるのは、$2\theta=90°$ のときです。
+\[\theta=45°,\qquad\tau_{\max}=\frac{100}{2}\times1=50\ \mathrm{MPa}\]
+\phtashikame
+単位：N÷mm$^2$＝MPa。\\
+極端な場合：$\theta=0$ なら $\sigma_\theta=100$、$\tau_\theta=0$（ふつうの断面）。$\theta=90°$ なら両方0（軸にそった面には力がかからない）。\\
+大きさ：ずらす応力の最大は、引っぱる応力のちょうど半分。
+\kotae （1）\qty{8660}{N}と\qty{5000}{N}、\qty{75}{MPa}と約\qty{43}{MPa}　（2）45°、\qty{50}{MPa}
+\end{phreidai}
+\begin{jibun}
+断面積\qty{50}{mm^2}の棒を\qty{4}{kN}で引っぱります。（1）法線が軸と60°をなす切り口の、垂直な力・平行な力と、垂直応力・せん断応力を求めましょう。（2）せん断応力の最大値と、その切り口の角を求めましょう。
+\bkjans{（1）\qty{2000}{N}と約\qty{3464}{N}、面積\qty{100}{mm^2}で\qty{20}{MPa}と約\qty{34.6}{MPa}　（2）45°、\qty{40}{MPa}}
+\end{jibun}
+
+\begin{phreidai}[ねじった棒の主応力（チョーク）]
+\label{ph:力-9:ex2}ねじった丸棒の表面の小さな正方形に、せん断応力 $\tau=\qty{40}{MPa}$ だけがはたらいています（$\sigma_x=\sigma_y=0$）。主応力と主方向を求めましょう。
+\phbamen
+\bkhatenaref のチョークや、モータの軸の表面の状態です。どの向きの切り口で、引きはなす応力が最大になるかを知りたい場面です。
+\phmushi
+軸の表面のうすい部分だけを考え（平面応力）、曲げる力や軸の向きの力はないとします。
+\phzu
+$x$ を軸の向き、$y$ を周の向きにとります。$\sigma_x=0$、$\sigma_y=0$、$\tau=40$。
+\phriyu
+主応力の式 $\sigma_{1,2}=c\pm R$ と、主方向の式 $\tan2\theta_p=\dfrac{2\tau}{\sigma_x-\sigma_y}$ を使います。
+\phtateru
+\[c=\frac{0+0}{2},\qquad R=\sqrt{\Bigl(\frac{0-0}{2}\Bigr)^2+40^2},\qquad\tan2\theta_p=\frac{2\times40}{0}\]
+\phtoku
+$c=0$、$R=40$。$\sigma_1=\qty{40}{MPa}$、$\sigma_2=\qty{-40}{MPa}$。$\tan2\theta_p$ は分母が0で「限りなく大きい」ので $2\theta_p=90°$、$\theta_p=45°$。
+\phtashikame
+モールの円：中心が原点、半径40の円。X 点 $(0,\ -40)$ から左回りに90°で $\sigma_1$ の点 $(40,\ 0)$。切り口では45°。\\
+意味：軸から45°の向きに\qty{40}{MPa}の引張、それと直角の向きに\qty{40}{MPa}の圧縮。チョークは引張で割れるので、45°のらせんに割れる。
+\kotae 主応力 $\pm\qty{40}{MPa}$、主方向は軸から45°（と135°）
+\end{phreidai}
+\begin{jibun}
+せん断応力 $\tau=\qty{25}{MPa}$ だけがはたらく点の、主応力と主方向を求めましょう。
+\bkjans{$c=0$、$R=25$。主応力 $\pm\qty{25}{MPa}$、主方向は45°と135°}
+\end{jibun}
+
+\begin{phreidai}[モールの円をかいて主応力を求める]
+\label{ph:力-9:ex3}板の中の点で、$\sigma_x=\qty{80}{MPa}$、$\sigma_y=\qty{-20}{MPa}$、$\tau=\qty{30}{MPa}$ です。モールの円の中心と半径、主応力、主方向の角、最大せん断応力を求めましょう。
+\phbamen
+③の表計算と同じ点です。表で見つけた最大・最小を、式で正確に求めます。
+\phmushi
+平面応力とし、板の厚さの向きの応力（$\sigma_3$）は0とします。最大せん断応力は、この平面の中で考えます。
+\phzu
+図\ref{ph:力-9:fig-mohr}の円。X $(80,\ -30)$、Y $(-20,\ 30)$。
+\phriyu
+X と Y の中点が中心 $c$、X までの距離が半径 $R$ です。主応力は $c\pm R$、主方向は $\tan2\theta_p$。最大せん断応力は円の半径です。
+\phtateru
+\[c=\frac{\sigma_x+\sigma_y}{2},\qquad R=\sqrt{\Bigl(\frac{\sigma_x-\sigma_y}{2}\Bigr)^2+\tau^2},\qquad\tan2\theta_p=\frac{2\tau}{\sigma_x-\sigma_y}\]
+\phtoku
+\[c=\frac{80+(-20)}{2}=30,\qquad R=\sqrt{50^2+30^2}=\sqrt{3400}=58.3\]
+\[\sigma_1=30+58.3=88.3\ \mathrm{MPa},\qquad\sigma_2=30-58.3=-28.3\ \mathrm{MPa}\]
+\[\tan2\theta_p=\frac{60}{100}=0.6,\qquad2\theta_p=31.0°,\qquad\theta_p=15.5°\]
+最大せん断応力は $R=\qty{58.3}{MPa}$ で、主方向から45°回した面（$15.5°+45°=60.5°$）にはたらきます。
+\phtashikame
+表（図\ref{ph:力-9:fig-sheet}）：15°で88.3、105°で $-28.3$、60°で58.3。ぴったり合う。\\
+和の確かめ：$\sigma_1+\sigma_2=60=\sigma_x+\sigma_y$（回しても和は変わらない）。
+\kotae 中心\qty{30}{MPa}。半径 約\qty{58.3}{MPa}。主応力 約\qty{88.3}{MPa}と約\qty{-28.3}{MPa}。主方向 約15.5°。最大せん断応力 約\qty{58.3}{MPa}
+\end{phreidai}
+\begin{jibun}
+$\sigma_x=\qty{50}{MPa}$、$\sigma_y=\qty{10}{MPa}$、$\tau=\qty{15}{MPa}$ の点の、モールの円の中心と半径、主応力、主方向の角、（平面の中の）最大せん断応力を求めましょう。
+\bkjans{中心\qty{30}{MPa}、半径\qty{25}{MPa}、$\sigma_1=\qty{55}{MPa}$、$\sigma_2=\qty{5}{MPa}$、$\tan2\theta_p=0.75$ で $\theta_p\approx18.4°$、\qty{25}{MPa}}
+\end{jibun}
+
+\begin{phreidai}[主応力を固有値として求める]
+\label{ph:力-9:ex4}\bkreidairef{3}と同じ応力の行列 $\boldsymbol{\sigma}=\begin{pmatrix}80&30\\30&-20\end{pmatrix}$（MPa）の固有値と固有ベクトルを求め、主応力と主方向を確かめましょう。
+\phbamen
+モールの円と同じ答えを、行列の計算（7-8）で出します。3次元の応力（3×3の行列）では、こちらの方法しか使えません。
+\phmushi
+\bkreidairef{3}と同じ（平面応力）。
+\phzu
+固有値 $\lambda$、固有ベクトル $\vec n=(n_x,\ n_y)$。
+\phriyu
+主方向では切り口の力が法線と同じ向き（$\boldsymbol{\sigma}\vec n=\lambda\vec n$）なので、固有値の問題です。
+\phtateru
+\[\det\begin{pmatrix}80-\lambda&30\\30&-20-\lambda\end{pmatrix}=(80-\lambda)(-20-\lambda)-30^2=0\]
+\phtoku
+展開すると
+\[\lambda^2-60\lambda-2500=0\]
+解の公式（3-10）で
+\[\lambda=30\pm\sqrt{900+2500}=30\pm58.3\]
+$\lambda_1=88.3$ の固有ベクトル：1行めの式から
+\[(80-88.3)\,n_x+30\,n_y=0,\qquad n_y=\frac{8.3}{30}\,n_x=0.277\,n_x\]
+向きの角は $\tan^{-1}0.277=15.5°$ です。\par
+$\lambda_2=-28.3$ の固有ベクトル：
+\[(80+28.3)\,n_x+30\,n_y=0,\qquad n_y=-3.61\,n_x\]
+角は $-74.5°$（$105.5°$ と同じ向き）です。
+\phtashikame
+2つの固有ベクトル $(1,\ 0.277)$ と $(1,\ -3.61)$ の内積は $1\times1+0.277\times(-3.61)=0.00$ で、直交しています（7-8）。\\
+角の差：$15.5°-(-74.5°)=90°$。\bkreidairef{3}と同じ答え。
+\kotae 主応力 約\qty{88.3}{MPa}と約\qty{-28.3}{MPa}、主方向は15.5°と105.5°（直交）
+\end{phreidai}
+\begin{jibun}
+応力の行列 $\begin{pmatrix}50&15\\15&10\end{pmatrix}$（MPa）の固有値と、大きいほうの固有値の固有ベクトルの向き（$x$ 軸からの角）を求めましょう。
+\bkjans{$\lambda^2-60\lambda+275=0$ で $\lambda=55$、$5$。$\lambda=55$ のとき $n_y=\dfrac{1}{3}n_x$、角は約18.4°}
+\end{jibun}
+
+\begin{phreidai}[ミーゼス応力で安全率を確かめる]
+\label{ph:力-9:ex5}\bkreidairef{3}の点（$\sigma_x=80$、$\sigma_y=-20$、$\tau=30$ MPa）が SS400（降伏点\qty{245}{MPa}）の部品の中にあります。ミーゼス応力と安全率を求めましょう。
+\phbamen
+組み合わさった応力で、延性の鋼が降伏しないかを確かめる、設計の場面です。
+\phmushi
+材料は均質・等方で、ミーゼスの説があてはまるとします。応力集中や疲労は考えません。
+\phzu
+主応力 $\sigma_1=88.3$、$\sigma_2=-28.3$（\bkreidairef{3}）。
+\phriyu
+延性の材料なので、ミーゼス応力を降伏点とくらべます。成分の式でも主応力の式でも計算でき、2通りで確かめられます。
+\phtateru
+\[\sigma_{\mathrm{eq}}=\sqrt{\sigma_x^{\,2}-\sigma_x\sigma_y+\sigma_y^{\,2}+3\tau^2},\qquad S=\frac{\sigma_Y}{\sigma_{\mathrm{eq}}}\]
+\phtoku
+\[\sigma_{\mathrm{eq}}=\sqrt{6400+1600+400+2700}=\sqrt{11100}=105.4\ \mathrm{MPa}\]
+\[S=\frac{245}{105.4}=2.32\]
+\phtashikame
+主応力で：$\sqrt{88.3^2-88.3\times(-28.3)+(-28.3)^2}=\sqrt{11100}=105.4$。同じ。\\
+大きさ：$\sigma_{\mathrm{eq}}$ は $\sigma_1=88.3$ より大きい。反対の符号の $\sigma_2$（圧縮）があると、ずらす応力が大きくなり、きびしくなるからです。
+\kotae 約\qty{105}{MPa}、安全率 約2.3
+\end{phreidai}
+\begin{jibun}
+$\sigma_x=\qty{50}{MPa}$、$\sigma_y=\qty{10}{MPa}$、$\tau=\qty{15}{MPa}$ の点のミーゼス応力と、降伏点\qty{245}{MPa}に対する安全率を求めましょう。
+\bkjans{$\sqrt{2500-500+100+675}=\sqrt{2775}\approx\qty{52.7}{MPa}$、安全率 約4.7}
+\end{jibun}
+
+\begin{phreidai}[トレスカの説で確かめる]
+\label{ph:力-9:ex6}トレスカの説（最大せん断応力説）で、降伏点\qty{245}{MPa}に対する安全率を求めましょう。（1）\bkreidairef{3}の点（$\sigma_1=88.3$、$\sigma_2=-28.3$ MPa）。（2）$\sigma_1=60$、$\sigma_2=\qty{40}{MPa}$ の点（うすい板の表面で、$\sigma_3=0$）。
+\phbamen
+トレスカの説は、ミーゼスより少し安全側（きびしめ）で、手計算が楽なので、設計でよく使われます。
+\phmushi
+平面応力で、3つめの主応力は0とします。
+\phzu
+トレスカの相当応力は、3つの主応力（$\sigma_1$、$\sigma_2$、0）のうち、いちばん大きいものと小さいものの差です。
+\phriyu
+最大せん断応力は「いちばん大きなモールの円」の半径（この章の⑧のせいかくに言うと）。それを2倍したものを $\sigma_Y$ とくらべます。
+\phtateru
+\[\sigma_T=\max(|\sigma_1-\sigma_2|,\ |\sigma_1|,\ |\sigma_2|),\qquad S=\frac{\sigma_Y}{\sigma_T}\]
+\phtoku
+（1）3つの主応力は $88.3$、$0$、$-28.3$ です。
+\[\sigma_T=88.3-(-28.3)=116.6\ \mathrm{MPa},\qquad S=\frac{245}{116.6}=2.10\]
+（2）3つの主応力は $60$、$40$、$0$ です。
+\[\sigma_T=60-0=60\ \mathrm{MPa},\qquad S=\frac{245}{60}=4.08\]
+\phtashikame
+（1）ミーゼス（\qty{105}{MPa}、2.3）より少しきびしい答え。2つの説の差は約1割。\\
+（2）$\sigma_1-\sigma_2=20$ だけを見ると安全率12になってしまう。3つめの主応力0を忘れると、危ない方にまちがえます（まちがえやすいところ）。
+\kotae （1）約\qty{117}{MPa}、安全率 約2.1　（2）\qty{60}{MPa}、安全率 約4.1
+\end{phreidai}
+\begin{jibun}
+トレスカの説で、降伏点\qty{245}{MPa}に対する安全率を求めましょう（$\sigma_3=0$）。\par（1）$\sigma_1=\qty{70}{MPa}$、$\sigma_2=\qty{-30}{MPa}$\par（2）$\sigma_1=\qty{90}{MPa}$、$\sigma_2=\qty{50}{MPa}$
+\bkjans{（1）$70-(-30)=\qty{100}{MPa}$、約2.5　（2）$90-0=\qty{90}{MPa}$、約2.7}
+\end{jibun}
+
+\begin{phreidai}[曲げとねじりを同時に受ける軸]
+\label{ph:力-9:ex7}SS400 の軸の表面の1点で、曲げによる応力 $\sigma=\qty{60}{MPa}$（軸の向き）と、ねじりによるせん断応力 $\tau=\qty{40}{MPa}$ が同時にはたらいています。主応力、ミーゼス応力、トレスカの相当応力と、それぞれの安全率を求めましょう。
+\phbamen
+自動車の駆動軸や、ベルトをかけた軸は、曲げられながらねじられます。応力の求め方は力-10・力-11 で学びます。ここでは、2つを組み合わせる方法を学びます。
+\phmushi
+周の向きの応力 $\sigma_y=0$ とします。応力集中（キーみぞなど）や、くり返しによる疲労は考えません。
+\phzu
+$\sigma_x=60$、$\sigma_y=0$、$\tau=40$。
+\phriyu
+主応力の式、ミーゼスの式（$\sigma_y=0$ なら $\sqrt{\sigma^2+3\tau^2}$）、トレスカ（$\sigma_1$ と $\sigma_2$ が反対の符号なので $\sigma_1-\sigma_2=\sqrt{\sigma^2+4\tau^2}$）を使います。
+\phtateru
+\[\sigma_{1,2}=\frac{\sigma}{2}\pm\sqrt{\Bigl(\frac{\sigma}{2}\Bigr)^2+\tau^2},\qquad\sigma_{\mathrm{eq}}=\sqrt{\sigma^2+3\tau^2},\qquad\sigma_T=\sqrt{\sigma^2+4\tau^2}\]
+\phtoku
+\[\sigma_{1,2}=30\pm\sqrt{900+1600}=30\pm50,\qquad\sigma_1=80,\quad\sigma_2=-20\ \mathrm{MPa}\]
+\[\sigma_{\mathrm{eq}}=\sqrt{3600+4800}=91.7\ \mathrm{MPa}\]
+\[\sigma_T=\sqrt{3600+6400}=100\ \mathrm{MPa}\]
+安全率：ミーゼス $\dfrac{245}{91.7}=2.67$、トレスカ $\dfrac{245}{100}=2.45$
+\phtashikame
+主応力で確かめると
+\[\sqrt{80^2-80\times(-20)+(-20)^2}=\sqrt{8400}=91.7,\quad80-(-20)=100\]
+極端な場合：$\tau=0$ なら、どちらも $\sigma=60$（ただの引張）。$\sigma=0$ なら $\sqrt3\tau$ と $2\tau$（純粋せん断）。
+\kotae 主応力 \qty{80}{MPa}と\qty{-20}{MPa}、ミーゼス 約\qty{92}{MPa}（安全率 約2.7）、トレスカ \qty{100}{MPa}（安全率 約2.5）
+\end{phreidai}
+\begin{jibun}
+軸の表面で $\sigma=\qty{80}{MPa}$、$\tau=\qty{30}{MPa}$ のとき、主応力、ミーゼス応力、トレスカの相当応力を求めましょう。
+\bkjans{$\sigma_{1,2}=40\pm50$ で\qty{90}{MPa}と\qty{-10}{MPa}、ミーゼス $\sqrt{6400+2700}\approx\qty{95.4}{MPa}$、トレスカ $\sqrt{6400+3600}=\qty{100}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[圧力タンクの壁の最大せん断応力]
+\label{ph:力-9:ex8}空気タンク（円筒）の壁には、周の向きに $\sigma_\theta=\qty{50}{MPa}$、軸の向きに $\sigma_z=\qty{25}{MPa}$ の引張の応力がはたらいています（この求め方は力-11 で学びます）。壁の最大せん断応力とミーゼス応力を求めましょう。
+\phbamen
+ガスボンベやボイラのような圧力容器の壁です。周の向きと軸の向きの両方に引っぱられています。
+\phmushi
+壁はうすく、厚さの向きの応力（内側で $-$内圧、外側で0）は小さいので0とします（$\sigma_3=0$）。
+\phzu
+主応力は $\sigma_1=50$、$\sigma_2=25$、$\sigma_3=0$（せん断がないので、この向きがそのまま主方向）。
+\phriyu
+3つのモールの円をかき、いちばん大きな円の半径が最大せん断応力（この章の⑧のせいかくに言うと）。
+\phtateru
+\[\tau_{\max}=\frac{\sigma_{\text{最大}}-\sigma_{\text{最小}}}{2},\qquad\sigma_{\mathrm{eq}}=\sqrt{\sigma_1^{\,2}-\sigma_1\sigma_2+\sigma_2^{\,2}}\]
+\phtoku
+平面の中の円：$\dfrac{50-25}{2}=12.5$。いちばん大きな円：$\dfrac{50-0}{2}=\qty{25}{MPa}$。だから $\tau_{\max}=\qty{25}{MPa}$。
+\[\sigma_{\mathrm{eq}}=\sqrt{2500-1250+625}=\sqrt{1875}=43.3\ \mathrm{MPa}\]
+\phtashikame
+最大せん断応力の面は、周の向きと厚さの向きの間の45°の面（壁の中をななめに切る面）。平面の中だけを見ると、半分の\qty{12.5}{MPa}とまちがえます。\\
+ミーゼス応力（\qty{43}{MPa}）は、$\sigma_\theta=50$ より小さい。2つの向きに同時に引かれると、少しだけゆるやかになります。
+\kotae 最大せん断応力 \qty{25}{MPa}、ミーゼス応力 約\qty{43}{MPa}
+\end{phreidai}
+\begin{jibun}
+タンクの壁で、周の向きに\qty{40}{MPa}、軸の向きに\qty{20}{MPa}の引張です（厚さの向きは0）。最大せん断応力とミーゼス応力を求めましょう。
+\bkjans{平面の中は\qty{10}{MPa}だが、いちばん大きな円で $\dfrac{40-0}{2}=\qty{20}{MPa}$。ミーゼス $\sqrt{1200}\approx\qty{34.6}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[ひずみゲージで応力をはかる]
+\label{ph:力-9:ex9}鋼の棒（$E=\qty{205}{GPa}$）の表面に、軸の向きにひずみゲージをはりました。荷物をつるすと、$500\,\mu\varepsilon$（$500\times10^{-6}$）を示しました。棒の応力はいくらですか。棒は1つの向きに引っぱられているとします。
+\phbamen
+クレーンのフックや橋のワイヤに、本当にどれだけの力がかかっているかを、はりつけたゲージで調べる場面です。
+\phmushi
+応力は1つの向き（軸の向き）だけで、弾性の範囲とします。温度の変化によるゲージの出力のずれは無視します。
+\phzu
+ひずみ $\varepsilon=500\times10^{-6}$、ヤング率 $E=\qty{205000}{MPa}$。
+\phriyu
+1つの向きの応力なので、フックの法則 $\sigma=E\varepsilon$（力-8）がそのまま使えます。（横の向きのひずみは $-\nu\varepsilon$ ですが、横の応力は0です。）
+\phtateru
+\[\sigma=E\varepsilon\]
+\phtoku
+\[\sigma=205000\times500\times10^{-6}=102.5\ \mathrm{MPa}\]
+\phtashikame
+単位：MPa×単位なし＝MPa。\\
+大きさ：SS400 の降伏点の約4割。ゲージ1枚（\qty{120}{\ohm}、ゲージ率2）の抵抗の変化は\qty{0.12}{\ohm}。小さな変化でも、ブリッジ回路でしっかりはかれます。
+\kotae 約\qty{103}{MPa}（約\qty{100}{MPa}）
+\end{phreidai}
+\begin{jibun}
+アルミニウム合金の棒（$E=\qty{69}{GPa}$）の軸の向きのゲージが $800\,\mu\varepsilon$ を示しました。1つの向きの応力とすると、何 MPa ですか。
+\bkjans{$69000\times800\times10^{-6}\approx\qty{55.2}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[ロゼットゲージから主応力を求める]
+\label{ph:力-9:ex10}鋼の板（$E=\qty{205}{GPa}$、$\nu=0.3$）に、0°・45°・90°のロゼットゲージをはりました。$\varepsilon_0=400$、$\varepsilon_{45}=250$、$\varepsilon_{90}=-100$（単位はすべて $\mu\varepsilon$）でした。主ひずみ、主方向、主応力を求めましょう。
+\phbamen
+機械の部品のどの向きに、どれだけの応力がかかっているかわからないときに、3つの向きのひずみから求める場面です。
+\phmushi
+板の表面の平面応力で、弾性の範囲。ゲージは1点にあるとみなします。
+\phzu
+$\varepsilon_x=\varepsilon_0$、$\varepsilon_y=\varepsilon_{90}$、$\gamma=2\varepsilon_{45}-\varepsilon_0-\varepsilon_{90}$（$\mu\varepsilon$）。
+\phriyu
+ひずみも応力と同じ形の対称な行列なので、主ひずみは主応力と同じ式で出せます。主応力は、ポアソン比をふくむフックの法則を解いた式（この章の⑩）で求めます。
+\phtateru
+\[\varepsilon_{1,2}=\frac{\varepsilon_x+\varepsilon_y}{2}\pm\sqrt{\Bigl(\frac{\varepsilon_x-\varepsilon_y}{2}\Bigr)^2+\Bigl(\frac{\gamma}{2}\Bigr)^2},\qquad\tan2\theta_p=\frac{\gamma}{\varepsilon_x-\varepsilon_y}\]
+\[\sigma_1=\frac{E}{1-\nu^2}(\varepsilon_1+\nu\varepsilon_2),\qquad\sigma_2=\frac{E}{1-\nu^2}(\varepsilon_2+\nu\varepsilon_1)\]
+\phtoku
+\[\gamma=2\times250-400-(-100)=200\]
+\[\text{中心}\ \ \frac{400+(-100)}{2}=150,\qquad\text{半径}\ \ \sqrt{250^2+100^2}=269.3\]
+\[\varepsilon_1=150+269.3=419.3,\qquad\varepsilon_2=150-269.3=-119.3\quad(\mu\varepsilon)\]
+\[\tan2\theta_p=\frac{200}{500}=0.4,\qquad2\theta_p=21.8°,\qquad\theta_p=10.9°\]
+\[\frac{E}{1-\nu^2}=\frac{205000}{0.91}=225300\ \mathrm{MPa}\]
+\[\sigma_1=225300\times(419.3-0.3\times119.3)\times10^{-6}=86.4\ \mathrm{MPa}\]
+\[\sigma_2=225300\times(-119.3+0.3\times419.3)\times10^{-6}=1.5\ \mathrm{MPa}\]
+\phtashikame
+主ひずみの和 $419.3-119.3=300=\varepsilon_0+\varepsilon_{90}$。\\
+$\sigma_2$ はほぼ0：0°に近い向きにだけ引っぱられている、とわかります。横のひずみ $-119$ は、ポアソン比で細くなった分（$-0.3\times419\approx-126$ に近い）です。
+\kotae 主ひずみ 約 $419\,\mu\varepsilon$ と $-119\,\mu\varepsilon$。主方向 約10.9°。主応力 約\qty{86}{MPa}と約\qty{1.5}{MPa}
+\end{phreidai}
+\begin{jibun}
+鋼の板（$E=\qty{205}{GPa}$、$\nu=0.3$）のロゼットで、$\varepsilon_0=300$、$\varepsilon_{45}=250$、$\varepsilon_{90}=100$（$\mu\varepsilon$）でした。主ひずみ、主方向、主応力を求めましょう。
+\bkjans{$\gamma=100$。主ひずみ 約 $312\,\mu\varepsilon$、$88\,\mu\varepsilon$。$\tan2\theta_p=0.5$ で $\theta_p\approx13.3°$。主応力 約\qty{76}{MPa}、約\qty{41}{MPa}}
+\end{jibun}
+
+\begin{phreidai}[ななめに接着した継ぎ目]
+\label{ph:力-9:ex11}断面\qty{20}{mm}×\qty{20}{mm}の棒を、法線が軸と30°をなすななめの面で接着しました。接着剤は、引きはなす強さ\qty{40}{MPa}、ずらす強さ\qty{20}{MPa}です。この棒を\qty{20}{kN}で引っぱると、継ぎ目ははがれますか。
+\phbamen
+接着や溶接の継ぎ目を、わざとななめにすることがあります。継ぎ目の面にかかる応力を、2つの強さとくらべる場面です。
+\phmushi
+継ぎ目の面に応力は一様にかかり、接着剤の層の厚さは無視します。棒の材料は継ぎ目より十分強いとします。
+\phzu
+棒の応力 $\sigma=\dfrac{F}{A}$、継ぎ目の角 $\theta=30°$。
+\phriyu
+ななめの切り口の式 $\sigma_\theta=\sigma\cos^2\theta$、$\tau_\theta=\sigma\sin\theta\cos\theta$ で、継ぎ目の面の2つの応力を出し、それぞれの強さとくらべます。
+\phtateru
+\[\sigma=\frac{20000}{20\times20},\qquad\sigma_\theta=\sigma\cos^2 30°,\qquad\tau_\theta=\sigma\sin30°\cos30°\]
+\phtoku
+\[\sigma=50\ \mathrm{MPa}\]
+\[\sigma_\theta=50\times0.75=37.5\ \mathrm{MPa},\qquad\tau_\theta=50\times0.433=21.7\ \mathrm{MPa}\]
+引きはなす応力 $37.5<40$ はもつが、ずらす応力 $21.7>20$ なので、ずれてはがれます。
+\phtashikame
+2つの強さの両方とくらべることが大切。$\sigma_\theta$ だけ見ると「大丈夫」とまちがえる。\\
+極端な場合：$\theta=0$（直角の継ぎ目）なら $\sigma_\theta=50>40$ で、引きはなされてはがれる。
+\kotae はがれる（ずらす応力 約\qty{21.7}{MPa}が、ずらす強さ\qty{20}{MPa}をこえる）
+\end{phreidai}
+\begin{jibun}
+断面\qty{20}{mm}×\qty{20}{mm}の棒を、法線が軸と40°をなす面で接着しました（引きはなす強さ\qty{30}{MPa}、ずらす強さ\qty{20}{MPa}）。\qty{16}{kN}で引っぱると、継ぎ目ははがれますか。
+\bkjans{$\sigma=\qty{40}{MPa}$、$\sigma_\theta\approx\qty{23.5}{MPa}$（$<30$）、$\tau_\theta\approx\qty{19.7}{MPa}$（$<20$）。どちらも強さより小さいので、はがれない（ずらす側は余裕が少ない）}
+\end{jibun}
+
+\begin{phreidai}[$E$ と $\nu$ から $G$ を求める]
+\label{ph:力-9:ex12}鋼のヤング率は\qty{205}{GPa}、ポアソン比は0.3です。横弾性係数 $G$ を求めましょう。
+\phbamen
+ねじりの計算（力-11）には $G$ が必要です。でも、材料の表には $E$ と $\nu$ しかないことがよくあります。
+\phmushi
+材料は均質・等方とします（向きで性質が変わらない）。
+\phzu
+$E=\qty{205}{GPa}$、$\nu=0.3$。
+\phriyu
+等方な材料では、$E$・$G$・$\nu$ のうち2つで残りが決まる関係 $E=2G(1+\nu)$（この章の⑩）が使えます。
+\phtateru
+\[G=\frac{E}{2(1+\nu)}\]
+\phtoku
+\[G=\frac{205}{2\times1.3}=\frac{205}{2.6}=78.8\ \mathrm{GPa}\]
+\phtashikame
+大きさ：$E$ の約4割。力-8 の「鋼の $G$ は約\qty{79}{GPa}」と合う。\\
+極端な場合：$\nu=0.5$（ゴム）なら $G=\dfrac{E}{3}$。$\nu=0$ なら $G=\dfrac{E}{2}$。
+\kotae 約\qty{79}{GPa}
+\end{phreidai}
+\begin{jibun}
+アルミニウム合金の横弾性係数を求めましょう。ヤング率は\qty{69}{GPa}、ポアソン比は0.33です。
+\bkjans{$\dfrac{69}{2\times1.33}\approx\qty{25.9}{GPa}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{円の上の角は2倍}
+\bkng{モールの円の上で、X 点から $\sigma_1$ まで30°回ったので、主方向は $x$ から30°。}
+\bkok{円の上の角は切り口の角の2倍。主方向は $\dfrac{30°}{2}=15°$。}
+$\tan2\theta_p$ の式から角を出すときも同じで、$2\theta_p$ を求めたら、最後に2でわるのを忘れないようにしよう。
+\end{tsumazuki}
+\begin{tsumazuki}{3つめの主応力を忘れる}
+\bkng{主応力が\qty{50}{MPa}と\qty{25}{MPa}だから、最大せん断応力は、差を2でわって\qty{12.5}{MPa}。}
+\bkok{板の表面では $\sigma_3=0$ もある。いちばん大きな円の半径は、50と0の差を2でわって\qty{25}{MPa}。}
+$\sigma_1$ と $\sigma_2$ が同じ符号のときは、平面の中の円より、0をふくむ円のほうが大きくなります（\bkreidairef{8}）。
+\end{tsumazuki}
+\begin{tsumazuki}{応力はベクトルのようにはたせない}
+\bkng{引張が\qty{60}{MPa}、せん断が\qty{40}{MPa}だから、三平方の定理で、全体の応力は\qty{72}{MPa}。}
+\bkok{ミーゼス応力なら $\sqrt{60^2+3\times40^2}\approx\qty{92}{MPa}$。主応力なら\qty{80}{MPa}と\qty{-20}{MPa}。}
+応力は、向きを2つもつ量（行列）です。矢印（ベクトル）のように三平方の定理で合わせることはできません。
+\end{tsumazuki}
+\begin{tsumazuki}{ずらす応力の向き（符号）}
+\bkng{$x$ の面の点を、モールの円の上で $(\sigma_x,\ \tau)$ にとる。}
+\bkok{この本の決め方では、$x$ の面は $(\sigma_x,\ -\tau)$、$y$ の面は $(\sigma_y,\ \tau)$。}
+専門書によって、ずらす応力の正の向きの決め方がちがい、円の上の点の上下が入れかわります。主応力の大きさは同じになりますが、回る向きが反対になるので、1冊の中では決め方をそろえよう。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[ひずみゲージで、橋や機械の「今」をはかる]
+\noindent\begin{minipage}[c]{0.60\linewidth}\raggedright
+古い橋の点検や、新しい車の試験では、部品にたくさんのひずみゲージをはり、走らせたり荷物をのせたりして、ひずみをはかります。主方向がわからない所にはロゼットをはり、この章の方法で主応力とミーゼス応力を計算して、設計のときの計算と合っているかを確かめます。飛行機を地上で何万回も「飛んだのと同じ力」でゆらす疲労試験でも、翼や胴体に数千枚のゲージがはられます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!30] (0,0) rectangle (40,8);
+  \draw[bkGray!80!black, line width=0.6pt] (0,0) rectangle (40,8);
+  \foreach \x in {4,12,20,28,36} {\fill[bkLine!80] (\x-1.5,8) -- (\x,14) -- (\x+1.5,8) -- cycle;}
+  \fill[bkYellow!60] (17,1.5) rectangle (23,6.5); \draw[bkYellow!70!black, line width=0.4pt] (17,1.5) rectangle (23,6.5);
+  \draw[bkInk, line width=0.5pt] (20,1.5) -- (20,-6) -- (34,-6);
+  \filldraw[fill=bkNavy!15, draw=bkNavy!70, line width=0.5pt] (34,-10) rectangle (46,-2);
+  \node[pxj small] at (40,-6) {計測器};
+  \node[pxj small, anchor=north] at (14,-8) {ゲージ};
+\end{tikzpicture}
+\end{minipage}
+\begin{phketa}[ひずみと応力の大きさ]
+\phketaline{ひずみゲージではかれるひずみ}{約 $1\,\mu\varepsilon$（$10^{-6}$）から}
+\phketaline{鋼で\qty{100}{MPa}の応力のひずみ}{約 $490\,\mu\varepsilon$}
+\phketaline{SS400 が降伏するときのひずみ}{約 $1200\,\mu\varepsilon$（0.12\,\%）}
+\phketaline{ゲージ率2・\qty{120}{\ohm}のゲージ、$500\,\mu\varepsilon$ の抵抗の変化}{約\qty{0.12}{\ohm}}
+\phboxhead{答えが桁で合っているか}
+鋼の部品で、ふつうに使っているときのひずみは数百 $\mu\varepsilon$ です。計算した主応力が数 GPa になったら、$\mu$（$10^{-6}$）の換算を忘れていないか確かめよう。
+\end{phketa}
+\end{phkougaku}
+
+\begin{phkougaku}[ねじる軸は、どこから壊れる？]
+自動車の駆動軸のように、ねじりで力を伝える軸は、表面に、ねじりのせん断応力と、曲げの応力が組み合わさってかかります。延性の鋼の軸を設計するときは、\bkreidairef{7}のようにミーゼス応力（またはトレスカの相当応力）を計算して、許容応力とくらべます。
+
+一方、くり返しねじられて疲労で壊れた軸の割れ口を調べると、表面の小さなきずから、45°のらせんの向きにき裂が進んでいることがよくあります。くり返しの力では、延性の材料でも、き裂は「引きはなす主応力」に直角に進みやすいからです。こわれた部品の割れ口の向きから、どんな力がかかっていたのかを推理する仕事を、\textbf{破面解析}（はめんかいせき）といいます。
+\end{phkougaku}
+\phstation{強度設計,実験応力解析,機械設計,材料強度学}{主応力、主せん断応力、モールの応力円、相当応力（ミーゼス応力）、最大せん断応力説、ひずみゲージ、ロゼット解析、平面応力}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 断面積\qty{50}{mm^2}の棒を\qty{6}{kN}で引っぱります。法線が軸と30°をなす切り口の、垂直な力・平行な力と、垂直応力・せん断応力を求めましょう。
+\bkpans{約\qty{5196}{N}と\qty{3000}{N}。$\sigma=\qty{120}{MPa}$ なので、$\sigma_\theta=\qty{90}{MPa}$、$\tau_\theta\approx\qty{52}{MPa}$}
+\bkproblem せん断応力 $\tau=\qty{60}{MPa}$ だけがはたらく点の、主応力と主方向を求めましょう。
+\bkpans{主応力 $\pm\qty{60}{MPa}$、主方向は45°と135°}
+\bkproblem $\sigma_x=\qty{100}{MPa}$、$\sigma_y=\qty{20}{MPa}$、$\tau=\qty{30}{MPa}$ の点の、モールの円の中心と半径、主応力、主方向の角、（平面の中の）最大せん断応力を求めましょう。
+\bkpans{中心\qty{60}{MPa}、半径\qty{50}{MPa}、$\sigma_1=\qty{110}{MPa}$、$\sigma_2=\qty{10}{MPa}$、$\tan2\theta_p=0.75$ で $\theta_p\approx18.4°$、\qty{50}{MPa}}
+\bkproblem 銅（$E=\qty{117}{GPa}$、$\nu=0.34$）の横弾性係数を求めましょう。
+\bkpans{$\dfrac{117}{2\times1.34}\approx\qty{43.7}{GPa}$}
+\bkproblem 鋼の棒（$E=\qty{205}{GPa}$）の軸の向きのひずみゲージが $300\,\mu\varepsilon$ を示しました。1つの向きの応力とすると、何 MPa ですか。
+\bkpans{$205000\times300\times10^{-6}=\qty{61.5}{MPa}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 応力の行列 $\begin{pmatrix}40&-30\\-30&-40\end{pmatrix}$（MPa）の固有値と、大きいほうの固有値の固有ベクトルの向き（$x$ 軸からの角）を求めましょう。
+\bkpans{$\lambda^2-2500=0$ で $\lambda=\pm50$。$\lambda=50$ のとき $n_y=-\dfrac{1}{3}n_x$、角は約 $-18.4°$}
+\bkproblem 軸の表面で、曲げの応力 $\sigma=\qty{100}{MPa}$ と、ねじりのせん断応力 $\tau=\qty{50}{MPa}$ がはたらいています。主応力、ミーゼス応力、トレスカの相当応力と、降伏点\qty{245}{MPa}に対するそれぞれの安全率を求めましょう。
+\bkpans{主応力 約\qty{121}{MPa}と約\qty{-21}{MPa}。ミーゼス $\sqrt{17500}\approx\qty{132}{MPa}$（約1.9）、トレスカ $\sqrt{20000}\approx\qty{141}{MPa}$（約1.7）}
+\bkproblem 円筒タンクの壁で、周の向きに\qty{80}{MPa}、軸の向きに\qty{40}{MPa}の引張です（厚さの向きは0）。最大せん断応力とミーゼス応力を求めましょう。
+\bkpans{最大せん断応力 $\dfrac{80-0}{2}=\qty{40}{MPa}$、ミーゼス $\sqrt{4800}\approx\qty{69}{MPa}$}
+\bkproblem 鋼の板（$E=\qty{205}{GPa}$、$\nu=0.3$）のロゼットで、$\varepsilon_0=500$、$\varepsilon_{45}=300$、$\varepsilon_{90}=-100$（$\mu\varepsilon$）でした。主ひずみ、主方向、主応力を求めましょう。
+\bkpans{$\gamma=200$。主ひずみ 約 $516\,\mu\varepsilon$、$-116\,\mu\varepsilon$。$\tan2\theta_p=\dfrac{1}{3}$ で $\theta_p\approx9.2°$。主応力 約\qty{108}{MPa}、約\qty{8.7}{MPa}}
+\bkproblem 断面\qty{20}{mm}×\qty{20}{mm}の棒を、法線が軸と45°をなす面で接着しました（引きはなす強さ\qty{20}{MPa}、ずらす強さ\qty{12}{MPa}）。\qty{12}{kN}で引っぱると、継ぎ目ははがれますか。
+\bkpans{$\sigma=\qty{30}{MPa}$、$\sigma_\theta=\qty{15}{MPa}$（$<20$）、$\tau_\theta=\qty{15}{MPa}$（$>12$）。ずれてはがれる}
+\bkproblem うすい板の表面で、主応力が $\sigma_1=\qty{120}{MPa}$、$\sigma_2=\qty{80}{MPa}$ です（$\sigma_3=0$）。トレスカの相当応力と、降伏点\qty{245}{MPa}に対する安全率を求めましょう。
+\bkpans{$120-0=\qty{120}{MPa}$、安全率 約2.0}
+\phnyushi
+\bkproblem 断面積 $S=\qty{200}{mm^2}$ の棒を、力 $F=\qty{12}{kN}$ で引っぱります。棒を、軸に直角な面から角 $\theta$ だけかたむけた面で切ったと考えます。（1）$\theta=30°$ のとき、切り口に垂直な力と平行な力の大きさを求めましょう。（2）（1）の切り口の面積と、面積1あたりの垂直な力・平行な力を求めましょう。（3）面積1あたりの平行な力がいちばん大きくなる $\theta$ と、その値を求めましょう。
+\bkpans{（1）約\qty{10.4}{kN}と\qty{6.0}{kN}　（2）面積 約\qty{231}{mm^2}、\qty{45}{MPa}と約\qty{26}{MPa}　（3）$\dfrac{F}{S}\sin\theta\cos\theta=\dfrac{F}{2S}\sin2\theta$ なので $\theta=45°$、\qty{30}{MPa}}
+
+\begin{column}{ねじって折れる骨：らせん骨折}
+人の骨でも、チョークと同じことが起きます。スキーで転んで足が強くひねられると、すねの骨がらせんの形に折れることがあり、「らせん骨折」とよばれます。骨は、押しちぢめより引っぱりに弱いので、ねじりでできる45°の向きの引っぱりの主応力で割れるのです。スキーのビンディング（くつを板にとめる金具）は、足が強くねじられると、くつが板からはずれるように作られています。
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 引っぱった棒のななめの切り口にかかる、垂直応力とせん断応力を計算できる。\bkfurref{ph:力-9:sec3}
+\item モールの円をかいて、主応力と最大せん断応力を求められる。\bkfurref{ph:力-9:sec8}
+\item 応力を行列で表して主応力を固有値として求め、ミーゼス応力で安全率を確かめられる。\bkfurref{ph:力-9:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{同じ1つの点でも、切り口を回すと、引っぱりにもずれにも見える。だから「どの向きが一番きびしいか」を探すんだね。}

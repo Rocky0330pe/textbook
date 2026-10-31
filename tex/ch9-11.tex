@@ -1,0 +1,1134 @@
+%% 9-11 行列の指数関数と固有値（第15回：組 V9-7。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md、頭文字 kixl）と、2つの世界の図（tools/kata9.md）。場合分けの表9-11（A〜I）と流れ図。
+%% ほかの巻との約束：7-10:772 の (I+At/n)^n（ばね ω=1、t=2π で 1.37・1.03・1.003、冷めるお湯 0.5987・0.60645・0.60653）、
+%%   7-11:369 の送電線 e^{Mℓ}（cosh1=1.543、sinh1=1.175、四端子定数）、予告カード 9-11（8-13 の熱の1歩の行列の固有値と r≦1/2）、
+%%   9-2 のもっと知りたい（熱の行列の固有ベクトルは sin の形）、9-1⑧の棒（L=0.1 m、α=1e-4、10秒で47.45 ℃、50 ℃は9.47秒）、
+%%   6-14 の水そう（10±10e^{-0.2t}）、車A・車B、9-10 の倒立振子（±2、A−BK で −2・−2）。数はすべて Python で検算した（scratchpad/v9-7/chk11.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixl は章ごとに置きかえる =====
+\colorlet{kixlNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixlSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixlSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixl dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixl dan1/.style={kixl dan, draw=kixlNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixl dan2/.style={kixl dan, draw=kixlSc, fill=kixlSb, text=bkInk},
+  kixl dan3/.style={kixl dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixl name/.style={draw=kixlNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixl seki/.style={draw=kixlSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixlSb},
+  kixl tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixl q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixl do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixl go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixl yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixl@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixldan{1|2|3}
+\newcommand\kixldan[1]{\tikz[baseline=(d.base)]\node[kixl dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixlnaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixlnaosu[1]{\tikz[baseline=(d.base)]\node[kixl dan2] (d) {\vphantom{あ}直す：\kixl@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixlop{1|2|3|4}
+\newcommand\kixlop[1]{\tikz[baseline=(d.base)]\node[kixl dan2] (d) {\vphantom{あ}\kixl@op{#1}};}
+% 段の見出し（本文で）  \kixldanhead{1|2|3}{見出し}
+\newcommand\kixldanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixl dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixlcase{C}（′ は \kixlcase{A$'$}）
+\newcommand\kixlcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixlbaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixlbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixl@cases#3,\@nil）}
+\def\kixl@cases#1,#2\@nil{\kixlcase{#1}\ifx\relax#2\relax\else と\kixl@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixlN[1]{\tikz[baseline=(n.base)]\node[kixl name] (n) {$\displaystyle #1$};}
+\newcommand\kixlNt[1]{\tikz[baseline=(n.base)]{\node[kixl name] (n) {$\displaystyle #1$};\node[kixl tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixlS[1]{\tikz[baseline=(n.base)]\node[kixl seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixlSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixlSt[2]{\tikz[baseline=(n.base)]{\node[kixl seki] (n) {$\displaystyle #2$};\node[kixl tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixl@op{#1}};}}
+% 場合分けの表の題の帯  \kixlcasetitle{9-2}{題}
+\newcommand\kixlcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixlpic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixlpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixlx/\kixly in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixlx-1},{\kixly-1}) -- ({\kixlx+1},{\kixly+1}) ({\kixlx-1},{\kixly+1}) -- ({\kixlx+1},{\kixly-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixlx/\kixly in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixlx,\kixly) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+\makeatletter
+%% ===== 2つの世界の図の部品（tools/kata9.md 3-2。頭文字 kixl）=====
+\colorlet{kixlW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixlF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixlP}{bkRed!80!black}% s の世界の点（×）
+% グラフのスタイル（どれも scale only axis：はばと高さは軸の箱の大きさ）
+\pgfplotsset{
+  kixl base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixl wave/.style={kixl base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixl spec/.style={kixl base, ymin=0},
+  kixl splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixl sig/.style={kixlW, line width=1.4pt, no markers, samples=241, smooth},
+  kixl part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth},
+  kixl bar/.style={ycomb, draw=kixlF, line width=3pt, no markers},
+  kixl dot/.style={only marks, mark=*, mark size=1.3pt, kixlW}}
+% 2つの世界の見出しと、行き来の矢印  \kixlworlds[見出しの高さ]{左の題}{右の題}{上の矢印（→）}{下の矢印（←）}
+%     左の軸は at={(0mm,0mm)}、右の軸は at={(76mm,0mm)}（はば 47 mm）に置く。見出しは軸の上（ふつう 42 mm）
+\tikzset{
+  kixl world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixl bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixl blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixlworlds[5][42mm]{%
+  \node[kixl world, draw=kixlW] (kixlL) at (23.5mm,#1) {#2};
+  \node[kixl world, draw=kixlF] (kixlR) at (99.5mm,#1) {#3};
+  \draw[kixl bridge] ([yshift=1.3mm, xshift=1.5mm]kixlL.east) -- node[kixl blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixlR.west);
+  \draw[kixl bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixlR.west) -- node[kixl blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixlL.east);}
+% s の世界の点（axis の中で）  \kixlpole[色]{実部}{虚部}（×）  \kixlzero[色]{実部}{虚部}（○）
+\newcommand\kixlpole[3][kixlP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixlzero[3][kixlP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+%% ===== この章の部品（9-11）=====
+\newcommand\kixlhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+\newcommand\kixlbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+\newcommand\kixlline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\kixlframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+\newcommand\kixla{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixlb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixls{\rightskip=0pt plus 8em\relax}
+% bkhenkei の中の行列（行の間をふつうに）  \kixlpm{a&b\\c&d}
+\newcommand\kixlpm[1]{{\renewcommand\arraystretch{1}\begin{pmatrix}#1\end{pmatrix}}}
+\makeatother
+
+\bkchapter{9}{11}{行列の指数関数と固有値}{\bklevel{5}}{行列の指数関数と固有値}
+\bkmichishirube{5-14,5-17,6-4,6-11,6-14,7-6,7-8,7-9,7-10,7-11,8-13,9-7,9-10}{9-12,9-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace オイラー法のくり返し $\bigl(I+A\frac{t}{n}\bigr)^n$ を表計算で計算し、行列の指数関数 $e^{At}$ に近づくのを確かめられる。
+\item \bklevel{4}\enspace 対角の行列と対角化で $e^{At}$ を計算し、状態方程式 $\dot{\vec x}=A\vec x$ を解ける。
+\item \bklevel{5}\enspace 場合分けの表で $e^{At}$ の求め方を選び（回転・$\cosh$ と $\sinh$・$(sI-A)^{-1}$・数値）、固有値で落ち着くかを判定できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+冷めるお湯のように、式が1つの $\dot x=ax$ の答えは $x=e^{at}x_0$ でした（6-4）。9-10 では、たくさんの式を $\dot{\vec x}=A\vec x$ と1行で書きました。\par\vspace{4pt}
+\textbf{その答えも、$e$ の形で書けるでしょうか。$e$ の右上に「行列」をのせるとは、どういうことでしょう。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[draw=\bkTT, line width=0.9pt, rounded corners=1.5mm, fill=white, align=center, font=\small, minimum width=52mm, minimum height=11mm] (a) at (0,13) {$\dot x=ax$\quad →\quad $x=e^{at}x_0$};
+  \node[draw=bkOrange!85!black, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.5mm, fill=white, align=center, font=\small, minimum width=52mm, minimum height=11mm] (b) at (0,0) {$\dot{\vec x}=A\vec x$\quad →\quad $\vec x=e^{\,?}\,\vec x_0$};
+  \node[font=\footnotesize, anchor=north] at (0,-7) {1つの式（上）と、たくさんの式（下）};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 第7巻（7-10）では、オイラー法の1歩の行列 $I+A\Delta t$ をくり返しかけて、状態方程式を近い値で解きました。そこで、「1歩を細かくしていった先の行列を $e^{At}$ と書き、第9巻（9-11）で、制御の式を解く主役にする」と予告しました。この章は、その約束を果たす章です。
+
+$e^{At}$ は「行列の指数関数」とよばれ、制御・回路・構造の振動・熱の計算など、たくさんの式をまとめて解くときの土台です。7-11 の送電線の $\cosh$・$\sinh$ の行列も、9-1 で解いた棒の熱も、ここで1つにつながります。
+
+名前は新しくても、使う道具は、行列のかけ算（7-1）、対角化（7-9）、部分分数と変換表（9-7）など、もう知っているものばかりです。1回でわからなくても大丈夫です。ここまで来たみなさんなら、1つずつ確かめながら進めば、必ずたどり着けます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ばねを、オイラー法で1周させよう]
+7-10 のばね（$\omega=1$）$\dot x=v$、$\dot v=-x$ を、表計算のオイラー法で1周（$t=2\pi$）させます。はじめは $x=1$、$v=0$ です。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item F1 に1歩の時間 $\Delta t=\frac{2\pi}{63}$ を入れる（\texttt{=2*PI()/63}。約0.0997秒）。
+\item A列に歩の番号0〜63、B列に時刻 \texttt{=A2*\$F\$1} を入れる。
+\item C2 に1、D2 に0（はじめの $x$ と $v$）。
+\item C3 に \texttt{=C2+\$F\$1*D2}、D3 に \texttt{=D2-\$F\$1*C2} と入れて、65行めまでコピーする。
+\item 63歩め（$t=2\pi$）の $x$ を見る。本当は1周してもとの1にもどるはず。F1 を $\frac{2\pi}{630}$ にして630歩でもためす。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ④の式は、6-2 のオイラー法「次の値＝今の値＋変わる速さ×$\Delta t$」です。$x$ の変わる速さは $v$、$v$ の変わる速さは $-x$ なので、こうなります。
+
+\begin{bkcenter}
+\bksheet{4}{20}{%
+1 & 歩 & $t$（s） & $x$ & $v$ \\
+2 & 0 & 0 & 1 & 0 \\
+3 & 1 & 0.0997 & 1 & $-0.0997$ \\
+4 & 2 & 0.1995 & 0.9901 & $-0.1995$ \\
+5 & 3 & 0.2992 & 0.9702 & $-0.2982$ \\
+6 & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+18 & 16 & 1.5957 & $-0.0213$ & $-1.0822$ \\
+34 & 32 & 3.1915 & $-1.1707$ & 0.0461 \\
+50 & 48 & 4.7872 & 0.0748 & 1.2659 \\
+65 & 63 & 6.2832 & 1.3656 & 0.0283 \\}
+\bktabcaption{オイラー法で1周させた表（$\Delta t=\frac{2\pi}{63}$）。1周したのに、$x$ は1ではなく約1.37 になった。}
+\label{bk:9-11:tab-sheet}
+\end{bkcenter}
+
+\begin{omoidasou}
+\bkrecall{5-14}{$\Bigl(1+\dfrac{1}{n}\Bigr)^n$ は $n$ を大きくすると $e=2.718\cdots$ に近づく。$e^{at}$ を微分すると $ae^{at}$。}
+\bkrecall{5-17}{$e^x=1+x+\dfrac{x^2}{2!}+\dfrac{x^3}{3!}+\cdots$（テイラー展開）。}
+\bkrecall{6-4}{$\dot x=ax$ の答えは $x=x_0e^{at}$（冷めるお湯は $a=-0.05$）。}
+\bkrecall{7-9}{固有ベクトルを並べた $P$、固有値を並べた $D$ で $A=PDP^{-1}$。$A^n=PD^nP^{-1}$。}
+\bkrecall{7-10}{オイラー法の1歩の行列は $I+A\,\Delta t$。$n$ 歩で $\bigl(I+A\frac tn\bigr)^n$。ばねで1周すると、$n=63$ で成分が1.37ほど。}
+\bkrecall{9-7}{部分分数に分けて、変換表を逆に引く：$\dfrac{1}{s+a}\to e^{-at}$、$\dfrac{1}{(s+a)^2}\to te^{-at}$。}
+\bkrecall{9-10}{状態方程式 $\dot{\vec x}=A\vec x+Bu$。$A$ の固有値の実部がすべて負なら落ち着く。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{くり返しの先にある行列}{\bklevel{3}}
+
+\bksubsection{1}{1歩を細かくした先：$e^{At}$}
+
+\label{bk:9-11:kiwami}やってみようの表では、1周したのに、$x$ は1ではなく1.37 になりました。オイラー法の1歩は、まっすぐな線で進むので、円の外側へ少しずつずれていくからです（図\ref{bk:9-11:fig-uzu}）。1歩を細かくすると、どうなるでしょう。
+
+状態を $\vec x=(x,\ v)$ とすると、ばねの式は $\dot{\vec x}=A\vec x$ で、1歩の行列は $I+A\Delta t$ です（7-10）。
+\[ A=\begin{pmatrix}0&1\\-1&0\end{pmatrix},\qquad I+A\,\Delta t=\begin{pmatrix}1&\Delta t\\-\Delta t&1\end{pmatrix} \]
+時刻 $t$ までを $n$ 歩で進めると $\Delta t=\frac tn$ なので、$t$ 秒後の状態は $\bigl(I+A\frac tn\bigr)^n\vec x_0$ です。$t=2\pi$（1周）で、この行列の成分を Python で計算すると、次のようになりました。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,26mm] Q[c,m,24mm] Q[c,m,24mm] Q[c,m,34mm]}, row{2-Z}={font=\small}, rowsep=1.5pt}
+歩の数 $n$ & 左上・右下 & 右上 & 1周でのずれ \\
+63 & 1.3656 & $-0.0283$ & 37\,\% 大きい \\
+630 & 1.0318 & $-0.0002$ & 3\,\% 大きい \\
+6283 & 1.0031 & 0.0000 & 0.3\,\% 大きい \\
+限りなく多く & 1 & 0 & ずれなし \\
+\end{bktable}
+\bktabcaption{$\bigl(I+A\frac{t}{n}\bigr)^n$（$t=2\pi$）の成分。7-10 で予告した 1.37・1.03・1.003 は、単位行列 $I$ に近づいていく。}
+\label{bk:9-11:tab-n}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis equal image, width=72mm, height=72mm, xmin=-1.5, xmax=1.6, ymin=-1.5, ymax=1.5, xtick={-1,1}, ytick={-1,1}, xlabel={$x$}, ylabel={$v$}]
+  \addplot[bkGray, line width=1pt, dashed, domain=0:360, samples=90] ({cos(x)},{sin(x)});
+  \addplot[kixlW, line width=1.2pt, mark=*, mark size=0.9pt] coordinates {(1.000,0.000) (1.000,-0.100) (0.990,-0.199) (0.970,-0.298) (0.940,-0.395) (0.901,-0.489) (0.852,-0.579) (0.795,-0.664) (0.728,-0.743) (0.654,-0.816) (0.573,-0.881) (0.485,-0.938) (0.392,-0.986) (0.293,-1.025) (0.191,-1.055) (0.086,-1.074) (-0.021,-1.082) (-0.129,-1.080) (-0.237,-1.067) (-0.343,-1.044) (-0.447,-1.009) (-0.548,-0.965) (-0.644,-0.910) (-0.735,-0.846) (-0.819,-0.772) (-0.896,-0.691) (-0.965,-0.601) (-1.025,-0.505) (-1.076,-0.403) (-1.116,-0.295) (-1.145,-0.184) (-1.164,-0.070) (-1.171,0.046) (-1.166,0.163) (-1.150,0.279) (-1.122,0.394) (-1.083,0.506) (-1.032,0.614) (-0.971,0.717) (-0.900,0.814) (-0.818,0.903) (-0.728,0.985) (-0.630,1.058) (-0.525,1.120) (-0.413,1.173) (-0.296,1.214) (-0.175,1.243) (-0.051,1.261) (0.075,1.266) (0.201,1.258) (0.327,1.238) (0.450,1.206) (0.570,1.161) (0.686,1.104) (0.796,1.036) (0.900,0.956) (0.995,0.867) (1.081,0.767) (1.158,0.659) (1.224,0.544) (1.278,0.422) (1.320,0.294) (1.349,0.163) (1.366,0.028)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.45,1.32) {63歩のオイラー法};
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (axis cs:0,-1.12) {本当の動き（点線の円）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ばねの状態の点 $(x,\ v)$。本当は円を時計回りに1周してもとの点 $(1,\ 0)$ にもどる（6-14）。63歩のオイラー法（点）は、1歩ごとに少し外へずれ、うずをまいて $(1.37,\ 0.03)$ に着く。}
+\label{bk:9-11:fig-uzu}
+\end{bkfigure}
+
+$n$ をふやすと、1周後の行列は単位行列 $I$ に近づきます。1周するともとの状態にもどる、という本当の動きです。式が1つのとき、冷めるお湯（$a=-0.05$、$t=10$ 分）の $\bigl(1-\frac{0.5}{n}\bigr)^n$ が、$n=10$ で0.5987、$n=1000$ で0.60645 と、$e^{-0.5}=0.60653$ に近づいたのと同じです（5-14・7-10）。
+
+\kixldanhead{1}{記号を読む：くり返しの先にある行列}
+$n$ を限りなく大きくしたときに $\bigl(I+A\frac tn\bigr)^n$ が近づく行列を、$e^{At}$ と書き、\textbf{行列の指数関数}（ぎょうれつのしすうかんすう）といいます。\bkidx{ぎょうれつのしすうかんすう}{行列の指数関数}
+\kixlframe[112mm]{\Large $\displaystyle e^{At}=\lim_{n\to\infty}\Bigl(I+A\,\frac{t}{n}\Bigr)^n$\\[3pt]\normalsize\sffamily 「1歩の行列 $I+A\frac tn$ を $n$ 回かけて、$n$ を限りなく大きくした先」}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何を}：状態の行列 $A$ と、時間 $t$。$At$ は $A$ の成分をすべて $t$ 倍した行列。
+\item \textbf{何をする}：細かい1歩のくり返しの先（または、②の無限に続くたし算）。
+\item \textbf{何が出る}：$A$ と同じ大きさの行列。はじめの状態 $\vec x_0$ にかけると、$t$ 秒後の状態 $\vec x(t)=e^{At}\vec x_0$ が出る。
+\end{enumerate}
+\bkhatenaref の後半（$e$ の右上に行列をのせるとは）の答えは、次のとおりです。$e^{At}$ は、「$e$ という数を $At$ 回かける」という意味ではありません。行列の回数だけかけることはできないからです。$e^{At}$ は、くり返しの先の行列に付けた\textbf{名前}です。
+
+前半（$e$ の形で書けるか）の答えは「書ける」です。たくさんの式 $\dot{\vec x}=A\vec x$ の答えも、$\vec x(t)=e^{At}\vec x_0$ と、1つの式のときと同じ形で書けます。ただし、$e^{At}$ は名前なので、実際の値を出すには、行列の計算に直します（②〜⑤と、式でわかるの段）。
+\[ \kixlNt{e^{At}}=\kixlSt{4}{Pe^{Dt}P^{-1}\ \text{（対角化など）}} \]
+
+\bkstage{te}{手でわかる}{たし算で書き、対角化で計算する}{\bklevel{4}}
+
+\bksubsection{2}{無限に続くたし算で書く}
+
+\label{bk:9-11:kyusu}5-17 で、$e^x$ は次のように、無限に続くたし算で書けることを学びました。
+\kixlline{$e^x=1+x+\dfrac{x^2}{2!}+\dfrac{x^3}{3!}+\dfrac{x^4}{4!}+\cdots$}
+この $x$ に行列 $At$ を入れ、1 を単位行列 $I$ にかえたものが、$e^{At}$ のもう1つの書き方です。
+\kixlframe[112mm]{\Large $\displaystyle e^{At}=I+At+\frac{(At)^2}{2!}+\frac{(At)^3}{3!}+\frac{(At)^4}{4!}+\cdots$}
+行列の2乗・3乗はかけ算（7-1）で、行列どうしのたし算は成分ごとにたすので、この式は計算できます。①の「くり返しの先」と、このたし算は、同じ行列になります（せいかくに言うと②）。
+
+\kixlhead{ばねで、たしていく}
+ばねの $A$（1行め $(0,\ 1)$、2行め $(-1,\ 0)$）で、$t=\frac{\pi}{2}$（4分の1周）として、1つずつ項をたしていくと、次のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,36mm] Q[c,m,30mm] Q[c,m,46mm]}, row{2-Z}={font=\small}, rowsep=1pt}
+どの項までたしたか & 左上（＝右下） & 右上（＝左下の $-1$ 倍） \\
+$I+At$ & 1 & 1.5708 \\
+$(At)^2\div2!$ まで & $-0.2337$ & 1.5708 \\
+$(At)^3\div3!$ まで & $-0.2337$ & 0.9248 \\
+$(At)^4\div4!$ まで & 0.0200 & 0.9248 \\
+$(At)^5\div5!$ まで & 0.0200 & 1.0045 \\
+$(At)^6\div6!$ まで & $-0.0009$ & 1.0045 \\
+$(At)^7\div7!$ まで & $-0.0009$ & 0.99984 \\
+$(At)^8\div8!$ まで & 0.00002 & 0.99984 \\
+限りなく & 0 & 1 \\
+\end{bktable}
+\bktabcaption{$e^{At}$ を、たし算で求める（ばね、$t=\frac\pi2$）。項をふやすと、1行め $(0,\ 1)$、2行め $(-1,\ 0)$ の行列に近づく。}
+\label{bk:9-11:tab-kyusu}
+\end{bkcenter}
+近づく先の行列は、はじめの状態 $(1,\ 0)$ を $(0,\ -1)$ に移します。円を時計回りに4分の1周した所で、本当の動き（位置 $\cos t$、速度 $-\sin t$）と合います。左上と右上の数が、項を1つたすごとに交代で変わるのは、偶数番めの項と奇数番めの項がちがう成分に入るからです（⑧でわけを見ます）。
+
+\bksubsection{3}{$\vec x=e^{At}\vec x_0$ が答えになっていること}
+
+\label{bk:9-11:kotae}たし算の形を使うと、$\vec x(t)=e^{At}\vec x_0$ が $\dot{\vec x}=A\vec x$ の答えになっていることを確かめられます。項ごとに $t$ で微分します（5-17 で、$e^x$ のたし算を項ごとに微分したのと同じ）。$A$ は数の表なので、$t$ で微分すると $t^k$ の部分だけが変わります。
+\begin{bkhenkei}[0.5]
+\frac{\dd}{\dd t}\Bigl(I\Bigr)=O & 単位行列は $t$ によらないので、微分すると0の行列 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.5]
+\frac{\dd}{\dd t}\Bigl(At\Bigr)=A & $t$ を微分すると1 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{\dd}{\dd t}\Bigl(\frac{A^2t^2}{2!}\Bigr)=\frac{A^2\cdot2t}{2!}=A\cdot At & $t^2$ の微分は $2t$。$2!=2$ で約分 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{\dd}{\dd t}\Bigl(\frac{A^3t^3}{3!}\Bigr)=\frac{A^3\cdot3t^2}{3!}=A\cdot\frac{(At)^2}{2!} & $3!=3\times2!$ で約分 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{\dd}{\dd t}e^{At}=A\Bigl(I+At+\frac{(At)^2}{2!}+\cdots\Bigr)=Ae^{At} & 微分した項を並べると、$A\times$（もとのたし算） \\
+\end{bkhenkei}
+だから、$\vec x=e^{At}\vec x_0$ を微分すると $\dot{\vec x}=Ae^{At}\vec x_0=A\vec x$ で、状態方程式をみたします。また $t=0$ では、$At$ 以下の項がすべて0の行列になるので $e^{A0}=I$、つまり $\vec x(0)=I\vec x_0=\vec x_0$ で、はじめの状態とも合います。1つの式の $\frac{\dd}{\dd t}e^{at}=ae^{at}$（5-14）と、まったく同じ形です。
+
+\bksubsection{4}{対角の行列は、成分ごとに $e$}
+
+\label{bk:9-11:taikaku}つながっていない2つの式、たとえば温度の差が $\dot x_1=-x_1$、$\dot x_2=-2x_2$ のように別々に冷めていく2つのカップは、$A$ が対角の行列です。
+\[ A=\begin{pmatrix}-1&0\\0&-2\end{pmatrix},\qquad A^k=\begin{pmatrix}(-1)^k&0\\0&(-2)^k\end{pmatrix} \]
+対角の行列は、何乗しても対角のままで、ななめの数がそれぞれ何乗かになるだけです（7-9）。だから、たし算の左上には $1+(-t)+\frac{(-t)^2}{2!}+\cdots=e^{-t}$、右下には $e^{-2t}$ が並びます。
+\kixlframe[100mm]{$e^{At}=\begin{pmatrix}e^{-t}&0\\0&e^{-2t}\end{pmatrix}$\qquad 対角のときだけ、成分ごとに $e$}
+2つのカップは、それぞれ 6-4 の形で冷めます。式がつながっていないので、答えも別々です。
+
+\bksubsection{5}{対角化で計算する}
+
+\label{bk:9-11:taikakuka}ふつうの行列は対角ではありません。でも、7-9 で学んだ対角化 $A=PDP^{-1}$（$P$ は固有ベクトルを並べた行列、$D$ は固有値を並べた対角の行列）を使うと、対角の場合にもちこめます。
+\kixldanhead{2}{$e^{At}=Pe^{Dt}P^{-1}$}
+\begin{bkhenkei}[0.5]
+(At)^2=PDP^{-1}\,PDP^{-1}\,t^2 & $A=PDP^{-1}$ を2回かけた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.5]
+(At)^2=P(Dt)^2P^{-1} & まん中の $P^{-1}P=I$ が消える（7-9 の $A^n=PD^nP^{-1}$） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+e^{At}=P\Bigl(I+Dt+\frac{(Dt)^2}{2!}+\cdots\Bigr)P^{-1} & どの項も $P(\cdots)P^{-1}$ の形なので、$P$ と $P^{-1}$ を外へ出した \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.5]
+e^{At}=Pe^{Dt}P^{-1} & かっこの中は、対角の行列 $D$ の $e^{Dt}$（④） \\
+\end{bkhenkei}
+「ななめの物差し（固有ベクトル）で見ると、別々に $e^{\lambda t}$ で変わる。それをふつうの座標にもどす」という意味です（7-9 のななめの方眼）。
+
+\kixlhead{車A で計算する}
+車A（$\ddot x+3\dot x+2x=0$）の $A$ は、1行め $(0,\ 1)$、2行め $(-2,\ -3)$ です。固有値は $-1$（固有ベクトル $(1,\ -1)$）と $-2$（固有ベクトル $(1,\ -2)$）でした（7-8）。
+\begin{bkhenkei}[0.7]
+P=\kixlpm{1&1\\-1&-2},\quad \det P=-2+1=-1 & 固有ベクトルを列に並べた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+P^{-1}=\frac{1}{-1}\kixlpm{-2&-1\\1&1}=\kixlpm{2&1\\-1&-1} & 2×2の逆行列（7-5） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+Pe^{Dt}=\kixlpm{e^{-t}&e^{-2t}\\-e^{-t}&-2e^{-2t}} & $P$ の1列めに $e^{-t}$、2列めに $e^{-2t}$ をかけた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.8]
+Pe^{Dt}P^{-1}=\kixlpm{2e^{-t}-e^{-2t}&e^{-t}-e^{-2t}\\-2e^{-t}+2e^{-2t}&-e^{-t}+2e^{-2t}} & 右から $P^{-1}$ \\
+\end{bkhenkei}
+たとえば1行め1列めは、$Pe^{Dt}$ の1行め $(e^{-t},\ e^{-2t})$ と、$P^{-1}$ の1列め $(2,\ -1)$ をかけてたしたものです。$t=0$ を入れると、1行め $(1,\ 0)$、2行め $(0,\ 1)$ の単位行列になり、③と合います。はじめ $x=1$、$\dot x=0$（$\vec x_0=(1,\ 0)$）なら、$e^{At}\vec x_0$ は1列めなので、
+\kixlline{$x=2e^{-t}-e^{-2t}$}
+で、3-10・6-12・9-7 で求めた車A の答えと同じです。$t=1$ では、1行め $(0.6004,\ 0.2325)$、2行め $(-0.4651,\ -0.0972)$ です。
+
+\kixlhead{Python で確かめる}
+\Needspace{14\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+from scipy.linalg import expm
+A = np.array([[0, 1],
+              [-2, -3]])        \# 車A の状態の行列（7-8）
+print(np.linalg.eigvals(A))     \# 固有値
+np.set\_printoptions(precision=4, suppress=True)  \# 小数第4位まで
+print(expm(A*1.0))              \# t = 1 の行列の指数関数
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-1.+0.j -2.+0.j]
+[[ 0.6004  0.2325]
+ [-0.4651 -0.0972]]
+\end{bkcodeout}
+\texttt{expm} は、行列の指数関数を数値で計算する命令です（matrix exponential の略）。手で計算した値と合いました。
+
+\begin{seikaku}
+\kixlbox{① $e^{A+B}$ と $e^Ae^B$ は、ふつうはちがう}
+数なら $e^{a+b}=e^ae^b$ です。行列では、$AB=BA$（かける順番を入れかえてよい）なら $e^{A+B}=e^Ae^B$ がなり立ちます。$AB\neq BA$ だと、ふつうはなり立ちません。たとえば、$A$ が1行め $(0,\ 1)$、2行め $(0,\ 0)$、$B$ が1行め $(0,\ 0)$、2行め $(1,\ 0)$ なら（計算は⑨の台車・送電線と同じ）
+\[ e^Ae^B=\begin{pmatrix}1&1\\0&1\end{pmatrix}\begin{pmatrix}1&0\\1&1\end{pmatrix}=\begin{pmatrix}2&1\\1&1\end{pmatrix},\qquad e^{A+B}=\begin{pmatrix}1.543&1.175\\1.175&1.543\end{pmatrix} \]
+です（$A+B$ は送電線の $M$ と同じ形）。$AB\neq BA$ だからです（7-3 の「順番」）。あとの⑧で $e^{At}=e^{\sigma t}e^{Nt}$ と分けてよいのは、$\sigma I$ がどんな行列とも順番を入れかえられるからです。
+\kixlbox{② くり返しの先と、たし算が同じになるわけ}
+$\bigl(I+\frac{At}{n}\bigr)^n$ は、$n$ 個のかっこのかけ算です。かっこをはずすと、$(At)^k$ の項は「$n$ 個のかっこから $\frac{At}{n}$ を $k$ 個選ぶ」選び方の数だけ出てくるので、係数は $\frac{n(n-1)\cdots(n-k+1)}{k!}\times\frac{1}{n^k}$ です。$n$ を大きくすると、$\frac{n-1}{n}$、$\frac{n-2}{n}$、…はどれも1に近づくので、係数は $\frac{1}{k!}$ に近づきます。だから、①の極限と②のたし算は同じ行列です（5-14 の $\bigl(1+\frac1n\bigr)^n$ と同じ理由）。
+\end{seikaku}
+
+\bkkokomade[行列の指数関数 $e^{At}$ が、オイラー法のくり返しの先（または無限に続くたし算）の名前で、対角の行列なら成分ごとに $e$、対角化できれば $Pe^{Dt}P^{-1}$ で計算できれば十分です。この先は、固有値が複素数・重なるとき、入れるものがあるときなど、場合ごとの求め方です。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{場合ごとに、$e^{At}$ の求め方を選ぶ}{\bklevel{5}}
+
+\bksubsection{6}{場合分けの表と流れ図}
+
+\label{bk:9-11:basho}$e^{At}$ は名前です。実際の値は、\textbf{行列の計算}（対角化・逆行列）か、\textbf{部分分数}（$(sI-A)^{-1}$ を 9-7 の表で逆に引く）に直して求めます。どう直すと楽かは、$A$ の形と、何がほしいかで決まります。「こんなときは、こうする」を表にしました（記号 A〜I）。A・B は④・⑤で見た場合です。
+
+\kixldanhead{3}{作らずに済ませる（I）・数値（H）・たし算が切れる（D）}
+落ち着くかだけなら $e^{At}$ を作らない（I）、コンピュータの数値でよいなら \texttt{expm}（H）、$A^2$ が $O$ や $I$ の何倍かなら、たし算が途中で切れる（D）。表の中で「楽をする」の札が付いた3つです。行列の計算や部分分数を始める前に、まずこの3つに当てはまらないかを確かめましょう。
+
+\kixlcasetitle{9-11}{$e^{At}$：どんなときに、どう求める？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,32mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixlcase{A} & $A$ が対角（式どうしがつながっていない） & \kixlop{4}\enspace 成分ごとに $e^{\lambda t}$（④） & 1 \\
+\kixlcase{B} & 固有値がちがう実数 & \kixlop{4}\enspace 対角化 $e^{At}=Pe^{Dt}P^{-1}$（⑤） & 2・7 \\
+\kixlcase{C} & 固有値が複素数 $\sigma\pm j\omega$（ゆれる） & \kixlop{4}\enspace $N=A-\sigma I$ とすると $N^2=-\omega^2I$。$e^{At}=e^{\sigma t}\bigl(\cos\omega t\,I+\frac{\sin\omega t}{\omega}N\bigr)$（⑧） & 3 \\
+\kixlcase{D} & $A^2$ が $O$、または単位行列の何倍か & \kixldan{3}\enspace たし算が切れる・2つに分かれる。$A^2=O$ なら $I+At$、$M^2=\gamma^2I$ なら $\cosh\gamma t\,I+\frac{\sinh\gamma t}{\gamma}M$（⑨） & 4・5 \\
+\kixlcase{E} & 固有値が重なる（重解） & \kixlop{3}\enspace $(sI-A)^{-1}$ の成分を部分分数に。$\frac{1}{(s+a)^2}\to te^{-at}$（表9-7のC。⑩） & 6 \\
+\kixlcase{F} & どの形でも（2×2 なら楽）。確かめに & \kixlop{3}\enspace $(sI-A)^{-1}$ を逆行列（7-5）で作り、成分ごとに部分分数で表を逆に引く（⑩） & 7 \\
+\kixlcase{G} & 入れるもの $u$ がある & \kixlop{3}\enspace $(sI-A)^{-1}(\vec x_0+BU)$ を表9-7でもどす（⑪） & 8 \\
+\kixlcase{H} & コンピュータの数値でよい（3×3以上など） & \kixldan{3}\enspace \texttt{expm}、または $\bigl(I+A\frac tn\bigr)^n$（⑫） & 9 \\
+\kixlcase{I} & 落ち着くかどうかだけ & \kixldan{3}\enspace $e^{At}$ を作らない。固有値の実部がすべて負か（⑦） & 10 \\
+\end{bktable}
+\end{bkcenter}
+
+どの順で問えばよいかを、図\ref{bk:9-11:fig-flow}の流れ図にしました。楽をする問い（落ち着くかだけ・コンピュータの数値でよい）と、入れるものがあるかの問いを上に、$A$ の形の問いを下に置きました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixl do, text width=104mm] (s) at (60,0) {名前の段：$A$ は何か・はじめの状態・入れるもの・何がほしいか};
+  \node[kixl q] (q1) at (33,-20) {落ち着くかだけ？};
+  \node[kixl do, text width=40mm, anchor=west] (rI) at (71,-20) {固有値の実部を見る\enspace\kixlcase{I}};
+  \node[kixl q] (q2) at (33,-41) {コンピュータの数値でよい？};
+  \node[kixl do, text width=40mm, anchor=west] (rH) at (71,-41) {\texttt{expm} か $\bigl(I+A\frac tn\bigr)^n$\enspace\kixlcase{H}};
+  \node[kixl q] (q3) at (33,-62) {入れるもの $u$ がある？};
+  \node[kixl do, text width=40mm, anchor=west] (rG) at (71,-62) {$(sI-A)^{-1}(\vec x_0+BU)$\\を表9-7でもどす\enspace\kixlcase{G}};
+  \node[kixl q] (q4) at (33,-82) {$A$ は対角？};
+  \node[kixl do, text width=40mm, anchor=west] (rA) at (71,-82) {成分ごとに $e^{\lambda t}$\enspace\kixlcase{A}};
+  \node[kixl q] (q5) at (33,-100) {$A^2$ が $O$ か $I$ の何倍？};
+  \node[kixl do, text width=40mm, anchor=west] (rD) at (71,-100) {たし算が切れる・\\$\cosh$ と $\sinh$\enspace\kixlcase{D}};
+  \node[kixl q] (q6) at (33,-120) {固有値が重なる？};
+  \node[kixl do, text width=40mm, anchor=west] (rE) at (71,-120) {$(sI-A)^{-1}$ を部分分数で\enspace\kixlcase{E}};
+  \node[kixl q] (q7) at (33,-138) {固有値が複素数？};
+  \node[kixl do, text width=40mm, anchor=west] (rC) at (71,-138) {$e^{\sigma t}$ と回転\enspace\kixlcase{C}};
+  \node[kixl do, text width=40mm] (rB) at (33,-156) {対角化 $Pe^{Dt}P^{-1}$\enspace\kixlcase{B}};
+  \node[kixl do, text width=104mm] (end) at (60,-176) {確かめ：$t=0$ で $I$ になるか。$(sI-A)^{-1}$ でもどしても同じか\enspace\kixlcase{F}\\Python の \texttt{expm} と同じか};
+  \draw[kixl go] (s.south -| q1) -- (q1);
+  \foreach \kixlq/\kixlr in {q1/rI,q2/rH,q3/rG,q4/rA,q5/rD,q6/rE,q7/rC} {\draw[kixl go] (\kixlq) -- node[kixl yn, above] {はい} (\kixlr);}
+  \foreach \kixlq/\kixlr in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6,q6/q7,q7/rB} {\draw[kixl go] (\kixlq) -- node[kixl yn, left=1mm] {いいえ} (\kixlr);}
+  \foreach \kixln in {rI,rH,rG,rA,rD,rE,rC,rB} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixln.east) -- (\kixln.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-20) -- (127,-176);
+  \draw[kixl go, shorten <=0pt] (127,-176) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{$e^{At}$ の流れ図。ひし形は問い、四角はすること。上の2つ（I・H）と D が楽をする段、G は入れるものがあるときの直し方、そのほかは $A$ の形で選ぶ直す段。答えの出た四角からは、右の線をたどって最後の「確かめ」へ。F は確かめ（と E の中）で使う。}
+\label{bk:9-11:fig-flow}
+\end{bkfigure}
+
+\kixlhead{流れ図の使い方：車A}
+⑤の車A（$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -3)$）で、$e^{At}$ を求めたいときを、表9-11と図\ref{bk:9-11:fig-flow}の流れ図でたどります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：$A$ は車A の状態の行列、入れるものはない、ほしいのは $e^{At}$ そのもの。
+\item 落ち着くかだけ？\enspace いいえ。\enspace コンピュータの数値でよい？\enspace いいえ（2×2で、式がほしい）。\enspace 入れるもの $u$ がある？\enspace いいえ。
+\item $A$ は対角？\enspace いいえ。\enspace $A^2$ が $O$ か $I$ の何倍？\enspace $A^2$ は1行め $(-2,\ -3)$、2行め $(6,\ 7)$ で、いいえ。
+\item 固有値が重なる？\enspace いいえ（$-1$ と $-2$）。\enspace 固有値が複素数？\enspace いいえ。→ 対角化 \kixlcase{B}。
+\end{enumerate}
+⑤でしたとおりです。最後の確かめで、⑩の $(sI-A)^{-1}$ を使っても同じ答えになることを確かめます（F）。1回で全部の場合を覚えなくても大丈夫です。問題を解くたびに、表と流れ図にもどって確かめましょう。
+
+\kixlhead{どの場合かな？}
+次の行列の $e^{At}$（またはほしいもの）は、表9-11 のどの場合でしょう。先に自分で考えてから、答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $A$ が1行め $(-3,\ 0)$、2行め $(0,\ -5)$ の $e^{At}$\par\nobreak\noindent 答え：\kixlcase{A}。対角なので、$e^{-3t}$ と $e^{-5t}$ を並べるだけ。
+\item 倒立振子に $u=-K\vec x$ を入れた $A-BK$ が、落ち着くかだけ知りたい\par\nobreak\noindent 答え：\kixlcase{I}。固有値の実部を見る。
+\item 9つの点の熱の行列（9×9）で、10秒後の温度を数で知りたい\par\nobreak\noindent 答え：\kixlcase{H}。\texttt{expm} で。
+\item $A$ が1行め $(0,\ 1)$、2行め $(-1,\ 0)$（ばね）の $e^{At}$\par\nobreak\noindent 答え：\kixlcase{D}。$A^2=-I$（$I$ の $-1$ 倍）。固有値は $\pm j$ なので C でも求められる（⑧）。
+\end{enumerate}
+
+\bksubsection{7}{固有値で、落ち着くかがわかる：場合 I}
+
+\label{bk:9-11:antei}対角化できるとき、$\vec x(t)=Pe^{Dt}P^{-1}\vec x_0$ です。$P^{-1}\vec x_0$ を $(c_1,\ c_2)$ と書くと、
+\kixlline{$\vec x(t)=c_1\vec v_1e^{\lambda_1t}+c_2\vec v_2e^{\lambda_2t}$}
+となります（$\vec v_1$、$\vec v_2$ は固有ベクトル）。7-8 で $\vec x=\vec ve^{st}$ を入れて見つけた形を、たし合わせたものです。1つ1つの項の大きさは、$e^{\lambda t}$ の大きさで決まります。$\lambda=\sigma+j\omega$ なら $|e^{\lambda t}|=e^{\sigma t}$（6-10：$e^{j\omega t}$ の大きさは1）なので、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 固有値の実部 $\sigma$ がすべて負なら、どの項も0に近づき、状態は落ち着く。
+\item 実部が0の固有値なら、その項の大きさは変わらない（虚部があればゆれ続け、0 ならそのまま残る）。たての軸の上に固有値が重なると、大きくなる（台車の $t$ のように）。どちらも、落ち着くとはいわない。
+\item 実部が正の固有値が1つでもあれば、その項がどんどん大きくなる。
+\end{itemize}
+「落ち着くか」だけが知りたいときは、$e^{At}$ を作らずに、固有値だけを求めればよいのです（場合 I）。これが、7-8 の「固有値が全部『左半分』」、9-9 の「極がすべて左半分」、9-10 の判定の、もとになる理由です。
+
+\kixlhead{コンピュータの中のくり返しとのつながり}
+9-10⑨では、オイラー法の1歩の行列 $I+(A-BK)\Delta t$ で計算しました。本当の1歩の行列は、$\Delta t$ 秒だけ進める $e^{(A-BK)\Delta t}$ です。
+\kixlline{$\vec x(t+\Delta t)=e^{(A-BK)\Delta t}\,\vec x(t)$}
+その固有値は、$A-BK$ の固有値 $\lambda$ を使って $e^{\lambda\Delta t}$ になります（対角化すると $e^{D\Delta t}$ のななめの数だから）。$\lambda=\sigma+j\omega$ なら大きさは $e^{\sigma\Delta t}$ で、
+\kixlline{$|e^{\lambda\Delta t}|<1\quad\Longleftrightarrow\quad\sigma<0$}
+です。9-10 の2つの条件「連続では実部が負」「くり返しでは大きさが1より小さい」は、$e^{\lambda\Delta t}$ でつながっていたのです。棒を立たせる $u=-(8\theta+4\dot\theta)$、$\Delta t=0.1$ なら、本当の1歩の固有値は $e^{-0.2}=0.8187$ で、オイラー法の0.8 と近い値です。
+
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixlworlds[63mm]{時間の世界}{$s$ の世界（固有値）}{固有値を求める}{$e^{\lambda t}$ でもどす}
+\begin{axis}[kixl wave, at={(0mm,0mm)}, height=47mm, xmin=0, xmax=6.3, ymin=-1.2, ymax=1.6, xtick={0,2,4,6}, ytick={-1,1}, xlabel={時間 $t$}, ylabel={$x$}]
+  \addplot[kixl sig, domain=0:6.3] {2*exp(-x)-exp(-2*x)};
+  \addplot[kixlF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=200, smooth, domain=0:6.3] {cos(deg(x))};
+  \addplot[kixlP, line width=1.4pt, dash pattern=on 1.5pt off 1.5pt, no markers, samples=100, smooth, domain=0:1.72] {0.1*cosh(2*x)};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=kixlW, fill=white, inner sep=1pt] at (axis cs:2.1,0.18) {車A};
+  \node[font=\sffamily\footnotesize, anchor=west, text=kixlF, fill=white, inner sep=1pt] at (axis cs:4.3,-0.75) {ばね};
+  \node[font=\sffamily\footnotesize, anchor=west, text=kixlP, fill=white, inner sep=1pt] at (axis cs:1.15,1.35) {棒（制御なし）};
+\end{axis}
+\begin{axis}[kixl splane, at={(76mm,0mm)}, xmin=-2.6, xmax=3.4, ymin=-3, ymax=3, xtick={-2,-1,1,2}, ytick={-2,2}, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}, every axis x label/.append style={anchor=south east, at={(ticklabel* cs:1,0)}, yshift=1mm}]
+  \fill[bkGreen!10] (axis cs:-2.6,-3) rectangle (axis cs:0,3);
+  \kixlpole[kixlW]{-1}{0}\kixlpole[kixlW]{-2}{0}
+  \kixlpole[kixlF]{0}{1}\kixlpole[kixlF]{0}{-1}
+  \kixlpole[kixlP]{2}{0}
+  \node[font=\sffamily\footnotesize, anchor=south, text=kixlW, fill=white, inner sep=1pt] at (axis cs:-1.5,0.35) {車A};
+  \node[font=\sffamily\footnotesize, anchor=west, text=kixlF, fill=white, inner sep=1pt] at (axis cs:0.3,1.25) {ばね};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=kixlP, fill=white, inner sep=1pt] at (axis cs:1.85,0.3) {棒};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：車A（実線、はじめ1）、ばね（破線、はじめ1）、手のひらの棒（点線、はじめ0.1）の動き。右：それぞれの $A$ の固有値（×）。うすい緑は実部が負の左半分。車A の×は2つとも左半分で落ち着き、ばねはたての軸（虚軸）の上でゆれ続け、棒は $+2$ が右半分にあってたおれる（棒のもう1つの固有値 $-2$ は、車A の $-2$ と同じ場所）。}
+\label{bk:9-11:fig-sekai}
+\end{bkfigure}
+
+\bksubsection{8}{固有値が複素数：回転と $e^{\sigma t}$（場合 C）}
+
+\label{bk:9-11:kaiten}ばね（$\omega=1$）の $A$（1行め $(0,\ 1)$、2行め $(-1,\ 0)$）の固有値は $\pm j$ です。この $A$ は、2乗すると、とても簡単になります。
+\begin{bkhenkei}[0.7]
+A^2=\kixlpm{0&1\\-1&0}\kixlpm{0&1\\-1&0}=\kixlpm{-1&0\\0&-1}=-I & 行×列でかけた（7-1） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+A^3=A^2A=-A,\quad A^4=A^2A^2=I & $A^2=-I$ を使った \\
+\end{bkhenkei}
+$A$ の累乗は $I$、$A$、$-I$、$-A$、$I$、…とくり返します。だから、たし算を「偶数番めの項（$I$ が出る）」と「奇数番めの項（$A$ が出る）」に分けると、
+\begin{bkhenkei}[0.8]
+e^{At}=I\Bigl(1-\frac{t^2}{2!}+\frac{t^4}{4!}-\cdots\Bigr)+A\Bigl(t-\frac{t^3}{3!}+\frac{t^5}{5!}-\cdots\Bigr) & 偶数番めと奇数番めに分けた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+e^{At}=\cos t\;I+\sin t\;A & 5-17 の $\cos t$・$\sin t$ のたし算の形 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+e^{At}=\kixlpm{\cos t&\sin t\\-\sin t&\cos t} & 成分を書いた \\
+\end{bkhenkei}
+これは、7-6 の回転行列 $R(\theta)$ の $\theta$ を $-t$ にしたもの、つまり時計回りに角 $t$ だけ回す行列です。6-14 の図で、ばねの状態の点が時計回りにだ円（$\omega=1$ では円）を回ったのと同じです。②の表の行き先（4分の1周で1行め $(0,\ 1)$）もこの形です。そして $t=2\pi$ では $\cos2\pi=1$、$\sin2\pi=0$ で、
+\kixlline{$e^{A\cdot2\pi}=I$}
+です。7-10 で予告した 1.37・1.03・1.003 が近づいていく先は、この単位行列でした（表\ref{bk:9-11:tab-n}）。
+
+ばねの $A$ は $A^2=-I$（$I$ の $-1$ 倍）なので、流れ図では D に着きます。固有値が $\pm j$ の複素数なので、C の形でも求められます。2つの場合は、同じ考え（2乗が単位行列の何倍か）の、ちがう見方です。
+
+\kixlhead{ゆれながら小さくなるとき：車B}
+車B（$\ddot x+2\dot x+5x=0$）の $A$ は、1行め $(0,\ 1)$、2行め $(-5,\ -2)$ で、特性方程式 $\lambda^2+2\lambda+5=0$ から、固有値は $-1\pm2j$ です。実部を $\sigma=-1$、虚部を $\omega=2$ と書きます。$A$ から $\sigma I$ をひいた行列 $N$ を作ると、
+\begin{bkhenkei}[0.52]
+N=A-\sigma I=A+I=\kixlpm{1&1\\-5&-1} & 対角に1をたした \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+N^2=\kixlpm{1-5&1-1\\-5+5&-5+1}=\kixlpm{-4&0\\0&-4}=-4I & 行×列。$-4=-\omega^2$ \\
+\end{bkhenkei}
+と、ばねと同じ形 $N^2=-\omega^2I$ になります（2×2で固有値が $\sigma\pm j\omega$ なら、いつもこうなります）。$A=\sigma I+N$ で、$\sigma I$ はどんな行列とかけても順番を入れかえてよいので、$e^{At}=e^{\sigma t}e^{Nt}$ と分けられます（せいかくに言うと①）。$e^{Nt}$ は、ばねと同じ計算で $\cos\omega t\,I+\frac{\sin\omega t}{\omega}N$ です。
+\kixlframe[112mm]{$e^{At}=e^{\sigma t}\Bigl(\cos\omega t\;I+\dfrac{\sin\omega t}{\omega}\,N\Bigr)$\qquad $N=A-\sigma I$}
+車B では $\sigma=-1$、$\omega=2$ なので、
+\[ e^{At}=e^{-t}\begin{pmatrix}\cos2t+\frac12\sin2t&\frac12\sin2t\\[2pt]-\frac52\sin2t&\cos2t-\frac12\sin2t\end{pmatrix} \]
+です。はじめ $\vec x_0=(1,\ 0)$ なら1列めで、$x=e^{-t}\bigl(\cos2t+\frac12\sin2t\bigr)$。6-12・9-7 で求めた車B の答えと同じです（$t=1$ で0.01416、$t=2$ で $-0.1397$）。$e^{-t}$ が小さくする速さ（実部）、$\cos2t$・$\sin2t$ が回る速さ（虚部）を表しています。
+
+\bksubsection{9}{たし算が切れる・2つに分かれる：場合 D}
+
+\label{bk:9-11:kireru}$A^2$ が0の行列 $O$ になるときや、単位行列の何倍かになるときは、たし算そのものが簡単になります。
+
+\kixlhead{押したあとの台車：$A^2=O$}
+まさつのない床の上で、押されたあと力を受けずに進む台車の、位置 $x$ と速度 $v$ は $\dot x=v$、$\dot v=0$ です。$A$ は1行め $(0,\ 1)$、2行め $(0,\ 0)$ で、
+\begin{bkhenkei}[0.7]
+A^2=\kixlpm{0&1\\0&0}\kixlpm{0&1\\0&0}=\kixlpm{0&0\\0&0}=O & 行×列 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.66]
+e^{At}=I+At+O+O+\cdots=\kixlpm{1&t\\0&1} & 3項めから先は0 \\
+\end{bkhenkei}
+たし算が2項で切れました。$\vec x_0=(x_0,\ v_0)$ にかけると、$x=x_0+v_0t$、$v=v_0$。一定の速さで進む等速の動きで、答えと合います。この $A$ は固有値が0の重解で、対角化できない行列ですが（7-9）、たし算なら、すぐに求められます。
+
+\kixlhead{送電線：$M^2=\gamma^2I$}
+7-11 のせいかくに言うとで、長さ $\ell$ の送電線の行列は $e^{M\ell}$（$M$ は1行め $(0,\ z)$、2行め $(y,\ 0)$）で、「9-11 でくわしく学ぶ」と約束しました。$M$ を2乗します。
+\begin{bkhenkei}[0.7]
+M^2=\kixlpm{0&z\\y&0}\kixlpm{0&z\\y&0}=\kixlpm{zy&0\\0&zy}=\gamma^2I & $\gamma=\sqrt{zy}$（伝搬定数、7-11） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+M^3=\gamma^2M,\quad M^4=\gamma^4I,\ \cdots & $M^2=\gamma^2I$ を使った \\
+\end{bkhenkei}
+ばねのときとちがい、符号が $-$ になりません。偶数番めと奇数番めに分けると、
+\begin{bkhenkei}[0.8]
+e^{M\ell}=I\Bigl(1+\frac{(\gamma\ell)^2}{2!}+\frac{(\gamma\ell)^4}{4!}+\cdots\Bigr)+\frac{M}{\gamma}\Bigl(\gamma\ell+\frac{(\gamma\ell)^3}{3!}+\cdots\Bigr) & 偶数番め・奇数番め \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+e^{M\ell}=\cosh\gamma\ell\;I+\frac{\sinh\gamma\ell}{\gamma}\,M & 6-11 の $\cosh$・$\sinh$ のたし算の形 \\
+\end{bkhenkei}
+成分を書き、$\frac{z}{\gamma}=\sqrt{\frac zy}=Z_0$（特性インピーダンス）、$\frac{y}{\gamma}=\frac{1}{Z_0}$ を使うと、
+\kixlframe[112mm]{$e^{M\ell}=\begin{pmatrix}\cosh\gamma\ell&Z_0\sinh\gamma\ell\\[2pt]\dfrac{1}{Z_0}\sinh\gamma\ell&\cosh\gamma\ell\end{pmatrix}$\qquad 四端子定数}
+7-11 で「専門書の式」として見せた行列が、ここで導けました。これが、長い電線の\textbf{四端子定数}（$A=D=\cosh\gamma\ell$、$B=Z_0\sinh\gamma\ell$、$C=\frac{1}{Z_0}\sinh\gamma\ell$）です（ここの $A$・$B$・$C$ は電気の本の四端子定数の名前で、状態方程式の $A$・$B$・$C$ とは別のもの）。7-11 の数（$z=y=1$、$\ell=1$）では $\gamma=1$、$Z_0=1$ で、$\cosh1=1.543$、$\sinh1=1.175$。7-11 の表で、箱を限りなく細かくした先の値です。$AD-BC=\cosh^2\gamma\ell-\sinh^2\gamma\ell=1$ も、7-11 のとおりです。
+
+\bksubsection{10}{ラプラス変換で求める：場合 F と E}
+
+\label{bk:9-11:laplace}どんな形の2×2の行列でも使える方法があります。ラプラス変換（9-5）です。$\dot{\vec x}=A\vec x$ を成分ごとに変換します。
+\begin{bkhenkei}[0.42]
+s\vec X-\vec x_0=A\vec X & $\mathcal L[\dot x]=sX-x(0)$（9-5）を成分ごとに \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+(sI-A)\vec X=\vec x_0 & $A\vec X$ を左へ移し、$s\vec X=sI\vec X$ でくくった \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\vec X=(sI-A)^{-1}\vec x_0 & 左から逆行列をかけた（7-5） \\
+\end{bkhenkei}
+いっぽう、答えは $\vec x=e^{At}\vec x_0$ でした。2つをくらべると、$e^{At}$ をラプラス変換したもの（成分ごとに）が $(sI-A)^{-1}$ です。式が1つなら $\mathcal L[e^{at}]=\frac{1}{s-a}$（表9-6）で、それの行列の形です。
+\[ \kixlNt{e^{At}}=\kixlSt{3}{\mathcal L^{-1}\bigl[(sI-A)^{-1}\bigr]\ \text{（成分ごとに部分分数）}} \]
+\vspace{2pt}
+
+\kixlhead{車A で確かめる（場合 F）}
+9-10⑩で、車A の $(sI-A)^{-1}$ を作りました。
+\[ (sI-A)^{-1}=\frac{1}{(s+1)(s+2)}\begin{pmatrix}s+3&1\\-2&s\end{pmatrix} \]
+4つの成分を、それぞれ部分分数に分けて（9-7 の表9-7のB：かくす方法）、表を逆に引きます。
+\begin{bkhenkei}[0.7]
+\frac{s+3}{(s+1)(s+2)}=\frac{2}{s+1}-\frac{1}{s+2}\to2e^{-t}-e^{-2t} & $s=-1$ で $\frac{2}{1}$、$s=-2$ で $\frac{1}{-1}$ \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{1}{(s+1)(s+2)}=\frac{1}{s+1}-\frac{1}{s+2}\to e^{-t}-e^{-2t} & 3-8 の約束の式（9-7） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{-2}{(s+1)(s+2)}=\frac{-2}{s+1}+\frac{2}{s+2}\to-2e^{-t}+2e^{-2t} & 上の式の $-2$ 倍 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\frac{s}{(s+1)(s+2)}=\frac{-1}{s+1}+\frac{2}{s+2}\to-e^{-t}+2e^{-2t} & $s=-1$ で $\frac{-1}{1}$、$s=-2$ で $\frac{-2}{-1}$ \\
+\end{bkhenkei}
+⑤の対角化と、まったく同じ $e^{At}$ になりました。2つの方法で同じ答えが出れば、計算のまちがいはまずありません。流れ図の最後の「確かめ」で F を使うのは、このためです。
+
+\kixlhead{固有値が重なるとき（場合 E）}
+$\ddot x+2\dot x+x=0$（6-12 のちょうどゆれない「臨界」の動き）の $A$ は、1行め $(0,\ 1)$、2行め $(-1,\ -2)$ で、固有値は $-1$ の重解です。固有ベクトルが1本しかなく、対角化できません（7-9）。そこで $(sI-A)^{-1}$ を使います。$\det(sI-A)=s(s+2)+1=(s+1)^2$ です。
+\begin{bkhenkei}[0.7]
+(sI-A)^{-1}=\frac{1}{(s+1)^2}\kixlpm{s+2&1\\-1&s} & $\det$ は $(s+1)^2$ \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+\frac{s+2}{(s+1)^2}=\frac{1}{s+1}+\frac{1}{(s+1)^2}\to e^{-t}+te^{-t} & $s+2=(s+1)+1$（表9-7のC） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+\frac{s}{(s+1)^2}=\frac{1}{s+1}-\frac{1}{(s+1)^2}\to e^{-t}-te^{-t} & $s=(s+1)-1$ と分けた \\
+\end{bkhenkei}
+$\frac{1}{(s+1)^2}\to te^{-t}$、$\frac{-1}{(s+1)^2}\to-te^{-t}$ も合わせて、
+\kixlframe[96mm]{$e^{At}=e^{-t}\begin{pmatrix}1+t&t\\-t&1-t\end{pmatrix}$}
+重解のときは、$e^{\lambda t}$ だけでなく $te^{\lambda t}$ の形が出てきます。6-12 の重解の答え $(c_1+c_2t)e^{st}$ と同じ形です。
+
+\bksubsection{11}{入れるものがあるとき：場合 G}
+
+\label{bk:9-11:nyuryoku}状態方程式に入れるもの $u$ があるとき（$\dot{\vec x}=A\vec x+Bu$）も、ラプラス変換で同じように解けます。
+\begin{bkhenkei}[0.42]
+s\vec X-\vec x_0=A\vec X+BU & 変換した \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+\vec X=(sI-A)^{-1}\bigl(\vec x_0+BU\bigr) & ⑩と同じように $\vec X$ について解いた \\
+\end{bkhenkei}
+はじめの状態の分 $(sI-A)^{-1}\vec x_0$ と、入れたものの分 $(sI-A)^{-1}BU$ の和です（線形なので、分けてたしてよい：5-18）。
+
+\kixlhead{車A に、一定の力を入れる}
+はじめ止まっている車A に、$t=0$ から $u=1$（ステップ）を入れ続けます（$U=\frac1s$、9-6）。$\vec x_0=\vec 0$、$B=(0,\ 1)$ のたて書きなので、
+\begin{bkhenkei}[0.7]
+(sI-A)^{-1}B\,U=\frac{1}{(s+1)(s+2)}\kixlpm{1\\s}\frac{1}{s} & 9-10⑩の $(sI-A)^{-1}B$ に $U$ をかけた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.7]
+X=\frac{1}{s(s+1)(s+2)}=\frac{1/2}{s}-\frac{1}{s+1}+\frac{1/2}{s+2} & 1行め（位置）。$s=0$、$-1$、$-2$ を代入して係数 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.52]
+x=\frac12-e^{-t}+\frac12e^{-2t} & 表を逆に引いた \\
+\end{bkhenkei}
+$t=1$ で0.1998、最後は $\frac12$ に落ち着きます。9-6・9-7 の最終値の定理で求めた $\frac12$ と同じです（ばねの力 $2x$ が、入れた1とつり合う位置）。
+
+\kixlhead{時間の世界で書くと：たたみこみ}
+同じ答えを、時間の世界で書くと次のようになります（9-6 のたたみこみ。積分の中の文字は $t_1$）。
+\kixlframe[118mm]{$\displaystyle\vec x(t)=e^{At}\vec x_0+\int_0^te^{A(t-t_1)}B\,u(t_1)\,\dd t_1$}
+「時刻 $t_1$ に入れた分 $Bu(t_1)\,\dd t_1$ が、残りの時間 $t-t_1$ だけ $e^{A(t-t_1)}$ で変わって、今に残っている。それを全部たした」という意味です。式の名前は積分ですが、実際の計算は、上のようにラプラス変換と部分分数で行うのがふつうです。
+
+\bksubsection{12}{大きな行列：熱の1歩の行列（場合 H）}
+
+\label{bk:9-11:netsu}8-13 では、長さ \qty{0.1}{m} の棒を \qty{0.01}{m} ずつに区切り、中の9つの点の温度を表計算で1歩ずつ進めました。8-13 の予告カードで「熱の1歩の行列の固有値」を、9-2 のもっと知りたいで「熱の行列の固有ベクトルは $\sin$ の形」を、9-11 で確かめると約束しました。ここで果たします。
+
+\kixlhead{熱の状態方程式}
+点 $m$ の温度を $T_m$ とすると、8-13 の差分の式の、時間の部分を微分のまま残した形は
+\kixlline{$\dot T_m=\dfrac{\alpha}{\Delta x^2}\bigl(T_{m-1}-2T_m+T_{m+1}\bigr)$}
+です（両はしの $T_0$、$T_{10}$ は0\,℃）。$\alpha=\qty{1e-4}{m^2/s}$、$\Delta x=\qty{0.01}{m}$ なので $\frac{\alpha}{\Delta x^2}=1$（1/s）。9つの温度を並べた $\vec T$ で書くと $\dot{\vec T}=A\vec T$、$A$ は9×9で、ななめに $-2$、そのすぐ上と下に1が並ぶ行列です（8-13 の行列と同じ形）。9×9の $e^{At}$ を手で計算するのは大変なので、Python に任せます（場合 H）。
+
+\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+from scipy.linalg import expm
+A = -2*np.eye(9) + np.eye(9, k=1) + np.eye(9, k=-1)
+lam, V = np.linalg.eigh(A)      \# 固有値と固有ベクトル
+print(lam[:5].round(4))         \# 小さいほうの5つ
+print(lam[5:].round(4))         \# 残りの4つ
+v = V[:, -1]                    \# いちばん遅い固有ベクトル
+print((v / v[4]).round(3))      \# まん中を1にした
+T0 = 100 * np.ones(9)           \# はじめどこも100度
+for t in [5, 10]:
+    T = expm(A*t) @ T0          \# t 秒後の温度
+    print(t, T[4].round(2))     \# まん中の点
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-3.9021 -3.618  -3.1756 -2.618  -2.    ]
+[-1.382  -0.8244 -0.382  -0.0979]
+[0.309 0.588 0.809 0.951 1.    0.951 0.809 0.588 0.309]
+5 76.77
+10 47.44
+\end{bkcodeout}
+\texttt{np.linalg.eigh} は、対称な行列の固有値と固有ベクトルを出す命令です（8-13 の \texttt{eigvalsh} のなかま）。
+
+\kixlhead{わかること}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{固有値はすべて負}（$-0.0979$〜$-3.9021$）。どんな温度から始めても、熱は落ち着く（0\,℃に近づく）。式で書くと $-4\sin^2\frac{m\pi}{20}$（$m=1$〜9）。
+\item \textbf{いちばん遅い固有ベクトルは $\sin$ の形}。0.309、0.588、0.809、0.951、1、…は、$\sin\frac{\pi}{10}$、$\sin\frac{2\pi}{10}$、…、$\sin\frac{5\pi}{10}$ そのもの（図\ref{bk:9-11:fig-sin}）。9-1 で熱方程式をフーリエ級数で解いたときの、いちばん長い成分 $\sin\frac{\pi x}{L}$ です。その固有値 $-0.0979$ は、9-1 の消える速さ $\alpha\bigl(\frac{\pi}{L}\bigr)^2=0.0987$（1/s）とほぼ同じです。
+\item \textbf{まん中の温度}は5秒で76.77\,℃、10秒で47.44\,℃。9-1 のフーリエ級数の答え（77.23\,℃、47.45\,℃）に近く、50\,℃になるのは約9.46秒（9-1 は9.47秒）です。少しちがうのは、棒を9つの点に分けた近似だからです。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=46mm, xmin=0, xmax=0.1, ymin=0, ymax=1.15, xtick={0,0.02,0.04,0.06,0.08,0.1}, xticklabel style={/pgf/number format/fixed}, scaled x ticks=false, ytick={0.5,1}, xlabel={$x$（m）}, ylabel={固有ベクトルの成分}]
+  \addplot[ycomb, kixlF, line width=3pt, no markers] coordinates {(0.01,0.309) (0.02,0.588) (0.03,0.809) (0.04,0.951) (0.05,1) (0.06,0.951) (0.07,0.809) (0.08,0.588) (0.09,0.309)};
+  \addplot[kixlW, line width=1.3pt, domain=0:0.1, samples=60] {sin(deg(pi*x/0.1))};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.066,1.06) {線：$\sin\frac{\pi x}{L}$（9-1）};
+  \node[font=\sffamily\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:0.036,1.06) {棒：固有ベクトル};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{熱の行列のいちばん遅い固有ベクトル（棒）と、9-1 のフーリエ級数の第1の成分 $\sin\frac{\pi x}{L}$（線）。9つの点の上で、ぴったり重なる。}
+\label{bk:9-11:fig-sin}
+\end{bkfigure}
+
+第1部で学んだフーリエの成分（$\sin$ の形）と、第3部の行列の固有ベクトルは、同じものだったのです。フーリエ級数で熱を解くことは、熱の行列を対角化して、固有ベクトルごとに $e^{\lambda t}$ で小さくすることと同じです。
+
+
+山の数がふえた $\sin$ の形も、固有ベクトルになっています（2番め・3番めに遅いもの。9-1 の第2・第3の成分）。山が多い細かい形ほど固有値が負に大きく、速く消えます。だから、しばらくたつと、いちばん遅い $\sin\frac{\pi x}{L}$ の形だけが残ります（9-1 で、時間がたつと第1の成分だけが残ったのと同じ）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, at={(0mm,0mm)}, axis x line=middle, axis y line=left, width=64mm, height=64mm, xmin=0, xmax=0.1, ymin=-1.15, ymax=1.15, xtick=\empty, ytick={-1,1}, title style={font=\sffamily\footnotesize}, title={山が2つ：固有値 $-0.382$}]
+  \addplot[ycomb, kixlF, line width=2.6pt, no markers] coordinates {(0.01,0.588) (0.02,0.951) (0.03,0.951) (0.04,0.588) (0.05,0.000) (0.06,-0.588) (0.07,-0.951) (0.08,-0.951) (0.09,-0.588)};
+  \addplot[kixlW, line width=1.1pt, domain=0:0.1, samples=80] {sin(deg(2*pi*x/0.1))};
+\end{axis}
+\begin{axis}[bkplot, at={(70mm,0mm)}, axis x line=middle, axis y line=left, width=64mm, height=64mm, xmin=0, xmax=0.1, ymin=-1.15, ymax=1.15, xtick=\empty, ytick={-1,1}, title style={font=\sffamily\footnotesize}, title={山が3つ：固有値 $-0.824$}]
+  \addplot[ycomb, kixlF, line width=2.6pt, no markers] coordinates {(0.01,0.809) (0.02,0.951) (0.03,0.309) (0.04,-0.588) (0.05,-1.000) (0.06,-0.588) (0.07,0.309) (0.08,0.951) (0.09,0.809)};
+  \addplot[kixlW, line width=1.1pt, domain=0:0.1, samples=80] {sin(deg(3*pi*x/0.1))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2番め・3番めに遅い固有ベクトル（棒）と、$\sin\frac{2\pi x}{L}$・$\sin\frac{3\pi x}{L}$（線）。$e^{-0.382t}$ は約2.6秒、$e^{-0.824t}$ は約1.2秒で $e^{-1}$ 倍になり、いちばん遅い形（約10.2秒）より速く消える。}
+\label{bk:9-11:fig-sin23}
+\end{bkfigure}
+
+\kixlhead{こわれない条件 $r\leqq\frac12$ をもう一度}
+8-13 の表計算は、オイラー法の1歩 $I+rA$（$r=\frac{\alpha\Delta t}{\Delta x^2}$）のくり返しです。その固有値は $1+r\lambda=1-4r\sin^2\frac{m\pi}{20}$（7-10 の $1+\lambda\Delta t$）で、いちばん小さいのは $m=9$ の $1-4r\times0.9755$ です。これが $-1$ 以上であることが、こわれない条件で、$r\leqq\frac{1}{2\times0.9755}=0.513$。「ほぼ $r\leqq\frac12$」です（8-13）。$r=0.25$ なら固有値は0.0245〜0.9755 で、どれも大きさが1より小さく、$r=0.6$ ならいちばん小さいものが $-1.341$ で、こわれます。$r$ を小さくするほど安全ですが、そのぶん1歩の時間 $\Delta t$ が短くなり、計算の回数がふえます。予告カード 9-11 の「熱の1歩の行列の固有値と、こわれない条件」は、このことでした。
+
+
+
+\Needspace{18\baselineskip}
+\begin{motto}[5]
+\kixlbox{$e^{At}$ の行列式は $e^{(a+d)t}$}
+2×2の $A$（1行め $(a,\ b)$、2行め $(c,\ d)$）なら、次の式がなり立ちます（$a+d$ は対角の和）。
+\kixlline{$\det e^{At}=e^{(a+d)t}$}
+対角化すると、次のようになります。
+\kixlline{$\det e^{At}=\det e^{Dt}=e^{\lambda_1t}e^{\lambda_2t}=e^{(\lambda_1+\lambda_2)t}$}
+特性方程式 $\lambda^2-(a+d)\lambda+(ad-bc)=0$ の2つの解の和は $a+d$ なので、$\lambda_1+\lambda_2=a+d$ です。行列式は「面積が何倍になるか」でした（7-4）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{\bkTT}●}]
+\item ばね（$a+d=0$）：$\cos^2t+\sin^2t=1$。回転は面積を変えない。
+\item 送電線（$a+d=0$）：$\cosh^2-\sinh^2=1$。7-11 の「四端子定数の $AD-BC=1$」のわけ。
+\item 水そう（$a+d=-0.2$）：$e^{-0.2t}$。水の合計は変わらないが、差が消えていくので、広がりは小さくなる。
+\item 車A（$a+d=-3$）：$t=1$ で、次のとおり。状態の広がりが小さくなる（落ち着く）。
+\kixlline{$0.6004\times(-0.0972)-0.2325\times(-0.4651)=0.0498=e^{-3}$}
+\end{itemize}
+\end{motto}
+
+\begin{senmonsho}[線形代数・制御工学の本ふうの書き方]
+\begin{bkhonbun}
+正方行列 $A$ に対し，$\exp(At)=\displaystyle\sum_{k=0}^{\infty}\frac{t^k}{k!}A^k$ を行列指数関数という．$\Phi(t)=e^{At}$ は状態遷移行列とよばれ，$\dot{\symbf{x}}=A\symbf{x}+\symbf{b}u$ の解は $\symbf{x}(t)=\Phi(t)\symbf{x}(0)+\displaystyle\int_0^t\Phi(t-\tau)\symbf{b}u(\tau)\,d\tau$ で与えられる．また $\mathcal{L}[\Phi(t)]=(sI-A)^{-1}$ である．$A$ の全固有値の実部が負であるとき，系は漸近安定である．
+\end{bkhonbun}
+\bkyaku{$\exp(At)$ は $e^{At}$ の別の書き方（$e$ の右上が長いときに使う）。$\sum_{k=0}^{\infty}$ は $k=0,\ 1,\ 2,\ \cdots$ の項をすべてたすこと（$A^0=I$、$0!=1$）。$\Phi$（ファイ）は $t$ 秒進める行列なので「状態遷移行列」。$\tau$（タウ）はこの本の $t_1$（この本では $\tau$ を時定数に使っている）。「漸近安定」は、時間がたつと原点に近づいていくこと（落ち着く）。}
+\end{senmonsho}
+
+
+
+\begin{kotoba}
+\small
+\bkword{行列の指数関数}{$e^{At}=I+At+\frac{(At)^2}{2!}+\cdots$。1歩 $I+A\frac tn$ のくり返しの先。$\dot{\vec x}=A\vec x$ の答えは $e^{At}\vec x_0$。}
+\bkword{状態遷移行列}{はじめの状態を $t$ 秒後の状態に移す行列 $e^{At}$ の、制御の本での名前。}
+\bkword{四端子定数}{長い電線では $\cosh\gamma\ell$、$Z_0\sinh\gamma\ell$、$\frac{1}{Z_0}\sinh\gamma\ell$、$\cosh\gamma\ell$ で、$e^{M\ell}$ の成分。}
+\bkword{漸近安定}{時間がたつと原点に近づくこと。$A$ の固有値の実部がすべて負のとき。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$e^{At}$}{イー・エーティー（行列の指数関数）}{$I+At+\frac{(At)^2}{2!}+\cdots$ の名前。はじめの状態にかけると $t$ 秒後の状態が出る。成分ごとの $e$ ではない}{matrix exponential}{9-11}}
+{\bkkigocard{\scalebox{0.55}{$(sI-A)^{-1}$}}{エスアイ・マイナス・エーの逆行列}{$e^{At}$ をラプラス変換したもの。成分ごとに部分分数に分けて表を逆に引くと $e^{At}$ になる}{resolvent}{9-11}}
+
+\begin{taisetsu}
+\kixlbox{行列の指数関数の3つの段}
+\kixldan{1}\enspace 名前を読む：$e^{At}$ は「1歩 $I+A\frac tn$ のくり返しの先」「$I+At+\frac{(At)^2}{2!}+\cdots$」。$\vec x(t)=e^{At}\vec x_0$\par
+\kixldan{3}\enspace 直す前に：落ち着くかだけ？（固有値）\quad コンピュータの数値でよい？（\texttt{expm}）\quad $A^2$ が簡単？\par
+\kixldan{2}\enspace 直す：行列の計算（対角化 $Pe^{Dt}P^{-1}$）か、部分分数（$(sI-A)^{-1}$ を表9-7で）\par
+\[ \kixlNt{e^{At}}=\kixlSt{4}{Pe^{Dt}P^{-1}} \]
+\kixlbox{場合分けの表9-11（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,40mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kixlcase{A} & 対角 & 成分ごとに $e^{\lambda t}$ \\
+\kixlcase{B} & 固有値がちがう実数 & $Pe^{Dt}P^{-1}$ \\
+\kixlcase{C} & 固有値が $\sigma\pm j\omega$ & $e^{\sigma t}\bigl(\cos\omega t\,I+\frac{\sin\omega t}{\omega}N\bigr)$ \\
+\kixlcase{D} & $A^2=O$・$I$ の何倍か & $I+At$、$\cosh$ と $\sinh$ \\
+\kixlcase{E} & 固有値が重なる & $(sI-A)^{-1}$ を部分分数（$te^{\lambda t}$） \\
+\kixlcase{F} & どの形でも・確かめ & $\mathcal L^{-1}\bigl[(sI-A)^{-1}\bigr]$ \\
+\kixlcase{G} & 入れるものがある & $(sI-A)^{-1}(\vec x_0+BU)$ をもどす \\
+\kixlcase{H} & 大きい・数値 & \texttt{expm}、$\bigl(I+A\frac tn\bigr)^n$ \\
+\kixlcase{I} & 落ち着くかだけ & 固有値の実部がすべて負か \\
+\end{bktable}
+\end{taisetsu}
+
+%% ---------------- 例題 ----------------
+\Needspace{12\baselineskip}
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、表9-11 のどの場合かを書きました。例題1〜10を図\ref{bk:9-11:fig-flow}の流れ図でたどると、どれも1行めの場合に着きます（書いていない問いは「いいえ」）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,34mm] X[l,m] Q[c,m,14mm]}, row{2-Z}={font=\footnotesize}, rowsep=0.5pt, colsep=2.5pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 対角の行列 & $A$ は対角？ & \kixlcase{A} \\
+2 & 水そうを対角化で & （どれも「いいえ」） & \kixlcase{B} \\
+3 & 車B（ゆれる） & 固有値が複素数？ & \kixlcase{C} \\
+4 & 押したあとの台車 & $A^2$ が $O$ か $I$ の何倍？ & \kixlcase{D} \\
+5 & 送電線 & $A^2$ が $O$ か $I$ の何倍？ & \kixlcase{D} \\
+6 & ちょうどゆれない動き & 固有値が重なる？ & \kixlcase{E} \\
+7 & $(sI-A)^{-1}$ で & （どれも「いいえ」）→ 確かめの F で求める & \kixlcase{B}\kixlcase{F} \\
+8 & 一定の力を入れる & 入れるもの $u$ がある？ & \kixlcase{G} \\
+9 & 3つの点の熱 & コンピュータの数値でよい？ & \kixlcase{H} \\
+10 & 落ち着くかの判定 & 落ち着くかだけ？ & \kixlcase{I} \\
+\end{bktable}
+\bktabcaption{例題1〜10の流れ図の道すじ。}
+\end{bkcenter}
+
+\kixlhead{例題の読み方}
+どの例題も、次の順に書いてあります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \kixldan{1}\enspace $e^{At}$ が何の名前かを読む（$\vec x(t)=e^{At}\vec x_0$）。
+\item \kixldan{3}\enspace 楽な道があれば先に使う（$A^2$ が簡単・コンピュータの数値でよい・固有値だけでよい）。
+\item \kixlnaosu{4} か \kixlnaosu{3}\enspace 行列の計算か部分分数に直して計算する。
+\item 答えが出たら、$t=0$ で単位行列 $I$ になるかを確かめる（どの $e^{At}$ もそうなる）。
+\end{enumerate}
+
+\begin{reidai}[対角の行列]
+$\dot x_1=-x_1$、$\dot x_2=-2x_2$（つながっていない2つの式）で、はじめ $\vec x_0=(3,\ 4)$ です。$e^{At}$ と、$t=1$ の状態を求めましょう。\par
+\kangaekata \kixlbaai{$A$ が対角}{9-11}{A}\par
+\kixldan{1}\enspace $e^{At}$：$I+At+\frac{(At)^2}{2!}+\cdots$ の名前。$\vec x(t)=e^{At}\vec x_0$。\par
+\kixlnaosu{4}\enspace $A$ のななめは $-1$ と $-2$。対角なので、成分ごとに $e^{\lambda t}$。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $e^{At}=\begin{pmatrix}e^{-t}&0\\0&e^{-2t}\end{pmatrix}$\par
+\kixla $\vec x(t)=(3e^{-t},\ 4e^{-2t})$、$t=1$ で $(3\times0.3679,\ 4\times0.1353)$\par
+\kotae 対角が $e^{-t}$・$e^{-2t}$ の行列。$t=1$ で $(1.104,\ 0.541)$
+\end{reidai}
+
+\kixlhead{確かめ（例題1）}
+$t=0$ を入れると、対角が $e^0=1$ の単位行列になり、$\vec x(0)=(3,\ 4)$ とはじめの状態に合います。2つの数は、それぞれ 6-4 の冷め方と同じで、1つめは1秒ごとに $e^{-1}=0.368$ 倍、2つめは $e^{-2}=0.135$ 倍になります。
+
+\begin{jibun}
+$\dot x_1=-0.5x_1$、$\dot x_2=-3x_2$ で、はじめ $\vec x_0=(2,\ 1)$ です。$e^{At}$ と、$t=2$ の状態を求めましょう。
+\bkjans{$e^{At}$ は対角が $e^{-0.5t}$・$e^{-3t}$、ほかは0。$\vec x=(2e^{-0.5t},\ e^{-3t})$。$t=2$ で $(2e^{-1},\ e^{-6})=(0.736,\ 0.00248)$。}
+\end{jibun}
+
+\begin{reidai}[水そうを対角化で]
+6-14 の水そう（$A$ は1行め $(-0.1,\ 0.1)$、2行め $(0.1,\ -0.1)$、時間は分）で、$e^{At}$ を対角化で求め、はじめ $\vec x_0=(20,\ 0)$ の10分後の水位を求めましょう。固有値は0（固有ベクトル $(1,\ 1)$）と $-0.2$（$(1,\ -1)$）です（7-8）。\par
+\kangaekata \kixlbaai{固有値がちがう実数}{9-11}{B}\par
+\kixldan{1}\enspace $e^{At}$ を、行列の計算 $Pe^{Dt}P^{-1}$ に直す。\par
+\kixlnaosu{4}\enspace $P$ と $P^{-1}$ を作り、$e^{Dt}$ をはさんでかける。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $P=\begin{pmatrix}1&1\\1&-1\end{pmatrix}$、$\det P=-2$、$P^{-1}=\begin{pmatrix}\frac12&\frac12\\[2pt]\frac12&-\frac12\end{pmatrix}$\par
+\kixla $Pe^{Dt}=\begin{pmatrix}1&e^{-0.2t}\\1&-e^{-0.2t}\end{pmatrix}$\quad （$e^{0t}=1$）\par
+\kixla $e^{At}=\dfrac12\begin{pmatrix}1+e^{-0.2t}&1-e^{-0.2t}\\1-e^{-0.2t}&1+e^{-0.2t}\end{pmatrix}$\par
+\kixla $\vec x=e^{At}\vec x_0=(10+10e^{-0.2t},\ 10-10e^{-0.2t})$\quad （1列めの20倍）\par
+\kixla $t=10$：$e^{-2}=0.1353$ で $(11.35,\ 8.65)$\par
+\kotae $h_1=10+10e^{-0.2t}$、$h_2=10-10e^{-0.2t}$。10分後に \qty{11.35}{cm} と \qty{8.65}{cm}（6-14・7-8 と同じ）
+\end{reidai}
+
+\begin{jibun}
+となり合う2つの部屋の温度の差（外との差）が、$A$ が1行め $(-0.3,\ 0.1)$、2行め $(0.1,\ -0.3)$ の $\dot{\vec x}=A\vec x$ にしたがいます（分）。固有値は $-0.2$（$(1,\ 1)$）と $-0.4$（$(1,\ -1)$）です。$e^{At}$ を対角化で求め、はじめ $(20,\ 0)$ の5分後を求めましょう。
+\bkjans{$P$ は例題2と同じ。$e^{At}$ は $\frac12$ に、1行め $(e^{-0.2t}+e^{-0.4t},\ e^{-0.2t}-e^{-0.4t})$、2行め $(e^{-0.2t}-e^{-0.4t},\ e^{-0.2t}+e^{-0.4t})$。$x_1=10e^{-0.2t}+10e^{-0.4t}$、$x_2=10e^{-0.2t}-10e^{-0.4t}$。5分後 $(5.03,\ 2.33)$。}
+\end{jibun}
+
+\begin{reidai}[車B（ゆれる）]
+車B（$A$ は1行め $(0,\ 1)$、2行め $(-5,\ -2)$）の $e^{At}$ を求め、はじめ $\vec x_0=(1,\ 0)$ のときの $x(t)$ と $x(1)$ を求めましょう。\par
+\kangaekata \kixlbaai{固有値が複素数}{9-11}{C}\par
+\kixldan{1}\enspace $e^{At}$ を、$e^{\sigma t}\bigl(\cos\omega t\,I+\frac{\sin\omega t}{\omega}N\bigr)$ の行列の計算に直す。\par
+\kixlnaosu{4}\enspace 固有値から $\sigma$・$\omega$ を読み、$N=A-\sigma I$ を作る。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $\lambda^2+2\lambda+5=0$ より $\lambda=-1\pm2j$。$\sigma=-1$、$\omega=2$\par
+\kixla $N=A+I=\begin{pmatrix}1&1\\-5&-1\end{pmatrix}$、$N^2=-4I$\par
+\kixla $e^{At}=e^{-t}\Bigl(\cos2t\,I+\dfrac{\sin2t}{2}N\Bigr)$\par
+\kixla $x(t)$ は1行め1列め：$e^{-t}\bigl(\cos2t+\tfrac12\sin2t\bigr)$\par
+\kixla $x(1)=0.3679\times(-0.4161+0.4546)=0.0142$\par
+\kotae $e^{At}=e^{-t}$ に、1行め $\bigl(\cos2t+\tfrac12\sin2t,\ \tfrac12\sin2t\bigr)$、2行め $\bigl(-\tfrac52\sin2t,\ \cos2t-\tfrac12\sin2t\bigr)$ をかけたもの。$x(1)=0.0142$
+\end{reidai}
+
+\begin{jibun}
+$A$ が1行め $(0,\ 1)$、2行め $(-10,\ -2)$ のとき、$e^{At}$ を求め、はじめ $(1,\ 0)$ の $x(t)$ と $x(1)$ を求めましょう。
+\bkjans{$\lambda=-1\pm3j$、$N=A+I$（1行め $(1,\ 1)$、2行め $(-10,\ -1)$）、$N^2=-9I$。$e^{At}=e^{-t}\bigl(\cos3t\,I+\frac{\sin3t}{3}N\bigr)$。$x=e^{-t}\bigl(\cos3t+\frac13\sin3t\bigr)$、$x(1)=-0.347$。}
+\end{jibun}
+
+\begin{reidai}[押したあとの台車]
+まさつのない床の台車で、$\dot x=v$、$\dot v=0$ です。$e^{At}$ を求め、はじめ $x=0$、$v=\qty{2}{m/s}$ のときの3秒後の状態を求めましょう。\par
+\kangaekata \kixlbaai{$A^2$ が $O$}{9-11}{D}\par
+\kixldan{1}\enspace $e^{At}=I+At+\frac{(At)^2}{2!}+\cdots$ の名前。\par
+\kixldan{3}\enspace $A^2=O$ なので、たし算は2項で切れる。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $A=\begin{pmatrix}0&1\\0&0\end{pmatrix}$、$A^2=\begin{pmatrix}0&0\\0&0\end{pmatrix}$\par
+\kixla $e^{At}=I+At=\begin{pmatrix}1&t\\0&1\end{pmatrix}$\par
+\kixla $\vec x=(0+2t,\ 2)$、$t=3$ で $(6,\ 2)$\par
+\kotae $e^{At}$ は1行め $(1,\ t)$、2行め $(0,\ 1)$。3秒後に $x=\qty{6}{m}$、$v=\qty{2}{m/s}$
+\end{reidai}
+
+\begin{jibun}
+$\dot x=3y$、$\dot y=0$ の $e^{At}$ を求め、はじめ $(1,\ 2)$ の $t=2$ の状態を求めましょう。
+\bkjans{$A$ は1行め $(0,\ 3)$、2行め $(0,\ 0)$、$A^2=O$。$e^{At}=I+At$ は1行め $(1,\ 3t)$、2行め $(0,\ 1)$。$\vec x=(1+6t,\ 2)$、$t=2$ で $(13,\ 2)$。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[送電線]
+1\,km あたりの直列の部分が $z=\qty{4}{\ohm/km}$、並列の部分が $y=\qty{1}{S/km}$ の線（7-11 と同じ、数を簡単にした線）で、長さ $\ell=\qty{0.5}{km}$ の行列 $e^{M\ell}$（$M$ は1行め $(0,\ z)$、2行め $(y,\ 0)$）を求めましょう（$\cosh1=1.543$、$\sinh1=1.175$）。\par
+\kangaekata \kixlbaai{$M^2$ が単位行列の何倍か}{9-11}{D}\par
+\kixldan{1}\enspace $e^{M\ell}$：長さ $\ell$ の線の行列（小さな箱を限りなくつないだ先）。\par
+\kixldan{3}\enspace $M^2=zyI=\gamma^2I$ なので、$\cosh$ と $\sinh$ に分かれる。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $\gamma=\sqrt{zy}=\sqrt{4\times1}=2$（1/km）、$Z_0=\sqrt{\frac zy}=\sqrt4=2$（Ω）\par
+\kixla $\gamma\ell=2\times0.5=1$\par
+\kixla $e^{M\ell}=\begin{pmatrix}\cosh1&Z_0\sinh1\\\frac{1}{Z_0}\sinh1&\cosh1\end{pmatrix}=\begin{pmatrix}1.543&2\times1.175\\\frac{1.175}{2}&1.543\end{pmatrix}$\par
+\kotae 1行め $(1.543,\ 2.350)$、2行め $(0.588,\ 1.543)$。行列式は $1.543^2-2.350\times0.588=0.999$（丸めのため。本当は1）
+\end{reidai}
+
+\begin{jibun}
+$z=\qty{1}{\ohm/km}$、$y=\qty{4}{S/km}$、$\ell=\qty{0.5}{km}$ の線で、$e^{M\ell}$ を求めましょう（$\cosh1=1.543$、$\sinh1=1.175$）。
+\bkjans{$\gamma=\sqrt{4}=2$、$Z_0=\sqrt{\frac14}=0.5$、$\gamma\ell=1$。1行め $(1.543,\ 0.5\times1.175)=(1.543,\ 0.588)$、2行め $(1.175\div0.5,\ 1.543)=(2.350,\ 1.543)$。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[ちょうどゆれない動き]
+$\ddot x+2\dot x+x=0$（$A$ は1行め $(0,\ 1)$、2行め $(-1,\ -2)$）の $e^{At}$ を、$(sI-A)^{-1}$ を逆変換して求め、はじめ $(1,\ 0)$ の $x(t)$ と $x(1)$ を求めましょう。\par
+\kangaekata \kixlbaai{固有値が重なる}{9-11}{E}\par
+\kixldan{1}\enspace $e^{At}=\mathcal L^{-1}\bigl[(sI-A)^{-1}\bigr]$（成分ごと）。\par
+\kixlnaosu{3}\enspace 4つの成分を部分分数に分け、$\frac{1}{(s+1)^2}\to te^{-t}$（表9-7のC）。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $\det(sI-A)=s(s+2)+1=(s+1)^2$\par
+\kixla $(sI-A)^{-1}=\dfrac{1}{(s+1)^2}\begin{pmatrix}s+2&1\\-1&s\end{pmatrix}$\par
+\kixla $\dfrac{s+2}{(s+1)^2}=\dfrac{1}{s+1}+\dfrac{1}{(s+1)^2}\to(1+t)e^{-t}$\par
+\kixla $\dfrac{s}{(s+1)^2}=\dfrac{1}{s+1}-\dfrac{1}{(s+1)^2}\to(1-t)e^{-t}$\par
+\kixla $x(t)$ は1行め1列め：$(1+t)e^{-t}$、$x(1)=2e^{-1}=0.736$\par
+\kotae $e^{At}=e^{-t}$ に、1行め $(1+t,\ t)$、2行め $(-t,\ 1-t)$ をかけたもの。$x(1)=0.736$
+\end{reidai}
+
+\begin{jibun}
+9-10 で棒を立たせた $A-BK$（1行め $(0,\ 1)$、2行め $(-4,\ -4)$）の $e^{At}$ を、$(sI-A)^{-1}$ を逆変換して求め、はじめ $(0.01,\ 0)$ の $\theta(t)$ と $\theta(1)$ を求めましょう。
+\bkjans{$\det=(s+2)^2$、$(sI-A)^{-1}$ は $\frac{1}{(s+2)^2}$ に1行め $(s+4,\ 1)$、2行め $(-4,\ s)$。$\frac{s+4}{(s+2)^2}=\frac{1}{s+2}+\frac{2}{(s+2)^2}\to(1+2t)e^{-2t}$。$e^{At}=e^{-2t}$ に1行め $(1+2t,\ t)$、2行め $(-4t,\ 1-2t)$。$\theta=0.01(1+2t)e^{-2t}$、$\theta(1)=0.00406$（9-10 と同じ）。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[$(sI-A)^{-1}$ で]
+$\ddot x+5\dot x+6x=0$（$A$ は1行め $(0,\ 1)$、2行め $(-6,\ -5)$、固有値 $-2$・$-3$）の $e^{At}$ を、$(sI-A)^{-1}$ を逆変換して求めましょう。また $t=1$ の値を求めましょう。\par
+\kangaekata \kixlbaai{固有値がちがう実数。$(sI-A)^{-1}$ で求める}{9-11}{B,F}\par
+\kixldan{1}\enspace $e^{At}=\mathcal L^{-1}\bigl[(sI-A)^{-1}\bigr]$。\par
+\kixlnaosu{3}\enspace 成分ごとに部分分数（表9-7のB：かくす方法）。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $(sI-A)^{-1}=\dfrac{1}{(s+2)(s+3)}\begin{pmatrix}s+5&1\\-6&s\end{pmatrix}$\par
+\kixla $\dfrac{s+5}{(s+2)(s+3)}=\dfrac{3}{s+2}-\dfrac{2}{s+3}$\quad （$s=-2$ で $\frac31$、$s=-3$ で $\frac{2}{-1}$）\par
+\kixla $\dfrac{1}{(s+2)(s+3)}=\dfrac{1}{s+2}-\dfrac{1}{s+3}$、$\dfrac{s}{(s+2)(s+3)}=\dfrac{-2}{s+2}+\dfrac{3}{s+3}$\par
+\kixla $e^{At}=\begin{pmatrix}3e^{-2t}-2e^{-3t}&e^{-2t}-e^{-3t}\\-6e^{-2t}+6e^{-3t}&-2e^{-2t}+3e^{-3t}\end{pmatrix}$\par
+\kotae 上の行列。$t=1$ で1行め $(0.3064,\ 0.0855)$、2行め $(-0.5133,\ -0.1213)$（$t=0$ で $I$ になる）
+\end{reidai}
+
+\begin{jibun}
+$A$ が1行め $(0,\ 1)$、2行め $(-3,\ -4)$（固有値 $-1$・$-3$）の $e^{At}$ を、$(sI-A)^{-1}$ を逆変換して求めましょう。
+\bkjans{$(sI-A)^{-1}=\frac{1}{(s+1)(s+3)}$ に1行め $(s+4,\ 1)$、2行め $(-3,\ s)$。1行め1列め $1.5e^{-t}-0.5e^{-3t}$、1行め2列め $0.5e^{-t}-0.5e^{-3t}$、2行め1列め $-1.5e^{-t}+1.5e^{-3t}$、2行め2列め $-0.5e^{-t}+1.5e^{-3t}$。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[一定の力を入れる]
+はじめ止まっている車A（$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -3)$、$B=(0,\ 1)$ のたて書き）に、$t=0$ から $u=1$ を入れ続けます。位置 $x(t)$ と、$t=1$ の値、最後に落ち着く値を求めましょう。\par
+\kangaekata \kixlbaai{入れるもの $u$ がある}{9-11}{G}\par
+\kixldan{1}\enspace $\vec x$ は「$e^{At}\vec x_0$ ＋ 入れた分」。ラプラス変換では、次の形。\par
+\kixlline{$\vec X=(sI-A)^{-1}(\vec x_0+BU)$}
+\kixlnaosu{3}\enspace $\vec x_0=\vec0$、$U=\frac1s$。1行めを部分分数に分け、表9-7で逆に引く。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 $X=\dfrac{1}{(s+1)(s+2)}\times\dfrac1s=\dfrac{1}{s(s+1)(s+2)}$\par
+\kixla $=\dfrac{1/2}{s}-\dfrac{1}{s+1}+\dfrac{1/2}{s+2}$\quad （$s=0$、$-1$、$-2$ を代入）\par
+\kixla $x=\frac12-e^{-t}+\frac12e^{-2t}$、$x(1)=0.5-0.3679+0.0677=0.1998$\par
+\kotae $x=\frac12-e^{-t}+\frac12e^{-2t}$。$x(1)=0.200$、最後は $\frac12$
+\end{reidai}
+
+\begin{jibun}
+はじめ止まっている $A$（1行め $(0,\ 1)$、2行め $(-6,\ -5)$）、$B=(0,\ 1)$ のたて書きの式に、$u=1$ を入れ続けます。$x(t)$、$x(1)$、最後の値を求めましょう。
+\bkjans{$X=\frac{1}{s(s+2)(s+3)}=\frac{1/6}{s}-\frac{1/2}{s+2}+\frac{1/3}{s+3}$。$x=\frac16-\frac12e^{-2t}+\frac13e^{-3t}$。$x(1)=0.116$、最後は $\frac16$。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[3つの点の熱]
+長さ \qty{0.04}{m} の棒を \qty{0.01}{m} ずつに区切った中の3つの点の温度は、$\dot{\vec T}=A\vec T$（$A$ は1行め $(-2,\ 1,\ 0)$、2行め $(1,\ -2,\ 1)$、3行め $(0,\ 1,\ -2)$、1/s）にしたがいます（⑫と同じ $\frac{\alpha}{\Delta x^2}=1$）。はじめどこも100\,℃のとき、1秒後の温度と、固有値を Python で求めましょう。\par
+\kangaekata \kixlbaai{3×3で、コンピュータの数値でよい}{9-11}{H}\par
+\kixldan{1}\enspace $\vec T(t)=e^{At}\vec T_0$。\par
+\kixldan{3}\enspace 3×3なので、\texttt{expm} と \texttt{eigvalsh} で数値を出す。\par
+\shiki 次のプログラムで計算する。\par
+\begin{bkcode}[Python]
+import numpy as np
+from scipy.linalg import expm
+A = np.array([[-2, 1, 0],
+              [1, -2, 1],
+              [0, 1, -2]])               \# 3つの点の熱の行列
+print(np.linalg.eigvalsh(A).round(3))  \# 固有値
+print((expm(A*1.0) @ [100, 100, 100]).round(2))  \# 1秒後
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-3.414 -2.    -0.586]
+[48.   66.51 48.  ]
+\end{bkcodeout}
+\kotae 1秒後に48.00\,℃、66.51\,℃、48.00\,℃。固有値は $-3.414$、$-2$、$-0.586$（すべて負なので落ち着く。いちばん遅い $-0.586$ の固有ベクトルは $(1,\ 1.414,\ 1)$ で $\sin$ の形）
+\end{reidai}
+
+\begin{jibun}
+例題9の3つの点で、はじめ $(0,\ 100,\ 0)$\,℃（まん中だけ熱い）のとき、例題9のプログラムの \texttt{[100, 100, 100]} を書きかえて、1秒後の温度を求めましょう。
+\bkjans{\texttt{[0, 100, 0]} にかえる。1秒後 $(18.52,\ 29.48,\ 18.52)$\,℃。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[落ち着くかの判定]
+次の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。\par
+（1）手のひらの棒（1行め $(0,\ 1)$、2行め $(4,\ 0)$）\par
+（2）棒を立たせた $A-BK$（1行め $(0,\ 1)$、2行め $(-4,\ -4)$）\par
+（3）ばね（1行め $(0,\ 1)$、2行め $(-1,\ 0)$）\par
+\kangaekata \kixlbaai{落ち着くかどうかだけ}{9-11}{I}\par
+\kixldan{1}\enspace 「落ち着くか」は、$e^{At}$ が0の行列に近づくか。\par
+\kixldan{3}\enspace $e^{At}$ は作らず、固有値の実部だけを見る。\par
+\shiki\kixls\hangindent=2.6\zw\hangafter=1 （1）$\lambda^2-4=0$、$\lambda=\pm2$\par
+\kixla （2）$\lambda^2+4\lambda+4=0$、$\lambda=-2$（重解）\par
+\kixla （3）$\lambda^2+1=0$、$\lambda=\pm j$（実部0）\par
+\kotae （1）$+2$ があるので落ち着かない（たおれる）
+\kixla （2）実部がすべて負なので落ち着く
+\kixla （3）実部が0で虚部があるので、ゆれ続ける（落ち着かない）
+\end{reidai}
+
+\begin{jibun}
+次の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。（1）$A$ は1行め $(0,\ 1)$、2行め $(-5,\ -2)$。（2）$A$ は1行め $(0,\ 1)$、2行め $(2,\ -1)$。（3）$A$ は1行め $(0,\ 1)$、2行め $(-6,\ -5)$。
+\bkjans{（1）$-1\pm2j$ で落ち着く。\newline （2）$\lambda^2+\lambda-2=(\lambda-1)(\lambda+2)=0$ で $\lambda=1$、$-2$。1があるので落ち着かない。\newline （3）$-2$、$-3$ で落ち着く。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① $e^{At}$ を、成分ごとに $e$ にする}
+\bkng{車A の $e^{At}$ は、1行め $(e^{0},\ e^{t})$、2行め $(e^{-2t},\ e^{-3t})$}
+\bkok{$e^{At}$ は名前。行列の計算に直す（車A は対角化して $Pe^{Dt}P^{-1}$）}
+\[ \kixlN{e^{At}}\neq\text{（成分ごとの $e$）},\qquad \kixlN{e^{At}}=\kixlS{Pe^{Dt}P^{-1}} \]
+成分ごとに $e$ にしてよいのは、$A$ が対角のとき（場合 A）だけです。$t=0$ を入れてみると、まちがいに気づけます。上の × の行列は、$t=0$ で単位行列 $I$ になりません（右上が $e^0=1$）。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixlEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② $P$ と $P^{-1}$ の順番を逆にする}
+\raggedright\bkng{$e^{At}=P^{-1}e^{Dt}P$}
+\bkok{$e^{At}=Pe^{Dt}P^{-1}$}
+右から読みます。$P^{-1}$ で「ななめの物差し」に直し、$e^{Dt}$ で変化させ、$P$ でふつうの座標にもどします（7-9）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ $e^{A+B}=e^Ae^B$ と思う}
+\raggedright\bkng{どんな $A$・$B$ でも $e^{A+B}=e^Ae^B$}
+\bkok{$AB=BA$ ならよい。$AB\neq BA$ だと、ふつうはなり立たない}
+せいかくに言うと①の例では、$e^Ae^B$ の1行めは $(2,\ 1)$、$e^{A+B}$ の1行めは $(1.543,\ 1.175)$ です。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixlEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 実部が0でも「落ち着く」と思う}
+\raggedright\bkng{ばね（$\pm j$）は、正の実部がないので落ち着く}
+\bkok{実部0は大きさが変わらない（虚部があればゆれ続ける）。落ち着くのは、実部が\textbf{すべて負}のとき}
+ばねの $e^{At}$ は回転で、大きさが小さくなりません（⑧）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 重解で $te^{\lambda t}$ を忘れる}
+\raggedright\bkng{固有値 $-1$ の重解なので、$e^{At}$ は $e^{-t}$ の何倍か}
+\bkok{$\frac{1}{(s+1)^2}$ の項から $te^{-t}$ が出る}
+例題6の $e^{At}$ には、$e^{-t}$ のほかに $te^{-t}$ が入っています（6-12 の重解と同じ）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑥ 連続の条件と、1歩の行列の条件を取りちがえる}
+\bkng{$A-BK$ の固有値 $-2$ は大きさが2で1より大きいので、棒はたおれる}
+\bkok{$\dot{\vec x}=(A-BK)\vec x$ では実部（$-2<0$）を見る。1歩の行列 $e^{(A-BK)\Delta t}$ の固有値 $e^{-2\Delta t}$ なら大きさ（1より小さい）を見る}
+2つの条件は $|e^{\lambda\Delta t}|=e^{\sigma\Delta t}$ でつながっています（⑦）。どちらの式の固有値なのかを、いつも確かめましょう。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixlbox{コンピュータの中の1歩：$e^{A\Delta t}$}
+\noindent\begin{minipage}[c]{0.68\linewidth}
+\raggedright
+ドローンや工場の機械をコンピュータで制御するときや、車・ロボットの動きをコンピュータで試すとき（シミュレーション）には、$\Delta t$ ごとの1歩の行列が必要です。オイラー法の $I+A\Delta t$ より正確な $e^{A\Delta t}$ を、はじめに1回だけ計算しておけば、あとはかけ算をくり返すだけで、正しい動きを追えます。固有値が単位円の中にあるかどうかで、計算が落ち着くかもわかります（⑦）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixlk in {0,1,2,3,4} {\fill[kixlW] ({\kixlk*6},{14*exp(-0.35*\kixlk)}) circle (1);}
+  \draw[kixlW, line width=0.6pt] (0,14) -- (6,{14*exp(-0.35)}) -- (12,{14*exp(-0.7)}) -- (18,{14*exp(-1.05)}) -- (24,{14*exp(-1.4)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.5mm]}] (-2,0) -- (28,0);
+  \node[font=\footnotesize, anchor=north, align=center] at (12,-1) {$\Delta t$ ごとに\\$e^{A\Delta t}$ をかける};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixlbox{ビルや橋のゆれ：固有ベクトルごとのゆれ（モード）}
+ビルの各階の位置と速度を並べた大きな状態方程式でも、$e^{At}$ は固有ベクトルごとに $e^{\lambda t}$ で変わる動きの和です。固有ベクトルの形を「ゆれのモード」とよび、地震のときにどの形のゆれが強く出るか、どれだけ速く小さくなるか（固有値の実部）を調べて、建物を設計します（7-9 のモード解析、物理 波-3）。
+\par\vspace{4pt}
+\kixlbox{送電線・アンテナ線}
+送電線や、テレビのアンテナにつなぐ同軸ケーブルは、⑨の四端子定数 $e^{M\ell}$ で、入口と出口の電圧・電流の関係を表します。本物の線では $z$・$y$ に $j\omega L$・$j\omega C$ が入り、$\gamma$ が複素数になるので、$\cosh$・$\sinh$ が「回る」形になって、電圧の波が線を伝わるようすが表れます（物理 電-13）。
+\end{butsuri}
+
+\begin{column}{行列の指数関数の「19のあやしい計算方法」}
+$e^{At}$ を数値で計算するのは、意外にむずかしい問題です。たし算の形をそのまま使うと、$t$ が大きいとき、大きな数どうしの打ち消しあいで、計算の誤差がふくらむことがあります。1978年、数値計算の研究者クリーブ・モラーとチャールズ・ヴァン・ローンは、『行列の指数関数を計算する19のあやしい方法』という題の論文で、いろいろな方法の長所と弱点をくらべました。25年後には、その続きの論文も書かれています。いまの \texttt{expm} のような命令は、こうした研究をもとに、$t$ をいったん小さく分けてから計算し、あとで何回も2乗してもとにもどす、という工夫で、正確な値を出しています。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $\dot x_1=-4x_1$、$\dot x_2=-0.1x_2$ で、はじめ $(5,\ 10)$ です。$e^{At}$ と、$t=1$ の状態を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$e^{At}$ は対角が $e^{-4t}$・$e^{-0.1t}$、ほかは0。$\vec x=(5e^{-4t},\ 10e^{-0.1t})$。$t=1$ で $(0.0916,\ 9.048)$。}
+
+\bkproblem 6-14 の水そう（例題2と同じ $A$）で、はじめ $(20,\ 0)$ のときの5分後の水位を求めましょう\mbox{（\bkreidairef{2}）}（$e^{-1}=0.3679$）。
+\bkpans{$(10+10e^{-0.2t},\ 10-10e^{-0.2t})$ に $t=5$。$(13.68,\ 6.32)$\,cm。}
+
+\bkproblem $\dot x=v$、$\dot v=0$ の台車で、はじめ $x=\qty{1}{m}$、$v=\qty{-0.5}{m/s}$ です。$e^{At}$ を使って、4秒後の状態を求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$e^{At}$ は1行め $(1,\ t)$、2行め $(0,\ 1)$。$\vec x=(1-0.5t,\ -0.5)$。4秒後 $(-1,\ -0.5)$。}
+
+\bkproblem $z=\qty{1}{\ohm/km}$、$y=\qty{1}{S/km}$ の線（7-11 と同じ数）で、長さ $\ell=\qty{2}{km}$ の $e^{M\ell}$ を求めましょう（$\cosh2=3.762$、$\sinh2=3.627$）\mbox{（\bkreidairef{5}）}。
+\bkpans{$\gamma=1$、$Z_0=1$、$\gamma\ell=2$。1行め $(3.762,\ 3.627)$、2行め $(3.627,\ 3.762)$。}
+
+\bkproblem 次の $\dot{\vec x}=A\vec x$ は落ち着くでしょうか。（1）$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -2)$。（2）$A$ は1行め $(0,\ 1)$、2行め $(-4,\ 0)$。（3）$A$ は1行め $(0,\ 1)$、2行め $(1,\ 0)$\mbox{（\bkreidairef{10}）}。
+\bkpans{（1）$\lambda^2+2\lambda+2=0$、$-1\pm j$。落ち着く。\newline （2）$\lambda^2+4=0$、$\pm2j$。ゆれ続ける（落ち着かない）。\newline （3）$\lambda^2-1=0$、$\pm1$。落ち着かない。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem $A$ が1行め $(0,\ 1)$、2行め $(-2,\ -2)$ の $e^{At}$ を求め、はじめ $(1,\ 0)$ の $x(t)$ と $x(1)$ を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\lambda=-1\pm j$、$\sigma=-1$、$\omega=1$。$N=A+I$ は1行め $(1,\ 1)$、2行め $(-2,\ -1)$、$N^2=-I$。$e^{At}=e^{-t}(\cos t\,I+\sin t\,N)$。$x=e^{-t}(\cos t+\sin t)$、$x(1)=0.508$。}
+
+\bkproblem $A$ が1行め $(0,\ 1)$、2行め $(-9,\ -6)$（固有値 $-3$ の重解）の $e^{At}$ を、$(sI-A)^{-1}$ で求め、はじめ $(1,\ 0)$ の $x(t)$ と $x(1)$ を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\det=(s+3)^2$。$(sI-A)^{-1}$ は $\frac{1}{(s+3)^2}$ に1行め $(s+6,\ 1)$、2行め $(-9,\ s)$。$\frac{s+6}{(s+3)^2}=\frac{1}{s+3}+\frac{3}{(s+3)^2}$。$e^{At}=e^{-3t}$ に1行め $(1+3t,\ t)$、2行め $(-9t,\ 1-3t)$。$x=(1+3t)e^{-3t}$、$x(1)=4e^{-3}=0.199$。}
+
+\bkproblem $A$ が1行め $(0,\ 1)$、2行め $(-8,\ -6)$（固有値 $-2$・$-4$）の $e^{At}$ を、$(sI-A)^{-1}$ で求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$(sI-A)^{-1}=\frac{1}{(s+2)(s+4)}$ に1行め $(s+6,\ 1)$、2行め $(-8,\ s)$。1行め1列め $2e^{-2t}-e^{-4t}$、1行め2列め $0.5e^{-2t}-0.5e^{-4t}$、2行め1列め $-4e^{-2t}+4e^{-4t}$、2行め2列め $-e^{-2t}+2e^{-4t}$。}
+
+\bkproblem はじめ止まっている車A に、$t=0$ から $u=2$ を入れ続けます。位置 $x(t)$ と $x(1)$、最後の値を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$X=\frac{2}{s(s+1)(s+2)}=\frac1s-\frac{2}{s+1}+\frac{1}{s+2}$。$x=1-2e^{-t}+e^{-2t}$。$x(1)=0.400$、最後は1（例題8の2倍）。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item オイラー法のくり返しを表計算で計算し、行列の指数関数 $e^{At}$ に近づくのを確かめられる。\bkfurref{bk:9-11:kiwami}
+\item 対角の行列と対角化で $e^{At}$ を計算し、状態方程式を解ける。\bkfurref{bk:9-11:taikakuka}
+\item 場合分けの表で $e^{At}$ の求め方を選び、固有値で落ち着くかを判定できる。\bkfurref{bk:9-11:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{熱の行列の固有ベクトルがフーリエの $\sin$ だったなんて、びっくり。次は、フーリエとラプラスの使いみちを見に行こう。}

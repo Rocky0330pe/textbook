@@ -1,0 +1,1480 @@
+%% 9-7 ラプラス変換で微分方程式を解く（第15回：組 V9-5。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md）で書く。場合分けの表9-7（A〜I）と流れ図。
+%% ほかの巻との約束：3-8 の 1/((s+1)(s+2))=1/(s+1)−1/(s+2)→e^{-t}−e^{-2t}「全体は、その差です」、
+%%   車A・車B（3-10・6-12・7-8：2e^{-t}−e^{-2t}、e^{-t}(cos2t+½sin2t)）、6-12「同じ s」、6-4 熱電対（τ=30 s、rτ=1 ℃）、
+%%   6-4 の RC（10 V・τ=2 s）、6-12 の RLC（10 mH・1 µF・20 Ω：17.29 V、72.9 %）、6-13 の強制振動と共振（6-13:664 の約束）。
+%%   数はすべて Python で検算した（scratchpad/v9-5/check97.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixh は章ごとに置きかえる =====
+\colorlet{kixhNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixhSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixhSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixh dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixh dan1/.style={kixh dan, draw=kixhNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixh dan2/.style={kixh dan, draw=kixhSc, fill=kixhSb, text=bkInk},
+  kixh dan3/.style={kixh dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixh name/.style={draw=kixhNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixh seki/.style={draw=kixhSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixhSb},
+  kixh tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixh q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixh do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixh go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixh yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixh@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixhdan{1|2|3}
+\newcommand\kixhdan[1]{\tikz[baseline=(d.base)]\node[kixh dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixhnaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixhnaosu[1]{\tikz[baseline=(d.base)]\node[kixh dan2] (d) {\vphantom{あ}直す：\kixh@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixhop{1|2|3|4}
+\newcommand\kixhop[1]{\tikz[baseline=(d.base)]\node[kixh dan2] (d) {\vphantom{あ}\kixh@op{#1}};}
+% 段の見出し（本文で）  \kixhdanhead{1|2|3}{見出し}
+\newcommand\kixhdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixh dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixhcase{C}（′ は \kixhcase{A$'$}）
+\newcommand\kixhcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixhbaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixhbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixh@cases#3,\@nil）}
+\def\kixh@cases#1,#2\@nil{\kixhcase{#1}\ifx\relax#2\relax\else と\kixh@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixhN[1]{\tikz[baseline=(n.base)]\node[kixh name] (n) {$\displaystyle #1$};}
+\newcommand\kixhNt[1]{\tikz[baseline=(n.base)]{\node[kixh name] (n) {$\displaystyle #1$};\node[kixh tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixhS[1]{\tikz[baseline=(n.base)]\node[kixh seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixhSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixhSt[2]{\tikz[baseline=(n.base)]{\node[kixh seki] (n) {$\displaystyle #2$};\node[kixh tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixh@op{#1}};}}
+% 場合分けの表の題の帯  \kixhcasetitle{9-2}{題}
+\newcommand\kixhcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixhpic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixhpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixhx/\kixhy in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixhx-1},{\kixhy-1}) -- ({\kixhx+1},{\kixhy+1}) ({\kixhx-1},{\kixhy+1}) -- ({\kixhx+1},{\kixhy-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixhx/\kixhy in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixhx,\kixhy) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+%% ===== この章の部品（9-7）=====
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\kixhhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixhbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kixhline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixhframe[はば]{中身}
+\newcommand\kixhframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixha{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixhb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixhs{\rightskip=0pt plus 8em\relax}
+% 2つの世界の図の箱
+\tikzset{
+  kixh tw/.style={rectangle, draw=bkInk!70, line width=0.8pt, fill=white, rounded corners=1mm, font=\small, align=flush center, inner xsep=2mm, inner ysep=1.6mm, text=bkInk},
+  kixh sw/.style={rectangle, draw=\bkTT, line width=0.8pt, fill=bkTheme!8, rounded corners=1mm, font=\small, align=flush center, inner xsep=2mm, inner ysep=1.6mm, text=bkInk},
+  kixh step/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.6mm, align=flush center},
+}
+%% ===== 2つの世界の図の型（tools/kata9.md、組 V9-1）。頭文字 kixa → kixh =====
+\colorlet{kixhW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixhF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixhP}{bkRed!80!black}% s の世界の点（×）
+\pgfplotsset{
+  kixh base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixh wave/.style={kixh base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixh splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixh sig/.style={kixhW, line width=1.4pt, no markers, samples=241, smooth},
+  kixh part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth}}
+\tikzset{
+  kixh world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixh bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixh blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixhworlds[5][42mm]{%
+  \node[kixh world, draw=kixhW] (kixhL) at (23.5mm,#1) {#2};
+  \node[kixh world, draw=kixhF] (kixhR) at (99.5mm,#1) {#3};
+  \draw[kixh bridge] ([yshift=1.3mm, xshift=1.5mm]kixhL.east) -- node[kixh blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixhR.west);
+  \draw[kixh bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixhR.west) -- node[kixh blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixhL.east);}
+\newcommand\kixhpole[3][kixhP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\makeatother
+
+\bkchapter{9}{7}{ラプラス変換で\\微分方程式を解く}{\bklevel{5}}{ラプラス変換で微分方程式を解く}
+\bkmichishirube{3-8,3-10,6-2,6-4,6-12,6-13,9-5,9-6}{9-8,9-9,9-10,9-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 微分方程式を「変換する・わり算で解く・部分分数に分ける・表でもどす」の4つの手順で解く流れを、図とオイラー法の表で説明できる。
+\item \bklevel{4}\enspace 分母がちがう1次式のかけ算になる式を、部分分数に分けて、表を逆に引いて時間の関数にもどせる。
+\item \bklevel{5}\enspace 場合分けの表9-7を使って、重解・分母が0になる $s$ が複素数の式・入力のある式・おくれて始まる式・最後の値だけの場合も、もどし方を選んで計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+3-10・6-12 の車A（$\ddot x+3\dot x+2x=0$）と車B（$\ddot x+2\dot x+5x=0$）は、段差をこえたあと、高さのずれ $x(0)=1$、速さ $\dot x(0)=0$ から、もとの高さにもどります（車A はゆれずに、車B はゆれながら。図\ref{bk:9-7:fig-kyoku}）。6-12 では、$e^{st}$ を入れて $s$ を求め、最後に $A$、$B$ をはじめの値に合わせて答えを作りました。\par\vspace{4pt}
+\textbf{$e^{st}$ を入れたり、あとから $A$、$B$ を合わせたりしないで、表を引くだけで、この答えが出せるでしょうか。}
+\end{hatena}
+
+\noindent 9-5 で、微分を $s$ のかけ算に変える翻訳（ラプラス変換）を作り、9-6 で、よく使う関数の変換表を作りました。この章では、その2つを使って、微分方程式を解きます。
+
+翻訳すると、微分方程式は $s$ の世界の「ふつうの方程式」になり、わり算で解けます。でも、解けた $X(s)$ は $s$ の式なので、そのままでは動きがわかりません。$s$ の式を時間の世界へ\textbf{もどす}ことが必要です。この「もどす」の名前が\textbf{逆ラプラス変換}です。
+
+もどすときの実際の道具は、3-8 で学んだ\textbf{部分分数}と、9-6 の変換表を\textbf{逆に引く}ことの2つです。3-8 で「第9巻で機械の動きを調べるときに使う計算です」と予告した計算を、ここで使います。
+
+手順は多く見えますが、することは4つだけです。1回でわからなくても大丈夫。例題を1つずつ、表と流れ図を見ながら進めましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[オイラー法の表と、表を引いた答えをくらべよう]
+6-2 のオイラー法で、車A（$\ddot x+3\dot x+2x=0$、$x(0)=1$、$\dot x(0)=0$）を $\Delta t=\qty{0.1}{s}$ ずつ計算し、この章で作る答え $2e^{-t}-e^{-2t}$ とくらべます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列に時刻 $t$（0, 0.1, …, 1）を入れる。B2 に $x(0)=1$、C2 に速さ $\dot x(0)=0$ を入れる。
+\item D2 に加速度 \texttt{=-3*C2-2*B2} を入れる（式を $\ddot x=-3\dot x-2x$ と変形した）。
+\item B3 に \texttt{=B2+C2*0.1}、C3 に \texttt{=C2+D2*0.1} を入れ、D2 を D3 にコピーする。3行めを12行めまでコピーする。
+\item E2 に \texttt{=2*EXP(-A2)-EXP(-2*A2)} と入れて、E12 までコピーする。B列とE列を同じグラフにかく。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=46mm, xmin=0, xmax=3.3, ymin=0, ymax=1.12, xtick={1,2,3}, ytick={0.5,1}, xlabel={$t$（s）}, ylabel={$x$}]
+  \addplot[bkcurve, domain=0:3.1, samples=80] {2*exp(-x)-exp(-2*x)};
+  \addplot[only marks, mark=*, mark size=1.3pt, bkOrange!85!black] coordinates {(0,1.0000) (0.1,1.0000) (0.2,0.9800) (0.3,0.9460) (0.4,0.9026) (0.5,0.8533) (0.6,0.8007) (0.7,0.7469) (0.8,0.6932) (0.9,0.6406) (1,0.5900) (1.1,0.5417) (1.2,0.4961) (1.3,0.4534) (1.4,0.4136) (1.5,0.3766) (1.6,0.3425) (1.7,0.3110) (1.8,0.2822) (1.9,0.2558) (2,0.2316) (2.2,0.1896) (2.4,0.1548) (2.6,0.1262) (2.8,0.1027) (3,0.0835)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\raggedright
+線は表を引いた答え、点はオイラー法（表\ref{bk:9-7:tab-euler}）です。点は線のすぐ近くにならびます。$\Delta t$ を0.01にすると、$x(1)$ は0.5994 になり、0.6004 にもっと近づきます。
+
+E列の式 $2e^{-t}-e^{-2t}$ は、6-12 の答えと同じです。この章では、これを\textbf{表を引くだけで}作ります（④）。
+\end{minipage}
+
+\begin{bkcenter}
+\bksheet{5}{17}{%
+1 & $t$ & $x$（オイラー法） & 速さ $\dot x$ & 加速度 $\ddot x$ & $2e^{-t}-e^{-2t}$ \\
+2 & 0 & 1 & 0 & $-2$ & 1 \\
+3 & 0.1 & 1 & $-0.2$ & $-1.4$ & 0.9909 \\
+4 & 0.2 & 0.98 & $-0.34$ & $-0.94$ & 0.9671 \\
+5 & 0.3 & 0.946 & $-0.434$ & $-0.59$ & 0.9328 \\
+6 & 0.4 & 0.9026 & $-0.493$ & $-0.3262$ & 0.8913 \\
+7 & 0.5 & 0.8533 & $-0.5256$ & $-0.1297$ & 0.8452 \\
+8 & 0.6 & 0.8007 & $-0.5386$ & 0.0143 & 0.7964 \\
+9 & 0.7 & 0.7469 & $-0.5372$ & 0.1177 & 0.7466 \\
+10 & 0.8 & 0.6932 & $-0.5254$ & 0.1898 & 0.6968 \\
+11 & 0.9 & 0.6406 & $-0.5064$ & 0.2380 & 0.6478 \\
+12 & 1 & 0.5900 & $-0.4826$ & 0.2679 & 0.6004 \\}
+\bktabcaption{車Aの表（$\Delta t=\qty{0.1}{s}$）。オイラー法の $x(1)=0.5900$ と、表を引いた答えの0.6004 は、ほぼ同じ。}
+\label{bk:9-7:tab-euler}
+\end{bkcenter}
+
+
+\begin{omoidasou}
+\bkrecall{3-8}{部分分数分解：$\dfrac{1}{x(x+1)}=\dfrac{1}{x}-\dfrac{1}{x+1}$。係数は、分母をはらった式に $x=0$、$x=-1$ を代入すると決まる（数を代入する方法）。}
+\bkrecall{6-12}{車A の特性方程式 $s^2+3s+2=0$、$s=-1,\ -2$。はじめの値に合わせて $x=2e^{-t}-e^{-2t}$。}
+\bkrecall{9-5}{$\mathcal L[\dot x]=sX-x(0)$、$\mathcal L[\ddot x]=s^2X-sx(0)-\dot x(0)$（部分積分のはしの項）。小文字は時間の世界、大文字は $s$ の世界。}
+\bkrecall{9-6}{変換表：$1\to\dfrac1s$、$e^{-at}\to\dfrac{1}{s+a}$、$\sin\omega t\to\dfrac{\omega}{s^2+\omega^2}$、$\cos\omega t\to\dfrac{s}{s^2+\omega^2}$。$e^{-at}$ がかかると $s$ が $s+a$ にずれる。}
+\bkrecall{6-2}{オイラー法：次の値＝今の値＋変化の速さ×$\Delta t$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{翻訳して、解いて、分けて、もどす}{\bklevel{3}}
+
+\bksubsection{1}{4つの手順}
+
+\label{bk:9-7:tejun}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.82mm]
+  \fill[bkGray!10, rounded corners=2mm] (0,-62) rectangle (48,8);
+  \fill[bkTheme!5, rounded corners=2mm] (72,-62) rectangle (132,8);
+  \node[font=\sffamily\bfseries\small, text=bkInk] at (24,4) {時間の世界（$t$）};
+  \node[font=\sffamily\bfseries\small, text=\bkTT] at (102,4) {$s$ の世界};
+  \node[kixh tw, text width=38mm] (de) at (24,-9) {$\ddot x+3\dot x+2x=0$\\$x(0)=1$、$\dot x(0)=0$};
+  \node[kixh sw, text width=52mm] (se) at (102,-9) {$(s^2X-s)+3(sX-1)+2X=0$};
+  \node[kixh sw, text width=52mm] (sx) at (102,-28) {$X=\dfrac{s+3}{(s+1)(s+2)}$};
+  \node[kixh sw, text width=52mm] (sp) at (102,-49) {$X=\dfrac{2}{s+1}-\dfrac{1}{s+2}$};
+  \node[kixh tw, text width=38mm] (ans) at (24,-49) {$x=2e^{-t}-e^{-2t}$};
+  \draw[bk link] (de) -- node[kixh step, above=1mm, fill=none] {①変換する} (se);
+  \draw[bk link] (se) -- node[kixh step, right=1.5mm, fill=none] {②わり算で解く} (sx);
+  \draw[bk link] (sx) -- node[kixh step, right=1.5mm, fill=none] {③部分分数に分ける} (sp);
+  \draw[bk link] (sp) -- node[kixh step, above=1mm, fill=none] {④表でもどす} (ans);
+  \draw[bkGray, line width=0.9pt, dash pattern=on 3pt off 2pt, -{Stealth[length=2.2mm]}] (de) -- node[kixh step, fill=bkGray!10, align=center] {6-12 の道：\\$e^{st}$ を入れて、\\あとで $A$、$B$ を\\合わせる} (ans);
+\end{tikzpicture}
+\bkfigcaption{ラプラス変換で解く4つの手順（実線の矢印）。①と④は表を引くだけ、②はふつうの方程式、③は3-8 の部分分数。点線は 6-12 で通った道。}
+\label{bk:9-7:fig-tejun}
+\end{bkfigure}
+
+車A（$x(0)=1$、$\dot x(0)=0$）を例に、ラプラス変換で微分方程式を解く道すじを、図\ref{bk:9-7:fig-tejun}にかきました。左が時間の世界、右が $s$ の世界です。
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{変換する}：式の項を1つずつ、9-5 の辞書で $s$ の世界へ翻訳する。はじめの値もここで入る。
+\item \textbf{わり算で解く}：$X$ の1次方程式になるので、わり算で「$X=$分数の式」の形にする。
+\item \textbf{部分分数に分ける}：表にある形（$\tfrac{1}{s+a}$ など）の和に分ける（3-8）。
+\item \textbf{表でもどす}：1つずつ、表を逆に引いて時間の関数にもどし、たす。
+\end{enumerate}
+
+\kixhhead{なぜ、まわり道をするのか}
+時間の世界では、$x$ と、その微分 $\dot x$・$\ddot x$ がからみあっていて、ふつうのわり算では解けません。$s$ の世界では、微分が $s$ のかけ算に変わる（9-5）ので、$X$ についての\textbf{ふつうの1次方程式}になり、わり算1回で解けます。図\ref{bk:9-7:fig-tejun}は遠回りに見えますが、どの矢印も、表を引くか、ふつうの計算をするだけです。
+
+同じ考えは、3-12 の対数にもありました。大きな数のかけ算は、対数に直すとたし算になり、計算してから、もとの数にもどしました。「むずかしい計算は、やさしい世界に翻訳して行い、答えをもどす」のです。
+
+\bksubsection{2}{名前の段：$\mathcal L^{-1}$ の記号を読む}
+
+\label{bk:9-7:namae}④の「もどす」には、次の名前がついています。
+\kixhframe[110mm]{\Large $\mathcal L^{-1}[F(s)]=f(t)$\\[3pt]\normalsize\sffamily 「ラプラス変換すると $F(s)$ になる、時間の関数 $f(t)$」}
+これを\textbf{逆ラプラス変換}（ぎゃくラプラスへんかん）といいます。\bkidx{ぎゃくらぷらすへんかん}{逆ラプラス変換}
+
+\kixhdanhead{1}{記号を読む：どの $s$ の式を、時間の世界へもどすか}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何を}：かっこの中の $F(s)$ は、$s$ の世界の式です。
+\item \textbf{$-1$ の印}：「逆向き」の印です。逆関数 $f^{-1}$ や、逆行列 $A^{-1}$（7-5）と同じ印で、$1/\mathcal L$ という意味ではありません。
+\item \textbf{答え}：$\mathcal L[f(t)]=F(s)$ となる $f(t)$（$t\geqq0$ の関数）です。
+\end{enumerate}
+
+\kixhhead{名前は、まだ計算していない}
+9-6 までの $\mathcal L$ と同じく、$\mathcal L^{-1}$ も操作の\textbf{名前}です。専門書には、名前の上の式（$s$ を複素数として積分する式）がのっていますが、この本では使いません（専門書をのぞいてみようで名前だけ）。実際は、次の2つの道具に\textbf{直して}求めます。
+\[ \kixhNt{\mathcal L^{-1}\Bigl[\frac{s+3}{(s+1)(s+2)}\Bigr]}=\kixhSt{3}{\mathcal L^{-1}\Bigl[\frac{2}{s+1}\Bigr]-\mathcal L^{-1}\Bigl[\frac{1}{s+2}\Bigr]} \]
+\[ =\kixhSt{2}{2e^{-t}-e^{-2t}} \]
+左の点線の枠は、まだ名前のままです。1行めで\textbf{部分分数}に分け、2行めで1つずつ\textbf{表を引いて}答えを出しました。
+
+\kixhhead{なぜ、項ごとにもどしてよいのか}
+ラプラス変換は線形でした（9-5）。$\mathcal L[af+bg]=a\mathcal L[f]+b\mathcal L[g]$ なので、逆向きも同じで、
+\kixhline{$\mathcal L^{-1}[aF+bG]=a\,\mathcal L^{-1}[F]+b\,\mathcal L^{-1}[G]$}
+です。だから、和や差に分けておけば、1つずつもどして、たせばよいのです。でも、\textbf{かけ算のままでは、1つずつもどせません}（まちがえやすいところ①）。部分分数に分けるのは、かけ算を、たし算に変えるためです。
+
+\kixhhead{逆に引く表}
+9-6 の変換表（$f(t)\to F(s)$）を、右の列から左へ逆向きに引きます（表\ref{bk:9-7:tab-gyaku}）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,8mm] Q[c,m,40mm] Q[c,m,36mm] Q[l,m,36mm]}, row{2-Z}={font=\small}, rowsep=0.6pt, colsep=3pt}
+行 & $s$ の世界 $F(s)$ & 時間の世界 $f(t)$ & 作った所 \\
+1 & $\dfrac{1}{s}$ & $1$ & 9-5 \\
+2 & $\dfrac{1}{s^2}$ & $t$ & 9-6 \\
+3 & $\dfrac{1}{s+a}$ & $e^{-at}$ & 9-5 \\
+4 & $\dfrac{1}{(s+a)^2}$ & $te^{-at}$ & 9-6 \\
+5 & $\dfrac{\omega}{s^2+\omega^2}$ & $\sin\omega t$ & 9-6 \\
+6 & $\dfrac{s}{s^2+\omega^2}$ & $\cos\omega t$ & 9-6 \\
+7 & $\dfrac{\omega}{(s+a)^2+\omega^2}$ & $e^{-at}\sin\omega t$ & 9-6（$s$ のずらし） \\
+8 & $\dfrac{s+a}{(s+a)^2+\omega^2}$ & $e^{-at}\cos\omega t$ & 9-6（$s$ のずらし） \\
+9 & $\dfrac{2\omega s}{(s^2+\omega^2)^2}$ & $t\sin\omega t$ & 9-6（$t$ をかける） \\
+10 & $1$ & $\delta(t)$ & 9-6 \\
+11 & $e^{-st_0}F(s)$ & $f(t-t_0)$（$t\geqq t_0$ で） & 9-6（時間のずらし） \\
+\end{bktable}
+\bktabcaption{逆に引く表（9-6 の変換表から）。分子もふくめて形をぴったり合わせて引く。定数倍は、外に出してから引く。行11は、$t<t_0$ では0。}
+\label{bk:9-7:tab-gyaku}
+\end{bkcenter}
+
+\begin{seikaku}
+\kixhbox{もどした答えは、1つに決まる}
+表を逆に引くとき、「同じ $F(s)$ になる、別の $f(t)$ があったら困る」と思うかもしれません。$t\geqq0$ で連続な関数なら、ラプラス変換が同じになる関数は1つしかないことが知られています（レルヒの定理）。だから、表を逆に引いて見つけた関数が、ただ1つの答えです。なお、ラプラス変換は $t\geqq0$ の値だけで決まるので、もどした答えも $t\geqq0$ の所だけを表します。
+\end{seikaku}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 逆ラプラス変換 $\mathcal L^{-1}[F(s)]$ は、「ラプラス変換すると $F(s)$ になる時間の関数」の名前。$-1$ は逆向きの印。
+\item 実際は、部分分数で表の形の和に分け、1つずつ表を逆に引いて、たす。
+\end{itemize}
+\end{taisetsu}
+
+
+
+\bkstage{te}{手でわかる}{部分分数に分けて、表でもどす}{\bklevel{4}}
+
+\bksubsection{3}{3-8 の約束：全体は、その差}
+
+\label{bk:9-7:sa}3-8 の物理・工学ではこう使うでは、「$\dfrac{1}{(s+1)(s+2)}$ のままでは動きがわかりませんが、分けると、1つずつは表で引ける形で、『すぐ落ち着く動き』にもどせます。全体は、その差です（9-7）」と書きました。ここで、その約束を果たします。
+
+\kixhhead{この式は、どんな動きか}
+車A が、止まった高さ（$x(0)=0$）にいるとき、下から速さ1でつき上げられた（$\dot x(0)=1$）とします。①で変換すると、
+\begin{bkhenkei}[0.56]
+\ddot x+3\dot x+2x=0 & 問題の式（$x(0)=0$、$\dot x(0)=1$） \\
+(s^2X-s\times0-1)+3(sX-0)+2X=0 & 項ごとに変換（9-5 の微分の行） \\
+(s^2+3s+2)X=1 & $X$ の項をまとめ、$-1$ を右へ \\
+X=\frac{1}{(s+1)(s+2)} & $s^2+3s+2$ でわり、因数分解 \\
+\end{bkhenkei}
+3-8 の式は、車A をつき上げたときの動きだったのです。
+
+\kixhdanhead{2}{部分分数に直す：数を代入する方法}
+\kixhline{$\dfrac{1}{(s+1)(s+2)}=\dfrac{A}{s+1}+\dfrac{B}{s+2}$}
+とおき、両辺に $(s+1)(s+2)$ をかけて分母をはらいます（3-8 の道具9）。
+\begin{bkhenkei}[0.5]
+1=A(s+2)+B(s+1) & 両辺に $(s+1)(s+2)$ をかけた \\
+1=A\times1+B\times0,\quad A=1 & $s=-1$ を入れた。$B$ の項が消える \\
+1=A\times0+B\times(-1),\quad B=-1 & $s=-2$ を入れた。$A$ の項が消える \\
+\end{bkhenkei}
+$s=-1$ を入れるのは、$(s+1)$ が0になって、$B$ の項が消えるからです。分母が0になる $s$ を、1つずつ入れていきます（この $s$ に、9-9 で「極」と名前をつけます）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\Large, inner sep=0.8mm, fill=bkOrange!35, rounded corners=0.8mm] (d1) at (10,-6) {$(s+1)$};
+  \node[font=\Large, inner sep=0.8mm] (d2) at (30,-6) {$(s+2)$};
+  \draw[bkInk, line width=0.6pt] (0,-1.2) -- (40,-1.2);
+  \node[font=\Large] at (20,4) {$1$};
+  \node[font=\footnotesize, text=bkInk, anchor=north] at (10,-11.5) {指でかくす};
+  \draw[bk link] (43,-1.2) -- node[bk link label, above, font=\sffamily\footnotesize] {残りに $s=-1$} (68,-1.2);
+  \node[font=\Large, anchor=west] (r) at (71,-1.2) {$\dfrac{1}{-1+2}=1$};
+  \node[font=\small, anchor=north] at (r.south) {これが $A$（$\tfrac{1}{s+1}$ の係数）};
+\end{tikzpicture}
+\bkfigcaption{かくす方法。$(s+1)$ を指でかくし、残りの式に、かくした所が0になる $s=-1$ を入れると、$A$ が出る。$(s+2)$ をかくして $s=-2$ を入れると $B=\frac{1}{-2+1}=-1$。}
+\label{bk:9-7:fig-kakusu}
+\end{bkfigure}
+
+上の計算は、もっと短くできます。両辺に $(s+1)$ だけをかけると、
+\kixhline{$\dfrac{1}{s+2}=A+\dfrac{B(s+1)}{s+2}$}
+です。ここに $s=-1$ を入れると、右の項が消えて、$A=1/(-1+2)=1$ です。これは、図\ref{bk:9-7:fig-kakusu}のように、もとの式の $(s+1)$ を指でかくして、残りに $s=-1$ を入れたのと同じです。この本では「\textbf{かくす方法}」とよびます。
+
+\kixhhead{表でもどす}
+\kixhline{$X=\dfrac{1}{s+1}-\dfrac{1}{s+2}$}
+表\ref{bk:9-7:tab-gyaku}の行3で、$\dfrac{1}{s+1}\to e^{-t}$、$\dfrac{1}{s+2}\to e^{-2t}$ です。
+\kixhframe[100mm]{\large $x=e^{-t}-e^{-2t}$}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=54mm, xmin=0, xmax=4.4, ymin=0, ymax=1.05, xtick={1,2,3,4}, ytick={0.25,0.5,1}, xlabel={$t$}, grid=none]
+  \addplot[bkBlue, line width=1.3pt, domain=0:4.1] {exp(-x)};
+  \addplot[bkGreen!70!black, line width=1.3pt, dash pattern=on 4pt off 1.5pt, domain=0:4.1] {exp(-2*x)};
+  \addplot[bkRed, line width=1.7pt, domain=0:4.1] {exp(-x)-exp(-2*x)};
+  \draw[bkInk, line width=0.5pt, dash pattern=on 1pt off 1pt] (axis cs:0.693,0) -- (axis cs:0.693,0.25);
+  \draw[bkInk, line width=0.4pt] (axis cs:1.95,0.62) -- (axis cs:1.2,0.301);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.95,0.62) {青：$e^{-t}$};
+  \draw[bkInk, line width=0.4pt] (axis cs:1.05,0.92) -- (axis cs:0.35,0.497);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.05,0.92) {緑の点線：$e^{-2t}$};
+  \draw[bkInk, line width=0.4pt] (axis cs:2.4,0.36) -- (axis cs:1.8,0.138);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:2.4,0.36) {赤：差};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\raggedright
+はじめは $e^{-t}$ も $e^{-2t}$ も1なので、差は0です（$x(0)=0$）。$e^{-2t}$ のほうが速くへるので差が開き、山をこえたあとは、ゆっくりへる $e^{-t}$ だけが残って、0にもどります。
+
+山の時刻は、$\dot x=-e^{-t}+2e^{-2t}=0$ から $e^{-t}=\tfrac12$、$t=\ln2\approx0.69$ です。山の高さは $\tfrac12-\tfrac14=0.25$ です（点線）。
+\end{minipage}
+\par\vspace{4pt}
+3-8 の約束どおり、「すぐ落ち着く動き」$e^{-t}$ と $e^{-2t}$ の\textbf{差}が、全体の動きでした。
+
+\bksubsection{4}{車A を、表を引くだけで解く}
+
+\label{bk:9-7:kurumaA}はてな？の車A（$x(0)=1$、$\dot x(0)=0$）を、4つの手順で解きます。
+
+\kixhhead{① 変換する、② わり算で解く}
+\begin{bkhenkei}[0.56]
+\ddot x+3\dot x+2x=0 & 問題の式（$x(0)=1$、$\dot x(0)=0$） \\
+(s^2X-s\times1-0)+3(sX-1)+2X=0 & 項ごとに変換。はじめの値を入れた \\
+s^2X+3sX+2X-s-3=0 & かっこをはずした \\
+(s^2+3s+2)X=s+3 & $X$ の項を左に、残りを右へ \\
+X=\frac{s+3}{(s+1)(s+2)} & わり算。分母を因数分解（3-10） \\
+\end{bkhenkei}
+
+\kixhhead{③ 部分分数に分ける}
+\kixhline{$\dfrac{s+3}{(s+1)(s+2)}=\dfrac{A}{s+1}+\dfrac{B}{s+2}$}
+とおいて、かくす方法で $A$、$B$ を求めます。
+\begin{bkhenkei}[0.5]
+A=\frac{s+3}{s+2}\bigg|_{s=-1}=\frac{-1+3}{-1+2}=2 & $(s+1)$ をかくして $s=-1$ \\
+B=\frac{s+3}{s+1}\bigg|_{s=-2}=\frac{-2+3}{-2+1}=-1 & $(s+2)$ をかくして $s=-2$ \\
+X=\frac{2}{s+1}-\frac{1}{s+2} & 部分分数に分けた \\
+\end{bkhenkei}
+「$\big|_{s=-1}$」は、「$s=-1$ を入れる」という印です。
+
+\kixhhead{④ 表でもどす}
+表\ref{bk:9-7:tab-gyaku}の行3を2回使って、
+\kixhframe[100mm]{\large $x=2e^{-t}-e^{-2t}$}
+6-12 の答え、やってみようのE列と同じです。
+
+\kixhhead{答えを確かめる}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item $t=0$ を入れる：$x(0)=2-1=1$。はじめの高さと合う。
+\item 微分して $t=0$：$\dot x=-2e^{-t}+2e^{-2t}$ で、$\dot x(0)=-2+2=0$。はじめの速さと合う。
+\item 最後の値：$t$ が大きいと、どちらの項も0に近づき、$x\to0$（もとの高さにもどる）。
+\end{itemize}
+6-12 のように $A$、$B$ をあとから決める計算は、どこにもありませんでした。はじめの値は、①の変換のときに、もう入っていたのです。
+\par\noindent\bkhatenaref の答え：出せます。車A は表を引くだけで $2e^{-t}-e^{-2t}$ になりました。車B も、⑨で同じ4つの手順で解きます。
+
+\bksubsection{5}{はじめの値は分子に、動き方は分母に}
+
+\label{bk:9-7:bunbo}③と④でもどした2つの式を、ならべてみます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,40mm] Q[c,m,44mm] Q[c,m,32mm]}, row{2-Z}={font=\small}, rowsep=3pt}
+はじめの値 & $X(s)$ & $x(t)$ \\
+$x(0)=0$、$\dot x(0)=1$（③） & $\dfrac{1}{s^2+3s+2}$ & $e^{-t}-e^{-2t}$ \\
+$x(0)=1$、$\dot x(0)=0$（④） & $\dfrac{s+3}{s^2+3s+2}$ & $2e^{-t}-e^{-2t}$ \\
+$x(0)=1$、$\dot x(0)=-2$ & $\dfrac{s+1}{s^2+3s+2}=\dfrac{1}{s+2}$ & $e^{-2t}$ \\
+\end{bktable}
+\bktabcaption{車A で、はじめの値だけを変えた。分母は同じで、分子だけが変わる。3行めの分子は $(s+3)\times1+(-2)=s+1$ で、分母の $s+1$ と約分できる。}
+\end{bkcenter}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item \textbf{分母} $s^2+3s+2$ は、はじめの値によらず同じです。これは 6-12 の特性方程式の左辺そのものです。6-12 で「第9巻のラプラス変換でも同じ $s$ を使います」と書いたのは、このためです。分母が0になる $s=-1$、$-2$ が、答えに出てくる $e^{-t}$、$e^{-2t}$ を決めます。
+\item \textbf{分子}は、はじめの値で変わります。分子が変わると、$e^{-t}$、$e^{-2t}$ の係数（1と $-1$、2と $-1$）が変わります。3行めのように、分子が分母の $s+1$ と約分されると、$e^{-t}$ の項が消えて、$e^{-2t}$ だけが残ります。
+\end{itemize}
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=44mm, xmin=0, xmax=5.2, ymin=0, ymax=1.12, xtick={1,2,3,4,5}, ytick={0.25,0.5,1}, xlabel={$t$}, ylabel={$x$}, legend style={at={(0.97,0.95)}, anchor=north east, font=\footnotesize, draw=bkInk!40, fill=white, row sep=1pt}, legend cell align=left]
+  \addplot[bkBlue, line width=1.6pt, domain=0:5] {2*exp(-x)-exp(-2*x)};
+  \addlegendentry{$2e^{-t}-e^{-2t}$（④）}
+  \addplot[bkGreen!70!black, line width=1.6pt, dash pattern=on 1.5pt off 1.5pt, domain=0:5] {exp(-x)-exp(-2*x)};
+  \addlegendentry{$e^{-t}-e^{-2t}$（③）}
+  \addplot[bkRed, line width=1.6pt, dash pattern=on 4pt off 2pt, domain=0:5] {exp(-2*x)};
+  \addlegendentry{$e^{-2t}$（3行め）}
+\end{axis}
+\end{tikzpicture}\par}
+{\small 3つとも、同じ分母（同じ車）なので、どれも0にもどります。はじめの値で、もどり方の形だけが変わります。}\par
+ばね・質量・ダンパーの形 $\ddot x+a_1\dot x+a_0x=u(t)$ なら、①と②をいつも同じように計算できて、
+\kixhframe[120mm]{$(s^2+a_1s+a_0)X=U(s)+(s+a_1)\,x(0)+\dot x(0)$}
+となります。左のかっこは機械の性質、右は「外から入れたもの」と「はじめの値」です。
+
+
+\Needspace{22\baselineskip}\begin{motto}[5]
+\kixhbox{2つの式がからむ連立の式も、同じ手順で（6-14 の水そう）}
+6-14 の2つの水そうは、$\dot h_1=-0.1(h_1-h_2)$、$\dot h_2=0.1(h_1-h_2)$（$h$〔cm〕、$t$〔分〕）でした。はじめ $h_1(0)=20$、$h_2(0)=0$ として、両方の式を変換します。
+\begin{bkhenkei}[0.56]
+sH_1-20=-0.1(H_1-H_2) & 1つめの式を変換した \\
+sH_2-0=0.1(H_1-H_2) & 2つめの式を変換した \\
+H_1+H_2=\frac{20}{s} & 2つの式をたすと $s(H_1+H_2)=20$（6-14 の和） \\
+H_1-H_2=\frac{20}{s+0.2} & ひくと $(s+0.2)(H_1-H_2)=20$（6-14 の差） \\
+H_1=\frac{10}{s}+\frac{10}{s+0.2} & 和と差をたして2でわった \\
+H_2=\frac{10}{s}-\frac{10}{s+0.2} & 和と差をひいて2でわった \\
+\end{bkhenkei}
+表でもどすと、$h_1=10+10e^{-0.2t}$、$h_2=10-10e^{-0.2t}$。10分後は 11.353\,cm と 8.647\,cm です。$s$ の世界では、連立の微分方程式が、ふつうの連立1次方程式になります。たくさんの式は、行列でまとめて書きます（9-10・9-11）。
+\end{motto}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixhworlds[63mm]{時間の世界}{$s$ の世界}{変換する}{もどす}
+\begin{axis}[kixh wave, at={(0mm,0mm)}, height=41mm, xmin=0, xmax=5, ymin=-0.4, ymax=1.1, xtick={0,1,...,5}, ytick={0.5,1}, xlabel={時間 $t$}, ylabel={$x$}]
+  \addplot[kixh sig, domain=0:5] {2*exp(-x)-exp(-2*x)};
+  \addplot[kixhF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=241, smooth, domain=0:5] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=kixhW, fill=white, inner sep=1pt] at (axis cs:1.6,0.52) {車A（実線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=kixhF, fill=white, inner sep=1pt] at (axis cs:2.2,-0.18) {車B（破線）};
+\end{axis}
+\begin{axis}[kixh splane, at={(76mm,0mm)}, width=41mm, height=41mm, xmin=-3, xmax=2, ymin=-2.5, ymax=2.5, xtick={-2,-1}, ytick={-2,-1,1,2}, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \fill[bkGreen!10] (axis cs:-3,-2.5) rectangle (axis cs:0,2.5);
+  \kixhpole[kixhW]{-1}{0}\kixhpole[kixhW]{-2}{0}
+  \kixhpole[kixhF]{-1}{2}\kixhpole[kixhF]{-1}{-2}
+  \node[font=\sffamily\footnotesize, anchor=south, text=kixhW, fill=white, inner sep=1pt] at (axis cs:-1.5,0.3) {車A};
+  \node[font=\sffamily\footnotesize, anchor=west, text=kixhF, fill=white, inner sep=1pt] at (axis cs:-0.8,1.55) {車B};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{車A・車B の動き（左）と、分母が0になる $s$ の場所（右の×）。車A は $-1$ と $-2$（青）、車B は $-1\pm2j$（オレンジ。6-12⑩の図と同じ点）。緑は実部が負の左半分。左の×ほど速く消え、上下にはなれた×はゆれる。}
+\label{bk:9-7:fig-kyoku}
+\end{bkfigure}
+
+
+\bkkokomade[分母がちがう1次式のかけ算になる式を、4つの手順（変換する・わり算で解く・部分分数に分ける・表でもどす）で解ければ十分です。この先は、重解・分母が0になる $s$ が複素数の式・入力のある式など、いろいろな形のもどし方です。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{形を見て、もどし方を選ぶ}{\bklevel{5}}
+
+\bksubsection{6}{場合分けの表と流れ図}
+
+\label{bk:9-7:basho}④の車A は、分母がちがう1次式のかけ算でした。でも、車B の分母 $s^2+2s+5$ は実数の1次式に分けられません。重解のときや、外から力を入れたとき、スイッチをおくれて入れたときも、分け方が変わります。どの形なら、どう分けてどう引くかを、場合分けの表9-7にまとめました（記号 A〜I）。手順の頭の札は、使う道具です。
+
+分母の形が変わると、もどした動きの形も変わります。図\ref{bk:9-7:fig-katachi}で、先に形を見ておきましょう。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=28mm, xmin=0, xmax=5.4, ymin=-0.2, ymax=1.15, xtick=\empty, ytick={1}, xlabel={$t$}, title={\footnotesize（ア）ちがう1次式 $(s+1)(s+2)$}]
+\addplot[bkBlue, line width=1.4pt, domain=0:5.1] {2*exp(-x)-exp(-2*x)};
+\end{axis}
+\begin{axis}[at={(68mm,0)}, bkplot, width=64mm, height=28mm, xmin=0, xmax=5.4, ymin=-0.2, ymax=1.35, xtick=\empty, ytick={1}, xlabel={$t$}, title={\footnotesize（イ）同じ1次式が2回 $(s+1)^2$}]
+\addplot[bkGreen!70!black, line width=1.4pt, domain=0:5.1] {(1+2*x)*exp(-x)};
+\end{axis}
+\begin{axis}[at={(0,-31mm)}, bkplot, width=64mm, height=28mm, xmin=0, xmax=5.4, ymin=-0.7, ymax=1.15, xtick=\empty, ytick={1}, xlabel={$t$}, title={\footnotesize（ウ）分けられない2次式 $(s+1)^2+4$}]
+\addplot[bkRed, line width=1.4pt, domain=0:5.1, samples=150] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+\end{axis}
+\begin{axis}[at={(68mm,-31mm)}, bkplot, width=64mm, height=28mm, xmin=0, xmax=5.4, ymin=-0.2, ymax=1.35, xtick=\empty, ytick={1}, xlabel={$t$}, title={\footnotesize（エ）$s$ と2次式 $s\bigl((s+1)^2+4\bigr)$}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:5.1] {1};
+\addplot[bkOrange!85!black, line width=1.4pt, domain=0:5.1, samples=150] {1-exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{分母の形と、もどした動きの形。（ア）ゆれずにへる（場合 B）。（イ）$te^{-t}$ が入り、少しふくらんでからへる（場合 C）。（ウ）ゆれながらへる（場合 D）。（エ）$\frac{1}{s}$ の項があるので、0でない値に落ち着く（場合 E）。}
+\label{bk:9-7:fig-katachi}
+\end{bkfigure}
+
+B〜E は②の\textbf{直す段}（部分分数に直して、表を引く）、F〜I は③の\textbf{楽をする段}です。A は、もう表の形なので、引くだけです。「分けられない2次式」は、判別式が負で、実数の1次式のかけ算にできない2次式のことです（3-10・6-8）。どの順に問えばよいかを、図\ref{bk:9-7:fig-flow}の流れ図にしました。
+
+\kixhcasetitle{9-7}{逆ラプラス変換：どんな形なら、どうもどす？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,36mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=1.6pt, colsep=3.5pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixhcase{A} & 表の形そのもの（定数倍をのぞく） & \kixhop{2}\enspace 定数倍を外に出し、表\ref{bk:9-7:tab-gyaku}を逆に引く & 1・9・11 \\
+\kixhcase{B} & 分母が、ちがう1次式のかけ算（$s$ だけの因数もふくむ） & \kixhop{3}\enspace $\dfrac{A}{s-p_1}+\dfrac{B}{s-p_2}+\cdots$。係数はかくす方法\par\kixhop{2}\enspace $Ae^{p_1t}+Be^{p_2t}+\cdots$ & 2・3・10 \\
+\kixhcase{C} & 同じ1次式が2回以上かかる（重解） & \kixhop{3}\enspace $\dfrac{A}{s+a}+\dfrac{B}{(s+a)^2}$。$B$ はかくす方法、$A$ は係数を比べる\par\kixhop{2}\enspace $Ae^{-at}+Bte^{-at}$ & 4・5 \\
+\kixhcase{D} & 分母が、実数の1次式に分けられない2次式（判別式が負）1つだけ（ほかの因数なし） & \kixhop{3}\enspace 平方完成 $(s+a)^2+\omega^2$。分子を $(s+a)$ と定数に分ける\par\kixhop{2}\enspace 行7・行8 & 6 \\
+\kixhcase{E} & 分けられない2次式と、ほかの因数（1次式・もう1つの2次式）がまざる & \kixhop{3}\enspace $\dfrac{A}{s-p}+\dfrac{Bs+C}{\text{2次式}}$。2次式の分子は1次式。係数は、分母が0になる $s$ を入れる・係数を比べる\par\kixhop{2}\enspace B と D の形でもどす & 7・8 \\
+\kixhcase{F} & $e^{-st_0}$ がかかっている & \kixhdan{3}\enspace $e^{-st_0}$ をはずして下の問いでもどし、答えを $t_0$ だけ右へずらす & 10 \\
+\kixhcase{G} & 分子の次数が、分母の次数と同じか大きい & \kixhdan{3}\enspace 先にわり算（3-8）。残りの分数を下の問いで。定数の項は $\delta(t)$ & 11 \\
+\kixhcase{H} & 最後の値（落ち着く値）だけほしい & \kixhdan{3}\enspace もどさない。$\displaystyle\lim_{s\to0}sF(s)$（最終値の定理）。落ち着くときだけ & 12 \\
+\kixhcase{I} & 3次以上の分母で、手の計算では1次式・2次式に分けきれない & \kixhdan{3}\enspace Python で分母が0になる $s$ と係数を出し、B・D の形で読む & 13 \\
+\end{bktable}
+\end{bkcenter}
+
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixh do, text width=76mm] (s) at (46,0) {記号を読む（名前の段）：もどす $F(s)$ を、\\②のわり算で1つの分数にしておく};
+  \node[kixh q] (q1) at (33,-20) {最後の値だけほしい？};
+  \node[kixh do, text width=44mm, anchor=west] (rH) at (71,-20) {最終値の定理（落ち着く\\ときだけ）\enspace\kixhcase{H}};
+  \node[kixh q] (q2) at (33,-38) {$e^{-st_0}$ がかかっている？};
+  \node[kixh do, text width=44mm, anchor=west] (rF) at (71,-38) {はずし、あとで $t_0$ ずらす\enspace\kixhcase{F}};
+  \node[kixh q] (q3) at (33,-56) {分子の次数≧分母の次数？};
+  \node[kixh do, text width=44mm, anchor=west] (rG) at (71,-56) {わり算して、残りで下へ\enspace\kixhcase{G}};
+  \node[kixh q] (q4) at (33,-74) {表の形そのもの？};
+  \node[kixh do, text width=40mm, anchor=west] (rA) at (71,-74) {表を逆に引く\enspace\kixhcase{A}};
+  \node[kixh q] (q5) at (33,-94) {3次以上で、手で分けきれない？};
+  \node[kixh do, text width=40mm, anchor=west] (rI) at (74,-94) {Python で分母が0になる $s$ と係数\enspace\kixhcase{I}};
+  \node[kixh q] (q6) at (33,-116) {分母が、分けられない2次式1つだけ？};
+  \node[kixh do, text width=40mm, anchor=west] (rD) at (79,-116) {平方完成、行7・行8\enspace\kixhcase{D}};
+  \node[kixh q] (q7) at (33,-138) {分けられない2次式もある？};
+  \node[kixh do, text width=40mm, anchor=west] (rE) at (74,-138) {B と D の形に分ける\enspace\kixhcase{E}};
+  \node[kixh q] (q8) at (33,-158) {同じ1次式が2回以上？};
+  \node[kixh do, text width=40mm, anchor=west] (rC) at (74,-158) {$\dfrac{A}{s+a}+\dfrac{B}{(s+a)^2}$\enspace\kixhcase{C}};
+  \node[kixh do, text width=40mm] (rB) at (33,-176) {部分分数、かくす方法\enspace\kixhcase{B}};
+  \node[kixh do, text width=104mm] (end) at (60,-194) {確かめ：$t=0$ の値・最後の値・オイラー法の表と合うか};
+  \draw[kixh go] (s.south -| q1) -- (q1);
+  \foreach \kixhq/\kixhr in {q1/rH,q2/rF,q3/rG,q4/rA,q5/rI,q6/rD,q7/rE,q8/rC} {\draw[kixh go] (\kixhq) -- node[kixh yn, above] {はい} (\kixhr);}
+  \foreach \kixhq/\kixhr in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6,q6/q7,q7/q8,q8/rB} {\draw[kixh go] (\kixhq) -- node[kixh yn, left=1mm] {いいえ} (\kixhr);}
+  \draw[kixh go, shorten >=0.4mm] (rF.south) |- (33.8,-46.5);
+  \draw[kixh go, shorten >=0.4mm] (rG.south) |- (33.8,-64.5);
+  \foreach \kixhn in {rH,rA,rI,rD,rE,rC,rB} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixhn.east) -- (\kixhn.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-20) -- (127,-194);
+  \draw[kixh go, shorten <=0pt] (127,-194) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{逆ラプラス変換の流れ図。ひし形は問い、四角はすること。上の3つ（H・F・G）と I が楽をする段。F・G のあとは左の列の次の問いへもどる。もどした四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:9-7:fig-flow}
+\end{bkfigure}
+
+\kixhhead{流れ図の使い方：車A}
+④の車A $X=\dfrac{s+3}{(s+1)(s+2)}$ をたどります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：もどすのは $X(s)$。②のわり算で、もう1つの分数になっている。
+\item 最後の値だけほしい？\enspace いいえ（動きがほしい）。\enspace $e^{-st_0}$ がかかっている？\enspace いいえ。
+\item 分子の次数≧分母の次数？\enspace いいえ（分子は1次、分母は2次）。\enspace 表の形そのもの？\enspace いいえ（2つの和に分けないと引けない）。
+\item 3次以上で、手で分けきれない？\enspace いいえ（2次で、$(s+1)(s+2)$ に分けられた）。\enspace 分母が、分けられない2次式1つだけ？\enspace いいえ。\enspace 分けられない2次式もある？\enspace いいえ。
+\item 同じ1次式が2回以上？\enspace いいえ（$s+1$ と $s+2$ はちがう）。
+\end{enumerate}
+こうして場合 \kixhcase{B} に着きます。④でしたとおりです。1回で全部の問いを覚えなくても大丈夫です。問題を解くたびに、表と流れ図にもどって確かめましょう。
+
+\kixhhead{どの場合かな？}
+次の $F(s)$ は、場合分けの表9-7のどの場合でしょう。流れ図を上からたどって、先に自分で考えてから答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $\dfrac{3}{s+4}$\par\nobreak\noindent 答え：\kixhcase{A}。表の行3の3倍。
+\item $\dfrac{2s+1}{s(s+1)}$\par\nobreak\noindent 答え：\kixhcase{B}。分母 $s$ と $s+1$ は、ちがう1次式。
+\item $\dfrac{1}{s^2+4s+4}$\par\nobreak\noindent 答え：\kixhcase{C}。$s^2+4s+4=(s+2)^2$ で、同じ1次式が2回。
+\item $\dfrac{s+3}{s^2+2s+10}$\par\nobreak\noindent 答え：\kixhcase{D}。判別式 $4-40<0$ の2次式が1つだけ（ほかの因数なし）。
+\item $\dfrac{e^{-3s}}{s+1}$\par\nobreak\noindent 答え：\kixhcase{F}→\kixhcase{A}。$e^{-3s}$ をはずすと表の形。
+\item $\dfrac{5}{s(s+2)}$ が、時間がたつと近づく値\par\nobreak\noindent 答え：\kixhcase{H}。最後の値だけ。
+\end{enumerate}
+
+\bksubsection{7}{場合 A：表の形にそろえて引く}
+
+\label{bk:9-7:A}表を引くときは、分子もふくめて、形をぴったり合わせます。合わないときは、定数倍を外に出してそろえます（線形だから）。
+\begin{bkhenkei}[0.5]
+\frac{5}{s+2}=5\times\frac{1}{s+2}\to5e^{-2t} & 行3（$a=2$）の5倍 \\
+\frac{6}{s^2+9}=2\times\frac{3}{s^2+3^2}\to2\sin3t & 行5（$\omega=3$）。分子を3にそろえ、残りの2を外へ \\
+\end{bkhenkei}
+$6/(s^2+9)$ を「$6\sin3t$」とするのは、まちがいです。行5の分子は $\omega$（ここでは3）なので、分子の6を「$3\times2$」と見ます。
+
+\kixhhead{6-13 の共振を、表で}
+6-13⑨では、はじめは静かなばねを考えました。式は次のとおりです。
+\kixhline{$\ddot x+4x=\cos2t$}
+$P\cos2t+Q\sin2t$ を入れてもうまくいかず、$t$ をかけた形 $\tfrac t4\sin2t$ を入れて確かめました。9-6 の例題8 では、$t$ がかかった形を変換しました。ここでは逆に、表を引いてもどします。
+\begin{bkhenkei}[0.5]
+s^2X+4X=\frac{s}{s^2+4} & 変換。はじめの値は0。$\cos2t\to\frac{s}{s^2+4}$（行6） \\
+X=\frac{s}{(s^2+4)^2} & $s^2+4$ でわった \\
+X=\frac14\times\frac{2\times2\times s}{(s^2+2^2)^2} & 行9（$\omega=2$）の形にそろえた \\
+x=\frac{t}{4}\sin2t & 行9でもどした \\
+\end{bkhenkei}
+分母に、自分のゆれの $s^2+4$ と、ゆすりの $s^2+4$ が\textbf{重なって}2乗になったことが、ゆれがどんどん大きくなる（$t$ がかかる）しるしです。
+
+\bksubsection{8}{場合 C：同じ1次式が2回（重解）}
+
+\label{bk:9-7:C}6-12⑤の臨界減衰のように、特性方程式が重解をもつと、分母に同じ1次式が2回かかります。たとえば、$\ddot x+2\dot x+x=0$、$x(0)=1$、$\dot x(0)=1$ では、
+\begin{bkhenkei}[0.5]
+(s^2X-s-1)+2(sX-1)+X=0 & 変換した \\
+(s^2+2s+1)X=s+3 & まとめた \\
+X=\frac{s+3}{(s+1)^2} & 分母は $(s+1)$ が2回 \\
+\end{bkhenkei}
+です。
+
+\kixhhead{$\dfrac{A}{s+1}+\dfrac{B}{s+1}$ ではうまくいかない}
+B と同じように分けようとすると、$\dfrac{A}{s+1}+\dfrac{B}{s+1}=\dfrac{A+B}{s+1}$ で、分母が $(s+1)$ の1つだけの式しか作れません。分子が $s+3$ で分母が $(s+1)^2$ の式にはなりません。そこで、2回かかった分を受けもつ項を入れます。
+\kixhline{$\dfrac{s+3}{(s+1)^2}=\dfrac{A}{s+1}+\dfrac{B}{(s+1)^2}$}
+\begin{bkhenkei}[0.5]
+s+3=A(s+1)+B & 両辺に $(s+1)^2$ をかけた \\
+-1+3=A\times0+B,\quad B=2 & $s=-1$ を入れた \\
+1=A & 両辺の $s$ の係数を比べた（3-8） \\
+X=\frac{1}{s+1}+\frac{2}{(s+1)^2} & 部分分数に分けた \\
+x=e^{-t}+2te^{-t} & 行3と行4でもどした \\
+\end{bkhenkei}
+$x=(1+2t)e^{-t}$ は、6-12⑤の重解の形 $(A+Bt)e^{st}$ と同じです。行4の $te^{-at}$ は、9-6 で「$t$ をかけると $-\dfrac{\dd F}{\dd s}$」から作った行でした。
+
+\kixhhead{熱電対のおくれ（6-4 の約束）}
+6-4 のコラムでは、時定数 $\tau=\qty{30}{s}$ の熱電対で、温度が1秒に $r=\frac{1}{30}$\,℃（1分に2\,℃）ずつ上がり続けると、計器は $r\tau=1$\,℃おくれて追いかける、と書きました。このしくみを「1次おくれ」とよぶことは、9-9 でくわしく学びます。
+
+計器の値の上がり分を $y$〔℃〕とすると、$\tau\dot y+y=rt$、$y(0)=0$ です（6-4⑥の式）。
+\begin{bkhenkei}[0.5]
+\tau(sY-0)+Y=\frac{r}{s^2} & 変換した（$t\to\frac{1}{s^2}$、行2） \\
+Y=\frac{r}{s^2(\tau s+1)} & $s=0$ が2回（重解）、$-\frac1\tau$ が1回 \\
+\end{bkhenkei}
+$\tau=30$ とし、次のようにおきます。
+\kixhline{$\dfrac{1}{s^2(30s+1)}=\dfrac{A}{s}+\dfrac{B}{s^2}+\dfrac{C}{30s+1}$}
+\begin{bkhenkei}[0.5]
+1=As(30s+1)+B(30s+1)+Cs^2 & 分母をはらった \\
+B=1 & $s=0$ を入れた \\
+1=C\times\frac{1}{900},\quad C=900 & $s=-\frac{1}{30}$ を入れた（$s^2=\frac{1}{900}$） \\
+0=30A+C,\quad A=-30 & $s^2$ の係数を比べた \\
+\frac{1}{s^2(30s+1)}=-\frac{30}{s}+\frac{1}{s^2}+\frac{30}{s+\frac{1}{30}} & $\frac{900}{30s+1}=\frac{30}{s+1/30}$ \\
+y=\frac{1}{30}\bigl(t-30+30e^{-t/30}\bigr) & $r=\frac{1}{30}$ をかけて、行1・2・3でもどした \\
+\end{bkhenkei}
+本当の温度の上がり分は $rt=t/30$ なので、おくれは $t/30-y=1-e^{-t/30}$〔℃〕です。30秒で0.632\,℃、60秒で0.865\,℃、150秒で0.993\,℃と、$r\tau=1$\,℃に近づきます。6-4 の図の数が、表を引くだけで出ました。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=46mm, xmin=0, xmax=165, ymin=0, ymax=6, xtick={30,60,90,120,150}, ytick={1,2,3,4,5}, xlabel={$t$（s）}, ylabel={上がり分（℃）}, legend style={at={(0.03,0.97)}, anchor=north west, font=\footnotesize, draw=bkInk!40, fill=white}, legend cell align=left]
+  \addplot[bkGray, line width=1.2pt, dash pattern=on 4pt off 2pt, domain=0:160] {x/30};
+  \addlegendentry{本当の温度 $rt=t/30$}
+  \addplot[bkBlue, line width=1.6pt, domain=0:160, samples=120] {(x-30+30*exp(-x/30))/30};
+  \addlegendentry{計器の値 $y$}
+  \draw[bkRed, line width=0.8pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (axis cs:150,4.007) -- (axis cs:150,5);
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:147,4.5) {おくれ 0.993\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{熱電対のおくれ（$\tau=\qty{30}{s}$）。はじめは計器がほとんど動かず、やがて本当の温度と平行になり、1\,℃おくれて追いかける。}
+\label{bk:9-7:fig-netsu}
+\end{bkfigure}
+
+\begin{seikaku}
+\kixhbox{3回かかるときは、3つ置く}
+$(s+a)$ が2回なら $\dfrac{A}{s+a}+\dfrac{B}{(s+a)^2}$ と2つ置きました。3回なら、次のように3つ置きます。
+\kixhline{$\dfrac{\text{分子}}{(s+a)^3}=\dfrac{A}{s+a}+\dfrac{B}{(s+a)^2}+\dfrac{C}{(s+a)^3}$}
+いちばん高い次数の $C$ だけは、$(s+a)^3$ をかけて $s=-a$ を入れると決まります（かくす方法）。$A$・$B$ は、係数を比べて決めます。もどすと $\dfrac{1}{(s+a)^3}$ は $\dfrac{t^2}{2}e^{-at}$ です（9-6 の「$t$ をかける」を2回）。この本の例題では、2回まで使います。
+\end{seikaku}
+
+\bksubsection{9}{場合 D：分けられない2次式（分母が0になる $s$ が複素数）}
+
+\label{bk:9-7:D}はてな？の車B（$\ddot x+2\dot x+5x=0$、$x(0)=1$、$\dot x(0)=0$）を解きます。変換までは 9-6 の例題5 で済ませました。その続きの、もどす所です。
+\begin{bkhenkei}[0.5]
+(s^2X-s)+2(sX-1)+5X=0 & 変換した \\
+X=\frac{s+2}{s^2+2s+5} & まとめて、わった \\
+\end{bkhenkei}
+分母の判別式は $2^2-4\times5=-16<0$ で、実数の1次式には分けられません。そこで、表の行7・行8の分母 $(s+a)^2+\omega^2$ の形にします。
+
+\kixhhead{平方完成して、分子を分ける}
+\begin{bkhenkei}[0.62]
+s^2+2s+5=(s+1)^2+4 & 平方完成（3-8）：$s$ の係数2の半分1を使う \\
+s+2=(s+1)+1 & 分子を「$(s+1)$＋定数」に分けた \\
+X=\frac{s+1}{(s+1)^2+2^2}+\frac{1}{(s+1)^2+2^2} & 2つの分数に分けた \\
+X=\frac{s+1}{(s+1)^2+2^2}+\frac12\times\frac{2}{(s+1)^2+2^2} & 2つめの分子を $\omega=2$ にそろえた \\
+x=e^{-t}\cos2t+\frac12e^{-t}\sin2t & 行8と行7（$a=1$、$\omega=2$）でもどした \\
+\end{bkhenkei}
+\kixhframe[110mm]{\large $x=e^{-t}\Bigl(\cos2t+\dfrac12\sin2t\Bigr)$}
+6-12 と同じ答えです。$e^{-t}$ の1は平方完成の $(s+1)$ から、$\cos2t$ の2は $2^2$ から来ました。分母が0になる $s$ は $-1\pm2j$ で、実部 $-1$ が「へる速さ」、虚部 $2$ が「ゆれの速さ」です（6-10⑪の $e^{(\sigma+j\omega)t}$）。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=46mm, xmin=0, xmax=4.4, ymin=-1.2, ymax=1.2, xtick={3.1416}, xticklabels={$\pi$}, xticklabel style={fill=white, inner sep=1pt, yshift=-1mm}, ytick={-1,1}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:4.1] {1.118*exp(-x)};
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:4.1] {-1.118*exp(-x)};
+  \addplot[bkRed, line width=1.7pt, domain=0:4.1, samples=160] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\raggedright
+赤が車B の動き、灰色の点線は、ゆれのはばが $e^{-t}$ に比例してへっていくようすです（はばは $\sqrt{1+0.5^2}\,e^{-t}\approx1.12e^{-t}$。4-9 の合成）。ゆれの1回分は $2\pi\div2=\pi\approx3.14$ 秒です。
+\end{minipage}
+
+\begin{seikaku}
+\kixhbox{複素数のまま分けても、同じ答え}
+分母を $(s-p)(s-\bar p)$、$p=-1+2j$ と複素数の1次式に分ければ、B と同じかくす方法も使えます。
+\kixhline{$\dfrac{s+2}{(s-p)(s-\bar p)}=\dfrac{A}{s-p}+\dfrac{\bar A}{s-\bar p}$,\qquad $A=\dfrac{p+2}{p-\bar p}=\dfrac{1+2j}{4j}=0.5-0.25j$}
+もどすと $Ae^{pt}+\bar Ae^{\bar pt}$ です。2つは共役（6-9）なので、和は $Ae^{pt}$ の実部の2倍です。
+\kixhline{$2e^{-t}\bigl(0.5\cos2t+0.25\sin2t\bigr)=e^{-t}\Bigl(\cos2t+\dfrac12\sin2t\Bigr)$}
+同じ答えになりました。この本では、計算が実数だけですむ平方完成の方法を使います。
+\end{seikaku}
+
+\bksubsection{10}{場合 E：外から入れたものがある式}
+
+\label{bk:9-7:E}外から電圧や力を入れると、分母に、機械の2次式のほかに、入れたものの分母（$s$ や $s^2+1$）がかかります。これが場合 E です。
+
+\kixhhead{RLC 回路のスイッチを入れる（6-12 の数）}
+$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$ の回路に、$t=0$ で \qty{10}{V} の電池をつなぎます。コンデンサーの電圧 $v$〔V〕は、はじめ0、電流も0です。回路の式 $L\tfrac{\dd i}{\dd t}+Ri+v=10$ に $i=C\dot v$ を入れて $LC$ でわると、
+\kixhline{$\ddot v+2000\,\dot v+10^8\,v=10^9$\qquad （$R/L=2000$、$1/(LC)=10^8$）}
+です。
+\begin{bkhenkei}[0.56]
+(s^2+2000s+10^8)V=\frac{10^9}{s} & 変換した（はじめの値は0） \\
+V=\frac{10^9}{s\,(s^2+2000s+10^8)} & $s$ と、分けられない2次式（判別式が負） \\
+V=\frac{A}{s}+\frac{Bs+C}{s^2+2000s+10^8} & 2次式の分子は1次式 $Bs+C$ \\
+A=\frac{10^9}{10^8}=10 & $s$ をかくして $s=0$ \\
+10^9=10(s^2+2000s+10^8)+(Bs+C)s & 分母をはらった \\
+B=-10,\quad C=-20000 & $s^2$ と $s$ の係数を比べた \\
+\end{bkhenkei}
+2次式は $(s+1000)^2+9950^2$ と平方完成できます（$10^8-1000^2=9.9\times10^7$、$\sqrt{9.9\times10^7}\approx9950$）。分子は $-10(s+2000)=-10\bigl((s+1000)+1000\bigr)$ です。
+\kixhframe[120mm]{$v=10-10e^{-1000t}\Bigl(\cos9950t+\dfrac{1000}{9950}\sin9950t\Bigr)$}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=48mm, xmin=0, xmax=3.3, ymin=0, ymax=19.5, xtick={1,2,3}, ytick={5,10,15}, xlabel={$t$（ms）}, ylabel={$v$（V）}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:3.1] {10};
+  \addplot[bkBlue, line width=1.6pt, domain=0:3.1, samples=400] {10-10*exp(-x)*(cos(deg(9.95*x))+0.1005*sin(deg(9.95*x)))};
+  \fill[bkRed] (axis cs:0.316,17.29) circle (1.3pt);
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.45,17.6) {17.29\,V（0.316\,ms）};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}
+\raggedright
+10\,V の電池なのに、0.316\,ms（ゆれの半分 $\frac{\pi}{9950}$\,s）で、コンデンサーには 17.29\,V もかかります（行きすぎ72.9\,\%）。$\frac{1}{s}$ の係数10が、最後に落ち着く電圧です。回路の部品は、この行きすぎにたえるものを選びます。
+\end{minipage}
+
+\kixhhead{6-13 の強制振動：2つのゆれが、部分分数で分かれる}
+6-13④の $\ddot x+2\dot x+5x=10\cos t$（はじめは静か）を解きます。
+\begin{bkhenkei}[0.5]
+(s^2+2s+5)X=\frac{10s}{s^2+1} & 変換した（$\cos t\to\frac{s}{s^2+1}$） \\
+X=\frac{10s}{(s^2+1)(s^2+2s+5)} & 分けられない2次式が2つ \\
+X=\frac{As+B}{s^2+1}+\frac{Cs+D}{s^2+2s+5} & どちらの分子も1次式 \\
+\end{bkhenkei}
+$A$、$B$ は、両辺に $s^2+1$ をかけて、$s^2+1=0$ になる $s=j$（6-8）を入れると出ます（かくす方法を複素数で使う）。
+\begin{bkhenkei}[0.64]
+\frac{10s}{s^2+2s+5}\bigg|_{s=j}=Aj+B & $s^2+1$ をかくして $s=j$ \\
+\frac{10j}{-1+2j+5}=\frac{10j}{4+2j} & $j^2=-1$ \\
+\phantom{\frac{10j}{-1+2j+5}}=\frac{10j(4-2j)}{20}=1+2j & 分母の共役をかけた（6-9） \\
+A=2,\quad B=1 & 実部と虚部を比べた \\
+10s=(2s+1)(s^2+2s+5) & 分母をはらった \\
+\phantom{10s=}+(Cs+D)(s^2+1) & \\
+0=2+C,\quad C=-2 & $s^3$ の係数を比べた \\
+0=5+D,\quad D=-5 & 定数の項を比べた \\
+\end{bkhenkei}
+2つめの分数は、⑨と同じく平方完成して分子を分けると、
+\kixhline{$\dfrac{-2s-5}{(s+1)^2+4}=-\dfrac{2(s+1)}{(s+1)^2+2^2}-\dfrac32\times\dfrac{2}{(s+1)^2+2^2}$}
+です。表の行6・行5と行8・行7でもどして、
+\kixhframe[120mm]{$x=\underbrace{2\cos t+\sin t}_{\text{ゆすりに合うゆれ}}\ \underbrace{-\,e^{-t}\bigl(2\cos2t+1.5\sin2t\bigr)}_{\text{自分のゆれ（消える）}}$}
+6-13 と同じ答えです。6-13 では、2つのゆれを別々に作ってから、はじめの値に合わせました。ラプラス変換では、部分分数が、ゆすりの分母 $s^2+1$ から来た項と、機械の分母 $s^2+2s+5$ から来た項に、\textbf{自動で分けて}くれます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=120mm, height=46mm, xmin=0, xmax=13.2, ymin=-2.6, ymax=2.9, xtick={2,4,6,8,10,12}, ytick={-2,0,2}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkInk!50, line width=0.5pt, domain=0:13] {0};
+  \addplot[bkGray, line width=1pt, dash pattern=on 4pt off 2pt, domain=0:12.8, samples=200] {2*cos(deg(x))+sin(deg(x))};
+  \addplot[bkBlue, line width=1.7pt, domain=0:12.8, samples=300] {2*cos(deg(x))+sin(deg(x))-exp(-x)*(2*cos(deg(2*x))+1.5*sin(deg(2*x)))};
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:5.6,2.38) {灰色の点線：ゆすりに合うゆれ $2\cos t+\sin t$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{6-13 の強制振動（青）。はじめは自分のゆれがまざるが、$e^{-t}$ で消えて、3秒ほどで、ゆすりに合うゆれ（灰色）とほぼ重なる。}
+\label{bk:9-7:fig-kyousei}
+\end{bkfigure}
+
+\bksubsection{11}{楽をする段：F・G・H・I}
+
+\label{bk:9-7:raku}\kixhdanhead{3}{もどす前に、楽な道をさがす}
+流れ図の上の3つの問いと I の問いは、部分分数に分ける前に確かめます。
+
+\kixhhead{F：おくれて始まる（$e^{-st_0}$）}
+6-4 の RC 回路（10\,V、$\tau=\qty{2}{s}$）のスイッチを、2秒おくれて入れたとします。入れる電圧は「2秒後から10\,V」で、変換は $\tfrac{10}{s}e^{-2s}$（9-6 の時間のずらし）です。$2sV+V=\tfrac{10}{s}e^{-2s}$ から、
+\kixhline{$V=e^{-2s}\times\dfrac{10}{s(2s+1)}$}
+$e^{-2s}$ は部分分数に入れず、外に出しておきます。残りは場合 B で $10-10e^{-t/2}$（例題3）。最後に、表\ref{bk:9-7:tab-gyaku}の行11で、答えを2秒だけ右へずらします。
+\kixhline{$v=0$\quad （$t<2$）、\qquad $v=10-10e^{-(t-2)/2}$\quad （$t\geqq2$）}
+
+\kixhhead{G：分子の次数が大きい}
+$\dfrac{2s+5}{s+2}$ は、分子も分母も1次式で、表のどの行の形でもありません。3-8 の多項式のわり算で $2s+5=2(s+2)+1$ なので、
+\kixhline{$\dfrac{2s+5}{s+2}=2+\dfrac{1}{s+2}\ \longrightarrow\ 2\,\delta(t)+e^{-2t}$}
+定数2は、表の行10で $2\delta(t)$（$t=0$ の一瞬のたたき：9-6）です。わり算の残り $\dfrac{1}{s+2}$ を、流れ図の次の問いへもどして、場合 A でもどしました。
+
+\kixhhead{H：最後の値だけほしい（最終値の定理）}
+9-6 の最終値の定理 $\displaystyle\lim_{t\to\infty}f(t)=\lim_{s\to0}sF(s)$ を使うと、もどさずに最後の値がわかります。$F=\dfrac{1}{s(s+1)(s+2)}$ なら、
+\kixhline{$sF(s)=\dfrac{1}{(s+1)(s+2)}\ \longrightarrow\ \dfrac{1}{1\times2}=\dfrac12$\quad （$s\to0$）}
+全部もどすと $f=\frac12-e^{-t}+\frac12e^{-2t}$ で、たしかに $\frac12$ に近づきます。ただし、\textbf{落ち着くときだけ}使えます。$sF(s)$ の分母が0になる $s$ が、すべて実部が負（複素数の平面の左半分）のときです。$F=\dfrac{1}{s^2+1}$（$\sin t$）では、$sF\to0$ ですが、$\sin t$ はいつまでもゆれていて、0には落ち着きません。
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=40mm, xmin=0, xmax=6.4, ymin=0, ymax=0.62, xtick={2,4,6}, ytick={0.5}, yticklabels={$\frac12$}, xlabel={$t$}, title={\footnotesize（1）$\frac12-e^{-t}+\frac12e^{-2t}$}, title style={yshift=-1mm}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:6.2] {0.5};
+\addplot[bkBlue, line width=1.6pt, domain=0:6.2] {0.5-exp(-x)+0.5*exp(-2*x)};
+\end{axis}
+\end{tikzpicture}\hspace{4mm}\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=40mm, xmin=0, xmax=6.4, ymin=-1.25, ymax=1.25, xtick={2,4,6}, ytick={-1,1}, xlabel={$t$}, title={\footnotesize（2）$\sin t$：ゆれ続ける}, title style={yshift=-1mm}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:6.2] {0};
+\addplot[bkRed, line width=1.6pt, domain=0:6.2, samples=160] {sin(deg(x))};
+\end{axis}
+\end{tikzpicture}\par}
+
+\kixhhead{I：分母が分けきれない（Python）}
+1次おくれの箱を3つつないで比例制御すると（9-9）、ステップ応答は $Y=\dfrac{4}{s\bigl((s+1)^3+4\bigr)}$ のような形になります。$(s+1)^3+4=s^3+3s^2+3s+5$ は、手の計算では因数が見つかりません。そこで Python で、分母が0になる $s$（\texttt{p}）と部分分数の係数（\texttt{r}）を出します。\texttt{signal.residue} は、部分分数の係数を出す関数です。
+\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+from scipy import signal
+den = np.polymul([1, 0], [1, 3, 3, 5])   \# 分母の4次式の係数
+r, p, k = signal.residue([4], den)       \# 4/den を部分分数に
+print(np.round(p, 4))                    \# 分母が0になる s
+print(np.round(r, 4))                    \# それぞれの係数
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[ 0.    +0.j     -0.2063+1.3747j -0.2063-1.3747j -2.5874+0.j    ]
+[ 0.8   +0.j     -0.2977+0.2371j -0.2977-0.2371j -0.2045+0.j    ]
+\end{bkcodeout}
+$s=0$ の係数0.8 は最後の値（最終値の定理でも $\frac{4}{5}=0.8$）、$-2.5874$ の係数は $-0.2045$ です。共役な2つの組は、⑨のせいかくに言うとと同じく、実部の2倍で、$e^{-0.2063t}(-0.5954\cos1.3747t-0.4742\sin1.3747t)$ になります。
+\kixhline{$y=0.8-0.2045e^{-2.5874t}$}
+\kixhline{$\phantom{y=0.8}-e^{-0.2063t}\bigl(0.5954\cos1.3747t+0.4742\sin1.3747t\bigr)$}
+$t=0$ で $0.8-0.2045-0.5954\approx0$ と、はじめの値に合います。実部 $-0.2063$ が0に近いので、ゆれがなかなか消えません（9-9 でくわしく）。
+
+\begin{motto}[5]
+\kixhbox{$t=0$ の値を、もどさずに確かめる（初期値の定理）}
+9-6 の初期値の定理 $\displaystyle f(0)=\lim_{s\to\infty}sF(s)$ を使うと、もどす前に、はじめの値を確かめられます。車A の $X$（④）なら、
+\kixhline{$sX=\dfrac{s(s+3)}{(s+1)(s+2)}=\dfrac{s^2+3s}{s^2+3s+2}$}
+で、$s$ がとても大きいと、分子と分母の $s^2$ が主役になって1に近づきます。だから $x(0)=1$ で、はじめの値と合います。①の変換でまちがえると、ここで合わなくなるので、計算の確かめに使えます。
+\end{motto}
+
+\begin{senmonsho}[逆ラプラス変換の専門書ふうの書き方]
+\begin{bkhonbun}
+$F(s)$ の逆ラプラス変換は
+\[ f(t)=\mathcal{L}^{-1}\{F(s)\}=\frac{1}{2\pi i}\int_{c-i\infty}^{c+i\infty}F(s)e^{st}\,ds \]
+（ブロムウィッチ積分）で与えられる．$F(s)=N(s)/D(s)$ で $D(s)=0$ の根 $p_k$ がすべて単根ならば
+\[ f(t)=\sum_k\frac{N(p_k)}{D'(p_k)}e^{p_kt} \]
+（ヘビサイドの展開定理）．
+\end{bkhonbun}
+\bkyaku{名前の上の式は、$s$ を複素数の直線にそって積分するもの（複素関数論という分野の道具。この本では使わない）。$i$ はこの本の $j$。かっこは $\{\ \}$ の本も多い。「単根」は重解でない解。ヘビサイドの展開定理は、かくす方法の答えを1つの式にしたもの。車A なら $N=s+3$、$D'=2s+3$ で、$p=-1$ の係数は $\frac{2}{1}=2$、$p=-2$ の係数は $\frac{1}{-1}=-1$（④と同じ）。係数のことを「留数」（りゅうすう）とよぶ本もある。}
+\end{senmonsho}
+
+
+
+\begin{kotoba}
+\small
+\bkword{逆ラプラス変換}{$\mathcal L^{-1}[F(s)]$。ラプラス変換すると $F(s)$ になる時間の関数。名前で、実際は部分分数と表で求める。}
+\bkword{部分分数に分ける}{分数の式を、表にある形（$\frac{1}{s+a}$ など）の和に直すこと（3-8）。}
+\bkword{かくす方法}{$(s-p)$ をかくして、残りに $s=p$ を入れて、$\frac{A}{s-p}$ の係数 $A$ を出す方法。}
+\bkword{重解}{分母に同じ1次式が2回以上かかること。$te^{-at}$ の項が出る。}
+\bkword{過渡現象}{スイッチを入れた直後などの、落ち着くまでの間の変化。}
+\end{kotoba}
+\bkidx{ぶぶんぶんすうぶんかい}{部分分数分解}\bkidx{かとげんしょう}{過渡現象}\bkidx{じゅうかい}{重解}
+
+
+
+
+
+\begin{taisetsu}
+\raggedright
+\kixhbox{逆ラプラス変換の3つの段}
+\kixhdan{1}\enspace 記号を読む：もどす $F(s)$ を、②のわり算で1つの分数にしておく\par
+\kixhdan{3}\enspace 分ける前に：最後の値だけ？\enspace $e^{-st_0}$？\enspace 分子の次数が大きい？\enspace 表の形？\enspace 3次以上で分けきれない？\par
+\kixhdan{2}\enspace 部分分数に分けて、1つずつ表を逆に引き、たす\par
+\[ \kixhN{\mathcal L^{-1}\Bigl[\frac{s+3}{(s+1)(s+2)}\Bigr]}\ \to\ \kixhS{\frac{2}{s+1}-\frac{1}{s+2}}\ \to\ \kixhS{2e^{-t}-e^{-2t}} \]
+\kixhbox{4つの手順（2階の式 $\ddot x+a_1\dot x+a_0x=u$）}
+①変換：$(s^2+a_1s+a_0)X=U(s)+(s+a_1)x(0)+\dot x(0)$\quad ②わり算\quad ③部分分数\quad ④表でもどす
+\kixhbox{場合分けの表9-7（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,46mm] X[l,m]}, row{2-Z}={font=\footnotesize}, rowsep=0.5pt, colsep=3pt}
+記号 & こんなとき & もどし方 \\
+\kixhcase{A} & 表の形そのもの & 定数倍を外に出して引く \\
+\kixhcase{B} & ちがう1次式のかけ算 & かくす方法 → $Ae^{p_1t}+Be^{p_2t}$ \\
+\kixhcase{C} & 同じ1次式が2回（重解） & $\frac{A}{s+a}+\frac{B}{(s+a)^2}$ → $te^{-at}$ \\
+\kixhcase{D} & 分けられない2次式が1つだけ & 平方完成 → $e^{-at}\cos\omega t$、$e^{-at}\sin\omega t$ \\
+\kixhcase{E} & 2次式とほかの因数（もう1つの2次式も） & 2次式の分子は $Bs+C$。分母が0になる $s$ を入れる・係数を比べる \\
+\kixhcase{F} & $e^{-st_0}$ & はずしてもどし、$t_0$ ずらす \\
+\kixhcase{G} & 分子の次数が大きい & わり算。定数は $\delta(t)$ \\
+\kixhcase{H} & 最後の値だけ & $\lim_{s\to0}sF$（落ち着くときだけ） \\
+\kixhcase{I} & 3次以上で分けきれない & Python で、分母が0になる $s$ と係数 \\
+\end{bktable}
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{\scalebox{0.72}{$\mathcal L^{-1}[F]$}}{ラプラス・インバース（逆ラプラス変換）}{変換すると $F(s)$ になる時間の関数。$-1$ は逆向きの印}{inverse Laplace transform}{9-7}}{}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、場合分けの表9-7のどの場合かを書きました（微分方程式は、①変換する→②わり算で解く、をすませてから場合を見る）。\textbf{例題を流れ図でたどってみよう}：図\ref{bk:9-7:fig-flow}でたどると表\ref{bk:9-7:tab-trace}のようになり、どれも1行めの場合に着きます（書いていない問いは「いいえ」）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,34mm] X[l,m] Q[c,m,14mm]}, row{2-Z}={font=\footnotesize}, rowsep=0pt, colsep=3pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 表の形にそろえる & 表の形そのもの？ & \kixhcase{A} \\
+2 & ゆれずにもどる & （どれも「いいえ」） & \kixhcase{B} \\
+3 & RC の充電 & （どれも「いいえ」） & \kixhcase{B} \\
+4 & 臨界減衰 & 同じ1次式が2回以上？ & \kixhcase{C} \\
+5 & 熱電対のおくれ & 同じ1次式が2回以上？（$s$ が2回） & \kixhcase{C} \\
+6 & ゆれながらもどる & 分母が、分けられない2次式1つだけ？ & \kixhcase{D} \\
+7 & 一定の力をかけ続ける & 分けられない2次式もある？ & \kixhcase{E} \\
+8 & 強制振動 & 分けられない2次式もある？ & \kixhcase{E} \\
+9 & 共振 & 表の形そのもの？ & \kixhcase{A} \\
+10 & おくれたスイッチ & $e^{-st_0}$ がかかっている？（残りは B） & \kixhcase{F}\,\kixhcase{B} \\
+11 & 分子が大きい & 分子の次数≧分母の次数？ → 表の形そのもの？ & \kixhcase{G}\,\kixhcase{A} \\
+12 & 最後の値 & 最後の値だけほしい？ & \kixhcase{H} \\
+13 & 分けきれない分母 & 3次以上で、手で分けきれない？ & \kixhcase{I} \\
+\end{bktable}
+\bktabcaption{例題1〜13の流れ図の道すじ。}\label{bk:9-7:tab-trace}
+\end{bkcenter}
+
+
+
+\begin{reidai}[表の形にそろえて引く]
+次の $F(s)$ を、時間の関数にもどしましょう。\par
+（1）\nobreak $\dfrac{5}{s+2}$\qquad（2）\nobreak $\dfrac{6}{s^2+9}$\qquad（3）\nobreak $\dfrac{3s}{s^2+4}$\par
+\kangaekata \kixhbaai{表の形そのもの（定数倍をのぞく）}{9-7}{A}\par
+\kixhdan{1}\enspace $\mathcal L^{-1}$ は名前。ここでは分けずに、表を引くだけ。\par
+\kixhnaosu{2}\enspace 表\ref{bk:9-7:tab-gyaku}の行と、分子もふくめて形をそろえる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 （1）$\dfrac{5}{s+2}=5\times\dfrac{1}{s+2}$\quad （行3、$a=2$）\par
+\kixha （2）$\dfrac{6}{s^2+9}=2\times\dfrac{3}{s^2+3^2}$\quad （行5、$\omega=3$。分子を3にそろえた）\par
+\kixha （3）$\dfrac{3s}{s^2+4}=3\times\dfrac{s}{s^2+2^2}$\quad （行6、$\omega=2$）\par
+\kotae （1）\nobreak $5e^{-2t}$\quad（2）\nobreak $2\sin3t$\quad（3）\nobreak $3\cos2t$
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=42mm, height=32mm, xmin=0, xmax=3.4, ymin=-0.3, ymax=5.6, xtick=\empty, ytick={5}, xlabel={$t$}, title={\footnotesize（1）$5e^{-2t}$}, title style={yshift=-1mm}]
+\addplot[bkBlue, line width=1.4pt, domain=0:3.2] {5*exp(-2*x)};
+\end{axis}
+\end{tikzpicture}\hspace{2mm}\begin{tikzpicture}
+\begin{axis}[bkplot, width=42mm, height=32mm, xmin=0, xmax=3.4, ymin=-2.4, ymax=2.4, xtick=\empty, ytick={-2,2}, xlabel={$t$}, title={\footnotesize（2）$2\sin3t$}, title style={yshift=-1mm}]
+\addplot[bkRed, line width=1.4pt, domain=0:3.2, samples=120] {2*sin(deg(3*x))};
+\end{axis}
+\end{tikzpicture}\hspace{2mm}\begin{tikzpicture}
+\begin{axis}[bkplot, width=42mm, height=32mm, xmin=0, xmax=3.4, ymin=-3.5, ymax=3.5, xtick=\empty, ytick={-3,3}, xlabel={$t$}, title={\footnotesize（3）$3\cos2t$}, title style={yshift=-1mm}]
+\addplot[bkGreen!70!black, line width=1.4pt, domain=0:3.2, samples=120] {3*cos(deg(2*x))};
+\end{axis}
+\end{tikzpicture}\par}
+{\small 分母が $s+a$ なら $e^{-at}$ の形でへり、$s^2+\omega^2$ なら $\sin$・$\cos$ の形でゆれ続けます。}
+\end{reidai}
+
+\begin{jibun}
+次の $F(s)$ を、時間の関数にもどしましょう。\par
+（1）\nobreak $\dfrac{3}{s+4}$\qquad（2）\nobreak $\dfrac{10}{s^2+25}$\qquad（3）\nobreak $\dfrac{2s}{s^2+16}$
+\bkjans{（1）\nobreak $3\times\frac{1}{s+4}$ で $3e^{-4t}$。（2）\nobreak $2\times\frac{5}{s^2+5^2}$ で $2\sin5t$。（3）\nobreak $2\times\frac{s}{s^2+4^2}$ で $2\cos4t$。}
+\end{jibun}
+
+\begin{reidai}[ゆれずにもどる動き]
+$\ddot x+4\dot x+3x=0$、$x(0)=2$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。\par
+\kangaekata \kixhbaai{分母が、ちがう1次式のかけ算}{9-7}{B}\par
+\kixhdan{1}\enspace ①②で $X(s)$ を出し、$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{3}\enspace 分母 $(s+1)(s+3)$ で、$\dfrac{A}{s+1}+\dfrac{B}{s+3}$。かくす方法で $A$、$B$。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①\enspace $(s^2X-2s)+4(sX-2)+3X=0$\quad （$x(0)=2$ を入れた）\par
+\kixha ②\enspace $(s^2+4s+3)X=2s+8$\par
+\kixhb $X=\dfrac{2s+8}{(s+1)(s+3)}$\par
+\kixha ③\enspace $A=\dfrac{2s+8}{s+3}\Big|_{s=-1}=\dfrac{6}{2}=3$\quad （$(s+1)$ をかくした）\par
+\kixhb $B=\dfrac{2s+8}{s+1}\Big|_{s=-3}=\dfrac{2}{-2}=-1$\quad （$(s+3)$ をかくした）\par
+\kixha ④\enspace $X=\dfrac{3}{s+1}-\dfrac{1}{s+3}$ を、行3でもどす\par
+\kixha 確かめ：$x(0)=3-1=2$、$\dot x(0)=-3+3=0$\par
+\kotae $x=3e^{-t}-e^{-3t}$
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, axis x line=bottom, axis y line=left, xmin=0, xmax=4.3, ymin=-1.2, ymax=3.4, xtick={1,2,3,4}, ytick={-1,0,1,2,3}, xlabel={$t$}]
+\addplot[bkInk!50, line width=0.5pt, domain=0:4.2] {0};
+\addplot[bkBlue, line width=1pt, dash pattern=on 4pt off 1.5pt, domain=0:4] {3*exp(-x)};
+\addplot[bkGreen!70!black, line width=1pt, dash pattern=on 1.5pt off 1.5pt, domain=0:4] {-exp(-3*x)};
+\addplot[bkRed, line width=1.6pt, domain=0:4] {3*exp(-x)-exp(-3*x)};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.15,2.1) {点線：$3e^{-t}$};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.75,-0.75) {点線：$-e^{-3t}$};
+\node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:2.3,0.75) {赤：$x$};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+5\dot x+6x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。
+\bkjans{$(s^2+5s+6)X=s+5$、$X=\frac{s+5}{(s+2)(s+3)}$。$A=\frac{3}{1}=3$、$B=\frac{2}{-1}=-2$。$x=3e^{-2t}-2e^{-3t}$。}
+\end{jibun}
+
+\begin{reidai}[RC 回路の充電]
+6-4 の回路（電池 \qty{10}{V}、$R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$、時定数 $\tau=RC=\qty{2}{s}$）で、はじめ0\,V のコンデンサーの電圧 $v$〔V〕は、$2\dot v+v=10$ にしたがいます。$v$ を求め、2秒後・6秒後の電圧を求めましょう（$e^{-1}=0.3679$、$e^{-3}=0.0498$）。\par
+\kangaekata \kixhbaai{分母が $s$ と1次式のかけ算}{9-7}{B}\par
+\kixhdan{1}\enspace 右辺の10も変換して（$10\to\dfrac{10}{s}$）、$\mathcal L^{-1}[V]$ を求める。\par
+\kixhnaosu{3}\enspace $2s+1$ を $2(s+0.5)$ と、$s$ の係数を1にしてから分ける。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①\enspace $2(sV-0)+V=\dfrac{10}{s}$\par
+\kixha ②\enspace $V=\dfrac{10}{s(2s+1)}=\dfrac{5}{s(s+0.5)}$\quad （分母と分子を2でわった）\par
+\kixha ③\enspace $A=\dfrac{5}{s+0.5}\Big|_{s=0}=10$、\quad $B=\dfrac{5}{s}\Big|_{s=-0.5}=-10$\par
+\kixha ④\enspace $V=\dfrac{10}{s}-\dfrac{10}{s+0.5}$ を、行1と行3でもどす\par
+\kixha $v(2)=10-10e^{-1}=10-3.679=6.321$\par
+\kixha $v(6)=10-10e^{-3}=10-0.498=9.502$\par
+\kotae $v=10-10e^{-t/2}$。2秒後 約 \qty{6.32}{V}、6秒後 約 \qty{9.50}{V}（$\frac1s$ の係数10が、最後の電圧）
+\end{reidai}
+
+\begin{jibun}
+電池 \qty{6}{V}、$R=\qty{5}{k\ohm}$、$C=\qty{100}{\micro F}$（$\tau=\qty{0.5}{s}$）の回路で、はじめ0\,V のコンデンサーの電圧は $0.5\dot v+v=6$ にしたがいます。$v$ を求め、0.5秒後の電圧を求めましょう（$e^{-1}=0.3679$）。
+\bkjans{$V=\frac{6}{s(0.5s+1)}=\frac{12}{s(s+2)}=\frac{6}{s}-\frac{6}{s+2}$。$v=6-6e^{-2t}$。0.5秒後 $6-6\times0.3679\approx\qty{3.79}{V}$。}
+\end{jibun}
+
+\begin{reidai}[臨界減衰（重解）]
+$\ddot x+2\dot x+x=0$、$x(0)=1$、$\dot x(0)=1$ を、ラプラス変換で解きましょう。\par
+\kangaekata \kixhbaai{同じ1次式が2回}{9-7}{C}\par
+\kixhdan{1}\enspace ①②で $X(s)$ を出し、$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{3}\enspace $\dfrac{A}{s+1}+\dfrac{B}{(s+1)^2}$。$B$ は $s=-1$ を入れて、$A$ は係数を比べる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $(s^2X-s-1)+2(sX-1)+X=0$ から $X=\dfrac{s+3}{(s+1)^2}$\par
+\kixha ③\enspace $s+3=A(s+1)+B$\quad （両辺に $(s+1)^2$ をかけた）\par
+\kixhb $s=-1$ で $B=2$。$s$ の係数を比べて $A=1$\par
+\kixha ④\enspace $X=\dfrac{1}{s+1}+\dfrac{2}{(s+1)^2}$ を、行3と行4でもどす\par
+\kixha 確かめ：$x(0)=1$。$\dot x=-e^{-t}+2e^{-t}-2te^{-t}$ で $\dot x(0)=1$\par
+\kotae $x=e^{-t}+2te^{-t}=(1+2t)e^{-t}$
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=6.4, ymin=0, ymax=1.45, xtick={0.5,2,4,6}, xticklabels={0.5,2,4,6}, ytick={1,1.21}, xlabel={$t$}]
+\addplot[bkRed, line width=1.6pt, domain=0:6.1] {(1+2*x)*exp(-x)};
+\draw[bkInk, line width=0.4pt, dash pattern=on 1pt off 1pt] (axis cs:0.5,0) -- (axis cs:0.5,1.213);
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.4,1.15) {はじめの速さ1で少し上がってから、ゆれずにもどる};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+4\dot x+4x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。
+\bkjans{$X=\frac{s+4}{(s+2)^2}$。$s+4=A(s+2)+B$ で $B=2$、$A=1$。$x=e^{-2t}+2te^{-2t}=(1+2t)e^{-2t}$。}
+\end{jibun}
+
+\begin{reidai}[熱電対のおくれ]
+時定数 $\tau=\qty{30}{s}$ の熱電対で、温度が1秒に $r=\frac{1}{30}$\,℃ずつ上がり続けます。計器の値の上がり分 $y$〔℃〕は $30\dot y+y=\frac{t}{30}$、$y(0)=0$ にしたがいます。$y$ と、60秒後のおくれ（本当の上がり分 $\frac{t}{30}$ と $y$ の差）を求めましょう（$e^{-2}=0.1353$）。\par
+\kangaekata \kixhbaai{同じ1次式（$s$）が2回}{9-7}{C}\par
+\kixhdan{1}\enspace 右辺 $\frac{t}{30}$ を $\frac{1}{30s^2}$ に変換し、$\mathcal L^{-1}[Y]$ を求める。\par
+\kixhnaosu{3}\enspace $\dfrac{1}{s^2(30s+1)}=\dfrac{A}{s}+\dfrac{B}{s^2}+\dfrac{C}{30s+1}$。$B$・$C$ は数を入れ、$A$ は係数を比べる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $30sY+Y=\dfrac{1}{30s^2}$ から $Y=\dfrac{1}{30}\times\dfrac{1}{s^2(30s+1)}$\par
+\kixha ③\enspace $1=As(30s+1)+B(30s+1)+Cs^2$\par
+\kixhb $s=0$ で $B=1$。$s=-\frac{1}{30}$ で $1=\frac{C}{900}$、$C=900$\par
+\kixhb $s^2$ の係数：$0=30A+C$ から $A=-30$\par
+\kixha ④\enspace $Y=\dfrac{1}{30}\Bigl(-\dfrac{30}{s}+\dfrac{1}{s^2}+\dfrac{30}{s+\frac{1}{30}}\Bigr)$ を、行1・2・3でもどす\par
+\kixha $y=\dfrac{1}{30}\bigl(t-30+30e^{-t/30}\bigr)$\par
+\kixha おくれ $\dfrac{t}{30}-y=1-e^{-t/30}$。60秒で $1-e^{-2}=0.865$\par
+\kotae $y=\dfrac{t}{30}-1+e^{-t/30}$。60秒後のおくれ 約0.865\,℃（やがて $r\tau=1$\,℃）
+\end{reidai}
+
+\begin{jibun}
+時定数 $\tau=\qty{10}{s}$ の温度計で、温度が1秒に $r=0.5$\,℃ずつ上がり続けます。計器の値の上がり分は $10\dot y+y=0.5t$、$y(0)=0$ にしたがいます。$y$ と、20秒後のおくれを求めましょう（$e^{-2}=0.1353$）。
+\bkjans{$Y=\frac{0.5}{s^2(10s+1)}$。$\frac{1}{s^2(10s+1)}=-\frac{10}{s}+\frac{1}{s^2}+\frac{10}{s+0.1}$。$y=0.5(t-10+10e^{-0.1t})$。おくれ $0.5t-y=5(1-e^{-0.1t})$、20秒後 約4.32\,℃（やがて5\,℃）。}
+\end{jibun}
+
+\begin{reidai}[ゆれながらもどる]
+$\ddot x+4\dot x+13x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。\par
+\kangaekata \kixhbaai{分母が、分けられない2次式1つだけ（ほかの因数なし）}{9-7}{D}\par
+\kixhdan{1}\enspace ①②で $X(s)$ を出し、$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{3}\enspace 判別式 $16-52<0$。平方完成して、分子を $(s+2)$ と定数に分ける。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $(s^2X-s)+4(sX-1)+13X=0$ から $X=\dfrac{s+4}{s^2+4s+13}$\par
+\kixha ③\enspace $s^2+4s+13=(s+2)^2+9=(s+2)^2+3^2$\par
+\kixhb $s+4=(s+2)+2$、\quad $2=\dfrac23\times3$\par
+\kixhb $X=\dfrac{s+2}{(s+2)^2+3^2}+\dfrac23\times\dfrac{3}{(s+2)^2+3^2}$\par
+\kixha ④\enspace 行8と行7（$a=2$、$\omega=3$）でもどす\par
+\kotae $x=e^{-2t}\Bigl(\cos3t+\dfrac23\sin3t\Bigr)$
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=3.3, ymin=-1.3, ymax=1.3, xtick={1.0472,2.0944}, xticklabels={$\frac{\pi}{3}$,$\frac{2\pi}{3}$}, xticklabel style={fill=white, inner sep=1pt, yshift=-1mm}, ytick={-1,1}, xlabel={$t$}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:3.1] {1.202*exp(-2*x)};
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:3.1] {-1.202*exp(-2*x)};
+\addplot[bkRed, line width=1.6pt, domain=0:3.1, samples=160] {exp(-2*x)*(cos(deg(3*x))+2/3*sin(deg(3*x)))};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.2,0.8) {ゆれの1回分 $\frac{2\pi}{3}\approx2.09$ 秒、はばは $e^{-2t}$ でへる};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+6\dot x+10x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。
+\bkjans{$X=\frac{s+6}{s^2+6s+10}=\frac{s+3}{(s+3)^2+1^2}+3\times\frac{1}{(s+3)^2+1^2}$。$x=e^{-3t}(\cos t+3\sin t)$。}
+\end{jibun}
+
+\begin{reidai}[一定の力をかけ続ける]
+車B の式に、一定の力をかけ続けたときの $\ddot x+2\dot x+5x=5$（$x(0)=0$、$\dot x(0)=0$）を、ラプラス変換で解きましょう。\par
+\kangaekata \kixhbaai{分けられない2次式と、$s$ がまざる}{9-7}{E}\par
+\kixhdan{1}\enspace 右辺 $5\to\dfrac{5}{s}$。$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{3}\enspace $\dfrac{A}{s}+\dfrac{Bs+C}{s^2+2s+5}$。$A$ はかくす方法、$B$・$C$ は係数を比べる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $(s^2+2s+5)X=\dfrac{5}{s}$ から $X=\dfrac{5}{s(s^2+2s+5)}$\par
+\kixha ③\enspace $A=\dfrac{5}{s^2+2s+5}\Big|_{s=0}=1$\par
+\kixhb $5=(s^2+2s+5)+(Bs+C)s$\quad （分母をはらい、$A=1$ を入れた）\par
+\kixhb $s^2$ の係数：$0=1+B$、$B=-1$。\enspace $s$ の係数：$0=2+C$、$C=-2$\par
+\kixha ④\enspace $X=\dfrac{1}{s}-\dfrac{s+2}{s^2+2s+5}$\par
+\kixhb うしろの項は⑨の車B と同じ形で、$e^{-t}\bigl(\cos2t+\frac12\sin2t\bigr)$\par
+\kotae $x=1-e^{-t}\Bigl(\cos2t+\dfrac12\sin2t\Bigr)$（1に落ち着く。いちばん高いのは $t=\frac{\pi}{2}$ で約1.21）
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=6.4, ymin=0, ymax=1.42, xtick={1.5708,4,6}, xticklabels={$\frac{\pi}{2}$,4,6}, ytick={1,1.21}, xlabel={$t$}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:6.1] {1};
+\addplot[bkBlue, line width=1.6pt, domain=0:6.1, samples=160] {1-exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:2.3,1.27) {1をこえて行きすぎてから、1に落ち着く};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+4\dot x+13x=13$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう（例題6の答えを使ってよい）。
+\bkjans{$X=\frac{13}{s(s^2+4s+13)}$。$A=1$、$13=(s^2+4s+13)+(Bs+C)s$ で $B=-1$、$C=-4$。$X=\frac1s-\frac{s+4}{s^2+4s+13}$。$x=1-e^{-2t}\bigl(\cos3t+\frac23\sin3t\bigr)$。}
+\end{jibun}
+
+\begin{reidai}[強制振動]
+$\ddot x+2\dot x+2x=5\cos t$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。ゆすりに合うゆれと、自分のゆれに分けて答えましょう。\par
+\kangaekata \kixhbaai{分けられない2次式が2つ（1つだけではない）}{9-7}{E}\par
+\kixhdan{1}\enspace $\cos t\to\dfrac{s}{s^2+1}$。$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{3}\enspace $\dfrac{As+B}{s^2+1}+\dfrac{Cs+D}{s^2+2s+2}$。$A$・$B$ は $s=j$ を入れ、$C$・$D$ は係数を比べる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $X=\dfrac{5s}{(s^2+1)(s^2+2s+2)}$\par
+\kixha ③\enspace $\dfrac{5s}{s^2+2s+2}\Big|_{s=j}=\dfrac{5j}{1+2j}=\dfrac{5j(1-2j)}{5}=2+j$\par
+\kixhb $Aj+B=2+j$ から $A=1$、$B=2$\par
+\kixhb $5s=(s+2)(s^2+2s+2)+(Cs+D)(s^2+1)$\par
+\kixhb $(s+2)(s^2+2s+2)=s^3+4s^2+6s+4$\par
+\kixhb $s^3$：$0=1+C$、$C=-1$。\enspace 定数：$0=4+D$、$D=-4$\par
+\kixha ④\enspace $\dfrac{s+2}{s^2+1}\to\cos t+2\sin t$\par
+\kixhb $\dfrac{-s-4}{(s+1)^2+1}=-\dfrac{s+1}{(s+1)^2+1}-3\times\dfrac{1}{(s+1)^2+1}$\par
+\kixhb $\to-e^{-t}\cos t-3e^{-t}\sin t$\quad （行8・行7、$a=1$、$\omega=1$）\par
+\kotae $x=\underbrace{\cos t+2\sin t}_{\text{ゆすりに合うゆれ}}\underbrace{-e^{-t}(\cos t+3\sin t)}_{\text{自分のゆれ}}$
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+4\dot x+5x=8\cos t$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。ゆすりに合うゆれと、自分のゆれに分けて答えましょう。
+\bkjans{$X=\frac{8s}{(s^2+1)(s^2+4s+5)}$。$s=j$ で $\frac{8j}{4+4j}=1+j$、$A=1$、$B=1$。$8s=(s+1)(s^2+4s+5)$ $+(Cs+D)(s^2+1)$ で $C=-1$、$D=-5$。$\frac{-s-5}{(s+2)^2+1}$ をもどして、$x=\cos t+\sin t-e^{-2t}(\cos t+3\sin t)$。}
+\end{jibun}
+
+\begin{reidai}[共振]
+6-13⑨の $\ddot x+4x=\cos2t$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。\par
+\kangaekata \kixhbaai{表の形そのもの（行9、定数倍をのぞく）}{9-7}{A}\par
+\kixhdan{1}\enspace $\cos2t\to\dfrac{s}{s^2+4}$。$\mathcal L^{-1}[X]$ を求める。\par
+\kixhnaosu{2}\enspace 行9 $\dfrac{2\omega s}{(s^2+\omega^2)^2}$（$\omega=2$ で $\dfrac{4s}{(s^2+4)^2}$）にそろえる。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 ①②\enspace $(s^2+4)X=\dfrac{s}{s^2+4}$ から $X=\dfrac{s}{(s^2+4)^2}$\par
+\kixha $X=\dfrac14\times\dfrac{4s}{(s^2+4)^2}$\quad （分子を4にそろえた）\par
+\kotae $x=\dfrac{t}{4}\sin2t$（ゆれのはば $\frac t4$ が、時間とともに大きくなる）
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, axis x line=bottom, axis y line=left, xmin=0, xmax=13.2, ymin=-3.4, ymax=3.6, xtick={4,8,12}, ytick={-3,0,3}, xlabel={$t$}]
+\addplot[bkInk!50, line width=0.5pt, domain=0:13] {0};
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:12.6] {x/4};
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:12.6] {-x/4};
+\addplot[bkRed, line width=1.6pt, domain=0:12.6, samples=300] {x/4*sin(deg(2*x))};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.4,-2.4) {点線：$\pm\frac t4$（はばが、まっすぐ大きくなる）};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+$\ddot x+9x=6\cos3t$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう。
+\bkjans{$X=\frac{6s}{(s^2+9)^2}$。行9（$\omega=3$）の $\frac{2\times3\times s}{(s^2+3^2)^2}$ そのもの。$x=t\sin3t$。}
+\end{jibun}
+
+\begin{reidai}[おくれて入れたスイッチ]
+例題3の RC 回路で、スイッチを2秒おくれて入れます。コンデンサーの電圧の変換 $V(s)$ をもどし、4秒後の電圧を求めましょう（$e^{-1}=0.3679$）。
+\kixhline{$V(s)=e^{-2s}\times\dfrac{10}{s(2s+1)}$}
+\kangaekata \kixhbaai{$e^{-2s}$ がかかり、残りは $s$ と1次式のかけ算}{9-7}{F,B}\par
+\kixhdan{1}\enspace $\mathcal L^{-1}[V]$ を求める。\par
+\kixhdan{3}\enspace $e^{-2s}$ は分けずに外に出し、残りをもどしてから2秒ずらす（行11）。\par
+\kixhnaosu{3}\enspace 残り $\dfrac{10}{s(2s+1)}$ は、例題3で $\dfrac{10}{s}-\dfrac{10}{s+0.5}$。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 残りをもどすと $10-10e^{-t/2}$（例題3）\par
+\kixha $t$ を $t-2$ に変える：$v=10-10e^{-(t-2)/2}$（$t\geqq2$）、$v=0$（$t<2$）\par
+\kixha $v(4)=10-10e^{-1}=6.321$\par
+\kotae $t<2$ で $v=0$、$t\geqq2$ で $v=10-10e^{-(t-2)/2}$。4秒後 約 \qty{6.32}{V}
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=10.6, ymin=0, ymax=13.5, xtick={2,4,6,8,10}, ytick={5,10}, xlabel={$t$（s）}, ylabel={$v$（V）}]
+\addplot[bkGray, line width=1pt, dash pattern=on 4pt off 2pt, domain=0:10.2] {10-10*exp(-x/2)};
+\addplot[bkBlue, line width=1.6pt, domain=0:2] {0};
+\addplot[bkBlue, line width=1.6pt, domain=2:10.2] {10-10*exp(-(x-2)/2)};
+\node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:0.25,13.3) {青：2秒おくれ。灰色：例題3（おくれなし）};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+次の $V(s)$ をもどし、1.5秒後の値を求めましょう（$e^{-1}=0.3679$）。
+\kixhline{$V(s)=e^{-s}\times\dfrac{6}{s(0.5s+1)}$}
+\bkjans{残りは $6-6e^{-2t}$（例題3のじぶんでとこう）。$t<1$ で0、$t\geqq1$ で $6-6e^{-2(t-1)}$。1.5秒後 $6-6\times0.3679\approx3.79$。}
+\end{jibun}
+
+\begin{reidai}[分子の次数が大きい]
+$F(s)=\dfrac{2s+5}{s+2}$ を、時間の関数にもどしましょう。\par
+\kangaekata \kixhbaai{分子の次数が分母と同じ。わったあとは表の形}{9-7}{G,A}\par
+\kixhdan{1}\enspace $\mathcal L^{-1}[F]$ を求める。\par
+\kixhdan{3}\enspace 先にわり算をして、整数の部分と、分子の次数が小さい分数に分ける。\par
+\kixhnaosu{2}\enspace 定数は行10、分数は行3。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 $2s+5=2(s+2)+1$\quad （わり算：商2、余り1）\par
+\kixha $F=2+\dfrac{1}{s+2}$\par
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=38mm, xmin=-0.3, xmax=3.3, ymin=0, ymax=2.5, xtick={1,2,3}, ytick={1}, xlabel={$t$}, axis x line=bottom]
+\addplot[bkRed, line width=1.6pt, domain=0:3.1] {exp(-2*x)};
+\draw[bkBlue, line width=1.6pt, -{Stealth[length=2.6mm]}] (axis cs:0,0) -- (axis cs:0,2.3);
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.12,2.05) {青：$2\delta(t)$（$t=0$ で一瞬だけ、強さ2）};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.75,0.62) {赤：$e^{-2t}$};
+\end{axis}
+\end{tikzpicture}\par}
+{\small わり算の商の2は、$\delta$ になります。分子と分母の次数が同じときは、わり算の商が定数になり、$\delta$ が出ます（分子のほうが大きいときは、この本ではあつかいません）。}\par
+\kotae $2\delta(t)+e^{-2t}$
+\end{reidai}
+
+\begin{jibun}
+$F(s)=\dfrac{3s+4}{s+1}$ を、時間の関数にもどしましょう。
+\bkjans{$3s+4=3(s+1)+1$ で $F=3+\frac{1}{s+1}$。$3\delta(t)+e^{-t}$。}
+\end{jibun}
+
+\begin{reidai}[最後の値だけ求める]
+次の $F(s)$ について、もとの関数が時間がたつと近づく値を、最終値の定理で求めましょう。使えないときは、そのわけを答えましょう。\par
+（1）\nobreak $\dfrac{1}{s(s+1)(s+2)}$\qquad（2）\nobreak $\dfrac{2}{s(s^2+4)}$\par
+\kangaekata \kixhbaai{最後の値だけほしい}{9-7}{H}\par
+\kixhdan{1}\enspace $\mathcal L^{-1}[F]$ の、$t\to\infty$ の値。ここでは、もどさない。\par
+\kixhdan{3}\enspace $sF(s)$ の分母が0になる $s$ が、すべて実部が負かを先に見る。そうなら $\displaystyle\lim_{s\to0}sF(s)$。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 （1）$sF=\dfrac{1}{(s+1)(s+2)}$。分母が0になるのは $-1$、$-2$（左半分）\par
+\kixhb $s\to0$ で $\dfrac{1}{1\times2}=\dfrac12$\par
+\kixha （2）$sF=\dfrac{2}{s^2+4}$。分母が0になるのは $\pm2j$（実部が0）で、落ち着かない\par
+\kixhb 実際にもどすと $\dfrac{2}{s(s^2+4)}=\dfrac{1}{2}\times\dfrac1s-\dfrac12\times\dfrac{s}{s^2+4}$ で、$\dfrac12-\dfrac12\cos2t$\par
+\kotae （1）\nobreak $\dfrac12$\quad（2）\nobreak 使えない（$\frac12-\frac12\cos2t$ は、0と1の間をゆれ続ける）
+\end{reidai}
+
+\begin{jibun}
+次の $F(s)$ について、もとの関数が近づく値を、最終値の定理で求めましょう。使えないときは、そのわけを答えましょう。\par
+（1）\nobreak $\dfrac{6}{s(s+2)(s+3)}$\qquad（2）\nobreak $\dfrac{3}{s(s^2+9)}$
+\bkjans{（1）\nobreak $sF=\frac{6}{(s+2)(s+3)}$、分母が0になるのは $-2$・$-3$。$\frac{6}{6}=1$。（2）\nobreak $sF=\frac{3}{s^2+9}$ の分母が0になる $\pm3j$ は実部が0で、落ち着かない。使えない（もどすと $\frac13-\frac13\cos3t$）。}
+\end{jibun}
+
+\begin{reidai}[手で分けきれない分母]
+⑪の I の Python を使って、$Y=\dfrac{2}{s\bigl((s+1)^3+2\bigr)}$ をもどしましょう。実行結果は、分母が0になる $s$ が $0$、$-0.37\pm1.0911j$、$-2.2599$、係数が $0.6667$、$-0.2404\pm0.274j$、$-0.1858$ でした。\par
+\kangaekata \kixhbaai{3次の式 $s^3+3s^2+3s+3$ の因数が見つからない}{9-7}{I}\par
+\kixhdan{1}\enspace $\mathcal L^{-1}[Y]$ を求める。\par
+\kixhdan{3}\enspace Python の \texttt{residue} で分母が0になる $s$ と係数を出し、実数の $s$ は B、共役な組は実部の2倍で読む。\par
+\shiki\kixhs\hangindent=2.6\zw\hangafter=1 実数の $s$ の項：$0.6667\times1$、$-0.1858e^{-2.2599t}$\par
+\kixha 共役な組：$2e^{-0.37t}\bigl(-0.2404\cos1.0911t-0.274\sin1.0911t\bigr)$\par
+\kixhb $=-e^{-0.37t}\bigl(0.4808\cos1.0911t+0.548\sin1.0911t\bigr)$\par
+\kixha 確かめ：$t=0$ で $0.6667-0.1858-0.4808\approx0$。最後の値 $\frac{2}{1+2}=0.6667$（最終値の定理）\par
+\kotae $y=0.6667-0.1858e^{-2.2599t}$ $-e^{-0.37t}(0.4808\cos1.0911t+0.548\sin1.0911t)$
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=16.5, ymin=0, ymax=1.05, xtick={5,10,15}, ytick={0.6667,1}, yticklabels={$\frac23$,1}, xlabel={$t$}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:16] {2/3};
+\addplot[bkBlue, line width=1.6pt, domain=0:16, samples=200] {0.6667-0.1858*exp(-2.2599*x)-exp(-0.37*x)*(0.4808*cos(deg(1.0911*x))+0.548*sin(deg(1.0911*x)))};
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:5.5,0.25) {ゆれながら $\frac23$ に近づく};
+\end{axis}
+\end{tikzpicture}\par}
+\end{reidai}
+
+\begin{jibun}
+⑪の Python の実行結果（$Y=\dfrac{4}{s((s+1)^3+4)}$）から $y$ の式を書き、$t=0$ の値と最後の値を確かめましょう。
+\bkjans{$y=0.8-0.2045e^{-2.5874t}$ $-e^{-0.2063t}(0.5954\cos1.3747t$ $+0.4742\sin1.3747t)$。$t=0$ で $0.8-0.2045-0.5954\approx0$。最後の値0.8（$\frac{4}{1+4}$）。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① かけ算のまま、1つずつもどす}
+\bkng{$\mathcal L^{-1}\Bigl[\dfrac{1}{s+1}\times\dfrac{1}{s+2}\Bigr]=e^{-t}\times e^{-2t}=e^{-3t}$}
+\bkok{部分分数でひき算にしてから：$\dfrac{1}{s+1}-\dfrac{1}{s+2}\to e^{-t}-e^{-2t}$}
+\[ \kixhNt{\mathcal L^{-1}\Bigl[\frac{1}{(s+1)(s+2)}\Bigr]}=\kixhSt{3}{\mathcal L^{-1}\Bigl[\frac{1}{s+1}\Bigr]-\mathcal L^{-1}\Bigl[\frac{1}{s+2}\Bigr]} \]
+項ごとにもどしてよいのは、和と差だけです（線形）。$s$ の世界のかけ算は、時間の世界ではかけ算ではなく、たたみこみになります（9-6）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② 落ち着かない式に、最終値の定理を使う}
+\bkng{$F=\dfrac{1}{s^2+1}$ で、$sF\to0$ だから $\sin t$ は0に落ち着く}
+\bkok{$sF$ の分母が0になる $\pm j$ は実部が0。落ち着かないので使えない}
+最終値の定理は、「落ち着くなら、その値はこれ」という定理です。落ち着くかどうかは、先に分母が0になる $s$ で確かめます。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixhEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ $\frac{1}{2s+1}$ をそのまま引く}
+\raggedright\bkng{$\dfrac{1}{2s+1}\to e^{-2t}$、または $e^{-t}$}
+\bkok{$\dfrac{1}{2s+1}=\dfrac12\times\dfrac{1}{s+0.5}$\\$\to\dfrac12e^{-t/2}$}
+行3は $s$ の係数が1の形です。先に2でくくります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 2次式の分子を定数だけにする}
+\raggedright\bkng{$\dfrac{5}{s(s^2+2s+5)}$\\$=\dfrac{A}{s}+\dfrac{B}{s^2+2s+5}$}
+\bkok{$\dfrac{A}{s}+\dfrac{Bs+C}{s^2+2s+5}$}
+2次式の分子は1次式にします。定数だけでは、係数が合いません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixhEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 平方完成のずれ}
+\raggedright\bkng{$s^2+2s+5=(s+2)^2+1$}
+\bkok{$s^2+2s+5=(s+1)^2+4$}
+$s$ の係数2の\textbf{半分}の1を使います。$(s+1)^2=s^2+2s+1$ なので、残りは4です。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ 重解の $\frac{B}{(s+a)^2}$ を忘れる}
+\raggedright\bkng{$\dfrac{s+3}{(s+1)^2}=\dfrac{A}{s+1}+\dfrac{B}{s+1}$}
+\bkok{$\dfrac{A}{s+1}+\dfrac{B}{(s+1)^2}$}
+右の2つは $\frac{A+B}{s+1}$ と同じで、分母が2乗の式を作れません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixhEHV}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑦ はじめの値を入れ忘れる}
+\raggedright\bkng{車A を $s^2X+3sX+2X=0$ として、$X=0$}
+\bkok{$(s^2X-s)+3(sX-1)$\\$+2X=0$}
+$\mathcal L[\ddot x]=s^2X-sx(0)-\dot x(0)$ です。はじめの値が、動きのもとです。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑧ $e^{-st_0}$ を部分分数に入れる}
+\raggedright\bkng{$\dfrac{10e^{-2s}}{s(2s+1)}=\dfrac{A}{s}+\dfrac{B}{s+0.5}$ で $A=10e^{-2s}$…}
+\bkok{$e^{-2s}$ を外に出して分け、もどしてから2秒ずらす}
+$e^{-st_0}$ は多項式ではないので、部分分数の中に入れません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixhEHW}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑨ 共役な組の片方だけを使う}
+\raggedright\bkng{係数 $-0.2977+0.2371j$ の項だけを読んで、\\$-0.2977e^{-0.2063t}\cos1.3747t$}
+\bkok{2つの組は実部の2倍。$-0.5954\cos$、$-0.4742\sin$}
+共役な2つの $s$（$a\pm bj$）は、2つで1組です。片方だけでは $t=0$ の値が合いません。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑩ 最終値の定理で $s$ をかけ忘れる}
+\raggedright\bkng{$F=\dfrac{1}{s(s+1)(s+2)}$ で、$\displaystyle\lim_{s\to0}F(s)$ を求めて「∞」}
+\bkok{$\displaystyle\lim_{s\to0}sF(s)=\frac12$}
+$\frac1s$ は「最後の値」をつつんだ形です。$s$ をかけて、取り出します。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\par\vspace{4pt}
+\begingroup\tcbset{equal height group=kixhEHX}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑪ 2次式が2つでも D にする}
+\raggedright\bkng{$\dfrac{5s}{(s^2+1)(s^2+2s+2)}$ を、平方完成1回で、行7・行8 だけでもどす}
+\bkok{2次式が2つなら E。$\dfrac{As+B}{s^2+1}+\dfrac{Cs+D}{s^2+2s+2}$ に分けてから}
+D は、分けられない2次式が1つだけのときです。2つあれば、ゆれも2種類（ゆすりのゆれと自分のゆれ）あります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑫ かくす方法で、入れる $s$ の符号をまちがえる}
+\raggedright\bkng{$\dfrac{1}{(s+1)(s+2)}$ の $A$ で、$(s+1)$ をかくして $s=1$ を入れ、$\dfrac{1}{3}$}
+\bkok{$s+1=0$ になる $s=-1$ を入れて、$\dfrac{1}{-1+2}=1$}
+入れるのは、かくした1次式が0になる $s$ です（③）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+
+
+
+
+
+\begin{column}{数で解くか、式で解くか}
+やってみようのオイラー法は、どんな微分方程式でも数の表で答えを出せる強い道具です。いっぽう、ラプラス変換で解くと答えが $2e^{-t}-e^{-2t}$ のような式で出て、分母の因数を見るだけで、速く消える動きか、ゆれる動きかがわかります。工学では、数で確かめ、式で考える、の両方を使います。
+\end{column}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixhbox{スイッチを入れた直後：回路の過渡現象}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+電源を入れた直後の電圧や電流の変化を、\textbf{過渡現象}（かとげんしょう）といいます。⑩の RLC 回路では、10\,V の電池なのに、コンデンサーに一時 17\,V 以上かかりました。モーターや電球に電源を入れた直後にも、ふだんより大きな電流（突入電流）が流れることがあります。部品がこわれないか、ブレーカーが落ちないかを、設計の段階でラプラス変換を使って調べます（物理 電-9）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (27,0) node[below, font=\footnotesize] {$t$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (0,24);
+  \draw[bkGray, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (0,12) -- (26,12);
+  \draw[bkBlue, line width=1.2pt] plot[smooth, domain=0:26, samples=120] (\x,{12-12*exp(-0.17*\x)*cos(40*\x)});
+  \node[font=\footnotesize, anchor=east] at (-0.8,12) {10\,V};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixhbox{車のサスペンション}
+車A・車B は、車のばねとダンパーの式でした。設計する人は、分母の $s^2+cs+k$（質量1あたり）の係数 $c$、$k$ を変えて、分母が0になる $s$ の場所を動かし、「ゆれずにもどる」「少しゆれて速くもどる」を選びます。部分分数の各項が、1つ1つの動きの成分です（物理 波-1、9-9）。
+\par\vspace{4pt}
+\kixhbox{計器のおくれ}
+工場の温度・圧力の計器は、本当の値を少しおくれて追いかけます。例題5のように、上がり続ける温度では、計器はいつも $r\tau$ だけ低い値を指します。制御の設計では、このおくれを見こんで、警報や機械の動きを決めます（9-9）。
+\end{butsuri}
+
+
+
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 次の $F(s)$ を、時間の関数にもどしましょう。\par
+（1）\nobreak $\dfrac{4}{s+3}$\qquad（2）\nobreak $\dfrac{12}{s^2+16}$\qquad（3）\nobreak $\dfrac{5s}{s^2+1}$\mbox{（\bkreidairef{1}）}
+\bkpans{（1）\nobreak $4e^{-3t}$。（2）\nobreak $3\times\frac{4}{s^2+4^2}$ で $3\sin4t$。（3）\nobreak $5\cos t$。}
+
+\bkproblem 次の動きを、ラプラス変換で求めましょう\mbox{（\bkreidairef{2}）}。\par
+（1）\nobreak $\ddot x+6\dot x+8x=0$、$x(0)=1$、$\dot x(0)=0$\par
+（2）\nobreak 車A（$\ddot x+3\dot x+2x=0$）を、$x(0)=0$、$\dot x(0)=2$ でつき上げたとき
+\bkpans{（1）\nobreak $X=\frac{s+6}{(s+2)(s+4)}$。$A=\frac{4}{2}=2$、$B=\frac{2}{-2}=-1$。$x=2e^{-2t}-e^{-4t}$。（2）\nobreak $(s^2+3s+2)X=2$、$X=\frac{2}{(s+1)(s+2)}=\frac{2}{s+1}-\frac{2}{s+2}$。$x=2e^{-t}-2e^{-2t}$。}
+
+\bkproblem 電池 \qty{12}{V}、$R=\qty{40}{k\ohm}$、$C=\qty{100}{\micro F}$ の回路で、はじめ0\,V のコンデンサーの電圧は $4\dot v+v=12$ にしたがいます。$v$ と、4秒後の電圧を求めましょう（$e^{-1}=0.3679$）\mbox{（\bkreidairef{3}）}。
+\bkpans{$V=\frac{12}{s(4s+1)}=\frac{3}{s(s+0.25)}=\frac{12}{s}-\frac{12}{s+0.25}$。$v=12-12e^{-t/4}$。4秒後 $12-12\times0.3679\approx\qty{7.59}{V}$。}
+
+\bkproblem $\ddot x+6\dot x+9x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$X=\frac{s+6}{(s+3)^2}=\frac{1}{s+3}+\frac{3}{(s+3)^2}$。$x=(1+3t)e^{-3t}$。}
+
+\bkproblem $\ddot x+2\dot x+10x=0$、$x(0)=1$、$\dot x(0)=0$ を、ラプラス変換で解きましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$X=\frac{s+2}{(s+1)^2+3^2}=\frac{s+1}{(s+1)^2+3^2}+\frac13\times\frac{3}{(s+1)^2+3^2}$。$x=e^{-t}\bigl(\cos3t+\frac13\sin3t\bigr)$。}
+
+\bkproblem 次の $F(s)$ について、もとの関数が近づく値を、最終値の定理で求めましょう。使えないときは、そのわけを答えましょう。\par
+（1）\nobreak $\dfrac{10}{s(s+1)(s+5)}$\qquad（2）\nobreak $\dfrac{5}{s(s^2+25)}$\mbox{（\bkreidairef{12}）}
+\bkpans{（1）\nobreak $\frac{10}{1\times5}=2$。（2）\nobreak $sF$ の分母が0になる $\pm5j$ は実部が0で、落ち着かない。使えない。}
+
+\bkproblem 時定数 $\tau=\qty{20}{s}$ の温度計で、温度が1秒に $r=0.2$\,℃ずつ上がり続けます。計器の値の上がり分は $20\dot y+y=0.2t$、$y(0)=0$ にしたがいます。$y$ と、20秒後のおくれを求めましょう（$e^{-1}=0.3679$）\mbox{（\bkreidairef{5}）}。
+\bkpans{$Y=\frac{0.2}{s^2(20s+1)}$。$\frac{1}{s^2(20s+1)}=-\frac{20}{s}+\frac{1}{s^2}+\frac{20}{s+0.05}$。$y=0.2(t-20+20e^{-0.05t})$。おくれ $4(1-e^{-0.05t})$、20秒後 約2.53\,℃（やがて4\,℃）。}
+
+\bkproblem $F(s)=\dfrac{4s+9}{s+2}$ を、時間の関数にもどしましょう\mbox{（\bkreidairef{11}）}。
+\bkpans{$4s+9=4(s+2)+1$ で $F=4+\frac{1}{s+2}$。$4\delta(t)+e^{-2t}$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 次の式（$x(0)=0$、$\dot x(0)=0$）を、ラプラス変換で解きましょう\mbox{（\bkreidairef{7}・\bkreidairef{8}）}。\par
+（1）\nobreak $\ddot x+2\dot x+10x=10$（問題5の答えを使ってよい）\par
+（2）\nobreak $\ddot x+4\dot x+13x=40\cos t$（ゆすりに合うゆれと、自分のゆれに分けて）
+\bkpans{（1）\nobreak $X=\frac{10}{s(s^2+2s+10)}=\frac1s-\frac{s+2}{s^2+2s+10}$。$x=1-e^{-t}\bigl(\cos3t+\frac13\sin3t\bigr)$。（2）\nobreak $X=\frac{40s}{(s^2+1)(s^2+4s+13)}$。$s=j$ で $\frac{40j}{12+4j}=1+3j$、$\frac{3s+1}{s^2+1}$。$40s=(3s+1)(s^2+4s+13)$ $+(Cs+D)(s^2+1)$ で $C=-3$、$D=-13$。$\frac{-3s-13}{(s+2)^2+3^2}=-3\times\frac{s+2}{(s+2)^2+3^2}$ $-\frac73\times\frac{3}{(s+2)^2+3^2}$。$x=3\cos t+\sin t$ $-e^{-2t}\bigl(3\cos3t+\frac73\sin3t\bigr)$。}
+
+\bkproblem $\ddot x+16x=8\cos4t$、$x(0)=0$、$\dot x(0)=0$ を、ラプラス変換で解きましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$X=\frac{8s}{(s^2+16)^2}$ は行9（$\omega=4$）そのもの。$x=t\sin4t$。}
+
+\bkproblem 例題3の RC 回路のスイッチを、3秒おくれて入れます。次の $V(s)$ をもどし、5秒後の電圧を求めましょう（$e^{-1}=0.3679$）\mbox{（\bkreidairef{10}）}。
+\kixhline{$V(s)=e^{-3s}\times\dfrac{10}{s(2s+1)}$}
+\bkpans{$t<3$ で0、$t\geqq3$ で $v=10-10e^{-(t-3)/2}$。5秒後 $10-10\times0.3679\approx\qty{6.32}{V}$。}
+
+\bkproblem 次の $Y$ を、⑪と同じ Python（分母の係数は \texttt{[1, 3, 3, 2]}）で分けると、実行結果は下のとおりでした。上の行が分母が0になる $s$、下の行が係数です。$y$ の式を書き、$t=0$ の値と最後の値を確かめましょう\mbox{（\bkreidairef{13}）}。
+\kixhline{$Y=\dfrac{1}{s\bigl((s+1)^3+1\bigr)}$}
+\begin{bkcodeout}[実行結果]
+[ 0.  +0.j     -0.5+0.866j  -0.5-0.866j  -2. +0.j    ]
+[ 0.5   +0.j     -0.1667+0.2887j -0.1667-0.2887j -0.1667+0.j    ]
+\end{bkcodeout}
+\bkpans{$y=0.5-0.1667e^{-2t}$ $-e^{-0.5t}(0.3333\cos0.866t$ $+0.5774\sin0.866t)$。$t=0$ で $0.5-0.1667-0.3333=0$。最後の値0.5（$\frac{1}{1+1}$）。}
+
+\begin{column}{はかり終わる前に、答えを予想する体温計}
+6-4 で、体温計をわきにはさんで、すぐに取り出してはいけないことを学びました。体温計の値が1次おくれの形 $T_\infty-(T_\infty-T_0)e^{-t/\tau}$ で近づくなら、はじめの数十秒の上がり方から $T_\infty$ と $\tau$ を求めて、最後の値を先に予想できます。「予測式」とよばれる電子体温計は、このように、上がり方から最後の温度を予想する考え方を使っています（くわしい計算は会社や機種でちがいます）。
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=34mm, xmin=0, xmax=5.3, ymin=0, ymax=1.25, xtick=\empty, ytick=\empty, xlabel={時間}, ylabel={温度}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:5.1] {1};
+  \addplot[bkInk!40, line width=1.2pt, domain=0.8:5.1] {1-exp(-x)};
+  \addplot[bkRed, line width=1.8pt, domain=0:0.8] {1-exp(-x)};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:0.85,0.42) {赤：はかるのは、ここだけ};
+  \node[font=\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:5.1,1.03) {点線：予想した最後の値 $T_\infty$};
+\end{axis}
+\end{tikzpicture}\par}
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 微分方程式を「変換する・わり算で解く・部分分数に分ける・表でもどす」の4つの手順で解く流れを、図とオイラー法の表で説明できる。\bkfurref{bk:9-7:tejun}
+\item 分母がちがう1次式のかけ算になる式を、部分分数に分けて、表を逆に引いて時間の関数にもどせる。\bkfurref{bk:9-7:kurumaA}
+\item 場合分けの表9-7を使って、重解・分母が0になる $s$ が複素数の式・入力のある式・おくれて始まる式・最後の値だけの場合も、もどし方を選んで計算できる。\bkfurref{bk:9-7:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{分母が0になる $s$ が、答えの $e^{pt}$ を決めていたね。次は、機械の「入れると出てくる」を、その分数のまま考える伝達関数だ。}

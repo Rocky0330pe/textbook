@@ -1,0 +1,1149 @@
+%% 6-1 微分方程式ってなに？（第14回：組 V6-1。ページ制限なし。偶数ページ）
+%% ① 答えが数の方程式（2-16）と、答えが関数の方程式 ② ルールを読む（日本語・単位・符号）
+%% ③〜⑤ 法則からルールを作る：熱（ニュートンの冷却の法則）・電気（コンデンサーの放電）・ばね（2階）
+%% ⑥ 傾きの場 ⑦ はじめの状態で1本に決まる ⑧ 代入して確かめる ⑨ 階数・線形・初期条件 ⑩ ルールの形と、この巻の地図
+\makeatletter
+%% ---- この章だけで使う部品（頭文字 \bkvib…） ----
+% 囲みの中の小見出し（それだけで1行）  \bkvibmidashi{見出し}
+\newcommand\bkvibmidashi[1]{\par\Needspace{4\baselineskip}\addvspace{4pt}\noindent{\sffamily\bfseries #1}\par\nobreak\vspace{2pt}}
+% ばね（ジグザグ）  \bkvibspring{(左はし)}{長さ mm}{山の数}{山の高さ mm}{色}
+\newcommand\bkvibspring[5]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\bkvib@w{#2/(#3*2+2)}
+  \draw[#5, line width=0.9pt, line join=round] (0,0) -- (\bkvib@w,0)
+    \foreach \q in {1,...,#3} { -- ({\bkvib@w*(2*\q-0.5)},#4) -- ({\bkvib@w*(2*\q+0.5)},-#4)} -- ({#2-\bkvib@w},0) -- (#2,0);
+  \end{scope}}
+% 傾きの場（冷めるお湯）  \bkvibfield  横 1分＝1.8 mm、たて 1℃＝0.7 mm。6分ごと・10℃ごとに短い線
+\newcommand\bkvibfield{%
+  \draw[bkLine, line width=0.3pt] (0,0) grid[xstep=18, ystep=14] (108,63);
+  \foreach \t in {3,9,...,57} {\foreach \T in {10,20,...,90} {%
+    \pgfmathsetmacro\bkvibang{atan2(0.7*(-0.05*(\T-20)),1.8)}%
+    \draw[bkInk!75, line width=0.8pt, line cap=round] ({\t*1.8},{\T*0.7}) ++(\bkvibang+180:2.1) -- ++(\bkvibang:4.2);}}
+  \draw[-{Stealth[length=4pt]}, bkInk, line width=0.7pt] (0,0) -- (114,0) node[anchor=west, font=\sffamily\footnotesize] {$t$（分）};
+  \draw[-{Stealth[length=4pt]}, bkInk, line width=0.7pt] (0,0) -- (0,68) node[anchor=south, font=\sffamily\footnotesize] {$T$（℃）};
+  \foreach \t in {10,20,...,60} {\node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({\t*1.8},-1.8) {\t};}
+  \foreach \T in {20,40,60,80} {\node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,{\T*0.7}) {\T};}
+  \node[anchor=north east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.2,-1.8) {0};}
+\makeatother
+
+\bkchapter{6}{1}{微分方程式ってなに？}{\bklevel{2}}{微分方程式ってなに？}
+\bkmichishirube{2-16,5-3,5-5,5-13,5-18}{6-2,6-4,6-6,6-15}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 「変わる速さのルール」（微分方程式）を、ことばと単位で読み、法則から式に書ける。
+\item \bklevel{2}\enspace 傾きの場をかいて、はじめの状態から、未来のようすを1本のグラフで予想できる。
+\item \bklevel{2}\enspace 関数を代入して、微分方程式の解かどうかを確かめられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+2-16の方程式 $4t=10+2t$ の答えは、$t=5$ という1つの数でした。\par\vspace{3pt}
+この章の方程式は、答えが数ではなく「関数」（グラフ1本）になります。答えが関数になる方程式って、どういうことかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：数直線の1点
+  \draw[-{Stealth[length=3pt]}, bkInk, line width=0.6pt] (0,22) -- (26,22);
+  \foreach \k in {0,...,6} {\draw[bkInk, line width=0.5pt] ({2+3.6*\k},21) -- ({2+3.6*\k},23);}
+  \fill[bkOrange] (20,22) circle (1.3);
+  \node[anchor=north, font=\sffamily\footnotesize] at (20,20.2) {5};
+  \node[anchor=south, font=\sffamily\footnotesize] at (13,24.5) {答えは数};
+  % 右：グラフ1本
+  \draw[-{Stealth[length=3pt]}, bkInk, line width=0.6pt] (32,3) -- (58,3);
+  \draw[-{Stealth[length=3pt]}, bkInk, line width=0.6pt] (32,3) -- (32,28);
+  \draw[bkBlue, line width=1.2pt, domain=0:24, samples=30] plot ({32+\x}, {3+4+18*exp(-\x/9)});
+  \node[anchor=north, font=\sffamily\footnotesize] at (45,1) {答えは関数};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+序章では、冷めるお湯の温度を「1分ごとに少しずつ」計算しました。そのとき使った「次の瞬間を決めるルール」を、微分の記号で式に書くと、方程式の形になります。この章では、そのような方程式の読み方・作り方と、答えの意味を、ゆっくり見ていきます。
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[冷めるお湯の温度をはかろう]
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\textbf{用意するもの}\par
+カップ、温度計、時計（スマホのタイマー）、電卓、方眼紙
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 部屋の温度をはかろう。
+\item カップに熱いお湯を入れ、温度計を入れたまま、2分ごとに温度を記録しよう（やけどに注意）。
+\item となりどうしの温度の差を2でわって、「1分あたりに下がった温度」（冷める速さ）を求めよう。
+\item 冷める速さと、部屋との温度の差をくらべよう。何か、きまりはあるかな？
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkOrange!12, draw=bkInk!70, line width=0.9pt] (2,0) -- (0.5,20) -- (23.5,20) -- (22,0) -- cycle;
+  \fill[bkOrange!35] (1.9,1.2) -- (0.8,16) -- (23.2,16) -- (22.1,1.2) -- cycle;
+  \draw[bkInk!70, line width=0.9pt] (23.1,15) arc (90:-90:4 and 5);
+  \foreach \s in {5,10} {\draw[bkGray, line width=0.7pt] (\s,22) .. controls (\s-1.5,24.5) and (\s+1.5,26) .. (\s,28.5);}
+  \draw[bkInk, line width=0.7pt, rounded corners=0.8mm] (15.2,6) rectangle (17.8,31);
+  \fill[bkRed] (16.5,5.8) circle (1.8);
+  \fill[bkRed] (16.1,6) rectangle (16.9,24);
+  \bkclock{(36,14)}{6}{10}{10}
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent 部屋の温度が20\,℃の日に、はじめ80\,℃のお湯ではかった例を、次の表にしました（この本で使う数に合わせた例です）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1.5pt, colsep=3pt}
+時刻（分） & 0 & 2 & 4 & 6 & 8 & 10 \\
+温度（℃） & 80.0 & 74.3 & 69.1 & 64.4 & 60.2 & 56.4 \\
+部屋との差（℃） & 60.0 & 54.3 & 49.1 & 44.4 & 40.2 & 36.4 \\
+\end{bktable}
+\bktabcaption{2分ごとにはかったお湯の温度（部屋は20\,℃）}
+\end{bkcenter}
+
+③の「冷める速さ」は、2分のあいだに下がった温度を2でわります。たとえば0分から2分までは、$80.0-74.3=5.7$ 下がったので、$5.7\div2=2.85$ で、1分あたり2.85\,℃です。
+
+④でくらべる「差」は、その2分のあいだの差の平均（はじめの差とおわりの差を足して2でわったもの）を使います。0分から2分までなら $(60.0+54.3)\div2=57.15$ です。2分のあいだにも差は小さくなっていくので、まん中ごろの値を使うのです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=15mm]}}, rowsep=1.5pt, colsep=3pt}
+あいだ（分） & 0〜2 & 2〜4 & 4〜6 & 6〜8 & 8〜10 \\
+冷める速さ（℃/分） & 2.85 & 2.60 & 2.35 & 2.10 & 1.90 \\
+差の平均（℃） & 57.15 & 51.70 & 46.75 & 42.30 & 38.30 \\
+速さ÷差 & 0.050 & 0.050 & 0.050 & 0.050 & 0.050 \\
+\end{bktable}
+\bktabcaption{冷める速さと、部屋との差。いちばん下の行は小数第3位で四捨五入した。}
+\end{bkcenter}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=54mm, height=46mm, xmin=0, xmax=66, ymin=0, ymax=3.4, xtick={20,40,60}, ytick={1,2,3},
+  xlabel={差（℃）}, ylabel={冷める速さ（℃/分）}]
+  \addplot[bkthin, dashed, domain=0:64] {0.05*x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(57.15,2.85) (51.7,2.6) (46.75,2.35) (42.3,2.1) (38.3,1.9)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+グラフにすると、点は原点を通る直線（点線）の上にならびます。差が大きいときほど速く冷め、冷める速さは差の0.05倍です。冷める速さは、部屋との差に\textbf{比例}しています（比例は2-15・3-1）。
+\end{minipage}
+
+\begin{omoidasou}
+\bkrecall{2-16}{方程式 $4t=10+2t$ の解は $t=5$。代入して、両辺が等しくなるか確かめる。}
+\bkrecall{5-3}{$\dfrac{\dd y}{\dd x}$ は、$y$ を $x$ で微分したもの。分数の形だが、ひとまとまりの記号。}
+\bkrecall{5-5}{$\dot{x}=\dfrac{\dd x}{\dd t}$（速度）、$\ddot{x}=\dfrac{\dd^2x}{\dd t^2}$（加速度）。運動の法則 $F=ma$。}
+\bkrecall{5-13}{法則とはじめの状態がそろって、はじめて先のようすが1つに決まる。}
+\bkrecall{5-18}{答えの候補リスト。冷めるお湯は $T=20+60e^{-0.05t}$。$(e^{at})'=ae^{at}$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{18\baselineskip}
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{答えが「数」の方程式と、答えが「関数」の方程式}
+
+\label{bk:6-1:kansu}やってみようで、冷めるお湯には次のルールがあることがわかりました。
+\begin{taisetsu}
+\centering 温度の変わる速さ ＝ $-0.05$ ×（温度 $-$ 20）
+\end{taisetsu}
+「温度の変わる速さ」は、温度を時間で微分したものです（5-3）。時刻を $t$（分）、温度を $T$（℃）とすると、$\dfrac{\dd T}{\dd t}$ と書けます。だから、このルールは次の式になります。
+\[ \frac{\dd T}{\dd t}=-0.05\,(T-20) \]
+$-0.05$ のマイナスは、「下がる向き」を表します。くわしくは②で読みます。
+
+この式は、「＝」でつながった方程式です。では、この方程式で「わからないもの」は何でしょう。2-16の方程式とくらべてみます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] Q[l,m,wd=40mm] Q[l,m,wd=52mm]}, rowsep=1.5pt, colsep=4pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+ & 2-16の方程式 & この章の方程式 \\
+式 & $4t=10+2t$ & $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ \\
+わからないもの & 数 $t$ & 時刻ごとの温度 $T$（すべての時刻の分） \\
+答え & $t=5$（1つの数） & 時刻 $t$ と温度 $T$ の関係（関数） \\
+図にすると & 数直線の上の1点 & グラフ1本 \\
+\end{bktable}
+\bktabcaption{答えが数の方程式と、答えが関数の方程式}
+\end{bkcenter}
+
+2-16では、$t$ に数を入れて、両辺が等しくなるかをためしました。この章の方程式では、$T$ のところに「関数」を入れてためします。3つの候補でためしてみましょう。どれも、はじめ（$t=0$）は80\,℃です。
+
+\bkvibmidashi{候補A：ずっと80\,℃のまま（$T=80$）}
+温度が変わらないので、変わる速さ（左辺）は0です。ところが右辺は、$-0.05\times(80-20)=-3$ です。$0$ と $-3$ はちがうので、候補Aは答えではありません。
+
+\bkvibmidashi{候補B：1分に3\,℃ずつ下がり続ける（$T=80-3t$）}
+グラフは傾き $-3$ の直線なので、左辺はいつも $-3$ です。右辺に $T=80-3t$ を入れると、
+\begin{bkhenkei}
+-0.05\,(T-20) & 右辺 \\
+=-0.05\,(80-3t-20) & $T=80-3t$ を入れる \\
+=-0.05\,(60-3t) & $80-20=60$ \\
+=-3+0.15t & かっこをはずす（3-8） \\
+\end{bkhenkei}
+$t=0$ では、右辺も $-3$ で、左辺と合います。でも、$t=10$ では右辺が $-3+1.5=-1.5$ で、左辺の $-3$ と合いません。1つの時刻だけで合っても、答えにはなりません。
+
+\bkvibmidashi{候補C：5-18で求めた式（$T=20+60e^{-0.05t}$）}
+左辺は、$e^{at}$ の微分（5-14）で求めます。20は定数なので、微分すると0です。
+\begin{bkhenkei}
+\dfrac{\dd T}{\dd t}=0+60\times(-0.05)\,e^{-0.05t} & $(e^{at})'=ae^{at}$ で $a=-0.05$ \\
+=-3e^{-0.05t} & $60\times0.05=3$ \\
+\end{bkhenkei}
+右辺は、$T-20=60e^{-0.05t}$ なので、
+\begin{bkhenkei}
+-0.05\,(T-20)=-0.05\times60e^{-0.05t} & $T-20$ を入れる \\
+=-3e^{-0.05t} & $0.05\times60=3$ \\
+\end{bkhenkei}
+左辺と右辺が、どの $t$ でも同じ $-3e^{-0.05t}$ になりました。候補Cは、すべての時刻でルールに合っています。数でも確かめておきます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] *{3}{Q[c,m,wd=18mm]}}, rowsep=1.5pt, colsep=4pt}
+時刻 $t$（分） & 0 & 10 & 20 \\
+候補Cの温度 $T$（℃） & 80 & 56.39 & 42.07 \\
+左辺 $-3e^{-0.05t}$ & $-3$ & $-1.82$ & $-1.10$ \\
+右辺 $-0.05\,(T-20)$ & $-3$ & $-1.82$ & $-1.10$ \\
+\end{bktable}
+\bktabcaption{候補Cは、どの時刻でも左辺と右辺が等しい（小数第3位で四捨五入）}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=76mm, xmin=0, xmax=26, ymin=0, ymax=130, xtick={5,10,...,25}, ytick={20,40,60,80},
+  xlabel={$t$（分）}, ylabel={$T$（℃）}]
+  \addplot[bkthin, dashed, domain=0:25] {20};
+  \addplot[bkcurve2, domain=0:20] {80-3*x};
+  \addplot[bkcurve, domain=0:25, samples=60] {20+60*exp(-0.05*x)};
+  % t=10 の接線（候補C：傾き -1.82）と、候補Bの傾き -3
+  \addplot[bkPurple, line width=1.4pt, dashed, domain=3:17] {56.39-1.82*(x-10)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(10,56.39) (10,50)};
+  \node[anchor=south west, font=\sffamily\footnotesize, text=bkBlue] at (axis cs:21,43) {候補C};
+  \node[anchor=east, font=\sffamily\footnotesize, text=bkOrange!80!black] at (axis cs:8.5,48) {候補B};
+  \node[anchor=north west, font=\sffamily\footnotesize, text=bkPurple, align=left, fill=white, inner sep=1pt] at (axis cs:3,130) {候補Cの $t=10$ での傾き（点線）$-1.82$\\＝ルールの $-0.05\times(56.39-20)$};
+  \node[anchor=north west, font=\sffamily\footnotesize, text=bkOrange!80!black, align=left, fill=white, inner sep=1pt] at (axis cs:3,106.5) {候補Bの傾きは $-3$ のまま。ルールの\\$-0.05\times(50-20)=-1.5$ と合わない};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{候補B（オレンジの直線）と候補C（青の曲線）。$t=10$ で、グラフの傾きがルールの値と合うかをくらべる。}
+\end{bkfigure}
+
+図で見ると、候補Bの直線は、どこでも同じ傾き $-3$ で下がります。でも、温度が下がって部屋との差が小さくなると、ルールの決める下がる速さは小さくなります。だから、直線では合わないのです。候補Cの曲線は、どの点でも、傾きがちょうどルールの値になっています。
+
+このように、「変わる速さ」（微分）が入っていて、わからないものが関数である方程式を、\textbf{微分方程式}（びぶんほうていしき）といいます。そして、微分方程式をみたす関数を、その微分方程式の\textbf{解}（かい）といいます。解を求めることを、「微分方程式を\textbf{解く}」といいます。\bkidx{びぶんほうていしき}{微分方程式}
+
+\Needspace{7\baselineskip}
+\noindent\textbf{\bkhatenaref の答え}\par
+微分方程式の答え（解）は、1つの数ではありません。すべての時刻の温度を決める関数です。グラフにすると、数直線の上の1点ではなく、1本の曲線になります。ためすときは、関数を代入して、どの時刻でも左辺と右辺が等しくなるかを調べます。
+
+\begin{seikaku}
+\textbf{「すべての時刻で」の意味}\par
+微分方程式の解は、考えている時間のはんい（たとえば $t\geqq0$）の、すべての $t$ で式をみたす関数です。候補Bのように、とちゅうの1つの時刻（$t=0$）だけで等しくなっても、解ではありません。
+\end{seikaku}
+
+\bksubsection{2}{ルールを、ことばと単位で読む}
+
+\label{bk:6-1:yomu}微分方程式は、記号がならんでいて、むずかしそうに見えます。でも、1つずつ日本語にもどせば、ふつうの文になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\Large, inner sep=0.6pt, anchor=base west] (n1) at (34,0) {$\dfrac{\dd T}{\dd t}$};
+  \node[font=\Large, inner sep=0.6pt, anchor=base west] (n2) at ([xshift=3mm]n1.base east) {$=$};
+  \node[font=\Large, inner sep=0.6pt, anchor=base west] (n3) at ([xshift=3mm]n2.base east) {$-$};
+  \node[font=\Large, inner sep=0.6pt, anchor=base west] (n4) at ([xshift=2.5mm]n3.base east) {$0.05$};
+  \node[font=\Large, inner sep=0.6pt, anchor=base west] (n5) at ([xshift=2.5mm]n4.base east) {$(T-20)$};
+  \node[bk node, text width=30mm, font=\sffamily\footnotesize, anchor=north] (A) at (22,-16) {温度の変わる速さ\\〔℃/分〕};
+  \node[bk node, text width=36mm, font=\sffamily\footnotesize, anchor=south] (B) at (36,15) {下がる向き\\（差をへらす向き）};
+  \node[bk node, text width=30mm, font=\sffamily\footnotesize, anchor=north] (C) at (70,-16) {比例の数\\〔1/分〕};
+  \node[bk node, text width=32mm, font=\sffamily\footnotesize, anchor=south] (D) at (100,15) {部屋の温度との差\\〔℃〕};
+  \draw[bk link] (A.north) -- (n1.south);
+  \draw[bk link] (B.south) -- (n3.north);
+  \draw[bk link] (C.north) -- (n4.south);
+  \draw[bk link] (D.south) -- (n5.north);
+  \node[anchor=north west, text width=26mm, align=left, font=\sffamily\footnotesize, text=bkDeep] at (102,-16) {20は部屋の温度。\\お湯はここに近づく。};
+\end{tikzpicture}
+\bkfigcaption{冷めるお湯のルールを、部分ごとに読む}
+\end{bkfigure}
+
+つなげて読むと、次の文になります。
+\begin{taisetsu}
+温度の変わる速さ（1分あたり何\,℃）は、部屋の温度との差の0.05倍で、差をへらす向き（下がる向き）。
+\end{taisetsu}
+
+\Needspace{4\baselineskip}\noindent\textbf{単位で読む}\par
+左辺 $\dfrac{\dd T}{\dd t}$ は「温度÷時間」なので、単位は ℃/分です。右辺の $(T-20)$ は温度の差なので ℃ です。両辺の単位をそろえるには、0.05の単位が「1/分」でなければなりません。
+\[ \bigl(\text{1/分}\bigr)\times\bigl(\text{℃}\bigr)=\text{℃/分} \]
+0.05〔1/分〕は、「差1\,℃あたり、1分に0.05\,℃下がる」という意味です。差が60\,℃なら $0.05\times60=3$ で、1分に3\,℃下がります。
+
+\Needspace{4\baselineskip}\noindent\textbf{なぜ0.05なのか、なぜ20なのか}\par
+20は、その日の部屋の温度だからです。0.05は、やってみようで、はかって決めた数です。カップの大きさ、ふたがあるかないか、風が当たるかどうかで変わります。大きなカップや、ふたをしたカップでは、0.05より小さくなります（ゆっくり冷める）。
+
+\Needspace{4\baselineskip}\noindent\textbf{記号の書き方}\par
+$\dfrac{\dd T}{\dd t}$ は、$\dot{T}$（ティー・ドット、5-5）や $T'$（ティー・ダッシュ、5-4）と書いても同じ意味です。この巻では、ルールを立てるときや読むときは、単位が読みやすい $\dfrac{\dd T}{\dd t}$ の形を主に使います。
+
+\Needspace{4\baselineskip}\noindent\textbf{マイナスの意味を、数で確かめる}\par
+いろいろな温度 $T$ を右辺に入れて、変わる速さを計算します。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{5}{Q[c,m,wd=13mm]}}, rowsep=1.5pt, colsep=3pt}
+温度 $T$（℃） & 80 & 60 & 40 & 20 & 10 \\
+差 $T-20$（℃） & 60 & 40 & 20 & 0 & $-10$ \\
+変わる速さ（℃/分） & $-3$ & $-2$ & $-1$ & 0 & $+0.5$ \\
+ようす & 下がる & 下がる & 下がる & 変わらない & 上がる \\
+\end{bktable}
+\bktabcaption{ルールの右辺に、いろいろな温度を入れる}
+\end{bkcenter}
+
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=50mm, xmin=0, xmax=92, ymin=-3.6, ymax=1.6, xtick={20,40,60,80}, ytick={-3,-2,-1,1},
+  xlabel={$T$}, ylabel={変わる速さ}, axis x line=middle]
+  \addplot[bkcurve, domain=0:88] {-0.05*(x-20)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(80,-3) (60,-2) (40,-1) (20,0) (10,0.5)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+20\,℃より熱いと、変わる速さはマイナス（下がる）。20\,℃より冷たいと、プラス（上がる）。ちょうど20\,℃では0で、温度は変わりません。どちらの場合も、温度は20\,℃に近づく向きに変わります。$-0.05$ のマイナスが、この「近づく向き」を作っているのです。
+\end{minipage}
+
+\bksubsection{3}{法則からルールを作る：熱}
+
+\label{bk:6-1:netsu}やってみようで見つけた「冷める速さは、部屋との温度の差に比例する」というきまりは、\textbf{ニュートンの冷却の法則}とよばれています。1701年に、イギリスのニュートンが、名前を出さずに発表しました。\bkidx{にゅーとんのれいきゃくのほうそく}{ニュートンの冷却の法則}
+
+この法則から、ルールの式を作る手順を、1つずつ書いておきます。この手順は、熱でも、電気でも、ばねでも同じです。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item \textbf{主役の量を決めて、文字にする。}\enspace ここでは、お湯の温度 $T$〔℃〕。時刻は $t$〔分〕。
+\item \textbf{主役の量の「変わる速さ」を、微分で書く。}\enspace $\dfrac{\dd T}{\dd t}$〔℃/分〕。
+\item \textbf{変わる速さを決める法則を、式にする。}\enspace 差 $T-20$ に比例し、差をへらす向き。比例の数を0.05〔1/分〕とすると、$-0.05\,(T-20)$。
+\item \textbf{②と③を「＝」でつなぐ。}\enspace $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$。
+\end{enumerate}
+
+\begin{seikaku}
+\textbf{ニュートンの冷却の法則は、近似のきまり}\par
+お湯から逃げる熱は、まわりの空気へ伝わる熱のほかに、湯気になって出ていく熱（蒸発）や、光（赤外線）として出ていく熱もあります。このため、温度の差が大きいときや、ふたのないお湯では、比例のきまりから少しずれます。それでも、ふつうの温度の差では、このきまりでよく合います。0.05のような比例の数が、カップの何で決まるのか（熱のためやすさと、逃げにくさ）は、6-4で調べます。
+\end{seikaku}
+
+\bksubsection{4}{法則からルールを作る：電気（コンデンサーの放電）}
+
+\label{bk:6-1:denki}次は、電気の回路です。この巻では、\textbf{コンデンサー}という部品がよく出てきます。コンデンサーは、電気をためる部品です。2枚の金属の板を、電気を通さないうすい膜をはさんで向かい合わせた作りになっています。電池につなぐと、片方の板に＋の電気、もう片方に$-$の電気がたまります。カメラのフラッシュは、コンデンサーにためた電気を、一瞬で流して光らせています。\bkidx{こんでんさー}{コンデンサー}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：コンデンサーの作り（2枚の板と、たまった電気）
+  \begin{scope}[shift={(0,0)}]
+    \fill[bkGray!20] (8,0) rectangle (12,30);
+    \draw[bkInk, line width=1pt] (8,0) rectangle (12,30);
+    \fill[bkGray!20] (22,0) rectangle (26,30);
+    \draw[bkInk, line width=1pt] (22,0) rectangle (26,30);
+    \fill[bkYellow!30] (12,0) rectangle (22,30);
+    \foreach \y in {4,10,...,28} {\node[font=\sffamily\bfseries\small, text=bkRed] at (14.2,\y) {＋}; \node[font=\sffamily\bfseries\small, text=bkBlue] at (19.8,\y) {$-$};}
+    \draw[bkInk, line width=0.9pt] (10,30) -- (10,36) (24,30) -- (24,36);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (17,-2) {金属の板2枚と、\\あいだのうすい膜};
+  \end{scope}
+  % 右：放電の回路
+  \begin{scope}[shift={(58,2)}]
+    \draw[bkInk, line width=0.9pt] (0,0) -- (0,10.5) (0,13.5) -- (0,26) -- (20,26);
+    \draw[bkInk, line width=1.4pt] (-4,10.5) -- (4,10.5) (-4,13.5) -- (4,13.5);
+    \draw[bkInk, line width=0.9pt] (20,26) -- (28,29.5);
+    \fill[bkInk] (20,26) circle (0.8) (29,26) circle (0.8);
+    \draw[bkInk, line width=0.9pt] (29,26) -- (50,26) -- (50,19);
+    \draw[bkInk, line width=0.9pt, fill=white] (48,7) rectangle (52,19);
+    \draw[bkInk, line width=0.9pt] (50,7) -- (50,0) -- (0,0);
+    \node[anchor=east, font=\sffamily\footnotesize, align=right] at (-9,12) {コンデンサー\\$C$〔F〕};
+    \node[anchor=west, font=\sffamily\footnotesize, align=left] at (53.5,13) {抵抗\\$R$〔$\Omega$〕};
+    \node[anchor=south, font=\sffamily\footnotesize] at (24.5,30) {スイッチ};
+    \node[anchor=west, font=\sffamily\footnotesize] at (5,12) {電圧 $V$〔V〕};
+    \node[font=\sffamily\bfseries\footnotesize, text=bkRed] at (-6.5,16.5) {＋};
+    \node[font=\sffamily\bfseries\footnotesize, text=bkBlue] at (-6.5,7.5) {$-$};
+    \draw[-{Stealth[length=4pt]}, bkRed, line width=1.1pt] (34,22.5) -- (44,22.5);
+    \draw[-{Stealth[length=4pt]}, bkRed, line width=1.1pt] (40,3.5) -- (30,3.5);
+    \node[anchor=south, font=\sffamily\footnotesize, text=bkRed!80!black] at (30,5) {電流 $i$〔A〕};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：コンデンサーの作り。右：電気をためたコンデンサーを、スイッチで抵抗につなぐ回路（放電）。}
+\end{bkfigure}
+
+はじめに電気をためておいたコンデンサーを、スイッチを入れて抵抗につなぐと、電気が抵抗を通って流れ出します。これを\textbf{放電}（ほうでん）といいます。電気が出ていくと、コンデンサーの電圧 $V$ は下がっていきます。では、どんな速さで下がるのでしょう。熱と同じ手順で、ルールを作ります。そのために、次の3つのきまりを使います。
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=3pt]
+\item \textbf{コンデンサーのきまり}\enspace コンデンサーにたまっている電気の量 $q$〔C〕は、電圧 $V$〔V〕に比例する。
+\[ q=CV \]
+比例の数 $C$ を\textbf{静電容量}といい、単位はF（ファラド）。C（クーロン）は電気の量の単位です。この本では、これを部品のきまり（法則）として使います。くわしくは物理シリーズ『電磁気学』で学びます。
+\item \textbf{オームの法則}\enspace 抵抗に流れる電流 $i$〔A〕は、抵抗にかかる電圧に比例する（中学校の理科、2-15）。ここでは抵抗にかかる電圧もコンデンサーの電圧 $V$ と同じなので、
+\[ i=\frac{V}{R} \]
+\item \textbf{電流は、電気の量の流れる速さ}\enspace 1\,Aは、1秒あたり1\,Cの電気が流れることです。コンデンサーに電気が流れこむ向きを＋にすると、たまっている電気の量 $q$ の変わる速さが電流です。
+\[ i=\frac{\dd q}{\dd t}\qquad\text{（流れこむ向きが＋）} \]
+放電では、電気はコンデンサーから流れ出ます。図の向きに流れ出る電流を $i$ とすると、$q$ は1秒あたり $i$ ずつへるので、
+\[ \frac{\dd q}{\dd t}=-i \]
+\end{enumerate}
+
+この3つを組み合わせます。1行に1つのことだけをします。
+\begin{bkhenkei}
+\dfrac{\dd q}{\dd t}=-i & ③のきまり \\
+\dfrac{\dd (CV)}{\dd t}=-\dfrac{V}{R} & 左に①を、右に②を入れる \\
+C\,\dfrac{\dd V}{\dd t}=-\dfrac{V}{R} & $C$ は部品で決まる定数なので、微分の前に出せる（5-4） \\
+\dfrac{\dd V}{\dd t}=-\dfrac{V}{RC} & 両辺を $C$ でわる \\
+\end{bkhenkei}
+
+\begin{taisetsu}
+\centering コンデンサーの放電のルール\qquad $\dfrac{\dd V}{\dd t}=-\dfrac{V}{RC}$
+\end{taisetsu}
+
+\Needspace{4\baselineskip}\noindent\textbf{数を入れて読む}\par
+抵抗 $R=\qty{20}{k\ohm}$、静電容量 $C=\qty{100}{\micro F}$ のときを考えます。kは1000倍、μ（マイクロ）は100万分の1です（5巻の巻末）。
+\[ R=20\times1000=\qty{20000}{\ohm},\qquad C=100\div\num{1000000}=\qty{0.0001}{F} \]
+だから、$RC=\num{20000}\times0.0001=2$ です。ルールは
+\[ \frac{\dd V}{\dd t}=-\frac{V}{2} \]
+となります。日本語にすると、「電圧の変わる速さ（1秒あたり何V）は、今の電圧の半分で、下がる向き」です。今の電圧が\qty{10}{V}なら、1秒あたり\qty{5}{V}の速さで下がります。電圧が下がると、下がる速さも小さくなります。
+
+\Needspace{4\baselineskip}\noindent\textbf{$RC$ の単位は「秒」}\par
+$\Omega$ は「V÷A」、F は「C÷V」、A は「C÷s」（1秒あたりのクーロン）です。順に入れていくと、
+\[ \Omega\times\mathrm{F}=\frac{\mathrm{V}}{\mathrm{A}}\times\frac{\mathrm{C}}{\mathrm{V}}=\frac{\mathrm{C}}{\mathrm{A}}=\mathrm{C}\div\frac{\mathrm{C}}{\mathrm{s}}=\mathrm{s} \]
+Vどうし、Cどうしが約分されて、s（秒）が残ります。だから、$RC=2$ は「2秒」です。ルールの右辺 $-\dfrac{V}{RC}$ の単位は V/s になり、左辺の「電圧の変わる速さ」と単位がそろいます。
+
+\Needspace{4\baselineskip}\noindent\textbf{冷めるお湯とくらべる}\par
+冷めるお湯のルールは「部屋の温度20\,℃との差」に比例して変わりました。コンデンサーのルールは「0\,Vとの差」、つまり電圧そのものに比例して変わります。電圧は0\,Vに近づいていきます。3-11で「コンデンサーにためた電気を抵抗に流すと、電圧は同じ時間ごとに同じ割合でへる」と書いたのは、このルールのことです（6-4で確かめます）。
+
+\bksubsection{5}{法則からルールを作る：ばね（2回微分のルール）}
+
+\label{bk:6-1:bane}3つめは、なめらかな水平の台の上で、ばねにつけたおもりの動きです。5-15で、質量 \qty{0.5}{kg} のおもりと、ばね定数 \qty{8}{N/m} のばねを調べました。同じばねで、ルールを作ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!25] (-3,0) rectangle (0,26);
+  \draw[bkGray!80!black, line width=0.9pt] (0,0) -- (0,26);
+  \fill[bkGray!25] (-3,-1.6) rectangle (120,0);
+  \draw[bkGray!80!black, line width=0.9pt] (0,0) -- (120,0);
+  \bkvibspring{(0,11)}{56}{7}{2.4}{bkInk}
+  \filldraw[fill=bkOrange!40, draw=bkOrange!70!black, line width=0.9pt] (56,0.2) rectangle (72,22);
+  \node[font=\sffamily\footnotesize] at (64,11) {\qty{0.5}{kg}};
+  % つり合いの位置と、ずれ x
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (44,-6) -- (44,30);
+  \node[anchor=south, font=\sffamily\footnotesize, text=bkGray] at (44,30) {つり合いの位置（$x=0$）};
+  \draw[{Stealth[length=3pt]}-{Stealth[length=3pt]}, bkInk, line width=0.7pt] (44,-4.5) -- (64,-4.5);
+  \node[anchor=north, font=\sffamily\footnotesize] at (54,-5.5) {のび $x$〔m〕};
+  \draw[bkInk, line width=0.6pt] (64,-1) -- (64,-6);
+  % ばねの力
+  \draw[-{Stealth[length=5pt]}, bkRed, line width=1.4pt] (56,18) -- (46.5,18);
+  \node[anchor=west, text width=44mm, align=left, font=\sffamily\footnotesize] at (76,12) {おもりを右へ $x$ だけ引くと、ばねは左向き（もどる向き）に引く。この力（赤い矢印）が $-kx$。};
+\end{tikzpicture}
+\bkfigcaption{ばねにつけたおもり。右向きを＋として、つり合いの位置からのずれを $x$ とする。}
+\end{bkfigure}
+
+熱と同じ手順で進めます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item \textbf{主役の量}\enspace つり合いの位置からのずれ $x$〔m〕（右向きを＋）。時刻は $t$〔s〕。
+\item \textbf{変わる速さ}\enspace 位置の変わる速さは速度 $\dfrac{\dd x}{\dd t}$、速度の変わる速さは加速度 $\dfrac{\dd^2x}{\dd t^2}$（5-5）。
+\item \textbf{法則}\enspace 運動の法則（物にはたらく力＝質量×加速度、5-5）と、フックの法則（ばねの力はのびに比例し、もどる向き：$-kx$、2-15）。
+\item \textbf{「＝」でつなぐ}\enspace 質量×加速度＝ばねの力。
+\end{enumerate}
+\begin{bkhenkei}
+m\,\dfrac{\dd^2x}{\dd t^2}=-kx & 運動の法則に、ばねの力を入れる \\
+0.5\,\dfrac{\dd^2x}{\dd t^2}=-8x & $m=0.5$、$k=8$ を入れる \\
+\dfrac{\dd^2x}{\dd t^2}=-16x & 両辺を0.5でわる（$8\div0.5=16$） \\
+\end{bkhenkei}
+日本語にすると、「加速度は、ずれの16倍の大きさで、つり合いの位置にもどる向き」です。$x=\qty{0.1}{m}$ なら、加速度は $-16\times0.1=-1.6$ で、左向きに \qty{1.6}{m/s^2} です。16の単位は、$\dfrac{k}{m}$ の単位 $\dfrac{\mathrm{N/m}}{\mathrm{kg}}$ です。N（ニュートン）は $\mathrm{kg\cdot m/s^2}$ なので、$\dfrac{\mathrm{kg\cdot m/s^2}}{\mathrm{m}\times\mathrm{kg}}=\mathrm{1/s^2}$ になり、$\mathrm{(1/s^2)\times m=m/s^2}$ で加速度の単位とそろいます。
+
+\Needspace{4\baselineskip}\noindent\textbf{熱や電気のルールと、どこがちがう？}\par
+熱と電気のルールは、1回微分 $\dfrac{\dd T}{\dd t}$ が今の状態で決まりました。ばねのルールは、2回微分（加速度）が今の位置で決まります。だから、ばねの「今の状態」は、位置だけでは足りず、位置と速度の2つが必要です。序章のボールと同じで、「次の速度＝今の速度＋加速度×$\Delta t$」「次の位置＝今の位置＋速度×$\Delta t$」の2つをくり返して進めます（6-2で表計算にします）。
+
+%% ---------------- ⑥ 傾きの場 ----------------
+\bksubsection{6}{ルールを図にする：傾きの場}
+
+\label{bk:6-1:ba}微分方程式は、グラフの傾きを決めるルールでもあります。$\dfrac{\dd T}{\dd t}$ は、$t$-$T$ のグラフの接線の傾きだからです（5-3）。冷めるお湯のルール $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ で、いろいろな温度での傾きを、表計算で求めてみましょう。
+
+\begin{bkcenter}
+\bksheet{2}{34}{%
+1 & 温度 $T$ & 傾き $\dfrac{\dd T}{\dd t}$ \\
+2 & 90 & \texttt{=-0.05*(A2-20)} \\
+3 & 80 & （上をコピー） \\}
+\bktabcaption{A列に温度を入れ、B列でルールの右辺を計算する}\label{bk:6-1:tab-sheet}
+\end{bkcenter}
+
+A列に90、80、70、……、0と入れて、B列をコピーすると、傾きは $-3.5$、$-3$、$-2.5$、$-2$、$-1.5$、$-1$、$-0.5$、0、0.5、1 になります。
+
+次に、$t$-$T$ の方眼の上に、この傾きの短い線をかきます。温度80\,℃の高さには傾き $-3$ の線、20\,℃の高さには横向き（傾き0）の線、という具合です。ルールに $t$ が入っていないので、同じ高さなら、どの時刻でも同じ傾きです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkvibfield
+  \draw[bkOrange, line width=1.6pt, domain=0:60, samples=60] plot ({\x*1.8}, {0.7*(20+60*exp(-0.05*\x))});
+  \fill[bkOrange] (0,56) circle (1.5);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!80!black, fill=white, inner sep=1pt] at (12,58) {80\,℃から、線にそって進む};
+\end{tikzpicture}
+\bkfigcaption{冷めるお湯のルールの傾きの場。短い線は、その点での傾き。80\,℃の点から線の向きにそって進むと、オレンジの曲線になる。}
+\label{bk:6-1:fig-ba}
+\end{bkfigure}
+
+このように、方眼の点ごとに、ルールが決める傾きの短い線をかいた図を、\textbf{傾きの場}（かたむきのば）といいます。方向の場ともいいます。\bkidx{かたむきのば}{傾きの場}
+
+傾きの場は、川の流れの向きをかいた地図のようなものです。川に木の葉を落とすと、木の葉は流れの向きにそって流されていきます。80\,℃の点から、短い線の向きにそって少しずつ進むと、1本の曲線がかけます。これが、はじめ80\,℃のときの解のグラフです。
+
+図を見ると、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 20\,℃より上では、線はどれも右下がり。上のほうほど急。だから、熱いほど速く冷める。
+\item 20\,℃の高さの線は横向き。20\,℃に着いた曲線は、もう上がりも下がりもしない。
+\item 20\,℃より下では、線は右上がり。冷たい水はあたたまって、20\,℃に近づく。
+\end{itemize}
+式を解かなくても、傾きの場をかくだけで、解のようすがかなりわかるのです。
+
+\begin{motto}[2]
+\textbf{Python で傾きの場をかこう}\par
+この傾きの場（図\ref{bk:6-1:fig-ba}）は、Python（2-19）でもかけます。下のプログラムは、6分ごと・10\,℃ごとの点に、ルールが決める傾きの短い線をかきます。
+\begin{bkcode}[Python]
+import numpy as np
+import matplotlib.pyplot as plt
+\# 6分ごと・10℃ごとの点を、すべての組で作る
+t, T = np.meshgrid(np.arange(0, 61, 6),
+                   np.arange(0, 91, 10))
+s = -0.05 * (T - 20)      \# その点の傾き（ルールの右辺）
+\# 横に1、たてに s の向きの、矢じりのない短い線
+plt.quiver(t, T, 1 + 0*s, s, angles='xy',
+           pivot='mid', headlength=0, headwidth=1)
+plt.show()
+\end{bkcode}
+1行ずつ読んでおきます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \texttt{np.arange(0, 61, 6)} は、0から6ずつふやした 0、6、12、……、60 です（61は「61の手前まで」の意味）。
+\item \texttt{np.meshgrid} は、時刻と温度のすべての組（方眼の交点）を作ります。表計算でA列に温度、1行めに時刻をならべた表と同じです。
+\item \texttt{s = -0.05 * (T - 20)} が、ルールの右辺です。表計算のB列の式（表\ref{bk:6-1:tab-sheet}）と同じ計算を、すべての点でいっぺんにします。
+\item \texttt{plt.quiver} は、点ごとに「横に1、たてに $s$」の向きの線をかきます。\texttt{angles='xy'} で、グラフの目もりどおりの傾きになります。
+\end{enumerate}
+ルールの式をかえると、ほかのルールの傾きの場もかけます。6-2では、この線にそって少しずつ進む計算（オイラー法）を、同じようにプログラムにします。
+\end{motto}
+
+%% ---------------- ⑦ はじめの状態 ----------------
+\bksubsection{7}{はじめの状態で、解が1本に決まる}
+
+\label{bk:6-1:shoki}傾きの場の上で、出発する点を変えてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkvibfield
+  \foreach \T/\c in {80/bkBlue, 50/bkOrange, 10/bkGreen!70!black} {
+    \draw[\c, line width=1.6pt, domain=0:60, samples=60] plot ({\x*1.8}, {0.7*(20+(\T-20)*exp(-0.05*\x))});
+    \fill[\c] (0,{0.7*\T}) circle (1.5);}
+  \draw[bkPurple, line width=1.6pt] (0,14) -- (108,14);
+  \fill[bkPurple] (0,14) circle (1.5);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue, fill=white, inner sep=1pt] at (12,58) {はじめ 80\,℃};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!80!black, fill=white, inner sep=1pt] at (12,37) {はじめ 50\,℃};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkPurple, inner sep=1pt] at (109,14) {はじめ 20\,℃};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGreen!50!black, fill=white, inner sep=1pt] at (12,4) {はじめ 10\,℃};
+\end{tikzpicture}
+\bkfigcaption{同じルールでも、出発点（はじめの状態）がちがうと、ちがう曲線になる。どの曲線も、20\,℃に近づく。}
+\label{bk:6-1:fig-shoki}
+\end{bkfigure}
+
+80\,℃から出発すれば青の曲線、50\,℃からならオレンジの曲線、10\,℃からなら緑の曲線です。20\,℃から出発すると、ずっと20\,℃のまま（むらさきの横の直線）です。$T=20$ も、はじめが20\,℃のときの解です。
+
+1つの微分方程式には、解がたくさんあります。そのうちのどれになるかを決めるのが、はじめの状態です。時刻0の状態を\textbf{初期条件}（しょきじょうけん）といい、「$t=0$ で $T=80$」を、$T(0)=80$ と書きます。5-13で、「法則とはじめの状態がそろって、はじめて先のようすが1つに決まる」と書いたことを、傾きの場で見たことになります。\bkidx{しょきじょうけん}{初期条件}
+
+\begin{taisetsu}
+\centering ルール（微分方程式）＋ はじめの状態（初期条件）→ 解はただ1つ
+\end{taisetsu}
+
+\Needspace{4\baselineskip}\noindent\textbf{2回微分のルールには、はじめの状態が2つ要る}\par
+ばねのルール $\dfrac{\dd^2x}{\dd t^2}=-16x$ では、はじめの位置だけでは動きが決まりません。同じ位置 $x=\qty{0.1}{m}$ から出発しても、手を静かにはなした場合（はじめの速度0）と、右へ \qty{0.4}{m/s} の速さで押し出した場合では、ちがう動きになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=50mm, xmin=0, xmax=3.3, ymin=-0.17, ymax=0.19, xtick={1,2,3}, ytick={-0.1,0.1},
+  yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \addplot[bkcurve, domain=0:3.14, samples=150] {0.1*cos(deg(4*x))};
+  \addplot[bkcurve2, domain=0:3.14, samples=150] {0.1*cos(deg(4*x))+0.1*sin(deg(4*x))};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(0,0.1)};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue, inner sep=1pt] at (axis cs:2.0,0.165) {静かにはなした（速度0）};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!80!black, inner sep=1pt] at (axis cs:0.35,0.165) {右へ 0.4\,m/s で押し出した};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ位置（0.1\,m）から出発しても、はじめの速度がちがうと、ちがう動きになる}
+\end{bkfigure}
+
+5-18で見たように、2回微分の式の答えには、決める数が2つ（$A$ と $B$）あります。だから、はじめの位置とはじめの速度の、2つの初期条件が必要です。
+
+\begin{seikaku}
+\textbf{解がただ1つに決まるのは、なぜ？}\par
+傾きの場で、1つの点から出ている線は1本だけです。だから、同じ点から出発した曲線が、とちゅうで2本に分かれることはありません。また、2本の解の曲線が交わることもありません（交わった点から先は、同じ1本になってしまうからです）。大学では、ルールの右辺がなめらかに変わるなら、初期条件をみたす解がちょうど1つあることを証明します（\textbf{解の存在と一意性}）。
+\end{seikaku}
+
+\begin{motto}[4]
+\textbf{右辺がなめらかでないと、解が1つに決まらないこともある}\par
+$\dfrac{\dd y}{\dd t}=3y^{\frac{2}{3}}$、$y(0)=0$ という微分方程式を考えます。$y=0$（ずっと0）は解です。左辺も右辺も0になるからです。ところが、$y=t^3$ も解です。左辺は $(t^3)'=3t^2$（5-4）、右辺は $3(t^3)^{\frac{2}{3}}=3t^2$ で、等しくなります。同じ初期条件なのに、解が2つあります。右辺の $y^{\frac{2}{3}}$ は、$y=0$ のところで傾きが急に大きくなる（なめらかでない）ので、このようなことが起きるのです。物理や工学で出てくるルールのほとんどは右辺がなめらかなので、心配はいりません。
+\end{motto}
+
+%% ---------------- ⑧ 代入して確かめる ----------------
+\bksubsection{8}{解かどうかを、代入して確かめる}
+
+\label{bk:6-1:tashikame}①で、候補Cが解であることを確かめました。その手順をまとめておきます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=3pt]
+\item \textbf{左辺を計算する。}\enspace 候補の関数を微分する（5-18の表）。
+\item \textbf{右辺を計算する。}\enspace 候補の関数を、右辺の文字のところに入れる。
+\item \textbf{①と②が、すべての $t$ で同じ式になるか見る。}\enspace 同じなら、微分方程式の解。
+\item \textbf{初期条件を確かめる。}\enspace $t=0$ を入れて、はじめの値になるか見る。
+\end{enumerate}
+
+コンデンサーの放電 $\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$、$V(0)=10$ で、候補 $V=10e^{-0.5t}$ をためします（$-\dfrac{1}{2}=-0.5$）。
+\begin{bkhenkei}
+\dfrac{\dd V}{\dd t}=10\times(-0.5)\,e^{-0.5t}=-5e^{-0.5t} & ①左辺。$(e^{at})'=ae^{at}$ で $a=-0.5$ \\
+-\dfrac{V}{2}=-\dfrac{10e^{-0.5t}}{2}=-5e^{-0.5t} & ②右辺。$V$ を入れる \\
+-5e^{-0.5t}=-5e^{-0.5t} & ③すべての $t$ で同じ \\
+V(0)=10e^{0}=10\times1=10 & ④初期条件。$e^0=1$ \\
+\end{bkhenkei}
+4つとも合ったので、$V=10e^{-0.5t}$ が解です。はじめ\qty{10}{V}の電圧が、$e^{-0.5t}$ の形でへっていきます。
+
+解がわかっていれば、確かめるのはこのように簡単です。むずかしいのは、解を見つけることです。それが、この巻の仕事です。6-2では表計算で（数で）、6-4・6-12では式で見つけます。
+
+%% ---------------- ⑨ ことば ----------------
+\bksubsection{9}{微分方程式のことば：階数と線形}
+
+\label{bk:6-1:kotoba}微分方程式を、形で分けるためのことばを2つ紹介します。
+
+\Needspace{4\baselineskip}\noindent\textbf{階数}\par
+微分方程式にふくまれる、いちばん多い微分の回数を、\textbf{階数}（かいすう）といいます。1回微分までなら1階、2回微分があれば2階の微分方程式です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[c,m,wd=12mm] Q[l,m,wd=56mm]}, rowsep=1.5pt, colsep=4pt, row{1}={font=\sffamily\bfseries\small}}
+微分方程式 & 階数 & 必要な初期条件 \\
+$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ & 1階 & はじめの温度の1つ \\
+$\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$ & 1階 & はじめの電圧の1つ \\
+$\dfrac{\dd^2x}{\dd t^2}=-16x$ & 2階 & はじめの位置と速度の2つ \\
+\end{bktable}
+\bktabcaption{階数と、必要な初期条件の数}
+\end{bkcenter}
+階数の数だけ、初期条件が必要です。1回積分するごとに、決めなければならない定数 $C$ が1つ出てくるからです（5-13）。
+
+\Needspace{4\baselineskip}\noindent\textbf{線形}\par
+主役の量（$T$ や $x$）とその微分が、「数×主役の量」の形と、たし算・ひき算だけで出てくる微分方程式を、\textbf{線形}（せんけい）の微分方程式といいます（5-18）。主役の量どうしをかけたり、2乗したり、$\sin$ の中に入れたりしていない、ということです。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 線形：$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、$\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$、$\dfrac{\dd^2x}{\dd t^2}=-16x$
+\item 線形でない：$\dfrac{\dd y}{\dd t}=y^2$（2乗）、$\dfrac{\dd^2\theta}{\dd t^2}=-9.8\sin\theta$（$\sin$ の中。ふれはばの大きい振り子）
+\end{itemize}
+この巻の第3部で式で解くのは、ほとんどが線形の微分方程式です。線形でないものは、表計算（6-2）で解きます。
+
+\begin{seikaku}
+\textbf{5-18の「線形」とのつながり}\par
+5-18では、「答えどうしをたしても答え、何倍しても答え」になる式を線形とよびました。$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ は、$-20$ という定数の項があるので、このままでは答えどうしをたすと答えになりません。でも、5-18④のように差 $u=T-20$ を主役にすると $\dfrac{\dd u}{\dd t}=-0.05\,u$ となり、「たしても、何倍しても答え」の性質が成り立ちます。定数の項があっても、この本では線形の仲間とよびます。
+\end{seikaku}
+
+
+%% ---------------- ⑩ ルールの形と、この巻の地図 ----------------
+\bksubsection{10}{ルールの形で、解き方が決まる}
+
+\label{bk:6-1:katachi}この巻では、いろいろな形の微分方程式が出てきます。形によって、解き方と、解のグラフのようすが決まります。
+
+\begin{bkcenter}
+\begin{tblr}{width=\linewidth, colspec={X[l,m] Q[l,m] Q[c,m] Q[c,m]}, row{1}={bg=bkTheme!12, font=\sffamily\small}, hline{1,2,Z}={0.6pt,bkGray}, hline{3-8}={0.3pt,bkGray}, rowsep=2pt, colsep=4pt, cells={font=\small}}
+ルールの形 & 例 & 解のようす & 章 \\
+右辺が時刻 $t$ だけ & $\dfrac{\dd v}{\dd t}=9.8$（落ちるボール） & 積分するだけ & 6-3 \\
+自分に比例 & $\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$（放電） & へる・ふえる & 6-4 \\
+目標との差に比例 & $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ & 目標に近づく & 6-4・6-5 \\
+2回微分が自分の $-$ 倍 & $\dfrac{\dd^2x}{\dd t^2}=-16x$（ばね） & ゆれる & 6-6 \\
+ブレーキつきのばね & $m\ddot{x}+c\dot{x}+kx=0$ & ゆれながら止まる & 6-7・6-12 \\
+ゆすられるばね & 右辺に $\cos\omega t$ & 共振 & 6-13 \\
+いくつもの量がからむ & 2つの水そう & いっしょに変わる & 6-14 \\
+\end{tblr}
+\bktabcaption{ルールの形と、解き方の章。どの形でも、表計算（6-2）なら解ける。}
+\end{bkcenter}
+
+表のどの形でも、表計算で少しずつ進めれば、数で解けます（6-2）。式の形の解を求められるのは、特別な形のときだけです。だから、この巻では、まず表計算で解を見て、そのあとで式で解きます。
+
+\begin{taisetsu}
+\begin{tblr}{width=\linewidth, colspec={Q[l,t,wd=6\zw] X[l,t]}, rowsep=2pt, colsep=0pt, column{1}={font=\sffamily\bfseries\small, fg=\bkTT}, column{2}={font=\sffamily\bfseries}}
+微分方程式 & 変わる速さ（微分）が入っていて、わからないものが関数である方程式。 \\
+解 & すべての時刻でみたす関数。代入して、左辺と右辺が等しいか確かめる。 \\
+作り方 & 主役の量を決める → 変わる速さを微分で書く → 法則を式にして「＝」でつなぐ。 \\
+初期条件 & 階数の数だけ必要。ルールと初期条件で、解はただ1つに決まる。 \\
+\end{tblr}
+\end{taisetsu}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+独立変数 $t$ の未知関数 $y(t)$ とその導関数を含む方程式を常微分方程式という。含まれる導関数の最高階数を方程式の階数という。$n$ 階の方程式では、$n$ 個の初期条件 $y(0),\ y'(0),\ \dots,\ y^{(n-1)}(0)$ を与えると、解が一意に定まる。
+\end{bkhonbun}
+\bkyaku{「独立変数」は自分で動かす変数（ここでは時刻 $t$）、「未知関数」はわからない関数、「導関数」は微分したもの。「常微分方程式」は、変数が $t$ の1つだけの微分方程式（変数が場所と時間の2つ以上あるものは偏微分方程式で、8-13で学ぶ）。「一意に定まる」は「ただ1つに決まる」。}
+\end{senmonsho}
+
+\begin{kotoba}
+\small
+\bkword{微分方程式}{変わる速さ（微分）をふくみ、わからないものが関数である方程式。}
+\bkword{解}{微分方程式をみたす関数。}
+\bkword{傾きの場}{方眼の点ごとに、ルールの決める傾きの短い線をかいた図。}
+\bkword{初期条件}{はじめ（$t=0$）の状態。$T(0)=80$ のように書く。}
+\bkword{階数}{ふくまれる微分の、いちばん多い回数。}
+\bkword{静電容量}{コンデンサーのためやすさ。$q=CV$ の $C$。単位はF（ファラド）。}
+\end{kotoba}
+
+\clearpage
+\begin{column}{3つのルールを、ならべてみよう}
+この章では、熱・電気・ばねの3つの場面で、法則からルールを作りました。ならべてみると、作り方は同じで、ルールの形もよく似ています。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=9mm] Q[l,m,wd=24mm] Q[l,m,wd=28mm] Q[c,m,wd=38mm]}, rowsep=1.5pt, colsep=2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+場面 & 主役の量 & 使った法則 & ルール \\
+熱 & お湯の温度 $T$〔℃〕 & ニュートンの冷却の法則 & $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ \\
+電気 & コンデンサーの電圧 $V$〔V〕 & $q=CV$、オームの法則、$i=\dfrac{\dd q}{\dd t}$ & $\dfrac{\dd V}{\dd t}=-\dfrac{V}{RC}$ \\
+ばね & おもりのずれ $x$〔m〕 & 運動の法則、フックの法則 & $m\dfrac{\dd^2x}{\dd t^2}=-kx$ \\
+\end{bktable}
+\end{bkcenter}
+\par\vspace{2pt}
+{\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, at={(0mm,0mm)}, width=44mm, height=34mm, xmin=0, xmax=66, ymin=0, ymax=92, xtick=\empty, ytick={20,80}, xlabel={$t$}, ylabel={$T$}]
+  \addplot[bkthin, dashed, domain=0:62] {20};
+  \addplot[bkcurve, domain=0:62, samples=40] {20+60*exp(-0.05*x)};
+\end{axis}
+\begin{axis}[bkplot, at={(41mm,0mm)}, width=44mm, height=34mm, xmin=0, xmax=9, ymin=0, ymax=11.5, xtick=\empty, ytick={10}, xlabel={$t$}, ylabel={$V$}]
+  \addplot[bkcurve, domain=0:8.5, samples=40] {10*exp(-x/2)};
+\end{axis}
+\begin{axis}[bkplot, at={(82mm,0mm)}, width=44mm, height=34mm, xmin=0, xmax=3.4, ymin=-0.13, ymax=0.14, xtick=\empty, ytick=\empty, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkcurve, domain=0:3.2, samples=120] {0.1*cos(deg(4*x))};
+\end{axis}
+\node[anchor=north, font=\sffamily\footnotesize] at (19mm,-3mm) {熱：20\,℃に近づく};
+\node[anchor=north, font=\sffamily\footnotesize] at (60mm,-3mm) {電気：0\,Vに近づく};
+\node[anchor=north, font=\sffamily\footnotesize] at (101mm,-3mm) {ばね：ゆれる};
+\end{tikzpicture}\par}
+\vspace{4pt}
+熱と電気のルールは、どちらも「目標の値（20\,℃や0\,V）との差に比例して、差をへらす向きに変わる」形です。だから、グラフもそっくりです。6-4では、この2つを同じ方法でいっしょに解きます。熱と電気のルールは1階です。ばねだけは2回微分のルール（2階）で、近づくのではなく、ゆれます（6-6）。この巻では、ちがう分野でも同じ形のルールが何度も出てきます。それをまとめるのが6-15です。
+\end{column}
+\clearpage
+\bkkigocards{\bkkigocard{{\fontsize{14}{16}\selectfont$\dfrac{\dd y}{\dd t}=f(y)$}}{ディーワイ・ディーティー イコール エフ・オブ・ワイ}{$y$ の変わる速さが、今の $y$ で決まるルール（1階の微分方程式）}{differential equation}{6-1}}{}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[ルールを読む]
+冷めるお湯のルール $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$（$T$ は℃、$t$ は分）で、温度が（1）60\,℃、（2）10\,℃のときの、温度の変わる速さを求めましょう。上がるか下がるかも答えましょう。\par
+\kangaekata 右辺の $T$ に温度を入れる。答えがマイナスなら下がる、プラスなら上がる（②）。単位は℃/分。\par
+\shiki （1）$-0.05\times(60-20)=-0.05\times40=-2$\par
+\hspace*{2.6\zw}（2）$-0.05\times(10-20)=-0.05\times(-10)=0.5$\par
+\kotae （1）1分あたり2\,℃下がる（$-2$\,℃/分）\par
+\hspace*{3.2\zw}（2）1分あたり0.5\,℃上がる（$+0.5$\,℃/分）
+\end{reidai}
+
+\begin{jibun}
+ルール $\dfrac{\dd T}{\dd t}=-0.1\,(T-25)$（$T$ は℃、$t$ は分）で、温度が（1）45\,℃、（2）15\,℃のときの、温度の変わる速さを求めましょう。上がるか下がるかも答えましょう。
+\bkjans{（1）\nobreak $-0.1\times20=-2$。1分あたり2\,℃下がる。（2）\nobreak $-0.1\times(-10)=1$。1分あたり1\,℃上がる。}
+\end{jibun}
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=1mm]
+  % 温度の目もり（1℃＝0.5 mm）と、変わる速さの矢印（1℃/分＝6 mm）
+  \draw[-{Stealth[length=3.5pt]}, bkInk, line width=0.7pt] (0,0) -- (0,50) node[anchor=south, font=\sffamily\footnotesize] {温度（℃）};
+  \foreach \T in {20,40,60,80} {\draw[bkInk, line width=0.5pt] (-1,{\T*0.5}) -- (0,{\T*0.5}); \node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,{\T*0.5}) {\T};}
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (0,10) -- (52,10);
+  \foreach \x/\T/\v in {10/80/-3, 20/60/-2, 30/40/-1, 46/10/0.5} {
+    \draw[bkLine, line width=0.4pt] (0,{\T*0.5}) -- (\x,{\T*0.5});
+    \fill[bkInk] (\x,{\T*0.5}) circle (0.8);
+    \draw[-{Stealth[length=4pt]}, bkRed, line width=1.3pt] (\x,{\T*0.5}) -- (\x,{\T*0.5+6*\v});}
+  \fill[bkInk] (38,10) circle (0.8);
+  \node[anchor=north, font=\sffamily\footnotesize] at (38,8.6) {0};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (10.8,36) {$-3$};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (20.8,25) {$-2$};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (30.8,17) {$-1$};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (46.8,6.5) {$+0.5$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+温度の目もりの横に、その温度での「変わる速さ」を赤い矢印でかきました。下向きは下がる、上向きは上がるで、長さは速さの大きさです。矢印は、どれも20\,℃（点線）のほうを向いています。20\,℃から遠いほど、矢印は長くなります。
+\end{minipage}
+
+
+\begin{reidai}[ことばからルールを作る]
+部屋の温度は25\,℃です。お茶の温度 $T$〔℃〕の冷める速さは、部屋との温度の差の0.04倍〔1/分〕です。時刻を $t$〔分〕として、ルールを微分方程式で書きましょう。また、お茶が85\,℃のときの温度の変わる速さを求めましょう。\par
+\kangaekata ③の手順で作る。主役は $T$、変わる速さは $\dfrac{\dd T}{\dd t}$。差は $T-25$。差をへらす向きなので、マイナスをつける。\par
+\shiki 変わる速さ：$\dfrac{\dd T}{\dd t}$\par
+\hspace*{2.6\zw}法則：$-0.04\times(T-25)$\par
+\hspace*{2.6\zw}85\,℃のとき：$-0.04\times(85-25)=-0.04\times60=-2.4$\par
+\kotae $\dfrac{\dd T}{\dd t}=-0.04\,(T-25)$。85\,℃のとき、1分あたり2.4\,℃下がる
+\end{reidai}
+
+\begin{jibun}
+部屋の温度は18\,℃です。スープの温度 $T$〔℃〕の冷める速さは、部屋との温度の差の0.08倍〔1/分〕です。時刻を $t$〔分〕として、ルールを微分方程式で書きましょう。また、スープが68\,℃のときの温度の変わる速さを求めましょう。
+\bkjans{$\tfrac{\dd T}{\dd t}=-0.08\,(T-18)$。68\,℃のとき $-0.08\times50=-4$ で、1分あたり4\,℃下がる。}
+\end{jibun}
+\noindent 例題2では、問題のことばを、1つずつ記号に置きかえました。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=58mm] Q[c,m,wd=40mm]}, rowsep=1pt, colsep=4pt, row{1}={font=\sffamily\bfseries\small}}
+問題のことば & 式では \\
+お茶の温度 & $T$〔℃〕 \\
+冷める速さ（温度の変わる速さ） & $\dfrac{\dd T}{\dd t}$〔℃/分〕 \\
+部屋との温度の差 & $T-25$〔℃〕 \\
+差の0.04倍 & $0.04\times(T-25)$ \\
+冷める（差をへらす向き） & 前にマイナス $-$ \\
+\end{bktable}
+\bktabcaption{ことばを記号に置きかえる}
+\end{bkcenter}
+「冷める速さ」は下がる速さなので、温度の変わる速さとしてはマイナスです。だから、最後にマイナスをつけます。
+
+
+\begin{reidai}[コンデンサーの放電のルール]
+抵抗 $R=\qty{20}{k\ohm}$、静電容量 $C=\qty{100}{\micro F}$ で、コンデンサーを放電させます。電圧 $V$〔V〕のルール $\dfrac{\dd V}{\dd t}=-\dfrac{V}{RC}$ に数を入れ、電圧が（1）\qty{10}{V}、（2）\qty{4}{V}のときの、電圧の変わる速さを求めましょう。\par
+\kangaekata \unit{k\ohm}・\unit{\micro F} を、\unit{\ohm}・\unit{F} になおしてから $RC$ を計算する（k は1000倍、μは100万分の1）。$RC$ の単位は秒（④）。\par
+\shiki $R=20\times1000=\num{20000}$、$C=100\div\num{1000000}=0.0001$\par
+\hspace*{2.6\zw}$RC=\num{20000}\times0.0001=2$（秒）。ルールは $\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$\par
+\hspace*{2.6\zw}（1）$-\dfrac{10}{2}=-5$\par
+\hspace*{3.2\zw}（2）$-\dfrac{4}{2}=-2$\par
+\kotae （1）1秒あたり\qty{5}{V}下がる\par
+\hspace*{3.2\zw}（2）1秒あたり\qty{2}{V}下がる
+\end{reidai}
+電圧が低くなると、下がる速さも小さくなります。冷めるお湯で、温度が部屋に近づくと冷める速さが小さくなったのと同じです。
+
+\begin{jibun}
+抵抗 $R=\qty{50}{k\ohm}$、静電容量 $C=\qty{20}{\micro F}$ で、コンデンサーを放電させます。$RC$ を求めて放電のルールを書き、電圧が\qty{6}{V}のときの電圧の変わる速さを求めましょう。
+\bkjans{$RC=\num{50000}\times0.00002=1$（秒）。$\tfrac{\dd V}{\dd t}=-V$。6\,Vのとき、1秒あたり6\,V下がる。}
+\end{jibun}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=48mm, xmin=0, xmax=8.6, ymin=0, ymax=11.5, xtick={2,4,6,8}, ytick={2,4,6,8,10},
+  xlabel={$t$（s）}, ylabel={$V$（V）}]
+  \addplot[bkcurve, domain=0:8.2, samples=60] {10*exp(-x/2)};
+  \addplot[bkRed, line width=1pt, domain=0:2] {10-5*x};
+  \addplot[bkRed, line width=1pt, domain=0.8:3.833] {4-2*(x-1.833)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(0,10) (1.833,4)};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (axis cs:1.0,10.6) {傾き $-5$（10\,Vの半分）};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (axis cs:2.4,4.6) {傾き $-2$（4\,Vの半分）};
+  \node[anchor=south west, font=\sffamily\footnotesize, text=bkBlue] at (axis cs:4.6,1.2) {放電するコンデンサーの電圧};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{例題3の放電のグラフ（式は6-4で求める）。どの点でも、接線の傾きは「今の電圧の半分」で下向き。}
+\end{bkfigure}
+
+
+\begin{reidai}[ばねのルール]
+質量 \qty{0.5}{kg} のおもりを、ばね定数 \qty{8}{N/m} のばねにつけました。（1）ずれ $x$〔m〕のルールを書きましょう。（2）$x=\qty{-0.05}{m}$（左へ \qty{5}{cm}）のときの加速度を求めましょう。（3）このルールの階数を答えましょう。\par
+\kangaekata 運動の法則「質量×加速度＝力」に、ばねの力 $-kx$ を入れる（⑤）。\par
+\shiki （1）$0.5\,\dfrac{\dd^2x}{\dd t^2}=-8x$。両辺を0.5でわって $\dfrac{\dd^2x}{\dd t^2}=-16x$\par
+\hspace*{2.6\zw}（2）$-16\times(-0.05)=0.8$\par
+\hspace*{2.6\zw}（3）2回微分 $\dfrac{\dd^2x}{\dd t^2}$ があるので2階\par
+\kotae （1）$\dfrac{\dd^2x}{\dd t^2}=-16x$\par
+\hspace*{3.2\zw}（2）右向きに \qty{0.8}{m/s^2}\par
+\hspace*{3.2\zw}（3）2階
+\end{reidai}
+左にずれているときは、ばねが右へおし返すので、加速度は右向き（プラス）になります。ルールのマイナスが、いつも「つり合いの位置にもどる向き」を作っています。
+
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{jibun}
+質量 \qty{2}{kg} のおもりを、ばね定数 \qty{50}{N/m} のばねにつけました。（1）ずれ $x$〔m〕のルールを書きましょう。（2）$x=\qty{0.04}{m}$ のときの加速度を求めましょう。（3）階数を答えましょう。
+\bkjans{（1）\nobreak $2\tfrac{\dd^2x}{\dd t^2}=-50x$ より $\tfrac{\dd^2x}{\dd t^2}=-25x$。（2）\nobreak $-25\times0.04=-1$。左向きに1\,m/s$^2$。（3）\nobreak 2階。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=52mm, height=44mm, xmin=-0.13, xmax=0.13, ymin=-2.2, ymax=2.2, xtick={-0.1,0.1}, ytick={-2,-1,1,2},
+  xticklabel style={/pgf/number format/fixed}, xlabel={$x$（m）}, ylabel={加速度（m/s$^2$）}]
+  \addplot[bkcurve, domain=-0.125:0.125] {-16*x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(-0.05,0.8) (0.1,-1.6)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ずれと加速度}\label{bk:6-1:fig-ax}
+\end{minipage}
+\par\vspace{3pt}
+図\ref{bk:6-1:fig-ax}は、ばねのルールを、ずれ $x$ と加速度のグラフにしたものです。加速度はずれに比例し、向きは反対なので、原点を通る右下がりの直線（傾き $-16$）になります。オレンジの点は、例題4と⑤の値です。
+
+
+\begin{reidai}[解かどうか確かめる（1階）]
+$T=20+60e^{-0.05t}$ が、微分方程式 $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$ と初期条件 $T(0)=80$ をみたすことを確かめましょう。\par
+\kangaekata ⑧の4つの手順。左辺は5-18の表で微分、右辺は $T-20$ を入れる。\par
+\shiki ①左辺：$\dfrac{\dd T}{\dd t}=0+60\times(-0.05)\,e^{-0.05t}=-3e^{-0.05t}$\par
+\hspace*{2.6\zw}②右辺：$T-20=60e^{-0.05t}$ なので $-0.05\times60e^{-0.05t}=-3e^{-0.05t}$\par
+\hspace*{2.6\zw}③すべての $t$ で、左辺＝右辺\par
+\hspace*{2.6\zw}④$T(0)=20+60e^{0}=20+60\times1=80$\par
+\kotae 微分方程式と初期条件をみたす（解である）
+\end{reidai}
+
+\begin{jibun}
+$V=10e^{-0.5t}$ が、微分方程式 $\dfrac{\dd V}{\dd t}=-0.5V$ と初期条件 $V(0)=10$ をみたすことを確かめましょう。
+\bkjans{左辺 $10\times(-0.5)e^{-0.5t}=-5e^{-0.5t}$。右辺 $-0.5\times10e^{-0.5t}=-5e^{-0.5t}$ で等しい。$V(0)=10e^0=10$。}
+\end{jibun}
+\noindent 表計算でも確かめられます。A列に時刻を入れ、B2に \texttt{=20+60*EXP(-0.05*A2)}（候補の温度）、C2に \texttt{=-3*EXP(-0.05*A2)}（左辺）、D2に \texttt{=-0.05*(B2-20)}（右辺）と入れて、下へコピーします（\texttt{EXP(x)} は $e^x$）。
+\begin{bkcenter}
+\bksheet{4}{20}{%
+1 & $t$ & $T$ & 左辺 & 右辺 \\
+2 & 0 & 80 & $-3$ & $-3$ \\
+3 & 10 & 56.39 & $-1.82$ & $-1.82$ \\
+4 & 20 & 42.07 & $-1.10$ & $-1.10$ \\
+5 & 30 & 33.39 & $-0.67$ & $-0.67$ \\}
+\bktabcaption{計算の結果（小数第3位で四捨五入）。C列とD列は、どの行でも等しい。}
+\end{bkcenter}
+
+
+\begin{reidai}[解でないものを見分ける]
+微分方程式 $\dfrac{\dd y}{\dd t}=-2y$、初期条件 $y(0)=5$ の解は、次のどれでしょう。\par
+\quad （ア）$y=5-10t$、（イ）$y=5e^{-2t}$、（ウ）$y=5e^{2t}$\par
+\kangaekata 1つずつ、左辺と右辺を計算してくらべる（⑧）。1つの時刻だけで合ってもだめ（①）。\par
+\shiki （ア）左辺 $-10$、右辺 $-2(5-10t)=-10+20t$。$t=1$ では左辺 $-10$、\par
+\hspace*{4.6\zw}右辺 $10$ で、合わない\par
+\hspace*{2.6\zw}（イ）左辺 $5\times(-2)e^{-2t}=-10e^{-2t}$、右辺 $-2\times5e^{-2t}=-10e^{-2t}$\par
+\hspace*{4.6\zw}で等しい。$y(0)=5e^0=5$\par
+\hspace*{2.6\zw}（ウ）左辺 $5\times2e^{2t}=10e^{2t}$、右辺 $-2\times5e^{2t}=-10e^{2t}$\par
+\hspace*{4.6\zw}で、符号がちがう\par
+\kotae （イ）
+\end{reidai}
+（ア）は $t=0$ では左辺も右辺も $-10$ で合いますが、ほかの時刻では合いません。（ウ）は、$y(0)=5$ はみたしますが、ふえていく関数なので、「自分の $-2$ 倍の速さでへる」ルールに合いません。初期条件だけ合っていても、解ではないのです。
+
+\begin{jibun}
+微分方程式 $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、初期条件 $T(0)=50$ の解は、次のどれでしょう。\par
+\quad （ア）$T=50-1.5t$、（イ）$T=20+30e^{-0.05t}$、（ウ）$T=50e^{-0.05t}$
+\bkjans{（イ）。（ア）は左辺 $-1.5$、右辺 $-1.5+0.075t$ で $t\neq0$ で合わない。（ウ）は左辺 $-2.5e^{-0.05t}$、右辺 $-2.5e^{-0.05t}+1$ で合わない。}
+\end{jibun}
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=50mm, xmin=0, xmax=1.08, ymin=-6, ymax=17, xtick={0.5,1}, ytick={-5,5,10,15},
+  xlabel={$t$}, ylabel={$y$}]
+  \addplot[bkcurve2, domain=0:1] {5-10*x};
+  \addplot[bkcurve, domain=0:1, samples=40] {5*exp(-2*x)};
+  \addplot[bkcurve3, domain=0:0.605, samples=40] {5*exp(2*x)};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGreen!50!black] at (axis cs:0.62,15.5) {（ウ）};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue] at (axis cs:0.78,2.4) {（イ）};
+  \node[anchor=east, font=\sffamily\footnotesize, text=bkOrange!80!black] at (axis cs:0.6,-4.2) {（ア）};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+3つの候補のグラフです。ルール $\dfrac{\dd y}{\dd t}=-2y$ では、$y$ がプラスなら傾きはマイナスで、$y$ が0に近づくほど傾きはゆるやかになります。（ア）は傾きが変わらず、0をつきぬけます。（ウ）は右上がりです。ルールのとおりに曲がっているのは（イ）だけです。
+\end{minipage}
+
+
+\begin{reidai}[解かどうか確かめる（2階）]
+$x=0.1\cos4t$ が、ばねの微分方程式 $\dfrac{\dd^2x}{\dd t^2}=-16x$ と、初期条件 $x(0)=0.1$、$\dfrac{\dd x}{\dd t}(0)=0$ をみたすことを確かめましょう。\par
+\kangaekata 2回微分して左辺を作る（5-15：$\cos$ の微分は $-\sin$、$\sin$ の微分は $\cos$。$\omega=4$ がかかる）。初期条件は2つ確かめる。\par
+\shiki 1回微分：$\dfrac{\dd x}{\dd t}=0.1\times(-4\sin4t)=-0.4\sin4t$\par
+\hspace*{2.6\zw}2回微分：$\dfrac{\dd^2x}{\dd t^2}=-0.4\times4\cos4t=-1.6\cos4t$\par
+\hspace*{2.6\zw}右辺：$-16x=-16\times0.1\cos4t=-1.6\cos4t$　で等しい\par
+\hspace*{2.6\zw}$x(0)=0.1\cos0=0.1$、$\dfrac{\dd x}{\dd t}(0)=-0.4\sin0=0$\par
+\kotae 微分方程式と、2つの初期条件をみたす（解である）
+\end{reidai}
+
+\begin{jibun}
+$x=0.05\sin4t$ が、$\dfrac{\dd^2x}{\dd t^2}=-16x$ と、初期条件 $x(0)=0$、$\dfrac{\dd x}{\dd t}(0)=0.2$ をみたすことを確かめましょう。
+\bkjans{$\tfrac{\dd x}{\dd t}=0.2\cos4t$、$\tfrac{\dd^2x}{\dd t^2}=-0.8\sin4t=-16\times0.05\sin4t=-16x$。$x(0)=0$、$\tfrac{\dd x}{\dd t}(0)=0.2\cos0=0.2$。}
+\end{jibun}
+\noindent 数でも確かめます。いくつかの時刻で、2回微分（加速度）と $-16x$ を計算すると、同じ値になります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{4}{Q[c,m,wd=19mm]}}, rowsep=1.5pt, colsep=3pt}
+時刻 $t$（s） & 0 & 0.2 & 0.6 & 0.8 \\
+位置 $x$（m） & 0.1 & 0.0697 & $-0.0737$ & $-0.0998$ \\
+加速度 $-1.6\cos4t$ & $-1.6$ & $-1.115$ & 1.180 & 1.597 \\
+$-16x$ & $-1.6$ & $-1.115$ & 1.180 & 1.597 \\
+\end{bktable}
+\bktabcaption{加速度と $-16x$ は、どの時刻でも等しい（$\cos$ はラジアンで計算した）}
+\end{bkcenter}
+
+
+\begin{reidai}[傾きの場から、解のようすを予想する]
+微分方程式 $\dfrac{\dd y}{\dd t}=-0.5\,(y-2)$ について、（1）$y=0$、1、2、3、4 での傾きを求めましょう。（2）$y(0)=4$ と $y(0)=0$ の解は、それぞれどうなりますか。\par
+\kangaekata 右辺に $y$ を入れて傾きを求め、傾きの場をかく（⑥）。傾きが0になる高さに、解は近づく。\par
+\shiki （1）$y=0$：$-0.5\times(-2)=1$、$y=1$：$-0.5\times(-1)=0.5$\par
+\hspace*{4.6\zw}$y=2$：0、$y=3$：$-0.5$、$y=4$：$-1$\par
+\hspace*{2.6\zw}（2）$y>2$ では傾きがマイナス、$y<2$ ではプラス、$y=2$ で0\par
+\kotae （1）1、0.5、0、$-0.5$、$-1$\par
+\hspace*{3.2\zw}（2）$y(0)=4$ はへって2に近づく。$y(0)=0$ はふえて2に近づく
+\end{reidai}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=0.88mm, y=1mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid[xstep=10, ystep=10] (60,40);
+  \foreach \t in {0,5,...,60} {\foreach \y in {0,0.5,...,4} {%
+    \pgfmathsetmacro\bkvibang{atan2(10*(-0.5*(\y-2)),8.8)}%
+    \draw[bkInk!75, line width=0.7pt, line cap=round] (\t,{\y*10}) ++(\bkvibang+180:1.7) -- ++(\bkvibang:3.4);}}
+  \draw[bkBlue, line width=1.5pt, domain=0:6, samples=50] plot ({\x*10}, {10*(2+2*exp(-0.5*\x))});
+  \draw[bkOrange, line width=1.5pt, domain=0:6, samples=50] plot ({\x*10}, {10*(2-2*exp(-0.5*\x))});
+  \draw[-{Stealth[length=3.5pt]}, bkInk, line width=0.7pt] (0,0) -- (65,0) node[anchor=west, font=\sffamily\footnotesize] {$t$};
+  \draw[-{Stealth[length=3.5pt]}, bkInk, line width=0.7pt] (0,0) -- (0,45) node[anchor=south, font=\sffamily\footnotesize] {$y$};
+  \foreach \y in {1,2,3,4} {\node[anchor=east, font=\sffamily\footnotesize, inner sep=0pt] at (-1.8,{\y*10}) {\y};}
+  \foreach \t in {2,4,6} {\node[anchor=north, font=\sffamily\footnotesize, inner sep=0pt] at ({\t*10},-1.8) {\t};}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+傾きの場をかいて、$y(0)=4$（青）と $y(0)=0$（オレンジ）から線にそって進むと、どちらも $y=2$ の横の線に近づきます。$y=2$ は、冷めるお湯の「部屋の温度20\,℃」にあたる高さです。
+\end{minipage}
+
+\begin{jibun}
+微分方程式 $\dfrac{\dd T}{\dd t}=-0.1\,(T-30)$ について、（1）$T=10$、20、30、40、50 での傾きを求めましょう。（2）$T(0)=50$ と $T(0)=10$ の解は、それぞれどうなりますか。
+\bkjans{（1）\nobreak 2、1、0、$-1$、$-2$。（2）\nobreak $T(0)=50$ はへって30に近づく。$T(0)=10$ はふえて30に近づく。}
+\end{jibun}
+
+\begin{reidai}[階数と線形を見分ける]
+次の微分方程式の階数を答えましょう。また、線形かどうかも答えましょう。\par
+\quad （1）$\dfrac{\dd V}{\dd t}=-\dfrac{V}{2}$、（2）$\dfrac{\dd^2x}{\dd t^2}=-16x$、（3）$\dfrac{\dd v}{\dd t}=9.8-0.01v^2$\par
+\kangaekata いちばん多い微分の回数が階数（⑨）。主役の量が2乗されていたら線形でない。\par
+\shiki （1）1回微分だけ。$V$ は「数×$V$」の形\par
+\hspace*{2.6\zw}（2）2回微分がある。$x$ は「数×$x$」の形\par
+\hspace*{2.6\zw}（3）1回微分だけ。$v^2$（2乗）がある\par
+\kotae （1）1階・線形\par
+\hspace*{3.2\zw}（2）2階・線形\par
+\hspace*{3.2\zw}（3）1階・線形でない
+\end{reidai}
+（3）は、雨つぶのように、空気の抵抗が速さの2乗に比例するときの落ち方のルールです。線形でないので、6-5では表計算で解きます。
+
+\begin{jibun}
+次の微分方程式の階数を答えましょう。また、線形かどうかも答えましょう。\par
+\quad （1）$\dfrac{\dd T}{\dd t}=-0.2\,(T-15)$、（2）$\dfrac{\dd^2\theta}{\dd t^2}=-9.8\sin\theta$、（3）$\dfrac{\dd^2q}{\dd t^2}=-100q$
+\bkjans{（1）\nobreak 1階・線形。（2）\nobreak 2階・線形でない（$\sin\theta$）。（3）\nobreak 2階・線形。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{解を「数」と答える}
+\bkng{$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、$T(0)=80$ の解は $T=20$}
+\bkok{解は関数 $T=20+60e^{-0.05t}$}
+$T=20$ は、はじめから20\,℃のときの解です。はじめが80\,℃なら、温度は時刻とともに変わるので、解は時刻 $t$ の関数になります。20は、温度が近づいていく先の数です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\dfrac{\dd T}{\dd t}$ を分数として約分する}
+\bkng{$\dfrac{\dd T}{\dd t}$ の $\dd$ を約分して $\dfrac{T}{t}$ にする}
+\bkok{$\dfrac{\dd T}{\dd t}$ は「$T$ の変わる速さ」を表す、ひとまとまりの記号}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+$\dd$ は、数でも文字でもありません（5-3）。たとえば $t=10$ では、$\dfrac{T}{t}=\dfrac{56.39}{10}\approx5.6$ ですが、ほんとうの変わる速さは $-1.82$ です。図で見ると、$\dfrac{T}{t}$ は原点と点を結ぶ線（オレンジ）の傾き、$\dfrac{\dd T}{\dd t}$ は接線（青）の傾きで、まったくちがう量です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=56mm, height=42mm, xmin=0, xmax=26, ymin=0, ymax=92, xtick={10,20}, ytick={20,40,60,80},
+  xlabel={$t$}, ylabel={$T$}]
+  \addplot[bkthin, domain=0:25, samples=40] {20+60*exp(-0.05*x)};
+  \addplot[bkOrange, line width=1.2pt, domain=0:12] {5.639*x};
+  \addplot[bkBlue, line width=1.2pt, domain=4:16] {56.39-1.82*(x-10)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(10,56.39)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{「下がる向き」のマイナスをつけ忘れる}
+\bkng{冷める速さが差の0.05倍なので $\dfrac{\dd T}{\dd t}=0.05\,(T-20)$}
+\bkok{差をへらす向きなので $\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+マイナスがないと、80\,℃では「1分あたり3\,℃上がる」ことになります。1分ごとに計算すると、80、83、86.15、89.46……と、お湯がどんどん熱くなってしまいます（オレンジ）。答えがおかしな向きに進んだら、符号を確かめましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=50mm, height=40mm, xmin=0, xmax=11, ymin=0, ymax=120, xtick={5,10}, ytick={20,60,100},
+  xlabel={$t$}, ylabel={$T$}]
+  \addplot[bkthin, dashed, domain=0:10.5] {20};
+  \addplot[bkcurve, domain=0:10, samples=30] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve2, only marks, mark=*, mark size=1.2pt, samples at={0,1,...,10}] {20+60*1.05^x};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{\unit{k\ohm}・\unit{\micro F} のまま $RC$ を計算する}
+\bkng{$R=\qty{20}{k\ohm}$、$C=\qty{100}{\micro F}$ で $RC=20\times100=2000$}
+\bkok{$RC=\num{20000}\times0.0001=2$（秒）}
+そのままかけると単位が「$\unit{k\ohm}\times\unit{\micro F}$」になり、秒ではありません。k（1000倍）とμ（100万分の1）をなおしてからかけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{2階のルールで、初期条件を1つしか使わない}
+\bkng{ばねの動きは、はじめの位置 $x(0)=0.1$ だけで決まる}
+\bkok{はじめの位置と、はじめの速度の2つで決まる}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+2階の微分方程式には、決める数が2つあります（⑦）。はじめの速度がちがうと、同じ位置から出発しても、ちがう動きになります（図\ref{bk:6-1:fig-ts5}：青は速度0、オレンジは右へ0.4\,m/sで出発）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=56mm, height=38mm, xmin=0, xmax=1.7, ymin=-0.16, ymax=0.17, xtick={0.5,1,1.5}, ytick={-0.1,0.1},
+  yticklabel style={/pgf/number format/fixed}, xticklabel style={/pgf/number format/fixed}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkcurve, domain=0:1.6, samples=80] {0.1*cos(deg(4*x))};
+  \addplot[bkcurve2, domain=0:1.6, samples=80] {0.1*cos(deg(4*x))+0.1*sin(deg(4*x))};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(0,0.1)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ位置、ちがう速度で出発}\label{bk:6-1:fig-ts5}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{column}{ニュートンが温度をはかった方法}
+ニュートンが冷却の法則を発表したのは、温度計ではかれないほど高い温度をはかるためでした。当時の温度計は、真っ赤に焼けた鉄の温度をはかれません。そこで、焼けた鉄を風の当たる所に置き、温度計ではかれる温度まで冷めるのにかかった時間を記録しました。冷め方のきまり（差に比例して冷める）を使えば、冷めるのにかかった時間から、はじめの温度を逆に計算できるのです。「ルール」と「いまの状態」から、過去や未来の状態がわかる。この巻の考え方は、300年以上前から使われていました。
+\end{column}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ロケット
+  \begin{scope}[shift={(14,0)}]
+    \fill[bkOrange!70] (-2.2,1) -- (0,-5) -- (2.2,1) -- cycle;
+    \fill[bkYellow] (-1.2,1) -- (0,-2.5) -- (1.2,1) -- cycle;
+    \filldraw[fill=white, draw=bkInk!80, line width=0.8pt] (-3,1) rectangle (3,17);
+    \filldraw[fill=bkRed!70, draw=bkInk!80, line width=0.8pt] (-3,17) .. controls (-3,21) and (-1,23) .. (0,24) .. controls (1,23) and (3,21) .. (3,17) -- cycle;
+    \filldraw[fill=bkRed!70, draw=bkInk!80, line width=0.8pt] (-3,1) -- (-6,-1) -- (-6,3) -- (-3,6) -- cycle;
+    \filldraw[fill=bkRed!70, draw=bkInk!80, line width=0.8pt] (3,1) -- (6,-1) -- (6,3) -- (3,6) -- cycle;
+    \filldraw[fill=bkBlue!30, draw=bkInk!80, line width=0.6pt] (0,12) circle (1.6);
+    \node[anchor=north, font=\sffamily\footnotesize] at (0,-6.5) {ロケット};
+  \end{scope}
+  % カメラとフラッシュ
+  \begin{scope}[shift={(58,4)}]
+    \filldraw[fill=bkInk!75, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (-12,0) rectangle (12,13);
+    \filldraw[fill=bkInk!60, draw=bkInk, line width=0.8pt, rounded corners=0.8mm] (-5,13) rectangle (5,17);
+    \filldraw[fill=bkYellow!60, draw=bkInk, line width=0.6pt] (-4,14) rectangle (4,16.2);
+    \foreach \a in {50,70,90,110,130} {\draw[bkYellow!80!black, line width=0.8pt, line cap=round] ($(0,18)+(\a:1.2)$) -- ($(0,18)+(\a:4.2)$);}
+    \filldraw[fill=bkGray!40, draw=bkInk, line width=0.8pt] (0,6.5) circle (4.6);
+    \filldraw[fill=bkBlue!35, draw=bkInk, line width=0.6pt] (0,6.5) circle (2.6);
+    \node[anchor=north, font=\sffamily\footnotesize] at (0,-2.5) {カメラのフラッシュ};
+  \end{scope}
+  % スマホと熱
+  \begin{scope}[shift={(102,0)}]
+    \filldraw[fill=bkInk!80, draw=bkInk, line width=0.8pt, rounded corners=1.8mm] (-6,0) rectangle (6,22);
+    \fill[bkBlue!25, rounded corners=0.8mm] (-4.8,2.5) rectangle (4.8,19.5);
+    \filldraw[fill=bkOrange!60, draw=bkOrange!70!black, line width=0.5pt] (-2.5,8.5) rectangle (2.5,13.5);
+    \foreach \x in {9,12.5} {\draw[bkRed!80, line width=0.8pt] (\x,4) .. controls (\x-1.5,7) and (\x+1.5,9) .. (\x,12) .. controls (\x-1.5,15) and (\x+1.5,17) .. (\x,20);}
+    \node[anchor=north, font=\sffamily\footnotesize] at (2,-2.5) {スマホの部品の熱};
+  \end{scope}
+\end{tikzpicture}\par}
+\vspace{2pt}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{運動方程式（物理シリーズ『力学』）}\par\noindent 物にはたらく力の合計を $\sum\vec{F}$ と書くと、運動の法則は $m\dfrac{\dd^2\vec{r}}{\dd t^2}=\sum\vec{F}$ です（$\vec{r}$ は位置を表す矢印、4-10）。これは、位置を求める2階の微分方程式です。ロケットや人工衛星の通り道は、この式を、はじめの位置と速度から少しずつ進めて計算します。
+\item \textbf{カメラのフラッシュ}\par\noindent 電池の電気を、まずコンデンサーにゆっくりためます。シャッターを切った瞬間に、ためた電気を光る管に一気に流して、短い時間だけ強く光らせます。ためるときも流すときも、電圧は $\dfrac{\dd V}{\dd t}$ のルールにしたがって変わります（6-4）。
+\item \textbf{電子機器の温度}\par\noindent スマホやパソコンの部品は、使うと熱を出し、まわりの空気に熱を逃がします。部品の温度の変わり方も、ニュートンの冷却の法則と同じ形のルールで計算して、熱くなりすぎないように設計します（6-4）。
+\end{itemize}
+\end{butsuri}
+
+
+\begin{column}{コンデンサーは、どこにある？}
+\noindent\begin{minipage}[c]{0.72\linewidth}
+コンデンサーは、身のまわりの電気製品のほとんどに入っています。スマホの中の基板には、米つぶより小さなコンデンサーが数百こ以上ならんでいて、電圧のゆれをならしたり、電気を少しためておいたりしています。スマホの画面（タッチパネル）も、指が近づくと電気のたまり方が変わることを利用して、さわった場所を見つけています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.26\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 円柱形のコンデンサー（電解コンデンサー）と、小さなチップのコンデンサー
+  \filldraw[fill=bkBlue!35, draw=bkInk, line width=0.7pt, rounded corners=1mm] (0,6) rectangle (9,22);
+  \fill[bkGray!50] (6.5,6.3) rectangle (8.6,21.7);
+  \draw[bkInk, line width=0.7pt] (3,6) -- (3,0) (6,6) -- (6,1.5);
+  \filldraw[fill=bkOrange!30, draw=bkInk, line width=0.6pt] (15,3) rectangle (19,5.4);
+  \fill[bkGray!60] (15,3) rectangle (15.8,5.4) (18.2,3) rectangle (19,5.4);
+  \node[anchor=north, font=\sffamily\footnotesize] at (4.5,-1.5) {円柱形};
+  \node[anchor=north, font=\sffamily\footnotesize, align=center] at (17,1.6) {チップ};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{2}
+
+\bkproblem ルール $\dfrac{\dd T}{\dd t}=-0.08\,(T-22)$（$T$ は℃、$t$ は分）で、温度が（1）72\,℃、（2）12\,℃のときの、温度の変わる速さを求めましょう。上がるか下がるかも答えましょう。
+\bkpans{（1）\nobreak $-0.08\times50=-4$。1分あたり4\,℃下がる。（2）\nobreak $-0.08\times(-10)=0.8$。1分あたり0.8\,℃上がる。}
+
+\bkproblem 部屋の温度は15\,℃です。ホットミルクの温度 $T$〔℃〕の冷める速さは、部屋との温度の差の0.06倍〔1/分〕です。時刻を $t$〔分〕として、ルールを微分方程式で書きましょう。また、65\,℃のときの温度の変わる速さを求めましょう。
+\bkpans{$\tfrac{\dd T}{\dd t}=-0.06\,(T-15)$。65\,℃のとき $-0.06\times50=-3$ で、1分あたり3\,℃下がる。}
+
+\bkproblem 抵抗 $R=\qty{100}{k\ohm}$、静電容量 $C=\qty{10}{\micro F}$ で、コンデンサーを放電させます。$RC$ を求めて放電のルールを書き、電圧が\qty{8}{V}のときの電圧の変わる速さを求めましょう。
+\bkpans{$RC=\num{100000}\times0.00001=1$（秒）。$\tfrac{\dd V}{\dd t}=-V$。8\,Vのとき、1秒あたり8\,V下がる。}
+
+\bkproblem 質量 \qty{0.2}{kg} のおもりを、ばね定数 \qty{20}{N/m} のばねにつけました。（1）ずれ $x$〔m〕のルールを書きましょう。（2）$x=\qty{0.03}{m}$ のときの加速度を求めましょう。（3）階数を答えましょう。
+\bkpans{（1）\nobreak $0.2\tfrac{\dd^2x}{\dd t^2}=-20x$ より $\tfrac{\dd^2x}{\dd t^2}=-100x$。（2）\nobreak $-100\times0.03=-3$。左向きに3\,m/s$^2$。（3）\nobreak 2階。}
+
+\bkproblem 次の微分方程式の階数を答えましょう。また、線形かどうかも答えましょう。\newline
+（1）$\dfrac{\dd y}{\dd t}=-3y$、（2）$\dfrac{\dd^2y}{\dd t^2}=-4y$、（3）$\dfrac{\dd y}{\dd t}=y^3$
+\bkpans{（1）\nobreak 1階・線形。（2）\nobreak 2階・線形。（3）\nobreak 1階・線形でない（$y^3$）。}
+
+\bkproblem $y=3e^{-0.5t}$ が、微分方程式 $\dfrac{\dd y}{\dd t}=-0.5y$ と初期条件 $y(0)=3$ をみたすことを確かめましょう。
+\bkpans{左辺 $3\times(-0.5)e^{-0.5t}=-1.5e^{-0.5t}$。右辺 $-0.5\times3e^{-0.5t}=-1.5e^{-0.5t}$ で等しい。$y(0)=3e^0=3$。}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem 微分方程式 $\dfrac{\dd y}{\dd t}=-0.2\,(y-5)$ について、（1）$y=1$、3、5、7、9 での傾きを求めましょう。（2）$y(0)=9$ と $y(0)=1$ の解は、それぞれどうなりますか。
+\bkpans{（1）\nobreak 0.8、0.4、0、$-0.4$、$-0.8$。（2）\nobreak $y(0)=9$ はへって5に近づく。$y(0)=1$ はふえて5に近づく。}
+
+\bkproblem 微分方程式 $\dfrac{\dd y}{\dd t}=-3y$、初期条件 $y(0)=2$ の解は、次のどれでしょう。理由も書きましょう。\newline
+（ア）$y=2-6t$、（イ）$y=2e^{-3t}$、（ウ）$y=2e^{3t}$
+\bkpans{（イ）。左辺 $-6e^{-3t}$、右辺 $-3\times2e^{-3t}=-6e^{-3t}$ で等しく、$y(0)=2$。（ア）は右辺 $-6+18t$ で $t\neq0$ で合わない。（ウ）は左辺 $6e^{3t}$、右辺 $-6e^{3t}$ で合わない。}
+
+\bkproblem $x=0.04\cos10t$ が、$\dfrac{\dd^2x}{\dd t^2}=-100x$ と、初期条件 $x(0)=0.04$、$\dfrac{\dd x}{\dd t}(0)=0$ をみたすことを確かめましょう。これは、問題4のばねを \qty{4}{cm} 引いて静かにはなしたときの動きです。
+\bkpans{$\tfrac{\dd x}{\dd t}=-0.4\sin10t$、$\tfrac{\dd^2x}{\dd t^2}=-4\cos10t=-100\times0.04\cos10t=-100x$。$x(0)=0.04\cos0=0.04$、$\tfrac{\dd x}{\dd t}(0)=-0.4\sin0=0$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 微分方程式を、ことばと単位で読み、式に書ける。\bkfurref{bk:6-1:yomu}
+\item 傾きの場から、解のようすを予想できる。\bkfurref{bk:6-1:ba}
+\item 代入して、解かどうか確かめられる。\bkfurref{bk:6-1:tashikame}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{答えが「グラフ1本」になる方程式なんだね。次の6-2では、表計算でそのグラフを作ってみよう。}

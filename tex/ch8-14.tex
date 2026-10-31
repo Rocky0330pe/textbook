@@ -1,0 +1,496 @@
+%% 8-14 div と rot で書かれた式を読もう（読みもの。第14回：組 V8-1。ページ制限なし。偶数ページ）
+%% 読みものの型：現象の場面→どこでこの巻の数学が働いているか→専門書での書き方。問題は置かない。
+%% ほかの章・物理の本との約束：
+%%   8-9：div E=ρ/ε0（電荷は電場のわき出し）、div B=0（N極だけ、S極だけの磁石はできない）、連続の式（その点の密度が増える速さ＋その点からのわき出し＝0）、ホース。
+%%   8-10：rot B=μ0 j（導線の外では 0）、rot grad=0・div rot=0「8-14 で読む電気と磁気の式で、この2つの関係が大事な役目」、10 A・5 cm で 4×10^-5 T、地磁気（日本でおよそ 4.5×10^-5 T）。
+%%   8-11：ガウスの法則 ∯E·n dS=Q中/ε0、アンペールの法則 ∮B·dr=μ0 I中、S6 ファラデー ∮E·dr=−dΦ/dt、積分形と微分形、G3・S4、地球 g=9.82。
+%%   8-12：∇²=まわりの平均との差、rot rot A=grad div A−∇²A（S15）。8-13：熱方程式 ∂T/∂t=α∇²T、波動方程式、物質微分 DT/Dt。
+%%   物理 力-15：ナビエ・ストークス方程式を同じ形・同じ読み方で。物理 電-14・電-15（4つの式・電磁波）の予告。
+%%   主役の6つの場（ア）〜（カ）の div と rot は 8-9・8-10 の表と同じ数。
+%%   ∯ は数式の中で \oiint。数はすべて Python で確かめた（c=1/√(μ0ε0)=2.998×10^8 m/s など）。
+\makeatletter
+%% ---- 「名前と操作」の型（tools/kata8-int.md。頭文字 kviiio） ----
+\colorlet{kviiioNc}{bkOrange!85!black}\colorlet{kviiioSc}{bkTheme}\colorlet{kviiioSb}{bkTheme!8}
+\tikzset{
+  kviiio dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kviiio dan1/.style={kviiio dan, draw=kviiioNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kviiio name/.style={draw=kviiioNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kviiio tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm}}
+\newcommand\kviiiodan[1]{\tikz[baseline=(d.base)]\node[kviiio dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+\newcommand\kviiioNt[1]{\tikz[baseline=(n.base)]{\node[kviiio name] (n) {$\displaystyle #1$};\node[kviiio tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+%% ---- この章だけで使う部品（頭文字 kviiio） ----
+\tikzset{kviiio lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  kviiio arr/.style={-{Stealth[length=1.9mm, width=1.7mm]}, line width=0.9pt}}
+% 本文の小見出し（太字の1行）
+\newcommand\kviiiohead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiiobox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviiioframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 4つの式の小さな絵
+\newcommand\kviiiopicA{% 点電荷：わき出す電場
+  \filldraw[fill=bkRed!70, draw=bkRed!80!black] (0,0) circle (2.2);\node[text=white, font=\sffamily\bfseries\footnotesize] at (0,0) {＋};
+  \foreach \a in {0,45,...,315} {\draw[kviiio arr, bkRed!80!black] (\a:3.6) -- (\a:11);}}
+\newcommand\kviiiopicB{% 棒磁石：輪になる磁力線
+  \foreach \s in {4,7,10} {\draw[\bkTT, line width=0.8pt] (0,0) ellipse ({\s+4} and {0.8*\s});}
+  \fill[bkBlue!70!black] (-5,-1.8) rectangle (0,1.8);\fill[bkRed!80!black] (0,-1.8) rectangle (5,1.8);
+  \node[text=white, font=\sffamily\bfseries\footnotesize] at (-2.5,0) {S};\node[text=white, font=\sffamily\bfseries\footnotesize] at (2.5,0) {N};
+  \draw[kviiio arr, \bkTT] (-0.5,8) -- (0.5,8);\draw[kviiio arr, \bkTT] (0.5,-8) -- (-0.5,-8);}
+\newcommand\kviiiopicC{% 変わる磁場のまわりの電場のうず
+  \foreach \x in {-3,0,3} {\draw[kviiio arr, \bkTT, line width=1.1pt] (\x,-9) -- (\x,9);}
+  \node[kviiio lab, anchor=west, text=\bkTT] at (3.6,9.6) {$\vec B$ が強くなる};
+  \draw[bkOrange!85!black, line width=1.2pt] (0,0) ellipse (9 and 3);
+  \draw[kviiio arr, bkOrange!85!black, line width=1.2pt] (-4.5,-2.598) -- (-6,-2.245);
+  \node[kviiio lab, anchor=east, text=bkOrange!75!black] at (-9.6,-1) {$\vec E$ のうず};}
+\newcommand\kviiiopicD{% 電流のまわりの磁場のうず
+  \draw[bkOrange!80!black, line width=2pt] (0,-10) -- (0,10);
+  \draw[kviiio arr, bkOrange!80!black, line width=1.4pt] (0,4) -- (0,10.5);
+  \node[kviiio lab, anchor=west, text=bkOrange!75!black] at (1,10) {電流};
+  \foreach \s in {4,7.5} {\draw[\bkTT, line width=0.9pt] (0,-2) ellipse [x radius=\s, y radius={0.35*\s}];}
+  \draw[kviiio arr, \bkTT, line width=1.1pt] (3.2,-4.374) -- (4.6,-4.072);}
+\makeatother
+
+\bkchapter{8}{14}{div と rot で書かれた式を\\読もう}{\bklevel{5}}{div と rot で書かれた式を読もう}
+\bkmichishirube{8-4,8-9,8-10,8-11,8-12,8-13}{9-0}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 電気と磁気の4つの式（マクスウェル方程式）を、「わき出し」と「うず」のことばで読める。
+\item \bklevel{5}\enspace 積分形と微分形が同じことを言っているわけを、ガウスの定理とストークスの定理で説明でき、4つの式から光の速さが出てくる道すじをたどれる。
+\item \bklevel{5}\enspace 流れの式・熱の式の項を1つずつ、この巻の道具（grad・div・rot・$\nabla^2$・物質微分）のことばに訳せる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\raggedright
+モーター、発電機、IH 調理器、スマホの電波、そして光。電気と磁気が関わるできごとは、すべて、たった4つの式から出てくるといわれます。\par\vspace{4pt}
+その4つの式は、何を言っているのでしょう。そして、「光は電気と磁気の波だ」ということは、どうしてわかったのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \begin{scope}[shift={(20,32)}]\kviiiopicA\end{scope}
+  \begin{scope}[shift={(50,32)}]\kviiiopicB\end{scope}
+  \begin{scope}[shift={(24,4)}]\kviiiopicC\end{scope}
+  \begin{scope}[shift={(54,4)}]\kviiiopicD\end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\begin{omoidasou}
+\bkrecall{8-4}{$\mathrm{grad}\,f$ は、いちばん急に増える向きの矢印。電場は電位の坂を下る向き：$\vec E=-\mathrm{grad}\,\phi$。}
+\bkrecall{8-9}{$\mathrm{div}\,\vec F$ は、小さな箱から出ていく量÷箱の体積（わき出し）。$\mathrm{div}\,\vec E=\dfrac{\rho}{\varepsilon_0}$、$\mathrm{div}\,\vec B=0$。}
+\bkrecall{8-10}{$\mathrm{rot}\,\vec F$ は、小さなマスのまわりを1周してたしたものを面積でわったもの（うず）。導線の中で $\mathrm{rot}\,\vec B=\mu_0\vec j$。$\mathrm{div}\,(\mathrm{rot}\,\vec F)=0$。}
+\bkrecall{8-11}{ガウスの定理：閉じた面から出る量＝中の div の合計。ストークスの定理：閉じた道の1周＝中の rot の合計。}
+\bkrecall{8-12}{$\nabla^2f$ は「まわりの平均との差」。$\mathrm{rot}\,\mathrm{rot}\,\vec A=\mathrm{grad}\,\mathrm{div}\,\vec A-\nabla^2\vec A$。}
+\bkrecall{8-13}{熱方程式 $\dfrac{\partial T}{\partial t}=\alpha\,\nabla^2T$。波動方程式 $\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$ の $c$ は波の速さ。物質微分 $\dfrac{\mathrm DT}{\mathrm Dt}$。}
+\end{omoidasou}
+
+\noindent この章は\textbf{読みもの}です。例題や問題はありません。8-1〜8-13 で作った道具を使って、電気と磁気・水の流れ・熱の「基本の式」を読んでいきます。式を解くのではなく、式の1つ1つの記号が「何を言っているか」を、この巻のことばに訳すことが目標です。長い式でも、1つずつ訳していけば大丈夫です。
+
+この章を読むときに使うことばは、2つだけです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=50mm] Q[l,m,wd=40mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+ことば & 意味 & 式の記号 \\
+わき出し（発散） & 小さな箱から出ていく量（8-9） & $\mathrm{div}$、$\nabla\cdot$ \\
+うず（回転） & 小さなマスのまわりを1周（8-10） & $\mathrm{rot}$、$\nabla\times$ \\
+\end{bktable}
+\bktabcaption{この章で使う2つのことば。専門書の書き方（$\nabla$）は、8-4・8-9・8-10 で並べて見せたもの。}
+\end{bkcenter}
+
+%% ================= 電気と磁気 =================
+\bksection{butsuri}{電気と磁気の4つの式}
+
+\bksubsection{1}{4つの式を並べる}
+
+\label{bk:8-14:yottsu}8-9〜8-11 で、電気と磁気の式がいくつか出てきました。それを全部集めると、次の4つになります。左の列は、8-11 で袋や道を選んで使った形（\textbf{積分形}）、右の列は、8-9・8-10 で場所ごとに書いた形（\textbf{微分形}）です。どちらも同じことを言っています（③）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=52mm] Q[c,m,wd=37mm] Q[l,m,wd=25mm]}, rowsep=3pt, colsep=2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+ & 積分形（袋・道で） & 微分形（場所ごとに） & 読み方 \\
+（1） & $\displaystyle\oiint_S\vec E\cdot\vec n\,\dd S=\frac{Q_{\text{中}}}{\varepsilon_0}$ & $\mathrm{div}\,\vec E=\dfrac{\rho}{\varepsilon_0}$ & 電荷は電場のわき出し \\
+（2） & $\displaystyle\oiint_S\vec B\cdot\vec n\,\dd S=0$ & $\mathrm{div}\,\vec B=0$ & 磁場にわき出しはない \\
+（3） & $\displaystyle\oint_C\vec E\cdot\dd\vec r=-\frac{\dd\Phi_B}{\dd t}$ & $\mathrm{rot}\,\vec E=-\dfrac{\partial\vec B}{\partial t}$ & 変わる磁場は電場のうずを作る \\
+（4） & $\displaystyle\oint_C\vec B\cdot\dd\vec r=\mu_0I_{\text{中}}+\mu_0\varepsilon_0\frac{\dd\Phi_E}{\dd t}$ & $\mathrm{rot}\,\vec B=\mu_0\vec j+\mu_0\varepsilon_0\dfrac{\partial\vec E}{\partial t}$ & 電流と変わる電場は磁場のうずを作る \\
+\end{bktable}
+\bktabcaption{電気と磁気の4つの式（物のない所の形。電荷や電流はあってよい）。$\Phi_B$ は道 $C$ をふちとする面を通る磁場の流束（磁束）、$\Phi_E$ は電場の流束（8-8）。}
+\label{bk:8-14:tab-yottsu}
+\end{bkcenter}
+
+この4つをまとめて\textbf{マクスウェル方程式}といいます。\bkidx{まくすうぇるほうていしき}{マクスウェル方程式}記号の意味は、次のとおりです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=20mm] Q[l,m,wd=74mm] Q[l,m,wd=28mm]}, rowsep=0pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+記号 & 意味 & 単位 \\
+$\vec E$ & 電場（電気の力の場。\qty{1}{C} の電荷にはたらく力） & 〔V/m〕＝〔N/C〕 \\
+$\vec B$ & 磁場（磁束密度） & 〔T〕 \\
+$\rho$ & 電荷の密度（\qty{1}{m^3} あたりの電荷） & 〔C/m³〕 \\
+$\vec j$ & 電流密度（\qty{1}{m^2} あたりの電流。8-10） & 〔A/m²〕 \\
+$\varepsilon_0$ & 真空の誘電率 $8.854\times10^{-12}$（自然の定数） & 〔F/m〕 \\
+$\mu_0$ & 真空の透磁率 $\mu_0\approx4\pi\times10^{-7}$（自然の定数） & 〔N/A²〕 \\
+\end{bktable}
+\bktabcaption{4つの式に出てくる記号。$\mu_0$ は、2019年の SI の改定からは測って決める値で、ほぼ $4\pi\times10^{-7}$ N/A²（T·m/A と同じ単位）。}
+\end{bkcenter}
+
+左の積分形は、どれも 8-0 で約束した「操作の名前」です。たとえば（1）の左辺は、次のように読みます。
+\[ \kviiioNt{\oiint_S\vec E\cdot\vec n\,\dd S} \]
+\kviiiodan{1}\enspace 「閉じた面 $S$ の上で（◯は閉じている印）、電場の矢印と外向きのタイル $\vec n\,\dd S$ の内積を、たし合わせる」。電場が面を外へ通りぬける量（電場の流束 $\Phi_E$）です。8-11 では、これを実際に計算する方法（直す段・楽をする段）を、場合 G3（対称な袋を選ぶ）・S4（対称な道を選ぶ）として見ました。この章では、計算はせずに、\textbf{名前の段だけで読みます}。
+
+\bksubsection{2}{1つずつ読む}
+
+\label{bk:8-14:yomu}
+
+
+
+\kviiiohead{（1）電荷は、電場のわき出し}
+$\mathrm{div}\,\vec E=\dfrac{\rho}{\varepsilon_0}$ は、「電荷のある所から電場がわき出し（プラスの電荷）、吸いこまれる（マイナスの電荷）。電荷のない所では、わき出しも吸いこみもない」と読みます（8-9）。積分形では、「どんな袋でも、電場が外へ出ていく量は、中の電荷を $\varepsilon_0$ でわったもの」です。袋の形によらないので、点電荷を中心とする球の袋を選ぶと、電場の大きさ $E=\dfrac{Q}{4\pi\varepsilon_0r^2}$ が出てきました（8-11 の G3）。高校物理の「電気力線の本数 $4\pi kQ$」は、この式の言いかえです。
+
+\kviiiohead{（2）磁場にわき出しはない}
+$\mathrm{div}\,\vec B=0$ は、「磁場には、わき出しも吸いこみもない」と読みます。磁石を細かく切っても、N極だけ、S極だけの磁石はできません（8-9）。磁力線は、磁石の外ではN極からS極へ、中ではS極からN極へ進み、いつも輪になってつながっています。ですから、どんな袋をとっても、入る磁力線と出る磁力線は同じ数で、流束は0です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\cy/\nn/\tt in {0/0/1/{（1）電荷は、電場のわき出し}, 66/0/2/{（2）磁力線は、いつも輪になる}, 0/-40/3/{（3）変わる磁場が、電場のうずを作る}, 66/-40/4/{（4）電流が、磁場のうずを作る}} {
+    \draw[bkLine, line width=0.6pt, rounded corners=2mm, fill=white] (\cx,\cy) rectangle ++(62,-36);
+    \node[anchor=north west, kviiio lab, font=\sffamily\bfseries\footnotesize, text=\bkTT] at (\cx+2.5,\cy-2) {\tt};}
+  \begin{scope}[shift={(31,-22)}]\kviiiopicA\end{scope}
+  \begin{scope}[shift={(97,-22)}]\kviiiopicB\end{scope}
+  \begin{scope}[shift={(25,-63)}]\kviiiopicC\end{scope}
+  \begin{scope}[shift={(95,-64)}]\kviiiopicD\end{scope}
+\end{tikzpicture}
+\bkfigcaption{4つの式が言っていること。（4）では、電流のまわりの磁場が、上から見て左回り（右ねじの向き）に回る。}
+\label{bk:8-14:fig-yottsu}
+\end{bkfigure}
+
+\kviiiohead{（3）変わる磁場は、電場のうずを作る}
+$\mathrm{rot}\,\vec E=-\dfrac{\partial\vec B}{\partial t}$ は、「磁場が時間とともに変わる所には、電場のうずができる」と読みます。積分形（8-11 の S6）は「道を1周したときの電場の線積分（コイルに生まれる電圧）は、道を通る磁束の減り方に等しい」で、これがファラデーの電磁誘導の法則です。発電機は、コイルの中の磁束を回転で変えて、電圧を作ります。IH 調理器は、1秒に2万〜9万回行ったり来たりする電流（周波数 20〜90 kHz）をコイルに流して、なべの底を通る磁場を変え、なべの底に電場のうずを作ります。そのうずが金属のなべに流す電流（うず電流）で、熱を出します。変圧器も、変わる磁束が別のコイルに電圧を生むしくみで、電圧を変えています。マイナスの記号は、「うずは、磁場の変化をさまたげる向きに回る」という意味です（レンツの法則）。
+
+磁場が変わらないとき、（3）は $\mathrm{rot}\,\vec E=\vec0$ です。8-10 で見たように、うずのない場は坂の矢印で書けるので、$\vec E=-\mathrm{grad}\,\phi$（8-4 の電位）になります。電池や静電気の電場は、この場合です。
+
+\kviiiohead{（4）電流と、変わる電場は、磁場のうずを作る}
+$\mathrm{rot}\,\vec B=\mu_0\vec j+\cdots$ の1つめの項は、8-10 で見た「導線の中では $\mathrm{rot}\,\vec B=\mu_0\vec j$、外では0」です。磁場のうずは、電流が流れている所にあります。積分形（8-11 のアンペールの法則）で、導線のまわりの円の道を選ぶと、$B=\dfrac{\mu_0I}{2\pi r}$ が出てきました（S4）。\qty{10}{A} の電流から \qty{5}{cm} の所では $B=4\times10^{-5}$ T で、地球の磁場（日本ではおよそ $4.5\times10^{-5}$ T）と同じくらいです。
+
+2つめの項 $\mu_0\varepsilon_0\dfrac{\partial\vec E}{\partial t}$ は、電流がなくても、\textbf{電場が時間とともに変わる所には、磁場のうずができる}と言っています。この項は、マクスウェルが、ほかの式との矛盾をなくすために付け加えたものです。次の④で、その理由をこの巻の道具で確かめます。
+
+\begin{column}{方位磁針で、磁場のうずを見る}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+まっすぐな導線のまわりに方位磁針を円く並べて電流を流すと、針は導線を囲む円にそって並びます。1820年に、デンマークのエルステッドが気づいたと伝えられている実験で、（4）の1つめの項 $\mu_0\vec j$（電流は磁場のうずを作る）そのものです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!50, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (0,0) circle (10);
+  \filldraw[fill=bkOrange!40, draw=bkOrange!80!black, line width=0.8pt] (0,0) circle (2.2);
+  \fill[bkInk] (0,0) circle (0.6);
+  \foreach \a in {0,45,...,315} {\begin{scope}[shift={(\a:10)}, rotate=\a+90]
+    \filldraw[fill=white, draw=bkInk!70, line width=0.5pt] (0,0) circle (2.6);
+    \fill[bkRed!80!black] (2.1,0) -- (0,0.7) -- (0,-0.7) -- cycle;
+    \fill[bkBlue!70!black] (-2.1,0) -- (0,0.7) -- (0,-0.7) -- cycle;
+  \end{scope}}
+  \node[kviiio lab, anchor=north, align=center] at (0,-14) {上から見た図（電流は手前へ）};
+\end{tikzpicture}
+\end{minipage}
+\end{column}
+
+\bksubsection{3}{積分形と微分形は、同じことを言っている}
+
+\label{bk:8-14:sekibun}8-11 の「せいかくに言うと」で、ガウスの法則（積分形）から、微分形 $\mathrm{div}\,\vec E=\rho/\varepsilon_0$ を出しました。同じ考えで、（3）の積分形から微分形を出してみます。道 $C$ と、それをふちとする面 $S$ を、動かさずに考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkOrange!15, draw=bkOrange!85!black, line width=1.2pt] (0,0) ellipse (24 and 8);
+  \draw[kviiio arr, bkOrange!85!black, line width=1.2pt] (-12,-6.93) -- (-8,-7.54);
+  \node[kviiio lab, anchor=north east, text=bkOrange!75!black] at (-8,-9.5) {道 $C$（左回り）};
+  \node[kviiio lab, text=bkOrange!75!black] at (-17,-1.5) {面 $S$};
+  \foreach \x in {-2,7,16} {\draw[kviiio arr, \bkTT, line width=1.1pt] (\x,-14) -- (\x,20);}
+  \node[kviiio lab, anchor=west, text=\bkTT] at (19,19) {磁場 $\vec B$（時間とともに変わる）};
+  \draw[kviiio arr, bkInk, line width=1.2pt] (-11,0) -- (-11,12);
+  \node[kviiio lab, anchor=east] at (-11.8,11) {$\vec n$};
+  \node[kviiio lab, anchor=west, align=left] at (28,0) {面 $S$ を通る磁場の流束が磁束 $\Phi_B$。\\道 $C$ を回る向きと $\vec n$ は右ねじ（8-11）};
+\end{tikzpicture}
+\bkfigcaption{道 $C$ と、それをふちとする面 $S$。（3）の左辺は道 $C$ の上の線積分、右辺は面 $S$ を通る磁束の変わり方。}
+\end{bkfigure}
+
+\begin{bkhenkei}[0.56]
+\oint_C\vec E\cdot\dd\vec r=-\frac{\dd\Phi_B}{\dd t} & （3）の積分形 \\
+\oint_C\vec E\cdot\dd\vec r=\iint_S\mathrm{rot}\,\vec E\cdot\vec n\,\dd S & 左辺にストークスの定理（8-11） \\
+\frac{\dd\Phi_B}{\dd t}=\iint_S\frac{\partial\vec B}{\partial t}\cdot\vec n\,\dd S & 磁束 $\Phi_B=\iint_S\vec B\cdot\vec n\,\dd S$ を時間で微分（面は動かない） \\
+\iint_S\Bigl(\mathrm{rot}\,\vec E+\frac{\partial\vec B}{\partial t}\Bigr)\cdot\vec n\,\dd S=0 & 2つを1つの面積分にまとめた \\
+\mathrm{rot}\,\vec E+\frac{\partial\vec B}{\partial t}=\vec0 & どんなに小さな面でも0なので、中身が0 \\
+\end{bkhenkei}
+
+最後の行は、8-11 と同じ理屈です。面はどこに、どの向きに、どんなに小さくとってもよいので、かっこの中身が0でない所が1か所でもあると、そこに小さな面をとったときに積分が0になりません。だから、どこでも中身が0です。こうして（3）の微分形 $\mathrm{rot}\,\vec E=-\dfrac{\partial\vec B}{\partial t}$ が出てきました。（1）（2）はガウスの定理で、（4）は同じくストークスの定理で、積分形と微分形を行き来できます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=28mm] Q[l,m,wd=44mm] Q[l,m,wd=48mm]}, rowsep=1.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+ & 積分形 & 微分形 \\
+見ているもの & 袋全体・道全体 & 1つの場所 \\
+使う道具 & 面積分・線積分（8-7・8-8） & div・rot（8-9・8-10） \\
+得意なこと & 対称な場の大きさを求める（8-11 の G3・S4） & 場所ごとに何が起きているかを見る。波の式を作る（⑤） \\
+つなぐもの & \SetCell[c=2]{c} ガウスの定理・ストークスの定理（8-11） & \\
+\end{bktable}
+\bktabcaption{積分形と微分形のちがい}
+\end{bkcenter}
+
+\bksubsection{4}{マクスウェルが付け加えた項}
+
+\label{bk:8-14:hen}（4）の2つめの項がないと、どこがおかしくなるのでしょう。8-10 で、どんな $\vec F$ でも $\mathrm{div}\,(\mathrm{rot}\,\vec F)=0$（うずの矢印の場には、わき出しがない）を確かめました。もし（4）が $\mathrm{rot}\,\vec B=\mu_0\vec j$ だけだとすると、両辺の発散をとって、
+
+\begin{bkhenkei}[0.5]
+\mathrm{div}\,(\mathrm{rot}\,\vec B)=\mu_0\,\mathrm{div}\,\vec j & 両辺の発散をとった \\
+0=\mu_0\,\mathrm{div}\,\vec j & 左辺は、いつも0（8-10） \\
+\end{bkhenkei}
+
+となり、「電流には、どこにもわき出しがない（$\mathrm{div}\,\vec j=0$）」ことになってしまいます。ところが、コンデンサーに電気をためている間は、＋の極板には電流が流れこむだけで、すきまをこえては流れ出ません。＋の極板では電流が吸いこまれ（－の極板ではわき出し）、電荷がたまっていきます。電荷の連続の式（8-9 と同じ形。電荷は勝手に生まれも消えもしない）
+\[ \frac{\partial\rho}{\partial t}+\mathrm{div}\,\vec j=0 \]
+で、$\dfrac{\partial\rho}{\partial t}$ が0でない所では、$\mathrm{div}\,\vec j$ は0になりません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkOrange!80!black, line width=1.6pt] (0,0) -- (40,0) (60,0) -- (100,0);
+  \fill[bkInk!70] (40,-12) rectangle (42,12);\fill[bkInk!70] (58,-12) rectangle (60,12);
+  \draw[kviiio arr, bkOrange!80!black, line width=1.3pt] (16,2.5) -- (32,2.5);\node[kviiio lab, anchor=south, text=bkOrange!75!black] at (24,3.5) {電流 $I$};
+  \draw[kviiio arr, bkOrange!80!black, line width=1.3pt] (68,2.5) -- (84,2.5);\node[kviiio lab, anchor=south, text=bkOrange!75!black] at (76,3.5) {電流 $I$};
+  \foreach \yy in {-8,-3,2,7} {\draw[kviiio arr, \bkTT] (43.5,\yy) -- (56.5,\yy);}
+  \node[kviiio lab, anchor=north, text=\bkTT, align=center] at (50,-16.5) {極板の間：電流はないが、\\電場 $\vec E$ が強くなっていく};
+  \node[kviiio lab, anchor=south] at (37,12) {＋};\node[kviiio lab, anchor=south] at (63,12) {－};
+  \foreach \cx in {8,92} {\draw[bkInk!60, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (\cx,0) ellipse (3 and 9);}
+  \draw[bkInk!60, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (50,0) ellipse (3.5 and 15);
+  \node[kviiio lab, anchor=north, text=bkInk!80, align=center] at (8,-10.5) {まわりに\\磁場のうず};
+  \node[kviiio lab, anchor=north, text=bkInk!80, align=center] at (92,-10.5) {まわりに\\磁場のうず};
+\end{tikzpicture}
+\bkfigcaption{電気をためているコンデンサー。導線のまわりにも、極板をすっぽり囲む輪（まん中の点線）のまわりにも、同じ磁場のうずができる。極板の間で磁場のうずを作っているのは、強くなっていく電場（（4）の2つめの項）。}
+\label{bk:8-14:fig-cond}
+\end{bkfigure}
+
+マクスウェルは、2つめの項 $\mu_0\varepsilon_0\dfrac{\partial\vec E}{\partial t}$ を付け加えました。すると、両辺の発散をとったときに、
+
+\begin{bkhenkei}[0.58]
+0=\mu_0\,\mathrm{div}\,\vec j+\mu_0\varepsilon_0\frac{\partial}{\partial t}\,\mathrm{div}\,\vec E & 両辺の発散をとった（左辺は0） \\
+=\mu_0\,\mathrm{div}\,\vec j+\mu_0\varepsilon_0\frac{\partial}{\partial t}\Bigl(\frac{\rho}{\varepsilon_0}\Bigr) & （1）の $\mathrm{div}\,\vec E=\dfrac{\rho}{\varepsilon_0}$ を入れた \\
+=\mu_0\Bigl(\mathrm{div}\,\vec j+\frac{\partial\rho}{\partial t}\Bigr) & $\varepsilon_0$ が約分された \\
+\end{bkhenkei}
+
+となり、かっこの中は電荷の連続の式そのものなので、ちゃんと0になります。矛盾がなくなりました。コンデンサーの極板の間では、電流のかわりに、強くなっていく電場が磁場のうずを作っています。この項がある、ということが、次の⑤の電磁波につながります。
+
+\bksubsection{5}{4つの式から、光の速さが出てくる}
+
+\label{bk:8-14:denjiha}電荷も電流もない所（$\rho=0$、$\vec j=\vec0$）では、4つの式は次のようになります。
+\[ \mathrm{div}\,\vec E=0,\qquad \mathrm{div}\,\vec B=0,\qquad \mathrm{rot}\,\vec E=-\frac{\partial\vec B}{\partial t},\qquad \mathrm{rot}\,\vec B=\mu_0\varepsilon_0\frac{\partial\vec E}{\partial t} \]
+「変わる磁場が電場のうずを作り、変わる電場が磁場のうずを作る」。この2つがくり返されて、電場と磁場の変化が、次々と空間を伝わっていきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\c/\t in {0/bkRed/{$\vec E$ が変わる}, 1/\bkTT/{$\vec B$ のうず}, 2/bkRed/{$\vec E$ のうず}, 3/\bkTT/{$\vec B$ のうず}} {
+    \node[draw=\c!80!black, line width=0.9pt, fill=white, rounded corners=1.5mm, minimum width=24mm, minimum height=9mm, font=\sffamily\footnotesize, text=bkInk] (k\i) at ({34*\i},0) {\t};}
+  \foreach \i/\j/\t in {0/1/{（4）}, 1/2/{（3）}, 2/3/{（4）}} {\draw[bk link] (k\i) -- node[bk link label, above] {\t} (k\j);}
+  \node[anchor=west, kviiio lab] at (115,0) {…};
+  \draw[kviiio arr, bkInk!70, line width=1pt] (-12,-9) -- (118,-9);
+  \node[kviiio lab, anchor=north] at (53,-10.5) {変化が、となりの場所へ次々と伝わる（電磁波）};
+\end{tikzpicture}
+\bkfigcaption{変わる電場が磁場のうずを作り（（4）の2つめの項）、そのうずが変わると電場のうずを作る（（3））。このくり返しで、電場と磁場の変化が空間を伝わっていく。}
+\end{bkfigure}
+
+\Needspace{14\baselineskip}\noindent これを式でたどります。（3）の両辺の回転をとります。
+
+\begin{bkhenkei}[0.56]
+\mathrm{rot}\,(\mathrm{rot}\,\vec E)=-\frac{\partial}{\partial t}\,\mathrm{rot}\,\vec B & （3）の両辺の回転をとった（$t$ の微分と順番を入れかえた：8-2） \\
+=-\mu_0\varepsilon_0\frac{\partial^2\vec E}{\partial t^2} & 右辺に（4）を入れた \\
+\mathrm{rot}\,(\mathrm{rot}\,\vec E)=\mathrm{grad}\,(\mathrm{div}\,\vec E)-\nabla^2\vec E & 8-12 の専門書をのぞいてみようの式 \\
+=-\nabla^2\vec E & 電荷がない所では $\mathrm{div}\,\vec E=0$ \\
+\frac{\partial^2\vec E}{\partial t^2}=\frac{1}{\mu_0\varepsilon_0}\,\nabla^2\vec E & 2つを等しいとおき、$-\mu_0\varepsilon_0$ でわった \\
+\end{bkhenkei}
+
+最後の式は、8-13 の波動方程式 $\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$ の3次元の形です（$\nabla^2$ は成分ごと：8-12）。だから、電場は波として伝わり、その速さ $c$ は $c^2=\dfrac{1}{\mu_0\varepsilon_0}$ から求められます。
+
+\begin{bkhenkei}[0.5]
+c=\frac{1}{\sqrt{\mu_0\varepsilon_0}} & 波の速さ（8-13 の $c$ と同じ役目） \\
+=\frac{1}{\sqrt{4\pi\times10^{-7}\times8.854\times10^{-12}}} & 2つの自然の定数を入れた \\
+\approx3.00\times10^8\ \text{m/s} & 電卓（Python）で計算した \\
+\end{bkhenkei}
+
+これは、光の速さ（約 \qty{3.00e8}{m/s}）とぴったり同じです。$\varepsilon_0$ と $\mu_0$ は、もともとコンデンサーや電流のまわりの磁場の実験からはかった数で、光とは関係がありませんでした。それなのに、そこから光の速さが出てきたのです。マクスウェルは、このことから「光は、電場と磁場の波（\textbf{電磁波}）である」と考えました。\bkidx{でんじは}{電磁波}磁場も同じ波動方程式をみたします（（4）の回転をとって、同じように計算できます）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!60, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (112,0) node[right, kviiio lab] {進む向き};
+  \draw[bkRed!80!black, line width=1.3pt, domain=0:100, samples=80] plot (\x,{14*sin(\x*7.2)});
+  \foreach \xx in {6.25,12.5,...,93.75} {\pgfmathsetmacro\kviiioE{14*sin(\xx*7.2)}\draw[bkRed!80!black, line width=0.5pt] (\xx,0) -- (\xx,\kviiioE);}
+  \draw[\bkTT, line width=1.3pt, dash pattern=on 3pt off 1.5pt, domain=0:100, samples=80] plot ({\x+5.6*sin(\x*7.2)},{-4.2*sin(\x*7.2)});
+  \foreach \xx in {6.25,12.5,...,93.75} {\pgfmathsetmacro\kviiioB{sin(\xx*7.2)}\draw[\bkTT, line width=0.5pt] (\xx,0) -- ({\xx+5.6*\kviiioB},{-4.2*\kviiioB});}
+  \node[kviiio lab, anchor=south, text=bkRed!75!black] at (50,15.8) {電場 $\vec E$（赤の実線。たて向き）};
+  \node[kviiio lab, anchor=north, text=\bkTT] at (50,-15.8) {磁場 $\vec B$（紺の点線。紙に直角な向きを、ななめから見た形）};
+\end{tikzpicture}
+\bkfigcaption{電磁波のようす（模式図）。電場と磁場は、進む向きにも、たがいにも直角で、いっしょに変化しながら速さ $c$ で進む。}
+\end{bkfigure}
+
+\begin{column}{マクスウェルとヘルツ}
+イギリスのマクスウェルは、1860年代に、それまでに見つかっていた電気と磁気の法則を1組の方程式にまとめ、電磁波が光の速さで伝わることを示しました。ただし、マクスウェルの書いた式は、今の形とはちがい、たくさんの成分の式でした。今のように div と rot（$\nabla$）を使った4つの式にまとめたのは、8-0 のコラムに出てきたヘビサイドたちです。
+
+マクスウェルの予言した電磁波を、実験で本当に作って確かめたのは、ドイツのヘルツで、1888年ごろのことです。周波数の単位「ヘルツ（Hz）」は、この人の名前です。今では、電波（スマホ・テレビ・電子レンジ）、赤外線、光、X線は、どれも波長がちがうだけの電磁波だとわかっています。
+\end{column}
+
+%% ================= 流れ =================
+\bksection{butsuri}{水と空気の流れの式}
+
+\bksubsection{6}{連続の式：物は勝手に生まれも消えもしない}
+
+\label{bk:8-14:renzoku}8-9 で作った連続の式を、もう一度読みます。$\rho$ は流れているもの（水・空気）の密度、$\vec v$ は流れの速度です。
+\kviiioframe{$\dfrac{\partial\rho}{\partial t}+\mathrm{div}\,(\rho\vec v)=0$}
+物理第1巻（力-13）と同じことばで、「\textbf{その点の密度が増える速さ＋その点からのわき出し＝0}」です。わき出しがあれば、その分だけ密度が減ります。電荷の連続の式（④）と、まったく同じ形です。水のように縮まないものでは、$\rho$ が変わらないので、$\mathrm{div}\,\vec v=0$（わき出しのない流れ）です。
+
+ホースの先を指でつまむと、水は勢いよく飛び出します。$\mathrm{div}\,\vec v=0$ の流れでは、ホースの断面を通る量（流束、8-8）がどこでも同じなので、断面積が半分になれば、速さは2倍になります（8-9）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (0,-8) -- (50,-8) to[out=0, in=180] (75,-4) -- (110,-4) -- (110,4) -- (75,4) to[out=180, in=0] (50,8) -- (0,8) -- cycle;
+  \draw[bkInk!70, line width=1pt] (0,-8) -- (50,-8) to[out=0, in=180] (75,-4) -- (110,-4);
+  \draw[bkInk!70, line width=1pt] (0,8) -- (50,8) to[out=0, in=180] (75,4) -- (110,4);
+  \foreach \yy in {-4,0,4} {\draw[kviiio arr, bkBlue!80!black] (12,\yy) -- ++(9,0);}
+  \foreach \yy in {-2,2} {\draw[kviiio arr, bkBlue!80!black, line width=1.1pt] (86,\yy) -- ++(18,0);}
+  \draw[\bkTT, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (30,-8) -- (30,8) (95,-4) -- (95,4);
+  \node[kviiio lab, anchor=north] at (30,-9.5) {断面積 $A$、速さ $v$};
+  \node[kviiio lab, anchor=north] at (95,-5.5) {断面積 $\dfrac{A}{2}$、速さ $2v$};
+  \node[kviiio lab, anchor=south] at (62,9.8) {どの断面でも、1秒に通る量 $Av$ は同じ};
+\end{tikzpicture}
+\bkfigcaption{ホースの先を細くすると、速くなる。$\mathrm{div}\,\vec v=0$ なので、細い所でも1秒に通る水の量は同じ（8-9）。}
+\end{bkfigure}
+
+\bksubsection{7}{ナビエ・ストークス方程式を読む}
+
+\label{bk:8-14:ns}水や空気の流れの基本の式は、流れの中の小さなかたまりに「質量×加速度＝力」をあてはめたものです。物理第1巻（力-15）で読んだ式と同じ形で書きます（水は縮まないとした形）。これを\textbf{ナビエ・ストークス方程式}といいます。\bkidx{なびえすとーくすほうていしき}{ナビエ・ストークス方程式}項を1つずつ、この巻のことばに訳すと、表\ref{bk:8-14:tab-ns}のようになります。
+
+\kviiioframe{$\rho\left(\dfrac{\partial\vec v}{\partial t}+(\vec v\cdot\nabla)\vec v\right)=-\nabla p+\mu\nabla^2\vec v+\rho\vec g$}
+
+流れが止まっているとき（$\vec v=\vec0$）は、左辺もねばりの項も0になり、$\nabla p=\rho\vec g$ です。物理第1巻（力-12）の静水圧の式で、深いほど圧力が大きくなることを表します。
+
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=36mm] Q[l,m,wd=70mm] Q[c,m,wd=14mm]}, rowsep=0.5pt, colsep=2.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+項 & この巻のことばでは & 章 \\
+$\rho\Bigl(\dfrac{\partial\vec v}{\partial t}+(\vec v\cdot\nabla)\vec v\Bigr)$ & 密度×加速度。かっこの中は、流れにのって動くかたまりの加速度（物質微分 $\dfrac{\mathrm D\vec v}{\mathrm Dt}$） & 8-13 \\
+$\dfrac{\partial\vec v}{\partial t}$ & 同じ場所で、時間とともに速さが変わる分 & 8-2・8-13 \\
+$(\vec v\cdot\nabla)\vec v$ & 速さのちがう場所へ運ばれて、速さが変わる分（ホースの細い所へ流れこむと速くなる） & 8-13 \\
+$-\nabla p$ & 圧力の高い所から低い所へ押す力（圧力の勾配の反対向き） & 8-4 \\
+$\mu\nabla^2\vec v$ & ねばりの力。ラプラシアンは「まわりの平均との差」なので、ねばりは速さをまわりの平均にならそうとする & 8-12 \\
+$\rho\vec g$ & 重力 & 8-5 \\
+\end{bktable}
+\bktabcaption{ナビエ・ストークス方程式の読み方（物理第1巻 力-15 と同じ）。$\mu$ はねばりの強さ（粘度）。}
+\label{bk:8-14:tab-ns}
+\end{bkcenter}
+
+この式は、連続の式と組にして使います。2つの式は、ふつうは手で解けないので、空間を細かいマスに分け、8-13 の表計算と同じように、となりのマスとの差で式を書いて（差分法）、コンピュータで少しずつ時間を進めて解きます。天気予報、車や飛行機のまわりの空気の流れ、血管の中の血液の流れの計算は、この方法で行われています。
+
+\kviiiohead{流れのうず：渦度}
+流れの速度の回転 $\mathrm{rot}\,\vec v$ を、流れの本では\textbf{渦度}（うずど）といいます。8-10 で見たように、小さな風車を置いたとき、風車は渦度の半分の角速度で回ります。台風の中心付近や、飛行機の翼の後ろにできるうずは、渦度が大きい所です。（オ）のずれの流れのように、まっすぐ流れていても渦度がある所（川の岸の近く）もあります。
+
+%% ================= 熱と重力 =================
+\bksection{butsuri}{熱・におい・重力の式}
+
+\bksubsection{8}{熱方程式と拡散方程式}
+
+\label{bk:8-14:netsu}8-13 で、3次元の熱方程式を作りました。
+\kviiioframe{$\dfrac{\partial T}{\partial t}=\alpha\,\nabla^2T$\qquad $\Bigl(\alpha=\dfrac{k}{\rho c}\Bigr)$}
+$k$ は熱伝導率、$\rho$ は物の密度、$c$ は比熱です（この章の光の速さ $c$、電荷の密度 $\rho$ とは別のもの）。
+この巻のことばに訳すと、次の3つの文をつないだものです。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 熱は、温度の坂を下る向きに流れる：$\vec q=-k\,\mathrm{grad}\,T$（フーリエの法則、8-4）。
+\item 熱の流れのわき出しの分だけ、熱が減る：たまる熱は $-\mathrm{div}\,\vec q$（8-9）。
+\item $\mathrm{div}\,(\mathrm{grad}\,T)=\nabla^2T$（8-12）。だから「まわりの平均との差」に比例して温度が変わる。
+\end{enumerate}
+温度がまわりの平均より低い所は温まり、高い所は冷えて、でこぼこはならされていきます。
+
+コーヒーに入れたミルクが広がるようす、部屋の中でにおいが広がるようす、半導体の中の電子のちらばり、原子炉の中の中性子のちらばりも、同じ形の式で書けます。$T$ のかわりに「もののこさ」を入れたこの形を、\textbf{拡散方程式}といいます。「こい所から、うすい所へ、こさの坂を下って広がる」という同じしくみだからです。
+
+\bksubsection{9}{重力のガウスの法則}
+
+\label{bk:8-14:juryoku}重力の場 $\vec g$（\qty{1}{kg} にはたらく重力。8-5）も、電場とよく似た式で書けます。電荷のかわりに質量の密度 $\rho$ を使い、
+\kviiioframe{$\mathrm{div}\,\vec g=-4\pi G\rho$\qquad $\Bigl(\displaystyle\oiint_S\vec g\cdot\vec n\,\dd S=-4\pi GM_{\text{中}}\Bigr)$}
+です。$G=6.674\times10^{-11}$〔N·m²/kg²〕は万有引力の定数です。マイナスは、重力が「わき出し」ではなく「吸いこみ」であること（物は引き合う）を表しています。8-11 では、この式で地球を球の袋でかこみ、地球の外では全部の質量が中心に集まったのと同じ力になること（地面で $g=9.82$ m/s²）を示しました（物理第1巻 力-2 の約束）。
+
+\bksubsection{10}{場は「わき出し」と「うず」で決まる}
+
+\label{bk:8-14:helm}ここまで読んだ式は、どれも「わき出し（div）」か「うず（rot）」か、その両方を決める式でした。これには理由があります。遠くへ行くほど0になる場なら、\textbf{わき出しの場所と量、うずの場所と強さがわかると、場全体が1つに決まる}ことが知られています。これを\textbf{ヘルムホルツの分解}といいます。\bkidx{へるむほるつのぶんかい}{ヘルムホルツの分解}場は、「わき出しだけの部分（坂の矢印 $-\mathrm{grad}\,\phi$ の形）」と「うずだけの部分」のたし算に分けられる、ということです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[l,m,wd=40mm] Q[l,m,wd=46mm]}, rowsep=0pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+場 & わき出し（div） & うず（rot） \\
+止まった電荷の電場 & 電荷の所 $\dfrac{\rho}{\varepsilon_0}$ & なし（$-\mathrm{grad}\,\phi$ で書ける） \\
+磁場 & なし & 電流と、変わる電場の所 \\
+縮まない水の流れ & なし & 渦度のある所 \\
+重力 & 質量の所（吸いこみ） & なし \\
+\end{bktable}
+\bktabcaption{いろいろな場の、わき出しとうず}
+\end{bkcenter}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=25mm] *{6}{Q[c,m,wd=13mm]}}, rowsep=1.2pt, colsep=3pt, cells={font=\small}, row{1}={font=\sffamily\small, bg=bkTheme!10}, row{2}={font=\footnotesize}}
+場 & （ア） & （イ） & （ウ） & （エ） & （オ） & （カ） \\
+ & 広がる & 集まる & そろった & うず & ずれ & 側溝 \\
+わき出し $\mathrm{div}\,\vec F$ & 2 & $-2$ & 0 & 0 & 0 & 1 \\
+うず $\mathrm{rot}\,\vec F$ & 0 & 0 & 0 & 2 & $-1$ & 0 \\
+\end{bktable}
+\bktabcaption{主役の6つの場のわき出しとうず（8-9・8-10 の表と同じ数）。（ア）（イ）（カ）はわき出しだけ、（エ）（オ）はうずだけ、（ウ）はどちらもない。}
+\label{bk:8-14:tab-ba6}
+\end{bkcenter}
+
+主役の6つの場（8-5）では、表\ref{bk:8-14:tab-ba6}（8-9・8-10 の表と同じ数）のように、（ア）（イ）（カ）は「わき出しだけ」、（エ）（オ）は「うずだけ」の場でした。（ウ）は div も rot も0なのに、0ではありません。遠くで0にならない場なので、「1つに決まる」の条件からはずれます。電気と磁気の4つの式は、「電場と磁場の、わき出しとうずはどこにあるか」を全部書いたものなので、電場と磁場が決まるのです。8-0 で予告した「矢印の地図から、わき出す所と、うずを巻く所を読む」ことが、自然の基本の式の読み方そのものだったのです。
+
+%% ================= 専門書 =================
+\bksection{card}{専門書をのぞいてみよう}
+
+\bksubsection{11}{専門書の書き方に訳す}
+
+\label{bk:8-14:senmon}大学の本では、同じ式が少しちがう記号で書かれています。表の左の列がこの本の書き方（物理シリーズも同じ）、右の列が専門書でよく見る書き方です。記号がちがっても、言っていることは同じです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=38mm] Q[c,m,wd=48mm]}, rowsep=0pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+もの & この本 & 専門書でよく見る書き方 \\
+ベクトル（場） & $\vec E$、$\vec v$ & $\symbf{E}$、$\symbf{v}$（太字） \\
+勾配 & $\mathrm{grad}\,f$ & $\nabla f$ \\
+発散 & $\mathrm{div}\,\vec F$ & $\nabla\cdot\symbf{F}$ \\
+回転 & $\mathrm{rot}\,\vec F$ & $\nabla\times\symbf{F}$、$\operatorname{curl}\symbf{F}$ \\
+ラプラシアン & $\nabla^2f$ & $\nabla^2f$、$\Delta f$ \\
+閉じた面の積分 & $\displaystyle\oiint_S$ & $\displaystyle\oint_S$、$\displaystyle\oint_{\partial V}$ \\
+面のタイル & $\vec n\,\dd S$ & $\dd\symbf{S}$、$\dd\symbf{A}$ \\
+体積・面の積分 & $\displaystyle\iiint_V$、$\displaystyle\iint_S$ & $\displaystyle\int_V$、$\displaystyle\int_S$（$\int$ を1つ） \\
+\end{bktable}
+\bktabcaption{この巻の記号と、専門書でよく見る記号の対応}
+\end{bkcenter}
+
+\begin{senmonsho}[電磁気学の教科書ふうの書き方]
+\begin{bkhonbun}
+真空中のマクスウェル方程式は
+\[ \nabla\cdot\symbf{E}=\rho/\varepsilon_0,\qquad \nabla\cdot\symbf{B}=0, \]
+\[ \nabla\times\symbf{E}=-\partial\symbf{B}/\partial t,\qquad \nabla\times\symbf{B}=\mu_0\symbf{j}+\mu_0\varepsilon_0\,\partial\symbf{E}/\partial t \]
+である。第1式の両辺を領域 $V$ で積分し，ガウスの定理を用いると $\oint_{\partial V}\symbf{E}\cdot\dd\symbf{S}=Q/\varepsilon_0$ を得る。
+\end{bkhonbun}
+\bkyaku{太字の $\symbf{E}$・$\symbf{B}$ は、この本の矢印の $\vec E$・$\vec B$。$\nabla\cdot$ は div、$\nabla\times$ は rot（8-9・8-10）。「領域 $V$」は立体、「$\partial V$」は「$V$ の境目（表面）」という意味で、偏微分の $\partial$ とは別の使い方。閉じた面の積分に $\oint$ を1つだけ書いているが、この本の $\oiint$ と同じ（◯は閉じている印）。$\dd\symbf{S}$ はこの本の $\vec n\,\dd S$。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\kviiiobox{自然の基本の式は、「わき出し」と「うず」の式}
+・電荷は電場のわき出し。磁場にわき出しはない。変わる磁場は電場のうずを、電流と変わる電場は磁場のうずを作る。その2つがくり返されて、電磁波（光）が速さ $c=\dfrac{1}{\sqrt{\mu_0\varepsilon_0}}$ で伝わる。\par
+・積分形（袋・道）と微分形（場所ごと）は、ガウスの定理・ストークスの定理でつながる。\par
+・流れの式・熱の式も、grad・div・rot・$\nabla^2$・物質微分の組み合わせで読める。
+\end{taisetsu}
+
+
+
+\begin{kotoba}
+\small
+\bkword{マクスウェル方程式}{電場と磁場のわき出しとうずを決める4つの式。}
+\bkword{電磁波}{電場と磁場の変化が、たがいにうずを作り合いながら伝わる波。光や電波。}
+\bkword{ナビエ・ストークス方程式}{流れの中のかたまりの運動方程式。流れの基本の式。}
+\bkword{ヘルムホルツの分解}{場を、わき出しだけの部分とうずだけの部分に分けること。}
+\end{kotoba}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 4つの式を、「わき出し」と「うず」のことばで読める。\bkfurref{bk:8-14:yomu}
+\item 積分形と微分形のつながり、光の速さの出し方を言える。\bkfurref{bk:8-14:sekibun}
+\item 流れの式・熱の式の項を、この巻のことばに訳せる。\bkfurref{bk:8-14:ns}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{矢印の地図の「わき出し」と「うず」が、光の速さまで決めていたんだね。第9巻では、波や音を sin と cos に分けて、ゆれ方そのものを読んでいくよ。}

@@ -1,0 +1,1094 @@
+%% 6-6 ばねと振り子（第14回：組 V6-4。ページ制限なし。偶数ページ）
+%% ほかの巻が指している形：5-15 のばね（0.5 kg・8 N/m・ω=4・周期約1.57 s）を「くわしく調べる」（ch5-15:297）、
+%%   2-8 の「なぜ √ になるのか、なぜ約2なのか」（ch2-08:238）、5-6 の「T=2π√(L/g) は6-6で求めます」、
+%%   2-15・5-18 の「電気の回路の中のゆれ（LC回路）」、4-8 の「単振動（6-6でくわしく）」、
+%%   物理 力-11 の「固有値問題（数学 6-6 のもっと知りたい）」
+%% 記号：固有角振動数 ω_n（n は立てた字）、振幅 X、初期位相 φ（5-15 のカードと同じ。x=X cos(ω_n t+φ)）、
+%%   表計算は 6-2 の型（t｜x｜v｜a、Δt はセル1つ、速度を先に進めるオイラー法）
+\makeatletter
+% 囲みの外の小見出し（太字の1行）
+\newcommand\kvighead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kvigbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\noindent\ignorespaces}
+% 例題の途中式の行（折り返しても、そろえた位置から始まる）
+\newcommand\kviga{\par\vspace{2pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kvigb{\par\vspace{2pt}\noindent\hangindent=4.6\zw\hangafter=0\relax}
+% 大事な式のわく  \kvigframe{中身}
+\newcommand\kvigframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% ばね（横）  \kvigspringh{左のはしの x}{右のはしの x}{y}
+\newcommand\kvigspringh[3]{%
+  \draw[bkInk!80, line width=0.7pt] (#1,#3) -- ({#1+2},#3);
+  \draw[bkInk!80, line width=0.7pt, decorate, decoration={zigzag, segment length=2mm, amplitude=1.7mm}] ({#1+2},#3) -- ({#2-2},#3);
+  \draw[bkInk!80, line width=0.7pt] ({#2-2},#3) -- (#2,#3);}
+% ばね（たて）  \kvigspringv{x}{上のはしの y}{下のはしの y}
+\newcommand\kvigspringv[3]{%
+  \draw[bkInk!80, line width=0.7pt] (#1,#2) -- (#1,{#2-2});
+  \draw[bkInk!80, line width=0.7pt, decorate, decoration={zigzag, segment length=2mm, amplitude=1.7mm}] (#1,{#2-2}) -- (#1,{#3+2});
+  \draw[bkInk!80, line width=0.7pt] (#1,{#3+2}) -- (#1,#3);}
+% かべ（たて）  \kvigwall{x}{下の y}{上の y}（左側に斜線）
+\newcommand\kvigwall[3]{%
+  \fill[pattern=north east lines, pattern color=bkGray] ({#1-2.6},#2) rectangle (#1,#3);
+  \draw[bkInk, line width=1pt] (#1,#2) -- (#1,#3);}
+% 天井  \kvigceil{左の x}{右の x}{y}（上側に斜線）
+\newcommand\kvigceil[3]{%
+  \fill[pattern=north east lines, pattern color=bkGray] (#1,#3) rectangle (#2,{#3+2.6});
+  \draw[bkInk, line width=1pt] (#1,#3) -- (#2,#3);}
+% 床  \kvigfloor{左の x}{右の x}{y}（下側に斜線）
+\newcommand\kvigfloor[3]{%
+  \fill[pattern=north east lines, pattern color=bkGray] (#1,{#3-2.4}) rectangle (#2,#3);
+  \draw[bkInk, line width=1pt] (#1,#3) -- (#2,#3);}
+% 台車  \kvigcart{(床の上のまん中)}{色}（はば14 mm、高さ 11 mm。ばねは左はしの高さ 7 mm につなぐ）
+\newcommand\kvigcart[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=#2!25, draw=#2!80!black, line width=0.8pt, rounded corners=1mm] (-7,3) rectangle (7,11);
+  \filldraw[fill=bkInk!70, draw=bkInk, line width=0.5pt] (-4,1.5) circle (1.5) (4,1.5) circle (1.5);
+\end{scope}}
+% おもり（つるす）  \kvigweight{(上のはしのまん中)}{色}
+\newcommand\kvigweight[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=#2!30, draw=#2!80!black, line width=0.8pt, rounded corners=0.8mm] (-4,0) rectangle (4,-7);
+\end{scope}}
+% 回路の部品（たて向き）。\kvigcap{x}{下の y}{上の y}（まん中にコンデンサー）、\kvigcoil{x}{下の y}{上の y}（まん中にコイル）、
+% \kvigres{x}{下の y}{上の y}（まん中に抵抗の四角）
+\newcommand\kvigcap[3]{%
+  \draw[bkInk, line width=0.8pt] (#1,#2) -- (#1,{(#2+#3)/2-1.1}) (#1,{(#2+#3)/2+1.1}) -- (#1,#3);
+  \draw[bkInk, line width=1.4pt] ({#1-4},{(#2+#3)/2-1.1}) -- ({#1+4},{(#2+#3)/2-1.1}) ({#1-4},{(#2+#3)/2+1.1}) -- ({#1+4},{(#2+#3)/2+1.1});}
+\newcommand\kvigcoil[3]{%
+  \draw[bkInk, line width=0.8pt] (#1,#2) -- (#1,{(#2+#3)/2-6}) (#1,{(#2+#3)/2+6}) -- (#1,#3);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={coil, aspect=0.55, segment length=2.4mm, amplitude=2.4mm}] (#1,{(#2+#3)/2-6}) -- (#1,{(#2+#3)/2+6});}
+\newcommand\kvigres[3]{%
+  \draw[bkInk, line width=0.8pt] (#1,#2) -- (#1,{(#2+#3)/2-5}) (#1,{(#2+#3)/2+5}) -- (#1,#3);
+  \draw[bkInk, line width=0.8pt, fill=white] ({#1-1.8},{(#2+#3)/2-5}) rectangle ({#1+1.8},{(#2+#3)/2+5});}
+% グラフの目もりの数字を、線と重ならないように、グラフの下のはしの外に置く  \kvigxtl{x}{ymin}{数字}（axis の中で）
+\newcommand\kvigxtl[3]{\node[font=\sffamily\footnotesize, text=bkInk, anchor=north, inner sep=1pt] at (axis cs:#1,#2) {#3};}
+\makeatother
+
+\bkchapter{6}{6}{ばねと振り子}{\bklevel{3}}{ばねと振り子}
+\bkmichishirube{2-8,2-15,4-8,4-9,5-15,5-17,5-18,6-2}{6-7,6-12,6-13,6-15,7-8}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace ばねとおもりの式を力の図から立て、固有角振動数 $\omega_{\mathrm n}$ と周期を求められる。
+\item \bklevel{3}\enspace はじめの位置と速度から、振幅と初期位相を決められる。
+\item \bklevel{3}\enspace 振り子や、コイルとコンデンサーの回路も同じ形の式になることを説明し、周期を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\raggedright
+同じばねに、同じおもりを2つつるしました。左は\qty{2}{cm}だけ下に引いて、右は\qty{6}{cm}だけ下に引いて、同時に手をはなします。
+
+右のおもりは、左の3倍も長い道のりを上下します。1往復するのにかかる時間は、右のほうが長いでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.39\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kvigceil{-4}{40}{0}
+  \kvigspringv{6}{0}{-23}
+  \kvigweight{(6,-23)}{bkBlue}
+  \kvigspringv{27}{0}{-29}
+  \kvigweight{(27,-29)}{bkOrange}
+  % つり合いの位置（おもりの上のはしの高さ。点線）
+  \draw[bkGray, dashed, line width=0.5pt] (-4,-20) -- (40,-20);
+  \draw[bk arrow, bkBlue, line width=0.9pt] (12.5,-20) -- (12.5,-23.5);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkInk] at (13,-24.5) {\qty{2}{cm}};
+  \draw[bk arrow, bkOrange!85!black, line width=0.9pt] (33.5,-20) -- (33.5,-29.5);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkInk] at (34,-27) {\qty{6}{cm}};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkInk, align=center] at (18,-39) {点線は、つり合いの位置};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent ばねにつるしたおもりは、5-15で「$\sin$ の形でゆれる（単振動）」と分かりました。この章では、ばね・振り子・電気の回路の「ゆれ」を、微分方程式として1つずつ立てて解きます。どんな数でゆれ方が決まるのか、はじめにどう動かすとどうゆれるのかを、式と表計算の両方で調べます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ばねのゆれの周期をはかろう]
+\kvigbox{用意するもの}
+やわらかいつるまきばね（\qty{100}{g}のおもりで\qty{10}{cm}ほどのびるもの）、\qty{50}{g}のおもり4こ、スタンド、ものさし、スマートフォンのストップウォッチ
+\noindent\begin{minipage}[c]{0.7\linewidth}\raggedright
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item スタンドにばねをつるし、おもりを2こ（\qty{100}{g}）つけよう。おもりが止まった高さに、ものさしで印をつけよう。
+\item おもりを印から\qty{2}{cm}下に引いて、そっと手をはなそう。10往復する時間をはかり、10でわって1往復の時間（周期）を求めよう。
+\item 引く長さを\qty{4}{cm}にして、②をくり返そう。
+\item おもりを1こ（\qty{50}{g}）、4こ（\qty{200}{g}）にかえて、②をくり返そう。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.27\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-12,-46) rectangle (14,-44);
+  \draw[bkInk!70, line width=1.6pt] (-8,-44) -- (-8,6) -- (6,6);
+  \kvigspringv{4}{6}{-20}
+  \kvigweight{(4,-20)}{bkBlue}
+  \draw[bkInk, line width=0.5pt] (2,-27) -- (6,-27);
+  \filldraw[fill=bkBlue!30, draw=bkBlue!80!black, line width=0.6pt] (0.5,-27) rectangle (7.5,-31);
+  \fill[bkYellow!40] (10,-36) rectangle (13,-4);
+  \draw[bkInk!60, line width=0.5pt] (10,-36) rectangle (13,-4);
+  \foreach \yy in {-34,-32,...,-6} {\draw[bkInk!60, line width=0.4pt] (10,\yy) -- (11.2,\yy);}
+  \draw[bkRed, line width=0.8pt] (8.5,-20) -- (14.5,-20);
+  \node[font=\sffamily\footnotesize, anchor=north] at (2,-47) {ばねとおもり};
+\end{tikzpicture}
+\end{minipage}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] Q[c,m,wd=22mm] Q[c,m,wd=26mm] Q[c,m,wd=22mm]}, rowsep=1pt}
+おもり & 引いた長さ & 10往復の時間 & 周期 \\
+\qty{100}{g} & \qty{2}{cm} & \qty{6.3}{s} & \qty{0.63}{s} \\
+\qty{100}{g} & \qty{4}{cm} & \qty{6.3}{s} & \qty{0.63}{s} \\
+\qty{50}{g} & \qty{2}{cm} & \qty{4.5}{s} & \qty{0.45}{s} \\
+\qty{200}{g} & \qty{2}{cm} & \qty{8.9}{s} & \qty{0.89}{s} \\
+\end{bktable}
+\bktabcaption{ミナさんがはかった結果}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent 1つの往復は短いので、10往復をまとめてはかり、10でわりました。ストップウォッチをおすタイミングのずれ（0.1〜0.2秒ほど）が、10分の1になるからです。
+
+表から、2つのことに気づきます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 引いた長さを\qty{2}{cm}から\qty{4}{cm}にしても、周期は\qty{0.63}{s}のまま変わらない。
+\item おもりを\qty{50}{g}から\qty{200}{g}へ4倍にすると、周期は\qty{0.45}{s}から\qty{0.89}{s}へ、約2倍になる。
+\end{itemize}
+「4倍で2倍」は、2-8の振り子（長さを4倍にすると周期が2倍）と同じきまりです。$\sqrt4=2$ なので、周期は質量の $\sqrt{\phantom{m}}$ に比例しているようです。なぜそうなるのかを、この章で式から確かめます。
+
+\begin{omoidasou}
+\bkrecall{2-15}{ばねの力は、のびに比例する：$F=kx$。$k$ はばね定数〔N/m〕。}
+\bkrecall{4-9}{加法定理：$\cos(a+b)=\cos a\cos b-\sin a\sin b$}
+\bkrecall{5-5}{力＝質量×加速度（$F=ma$）。$\dot x=\dfrac{\dd x}{\dd t}$ は速度、$\ddot x=\dfrac{\dd^2x}{\dd t^2}$ は加速度。}
+\bkrecall{5-15}{$x=A\sin\omega t$ なら $\ddot x=-\omega^2x$。ばねなら $\omega^2=\dfrac{k}{m}$。\\\qty{0.5}{kg}・\qty{8}{N/m}のばねで $\omega=4$、周期 $\dfrac{2\pi}{\omega}\approx\qty{1.57}{s}$。}
+\bkrecall{5-17}{振り子：$\ddot\theta=-\dfrac{g}{L}\sin\theta$。ふれが小さいと $\sin\theta\approx\theta$ で、周期 $2\pi\sqrt{\dfrac{L}{g}}$。}
+\bkrecall{5-18}{「2回微分すると自分の $-\omega^2$ 倍」の答えは $A\sin\omega t+B\cos\omega t$。\\$A$、$B$ は、はじめの位置と速度で決める。差 $u=T-20$ のように、ずらして使える。}
+\bkrecall{6-2}{2階の式は、位置 $x$ と速度 $v$ の2つの列で進める。速度を先に新しくし、その新しい速度で位置を進める（速度を先に進めるオイラー法）。}
+\bkrecall{6-4}{コンデンサー：たまる電気の量 $q$〔C〕は電圧 $V$〔V〕に比例し、$q=CV$。\\コイル：電流 $i$〔A〕が変わると、変わる速さに比例した電圧 $L\dfrac{\dd i}{\dd t}$ が生まれる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{ばねの式を、力の図から立てる}
+
+\label{bk:6-6:shiki}5-15のばねを、くわしく調べます。なめらかなレールの上に、質量\qty{0.5}{kg}の台車があります。台車は、ばね定数\qty{8}{N/m}のばねで、かべにつながっています。台車を右へ\qty{10}{cm}引いて、そっと手をはなします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kvigfloor{0}{122}{0}
+  \kvigwall{4}{0}{20}
+  % 上：ばねが自然の長さ
+  \begin{scope}[yshift=0mm]
+  \kvigspringh{4}{50}{7}
+  \kvigcart{(57,0)}{bkBlue}
+  \end{scope}
+  \draw[bkGray, dashed, line width=0.5pt] (57,-3) -- (57,24);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkInk] at (57,24.5) {$x=0$（ばねが自然の長さ）};
+  % 右へ引いた位置（うすく）
+  \draw[bkOrange!80!black, line width=0.8pt, dashed, rounded corners=1mm] (70,3) rectangle (84,11);
+  \draw[bk arrow, bkOrange!80!black, line width=0.9pt] (57,15) -- (77,15);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkInk] at (69,15.5) {$x$（右が＋）};
+  % x の軸
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=4pt]}] (40,-7) -- (112,-7) node[anchor=west, font=\sffamily\footnotesize] {$x$};
+  \foreach \u/\l in {37/{$-0.1$}, 57/{0}, 77/{0.1}} {\draw[bkInk, line width=0.6pt] (\u,-6.2) -- (\u,-7.8); \node[font=\sffamily\footnotesize, anchor=north] at (\u,-8.5) {\l};}
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGray] at (100,-8.5) {（m）};
+\end{tikzpicture}
+\bkfigcaption{台車の位置 $x$ は、ばねが自然の長さのときを0とし、右を＋にする。}
+\label{bk:6-6:fig-daisha}
+\end{bkfigure}
+
+\kvighead{位置の決め方}
+ばねがのびても縮んでもいない（自然の長さの）ときの台車の位置を0とします。右へずれたら $x$ は＋、左へずれたら $x$ は－です。こう決めると、$x$ がそのまま「ばねののび」になります（縮んでいるときは、のびが－）。
+
+\kvighead{ばねが台車をおす力・引く力}
+いろいろな位置で、ばねが台車にはたらかせる力を表にします。ばねの力の大きさは、のびの大きさ×$k$ です（2-15）。向きは、右向きを＋とします。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=1pt}
+位置 $x$〔m〕 & $-0.1$ & $-0.05$ & 0 & 0.05 & 0.1 \\
+ばねのようす & 縮む & 縮む & 自然 & のびる & のびる \\
+力 $F$〔N〕 & $+0.8$ & $+0.4$ & 0 & $-0.4$ & $-0.8$ \\
+\end{bktable}
+\bktabcaption{のびているときは左へ引き（－）、縮んでいるときは右へおす（＋）。}
+\end{bkcenter}
+力はいつも、ずれ $x$ と反対向きで、大きさは $8\times\lvert x\rvert$ です。$x=0.1$ のとき $F=-0.8$、$x=-0.1$ のとき $F=+0.8$。どちらも $F=-8x$ に合います。向きまでこめて書くと、
+\kvigframe{$F=-kx$}
+$-$ は、「ずれと反対向きに、もとの位置へもどそうとする」という意味です。マイナスをつけ忘れると、ずれた向きにさらにおし出す力になり、台車はどんどん遠くへ行ってしまいます。
+
+\kvighead{力＝質量×加速度}
+台車には、重力と、レールが支える力もはたらきます。でも、この2つは上下の向きで打ち消しあい、左右の動きには関係しません。レールとの摩擦や空気の抵抗は、とても小さいので、ここでは考えません（6-7で考えます）。左右の向きの力は、ばねの力だけです。5-5の $F=ma$ に入れると、加速度は $\ddot x$ なので、
+\[ m\ddot x=-kx \]
+これが、ばねと台車の\textbf{運動方程式}です。左は「質量×加速度」、右は「ばねの力」です。\bkidx{うんどうほうていしき}{運動方程式}
+
+\kvighead{両辺を $m$ でわって、答えの候補を選ぶ}
+\begin{bkhenkei}
+m\ddot x=-kx & 運動方程式 \\
+\ddot x=-\frac{k}{m}\,x & 両辺を $m$ でわる \\
+\ddot x=-16x & 数を入れる（$8\div0.5=16$）\\
+\end{bkhenkei}
+「2回微分すると、自分の $-16$ 倍」の関数です。5-18の答えの候補の表で、$-\omega^2=-16$ の行です。$\omega^2=16$ なので $\omega=4$（2乗して16になる正の数）。答えの形は
+\[ x=A\sin4t+B\cos4t \]
+$\sin4t$ を2回微分すると、4が2回かかって $4\times4=16$、$\cos$ の微分の $-$ がついて $-16\sin4t$ になるからです（5-15）。だから、ここで出てくる4は、16（つまり $\dfrac{k}{m}$）の $\sqrt{\phantom{m}}$ です。$A$ と $B$ は、はじめの状態で決めます（④で調べます）。
+
+\kvighead{固有角振動数と周期}
+文字のまま書くと、$\omega^2=\dfrac{k}{m}$ なので、
+\kvigframe{$\omega_{\mathrm n}=\sqrt{\dfrac{k}{m}}\qquad T=\dfrac{2\pi}{\omega_{\mathrm n}}=2\pi\sqrt{\dfrac{m}{k}}$}
+$\omega_{\mathrm n}$（オメガ・エヌ）を\textbf{固有角振動数}といいます。「固有」は、「その物が自分で決める」という意味です。ばねと台車の組を選んだ時点で、ゆれる速さ（1秒に進む角）は決まっていて、手のはなし方では変わりません。下つきの n は natural（自然の）の頭文字です。\bkidx{こゆうかくしんどうすう}{固有角振動数 $\omega_{\mathrm n}$}
+
+周期 $T$ が $\dfrac{2\pi}{\omega_{\mathrm n}}$ になるのは、$\sin\omega_{\mathrm n}t$ の角 $\omega_{\mathrm n}t$ が、1往復で $2\pi$（1周、4-8）だけ進むからです。$\omega_{\mathrm n}T=2\pi$ を $T$ について解きました。このばねでは、
+\[ \omega_{\mathrm n}=\sqrt{16}=4\ \mathrm{rad/s},\qquad T=\frac{2\pi}{4}=\frac{6.283}{4}\approx\qty{1.57}{s} \]
+1秒あたりの往復の回数（\textbf{振動数} $f$）は、$f=\dfrac{1}{T}=\dfrac{1}{1.571}\approx\qty{0.64}{Hz}$ です。Hz（ヘルツ）は「1秒あたりの回数」の単位です。
+
+\kvigbox{単位で確かめる}
+$\dfrac{k}{m}$ の単位は〔N/m〕÷〔kg〕です。$\mathrm{N}=\mathrm{kg\,m/s^2}$（\qty{1}{kg}を\qty{1}{m/s^2}で加速する力）なので、
+\[ \frac{\mathrm{N/m}}{\mathrm{kg}}=\frac{\mathrm{kg\,m/s^2}}{\mathrm{m}\times\mathrm{kg}}=\frac{1}{\mathrm{s^2}} \]
+kg と m が約分されて、$\dfrac{1}{\mathrm{s^2}}$ が残ります。その $\sqrt{\phantom{m}}$ は $\dfrac{1}{\mathrm s}$ で、「1秒あたり」の量になりました。角はラジアンで数えるので、$\omega_{\mathrm n}$ の単位は rad/s です。
+
+\kvigbox{式を読む}
+$T=2\pi\sqrt{\dfrac{m}{k}}$ は、次のように読めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 質量 $m$ を4倍にすると、$\sqrt4=2$ なので周期は2倍。重い物は動かしにくい（同じ力でも加速度が小さい）ので、ゆっくりゆれる。
+\item ばね定数 $k$ を4倍（かたいばね）にすると、周期は $\dfrac{1}{2}$ 倍。引きもどす力が強いので、速くゆれる。
+\end{itemize}
+やってみようの「おもり4倍で周期2倍」は、この1つめです。周期が質量の $\sqrt{\phantom{m}}$ に比例するのは、$\omega_{\mathrm n}$ が $\dfrac{k}{m}$ の $\sqrt{\phantom{m}}$ だからで、それは「2回微分すると $\omega$ が2回かかる」からでした。
+
+\begin{seikaku}
+ばねの力が $F=-kx$ になるのは、のびが小さい範囲だけです（フックの法則、1678年）。のばしすぎると、力はのびに比例しなくなり、ばねはもとにもどらなくなります。また、ばね自身の質量も、ここでは考えていません。ばねがおもりよりずっと軽いときに、よく合う式です。
+\end{seikaku}
+
+\bksubsection{2}{表計算でも動かしてみる}
+
+\label{bk:6-6:hyou}式の答えが本当に合っているか、6-2の表計算で確かめます。きまりは「加速度＝$-\dfrac{k}{m}\times$位置」だけです。$\Delta t=\qty{0.01}{s}$ として、6-2と同じ順で1行ずつ進めます。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 今の位置から加速度を求める：$a=-\dfrac{k}{m}x=-16x$
+\item 新しい速度：$v+a\times\Delta t$（加速度は「1秒あたりの速度の変化」だから）
+\item 新しい位置：$x+(\text{新しい速度})\times\Delta t$（速度は「1秒あたりの位置の変化」だから）
+\end{enumerate}
+表計算では、6-2と同じ型で、$\Delta t$ をセルE2に入れます。D2に \texttt{=-8*B2/0.5}、C3に \texttt{=C2+D2*\$E\$2}、B3に \texttt{=B2+C3*\$E\$2} と書いて、下へコピーします。F列には、くらべるために式の答えを入れました。
+\begin{bkcenter}
+\bksheet{6}{17.5}{%
+1 & $t$〔s〕 & $x$〔m〕 & $v$〔m/s〕 & $a$〔m/s$^2$〕 & $\Delta t$ & $0.1\cos4t$ \\
+2 & 0 & 0.10000 & 0 & $-1.60000$ & 0.01 & 0.10000 \\
+3 & 0.01 & 0.09984 & $-0.01600$ & $-1.59744$ & & 0.09992 \\
+4 & 0.02 & 0.09952 & $-0.03197$ & $-1.59232$ & & 0.09968 \\
+5 & 0.03 & 0.09904 & $-0.04790$ & $-1.58466$ & & 0.09928 \\
+81 & 0.79 & $-0.09995$ & 0.00745 & 1.59913 & & $-0.09998$ \\
+159 & 1.57 & 0.10001 & 0.00111 & $-1.60008$ & & 0.10000 \\}
+\bktabcaption{5行めのあとは、とちゅうの行を省いた。F列は、式の答え $x=0.1\cos4t$。}
+\end{bkcenter}
+1行めの計算を、手でたどります。
+\begin{bkhenkei}
+a=-16\times0.1=-1.6 & ① 今の位置から加速度 \\
+v=0+(-1.6)\times0.01=-0.016 & ② 新しい速度 \\
+x=0.1+(-0.016)\times0.01 & ③ 新しい速度で位置を進める \\
+\phantom{x}=0.09984 & \\
+\end{bkhenkei}
+表の3行めと同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=44mm, xmin=0, xmax=6.4, ymin=-0.12, ymax=0.14, xtick={1,2,3,4,5,6}, xticklabels={}, ytick={-0.1,0.1}, yticklabels={$-0.1$,0.1}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \kvigxtl{1}{-0.12}{1}\kvigxtl{2}{-0.12}{2}\kvigxtl{3}{-0.12}{3}\kvigxtl{4}{-0.12}{4}\kvigxtl{5}{-0.12}{5}\kvigxtl{6}{-0.12}{6}
+  \addplot[bkcurve, domain=0:6.2, samples=160] {0.1*cos(deg(4*x))};
+  \addplot[only marks, mark=*, mark size=1.3pt, bkOrange] coordinates {(0,0.1) (0.2,0.0682) (0.4,-0.0049) (0.6,-0.0751) (0.8,-0.0997) (1.0,-0.0638) (1.2,0.0108) (1.4,0.0788) (1.6,0.0991) (1.8,0.0592) (2.0,-0.0166) (2.2,-0.0823) (2.4,-0.0981) (2.6,-0.0544) (2.8,0.0223) (3.0,0.0855) (3.2,0.0968) (3.4,0.0494) (3.6,-0.0280) (3.8,-0.0884) (4.0,-0.0952) (4.2,-0.0442) (4.4,0.0336) (4.6,0.0910) (4.8,0.0932) (5.0,0.0389) (5.2,-0.0390) (5.4,-0.0933) (5.6,-0.0909) (5.8,-0.0334) (6.0,0.0444)};
+  \draw[bk arrow, bkGray, line width=0.8pt] (axis cs:0,0.122) -- (axis cs:1.571,0.122);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (axis cs:0.785,0.122) {周期 \qty{1.57}{s}};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{青い線は式の答え $x=0.1\cos4t$、オレンジの点は表計算（0.2秒ごとに表示）。点は線にのり、1.57秒ごとに同じ形をくり返す。}
+\end{bkfigure}
+表計算の159行め（1.57秒）で、台車はもとの位置0.1にもどっています。式で求めた周期 $\qty{1.57}{s}$ と合います。式で解く方法と、数で進める方法の2通りで、同じ動きが出てきました。手をはなした台車は、はじめは $\cos$ の山（いちばん右）にいて、そこから左へ動き出します。
+
+\bksubsection{3}{周期は、ゆれの大きさによらない}
+
+\label{bk:6-6:hatena}\bkhatenaref では、\qty{2}{cm}引いたおもりと\qty{6}{cm}引いたおもりの周期をくらべました。まず、水平なばねの台車で考えます（つるしたばねは⑤で）。
+
+\kvighead{式で考える}
+周期の式 $T=2\pi\sqrt{\dfrac{m}{k}}$ には、質量 $m$ とばね定数 $k$ しか入っていません。どれだけ引いたか（ゆれの大きさ）は、どこにも入っていません。だから、周期はゆれの大きさによりません。
+
+\kvighead{数で考える}
+式だけでは、なっとくしにくいかもしれません。表計算で、はじめの位置を0.1と0.3（3倍）にして、ならべてみます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=34mm] Q[c,m,wd=34mm] Q[c,m,wd=20mm]}, rowsep=1pt}
+$t$ & はじめ0.1のとき & はじめ0.3のとき & 何倍？ \\
+0 & 0.10000 & 0.30000 & 3倍 \\
+0.01 & 0.09984 & 0.29952 & 3倍 \\
+0.02 & 0.09952 & 0.29856 & 3倍 \\
+0.39 & $-0.00093$ & $-0.00279$ & 3倍 \\
+0.79 & $-0.09995$ & $-0.29985$ & 3倍 \\
+\end{bktable}
+\bktabcaption{どの時刻でも、位置はぴったり3倍。0を通る時刻も、いちばん左に来る時刻も同じ。}
+\end{bkcenter}
+なぜ、ぴったり3倍になるのでしょう。1行ずつたどると、次のようになっています。
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 位置が3倍なので、ばねの力 $-kx$ も3倍。だから加速度も3倍。
+\item 加速度が3倍なので、$\Delta t$ のあいだにつく速度も3倍。
+\item 速度が3倍なので、$\Delta t$ のあいだに進む道のりも3倍。次の位置も3倍。
+\end{enumerate}
+これが、どの行でもくり返されます。3倍遠くからスタートしたおもりは、3倍強い力で引きもどされ、3倍の速さで走ります。\textbf{3倍の道のりを3倍の速さで走るので、かかる時間は同じ}なのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=46mm, xmin=0, xmax=3.4, ymin=-7.5, ymax=8.5, xtick={0.785,1.571,2.356,3.142}, xticklabels={}, ytick={-6,-2,2,6}, xlabel={$t$（s）}, ylabel={$x$（cm）}]
+  \addplot[bkcurve2, domain=0:3.3, samples=120] {6*cos(deg(4*x))};
+  \addplot[bkcurve, domain=0:3.3, samples=120] {2*cos(deg(4*x))};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0.393,-7) -- (axis cs:0.393,7);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:1.178,-7) -- (axis cs:1.178,7);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west, inner sep=1pt] at (axis cs:3.36,4.7) {\qty{6}{cm}引いた};
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=west, inner sep=1pt] at (axis cs:3.36,1.0) {\qty{2}{cm}引いた};
+  \kvigxtl{0.785}{-7.5}{0.79}\kvigxtl{1.571}{-7.5}{1.57}\kvigxtl{2.356}{-7.5}{2.36}\kvigxtl{3.142}{-7.5}{3.14}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ゆれの大きさは3倍ちがうのに、0を通る時刻（点線）も、山の時刻も同じ。}
+\end{bkfigure}
+\kvigbox{\bkhatenaref の答え}
+同じ時間です。ばねの力がずれに比例するので、遠くから始めたおもりほど強く引かれ、速く動きます。ゆれの大きさがいくつでも、1往復の時間は $2\pi\sqrt{\dfrac{m}{k}}$ です。
+
+5-18で、「答えを何倍しても答え」になる式を線形とよびました。$m\ddot x=-kx$ は線形なので、$x=0.1\cos4t$ が答えなら、3倍した $x=0.3\cos4t$ も答えです。上の表は、そのことを数で見たものです。
+
+ブランコや振り子は、少しちがいます。ふれが小さいときは周期は同じですが、大きくこぐと、少し長くなります。そのわけは⑦で調べます。
+
+\bksubsection{4}{はじめの位置と速度から、振幅と初期位相を決める}
+
+\label{bk:6-6:shoki}こんどは、台車を右へ\qty{10}{cm}引いたところで、右向きに\qty{0.4}{m/s}の速さでおし出すように手をはなします。はじめの位置は $x_0=0.1$、はじめの速度は $v_0=0.4$ です。台車は、どこまで右へ行くでしょう。それはいつでしょう。
+
+\kvighead{$A$ と $B$ を決める}
+答えの形は $x=A\sin4t+B\cos4t$ でした。5-18と同じ手順で、$A$ と $B$ を決めます。
+\begin{bkhenkei}
+x(0)=A\sin0+B\cos0=B & $t=0$ を入れる（$\sin0=0$、$\cos0=1$）\\
+B=0.1 & はじめの位置が0.1 \\
+\dot x=4A\cos4t-4B\sin4t & $x$ を微分して速度にする（5-15）\\
+\dot x(0)=4A & $t=0$ を入れる \\
+A=0.4\div4=0.1 & はじめの速度が0.4 \\
+\end{bkhenkei}
+だから $x=0.1\sin4t+0.1\cos4t$ です。$B$ ははじめの位置そのもの、$A$ ははじめの速度を $\omega_{\mathrm n}$ でわったものです。
+
+この式のままでは、いちばん右へ行く位置（振幅）が見えません。0.1と0.1をたして0.2、ではありません。$\sin4t$ と $\cos4t$ の山の時刻がずれているからです（4-9の合成と同じ）。1つの $\cos$ の波にまとめます。
+
+\kvighead{方法1：加法定理でまとめる}
+振幅を $X$、ずれの角を $\phi$ として、$x=X\cos(4t+\phi)$ の形にしたいとします。4-9の加法定理で広げると、
+\[ X\cos(4t+\phi)=X\cos\phi\cos4t-X\sin\phi\sin4t \]
+これが $0.1\cos4t+0.1\sin4t$ と、どの $t$ でも同じになるには、$\cos4t$ の前の数どうし、$\sin4t$ の前の数どうしが等しければよいです。
+\[ X\cos\phi=0.1,\qquad -X\sin\phi=0.1 \]
+2つの式を2乗してたすと、$\cos^2\phi+\sin^2\phi=1$（4-8）なので、
+\[ X^2=0.1^2+0.1^2=0.02,\qquad X=\sqrt{0.02}\approx0.141 \]
+$\cos\phi=\dfrac{0.1}{0.141}=0.707$、$\sin\phi=-\dfrac{0.1}{0.141}=-0.707$ なので、$\phi=-\dfrac{\pi}{4}$（$-45°$）です。
+\kvigframe{$x=0.141\cos\Bigl(4t-\dfrac{\pi}{4}\Bigr)$}
+$X$ を\textbf{振幅}、$\phi$ を\textbf{初期位相}といいます（5-15の記号カード）。台車は、右へ\qty{14.1}{cm}まで行きます。いちばん右に来るのは、$\cos$ の中身が0になる $4t-\dfrac{\pi}{4}=0$ のとき、つまり $t=\dfrac{\pi}{16}\approx\qty{0.20}{s}$ です。
+
+\kvighead{方法2：回る点の影で考える}
+4-8で、円の上を一定の速さで回る点に横から光を当てると、影は単振動をする、と学びました。台車の位置 $x$ を、半径 $X$ の円の上を、1秒に $\omega_{\mathrm n}$ ラジアンの割合で左回りに回る点Pの影（横の座標）と見ます。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-26,0) -- (28,0) node[anchor=west, font=\sffamily\footnotesize, text=bkInk] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,-26) -- (0,26) node[anchor=south, font=\sffamily\footnotesize, text=bkInk] {$-\dfrac{v}{\omega_{\mathrm n}}$};
+  \draw[bkBlue, line width=1.1pt] (0,0) circle (20);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (-45:20);
+  \fill[bkOrange] (-45:20) circle (1.3);
+  \node[font=\sffamily\footnotesize, anchor=north west] at ($(-45:20)+(0.8,-0.4)$) {P};
+  \draw[bkGray, dashed, line width=0.5pt] (-45:20) -- (14.14,0);
+  \fill[bkInk] (14.14,0) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (14.14,1.5) {$x_0$};
+  \draw[bkInk, line width=0.5pt] (7,0) arc (0:-45:7);
+  \node[font=\sffamily\footnotesize] at (-22.5:10.5) {$\phi$};
+  \node[font=\sffamily\footnotesize, anchor=north east] at ($(-45:10)+(-0.8,-0.8)$) {$X$};
+  \draw[bk arrow, bkOrange!85!black, line width=1pt] (-35:24) arc (-35:-5:24);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}
+点Pの影の速さは、Pの速度の横向きの成分です。5-15で、回る点の速度の横の成分は「たての座標の $-\omega_{\mathrm n}$ 倍」でした。だから、Pのたての座標は $-\dfrac{v}{\omega_{\mathrm n}}$ です。
+
+はじめのPは、横 $x_0=0.1$、たて $-\dfrac{0.4}{4}=-0.1$ の点です。
+
+6-2では点 $\bigl(x,\ \frac{v}{4}\bigr)$ をかきました。ここでは、たてに $-$ をつけて上下を裏返したので、点は4-8と同じ左回りに回ります。
+\end{minipage}\par\vspace{3pt}
+この図から、振幅と初期位相が読めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 振幅 $X$ は円の半径。三平方の定理（4-4）で $X=\sqrt{0.1^2+0.1^2}\approx0.141$。
+\item 初期位相 $\phi$ は、はじめのPの向きの角。横0.1、たて $-0.1$ なので $-45°$。
+\item Pが左回りに45°回って横軸の上に来たとき、影はいちばん右です。45°は $\dfrac{\pi}{4}$\,rad で、1秒に4ラジアン回るので、$\dfrac{\pi}{4}\div4=\dfrac{\pi}{16}\approx\qty{0.20}{s}$ 後。
+\end{itemize}
+方法1と同じ答えです。右向きにおし出したので、台車はすぐには引き返さず、少し右へ進んでから引き返します。だから山（いちばん右）は、手をはなした0.2秒あとに来ます。初期位相が負（$-45°$）なのは、「山が少しおくれて来る」ことを表しています。
+
+\kvigframe{$X=\sqrt{x_0^{\,2}+\Bigl(\dfrac{v_0}{\omega_{\mathrm n}}\Bigr)^2}\qquad \phi\ \text{は、点}\ \Bigl(x_0,\ -\dfrac{v_0}{\omega_{\mathrm n}}\Bigr)\ \text{の向きの角}$}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=44mm, xmin=0, xmax=2.0, ymin=-0.17, ymax=0.19, xtick={0.196,0.5,1,1.5}, xticklabels={}, ytick={-0.1,0.1}, yticklabels={$-0.1$,0.1}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \kvigxtl{0.196}{-0.17}{0.20}\kvigxtl{0.5}{-0.17}{0.5}\kvigxtl{1}{-0.17}{1}\kvigxtl{1.5}{-0.17}{1.5}
+  \addplot[bkthin, dashed, domain=0:1.9, samples=100] {0.1*cos(deg(4*x))};
+  \addplot[bkcurve, domain=0:1.9, samples=140] {0.1*sin(deg(4*x))+0.1*cos(deg(4*x))};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkOrange] coordinates {(0,0.1) (0.196,0.1414)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.24,0.143) {いちばん右（0.20秒後、\qty{0.141}{m}）};
+  
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{おし出してはなした台車（青）。点線（速さ0ではなした台車）より、山が少しおくれて高くなる。}
+\end{bkfigure}
+
+\begin{seikaku}
+$\phi$ は、$\tan\phi=\dfrac{-v_0/\omega_{\mathrm n}}{x_0}$ だけでは決まりません。たとえば点 $(0.1,\ -0.1)$ と点 $(-0.1,\ 0.1)$ は、どちらも $\tan\phi=-1$ ですが、向きは反対です（4-15の $\tan^{-1}$ の注意と同じ）。図をかいて、点がどの向きにあるかを確かめてから角を決めます。
+\end{seikaku}
+
+\bkfukidashi{mina}{方法1がむずかしければ、方法2の図だけでも大丈夫。点をかけば、振幅も初期位相も読めるよ。}
+
+\bksubsection{5}{つるしたばね：ずらして考える}
+
+\label{bk:6-6:tsurusu}\bkhatenaref のおもりは、たてにつるしたばねでした。こんどは、重力も式に入ります。質量\qty{0.2}{kg}のおもりを、ばね定数\qty{20}{N/m}のばねにつるします。
+
+\noindent\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kvigceil{-12}{12}{0}
+  \kvigspringv{0}{0}{-22}
+  \kvigweight{(0,-22)}{bkBlue}
+  \draw[bkGray, dashed, line width=0.5pt] (-14,-12) -- (14,-12);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkInk] at (14.5,-12) {自然の長さ};
+  \draw[bkGray, dashed, line width=0.5pt] (-14,-22) -- (14,-22);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkInk] at (14.5,-22) {つり合い};
+  \draw[bkInk, line width=0.6pt, {Stealth[length=3pt]}-{Stealth[length=3pt]}] (-10,-12.6) -- (-10,-21.4);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-10.8,-17) {$y_0$};
+  \draw[bk arrow, bkInk, line width=0.9pt] (2.5,-29.5) -- (2.5,-39) node[anchor=north, font=\sffamily\footnotesize] {$mg$};
+  \draw[bkRed, line width=0.4pt] (-4,-23.2) -- (-7,-23.2);
+  \draw[bk arrow, bkRed, line width=0.9pt] (-7,-23.2) -- (-7,-13.5);
+  \node[font=\sffamily\footnotesize, text=bkRed, anchor=east] at (-7.8,-27) {$ky$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.6\linewidth}
+ばねが自然の長さのときのおもりの位置から、下向きにはかった位置を $y$ とします（下が＋）。おもりには、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 重力 $mg$（下向きなので＋）
+\item ばねの力 $ky$（のびが $y$ なので、上向きに $ky$。だから $-ky$）
+\end{itemize}
+がはたらきます（$g=\qty{9.8}{m/s^2}$）。だから運動方程式は
+\[ m\ddot y=mg-ky \]
+\end{minipage}\par\vspace{3pt}
+右に $mg$ という定数があるので、5-18の候補の表のどの行とも形がちがいます。そこで、5-18④の「ずらし」を使います。
+
+\kvighead{つり合いの位置を見つける}
+おもりが静かにぶら下がっているとき、加速度は0です。$m\ddot y=0$ なので、$mg-ky=0$。このときの $y$ を $y_0$ と書くと、
+\[ y_0=\frac{mg}{k}=\frac{0.2\times9.8}{20}=\qty{0.098}{m} \]
+ばねは\qty{9.8}{cm}のびて、つり合います。
+
+\kvighead{つり合いの位置からのずれを主役にする}
+つり合いの位置からのずれを $u=y-y_0$ とします。$y_0$ は定数なので微分すると0になり、$\ddot u=\ddot y$ です。右辺は、$y=u+y_0$ を入れて、
+\begin{bkhenkei}
+mg-ky=mg-k(u+y_0) & $y=u+y_0$ を入れる \\
+=mg-ky_0-ku & かっこをはずす \\
+=-ku & $mg-ky_0=0$（つり合いの式）を使う \\
+\end{bkhenkei}
+だから、
+\kvigframe{$m\ddot u=-ku$}
+水平なばねの式と、まったく同じ形です。重さ $mg$ は、ゆれの中心をつり合いの位置まで下げるだけで、ゆれ方（周期）は変えません。周期は $2\pi\sqrt{\dfrac{0.2}{20}}=2\pi\times0.1\approx\qty{0.63}{s}$ です。
+
+\bkhatenaref のおもりも、つり合いの位置から2\,cm・6\,cm 引いたので、$u$ の式で考えれば③と同じです。2つのおもりは、同じ周期でゆれます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, y dir=reverse, width=118mm, height=44mm, xmin=0, xmax=1.45, ymin=0, ymax=0.17, xtick={0.314,0.628,0.942,1.257}, xticklabels={0.31,0.63,0.94,1.26}, ytick={0.058,0.098,0.138}, yticklabels={0.058,0.098,0.138}, xlabel={$t$（s）}, ylabel={$y$（m）}, every axis y label/.style={at={(ticklabel* cs:1)}, anchor=north, yshift=-1mm, font=\sffamily\small, text=bkInk}]
+  \addplot[bkthin, dashed, domain=0:1.4] {0.098};
+  \addplot[bkcurve, domain=0:1.4, samples=120] {0.098+0.04*cos(deg(10*x))};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at (axis cs:1.42,0.098) {つり合い};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{つり合いの位置から\qty{4}{cm}引いてはなしたおもりの位置 $y$（下が＋なので、グラフの下向きを＋にした）。ゆれの中心は $y_0=\qty{0.098}{m}$。}
+\end{bkfigure}
+
+\kvigbox{おもしろいこと}
+つり合いの式 $ky_0=mg$ から、$\dfrac{m}{k}=\dfrac{y_0}{g}$ です。これを周期の式に入れると、
+\[ T=2\pi\sqrt{\frac{m}{k}}=2\pi\sqrt{\frac{y_0}{g}} \]
+つるしたばねの周期は、「おもりをつるしてのびた長さ $y_0$」と同じ長さの振り子の周期と同じです（⑦）。やってみようのばねは、\qty{100}{g}で約\qty{10}{cm}のびたので、周期は $2\pi\sqrt{\dfrac{0.1}{9.8}}\approx\qty{0.63}{s}$。ミナさんがはかった値とぴったり合います。
+
+\bksubsection{6}{エネルギーは保たれる}
+
+\label{bk:6-6:energy}ゆれている台車は、はしでは止まり、まん中では速く走ります。速さはたえず変わるのに、変わらないものがあります。それがエネルギーです。
+
+\kvighead{ばねにたくわえられるエネルギー}
+ばねを $x$ だけのばす（縮める）には、仕事 $\dfrac{1}{2}kx^2$ が必要でした（5-12）。のびたばねは、このエネルギー（\textbf{弾性エネルギー}）をたくわえています。
+
+\kvighead{動いている物がもつエネルギー}
+止まっている質量 $m$ の物に、一定の力 $F$ を加えて、速さ $v$ まで加速するのに必要な仕事を考えます。加速度は $a=\dfrac{F}{m}$ で一定です。5-13から、$t$ 秒後の速さは $v=at$、進んだ道のりは $\dfrac{1}{2}at^2$ です。
+\begin{bkhenkei}
+t=\frac{v}{a} & 速さが $v$ になる時刻（$v=at$ から）\\
+\text{道のり}=\frac{1}{2}a\Bigl(\frac{v}{a}\Bigr)^2=\frac{v^2}{2a} & 5-13の式に $t$ を入れる \\
+\text{仕事}=F\times\frac{v^2}{2a}=ma\times\frac{v^2}{2a} & 仕事＝力×道のり、$F=ma$ \\
+=\frac{1}{2}mv^2 & $a$ を約分する \\
+\end{bkhenkei}
+速さ $v$ で動いている物は、この分のエネルギーをもっています。これを\textbf{運動エネルギー}といいます。$v$ が2乗で入るのは、速さが2倍になると、加速にかかる時間も、そのあいだの平均の速さも2倍になり、道のりが4倍になるからです。\bkidx{うんどうえねるぎー}{運動エネルギー}
+
+\kvighead{たすと一定}
+$x=0.1\cos4t$、$v=-0.4\sin4t$ の台車で、2つのエネルギーを計算します（$m=0.5$、$k=8$）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{3}{Q[c,m,wd=24mm]}}, rowsep=1pt}
+時刻 & 0（右のはし） & 0.196 & 0.393（まん中） \\
+位置 $x$〔m〕 & 0.1 & 0.0707 & 0 \\
+速度 $v$〔m/s〕 & 0 & $-0.283$ & $-0.4$ \\
+$\frac{1}{2}kx^2$〔J〕 & 0.04 & 0.02 & 0 \\
+$\frac{1}{2}mv^2$〔J〕 & 0 & 0.02 & 0.04 \\
+合計（J） & 0.04 & 0.04 & 0.04 \\
+\end{bktable}
+\bktabcaption{ばねのエネルギーと運動エネルギーは入れかわるが、合計は0.04\,Jのまま。}
+\end{bkcenter}
+
+\noindent\begin{minipage}[c]{0.54\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=40mm, xmin=0, xmax=1.7, ymin=0, ymax=0.052, xtick={0.393,0.785,1.178,1.571}, xticklabels={0.39,0.79,1.18,1.57}, ytick={0.02,0.04}, yticklabels={0.02,0.04}, xlabel={$t$（s）}, ylabel={（J）}]
+  \addplot[bkcurve, domain=0:1.6, samples=120] {0.04*cos(deg(4*x))^2};
+  \addplot[bkcurve2, domain=0:1.6, samples=120] {0.04*sin(deg(4*x))^2};
+  \addplot[bkPurple, line width=1.4pt, domain=0:1.6] {0.04};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}
+青はばねのエネルギー、オレンジは運動エネルギー、紫はその合計です。はしではばねのエネルギーだけ、まん中では運動エネルギーだけ。合計はいつも同じです。
+\end{minipage}
+
+\kvighead{なぜ一定なのか：微分して確かめる}
+合計 $E=\dfrac{1}{2}mv^2+\dfrac{1}{2}kx^2$ を時間で微分します。$v^2$ を微分すると、合成関数の微分（5-6）で $2v\times\dot v$ になります（外側の $(\ )^2$ の微分が $2v$、内側の $v$ の微分が $\dot v$）。$x^2$ も同じです。
+\begin{bkhenkei}
+\dot E=\frac{1}{2}m\times2v\dot v+\frac{1}{2}k\times2x\dot x & 合成関数の微分 \\
+=mv\ddot x+kxv & $\dot v=\ddot x$、$\dot x=v$ \\
+=v\,(m\ddot x+kx) & $v$ でくくる \\
+=v\times0=0 & $m\ddot x=-kx$ だから \\
+\end{bkhenkei}
+変わる速さがいつも0なので、$E$ は一定です。運動方程式が成り立つことと、エネルギーが保たれることは、同じことの言いかえなのです（6-15でくわしく）。
+
+\kvighead{いちばん速い所の速さ}
+はし（$x=\pm X$）では速さ0なので、エネルギーはすべてばねにあって $\dfrac{1}{2}kX^2$。まん中（$x=0$）ではすべて運動エネルギーで $\dfrac{1}{2}mv_{\max}^{\,2}$。2つは等しいので、
+\[ \frac{1}{2}mv_{\max}^{\,2}=\frac{1}{2}kX^2\qquad\text{より}\qquad v_{\max}=X\sqrt{\frac{k}{m}}=X\omega_{\mathrm n} \]
+このばねでは $0.1\times4=\qty{0.4}{m/s}$ です。
+
+\kvighead{表計算のチェックにも使える}
+エネルギーは、表計算が正しく進んでいるかを見るのにも役立ちます。②の表計算（速度を先に進める方法、$\Delta t=0.01$）では、合計は0.039〜0.041のあいだを少し上下するだけで、ほぼ一定です。ところが、6-2の「ふつうのオイラー法」（今の速度で位置を進める）で $\Delta t=0.05$ とすると、1周期のあいだに合計は0.04から0.135へ、3倍以上にふえてしまいます。ばねのゆれは、エネルギーが保たれるのに、計算の方法のせいでふくらんだのです。
+
+\bksubsection{7}{振り子：2-8の「約2」のなぞを解く}
+
+\label{bk:6-6:furiko}5-17で、長さ $L$ の振り子の式を、力の図から立てました。
+\[ \ddot\theta=-\frac{g}{L}\sin\theta \]
+ふれが小さいときは $\sin\theta\approx\theta$（5-17）なので、
+\[ \ddot\theta\approx-\frac{g}{L}\,\theta \]
+これは、ばねの $\ddot x=-\dfrac{k}{m}x$ と同じ形です。$\dfrac{k}{m}$ のかわりに $\dfrac{g}{L}$ が入っているだけなので、答えも同じ形で、
+\kvigframe{$\omega_{\mathrm n}=\sqrt{\dfrac{g}{L}}\qquad T=2\pi\sqrt{\dfrac{L}{g}}$}
+
+\kvighead{2-8の約束：なぜ $\sqrt{\phantom{L}}$ で、なぜ約2なのか}
+2-8では、振り子の長さと周期をはかって、「長さ（m）の $\sqrt{\phantom{L}}$ を2倍すると、周期（秒）のおよその値」というきまりを、表から見つけました。そのとき「なぜ $\sqrt{\phantom{L}}$ になるのか、なぜ約2なのかは、6-6で式から求めます」と約束しました。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{なぜ $\sqrt{\phantom{L}}$ か}\quad 2回微分すると $\omega$ が2回かかるので、式に出てくるのは \mbox{$\omega^2=\dfrac{g}{L}$} です（5-18）。だから $\omega$ はその $\sqrt{\phantom{L}}$ になり、周期も $\sqrt{L}$ に比例します。
+\item \textbf{なぜ約2か}\quad 周期の式を、$\sqrt{L}$ とそれ以外に分けます。
+\[ T=2\pi\sqrt{\frac{L}{g}}=\frac{2\pi}{\sqrt{g}}\times\sqrt{L}=\frac{6.283}{\sqrt{9.8}}\times\sqrt{L}=\frac{6.283}{3.130}\times\sqrt{L}\approx2.007\sqrt{L} \]
+2.007は、1周の角 $2\pi$ を、地球の重力加速度9.8の $\sqrt{\phantom{g}}$ でわった数でした。2にとても近いのは、たまたまです。月の上（$g=\qty{1.62}{m/s^2}$）なら $\dfrac{2\pi}{\sqrt{1.62}}\approx4.94$ で、同じ振り子の周期は約2.5倍になります。
+\end{itemize}
+
+ばねでは、質量 $m$ が周期を決めました。振り子の式には、質量 $m$ が入っていません。重いおもりは動かしにくいけれど、そのぶん重力も大きいので、2つが打ち消しあうからです（5-17で、両辺を $mL$ でわったとき $m$ が消えました）。
+
+\kvighead{大きくふれると、周期は長くなる}
+ふれが大きいときは、$\sin\theta\approx\theta$ が使えません。そこで、$\ddot\theta=-\dfrac{g}{L}\sin\theta$ のまま、6-2の方法でコンピュータに計算させます（$L=\qty{1}{m}$）。
+
+\begin{bkcode}[Python]
+import math
+g, L = 9.8, 1.0            \# 重力加速度、糸の長さ
+dt = 0.001                 \# Δt（秒）
+for deg in [10, 30, 60, 90, 120, 150]:
+    th = math.radians(deg)   \# はじめの角（ラジアン）
+    om = 0.0                 \# はじめの角速度
+    t = 0.0
+    while True:
+        a = -g / L * math.sin(th)    \# 角の加速度
+        om = om + a * dt             \# 速度を先に新しくする
+        th2 = th + om * dt           \# 新しい速度で角を進める
+        t = t + dt
+        if th > 0 and th2 <= 0:      \# 0を下向きに通ったら
+            break
+        th = th2
+    print(deg, "度：周期", round(4 * t, 2), "秒")
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+10 度：周期 2.01 秒
+30 度：周期 2.04 秒
+60 度：周期 2.15 秒
+90 度：周期 2.37 秒
+120 度：周期 2.76 秒
+150 度：周期 3.54 秒
+\end{bkcodeout}
+はしから手をはなした振り子が、まん中（$\theta=0$）を初めて通るまでが $\dfrac{1}{4}$ 周期なので、その時刻を4倍しています。小さいふれの周期の式では $2.007\sqrt{1}\approx2.01$ 秒です。10°ではほとんど同じですが、90°では18\,\%、150°では76\,\%も長くなりました。
+
+なぜ長くなるのでしょう。$\sin\theta$ と $\theta$ をくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1pt}
+ふれの角 & 10° & 30° & 60° & 90° & 120° & 150° \\
+$\dfrac{\sin\theta}{\theta}$ & 0.995 & 0.955 & 0.827 & 0.637 & 0.413 & 0.191 \\
+\end{bktable}
+\bktabcaption{$\theta$ はラジアン。角が大きいほど、$\sin\theta$ は $\theta$ より小さくなる。}
+\end{bkcenter}
+引きもどす力は $mg\sin\theta$ です。ふれが大きいと、$\sin\theta$ は $\theta$ よりずっと小さいので、引きもどす力は、単振動の式で考えた力より弱くなります。弱い力で引きもどされるので、ゆっくりもどってきて、周期が長くなるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=44mm, xmin=0, xmax=4.3, ymin=-1.2, ymax=1.35, xtick={1,2,3,4}, xticklabels={}, ytick={-1,1}, xlabel={$t$（s）}, ylabel={$\dfrac{\theta}{\theta_0}$}]
+  \addplot[bkcurve, smooth] coordinates {(0.0,1.000) (0.1,0.952) (0.2,0.811) (0.3,0.592) (0.4,0.316) (0.5,0.009) (0.6,-0.299) (0.7,-0.578) (0.8,-0.801) (0.9,-0.946) (1.0,-1.000) (1.1,-0.957) (1.2,-0.821) (1.3,-0.606) (1.4,-0.332) (1.5,-0.026) (1.6,0.283) (1.7,0.564) (1.8,0.791) (1.9,0.941) (2.0,0.999) (2.1,0.962) (2.2,0.831) (2.3,0.619) (2.4,0.348) (2.5,0.043) (2.6,-0.267) (2.7,-0.550) (2.8,-0.780) (2.9,-0.935) (3.0,-0.999) (3.1,-0.966) (3.2,-0.840) (3.3,-0.633) (3.4,-0.364) (3.5,-0.060) (3.6,0.250) (3.7,0.536) (3.8,0.769) (3.9,0.928) (4.0,0.998)};
+  \addplot[bkcurve2, smooth] coordinates {(0.0,1.000) (0.1,0.969) (0.2,0.875) (0.3,0.721) (0.4,0.511) (0.5,0.256) (0.6,-0.022) (0.7,-0.298) (0.8,-0.547) (0.9,-0.749) (1.0,-0.894) (1.1,-0.978) (1.2,-0.999) (1.3,-0.958) (1.4,-0.855) (1.5,-0.692) (1.6,-0.474) (1.7,-0.214) (1.8,0.065) (1.9,0.339) (2.0,0.581) (2.1,0.775) (2.2,0.911) (2.3,0.985) (2.4,0.997) (2.5,0.947) (2.6,0.834) (2.7,0.662) (2.8,0.436) (2.9,0.172) (3.0,-0.109) (3.1,-0.379) (3.2,-0.615) (3.3,-0.800) (3.4,-0.926) (3.5,-0.991) (3.6,-0.993) (3.7,-0.933) (3.8,-0.811) (3.9,-0.630) (4.0,-0.397)};
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=south, fill=white, inner sep=1pt] at (axis cs:2.0,1.08) {10°};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south, fill=white, inner sep=1pt] at (axis cs:2.42,1.08) {90°};
+  \kvigxtl{1}{-1.2}{1}\kvigxtl{2}{-1.2}{2}\kvigxtl{3}{-1.2}{3}\kvigxtl{4}{-1.2}{4}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{長さ\qty{1}{m}の振り子の角を、はじめの角 $\theta_0$ でわった値。10°（青）は2.01秒で、90°（オレンジ）は2.37秒でもとにもどる。}
+\end{bkfigure}
+ブランコを小さくこぐときは、こぐ大きさによらず、1往復の時間はほぼ同じです。大きくこぐと、少し長くなります。ばねとちがって、振り子の引きもどす力は、ふれに正確には比例していないからです。
+
+\bksubsection{8}{電気のゆれ：コイルとコンデンサーの回路}
+
+\label{bk:6-6:lc}2-15で、「ばねにつるしたおもりのゆれと、電気の回路の中のゆれも、同じ形の式で書けます」と書きました。その回路を作ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ① 電池でためる
+  \begin{scope}
+  \draw[bkInk, line width=0.8pt] (0,0) -- (0,8.8) (0,11.2) -- (0,22) -- (28,22) -- (28,0) -- (0,0);
+  \draw[bkInk, line width=1.4pt] (-4,11.2) -- (4,11.2);
+  \draw[bkInk, line width=2.2pt] (-2,8.8) -- (2,8.8);
+  \fill[white] (24,9.9) rectangle (32,12.1);
+  \kvigcap{28}{0}{22}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5,10) {電池};
+  \node[font=\sffamily\footnotesize, anchor=west] at (33,13.2) {$+q$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (33,7.8) {$-q$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (14,-2.5) {① 電池でためる};
+  \end{scope}
+  % ② コイルにつなぎかえる
+  \begin{scope}[xshift=68mm]
+  \draw[bkInk, line width=0.8pt] (0,22) -- (34,22) (0,0) -- (34,0);
+  \kvigcap{0}{0}{22}
+  \kvigcoil{34}{0}{22}
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5,13.2) {$+q$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5,7.8) {$-q$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (38,11) {コイル $L$};
+  \draw[bk arrow, bkOrange!85!black, line width=1pt] (10,25) -- (24,25);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkOrange!80!black] at (17,25.5) {電流 $i$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (17,-2.5) {② コイルにつなぎかえる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{コンデンサー $C$ に電池で電気をためてから（①）、電池をはずしてコイル $L$ につなぎかえる（②）。電流 $i$ は、コンデンサーの上の板から出てコイルを上から下へ流れる向きを＋とする。}
+\label{bk:6-6:fig-lc}
+\end{bkfigure}
+\textbf{コイル}は、導線をぐるぐる巻いた部品です。電流が変わろうとすると、それをさまたげる電圧を生みます（6-4）。モーターの巻き線や、スピーカーの中にもあります。
+
+コンデンサーにたまった電気が、コイルを通って流れ出します。電流が流れきってコンデンサーが空になっても、コイルは「流れ続けよう」とするので、電流はすぐには止まりません。そのため、コンデンサーは反対向きにためられ、また流れもどってきます。電気が行ったり来たりするのです。
+
+\kvighead{式を立てる}
+\begin{enumerate}[label={\bkcircled[\bkTF]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item コンデンサーの上の板にたまった電気を $q$〔C〕とします（下の板は $-q$）。電圧は $q=CV$ から $V=\dfrac{q}{C}$ です。
+\item 電流 $i$〔A〕は、上の板から出てコイルを上から下へ流れる向きを＋とします。電流は「1秒あたりに通りぬける電気の量」（5-12）で、上の板の電気はそのぶんへるので、$i=-\dfrac{\dd q}{\dd t}$ です。
+\item コイルとコンデンサーは、同じ2本の導線の両はしにつながっているので、かかる電圧は同じです。コイルの電圧は $L\dfrac{\dd i}{\dd t}$ なので、
+\[ L\frac{\dd i}{\dd t}=\frac{q}{C} \]
+\end{enumerate}
+③の式の $i$ に、②の $i=-\dfrac{\dd q}{\dd t}$ を入れます。
+\begin{bkhenkei}
+L\frac{\dd i}{\dd t}=\frac{q}{C} & ③の式 \\
+L\times\Bigl(-\frac{\dd^2q}{\dd t^2}\Bigr)=\frac{q}{C} & ②の $i$ を入れる（$\dfrac{\dd i}{\dd t}=-\ddot q$）\\
+L\ddot q=-\frac{q}{C} & 両辺に $-1$ をかける \\
+\ddot q=-\frac{1}{LC}\,q & 両辺を $L$ でわる \\
+\end{bkhenkei}
+「2回微分すると、自分の $-\dfrac{1}{LC}$ 倍」。ばねの $\ddot x=-\dfrac{k}{m}x$ と同じ形です。だから、たまった電気の量 $q$ は、$\sin$・$\cos$ の形でゆれます。これを\textbf{電気振動}といいます。\bkidx{でんきしんどう}{電気振動（LC回路）}
+\kvigframe{$\omega_{\mathrm n}=\dfrac{1}{\sqrt{LC}}\qquad T=2\pi\sqrt{LC}$}
+高校の物理で「電気振動の周期は $2\pi\sqrt{LC}$」と習う式は、こうして微分方程式から出てきます。
+
+\kvighead{数を入れる}
+$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$ のとき。接頭語を直すと、$\qty{10}{mH}=\qty{0.01}{H}$、$\qty{1}{\micro F}=\qty{0.000001}{F}$ です（m は $\frac{1}{1000}$、μ は $\frac{1}{1000000}$）。
+\[ LC=0.01\times0.000001=0.00000001=10^{-8} \]
+\[ \omega_{\mathrm n}=\frac{1}{\sqrt{10^{-8}}}=\frac{1}{10^{-4}}=\num{10000}\ \mathrm{rad/s} \]
+\[ T=\frac{2\pi}{\num{10000}}\approx\qty{0.000628}{s}=\qty{0.628}{ms},\qquad f=\frac{1}{T}\approx\qty{1592}{Hz} \]
+1秒に約1600回も、電気が行ったり来たりします。ばねのゆれよりずっと速いのは、$L$ と $C$ がとても小さいからです。
+
+\kvigbox{単位で確かめる}
+コイルの $V=L\dfrac{\dd i}{\dd t}$ から、H（ヘンリー）＝V/(A/s)＝$\mathrm{V\,s/A}$。コンデンサーの $q=CV$ と、C（クーロン）＝A\,s（5-12）から、F（ファラド）＝C/V＝$\mathrm{A\,s/V}$。かけると、
+\[ \mathrm{H}\times\mathrm{F}=\frac{\mathrm{V\,s}}{\mathrm{A}}\times\frac{\mathrm{A\,s}}{\mathrm{V}}=\mathrm{s^2} \]
+$LC$ は「時間の2乗」なので、$\sqrt{LC}$ は時間、$\dfrac{1}{\sqrt{LC}}$ は「1秒あたり」です。ばねの $\dfrac{m}{k}$ が $\mathrm{s^2}$ だったのと同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=42mm, xmin=0, xmax=1.42, ymin=-1.25, ymax=1.45, xtick={0.157,0.314,0.471,0.628,0.942,1.257}, xticklabels={}, ytick={-1,1}, xlabel={$t$（ms）}]
+  \kvigxtl{0.157}{-1.25}{0.16}\kvigxtl{0.314}{-1.25}{0.31}\kvigxtl{0.471}{-1.25}{0.47}\kvigxtl{0.628}{-1.25}{0.63}\kvigxtl{0.942}{-1.25}{0.94}\kvigxtl{1.257}{-1.25}{1.26}
+  \addplot[bkcurve, domain=0:1.35, samples=140] {cos(deg(10*x))};
+  \addplot[bkcurve2, domain=0:1.35, samples=140] {sin(deg(10*x))};
+  \node[font=\sffamily\footnotesize, text=bkBlue, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.64,1.06) {電気の量 $q$};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.17,1.06) {電流 $i$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{たまった電気の量 $q$（青）と電流 $i$（オレンジ）。どちらも、いちばん大きい値を1とした。$q$ が0のとき電流がいちばん大きく、電流が0のとき $q$ がいちばん大きい。}
+\end{bkfigure}
+
+\kvighead{ばねとくらべる}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=40mm] Q[c,m,wd=40mm]}, rowsep=1.5pt}
+ & ばねとおもり & コイルとコンデンサー \\
+ゆれる量 & 位置 $x$ & 電気の量 $q$ \\
+その速さ & 速度 $\dot x$ & $\dot q$（電流 $i$ の $-1$ 倍） \\
+変化をきらう & 質量 $m$ & コイル $L$ \\
+もとにもどす & ばね定数 $k$ & $\dfrac{1}{C}$ \\
+式 & $m\ddot x=-kx$ & $L\ddot q=-\dfrac{1}{C}\,q$ \\
+固有角振動数 & $\sqrt{\dfrac{k}{m}}$ & $\dfrac{1}{\sqrt{LC}}$ \\
+たくわえるエネルギー & $\dfrac{1}{2}kx^2$（ばね） & $\dfrac{q^2}{2C}$（コンデンサー） \\
+動きのエネルギー & $\dfrac{1}{2}m\dot x^2$ & $\dfrac{1}{2}Li^2$（コイル） \\
+\end{bktable}
+\bktabcaption{2つの式は、文字をおきかえると同じになる（6-15でまとめる）。}
+\end{bkcenter}
+質量 $m$ は、速度が変わるのをきらいます。コイル $L$ は、電流が変わるのをきらいます。だから $m$ と $L$ が組になります。$\dfrac{1}{C}$ が $k$ と組になるのは、$C$ が大きいコンデンサーほど、少しの電圧でたくさんの電気をためられる「やわらかい」部品だからです。やわらかいばね（$k$ が小さい）と同じです。
+
+\kvighead{エネルギーも同じ形}
+ばねでは、エネルギーがばねと台車のあいだを行き来しました。LC回路では、エネルギーがコンデンサーとコイルのあいだを行き来します。表のおきかえ（$k\to\dfrac{1}{C}$、$x\to q$、$m\to L$、$\dot x\to$ 電流）で、ばねのエネルギーの式を書きかえると、
+\[ \text{コンデンサー}\quad\frac{q^2}{2C}=\frac{1}{2}CV^2,\qquad \text{コイル}\quad\frac{1}{2}Li^2 \]
+（$q=CV$ を入れると $\dfrac{(CV)^2}{2C}=\dfrac{1}{2}CV^2$。）この本では、この2つを部品のきまりとして使います（くわしくは物理シリーズ『電磁気学』）。⑥と同じように、2つの合計は一定です。
+
+たとえば、$C=\qty{1}{\micro F}$ のコンデンサーを\qty{10}{V}にためると、エネルギーは $\dfrac{1}{2}\times0.000001\times10^2=\qty{0.00005}{J}$ です。コンデンサーが空になる瞬間は、これがすべてコイルにあるので、$\dfrac{1}{2}Li^2=0.00005$。$L=\qty{0.01}{H}$ なら $i^2=0.01$ で、電流はいちばん大きいとき\qty{0.1}{A}です（例題8）。
+
+\noindent\begin{minipage}[c]{0.54\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=64mm, height=38mm, xmin=0, xmax=0.68, ymin=0, ymax=58, xtick={0.157,0.314,0.471,0.628}, xticklabels={}, ytick={25,50}, xlabel={$t$（ms）}, ylabel={（$\mu$J）}]
+  \addplot[bkcurve, domain=0:0.64, samples=120] {50*cos(deg(10*x))^2};
+  \addplot[bkcurve2, domain=0:0.64, samples=120] {50*sin(deg(10*x))^2};
+  \addplot[bkPurple, line width=1.4pt, domain=0:0.64] {50};
+  \kvigxtl{0.157}{0}{0.16}\kvigxtl{0.314}{0}{0.31}\kvigxtl{0.471}{0}{0.47}\kvigxtl{0.628}{0}{0.63}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}
+青はコンデンサー、オレンジはコイルのエネルギー、紫はその合計（$\qty{50}{\micro J}$）です。6-6⑥のばねのグラフと同じ形で、エネルギーが2つの部品のあいだを行き来します。
+\end{minipage}
+
+\begin{seikaku}
+本物のコイルの導線には、わずかな抵抗があります。抵抗は電気のエネルギーを熱に変えるので、電気のゆれは少しずつ小さくなって、やがて止まります。ばねのゆれも、摩擦や空気の抵抗で止まります。「ゆれながら止まる」動きは、6-7で調べます。
+\end{seikaku}
+
+\Needspace{28\baselineskip}
+\begin{motto}[5]
+\kvigbox{両はしで決める：固有値問題}
+ギターの弦は、両はしを止めてあります。弦の横へのずれを $y$、はしからの場所を $x$ とすると、弦が1つの形のままゆれるとき、その形 $y(x)$ は $\dfrac{\dd^2y}{\dd x^2}=-\kappa^2y$（$\kappa$ はカッパ。正の数）をみたします。ばねと同じ形ですが、変わる量が時間 $t$ でなく、場所 $x$ です。答えの形は $y=A\sin\kappa x+B\cos\kappa x$ です。
+
+弦の長さを $\ell$ とすると、両はしは動かないので、$y(0)=0$、$y(\ell)=0$ です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $y(0)=A\times0+B\times1=B=0$ なので、$y=A\sin\kappa x$。
+\item $y(\ell)=A\sin\kappa\ell=0$。$A=0$ なら弦はまっすぐのままで、ゆれていません。
+\end{itemize}
+ゆれている（$A\neq0$）なら、$\sin\kappa\ell=0$ でなければなりません。$\sin$ が0になるのは角が $\pi$、$2\pi$、$3\pi$、…のときだけなので、$\kappa\ell=\pi,\ 2\pi,\ 3\pi,\ \dots$。$\kappa$ は、とびとびの値しかとれません。
+
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \n/\yy in {1/0, 2/-12, 3/-24} {
+    \draw[bkGray, line width=0.5pt] (0,\yy) -- (60,\yy);
+    \fill[bkInk] (0,\yy) circle (0.9) (60,\yy) circle (0.9);
+    \draw[bkBlue, line width=1.2pt, domain=0:60, samples=80] plot (\x, {\yy+4*sin(\n*3*\x)});
+    \node[font=\sffamily\footnotesize, anchor=west] at (64,\yy) {$\kappa\ell=\n\pi$};}
+\end{tikzpicture}
+\end{bkcenter}
+「両はしの条件を満たす0でない答えがある、とびとびの値をさがす問題」を、微分方程式の\textbf{固有値問題}といいます。ギターの弦は、この形の組み合わせでゆれ、$\kappa\ell=\pi$ が基音、$2\pi$・$3\pi$ が倍音になります。細い柱をおしつぶすときの曲がり方も、同じ問題です（物理 力-11）。7-8の行列の固有値と、同じ「固有」のことばです。\bkidx{こゆうちもんだい}{固有値問題}
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[5.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{ばね}$m\ddot x=-kx$\qquad $\omega_{\mathrm n}=\sqrt{\dfrac{k}{m}}$\qquad $T=2\pi\sqrt{\dfrac{m}{k}}$\\[3pt]
+\tsl{振り子}$\ddot\theta\approx-\dfrac{g}{L}\theta$\qquad $T=2\pi\sqrt{\dfrac{L}{g}}$（小さいふれ）\\[3pt]
+\tsl{LC回路}$L\ddot q=-\dfrac{1}{C}q$\qquad $\omega_{\mathrm n}=\dfrac{1}{\sqrt{LC}}$\qquad $T=2\pi\sqrt{LC}$\\[3pt]
+\tsl{はじめの状態}$x=X\cos(\omega_{\mathrm n}t+\phi)$\qquad $X=\sqrt{x_0^{\,2}+\Bigl(\dfrac{v_0}{\omega_{\mathrm n}}\Bigr)^2}$\\[3pt]
+\tsl{エネルギー}$\dfrac{1}{2}mv^2+\dfrac{1}{2}kx^2$ は一定\qquad $v_{\max}=X\omega_{\mathrm n}$\\[3pt]
+\tsl{}周期は、ゆれの大きさによらない（振り子は小さいふれのとき）。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{運動方程式}{質量×加速度＝力、を式にしたもの。ばねでは $m\ddot x=-kx$。}
+\bkword{固有角振動数}{その物が自分で決める、1秒に進む角 $\omega_{\mathrm n}$（rad/s）。ばねでは $\sqrt{k/m}$。}
+\bkword{振動数}{1秒あたりの往復の回数 $f$（Hz）。$f=\dfrac{1}{T}=\dfrac{\omega_{\mathrm n}}{2\pi}$。}
+\bkword{振幅・初期位相}{$x=X\cos(\omega_{\mathrm n}t+\phi)$ の $X$（ゆれの大きさ）と $\phi$（$t=0$ での角）。}
+\bkword{運動エネルギー}{動いている物がもつエネルギー $\dfrac{1}{2}mv^2$。}
+\bkword{単振動}{$x=X\cos(\omega_{\mathrm n}t+\phi)$ の形のゆれ。周期はゆれの大きさによらない。}
+\bkword{電気振動}{コイルとコンデンサーの回路で、電気が行ったり来たりすること。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\omega_{\mathrm n}$}{オメガ・エヌ}{固有角振動数。ばねは $\sqrt{k/m}$、振り子は $\sqrt{g/L}$、LC回路は $1/\sqrt{LC}$。n は立てた字}{natural angular frequency}{6-6}}
+{\bkkigocard{$L$・$C$}{エル・シー}{コイルのインダクタンス〔H〕と、コンデンサーの静電容量〔F〕}{inductance, capacitance}{6-4}}
+
+%% ---------------- 例題 ----------------
+\begin{column}{フックの「なぞの文字」}
+ばねの力がのびに比例することを見つけたのは、イギリスのフックです。1676年、フックは発見を、ラテン語の文字をならべかえた「\mbox{ceiiinosssttuv}」というなぞの文字列で発表しました。ほかの人に先に発表されないように、でも中身はまだひみつにしておくための工夫です。2年後の1678年に明かされた答えは「ut tensio, sic vis」（のびのとおりに、力も）。これが、この章のはじめに使った $F=kx$ です。今では「フックの法則」とよばれ、ばねばかりや体重計、建物の設計にまで使われています。
+\end{column}
+
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[ばねの固有角振動数と周期]
+質量\qty{0.5}{kg}の台車を、ばね定数\qty{8}{N/m}のばねにつなぎました。固有角振動数、周期、振動数を求めましょう。また、台車の質量を\qty{2}{kg}にすると、周期はいくつになりますか（$\pi=3.14$）。\par
+\kangaekata $\omega_{\mathrm n}=\sqrt{\dfrac{k}{m}}$、$T=\dfrac{2\pi}{\omega_{\mathrm n}}$、$f=\dfrac{1}{T}$（①）。質量が4倍なら、周期は $\sqrt4=2$ 倍。\par
+\shiki
+\kviga $\dfrac{k}{m}=\dfrac{8}{0.5}=16$ なので、$\omega_{\mathrm n}=\sqrt{16}=4$
+\kviga $T=\dfrac{2\times3.14}{4}=1.57$、\quad $f=\dfrac{1}{1.57}\approx0.64$
+\kviga 質量が $2\div0.5=4$ 倍なので、周期は $\sqrt4=2$ 倍
+\kviga $1.57\times2=3.14$\par
+\kotae $\omega_{\mathrm n}=4$\,rad/s、周期\qty{1.57}{s}、振動数\qty{0.64}{Hz}。\qty{2}{kg}では\qty{3.14}{s}
+\end{reidai}
+
+\begin{jibun}
+質量\qty{2}{kg}のおもりと、ばね定数\qty{50}{N/m}のばねの、固有角振動数・周期・振動数を求めましょう。また、質量を\qty{0.5}{kg}にすると、周期はいくつになりますか（$\pi=3.14$）。
+\bkjans{$\omega_{\mathrm n}=\sqrt{25}=5$\,rad/s、周期 $\dfrac{6.28}{5}\approx\qty{1.26}{s}$、振動数\qty{0.80}{Hz}。質量 $\frac{1}{4}$ 倍で周期 $\frac{1}{2}$ 倍の約\qty{0.63}{s}}
+\end{jibun}
+
+\begin{reidai}[周期から質量をはかる]
+宇宙ステーションの中では、体重計が使えません。そこで、ばねで支えたいすをゆらし、周期から質量をはかります。ばね定数は\qty{3000}{N/m}、いすだけの質量は\qty{10}{kg}です。人が乗ると、周期は\qty{0.96}{s}になりました。人の質量を求めましょう（$4\pi^2=39.48$）。\par
+\kangaekata $T=2\pi\sqrt{\dfrac{m}{k}}$ を $m$ について解く。両辺を2乗して $\sqrt{\phantom{m}}$ をはずす。$m$ は、いすと人を合わせた質量。\par
+\shiki
+\kviga $T^2=4\pi^2\times\dfrac{m}{k}$（両辺を2乗）
+\kviga $m=\dfrac{kT^2}{4\pi^2}$（両辺に $\dfrac{k}{4\pi^2}$ をかける）
+\kviga $m=\dfrac{3000\times0.96^2}{39.48}=\dfrac{3000\times0.9216}{39.48}=\dfrac{2764.8}{39.48}\approx70.0$
+\kviga 人の質量は $70.0-10=60.0$\par
+\kotae 約\qty{60}{kg}
+\end{reidai}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+地球の上の体重計は、重さ（地球が引く力）をはかっています。宇宙ステーションでは重さを感じないので、体重計の目もりは0になります。でも、動かしにくさ（質量）は宇宙でも変わらないので、ゆれの周期ではかれるのです（コラム）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}
+\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \kvigwall{0}{0}{24}
+  \kvigspringh{0}{14}{8}
+  \kvigspringh{34}{46}{8}
+  \kvigwall{46}{0}{24}
+  \draw[bkInk, line width=0.8pt] (46,0) -- (48.6,0);
+  \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=0.8pt, rounded corners=1mm] (14,3) rectangle (34,13);
+  \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=0.8pt, rounded corners=1mm] (14,13) rectangle (18,26);
+  \fill[bkInk!70] (26,19) circle (2.6);
+  \draw[bkInk!70, line width=2pt, line cap=round] (26,16) -- (26,13.5) (26,15) -- (31,15);
+  \draw[bk arrow, bkGray, line width=0.8pt] (18,-2) -- (30,-2);
+  \draw[bk arrow, bkGray, line width=0.8pt] (30,-2) -- (18,-2);
+  \node[font=\sffamily\footnotesize, anchor=north] at (24,-3.5) {左右にゆれる};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{jibun}
+ばね定数\qty{2000}{N/m}のばねで支えた、質量\qty{8}{kg}のいすがあります。人が乗ると、周期は\qty{1.07}{s}でした。人の質量を求めましょう（$4\pi^2=39.48$）。
+\bkjans{$m=\dfrac{2000\times1.07^2}{39.48}=\dfrac{2289.8}{39.48}\approx58.0$。人は $58.0-8=\qty{50}{kg}$}
+\end{jibun}
+
+\begin{reidai}[つるしたばねの、のびと周期]
+ばね定数\qty{40}{N/m}のばねに、\qty{0.1}{kg}のおもりをつるしました。つり合うときのばねののびと、ゆれの周期を求めましょう。また、のびた長さ $y_0$ を使った $2\pi\sqrt{\dfrac{y_0}{g}}$ でも周期を計算し、同じになることを確かめましょう（$g=\qty{9.8}{m/s^2}$）。\par
+\kangaekata つり合いでは $ky_0=mg$（⑤）。重さはゆれの中心を下げるだけで、周期は $2\pi\sqrt{\dfrac{m}{k}}$ のまま。\par
+\shiki
+\kviga $y_0=\dfrac{mg}{k}=\dfrac{0.1\times9.8}{40}=0.0245$
+\kviga $T=2\pi\sqrt{\dfrac{0.1}{40}}=2\pi\sqrt{0.0025}=2\pi\times0.05\approx0.314$
+\kviga $2\pi\sqrt{\dfrac{y_0}{g}}=2\pi\sqrt{\dfrac{0.0245}{9.8}}=2\pi\sqrt{0.0025}\approx0.314$\par
+\kotae のび\qty{2.45}{cm}、周期約\qty{0.31}{s}（2つの式で同じ）
+\end{reidai}
+
+\begin{jibun}
+ばね定数\qty{25}{N/m}のばねに、\qty{0.4}{kg}のおもりをつるしました。つり合うときののびと周期を求め、$2\pi\sqrt{\dfrac{y_0}{g}}$ でも確かめましょう（$g=\qty{9.8}{m/s^2}$、$\sqrt{0.016}=0.126$）。
+\bkjans{のび $\dfrac{0.4\times9.8}{25}=\qty{0.1568}{m}$。周期 $2\pi\sqrt{0.016}\approx\qty{0.79}{s}$。$\dfrac{0.1568}{9.8}=0.016$ なので同じ}
+\end{jibun}
+
+\begin{reidai}[はじめの位置と速度から、振幅と初期位相]
+質量\qty{2}{kg}、ばね定数\qty{8}{N/m}の台車を、$x_0=\qty{0.1}{m}$ の所で、右向きに $v_0=\qty{0.346}{m/s}$（$=0.2\sqrt3$）で動かしながらはなしました。振幅 $X$ と初期位相 $\phi$ を求め、$x$ を $X\cos(\omega_{\mathrm n}t+\phi)$ の形で書きましょう。いちばん右に来るのは何秒後ですか。\par
+\kangaekata ④の方法2。点 $\Bigl(x_0,\ -\dfrac{v_0}{\omega_{\mathrm n}}\Bigr)$ をかき、原点からの距離が $X$、向きの角が $\phi$。点が横軸の右に来るまで回る時間を求める。\par
+\shiki
+\kviga $\omega_{\mathrm n}=\sqrt{\dfrac{8}{2}}=2$。$\dfrac{v_0}{\omega_{\mathrm n}}=\dfrac{0.2\sqrt3}{2}=0.1\sqrt3\approx0.173$
+\kviga 点は $(0.1,\ -0.173)$。原点からの距離は
+\kvigb $X=\sqrt{0.1^2+(0.1\sqrt3)^2}=\sqrt{0.01+0.03}=\sqrt{0.04}=0.2$
+\kviga 横0.1、たて $-0.173$ の向きは、$\cos\phi=\dfrac{0.1}{0.2}=\dfrac{1}{2}$、$\sin\phi<0$ なので $\phi=-60°=-\dfrac{\pi}{3}$
+\kviga いちばん右は $2t-\dfrac{\pi}{3}=0$ のとき。$t=\dfrac{\pi}{6}\approx0.52$\par
+\kotae $x=0.2\cos\Bigl(2t-\dfrac{\pi}{3}\Bigr)$、振幅\qty{0.2}{m}、約\qty{0.52}{s}後
+\end{reidai}
+
+\begin{jibun}
+質量\qty{0.5}{kg}、ばね定数\qty{8}{N/m}の台車を、$x_0=\qty{0.0866}{m}$（$=0.05\sqrt3$）の所で、右向きに $v_0=\qty{0.2}{m/s}$ で動かしながらはなしました。振幅と初期位相を求め、いちばん右に来る時刻を求めましょう。
+\bkjans{$\omega_{\mathrm n}=4$。点 $(0.05\sqrt3,\ -0.05)$。$X=\sqrt{0.0075+0.0025}=\qty{0.1}{m}$、$\phi=-\dfrac{\pi}{6}$。$x=0.1\cos\Bigl(4t-\dfrac{\pi}{6}\Bigr)$。$t=\dfrac{\pi}{24}\approx\qty{0.13}{s}$後}
+\end{jibun}
+
+\begin{reidai}[エネルギーから速さを求める]
+質量\qty{0.5}{kg}、ばね定数\qty{8}{N/m}の台車が、振幅\qty{0.1}{m}でゆれています。いちばん速い所の速さと、$x=\qty{0.06}{m}$ を通るときの速さを求めましょう。\par
+\kangaekata はしでは速さ0なので、エネルギーの合計は $\dfrac{1}{2}kX^2$（⑥）。どの位置でも、ばねのエネルギー＋運動エネルギー＝この合計。\par
+\shiki
+\kviga 合計 $E=\dfrac{1}{2}\times8\times0.1^2=0.04$
+\kviga まん中では $\dfrac{1}{2}\times0.5\times v^2=0.04$ より $v^2=0.16$、$v=0.4$
+\kviga $x=0.06$ では、ばねのエネルギーが $\dfrac{1}{2}\times8\times0.06^2=0.0144$
+\kviga 運動エネルギーは $0.04-0.0144=0.0256$
+\kviga $\dfrac{1}{2}\times0.5\times v^2=0.0256$ より $v^2=0.1024$、$v=0.32$\par
+\kotae いちばん速い所で\qty{0.4}{m/s}、$x=\qty{0.06}{m}$ で\qty{0.32}{m/s}
+\end{reidai}
+
+\begin{jibun}
+質量\qty{2}{kg}、ばね定数\qty{50}{N/m}のおもりが、振幅\qty{0.2}{m}でゆれています。いちばん速い所の速さと、$x=\qty{0.12}{m}$ を通るときの速さを求めましょう。
+\bkjans{合計 $\frac{1}{2}\times50\times0.04=\qty{1}{J}$。いちばん速い所で $v^2=1$、\qty{1}{m/s}。$x=0.12$ では、ばね0.36\,J、運動0.64\,J、$v^2=0.64$ で\qty{0.8}{m/s}}
+\end{jibun}
+
+\begin{reidai}[振り子の長さと周期]
+（1）周期がちょうど\qty{2}{s}の振り子の、糸の長さを求めましょう。\par
+（2）この振り子を月（$g=\qty{1.62}{m/s^2}$）にもっていくと、周期はいくつになりますか（地球では $g=\qty{9.8}{m/s^2}$、$4\pi^2=39.48$、$\sqrt{0.613}=0.783$）。\par
+\kangaekata $T=2\pi\sqrt{\dfrac{L}{g}}$ を $L$ について解く（例題2と同じく、両辺を2乗）。月では $g$ だけを変える。\par
+\shiki
+\kviga（1）$T^2=4\pi^2\times\dfrac{L}{g}$ より $L=\dfrac{gT^2}{4\pi^2}=\dfrac{9.8\times4}{39.48}\approx0.993$
+\kviga（2）$\dfrac{L}{g}=\dfrac{0.993}{1.62}\approx0.613$
+\kvigb $T=2\pi\sqrt{0.613}=6.283\times0.783\approx4.92$\par
+\kotae （1）約\qty{0.99}{m}、（2）約\qty{4.9}{s}
+\end{reidai}
+周期2秒の振り子は、片道がちょうど1秒です。昔の振り子時計は、この長さ（約\qty{1}{m}）の振り子を「秒振り子」として使いました。
+
+\begin{jibun}
+（1）周期\qty{1.5}{s}の振り子の、糸の長さを求めましょう。\par
+（2）この振り子を火星（$g=\qty{3.71}{m/s^2}$）にもっていくと、周期はいくつになりますか（地球では $g=\qty{9.8}{m/s^2}$、$4\pi^2=39.48$、$\sqrt{0.151}=0.389$）。
+\bkjans{（1）\nobreak $L=\dfrac{9.8\times1.5^2}{39.48}\approx\qty{0.56}{m}$。（2）\nobreak $\dfrac{0.56}{3.71}\approx0.151$、$T=6.283\times0.389\approx\qty{2.4}{s}$}
+\end{jibun}
+
+\begin{reidai}[コイルとコンデンサーの回路の周期]
+$L=\qty{10}{mH}$ のコイルと $C=\qty{1}{\micro F}$ のコンデンサーの回路の、固有角振動数・周期・振動数を求めましょう。また、コンデンサーを $C=\qty{4}{\micro F}$ にかえると、周期と振動数はいくつになりますか（$\pi=3.14$）。\par
+\kangaekata 接頭語を直して（m は $10^{-3}$、μ は $10^{-6}$）、$\omega_{\mathrm n}=\dfrac{1}{\sqrt{LC}}$（⑧）。$C$ が4倍なら $\sqrt{LC}$ は2倍なので、周期は2倍。\par
+\shiki
+\kviga $L=10\times10^{-3}=10^{-2}$、$C=10^{-6}$ なので $LC=10^{-8}$
+\kviga $\sqrt{LC}=10^{-4}$、$\omega_{\mathrm n}=\dfrac{1}{10^{-4}}=10^4=\num{10000}$
+\kviga $T=\dfrac{2\times3.14}{\num{10000}}=0.000628$、$f=\dfrac{1}{0.000628}\approx1592$
+\kviga $C$ が4倍：周期は2倍の0.001256、振動数は $\dfrac{1}{2}$ 倍の796\par
+\kotae $\omega_{\mathrm n}=\num{10000}$\,rad/s、周期\qty{0.628}{ms}、振動数約\qty{1590}{Hz}。$C=\qty{4}{\micro F}$ では、周期\qty{1.26}{ms}、振動数約\qty{796}{Hz}
+\end{reidai}
+
+\begin{jibun}
+$L=\qty{1}{mH}$、$C=\qty{0.1}{\micro F}$ の回路の、固有角振動数・周期・振動数を求めましょう。また、コイルを $L=\qty{4}{mH}$ にかえると、周期はいくつになりますか（$\pi=3.14$）。
+\bkjans{$LC=10^{-3}\times10^{-7}=10^{-10}$、$\omega_{\mathrm n}=10^5$\,rad/s。周期 \mbox{$\qty{0.0000628}{s}=\qty{62.8}{\micro s}$}、振動数約\qty{15900}{Hz}。$L$ が4倍で周期2倍の\qty{126}{\micro s}}
+\end{jibun}
+
+\begin{reidai}[LC回路のエネルギーと、いちばん大きい電流]
+$C=\qty{1}{\micro F}$ のコンデンサーを\qty{10}{V}にためてから、$L=\qty{10}{mH}$ のコイルにつなぎかえました。コンデンサーにたまったエネルギーと、回路に流れる電流のいちばん大きい値を求めましょう。\par
+\kangaekata コンデンサーのエネルギーは $\dfrac{1}{2}CV^2$、コイルは $\dfrac{1}{2}Li^2$（⑧）。電流がいちばん大きいのは、コンデンサーが空になって、エネルギーがすべてコイルに移ったとき（例題5のまん中と同じ）。\par
+\shiki
+\kviga $\dfrac{1}{2}CV^2=\dfrac{1}{2}\times0.000001\times10^2=0.00005$
+\kviga $\dfrac{1}{2}\times0.01\times i^2=0.00005$（両辺に2をかけて0.01でわる）
+\kviga $i^2=\dfrac{0.0001}{0.01}=0.01$、$i=0.1$\par
+\kotae エネルギー\qty{0.00005}{J}（$\qty{50}{\micro J}$）、電流のいちばん大きい値\qty{0.1}{A}
+\end{reidai}
+
+\begin{jibun}
+$C=\qty{8}{\micro F}$ のコンデンサーを\qty{5}{V}にためてから、$L=\qty{20}{mH}$ のコイルにつなぎかえました。コンデンサーにたまったエネルギーと、電流のいちばん大きい値を求めましょう。
+\bkjans{$\dfrac{1}{2}\times0.000008\times5^2=\qty{0.0001}{J}$。$\dfrac{1}{2}\times0.02\times i^2=0.0001$ より $i^2=0.01$、\qty{0.1}{A}}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$\omega_{\mathrm n}$ と周期の計算をまちがえる}
+\bkng{$\omega_{\mathrm n}=\dfrac{k}{m}=\dfrac{8}{0.5}=16$}
+\bkok{$\omega_{\mathrm n}=\sqrt{\dfrac{k}{m}}=\sqrt{16}=4$}
+式に出てくるのは $\omega^2=\dfrac{k}{m}$ です。$\sin16t$ を2回微分すると $-256\sin16t$ で、$-16$ 倍になりません。
+\bkng{$T=\dfrac{1}{\omega_{\mathrm n}}=\dfrac{1}{4}=\qty{0.25}{s}$}
+\bkok{$T=\dfrac{2\pi}{\omega_{\mathrm n}}=\dfrac{6.28}{4}\approx\qty{1.57}{s}$}
+$\omega_{\mathrm n}$ は「1秒に進む角（rad）」で、1往復は $2\pi$\,rad です。振動数は $f=\dfrac{\omega_{\mathrm n}}{2\pi}$ です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{大きく引くと、周期が長くなると思う}
+\bkng{\qty{6}{cm}引いたほうが、遠くまで行くので周期が長い}
+\bkok{ばねなら周期は同じ。振り子は、ふれが小さければ同じ}
+遠くから始めると、強い力で引かれて速く動きます。周期の式 $2\pi\sqrt{\dfrac{m}{k}}$ に、振幅は入っていません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{つるしたばねで、ゆれの中心をまちがえる}
+\bkng{ゆれの中心は、ばねが自然の長さの位置}
+\bkok{ゆれの中心は、おもりがつり合う位置（$y_0=\dfrac{mg}{k}$ だけ下）}
+重さ $mg$ は、ゆれの中心をつり合いの位置まで下げます。振幅は、つり合いの位置から何cm引いたかで決まります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{接頭語を直さずに計算する}
+\bkng{$L=10$、$C=1$ として $\omega_{\mathrm n}=\dfrac{1}{\sqrt{10}}\approx0.32$}
+\bkok{$L=\qty{0.01}{H}$、$C=\qty{0.000001}{F}$ として $\omega_{\mathrm n}=\num{10000}$}
+mH は $\frac{1}{1000}$\,H、μF は $\frac{1}{1000000}$\,F です。直さないと、答えが3万倍以上ずれます。
+\end{tsumazuki}
+
+
+%% ---------------- 物理・工学 ----------------
+\begin{column}{3つのゆれを、くらべてみよう}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=14mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm]}, rowsep=1pt}
+ & ばねとおもり & 振り子 & LC回路 \\
+式 & $\ddot x=-\dfrac{k}{m}x$ & $\ddot\theta\approx-\dfrac{g}{L}\theta$ & $\ddot q=-\dfrac{1}{LC}q$ \\
+$\omega_{\mathrm n}$ & $\sqrt{\dfrac{k}{m}}$ & $\sqrt{\dfrac{g}{L}}$ & $\dfrac{1}{\sqrt{LC}}$ \\
+\end{bktable}
+\end{bkcenter}
+3つとも「2回微分すると自分の $-\omega_{\mathrm n}^{\,2}$ 倍」の式なので、答えはどれも $X\cos(\omega_{\mathrm n}t+\phi)$ です（6-15でまとめます）。
+\end{column}
+
+
+
+
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{建物の固有周期と地震}\par\noindent
+\begin{minipage}[c]{0.66\linewidth}
+建物も、ばねとおもりと同じようにゆれます。重い建物ほど、やわらかい建物ほど、周期は長くなります。高さが\qty{30}{m}ほどの建物では1秒ほど、\qty{200}{m}ほどの超高層ビルでは5秒前後です。地震のゆれの周期が建物の固有周期に近いと、ゆれが大きくなります（6-13）。だから、建物の設計では、まず固有周期を計算します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-2,0) rectangle (34,-1.5);
+  \filldraw[fill=bkBlue!15, draw=bkBlue, line width=0.7pt] (2,0) rectangle (10,9);
+  \filldraw[fill=bkBlue!15, draw=bkBlue, line width=0.7pt] (18,0) .. controls (18.5,14) and (19.5,24) .. (20.5,32) -- (28.5,32) .. controls (27.5,24) and (26.5,14) .. (26,0) -- cycle;
+  \node[font=\sffamily\footnotesize, anchor=north] at (6,-2) {約1秒};
+  \node[font=\sffamily\footnotesize, anchor=north] at (22,-2) {5秒前後};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{クォーツ時計}\par\noindent
+\begin{minipage}[c]{0.66\linewidth}
+クォーツ時計の中には、音さの形をした小さな水晶があります。電圧をかけると、水晶は1秒に\num{32768}回ゆれます。この数は $2^{15}$ なので、回数を2でわることを15回くり返すと、ちょうど1秒に1回の合図になります（3-11の倍々の逆）。固有振動数が温度などでほとんど変わらないので、時計は正確に進みます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.3\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.7pt, rounded corners=0.6mm] (0,0) rectangle (16,4);
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.7pt, rounded corners=0.6mm] (0,4) rectangle (4,22) (12,4) rectangle (16,22);
+  \draw[bk arrow, bkOrange!85!black, line width=0.8pt] (-1.5,18) -- (-5,18);
+  \draw[bk arrow, bkOrange!85!black, line width=0.8pt] (17.5,18) -- (21,18);
+  \node[font=\sffamily\footnotesize, anchor=north] at (8,-1.5) {水晶の音さ};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{IH調理器とラジオ}\par\noindent コイルとコンデンサーの電気振動は、決まった振動数の電流を作るのに使います。IH調理器は、コイルに1秒に数万回向きが変わる電流を流して、なべを温めます。ラジオは、$L$ と $C$ の固有振動数を放送局の電波に合わせて、その局だけを選び出します（6-13）。
+\end{itemize}
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 質量\qty{0.8}{kg}のおもりと、ばね定数\qty{20}{N/m}のばねの、固有角振動数・周期・振動数を求めましょう（$\pi=3.14$）。
+\bkpans{$\omega_{\mathrm n}=\sqrt{25}=5$\,rad/s、周期約\qty{1.26}{s}、振動数約\qty{0.80}{Hz}}
+
+\bkproblem ばね定数\qty{49}{N/m}のばねに\qty{0.5}{kg}のおもりをつるしました。つり合うときののびと、周期を求めましょう（$g=\qty{9.8}{m/s^2}$、$\sqrt{0.0102}=0.101$）。
+\bkpans{のび $\dfrac{0.5\times9.8}{49}=\qty{0.1}{m}$。周期 $2\pi\times0.101\approx\qty{0.63}{s}$}
+
+\bkproblem 質量\qty{0.5}{kg}、ばね定数\qty{8}{N/m}の台車を、$x_0=\qty{0.05}{m}$ の所で、右向きに $v_0=\qty{0.2}{m/s}$ で動かしながらはなしました。振幅と初期位相を求めましょう。
+\bkpans{$\omega_{\mathrm n}=4$。点 $(0.05,\ -0.05)$。振幅 $0.05\sqrt2\approx\qty{0.071}{m}$、$\phi=-\dfrac{\pi}{4}$}
+
+\bkproblem 質量\qty{1}{kg}、ばね定数\qty{100}{N/m}のおもりが、振幅\qty{0.05}{m}でゆれています。いちばん速い所の速さと、$x=\qty{0.03}{m}$ を通るときの速さを求めましょう。
+\bkpans{合計 \mbox{$\frac{1}{2}\times100\times0.05^2=\qty{0.125}{J}$}。いちばん速い所で\qty{0.5}{m/s}。$x=0.03$ では運動エネルギー0.08\,Jで\qty{0.4}{m/s}}
+
+\bkproblem （1）長さ\qty{2.45}{m}の振り子の周期を求めましょう。\par
+（2）周期\qty{1}{s}の振り子の長さを求めましょう（$g=\qty{9.8}{m/s^2}$、$4\pi^2=39.48$）。
+\bkpans{（1）\nobreak $2\pi\sqrt{0.25}=\pi\approx\qty{3.14}{s}$。（2）\nobreak $\dfrac{9.8\times1^2}{39.48}\approx\qty{0.25}{m}$}
+
+\bkproblem $L=\qty{100}{mH}$、$C=\qty{10}{\micro F}$ の回路の、固有角振動数・周期・振動数を求めましょう（$\pi=3.14$）。
+\bkpans{$LC=0.1\times0.00001=10^{-6}$、$\omega_{\mathrm n}=1000$\,rad/s。周期\qty{6.28}{ms}、振動数約\qty{159}{Hz}}
+
+\begin{column}{宇宙で体重をはかる}
+1973年、アメリカの宇宙ステーション「スカイラブ」の飛行士は、毎日、ゆれるいすに乗りました。いすを引いてはなし、3往復ほどのゆれの時間を電気で正確にはかります。周期は質量の $\sqrt{\phantom{m}}$ に比例するので、周期から体の質量がわかります。息を止め、体を動かさないように、いすにしっかりつかまってはかりました。体の中の動きでも、ゆれが変わってしまうからです。宇宙では、筋肉や骨がへって体の質量が変わるので、健康を見守るのに欠かせない測定でした。
+\end{column}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem （例題2の手順を2回使います。）ばね定数\qty{500}{N/m}のばねで支えた台があります。台だけをゆらすと周期は\qty{0.40}{s}、荷物をのせると\qty{0.80}{s}でした。台の質量と荷物の質量を求めましょう（$4\pi^2=39.48$）。
+\bkpans{台約\qty{2.03}{kg}、全体約\qty{8.11}{kg}、荷物約\qty{6.08}{kg}（周期2倍で質量4倍）}
+
+\bkproblem 質量\qty{0.5}{kg}、ばね定数\qty{8}{N/m}の台車を、$x_0=\qty{0.1}{m}$ の所で、右向きに $v_0=\qty{0.693}{m/s}$（$=0.4\sqrt3$）で動かしながらはなしました。$x$ を $X\cos(\omega_{\mathrm n}t+\phi)$ の形で書き、いちばん右に来る時刻を求めましょう。
+\bkpans{点 $(0.1,\ -0.1\sqrt3)$。$X=0.2$、$\phi=-\dfrac{\pi}{3}$。$x=0.2\cos\Bigl(4t-\dfrac{\pi}{3}\Bigr)$。$t=\dfrac{\pi}{12}\approx\qty{0.26}{s}$後}
+
+\bkproblem ばねにおもりをつるすと、\qty{6.1}{cm}のびてつり合いました。このおもりのゆれの周期を求めましょう（$g=\qty{9.8}{m/s^2}$、$\sqrt{0.00622}=0.0789$）。
+\bkpans{$2\pi\sqrt{\dfrac{0.061}{9.8}}=6.283\times0.0789\approx\qty{0.50}{s}$}
+
+\bkproblem $C=\qty{2}{\micro F}$ のコンデンサーを\qty{20}{V}にためてから、$L=\qty{50}{mH}$ のコイルにつなぎかえました。電流のいちばん大きい値と、電気振動の周期を求めましょう（$\pi=3.14$、$\sqrt{10^{-7}}=0.000316$）。
+\bkpans{エネルギー\qty{0.0004}{J}。$i^2=0.016$ より約\qty{0.13}{A}。周期 $6.28\times0.000316\approx\qty{1.99}{ms}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ばねの運動方程式を立て、$\omega_{\mathrm n}=\sqrt{k/m}$ と周期を求められる。\bkfurref{bk:6-6:shiki}
+\item はじめの位置と速度から、振幅と初期位相を決められる。\bkfurref{bk:6-6:shoki}
+\item 振り子・LC回路の周期を、ばねと同じ形の式から求められる。\bkfurref{bk:6-6:lc}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{ばねも振り子も電気も、同じ式でゆれていた！\quad でも本物のゆれは、いつか止まるよね。次の章で調べよう。}

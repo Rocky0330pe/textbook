@@ -1,0 +1,1238 @@
+%% 9-1 波をたし合わせて形を作る：フーリエ級数（第15回：組 V9-2。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md）。頭文字 kixb。場合分けの表9-2 は 9-2 にあり、この章は I・E・F・B・C を予告して使う。
+%% ほかの巻との約束：4-9（ch4-09:520〜528）の 0.724・約0.785（→ π/4）、「フーリエ級数…9-1 で学びます」。
+%%   5-16:606「∫ t sin nt dt を部分積分で（9-1）」→ ⑦ のこぎり波 b_n=2(−1)^{n+1}/n。
+%%   6-3:632 フーリエ（1822年『熱の解析的理論』）→ コラム。8-13:521・522「分けて解いて、たし直す」「変数分離法とフーリエ級数」
+%%   → ⑧。8-13 の a は nπ/L、α=1×10⁻⁴、0.0987/s。予告カード 9-1「弦のゆれも sin の形」→ ⑨。
+%%   組どうしの約束：棒 L=0.1 m・一様100℃・両はし0℃、まん中50℃は 9.47 秒（表計算 9.50 秒）、10秒で 47.45℃。
+%%   ギター A弦 110 Hz・0.65 m・c=143 m/s。方形波のギブズ 1.179。
+%%   数はすべて Python で検算した（scratchpad/v9-2/py/c1.py・c2.py・c3.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixb は章ごとに置きかえる =====
+\colorlet{kixbNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixbSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixbSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixb dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixb dan1/.style={kixb dan, draw=kixbNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixb dan2/.style={kixb dan, draw=kixbSc, fill=kixbSb, text=bkInk},
+  kixb dan3/.style={kixb dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixb name/.style={draw=kixbNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixb seki/.style={draw=kixbSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixbSb},
+  kixb tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixb q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixb do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixb go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixb yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixb@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixbdan{1|2|3}
+\newcommand\kixbdan[1]{\tikz[baseline=(d.base)]\node[kixb dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixbnaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixbnaosu[1]{\tikz[baseline=(d.base)]\node[kixb dan2] (d) {\vphantom{あ}直す：\kixb@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixbop{1|2|3|4}
+\newcommand\kixbop[1]{\tikz[baseline=(d.base)]\node[kixb dan2] (d) {\vphantom{あ}\kixb@op{#1}};}
+% 段の見出し（本文で）  \kixbdanhead{1|2|3}{見出し}
+\newcommand\kixbdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixb dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixbcase{C}（′ は \kixbcase{A$'$}）
+\newcommand\kixbcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixbbaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixbbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixb@cases#3,\@nil）}
+\def\kixb@cases#1,#2\@nil{\kixbcase{#1}\ifx\relax#2\relax\else と\kixb@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixbN[1]{\tikz[baseline=(n.base)]\node[kixb name] (n) {$\displaystyle #1$};}
+\newcommand\kixbNt[1]{\tikz[baseline=(n.base)]{\node[kixb name] (n) {$\displaystyle #1$};\node[kixb tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixbS[1]{\tikz[baseline=(n.base)]\node[kixb seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixbSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixbSt[2]{\tikz[baseline=(n.base)]{\node[kixb seki] (n) {$\displaystyle #2$};\node[kixb tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixb@op{#1}};}}
+% 場合分けの表の題の帯  \kixbcasetitle{9-2}{題}
+\newcommand\kixbcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixbpic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixbpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixbx/\kixby in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixbx-1},{\kixby-1}) -- ({\kixbx+1},{\kixby+1}) ({\kixbx-1},{\kixby+1}) -- ({\kixbx+1},{\kixby-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixbx/\kixby in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixbx,\kixby) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+%% ===== この章の部品（頭文字 kixb） =====
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\kixbhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixbbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kixbline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixbframe[はば]{中身}
+\newcommand\kixbframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixba{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixbb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixbs{\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=1\relax}
+%% ===== 表計算・2つの世界の図の型（tools/kata9.md、組 V9-1） =====
+\colorlet{kixbN}{bkOrange!16}% 1行め（成分の番号・周波数）のマス
+\colorlet{kixbK}{bkGreen!16}% 2行め（成分の大きさ）のマス
+\colorlet{kixbS}{bkYellow!45}% 合計・注目するマス
+% 表計算の数式バー  \kixbfx{セル}{式}（式の中の $ は \$、^ は \^{}）
+\newcommand\kixbfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=78mm, text width=74mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kixbW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixbF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixbP}{bkRed!80!black}% s の世界の点（×）
+% グラフのスタイル（どれも scale only axis：はばと高さは軸の箱の大きさ）
+\pgfplotsset{
+  kixb base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixb wave/.style={kixb base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixb spec/.style={kixb base, ymin=0},
+  kixb splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixb sig/.style={kixbW, line width=1.4pt, no markers, samples=241, smooth},
+  kixb part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth},
+  kixb bar/.style={ycomb, draw=kixbF, line width=3pt, no markers},
+  kixb dot/.style={only marks, mark=*, mark size=1.3pt, kixbW}}
+% 2つの世界の見出しと、行き来の矢印  \kixbworlds[見出しの高さ]{左の題}{右の題}{上の矢印（→）}{下の矢印（←）}
+%     左の軸は at={(0mm,0mm)}、右の軸は at={(76mm,0mm)}（はば 47 mm）に置く。見出しは軸の上（ふつう 42 mm）
+\tikzset{
+  kixb world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixb bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixb blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixbworlds[5][42mm]{%
+  \node[kixb world, draw=kixbW] (kixbL) at (23.5mm,#1) {#2};
+  \node[kixb world, draw=kixbF] (kixbR) at (99.5mm,#1) {#3};
+  \draw[kixb bridge] ([yshift=1.3mm, xshift=1.5mm]kixbL.east) -- node[kixb blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixbR.west);
+  \draw[kixb bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixbR.west) -- node[kixb blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixbL.east);}
+% s の世界の点（axis の中で）  \kixbpole[色]{実部}{虚部}（×）  \kixbzero[色]{実部}{虚部}（○）
+\newcommand\kixbpole[3][kixbP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixbzero[3][kixbP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+% 方形波（高さ h、周期 w mm、n 周期）  \kixbsq{(x,y)}{w}{h}{n}
+\newcommand\kixbsq[4]{\begin{scope}[shift={#1}]
+  \foreach \kixbk in {1,...,#4} {\draw[bkInk, line width=0.9pt] ({(\kixbk-1)*#2},0) -- ({(\kixbk-1)*#2},#3) -- ({(\kixbk-0.5)*#2},#3) -- ({(\kixbk-0.5)*#2},-#3) -- ({\kixbk*#2},-#3) -- ({\kixbk*#2},0);}
+  \end{scope}}
+% 棒（断熱材でくるんだ金属の棒。8-13 の形）  \kixbrod{(x,y)}{長さ}{色}
+\newcommand\kixbrod[3]{\begin{scope}[shift={#1}]
+  \fill[bkYellow!25] (0,-3.4) rectangle (#2,3.4);
+  \draw[bkOrange!70!black, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (0,-3.4) rectangle (#2,3.4);
+  \fill[#3] (0,-1.7) rectangle (#2,1.7);
+  \draw[bkInk!70, line width=0.6pt] (0,-1.7) rectangle (#2,1.7);
+  \end{scope}}
+\makeatother
+
+\bkchapter{9}{1}{波をたし合わせて形を作る：\\フーリエ級数}{\bklevel{4}}{波をたし合わせて形を作る：フーリエ級数}
+\bkmichishirube{4-9,5-10,5-15,5-16,6-4,6-6,6-10,8-13}{9-2,9-3,9-4}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace $\sin$ の波を1つずつたして四角い波に近づくのを表計算で確かめ、成分の棒グラフ（スペクトル）を読める。
+\item \bklevel{4}\enspace フーリエ級数の形を書き、方形波・のこぎり波の係数を、ふつうの定積分（部分積分）に直して求められる。
+\item \bklevel{4}\enspace 棒の熱と弦のゆれを、変数分離とフーリエ級数で「分けて解いて、たし直す」ことができる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+図の左の3つは、なめらかな $\sin$ の波です。高さは1、$\frac13$、$\frac15$ で、下ほど速くゆれます。\par\vspace{3pt}
+3つをたすと、図の右はしの波のように、山の上が平らになりかけます。もっとたしていくと、角のある四角い波（デジタルの信号）ができます。\par\vspace{3pt}
+\textbf{なめらかな波をたして、角のある形ができるのはなぜ？\ 何を、どれだけたせばよいのでしょう。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=0.78mm, y=1mm]
+  \foreach \kixbn/\kixby/\kixbc in {1/22/bkBlue,3/11/bkGreen!70!black,5/0/bkOrange!90!black} {%
+    \draw[bkGray, line width=0.4pt] (10,\kixby) -- (32.5,\kixby);
+    \draw[\kixbc, line width=1pt, domain=0:360, samples=120, smooth, variable=\t] plot ({10+\t/16},{\kixby+3.8*sin(\kixbn*\t)/\kixbn});}
+  \node[font=\footnotesize, anchor=east] at (8.5,22) {$\sin t$};
+  \node[font=\footnotesize, anchor=east] at (8.5,11) {$\frac13\sin3t$};
+  \node[font=\footnotesize, anchor=east] at (8.5,0) {$\frac15\sin5t$};
+  \node[font=\sffamily\bfseries] at (21,16.5) {＋};
+  \node[font=\sffamily\bfseries] at (21,5.5) {＋};
+  \draw[bkInk!75, line width=1pt, -{Stealth[length=2.2mm]}] (34.5,11) -- (40,11);
+  \draw[bkGray, line width=0.4pt] (42,11) -- (64.5,11);
+  \draw[bkOrange!85!black, line width=0.8pt, dash pattern=on 2pt off 1.2pt] (42,11) -- (42,14) -- (53.25,14) -- (53.25,8) -- (64.5,8) -- (64.5,11);
+  \draw[bkBlue, line width=1.1pt, domain=0:360, samples=200, smooth, variable=\t] plot ({42+\t/16},{11+3.8*(sin(\t)+sin(3*\t)/3+sin(5*\t)/5)});
+  \node[font=\footnotesize, anchor=north] at (53.25,4.5) {3つの和};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 4-9 のもっと知りたいで、$\sin\theta$ に $\frac13\sin3\theta$、$\frac15\sin5\theta$、$\frac17\sin7\theta$、……とたしていくと、四角い波（\textbf{方形波}、ほうけいは）に近づくことを見ました。$\theta=90°$ では $1-\frac13+\frac15-\frac17\approx0.724$ で、たす数をふやすと「約0.785」に近づく、とも書きました。そして「この考え方をフーリエ級数といい、9-1 で学びます」と約束しました。
+
+この章は、その約束を果たします。方形波の作り方（何をどれだけたすか）を表計算で確かめ、0.785 の正体をつきとめます。それから、たす量（係数）を、ふつうの定積分で求める方法を学びます。
+
+さらに、8-13 の最後で予告した「\textbf{分けて解いて、たし直す}」方法を使います。どこも100\,℃の金属の棒を、両はしから冷やしたときの温度を、表計算をせずに式で求めます。じつは、これがフーリエ自身が解いた問題で、フーリエ級数はこのために生まれました。
+
+\begin{omoidasou}
+\bkrecall{4-9}{$\sin\theta+\frac13\sin3\theta+\frac15\sin5\theta+\frac17\sin7\theta$ は、方形波に近い形。$\theta=90°$ で約0.724。}
+\bkrecall{5-10}{$\sum_{k=1}^{n}$ は「$k=1$ から $n$ までたす」という書き方。}
+\bkrecall{5-15}{$\sin$・$\cos$ を1周期（$0$ から $2\pi$）で積分すると0。$\int\sin nt\,\dd t=-\tfrac{\cos nt}{n}$。}
+\bkrecall{5-16}{部分積分：$\int_a^b fg'\,\dd t=\Bigl[fg\Bigr]_a^b-\int_a^b f'g\,\dd t$。$\int_0^{\pi}t\sin t\,\dd t=\pi$。}
+\bkrecall{6-4}{$\tfrac{\dd y}{\dd t}=-ky$ の答えは $y=Ce^{-kt}$。$k$ が大きいほど速く小さくなる。}
+\bkrecall{6-6}{$\tfrac{\dd^2x}{\dd t^2}=-\omega^2x$ の答えは $\sin\omega t$ と $\cos\omega t$ の和（単振動）。}
+\bkrecall{8-13}{熱方程式 $\tfrac{\partial T}{\partial t}=\alpha\tfrac{\partial^2T}{\partial x^2}$。$T=e^{-\alpha a^2t}\sin ax$ は答えで、$\sin$ の形を保って小さくなる。}
+\end{omoidasou}
+
+この巻のさいごの路線④「回転と波」の終点です。★★★★の章で、式でわかるの段は大学で学ぶ内容です。1回でわからなくても大丈夫。表とグラフで「こうなる」を先に見てから、式で確かめていきましょう。
+
+\begin{yattemiyou}[$\sin$ を1つずつたしていこう]
+表計算で、$\sin\theta$、$\frac13\sin3\theta$、$\frac15\sin5\theta$、$\frac17\sin7\theta$ の4つの成分を計算して、たします。A列が角 $\theta$（度）、1行めが番号 $n$、2行めが大きさ $\frac1n$ です。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item B1〜E1 に番号1, 3, 5, 7、B2 に \texttt{=1/B1} を入れて E2 まで右へコピーする。
+\item A3 から下へ、0, 30, 60, …, 360 を入れる。
+\item B3 に下の数式バーの式を入れ、B3:E15 にコピーする。F3 に \texttt{=SUM(B3:E3)} を入れて下へコピーする。
+\end{enumerate}
+\begin{bkcenter}
+\kixbfx{B3}{=B\$2*SIN(B\$1*RADIANS(\$A3))}\par\vspace{1mm}
+\bksheet{6}{15}{%
+1 & \SetCell{c} $\theta$＼$n$ & \SetCell{bg=kixbN} 1 & \SetCell{bg=kixbN} 3 & \SetCell{bg=kixbN} 5 & \SetCell{bg=kixbN} 7 & \SetCell{c} 合計 \\
+2 & \SetCell{c} 大きさ & \SetCell{bg=kixbK} 1 & \SetCell{bg=kixbK} 0.3333 & \SetCell{bg=kixbK} 0.2 & \SetCell{bg=kixbK} 0.1429 & \\
+3 & 0 & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+4 & 30 & 0.5000 & 0.3333 & 0.1000 & $-0.0714$ & 0.8619 \\
+5 & 60 & 0.8660 & 0.0000 & $-0.1732$ & 0.1237 & 0.8165 \\
+6 & 90 & 1.0000 & $-0.3333$ & 0.2000 & $-0.1429$ & \SetCell{bg=kixbS} ア \\
+7 & 120 & 0.8660 & 0.0000 & $-0.1732$ & 0.1237 & 0.8165 \\
+8 & 150 & 0.5000 & 0.3333 & 0.1000 & $-0.0714$ & 0.8619 \\
+9 & 180 & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\}
+\bktabcaption{方形波を4項までたす表（小数第4位まで。180° から360° は、符号が逆の同じ値なので省いた）。A列は角 $\theta$（°）、1行めは番号 $n$、2行めは大きさ $\frac1n$。}
+\end{bkcenter}
+\vspace{2pt}
+アをうめよう。10° ごと（37行）にして、F列の折れ線グラフもかいてみよう。
+\end{yattemiyou}
+
+\noindent B3 の式の \texttt{B\$1*RADIANS(\$A3)} は「番号×角」（$3\theta$ など）で、表計算の SIN はラジアンで受けとるので RADIANS で直します（4-2）。\texttt{B\$2*} は大きさ $\frac1n$ をかける部分です。\texttt{\$} は「いつも1行め・2行め・A列を読む」印です。
+
+90° の行は、$\sin90°=1$、$\sin270°=-1$ です。450° は1回転と90°、630° は1回転と270° なので、$\sin450°=1$、$\sin630°=-1$ です。1つずつたしていくと、
+\begin{bkhenkei}[0.5]
+1-\frac13=0.6667 & 2つまで：$\frac13\sin270°=-\frac13$ \\
+0.6667+\frac15=0.8667 & 3つまで：$\frac15\sin450°=+\frac15$ \\
+0.8667-\frac17=0.7238 & 4つまで（ア）：$\frac17\sin630°=-\frac17$ \\
+\end{bkhenkei}
+アの0.7238が、4-9 の「約0.724」です。90° の値は、たすたびに上がったり下がったりしながら、だんだん動きが小さくなります。
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{14\baselineskip}
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{$\sin$ をたすと、形ができる}{\bklevel{3}}
+
+\bksubsection{1}{たしていくと、四角に近づく}
+
+\label{bk:9-1:tasu}やってみようの表をグラフにすると、図\ref{bk:9-1:fig-bubunwa}のようになります。$\sin\theta$ だけ（灰色）では丸い山です。2つ、4つとたすと、山の上がだんだん平らになり、0° と180° の所で、まっすぐ立ち上がるようになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=54mm, axis x line=bottom, axis y line=left, xmin=0, xmax=380, ymin=-1.2, ymax=1.25, xtick={0,90,180,270,360}, xticklabels={0°,90°,180°,270°,360°}, ytick={-1,-0.5,0,0.5,1}, xlabel={$\theta$}, legend style={font=\sffamily\footnotesize, at={(0.5,1.03)}, anchor=south, draw=bkLine, fill=white, inner sep=1pt}, legend columns=4, legend cell align=left]
+  \addplot[bkthin, domain=0:360, samples=120] {sin(x)};
+  \addplot[bkGreen!70!black, line width=1.1pt, dash pattern=on 4pt off 1.5pt, domain=0:360, samples=200] {sin(x)+sin(3*x)/3};
+  \addplot[bkcurve, domain=0:360, samples=400] {sin(x)+sin(3*x)/3+sin(5*x)/5+sin(7*x)/7};
+  \addplot[bkOrange!85!black, line width=0.9pt, dash pattern=on 2pt off 1.5pt] coordinates {(0,0.785) (180,0.785) (180,-0.785) (360,-0.785)};
+  \legend{1つ,2つ,4つ,$\pm0.785$}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{やってみようの表のグラフ。たす波をふやすと、オレンジの点線（高さ0.785の方形波）に近づく。}
+\label{bk:9-1:fig-bubunwa}
+\end{bkfigure}
+
+90° の値を、もっとたくさんたして調べます（表計算の列をふやすか、Python で計算します）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] *{7}{Q[c,m,wd=13mm]}}, row{1}={font=\sffamily\small}, rowsep=1.5pt, colsep=2pt}
+たした波の数 & 1 & 2 & 3 & 4 & 10 & 100 & 1000 \\
+90° の値 & 1 & 0.6667 & 0.8667 & 0.7238 & 0.7605 & 0.7829 & 0.7851 \\
+\end{bktable}
+\bktabcaption{90° の値。たす数をふやすと、0.7854 に近づいていく。}
+\end{bkcenter}
+近づいていく先は $0.7853\cdots$ で、これは $\frac{\pi}{4}=3.14159\cdots\div4=0.78539\cdots$ と同じです。つまり
+\kixbframe[100mm]{$1-\dfrac13+\dfrac15-\dfrac17+\dfrac19-\cdots=\dfrac{\pi}{4}$}
+です。4-9 の「約0.785」の正体は、$\frac{\pi}{4}$ でした。奇数の逆数を、＋と－を交互にしてたすと、円周率が出てくるのです。なぜ $\pi$ が出てくるのかは、⑦で、ちがう波（のこぎり波）からもう一度確かめます。
+
+\bksubsection{2}{高さを1にそろえる・角の山}
+
+\label{bk:9-1:sorou}方形波の高さを、0.785 ではなく1にしたいときは、全体を $1\div0.785$、つまり $\frac{4}{\pi}\approx1.273$ 倍します（$\frac{\pi}{4}$ でわることは、$\frac{4}{\pi}$ をかけること）。
+\kixbframe[110mm]{$\dfrac{4}{\pi}\Bigl(\sin t+\dfrac13\sin3t+\dfrac15\sin5t+\dfrac17\sin7t+\cdots\Bigr)$\\[2pt]\small\sffamily は、高さ1の方形波（$0<t<\pi$ で1、$\pi<t<2\pi$ で $-1$）}
+ここから、角を $\theta$（度）ではなく $t$（ラジアン）で書きます。$t$ は時刻と思ってかまいません（1秒に1ラジアン進む回転の角。5-15）。周期（1回ゆれる時間）は $2\pi$ 秒です。
+
+\kixbhead{角のそばの山は、消えない}
+高さ1の方形波に近づけた和を、角（$t=0$）の近くで拡大してみます（図\ref{bk:9-1:fig-gibbs}）。たす数をふやすと、平らな所はどんどん1に近づきます。ところが、角のすぐそばに、1より少し高い山が残ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=g1, width=62mm, height=50mm, axis x line=bottom, axis y line=left, xmin=0, xmax=380, ymin=-1.35, ymax=1.45, xtick={0,180,360}, xticklabels={0,$\pi$,$2\pi$}, ytick={-1,0,1}, xlabel={$t$}, title={10個たした和}, title style={font=\sffamily\footnotesize, yshift=1mm}]
+  \addplot[bkOrange!85!black, line width=0.9pt, dash pattern=on 2pt off 1.5pt] coordinates {(0,1) (180,1) (180,-1) (360,-1)};
+  \addplot[bkcurve, line width=1.1pt] coordinates {(0.0,0.000) (1.0,0.221) (2.0,0.433) (3.0,0.627) (4.0,0.798) (5.0,0.940) (6.0,1.049) (7.0,1.124) (8.0,1.167) (9.0,1.180) (10.0,1.168) (11.0,1.138) (12.0,1.096) (13.0,1.048) (14.0,1.000) (15.0,0.959) (16.0,0.927) (17.0,0.908) (18.0,0.901) (19.0,0.907) (20.0,0.924) (21.0,0.948) (22.0,0.976) (23.0,1.005) (24.0,1.031) (25.0,1.052) (26.0,1.064) (27.0,1.069) (28.0,1.065) (29.0,1.053) (30.0,1.036) (31.0,1.015) (32.0,0.994) (33.0,0.975) (34.0,0.960) (35.0,0.950) (36.0,0.946) (37.0,0.950) (38.0,0.959) (39.0,0.972) (40.0,0.989) (41.0,1.006) (42.0,1.021) (43.0,1.034) (44.0,1.042) (45.0,1.045) (46.0,1.042) (47.0,1.034) (48.0,1.023) (49.0,1.009) (50.0,0.995) (51.0,0.981) (52.0,0.970) (53.0,0.963) (54.0,0.961) (55.0,0.963) (56.0,0.970) (57.0,0.980) (58.0,0.992) (59.0,1.005) (60.0,1.017) (61.0,1.027) (62.0,1.033) (63.0,1.036) (64.0,1.033) (65.0,1.027) (66.0,1.018) (67.0,1.007) (68.0,0.995) (69.0,0.984) (70.0,0.975) (71.0,0.969) (72.0,0.967) (73.0,0.969) (74.0,0.974) (75.0,0.983) (76.0,0.994) (77.0,1.005) (78.0,1.016) (79.0,1.025) (80.0,1.030) (81.0,1.032) (82.0,1.030) (83.0,1.025) (84.0,1.016) (85.0,1.006) (86.0,0.995) (87.0,0.984) (88.0,0.976) (89.0,0.970) (90.0,0.968) (91.0,0.970) (92.0,0.976) (93.0,0.984) (94.0,0.995) (95.0,1.006) (96.0,1.016) (97.0,1.025) (98.0,1.030) (99.0,1.032) (100.0,1.030) (101.0,1.025) (102.0,1.016) (103.0,1.005) (104.0,0.994) (105.0,0.983) (106.0,0.974) (107.0,0.969) (108.0,0.967) (109.0,0.969) (110.0,0.975) (111.0,0.984) (112.0,0.995) (113.0,1.007) (114.0,1.018) (115.0,1.027) (116.0,1.033) (117.0,1.036) (118.0,1.033) (119.0,1.027) (120.0,1.017) (121.0,1.005) (122.0,0.992) (123.0,0.980) (124.0,0.970) (125.0,0.963) (126.0,0.961) (127.0,0.963) (128.0,0.970) (129.0,0.981) (130.0,0.995) (131.0,1.009) (132.0,1.023) (133.0,1.034) (134.0,1.042) (135.0,1.045) (136.0,1.042) (137.0,1.034) (138.0,1.021) (139.0,1.006) (140.0,0.989) (141.0,0.972) (142.0,0.959) (143.0,0.950) (144.0,0.946) (145.0,0.950) (146.0,0.960) (147.0,0.975) (148.0,0.994) (149.0,1.015) (150.0,1.036) (151.0,1.053) (152.0,1.065) (153.0,1.069) (154.0,1.064) (155.0,1.052) (156.0,1.031) (157.0,1.005) (158.0,0.976) (159.0,0.948) (160.0,0.924) (161.0,0.907) (162.0,0.901) (163.0,0.908) (164.0,0.927) (165.0,0.959) (166.0,1.000) (167.0,1.048) (168.0,1.096) (169.0,1.138) (170.0,1.168) (171.0,1.180) (172.0,1.167) (173.0,1.124) (174.0,1.049) (175.0,0.940) (176.0,0.798) (177.0,0.627) (178.0,0.433) (179.0,0.221) (180.0,0.000) (181.0,-0.221) (182.0,-0.433) (183.0,-0.627) (184.0,-0.798) (185.0,-0.940) (186.0,-1.049) (187.0,-1.124) (188.0,-1.167) (189.0,-1.180) (190.0,-1.168) (191.0,-1.138) (192.0,-1.096) (193.0,-1.048) (194.0,-1.000) (195.0,-0.959) (196.0,-0.927) (197.0,-0.908) (198.0,-0.901) (199.0,-0.907) (200.0,-0.924) (201.0,-0.948) (202.0,-0.976) (203.0,-1.005) (204.0,-1.031) (205.0,-1.052) (206.0,-1.064) (207.0,-1.069) (208.0,-1.065) (209.0,-1.053) (210.0,-1.036) (211.0,-1.015) (212.0,-0.994) (213.0,-0.975) (214.0,-0.960) (215.0,-0.950) (216.0,-0.946) (217.0,-0.950) (218.0,-0.959) (219.0,-0.972) (220.0,-0.989) (221.0,-1.006) (222.0,-1.021) (223.0,-1.034) (224.0,-1.042) (225.0,-1.045) (226.0,-1.042) (227.0,-1.034) (228.0,-1.023) (229.0,-1.009) (230.0,-0.995) (231.0,-0.981) (232.0,-0.970) (233.0,-0.963) (234.0,-0.961) (235.0,-0.963) (236.0,-0.970) (237.0,-0.980) (238.0,-0.992) (239.0,-1.005) (240.0,-1.017) (241.0,-1.027) (242.0,-1.033) (243.0,-1.036) (244.0,-1.033) (245.0,-1.027) (246.0,-1.018) (247.0,-1.007) (248.0,-0.995) (249.0,-0.984) (250.0,-0.975) (251.0,-0.969) (252.0,-0.967) (253.0,-0.969) (254.0,-0.974) (255.0,-0.983) (256.0,-0.994) (257.0,-1.005) (258.0,-1.016) (259.0,-1.025) (260.0,-1.030) (261.0,-1.032) (262.0,-1.030) (263.0,-1.025) (264.0,-1.016) (265.0,-1.006) (266.0,-0.995) (267.0,-0.984) (268.0,-0.976) (269.0,-0.970) (270.0,-0.968) (271.0,-0.970) (272.0,-0.976) (273.0,-0.984) (274.0,-0.995) (275.0,-1.006) (276.0,-1.016) (277.0,-1.025) (278.0,-1.030) (279.0,-1.032) (280.0,-1.030) (281.0,-1.025) (282.0,-1.016) (283.0,-1.005) (284.0,-0.994) (285.0,-0.983) (286.0,-0.974) (287.0,-0.969) (288.0,-0.967) (289.0,-0.969) (290.0,-0.975) (291.0,-0.984) (292.0,-0.995) (293.0,-1.007) (294.0,-1.018) (295.0,-1.027) (296.0,-1.033) (297.0,-1.036) (298.0,-1.033) (299.0,-1.027) (300.0,-1.017) (301.0,-1.005) (302.0,-0.992) (303.0,-0.980) (304.0,-0.970) (305.0,-0.963) (306.0,-0.961) (307.0,-0.963) (308.0,-0.970) (309.0,-0.981) (310.0,-0.995) (311.0,-1.009) (312.0,-1.023) (313.0,-1.034) (314.0,-1.042) (315.0,-1.045) (316.0,-1.042) (317.0,-1.034) (318.0,-1.021) (319.0,-1.006) (320.0,-0.989) (321.0,-0.972) (322.0,-0.959) (323.0,-0.950) (324.0,-0.946) (325.0,-0.950) (326.0,-0.960) (327.0,-0.975) (328.0,-0.994) (329.0,-1.015) (330.0,-1.036) (331.0,-1.053) (332.0,-1.065) (333.0,-1.069) (334.0,-1.064) (335.0,-1.052) (336.0,-1.031) (337.0,-1.005) (338.0,-0.976) (339.0,-0.948) (340.0,-0.924) (341.0,-0.907) (342.0,-0.901) (343.0,-0.908) (344.0,-0.927) (345.0,-0.959) (346.0,-1.000) (347.0,-1.048) (348.0,-1.096) (349.0,-1.138) (350.0,-1.168) (351.0,-1.180) (352.0,-1.167) (353.0,-1.124) (354.0,-1.049) (355.0,-0.940) (356.0,-0.798) (357.0,-0.627) (358.0,-0.433) (359.0,-0.221) (360.0,-0.000)};
+  \draw[bkRed!80!black, line width=0.8pt] (axis cs:0,-0.3) rectangle (axis cs:60,1.3);
+\end{axis}
+\begin{axis}[bkplot, at={(g1.east)}, anchor=west, xshift=12mm, width=62mm, height=50mm, xmin=0, xmax=64, ymin=0, ymax=1.4, xtick={20,40,60}, xticklabels={$\frac{\pi}{9}$,$\frac{2\pi}{9}$,$\frac{\pi}{3}$}, ytick={0.5,1,1.179}, yticklabels={0.5,1,1.179}, xlabel={$t$}, title={角のそばを拡大}, title style={font=\sffamily\footnotesize, yshift=1mm}, legend style={font=\sffamily\footnotesize, at={(0.98,0.04)}, anchor=south east, draw=bkLine, fill=white, inner sep=1pt}, legend cell align=left]
+  \addplot[bkGreen!70!black, line width=1.1pt, dash pattern=on 4pt off 1.5pt] coordinates {(0.00,0.000) (0.25,0.056) (0.50,0.111) (0.75,0.166) (1.00,0.221) (1.25,0.275) (1.50,0.328) (1.75,0.381) (2.00,0.433) (2.25,0.483) (2.50,0.533) (2.75,0.581) (3.00,0.627) (3.25,0.673) (3.50,0.716) (3.75,0.758) (4.00,0.798) (4.25,0.837) (4.50,0.873) (4.75,0.907) (5.00,0.940) (5.25,0.970) (5.50,0.998) (5.75,1.025) (6.00,1.049) (6.25,1.071) (6.50,1.090) (6.75,1.108) (7.00,1.124) (7.25,1.138) (7.50,1.149) (7.75,1.159) (8.00,1.167) (8.25,1.172) (8.50,1.177) (8.75,1.179) (9.00,1.180) (9.25,1.179) (9.50,1.177) (9.75,1.173) (10.00,1.168) (10.25,1.162) (10.50,1.155) (10.75,1.147) (11.00,1.138) (11.25,1.128) (11.50,1.118) (11.75,1.107) (12.00,1.096) (12.25,1.084) (12.50,1.072) (12.75,1.060) (13.00,1.048) (13.25,1.036) (13.50,1.024) (13.75,1.012) (14.00,1.000) (14.25,0.989) (14.50,0.979) (14.75,0.968) (15.00,0.959) (15.25,0.950) (15.50,0.942) (15.75,0.934) (16.00,0.927) (16.25,0.921) (16.50,0.916) (16.75,0.911) (17.00,0.908) (17.25,0.905) (17.50,0.903) (17.75,0.902) (18.00,0.901) (18.25,0.902) (18.50,0.903) (18.75,0.905) (19.00,0.907) (19.25,0.910) (19.50,0.914) (19.75,0.919) (20.00,0.924) (20.25,0.929) (20.50,0.935) (20.75,0.941) (21.00,0.948) (21.25,0.955) (21.50,0.962) (21.75,0.969) (22.00,0.976) (22.25,0.983) (22.50,0.991) (22.75,0.998) (23.00,1.005) (23.25,1.012) (23.50,1.019) (23.75,1.025) (24.00,1.031) (24.25,1.037) (24.50,1.042) (24.75,1.047) (25.00,1.052) (25.25,1.056) (25.50,1.059) (25.75,1.062) (26.00,1.064) (26.25,1.066) (26.50,1.068) (26.75,1.068) (27.00,1.069) (27.25,1.068) (27.50,1.068) (27.75,1.066) (28.00,1.065) (28.25,1.062) (28.50,1.060) (28.75,1.057) (29.00,1.053) (29.25,1.049) (29.50,1.045) (29.75,1.041) (30.00,1.036) (30.25,1.031) (30.50,1.026) (30.75,1.021) (31.00,1.015) (31.25,1.010) (31.50,1.005) (31.75,0.999) (32.00,0.994) (32.25,0.989) (32.50,0.984) (32.75,0.979) (33.00,0.975) (33.25,0.971) (33.50,0.967) (33.75,0.963) (34.00,0.960) (34.25,0.957) (34.50,0.954) (34.75,0.952) (35.00,0.950) (35.25,0.948) (35.50,0.947) (35.75,0.947) (36.00,0.946) (36.25,0.947) (36.50,0.947) (36.75,0.948) (37.00,0.950) (37.25,0.951) (37.50,0.954) (37.75,0.956) (38.00,0.959) (38.25,0.962) (38.50,0.965) (38.75,0.969) (39.00,0.972) (39.25,0.976) (39.50,0.980) (39.75,0.984) (40.00,0.989) (40.25,0.993) (40.50,0.997) (40.75,1.001) (41.00,1.006) (41.25,1.010) (41.50,1.014) (41.75,1.018) (42.00,1.021) (42.25,1.025) (42.50,1.028) (42.75,1.031) (43.00,1.034) (43.25,1.036) (43.50,1.039) (43.75,1.040) (44.00,1.042) (44.25,1.043) (44.50,1.044) (44.75,1.045) (45.00,1.045) (45.25,1.045) (45.50,1.044) (45.75,1.043) (46.00,1.042) (46.25,1.041) (46.50,1.039) (46.75,1.037) (47.00,1.034) (47.25,1.032) (47.50,1.029) (47.75,1.026) (48.00,1.023) (48.25,1.020) (48.50,1.016) (48.75,1.013) (49.00,1.009) (49.25,1.005) (49.50,1.002) (49.75,0.998) (50.00,0.995) (50.25,0.991) (50.50,0.988) (50.75,0.984) (51.00,0.981) (51.25,0.978) (51.50,0.975) (51.75,0.973) (52.00,0.970) (52.25,0.968) (52.50,0.966) (52.75,0.965) (53.00,0.963) (53.25,0.962) (53.50,0.961) (53.75,0.961) (54.00,0.961) (54.25,0.961) (54.50,0.961) (54.75,0.962) (55.00,0.963) (55.25,0.964) (55.50,0.966) (55.75,0.968) (56.00,0.970) (56.25,0.972) (56.50,0.975) (56.75,0.977) (57.00,0.980) (57.25,0.983) (57.50,0.986) (57.75,0.989) (58.00,0.992) (58.25,0.996) (58.50,0.999) (58.75,1.002) (59.00,1.005) (59.25,1.009) (59.50,1.012) (59.75,1.015) (60.00,1.017)};
+  \addplot[bkcurve, line width=1.1pt] coordinates {(0.00,0.000) (0.25,0.275) (0.50,0.533) (0.75,0.758) (1.00,0.939) (1.25,1.070) (1.50,1.148) (1.75,1.178) (2.00,1.168) (2.25,1.128) (2.50,1.072) (2.75,1.012) (3.00,0.960) (3.25,0.922) (3.50,0.904) (3.75,0.906) (4.00,0.925) (4.25,0.955) (4.50,0.990) (4.75,1.024) (5.00,1.050) (5.25,1.064) (5.50,1.065) (5.75,1.055) (6.00,1.035) (6.25,1.010) (6.50,0.985) (6.75,0.965) (7.00,0.953) (7.25,0.950) (7.50,0.956) (7.75,0.970) (8.00,0.989) (8.25,1.009) (8.50,1.025) (8.75,1.036) (9.00,1.040) (9.25,1.037) (9.50,1.026) (9.75,1.012) (10.00,0.996) (10.25,0.981) (10.50,0.971) (10.75,0.966) (11.00,0.968) (11.25,0.976) (11.50,0.988) (11.75,1.001) (12.00,1.014) (12.25,1.024) (12.50,1.029) (12.75,1.028) (13.00,1.022) (13.25,1.013) (13.50,1.001) (13.75,0.990) (14.00,0.981) (14.25,0.975) (14.50,0.975) (14.75,0.979) (15.00,0.987) (15.25,0.997) (15.50,1.007) (15.75,1.016) (16.00,1.021) (16.25,1.023) (16.50,1.020) (16.75,1.013) (17.00,1.004) (17.25,0.995) (17.50,0.987) (17.75,0.981) (18.00,0.979) (18.25,0.981) (18.50,0.987) (18.75,0.994) (19.00,1.003) (19.25,1.011) (19.50,1.016) (19.75,1.019) (20.00,1.018) (20.25,1.013) (20.50,1.007) (20.75,0.999) (21.00,0.992) (21.25,0.986) (21.50,0.983) (21.75,0.983) (22.00,0.987) (22.25,0.993) (22.50,1.000) (22.75,1.007) (23.00,1.012) (23.25,1.015) (23.50,1.016) (23.75,1.013) (24.00,1.008) (24.25,1.002) (24.50,0.995) (24.75,0.989) (25.00,0.986) (25.25,0.985) (25.50,0.987) (25.75,0.991) (26.00,0.997) (26.25,1.003) (26.50,1.009) (26.75,1.013) (27.00,1.014) (27.25,1.013) (27.50,1.009) (27.75,1.004) (28.00,0.998) (28.25,0.992) (28.50,0.989) (28.75,0.987) (29.00,0.988) (29.25,0.991) (29.50,0.995) (29.75,1.001) (30.00,1.006) (30.25,1.010) (30.50,1.012) (30.75,1.012) (31.00,1.010) (31.25,1.005) (31.50,1.000) (31.75,0.995) (32.00,0.991) (32.25,0.989) (32.50,0.988) (32.75,0.990) (33.00,0.994) (33.25,0.999) (33.50,1.004) (33.75,1.008) (34.00,1.011) (34.25,1.011) (34.50,1.010) (34.75,1.007) (35.00,1.002) (35.25,0.997) (35.50,0.993) (35.75,0.990) (36.00,0.989) (36.25,0.990) (36.50,0.993) (36.75,0.997) (37.00,1.002) (37.25,1.006) (37.50,1.009) (37.75,1.010) (38.00,1.010) (38.25,1.007) (38.50,1.004) (38.75,0.999) (39.00,0.995) (39.25,0.992) (39.50,0.990) (39.75,0.990) (40.00,0.992) (40.25,0.996) (40.50,1.000) (40.75,1.004) (41.00,1.007) (41.25,1.009) (41.50,1.009) (41.75,1.008) (42.00,1.005) (42.25,1.001) (42.50,0.997) (42.75,0.993) (43.00,0.991) (43.25,0.991) (43.50,0.992) (43.75,0.995) (44.00,0.998) (44.25,1.002) (44.50,1.006) (44.75,1.008) (45.00,1.009) (45.25,1.008) (45.50,1.006) (45.75,1.002) (46.00,0.999) (46.25,0.995) (46.50,0.992) (46.75,0.991) (47.00,0.992) (47.25,0.994) (47.50,0.997) (47.75,1.001) (48.00,1.004) (48.25,1.007) (48.50,1.008) (48.75,1.008) (49.00,1.007) (49.25,1.004) (49.50,1.000) (49.75,0.997) (50.00,0.994) (50.25,0.992) (50.50,0.992) (50.75,0.993) (51.00,0.996) (51.25,0.999) (51.50,1.003) (51.75,1.006) (52.00,1.008) (52.25,1.008) (52.50,1.007) (52.75,1.005) (53.00,1.001) (53.25,0.998) (53.50,0.995) (53.75,0.993) (54.00,0.992) (54.25,0.993) (54.50,0.995) (54.75,0.998) (55.00,1.001) (55.25,1.004) (55.50,1.007) (55.75,1.008) (56.00,1.007) (56.25,1.005) (56.50,1.003) (56.75,0.999) (57.00,0.996) (57.25,0.994) (57.50,0.993) (57.75,0.993) (58.00,0.994) (58.25,0.997) (58.50,1.000) (58.75,1.003) (59.00,1.006) (59.25,1.007) (59.50,1.007) (59.75,1.006) (60.00,1.004)};
+  \addplot[bkRed!80!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] coordinates {(0,1.179) (64,1.179)};
+  \legend{10個,50個}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{高さ1の方形波に近づけた和。右は、左の赤い四角の中を横に6倍に拡大したもの（目もりはラジアン。$\frac{\pi}{9}$ は20°）。たす数を10個から50個にふやすと、山は角に近づくが、高さは約1.179のまま変わらない。}
+\label{bk:9-1:fig-gibbs}
+\end{bkfigure}
+
+山のいちばん高い所を Python で調べると、次のようになりました。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=12mm]}}, row{1}={font=\sffamily\small}, rowsep=1.5pt, colsep=2pt}
+たした波の数 & 1 & 2 & 4 & 10 & 50 & 200 \\
+山の高さ & 1.273 & 1.200 & 1.184 & 1.180 & 1.179 & 1.179 \\
+山の場所 & 90° & 45° & 22.5° & 9° & 1.8° & 0.45° \\
+\end{bktable}
+\bktabcaption{角のそばの山。場所は角に近づくが、高さは1.179より下がらない。}
+\end{bkcenter}
+とび（$-1$ から1へ、2だけとぶ）に対して、$0.179\div2\approx0.09$、つまり\textbf{約9\%の行きすぎ}が、いくつたしても残ります。この現象を\textbf{ギブズ現象}（ギブズげんしょう）といいます。\bkidx{ぎぶずげんしょう}{ギブズ現象}ただし、山の\textbf{はば}はどんどんせまくなるので、角から少しでもはなれた所では、和は方形波にいくらでも近づきます。
+
+\begin{motto}[4]
+\kixbbox{ギブズ現象の名前のゆらい}
+1898年、アメリカのマイケルソンは、80個の波をたせる機械（調和解析機）で、方形波などの波をたし合わせてかきました。同じ年、物理学者のギブズが雑誌『ネイチャー』への手紙で、角の近くの形を説明しましたが、最初の手紙にはまちがいがあり、翌1899年に直しました。じつは、イギリスのウィルブラハムが1848年に、同じことを見つけていました。「ギブズ現象」という名前は、1906年にボッハーがつけたものです。
+\end{motto}
+
+\kixbhead{音で聞くと}
+$\sin$ の波1つだけの音は、口笛や時報の「ピッ」のような、すんだ音です。同じ高さの方形波の音は、ブザーのような、ざらざらした音に聞こえます。高さ（1秒にゆれる回数）は同じでも、3倍・5倍・7倍の速さでゆれる波がまざっているので、ちがう音に聞こえるのです。どの波が、どれだけまざっているか。これが音色を決めます（③）。
+
+%% ---------------- 手でわかる ----------------
+\bkstage{te}{手でわかる}{成分の表と、係数の見つけ方}{\bklevel{4}}
+
+\bksubsection{3}{成分の棒グラフ：スペクトル}
+
+\label{bk:9-1:spec}高さ1の方形波は、次のように、ゆれる速さのちがう $\sin$ の和で書けました。
+\[ \frac{4}{\pi}\sin t+0\times\sin2t+\frac{4}{3\pi}\sin3t+0\times\sin4t+\frac{4}{5\pi}\sin5t+\cdots \]
+1つ1つの $\sin$ の波を、方形波の\textbf{成分}（せいぶん）といいます。それぞれの成分を何倍してたすかを、棒の高さで表すと、図\ref{bk:9-1:fig-spec}の右のようになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixbworlds{時間の世界}{周波数の世界}{分ける}{たし合わせる}
+\begin{axis}[kixb wave, at={(0mm,0mm)}, xmin=0, xmax=380, ymin=-1.5, ymax=1.5, xtick={180,360}, xticklabels={$\pi$,$2\pi$}, ytick={-1,1}, xlabel={$t$}, ylabel={$f$}]
+  \addplot[bkOrange!85!black, line width=0.9pt, dash pattern=on 3pt off 1.5pt] coordinates {(0,0) (0,1) (180,1) (180,-1) (360,-1) (360,0)};
+  \addplot[kixb sig, domain=0:360] {4/pi*(sin(x)+sin(3*x)/3+sin(5*x)/5)};
+\end{axis}
+\begin{axis}[kixb spec, at={(76mm,0mm)}, xmin=0, xmax=10, ymax=1.45, xtick={1,2,...,9}, ytick={0.5,1}, xlabel={番号 $n$}, ylabel={大きさ $b_n$}]
+  \addplot[kixb bar] coordinates {(1,1.2732) (3,0.4244) (5,0.2546) (7,0.1819) (9,0.1415)};
+  \addplot[kixb dot, mark size=1.5pt, bkInk] coordinates {(2,0) (4,0) (6,0) (8,0)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ方形波の2つの見方。左は時間の世界の形（オレンジの点線が方形波、青い線は右の棒のうち $n=1$・3・5 の3本をたしたもの）、右は周波数の世界のスペクトル（$\sin nt$ を何倍してたすかの棒グラフ）。偶数番（黒い点）は0。左から右へが「分ける」、右から左へが「たし合わせる」。}
+\label{bk:9-1:fig-spec}
+\end{bkfigure}
+
+このような「成分の大きさの棒グラフ」を\textbf{スペクトル}といいます。\bkidx{すぺくとる}{スペクトル}虹が、太陽の光を色（波長）ごとに分けて見せるのと同じ考えで、波を「ゆれる速さ」ごとに分けて見せるグラフです。
+
+左の形と右の棒グラフは、同じものの2つの見方です。左から右へが「分ける」、右から左へが「たし合わせる」です。この巻では、このように\textbf{時間の世界}と\textbf{周波数の世界}の2つを、いつも並べて見ていきます（9-0）。
+
+\kixbhead{方形波のスペクトルの読み方}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item いちばん大きいのは $n=1$（方形波と同じ速さでゆれる成分）。これを\textbf{基本波}（きほんは）といいます。
+\item $n=3,\ 5,\ 7,\ \cdots$ と、奇数番の成分だけがあり、大きさは $\frac13$、$\frac15$、$\frac17$ と、$n$ に反比例して小さくなります。2以上の番号の成分を\textbf{高調波}（こうちょうは）といいます。
+\item 偶数番の成分はありません。方形波の上半分と下半分が、ちょうど同じ形で上下に返っているからです（くわしいわけは 9-2 で）。
+\end{itemize}
+
+\kixbhead{スペクトルがちがえば、音色がちがう}
+楽器の音や声も、くり返す波です。同じ高さの音でも、楽器によって波の形がちがい、スペクトル（どの成分が、どれだけあるか）がちがいます。図\ref{bk:9-1:fig-neiro}は、作った数で2つの音をくらべた例です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixby/\kixba/\kixbb/\kixbc/\kixbd/\kixbname in {0/1/0.5/0.3/0.1/音A,-34/1/0.1/0.4/0.05/音B} {%
+    \begin{scope}[shift={(0,\kixby)}]
+    \node[font=\sffamily\bfseries\footnotesize, anchor=west] at (-2,13) {\kixbname};
+    \draw[bkGray, line width=0.4pt] (0,0) -- (60,0);
+    \draw[bkBlue, line width=1pt, domain=0:720, samples=240, smooth, variable=\t] plot ({\t/12},{6*(\kixba*sin(\t)+\kixbb*sin(2*\t)+\kixbc*sin(3*\t)+\kixbd*sin(4*\t))});
+    \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (80,-6) -- (120,-6) node[right, font=\footnotesize, inner sep=1pt] {$n$};
+    \draw[bkInk, line width=0.6pt] (80,-6) -- (80,12);
+    \foreach \kixbn/\kixbh in {1/\kixba,2/\kixbb,3/\kixbc,4/\kixbd} {%
+      \fill[bkOrange!85] ({80+7*\kixbn-2},-6) rectangle ({80+7*\kixbn+2},{-6+15*\kixbh});
+      \node[font=\footnotesize, anchor=north] at ({80+7*\kixbn},-6.6) {\kixbn};}
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{同じ高さ（基本波は同じ）の2つの音（作った数）。音Aは2番め（2倍の速さ）の成分が大きく、音Bは3番めが大きい。波の形がちがい、音色がちがって聞こえる。}
+\label{bk:9-1:fig-neiro}
+\end{bkfigure}
+
+音の高さを決めるのは基本波の速さ（1秒にゆれる回数）、音色を決めるのはスペクトルの形（成分の並び）です。ギターやピアノの音のスペクトルは、2倍・3倍・4倍…の成分がならぶ形になります（⑨の弦で、なぜそうなるかを見ます）。
+
+\bksubsection{4}{周期が $T$ の波}
+
+\label{bk:9-1:shuki}ここまでは、周期（1回のくり返しにかかる時間）が $2\pi$ 秒の波でした。家のコンセントの電気は、東日本では1秒に50回、西日本では60回くり返します。周期が $T$〔s〕の波では、1秒に進む角を
+\kixbframe[90mm]{$\omega_0=\dfrac{2\pi}{T}$\qquad（基本角周波数〔rad/s〕）}
+とします。1周期 $T$ のあいだに、角がちょうど $2\pi$（1回転）進むようにするためです（5-15 の角周波数 $\omega$ と同じ考え）。これを\textbf{基本角周波数}といい、$\omega_0$（オメガ・ゼロ）と書きます。$\sin t$ の $t$ を $\omega_0t$ に、$\sin nt$ を $\sin n\omega_0t$ にかえると、周期 $T$ の方形波になります。
+\kixbframe[110mm]{$\dfrac{4}{\pi}\Bigl(\sin\omega_0t+\dfrac13\sin3\omega_0t+\dfrac15\sin5\omega_0t+\cdots\Bigr)$\\[2pt]\small\sffamily 高さ1、周期 $T$ の方形波}
+$n$ 番めの成分は、角周波数が $n\omega_0$ です。1秒にゆれる回数（周波数）でいうと、基本波の $n$ 倍です。
+
+\kixbhead{50\,Hz の方形波}
+たとえば、周期 $T=\frac{1}{50}$\,s（$=\qty{0.02}{s}$）の方形波なら、
+\[ \omega_0=\frac{2\pi}{0.02}=100\pi\approx314\ \text{rad/s} \]
+です。成分は 50\,Hz（基本波）、150\,Hz、250\,Hz、350\,Hz、…で、大きさは $\frac{4}{\pi}\approx1.27$、$\frac{4}{3\pi}\approx0.42$、$\frac{4}{5\pi}\approx0.25$、…です。直流を交流に変える装置の中には、まず方形波に近い電圧を作るものがあります。そのままでは 150\,Hz・250\,Hz の成分がまざり、モーターがうなったり、ほかの機械に雑音を出したりします。だから、これらの成分を小さくする工夫をします（9-2・9-3）。
+
+\begin{seikaku}
+\kixbbox{角周波数・周波数・番号}
+$\omega_0$ は「基本の」角周波数で、$n\omega_0$ が $n$ 番めの成分の角周波数です。$\omega_n$ とは書きません。6-12 の $\omega_{\mathrm n}$（立てた n）は、ばねの「固有角振動数」という別のものだからです。また、周波数（1秒の回数〔Hz〕）と角周波数（1秒に進む角〔rad/s〕）は $2\pi$ 倍ちがいます。周波数は「振動数」と同じものです。
+\end{seikaku}
+
+\bksubsection{5}{係数の見つけ方：かけて平均の2倍}
+
+\label{bk:9-1:kakete}方形波は「$\sin t$ を $\frac{4}{\pi}$ 倍、$\sin3t$ を $\frac{4}{3\pi}$ 倍、……」してたしたものでした。では、どんな波でも、この「何倍か」（\textbf{係数}）を見つける方法はあるでしょうか。表計算で、ためしてみます。
+
+\kixbhead{表計算で：方形波に $\sin nt$ をかけて、平均する}
+1周期（0° から 360°）を10° ずつ36個に区切り、それぞれのまん中の角（5°、15°、…、355°）で、方形波の値 $f$（B列）に $\sin t$、$\sin3t$、$\sin5t$ をかけます。いちばん下の行で、36個の平均を2倍します。
+\begin{bkcenter}
+\kixbfx{C2}{=\$B2*SIN(C\$1*RADIANS(\$A2))}\par\vspace{1mm}
+\bksheet{5}{17}{%
+1 & \SetCell{c} $t$＼$n$ & \SetCell{c} 波 $f$ & \SetCell{bg=kixbN} 1 & \SetCell{bg=kixbN} 3 & \SetCell{bg=kixbN} 5 \\
+2 & 5 & 1 & 0.0872 & 0.2588 & 0.4226 \\
+3 & 15 & 1 & 0.2588 & 0.7071 & 0.9659 \\
+4 & 25 & 1 & 0.4226 & 0.9659 & 0.8192 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+20 & 185 & $-1$ & 0.0872 & 0.2588 & 0.4226 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+37 & 355 & $-1$ & 0.0872 & 0.2588 & 0.4226 \\
+38 & \SetCell{c} 平均×2 & & \SetCell{bg=kixbS} 1.2749 & \SetCell{bg=kixbS} 0.4293 & \SetCell{bg=kixbS} 0.2629 \\}
+\bktabcaption{方形波（B列：\texttt{=IF(A2<180,1,-1)}）に $\sin nt$ をかけた表。A列は角 $t$（°。5° から10° ごとの36点）、1行めは番号 $n$。38行めは \texttt{=2*AVERAGE(C2:C37)}。}
+\end{bkcenter}
+本当の係数とくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, row{1}={font=\sffamily\small}, rowsep=1.5pt, colsep=3pt}
+ & $n=1$ & $n=3$ & $n=5$ \\
+平均の2倍 & 1.2749 & 0.4293 & 0.2629 \\
+方形波の係数 & $\frac{4}{\pi}=1.2732$ & $\frac{4}{3\pi}=0.4244$ & $\frac{4}{5\pi}=0.2546$ \\
+\end{bktable}
+\bktabcaption{「かけて平均の2倍」は、方形波の係数にほぼ等しい。区切りを細かくすると、もっと近づく。偶数番（$n=2$ など）の列を足すと、平均は0になる。}
+\end{bkcenter}
+「$\sin nt$ をかけて、1周期で平均し、2倍する」と、$\sin nt$ の係数がほぼ出てきました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixbx/\kixbn/\kixbtitle in {0/1/{$f\times\sin t$：いつも0以上},68/2/{$f\times\sin2t$：上と下が打ち消す}} {%
+    \begin{scope}[shift={(\kixbx,0)}]
+    \node[font=\sffamily\footnotesize, anchor=south] at (27,15) {\kixbtitle};
+    \draw[bkInk, line width=0.5pt, -{Stealth[length=1.8mm]}] (0,0) -- (58,0) node[right, font=\footnotesize, inner sep=1pt] {$t$};
+    \fill[bkBlue!25, domain=0:360, samples=120, variable=\t] (0,0) -- plot ({\t/7},{(\t<180 ? 1 : -1)*10*sin(\kixbn*\t)}) -- (51.43,0) -- cycle;
+    \draw[bkBlue, line width=1pt, domain=0:360, samples=120, variable=\t] plot ({\t/7},{(\t<180 ? 1 : -1)*10*sin(\kixbn*\t)});
+    \node[font=\footnotesize, anchor=north] at (25.7,-11) {$\pi$};
+    \node[font=\footnotesize, anchor=north] at (51.4,-11) {$2\pi$};
+    \draw[bkGray, line width=0.4pt] (25.7,-10.5) -- (25.7,11);
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{方形波 $f$ に $\sin t$ をかけると（左）、$f$ と $\sin t$ はいつも同じ符号なので、積は0以上で、平均は正。$\sin2t$ をかけると（右）、正の部分と負の部分が同じ面積で、平均は0。}
+\label{bk:9-1:fig-kakete}
+\end{bkfigure}
+
+図\ref{bk:9-1:fig-kakete}が、そのしくみです。方形波にふくまれる $\sin t$ の成分は、$\sin t$ と「歩調が合っている」ので、かけると正の値ばかりがたまります。ふくまれていない $\sin2t$ をかけると、正と負が打ち消し合って0になります。かけ算が、その成分だけを「取り出す」はたらきをしているのです。
+
+なぜ平均を\textbf{2倍}するのかも、1つ確かめます。$f$ が $\sin t$ そのもの（係数は1）なら、かけたものは $\sin^2t$ です。$\sin^2t=\frac{1-\cos2t}{2}$（4-9 の2倍角の式）で、$\cos2t$ の平均は0なので、$\sin^2t$ の平均は $\frac12$ です。係数1を出すには、平均 $\frac12$ を2倍しなければなりません。なぜ、ほかの成分がきれいに0になるのかは、9-2 で、ふつうの定積分を使ってきちんと確かめます。
+
+\kixbdanhead{1}{「係数」は、操作の名前}
+「かけて平均の2倍」を式で書きます。関数の平均は「積分÷区間の長さ」でした（5-11）。周期が $2\pi$ の波 $f(t)$ の、$\sin nt$ の係数を $b_n$ と書くと、
+\[ b_n=2\times\frac{1}{2\pi}\int_0^{2\pi}f(t)\sin nt\,\dd t=\frac{1}{\pi}\int_0^{2\pi}f(t)\sin nt\,\dd t \]
+です。$b_n$（ビー・エヌ）は、「1周期で、$f$ に $\sin nt$ をかけてたし合わせ、$\frac{1}{\pi}$ 倍する」という\textbf{操作の名前}です。記号 $b_n$ を見ただけでは、まだ数は出ません。この巻では、名前の記号を点線のわくで、実際に計算できる形を実線のわくで、書き分けます。
+\[ \kixbNt{b_n}=\kixbSt{1}{\frac{1}{\pi}\int_0^{2\pi}f(t)\sin nt\,\dd t} \]
+実線のわくの下の札は、どの道具で計算するかです。この章の道具は「ふつうの定積分」です（9-5 からは「表を引く」「部分分数」「行列の計算」の札も出てきます）。
+
+\kixbdanhead{2}{ふつうの定積分に直す：区間に分ける}
+方形波は、$0<t<\pi$ で1、$\pi<t<2\pi$ で $-1$ です。1つの式では書けないので、積分の区間を2つに分けます（5-11：$\int_a^c=\int_a^b+\int_b^c$）。
+\begin{bkhenkei}[0.6]
+b_n=\frac{1}{\pi}\Bigl(\int_0^{\pi}\sin nt\,\dd t-\int_{\pi}^{2\pi}\sin nt\,\dd t\Bigr) & 区間を2つに分ける。2つめは $f=-1$ \\
+\int_0^{\pi}\sin nt\,\dd t=\Bigl[-\frac{\cos nt}{n}\Bigr]_0^{\pi}=\frac{1-\cos n\pi}{n} & 5-15 の積分。$\cos0=1$ \\
+\int_{\pi}^{2\pi}\sin nt\,\dd t=\Bigl[-\frac{\cos nt}{n}\Bigr]_{\pi}^{2\pi}=\frac{\cos n\pi-1}{n} & $\cos2n\pi=1$（$2\pi$ の整数倍） \\
+b_n=\frac{1}{\pi}\Bigl(\frac{1-\cos n\pi}{n}-\frac{\cos n\pi-1}{n}\Bigr) & 2行め・3行めを入れる \\
+=\frac{2(1-\cos n\pi)}{n\pi} & 分子をまとめる \\
+\end{bkhenkei}
+$\cos n\pi$ は、$n$ が奇数なら $-1$、偶数なら1です（$\pi$ ごとに $-1$ と1をくり返す）。まとめて $\cos n\pi=(-1)^n$ と書けます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=38mm] *{5}{Q[c,m,wd=14mm]}}, row{1}={font=\sffamily\small}, rowsep=1.5pt, colsep=2pt}
+$n$ & 1 & 2 & 3 & 4 & 5 \\
+$\cos n\pi$ & $-1$ & 1 & $-1$ & 1 & $-1$ \\
+$b_n=\dfrac{2(1-\cos n\pi)}{n\pi}$ & $\dfrac{4}{\pi}$ & 0 & $\dfrac{4}{3\pi}$ & 0 & $\dfrac{4}{5\pi}$ \\
+\end{bktable}
+\bktabcaption{方形波の係数。奇数番は $\frac{4}{n\pi}$、偶数番は0。}
+\end{bkcenter}
+表計算で見つけた1.2749、0.4293、0.2629 の、本当の値 $\frac{4}{\pi}$、$\frac{4}{3\pi}$、$\frac{4}{5\pi}$ が、ふつうの定積分で出ました。偶数番が0になることも、式でわかりました。
+
+\bkhatenaref の答えです。なめらかな波でも、$\sin t$、$\sin3t$、$\sin5t$、…と、\textbf{速くゆれる波を、$\frac{4}{n\pi}$ ずつ小さくしながら、限りなくたしていく}と、角のある方形波になります。1つ1つの波はなめらかでも、速くゆれる波ほど、急な変化を作れます。無限にたすと、とびのある形まで作れるのです（角のそばの約9\%の山は残ります：②）。
+
+\bkkokomade[$\sin$ をたして方形波に近づくこと、成分を棒グラフ（スペクトル）で読むこと、係数は「かけて平均の2倍」で、方形波なら区間に分けたふつうの定積分で $\frac{4}{n\pi}$ と求まること。ここまでわかれば十分です。この先は、$\cos$ や平均もふくめた一般の形と、熱・弦への使いみちです。]
+
+%% ---------------- 式でわかる ----------------
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{一般の形と、熱・弦}{\bklevel{4}}
+
+\bksubsection{6}{フーリエ級数の式}
+
+\label{bk:9-1:shiki}方形波は $\sin$ だけでたせました。でも、いつもそうとはかぎりません。たとえば、0\,V と 5\,V をくり返すデジタル回路の信号は、平均が 2.5\,V で、0 のまわりで上下に同じだけゆれる波ではありません。また、方形波を時間の向きに少しずらすと、$\cos$ の成分も必要になります（$\cos t=\sin(t+\frac{\pi}{2})$。4-8）。そこで、一般には次の形を使います。
+
+\kixbframe[124mm]{$f(t)=\dfrac{a_0}{2}+\displaystyle\sum_{n=1}^{\infty}\bigl(a_n\cos n\omega_0t+b_n\sin n\omega_0t\bigr)$\qquad $\Bigl(\omega_0=\dfrac{2\pi}{T}\Bigr)$}
+
+これを\textbf{フーリエ級数}（フーリエきゅうすう）といい、\bkidx{ふーりえきゅうすう}{フーリエ級数}$a_n$・$b_n$ を\textbf{フーリエ係数}といいます。$\sum_{n=1}^{\infty}$ は「$n=1,\ 2,\ 3,\ \cdots$ と、限りなくたす」という意味です（5-10 の $\sum$ の、終わりのない形）。係数は、⑤と同じく「かけて平均の2倍」です。
+
+\[ \kixbNt{a_n}=\kixbSt{1}{\frac{2}{T}\int_0^Tf(t)\cos n\omega_0t\,\dd t} \]
+\[ \kixbNt{b_n}=\kixbSt{1}{\frac{2}{T}\int_0^Tf(t)\sin n\omega_0t\,\dd t} \]
+
+$\frac{2}{T}$ は「平均（$\frac{1}{T}\int_0^T$）の2倍」の意味です。$T=2\pi$ なら $\frac{2}{2\pi}=\frac{1}{\pi}$ で、⑤の式にもどります。$a_n$ は $n=0,\ 1,\ 2,\ \cdots$、$b_n$ は $n=1,\ 2,\ \cdots$ について使います（$b_0$ は $\sin0=0$ をかけるので、いつも0）。
+
+\kixbhead{なぜ $\frac{a_0}{2}$ と、$\frac12$ をつけるのか}
+定数の項（$t$ によらない部分）が何になるかを考えます。フーリエ級数の両辺を、1周期で積分します。$\cos n\omega_0t$・$\sin n\omega_0t$（$n\geqq1$）は、1周期で積分すると0です（5-15。ちょうど $n$ 回、上と下が同じだけある）。
+\begin{bkhenkei}[0.56]
+\int_0^Tf(t)\,\dd t=\int_0^T(\text{定数})\,\dd t+0 & $\cos$・$\sin$ の項は、1周期で0 \\
+\int_0^Tf(t)\,\dd t=(\text{定数})\times T & 定数の積分は、定数×長さ \\
+\text{定数}=\frac{1}{T}\int_0^Tf(t)\,\dd t & 両辺を $T$ でわる。これは $f$ の平均 \\
+\end{bkhenkei}
+定数の項は、$f$ の\textbf{平均}です（\textbf{直流分}ともいいます）。いっぽう、$a_n$ の式に $n=0$ を入れると、$\cos0=1$ なので
+\begin{bkhenkei}[0.56]
+a_0=\frac{2}{T}\int_0^Tf(t)\times1\,\dd t & $a_n$ の式で $n=0$ \\
+a_0=2\times\frac{1}{T}\int_0^Tf(t)\,\dd t=2\times(\text{平均}) & $\frac{2}{T}=2\times\frac{1}{T}$ \\
+\frac{a_0}{2}=\text{平均} & 両辺を2でわる \\
+\end{bkhenkei}
+です。定数の項を $\frac{a_0}{2}$ と書いておけば、$a_0$ だけ別の式を作らずに、$a_n$ の式をそのまま $n=0$ に使えます。$\frac12$ は、そのための約束です。
+
+\kixbhead{1周期なら、どこからどこまででもよい}
+$f$ も $\cos n\omega_0t$・$\sin n\omega_0t$ も、周期 $T$ でくり返します。だから、積分は「長さ $T$ の区間」なら、$0$ から $T$ でも、$-\frac{T}{2}$ から $\frac{T}{2}$ でも、同じ値になります（1周期ぶんの面積は、どこで切っても同じ）。計算が楽になるほうを選びます。⑦では $-\pi$ から $\pi$ を使います。
+
+\kixbhead{どんなときに、どう直す？（9-2 の表の予告）}
+係数 $a_n$・$b_n$ は名前です。実際の計算のしかたは、波の形によって変わります。9-2 で、すべての場合を「場合分けの表9-2」と流れ図にまとめます。この章では、そのうち次の5つを使います（記号は表9-2 と同じ）。
+
+\kixbcasetitle{9-2}{（この章で使う5つ）フーリエ係数をどう求める？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,32mm] X[l,m] Q[c,m,13mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixbcase{I} & 式がなく、はかった値だけ（とびとびの値） & \kixbdan{3}\enspace 表計算で「値×$\sin n\omega_0t$」の平均の2倍（⑤の表） & 5 \\
+\kixbcase{E} & 棒・弦のように、$0$ から $L$ だけで決まる形 & \kixbdan{3}\enspace 外側へ、原点で半回転した形に広げて、$\sin$ だけの級数にする（⑧） & 6・7 \\
+\kixbcase{F} & 周期が $2\pi$ でない & \kixbdan{3}\enspace $\omega_0=\frac{2\pi}{T}$、$\theta=\omega_0t$ とおきかえて、周期 $2\pi$ の形にもどす & 4 \\
+\kixbcase{B} & 区間ごとに一定（方形波） & \kixbop{1}\enspace 区間に分けて、$\cos$・$\sin$ の定積分。$\cos n\pi=(-1)^n$ & 2・4・6・7 \\
+\kixbcase{C} & 区間ごとに1次式（のこぎり波） & \kixbop{1}\enspace 部分積分（5-16） & 3 \\
+\end{bktable}
+\end{bkcenter}
+I・E・F は、③の\textbf{楽をする段}（計算する前に、形を楽なものに直す）、B・C は②の\textbf{直す段}（ふつうの定積分で計算する）です。E・F のあとは、B か C で計算します。
+
+\bksubsection{7}{のこぎり波：部分積分で}
+
+\label{bk:9-1:nokogiri}5-16 で「$\int t\sin nt\,\dd t$ のような積分を部分積分で計算して、音や振動を $\sin$ と $\cos$ に分けます（9-1）」と約束しました。$-\pi<t<\pi$ で $f(t)=t$ をくり返す\textbf{のこぎり波}の係数を求めます（図\ref{bk:9-1:fig-saw}）。周期は $2\pi$ なので、$\frac{2}{T}=\frac{1}{\pi}$、積分は $-\pi$ から $\pi$ までにします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=50mm, xmin=-200, xmax=560, ymin=-3.8, ymax=4.2, xtick={-180,180,540}, xticklabels={$-\pi$,$\pi$,$3\pi$}, ytick={-3.1416,3.1416}, yticklabels={$-\pi$,$\pi$}, xlabel={$t$}]
+  \addplot[bkOrange!85!black, line width=1.1pt] coordinates {(-180,-3.1416) (180,3.1416)};
+  \addplot[bkcurve, line width=1.1pt] coordinates {(-180.0,-0.000) (-179.0,-0.174) (-178.0,-0.348) (-177.0,-0.521) (-176.0,-0.692) (-175.0,-0.861) (-174.0,-1.026) (-173.0,-1.189) (-172.0,-1.347) (-171.0,-1.501) (-170.0,-1.650) (-169.0,-1.794) (-168.0,-1.932) (-167.0,-2.064) (-166.0,-2.190) (-165.0,-2.308) (-164.0,-2.420) (-163.0,-2.524) (-162.0,-2.621) (-161.0,-2.710) (-160.0,-2.791) (-159.0,-2.864) (-158.0,-2.928) (-157.0,-2.985) (-156.0,-3.034) (-155.0,-3.075) (-154.0,-3.108) (-153.0,-3.134) (-152.0,-3.152) (-151.0,-3.162) (-150.0,-3.166) (-149.0,-3.162) (-148.0,-3.152) (-147.0,-3.136) (-146.0,-3.114) (-145.0,-3.087) (-144.0,-3.055) (-143.0,-3.017) (-142.0,-2.976) (-141.0,-2.931) (-140.0,-2.882) (-139.0,-2.830) (-138.0,-2.776) (-137.0,-2.720) (-136.0,-2.662) (-135.0,-2.603) (-134.0,-2.543) (-133.0,-2.483) (-132.0,-2.422) (-131.0,-2.362) (-130.0,-2.303) (-129.0,-2.245) (-128.0,-2.189) (-127.0,-2.134) (-126.0,-2.081) (-125.0,-2.031) (-124.0,-1.983) (-123.0,-1.937) (-122.0,-1.895) (-121.0,-1.855) (-120.0,-1.819) (-119.0,-1.785) (-118.0,-1.755) (-117.0,-1.728) (-116.0,-1.705) (-115.0,-1.684) (-114.0,-1.667) (-113.0,-1.653) (-112.0,-1.641) (-111.0,-1.633) (-110.0,-1.627) (-109.0,-1.624) (-108.0,-1.623) (-107.0,-1.624) (-106.0,-1.626) (-105.0,-1.631) (-104.0,-1.637) (-103.0,-1.644) (-102.0,-1.652) (-101.0,-1.661) (-100.0,-1.670) (-99.0,-1.679) (-98.0,-1.689) (-97.0,-1.698) (-96.0,-1.706) (-95.0,-1.714) (-94.0,-1.720) (-93.0,-1.726) (-92.0,-1.730) (-91.0,-1.732) (-90.0,-1.733) (-89.0,-1.732) (-88.0,-1.730) (-87.0,-1.725) (-86.0,-1.718) (-85.0,-1.708) (-84.0,-1.697) (-83.0,-1.683) (-82.0,-1.667) (-81.0,-1.649) (-80.0,-1.629) (-79.0,-1.606) (-78.0,-1.582) (-77.0,-1.555) (-76.0,-1.527) (-75.0,-1.497) (-74.0,-1.465) (-73.0,-1.432) (-72.0,-1.398) (-71.0,-1.363) (-70.0,-1.326) (-69.0,-1.289) (-68.0,-1.251) (-67.0,-1.213) (-66.0,-1.175) (-65.0,-1.137) (-64.0,-1.099) (-63.0,-1.061) (-62.0,-1.024) (-61.0,-0.988) (-60.0,-0.953) (-59.0,-0.918) (-58.0,-0.885) (-57.0,-0.853) (-56.0,-0.823) (-55.0,-0.794) (-54.0,-0.767) (-53.0,-0.741) (-52.0,-0.718) (-51.0,-0.696) (-50.0,-0.676) (-49.0,-0.658) (-48.0,-0.641) (-47.0,-0.627) (-46.0,-0.614) (-45.0,-0.603) (-44.0,-0.593) (-43.0,-0.586) (-42.0,-0.579) (-41.0,-0.574) (-40.0,-0.570) (-39.0,-0.568) (-38.0,-0.566) (-37.0,-0.565) (-36.0,-0.565) (-35.0,-0.565) (-34.0,-0.565) (-33.0,-0.566) (-32.0,-0.567) (-31.0,-0.567) (-30.0,-0.568) (-29.0,-0.567) (-28.0,-0.566) (-27.0,-0.565) (-26.0,-0.562) (-25.0,-0.558) (-24.0,-0.554) (-23.0,-0.547) (-22.0,-0.540) (-21.0,-0.531) (-20.0,-0.520) (-19.0,-0.508) (-18.0,-0.494) (-17.0,-0.479) (-16.0,-0.461) (-15.0,-0.442) (-14.0,-0.422) (-13.0,-0.400) (-12.0,-0.376) (-11.0,-0.350) (-10.0,-0.324) (-9.0,-0.295) (-8.0,-0.266) (-7.0,-0.235) (-6.0,-0.204) (-5.0,-0.171) (-4.0,-0.138) (-3.0,-0.104) (-2.0,-0.070) (-1.0,-0.035) (0.0,0.000) (1.0,0.035) (2.0,0.070) (3.0,0.104) (4.0,0.138) (5.0,0.171) (6.0,0.204) (7.0,0.235) (8.0,0.266) (9.0,0.295) (10.0,0.324) (11.0,0.350) (12.0,0.376) (13.0,0.400) (14.0,0.422) (15.0,0.442) (16.0,0.461) (17.0,0.479) (18.0,0.494) (19.0,0.508) (20.0,0.520) (21.0,0.531) (22.0,0.540) (23.0,0.547) (24.0,0.554) (25.0,0.558) (26.0,0.562) (27.0,0.565) (28.0,0.566) (29.0,0.567) (30.0,0.568) (31.0,0.567) (32.0,0.567) (33.0,0.566) (34.0,0.565) (35.0,0.565) (36.0,0.565) (37.0,0.565) (38.0,0.566) (39.0,0.568) (40.0,0.570) (41.0,0.574) (42.0,0.579) (43.0,0.586) (44.0,0.593) (45.0,0.603) (46.0,0.614) (47.0,0.627) (48.0,0.641) (49.0,0.658) (50.0,0.676) (51.0,0.696) (52.0,0.718) (53.0,0.741) (54.0,0.767) (55.0,0.794) (56.0,0.823) (57.0,0.853) (58.0,0.885) (59.0,0.918) (60.0,0.953) (61.0,0.988) (62.0,1.024) (63.0,1.061) (64.0,1.099) (65.0,1.137) (66.0,1.175) (67.0,1.213) (68.0,1.251) (69.0,1.289) (70.0,1.326) (71.0,1.363) (72.0,1.398) (73.0,1.432) (74.0,1.465) (75.0,1.497) (76.0,1.527) (77.0,1.555) (78.0,1.582) (79.0,1.606) (80.0,1.629) (81.0,1.649) (82.0,1.667) (83.0,1.683) (84.0,1.697) (85.0,1.708) (86.0,1.718) (87.0,1.725) (88.0,1.730) (89.0,1.732) (90.0,1.733) (91.0,1.732) (92.0,1.730) (93.0,1.726) (94.0,1.720) (95.0,1.714) (96.0,1.706) (97.0,1.698) (98.0,1.689) (99.0,1.679) (100.0,1.670) (101.0,1.661) (102.0,1.652) (103.0,1.644) (104.0,1.637) (105.0,1.631) (106.0,1.626) (107.0,1.624) (108.0,1.623) (109.0,1.624) (110.0,1.627) (111.0,1.633) (112.0,1.641) (113.0,1.653) (114.0,1.667) (115.0,1.684) (116.0,1.705) (117.0,1.728) (118.0,1.755) (119.0,1.785) (120.0,1.819) (121.0,1.855) (122.0,1.895) (123.0,1.937) (124.0,1.983) (125.0,2.031) (126.0,2.081) (127.0,2.134) (128.0,2.189) (129.0,2.245) (130.0,2.303) (131.0,2.362) (132.0,2.422) (133.0,2.483) (134.0,2.543) (135.0,2.603) (136.0,2.662) (137.0,2.720) (138.0,2.776) (139.0,2.830) (140.0,2.882) (141.0,2.931) (142.0,2.976) (143.0,3.017) (144.0,3.055) (145.0,3.087) (146.0,3.114) (147.0,3.136) (148.0,3.152) (149.0,3.162) (150.0,3.166) (151.0,3.162) (152.0,3.152) (153.0,3.134) (154.0,3.108) (155.0,3.075) (156.0,3.034) (157.0,2.985) (158.0,2.928) (159.0,2.864) (160.0,2.791) (161.0,2.710) (162.0,2.621) (163.0,2.524) (164.0,2.420) (165.0,2.308) (166.0,2.190) (167.0,2.064) (168.0,1.932) (169.0,1.794) (170.0,1.650) (171.0,1.501) (172.0,1.347) (173.0,1.189) (174.0,1.026) (175.0,0.861) (176.0,0.692) (177.0,0.521) (178.0,0.348) (179.0,0.174) (180.0,0.000) (181.0,-0.174) (182.0,-0.348) (183.0,-0.521) (184.0,-0.692) (185.0,-0.861) (186.0,-1.026) (187.0,-1.189) (188.0,-1.347) (189.0,-1.501) (190.0,-1.650) (191.0,-1.794) (192.0,-1.932) (193.0,-2.064) (194.0,-2.190) (195.0,-2.308) (196.0,-2.420) (197.0,-2.524) (198.0,-2.621) (199.0,-2.710) (200.0,-2.791) (201.0,-2.864) (202.0,-2.928) (203.0,-2.985) (204.0,-3.034) (205.0,-3.075) (206.0,-3.108) (207.0,-3.134) (208.0,-3.152) (209.0,-3.162) (210.0,-3.166) (211.0,-3.162) (212.0,-3.152) (213.0,-3.136) (214.0,-3.114) (215.0,-3.087) (216.0,-3.055) (217.0,-3.017) (218.0,-2.976) (219.0,-2.931) (220.0,-2.882) (221.0,-2.830) (222.0,-2.776) (223.0,-2.720) (224.0,-2.662) (225.0,-2.603) (226.0,-2.543) (227.0,-2.483) (228.0,-2.422) (229.0,-2.362) (230.0,-2.303) (231.0,-2.245) (232.0,-2.189) (233.0,-2.134) (234.0,-2.081) (235.0,-2.031) (236.0,-1.983) (237.0,-1.937) (238.0,-1.895) (239.0,-1.855) (240.0,-1.819) (241.0,-1.785) (242.0,-1.755) (243.0,-1.728) (244.0,-1.705) (245.0,-1.684) (246.0,-1.667) (247.0,-1.653) (248.0,-1.641) (249.0,-1.633) (250.0,-1.627) (251.0,-1.624) (252.0,-1.623) (253.0,-1.624) (254.0,-1.626) (255.0,-1.631) (256.0,-1.637) (257.0,-1.644) (258.0,-1.652) (259.0,-1.661) (260.0,-1.670) (261.0,-1.679) (262.0,-1.689) (263.0,-1.698) (264.0,-1.706) (265.0,-1.714) (266.0,-1.720) (267.0,-1.726) (268.0,-1.730) (269.0,-1.732) (270.0,-1.733) (271.0,-1.732) (272.0,-1.730) (273.0,-1.725) (274.0,-1.718) (275.0,-1.708) (276.0,-1.697) (277.0,-1.683) (278.0,-1.667) (279.0,-1.649) (280.0,-1.629) (281.0,-1.606) (282.0,-1.582) (283.0,-1.555) (284.0,-1.527) (285.0,-1.497) (286.0,-1.465) (287.0,-1.432) (288.0,-1.398) (289.0,-1.363) (290.0,-1.326) (291.0,-1.289) (292.0,-1.251) (293.0,-1.213) (294.0,-1.175) (295.0,-1.137) (296.0,-1.099) (297.0,-1.061) (298.0,-1.024) (299.0,-0.988) (300.0,-0.953) (301.0,-0.918) (302.0,-0.885) (303.0,-0.853) (304.0,-0.823) (305.0,-0.794) (306.0,-0.767) (307.0,-0.741) (308.0,-0.718) (309.0,-0.696) (310.0,-0.676) (311.0,-0.658) (312.0,-0.641) (313.0,-0.627) (314.0,-0.614) (315.0,-0.603) (316.0,-0.593) (317.0,-0.586) (318.0,-0.579) (319.0,-0.574) (320.0,-0.570) (321.0,-0.568) (322.0,-0.566) (323.0,-0.565) (324.0,-0.565) (325.0,-0.565) (326.0,-0.565) (327.0,-0.566) (328.0,-0.567) (329.0,-0.567) (330.0,-0.568) (331.0,-0.567) (332.0,-0.566) (333.0,-0.565) (334.0,-0.562) (335.0,-0.558) (336.0,-0.554) (337.0,-0.547) (338.0,-0.540) (339.0,-0.531) (340.0,-0.520) (341.0,-0.508) (342.0,-0.494) (343.0,-0.479) (344.0,-0.461) (345.0,-0.442) (346.0,-0.422) (347.0,-0.400) (348.0,-0.376) (349.0,-0.350) (350.0,-0.324) (351.0,-0.295) (352.0,-0.266) (353.0,-0.235) (354.0,-0.204) (355.0,-0.171) (356.0,-0.138) (357.0,-0.104) (358.0,-0.070) (359.0,-0.035) (360.0,-0.000) (361.0,0.035) (362.0,0.070) (363.0,0.104) (364.0,0.138) (365.0,0.171) (366.0,0.204) (367.0,0.235) (368.0,0.266) (369.0,0.295) (370.0,0.324) (371.0,0.350) (372.0,0.376) (373.0,0.400) (374.0,0.422) (375.0,0.442) (376.0,0.461) (377.0,0.479) (378.0,0.494) (379.0,0.508) (380.0,0.520) (381.0,0.531) (382.0,0.540) (383.0,0.547) (384.0,0.554) (385.0,0.558) (386.0,0.562) (387.0,0.565) (388.0,0.566) (389.0,0.567) (390.0,0.568) (391.0,0.567) (392.0,0.567) (393.0,0.566) (394.0,0.565) (395.0,0.565) (396.0,0.565) (397.0,0.565) (398.0,0.566) (399.0,0.568) (400.0,0.570) (401.0,0.574) (402.0,0.579) (403.0,0.586) (404.0,0.593) (405.0,0.603) (406.0,0.614) (407.0,0.627) (408.0,0.641) (409.0,0.658) (410.0,0.676) (411.0,0.696) (412.0,0.718) (413.0,0.741) (414.0,0.767) (415.0,0.794) (416.0,0.823) (417.0,0.853) (418.0,0.885) (419.0,0.918) (420.0,0.953) (421.0,0.988) (422.0,1.024) (423.0,1.061) (424.0,1.099) (425.0,1.137) (426.0,1.175) (427.0,1.213) (428.0,1.251) (429.0,1.289) (430.0,1.326) (431.0,1.363) (432.0,1.398) (433.0,1.432) (434.0,1.465) (435.0,1.497) (436.0,1.527) (437.0,1.555) (438.0,1.582) (439.0,1.606) (440.0,1.629) (441.0,1.649) (442.0,1.667) (443.0,1.683) (444.0,1.697) (445.0,1.708) (446.0,1.718) (447.0,1.725) (448.0,1.730) (449.0,1.732) (450.0,1.733) (451.0,1.732) (452.0,1.730) (453.0,1.726) (454.0,1.720) (455.0,1.714) (456.0,1.706) (457.0,1.698) (458.0,1.689) (459.0,1.679) (460.0,1.670) (461.0,1.661) (462.0,1.652) (463.0,1.644) (464.0,1.637) (465.0,1.631) (466.0,1.626) (467.0,1.624) (468.0,1.623) (469.0,1.624) (470.0,1.627) (471.0,1.633) (472.0,1.641) (473.0,1.653) (474.0,1.667) (475.0,1.684) (476.0,1.705) (477.0,1.728) (478.0,1.755) (479.0,1.785) (480.0,1.819) (481.0,1.855) (482.0,1.895) (483.0,1.937) (484.0,1.983) (485.0,2.031) (486.0,2.081) (487.0,2.134) (488.0,2.189) (489.0,2.245) (490.0,2.303) (491.0,2.362) (492.0,2.422) (493.0,2.483) (494.0,2.543) (495.0,2.603) (496.0,2.662) (497.0,2.720) (498.0,2.776) (499.0,2.830) (500.0,2.882) (501.0,2.931) (502.0,2.976) (503.0,3.017) (504.0,3.055) (505.0,3.087) (506.0,3.114) (507.0,3.136) (508.0,3.152) (509.0,3.162) (510.0,3.166) (511.0,3.162) (512.0,3.152) (513.0,3.134) (514.0,3.108) (515.0,3.075) (516.0,3.034) (517.0,2.985) (518.0,2.928) (519.0,2.864) (520.0,2.791) (521.0,2.710) (522.0,2.621) (523.0,2.524) (524.0,2.420) (525.0,2.308) (526.0,2.190) (527.0,2.064) (528.0,1.932) (529.0,1.794) (530.0,1.650) (531.0,1.501) (532.0,1.347) (533.0,1.189) (534.0,1.026) (535.0,0.861) (536.0,0.692) (537.0,0.521) (538.0,0.348) (539.0,0.174) (540.0,0.000)};
+  \addplot[bkOrange!85!black, line width=1.1pt, forget plot] coordinates {(180,-3.1416) (540,3.1416)};
+  \addplot[bkOrange!85!black, line width=0.5pt, dash pattern=on 1.5pt off 1pt, forget plot] coordinates {(180,3.1416) (180,-3.1416)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{オレンジの線がのこぎり波（$-\pi<t<\pi$ で $f(t)=t$ をくり返す。目もりはラジアン）、青い線がフーリエ級数の5個までの和。$t=\pi$ のとびの所では、和は0（とびの上下のまん中）を通る。}
+\label{bk:9-1:fig-saw}
+\end{bkfigure}
+
+\kixbdan{1}\enspace $b_n=\frac{1}{\pi}\int_{-\pi}^{\pi}t\sin nt\,\dd t$（$t$ に $\sin nt$ をかけて、1周期でたす）。$a_n$ も同じく $t\cos nt$ をたす。\par
+\kixbnaosu{1}\enspace $t$ と $\sin nt$ のかけ算の積分なので、部分積分（5-16）を使う。
+
+\kixbhead{$b_n$ を求める}
+5-16 の部分積分 $\int fg'\,\dd t=\bigl[fg\bigr]-\int f'g\,\dd t$ で、微分すると簡単になる $t$ を $f$ に、積分できる $\sin nt$ を $g'$ にします。$g=-\frac{\cos nt}{n}$ です。
+\begin{bkhenkei}[0.66]
+\int_{-\pi}^{\pi}t\sin nt\,\dd t=\Bigl[-\frac{t\cos nt}{n}\Bigr]_{-\pi}^{\pi}+\frac{1}{n}\int_{-\pi}^{\pi}\cos nt\,\dd t & 部分積分。$f'=1$ \\
+\Bigl[-\frac{t\cos nt}{n}\Bigr]_{-\pi}^{\pi}=-\frac{\pi\cos n\pi}{n}-\frac{\pi\cos(-n\pi)}{n} & 上のはしから下のはしをひく \\
+=-\frac{2\pi\cos n\pi}{n}=\frac{2\pi(-1)^{n+1}}{n} & $\cos(-n\pi)=(-1)^n$ \\
+\frac{1}{n}\int_{-\pi}^{\pi}\cos nt\,\dd t=\frac{1}{n}\Bigl[\frac{\sin nt}{n}\Bigr]_{-\pi}^{\pi}=0 & $\sin(\pm n\pi)=0$ \\
+b_n=\frac{1}{\pi}\times\frac{2\pi(-1)^{n+1}}{n}=\frac{2(-1)^{n+1}}{n} & $\frac{1}{\pi}$ をかける \\
+\end{bkhenkei}
+$n=1$ のとき、積分は $2\pi$ です。5-16 の例題 $\int_0^{\pi}t\sin t\,\dd t=\pi$ の2倍で、$-\pi$ から0の部分も同じだけある（$t\sin t$ のグラフが左右対称）からです。
+
+\kixbhead{$a_n$ と $a_0$ を求める}
+$a_n$ も部分積分で、$g'=\cos nt$、$g=\frac{\sin nt}{n}$ とします（$n\geqq1$）。
+\begin{bkhenkei}[0.66]
+\int_{-\pi}^{\pi}t\cos nt\,\dd t=\Bigl[\frac{t\sin nt}{n}\Bigr]_{-\pi}^{\pi}-\frac{1}{n}\int_{-\pi}^{\pi}\sin nt\,\dd t & 部分積分 \\
+=0-\frac{1}{n}\Bigl[-\frac{\cos nt}{n}\Bigr]_{-\pi}^{\pi}=0 & $\pm n\pi$ で $\sin$ は0、$\cos$ は同じ値 \\
+a_0=\frac{1}{\pi}\int_{-\pi}^{\pi}t\,\dd t=\frac{1}{\pi}\Bigl[\frac{t^2}{2}\Bigr]_{-\pi}^{\pi}=0 & $\frac{\pi^2}{2}-\frac{\pi^2}{2}=0$ \\
+\end{bkhenkei}
+$a_n$ はすべて0です（$t\cos nt$ は、$t$ を $-t$ にすると符号が変わる形なので、左右の面積が打ち消す。9-2 で「奇関数」とよぶ形です）。だから
+\kixbframe[118mm]{$t=2\Bigl(\sin t-\dfrac{\sin2t}{2}+\dfrac{\sin3t}{3}-\dfrac{\sin4t}{4}+\cdots\Bigr)$\qquad（$-\pi<t<\pi$）}
+
+\kixbhead{$\frac{\pi}{4}$ が、もう一度出てくる}
+この式に $t=\frac{\pi}{2}$ を入れます。$\sin\frac{\pi}{2}=1$、$\sin\pi=0$、$\sin\frac{3\pi}{2}=-1$、$\sin2\pi=0$、$\sin\frac{5\pi}{2}=1$、…なので、偶数番の項は消えます。
+\begin{bkhenkei}[0.56]
+\frac{\pi}{2}=2\Bigl(1-0+\frac{-1}{3}-0+\frac{1}{5}-\cdots\Bigr) & $t=\frac{\pi}{2}$ を入れる \\
+\frac{\pi}{4}=1-\frac13+\frac15-\frac17+\cdots & 両辺を2でわる \\
+\end{bkhenkei}
+①で、方形波の90° の値から見つけた式と同じです。ちがう波から同じ $\frac{\pi}{4}$ が出たことで、①の0.785 が本当に $\frac{\pi}{4}$ だと確かめられました。
+
+\kixbhead{とびの所では、まん中の値}
+$t=\pi$ では、のこぎり波は $\pi$ から $-\pi$ へとびます。級数に $t=\pi$ を入れると、$\sin n\pi=0$ なので、すべての項が0で、和は0です。0 は、とびの上（$\pi$）と下（$-\pi$）のまん中です。フーリエ級数は、とびの所では、\textbf{左右の値の平均}を通ります（図\ref{bk:9-1:fig-saw}）。方形波の $t=0$・$\pi$ でも、和は0（1と $-1$ のまん中）でした。
+
+\bksubsection{8}{熱方程式を、分けて解いて、たし直す}
+
+\label{bk:9-1:netsu}8-13 の最後で、「どんな形の温度でも、$\sin$ の形のたし算で書ける。$\sin$ の1つ1つは、それぞれの速さで小さくなる。だから、たし直せば、どんな初めの温度の答えも式で書ける」と予告しました。その約束を果たします。
+
+\kixbhead{問題：どこも100\,℃の棒を、両はしから冷やす}
+長さ $L=\qty{0.1}{m}$ のアルミの棒が、どこも100\,℃になっています（熱湯から出したところ）。時刻 $t=0$ に、両はしを0\,℃の氷水につけ、そのまま0\,℃に保ちます。棒のまわりは断熱材でくるんであり、熱は両はしからだけ逃げます。棒の場所 $x$〔m〕、時刻 $t$〔s〕の温度を $T(x,\ t)$〔℃〕とします（この節の $T$ は温度です。周期の $T$ は使いません）。熱拡散率は、8-13 と同じ $\alpha=1\times10^{-4}$\,m²/s です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!20] (-14,-9) rectangle (0,6);
+  \fill[bkBlue!20] (100,-9) rectangle (114,6);
+  \foreach \kixbx in {-11,-6,104,109} {\draw[bkBlue!70!black, line width=0.5pt, fill=white] (\kixbx,-4) rectangle ++(3,3);}
+  \draw[bkInk!80, line width=0.9pt] (-15,9) -- (-15,-10) -- (1,-10) -- (1,9);
+  \draw[bkInk!80, line width=0.9pt] (99,9) -- (99,-10) -- (115,-10) -- (115,9);
+  \kixbrod{(0,2)}{100}{bkRed!45}
+  \node[font=\sffamily\footnotesize, anchor=north] at (-7,-10.5) {0\,℃};
+  \node[font=\sffamily\footnotesize, anchor=north] at (107,-10.5) {0\,℃};
+  \node[font=\sffamily\footnotesize] at (50,2) {はじめ：どこも100\,℃};
+  \node[font=\sffamily\footnotesize, anchor=north] at (50,-2.5) {断熱材};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (0,10) -- (100,10);
+  \node[font=\sffamily\footnotesize, anchor=south] at (50,10.5) {$L=\qty{0.1}{m}$};
+  \node[font=\footnotesize, anchor=south] at (0,13.5) {$x=0$};
+  \node[font=\footnotesize, anchor=south] at (100,13.5) {$x=L$};
+\end{tikzpicture}
+\bkfigcaption{どこも100\,℃のアルミの棒の両はしを、0\,℃の氷水につける。まん中が50\,℃になるのは何秒後か。}
+\label{bk:9-1:fig-bo}
+\end{bkfigure}
+
+まん中が50\,℃まで冷えるのは、何秒後でしょう。8-13 なら、表計算で1歩ずつ進めました。ここでは、式で答えを出します。
+
+\kixbhead{（a）8-13 の答えを思い出す}
+8-13 で、$T=e^{-\alpha a^2t}\sin ax$ が熱方程式
+\[ \frac{\partial T}{\partial t}=\alpha\frac{\partial^2T}{\partial x^2} \]
+の答えになることを、代入して確かめました。$\sin$ の形の温度は、形を保ったまま、$e^{-\alpha a^2t}$ の割合で小さくなるのでした。
+
+この答えが、両はし0\,℃をみたすには、$x=0$ と $x=L$ で $\sin ax=0$ でなければなりません。$x=0$ では $\sin0=0$ で、いつも大丈夫です。$x=L$ では $\sin aL=0$、つまり $aL$ が $\pi$ の整数倍です。
+\[ aL=n\pi\quad\text{より}\quad a=\frac{n\pi}{L}\qquad(n=1,\ 2,\ 3,\ \cdots) \]
+8-13 の $a$ は、この $\frac{n\pi}{L}$ のことでした。8-13 の数を入れた例（$a=\frac{\pi}{0.1}\approx31.4$）は、$n=1$ の場合です。ここからは、フーリエ係数の $a_n$ とまぎれないように、$a$ を使わずに $\sin\frac{n\pi x}{L}$ と書きます。
+
+\kixbhead{（b）変数分離：形と大きさに分ける}
+（a）の答えは、どれも「場所だけで決まる形」×「時間だけで決まる大きさ」になっています。そこで、答えを最初から
+\[ T(x,\ t)=X(x)\,\Theta(t) \]
+とおいてみます。$X$ は場所 $x$ だけの関数（形）、$\Theta$（シータ）は時刻 $t$ だけの関数（大きさ）です。熱方程式に入れて、1行ずつ変形します。
+\begin{bkhenkei}[0.52]
+\frac{\partial T}{\partial t}=X(x)\,\Theta'(t) & $x$ を止めて $t$ で微分。$X$ は定数あつかい \\
+\frac{\partial^2T}{\partial x^2}=X''(x)\,\Theta(t) & $t$ を止めて $x$ で2回微分 \\
+X\,\Theta'=\alpha\,X''\,\Theta & 熱方程式に入れる \\
+\frac{\Theta'(t)}{\alpha\,\Theta(t)}=\frac{X''(x)}{X(x)} & 両辺を $\alpha X\Theta$ でわる \\
+\end{bkhenkei}
+左辺は $t$ だけの式、右辺は $x$ だけの式です。$t$ を変えても右辺は変わらないので、左辺も変わりません。$x$ を変えても左辺は変わらないので、右辺も変わりません。だから、両辺は\textbf{同じ定数}です。この定数を $-\lambda$（ラムダ）とおきます（負にするわけは、せいかくに言うとで）。
+\begin{bkhenkei}[0.52]
+\Theta'=-\lambda\alpha\,\Theta & 左辺$=-\lambda$。6-4 の形 \\
+\Theta=e^{-\lambda\alpha t} & 6-4・5-14：$e^{-kt}$ の形 \\
+X''=-\lambda X & 右辺$=-\lambda$。6-6 の単振動の形 \\
+X=\sin\sqrt{\lambda}\,x & $X(0)=0$ なので $\cos$ は入らない \\
+\sqrt{\lambda}=\frac{n\pi}{L} & $X(L)=0$ から（（a）と同じ） \\
+\end{bkhenkei}
+1つの偏微分方程式が、$t$ の式と $x$ の式の、2つのふつうの微分方程式に分かれました。このように、答えを「1つの変数だけの関数のかけ算」とおいて式を分ける方法を\textbf{変数分離法}（へんすうぶんりほう）といいます。\bkidx{へんすうぶんりほう}{変数分離法}6-4 の変数分離形（1つの式の中で $y$ と $t$ を左右に分ける）と同じ考えを、偏微分方程式に広げたものです。こうして、1つずつの答え
+\kixbframe[110mm]{$T_n=e^{-\alpha(n\pi/L)^2t}\sin\dfrac{n\pi x}{L}$\qquad（$n=1,\ 2,\ 3,\ \cdots$）}
+が得られます。（a）の答えと同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixbi/\kixbn/\kixbk/\kixbh in {0/1/0.0987/7.0,1/3/0.888/0.78,2/5/2.467/0.28} {%
+    \begin{scope}[shift={(\kixbi*44,0)}]
+    \draw[bkInk, line width=0.5pt] (0,0) -- (36,0);
+    \draw[bkBlue, line width=1pt, domain=0:36, samples=80, smooth] plot (\x,{9*sin(5*\kixbn*\x)});
+    \draw[bkOrange!85!black, line width=0.9pt, dash pattern=on 2pt off 1.2pt, domain=0:36, samples=80, smooth] plot (\x,{4.5*sin(5*\kixbn*\x)});
+    \node[font=\sffamily\footnotesize, anchor=south] at (18,11) {$n=\kixbn$};
+    \node[font=\footnotesize, anchor=north, align=center] at (18,-11) {1秒に $\kixbk$\\半分まで $\kixbh$ 秒};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{1つずつの答え $T_n$ の形。青が始めの形、オレンジの点線が半分になった形。でこぼこが $n$ 倍細かいと、$n^2$ 倍速く消える（$\alpha(\frac{n\pi}{L})^2$ が $n^2$ 倍）。}
+\label{bk:9-1:fig-mode}
+\end{bkfigure}
+
+$\alpha\bigl(\tfrac{\pi}{L}\bigr)^2=1\times10^{-4}\times\bigl(\tfrac{3.1416}{0.1}\bigr)^2=0.0987$〔1/s〕です（8-13 と同じ数）。$n=3$ では $3^2=9$ 倍の $0.888$、$n=5$ では $25$ 倍の $2.467$ です。$e^{-kt}=\frac12$ となる時間は $\frac{\ln2}{k}$ なので、$n=1$ は7.0秒、$n=3$ は0.78秒、$n=5$ は0.28秒で半分になります。
+
+\kixbhead{（c）たし直す：初めの形をフーリエ級数で書く}
+熱方程式は\textbf{線形}です（5-18：答えどうしをたしても答え、何倍しても答え）。だから、$T_1$、$T_2$、$T_3$、…に係数をかけてたしたもの
+\[ T(x,\ t)=\sum_{n=1}^{\infty}b_n\,e^{-\alpha(n\pi/L)^2t}\sin\frac{n\pi x}{L} \]
+も、熱方程式と両はし0\,℃をみたします。あとは、$t=0$ で「どこも100\,℃」になるように、$b_n$ を決めればよいのです。$t=0$ では $e^0=1$ なので、
+\[ \sum_{n=1}^{\infty}b_n\sin\frac{n\pi x}{L}=100\qquad(0<x<L) \]
+となる $b_n$ をさがします。$\sin$ だけでたすので、ここで方形波を使います。棒の外側に、$-L<x<0$ では $-100$ の「見えない棒」があると考えると、温度のグラフは、周期 $2L$、高さ100の方形波になります（図\ref{bk:9-1:fig-hirogeru}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.76mm, y=1mm]
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=2mm]}] (-52,0) -- (106,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=2mm]}] (0,-16) -- (0,18);
+  \fill[bkRed!12] (0,0) rectangle (50,12);
+  \draw[bkGray, line width=0.9pt, dash pattern=on 2pt off 1.5pt] (-50,0) -- (-50,-12) -- (0,-12);
+  \draw[bkRed!80!black, line width=1.3pt] (0,12) -- (50,12);
+  \draw[bkGray, line width=0.9pt, dash pattern=on 2pt off 1.5pt] (50,12) -- (50,-12) -- (100,-12) -- (100,0);
+  \node[font=\footnotesize, anchor=south] at (25,12.5) {本当の棒：100\,℃};
+  \node[font=\footnotesize, anchor=north, align=center] at (-25,-13) {見えない棒：$-100$};
+  \node[font=\footnotesize, anchor=north east] at (-0.8,-0.5) {0};
+  \node[font=\footnotesize, anchor=north] at (51.5,-0.5) {$L$};
+  \node[font=\footnotesize, anchor=north] at (100,-0.5) {$2L$};
+  \node[font=\footnotesize, anchor=south] at (-50,0.5) {$-L$};
+\end{tikzpicture}
+\bkfigcaption{0から $L$ だけの温度（赤）を、原点で半回転した形（灰色の点線）に広げると、周期 $2L$ の方形波になる。0から $L$ の所では、もとの温度と同じ。}
+\label{bk:9-1:fig-hirogeru}
+\end{bkfigure}
+
+高さ1、周期 $2\pi$ の方形波は $\frac{4}{\pi}\bigl(\sin t+\frac13\sin3t+\cdots\bigr)$ でした（②）。$t$ のかわりに $\frac{\pi x}{L}$（$x$ が $2L$ 進むと $2\pi$ 進む）を入れ、高さを100倍すると、
+\[ 100=\frac{400}{\pi}\Bigl(\sin\frac{\pi x}{L}+\frac13\sin\frac{3\pi x}{L}+\frac15\sin\frac{5\pi x}{L}+\cdots\Bigr)\qquad(0<x<L) \]
+です。だから、$b_n=\frac{400}{n\pi}$（$n$ が奇数）、偶数番は0です。これを（c）の式に入れて、答えが出ます。
+\kixbframe[124mm]{$T(x,\ t)=\displaystyle\sum_{n=1,3,5,\cdots}\frac{400}{n\pi}\,e^{-\alpha(n\pi/L)^2t}\sin\frac{n\pi x}{L}$}
+初めの形を、1つずつ形を保って小さくなる $\sin$ の形に\textbf{分け}（フーリエ級数）、1つずつ時間を進めて（$e^{-\alpha(n\pi/L)^2t}$ をかけて）、\textbf{たし直す}。これが「分けて解いて、たし直す」方法です。
+
+\kixbhead{（d）数を入れる：まん中の温度}
+まん中 $x=\frac{L}{2}$ では、$\sin\frac{n\pi}{2}$ が、$n=1$ で1、$n=3$ で $-1$、$n=5$ で1、…です。
+\[ T\Bigl(\frac{L}{2},\ t\Bigr)=\frac{400}{\pi}e^{-0.0987t}-\frac{400}{3\pi}e^{-0.888t}+\frac{400}{5\pi}e^{-2.467t}-\cdots \]
+$\frac{400}{\pi}=127.3$、$\frac{400}{3\pi}=42.44$、$\frac{400}{5\pi}=25.46$ です。Python で多くの項をたした値と、1項めだけの値をくらべます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=13mm]}}, row{1}={font=\sffamily\small}, rowsep=1.5pt, colsep=2pt}
+時刻 $t$（s） & 0.5 & 2 & 5 & 10 & 20 & 30 \\
+全部の項（℃） & 100.0 & 97.52 & 77.23 & 47.45 & 17.69 & 6.59 \\
+1項めだけ（℃） & 121.2 & 104.5 & 77.73 & 47.45 & 17.69 & 6.59 \\
+\end{bktable}
+\bktabcaption{棒のまん中の温度。はじめは1項だけでは足りないが、5秒をすぎると1項めだけでほぼ同じになる。}\label{bk:9-1:tab-netsu}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=p1, width=64mm, height=52mm, xmin=0, xmax=10.8, ymin=0, ymax=118, xtick={2,4,6,8,10}, ytick={20,40,60,80,100}, xlabel={$x$（cm）}, ylabel={$T$（℃）}, title={棒の温度の形}, title style={font=\sffamily\footnotesize, yshift=2mm}]
+  \addplot[bkthin, line width=1pt] coordinates {(0,0) (0,100) (10,100) (10,0)};
+  \addplot[bkcurve, line width=1pt] coordinates {(0.00,0.000) (0.25,6.215) (0.50,12.387) (0.75,18.471) (1.00,24.425) (1.25,30.208) (1.50,35.783) (1.75,41.113) (2.00,46.165) (2.25,50.909) (2.50,55.318) (2.75,59.368) (3.00,63.040) (3.25,66.316) (3.50,69.181) (3.75,71.623) (4.00,73.633) (4.25,75.203) (4.50,76.329) (4.75,77.005) (5.00,77.231) (5.25,77.005) (5.50,76.329) (5.75,75.203) (6.00,73.633) (6.25,71.623) (6.50,69.181) (6.75,66.316) (7.00,63.040) (7.25,59.368) (7.50,55.318) (7.75,50.909) (8.00,46.165) (8.25,41.113) (8.50,35.783) (8.75,30.208) (9.00,24.425) (9.25,18.471) (9.50,12.387) (9.75,6.215) (10.00,0.000)};
+  \addplot[bkcurve, line width=1pt] coordinates {(0.00,0.000) (0.25,3.725) (0.50,7.426) (0.75,11.082) (1.00,14.669) (1.25,18.166) (1.50,21.550) (1.75,24.801) (2.00,27.899) (2.25,30.824) (2.50,33.560) (2.75,36.088) (3.00,38.393) (3.25,40.462) (3.50,42.281) (3.75,43.840) (4.00,45.129) (4.25,46.139) (4.50,46.865) (4.75,47.303) (5.00,47.449) (5.25,47.303) (5.50,46.865) (5.75,46.139) (6.00,45.129) (6.25,43.840) (6.50,42.281) (6.75,40.462) (7.00,38.393) (7.25,36.088) (7.50,33.560) (7.75,30.824) (8.00,27.899) (8.25,24.801) (8.50,21.550) (8.75,18.166) (9.00,14.669) (9.25,11.082) (9.50,7.426) (9.75,3.725) (10.00,0.000)};
+  \addplot[bkcurve, line width=1pt] coordinates {(0.00,0.000) (0.25,1.388) (0.50,2.767) (0.75,4.129) (1.00,5.465) (1.25,6.768) (1.50,8.030) (1.75,9.241) (2.00,10.396) (2.25,11.487) (2.50,12.506) (2.75,13.449) (3.00,14.309) (3.25,15.080) (3.50,15.759) (3.75,16.340) (4.00,16.821) (4.25,17.198) (4.50,17.469) (4.75,17.632) (5.00,17.687) (5.25,17.632) (5.50,17.469) (5.75,17.198) (6.00,16.821) (6.25,16.340) (6.50,15.759) (6.75,15.080) (7.00,14.309) (7.25,13.449) (7.50,12.506) (7.75,11.487) (8.00,10.396) (8.25,9.241) (8.50,8.030) (8.75,6.768) (9.00,5.465) (9.25,4.129) (9.50,2.767) (9.75,1.388) (10.00,0.000)};
+  \node[font=\footnotesize, fill=white, inner sep=0.5pt] at (axis cs:5,106) {0秒};
+  \node[font=\footnotesize, fill=white, inner sep=0.5pt] at (axis cs:5,85) {5秒};
+  \node[font=\footnotesize, fill=white, inner sep=0.5pt] at (axis cs:5,55) {10秒};
+  \node[font=\footnotesize, fill=white, inner sep=0.5pt] at (axis cs:5,25) {20秒};
+\end{axis}
+\begin{axis}[bkplot, at={(p1.east)}, anchor=west, xshift=14mm, width=64mm, height=52mm, xmin=0, xmax=32, ymin=0, ymax=130, xtick={20,30}, ytick={50,100}, xlabel={$t$（s）}, title={まん中の温度}, title style={font=\sffamily\footnotesize, yshift=2mm}, legend style={font=\sffamily\footnotesize, at={(0.98,0.98)}, anchor=north east, draw=bkLine, fill=white, inner sep=1pt}, legend cell align=left]
+  \addplot[bkcurve, line width=1.1pt] coordinates {(0,100) (0.05,100.000) (0.20,100.000) (0.35,100.000) (0.50,100.000) (0.65,99.998) (0.80,99.984) (0.95,99.941) (1.10,99.847) (1.25,99.681) (1.40,99.430) (1.56,99.084) (1.71,98.643) (1.86,98.109) (2.01,97.487) (2.16,96.786) (2.31,96.012) (2.46,95.174) (2.61,94.281) (2.76,93.341) (2.91,92.360) (3.06,91.346) (3.21,90.305) (3.36,89.241) (3.51,88.160) (3.66,87.066) (3.81,85.963) (3.96,84.853) (4.11,83.740) (4.26,82.626) (4.41,81.514) (4.57,80.405) (4.72,79.300) (4.87,78.202) (5.02,77.111) (5.17,76.029) (5.32,74.955) (5.47,73.892) (5.62,72.839) (5.77,71.797) (5.92,70.766) (6.07,69.747) (6.22,68.740) (6.37,67.745) (6.52,66.762) (6.67,65.792) (6.82,64.835) (6.97,63.890) (7.12,62.957) (7.27,62.038) (7.42,61.130) (7.58,60.235) (7.73,59.353) (7.88,58.483) (8.03,57.625) (8.18,56.779) (8.33,55.945) (8.48,55.123) (8.63,54.313) (8.78,53.514) (8.93,52.727) (9.08,51.951) (9.23,51.187) (9.38,50.433) (9.53,49.691) (9.68,48.959) (9.83,48.238) (9.98,47.528) (10.13,46.827) (10.28,46.138) (10.43,45.458) (10.59,44.788) (10.74,44.128) (10.89,43.478) (11.04,42.837) (11.19,42.206) (11.34,41.584) (11.49,40.971) (11.64,40.367) (11.79,39.772) (11.94,39.186) (12.09,38.608) (12.24,38.039) (12.39,37.478) (12.54,36.925) (12.69,36.381) (12.84,35.845) (12.99,35.316) (13.14,34.796) (13.29,34.283) (13.44,33.777) (13.60,33.279) (13.75,32.789) (13.90,32.305) (14.05,31.829) (14.20,31.360) (14.35,30.897) (14.50,30.442) (14.65,29.993) (14.80,29.551) (14.95,29.115) (15.10,28.686) (15.25,28.263) (15.40,27.846) (15.55,27.435) (15.70,27.031) (15.85,26.632) (16.00,26.240) (16.15,25.853) (16.30,25.472) (16.45,25.096) (16.61,24.726) (16.76,24.362) (16.91,24.002) (17.06,23.648) (17.21,23.300) (17.36,22.956) (17.51,22.618) (17.66,22.284) (17.81,21.956) (17.96,21.632) (18.11,21.313) (18.26,20.999) (18.41,20.689) (18.56,20.384) (18.71,20.084) (18.86,19.787) (19.01,19.496) (19.16,19.208) (19.31,18.925) (19.46,18.646) (19.62,18.371) (19.77,18.100) (19.92,17.833) (20.07,17.570) (20.22,17.311) (20.37,17.056) (20.52,16.805) (20.67,16.557) (20.82,16.313) (20.97,16.072) (21.12,15.835) (21.27,15.602) (21.42,15.372) (21.57,15.145) (21.72,14.922) (21.87,14.702) (22.02,14.485) (22.17,14.271) (22.32,14.061) (22.47,13.854) (22.63,13.649) (22.78,13.448) (22.93,13.250) (23.08,13.055) (23.23,12.862) (23.38,12.672) (23.53,12.486) (23.68,12.302) (23.83,12.120) (23.98,11.941) (24.13,11.765) (24.28,11.592) (24.43,11.421) (24.58,11.253) (24.73,11.087) (24.88,10.923) (25.03,10.762) (25.18,10.603) (25.33,10.447) (25.48,10.293) (25.64,10.141) (25.79,9.992) (25.94,9.844) (26.09,9.699) (26.24,9.556) (26.39,9.415) (26.54,9.277) (26.69,9.140) (26.84,9.005) (26.99,8.872) (27.14,8.741) (27.29,8.613) (27.44,8.486) (27.59,8.360) (27.74,8.237) (27.89,8.116) (28.04,7.996) (28.19,7.878) (28.34,7.762) (28.49,7.648) (28.65,7.535) (28.80,7.424) (28.95,7.314) (29.10,7.206) (29.25,7.100) (29.40,6.996) (29.55,6.892) (29.70,6.791) (29.85,6.691) (30.00,6.592)};
+  \addplot[bkOrange!85!black, line width=1.1pt, dash pattern=on 3pt off 1.5pt] coordinates {(0.90,116.502) (1.14,113.724) (1.39,111.012) (1.63,108.365) (1.88,105.781) (2.12,103.258) (2.37,100.796) (2.61,98.392) (2.86,96.046) (3.10,93.756) (3.35,91.520) (3.59,89.338) (3.83,87.207) (4.08,85.128) (4.32,83.098) (4.57,81.116) (4.81,79.182) (5.06,77.294) (5.30,75.451) (5.55,73.652) (5.79,71.895) (6.04,70.181) (6.28,68.507) (6.52,66.874) (6.77,65.279) (7.01,63.722) (7.26,62.203) (7.50,60.720) (7.75,59.272) (7.99,57.858) (8.24,56.479) (8.48,55.132) (8.73,53.817) (8.97,52.534) (9.21,51.281) (9.46,50.058) (9.70,48.865) (9.95,47.699) (10.19,46.562) (10.44,45.452) (10.68,44.368) (10.93,43.310) (11.17,42.277) (11.42,41.269) (11.66,40.285) (11.90,39.324) (12.15,38.386) (12.39,37.471) (12.64,36.577) (12.88,35.705) (13.13,34.854) (13.37,34.023) (13.62,33.211) (13.86,32.419) (14.11,31.646) (14.35,30.892) (14.59,30.155) (14.84,29.436) (15.08,28.734) (15.33,28.049) (15.57,27.380) (15.82,26.727) (16.06,26.090) (16.31,25.468) (16.55,24.860) (16.79,24.268) (17.04,23.689) (17.28,23.124) (17.53,22.573) (17.77,22.034) (18.02,21.509) (18.26,20.996) (18.51,20.495) (18.75,20.007) (19.00,19.529) (19.24,19.064) (19.48,18.609) (19.73,18.165) (19.97,17.732) (20.22,17.309) (20.46,16.897) (20.71,16.494) (20.95,16.100) (21.20,15.716) (21.44,15.342) (21.69,14.976) (21.93,14.619) (22.17,14.270) (22.42,13.930) (22.66,13.598) (22.91,13.273) (23.15,12.957) (23.40,12.648) (23.64,12.346) (23.89,12.052) (24.13,11.765) (24.38,11.484) (24.62,11.210) (24.86,10.943) (25.11,10.682) (25.35,10.427) (25.60,10.179) (25.84,9.936) (26.09,9.699) (26.33,9.468) (26.58,9.242) (26.82,9.021) (27.07,8.806) (27.31,8.596) (27.55,8.391) (27.80,8.191) (28.04,7.996) (28.29,7.805) (28.53,7.619) (28.78,7.437) (29.02,7.260) (29.27,7.087) (29.51,6.918) (29.76,6.753) (30.00,6.592)};
+  \addplot[bkRed!80!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt, forget plot] coordinates {(0,50) (9.47,50) (9.47,0)};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=0.5pt] at (axis cs:9.47,-1) {9.47};
+  \legend{全部の項,1項めだけ}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：0・5・10・20秒の形。時間とともに、角がとれて $\sin$ の山の形（$n=1$ の形）になり、そのまま小さくなる。右：まん中の温度。1項めだけの線は、はじめは100\,℃をこえる（$t=0$ で127\,℃）が、すぐに全部の項の線と重なる。}
+\label{bk:9-1:fig-netsu}
+\end{bkfigure}
+
+まん中が50\,℃になる時刻は、1項めだけの式で求められます（2項め以下は、5秒で0.5\,℃ほど、10秒では0.006\,℃と、とても小さいので）。
+\begin{bkhenkei}[0.5]
+127.3\,e^{-0.0987t}=50 & 1項めだけ \\
+e^{-0.0987t}=\frac{50}{127.3}=0.3928 & 両辺を127.3でわる \\
+-0.0987t=\ln0.3928=-0.9345 & 両辺の $\ln$ をとる（3-12・5-14） \\
+t=\frac{0.9345}{0.0987}\approx9.47 & 両辺を $-0.0987$ でわる \\
+\end{bkhenkei}
+答えは\textbf{約9.47秒後}です。全部の項で計算しても9.47秒です。8-13 の表計算（$\Delta x=\qty{0.01}{m}$、$\Delta t=\qty{0.25}{s}$）を、この問題（はじめ100\,℃、両はし0\,℃）で進めると、9.50秒で50\,℃を下まわります。表計算と式の答えがよく合いました。
+
+\kixbhead{細かいでこぼこは、すぐ消える}
+はじめの「どこも100\,℃で、両はしだけ0\,℃」という形は、両はしに急な段差があります。段差を作るには、細かい $\sin$（$n$ が大きいもの）がたくさん要ります。でも、細かい成分ほど $n^2$ 倍速く消えるので、数秒で角がとれ、あとは $n=1$ のなだらかな山の形のまま、7.0秒ごとに半分になっていきます（図\ref{bk:9-1:fig-netsu}）。熱の問題で「1項めだけで十分」になることが多いのは、このためです。
+
+\kixbhead{Python で級数をたす}
+表\ref{bk:9-1:tab-netsu}の「全部の項」は、次のプログラムで、奇数番の項を200個たして求めました（$n=1$ から399まで）。奇数を並べた列 \texttt{n} を作り、1つずつの項を計算して、まとめてたしています。
+\Needspace{16\baselineskip}\begin{bkcode}[Python]
+import numpy as np
+L, al = 0.1, 1e-4            \# 棒の長さ〔m〕、熱拡散率〔m²/s〕
+def T(x, t, N=200):          \# 奇数番の項を N 個たす
+    n = np.arange(1, 2*N, 2) \# 1, 3, 5, …, 2N−1
+    return np.sum(400/(n*np.pi) * np.exp(-al*(n*np.pi/L)**2*t)
+                  * np.sin(n*np.pi*x/L))
+for t in [2, 5, 10, 20]:
+    print(t, round(T(L/2, t), 2))  \# まん中の温度
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+2 97.52
+5 77.23
+10 47.45
+20 17.69
+\end{bkcodeout}
+\texttt{N=1} にすると、1項めだけの値になります。\texttt{t} を小さくしていくと、項の数を多くしないと100\,℃に近づかないことも確かめられます。
+
+\bksubsection{9}{弦のゆれ：倍音の正体}
+
+\label{bk:9-1:gen}8-13 の波動方程式
+\[ \frac{\partial^2y}{\partial t^2}=c^2\frac{\partial^2y}{\partial x^2} \]
+も、同じ方法で解けます（$y$ は弦の横へのずれ〔m〕、$c$ は弦を伝わる波の速さ〔m/s〕）。両はしを止めた長さ $L$ の弦を、ある形に引っぱって、そっとはなします。$y=X(x)\,\Theta(t)$ とおきます。
+\begin{bkhenkei}[0.52]
+X\,\Theta''=c^2X''\,\Theta & 波動方程式に入れる \\
+\frac{\Theta''}{c^2\,\Theta}=\frac{X''}{X}=-\lambda & 両辺を $c^2X\Theta$ でわる。同じ定数 \\
+X=\sin\frac{n\pi x}{L} & 熱と同じ（両はしで0） \\
+\Theta''=-\Bigl(\frac{n\pi c}{L}\Bigr)^2\Theta & 左の式に $\lambda=(\frac{n\pi}{L})^2$ を入れる \\
+\Theta=\cos\frac{n\pi ct}{L} & 6-6 の単振動。はなした時は止まっている \\
+\end{bkhenkei}
+熱では時間の部分が $e^{-kt}$（小さくなる）でしたが、弦では $\cos$（ゆれ続ける）です。8-13 で見た「熱は1回微分、波は2回微分」のちがいが、ここに出ています。答えは
+\kixbframe[114mm]{$y=\displaystyle\sum_{n=1}^{\infty}b_n\sin\frac{n\pi x}{L}\cos\frac{n\pi ct}{L}$}
+です。$b_n$ は、はじめの形を $\sin\frac{n\pi x}{L}$ のたし算で書いた係数です（はじく場所でどう変わるかは、9-2 で）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixbi/\kixbn/\kixbf in {0/1/110,1/2/220,2/3/330} {%
+    \begin{scope}[shift={(\kixbi*44,0)}]
+    \fill[bkInk] (0,0) circle (0.8) (36,0) circle (0.8);
+    \draw[bkGray, line width=0.4pt] (0,0) -- (36,0);
+    \draw[bkBlue, line width=1pt, domain=0:36, samples=80, smooth] plot (\x,{7*sin(5*\kixbn*\x)});
+    \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:36, samples=80, smooth] plot (\x,{-7*sin(5*\kixbn*\x)});
+    \node[font=\sffamily\footnotesize, anchor=south] at (18,9) {$n=\kixbn$};
+    \node[font=\footnotesize, anchor=north] at (18,-9) {\kixbf\,Hz};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{長さ \qty{0.65}{m}、基本の周波数110\,Hz の弦（ギターの5弦）の、1つずつのゆれ方。点線は半周期後の形。$n$ 番めは、基本の $n$ 倍の周波数でゆれる。}
+\label{bk:9-1:fig-gen}
+\end{bkfigure}
+
+$n$ 番めのゆれは、角周波数 $\frac{n\pi c}{L}$ でゆれます。周波数（1秒の回数）は、それを $2\pi$ でわって
+\kixbframe[90mm]{$f_n=\dfrac{n\pi c}{L}\div2\pi=\dfrac{nc}{2L}$}
+です（ここの $f_n$ は周波数〔Hz〕で、関数の $f$ ではありません）。高校の物理で習う弦の固有振動数 $f_n=\frac{nv}{2L}$ は、この式です。波動方程式を変数分離すると、自然に出てくるのです。
+
+ギターの5弦（ラの音）は、ふつう110\,Hz にあわせます。弦の長さを \qty{0.65}{m} とすると、$f_1=\frac{c}{2L}$ から $c=2Lf_1=2\times0.65\times110=\qty{143}{m/s}$ です。$n=2,\ 3,\ 4,\ \cdots$ の成分は 220\,Hz、330\,Hz、440\,Hz、…で、すべて110\,Hz のちょうど整数倍です。
+
+弦の音のスペクトルが「基本の2倍・3倍・4倍…」に線が並ぶ形になるのは、このためです（③）。基本の周波数の2倍・3倍…（整数倍）の成分を\textbf{倍音}（ばいおん）といいます（9-0 と同じ言い方）。\bkidx{ばいおん}{倍音}どの倍音がどれだけ強いか（$b_n$）は、弦をはじく場所や、はじき方で変わり、それが音色のちがいになります。
+
+\Needspace{16\baselineskip}
+\begin{seikaku}
+\kixbbox{フーリエ級数が使えるための条件と、定数を負にするわけ}
+（1）1周期の中で、とびや山・谷の数が限りある（無限にふるえたりしない）なら、フーリエ級数は、なめらかな所では $f(t)$ に、とびの所では左右の値の平均に近づきます（ディリクレの条件。証明は専門書で）。ただし、とびのそばには約9\%の山（ギブズ現象）が残ります。\par
+（2）変数分離で、定数を $+\mu$（正）とすると、$X''=\mu X$ の答えは $e^{\sqrt{\mu}x}$ と $e^{-\sqrt{\mu}x}$ の和で（6-11 の $\cosh$ のなかま）、両はしで0にするには、全体が0しかありません。定数が0なら $X''=0$ で直線になり、これも両はし0なら全体が0です。両はし0の答えが0でなく出るのは、定数が負のときだけです。だから $-\lambda$（$\lambda>0$）とおきました。
+\end{seikaku}
+
+
+
+\begin{kotoba}
+\small
+\bkword{方形波}{高さの決まった2つの値を、同じ時間ずつ交互にくり返す四角い波。}
+\bkword{フーリエ級数}{くり返す波を、$\cos n\omega_0t$・$\sin n\omega_0t$ の和で書いたもの。}
+\bkword{フーリエ係数}{フーリエ級数の $a_n$・$b_n$。「かけて平均の2倍」で求める。}
+\bkword{基本波・高調波}{$n=1$ の成分が基本波、$n\geqq2$ の成分が高調波。}
+\bkword{基本角周波数}{周期 $T$ の波で、$\omega_0=\frac{2\pi}{T}$。1周期で角が $2\pi$ 進む。}
+\bkword{スペクトル}{成分の大きさを、番号（周波数）ごとに並べた棒グラフ。}
+\bkword{ギブズ現象}{とびのそばに、約9\%の行きすぎの山が残ること。}
+\bkword{変数分離法}{答えを $X(x)\,\Theta(t)$ のように1つの変数だけの関数のかけ算とおき、式を分けて解く方法。}
+\bkword{倍音}{弦や管の音にふくまれる、基本の周波数の2倍・3倍…（整数倍）の成分。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$a_n$・$b_n$}{エー・エヌ、ビー・エヌ}{フーリエ係数。$\cos n\omega_0t$・$\sin n\omega_0t$ を何倍してたすか。「かけて平均の2倍」という操作の名前}{Fourier coefficients}{9-1}}
+{\bkkigocard{$\omega_0$}{オメガ・ゼロ}{基本角周波数 $\frac{2\pi}{T}$〔rad/s〕。$n$ 番めの成分は $n\omega_0$。6-12 の $\omega_{\mathrm n}$ とは別}{fundamental angular frequency}{9-1}}
+
+
+
+\begin{taisetsu}
+\kixbbox{フーリエ級数}
+周期 $T$ でくり返す波は、$\omega_0=\frac{2\pi}{T}$ として
+\[ f(t)=\frac{a_0}{2}+\sum_{n=1}^{\infty}\bigl(a_n\cos n\omega_0t+b_n\sin n\omega_0t\bigr) \]
+と書ける。$\frac{a_0}{2}$ は平均（直流分）。とびの所では、左右の値の平均を通る。
+\kixbbox{係数は名前。ふつうの定積分に直して求める}
+\[ \kixbNt{b_n}=\kixbSt{1}{\frac{2}{T}\int_0^Tf(t)\sin n\omega_0t\,\dd t} \]
+$a_n$ は $\sin$ を $\cos$ にかえる。$n=0$ にも使える。1周期なら、どこからでもよい。\par
+\kixbdan{1}\enspace 記号を読む：どの波 $f$・周期 $T$・どの係数か\par
+\kixbdan{3}\enspace 計算の前に：式がなく、はかった値だけ（I）？\ 0〜$L$ だけの形（E）？\ 周期が $2\pi$ でない（F）？\par
+\kixbnaosu{1}\enspace 区間ごとに一定（B）は区間に分けて、1次式（C）は部分積分で
+\kixbbox{この章で使った場合（表9-2 の一部）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,44mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=1pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kixbcase{I} & はかった値だけ & 表計算で「値×$\sin n\omega_0t$」の平均の2倍 \\
+\kixbcase{E} & 0から $L$ だけの形 & 原点で半回転して広げ、$\sin$ だけにする \\
+\kixbcase{F} & 周期が $2\pi$ でない & $\theta=\omega_0t$ で周期 $2\pi$ にもどす \\
+\kixbcase{B} & 区間ごとに一定 & 区間に分けて定積分。$\cos n\pi=(-1)^n$ \\
+\kixbcase{C} & 区間ごとに1次式 & 部分積分 \\
+\end{bktable}
+\kixbbox{分けて解いて、たし直す}
+熱方程式・波動方程式は、$\sin\frac{n\pi x}{L}$ の形に分けると、熱は $e^{-\alpha(n\pi/L)^2t}$ で小さくなり、弦は $\cos\frac{n\pi ct}{L}$ でゆれる（周波数 $\frac{nc}{2L}$）。たし直せば答え。
+\end{taisetsu}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 係数を求める例題（2〜7）では、「考え方」の1行めに、9-2 の場合分けの表9-2 のどの場合かを書きました（この章では、⑥の5つを使います）。2つの場合を書いたものは、左の場合で形を楽なものに直してから、右の場合で計算します（例題と場合の一覧は、例題1のあとの表）。
+
+
+\begin{reidai}[方形波の級数を計算する]
+高さ1の方形波の級数 $\frac{4}{\pi}\bigl(\sin t+\frac13\sin3t+\frac15\sin5t+\cdots\bigr)$ を、3つめの項（$\frac15\sin5t$）まででやめて、$t=\frac{\pi}{2}$ と $t=\frac{\pi}{6}$ での値を求めましょう。\par
+\kangaekata 係数はもうわかっているので、表9-2 は使わない。たし算だけ。\par
+\kixbdan{1}\enspace $\sum$ は「限りなくたす」という名前。ここでは3つでやめてたす（とちゅうまでの和）。\par
+\shiki\kixbs $t=\frac{\pi}{2}$：$\sin\frac{\pi}{2}=1$、$\sin\frac{3\pi}{2}=-1$、$\sin\frac{5\pi}{2}=1$\par
+\kixbb かっこの中は $1-\frac13+\frac15=0.8667$\par
+\kixbb $\frac{4}{\pi}\times0.8667=1.2732\times0.8667\approx1.103$\par
+\kixba $t=\frac{\pi}{6}$：$\sin\frac{\pi}{6}=0.5$、$\sin\frac{\pi}{2}=1$、$\sin\frac{5\pi}{6}=0.5$\par
+\kixbb かっこの中は $0.5+\frac13\times1+\frac15\times0.5=0.9333$\par
+\kixbb $1.2732\times0.9333\approx1.188$\par
+\kotae $t=\frac{\pi}{2}$ で約1.103、$t=\frac{\pi}{6}$ で約1.188（本当の値1のまわりを上下する）
+\end{reidai}
+
+\begin{jibun}
+同じ級数を3つめの項まででやめて、$t=\frac{\pi}{4}$ と $t=\frac{\pi}{3}$ での値を求めましょう（$\sin\frac{\pi}{4}=\sin\frac{3\pi}{4}=0.7071$、$\sin\frac{5\pi}{4}=-0.7071$、$\sin\frac{\pi}{3}=0.8660$、$\sin\pi=0$、$\sin\frac{5\pi}{3}=-0.8660$）。
+\bkjans{$t=\frac{\pi}{4}$：かっこの中 $0.7071+\frac{0.7071}{3}-\frac{0.7071}{5}=0.8014$、$1.2732\times0.8014\approx1.020$。$t=\frac{\pi}{3}$：$0.8660+0-\frac{0.8660}{5}=0.6928$、$1.2732\times0.6928\approx0.882$。}
+\end{jibun}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,36mm] X[l,m] Q[c,m,18mm]}, row{2-Z}={font=\small}, rowsep=1pt, colsep=3pt}
+例題 & 題 & どこを見て決めたか & 場合 \\
+2 & 0と1をくり返す信号 & 区間ごとに一定（1と0） & \kixbcase{B} \\
+3 & 0から $2\pi$ ののこぎり波 & 区間ごとに1次式（$f=t$） & \kixbcase{C} \\
+4 & 1\,kHz の信号の成分 & 周期が $2\pi$ でない→区間ごとに一定 & \kixbcase{F}\kixbcase{B} \\
+5 & 12個のデータ & 式がなく、はかった値だけ & \kixbcase{I} \\
+6・7 & 棒のまん中の温度 & 0から $L$ だけ→区間ごとに一定 & \kixbcase{E}\kixbcase{B} \\
+1・8・9 & 級数の計算・倍音・$\frac{\pi}{4}$ & 係数は求めない（たすだけ） & なし \\
+\end{bktable}
+\bktabcaption{例題と、表9-2 の場合。9-2 の流れ図でたどっても、同じ場合に着く。}
+\end{bkcenter}
+
+\begin{column}{フーリエと熱の解析的理論}
+フランスのフーリエ（1768〜1830年）は、県知事をつとめながら熱の伝わり方を研究し、1807年12月、どんな形の温度も $\sin$ と $\cos$ のたし算で書けると、パリの学士院で発表しました。審査をしたラグランジュやラプラスは、とびのある形まで書けるという考えに反対しましたが、フーリエは研究を続け、1822年に『熱の解析的理論』をまとめました（6-3 のコラム）。例題6・7 の棒は、フーリエが解いた問題そのものです。
+\end{column}
+
+\begin{reidai}[0と1をくり返す信号]
+$0<t<\pi$ で1、$\pi<t<2\pi$ で0 をくり返す信号（周期 $2\pi$）のフーリエ係数 $a_0$、$a_n$、$b_n$ を求め、フーリエ級数で書きましょう。\par
+\kangaekata \kixbbaai{区間ごとに一定}{9-2}{B}\par
+\kixbdan{1}\enspace $a_n$・$b_n$：1周期で $f$ に $\cos nt$・$\sin nt$ をかけてたし、$\frac{1}{\pi}$ 倍（$T=2\pi$）。\par
+\kixbnaosu{1}\enspace $\pi<t<2\pi$ では $f=0$ なので、積分は0から $\pi$ だけ残る。\par
+\shiki\kixbs $a_0=\frac{1}{\pi}\int_0^{\pi}1\,\dd t=\frac{1}{\pi}\times\pi=1$　だから $\frac{a_0}{2}=\frac12$（平均）\par
+\kixba $a_n=\frac{1}{\pi}\int_0^{\pi}\cos nt\,\dd t=\frac{1}{\pi}\Bigl[\frac{\sin nt}{n}\Bigr]_0^{\pi}=0$\quad （$\sin n\pi=0$）\par
+\kixba $b_n=\frac{1}{\pi}\int_0^{\pi}\sin nt\,\dd t=\frac{1}{\pi}\Bigl[-\frac{\cos nt}{n}\Bigr]_0^{\pi}=\frac{1-\cos n\pi}{n\pi}$\par
+\kixbb $n$ が奇数なら $\frac{2}{n\pi}$、偶数なら0\par
+\kotae $\frac{a_0}{2}=\frac12$、$a_n=0$、$b_n=\frac{2}{n\pi}$（奇数）・0（偶数）。\\
+\hspace*{2.6\zw}$f(t)=\frac12+\frac{2}{\pi}\bigl(\sin t+\frac13\sin3t+\frac15\sin5t+\cdots\bigr)$
+\end{reidai}
+
+\begin{jibun}
+$0<t<\pi$ で5、$\pi<t<2\pi$ で0 をくり返す信号（周期 $2\pi$）のフーリエ係数を求め、フーリエ級数で書きましょう。
+\bkjans{$a_0=\frac{1}{\pi}\int_0^{\pi}5\,\dd t=5$、$\frac{a_0}{2}=2.5$。$a_n=\frac{5}{\pi}\bigl[\frac{\sin nt}{n}\bigr]_0^{\pi}=0$。$b_n=\frac{5(1-\cos n\pi)}{n\pi}$ で、奇数なら $\frac{10}{n\pi}$、偶数なら0。$f=2.5+\frac{10}{\pi}\bigl(\sin t+\frac13\sin3t+\cdots\bigr)$。}
+\end{jibun}
+
+\begin{reidai}[$0$ から $2\pi$ ののこぎり波]
+$0<t<2\pi$ で $f(t)=t$ をくり返すのこぎり波（周期 $2\pi$）の、フーリエ係数を求めましょう。\par
+\kangaekata \kixbbaai{区間ごとに1次式}{9-2}{C}\par
+\kixbdan{1}\enspace $a_n$・$b_n$：1周期（0から $2\pi$）で $t$ に $\cos nt$・$\sin nt$ をかけてたし、$\frac{1}{\pi}$ 倍。\par
+\kixbnaosu{1}\enspace $t\times\cos nt$・$t\times\sin nt$ は部分積分（⑦と同じく、$t$ を微分する側に）。\par
+\shiki\kixbs $a_0=\frac{1}{\pi}\int_0^{2\pi}t\,\dd t=\frac{1}{\pi}\Bigl[\frac{t^2}{2}\Bigr]_0^{2\pi}=\frac{1}{\pi}\times2\pi^2=2\pi$　だから $\frac{a_0}{2}=\pi$\par
+\kixba $\int_0^{2\pi}t\cos nt\,\dd t=\Bigl[\frac{t\sin nt}{n}\Bigr]_0^{2\pi}+\Bigl[\frac{\cos nt}{n^2}\Bigr]_0^{2\pi}=0+0=0$\par
+\kixbb （$\sin2n\pi=0$、$\cos2n\pi=\cos0=1$）だから $a_n=0$\par
+\kixba $\int_0^{2\pi}t\sin nt\,\dd t=\Bigl[-\frac{t\cos nt}{n}\Bigr]_0^{2\pi}+\frac{1}{n}\int_0^{2\pi}\cos nt\,\dd t$\par
+\kixbb $=-\frac{2\pi\times1}{n}+0=-\frac{2\pi}{n}$\par
+\kixba $b_n=\frac{1}{\pi}\times\Bigl(-\frac{2\pi}{n}\Bigr)=-\frac{2}{n}$\par
+\kotae $\frac{a_0}{2}=\pi$、$a_n=0$、$b_n=-\frac{2}{n}$。\\
+\hspace*{2.6\zw}$f(t)=\pi-2\bigl(\sin t+\frac{\sin2t}{2}+\frac{\sin3t}{3}+\cdots\bigr)$
+\end{reidai}
+
+\begin{jibun}
+$0<t<2\pi$ で $f(t)=2t$ をくり返すのこぎり波の、フーリエ係数を求めましょう。
+\bkjans{$a_0=\frac{1}{\pi}\int_0^{2\pi}2t\,\dd t=4\pi$、$\frac{a_0}{2}=2\pi$。$a_n=\frac{2}{\pi}\int_0^{2\pi}t\cos nt\,\dd t=0$。$b_n=\frac{2}{\pi}\int_0^{2\pi}t\sin nt\,\dd t=\frac{2}{\pi}\times\bigl(-\frac{2\pi}{n}\bigr)=-\frac{4}{n}$。}
+\end{jibun}
+
+\begin{reidai}[1\,kHz の信号の成分]
+マイコンが、0\,V と5\,V を、1秒に1000回（1\,kHz）同じ時間ずつ交互に出しています（1周期の前半が5\,V）。この信号の平均（直流分）と、1\,kHz・3\,kHz・5\,kHz の成分の大きさ（係数）を求めましょう。\par
+\kangaekata \kixbbaai{周期が $2\pi$ でなく、区間ごとに一定}{9-2}{F,B}\par
+\kixbdan{1}\enspace $b_n=\frac{2}{T}\int_0^Tf(t)\sin n\omega_0t\,\dd t$ など。$T=\qty{0.001}{s}$。\par
+\kixbdan{3}\enspace $\omega_0=\frac{2\pi}{T}=2000\pi$\,rad/s。$\theta=\omega_0t$ とおくと、$t$ が0から $T$ のとき $\theta$ は0から $2\pi$。\par
+\kixbnaosu{1}\enspace $\theta$ で見ると、$0<\theta<\pi$ で5、$\pi<\theta<2\pi$ で0 の、周期 $2\pi$ の波。\par
+\shiki\kixbs $\dd t=\frac{\dd\theta}{\omega_0}$ なので、$\frac{2}{T}\int_0^T\cdots\dd t=\frac{2}{T\omega_0}\int_0^{2\pi}\cdots\dd\theta=\frac{1}{\pi}\int_0^{2\pi}\cdots\dd\theta$\par
+\kixbb （$T\omega_0=2\pi$）。周期 $2\pi$ のときと同じ式になる\par
+\kixba 例題2の信号の5倍なので、$\frac{a_0}{2}=5\times\frac12=2.5$、$a_n=0$、$b_n=5\times\frac{2}{n\pi}=\frac{10}{n\pi}$（奇数）\par
+\kixba $n=1$（1\,kHz）：$\frac{10}{\pi}\approx3.18$、$n=3$（3\,kHz）：$\frac{10}{3\pi}\approx1.06$\par
+\kixba $n=5$（5\,kHz）：$\frac{10}{5\pi}\approx0.64$\par
+\kotae 平均 2.5\,V、1\,kHz：約3.18\,V、3\,kHz：約1.06\,V、5\,kHz：約0.64\,V（2\,kHz などの偶数倍は0）
+\end{reidai}
+
+\begin{jibun}
+0\,V と3.3\,V を、1秒に2000回（2\,kHz）同じ時間ずつ交互に出す信号（前半が3.3\,V）の、平均と、2\,kHz・6\,kHz・10\,kHz の成分の大きさを求めましょう。
+\bkjans{$\theta=\omega_0t$ とおくと、$0<\theta<\pi$ で3.3、$\pi<\theta<2\pi$ で0。平均 $\frac{a_0}{2}=1.65$\,V。$b_n=\frac{3.3(1-\cos n\pi)}{n\pi}$ で、奇数なら $\frac{6.6}{n\pi}$。2\,kHz：約2.10\,V、6\,kHz：約0.70\,V、10\,kHz：約0.42\,V。}
+\end{jibun}
+
+\begin{reidai}[12個のデータから係数を求める]
+高さ1の方形波を、1周期で12回、15°、45°、75°、…、345°（30° ごと）ではかりました。値は、15° から165° の6つが1、195° から345° の6つが $-1$ です。$\sin t$ の係数 $b_1$ の近い値を、「かけて平均の2倍」で求めましょう。\par
+\kangaekata \kixbbaai{データだけ}{9-2}{I}\par
+\kixbdan{1}\enspace $b_1=\frac{1}{\pi}\int_0^{2\pi}f\sin t\,\dd t$。式がないので、積分はできない。\par
+\kixbdan{3}\enspace 12個の「値×$\sin t$」の平均を2倍する（⑤の表計算と同じ）。\par
+\shiki\kixbs $\sin15°=0.2588$、$\sin45°=0.7071$、$\sin75°=0.9659$、$\sin105°=0.9659$、$\sin135°=0.7071$、$\sin165°=0.2588$\par
+\kixba 前半の6つの和：$1\times(0.2588+0.7071+0.9659)\times2=3.8637$\par
+\kixba 後半は $f=-1$、$\sin$ も負（$\sin195°=-0.2588$ など）なので、積は前半と同じ\par
+\kixbb 後半の6つの和も3.8637\par
+\kixba 平均：$\frac{3.8637\times2}{12}=0.6440$、2倍して $1.288$\par
+\kotae $b_1\approx1.288$（本当の値 $\frac{4}{\pi}\approx1.273$。36個なら1.275）
+\end{reidai}
+
+\begin{jibun}
+例題5と同じ12個のデータから、$\sin3t$ の係数 $b_3$ の近い値を求めましょう（$\sin3t$ の値は、$t=15°$、45°、75°、…、345° の順に $0.7071$、$0.7071$、$-0.7071$、$-0.7071$、$0.7071$、$0.7071$、$-0.7071$、$-0.7071$、$0.7071$、$0.7071$、$-0.7071$、$-0.7071$）。
+\bkjans{前半の6つの和 $0.7071\times(1+1-1-1+1+1)=1.4142$。後半は $f=-1$ で、値の和 $-1.4142$ に $-1$ をかけて1.4142。平均 $\frac{2.8284}{12}=0.2357$、2倍して $b_3\approx0.471$（本当の値 $\frac{4}{3\pi}\approx0.424$）。}
+\end{jibun}
+
+\begin{reidai}[棒のまん中の温度]
+⑧の棒（$L=\qty{0.1}{m}$、$\alpha=1\times10^{-4}$\,m²/s、はじめどこも100\,℃、両はし0\,℃）で、10秒後のまん中の温度を、級数の1項めと2項め（$n=1$、$3$）で求めましょう。\par
+\kangaekata \kixbbaai{0から $L$ だけの形で、区間ごとに一定}{9-2}{E,B}\par
+\kixbdan{1}\enspace はじめの形の係数 $b_n$：$\sin\frac{n\pi x}{L}$ を何倍してたすか。\par
+\kixbdan{3}\enspace 原点で半回転して広げると、周期 $2L$、高さ100の方形波（図\ref{bk:9-1:fig-hirogeru}）。\par
+\kixbnaosu{1}\enspace 方形波の係数（⑤）を100倍して、$b_n=\frac{400}{n\pi}$（奇数）。\par
+\shiki\kixbs $n=1$：$\alpha(\frac{\pi}{L})^2=0.0987$、$e^{-0.0987\times10}=e^{-0.987}=0.3727$\par
+\kixbb $\frac{400}{\pi}\times0.3727\times\sin\frac{\pi}{2}=127.32\times0.3727\approx47.45$\par
+\kixba $n=3$：$e^{-0.888\times10}=e^{-8.88}=0.000139$\par
+\kixbb $\frac{400}{3\pi}\times0.000139\times\sin\frac{3\pi}{2}$\par
+\kixbb $=42.44\times0.000139\times(-1)\approx-0.006$\par
+\kixba 合計 $47.45-0.006\approx47.45$\par
+\kotae 約47.45\,℃（2項めは $-0.006$\,℃ で、1項めだけでほぼ同じ）
+\end{reidai}
+
+\begin{jibun}
+同じ棒で、20秒後のまん中の温度を、級数の1項めと2項めで求めましょう（$e^{-1.974}=0.1389$、$e^{-17.77}\approx1.9\times10^{-8}$）。
+\bkjans{$n=1$：$127.32\times0.1389\approx17.69$。$n=3$：$-42.44\times1.9\times10^{-8}\approx-0.0000008$。合計 約17.69\,℃。}
+\end{jibun}
+
+\begin{reidai}[まん中が50\,℃になる時刻]
+同じ棒のまん中が50\,℃になるのは何秒後か、級数の1項めだけで求めましょう。\par
+\kangaekata \kixbbaai{0から $L$ だけの形で、区間ごとに一定}{9-2}{E,B}\par
+\kixbdan{1}\enspace まん中の温度 $\sum b_n e^{-\alpha(n\pi/L)^2t}\sin\frac{n\pi}{2}$。\par
+\kixbdan{3}\enspace $b_n=\frac{400}{n\pi}$（例題6と同じ）。5秒をすぎると2項め以下はとても小さいので、1項めだけにする。\par
+\shiki\kixbs $127.32\,e^{-0.0987t}=50$\par
+\kixba $e^{-0.0987t}=\frac{50}{127.32}=0.3927$\par
+\kixba $-0.0987t=\ln0.3927=-0.9347$\par
+\kixba $t=\frac{0.9347}{0.0987}\approx9.47$\par
+\begin{center}\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=34mm, axis x line=bottom, axis y line=left, xmin=0, xmax=20.5, ymin=0, ymax=135, xtick={5,9.47,15,20}, xticklabels={5,9.47,15,20}, ytick={50,100}, xlabel={$t$（s）}]
+  \addplot[kixbW, line width=1.2pt, domain=0:20, samples=80] {400/pi*exp(-0.0987*x)};
+  \addplot[bkOrange!85!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] coordinates {(0,50) (9.47,50) (9.47,0)};
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=0.5pt] at (axis cs:11,95) {$127.32\,e^{-0.0987t}$（1項め）};
+\end{axis}
+\end{tikzpicture}\end{center}
+\kixba 1項めのグラフが50\,℃の線と交わる時刻が答え\par
+\kotae 約9.47秒後（8-13 の表計算では9.50秒）
+\end{reidai}
+
+\begin{jibun}
+同じ棒のまん中が25\,℃になるのは何秒後か、1項めだけで求めましょう（$\ln\frac{25}{127.32}=-1.628$）。
+\bkjans{$127.32\,e^{-0.0987t}=25$、$e^{-0.0987t}=0.1963$、$-0.0987t=-1.628$、$t=\frac{1.628}{0.0987}\approx16.5$。約16.5秒後。}
+\end{jibun}
+
+\begin{reidai}[ギターの弦の倍音]
+ギターの5弦は、長さ \qty{0.65}{m} で、基本の周波数110\,Hz です。（1）弦を伝わる波の速さ $c$、（2）3番めの倍音の周波数、（3）弦のまん中をおさえて長さを半分にしたときの基本の周波数を求めましょう。\par
+\kangaekata 係数は求めないので、表9-2 は使わない。⑨の $f_n=\frac{nc}{2L}$ を使う。\par
+\kixbdan{1}\enspace $y=\sum b_n\sin\frac{n\pi x}{L}\cos\frac{n\pi ct}{L}$：$n$ 番めは周波数 $\frac{nc}{2L}$ でゆれる。\par
+\shiki\kixbs （1）$f_1=\frac{c}{2L}$ から $c=2Lf_1=2\times0.65\times110=143$\par
+\kixba （2）$f_3=3\times\frac{c}{2L}=3\times110=330$\par
+\kixba （3）$L=\qty{0.325}{m}$ で、$f_1=\frac{143}{2\times0.325}=220$\par
+\begin{center}\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixby/\kixbl/\kixbt in {10/90/{0.65\,m：110\,Hz},0/45/{0.325\,m：220\,Hz}} {%
+    \fill[bkInk] (0,\kixby) circle (0.7) (\kixbl,\kixby) circle (0.7);
+    \draw[bkBlue, line width=1pt, domain=0:\kixbl, samples=60, smooth] plot (\x,{\kixby+3*sin(\x/\kixbl*180)});
+    \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:\kixbl, samples=60, smooth] plot (\x,{\kixby-3*sin(\x/\kixbl*180)});
+    \node[font=\footnotesize, anchor=west] at ({\kixbl+3},\kixby) {\kixbt};}
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (45,-9) -- (45,-1.5);
+  \node[font=\footnotesize, anchor=west] at (47,-7) {まん中をおさえる};
+\end{tikzpicture}\end{center}
+\kotae （1）\qty{143}{m/s}　（2）330\,Hz　（3）220\,Hz（長さが半分で、周波数は2倍：1オクターブ上）
+\end{reidai}
+
+\begin{jibun}
+ギターの6弦は、長さ \qty{0.65}{m} で、基本の周波数がおよそ82\,Hz です。（1）弦を伝わる波の速さ $c$、（2）3番めの倍音の周波数、（3）長さを半分にしたときの基本の周波数を求めましょう。
+\bkjans{（1）$c=2\times0.65\times82\approx\qty{107}{m/s}$。（2）$3\times82=246$\,Hz。（3）$\frac{106.6}{2\times0.325}=164$\,Hz（2倍）。}
+\end{jibun}
+
+\begin{reidai}[級数から $\frac{\pi}{4}$ を求める]
+高さ1の方形波の級数 $\frac{4}{\pi}\bigl(\sin t+\frac13\sin3t+\frac15\sin5t+\cdots\bigr)$ は、$0<t<\pi$ で1になります。$t=\frac{\pi}{2}$ を入れて、$1-\frac13+\frac15-\frac17+\cdots$ の値を求めましょう。\par
+\kangaekata 係数はわかっているので、表9-2 は使わない。値のわかっている点を入れる。\par
+\kixbdan{1}\enspace $\sum$ は限りなくたす名前。ここでは $t=\frac{\pi}{2}$ で、左辺の値1と等しいとおく。\par
+\shiki\kixbs $\sin\frac{n\pi}{2}$ は、$n=1,\ 3,\ 5,\ 7,\ \cdots$ で $1,\ -1,\ 1,\ -1,\ \cdots$\par
+\kixba $1=\frac{4}{\pi}\bigl(1-\frac13+\frac15-\frac17+\cdots\bigr)$\par
+\kixba 両辺に $\frac{\pi}{4}$ をかける：$1-\frac13+\frac15-\frac17+\cdots=\frac{\pi}{4}$\par
+\begin{center}\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=38mm, xmin=0, xmax=13, ymin=0.6, ymax=1.05, xtick={1,2,4,6,8,10,12}, ytick={0.7,0.785,0.9,1}, yticklabels={0.7,0.785,0.9,1}, xlabel={たした数}, axis x line=bottom, axis y line=left]
+  \addplot[bkOrange!85!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] coordinates {(0,0.7854) (13,0.7854)};
+  \addplot[bkBlue, line width=1pt, mark=*, mark size=1.3pt] coordinates {(1,1) (2,0.6667) (3,0.8667) (4,0.7238) (5,0.8349) (6,0.744) (7,0.8209) (8,0.7543) (9,0.8131) (10,0.7605) (11,0.8081) (12,0.7646)};
+\end{axis}
+\end{tikzpicture}\end{center}
+\kixba 左辺を、たす数をふやしながら計算すると、上の図のように上下しながら0.785（点線）に近づく\par
+\kotae $\frac{\pi}{4}\approx0.785$
+\end{reidai}
+\noindent 級数に定数の項（$\frac{a_0}{2}$）があるときは、$t$ を入れたあと、先に両辺から定数の項をひいてから、残りの $\sum$ の部分を求めます。
+
+\begin{jibun}
+例題2の信号の級数 $\frac12+\frac{2}{\pi}\bigl(\sin t+\frac13\sin3t+\frac15\sin5t+\cdots\bigr)$ は、$0<t<\pi$ で1です。$t=\frac{\pi}{2}$ を入れて、$1-\frac13+\frac15-\cdots$ の値を求めましょう。
+\bkjans{$1=\frac12+\frac{2}{\pi}\bigl(1-\frac13+\frac15-\cdots\bigr)$。両辺から $\frac12$ をひいて $\frac12=\frac{2}{\pi}(\cdots)$。両辺に $\frac{\pi}{2}$ をかけて、$1-\frac13+\frac15-\cdots=\frac{\pi}{4}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 係数の名前 $b_n$ を、そのまま値と思う}
+\bkng{$b_n$ は「$n$ 番めの点での $f$ の値」}
+\bkok{$b_n$ は「$\sin n\omega_0t$ をかけて平均の2倍」という操作の名前}
+\[ \kixbNt{b_n}=\kixbSt{1}{\frac{2}{T}\int_0^Tf(t)\sin n\omega_0t\,\dd t} \]
+$b_n$ は、1周期ぜんぶの $f$ の値を使って決まる数です。1か所の値ではありません。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixbEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② 平均を $a_0$ とする}
+\raggedright\bkng{例題2の信号の定数の項は $a_0=1$}
+\bkok{定数の項は $\frac{a_0}{2}=\frac12$}
+$a_0$ は平均の2倍です。$a_n$ の式を $n=0$ にも使えるように、$\frac12$ をつけて書く約束でした。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ $\frac{1}{n}$ をつけ忘れる}
+\raggedright\bkng{$\int_0^{\pi}\sin nt\,\dd t=\bigl[-\cos nt\bigr]_0^{\pi}$}
+\bkok{$\int_0^{\pi}\sin nt\,\dd t=\Bigl[-\frac{\cos nt}{n}\Bigr]_0^{\pi}$}
+$-\cos nt$ を微分すると $n\sin nt$ です。$n$ でわっておかないと、$n$ 倍ずれます（5-15）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixbEHB}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ $\cos n\pi$ をいつも $-1$ にする}
+\raggedright\bkng{$\cos n\pi=-1$}
+\bkok{$\cos n\pi=(-1)^n$（偶数なら1）}
+$\cos\pi=-1$ ですが、$\cos2\pi=1$ です。方形波の偶数番が0になるのは、このためです。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ たくさんたせば、角の山は消える}
+\raggedright\bkng{1000個たせば、山はなくなる}
+\bkok{山の高さは約1.179のまま}
+たす数をふやすと、山は角に近づき、はばはせまくなりますが、高さは下がりません（ギブズ現象）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixbEHC}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ $n\omega_0$ を $\omega_{\mathrm n}$ と書く}
+\raggedright\bkng{3番めの成分の角周波数は $\omega_3$}
+\bkok{$3\omega_0$（基本の3倍）}
+$\omega_{\mathrm n}$ は 6-12 の固有角振動数で、別のものです。番号は $\omega_0$ の前にかけます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑦ 熱の式の $T$ を周期と読む}
+\raggedright\bkng{$T(x,\ t)$ の $T$ は周期}
+\bkok{熱の節の $T$ は温度〔℃〕}
+熱や弦の節では、周期を使わず、棒の長さ $L$ と $\sin\frac{n\pi x}{L}$ で書きました。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixbbox{デジタル回路の信号と、雑音}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+コンピュータの中では、0と1の信号が、1秒に何億回も切りかわっています。例題4のように、方形波に近い信号は、基本の周波数の3倍・5倍・7倍…の成分をふくみます。この高い成分が電線から電波として出ると、ほかの機械の雑音になります。電子機器の設計では、信号のスペクトルを調べ、高い成分を小さくする工夫をしています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=1.6mm]}] (0,0) -- (40,0);
+  \draw[bkOrange!85!black, line width=1pt] (0,0) -- (0,8) -- (6,8) -- (6,0) -- (12,0) -- (12,8) -- (18,8) -- (18,0) -- (24,0) -- (24,8) -- (30,8) -- (30,0) -- (36,0);
+  \node[font=\footnotesize, anchor=north] at (18,-1) {0と1の信号};
+  \foreach \kixbn/\kixbh in {1/1,3/0.333,5/0.2,7/0.143} {\fill[bkBlue!80] ({4+4*\kixbn-1.2},-22) rectangle ({4+4*\kixbn+1.2},{-22+12*\kixbh});}
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=1.6mm]}] (2,-22) -- (40,-22);
+  \node[font=\footnotesize, anchor=north] at (20,-23) {成分（1・3・5・7倍）};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\par\vspace{6pt}
+\kixbbox{電気のひずみ}
+コンセントの電気（50\,Hz・60\,Hz）から、とぎれとぎれに電流をとる電気製品があると、電流の形がくずれ（ひずみ）、150\,Hz・250\,Hz などの高調波がふくまれます。高調波は変圧器などを熱くするので、量をフーリエ係数で表して管理します（9-2）。
+
+\par\vspace{4pt}
+\kixbbox{弦楽器のハーモニクス}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+ギターの弦のまん中に指を軽くふれてはじくと、1オクターブ高い、すんだ音が出ます（ハーモニクス）。まん中がゆれない $n=2,\ 4,\ \cdots$ のゆれ（図\ref{bk:9-1:fig-gen}の $n=2$）だけが残り、まん中がゆれる $n=1,\ 3,\ \cdots$ は指で止められるからです。いちばん低い成分は $n=2$ の220\,Hz です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk] (0,0) circle (0.7) (36,0) circle (0.7);
+  \draw[bkBlue, line width=1pt, domain=0:36, samples=80, smooth] plot (\x,{6*sin(10*\x)});
+  \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:36, samples=80, smooth] plot (\x,{-6*sin(10*\x)});
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (18,14) -- (18,2);
+  \node[font=\footnotesize, anchor=south] at (18,14.5) {指でふれる};
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+\begin{column}{焼き入れした部品の冷え方}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+鉄の部品を熱してから水や油で急に冷やす「焼き入れ」では、中心の冷える速さで、かたさが変わります。⑧と同じく、少し時間がたつと1項めだけで冷え方がわかります。厚さが2倍なら、冷える時間はおよそ4倍です（$e^{-\alpha(\pi/L)^2t}$ の $L^2$。右の図）。くわしくは物理シリーズ（熱-11）で。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=46mm, height=34mm, axis x line=bottom, axis y line=left, xmin=0, xmax=4.4, ymin=0, ymax=1.15, xtick={1,2,3,4}, ytick={0.5,1}, xlabel={時間}, xlabel style={font=\sffamily\footnotesize}]
+  \addplot[kixbW, line width=1.2pt, domain=0:4, samples=60] {exp(-x)};
+  \addplot[bkOrange!85!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt, domain=0:4, samples=60] {exp(-x/4)};
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=0.5pt] at (axis cs:1.1,0.22) {厚さ $L$};
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=0.5pt] at (axis cs:2.2,0.68) {厚さ $2L$};
+\end{axis}
+\end{tikzpicture}\par
+{\footnotesize 中心の温度（1項め）。$2L$ は4倍ゆっくり}
+\end{minipage}
+\end{column}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 高さ1の方形波の級数を、4つめの項（$\frac17\sin7t$）まででやめて、$t=\frac{\pi}{2}$ での値を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{かっこの中 $1-\frac13+\frac15-\frac17=0.7238$。$\frac{4}{\pi}\times0.7238\approx0.922$。}
+
+\bkproblem $0<t<\pi$ で2、$\pi<t<2\pi$ で0 をくり返す信号（周期 $2\pi$）のフーリエ係数を求め、フーリエ級数で書きましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$\frac{a_0}{2}=1$、$a_n=0$、$b_n=\frac{2(1-\cos n\pi)}{n\pi}$ で、奇数なら $\frac{4}{n\pi}$、偶数なら0。$f=1+\frac{4}{\pi}\bigl(\sin t+\frac13\sin3t+\cdots\bigr)$。}
+
+\bkproblem $0<t<2\pi$ で $f(t)=\frac{t}{2}$ をくり返すのこぎり波の、フーリエ係数を求めましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$a_0=\frac{1}{2\pi}\int_0^{2\pi}t\,\dd t=\pi$ で $\frac{a_0}{2}=\frac{\pi}{2}$。$a_n=0$。$b_n=\frac{1}{2\pi}\times\bigl(-\frac{2\pi}{n}\bigr)=-\frac{1}{n}$。}
+
+\bkproblem 0\,V と10\,V を、1秒に50回（50\,Hz）同じ時間ずつ交互にくり返す電圧（前半が10\,V）の、平均と、50\,Hz・150\,Hz・250\,Hz の成分の大きさを求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$\theta=\omega_0t$ とおくと、0から $\pi$ で10、$\pi$ から $2\pi$ で0。平均5\,V。$b_n=\frac{20}{n\pi}$（奇数）。50\,Hz：約6.37\,V、150\,Hz：約2.12\,V、250\,Hz：約1.27\,V。}
+
+\bkproblem ⑧の棒で、15秒後のまん中の温度を、級数の1項めと2項めで求めましょう（$e^{-1.480}=0.2275$、$e^{-13.32}\approx1.6\times10^{-6}$）\mbox{（\bkreidairef{6}）}。
+\bkpans{$n=1$：$127.32\times0.2275\approx28.97$。$n=3$：$-42.44\times1.6\times10^{-6}\approx-0.00007$。合計 約28.97\,℃。}
+
+\bkproblem 長さ \qty{0.65}{m} の弦を伝わる波の速さが \qty{143}{m/s} のとき、（1）4番めの倍音の周波数、（2）長さを \qty{0.5}{m} にしたときの基本の周波数を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{（1）$f_4=\frac{4\times143}{2\times0.65}=440$\,Hz。（2）$\frac{143}{2\times0.5}=143$\,Hz。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem ⑧の棒のまん中が30\,℃になるのは何秒後か、1項めだけで求めましょう（$\ln\frac{30}{127.32}=-1.446$）\mbox{（\bkreidairef{7}）}。
+\bkpans{$e^{-0.0987t}=\frac{30}{127.32}$、$-0.0987t=-1.446$、$t=\frac{1.446}{0.0987}\approx14.6$。約14.6秒後。}
+
+\bkproblem $0<t<\pi$ で1、$\pi<t<2\pi$ で0 の信号（例題2）を、15°、45°、…、345° の12か所ではかりました。$b_1$ の近い値を「かけて平均の2倍」で求め、本当の値 $\frac{2}{\pi}$ とくらべましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{前半6つの「値×$\sin t$」の和 $(0.2588+0.7071+0.9659)\times2=3.8637$、後半は0。平均 $\frac{3.8637}{12}=0.3220$、2倍して $b_1\approx0.644$（本当の値 $\frac{2}{\pi}\approx0.637$）。}
+
+\bkproblem ⑧の棒の答えに $t=0$、$x=\frac{L}{2}$ を入れると、左辺は100\,℃です。このことから、$1-\frac13+\frac15-\frac17+\cdots$ の値を求めましょう\mbox{（\bkreidairef{9}）}。
+\bkpans{$100=\frac{400}{\pi}\bigl(1-\frac13+\frac15-\cdots\bigr)$。両辺に $\frac{\pi}{400}$ をかけて、$1-\frac13+\frac15-\cdots=\frac{\pi}{4}$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item $\sin$ の波をたして方形波に近づくのを表計算で確かめ、スペクトルを読める。\bkfurref{bk:9-1:spec}
+\item フーリエ級数の形を書き、方形波・のこぎり波の係数を、ふつうの定積分で求められる。\bkfurref{bk:9-1:kakete}
+\item 棒の熱と弦のゆれを、変数分離とフーリエ級数で解ける。\bkfurref{bk:9-1:netsu}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{かけて平均の2倍で、成分が取り出せた。どうしてほかの成分はきれいに0になるんだろう。次の 9-2 で、そのしくみ（直交性）を確かめよう。}

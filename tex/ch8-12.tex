@@ -1,0 +1,944 @@
+%% 8-12 ならす働き：ラプラシアン（第14回：組 V8-7。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本が指している形：
+%%   物理 p1-15:551「ラプラシアン（8-12）は『まわりの平均との差』なので、ねばりは速さをまわりの平均にならそうとする」→ 同じ言い方。ベクトルの ∇² は成分ごと。
+%%   ch4-15:468「第8巻（8-6・8-12）では、円柱座標や球座標を使って、パイプの中の流れや、球のまわりの電場を計算します」→ ⑦ 球対称・軸対称（S6）、⑧ 管の流れ。
+%%   決定4：ラプラシアンは ∇²（Δ は「変化の量」とぶつかる。Δ と書く本もある、と記号カードと専門書に）。決定7：電位は φ、球座標の角は φ（別の文字と注）。決定9：熱伝導率 k。
+%%   組どうしの約束：主役の山 h=100−0.01x²−0.02y²（∇²h=−0.06）、板の25℃（5×5 の中の3×3：42.857・52.679…）、6-3 のかべ（T=20−100x）、6-11 のフィン（β=20、L=0.05、θ_b=40）、管（R=1 cm、u_max=0.2 m/s）。
+%%   数はすべて scratchpad/v8-7/py/c12.py で検算。
+\makeatletter
+% 本文の小見出し（太字の1行）
+\newcommand\kviiimhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiimbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviiimframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!8, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（「式」の札のあとにそろえる）
+\newcommand\kviiimq{\par\vspace{1pt}\noindent\hangindent=2.6\zw\hangafter=0\relax}
+% 表計算の数式バー（7-1 の型と同じ）  \kviiimfx{B8}{=AVERAGE(B1,A2,C2,B3)}
+\newcommand\kviiimfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=50mm, text width=56mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+\colorlet{kviiimB}{bkLine!30}\colorlet{kviiimR}{bkYellow!35}\colorlet{kviiimH}{bkRed!14}\colorlet{kviiimC}{bkBlue!12}
+% 温度の色のマス（0〜100℃を白→赤に）  \kviiimtcell{(x,y)}{大きさ mm}{値}{表示する字}
+\newcommand\kviiimtcell[4]{\pgfmathtruncatemacro\kviiim@p{min(100,max(0,#3))*0.6}%
+  \filldraw[fill=bkRed!\kviiim@p, draw=bkInk!60, line width=0.4pt] #1 rectangle ++(#2,#2);
+  \node[font=\sffamily\footnotesize, text=bkInk] at ($#1+(#2/2,#2/2)$) {#4};}
+% 正方形の板（上のふちだけ色を変える）  \kviiimplate{(x,y)}{はば}{上の色}{右}{下}{左}
+\newcommand\kviiimplate[6]{\begin{scope}[shift={#1}]
+  \fill[bkGray!10] (0,0) rectangle (#2,#2);
+  \draw[#3, line width=2.2pt] (0,#2) -- (#2,#2);
+  \draw[#4, line width=2.2pt] (#2,#2) -- (#2,0);
+  \draw[#5, line width=2.2pt] (#2,0) -- (0,0);
+  \draw[#6, line width=2.2pt] (0,0) -- (0,#2);
+  \end{scope}}
+\makeatother
+
+\bkchapter{8}{12}{ならす働き：\\ラプラシアン}{\bklevel{5}}{ならす働き：ラプラシアン}
+\bkmichishirube{4-15,6-3,6-11,8-2,8-4,8-6,8-9,8-10,8-11}{8-13,8-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 表計算で、マスの値と「まわりの平均」との差を出し、温まる所と冷える所を見分けられる。
+\item \bklevel{4}\enspace 「どのマスも、まわりの平均と同じ」のくり返しで、板の温度が落ち着いた形を求められる。
+\item \bklevel{5}\enspace ラプラシアン $\nabla^2f$ を偏微分で計算し、球や円柱の形の場合にも使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.57\linewidth}
+\raggedright
+正方形のうすい金属の板があります。上のふちだけを\textbf{100\,℃}のお湯にひたし、ほかの3つのふちは\textbf{0\,℃}の氷水にひたしておきます。長い時間がたつと、板の温度はもう変わらなくなります。\par\vspace{4pt}
+そのとき、板の\textbf{まん中}は何\,℃になっているでしょう。4つのふちの温度の平均の $(100+0+0+0)\div4=25$ かな？\ それとも、ちがうかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiimplate{(0,0)}{28}{bkRed}{bkBlue}{bkBlue}{bkBlue}
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black] at (14,29.5) {100\,℃};
+  \node[font=\sffamily\footnotesize, anchor=north] at (14,-1.5) {0\,℃};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1.5,14) {0\,℃};
+  \node[font=\sffamily\footnotesize, anchor=west] at (29.5,14) {0\,℃};
+  \fill[bkInk] (14,14) circle (0.9);
+  \node[font=\sffamily\small\bfseries, anchor=south] at (14,15.5) {？\,℃};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+物理シリーズ『力学』の 力-15 では、水のねばりの力を $\mu\nabla^2\vec v$ と書き、「ラプラシアン（8-12）は『\textbf{まわりの平均との差}』なので、ねばりは速さをまわりの平均にならそうとする」と読みました。この章は、その「まわりの平均との差」を作る章です。
+
+熱いみそ汁は冷め、冷たいジュースはぬるくなります。どちらも、まわり（部屋の空気）と同じ温度に近づいていきます。板の中でも同じです。まわりより熱い所は冷え、まわりより冷たい所は温まります。だから、ある場所が温まるか冷えるかを知るには、その場所の温度と\textbf{まわりの温度の平均}をくらべればよいのです。この「まわりの平均との差」を、表計算で出すことから始めましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=58mm, xmin=0, xmax=64, ymin=0, ymax=88, xtick={0,10,20,30,40,50,60}, ytick={0,20,40,60,80}, xlabel={$t$（分）}, ylabel={温度（℃）}]
+  \addplot[bkthin, dashed, domain=0:62] {20};
+  \addplot[bkcurve2, domain=0:62, samples=60] {20+60*exp(-0.05*x)};
+  \addplot[bkcurve, domain=0:62, samples=60] {20-15*exp(-0.05*x)};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:5,66) {熱いみそ汁（80\,℃から）};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=\bkTT, fill=white, inner sep=1pt] at (axis cs:24,12.5) {冷たいジュース（5\,℃から）};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkGray, fill=white, inner sep=1pt] at (axis cs:62,23) {部屋の温度 20\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{熱いものも冷たいものも、まわり（部屋）の温度に近づいていく（6-4 の冷めるお湯と同じ形）。まわりとの差が大きいほど、温度は速く変わる。}
+\label{bk:8-12:fig-heya}
+\end{bkfigure}
+
+図\ref{bk:8-12:fig-heya}のように、温度が変わる速さは、まわりとの差が大きいほど速く、差が0になると止まります。みそ汁やジュースでは「まわり」は部屋の空気でした。板の中の1つの場所にとっては、「まわり」はとなりの場所です。
+
+\begin{yattemiyou}[まわり4マスの平均とくらべよう]
+うすいアルミの板のまん中に、ドライヤーの熱い風を当てています。板の温度を \qty{1}{cm} おきにはかって、表計算の A1:E5 に入れました（1行が北から南へ \qty{1}{cm}、1列が西から東へ \qty{1}{cm}。ふちは部屋と同じ20\,℃）。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 1行め〜5行めに、下の表の温度を入れる。
+\item B7 に \texttt{=AVERAGE(B1,A2,C2,B3)-B2} を入れる。B2 の北（B1）・西（A2）・東（C2）・南（B3）の4マスの平均から、B2 自身をひいた数です。
+\item B7 をコピーして、B7:D9 の9マスに貼る。上の表の B2:D4 の「まわりの平均との差」が、同じ並びで出る。
+\end{enumerate}
+\begin{bkcenter}
+\kviiimfx{B7}{=AVERAGE(B1,A2,C2,B3)-B2}\par\vspace{1mm}
+\bksheet{5}{14}{%
+1 & 20 & 20 & 20 & 20 & 20 \\
+2 & 20 & \SetCell{bg=kviiimH} 35 & \SetCell{bg=kviiimH} 40 & \SetCell{bg=kviiimH} 35 & 20 \\
+3 & 20 & \SetCell{bg=kviiimH} 40 & \SetCell{bg=kviiimH} 80 & \SetCell{bg=kviiimH} 40 & 20 \\
+4 & 20 & \SetCell{bg=kviiimH} 35 & \SetCell{bg=kviiimH} 40 & \SetCell{bg=kviiimH} 35 & 20 \\
+5 & 20 & 20 & 20 & 20 & 20 \\
+6 & & & & & \\
+7 & & \SetCell{bg=kviiimR} ア & \SetCell{bg=kviiimR} イ & \SetCell{bg=kviiimR} $-5$ & \\
+8 & & \SetCell{bg=kviiimR} 2.5 & \SetCell{bg=kviiimR} ウ & \SetCell{bg=kviiimR} 2.5 & \\
+9 & & \SetCell{bg=kviiimR} $-5$ & \SetCell{bg=kviiimR} 2.5 & \SetCell{bg=kviiimR} $-5$ & \\}
+\bktabcaption{1〜5行めが板の温度（℃）。B7:D9 が、B2:D4 の「まわり4マスの平均－自分」。}
+\end{bkcenter}
+\vspace{2pt}
+アからウをうめよう。差が正のマスと負のマスは、それぞれ温まるかな、冷えるかな？
+\end{yattemiyou}
+
+\noindent B7 の式は、B2 から見て北・西・東・南の4マスを指しています。B7 を C7 に貼ると、指す場所も1列ずつ右へずれて \texttt{=AVERAGE(C1,B2,D2,C3)-C2} になります（2-18 の、コピーすると指す場所がずれるしくみ）。だから、B7:D9 の9マスは、それぞれ上の表の B2:D4 の同じ並びの場所について計算します。手で確かめます。
+\begin{bkhenkei}[0.66]
+\text{ア：}\frac{20+20+40+40}{4}-35=30-35=-5 & B2（35\,℃）の差 \\
+\text{イ：}\frac{20+35+35+80}{4}-40=42.5-40=2.5 & C2（40\,℃）の差 \\
+\text{ウ：}\frac{40+40+40+40}{4}-80=40-80=-40 & C3（80\,℃）の差 \\
+\end{bkhenkei}
+分子の4つの数は、北・西・東・南の順です。たとえばアの B2 なら、北の B1 が20、西の A2 が20、東の C2 が40、南の B3 が40です。
+まん中の80\,℃のマスは $-40$ です。まわりの平均（40\,℃）より40\,℃も熱いので、これから冷えていきます（ドライヤーを止めれば）。
+
+おもしろいのは、イ（40\,℃のマス）とア（35\,℃のマス）です。40\,℃のマスのほうが熱いのに、40\,℃のマスは $+2.5$ で\textbf{温まり}、35\,℃のマスは $-5$ で\textbf{冷え}ます。40\,℃のマスは、南に80\,℃の熱いマスがとなり合っているからです。温まるか冷えるかは、自分の温度が高いか低いかでは決まりません。\textbf{まわりとくらべて}高いか低いかで決まるのです。
+
+もう1つ、ためしてみましょう。表の温度を全部10\,℃ずつ上げても（ふちを30\,℃、まん中を90\,℃にしても）、B7:D9 の数は1つも変わりません。まわりの平均も自分も同じだけ上がるので、差は変わらないからです。「まわりの平均との差」は、温度そのものではなく、\textbf{でこぼこのようす}を表す数です。
+
+この章では、この「まわりの平均との差」を、\textbf{ラプラシアン}（8-2 の偏微分を2回使う量）として式にします。熱の伝わり方・電気の場・水のねばり・画像の輪郭さがしまで、場所で値が変わるいろいろな量の「ならす働き」が、この1つの量で表せます。
+
+★★★★★ の章ですが、「目でわかる」「手でわかる」の段は、表計算と電卓だけで読めます。「式でわかる」の段は、1回で分からなくても大丈夫です。表でつかんだ感じが、あとから式とつながります。
+
+\begin{omoidasou}
+\bkrecall{4-15}{球座標 $(r,\ \theta,\ \varphi)$ の $r$ は原点からの距離、円柱座標の $r$ は軸からの距離。}
+\bkrecall{6-3}{かべの温度が変わらない（定常）とき $\tfrac{\dd^2T}{\dd x^2}=0$。答えは直線 $T=20-100x$。両はしの温度（境界条件）で決まる。}
+\bkrecall{6-11}{冷却フィンの温度差 $\theta$ は $\tfrac{\dd^2\theta}{\dd x^2}=\beta^2\theta$。$\beta=20$〔1/m〕、根もと40\,K。}
+\bkrecall{8-2}{偏微分は、ほかを止めて1つだけ動かす。$\tfrac{\partial^2f}{\partial x^2}$ は $x$ で2回偏微分したもの。}
+\bkrecall{8-4}{$\mathrm{grad}\,f$ は、いちばん急に増える向きの矢印。熱の流れは $\vec q=-k\,\mathrm{grad}\,T$（$k$ は熱伝導率）。}
+\bkrecall{8-9}{$\mathrm{div}\,\vec F$ は、小さな箱から出ていく量÷箱の体積（わき出し）。}
+\bkrecall{8-11}{中のわき出しを全部たすと、外の面から出ていく量になる（ガウスの定理）。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{14\baselineskip}
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{まわりより高いか、低いか}{\bklevel{3}}
+
+\bksubsection{1}{まわりの平均との差}
+
+\leavevmode\label{bk:8-12:sa}やってみようで出した数を、もう一度ことばにします。場所で値が変わる量（温度・高さ・電位など）を表計算の表にしたとき、
+\kviiimframe{（まわり4マスの平均）－（自分の値）}
+を、この本では「\textbf{まわりの平均との差}」とよびます。この数の符号で、そのマスのようすがわかります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \foreach \i in {0,1,2} {\foreach \j in {0,1,2} {\draw[bkInk!60, line width=0.5pt] (\i*12,\j*12) rectangle ++(12,12);}}
+    \fill[bkOrange!35] (12,12) rectangle ++(12,12);
+    \foreach \p in {(12,24),(0,12),(24,12),(12,0)} {\fill[bkBlue!16] \p rectangle ++(12,12);}
+    \foreach \i in {0,1,2} {\foreach \j in {0,1,2} {\draw[bkInk!60, line width=0.5pt] (\i*12,\j*12) rectangle ++(12,12);}}
+    \node[font=\sffamily\footnotesize] at (18,18) {自分};
+    \node[font=\sffamily\footnotesize] at (18,30) {北};
+    \node[font=\sffamily\footnotesize] at (18,6) {南};
+    \node[font=\sffamily\footnotesize] at (6,18) {西};
+    \node[font=\sffamily\footnotesize] at (30,18) {東};
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (18,-2) {青い4マスの平均\\－オレンジのマス};
+  \end{scope}
+  \begin{scope}[xshift=52mm]
+    \node[anchor=north west, align=left, font=\small, text width=74mm] at (0,36) {%
+      \textbf{正}（$+$）：まわりより冷たい。\par まわりから熱が入ってきて、温まる。\par\vspace{5pt}
+      \textbf{負}（$-$）：まわりより熱い。\par まわりへ熱が出ていき、冷える。\par\vspace{5pt}
+      \textbf{0}：まわりの平均と同じ。\par 入る熱と出る熱がつり合い、変わらない。};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{まわり4マス（北・南・西・東）の平均と、自分をくらべる。ななめのマスは使わない。}
+\label{bk:8-12:fig-juji}
+\end{bkfigure}
+
+なぜ「正なら温まる」のでしょう。6-3 で学んだように、熱は温度の高い所から低い所へ流れ、その量は温度の差に比例します（フーリエの法則）。自分のマスに、北のマスから入ってくる熱は「北の温度－自分の温度」に比例します。西・東・南も同じです。4つをたすと、
+\[ (\text{北}-\text{自分})+(\text{西}-\text{自分})+(\text{東}-\text{自分})+(\text{南}-\text{自分}) \]
+\[ =(\text{北}+\text{西}+\text{東}+\text{南})-4\times\text{自分}=4\times\bigl((\text{まわりの平均})-(\text{自分})\bigr) \]
+です。\textbf{まわりから入ってくる熱の合計は、「まわりの平均との差」の4倍に比例する}のです。差が正なら、入ってくる熱のほうが多いので温まり、負なら出ていく熱のほうが多いので冷えます。
+
+\kviiimhead{山の高さでも同じ数が作れる}
+「まわりの平均との差」は、温度だけの数ではありません。表になっていれば、高さ・電位・水の深さ・画像の明るさなど、どんな量でも計算できます。量がちがえば、意味のことばが変わるだけです。高さなら、正の所は「まわりよりくぼんでいる（谷・おわんの底）」、負の所は「まわりより出っぱっている（山・尾根）」です。
+
+\bksubsection{2}{主役の山は、どこでも「まわりより高い」}
+
+\label{bk:8-12:yama}8-1 から使ってきた主役の山 $h=100-0.01x^2-0.02y^2$（m。$x$ は東へ、$y$ は北へ）で、まわりの平均との差を計算します。\qty{10}{m} おきの地図にして、点 $(30,\ 20)$ を自分のマスにします。
+\begin{bkhenkei}[0.62]
+h(30,\ 20)=100-9-8=83 & 自分 \\
+h(40,\ 20)=76,\quad h(20,\ 20)=88 & 東と西 \\
+h(30,\ 30)=73,\quad h(30,\ 10)=89 & 北と南 \\
+\frac{76+88+73+89}{4}-83=81.5-83=-1.5 & まわりの平均との差 \\
+\end{bkhenkei}
+東は $x$ を10ふやした点、北は $y$ を10ふやした点です。高さは、東なら $100-16-8=76$ のように、自分のときと同じように計算します。差は $-1.5$\,m です。点 $(30,\ 20)$ は、まわり4点の平均より\qty{1.5}{m}高い、つまり\textbf{出っぱっています}。山の形として、あたりまえですね。
+
+同じ計算を、頂上 $(0,\ 0)$ でも、ずっと南東の点 $(50,\ -30)$ でもしてみます。頂上では $h=100$、まわりの平均は98.5で、差は $-1.5$。点 $(50,\ -30)$ では $h=57$、まわりの平均は55.5で、差はやはり $-1.5$ です（じぶんで1つ確かめてみましょう）。\textbf{主役の山は、どこでも差が $-1.5$} なのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=ew, axis x line=bottom, axis y line=left, width=62mm, height=50mm, xmin=15, xmax=45, ymin=70, ymax=92, xtick={20,30,40}, ytick={75,80,85,90}, xlabel={$x$（m）}, ylabel={$h$（m）}]
+  \addplot[bkcurve, domain=15:45, samples=40] {92-0.01*x^2};
+  \addplot[bkthin, dashed] coordinates {(20,88) (40,76)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(20,88) (30,83) (40,76)};
+  \addplot[only marks, mark=o, mark size=2pt, bkRed, line width=1pt] coordinates {(30,82)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:30.5,83.4) {83};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:29.3,81.4) {平均82};
+\end{axis}
+\begin{axis}[bkplot, at={(ew.east)}, anchor=west, xshift=16mm, axis x line=bottom, axis y line=left, width=62mm, height=50mm, xmin=5, xmax=35, ymin=70, ymax=92, xtick={10,20,30}, ytick={75,80,85,90}, xlabel={$y$（m）}, ylabel={$h$（m）}]
+  \addplot[bkcurve2, domain=5:31.3, samples=40] {91-0.02*x^2};
+  \addplot[bkthin, dashed] coordinates {(10,89) (30,73)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(10,89) (20,83) (30,73)};
+  \addplot[only marks, mark=o, mark size=2pt, bkRed, line width=1pt] coordinates {(20,81)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:20.5,83.4) {83};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:19.3,80.4) {平均81};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{主役の山を、点 $(30,\ 20)$ を通る2つの切り口で見る。左は東西の切り口（$y=20$）、右は南北の切り口（$x=30$）。点線は、となり2点を結んだ線。赤い丸は、となり2点の平均（点線のまん中）。どちらも、山の点（83）が平均より上にある。}
+\label{bk:8-12:fig-yama}
+\end{bkfigure}
+
+なぜ、どこでも同じ数になるのでしょう。図\ref{bk:8-12:fig-yama}のように、4つのまわりの点を「東西の2点」と「南北の2点」に分けてみます。東西の2点の平均は $(76+88)\div2=82$ で、自分の83より1低い。南北の2点の平均は $(73+89)\div2=81$ で、2低い。4点の平均81.5は、82と81の平均なので、差は1と2の平均の1.5になります。
+\[ -1.5=\frac{(-1)+(-2)}{2} \]
+東西の切り口は、放物線 $h=92-0.01x^2$ です。南北の切り口は、放物線 $h=91-0.02y^2$ です（8-1 の切り口）。放物線は、どこでも同じ曲がり方をしているので、「となり2点の平均との差」がどこでも同じになるのです。北向きの切り口のほうが、$y^2$ の係数が2倍なので、2倍強く曲がっています。この「曲がり方」が2階微分だ、ということを④で確かめます。
+
+\Needspace{10\baselineskip}
+\bkstage{te}{手でわかる}{表計算でならす}{\bklevel{4}}
+
+\bksubsection{3}{板の温度が落ち着く形}
+
+\label{bk:8-12:ita}\bkhatenaref の板を、表計算で調べます。板を $4\times4$ のマスに分けると、マスの角の点が $5\times5$ 個できます。ふちの点は、上が100\,℃、ほかが0\,℃で決まっています（境界条件。6-3）。まん中の $3\times3$ の点の温度を求めます。
+
+長い時間がたって温度がもう変わらない（定常）とき、どの点でも、入ってくる熱と出ていく熱がつり合っています。①から、それは\textbf{まわりの平均との差が0}、つまり
+\kviiimframe{どの点も、まわり4点の平均と同じ温度}
+ということです。この条件をみたす温度を、次の「ならす」くり返しでさがします。
+
+\kviiimhead{「ならす」くり返し}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item まん中の9点を、てきとうな温度（ここでは全部0\,℃）にしておく。
+\item 9点それぞれを、「まわり4点の平均」に置きかえた新しい表を作る。ふちは100\,℃と0\,℃のまま。
+\item ②を何回もくり返す。表がもう変わらなくなったら、それが答え。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \ox/\name/\vals in {
+    0/{0回め}/{0,0,0,0,0,0,0,0,0},
+    34/{1回め}/{25,25,25,0,0,0,0,0,0},
+    68/{2回め}/{31,38,31,6,6,6,0,0,0},
+    102/{30回め}/{43,53,43,19,25,19,7,10,7}} {
+    \begin{scope}[shift={(\ox,0)}]
+      \foreach \i in {0,...,4} {\fill[bkRed!25] (\i*6,24) rectangle ++(6,6); \draw[bkInk!60, line width=0.4pt] (\i*6,24) rectangle ++(6,6);}
+      \foreach \i in {0,...,4} {\fill[bkBlue!14] (\i*6,0) rectangle ++(6,6); \draw[bkInk!60, line width=0.4pt] (\i*6,0) rectangle ++(6,6);}
+      \foreach \j in {1,2,3} {\fill[bkBlue!14] (0,\j*6) rectangle ++(6,6); \draw[bkInk!60, line width=0.4pt] (0,\j*6) rectangle ++(6,6);
+                              \fill[bkBlue!14] (24,\j*6) rectangle ++(6,6); \draw[bkInk!60, line width=0.4pt] (24,\j*6) rectangle ++(6,6);}
+      \foreach \v [count=\c from 0] in \vals {%
+        \pgfmathtruncatemacro\cc{mod(\c,3)}\pgfmathtruncatemacro\rr{div(\c,3)}%
+        {\kviiimtcell{({6+6*\cc},{18-6*\rr})}{6}{\v}{\v}}}
+      \node[font=\sffamily\footnotesize] at (15,27) {100};
+      \node[font=\sffamily\footnotesize] at (15,3) {0};
+      \node[font=\sffamily\small\bfseries, anchor=south] at (15,31.5) {\name};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{ならすくり返し（小数第1位を四捨五入）。上のふちの赤は100\,℃、ほかの3つのふちの青は0\,℃。まん中の9点の色が濃いほど熱い。30回で、ほとんど変わらなくなる。}
+\label{bk:8-12:fig-narasu}
+\end{bkfigure}
+
+1回めは、上の段の3点だけが25になります。北どなりが100\,℃のふちなので $(100+0+0+0)\div4=25$ です。2回めには、その25が下の段へしみこんで、まん中の段が6.25になります。熱が上から少しずつ広がっていくようすが、くり返しの中に見えます。
+
+表計算では、1回の置きかえを1つの表（5行）にして、下へ並べていきます。
+
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 1〜5行めに、はじめの表を入れる。
+\item A7 に \texttt{=A1} を入れ、A7:E11 のふちのマス全部に貼る（7行め・11行め・A列・E列）。
+\item B8 に \texttt{=AVERAGE(B1,A2,C2,B3)} を入れ、B8:D10 に貼る。B8 は、上の表の B2 の北・西・東・南の4点の平均です。
+\item A7:E12（空いた12行めもふくめた6行）をコピーして、A13・A19・A25・…に、次々に貼る。貼るたびに、1回ずつならした表ができる。
+\end{enumerate}
+④で貼った式は、指す場所が6行ずつ下へずれるので、どの表も「1つ上の表」をならしたものになります。
+
+\begin{bkcenter}
+\kviiimfx{B8}{=AVERAGE(B1,A2,C2,B3)}\par\vspace{1mm}
+\bksheet{5}{14}{%
+1 & 0 & 100 & 100 & 100 & 0 \\
+2 & 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & 0 \\
+3 & 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & 0 \\
+4 & 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & \SetCell{bg=kviiimC} 0 & 0 \\
+5 & 0 & 0 & 0 & 0 & 0 \\
+6 & & & & & \\
+7 & 0 & 100 & 100 & 100 & 0 \\
+8 & 0 & \SetCell{bg=kviiimR} 25 & \SetCell{bg=kviiimR} 25 & \SetCell{bg=kviiimR} 25 & 0 \\
+9 & 0 & \SetCell{bg=kviiimR} 0 & \SetCell{bg=kviiimR} 0 & \SetCell{bg=kviiimR} 0 & 0 \\
+10 & 0 & \SetCell{bg=kviiimR} 0 & \SetCell{bg=kviiimR} 0 & \SetCell{bg=kviiimR} 0 & 0 \\
+11 & 0 & 0 & 0 & 0 & 0 \\}
+\bktabcaption{1〜5行めがはじめの表（0回め）、7〜11行めが1回ならした表。ふち（白いマス）は、7行めなら \texttt{=A1} のように、上の表の同じ場所を指す式にしておく。}
+\end{bkcenter}
+
+くり返しを続けた結果を、表にします（小数第3位まで）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] *{3}{Q[c,m,wd=38mm]}}, colsep=2pt, rowsep=1pt, row{1}={font=\sffamily\small}}
+回数 & 上の段 & まん中の段 & 下の段 \\
+1 & 25・25・25 & 0・0・0 & 0・0・0 \\
+2 & 31.25・37.5・31.25 & 6.25・6.25・6.25 & 0・0・0 \\
+5 & 39.648・47.852・… & 14.063・18.75・… & 4.102・5.273・… \\
+10 & 42.271・51.897・… & 17.969・23.828・… & 6.557・9.041・… \\
+30 & 42.857・52.678・… & 18.749・24.999・… & 7.142・9.821・… \\
+50 & 42.857・52.679・… & 18.75・\textbf{25}・… & 7.143・9.821・… \\
+\end{bktable}
+\bktabcaption{ならすくり返しの結果。「…」は、左右対称なので左のはしと同じ数。}
+\end{bkcenter}
+50回めには、表はもう変わりません。\textbf{まん中の点は25\,℃}です。落ち着いた表で、まわりの平均と同じになっているかを、まん中の点で確かめます。北52.679、西18.75、東18.75、南9.821 なので、
+\[ \frac{52.679+18.75+18.75+9.821}{4}=\frac{100}{4}=25 \]
+たしかに、まわりの平均と同じです。
+
+\kviiimhead{Python で確かめる}
+同じくり返しを、Python の numpy（2-19・7-1）で書くと、次のようになります。表の行と列をそのまま2次元の配列 \texttt{T} にします。\texttt{T[0, 1:4]} は「0行めの、1列めから3列めまで」という意味です（\texttt{1:4} は4の手前まで）。\par\nobreak
+\Needspace{16\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+T = np.zeros((5, 5))          \# 5×5 の点。はじめは全部0
+T[0, 1:4] = 100               \# 上のふち（角はのぞく）を100
+for n in range(50):           \# 50回ならす
+    U = T.copy()              \# 新しい表 U を、T を写して作る
+    U[1:4, 1:4] = (T[0:3, 1:4] + T[2:5, 1:4]
+                   + T[1:4, 0:3] + T[1:4, 2:5]) / 4
+    T = U                     \# 新しい表を、次の「1つ前の表」に
+print(T[1:4, 1:4].round(3))   \# まん中の9点を小数第3位まで
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[42.857 52.679 42.857]
+ [18.75  25.    18.75 ]
+ [ 7.143  9.821  7.143]]
+\end{bkcodeout}
+いちばん長い行が「ならす」の1行です。\texttt{T[0:3, 1:4]} は、まん中の9点を1行ずつ上にずらした場所、つまり9点それぞれの\textbf{北どなり}の値を集めたものです。同じように、\texttt{T[2:5, 1:4]} が南どなり、\texttt{T[1:4, 0:3]} が西どなり、\texttt{T[1:4, 2:5]} が東どなりです。4つをたして4でわるので、9点を一度に「まわり4点の平均」に置きかえられます。表計算の \texttt{=AVERAGE(B1,A2,C2,B3)} を9マスに貼ったのと同じことです。
+
+\kviiimhead{はてな？の答え：25\,℃。でも、平均したからではない}
+\bkhatenaref の答えは25\,℃でした。4つのふちの平均と同じ数ですが、「ふちの平均をとったから」25になったのではありません。たとえば上のふちのすぐ下の点（上の段のまん中）は52.679\,℃で、ふちの平均とはまったくちがいます。まん中だけが25になるわけを、図\ref{bk:8-12:fig-kasane}の4枚の板で考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kviiimplate{(0,0)}{18}{bkRed}{bkBlue}{bkBlue}{bkBlue}
+  \node[font=\sffamily\small] at (24,9) {$+$};
+  \kviiimplate{(30,0)}{18}{bkBlue}{bkRed}{bkBlue}{bkBlue}
+  \node[font=\sffamily\small] at (54,9) {$+$};
+  \kviiimplate{(60,0)}{18}{bkBlue}{bkBlue}{bkRed}{bkBlue}
+  \node[font=\sffamily\small] at (84,9) {$+$};
+  \kviiimplate{(90,0)}{18}{bkBlue}{bkBlue}{bkBlue}{bkRed}
+  \node[font=\sffamily\small] at (114,9) {$=$};
+  \kviiimplate{(120,0)}{12}{bkRed}{bkRed}{bkRed}{bkRed}
+  \foreach \x in {9,39,69,99} {\fill[bkInk] (\x,9) circle (0.8); \node[font=\sffamily\footnotesize, anchor=north] at (\x,-2) {$x$\,℃};}
+  \node[font=\sffamily\footnotesize, anchor=north] at (126,-2) {100\,℃};
+  \fill[bkInk] (126,6) circle (0.8);
+  \node[font=\sffamily\footnotesize, anchor=south] at (9,19.5) {A};
+  \node[font=\sffamily\footnotesize, anchor=south] at (39,19.5) {B};
+  \node[font=\sffamily\footnotesize, anchor=south] at (69,19.5) {C};
+  \node[font=\sffamily\footnotesize, anchor=south] at (99,19.5) {D};
+\end{tikzpicture}
+\bkfigcaption{赤いふちが100\,℃、青いふちが0\,℃の板が4枚。B・C・D は、A を90°ずつ回したもの。4枚の温度を点ごとにたすと、4つのふちがどれも100\,℃の板になる。}
+\label{bk:8-12:fig-kasane}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 板B・C・D は、板A を90°・180°・270°回しただけなので、\textbf{まん中の温度は4枚とも同じ}です。それを $x$\,℃とします。
+\item 4枚の落ち着いた温度を、点ごとにたした表を作ります。どの点でも「まわりの平均と同じ」が4枚ともなり立っているので、たした表でもなり立ちます（4つの式「自分＝まわりの平均」を、そのままたせばよい）。
+\item たした表のふちは、どの辺も「100が1枚と0が3枚」なので100\,℃です。4つのふちがどれも100\,℃なら、どの点も100\,℃のとき、「まわりの平均と同じ」がなり立ちます。落ち着いた形はこの1つしかないので（せいかくに言うと）、たした表はどこも100\,℃です。
+\item まん中では $x+x+x+x=100$ なので、$x=25$。
+\end{enumerate}
+まん中の25は、ふちの温度の平均だから出たのではなく、「4つの向きが同じ形」という\textbf{対称性}と、「たし合わせても平均の性質がくずれない」という性質から出てきたのです。同じ考えで、上100\,℃・右60\,℃・ほか0\,℃の板のまん中は $\tfrac{100+60}{4}=40$\,℃になります（\bkreidairef{5}）。
+
+\Needspace{12\baselineskip}
+\begin{seikaku}
+③で「落ち着いた形はこの1つしかない」と書きました。わけは次のとおりです。ふちの温度が同じ2つの落ち着いた表があったとして、その差の表を作ります。差の表も「どの点もまわりの平均と同じ」をみたし、ふちはどこも0です。差の表でいちばん大きい値の点を考えると、その点はまわりの平均と同じなので、まわりの4点もすべて同じいちばん大きい値でなければなりません（1つでも小さい点があれば、平均は自分より小さくなる）。これをくり返すと、いちばん大きい値はふちまで続くので、0です。いちばん小さい値も同じく0です。だから、差はどこも0で、2つの表は同じです。この「いちばん大きい値・小さい値は、ふちにしかない」性質は、⑥でもう一度出てきます。
+\end{seikaku}
+
+\bksubsection{4}{1次元：となり2つの平均との差は、2階微分}
+
+\label{bk:8-12:ichi}こんどは、棒やかべのような1次元の場合です。まわりは「左右のとなり2点」になります。②の山の切り口で見たように、となり2点の平均との差は、グラフの\textbf{曲がり方}を表しています。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=g1, axis x line=bottom, axis y line=left, width=62mm, height=46mm, xmin=0, xmax=4, ymin=0, ymax=5, xtick={1,2,3}, xticklabels={$x-h$,$x$,$x+h$}, ytick=\empty, title={下に凸：差が正}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[bkcurve, domain=0.3:3.7, samples=40] {0.5*(x-2)^2+1.2};
+  \addplot[bkthin, dashed] coordinates {(1,1.7) (3,1.7)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(1,1.7) (2,1.2) (3,1.7)};
+  \addplot[only marks, mark=o, mark size=2pt, bkRed, line width=1pt] coordinates {(2,1.7)};
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (axis cs:2.25,1.25) -- (axis cs:2.25,1.65);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:2,2.1) {平均};
+\end{axis}
+\begin{axis}[bkplot, at={(g1.east)}, anchor=west, xshift=12mm, axis x line=bottom, axis y line=left, width=62mm, height=46mm, xmin=0, xmax=4, ymin=0, ymax=5, xtick={1,2,3}, xticklabels={$x-h$,$x$,$x+h$}, ytick=\empty, title={上に凸：差が負}, title style={font=\sffamily\footnotesize, yshift=-1mm}]
+  \addplot[bkcurve2, domain=0.3:3.7, samples=40] {-0.5*(x-2)^2+3.8};
+  \addplot[bkthin, dashed] coordinates {(1,3.3) (3,3.3)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(1,3.3) (2,3.8) (3,3.3)};
+  \addplot[only marks, mark=o, mark size=2pt, bkRed, line width=1pt] coordinates {(2,3.3)};
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=3pt]}] (axis cs:2.25,3.75) -- (axis cs:2.25,3.35);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!80!black, fill=white, inner sep=1pt] at (axis cs:2,2.9) {平均};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{となり2点（$x-h$ と $x+h$）を結んだ点線のまん中の高さが、となり2点の平均（赤い丸）。下に凸なら平均は自分より上、上に凸なら下。まっすぐなら、ちょうど自分と同じ。}
+\label{bk:8-12:fig-tsuru}
+\end{bkfigure}
+
+となりとの間かくを $h$ として、$f(x-h)$、$f(x)$、$f(x+h)$ の3つの値を使います。となり2点の平均との差は、
+\[ \frac{f(x+h)+f(x-h)}{2}-f(x)=\frac{f(x+h)-2f(x)+f(x-h)}{2} \]
+です。右辺の分子 $f(x+h)-2f(x)+f(x-h)$ を、「となりとの差」の形に分けてみます。
+\[ f(x+h)-2f(x)+f(x-h)=\bigl(f(x+h)-f(x)\bigr)-\bigl(f(x)-f(x-h)\bigr) \]
+右の点との差から、左の点との差をひいたもの、つまり\textbf{差の差}です。
+
+\kviiimhead{差の差を、表で見る}
+$f(x)=x^2$、$h=1$ で、差と差の差を表にします。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{5}{Q[c,m,wd=12mm]}}, rowsep=1pt, row{1}={font=\sffamily\small}}
+$x$ & 1 & 2 & 3 & 4 & 5 \\
+$f(x)=x^2$ & 1 & 4 & 9 & 16 & 25 \\
+右どなりとの差 & 3 & 5 & 7 & 9 & \\
+差の差 & 2 & 2 & 2 & & \\
+\end{bktable}
+\bktabcaption{「右どなりとの差」は、右の値から自分をひいた数（$x=1$ なら $4-1=3$）。「差の差」は、右どなりの差から自分の差をひいた数（$5-3=2$）。}
+\end{bkcenter}
+差は3、5、7、9と、2ずつふえています。差の差は、どこでも $5-3=2$、$7-5=2$、$9-7=2$ です。5-3 で学んだように、となりとの差÷$h$ は、傾き（微分 $f'$）の近い値でした。だから、差の差÷$h$ は「傾きの変わり方」で、それをもう一度 $h$ でわると、\textbf{2階微分} $f''$ の近い値になります。
+\kviiimframe[110mm]{$\displaystyle \frac{f(x+h)-2f(x)+f(x-h)}{h^2}\approx\frac{\dd^2f}{\dd x^2}$}
+$x^2$ なら、左辺は $2\div1^2=2$、右辺は $(x^2)''=2$ で、ぴったり同じです（放物線では、どの $h$ でも等号。せいかくに言うと）。
+
+この式を使うと、となり2点の平均との差は
+\[ \frac{f(x+h)+f(x-h)}{2}-f(x)\approx\frac{h^2}{2}\,\frac{\dd^2f}{\dd x^2} \]
+と書けます。\textbf{となり2点の平均との差は、2階微分に $\tfrac{h^2}{2}$ をかけたもの}です。2階微分が正（下に凸）なら差は正、負（上に凸）なら差は負。図\ref{bk:8-12:fig-tsuru}のとおりです。②の山の切り口で、東西の差が $-1$ だったのは、$\tfrac{10^2}{2}\times(-0.02)=-1$（東西の切り口 $92-0.01x^2$ の2階微分は $-0.02$）だからです。
+
+\kviiimhead{6-3 のかべ・6-11 のフィンをもう一度}
+6-3 のかべでは、定常の温度が $\tfrac{\dd^2T}{\dd x^2}=0$ をみたしました。これは「どの点も、となり2点の平均と同じ」ということです。となりの平均と同じ点が並ぶと、グラフはまっすぐになります。だから答えが直線 $T=20-100x$ だったのです。かべの0.05 m おきの温度 20、15、10、5、0（℃）は、たしかにどれも、となり2つの平均です。
+
+6-11 の冷却フィンは $\tfrac{\dd^2\theta}{\dd x^2}=\beta^2\theta$ でした。右辺は正（板は部屋より温かいので $\theta>0$）なので、どの点も「となりの平均より低い」、つまり下に凸です。フィンの点は、となりから熱をもらって、その分を横（表面）から空気へ逃がしています。だから、となりの平均より少し低い温度でつり合うのです（\bkreidairef{6}）。
+
+\bkkokomade[温まるか冷えるかは、「まわりの平均との差」の符号で決まります。どの点もまわりの平均と同じになると、温度は落ち着きます。1次元なら、となりの平均との差は2階微分の $\frac{h^2}{2}$ 倍です。この先は、2次元・3次元の式（ラプラシアン）を作ります。]
+
+\Needspace{10\baselineskip}
+\bkstage{shiki}{式でわかる}{ラプラシアン}{\bklevel{5}}
+
+\bksubsection{5}{ラプラシアンの式}
+
+\label{bk:8-12:lap}2次元の「まわり4点の平均との差」を、④の1次元の結果で書きなおします。間かく $h$ の方眼で、自分を $f$、東・西・北・南を $f_{\text{東}}$・$f_{\text{西}}$・$f_{\text{北}}$・$f_{\text{南}}$ とします。②の山と同じように、4点を東西の2点と南北の2点に分けます。
+\begin{bkhenkei}[0.56]
+\frac{f_{\text{東}}+f_{\text{西}}+f_{\text{北}}+f_{\text{南}}}{4}-f & まわり4点の平均との差 \\
+=\frac{(f_{\text{東}}-2f+f_{\text{西}})+(f_{\text{北}}-2f+f_{\text{南}})}{4} & $-f$ を $-\frac{4f}{4}$ にして、2つに分ける \\
+\approx\frac{h^2\dfrac{\partial^2f}{\partial x^2}+h^2\dfrac{\partial^2f}{\partial y^2}}{4} & ④の式を、東西と南北に使う \\
+=\frac{h^2}{4}\left(\frac{\partial^2f}{\partial x^2}+\frac{\partial^2f}{\partial y^2}\right) & $\frac{h^2}{4}$ でくくる \\
+\end{bkhenkei}
+2行めから3行めで、偏微分（8-2）になったのは、東西の3点では $y$ が同じ（$y$ を止めて $x$ だけ動かしている）からです。南北の3点では $x$ を止めています。
+
+最後の行のかっこの中を、$f$ の\textbf{ラプラシアン}といい、$\nabla^2f$ と書きます。\bkidx{らぷらしあん}{ラプラシアン}読み方は「ナブラ2乗 $f$」または「ラプラシアン $f$」です。
+\kviiimframe[118mm]{$\displaystyle \nabla^2f=\frac{\partial^2f}{\partial x^2}+\frac{\partial^2f}{\partial y^2}\qquad\left(\text{3次元では}\ +\frac{\partial^2f}{\partial z^2}\right)$\\[6pt]
+{\small まわりの平均との差 $\approx\dfrac{h^2}{4}\,\nabla^2f$\qquad（3次元は、まわり6点で $\dfrac{h^2}{6}\,\nabla^2f$）}}
+3次元では、まわりは東西・南北・上下の6点です。6点の平均との差は、3組の「差の差」を6でわるので $\dfrac{h^2}{6}$ がかかります。数（4や6）は、まわりの点の数です。
+
+\kviiimhead{主役の山で確かめる}
+$h=100-0.01x^2-0.02y^2$ を偏微分します（8-2）。
+\begin{bkhenkei}[0.5]
+\frac{\partial h}{\partial x}=-0.02x,\quad \frac{\partial^2h}{\partial x^2}=-0.02 & $y$ を止めて、$x$ で2回 \\
+\frac{\partial h}{\partial y}=-0.04y,\quad \frac{\partial^2h}{\partial y^2}=-0.04 & $x$ を止めて、$y$ で2回 \\
+\nabla^2h=-0.02+(-0.04)=-0.06 & たす \\
+\end{bkhenkei}
+$\nabla^2h=-0.06$ は、$x$ も $y$ も入っていない数なので、山のどこでも同じです。方眼の間かくは $h=10$ なので（山の高さの $h$ と同じ文字ですが、ここだけ間かくの意味）、まわりの平均との差は $\dfrac{10^2}{4}\times(-0.06)=25\times(-0.06)=-1.5$。②の表計算の $-1.5$ とぴったり合います（2次式なので、ぴったり。\bkreidairef{3}）。
+
+\kviiimhead{名前のわけ：div grad}
+ラプラシアンには、もう1つの見方があります。8-4 の勾配 $\mathrm{grad}\,f$ は、成分が $\Bigl(\dfrac{\partial f}{\partial x},\ \dfrac{\partial f}{\partial y},\ \dfrac{\partial f}{\partial z}\Bigr)$ の矢印でした。この矢印の場の発散（8-9）を計算します。発散は「$x$ 成分を $x$ で、$y$ 成分を $y$ で、$z$ 成分を $z$ で偏微分してたす」でした。
+\begin{bkhenkei}[0.7]
+\mathrm{div}\,(\mathrm{grad}\,f)=\frac{\partial}{\partial x}\Bigl(\frac{\partial f}{\partial x}\Bigr)+\frac{\partial}{\partial y}\Bigl(\frac{\partial f}{\partial y}\Bigr)+\frac{\partial}{\partial z}\Bigl(\frac{\partial f}{\partial z}\Bigr) & 8-9 の発散の式 \\
+=\frac{\partial^2f}{\partial x^2}+\frac{\partial^2f}{\partial y^2}+\frac{\partial^2f}{\partial z^2}=\nabla^2f & 2回の偏微分の書き方 \\
+\end{bkhenkei}
+\kviiimframe{$\nabla^2f=\mathrm{div}\,\mathrm{grad}\,f=\nabla\cdot\nabla f$}
+$\nabla\cdot\nabla$ は、ナブラ $\nabla=\Bigl(\dfrac{\partial}{\partial x},\ \dfrac{\partial}{\partial y},\ \dfrac{\partial}{\partial z}\Bigr)$ と自分との内積（4-12）の形です。$(a,\ b,\ c)\cdot(a,\ b,\ c)=a^2+b^2+c^2$ と同じように「2乗の和」になるので、$\nabla^2$ と書きます。
+
+この見方は、熱の流れで意味がはっきりします。8-4 で、熱の流れの矢印は $\vec q=-k\,\mathrm{grad}\,T$ でした（$k$ は熱伝導率）。8-9 で、小さな箱から出ていく熱は $\mathrm{div}\,\vec q$ でした。だから、
+\[ \mathrm{div}\,\vec q=\mathrm{div}\,(-k\,\mathrm{grad}\,T)=-k\,\nabla^2T \]
+$\nabla^2T$ が正なら、$\mathrm{div}\,\vec q$ は負で、熱は\textbf{入ってくるほうが多い}。だから温まります。①で表計算から見つけた「差が正なら温まる」と同じことを、式が言っています。
+
+\bksubsection{6}{ラプラス方程式とポアソン方程式}
+
+\label{bk:8-12:houteishiki}③の板のように、温度が落ち着いて、中で熱が生まれも消えもしないとき、どこでも $\mathrm{div}\,\vec q=0$ なので、
+\kviiimframe{$\nabla^2T=0$\qquad（どの点も、まわりの平均と同じ）}
+がなり立ちます。この形の式を\textbf{ラプラス方程式}といいます。\bkidx{らぷらすほうていしき}{ラプラス方程式}6-3 のかべの $\tfrac{\dd^2T}{\dd x^2}=0$ は、その1次元の場合です。
+
+ラプラス方程式は、熱だけの式ではありません。表にまとめます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=40mm] X[l,m]}, width=0.96\linewidth, rowsep=2pt, row{1}={font=\sffamily\small}}
+量 & 落ち着いたとき & そのわけ \\
+温度 $T$ & 熱が生まれない所で $\nabla^2T=0$ & 熱の流れ $-k\,\mathrm{grad}\,T$ のわき出しが0 \\
+電位 $\phi$ & 電荷がない所で $\nabla^2\phi=0$ & 電場 $\vec E=-\mathrm{grad}\,\phi$（8-4）のわき出しが0 \\
+地下水の水位 & 水がわかない所で $\nabla^2(\text{水位})=0$ & 地下の水の流れは水位の傾きに比例 \\
+はったまくの高さ & 押す力がない所で $\nabla^2(\text{高さ})=0$ & 引っぱる力で、まわりの平均にならされる \\
+\end{bktable}
+\bktabcaption{ラプラス方程式になる量。どれも「流れ（力）が傾きに比例し、わき出しがない」。}
+\end{bkcenter}
+石けんのまく（シャボン玉のまく）を、ゆがんだ針金のわくにはると、まくの高さは、ほぼラプラス方程式をみたす形になります（まくのかたむきが小さいとき）。
+
+\kviiimhead{いちばん高い所は、ふちにある}
+ラプラス方程式をみたす量は、どの点もまわりの平均と同じです。だから、中にまわりより高い点（山の頂上）も、まわりより低い点（谷の底）もありません。③のせいかくに言うとで見たように、\textbf{いちばん大きい値と小さい値は、ふち（境目）にしかない}のです。これを\textbf{最大値の原理}といいます。\bkidx{さいだいちのげんり}{最大値の原理}③の板でも、中の温度はどこも0\,℃と100\,℃のあいだでした。電気でいうと、電荷のない空間には、電位の頂上も谷底もありません。
+
+\kviiimhead{わき出しがあるとき：ポアソン方程式}
+中で熱が生まれる（電気ヒーター・電子部品の発熱など）と、出ていく熱 $\mathrm{div}\,\vec q$ は、生まれる熱と同じになります。1秒・\qty{1}{m^3} あたりに生まれる熱を $Q$〔W/m³〕とすると、
+\[ -k\,\nabla^2T=Q\qquad\text{だから}\qquad \nabla^2T=-\frac{Q}{k} \]
+です。電気では、電荷のある所で $\nabla^2\phi=-\tfrac{\rho}{\varepsilon_0}$（$\rho$ は電荷の密度〔C/m³〕、$\varepsilon_0$ は真空の誘電率）になります。右辺にわき出しの量が入ったこの形を\textbf{ポアソン方程式}といいます。\bkidx{ぽあそんほうていしき}{ポアソン方程式}熱が生まれる所では $\nabla^2T<0$、つまり、まわりより熱くなって（出っぱって）います。電子部品のチップがまわりの基板より熱くなるのは、このためです。
+
+\bksubsection{7}{球や円柱の形のとき}
+
+\label{bk:8-12:kyu}点電荷のまわりの電位や、パイプを包む保温材の温度は、中心（または軸）からの距離 $r$ だけで決まります。4-15 で約束したように、このような量は球座標・円柱座標の $r$ で書くと、式が短くなります。$f$ が $r$ だけで決まるときのラプラシアンを、⑤の「div grad」と、8-11 の「出ていく量」で作ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!10] (0,0) circle (24);
+  \fill[white] (0,0) circle (15);
+  \draw[bkInk, line width=0.9pt] (0,0) circle (15) (0,0) circle (24);
+  \fill[bkInk] (0,0) circle (0.9);
+  \draw[bkInk, line width=0.5pt] (0,0) -- (15,0);
+  \node[font=\sffamily\footnotesize, anchor=south] at (8,0.5) {$r$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (15,-3) -- (24,-3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (19.5,-3.5) {$\Delta r$};
+  \foreach \a in {50,130,230,310} {\draw[bkOrange!80!black, line width=1.1pt, -{Stealth[length=3pt]}] (\a:11) -- (\a:15.6);
+                                    \draw[bkRed, line width=1.4pt, -{Stealth[length=3.5pt]}] (\a:24) -- (\a:30.5);}
+  \node[anchor=west, font=\small, align=left, text width=74mm] at (36,8) {%
+    \textbf{内側の球面}（短い矢印）から入る量：\par\hspace{1\zw}$f'(r)\times4\pi r^2$\par\vspace{3pt}
+    \textbf{外側の球面}（長い矢印）から出る量：\par\hspace{1\zw}$f'(r+\Delta r)\times4\pi(r+\Delta r)^2$\par\vspace{3pt}
+    青い殻の体積：$4\pi r^2\,\Delta r$};
+\end{tikzpicture}
+\bkfigcaption{半径 $r$ と $r+\Delta r$ の2つの球面ではさんだ、うすい殻（玉ねぎの皮のような形）。$\mathrm{grad}\,f$ の矢印は、どこでも球面に直角で、同じ球面の上では同じ大きさ。}
+\label{bk:8-12:fig-kara}
+\end{bkfigure}
+
+$f$ が $r$ だけで決まるとき、$\mathrm{grad}\,f$ は中心から外向き（または内向き）で、大きさは $f'(r)=\tfrac{\dd f}{\dd r}$ です（8-4：等値面は球面で、勾配はそれに直角）。半径 $r$ の球面を外へ通りぬける量（8-8 の流束）は、$\mathrm{grad}\,f$ が球面の上でどこでも同じ大きさで面に直角なので、積分の外に出せます（表8-8のD：一定×面積）。
+\[ G(r)=f'(r)\times4\pi r^2 \]
+殻から出ていく量は、「外の球面から出る量」から「内の球面から入る量」をひいた
+\[ G(r+\Delta r)-G(r) \]
+です。8-9 の発散は「出ていく量÷体積」なので、
+\begin{bkhenkei}[0.58]
+\nabla^2f=\mathrm{div}\,\mathrm{grad}\,f\approx\frac{G(r+\Delta r)-G(r)}{4\pi r^2\,\Delta r} & 出ていく量÷殻の体積 \\
+\to\frac{1}{4\pi r^2}\,\frac{\dd G}{\dd r} & $\Delta r\to0$（5-3 の微分の定義） \\
+=\frac{1}{4\pi r^2}\,\frac{\dd}{\dd r}\Bigl(4\pi r^2\,\frac{\dd f}{\dd r}\Bigr) & $G$ を入れる \\
+=\frac{1}{r^2}\,\frac{\dd}{\dd r}\Bigl(r^2\,\frac{\dd f}{\dd r}\Bigr) & $4\pi$ を約分 \\
+\end{bkhenkei}
+円柱（長さ $L$）なら、球面のかわりに円柱の側面（面積 $2\pi rL$）、殻の体積は $2\pi rL\,\Delta r$ です。同じように計算して、次の2つの式ができます。
+\kviiimframe[118mm]{球：$\displaystyle \nabla^2f=\frac{1}{r^2}\,\frac{\dd}{\dd r}\Bigl(r^2\,\frac{\dd f}{\dd r}\Bigr)$\qquad 円柱：$\displaystyle \nabla^2f=\frac{1}{r}\,\frac{\dd}{\dd r}\Bigl(r\,\frac{\dd f}{\dd r}\Bigr)$}
+$f$ が $r$ だけの関数なので、$\partial$ でなく $\dd$ で書いています（8-2：変数が1つなら $\dd$）。
+
+\kviiimhead{2通りで確かめる}
+$f=x^2+y^2+z^2$ は、中心からの距離 $r$ で書くと $f=r^2$ です。直角座標で計算すると、$\nabla^2f=2+2+2=6$ でした。球の式で計算すると、次のようになります。
+\begin{bkhenkei}[0.5]
+\frac{\dd f}{\dd r}=2r,\quad r^2\,\frac{\dd f}{\dd r}=2r^3 & 内側から計算する \\
+\frac{\dd}{\dd r}(2r^3)=6r^2 & もう一度 $r$ で微分 \\
+\nabla^2f=\frac{1}{r^2}\times6r^2=6 & $\frac{1}{r^2}$ をかける \\
+\end{bkhenkei}
+どちらも6で、同じです（\bkreidairef{7}）。
+
+\kviiimhead{点電荷の電位：$\nabla^2\tfrac{1}{r}=0$}
+点電荷 $Q$ のまわりの電位は $\phi=\tfrac{Q}{4\pi\varepsilon_0}\times\tfrac{1}{r}$ です（物理シリーズ『電磁気』）。$\tfrac{1}{r}$ のラプラシアンを球の式で計算します。
+\begin{bkhenkei}[0.5]
+\frac{\dd}{\dd r}\Bigl(\frac{1}{r}\Bigr)=-\frac{1}{r^2} & $r^{-1}$ の微分（5-4） \\
+r^2\times\Bigl(-\frac{1}{r^2}\Bigr)=-1 & $r^2$ をかける \\
+\frac{\dd}{\dd r}(-1)=0,\quad \nabla^2\frac{1}{r}=0 & 定数の微分は0（$r\neq0$） \\
+\end{bkhenkei}
+原点（電荷のある所）以外では、ラプラス方程式をみたします。8-11 で、点電荷の電束は「どの半径の球でも同じ」でした。殻の内と外で同じ量が通るので、殻の中にわき出しがない。それが $\nabla^2\tfrac{1}{r}=0$ の意味です。ただし、$\tfrac{\dd^2}{\dd r^2}\Bigl(\tfrac{1}{r}\Bigr)=\tfrac{2}{r^3}$ は0ではありません。球の式の $\tfrac{1}{r^2}\tfrac{\dd}{\dd r}\Bigl(r^2\cdots\Bigr)$ を、$\tfrac{\dd^2}{\dd r^2}$ だけにしてはいけないのです（まちがえやすいところ）。
+
+\kviiimhead{ラプラス方程式の答えの形}
+$r$ だけで決まる量が $\nabla^2f=0$ をみたすときの形を求めます。球なら、$r^2\tfrac{\dd f}{\dd r}$ を微分して0なので、$r^2\tfrac{\dd f}{\dd r}$ は定数です。その定数を $-a$ とすると、
+\begin{bkhenkei}[0.5]
+r^2\,\frac{\dd f}{\dd r}=-a,\quad \frac{\dd f}{\dd r}=-\frac{a}{r^2} & $r^2$ でわる \\
+f=\frac{a}{r}+b & 積分する（$-\frac{a}{r^2}$ の原始関数は $\frac{a}{r}$） \\
+\end{bkhenkei}
+円柱なら $r\tfrac{\dd f}{\dd r}=a$ から $\tfrac{\dd f}{\dd r}=\tfrac{a}{r}$、積分して $f=a\ln r+b$ です（5-14：$\frac{1}{r}$ の原始関数は $\ln r$）。$a$ と $b$ は、6-3 と同じように、内と外の境界条件で決めます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] Q[c,m,wd=30mm] Q[l,m,wd=56mm]}, rowsep=2pt, row{1}={font=\sffamily\small}}
+形 & $\nabla^2f=0$ の答え & 例 \\
+平らなかべ & $f=ax+b$ & 6-3 のかべの温度 \\
+円柱（軸からの距離） & $f=a\ln r+b$ & パイプの保温材の温度、同軸ケーブルの電位 \\
+球（中心からの距離） & $f=\dfrac{a}{r}+b$ & 点電荷・帯電した球のまわりの電位 \\
+\end{bktable}
+\bktabcaption{3つの形の、ラプラス方程式の答え。}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=58mm, xmin=0.1, xmax=0.2, ymin=0, ymax=105, xtick={0.1,0.125,0.15,0.175,0.2}, xticklabel style={/pgf/number format/fixed, /pgf/number format/precision=3}, ytick={0,25,50,75,100}, xlabel={$r$（m）}, ylabel={電位（V）}, legend style={at={(axis cs:0.2,104)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine, fill=white}, legend cell align=left]
+  \addplot[bkthin, line width=1.4pt, dash pattern=on 4pt off 2pt, domain=0.1:0.2] {100-1000*(x-0.1)};
+  \addlegendentry{平らな板（まん中50\,V）}
+  \addplot[bkcurve2, domain=0.1:0.2, samples=60] {100-100*ln(x/0.1)/ln(2)};
+  \addlegendentry{円筒（41.5\,V）}
+  \addplot[bkcurve, domain=0.1:0.2, samples=60] {20/x-100};
+  \addlegendentry{球（33.3\,V）}
+  \draw[bkGray, line width=0.6pt, dashed] (axis cs:0.15,0) -- (axis cs:0.15,52);
+  \fill[bkInk] (axis cs:0.15,50) circle (1.3pt) (axis cs:0.15,41.5) circle (1.3pt) (axis cs:0.15,33.33) circle (1.3pt);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{内側（$r=\qty{0.1}{m}$）が100\,V、外側（$r=\qty{0.2}{m}$）が0\,V のときの電位。灰色の点線は平らな2枚の板、オレンジは同じ軸の2本の円筒、紺は同じ中心の2つの球。黒い点は、まん中（$r=\qty{0.15}{m}$）の電位。形によってちがう。}
+\label{bk:8-12:fig-katachi}
+\end{bkfigure}
+
+図\ref{bk:8-12:fig-katachi}は、内側を100\,V、外側を0\,V にしたときの3つの形の電位です。平らな板ならまん中は50\,V、円筒なら41.5\,V、球なら33.3\,V（\bkreidairef{8}）。球や円筒では、外へ行くほど面積が広がり、同じ量の流れ（電気力線）がうすまるので、坂（電場）は内側ほど急になります。平らなかべでは、どこでも同じ坂でした。
+
+\Needspace{12\baselineskip}
+\bksubsection{8}{矢印の量のラプラシアン}
+
+\label{bk:8-12:vec}物理 力-15 のナビエ・ストークス方程式には、ねばりの力 $\mu\nabla^2\vec v$ が出てきました。矢印の量 $\vec v=(v_x,\ v_y,\ v_z)$ のラプラシアンは、\textbf{成分ごとにラプラシアンをとったもの}です。
+\[ \nabla^2\vec v=\bigl(\nabla^2v_x,\ \nabla^2v_y,\ \nabla^2v_z\bigr) \]
+$x$ 成分の速さ $v_x$ だけを見ると、まわりの平均より遅い所は、ねばりで前へ引っぱられ、速い所は後ろへ引きもどされます。力-15 の「ねばりは速さをまわりの平均にならそうとする」です。
+
+\kviiimhead{管の中の流れで確かめる}
+8-6・8-8 の管の流れ（半径 $R=\qty{1}{cm}$）では、速さは軸からの距離 $r$ で決まり、$u=u_{\max}\Bigl(1-\tfrac{r^2}{R^2}\Bigr)$、$u_{\max}=\qty{0.2}{m/s}$ でした。流れの向きの速さ $u$ は $r$ だけで決まるので、⑦の円柱の式が使えます。
+\begin{bkhenkei}[0.52]
+\frac{\dd u}{\dd r}=-\frac{2u_{\max}}{R^2}\,r & $1-\frac{r^2}{R^2}$ を $r$ で微分 \\
+r\,\frac{\dd u}{\dd r}=-\frac{2u_{\max}}{R^2}\,r^2 & $r$ をかける \\
+\frac{\dd}{\dd r}\Bigl(r\,\frac{\dd u}{\dd r}\Bigr)=-\frac{4u_{\max}}{R^2}\,r & もう一度 $r$ で微分 \\
+\nabla^2u=\frac{1}{r}\times\Bigl(-\frac{4u_{\max}}{R^2}\,r\Bigr)=-\frac{4u_{\max}}{R^2} & $\frac{1}{r}$ をかける \\
+\end{bkhenkei}
+数を入れると、$\nabla^2u=-\tfrac{4\times0.2}{0.01^2}=-8000$〔1/(m·s)〕で、管の中のどこでも同じです。管の流れは軸に近いほど速いので、どの場所の水も、まわりの平均より少し速くなっています。だから、ねばりの力は流れと逆向きに、どこでも同じ強さではたらきます。水のねばり $\mu=1.0\times10^{-3}$〔Pa·s〕（20\,℃）なら、1 m³ あたりの力は
+\[ \mu\nabla^2u=1.0\times10^{-3}\times(-8000)=-8\ \text{〔N/m³〕} \]
+この力とつり合うのが、管の前後の圧力の差です。圧力は流れの向きに1 m あたり 8 Pa 下がります。物理 力-14 のハーゲン・ポアズイユの式から、1 m あたりの圧力の下がりを出すと
+\[ \frac{4\mu u_{\max}}{R^2}=\frac{4\times1.0\times10^{-3}\times0.2}{0.01^2}=8\ \text{〔Pa/m〕} \]
+で、同じ数になります。
+
+\Needspace{16\baselineskip}
+\begin{motto}[5]
+\kviiimbox{$\mathrm{rot}\,\mathrm{rot}\,\vec A=\mathrm{grad}\,\mathrm{div}\,\vec A-\nabla^2\vec A$}
+電磁気の本で、電磁波の式を作るときに使う式です（物理 電-15）。$x$ 成分だけ確かめます。$\mathrm{rot}\,\vec A$ の $y$ 成分は $\tfrac{\partial A_x}{\partial z}-\tfrac{\partial A_z}{\partial x}$、$z$ 成分は $\tfrac{\partial A_y}{\partial x}-\tfrac{\partial A_x}{\partial y}$ でした（8-10）。
+rot の $x$ 成分の形（「$z$ 成分を $y$ で」ひく「$y$ 成分を $z$ で」）にあてはめます。
+\[ (\mathrm{rot}\,\mathrm{rot}\,\vec A)_x=\frac{\partial}{\partial y}\Bigl(\frac{\partial A_y}{\partial x}-\frac{\partial A_x}{\partial y}\Bigr)-\frac{\partial}{\partial z}\Bigl(\frac{\partial A_x}{\partial z}-\frac{\partial A_z}{\partial x}\Bigr) \]
+かっこを開きます（偏微分は順番によらない：8-2）。
+\[ =\frac{\partial^2A_y}{\partial x\,\partial y}+\frac{\partial^2A_z}{\partial x\,\partial z}-\frac{\partial^2A_x}{\partial y^2}-\frac{\partial^2A_x}{\partial z^2} \]
+$\tfrac{\partial^2A_x}{\partial x^2}$ を足してひき、前の3つを $\tfrac{\partial}{\partial x}$ でくくります。
+\[ =\frac{\partial}{\partial x}\Bigl(\frac{\partial A_x}{\partial x}+\frac{\partial A_y}{\partial y}+\frac{\partial A_z}{\partial z}\Bigr)-\nabla^2A_x \]
+最後の行の1つめは $\mathrm{div}\,\vec A$ を $x$ で偏微分したもの、つまり $\mathrm{grad}\,\mathrm{div}\,\vec A$ の $x$ 成分です。$y$・$z$ 成分も同じです。
+\end{motto}
+
+\Needspace{10\baselineskip}
+\begin{seikaku}
+④の「差の差÷$h^2$」と2階微分は、ふつうは近い値で、ぴったりではありません。5-17 のテイラー展開で $f(x\pm h)=f\pm hf'+\tfrac{h^2}{2}f''\pm\tfrac{h^3}{6}f'''+\tfrac{h^4}{24}f''''\pm\cdots$ と書いて2つをたすと、奇数回の項が消えて、
+\[ \frac{f(x+h)-2f(x)+f(x-h)}{h^2}=f''+\frac{h^2}{12}f''''+\cdots \]
+となります。ずれは $h^2$ に比例し、$h$ を半分にすると約 $\frac14$ になります。2次式では $f''''=0$ なので、ずれは0です（主役の山の $-1.5$ がぴったりだったわけ）。また、ラプラス方程式をみたす関数は、どんな円（球）の上の平均も、中心の値と\textbf{ぴったり}同じになることが知られています（平均値の性質）。方眼の4点の平均と同じになるのは、近い値としてです。
+\end{seikaku}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+微分作用素 $\Delta=\nabla^2=\tfrac{\partial^2}{\partial x^2}+\tfrac{\partial^2}{\partial y^2}+\tfrac{\partial^2}{\partial z^2}$ をラプラス作用素（ラプラシアン）という。領域 $\Omega$ で $\Delta u=0$ をみたす $C^2$ 級関数 $u$ を調和関数という。調和関数は平均値の性質をもち，$\Omega$ の内部で最大値・最小値をとらない（最大値原理）。
+\end{bkhonbun}
+\bkyaku{$\Delta$ は、この本の $\nabla^2$ と同じもの（数学の本は $\Delta$、物理・工学の本は $\nabla^2$ が多い。この本では $\Delta$ は「変化の量」に使う）。「作用素」は、関数に何かをする記号。「領域 $\Omega$」は板や空間の中の部分。「$C^2$ 級」は2回微分してもなめらか。$\Delta u=0$ をみたす関数を調和関数（ちょうわかんすう）という。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{ラプラシアン}$\nabla^2f=\dfrac{\partial^2f}{\partial x^2}+\dfrac{\partial^2f}{\partial y^2}+\dfrac{\partial^2f}{\partial z^2}=\mathrm{div}\,\mathrm{grad}\,f$\\[4pt]
+\tsl{まわりの平均}まわり4点の平均との差 $\approx\dfrac{h^2}{4}\nabla^2f$（正なら温まる）\\[4pt]
+\tsl{落ち着いた形}$\nabla^2T=0$（ラプラス）、$\nabla^2T=-\dfrac{Q}{k}$（ポアソン）\\[4pt]
+\tsl{球・円柱}$\dfrac{1}{r^2}\dfrac{\dd}{\dd r}\Bigl(r^2\dfrac{\dd f}{\dd r}\Bigr)$・$\dfrac{1}{r}\dfrac{\dd}{\dd r}\Bigl(r\dfrac{\dd f}{\dd r}\Bigr)$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{ラプラシアン}{$\nabla^2f$。2回の偏微分の和。「まわりの平均との差」を表す。}
+\bkword{ラプラス方程式}{$\nabla^2f=0$。どの点もまわりの平均と同じ。落ち着いた温度・電位。}
+\bkword{ポアソン方程式}{$\nabla^2f=$（わき出しの量）。熱が生まれる所・電荷のある所。}
+\bkword{最大値の原理}{ラプラス方程式をみたす量の最大・最小は、ふち（境目）にある。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\nabla^2f$}{ナブラ2乗エフ、ラプラシアン・エフ}{$\dfrac{\partial^2f}{\partial x^2}+\dfrac{\partial^2f}{\partial y^2}+\dfrac{\partial^2f}{\partial z^2}$。数学の本では $\Delta f$ とも書く}{Laplacian}{8-12}}{}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[まわりの平均との差]
+板の上のマス P は50\,℃で、まわりは北70\,℃・南50\,℃・西40\,℃・東60\,℃です。マス Q は30\,℃で、まわりは北20\,℃・南35\,℃・西25\,℃・東20\,℃です。それぞれ「まわりの平均との差」を求め、温まるか冷えるかを答えましょう。\par
+\kangaekata まわり4マスの平均から自分をひく。正なら温まり、負なら冷える（①）。\par
+\shiki P：$\dfrac{70+50+40+60}{4}-50=\dfrac{220}{4}-50=55-50=5$\par
+\kviiimq Q：$\dfrac{20+35+25+20}{4}-30=\dfrac{100}{4}-30=25-30=-5$\par
+\kotae P は $+5$（温まる）、Q は $-5$（冷える）
+\end{reidai}
+
+\begin{reidai}[式のラプラシアン]
+次の関数のラプラシアンを求めましょう。（1）$f=3x^2+2y^2$\quad（2）$g=x^2-y^2+4xy+3x$\par
+\kangaekata $x$ で2回偏微分したもの（$y$ は止める）と、$y$ で2回偏微分したもの（$x$ は止める）をたす（⑤）。\par
+\shiki（1）$\dfrac{\partial f}{\partial x}=6x$、$\dfrac{\partial^2f}{\partial x^2}=6$。$\dfrac{\partial f}{\partial y}=4y$、$\dfrac{\partial^2f}{\partial y^2}=4$\par
+\kviiimq $\nabla^2f=6+4=10$\par
+\kviiimq（2）$\dfrac{\partial g}{\partial x}=2x+4y+3$、$\dfrac{\partial^2g}{\partial x^2}=2$（$4y$ と3は $x$ で微分すると0）\par
+\kviiimq $\dfrac{\partial g}{\partial y}=-2y+4x$、$\dfrac{\partial^2g}{\partial y^2}=-2$（$4x$ は $y$ で微分すると0）\par
+\kviiimq $\nabla^2g=2+(-2)=0$\par
+\kotae（1）10\quad（2）0（ラプラス方程式をみたす）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiimjA}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright マス P は40\,℃で、まわりは北30・南50・西45・東55（℃）です。マス Q は60\,℃で、まわりは北54・南50・西56・東52（℃）です。それぞれ「まわりの平均との差」を求め、温まるか冷えるかを答えましょう。
+\bkjans{P：$\dfrac{180}{4}-40=45-40=+5$ で温まる。Q：$\dfrac{212}{4}-60=53-60=-7$ で冷える。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 次の関数のラプラシアン $\nabla^2f$ と $\nabla^2g$ を求めましょう。\par\vspace{2pt}
+$f=x^2+4y^2+z^2$\par
+$g=2xy-3x+y$
+\bkjans{$\nabla^2f=2+8+2=12$。$g$ は、$x$ で2回偏微分すると0、$y$ で2回偏微分しても0なので、$\nabla^2g=0$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[方眼の差を $\nabla^2$ で予想する]
+主役の山 $h=100-0.01x^2-0.02y^2$ を \qty{10}{m} おきの方眼にしたとき、まわり4点の平均との差を $\nabla^2h$ から予想しましょう。また、点 $(30,\ 20)$ で表の数と合うか確かめましょう。\par
+\kangaekata まわり4点の平均との差 $\approx\dfrac{h^2}{4}\nabla^2h$（$h$ は方眼の間かく10）。\par
+\shiki $\dfrac{\partial^2h}{\partial x^2}=-0.02$、$\dfrac{\partial^2h}{\partial y^2}=-0.04$ なので $\nabla^2h=-0.06$\par
+\kviiimq 予想：$\dfrac{10^2}{4}\times(-0.06)=25\times(-0.06)=-1.5$\par
+\kviiimq 表：自分は83、まわりは東76・西88・北73・南89\par
+\kviiimq $\dfrac{76+88+73+89}{4}-83=81.5-83=-1.5$\par
+\kotae どこでも $-1.5$\,m。表の数と同じ
+\end{reidai}
+
+\begin{reidai}[落ち着いた温度を連立方程式で]
+たてに並んだ2つのマス A（上）と B（下）があります。A のまわりは北が100\,℃、西と東が0\,℃、南が B。B のまわりは北が A、西・東・南が0\,℃です。落ち着いた温度を求めましょう（小数第1位まで）。\par
+\kangaekata 落ち着いたら、どのマスもまわりの平均と同じ（③）。マスごとに式を作り、連立方程式（3-6）で解く。\par
+\shiki A：$A=\dfrac{100+0+0+B}{4}$ から $4A=100+B$\par
+\kviiimq B：$B=\dfrac{A+0+0+0}{4}$ から $A=4B$\par
+\kviiimq 1つめの式の $A$ に $4B$ を入れて $16B=100+B$\par
+\kviiimq 両辺から $B$ をひいて $15B=100$、$B=6.666\cdots$\par
+\kviiimq $A=4B=26.666\cdots$\par
+\kotae A は約26.7\,℃、B は約6.7\,℃
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiimjB}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright おわんの形の谷 $z=0.03x^2+0.01y^2$（m）を \qty{10}{m} おきの方眼にしたとき、まわり4点の平均との差を $\nabla^2z$ から予想しましょう。また、点 $(20,\ 10)$ で確かめましょう。
+\bkjans{$\nabla^2z=0.06+0.02=0.08$。予想 $25\times0.08=2.0$。点 $(20,\ 10)$ は $z=13$、東28・西4・北16・南12で平均15、差 $15-13=2.0$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 上の段に2つのマスがあります。上のマス A は北が80\,℃、西が20\,℃、東が0\,℃、南がマス B。下のマス B は北が A、西が20\,℃、東と南が0\,℃です。落ち着いた温度を求めましょう。
+\bkjans{$4A=80+20+0+B$、$4B=A+20$。2つめから $A=4B-20$。1つめに入れて $16B-80=100+B$、$B=12$、$A=28$。A は28\,℃、B は12\,℃。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[板のまん中の温度]
+正方形の板の上のふちが100\,℃、右のふちが60\,℃、下と左のふちが0\,℃です。落ち着いたとき、板のまん中は何\,℃ですか。\par
+\kangaekata 1つのふちだけが $T$\,℃でほかが0\,℃の板のまん中は $\dfrac{T}{4}$（③の重ね合わせ）。2枚の板の温度をたす。\par
+\shiki 上だけ100\,℃の板のまん中：$100\div4=25$\par
+\kviiimq 右だけ60\,℃の板のまん中：$60\div4=15$\par
+\kviiimq たした板のふちは、上100・右60・下0・左0 になるので、まん中は $25+15=40$\par
+\kotae 40\,℃
+\end{reidai}
+
+\begin{reidai}[となりの値から2階微分：冷却フィン]
+6-11 の冷却フィン（$\beta=20$〔1/m〕）の温度差 $\theta$ を \qty{0.01}{m} おきに計算すると、根もとから 40.00、34.67、30.73（K）でした。まん中の点で $\dfrac{\dd^2\theta}{\dd x^2}$ の近い値を求め、$\beta^2\theta$ とくらべましょう。\par
+\kangaekata $\dfrac{\dd^2\theta}{\dd x^2}\approx\dfrac{\theta(x+h)-2\theta(x)+\theta(x-h)}{h^2}$（④）。$h=0.01$。\par
+\shiki 分子：$30.73-2\times34.67+40.00=30.73-69.34+40.00=1.39$\par
+\kviiimq $\dfrac{1.39}{0.01^2}=\dfrac{1.39}{0.0001}=13900$\par
+\kviiimq $\beta^2\theta=20^2\times34.67=400\times34.67=13868$\par
+\kotae 約13900〔K/m²〕。$\beta^2\theta$ の13868とほぼ同じ（$\dfrac{\dd^2\theta}{\dd x^2}=\beta^2\theta$ をみたす）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiimjC}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 正方形の板の上のふちが80\,℃、左が40\,℃、下が20\,℃、右が0\,℃です。落ち着いたとき、板のまん中は何\,℃ですか。
+\bkjans{$\dfrac{80}{4}+\dfrac{40}{4}+\dfrac{20}{4}+\dfrac{0}{4}=20+10+5+0=35$。35\,℃。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 棒の中の温度を \qty{0.1}{m} おきにはかると、50\,℃、58\,℃、62\,℃でした。まん中の点での $\dfrac{\dd^2T}{\dd x^2}$ の近い値を求め、まん中の点がとなり2点の平均より高いか低いかを答えましょう。
+\bkjans{$\dfrac{62-2\times58+50}{0.1^2}=\dfrac{-4}{0.01}=-400$〔℃/m²〕。平均は56\,℃で、まん中（58\,℃）のほうが高い（上に凸）。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[球・円柱の式で計算する]
+（1）$f=r^2$（$r$ は中心からの距離）の $\nabla^2f$ を、球の式で求めましょう。（2）$g=\ln r$（$r$ は軸からの距離）の $\nabla^2g$ を、円柱の式で求めましょう。\par
+\kangaekata いちばん内側の $\dfrac{\dd f}{\dd r}$ から順に計算する（⑦）。\par
+\shiki（1）$\dfrac{\dd f}{\dd r}=2r$、$r^2\times2r=2r^3$、$\dfrac{\dd}{\dd r}(2r^3)=6r^2$\par
+\kviiimq $\nabla^2f=\dfrac{1}{r^2}\times6r^2=6$\par
+\kviiimq（2）$\dfrac{\dd g}{\dd r}=\dfrac{1}{r}$、$r\times\dfrac{1}{r}=1$、$\dfrac{\dd}{\dd r}(1)=0$\par
+\kviiimq $\nabla^2g=\dfrac{1}{r}\times0=0$\par
+\kotae（1）6（$x^2+y^2+z^2$ で計算したのと同じ）\quad（2）0
+\end{reidai}
+
+\begin{reidai}[同じ中心の球のあいだの電位]
+同じ中心の2つの金属の球があり、内側（半径 \qty{0.1}{m}）が100\,V、外側（半径 \qty{0.2}{m}）が0\,V です。あいだに電荷はありません。電位 $\phi$ は $r$ だけで決まり、$\nabla^2\phi=0$ をみたすので $\phi=\dfrac{a}{r}+b$ と書けます。$a$ と $b$ を求め、$r=\qty{0.15}{m}$ の電位を求めましょう。\par
+\kangaekata 内と外の境界条件で $a$ と $b$ を決める（⑦。6-3 と同じ）。\par
+\shiki 内側：$100=\dfrac{a}{0.1}+b=10a+b$\par
+\kviiimq 外側：$0=\dfrac{a}{0.2}+b=5a+b$\par
+\kviiimq 上の式から下の式をひいて $100=5a$、$a=20$。下の式から $b=-100$\par
+\kviiimq $r=0.15$ では $\phi=\dfrac{20}{0.15}-100=133.3-100=33.3$\par
+\kotae $a=20$、$b=-100$。約\qty{33.3}{V}（まん中でも50\,V ではない）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=kviiimjD}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright（1）$f=r^4$（$r$ は中心からの距離）の $\nabla^2f$ を、球の式で求めましょう。\par
+（2）$g=r^2$（$r$ は軸からの距離）の $\nabla^2g$ を、円柱の式で求めましょう。
+\bkjans{（1）\nobreak $\dfrac{\dd f}{\dd r}=4r^3$、$r^2\times4r^3=4r^5$、微分して $20r^4$、$\dfrac{1}{r^2}$ をかけて $20r^2$。（2）\nobreak $r\times2r=2r^2$、微分して $4r$、$\dfrac{1}{r}$ をかけて4。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\raggedright 同じ中心の2つの球の、内側（半径 \qty{0.05}{m}）が60\,V、外側（半径 \qty{0.1}{m}）が0\,V です。あいだの電位を $\phi=\dfrac{a}{r}+b$ として $a$ と $b$ を求め、$r=\qty{0.075}{m}$ の電位を求めましょう。
+\bkjans{$60=20a+b$、$0=10a+b$。ひいて $60=10a$、$a=6$、$b=-60$。$\phi=\dfrac{6}{r}-60$。$r=0.075$ で $80-60=\qty{20}{V}$。}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[パイプの保温材の中の温度]
+お湯のパイプ（半径 \qty{0.05}{m}）を、外の半径 \qty{0.1}{m} の保温材で包みました。保温材の内側は80\,℃、外側は20\,℃で、温度は落ち着いています。保温材の中の温度は $T=80+a\ln\dfrac{r}{0.05}$ と書けます。$a$ を求め、$r=\qty{0.075}{m}$ の温度を求めましょう（$\ln2=0.693$、$\ln1.5=0.405$）。\par
+\kangaekata 円柱の形なので $T=a\ln r+b$（⑦）。$\ln r=\ln\dfrac{r}{0.05}+\ln0.05$（3-12）なので、$a\ln r+b$ は $a\ln\dfrac{r}{0.05}+$（定数）と書ける。$r=0.05$ では $\ln1=0$ なので、その定数は内側の温度80になる。\par
+\shiki 外側：$20=80+a\ln\dfrac{0.1}{0.05}=80+a\ln2$\par
+\kviiimq $a=\dfrac{20-80}{0.693}=\dfrac{-60}{0.693}=-86.6$\par
+\kviiimq $r=0.075$：$T=80-86.6\times\ln\dfrac{0.075}{0.05}=80-86.6\times\ln1.5$\par
+\kviiimq $=80-86.6\times0.405=80-35.1=44.9$\par
+\kotae $a\approx-86.6$。約44.9\,℃（まん中でも50\,℃ではない）
+\end{reidai}
+
+\begin{jibun}
+半径 \qty{0.02}{m} のパイプを、外の半径 \qty{0.04}{m} の保温材で包みました。内側は100\,℃、外側は40\,℃です。$T=100+a\ln\dfrac{r}{0.02}$ として $a$ を求め、$r=\qty{0.03}{m}$ の温度を求めましょう（$\ln2=0.693$、$\ln1.5=0.405$）。
+\bkjans{$40=100+a\ln2$ から $a=\dfrac{-60}{0.693}=-86.6$。$r=0.03$ で $T=100-86.6\times0.405=100-35.1=64.9$\,℃。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$\nabla^2$ と $\Delta$ を取りちがえる}
+\bkng{熱の式の $\Delta T$ を「$T$ のラプラシアン」と読む}
+\bkok{この本の $\Delta T$ は「$T$ の変化の量」。ラプラシアンは $\nabla^2T$}
+第2巻から、$\Delta$ は「変化の量」（$\Delta t$、$\Delta x$）の記号です。数学の本では、ラプラシアンを $\Delta$ と書くこともあるので、本ごとに確かめます（専門書をのぞいてみよう）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\nabla^2f$ を矢印で答える}
+\bkng{$f=x^2+y^2$ のとき $\nabla^2f=(2,\ 2)$}
+\bkok{$\nabla^2f=2+2=4$（1つの数）}
+$\mathrm{grad}\,f$ は矢印ですが、$\nabla^2f=\mathrm{div}\,\mathrm{grad}\,f$ は発散なので、1つの数です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$(\nabla f)^2$ と $\nabla^2f$ を同じと思う}
+\bkng{$f=x^2$ なら $\nabla^2f=(2x)^2=4x^2$}
+\bkok{$\nabla^2f$ は「2回微分」なので $(x^2)''=2$}
+$\nabla^2$ の「2」は、ナブラを2回はたらかせる印で、1回微分した結果の2乗ではありません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{球の式を、2階微分だけにする}
+\bkng{$f=\dfrac{1}{r}$ なら $\nabla^2f=\dfrac{\dd^2}{\dd r^2}\Bigl(\dfrac{1}{r}\Bigr)=\dfrac{2}{r^3}$}
+\bkok{$\dfrac{1}{r^2}\dfrac{\dd}{\dd r}\Bigl(r^2\times\Bigl(-\dfrac{1}{r^2}\Bigr)\Bigr)=0$}
+球の殻は外ほど面積が広がるので、$r^2$ をかけてから微分します（⑦）。直角座標で計算しても0になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{ふちのマスにも平均の式を入れる}
+\bkng{表計算で、ふちのマスにも \texttt{=AVERAGE(…)} を入れる}
+\bkok{ふちのマスは、決まった温度（境界条件）のまま}
+ふちまで平均にすると、ふちの100\,℃が下がってしまい、問題が変わります。ふちの値は、外から決まっています（6-3）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{熱い所は冷える、と思う}
+\bkng{40\,℃のマスは35\,℃のマスより熱いから、先に冷える}
+\bkok{まわりの平均より熱いか冷たいかで決まる}
+やってみようの40\,℃のマスは、となりに80\,℃があるので温まります。温度の高さではなく、まわりとの差を見ます（①）。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{\bkTT}●}]
+\item \textbf{半導体の中の電位：ポアソン方程式}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+トランジスタやダイオードの中では、電子や正の電荷（ホール）の分布で電位が決まります。設計では、チップの断面を細かいマスに分け、ポアソン方程式 $\nabla^2\phi=-\dfrac{\rho}{\varepsilon}$ を、③のようなくり返しや連立方程式でコンピュータに解かせます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkInk!80, draw=bkInk, rounded corners=0.8mm] (4,4) rectangle (22,18);
+  \foreach \x in {6,10,14,18} {\draw[bkGray, line width=1pt] (\x,4) -- (\x,1) (\x,18) -- (\x,21);}
+  \foreach \y in {7,11,15} {\draw[bkGray, line width=1pt] (4,\y) -- (1,\y) (22,\y) -- (25,\y);}
+  \node[font=\sffamily\footnotesize, text=white] at (13,11) {$\phi$};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{管の中のねばり}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+⑧のように、管の中の水は、まわりより速い所ほどねばりでブレーキがかかります。点滴や血管、エンジンの油の通り道の設計では、$\mu\nabla^2u$ と圧力の差のつり合いから、流れる量を計算します\mbox{（物理 力-14・力-15）}。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (0,2) rectangle (26,18);
+  \draw[bkInk, line width=1pt] (0,2) -- (26,2) (0,18) -- (26,18);
+  \foreach \yy/\l in {4.5/5,7.5/11,10/14,12.5/11,15.5/5} {\draw[bkBlue!80!black, line width=1.1pt, -{Stealth[length=2.6pt]}] (3,\yy) -- ++(\l,0);}
+  \draw[bkGray, line width=0.6pt, dashed] (3,2) -- (3,18);
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{写真の輪郭をさがす}\par\vspace{2pt}\noindent\begin{minipage}[c]{0.74\linewidth}\raggedright
+写真は、明るさの数を並べた表です。どのマスにも「まわり4マスの平均との差」の4倍を計算すると、明るさが急に変わる所（物の輪郭）で大きな数が出ます。この計算は\textbf{ラプラシアンフィルター}とよばれ、画像処理の入門でよく使われます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.22\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\v in {0/0,1/1,2/0,3/1,4/-4,5/1,6/0,7/1,8/0} {\pgfmathtruncatemacro\cc{mod(\i,3)}\pgfmathtruncatemacro\rr{div(\i,3)}
+    \draw[bkInk!70, line width=0.5pt, fill=white] (\cc*7+2,14-\rr*7) rectangle ++(7,7);
+    \node[font=\sffamily\footnotesize] at (\cc*7+5.5,17.5-\rr*7) {$\v$};}
+\end{tikzpicture}
+\end{minipage}
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{ラプラスとポアソン}
+ラプラス方程式の名前は、フランスの数学者ラプラス（1749〜1827年）からきています。ラプラスは、惑星や地球のような大きな物が引き合う力を調べる中で、1780年代にこの式を使いました。のちに、その弟子にあたるポアソン（1781〜1840年）が、物の中（質量のある所）では右辺が0でなくなることを示し、1810年代に今のポアソン方程式の形にしたと伝えられています。同じ式が、のちに電気・熱・流れでも使われるようになりました。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 板の上のマスは30\,℃で、まわりは北40・南24・西36・東28（℃）です。「まわりの平均との差」を求め、温まるか冷えるかを答えましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$\dfrac{128}{4}-30=32-30=+2$。温まる。}
+
+\bkproblem $f=5x^2-y^2+2z^2+xy$ のラプラシアン $\nabla^2f$ を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$10+(-2)+4=12$（$xy$ は $x$ で2回、$y$ で2回偏微分するとどちらも0）。}
+
+\bkproblem $f=50+0.02x^2+0.02y^2$ を \qty{5}{m} おきの方眼にしたとき、まわり4点の平均との差を $\nabla^2f$ から予想しましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\nabla^2f=0.04+0.04=0.08$。$\dfrac{5^2}{4}\times0.08=6.25\times0.08=0.5$。}
+
+\bkproblem たてに並んだ2つのマス A（上）と B（下）があります。A のまわりは北が40\,℃、西・東が0\,℃、南が B。B のまわりは北が A、西・東が0\,℃、南が20\,℃です。落ち着いた温度を求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$4A=40+B$、$4B=A+20$。1つめから $B=4A-40$。2つめに入れて $16A-160=A+20$、$A=12$、$B=8$。A は12\,℃、B は8\,℃。}
+
+\bkproblem 正方形の板の上・右のふちが100\,℃、下が40\,℃、左が0\,℃です。落ち着いたとき、板のまん中は何\,℃ですか\mbox{（\bkreidairef{5}）}。
+\bkpans{$25+25+10+0=60$。60\,℃。}
+
+\bkproblem 棒の温度を \qty{0.02}{m} おきにはかると、20\,℃、26\,℃、30\,℃でした。まん中の点での $\dfrac{\dd^2T}{\dd x^2}$ の近い値を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\dfrac{30-52+20}{0.02^2}=\dfrac{-2}{0.0004}=-5000$〔℃/m²〕。}
+
+\bkproblem $f=r^3$ の $\nabla^2f$ を、球の式で求めましょう。$r$ は中心からの距離です\mbox{（\bkreidairef{7}）}。
+\bkpans{$\dfrac{\dd f}{\dd r}=3r^2$、$r^2\times3r^2=3r^4$、微分して $12r^3$、$\dfrac{1}{r^2}$ をかけて $12r$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 同じ中心の2つの球の内側（半径 \qty{0.2}{m}）が50\,V、外側（半径 \qty{0.4}{m}）が0\,V のとき、$r=\qty{0.3}{m}$ の電位を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$\phi=\dfrac{a}{r}+b$ とおく。$50=5a+b$、$0=2.5a+b$。$a=20$、$b=-50$。$r=0.3$ で $66.7-50=\qty{16.7}{V}$。}
+
+\bkproblem 内の半径 \qty{0.1}{m}、外の半径 \qty{0.2}{m} の保温材の内側が90\,℃、外側が30\,℃のとき、$r=\qty{0.15}{m}$ の温度を求めましょう（$\ln2=0.693$、$\ln1.5=0.405$）\mbox{（\bkreidairef{9}）}。
+\bkpans{$T=90+a\ln\dfrac{r}{0.1}$ とおく。$a=\dfrac{-60}{0.693}=-86.6$。$T=90-86.6\times0.405=90-35.1=54.9$\,℃。}
+
+\bkproblem $f=\dfrac{1}{r^2}$（$r$ は中心からの距離）の $\nabla^2f$ を、球の式で求めましょう。$f$ はラプラス方程式をみたしますか\mbox{（\bkreidairef{7}）}。
+\bkpans{$\dfrac{\dd f}{\dd r}=-\dfrac{2}{r^3}$、$r^2$ をかけて $-\dfrac{2}{r}$、微分して $\dfrac{2}{r^2}$、$\dfrac{1}{r^2}$ をかけて $\dfrac{2}{r^4}$。0ではないので、みたさない。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item マスの値と「まわりの平均」との差を出し、温まる所と冷える所を見分けられる。\bkfurref{bk:8-12:sa}
+\item 「どのマスもまわりの平均と同じ」のくり返しで、板の落ち着いた温度を求められる。\bkfurref{bk:8-12:ita}
+\item ラプラシアンを偏微分で計算し、球や円柱の形の場合にも使える。\bkfurref{bk:8-12:lap}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{「まわりの平均との差」が、温まるか冷えるかを決めていた。次の 8-13 では、温度がならされていくようすを表計算で追いかけよう。}

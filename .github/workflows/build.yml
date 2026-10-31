@@ -1,0 +1,198 @@
+# 組版（PDFを作る）
+# ・プルリクエスト／main への push：変わった巻だけを組む（scripts/changed-targets.py が決める）
+#   （リポジトリに初めて入れたときの push では組まない。初回は手動で組む）
+# ・手動（Actions タブ →「組版」→「Run workflow」）：組む巻を入力して組む（例: guide、6 7、all）
+# ・タグの push：組んで、リリース（Releases）に PDF を添付する
+#     vol6-ver2  → 第6巻だけ
+#     guide-ver2 → ガイドブックだけ
+#     p1-ver2    → 物理第1巻だけ
+#     all-YYYY-MM-DD（例: all-2026-11-01）→ 全巻とガイドブック
+#     （それ以外のタグ、例えば migration-2026-10-31 では組まない）
+# 組んだ PDF は、実行結果のページの「Artifacts」から zip でダウンロードできる（7日間保存。ずっと残す版はタグをつけてリリースにする）。
+name: 組版
+
+on:
+  push:
+    branches: [main]
+    tags: ['vol[1-9]-ver*', 'guide-ver*', 'p[1-5]-ver*', 'all-*']
+    paths:
+      - 'tex/**'
+      - 'texmf/**'
+      - 'phys/**'
+      - 'series.py'
+      - 'gen.py'
+      - 'pages_actual.json'
+      - 'tools/*.py'
+      - 'scripts/**'
+      - '.github/workflows/build.yml'
+  pull_request:
+    paths:
+      - 'tex/**'
+      - 'texmf/**'
+      - 'phys/**'
+      - 'series.py'
+      - 'gen.py'
+      - 'pages_actual.json'
+      - 'tools/*.py'
+      - 'scripts/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: '組む巻（空白区切り）。1〜9・guide・p1〜p5・all（all は時間がかかる）'
+        required: true
+        default: 'guide'
+
+# プルリクエストだけ、同じブランチに新しい push が来たら古い実行を止める。
+# 手動の実行・main への push・タグは止めない（途中の巻が組まれないままになるのを防ぐ）。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: 組む巻を決める
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.t.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: t
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
+          INPUT: ${{ github.event.inputs.targets }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ALL='["1","2","3","4","5","6","7","8","9","guide"]'
+          if [ "$EVENT" = workflow_dispatch ]; then
+            T=$(python3 scripts/changed-targets.py --input "$INPUT")
+          elif [ "$REF_TYPE" = tag ]; then
+            if [[ "$TAG" =~ ^vol([1-9])-ver[0-9]+$ ]]; then T="[\"${BASH_REMATCH[1]}\"]"
+            elif [[ "$TAG" =~ ^guide-ver[0-9]+$ ]]; then T='["guide"]'
+            elif [[ "$TAG" =~ ^(p[1-5])-ver[0-9]+$ ]]; then T="[\"${BASH_REMATCH[1]}\"]"
+            elif [[ "$TAG" =~ ^all-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then T="$ALL"
+            else echo "::error::このタグの形は決まりにない: $TAG（volN-verM・guide-verM・pN-verM・all-YYYY-MM-DD）"; T='[]'; fi
+          elif [ "$EVENT" = pull_request ]; then
+            T=$(python3 scripts/changed-targets.py --pr "$PR_BASE" "$PR_HEAD")
+          else
+            T=$(python3 scripts/changed-targets.py "$BEFORE" "$AFTER")
+          fi
+          echo "組む巻: $T"
+          echo "組む巻: \`$T\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "targets=$T" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: 組む (${{ matrix.target }})
+    needs: plan
+    if: needs.plan.outputs.targets != '[]' && needs.plan.outputs.targets != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        target: ${{ fromJSON(needs.plan.outputs.targets) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # 制作環境（Ubuntu 24.04 の TeX Live 2023）と同じものを、推奨パッケージなしで入れる。
+      # 推奨パッケージを入れると fonts-texgyre-math が入り、数式の書体が変わって全巻のページ送りが変わる。
+      - name: TeX Live 2023 をインストールする
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            texlive-base texlive-binaries texlive-latex-base texlive-latex-recommended \
+            texlive-latex-extra texlive-fonts-recommended texlive-pictures texlive-science \
+            texlive-lang-greek texlive-xetex latexmk poppler-utils fonts-lmodern fonts-texgyre \
+            fontconfig > /dev/null
+          lualatex --version | head -1
+          if kpsewhich texgyreschola-math.otf > /dev/null || fc-list | grep -qi 'schola.*math'; then
+            echo "::error::fonts-texgyre-math が入っている（数式の書体が変わるので組まない）"; exit 1
+          fi
+          { echo '<details><summary>入っている TeX のパッケージ</summary>'; echo; echo '```';
+            dpkg-query -W 'texlive*' 'fonts-texgyre*' 'fonts-lmodern' 2>/dev/null; echo '```'; echo '</details>'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # luaotfload のフォントのキャッシュを次回に使い回す（1回目は数分かかる）
+      - uses: actions/cache@v5
+        with:
+          path: ~/.texlive2023
+          key: luaotfload-${{ runner.os }}-${{ hashFiles('texmf/**', 'tex/fonts/**') }}
+
+      - name: 組む
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          BK_TIMEOUT=5400 BK_STRICT=1 bash scripts/ci-build.sh "$TARGET"
+
+      - name: 結果の表
+        if: always()
+        run: |
+          [ -f out/summary.md ] && cat out/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+          for f in out/check_pages_*.txt; do
+            [ -f "$f" ] || continue
+            { echo; echo "<details><summary>$(basename "$f")</summary>"; echo; echo '```'; cat "$f"; echo '```'; echo "</details>"; } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: PDF を保存する
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pdf-${{ matrix.target }}
+          path: |
+            out/*.pdf
+            out/summary.md
+            out/check_pages_*.txt
+            out/pages_actual_*.json
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: ログを保存する（失敗・時間切れのとき）
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v6
+        with:
+          name: log-${{ matrix.target }}
+          path: |
+            out/*.log
+            tex/*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  release:
+    name: リリースに PDF を添付する
+    needs: build
+    # 組んだジョブがすべて成功したときだけ
+    if: github.ref_type == 'tag' && success()
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: src
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: pdf-*
+          path: dist
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # 版の番号：volN-verM などは VerM、all-YYYY-MM-DD は日付
+          if [[ "$TAG" =~ -ver([0-9]+)$ ]]; then VER="Ver${BASH_REMATCH[1]}"; else VER="${TAG#all-}"; fi
+          # GitHub はリリースのファイル名に日本語を使えないので、ファイル名は英数字、表示名を日本語にする。
+          # あわせて、中のファイルを納品の名前にした zip を添付する。
+          python3 src/scripts/name-pdfs.py "$VER" "$TAG" dist release
+          mapfile -t ASSETS < release/assets.txt
+          gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" --notes "タグ $TAG の時点のソースから自動で組んだ PDF です。納品の名前のファイルは ${TAG}_pdf.zip の中にあります。委員会の確認は docs/議事録 を参照。"

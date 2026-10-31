@@ -1,0 +1,1031 @@
+%% 4-11 ベクトルを成分で計算しよう（第13回：組 V4-6。ページ制限なし。偶数ページ）
+%% ほかの巻・物理シリーズから指される形：
+%%   ・5-15 の思い出そう「速度は、向きと大きさをもつ量（ベクトル）。x 方向の成分と y 方向の成分に分けて考えられる。」
+%%   ・3-15「数の組は、向きと大きさをもつ矢印（ベクトル）と考えることができる（4-10・4-11）」：成分が3つでも10個でもベクトル
+%%   ・力を (F cosθ, F sinθ) に分ける、単位ベクトル、位置ベクトル・重心（位置の平均）、p=p0+tv、つり合いは成分ごとに和が0
+%% 単位ベクトルは e と書く。x・y 方向の単位ベクトルは e_x=(1, 0)、e_y=(0, 1)（4-13 の i・j と同じもの。4-15 の e_r・e_θ と同じ書き方）
+%% 数は、すべて Python で計算して確かめた（scratchpad/v4-6/py/c11.py）。
+\makeatletter
+\newcommand\bkivlstep[2]{\par\addvspace{6pt}\Needspace{5\baselineskip}\noindent
+  {\bkcircled[bkOrange]{#1}\enspace\sffamily\bfseries\color{bkOrange!75!black}#2}\par\nobreak\vspace{2pt}}
+\newcommand\bkivlline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\bkivlmidashi[1]{\par\addvspace{4pt}\Needspace{5\baselineskip}\noindent\textbf{#1}\par\nobreak}
+% 座標の軸  \bkivlaxes{xmin}{xmax}{ymin}{ymax}（mm）
+\newcommand\bkivlaxes[4]{%
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (#1,0) -- (#2,0) node[anchor=west, font=\sffamily\footnotesize] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (0,#3) -- (0,#4) node[anchor=south, font=\sffamily\footnotesize] {$y$};}
+% 小さな船（上から見た形。#2 は船首の向きの角度）  \bkivlboat{(x,y)}{角度}
+\newcommand\bkivlboat[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=bkOrange!45, draw=bkOrange!70!black, line width=0.5pt] (-3.5,-1.6) -- (2,-1.6) -- (4,0) -- (2,1.6) -- (-3.5,1.6) -- cycle;\end{scope}}
+\makeatother
+\tikzset{kivl vec/.style={-{Stealth[length=4.5pt, width=4pt]}, line width=1.5pt},
+  kivl lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+
+\bkchapter{4}{11}{ベクトルを成分で\\計算しよう}{\bklevelrange{2}{3}}{ベクトルを成分で計算しよう}
+\bkmichishirube{3-2,3-6,4-4,4-6,4-10}{4-12,5-15,7-2}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace ベクトルを成分 $(a_x,\ a_y)$ で表し、和・差・実数倍・大きさを計算できる。
+\item \bklevel{3}\enspace 力や速度を、$x$ 方向と $y$ 方向の成分に分けて考えられる。
+\item \bklevel{3}\enspace 位置ベクトルで、内分点・重心・まっすぐ進む点の位置を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright 
+はば\qty{60}{m}の川を、ボートでわたります。ボートは、水に対して\qty{3}{m/s}の速さで、向こう岸へまっすぐ船首を向けてこぎます。ところが、川の水は\qty{1.5}{m/s}で流れています。
+
+ボートは、向こう岸のどこに着くかな？　真正面に着くには、どっちへ船首を向ければいいかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!14] (0,0) rectangle (58,30);
+  \fill[bkGreen!25] (0,-6) rectangle (58,0) (0,30) rectangle (58,36);
+  \draw[bkGreen!50!black, line width=0.6pt] (0,0) -- (58,0) (0,30) -- (58,30);
+  \foreach \y in {8,22} {\draw[bkBlue!70!black, line width=0.7pt, -{Stealth[length=3pt]}] (34,\y) -- (48,\y);}
+  \node[font=\sffamily\footnotesize, text=bkBlue!70!black, anchor=south] at (41,22.8) {流れ\qty{1.5}{m/s}};
+  \bkivlboat{(10,3)}{90}
+  \draw[bkOrange!80!black, line width=0.9pt, -{Stealth[length=3pt]}] (10,7.5) -- (10,15);
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=west] at (11,12) {\qty{3}{m/s}};
+  \draw[bkGray, line width=0.6pt, dashed] (10,30) -- (10,36);
+  \node[font=\sffamily\footnotesize, anchor=south] at (10,36.5) {真正面};
+  \node[font=\sffamily\bfseries\large, text=bkRed] at (30,33) {?};
+  \draw[bkInk!60, line width=0.5pt, <->] (54,0.6) -- (54,29.4);
+  \node[font=\sffamily\footnotesize, anchor=east, fill=bkBlue!14, inner sep=0.6pt] at (53,15) {\qty{60}{m}};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 4-10では、ベクトルを矢印でかいて、つないだり、平行四辺形をかいたりしました。図をかけば答えは見えますが、矢印が3本、4本とふえると、作図はたいへんです。角が中途半端だと、長さを正確に読むこともできません。
+
+そこでこの章では、ベクトルを「横にどれだけ、たてにどれだけ」という\textbf{2つの数の組}で表します。すると、矢印のたし算もひき算も、ふつうの数の計算だけでできるようになります。物理シリーズで力や速度を計算するときは、ほとんどいつもこの方法を使います。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[方眼の上で、宝さがし]
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright 
+宝の地図に、スタートからの進み方が4つ書いてあります（1マス\qty{1}{m}）。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 右へ3、上へ2
+\item 左へ1、上へ4
+\item 右へ5、下へ3
+\item 左へ2、下へ1
+\end{enumerate}
+ノートの方眼に、矢印を順につないでかき、宝の場所をさがそう。宝は、スタートから見て、右へいくつ・上へいくつの所かな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=5.2mm, y=5.2mm]
+  \draw[bkLine, line width=0.3pt] (-1,-1) grid (9,7);
+  \draw[kivl vec, bkBlue, line width=1.2pt] (0,0) -- (3,2);
+  \draw[kivl vec, bkOrange, line width=1.2pt] (3,2) -- (2,6);
+  \draw[kivl vec, bkGreen!70!black, line width=1.2pt] (2,6) -- (7,3);
+  \draw[kivl vec, bkPurple, line width=1.2pt] (7,3) -- (5,2);
+  \fill[bkInk] (0,0) circle (0.18);
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=0.5pt] at (0,-0.25) {スタート};
+  \node[font=\sffamily\bfseries\large, text=bkRed] at (5,1.25) {×};
+  \foreach \p/\n/\a in {{1.2,1.5}/1/south east, {2.2,4}/2/east, {5,5}/3/south west, {6,2.2}/4/north} {
+    \node[font=\sffamily\footnotesize\bfseries, anchor=\a, fill=white, inner sep=0.6pt] at (\p) {\n};}
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：宝は×の所で、スタートから右へ5、上へ2です。図をかかなくても求められます。横の動きだけを集めると、右へ3、左へ1、右へ5、左へ2なので、右を＋として $3-1+5-2=5$。たての動きだけを集めると、上を＋として $2+4-3-1=2$。図をかいて求めた答えと同じです。\textbf{横どうし、たてどうしをたせばよい}のです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{4}{Q[c,m,wd=12mm]} Q[c,m,wd=16mm]}, rowsep=1.5pt}
+進み方 & 1 & 2 & 3 & 4 & 合計 \\
+横（右が＋） & 3 & $-1$ & 5 & $-2$ & 5 \\
+たて（上が＋） & 2 & 4 & $-3$ & $-1$ & 2 \\
+\end{bktable}
+\bktabcaption{横の列とたての列を、別々にたす。矢印をつなぐ順番を変えても、合計は変わらない。}
+\end{bkcenter}
+
+\bkfukidashi{mina}{図をかかなくても、たし算とひき算だけで宝が見つかった！}
+
+\begin{omoidasou}
+\bkrecall{3-2}{点 $(a,\ b)$ を右へ $p$、上へ $q$ 動かすと $(a+p,\ b+q)$。横の動きとたての動きは、おたがいにじゃまをしない。$x_1$ の小さな1は名前の印。}
+\bkrecall{4-4}{2点 $(x_1,\ y_1)$、$(x_2,\ y_2)$ の距離は $\sqrt{(x_2-x_1)^2+(y_2-y_1)^2}$。}
+\bkrecall{4-6}{直角三角形で、斜辺を $r$、角 $\theta$ のとなりの辺を $a$、向かいの辺を $b$ とすると、$a=r\cos\theta$、$b=r\sin\theta$。}
+\bkrecall{4-8}{半径1の円の上で、$x$ 軸の正の向きから左回りに角 $\theta$ の所にある点は\\$(\cos\theta,\ \sin\theta)$。90°より大きい角でも使える。}
+\bkrecall{4-10}{ベクトルの和は矢印をつなぐ。$k\vec{a}$ は長さ $|k|$ 倍（$k<0$ なら反対向き）。$\overrightarrow{\mathrm{OA}}-\overrightarrow{\mathrm{OB}}=\overrightarrow{\mathrm{BA}}$。合力が $\vec{0}$ なら、力はつり合う。}
+\bkrecall{3-6}{連立方程式：2つの式から、文字を1つずつ消して解く。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{ベクトルを2つの数で表す：成分}
+
+\label{bk:4-11:seibun}方眼の上の矢印 $\vec{a}$ は、始点から右へ4、上へ3進んだ所が終点です（図\ref{bk:4-11:fig-seibun}）。この「右へ4・上へ3」を、座標と同じように2つの数の組 $(4,\ 3)$ で書くことにします。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=5.2mm, y=5.2mm]
+  \draw[bkLine, line width=0.3pt] (-0.5,-0.5) grid (6.5,5.5);
+  \bkivlaxes{-0.5}{6.8}{-0.5}{5.8}
+  \draw[bkBlue!60, line width=1pt, dashed] (1,1) -- (5,1);
+  \draw[bkOrange!80!black, line width=1pt, dashed] (5,1) -- (5,4);
+  \draw[kivl vec, bkRed] (1,1) -- (5,4);
+  \node[kivl lab, text=bkBlue!80!black, anchor=north, fill=white] at (3,0.85) {$x$ 成分 4};
+  \node[kivl lab, text=bkOrange!80!black, anchor=west, fill=white] at (5.15,2.5) {$y$ 成分 3};
+  \node[kivl lab, text=bkRed!80!black, anchor=south east, fill=white] at (2.7,2.6) {$\vec{a}=(4,\ 3)$};
+\end{tikzpicture}
+\bkfigcaption{矢印の横の進み（$x$ 成分）とたての進み（$y$ 成分）。}\label{bk:4-11:fig-seibun}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright 
+横の進みを\textbf{$x$ 成分}、たての進みを\textbf{$y$ 成分}といいます。\bkidx{せいぶん}{成分}\par\vspace{2pt}
+右や上へ進むときは正、左や下へ進むときは負の数にします（2-2）。\par\vspace{2pt}
+たとえば「左へ2・下へ5」は $(-2,\ -5)$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+一般に、ベクトル $\vec{a}$ の $x$ 成分を $a_x$、$y$ 成分を $a_y$ と書き、
+\bkivlline{\fbox{$\vec{a}=(a_x,\ a_y)$}}
+と表します。$a_x$ の小さな $x$ は、「$x$ 方向の」という名前の印で、かけ算ではありません（3-2の下つき文字）。
+
+\bkivlmidashi{2通りの見方}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{\bkTT}●}]
+\item \textbf{動き方として}：3-2で、点を「右へ $p$、上へ $q$」動かしました。その動かし方が、ベクトル $(p,\ q)$ です。
+\item \textbf{矢印として}：始点を原点Oに置くと、終点の座標が、そのまま成分になります。$\vec{a}=(4,\ 3)$ なら、終点は点 $(4,\ 3)$ です。
+\end{itemize}
+
+4-10で、向きと大きさが同じなら、どこにかいても同じベクトルでした。どこにかいても「右へ4・上へ3」は変わらないので、成分も変わりません。だから、\textbf{2つのベクトルが等しいのは、$x$ 成分どうしも、$y$ 成分どうしも等しいとき}です。ゼロベクトルは $\vec{0}=(0,\ 0)$ です。
+
+\bkivlmidashi{2点から成分を求める}
+点 $\mathrm{A}(x_1,\ y_1)$ から点 $\mathrm{B}(x_2,\ y_2)$ への矢印は、横に $x_2-x_1$、たてに $y_2-y_1$ 進みます（あと－まえ、3-2）。
+\bkivlline{$\overrightarrow{\mathrm{AB}}=(x_2-x_1,\ y_2-y_1)$}
+たとえば $\mathrm{A}(1,\ 5)$、$\mathrm{B}(4,\ 1)$ なら、$\overrightarrow{\mathrm{AB}}=(4-1,\ 1-5)=(3,\ -4)$ です。右へ3、下へ4です。
+
+\bkivlmidashi{大きさ}
+ベクトルの大きさは、横 $|a_x|$、たて $|a_y|$ の直角三角形の斜辺の長さです。三平方の定理（4-4）から、
+\bkivlline{\fbox{$|\vec{a}|=\sqrt{a_x^{\,2}+a_y^{\,2}}$}}
+$a_x$ が負でも、2乗すれば正なので、そのまま入れてかまいません。$\vec{a}=(4,\ 3)$ なら $|\vec{a}|=\sqrt{16+9}=5$、$\overrightarrow{\mathrm{AB}}=(3,\ -4)$ なら $\sqrt{9+16}=5$ です。これは、4-4の「2点の距離」と同じ式です。
+
+\bkkigocards{\bkkigocard{$(a_x,\ a_y)$}{エー・エックス、エー・ワイ}{ベクトル $\vec{a}$ の成分。横の進みとたての進み。}{components}{4-11}}
+{\bkkigocard{$\vec{e}$}{ベクトル・イー}{単位ベクトル。大きさが1のベクトル。向きだけを表す。}{unit vector}{4-11}}
+
+\bksubsection{2}{和・差・実数倍は、成分ごとに計算する}
+
+\label{bk:4-11:keisan}やってみようでは、横どうし、たてどうしをたすと、つないだ矢印の終点がわかりました。図で確かめましょう。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkLine, line width=0.3pt] (-0.5,-0.5) grid (6.5,5.5);
+  \draw[kivl vec, bkBlue] (0,0) -- (4,1);
+  \draw[kivl vec, bkOrange] (4,1) -- (5,4);
+  \draw[kivl vec, bkRed] (0.08,0.2) -- (4.92,3.8);
+  \draw[bkBlue!70, line width=0.8pt, dashed] (0,-0.25) -- (4,-0.25);
+  \draw[bkOrange!80!black, line width=0.8pt, dashed] (4,-0.25) -- (5,-0.25);
+  \node[kivl lab, text=bkBlue!80!black, anchor=north west, fill=white] at (2.4,0.5) {$\vec{a}=(4,\ 1)$};
+  \node[kivl lab, text=bkOrange!80!black, anchor=west, fill=white] at (4.75,2.2) {$\vec{b}=(1,\ 3)$};
+  \node[kivl lab, text=bkRed!80!black, anchor=south east, fill=white] at (2.2,2.2) {$\vec{a}+\vec{b}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright 
+$\vec{a}=(4,\ 1)$ に $\vec{b}=(1,\ 3)$ をつなぎます。\par\vspace{2pt}
+横の進みは、$\vec{a}$ の4と $\vec{b}$ の1を合わせて $4+1=5$（下の点線）。\par\vspace{2pt}
+たての進みは $1+3=4$。\par\vspace{2pt}
+だから $\vec{a}+\vec{b}=(5,\ 4)$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+横の動きとたての動きは、おたがいにじゃまをしません（3-2）。だから、つないだ矢印の横の進みは、横の進みどうしの和です。たてについても同じです。実数倍と差も、同じように考えられます。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{実数倍}：$2\vec{a}$ は、$\vec{a}$ を2本つないだものなので、横もたても2倍で $(8,\ 2)$。長さが2倍の矢印は、相似（4-3）で、横とたても2倍になる、と見ることもできます。
+\item \textbf{差}：$\vec{a}-\vec{b}=\vec{a}+(-\vec{b})$。$-\vec{b}$ は $\vec{b}$ と反対向きなので $(-1,\ -3)$。だから $\vec{a}-\vec{b}=(4-1,\ 1-3)=(3,\ -2)$。
+\end{itemize}
+
+まとめると、$\vec{a}=(a_x,\ a_y)$、$\vec{b}=(b_x,\ b_y)$、$k$ を実数として、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] Q[l,m,wd=78mm]}, rowsep=2pt}
+計算 & 成分 \\
+和 & $\vec{a}+\vec{b}=(a_x+b_x,\ a_y+b_y)$ \\
+差 & $\vec{a}-\vec{b}=(a_x-b_x,\ a_y-b_y)$ \\
+実数倍 & $k\vec{a}=(ka_x,\ ka_y)$ \\
+\end{bktable}
+\bktabcaption{ベクトルの計算は、$x$ 成分は $x$ 成分どうし、$y$ 成分は $y$ 成分どうしで計算する。}
+\end{bkcenter}
+
+4-10の例題4で、方眼にかいて求めた答えを、成分で確かめてみましょう。$\vec{a}=(2,\ 1)$、$\vec{b}=(1,\ 3)$ でした。$\vec{a}+\vec{b}=(3,\ 4)$、$2\vec{a}=(4,\ 2)$、$-\vec{b}=(-1,\ -3)$、$\vec{a}-\vec{b}=(1,\ -2)$ で、図で求めた答えとすべて同じです。
+
+いくつかの計算を組み合わせるときは、まず実数倍を成分ごとに計算し、次にたしたりひいたりします。たとえば $\vec{a}=(2,\ 1)$、$\vec{b}=(1,\ 3)$ で $3\vec{a}-2\vec{b}$ は、
+\bkivlline{$3\vec{a}-2\vec{b}=(6,\ 3)-(2,\ 6)=(6-2,\ 3-6)=(4,\ -3)$}
+です。
+
+\bksubsection{3}{力を、横とたての成分に分ける}
+
+\label{bk:4-11:bunkai}\bkivlstep{1}{ななめに引くひも}
+雪の上で、そりをひもで引きます。ひもは、地面から30°上を向いていて、ひもを引く力は\qty{50}{N}です。この力は、そりを前へ進める働きと、そりを上へ持ち上げる働きの、両方をしています。それぞれ何Nずつでしょう。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!8] (-8,-6) rectangle (62,0);
+  \draw[bkGray, line width=0.6pt] (-8,0) -- (62,0);
+  \filldraw[fill=bkRed!45, draw=bkRed!70!black, line width=0.6pt, rounded corners=0.8mm] (-6,1) rectangle (8,6);
+  \draw[bkInk!70, line width=0.8pt] (-7,0.4) -- (9,0.4) to[out=0, in=-90] (11,3);
+  \fill[bkInk] (8,4) circle (0.9);
+  \draw[bkGray, line width=0.5pt, dashed] (43.3,4) -- (43.3,29) (8,29) -- (43.3,29);
+  \draw[kivl vec, bkPurple] (8,4) -- ++(30:40);
+  \draw[kivl vec, bkBlue] (8,4) -- (42.6,4);
+  \draw[kivl vec, bkOrange] (8,4.6) -- (8,28.4);
+  \draw[bkInk, line width=0.5pt] (17,4) arc (0:30:9);
+  \node[font=\sffamily\footnotesize] at ($(8,4)+(15:12)$) {30°};
+  \node[kivl lab, text=bkPurple!80!black, anchor=south east, fill=white] at (30,20) {\qty{50}{N}};
+  \node[kivl lab, text=bkBlue!80!black, anchor=north, fill=bkBlue!8] at (27,2.8) {$50\cos30°$};
+  \node[kivl lab, text=bkOrange!80!black, anchor=east] at (6.5,18) {$50\sin30°$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\raggedright 
+ひもの力の矢印（むらさき）を斜辺とする直角三角形を作ります。\par\vspace{2pt}
+横の辺（青）が、前へ進める働き。たての辺（オレンジ）が、持ち上げる働きです。\par\vspace{2pt}
+斜辺が50、角が30°なので、4-6から、横は $50\cos30°$、たては $50\sin30°$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+$\cos30°=\dfrac{\sqrt3}{2}\approx0.866$、$\sin30°=0.5$ なので（$\approx$ は「ほぼ等しい」。5-8でくわしく）、
+\bkivlline{横：$50\times0.866=43.3$\qquad たて：$50\times0.5=25$}
+ひもの力は、成分で書くと $(43.3,\ 25)$ です。そりを前へ進めるのは\qty{43.3}{N}分だけで、残りの\qty{25}{N}分は、そりを持ち上げて、雪に押しつける力を軽くしています。
+
+確かめてみましょう。$\sqrt{43.3^2+25^2}=\sqrt{1874.9+625}=\sqrt{2499.9}\approx50$ で、もとの\qty{50}{N}にもどります。$43.3+25=68.3$ にはならないことに注意しましょう（4-10）。
+
+大きさ $F$ の力が、$x$ 軸の正の向きから角 $\theta$ の向きにはたらくとき、
+\bkivlline{\fbox{$\vec{F}=(F\cos\theta,\ F\sin\theta)$}}
+これを、力を\textbf{成分に分ける}（分解する）といいます。\bkidx{ちからのぶんかい}{力の分解}
+
+\bkivlstep{2}{90°より大きい角でも使える}
+4-8で、半径1の円の上の点は $(\cos\theta,\ \sin\theta)$ でした。大きさ $F$ の力の矢印は、この半径1の矢印を $F$ 倍にのばしたものです。だから、角 $\theta$ が90°より大きくても、同じ式が使えます。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkivlaxes{-30}{26}{-4}{28}
+  \draw[bkGray!60, line width=0.5pt] (24,0) arc (0:180:24);
+  \draw[bkGray, line width=0.5pt, dashed] (-20.78,0) -- (-20.78,12) -- (0,12);
+  \draw[kivl vec, bkPurple] (0,0) -- (150:24);
+  \draw[bkInk, line width=0.5pt] (6,0) arc (0:150:6);
+  \node[font=\sffamily\footnotesize] at (118:9.5) {150°};
+  \node[kivl lab, anchor=north] at (-20.78,-1.2) {$F\cos150°$};
+  \node[kivl lab, anchor=west] at (1,12) {$F\sin150°$};
+  \node[kivl lab, text=bkPurple!80!black, anchor=south west] at ($(150:15)+(0.6,0.6)$) {$F$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedright 
+150°の向きの\qty{50}{N}の力は、左上を向いています。\par\vspace{2pt}
+$\cos150°=-0.866$、$\sin150°=0.5$（4-7・4-8）なので、
+\[ (50\times(-0.866),\ 50\times0.5) \]
+\[ =(-43.3,\ 25) \]
+$x$ 成分が負になり、「左へ43.3」をちゃんと表しています。
+\end{minipage}
+
+\par\vspace{4pt}
+直角三角形だけで考えると、「左向きだから $-$ をつける」と自分で決めなければなりません。$\cos$・$\sin$ を4-8のように使えば、符号は式が自動でつけてくれます。
+
+\bkivlstep{3}{成分から、大きさと向きを求める}
+反対に、成分 $(F_x,\ F_y)$ がわかっているときは、大きさは $\sqrt{F_x^{\,2}+F_y^{\,2}}$ です。向きの角 $\theta$ は、$\tan\theta=\dfrac{F_y}{F_x}$ から求めます（4-6）。ただし、電卓の $\tan^{-1}$ は $-90°$ から $90°$ までの角しか答えません。\textbf{矢印がどっちを向いているか、図をかいて確かめる}ことが大切です。
+
+たとえば $\vec{F}=(-5,\ 12)$ は、左へ5、上へ12で、左上を向いています。電卓で $\tan^{-1}\dfrac{12}{-5}$ を計算すると $-67.4°$ と出ますが、これは右下の向きです。左上の向きは、そこから180°回した $-67.4°+180°=112.6°$ です。$\tan$ の値は、180°回しても同じになるからです（4-8）。大きさは $\sqrt{25+144}=13$ です。
+
+\bkivlstep{4}{軸は、計算が楽になるように選ぶ}
+3-2で、原点と＋の向きは、自分で決めてよいのでした。軸の向きも、自分で決めてかまいません。4-6では、斜面の上の荷物にはたらく重力 $mg$ を、斜面にそった向きの $mg\sin\theta$ と、斜面に垂直な向きの $mg\cos\theta$ に分けました。これは、\textbf{斜面にそった向きを $x$ 軸、斜面に垂直な向きを $y$ 軸}にして、重力を成分に分けたのと同じことです。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1.15mm, y=1.15mm]
+  \fill[bkGray!25] (0,0) -- (50,0) -- (0,28.87) -- cycle;
+  \draw[bkInk!70, line width=0.7pt] (0,0) -- (50,0) -- (0,28.87) -- cycle;
+  \draw[bkInk, line width=0.5pt] (42,0) arc (180:150:8);
+  \node[font=\sffamily\footnotesize] at ($(50,0)+(165:11)$) {30°};
+  \begin{scope}[shift={(22,12.7)}, rotate=-30]
+    \filldraw[fill=bkOrange!40, draw=bkOrange!70!black, line width=0.6pt] (-5,0) rectangle (5,7);
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,3.5) -- (17,3.5) node[anchor=south west, font=\sffamily\footnotesize, text=bkGray] {$x$};
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=3pt]}] (0,3.5) -- (0,20) node[anchor=south, font=\sffamily\footnotesize, text=bkGray] {$y$};
+    \draw[kivl vec, bkBlue, line width=1.2pt] (0,3.5) -- (9.8,3.5);
+    \draw[kivl vec, bkOrange, line width=1.2pt] (0,3.5) -- (0,-13.47);
+    \fill[bkInk] (0,3.5) circle (0.8);
+  \end{scope}
+  \draw[kivl vec, bkPurple, line width=1.2pt] (23.75,15.73) -- ++(0,-19.6);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\raggedright 
+むらさきが重力、青が斜面にそった成分、オレンジが斜面に垂直な成分です。\par\vspace{2pt}
+質量\qty{2}{kg}の荷物なら、重力は $2\times9.8=\qty{19.6}{N}$。斜面が30°なら、斜面にそった成分は $19.6\times0.5=\qty{9.8}{N}$、垂直な成分は $19.6\times0.866\approx\qty{17.0}{N}$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+軸を斜面にそわせると、荷物は $x$ 方向（斜面にそった向き）にだけ動くので、$y$ 方向の動きを考えなくてすみます。\textbf{同じ力でも、軸の選び方で成分は変わります}。物理では、問題に合わせて、いちばん計算が楽になる軸を選びます。
+
+\bksubsection{4}{速度を成分に分ける}
+
+\label{bk:4-11:sokudo}\textbf{速度は、向きと大きさをもつ量（ベクトル）です}（4-10）。だから、力と同じように、\textbf{$x$ 方向の成分と $y$ 方向の成分に分けて考えられます}。
+
+\bkivlstep{1}{位置の変化から速度の成分を求める}
+グラウンドの上を、ドローンが一定の速度でまっすぐ飛んでいます。真上から見た位置を、地面に方眼をかいて座標で表します（単位はm）。0秒のときは $(2,\ 1)$、4秒のときは $(14,\ 6)$ にいました。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=3.7mm, y=3.7mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid (16,8);
+  \bkivlaxes{0}{16.8}{0}{8.8}
+  \draw[bkGray, line width=0.6pt, dashed] (2,1) -- (14,1) -- (14,6);
+  \draw[kivl vec, bkRed] (2.2,1.08) -- (13.8,5.92);
+  \fill[bkInk] (2,1) circle (0.2) (14,6) circle (0.2);
+  \node[kivl lab, anchor=north east] at (2,0.8) {0秒};
+  \node[kivl lab, anchor=south] at (14,6.3) {4秒};
+  \node[kivl lab, anchor=north, fill=white] at (8,0.85) {$\Delta x=12$};
+  \node[kivl lab, anchor=west, fill=white] at (14.2,3.5) {$\Delta y=5$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\raggedright 
+4秒間の位置の変化は、あと－まえで
+\[ (14-2,\ 6-1)=(12,\ 5) \]
+これを、かかった時間4秒でわると、1秒あたりの位置の変化になります。
+\[ \Bigl(\frac{12}{4},\ \frac{5}{4}\Bigr)=(3,\ 1.25) \]
+\end{minipage}
+
+\par\vspace{4pt}
+これが、ドローンの\textbf{速度の成分}です。1秒ごとに、横（$x$ 方向）へ\qty{3}{m}、たて（$y$ 方向）へ\qty{1.25}{m}進みます。$x$ 成分は $\dfrac{\Delta x}{\Delta t}$、$y$ 成分は $\dfrac{\Delta y}{\Delta t}$ です。2-3の「速さ＝$\Delta x\div\Delta t$」を、横とたてで1回ずつ使ったのです。
+\bkivlline{\fbox{$\vec{v}=\Bigl(\dfrac{\Delta x}{\Delta t},\ \dfrac{\Delta y}{\Delta t}\Bigr)$}}
+速さ（速度の大きさ）は $\sqrt{3^2+1.25^2}=\sqrt{10.5625}=3.25$ で、\qty{3.25}{m/s}です。位置の変化の大きさ $\sqrt{12^2+5^2}=13$（m）を4秒でわっても、$13\div4=3.25$ で同じになります。
+
+\bkivlstep{2}{\bkhatenaref の答え：横とたてを別々に考える}
+ボートの速度は、「水に対するボートの速度」と「水の流れの速度」の和です（4-10の相対速度：地面から見たボートの速度＝水から見たボートの速度＋水の速度）。川の流れの向きを $x$ 軸、向こう岸の向きを $y$ 軸にとると、
+\bkivlline{$(0,\ 3)+(1.5,\ 0)=(1.5,\ 3)$}
+
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!14] (0,0) rectangle (50,40);
+  \fill[bkGreen!25] (0,-4) rectangle (50,0) (0,40) rectangle (50,44);
+  \draw[bkGreen!50!black, line width=0.6pt] (0,0) -- (50,0) (0,40) -- (50,40);
+  \draw[bkGray, line width=0.6pt, dashed] (8,0) -- (28,40);
+  \draw[kivl vec, bkOrange] (8,0) -- (8,12);
+  \draw[kivl vec, bkBlue] (8.3,12) -- (14,12);
+  \draw[kivl vec, bkRed] (8.25,0.5) -- (13.75,11.5);
+  \fill[bkInk] (28,40) circle (1);
+  \node[kivl lab, anchor=south] at (28,41.2) {着く所};
+  \node[kivl lab, text=bkOrange!80!black, anchor=east] at (7,6) {3};
+  \node[kivl lab, text=bkBlue!80!black, anchor=south] at (11,12.6) {1.5};
+  \draw[bkInk!60, line width=0.5pt, <->] (8.4,36.5) -- (27.6,36.5);
+  \node[kivl lab, anchor=north, fill=bkBlue!14] at (18,35.8) {\qty{30}{m}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright 
+\textbf{たて（$y$ 方向）}：向こう岸までの\qty{60}{m}を、1秒に\qty{3}{m}ずつ進みます。かかる時間は $60\div3=\qty{20}{s}$ です。\par\vspace{3pt}
+\textbf{横（$x$ 方向）}：その20秒のあいだ、1秒に\qty{1.5}{m}ずつ下流へ流されます。$1.5\times20=\qty{30}{m}$ です。\par\vspace{3pt}
+だから、ボートは\textbf{真正面から\qty{30}{m}下流}に着きます。
+\end{minipage}
+
+\par\vspace{4pt}
+川の流れは、向こう岸へ着くまでの時間を変えません。流れは横向きなので、たての進み方にはじゃまをしないからです。岸から見たボートの速さは $\sqrt{1.5^2+3^2}\approx\qty{3.35}{m/s}$ ですが、たてと横を別々に考えれば、この数を使わなくても答えが出ます。
+
+\bkivlstep{3}{真正面に着くには}
+真正面に着くには、流される分を打ち消すように、船首を少し上流へ向けます。船首を、向こう岸の向きから上流へ角 $\theta$ だけかたむけると、水に対するボートの速度は $(-3\sin\theta,\ 3\cos\theta)$ です（上流は $x$ の負の向き）。
+
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[kivl vec, bkOrange] (0,0) -- (-12,20.78);
+  \draw[kivl vec, bkBlue] (-12,20.78) -- (-0.4,20.78);
+  \draw[kivl vec, bkRed] (0,0.6) -- (0,20.2);
+  \draw[bkGray, line width=0.4pt, dashed] (0,0) -- (0,26);
+  \draw[bkInk, line width=0.5pt] (0,8) arc (90:120:8);
+  \node[font=\sffamily\footnotesize] at (105:10.5) {$\theta$};
+  \node[kivl lab, text=bkOrange!80!black, anchor=east] at (-7,9) {3};
+  \node[kivl lab, text=bkBlue!80!black, anchor=south] at (-6,21.6) {1.5};
+  \node[kivl lab, text=bkRed!80!black, anchor=west] at (1,12) {岸から見た速度};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\raggedright 
+これに流れ $(1.5,\ 0)$ をたした $x$ 成分が0になればよいので、
+\[ -3\sin\theta+1.5=0 \]
+だから $\sin\theta=0.5$ です。
+$\theta=30°$ です。船首を30°上流へ向ければ、まっすぐ向こう岸へ進みます。
+\end{minipage}
+
+\par\vspace{4pt}
+このとき、向こう岸へ進む速さは $3\cos30°\approx3\times0.866=2.598$ で、約\qty{2.6}{m/s}になります。\qty{60}{m}わたるのにかかる時間は $60\div2.598\approx\qty{23.1}{s}$ で、まっすぐ向けたときの20秒より長くかかります。流れに逆らう分だけ、前へ進む力が使われるからです。
+
+\bksubsection{5}{大きさ1のベクトル：単位ベクトル}
+
+\label{bk:4-11:tani}大きさが1のベクトルを、\textbf{単位ベクトル}といいます。\bkidx{たんいべくとる}{単位ベクトル}単位ベクトルは、「向き」だけを表す矢印です。この本では、単位ベクトルを $\vec{e}$ で表します（e は「1つ、単位」を意味するドイツ語 Einheit の頭文字）。
+
+\bkivlmidashi{あるベクトルと同じ向きの単位ベクトル}
+$\vec{a}=(3,\ 4)$ の大きさは5です。$\vec{a}$ を5でわる（$\dfrac{1}{5}$ 倍する）と、向きはそのままで、大きさが1になります。
+\bkivlline{$\vec{e}=\dfrac{1}{5}\vec{a}=\Bigl(\dfrac{3}{5},\ \dfrac{4}{5}\Bigr)=(0.6,\ 0.8)$}
+確かめると、$\sqrt{0.6^2+0.8^2}=\sqrt{0.36+0.64}=1$ です。一般に、$\vec{a}$ と同じ向きの単位ベクトルは、$\vec{a}$ をその大きさでわったものです。
+\bkivlline{\fbox{$\vec{e}=\dfrac{\vec{a}}{|\vec{a}|}$}}
+（ベクトルを数でわるのは、その数分の1をかけるという意味です。）
+
+\bkivlmidashi{向きと大きさから、ベクトルを作る}
+反対に、向きを表す単位ベクトル $\vec{e}$ に大きさをかければ、ベクトルができます。「$(3,\ 4)$ の向きに、大きさ\qty{15}{N}の力」は、$15\vec{e}=15\times(0.6,\ 0.8)=(9,\ 12)$ です。\textbf{向き（単位ベクトル）と大きさ（数）を分けて考えられる}のが、単位ベクトルの便利なところです。
+
+角 $\theta$ の向きの単位ベクトルは、4-8の $(\cos\theta,\ \sin\theta)$ そのものです。③の $\vec{F}=(F\cos\theta,\ F\sin\theta)$ は、「大きさ $F$×向きの単位ベクトル」だったのです。
+
+\bkivlmidashi{$x$ 方向と $y$ 方向の単位ベクトル}
+とくに、$x$ 軸の正の向きの単位ベクトルを $\vec{e}_x=(1,\ 0)$、$y$ 軸の正の向きの単位ベクトルを $\vec{e}_y=(0,\ 1)$ と書きます。すると、どんなベクトルも
+\bkivlline{$\vec{a}=(a_x,\ a_y)=a_x\vec{e}_x+a_y\vec{e}_y$}
+と書けます。「$x$ 方向の1を $a_x$ 個と、$y$ 方向の1を $a_y$ 個」という意味です。$(4,\ 3)=4\vec{e}_x+3\vec{e}_y$ です。4-13では、空間の3つの向きの単位ベクトルを $\vec{i}$、$\vec{j}$、$\vec{k}$ とも書きます。
+
+\bksubsection{6}{位置ベクトル・内分点・重心}
+
+\label{bk:4-11:ichi}\bkivlstep{1}{位置ベクトル}
+原点Oを1つ決めると、点Pの場所は、Oから P への矢印 $\overrightarrow{\mathrm{OP}}$ で表せます。この矢印を、点Pの\textbf{位置ベクトル}といいます。\bkidx{いちべくとる}{位置ベクトル}始点がOなので、位置ベクトルの成分は、点Pの座標と同じです。点 $\mathrm{P}(3,\ 2)$ の位置ベクトルは $(3,\ 2)$ です。
+
+点A、B、…の位置ベクトルを、小文字で $\vec{a}$、$\vec{b}$、…と書くことにします。すると、AからBへの矢印は、4-10の「あと－まえ」で、
+\bkivlline{\fbox{$\overrightarrow{\mathrm{AB}}=\vec{b}-\vec{a}$}}
+です。①の「$\overrightarrow{\mathrm{AB}}=(x_2-x_1,\ y_2-y_1)$」は、これを成分で書いたものでした。
+
+\bkivlstep{2}{線分を分ける点：内分点}
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=6.5mm, y=6.5mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid (8,5);
+  \bkivlaxes{0}{8.8}{0}{5.8}
+  \draw[bkInk, line width=1pt] (1,1) -- (7,4);
+  \foreach \p/\n/\a in {{1,1}/A/north west, {7,4}/B/north west, {4,2.5}/M/north west, {3,2}/P/south east} {\fill[bkInk] (\p) circle (0.16); \node[kivl lab, anchor=\a, fill=white] at (\p) {\n};}
+  \draw[bkGray, line width=0.4pt, densely dashed] (1,1) -- (1,0) (7,4) -- (7,0);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\raggedright 
+$\mathrm{A}(1,\ 1)$ と $\mathrm{B}(7,\ 4)$ を結ぶ線分ABの、まん中の点Mを求めます。\par\vspace{2pt}
+AからBへは $\vec{b}-\vec{a}=(6,\ 3)$ です。Mは、AからBへの道のりの半分の所なので、
+\[ \vec{a}+\frac{1}{2}(6,\ 3)=(1+3,\ 1+1.5) \]
+\[ =(4,\ 2.5) \]
+\end{minipage}
+
+\par\vspace{4pt}
+文字のままで計算すると、
+\bkivlline{$\vec{a}+\dfrac{1}{2}(\vec{b}-\vec{a})=\vec{a}+\dfrac{1}{2}\vec{b}-\dfrac{1}{2}\vec{a}=\dfrac{\vec{a}+\vec{b}}{2}$}
+\textbf{まん中の点（中点）の位置ベクトルは、2つの位置ベクトルの平均}です。成分で見ると、$x$ 座標の平均 $\dfrac{1+7}{2}=4$ と、$y$ 座標の平均 $\dfrac{1+4}{2}=2.5$ です。
+
+線分ABを $m:n$ に分ける点も、同じように求められます。AからBへの道のりの $\dfrac{m}{m+n}$ の所なので、
+\begin{align*}
+\vec{a}+\frac{m}{m+n}(\vec{b}-\vec{a})&=\frac{(m+n)\vec{a}+m\vec{b}-m\vec{a}}{m+n}=\frac{n\vec{a}+m\vec{b}}{m+n}
+\end{align*}
+このように線分を $m:n$ に分ける点を、$m:n$ の\textbf{内分点}（ないぶんてん）といいます。たとえば、ABを $1:2$ に分ける点Pは、AからBへの道のりの $\dfrac{1}{3}$ の所なので、$(1,\ 1)+\dfrac{1}{3}(6,\ 3)=(1+2,\ 1+1)=(3,\ 2)$ です。式で計算すると、$\dfrac{2(1,\ 1)+1(7,\ 4)}{3}=\dfrac{(9,\ 6)}{3}=(3,\ 2)$ で、同じです。
+
+$\vec{a}$ には、遠いほうの数 $n$ がかかることに注意しましょう。Aに近い点ほど、Aの位置ベクトルを多く混ぜるからです。
+
+\bkivlstep{3}{三角形の重心}
+\noindent\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=5mm, y=5mm]
+  \draw[bkLine, line width=0.3pt] (0,0) grid (8,8);
+  \filldraw[fill=bkTheme!15, draw=bkInk, line width=0.9pt] (1,1) -- (7,4) -- (4,7) -- cycle;
+  \draw[bkBlue, line width=0.7pt] (1,1) -- (5.5,5.5);
+  \draw[bkBlue, line width=0.7pt] (7,4) -- (2.5,4);
+  \draw[bkBlue, line width=0.7pt] (4,7) -- (4,2.5);
+  \fill[bkRed] (4,4) circle (0.2);
+  \node[kivl lab, text=bkRed!80!black, anchor=north west, fill=white] at (4.15,3.85) {G};
+  \foreach \p/\n/\a in {{1,1}/A/north east, {7,4}/B/west, {4,7}/C/south} {\node[kivl lab, anchor=\a] at (\p) {\n};}
+  \node[kivl lab, anchor=north west] at (7,3.8) {};
+  \foreach \p in {{5.5,5.5},{2.5,4},{4,2.5}} {\fill[bkBlue] (\p) circle (0.13);}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\raggedright 
+三角形の頂点と、向かいの辺の中点を結ぶ線を、\textbf{中線}といいます。3本の中線は、1つの点Gで交わります。この点を、三角形の\textbf{重心}といいます。\bkidx{じゅうしん}{重心}\par\vspace{2pt}
+図は、$\mathrm{A}(1,\ 1)$、$\mathrm{B}(7,\ 4)$、$\mathrm{C}(4,\ 7)$ の三角形で、重心は $\mathrm{G}(4,\ 4)$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+3つの頂点の位置ベクトルの平均を計算してみます。
+\bkivlline{$\dfrac{\vec{a}+\vec{b}+\vec{c}}{3}=\Bigl(\dfrac{1+7+4}{3},\ \dfrac{1+4+7}{3}\Bigr)=(4,\ 4)$}
+重心Gと同じ点です。これは偶然ではありません。BCの中点Mは $\dfrac{\vec{b}+\vec{c}}{2}$ です。中線AMを $2:1$ に分ける点は、内分点の式で $m=2$、$n=1$ として、
+\bkivlline{$\dfrac{1\times\vec{a}+2\times\dfrac{\vec{b}+\vec{c}}{2}}{2+1}=\dfrac{\vec{a}+\vec{b}+\vec{c}}{3}$}
+になります。ほかの2本の中線でも、同じ計算で同じ点になります。だから3本の中線は、どれも $2:1$ の点、つまり3つの位置ベクトルの平均の点を通るのです。
+\bkivlline{\fbox{三角形の重心 $\vec{g}=\dfrac{\vec{a}+\vec{b}+\vec{c}}{3}$（頂点の位置の平均）}}
+
+厚さが一様な三角形の板を、重心の1点で下から支えると、板は落ちずにつり合います。重心は、物の重さが全部そこに集まっていると考えてよい点です。
+
+\bkivlstep{4}{重さのちがう物の重心：重みをつけた平均}
+シーソーに、質量\qty{30}{kg}のソラさんと\qty{20}{kg}のミナさんが乗ります。2人の間は\qty{5}{m}です。どこを支えるとつり合うでしょう。
+
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!70] (20,-8) -- (24,0) -- (28,-8) -- cycle;
+  \draw[bkInk, line width=1.6pt] (-2,0.6) -- (52,0.6);
+  \bkkid{(0,1.4)}{16}{bkBlue!70}{bkInk}
+  \bkkid{(50,1.4)}{13}{bkOrange!80}{bkInk}
+  \draw[bkGray, line width=0.5pt, <->] (0,-4) -- (23.6,-4);
+  \draw[bkGray, line width=0.5pt, <->] (24.4,-4) -- (50,-4);
+  \node[kivl lab, anchor=north] at (11,-4.8) {\qty{2}{m}};
+  \node[kivl lab, anchor=north] at (38,-4.8) {\qty{3}{m}};
+  \node[kivl lab, anchor=south] at (0,19) {\qty{30}{kg}};
+  \node[kivl lab, anchor=south] at (50,16) {\qty{20}{kg}};
+  \node[kivl lab, anchor=north, text=bkRed!80!black] at (24,-9.5) {重心（$x=2$）};
+  \node[kivl lab, anchor=north] at (0,-9.5) {$x=0$};
+  \node[kivl lab, anchor=north] at (50,-9.5) {$x=5$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\raggedright 
+てこのつり合い（小学校の理科）では、「重さ×支点からの距離」が左右で等しくなります。\par\vspace{2pt}
+$30\times2=60$、$20\times3=60$ なので、ソラさんから\qty{2}{m}の所を支えるとつり合います。重いほうに近い所です。
+\end{minipage}
+
+\par\vspace{4pt}
+ソラさんの位置を $x=0$、ミナさんの位置を $x=5$ とすると、支点は $x=2$ です。これは、2人の位置を、質量で\textbf{重み}をつけて平均したものです。
+\bkivlline{$\dfrac{30\times0+20\times5}{30+20}=\dfrac{100}{50}=2$}
+平面や空間でも同じで、質量 $m_1$、$m_2$ の物が位置 $\vec{r}_1$、$\vec{r}_2$ にあるとき、2つを合わせた物の重心は
+\bkivlline{\fbox{$\vec{r}_{\mathrm{G}}=\dfrac{m_1\vec{r}_1+m_2\vec{r}_2}{m_1+m_2}$}}
+です。内分点の式と見くらべると、重心は2つの物を結ぶ線分を $m_2:m_1$ に分ける点です。3つ以上の物でも、分子に「質量×位置ベクトル」をたし、分母に質量の合計を書きます。質量がすべて等しいときは、ふつうの平均になり、三角形の重心の式にもどります。
+
+\begin{seikaku}
+\textbf{重心と質量中心}\par
+物理では、質量で重みをつけた位置の平均を、\textbf{質量中心}とよぶこともあります。地球の上のように、重力の強さがどこでも同じと考えてよい所では、質量中心と重心は同じ点です。物理シリーズの力学では、たくさんの部分でできた物の動きを、この1点の動きで考えます。
+\end{seikaku}
+
+\bksubsection{7}{まっすぐ一定の速さで進む点：$\vec{p}=\vec{p}_0+t\vec{v}$}
+
+\label{bk:4-11:chokusen}\bkhatenaref のボートは、出発点 $(0,\ 0)$ から、速度 $(1.5,\ 3)$ でまっすぐ進みました。$t$ 秒後の位置を表にします。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] *{5}{Q[c,m,wd=16mm]}}, rowsep=1.5pt}
+時間 $t$（s） & 0 & 1 & 2 & 10 & 20 \\
+位置（m） & $(0,\ 0)$ & $(1.5,\ 3)$ & $(3,\ 6)$ & $(15,\ 30)$ & $(30,\ 60)$ \\
+\end{bktable}
+\bktabcaption{1秒ごとに、速度 $(1.5,\ 3)$ を1回ずつたしていく。}
+\end{bkcenter}
+
+1秒ごとに速度の分だけ進むので、$t$ 秒後には、はじめの位置に「速度の $t$ 倍」をたした所にいます。はじめの位置を $\vec{p}_0$（ピー・ゼロ）、速度を $\vec{v}$ とすると、$t$ 秒後の位置 $\vec{p}$ は
+\bkivlline{\fbox{$\vec{p}=\vec{p}_0+t\vec{v}$}}
+です。成分で書くと、$\vec{p}_0=(x_0,\ y_0)$、$\vec{v}=(v_x,\ v_y)$ として、
+\bkivlline{$x=x_0+v_xt,\qquad y=y_0+v_yt$}
+横もたても、時間 $t$ の1次関数（3-5）です。$x$ の式の傾きが $v_x$、$y$ の式の傾きが $v_y$ です。このように、まっすぐ一定の速さで進む運動を、\textbf{等速直線運動}といいます。\bkidx{とうそくちょくせんうんどう}{等速直線運動}
+
+$t$ をいろいろに変えると、点 $\vec{p}$ は1本の直線をえがきます。$t$ は、点の場所を決めるための「なかだちの変数」なので、4-8と同じように\textbf{媒介変数}（ばいかいへんすう）とよびます。$\vec{p}=\vec{p}_0+t\vec{v}$ は、「点 $\vec{p}_0$ を通り、$\vec{v}$ の向きにのびる直線」を表す式でもあります。
+
+\bkivlmidashi{表計算で、少しずつ進める}
+速度が一定なら、1つ前の位置に「速度×$\Delta t$」をたしていくと、次々に位置が求められます。$\Delta t=\qty{2}{s}$ として、ボートの位置を表計算で求めてみましょう。2行めにはじめの時刻と位置を入れ、3行めに次の式を入れて、下へコピーします。
+\begin{bkcenter}
+\bksheet{3}{26}{%
+1 & $t$（s） & $x$（m） & $y$（m） \\
+2 & 0 & 0 & 0 \\
+3 & \texttt{=A2+2} & \texttt{=B2+1.5*2} & \texttt{=C2+3*2} \\}
+\end{bkcenter}
+\texttt{1.5*2} は「横の速度×2秒」、\texttt{3*2} は「たての速度×2秒」です。計算の結果は次のようになります。
+\begin{bkcenter}
+\bksheet{3}{26}{%
+1 & $t$（s） & $x$（m） & $y$（m） \\
+2 & 0 & 0 & 0 \\
+3 & 2 & 3 & 6 \\
+4 & 4 & 6 & 12 \\
+5 & 6 & 9 & 18 \\
+6 & 8 & 12 & 24 \\
+7 & 10 & 15 & 30 \\}
+\bktabcaption{2秒ごとに、$x$ は3ずつ、$y$ は6ずつふえる。さらに下へ続けると、$t=20$ で $(30,\ 60)$。}
+\end{bkcenter}
+$y=60$（向こう岸）になるのは $t=20$ の行で、そのとき $x=30$ です。$\vec{p}=\vec{p}_0+t\vec{v}$ で求めた答えと同じです。速度がとちゅうで変わるとき（たとえば川の流れが岸の近くでおそいとき）も、行ごとに速度を変えれば、同じやり方で計算できます。このように少しずつ位置を進める計算は、ゲームの中のボールの動き（物理・工学ではこう使う）や、5-13で学ぶ計算の出発点です。
+
+\bksubsection{8}{数の組は、ベクトルと考えられる}
+
+\label{bk:4-11:kumi}ここまで、ベクトルは2つの数の組でした。でも、成分ごとに計算するやり方は、数がいくつあっても同じように使えます。
+
+\bkivlmidashi{例1　5教科のテスト}
+ソラさんの1学期と2学期のテストの点を、（国語、数学、英語、理科、社会）の順に5つの数の組で書きます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=26mm] *{5}{Q[c,m,wd=13mm]}}, rowsep=1.5pt}
+ & 国語 & 数学 & 英語 & 理科 & 社会 \\
+1学期 $\vec{s}_1$ & 70 & 85 & 60 & 90 & 75 \\
+2学期 $\vec{s}_2$ & 75 & 80 & 70 & 95 & 80 \\
+変化 $\vec{s}_2-\vec{s}_1$ & 5 & $-5$ & 10 & 5 & 5 \\
+平均 $\dfrac{\vec{s}_1+\vec{s}_2}{2}$ & 72.5 & 82.5 & 65 & 92.5 & 77.5 \\
+\end{bktable}
+\bktabcaption{5つの数の組でも、ひき算や平均は、成分ごとに計算する。}
+\end{bkcenter}
+「変化」は、教科ごとの「あと－まえ」です。5つの数を1つの組として、一度にまとめて扱えます。
+
+\bkivlmidashi{例2　画面の色}
+スマートフォンの画面の1つの点の色は、赤（R）・緑（G）・青（B）の光の強さを、それぞれ0から255までの数で決めています。だいだい色は $(255,\ 128,\ 0)$ のような3つの数の組です。2つの色をまぜたり、明るさを半分にしたりするのも、成分ごとの計算です。
+
+\bkivlmidashi{例3　偏差の組（3-15）}
+3-15で、10人の身長の偏差は $(-14,\ -10,\ -7,\ -4,\ -2,\ 2,\ 4,\ 6,\ 9,\ 16)$ でした。これは、成分が10個のベクトルと考えられます。成分が3つ以上のときも、大きさは「成分の2乗の和の $\sqrt{\phantom{x}}$」と決めます（成分が3つのときに三平方の定理と合うことは、4-13で図をかいて確かめます）。この偏差のベクトルの大きさは
+\bkivlline{$\sqrt{(-14)^2+(-10)^2+\cdots+16^2}=\sqrt{758}\approx27.53$}
+です。3-14の標準偏差 $\sigma$ は「偏差の2乗の平均の $\sqrt{\phantom{x}}$」だったので、$\sigma=\sqrt{758\div10}=\dfrac{\sqrt{758}}{\sqrt{10}}\approx8.71$（cm）。標準偏差は、偏差のベクトルの大きさを $\sqrt{10}$ でわったものなのです。
+
+このように、\textbf{数の組は、向きと大きさをもつ矢印（ベクトル）と考えることができます}。成分が3つでも10個でも、ベクトルです。成分が4つ以上になると、もう矢印を絵にかくことはできません。それでも、和・差・実数倍・大きさは、2つの成分のときと同じ式で計算できます。第7巻では、このような「たくさんの数の組」を、行列という道具でまとめて計算します。
+
+\bksubsection{9}{つり合いは、成分ごとに和が0}
+
+\label{bk:4-11:tsuriai}4-10で、力がつり合っているとは、合力が $\vec{0}=(0,\ 0)$ になることでした。成分で書くと、
+\bkivlline{\fbox{$x$ 成分の和 $=0$\quad かつ\quad $y$ 成分の和 $=0$}}
+です。横とたての2つの式ができるので、わからない力が2つあっても求められます。
+
+\bkivlstep{1}{左右対称につるす}
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-30,22) rectangle (30,25);
+  \draw[bkInk!70, line width=0.8pt] (-26,22) -- (0,7) -- (26,22);
+  \filldraw[fill=bkYellow!60, draw=bkYellow!50!black, line width=0.5pt] (-4,7) -- (4,7) -- (6,0) -- (-6,0) -- cycle;
+  \fill[bkInk] (0,7) circle (0.9);
+  \draw[kivl vec, bkBlue, line width=1.2pt] (0,7) -- ++(150:16);
+  \draw[kivl vec, bkBlue, line width=1.2pt] (0,7) -- ++(30:16);
+  \draw[kivl vec, bkPurple, line width=1.2pt] (0,3) -- (0,-13);
+  \draw[bkInk, line width=0.5pt] ($(0,7)+(8,0)$) arc (0:30:8);
+  \draw[bkGray, line width=0.4pt, dashed] (0,7) -- (12,7);
+  \node[font=\sffamily\footnotesize] at ($(0,7)+(15:11)$) {30°};
+  \node[kivl lab, text=bkBlue!80!black, anchor=south] at ($(0,7)+(30:16)+(0,0.8)$) {$T$};
+  \node[kivl lab, text=bkBlue!80!black, anchor=south] at ($(0,7)+(150:16)+(0,0.8)$) {$T$};
+  \node[kivl lab, text=bkPurple!80!black, anchor=west] at (1.2,-10) {\qty{40}{N}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright 
+重さ\qty{40}{N}の電灯を、水平から30°上向きの2本のひもでつるします。左右対称なので、2本のひもの力の大きさは同じで、$T$ とします。
+\end{minipage}
+
+\par\vspace{4pt}
+右のひもの力は $(T\cos30°,\ T\sin30°)$、\par
+左のひもの力は $(-T\cos30°,\ T\sin30°)$、\par
+重力は $(0,\ -40)$ です。\par
+
+\par\vspace{4pt}
+$x$ 成分の和は $T\cos30°-T\cos30°+0=0$ で、いつも0です。$y$ 成分の和が0になる条件は、
+\bkivlline{$T\sin30°+T\sin30°-40=0\qquad 2T\times0.5=40\qquad T=40$}
+ひも1本が\qty{40}{N}で、電灯の重さと同じです。2本で支えているのに、1本1本が全部の重さと同じ力で引いています。ひもが水平に近いと、上向きの成分が小さいので、そのぶん大きな力がいるのです（4-10のクレーンのつり角と同じ）。
+
+\bkivlstep{2}{左右で角がちがうとき：連立方程式}
+左のひもが水平から30°、右のひもが水平から60°のとき、重さ\qty{100}{N}の看板をつるします。左のひもの力を $T_1$、右を $T_2$ とします。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-32,24) rectangle (20,27);
+  \draw[bkInk!70, line width=0.8pt] (-29.4,24) -- (0,7) -- (9.8,24);
+  \filldraw[fill=bkGreen!40, draw=bkGreen!50!black, line width=0.5pt] (-7,7) rectangle (7,-1);
+  \fill[bkInk] (0,7) circle (0.9);
+  \draw[kivl vec, bkBlue, line width=1.2pt] (0,7) -- ++(150:15);
+  \draw[kivl vec, bkOrange, line width=1.2pt] (0,7) -- ++(60:15);
+  \draw[kivl vec, bkPurple, line width=1.2pt] (0,3) -- (0,-14);
+  \draw[bkGray, line width=0.4pt, dashed] (-14,7) -- (14,7);
+  \draw[bkInk, line width=0.5pt] ($(0,7)+(150:7)$) arc (150:180:7);
+  \node[font=\sffamily\footnotesize] at ($(0,7)+(165:10.5)$) {30°};
+  \draw[bkInk, line width=0.5pt] ($(0,7)+(6,0)$) arc (0:60:6);
+  \node[font=\sffamily\footnotesize] at ($(0,7)+(30:9.5)$) {60°};
+  \node[kivl lab, text=bkBlue!80!black, anchor=south east] at ($(0,7)+(150:15)$) {$T_1$};
+  \node[kivl lab, text=bkOrange!80!black, anchor=west] at ($(0,7)+(60:15)+(0.8,0)$) {$T_2$};
+  \node[kivl lab, text=bkPurple!80!black, anchor=west] at (1.2,-11) {\qty{100}{N}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright 
+左のひもの力：$(-T_1\cos30°,\ T_1\sin30°)$\par
+右のひもの力：$(T_2\cos60°,\ T_2\sin60°)$\par
+重力：$(0,\ -100)$\par\vspace{3pt}
+$\cos30°=\sin60°=\dfrac{\sqrt3}{2}$、$\sin30°=\cos60°=\dfrac{1}{2}$ を使います。
+\end{minipage}
+
+\par\vspace{4pt}
+\begin{align*}
+x\text{ 成分の和}=0&:\quad -\frac{\sqrt3}{2}T_1+\frac{1}{2}T_2=0 &&\text{…①}\\
+y\text{ 成分の和}=0&:\quad \frac{1}{2}T_1+\frac{\sqrt3}{2}T_2-100=0 &&\text{…②}
+\end{align*}
+①から $T_2=\sqrt3\,T_1$。これを②に入れると（代入法、3-6）、
+\bkivlline{$\dfrac{1}{2}T_1+\dfrac{\sqrt3}{2}\times\sqrt3\,T_1=100\qquad\dfrac{1}{2}T_1+\dfrac{3}{2}T_1=100\qquad 2T_1=100$}
+$T_1=50$、$T_2=50\sqrt3\approx86.6$ です。左のひもは\qty{50}{N}、右のひもは約\qty{86.6}{N}です。たてに近い右のひものほうが、多くの重さを受け持っています。
+
+\begin{motto}[3]
+\textbf{ななめの2本の物差しではかる}\par
+$\vec{a}=(2,\ 1)$、$\vec{b}=(1,\ 3)$ のように、平行でない2つのベクトルがあれば、平面のどんなベクトルも「$\vec{a}$ を $s$ 本と、$\vec{b}$ を $t$ 本」つないで作れます。たとえば $\vec{c}=(5,\ 5)$ を $s\vec{a}+t\vec{b}$ で表すと、成分ごとに
+\[ 2s+t=5,\qquad s+3t=5 \]
+の連立方程式になり、$s=2$、$t=1$ です。$(5,\ 5)=2(2,\ 1)+1(1,\ 3)$ で、確かに合っています。$\vec{e}_x$、$\vec{e}_y$ のかわりに、ななめの $\vec{a}$、$\vec{b}$ を物差しにした「ななめの座標」を使ったことになります。第7巻では、この考えを行列で整理します。
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[4.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{成分}$\vec{a}=(a_x,\ a_y)$\qquad $\overrightarrow{\mathrm{AB}}=(x_2-x_1,\ y_2-y_1)=\vec{b}-\vec{a}$\\[3pt]
+\tsl{大きさ}$|\vec{a}|=\sqrt{a_x^{\,2}+a_y^{\,2}}$\qquad 単位ベクトル $\vec{e}=\dfrac{\vec{a}}{|\vec{a}|}$\\[3pt]
+\tsl{計算}和・差・実数倍は、成分ごとに計算する\\[3pt]
+\tsl{分解}$\vec{F}=(F\cos\theta,\ F\sin\theta)$\qquad 速度 $\vec{v}=\Bigl(\dfrac{\Delta x}{\Delta t},\ \dfrac{\Delta y}{\Delta t}\Bigr)$\\[3pt]
+\tsl{位置}中点 $\dfrac{\vec{a}+\vec{b}}{2}$\quad 重心 $\dfrac{\vec{a}+\vec{b}+\vec{c}}{3}$\quad $\dfrac{m_1\vec{r}_1+m_2\vec{r}_2}{m_1+m_2}$\quad $\vec{p}=\vec{p}_0+t\vec{v}$\\[3pt]
+\tsl{つり合い}$x$ 成分の和 $=0$、$y$ 成分の和 $=0$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{成分}{ベクトルの横の進み（$x$ 成分）とたての進み（$y$ 成分）。}
+\bkword{単位ベクトル}{大きさが1のベクトル。向きだけを表す。}
+\bkword{位置ベクトル}{原点Oから点Pへのベクトル。成分は点Pの座標と同じ。}
+\bkword{内分点}{線分を $m:n$ に分ける点。$\dfrac{n\vec{a}+m\vec{b}}{m+n}$。}
+\bkword{重心}{位置の平均。質量がちがうときは、質量で重みをつけて平均する。}
+\bkword{等速直線運動}{まっすぐ一定の速さで進む運動。$\vec{p}=\vec{p}_0+t\vec{v}$。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[2点から成分と大きさを求める]
+$\mathrm{A}(-1,\ 2)$、$\mathrm{B}(5,\ -6)$ のとき、$\overrightarrow{\mathrm{AB}}$ の成分と大きさを求めましょう。\par
+\kangaekata 成分は「あと（B）－まえ（A）」。大きさは成分の2乗の和の $\sqrt{\phantom{x}}$。\par
+\shiki $\overrightarrow{\mathrm{AB}}=(5-(-1),\ -6-2)=(6,\ -8)$\par
+\hspace*{2.6\zw}$|\overrightarrow{\mathrm{AB}}|=\sqrt{6^2+(-8)^2}=\sqrt{36+64}=\sqrt{100}=10$\par
+\kotae $\overrightarrow{\mathrm{AB}}=(6,\ -8)$、大きさ10
+\end{reidai}
+
+\begin{jibun}
+$\mathrm{A}(2,\ -3)$、$\mathrm{B}(-3,\ 9)$ のとき、$\overrightarrow{\mathrm{AB}}$ の成分と大きさを求めましょう。
+\bkjans{$(-3-2,\ 9-(-3))=(-5,\ 12)$。大きさ $\sqrt{25+144}=13$}
+\end{jibun}
+
+\begin{reidai}[成分で計算する]
+$\vec{a}=(3,\ -1)$、$\vec{b}=(-2,\ 4)$ のとき、次を求めましょう。\par
+（1）$\vec{a}+\vec{b}$\quad（2）$\vec{a}-\vec{b}$\quad（3）$2\vec{a}-3\vec{b}$\quad（4）$|\vec{a}+\vec{b}|$\par
+\kangaekata 成分ごとに計算する。実数倍を先に計算してから、たしたりひいたりする。\par
+\shiki（1）$(3+(-2),\ -1+4)=(1,\ 3)$\par
+\hspace*{2.6\zw}（2）$(3-(-2),\ -1-4)=(5,\ -5)$\par
+\hspace*{2.6\zw}（3）$2\vec{a}=(6,\ -2)$、$3\vec{b}=(-6,\ 12)$\par
+\hspace*{4.6\zw}$(6-(-6),\ -2-12)=(12,\ -14)$\par
+\hspace*{2.6\zw}（4）$\sqrt{1^2+3^2}=\sqrt{10}\approx3.16$\par
+\kotae （1）$(1,\ 3)$\quad（2）$(5,\ -5)$\quad（3）$(12,\ -14)$\quad（4）$\sqrt{10}$（約3.16）
+\end{reidai}
+（3）では、$-3\vec{b}$ の $x$ 成分が $-3\times(-2)=+6$ になるので、$6-(-6)=12$ です。負の数の符号に気をつけましょう。
+
+\begin{jibun}
+$\vec{a}=(-1,\ 2)$、$\vec{b}=(3,\ 1)$ のとき、次を求めましょう。\par
+（1）$\vec{a}+\vec{b}$\quad（2）$\vec{a}-\vec{b}$\quad（3）$3\vec{a}-2\vec{b}$\quad（4）$|\vec{a}+\vec{b}|$
+\bkjans{（1）\nobreak $(2,\ 3)$（2）\nobreak $(-4,\ 1)$（3）\nobreak $(-3,\ 6)-(6,\ 2)=(-9,\ 4)$（4）\nobreak $\sqrt{13}\approx3.61$}
+\end{jibun}
+
+\begin{reidai}[力を成分に分ける]
+大きさ\qty{80}{N}の力が、次の向きにはたらいています。$x$ 成分と $y$ 成分を求めましょう（角は $x$ 軸の正の向きから左回りにはかる）。\quad（1）30°\quad（2）120°\par
+\kangaekata $\vec{F}=(F\cos\theta,\ F\sin\theta)$。$\cos30°=\dfrac{\sqrt3}{2}$、$\sin30°=\dfrac{1}{2}$、$\cos120°=-\dfrac{1}{2}$、$\sin120°=\dfrac{\sqrt3}{2}$（4-7・4-8）。\par
+\shiki（1）$\Bigl(80\times\dfrac{\sqrt3}{2},\ 80\times\dfrac{1}{2}\Bigr)=(40\sqrt3,\ 40)\approx(69.3,\ 40)$\par
+\hspace*{2.6\zw}（2）$\Bigl(80\times\Bigl(-\dfrac{1}{2}\Bigr),\ 80\times\dfrac{\sqrt3}{2}\Bigr)=(-40,\ 40\sqrt3)\approx(-40,\ 69.3)$\par
+\kotae （1）$(69.3,\ 40)$\quad（2）$(-40,\ 69.3)$（単位はN）
+\end{reidai}
+
+\begin{jibun}
+大きさ\qty{60}{N}の力が、（1）60°、（2）135° の向きにはたらいています。$x$ 成分と $y$ 成分を求めましょう（$\sqrt2\approx1.414$、$\sqrt3\approx1.732$）。
+\bkjans{（1）\nobreak $(30,\ 30\sqrt3)\approx(30,\ 52.0)$（2）\nobreak $(-30\sqrt2,\ 30\sqrt2)\approx(-42.4,\ 42.4)$}
+\end{jibun}
+
+\begin{reidai}[成分から大きさと向きを求める]
+$\vec{F}=(-5,\ 12)$（単位はN）の大きさと、向きの角 $\theta$（$x$ 軸の正の向きから左回り）を求めましょう。\par
+\kangaekata 大きさは $\sqrt{F_x^{\,2}+F_y^{\,2}}$。角は $\tan^{-1}$ で求め、図をかいて区画を確かめる。\par
+\shiki 大きさ $\sqrt{(-5)^2+12^2}=\sqrt{25+144}=\sqrt{169}=13$\par
+\hspace*{2.6\zw}$x$ 成分が負、$y$ 成分が正なので、矢印は左上を向く\par
+\hspace*{2.6\zw}電卓で $\tan^{-1}(12\div(-5))=-67.38\cdots°$（これは右下の向き）\par
+\hspace*{2.6\zw}左上の向きは、180°回して $-67.4°+180°=112.6°$\par
+\kotae 大きさ\qty{13}{N}、$\theta\approx112.6°$
+\end{reidai}
+
+\begin{jibun}
+$\vec{F}=(-7,\ 24)$（単位はN）の大きさと、向きの角 $\theta$ を求めましょう。
+\bkjans{大きさ $\sqrt{49+576}=\qty{25}{N}$。$\tan^{-1}\dfrac{24}{-7}\approx-73.7°$ は右下なので、180°回して $\theta\approx106.3°$}
+\end{jibun}
+
+\begin{reidai}[位置の変化から速度の成分を求める]
+一定の速度でまっすぐ走るラジコンカーが、0秒に点 $(1,\ 3)$、4秒後に点 $(9,\ 9)$ にいました（単位はm）。速度の成分と速さを求めましょう。\par
+\kangaekata 位置の変化は「あと－まえ」。それを時間でわると速度の成分。\par
+\shiki 位置の変化 $(9-1,\ 9-3)=(8,\ 6)$\par
+\hspace*{2.6\zw}速度 $\Bigl(\dfrac{8}{4},\ \dfrac{6}{4}\Bigr)=(2,\ 1.5)$\par
+\hspace*{2.6\zw}速さ $\sqrt{2^2+1.5^2}=\sqrt{4+2.25}=\sqrt{6.25}=2.5$\par
+\kotae 速度 $(2,\ 1.5)$（m/s）、速さ\qty{2.5}{m/s}
+\end{reidai}
+確かめ：位置の変化の大きさ $\sqrt{8^2+6^2}=10$（m）を4秒でわっても、$10\div4=2.5$ で同じです。
+
+\begin{jibun}
+一定の速度でまっすぐ飛ぶ鳥が、0秒に点 $(-3,\ 5)$、3秒後に点 $(9,\ -4)$ にいました（単位はm）。速度の成分と速さを求めましょう。
+\bkjans{変化 $(12,\ -9)$。速度 $(4,\ -3)$（m/s）、速さ $\sqrt{16+9}=\qty{5}{m/s}$}
+\end{jibun}
+
+\begin{reidai}[流れのある川をわたる]
+はば\qty{80}{m}の川を、水に対して\qty{4}{m/s}でこぐボートが、向こう岸へまっすぐ船首を向けてわたります。川の流れは\qty{3}{m/s}です。わたるのにかかる時間、流される距離、岸から見た速さを求めましょう。\par
+\kangaekata 流れの向きを $x$、向こう岸の向きを $y$ にとる。たてと横は別々に考える。\par
+\shiki 岸から見た速度 $(0,\ 4)+(3,\ 0)=(3,\ 4)$\par
+\hspace*{2.6\zw}たて：$80\div4=20$（s）\par
+\hspace*{2.6\zw}横：$3\times20=60$（m）\par
+\hspace*{2.6\zw}速さ：$\sqrt{3^2+4^2}=5$（m/s）\par
+\kotae \qty{20}{s}、\qty{60}{m}、\qty{5}{m/s}
+\end{reidai}
+
+\begin{jibun}
+はば\qty{120}{m}の川を、水に対して\qty{5}{m/s}でこぐボートが、向こう岸へまっすぐ船首を向けてわたります。川の流れは\qty{2}{m/s}です。わたるのにかかる時間、流される距離、岸から見た速さを求めましょう。
+\bkjans{$120\div5=\qty{24}{s}$、$2\times24=\qty{48}{m}$、$\sqrt{2^2+5^2}=\sqrt{29}\approx\qty{5.39}{m/s}$}
+\end{jibun}
+
+\begin{reidai}[真正面に着くように船首を向ける]
+はば\qty{100}{m}の川を、水に対して\qty{4}{m/s}でこぐボートでわたります。川の流れは\qty{2}{m/s}です。真正面に着くには、船首を上流へ何度かたむければよいでしょう。また、わたるのにかかる時間を求めましょう。\par
+\kangaekata 上流へ $\theta$ かたむけると、水に対する速度は $(-4\sin\theta,\ 4\cos\theta)$。流れ $(2,\ 0)$ をたした $x$ 成分が0になればよい。\par
+\shiki $-4\sin\theta+2=0$ より $\sin\theta=0.5$、$\theta=30°$\par
+\hspace*{2.6\zw}向こう岸へ進む速さ $4\cos30°=4\times0.866=3.464$\par
+\hspace*{2.6\zw}時間 $100\div3.464\approx28.9$\par
+\kotae 上流へ30°、約\qty{28.9}{s}
+\end{reidai}
+
+\begin{jibun}
+はば\qty{200}{m}の川を、水に対して\qty{10}{m/s}で進むボートでわたります。川の流れは\qty{5}{m/s}です。真正面に着くには、船首を上流へ何度かたむければよいでしょう。また、わたるのにかかる時間を求めましょう。
+\bkjans{$\sin\theta=\dfrac{5}{10}=0.5$ で30°。$10\cos30°\approx8.66$。$200\div8.66\approx\qty{23.1}{s}$}
+\end{jibun}
+
+\bkivlmidashi{例題7を図で見る}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+水に対する速度（オレンジ、大きさ4）を上流へ30°かたむけ、その先に流れの速度（青、大きさ2）をつなぎます。和（赤）は、ちょうど向こう岸へまっすぐの向きになります。赤の長さは、斜辺4・角30°の直角三角形のたての辺なので、$4\cos30°\approx3.46$ です。オレンジの横の成分 $4\sin30°=2$ が、流れの2をちょうど打ち消しています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!10] (-26,-3) rectangle (22,40);
+  \draw[bkGreen!50!black, line width=0.6pt] (-26,-3) -- (22,-3) (-26,40) -- (22,40);
+  \draw[kivl vec, bkOrange] (0,0) -- (-16,27.71);
+  \draw[kivl vec, bkBlue] (-16,27.71) -- (-0.5,27.71);
+  \draw[kivl vec, bkRed] (0,0.6) -- (0,27.1);
+  \draw[bkGray, line width=0.4pt, dashed] (0,27.71) -- (0,36);
+  \draw[bkInk, line width=0.5pt] (0,9) arc (90:120:9);
+  \node[font=\sffamily\footnotesize] at (105:12) {30°};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=east] at (-9,12) {4};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south] at (-8,28.4) {2};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (1,14) {約3.46};
+  \node[font=\sffamily\footnotesize, anchor=south, fill=bkBlue!10, inner sep=0.8pt] at (11,32) {向こう岸};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{reidai}[単位ベクトルと、向きと大きさから作るベクトル]
+$\vec{a}=(3,\ 4)$ と同じ向きの単位ベクトル $\vec{e}$ を求めましょう。また、$\vec{a}$ の向きにはたらく大きさ\qty{15}{N}の力 $\vec{F}$ の成分を求めましょう。\par
+\kangaekata $\vec{e}=\dfrac{\vec{a}}{|\vec{a}|}$。力は「大きさ×単位ベクトル」。\par
+\shiki $|\vec{a}|=\sqrt{9+16}=5$\par
+\hspace*{2.6\zw}$\vec{e}=\dfrac{1}{5}(3,\ 4)=(0.6,\ 0.8)$\par
+\hspace*{2.6\zw}$\vec{F}=15\times(0.6,\ 0.8)=(9,\ 12)$\par
+\kotae $\vec{e}=(0.6,\ 0.8)$、$\vec{F}=(9,\ 12)$（単位はN）
+\end{reidai}
+
+\begin{jibun}
+$\vec{a}=(5,\ -12)$ と同じ向きの単位ベクトル $\vec{e}$ と、$\vec{a}$ の向きにはたらく大きさ\qty{26}{N}の力の成分を求めましょう。
+\bkjans{$|\vec{a}|=13$。$\vec{e}=\Bigl(\dfrac{5}{13},\ -\dfrac{12}{13}\Bigr)$。力は $26\vec{e}=(10,\ -24)$（N）}
+\end{jibun}
+
+\begin{reidai}[中点・内分点・重心]
+$\mathrm{A}(1,\ 1)$、$\mathrm{B}(7,\ 4)$、$\mathrm{C}(4,\ 7)$ について、次の点の座標を求めましょう。\par
+（1）ABの中点\quad（2）ABを $1:2$ に分ける点\quad（3）三角形ABCの重心\par
+\kangaekata 中点は平均。$m:n$ の内分点は $\dfrac{n\vec{a}+m\vec{b}}{m+n}$。重心は3つの頂点の平均。\par
+\shiki（1）$\Bigl(\dfrac{1+7}{2},\ \dfrac{1+4}{2}\Bigr)=(4,\ 2.5)$\par
+\hspace*{2.6\zw}（2）$\dfrac{2(1,\ 1)+1(7,\ 4)}{1+2}=\dfrac{(9,\ 6)}{3}=(3,\ 2)$\par
+\hspace*{2.6\zw}（3）$\Bigl(\dfrac{1+7+4}{3},\ \dfrac{1+4+7}{3}\Bigr)=(4,\ 4)$\par
+\kotae （1）$(4,\ 2.5)$\quad（2）$(3,\ 2)$\quad（3）$(4,\ 4)$
+\end{reidai}
+
+\begin{jibun}
+$\mathrm{A}(-2,\ 3)$、$\mathrm{B}(4,\ 0)$、$\mathrm{C}(1,\ 6)$ について、（1）ABの中点、（2）ABを $2:1$ に分ける点、（3）三角形ABCの重心 の座標を求めましょう。
+\bkjans{（1）\nobreak $(1,\ 1.5)$（2）\nobreak $\dfrac{1(-2,\ 3)+2(4,\ 0)}{3}=(2,\ 1)$（3）\nobreak $(1,\ 3)$}
+\end{jibun}
+
+\begin{reidai}[質量のちがう物の重心]
+質量\qty{2}{kg}の物が点 $(0,\ 0)$ に、質量\qty{1}{kg}の物が点 $(6,\ 3)$ にあります（単位はm）。2つを合わせた重心を求めましょう。さらに、質量\qty{3}{kg}の物を点 $(4,\ -1)$ に加えると、重心はどこになりますか。\par
+\kangaekata 重心は、質量で重みをつけた位置の平均。分子は「質量×位置」の和、分母は質量の合計。\par
+\shiki $\dfrac{2(0,\ 0)+1(6,\ 3)}{2+1}=\dfrac{(6,\ 3)}{3}=(2,\ 1)$\par\vspace{2pt}
+\hspace*{2.6\zw}$\dfrac{2(0,\ 0)+1(6,\ 3)+3(4,\ -1)}{2+1+3}=\dfrac{(6+12,\ 3-3)}{6}$\par\vspace{2pt}
+\hspace*{4.6\zw}$=\dfrac{(18,\ 0)}{6}=(3,\ 0)$\par
+\kotae $(2,\ 1)$、加えたあとは $(3,\ 0)$
+\end{reidai}
+はじめの重心 $(2,\ 1)$ は、重い\qty{2}{kg}の物に近く、2つを結ぶ線分を $1:2$ に分ける点です（$m_2:m_1=1:2$）。
+
+\begin{jibun}
+質量\qty{3}{kg}の物が点 $(2,\ 0)$ に、質量\qty{1}{kg}の物が点 $(6,\ 4)$ にあります。2つを合わせた重心を求めましょう。さらに、質量\qty{4}{kg}の物を点 $(-1,\ 1)$ に加えると、重心はどこになりますか。
+\bkjans{$\dfrac{3(2,\ 0)+1(6,\ 4)}{4}=(3,\ 1)$。加えると $\dfrac{(12,\ 4)+(-4,\ 4)}{8}=(1,\ 1)$}
+\end{jibun}
+
+\begin{reidai}[まっすぐ一定の速さで進む点]
+点Pは、はじめ $\vec{p}_0=(-4,\ 2)$ にあり、速度 $\vec{v}=(3,\ 1)$（m/s）でまっすぐ進みます。（1）5秒後の位置を求めましょう。（2）$x$ 座標が20になるのは何秒後で、そのときの $y$ 座標はいくつですか。\par
+\kangaekata $\vec{p}=\vec{p}_0+t\vec{v}$。成分で書くと $x=-4+3t$、$y=2+t$。\par
+\shiki（1）$(-4,\ 2)+5(3,\ 1)=(-4+15,\ 2+5)=(11,\ 7)$\par
+\hspace*{2.6\zw}（2）$-4+3t=20$ より $3t=24$、$t=8$\par
+\hspace*{4.6\zw}$y=2+8=10$\par
+\kotae （1）$(11,\ 7)$\quad（2）8秒後、$y=10$
+\end{reidai}
+
+\begin{jibun}
+点Pは、はじめ $\vec{p}_0=(10,\ -3)$ にあり、速度 $\vec{v}=(-2,\ 1.5)$（m/s）でまっすぐ進みます。（1）4秒後の位置を求めましょう。（2）$x$ 座標が0になるのは何秒後で、そのときの $y$ 座標はいくつですか。
+\bkjans{（1）\nobreak $(10-8,\ -3+6)=(2,\ 3)$（2）\nobreak $10-2t=0$ で5秒後、$y=-3+7.5=4.5$}
+\end{jibun}
+
+\bkivlmidashi{例題11を図で見る}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+点Pの位置を、1秒ごとに方眼にかきこむと、点は1本の直線の上に、同じ間かくで並びます。1秒ごとに、同じ速度 $(3,\ 1)$ をたしていくからです。5秒後の $(11,\ 7)$ と、8秒後の $(20,\ 10)$ も、この直線の上にあります。直線の傾きは $\dfrac{1}{3}$ で、速度の $y$ 成分÷$x$ 成分と同じです（3-5）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=2.1mm, y=2.1mm]
+  \draw[bkLine, line width=0.3pt] (-5,0) grid (21,11);
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3pt]}] (-5,0) -- (21.8,0) node[anchor=west, font=\sffamily\footnotesize] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3pt]}] (0,0) -- (0,11.8) node[anchor=south, font=\sffamily\footnotesize] {$y$};
+  \draw[bkBlue, line width=0.9pt] (-4,2) -- (20,10);
+  \foreach \t in {0,...,8} {\fill[bkOrange] ({-4+3*\t},{2+\t}) circle (0.32);}
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=0.8pt] at (-4,1.3) {0秒};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=0.8pt] at (11.3,6.4) {5秒};
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=0.8pt] at (19,9.2) {8秒};
+\end{tikzpicture}
+\end{minipage}
+
+\begin{reidai}[2本のひもでつるした物のつり合い]
+重さ\qty{100}{N}の看板を、左は水平から30°、右は水平から60°の2本のひもでつるしました。左のひもの力 $T_1$ と右のひもの力 $T_2$ を求めましょう（$\sqrt3\approx1.732$）。\par
+\kangaekata $x$ 成分の和 $=0$、$y$ 成分の和 $=0$ の連立方程式（数学の道具⑨）。\par
+\shiki $x$：$-\dfrac{\sqrt3}{2}T_1+\dfrac{1}{2}T_2=0$ より $T_2=\sqrt3\,T_1$\par
+\hspace*{2.6\zw}$y$：$\dfrac{1}{2}T_1+\dfrac{\sqrt3}{2}T_2=100$ に入れて $\dfrac{1}{2}T_1+\dfrac{3}{2}T_1=100$\par
+\hspace*{2.6\zw}$2T_1=100$ より $T_1=50$、$T_2=50\sqrt3\approx86.6$\par
+\kotae $T_1=\qty{50}{N}$、$T_2\approx\qty{86.6}{N}$
+\end{reidai}
+
+\begin{jibun}
+重さ\qty{200}{N}の荷物を、左は水平から60°、右は水平から30°の2本のひもでつるしました。左のひもの力 $T_1$ と右のひもの力 $T_2$ を求めましょう。
+\bkjans{$x$：$-\dfrac{1}{2}T_1+\dfrac{\sqrt3}{2}T_2=0$ より $T_1=\sqrt3\,T_2$。$y$：$\dfrac{\sqrt3}{2}T_1+\dfrac{1}{2}T_2=200$ から $2T_2=200$。$T_2=\qty{100}{N}$、$T_1=100\sqrt3\approx\qty{173.2}{N}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{$\overrightarrow{\mathrm{AB}}$ を「まえ－あと」で計算する}
+\bkng{$\mathrm{A}(1,\ 5)$、$\mathrm{B}(4,\ 1)$ で $\overrightarrow{\mathrm{AB}}=(1-4,\ 5-1)=(-3,\ 4)$}
+\bkok{$\overrightarrow{\mathrm{AB}}=(4-1,\ 1-5)=(3,\ -4)$（あと－まえ）}
+AからBへ行く矢印です。Bの座標（あと）からAの座標（まえ）をひきます。逆にすると、向きが反対の $\overrightarrow{\mathrm{BA}}$ になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{大きさを、成分の和で求める}
+\bkng{$\vec{a}=(3,\ 4)$ の大きさは $3+4=7$}
+\bkok{$|\vec{a}|=\sqrt{3^2+4^2}=5$}
+横とたては直角なので、大きさは直角三角形の斜辺です。成分をそのままたすと、遠回りの道のりになってしまいます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{角をはかる場所で、$\cos$ と $\sin$ が入れかわる}
+\bkng{たての線から30°かたむいた\qty{10}{N}の力を $(10\cos30°,\ 10\sin30°)$}
+\bkok{たての線からはかった角なら、$x$ 成分は $10\sin30°$、$y$ 成分は $10\cos30°$}
+$(F\cos\theta,\ F\sin\theta)$ の $\theta$ は、$x$ 軸（横）からはかった角です。図をかいて、角のとなりの辺が $\cos$、向かいの辺が $\sin$ と確かめましょう（4-6）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\tan^{-1}$ の答えを、そのまま向きの角にする}
+\bkng{$(-5,\ 12)$ の向きは $\tan^{-1}\dfrac{12}{-5}=-67.4°$}
+\bkok{左上を向いているので、$-67.4°+180°=112.6°$}
+電卓の $\tan^{-1}$ は、右半分（$-90°$ から $90°$）の角しか答えません。矢印が左を向いているときは180°をたします。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{横風の中で着陸する飛行機}\par
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+旅客機は、着陸のとき空気に対して約\qty{70}{m/s}で進みます。滑走路に直角な横風が\qty{10}{m/s}ふいていると、機首を滑走路の向きにしたままでは、横へ流されてしまいます。そこでパイロットは、機首を風上へ角 $\theta$ だけ向けます。横の成分が打ち消し合う条件は $70\sin\theta=10$ です。だから $\sin\theta=\dfrac{1}{7}$ で、$\theta\approx8.2°$ です。⑤の「真正面に着くボート」と同じ計算です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (-6,-14) rectangle (6,26);
+  \draw[white, line width=1pt, dashed] (0,-12) -- (0,24);
+  \begin{scope}[shift={(0,6)}, rotate=8.2]
+    \fill[bkBlue!70] (0,9) -- (1.4,6) -- (1.4,-6) -- (0,-8) -- (-1.4,-6) -- (-1.4,6) -- cycle;
+    \fill[bkBlue!70] (-9,0) -- (9,0) -- (1.4,3) -- (-1.4,3) -- cycle;
+    \fill[bkBlue!70] (-4,-6.5) -- (4,-6.5) -- (1,-5) -- (-1,-5) -- cycle;
+    \draw[bkBlue!70!black, line width=0.4pt, dashed] (0,9.5) -- (0,17);
+  \end{scope}
+  \draw[kivl vec, bkOrange, line width=1.1pt] (-26,-6) -- (-13,-6);
+  \node[kivl lab, text=bkOrange!80!black, anchor=north] at (-19.5,-7) {横風};
+  \draw[bkGray, line width=0.4pt, dashed] (0,6) -- (0,24);
+  \draw[bkInk, line width=0.5pt] (0,20) arc (90:98.2:14);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-3,21.5) {$\theta$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (7,-11) {滑走路};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{ゲームの中のボール}\par
+コンピュータゲームでは、ボールの位置を、1秒に60回（1コマ $\dfrac{1}{60}$ 秒ごとに）計算しなおします。1コマごとに、位置に「速度×$\dfrac{1}{60}$」をたします。速度が $(3,\ 4)$ なら、1コマで $(0.05,\ 0.0667)$ ずつ進みます。$\vec{p}=\vec{p}_0+t\vec{v}$ を、少しずつ計算しているのです。
+\item \textbf{斜張橋のケーブル}\par
+斜張橋では、塔からななめにはったケーブルが橋げたをつっています。水平から30°のケーブルなら、ケーブルの力の $\sin30°=0.5$ 倍が上向きの成分になって、橋げたの重さを支えます。残りの横向きの成分（$\cos30°\approx0.87$ 倍）は、橋げたを塔のほうへ押しつけます。設計では、ケーブル1本1本の力を、こうして成分に分けて計算します。
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{やじろべえは、なぜたおれない？}
+やじろべえは、細い1点で支えられているのに、ゆらしてもたおれずにもどってきます。そのわけは、重心の位置にあります。両うでの先の重いおもりのおかげで、全体の重心は、支える点より\textbf{下}にあります。かたむくと、重心が支点の真下からずれて、重力が「もとにもどす向き」に回す働きをするのです。重心が支点より上にある物（えんぴつを立てたときなど）は、少しかたむくと、重力がもっとかたむける向きに回すので、たおれてしまいます。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{2}
+
+\bkproblem $\mathrm{A}(3,\ -2)$、$\mathrm{B}(-5,\ 4)$ のとき、$\overrightarrow{\mathrm{AB}}$ の成分と大きさを求めましょう（\bkreidairef{1}）。
+\bkpans{$(-8,\ 6)$、大きさ10}
+
+\bkproblem $\vec{a}=(2,\ -3)$、$\vec{b}=(-1,\ 4)$ のとき、次を求めましょう（\bkreidairef{2}）。\\
+（1）$\vec{a}+\vec{b}$\quad（2）$\vec{a}-\vec{b}$\quad（3）$3\vec{a}+2\vec{b}$\quad（4）$|\vec{a}-\vec{b}|$
+\bkpans{（1）\nobreak $(1,\ 1)$（2）\nobreak $(3,\ -7)$（3）\nobreak $(4,\ -1)$（4）\nobreak $\sqrt{58}\approx7.62$}
+
+\bkproblem 大きさ\qty{40}{N}の力が、（1）30°、（2）150° の向きにはたらいています。$x$ 成分と $y$ 成分を求めましょう（\bkreidairef{3}）。
+\bkpans{（1）\nobreak $(20\sqrt3,\ 20)\approx(34.6,\ 20)$（2）\nobreak $(-20\sqrt3,\ 20)\approx(-34.6,\ 20)$}
+
+\bkproblem 一定の速度でまっすぐ進む船が、0秒に点 $(1,\ -2)$、5秒後に点 $(16,\ 18)$ にいました（単位はm）。速度の成分と速さを求めましょう（\bkreidairef{5}）。
+\bkpans{変化 $(15,\ 20)$。速度 $(3,\ 4)$（m/s）、速さ\qty{5}{m/s}}
+
+\bkproblem $\vec{a}=(-8,\ 6)$ と同じ向きの単位ベクトルと、$\vec{a}$ の向きにはたらく大きさ\qty{20}{N}の力の成分を求めましょう（\bkreidairef{8}）。
+\bkpans{$|\vec{a}|=10$。$(-0.8,\ 0.6)$。力は $(-16,\ 12)$（N）}
+
+\bkproblem $\mathrm{A}(2,\ 5)$、$\mathrm{B}(8,\ -1)$、$\mathrm{C}(-1,\ 2)$ について、（1）ABの中点、（2）ABを $1:2$ に分ける点、（3）三角形ABCの重心 を求めましょう（\bkreidairef{9}）。
+\bkpans{（1）\nobreak $(5,\ 2)$（2）\nobreak $\dfrac{2(2,\ 5)+(8,\ -1)}{3}=(4,\ 3)$（3）\nobreak $(3,\ 2)$}
+
+\bkproblem 点Pは、はじめ $(5,\ 0)$ にあり、速度 $(-1,\ 2)$（m/s）でまっすぐ進みます。3秒後の位置と、$y$ 座標が10になる時刻を求めましょう（\bkreidairef{11}）。
+\bkpans{$(2,\ 6)$。$2t=10$ で5秒後}
+
+\bkproblemgroup{チャレンジ}{3}
+
+\bkproblem $\vec{F}=(-6,\ 8)$（単位はN）の大きさと、向きの角 $\theta$（$x$ 軸の正の向きから左回り）を求めましょう（\bkreidairef{4}）。
+\bkpans{大きさ\qty{10}{N}。$\tan^{-1}\dfrac{8}{-6}\approx-53.1°$ に180°をたして $\theta\approx126.9°$}
+
+\bkproblem はば\qty{90}{m}の川を、水に対して\qty{6}{m/s}で進むボートでわたります。流れは\qty{3}{m/s}です。（1）船首を向こう岸へまっすぐ向けたとき、流される距離を求めましょう。（2）真正面に着くための船首の向きと、かかる時間を求めましょう（\bkreidairef{6}・\bkreidairef{7}）。
+\bkpans{（1）\nobreak $90\div6=\qty{15}{s}$、$3\times15=\qty{45}{m}$（2）\nobreak $\sin\theta=0.5$ で上流へ30°。$6\cos30°\approx5.196$、$90\div5.196\approx\qty{17.3}{s}$}
+
+\bkproblem 質量\qty{4}{kg}の物が点 $(1,\ 2)$ に、\qty{2}{kg}の物が点 $(7,\ -1)$ にあります。2つを合わせた重心を求めましょう。さらに\qty{2}{kg}の物を点 $(-3,\ 3)$ に加えたときの重心を求めましょう（\bkreidairef{10}）。
+\bkpans{$\dfrac{(4,\ 8)+(14,\ -2)}{6}=(3,\ 1)$。加えると $\dfrac{(18,\ 6)+(-6,\ 6)}{8}=(1.5,\ 1.5)$}
+
+\bkproblem 重さ\qty{60}{N}の電灯を、左は水平から30°、右は水平から60°の2本のひもでつるしました。2本のひもの力を求めましょう（\bkreidairef{12}）。
+\bkpans{$T_2=\sqrt3\,T_1$、$\dfrac{1}{2}T_1+\dfrac{3}{2}T_1=60$ から $T_1=\qty{30}{N}$、$T_2=30\sqrt3\approx\qty{52.0}{N}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 成分で、和・差・実数倍・大きさを計算できる。\bkfurref{bk:4-11:keisan}
+\item 力や速度を、成分に分けて考えられる。\bkfurref{bk:4-11:bunkai}
+\item 内分点・重心・進む点の位置を求められる。\bkfurref{bk:4-11:ichi}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{横とたてに分ければ、ふつうの数の計算になるんだね。次は、2つのベクトルの「向きのそろいぐあい」を計算するよ。}

@@ -1,0 +1,22 @@
+from math import pi, sqrt
+g=9.8; Es=205e3; Ea=69e3; Ecu=117e3
+A=lambda d: pi*d*d/4
+print("基本1 銅線 d2 L3m 100N"); a=A(2); s=100/a; print(a,s,s/Ecu, s/Ecu*3000)
+print("基本2 SS400 S5 5kN"); sa=245/5; Ar=5000/sa; print(sa,Ar,sqrt(4*Ar/pi))
+print("基本3 銅管 10m ΔT50 α1.7e-5"); print(1.7e-5*10000*50)
+print("基本4 ボルト d16 20kN 1面"); print(20000/A(16))
+print("基本5 ばね k1=50 k2=50 m=0.40 直列・並列"); F=0.4*g; print(F, F/25, F/100)
+print("チャレンジ6 段付き 鋼 L0.5 d16 + アルミ L0.5 d16 , 8kN"); a=A(16); d1=8000*500/(Es*a); d2=8000*500/(Ea*a); print(a,d1,d2,d1+d2)
+print("チャレンジ7 自重 銅線? 鋼のワイヤ 2000m ρ7850"); print(7850*g*2000**2/(2*205e9))
+print("チャレンジ8 穴 W150 t6 d8 F18kN"); s=18000/(150*6); print(s, 3*s)
+print("チャレンジ9 パンチ t3 d12 τ250"); print(pi*12*3*250)
+print("チャレンジ10 ポアソン 鋼 d20 ε5e-4"); print(20*0.3*5e-4, 5e-4*0.4)
+print("チャレンジ11 ロングレール ΔT40"); s=205e3*1.2e-5*40; print(s, s*7750)
+print("チャレンジ12 RC 400x400 8-D22(387.1) 2000kN Ec23 Es205")
+As=8*387.1; Ac=160000-As; EA=23e3*Ac+205e3*As; e=2e6/EA; print(As,Ac,e,23e3*e,205e3*e,205e3*As/EA)
+print("入試1 k1=30 k2=60 l=0.60 m=0.90")
+k1,k2=30,60; F=0.9*g; print(F, k2*0.6/(k1+k2), F/(k1+k2), F*(1/k1+1/k2))
+print("入試2 鋼棒 L2.0m A100mm2 gap0.10mm ΔT10")
+free=1.2e-5*2000*10; print(free, (free-0.1), (free-0.1)/2000*205e3, (free-0.1)/2000*205e3*100, 0.1/(1.2e-5*2000))
+print("じぶん4 鉄橋 50m 40K (2) すきま15 ΔT50"); print(1.2e-5*50000*40, (1.2e-5*50000*50-15)/50000*205e3)
+print("ex4 (2)"); print((12-5)/25000*205e3)

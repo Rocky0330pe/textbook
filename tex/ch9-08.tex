@@ -1,0 +1,1175 @@
+%% 9-8 伝達関数：入れると出てくるを s で表す（第15回：組 V9-5。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md）で書く。場合分けの表9-8（A〜H）と流れ図。
+%% ほかの巻との約束：3-3:800 ブロック線図「アクセル→エンジンの力→車の速さ」（はてな？）、3-12:730「dB のたし算（9-8）」（⑨、100 Hz の RC）、
+%%   3-01:725 エアコン（⑦、RK_p=9 で 26.9 ℃・6分。9-9 と同じ数・文字）、6-13 の複素振幅＝F0 G(jω)（⑧）、6-13 の G(ω) は別のもの（⑧・まちがえやすいところ④）、
+%%   モーター 10/(0.5s+1)（K_p=1 で −22、ずれ 9.1 %。9-9 と同じ）、車 1/(1000s+50)（τ=20 s、500 N で 10 m/s）、サスペンション（もっと知りたい。9-9 で零点）。
+%%   フィードバックの箱は G_2（専門書の H は欄で）。数はすべて Python で検算した（scratchpad/v9-5/check98.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixi は章ごとに置きかえる =====
+\colorlet{kixiNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixiSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixiSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixi dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixi dan1/.style={kixi dan, draw=kixiNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixi dan2/.style={kixi dan, draw=kixiSc, fill=kixiSb, text=bkInk},
+  kixi dan3/.style={kixi dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixi name/.style={draw=kixiNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixi seki/.style={draw=kixiSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixiSb},
+  kixi tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixi q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixi do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixi go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixi yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixi@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixidan{1|2|3}
+\newcommand\kixidan[1]{\tikz[baseline=(d.base)]\node[kixi dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixinaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixinaosu[1]{\tikz[baseline=(d.base)]\node[kixi dan2] (d) {\vphantom{あ}直す：\kixi@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixiop{1|2|3|4}
+\newcommand\kixiop[1]{\tikz[baseline=(d.base)]\node[kixi dan2] (d) {\vphantom{あ}\kixi@op{#1}};}
+% 段の見出し（本文で）  \kixidanhead{1|2|3}{見出し}
+\newcommand\kixidanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixi dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixicase{C}（′ は \kixicase{A$'$}）
+\newcommand\kixicase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixibaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixibaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixi@cases#3,\@nil）}
+\def\kixi@cases#1,#2\@nil{\kixicase{#1}\ifx\relax#2\relax\else と\kixi@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixiN[1]{\tikz[baseline=(n.base)]\node[kixi name] (n) {$\displaystyle #1$};}
+\newcommand\kixiNt[1]{\tikz[baseline=(n.base)]{\node[kixi name] (n) {$\displaystyle #1$};\node[kixi tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixiS[1]{\tikz[baseline=(n.base)]\node[kixi seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixiSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixiSt[2]{\tikz[baseline=(n.base)]{\node[kixi seki] (n) {$\displaystyle #2$};\node[kixi tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixi@op{#1}};}}
+% 場合分けの表の題の帯  \kixicasetitle{9-2}{題}
+\newcommand\kixicasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixipic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixipic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixix/\kixiy in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixix-1},{\kixiy-1}) -- ({\kixix+1},{\kixiy+1}) ({\kixix-1},{\kixiy+1}) -- ({\kixix+1},{\kixiy-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixix/\kixiy in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixix,\kixiy) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+%% ===== 2つの世界の図の型（tools/kata9.md、組 V9-1）。頭文字 kixa → kixi =====
+\colorlet{kixiW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixiF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixiP}{bkRed!80!black}% s の世界の点（×）
+\pgfplotsset{
+  kixi base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixi wave/.style={kixi base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixi splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixi sig/.style={kixiW, line width=1.4pt, no markers, samples=241, smooth},
+  kixi part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth}}
+\tikzset{
+  kixi world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixi bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixi blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixiworlds[5][42mm]{%
+  \node[kixi world, draw=kixiW] (kixiL) at (23.5mm,#1) {#2};
+  \node[kixi world, draw=kixiF] (kixiR) at (99.5mm,#1) {#3};
+  \draw[kixi bridge] ([yshift=1.3mm, xshift=1.5mm]kixiL.east) -- node[kixi blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixiR.west);
+  \draw[kixi bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixiR.west) -- node[kixi blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixiL.east);}
+\newcommand\kixipole[3][kixiP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\makeatother
+%% ===== この章の部品（9-8）=====
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\kixihead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixibox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kixiline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixiframe[はば]{中身}
+\newcommand\kixiframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixia{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixib{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixis{\rightskip=0pt plus 8em\relax}
+% ブロック線図の部品
+\tikzset{
+  kixi blk/.style={rectangle, draw=bkInk, line width=0.9pt, fill=bkTheme!6, rounded corners=0.8mm, minimum height=11mm, minimum width=18mm, inner xsep=2mm, font=\small, align=flush center, text=bkInk},
+  kixi sum/.style={circle, draw=bkInk, line width=0.9pt, fill=white, minimum size=6mm, inner sep=0pt},
+  kixi sig/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk},
+  kixi lab/.style={font=\footnotesize, text=bkInk, inner sep=0.8mm, align=flush center},
+}
+% 加え合わせ点の符号  \kixipm{(点)}{位置}{符号}
+\newcommand\kixipm[3]{\node[font=\footnotesize, text=bkInk, inner sep=0.3mm] at ($#1+#2$) {$#3$};}
+\makeatother
+
+\bkchapter{9}{8}{伝達関数：入れると\\出てくるを $s$ で表す}{\bklevel{5}}{伝達関数：入れると出てくるを $s$ で表す}
+\bkmichishirube{3-3,3-12,6-4,6-12,6-13,9-6,9-7}{9-9,9-10,9-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 「入れると出てくる」箱を、伝達関数 $G(s)=Y(s)\div U(s)$ で表せることを、ブロック線図と表計算で説明できる。
+\item \bklevel{4}\enspace 微分方程式から伝達関数を作り、箱を直列・並列につないだ伝達関数と、ステップ応答・インパルス応答を求められる。
+\item \bklevel{5}\enspace 場合分けの表9-8を使って、フィードバック・状態方程式・周波数応答（dB）の場合も、伝達関数を求めて使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+3-3 で、機械のしくみを「入れると出てくる箱」を矢印でつないだ図（ブロック線図）でかけることを学びました。自動車なら「アクセルをふむ量→エンジンの力→車の速さ」です。3-3 では、「第9巻では、この箱の中のきまりを式で書き、機械全体のふるまいを計算します」と予告しました。
+\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixi lab] (a) at (6,0) {アクセルを\\ふむ量};
+  \node[kixi blk, minimum width=24mm] (e) at (38,0) {エンジン\\{\footnotesize ？}};
+  \node[kixi blk, minimum width=24mm] (c) at (78,0) {車のからだ\\{\footnotesize ？}};
+  \node[kixi lab] (v) at (110,0) {車の\\速さ};
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1.5mm] (a) -- (e);
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1.5mm] (e) -- node[kixi lab, above] {力} (c);
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1.5mm] (c) -- (v);
+\end{tikzpicture}
+\end{center}
+\textbf{箱の中の「？」に式を書き入れると、アクセルを一定にふんでから速さが落ち着くまでに、どれくらいかかるかがわかるでしょうか。}
+\end{hatena}
+
+\noindent 9-7 では、微分方程式を1つずつ、ラプラス変換と部分分数で解きました。でも、機械に入れるものは、一定の力、少しずつふえる力、ゆれる力など、いろいろです。入れるものが変わるたびに、はじめから解き直すのは大変です。
+
+この章では、機械そのものの性質を、$s$ の分数の式1つで表します。この式を\textbf{伝達関数}といいます。伝達関数がわかれば、何を入れても、$s$ の世界では「入れたもの×伝達関数」のかけ算1回で出てくるものがわかります。箱をつなげば、伝達関数もかけ算でつながります。
+
+制御工学（機械を思いどおりに動かす工学）の本は、ほとんどこの考え方で書かれています。ことばも記号も多く見えますが、1回でわからなくても大丈夫です。3-3 の「箱と矢印」を思い出しながら、1つずつ進みましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[アクセルを一定にふんだ車の速さを、表計算で]
+質量 \qty{1000}{kg} の車に、エンジンが一定の力 \qty{500}{N} を出し続けます。空気や路面の抵抗は速さに比例し、速さ \qty{1}{m/s} あたり \qty{50}{N} とします（たとえばの数）。だから、速さ $v$〔m/s〕は $1000\dot v=500-50v$ にしたがいます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列に時刻 $t$（1秒ずつ）、B2 に $v(0)=0$ を入れる。
+\item C2 に、加速度の式を入れる（式を $\dot v=(500-50v)/1000$ と変形した）。\par\texttt{=(500-50*B2)/1000}
+\item B3 に、6-2 のオイラー法（$\Delta t=\qty{1}{s}$）の式を入れ、C2 を C3 にコピーする。3行めを下へ102行めまでコピーする。\par\texttt{=B2+C2*1}
+\item D列に、この章で作る式を入れて、くらべる。\par\texttt{=10*(1-EXP(-0.05*A2))}
+\end{enumerate}
+\end{yattemiyou}
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & $t$（s） & 速さ $v$（m/s） & 加速度 & $10(1-e^{-0.05t})$ \\
+2 & 0 & 0 & 0.5 & 0 \\
+3 & 1 & 0.5 & 0.475 & 0.488 \\
+4 & 2 & 0.975 & 0.4512 & 0.952 \\
+5 & 3 & 1.426 & 0.4287 & 1.393 \\
+6 & 4 & 1.855 & 0.4073 & 1.813 \\
+7 & 5 & 2.262 & 0.3869 & 2.212 \\
+12 & 10 & 4.013 & 0.2994 & 3.935 \\
+22 & 20 & 6.415 & 0.1792 & 6.321 \\
+42 & 40 & 8.715 & 0.0643 & 8.647 \\
+62 & 60 & 9.539 & 0.023 & 9.502 \\
+102 & 100 & 9.941 & 0.003 & 9.933 \\}
+\bktabcaption{車の速さの表計算（8〜11行めなどは省いた）。速さは10\,m/s（36\,km/h）に近づき、20秒で約6.3\,m/s（10\,m/s の63\,\%）。}
+\label{bk:9-8:tab-car}
+\end{bkcenter}
+
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=66mm, height=44mm, xmin=0, xmax=105, ymin=0, ymax=11.5, xtick={20,40,60,80,100}, ytick={6.32,10}, yticklabels={6.32,10}, xlabel={$t$（s）}, ylabel={$v$（m/s）}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:100] {10};
+  \addplot[bkBlue, line width=1.6pt, domain=0:100] {10*(1-exp(-0.05*x))};
+  \addplot[only marks, mark=*, mark size=1.2pt, bkOrange!85!black] coordinates {(0,0) (5,2.262) (10,4.013) (20,6.415) (40,8.715) (60,9.539) (100,9.941)};
+  \draw[bkInk, line width=0.4pt, dash pattern=on 1pt off 1pt] (axis cs:20,0) -- (axis cs:20,6.32) -- (axis cs:0,6.32);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\raggedright
+点は表計算、線は式です。速さは10\,m/s に近づきます。落ち着いたら加速度は0なので、$500=50v$ から $v=10$ です。
+
+20秒で10\,m/s の63\,\%に着きます。6-4 の冷めるお湯と同じ「時定数」で、ここでは $1000\div50=20$ 秒です。
+\end{minipage}
+
+\begin{omoidasou}
+\bkrecall{3-3}{入れると出てくる箱。箱をつなぐと、前の箱から出たものが次の箱に入る（合成関数）。}
+\bkrecall{6-4}{$\tau\dot y+y=$（入れたもの）の形なら、時定数 $\tau$ で63\,\%、$3\tau$ で95\,\%近づく。}
+\bkrecall{6-13}{ばねを $F_0\cos\omega t$ でゆすると、ゆれは $\mathrm{Re}[Xe^{j\omega t}]$、複素振幅 $X=\dfrac{F_0}{k-m\omega^2+jc\omega}$。}
+\bkrecall{3-12}{倍率を dB で表すと $20\log_{10}$（振幅の倍率）。10倍で20\,dB、かけ算は dB のたし算。}
+\bkrecall{9-7}{変換→わり算→部分分数→表でもどす。はじめの値は分子に、動き方は分母に出てくる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{入れると出てくるを、1つの式で}{\bklevel{3}}
+
+\bksubsection{1}{箱の中のきまりを、$s$ で書く}
+
+\label{bk:9-8:hako}はてな？の「車のからだ」の箱に入るのはエンジンの力 $f$〔N〕、出てくるのは速さ $v$〔m/s〕です。やってみようの式を、力を文字のままにして書くと、
+\kixiline{$1000\dot v+50v=f$\qquad （$v(0)=0$）}
+です。時間の世界では、$v$ と $\dot v$ がからみあっているので、$f$ を入れたら $v$ がいくつかは、すぐにはわかりません。
+
+9-5・9-7 と同じく、$s$ の世界へ変換します。はじめは止まっている（$v(0)=0$）ので、$\dot v\to sV$ です。
+\begin{bkhenkei}[0.5]
+1000\dot v+50v=f & 車のからだの式 \\
+1000sV+50V=F & 変換した。$v(0)=0$ なので $\mathcal L[\dot v]=sV$ \\
+(1000s+50)V=F & $V$ でくくった \\
+V=\frac{1}{1000s+50}\times F & わった \\
+\end{bkhenkei}
+$s$ の世界では、出てくるもの $V$ は、入れたもの $F$ に、$1/(1000s+50)$ という式を\textbf{かけた}ものです。$F$ が何であっても、このかけ算は同じです。この「かける式」が、車のからだという箱の性質を表しています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.95mm, y=1mm]
+  \kixiworlds[17mm]{時間の世界}{$s$ の世界}{変換する}{もどす}
+  \node[kixi lab] (u1) at (0,0) {$f(t)$};
+  \node[kixi blk, text width=27.5mm] (b1) at (30,0) {$1000\dot v+50v=f$\\{\footnotesize 微分がからむ}};
+  \node[kixi lab] (y1) at (57,0) {$v(t)$};
+  \draw[kixi sig, shorten <=0.5mm, shorten >=1mm] (u1) -- (b1);
+  \draw[kixi sig, shorten <=1mm, shorten >=0.5mm] (b1) -- (y1);
+  \node[kixi lab] (u2) at (73,0) {$F(s)$};
+  \node[kixi blk, text width=21mm] (b2) at (100,0) {$\dfrac{1}{1000s+50}$\\{\footnotesize かけるだけ}};
+  \node[kixi lab] (y2) at (127,0) {$V(s)$};
+  \draw[kixi sig, shorten <=0.5mm, shorten >=1mm] (u2) -- (b2);
+  \draw[kixi sig, shorten <=1mm, shorten >=0.5mm] (b2) -- (y2);
+\end{tikzpicture}
+\bkfigcaption{同じ「車のからだ」の箱の、2つの書き方。左の時間の世界では微分方程式（出てくるものは、たたみこみ（9-6）で決まる）。右の $s$ の世界では、入れたものに伝達関数をかけるだけ。}
+\label{bk:9-8:fig-sekai}
+\end{bkfigure}
+
+\bksubsection{2}{名前の段：伝達関数 $G(s)$ を読む}
+
+\label{bk:9-8:namae}箱の「かける式」を、次の名前でよびます。
+\kixiframe[118mm]{\Large $G(s)=\dfrac{Y(s)}{U(s)}$\\[3pt]\normalsize\sffamily 「はじめの値をすべて0にしたときの、出てくるもの÷入れるもの」}
+これを、その箱の\textbf{伝達関数}（でんたつかんすう）といいます。\bkidx{でんたつかんすう}{伝達関数}入れるもの（入力）を $u$、出てくるもの（出力）を $y$ と書き、$s$ の世界では大文字の $U$、$Y$ です（9-5 の約束）。英語の transfer function は「受けわたしの関数」という意味です。
+
+\kixidanhead{1}{記号を読む：何を何でわるか・どんな条件で}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何を何でわるか}：出てくるもの $Y(s)$ を、入れるもの $U(s)$ でわる。
+\item \textbf{条件}：はじめの値（$y(0)$、$\dot y(0)$ など）は\textbf{すべて0}にする。
+\item \textbf{答えの形}：$s$ の分数の式。$U$ や $Y$ は入っていない。
+\end{enumerate}
+\[ \kixiNt{G(s)=\frac{V(s)}{F(s)}}=\kixiSt{2}{\frac{1}{1000s+50}} \]
+左の点線は名前、右の実線は、9-5 の微分の行（$\dot v\to sV$）を引いて作った実際の式です。
+
+\kixihead{なぜ、はじめの値を0にするのか}
+9-7 の⑤で、ばね・質量・ダンパーの式は、次の形でした。
+\kixiline{$(s^2+a_1s+a_0)X=U(s)+(s+a_1)x(0)+\dot x(0)$}右辺の $U(s)$ の部分は「入れたもの」で決まり、残りは「はじめの値」で決まります。伝達関数は、そのうち「機械が入れたものをどう変えるか」だけを取り出したものです。はじめの値の分は、9-7 のように別に足せばよいので、伝達関数ではいつも0にしておきます。
+
+\kixihead{6-13 の $G(\omega)$ とは別のもの}
+6-13 では、ゆれの大きさの分母の式 $(k-m\omega^2)^2+(c\omega)^2$ に、判別式の $D$ と区別するために $G(\omega)$ という名前をつけました。これは伝達関数 $G(s)$ とは\textbf{別のもの}です（⑧で見るように、6-13 の $G(\omega)$ は、伝達関数の大きさの2乗の逆数 $1/|G(j\omega)|^2$ にあたります）。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 伝達関数 $G(s)=\dfrac{Y(s)}{U(s)}$ は、「はじめの値を0にしたときの、出てくるもの÷入れるもの」の名前。
+\item $s$ の世界では、出てくるもの＝伝達関数×入れたもの（$Y=GU$）。何を入れても、かけ算1回。
+\end{itemize}
+\end{taisetsu}
+
+\bkstage{te}{手でわかる}{作って、つないで、もどす}{\bklevel{4}}
+
+\bksubsection{3}{微分方程式から作る}
+
+\label{bk:9-8:tsukuru}\kixidanhead{2}{表を引いて、$s$ の式に直す}
+伝達関数は、次の手順でいつも作れます。6-12 で特性方程式を作ったときと同じ置きかえです。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item はじめの値をすべて0にして、$y\to Y$、$\dot y\to sY$、$\ddot y\to s^2Y$、入れるもの $u\to U$ と置きかえる（9-5 の微分の行）。
+\item $Y$ でくくる。
+\item $\dfrac{Y}{U}$ の形にする。
+\end{enumerate}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,30mm] Q[c,m,42mm] Q[c,m,36mm] Q[l,m,14mm]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+箱 & 微分方程式 & 伝達関数 $G(s)$ & 章 \\
+RC 回路（$\tau=\qty{2}{s}$） & $2\dot v+v=u$ & $\dfrac{1}{2s+1}$ & 6-4 \\
+熱電対（$\tau=\qty{30}{s}$） & $30\dot y+y=u$ & $\dfrac{1}{30s+1}$ & 6-4 \\
+車のからだ & $1000\dot v+50v=f$ & $\dfrac{1}{1000s+50}$ & この章 \\
+ばね（6-13 の数） & $0.5\ddot x+0.4\dot x+8x=f$ & $\dfrac{1}{0.5s^2+0.4s+8}$ & 6-13 \\
+モーター（電圧→回る速さ $y$） & $0.5\dot y+y=10u$ & $\dfrac{10}{0.5s+1}$ & この章 \\
+\end{bktable}
+\bktabcaption{いろいろな箱の伝達関数。分母は、6-12 の特性方程式の左辺と同じ。}
+\label{bk:9-8:tab-g}
+\end{bkcenter}
+分母を0とおいた式は、6-12 の特性方程式そのものです。だから、伝達関数の分母が0になる $s$ が、その機械の動き方（$e^{st}$）を決めます。9-9 では、この $s$ を「極」とよびます。
+
+モーターの行の $y$ は、回る速さ〔rad/s〕です（⑧で角周波数に使う $\omega$ とまぎれないように、$y$ と書きます）。1\,V を入れ続けると、やがて \qty{10}{rad/s}（1分に約95.5回転）で回り、そこへ近づく時定数が \qty{0.5}{s} のモーターです（たとえばの数）。$s=0$ を入れた $G(0)=10$ が、ゆっくり変えたときの倍率（1\,V あたり \qty{10}{rad/s}）です。これを\textbf{定常のゲイン}といいます。
+
+\begin{motto}[4]
+\kixibox{水そうもヒーターも、同じ形の箱（6-15 の相似）}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+水そう（底面積 $A$〔cm²〕）に、ポンプで1秒に $q$〔cm³〕の水を入れます。底の管からは、水位 $h$〔cm〕に比例して $h/R$ ずつ出ていくとします（$R$ は管の水の通りにくさ）。たまる水の量の変わり方は $A\dot h=q-h/R$ なので、
+\kixiline{$AR\,\dot h+h=Rq$}
+\kixiline{$G(s)=\dfrac{H(s)}{Q(s)}=\dfrac{R}{ARs+1}$}
+部屋のヒーター（電力 $P$〔W〕、熱容量 $C$〔J/K〕、熱の抵抗 $R$〔K/W〕、部屋と外の温度差 $y$〔K〕）も、$C\dot y=P-y/R$ から $G=R/(RCs+1)$ です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,22) -- (0,0) -- (24,0) -- (24,22);
+  \fill[bkBlue!25] (0.5,0.5) rectangle (23.5,12);
+  \draw[bkBlue, line width=0.7pt] (0.5,12) -- (23.5,12);
+  \draw[bkInk, line width=0.9pt] (24,3) -- (33,3);
+  \draw[bkBlue, line width=0.9pt, -{Stealth[length=1.6mm]}] (25,1.5) -- (32.5,1.5);
+  \node[font=\footnotesize, anchor=north] at (29,0.5) {$h/R$};
+  \draw[bkBlue, line width=0.9pt, -{Stealth[length=1.6mm]}] (9,27) -- (9,16);
+  \node[font=\footnotesize, anchor=west] at (10,25) {$q$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (-3,0.5) -- (-3,12);
+  \node[font=\footnotesize, anchor=east] at (-3.8,6) {$h$};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+どちらも RC 回路と同じ $K/(\tau s+1)$ の形（1次おくれ）で、$K=R$、$\tau=AR$ または $RC$ です。6-15 で、ばね・電気・熱の式が同じ形になること（相似）を学びました。伝達関数で書くと、分野がちがっても同じ箱になることが、ひと目でわかります。（ここの $H(s)$ は水位 $h$ の変換で、ステップ関数の $H(t)$ とは別のものです。）
+\end{motto}
+
+\bksubsection{4}{インパルス応答とステップ応答}
+
+\label{bk:9-8:outou}伝達関数がわかれば、何を入れたときでも、$Y=G\times U$ を 9-7 の方法でもどすだけです。よく使う入れ方は2つあります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,32mm] Q[l,m,44mm] Q[c,m,18mm] Q[c,m,26mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=3pt}
+入れ方 & たとえ & $U(s)$ & 出てくるもの \\
+インパルス $\delta(t)$ & ハンマーで1回たたく（9-6） & $1$ & $\mathcal L^{-1}[G]$ \\
+ステップ $H(t)$ & スイッチを入れて、入れ続ける & $\dfrac1s$ & $\mathcal L^{-1}\Bigl[\dfrac{G}{s}\Bigr]$ \\
+\end{bktable}
+\bktabcaption{インパルス応答とステップ応答。「応答」は、入れたものに対して出てくる動きのこと。}
+\end{bkcenter}
+
+\kixihead{はてな？の答え：アクセルを一定にふむ}
+エンジンの力 \qty{500}{N} を $t=0$ から入れ続けると、$F=\dfrac{500}{s}$ です。
+\begin{bkhenkei}[0.5]
+V=G\,F=\frac{1}{1000s+50}\times\frac{500}{s} & $Y=GU$ \\
+V=\frac{0.5}{s(s+0.05)} & 分母と分子を1000でわった \\
+V=\frac{10}{s}-\frac{10}{s+0.05} & かくす方法（9-7）：$\frac{0.5}{0.05}=10$、$\frac{0.5}{-0.05}=-10$ \\
+v=10-10e^{-0.05t} & 表を逆に引いた \\
+\end{bkhenkei}
+やってみようのD列の式です。速さは10\,m/s に近づき、時定数は $\frac{1}{0.05}=20$ 秒です。20秒で63\,\%、60秒（$3\tau$）で95\,\%、80〜100秒（$4\tau$〜$5\tau$）で98〜99\,\%です。工学では、ほとんど落ち着いたとみなせる時間を\textbf{整定時間}とよび、1次おくれでは $4\tau$〜$5\tau$ がめやすです。\textbf{はてな？の答え}：アクセルを一定にふむと、車は約20秒の時定数で速さを上げ、1分半ほどで、ほぼ一定の速さ（ここでは10\,m/s）になります。
+
+\kixihead{インパルス応答：後ろからドンとおす}
+止まった車を後ろから短い時間だけ強くおし、力×時間（力積）が \qty{1000}{N.s} だったとします。入れたものは $1000\,\delta(t)$ で、$F=1000$ です。
+\kixiline{$V=\dfrac{1000}{1000s+50}=\dfrac{1}{s+0.05}\ \longrightarrow\ v=e^{-0.05t}$}
+車は速さ \qty{1}{m/s} で動き出し、抵抗で、時定数20秒でゆっくり止まります。インパルス応答は、伝達関数をそのままもどしたものなので、「その箱の動き方の見本」です。
+
+\bksubsection{5}{箱をつなぐ：直列はかけ算、並列はたし算}
+
+\label{bk:9-8:tsunagu}\kixihead{直列：かけ算}
+はてな？の「エンジン」の箱を入れます。アクセルをふむ量を $p$（0〜1。ふみこんだ割合）、エンジンの力を $f$ とし、エンジンの伝達関数は、いっぱいにふむと \qty{5000}{N}、時定数 \qty{0.5}{s} の1次おくれ（たとえばの数）として、次の $G_1$ とします。
+\kixiline{$G_1(s)=\dfrac{5000}{0.5s+1}$}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixi lab] (p) at (4,0) {$P(s)$};
+  \node[kixi blk] (g1) at (32,0) {$G_1=\dfrac{5000}{0.5s+1}$};
+  \node[kixi blk] (g2) at (82,0) {$G_2=\dfrac{1}{1000s+50}$};
+  \node[kixi lab] (v) at (122,0) {$V(s)$};
+  \draw[kixi sig, shorten <=1mm, shorten >=1.5mm] (p) -- (g1);
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1.5mm] (g1) -- node[kixi lab, above] {$F(s)$} (g2);
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1mm] (g2) -- (v);
+  \node[kixi blk, minimum width=60mm] (g) at (60,-20) {$G_2G_1=\dfrac{5000}{(0.5s+1)(1000s+50)}$};
+  \node[kixi lab] (p2) at (4,-20) {$P(s)$};
+  \node[kixi lab] (v2) at (122,-20) {$V(s)$};
+  \draw[kixi sig, shorten <=1mm, shorten >=1.5mm] (p2) -- (g);
+  \draw[kixi sig, shorten <=1.5mm, shorten >=1mm] (g) -- (v2);
+  \node[kixi lab, fill=white] at (60,-10) {1つの箱にまとめる（かけ算）};
+\end{tikzpicture}
+\bkfigcaption{直列につないだ2つの箱は、伝達関数のかけ算の1つの箱になる。}
+\label{bk:9-8:fig-chokuretsu}
+\end{bkfigure}
+
+\begin{bkhenkei}[0.5]
+F=G_1P & エンジンの箱 \\
+V=G_2F & 車のからだの箱 \\
+V=G_2G_1P & 1行めを2行めに入れた \\
+\frac{V}{P}=G_2G_1 & 全体の伝達関数は、かけ算 \\
+\end{bkhenkei}
+3-3 の合成関数（前の箱から出たものを、次の箱に入れる）と同じ考えです。伝達関数は数のようにかけ算するので、$G_2G_1=G_1G_2$ と順番を入れかえてもかまいません。7-3 の行列のかけ算は順番を入れかえられませんでしたが、1つ入れて1つ出てくる箱の伝達関数は、ただの分数の式だからです。
+
+全体の定常のゲインは $G_2(0)G_1(0)=\frac{1}{50}\times5000=100$ で、アクセルを0.1だけふむと、最後は $0.1\times100=\qty{10}{m/s}$ です。エンジンの時定数（0.5秒）は車の時定数（20秒）よりずっと短いので、ステップ応答は、エンジンの箱がないときとほとんど変わりません（20秒で 6.23\,m/s と 6.32\,m/s）。おそいほうの箱が、全体の速さを決めます。
+
+\kixihead{並列：たし算}
+同じものが2つの箱に入り、出てきたものをたすときは、
+\kixiline{$Y=G_1U+G_2U=(G_1+G_2)U$}
+なので、伝達関数は\textbf{たし算}です。たとえば、2つのスピーカー（低い音用と高い音用）に同じ電気信号を分けて送る回路（例題3）は、並列の箱です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixi lab] (u) at (4,0) {$U(s)$};
+  \fill[bkInk] (18,0) circle (0.8);
+  \node[kixi blk, minimum width=34mm] (g1) at (52,9) {$G_1=\dfrac{1}{\tau s+1}$\enspace{\footnotesize 低い音用}};
+  \node[kixi blk, minimum width=34mm] (g2) at (52,-9) {$G_2=\dfrac{\tau s}{\tau s+1}$\enspace{\footnotesize 高い音用}};
+  \node[kixi sum] (sm) at (90,0) {};
+  \node[kixi lab] (y) at (118,0) {$Y(s)$};
+  \draw[line width=0.9pt, bkInk] (u) -- (18,0);
+  \draw[kixi sig] (18,0) |- (g1);
+  \draw[kixi sig] (18,0) |- (g2);
+  \draw[kixi sig] (g1) -| (sm);
+  \draw[kixi sig] (g2) -| (sm);
+  \draw[kixi sig] (sm) -- (y);
+  \kixipm{(sm)}{(-4,4)}{+}
+  \kixipm{(sm)}{(-4,-4)}{+}
+\end{tikzpicture}
+\bkfigcaption{並列の箱。同じ $U$ が2つの箱に入り、出たものを加え合わせ点（○）でたす。全体は $G_1+G_2$。}
+\label{bk:9-8:fig-heiretsu}
+\end{bkfigure}
+
+\bkkokomade[微分方程式から伝達関数を作り、直列はかけ算・並列はたし算でまとめ、$G$ や $G/s$ を 9-7 の方法でもどして、インパルス応答・ステップ応答を出せれば十分です。この先は、フィードバック・状態方程式・周波数応答（dB）です。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{つなぎ方と、ほしいもので選ぶ}{\bklevel{5}}
+
+\bksubsection{6}{場合分けの表と流れ図}
+
+\label{bk:9-8:basho}伝達関数の求め方は、「何があたえられているか」（微分方程式・データ・状態方程式）と、「箱がどうつながっているか」（直列・並列・フィードバック）と、「何がほしいか」（伝達関数そのもの・時間の動き・$\sin$ を入れたときの倍率）で決まります。場合分けの表9-8にまとめました（記号 A〜H）。
+
+A と E は②の\textbf{直す段}（表を引く・行列の計算）、F は9-7 の部分分数と表、B・C・D・G・H は③の\textbf{楽をする段}（積分も変換もせず、かけ算・たし算・代入だけ）です。A・D・C・B のあとは、次の見開きの図\ref{bk:9-8:fig-flow}の流れ図の次の問いへ進み、さらにつなぎ方やほしいものを問います。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 直列
+  \node[kixi lab, anchor=west, font=\sffamily\bfseries\footnotesize] at (0,0) {直列};
+  \node[kixi blk, minimum width=12mm, minimum height=8mm] (a1) at (30,0) {$G_1$};
+  \node[kixi blk, minimum width=12mm, minimum height=8mm] (a2) at (52,0) {$G_2$};
+  \draw[kixi sig] (16,0) -- (a1); \draw[kixi sig] (a1) -- (a2); \draw[kixi sig] (a2) -- (68,0);
+  \node[kixi lab, anchor=west] at (76,0) {$\Rightarrow\ G_1G_2$（かけ算）};
+  % 並列
+  \node[kixi lab, anchor=west, font=\sffamily\bfseries\footnotesize] at (0,-19) {並列};
+  \node[kixi blk, minimum width=12mm, minimum height=7mm] (b1) at (40,-14) {$G_1$};
+  \node[kixi blk, minimum width=12mm, minimum height=7mm] (b2) at (40,-24) {$G_2$};
+  \node[kixi sum] (bs) at (60,-19) {};
+  \fill[bkInk] (24,-19) circle (0.7);
+  \draw[line width=0.9pt, bkInk] (16,-19) -- (24,-19);
+  \draw[kixi sig] (24,-19) |- (b1); \draw[kixi sig] (24,-19) |- (b2);
+  \draw[kixi sig] (b1) -| (bs); \draw[kixi sig] (b2) -| (bs);
+  \draw[kixi sig] (bs) -- (70,-19);
+  \node[kixi lab, anchor=west] at (76,-19) {$\Rightarrow\ G_1+G_2$（たし算）};
+  % フィードバック
+  \node[kixi lab, anchor=west, font=\sffamily\bfseries\footnotesize] at (0,-44) {フィード\\バック};
+  \node[kixi sum] (cs) at (24,-38) {};
+  \node[kixi blk, minimum width=12mm, minimum height=7mm] (c1) at (44,-38) {$G_1$};
+  \node[kixi blk, minimum width=12mm, minimum height=7mm] (c2) at (44,-50) {$G_2$};
+  \draw[kixi sig] (16,-38) -- (cs); \draw[kixi sig] (cs) -- (c1); \draw[kixi sig] (c1) -- (70,-38);
+  \fill[bkInk] (62,-38) circle (0.7);
+  \draw[kixi sig] (62,-38) |- (c2); \draw[kixi sig] (c2) -| (cs);
+  \kixipm{(cs)}{(-3,3)}{+}\kixipm{(cs)}{(-3.2,-3.6)}{-}
+  \node[kixi lab, anchor=west] at (76,-44) {$\Rightarrow\ \dfrac{G_1}{1+G_1G_2}$（1周の式を解く）};
+\end{tikzpicture}
+\bkfigcaption{箱のつなぎ方の3つの形と、1つの箱にまとめた伝達関数。○は加え合わせ点、黒い点は線が分かれる所。}
+\label{bk:9-8:fig-tsunagi}
+\end{bkfigure}
+
+\kixicasetitle{9-8}{伝達関数：どんなときに、どう求める？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,34mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=3.5pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixicase{A} & 微分方程式があたえられている & \kixiop{2}\enspace はじめの値を0にして $\dot y\to sY$、$\ddot y\to s^2Y$、$u\to U$。$Y$ でくくって $\frac{Y}{U}$ & 1 \\
+\kixicase{B} & 箱が1列につながる（直列） & \kixidan{3}\enspace かけ算 $G_1G_2$。順番を入れかえてよい & 2・9 \\
+\kixicase{C} & 同じものが2つの箱に入り、出たものをたす（並列） & \kixidan{3}\enspace たし算 $G_1+G_2$ & 3 \\
+\kixicase{D} & 出たものをはかって、入れる側へもどす（フィードバック） & \kixidan{3}\enspace 1周の式 $Y=G_1(R-G_2Y)$ を $Y$ について解き、$\dfrac{G_1}{1+G_1G_2}$ & 4・5 \\
+\kixicase{E} & 状態方程式 $\dot{\vec x}=A\vec x+B u$、$y=C\vec x$ があたえられている & \kixiop{4}\enspace $G=C(sI-A)^{-1}B$（逆行列は 7-5） & 6 \\
+\kixicase{F} & インパルス応答・ステップ応答（時間の動き）がほしい & \kixiop{3}\enspace $G\times1$ か $G\times\frac1s$ を部分分数に分け\par\kixiop{2}\enspace 表9-7でもどす & 7 \\
+\kixicase{G} & $\sin$ を入れたときの倍率とおくれ（周波数応答）がほしい & \kixidan{3}\enspace $s=j\omega$ を入れる。倍率 $|G(j\omega)|$、おくれは角。dB は $20\log_{10}|G|$ & 8・9 \\
+\kixicase{H} & 実験のデータしかない（1次おくれとわかっている） & \kixidan{3}\enspace ステップ応答の最後の値÷入れた大きさ＝$K$、63.2\,\%に着く時刻＝$\tau$ で $\dfrac{K}{\tau s+1}$ & 10 \\
+\end{bktable}
+{\small A・B・C・D のあと、ほしいもの（時間の動き・$\sin$ の倍率）がなければ、そこで作った $G$ が答え（流れ図のいちばん下の四角）。}\par
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixi do, text width=76mm] (s) at (46,0) {記号を読む（名前の段）：入れるもの $U$・出てくるもの $Y$、\\はじめの値は0};
+  \node[kixi q] (q1) at (33,-20) {実験のデータから作る？};
+  \node[kixi do, text width=44mm, anchor=west] (rH) at (71,-20) {最後の値で $K$、63\,\%で $\tau$\enspace\kixicase{H}};
+  \node[kixi q] (q2) at (33,-38) {状態方程式がある？};
+  \node[kixi do, text width=44mm, anchor=west] (rE) at (71,-38) {$C(sI-A)^{-1}B$\enspace\kixicase{E}};
+  \node[kixi q] (q3) at (33,-56) {微分方程式がある？};
+  \node[kixi do, text width=44mm, anchor=west] (rA) at (71,-56) {$s$ に置きかえて $\frac YU$。下へ\enspace\kixicase{A}};
+  \node[kixi q] (q4) at (33,-74) {もどす線がある？};
+  \node[kixi do, text width=44mm, anchor=west] (rD) at (71,-74) {前向きの道（直列はかけ算）を $G_1$ に。$\frac{G_1}{1+G_1G_2}$\enspace\kixicase{D}};
+  \node[kixi q] (q5) at (33,-92) {2つの箱を出たものをたす？};
+  \node[kixi do, text width=44mm, anchor=west] (rC) at (71,-92) {たし算。下へ\enspace\kixicase{C}};
+  \node[kixi q] (q6) at (33,-110) {箱が1列につながる？};
+  \node[kixi do, text width=44mm, anchor=west] (rB) at (71,-110) {かけ算。下へ\enspace\kixicase{B}};
+  \node[kixi q] (q7) at (33,-128) {$\sin$ を入れた倍率がほしい？};
+  \node[kixi do, text width=44mm, anchor=west] (rG) at (71,-128) {$s=j\omega$ を入れる\enspace\kixicase{G}};
+  \node[kixi q] (q8) at (33,-146) {時間の動きがほしい？};
+  \node[kixi do, text width=44mm, anchor=west] (rF) at (71,-146) {$G$ か $\frac Gs$ を表9-7でもどす\enspace\kixicase{F}};
+  \node[kixi do, text width=40mm] (rT) at (33,-164) {ほしいものはない：\\A〜D で作った $G$ が答え};
+  \node[kixi do, text width=104mm] (end) at (60,-182) {確かめ：$G(0)$ が、ゆっくり変えたときの倍率と合うか。単位は合うか};
+  \draw[kixi go] (s.south -| q1) -- (q1);
+  \foreach \kixiq/\kixir in {q1/rH,q2/rE,q3/rA,q4/rD,q5/rC,q6/rB,q7/rG,q8/rF} {\draw[kixi go] (\kixiq) -- node[kixi yn, above] {はい} (\kixir);}
+  \foreach \kixiq/\kixir in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6,q6/q7,q7/q8,q8/rT} {\draw[kixi go] (\kixiq) -- node[kixi yn, left=1mm] {いいえ} (\kixir);}
+  \draw[kixi go, shorten >=0.4mm] (rA.south) |- (33.8,-64.5);
+  \draw[kixi go, shorten >=0.4mm] (rD.south) |- (33.8,-82.5);
+  \draw[kixi go, shorten >=0.4mm] (rC.south) |- (33.8,-100.5);
+  \draw[kixi go, shorten >=0.4mm] (rB.south) |- (33.8,-118.5);
+  \foreach \kixin in {rH,rE,rG,rF,rT} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixin.east) -- (\kixin.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-20) -- (127,-182);
+  \draw[kixi go, shorten <=0pt] (127,-182) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{伝達関数の流れ図。ひし形は問い、四角はすること。A・D・C・B のあとは左の列の次の問いへもどる。つなぎ方は外側（もどす線）から問う。D では、前向きの道の直列をかけ算でまとめてから $G_1$ にする。できた四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:9-8:fig-flow}
+\end{bkfigure}
+
+\kixihead{流れ図の使い方：はてな？の車}
+はてな？の「アクセル→エンジン→車のからだ」で、全体のステップ応答をたどります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：入れるもの＝アクセルをふむ量 $P$、出てくるもの＝速さ $V$。はじめは止まっている。
+\item データから？\enspace いいえ。\enspace 状態方程式？\enspace いいえ。\enspace 微分方程式？\enspace はい（車のからだは $1000\dot v+50v=f$）→ \kixicase{A} で $G_2$ を作り、下の問いへ。
+\item もどす線？\enspace いいえ。\enspace たす？\enspace いいえ。\enspace 1列？\enspace はい → \kixicase{B} で $G_2G_1$。下の問いへ。
+\item $\sin$ の倍率？\enspace いいえ。\enspace 時間の動き？\enspace はい → \kixicase{F} で $\dfrac{G_2G_1}{s}$ をもどす。
+\end{enumerate}
+1つの問題で、いくつもの場合を通ることがあります。そのときは、通った順に記号を書きます（A→B→F）。1回で全部を覚えなくても大丈夫です。
+
+\kixihead{どの場合かな？}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $3\ddot y+2\dot y+y=u$ の伝達関数\par\nobreak\noindent 答え：\kixicase{A}。微分方程式がある。
+\item 温度計の、スイッチを入れたあとの読みの表から伝達関数を作る\par\nobreak\noindent 答え：\kixicase{H}。実験のデータ。
+\item $G_1=\tfrac{2}{s+1}$ の箱の出たものを $G_2=\tfrac{3}{s+4}$ の箱に入れる\par\nobreak\noindent 答え：\kixicase{B}。直列。
+\item モーターの速さをはかって、目標とのずれで電圧を決める\par\nobreak\noindent 答え：\kixicase{D}。もどす線がある。
+\end{enumerate}
+
+\bksubsection{7}{フィードバック：はかって、もどす}
+
+\label{bk:9-8:fb}3-1 で、「エアコンは部屋の温度をはかりつづけ、設定温度との差が大きいほど強く冷やします（このしくみは第9巻の制御で学びます）」と書きました。このように、出てきたものをはかって、入れる側へもどすつなぎ方を\textbf{フィードバック}といいます。\bkidx{ふぃーどばっく}{フィードバック}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixi lab] (r) at (2,0) {$R(s)$\\{\footnotesize 目標}};
+  \node[kixi sum] (sum) at (22,0) {};
+  \node[kixi blk] (g1) at (68,0) {$G_1$};
+  \node[kixi lab] (y) at (124,0) {$Y(s)$\\{\footnotesize 出てくる}};
+  \node[kixi blk] (g2) at (68,-22) {$G_2$\\{\footnotesize はかる}};
+  \draw[kixi sig, shorten <=1mm] (r) -- (sum);
+  \draw[kixi sig] (sum) -- node[kixi lab, below=0.8mm, pos=0.5] {$E=R-G_2Y$} (g1);
+  \draw[kixi sig] (g1) -- (y);
+  \fill[bkInk] (102,0) circle (0.8);
+  \draw[kixi sig] (102,0) |- (g2);
+  \draw[kixi sig] (g2) -| (sum);
+  \kixipm{(sum)}{(-3.4,4.2)}{+}
+  \kixipm{(sum)}{(3.4,-4)}{-}
+  \node[kixi lab, anchor=west] at (104,-11) {引き出し点};
+  \node[kixi lab, anchor=east] (lsum) at (15,-11) {加え合わせ点};
+  \draw[bkInk!60, line width=0.5pt] (lsum.north east) -- (sum.south west);
+\end{tikzpicture}
+\bkfigcaption{フィードバック。出てきた $Y$ を $G_2$ ではかって、加え合わせ点（○）で目標 $R$ から引く。$G_1$ に入るのは、そのずれ $E=R-G_2Y$。}
+\label{bk:9-8:fig-fb}
+\end{bkfigure}
+
+\kixidanhead{3}{1周の式を、$Y$ について解く}
+図\ref{bk:9-8:fig-fb}の矢印を1周たどると、$Y$ が両辺に出てくる式が1本できます。それを、ふつうの1次方程式として $Y$ について解きます。
+\begin{bkhenkei}[0.5]
+Y=G_1E & $G_1$ の箱 \\
+E=R-G_2Y & 加え合わせ点（目標からはかった値を引く） \\
+Y=G_1(R-G_2Y) & 2行めを1行めに入れた（1周の式） \\
+Y+G_1G_2Y=G_1R & 展開して、$Y$ の項を左へ \\
+(1+G_1G_2)Y=G_1R & $Y$ でくくった \\
+\frac{Y}{R}=\frac{G_1}{1+G_1G_2} & わった \\
+\end{bkhenkei}
+\kixiframe[110mm]{\large フィードバックの全体の伝達関数\quad $\dfrac{Y}{R}=\dfrac{G_1}{1+G_1G_2}$}
+分母の「1＋」は、もどす量を\textbf{引く}から出てきました（加え合わせ点の符号が $-$）。もどす量をたすと $1-G_1G_2$ になります。
+
+\kixihead{モーターの速さの比例制御}
+表\ref{bk:9-8:tab-g}のモーター $\dfrac{10}{0.5s+1}$ で、目標の速さとのずれに $K_{\mathrm p}$〔V/(rad/s)〕をかけた電圧を加えます（\textbf{比例制御}）。速さはセンサーでそのままはかる（$G_2=1$）とします。前向きの道は「$K_{\mathrm p}$ 倍してからモーター」の直列なので、$G_1=\dfrac{10K_{\mathrm p}}{0.5s+1}$ です。
+\begin{bkhenkei}[0.56]
+\frac{Y}{R}=\frac{\dfrac{10K_{\mathrm p}}{0.5s+1}}{1+\dfrac{10K_{\mathrm p}}{0.5s+1}} & フィードバックの式に入れた \\
+\frac{Y}{R}=\frac{10K_{\mathrm p}}{0.5s+1+10K_{\mathrm p}} & 分母と分子に $0.5s+1$ をかけた \\
+\end{bkhenkei}
+$K_{\mathrm p}=1$ なら $\dfrac{10}{0.5s+11}=\dfrac{20}{s+22}$ です。分母が0になる $s$ は、モーターだけのときの $-2$ から $-22$ に動き、時定数は0.5秒から $\frac{1}{22}\approx\qty{0.045}{s}$ へ、約11分の1になります。フィードバックで、目標に速く追いつくようになりました。
+
+ただし、定常のゲインは $\frac{10}{11}\approx0.909$ です。目標 \qty{100}{rad/s} にすると \qty{90.9}{rad/s} で落ち着き、9.1\,\%のずれが残ります。このずれと、$K_{\mathrm p}$ の選び方は 9-9 でくわしく調べます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,18mm] Q[c,m,30mm] Q[c,m,24mm] Q[c,m,28mm]}, row{2-Z}={font=\small}, rowsep=2pt}
+$K_{\mathrm p}$ & 分母が0になる $s$ & 時定数（s） & 残るずれ \\
+0.1 & $-4$ & 0.25 & 50\,\% \\
+1 & $-22$ & 0.045 & 9.1\,\% \\
+10 & $-202$ & 0.005 & 1.0\,\% \\
+\end{bktable}
+\bktabcaption{比例の強さ $K_{\mathrm p}$ を変えたモーター。強いほど速く、ずれも小さい（ずれは $\frac{1}{1+10K_{\mathrm p}}$）。}
+\end{bkcenter}
+
+\kixihead{エアコン（3-1 の約束）}
+外が 35\,℃、設定が 26\,℃とします。部屋が外より何℃低いかを $y$〔℃〕とすると、目標は $r=35-26=9$ です。エアコンが冷やす力（1秒あたりに取りさる熱）を $P$〔W〕とすると、部屋の熱のつり合いは、6-4 の熱の抵抗 $R$〔K/W〕と熱容量 $C$〔J/K〕で
+\kixiline{$RC\,\dot y+y=RP$\qquad （部屋の箱 $\dfrac{R}{RCs+1}$。$RC=60$ 分）}
+です（$y$ がふえるほど外から入る熱がふえるので、$+y$ の項）。エアコンは、ずれに比例して $P=K_{\mathrm p}(r-y)$ で冷やします（$K_{\mathrm p}$〔W/K〕）。
+\begin{bkhenkei}[0.5]
+G_1=K_{\mathrm p}\times\frac{R}{60s+1}=\frac{RK_{\mathrm p}}{60s+1} & 前向きの道（$s$ は 1/分）、$G_2=1$ \\
+\frac{Y}{R_{\text{目標}}}=\frac{RK_{\mathrm p}}{60s+1+RK_{\mathrm p}} & フィードバックの式 \\
+\end{bkhenkei}
+（目標の $R$ と熱の抵抗 $R$ がまぎれないよう、目標は $R_{\text{目標}}$ と書きました。）$RK_{\mathrm p}=9$ なら $\dfrac{9}{60s+10}$ です。定常のゲインは $\frac{9}{10}=0.9$ なので、部屋は外より $9\times0.9=8.1$\,℃低い 26.9\,℃で落ち着き、0.9\,℃のずれが残ります。時定数は $\frac{60}{10}=6$ 分です。
+
+\bksubsection{8}{周波数応答：$s=j\omega$ を入れる}
+
+\label{bk:9-8:shuha}箱に $\sin$ や $\cos$ の形の入力を入れ続けると、はじめのまざりもの（自分の動き）が消えたあと、出てくるものも同じ速さ $\omega$ の $\sin$ になります（6-13④の「ゆすりに合うゆれ」）。変わるのは、大きさ（倍率）と、おくれ（角）だけです。
+
+\kixidanhead{3}{変換しない：$s$ に $j\omega$ を入れるだけ}
+6-13 では、ばね（$m=0.5$、$k=8$、$c=0.4$）を $F_0\cos\omega t$ でゆすったときの複素振幅を $X=\dfrac{F_0}{k-m\omega^2+jc\omega}$ と求めました。このばねの伝達関数 $G(s)=\dfrac{1}{0.5s^2+0.4s+8}$ に $s=j\omega$ を入れると、$s^2=-\omega^2$ なので
+\kixiline{$G(j\omega)=\dfrac{1}{8-0.5\omega^2+0.4j\omega}$,\qquad $X=F_0\,G(j\omega)$}
+で、6-13 の複素振幅は $F_0G(j\omega)$ そのものでした。$s=j\omega$ は、6-10 の $e^{st}$ の $s$ を $j\omega$（実部 $\sigma=0$）にした、ちょうど「へりもふえもせず、回り続ける」所です。
+\kixiframe[118mm]{倍率\quad $|G(j\omega)|$\qquad おくれ\quad $G(j\omega)$ の角の大きさ（$-$ の角）}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,16mm] Q[c,m,40mm] Q[c,m,22mm] Q[c,m,26mm] Q[c,m,16mm]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+$\omega$ & $G(j\omega)$ & $|G(j\omega)|$ & ゆれ（$F_0=0.8$） & おくれ \\
+2 & $\dfrac{1}{6+0.8j}$ & 0.1652 & 0.132\,m & 7.6° \\
+4 & $\dfrac{1}{1.6j}$ & 0.625 & 0.5\,m & 90° \\
+8 & $\dfrac{1}{-24+3.2j}$ & 0.0413 & 0.033\,m & 172.4° \\
+\end{bktable}
+\bktabcaption{6-13 のばねの周波数応答。6-13 の表と同じ数が、$s=j\omega$ を入れるだけで出る。}
+\end{bkcenter}
+6-13 の $G(\omega)=(k-m\omega^2)^2+(c\omega)^2$ は、ここでの分母の大きさの2乗です。だから $|G(j\omega)|=\dfrac{1}{\sqrt{G_{\text{6-13}}(\omega)}}$ で、名前が同じ $G$ でも、別のものです。
+
+\bksubsection{9}{dB で表すと、直列はたし算（3-12 の約束）}
+
+\label{bk:9-8:db}3-12 で、ボード線図（横軸にゆれの速さを対数目もりで、たて軸に倍率を dB でとったグラフ）を紹介し、「装置をつないだときの倍率も、dB のたし算で求められます（9-8）」と書きました。ここで確かめます。
+
+3-12 の図の回路は、抵抗とコンデンサーで作る、低い音だけを通す回路（ローパスフィルター）でした。その伝達関数は 6-4 の RC と同じ形 $\dfrac{1}{\tau s+1}$ で、100\,Hz で折れるように $\tau=\dfrac{1}{2\pi\times100}\approx\qty{1.592}{ms}$ です。ゆれの速さ（周波数）100\,Hz は、角周波数 $\omega=2\pi\times100$〔rad/s〕です。
+\begin{bkhenkei}[0.5]
+G(j\omega)=\frac{1}{1+j\omega\tau} & $s=j\omega$ を入れた \\
+|G|=\frac{1}{\sqrt{1+(\omega\tau)^2}} & 分母の大きさ（6-9） \\
+20\log_{10}|G|=-10\log_{10}\bigl(1+(\omega\tau)^2\bigr) & dB に直した（$\log\frac{1}{\sqrt{a}}=-\frac12\log a$） \\
+\end{bkhenkei}
+$\omega\tau=\frac{f}{100}$（$f$ は周波数〔Hz〕）なので、3-12 の図の式 $-10\log_{10}\bigl(1+(f/100)^2\bigr)$ と同じです。
+
+9-3 の⑧では、この RC に 50\,Hz の方形波（高さ1）を入れ、回る矢印1本ずつが $\tfrac{1}{1+jn\omega_0\tau}$ 倍になることを見ました。この「その周波数の倍率」が、伝達関数に $s=j\omega$ を入れた $G(j\omega)$ です。50・150・250・350\,Hz の成分（大きさ 1.273・0.424・0.255・0.182）は、$|G|$＝0.894・0.555・0.371・0.275 倍になり、1.139・0.235・0.095・0.050 で出てきます。高い成分ほど小さくなるので、四角い波の角がまるくなります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,18mm] Q[c,m,18mm] Q[c,m,22mm] Q[c,m,18mm] Q[c,m,26mm] Q[c,m,18mm]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+周波数 & $|G|$ & 1段（dB） & おくれ & 2段（dB） & 2段の倍率 \\
+10\,Hz & 0.995 & $-0.04$ & 5.7° & $-0.09$ & 0.990 \\
+100\,Hz & 0.707 & $-3.01$ & 45° & $-6.02$ & 0.5 \\
+300\,Hz & 0.316 & $-10.0$ & 71.6° & $-20.0$ & 0.1 \\
+1\,kHz & 0.0995 & $-20.04$ & 84.3° & $-40.09$ & 0.0099 \\
+10\,kHz & 0.0100 & $-40.00$ & 89.4° & $-80.00$ & 0.0001 \\
+\end{bktable}
+\bktabcaption{100\,Hz のローパスフィルター1段と、同じものを2段つないだとき。2段の dB は、1段の dB の2倍（たし算）。}
+\label{bk:9-8:tab-db}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, xmode=log, width=110mm, height=50mm, xmin=10, xmax=10000, ymin=-85, ymax=6, xtick={10,100,1000,10000}, xticklabels={10,100,1000,10000}, ytick={-80,-60,-40,-20,0}, xlabel={周波数（Hz）}, ylabel={dB}, every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small}, grid=major]
+  \addplot[bkBlue, line width=1.6pt, domain=10:10000, samples=120] {-10*log10(1+(x/100)^2)};
+  \addplot[bkOrange!85!black, line width=1.6pt, dash pattern=on 5pt off 2pt, domain=10:10000, samples=120] {-20*log10(1+(x/100)^2)};
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:1200,-22) {1段（実線）};
+  \node[font=\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (axis cs:900,-48) {2段（破線）：dB は2倍};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ボード線図（大きさ）。1段は100\,Hz より高いと、周波数が10倍になるごとに $-20$\,dB。2段は $-40$\,dB ずつ下がる。}
+\label{bk:9-8:fig-bode}
+\end{bkfigure}
+
+2段つなぐと、伝達関数は直列のかけ算 $G\times G$ です。倍率もかけ算 $|G|\times|G|$ になり、3-12 の対数のきまり $\log(ab)=\log a+\log b$ で、dB は\textbf{たし算}になります。
+\kixiline{$20\log_{10}\bigl(|G_1|\,|G_2|\bigr)=20\log_{10}|G_1|+20\log_{10}|G_2|$}
+グラフでは、2つの箱の線を上下にたせば、つないだ全体の線になります。これが、ボード線図が便利なわけです。ただし、実際の回路で2つの RC を直接つなぐと、うしろの回路が前の回路の電流を少し取るので、ぴったり $G\times G$ にはなりません。間に、受け取った電圧をそのまま次へ送る回路（バッファー）を入れたときに、この計算が成り立ちます。ボード線図の線を直線で近づけてかく方法などは、物理シリーズ（波-2・波-4）で学びます。
+
+\bksubsection{10}{状態方程式から作る（行列の計算）}
+
+\label{bk:9-8:joutai}7-11 では、機械の状態をベクトル $\vec x$ にまとめ、外から加える量 $u$ を入れた $\dot{\vec x}=A\vec x+Bu$ の形を状態方程式とよびました（9-10 でくわしく学びます）。出てくるものが $y=C\vec x$ なら、伝達関数は行列の計算で作れます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixi lab] (u) at (0,0) {$U$};
+  \node[kixi blk, minimum width=12mm] (b) at (18,0) {$B$};
+  \node[kixi sum] (sum) at (36,0) {};
+  \node[kixi blk, minimum width=14mm] (int) at (58,0) {$\dfrac1s$\\{\footnotesize 積分}};
+  \node[kixi blk, minimum width=12mm] (c) at (96,0) {$C$};
+  \node[kixi lab] (y) at (114,0) {$Y$};
+  \node[kixi blk, minimum width=12mm] (a) at (58,-20) {$A$};
+  \draw[kixi sig, shorten <=0.5mm] (u) -- (b);
+  \draw[kixi sig] (b) -- (sum);
+  \draw[kixi sig] (sum) -- node[kixi lab, above] {$s\vec X$} (int);
+  \draw[kixi sig] (int) -- node[kixi lab, above, pos=0.45] {$\vec X$} (c);
+  \draw[kixi sig, shorten >=0.5mm] (c) -- (y);
+  \fill[bkInk] (78,0) circle (0.8);
+  \draw[kixi sig] (78,0) |- (a);
+  \draw[kixi sig] (a) -| (sum);
+  \kixipm{(sum)}{(-3.2,3.2)}{+}
+  \kixipm{(sum)}{(3.2,-3.6)}{+}
+\end{tikzpicture}
+\bkfigcaption{状態方程式のブロック線図。$\dot{\vec x}$ を積分（$s$ の世界では $\frac1s$ をかける）すると $\vec x$。$\vec x$ に $A$ をかけてもどし、$Bu$ とたすと、また $\dot{\vec x}$。線の中を流れるのは、数ではなくベクトル。}
+\label{bk:9-8:fig-joutai}
+\end{bkfigure}
+
+\kixidanhead{2}{行列の計算に直す}
+はじめの値を0にして変換すると、$s\vec X=A\vec X+BU$ です。
+\begin{bkhenkei}[0.5]
+s\vec X-A\vec X=BU & $A\vec X$ を左へ \\
+(sI-A)\vec X=BU & $s\vec X=sI\vec X$（$I$ は単位行列、7-5） \\
+\vec X=(sI-A)^{-1}BU & 左から逆行列をかけた（7-5） \\
+Y=C(sI-A)^{-1}B\,U & $Y=C\vec X$ \\
+\end{bkhenkei}
+\kixiframe[100mm]{\large $G(s)=C(sI-A)^{-1}B$}
+\[ \kixiNt{G(s)}=\kixiSt{4}{C(sI-A)^{-1}B} \]
+車A（$\ddot x+3\dot x+2x=u$）を、状態 $\vec x=(x,\ \dot x)$ で書くと、7-8 と同じく次のようになります。
+\[ A=\begin{pmatrix}0&1\\-2&-3\end{pmatrix},\qquad B=\begin{pmatrix}0\\1\end{pmatrix},\qquad C=\begin{pmatrix}1&0\end{pmatrix} \]
+\begin{bkhenkei}[0.56]
+sI-A=\begin{pmatrix}s&-1\\2&s+3\end{pmatrix} & $s$ をななめに足し、$A$ を引いた \\
+\det(sI-A)=s(s+3)+2=s^2+3s+2 & 行列式（7-4） \\
+(sI-A)^{-1}=\frac{1}{s^2+3s+2}\begin{pmatrix}s+3&1\\-2&s\end{pmatrix} & 2×2 の逆行列（7-5） \\
+(sI-A)^{-1}B=\frac{1}{s^2+3s+2}\begin{pmatrix}1\\s\end{pmatrix} & 2列めを取り出した \\
+C(sI-A)^{-1}B=\frac{1}{s^2+3s+2} & 1行めを取り出した \\
+\end{bkhenkei}
+微分方程式から作った（場合 A）のと同じ $\dfrac{1}{s^2+3s+2}$ です。分母の $\det(sI-A)$ は、7-8 の固有値を求める式と同じなので、「伝達関数の分母が0になる $s$ ＝ 状態の行列の固有値」がわかります（9-9・9-11）。
+
+\bksubsection{11}{実験のデータから作る}
+
+\label{bk:9-8:data}機械の中の式がわからなくても、1次おくれ $\dfrac{K}{\tau s+1}$ になるとわかっていれば、ステップ応答のデータから $K$ と $\tau$ が決まります。ステップ応答は $y=K\times(\text{入れた大きさ})\times(1-e^{-t/\tau})$ だからです（④の車と同じ形）。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 最後の値÷入れた大きさ $=K$（定常のゲイン）。
+\item 最後の値の63.2\,\%（$1-e^{-1}$）に着く時刻 $=\tau$。
+\end{enumerate}
+63.2\,\%は、$t=\tau$ のとき $1-e^{-1}=0.632$ だからです（6-4）。工場では、機械に一定の入力を入れて記録をとり、この方法で伝達関数を決めることがよくあります。
+
+\begin{motto}[5]
+\kixibox{車のサスペンション：路面から車体への伝達関数}
+道のでこぼこの高さ $x_{\mathrm r}$ が、ばね（$k$）とダンパー（$c$）を通って車体（質量 $m$、高さ $x$）に伝わる式は、$m\ddot x=-k(x-x_{\mathrm r})-c(\dot x-\dot x_{\mathrm r})$ です。はじめの値を0にして変換すると、
+\begin{bkhenkei}[0.5]
+(ms^2+cs+k)X=(cs+k)X_{\mathrm r} & 変換し、$X$ の項を左へ \\
+\frac{X}{X_{\mathrm r}}=\frac{cs+k}{ms^2+cs+k} & 路面から車体への伝達関数 \\
+\end{bkhenkei}
+分子にも $s$ が入っているのは、ダンパーが路面の「上がる速さ」も車体に伝えるからです。1輪分を $m=\qty{250}{kg}$、$k=\num{16000}$\,N/m、$c=\num{2000}$\,N·s/m とすると（たとえばの数）、高さ \qty{5}{cm} の段差に乗り上げたとき、車体はいちばん高くて \qty{6.49}{cm}（約0.30秒後）まで上がり、それから \qty{5}{cm} に落ち着きます。分子が0になる $s$ と、分母が0になる $s$ の場所（9-9 で「零点」「極」と名前をつけます）でこの動きを読む方法は、9-9 で学びます。
+\end{motto}
+
+\begin{senmonsho}[ブロック線図と伝達関数の専門書ふうの書き方]
+\begin{bkhonbun}
+初期値をすべて零とおいたとき，出力のラプラス変換と入力のラプラス変換の比 $G(s)=Y(s)/U(s)$ を伝達関数という．前向き要素 $G(s)$，フィードバック要素 $H(s)$ からなる負帰還系の閉ループ伝達関数は
+\[ W(s)=\frac{G(s)}{1+G(s)H(s)} \]
+である．$G(s)H(s)$ を一巡伝達関数という．
+\end{bkhonbun}
+\bkyaku{「零」は0。「要素」は箱、「負帰還」は引いてもどすフィードバック、「閉ループ」は1周してもどる全体。この本の $G_1$ を $G$、$G_2$ を $H$ と書く本が多い（この本では、$H(t)$ をステップ関数に使っているので $G_2$ と書いた）。「一巡伝達関数」は、1周の倍率 $G_1G_2$。ブロック線図の○（加え合わせ点）には、たすか引くかの符号 $+$・$-$ を書き、線が分かれる所（引き出し点）には黒い点を打つ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\raggedright
+\kixibox{伝達関数の3つの段}
+\kixidan{1}\enspace 記号を読む：入れるもの $U$・出てくるもの $Y$、はじめの値は0\par
+\kixidan{3}\enspace データ？\enspace つなぎ方（もどす・たす・1列）？\enspace $\sin$ の倍率？\par
+\kixidan{2}\enspace 微分→$s$ のかけ算（表を引く）か、$C(sI-A)^{-1}B$（行列）\par
+\vspace{-2pt}\[ \kixiN{G(s)=\frac{Y(s)}{U(s)}}\ =\ \kixiS{\frac{1}{ms^2+cs+k}}\qquad Y=GU \]\vspace{-4pt}
+\kixibox{場合分けの表9-8（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,44mm] X[l,m]}, row{2-Z}={font=\footnotesize}, rowsep=0pt, colsep=3pt}
+記号 & こんなとき & 求め方 \\
+\kixicase{A} & 微分方程式 & はじめの値0、$\dot y\to sY$ \\
+\kixicase{B} & 直列 & かけ算 $G_1G_2$ \\
+\kixicase{C} & 並列 & たし算 $G_1+G_2$ \\
+\kixicase{D} & フィードバック & $\frac{G_1}{1+G_1G_2}$（引いてもどすとき） \\
+\kixicase{E} & 状態方程式 & $C(sI-A)^{-1}B$ \\
+\kixicase{F} & 時間の動き & $G$・$\frac{G}{s}$ を表9-7でもどす \\
+\kixicase{G} & $\sin$ の倍率・おくれ & $s=j\omega$。dB は $20\log_{10}|G|$。直列は dB のたし算 \\
+\kixicase{H} & データから & 最後の値で $K$、63.2\,\%の時刻で $\tau$ \\
+\end{bktable}
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{$G(s)$}{ジー・エス}{伝達関数。はじめの値を0にした $Y\div U$。$s=j\omega$ で周波数応答}{transfer function}{9-8}}{\bkkigocard{\begin{tikzpicture}[x=1mm,y=1mm]\draw[line width=1pt] (0,0) circle (3.2);\node[font=\Large] at (-4.6,4.6) {$+$};\node[font=\Large] at (4.6,-4.8) {$-$};\end{tikzpicture}}{くわえあわせてん}{ブロック線図で、矢印をたし引きする所。符号を横に書く}{summing point}{9-8}}
+
+\begin{kotoba}
+\small
+\bkword{伝達関数}{$G(s)=Y(s)\div U(s)$。はじめの値を0にしたときの、出てくるもの÷入れるもの。機械の性質を表す $s$ の式。}
+\bkword{ブロック線図}{箱（伝達関数）を矢印でつないだ図。○は加え合わせ点。}
+\bkword{フィードバック}{出てきたものをはかって、入れる側にもどすつなぎ方。全体の伝達関数は、表9-8の D の式。}
+\bkword{周波数応答}{$\sin$ を入れたときの倍率とおくれ。$s=j\omega$ を入れた $G(j\omega)$ で求める。}
+\bkword{定常のゲイン}{$G(0)$。落ち着いたときの倍率。}
+\end{kotoba}
+\bkidx{ぶろっくせんず}{ブロック線図}\bkidx{しゅうはすうおうとう}{周波数応答}\bkidx{すてっぷおうとう}{ステップ応答}
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、場合分けの表9-8のどの場合かを書きました。\textbf{例題を流れ図でたどってみよう}：図\ref{bk:9-8:fig-flow}でたどると表\ref{bk:9-8:tab-trace}のようになり、どれも1行めの場合に着きます（書いていない問いは「いいえ」。じぶんでとこうも同じ道すじ）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,32mm] X[l,m] Q[c,m,16mm]}, row{2-Z}={font=\footnotesize}, rowsep=0pt, colsep=3pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 微分方程式から & 微分方程式がある？ & \kixicase{A} \\
+2 & エンジンと車 & 箱が1列につながる？ & \kixicase{B} \\
+3 & 2つのスピーカー & 2つの箱を出たものをたす？ & \kixicase{C} \\
+4 & モーターの比例制御 & もどす線がある？ & \kixicase{D} \\
+5 & エアコン & もどす線がある？ & \kixicase{D} \\
+6 & 状態方程式から & 状態方程式がある？ & \kixicase{E} \\
+7 & ステップ応答など & 時間の動きがほしい？ & \kixicase{F} \\
+8 & ばねの周波数応答 & $\sin$ を入れた倍率がほしい？ & \kixicase{G} \\
+9 & 2段のフィルター & 1列につながる？ → $\sin$ を入れた倍率がほしい？ & \kixicase{B}\,\kixicase{G} \\
+10 & データから作る & 実験のデータから作る？ & \kixicase{H} \\
+\end{bktable}
+\bktabcaption{例題1〜10の流れ図の道すじ。例題1・2 は、A・B のあとの問いがすべて「いいえ」で、「A〜D で作った $G$ が答え」の四角で終わる。}\label{bk:9-8:tab-trace}
+\end{bkcenter}
+
+\begin{reidai}[微分方程式から伝達関数を作る]
+次の箱の伝達関数を作りましょう。\par
+（1）\nobreak RC 回路（$\tau=\qty{2}{s}$）：入れる電圧 $u$、コンデンサーの電圧 $v$ で $2\dot v+v=u$\par
+（2）\nobreak 6-13 のばね：入れる力 $f$、位置 $x$ で $0.5\ddot x+0.4\dot x+8x=f$\par
+\kangaekata \kixibaai{微分方程式があたえられている}{9-8}{A}\par
+\kixidan{1}\enspace $G=\dfrac{\text{出てくるもの}}{\text{入れるもの}}$。はじめの値は0。\par
+\kixinaosu{2}\enspace 9-5 の微分の行で、$\dot v\to sV$、$\ddot x\to s^2X$。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 （1）$2sV+V=U$\quad （はじめの値0で変換）\par
+\kixib $(2s+1)V=U$、\quad $G=\dfrac{V}{U}=\dfrac{1}{2s+1}$\par
+\kixia （2）$0.5s^2X+0.4sX+8X=F$\par
+\kixib $(0.5s^2+0.4s+8)X=F$、\quad $G=\dfrac{X}{F}=\dfrac{1}{0.5s^2+0.4s+8}$\par
+\kixia 確かめ：（1）$G(0)=1$（ゆっくりなら、入れた電圧がそのまま）。（2）$G(0)=\frac18$（ばねは 1\,N で $\frac18$\,m のびる）\par
+\kotae （1）\nobreak $\dfrac{1}{2s+1}$\quad（2）\nobreak $\dfrac{1}{0.5s^2+0.4s+8}$
+\end{reidai}
+
+\begin{jibun}
+次の箱の伝達関数を作り、$G(0)$ を求めましょう。\par
+（1）\nobreak 2倍にして表示する温度計：本当の温度 $u$、表示 $y$ で $30\dot y+y=2u$\par
+（2）\nobreak 車A：入れる力 $u$、位置 $x$ で $\ddot x+3\dot x+2x=u$
+\bkjans{（1）\nobreak $\frac{2}{30s+1}$、$G(0)=2$。（2）\nobreak $(s^2+3s+2)X=U$ で $\frac{1}{s^2+3s+2}$、$G(0)=\frac12$。}
+\end{jibun}
+
+\begin{reidai}[エンジンと車をつなぐ]
+エンジン $G_1=\dfrac{5000}{0.5s+1}$（アクセルをふむ量 $p$ → 力〔N〕）と、車のからだ $G_2=\dfrac{1}{1000s+50}$（力 → 速さ〔m/s〕）を直列につなぎます。全体の伝達関数と、アクセルを0.1ふみ続けたときに落ち着く速さを求めましょう。\par
+\kangaekata \kixibaai{箱が1列につながる}{9-8}{B}\par
+\kixidan{1}\enspace 全体の $G=\dfrac{V}{P}$。\par
+\kixidan{3}\enspace 直列はかけ算。落ち着く速さは $G(0)\times0.1$。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $G=G_2G_1=\dfrac{5000}{(0.5s+1)(1000s+50)}$\par
+\kixia $G(0)=\dfrac{5000}{1\times50}=100$\quad （$s=0$ を入れた）\par
+\kixia 落ち着く速さ $100\times0.1=10$\par
+\kotae $G=\dfrac{5000}{(0.5s+1)(1000s+50)}$。\qty{10}{m/s}（\qty{36}{km/h}）
+\end{reidai}
+
+\begin{jibun}
+ポンプ $G_1=\dfrac{50}{0.1s+1}$（電圧〔V〕→ 流れこむ水〔cm³/s〕）と、水そう $G_2=\dfrac{0.02}{50s+1}$（流れこむ水 → 水位〔cm〕）を直列につなぎます。全体の伝達関数と、2\,V を加え続けたときに落ち着く水位を求めましょう。
+\bkjans{$G=\frac{50\times0.02}{(0.1s+1)(50s+1)}=\frac{1}{(0.1s+1)(50s+1)}$。$G(0)=1$ で、$1\times2=\qty{2}{cm}$。}
+\end{jibun}
+
+\begin{reidai}[2つのスピーカー（並列）]
+2つのスピーカーに同じ電気信号 $U$ を分けて送ります。低い音用と高い音用に、次の回路を通します（$\tau=\qty{79.6}{\micro s}$。2\,kHz で分ける）。
+\kixiline{低い音用\enspace $G_1=\dfrac{1}{\tau s+1}$\qquad 高い音用\enspace $G_2=\dfrac{\tau s}{\tau s+1}$}
+2つから出る音をたしたときの伝達関数を求めましょう。\par
+\kangaekata \kixibaai{2つの箱を出たものをたす}{9-8}{C}\par
+\kixidan{1}\enspace 全体の $G=\dfrac{Y}{U}$、$Y=G_1U+G_2U$。\par
+\kixidan{3}\enspace 並列はたし算。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $G=G_1+G_2=\dfrac{1}{\tau s+1}+\dfrac{\tau s}{\tau s+1}$\par
+\kixia $=\dfrac{1+\tau s}{\tau s+1}=1$\quad （分母が同じなので、分子をたした）\par
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=42mm, xmin=2, xmax=4.6, ymin=0, ymax=1.18, xtick={2,3,3.30103,4}, xticklabels={100,1000,2000,10000}, ytick={0.5,0.707,1}, yticklabels={0.5,0.71,1}, xlabel={周波数（Hz）}, ylabel={倍率}]
+  \addplot[bkGray, line width=1pt, dash pattern=on 4pt off 2pt, domain=2:4.6] {1};
+  \addplot[bkBlue, line width=1.5pt, domain=2:4.6, samples=120] {1/sqrt(1+(10^x/2000)^2)};
+  \addplot[bkRed, line width=1.5pt, domain=2:4.6, samples=120] {(10^x/2000)/sqrt(1+(10^x/2000)^2)};
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:2.05,1.02) {点線：たした全体 $G_1+G_2=1$};
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:2.05,0.62) {青：低い音用 $|G_1|$};
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:4.55,0.62) {赤：高い音用 $|G_2|$};
+\end{axis}
+\end{tikzpicture}\par}
+\kotae $G=1$（低い音と高い音に分けても、たすと、もとの信号にもどる）
+\end{reidai}
+
+\begin{jibun}
+同じ入力が $G_1=\dfrac{2}{s+1}$ と $G_2=\dfrac{3}{s+2}$ の2つの箱に入り、出たものをたします。全体の伝達関数を1つの分数で表しましょう。
+\bkjans{$\frac{2}{s+1}+\frac{3}{s+2}=\frac{2(s+2)+3(s+1)}{(s+1)(s+2)}=\frac{5s+7}{(s+1)(s+2)}$。}
+\end{jibun}
+
+\begin{reidai}[モーターの比例制御]
+モーター $\dfrac{10}{0.5s+1}$（電圧 → 回る速さ）を、比例の強さ $K_{\mathrm p}=1$ で比例制御します（速さはそのままはかる。$G_2=1$）。全体の伝達関数、分母が0になる $s$、時定数、目標とのずれ（何\,\%残るか）を求めましょう。\par
+\kangaekata \kixibaai{もどす線がある}{9-8}{D}\par
+\kixidan{1}\enspace 目標 $R$ から速さ $Y$ への $\dfrac{Y}{R}$。\par
+\kixidan{3}\enspace 1周の式から $\dfrac{G_1}{1+G_1G_2}$。$G_1=K_{\mathrm p}\times\dfrac{10}{0.5s+1}$（直列）。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $G_1=\dfrac{10}{0.5s+1}$、$G_2=1$\par
+\kixia $\dfrac{Y}{R}=\dfrac{G_1}{1+G_1}=\dfrac{10}{0.5s+1+10}=\dfrac{10}{0.5s+11}$\quad （分母と分子に $0.5s+1$ をかけた）\par
+\kixia $0.5s+11=0$ から $s=-22$。時定数 $\frac{1}{22}\approx0.045$\par
+\kixia 定常のゲイン $\frac{10}{11}=0.909$ → ずれ $1-0.909=0.091$\par
+\kotae $\dfrac{10}{0.5s+11}$。$s=-22$、時定数 約 \qty{0.045}{s}、ずれ約9.1\,\%
+\end{reidai}
+
+\begin{jibun}
+例題4のモーターを、比例の強さ $K_{\mathrm p}=0.1$ で比例制御します。全体の伝達関数、分母が0になる $s$、時定数、ずれを求めましょう。
+\bkjans{$G_1=\frac{1}{0.5s+1}$。$\frac{G_1}{1+G_1}=\frac{1}{0.5s+2}$。$s=-4$、時定数 \qty{0.25}{s}。定常のゲイン $\frac12$ で、ずれ50\,\%。}
+\end{jibun}
+
+\begin{reidai}[エアコン（比例制御）]
+⑦のエアコン（外 35\,℃、設定 26\,℃、部屋の箱 $\dfrac{R}{60s+1}$、$s$ は 1/分）を、$RK_{\mathrm p}=9$ で比例制御します。部屋が落ち着く温度と、時定数を求めましょう。\par
+\kangaekata \kixibaai{もどす線がある}{9-8}{D}\par
+\kixidan{1}\enspace 目標（外より9\,℃低く）から、外より何℃低いか $y$ への伝達関数。\par
+\kixidan{3}\enspace $G_1=\dfrac{RK_{\mathrm p}}{60s+1}$、$G_2=1$ で $\dfrac{G_1}{1+G_1G_2}$。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $\dfrac{G_1}{1+G_1}=\dfrac{9}{60s+1+9}=\dfrac{9}{60s+10}$\par
+\kixia 定常のゲイン $\frac{9}{10}=0.9$。$y$ は $9\times0.9=8.1$\,℃\par
+\kixia 温度 $35-8.1=26.9$。時定数 $60\div10=6$\par
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=46mm, xmin=0, xmax=42, ymin=24.2, ymax=36, xtick={6,12,18,24,30,36}, ytick={26.9,29.9,35}, yticklabels={26.9,29.9,35}, xlabel={$t$（分）}, ylabel={温度（℃）}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:40] {26};
+  \addplot[bkBlue, line width=1.6pt, domain=0:40, samples=100] {35-8.1*(1-exp(-x/6))};
+  \draw[bkInk, line width=0.4pt, dash pattern=on 1pt off 1pt] (axis cs:6,24.5) -- (axis cs:6,29.88) -- (axis cs:0,29.88);
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:15,27.6) {26.9\,℃で落ち着く};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:15,25.8) {点線：設定 26\,℃（0.9\,℃のずれ）};
+\end{axis}
+\end{tikzpicture}\par}
+\kotae 26.9\,℃で落ち着く（0.9\,℃のずれが残る）。時定数6分
+\end{reidai}
+
+\begin{jibun}
+例題5のエアコンを、$RK_{\mathrm p}=4$ で比例制御します。落ち着く温度と時定数を求めましょう。
+\bkjans{$\frac{4}{60s+5}$。定常のゲイン0.8、$y=9\times0.8=7.2$\,℃で $35-7.2=27.8$\,℃。時定数 $60\div5=12$ 分。}
+\end{jibun}
+
+\begin{reidai}[状態方程式から作る]
+車A の状態方程式（$\vec x=(x,\ \dot x)$）の伝達関数 $G=C(sI-A)^{-1}B$ を求めましょう。
+\[ A=\begin{pmatrix}0&1\\-2&-3\end{pmatrix},\qquad B=\begin{pmatrix}0\\1\end{pmatrix},\qquad C=\begin{pmatrix}1&0\end{pmatrix} \]
+\kangaekata \kixibaai{状態方程式があたえられている}{9-8}{E}\par
+\kixidan{1}\enspace $G=\dfrac{Y}{U}$。はじめの値は0。\par
+\kixinaosu{4}\enspace $sI-A$ を作り、2×2 の逆行列（7-5）。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $sI-A$ は、1行め $(s,\ -1)$、2行め $(2,\ s+3)$\par
+\kixia 行列式 $s(s+3)-(-1)\times2=s^2+3s+2$\par
+\kixia 逆行列は $\dfrac{1}{s^2+3s+2}$ ×（1行め $(s+3,\ 1)$、2行め $(-2,\ s)$）\par
+\kixia $B$ をかけると2列めが残る：$\dfrac{1}{s^2+3s+2}\times(1,\ s)$ のたて書き\par
+\kixia $C$ をかけると1つめの成分が残る：$\dfrac{1}{s^2+3s+2}$\par
+\kotae $G=\dfrac{1}{s^2+3s+2}$（微分方程式から作ったものと同じ）
+\end{reidai}
+
+\begin{jibun}
+車B（$\ddot x+2\dot x+5x=u$）の状態方程式は、$A$ の1行めが $(0,\ 1)$、2行めが $(-5,\ -2)$、$B$ と $C$ は例題6と同じです。$G=C(sI-A)^{-1}B$ を求めましょう。
+\bkjans{$\det(sI-A)=s^2+2s+5$。逆行列の2列めは $\frac{1}{s^2+2s+5}\times(1,\ s)$。$G=\frac{1}{s^2+2s+5}$。}
+\end{jibun}
+
+\begin{reidai}[ステップ応答とインパルス応答]
+（1）\nobreak 車のからだ $G=\dfrac{1}{1000s+50}$ に、\qty{500}{N} の力を入れ続けたときの速さ $v$ と、20秒後の速さを求めましょう（$e^{-1}=0.3679$）。\par
+（2）\nobreak RC 回路 $G=\dfrac{1}{2s+1}$ のインパルス応答を求めましょう。\par
+\kangaekata \kixibaai{時間の動きがほしい}{9-8}{F}\par
+\kixidan{1}\enspace $Y=G\times U$ をもどす。ステップは $U=\frac{500}{s}$、インパルスは $U=1$。\par
+\kixinaosu{3}\enspace 部分分数に分けて、表9-7でもどす。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 （1）$V=\dfrac{500}{s(1000s+50)}=\dfrac{0.5}{s(s+0.05)}=\dfrac{10}{s}-\dfrac{10}{s+0.05}$\par
+\kixib $v=10-10e^{-0.05t}$、$v(20)=10-10e^{-1}=6.32$\par
+\kixia （2）$Y=\dfrac{1}{2s+1}=\dfrac12\times\dfrac{1}{s+0.5}$\par
+\kixib $y=\dfrac12e^{-t/2}$\par
+\kotae （1）\nobreak $v=10-10e^{-0.05t}$、20秒後 約 \qty{6.32}{m/s}\quad（2）\nobreak $\dfrac12e^{-t/2}$
+\end{reidai}
+
+\begin{jibun}
+（1）\nobreak 質量 \qty{1500}{kg}、抵抗 \qty{75}{N} /（m/s）の車 $G=\dfrac{1}{1500s+75}$ に、\qty{600}{N} を入れ続けたときの速さと、20秒後の速さを求めましょう（$e^{-1}=0.3679$）。\par
+（2）\nobreak 熱電対 $G=\dfrac{1}{30s+1}$ のインパルス応答を求めましょう。
+\bkjans{（1）\nobreak $V=\frac{8}{s}-\frac{8}{s+0.05}$、$v=8-8e^{-0.05t}$、20秒後 約 \qty{5.06}{m/s}。（2）\nobreak $\frac{1}{30}e^{-t/30}$。}
+\end{jibun}
+
+\begin{reidai}[ばねの周波数応答]
+6-13 のばね $G=\dfrac{1}{0.5s^2+0.4s+8}$ を、$F_0=\qty{0.8}{N}$ の力でゆすります。（1）\nobreak $\omega=\qty{2}{rad/s}$、（2）\nobreak $\omega=\qty{8}{rad/s}$ のとき、落ち着いたゆれの大きさと、おくれの角を求めましょう（$\sqrt{36.64}\approx6.053$、$\sqrt{586.24}\approx24.21$、$\tan^{-1}\frac{0.8}{6}\approx7.6°$）。\par
+\kangaekata \kixibaai{$\sin$ を入れたときの倍率とおくれがほしい}{9-8}{G}\par
+\kixidan{1}\enspace 倍率 $|G(j\omega)|$、おくれは $G(j\omega)$ の角。\par
+\kixidan{3}\enspace 変換も逆変換もしない。$s=j\omega$ を入れる。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 （1）$s=2j$ を入れる。$s^2=(2j)^2=-4$。\par
+\kixia 分母 $=0.5\times(-4)+0.4\times2j+8=6+0.8j$\par
+\kixia $|G|=1\div\sqrt{36.64}\approx0.1652$。ゆれ $0.8\times0.1652\approx0.132$\par
+\kixia 分母の点は右上（実部が正）で、角 $\tan^{-1}\frac{0.8}{6}\approx7.6°$。$G$ は逆数なので $-7.6°$\par
+\kixia （2）$s=8j$ を入れる。$s^2=(8j)^2=-64$。\par
+\kixia 分母 $=0.5\times(-64)+0.4\times8j+8=-24+3.2j$\par
+\kixia $|G|=1\div\sqrt{586.24}\approx0.0413$。ゆれ $0.8\times0.0413\approx0.033$\par
+\kixia 分母の点は左上（実部が負）で、角は $180°$ から引いて $180°-7.6°=172.4°$。$G$ は $-172.4°$\par
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=30mm, axis lines=middle, xmin=-27, xmax=23, ymin=-0.6, ymax=4.6, xtick={-24,6}, ytick={0.8,3.2}, xlabel={実部}, ylabel={虚部}, xlabel style={anchor=north east}, ylabel style={anchor=south}]
+  \draw[bkBlue, line width=1.2pt, -{Stealth[length=2mm]}] (axis cs:0,0) -- (axis cs:6,0.8);
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=2mm]}] (axis cs:0,0) -- (axis cs:-24,3.2);
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:6.8,1.0) {（1）$6+0.8j$：角 7.6°};
+  \node[font=\footnotesize, anchor=south, fill=white, inner sep=1pt] at (axis cs:-20,3.6) {（2）$-24+3.2j$：角 $180°-7.6°$};
+\end{axis}
+\end{tikzpicture}\par}
+\kotae （1）\nobreak 約 \qty{0.132}{m}、7.6°おくれる（6-13 と同じ）\quad（2）\nobreak 約 \qty{0.033}{m}、172.4°おくれる
+\end{reidai}
+
+\begin{jibun}
+例題8のばねを、$F_0=\qty{0.8}{N}$ でゆすります。（1）\nobreak $\omega=\qty{3}{rad/s}$、（2）\nobreak $\omega=\qty{5}{rad/s}$ のとき、ゆれの大きさと、おくれの角を求めましょう（$\sqrt{13.69}=3.7$、$\sqrt{24.25}\approx4.924$、$\tan^{-1}\frac{1.2}{3.5}\approx18.9°$、$\tan^{-1}\frac{2}{4.5}\approx24.0°$）。
+\bkjans{（1）\nobreak 分母 $3.5+1.2j$、ゆれ約 \qty{0.216}{m}、おくれ約18.9°。（2）\nobreak 分母 $-4.5+2j$、ゆれ約 \qty{0.162}{m}、おくれ $180°-24.0°=156.0°$。}
+\end{jibun}
+
+\begin{reidai}[2段のフィルターを dB で]
+⑨の 100\,Hz のローパスフィルター $G=\dfrac{1}{\tau s+1}$（$\omega\tau=\frac{f}{100}$）を、バッファーをはさんで2段つなぎます。300\,Hz の信号の倍率を、1段・2段それぞれ dB と倍で求めましょう（$\log_{10}10=1$）。\par
+\kangaekata \kixibaai{箱が1列につながり、$\sin$ を入れたときの倍率がほしい}{9-8}{B,G}\par
+\kixidan{1}\enspace 2段の伝達関数 $G\times G$ の $|G(j\omega)|$。\par
+\kixidan{3}\enspace 直列はかけ算、dB はたし算。$s=j\omega$ を入れる。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 $\omega\tau=\frac{300}{100}=3$、$|G|=\dfrac{1}{\sqrt{1+3^2}}=\dfrac{1}{\sqrt{10}}$\par
+\kixia 1段：$20\log_{10}\dfrac{1}{\sqrt{10}}=-10\log_{10}10=-10$\,dB\par
+\kixia 2段：$-10+(-10)=-20$\,dB（たし算）。倍は $\dfrac{1}{\sqrt{10}}\times\dfrac{1}{\sqrt{10}}=\dfrac{1}{10}$\par
+\kotae 1段 $-10$\,dB（約0.316倍）、2段 $-20$\,dB（0.1倍）
+\end{reidai}
+
+\begin{jibun}
+同じフィルターで、100\,Hz の信号の倍率を、1段・2段それぞれ dB と倍で求めましょう（$\log_{10}2=0.301$）。
+\bkjans{$\omega\tau=1$、$|G|=\frac{1}{\sqrt2}\approx0.707$。1段 $-10\log_{10}2\approx-3.01$\,dB、2段 $-6.02$\,dB、倍は $\frac12$。}
+\end{jibun}
+
+\begin{reidai}[データから伝達関数を作る]
+モーターに $t=0$ から 1\,V を加え続け、回る速さ（rad/s）をはかると、表のようになりました。1次おくれ $\dfrac{K}{\tau s+1}$ として、$K$ と $\tau$ を求めましょう。
+\begin{center}\begin{bktable}{colspec={Q[c,m,22mm] *{7}{Q[c,m,10mm]}}, row{1-Z}={font=\small}, rowsep=1pt, colsep=2pt}
+$t$（s） & 0 & 0.25 & 0.5 & 1 & 1.5 & 2 & 3 \\
+速さ & 0 & 3.93 & 6.32 & 8.65 & 9.50 & 9.82 & 9.98 \\
+\end{bktable}\end{center}
+\kangaekata \kixibaai{実験のデータから作る（1次おくれ）}{9-8}{H}\par
+\kixidan{1}\enspace $G=\dfrac{K}{\tau s+1}$ の $K$ と $\tau$。\par
+\kixidan{3}\enspace 最後の値÷1\,V＝$K$。最後の値の63.2\,\%に着く時刻＝$\tau$。\par
+\shiki\kixis\hangindent=2.6\zw\hangafter=1 最後の値は約10（3秒で9.98）なので $K=10\div1=10$\par
+\kixia $10\times0.632=6.32$ に着くのは0.5秒なので $\tau=0.5$\par
+\par\vspace{2pt}{\centering\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=40mm, xmin=0, xmax=3.3, ymin=0, ymax=11.5, xtick={0.5,1,2,3}, ytick={6.32,10}, xlabel={$t$（s）}, ylabel={速さ}]
+\addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, domain=0:3.1] {10};
+\addplot[bkBlue, line width=1.4pt, domain=0:3.1] {10-10*exp(-2*x)};
+\addplot[only marks, mark=*, mark size=1.6pt, bkOrange!85!black] coordinates {(0,0) (0.25,3.93) (0.5,6.32) (1,8.65) (1.5,9.50) (2,9.82) (3,9.98)};
+\draw[bkInk, line width=0.4pt, dash pattern=on 1pt off 1pt] (axis cs:0.5,0) -- (axis cs:0.5,6.32) -- (axis cs:0,6.32);
+\node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.1,4.6) {点：はかった値。線：$10(1-e^{-t/0.5})$};
+\end{axis}
+\end{tikzpicture}\par}
+\kotae $K=10$、$\tau=\qty{0.5}{s}$。$G=\dfrac{10}{0.5s+1}$（表\ref{bk:9-8:tab-g}のモーター）
+\end{reidai}
+
+\begin{jibun}
+20\,℃の熱電対を、$t=0$ に 80\,℃のお湯に入れると、読みは次のようになりました。本当の温度の上がり分（60\,℃）を入れたものとして、1次おくれ $\dfrac{K}{\tau s+1}$ の $K$ と $\tau$ を求めましょう。
+\begin{center}\begin{bktable}{colspec={Q[c,m,22mm] *{7}{Q[c,m,10mm]}}, row{1-Z}={font=\small}, rowsep=1pt, colsep=2pt}
+$t$（s） & 0 & 10 & 20 & 30 & 60 & 90 & 150 \\
+読み（℃） & 20 & 37.0 & 49.2 & 57.9 & 71.9 & 77.0 & 79.6 \\
+\end{bktable}\end{center}
+\bkjans{$K=60\div60=1$。60の63.2\,\%（読み57.9\,℃）に着くのは30秒で、$\tau=\qty{30}{s}$。$G=\frac{1}{30s+1}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 伝達関数に、はじめの値を入れる}
+\bkng{$1000\dot v+50v=f$、$v(0)=2$ から $G=\dfrac{V}{F}=\dfrac{F+2000}{(1000s+50)F}$}
+\bkok{伝達関数は、はじめの値を0にして作る。$G=\dfrac{1}{1000s+50}$}
+\[ \kixiNt{G(s)}=\kixiSt{2}{\frac{1}{1000s+50}} \]
+はじめの値の分は、伝達関数とは別に、9-7 のように足します。伝達関数は「機械の性質」なので、$F$ や $v(0)$ は入りません。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixiEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② フィードバックの符号}
+\raggedright\bkng{引いてもどすのに $\dfrac{G_1}{1-G_1G_2}$}
+\bkok{引いてもどすなら $\dfrac{G_1}{1+G_1G_2}$}
+1周の式 $Y=G_1(R-G_2Y)$ を解くと、分母は $1+G_1G_2$ です。加え合わせ点の符号を見ます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 振幅の dB で $10\log$}
+\raggedright\bkng{倍率 $\frac{1}{10}$ を $10\log_{10}\frac{1}{10}=-10$\,dB}
+\bkok{振幅（電圧・ゆれ）の倍率は $20\log_{10}$ で $-20$\,dB}
+$10\log$ は電力の倍率のときです。電力は振幅の2乗なので、$10\log a^2=20\log a$（3-12）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixiEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ 6-13 の $G(\omega)$ と同じだと思う}
+\raggedright\bkng{6-13 の\\$G(\omega)=(k-m\omega^2)^2+(c\omega)^2$\\が伝達関数}
+\bkok{伝達関数は $G(s)=\dfrac{1}{ms^2+cs+k}$。6-13 の $G(\omega)$ は $\dfrac{1}{|G(j\omega)|^2}$}
+同じ文字でも、章ごとの名前のつけ方がちがいます。式で確かめます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 行列の順番も入れかえる}
+\raggedright\bkng{$C(sI-A)^{-1}B$ を $B\,C(sI-A)^{-1}$ と入れかえる}
+\bkok{行列のかけ算の順番は変えない（7-3）}
+伝達関数どうしの $G_1G_2=G_2G_1$ は、ただの分数の式だから成り立ちます。行列では成り立ちません。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑥ 名前の $G(s)$ に、時刻 $t$ を入れる}
+\bkng{車の $G(s)=\dfrac{1}{1000s+50}$ に $s=20$ を入れて、20秒後の速さ}
+\bkok{時刻の動きは、$G\times U$ を表9-7でもどしてから、$t=20$ を入れる}
+$s$ は時刻ではありません（9-5）。$G(s)$ は $s$ の世界の式で、時間の世界の値を知るには、もどす操作が必要です。$s$ に入れてよい数は、$s=0$（定常のゲイン）と $s=j\omega$（周波数応答）のように、意味のわかっているものだけです。
+\end{tsumazuki}
+
+\begin{column}{ワットの調速機から、スマートフォンまで}
+蒸気機関の回る速さを一定に保つ「調速機（ガバナー）」は、回る速さが上がると、おもりが遠心力で開いて、蒸気の弁をしぼるしくみです。速さをはかって、入れる側にもどすフィードバックそのものです。18世紀の終わりにワットの蒸気機関に使われて広まったと伝えられています。その後、ゆれが止まらない調速機があることが問題になり、19世紀にマクスウェルが、微分方程式でその安定を調べました。今では、スマートフォンの手ぶれ補正やカメラのピント合わせの中でも、フィードバック制御が働いています。
+\end{column}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixibox{制御の設計図：ブロック線図}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+自動車のクルーズコントロール（速さを一定に保つしくみ）、エレベーター、ドローンの姿勢、工場の温度の制御など、機械を自動で動かすしくみは、まずブロック線図で設計します。「目標→制御する箱→機械→センサーでもどす」の形で、それぞれの箱を伝達関数で書けば、全体の伝達関数は⑦の式で1つにまとまります（物理 波-4、9-9・9-12）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=0.94mm, y=1mm]
+  \node[kixi sum, minimum size=4.5mm] (s) at (3,0) {};
+  \node[kixi blk, minimum width=11mm, minimum height=8mm, inner xsep=1mm, font=\footnotesize] (k) at (15,0) {制御};
+  \node[kixi blk, minimum width=11mm, minimum height=8mm, inner xsep=1mm, font=\footnotesize] (m) at (30,0) {機械};
+  \node[kixi blk, minimum width=11mm, minimum height=8mm, inner xsep=1mm, font=\footnotesize] (c) at (22.5,-13) {センサー};
+  \draw[kixi sig] (-3,0) -- (s);
+  \draw[kixi sig] (s) -- (k);
+  \draw[kixi sig] (k) -- (m);
+  \draw[kixi sig] (m) -- (44,0);
+  \fill[bkInk] (38.5,0) circle (0.6);
+
+  \draw[kixi sig] (38.5,0) |- (c);
+  \draw[kixi sig] (c) -| (s);
+  \kixipm{(s)}{(-3,-3.4)}{-}
+  \kixipm{(s)}{(-3,3.2)}{+}
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{16pt}
+\kixibox{オーディオ：イコライザーとスピーカー}
+音楽の高い音や低い音を強めたり弱めたりするイコライザーは、周波数ごとの倍率（周波数応答）を dB で調整する装置です。スピーカー・アンプ・部屋の響きを直列の箱と考えると、全体の dB は、それぞれの dB のたし算で見積もれます（⑨。物理 波-11）。
+\par\vspace{4pt}
+\kixibox{防振：機械のゆれを伝えない}
+洗たく機や工場の機械の下に入れるゴム（防振ゴム）は、ばね・ダンパーの箱です。⑧のように $s=j\omega$ を入れると、ゆれの周波数が、その箱の固有角振動数よりずっと高ければ、床へ伝わるゆれの倍率は小さくなります。だから防振ゴムは、固有角振動数が、機械のゆれより十分低くなるように選びます（物理 波-2）。
+\end{butsuri}
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $4\dot y+y=2u$ の伝達関数と、$G(0)$ を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$(4s+1)Y=2U$ で $G=\frac{2}{4s+1}$。$G(0)=2$。}
+
+\bkproblem $G_1=\dfrac{4}{s+2}$ と $G_2=\dfrac{3}{s+6}$ を直列につないだ伝達関数と、定常のゲインを求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$G=\frac{12}{(s+2)(s+6)}$。$G(0)=\frac{12}{12}=1$。}
+
+\bkproblem 同じ入力が $G_1=\dfrac{1}{s+1}$ と $G_2=\dfrac{2}{s+3}$ に入り、出たものをたします。全体の伝達関数を1つの分数で表しましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\frac{(s+3)+2(s+1)}{(s+1)(s+3)}=\frac{3s+5}{(s+1)(s+3)}$。}
+
+\bkproblem 例題4のモーターを $K_{\mathrm p}=10$ で比例制御します。全体の伝達関数、分母が0になる $s$、ずれを求めましょう\mbox{（\bkreidairef{4}）}。
+\bkpans{$G_1=\frac{100}{0.5s+1}$。$\frac{100}{0.5s+101}$。$s=-202$。定常のゲイン $\frac{100}{101}$ で、ずれ約1.0\,\%。}
+
+\bkproblem 車のからだ $G=\dfrac{1}{1000s+50}$ に \qty{250}{N} を入れ続けたときの速さ $v$ と、60秒後の速さを求めましょう（$e^{-3}=0.0498$）\mbox{（\bkreidairef{7}）}。
+\bkpans{$V=\frac{250}{s(1000s+50)}=\frac{5}{s}-\frac{5}{s+0.05}$。$v=5-5e^{-0.05t}$。60秒後 $5-5\times0.0498\approx\qty{4.75}{m/s}$。}
+
+\bkproblem 例題10と同じ方法で、ステップ（2\,V）を入れたときの最後の値が \qty{30}{rad/s}、その63.2\,\%に着くのが \qty{0.2}{s} のモーターの伝達関数を求めましょう\mbox{（\bkreidairef{10}）}。
+\bkpans{$K=30\div2=15$、$\tau=0.2$。$G=\frac{15}{0.2s+1}$。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 例題5のエアコンを $RK_{\mathrm p}=19$ で比例制御します。落ち着く温度と時定数を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$\frac{19}{60s+20}$。定常のゲイン0.95、$y=9\times0.95=8.55$\,℃で $35-8.55=26.45$\,℃。時定数 $60\div20=3$ 分。}
+
+\bkproblem $A$ の1行めが $(0,\ 1)$、2行めが $(-6,\ -5)$、$B$ と $C$ が例題6と同じ状態方程式の伝達関数を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\det(sI-A)=s^2+5s+6$。$G=\frac{1}{s^2+5s+6}$。}
+
+\bkproblem 例題8のばねを $\omega=6$\,rad/s でゆすります（$F_0=\qty{0.8}{N}$）。ゆれの大きさとおくれの角を求めましょう（電卓を使ってよい）\mbox{（\bkreidairef{8}）}。
+\bkpans{分母 $-10+2.4j$、$|G|=1\div\sqrt{105.76}\approx0.0972$、ゆれ約 \qty{0.078}{m}。実部が負で、おくれ $180°-13.5°=166.5°$。}
+
+\bkproblem 例題9のフィルターを3段つなぐと、1\,kHz の信号は何 dB になりますか。1段は1\,kHz で $-20.04$\,dB です\mbox{（\bkreidairef{9}）}。
+\bkpans{直列なので dB はたし算。$3\times(-20.04)\approx-60.1$\,dB（約1000分の1）。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 「入れると出てくる」箱を、伝達関数 $G(s)=Y(s)\div U(s)$ で表せることを、ブロック線図と表計算で説明できる。\bkfurref{bk:9-8:hako}
+\item 微分方程式から伝達関数を作り、箱を直列・並列につないだ伝達関数と、ステップ応答・インパルス応答を求められる。\bkfurref{bk:9-8:tsukuru}
+\item 場合分けの表9-8を使って、フィードバック・状態方程式・周波数応答（dB）の場合も、伝達関数を求めて使える。\bkfurref{bk:9-8:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{伝達関数の分母が0になる $s$ で、機械の動き方が決まっていたね。次の 9-9 では、その $s$ を「極」とよんで、落ち着くかどうかを見分けるよ。}

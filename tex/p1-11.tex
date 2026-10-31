@@ -1,0 +1,1148 @@
+%% 第13回編集委員会（物理第1巻）
+%% p1-11.tex  力-11　ねじる・ふくらむ・曲がる：ねじりと座屈（組 P1-6）
+%% 数値はすべて Python で計算した（scratchpad/phys1/力-11/calc11.py）。g＝9.8 m/s²。
+%% 記号（計画書 C-1）：ねじりモーメント T、極断面二次モーメント I_p、極断面係数 Z_p、ねじれ角 φ、座屈荷重 F_cr、
+%%   伝達動力 P、回転数 n、角速度 ω、横弾性係数 G、ひずみエネルギー U、圧力 p（ゲージ圧と書き分ける）、厚さ t、
+%%   コイルばねの巻数は n_c（回転数 n とぶつけない）。曲げは力-10 と同じ（y は横へのたわみ）。
+%% 出典：
+%%   鋼 E＝205 GPa、アルミニウム合金 E＝69 GPa：巻末の表。鋼の G＝79 GPa は E＝2G(1＋ν)（力-9）で ν＝0.3 として計算（78.8 GPa）。
+%%   単管足場の鋼管 φ48.6×2.4（JIS G 3444 STK500、降伏点 355 N/mm² 以上）：単管の性能表（pdfcoffee 掲載の JIS G 3444:2015 表）
+%%   アルミ缶：胴の厚さ 約0.1 mm（東京大学 ICMS ポスター 2021 の実測で平均 0.13 mm。いちばんうすい所は約0.1 mm）、
+%%     内圧（ゲージ圧）約0.3 MPa は炭酸飲料の目安（缶の設計の最大内圧は約0.6 MPa：US 特許 12384590 の記述）〔要：メーカー資料〕
+%%   NASA SP-8007（Buckling of Thin-Walled Circular Cylinders、1965、1968改訂）は 1930〜60年代の実験にもとづく：
+%%     NASA NESC Technical Bulletin 16-01 "Buckling Knockdown Factors"（NTRS 20240000391）
+%%   NASA Shell Buckling Knockdown Factor Project（2007年に NESC が開始）：NTRS 20120008172
+%%   オイラーの柱の式（1744年、『極大・極小の性質をもつ曲線を見つける方法』の付録）、ケベック橋（1907年8月29日、75人死亡、
+%%     下弦材の座屈）：Timoshenko, History of Strength of Materials (1953)、ケベック橋の調査報告（1908）
+\makeatletter
+\newcommand\pxlhead[1]{\par\addvspace{4pt}\Needspace{6\baselineskip}\noindent\textbf{#1}\par\nobreak\noindent\ignorespaces}
+\newcommand\pxlq[2]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{#2}}
+\newcommand\pxlu[1]{\unit[inter-unit-product=\ensuremath{\cdot}]{#1}}
+% 支点（ピン）。上向き・下向きどちらにも使う  \pxlpin{(x,y)}{角度}   角度 0 で下に台
+\newcommand\pxlpin[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=bkLine!70, draw=bkInk, line width=0.6pt] (0,0) -- (-2.3,-3.8) -- (2.3,-3.8) -- cycle;
+  \draw[bkInk, line width=0.6pt] (-3.4,-3.8) -- (3.4,-3.8);
+  \foreach \i in {-3.0,-1.6,-0.2,1.2,2.6} {\draw[bkGray, line width=0.4pt] (\i,-3.8) -- ++(-1.1,-1.2);}
+\end{scope}}
+% 固定（地面・天井）  \pxlfix{(x,y)}{はば}{上か下}  上なら天井（はしごの線が上）
+\newcommand\pxlground[2]{\begin{scope}[shift={#1}]
+  \fill[bkLine!60] (-#2/2,-2.5) rectangle (#2/2,0); \draw[bkInk, line width=0.8pt] (-#2/2,0) -- (#2/2,0);
+  \pgfmathsetmacro\pxla{-#2/2}\pgfmathsetmacro\pxlb{-#2/2+2}\pgfmathsetmacro\pxlc{#2/2}\foreach \xx in {\pxla,\pxlb,...,\pxlc} {\draw[bkGray, line width=0.4pt] (\xx,0) -- ++(-1.4,-2.2);}
+\end{scope}}
+\newcommand\pxlceil[2]{\begin{scope}[shift={#1}]
+  \fill[bkLine!60] (-#2/2,0) rectangle (#2/2,2.5); \draw[bkInk, line width=0.8pt] (-#2/2,0) -- (#2/2,0);
+  \pgfmathsetmacro\pxla{-#2/2}\pgfmathsetmacro\pxlb{-#2/2+2}\pgfmathsetmacro\pxlc{#2/2}\foreach \xx in {\pxla,\pxlb,...,\pxlc} {\draw[bkGray, line width=0.4pt] (\xx,0) -- ++(1.4,2.2);}
+\end{scope}}
+\makeatother
+
+\phchapter{11}{ねじる・ふくらむ・曲がる：ねじりと座屈}{細い棒を上から押すと、急にぐにゃりと曲がるのはなぜ？}{\bklevel{5}}{ねじる・ふくらむ・曲がる：ねじりと座屈}
+\bkmichishirube{5-18,6-6,8-2,8-6,力-4,力-8,力-10}{力-16,波-1,熱-3}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 棒を押す・ねじる・内からふくらませると、どこがどう変わるかを、実験と表から言える。
+\item \bklevel{4}\enspace 軸が伝える動力とねじりモーメント、圧力容器の壁の応力、柱が曲がり始める力を計算できる。
+\item \bklevel{5}\enspace ねじり・ひずみエネルギー・座屈の式を導き、カスティリアーノの定理でたわみを求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{コイルばねのばね定数 $k=\dfrac{Gd^4}{8n_{\rm c}D^3}$}{中学理科}{ph:力-11:coil}
+\phkx{$F=kx$（ばねののび）、ばねの直列・並列}{中学理科・高校物理}{力-8 で導く}
+\phk{曲面が受ける圧力の力＝圧力×投影面積}{高校物理}{ph:力-11:toei}
+\phkx{$p=\dfrac{F}{S}$（圧力）}{中学理科}{力-12 で導く}
+\phkx{$P=Fv$（仕事率）}{高校物理基礎}{力-4 で導く}
+}
+
+\begin{hatena}
+\par\vspace{3pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+キッチンスケールの上に、乾いたスパゲッティを1本立てて、上から指でそっと押してみましょう。はじめはまっすぐのまま、スケールの数字だけがふえていきます。ところが、ある力をこえたとたん、スパゲッティは急にぐにゃりと横へ曲がり、それ以上は強く押せなくなります。
+
+少しずつ押しているのに、なぜ「急に」曲がるのでしょう。どんな力で曲がるかは、何で決まるのかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!30] (0,0) rectangle (30,6); \draw[bkInk, line width=0.6pt] (0,0) rectangle (30,6);
+  \fill[white] (9,1.5) rectangle (21,4.5); \draw[bkInk, line width=0.4pt] (9,1.5) rectangle (21,4.5);
+  \node[font=\sffamily\footnotesize] at (15,3) {124 g};
+  % まっすぐ
+  \draw[bkYellow!80!black, line width=1.3pt] (8,6) -- (8,40);
+  \draw[bk arrow, bkRed, line width=1.1pt] (8,48) -- (8,41.5);
+  \node[anchor=north, font=\sffamily\footnotesize] at (8,-1) {はじめ};
+  % 曲がった
+  \draw[bkYellow!80!black, line width=1.3pt] (24,6) .. controls (31,18) and (31,28) .. (24,40);
+  \draw[bk arrow, bkRed, line width=1.1pt] (24,48) -- (24,41.5);
+  \node[anchor=north, font=\sffamily\footnotesize] at (24,-1) {急に曲がる};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-10 では、はりを横から曲げました。この章では、棒を\textbf{ねじる}（モータの軸）、内側から\textbf{ふくらませる}（タンク・缶）、軸の向きに\textbf{押して曲げる}（柱・足場）の3つを調べます。3つとも、材料の中では力-8〜力-10 と同じ応力とひずみが起きています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ねじる：モータと軸とポンプ
+  \begin{scope}[shift={(0,0)}]
+    \fill[bkBlue!30, rounded corners=1mm] (0,4) rectangle (12,16); \draw[bkBlue!70!black, line width=0.6pt, rounded corners=1mm] (0,4) rectangle (12,16);
+    \node[font=\sffamily\footnotesize] at (6,10) {M};
+    \fill[bkGray!40] (12,8.8) rectangle (30,11.2); \draw[bkInk, line width=0.5pt] (12,8.8) rectangle (30,11.2);
+    \fill[bkGreen!30] (30,3) rectangle (40,17); \draw[bkGreen!60!black, line width=0.6pt] (30,3) rectangle (40,17);
+    \draw[-{Stealth[length=3.5pt]}, bkOrange, line width=1pt] (21,15) arc (90:-200:1.6 and 4.4);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (20,0) {ねじる\\（モータの軸）};
+  \end{scope}
+  % ふくらむ：タンク
+  \begin{scope}[shift={(50,0)}]
+    \fill[bkRed!20, rounded corners=4mm] (0,3) rectangle (34,17); \draw[bkRed!70!black, line width=0.7pt, rounded corners=4mm] (0,3) rectangle (34,17);
+    \foreach \x in {7,17,27} {\draw[-{Stealth[length=3pt]}, bkRed, line width=0.7pt] (\x,10) -- (\x,15.6); \draw[-{Stealth[length=3pt]}, bkRed, line width=0.7pt] (\x,10) -- (\x,4.4);}
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (17,0) {ふくらむ\\（タンク・缶）};
+  \end{scope}
+  % 押して曲がる：柱
+  \begin{scope}[shift={(104,0)}]
+    \fill[bkLine!60] (0,1.5) rectangle (24,3); \draw[bkInk, line width=0.7pt] (0,3) -- (24,3);
+    \draw[bkYellow!80!black, line width=1.6pt] (12,3) .. controls (16.5,9) and (16.5,15) .. (12,21);
+    \draw[bkGray, dashed, line width=0.4pt] (12,3) -- (12,21);
+    \draw[bk arrow, bkOrange, line width=1.2pt] (12,29) -- (12,22.5);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (12,0) {押して曲がる\\（柱・足場）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{この章の3つの変形。どれも、材料の中では応力とひずみが起きている。}
+\end{bkfigure}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[スパゲッティの柱を押してみよう]
+\par\vspace{3pt}\noindent\begin{minipage}[c]{0.58\linewidth}
+\textbf{用意するもの}\par
+乾いたスパゲッティ（太さ 1.7 mm くらい）、キッチンスケール（g の目もり）、ものさし
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item スパゲッティを 10 cm に折り、スケールの上にまっすぐ立てる。
+\item 上のはしを指先で軽くおさえ、まっすぐ下へゆっくり押す。
+\item 急に横へ曲がる直前の、スケールの数字を読む。3回はかって平均しよう。
+\item 長さを 14 cm、20 cm に変えて、同じようにはかろう。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{bktable}{colspec={Q[c,m,wd=11mm] Q[c,m,wd=19mm]}, rowsep=1.5pt}
+長さ（cm） & {曲がり始めた\\ときの値（g）} \\
+10 & 124 \\
+14 & 63 \\
+20 & 31 \\
+\end{bktable}
+\par\vspace{2pt}{\footnotesize ソラさんがはかった結果}
+\end{minipage}
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{力-8}{せん断応力 $\tau$ とせん断ひずみ $\gamma$ の間には $\tau=G\gamma$（$G$ は横弾性係数）。鋼の $G$ は約\qty{79}{GPa}。}
+\bkrecall{力-10}{はりの曲がり方 $\dfrac{1}{\rho}=\dfrac{M}{EI}$、たわみの微分方程式 $EI\dfrac{\dd^2y}{\dd x^2}=-M$。$I=\displaystyle\int y^2\,\dd A$。}
+\bkrecall{力-4}{仕事率 $P=Fv$。ばねを $x$ だけのばす仕事は $\dfrac{1}{2}kx^2$（三角形の面積）。}
+\bkrecall{6-6}{$\dfrac{\dd^2y}{\dd x^2}=-k^2y$ の答えは $y=A\sin kx+B\cos kx$（ばねと振り子の式）。}
+\bkrecall{8-2}{偏微分 $\dfrac{\partial U}{\partial F}$：ほかの量を止めて、$F$ だけを動かしたときの変化の割合。}
+\end{omoidasou}
+
+%% ================================================================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{押す・ねじる・ふくらませるを目で見る}{3}
+
+\bksubsection{1}{長さを2倍にすると、曲がり始める力は4分の1}
+\label{ph:力-11:sec1}やってみようの結果を見ましょう。長さ\qty{10}{cm}で\qty{124}{g}、\qty{20}{cm}（2倍）で\qty{31}{g}。力は $\dfrac{31}{124}=\dfrac{1}{4}$ になりました。\qty{14}{cm}（1.4倍）では\qty{63}{g}で、$\dfrac{63}{124}\approx0.51\approx\dfrac{1}{1.4^2}$ です。曲がり始める力は、長さの2乗に反比例しています。
+
+\noindent\begin{minipage}[c]{0.50\linewidth}
+もう1つ大切なことがあります。押す力が曲がり始める力より小さいうちは、スパゲッティは\textbf{まっすぐなまま}です。横から指で少しつついても、もとのまっすぐにもどります。ところが、曲がり始める力に近づくと、少しつついただけで大きく曲がり、もどりにくくなります。そして、その力をこえると、まっすぐでいられなくなります。
+
+棒を軸の向きに押したとき、ある力で急に横へ曲がることを\textbf{座屈}（ざくつ）といいます。\bkidx{ざくつ}{座屈}そのときの力を\textbf{座屈荷重}といいます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{axis}[bkplot, width=56mm, height=44mm, xmin=0, xmax=24, ymin=0, ymax=140, xtick={10,14,20}, ytick={31,63,124}, xlabel={cm}, ylabel={g}]
+  \addplot[bkcurve, domain=8.5:23, samples=60] {124*(10/x)^2};
+  \fill[bkRed] (axis cs:10,124) circle (1.6pt);
+  \fill[bkRed] (axis cs:14,63) circle (1.6pt);
+  \fill[bkRed] (axis cs:20,31) circle (1.6pt);
+\end{axis}
+\end{tikzpicture}
+\par\vspace{1pt}{\footnotesize 長さと、曲がり始める力（線は「2乗に反比例」）}
+\end{minipage}
+
+\begin{phmijika}[ボールペンの芯と、つまようじ]
+細いボールペンの替え芯を長いまま押すと、すぐに曲がります。短く切ると、なかなか曲がりません。つまようじも同じです。太さも大きくききます。太さを2倍にすると、曲がり始める力は16倍になります（⑨で導く）。
+\end{phmijika}
+
+\bksubsection{2}{ゴム管をねじると、線がらせんになる}
+\label{ph:力-11:sec2}\noindent\begin{minipage}[c]{0.56\linewidth}
+太いゴム管（または丸い消しゴム）の表面に、軸の向きの線と、輪の形の線をかいて、方眼のような小さな四角を作ります。両はしを持って、反対の向きにねじってみましょう。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 軸の向きの線は、ななめに傾いて\textbf{らせん}になる。
+\item 輪の形の線は、輪のまま。長さも変わらない。
+\item 小さな四角は、ひし形のようにずれる（せん断ひずみ $\gamma$、力-8）。
+\item 中心に近い所ほど、ずれは小さい（ゴム管を切ってみるとわかる）。
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ねじる前
+  \fill[bkGreen!20] (0,26) rectangle (44,38); \draw[bkGreen!60!black, line width=0.6pt] (0,26) rectangle (44,38);
+  \foreach \x in {6,14,...,38} {\draw[bkInk, line width=0.4pt] (\x,26) -- (\x,38);}
+  \draw[bkRed, line width=0.8pt] (0,32) -- (44,32);
+  \node[anchor=south, font=\sffamily\footnotesize] at (22,38.5) {ねじる前};
+  % ねじったあと
+  \fill[bkGreen!20] (0,0) rectangle (44,12); \draw[bkGreen!60!black, line width=0.6pt] (0,0) rectangle (44,12);
+  \foreach \x in {6,14,...,38} {\draw[bkInk, line width=0.4pt] (\x,0) -- (\x,12);}
+  \draw[bkRed, line width=0.8pt] (0,3) -- (44,9);
+  \draw[-{Stealth[length=4pt]}, bkBlue, line width=1pt] (-3,1) arc (-140:140:2.5 and 6.5);
+  \draw[-{Stealth[length=4pt]}, bkBlue, line width=1pt] (47,11) arc (40:-220:2.5 and 6.5);
+  \node[anchor=north, font=\sffamily\footnotesize, align=center] at (22,-1) {ねじったあと\\（線が傾いて、らせんに）};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\noindent ねじられた棒の中では、断面と断面が、たがいに少しずつ回ってずれています。この「ずれ」を止めているのが、断面にはたらくせん断応力です。ねじる働き（回す働き）を、\textbf{ねじりモーメント} $T$ といいます。\bkidx{ねじりもーめんと}{ねじりモーメント}力-5 の力のモーメント $M$ や、力-6 のトルク $\vec N$ と同じ種類の量で、単位は N·m です。
+
+\begin{phmijika}[ドライバーと、ぬれたタオル]
+ドライバーでねじを回すとき、手はドライバーの柄にねじりモーメントをかけています。柄が太いほど、同じ手の力で大きな $T$ を出せます（力×うで）。ぬれたタオルをしぼると、タオルの表面の模様がらせんになります。これも、ねじりで断面どうしがずれたしるしです。
+\end{phmijika}
+
+\Needspace{16\baselineskip}
+\bksubsection{3}{ソーセージは、なぜたてに割れる？}
+\label{ph:力-11:sec3}\noindent\begin{minipage}[c]{0.56\linewidth}
+ソーセージをゆですぎると、皮がたて（長さの向き）に割れます。細長い風船を針でつつくと、やはりたてに裂けます。中の圧力が、皮を内側から押しているからです。
+
+円筒の形の入れ物の壁には、2つの向きの引っぱりがかかります。輪の向き（周の向き）と、長さの向き（軸の向き）です。たてに割れるのは、輪の向きの引っぱりのほうが大きいからです。⑦で、輪の向きの応力が軸の向きのちょうど2倍になることを導きます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkRed!30, rounded corners=5mm] (0,0) rectangle (46,12);
+  \draw[bkRed!70!black, line width=0.7pt, rounded corners=5mm] (0,0) rectangle (46,12);
+  \draw[bkInk, line width=1pt] (14,6) -- (32,6);
+  \draw[bkInk, line width=0.6pt] (14,6.6) -- (32,6.6);
+  \draw[bk arrow, bkBlue, line width=1.1pt] (23,13.5) -- (23,20); \draw[bk arrow, bkBlue, line width=1.1pt] (23,-1.5) -- (23,-8);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black] at (24.5,18) {輪の向き：大};
+  \draw[bk arrow, bkOrange, line width=0.9pt] (48,6) -- (53,6); \draw[bk arrow, bkOrange, line width=0.9pt] (-2,6) -- (-7,6);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkOrange!70!black] at (51,4.5) {軸：小};
+  \node[anchor=north, font=\sffamily\footnotesize] at (23,-9) {たての割れ目};
+\end{tikzpicture}
+\end{minipage}
+
+%% ================================================================
+\phstage{te}{表計算で数を出す}{3}
+
+\bksubsection{4}{表計算：少し曲がった柱は、どこまで耐える？}
+\label{ph:力-11:sec4}本物の柱は、ほんの少しだけ曲がっていたり、押す力が少しずれていたりします。はじめに $y_0$ だけ曲がっていた柱を力 $F$ で押すと、まん中の横へのずれ $y$ は
+\[ y=\frac{y_0}{1-\dfrac{F}{F_{\mathrm{cr}}}} \]
+になります（$F_{\mathrm{cr}}$ は座屈荷重。⑨で導く）。表計算で、$F$ をふやしながら $y$ を計算してみましょう。直径\qty{5}{mm}、長さ\qty{0.5}{m}のアルミニウム合金の棒（$F_{\mathrm{cr}}=\qty{83.6}{N}$、例題1）が、はじめに\qty{1}{mm}曲がっていたとします。
+
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\centering
+\bksheet{3}{16}{%
+1 & $F$（N） & $\dfrac{F}{F_{\mathrm{cr}}}$ & $y$（mm） \\
+2 & 0 & 0.00 & 1.00 \\
+3 & 20 & 0.24 & 1.31 \\
+4 & 40 & 0.48 & 1.92 \\
+5 & 60 & 0.72 & 3.55 \\
+6 & 70 & 0.84 & 6.16 \\
+7 & 80 & 0.96 & 23.4 \\}
+\par\vspace{2pt}{\footnotesize C2 は \texttt{=B2/83.6}、D2 は \texttt{=1/(1-C2)}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{axis}[bkplot, width=50mm, height=46mm, xmin=0, xmax=1.12, ymin=0, ymax=11, xtick={0.25,0.5,0.75,1}, ytick={1,2,4,10}, xlabel={$\frac{F}{F_{\mathrm{cr}}}$}, ylabel={$\frac{y}{y_0}$}]
+  \addplot[bkcurve, domain=0:0.905, samples=80] {1/(1-x)};
+  \draw[bkRed, dashed, line width=0.8pt] (axis cs:1,0) -- (axis cs:1,11);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (axis cs:1.01,6) {$F_{\mathrm{cr}}$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\noindent 力が座屈荷重の半分（0.5）では、曲がりは2倍。0.9 で10倍、0.96 で23倍です。座屈荷重に近づくと、曲がりが急にふくらみます。これが「急にぐにゃり」の正体の1つです。\bkhatenaref の答えは、⑨で式から確かめます。
+
+\begin{phbaisuru}{はじめの曲がり $y_0$}
+$y$ も2倍。でも、曲がりが急にふくらむ力（$F_{\mathrm{cr}}$）は変わりません。はじめの曲がりが小さいほど、座屈荷重の近くまでまっすぐに見え、そこで急に曲がるように見えます。
+\end{phbaisuru}
+
+\bksubsection{5}{表計算：軸が伝える動力と、ねじりモーメント}
+\label{ph:力-11:sec5}モータは、軸を回してポンプや車輪に動力を伝えます。軸の表面（半径 $r$）を、力 $F$ で回しているとすると、表面の速さは $v=r\omega$（数学 4-8）なので、仕事率は（力-4）
+\[ P=Fv=F\cdot r\omega=T\omega \]
+です。$T=Fr$ はねじりモーメント、$\omega$ は角速度（rad/s）です。1秒に $n$ 回転するなら $\omega=2\pi n$。\label{ph:力-11:Tw}
+\pheq{P=T\omega}{W ＝ N·m × rad/s}
+\begin{phyomi}[$P=T\omega$]
+動力は「ねじる強さ×回る速さ」。同じ動力なら、速く回すほど、ねじりモーメントは小さくてよい。
+\end{phyomi}
+同じ\qty{100}{kW}を伝える軸のねじりモーメントを、回転数を変えて表計算で求めます。回転数は「毎分○回転」で表すことが多いので、\qty{60}{s/min}でわって1秒あたりにします。
+
+\noindent\begin{minipage}[c]{0.58\linewidth}
+\centering
+\bksheet{3}{19}{%
+1 & 毎分の回転数 & $\omega$（rad/s） & $T$（N·m） \\
+2 & 500 & 52.4 & 1910 \\
+3 & 1000 & 104.7 & 955 \\
+4 & 1500 & 157.1 & 637 \\
+5 & 3000 & 314.2 & 318 \\
+6 & 6000 & 628.3 & 159 \\}
+\par\vspace{2pt}{\footnotesize B2 は \texttt{=2*PI()*A2/60}、C2 は \texttt{=100000/B2}}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+回転数が2倍になると、$T$ は半分。$T$ が半分なら、軸は細くてよくなります（⑥で、軸の太さは $T$ の3乗根に比例することを導く）。発電所のタービンや、ジェットエンジンが速く回るのも、車が歯車で回転を落として大きなねじりモーメントを得るのも、この関係です。
+\end{minipage}
+
+\phkokomade
+
+%% ================================================================
+\phstage{shiki}{ねじり・圧力・座屈を式で導く}{5}
+
+\bksubsection{6}{丸い棒のねじり}
+\label{ph:力-11:sec6}直径 $d$、長さ $L$ の丸い棒の片方を止め、もう片方をねじりモーメント $T$ でねじると、角 $\varphi$（\textbf{ねじれ角}）だけ回ったとします。②の実験から、断面は丸く平らなまま、少しずつ回っているとします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGreen!15] (0,-10) rectangle (70,10);
+  \draw[bkGreen!60!black, line width=0.7pt] (0,-10) -- (70,-10) (0,10) -- (70,10);
+  \draw[bkGreen!60!black, line width=0.7pt] (0,0) ellipse (3 and 10);
+  \draw[bkGreen!60!black, line width=0.7pt, fill=bkGreen!25] (70,0) ellipse (3 and 10);
+  \draw[bkGray, dashed, line width=0.5pt] (0,0) -- (70,0);
+  % 表面の線（ねじる前・後）
+  \draw[bkGray, line width=0.6pt, dashed] (0,-6) -- (70,-6);
+  \draw[bkRed, line width=1pt] (0,-6) -- (70,-2.8);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black] at (40,-11) {表面の線は傾いて、角 $\gamma$};
+  \draw[bkInk, line width=0.5pt] (20,-6) arc (0:13:14); \node[font=\sffamily\footnotesize] at (24,-5.4) {$\gamma$};
+  % 端の回転
+  \draw[bkBlue, line width=0.9pt] (70,0) -- (70.6,-6); \draw[bkBlue, line width=0.9pt] (70,0) -- (71.4,-2.8);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black] at (74,-5) {$\varphi$（ねじれ角）};
+  \draw[-{Stealth[length=4.5pt]}, bkOrange, line width=1.2pt] (76,9) arc (60:-200:4 and 11);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!70!black] at (80,12) {$T$};
+  \fill[bkLine!60] (-6,-14) rectangle (-3,14); \draw[bkInk, line width=0.8pt] (-3,-14) -- (-3,14);
+  \draw[bkGray, line width=0.4pt, <->] (0,15) -- (70,15); \node[anchor=south, font=\sffamily\footnotesize] at (35,15.3) {$L$};
+\end{tikzpicture}
+\bkfigcaption{片方を止めて、もう片方をねじる。はしの断面が角 $\varphi$ 回ると、表面の線は角 $\gamma$ だけ傾く。}
+\end{bkfigure}
+
+\pxlhead{（ア）せん断ひずみ：中心からの距離に比例}
+中心から $r$ の所の点は、はしで弧の長さ $r\varphi$ だけ動きます（数学 4-2 の $s=r\theta$）。この動きが長さ $L$ にわたって一様に広がるので、線の傾き（せん断ひずみ）は
+\[ \gamma=\frac{r\varphi}{L} \]
+\pxlhead{（イ）せん断応力：$\tau=G\gamma$（力-8）}
+\[ \tau=G\frac{r\varphi}{L} \]
+中心では0、表面でいちばん大きくなります。力-10 の曲げ応力が中立軸からの距離に比例したのと、よくにています。
+\pxlhead{（ウ）せん断応力が回す働きの合計が $T$}
+小さな面積 $\dd A$ にはたらく力 $\tau\,\dd A$ は、中心のまわりに、うで $r$ で回す働き $\tau r\,\dd A$ をもちます。全部足すと、
+\[ T=\int\tau r\,\dd A=\frac{G\varphi}{L}\int r^2\,\dd A \]
+$\displaystyle I_{\mathrm p}=\int r^2\,\dd A$ を\textbf{極断面二次モーメント}といいます。\bkidx{きょくだんめんにじもーめんと}{極断面二次モーメント}力-10 ⑦で、丸い断面では $I_{\mathrm p}=\dfrac{\pi d^4}{32}$ と計算しました。
+\pheq{T=\frac{GI_{\mathrm p}\varphi}{L},\qquad \tau=\frac{Tr}{I_{\mathrm p}}}{N·m ＝ Pa × m$^4$ ÷ m}
+\label{ph:力-11:neji}
+\pxlhead{（エ）いちばん大きいせん断応力}
+表面 $r=\dfrac{d}{2}$ で最大です。$Z_{\mathrm p}=\dfrac{I_{\mathrm p}}{d/2}=\dfrac{\pi d^3}{16}$（\textbf{極断面係数}）とおくと、
+\pheq{\tau_{\max}=\frac{T}{Z_{\mathrm p}}=\frac{16T}{\pi d^3}}{Pa ＝ N·m ÷ m$^3$}
+
+\begin{phyomi}[$\tau_{\max}=\dfrac{16T}{\pi d^3}$]
+ねじる働き $T$ が大きいほど、応力は大きい。軸を太くすると、$d^3$ で応力が小さくなる。必要な太さは $d=\sqrt[3]{\dfrac{16T}{\pi\tau}}$ で、$T$ の3乗根に比例する。
+\end{phyomi}
+\begin{phbaisuru}{直径 $d$}
+\par\vspace{3pt}\noindent\begin{minipage}[c]{0.50\linewidth}
+同じ $T$ でのいちばん大きい応力は $\dfrac{1}{8}$。ねじれ角は $I_{\mathrm p}$ が16倍なので $\dfrac{1}{16}$。軸を少し太くするだけで、強さもかたさも大きくふえます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{axis}[bkplot, width=54mm, height=38mm, xmin=0, xmax=2.3, ymin=0, ymax=9, xtick={0.5,1,1.5,2}, ytick={1,4,8}, xlabel={倍}, ylabel={倍率}]
+  \addplot[bkRed, line width=1.6pt, domain=0.5:2.2, samples=60] {1/x^3};
+  \addplot[bkBlue, line width=1.6pt, domain=0.59:2.2, samples=60] {1/x^4};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (axis cs:0.62,7.6) {$\tau_{\max}$};
+  \node[anchor=east, font=\sffamily\footnotesize, text=bkBlue!80!black] at (axis cs:0.55,5.2) {$\varphi$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\pxlhead{パイプの軸（中空軸）}
+外径 $D$、内径 $d$ のパイプでは、$I_{\mathrm p}=\dfrac{\pi(D^4-d^4)}{32}$、$Z_{\mathrm p}=\dfrac{\pi(D^4-d^4)}{16D}$ です。中心の近くは応力が小さく、ほとんど働いていないので、そこをくりぬいても強さはあまり落ちず、軽くなります（例題8）。
+
+\bksubsection{7}{うすい円筒と球の入れ物：半分に切ってつり合いを見る}
+\label{ph:力-11:sec7}半径 $r$、壁の厚さ $t$ のうすい円筒の入れ物に、気体が圧力 $p$ で入っています。外は大気圧なので、壁を外へ押すのは、中と外の圧力の差、つまり\textbf{ゲージ圧}です（以下、$p$ はゲージ圧）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 断面（半分）
+  \begin{scope}[shift={(24,4)}]
+    \fill[bkBlue!15] (-18,0) arc (180:0:18) -- cycle;
+    \draw[bkInk, line width=1.6pt] (-18,0) arc (180:0:18);
+    \foreach \a in {15,35,...,165} {\draw[-{Stealth[length=3pt]}, bkBlue, line width=0.7pt] (\a:11) -- (\a:16.8);}
+    \draw[bkGray, dashed, line width=0.5pt] (-22,0) -- (22,0);
+    \draw[bk arrow, bkRed, line width=1.3pt] (-18,-1.5) -- (-18,-10); \draw[bk arrow, bkRed, line width=1.3pt] (18,-1.5) -- (18,-10);
+    \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black] at (-18,-10.5) {$\sigma_\theta tL$};
+    \node[anchor=north, font=\sffamily\footnotesize, text=bkRed!80!black] at (18,-10.5) {$\sigma_\theta tL$};
+    \draw[bkGray, line width=0.4pt, <->] (0,0) -- (45:18); \node[font=\sffamily\footnotesize] at (30:6.5) {$r$};
+    \node[anchor=south, font=\sffamily\footnotesize] at (0,19) {円筒を半分に切った断面};
+  \end{scope}
+  % 気体の平らな面
+  \begin{scope}[shift={(84,4)}]
+    \fill[bkBlue!15] (-18,0) arc (180:0:18) -- cycle;
+    \draw[bkInk, line width=1.6pt] (-18,0) arc (180:0:18);
+    \foreach \x in {-14,-7,0,7,14} {\draw[-{Stealth[length=3pt]}, bkBlue, line width=0.9pt] (\x,-7) -- (\x,-0.6);}
+    \draw[bkBlue!70!black, line width=0.9pt] (-18,0) -- (18,0);
+    \node[anchor=north, font=\sffamily\footnotesize, text=bkBlue!80!black] at (0,-7.4) {のこり半分の気体が押す：$p\times2rL$};
+    \node[anchor=south, font=\sffamily\footnotesize] at (0,19) {中の気体ごと考える};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{長さ $L$ の円筒を、軸をふくむ面で半分に切る。左：圧力は壁のあらゆる所を外へ押す。右：中の気体ごと考えると、平らな切り口（面積 $2rL$）を気体が押す力と同じ。}
+\end{bkfigure}
+
+\pxlhead{輪の向きの応力（フープ応力）}
+長さ $L$ の部分を、上下の半分に切って、上の半分のつり合いを考えます。圧力は壁のあらゆる所を、壁に垂直に外へ押します。横向きの成分は、左右で打ち消し合います。上向きの成分を足すと、角 $\theta$ の所のはば $r\,\dd\theta$ の帯では $p\sin\theta\cdot r\,\dd\theta\cdot L$ なので、
+\[ \int_0^{\pi}p\sin\theta\,rL\,\dd\theta=prL\Bigl[-\cos\theta\Bigr]_0^{\pi}=prL\bigl(1-(-1)\bigr)=2prL \]
+これは、上の半分の\textbf{影の面積}（真下から見た面積 $2r\times L$）に $p$ をかけたものと同じです。\label{ph:力-11:toei}もう1つの考え方：中の気体の上半分と壁をひとまとめにすると、気体の平らな切り口（面積 $2rL$）を、下の半分の気体が $p$ で押しています。曲がった面が受ける圧力の力の合計は、「圧力×その面を平らな面に写した面積（投影面積）」です。
+
+この力を、左右の2つの切り口の壁（面積 $tL$ ずつ）が引っぱって支えます。$2\sigma_\theta tL=2prL$ より、
+\pheq{\sigma_\theta=\frac{pr}{t}}{Pa ＝ Pa × m ÷ m}
+\pxlhead{軸の向きの応力}
+こんどは円筒を、軸に垂直な面で切ります。ふたを押す力は、ふたの形によらず $p\times\pi r^2$（投影面積）。これを、輪の形の壁の切り口（面積 $2\pi rt$）が支えるので、$\sigma_z\cdot2\pi rt=p\pi r^2$ より
+\[ \sigma_z=\frac{pr}{2t} \]
+\pxlhead{球の入れ物}
+球をまん中で半分に切ると、どの向きに切っても円筒の「軸の向き」と同じ形になり、$\sigma=\dfrac{pr}{2t}$ です。同じ圧力・半径・厚さなら、球の壁の応力は円筒の半分です。高い圧力のガスを大量にためるタンクに、球の形が使われるのはこのためです。
+
+\begin{phyomi}[$\sigma_\theta=\dfrac{pr}{t}$]
+壁の応力は、圧力と半径に比例し、厚さに反比例する。輪の向きは軸の向きの2倍なので、円筒はたてに割れる（③のソーセージ）。
+\end{phyomi}
+\begin{phbaisuru}{半径 $r$}
+同じ圧力・同じ厚さなら、壁の応力も2倍。大きなタンクほど厚い壁がいります。細い自転車のタイヤのチューブが高い圧力に耐えられるのは、半径が小さいからです。
+\end{phbaisuru}
+
+\begin{seikaku}
+「うすい」とは、厚さ $t$ が半径 $r$ の $\dfrac{1}{10}$ くらいより小さいことです。このとき、壁の厚さの中で応力はほぼ一様とみなせます。厚い壁（高圧の油圧シリンダなど）では、内側の応力が外側より大きくなり、この章の式では足りません（厚肉円筒の式。大学で学ぶ）。
+\end{seikaku}
+
+\Needspace{14\baselineskip}
+\begin{phflow}
+\phflowrow{圧力の力の合計\\$\displaystyle\int p\sin\theta\,rL\,\dd\theta$}{$p$ が一様\\半分の円筒}{$p\times2rL$\\（圧力×投影面積）}
+\phflowrow{$p\times2rL=2\sigma_\theta tL$}{壁はうすい\\（$t\ll r$）}{$\sigma_\theta=\dfrac{pr}{t}$}
+\end{phflow}
+
+\bksubsection{8}{ひずみエネルギーとカスティリアーノの定理}
+\label{ph:力-11:sec8}ばねをゆっくりのばすと、した仕事はばねの中に、位置エネルギーとしてたくわえられます（力-4）。材料も同じです。変形した材料にたくわえられるエネルギーを\textbf{ひずみエネルギー} $U$ といいます。\bkidx{ひずみえねるぎー}{ひずみエネルギー}
+
+\pxlhead{棒を引っぱると}
+棒（長さ $L$、断面積 $A$）を、力を0からゆっくり $F$ までふやして引っぱり、$\delta$ のびたとします。力とのびは比例するので、仕事は三角形の面積 $\dfrac{1}{2}F\delta$（力-4）です。$\delta=\dfrac{FL}{EA}$（力-8）を使うと、
+\[ U=\frac{1}{2}F\delta=\frac{F^2L}{2EA}=\frac{\sigma^2}{2E}\times AL \]
+$AL$ は体積なので、1 m$^3$ あたりのひずみエネルギーは $\dfrac{\sigma^2}{2E}$ です。
+\pheq{U=\int\frac{\sigma^2}{2E}\,\dd V}{J ＝ Pa$^2$ ÷ Pa × m$^3$}
+\pxlhead{はりを曲げると}
+力-10 の $\sigma=\dfrac{My}{I}$ を入れて、断面の上で足すと $\displaystyle\int y^2\,\dd A=I$ なので、
+\[ U=\int_0^L\Bigl(\int\frac{M^2y^2}{2EI^2}\,\dd A\Bigr)\dd x=\int_0^L\frac{M^2}{2EI}\,\dd x \]
+ねじりでは同じように $U=\displaystyle\int_0^L\frac{T^2}{2GI_{\mathrm p}}\,\dd x$ です。
+
+\pxlhead{カスティリアーノの定理}
+ばね1本では、$U=\dfrac{1}{2}F\delta$、$\delta=\dfrac{F}{k}$ なので $U=\dfrac{F^2}{2k}$。これを $F$ で微分すると、
+\[ \frac{\dd U}{\dd F}=\frac{F}{k}=\delta \]
+「ひずみエネルギーを力で微分すると、その力の向きの変位（のび・たわみ）になる」。力がいくつかあるときも、ほかの力を止めて1つの力 $F_i$ で偏微分（数学 8-2）すると、その力の点の、その力の向きの変位 $\delta_i$ になります。これを\textbf{カスティリアーノの定理}といいます（1870年代、イタリアの技術者カスティリアーノ）。\bkidx{かすてぃりあーののていり}{カスティリアーノの定理}
+\pheq{\delta_i=\frac{\partial U}{\partial F_i}}{m ＝ J ÷ N}
+\label{ph:力-11:casti}
+
+\pxlhead{片持ちはりで確かめる}
+力-10 ⑨の片持ちはり（先に $F$）では、かべから $x$ の所の曲げモーメントは $M=-F(L-x)$ でした。
+\[ U=\int_0^L\frac{F^2(L-x)^2}{2EI}\,\dd x=\frac{F^2}{2EI}\Bigl[-\frac{(L-x)^3}{3}\Bigr]_0^L=\frac{F^2L^3}{6EI} \]
+\[ \delta=\frac{\partial U}{\partial F}=\frac{FL^3}{3EI} \]
+力-10 で微分方程式を2回積分して出した答えと、同じになりました。カスティリアーノの定理では、積分は1回、境界条件もいりません。曲がった腕や、つなぎ合わせた部材のたわみを求めるのに、とても便利です（例題13）。
+
+\Needspace{14\baselineskip}
+\begin{phflow}
+\phflowrow{$\delta=\dfrac{\partial U}{\partial F}$}{ばね1本\\$U=\dfrac{F^2}{2k}$}{$\delta=\dfrac{F}{k}$\\（$F=kx$）}
+\phflowrow{$\delta=\dfrac{\partial U}{\partial F}$}{ばね2本を直列\\$U=\dfrac{F^2}{2k_1}+\dfrac{F^2}{2k_2}$}{$\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$\\（力-8）}
+\end{phflow}
+
+\pxlhead{コイルばねのばね定数}
+\label{ph:力-11:coil}\noindent\begin{minipage}[c]{0.58\linewidth}
+中学の理科で使うコイルばねは、針金をらせんに巻いたものです。ばねを $F$ で引くと、針金の断面には、どこでも $T=F\times\dfrac{D}{2}$ のねじりモーメントがかかります（$D$ はコイルの平均の直径）。つまり、コイルばねは「巻いた、ねじりの棒」です。針金の直径を $d$、巻数を $n_{\mathrm c}$ とすると、針金の長さは $\pi Dn_{\mathrm c}$ です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkLine!60] (0,42) rectangle (20,44.5); \draw[bkGray, line width=0.6pt] (0,42) -- (20,42);
+  \draw[bkInk, line width=0.8pt] (10,42) -- (10,39) -- (4,37);
+  \foreach \k in {0,...,6} {
+    \draw[bkBlue!45, line width=1.1pt] ({16},{35-4*\k}) -- ({4},{33-4*\k});
+    \draw[bkBlue, line width=1.3pt] ({4},{37-4*\k}) -- ({16},{35-4*\k});}
+  \draw[bkInk, line width=0.8pt] (4,9) -- (10,7) -- (10,4);
+  \draw[bk arrow, bkOrange, line width=1.2pt] (10,4) -- (10,-3); \node[anchor=west, font=\sffamily\footnotesize, text=bkOrange!70!black] at (11,-0.5) {$F$};
+  \draw[bkGray, line width=0.4pt] (4,8) -- (4,-7) (16,10) -- (16,-7);
+  \draw[bkGray, line width=0.4pt, <->] (4,-6) -- (16,-6); \node[anchor=north, font=\sffamily\footnotesize] at (10,-6.5) {$D$};
+\end{tikzpicture}
+\end{minipage}
+\par\noindent ねじりのひずみエネルギーは（⑧の $U=\displaystyle\int\frac{T^2}{2GI_{\mathrm p}}\,\dd x$ で、長さが $\pi Dn_{\mathrm c}$）
+\[ U=\frac{T^2\cdot\pi Dn_{\mathrm c}}{2GI_{\mathrm p}}=\frac{F^2D^2}{4}\cdot\frac{\pi Dn_{\mathrm c}\times32}{2G\pi d^4}=\frac{4F^2D^3n_{\mathrm c}}{Gd^4} \]
+カスティリアーノの定理で $F$ で微分すると、のび $x=\dfrac{\partial U}{\partial F}=\dfrac{8D^3n_{\mathrm c}}{Gd^4}F$。だから
+\pheq{F=kx,\qquad k=\frac{Gd^4}{8n_{\mathrm c}D^3}}{N/m ＝ Pa × m$^4$ ÷ m$^3$}
+コイルばねののびが力に比例する（中学の理科の実験）のは、針金のねじれ角が $T$ に比例するからでした。
+
+\Needspace{14\baselineskip}
+\begin{phflow}
+\phflowrow{$T=\dfrac{GI_{\mathrm p}\varphi}{L}$\\（ねじり）}{針金を巻いた\\コイルばね}{$F=kx$\\$k=\dfrac{Gd^4}{8n_{\mathrm c}D^3}$}
+\end{phflow}
+
+\begin{phbaisuru}{巻数 $n_{\mathrm c}$}
+$k$ は半分（やわらかくなる）。ばねを半分に切ると巻数が半分になり、$k$ は2倍です。針金の太さ $d$ を2倍にすると、$k$ は16倍。コイルの直径 $D$ を2倍にすると、$k$ は $\dfrac{1}{8}$ です。
+\end{phbaisuru}
+
+\bksubsection{9}{オイラーの座屈荷重}
+\label{ph:力-11:sec9}いよいよ\bkhatenaref です。長さ $L$ のまっすぐな柱の両はしを、回れる支点（ピン）でとめ、軸の向きに $F$ で押します。もし柱が横へ $y(x)$ だけ曲がったとしたら、つり合えるでしょうか。
+
+\noindent\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxlpin{(0,0)}{0}
+  \pxlpin{(0,50)}{180}
+  \draw[bkGray, dashed, line width=0.5pt] (0,0) -- (0,50);
+  \draw[bkYellow!80!black, line width=1.6pt] plot[domain=0:50, samples=40, smooth] ({8*sin(3.6*\x)},\x);
+  \draw[bk arrow, bkRed, line width=1.2pt] (0,63) -- (0,55);
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!80!black] at (1,61) {$F$};
+  \draw[bkGray, line width=0.4pt, <->] (0,30) -- ({8*sin(108)},30); \node[anchor=south, font=\sffamily\footnotesize] at (4,30.3) {$y$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=4pt]}] (-12,0) -- (-12,48); \node[anchor=east, font=\sffamily\footnotesize] at (-12.5,44) {$x$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.60\linewidth}
+下から $x$ の所で柱を切り、下の部分を考えます。下のはしには、支点から上向きの力 $F$ がはたらきます。この力の作用線は柱の元の位置（$y=0$）を通るので、切り口のまわりに、うで $y$ で回す働き $Fy$ をもちます。これを切り口の曲げモーメントがつり合わせるので、$M=Fy$。力-10 のたわみの微分方程式 $EI\dfrac{\dd^2y}{\dd x^2}=-M$ に入れると、
+\end{minipage}
+\pheq{EI\frac{\dd^2y}{\dd x^2}=-Fy\qquad\text{つまり}\qquad \frac{\dd^2y}{\dd x^2}=-\frac{F}{EI}\,y}{1/m ＝ N ÷ N·m$^2$ × m}
+\begin{phyomi}[$\dfrac{\dd^2y}{\dd x^2}=-k^2y$（$k^2=\dfrac{F}{EI}$）]
+「2回微分すると、自分の $-k^2$ 倍」。数学 6-6 のばねの式と同じ形で、答えは $\sin$ と $\cos$（数学 5-18 のふるまい表）。ばねでは時間 $t$ でゆれたのが、柱では場所 $x$ で波の形に曲がる。
+\end{phyomi}
+
+\pxlhead{答えの形と、両はしの条件}
+答えは $y=A\sin kx+B\cos kx$ です（$k=\sqrt{\dfrac{F}{EI}}$）。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=2pt]
+\item 下のはし（$x=0$）で $y=0$：$B=0$。
+\item 上のはし（$x=L$）で $y=0$：$A\sin kL=0$。
+\end{enumerate}
+②が成り立つのは、$A=0$（まっすぐのまま）か、$\sin kL=0$ のときです。$\sin kL=0$ になるのは $kL=\pi,\ 2\pi,\ 3\pi,\ \cdots$（数学 4-8）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $kL<\pi$（$F$ が小さい）なら、$\sin kL\neq0$ なので $A=0$。柱は\textbf{まっすぐのままでしか}つり合えません。
+\item $kL=\pi$ のとき、$A$ が0でなくても条件を満たします。\textbf{曲がった形でもつり合える}ようになります。
+\end{itemize}
+$kL=\pi$ は $\dfrac{F}{EI}L^2=\pi^2$ なので、
+\pheq{F_{\mathrm{cr}}=\frac{\pi^2EI}{L^2}}{N ＝ Pa × m$^4$ ÷ m$^2$}
+\label{ph:力-11:euler}
+これが\textbf{オイラーの座屈荷重}です（1744年、オイラー）。
+
+\pxlhead{\bkhatenaref の答え}
+押す力が $F_{\mathrm{cr}}$ より小さいうちは、柱はまっすぐでしかつり合えないので、横からつついても、まっすぐにもどります。$F_{\mathrm{cr}}$ に達すると、曲がった形でもつり合えるようになり、さらに押すと、まっすぐな形はつり合いを保てなくなって（不安定になって）、曲がった形へ移ります。力をゆっくりふやしても、形の変わり方は「ある所で急に」起きるのです。本物の柱では、少しの曲がりやずれ $y_0$ が、④の $\dfrac{y_0}{1-F/F_{\mathrm{cr}}}$ のようにふくらむので、$F_{\mathrm{cr}}$ の近くで急に大きく曲がって見えます。
+
+\begin{phyomi}[$F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L^2}$]
+座屈荷重は、曲げにくさ $EI$ に比例し、長さの2乗に反比例する。材料の強さ（降伏点）は式に入っていない。細長い柱は、材料がこわれる前に、形が保てなくなって曲がる。$\pi^2$ は、$\sin$ の山1つ（$kL=\pi$）から出てくる数。
+\end{phyomi}
+\begin{phbaisuru}{直径 $d$}
+丸い棒の $I=\dfrac{\pi d^4}{64}$ は16倍なので、$F_{\mathrm{cr}}$ も16倍（①のボールペンの芯）。長さを2倍にすると $\dfrac{1}{4}$（①の実験）。
+\end{phbaisuru}
+
+\begin{seikaku}
+\phboxhead{$A$ は決まらない}
+$kL=\pi$ のとき、$A$ はどんな値でも式を満たします。これは「曲がり始める力」はわかっても、「どれだけ曲がるか」はこの式ではわからない、ということです。この式は、たわみが小さいとして作った近似の式（力-10 の $\dfrac{1}{\rho}\approx y''$）だからです。曲がった後の形を求めるには、正確な曲率の式を使います（後座屈。大学で学ぶ）。
+\end{seikaku}
+
+\pxlhead{固有値問題}
+$kL=\pi,\ 2\pi,\ \cdots$ のように、「両はしの条件を満たす0でない答えがある」とびとびの $F$ をさがす問題を、微分方程式の\textbf{固有値問題}といいます（数学 6-6 のもっと知りたい）。数学 7-8 の行列の固有値「向きが変わらない特別なベクトル」と同じように、「形が変わらずにつり合える特別な力」をさがしています。$kL=2\pi$（$F=4F_{\mathrm{cr}}$）では、S字の形で曲がりますが、ふつうは1つめの $F_{\mathrm{cr}}$ で先に曲がってしまいます。
+
+\pxlhead{はさんでさがす：コンピュータで座屈荷重を求める}
+式で解けない柱（太さが変わる柱など）では、コンピュータで $F_{\mathrm{cr}}$ をさがします。下のはしで $y=0$、傾き1として、$\dfrac{\dd^2y}{\dd x^2}=-\dfrac{F}{EI}y$ を少しずつ進めて（数学 6-2 のオイラー法）、上のはしの $y$ を計算します。$F$ が小さいと上のはしの $y$ は正、大きいと負。0になる $F$ を、はさみうち（数学 2-13⑤）でさがします。
+\begin{phcode}
+from math import pi
+EI, L, n = 69e9*pi*0.005**4/64, 0.5, 2000   \# 例題1 のアルミ棒
+def y\_top(F):
+    dx, y, v = L/n, 0.0, 1.0      \# 下のはし：y=0、傾き1
+    for i in range(n):
+        v = v - F/EI*y*dx
+        y = y + v*dx
+    return y
+lo, hi = 10, 150                  \# y\_top(10)>0、y\_top(150)<0
+for k in range(30):
+    mid = (lo + hi)/2
+    if y\_top(mid) > 0: lo = mid
+    else: hi = mid
+print(round(mid, 1), round(pi**2*EI/L**2, 1))
+\end{phcode}
+\begin{phcodeout}
+83.6 83.6
+\end{phcodeout}
+
+\pxlhead{はしのとめ方と有効長さ}
+はしのとめ方が変わると、曲がった形が変わり、座屈荷重も変わります。曲がった形の中で、$\sin$ の山1つ分（両はしピンと同じ形）の長さ $L_{\mathrm e}$ を\textbf{有効長さ}（座屈長さ）といい、$F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L_{\mathrm e}^2}$ と書けます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 両はしピン
+  \begin{scope}[shift={(8,0)}]
+    \pxlpin{(0,0)}{0} \pxlpin{(0,40)}{180}
+    \draw[bkYellow!80!black, line width=1.5pt] plot[domain=0:40, samples=30, smooth] ({6*sin(4.5*\x)},\x);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (0,-6) {両はしピン\\$L_{\mathrm e}=L$};
+  \end{scope}
+  % 下固定・上自由
+  \begin{scope}[shift={(40,0)}]
+    \pxlground{(0,0)}{12}
+    \draw[bkYellow!80!black, line width=1.5pt] plot[domain=0:40, samples=30, smooth] ({8*(1-cos(2.25*\x))},\x);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (0,-6) {下は固定・上は自由\\$L_{\mathrm e}=2L$};
+  \end{scope}
+  % 両はし固定
+  \begin{scope}[shift={(76,0)}]
+    \pxlground{(0,0)}{12} \pxlceil{(0,40)}{12}
+    \draw[bkYellow!80!black, line width=1.5pt] plot[domain=0:40, samples=40, smooth] ({4*(1-cos(9*\x))},\x);
+    \draw[bkRed, line width=0.5pt] (-5,10) -- (5,10); \draw[bkRed, line width=0.5pt] (-5,30) -- (5,30);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (0,-6) {両はし固定\\$L_{\mathrm e}=0.5L$};
+  \end{scope}
+  % 下固定・上ピン
+  \begin{scope}[shift={(110,0)}]
+    \pxlground{(0,0)}{12} \pxlpin{(0,40)}{180}
+    \draw[bkYellow!80!black, line width=1.5pt] plot[domain=0:40, samples=50, smooth] ({sin(6.4363*\x)-4.4934*cos(6.4363*\x)+4.4934-0.112335*\x},\x);
+    \node[anchor=north, font=\sffamily\footnotesize, align=center] at (0,-6) {下は固定・上はピン\\$L_{\mathrm e}\approx0.7L$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{はしのとめ方と有効長さ（どれも柱の長さは $L$）。両はし固定の赤い線の間（長さ $\frac{L}{2}$）は、両はしピンの柱と同じ形。}
+\end{bkfigure}
+\noindent 下を固定し上が自由な柱（旗ざおなど）は、地面の下に鏡で写した柱を足すと、長さ $2L$ の両はしピンの柱と同じ形です。だから $L_{\mathrm e}=2L$ で、座屈荷重は両はしピンの $\dfrac{1}{4}$。両はし固定では、曲がる向きが変わる2つの点（赤い線）の間が両はしピンと同じ形なので $L_{\mathrm e}=0.5L$、座屈荷重は4倍です。
+
+\pxlhead{細長比：座屈が先か、降伏が先か}
+座屈荷重を断面積 $A$ でわった応力は、$i=\sqrt{\dfrac{I}{A}}$（\textbf{断面二次半径}）を使うと
+\[ \sigma_{\mathrm{cr}}=\frac{F_{\mathrm{cr}}}{A}=\frac{\pi^2E}{\lambda^2},\qquad \lambda=\frac{L_{\mathrm e}}{i} \]
+$\lambda$ を\textbf{細長比}といいます。細長い（$\lambda$ が大きい）ほど、小さい応力で座屈します。$\sigma_{\mathrm{cr}}$ が材料の降伏点 $\sigma_{\mathrm Y}$ をこえるような太く短い柱では、座屈の前に材料が降伏して、オイラーの式は使えません。境は $\lambda=\pi\sqrt{\dfrac{E}{\sigma_{\mathrm Y}}}$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{axis}[bkplot, width=110mm, height=50mm, xmin=0, xmax=250, ymin=0, ymax=520, xtick={50,75.5,110,150,200,220}, xticklabels={50,75,110,150,200,220}, ytick={167,355}, xlabel={$\lambda$}, ylabel={MPa}]
+  \addplot[bkBlue, line width=1.6pt, domain=63:245, samples=80] {9.8696*205000/x^2};
+  \draw[bkRed, line width=1.4pt, dashed] (axis cs:0,355) -- (axis cs:245,355);
+  \fill[bkInk] (axis cs:110,167) circle (1.7pt);
+  \fill[bkInk] (axis cs:220,41.8) circle (1.7pt);
+  \node[anchor=south west, font=\sffamily\footnotesize, text=bkRed!80!black] at (axis cs:150,358) {降伏点 355 MPa（STK500）};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkBlue!80!black] at (axis cs:120,240) {オイラー $\sigma_{\mathrm{cr}}=\dfrac{\pi^2E}{\lambda^2}$};
+  \node[anchor=south west, font=\sffamily\footnotesize] at (axis cs:112,170) {足場管 1.8 m};
+  \node[anchor=south west, font=\sffamily\footnotesize] at (axis cs:222,44) {3.6 m};
+  \node[anchor=north, font=\sffamily\footnotesize, align=center] at (axis cs:30,300) {降伏が\\先};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{鋼の柱（$E=\qty{205}{GPa}$）の細長比と、座屈する応力。$\lambda$ が約75より小さいと、座屈より先に降伏する（例題4・5）。}
+\end{bkfigure}
+
+\begin{phmada}[うすい円筒は、なぜ理論よりずっと弱い？]
+ロケットの胴体や飲み物の缶のような、うすい円筒の殻を軸の向きに押したときの座屈荷重は、20世紀のはじめに理論で計算されました。ところが、実験でつぶれる力は、理論の値の半分以下になることもあり、ばらつきも大きかったのです。殻の形のほんのわずかな狂い（厚さよりずっと小さいへこみ）に、とても敏感だからだと考えられています。そこでアメリカ航空宇宙局（NASA）は、1930〜1960年代の実験をもとに、理論の値に1より小さい「低減係数」をかけて設計する指針（1965年、1968年改訂）を作りました。この指針は安全がわに大きく見積もっているので、2007年からは、殻の形の狂いを細かくはかって計算と実験で確かめ、もっとむだのない係数を決める研究が進められています。どんな狂いが、どれだけ強さを下げるのかを、形を見ただけで正確に予測する方法は、まだ研究の途中です。
+\end{phmada}
+
+\begin{phsaki}{丸くない軸・厚い入れ物・曲がったあとの柱}
+四角い棒をねじると、断面は平らなままではいられず、そり返ります（サン・ブナンのねじり）。厚い入れ物の壁の応力（厚肉円筒）、太さが変わる柱、材料が一部降伏してからの座屈（設計で使う座屈曲線）、曲がり始めたあとの形（後座屈）は、大学の材料力学・構造力学で学びます。殻の座屈の細かい計算は、大学院の内容です。
+\end{phsaki}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+両端ピン支持の真直な柱に軸圧縮荷重 $P$ が作用するとき、たわみ $v$ は $EIv''+Pv=0$ を満たす。境界条件 $v(0)=v(L)=0$ のもとで非自明解が存在する条件 $\sin kL=0$ より、座屈荷重 $P_{\mathrm{cr}}=\dfrac{\pi^2EI}{L^2}$ を得る。
+\end{bkhonbun}
+\bkyaku{専門書では、軸の向きの荷重を $P$、たわみを $v$ と書くことが多い。この本では、動力の $P$ とぶつからないように、荷重を $F$ と書く。「非自明解」は「0でない答え」のこと。}
+\end{senmonsho}
+
+\bkkigocards{\bkkigocard{$T$}{ティー}{ねじりモーメント（N·m）。力-5 のモーメント $M$、力-6 のトルク $\vec N$ と同じ種類の量で、専門書の習慣で文字が変わる}{torque}{力-11}}{\bkkigocard{$I_{\mathrm p}$}{アイピー}{極断面二次モーメント $\int r^2\,\dd A$（m$^4$）。丸い棒では $\frac{\pi d^4}{32}$}{polar moment of area}{力-11}}
+
+\begin{kotoba}\small
+\bkword{ねじりモーメント $T$}{軸をねじる働き。$P=T\omega$。}
+\bkword{ねじれ角 $\varphi$}{軸の両はしの断面が、たがいに回った角。}
+\bkword{極断面二次モーメント $I_{\mathrm p}$}{$\int r^2\,\dd A$。ねじれにくさを決める断面の量。}
+\bkword{フープ応力}{円筒の壁の、輪の向きの応力 $\dfrac{pr}{t}$。}
+\bkword{ひずみエネルギー}{変形した材料にたくわえられるエネルギー。}
+\bkword{座屈}{押した柱が、ある力で急に横へ曲がること。}
+\bkword{有効長さ}{座屈の形の、$\sin$ の山1つ分の長さ。}
+\bkword{細長比 $\lambda$}{有効長さ÷断面二次半径。}
+\end{kotoba}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{動力}$P=T\omega$、\ $\omega=2\pi n$（$n$ は1秒あたりの回転数）\\[3pt]
+\tsl{ねじり}$T=\dfrac{GI_{\mathrm p}\varphi}{L}$、\ $\tau_{\max}=\dfrac{16T}{\pi d^3}$、\ $I_{\mathrm p}=\dfrac{\pi d^4}{32}$\\[3pt]
+\tsl{うすい入れ物}円筒 $\sigma_\theta=\dfrac{pr}{t}$、$\sigma_z=\dfrac{pr}{2t}$、球 $\dfrac{pr}{2t}$（$p$ はゲージ圧）\\[3pt]
+\tsl{エネルギー}$U=\displaystyle\int\frac{M^2}{2EI}\,\dd x$、たわみは $\delta=\dfrac{\partial U}{\partial F}$\\[3pt]
+\tsl{コイルばね}$k=\dfrac{Gd^4}{8n_{\mathrm c}D^3}$\\[3pt]
+\tsl{座屈}$F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L_{\mathrm e}^2}$。細長比 $\lambda=\dfrac{L_{\mathrm e}}{i}$ が小さいと降伏が先
+\end{taisetsu}
+
+%% ================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[アルミ棒の座屈荷重]
+\label{ph:力-11:ex1}直径\qty{5}{mm}、長さ\qty{0.5}{m}のアルミニウム合金の丸棒（$E=\qty{69}{GPa}$）を、両はしを回れるようにとめて、軸の向きに押します。座屈荷重を求めましょう。
+\phbamen
+細い棒を、両はしから押しちぢめる場面です。どの力で急に曲がるかを知りたい。
+\phmushi
+棒ははじめまっすぐで、力は断面の中心を押すとします。棒の重さは無視します。
+\phzu
+両はしピン、$L=\qty{0.5}{m}$、$d=\qty{5}{mm}$、$I=\dfrac{\pi d^4}{64}$。
+\phriyu
+両はしが回れる細長い柱なので、⑨で導いたオイラーの座屈荷重 $F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L^2}$ を使います。
+\phtateru
+\[ I=\frac{\pi\times0.005^4}{64},\qquad F_{\mathrm{cr}}=\frac{\pi^2\times69\times10^9\times I}{0.5^2} \]
+\phtoku
+\[ I=\qty{3.07e-11}{m^4} \]
+\[ F_{\mathrm{cr}}=\frac{9.87\times69\times10^9\times3.07\times10^{-11}}{0.25}\approx\qty{84}{N} \]
+\phtashikame
+単位：$\dfrac{\unit{Pa}\times\unit{m^4}}{\unit{m^2}}=\unit{N/m^2}\times\unit{m^2}=\unit{N}$。\\
+大きさ：約\qty{8.5}{kg}の重さ。応力は $\dfrac{84}{\pi\times0.0025^2}\approx\qty{4.3}{MPa}$ で、アルミ合金の耐力（約\qty{270}{MPa}）よりずっと小さい。材料がこわれる前に座屈することがわかります。\\
+別の方法で：⑨のプログラムの「はさんでさがす」でも\qty{83.6}{N}でした。
+\kotae 約\qty{84}{N}
+\end{phreidai}
+\begin{jibun}
+直径\qty{4}{mm}、長さ\qty{0.4}{m}のアルミニウム合金の丸棒（$E=\qty{69}{GPa}$、両はしピン）の座屈荷重を求めましょう。
+\bkjans{$I=\qty{1.26e-11}{m^4}$。$F_{\mathrm{cr}}=\pi^2EI/L^2\approx\qty{53}{N}$}
+\end{jibun}
+
+\begin{phreidai}[長さ・太さを変えると座屈荷重は？]
+\label{ph:力-11:ex2}例題1の棒で、（1）長さを2倍の\qty{1.0}{m}にしたとき、（2）長さはそのままで直径を2倍の\qty{10}{mm}にしたとき、座屈荷重はいくつになるでしょう。
+\phbamen
+同じ材料で、形だけを変えます。
+\phmushi
+例題1と同じ（まっすぐ、中心を押す、両はしピン）。
+\phzu
+長さ $L$、直径 $d$。$F_{\mathrm{cr}}=\dfrac{\pi^2E}{L^2}\cdot\dfrac{\pi d^4}{64}$ なので、$F_{\mathrm{cr}}$ は $\dfrac{d^4}{L^2}$ に比例します。
+\phriyu
+もう一度全部を計算しなくても、比例の関係（倍率）を使えば、例題1の答えから求められます。
+\phtateru
+（1）$F_{\mathrm{cr}}\times\dfrac{1}{2^2}$\qquad（2）$F_{\mathrm{cr}}\times2^4$
+\phtoku
+（1）$83.6\times\dfrac{1}{4}\approx\qty{21}{N}$\qquad（2）$83.6\times16\approx\qty{1340}{N}$
+\phtashikame
+単位：N。\\
+大きさ：（2）は\qty{1.3}{kN}で、約\qty{136}{kg}の重さ。このときの応力は $\dfrac{1340}{\pi\times0.005^2}\approx\qty{17}{MPa}$ で、まだ耐力より小さいので、オイラーの式が使えます。\\
+極端な場合：長さを0に近づけると、座屈荷重はいくらでも大きくなりますが、実際にはその前に材料が降伏します（細長比）。
+\kotae （1）約\qty{21}{N}\quad（2）約\qty{1340}{N}
+\end{phreidai}
+\begin{jibun}
+両はしピンの柱の長さを1.5倍にし、直径も1.5倍にすると、座屈荷重はもとの何倍になるでしょう。
+\bkjans{$\dfrac{1.5^4}{1.5^2}=1.5^2=2.25$ 倍}
+\end{jibun}
+
+\begin{phreidai}[下を固定し、上が自由な棒]
+\label{ph:力-11:ex3}例題1と同じアルミ棒（直径\qty{5}{mm}、長さ\qty{0.5}{m}）を、下のはしを台にしっかり固定し、上のはしは自由にして、上から押します。座屈荷重を求めましょう。
+\phbamen
+旗ざおや、地面に立てた細い支柱の上に物をのせる場面です。
+\phmushi
+固定は完全で、下のはしは回れないとします。上の荷重は真下を向いたままとします。
+\phzu
+⑨の図の「下は固定・上は自由」。有効長さ $L_{\mathrm e}=2L$。
+\phriyu
+はしのとめ方がちがうので、有効長さを使った $F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L_{\mathrm e}^2}$ を使います。
+\phtateru
+\[ F_{\mathrm{cr}}=\frac{\pi^2EI}{(2L)^2}=\frac{1}{4}\times\frac{\pi^2EI}{L^2} \]
+\phtoku
+\[ F_{\mathrm{cr}}=\frac{83.6}{4}\approx\qty{21}{N} \]
+\phtashikame
+単位：N。\\
+くらべる：両はしピンの $\dfrac{1}{4}$。上のはしが横へ自由に動けるので、ずっと弱い。\\
+極端な場合：上のはしも横へ動けないようにすると（上はピン）、$L_{\mathrm e}\approx0.7L$ で約2倍に強くなります。
+\kotae 約\qty{21}{N}（両はしピンの $\dfrac{1}{4}$）
+\end{phreidai}
+\begin{jibun}
+例題1のアルミ棒の両はしを、しっかり固定しました（両はし固定）。座屈荷重を求めましょう。
+\bkjans{$L_{\mathrm e}=0.5L$ なので4倍。$83.6\times4\approx\qty{334}{N}$}
+\end{jibun}
+
+\begin{phreidai}[足場の鋼管は、座屈と降伏のどちらが先？]
+\label{ph:力-11:ex4}工事の足場に使う鋼管（外径\qty{48.6}{mm}、厚さ\qty{2.4}{mm}、STK500、$E=\qty{205}{GPa}$、降伏点\qty{355}{MPa}）を、長さ\qty{3.6}{m}の柱として両はしピンで使います。座屈荷重と、断面全体が降伏する力をくらべましょう。
+\phbamen
+建物の外の足場は、細長い鋼管を組み立てて作ります。上の重さを支える鋼管が、曲がって倒れないかを確かめます。
+\phmushi
+鋼管ははじめまっすぐで、力は中心を押し、両はしは回れるとします。
+\phzu
+外径 $D=\qty{48.6}{mm}$、内径 $d=48.6-2\times2.4=\qty{43.8}{mm}$。断面積 $A$、$I$、長さ $L=\qty{3.6}{m}$。
+\phriyu
+座屈はオイラーの式 $F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L^2}$、降伏は「応力×断面積」の $F_{\mathrm Y}=\sigma_{\mathrm Y}A$。小さいほうで、柱は使えなくなります。
+\phtateru
+\[ A=\frac{\pi}{4}(48.6^2-43.8^2),\qquad I=\frac{\pi}{64}(48.6^4-43.8^4) \]
+\phtoku
+\[ A=\qty{348}{mm^2},\qquad I=\qty{9.32e4}{mm^4}=\qty{9.32e-8}{m^4} \]
+\[ F_{\mathrm{cr}}=\frac{9.87\times205\times10^9\times9.32\times10^{-8}}{3.6^2}\approx\qty{14.5}{kN} \]
+\[ F_{\mathrm Y}=355\times348\approx\qty{124}{kN} \]
+\phtashikame
+単位：$\unit{MPa}\times\unit{mm^2}=\unit{N/mm^2}\times\unit{mm^2}=\unit{N}$。\\
+大きさ：座屈荷重は、降伏する力の約 $\dfrac{1}{8.5}$。細長い鋼管は、材料の強さを使い切る前に座屈で決まります。\\
+極端な場合：長さを半分の\qty{1.8}{m}にすると、座屈荷重は4倍の約\qty{58}{kN}。足場では、鋼管の途中を横の管や「壁つなぎ」でとめて、座屈する長さを短くします。
+\kotae 座屈荷重 約\qty{14.5}{kN}、降伏する力 約\qty{124}{kN}。座屈が先
+\end{phreidai}
+\begin{jibun}
+例題4の鋼管を、長さ\qty{2.4}{m}の両はしピンの柱にしました。座屈荷重を求めましょう。
+\bkjans{$F_{\mathrm{cr}}=\pi^2EI/L^2\approx\qty{33}{kN}$（\qty{3.6}{m}の $\bigl(\frac{3.6}{2.4}\bigr)^2=2.25$ 倍）}
+\end{jibun}
+
+\begin{phreidai}[細長比の境]
+\label{ph:力-11:ex5}例題4の鋼管で、断面二次半径 $i$ を求め、長さ\qty{3.6}{m}と\qty{1.8}{m}の細長比を計算しましょう。また、オイラーの座屈の応力が降伏点（\qty{355}{MPa}）と等しくなる細長比と、そのときの長さを求めましょう。
+\phbamen
+柱の設計では、まず「細長い柱か、太く短い柱か」を細長比で見分けます。
+\phmushi
+両はしピン（$L_{\mathrm e}=L$）とします。
+\phzu
+$i=\sqrt{\dfrac{I}{A}}$、$\lambda=\dfrac{L_{\mathrm e}}{i}$、境の細長比 $\lambda_{\mathrm Y}$。
+\phriyu
+⑨の $\sigma_{\mathrm{cr}}=\dfrac{\pi^2E}{\lambda^2}$ が $\sigma_{\mathrm Y}$ と等しくなる $\lambda$ が境です。
+\phtateru
+\[ i=\sqrt{\frac{9.32\times10^4}{348}},\qquad \frac{\pi^2E}{\lambda_{\mathrm Y}^2}=\sigma_{\mathrm Y}\ \text{より}\ \lambda_{\mathrm Y}=\pi\sqrt{\frac{E}{\sigma_{\mathrm Y}}} \]
+\phtoku
+\[ i=\qty{16.4}{mm},\quad \lambda_{3.6}=\frac{3600}{16.4}\approx220,\quad \lambda_{1.8}\approx110 \]
+\[ \lambda_{\mathrm Y}=\pi\sqrt{\frac{205\times10^3}{355}}\approx75.5,\qquad L=75.5\times\qty{16.4}{mm}\approx\qty{1.2}{m} \]
+\phtashikame
+単位：$\lambda$ は長さ÷長さで単位なし。\\
+大きさ：\qty{1.8}{m}の $\lambda=110$ は境の75より大きいので、オイラーの式の範囲です。ただし本物の柱には少しの曲がりや、作るときに残った応力があり、境の近くではオイラーの式より小さい力で曲がり始めます。設計では、実験で決めた「座屈曲線」を使います（この先は大学で）。\\
+極端な場合：\qty{1.2}{m}より短いと、降伏が先になります。
+\kotae $i\approx\qty{16.4}{mm}$、$\lambda\approx220$（\qty{3.6}{m}）・110（\qty{1.8}{m}）。境は $\lambda\approx75$（長さ約\qty{1.2}{m}）
+\end{phreidai}
+\begin{jibun}
+直径\qty{10}{mm}のアルミニウム合金の丸棒（$E=\qty{69}{GPa}$）の断面二次半径を求め、長さ\qty{1.0}{m}（両はしピン）の細長比と座屈荷重を求めましょう（丸い棒の $i=\dfrac{d}{4}$）。
+\bkjans{$i=\qty{2.5}{mm}$、$\lambda=1000\div2.5=400$。$I=\qty{4.91e-10}{m^4}$、$F_{\mathrm{cr}}\approx\qty{334}{N}$}
+\end{jibun}
+
+\begin{phreidai}[ポンプを回す軸の太さ]
+\label{ph:力-11:ex6}\qty{100}{kW}のモータが、毎分3000回転でポンプを回します。軸（中の詰まった丸棒）の許されるせん断応力を\qty{50}{MPa}とするとき、軸の直径を求めましょう。
+\phbamen
+工場のポンプは、モータの軸から、つぎ手を通して回されます。軸がねじり切れないように太さを決めます。
+\phmushi
+軸は、ねじりだけを受けるとします（曲げや、キーのみぞによる応力集中は、許される応力を小さくとることでふくめる）。
+\phzu
+$P=\qty{100}{kW}$、$n=\dfrac{3000}{60}=\qty{50}{/s}$、$\omega=2\pi n$、$\tau_{\mathrm a}=\qty{50}{MPa}$、直径 $d$。
+\phriyu
+まず⑤の $P=T\omega$ から $T$ を出し、⑥の $\tau_{\max}=\dfrac{16T}{\pi d^3}$ が $\tau_{\mathrm a}$ 以下になる $d$ を求めます。
+\phtateru
+\[ T=\frac{P}{\omega}=\frac{100\times10^3}{2\pi\times50},\qquad \frac{16T}{\pi d^3}=50\times10^6 \]
+\phtoku
+\[ \omega=\pxlq{314}{rad/s},\quad T=\pxlq{318}{N.m},\quad d=\sqrt[3]{\frac{16\times318}{\pi\times50\times10^6}}=\qty{0.0319}{m} \]
+\phtashikame
+単位：$\Bigl(\dfrac{\pxlu{N.m}}{\unit{Pa}}\Bigr)^{1/3}=(\unit{m^3})^{1/3}=\unit{m}$。\\
+大きさ：直径\qty{32}{mm}は、\qty{100}{kW}のポンプの軸として、ありそうな太さです。\\
+極端な場合：毎分1500回転なら、$T$ は2倍で、直径は $\sqrt[3]{2}=1.26$ 倍の約\qty{40}{mm}になります。
+\kotae 約\qty{32}{mm}（$T\approx\pxlq{318}{N.m}$）
+\end{phreidai}
+\begin{jibun}
+\qty{15}{kW}のモータが毎分1500回転で機械を回します。許されるせん断応力を\qty{40}{MPa}として、軸の直径を求めましょう。
+\bkjans{$\omega=\pxlq{157.1}{rad/s}$、$T=\pxlq{95.5}{N.m}$。$d=\sqrt[3]{16T/(\pi\tau)}\approx\qty{23}{mm}$}
+\end{jibun}
+
+\begin{phreidai}[軸のねじれ角]
+\label{ph:力-11:ex7}例題6の軸（直径\qty{32}{mm}、$T=\pxlq{318}{N.m}$）の長さ\qty{1.0}{m}のねじれ角を求めましょう（鋼の $G=\qty{79}{GPa}$）。
+\phbamen
+軸が強さの点でだいじょうぶでも、ねじれすぎると、回転がおくれたり、ふるえたりします。
+\phmushi
+軸はまっすぐな丸棒で、ねじりモーメントは長さにそって一定とします。
+\phzu
+$d=\qty{32}{mm}$、$L=\qty{1.0}{m}$、$I_{\mathrm p}=\dfrac{\pi d^4}{32}$、ねじれ角 $\varphi$。
+\phriyu
+⑥の $T=\dfrac{GI_{\mathrm p}\varphi}{L}$ を $\varphi$ について解きます。
+\phtateru
+\[ \varphi=\frac{TL}{GI_{\mathrm p}},\qquad I_{\mathrm p}=\frac{\pi\times0.032^4}{32} \]
+\phtoku
+\[ I_{\mathrm p}=\qty{1.03e-7}{m^4},\qquad \varphi=\frac{318\times1.0}{79\times10^9\times1.03\times10^{-7}}\approx\qty{0.039}{rad} \]
+度になおすと $0.039\times\dfrac{180}{\pi}\approx2.2°$。
+\phtashikame
+単位：$\dfrac{\pxlu{N.m}\times\unit{m}}{\unit{Pa}\times\unit{m^4}}$ で単位なし（rad）。\\
+大きさ：\qty{1}{m}で約2°。軸のねじれを「\qty{1}{m}あたり0.25°以下」のように決めることもあり、その場合は、強さで決めた直径より太くします。
+\kotae 約\qty{0.039}{rad}（約2.2°）
+\end{phreidai}
+\begin{jibun}
+直径\qty{25}{mm}、長さ\qty{0.8}{m}の鋼の軸（$G=\qty{79}{GPa}$）を、\pxlq{100}{N.m}でねじりました。ねじれ角を、ラジアンと度で求めましょう。
+\bkjans{$I_{\mathrm p}=\qty{3.83e-8}{m^4}$。$\varphi=TL/(GI_{\mathrm p})\approx\qty{0.026}{rad}$（約1.5°）}
+\end{jibun}
+
+\begin{phreidai}[中空軸と中実軸：同じ重さなら？]
+\label{ph:力-11:ex8}外径\qty{40}{mm}、内径\qty{30}{mm}の中空軸と、同じ断面積（同じ重さ）の中実軸で、ねじりの強さ（$Z_{\mathrm p}$）と、ねじれにくさ（$I_{\mathrm p}$）をくらべましょう。
+\phbamen
+車のプロペラシャフトや自転車のフレームは、パイプでできています。
+\phmushi
+材料は同じで、断面はきれいな円とします。
+\phzu
+中空軸：$D=\qty{40}{mm}$、$d=\qty{30}{mm}$。中実軸の直径 $d_{\mathrm s}=\sqrt{40^2-30^2}=\qty{26.5}{mm}$（力-10 例題9と同じ）。
+\phriyu
+強さは $\tau_{\max}=\dfrac{T}{Z_{\mathrm p}}$ なので $Z_{\mathrm p}$ で、ねじれにくさは $I_{\mathrm p}$ でくらべます（⑥）。
+\phtateru
+\[ Z_{\mathrm p,\text{中空}}=\frac{\pi(40^4-30^4)}{16\times40},\qquad Z_{\mathrm p,\text{中実}}=\frac{\pi\times26.46^3}{16} \]
+\phtoku
+\[ Z_{\mathrm p,\text{中空}}=\qty{8590}{mm^3},\qquad Z_{\mathrm p,\text{中実}}=\qty{3640}{mm^3},\qquad \text{比}\approx2.4 \]
+\[ \frac{I_{\mathrm p,\text{中空}}}{I_{\mathrm p,\text{中実}}}=\frac{40^4-30^4}{26.46^4}\approx3.6 \]
+\phtashikame
+単位：mm$^3$ どうし、mm$^4$ どうしの比。\\
+大きさ：同じ重さで、強さは約2.4倍、ねじれにくさは約3.6倍（力-10 例題9の曲げと同じ比。$I_{\mathrm p}=2I$ だから）。\\
+極端な場合：うすくしすぎたパイプは、ねじると局部的にしわが寄るように座屈するので、厚さには下限があります。
+\kotae 強さ（$Z_{\mathrm p}$）約2.4倍、ねじれにくさ（$I_{\mathrm p}$）約3.6倍
+\end{phreidai}
+\begin{jibun}
+外径\qty{50}{mm}、内径\qty{40}{mm}の中空軸と、同じ断面積の中実軸で、$Z_{\mathrm p}$ の比を求めましょう。
+\bkjans{中実軸の直径は\qty{30}{mm}。$Z_{\mathrm p}$ は中空 \qty{14490}{mm^3}、中実 \qty{5300}{mm^3} で、約2.7倍}
+\end{jibun}
+
+\begin{phreidai}[空気タンクの壁の応力]
+\label{ph:力-11:ex9}内半径\qty{0.15}{m}、壁の厚さ\qty{3}{mm}の円筒形の空気タンクに、ゲージ圧\qty{1.0}{MPa}の圧縮空気が入っています。輪の向きと軸の向きの応力を求めましょう。
+\phbamen
+工場のコンプレッサのタンクです。ゲージ圧\qty{1.0}{MPa}は、絶対圧では約\qty{1.1}{MPa}です。
+\phmushi
+壁はうすい（$\dfrac{t}{r}=0.02$）とし、壁の厚さの中で応力は一様とします。ふたの近くや、管をつないだ穴のまわりは考えません。
+\phzu
+⑦の図。$p=\qty{1.0}{MPa}$（ゲージ圧）、$r=\qty{0.15}{m}$、$t=\qty{3}{mm}$。
+\phriyu
+壁を外へ押すのは、中と外の圧力の差（ゲージ圧）です。うすい円筒なので、⑦の $\sigma_\theta=\dfrac{pr}{t}$、$\sigma_z=\dfrac{pr}{2t}$ を使います。
+\phtateru
+\[ \sigma_\theta=\frac{1.0\times10^6\times0.15}{0.003},\qquad \sigma_z=\frac{\sigma_\theta}{2} \]
+\phtoku
+\[ \sigma_\theta=\qty{5.0e7}{Pa}=\qty{50}{MPa},\qquad \sigma_z=\qty{25}{MPa} \]
+\phtashikame
+単位：$\dfrac{\unit{Pa}\times\unit{m}}{\unit{m}}=\unit{Pa}$。\\
+大きさ：一般の鋼（SS400）の降伏点（\qty{245}{MPa}）の約 $\dfrac{1}{5}$。圧力容器は、溶接のつぎ目なども考えて、余裕をもって作ります。\\
+まちがえやすい所：絶対圧の\qty{1.1}{MPa}を使うと、応力を10\,\%大きく見積もってしまいます。
+\kotae 輪の向き\qty{50}{MPa}、軸の向き\qty{25}{MPa}
+\end{phreidai}
+\begin{jibun}
+内半径\qty{0.25}{m}、厚さ\qty{4}{mm}の円筒形のタンクに、ゲージ圧\qty{0.8}{MPa}の気体が入っています。輪の向きと軸の向きの応力を求めましょう。
+\bkjans{$\sigma_\theta=pr/t=\qty{50}{MPa}$、$\sigma_z=\qty{25}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[炭酸飲料の缶]
+\label{ph:力-11:ex10}炭酸飲料の缶（半径約\qty{33}{mm}、胴の厚さ約\qty{0.1}{mm}）の中の圧力が、ゲージ圧で約\qty{0.3}{MPa}のとき、胴の輪の向きと軸の向きの応力を求めましょう。
+\phbamen
+アルミの缶の胴は、紙よりうすい板です。それでも、炭酸の圧力でこわれないのはなぜでしょう。
+\phmushi
+缶の胴を、うすい円筒とみなします（$\dfrac{t}{r}=0.003$）。上と下のふたの近くは考えません。
+\phzu
+$p=\qty{0.3}{MPa}$（ゲージ圧）、$r=\qty{33}{mm}$、$t=\qty{0.1}{mm}$。
+\phriyu
+例題9と同じく、うすい円筒の $\sigma_\theta=\dfrac{pr}{t}$、$\sigma_z=\dfrac{pr}{2t}$。
+\phtateru
+\[ \sigma_\theta=\frac{0.3\times33}{0.1}\ \unit{MPa} \]
+（MPa と mm のまま計算してよい。mm どうしの比になるから）
+\phtoku
+\[ \sigma_\theta=\qty{99}{MPa},\qquad \sigma_z\approx\qty{50}{MPa} \]
+\phtashikame
+単位：$\unit{MPa}\times\dfrac{\unit{mm}}{\unit{mm}}=\unit{MPa}$。\\
+大きさ：うすい缶でも、壁には\qty{100}{MPa}近い応力がかかっています。缶の材料には、強いアルミニウム合金が使われています。\\
+もう1つの見方：開ける前の缶は、指で押してもへこみにくい。中の圧力が胴を引っぱって、張った状態にしているからです。開けると圧力が下がり、かんたんにへこみます。
+\kotae 輪の向き約\qty{99}{MPa}、軸の向き約\qty{50}{MPa}
+\end{phreidai}
+\begin{jibun}
+半径\qty{45}{mm}、胴の厚さ\qty{0.3}{mm}の円筒形のボトルに、ゲージ圧\qty{0.4}{MPa}の炭酸飲料が入っています。胴の輪の向きの応力を求めましょう。
+\bkjans{$\sigma_\theta=0.4\times45\div0.3=\qty{60}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[球形のタンクの壁の厚さ]
+\label{ph:力-11:ex11}内半径\qty{5}{m}の球形のタンクに、ゲージ圧\qty{1.0}{MPa}の気体をためます。壁の応力を\qty{150}{MPa}以下にするには、壁の厚さを何 mm 以上にすればよいでしょう。
+\phbamen
+ガスを高い圧力でためる大きな球形のタンクです。
+\phmushi
+壁はうすい（あとで確かめる）とし、支える脚や、つなぐ管のまわりは考えません。
+\phzu
+球を半分に切った図（⑦）。$p=\qty{1.0}{MPa}$、$r=\qty{5}{m}$、$\sigma\leqq\qty{150}{MPa}$、厚さ $t$。
+\phriyu
+半分に切った球のつり合い「$p\times\pi r^2$（投影面積）$=\sigma\times2\pi rt$」から、$\sigma=\dfrac{pr}{2t}$（⑦）。
+\phtateru
+\[ \frac{pr}{2t}\leqq150\times10^6 \]
+\phtoku
+\[ t\geqq\frac{1.0\times10^6\times5}{2\times150\times10^6}=\qty{0.0167}{m}\approx\qty{17}{mm} \]
+\phtashikame
+単位：$\dfrac{\unit{Pa}\times\unit{m}}{\unit{Pa}}=\unit{m}$。\\
+うすいか：$\dfrac{t}{r}=\dfrac{0.017}{5}=0.003$ で、十分うすい。\\
+くらべる：同じ半径の円筒なら $\sigma_\theta=\dfrac{pr}{t}$ なので、厚さは2倍の\qty{34}{mm}いります。球は、同じ容積の中で、いちばん少ない材料で圧力に耐える形です。
+\kotae 約\qty{17}{mm}以上
+\end{phreidai}
+\begin{jibun}
+内半径\qty{8}{m}の球形のタンクに、ゲージ圧\qty{0.6}{MPa}の気体をためます。壁の応力を\qty{120}{MPa}以下にするには、厚さを何 mm 以上にすればよいでしょう。
+\bkjans{$t\geqq pr/(2\sigma)=\qty{0.020}{m}$。\qty{20}{mm}以上}
+\end{jibun}
+
+\begin{phreidai}[コイルばねのばね定数]
+\label{ph:力-11:ex12}直径\qty{1.0}{mm}の鋼の針金（$G=\qty{79}{GPa}$）を、平均の直径\qty{10}{mm}で10回巻いたコイルばねがあります。ばね定数を求め、\qty{0.5}{kg}のおもりをつるしたときののびを求めましょう。
+\phbamen
+理科の実験で使うようなばねです。ばね定数を、針金の太さと巻き方から計算します。
+\phmushi
+巻きのピッチ（となりの巻きとの間）は小さいとし、針金のねじり以外の変形（曲げなど）は無視します。ばねの重さも無視します。
+\phzu
+⑧のコイルばねの図。$d=\qty{1.0}{mm}$、$D=\qty{10}{mm}$、$n_{\mathrm c}=10$。
+\phriyu
+コイルばねは「巻いたねじりの棒」なので、⑧でカスティリアーノの定理から導いた $k=\dfrac{Gd^4}{8n_{\mathrm c}D^3}$ を使います。
+\phtateru
+\[ k=\frac{79\times10^9\times(1.0\times10^{-3})^4}{8\times10\times(10\times10^{-3})^3},\qquad x=\frac{mg}{k} \]
+\phtoku
+\[ k=\frac{0.079}{8\times10^{-5}}\approx\pxlq{988}{N/m},\qquad x=\frac{0.5\times9.8}{988}\approx\qty{5.0e-3}{m} \]
+\phtashikame
+単位：$\dfrac{\unit{Pa}\times\unit{m^4}}{\unit{m^3}}=\unit{N/m}$。\\
+大きさ：\qty{0.5}{kg}で\qty{5}{mm}のびる、かためのばねです。\\
+極端な場合：巻数を2倍にすると $k$ は半分で、のびは\qty{10}{mm}。ばねを半分に切ると $k$ は2倍です。
+\kotae $k\approx\pxlq{990}{N/m}$、のび約\qty{5.0}{mm}
+\end{phreidai}
+\begin{jibun}
+直径\qty{2.0}{mm}の鋼の針金（$G=\qty{79}{GPa}$）を、平均の直径\qty{20}{mm}で8回巻いたコイルばねのばね定数を求めましょう。また、このばねを半分の長さ（4回巻き）に切ると、ばね定数はいくつになるでしょう。
+\bkjans{$k\approx\pxlq{2470}{N/m}$。半分に切ると巻数が半分で、$k$ は2倍の約\pxlq{4940}{N/m}}
+\end{jibun}
+
+\begin{phreidai}[L字の腕の先のたわみ：カスティリアーノの定理]
+\label{ph:力-11:ex13}地面に立てた高さ $h=\qty{2.0}{m}$ の柱の上から、水平に $b=\qty{1.0}{m}$ の腕が出ている、L字形の看板の支柱があります（どちらも同じ鋼管で、$EI=\pxlq{5.60e4}{N.m^2}$）。腕の先に、下向きに $F=\qty{200}{N}$ の看板をつるしたとき、腕の先が下がる量を求めましょう。
+\phbamen
+L字形の支柱は、腕が曲がるだけでなく、柱も曲がります。2つを合わせたたわみを求めます。
+\phmushi
+柱がちぢむ量（軸の向きの変形）とせん断による変形は、曲げにくらべて小さいので無視します。柱の下は地面にしっかり固定されているとします。
+\phzu
+\par\vspace{3pt}\noindent\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxlground{(4,0)}{14}
+  \fill[bkGray!40] (3,0) rectangle (5,36) (3,34) rectangle (24,36);
+  \draw[bkInk, line width=0.5pt] (3,0) -- (3,36) -- (24,36) -- (24,34) -- (5,34) -- (5,0);
+  \draw[bkInk, line width=0.5pt] (24,34) -- (24,29);
+  \fill[bkYellow!50] (19,22) rectangle (29,29); \draw[bkInk, line width=0.5pt] (19,22) rectangle (29,29);
+  \draw[bk arrow, bkOrange, line width=1.1pt] (31,33) -- (31,25); \node[anchor=west, font=\sffamily\footnotesize] at (32,29) {$F$};
+  \draw[bkGray, line width=0.4pt, <->] (-2,0) -- (-2,35); \node[anchor=east, font=\sffamily\footnotesize] at (-2.5,18) {$h$};
+  \draw[bkGray, line width=0.4pt, <->] (4,39) -- (24,39); \node[anchor=south, font=\sffamily\footnotesize] at (14,39.3) {$b$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}
+腕：先から $s$ の所の曲げモーメントの大きさは $Fs$（うで $s$）。\\
+柱：どの高さでも、看板の力のうでは $b$ なので、曲げモーメントの大きさは $Fb$（一定）。
+\end{minipage}
+\phriyu
+形が曲がっていて、微分方程式を立てにくい。⑧のカスティリアーノの定理なら、腕と柱のひずみエネルギーを足して、$F$ で微分するだけで求められます。
+\phtateru
+\[ U=\int_0^b\frac{(Fs)^2}{2EI}\,\dd s+\int_0^h\frac{(Fb)^2}{2EI}\,\dd z=\frac{F^2b^3}{6EI}+\frac{F^2b^2h}{2EI} \]
+\phtoku
+\[ \delta=\frac{\partial U}{\partial F}=\frac{Fb^3}{3EI}+\frac{Fb^2h}{EI}=\frac{200\times1^3}{3\times5.60\times10^4}+\frac{200\times1^2\times2}{5.60\times10^4} \]
+\[ \delta=\qty{1.19e-3}{m}+\qty{7.14e-3}{m}\approx\qty{8.3e-3}{m} \]
+\phtashikame
+単位：$\dfrac{\unit{N}\times\unit{m^3}}{\pxlu{N.m^2}}=\unit{m}$。\\
+大きさ：第1項は、腕だけの片持ちはり（力-10 ⑨の $\dfrac{FL^3}{3EI}$）と同じ。柱の曲がりによる第2項のほうが6倍も大きい。柱が少し傾くだけで、腕の先は大きく下がるからです。\\
+極端な場合：$h=0$（柱がない）なら、片持ちはりの答えにもどります。
+\kotae 約\qty{8.3}{mm}
+\end{phreidai}
+\begin{jibun}
+例題13と同じ鋼管（$EI=\pxlq{5.60e4}{N.m^2}$）で、柱の高さ $h=\qty{1.0}{m}$、腕の長さ $b=\qty{0.5}{m}$ のL字形の支柱を作り、腕の先に\qty{300}{N}をかけました。腕の先が下がる量を求めましょう。
+\bkjans{\qty{0.22}{mm}（腕）＋\qty{1.34}{mm}（柱）で、約\qty{1.6}{mm}}
+\end{jibun}
+
+\begin{phreidai}[安全弁のばね：圧力とばねのつり合い]
+\label{ph:力-11:ex14}空気タンクの安全弁を、ゲージ圧\qty{1.0}{MPa}で開くようにしたい。弁の円板の直径は\qty{20}{mm}です。直径\qty{4}{mm}の鋼の針金（$G=\qty{79}{GPa}$）を、平均の直径\qty{24}{mm}で8回巻いたばねを使うとき、ばねを何 mm ちぢめておけばよいでしょう。
+\phbamen
+圧力が上がりすぎると、弁の円板がばねに勝って持ち上がり、空気が逃げます（工学ではこう使うの図）。開く瞬間は、圧力が円板を押す力と、ばねが押さえる力がつり合っています。
+\phmushi
+円板と弁の重さ、弁と座面の摩擦、円板の外側の大気圧の影響（ゲージ圧を使うことでふくめる）は無視します。ばねは、ねじりだけで変形するとします。
+\phzu
+円板の面積 $A=\dfrac{\pi}{4}d_{\mathrm v}^2$（$d_{\mathrm v}=\qty{20}{mm}$）、ゲージ圧 $p$、ばね定数 $k$、あらかじめちぢめる長さ $x$。
+\phriyu
+圧力が円板を押す力は「ゲージ圧×面積」（⑦）。ばねの力は $F=kx$ で、$k$ は⑧の $k=\dfrac{Gd^4}{8n_{\mathrm c}D^3}$。開く瞬間のつり合い $pA=kx$ から $x$ を求めます。
+\phtateru
+\[ pA=1.0\times10^6\times\frac{\pi}{4}\times0.020^2,\qquad x=\frac{pA}{k} \]
+\[ k=\frac{79\times10^9\times0.004^4}{8\times8\times0.024^3} \]
+\phtoku
+\[ pA\approx\qty{314}{N},\qquad k\approx\pxlq{2.29e4}{N/m}=\pxlq{22.9}{N/mm} \]
+\[ x=\frac{314}{22.9}\approx\qty{13.7}{mm} \]
+\phtashikame
+単位：$\dfrac{\unit{N}}{\unit{N/mm}}=\unit{mm}$。\\
+大きさ：ばねの長さ（巻数8・針金\qty{4}{mm}で、ぎっしり巻いても\qty{32}{mm}以上）にくらべて、ちぢめる\qty{13.7}{mm}はありそうな値です。\\
+極端な場合：開く圧力を2倍にしたいなら、ちぢめる長さも2倍。でも、ばねがちぢみきってしまうので、ふつうは太い針金のばね（$k$ が大きい）にかえます。
+\kotae 約\qty{14}{mm}（$k\approx\pxlq{22.9}{N/mm}$、力\qty{314}{N}）
+\end{phreidai}
+\begin{jibun}
+弁の円板の直径が\qty{25}{mm}の安全弁を、ゲージ圧\qty{0.7}{MPa}で開くようにします。ばね定数\pxlq{20}{N/mm}のばねを使うとき、ばねを何 mm ちぢめておけばよいでしょう。
+\bkjans{$pA=0.7\times10^6\times\frac{\pi}{4}\times0.025^2\approx\qty{344}{N}$。$344\div20\approx\qty{17}{mm}$}
+\end{jibun}
+
+%% ================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{長さ2倍で、座屈荷重は半分？}
+\bkng{柱の長さを2倍にすると、座屈荷重は $\dfrac{1}{2}$ になる。}
+\bkok{$F_{\mathrm{cr}}=\dfrac{\pi^2EI}{L^2}$ なので $\dfrac{1}{4}$。太さ（直径）を2倍にすると16倍。}
+長さは2乗、直径は $I$ を通して4乗できいてきます。
+\end{tsumazuki}
+\begin{tsumazuki}{ゲージ圧と絶対圧}
+\bkng{タンクの中の絶対圧\qty{1.1}{MPa}で、壁の応力を計算する。}
+\bkok{壁を外へ押すのは中と外の差なので、ゲージ圧\qty{1.0}{MPa}で計算する。}
+外の大気圧も、壁を内へ押しているからです。
+\end{tsumazuki}
+\begin{tsumazuki}{円筒の壁は、軸の向きが大きい？}
+\bkng{長い円筒では、長さの向きに大きく引っぱられる。}
+\bkok{輪の向き（$\dfrac{pr}{t}$）は、軸の向き（$\dfrac{pr}{2t}$）の2倍。だからたてに割れる。}
+長さ $L$ にかかる圧力の力は、長さとともにふえ、支える壁の切り口も長さとともにふえるので、長さによりません。
+\end{tsumazuki}
+\begin{tsumazuki}{毎分の回転数をそのまま使う}
+\bkng{毎分3000回転なら $\omega=2\pi\times3000$。}
+\bkok{1秒あたりにしてから：$\omega=2\pi\times\dfrac{3000}{60}=\pxlq{314}{rad/s}$。}
+$P=T\omega$ の $\omega$ は rad/s です。\qty{60}{s/min}でわるのを忘れると、$T$ が60分の1になります。
+\end{tsumazuki}
+\begin{tsumazuki}{中空軸の $Z_{\mathrm p}$}
+\bkng{$Z_{\mathrm p}=\dfrac{\pi(D^3-d^3)}{16}$}
+\bkok{$Z_{\mathrm p}=\dfrac{I_{\mathrm p}}{D/2}=\dfrac{\pi(D^4-d^4)}{16D}$}
+足し引きできるのは、$\int r^2\,\dd A$ の $I_{\mathrm p}$ だけです。$Z_{\mathrm p}$ は、$I_{\mathrm p}$ を外側の半径でわって作ります。
+\end{tsumazuki}
+
+%% ================================================================
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[安全弁・軸・足場]
+\par\vspace{3pt}\noindent\begin{minipage}[c]{0.58\linewidth}
+\phboxhead{安全弁：ばねと圧力のつり合い}
+ボイラーや空気タンクには、圧力が上がりすぎたときに自動で開いて、気体を逃がす\textbf{安全弁}がついています。弁の円板を、コイルばねが上から押さえています。中の圧力が弁の円板を押す力（ゲージ圧×円板の面積）が、ばねの力をこえると、弁が持ち上がって開きます。たとえば、弁の円板の直径が\qty{20}{mm}で、ゲージ圧\qty{1.0}{MPa}で開くようにするには、ばねで $1.0\times10^6\times\dfrac{\pi}{4}\times0.020^2\approx\qty{314}{N}$ の力で押さえておきます。ばねの太さ・巻数（⑧の $k$）と、あらかじめちぢめておく長さで、開く圧力が決まります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (0,0) rectangle (10,6) (24,0) rectangle (34,6);
+  \draw[bkInk, line width=0.6pt] (0,6) -- (10,6) -- (10,0) (24,0) -- (24,6) -- (34,6);
+  \fill[bkBlue!20] (10,-8) rectangle (24,1);
+  \draw[bkInk, line width=0.6pt] (10,-8) -- (10,0) (24,-8) -- (24,0);
+  \fill[bkOrange!50] (9,6) rectangle (25,8.5); \draw[bkInk, line width=0.6pt] (9,6) rectangle (25,8.5);
+  \foreach \k in {0,...,4} {\draw[bkGreen!60!black, line width=1.1pt] (12,{9.5+\k*4}) -- (22,{11.5+\k*4}) -- (12,{13.5+\k*4});}
+  \fill[bkGray!35] (8,29.5) rectangle (26,32); \draw[bkInk, line width=0.6pt] (8,29.5) rectangle (26,32);
+  \foreach \x in {12,15,18,21} {\draw[-{Stealth[length=3pt]}, bkBlue, line width=0.8pt] (\x,-6) -- (\x,5.4);}
+  \node[anchor=west, font=\sffamily\footnotesize] at (27,20) {ばね};
+  \node[anchor=west, font=\sffamily\footnotesize] at (27,8) {円板};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkBlue!80!black] at (17,-8.5) {タンクの圧力};
+\end{tikzpicture}
+\end{minipage}
+
+\phboxhead{軸の点検}
+ポンプやファンの軸は、ねじりのほかに曲げも受けて何億回も回るので、くり返しの力による疲労（力-8）で太さが決まることが多く、許される応力を小さくとります。保全の現場では、軸の振れや、カップリング（つぎ手）の芯のずれを定期的にはかり、ねじり・曲げの余分な力がかかっていないかを確かめます。
+
+\phboxhead{足場と壁つなぎ}
+建物の外の足場では、鋼管の柱を一定の間かくで建物の壁とつなぎます（壁つなぎ）。例題4・5のように、座屈荷重は長さの2乗に反比例するので、とちゅうをとめて有効長さを短くすると、ずっと強くなるからです。
+
+\begin{phketa}[ねじり・圧力・座屈の数値]
+\phketaline{鋼の横弾性係数 $G$}{約\qty{79}{GPa}}
+\phketaline{足場の鋼管（$\phi$\qty{48.6}{mm}×\qty{2.4}{mm}、STK500）の降伏点}{\qty{355}{MPa}以上}
+\phketaline{足場の鋼管 \qty{3.6}{m}（両はしピン）の座屈荷重}{約\qty{15}{kN}}
+\phketaline{炭酸飲料の缶の内圧（ゲージ圧、目安）}{約\qty{0.3}{MPa}}
+\phketaline{アルミ缶の胴の厚さ}{約\qty{0.1}{mm}}
+\phboxhead{答えが桁で合っているか}
+座屈の答えが降伏する力（$\sigma_{\mathrm Y}A$）より大きく出たら、オイラーの式は使えません（細長比が小さい）。圧力容器の応力が\qty{1000}{MPa}をこえるような答えは、ゲージ圧と絶対圧、mm と m のまちがいを疑おう。
+\end{phketa}
+\end{phkougaku}
+\phstation{機械要素設計,圧力容器,構造力学,ばね設計}{ねじりモーメント、極断面係数、伝達動力、フープ応力、座屈長さ、細長比、ひずみエネルギー法}
+
+\begin{column}{オイラーの式が役に立つまで}
+オイラーは1744年に、柱が曲がり始める力を導きました。でも当時の柱は石や太い木で、座屈の前に材料がこわれるものばかりでした。この式が本当に必要になったのは、鉄や鋼の細長い部材で橋や建物を作るようになった100年ほどあとです。1907年、カナダで工事中のケベック橋が、おしちぢめられる部材の座屈がきっかけで落ち、75人の作業員が亡くなりました。この事故のあと、おしちぢめられる部材の設計の決まりが、大きく見直されました。
+\end{column}
+
+%% ================================================================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 両はしピンの柱で、次のように変えると、座屈荷重は何倍になるでしょう。\par
+（1）\nobreak 長さを半分\quad（2）\nobreak 直径を1.5倍\quad（3）\nobreak 両はしを固定
+\bkpans{（1）\nobreak 4倍（2）\nobreak $1.5^4\approx5.1$ 倍（3）\nobreak 4倍}
+\bkproblem \qty{7.5}{kW}のモータが毎分1450回転で回っています。軸のねじりモーメントを求め、直径\qty{20}{mm}の中実軸のいちばん大きいせん断応力を求めましょう。
+\bkpans{$\omega\approx\pxlq{151.8}{rad/s}$、$T\approx\pxlq{49.4}{N.m}$。$\tau=16T/(\pi d^3)\approx\qty{31}{MPa}$}
+\bkproblem 内半径\qty{0.3}{m}、厚さ\qty{5}{mm}の円筒形のタンクに、ゲージ圧\qty{0.5}{MPa}の気体が入っています。輪の向きと軸の向きの応力を求めましょう。
+\bkpans{$\sigma_\theta=0.5\times300\div5=\qty{30}{MPa}$、$\sigma_z=\qty{15}{MPa}$}
+\bkproblem 直径\qty{3}{mm}の鋼の針金（$G=\qty{79}{GPa}$）を、平均の直径\qty{30}{mm}で12回巻いたコイルばねのばね定数を求めましょう。
+\bkpans{$k=Gd^4/(8n_{\mathrm c}D^3)\approx\pxlq{2470}{N/m}$}
+\bkproblem 例題4の足場の鋼管（$I=\qty{9.32e-8}{m^4}$、$i=\qty{16.4}{mm}$）を、長さ\qty{2.0}{m}の両はしピンの柱にしました。座屈荷重と細長比を求めましょう。
+\bkpans{$F_{\mathrm{cr}}\approx\qty{47}{kN}$、$\lambda=2000\div16.4\approx122$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 内径が外径の0.8倍の中空軸で\pxlq{1000}{N.m}を伝えます（許されるせん断応力\qty{40}{MPa}）。外径と、同じ条件の中実軸の直径を求め、重さをくらべましょう。
+\bkpans{$D^3=16T/\bigl(\pi\tau(1-0.8^4)\bigr)$ より $D\approx\qty{60}{mm}$（内径約\qty{48}{mm}）。中実軸は約\qty{50}{mm}。重さは約0.51倍}
+\bkproblem 少し曲がった柱を座屈荷重の75\,\%の力で押すと、曲がりははじめの何倍？
+\bkpans{$1\div(1-0.75)=4$ 倍}
+\bkproblem $EI=\pxlq{7.61e3}{N.m^2}$ の鋼管で、柱の高さ\qty{1.2}{m}、腕\qty{0.8}{m}のL字形の支柱を作り、腕の先に\qty{150}{N}を下向きにかけました。腕の先が下がる量は？
+\bkpans{\qty{3.4}{mm}（腕）＋\qty{15.1}{mm}（柱）で、約\qty{18.5}{mm}}
+\phnyushi
+\bkproblem 半径\qty{0.20}{m}の2つの半球を合わせ、中を\qty{2.0e4}{Pa}にしました。大気圧を\qty{1.0e5}{Pa}として、引きはなすのに必要な力は？
+\bkpans{圧力の差 \qty{8.0e4}{Pa} が投影面積 $\pi\times0.20^2=\qty{0.126}{m^2}$ にかかる。約\qty{1.0e4}{N}}
+\bkproblem ばね定数\pxlq{490}{N/m}のコイルばねに\qty{0.5}{kg}のおもりをつるすと、\qty{1.0}{cm}のびました。同じおもりで、（1）ばねを半分の長さに切ったとき、（2）2本を並列にしたとき、（3）2本を直列にしたときの、のびを求めましょう。
+\bkpans{（1）\nobreak 巻数が半分で $k$ が2倍、\qty{0.5}{cm}（2）\nobreak $k=\pxlq{980}{N/m}$ で\qty{0.5}{cm}（3）\nobreak $k=\pxlq{245}{N/m}$ で\qty{2.0}{cm}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 棒を押す・ねじる・内からふくらませると、どこがどう変わるかを、実験と表から言える。\bkfurref{ph:力-11:sec1}
+\item 軸が伝える動力とねじりモーメント、圧力容器の壁の応力、柱が曲がり始める力を計算できる。\bkfurref{ph:力-11:sec5}
+\item ねじり・ひずみエネルギー・座屈の式を導き、カスティリアーノの定理でたわみを求められる。\bkfurref{ph:力-11:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{急に曲がるのは、まっすぐのままでいられなくなるから。足場の壁つなぎにも、わけがあったんだね。}

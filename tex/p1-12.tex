@@ -1,0 +1,1377 @@
+%% 力-12 水の中の力：圧力と浮力（第13回編集委員会 物理第1巻：組 P1-7）
+%% 第4部（流体の力学）の最初の章。ここで決めた流体の記号と言い方を、力-13・力-14・力-15 もそのまま使う：
+%%   圧力 p（Pa）。ゲージ圧（大気圧との差）と絶対圧（真空からはかる）は、ことばで必ず書き分ける（単位のうしろに G は付けない）。
+%%   大気圧 p_0。密度 ρ（kg/m^3）、体積 V、深さ h（水面から下向きに正）、高さ z（上向きに正）。浮力 F_B。
+%%   水の密度は例題では 1000 kg/m^3（20 ℃で 998.2：巻末の表）。海水 1025 kg/m^3、空気 1.2 kg/m^3（20 ℃で 1.204）。
+%%   体積弾性率 K（力-8 で定義）。体積流量 Q・質量流量 m-dot は力-13 で決める。
+%%   「流体」＝止まっているときに、ずらす力（せん断）を支えられない物（気体と液体）。
+%% 数値はすべて Python で確かめた：scratchpad/phys1/力-12/c12.py
+%% 出典（まだわかっていないこと・歴史・実機の値）：
+%%   標準大気圧 101325 Pa：1954年の第10回国際度量衡総会で決めた値（定義値）。
+%%   水の体積弾性率 約2.2 GPa（20 ℃）：理科年表の水の圧縮率 約4.5×10^-10 /Pa の逆数。
+%%   氷の密度 917 kg/m^3（0 ℃、理科年表）。海水 約1025 kg/m^3（表面の平均的な値。場所で 1020〜1030）。
+%%   水銀の密度 13595 kg/m^3（0 ℃）：0.760 m × 13595 × 9.80665 ＝ 101325 Pa で確かめた。
+%%   ヘリウム 0.166 kg/m^3・空気 1.204 kg/m^3（20 ℃・1気圧）：理想気体の式 ρ＝pM/(RT) で計算して確かめた（0.1664、1.2041）。
+%%   水道の水圧：水道施設の技術的基準を定める省令（平成12年厚生省令第15号）の配水施設の基準で、配水管から給水管に
+%%     分かれる所の水圧は 0.15〜0.74 MPa（刈谷市・安城市の「直結増圧式給水」の資料の引用で確認。条文は e-Gov で要確認）。
+%%   トリチェリの実験：1643年（トリチェリの考えでヴィヴィアーニが行った）。ピュイ・ド・ドームの実験：1648年（パスカルの依頼でペリエが行った）。
+%%   ガリレオ『新科学対話』（1638年）に、吸い上げポンプでは約18ブラッチョ（約10 m）より高く水を上げられない、という話がある。
+%%   ヤンセンの実験：H. A. Janssen, Zeitschrift des Vereines deutscher Ingenieure 39, 1045 (1895)（穀物のサイロの底の圧力）。
+%%   アルキメデスの王冠の話：ウィトルウィウス『建築について』第9書（紀元前1世紀）に伝わる話。アルキメデス本人の記録ではない。
+%%   油圧ショベルの油圧：約30 MPa（中型で 30〜38 MPa 程度。メーカーの公開仕様で要確認）。
+\makeatletter
+% 水（断面）  \pxmwater{左下}{右上}   水面の線つき
+\newcommand\pxmwater[2]{\fill[bkBlue!13] #1 rectangle #2;
+  \path #1 coordinate (pxm@a) #2 coordinate (pxm@b);
+  \draw[bkBlue!70!black, line width=0.8pt] (pxm@a|-pxm@b) -- (pxm@b);}
+% 水面のしるし ▽  \pxmsurf{(x,y)}
+\newcommand\pxmsurf[1]{\draw[bkBlue!70!black, line width=0.6pt] ($#1+(-1.4,2.4)$) -- ($#1+(1.4,2.4)$) -- ($#1+(0,0.2)$) -- cycle;}
+% 船（横から）  \pxmship{(中心の水面の点)}{はば}{水面の下の深さ}{水面の上の高さ}
+\newcommand\pxmship[4]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!40, draw=bkInk, line width=0.7pt, line join=round] (-#2/2+1.5,-#3) -- (#2/2-1.5,-#3) -- (#2/2,#4) -- (-#2/2,#4) -- cycle;
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (-#2/4,#4) rectangle (#2/8,#4+4);
+  \fill[bkInk] (-#2/4+1.5,#4+1.6) rectangle ++(1.6,1.4) (-#2/4+4.5,#4+1.6) rectangle ++(1.6,1.4);
+\end{scope}}
+\makeatother
+\tikzset{pxm f/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.3pt},
+  pxm lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  pxm dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{12}{水の中の力：\\圧力と浮力}{鉄でできた大きな船が、なぜ水に浮かぶ？}{\bklevelrange{3}{4}}{水の中の力：圧力と浮力}
+\bkmichishirube{3-7,4-6,5-12,8-6,力-2}{力-13,力-14,熱-3}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 圧力を計算し、水圧 $p=p_0+\rho gh$ を使える。
+\item \bklevel{3}\enspace 浮力のわけを説明し、浮き沈みを計算できる。
+\item \bklevel{4}\enspace 油圧・壁や水門の力・船の安定を計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{同じ体積でも、物によって重さがちがう}{小学校理科}{ph:力-12:mitsudo}
+\phk{密度 $\rho=m/V$、圧力 $p=F/S$}{中学理科}{ph:力-12:atsuryoku}
+\phk{空気は縮められ、水は縮められない}{小学校理科}{ph:力-12:K}
+\phk{水圧はあらゆる向きからはたらく}{中学理科}{ph:力-12:muki}
+\phk{$p=p_0+\rho gh$（水圧は深いほど大きい）}{高校物理基礎}{ph:力-12:suiatsu}
+\phk{大気圧は約\qty{1013}{hPa}（水銀柱\qty{760}{mm}）}{中学理科}{ph:力-12:taikiatsu}
+\phk{$F_1/A_1=F_2/A_2$（パスカルの原理）}{高校物理（発展）}{ph:力-12:pascal}
+\phk{浮力＝空気中の重さ－水中の重さ}{中学理科}{ph:力-12:furyoku-chu}
+\phk{$F_{\mathrm{B}}=\rho Vg$（アルキメデスの原理）}{高校物理基礎}{ph:力-12:furyoku}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}\raggedright
+鉄のくぎを水に入れると、すぐに沈みます。鉄は水より重いからです。
+
+ところが、港には、何万トンもの鉄でできた大きな船が浮かんでいます。くぎよりずっと多くの鉄を使っているのに、なぜ沈まないのでしょう。
+
+船を水に浮かせている力は、どこから来るのかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \pxmwater{(0,0)}{(58,24)}
+  \pxmship{(22,24)}{34}{4}{6}
+  \filldraw[fill=bkGray!75, draw=bkInk, line width=0.6pt] (47,0.6) rectangle (53,6.6);
+  \node[pxm lab, anchor=south] at (22,35.5) {鉄の船（浮かぶ）};
+  \node[pxm lab, anchor=south, align=center] at (49,8.4) {鉄のかたまり\\（沈む）};
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (41,30) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 水の中の物は、まわりの水から押されています。水が押す力は、深いほど大きくなります。この章では、まず「押す強さ」を数で表す\textbf{圧力}を作り、深さとの関係を式にします。それを使うと、浮く力（浮力）も、ダムの壁にかかる力も、重い車を小さな力で持ち上げる油圧のしくみも、同じ考え方で計算できます。水や空気のように、形が自由に変わって流れる物を\textbf{流体}といいます。この章と力-13〜力-15 は、流体の力学です。\bkidx{りゅうたい}{流体}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{omoidasou}
+\bkrecall{2-10}{単位も、かけ算・わり算できる。\qty{1}{N}は\qty{1}{kg}の物を\qty{1}{m/s^2}で加速させる力。N/m$^2$ は「\qty{1}{m^2}あたりの力」。}
+\bkrecall{3-7}{圧力は\qty{1}{m^2}あたりにおす力で、単位は Pa（パスカル）。まわりの空気の圧力は約\qty{101}{kPa}。温度が変わらなければ、気体の $pV$ は一定。}
+\bkrecall{4-6}{直角三角形の斜辺が $c$、角が $\theta$ なら、となりの辺は $c\cos\theta$、向かいの辺は $c\sin\theta$。}
+\bkrecall{5-12}{細かく分けて、かけて、たす。力が場所で変わるときの仕事は $\displaystyle\int F\,\dd x$。}
+\bkrecall{力-2}{地面の近くで質量 $m$ の物にはたらく重力は $mg$（$g$ は約\qty{9.8}{N/kg}）。止まっている物では、はたらく力の和が0（つり合い）。}
+\end{omoidasou}
+
+\begin{yattemiyou}[水が押す力を見てみよう]
+\textbf{用意するもの}\par
+\qty{2}{L}のペットボトル、きり（大人といっしょに使う）、ビニールテープ、ポリ袋、バケツ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item ペットボトルの横に、高さのちがう穴を3つあける。穴をテープでふさいで水を満たし、ふたを外して流しの台の上に置く。
+\item テープを一度にはがして、3つの穴から出る水の勢いを比べる。
+\item 手にポリ袋をかぶせて、バケツの水の中に入れる。手を深く入れていくと、袋はどうなるかな？
+\end{enumerate}
+\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ボトル：底 y=0、水面 y=20、穴は高さ 15・10・5（深さ 5・10・15）
+  \fill[bkBlue!13] (0,0) rectangle (10,20);
+  \draw[bkInk, line width=0.9pt, line join=round] (0,27) -- (0,0) -- (10,0) -- (10,27);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,20) -- (10,20);
+  \draw[bkGray, line width=0.6pt] (-4,0) -- (40,0);
+  \foreach \hh/\dd in {15/5,10/10,5/15} {
+    \draw[bkBlue!80!black, line width=1.2pt, domain=0:{2*sqrt(\dd*\hh)}, samples=30, smooth] plot ({10+\x},{\hh-\x*\x/(4*\dd)});
+    \fill[bkInk] (10,\hh) circle (0.55);}
+  \node[pxm lab, anchor=east] at (-1,15) {上};
+  \node[pxm lab, anchor=east] at (-1,10) {中};
+  \node[pxm lab, anchor=east] at (-1,5) {下};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright\small
+穴から出たすぐの所を見ると、下の穴ほど勢いよく横に飛び出し、水の線の曲がり方がゆるやかです。深い所ほど、水が強く押しているからです。\par\vspace{2pt}
+（台の上に落ちる場所は、まん中の穴がいちばん遠くなることがあります。下の穴の水は、速いかわりに落ちる高さが低いからです。）
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの③では、手を深く入れるほど、ポリ袋が手にぴったりとはりつきました。袋は上からも下からも横からも、手のほうへ押されています。水は、どの向きの面も押し、その強さは深いほど大きいのです。①②の結果とあわせて、この2つのことを数で表していきます。
+
+
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{圧力と密度：1 m$^{2}$ あたり、1 m$^{3}$ あたり}
+
+\leavevmode\label{ph:力-12:sec1}雪の上を、ふつうのくつで歩くと、足がずぶずぶ沈みます。スキーをはくと、沈みません。体重は同じなのに、何がちがうのでしょう。
+
+体重\qty{50}{kg}の人を考えます。雪を押す力は、体にはたらく重力で、$50\times9.8$ より\qty{490}{N}です。くつ2足の底の面積は、合わせて\qty{300}{cm^2}（\qty{0.03}{m^2}）とします。スキー2本では\qty{0.3}{m^2}とします。同じ\qty{490}{N}の力を、どれだけの面積に分けて受けているかがちがいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % くつ
+  \fill[bkLine!60] (0,0) rectangle (50,6);
+  \draw[bkGray, line width=0.6pt] (0,6) -- (50,6);
+  \fill[bkInk!70] (19,2) rectangle (31,6.6);
+  \draw[pxm f, bkOrange!85!black] (25,24) -- (25,8);
+  \node[pxm lab, anchor=west] at (26.5,17) {\qty{490}{N}};
+  \foreach \x in {20,22.5,...,30} \draw[pxm f, bkRed!75!black, line width=0.8pt] (\x,-0.5) -- (\x,-5);
+  \node[pxm lab, anchor=north, align=center] at (25,-7) {くつ（\qty{0.03}{m^2}）\\$490\div0.03\approx\qty{16000}{Pa}$};
+  % スキー
+  \begin{scope}[xshift=68mm]
+  \fill[bkLine!60] (0,0) rectangle (56,6);
+  \draw[bkGray, line width=0.6pt] (0,6) -- (56,6);
+  \fill[bkBlue!70] (2,6) rectangle (54,7.4);
+  \fill[bkInk!70] (24,7.4) rectangle (32,11);
+  \draw[pxm f, bkOrange!85!black] (28,28) -- (28,12.5);
+  \node[pxm lab, anchor=west] at (29.5,21) {\qty{490}{N}};
+  \foreach \x in {4,10,...,52} \draw[pxm f, bkRed!75!black, line width=0.8pt] (\x,-0.5) -- (\x,-2.6);
+  \node[pxm lab, anchor=north, align=center] at (28,-7) {スキー（\qty{0.3}{m^2}）\\$490\div0.3\approx\qty{1600}{Pa}$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ\qty{490}{N}でも、広い面で受けると、\qty{1}{m^2}あたりの力（赤い矢印1本の強さ）は小さくなる。}
+\end{bkfigure}
+
+\qty{1}{m^2}あたりの力は、くつでは $490\div0.03\approx\qty{16000}{N}$、スキーでは $490\div0.3\approx\qty{1600}{N}$ で、10分の1です。雪がこわれるかどうかは、全体の力ではなく、この「\qty{1}{m^2}あたりの力」で決まります。そこで、
+\label{ph:力-12:atsuryoku}
+\pheq{\text{圧力}=\frac{\text{面を垂直に押す力}}{\text{面積}},\qquad p=\frac{F}{S}}{Pa ＝ N ÷ m$^2$}
+と決めます。これは\textbf{圧力}の定義です（3-7 で出てきた圧力と同じ）。\bkidx{あつりょく}{圧力}$p$ は英語の pressure、$S$ は面（surface）の頭文字です。単位は N/m$^2$ で、これを Pa（パスカル）と書きます。\qty{1}{Pa}は\qty{1}{m^2}を\qty{1}{N}で押す圧力で、とても小さな圧力です（\qty{1}{m^2}の板の上に、みかん1こを100こに分けて広げたくらい）。だから、ふだんは kPa（\qty{1000}{Pa}）や MPa（$10^6$\,Pa）を使います。
+
+\begin{phyomi}[$p=\dfrac{F}{S}$]
+「\qty{1}{m^2}あたり、何 N で押しているか」。力 $F$ は面に垂直な向きの力です。面にそってずらす向きの力は、圧力には入れません。
+\end{phyomi}
+\begin{phmijika}[とがった物・広い物]
+画びょうを\qty{10}{N}で押すと、頭（約\qty{1}{cm^2}＝$10^{-4}$\,m$^2$）が指を押す圧力は $10\div10^{-4}=\qty{100000}{Pa}$（\qty{100}{kPa}）。先（約\qty{0.1}{mm^2}＝$10^{-7}$\,m$^2$）が板を押す圧力は $10\div10^{-7}=10^8$\,Pa（\qty{100}{MPa}）で、1000倍です。だから先だけが板にささります。包丁の刃も同じです。反対に、雪上車のはば広いベルト（キャタピラ）や、トラックのたくさんのタイヤは、面積を広くして圧力を小さくしています。
+\end{phmijika}
+\begin{phbaisuru}{面積 $S$}
+力が同じなら、圧力は半分になります。$p$ と $S$ は反比例です（2-15・3-7）。下のグラフは、\qty{490}{N}で押すときの圧力です。面積を小さくしていくと、圧力はどこまでも大きくなります。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=42mm, xmin=0, xmax=0.33, ymin=0, ymax=26, xtick={0.03,0.1,0.2,0.3}, xticklabels={0.03,0.1,0.2,0.3}, ytick={5,10,15,20,25}, xlabel={$S$（m$^2$）}, ylabel={$p$（kPa）}]
+  \addplot[bkcurve, domain=0.019:0.32, samples=120] {0.49/x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(0.03,16.33) (0.06,8.17) (0.3,1.633)};
+  \node[font=\sffamily\scriptsize, anchor=west] at (axis cs:0.034,17.5) {くつ 16 kPa};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:0.064,8.6) {面積2倍で 8.2 kPa};
+  \node[font=\sffamily\scriptsize, anchor=south] at (axis cs:0.3,2.6) {スキー 1.6 kPa};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\noindent\textbf{密度：1 m$^3$ あたりの質量}\par\nobreak
+もう1つ、流体で必ず使う量があります。同じ\qty{1}{L}のペットボトルでも、水を入れると約\qty{1}{kg}、油を入れると約\qty{0.9}{kg}、空気だけなら約\qty{1.2}{g}です（小学校理科「同じ体積でも、物によって重さがちがう」）。物の種類による重さのちがいを比べるには、同じ体積あたりの質量を比べます。
+\label{ph:力-12:mitsudo}
+\pheq{\text{密度}=\frac{\text{質量}}{\text{体積}},\qquad \rho=\frac{m}{V}}{kg/m$^3$ ＝ kg ÷ m$^3$}
+これを\textbf{密度}といいます。\bkidx{みつど}{密度}$\rho$ はギリシャ文字で「ロー」と読みます。単位は kg/m$^3$ です。理科で使う g/cm$^3$ とは、単位つきの1で換算します（2-10）：
+\[ \qty{1}{g/cm^3}=\frac{\qty{1}{g}}{\qty{1}{cm^3}}\times\frac{\qty{1}{kg}}{\qty{1000}{g}}\times\frac{\num{1000000}\,\mathrm{cm^3}}{\qty{1}{m^3}}=\qty{1000}{kg/m^3} \]
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[r,m,wd=22mm] Q[l,m,wd=34mm] Q[r,m,wd=22mm]}, rowsep=1.2pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+物 & 密度（kg/m$^3$） & 物 & 密度（kg/m$^3$） \\
+空気（\qty{20}{\celsius}） & 1.2 & 水（\qty{20}{\celsius}） & 998 \\
+ヘリウム（\qty{20}{\celsius}） & 0.17 & 海水 & 約1025 \\
+木（すぎ） & 約380 & アルミニウム & 約2700 \\
+作動油（油圧の油） & 約860 & 鉄（鋼） & 約7850 \\
+氷（\qty{0}{\celsius}） & 917 & 水銀（\qty{0}{\celsius}） & \num{13595} \\
+\end{bktable}
+\bktabcaption{いろいろな物の密度（気体は1気圧。巻末の表と理科年表による）。この章の例題では、水の密度を\qty{1000}{kg/m^3}とする（998 とのちがいは 0.2\,\% で、答えの2けたには効かない）。}
+\end{bkcenter}
+
+\begin{seikaku}
+密度が場所でちがう物（中に空気のあなが多いパン、下ほどぎゅっとつまった空気など）では、小さな体積 $\dd V$ をとり、その中の質量 $\dd m$ をわった $\rho=\dd m/\dd V$ を、その点の密度と考えます。圧力も同じで、小さな面 $\dd S$ を押す力 $\dd F$ から $p=\dd F/\dd S$ を、その点の圧力とします。
+\end{seikaku}
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\rho=\dfrac{\dd m}{\dd V}$\\（その点の密度）}{どこも同じ物\\（一様）}{$\rho=\dfrac{m}{V}$}
+\phflowrow{$p=\dfrac{\dd F}{\dd S}$\\（その点の圧力）}{面のどこも\\同じ強さで押す}{$p=\dfrac{F}{S}$}
+\end{phflow}
+
+\bksubsection{2}{流体の圧力は、どの向きにも同じ}
+
+\leavevmode\label{ph:力-12:sec2}やってみようのポリ袋は、上からも下からも横からも、手に押しつけられました。水は、どんな向きの面も押します。しかも、その力は必ず面に\textbf{垂直}です。なぜでしょう。
+
+\noindent\textbf{流体は、ずらす力を支えられない}\par\nobreak
+ゼリーや消しゴムは、上の面を横にずらす向きに押しても、少しゆがんだ所で止まります。かたまり（固体）は、ずらす力を支えられるからです。ところが、水や空気は、どんなに小さな力でも、ずらす向きに押し続けると、形が変わり続けて流れてしまいます。これが流体の特ちょうです。だから、\textbf{止まっている流体}が面を押す力には、面にそってずらす向きの成分がありません。もしあったら、その力で水が流れ出し、止まっていられないからです。止まっている流体の力は、面に垂直です。
+
+\noindent\textbf{小さな三角柱で確かめる}\par\nobreak
+では、垂直に押す強さは、面の向きによって変わらないのでしょうか。水の中に、断面が直角三角形の、小さな三角柱の形をした水のかたまりを考えます。おくゆきは $b$ です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!13] (-12,-12) rectangle (70,46);
+  \filldraw[fill=bkBlue!32, draw=bkBlue!70!black, line width=0.9pt] (0,0) -- (48,0) -- (0,30) -- cycle;
+  % 鉛直な面の力（右向き）
+  \foreach \y in {6,15,24} \draw[pxm f, bkRed!75!black] (-9,\y) -- (-0.8,\y);
+  \node[pxm lab, anchor=south, fill=bkBlue!13] at (-6,26.5) {$p_x$};
+  % 底の面の力（上向き）
+  \foreach \x in {8,20,32,44} \draw[pxm f, bkRed!75!black] (\x,-9) -- (\x,-0.8);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (45,-6) {$p_z$};
+  % 斜面の力（斜面に垂直、内向き）  斜面の法線（外向き）は (30,48)/|..| → (0.53,0.848)
+  \foreach \t in {0.2,0.5,0.8} {\coordinate (q) at ($(48,0)!\t!(0,30)$);
+    \draw[pxm f, bkRed!75!black] ($(q)+(5.3,8.48)$) -- ($(q)+(0.42,0.68)$);}
+  \node[pxm lab, anchor=south west, fill=bkBlue!13] at (39,20) {$p_n$};
+  % 長さ
+  \node[pxm lab, anchor=north, fill=bkBlue!32] at (24,-1.6) {$\Delta x$};
+  \node[pxm lab, anchor=west, fill=bkBlue!32] at (1.4,14) {$\Delta z$};
+  \node[pxm lab, fill=bkBlue!32] at (22,11) {$\Delta s$};
+  \draw[bkInk, line width=0.5pt] (40,0) arc (180:148:8);
+  \node[pxm lab, fill=bkBlue!32] at (36.5,2.5) {$\theta$};
+\end{tikzpicture}
+\bkfigcaption{水の中の小さな三角柱（断面）。3つの面を押す圧力を $p_x$・$p_z$・$p_n$ とする。力は、どれも面に垂直。}
+\end{bkfigure}
+斜めの面の長さを $\Delta s$、水平な面とのあいだの角を $\theta$ とすると、4-6 より $\Delta x=\Delta s\cos\theta$、$\Delta z=\Delta s\sin\theta$ です。各面を押す力は「圧力×面積」です。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{横のつり合い}：左の面を右へ押す力 $p_x\,\Delta z\,b$ と、斜めの面を押す力の左向きの成分 $p_n\,\Delta s\,b\,\sin\theta$ がつり合う。$\Delta z=\Delta s\sin\theta$ なので、$p_x\,\Delta s\sin\theta\, b=p_n\,\Delta s\sin\theta\, b$。両辺を同じ数でわって $p_x=p_n$。
+\item \textbf{たてのつり合い}：底を上へ押す力 $p_z\,\Delta x\,b$ ＝ 斜めの面の力の下向きの成分 $p_n\,\Delta s\,b\,\cos\theta$ ＋ 三角柱の重さ $\rho g\times\dfrac{1}{2}\Delta x\,\Delta z\,b$。$\Delta x=\Delta s\cos\theta$ を入れて、両辺を $\Delta x\,b$ でわると $p_z=p_n+\dfrac{1}{2}\rho g\,\Delta z$。
+\item 三角柱をどんどん小さくすると、$\Delta z$ は0に近づき、重さの分 $\dfrac{1}{2}\rho g\,\Delta z$ は消える。だから $p_z=p_n$。
+\end{enumerate}
+$\theta$ はどんな角でもよかったので、\label{ph:力-12:muki}\textbf{止まっている流体の中の1点では、圧力はどの向きの面にも同じ大きさで、面に垂直にはたらきます}。圧力は「向きを持たない量（スカラー）」です。向きを持つのは、圧力が面を押す「力」のほうで、その向きは面で決まります。この性質は、17世紀にフランスのパスカルが、⑤の原理とあわせて本にまとめたことで、広く知られるようになりました。
+
+\noindent\textbf{水はおし縮められない}\par\nobreak
+\label{ph:力-12:K}先をふさいだ注射器に空気を入れて押すと、ピストンは押しこめます。水を入れると、ほとんど動きません（小学校理科）。力-8 で、体積が縮む割合と圧力の増え方は比例し、その比が\textbf{体積弾性率} $K$ だと学びました。
+\pheq{\Delta p=-K\,\frac{\Delta V}{V}}{Pa ＝ Pa × （無次元）}
+マイナスは「圧力が増えると体積が減る」ことを表します。水の $K$ は約\qty{2.2}{GPa}（$2.2\times10^9$\,Pa）です。空気は、温度が変わらなければ $pV$ が一定（3-7）なので、圧力が少し増えると、体積はちょうど同じ割合だけ減ります。つまり空気の $K$ は今の圧力 $p$ と同じで、約\qty{0.1}{MPa}です。水は空気の約2万倍、縮みにくいのです。
+\begin{phbaisuru}{加える圧力 $\Delta p$}
+縮む割合も2倍です。水に\qty{1}{MPa}（約10気圧）を加えても、縮むのは $\dfrac{10^6}{2.2\times10^9}\approx0.00045$、つまり 0.045\,\% だけです。いちばん深い海の底（深さ約\qty{11}{km}、約\qty{110}{MPa}）では約5\,\% 縮む計算になります（本当は、強く縮めるほど $K$ が大きくなるので、それより少し小さい）。
+\end{phbaisuru}
+\begin{phmijika}[車のブレーキ]
+車のブレーキは、ペダルを踏む力を、管の中の油で車輪まで伝えています。液体はほとんど縮まないので、踏んだ分だけすぐに力が伝わります。管に空気の泡が入ると、泡が縮んでペダルがふわふわになり、ブレーキがききにくくなります。整備では、管から空気を追い出す「エア抜き」をします。
+\end{phmijika}
+
+\bksubsection{3}{深いほど大きい：静水圧 $p=p_0+\rho gh$}
+
+\leavevmode\label{ph:力-12:sec3}やってみようでは、深い穴ほど水が勢いよく出ました。深さと圧力の関係を、水の柱の重さから作りましょう。
+
+\begin{phmodel}[止まっている水]
+\phignore{水が流れること。水がおし縮められること（密度が深さで変わること）。温度による密度のちがい。}
+\phassume{水は止まっていて、密度 $\rho$ は一定。$g$ も一定。水面には大気圧 $p_0$ がはたらく。}
+\phlimit{水が流れているとき（力-13）。深さ数 km の深海（約0.5〜5\,\% 縮む）。空気のように、高さで密度が大きく変わる流体（熱-3）。}
+\end{phmodel}
+\noindent\textbf{水の柱の重さを、底が支える}\par\nobreak
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxmwater{(0,0)}{(44,40)}
+  \pxmsurf{(36,40)}
+  \filldraw[fill=bkBlue!32, draw=bkBlue!70!black, line width=0.8pt, dashed] (14,10) rectangle (26,40);
+  \draw[pxm f, bkOrange!85!black] (20,30) -- (20,18);
+  \node[pxm lab, anchor=west, fill=bkBlue!32] at (20.8,32.5) {$\rho Shg$};
+  \foreach \x in {16,20,24} \draw[pxm f, bkRed!75!black] (\x,3) -- (\x,9.4);
+  \node[pxm lab, anchor=north] at (20,2.6) {$p\,S$（下の水が押す）};
+  \foreach \x in {16,24} \draw[pxm f, bkRed!75!black, line width=0.9pt] (\x,47) -- (\x,40.6);
+  \node[pxm lab, anchor=south] at (20,47) {$p_0S$（大気）};
+  \draw[pxm dim] (30,10) -- (30,40);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (31,25) {$h$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.59\linewidth}\raggedright
+水の中に、底面積 $S$、高さ $h$ の水の柱（点線）を考えます。上の面は水面で、大気が圧力 $p_0$ で押しています。柱の重さは、体積 $Sh$ に密度 $\rho$ と $g$ をかけた $\rho Shg$ です。\par\vspace{3pt}
+柱は止まっているので、下の水が押し上げる力 $pS$ は、大気が押す力と重さの和に等しくなります（横から押す力は左右で打ち消す）。
+\[ pS=p_0S+\rho Shg \]
+両辺を $S$ でわると、深さ $h$ の圧力が出ます。
+\end{minipage}
+\pheq{p=p_0+\rho gh}{Pa ＝ kg/m$^3$ × m/s$^2$ × m}
+\label{ph:力-12:suiatsu}これが、止まっている水の圧力（\textbf{静水圧}）の式です。\bkidx{せいすいあつ}{静水圧}次元チェックの右辺は $\dfrac{\mathrm{kg}}{\mathrm{m^3}}\times\dfrac{\mathrm{m}}{\mathrm{s^2}}\times\mathrm{m}=\dfrac{\mathrm{kg\,m/s^2}}{\mathrm{m^2}}=\dfrac{\mathrm{N}}{\mathrm{m^2}}$ で、たしかに Pa です。
+
+\begin{phyomi}[$p=p_0+\rho gh$]
+深さ $h$ の圧力は、「水面を押す大気の圧力 $p_0$」に、「その上にある、底面積\qty{1}{m^2}の水の柱の重さ $\rho gh$」をたしたものです。容器の形は式に入っていません。
+\end{phyomi}
+\begin{phmijika}[10 m ごとに約1気圧]
+水では $\rho g=1000\times9.8=\qty{9800}{Pa/m}$ なので、\qty{1}{m}深くなるごとに約\qty{9.8}{kPa}、\qty{10}{m}で約\qty{98}{kPa}増えます。大気の圧力が約\qty{101}{kPa}なので、「水に\qty{10}{m}もぐるごとに、約1気圧ずつ増える」と覚えておくと便利です。プールの底（\qty{2}{m}）で耳がつんとするのは、約\qty{20}{kPa}（約0.2気圧）増えた圧力が、こまくを押すからです。
+\end{phmijika}
+\begin{phbaisuru}{深さ $h$}
+増える分 $\rho gh$（ゲージ圧）は2倍になります（比例）。全体の $p$（絶対圧）は、$p_0$ の分があるので2倍にはなりません。グラフのオレンジの線がゲージ圧、青の線が絶対圧です。深さ\qty{10}{m}から\qty{20}{m}にすると、ゲージ圧は98→\qty{196}{kPa}で2倍、絶対圧は199→\qty{297}{kPa}で約1.5倍です。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=50mm, xmin=0, xmax=32, ymin=0, ymax=420, xtick={10,20,30}, ytick={98,101,196,199,297}, yticklabels={,,196,,297}, xlabel={深さ $h$（m）}, ylabel={$p$（kPa）}]
+  \addplot[bkcurve, domain=0:30] {101.3+9.8*x};
+  \addplot[bkcurve2, domain=0:30] {9.8*x};
+  \addplot[bkthin, dashed, domain=0:30] {101.3};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(10,98) (20,196) (10,199.3) (20,297.3)};
+  \node[font=\sffamily\scriptsize, text=bkBlue!80!black, anchor=south east, fill=white, inner sep=1pt] at (axis cs:23,360) {絶対圧 $p_0+\rho gh$};
+  \node[font=\sffamily\scriptsize, text=bkOrange!80!black, anchor=north west, fill=white, inner sep=1pt] at (axis cs:24.5,215) {ゲージ圧 $\rho gh$};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:0.6,104) {$p_0$};
+  \node[font=\sffamily\scriptsize, anchor=north west] at (axis cs:10.4,96) {98};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:9.6,202) {199};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\noindent\textbf{1まいずつ重ねる：一般の式から}\par\nobreak
+上の式では、密度 $\rho$ が深さによらず一定としました。密度が変わるとき（深い海、高い空）にも使える形にするため、水の中の、厚さがうすい層（厚さ $\Delta z$、面積 $S$）のつり合いを考えます。高さ $z$ は上向きを正にとります。層の下の面の圧力を $p$、上の面の圧力を $p+\Delta p$ とすると、
+\[ \underbrace{pS}_{\text{下から押す}}=\underbrace{(p+\Delta p)S}_{\text{上から押す}}+\underbrace{\rho S\Delta z\,g}_{\text{層の重さ}}\qquad\text{より}\qquad \frac{\Delta p}{\Delta z}=-\rho g \]
+層をうすくした先（5-3）が、微分の式です。
+\pheq{\frac{\dd p}{\dd z}=-\rho g}{Pa/m ＝ kg/m$^3$ × m/s$^2$}
+「上へ\qty{1}{m}進むと、圧力は $\rho g$ だけ減る」という意味です。$\rho$ と $g$ が一定なら、これは「傾きが一定」の関数で、積分すると直線になります（6-3 で学ぶ「積分するだけで解ける形」）。水面 $z=z_0$ で $p=p_0$ として積分すると $p=p_0+\rho g(z_0-z)$ です。水面からの深さ $h=z_0-z$ を使えば、$p=p_0+\rho gh$ にもどります。
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\dfrac{\dd p}{\dd z}=-\rho g$\\（どんな流体でも）}{$\rho$ と $g$ が一定\\水面で $p=p_0$}{$p=p_0+\rho gh$}
+\phflowrow{$p=p_0+\rho gh$}{大気との差だけを見る\\（ゲージ圧）}{水圧は\\深いほど大きい}
+\phflowrow{$p=p_0+\rho gh$}{同じ深さの2点を\\比べる}{同じ深さなら\\同じ圧力}
+\end{phflow}
+
+
+\begin{motto}[5]
+\phboxhead{3次元で書くと：$\operatorname{grad}p=\rho\vec{g}$}
+小さな立方体（$\Delta x\times\Delta y\times\Delta z$）のつり合いを、上下だけでなく東西・南北の向きにも書くと、$x$・$y$ の向きには重力がないので、$\dfrac{\partial p}{\partial x}=0$、$\dfrac{\partial p}{\partial y}=0$、$\dfrac{\partial p}{\partial z}=-\rho g$ です（8-2 の偏微分）。3つをまとめると、勾配（8-4）を使って
+\[ \operatorname{grad}p=\rho\vec{g},\qquad \vec{g}=(0,\ 0,\ -g) \]
+と書けます。勾配は「いちばん急に増える向き」なので、止まっている流体の中で圧力がいちばん急に増える向きは、真下です。圧力が等しい面（等圧面）は、どこでも $\vec{g}$ に垂直、つまり水平になります。だから、止まった水の水面は水平です。力-13 で、流れている流体の式（オイラーの式）に広げます。
+\end{motto}
+
+\noindent\textbf{形によらない}\par\nobreak
+式に容器の形は入っていません。下の3つの容器は、底の面積も水の量もちがいますが、水の深さは同じなので、底の圧力は同じです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xo/\shape in {0/a,42/b,84/c} {}
+  % 円柱
+  \fill[bkBlue!13] (0,0) rectangle (24,26);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,26) -- (24,26);
+  \draw[bkInk, line width=1pt] (0,32) -- (0,0) -- (24,0) -- (24,32);
+  % 上に広がる
+  \fill[bkBlue!13] (48,0) -- (62,0) -- (76,26) -- (34,26) -- cycle;
+  \draw[bkBlue!70!black, line width=0.7pt] (34,26) -- (76,26);
+  \draw[bkInk, line width=1pt] (30.8,32) -- (48,0) -- (62,0) -- (79.2,32);
+  % 細い首
+  \fill[bkBlue!13] (88,0) rectangle (124,10) (102,10) rectangle (110,26);
+  \draw[bkBlue!70!black, line width=0.7pt] (102,26) -- (110,26);
+  \draw[bkInk, line width=1pt, line join=round] (102,32) -- (102,10) -- (88,10) -- (88,0) -- (124,0) -- (124,10) -- (110,10) -- (110,32);
+  \foreach \x in {12,55,106} {\fill[bkRed!75!black] (\x,0.9) circle (0.9);}
+  \draw[pxm dim] (128,0) -- (128,26);
+  \node[pxm lab, anchor=west] at (129,13) {$h$};
+  \node[pxm lab, anchor=north] at (12,-2) {円柱};
+  \node[pxm lab, anchor=north] at (55,-2) {上が広い};
+  \node[pxm lab, anchor=north] at (106,-2) {首が細い};
+\end{tikzpicture}
+\bkfigcaption{深さ $h$ が同じなら、底の赤い点の圧力はどれも $p_0+\rho gh$（パスカルのつぼ）。容器の壁も水を押しているので、底が受ける力は、中の水の重さと同じとは限らない。}
+\end{bkfigure}
+「首が細い」容器で、底が受ける力 $pS$ が中の水の重さより大きくなるのは、ふしぎに見えます。これは、横に広がった天井（底より上の壁）が、水を下へ押し返しているからです。容器全体を台ばかりにのせれば、台ばかりの目もりは、容器と水の重さの和になります。
+
+
+
+\bksubsection{4}{空気の重さが押す：大気圧と、ゲージ圧・絶対圧}
+
+\leavevmode\label{ph:力-12:sec4}わたしたちは、空気の「海」の底に住んでいます。空気にも重さがあり、上にある空気の柱の重さが、大気の圧力（\textbf{大気圧}）です。
+
+\noindent\textbf{トリチェリの実験}\par\nobreak
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 皿の水銀
+  \fill[bkGray!55] (2,0) rectangle (38,6);
+  \draw[bkInk, line width=1pt] (0,10) -- (2,0) -- (38,0) -- (40,10);
+  \draw[bkGray!80!black, line width=0.6pt] (2,6) -- (38,6);
+  % 管
+  \fill[bkGray!55] (17,2) rectangle (23,40);
+  \draw[bkInk, line width=0.9pt] (17,2) -- (17,52) arc (180:0:3) -- (23,2);
+  \node[pxm lab, anchor=west] at (24,49) {真空};
+  \draw[pxm dim] (8,6) -- (8,40);
+  \draw[bkGray, dashed, line width=0.4pt] (8,40) -- (17,40);
+  \node[pxm lab, anchor=east, align=right] at (7,23) {\qty{760}{mm}};
+  \foreach \x in {30,35} \draw[pxm f, bkRed!75!black, line width=0.9pt] (\x,14) -- (\x,6.6);
+  \node[pxm lab, anchor=south] at (32.5,14) {$p_0$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+\qty{1}{m}ほどのガラス管に水銀を満たし、口を指でふさいで、水銀の入った皿の中でさかさに立てます。指をはなすと、水銀は少し下がり、皿の面から約\qty{760}{mm}の高さで止まります。管の上は、何もない空間（真空）になります。1643年に、イタリアのトリチェリの考えで行われた実験です。\par\vspace{3pt}
+皿の水銀の面と、管の中の同じ高さの点は、圧力が等しい（③の流れ図）。管の外では大気が $p_0$ で押し、管の中では高さ\qty{760}{mm}の水銀の柱の重さが押しています。
+\end{minipage}
+\[ p_0=\rho_{\text{水銀}}\,g\,h=\qty{13595}{kg/m^3}\times\qty{9.80665}{m/s^2}\times\qty{0.760}{m}\approx\qty{101325}{Pa} \]
+\label{ph:力-12:taikiatsu}これが「1気圧」で、天気予報の\qty{1013}{hPa}（ヘクトパスカル、h は100倍）と同じ大きさです。\qty{101325}{Pa}は、1954年に国際的に決めた値（標準大気圧）です。
+
+水銀の代わりに水を使うと、水の柱は $\dfrac{\num{101325}}{998\times9.81}\approx\qty{10.3}{m}$ です。水銀は水の約13.6倍重いので、柱は13.6分の1ですみます。\qty{1}{m^2}の上にある空気の重さは、$101325\div9.8\approx\num{10300}$\,kg 分、つまり約\qty{10}{t}分です。それでもわたしたちがつぶれないのは、体の中の液体や空気も、同じ圧力で外へ押し返しているからです。
+
+\noindent\textbf{高い所ほど、大気圧は小さい}\par\nobreak
+1648年、パスカルにたのまれたペリエは、フランスのピュイ・ド・ドームという山（約\qty{1460}{m}）に水銀の管を運び、ふもとより頂上のほうが水銀の柱が約\qty{85}{mm}低くなることを確かめました。上にある空気が少ないからです。空気の密度を\qty{1.2}{kg/m^3}で一定とすると、③の式から、\qty{100}{m}上がるごとに大気圧は約 $1.2\times9.8\times100\approx\qty{1.2}{kPa}$（約\qty{12}{hPa}）下がります。スマートフォンの気圧センサーは、この差から、今いる階を知ることができます。ただし、空気は縮みやすく（②）、高い所ほど密度も小さくなるので、何 km も上がるときは、密度一定の式は使えません。富士山の頂上（\qty{3776}{m}）の大気圧は約\qty{63}{kPa}で（3-7）、密度一定の計算（約\qty{57}{kPa}）とはずれます。くわしくは熱-3 で学びます。
+
+\noindent\textbf{ゲージ圧と絶対圧}\par\nobreak
+\label{ph:力-12:gauge}圧力のはかり方は2通りあります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{絶対圧}：何もない真空を0としてはかる圧力。トリチェリの管の上が0です。気体の $pV$ の計算（3-7・熱-3）には、必ず絶対圧を使います。
+\item \textbf{ゲージ圧}：まわりの大気圧を0として、大気圧より何 Pa 大きいかではかる圧力。工場や車の圧力計（ゲージ）の多くは、こちらを示します。\bkidx{げーじあつ}{ゲージ圧}
+\end{itemize}
+\[ \text{絶対圧}=\text{ゲージ圧}+\text{大気圧} \]
+たとえば、車のタイヤの空気圧「\qty{230}{kPa}」はゲージ圧で、絶対圧は約 $230+101=\qty{331}{kPa}$ です。水の中の深さ $h$ の点では、$\rho gh$ がゲージ圧、$p_0+\rho gh$ が絶対圧です。この本では、どちらの圧力かを、数のそばに必ず書きます。大気圧より小さい圧力は、ゲージ圧では負の数になります（掃除機の中など）。
+
+\begin{column}{10 mより高くは吸い上げられない}
+17世紀のイタリアでは、井戸から水を吸い上げるポンプで、どうしても約10 mより高くは水が上がらないことが知られていました。ガリレオは1638年の本（『新科学対話』）でこの話を書いていますが、理由は正しく説明できませんでした。その弟子のトリチェリは、「ポンプが水を引き上げているのではなく、まわりの大気が水面を押し上げているのだ」と考え、もっと重い水銀を使えば短い管で同じことが起きるはずだと予想しました。それが上の実験です。ポンプが管の中の空気をすっかりぬいても、水を押し上げるのは大気圧だけなので、高さは最大でも約\qty{10.3}{m}です（じっさいは、水が蒸発する圧力（熱-8）や管の損失（力-14）のため、7〜8 mくらいまで）。深い井戸では、ポンプを水の中に沈めて、下から押し上げます。
+\end{column}
+
+\bksubsection{5}{閉じこめた水は、力を伝える：パスカルの原理と油圧}
+
+\leavevmode\label{ph:力-12:sec5}③の式 $p=p_0+\rho gh$ で、水面を押す圧力 $p_0$ を $\Delta p$ だけ増やすと、どの深さの圧力も、同じ $\Delta p$ だけ増えます。水は縮まない（②）ので、増えた分は一瞬で水全体に伝わります。
+\begin{taisetsu}
+\textbf{パスカルの原理}\quad 閉じこめて止まっている流体の一部の圧力を増やすと、流体のどの点の圧力も、同じだけ増える。\bkidx{ぱすかるのげんり}{パスカルの原理}
+\end{taisetsu}
+
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  % 油（下のつながった部分）
+  \fill[bkOrange!22] (4,0) rectangle (60,8) (4,8) rectangle (10,20) (28,8) rectangle (60,24);
+  \draw[bkInk, line width=1pt, line join=round] (4,30) -- (4,0) -- (60,0) -- (60,36);
+  \draw[bkInk, line width=1pt, line join=round] (10,30) -- (10,8) -- (28,8) -- (28,36);
+  % 小ピストン
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (4.4,20) rectangle (9.6,23);
+  \draw[pxm f, bkOrange!85!black] (7,33) -- (7,23.8);
+  \node[pxm lab, anchor=south] at (7,33.3) {$F_1$};
+  % 大ピストン
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (28.4,24) rectangle (59.6,28);
+  \filldraw[fill=bkRed!45, draw=bkInk, line width=0.6pt] (36,28) rectangle (52,36);
+  \draw[pxm f, bkBlue!80!black] (44,14) -- (44,23.2);
+  \node[pxm lab, anchor=west] at (45,17) {$F_2$};
+  \node[pxm lab, anchor=north] at (7,-1.5) {$A_1$};
+  \node[pxm lab, anchor=north] at (44,-1.5) {$A_2$};
+  \node[pxm lab, anchor=north west] at (12,7) {油（圧力 $p$）};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+細いつつ（面積 $A_1$）と太いつつ（面積 $A_2$）を、油でつなぎます。細いほうのピストンを $F_1$ で押すと、油の圧力が $p=F_1/A_1$ だけ増えます。パスカルの原理で、太いほうのピストンの下でも同じだけ増えます。
+\end{minipage}
+\par\vspace{3pt}
+だから、太いピストンを押し上げる力は $F_2=pA_2=\dfrac{A_2}{A_1}F_1$ です。\label{ph:力-12:pascal}つまり $\dfrac{F_1}{A_1}=\dfrac{F_2}{A_2}$（どちらも同じ圧力）です。面積が100倍なら、力も100倍になります。これが油圧ジャッキのしくみです。
+\pheq{F_2=\frac{A_2}{A_1}F_1}{N ＝ （m$^2$ ÷ m$^2$）× N}
+
+\begin{phyomi}[$F_2=\dfrac{A_2}{A_1}F_1$]
+力は面積の比だけ大きくなる。つつの直径の比が $k$ なら、面積の比は $k^2$ です（円の面積は直径の2乗に比例）。
+\end{phyomi}
+\begin{phbaisuru}{太いつつの直径}
+面積は4倍になるので、持ち上げる力も4倍です。下のグラフは、細いつつ（直径\qty{1}{cm}）を\qty{100}{N}で押したときの、太いつつの直径と、持ち上げる力の関係です。直径が10倍の\qty{10}{cm}なら、\qty{10000}{N}（約\qty{1}{t}の物の重さ）です。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=11.5, ymin=0, ymax=13500, xtick={2,4,6,8,10}, ytick={2500,5000,10000}, yticklabels={2500,5000,10000}, xlabel={直径（cm）}, ylabel={$F_2$（N）}]
+  \addplot[bkcurve, domain=0:11] {100*x^2};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(5,2500) (10,10000)};
+  \node[font=\sffamily\scriptsize, anchor=east] at (axis cs:4.8,3300) {\qty{5}{cm}：\qty{2500}{N}};
+  \node[font=\sffamily\scriptsize, anchor=east] at (axis cs:9.7,10600) {2倍の\qty{10}{cm}：4倍の\qty{10000}{N}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\noindent\textbf{力は大きくなるが、仕事は得をしない}\par\nobreak
+細いピストンを $s_1$ 押しこむと、油が $A_1s_1$ だけ太いつつへ移ります。油は縮まないので、太いピストンが上がる距離 $s_2$ は $A_1s_1=A_2s_2$ から $s_2=\dfrac{A_1}{A_2}s_1$ です。面積が100倍なら、上がる距離は100分の1です。手がした仕事 $F_1s_1$ と、ピストンがした仕事 $F_2s_2=\dfrac{A_2}{A_1}F_1\times\dfrac{A_1}{A_2}s_1=F_1s_1$ は等しく、力は増えても仕事は増えません（力-4 の仕事の原理）。だからジャッキでは、小さいピストンを何回も往復させて、少しずつ持ち上げます。
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$p_1+\rho gz_1=p_2+\rho gz_2$\\（止まった流体の2点）}{2つのピストンの\\高さの差を無視}{$\dfrac{F_1}{A_1}=\dfrac{F_2}{A_2}$}
+\phflowrow{$A_1s_1=A_2s_2$\\（油は縮まない）}{摩擦と油の\\もれを無視}{$F_1s_1=F_2s_2$\\（仕事の原理）}
+\end{phflow}
+1段めの流れ図の「高さの差を無視」は、油圧の圧力が何 MPa もあるのに比べて、高さ\qty{1}{m}の差による圧力の差 $\rho g\times\qty{1}{m}$ は油で約\qty{8.5}{kPa}と小さいからです。
+\begin{phmijika}[クレーンの腕を持ち上げる]
+序章のクレーンや油圧ショベルの腕は、油圧シリンダで動いています。ポンプが油に約\qty{30}{MPa}（大気圧の約300倍）の圧力をかけると、直径\qty{12}{cm}のピストンには $30\times10^6\times\dfrac{\pi\times0.12^2}{4}\approx\qty{340}{kN}$、約\qty{35}{t}の物を持ち上げる力が出ます。車のブレーキ、歯医者さんのいす、工場のプレス機も同じしくみです。
+\end{phmijika}
+
+\bksubsection{6}{壁と水門にかかる力：圧力の中心}
+
+\leavevmode\label{ph:力-12:sec6}水そうやダムの壁は、水に押されています。圧力が深さとともに増えるので、壁の下ほど強く押されます。壁全体にかかる力を求めましょう。
+
+ここからは、大気が壁の両側から押す力は打ち消し合うので、ゲージ圧 $\rho gh$ だけを考えます。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxmwater{(0,0)}{(26,40)}
+  \pxmsurf{(8,40)}
+  \fill[bkGray!35] (26,0) rectangle (34,46);
+  \draw[bkInk, line width=0.9pt] (26,0) rectangle (34,46);
+  % 圧力の三角形（壁の外側にかく）
+  \fill[bkRed!12] (34,40) -- (34,0) -- (58,0) -- cycle;
+  \draw[bkRed!75!black, line width=0.6pt] (34,40) -- (58,0);
+  \foreach \yy in {6,14,22,30} {\pgfmathsetmacro\len{24*(40-\yy)/40}
+    \draw[pxm f, bkRed!75!black, line width=0.8pt] (34+\len,\yy) -- (34.6,\yy);}
+  \draw[pxm f, bkInk, line width=1.8pt] (56,13.33) -- (35,13.33);
+  \node[pxm lab, anchor=south] at (52,14.5) {$F$};
+  \draw[bkGray, dashed, line width=0.4pt] (2,13.33) -- (26,13.33);
+  \draw[pxm dim] (4,40) -- (4,13.33);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (5,26) {$\tfrac{2}{3}h$};
+  \draw[pxm dim] (20,0) -- (20,40);
+  \node[pxm lab, anchor=east, fill=bkBlue!13] at (19,6) {$h$};
+  \node[pxm lab, anchor=north] at (46,-1.5) {$\rho gh$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+深さ $y$ の所の圧力は $\rho gy$ で、深さに比例します。壁の右に、矢印の長さで圧力をかくと、三角形になります。\par\vspace{3pt}
+壁を、深さ $\dd y$ ずつの細い帯に分けます（5-12 の「分けて、かけて、たす」）。帯の面積は $b\,\dd y$（$b$ は壁のはば）なので、帯を押す力は $\rho gy\times b\,\dd y$。これを水面（$y=0$）から底（$y=h$）までたします。
+\end{minipage}
+\[ F=\int_0^h\rho g\,y\,b\,\dd y=\rho gb\,\eval{\frac{y^2}{2}}{0}{h}=\frac{1}{2}\rho g h^2 b \]
+\pheq{F=\frac{1}{2}\rho gh^2b}{N ＝ kg/m$^3$ × m/s$^2$ × m$^2$ × m}
+\begin{phyomi}[$F=\dfrac{1}{2}\rho gh^2b$]
+「底の圧力 $\rho gh$」×「壁の面積 $hb$」の半分。圧力の三角形の面積 $\dfrac{1}{2}\times h\times\rho gh$ に、はば $b$ をかけたものです。平均の圧力（まん中の深さ $\dfrac{h}{2}$ の圧力）×面積、とも読めます。
+\end{phyomi}
+\begin{phbaisuru}{深さ $h$}
+力は4倍です。深さが2倍になると、平均の圧力も2倍、押される面積も2倍だからです。高さ\qty{100}{m}のダムでは、はば\qty{1}{m}あたり $\dfrac{1}{2}\times1000\times9.8\times100^2\times1=\qty{49}{MN}$、約\num{5000}\,t の物の重さにあたる力がかかります。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=42mm, xmin=0, xmax=3.3, ymin=0, ymax=50, xtick={1,2,3}, ytick={10,20,30,40}, xlabel={$h$（m）}, ylabel={$F$（kN）}]
+  \addplot[bkcurve, domain=0:3.1] {4.9*x^2};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(1,4.9) (2,19.6) (3,44.1)};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:1,6) {4.9};
+  \node[font=\sffamily\scriptsize, anchor=south east] at (axis cs:2,20.5) {19.6（4倍）};
+  \node[font=\sffamily\scriptsize, anchor=east] at (axis cs:2.9,44.1) {44.1（9倍）};
+\end{axis}
+\end{tikzpicture}
+\par\raggedright{\small はば\qty{1}{m}の壁。深さが2倍で4倍、3倍で9倍。だからダムの壁は、下ほど厚く作る。}
+\end{phbaisuru}
+
+\noindent\textbf{力はどこにかかる？　圧力の中心}\par\nobreak
+\label{ph:力-12:center}力 $F$ は壁全体に広がっていますが、壁をたおそうとするはたらき（力のモーメント、力-5）を考えるには、「1本の力にまとめたら、どの深さにかかるか」が必要です。その深さを\textbf{圧力の中心}といいます。水面のまわりのモーメントを、帯ごとに足します。帯の力 $\rho gyb\,\dd y$ に、水面からのきょり $y$ をかけて、
+\[ \int_0^h y\times\rho gyb\,\dd y=\rho gb\,\frac{h^3}{3} \]
+これが、まとめた力 $F$ ×（中心の深さ $y_{\mathrm{c}}$）に等しいので、
+\[ y_{\mathrm{c}}=\frac{\rho gb\,h^3/3}{\rho gb\,h^2/2}=\frac{2}{3}h \]
+圧力の中心は、深さの3分の2の所です。圧力の三角形の重心（4-11）と同じ深さです。まん中（$\dfrac{h}{2}$）より下になるのは、下ほど強く押されているからです。
+
+\noindent\textbf{表計算で、帯をたしてみる}\par\nobreak
+深さ\qty{3}{m}・はば\qty{2}{m}の水門を、\qty{0.5}{m}ずつの6本の帯に分けて、帯のまん中の深さの圧力で計算します。
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & 帯 & まん中の深さ（m） & 圧力（kPa） & 帯の力（kN） & たした力（kN） \\
+2 & 1 & 0.25 & 2.45 & 2.45 & 2.45 \\
+3 & 2 & 0.75 & 7.35 & 7.35 & 9.80 \\
+4 & 3 & 1.25 & 12.25 & 12.25 & 22.05 \\
+5 & 4 & 1.75 & 17.15 & 17.15 & 39.20 \\
+6 & 5 & 2.25 & 22.05 & 22.05 & 61.25 \\
+7 & 6 & 2.75 & 26.95 & 26.95 & 88.20 \\}
+\bktabcaption{C2 は \texttt{=1000*9.8*B2/1000}（kPa）、D2 は \texttt{=C2*2*0.5}（圧力×はば×帯の高さ）。E2 は \texttt{=D2}、E3 は \texttt{=E2+D3}。下へコピーする。}
+\end{bkcenter}
+合計の\qty{88.2}{kN}は、式 $\dfrac{1}{2}\times1000\times9.8\times3^2\times2=\qty{88.2}{kN}$ とぴったり同じです。圧力が深さの1次関数なので、帯のまん中の値を使うと、帯の中の大きい所と小さい所がちょうど打ち消すからです（5-10 の台形と同じ考え）。
+
+\noindent\textbf{斜めの水門・水面より下にある板}\par\nobreak
+板が斜めでも、上のはしが水面より下でも、「平らな板」なら同じ考えで計算できます。板の小さな部分 $\dd A$ を押す力は $\rho gy\,\dd A$（$y$ はその部分の深さ）なので、
+\[ F=\int\rho g\,y\,\dd A=\rho g\int y\,\dd A=\rho g\,y_{\mathrm{G}}A \]
+最後の等号は、「$\displaystyle\int y\,\dd A$ ＝ 図形の重心の深さ $y_{\mathrm{G}}$ × 面積 $A$」（重心の定義。4-11・8-6）を使いました。つまり\textbf{平らな板にかかる力は、板の重心の深さの圧力 × 板の面積}です。圧力の中心は、重心より少し深い所になります。
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$F=\displaystyle\int p\,\dd A$\\（壁を押す力の和）}{平らな板\\大気は両側で打ち消す}{$F=\rho g\,y_{\mathrm{G}}A$}
+\phflowrow{$F=\rho g\,y_{\mathrm{G}}A$}{鉛直な長方形で\\上のはしが水面}{$F=\dfrac{1}{2}\rho gh^2b$\\中心は $\dfrac{2}{3}h$}
+\end{phflow}
+
+\bksubsection{7}{浮力：押しのけた水の重さ}
+
+\leavevmode\label{ph:力-12:sec7}水の中の物は、上の面より下の面のほうが深いので、下から押す力のほうが大きくなります。この差が、物を押し上げる\textbf{浮力}です。\bkidx{ふりょく}{浮力}大きさを、2つの方法で求めます。
+
+\noindent\textbf{方法1：箱の上と下の差}\par\nobreak
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxmwater{(0,0)}{(50,46)}
+  \pxmsurf{(42,46)}
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.8pt] (15,12) rectangle (35,28);
+  \foreach \x in {19,25,31} {\draw[pxm f, bkRed!75!black, line width=0.9pt] (\x,34) -- (\x,28.6);
+    \draw[pxm f, bkRed!75!black, line width=1.2pt] (\x,3) -- (\x,11.4);}
+  \foreach \y in {16,24} {\draw[pxm f, bkRed!75!black, line width=0.9pt] (8,\y) -- (14.4,\y); \draw[pxm f, bkRed!75!black, line width=0.9pt] (42,\y) -- (35.6,\y);}
+  \draw[pxm dim] (45,46) -- (45,28);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (46,37) {$h$};
+  \draw[pxm dim] (11,28) -- (11,12);
+  \node[pxm lab, anchor=east, fill=bkBlue!13] at (10.4,20) {$c$};
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (32,32) {$p_{\text{上}}S$};
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (32,6) {$p_{\text{下}}S$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+上の面の深さが $h$、高さが $c$、上と下の面積が $S$ の箱を沈めます。横の面を押す力は、左右で同じ大きさ・反対向きなので打ち消します。上と下は、
+\[ p_{\text{上}}=p_0+\rho gh,\quad p_{\text{下}}=p_0+\rho g(h+c) \]
+なので、上向きの力の合計は
+\[ p_{\text{下}}S-p_{\text{上}}S=\rho gcS=\rho Vg \]
+\end{minipage}
+\par\vspace{3pt}
+$V=cS$ は箱の体積です。$\rho Vg$ は、\textbf{箱と同じ体積の水の重さ}です。しかも、$h$ が式から消えました。\textbf{浮力は、深さによりません}。
+
+\noindent\textbf{方法2：水に置きかえる}\par\nobreak
+形がでこぼこの物でも同じになることを、うまい考えで確かめます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xo/\txt in {0/{① 石},66/{② 同じ形の水}} {
+  \begin{scope}[xshift=\xo mm]
+  \pxmwater{(0,0)}{(52,36)}
+  \pxmsurf{(46,36)}
+  \end{scope}}
+  \filldraw[fill=bkGray!50, draw=bkInk, line width=0.8pt, smooth cycle, tension=0.8] plot coordinates {(16,10) (30,8) (38,16) (34,25) (22,26) (14,19)};
+  \begin{scope}[xshift=66mm]
+  \filldraw[fill=bkBlue!32, draw=bkBlue!70!black, line width=0.8pt, dashed, smooth cycle, tension=0.8] plot coordinates {(16,10) (30,8) (38,16) (34,25) (22,26) (14,19)};
+  \draw[pxm f, bkOrange!85!black] (26,17) -- (26,9);
+  \node[pxm lab, anchor=west, fill=bkBlue!32] at (26.6,13.5) {重さ};
+  \draw[pxm f, bkBlue!70!black, line width=1.6pt] (44,6) -- (44,24);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (44.8,15) {$F_{\mathrm{B}}$};
+  \end{scope}
+  \foreach \a in {0,60,...,300} {\draw[pxm f, bkRed!75!black, line width=0.8pt] ($(26,17)+(\a:15)$) -- ($(26,17)+(\a:10.5)$);}
+  \node[pxm lab, anchor=north] at (26,-1.6) {① 石を押す水の力};
+  \node[pxm lab, anchor=north] at (92,-1.6) {② 石と同じ形の水のかたまり};
+\end{tikzpicture}
+\bkfigcaption{①の石を、同じ形の水（②）に置きかえても、まわりの水が押す力は変わらない。②の水は止まっているので、押す力の合計は、そのかたまりの重さとつり合う。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 水の中に石があります。まわりの水が石の表面を押す力の合計を、$F_{\mathrm{B}}$ とします。
+\item 石を取り出し、そこを同じ形の水で満たしたと考えます。まわりの水の圧力は、深さだけで決まるので（③）、まわりの水が押す力は、石のときとまったく同じ $F_{\mathrm{B}}$ です。
+\item 置きかえた水のかたまりは、まわりの水と同じように止まっています。止まっているので、まわりの水が押す力の合計 $F_{\mathrm{B}}$ は、かたまりの重さ（$\rho Vg$）とつり合っています。
+\end{enumerate}
+だから、どんな形の物でも、
+\pheq{F_{\mathrm{B}}=\rho Vg}{N ＝ kg/m$^3$ × m$^3$ × m/s$^2$}
+\label{ph:力-12:furyoku}です。$\rho$ は\textbf{まわりの流体}の密度、$V$ は物が流体の中にある部分の体積（押しのけた体積）です。この決まりを\textbf{アルキメデスの原理}といいます。\bkidx{あるきめですのげんり}{アルキメデスの原理}紀元前3世紀のギリシャの数学者アルキメデスが、浮く物について書いた本の中で示しました。$F_{\mathrm{B}}$ の B は英語の buoyancy（浮力）です。
+
+\begin{phyomi}[$F_{\mathrm{B}}=\rho Vg$]
+「押しのけた流体の重さ」。物の材料や重さは入っていません。同じ体積なら、鉄の玉でも木の玉でも、水の中で受ける浮力は同じです。
+\end{phyomi}
+\begin{phbaisuru}{沈める深さ}
+物がすっかり水の中にあれば、浮力は変わりません。下のグラフは、高さ\qty{10}{cm}・体積\qty{200}{cm^3}のおもり（\qty{0.5}{kg}）をばねばかりでつるし（浮力は全部入ると $1000\times0.0002\times9.8=\qty{1.96}{N}$）、水に沈めていったときの目もりです。水に入りかけている間は、沈んだ体積に比例して浮力が増えるので目もりが下がり、全部入ってからは、どんなに深くしても目もりは同じです。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=26, ymin=0, ymax=5.8, xtick={5,10,15,20,25}, ytick={1,2,3,4,4.9}, yticklabels={1,2,3,4,4.9}, xlabel={沈めた深さ（cm）}, ylabel={ばねばかり（N）}]
+  \addplot[bkcurve] coordinates {(0,4.9) (10,2.94) (25,2.94)};
+  \addplot[bkthin, dashed] coordinates {(0,4.9) (25,4.9)};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:12,4.95) {空気中の重さ\ \qty{4.9}{N}};
+  \node[font=\sffamily\scriptsize, anchor=north west] at (axis cs:11,2.75) {全部入ると\qty{2.94}{N}で一定};
+  \draw[bkGray, line width=0.5pt] (axis cs:20,2.94) -- (axis cs:20,4.9);
+  \node[font=\sffamily\scriptsize, anchor=west, fill=white] at (axis cs:20.4,3.9) {浮力\qty{1.96}{N}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+\label{ph:力-12:furyoku-chu}ばねばかりの目もりは、重さから浮力を引いた分です。だから、中学理科で学ぶ
+\[ \text{浮力}=\text{空気中の重さ}-\text{水中の重さ} \]
+は、「ばねばかりの目もりの差が $F_{\mathrm{B}}$」ということです。
+
+\noindent\textbf{浮く・沈む}\par\nobreak
+物の平均の密度を $\rho_{\text{物}}$、体積を $V$ とすると、重さは $\rho_{\text{物}}Vg$、全部沈めたときの浮力は $\rho Vg$ です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $\rho_{\text{物}}>\rho$ なら、重さのほうが大きく、沈む。
+\item $\rho_{\text{物}}<\rho$ なら、浮き上がり、水面に出た所で止まる。浮かんで止まっているとき、重さ＝浮力なので $\rho_{\text{物}}Vg=\rho V_{\text{水中}}g$。だから $\dfrac{V_{\text{水中}}}{V}=\dfrac{\rho_{\text{物}}}{\rho}$。
+\end{itemize}
+\label{ph:力-12:fune}\bkhatenaref の答え：船は、鉄の板で囲んだ大きな空間（中は空気）を持っています。鉄と中の空気を合わせた船全体の平均の密度は、水よりずっと小さいので、船は浮きます。船が浮かんでいるとき、船の水面より下の部分が押しのけた水の重さが、ちょうど船全体の重さと等しくなっています。同じ量の鉄をかためたかたまりは、体積が小さく、押しのけられる水が少ないので、浮力が足りずに沈みます（\bkreidairef{9}）。
+\begin{phmijika}[浮いたり沈んだり]
+潜水艦は、船体の中のタンクに海水を入れて平均の密度を大きくして沈み、圧縮空気で海水を追い出して浮きます。多くの魚は、体の中の「浮き袋」の空気の量で、体の平均の密度を水とほぼ同じにしています。塩分がとても多い死海の水（密度 約\qty{1240}{kg/m^3}）では、人の体（平均の密度 約\qty{1000}{kg/m^3}）は体の5分の1ほどが水面の上に出ます。
+\end{phmijika}
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$F_{\mathrm{B}}=\displaystyle-\oint p\,\vec{n}\,\dd S$\\（表面を押す力の和）}{止まった流体\\$\rho$ が一定}{$F_{\mathrm{B}}=\rho Vg$}
+\phflowrow{$F_{\mathrm{B}}=\rho Vg$}{ばねばかりで\\つるして沈める}{浮力＝空気中の重さ\\－水中の重さ}
+\phflowrow{重さ＝浮力}{浮かんで\\止まっている}{$\dfrac{V_{\text{水中}}}{V}=\dfrac{\rho_{\text{物}}}{\rho}$}
+\end{phflow}
+\begin{motto}[5]
+\phboxhead{ガウスの定理で導く}
+流れ図の1段めの $\vec{n}$ は、物の表面の外向きの単位ベクトルです（8-8）。圧力は内向きに押すので、マイナスがつきます。ガウスの定理（8-11）の形の1つ「$\displaystyle\oint p\,\vec{n}\,\dd S=\int\operatorname{grad}p\,\dd V$」を使い、③のもっと知りたいの $\operatorname{grad}p=\rho\vec{g}$ を入れると、
+\[ F_{\mathrm{B}}=-\int\operatorname{grad}p\,\dd V=-\int\rho\vec{g}\,\dd V=-\rho V\vec{g} \]
+$\vec{g}$ は下向きなので、$-\rho V\vec{g}$ は上向きで大きさ $\rho Vg$ です。「水に置きかえる」考え（方法2）を、計算で書いたものです。
+\end{motto}
+
+\bksubsection{8}{ひっくり返らない船：浮かぶ物の安定とメタセンタ}
+
+\leavevmode\label{ph:力-12:sec8}船は浮くだけでなく、波で少し傾いても、元にもどらなければいけません。重さがかかる点（\textbf{重心} G）と、浮力がかかる点（押しのけた水の部分の重心。\textbf{浮心} B という）の位置で考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % まっすぐ
+  \begin{scope}
+  \fill[bkBlue!13] (-28,-16) rectangle (28,0);
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt] (-20,-10) rectangle (20,10);
+  \fill[bkBlue!28] (-20,-10) rectangle (20,0);
+  \draw[bkInk, line width=0.8pt] (-20,-10) rectangle (20,10);
+  \draw[bkBlue!70!black, line width=0.8pt] (-28,0) -- (28,0);
+  \fill[bkOrange!85!black] (0,1) circle (1.1); \node[pxm lab, anchor=west] at (1.4,2.5) {G};
+  \fill[bkBlue!80!black] (0,-5) circle (1.1); \node[pxm lab, anchor=west] at (1.4,-6.5) {B};
+  \draw[pxm f, bkOrange!85!black] (-5,1) -- (-5,-8);
+  \draw[pxm f, bkBlue!80!black] (-9,-7) -- (-9,2);
+  \node[pxm lab, anchor=north] at (0,-17.5) {① まっすぐ：G と B が同じ線上};
+  \end{scope}
+  % 傾いた（復原）。はば40・高さ20・喫水10 の箱を15°傾けた。B' と M は計算した位置
+  \begin{scope}[xshift=72mm]
+  \fill[bkBlue!13] (-28,-16) rectangle (28,0);
+  \begin{scope}
+    \clip (-28,-16) rectangle (28,0);
+    \begin{scope}[rotate=-15]\fill[bkBlue!28] (-20,-10) rectangle (20,10);\end{scope}
+  \end{scope}
+  \begin{scope}[rotate=-15]
+    \fill[bkGray!25] (-20,0) rectangle (20,10);
+    \begin{scope}\clip (-28,-16) rectangle (28,0);\end{scope}
+    \draw[bkInk, line width=0.8pt] (-20,-10) rectangle (20,10);
+    \draw[bkGray, dashed, line width=0.5pt] (0,-13) -- (0,15);
+  \end{scope}
+  \begin{scope}\clip (-28,-16) rectangle (28,0);
+    \begin{scope}[rotate=-15]\fill[bkBlue!28] (-20,-10) rectangle (20,10);\draw[bkInk, line width=0.8pt] (-20,-10) rectangle (20,10);\end{scope}
+  \end{scope}
+  \draw[bkBlue!70!black, line width=0.8pt] (-28,0) -- (28,0);
+  \coordinate (G) at (0.26,0.97);
+  \coordinate (B) at (2.28,-5.30);
+  \coordinate (M) at (2.28,8.50);
+  \draw[bkBlue!80!black, line width=0.5pt, dashed] (B) -- (M);
+  \draw[pxm f, bkOrange!85!black] ($(G)+(0,-0.6)$) -- ++(0,-9);
+  \draw[pxm f, bkBlue!80!black] ($(B)+(0,0.6)$) -- ++(0,9);
+  \fill[bkOrange!85!black] (G) circle (1.1); \node[pxm lab, anchor=east] at ($(G)+(-1.2,0.4)$) {G};
+  \fill[bkBlue!80!black] (B) circle (1.1); \node[pxm lab, anchor=west] at ($(B)+(1.2,-0.6)$) {B$'$};
+  \fill[bkRed!75!black] (M) circle (1.1); \node[pxm lab, anchor=west] at ($(M)+(1.4,0.6)$) {M（メタセンタ）};
+  \draw[-{Stealth[length=4pt]}, bkRed!75!black, line width=1pt] (-9,17) arc (60:120:9);
+  \node[pxm lab, anchor=east] at (-14.5,15.5) {元にもどす};
+  \node[pxm lab, anchor=north] at (0,-17.5) {② 傾くと B が低い側へ動く};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{傾いた船では、水に沈む部分の形が変わり、浮心 B が傾いた側（B$'$）へ動く。浮力の作用線が船の中心線と交わる点 M が、重心 G より上にあれば、重さと浮力のモーメントは船を元にもどす向きになる。}
+\end{bkfigure}
+
+まっすぐ浮いているとき、G と B は同じ鉛直線の上にあります。ふつうの船では、G のほうが B より上です。それでも船がひっくり返らないのは、船が傾くと、低くなった側が多く水に沈み、高くなった側が水から出るので、\textbf{浮心が低い側へ動く}からです。動いた浮心 B$'$ から真上に引いた浮力の線が、船の中心線と交わる点を\textbf{メタセンタ} M といいます。\bkidx{めたせんた}{メタセンタ}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item M が G より上（GM $>0$）：重さと浮力が、船を元にもどす向きに回す（安定）。
+\item M が G より下（GM $<0$）：傾きをさらに大きくする向きに回す（不安定。ひっくり返る）。
+\end{itemize}
+GM の長さを\textbf{メタセンタ高さ}といいます。傾きが小さいとき、元にもどす力のモーメントは、船の重さを $W$、傾きを $\theta$ として $W\cdot\mathrm{GM}\sin\theta$ です。
+
+\noindent\textbf{箱の形の船の BM}\par\nobreak
+\label{ph:力-12:bm}はば $b$、水の中の深さ（\textbf{喫水}）$d$ の、箱の形の船を角 $\theta$（小さい）だけ傾けます。高くなった側から、断面が直角三角形（底辺 $\dfrac{b}{2}$、高さ $\dfrac{b}{2}\tan\theta$）の部分が水から出て、同じ形の部分が低い側で水に入ります。三角形の重心は、中心線から $\dfrac{2}{3}\times\dfrac{b}{2}=\dfrac{b}{3}$ の所なので、その三角形の分の水が、左から右へ $\dfrac{2b}{3}$ 動いたのと同じです。断面で考えると、浮心が横に動く距離は（動いた面積×動いた距離）÷（水の中の面積全体）で、
+\[ \mathrm{BB'}=\frac{\dfrac{1}{2}\cdot\dfrac{b}{2}\cdot\dfrac{b}{2}\tan\theta\times\dfrac{2b}{3}}{bd}=\frac{b^2}{12d}\tan\theta \]
+M は B の真上で、$\mathrm{BB'}=\mathrm{BM}\tan\theta$ の関係にあるので
+\pheq{\mathrm{BM}=\frac{b^2}{12d}}{m ＝ m$^2$ ÷ m}
+です。船の底（キール K）からはかると、$\mathrm{KB}=\dfrac{d}{2}$、$\mathrm{KM}=\mathrm{KB}+\mathrm{BM}$ で、重心の高さ KG とくらべて
+\[ \mathrm{GM}=\mathrm{KB}+\mathrm{BM}-\mathrm{KG} \]
+\begin{phbaisuru}{船のはば $b$}
+BM は4倍になります。はばの広い船ほど、傾いたときに浮心が大きく動き、安定します。反対に、荷物を高く積むと KG が大きくなり、GM が小さくなります（グラフ：はば\qty{10}{m}・喫水\qty{2}{m}の箱の船。KG が約\qty{5.2}{m}をこえると GM が負になり、ひっくり返る）。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=52mm, xmin=0, xmax=7, ymin=-2, ymax=5.6, xtick={1,2,3,4,5,6}, ytick={-2,-1,1,2,3,4,5}, xlabel={KG（m）}, ylabel={GM（m）}]
+  \addplot[bkcurve, domain=0:6.8] {5.1667-x};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(3,2.1667) (5.1667,0)};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:3.2,2.4) {KG＝\qty{3}{m}で GM≈\qty{2.2}{m}};
+  \node[font=\sffamily\scriptsize, anchor=south west] at (axis cs:5.3,0.3) {安定の限界};
+  \node[font=\sffamily\scriptsize, anchor=north east, text=bkRed!75!black] at (axis cs:4.9,-1.0) {ここから先は不安定};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+\begin{seikaku}
+BM の式は、傾きが小さいとき（$\theta$ が約10°まで）の近似です。$\tan\theta\approx\theta$ と同じ考えです（5-17）。大きく傾くと、甲板のはしが水に入ったり、底が水から出たりして、三角形の形が変わります。その計算は、この先は大学で（船舶工学の「復原力曲線」）。
+\end{seikaku}
+
+\bksubsection{9}{圧力をはかる：マノメータと液面計}
+
+\leavevmode\label{ph:力-12:sec9}工場では、配管やタンクの圧力・液の高さを、圧力の差からはかります。使うのは③の流れ図の3段め、
+\begin{taisetsu}
+止まっていて、\textbf{同じ液体でつながっている}2つの点は、同じ高さなら同じ圧力。高さが $\Delta z$ ちがえば、圧力は $\rho g\,\Delta z$ ちがう（低いほうが大きい）。
+\end{taisetsu}
+です。「同じ液体でつながっている」が大事です。とちゅうに別の液体や空気がはさまっていると、それぞれの区間で密度を変えて計算します。
+
+\noindent\textbf{U字管マノメータ}\par\nobreak
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!25] (0,0) rectangle (6,22) (24,0) rectangle (30,34) (0,-6) rectangle (30,0);
+  \draw[bkInk, line width=0.9pt, line join=round] (0,44) -- (0,-6) -- (30,-6) -- (30,44);
+  \draw[bkInk, line width=0.9pt, line join=round] (6,44) -- (6,0) -- (24,0) -- (24,44);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,22) -- (6,22) (24,34) -- (30,34);
+  \draw[pxm f, bkRed!75!black] (3,52) -- (3,44.6);
+  \node[pxm lab, anchor=south] at (3,52) {$p_1$（はかりたい）};
+  \draw[pxm f, bkRed!75!black] (27,52) -- (27,44.6);
+  \node[pxm lab, anchor=south] at (30,52) {$p_0$（大気）};
+  \draw[bkGray, dashed, line width=0.4pt] (6,22) -- (36,22);
+  \draw[pxm dim] (35,22) -- (35,34);
+  \node[pxm lab, anchor=west] at (36,28) {$\Delta h$};
+  \fill[bkRed!75!black] (3,22) circle (0.8) (27,22) circle (0.8);
+  \node[pxm lab, anchor=east] at (-0.6,22) {A};
+  \node[pxm lab, anchor=north west] at (30.4,21.6) {A$'$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+U字に曲げた透明な管に水を入れ、片方をはかりたい所（圧力 $p_1$）につなぎ、もう片方は大気に開きます。押された側の水面が下がり、反対側が $\Delta h$ だけ高くなります。
+\end{minipage}
+\par\vspace{3pt}
+左の水面の点 A と、右の管の同じ高さの点 A$'$ は、同じ水でつながっているので圧力が等しい。A$'$ の圧力は、その上の水の柱 $\Delta h$ の分だけ大気より大きいので、
+\[ p_1=p_0+\rho g\,\Delta h \]
+つまり、水面の差 $\Delta h$ から、ゲージ圧 $p_1-p_0=\rho g\,\Delta h$ がわかります。水の差\qty{1}{mm}は約\qty{9.8}{Pa}です。小さな圧力の差（換気ダクトの中の空気など）をはかるのに使い、大きな差には密度の大きい水銀を使います。
+
+\noindent\textbf{ブルドン管圧力計}\par\nobreak
+配管についている丸い圧力計の多くは、中に、断面が平たいだ円の、C の字に曲げた管（ブルドン管）が入っています。中に圧力がかかると、管が丸くなろうとして C の字が少しのび、その動きを歯車で針に伝えます。管の外には大気がかかっているので、目もりは\textbf{ゲージ圧}です。
+
+\noindent\textbf{差圧式の液面計}\par\nobreak
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \fill[bkBlue!20] (0,0) rectangle (30,30);
+  \draw[bkBlue!70!black, line width=0.7pt] (0,30) -- (30,30);
+  \draw[bkInk, line width=1.1pt, line join=round] (0,44) -- (0,0) -- (30,0) -- (30,44) -- cycle;
+  % 下の取り出し口と、上の取り出し口
+  \draw[bkInk, line width=1.6pt] (30,3) -- (44,3) -- (44,8);
+  \draw[bkInk, line width=1.6pt] (30,41) -- (52,41) -- (52,14);
+  \filldraw[fill=bkTheme!20, draw=bkInk, line width=0.8pt] (40,8) rectangle (56,14);
+  \node[font=\sffamily\scriptsize] at (48,11) {差圧計};
+  \node[pxm lab, anchor=north] at (44,1.5) {高圧側};
+  \node[pxm lab, anchor=east] at (50.5,36) {低圧側};
+  \draw[pxm dim] (-3,3) -- (-3,30);
+  \node[pxm lab, anchor=east] at (-4,17) {$h$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+タンクの底の近くと、液面より上の空間を、差圧計（2つの圧力の差を電気の信号に変える計器）につなぎます。
+\end{minipage}
+\par\vspace{3pt}
+底の圧力は「液面の上の圧力 ＋ $\rho gh$」、上の空間の圧力は「液面の上の圧力」なので、差は
+\[ \Delta p=\rho gh,\qquad h=\frac{\Delta p}{\rho g} \]
+タンクの中の圧力がいくらでも、液の高さ $h$ だけがわかります。
+\label{ph:力-12:sasatsu}化学工場の反応タンクや、ボイラーの水位は、この方法でいつも見はられています。液の密度が温度や成分で変わると、同じ $\Delta p$ でも $h$ がずれるので、液の密度を正しく設定することが大切です（工学ではこう使う）。
+
+\begin{phmada}[砂や粉の圧力]
+水を入れた筒の底の圧力は、深さに比例して増えます。ところが、米や砂のような粒を高い筒に入れていくと、底を押す力は、はじめは増えますが、ある高さからほとんど増えなくなります。粒どうしが押し合って、その力の一部を筒の壁の摩擦が支えるからです。1895年、ドイツのヤンセンは、穀物をためるサイロでこれを調べ、壁の摩擦をいれた簡単な式を作りました（ヤンセンの式）。この式は今もサイロの設計に使われます。
+
+けれども、粒がたくさん集まった物（粉体）は、ゆっくり押すと固体のようにふんばり、ゆすると液体のように流れ、ときには気体のように飛び散ります。水の $p=p_0+\rho gh$ や、固体の力学（第3部）のような、粉体全体のふるまいをまとめて書く一般の式は、まだ見つかっていません。粉や粒の物理は、薬・食品・土木の工学と結びついて、今も研究が続いています。
+\end{phmada}
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 圧力 $p=\dfrac{F}{S}$（Pa＝N/m$^2$）、密度 $\rho=\dfrac{m}{V}$（kg/m$^3$）。止まった流体の圧力は、どの向きの面にも垂直に、同じ大きさではたらく。
+\item 静水圧 $p=p_0+\rho gh$。ゲージ圧は $\rho gh$、絶対圧は $p_0+\rho gh$。同じ液体でつながった同じ高さの点は、同じ圧力。
+\item 閉じこめた流体：$\dfrac{F_1}{A_1}=\dfrac{F_2}{A_2}$（パスカルの原理）。壁の力 $F=\rho g\,y_{\mathrm{G}}A$、鉛直な壁は $\dfrac{1}{2}\rho gh^2b$、中心は深さの $\dfrac{2}{3}$。
+\item 浮力 $F_{\mathrm{B}}=\rho Vg$（押しのけた流体の重さ）。浮かぶ物は重さ＝浮力。傾いても安定なのは GM $>0$ のとき。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{流体}{気体と液体。止まっているときは、ずらす力を支えられず、面に垂直にしか押さない。}
+\bkword{静水圧}{止まっている液体の圧力。深さ $h$ で $p_0+\rho gh$。}
+\bkword{ゲージ圧・絶対圧}{大気圧を0としてはかる圧力と、真空を0としてはかる圧力。絶対圧＝ゲージ圧＋大気圧。}
+\bkword{パスカルの原理}{閉じこめた流体の一部の圧力を増やすと、どこも同じだけ増える。}
+\bkword{浮力・浮心}{流体が物を押し上げる力（押しのけた流体の重さ）と、その力がかかる点（押しのけた部分の重心）。}
+\bkword{圧力の中心}{壁や水門を押す力を1本にまとめたとき、その力がかかる点。}
+\bkword{メタセンタ}{傾いた船の浮力の線が中心線と交わる点。重心より上なら安定。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$p$}{ピー}{圧力（Pa）。力-3 の運動量 $\vec{p}$ とは別の量。運動量と同じ章で使うときは、運動量を $m\vec{v}$ と書く}{pressure}{力-12}}{\bkkigocard{$\rho$}{ロー}{密度（kg/m$^3$）。力-1 の曲率半径 $\rho$、電-4 の抵抗率 $\rho$ とは別の量}{density}{力-12}}
+
+\begin{senmonsho}[静止流体の圧力]
+\begin{bkhonbun}
+静止流体中の任意の点において、圧力は方向によらず等しい。体積力として重力のみが作用する場合、流体要素のつり合いから
+\[ \nabla p=\rho\symbf g \]
+を得る。鉛直上向きに $z$ 軸をとれば $\mathrm{d}p/\mathrm{d}z=-\rho g$ であり、$\rho$ が一定ならば、自由表面からの深さ $h$ における圧力は $p=p_a+\rho gh$ となる。流体中の物体に作用する浮力は、物体が排除した流体の重量に等しい（アルキメデスの原理）。
+\end{bkhonbun}
+\bkyaku{$\nabla p$ は $\operatorname{grad}p$ と同じ（数学 8-4）。太字の $\symbf g$ は、この本の $\vec g$（数学 4-13）。「体積力」は、重力のように体積全体にはたらく力。$p_a$ は大気圧（この本の $p_0$）。「自由表面」は水面、「排除した」は押しのけた。「重量」は重さ（$mg$）。}
+\end{senmonsho}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題は、どれも同じ7つの段で解きます。とくに②「何を無視するか」と⑦「答えを確かめる」を、毎回ていねいに書きましょう。水の密度は\qty{1000}{kg/m^3}、海水は\qty{1025}{kg/m^3}、$g=\qty{9.8}{m/s^2}$、大気圧は\qty{101}{kPa}とします。
+
+\begin{reidai}[ハイヒールとくつ]
+\label{ph:力-12:ex1}体重\qty{50}{kg}の人が、かかとの面積が\qty{1}{cm^2}のハイヒールで、かかとだけで片足立ちしました。面積が\qty{150}{cm^2}のくつで片足立ちしたときと、床を押す圧力をくらべましょう。
+\par\kangaekata 圧力の定義 $p=\dfrac{F}{S}$ を使う。体重は全部その面にかかり、面のどこも同じ強さで押すとする（つま先やもう片方の足は無視）。面積は m$^2$ に直す：\qty{1}{cm^2}＝$10^{-4}$\,m$^2$、\qty{150}{cm^2}＝\qty{0.015}{m^2}。
+\par\shiki $F=mg=50\times9.8=\qty{490}{N}$。$p_{\text{ヒール}}=\dfrac{490}{10^{-4}}=4.9\times10^6$\,Pa、$p_{\text{くつ}}=\dfrac{490}{0.015}\approx\qty{33000}{Pa}$
+\par\kotae ハイヒール 約\qty{4.9}{MPa}、くつ 約\qty{33}{kPa}。面積の比と同じ約150倍（反比例）。ヒールは大気圧の約50倍
+\end{reidai}
+\begin{jibun}
+体重\qty{60}{kg}の人が、両足（合わせて\qty{300}{cm^2}）で雪の上に立つときと、スキー（合わせて\qty{0.3}{m^2}）で立つときの圧力を求めましょう。
+\bkjans{両足 $\dfrac{588}{0.03}=\qty{19600}{Pa}$ で約\qty{20}{kPa}、スキー $\dfrac{588}{0.3}=\qty{1960}{Pa}$ で約\qty{2.0}{kPa}}
+\end{jibun}
+
+\begin{phreidai}[ダム湖の取水口の圧力]
+\label{ph:力-12:ex2}ダム湖の水深\qty{10}{m}の所に、水を取り入れる口があります。ここの圧力を、ゲージ圧と絶対圧で求めましょう。絶対圧は、大気圧の何倍ですか。
+\phbamen
+湖の水は止まっていて、水面には大気がのっています。口の深さは\qty{10}{m}です。
+\phmushi
+水の流れ（口から入る水の動き）、水の温度による密度のちがい、水が縮むことを無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \pxmwater{(0,0)}{(34,24)}
+  \pxmsurf{(28,24)}
+  \fill[bkRed!75!black] (12,4) circle (1);
+  \draw[pxm dim] (6,24) -- (6,4);
+  \node[pxm lab, anchor=east, fill=bkBlue!13] at (5.4,14) {$h$};
+  \node[pxm lab, anchor=west] at (13.5,4) {口};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.63\linewidth}\raggedright
+水面の圧力 $p_0=\qty{101}{kPa}$、深さ $h=\qty{10}{m}$、口の圧力 $p$。
+\end{minipage}
+\phriyu
+止まった水で、密度一定とみなせるので、静水圧の式 $p=p_0+\rho gh$ が使えます。ゲージ圧は $\rho gh$ の部分です。
+\phtateru
+\[ \text{ゲージ圧}=\rho gh=1000\times9.8\times10,\qquad \text{絶対圧}=p_0+\rho gh \]
+\phtoku
+\[ \text{ゲージ圧}=\qty{98000}{Pa}=\qty{98}{kPa},\qquad \text{絶対圧}=101+98=\qty{199}{kPa} \]
+\[ \frac{199}{101}\approx2.0 \]
+\phtashikame
+単位：kg/m$^3$×m/s$^2$×m＝Pa。大きさ：「\qty{10}{m}で約1気圧」と合っている。極端な場合：$h=0$（水面）なら、ゲージ圧0、絶対圧は大気圧。
+\kotae ゲージ圧 約\qty{98}{kPa}、絶対圧 約\qty{199}{kPa}（大気圧の約2.0倍）
+\end{phreidai}
+\begin{jibun}
+プールの水深\qty{5}{m}の飛びこみ用の所の底の圧力を、ゲージ圧と絶対圧で求めましょう。絶対圧は大気圧の何倍ですか。
+\bkjans{ゲージ圧 $1000\times9.8\times5=\qty{49}{kPa}$、絶対圧 $101+49=\qty{150}{kPa}$、約1.5倍}
+\end{jibun}
+
+\begin{phreidai}[ダイバーが受ける圧力と、肺の空気]
+\label{ph:力-12:ex3}海で深さ\qty{30}{m}までもぐったダイバーが受ける圧力を、絶対圧で求めましょう。また、水面で\qty{6.0}{L}だった肺の空気は、何 L になりますか（息を止め、温度は変わらないとする）。
+\phbamen
+海水は止まっていて、ダイバーの体のまわりの圧力は深さで決まります。肺の空気は、まわりと同じ圧力までおし縮められます。
+\phmushi
+波や潮の流れ、海水の温度による密度のちがい、体の大きさ（頭と足の深さのちがい）を無視します。
+\phzu
+深さ $h=\qty{30}{m}$、海水の密度 $\rho=\qty{1025}{kg/m^3}$、水面の圧力 $p_0$、肺の空気の体積 $V$。
+\phriyu
+圧力は静水圧の式。肺の空気は、温度が一定なので、気体の $pV$ 一定（3-7、ボイルの法則）。$pV$ には絶対圧を使います（④）。
+\phtateru
+\[ p=p_0+\rho gh=101\times10^3+1025\times9.8\times30,\qquad p_0\times6.0=p\times V \]
+\phtoku
+\[ \rho gh=\qty{301000}{Pa}\approx\qty{301}{kPa} \]
+\[ p\approx101+301=\qty{402}{kPa}\quad(\text{約4.0気圧}) \]
+\[ V=6.0\times\frac{101}{402}\approx\qty{1.5}{L} \]
+\phtashikame
+大きさ：海水の\qty{30}{m}で約3気圧ふえ、大気の1気圧とあわせて約4気圧。体積は約4分の1で、$6.0\div4=1.5$。ゲージ圧の\qty{301}{kPa}を $pV$ に使うと $6.0\times\dfrac{101}{301}=\qty{2.0}{L}$ となり、まちがえます。
+\kotae 約\qty{402}{kPa}（約4.0気圧）、肺の空気は約\qty{1.5}{L}
+\end{phreidai}
+\begin{jibun}
+海で深さ\qty{20}{m}までもぐると、圧力は絶対圧で何 kPa ですか。水面で\qty{6.0}{L}の空気は、何 L になりますか。
+\bkjans{ゲージ圧 $1025\times9.8\times20\approx\qty{201}{kPa}$。絶対圧 $101+201=\qty{302}{kPa}$（約3.0気圧）。$6.0\times\dfrac{101}{302}\approx\qty{2.0}{L}$}
+\end{jibun}
+
+\begin{reidai}[水道の水は、どこまで上がる？]
+\label{ph:力-12:ex4}水道の管の圧力（ゲージ圧）が\qty{0.20}{MPa}です。この管から細い管を真上に立てたら、水は何 m の高さまで上がって止まりますか。
+\par\kangaekata 水が止まったとき、水の柱の底のゲージ圧 $\rho gh$ が、水道の管のゲージ圧と等しい。流れているときの損失（力-14）は考えない。大気は管の中と柱の上の両方にかかるので、ゲージ圧どうしで比べればよい。
+\par\shiki $\rho gh=p_{\mathrm{g}}$ より $h=\dfrac{0.20\times10^6}{1000\times9.8}\approx\qty{20.4}{m}$
+\par\kotae 約\qty{20}{m}（「\qty{10}{m}で約\qty{0.1}{MPa}」と合う。6〜7階建ての屋上くらい）
+\end{reidai}
+\begin{jibun}
+水道の配水管の水圧は、国の基準（水道施設の技術的基準を定める省令）で、ゲージ圧\qtyrange{0.15}{0.74}{MPa}の範囲と決められています（低すぎると高い階に届かず、高すぎると蛇口や管がこわれやすい）。\qty{0.30}{MPa}では、水は何 m の高さまで上がりますか。
+\bkjans{$\dfrac{0.30\times10^6}{1000\times9.8}\approx\qty{31}{m}$}
+\end{jibun}
+
+\begin{reidai}[スマートフォンの気圧計で高さをはかる]
+\label{ph:力-12:ex5}ビルの1階でスマートフォンの気圧計は\qty{1012.0}{hPa}、屋上では\qty{1006.0}{hPa}でした。屋上の高さは何 m ですか。空気の密度は\qty{1.2}{kg/m^3}とします。
+\par\kangaekata 高さ数十 m なら空気の密度は一定とみてよいので、③の $\dfrac{\dd p}{\dd z}=-\rho g$ から $\Delta p=-\rho g\,\Delta z$。その間の天気の変化は無視する。
+\par\shiki $\Delta p=1006.0-1012.0=\qty{-6.0}{hPa}=\qty{-600}{Pa}$。$\Delta z=\dfrac{600}{1.2\times9.8}\approx\qty{51}{m}$
+\par\kotae 約\qty{51}{m}（「\qty{100}{m}で約\qty{12}{hPa}」と合う。15階建てくらい）
+\end{reidai}
+\begin{jibun}
+1階上がると、気圧が\qty{35}{Pa}下がりました。1階分の高さは何 m ですか（空気の密度\qty{1.2}{kg/m^3}）。
+\bkjans{$\dfrac{35}{1.2\times9.8}\approx\qty{3.0}{m}$}
+\end{jibun}
+
+\begin{phreidai}[油圧ジャッキ]
+\label{ph:力-12:ex6}油圧ジャッキの細いピストンの直径は\qty{1.0}{cm}、太いピストンの直径は\qty{10}{cm}です。細いピストンを\qty{100}{N}で押すと、太いピストンは何 N の力で持ち上げますか。細いピストンを\qty{10}{cm}押しこむと、太いピストンは何 mm 上がりますか。
+\phbamen
+閉じこめた油を通して、力を伝えます。持ち上げる力と、動く距離の両方を求めます。
+\phmushi
+ピストンと筒の摩擦、油のもれ、ピストンの重さ、2つのピストンの高さの差を無視します。油は縮まないとします。
+\phzu
+細いほう：直径 $d_1$、面積 $A_1$、力 $F_1$、動く距離 $s_1$。太いほう：$d_2$、$A_2$、$F_2$、$s_2$。
+\phriyu
+力はパスカルの原理 $\dfrac{F_1}{A_1}=\dfrac{F_2}{A_2}$。距離は、油の体積が変わらないこと $A_1s_1=A_2s_2$。
+\phtateru
+\[ \frac{A_2}{A_1}=\left(\frac{d_2}{d_1}\right)^2=\left(\frac{10}{1.0}\right)^2,\qquad F_2=\frac{A_2}{A_1}F_1,\qquad s_2=\frac{A_1}{A_2}s_1 \]
+\phtoku
+\[ \frac{A_2}{A_1}=100,\qquad F_2=100\times100=\qty{10000}{N} \]
+\[ s_2=\frac{\qty{100}{mm}}{100}=\qty{1.0}{mm} \]
+\phtashikame
+仕事：$F_1s_1=100\times0.10=\qty{10}{J}$、$F_2s_2=\num{10000}\times0.001=\qty{10}{J}$ で等しい（仕事の原理）。大きさ：\qty{10000}{N}は約\qty{1}{t}の物の重さ。\qty{5}{cm}上げるには、\qty{10}{cm}の押しこみを $50\div1.0=50$ 回くり返す。
+\kotae \qty{10000}{N}（約\qty{1}{t}の物を持ち上げる）、\qty{1.0}{mm}
+\end{phreidai}
+\begin{jibun}
+細いピストンの直径\qty{2.0}{cm}、太いピストンの直径\qty{12}{cm}の油圧ジャッキで、細いほうを\qty{150}{N}で押します。持ち上げる力と、細いほうを\qty{6.0}{cm}押しこんだときに太いほうが上がる距離を求めましょう。
+\bkjans{面積の比 $6^2=36$。$150\times36=\qty{5400}{N}$、$60\div36\approx\qty{1.7}{mm}$}
+\end{jibun}
+
+\begin{phreidai}[ダムの壁にかかる力]
+\label{ph:力-12:ex7}高さ\qty{100}{m}まで水をためたダムの、鉛直な壁を考えます。はば\qty{1}{m}あたりの壁にかかる水の力と、その力がかかる深さ（圧力の中心）を求めましょう。
+\phbamen
+壁は、水面から底まで、深さに比例する圧力で押されています。全体の力と、1本にまとめた力の位置を求めます。
+\phmushi
+壁の外側にも大気がかかるので、大気の力は打ち消し合うとして、ゲージ圧だけを考えます。本物のダムの壁は斜めですが、ここでは鉛直とします。水の流れや波を無視します。
+\phzu
+水の深さ $h=\qty{100}{m}$、壁のはば $b=\qty{1}{m}$、力 $F$、圧力の中心の深さ $y_{\mathrm{c}}$。
+\phriyu
+鉛直な長方形の壁で、上のはしが水面なので、⑥で積分して作った $F=\dfrac{1}{2}\rho gh^2b$、$y_{\mathrm{c}}=\dfrac{2}{3}h$ が使えます。
+\phtateru
+\[ F=\frac{1}{2}\times1000\times9.8\times100^2\times1,\qquad y_{\mathrm{c}}=\frac{2}{3}\times100 \]
+\phtoku
+\[ F=4.9\times10^7\,\mathrm{N}=\qty{49}{MN},\qquad y_{\mathrm{c}}\approx\qty{67}{m} \]
+\phtashikame
+単位：N。大きさ：底の圧力は $1000\times9.8\times100=\qty{980}{kPa}$（約10気圧）。平均の圧力（\qty{490}{kPa}）×面積（\qty{100}{m^2}）でも\qty{49}{MN}。これは約\num{5000}\,t の物の重さです。極端な場合：$h$ を半分の\qty{50}{m}にすると、力は4分の1の約\qty{12}{MN}。
+\kotae はば\qty{1}{m}あたり約\qty{49}{MN}、深さ約\qty{67}{m}の所
+\end{phreidai}
+\begin{jibun}
+ため池の出口を、高さ\qty{2.0}{m}・はば\qty{3.0}{m}の鉛直な板でせき止めています。水面は板の上のはしの高さです。板にかかる水の力と、圧力の中心の深さを求めましょう。
+\bkjans{$\dfrac{1}{2}\times1000\times9.8\times2.0^2\times3.0=\qty{58800}{N}$ で約\qty{59}{kN}。深さ $\dfrac{2}{3}\times2.0\approx\qty{1.3}{m}$}
+\end{jibun}
+
+\begin{phreidai}[斜めの水門]
+\label{ph:力-12:ex8}水平から60°傾いた長方形の水門があります。水門のはばは\qty{2.0}{m}で、上のはしは水面、下のはしは水面から深さ\qty{3.0}{m}の所にあります。水門にかかる水の力と、圧力の中心の深さを求めましょう。
+\phbamen
+水門は斜めなので、鉛直な壁より面積が広くなります。力は、どの部分でも水門の面に垂直です。
+\phmushi
+大気の力（両側で打ち消す）、水の流れを無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!13] (0,0) -- (17.3,0) -- (0,30) -- cycle;
+  \fill[bkBlue!13] (-20,0) rectangle (0,30);
+  \draw[bkBlue!70!black, line width=0.8pt] (-20,30) -- (0,30);
+  \draw[bkInk, line width=1.8pt] (0,30) -- (17.3,0);
+  \draw[bkGray, line width=0.6pt] (-20,0) -- (30,0);
+  \draw[bkInk, line width=0.5pt] (11.3,0) arc (180:120:6);
+  \node[pxm lab] at (9,3.2) {60°};
+  \draw[pxm dim] (-16,30) -- (-16,0);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (-15,15) {\qty{3.0}{m}};
+  \node[pxm lab, anchor=west] at (11,18) {$L$};
+  \fill[bkRed!75!black] (5.77,20) circle (1);
+  \draw[bkGray, dashed, line width=0.4pt] (-20,20) -- (5.77,20);
+  \node[pxm lab, anchor=south west] at (-19,20.3) {中心};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+水門の長さ（斜めの辺）$L$、面積 $A=L\times\qty{2.0}{m}$、重心の深さ $y_{\mathrm{G}}$、力 $F$。
+\end{minipage}
+\phriyu
+平らな板なので、⑥の $F=\rho g\,y_{\mathrm{G}}A$ が使えます。圧力は深さに比例し、上のはしが水面なので、斜めの方向にそっても三角形の形に増えます。だから圧力の中心は、斜めの長さの $\dfrac{2}{3}$、つまり深さの $\dfrac{2}{3}$ の所です。
+\phtateru
+\[ L=\frac{3.0}{\sin60^\circ},\qquad A=2.0L,\qquad y_{\mathrm{G}}=\frac{3.0}{2},\qquad F=\rho g\,y_{\mathrm{G}}A \]
+\phtoku
+\[ L=\frac{3.0}{0.866}\approx\qty{3.46}{m},\qquad A\approx\qty{6.93}{m^2} \]
+\[ F=1000\times9.8\times1.5\times6.93\approx\qty{102}{kN} \]
+圧力の中心の深さは $\dfrac{2}{3}\times3.0=\qty{2.0}{m}$。
+\phtashikame
+同じ深さ\qty{3.0}{m}の鉛直な水門（はば\qty{2.0}{m}）なら $\dfrac{1}{2}\times1000\times9.8\times3^2\times2=\qty{88.2}{kN}$（⑥の表計算）。斜めにすると面積が $\dfrac{1}{\sin60^\circ}\approx1.15$ 倍になり、力も1.15倍。極端な場合：90°（鉛直）にすると $\sin90^\circ=1$ で、鉛直の式にもどる。
+\kotae 約\qty{1.0e2}{kN}（\qty{102}{kN}）、深さ\qty{2.0}{m}の所
+\end{phreidai}
+\begin{jibun}
+水平から45°傾いた、はば\qty{1.0}{m}の長方形の水門の上のはしが水面、下のはしが深さ\qty{2.0}{m}です。水門にかかる力と、圧力の中心の深さを求めましょう。
+\bkjans{$L=\dfrac{2.0}{\sin45^\circ}\approx\qty{2.83}{m}$、$F=1000\times9.8\times1.0\times2.83\approx\qty{27.7}{kN}$（約\qty{28}{kN}）、深さ約\qty{1.3}{m}}
+\end{jibun}
+
+\begin{phreidai}[鋼の箱の船は、どれだけ沈む？]
+\label{ph:力-12:ex9}長さ\qty{20}{m}・はば\qty{5}{m}・高さ\qty{2}{m}の、ふたのない箱の形の船を、厚さ\qty{10}{mm}の鋼板（密度\qty{7850}{kg/m^3}）で作りました。(1) 川（真水）に浮かべると、何 m 沈みますか。(2) 沈む深さを\qty{1.5}{m}までにするとき、何 t の荷物を積めますか。(3) 同じ量の鋼をかためたかたまりは、浮きますか。
+\phbamen
+\bkhatenaref の船を、いちばん簡単な形で計算します。船は重さと浮力がつり合って浮かびます。
+\phmushi
+鋼板の厚さは、船の大きさにくらべてうすいので、体積は「板の面積×厚さ」で計算し、板の厚さの分の浮力も無視します。溶接の材料、波、船のゆれを無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkBlue!13] (-6,-8) rectangle (56,4);
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.9pt] (0,0) rectangle (50,12);
+  \fill[bkBlue!13] (-6,-8) rectangle (56,0);
+  \draw[bkInk, line width=0.9pt] (0,-1.6) rectangle (50,12);
+  \fill[bkBlue!25] (0,-1.6) rectangle (50,0);
+  \draw[bkBlue!70!black, line width=0.8pt] (-6,0) -- (56,0);
+  \draw[pxm dim] (53,-1.6) -- (53,12);
+  \node[pxm lab, anchor=west] at (54,6) {\qty{2}{m}};
+  \draw[pxm dim] (0,15) -- (50,15);
+  \node[pxm lab, anchor=south] at (25,15.4) {\qty{20}{m}（はば\qty{5}{m}）};
+  \node[pxm lab, anchor=north] at (25,-2.4) {沈む深さ $d$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.51\linewidth}\raggedright
+鋼板の面積 $S_{\text{板}}$、船の質量 $m$、沈む深さ（喫水）$d$、水の密度 $\rho$。水の中の部分の体積は $20\times5\times d$。
+\end{minipage}
+\phriyu
+浮かんで止まっているので「重さ＝浮力」。浮力はアルキメデスの原理 $\rho Vg$ で、$V$ は水の中の部分の体積です。
+\phtateru
+板の面積は、底 $20\times5$、長い側面2まい $2\times20\times2$、短い側面2まい $2\times5\times2$ の和。
+\[ S_{\text{板}}=100+80+20=\qty{200}{m^2},\qquad m=200\times0.010\times7850 \]
+\[ mg=\rho\times(20\times5\times d)\times g \quad\text{より}\quad d=\frac{m}{\rho\times100} \]
+\phtoku
+(1) $m=\qty{15700}{kg}$（\qty{15.7}{t}）。$d=\dfrac{15700}{1000\times100}=\qty{0.157}{m}\approx\qty{0.16}{m}$。\par
+(2) $d=\qty{1.5}{m}$ のとき、押しのける水は $100\times1.5=\qty{150}{m^3}$ で、その質量は\qty{150}{t}。船の\qty{15.7}{t}を引いて、$150-15.7\approx\qty{134}{t}$。\par
+(3) かたまりの体積は $\dfrac{15700}{7850}=\qty{2.0}{m^3}$。全部沈めても浮力は $1000\times2.0\times9.8=\qty{19.6}{kN}$ で、重さ $15700\times9.8\approx\qty{154}{kN}$ よりずっと小さいので、沈む。
+\phtashikame
+船全体の平均の密度は $\dfrac{15700}{20\times5\times2}=\qty{78.5}{kg/m^3}$ で、水の約13分の1。だから少ししか沈まない。(1) の $d$ は、高さ\qty{2}{m}の約8\,\% で、平均の密度の比 $\dfrac{78.5}{1000}$ と同じ。
+\kotae (1) 約\qty{0.16}{m}　(2) 約\qty{134}{t}　(3) 沈む
+\end{phreidai}
+\begin{jibun}
+長さ\qty{15}{m}・はば\qty{4}{m}・高さ\qty{1.5}{m}の、ふたのない箱の船を、厚さ\qty{8}{mm}の鋼板（\qty{7850}{kg/m^3}）で作りました。真水に浮かべたときに沈む深さと、沈む深さを\qty{1.0}{m}までにするときに積める荷物の質量を求めましょう。
+\bkjans{板 $60+45+12=\qty{117}{m^2}$、$m=117\times0.008\times7850\approx\qty{7350}{kg}$。$d=\dfrac{7350}{1000\times60}\approx\qty{0.12}{m}$。荷物 $60-7.35\approx\qty{53}{t}$}
+\end{jibun}
+
+\begin{phreidai}[氷山の一角]
+\label{ph:力-12:ex10}海に浮かぶ氷山（氷の密度\qty{917}{kg/m^3}）は、全体の体積の何\,\% が海面の上に出ていますか。真水の湖に浮かぶ氷ではどうですか。また、高さ\qty{10}{m}の直方体の氷が海に浮かぶとき、海面から上は何 m ですか。
+\phbamen
+「氷山の一角」ということばのとおり、氷山は、ほとんどが水の下にかくれています。その割合を求めます。
+\phmushi
+氷の中の空気の泡、海水の密度の深さによるちがい、波を無視します。
+\phzu
+氷の体積 $V$、水の中の部分の体積 $V_{\text{水中}}$、氷の密度 $\rho_{\text{氷}}$、海水の密度 $\rho$。
+\phriyu
+浮かんで止まっているので、⑦の $\dfrac{V_{\text{水中}}}{V}=\dfrac{\rho_{\text{物}}}{\rho}$ が使えます。
+\phtateru
+\[ \frac{V_{\text{水中}}}{V}=\frac{917}{1025}\ (\text{海}),\qquad \frac{917}{1000}\ (\text{真水}) \]
+\phtoku
+海：$\dfrac{917}{1025}\approx0.895$。上に出ているのは $1-0.895=0.105$ で約11\,\%。\par
+真水：$\dfrac{917}{1000}=0.917$。上は $0.083$ で約8\,\%。\par
+直方体（たての断面がどこも同じ）なら、体積の割合は高さの割合と同じなので、$10\times0.105\approx\qty{1.1}{m}$。
+\phtashikame
+単位：密度÷密度で、単位はない（割合）。大きさ：約1割が上。海水のほうが重いので、海のほうが少し多く出ている。極端な場合：氷の密度が水と同じなら、出ている部分は0。
+\kotae 海で約11\,\%、真水で約8\,\%。高さ\qty{10}{m}の氷では約\qty{1.1}{m}
+\end{phreidai}
+\begin{jibun}
+密度\qty{600}{kg/m^3}の木でできた、1辺\qty{20}{cm}の立方体を真水に浮かべます。水に沈む深さは何 cm ですか。
+\bkjans{$\dfrac{600}{1000}=0.6$ なので、$20\times0.6=\qty{12}{cm}$}
+\end{jibun}
+
+\begin{phreidai}[アルキメデスの王冠]
+\label{ph:力-12:ex11}王冠をばねばかりでつるすと、空気中で\qty{9.80}{N}、水の中にすっかり沈めると\qty{9.16}{N}でした。王冠の密度を求め、純金（\qty{19300}{kg/m^3}）かどうか判定しましょう。
+\phbamen
+アルキメデスが、王の冠に銀がまぜられていないかを、こわさずに調べたという話が伝わっています（紀元前1世紀のローマの本に書かれた話）。形が複雑で体積を直接はかれないので、浮力から体積を求めます。
+\phmushi
+空気の浮力（約\qty{0.0008}{N}）、糸の体積、冠の表面の泡を無視します。
+\phzu
+空気中の重さ $W_{\text{空}}$、水中の重さ $W_{\text{水}}$、浮力 $F_{\mathrm{B}}$、体積 $V$、質量 $m$、密度 $\rho_{\text{冠}}$。
+\phriyu
+浮力＝空気中の重さ－水中の重さ（⑦）で浮力を出し、$F_{\mathrm{B}}=\rho Vg$ から体積を出します。質量は $W_{\text{空}}=mg$ から。密度は $\dfrac{m}{V}$。
+\phtateru
+\[ F_{\mathrm{B}}=W_{\text{空}}-W_{\text{水}},\qquad V=\frac{F_{\mathrm{B}}}{\rho g} \]
+\[ \rho_{\text{冠}}=\frac{m}{V}=\frac{W_{\text{空}}/g}{F_{\mathrm{B}}/(\rho g)}=\frac{W_{\text{空}}}{W_{\text{空}}-W_{\text{水}}}\,\rho \]
+\phtoku
+\[ F_{\mathrm{B}}=9.80-9.16=\qty{0.64}{N} \]
+\[ V=\frac{0.64}{1000\times9.8}\approx6.5\times10^{-5}\,\mathrm{m^3}\quad(\qty{65}{cm^3}) \]
+\[ \rho_{\text{冠}}=\frac{9.80}{0.64}\times1000\approx\qty{15300}{kg/m^3} \]
+\phtashikame
+\qty{19300}{kg/m^3}よりずっと小さいので、純金ではない（金より軽い銀などがまざっている）。もし純金なら、体積は $\dfrac{1.00}{19300}\approx\qty{52}{cm^3}$ で、水中では\qty{9.29}{N}を示したはず。最後の式は $g$ が消えるので、月の上ではかっても同じ答えになる。
+\kotae 約\qty{15300}{kg/m^3}。純金ではない
+\end{phreidai}
+\begin{jibun}
+金属のかたまりをばねばかりでつるすと、空気中で\qty{5.00}{N}、水の中で\qty{4.36}{N}でした。密度を求め、次のどれに近いか答えましょう：アルミニウム（2700）、鉄（7850）、銅（8900）。
+\bkjans{$\dfrac{5.00}{5.00-4.36}\times1000\approx\qty{7800}{kg/m^3}$。鉄}
+\end{jibun}
+
+\begin{phreidai}[ヘリウムの風船は何 kg を持ち上げる？]
+\label{ph:力-12:ex12}ヘリウム\qty{1.0}{m^3}を入れた気球は、何 kg の物を持ち上げられますか。空気の密度は\qty{1.204}{kg/m^3}、ヘリウムの密度は\qty{0.166}{kg/m^3}（どちらも\qty{20}{\celsius}・1気圧）とします。
+\phbamen
+空気も流体なので、空気の中の物にも浮力がはたらきます。気球は、まわりの空気より軽い気体で、大きな体積を作ります。
+\phmushi
+気球の袋の質量と体積、ヘリウムが袋の中で少し押し縮められていること、高さによる空気の密度の変化を無視します。
+\phzu
+気球の体積 $V$、空気の密度 $\rho$、ヘリウムの密度 $\rho_{\mathrm{He}}$、持ち上げられる物の質量 $M$。
+\phriyu
+浮力は押しのけた空気の重さ $\rho Vg$（アルキメデスの原理は気体でも成り立つ）。上向きの浮力が、ヘリウムの重さと物の重さを支えます。
+\phtateru
+\[ \rho Vg=\rho_{\mathrm{He}}Vg+Mg\qquad\text{より}\qquad M=(\rho-\rho_{\mathrm{He}})V \]
+\phtoku
+\[ M=(1.204-0.166)\times1.0\approx\qty{1.04}{kg}\approx\qty{1.0}{kg} \]
+浮力は $1.204\times1.0\times9.8\approx\qty{11.8}{N}$、ヘリウムの重さは約\qty{1.6}{N}。
+\phtashikame
+単位：kg/m$^3$×m$^3$＝kg。大きさ：\qty{1}{m^3}（たたみ半分の広さで高さ\qty{1}{m}）のヘリウムで、ペットボトル1本分くらい。人（\qty{60}{kg}）を持ち上げるには、約\qty{58}{m^3}、直径\qty{5}{m}近い球がいる。極端な場合：中が空気なら $\rho-\rho_{\mathrm{He}}=0$ で、何も持ち上げられない。
+\kotae 約\qty{1.0}{kg}
+\end{phreidai}
+\begin{jibun}
+ヘリウムを\qty{10}{L}（\qty{0.010}{m^3}）入れたゴム風船があります。ゴムの質量は\qty{3}{g}です。この風船は、ほかに何 g までの物を持ち上げられますか（密度は例題と同じ）。
+\bkjans{$(1.204-0.166)\times0.010=\qty{0.0104}{kg}$（\qty{10.4}{g}）。$10.4-3\approx\qty{7}{g}$}
+\end{jibun}
+
+\begin{phreidai}[浮力の反作用：台ばかりの目もり]
+\label{ph:力-12:ex13}台ばかりに、水の入った容器（容器と水で\qty{2.0}{kg}）をのせます。質量\qty{0.27}{kg}・体積\qty{100}{cm^3}のアルミニウムのおもりを、ばねばかりでつるして、容器の底につかないように水にすっかり沈めました。ばねばかりと台ばかりは、それぞれ何 N を示しますか。
+\phbamen
+水はおもりを浮力で押し上げます。作用・反作用（力-2）で、おもりも水を同じ力で押し下げます。この力は、水と容器を通して台ばかりにかかります。
+\phmushi
+糸の質量と体積、水面が上がることで変わる深さ（浮力は深さによらないので効かない）を無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!30, draw=bkInk, line width=0.7pt] (-4,-5) rectangle (36,0);
+  \node[font=\sffamily\scriptsize] at (16,-2.5) {台ばかり};
+  \fill[bkBlue!13] (2,0) rectangle (30,20);
+  \draw[bkBlue!70!black, line width=0.7pt] (2,20) -- (30,20);
+  \draw[bkInk, line width=1pt] (2,26) -- (2,0) -- (30,0) -- (30,26);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.6pt] (12,6) rectangle (20,14);
+  \draw[bkInk, line width=0.5pt] (16,14) -- (16,34);
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (13.5,34) rectangle (18.5,42);
+  \draw[pxm f, bkBlue!80!black, line width=1pt] (22.5,7) -- (22.5,14);
+  \node[pxm lab, anchor=west, fill=bkBlue!13] at (23,10.5) {$F_{\mathrm{B}}$};
+  \node[pxm lab, anchor=west] at (19,38) {ばねばかり $T$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+おもりの質量 $m$・体積 $V$、浮力 $F_{\mathrm{B}}$、ばねばかりの力 $T$、容器と水の質量 $M$、台ばかりが押し上げる力 $N$。
+\end{minipage}
+\phriyu
+おもりについてのつり合いと、「容器＋水」についてのつり合いを、別々に書きます（力-2 の、物ごとに力を書く手順）。
+\phtateru
+おもり：$T+F_{\mathrm{B}}=mg$。\quad 容器＋水：$N=Mg+F_{\mathrm{B}}$（おもりが水を押し下げる反作用）。
+\[ F_{\mathrm{B}}=1000\times(100\times10^{-6})\times9.8 \]
+\phtoku
+\[ F_{\mathrm{B}}=\qty{0.98}{N} \]
+\[ T=0.27\times9.8-0.98\approx2.65-0.98=\qty{1.67}{N} \]
+\[ N=2.0\times9.8+0.98\approx\qty{20.6}{N} \]
+\phtashikame
+全体で確かめる：ばねばかりと台ばかりの合計 $1.67+20.6\approx22.2$ は、おもりと容器と水の重さの合計 $(0.27+2.0)\times9.8\approx\qty{22.2}{N}$ と等しい。浮力の分\qty{0.98}{N}が、ばねばかりから台ばかりへ「移った」。極端な場合：おもりを水から出すと、$T=\qty{2.65}{N}$、$N=\qty{19.6}{N}$。
+\kotae ばねばかり 約\qty{1.7}{N}、台ばかり 約\qty{20.6}{N}
+\end{phreidai}
+\begin{jibun}
+容器と水が\qty{1.5}{kg}の台ばかりの上で、質量\qty{0.79}{kg}・体積\qty{100}{cm^3}の鉄のおもりをばねばかりでつるし、水にすっかり沈めました（底につかない）。ばねばかりと台ばかりの目もりを求めましょう。
+\bkjans{浮力\qty{0.98}{N}。ばねばかり $0.79\times9.8-0.98\approx\qty{6.8}{N}$、台ばかり $1.5\times9.8+0.98\approx\qty{15.7}{N}$}
+\end{jibun}
+
+\begin{phreidai}[箱の形の船のメタセンタ高さ]
+\label{ph:力-12:ex14}はば\qty{10}{m}・喫水（水の中の深さ）\qty{2.0}{m}の箱の形の船があります。荷物を積んだ船全体の重心は、底から\qty{3.0}{m}の高さです。メタセンタ高さ GM を求め、安定かどうか判定しましょう。
+\phbamen
+荷物を積んだ船が、波で少し傾いても元にもどるかを調べます。船の設計や、荷物の積み方を決めるときにする計算です。
+\phmushi
+傾きは小さいとします。船の長さの方向の形は一様（箱）とし、積み荷が傾いたときに動くこと、波と風の力を無視します。
+\phzu
+底の点 K、浮心 B、重心 G、メタセンタ M。はば $b=\qty{10}{m}$、喫水 $d=\qty{2.0}{m}$、$\mathrm{KG}=\qty{3.0}{m}$。
+\phriyu
+⑧の、箱の形の船の式 $\mathrm{KB}=\dfrac{d}{2}$、$\mathrm{BM}=\dfrac{b^2}{12d}$、$\mathrm{GM}=\mathrm{KB}+\mathrm{BM}-\mathrm{KG}$ が使えます。
+\phtateru
+\[ \mathrm{KB}=\frac{2.0}{2},\qquad \mathrm{BM}=\frac{10^2}{12\times2.0},\qquad \mathrm{GM}=\mathrm{KB}+\mathrm{BM}-3.0 \]
+\phtoku
+\[ \mathrm{KB}=\qty{1.0}{m},\qquad \mathrm{BM}\approx\qty{4.17}{m},\qquad \mathrm{GM}\approx1.0+4.17-3.0\approx\qty{2.2}{m} \]
+\phtashikame
+GM $>0$ なので安定。重心は浮心（\qty{1.0}{m}）より上にあるのに安定なのは、BM が大きいから。荷物をさらに高く積んで KG が約\qty{5.2}{m}をこえると、GM が負になり、ひっくり返る。単位：m。
+\kotae GM 約\qty{2.2}{m}。安定
+\end{phreidai}
+\begin{jibun}
+はば\qty{6.0}{m}・喫水\qty{1.5}{m}の箱の形の船の重心が、底から\qty{2.2}{m}です。GM を求め、安定かどうか判定しましょう。
+\bkjans{$\mathrm{KB}=0.75$、$\mathrm{BM}=\dfrac{36}{18}=2.0$、$\mathrm{GM}=0.75+2.0-2.2\approx\qty{0.55}{m}$。安定}
+\end{jibun}
+
+\begin{phreidai}[U字管：マノメータと、2つの液体]
+\label{ph:力-12:ex15}(1) 換気ダクトにつないだ水のU字管マノメータで、水面の差が\qty{20}{mm}でした。ダクトの中のゲージ圧は何 Pa ですか。(2) 水の入ったU字管の片方に、密度\qty{800}{kg/m^3}の油を\qty{10}{cm}の高さまで注ぎました。油の面と、反対側の水面の高さの差は何 cm ですか（油と水はまざらない）。
+\phbamen
+(1) は、U字管の水面の差から圧力をはかる場面。(2) は、とちゅうに別の液体がある場面です。
+\phmushi
+管の太さの影響（表面張力で水面が曲がること）、温度による密度の変化を無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkBlue!25] (0,-6) rectangle (30,0) (0,0) rectangle (6,12) (24,0) rectangle (30,20);
+  \fill[bkOrange!35] (0,12) rectangle (6,22);
+  \draw[bkInk, line width=0.9pt, line join=round] (0,30) -- (0,-6) -- (30,-6) -- (30,30);
+  \draw[bkInk, line width=0.9pt, line join=round] (6,30) -- (6,0) -- (24,0) -- (24,30);
+  \draw[bkGray, dashed, line width=0.4pt] (-6,12) -- (36,12);
+  \fill[bkRed!75!black] (3,12) circle (0.8) (27,12) circle (0.8);
+  \node[pxm lab, anchor=east] at (-1,17) {油};
+  \draw[pxm dim] (33,12) -- (33,20);
+  \node[pxm lab, anchor=west] at (34,16) {$h_{\text{水}}$};
+  \draw[pxm dim] (-7,12) -- (-7,22);
+  \node[pxm lab, anchor=east] at (-7.5,24) {$h_{\text{油}}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+(2) 油と水の境目の高さに点線を引く。左の点（境目）と右の点は、同じ水でつながった同じ高さなので、圧力が等しい。左は油の柱 $h_{\text{油}}$、右は水の柱 $h_{\text{水}}$ がのっている。
+\end{minipage}
+\phriyu
+⑨の「同じ液体でつながった同じ高さの点は同じ圧力」と、柱の重さの式 $\rho gh$ を使います。(2) では、境目より上は液体がちがうので、境目の高さで比べます。
+\phtateru
+(1) $p-p_0=\rho g\,\Delta h=1000\times9.8\times0.020$\par
+(2) $p_0+\rho_{\text{油}}gh_{\text{油}}=p_0+\rho_{\text{水}}gh_{\text{水}}$ より $h_{\text{水}}=\dfrac{\rho_{\text{油}}}{\rho_{\text{水}}}h_{\text{油}}$
+\phtoku
+(1) $1000\times9.8\times0.020=\qty{196}{Pa}$（約\qty{2.0e2}{Pa}）\par
+(2) $h_{\text{水}}=\dfrac{800}{1000}\times10=\qty{8.0}{cm}$。差は $10-8.0=\qty{2.0}{cm}$（油の面のほうが高い）
+\phtashikame
+(1) 単位 Pa。水\qty{1}{mm}で約\qty{9.8}{Pa}だから、\qty{20}{mm}で約\qty{196}{Pa}。(2) 軽い油のほうが柱が高くなるのは、同じ圧力を作るのに、軽い液体ほど高い柱がいるから。極端な場合：油の密度が水と同じなら、差は0。
+\kotae (1) 約\qty{196}{Pa}（ゲージ圧）　(2) \qty{2.0}{cm}、油の面のほうが高い
+\end{phreidai}
+\begin{jibun}
+(1) 水のU字管マノメータの水面の差が\qty{35}{mm}でした。ゲージ圧は何 Pa ですか。(2) 水の入ったU字管の片方に、密度\qty{850}{kg/m^3}の油を\qty{12}{cm}の高さまで注ぎました。油の面と水面の差は何 cm ですか。
+\bkjans{(1) $1000\times9.8\times0.035=\qty{343}{Pa}$　(2) $12-0.85\times12=\qty{1.8}{cm}$（油の面が高い）}
+\end{jibun}
+
+\begin{phreidai}[差圧式の液面計]
+\label{ph:力-12:ex16}水のタンクの底と、液面より上の空間を差圧計につなぎました。(1) 水の高さが\qty{5.0}{m}のとき、差圧計は何 kPa を示しますか。(2) 差圧計が\qty{30}{kPa}を示しているとき、水の高さは何 m ですか。
+\phbamen
+タンクの中の液の高さを、外から見ずに、圧力の差で知る場面です。化学工場やボイラーで、いつも使われています。
+\phmushi
+取り出し口がタンクの底のちょうどの高さにあるとします（ずれていれば、その分を足す）。上の空間の気体の重さ（$\rho gh$ の気体の分）、液の温度による密度の変化を無視します。
+\phzu
+液の高さ $h$、液の密度 $\rho$、差圧 $\Delta p$。上の空間の圧力を $p_{\text{上}}$ とすると、底の圧力は $p_{\text{上}}+\rho gh$。
+\phriyu
+差圧計は2つの圧力の差 $\Delta p=(p_{\text{上}}+\rho gh)-p_{\text{上}}=\rho gh$ を示すので、⑨の $h=\dfrac{\Delta p}{\rho g}$ が使えます。
+\phtateru
+(1) $\Delta p=1000\times9.8\times5.0$\qquad (2) $h=\dfrac{30\times10^3}{1000\times9.8}$
+\phtoku
+(1) $\Delta p=\qty{49000}{Pa}=\qty{49}{kPa}$\qquad (2) $h\approx\qty{3.1}{m}$
+\phtashikame
+$p_{\text{上}}$ が式から消えたので、タンクの中に圧力がかかっていても、正しく液の高さがわかる。大きさ：「水\qty{1}{m}で約\qty{9.8}{kPa}」から、\qty{5}{m}で約\qty{49}{kPa}。極端な場合：空のタンクでは $\Delta p=0$。
+\kotae (1) \qty{49}{kPa}　(2) 約\qty{3.1}{m}
+\end{phreidai}
+\begin{jibun}
+硫酸（密度\qty{1830}{kg/m^3}）のタンクで、液の高さが\qty{2.0}{m}のとき差圧計は何 kPa を示しますか。また、差圧計が\qty{40}{kPa}のとき、液の高さは何 m ですか。
+\bkjans{$1830\times9.8\times2.0\approx\qty{35.9}{kPa}$（約\qty{36}{kPa}）、$\dfrac{40000}{1830\times9.8}\approx\qty{2.2}{m}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{浮力は、深く沈めるほど大きい？}
+\bkng{深い所ほど水圧が大きいので、浮力も大きくなる。}
+\bkok{物がすっかり水の中にあれば、浮力は深さによらない。}
+深くすると、上の面を押す力も下の面を押す力も、同じだけ大きくなります。浮力はその「差」なので変わりません（⑦の方法1で $h$ が消えた）。
+\end{tsumazuki}
+\begin{tsumazuki}{重い物は沈み、軽い物は浮く？}
+\bkng{何万トンもある船は重いので沈むはず。小さな鉄のくぎは軽いので浮くはず。}
+\bkok{浮くか沈むかは、重さではなく、物全体の平均の密度と、流体の密度の大小で決まる。}
+重さが2倍でも、体積も2倍なら浮き方は同じです。船は中の空気をふくめた平均の密度が小さく、くぎは小さくても密度が水の約8倍です。
+\end{tsumazuki}
+\begin{tsumazuki}{ゲージ圧のまま $pV$ 一定の式に入れる}
+\bkng{タイヤのゲージ圧\qty{230}{kPa}を、そのまま $pV$ 一定（3-7）の計算に使う。}
+\bkok{気体の $pV$ の計算には、絶対圧 $230+101=\qty{331}{kPa}$ を使う。}
+$pV$ が一定なのは、真空を0とした圧力です。ゲージ圧を使うと、\bkreidairef{3}の肺の空気のように、答えが大きくずれます。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[圧力ではかる・圧力で動かす・圧力で浮かぶ]
+\phboxhead{① 液面計と密度の設定}
+差圧式の液面計（\bkreidairef{16}）は、計器に設定した液の密度 $\rho$ で、差圧を高さに直しています。たとえば水（\qty{1000}{kg/m^3}）の設定のまま、密度\qty{1100}{kg/m^3}の液を入れると、同じ高さでも差圧が1.1倍になり、計器は液の高さを10\,\% 高く表示します。液の種類や温度を変えるときは、設定を見直します。工場の計装の仕事では、このような「何を仮定して数に直しているか」を、いつも確かめます。
+
+\phboxhead{② 船の満載喫水線}
+大きな船の横には、荷物を積んでよい深さを示す線（満載喫水線）がかかれています。海水と真水では密度がちがうので、同じ船でも、海から川に入ると $\dfrac{1025}{1000}=1.025$ 倍深く沈みます。喫水\qty{6.0}{m}の船なら、約\qty{6.15}{m}になります。そのため、線は「海の夏」「海の冬」「真水」などに分けてかかれています。
+
+\begin{phketa}[流体の圧力と密度]
+\phketaline{標準大気圧（決めた値）}{\qty{101325}{Pa}（約\qty{101}{kPa}）}
+\phketaline{水の密度（\qty{20}{\celsius}）・海水}{\qty{998}{kg/m^3}・約\qty{1025}{kg/m^3}}
+\phketaline{水深\qty{10}{m}の水圧（ゲージ圧）}{約\qty{98}{kPa}（約1気圧）}
+\phketaline{車のタイヤの空気圧（ゲージ圧）}{約\qtyrange{200}{250}{kPa}}
+\phketaline{水道の配水管の水圧（ゲージ圧）}{\qtyrange{0.15}{0.74}{MPa}}
+\phketaline{油圧ショベルの油圧}{約\qty{30}{MPa}}
+\phketaline{いちばん深い海の底（約\qty{11}{km}）}{約\qty{110}{MPa}}
+\phboxhead{答えが桁で合っているか}
+水の圧力は「\qty{10}{m}で約\qty{0.1}{MPa}」。水の柱の高さの見当に直すと、答えの桁をすぐ確かめられます。\qty{1}{MPa}なら約\qty{100}{m}の水の柱、\qty{30}{MPa}なら約\qty{3}{km}です。
+\end{phketa}
+\end{phkougaku}
+\phstation{計測工学（プロセス計装）,油圧工学,船舶工学,水理学}{ゲージ圧、絶対圧、差圧、静水圧、圧力の中心、浮心、メタセンタ、復原力、喫水、パスカルの原理}
+
+\begin{phsaki}{表面張力と毛管現象}
+この章では、水の表面のことは考えませんでした。じっさいの水の表面は、のびたゴムの膜のように、縮もうとする力（\textbf{表面張力}）を持っています。アメンボが水に浮けるのも、細いガラス管の中で水が上がる（\textbf{毛管現象}）のも、この力のためです。半径\qty{0.1}{mm}のガラス管では、水は約\qty{15}{cm}も上がります。表面張力が作る圧力の差（曲がった水面の内と外の差）を表す式（ヤング・ラプラスの式）や、泡やしずくの形、インクジェットのしずくの作り方は、大学の流体力学や界面の化学で学びます。力-13 の「まだわかっていないこと」にも、表面張力が出てきます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 質量\qty{4.0}{t}のゾウが、4本の足（1本の底の面積\qty{0.10}{m^2}）で立っています。地面を押す圧力を求めましょう（\bkreidairef{1}）。
+\bkpans{$\dfrac{4000\times9.8}{0.40}=\qty{98000}{Pa}$、約\qty{98}{kPa}}
+\bkproblem 湖の水深\qty{5.0}{m}の所の圧力を、ゲージ圧と絶対圧で求めましょう（\bkreidairef{2}）。
+\bkpans{ゲージ圧\qty{49}{kPa}、絶対圧 $101+49=\qty{150}{kPa}$}
+\bkproblem 海で深さ\qty{50}{m}の所の圧力を、ゲージ圧と絶対圧で求めましょう。絶対圧は大気圧の約何倍ですか。水面で\qty{6.0}{L}の空気は、何 L になりますか（\bkreidairef{3}）。
+\bkpans{ゲージ圧 $1025\times9.8\times50\approx\qty{502}{kPa}$、絶対圧 $101+502=\qty{603}{kPa}$、約6.0倍、$6.0\times\dfrac{101}{603}\approx\qty{1.0}{L}$}
+\bkproblem 細いピストンの直径\qty{3.0}{cm}、太いピストンの直径\qty{15}{cm}の油圧ジャッキで、細いほうを\qty{200}{N}で押します。持ち上げる力を求めましょう（\bkreidairef{6}）。
+\bkpans{面積の比 $5^2=25$。$200\times25=\qty{5000}{N}$}
+\bkproblem 体積\qty{500}{cm^3}・質量\qty{1.3}{kg}の石を、ばねばかりでつるして水にすっかり沈めました。浮力と、ばねばかりの目もりを求めましょう（\bkreidairef{13}）。
+\bkpans{浮力 $1000\times0.0005\times9.8=\qty{4.9}{N}$。目もり $1.3\times9.8-4.9\approx\qty{7.8}{N}$}
+\bkproblem スマートフォンの気圧計で、エレベータに乗る前と後の気圧の差が\qty{360}{Pa}でした。何 m 上がりましたか（空気の密度\qty{1.2}{kg/m^3}。\bkreidairef{5}）。
+\bkpans{$\dfrac{360}{1.2\times9.8}\approx\qty{31}{m}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 水そうの横の壁（はば\qty{0.80}{m}）に、深さ\qty{0.50}{m}まで水が入っています。壁にかかる水の力と、圧力の中心の深さを求めましょう（\bkreidairef{7}）。
+\bkpans{$\dfrac{1}{2}\times1000\times9.8\times0.50^2\times0.80=\qty{980}{N}$、深さ約\qty{0.33}{m}}
+\bkproblem 体積\qty{0.50}{m^3}・密度\qty{600}{kg/m^3}の木のいかだを真水に浮かべます。いかだが全部沈むまでに、何 kg の荷物を積めますか（\bkreidairef{9}）。
+\bkpans{浮力の最大 $1000\times0.50=\qty{500}{kg}$分。いかだは\qty{300}{kg}なので、$500-300=\qty{200}{kg}$}
+\bkproblem はば\qty{8.0}{m}・喫水\qty{2.0}{m}の箱の形の船の重心が、底から\qty{3.5}{m}です。(1) GM を求め、安定かどうか判定しましょう。(2) 荷物を積みかえて重心が\qty{0.50}{m}上がると、どうなりますか（\bkreidairef{14}）。
+\bkpans{(1) $\mathrm{KB}=1.0$、$\mathrm{BM}=\dfrac{64}{24}\approx2.67$、$\mathrm{GM}\approx\qty{0.17}{m}$。安定（ただし小さい）。(2) $\mathrm{GM}\approx\qty{-0.33}{m}$ で不安定になり、ひっくり返るおそれがある}
+\phnyushi
+\bkproblem 台ばかりに、容器と水（合わせて質量 $M$）をのせます。質量 $m$・体積 $V$ のおもりをばねばかりでつるし、水にすっかり沈めました（底につかない）。水の密度を $\rho$、重力加速度を $g$ とします。(1) ばねばかりと台ばかりの目もり（N）を、文字で表しましょう。(2) 糸を切って、おもりを容器の底に静かに置くと、台ばかりの目もりは (1) からいくら変わりますか（\bkreidairef{13}）。
+\bkpans{(1) ばねばかり $mg-\rho Vg$、台ばかり $Mg+\rho Vg$。(2) 台ばかりは $(M+m)g$ になるので、$mg-\rho Vg$ だけ増える}
+\bkproblem 水の入ったU字管の片方に、密度\qty{900}{kg/m^3}の油を注ぎました（まざらない）。(1) 油の柱の高さが\qty{15}{cm}のとき、油の面と水面の差は何 cm ですか。(2) 差が\qty{2.0}{cm}になるのは、油の柱が何 cm のときですか（\bkreidairef{15}）。
+\bkpans{(1) $15-0.90\times15=\qty{1.5}{cm}$。(2) $h-0.90h=2.0$ より $h=\qty{20}{cm}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 圧力を計算し、水圧 $p=p_0+\rho gh$ を（ゲージ圧と絶対圧を区別して）使える。\bkfurref{ph:力-12:sec3}
+\item 浮力が押しのけた水の重さになるわけを説明し、浮き沈みを計算できる。\bkfurref{ph:力-12:sec7}
+\item 油圧・壁や水門にかかる力（圧力の中心）・船の安定を計算できる。\bkfurref{ph:力-12:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{「止まっている」と決めたから、圧力は深さだけで決まったんだ。水が流れ出したら？　次の力-13 で、流れを数えてみよう。}

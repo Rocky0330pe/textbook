@@ -1,0 +1,732 @@
+%% 4-12 内積：どれだけ同じ向きか（第13回：組 V4-6。ページ制限なし。偶数ページ）
+%% ほかの巻・物理シリーズから指される形：
+%%   ・5-12「仕事＝力×力の向きに動いた距離、W=Fx と決めています（4-12）」：仕事 W＝力×力の向きに動いた距離。単位 J。1 N で 1 m 動かすと 1 J（1 J＝1 N·m）
+%%   ・3-15「相関係数 r は、同じ向きなら 1、反対向きなら -1、直角なら 0。4-12 では『内積』という計算で学ぶ」：r＝偏差ベクトルのなす角の cos
+%%   ・物理シリーズ：仕事 W=F·s=Fs cosθ、垂直抗力・向心力は仕事をしない
+%% 数は、すべて Python で計算して確かめた（scratchpad/v4-6/py/c12.py）。3-15 のデータ（10人の身長とタイム）は 3-15 と同じ。
+\makeatletter
+\newcommand\bkivmstep[2]{\par\addvspace{6pt}\Needspace{5\baselineskip}\noindent
+  {\bkcircled[bkOrange]{#1}\enspace\sffamily\bfseries\color{bkOrange!75!black}#2}\par\nobreak\vspace{2pt}}
+\newcommand\bkivmline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\bkivmmidashi[1]{\par\addvspace{4pt}\Needspace{5\baselineskip}\noindent\textbf{#1}\par\nobreak}
+% レールの上のトロッコ（横から）  \bkivmcart{(左下)}
+\newcommand\bkivmcart[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (0,3) -- (16,3) -- (17.5,11) -- (-1.5,11) -- cycle;
+  \fill[bkInk!80] (3.5,2.6) circle (2.4) (12.5,2.6) circle (2.4);
+  \fill[bkLine] (3.5,2.6) circle (0.9) (12.5,2.6) circle (0.9);\end{scope}}
+\makeatother
+\tikzset{kivm vec/.style={-{Stealth[length=4.5pt, width=4pt]}, line width=1.5pt},
+  kivm lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+
+\bkchapter{4}{12}{内積：\\どれだけ同じ向きか}{\bklevelrange{3}{4}}{内積：どれだけ同じ向きか}
+\bkmichishirube{3-15,4-7,4-10,4-11}{5-12,8-7,9-2}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 仕事 $W$ を「力×力の向きに動いた距離」で求め、ななめの力では $W=Fs\cos\theta$ を使える。
+\item \bklevel{3}\enspace 内積 $\vec{a}\cdot\vec{b}$ を、大きさと角からも、成分からも計算できる。
+\item \bklevel{4}\enspace 内積を使って、なす角・直交・正射影・相関係数を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright 
+レールの上のトロッコを動かします。レールにそってまっすぐ押すと、トロッコはよく進みます。ななめに押すと、同じ力でも進みにくくなります。
+
+では、レールに直角に、横から押したらどうでしょう。どんなに強く押しても、トロッコはレールにそってしか動けないので、1 mmも進みません。
+
+力の「役に立つ分」は、力と動く向きの角で、どう決まるのかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  % 上から見たレールとトロッコ
+  \draw[bkGray, line width=1pt] (-4,-5) -- (52,-5) (-4,5) -- (52,5);
+  \foreach \x in {0,6,...,48} {\draw[bkInk!40, line width=1.4pt] (\x,-7) -- (\x,7);}
+  \filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.6pt] (16,-6) rectangle (32,6);
+  \draw[kivm vec, bkBlue] (0,0) -- (14.5,0);
+  \draw[kivm vec, bkPurple] ($(16,0)+(150:15)$) -- (15.4,0.4);
+  \draw[kivm vec, bkRed] (24,22) -- (24,7.5);
+  \node[kivm lab, text=bkBlue!80!black, anchor=north] at (7,-8.5) {まっすぐ};
+  \node[kivm lab, text=bkPurple!80!black, anchor=south] at (3,8.5) {ななめ};
+  \node[kivm lab, text=bkRed!80!black, anchor=west] at (25.5,18) {直角};
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (41,14) {?};
+\end{tikzpicture}
+{\footnotesize\sffamily 上から見た図}
+\end{minipage}
+\end{hatena}
+
+\noindent 4-11では、力を成分に分けました。この章では、2つのベクトルが「どれだけ同じ向きを向いているか」を1つの数で表す計算、\textbf{内積}（ないせき）を作ります。内積は、物理の「仕事」やエネルギーの計算に欠かせません。さらに、3-15で学んだ相関係数も、じつは内積だったことがわかります。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[台車をななめに引いてみよう]
+\textbf{用意するもの}\par
+台車（またはキャスターつきのいす）、ばねばかり、ひも、分度器、メジャー
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 台車にひもをつけ、ばねばかりで、床と平行に、ゆっくり一定の速さで引く。目もりを読む。
+\item ひもを床から30°、60°上に向けて、台車が同じようにゆっくり進むように引く。目もりを読む。
+\item ひもをほとんど真上（90°に近い角）にして引くと、台車は前へ進むかな？
+\end{enumerate}
+\par\vspace{3pt}
+ソラさんの結果です（台車が進むのに、前向きに\qty{6}{N}がいるとき）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] *{3}{Q[c,m,wd=18mm]}}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ひもの角 & 0° & 30° & 60° \\
+ばねばかりの目もり & \qty{6.0}{N} & \qty{6.9}{N} & \qty{12.0}{N} \\
+\end{bktable}
+\bktabcaption{ひもの角が大きいほど、強く引かないと進まない。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent やってみようの答え：角が大きくなるほど、強く引かなければなりませんでした。60°では、0°のときの2倍の力がいりました。ひもの力のうち、前へ進めるのに役立つのは、4-11で分けた横の成分 $F\cos\theta$ だけだからです。$\approx$ は「ほぼ等しい」という記号です（5-8でくわしく）。$12.0\times\cos60°=12.0\times0.5=6.0$、$6.9\times\cos30°\approx6.9\times0.866\approx6.0$ で、どれも前向きの成分は\qty{6}{N}です。90°の真上に引くと、$\cos90°=0$ なので、前へ進める成分がなくなります。（実際の台車では、ひもを上に向けると、台車を床に押しつける力も変わるので、目もりは少しちがってきます。）
+
+\begin{omoidasou}
+\bkrecall{2-15}{力の大きさは N（ニュートン）ではかる。質量 $m$ の物にはたらく重力の大きさは $mg$（$g$ は約\qty{9.8}{N/kg}。4-6）。}
+\bkrecall{4-7}{余弦定理：三角形の2辺 $b$、$c$ と、そのあいだの角 $A$ から、\\$a^2=b^2+c^2-2bc\cos A$。$\cos90°=0$、鈍角の $\cos$ は負。}
+\bkrecall{4-8}{点 $(x,\ y)$ を原点のまわりに左へ90°回すと $(-y,\ x)$。}
+\bkrecall{4-11}{$\vec{F}=(F\cos\theta,\ F\sin\theta)$。$|\vec{a}|=\sqrt{a_x^{\,2}+a_y^{\,2}}$。単位ベクトル $\vec{e}=\dfrac{\vec{a}}{|\vec{a}|}$。数の組はベクトルと考えられる。}
+\bkrecall{3-15}{相関係数 $r=\dfrac{\sigma_{xy}}{\sigma_x\,\sigma_y}$。共分散 $\sigma_{xy}$ は偏差の積の平均。$-1\leqq r\leqq1$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bksubsection{1}{仕事：力×力の向きに動いた距離}
+
+\label{bk:4-12:shigoto}引っこしで、段ボール箱を運びます。重い箱ほど、たいへんです。高い所へ運ぶほど、たいへんです。この「たいへんさ」を、数で表してみましょう。
+
+\bkivmstep{1}{2倍の力、2倍の距離}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{\bkTT}●}]
+\item 同じ箱を2つ重ねて（2倍の力で）\qty{1}{m}持ち上げるのは、1つを\qty{1}{m}持ち上げるのを2回くり返すのと同じたいへんさです。\textbf{力が2倍なら、たいへんさも2倍}です。
+\item 1つの箱を\qty{2}{m}持ち上げるのは、\qty{1}{m}持ち上げるのを2回続けるのと同じです。\textbf{距離が2倍なら、たいへんさも2倍}です。
+\end{itemize}
+どちらにも比例する（2-15）ので、たいへんさは「力×距離」で表すのがよさそうです。
+
+\bkivmstep{2}{「1 N で 1 m」のブロックを数える}
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,1} {\foreach \j in {0,1,2} {\filldraw[fill=bkOrange!25, draw=bkOrange!70!black, line width=0.5pt] (\i*14,\j*9) rectangle ++(14,9);}}
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3pt]}] (0,0) -- (34,0) node[anchor=west, font=\sffamily\footnotesize] {距離（m）};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=3pt]}] (0,0) -- (0,32) node[anchor=south, font=\sffamily\footnotesize] {力（N）};
+  \foreach \i in {1,2} {\node[font=\sffamily\footnotesize, anchor=north] at (\i*14,-0.8) {\i};}
+  \foreach \j in {1,2,3} {\node[font=\sffamily\footnotesize, anchor=east] at (-0.8,\j*9) {\j};}
+  \node[font=\sffamily\footnotesize, text=bkOrange!70!black] at (7,4.5) {1 J};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedright 
+\qty{1}{N}の力で\qty{1}{m}動かすたいへんさを、1つのブロックとします。\par\vspace{2pt}
+\qty{3}{N}の力で\qty{2}{m}動かすと、たて3こ・横2こで、ブロックは $3\times2=6$ こです。力×距離は、この長方形の面積です。
+\end{minipage}
+
+\par\vspace{4pt}
+そこで物理では、
+\bkivmline{\fbox{仕事 $W$ ＝ 力 × 力の向きに動いた距離}\qquad $W=Fs$}
+と決めています。これを\textbf{仕事}（しごと）といいます。\bkidx{しごと}{仕事}$W$ は英語の work、$s$ は動いた距離を表すのによく使う文字です（5-12では $x$ とも書きます）。これは「定義」です（4-1）。
+
+仕事の単位は\textbf{J（ジュール）}です。\bkidx{じゅーる}{J（ジュール）}\qty{1}{N}の力で、物を力の向きに\qty{1}{m}動かしたときの仕事が\qty{1}{J}です。単位も N×m なので、
+\bkivmline{$\qty{1}{J}=\qty{1}{N}\times\qty{1}{m}=1\,\mathrm{N}{\cdot}\mathrm{m}$}
+と書けます（N·m は「ニュートン・メートル」と読みます）。
+
+\bkivmmidashi{身近な1 J}
+質量\qty{100}{g}（\qty{0.1}{kg}）のりんごにはたらく重力は、$0.1\times9.8=\qty{0.98}{N}$ で、ほぼ\qty{1}{N}です。このりんごを、ゆっくり\qty{1}{m}持ち上げる仕事は、$0.98\times1=\qty{0.98}{J}$ で、ほぼ\qty{1}{J}です。\qty{1}{J}は、「りんご1こを、ゆかから腰の高さまで持ち上げるくらい」の仕事です。
+
+ゆっくり一定の速さで持ち上げるとき、手が上に引く力は、物にはたらく重力と同じ大きさです。質量\qty{5}{kg}の荷物を\qty{2}{m}持ち上げるなら、
+\bkivmline{$F=mg=\qty{5}{kg}\times\qty{9.8}{N/kg}=\qty{49}{N},\qquad W=Fs=\qty{49}{N}\times\qty{2}{m}=\qty{98}{J}$}
+
+\bkivmmidashi{力と反対の向きに動くと、仕事は負}
+同じ荷物を、ゆっくり\qty{2}{m}下ろすとき、手は上向きに\qty{49}{N}で支えていますが、荷物は下へ動きます。力と反対の向きに動いたので、手のした仕事は $-\qty{98}{J}$ と、負の数で表します（2-2の「マイナスは反対の向き」）。手は、荷物に「仕事をされた」のです。
+
+仕事は、力の向きと動く向きの関係で決まる\textbf{ただの数（スカラー）}です。仕事そのものには、向きはありません。
+
+\bksubsection{2}{ななめの力の仕事}
+
+\label{bk:4-12:naname}では、力の向きと動く向きがずれているときは、どうなるでしょう。\bkhatenaref のトロッコを、レールから角 $\theta$ だけずれた向きに、大きさ $F$ の力で押して、レールにそって $s$ だけ動かします。
+
+\bkivmstep{1}{力を、動く向きとそれに直角な向きに分ける}
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=1pt] (-8,-3) -- (60,-3);
+  \bkivmcart{(0,-3)}
+  \draw[bkGray, line width=0.5pt, dashed] (8,8) -- ($(8,8)+(35:36)$);
+  \draw[bkGray, line width=0.5pt, dashed] ($(8,8)+(35:36)$) -- (37.5,8);
+  \draw[kivm vec, bkPurple] (8,8) -- ++(35:36);
+  \draw[kivm vec, bkBlue] (8,8) -- (37,8);
+  \draw[kivm vec, bkOrange] (8,8.6) -- (8,28.2);
+  \draw[bkInk, line width=0.5pt] (18,8) arc (0:35:10);
+  \node[font=\sffamily\footnotesize] at ($(8,8)+(17:13)$) {$\theta$};
+  \node[kivm lab, text=bkPurple!80!black, anchor=south east] at ($(8,8)+(35:28)+(-1,1)$) {$F$};
+  \node[kivm lab, text=bkBlue!80!black, anchor=north, fill=white] at (30,6.5) {$F\cos\theta$};
+  \node[kivm lab, text=bkOrange!80!black, anchor=east] at (6.5,22) {$F\sin\theta$};
+  \draw[kivm vec, bkGreen!70!black, line width=1.1pt] (-6,-9) -- (20,-9);
+  \node[kivm lab, text=bkGreen!50!black, anchor=west] at (21,-9) {動く向き（距離 $s$）};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\raggedright 
+4-11のように、力 $F$ を2つに分けます。\par\vspace{2pt}
+\textbf{動く向きの成分} $F\cos\theta$（青）：トロッコを前へ押す。\par\vspace{2pt}
+\textbf{直角な成分} $F\sin\theta$（オレンジ）：トロッコをレールに押しつけるだけで、前へは1 mmも進めない。
+\end{minipage}
+
+\par\vspace{4pt}
+仕事は「力×\textbf{力の向きに}動いた距離」でした。前へ進めるのに働いたのは青の成分だけなので、
+\bkivmline{\fbox{$W=(F\cos\theta)\times s=Fs\cos\theta$}}
+です。
+
+\bkivmstep{2}{もう1つの見方：動きを、力の向きに分ける}
+今度は、力のほうはそのままにして、動き（距離 $s$ の矢印）を、力の向きとそれに直角な向きに分けてみます。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[kivm vec, bkGreen!70!black] (0,0) -- (44,0);
+  \draw[bkGray, line width=0.5pt, dashed] (0,0) -- (35:46);
+  \draw[kivm vec, bkBlue] (0,0) -- (35:35.4);
+  \draw[bkGray, line width=0.6pt] (44,0) -- (35:36.04);
+  \draw[bkInk, line width=0.4pt] ($(35:36.04)+(35:-2.5)$) -- ++(-55:2.5) -- ++(35:2.5);
+  \draw[bkInk, line width=0.5pt] (9,0) arc (0:35:9);
+  \node[font=\sffamily\footnotesize] at (17:11.5) {$\theta$};
+  \node[kivm lab, text=bkGreen!50!black, anchor=north] at (22,-1.5) {動いた距離 $s$};
+  \node[kivm lab, text=bkBlue!80!black, anchor=south east] at ($(35:20)+(-0.5,0.8)$) {$s\cos\theta$};
+  \node[kivm lab, text=bkPurple!80!black, anchor=south] at (35:47) {力の向き};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedright 
+動いた距離 $s$ のうち、力の向きに進んだ分は、直角三角形のとなりの辺 $s\cos\theta$（青）です（4-6）。\par\vspace{2pt}
+だから、
+\[ W=F\times(s\cos\theta)=Fs\cos\theta \]
+で、同じ式になります。
+\end{minipage}
+
+\par\vspace{4pt}
+力を分けても、動きを分けても、同じ $Fs\cos\theta$ になりました。$Fs\cos\theta$ は、$F$ と $s$ の両方に対して「同じ向きの分だけ」をかけた数です。
+
+\bkivmstep{3}{角を変えてみる}
+$F=\qty{10}{N}$、$s=\qty{2}{m}$ として、角 $\theta$ を変えて仕事を計算します。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1.5pt}
+角 $\theta$ & 0° & 30° & 60° & 90° & 120° & 180° \\
+$\cos\theta$ & 1 & 0.866 & 0.5 & 0 & $-0.5$ & $-1$ \\
+仕事 $W$（J） & 20 & 17.3 & 10 & 0 & $-10$ & $-20$ \\
+\end{bktable}
+\bktabcaption{力と動く向きがそろうほど、仕事は大きい。直角なら0、反対向きなら負。}
+\end{bkcenter}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{\bkTT}●}]
+\item $\theta=0°$（同じ向き）：$\cos0°=1$ で、$W=Fs$。①の仕事と同じです。
+\item $\theta=180°$（反対向き）：$\cos180°=-1$ で、$W=-Fs$。①の「下ろすとき」と同じです。
+\item $90°<\theta<180°$：$\cos\theta$ が負（4-7）なので、仕事も負です。動きをじゃまする向きの力です。
+\end{itemize}
+
+\bkivmmidashi{\bkhatenaref の答え}
+レールに直角に押すと、$\theta=90°$ で $\cos90°=0$ なので、
+\bkivmline{$W=Fs\cos90°=Fs\times0=0$}
+です。力が動く向きに直角なら、どんなに強くても、\textbf{仕事は0}です。力の「役に立つ分」は $F\cos\theta$ で、角が90°に近づくほど小さくなり、90°でちょうど0になります。
+
+\bkivmstep{4}{斜面をすべり下りるとき、重力のする仕事}
+\label{bk:4-12:shamen}質量 $m$ の物が、角 $\theta$ の斜面にそって、距離 $s$ だけすべり下ります。このあいだに、重力（大きさ $mg$、真下向き）がする仕事を求めましょう。
+
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!25] (0,0) -- (52,0) -- (0,30) -- cycle;
+  \draw[bkInk!70, line width=0.7pt] (0,0) -- (52,0) -- (0,30) -- cycle;
+  \draw[bkInk, line width=0.5pt] (44,0) arc (180:150:8);
+  \node[font=\sffamily\footnotesize] at ($(52,0)+(165:11)$) {$\theta$};
+  \draw[kivm vec, bkGreen!70!black, line width=1.2pt] ($(8.66,25)+(60:2.5)$) -- ($(39,7.5)+(60:2.5)$);
+  \node[kivm lab, text=bkGreen!50!black, anchor=south west] at ($(25.55,18.45)+(60:4)$) {$s$};
+  \draw[kivm vec, bkPurple, line width=1.2pt] ($(8.66,25)+(60:2.5)$) -- ++(0,-16);
+  \node[kivm lab, text=bkPurple!80!black, anchor=east] at ($(8.66,16)+(60:2.5)+(-1.2,0)$) {$mg$};
+  \draw[bkInk, line width=0.4pt] ($(8.66,25)+(60:2.5)+(0,-5)$) arc (-90:-30:5);
+  \draw[bkInk, line width=0.3pt] ($(8.66,25)+(60:2.5)+(-62:5)$) -- (13.3,15.6);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=bkGray!25, inner sep=0.5pt] at (13.3,14.6) {$90°-\theta$};
+  \draw[bkBlue!70, line width=0.5pt, <->] (-3,7.5) -- (-3,25);
+  \node[kivm lab, text=bkBlue!80!black, anchor=east] at (-3.8,16) {$h$};
+  \draw[bkGray, line width=0.4pt, dashed] (-3,25) -- (8.66,25) (-3,7.5) -- (39,7.5);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.5\linewidth}\raggedright
+重力の向き（真下）と、動く向き（斜面にそって下）のなす角は $90°-\theta$ です（斜面が水平から $\theta$ かたむいているから）。\par\vspace{2pt}
+4-6で、$\cos(90°-\theta)=\sin\theta$ でした。
+\end{minipage}
+
+\par\vspace{4pt}
+\bkivmline{$W=mg\times s\times\cos(90°-\theta)=mg\times s\sin\theta$}
+ここで、$s\sin\theta$ は、斜面を下りるあいだに下がった\textbf{高さ} $h$ です（斜辺 $s$、角 $\theta$ の向かいの辺。4-6）。だから、
+\bkivmline{\fbox{重力のする仕事 $W=mgh$}}
+となります。斜面の角や長さが変わっても、\textbf{重力のする仕事は、下がった高さ $h$ だけで決まる}のです。急な斜面は短く、ゆるい斜面は長くなりますが、どちらも同じ高さを下りれば、重力のする仕事は同じです。物理シリーズでは、これが「位置エネルギー」の考え方の出発点になります。
+
+\bksubsection{3}{内積：2つのベクトルから1つの数を作る}
+
+\label{bk:4-12:naiseki}\bkivmstep{1}{内積の定義}
+仕事の式 $W=Fs\cos\theta$ は、「力のベクトル $\vec{F}$ の大きさ」×「動いた距離のベクトル $\vec{s}$ の大きさ」×「2つのなす角の $\cos$」でした。この計算に名前をつけます。
+
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[kivm vec, bkBlue] (0,0) -- (40,0);
+  \draw[kivm vec, bkOrange] (0,0) -- (50:28);
+  \fill[bkInk] (0,0) circle (0.9);
+  \draw[bkInk, line width=0.5pt] (8,0) arc (0:50:8);
+  \node[font=\sffamily\footnotesize] at (25:11) {$\theta$};
+  \node[kivm lab, text=bkBlue!80!black, anchor=north] at (22,-1.5) {$\vec{a}$};
+  \node[kivm lab, text=bkOrange!80!black, anchor=east] at ($(50:18)+(-1,0)$) {$\vec{b}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\raggedright 
+2つのベクトル $\vec{a}$、$\vec{b}$ の始点をそろえたときにできる角 $\theta$（$0°\leqq\theta\leqq180°$）を、$\vec{a}$ と $\vec{b}$ の\textbf{なす角}といいます。
+\end{minipage}
+
+\par\vspace{4pt}
+\bkivmline{\fbox{$\vec{a}\cdot\vec{b}=|\vec{a}||\vec{b}|\cos\theta$}}
+を、$\vec{a}$ と $\vec{b}$ の\textbf{内積}（ないせき）といいます。\bkidx{ないせき}{内積}「エー・ドット・ビー」と読みます。まん中の点「$\cdot$」は省略できません（$\vec{a}\vec{b}$ とは書きません）。この記号を使うと、仕事は
+\bkivmline{$W=\vec{F}\cdot\vec{s}$}
+と書けます。
+
+内積の答えは、ベクトルではなく\textbf{ただの数（スカラー）}です。2つの矢印から、「大きさの積」と「向きのそろいぐあい（$\cos\theta$）」をかけた1つの数を作るのです。
+
+\begin{bkcenter}
+\bkkigocard{$\vec{a}\cdot\vec{b}$}{エー・ドット・ビー}{内積。$|\vec{a}||\vec{b}|\cos\theta$。答えは数（スカラー）。}{inner product}{4-12}
+\end{bkcenter}
+
+\bkivmmidashi{例}
+$|\vec{a}|=4$、$|\vec{b}|=3$ で、なす角が60°なら、$\vec{a}\cdot\vec{b}=4\times3\times\cos60°=12\times0.5=6$。なす角が120°なら、$12\times(-0.5)=-6$。90°なら $12\times0=0$ です。
+
+\bkivmmidashi{自分自身との内積}
+$\vec{a}$ と $\vec{a}$ のなす角は0°なので、$\vec{a}\cdot\vec{a}=|\vec{a}||\vec{a}|\cos0°=|\vec{a}|^2$ です。自分自身との内積は、大きさの2乗です。
+
+\bkivmstep{2}{成分で計算すると：表で見つける}
+$\vec{a}=(a_x,\ a_y)$、$\vec{b}=(b_x,\ b_y)$ のとき、内積を成分で計算できないでしょうか。なす角がわかっているベクトルの組で、$a_xb_x+a_yb_y$（$x$ 成分どうしの積と、$y$ 成分どうしの積の和）を計算して、くらべてみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=17mm] Q[c,m,wd=17mm] Q[c,m,wd=12mm] Q[c,m,wd=40mm] Q[c,m,wd=24mm]}, colsep=4pt, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+$\vec{a}$ & $\vec{b}$ & なす角 & $|\vec{a}||\vec{b}|\cos\theta$ & $a_xb_x+a_yb_y$ \\
+$(4,\ 0)$ & $(3,\ 3)$ & 45° & $4\times3\sqrt2\times\dfrac{1}{\sqrt2}=12$ & $12+0=12$ \\
+$(1,\ \sqrt3)$ & $(2,\ 0)$ & 60° & $2\times2\times\dfrac{1}{2}=2$ & $2+0=2$ \\
+$(2,\ 1)$ & $(-1,\ 2)$ & 90° & $\sqrt5\times\sqrt5\times0=0$ & $-2+2=0$ \\
+\end{bktable}
+\bktabcaption{どの組でも、2つの列が同じ数になる。}
+\end{bkcenter}
+
+（なす角は、方眼に図をかけばわかります。$(3,\ 3)$ は45°の向き、$(1,\ \sqrt3)$ は60°の向き（$1:2:\sqrt3$ の三角形、4-4）、$(-1,\ 2)$ は $(2,\ 1)$ を左へ90°回した向き（4-8）です。）
+
+どうやら、
+\bkivmline{\fbox{$\vec{a}\cdot\vec{b}=a_xb_x+a_yb_y$}}
+となりそうです。角がわからなくても、成分のかけ算とたし算だけで内積が求められるのです。
+
+\bkivmstep{3}{なぜ同じになるのか：余弦定理で確かめる}
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[kivm vec, bkBlue] (0,0) -- (40,10);
+  \draw[kivm vec, bkOrange] (0,0) -- (12,30);
+  \draw[kivm vec, bkRed] (12.5,29.2) -- (39.3,10.8);
+  \fill[bkInk] (0,0) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1.2,0) {O};
+  \node[font=\sffamily\footnotesize, anchor=west] at (40.6,10) {A};
+  \node[font=\sffamily\footnotesize, anchor=south] at (12,30.6) {B};
+  \draw[bkInk, line width=0.5pt] ($(14:7)$) arc (14:68:7);
+  \node[font=\sffamily\footnotesize] at (41:10) {$\theta$};
+  \node[kivm lab, text=bkBlue!80!black, anchor=north west] at (20,4.6) {$\vec{a}$};
+  \node[kivm lab, text=bkOrange!80!black, anchor=east] at (5,15) {$\vec{b}$};
+  \node[kivm lab, text=bkRed!80!black, anchor=south west] at (27,20.5) {$\vec{a}-\vec{b}$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.56\linewidth}\raggedright 
+$\vec{a}=\overrightarrow{\mathrm{OA}}$、$\vec{b}=\overrightarrow{\mathrm{OB}}$ とします。三角形OABの辺ABは、$\overrightarrow{\mathrm{BA}}=\vec{a}-\vec{b}$ です（4-10）。\par\vspace{2pt}
+辺ABの長さの2乗を、\textbf{2通りの方法}で計算します。
+\end{minipage}
+
+\par\vspace{4pt}
+\textbf{方法1　余弦定理（4-7）}：2辺 $|\vec{a}|$、$|\vec{b}|$ とそのあいだの角 $\theta$ から、
+\begin{align*}
+\mathrm{AB}^2&=|\vec{a}|^2+|\vec{b}|^2-2|\vec{a}||\vec{b}|\cos\theta=|\vec{a}|^2+|\vec{b}|^2-2\,\vec{a}\cdot\vec{b}&&\text{…①}
+\end{align*}
+
+\textbf{方法2　成分（4-11）}：$\vec{a}-\vec{b}=(a_x-b_x,\ a_y-b_y)$ の大きさの2乗なので、展開（3-8）して、
+\begin{align*}
+\mathrm{AB}^2&=(a_x-b_x)^2+(a_y-b_y)^2\\
+&=a_x^{\,2}-2a_xb_x+b_x^{\,2}+a_y^{\,2}-2a_yb_y+b_y^{\,2}\\
+&=(a_x^{\,2}+a_y^{\,2})+(b_x^{\,2}+b_y^{\,2})-2(a_xb_x+a_yb_y)\\
+&=|\vec{a}|^2+|\vec{b}|^2-2(a_xb_x+a_yb_y)&&\text{…②}
+\end{align*}
+
+①と②は同じ長さの2乗なので、等しくなります。両方にある $|\vec{a}|^2+|\vec{b}|^2$ をひき、$-2$ でわると、
+\bkivmline{$\vec{a}\cdot\vec{b}=a_xb_x+a_yb_y$}
+表で見つけたきまりが、いつでも成り立つことがわかりました（これは「定理」です。4-1）。
+
+\bkivmmidashi{数で確かめる}
+$\vec{a}=(4,\ 2)$、$\vec{b}=(1,\ 3)$ で確かめます。$\vec{a}-\vec{b}=(3,\ -1)$ なので、$\mathrm{AB}^2=9+1=10$。いっぽう、$|\vec{a}|^2=20$、$|\vec{b}|^2=10$、$\vec{a}\cdot\vec{b}=4+6=10$ なので、②の右辺は $20+10-2\times10=10$。ぴったり合います。
+
+\bksubsection{4}{内積の符号と、直交}
+
+\label{bk:4-12:chokkou}$|\vec{a}|$ と $|\vec{b}|$ はいつも正なので、内積の符号は $\cos\theta$ の符号で決まります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\ang/\t/\s in {0/40/{鋭角（$0°\leqq\theta<90°$）}/{内積は正}, 44/90/{直角（$\theta=90°$）}/{内積は0}, 88/140/{鈍角（$90°<\theta\leqq180°$）}/{内積は負}} {
+    \draw[kivm vec, bkBlue] (\cx,0) -- ++(26,0);
+    \draw[kivm vec, bkOrange] (\cx,0) -- ++(\ang:20);
+    \fill[bkInk] (\cx,0) circle (0.8);
+    \node[font=\sffamily\footnotesize, anchor=north] at (\cx+13,-3) {\t};
+    \node[font=\sffamily\small\bfseries, anchor=north] at (\cx+13,-9) {\s};}
+  \draw[bkInk, line width=0.4pt] (44,3) -- (47,3) -- (47,0);
+\end{tikzpicture}
+\bkfigcaption{青を $\vec{a}$、オレンジを $\vec{b}$ とする。向きがそろっているほど内積は大きい。}
+\end{bkfigure}
+
+とくに大事なのは、\textbf{直角のとき内積が0}になることです。$\vec{0}$ でない2つのベクトルが直角に交わることを、\textbf{直交する}といいます。\bkidx{ちょっこう}{直交}
+\bkivmline{\fbox{$\vec{a}$ と $\vec{b}$ が直交する\quad$\Longleftrightarrow$\quad$\vec{a}\cdot\vec{b}=0$}}
+「$\Longleftrightarrow$」は、「左が成り立つなら右も成り立ち、右が成り立つなら左も成り立つ」という記号です。角を調べなくても、成分の計算だけで「直角かどうか」がわかります。
+
+\bkivmmidashi{例}
+4-8で、点 $(x,\ y)$ を左へ90°回すと $(-y,\ x)$ になりました。$(3,\ 4)$ を90°回した $(-4,\ 3)$ との内積は、$3\times(-4)+4\times3=-12+12=0$ で、確かに直交しています。
+
+「直交」は、ベクトルだけのことばではありません。第9巻では、$\sin$ や $\cos$ の波どうしの「直交」を使って、複雑な波を単純な波に分けます。その計算の中心にあるのも、この「内積が0」という考えです。
+
+\bksubsection{5}{なす角を求める}
+
+\label{bk:4-12:nasukaku}内積の定義の式を、$\cos\theta$ について解くと、
+\bkivmline{\fbox{$\cos\theta=\dfrac{\vec{a}\cdot\vec{b}}{|\vec{a}||\vec{b}|}=\dfrac{a_xb_x+a_yb_y}{|\vec{a}||\vec{b}|}$}}
+です。成分がわかれば、右辺は計算できるので、$\cos\theta$ がわかり、電卓の $\cos^{-1}$ で角が求められます（$\sin^{-1}$、$\tan^{-1}$ と同じ使い方。4-6）。
+
+たとえば $\vec{a}=(1,\ 2)$、$\vec{b}=(3,\ 1)$ なら、
+\bkivmline{$\vec{a}\cdot\vec{b}=3+2=5,\qquad |\vec{a}|=\sqrt5,\qquad |\vec{b}|=\sqrt{10}$}
+\bkivmline{$\cos\theta=\dfrac{5}{\sqrt5\times\sqrt{10}}=\dfrac{5}{\sqrt{50}}=\dfrac{5}{5\sqrt2}=\dfrac{1}{\sqrt2}$}
+$\cos\theta=\dfrac{1}{\sqrt2}$ になる角は45°です（$1:1:\sqrt2$、4-4）。方眼に2本の矢印をかいて、分度器で確かめてみましょう。
+
+$\cos^{-1}$ は、0°から180°までの角を答えるので、なす角（0°から180°）を求めるのに、ちょうど合っています（$\tan^{-1}$ のように、区画を考え直さなくてよい）。
+
+\bksubsection{6}{ある向きへの影の長さ：正射影}
+
+\label{bk:4-12:shaei}太陽が真上にあるとき、ななめに立てかけた棒の影は、地面に落ちます。影の長さは、棒の長さ×$\cos$（棒と地面の角）です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \x in {6,18,30} {\draw[bkYellow!70!black, line width=0.6pt, -{Stealth[length=3pt]}] (\x,40) -- (\x,33);}
+  \node[font=\sffamily\footnotesize, anchor=west] at (32,38) {真上からの光};
+  \fill[bkGray!50] (0,-1.2) rectangle (44,0);
+  \draw[kivm vec, bkOrange] (0,0.6) -- (35:34);
+  \draw[bkGray, line width=0.5pt, dashed] (35:34) -- (27.85,0.6);
+  \fill[bkInk!70] (0,-0.6) rectangle (27.85,0.6);
+  \draw[kivm vec, bkBlue, line width=1.1pt] (0,-5) -- (40,-5);
+  \node[kivm lab, text=bkBlue!80!black, anchor=north] at (20,-6.5) {向き $\vec{e}$（長さ1の単位ベクトル）};
+  \node[kivm lab, text=bkOrange!80!black, anchor=south east] at ($(35:20)+(-0.6,0.6)$) {$\vec{b}$};
+  \node[kivm lab, anchor=south, fill=white] at (14,1.5) {影};
+  \draw[bkInk, line width=0.5pt] (7,0.6) arc (0:35:7);
+  \node[font=\sffamily\footnotesize] at (17:10) {$\theta$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\raggedright 
+ベクトル $\vec{b}$ に、ある向き（単位ベクトル $\vec{e}$ の向き）に直角な光を当てたときの影を考えます。\par\vspace{2pt}
+影の長さは $|\vec{b}|\cos\theta$ です。$|\vec{e}|=1$ なので、
+\[ |\vec{b}|\cos\theta=|\vec{e}||\vec{b}|\cos\theta=\vec{e}\cdot\vec{b} \]
+\end{minipage}
+
+\par\vspace{4pt}
+このように、ベクトル $\vec{b}$ を、ある向きの直線の上に、直角に落とした影を、$\vec{b}$ の\textbf{正射影}（せいしゃえい）といいます。\bkidx{せいしゃえい}{正射影}影の長さ（向きもこめて、負にもなる）は
+\bkivmline{\fbox{$\vec{e}$ の向きへの $\vec{b}$ の正射影の長さ $=\vec{e}\cdot\vec{b}$}}
+です。$\theta$ が90°より大きいときは、影が反対がわにできるので、負の数になります。
+
+\bkivmmidashi{成分は、正射影だった}
+$\vec{e}_x=(1,\ 0)$ との内積は、$\vec{e}_x\cdot\vec{b}=1\times b_x+0\times b_y=b_x$ です。$x$ 成分は、$x$ 軸の向きへの正射影の長さだったのです。4-11で、斜面にそった軸で重力を分けたのも、「斜面の向きの単位ベクトル」との内積で、成分を取り出したことになります。\textbf{どんな向きの成分でも、その向きの単位ベクトルとの内積で求められます}。
+
+\bkivmmidashi{例：ななめの力の、ある向きの成分と仕事}
+力 $\vec{F}=(6,\ 8)$（N）の、$(4,\ 3)$ の向きの成分を求めます。$(4,\ 3)$ の大きさは5なので、その向きの単位ベクトルは $\vec{e}=(0.8,\ 0.6)$ です（4-11）。
+\bkivmline{$\vec{e}\cdot\vec{F}=0.8\times6+0.6\times8=4.8+4.8=9.6$}
+この向きの成分は\qty{9.6}{N}です。物がこの向きに\qty{5}{m}動いたなら、仕事は $9.6\times5=\qty{48}{J}$ です。動いた距離のベクトル $\vec{s}=5\vec{e}=(4,\ 3)$ との内積 $\vec{F}\cdot\vec{s}=24+24=48$ でも、同じ答えになります。
+
+\bksubsection{7}{相関係数は、偏差のベクトルの向きのそろいぐあい}
+
+\label{bk:4-12:soukan}3-15で、10人の身長と50\,m走のタイムの相関係数を求めました。その計算を、ベクトルの目で見直します。
+
+\bkivmstep{1}{偏差を、10個の成分のベクトルにする}
+4-11の⑧で、数の組はベクトルと考えられました。10人の身長の偏差と、タイムの偏差を、それぞれ成分が10個のベクトルにします。
+\begin{align*}
+\vec{d}_x&=(-14,\ -10,\ -7,\ -4,\ -2,\ 2,\ 4,\ 6,\ 9,\ 16)\\
+\vec{d}_y&=(0.2,\ 0.3,\ 0.6,\ -0.1,\ -0.5,\ -0.1,\ -0.1,\ 0.5,\ -0.2,\ -0.6)
+\end{align*}
+成分が10個になっても、内積は「同じ番号の成分どうしの積の和」、大きさは「成分の2乗の和の $\sqrt{\phantom{x}}$」と決めます。
+
+\bkivmstep{2}{内積と大きさを計算する}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{\bkTT}●}]
+\item 内積 $\vec{d}_x\cdot\vec{d}_y=(-14)\times0.2+(-10)\times0.3+\cdots+16\times(-0.6)=-17.6$。これは、3-15の「偏差の積の合計」そのものです。
+\item $|\vec{d}_x|=\sqrt{196+100+\cdots+256}=\sqrt{758}\approx27.53$
+\item $|\vec{d}_y|=\sqrt{0.04+0.09+\cdots+0.36}=\sqrt{1.42}\approx1.192$
+\end{itemize}
+2つのベクトルのなす角を $\theta$ とすると、⑤の式から、
+\bkivmline{$\cos\theta=\dfrac{\vec{d}_x\cdot\vec{d}_y}{|\vec{d}_x||\vec{d}_y|}=\dfrac{-17.6}{27.53\times1.192}=\dfrac{-17.6}{32.81}\approx-0.536$}
+3-15で求めた相関係数 $r=-0.536$ と、ぴったり同じです。
+
+\bkivmstep{3}{なぜ同じになるのか}
+3-15の式は $r=\dfrac{\sigma_{xy}}{\sigma_x\,\sigma_y}$ でした。人数を $n$ とすると、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=1pt, label={\color{\bkTT}●}]
+\item 共分散 $\sigma_{xy}$ は、偏差の積の合計÷$n$ なので、$\dfrac{\vec{d}_x\cdot\vec{d}_y}{n}$。
+\item 標準偏差 $\sigma_x$ は、偏差の2乗の合計÷$n$ の $\sqrt{\phantom{x}}$ なので、$\dfrac{|\vec{d}_x|}{\sqrt{n}}$（4-11の⑧）。$\sigma_y$ も同じ。
+\end{itemize}
+\bkivmline{$r=\dfrac{\dfrac{\vec{d}_x\cdot\vec{d}_y}{n}}{\dfrac{|\vec{d}_x|}{\sqrt{n}}\times\dfrac{|\vec{d}_y|}{\sqrt{n}}}=\dfrac{\dfrac{\vec{d}_x\cdot\vec{d}_y}{n}}{\dfrac{|\vec{d}_x||\vec{d}_y|}{n}}=\dfrac{\vec{d}_x\cdot\vec{d}_y}{|\vec{d}_x||\vec{d}_y|}=\cos\theta$}
+$n$ が分母と分子で消えて、なす角の $\cos$ だけが残ります。つまり、
+\bkivmline{\fbox{相関係数 $r$ ＝ 2つの偏差のベクトルの、なす角の $\cos$}}
+\textbf{同じ向きなら $r=1$、反対向きなら $r=-1$、直角（直交）なら $r=0$} です。3-15で「いつも $-1\leqq r\leqq1$」だったのは、$\cos\theta$ が $-1$ から1までの値しかとらないからです。身長とタイムの偏差のベクトルは、$\cos^{-1}(-0.536)\approx122°$ の角をなしていて、「やや反対向き」なのです。
+
+\begin{motto}[4]
+\textbf{点と直線の距離、直交する2直線}\par
+直線 $ax+by+c=0$ の上の2点を $\mathrm{P}(x_1,\ y_1)$、$\mathrm{Q}(x_2,\ y_2)$ とすると、$ax_1+by_1+c=0$、$ax_2+by_2+c=0$ です。ひくと $a(x_2-x_1)+b(y_2-y_1)=0$。これは、$(a,\ b)$ と $\overrightarrow{\mathrm{PQ}}$ の内積が0、つまり\textbf{ベクトル $(a,\ b)$ は直線に直交する}ということです。この向きの単位ベクトルへの正射影を使うと、点 $(x_0,\ y_0)$ から直線までの距離は
+\[ d=\frac{|ax_0+by_0+c|}{\sqrt{a^2+b^2}} \]
+になります。たとえば、点 $(3,\ 4)$ と直線 $3x+4y-5=0$ の距離は $\dfrac{|9+16-5|}{5}=4$ です。\par\vspace{3pt}
+また、傾き $m_1$ の直線の向きは $(1,\ m_1)$、傾き $m_2$ の直線の向きは $(1,\ m_2)$ です（3-5）。2直線が直交する条件は、内積 $1+m_1m_2=0$、つまり $m_1m_2=-1$ です。$y=2x+1$ と $y=-\dfrac{1}{2}x+3$ は、$2\times\Bigl(-\dfrac{1}{2}\Bigr)=-1$ なので直交します。
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[4.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{仕事}$W$＝力×力の向きに動いた距離。単位 J（1 J＝1 N·m）\\[3pt]
+\tsl{}ななめなら $W=Fs\cos\theta=\vec{F}\cdot\vec{s}$（直角なら0）\\[3pt]
+\tsl{内積}$\vec{a}\cdot\vec{b}=|\vec{a}||\vec{b}|\cos\theta=a_xb_x+a_yb_y$（答えは数）\\[3pt]
+\tsl{直交}$\vec{a}\cdot\vec{b}=0$\qquad なす角 $\cos\theta=\dfrac{\vec{a}\cdot\vec{b}}{|\vec{a}||\vec{b}|}$\\[3pt]
+\tsl{正射影}$\vec{e}$ の向きの成分 $=\vec{e}\cdot\vec{b}$（$\vec{e}$ は単位ベクトル）\\[3pt]
+\tsl{相関}相関係数 $r$ ＝ 偏差のベクトルのなす角の $\cos$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{仕事}{力×力の向きに動いた距離。単位は J（ジュール）。}
+\bkword{なす角}{2つのベクトルの始点をそろえたときの角。0°から180°。}
+\bkword{内積}{$\vec{a}\cdot\vec{b}=|\vec{a}||\vec{b}|\cos\theta$。成分では $a_xb_x+a_yb_y$。}
+\bkword{直交}{2つのベクトルが直角に交わること。内積が0。}
+\bkword{正射影}{ベクトルを、ある向きの直線の上に直角に落とした影。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[持ち上げる仕事]
+質量\qty{5}{kg}の荷物を、ゆっくり一定の速さで\qty{2}{m}持ち上げます。手のする仕事を求めましょう（$g=\qty{9.8}{N/kg}$）。また、同じ荷物をゆっくり\qty{2}{m}下ろすときの、手のする仕事を求めましょう。\par
+\kangaekata ゆっくり持ち上げるとき、手の力は重力と同じ大きさで上向き。仕事＝力×力の向きに動いた距離。下ろすときは、力（上向き）と動き（下向き）が反対なので負。\par
+\shiki 手の力 $F=mg=5\times9.8=49$（N）\par
+\hspace*{2.6\zw}持ち上げる：$W=49\times2=98$（J）\par
+\hspace*{2.6\zw}下ろす：$W=49\times2\times\cos180°=-98$（J）\par
+\kotae 持ち上げるとき\qty{98}{J}、下ろすとき $-\qty{98}{J}$
+\end{reidai}
+
+\begin{jibun}
+質量\qty{3}{kg}の荷物を、ゆっくり一定の速さで\qty{1.5}{m}持ち上げます。手のする仕事を求めましょう。また、同じ荷物をゆっくり\qty{1.5}{m}下ろすときの、手のする仕事を求めましょう。
+\bkjans{$F=3\times9.8=\qty{29.4}{N}$。持ち上げる $29.4\times1.5=\qty{44.1}{J}$、下ろす $-\qty{44.1}{J}$}
+\end{jibun}
+
+\begin{reidai}[ななめに引く力の仕事]
+台車を、床から60°上向きのひもで、大きさ\qty{40}{N}の力で引き、床にそって\qty{5}{m}動かしました。ひもの力のした仕事を求めましょう。\par
+\kangaekata 動く向き（床にそった向き）の成分 $F\cos\theta$ だけが仕事をする。$W=Fs\cos\theta$。\par
+\shiki $W=40\times5\times\cos60°=200\times0.5=100$\par
+\kotae \qty{100}{J}
+\end{reidai}
+
+\begin{jibun}
+台車を、床から30°上向きのひもで、大きさ\qty{50}{N}の力で引き、床にそって\qty{8}{m}動かしました。ひもの力のした仕事を求めましょう（$\cos30°\approx0.866$）。
+\bkjans{$50\times8\times\cos30°=400\times0.866\approx\qty{346}{J}$}
+\end{jibun}
+
+\begin{reidai}[大きさと角から内積を求める]
+$|\vec{a}|=4$、$|\vec{b}|=3$ のとき、なす角が（1）60°、（2）120°、（3）90° の場合の内積 $\vec{a}\cdot\vec{b}$ を求めましょう。\par
+\kangaekata $\vec{a}\cdot\vec{b}=|\vec{a}||\vec{b}|\cos\theta$。$\cos60°=0.5$、$\cos120°=-0.5$、$\cos90°=0$。\par
+\shiki（1）$4\times3\times0.5=6$\quad（2）$4\times3\times(-0.5)=-6$\quad（3）$4\times3\times0=0$\par
+\kotae （1）6\quad（2）$-6$\quad（3）0
+\end{reidai}
+
+\begin{jibun}
+$|\vec{a}|=6$、$|\vec{b}|=4$ のとき、なす角が（1）30°、（2）150°、（3）90° の場合の内積を求めましょう（$\cos30°=\dfrac{\sqrt3}{2}$、$\cos150°=-\dfrac{\sqrt3}{2}$）。
+\bkjans{（1）\nobreak $12\sqrt3\approx20.8$（2）\nobreak $-12\sqrt3\approx-20.8$（3）\nobreak 0}
+\end{jibun}
+
+\begin{reidai}[成分で内積と仕事を求める]
+（1）$\vec{a}=(2,\ -1)$、$\vec{b}=(3,\ 4)$ の内積を求めましょう。\par
+（2）力 $\vec{F}=(3,\ 4)$（N）がはたらいている物が、$\vec{s}=(5,\ -2)$（m）だけ動きました。力のした仕事を求めましょう。\par
+\kangaekata 内積は「$x$ 成分どうしの積＋$y$ 成分どうしの積」。仕事は $W=\vec{F}\cdot\vec{s}$。\par
+\shiki（1）$2\times3+(-1)\times4=6-4=2$\par
+\hspace*{2.6\zw}（2）$3\times5+4\times(-2)=15-8=7$\par
+\kotae （1）2\quad（2）\qty{7}{J}
+\end{reidai}
+（2）では、力の大きさは5、動いた距離は $\sqrt{29}\approx5.39$ ですが、向きがずれているので、仕事は $5\times5.39$ よりずっと小さい\qty{7}{J}です。
+
+\begin{jibun}
+（1）$\vec{a}=(-3,\ 2)$、$\vec{b}=(4,\ 5)$ の内積を求めましょう。\par
+（2）力 $\vec{F}=(6,\ -2)$（N）がはたらいている物が、$\vec{s}=(3,\ 4)$（m）だけ動きました。力のした仕事を求めましょう。
+\bkjans{（1）\nobreak $-12+10=-2$（2）\nobreak $18-8=\qty{10}{J}$}
+\end{jibun}
+
+\begin{reidai}[なす角を求める]
+次の2つのベクトルのなす角を求めましょう。\quad（1）$\vec{a}=(1,\ 2)$、$\vec{b}=(3,\ 1)$\quad（2）$\vec{a}=(1,\ 1)$、$\vec{b}=(0,\ -1)$\par
+\kangaekata $\cos\theta=\dfrac{\vec{a}\cdot\vec{b}}{|\vec{a}||\vec{b}|}$ を計算してから、角を求める。\par
+\shiki（1）$\vec{a}\cdot\vec{b}=3+2=5$、$|\vec{a}|=\sqrt5$、$|\vec{b}|=\sqrt{10}$\par
+\hspace*{4.6\zw}$\cos\theta=\dfrac{5}{\sqrt5\times\sqrt{10}}=\dfrac{5}{\sqrt{50}}=\dfrac{1}{\sqrt2}$ なので $\theta=45°$\par
+\hspace*{2.6\zw}（2）$\vec{a}\cdot\vec{b}=0-1=-1$、$|\vec{a}|=\sqrt2$、$|\vec{b}|=1$\par
+\hspace*{4.6\zw}$\cos\theta=\dfrac{-1}{\sqrt2}$ なので $\theta=135°$\par
+\kotae （1）45°\quad（2）135°
+\end{reidai}
+（2）は、$\cos\theta$ が負なので鈍角です。$\cos\theta=-\dfrac{1}{\sqrt2}$ になる角は、180°から45°をひいた135°です（4-7）。
+
+\begin{jibun}
+次の2つのベクトルのなす角を求めましょう。\quad（1）$\vec{a}=(2,\ 1)$、$\vec{b}=(1,\ 3)$\quad（2）$\vec{a}=(2,\ -1)$、$\vec{b}=(-1,\ 3)$
+\bkjans{（1）\nobreak $\cos\theta=\dfrac{5}{\sqrt5\times\sqrt{10}}=\dfrac{1}{\sqrt2}$ で45°（2）\nobreak $\cos\theta=\dfrac{-5}{\sqrt{50}}=-\dfrac{1}{\sqrt2}$ で135°}
+\end{jibun}
+
+\begin{reidai}[直交する条件]
+$\vec{a}=(3,\ k)$ と $\vec{b}=(2,\ -6)$ が直交するように、$k$ の値を決めましょう。\par
+\kangaekata 直交する ⇔ 内積が0。成分で内積を作り、$=0$ の方程式を解く（2-14）。\par
+\shiki $\vec{a}\cdot\vec{b}=3\times2+k\times(-6)=6-6k$\par
+\hspace*{2.6\zw}$6-6k=0$ より $6k=6$、$k=1$\par
+\kotae $k=1$
+\end{reidai}
+確かめ：$(3,\ 1)\cdot(2,\ -6)=6-6=0$ です。
+
+\begin{jibun}
+$\vec{a}=(k,\ 4)$ と $\vec{b}=(6,\ -3)$ が直交するように、$k$ の値を決めましょう。
+\bkjans{$6k-12=0$ より $k=2$}
+\end{jibun}
+
+\begin{reidai}[ある向きの成分と仕事]
+力 $\vec{F}=(6,\ 8)$（N）の、$(4,\ 3)$ の向きの成分を求めましょう。また、物がこの向きに\qty{5}{m}動いたときの、この力のした仕事を求めましょう。\par
+\kangaekata $(4,\ 3)$ の向きの単位ベクトル $\vec{e}$ との内積が、その向きの成分（正射影の長さ）。仕事は成分×距離。\par
+\shiki $|(4,\ 3)|=5$ より $\vec{e}=(0.8,\ 0.6)$\par
+\hspace*{2.6\zw}成分 $\vec{e}\cdot\vec{F}=0.8\times6+0.6\times8=4.8+4.8=9.6$\par
+\hspace*{2.6\zw}仕事 $9.6\times5=48$\par
+\kotae 成分\qty{9.6}{N}、仕事\qty{48}{J}
+\end{reidai}
+
+\begin{jibun}
+力 $\vec{F}=(10,\ 5)$（N）の、$(3,\ 4)$ の向きの成分を求めましょう。また、物がこの向きに\qty{3}{m}動いたときの、この力のした仕事を求めましょう。
+\bkjans{$\vec{e}=(0.6,\ 0.8)$。成分 $6+4=\qty{10}{N}$、仕事 $10\times3=\qty{30}{J}$}
+\end{jibun}
+
+\begin{reidai}[相関係数を内積で求める]
+4人の勉強時間 $x$（時間）とテストの点 $y$（点）です。偏差のベクトルの内積とそれぞれの大きさから、相関係数 $r$ を求めましょう。\par
+\begin{center}
+\begin{tblr}{colspec={Q[l,m] *{4}{Q[c,m,wd=10mm]}}, hlines={0.5pt,bkLine}, vlines={0.5pt,bkLine}, row{1}={bg=bkTheme!12, font=\sffamily\small}, rowsep=1pt}
+ & A & B & C & D \\
+$x$（時間） & 1 & 2 & 4 & 5 \\
+$y$（点） & 50 & 70 & 60 & 80 \\
+\end{tblr}
+\end{center}
+\kangaekata 平均を求めて偏差のベクトルを作る。$r=\dfrac{\vec{d}_x\cdot\vec{d}_y}{|\vec{d}_x||\vec{d}_y|}$。\par
+\shiki 平均 $\bar{x}=12\div4=3$、$\bar{y}=260\div4=65$\par
+\hspace*{2.6\zw}$\vec{d}_x=(-2,\ -1,\ 1,\ 2)$、$\vec{d}_y=(-15,\ 5,\ -5,\ 15)$\par
+\hspace*{2.6\zw}$\vec{d}_x\cdot\vec{d}_y=30-5-5+30=50$\par
+\hspace*{2.6\zw}$|\vec{d}_x|=\sqrt{4+1+1+4}=\sqrt{10}$、$|\vec{d}_y|=\sqrt{225+25+25+225}=\sqrt{500}$\par
+\hspace*{2.6\zw}$r=\dfrac{50}{\sqrt{10}\times\sqrt{500}}=\dfrac{50}{\sqrt{5000}}=\dfrac{50}{50\sqrt2}=\dfrac{1}{\sqrt2}\approx0.71$\par
+\kotae $r\approx0.71$（偏差のベクトルのなす角は45°）
+\end{reidai}
+
+\begin{jibun}
+4人の $x$ と $y$ が、$x$：2、4、6、8、$y$：9、7、8、4 です。偏差のベクトルの内積と大きさから、相関係数 $r$ を求めましょう（電卓を使ってよい）。
+\bkjans{$\bar{x}=5$、$\bar{y}=7$。$\vec{d}_x=(-3,\ -1,\ 1,\ 3)$、$\vec{d}_y=(2,\ 0,\ 1,\ -3)$。内積 $-14$、$|\vec{d}_x|=\sqrt{20}$、$|\vec{d}_y|=\sqrt{14}$。$r=\dfrac{-14}{\sqrt{280}}\approx-0.84$}
+\end{jibun}
+
+\begin{reidai}[斜面で重力のする仕事]
+質量\qty{2}{kg}の物が、30°の斜面にそって\qty{5}{m}すべり下りました。重力のした仕事を求めましょう（$g=\qty{9.8}{N/kg}$）。\par
+\kangaekata 重力と動く向きのなす角は $90°-30°=60°$。$W=mgs\cos60°$。下がった高さ $h=s\sin30°$ を使って $W=mgh$ でもよい。\par
+\shiki 重力の大きさ $mg=2\times9.8=19.6$（N）\par
+\hspace*{2.6\zw}$W=19.6\times5\times\cos60°=19.6\times5\times0.5=49$\par
+\hspace*{2.6\zw}確かめ：$h=5\times\sin30°=2.5$、$mgh=19.6\times2.5=49$\par
+\kotae \qty{49}{J}
+\end{reidai}
+
+\begin{jibun}
+質量\qty{3}{kg}の物が、30°の斜面にそって\qty{6}{m}すべり下りました。重力のした仕事を求めましょう。
+\bkjans{$mg=29.4$\,N。$29.4\times6\times\cos60°=\qty{88.2}{J}$（$h=3$\,m で $mgh$ と同じ）}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{内積の答えをベクトルにしてしまう}
+\bkng{$(2,\ -1)\cdot(3,\ 4)=(6,\ -4)$}
+\bkok{$(2,\ -1)\cdot(3,\ 4)=6+(-4)=2$（ただの数）}
+内積は、成分どうしの積を\textbf{たして}、1つの数にします。仕事にも向きはありませんでした。
+\end{tsumazuki}
+
+\begin{tsumazuki}{なす角を、矢印をつないだ所の角ではかる}
+\bkng{$\vec{a}$ の先に $\vec{b}$ をつないで、その間の角をなす角とする}
+\bkok{始点をそろえてかいてから、角をはかる}
+矢印をつなぐと、はかった角は、なす角を180°からひいた角になってしまいます。そのまま内積を計算すると、符号が逆になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{仕事を「力×動いた距離」だけで計算する}
+\bkng{\qty{40}{N}でななめ60°に引いて\qty{5}{m}動かしたので、$40\times5=\qty{200}{J}$}
+\bkok{$40\times5\times\cos60°=\qty{100}{J}$}
+仕事に使えるのは、動く向きの成分だけです。力の向きと動く向きが同じかどうか、いつも確かめましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\vec{a}\cdot\vec{a}$ を $|\vec{a}|$ にする}
+\bkng{$\vec{a}=(3,\ 4)$ なら $\vec{a}\cdot\vec{a}=5$}
+\bkok{$\vec{a}\cdot\vec{a}=9+16=25=|\vec{a}|^2$}
+自分自身との内積は、大きさの2乗です。大きさは、その $\sqrt{\phantom{x}}$ をとって5です。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{太陽電池パネルの向き}\par
+\noindent\begin{minipage}[c]{0.62\linewidth}
+太陽電池パネルが受ける光の量は、パネルに垂直な向き（法線）の単位ベクトル $\vec{n}$ と、太陽の光の向きとのなす角の $\cos$ に比例します。真正面から光を受けると、面積\qty{1.6}{m^2}、変換の効率20\%のパネルで、強さ\qty{1000}{W/m^2}の日光から約 $1000\times1.6\times0.2=\qty{320}{W}$ の電力が出ます。光がパネルの法線から60°ずれると、$\cos60°=0.5$ で約\qty{160}{W}に半減します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (-4,-1) rectangle (30,0);
+  \draw[bkInk!70, line width=0.8pt] (12,0) -- (12,6);
+  \fill[bkBlue!60] ($(12,6)+(-25:13)$) -- ($(12,6)+(155:13)$) -- ++(65:1.6) -- ($(12,6)+(-25:13)+(65:1.6)$) -- cycle;
+  \draw[kivm vec, bkRed, line width=1.1pt] (12,7) -- ++(65:14);
+  \node[kivm lab, text=bkRed!80!black, anchor=south] at ($(12,7)+(65:14.6)$) {$\vec{n}$};
+  \foreach \k in {0,1,2} {\draw[bkYellow!70!black, line width=0.7pt, -{Stealth[length=3pt]}] ($(28,30)+(\k*-4,\k*2)$) -- ++(-120:12);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (24,33.5) {日光};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{スピードガンと、音の高さが変わるドップラー効果}\par
+野球のスピードガンは、はね返ってくる電波の振動数の変化から速さをはかります。はかれるのは、ボールの速度の「ガンの向きの成分」、つまり速度とガンの向きの単位ベクトルとの内積だけです。\qty{40}{m/s}の球を、ボールの進む向きから30°ずれた所ではかると、$40\cos30°\approx\qty{34.6}{m/s}$ と小さく出てしまいます。救急車のサイレンの音の高さが変わる（ドップラー効果）のも、救急車の速度の「自分に向かう成分」によって決まります。
+\item \textbf{仕事をしない力}\par
+ジェットコースターのレールが車両を押す力（垂直抗力）は、いつもレールに垂直で、車両の動く向きと直交しています。円運動で中心へ引く力（向心力、4-10）も、動く向き（接線）と直交しています。どちらも内積が0なので、\textbf{仕事をしません}。人工衛星が円の軌道を同じ速さで回り続けられるのは、地球の引力が、いつも動く向きに直角だからです。
+\end{itemize}
+\end{butsuri}
+
+\begin{column}{ジュールは、ビール工場の息子}
+仕事の単位 J（ジュール）は、イギリスのジュール（1818〜1889年）の名前からとりました。ジュールは、ビール工場の家に生まれ、工場の仕事をしながら研究を続けました。おもりを落として水の中の羽根車を回すと、水の温度がわずかに上がることを、とても正確にはかりました。そして、「仕事をすると、それと決まった割合で熱が生まれる」ことを確かめました。いまでは、熱の量も、仕事と同じ J で表します。食品の表示の「kcal」も、1 kcal＝約\qty{4184}{J}です。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+
+\bkproblem 質量\qty{4}{kg}の荷物を、ゆっくり一定の速さで\qty{3}{m}持ち上げるときと、ゆっくり\qty{3}{m}下ろすときの、手のする仕事を求めましょう（\bkreidairef{1}）。
+\bkpans{$F=4\times9.8=\qty{39.2}{N}$。持ち上げる\qty{117.6}{J}、下ろす $-\qty{117.6}{J}$}
+
+\bkproblem 床から60°上向きのひもで、大きさ\qty{30}{N}の力で台車を引き、床にそって\qty{6}{m}動かしました。ひもの力のした仕事を求めましょう（\bkreidairef{2}）。
+\bkpans{$30\times6\times0.5=\qty{90}{J}$}
+
+\bkproblem $|\vec{a}|=5$、$|\vec{b}|=2$ のとき、なす角が（1）60°、（2）120° の場合の内積を求めましょう（\bkreidairef{3}）。
+\bkpans{（1）\nobreak 5（2）\nobreak $-5$}
+
+\bkproblem （1）$\vec{a}=(4,\ -3)$、$\vec{b}=(2,\ 5)$ の内積を求めましょう。（2）力 $\vec{F}=(2,\ 7)$（N）がはたらく物が $\vec{s}=(4,\ -1)$（m）だけ動きました。力のした仕事を求めましょう（\bkreidairef{4}）。
+\bkpans{（1）\nobreak $8-15=-7$（2）\nobreak $8-7=\qty{1}{J}$}
+
+\bkproblem $\vec{a}=(3,\ 1)$ と $\vec{b}=(1,\ 2)$ のなす角を求めましょう（\bkreidairef{5}）。
+\bkpans{$\cos\theta=\dfrac{5}{\sqrt{10}\times\sqrt5}=\dfrac{1}{\sqrt2}$ で45°}
+
+\bkproblem $\vec{a}=(4,\ k)$ と $\vec{b}=(-3,\ 6)$ が直交するように、$k$ の値を決めましょう（\bkreidairef{6}）。
+\bkpans{$-12+6k=0$ より $k=2$}
+
+\bkproblemgroup{チャレンジ}{4}
+
+\bkproblem 質量\qty{1}{kg}の物が、30°の斜面にそって\qty{10}{m}すべり下りました。重力のした仕事を求めましょう（\bkreidairef{9}）。
+\bkpans{$9.8\times10\times\cos60°=\qty{49}{J}$（$h=5$\,m）}
+
+\bkproblem $\vec{a}=(1,\ -1)$ と $\vec{b}=(0,\ 1)$ のなす角を求めましょう（\bkreidairef{5}）。
+\bkpans{$\cos\theta=\dfrac{-1}{\sqrt2}$ で135°}
+
+\bkproblem 力 $\vec{F}=(5,\ 10)$（N）の、$(4,\ 3)$ の向きの成分を求めましょう。また、物がこの向きに\qty{2}{m}動いたときの、この力のした仕事を求めましょう（\bkreidairef{7}）。
+\bkpans{$\vec{e}=(0.8,\ 0.6)$。成分 $4+6=\qty{10}{N}$、仕事\qty{20}{J}}
+
+\bkproblem 4人の $x$：1、3、5、7 と $y$：2、4、2、8 について、偏差のベクトルの内積と大きさから、相関係数 $r$ を求めましょう（\bkreidairef{8}）。
+\bkpans{$\bar{x}=4$、$\bar{y}=4$。$\vec{d}_x=(-3,\ -1,\ 1,\ 3)$、$\vec{d}_y=(-2,\ 0,\ -2,\ 4)$。内積16、$|\vec{d}_x|=\sqrt{20}$、$|\vec{d}_y|=\sqrt{24}$。$r=\dfrac{16}{\sqrt{480}}\approx0.73$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 仕事を求め、$W=Fs\cos\theta$ を使える。\bkfurref{bk:4-12:naname}
+\item 内積を、大きさと角からも、成分からも計算できる。\bkfurref{bk:4-12:naiseki}
+\item 内積で、なす角・直交・相関係数を求められる。\bkfurref{bk:4-12:chokkou}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{内積は「どれだけ同じ向きか」の数なんだね。次の章では、ベクトルを3次元の空間に広げるよ。}

@@ -1,0 +1,1128 @@
+%% 9-3 複素数で書くフーリエ級数（第15回：組 V9-3。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md）で書く。表9-2 に J・J′ の行を足して再掲、流れ図（c_n 用）。
+%% ほかの章との約束：6-10 の「反対向きに回る2本の矢印をたすと、まっすぐゆれる」「9-3 のフーリエ級数で大活躍」、
+%%   予告カード 9-3（8-13 の熱方程式を変数分離とフーリエ級数で）→ 輪の熱（R=5 cm、α=1e-4、0.04 /s、17.3 秒）。
+%%   方形波 c_n=2/(jnπ)、のこぎり波 c_n=j(-1)^n/n、3-12 の 100 Hz の RC に 50 Hz の方形波（1.139・0.235・0.095・0.050）。
+%%   数はすべて Python で検算した（scratchpad/v9-3/chk93.py）。
+
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixd は章ごとに置きかえる =====
+\colorlet{kixdNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixdSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixdSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixd dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixd dan1/.style={kixd dan, draw=kixdNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixd dan2/.style={kixd dan, draw=kixdSc, fill=kixdSb, text=bkInk},
+  kixd dan3/.style={kixd dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixd name/.style={draw=kixdNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixd seki/.style={draw=kixdSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixdSb},
+  kixd tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixd q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixd do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixd go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixd yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixd@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixddan{1|2|3}
+\newcommand\kixddan[1]{\tikz[baseline=(d.base)]\node[kixd dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixdnaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixdnaosu[1]{\tikz[baseline=(d.base)]\node[kixd dan2] (d) {\vphantom{あ}直す：\kixd@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixdop{1|2|3|4}
+\newcommand\kixdop[1]{\tikz[baseline=(d.base)]\node[kixd dan2] (d) {\vphantom{あ}\kixd@op{#1}};}
+% 段の見出し（本文で）  \kixddanhead{1|2|3}{見出し}
+\newcommand\kixddanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixd dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixdcase{C}（′ は \kixdcase{A$'$}）
+\newcommand\kixdcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixdbaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixdbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixd@cases#3,\@nil）}
+\def\kixd@cases#1,#2\@nil{\kixdcase{#1}\ifx\relax#2\relax\else と\kixd@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixdN[1]{\tikz[baseline=(n.base)]\node[kixd name] (n) {$\displaystyle #1$};}
+\newcommand\kixdNt[1]{\tikz[baseline=(n.base)]{\node[kixd name] (n) {$\displaystyle #1$};\node[kixd tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixdS[1]{\tikz[baseline=(n.base)]\node[kixd seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixdSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixdSt[2]{\tikz[baseline=(n.base)]{\node[kixd seki] (n) {$\displaystyle #2$};\node[kixd tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixd@op{#1}};}}
+% 場合分けの表の題の帯  \kixdcasetitle{9-2}{題}
+\newcommand\kixdcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixdpic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixdpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixdx/\kixdy in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixdx-1},{\kixdy-1}) -- ({\kixdx+1},{\kixdy+1}) ({\kixdx-1},{\kixdy+1}) -- ({\kixdx+1},{\kixdy-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixdx/\kixdy in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixdx,\kixdy) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+%% ===== この章の部品（9-3、組 V9-3）=====
+\makeatletter
+%% ----- 2つの世界の図の型（tools/kata9.md、組 V9-1。kixa→kixd）-----
+
+\colorlet{kixdW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixdF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixdP}{bkRed!80!black}% s の世界の点（×）
+% グラフのスタイル（どれも scale only axis：はばと高さは軸の箱の大きさ）
+\pgfplotsset{
+  kixd base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixd wave/.style={kixd base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixd spec/.style={kixd base, ymin=0},
+  kixd splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixd sig/.style={kixdW, line width=1.4pt, no markers, samples=241, smooth},
+  kixd part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth},
+  kixd bar/.style={ycomb, draw=kixdF, line width=3pt, no markers},
+  kixd dot/.style={only marks, mark=*, mark size=1.3pt, kixdW}}
+% 2つの世界の見出しと、行き来の矢印  \kixdworlds[見出しの高さ]{左の題}{右の題}{上の矢印（→）}{下の矢印（←）}
+%     左の軸は at={(0mm,0mm)}、右の軸は at={(76mm,0mm)}（はば 47 mm）に置く。見出しは軸の上（ふつう 42 mm）
+\tikzset{
+  kixd world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixd bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixd blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixdworlds[5][42mm]{%
+  \node[kixd world, draw=kixdW] (kixdL) at (23.5mm,#1) {#2};
+  \node[kixd world, draw=kixdF] (kixdR) at (99.5mm,#1) {#3};
+  \draw[kixd bridge] ([yshift=1.3mm, xshift=1.5mm]kixdL.east) -- node[kixd blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixdR.west);
+  \draw[kixd bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixdR.west) -- node[kixd blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixdL.east);}
+% s の世界の点（axis の中で）  \kixdpole[色]{実部}{虚部}（×）  \kixdzero[色]{実部}{虚部}（○）
+\newcommand\kixdpole[3][kixdP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixdzero[3][kixdP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+%% ----- ここから 9-3 だけの部品 -----
+% 小見出し（太字の1行）
+\newcommand\kixdhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixdbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式・ことばを、まん中に1行で置く
+\newcommand\kixdline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixdframe[はば]{中身}
+\newcommand\kixdframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixda{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixdb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixds{\rightskip=0pt plus 8em\relax}
+% 複素平面の軸  \kixdaxes{xmin}{xmax}{ymin}{ymax}（mm）
+\newcommand\kixdaxes[4]{%
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (#1,0) -- (#2,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,#3) -- (0,#4);
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (#2,-0.8) {実部};
+  \node[font=\footnotesize, anchor=south west, inner sep=1pt] at (0.8,#4) {虚部};}
+% 線スペクトルの棒  \kixdstem{x(mm)}{高さ(mm)}{色}
+\newcommand\kixdstem[3]{\draw[#3, line width=1.6pt] (#1,0) -- (#1,#2); \fill[#3] (#1,#2) circle (0.9);}
+\makeatother
+
+\bkchapter{9}{3}{複素数で書く\\フーリエ級数}{\bklevel{5}}{複素数で書くフーリエ級数}
+\bkmichishirube{6-8,6-9,6-10,6-13,8-13,9-1,9-2}{9-4,9-8}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 反対向きに回る2本の矢印をたすと $\cos$ の波になることを作図で確かめ、「負の周波数」の意味を言える。
+\item \bklevel{4}\enspace $a_n$・$b_n$ から複素フーリエ係数 $c_n=\tfrac{a_n-jb_n}{2}$ を求め、両側のスペクトルを読める。
+\item \bklevel{5}\enspace 場合分けの表を使って $c_n$ を $e$ の定積分で求め、回路に入れた周期の波や、輪の形の針金の熱を計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\raggedright
+長さ1の矢印を2本用意します。1本は左回り（時計の針と反対の向き）に、もう1本は右回り（時計の針と同じ向き）に、同じ速さで回します。はじめは2本とも右を向いています。\par\vspace{4pt}
+\textbf{この2本の矢印をたし算すると、和の矢印は、どんな動きをするでしょうか。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \kixdaxes{-26}{30}{-24}{26}
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1.2pt off 1pt] (0,0) circle (20);
+  \draw[bkBlue, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0) -- (40:20);
+  \draw[bkOrange!85!black, line width=1.4pt, dash pattern=on 3pt off 1.2pt, -{Stealth[length=2.4mm]}] (0,0) -- (-40:20);
+  \draw[bkBlue, line width=0.8pt, -{Stealth[length=1.8mm]}] (48:23.5) arc (48:75:23.5);
+  \draw[bkOrange!85!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (-48:23.5) arc (-48:-75:23.5);
+  \node[font=\footnotesize, anchor=south, fill=white, inner sep=1pt] at (-12,15) {左回り};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=1pt] at (-12,-15) {右回り};
+\end{tikzpicture}\par\vspace{1pt}
+{\footnotesize 青の実線が左回りの矢印、オレンジの点線が右回りの矢印。}
+\end{minipage}
+\end{hatena}
+
+\noindent 9-1・9-2 では、くり返す波を $\sin$ と $\cos$ の波の和に分けました。係数は $a_n$ と $b_n$ の2種類で、計算も2回ずつ必要でした。この章では、6-10 で学んだ回る矢印 $e^{j\theta}$ を使って、$\sin$ と $\cos$ を1つの式にまとめます。そうすると、係数は $c_n$ の1種類だけになり、積分も $e$ の積分1種類ですみます。
+
+この書き方は、回路や機械に周期の波を入れたときの計算（6-13 の複素数の方法）と、とても相性がよい書き方です。電気・通信・量子力学の専門書の多くは、フーリエ級数をこの形で書いています。最後に、8-13 の熱方程式を、輪の形の針金で解きます。
+
+この章は複素数をたくさん使います。$j$ のかけ算やオイラーの公式を思い出せなくても大丈夫です。思い出そうの章にもどりながら、ゆっくり進みましょう。1回でわからなくても、例題を1つ解くと見えてくることがあります。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[2本の回る矢印を、表計算でたそう]
+はてな？の2本の矢印の先の点の座標を、30°ごとに計算します。左回りの矢印は角 $\theta$、右回りの矢印は角 $-\theta$ の所にあります。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item A列（A2〜A14）に、回った角 $\theta$ を 0, 30, 60, …, 360 と入れる。
+\item B2 に \texttt{=COS(RADIANS(A2))}、C2 に \texttt{=SIN(RADIANS(A2))} と入れる（左回りの矢印の先の $x$・$y$）。
+\item D2 に \texttt{=COS(RADIANS(-A2))}、E2 に \texttt{=SIN(RADIANS(-A2))} と入れる（右回りの矢印の先）。
+\item F2 に \texttt{=B2+D2}、G2 に \texttt{=C2+E2} と入れる（和の矢印の先）。
+\item B2:G2 を14行めまでコピーし、F列とG列を、方眼紙の上に点でうってみる。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent RADIANS は、度を弧度（4-2）に直す関数です。180° までの結果は、次のようになりました（小数第3位まで）。
+
+\begin{bkcenter}
+\bksheet{7}{14}{%
+1 & 角 $\theta$（°） & 左の $x$ & 左の $y$ & 右の $x$ & 右の $y$ & 和の $x$ & 和の $y$ \\
+2 & 0 & 1 & 0 & 1 & 0 & 2 & 0 \\
+3 & 30 & 0.866 & 0.5 & 0.866 & $-0.5$ & 1.732 & 0 \\
+4 & 60 & 0.5 & 0.866 & 0.5 & $-0.866$ & 1 & 0 \\
+5 & 90 & 0 & 1 & 0 & $-1$ & 0 & 0 \\
+6 & 120 & $-0.5$ & 0.866 & $-0.5$ & $-0.866$ & $-1$ & 0 \\
+7 & 150 & $-0.866$ & 0.5 & $-0.866$ & $-0.5$ & $-1.732$ & 0 \\
+8 & 180 & $-1$ & 0 & $-1$ & 0 & $-2$ & 0 \\}
+\bktabcaption{2本の矢印の先の座標と、その和。G列（和の $y$）は、いつも0になる。}
+\label{bk:9-3:tab-sheet}
+\end{bkcenter}
+
+\begin{omoidasou}
+\bkrecall{6-10}{オイラーの公式 $e^{j\theta}=\cos\theta+j\sin\theta$。$e^{j\theta}$ は単位円の上の角 $\theta$ の点。}
+\bkrecall{6-10}{$\cos\theta=\tfrac{e^{j\theta}+e^{-j\theta}}{2}$、$\sin\theta=\tfrac{e^{j\theta}-e^{-j\theta}}{2j}$。微分は $j\omega$ をかけること。}
+\bkrecall{6-8}{$z=a+bj$ の共役な複素数は $\bar z=a-bj$。$\tfrac{1}{j}=-j$（分母と分子に $j$ をかける）。}
+\bkrecall{9-1}{くり返す波は $\tfrac{a_0}{2}+\sum(a_n\cos n\omega_0t+b_n\sin n\omega_0t)$。$\omega_0=\tfrac{2\pi}{T}$。}
+\bkrecall{9-2}{係数は「かけて1周期で積分し、$\tfrac{2}{T}$ 倍」。場合分けの表9-2と流れ図で求め方を選ぶ。}
+\bkrecall{8-13}{熱方程式 $\tfrac{\partial T}{\partial t}=\alpha\tfrac{\partial^2T}{\partial x^2}$。$\sin$ の形の温度は、形を保ったまま小さくなる。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\Needspace{16\baselineskip}\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{回る矢印2本で、ゆれる波}{\bklevel{3}}
+
+\bksubsection{1}{反対向きに回る2本の矢印をたす}
+
+\label{bk:9-3:ya}表\ref{bk:9-3:tab-sheet}の和の矢印は、$y$ がいつも0で、$x$ だけが次のように変わりました。
+\kixdline{$2\to1.732\to1\to0\to-1\to-1.732\to-2$}和の矢印の先は、横の軸の上を行ったり来たりするだけです。
+
+なぜ $y$ が0になるのでしょう。左回りの矢印と右回りの矢印は、いつも横の軸について\textbf{折り返した位置}（上下に対称な位置）にあります。だから、たての成分は「$+\sin\theta$ と $-\sin\theta$」で、たすと打ち消しあいます。横の成分は、どちらも $\cos\theta$ なので、たすと $2\cos\theta$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \kixdaxes{-19}{27}{-19}{21}
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1.2pt off 1pt] (0,0) circle (16);
+  \draw[bkBlue, line width=1.4pt, -{Stealth[length=2.4mm]}] (0,0) -- (60:16);
+  \draw[bkOrange!85!black, line width=1.4pt, dash pattern=on 3pt off 1.2pt, -{Stealth[length=2.4mm]}] (0,0) -- (-60:16);
+  \draw[bkGray, line width=0.5pt, dash pattern=on 1pt off 1pt] (60:16) -- (16,0) -- (-60:16);
+  \draw[bkPurple!80!black, line width=2pt, -{Stealth[length=2.6mm]}] (0,0) -- (16,0);
+  \node[font=\footnotesize, anchor=south west, inner sep=1pt] at ($(60:16)+(0.6,0)$) {$e^{j\theta}$};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at ($(-60:16)+(0.6,0)$) {$e^{-j\theta}$};
+  \node[font=\footnotesize, anchor=south, inner sep=1pt] at (9,0.8) {和};
+  \node[font=\footnotesize, anchor=north] at (0,-22) {$\theta=60°$ のとき};
+  \end{scope}
+  \begin{scope}[xshift=44mm, yshift=0mm, x=0.84mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (78,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$\theta$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-24) -- (0,25);
+  \foreach \kixdy/\kixdl in {10/1,20/2,-10/-1,-20/-2} {\draw[bkInk, line width=0.5pt] (0,\kixdy) -- (-1.2,\kixdy); \node[font=\footnotesize, anchor=east] at (-1.5,\kixdy) {$\kixdl$};}
+  \foreach \kixdx/\kixdl in {36/180°,72/360°} {\draw[bkInk, line width=0.5pt] (\kixdx,0) -- (\kixdx,-1.2); \node[font=\footnotesize, anchor=north, fill=white, inner sep=1pt] at (\kixdx,-1.5) {\kixdl};}
+  \draw[bkPurple!80!black, line width=1.5pt, domain=0:72, samples=80] plot (\x,{20*cos(\x*5)});
+  \foreach \kixdk in {0,1,...,12} {\fill[bkInk] ({6*\kixdk},{20*cos(30*\kixdk)}) circle (0.9);}
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (40,17) {$2\cos\theta$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：$\theta=60°$ のときの2本の矢印（青とオレンジの点線）と、その和（むらさき）。たての成分は打ち消しあう。右：和の $x$ を角 $\theta$ ごとにならべると、$2\cos\theta$ の波（黒い点は表\ref{bk:9-3:tab-sheet}の値）。}
+\label{bk:9-3:fig-ya}
+\end{bkfigure}
+
+\textbf{はてな？の答え}：和の矢印は、横の軸の上だけを、長さ2と $-2$ の間で行ったり来たりします。その長さ（横の成分）は $2\cos\theta$ で、$\cos$ の波です。回る2本の矢印をたすと、まっすぐゆれる波になるのです。
+
+式で書くと、6-10 で作った式そのものです。
+\[ e^{j\theta}+e^{-j\theta}=2\cos\theta,\qquad \cos\theta=\frac{e^{j\theta}+e^{-j\theta}}{2} \]
+ひき算をすると、横の成分が打ち消しあい、たての成分だけが残ります。
+\[ e^{j\theta}-e^{-j\theta}=2j\sin\theta,\qquad \sin\theta=\frac{e^{j\theta}-e^{-j\theta}}{2j} \]
+「$\cos$ は2本の矢印の和の半分」「$\sin$ は2本の矢印の差を $2j$ でわったもの」です。
+
+\bksubsection{2}{右回りは「負の周波数」}
+
+\label{bk:9-3:fu}時刻 $t$ に角 $\omega t$ の所にある矢印は $e^{j\omega t}$ です（6-10）。$\omega$〔rad/s〕は、1秒に何ラジアン回るかを表す角周波数で、$\omega>0$ なら左回りです。では、右回りの矢印 $e^{-j\omega t}$ は、どう読めばよいでしょう。
+\kixdline{$e^{-j\omega t}=e^{j(-\omega)t}$}
+と書くと、「角周波数が $-\omega$ の矢印」と読めます。このように、右回りに回る矢印の角周波数を、\textbf{負の周波数}（ふのしゅうはすう）といいます。\bkidx{ふのしゅうはすう}{負の周波数}マイナスは「回る向きが反対」という印で、「1秒にマイナス何回ゆれる」という意味ではありません。
+
+$\cos\omega t$ は、角周波数 $\omega$ の矢印と $-\omega$ の矢印に、それぞれ $\frac12$ をかけてたしたものです。$\sin\omega t$ は、$\frac{1}{2j}$ と $-\frac{1}{2j}$ をかけてたしたものです。
+\[ \cos\omega t=\frac12\,e^{j\omega t}+\frac12\,e^{-j\omega t},\qquad \sin\omega t=\frac{1}{2j}\,e^{j\omega t}-\frac{1}{2j}\,e^{-j\omega t} \]
+「どの角周波数の矢印に、何をかけるか」を、横軸に角周波数、たて軸にかける数の大きさをとって棒で表したものが、図\ref{bk:9-3:fig-fu}です。9-1 で、方形波の成分を棒グラフ（スペクトル）にしました。そのときは横軸が正の周波数だけでした。矢印で考えると、負の周波数の側にも棒が立ちます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-24,0) -- (26,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {角周波数};
+  \draw[bkInk, line width=0.5pt] (0,0) -- (0,1.2);
+  \node[font=\footnotesize, anchor=north] at (0,-1.5) {0};
+  \kixdstem{-15}{16}{bkOrange!85!black}\kixdstem{15}{16}{bkBlue}
+  \node[font=\footnotesize, anchor=north] at (-15,-1.5) {$-\omega$};
+  \node[font=\footnotesize, anchor=north] at (15,-1.5) {$\omega$};
+  \node[font=\footnotesize, anchor=south] at (-15,18) {$\frac12$};
+  \node[font=\footnotesize, anchor=south] at (15,18) {$\frac12$};
+  \node[font=\footnotesize, anchor=north] at (0,-9) {$\cos\omega t$};
+  \end{scope}
+  \begin{scope}[xshift=68mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-24,0) -- (26,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {角周波数};
+  \draw[bkInk, line width=0.5pt] (0,0) -- (0,1.2);
+  \node[font=\footnotesize, anchor=north] at (0,-1.5) {0};
+  \kixdstem{-15}{16}{bkOrange!85!black}\kixdstem{15}{16}{bkBlue}
+  \node[font=\footnotesize, anchor=north] at (-15,-1.5) {$-\omega$};
+  \node[font=\footnotesize, anchor=north] at (15,-1.5) {$\omega$};
+  \node[font=\footnotesize, anchor=south] at (-15,18) {$-\frac{1}{2j}=\frac{j}{2}$};
+  \node[font=\footnotesize, anchor=south] at (15,18) {$\frac{1}{2j}=-\frac{j}{2}$};
+  \node[font=\footnotesize, anchor=north] at (0,-9) {$\sin\omega t$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{$\cos\omega t$ と $\sin\omega t$ を、回る矢印に分けたときのスペクトル。棒の高さは、かける数の大きさ（どれも $\frac12$）。棒の上の数が、かける数そのもの（複素数）。オレンジの棒が負の周波数（右回り）。}
+\label{bk:9-3:fig-fu}
+\end{bkfigure}
+
+$\cos$ と $\sin$ は、棒の高さ（大きさ $\frac12$）は同じで、かける数の「向き」（複素平面の上の角）だけがちがいます。$\cos$ では2本とも実数 $\frac12$、$\sin$ では $-\frac{j}{2}$ と $\frac{j}{2}$ です。かける数の角が、波の山の位置（位相）を表しています。\par
+もう1つ大事なことがあります。どちらも、$\omega$ の棒と $-\omega$ の棒にかける数は、\textbf{共役な複素数}（6-8）の組です（$\frac12$ と $\frac12$、$-\frac{j}{2}$ と $\frac{j}{2}$）。共役な2本の矢印は、いつも横の軸について折り返した位置にあるので、和のたての成分が打ち消しあい、和が実数になります。ふつうの音や電圧のような、実数の波はすべてこの形です。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 反対向きに回る2本の矢印 $e^{j\omega t}$ と $e^{-j\omega t}$ をたすと、横にゆれる $2\cos\omega t$ になる。
+\item 右回りの矢印 $e^{-j\omega t}$ の角周波数 $-\omega$ を、負の周波数という。マイナスは回る向きの印。
+\item 実数の波では、$\omega$ と $-\omega$ の矢印にかける数は、共役な複素数の組になる。
+\end{itemize}
+\end{taisetsu}
+
+\Needspace{10\baselineskip}\bkstage{te}{手でわかる}{$a_n$・$b_n$ から $c_n$ へ}{\bklevel{4}}
+
+\bksubsection{3}{フーリエ級数を、回る矢印で書きかえる}
+
+\label{bk:9-3:kaki}9-1 のフーリエ級数の $n$ 番めの成分 $a_n\cos n\omega_0t+b_n\sin n\omega_0t$ に、①の $\cos$ と $\sin$ の式を入れます（$\theta=n\omega_0t$）。目標は、「左回りの矢印 $e^{jn\omega_0t}$ に何をかけるか」と「右回りの矢印 $e^{-jn\omega_0t}$ に何をかけるか」の形に整理することです。
+\begin{bkhenkei}[0.66]
+a_n\cos n\omega_0t+b_n\sin n\omega_0t & 9-1 の $n$ 番めの成分 \\
+=a_n\frac{e^{jn\omega_0t}+e^{-jn\omega_0t}}{2}+b_n\frac{e^{jn\omega_0t}-e^{-jn\omega_0t}}{2j} & ①の式で書きかえる \\
+=a_n\frac{e^{jn\omega_0t}+e^{-jn\omega_0t}}{2}-jb_n\frac{e^{jn\omega_0t}-e^{-jn\omega_0t}}{2} & $\dfrac{1}{j}=-j$（6-8） \\
+=\frac{a_n-jb_n}{2}\,e^{jn\omega_0t}+\frac{a_n+jb_n}{2}\,e^{-jn\omega_0t} & 同じ矢印どうしをまとめる \\
+\end{bkhenkei}
+左回りの矢印にかける数を $c_n$、右回りの矢印にかける数を $c_{-n}$ と名前をつけます。
+\kixdframe[112mm]{\Large $c_n=\dfrac{a_n-jb_n}{2},\qquad c_{-n}=\dfrac{a_n+jb_n}{2}$}
+$c_{-n}$ は、$c_n$ の虚部の符号を変えたもの、つまり\textbf{共役な複素数} $\overline{c_n}$ です（$a_n$・$b_n$ は実数なので）。②で見た「実数の波では、共役な組」が、ここでも出てきました。
+
+\kixdhead{平均の項も、矢印で}
+9-1 の級数のはじめの項 $\frac{a_0}{2}$ は、回らない矢印（$n=0$、$e^{j0t}=1$）にかける数と見て、$c_0=\frac{a_0}{2}$ とします。こうすると、フーリエ級数全体が、$n=\cdots,-2,-1,0,1,2,\cdots$ のすべての整数についての和になります。
+\kixdframe[112mm]{\Large $f(t)=\displaystyle\sum_{n=-\infty}^{\infty}c_n\,e^{jn\omega_0t}$\\[4pt]\normalsize\sffamily 「いろいろな速さで回る矢印に、$c_n$ をかけてたしたもの」}
+この形を\textbf{複素フーリエ級数}、$c_n$ を\textbf{複素フーリエ係数}（ふくそフーリエけいすう）といいます。\bkidx{ふくそふーりえけいすう}{複素フーリエ係数}$\sum$ の下の $n=-\infty$ は、「負の $n$ もすべてたす」という意味です。$n$ が負の項が、右回り（負の周波数）の矢印です。
+
+\kixdhead{逆に、$c_n$ から $a_n$・$b_n$ へ}
+上の2つの式をたすと $c_n+c_{-n}=a_n$、ひくと $c_n-c_{-n}=-jb_n$ です。両辺に $j$ をかけると、$j(c_n-c_{-n})=-j^2b_n=b_n$ です。
+\kixdline{$a_n=c_n+c_{-n}=2\times(c_n\text{ の実部}),\qquad b_n=j(c_n-c_{-n})=-2\times(c_n\text{ の虚部})$}
+$c_n$ の実部が $\cos$ の成分、虚部が $\sin$ の成分を表しています。
+
+\kixdhead{数で確かめる}
+$f(t)=3\cos t+4\sin t$（$a_1=3$、$b_1=4$）なら、$c_1=\tfrac{3-4j}{2}=1.5-2j$、$c_{-1}=1.5+2j$ です。もどしてみます。$c_{-1}e^{-jt}$ は $c_1e^{jt}$ の共役なので、2つをたすと虚部が打ち消しあい、実部の2倍になります。
+\begin{bkhenkei}[0.6]
+c_1e^{jt}=(1.5-2j)(\cos t+j\sin t) & オイラーの公式 \\
+=(1.5\cos t+2\sin t)+j(1.5\sin t-2\cos t) & 展開する（$j^2=-1$） \\
+c_1e^{jt}+c_{-1}e^{-jt}=2(1.5\cos t+2\sin t) & 実部の2倍 \\
+=3\cos t+4\sin t & もとの式にもどった \\
+\end{bkhenkei}
+
+\bksubsection{4}{方形波の $c_n$ と、両側のスペクトル}
+
+\label{bk:9-3:hokei}9-1 の高さ1の方形波（$0<t<\pi$ で1、$\pi<t<2\pi$ で $-1$、周期 $2\pi$）は、$a_n=0$、$b_n=\tfrac{4}{n\pi}$（$n$ が奇数）、$b_n=0$（$n$ が偶数）でした。③の式に入れます。
+\begin{bkhenkei}[0.5]
+c_n=\frac{0-j\cdot\frac{4}{n\pi}}{2}=-\frac{2j}{n\pi} & $n$ が正の奇数 \\
+=\frac{2}{jn\pi} & $-j=\dfrac{1}{j}$ を使って書きかえる \\
+c_{-n}=\overline{c_n}=\frac{2j}{n\pi} & 共役：虚部の符号を変える \\
+\end{bkhenkei}
+$n$ が負のときも、次のように同じ式で書けます。
+\[ c_{-n}=\frac{2j}{n\pi}=\frac{2}{j(-n)\pi}\qquad\text{（$c_n=\frac{2}{jn\pi}$ の $n$ を $-n$ にしたもの）} \]
+数にすると、$c_{\pm1}=\mp0.6366j$、$c_{\pm3}=\mp0.2122j$、$c_{\pm5}=\mp0.1273j$ です（$\pm$ と $\mp$ は、上どうし・下どうしの符号を組にして読む）。$n$ が偶数と $n=0$ では $c_n=0$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-28,0) -- (30,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$n$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,38);
+  \foreach \kixdn/\kixdh in {1/15.9,3/5.3,5/3.2,7/2.3} {\kixdstem{\kixdn*3.5}{\kixdh}{bkBlue}\kixdstem{-\kixdn*3.5}{\kixdh}{bkOrange!85!black}}
+  \foreach \kixdn in {-7,-5,-3,-1,1,3,5,7} {\node[font=\footnotesize, anchor=north] at ({\kixdn*3.5},-1.5) {$\kixdn$};}
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (5.5,18) {0.637};
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=1pt] at (-5.5,18) {0.637};
+  \node[font=\footnotesize, anchor=north] at (0,-8) {両側のスペクトル $|c_n|$};
+  \end{scope}
+  \begin{scope}[xshift=68mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (30,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$n$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,38);
+  \foreach \kixdn/\kixdh in {1/31.8,3/10.6,5/6.4,7/4.5} {\kixdstem{\kixdn*3.5}{\kixdh}{bkBlue}}
+  \foreach \kixdn in {1,3,5,7} {\node[font=\footnotesize, anchor=north] at ({\kixdn*3.5},-1.5) {$\kixdn$};}
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (5.5,31) {1.273};
+  \node[font=\footnotesize, anchor=north] at (14,-8) {片側のスペクトル（振幅）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{高さ1の方形波のスペクトル（たての目もりは左右で同じ）。左：両側のスペクトル。$|c_n|=\frac{2}{|n|\pi}$ の棒が、$n=0$ について左右対称に立つ。右：片側のスペクトル。正の $n$ だけで、高さは $2|c_n|$（9-1 の振幅 $\frac{4}{n\pi}$ と同じ）。}
+\label{bk:9-3:fig-ryogawa}
+\end{bkfigure}
+
+$|c_n|$ を棒の高さにして、負の $n$ もふくめてならべた図\ref{bk:9-3:fig-ryogawa}の左を、\textbf{両側スペクトル}（りょうがわスペクトル）といいます。\bkidx{りょうがわすぺくとる}{両側スペクトル}正の $n$ だけで、高さを振幅（9-1 の $\sqrt{a_n^2+b_n^2}$）にした右の図を、\textbf{片側スペクトル}といいます。
+
+両側スペクトルの棒の高さは、片側スペクトルの半分です。$n$ 番めの成分の振幅（山の高さ）は、左回りの矢印と右回りの矢印に、半分ずつ分けられているからです。①の図で、長さ1の矢印2本の和の長さが最大2になったのと同じで、2本の棒をあわせて、はじめて1つの波の振幅になります。
+\kixdline{振幅＝$2|c_n|=|c_n|+|c_{-n}|$}
+専門書や計測器の画面がどちらのスペクトルかは、負の周波数の側があるかどうかで見分けます。
+
+\bkkokomade[反対向きに回る2本の矢印の和が $\cos$ の波になること、$c_n=\frac{a_n-jb_n}{2}$ で $a_n$・$b_n$ から $c_n$ が求められること、両側スペクトルの高さは振幅の半分であることがわかれば十分です。この先は、$c_n$ を直接計算する方法と、その使いみちです。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{$c_n$ を直接求めて、使う}{\bklevel{5}}
+
+\bksubsection{5}{$c_n$ を直接求める：止めて、平均する}
+
+\label{bk:9-3:chokusetsu}③では、$a_n$・$b_n$ を先に求めてから $c_n$ を作りました。でも、$a_n$ と $b_n$ の2回の積分をしなくても、$c_n$ を1回の積分で直接求めることができます。9-2 の「かけて1周期で積分する」と同じ考えです。
+
+\kixdhead{ほしい矢印だけを止める}
+$f(t)=\sum c_ke^{jk\omega_0t}$ は、いろいろな速さで回る矢印の和です。ここに、右回りの矢印 $e^{-jn\omega_0t}$ をかけます。6-10 の「かけ算は肩のたし算」から、
+\kixdline{$c_k\,e^{jk\omega_0t}\times e^{-jn\omega_0t}=c_k\,e^{j(k-n)\omega_0t}$}
+となります。$k=n$ の矢印は、$e^{j0}=1$ になって\textbf{止まります}。$n$ 番めの矢印と同じ速さで逆に回すので、回転が打ち消されるのです。ほかの矢印（$k\neq n$）は、速さ $(k-n)\omega_0$ で回り続けます。
+
+\kixdhead{1周期で平均すると、回る矢印は0になる}
+回り続ける矢印 $e^{jm\omega_0t}$（$m$ は0でない整数）は、1周期 $T$ の間にちょうど $m$ 周します。1周期の間の矢印を、同じ時間の間かくで何本もとってならべると、図\ref{bk:9-3:fig-heikin}のように、どの向きも同じだけ出てくるので、たすと0になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \foreach \kixdk in {0,1,...,7} {\draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] (0,0) -- ({45*\kixdk}:13);}
+  \fill[bkInk] (0,0) circle (0.8);
+  \node[font=\footnotesize, anchor=north] at (0,-17) {$m=1$：8本の矢印};
+  \end{scope}
+  \begin{scope}[xshift=40mm, yshift=-10mm]
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] (0,0) -- ++(0:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] (9,0) -- ++(45:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(9,0)+(45:9)$) -- ++(90:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(9,0)+(45:9)+(90:9)$) -- ++(135:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(9,0)+(45:9)+(90:9)+(135:9)$) -- ++(180:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(0,0)+(45:9)+(90:9)+(135:9)$) -- ++(225:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(0,0)+(90:9)+(135:9)$) -- ++(270:9);
+  \draw[bkBlue, line width=1.1pt, -{Stealth[length=2mm]}] ($(0,0)+(135:9)$) -- ++(315:9);
+  \fill[bkInk] (0,0) circle (0.8);
+  \node[font=\footnotesize, anchor=north, align=center] at (4.5,-3) {先から先へつなぐと、\\もとの点にもどる（和は0）};
+  \end{scope}
+  \begin{scope}[xshift=82mm, yshift=0mm]
+  \draw[bkPurple!80!black, line width=1.1pt, -{Stealth[length=1.6mm]}] (0,-10) -- ++(0:4);
+  \foreach \kixdk in {1,...,7} {\draw[bkPurple!80!black, line width=1.1pt, -{Stealth[length=1.6mm]}] ({4*\kixdk},-10) -- ++(0:4);}
+  \fill[bkInk] (0,-10) circle (0.8);
+  \node[font=\footnotesize, anchor=north, align=center] at (16,-13) {$m=0$（止まった矢印）は\\8本とも同じ向き：\\和は8本分};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{1周期を8つに分け、回り続ける矢印 $e^{jm\omega_0t}$（$m=1$）を8本とる。左：8本は、どの向きにも同じだけある。中：先から先へつなぐと正八角形になって、もとの点にもどる。右：止まった矢印（$m=0$）だけは、たすと本数分の長さが残る。}
+\label{bk:9-3:fig-heikin}
+\end{bkfigure}
+
+本数を細かくした先が、1周期の積分です。式でも確かめます（$m\neq0$。$e^{jm\omega_0t}$ の積分は、5-14 の $\int e^{at}\dd t=\frac{1}{a}e^{at}$ で $a=jm\omega_0$）。
+\begin{bkhenkei}[0.56]
+\int_0^Te^{jm\omega_0t}\,\dd t=\Bigl[\,\frac{e^{jm\omega_0t}}{jm\omega_0}\,\Bigr]_0^T & $e^{at}$ の積分（$a=jm\omega_0$） \\
+=\frac{e^{jm\omega_0T}-1}{jm\omega_0}=\frac{e^{j2m\pi}-1}{jm\omega_0} & $\omega_0T=2\pi$ \\
+=\frac{1-1}{jm\omega_0}=0 & $e^{j2m\pi}=1$（$m$ 周してもとの所） \\
+\end{bkhenkei}
+$m=0$ なら、$\int_0^T1\,\dd t=T$ です。これが、矢印 $e^{jk\omega_0t}$ どうしの\textbf{直交性}です（9-2 の $\sin$・$\cos$ の直交性の、矢印の形）。
+
+\kixdhead{だから、かけて平均すると $c_n$ だけが残る}
+\begin{bkhenkei}[0.64]
+\int_0^Tf(t)\,e^{-jn\omega_0t}\,\dd t=\sum_k c_k\int_0^Te^{j(k-n)\omega_0t}\,\dd t & 項ごとに積分する \\
+=c_n\times T & $k=n$ の項だけが $T$、ほかは0 \\
+\end{bkhenkei}
+両辺を $T$ でわると、$c_n$ を求める式ができます。
+\[ \kixdNt{c_n}=\kixdSt{1}{\frac{1}{T}\int_0^Tf(t)\,e^{-jn\omega_0t}\,\dd t} \]
+
+\kixddanhead{1}{記号を読む：何に・何をかけて・どこからどこまで}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何に}：$f(t)$ は、周期 $T$ でくり返す波です。
+\item \textbf{何をかけて}：右回りの矢印 $e^{-jn\omega_0t}$。$n$ 番めの矢印を止めるための矢印です。\textbf{マイナス}がつきます。
+\item \textbf{どこからどこまで}：1周期（$0$ から $T$ まで。1周期分なら、$-\frac{T}{2}$ から $\frac{T}{2}$ までなど、どこからでもよい）。
+\item \textbf{何でわるか}：$T$ でわる。つまり「1周期の\textbf{平均}」。
+\end{enumerate}
+
+\kixdhead{なぜ $\frac{2}{T}$ でなく $\frac{1}{T}$ なのか}
+9-2 の $a_n$・$b_n$ の式には $\frac{2}{T}$ がありました。$\cos n\omega_0t$ をかけると、$\cos^2n\omega_0t$ の平均は $\frac12$ にしかならないので、2倍してもどしたのでした。矢印では、$e^{jn\omega_0t}\times e^{-jn\omega_0t}=1$ で、平均は1です。だから2倍する必要がなく、$\frac{1}{T}$ になります。「$c_n$ は、かけて平均したそのもの」と覚えておくとよいでしょう。
+
+\kixdhead{記号 $c_n$ は「名前」}
+$c_n$ は、「1周期で、$f$ に $e^{-jn\omega_0t}$ をかけてたし合わせ、$T$ でわる」という操作の\textbf{名前}です。記号を見ただけでは、まだ数は出ません。実際の値は、ふつうの定積分に\textbf{直して}求めます。$e$ の積分は「$\frac{1}{a}$ をかける」の1種類なので、$\cos$ と $\sin$ の2種類の積分をする 9-2 より、計算は短くなります。
+
+\kixddanhead{2}{ふつうの定積分に直す：方形波}
+③で $a_n$・$b_n$ から求めた方形波の $c_n$ を、こんどは直接求めます。周期は $T=2\pi$、$\omega_0=1$ です。1周期を、$f=1$ の区間と $f=-1$ の区間に分けます（9-2 と同じ）。$n\neq0$ とします。
+\begin{bkhenkei}[0.56]
+c_n=\frac{1}{2\pi}\Bigl(\int_0^{\pi}e^{-jnt}\,\dd t-\int_{\pi}^{2\pi}e^{-jnt}\,\dd t\Bigr) & 区間に分ける \\
+\int_0^{\pi}e^{-jnt}\,\dd t=\Bigl[\,\frac{e^{-jnt}}{-jn}\,\Bigr]_0^{\pi}=\frac{1-e^{-jn\pi}}{jn} & $e^{at}$ の積分（$a=-jn$） \\
+\int_{\pi}^{2\pi}e^{-jnt}\,\dd t=\frac{e^{-jn\pi}-1}{jn} & 同じように（$e^{-j2n\pi}=1$） \\
+c_n=\frac{1}{2\pi}\cdot\frac{2-2e^{-jn\pi}}{jn}=\frac{1-(-1)^n}{jn\pi} & $e^{-jn\pi}=\cos n\pi=(-1)^n$ \\
+\end{bkhenkei}
+$n$ が奇数なら $1-(-1)=2$ で $c_n=\tfrac{2}{jn\pi}$、偶数なら $1-1=0$ で $c_n=0$。③と同じ答えが、積分1回で出ました。$e^{-jn\pi}$ は、単位円の上の角 $-n\pi$ の点なので、$n$ が奇数なら $-1$、偶数なら1です（$\sin n\pi=0$ だから）。
+
+\Needspace{12\baselineskip}
+\bksubsection{6}{場合分けの表と流れ図}
+
+\label{bk:9-3:basho}$c_n$ の求め方も、9-2 と同じく場合によって選びます。9-2 の場合分けの表9-2に、複素数の係数の行 \kixdcase{J}・\kixdcase{J$'$} を足しました。\kixdcase{A}・\kixdcase{F}・\kixdcase{G} は表9-2と同じ記号で、$c_n$ を求めるときの手順を書いています。J$'$ の「$'$」は「J のなかま」という印で、微分の印ではありません。
+
+\kixdhead{流れ図の使い方：方形波の $c_n$}
+⑤で計算した方形波の $c_n$ を、場合分けの表9-2（つづき）と、図\ref{bk:9-3:fig-flow}の流れ図でたどってみます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：$f$＝高さ1の方形波、周期 $T=2\pi$、ほしいのはすべての $n$ の $c_n$。
+\item $f$ が $e^{jn\omega_0t}$ や $\cos$・$\sin$ の和で書いてある？\enspace いいえ（1と $-1$ をくり返す形で書いてある）。\enspace $\sin$・$\cos$ の積やべき？\enspace いいえ。
+\item 平均 $c_0$ だけほしい？\enspace いいえ。\enspace 周期が $2\pi$ でない？\enspace いいえ（$2\pi$）。
+\item 区間ごとに一定・1次式？\enspace はい（$1$ と $-1$）。
+\end{enumerate}
+こうして場合 \kixdcase{J} に決まります。⑤でしたとおりです。全部の場合を一度に覚えなくても大丈夫です。問題を解くたびに、表と流れ図にもどりましょう。
+
+\kixdhead{どの場合かな？}
+次の $c_n$ は、どの場合でしょう。流れ図を上からたどって、先に考えてから答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $f(t)=2\cos3t-\sin t$ の $c_n$\par\nobreak\noindent 答え：\kixdcase{J$'$}。$\cos$・$\sin$ の和で書いてある（$a_3=2$、$b_1=-1$）。
+\item $f(t)=\cos^2t$ の $c_n$\par\nobreak\noindent 答え：\kixdcase{A}。$\cos$ の2乗（べき）。
+\item 周期 \qty{0.01}{s} で、前の半分が1、後ろの半分が0の波の $c_n$\par\nobreak\noindent 答え：\kixdcase{F}→\kixdcase{J}。周期が $2\pi$ でなく、区間ごとに一定。
+\item スマホの充電器の中の、整流した電圧の平均\par\nobreak\noindent 答え：\kixdcase{G}。平均だけ。
+\end{enumerate}
+
+
+\kixdcasetitle{9-2}{（つづき）複素数の係数 $c_n$：どんなときに、どう求める？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,12mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixdcase{J$'$} & $f$ が $e^{jn\omega_0t}$ や $\cos n\omega_0t$・$\sin n\omega_0t$ の（定数倍の）和で書いてある & \kixddan{3}\enspace 積分しない。$c_n=\tfrac{a_n-jb_n}{2}$、$c_{-n}=\overline{c_n}$、$c_0=\tfrac{a_0}{2}$。逆は $a_n=c_n+c_{-n}$、$b_n=j(c_n-c_{-n})$ & 1・2・9 \\
+\kixdcase{A} & $\sin$・$\cos$ の積やべき（$\sin^3t$ など）で書ける & \kixddan{3}\enspace 積分しない。オイラーの公式で $e$ の式に直し、展開して、$e^{jnt}$ の前の数を読む & 3 \\
+\kixdcase{G} & 平均 $c_0$（直流分）だけほしい & \kixddan{3}\enspace 積分の意味から：$c_0$＝1周期の面積÷$T$ & 4 \\
+\kixdcase{F} & 周期が $2\pi$ でない（50\,Hz なら $T=0.02$\,s） & \kixddan{3}\enspace $\omega_0=\tfrac{2\pi}{T}$ にする。形が同じなら、$c_n$ は周期 $2\pi$ のときと同じ。このあと下の問いへ & 7 \\
+\kixdcase{J} & 区間ごとに一定、または区間ごとに1次式 & \kixdop{1}\enspace $\dfrac1T\displaystyle\int_0^Tf\,e^{-jn\omega_0t}\,\dd t$。区間に分ける。1次式は部分積分1回。$e^{-jn\pi}=(-1)^n$ & 5・6・7・8 \\
+\end{bktable}
+\end{bkcenter}
+{\small 表9-2のB〜E・H・I の形（$\sin$ だけの半区間・整流した波・データなど）は、9-2 の流れ図で $a_n$・$b_n$ を求めてから J$'$ で $c_n$ にします。式がなく、はかった値だけのときは、9-4 の DFT（表9-4のG）で $c_n$ が直接出ます。}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixd do, text width=100mm] (s) at (58,0) {記号を読む（名前の段）：どの波 $f$・周期 $T$・どの $n$ の $c_n$ か\\$c_n$ は「1周期で $e^{-jn\omega_0t}$ をかけて平均」の名前};
+  \node[kixd q, aspect=1.8] (q1) at (33,-28) {$f$ が $e^{jn\omega_0t}$ や\\$\cos$・$\sin$ の\\和で書いてある？};
+  \node[kixd do, text width=40mm, anchor=west] (rJp) at (71,-28) {$c_n=(a_n-jb_n)/2$ など\enspace\kixdcase{J$'$}};
+  \node[kixd q] (q2) at (33,-58) {$\sin$・$\cos$ の積やべき？};
+  \node[kixd do, text width=40mm, anchor=west] (rA) at (71,-58) {オイラーの公式で $e$ に\\直して展開\enspace\kixdcase{A}};
+  \node[kixd q] (q3) at (33,-78) {平均 $c_0$ だけほしい？};
+  \node[kixd do, text width=40mm, anchor=west] (rG) at (71,-78) {面積÷$T$\enspace\kixdcase{G}};
+  \node[kixd q] (q4) at (33,-98) {周期が $2\pi$ でない？};
+  \node[kixd do, text width=40mm, anchor=west] (rF) at (71,-98) {$\omega_0=2\pi/T$ にして、\\下の問いへ\enspace\kixdcase{F}};
+  \node[kixd q] (q5) at (33,-118) {区間ごとに一定・1次式？};
+  \node[kixd do, text width=40mm, anchor=west] (rJ) at (71,-118) {区間ごとに $e$ の定積分\\（1次式は部分積分）\enspace\kixdcase{J}};
+  \node[kixd do, text width=52mm] (rT) at (33,-138) {表9-2の流れ図で $a_n$・$b_n$ を\\求め、$c_n$ の式へ\enspace\kixdcase{J$'$}};
+  \node[kixd do, text width=106mm] (end) at (61,-154) {確かめ：$c_{-n}$ が $c_n$ の共役か。$a_n$・$b_n$ にもどして、9-1・9-2 と同じか};
+  \draw[kixd go] (s.south -| q1) -- (q1);
+  \foreach \kixdq/\kixdr in {q1/rJp,q2/rA,q3/rG,q4/rF,q5/rJ} {\draw[kixd go] (\kixdq) -- node[kixd yn, above] {はい} (\kixdr);}
+  \foreach \kixdq/\kixdr in {q1/q2,q2/q3,q3/q4,q4/q5,q5/rT} {\draw[kixd go] (\kixdq) -- node[kixd yn, left=1mm] {いいえ} (\kixdr);}
+  \draw[kixd go, shorten >=0.4mm] (rF.south) |- (33.8,-109.5);
+  \foreach \kixdn in {rJp,rA,rG,rJ,rT} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixdn.east) -- (\kixdn.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-28) -- (127,-154);
+  \draw[kixd go, shorten <=0pt] (127,-154) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{複素フーリエ係数 $c_n$ の流れ図。ひし形は問い、四角はすること。上の4つの問い（J$'$・A・G・F）が楽をする段、その下が直す段。F のあとは左の列の次の問いへもどる。計算した四角からは、右の線をたどって最後の「確かめ」へ。}
+\label{bk:9-3:fig-flow}
+\end{bkfigure}
+
+\bksubsection{7}{1次式の区間は、部分積分1回}
+
+\label{bk:9-3:bubun}のこぎり波 $f(t)=t$（$-\pi<t<\pi$）のように、区間の中で1次式になっている波では、$t\,e^{at}$ の積分が必要になります。5-16 の部分積分を1回使います。$a$ は0でない数（ここでは複素数 $-jn$）です。
+\begin{bkhenkei}[0.56]
+\int t\,e^{at}\,\dd t=t\cdot\frac{e^{at}}{a}-\int1\cdot\frac{e^{at}}{a}\,\dd t & 部分積分：$t$ を微分、$e^{at}$ を積分 \\
+=\frac{t\,e^{at}}{a}-\frac{e^{at}}{a^2} & 残りの積分をもう1回 $\dfrac{1}{a}$ \\
+=\Bigl(\frac{t}{a}-\frac{1}{a^2}\Bigr)e^{at} & $e^{at}$ でくくる \\
+\end{bkhenkei}
+右辺を積の微分（5-7）で微分すると、もとの $te^{at}$ にもどることも確かめられます。
+\[ \Bigl(\frac{t}{a}-\frac{1}{a^2}\Bigr)'e^{at}+\Bigl(\frac{t}{a}-\frac{1}{a^2}\Bigr)ae^{at}=\frac{e^{at}}{a}+te^{at}-\frac{e^{at}}{a}=te^{at} \]
+
+9-2 では、$t\cos nt$ と $t\sin nt$ の2つの部分積分が必要でした。$e$ の形なら1つですみます。$a$ が複素数でも、$e^{at}$ の微分が $ae^{at}$ になることは 6-10 で確かめたので、同じ計算ができます。のこぎり波の $c_n$ は例題6で求めます。
+
+\bksubsection{8}{回路に周期の波を入れる：成分ごとにかけ算}
+
+\label{bk:9-3:kairo}$c_n$ の形がいちばん役に立つのは、回路や機械に周期の波を入れるときです。3-12 の図にあった、抵抗とコンデンサーで作る「低い音だけを通す回路」（ローパスフィルター）を例にします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,20) -- (14,20);
+  \draw[bkInk, line width=0.9pt, fill=white] (14,17) rectangle (30,23);
+  \node[font=\footnotesize] at (22,27) {$R$};
+  \draw[bkInk, line width=0.9pt] (30,20) -- (46,20) -- (46,12);
+  \draw[bkInk, line width=1.4pt] (41,12) -- (51,12) (41,8) -- (51,8);
+  \node[font=\footnotesize, anchor=west] at (52.5,10) {$C$};
+  \draw[bkInk, line width=0.9pt] (46,8) -- (46,0) -- (0,0);
+  \draw[bkInk, line width=0.9pt] (46,20) -- (64,20) (46,0) -- (64,0);
+  \fill[bkInk] (0,20) circle (0.9) (0,0) circle (0.9) (64,20) circle (0.9) (64,0) circle (0.9);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (-4,1.5) -- (-4,18.5);
+  \node[font=\footnotesize, anchor=east, align=right] at (-5.5,10) {入れる電圧\\$v_{\mathrm{in}}$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (68,1.5) -- (68,18.5);
+  \node[font=\footnotesize, anchor=west, align=left] at (69.5,10) {出てくる電圧\\$v_{\mathrm{out}}$};
+\end{tikzpicture}
+\bkfigcaption{抵抗 $R$ とコンデンサー $C$ のローパスフィルター。出てくる電圧は、コンデンサーの両はしの電圧。}
+\label{bk:9-3:fig-rc}
+\end{bkfigure}
+
+抵抗に流れる電流を $i$〔A〕とすると、入れる電圧は「抵抗の電圧＋コンデンサーの電圧」で、$v_{\mathrm{in}}=Ri+v_{\mathrm{out}}$ です。コンデンサーの電流は $i=C\,\dd v_{\mathrm{out}}/\dd t$（6-10）です。入れると、時定数 $\tau=RC$〔s〕（6-4）の式になります。
+\kixdline{$\tau\dfrac{\dd v_{\mathrm{out}}}{\dd t}+v_{\mathrm{out}}=v_{\mathrm{in}}$}
+
+\kixdhead{1本の回る矢印を入れると}
+入れる電圧が、1本の回る矢印 $v_{\mathrm{in}}=e^{j\omega t}$ だとします。6-13 と同じく、出てくる電圧も同じ速さで回る矢印 $v_{\mathrm{out}}=Ke^{j\omega t}$ と置きます（$K$ は複素数）。微分は $j\omega$ をかけること（6-10）なので、
+\begin{bkhenkei}[0.5]
+\tau\cdot j\omega Ke^{j\omega t}+Ke^{j\omega t}=e^{j\omega t} & 式に入れる \\
+K(1+j\omega\tau)=1 & 両辺を $e^{j\omega t}$ でわる \\
+K=\frac{1}{1+j\omega\tau} & 両辺を $1+j\omega\tau$ でわる \\
+\end{bkhenkei}
+回る矢印は、この回路を通ると $\tfrac{1}{1+j\omega\tau}$ 倍になって出てきます。大きさは $\tfrac{1}{\sqrt{1+(\omega\tau)^2}}$ で、$\omega$ が大きい（速く回る）ほど小さくなります。だから、高い周波数ほど通りにくいのです。3-12 の折れ点 100\,Hz は、$\omega\tau=1$ になる所で、$\tau=\tfrac{1}{2\pi\times100}\approx\qty{1.592e-3}{s}$（1.592\,ms）です。
+
+\kixdhead{たくさんの矢印の和を入れると}
+この式は線形（5-18）なので、入れるものの和には、出てくるものの和が対応します。周期の波 $v_{\mathrm{in}}=\sum c_ne^{jn\omega_0t}$ を入れると、$n$ 番めの矢印は $\tfrac{1}{1+jn\omega_0\tau}$ 倍になります。
+\kixdframe[118mm]{\large $v_{\mathrm{out}}=\displaystyle\sum_{n=-\infty}^{\infty}\frac{c_n}{1+jn\omega_0\tau}\,e^{jn\omega_0t}$\\[3pt]\normalsize\sffamily 出てくる波の係数＝入れる波の係数×その周波数の倍率}
+$\cos$ と $\sin$ のままだと、成分ごとに大きさの変化と山のずれ（位相）を別々に計算しなければなりません。$c_n$ なら、複素数のかけ算1回で両方が出ます。この「その周波数の倍率」を、9-8 では $G(j\omega)$ と書き、周波数応答とよびます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixdworlds{時間の世界}{周波数の世界}{分ける}{たし合わせる}
+\begin{axis}[kixd wave, at={(0mm,0mm)}, xmin=0, xmax=40, ymin=-1.3, ymax=1.3, xtick={0,10,20,30,40}, ytick={-1,1}, xlabel={時間 $t$（ms）}, ylabel={電圧}]
+  \addplot[bkGray, line width=1.1pt, dash pattern=on 3pt off 1.5pt] coordinates {(0,1) (10,1) (10,-1) (20,-1) (20,1) (30,1) (30,-1) (40,-1)};
+  \addplot[kixdW, line width=1.4pt] coordinates {(0.00,-0.996) (0.25,-0.706) (0.50,-0.458) (0.75,-0.246) (1.00,-0.065) (1.25,0.090) (1.50,0.222) (1.75,0.335) (2.00,0.432) (2.25,0.514) (2.50,0.585) (2.75,0.645) (3.00,0.697) (3.25,0.741) (3.50,0.779) (3.75,0.811) (4.00,0.838) (4.25,0.862) (4.50,0.882) (4.75,0.899) (5.00,0.914) (5.25,0.926) (5.50,0.937) (5.75,0.946) (6.00,0.954) (6.25,0.961) (6.50,0.966) (6.75,0.971) (7.00,0.975) (7.25,0.979) (7.50,0.982) (7.75,0.985) (8.00,0.987) (8.25,0.989) (8.50,0.990) (8.75,0.992) (9.00,0.993) (9.25,0.994) (9.50,0.995) (9.75,0.996) (10.00,0.996) (10.25,0.706) (10.50,0.458) (10.75,0.246) (11.00,0.065) (11.25,-0.090) (11.50,-0.222) (11.75,-0.335) (12.00,-0.432) (12.25,-0.514) (12.50,-0.585) (12.75,-0.645) (13.00,-0.697) (13.25,-0.741) (13.50,-0.779) (13.75,-0.811) (14.00,-0.838) (14.25,-0.862) (14.50,-0.882) (14.75,-0.899) (15.00,-0.914) (15.25,-0.926) (15.50,-0.937) (15.75,-0.946) (16.00,-0.954) (16.25,-0.961) (16.50,-0.966) (16.75,-0.971) (17.00,-0.975) (17.25,-0.979) (17.50,-0.982) (17.75,-0.985) (18.00,-0.987) (18.25,-0.989) (18.50,-0.990) (18.75,-0.992) (19.00,-0.993) (19.25,-0.994) (19.50,-0.995) (19.75,-0.996) (20.00,-0.996) (20.25,-0.706) (20.50,-0.458) (20.75,-0.246) (21.00,-0.065) (21.25,0.090) (21.50,0.222) (21.75,0.335) (22.00,0.432) (22.25,0.514) (22.50,0.585) (22.75,0.645) (23.00,0.697) (23.25,0.741) (23.50,0.779) (23.75,0.811) (24.00,0.838) (24.25,0.862) (24.50,0.882) (24.75,0.899) (25.00,0.914) (25.25,0.926) (25.50,0.937) (25.75,0.946) (26.00,0.954) (26.25,0.961) (26.50,0.966) (26.75,0.971) (27.00,0.975) (27.25,0.979) (27.50,0.982) (27.75,0.985) (28.00,0.987) (28.25,0.989) (28.50,0.990) (28.75,0.992) (29.00,0.993) (29.25,0.994) (29.50,0.995) (29.75,0.996) (30.00,0.996) (30.25,0.706) (30.50,0.458) (30.75,0.246) (31.00,0.065) (31.25,-0.090) (31.50,-0.222) (31.75,-0.335) (32.00,-0.432) (32.25,-0.514) (32.50,-0.585) (32.75,-0.645) (33.00,-0.697) (33.25,-0.741) (33.50,-0.779) (33.75,-0.811) (34.00,-0.838) (34.25,-0.862) (34.50,-0.882) (34.75,-0.899) (35.00,-0.914) (35.25,-0.926) (35.50,-0.937) (35.75,-0.946) (36.00,-0.954) (36.25,-0.961) (36.50,-0.966) (36.75,-0.971) (37.00,-0.975) (37.25,-0.979) (37.50,-0.982) (37.75,-0.985) (38.00,-0.987) (38.25,-0.989) (38.50,-0.990) (38.75,-0.992) (39.00,-0.993) (39.25,-0.994) (39.50,-0.995) (39.75,-0.996) (40.00,-0.996)};
+\end{axis}
+\begin{axis}[kixd spec, at={(76mm,0mm)}, xmin=0, xmax=400, ymax=1.4, xtick={0,50,150,250,350}, ytick={0.5,1}, xlabel={周波数（Hz）}, ylabel={振幅}]
+  \addplot[ycomb, draw=bkGray!70, line width=3pt, no markers] coordinates {(43,1.273) (143,0.424) (243,0.255) (343,0.182)};
+  \addplot[kixd bar] coordinates {(57,1.139) (157,0.235) (257,0.095) (357,0.050)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{50\,Hz の方形波（高さ1）を、折れ点 100\,Hz のローパスフィルターに入れた。左（時間の世界）：灰色の破線が入れる波、青の実線が出てくる波。出てくる波は角が丸くなる。右（周波数の世界）：成分ごとの振幅。どの周波数でも、左の灰色の棒が入れる波、右のオレンジの棒が出てくる波。50\,Hz は 1.273 から 1.139 へ、150\,Hz は 0.424 から 0.235 へ、250\,Hz は 0.255 から 0.095 へ。高い成分ほど小さくなる（例題7）。}
+\label{bk:9-3:fig-rcout}
+\end{bkfigure}
+
+角の所の急な変化は、高い周波数の成分が作っていました（9-1 のギブズ現象のところで、角を作るには細かい $\sin$ がたくさん要った）。ローパスフィルターはその成分を小さくするので、出てくる波は角が丸くなります。時間の世界の「角が丸くなる」と、周波数の世界の「高い成分が小さくなる」は、同じことを2つの世界で見たものです。
+
+\bksubsection{9}{電力は、$|c_n|^2$ の和}
+
+\label{bk:9-3:denryoku}9-2 では、波の2乗の平均（電力に比例する量）が、成分ごとの2乗の平均の和になること（パーセバルの等式）を学びました。$c_n$ で書くと、さらに簡単な形になります。
+\kixdframe[110mm]{\Large $\dfrac{1}{T}\displaystyle\int_0^Tf(t)^2\,\dd t=\sum_{n=-\infty}^{\infty}|c_n|^2$}
+左辺は2乗の平均、右辺は「すべての矢印の長さの2乗」の和です。$n$ 番めの成分 $a_n\cos n\omega_0t+b_n\sin n\omega_0t$ の2乗の平均は $\frac{a_n^2+b_n^2}{2}$ でした（9-2）。いっぽう、$|c_n|^2+|c_{-n}|^2=2\times\tfrac{a_n^2+b_n^2}{4}=\tfrac{a_n^2+b_n^2}{2}$ で、同じです。両側スペクトルでは、1つの成分の電力を左右の2本の棒が半分ずつ受けもっているのです。
+
+\kixdhead{方形波で確かめる}
+高さ1の方形波の2乗はいつも1なので、左辺は1です。右辺は、$|c_n|^2=\tfrac{4}{n^2\pi^2}$（$n$ は奇数）を、正と負の $n$ の両方でたします。
+\kixdline{$2\times\dfrac{4}{\pi^2}\Bigl(1+\dfrac19+\dfrac1{25}+\cdots\Bigr)=\dfrac{8}{\pi^2}\times\dfrac{\pi^2}{8}=1$}
+（$1+\frac19+\frac1{25}+\cdots=\frac{\pi^2}{8}$ は 9-2 で求めた値。）左辺と右辺が一致しました。$n=\pm1$ の2本だけで $\tfrac{8}{\pi^2}\approx0.811$、つまり電力の約81\,\%が基本波にあります。
+
+\bksubsection{10}{輪の形の針金の熱を解く}
+
+\label{bk:9-3:wa}8-13 で学んだ熱方程式を、細い針金を丸めた\textbf{輪}で考えます。9-1 では、両はしを0\,℃に保った棒を解きました。輪には\textbf{はしがありません}。ぐるっと1周すると、もとの場所にもどります。針金のまわりは熱を通さない材料でおおい、熱は針金にそってだけ流れるとします。
+
+
+\kixdhead{輪の上の熱方程式}
+輪の上の場所を、角 $\theta$〔rad〕で表します。半径が $R$〔m〕なら、$\theta=0$ から測った針金にそった長さは $x=R\theta$ です（4-2 の弧の長さ）。だから、$x$ での微分は「$\theta$ で微分して $\frac1R$ をかける」ことで、2回微分すると $\frac{1}{R^2}$ がかかります。8-13 の熱方程式 $\partial T/\partial t=\alpha\,\partial^2T/\partial x^2$ は、次のようになります（$\alpha$〔m²/s〕は熱拡散率、$T$〔℃〕は温度。周期は使わないので、$T$ は温度の文字です）。
+\kixdline{$\dfrac{\partial T}{\partial t}=\dfrac{\alpha}{R^2}\,\dfrac{\partial^2T}{\partial\theta^2}$}
+
+\kixdhead{はしがない＝周期 $2\pi$}
+$\theta$ と $\theta+2\pi$ は同じ場所なので、温度は $\theta$ について周期 $2\pi$ の関数です。だから、どの時刻でも、複素フーリエ級数で書けます。係数は時刻によって変わるので、$c_n(t)$ と書きます。
+\kixdline{$T(\theta,\ t)=\displaystyle\sum_{n=-\infty}^{\infty}c_n(t)\,e^{jn\theta}$}
+9-1⑧の棒では、両はしが0\,℃なので、はしで0になる $\sin\frac{n\pi x}{L}$ だけを使いました（9-2⑩の半区間の展開）。輪にははしがないので、$\cos$ も $\sin$ も必要で、両方をまとめて書ける $e^{jn\theta}$ がぴったりです。$e^{jn\theta}$ は、$\theta$ が $2\pi$ ふえると $n$ 周してもとにもどる矢印なので、輪の「1周するともどる」という性質を、はじめからもっています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, baseline={(0,-4mm)}]
+  \draw[bkRed, line width=3.2pt] (0:15) arc (0:180:15);
+  \draw[bkBlue, line width=3.2pt, dash pattern=on 4pt off 1.6pt] (180:15) arc (180:360:15);
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=1.8mm]}] (0,0) -- (40:14.2);
+  \draw[bkInk, line width=0.5pt] (0,0) -- (15,0);
+  \draw[bkInk, line width=0.5pt] (6,0) arc (0:40:6);
+  \node[font=\footnotesize] at (20:8.6) {$\theta$};
+  \node[font=\footnotesize, anchor=south] at (0,17.5) {100\,℃（赤）};
+  \node[font=\footnotesize, anchor=north] at (0,-17.5) {0\,℃（青の点線）};
+  \node[font=\footnotesize, anchor=west] at (16.5,0) {$\theta=0$};
+  \node[font=\footnotesize, anchor=north] at (0,-23.5) {半径 $R=\qty{5}{cm}$};
+\end{tikzpicture}\hspace{5mm}%
+\begin{tikzpicture}
+  \begin{axis}[bkplot, scale only axis, width=66mm, height=40mm, xmin=0, xmax=360, ymin=0, ymax=110, xtick={90,180,270,360}, xticklabels={90°,180°,270°,360°}, ytick={25,50,75,100}, xlabel={$\theta$}, ylabel={℃}, yticklabel style={fill=white, inner sep=1pt}]
+    \addplot[bkInk!70, line width=1.1pt, dash pattern=on 1pt off 1.5pt] coordinates {(0,100) (180,100) (180,0) (360,0)};
+    \addplot[bkRed, line width=1.5pt] coordinates {(0,50.00) (7,55.79) (15,61.46) (22,66.87) (30,71.92) (37,76.51) (45,80.58) (52,84.08) (60,86.96) (68,89.20) (75,90.81) (82,91.77) (90,92.09) (97,91.77) (105,90.81) (112,89.20) (120,86.96) (127,84.08) (135,80.58) (142,76.51) (150,71.92) (158,66.87) (165,61.46) (172,55.79) (180,50.00) (188,44.21) (195,38.54) (202,33.13) (210,28.08) (217,23.49) (225,19.42) (232,15.92) (240,13.04) (247,10.80) (255,9.19) (262,8.23) (270,7.91) (278,8.23) (285,9.19) (292,10.80) (300,13.04) (307,15.92) (315,19.42) (322,23.49) (330,28.08) (338,33.13) (345,38.54) (352,44.21) (360,50.00)};
+    \addplot[bkOrange, line width=1.5pt, dash pattern=on 4pt off 1.5pt] coordinates {(0,50.00) (7,52.50) (15,54.96) (22,57.34) (30,59.59) (37,61.67) (45,63.56) (52,65.21) (60,66.61) (68,67.71) (75,68.52) (82,69.01) (90,69.17) (97,69.01) (105,68.52) (112,67.71) (120,66.61) (127,65.21) (135,63.56) (142,61.67) (150,59.59) (158,57.34) (165,54.96) (172,52.50) (180,50.00) (188,47.50) (195,45.04) (202,42.66) (210,40.41) (217,38.33) (225,36.44) (232,34.79) (240,33.39) (247,32.29) (255,31.48) (262,30.99) (270,30.83) (278,30.99) (285,31.48) (292,32.29) (300,33.39) (307,34.79) (315,36.44) (322,38.33) (330,40.41) (338,42.66) (345,45.04) (352,47.50) (360,50.00)};
+    \addplot[bkBlue, line width=1.5pt, dash pattern=on 1.2pt off 1.2pt] coordinates {(0,50.00) (7,50.75) (15,51.49) (22,52.21) (30,52.89) (37,53.52) (45,54.08) (52,54.58) (60,55.00) (68,55.34) (75,55.58) (82,55.73) (90,55.78) (97,55.73) (105,55.58) (112,55.34) (120,55.00) (127,54.58) (135,54.08) (142,53.52) (150,52.89) (158,52.21) (165,51.49) (172,50.75) (180,50.00) (188,49.25) (195,48.51) (202,47.79) (210,47.11) (217,46.48) (225,45.92) (232,45.42) (240,45.00) (247,44.66) (255,44.42) (262,44.27) (270,44.22) (278,44.27) (285,44.42) (292,44.66) (300,45.00) (307,45.42) (315,45.92) (322,46.48) (330,47.11) (338,47.79) (345,48.51) (352,49.25) (360,50.00)};
+  \end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：はじめに上半分が100\,℃、下半分が0\,℃の輪。場所は角 $\theta$ で表す。右：輪にそった温度。黒の細かい点線がはじめ、赤の実線が10秒後、オレンジの破線が30秒後、青の点線が60秒後。時間がたつと、でこぼこは $\sin\theta$ の形に近づきながら小さくなり、平均の50\,℃に近づく。}
+\label{bk:9-3:fig-wa}
+\end{bkfigure}
+
+\kixdhead{分けて解いて、たし直す}
+$e^{jn\theta}$ を $\theta$ で2回微分すると、$(jn)^2e^{jn\theta}=-n^2e^{jn\theta}$ です（6-10）。だから、$n$ 番めの項を熱方程式に入れると、次のようになります。
+\begin{bkhenkei}[0.56]
+\frac{\dd c_n}{\dd t}\,e^{jn\theta}=\frac{\alpha}{R^2}\,c_n\,(-n^2)\,e^{jn\theta} & $n$ 番めの項を入れる \\
+\frac{\dd c_n}{\dd t}=-\frac{\alpha n^2}{R^2}\,c_n & 両辺を $e^{jn\theta}$ でわる \\
+c_n(t)=c_n(0)\,e^{-\alpha n^2t/R^2} & 6-4 の「自分に比例してへる」式の答え \\
+\end{bkhenkei}
+場所の形 $e^{jn\theta}$ と、時間の変化 $c_n(t)$ に分かれました。これが 9-1 と同じ\textbf{変数分離}です。熱方程式は線形なので、項ごとの答えをたし直したものが、全体の答えです。
+\kixdframe[112mm]{\large $T(\theta,\ t)=\displaystyle\sum_{n=-\infty}^{\infty}c_n(0)\,e^{-\alpha n^2t/R^2}\,e^{jn\theta}$\\[3pt]\normalsize\sffamily はじめの温度の $c_n$ に、それぞれ $e^{-\alpha n^2t/R^2}$ をかける}
+
+\kixdhead{数を入れると}
+$R=\qty{0.05}{m}$（半径5\,cm）、$\alpha=\qty{1e-4}{m^2/s}$（8-13 の棒と同じ）なら、$\tfrac{\alpha}{R^2}=\tfrac{1\times10^{-4}}{0.0025}=0.04$\,/s です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item $n=\pm1$ の項は $e^{-0.04t}$ でへる。半分になるのは $\tfrac{\ln2}{0.04}\approx17.3$ 秒ごと。
+\item $n=\pm2$ は $e^{-0.16t}$、$n=\pm3$ は $e^{-0.36t}$。細かいでこぼこほど $n^2$ に比例して速く消える（8-13 と同じ）。
+\item $n=0$ の項 $c_0$ は、$e^{0}=1$ で、\textbf{いつまでも変わらない}。
+\end{itemize}
+$c_0$ は温度の平均です。輪からは熱が逃げないので、平均の温度は変わらず、最後は輪全体が平均の温度になります。両はしを0\,℃に保った 9-1 の棒では、はしから熱が逃げるので、まん中は9.47秒で50\,℃、10秒で47.45\,℃と下がり続け、最後は0\,℃になりました。ここが輪と棒のちがいです。図\ref{bk:9-3:fig-wa}の輪の温度の変わり方は、例題8で計算します。
+
+\begin{seikaku}
+\kixdbox{$c_{-n}=\overline{c_n}$ は、実数の波のとき}
+$c_{-n}=\overline{c_n}$ は、$f(t)$ が実数の値をとる波のときに成り立ちます。$c_n$ を求める式で $n$ を $-n$ にすると $e^{+jn\omega_0t}$ をかけることになり、$f$ が実数なら、これは $c_n$ の式の虚部の符号を変えたものだからです。量子力学の波動関数のように、もともと複素数の値をとる関数では、$c_{-n}$ と $c_n$ は関係がなく、両側のスペクトルは左右対称になりません。\par
+また、不連続な点（方形波の角）では、9-1 と同じく、級数は左右の値の平均に近づきます。$\sum_{n=-N}^{N}$ のように、正と負の $n$ を同じ所まで組にしてたせば、9-1 の和と同じものです。
+\end{seikaku}
+
+\begin{motto}[5]
+\kixdbox{量子力学の $e^{jkx}$}
+物理の量子力学（原-5）では、電子の状態を表す波動関数に $e^{jkx}$（専門書では $e^{ikx}$）の形がよく出てきます。$k$ は波数（8-13）で、$k>0$ なら右へ、$k<0$ なら左へ進む波を表します。音の波のように実数の波では、左回りと右回りの矢印がいつも組で出てきましたが、電子の波動関数では、片方だけの $e^{jkx}$ が「一方向に進む電子」を表し、意味をもちます。この章の負の周波数の考えは、そのまま「負の波数」として使われます。長さ $L$ の輪の上を回る電子の波動関数は、輪の熱と同じく $e^{j2\pi nx/L}$ の形になり、$n$ は整数にかぎられます。
+\end{motto}
+
+\begin{senmonsho}[複素フーリエ級数の専門書ふうの書き方]
+\begin{bkhonbun}
+周期 $2\pi$ の関数 $f$ に対し $\displaystyle\hat f(n)=\frac{1}{2\pi}\int_{-\pi}^{\pi}f(x)e^{-inx}\,dx$ とおくと，$\displaystyle f(x)\sim\sum_{n=-\infty}^{\infty}\hat f(n)e^{inx}$．$f$ が実数値ならば $\hat f(-n)=\overline{\hat f(n)}$．
+\end{bkhonbun}
+\bkyaku{$i$ はこの本の $j$（数学・物理の本は $i$、電気の本は $j$）。$\hat f(n)$（エフ・ハット・エヌ）はこの本の $c_n$。積分の区間は $-\pi$ から $\pi$ で、この本の「1周期ならどこからでもよい」の1つ。$\sim$ は「この級数を対応させる」という印で、どの点でも等しいとはかぎらない（角の点などがあるため）。「両側スペクトル」は two-sided spectrum、「片側スペクトル」は one-sided spectrum。}
+\begin{bkhonbun}
+ひずみ波交流 $\displaystyle i=I_0+\sum_{n=1}^{\infty}\sqrt2\,I_n\sin(n\omega t+\theta_n)$．$I_n$ は第 $n$ 調波の実効値．
+\end{bkhonbun}
+\bkyaku{電気の本の書き方。「ひずみ波」は $\sin$ の形からずれた（ひずんだ）波。「第 $n$ 調波」は $n$ 番めの成分（高調波）。$I_n$ は振幅を $\sqrt2$ でわった実効値（5-15）で、この本の $c_n$ とは $\sqrt2\,I_n=2|c_n|$ の関係。$\theta_n$ は $c_n$ の角から決まる山の位置。$I_0$ は平均（$c_0$）。}
+\end{senmonsho}
+
+\begin{kotoba}
+\small
+\bkword{複素フーリエ級数}{くり返す波を、回る矢印 $e^{jn\omega_0t}$ に $c_n$ をかけてたした形 $\sum c_ne^{jn\omega_0t}$ で表したもの。}
+\bkword{複素フーリエ係数}{$c_n=(a_n-jb_n)/2$。1周期で $e^{-jn\omega_0t}$ をかけて平均したもの。}
+\bkword{負の周波数}{右回りの矢印 $e^{-j\omega t}$ の角周波数 $-\omega$。マイナスは回る向きの印。}
+\bkword{両側スペクトル}{$|c_n|$ を、負の $n$ もふくめてならべた図。棒の高さは振幅の半分。}
+\bkword{片側スペクトル}{正の $n$ だけで、振幅 $2|c_n|$ をならべた図。}
+\end{kotoba}
+
+\begin{taisetsu}
+\kixdbox{$c_n$ の3つの段}
+\kixddan{1}\enspace 記号を読む：何に（$f$）・何をかけて（$e^{-jn\omega_0t}$。マイナス）・1周期で・$T$ でわる\par
+\kixddan{3}\enspace 直す前に：$\cos$・$\sin$・$e^{jn\omega_0t}$ の和で書いてある？　積やべき？　平均だけ？　周期は？\par
+\kixddan{2}\enspace 区間に分けて、$e$ の定積分（1次式は部分積分1回）\par
+\[ \kixdNt{c_n}=\kixdSt{1}{\frac{1}{T}\int_0^Tf(t)\,e^{-jn\omega_0t}\,\dd t} \]
+\kixdbox{場合分けの表9-2（$c_n$ の行のまとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,40mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kixdcase{J$'$} & $e^{jn\omega_0t}$ や $\cos$・$\sin$ の和で書いてある & $c_n=\frac{a_n-jb_n}{2}$、$c_{-n}=\overline{c_n}$ \\
+\kixdcase{A} & 積やべき & オイラーの公式で展開 \\
+\kixdcase{G} & 平均だけ & $c_0$＝面積÷$T$ \\
+\kixdcase{F} & 周期が $2\pi$ でない & $\omega_0=\frac{2\pi}{T}$ \\
+\kixdcase{J} & 区間ごとに一定・1次式 & $e$ の定積分（部分積分1回） \\
+\end{bktable}
+\kixdbox{使い方}
+回路や機械に周期の波を入れたら、出てくる $c_n$＝入れる $c_n$×その周波数の倍率。電力は $\sum|c_n|^2$。輪の熱は、$c_n$ に $e^{-\alpha n^2t/R^2}$ をかける。
+\end{taisetsu}
+
+
+
+
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、場合分けの表9-2（$c_n$ の行）のどの場合かを書きました。
+
+\kixdhead{例題を、流れ図でたどってみよう}
+例題1〜9を、図\ref{bk:9-3:fig-flow}の流れ図の上から順にたどると、次のようになります（書いていない問いは「いいえ」）。どれも、考え方の1行めの場合に着きます。じぶんでとこうも同じ道すじです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,32mm] X[l,m] Q[c,m,16mm]}, row{2-Z}={font=\small}, rowsep=0.8pt, colsep=3pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & 矢印の和を実数に & $f$ が $e^{jn\omega_0t}$ や $\cos$・$\sin$ の和で書いてある？ & \kixdcase{J$'$} \\
+2 & $a_n$・$b_n$ から $c_n$ & $f$ が $e^{jn\omega_0t}$ や $\cos$・$\sin$ の和で書いてある？ & \kixdcase{J$'$} \\
+3 & $\sin^3t$ & $\sin$・$\cos$ の積やべき？ & \kixdcase{A} \\
+4 & 整流した波の平均 & 平均 $c_0$ だけほしい？ & \kixdcase{G} \\
+5 & 0と2の方形波 & 区間ごとに一定・1次式？ & \kixdcase{J} \\
+6 & のこぎり波 & 区間ごとに一定・1次式？ & \kixdcase{J} \\
+7 & 50\,Hz の方形波と回路 & 周期が $2\pi$ でない？ → 区間ごとに一定・1次式？ & \kixdcase{F}\kixdcase{J} \\
+8 & 輪の熱 & 区間ごとに一定・1次式？ & \kixdcase{J} \\
+9 & 電力の割合 & $f$ が $e^{jn\omega_0t}$ や $\cos$・$\sin$ の和で書いてある？ & \kixdcase{J$'$} \\
+\end{bktable}
+\bktabcaption{例題1〜9の流れ図の道すじ。}
+\end{bkcenter}
+
+\bkkigocards{\bkkigocard{$c_n$}{シー・エヌ}{複素フーリエ係数。1周期で $e^{-jn\omega_0t}$ をかけて平均した値。$\frac{a_n-jb_n}{2}$}{complex Fourier coefficient}{9-3}}
+{\bkkigocard{$e^{jn\omega_0t}$}{イー・ジェイ・エヌ・オメガ・ゼロ・ティー}{$n$ 番めの回る矢印。$n>0$ は左回り、$n<0$ は右回り（負の周波数）}{complex exponential}{9-3}}
+
+
+\begin{reidai}[回る矢印の和を、実数の式にする]
+次の式を、$\cos$ と $\sin$ だけの実数の式にしましょう。\par
+\kixdline{（1）\ $2e^{j3t}+2e^{-j3t}$\qquad（2）\ $(1-2j)e^{jt}+(1+2j)e^{-jt}$}
+\kangaekata \kixdbaai{$e^{jn\omega_0t}$ の和で書いてある}{9-2}{J$'$}\par
+\kixddan{1}\enspace 名前は $c_n$ だが、ここでは積分しない。$c_n$ は式に見えている。\par
+\kixddan{3}\enspace $a_n=c_n+c_{-n}$、$b_n=j(c_n-c_{-n})$ を使う。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 （1）$c_3=c_{-3}=2$\par
+\kixdb $a_3=2+2=4$、$b_3=j(2-2)=0$\par
+\kixdb だから $4\cos3t$\par
+\kixda （2）$c_1=1-2j$、$c_{-1}=1+2j$（共役の組になっている）\par
+\kixdb $a_1=(1-2j)+(1+2j)=2$\par
+\kixdb $b_1=j\bigl((1-2j)-(1+2j)\bigr)=j\times(-4j)=-4j^2=4$\par
+\kixdb だから $2\cos t+4\sin t$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (-0.6,0) -- (3.2,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {実部};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,-2.4) -- (0,2.6) node[anchor=south, font=\footnotesize, inner sep=1pt] {虚部};
+  \draw[bkBlue, line width=1.3pt, -{Stealth[length=2mm]}] (0,0) -- (1,-2);
+  \draw[bkOrange!85!black, line width=1.3pt, dash pattern=on 3pt off 1.2pt, -{Stealth[length=2mm]}] (0,0) -- (1,2);
+  \draw[bkPurple!80!black, line width=1.8pt, -{Stealth[length=2.2mm]}] (0,0) -- (2,0);
+  \node[font=\footnotesize, anchor=west] at (1.1,-2) {$c_1=1-2j$};
+  \node[font=\footnotesize, anchor=west] at (1.1,2) {$c_{-1}=1+2j$};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=1pt] at (2.1,-0.25) {和 2};
+\end{tikzpicture}\hspace{4mm}{\footnotesize\begin{minipage}[b]{52mm}\raggedright （2）の $t=0$ の2本の矢印。共役の組は、横の軸について折り返した位置にあり、和は実数 $2=a_1$ になる。\end{minipage}}
+\par}\vspace{2pt}
+\kotae （1）$4\cos3t$\quad （2）$2\cos t+4\sin t$
+\end{reidai}
+
+\begin{jibun}
+次の式を、$\cos$ と $\sin$ だけの実数の式にしましょう。\par
+（1）$5e^{j2t}+5e^{-j2t}$\par
+（2）$(3+j)e^{jt}+(3-j)e^{-jt}$
+\bkjans{（1）\nobreak $a_2=10$、$b_2=0$ で $10\cos2t$。（2）\nobreak $a_1=6$、$b_1=j\bigl((3+j)-(3-j)\bigr)=j\times2j=-2$ で $6\cos t-2\sin t$。}
+\end{jibun}
+
+
+\begin{reidai}[$a_n$・$b_n$ から $c_n$ を求める]
+周期 $2\pi$ の波 $f(t)=1+2\cos t+4\sin2t$ の、0でない $c_n$ をすべて求め、両側スペクトルの棒の高さ $|c_n|$ を答えましょう。\par
+\kangaekata \kixdbaai{$\cos$・$\sin$ の和で書いてある}{9-2}{J$'$}\par
+\kixddan{1}\enspace 名前は $c_n$ だが、ここでは積分しない。\par
+\kixddan{3}\enspace $\frac{a_0}{2}=1$、$a_1=2$、$b_2=4$。ほかは0。$c_n=\frac{a_n-jb_n}{2}$、$c_{-n}=\overline{c_n}$。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $c_0=\dfrac{a_0}{2}=1$\par
+\kixda $c_1=\dfrac{2-j\times0}{2}=1$、\quad $c_{-1}=\overline{1}=1$\par
+\kixda $c_2=\dfrac{0-j\times4}{2}=-2j$、\quad $c_{-2}=\overline{-2j}=2j$\par
+\kixda 高さ：$|c_0|=1$、$|c_{\pm1}|=1$、$|c_{\pm2}|=|\mp2j|=2$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (-30,0) -- (32,0) node[anchor=west, font=\footnotesize, inner sep=1pt] {$n$};
+  \foreach \kixdn/\kixdh in {-2/14,-1/7,0/7,1/7,2/14} {\draw[bkBlue, line width=1.5pt] ({11*\kixdn},0) -- ({11*\kixdn},\kixdh); \fill[bkBlue] ({11*\kixdn},\kixdh) circle (0.85); \node[font=\footnotesize, anchor=north] at ({11*\kixdn},-1.2) {$\kixdn$};}
+  \foreach \kixdn/\kixdh/\kixdl in {-2/14/2,-1/7/1,0/7/1,1/7/1,2/14/2} {\node[font=\footnotesize, anchor=south] at ({11*\kixdn+3},{\kixdh}) {\kixdl};}
+\end{tikzpicture}\hspace{4mm}{\footnotesize\begin{minipage}[b]{40mm}\raggedright 両側スペクトル $|c_n|$。左右対称になる。\end{minipage}}
+\par}\vspace{2pt}
+\kotae $c_0=1$、$c_{\pm1}=1$、$c_{\pm2}=\mp2j$。高さは $n=0$ で1、$n=\pm1$ で1、$n=\pm2$ で2
+\end{reidai}
+
+\begin{jibun}
+周期 $2\pi$ の波 $f(t)=3+4\cos2t-6\sin3t$ の、0でない $c_n$ をすべて求めましょう。
+\bkjans{$c_0=3$、$c_{\pm2}=2$、$c_3=\frac{0-j(-6)}{2}=3j$、$c_{-3}=-3j$。}
+\end{jibun}
+
+
+\begin{reidai}[$\sin$ のべきを、オイラーの公式で分ける]
+$f(t)=\sin^3t$ の $c_n$ を、積分しないで求めましょう。また、$a_n$・$b_n$ にもどして、$\sin^3t$ を $\sin t$ と $\sin3t$ の和で書きましょう。\par
+\kangaekata \kixdbaai{$\sin$ の3乗（べき）}{9-2}{A}\par
+\kixddan{1}\enspace 名前は $c_n$ だが、ここでは積分しない。\par
+\kixddan{3}\enspace $\sin t=\dfrac{e^{jt}-e^{-jt}}{2j}$ を3乗して展開し、$e^{jnt}$ の前の数を読む。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $(2j)^3=8j^3=-8j$\par
+\kixda $(e^{jt}-e^{-jt})^3=e^{j3t}-3e^{jt}+3e^{-jt}-e^{-j3t}$\par
+\kixdb （$(a-b)^3=a^3-3a^2b+3ab^2-b^3$ と、$e^{j2t}e^{-jt}=e^{jt}$）\par
+\kixda $\sin^3t=\dfrac{e^{j3t}-3e^{jt}+3e^{-jt}-e^{-j3t}}{-8j}$\par
+\kixda $\dfrac{1}{-8j}=\dfrac{j}{8}$（分母と分子に $j$ をかけ、$j^2=-1$）\par
+\kixda $c_3=\dfrac{j}{8}$、$c_1=-\dfrac{3j}{8}$、$c_{-1}=\dfrac{3j}{8}$、$c_{-3}=-\dfrac{j}{8}$\par
+\kixda $b_1=j(c_1-c_{-1})=j\times\Bigl(-\dfrac{6j}{8}\Bigr)=\dfrac{3}{4}$\par
+\kixda $b_3=j(c_3-c_{-3})=j\times\dfrac{2j}{8}=-\dfrac{1}{4}$\par
+\kotae $c_{\pm1}=\mp\dfrac{3j}{8}$、$c_{\pm3}=\pm\dfrac{j}{8}$。$\sin^3t=\dfrac34\sin t-\dfrac14\sin3t$
+\end{reidai}
+
+\begin{jibun}
+$f(t)=\cos^3t$ の $c_n$ を、積分しないで求めましょう。また、$\cos^3t$ を $\cos t$ と $\cos3t$ の和で書きましょう。
+\bkjans{$\cos t=\frac{e^{jt}+e^{-jt}}{2}$ を3乗：$\frac{e^{j3t}+3e^{jt}+3e^{-jt}+e^{-j3t}}{8}$。$c_{\pm1}=\frac38$、$c_{\pm3}=\frac18$。$a_1=\frac34$、$a_3=\frac14$ で $\cos^3t=\frac34\cos t+\frac14\cos3t$。}
+\end{jibun}
+
+
+\begin{reidai}[整流した電圧の平均 $c_0$]
+最大1の交流 $\sin t$ の、負の部分を0にした波（半波整流：$0<t<\pi$ で $\sin t$、$\pi<t<2\pi$ で0）があります。平均の値 $c_0$ を求めましょう。\par
+\kangaekata \kixdbaai{平均だけほしい}{9-2}{G}\par
+\kixddan{1}\enspace $c_0$：1周期で $e^{-j0t}=1$ をかけて平均、つまり、ただの平均。\par
+\kixddan{3}\enspace 平均＝1周期のグラフの面積÷周期。$\pi<t<2\pi$ の部分は0なので、山1つ分の面積だけ。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 山1つの面積 $\displaystyle\int_0^{\pi}\sin t\,\dd t=\Bigl[\,-\cos t\,\Bigr]_0^{\pi}=1-(-1)=2$（5-15）\par
+\kixda $c_0=\dfrac{2}{2\pi}=\dfrac{1}{\pi}\approx0.318$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixd base, width=74mm, height=20mm, xmin=0, xmax=13, ymin=0, ymax=1.2, xtick={3.1416,6.2832,9.4248,12.566}, xticklabels={$\pi$,$2\pi$,$3\pi$,$4\pi$}, ytick={1}, xlabel={$t$}, xticklabel style={fill=white, inner sep=1pt}]
+  \addplot[bkBlue, line width=1.5pt, domain=0:12.566, samples=200] {max(sin(deg(x)),0)};
+  \addplot[bkRed, line width=1.1pt, dash pattern=on 3pt off 1.5pt, domain=0:12.566] {0.3183};
+\end{axis}
+\end{tikzpicture}\hspace{3mm}{\footnotesize\begin{minipage}[b]{34mm}\raggedright 赤の破線が平均 $c_0=0.318$。山の面積を、1周期にならした高さ。\end{minipage}}
+\par}\vspace{2pt}
+\kotae $\dfrac{1}{\pi}\approx0.318$（最大の値の約32\,\%）
+\end{reidai}
+
+\begin{jibun}
+$\sin t$ の負の部分を正に折り返した波（全波整流 $|\sin t|$。周期は $\pi$ だが、周期 $2\pi$ と見てもよい）の平均 $c_0$ を求めましょう。
+\bkjans{山2つで面積 $2+2=4$。$c_0=\frac{4}{2\pi}=\frac{2}{\pi}\approx0.637$。}
+\end{jibun}
+
+
+\begin{reidai}[0と2の方形波の $c_n$]
+周期 $2\pi$ で、$0<t<\pi$ では $f=2$、$\pi<t<2\pi$ では $f=0$ の波の $c_n$ を求めましょう。\par
+\kangaekata \kixdbaai{区間ごとに一定}{9-2}{J}\par
+\kixddan{1}\enspace $c_n$：1周期で $f$ に $e^{-jnt}$ をかけて平均（$T=2\pi$、$\omega_0=1$）。\par
+\kixdnaosu{1}\enspace $f=0$ の区間は0なので、$0$ から $\pi$ までの積分だけ。$n=0$ は別に計算する。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $n=0$：$c_0=\dfrac{1}{2\pi}\displaystyle\int_0^{\pi}2\,\dd t=\dfrac{2\pi}{2\pi}=1$\par
+\kixda $n\neq0$：$c_n=\dfrac{1}{2\pi}\displaystyle\int_0^{\pi}2e^{-jnt}\,\dd t$\par
+\kixdb $=\dfrac{1}{\pi}\Bigl[\,\dfrac{e^{-jnt}}{-jn}\,\Bigr]_0^{\pi}$\par
+\kixdb $=\dfrac{1}{\pi}\cdot\dfrac{1-e^{-jn\pi}}{jn}=\dfrac{1-(-1)^n}{jn\pi}$\par
+\kixda $n$ が奇数：$\dfrac{2}{jn\pi}$。$n$ が偶数：0\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}
+\begin{axis}[kixd base, width=74mm, height=20mm, xmin=0, xmax=13, ymin=0, ymax=2.4, xtick={3.1416,6.2832,9.4248,12.566}, xticklabels={$\pi$,$2\pi$,$3\pi$,$4\pi$}, ytick={1,2}, xlabel={$t$}, xticklabel style={fill=white, inner sep=1pt}, yticklabel style={fill=white, inner sep=1pt}]
+  \addplot[bkBlue, line width=1.5pt] coordinates {(0,2) (3.1416,2) (3.1416,0) (6.2832,0) (6.2832,2) (9.4248,2) (9.4248,0) (12.566,0)};
+  \addplot[bkRed, line width=1.1pt, dash pattern=on 3pt off 1.5pt, domain=0:12.566] {1};
+\end{axis}
+\end{tikzpicture}\hspace{3mm}{\footnotesize\begin{minipage}[b]{34mm}\raggedright 赤の破線が $c_0=1$（平均）。高さ1の方形波（$\pm1$）を1だけ上げた形。\end{minipage}}
+\par}\vspace{2pt}
+\kotae $c_0=1$。$n$ が奇数なら $c_n=\dfrac{2}{jn\pi}$（$c_{\pm1}=\mp0.637j$）、偶数なら0
+\end{reidai}
+
+
+\begin{jibun}
+周期 $2\pi$ で、$0<t<\pi$ では $f=3$、$\pi<t<2\pi$ では $f=0$ の波の $c_n$ を求めましょう。
+\bkjans{$c_0=\frac{3\pi}{2\pi}=1.5$。$n\neq0$ では $c_n=\frac{3}{2\pi}\cdot\frac{1-(-1)^n}{jn}$ で、奇数なら $\frac{3}{jn\pi}$、偶数なら0。}
+\end{jibun}
+
+
+
+\begin{reidai}[のこぎり波の $c_n$：部分積分1回]
+周期 $2\pi$ で、$-\pi<t<\pi$ では $f(t)=t$ ののこぎり波の $c_n$（$n\neq0$）を求め、9-1 の $b_n=\tfrac{2(-1)^{n+1}}{n}$ と同じになるか確かめましょう。\par
+\kangaekata \kixdbaai{区間の中で1次式}{9-2}{J}\par
+\kixddan{1}\enspace $c_n$：1周期（$-\pi$ から $\pi$）で $t$ に $e^{-jnt}$ をかけて平均。\par
+\kixdnaosu{1}\enspace ⑦の $\int te^{at}\dd t=\Bigl(\dfrac{t}{a}-\dfrac{1}{a^2}\Bigr)e^{at}$ で、$a=-jn$。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $\dfrac{1}{a}=\dfrac{1}{-jn}=\dfrac{j}{n}$、\quad $\dfrac{1}{a^2}=\dfrac{1}{(-jn)^2}=-\dfrac{1}{n^2}$\par
+\kixda $\displaystyle\int_{-\pi}^{\pi}te^{-jnt}\,\dd t=\Bigl[\Bigl(\dfrac{jt}{n}+\dfrac{1}{n^2}\Bigr)e^{-jnt}\Bigr]_{-\pi}^{\pi}$\par
+\kixda $e^{-jn\pi}=e^{jn\pi}=(-1)^n$ なので\par
+\kixdb $=\Bigl(\dfrac{j\pi}{n}+\dfrac{1}{n^2}\Bigr)(-1)^n-\Bigl(-\dfrac{j\pi}{n}+\dfrac{1}{n^2}\Bigr)(-1)^n$\par
+\kixdb $=\dfrac{2j\pi}{n}(-1)^n$\par
+\kixda $c_n=\dfrac{1}{2\pi}\times\dfrac{2j\pi(-1)^n}{n}=\dfrac{j(-1)^n}{n}$\par
+\kixda 確かめ：$c_{-n}=\dfrac{j(-1)^{-n}}{-n}=-\dfrac{j(-1)^n}{n}$ なので\par
+\kixdb $b_n=j(c_n-c_{-n})=j\cdot\dfrac{2j(-1)^n}{n}=\dfrac{-2(-1)^n}{n}=\dfrac{2(-1)^{n+1}}{n}$\par
+\kotae $c_n=\dfrac{j(-1)^n}{n}$（$c_1=-j$、$c_2=0.5j$、$c_3=-0.333j$）。9-1 の $b_n$ と一致する
+\end{reidai}
+
+\begin{jibun}
+周期 $2\pi$ で、$-\pi<t<\pi$ では $f(t)=3t$ ののこぎり波の $c_n$（$n\neq0$）を求めましょう。
+\bkjans{例題6の3倍。$c_n=\frac{3j(-1)^n}{n}$（$c_1=-3j$、$c_2=1.5j$）。}
+\end{jibun}
+
+
+\begin{reidai}[50\,Hz の方形波をローパスフィルターに通す]
+高さ1の 50\,Hz の方形波（前の半周期が1、後ろの半周期が $-1$）の $c_n$ を求めましょう。次に、この波を、折れ点 100\,Hz のローパスフィルターに入れたとき、出てくる波の 50\,Hz と 150\,Hz の成分の振幅を求めましょう。\par
+\kangaekata \kixdbaai{周期 $0.02$\,s で、区間ごとに一定}{9-2}{F,J}\par
+\kixddan{1}\enspace $c_n$：1周期 $T$ で $f$ に $e^{-jn\omega_0t}$ をかけて平均。\par
+\kixddan{3}\enspace $T=\dfrac{1}{50}=0.02$\,s、$\omega_0=\dfrac{2\pi}{T}=100\pi$\,rad/s。\par
+\kixdnaosu{1}\enspace $\theta=\omega_0t$ と置く（5-16 の置換積分。$\dd t=\dd\theta/\omega_0$、$\theta$ は $0$ から $2\pi$ まで）。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $c_n=\dfrac{1}{T\omega_0}\displaystyle\int_0^{2\pi}f\,e^{-jn\theta}\,\dd\theta=\dfrac{1}{2\pi}\int_0^{2\pi}f\,e^{-jn\theta}\,\dd\theta$（$T\omega_0=2\pi$）\par
+\kixda 周期 $2\pi$ の方形波と同じなので、⑤から $c_n=\tfrac{2}{jn\pi}$（奇数）、偶数は0\par
+\kixda 倍率は $1/(1+jn\omega_0\tau)$、$n\omega_0\tau=n\times\tfrac{50}{100}=0.5n$\par
+\kixda 50\,Hz：倍率の大きさ $1/\sqrt{1.25}=0.894$、$1.273\times0.894=1.139$\par
+\kixda 150\,Hz：倍率の大きさ $1/\sqrt{3.25}=0.555$、$0.424\times0.555=0.235$\par
+\kotae $c_n=\dfrac{2}{jn\pi}$（奇数）。50\,Hz は約1.14、150\,Hz は約0.24（150\,Hz のほうが大きく減る）
+\end{reidai}
+
+\begin{jibun}
+高さ1の 25\,Hz の方形波を、同じフィルター（折れ点 100\,Hz）に入れたとき、出てくる波の 25\,Hz と 75\,Hz の成分の振幅を求めましょう。
+\bkjans{$n\omega_0\tau=0.25n$。25\,Hz：$\frac{1}{\sqrt{1+0.0625}}=0.970$ で、$1.273\times0.970=1.235$。75\,Hz：$\frac{1}{\sqrt{1+0.5625}}=0.8$ で、$0.424\times0.8=0.340$。}
+\end{jibun}
+
+
+\begin{reidai}[輪の熱]
+半径 \qty{5}{cm} の細い輪（熱拡散率 $\alpha=\qty{1e-4}{m^2/s}$、まわりは熱を通さない）の上半分（$0<\theta<\pi$）が100\,℃、下半分（$\pi<\theta<2\pi$）が0\,℃の状態から始めます。（1）はじめの温度の $c_n$ を求めましょう。（2）上半分のまん中（$\theta=\frac{\pi}{2}$）が60\,℃になるのは何秒後か、$n=\pm1$ の項だけで求めましょう。（3）十分に時間がたつと、輪は何℃になりますか。（4）$n=\pm1$ の項が半分になる時間を求めましょう。\par
+\kangaekata \kixdbaai{はじめの温度が区間ごとに一定}{9-2}{J}\par
+\kixddan{1}\enspace $c_n$：$\theta$ について1周期（$0$〜$2\pi$）で $e^{-jn\theta}$ をかけて平均。\par
+\kixdnaosu{1}\enspace 0\,℃の区間は0。$0$ から $\pi$ までの積分だけ（例題5の2を100にした形）。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 （1）$c_0=\dfrac{100\pi}{2\pi}=50$\par
+\kixdb $c_n=\dfrac{100}{2\pi}\cdot\dfrac{1-(-1)^n}{jn}$ で、奇数なら $\dfrac{100}{jn\pi}$、偶数なら0\par
+\kixda （2）$\dfrac{\alpha}{R^2}=\dfrac{1\times10^{-4}}{0.05^2}=0.04$\,/s\par
+\kixdb $n=\pm1$ の2つの項：$\dfrac{100}{j\pi}e^{-0.04t}e^{j\theta}+\dfrac{100}{-j\pi}e^{-0.04t}e^{-j\theta}$\par
+\kixdb $=\dfrac{100}{\pi}e^{-0.04t}\cdot\dfrac{e^{j\theta}-e^{-j\theta}}{j}=\dfrac{200}{\pi}e^{-0.04t}\sin\theta$\par
+\kixdb $\theta=\dfrac{\pi}{2}$ で：$50+63.66\,e^{-0.04t}=60$\par
+\kixdb $e^{-0.04t}=\dfrac{10}{63.66}=0.1571$\par
+\kixdb $t=\dfrac{\ln(63.66/10)}{0.04}=\dfrac{1.851}{0.04}\approx46.3$\par
+\kixda （3）$n\neq0$ の項はすべて0に近づき、$c_0=50$ だけが残る\par
+\kixda （4）$e^{-0.04t}=\dfrac12$ から $t=\dfrac{\ln2}{0.04}=\dfrac{0.693}{0.04}\approx17.3$\par
+\kotae （1）$c_0=50$、奇数で $c_n=\tfrac{100}{jn\pi}$、偶数で0　（2）約46秒後　（3）50\,℃　（4）約17秒
+\end{reidai}
+
+{\small （2）で $n=\pm3$ の項は $\tfrac{200}{3\pi}e^{-0.36t}$ で、46秒後には $10^{-6}$\,℃ほどしかありません。だから1項だけで十分です（すべての項をたした計算でも 46.3 秒）。}
+
+\begin{jibun}
+例題8と同じ輪とはじめの温度で、（1）上半分のまん中が70\,℃になるのは何秒後か、$n=\pm1$ の項だけで求めましょう。（2）$n=\pm3$ の項が半分になる時間を求めましょう。
+\bkjans{（1）$50+63.66e^{-0.04t}=70$、$e^{-0.04t}=\frac{20}{63.66}=0.3142$、$t=\frac{\ln3.183}{0.04}=\frac{1.158}{0.04}\approx29$ 秒後。（2）$n=\pm3$ の項は $e^{-0.04\times3^2t}=e^{-0.36t}$ でへるので、$t=\frac{\ln2}{0.36}\approx1.93$ 秒。}
+\end{jibun}
+
+
+
+\begin{reidai}[基本波にある電力の割合]
+高さ1の方形波は、⑤から $f(t)=\sum_{n\text{ は奇数}}\tfrac{2}{jn\pi}e^{jnt}$ と書けます。$n=\pm1$・$\pm3$・$\pm5$ の成分だけで、全体の電力（2乗の平均＝1）の何\,\%になるか求めましょう。\par
+\kangaekata \kixdbaai{$e^{jn\omega_0t}$ の和で書いてある}{9-2}{J$'$}\par
+\kixddan{1}\enspace 名前は $c_n$ だが、ここでは積分しない（$c_n$ は式に見えている）。\par
+\kixddan{3}\enspace ⑨の $\sum|c_n|^2$ を、正と負の $n$ の両方でたす。\par
+\shiki\kixds\hangindent=2.6\zw\hangafter=1 $|c_n|^2=\dfrac{4}{n^2\pi^2}$、\quad $\dfrac{4}{\pi^2}=0.4053$\par
+\kixda $n=\pm1$：$2\times0.4053=0.8106$\par
+\kixda $n=\pm3$：$2\times\dfrac{0.4053}{9}=0.0901$\par
+\kixda $n=\pm5$：$2\times\dfrac{0.4053}{25}=0.0324$\par
+\kixda 合計 $0.8106+0.0901+0.0324=0.9331$\par
+\par\vspace{2pt}{\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt] (0,0) -- (100,0);
+  \foreach \kixdx/\kixdl in {0/0,50/50,100/100} {\draw[bkInk, line width=0.5pt] (\kixdx,0) -- (\kixdx,-1.2); \node[font=\footnotesize, anchor=north] at (\kixdx,-1.5) {\kixdl\,\%};}
+  \fill[bkBlue] (0,2) rectangle (81.06,7);
+  \fill[bkOrange] (81.06,2) rectangle (90.07,7);
+  \fill[bkGreen] (90.07,2) rectangle (93.31,7);
+  \draw[bkInk, line width=0.6pt] (0,2) rectangle (100,7);
+  \node[font=\footnotesize, anchor=south] at (40,7.5) {$n=\pm1$：81.1\,\%};
+  \node[font=\footnotesize, anchor=south west] at (78,7.5) {$\pm3$：9.0\,\%、$\pm5$：3.2\,\%};
+\end{tikzpicture}
+\par}\vspace{2pt}
+\kotae 約93\,\%（5番めまでの成分で、電力の93\,\%）
+\end{reidai}
+
+\begin{jibun}
+例題9と同じ方形波 $f(t)=\sum_{n\text{ は奇数}}\tfrac{2}{jn\pi}e^{jnt}$ で、$n=\pm1$・$\pm3$ の成分だけで、全体の電力の何\,\%になるか求めましょう。
+\bkjans{$0.8106+0.0901=0.9007$ で、約90\,\%。}
+\end{jibun}
+
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 名前の式から、そのまま $c_n$ を読もうとする}
+\bkng{$c_n=\dfrac{1}{T}f(t)\,e^{-jn\omega_0t}$（$t$ が残る）}
+\bkok{1周期で積分して、$t$ の入らない数にする}
+\[ \kixdN{c_n}=\kixdS{\frac{1}{2\pi}\int_0^{\pi}2e^{-jnt}\,\dd t}=\frac{1-(-1)^n}{jn\pi} \]
+$c_n$ は「かけて、1周期で平均する」という操作の名前です。平均した結果は、$t$ によらない数です。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixdEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② $c_n$ に $\frac{2}{T}$ をつける}
+\raggedright\bkng{$c_n=\dfrac{2}{T}\displaystyle\int_0^Tf\,e^{-jn\omega_0t}\,\dd t$}
+\bkok{$c_n=\dfrac{1}{T}\displaystyle\int_0^Tf\,e^{-jn\omega_0t}\,\dd t$}
+$e^{jn\omega_0t}\times e^{-jn\omega_0t}=1$ で、平均は1。2倍はいりません（$a_n$・$b_n$ は $\frac{2}{T}$）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ 両側スペクトルの高さを振幅と読む}
+\raggedright\bkng{方形波の基本波の振幅は0.637}
+\bkok{振幅は $2|c_1|=1.273$}
+負の周波数の棒にも同じ高さがあり、2本で1つの波です。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begingroup\tcbset{equal height group=kixdEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{④ $e^{-jn\omega_0t}$ のマイナスを忘れる}
+\raggedright\bkng{$\dfrac{1}{T}\displaystyle\int_0^Tf\,e^{+jn\omega_0t}\,\dd t$ を $c_n$ とする}
+\bkok{かけるのは右回り $e^{-jn\omega_0t}$}
+マイナスを忘れると $c_{-n}$（共役）が出て、$\sin$ の成分の符号が逆になります。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ $c_{-n}$ を $-c_n$ にする}
+\raggedright\bkng{$c_1=1-2j$ なら $c_{-1}=-1+2j$}
+\bkok{$c_{-1}=\overline{c_1}=1+2j$}
+実数の波では、$c_{-n}$ は $c_n$ の共役（虚部だけ符号が変わる）です。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑥ $\frac{1}{j}=j$ としてしまう}
+\bkng{$\dfrac{1}{-8j}=-\dfrac{j}{8}$}
+\bkok{$\dfrac{1}{-8j}=\dfrac{j}{-8j^2}=\dfrac{j}{8}$}
+$\tfrac{1}{j}=-j$ です（$j\times(-j)=-j^2=1$ で確かめられる）。符号のまちがいは、$\sin$ の成分の向きを逆にします。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kixdbox{交流のフェーザは、$c_n$ の1本}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+6-10 で、50\,Hz の交流を回る矢印（フェーザ）で表しました。それは、$c_n$ のうちの $n=1$ の1本だけを見たものです。家の電気製品には、電流がきれいな $\sin$ の形でなく、ひずんだ形で流れるものがあります（電源の回路で、電流が短い時間に集まって流れるものなど）。そのような電流は、50\,Hz・150\,Hz・250\,Hz…の矢印の組 $c_n$ で表し、成分ごとにフェーザの計算をして、たし直します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.33\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (0,0) -- (40,0);
+  \draw[bkInk, line width=0.6pt] (0,-12) -- (0,13);
+  \draw[bkBlue, line width=1.3pt, domain=0:36, samples=120] plot (\x,{10*(sin(10*\x)+0.33*sin(30*\x)+0.2*sin(50*\x))*0.8});
+  \node[font=\footnotesize, anchor=north] at (20,-13) {ひずんだ電流};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixdbox{音のフィルターとイコライザー}
+スマホや音楽プレーヤーの音の調整（イコライザー）は、低い音・高い音の成分ごとに倍率を変えるしくみです。⑧のローパスフィルターのように、「成分ごとにかけ算」で考えます。周期の音なら $c_n$ に倍率をかけたものが、出てくる音の $c_n$ です。くり返さない音には、次の 9-4 のフーリエ変換を使います。
+\par\vspace{4pt}
+\kixdbox{たくさんの $\sin$ をたして音を作る}
+電子楽器の中には、いろいろな周波数の成分をたし合わせて音色を作るものがあります（加算合成とよばれる方法）。どの $n$ に、どんな大きさと角の $c_n$ を置くかを決めることが、音色を決めることになります。
+\end{butsuri}
+
+\begin{column}{フーリエと、輪の熱}
+フーリエは、1822年の本『熱の解析的理論』（6-3）の中で、熱が伝わるいろいろな形の物を調べました。その1つの章が「輪の中の熱の動き」です。はしのない輪では、温度は1周でもとにもどる形になり、それを三角関数の和で表して解きました。この章の⑩は、その問題を、オイラーの公式（6-10）を使った複素数の形で解き直したものです。同じ本の中で、フーリエは棒・球・円柱・立方体の熱も調べています。どれも「分けて解いて、たし直す」方法で、形に合った関数の和で温度を表しました。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $(2-j)e^{j2t}+(2+j)e^{-j2t}$ を、$\cos$ と $\sin$ だけの実数の式にしましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$a_2=4$、$b_2=j\bigl((2-j)-(2+j)\bigr)=j\times(-2j)=2$。$4\cos2t+2\sin2t$。}
+
+\bkproblem 周期 $2\pi$ の波 $f(t)=2-6\cos t+8\sin3t$ の、0でない $c_n$ をすべて求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$c_0=2$、$c_{\pm1}=-3$、$c_3=\frac{0-8j}{2}=-4j$、$c_{-3}=4j$。}
+
+\bkproblem $f(t)=\cos^2t$ の $c_n$ を、オイラーの公式を使って積分しないで求め、$\cos^2t$ を定数と $\cos2t$ の和で書きましょう\mbox{（\bkreidairef{3}）}。
+\bkpans{$\frac{(e^{jt}+e^{-jt})^2}{4}=\frac{e^{j2t}+2+e^{-j2t}}{4}$。$c_0=\frac12$、$c_{\pm2}=\frac14$。$\cos^2t=\frac12+\frac12\cos2t$。}
+
+\bkproblem 周期 $2\pi$ で、$0<t<\pi$ では $f=4$、$\pi<t<2\pi$ では $f=0$ の波の平均 $c_0$ と、$c_n$（$n\neq0$）を求めましょう\mbox{（\bkreidairef{4}・\bkreidairef{5}）}。
+\bkpans{$c_0=\frac{4\pi}{2\pi}=2$。$c_n=\frac{4}{2\pi}\cdot\frac{1-(-1)^n}{jn}$ で、奇数なら $\frac{4}{jn\pi}$、偶数なら0。}
+
+\bkproblem 半径 \qty{10}{cm} の輪（$\alpha=\qty{1e-4}{m^2/s}$）で、例題8と同じはじめの温度（上半分100\,℃、下半分0\,℃）から始めます。$n=\pm1$ の項が半分になる時間と、上半分のまん中が60\,℃になる時刻を、$n=\pm1$ の項だけで求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$\frac{\alpha}{R^2}=\frac{1\times10^{-4}}{0.01}=0.01$\,/s。半分になるのは $\frac{\ln2}{0.01}\approx69.3$ 秒。$50+63.66e^{-0.01t}=60$ から $t=\frac{1.851}{0.01}\approx185$ 秒後。半径が2倍で、4倍おそい。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 周期 $2\pi$ で、$-\pi<t<\pi$ では $f(t)=2t$ の波の $c_n$（$n\neq0$）を求め、$b_n$ にもどしましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{例題6の2倍で $c_n=\frac{2j(-1)^n}{n}$。$b_n=j(c_n-c_{-n})=\frac{4(-1)^{n+1}}{n}$。}
+
+\bkproblem 高さ1の 100\,Hz の方形波を、折れ点 100\,Hz のローパスフィルターに入れたとき、出てくる波の 100\,Hz・300\,Hz・500\,Hz の成分の振幅を求めましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$n\omega_0\tau=n$。100\,Hz：$\frac{1}{\sqrt2}=0.707$ で $1.273\times0.707=0.900$。300\,Hz：$\frac{1}{\sqrt{10}}=0.316$ で $0.424\times0.316=0.134$。500\,Hz：$\frac{1}{\sqrt{26}}=0.196$ で $0.255\times0.196=0.050$。}
+
+\bkproblem 高さ1の方形波で、$n=\pm1$ の成分だけで全体の電力の何\,\%になるか求めましょう。また、残りの電力は、どの成分にありますか\mbox{（\bkreidairef{9}）}。
+\bkpans{$2\times\frac{4}{\pi^2}=0.811$ で約81\,\%。残りの約19\,\%は、$n=\pm3$、$\pm5$、…の高調波にある。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 反対向きに回る2本の矢印をたすと $\cos$ の波になることを作図で確かめ、「負の周波数」の意味を言える。\bkfurref{bk:9-3:ya}
+\item $a_n$・$b_n$ から複素フーリエ係数 $c_n=\frac{a_n-jb_n}{2}$ を求め、両側のスペクトルを読める。\bkfurref{bk:9-3:kaki}
+\item 場合分けの表を使って $c_n$ を $e$ の定積分で求め、回路に入れた周期の波や、輪の形の針金の熱を計算できる。\bkfurref{bk:9-3:basho}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{回る矢印2本で $\cos$ になるって、6-10 の図がここで生きたね。次は、くり返さない音も周波数に分けるフーリエ変換だよ。}

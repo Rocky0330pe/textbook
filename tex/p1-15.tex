@@ -1,0 +1,1058 @@
+%% 第13回編集委員会（物理第1巻）　組 P1-8
+%% p1-15.tex　力-15　模型で本物を調べる：物体まわりの流れと相似則（★5・3段）
+%% 数値はすべて Python で計算した：scratchpad/phys1/力-15/c15.py・c15b.py・cdre.py（例題・表・グラフの点）
+%% 記号（計画書 C-1）：抗力 F_{\mathrm D}・揚力 F_{\mathrm L}、抗力係数 C_{\mathrm D}・揚力係数 C_{\mathrm L}、無次元数は立体（Re・Fr・St）、代表の長さ d または L。
+%%   空気の抵抗の係数は力-2 と同じ b（f＝bv）と c（f＝cv²）。圧力 p（運動量は使わない）。ベクトルは太字（数学 4-13 の約束）。
+%% 空気 20 ℃ 1 気圧：ρ＝1.2 kg/m³（巻末 1.204）、μ＝1.8×10⁻⁵ Pa·s（巻末 0.0181 mPa·s）、ν＝1.5×10⁻⁵ m²/s。水 ν＝1.0×10⁻⁶ m²/s。
+%% 力-2 例題12（霧つぶ 半径 10 μm、終端速度 1.2 cm/s）と同じ数値で、ストークスの抵抗の係数 6π の出どころを示す（組どうしの約束3）。
+%% 出典
+%%   ・雨つぶの落ちる速さ（直径 2.0 mm で 6.49 m/s、1.0 mm で 4.03 m/s）：R. Gunn & G. D. Kinzer, J. Meteor. 6, 243 (1949)
+%%     （「天気」1974 年 7 月号の表に引用されたものでも確かめた）
+%%   ・球の抗力係数の曲線（図）：F. A. Morrison (2013) の、実験値にあわせた式（Re＜10⁶）で計算した目安
+%%   ・形ごとの抗力係数（円板 約1.17、球 約0.47、流線形 約0.04）：S. F. Hoerner, Fluid-Dynamic Drag (1965)
+%%   ・円柱のうしろのうず（ストローハル数 約0.2、Re＝300〜2×10⁵）：流体力学の教科書の一般的な値
+%%   ・ナビエ・ストークス方程式の解の存在となめらかさ：Clay Mathematics Institute のミレニアム懸賞問題（2000 年）
+%%   ・コルモゴロフの理論（1941 年）
+%%   ・ストークスの抵抗（1851 年）、バッキンガムのΠ定理（1914 年）、プラントルの境界層（1904 年）、カルマン渦（1911 年）
+%%   ・ウィリアム・フルードの船の模型実験（1870 年代、イギリス）
+%%   ・ライト兄弟の風洞（1901 年、200 をこえる翼の形を試した）
+%%   ・乗用車の抗力係数 0.25〜0.35：自動車会社の公開資料の一般的な範囲（機種名は出さない）
+\makeatletter
+% 力-15 は pxp…
+% 段落の見出し（それだけで1行）
+\newcommand\pxphead[1]{\par\addvspace{5pt}\Needspace{6\baselineskip}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 横から見た車  \pxpcar{(左下)}{倍率}
+\newcommand\pxpcar[2]{\begin{scope}[shift={#1}, scale=#2]
+  \filldraw[fill=bkRed!55, draw=bkRed!70!black, line width=0.6pt, rounded corners=1.2mm]
+    (0,2) -- (0,7) -- (8,8) -- (14,12.5) -- (27,12.5) -- (34,8) -- (40,7) -- (40,2) -- cycle;
+  \fill[white!85!bkBlue] (15,8.6) -- (18,11.6) -- (25,11.6) -- (29,8.6) -- cycle;
+  \fill[bkInk!85] (9,2) circle (3.2) (31,2) circle (3.2);
+  \fill[bkLine] (9,2) circle (1.2) (31,2) circle (1.2);
+\end{scope}}
+% 飛行機（横から）  \pxpplane{(機首)}{倍率}
+\newcommand\pxpplane[2]{\begin{scope}[shift={#1}, scale=#2]
+  \filldraw[fill=white, draw=bkNavy, line width=0.7pt, rounded corners=1.5mm] (0,0) -- (4,2.2) -- (40,2.2) -- (48,7) -- (51,7) -- (48,0.8) -- (44,-1.2) -- (4,-1.2) -- cycle;
+  \filldraw[fill=bkNavy!25, draw=bkNavy, line width=0.6pt] (18,-0.2) -- (30,-0.2) -- (32,-1.0) -- (16,-1.0) -- cycle;
+  \foreach \x in {8,11,...,38} {\fill[bkNavy!50] (\x,0.9) circle (0.45);}
+\end{scope}}
+% 翼の断面  \pxpwing{(前のはし)}{長さ}{角度}
+\newcommand\pxpwing[3]{\begin{scope}[shift={#1}, rotate=-#3, scale=#2/40]
+  \filldraw[fill=bkGray!35, draw=bkInk, line width=0.8pt] (0,0) .. controls (0,3.6) and (9,5.2) .. (18,4.6) .. controls (28,3.8) and (36,1.4) .. (40,0)
+     .. controls (34,0.2) and (24,-0.4) .. (14,-0.9) .. controls (6,-1.3) and (0,-1.4) .. (0,0) -- cycle;
+\end{scope}}
+\makeatother
+\tikzset{pxp lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  pxp arr/.style={-{Stealth[length=4pt, width=3.5pt]}, line width=1.1pt},
+  pxp flow/.style={bkBlue!70, line width=0.7pt, -{Stealth[length=2.6pt]}}}
+
+\phchapter{15}{模型で本物を調べる：\\物体まわりの流れと相似則}{小さな模型の実験で、本物の飛行機にはたらく力がわかる？}{\bklevel{5}}{模型で本物を調べる：物体まわりの流れと相似則}
+\bkmichishirube{2-10,3-12,7-5,8-12,力-14}{力-16,熱-4,熱-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 単位（次元）をそろえて、物理の量の関係の形を見つけられる。
+\item \bklevel{4}\enspace 抗力係数と揚力係数を使って、車・ボール・飛行機にはたらく力を見積もれる。
+\item \bklevel{5}\enspace 無次元数をそろえて、模型の実験から本物にはたらく力を求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$F_{\mathrm D}=\dfrac{1}{2}C_{\mathrm D}\rho Av^2$（抗力）}{大学（工学部）}{ph:力-15:kouryoku}
+\phk{$F_{\mathrm L}=\dfrac{1}{2}C_{\mathrm L}\rho Av^2$（揚力）}{大学（工学部）}{ph:力-15:youryoku}
+\phk{$F=6\pi\mu rv$（ストークスの抵抗）}{大学（工学部）}{ph:力-15:stokes}
+\phk{$Q\propto nD^3$、$P\propto n^3D^5$（送風機の相似則）}{大学（工学部）}{ph:力-15:fan}
+\phkx{$f=bv$、$v_f=\dfrac{mg}{b}$（空気の抵抗と終端速度）}{高校物理基礎}{力-2 で導く}
+\phkx{$T=2\pi\sqrt{\dfrac{l}{g}}$（ふりこの周期）}{小学校理科・高校物理}{波-1 で導く}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.48\linewidth}\raggedright
+新しい飛行機を作るとき、いきなり本物を作って飛ばすことはしません。まず、本物の何十分の1かの模型を作り、\textbf{風洞}（ふうどう）というトンネルの中で風を当てて、模型にはたらく力をはかります。
+
+でも、模型は小さいので、はたらく力も小さくなります。模型ではかった力から、本物の飛行機にはたらく力が、本当にわかるのでしょうか。風の速さは、本物と同じにすればよいのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.49\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!6] (0,0) rectangle (62,30);
+  \draw[bkGray, line width=1pt] (0,0) -- (62,0) (0,30) -- (62,30);
+  \foreach \y in {5,10,...,25} {\draw[pxp flow] (2,\y) -- (12,\y);}
+  \pxpplane{(20,15)}{0.75}
+  \draw[bkGray, line width=1pt] (36,13.8) -- (36,0);
+  \filldraw[fill=bkGray!40, draw=bkGray] (30,-8) rectangle (42,0);
+  \node[pxp lab, anchor=north] at (36,-9) {力をはかる台};
+  \node[pxp lab, anchor=south] at (31,31) {風洞の中の模型};
+  \node[pxp lab, anchor=west] at (2,-4) {風};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 力-14 では、管の中の流れの損失を調べました。この章では、空気や水の中を動く物体（車・ボール・飛行機・電線）が流れから受ける力を調べます。この力は、流れのようすが複雑なので、式だけで計算するのはむずかしく、実験で決めることが多いのです。そこで、小さな模型の実験の結果を、本物にあてはめる方法、\textbf{相似則}（そうじそく）が大切になります。
+
+\begin{omoidasou}
+\bkrecall{2-10}{単位は、かけたりわったりして組み立てられる。1 N＝1 kg·m/s$^2$。式の両辺の単位は同じになる（単位のチェック）。}
+\bkrecall{4-3}{相似比 $k$ の2つの形では、長さは $k$ 倍、面積は $k^2$ 倍、体積は $k^3$ 倍。}
+\bkrecall{3-12}{両対数グラフでは、$y=ax^n$ が傾き $n$ の直線になる。}
+\bkrecall{7-5}{連立方程式 $A\vec{x}=\vec{b}$ は、逆行列で $\vec{x}=A^{-1}\vec{b}$ と解ける。}
+\bkrecall{力-14}{レイノルズ数 $\mathrm{Re}=\dfrac{vd}{\nu}$ は、慣性の力と粘性の力の比。}
+\bkrecall{力-2}{終端速度では、重力と空気の抵抗がつり合う（$mg=bv$ なら $v_f=\dfrac{mg}{b}$）。}
+\end{omoidasou}
+
+\begin{yattemiyou}[コーヒーのフィルターを落とす]
+\textbf{用意するもの}\par
+紙のコーヒーフィルター（同じもの4枚）、メジャー、スマホ（スロー動画）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item かべに\qty{1}{m}と\qty{2}{m}の高さの印をつける。
+\item フィルター1枚を、口を上にして\qty{2}{m}の高さから放し、下の\qty{1}{m}を通る時間を、スロー動画からはかる。
+\item 2枚重ね、4枚重ねでも同じようにはかる。形は同じで、重さだけが2倍、4倍になる。
+\end{enumerate}
+\par\vspace{3pt}
+ミナさんの結果です（下の\qty{1}{m}は、ほぼ一定の速さで落ちていた）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] *{3}{Q[c,m,wd=20mm]}}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+重ねた枚数（重さ） & 1枚 & 2枚 & 4枚 \\
+下の1 m を通る時間 & \qty{1.00}{s} & \qty{0.71}{s} & \qty{0.50}{s} \\
+落ちる速さ & \qty{1.0}{m/s} & \qty{1.4}{m/s} & \qty{2.0}{m/s} \\
+\end{bktable}
+\bktabcaption{重さを4倍にしても、速さは2倍にしかならない。}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent やってみようの答え：フィルターは、すぐに一定の速さ（終端速度）になりました。そのとき、空気の抵抗は重さとつり合っています。重さを4倍にすると、速さは2倍になりました。つまり、空気の抵抗は、速さを2倍にすると4倍になる、速さの2乗に比例する力です。力-2 の「速さに比例する抵抗 $bv$」なら、重さ4倍で速さも4倍になるはずでした。なぜ2乗になるのかは、④で単位（次元）から説明します。
+
+%% ======================================================================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{物体のまわりの流れを見る}{3}
+
+\bksubsection{1}{風洞と水そう：模型で調べる}
+\label{ph:力-15:sec1}風洞は、送風機で一様な風を作り、その中に模型を置いて、模型にはたらく力や、まわりの流れのようすを調べる装置です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 風洞（横から見た断面）
+  \draw[bkGray, line width=1pt] (0,30) -- (22,30) .. controls (36,30) and (36,20) .. (50,20) -- (100,20) -- (112,24) -- (124,26);
+  \draw[bkGray, line width=1pt] (0,-6) -- (22,-6) .. controls (36,-6) and (36,4) .. (50,4) -- (100,4) -- (112,0) -- (124,-2);
+  \foreach \x in {6,9,12} {\draw[bkGray, line width=0.5pt] (\x,-6) -- (\x,30);}
+  \node[pxp lab, anchor=south] at (9,31) {整流の網};
+  \node[pxp lab, anchor=south] at (36,31) {しぼる所};
+  \fill[bkBlue!6] (50,4) rectangle (100,20);
+  \foreach \y in {7,11,15,18} {\draw[pxp flow] (52,\y) -- (60,\y);}
+  \pxpcar{(63,6.8)}{0.7}
+  \draw[bkGray, line width=0.9pt] (77,6.4) -- (77,4);
+  \filldraw[fill=bkGray!40, draw=bkGray] (72,-6) rectangle (82,4);
+  \node[pxp lab, anchor=north] at (77,-7) {力をはかる台（天びん）};
+  \node[pxp lab, anchor=south] at (75,21) {模型を置く所};
+  % 送風機
+  \filldraw[fill=bkGray!25, draw=bkGray, line width=0.8pt] (113,12) ellipse (2.5 and 11);
+  \draw[bkInk, line width=1pt] (113,12) -- (113,21) (113,12) -- (113,3);
+  \node[pxp lab, anchor=north] at (116,-3) {送風機};
+  \draw[pxp arr, bkBlue!80!black] (-6,12) -- (3,12);
+  \node[pxp lab, anchor=south] at (-3,13) {空気};
+\end{tikzpicture}
+\bkfigcaption{風洞のしくみ（横から見た断面）。網で流れの乱れをとり、しぼって速くした一様な風を、模型に当てる}
+\label{ph:力-15:fig-fudo}
+\end{bkfigure}
+
+\noindent 本物の車や飛行機を作ってから調べるのは、お金も時間もかかり、危険なこともあります。模型なら、形を少しずつ変えて、何十回でも試せます。船の場合は、長い水そうの中で模型を引っぱって調べます。ビルや橋の模型に風を当てて、強い風でゆれないかを調べることもあります。
+
+問題は、はてな？のとおり、「模型の結果を、本物にどうあてはめるか」です。小さいからといって、力を単純に大きさの比でかけてもうまくいきません。この章の後半（⑦）で、その方法を作ります。
+
+\bksubsection{2}{物体のうしろにできる、うず}
+\label{ph:力-15:sec2}川の中の橋の柱（橋脚）のうしろを見ると、うずが左右かわるがわる流れていくことがあります。円い柱のまわりの流れは、流れの速さによって、次のように変わります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \row/\yy/\name in {0/0/{とてもおそい：前とうしろで同じ形}, 1/-28/{少し速い：うしろに2つのうずがとどまる}, 2/-56/{もっと速い：うずが左右かわるがわる流れていく（カルマン渦）}} {
+    \node[pxp lab, anchor=south west] at (0,\yy+12) {\name};
+  }
+  % 1段め
+  \begin{scope}[shift={(0,0)}]
+    \foreach \y in {-7,-3.5,3.5,7} {\draw[bkBlue!70, line width=0.7pt] plot[smooth, domain=0:110, samples=60] (\x,{\y*(1+ 5/((\x-55)^2/16+(\y)^2/4+1.2))});}
+    \draw[bkBlue!70, line width=0.7pt] (0,0) -- (49,0) (61,0) -- (110,0);
+    \filldraw[fill=bkGray!50, draw=bkInk, line width=0.7pt] (55,0) circle (5);
+  \end{scope}
+  % 2段め
+  \begin{scope}[shift={(0,-28)}]
+    \foreach \y in {-7,-3.5,3.5,7} {\draw[bkBlue!70, line width=0.7pt] plot[smooth, domain=0:110, samples=60] (\x,{\y*(1+ 5/((\x-58)^2/40+(\y)^2/4+1.2))});}
+    \draw[bkBlue!70, line width=0.7pt] (0,0) -- (49,0);
+    \filldraw[fill=bkGray!50, draw=bkInk, line width=0.7pt] (55,0) circle (5);
+    \draw[bkRed!80, line width=0.8pt, -{Stealth[length=2.5pt]}] (65.5,5.2) arc (90:-240:2.3);
+    \draw[bkRed!80, line width=0.8pt, -{Stealth[length=2.5pt]}] (65.5,-5.2) arc (-90:240:2.3);
+  \end{scope}
+  % 3段め
+  \begin{scope}[shift={(0,-56)}]
+    \foreach \y in {-7,7} {\draw[bkBlue!70, line width=0.7pt] plot[smooth, domain=0:110, samples=80] (\x,{\y + (\x>55 ? 1.6*sin((\x-55)*18) : 0) + \y*0.25*exp(-(\x-55)^2/30)});}
+    \draw[bkBlue!70, line width=0.7pt] (0,0) -- (49,0);
+    \filldraw[fill=bkGray!50, draw=bkInk, line width=0.7pt] (55,0) circle (5);
+    \foreach \x/\s in {66/1,76/-1,86/1,96/-1,106/1} {\draw[bkRed!80, line width=0.8pt] (\x,\s*2.6) circle (2.3);}
+  \end{scope}
+  \draw[pxp arr, bkBlue!80!black] (0,-70) -- (16,-70);
+  \node[pxp lab, anchor=west] at (17,-70) {流れ};
+\end{tikzpicture}
+\bkfigcaption{円い柱のまわりの流れ（線は流れにそった線。速くなるほど、うしろの流れが乱れていく）}
+\label{ph:力-15:fig-karman}
+\end{bkfigure}
+
+\noindent ゆっくりした流れでは、流れは柱にそって回りこみ、うしろで元どおりになります。速くなると、流れは柱の表面からはなれてしまいます。これを\textbf{はく離}といいます。はく離した流れは、柱のうしろでうずを作ります。さらに速くなると、うずが左右かわるがわる生まれては流れていきます。この、たがいちがいのうずの列を\textbf{カルマン渦}（かるまんうず）といいます（ハンガリー生まれのカルマンが1911年に説明した）。\bkidx{かるまんうず}{カルマン渦}
+
+\begin{phmijika}[電線のうなり、旗のはためき]
+強い風の日に、電線が「ヒューン」と鳴るのは、電線のうしろにできるカルマン渦のためです。うずが左右かわるがわるはなれるたびに、電線は左右に小さく押されて、ふるえて音を出します。旗がはためくのも、旗ざおのうしろのうずのためです。
+\end{phmijika}
+
+\noindent うずが1秒にはなれる回数 $f$（Hz）は、流れの速さ $v$ と柱の太さ $d$ で決まり、$\dfrac{fd}{v}$ がほぼ0.2になることが、実験でわかっています。この単位のない数 \mbox{$\mathrm{St}=\dfrac{fd}{v}$} を\textbf{ストローハル数}といいます。
+
+\begin{phbaisuru}{風の速さ $v$}
+うずのはなれる回数 $f=\dfrac{0.2v}{d}$ も2倍になり、音は1オクターブ高くなります。風が強くなると、電線の音が高くなるのはこのためです。
+\end{phbaisuru}
+
+\bksubsection{3}{形で変わる抵抗}
+\label{ph:力-15:sec3}前から見た面積が同じでも、形によって、空気から受ける抵抗はとてもちがいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\cd/\name in {0/1.17/{円板}, 1/0.47/{球}, 2/0.04/{流線形}} {
+    \begin{scope}[shift={(\k*42,0)}]
+      \fill[bkOrange!70] (8,0) rectangle (22,{\cd*30});
+      \node[pxp lab, anchor=south] at (15,{\cd*30+1}) {\cd};
+      \node[pxp lab, anchor=north] at (15,-14) {\name};
+    \end{scope}}
+  \draw[bkGray, line width=0.6pt] (0,0) -- (118,0);
+  % 形
+  \begin{scope}[shift={(15,-7)}]\fill[bkInk!70] (-0.8,-5) rectangle (0.8,5);\end{scope}
+  \begin{scope}[shift={(57,-7)}]\filldraw[fill=bkGray!50, draw=bkInk, line width=0.6pt] (0,0) circle (4.5);\end{scope}
+  \begin{scope}[shift={(99,-7)}]\filldraw[fill=bkGray!50, draw=bkInk, line width=0.6pt] (-6,0) .. controls (-6,4.5) and (-2,4.5) .. (2,3.6) .. controls (6,2.4) and (10,0.8) .. (13,0) .. controls (10,-0.8) and (6,-2.4) .. (2,-3.6) .. controls (-2,-4.5) and (-6,-4.5) .. (-6,0);\end{scope}
+  \draw[pxp arr, bkBlue!80!black] (-10,-7) -- (0,-7);
+  \node[pxp lab, anchor=south] at (-5,-6) {風};
+  \node[pxp lab, anchor=south west] at (0,44) {抗力係数 $C_{\mathrm D}$（前から見た面積あたり）};
+\end{tikzpicture}
+\bkfigcaption{同じ太さの円板・球・流線形の抵抗のくらべ（抗力係数。⑤で決める数）}
+\label{ph:力-15:fig-katachi}
+\end{bkfigure}
+
+\noindent 流線形の抵抗は、円板の約30分の1です。抵抗を決めているのは、前の形よりも、むしろ\textbf{うしろの形}です。円板では、ふちで流れがはがれて、うしろに大きなうずの領域ができます。そこは圧力が低く、物体はうしろへ引っぱられます。流線形は、うしろを細く長くして、流れがはがれないようにしているのです。魚やイルカ、新幹線の先頭の形が細長いのも、同じ理由です。
+
+%% ----------------------------------------------------------------------
+\phstage{te}{次元から式の形を見つける}{3}
+
+\bksubsection{4}{単位をそろえて、関係の形を決める：次元解析}
+\label{ph:力-15:sec4}式がわからなくても、「両辺の単位は同じ」（2-10）という決まりだけで、関係の形がわかることがあります。小学校で調べた「ふりこの周期」で、ためしてみましょう。
+
+\pxphead{手順1　何で決まりそうかを書き出す}
+ふりこの周期 $T$（s）は、糸の長さ $l$（m）、おもりの質量 $m$（kg）、重力加速度 $g$（m/s$^2$）で決まりそうです。そこで
+\[T=C\,l^{a}\,m^{b}\,g^{c}\]
+とおきます（$C$ は単位のない数）。$a$、$b$、$c$ を決めます。
+
+\pxphead{手順2　単位の表を作る}
+長さ（m）・質量（kg）・時間（s）の3つの基本の単位を、それぞれ何乗ずつふくむかを表にします。この「何乗ずつ」を\textbf{次元}といいます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{4}{Q[c,m,wd=17mm]}}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ & $T$（s） & $l$（m） & $m$（kg） & $g$（m/s$^2$） \\
+m（長さ）の何乗 & 0 & 1 & 0 & 1 \\
+kg（質量）の何乗 & 0 & 0 & 1 & 0 \\
+s（時間）の何乗 & 1 & 0 & 0 & $-2$ \\
+\end{bktable}
+\bktabcaption{ふりこの量の次元（$g$ の m/s$^2$ は m$^1$s$^{-2}$）}
+\end{bkcenter}
+
+\pxphead{手順3　m・kg・s のそれぞれで、両辺の指数をそろえる}
+右辺の $l^am^bg^c$ の単位は $\text{m}^a\,\text{kg}^b\,(\text{m}\,\text{s}^{-2})^c=\text{m}^{a+c}\,\text{kg}^{b}\,\text{s}^{-2c}$ です。左辺 $T$ の単位 s$^1$ と同じにするには
+\[\text{m}:\ a+c=0,\qquad\text{kg}:\ b=0,\qquad\text{s}:\ -2c=1\]
+これを解くと $c=-\dfrac{1}{2}$、$a=\dfrac{1}{2}$、$b=0$。よって
+\[T=C\,l^{\frac{1}{2}}g^{-\frac{1}{2}}=C\sqrt{\frac{l}{g}}\]
+
+\noindent おもりの質量 $m$ は、式に入りません（$b=0$）。小学校で調べた「ふりこの周期は、おもりの重さによらない」が、単位だけから出てきました。この方法を\textbf{次元解析}といいます。数 $C$ は次元解析では決まりません。$C=2\pi$ になることは、波-1 で運動方程式を解いて確かめます。\bkidx{じげんかいせき}{次元解析}
+
+\begin{phbaisuru}[4倍]{糸の長さ $l$}
+周期は $\sqrt4=2$ 倍。長さ\qty{1}{m}で約\qty{2}{s}のふりこは、\qty{4}{m}で約\qty{4}{s}です。
+\end{phbaisuru}
+
+\pxphead{空気の抵抗の形}
+次に、空気の中を速さ $v$ で動く、太さ $d$ の物体が受ける抵抗 $F$ を考えます。ねばりの効き方は後で考えることにして、まず $F$ が空気の密度 $\rho$、速さ $v$、太さ $d$ で決まるとします。
+\[F=C\,\rho^{a}\,v^{b}\,d^{c}\]
+単位は、$F$ が N＝kg·m·s$^{-2}$、$\rho$ が kg·m$^{-3}$、$v$ が m·s$^{-1}$、$d$ が m です。
+\[\text{kg}:\ a=1,\qquad\text{s}:\ -b=-2,\qquad\text{m}:\ -3a+b+c=1\]
+から $a=1$、$b=2$、$c=1+3-2=2$。つまり $F=C\rho v^2d^2$ です。$d^2$ は前から見た面積 $A$ に比例するので、ふつうは次の形に書きます。\label{ph:力-15:kouryoku}
+\pheq{F_{\mathrm D}=\frac{1}{2}C_{\mathrm D}\,\rho Av^2}{N ＝ kg/m$^3$ × m$^2$ × m$^2$/s$^2$}
+\noindent 流れから受ける、流れの向きの力を\textbf{抗力}（こうりょく）といい、$F_{\mathrm D}$ と書きます。単位のない数 $C_{\mathrm D}$ を\textbf{抗力係数}といいます。図\ref{ph:力-15:fig-katachi}の数は、この $C_{\mathrm D}$ です。\bkidx{こうりょくけいすう}{抗力係数}
+
+\begin{phyomi}[$F_{\mathrm D}=\dfrac{1}{2}C_{\mathrm D}\rho Av^2$]
+$\dfrac{1}{2}\rho v^2$ は、速さ $v$ の流れが止められたときに上がる圧力（力-13 の動圧）。それに前から見た面積 $A$ をかけたものが「流れをまともに止めたときの力」の目安で、$C_{\mathrm D}$ は「そのうちの何倍の力を受けるか」を表す。$\dfrac{1}{2}$ をつけるのは、動圧の形にそろえるためです。
+\end{phyomi}
+
+\begin{phmijika}[自転車と向かい風]
+自転車で走ると、速く走るほど、風が重くなります。時速\qty{15}{km}から\qty{30}{km}にすると、空気の抵抗は4倍です。プロの自転車選手が、体を低くかがめるのは、前から見た面積 $A$ と $C_{\mathrm D}$ を小さくするためです。
+\end{phmijika}
+
+\begin{phbaisuru}{速さ $v$}
+抗力は $2^2=4$ 倍。抵抗に逆らって進むのに要る仕事率（動力）は、力×速さ（力-4）なので $4\times2=8$ 倍になります。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=82mm, height=50mm, xmin=0, xmax=2.3, ymin=0, ymax=9, xtick={1,2}, ytick={0,2,4,6,8},
+  xlabel={速さ（倍）}, ylabel={倍}]
+  \addplot[bkcurve, domain=0:2.08] {x^2};
+  \addplot[bkcurve2, domain=0:2.08] {x^3};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(1,1) (2,4) (2,8)};
+  \node[pxp lab, anchor=west, text=bkBlue!80!black] at (axis cs:2.1,4) {抗力};
+  \node[pxp lab, anchor=west, text=bkOrange!80!black] at (axis cs:2.1,8) {動力};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+車が高速道路で燃料を多く使うのは、このためです（例題\ref{ph:力-15:ex6}）。
+\end{phbaisuru}
+
+\noindent やってみようのフィルターでは、終端速度で $mg=\dfrac{1}{2}C_{\mathrm D}\rho Av^2$ なので、$v=\sqrt{\dfrac{2mg}{C_{\mathrm D}\rho A}}$ です。形が同じなら $C_{\mathrm D}$ と $A$ は同じなので、$v$ は $\sqrt{m}$ に比例します。重さ4倍で速さ2倍、重さ2倍で速さ $\sqrt2\approx1.4$ 倍。やってみようの結果と合います。
+
+\bksubsection{5}{抗力係数のグラフを読んで、計算する}
+\label{ph:力-15:sec5}実は $C_{\mathrm D}$ は、いつも同じ数ではありません。④では空気のねばりを考えませんでしたが、ねばりの効き方は、力-14 のレイノルズ数 $\mathrm{Re}=\dfrac{vd}{\nu}$ で表されます。$C_{\mathrm D}$ は Re によって変わるのです（なぜ Re だけで決まるのかは⑥で）。なめらかな球の $C_{\mathrm D}$ を、実験で調べた結果が、次のグラフです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=124mm, height=74mm, xmin=-1, xmax=6, ymin=-1.35, ymax=2.45,
+  xtick={-1,0,1,2,3,4,5,6}, xticklabels={0.1,1,10,$10^2$,$10^3$,$10^4$,$10^5$,$10^6$},
+  ytick={-1,-0.699,-0.301,0,0.301,0.699,1,2}, yticklabels={0.1,0.2,0.5,1,2,5,10,100},
+  xlabel={Re}, ylabel={$C_{\mathrm D}$}, every axis x label/.style={at={(axis description cs:1,0)}, anchor=west, xshift=1.5mm, font=\sffamily\small}]
+  \fill[bkYellow!40] (axis cs:5.25,-1.35) rectangle (axis cs:5.6,-0.15);
+  \addplot[bkPurple, line width=1.0pt, dashed, domain=-1:1.6] {1.3802-x};
+  \addplot[bkBlue, line width=1.6pt, smooth] coordinates {(-1.00,2.3806) (-0.80,2.1809) (-0.60,1.9816) (-0.40,1.7830) (-0.20,1.5859) (0.00,1.3922) (0.20,1.2053) (0.40,1.0305) (0.60,0.8723) (0.80,0.7303) (1.00,0.5985) (1.20,0.4713) (1.40,0.3474) (1.60,0.2287) (1.80,0.1176) (2.00,0.0162) (2.20,-0.0739) (2.40,-0.1520) (2.60,-0.2180) (2.80,-0.2722) (3.00,-0.3154) (3.20,-0.3486) (3.40,-0.3731) (3.60,-0.3901) (3.80,-0.4008) (4.00,-0.4060) (4.20,-0.4067) (4.40,-0.4034) (4.60,-0.3963) (4.80,-0.3855) (5.00,-0.3709) (5.10,-0.3628) (5.20,-0.3584) (5.25,-0.3628) (5.30,-0.3804) (5.35,-0.4261) (5.40,-0.5203) (5.45,-0.6685) (5.50,-0.8361) (5.55,-0.9654) (5.60,-1.0299) (5.65,-1.0447) (5.70,-1.0340) (5.80,-0.9874) (5.95,-0.9112)};
+  \node[pxp lab, anchor=west, text=bkPurple!80!black] at (axis cs:0.75,1.25) {$C_{\mathrm D}=\dfrac{24}{\mathrm{Re}}$（ストークス。⑩）};
+  \node[pxp lab, anchor=south, text=bkInk] at (axis cs:5.42,-0.12) {抗力の危機};
+  \node[pxp lab, anchor=north, text=bkBlue!80!black] at (axis cs:3.9,-0.48) {0.4〜0.5 でほぼ一定};
+  \addplot[only marks, mark=*, mark size=2pt, bkRed] coordinates {(2.944,-0.301) (5.289,-0.375)};
+  \node[pxp lab, anchor=south west, text=bkRed!80!black] at (axis cs:2.98,-0.27) {雨つぶ};
+  \node[pxp lab, anchor=south east, text=bkRed!80!black] at (axis cs:5.2,-0.31) {野球のボール};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{なめらかな球の抗力係数と Re（両対数。実験の値にあわせた式で描いた目安）}
+\label{ph:力-15:fig-cdre}
+\end{bkfigure}
+
+\begin{phyomi}[$C_{\mathrm D}$ と Re のグラフ]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phYomi}●}]
+\item Re が1より小さい所（霧つぶ・花粉）：$C_{\mathrm D}=\dfrac{24}{\mathrm{Re}}$ の直線にのる。ねばりが主役で、抗力は速さに比例する（⑩）。
+\item Re が\num{1000}〜$2\times10^5$ の所（雨つぶ・ボール）：$C_{\mathrm D}$ は0.4〜0.5でほぼ一定。抗力は速さの2乗に比例する。
+\item Re が約$3\times10^5$ の所：$C_{\mathrm D}$ が急に5分の1くらいに下がる（抗力の危機。⑧）。
+\end{itemize}
+\end{phyomi}
+
+\noindent 力-2 で使った「速さに比例する抵抗 $f=bv$」は、Re が小さいときの形です。ふつうの大きさのボールや車のように Re が大きいときは、「速さの2乗に比例する抵抗 $f=cv^2$（$c=\dfrac{1}{2}C_{\mathrm D}\rho A$）」になります。どちらの形を使うかは、Re を計算して決めます。
+
+\pxphead{雨つぶの終端速度を、表計算で求める}
+直径\qty{2}{mm}の雨つぶの終端速度を求めます。終端速度では、$mg=\dfrac{1}{2}C_{\mathrm D}\rho Av^2$ です。球の $m=\rho_{\text{水}}\dfrac{\pi d^3}{6}$、$A=\dfrac{\pi d^2}{4}$ を入れて $v$ について解くと
+\[v=\sqrt{\frac{4\rho_{\text{水}}gd}{3\rho C_{\mathrm D}}}=\sqrt{\frac{21.8}{C_{\mathrm D}}}\quad\text{（}d=\qty{0.002}{m}\text{、}\rho=\qty{1.2}{kg/m^3}\text{）}\]
+ところが、$C_{\mathrm D}$ は Re で変わり、Re は $v$ で変わります。そこで、速さを仮に決めて → Re → グラフから $C_{\mathrm D}$ → 新しい速さ、をくり返します。
+
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & 仮の速さ（m/s） & Re & $C_{\mathrm D}$（グラフ） & 新しい速さ（m/s） \\
+2 & 6.00 & 800 & 0.51 & 6.53 \\
+3 & 6.53 & 871 & 0.50 & 6.60 \\
+4 & 6.60 & 880 & 0.50 & 6.60 \\}
+\bktabcaption{くり返すと、約\qty{6.6}{m/s}で変わらなくなる。B2 の式は \texttt{=A2*0.002/1.5E-5}、D2 は \texttt{=SQRT(21.8/C2)}}
+\end{bkcenter}
+
+\noindent 計算の答えは約\qty{6.6}{m/s}、観測された値は\qty{6.5}{m/s}（1949年の測定）です。本物の雨つぶは、落ちるときに少しつぶれて横に広がるので、球より少しおそくなります。
+
+\pxphead{終端速度になるまでを、プログラムで追う}
+雨つぶが落ちはじめてから終端速度になるまでを、オイラー法（6-2）で計算します。運動方程式は $m\dfrac{\dd v}{\dd t}=mg-cv^2$、$c=\dfrac{1}{2}C_{\mathrm D}\rho A$ です（$C_{\mathrm D}=0.5$ で一定とする）。
+\begin{phcode}
+import math
+g, d = 9.8, 0.002
+m = 1000*math.pi*d**3/6       \# 雨つぶの質量（kg）
+c = 0.5*0.5*1.2*math.pi*d**2/4 \# c = C\_D * rho * A / 2
+v, t, dt = 0.0, 0.0, 0.1
+for i in range(15):
+    v = v + (g - c/m*v*v)*dt
+    t = t + dt
+    if i \% 2 == 1: print(round(t, 1), round(v, 2))
+\end{phcode}
+\begin{phcodeout}
+0.2 1.94
+0.4 3.63
+0.6 4.88
+0.8 5.66
+1.0 6.11
+1.2 6.35
+1.4 6.48
+\end{phcodeout}
+はじめは自由落下と同じく0.1秒に約\qty{1}{m/s}ずつ速くなりますが、速くなるほど抵抗が大きくなって、ふえ方がにぶります。1.5秒くらいで、ほぼ終端速度の\qty{6.6}{m/s}に近づきます。雨つぶは、何百 m も落ちてくる間、ほとんどこの一定の速さで落ちているのです。
+
+\phkokomade
+
+%% ----------------------------------------------------------------------
+\phstage{shiki}{無次元数と流れの方程式}{5}
+
+\bksubsection{6}{量の数から、無次元数の数を決める：Π定理}
+\label{ph:力-15:sec6}④の空気の抵抗では、ねばり（粘度 $\mu$）を入れませんでした。$\mu$ も入れて、$F$ が $\rho$、$v$、$d$、$\mu$ で決まるとすると、単位を合わせる式は3つ（m・kg・s）なのに、指数は4つになり、1つに決まりません。どうすればよいでしょう。
+
+考え方は、「単位のない組み合わせ（\textbf{無次元数}）を作って、その間の関係を調べる」です。まず、$\rho$、$v$、$d$ の3つを「ものさし」に選びます。そして、$F$ と $\mu$ を、それぞれ $\rho^av^bd^c$ でわって、単位を消すことを考えます。
+
+\pxphead{指数を行列で求める}
+$\rho^av^bd^c$ の単位は $\text{kg}^a\,\text{m}^{-3a+b+c}\,\text{s}^{-b}$ です。これを、ある量の単位 $\text{kg}^{x}\,\text{m}^{y}\,\text{s}^{z}$ と等しくする条件は、3つの式の連立方程式です。行列で書くと
+\[\begin{pmatrix}1&0&0\\-3&1&1\\0&-1&0\end{pmatrix}\begin{pmatrix}a\\b\\c\end{pmatrix}=\begin{pmatrix}x\\y\\z\end{pmatrix}\qquad\text{（上から kg・m・s の行）}\]
+左の行列の行列式は1で0でないので、逆行列があり（7-4・7-5）
+\[\begin{pmatrix}a\\b\\c\end{pmatrix}=\begin{pmatrix}1&0&0\\0&0&-1\\3&1&1\end{pmatrix}\begin{pmatrix}x\\y\\z\end{pmatrix}\]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 力 $F$（kg·m·s$^{-2}$：$x=1$、$y=1$、$z=-2$）：$a=1$、$b=2$、$c=3+1-2=2$。$\dfrac{F}{\rho v^2d^2}$ は単位のない数。
+\item 粘度 $\mu$（Pa·s＝kg·m$^{-1}$·s$^{-1}$：$x=1$、$y=-1$、$z=-1$）：$a=1$、$b=1$、$c=3-1-1=1$。$\dfrac{\mu}{\rho vd}=\dfrac{1}{\mathrm{Re}}$。
+\end{itemize}
+こうして、5つの量（$F$、$\rho$、$v$、$d$、$\mu$）の関係は、2つの無次元数の関係にまとめられます。
+\[\frac{F}{\rho v^2d^2}=\varphi(\mathrm{Re})\qquad\text{つまり}\qquad C_{\mathrm D}=\varphi(\mathrm{Re})\]
+（$\varphi$ はファイ。何かの関数、という意味。4-15 の角とは別）。抗力係数は Re だけで決まる、ということです。⑤のグラフ1本で、どんな大きさの球にも、空気にも水にも使えるのは、このためです。
+
+一般に、量が $n$ 個、基本の単位が $k$ 個なら、無次元数は $n-k$ 個にまとめられます。これを\textbf{バッキンガムのΠ（パイ）定理}（1914年）といいます。
+
+\begin{phsaki}{Π定理の一般の形}
+「ものさし」に選ぶ量の組が、いつも3つの式で決まるとは限りません（たとえば、選んだ量の単位どうしが独立でないとき）。そのときに無次元数が何個できるかは、行列の「階数」という考えで決まります。大学の線形代数で学びます。
+\end{phsaki}
+
+\bksubsection{7}{相似則：模型と本物で、無次元数をそろえる}
+\label{ph:力-15:sec7}⑥から、次のことがわかります。
+
+\begin{taisetsu}
+形がにていて（\textbf{幾何学的相似}。4-3）、Re が同じなら、$C_{\mathrm D}=\dfrac{F}{\rho v^2d^2}$ も同じになる。だから、模型ではかった力から、本物の力を計算できる。
+\[F_{\text{本物}}=F_{\text{模型}}\times\frac{(\rho v^2d^2)_{\text{本物}}}{(\rho v^2d^2)_{\text{模型}}}\]
+\end{taisetsu}
+\noindent このように、無次元数をそろえて模型と本物を結びつける決まりを\textbf{相似則}といいます。\bkidx{そうじそく}{相似則}
+
+\pxphead{\bkhatenaref の答え}
+模型の実験から、本物の飛行機にはたらく力はわかります。ただし、条件があります。形を正しく縮めるだけでなく、レイノルズ数などの無次元数を本物と同じにそろえることです。風の速さを本物と同じにするのではありません。
+
+\pxphead{Re をそろえるのはたいへん}
+長さ10分の1の模型で Re $=\dfrac{vd}{\nu}$ をそろえるには、同じ空気なら、風の速さを10倍にしなければなりません。時速\qty{100}{km}の車なら、模型には時速\qty{1000}{km}の風が要ります。これは音の速さに近く、空気が縮んで、本物とはちがう流れになってしまいます。そこで、次のようなくふうをします。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 動粘度の小さい水を使う（水の $\nu$ は空気の約15分の1。例題\ref{ph:力-15:ex1}）。
+\item 空気に圧力をかけて密度を大きくした風洞を使う（$\nu=\dfrac{\mu}{\rho}$ が小さくなる）。
+\item $C_{\mathrm D}$ が Re によらずほぼ一定の範囲（⑤のグラフの平らな所）なら、Re が少しちがっても使える。角ばった形の車や建物は、この範囲が広い。
+\end{enumerate}
+
+\pxphead{船の模型：フルード数}
+水面を進む船は、水面に波を作ります。波を作るのは重力なので、重力の効き方を表す無次元数
+\pheq{\mathrm{Fr}=\frac{v}{\sqrt{gL}}}{1 ＝ $\dfrac{\text{m/s}}{\sqrt{\text{m/s}^2\times\text{m}}}$}
+\noindent （\textbf{フルード数}。$L$ は船の長さ）をそろえます。模型の長さが本物の $\dfrac{1}{k}$ なら、$\sqrt{L}$ は $\dfrac{1}{\sqrt k}$ 倍なので、模型の速さも本物の $\dfrac{1}{\sqrt k}$ 倍にします（例題\ref{ph:力-15:ex2}）。
+
+ところが、同じ水を使うと、Fr と Re を両方そろえることはできません。Fr をそろえると模型の速さは $\dfrac{1}{\sqrt k}$ 倍、Re をそろえると $k$ 倍が必要だからです。そこで、イギリスのフルード（1870年代）は、船の抵抗を「波を作る抵抗」と「水のねばりによる摩擦の抵抗」に分け、波の分は Fr をそろえた模型で、摩擦の分は板の実験から作った式で求める方法を考えました。この考え方は、今も船の設計で使われています。
+
+\begin{phmijika}[相似則で「わかること」]
+同じ形の大小2つのボールでも、Re がちがえば $C_{\mathrm D}$ がちがうことがあります。小さな模型の飛行機が、本物とまったく同じように飛ぶわけではないのは、このためです。おもちゃの紙飛行機と旅客機は、Re が1000倍以上ちがいます。
+\end{phmijika}
+
+\bksubsection{8}{境界層とはく離：抵抗の2つの正体}
+\label{ph:力-15:sec8}空気のねばりは小さいのに、なぜ物体は大きな抵抗を受けるのでしょう。1904年、ドイツのプラントルは、次のように考えました。
+
+物体の表面では、すべりなしの条件（力-14②）で流れの速さは0です。そこから少しはなれると、もう外の流れと同じ速さです。速さが0から外の速さまで変わる、表面のうすい層を\textbf{境界層}（きょうかいそう）といいます。ねばりが効くのは、この中だけです。\bkidx{きょうかいそう}{境界層}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (0,-2) rectangle (110,0);
+  \draw[bkRed, line width=1pt, domain=0:108, samples=60] plot (\x,{2.0*sqrt(\x)});
+  \foreach \x in {20,55,95} {
+    \pgfmathsetmacro\dl{2.0*sqrt(\x)}
+    \draw[bkGray, line width=0.4pt] (\x,0) -- (\x,24);
+    \foreach \y in {2,5,...,23} {\pgfmathsetmacro\uu{(\y<\dl) ? 9*(2*\y/\dl-(\y/\dl)^2) : 9}\draw[pxp flow] (\x,\y) -- (\x+\uu,\y);}
+  }
+  \node[pxp lab, anchor=west, text=bkRed!80!black] at (64,23.5) {境界層の外がわ};
+  \node[pxp lab, anchor=north] at (55,-3) {板（流れは左から右）};
+\end{tikzpicture}
+\bkfigcaption{板の上の境界層（たての向きを大きくして描いた）。下流ほど厚くなる}
+\label{ph:力-15:fig-kyokai}
+\end{bkfigure}
+
+\noindent なめらかな板の上の境界層の厚さ $\delta$（デルタ）は、層流なら、前のはしからの距離 $x$ と、そこまでのレイノルズ数 $\mathrm{Re}_x=\dfrac{vx}{\nu}$ を使って
+\[\delta\approx\frac{5x}{\sqrt{\mathrm{Re}_x}}\]
+になることがわかっています（ブラジウス、1908年。導き方は大学で）。風\qty{10}{m/s}で\qty{0.5}{m}進んでも、約\qty{4}{mm}しかありません（例題\ref{ph:力-15:ex10}）。
+
+物体が受ける抗力には、2つの正体があります。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{摩擦の抵抗}：境界層の中で、ねばりが表面を引きずる力。飛行機の胴体や、流線形の物ではこちらが主役。
+\item \textbf{圧力の抵抗}：境界層がはく離して、うしろにうずの領域ができ、うしろの圧力が下がって引っぱられる力。円板や球のような物ではこちらが主役。
+\end{enumerate}
+
+\pxphead{ゴルフボールのくぼみ：抗力の危機}
+球のまわりの境界層は、Re が小さいうちは層流で、球の前半ではく離してしまい、うしろに大きなうずができます。Re が約$3\times10^5$ をこえると、境界層が乱流に変わります。乱流の境界層は、外の速い流れを内がわへ混ぜこむので、表面にねばり強くはりつき、はく離が球のうしろのほうへ下がります。うしろのうずが小さくなるので、$C_{\mathrm D}$ が急に下がります。これが\textbf{抗力の危機}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (20,0) circle (8);
+    \fill[bkRed!15] (20,7.6) .. controls (34,11) and (48,10) .. (56,9) -- (56,-9) .. controls (48,-10) and (34,-11) .. (20,-7.6) arc (-90:90:7.6);
+    \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (20,0) circle (8);
+    \draw[bkBlue!70, line width=0.8pt] (0,9) .. controls (10,9) and (16,10.5) .. (20,8.2) .. controls (32,11) and (44,10.4) .. (56,10.4);
+    \draw[bkBlue!70, line width=0.8pt] (0,-9) .. controls (10,-9) and (16,-10.5) .. (20,-8.2) .. controls (32,-11) and (44,-10.4) .. (56,-10.4);
+    \draw[bkRed!80, line width=0.6pt] (32,4) circle (2.2) (40,-3.5) circle (2.4) (48,3) circle (2.2);
+    \node[pxp lab, anchor=north, text width=56mm, align=center] at (28,-13) {なめらかな球（Re が小さい）\\はく離が前で、うずが大きい};
+  \end{scope}
+  \begin{scope}[shift={(66,0)}]
+    \fill[bkRed!15] (24,5.5) .. controls (34,6) and (44,5.5) .. (54,5) -- (54,-5) .. controls (44,-5.5) and (34,-6) .. (24,-5.5) -- cycle;
+    \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (20,0) circle (8);
+    \foreach \a in {0,30,...,330} {\fill[bkGray!20] ($(20,0)+(\a:5)$) circle (0.9);}
+    \fill[bkGray!20] (20,0) circle (0.9);
+    \draw[bkBlue!70, line width=0.8pt] (0,9) .. controls (10,9) and (16,10.5) .. (20,8.2) .. controls (25,7.4) and (28,6.3) .. (34,6.3) -- (54,6.3);
+    \draw[bkBlue!70, line width=0.8pt] (0,-9) .. controls (10,-9) and (16,-10.5) .. (20,-8.2) .. controls (25,-7.4) and (28,-6.3) .. (34,-6.3) -- (54,-6.3);
+    \draw[bkRed!80, line width=0.6pt] (36,2) circle (1.6) (44,-2) circle (1.6);
+    \node[pxp lab, anchor=north, text width=56mm, align=center] at (28,-13) {くぼみのある球\\はく離がうしろで、うずが小さい};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{はく離の位置と、うしろのうずの領域（赤）。うずが小さいほど、圧力の抵抗が小さい}
+\label{ph:力-15:fig-golf}
+\end{bkfigure}
+
+\noindent ゴルフボールの表面のくぼみ（ディンプル）は、境界層をわざと早く乱流にして、もっと小さな Re（ゴルフボールの速さの範囲）で抗力の危機を起こさせるくふうです。くぼみのあるボールは、なめらかなボールの2倍くらい遠くまで飛ぶといわれます。
+
+\bksubsection{9}{揚力：翼は空気を下へ曲げる}
+\label{ph:力-15:sec9}飛行機の翼は、少し上を向けて（\textbf{迎え角}をつけて）空気の中を進みます。すると、翼の上と下を通った空気は、うしろで下向きに曲げられて流れ去ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \y/\aa in {-14/0.06,-8/0.30,8/0.78,13/0.37,18/0.11} {\draw[pxp flow] plot[smooth] coordinates {(0,\y) (20,{\y+1.5*\aa}) (45,{\y+2.5*\aa}) (70,{\y-4*\aa}) (100,{\y-10*\aa})};}
+  \pxpwing{(30,4)}{36}{8}
+  \draw[pxp arr, bkRed] (46,8) -- (46,26);
+  \node[pxp lab, anchor=west, text=bkRed!80!black] at (47,24) {揚力 $F_{\mathrm L}$};
+  \draw[pxp arr, bkOrange!80!black] (68,-0.5) -- (80,-0.5);
+  \node[pxp lab, anchor=north, text=bkOrange!80!black] at (75,-2) {抗力 $F_{\mathrm D}$};
+  \draw[pxp arr, bkPurple] (88,-17) -- (94,-24);
+  \node[pxp lab, anchor=west, text=bkPurple!80!black] at (95,-22) {空気を下へ};
+  \node[pxp lab, anchor=south west] at (8,20) {流れ};
+\end{tikzpicture}
+\bkfigcaption{迎え角のある翼のまわりの流れ。翼が空気を下へ押し曲げると、その反作用で翼は上へ押される}
+\label{ph:力-15:fig-yoku}
+\end{bkfigure}
+
+\noindent 翼は、空気に下向きの運動量を与えています（力-13⑧の運動量の法則）。その反作用で、翼は上向きの力を受けます。流れに垂直な向きの、この力を\textbf{揚力}（ようりょく）といいます。翼のまわりでは、上の面の圧力が下がり、下の面の圧力が上がっています。この圧力の差を翼の面積で合わせたものが揚力で、同じ力を「圧力」から見るか「運動量」から見るかのちがいです。
+
+揚力も、抗力と同じように次元解析で形が決まります。$A$ は、ここでは翼を上から見た面積（翼面積）です。\label{ph:力-15:youryoku}
+\pheq{F_{\mathrm L}=\frac{1}{2}C_{\mathrm L}\,\rho Av^2}{N ＝ kg/m$^3$ × m$^2$ × m$^2$/s$^2$}
+\noindent $C_{\mathrm L}$ を\textbf{揚力係数}といいます。
+
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=86mm, height=52mm, xmin=0, xmax=22, ymin=0, ymax=1.8, xtick={0,5,10,15,20}, ytick={0,0.5,1,1.5},
+  xlabel={迎え角（°）}, ylabel={$C_{\mathrm L}$}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkcurve, smooth] coordinates {(0,0.25) (4,0.68) (8,1.1) (12,1.42) (14,1.52) (15,1.53) (16,1.45) (18,1.15) (20,1.0)};
+  \node[pxp lab, anchor=south, fill=white] at (axis cs:15.5,1.58) {失速};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{翼の揚力係数と迎え角（ふつうの翼の形の目安）。角を大きくしすぎると、上の面で流れがはく離して、揚力が急に減る（失速）}
+\end{bkcenter}
+
+\begin{phbaisuru}{飛ぶ速さ $v$}
+揚力は4倍。反対に、着陸のように速さを半分にすると、揚力は4分の1になってしまいます。そこで、ゆっくり飛ぶときは、翼のうしろの板（フラップ）を出して、翼を大きく曲げ、$C_{\mathrm L}$ を大きくします（例題\ref{ph:力-15:ex9}）。
+\end{phbaisuru}
+
+\bksubsection{10}{流れの基本の方程式を読む：ナビエ・ストークス方程式}
+\label{ph:力-15:sec10}力-13 のベルヌーイの式、力-14 のハーゲン・ポアズイユの式、この章のストークスの抵抗は、すべて1つの方程式から出てきます。流れの中の小さな流体のかたまりに、運動方程式（質量×加速度＝力）をあてはめたものです。速度は向きをもつ量なので、ベクトル $\vec{v}$ で書きます。
+\[\rho\left(\frac{\partial\vec{v}}{\partial t}+(\vec{v}\cdot\nabla)\vec{v}\right)=-\nabla p+\mu\nabla^2\vec{v}+\rho\vec{g}\]
+これを\textbf{ナビエ・ストークス方程式}といいます（水は縮まないとした形。1820〜1840年代）。
+
+\begin{phyomi}[ナビエ・ストークス方程式]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phYomi}●}]
+\item 左辺：密度×加速度。かっこの中は、流れにのって動くかたまりの加速度（物質微分 $\dfrac{\mathrm{D}\vec{v}}{\mathrm{D}t}$。8-13）。$\dfrac{\partial\vec{v}}{\partial t}$ は「同じ場所で、時間とともに速さが変わる分」、$(\vec{v}\cdot\nabla)\vec{v}$ は「速さのちがう場所へ運ばれて、速さが変わる分」（ホースの細い所へ流れこむと速くなる、のような変化）。
+\item $-\nabla p$：圧力の高い所から低い所へ押す力（8-4 の勾配）。力-12 の静水圧の式 $\nabla p=\rho\vec{g}$ は、流れが止まっているときのこの式です。
+\item $\mu\nabla^2\vec{v}$：ねばりの力。ラプラシアン（8-12）は「まわりの平均との差」なので、ねばりは速さをまわりの平均にならそうとする。
+\item $\rho\vec{g}$：重力。
+\end{itemize}
+\end{phyomi}
+
+\pxphead{無次元にすると Re が出てくる}
+代表の速さ $U$、代表の長さ $L$ で、速さ・長さ・時間・圧力をはかり直します（$\vec{v}=U\vec{v}^*$、$x=Lx^*$、$t=\dfrac{L}{U}t^*$、$p=\rho U^2p^*$。$*$ のついた量は単位のない数）。両辺を $\dfrac{\rho U^2}{L}$ でわり、重力を除いて書くと
+\[\frac{\partial\vec{v}^*}{\partial t^*}+(\vec{v}^*\cdot\nabla^*)\vec{v}^*=-\nabla^*p^*+\frac{1}{\mathrm{Re}}\nabla^{*2}\vec{v}^*\qquad\left(\mathrm{Re}=\frac{\rho UL}{\mu}\right)\]
+残った数は Re だけです。だから、形がにていて Re が同じなら、方程式がまったく同じになり、同じ形の流れになります。これが⑦の相似則の、いちばん深い理由です。
+
+\begin{phflow}[ナビエ・ストークス方程式から]
+\phflowrow{ナビエ・ストークス\\方程式}{ねばりを無視\\（Re が大きい）}{オイラーの式}
+\phflowrow{オイラーの式}{定常・流線に\\そって積分}{ベルヌーイの式\\（力-13）}
+\phflowrow{ナビエ・ストークス\\方程式}{円い管の中の\\まっすぐな流れ}{ハーゲン・ポアズイユ\\の式（力-14）}
+\phflowrow{ナビエ・ストークス\\方程式}{Re がとても小さい\\（左辺を無視）}{$F=6\pi\mu rv$\\（ストークスの抵抗）}
+\end{phflow}
+
+\pxphead{ストークスの抵抗}
+Re がとても小さいとき（霧つぶ・花粉・小さな油のつぶ）は、左辺の加速度の項が、ねばりの項にくらべて小さくなります（$\dfrac{1}{\mathrm{Re}}$ が大きい）。すると、抗力に密度 $\rho$ は効かなくなり、$F$ は $\mu$、$v$、半径 $r$ だけで決まります。単位をそろえると（④と同じ方法）$F=C\mu rv$ の形になり、方程式を解くと $C=6\pi$ です。\label{ph:力-15:stokes}
+\pheq{F=6\pi\mu rv}{N ＝ Pa·s × m × m/s}
+\noindent これを\textbf{ストークスの抵抗}といいます（イギリスのストークス、1851年）。$C_{\mathrm D}=\dfrac{F}{\frac{1}{2}\rho v^2\pi r^2}=\dfrac{12\mu}{\rho vr}=\dfrac{24}{\mathrm{Re}}$（Re は直径で計算）で、⑤のグラフの左の直線です。力-2 の「速さに比例する抵抗 $f=bv$」の $b=6\pi\mu r$ の出どころです（例題\ref{ph:力-15:ex5}）。係数 $6\pi$ を導くには、球のまわりの流れを、ナビエ・ストークス方程式から解く必要があります。
+
+\begin{phsaki}{ストークスの式の導き方}
+Re の小さい流れ（ストークス流れ）の方程式を、球のまわりで解く方法は、大学の流体力学で学びます。そのとき、抗力の3分の2が摩擦の抵抗、3分の1が圧力の抵抗だとわかります。
+\end{phsaki}
+
+\begin{phmada}[ナビエ・ストークス方程式の、解けないなぞ]
+\phboxhead{100万ドルの問題}
+ナビエ・ストークス方程式は、約200年前に作られ、天気予報から飛行機の設計まで、毎日使われています。ところが、3次元の空間で、はじめになめらかだった流れが、いつまでもなめらかなまま続く解があるかどうかは、数学として証明されていません。アメリカのクレイ数学研究所は、2000年にこれを7つの「ミレニアム懸賞問題」の1つに選び、解いた人に100万ドルの賞金を出すとしています。
+\phboxhead{乱流の理論}
+乱流の中の、大きなうずから小さなうずへエネルギーが受けわたされるようすについて、ソ連のコルモゴロフは1941年に、小さなうずの統計的な性質を予想する理論を作りました。これは実験とよく合う部分がありますが、ずれる部分もあり、乱流全体を説明する一般の理論は、まだありません。
+\end{phmada}
+
+\bksubsection{11}{送風機とポンプの相似則}
+\label{ph:力-15:sec11}形のにた送風機（ファン）やポンプでも、相似則が使えます。羽根車の直径を $D$、1秒あたりの回転数を $n$ とすると、羽根の先の速さは $\pi nD$ で、流れの速さはこれに比例します。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 流量 $Q$＝速さ×面積なので $Q\propto nD\times D^2=nD^3$。
+\item 送風機が作る圧力の差は、動圧 $\rho v^2$ に比例するので $\Delta p\propto\rho n^2D^2$。
+\item 動力 $P$＝流量×圧力の差なので $P\propto nD^3\times\rho n^2D^2=\rho n^3D^5$。
+\end{itemize}\label{ph:力-15:fan}
+\pheq{\frac{Q_2}{Q_1}=\frac{n_2}{n_1}\left(\frac{D_2}{D_1}\right)^3,\qquad\frac{P_2}{P_1}=\left(\frac{n_2}{n_1}\right)^3\left(\frac{D_2}{D_1}\right)^5}{1 ＝ 1}
+
+\begin{phbaisuru}[0.8倍]{回転数 $n$（同じ送風機）}
+流量は0.8倍、動力は $0.8^3=0.512$ で約半分になります。風の量を少し減らすだけで、電気は大きく節約できます。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=80mm, height=50mm, xmin=0, xmax=1.15, ymin=0, ymax=1.15, xtick={0.2,0.4,0.6,0.8,1}, ytick={0.2,0.4,0.6,0.8,1},
+  xlabel={回転数（倍）}, ylabel={倍}, xticklabel style={/pgf/number format/fixed}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkcurve, domain=0:1.05] {x};
+  \addplot[bkcurve2, domain=0:1.05] {x^3};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(0.8,0.8) (0.8,0.512)};
+  \node[pxp lab, anchor=south east, text=bkBlue!80!black] at (axis cs:0.55,0.62) {流量};
+  \node[pxp lab, anchor=north west, text=bkOrange!80!black] at (axis cs:0.82,0.45) {動力};
+\end{axis}
+\end{tikzpicture}
+\end{bkcenter}
+\end{phbaisuru}
+
+\noindent ビルや工場の送風機・ポンプのモータの回転数を、インバータという装置で変えて流量を調整すると、弁で流れをしぼる（力-14⑤）よりずっと電気を節約できます。
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.0\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{次元解析}両辺の単位（m・kg・s の指数）をそろえて、関係の形を決める\\[3pt]
+\tsl{抗力・揚力}$F_{\mathrm D}=\dfrac{1}{2}C_{\mathrm D}\rho Av^2$、$F_{\mathrm L}=\dfrac{1}{2}C_{\mathrm L}\rho Av^2$\\[3pt]
+\tsl{Π定理}$n$ 個の量、$k$ 個の基本の単位 → $n-k$ 個の無次元数。$C_{\mathrm D}=\varphi(\mathrm{Re})$\\[3pt]
+\tsl{相似則}形をにせて、Re（船は Fr）をそろえれば、$C_{\mathrm D}$・$C_{\mathrm L}$ が同じ\\[3pt]
+\tsl{Re が小さい}ストークスの抵抗 $F=6\pi\mu rv$（$C_{\mathrm D}=\dfrac{24}{\mathrm{Re}}$）\\[3pt]
+\tsl{送風機}$Q\propto nD^3$、$P\propto n^3D^5$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{次元解析}{両辺の単位（次元）がそろうことから、物理の量の関係の形を決める方法。}
+\bkword{抗力・揚力}{流れの中の物体が受ける力のうち、流れの向きの成分と、流れに垂直な成分。}
+\bkword{抗力係数・揚力係数}{抗力・揚力を $\dfrac{1}{2}\rho Av^2$ でわった、単位のない数 $C_{\mathrm D}$・$C_{\mathrm L}$。}
+\bkword{相似則}{形をにせて無次元数をそろえ、模型の結果を本物にあてはめる決まり。}
+\bkword{境界層・はく離}{表面近くの、ねばりが効くうすい層と、それが表面からはがれること。}
+\bkword{カルマン渦}{物体のうしろに、左右かわるがわるできて流れていく、うずの列。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$C_{\mathrm D}$}{シー・ディー}{抗力係数。$\dfrac{F_{\mathrm D}}{\frac12\rho Av^2}$。単位なし。D は drag（抗力）}{drag coefficient}{力-15}}
+{\bkkigocard{Fr}{フルード数}{$\dfrac{v}{\sqrt{gL}}$。慣性と重力の比。船・波の相似で使う}{Froude number}{力-15}}
+
+%% ======================================================================
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{phreidai}[車の模型で Re をそろえる]\label{ph:力-15:ex1}
+長さ\qty{4.5}{m}の乗用車が時速\qty{100}{km}で走るときの空気の抵抗を、長さ10分の1の模型で調べます。（1）空気の風洞で Re をそろえるには、風の速さは何 m/s 必要ですか。（2）かわりに水の中で模型を動かして Re をそろえたところ、模型が受ける抗力は\qty{1130}{N}でした。本物の車が受ける抗力を求めましょう。空気は $\rho=\qty{1.2}{kg/m^3}$、$\nu=\qty{1.5e-5}{m^2/s}$、水は $\rho=\qty{1000}{kg/m^3}$、$\nu=\qty{1.0e-6}{m^2/s}$ とします。
+\phbamen
+車の形を決めるときの模型実験です。Re をそろえる方法と、模型の力を本物の力に直す方法を考えます。
+\phmushi
+模型は本物の形を正確に縮めたもの（幾何学的相似）。地面の影響やタイヤの回転は無視します。空気は縮まないとします。
+\phzu
+本物：$L_{\text{本}}=\qty{4.5}{m}$、$v_{\text{本}}=\dfrac{100}{3.6}=\qty{27.8}{m/s}$。模型：$L_{\text{模}}=\qty{0.45}{m}$、速さ $v_{\text{模}}$。
+\phriyu
+Re が同じなら $C_{\mathrm D}=\dfrac{F}{\rho v^2L^2}$ も同じ（⑦）。まず Re をそろえる速さを求め、次に $\rho v^2L^2$ の比で力を直します。
+\phtateru
+\[\frac{v_{\text{模}}L_{\text{模}}}{\nu_{\text{模}}}=\frac{v_{\text{本}}L_{\text{本}}}{\nu_{\text{本}}},\qquad F_{\text{本}}=F_{\text{模}}\times\frac{(\rho v^2L^2)_{\text{本}}}{(\rho v^2L^2)_{\text{模}}}\]
+\phtoku
+（1）\nobreak\ 空気どうしなら $\nu$ が同じなので、$v_{\text{模}}=27.8\times10=\qty{278}{m/s}$（時速約\qty{1000}{km}）\par
+（2）\nobreak\ 水なら
+\[v_{\text{模}}=27.8\times10\times\frac{1.0\times10^{-6}}{1.5\times10^{-5}}\approx\qty{18.5}{m/s}\]
+\[F_{\text{本}}=1130\times\frac{1.2\times27.8^2\times4.5^2}{1000\times18.5^2\times0.45^2}=1130\times\frac{\num{18800}}{\num{69300}}\approx\qty{306}{N}\]
+\phtashikame
+大きさ：（1）の\qty{278}{m/s}は音の速さ（約\qty{340}{m/s}）に近く、空気が縮むので使えない。水なら現実的な速さになる。\\
+別の見方で：$C_{\mathrm D}=\dfrac{306}{\frac12\times1.2\times2.2\times27.8^2}\approx0.30$（前から見た面積を\qty{2.2}{m^2}とした）で、乗用車の $C_{\mathrm D}$ として、ありそうな値です。
+\kotae （1）約\qty{278}{m/s}、（2）約\qty{306}{N}
+\end{phreidai}
+\begin{jibun}
+長さ\qty{2}{m}のオートバイが\qty{20}{m/s}で走るときの空気の流れを、長さ5分の1の模型で調べます。水の中で Re をそろえるには、模型を何 m/s で動かせばよいですか（空気と水の $\nu$ は例題と同じ）。
+\bkjans{$20\times5\times\dfrac{1.0\times10^{-6}}{1.5\times10^{-5}}\approx\qty{6.7}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[船の模型の速さ]\label{ph:力-15:ex2}
+長さ\qty{100}{m}の船が\qty{10}{m/s}で進むときの波のようすを、長さ25分の1の模型で調べます。模型を何 m/s で引けばよいですか。
+\phbamen
+船が作る波は、船の抵抗の大きな部分です。波の相似をそろえます。
+\phmushi
+水のねばりの効き方（Re）は、ここではそろえない（⑦。摩擦の分は別に計算する）。
+\phzu
+本物：$L=\qty{100}{m}$、$v=\qty{10}{m/s}$。模型：$L=\qty{4}{m}$、速さ $v_{\text{模}}$。
+\phriyu
+波を作るのは重力なので、フルード数 $\mathrm{Fr}=\dfrac{v}{\sqrt{gL}}$ をそろえます。
+\phtateru
+\[\frac{v_{\text{模}}}{\sqrt{g\times4}}=\frac{10}{\sqrt{g\times100}}\]
+\phtoku
+\[v_{\text{模}}=10\times\sqrt{\frac{4}{100}}=10\times\frac{1}{5}=\qty{2}{m/s}\]
+\phtashikame
+大きさ：模型は25分の1だが、速さは5分の1（$\sqrt{25}=5$）。Fr＝$\dfrac{10}{\sqrt{9.8\times100}}\approx0.32$ で、どちらも同じ。
+\kotae \qty{2}{m/s}
+\end{phreidai}
+\begin{jibun}
+長さ16分の1の船の模型で、\qty{8}{m/s}で進む本物の船の波を調べます。模型を何 m/s で引けばよいですか。
+\bkjans{$8\times\dfrac{1}{\sqrt{16}}=\qty{2}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[次元解析で、ふりこの周期の形を決める]\label{ph:力-15:ex3}
+ふりこの周期 $T$ が、糸の長さ $l$、おもりの質量 $m$、重力加速度 $g$ だけで決まるとして、$T=C\,l^am^bg^c$ の $a$、$b$、$c$ を求めましょう。また、長さを9倍にすると周期は何倍ですか。
+\phbamen
+式を知らなくても、単位だけで関係の形を決める練習です。
+\phmushi
+空気の抵抗、糸の重さ、ふれはばの効き方は考えない。
+\phzu
+$T$（s）、$l$（m）、$m$（kg）、$g$（m/s$^2$）、単位のない数 $C$。
+\phriyu
+両辺の m・kg・s の指数がそれぞれ等しい、という3つの式で、3つの指数が決まります（④）。
+\phtateru
+\[\text{m}:\ a+c=0,\qquad\text{kg}:\ b=0,\qquad\text{s}:\ -2c=1\]
+\phtoku
+$c=-\dfrac{1}{2}$、$a=\dfrac{1}{2}$、$b=0$。$T=C\sqrt{\dfrac{l}{g}}$。長さ9倍で $\sqrt9=3$ 倍。
+\phtashikame
+単位：$\sqrt{\dfrac{\text{m}}{\text{m/s}^2}}=\sqrt{\text{s}^2}=\text{s}$ で、時間の単位。おもりの質量によらないことは、小学校の実験と合う。
+\kotae $a=\dfrac{1}{2}$、$b=0$、$c=-\dfrac{1}{2}$。3倍
+\end{phreidai}
+\begin{jibun}
+物を高さ $h$ から落としたときの落ちる時間 $t$ が、$h$（m）、質量 $m$（kg）、$g$（m/s$^2$）で決まるとして、$t=C\,h^am^bg^c$ の $a$、$b$、$c$ を求めましょう。高さを4倍にすると、時間は何倍ですか。
+\bkjans{$a=\dfrac{1}{2}$、$b=0$、$c=-\dfrac{1}{2}$（$t=C\sqrt{\dfrac{h}{g}}$）。2倍}
+\end{jibun}
+
+\begin{phreidai}[雨つぶの終端速度]\label{ph:力-15:ex4}
+直径\qty{2}{mm}の雨つぶ（球とする）の終端速度を、図\ref{ph:力-15:fig-cdre}のグラフを使って求め、観測された値\qty{6.5}{m/s}とくらべましょう。
+\phbamen
+雨は、空の高い所から落ちてきますが、地面ではほぼ一定の速さになっています。その速さを予想します。
+\phmushi
+雨つぶは変形しない球、風はない。空気は $\rho=\qty{1.2}{kg/m^3}$、$\nu=\qty{1.5e-5}{m^2/s}$。浮力（空気の重さの分）は、水の約800分の1なので無視します。
+\phzu
+直径 $d$、質量 $m=\rho_{\text{水}}\dfrac{\pi d^3}{6}$、前から見た面積 $A=\dfrac{\pi d^2}{4}$、終端速度 $v$。
+\phriyu
+終端速度では、重力と抗力がつり合います。抗力は $\dfrac12C_{\mathrm D}\rho Av^2$ で、$C_{\mathrm D}$ は Re で決まるので、グラフを読みながらくり返して求めます（⑤）。
+\phtateru
+\[mg=\frac{1}{2}C_{\mathrm D}\rho Av^2\qquad\text{より}\qquad v=\sqrt{\frac{4\rho_{\text{水}}gd}{3\rho C_{\mathrm D}}}\]
+\phtoku
+\[\frac{4\times1000\times9.8\times0.002}{3\times1.2}\approx21.8,\qquad v=\sqrt{\frac{21.8}{C_{\mathrm D}}}\]
+仮に $v=\qty{6}{m/s}$ とすると $\mathrm{Re}=\dfrac{6\times0.002}{1.5\times10^{-5}}=800$。グラフから $C_{\mathrm D}\approx0.5$。
+\[v=\sqrt{\frac{21.8}{0.5}}\approx\qty{6.6}{m/s}\]
+$\mathrm{Re}=\dfrac{6.6\times0.002}{1.5\times10^{-5}}=880$ でも $C_{\mathrm D}\approx0.5$ で変わらないので、約\qty{6.6}{m/s}。
+\phtashikame
+大きさ：観測された\qty{6.5}{m/s}とほぼ同じ。本物の雨つぶは少しつぶれるので、少しおそい。\\
+確かめ：Re は\num{1000}くらいで、$C_{\mathrm D}$ が一定の範囲。速さの2乗に比例する抵抗の形を使ったのは正しい。
+\kotae 約\qty{6.6}{m/s}（観測は\qty{6.5}{m/s}）
+\end{phreidai}
+\begin{jibun}
+直径\qty{10}{mm}、密度\qty{900}{kg/m^3}のひょうのつぶ（球、$C_{\mathrm D}=0.5$ とする）の終端速度を求めましょう。
+\bkjans{$v=\sqrt{\dfrac{4\times900\times9.8\times0.01}{3\times1.2\times0.5}}=\sqrt{196}=\qty{14}{m/s}$}
+\end{jibun}
+
+\begin{phreidai}[霧つぶが落ちる速さ]\label{ph:力-15:ex5}
+半径\qty{10}{\micro\metre}の霧のつぶ（水の球）の終端速度を、ストークスの抵抗を使って求め、Re が十分小さいことを確かめましょう（$\mu=\qty{1.8e-5}{Pa.s}$）。
+\phbamen
+霧が、なかなか地面に落ちないわけを調べます（力-2 の例題12と同じつぶ）。
+\phmushi
+空気の浮力は無視。つぶは球。
+\phzu
+$r=\qty{1.0e-5}{m}$、$m=1000\times\dfrac43\pi r^3$、終端速度 $v$。
+\phriyu
+とても小さいつぶなので、Re が小さいと予想し、ストークスの抵抗（⑩）を使います。あとで Re を確かめます。
+\phtateru
+\[mg=6\pi\mu rv\qquad\text{より}\qquad v=\frac{mg}{6\pi\mu r}\]
+\phtoku
+\[m=1000\times\frac{4}{3}\times3.14\times(10^{-5})^3\approx\qty{4.19e-12}{kg}\]
+\[v=\frac{4.19\times10^{-12}\times9.8}{6\times3.14\times1.8\times10^{-5}\times10^{-5}}\approx\qty{0.012}{m/s}\]
+\phtashikame
+Re：$\dfrac{1.2\times0.012\times2\times10^{-5}}{1.8\times10^{-5}}\approx0.016$ で、1よりずっと小さいので、ストークスの抵抗でよい。\\
+大きさ：1秒に約\qty{1.2}{cm}。力-2 の例題12と同じ値です。
+\kotae 約\qty{1.2}{cm/s}
+\end{phreidai}
+\begin{jibun}
+半径\qty{5}{\micro\metre}の霧のつぶの終端速度は、半径\qty{10}{\micro\metre}のつぶの何倍ですか。また、何 cm/s ですか。
+\bkjans{$v\propto\dfrac{r^3}{r}=r^2$ なので $\dfrac14$ 倍。約\qty{0.30}{cm/s}}
+\end{jibun}
+
+\begin{phreidai}[車の空気抵抗と動力]\label{ph:力-15:ex6}
+抗力係数0.30、前から見た面積\qty{2.2}{m^2}の乗用車が、時速\qty{100}{km}と時速\qty{50}{km}で走るとき、空気の抵抗と、それに逆らうのに要る動力をそれぞれ求めましょう。
+\phbamen
+車の燃費を考えるときの見積もりです。
+\phmushi
+風はない。タイヤの転がり抵抗は考えない。空気 $\rho=\qty{1.2}{kg/m^3}$。
+\phzu
+$C_{\mathrm D}=0.30$、$A=\qty{2.2}{m^2}$、$v=\qty{27.8}{m/s}$ と\qty{13.9}{m/s}。
+\phriyu
+車の Re は $10^6$ 以上で、$C_{\mathrm D}$ はほぼ一定。抗力の式と、動力＝力×速さを使います。
+\phtateru
+\[F_{\mathrm D}=\frac{1}{2}C_{\mathrm D}\rho Av^2,\qquad P=F_Dv\]
+\phtoku
+時速\qty{100}{km}：$F_{\mathrm D}=\dfrac12\times0.30\times1.2\times2.2\times27.8^2\approx\qty{306}{N}$、$P=306\times27.8\approx\qty{8.5}{kW}$\par
+時速\qty{50}{km}：$F_{\mathrm D}=\dfrac{306}{4}\approx\qty{76}{N}$、$P=\dfrac{8.5}{8}\approx\qty{1.1}{kW}$
+\phtashikame
+2倍の確かめ：速さが半分で、力は4分の1、動力は8分の1（④）。例題\ref{ph:力-15:ex1}の模型の結果（\qty{306}{N}）と合う。
+\kotae 時速\qty{100}{km}：約\qty{306}{N}、約\qty{8.5}{kW}。時速\qty{50}{km}：約\qty{76}{N}、約\qty{1.1}{kW}
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-15:ex6}の車が時速\qty{120}{km}で走るとき、空気の抵抗に逆らうのに要る動力を求めましょう。
+\bkjans{$v=\qty{33.3}{m/s}$。$F_{\mathrm D}\approx\qty{440}{N}$、$P\approx\qty{14.7}{kW}$}
+\end{jibun}
+
+\begin{phreidai}[野球のボールにはたらく空気の抵抗]\label{ph:力-15:ex7}
+直径\qty{73}{mm}、質量\qty{0.145}{kg}の野球のボールが\qty{40}{m/s}で飛ぶとき、空気の抵抗を求め、重さとくらべましょう（$C_{\mathrm D}=0.35$ とする）。
+\phbamen
+ピッチャーが投げた速い球です。空気の抵抗は無視できるでしょうか。
+\phmushi
+ボールの回転と縫い目の効果は、$C_{\mathrm D}$ にふくめる。
+\phzu
+$d=\qty{0.073}{m}$、$A=\dfrac{\pi d^2}{4}$、$v=\qty{40}{m/s}$。
+\phriyu
+Re を計算すると約$1.9\times10^5$で、⑤のグラフの $C_{\mathrm D}$ がほぼ一定の範囲の終わりの近くなので、抗力の式を使います。
+\phtateru
+\[F_{\mathrm D}=\frac{1}{2}C_{\mathrm D}\rho Av^2\]
+\phtoku
+\[A=\frac{3.14\times0.073^2}{4}\approx\qty{4.19e-3}{m^2}\]
+\[F_{\mathrm D}=\frac12\times0.35\times1.2\times0.00419\times40^2\approx\qty{1.4}{N}\]
+重さは $0.145\times9.8\approx\qty{1.42}{N}$。
+\phtashikame
+大きさ：空気の抵抗は、重さとほぼ同じ大きさ。速い球では、空気の抵抗を無視したモデル（力-1 の放物運動）は使えないことがわかります。
+\kotae 約\qty{1.4}{N}（重さとほぼ同じ）
+\end{phreidai}
+\begin{jibun}
+直径\qty{0.22}{m}、質量\qty{0.43}{kg}のサッカーボールが\qty{30}{m/s}で飛ぶとき（$C_{\mathrm D}=0.25$）、空気の抵抗と重さを求めましょう。
+\bkjans{$A\approx\qty{0.0380}{m^2}$。$F_{\mathrm D}$ は約\qty{5.1}{N}、重さは約\qty{4.2}{N}}
+\end{jibun}
+
+\begin{phreidai}[電線が鳴る音の高さ]\label{ph:力-15:ex8}
+直径\qty{10}{mm}の電線に、\qty{10}{m/s}の風が当たっています。電線のうしろでカルマン渦がはなれる回数（音の高さ）を求めましょう（ストローハル数0.2）。
+\phbamen
+風の日に電線が鳴る音の高さを予想します。
+\phmushi
+電線のゆれは小さいとし、うずのはなれ方は止まった円柱と同じとします。
+\phzu
+$d=\qty{0.01}{m}$、$v=\qty{10}{m/s}$、$\mathrm{St}=\dfrac{fd}{v}=0.2$。
+\phriyu
+Re＝$\dfrac{10\times0.01}{1.5\times10^{-5}}\approx\num{6700}$ で、ストローハル数がほぼ0.2になる範囲（300〜$2\times10^5$）です。
+\phtateru
+\[f=\frac{\mathrm{St}\,v}{d}\]
+\phtoku
+\[f=\frac{0.2\times10}{0.01}=\qty{200}{Hz}\]
+\phtashikame
+大きさ：\qty{200}{Hz}は人の声くらいの高さで、「ヒュー」と聞こえる音として、ありそう。風が2倍になれば\qty{400}{Hz}。
+\kotae 約\qty{200}{Hz}
+\end{phreidai}
+\begin{jibun}
+直径\qty{2}{m}のえんとつに\qty{10}{m/s}の風が当たるとき、うずがはなれる回数を求めましょう（ストローハル数0.2）。
+\bkjans{$f=\dfrac{0.2\times10}{2}=\qty{1}{Hz}$（1秒に1回、左右にゆすられる）}
+\end{jibun}
+
+\begin{phreidai}[旅客機が離陸するのに必要な揚力係数]\label{ph:力-15:ex9}
+質量\qty{70}{t}、翼面積\qty{125}{m^2}の旅客機が、\qty{75}{m/s}で離陸します。このとき必要な揚力係数を求めましょう（数は、例として決めた値）。
+\phbamen
+離陸するには、揚力が重さと同じになる必要があります。
+\phmushi
+地面近くの空気 $\rho=\qty{1.2}{kg/m^3}$。エンジンの推力のたての成分は無視します。
+\phzu
+$m=\qty{70000}{kg}$、$A=\qty{125}{m^2}$、$v=\qty{75}{m/s}$、揚力係数 $C_{\mathrm L}$。
+\phriyu
+揚力＝重さ、の式で $C_{\mathrm L}$ を求めます（⑨）。
+\phtateru
+\[\frac{1}{2}C_{\mathrm L}\rho Av^2=mg\qquad\text{より}\qquad C_{\mathrm L}=\frac{2mg}{\rho Av^2}\]
+\phtoku
+\[C_{\mathrm L}=\frac{2\times\num{70000}\times9.8}{1.2\times125\times75^2}=\frac{\num{1372000}}{\num{843750}}\approx1.6\]
+\phtashikame
+大きさ：ふつうの翼の $C_{\mathrm L}$ の最大は1.5くらい（⑨のグラフ）なので、1.6には足りない。だから、離陸や着陸のときは、フラップを出して $C_{\mathrm L}$ を大きくします。
+\kotae 約1.6
+\end{phreidai}
+\begin{jibun}
+質量\qty{1.0}{t}、翼面積\qty{16}{m^2}の小型機が\qty{30}{m/s}で離陸するのに必要な揚力係数を求めましょう。
+\bkjans{$C_{\mathrm L}=\dfrac{2\times1000\times9.8}{1.2\times16\times30^2}\approx1.1$}
+\end{jibun}
+
+\begin{phreidai}[板の上の境界層の厚さ]\label{ph:力-15:ex10}
+\qty{10}{m/s}の風の中に、なめらかな板を風と平行に置きます。前のはしから\qty{0.5}{m}の所の境界層の厚さを求めましょう（層流とする）。
+\phbamen
+ねばりが効く層の厚さの見当をつけます。
+\phmushi
+板は十分うすく、風は一様。境界層は層流（Re が約$5\times10^5$ より小さい）。
+\phzu
+$x=\qty{0.5}{m}$、$v=\qty{10}{m/s}$、$\nu=\qty{1.5e-5}{m^2/s}$、厚さ $\delta$。
+\phriyu
+層流の境界層の厚さの式 $\delta\approx\dfrac{5x}{\sqrt{\mathrm{Re}_x}}$（⑧）を使います。
+\phtateru
+\[\mathrm{Re}_x=\frac{vx}{\nu},\qquad\delta\approx\frac{5x}{\sqrt{\mathrm{Re}_x}}\]
+\phtoku
+\[\mathrm{Re}_x=\frac{10\times0.5}{1.5\times10^{-5}}\approx3.3\times10^5\]
+\[\delta\approx\frac{5\times0.5}{577}\approx\qty{0.0043}{m}=\qty{4.3}{mm}\]
+\phtashikame
+大きさ：板の長さ\qty{500}{mm}にくらべて約100分の1。境界層は本当にうすい。Re は$5\times10^5$ より小さく、層流としてよい。
+\kotae 約\qty{4.3}{mm}
+\end{phreidai}
+\begin{jibun}
+\qty{5}{m/s}の風の中で、なめらかな板の前のはしから\qty{0.3}{m}の所の境界層の厚さを求めましょう（層流とする）。
+\bkjans{$\mathrm{Re}_x=\num{100000}$。$\delta\approx\dfrac{1.5}{316}\approx\qty{4.7}{mm}$}
+\end{jibun}
+
+\begin{phreidai}[送風機の回転数を下げると]\label{ph:力-15:ex11}
+ビルの送風機の回転数を、インバータで80\,\%に下げました。流量と動力は、それぞれ何\,\%になりますか。
+\phbamen
+冬など、風の量が少なくてよいときの省エネです。
+\phmushi
+送風機の効率は変わらないとします。
+\phzu
+回転数の比 $\dfrac{n_2}{n_1}=0.8$、直径は同じ。
+\phriyu
+同じ送風機なので、⑪の相似則で $Q\propto n$、$P\propto n^3$ です。
+\phtateru
+\[\frac{Q_2}{Q_1}=0.8,\qquad\frac{P_2}{P_1}=0.8^3\]
+\phtoku
+\[0.8^3=0.8\times0.8\times0.8=0.512\]
+\phtashikame
+大きさ：流量を2割減らすだけで、動力は約半分。弁でしぼると動力はあまり減らないので、回転数を変えるほうが省エネになる。
+\kotae 流量80\,\%、動力約51\,\%
+\end{phreidai}
+\begin{jibun}
+同じ送風機の回転数を70\,\%にすると、動力は何\,\%になりますか。
+\bkjans{$0.7^3=0.343$ で約34\,\%}
+\end{jibun}
+
+\begin{phreidai}[速さの2乗の抵抗で落ちる物の加速度]\label{ph:力-15:ex12}
+例題\ref{ph:力-15:ex4}の雨つぶ（終端速度\qty{6.6}{m/s}）が、\qty{3.3}{m/s}で落ちているときの加速度を求めましょう。
+\phbamen
+終端速度に近づくまでのとちゅうのようすを調べます。
+\phmushi
+$C_{\mathrm D}$ は一定、抵抗は $cv^2$ の形とします。
+\phzu
+下向きを正。質量 $m$、抵抗 $cv^2$、終端速度 $v_f$、加速度 $a$。
+\phriyu
+終端速度では $mg=cv_f^2$ なので、$c=\dfrac{mg}{v_f^2}$。これを運動方程式に入れると、$m$ も $c$ も知らなくても $a$ が求まります。
+\phtateru
+\[ma=mg-cv^2=mg-mg\frac{v^2}{v_f^2}\qquad\text{より}\qquad a=g\left(1-\frac{v^2}{v_f^2}\right)\]
+\phtoku
+\[a=9.8\times\left(1-\left(\frac{3.3}{6.6}\right)^2\right)=9.8\times\frac34\approx\qty{7.4}{m/s^2}\]
+\phtashikame
+極端な場合：$v=0$ なら $a=g$（落ちはじめは自由落下と同じ）。$v=v_f$ なら $a=0$（終端速度）。⑤のプログラムで、0.4〜0.5秒ごろ（速さ約\qty{3.3}{m/s}）の速さのふえ方とも合う。
+\kotae 約\qty{7.4}{m/s^2}
+\end{phreidai}
+\begin{jibun}
+終端速度\qty{55}{m/s}のスカイダイバーが、\qty{44}{m/s}で落ちているときの加速度を求めましょう（抵抗は速さの2乗に比例するとする）。
+\bkjans{$9.8\times(1-0.8^2)=9.8\times0.36\approx\qty{3.5}{m/s^2}$}
+\end{jibun}
+
+\begin{phreidai}[管の損失の式の形を、次元解析で決める]\label{ph:力-15:ex13}
+まっすぐな円い管の中の圧力損失 $\Delta p$ は、流体の密度 $\rho$、平均の速さ $v$、内径 $d$、粘度 $\mu$、管の長さ $L$、壁の粗さ $\varepsilon$ で決まります。Π定理を使って、無次元数の関係にまとめ、力-14 のダルシー・ワイスバッハの式の形になることを確かめましょう。
+\phbamen
+力-14 で「実験からわかった」とした式の形を、単位から説明します。
+\phmushi
+管はまっすぐで、入口から十分はなれた所。流れは定常。
+\phzu
+量は $\Delta p$、$\rho$、$v$、$d$、$\mu$、$L$、$\varepsilon$ の7つ。基本の単位は m・kg・s の3つ。
+\phriyu
+Π定理から、無次元数は $7-3=4$ 個。$\rho$、$v$、$d$ を「ものさし」にして、残りの4つの量を無次元にします（⑥の行列の計算）。
+\phtateru
+$\Delta p$（Pa＝kg·m$^{-1}$·s$^{-2}$：$x=1$、$y=-1$、$z=-2$）を⑥の逆行列に入れると
+\[a=1,\qquad b=2,\qquad c=3-1-2=0\qquad\text{より}\qquad\frac{\Delta p}{\rho v^2}\]
+$\mu$ は⑥と同じで $\mathrm{Re}=\dfrac{\rho vd}{\mu}$。長さ $L$ と $\varepsilon$ は $d$ でわって $\dfrac{L}{d}$、$\dfrac{\varepsilon}{d}$。
+\phtoku
+4つの無次元数の関係は
+\[\frac{\Delta p}{\rho v^2}=\varphi\left(\mathrm{Re},\ \frac{L}{d},\ \frac{\varepsilon}{d}\right)\]
+さらに、まっすぐな管の損失は長さに比例する（力-14①）ので、$\dfrac{L}{d}$ はかけ算の形で出てきます。
+\[\frac{\Delta p}{\rho v^2}=\frac{L}{d}\,\psi\left(\mathrm{Re},\ \frac{\varepsilon}{d}\right)\]
+（$\psi$ はプサイ。別の関数）。$\psi$ を $\dfrac{\lambda}{2}$ と書けば $\Delta p=\lambda\dfrac{L}{d}\dfrac{\rho v^2}{2}$。$\lambda$ は Re と $\dfrac{\varepsilon}{d}$ だけで決まる、というのがムーディ線図です。
+\phtashikame
+単位：$\dfrac{\text{Pa}}{\text{kg/m}^3\times\text{m}^2/\text{s}^2}=\dfrac{\text{kg·m}^{-1}\text{s}^{-2}}{\text{kg·m}^{-1}\text{s}^{-2}}=1$。\\
+確かめ：層流では $\lambda=\dfrac{64}{\mathrm{Re}}$（力-14⑧）で、たしかに Re だけで決まっている。
+\kotae $\dfrac{\Delta p}{\rho v^2}=\dfrac{L}{d}\psi\left(\mathrm{Re},\dfrac{\varepsilon}{d}\right)$。ダルシー・ワイスバッハの式の形になる
+\end{phreidai}
+\begin{jibun}
+例題\ref{ph:力-15:ex13}の考え方で、物体が受ける揚力 $F_{\mathrm L}$ が $\rho$、$v$、$d$、$\mu$、迎え角 $\alpha$（単位なし）で決まるとき、無次元数はいくつできますか。また、それはどんな数ですか。
+\bkjans{量は6つ（$F_{\mathrm L}$、$\rho$、$v$、$d$、$\mu$、$\alpha$）、基本の単位は3つで $6-3=3$ 個。$\dfrac{F_{\mathrm L}}{\rho v^2d^2}$、Re、$\alpha$}
+\end{jibun}
+
+%% ======================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{模型を小さくしたら、風もおそくする}
+\bkng{10分の1の模型だから、風の速さも10分の1にする。}
+\bkok{Re $=\dfrac{vd}{\nu}$ をそろえるには、同じ空気なら風の速さを10倍にする。}
+長さが10分の1、速さも10分の1では、Re は100分の1になり、本物とはまったくちがう流れ（⑤のグラフの別の所）を調べることになります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{抗力の式の $A$ をまちがえる}
+\bkng{車の抗力の $A$ に、車の表面の面積を全部入れた。}
+\bkok{車・ボールの抗力は前から見た面積、翼の揚力は上から見た翼の面積。}
+$C_{\mathrm D}$ や $C_{\mathrm L}$ は、どの面積で割ったかで値が変わります。表やグラフの $C_{\mathrm D}$ を使うときは、その $A$ がどの面積かを必ず確かめます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{いつでも $f=bv$ を使う}
+\bkng{ボールの空気の抵抗も、速さに比例する（$f=bv$）として計算した。}
+\bkok{Re を計算して、1より小さければ $f=bv$（ストークス）、ボールのように\num{1000}以上なら $f=cv^2$。}
+高校の問題の「速さに比例する抵抗」は、霧つぶのような小さな物のときの形です（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{つばさの上が速いのは「同じ時間で通るから」？}
+\bkng{翼の上の道のりのほうが長いので、上と下を同じ時間で通るために、上の空気は速くなる。だから上の圧力が下がる。}
+\bkok{上の空気のほうが早くうしろに着く。揚力は、翼が空気を下へ曲げることと、それにともなう圧力の差で生まれる。}
+「同じ時間で通る」理由はありません（力-13 でも見ました）。実験でも、上の空気が先に着くことが確かめられています。
+\end{tsumazuki}
+
+%% ======================================================================
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[車の空気の抵抗を減らす]
+乗用車が高速道路を走るとき、エンジンの力の多くが空気の抵抗に使われます。動力は速さの3乗に比例するので（④）、速く走るほど、$C_{\mathrm D}$ を小さくする効果が大きくなります。自動車の会社は、本物の大きさの車や模型を風洞に入れ、床をベルトで動かして地面の効果も再現しながら、形を少しずつ変えて $C_{\mathrm D}$ を下げています。最近は、コンピュータで流れを計算する方法（力-16）と風洞を組み合わせています。
+\begin{phketa}[空気の中の物体]
+\phketaline{空気（\qty{20}{\celsius}、1気圧）の密度}{約\qty{1.2}{kg/m^3}}
+\phketaline{空気の粘度・動粘度}{約\qty{1.8e-5}{Pa.s}・\qty{1.5e-5}{m^2/s}}
+\phketaline{乗用車の抗力係数}{約0.25〜0.35}
+\phketaline{球の抗力係数（Re＝$10^3$〜$2\times10^5$）}{約0.4〜0.5}
+\phketaline{円柱のストローハル数}{約0.2}
+\phketaline{直径\qty{2}{mm}の雨つぶが落ちる速さ}{約\qty{6.5}{m/s}}
+\phboxhead{答えが桁で合っているか}
+ふつうの大きさ・速さの物体（車・ボール・人）は Re が$10^4$〜$10^7$で、抗力は $\dfrac12\rho v^2$ に前から見た面積をかけた大きさの半分〜同じくらいです。計算した抗力がこれとけたちがいなら、単位や $A$ を見直そう。
+\end{phketa}
+\phboxhead{建物と橋の風洞実験}
+高いビルや長い橋は、強い風でカルマン渦が生まれ、そのうずのはなれる回数が建物のゆれやすい回数（固有振動数。波-2）と合うと、大きくゆれることがあります。そこで、模型を風洞に入れて、ゆれ方を調べてから建てます。
+\end{phkougaku}
+\phstation{空気力学,模型実験,流体機械,計算流体力学}{無次元数、相似則、レイノルズ数、フルード数、境界層、はく離、抗力係数、揚力係数、ストローハル数}
+
+\begin{column}{ライト兄弟の手作りの風洞}
+1903年に、はじめて動力つきの飛行機で空を飛んだアメリカのライト兄弟は、その前の1901年、自転車屋の店で、長さ2 m くらいの木の箱に送風機をつけた手作りの風洞を作りました。そして、200をこえる形の小さな翼の模型を試し、揚力と抗力を、自分たちで作ったはかりではかりました。それまでの本にのっていた数が正しくないことに気づいた兄弟は、自分たちの測定をもとに翼を作り直し、成功につなげたのです。模型の実験で本物を設計する、この章の考え方の始まりの1つです。
+\end{column}
+
+\begin{senmonsho}[流体力学の書き方]
+\begin{bkhonbun}
+非圧縮性ニュートン流体の運動は $\rho\,\mathrm{D}\symbf{u}/\mathrm{D}t=-\nabla p+\mu\nabla^2\symbf{u}+\rho\symbf{g}$ で記述される。代表速度 $U$ と代表長さ $L$ で無次元化すると、流れは $\mathrm{Re}=UL/\nu$ のみに依存する。したがって、幾何学的に相似な二つの流れは、$\mathrm{Re}$ が等しければ力学的に相似であり、抗力係数 $C_{\mathrm D}$ も等しい。
+\end{bkhonbun}
+\bkyaku{速度を $\symbf{u}$ と書く本も多い（この章の $\vec{v}$。太字はベクトルの専門書の書き方。数学 4-13）。「非圧縮性」は縮まない、「無次元化」は単位のない数に直すこと（⑩）。「力学的に相似」は、力の比まで同じになること（⑦の相似則）。}
+\end{senmonsho}
+
+%% ======================================================================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 長さ\qty{100}{m}の船が\qty{8}{m/s}で進むときの波を、長さ20分の1の模型で調べます。模型を何 m/s で引けばよいですか（小数第1位まで）。
+\bkpans{$8\times\dfrac{1}{\sqrt{20}}\approx\qty{1.8}{m/s}$}
+
+\bkproblem 抗力係数0.30、前から見た面積\qty{2.2}{m^2}の車が時速\qty{80}{km}で走るとき、空気の抵抗と、それに逆らう動力を求めましょう（$\rho=\qty{1.2}{kg/m^3}$）。
+\bkpans{$v=\qty{22.2}{m/s}$。$F_{\mathrm D}\approx\qty{196}{N}$、$P\approx\qty{4.3}{kW}$}
+
+\bkproblem 直径\qty{20}{mm}の電線に\qty{15}{m/s}の風が当たっています。カルマン渦がはなれる回数を求めましょう（ストローハル数0.2）。
+\bkpans{$\dfrac{0.2\times15}{0.02}=\qty{150}{Hz}$}
+
+\bkproblem 送風機の回転数を90\,\%にすると、流量と動力は何\,\%になりますか。
+\bkpans{流量90\,\%、動力 $0.9^3=0.729$ で約73\,\%}
+
+\bkproblem 直径\qty{67}{mm}のテニスボールが\qty{30}{m/s}で飛ぶときの Re を求めましょう（$\nu=\qty{1.5e-5}{m^2/s}$）。⑤のグラフで $C_{\mathrm D}$ はおよそいくつですか。
+\bkpans{$\mathrm{Re}=\dfrac{30\times0.067}{1.5\times10^{-5}}\approx1.3\times10^5$。$C_{\mathrm D}$ は約0.4〜0.5}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 長さ\qty{4}{m}の車（時速\qty{90}{km}）を、長さ8分の1の模型で、水の中で Re をそろえて調べます。（1）模型を何 m/s で動かしますか。（2）模型の抗力が\qty{900}{N}のとき、本物の抗力を求めましょう（空気 $\rho=\qty{1.2}{kg/m^3}$、$\nu=\qty{1.5e-5}{m^2/s}$、水 $\rho=\qty{1000}{kg/m^3}$、$\nu=\qty{1.0e-6}{m^2/s}$）。
+\bkpans{（1）\nobreak $25\times8\times\dfrac{1}{15}\approx\qty{13.3}{m/s}$。（2）\nobreak $\rho v^2L^2$ の比をかけて、約\qty{243}{N}}
+
+\bkproblem 質量\qty{1.2}{t}、翼面積\qty{16}{m^2}の小型機が、\qty{35}{m/s}で水平に飛ぶのに必要な揚力係数を求めましょう（$\rho=\qty{1.2}{kg/m^3}$）。
+\bkpans{$C_{\mathrm L}=\dfrac{2\times1200\times9.8}{1.2\times16\times35^2}=1.0$}
+
+\bkproblem 物を高さ $h$ から落としたとき、地面に着く直前の速さ $v$ が、$h$、質量 $m$、$g$ だけで決まるとして、次元解析で $v=Ch^am^bg^c$ の指数を求めましょう。高さを4倍にすると、速さは何倍ですか。
+\bkpans{m：$a+c=1$、kg：$b=0$、s：$-2c=-1$。$a=\dfrac12$、$b=0$、$c=\dfrac12$（$v=C\sqrt{gh}$）。2倍}
+
+\phnyushi[5]
+\bkproblem 深い海の波の速さ $v$ が、重力加速度 $g$ と波長 $\lambda$（m）だけで決まるとします。（1）次元解析で $v=Cg^a\lambda^b$ の $a$、$b$ を求めましょう。（2）波長が\qty{10}{m}の波の速さが約\qty{4.0}{m/s}のとき、波長\qty{40}{m}の波の速さを求めましょう。
+\bkpans{（1）\nobreak m：$a+b=1$、s：$-2a=-1$ より $a=\dfrac12$、$b=\dfrac12$（$v=C\sqrt{g\lambda}$）。（2）\nobreak $\sqrt4=2$ 倍で約\qty{8.0}{m/s}}
+
+\bkproblem 質量 $m$ の物体が、速さの2乗に比例する空気の抵抗 $cv^2$ を受けながら、静かに落ちはじめました。（1）終端速度 $v_f$ を $m$、$g$、$c$ で表しましょう。（2）速さが $\dfrac{v_f}{2}$ のときの加速度を $g$ で表しましょう。
+\bkpans{（1）\nobreak $mg=cv_f^2$ より $v_f=\sqrt{\dfrac{mg}{c}}$。（2）\nobreak $a=g\left(1-\dfrac14\right)=\dfrac34g$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 単位（次元）をそろえて、物理の量の関係の形を見つけられる。\bkfurref{ph:力-15:sec4}
+\item 抗力係数と揚力係数を使って、車・ボール・飛行機にはたらく力を見積もれる。\bkfurref{ph:力-15:sec5}
+\item 無次元数をそろえて、模型の実験から本物にはたらく力を求められる。\bkfurref{ph:力-15:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{模型と本物は、大きさを合わせるんじゃなくて、単位のない数を合わせるんだね。}

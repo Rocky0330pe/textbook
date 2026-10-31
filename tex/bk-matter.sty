@@ -1,0 +1,503 @@
+%% bk-matter.sty
+%% 表紙（表1）・表2・扉・もくじ・路線図・裏表紙（表4）・背・カバー展開図の部品
+%% bk-b5.sty の後に読む。座標はすべて mm、原点は仕上がり（トリム）の左下。
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bk-matter}[2026/10/16 v0.2 covers and front matter]
+
+%% ------------------------------------------------------------
+%% 1. 巻・路線・部のデータ（series-data.tex が呼ぶ）
+%% ------------------------------------------------------------
+\newcommand\bkdefvol[7]{% 番号, 題名, 副題, キャッチ, 学年の目安, ★最小, ★最大
+  \@namedef{bk@title@#1}{#2}\@namedef{bk@sub@#1}{#3}\@namedef{bk@catch@#1}{#4}%
+  \@namedef{bk@grade@#1}{#5}\@namedef{bk@smin@#1}{#6}\@namedef{bk@smax@#1}{#7}}
+\newcommand\bkTitle[1]{\@nameuse{bk@title@#1}}
+\newcommand\bkSub[1]{\@nameuse{bk@sub@#1}}
+\newcommand\bkCatch[1]{\@nameuse{bk@catch@#1}}
+\newcommand\bkGrade[1]{\@nameuse{bk@grade@#1}}
+\newcommand\bkSmin[1]{\@nameuse{bk@smin@#1}}
+\newcommand\bkSmax[1]{\@nameuse{bk@smax@#1}}
+\newcommand\bkdefroute[5]{% 番号, 名前, 説明, この巻の駅, 終点
+  \@namedef{bk@rname@#1}{#2}\@namedef{bk@rsub@#1}{#3}\@namedef{bk@rhere@#1}{#4}\@namedef{bk@rend@#1}{#5}}
+\newcommand\bkdefpart[4]{% 番号, ラベル, 名前, 章の範囲
+  \@namedef{bk@plabel@#1}{#2}\@namedef{bk@pname@#1}{#3}\@namedef{bk@prange@#1}{#4}}
+\newcommand\bkSeries{\R{物理}{ぶつ|り}を\R{理解}{り|かい}するための\R{数学}{すう|がく}}
+\newcommand\bkSeriesPlain{物理を理解するための数学}
+\newcommand\bkEditor{「\bkSeries」\R{編集委員会}{へん|しゅう|い|いん|かい}}
+\newcommand\bkVolLabel[1][\bkvol]{\R{第}{だい}#1\R{巻}{かん}}
+
+%% ------------------------------------------------------------
+%% 2. 小さな部品：★メーター・路線アイコン・デルタ・ソラ・ミナ
+%% ------------------------------------------------------------
+% ★メーター（第11回：物理シリーズ第9回 No.4 と同じく形で区別）：最小まで ★（塗り）、最大まで ☆（白ぬき）、その先は うすい★
+\newcommand\bkstarmeter[2]{{\sffamily\scriptsize\@tempcnta=0\relax
+  \loop\advance\@tempcnta\@ne
+    \ifnum\@tempcnta>#2\relax\textcolor{bkLine}{★}%
+    \else\ifnum\@tempcnta>#1\relax\textcolor{bkStar}{☆}%
+    \else\textcolor{bkStar}{★}\fi\fi
+  \ifnum\@tempcnta<5\repeat}}
+
+% 路線アイコン  \bkrouteicon[直径]{番号}
+\@namedef{bk@rsym@1}{\draw[white, line width=1.1pt, line join=round] (0,0.62)--(0.6,-0.45)--(-0.6,-0.45)--cycle;}% Δ
+% ② たし合わせ：「＋」（たして合わせる）
+\@namedef{bk@rsym@2}{\fill[white, rounded corners=0.06] (-0.62,-0.13) rectangle (0.62,0.13) (-0.13,-0.62) rectangle (0.13,0.62);}%
+% ③ 倍々：「×2」（2倍、また2倍）
+\@namedef{bk@rsym@3}{\draw[white, line width=1.2pt, line cap=round] (-0.66,-0.3)--(-0.14,0.22) (-0.66,0.22)--(-0.14,-0.3);
+  \draw[white, line width=1.2pt, line cap=round, line join=round] (0.08,0.22) .. controls (0.1,0.5) and (0.6,0.52) .. (0.58,0.22)
+    .. controls (0.56,0.02) and (0.22,-0.12) .. (0.08,-0.4) -- (0.62,-0.4);}%
+\@namedef{bk@rsym@4}{\draw[white, line width=1.1pt, line cap=round]
+  plot[domain=-0.68:0.68, samples=25, smooth] (\x,{0.42*sin(\x*265)});}% 波
+\@namedef{bk@rsym@5}{\draw[white, line width=0.9pt] (-0.5,-0.5) grid[step=0.5] (0.5,0.5);
+  \draw[white, line width=0.9pt] (-0.5,-0.5) rectangle (0.5,0.5);}% 表
+\@namedef{bk@rsym@6}{\draw[white, line width=1.3pt, -{Stealth[length=0.45em]}] (-0.55,-0.45)--(0.55,0.5);}% 矢印
+\@namedef{bk@rsym@7}{\draw[white, line width=1pt] (-0.68,-0.3) rectangle (0.68,0.3);
+  \foreach \x in {-0.45,-0.15,0.15,0.45} \draw[white, line width=0.8pt] (\x,0.3)--(\x,0.02);}% ものさし
+\newcommand\bkrouteicon[2][1.05em]{\tikz[baseline=-0.38em, x=#1/2, y=#1/2]{%
+  \fill[bkRoute#2] (0,0) circle (1);\csname bk@rsym@#2\endcsname}}
+\newcommand\bk@routeicons[1]{\foreach \r [count=\k] in {#1}{\ifnum\k>1\hspace{0.5mm}\fi\bkrouteicon[0.95em]{\r}}}
+
+% 案内役の挿絵  \bkChar{sora|mina|delta}{(x,y)}{高さ}  (x,y) は絵の下のまん中
+\newcommand\bkChar[3]{\node[anchor=south, inner sep=0pt] at #2 {\includegraphics[height=#3]{img/#1.png}};}
+% （旧）ピクトグラムの仮イラスト。いまは使わない
+\newcommand\bkDeltaOld[4]{%
+  \begin{scope}[shift={#1}, scale=#2]
+    \draw[bkInk!75, line width=0.9pt, line cap=round] (-6.2,3.4)--(-9.6,6.6) (6.2,3.4)--(9.6,6.6);
+    \fill[bkInk!80] (-9.6,6.6) circle (1.05) (9.6,6.6) circle (1.05);
+    \draw[bkInk!75, line width=0.9pt] (0,13.2)--(0,16.3);
+    \fill[bkOrange] (0,16.8) circle (1.2);
+    \fill[bkInk!80] (-4.2,-0.8) circle (1.5) (4.2,-0.8) circle (1.5);
+    \filldraw[fill=#3, draw=bkInk!70, line width=0.8pt, rounded corners=2.4mm] (-8.4,0)--(8.4,0)--(0,14.5)--cycle;
+    \fill[#4, rounded corners=1.1mm] (-4.4,2.9) rectangle (4.4,7.6);
+    \fill[white] (-1.9,5.6) circle (0.75) (1.9,5.6) circle (0.75);
+    \draw[white, line width=0.7pt, line cap=round] (-1.1,4.0) arc (200:340:1.15);
+  \end{scope}}
+
+% （旧）ソラとミナのピクトグラム。いまは使わない
+\definecolor{bkSkin}{cmyk}{0,0.16,0.26,0}
+\definecolor{bkHair}{cmyk}{0.40,0.62,0.72,0.55}
+\definecolor{bkPants}{cmyk}{0.90,0.75,0.25,0.30}
+\newcommand\bk@kidbody[2]{% 服の色, 腕の向き(1=手をあげる)
+  \fill[bkPants, rounded corners=1.2mm] (-3.6,0) rectangle (-0.5,12.5) (0.5,0) rectangle (3.6,12.5);
+  \fill[bkInk!80] (-2.2,0.3) ellipse (2.2 and 1.1) (2.2,0.3) ellipse (2.2 and 1.1);
+  \ifnum#2=1
+    \draw[#1, line width=2.4mm, line cap=round] (-5,24.5)--(-8.6,18) (5,24.5)--(9,31.5);
+    \fill[bkSkin] (-8.9,17.3) circle (1.5) (9.3,32.3) circle (1.5);
+  \else
+    \draw[#1, line width=2.4mm, line cap=round] (-5,24.5)--(-8.4,16.5) (5,24.5)--(8.4,16.5);
+    \fill[bkSkin] (-8.7,15.8) circle (1.5) (8.7,15.8) circle (1.5);
+  \fi
+  \fill[#1, rounded corners=3mm] (-6.4,11) rectangle (6.4,27.4);
+  \fill[bkSkin] (-1.4,26.8) rectangle (1.4,29);}
+\newcommand\bk@kidface{%
+  \fill[bkSkin] (0,34.5) circle (7);
+  \fill[bkInk] (-2.5,34.3) circle (0.75) (2.5,34.3) circle (0.75);
+  \draw[bkInk, line width=0.7pt, line cap=round] (-1.7,31.6) arc (210:330:2);
+  \fill[bkRed!35] (-4.6,32.4) circle (1.0) (4.6,32.4) circle (1.0);}
+\newcommand\bkSoraOld[2]{% (x,y), 倍率
+  \begin{scope}[shift={#1}, scale=#2]
+    \bk@kidbody{bkRoute2}{1}\bk@kidface
+    \fill[bkHair] (-7.3,35.2) .. controls (-7.6,43.5) and (7.6,43.5) .. (7.3,35.2)
+      -- (5.6,37.4) -- (3.6,36.2) -- (1.2,37.8) -- (-1.4,36.4) -- (-3.8,37.9) -- (-5.8,36.4) -- cycle;
+  \end{scope}}
+\newcommand\bkMinaOld[2]{%
+  \begin{scope}[shift={#1}, scale=#2]
+    \bk@kidbody{bkRed!85}{0}\bk@kidface
+    \fill[bkHair] (7.6,38.6) circle (3.1);
+    \fill[bkYellow] (6.1,39.6) circle (0.9);
+    \fill[bkHair] (-7.4,34) .. controls (-8.2,44.5) and (8.2,44.5) .. (7.4,34)
+      .. controls (5.5,39.5) and (-1,40) .. (-3.8,37.6) .. controls (-5.2,36.8) and (-6.5,35.4) .. cycle;
+  \end{scope}}
+
+%% ------------------------------------------------------------
+%% 3. 1ページ全体に絵を描く（飾りなし）
+%% ------------------------------------------------------------
+\newcommand\bkartpage[2]{% {ページ番号の表示名}{TikZのコード}
+  \clearpage
+  \begingroup
+  \global\bk@decofalse\bkfolio{false}%
+  \def\thepage{#1}%
+  \AddToHookNext{shipout/background}{\put(0,-\paperheight){%
+    \begin{tikzpicture}[overlay, x=1mm, y=1mm]#2\end{tikzpicture}}}%
+  \thispagestyle{empty}\null\clearpage
+  \endgroup
+  \global\bk@decotrue\bkfolio{true}}
+
+%% ------------------------------------------------------------
+%% 4. 表紙（表1）
+%% ------------------------------------------------------------
+\newif\ifbk@lightvol
+\ifnum\bkvol=3 \bk@lightvoltrue\fi
+\ifnum\bkvol=4 \bk@lightvoltrue\fi
+\ifnum\bkvol=6 \bk@lightvoltrue\fi% 第14回
+\ifbk@lightvol
+  \colorlet{mA}{bkOn}\colorlet{mB}{white}\colorlet{mC}{bkVol!60!black}
+\else
+  \colorlet{mA}{white}\colorlet{mB}{bkVol!38!white}\colorlet{mC}{bkVol!55!black}
+\fi
+\newcommand\bk@titlefont{\sffamily\bfseries\fontsize{38}{46}\selectfont}
+\newcommand\bkFrontArt{%
+  \fill[bkVol] (-3,64) rectangle (185,260);
+  \fill[white] (-3,-3) rectangle (185,64);
+  % シリーズ名
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{12.5}{15}\selectfont] at (16,242) {\bkSeries};
+  \draw[bkOn, line width=0.6pt] (16,237.5) -- (112,237.5);
+  % 巻の番号
+  \fill[white, rounded corners=3mm] (128,224) rectangle (166,250);
+  \node[anchor=base, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries] at (147,230)
+    {\fontsize{15}{15}\selectfont\R{第}{だい}\hspace{1pt}{\fontsize{42}{42}\selectfont\bkvol}\hspace{1pt}\R{巻}{かん}};
+  % 題名・副題・キャッチ
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\bk@titlefont] at (15,206) {\bkTitle{\bkvol}};
+  \bk@ifsub{%
+    \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{17}{20}\selectfont] at (16,192) {\bkSub{\bkvol}};
+    \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{11.5}{14}\selectfont] at (16,181.5) {\bkCatch{\bkvol}};
+  }{%
+    \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{12}{14}\selectfont] at (16,192) {\bkCatch{\bkvol}};
+  }%
+  % 図柄
+  \begin{scope}[shift={(16,70)}]\csname bkMotif\romannumeral\bkvol\endcsname\end{scope}
+  % 全9巻の帯
+  \bk@lineup{16}{36}
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{8}{10}\selectfont] at (91,16) {\R{全}{ぜん}9\R{巻}{かん}　\bkSeries};
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{7.5}{9}\selectfont] at (91,8.5) {\bkEditor\hspace{1pt}\R{編}{へん}};
+}
+\newcommand\bk@ifsub[2]{\setbox0\hbox{\bkSub{\bkvol}}\ifdim\wd0>0pt #1\else #2\fi}
+% 全9巻の帯  \bk@lineup{x}{y}
+\newcommand\bk@lineup[2]{%
+  \foreach \i in {1,...,9} {
+    \pgfmathsetmacro\bk@lx{#1+(\i-1)*16.75}
+    \ifnum\i=\bkvol\relax
+      \fill[bkVol!100] (\bk@lx,#2-4) rectangle ++(14.4,22);
+      \fill[bkVol] (\bk@lx+7.2-2.6,#2+20.6) -- ++(5.2,0) -- ++(-2.6,3.4) -- cycle;
+      \node[text=bkBandOn\i, font=\sffamily\bfseries\fontsize{17}{17}\selectfont] at (\bk@lx+7.2,#2+7) {\i};
+    \else
+      \fill[bkVol\i] (\bk@lx,#2) rectangle ++(14.4,14);
+      \node[text=bkBandOn\i, font=\sffamily\bfseries\fontsize{12}{12}\selectfont] at (\bk@lx+7.2,#2+7) {\i};
+    \fi
+  }}
+\newcommand\bkFrontCoverPage{\bkartpage{表1}{\bkFrontArt}}
+
+%% ------------------------------------------------------------
+%% 5. 裏表紙（表4）
+%% ------------------------------------------------------------
+\newcommand\bkBackArt{%
+  \fill[bkVol!9] (-3,-3) rectangle (185,260);
+  \fill[bkVol] (-3,226) rectangle (185,260);
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{9.5}{12}\selectfont] at (16,246) {\bkSeries};
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{19}{24}\selectfont] at (16,233)
+    {\bkVolLabel\hspace{0.8em}\bkTitle{\bkvol}\bk@ifsub{\hspace{0.5em}{\fontsize{12}{14}\selectfont\bkSub{\bkvol}}}{}};
+  % この巻で学ぶこと
+  \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (16,210) {この\R{巻}{かん}で\R{学}{まな}ぶこと};
+  \draw[bkVol, line width=0.8pt] (16,206) -- (166,206);
+  \foreach \p in {1,...,\bk@npart} {
+    \pgfmathsetmacro\bk@py{196-(\p-1)*10.5}
+    \node[anchor=west, fill=bkVol, text=bkOn, rounded corners=1.2mm, inner xsep=2.2mm, inner ysep=1.2mm,
+      font=\sffamily\bfseries\fontsize{9}{11}\selectfont] (pp) at (16,\bk@py) {\@nameuse{bk@plabel@\p}};
+    \node[anchor=west, inner sep=0pt, text=bkInk, font=\sffamily\bfseries\fontsize{11}{14}\selectfont] (pn) at ([xshift=3mm]pp.east) {\@nameuse{bk@pname@\p}};
+    \node[anchor=west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8.5}{10}\selectfont] at ([xshift=2.5mm]pn.east) {\@nameuse{bk@prange@\p}};
+  }
+  % シリーズ全9巻
+  \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (16,140) {\R{全}{ぜん}9\R{巻}{かん}のならび};
+  \draw[bkVol, line width=0.8pt] (16,136) -- (98,136);
+  \foreach \i in {1,...,9} {
+    \pgfmathsetmacro\bk@ly{127-(\i-1)*8.6}
+    \ifnum\i=\bkvol\relax
+      \fill[white, rounded corners=1.5mm] (14,\bk@ly-3.6) rectangle (100,\bk@ly+3.9);
+      \draw[bkVol, line width=0.8pt, rounded corners=1.5mm] (14,\bk@ly-3.6) rectangle (100,\bk@ly+3.9);
+    \fi
+    \fill[bkVol\i, rounded corners=0.8mm] (16,\bk@ly-2.8) rectangle ++(5.6,5.6);
+    \node[text=bkBandOn\i, font=\sffamily\bfseries\fontsize{8}{8}\selectfont] at (18.8,\bk@ly) {\i};
+    \node[anchor=west, inner sep=0pt, text=bkInk, font=\sffamily\fontsize{8.6}{10}\selectfont] at (24.5,\bk@ly-0.3)
+      {\ltjsetruby{stretch=001}\ifnum\i=\bkvol\relax\bfseries\fi\bkTitle{\i}\setbox0\hbox{\bkSub{\i}}\ifdim\wd0>0pt\hspace{0.4em}{\color{bkGray}\fontsize{7}{8}\selectfont\bkSub{\i}}\fi};
+  }
+  % 案内役の3人と、この巻のひとこと（保護者・先生向けの説明は指導書にのせる）
+  \node[rectangle callout, callout absolute pointer={(136.5,91)}, anchor=south, draw=bkVol, line width=0.8pt, fill=white,
+    rounded corners=3mm, inner xsep=3.5mm, inner ysep=2.5mm, text width=50mm, align=center, text=bkDeep,
+    font=\sffamily\bfseries\fontsize{10.5}{16}\selectfont] at (136.5,97) {\bkCatch{\bkvol}};
+  \fill[bkVol!22, rounded corners=2mm] (107,50) rectangle (166,54);
+  \bkChar{sora}{(117,53.5)}{31mm}\bkChar{mina}{(136.5,53.5)}{31mm}\bkChar{delta}{(156,53.5)}{19mm}
+  % バーコード欄（入稿時に配置）
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt, fill=white] (114,12) rectangle (166,38);
+  \node[text=bkGray, align=center, font=\sffamily\fontsize{7}{9}\selectfont] at (140,25) {ISBN・バーコード\\（入稿時に配置）};
+  \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{7.5}{10}\selectfont] at (16,25) {\bkSeries　\bkVolLabel};
+  \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{7.5}{10}\selectfont] at (16,16) {\bkEditor\hspace{1pt}\R{編}{へん}};
+}
+\newcommand\bkBackCoverPage{\bkartpage{表4}{\bkBackArt}}
+
+%% ------------------------------------------------------------
+%% 6. 背（カバー展開図用）  \bkSpineArt{幅}
+%% ------------------------------------------------------------
+\newcommand\bkSpineArt[1]{%
+  \fill[bkVol] (0,-3) rectangle (#1,260);
+  \node[circle, fill=white, text=bkDeep, minimum size=0.78*#1 mm, inner sep=0pt,
+    font=\sffamily\bfseries\fontsize{14}{14}\selectfont] at (#1/2,240) {\bkvol};
+  \node[anchor=north, inner sep=0pt, text=bkOn] at (#1/2,226)
+    {\hbox{\tate\sffamily\bfseries\fontsize{15}{15}\selectfont\bk@spinetitle}};
+  \node[anchor=south, inner sep=0pt, text=bkOn] at (#1/2,12)
+    {\hbox{\tate\sffamily\fontsize{7.5}{7.5}\selectfont\def\R##1##2{##1}物理を理解するための数学}};
+}
+\newcommand\bk@spinetitle{\def\R##1##2{##1}\def\,{}\bkTitle{\bkvol}}
+
+%% ------------------------------------------------------------
+%% 7. 表2：いっしょに学ぶなかま
+%% ------------------------------------------------------------
+\newcommand\bkInsideFrontArt{%
+  \fill[bkVol!7] (-3,-3) rectangle (185,260);
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{22}{28}\selectfont] at (91,222) {いっしょに\R{学}{まな}ぶなかま};
+  \draw[bkVol, line width=1pt] (56,215) -- (126,215);
+  % 3枚のカード：上に絵、帯に名前、下にしょうかい
+  \foreach \x in {40,91,142} {
+    \fill[white, rounded corners=3mm] (\x-23.5,58) rectangle (\x+23.5,204);
+    \fill[bkVol!14] (\x-23.5,129) rectangle (\x+23.5,131);}
+  \begin{scope}\clip[rounded corners=3mm] (16.5,58) rectangle (63.5,204);\bkChar{sora}{(40,131)}{64mm}\end{scope}
+  \begin{scope}\clip[rounded corners=3mm] (67.5,58) rectangle (114.5,204);\bkChar{mina}{(91,131)}{64mm}\end{scope}
+  \bkChar{delta}{(142,140)}{38mm}
+  \foreach \x/\n in {40/ソラ, 91/ミナ, 142/デルタ}
+    \node[fill=bkVol, text=bkOn, rounded corners=2mm, inner xsep=4mm, inner ysep=1.6mm,
+      font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (\x,130) {\n};
+  \ifnum\bkvol=1\relax
+  % 第1巻は分かち書き。表2は版面の外（shipout）で組むので、改行の位置は \\ で決めておく
+  \foreach \x/\t in {40/{「なぜ？」と \R{聞}{き}くのが\\\R{大好}{だい|す}き。\\たしかめるまで、\\なっとく しない。},
+                     91/{\R{図}{ず}や グラフを\\かくのが とくい。\\\R{手}{て}を \R{動}{うご}かして\\\R{考}{かんが}える。},
+                     142/{\R{計算}{けい|さん}と \R{記録}{き|ろく}が\\とくいな ロボット。\\\R{名前}{な|まえ}は 「\R{変化}{へん|か}」を\\\R{表}{あらわ}す \R{記号}{き|ごう} Δから。}}
+    {\node[anchor=north, text width=40mm, align=left, text=bkInk, font=\fontsize{11.5}{20}\selectfont] at (\x,121) {\t};}
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{11}{15}\selectfont] at (91,40)
+    {こまったら、 3\R{人}{にん}の ことばを ヒントに しよう。};
+  \else
+  % 第11回：語の途中で改行しないよう、改行の位置を文節で決めておく（物理シリーズ第9回 No.6 と同じ）
+  \foreach \x/\t in {40/{「なぜ？」と\R{聞}{き}くのが\\\R{大好}{だい|す}き。\\たしかめるまで、\\なっとくしない。},
+                     91/{\R{図}{ず}やグラフをかくのが\\とくい。\\\R{手}{て}を\R{動}{うご}かして\R{考}{かんが}える。},
+                     142/{\R{計算}{けい|さん}と\R{記録}{き|ろく}がとくいな\\ロボット。\R{名前}{な|まえ}は\\「\R{変化}{へん|か}」を\R{表}{あらわ}す\\\R{記号}{き|ごう}Δから。}}
+    {\node[anchor=north, text width=40mm, align=left, text=bkInk, font=\fontsize{10}{17}\selectfont] at (\x,121) {\t};}
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{10.5}{14}\selectfont] at (91,40)
+    {こまったら、3\R{人}{にん}のことばをヒントにしよう。};
+  \fi
+}
+\newcommand\bkInsideFrontPage{\bkartpage{表2}{\bkInsideFrontArt}}
+
+%% ------------------------------------------------------------
+%% 8. 扉（p.1）
+%% ------------------------------------------------------------
+\newcommand\bkTitleArt{%
+  \fill[bkVol] (-3,246) rectangle (185,260);
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{15}\selectfont] at (91,206) {\bkSeries};
+  \node[anchor=base, fill=bkVol, text=bkOn, rounded corners=2mm, inner xsep=4mm, inner ysep=2mm,
+    font=\sffamily\bfseries\fontsize{15}{18}\selectfont] at (91,185) {\bkVolLabel};
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{32}{40}\selectfont] at (91,158) {\bkTitle{\bkvol}};
+  \bk@ifsub{\node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{15}{18}\selectfont] at (91,145) {\bkSub{\bkvol}};}{}
+  \node[anchor=base, text=bkGray, font=\fontsize{11}{15}\selectfont] at (91,130) {\bkCatch{\bkvol}};
+  \foreach \r [count=\k] in {1,...,7} {
+    \node[inner sep=0pt] at ({91+(\k-4)*13},98) {\bkrouteicon[7mm]{\r}};
+  }
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{8.5}{11}\selectfont] at (91,86) {\ifnum\bkvol=1\relax 7\R{本}{ほん}の \R{路線}{ろ|せん}が、 この \R{本}{ほん}を \R{通}{とお}って います\else 7\R{本}{ほん}の\R{路線}{ろ|せん}が、この\R{本}{ほん}を\R{通}{とお}っています\fi};
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{9}{12}\selectfont] at (91,34) {\bkEditor\hspace{1pt}\R{編}{へん}};
+  \fill[bkVol] (-3,-3) rectangle (185,4);
+}
+\newcommand\bkTitlePage{%
+  \clearpage\setcounter{page}{1}%
+  \begingroup\global\bk@decofalse\bkfolio{false}%
+  \AddToHookNext{shipout/background}{\put(0,-\paperheight){%
+    \begin{tikzpicture}[overlay, x=1mm, y=1mm]\bkTitleArt\end{tikzpicture}}}%
+  \null\clearpage\endgroup\global\bk@decotrue\bkfolio{true}}
+
+%% ------------------------------------------------------------
+%% 9. もくじ
+%% ------------------------------------------------------------
+\ifnum\bkvol=1\relax
+  \newcommand\bk@tocTitle{\sffamily\bfseries\fontsize{14}{21}\selectfont}
+  \newcommand\bk@tocHook{\rmfamily\fontsize{12}{18}\selectfont}
+  \newdimen\bk@tocgap \bk@tocgap=1.4mm% 第5回：第1部が7章になったので、1ページに収まるように詰めた
+\else
+  \newcommand\bk@tocTitle{\sffamily\bfseries\fontsize{11}{15}\selectfont}
+  \newcommand\bk@tocHook{\rmfamily\fontsize{8.6}{14}\selectfont}
+  \newdimen\bk@tocgap \bk@tocgap=0.9mm
+\fi
+\newcommand\bk@tocpill[2]{% 番号, 種類
+  \def\bk@k{#2}\def\bk@J{J}\def\bk@E{E}\def\bk@R{R}%
+  \ifx\bk@k\bk@J\def\bk@lab{\R{序章}{じょ|しょう}}\else\ifx\bk@k\bk@E\def\bk@lab{\R{終章}{しゅう|しょう}}\else\def\bk@lab{#1}\fi\fi
+  \ifx\bk@k\bk@R
+    \tikz[baseline=(p.base)]\node[draw=bkVol, line width=0.8pt, fill=white, text=bkDeep, rounded corners=1.3mm,
+      minimum width=11.5mm, inner xsep=1mm, inner ysep=1.1mm, font=\sffamily\bfseries\fontsize{9}{10}\selectfont] (p) {\bk@lab};%
+  \else
+    \tikz[baseline=(p.base)]\node[fill=bkVol, text=bkOn, rounded corners=1.3mm,
+      minimum width=11.5mm, inner xsep=1mm, inner ysep=1.1mm, font=\sffamily\bfseries\fontsize{9}{10}\selectfont] (p) {\bk@lab};%
+  \fi}
+% 章の行の右側（路線アイコン・★・ページ）。3つの中心の高さをそろえ、題名の字面の中心に合わせる
+% ページ番号  \bkpageno{番号}  → P.番号（「P.」は小さく）
+\newcommand\bkpageno[1]{{\fontsize{0.72em}{1em}\selectfont P.}\kern0.06em#1}
+\newcommand\bk@tocmeta[4]{%
+  \begin{tikzpicture}[baseline=-0.38em, x=1mm, y=1mm]
+    \path[use as bounding box] (0,-1) rectangle (36,1);
+    \node[anchor=east, inner sep=0pt, text=bkInk, font=\sffamily\bfseries\fontsize{11}{12}\selectfont] (pg) at (36,0) {\bkpageno{#4}};
+    \node[anchor=east, inner sep=0pt] (st) at (23.5,0) {\bkstarmeter{#2}{#3}};
+    \def\bk@r{#1}\def\bk@all{all}%
+    \ifx\bk@r\bk@all
+      \node[anchor=east, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{7.5}{9}\selectfont] at ([xshift=-2mm]st.west) {\R{全}{ぜん}\R{路線}{ろ|せん}};
+    \else
+      \foreach \r [count=\k] in {#1} {\xdef\bk@nr{\k}}%
+      \foreach \r [count=\k] in {#1} {
+        \node[anchor=east, inner sep=0pt] at ([xshift={-2mm-(\bk@nr-\k)*4.4mm}]st.west) {\bkrouteicon[0.95em]{\r}};}
+    \fi
+  \end{tikzpicture}}
+% 章の行  \bktocchap{番号}{題名}{ひとこと}{路線}{★最小}{★最大}{ページ}{種類}
+\renewcommand\bktocchap[8]{%
+  \par\noindent
+  \parbox[t]{14mm}{\leavevmode\bk@tocpill{#1}{#8}}%
+  \parbox[t]{\dimexpr\linewidth-14mm-36mm\relax}{\setlength\parskip{0pt}%
+    \leavevmode{\bk@tocTitle\color{bkInk}#2\def\bk@k{#8}\def\bk@R{R}\ifx\bk@k\bk@R\hspace{0.5em}{\fontsize{8}{9}\selectfont\color{bkDeep}［\R{読}{よ}みもの］}\fi}}%
+  \parbox[t]{36mm}{\leavevmode{\bk@tocTitle\bk@tocmeta{#4}{#5}{#6}{#7}}}%
+  \par\nobreak\vspace{-\bk@tochookup}\noindent\hspace{14mm}%
+  \parbox[t]{\dimexpr\linewidth-14mm\relax}{\setlength\parskip{0pt}\bk@tocKid
+    \leavevmode{\bk@tocHook\color{bkGray}#3}}%
+  \par\nobreak\vspace{\dimexpr\bk@tocgap+\bk@tochookup\relax}{\color{bkLine}\hrule height 0.35pt}\vspace{\bk@tocgap}}
+% 題名とひとことの間を詰める量（ルビのある巻はルビの分だけ残す）
+\newdimen\bk@tochookup
+\bk@tochookup=\ifnum\bkvol=1 0mm\else\ifnum\bkvol<4 0.8mm\else 1.6mm\fi\fi\relax
+% 第1巻は、ひとことも分かち書きの改行にする
+\ifnum\bkvol=1\relax\def\bk@tocKid{\bkwakachi}\else\let\bk@tocKid\relax\fi
+% 部の行  \bktocpart{ラベル}{名前}{ページ}
+\renewcommand\bktocpart[3]{%
+  \par\addvspace{1.5mm}\noindent
+  \begin{tikzpicture}[baseline=(t.base)]
+    \fill[bkVol!14, rounded corners=1.5mm] (0,-2.2mm) rectangle (\linewidth,5.4mm);
+    \node[anchor=west, fill=bkVol, text=bkOn, rounded corners=1.2mm, inner xsep=2mm, inner ysep=1mm,
+      font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont] (l) at (1.2mm,1.6mm) {#1};
+    \node[anchor=west, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{14}\selectfont] (t) at ([xshift=2mm]l.east) {#2};
+    \node[anchor=east, text=bkGray, font=\sffamily\fontsize{9}{10}\selectfont] at (\linewidth-2mm,1.6mm) {\bkpageno{#3}};
+  \end{tikzpicture}\par\nobreak\vspace{\bk@tocgap}}
+% 後付の行（4つを1行にまとめる）  \bktocbacks{名前1}{p1}{名前2}{p2}{名前3}{p3}{名前4}{p4}
+\newcommand\bk@backitem[2]{{\sffamily\bfseries\fontsize{9.5}{13}\selectfont\color{bkDeep}#1}\hspace{0.4em}{\sffamily\bfseries\fontsize{10}{13}\selectfont\bkpageno{#2}}}
+% 第5回：巻末の項目を いくつでも ならべる（項目の途中では改行しない）  \bktocbacklist{\bkbi{名前}{p}\bkbi{名前}{p}…}
+\newcommand\bkbi[2]{\mbox{\bk@backitem{#1}{#2}}\hspace{1.6em plus 1em}\allowbreak}
+\newcommand\bktocbacklist[1]{\par\vspace{1mm}{\leftskip=14mm\rightskip=0pt plus 1fil\parfillskip=0pt plus 1fil\parindent=0pt\noindent #1\unskip\par}}
+\newcommand\bktocbacks[8]{\par\vspace{1mm}\noindent\hspace{14mm}%
+  \bk@backitem{#1}{#2}\hfill\bk@backitem{#3}{#4}\hfill\bk@backitem{#5}{#6}\hfill\bk@backitem{#7}{#8}\par}
+% もくじの見出し
+\newcommand\bkTocHead{%
+  \noindent\begin{tikzpicture}
+    \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{30}{36}\selectfont] (h) at (0,0) {もくじ};
+    \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{15}\selectfont] at ([xshift=6mm]h.base east) {\bkVolLabel\hspace{0.6em}\bkTitle{\bkvol}};
+    \draw[bkVol, line width=1.6pt, overlay] (0,-3.5mm) -- (\linewidth,-3.5mm);
+    \node[anchor=north east, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8}{10}\selectfont] at (\linewidth,-5.5mm)
+      {\bkrouteicon[0.9em]{1}\,＝\R{路線}{ろ|せん}（\bkpageno{\bk@routepage}・\the\numexpr\bk@routepage+1\relax）\hspace{1.2em}\bkstarmeter{1}{2}\,＝\R{内容}{ない|よう}の\R{高}{たか}さ（★は\R{必}{かなら}ず、☆の\R{所}{ところ}まで）\hspace{1.2em}\bkpageno{8}＝8ページ};
+  \end{tikzpicture}\par\vspace{5.5mm}}
+\newcommand\bkTocPages[1]{%
+  \clearpage\setcounter{page}{2}%
+  \global\bk@decofalse\bkfolio{true}\bksetrunning{}{}{}%
+  \bkTocHead #1\par
+  \clearpage
+  \loop\ifnum\value{page}<\bk@routepage\relax\null\clearpage\repeat
+  \global\bk@decotrue}
+% もくじを次の見開きへ（第1巻）
+\newcommand\bktocspreadbreak{\par\clearpage\ifodd\value{page}\null\clearpage\fi}
+
+%% ------------------------------------------------------------
+%% 10. 路線図（p.4〜5）
+%% ------------------------------------------------------------
+\newcommand\bk@routecard[1]{%
+  \par\noindent\begin{tikzpicture}
+    \fill[bkRoute#1!8, rounded corners=2mm] (0,-9.6mm) rectangle (\linewidth,10mm);
+    \fill[bkRoute#1, rounded corners=1mm] (0,-9.6mm) rectangle (2.2mm,10mm);
+    \node[inner sep=0pt] at (10mm,0) {\bkrouteicon[12mm]{#1}};
+    \node[anchor=base west, inner sep=0pt, text=bkInk, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] (n) at (19mm,3.2mm)
+      {\ifcase#1\or①\or②\or③\or④\or⑤\or⑥\or⑦\fi\,\@nameuse{bk@rname@#1}};
+    \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8.5}{11}\selectfont] at ([xshift=4mm]n.base east) {\@nameuse{bk@rsub@#1}};
+    \node[anchor=base west, inner sep=0pt, text=bkInk, font=\sffamily\fontsize{9}{12}\selectfont] at (19mm,-5.4mm)
+      {{\color{bkRoute#1!80!black}\bfseries この\R{巻}{かん}の\R{駅}{えき}：}\@nameuse{bk@rhere@#1}};
+  \end{tikzpicture}\par\vspace{2.6mm}}
+\newcommand\bkRouteMapPages{%
+  \clearpage\setcounter{page}{\bk@routepage}%
+  \global\bk@decofalse\bkfolio{true}\bksetrunning{}{}{}%
+  \noindent{\sffamily\bfseries\fontsize{24}{30}\selectfont\color{bkDeep}この\R{本}{ほん}の\R{路線図}{ろ|せん|ず}}\par\vspace{1mm}
+  {\color{bkVol}\hrule height 1.4pt}\vspace{4mm}
+  \ifnum\bkvol=1\relax
+  {\fontsize{12}{21}\selectfont\bkwakachi\noindent\hspace{1\zw}この \R{本}{ほん}の \R{章}{しょう}は、 7\R{本}{ほん}の \R{路線}{ろ|せん}の どれかの \R{駅}{えき}です。
+  \R{同}{おな}じ \R{路線}{ろ|せん}の \R{駅}{えき}は、 \R{前}{まえ}の \R{巻}{かん}から \R{先}{さき}の \R{巻}{かん}まで、 ひとつの \R{考}{かんが}え\R{方}{かた}で つながって います。
+  \R{章}{しょう}の はじめの 「\R{道}{みち}しるべ」で、 いま どの \R{路線}{ろ|せん}に いるかを \R{確}{たし}かめよう。\par}\vspace{3mm}
+  \else
+  {\fontsize{10.5}{19}\selectfont この\R{本}{ほん}の\R{章}{しょう}は、7\R{本}{ほん}の\R{路線}{ろ|せん}のどれかの\R{駅}{えき}です。
+  \R{同}{おな}じ\R{路線}{ろ|せん}の\R{駅}{えき}は、\R{前}{まえ}の\R{巻}{かん}から\R{先}{さき}の\R{巻}{かん}まで、ひとつの\R{考}{かんが}え\R{方}{かた}でつながっています。
+  \R{章}{しょう}のはじめの「\R{道}{みち}しるべ」で、いまどの\R{路線}{ろ|せん}にいるかを\R{確}{たし}かめよう。\par}\vspace{5mm}
+  \fi
+  \foreach \r in {1,...,7} {\bk@routecard{\r}}
+  \clearpage
+  % 第5回：左ページ（この本の路線図）と同じ見出しの形にそろえる
+  \noindent{\sffamily\bfseries\fontsize{24}{30}\selectfont\color{bkDeep}\R{全}{ぜん}9\R{巻}{かん}の\R{路線図}{ろ|せん|ず}}\hfill{\sffamily\fontsize{8.5}{11}\selectfont\color{bkGray}\ifnum\bkvol=1\relax\R{下}{した}へ \R{行}{い}くほど \R{先}{さき}の \R{巻}{かん}。 \R{色}{いろ}の \R{帯}{おび}が この \R{巻}{かん}です。\else\R{下}{した}へ\R{行}{い}くほど\R{先}{さき}の\R{巻}{かん}。\R{色}{いろ}の\R{帯}{おび}がこの\R{巻}{かん}です。\fi}\par\vspace{1mm}
+  {\color{bkVol}\hrule height 1.4pt}\vspace{2mm}
+  \noindent\bkSeriesMap\par
+  \clearpage\global\bk@decotrue}
+
+% シリーズ全体の路線図（たて：巻、よこ：路線）。右ページの本文域（140×215 mm）に描く
+\newcommand\bkSeriesMap{%
+  \begin{tikzpicture}[x=1mm, y=1mm]
+    \useasboundingbox (0,0) rectangle (140,197.5);
+    % 巻の行
+    \foreach \v in {1,...,9} {
+      \pgfmathsetmacro\bk@vy{182-(\v-1)*17}
+      \ifnum\v=\bkvol\relax\fill[bkVol!18, rounded corners=2mm] (0,\bk@vy-7.6) rectangle (140,\bk@vy+7.6);\fi
+      \fill[bkVol\v, rounded corners=0.8mm] (1,\bk@vy-3.4) rectangle ++(6.8,6.8);
+      \node[text=bkBandOn\v, font=\sffamily\bfseries\fontsize{9}{9}\selectfont] at (4.4,\bk@vy) {\v};
+    }
+    % 乗りかえ駅（第6巻・路線①〜④）
+    \pgfmathsetmacro\bk@hy{182-5*17}
+    \draw[bkInk!60, line width=0.7pt, dash pattern=on 2pt off 1.5pt, rounded corners=2mm, fill=white]
+      (14,\bk@hy-6.4) rectangle (14+4*17.4-3.4,\bk@hy+6.4);
+    % 路線
+    \foreach \r in {1,...,7} {
+      \pgfmathsetmacro\bk@rx{20+(\r-1)*17.4}
+      \draw[bkRoute\r, line width=2.6pt, line cap=round] (\bk@rx,\@nameuse{bk@rtop@\r}) -- (\bk@rx,18);
+      \node[inner sep=0pt] at (\bk@rx,194) {\bkrouteicon[6mm]{\r}};
+      \node[anchor=base, text width=16mm, align=center, inner sep=0pt, text=bkInk,
+        font=\sffamily\bfseries\fontsize{7.2}{9}\selectfont] at (\bk@rx,11.9) {\@nameuse{bk@rend@\r}};
+    }
+    % 第5回：札が路線の線をおおわないように、路線①と②の線のあいだに短い札を置き、くわしくは下の説明に書く
+    \node[anchor=center, inner xsep=0.8mm, inner ysep=0.5mm, text=bkInk, font=\sffamily\bfseries\fontsize{6.6}{8}\selectfont,
+      fill=white, draw=bkInk!60, line width=0.7pt, rounded corners=1mm]
+      at (28.7,\bk@hy+6.4) {\R{乗}{の}りかえ\R{駅}{えき}};
+    \bk@stations
+    \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{7.5}{9}\selectfont] at (0,0)
+      {\ifnum\bkvol=1\relax\R{終点}{しゅう|てん}は、 \R{大学}{だい|がく}の \R{工学}{こう|がく}で \R{使}{つか}われて いる \R{分野}{ぶん|や}です。 \R{点線}{てん|せん}の かこみは \R{乗}{の}りかえ\R{駅}{えき}（6\R{巻}{かん}の \R{微分方程式}{び|ぶん|ほう|てい|しき}）。\else\R{終点}{しゅう|てん}は、\R{大学}{だい|がく}の\R{工学}{こう|がく}で\R{使}{つか}われている\R{分野}{ぶん|や}です。\R{点線}{てん|せん}の\R{囲}{かこ}みは\R{乗}{の}りかえ\R{駅}{えき}（\R{第}{だい}6\R{巻}{かん}の\R{微分方程式}{び|ぶん|ほう|てい|しき}）。\fi};
+  \end{tikzpicture}}
+% 駅  \bkstation{路線}{巻}{ラベル}
+\newcommand\bkstation[3]{%
+  \pgfmathsetmacro\bk@sx{20+(#1-1)*17.4}\pgfmathsetmacro\bk@sy{182-(#2-1)*17}%
+  \ifnum#2=\bkvol\relax
+    \fill[white] (\bk@sx,\bk@sy) circle (2.6);\draw[bkRoute#1, line width=1.6pt] (\bk@sx,\bk@sy) circle (2.6);
+    \node[anchor=west, inner sep=0.5pt, text=bkInk, fill=bkVol!18, font=\sffamily\bfseries\fontsize{7.5}{8}\selectfont] at (\bk@sx+3,\bk@sy) {#3};
+  \else
+    \fill[white] (\bk@sx,\bk@sy) circle (1.9);\draw[bkRoute#1, line width=1.2pt] (\bk@sx,\bk@sy) circle (1.9);
+    \node[anchor=west, inner sep=0.5pt, text=bkGray, font=\sffamily\fontsize{6.6}{7}\selectfont] at (\bk@sx+2.4,\bk@sy) {#3};
+  \fi}
+
+%% ------------------------------------------------------------
+%% 11. カバー展開図（入稿用）：表4・背・表1、塗り足し3 mm、トンボ
+%% ------------------------------------------------------------
+\newcommand\bk@cropmarks[4]{% 仕上がりの左下x, 左下y, 幅, 高さ（日本式の二重トンボ）
+  \begin{scope}[line width=0.25pt, black]
+    \foreach \cx/\sx in {#1/-1, #1+#3/1} \foreach \cy/\sy in {#2/-1, #2+#4/1} {
+      \draw (\cx+\sx*3,\cy+\sy*13) -- (\cx+\sx*3,\cy+\sy*3) -- (\cx+\sx*13,\cy+\sy*3);
+      \draw (\cx,\cy+\sy*13) -- (\cx,\cy+\sy*3);
+      \draw (\cx+\sx*13,\cy) -- (\cx+\sx*3,\cy);
+    }
+    \foreach \cx in {#1+#3/2} {\draw (\cx,#2-3) -- (\cx,#2-13) (\cx-6,#2-8) -- (\cx+6,#2-8);
+      \draw (\cx,#2+#4+3) -- (\cx,#2+#4+13) (\cx-6,#2+#4+8) -- (\cx+6,#2+#4+8);}
+    \foreach \cy in {#2+#4/2} {\draw (#1-3,\cy) -- (#1-13,\cy) (#1-8,\cy-6) -- (#1-8,\cy+6);
+      \draw (#1+#3+3,\cy) -- (#1+#3+13,\cy) (#1+#3+8,\cy-6) -- (#1+#3+8,\cy+6);}
+  \end{scope}}
+\newcommand\bkCoverWrapArt[1]{% 背の幅（mm）。原点＝仕上がりの左下（紙の端から18 mm内側）
+  \pgfmathsetmacro\bk@W{182+#1+182}%
+  \begin{scope}
+    \clip (-3,-3) rectangle (\bk@W+3,260);
+    \begin{scope}\clip (-3,-3) rectangle (182,260);\bkBackArt\end{scope}
+    \begin{scope}[shift={(182,0)}]\bkSpineArt{#1}\end{scope}
+    \begin{scope}[shift={(182+#1,0)}]\clip (0,-3) rectangle (185,260);\bkFrontArt\end{scope}
+  \end{scope}
+  \bk@cropmarks{0}{0}{\bk@W}{257}
+  \foreach \x in {182, 182+#1} {\draw[line width=0.25pt] (\x,-3) -- (\x,-13) (\x,260) -- (\x,270);}
+  \node[anchor=south west, inner sep=0pt, font=\sffamily\fontsize{6.5}{8}\selectfont] at (16,263)
+    {\def\R##1##2{##1}\bkSeriesPlain　第\bkvol 巻　カバー展開図（表4・背・表1）　仕上がり B5（182×257 mm）　背幅 #1 mm（本文\bk@totalpages ページ・紙厚0.09 mmで計算）　塗り足し 3 mm　CMYK};
+}
+\newcommand\bkCoverWrapPage[1]{%
+  \AddToHookNext{shipout/background}{\put(0,-\paperheight){%
+    \begin{tikzpicture}[overlay, x=1mm, y=1mm]\begin{scope}[shift={(18,18)}]\bkCoverWrapArt{#1}\end{scope}\end{tikzpicture}}}%
+  \thispagestyle{empty}\null\clearpage}
+
+\endinput

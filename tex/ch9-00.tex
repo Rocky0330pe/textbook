@@ -1,0 +1,962 @@
+%% 9-0 序章　音を分ける、変化を予想する（第15回：組 V9-1。ページ制限なし。偶数ページ）
+%% ① 楽器の「ラ」の波形（はてな？）② スペクトルのアプリ（やってみよう）③ 音は空気の圧力の波（8-13・8-14 の予告カード）
+%% ④ 3つの sin をたす（表計算：行＝時刻、列＝成分）⑤ 2つの世界（はてな？の答え）⑥ FFT（Python）
+%% ⑦ 冷めるお湯を表を引いて予想（9-5 の予告）⑧ s の世界の点（車A・車B、9-9 の予告）⑨ 倒立振子と行列（9-10・9-11 の予告）
+%% ⑩ この巻の地図 ⑪ 名前と実際の操作（tools/kata9-int.md）⑫ 主役 ⑬ 表計算と Python（tools/kata9.md）⑭ 記号 ⑮ 路線 ⑯ 読み方
+%% 数：440・880・1320 Hz の振幅 1・0.5・0.25（brief9-parts 5章の約束）、お湯 20+60e^{-0.05t}（10分 56.39 ℃、オイラー法 55.92 ℃）、
+%% 車A 2e^{-t}-e^{-2t}（x(1)=0.600）・車B e^{-t}(cos2t+0.5sin2t)（x(1)=0.014）、倒立振子 0.01cosh2t（2秒 0.2731）。
+\makeatletter
+\gdef\bk@partlabel{第9巻}\gdef\bk@partname{波と変化を読みとく}
+%% ===== kata9 の型（tools/kata9.md、組 V9-1）。頭文字 kixa は章ごとに置きかえる =====
+% (1) 色：表計算のマスと、2つの世界の線
+\colorlet{kixaN}{bkOrange!16}% 1行め（成分の番号・周波数）のマス
+\colorlet{kixaK}{bkGreen!16}% 2行め（成分の大きさ）のマス
+\colorlet{kixaS}{bkYellow!45}% 合計・注目するマス
+\colorlet{kixaW}{bkBlue!80!black}% 時間の世界の線（波形・動き）
+\colorlet{kixaF}{bkOrange!85!black}% 周波数の世界の棒
+\colorlet{kixaP}{bkRed!80!black}% s の世界の点（×）
+% (2) 表計算の数式バー  \kixafx{セル}{式}（式の中の $ は \$、^ は \^{}）
+\newcommand\kixafx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=78mm, text width=74mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+% (3) グラフのスタイル（どれも scale only axis：はばと高さは軸の箱の大きさ）
+\pgfplotsset{
+  kixa base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixa wave/.style={kixa base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixa spec/.style={kixa base, ymin=0},
+  kixa splane/.style={bkplot, scale only axis, width=47mm, height=47mm, axis equal image, grid=major,
+    every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north east, yshift=-0.5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(ticklabel* cs:1)}, anchor=south, yshift=1mm, font=\sffamily\small, text=bkInk}},
+  kixa sig/.style={kixaW, line width=1.4pt, no markers, samples=241, smooth},
+  kixa part/.style={bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt, no markers, samples=241, smooth},
+  kixa bar/.style={ycomb, draw=kixaF, line width=3pt, no markers},
+  kixa dot/.style={only marks, mark=*, mark size=1.3pt, kixaW}}
+% (4) 2つの世界の見出しと、行き来の矢印  \kixaworlds[見出しの高さ]{左の題}{右の題}{上の矢印（→）}{下の矢印（←）}
+%     左の軸は at={(0mm,0mm)}、右の軸は at={(76mm,0mm)}（はば 47 mm）に置く。見出しは軸の上（ふつう 42 mm）
+\tikzset{
+  kixa world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk,
+    minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixa bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixa blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixaworlds[5][42mm]{%
+  \node[kixa world, draw=kixaW] (kixaL) at (23.5mm,#1) {#2};
+  \node[kixa world, draw=kixaF] (kixaR) at (99.5mm,#1) {#3};
+  \draw[kixa bridge] ([yshift=1.3mm, xshift=1.5mm]kixaL.east) -- node[kixa blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixaR.west);
+  \draw[kixa bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixaR.west) -- node[kixa blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixaL.east);}
+% (5) s の世界の点（axis の中で）  \kixapole{実部}{虚部}（×）  \kixazero{実部}{虚部}（○）
+\newcommand\kixapole[3][kixaP]{\draw[#1, line width=1.3pt] (axis cs:#2,#3) ++(-1.3mm,-1.3mm) -- ++(2.6mm,2.6mm) (axis cs:#2,#3) ++(-1.3mm,1.3mm) -- ++(2.6mm,-2.6mm);}
+\newcommand\kixazero[3][kixaP]{\draw[#1, line width=1.1pt, fill=white] (axis cs:#2,#3) circle[radius=1.2mm];}
+%% ===== この章だけで使う部品（頭文字 kixa） =====
+\tikzset{
+  kixa lab/.style={font=\sffamily\footnotesize, inner sep=1pt, text=bkInk},
+  kixa arr/.style={-{Stealth[length=1.9mm, width=1.7mm]}, line width=0.9pt},
+  kixa eq/.style={draw=\bkTT, line width=0.9pt, rounded corners=1.5mm, fill=white, inner xsep=2mm, inner ysep=1.6mm, align=flush center, font=\small},
+  kixa step/.style={font=\sffamily\footnotesize, text=bkInk, fill=white, inner sep=0.8mm, align=center}}
+% 路線の1行  \kixaroute{y}{路線番号}{前の駅}{この巻の駅}{この先}
+\newcommand\kixaroute[5]{%
+  \draw[bkRoute#2, line width=3pt, line cap=round] (10,#1) -- (132,#1);
+  \node[inner sep=0pt] at (4,#1) {\bkrouteicon[7mm]{#2}};
+  \fill[white] (24,#1) circle (2.2);\draw[bkRoute#2, line width=1.1pt] (24,#1) circle (2.2);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (24,#1-3.8) {#3};
+  \fill[white, rounded corners=1.5mm] (38,#1-4.4) rectangle (110,#1+4.4);
+  \draw[bkRoute#2, line width=1.6pt, rounded corners=1.5mm] (38,#1-4.4) rectangle (110,#1+4.4);
+  \node[font=\sffamily\footnotesize, text=bkInk] at (74,#1) {#4};
+  \fill[bkRoute#2] (124,#1-3) rectangle (128,#1+3);
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (126,#1-3.8) {#5};}
+% 部の地図の1まい  \kixapart{上のはしの y}{部の名前}{章}{絵}{中身}   はば132mm・高さ40mm
+\newcommand\kixapart[5]{%
+  \draw[bkTheme!80!black, line width=1pt, fill=white, rounded corners=2.5mm] (0,#1) rectangle (132,#1-40);
+  \node[anchor=north west, fill=bkTheme, text=bkOn, rounded corners=1.2mm, font=\sffamily\bfseries\small,
+    inner xsep=2mm, inner ysep=1mm] at (3.5,#1-3.5) {#2};
+  \node[anchor=north east, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (128,#1-4.6) {#3};
+  \begin{scope}[shift={(23,#1-24)}]#4\end{scope}
+  \node[anchor=north west, text width=84mm, align=left, font=\footnotesize, inner sep=0pt, execute at begin node={\setlength{\baselineskip}{1.5em}}] at (44,#1-10.5) {#5};}
+% 箇条書きの1項目  \kixaitem{文}
+\newcommand\kixaitem[1]{\par\noindent\hangindent=1\zw\hangafter=1 ・#1\par}
+% 会話の1行  \kixatalk{y}{sora|mina|delta}{名前}{せりふ}
+\newcommand\kixatalk[4]{%
+  \bkChar{#2}{(7,#1-6.5)}{12mm}
+  \node[rectangle callout, callout absolute pointer={(15.5,#1)}, anchor=west, draw=bkTheme!80!black, line width=0.8pt,
+    fill=white, rounded corners=2.5mm, inner xsep=3mm, inner ysep=1.8mm, text width=103mm, align=left,
+    font=\small] at (21,#1) {#4};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (7,#1-7.5) {#3};}
+% 読み方のカード  \kixacard{(x,y)}{アイコン}{色}{見出し}{中身}  はば64mm・高さ44mm
+\newcommand\kixacard[5]{%
+  \node[anchor=north west, draw=#3, line width=1pt, fill=white, rounded corners=2.5mm,
+    minimum width=64mm, minimum height=44mm, inner sep=0pt] at #1 {};
+  \node[anchor=north west, inner sep=0pt] (ci) at ($#1+(3.5,-3)$) {\bkicon[1.5em]{#2}{#3}};
+  \node[anchor=west, font=\sffamily\bfseries\small, text=#3!85!black, inner sep=0pt] at ([xshift=2mm]ci.east) {#4};
+  \node[anchor=north west, text width=57mm, align=left, font=\small, inner sep=0pt] at ($#1+(3.5,-12)$) {#5};}
+% 1つの音の波形（3つの楽器の図。t は ms、440 Hz の n 倍の sin の和）  \kixasound{y}{名前}{式}{棒の座標}
+\newcommand\kixasound[4]{%
+  \begin{axis}[kixa wave, at={(0mm,#1)}, height=17mm, xmin=0, xmax=5, ymin=-2.8, ymax=2.8, xtick={0,1,...,5}, ytick=\empty,
+      extra y tick labels={}, xticklabels={}, xlabel={}, ylabel={}]
+    \addplot[kixa sig, domain=0:5, samples=301] {#3};
+  \end{axis}
+  \begin{axis}[kixa spec, at={(76mm,#1)}, height=17mm, xmin=0, xmax=2900, ymax=1.15, xtick={440,880,...,2640}, xticklabels={}, ytick=\empty, xlabel={}, ylabel={}]
+    \addplot[kixa bar] coordinates {#4};
+  \end{axis}
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkInk, align=right] at (-2mm,#1+8.5mm) {#2};}
+% 見出しのアイコン（路線：線と2つの駅）
+\newcommand\bk@icon@kixaroute{%
+  \draw[bkOn, line width=0.13*\bk@iu, line cap=round] (-0.62,0) -- (0.62,0);
+  \filldraw[fill=white, draw=bkOn, line width=0.09*\bk@iu] (-0.36,0) circle (0.2) (0.36,0) circle (0.2);}
+\makeatother
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixa は章ごとに置きかえる =====
+\colorlet{kixaNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixaSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixaSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixa dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixa dan1/.style={kixa dan, draw=kixaNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixa dan2/.style={kixa dan, draw=kixaSc, fill=kixaSb, text=bkInk},
+  kixa dan3/.style={kixa dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixa name/.style={draw=kixaNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixa seki/.style={draw=kixaSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixaSb},
+  kixa tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixa q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixa do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixa go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixa yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixa@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixadan{1|2|3}
+\newcommand\kixadan[1]{\tikz[baseline=(d.base)]\node[kixa dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixanaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixanaosu[1]{\tikz[baseline=(d.base)]\node[kixa dan2] (d) {\vphantom{あ}直す：\kixa@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixaop{1|2|3|4}
+\newcommand\kixaop[1]{\tikz[baseline=(d.base)]\node[kixa dan2] (d) {\vphantom{あ}\kixa@op{#1}};}
+% 段の見出し（本文で）  \kixadanhead{1|2|3}{見出し}
+\newcommand\kixadanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixa dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixacase{C}（′ は \kixacase{A$'$}）
+\newcommand\kixacase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixabaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixabaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixa@cases#3,\@nil）}
+\def\kixa@cases#1,#2\@nil{\kixacase{#1}\ifx\relax#2\relax\else と\kixa@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixaN[1]{\tikz[baseline=(n.base)]\node[kixa name] (n) {$\displaystyle #1$};}
+\newcommand\kixaNt[1]{\tikz[baseline=(n.base)]{\node[kixa name] (n) {$\displaystyle #1$};\node[kixa tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixaS[1]{\tikz[baseline=(n.base)]\node[kixa seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixaSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixaSt[2]{\tikz[baseline=(n.base)]{\node[kixa seki] (n) {$\displaystyle #2$};\node[kixa tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixa@op{#1}};}}
+% 場合分けの表の題の帯  \kixacasetitle{9-2}{題}
+\newcommand\kixacasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixapic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixapic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixax/\kixay in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixax-1},{\kixay-1}) -- ({\kixax+1},{\kixay+1}) ({\kixax-1},{\kixay+1}) -- ({\kixax+1},{\kixay-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixax/\kixay in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixax,\kixay) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+
+\bkchapter{9}{0}{音を分ける、\\変化を予想する}{\bklevel{3}}{音を分ける、変化を予想する}
+
+\noindent 合奏を始める前に、みんなで「ラ」の音を出して、音の高さをそろえることがあります。この「ラ」は、ふつう1秒に440回ふるえる音（\qty{440}{Hz}）です。ピアノで出しても、フルートで出しても、人が声で歌っても、高さは同じ「ラ」です。
+
+それなのに、目をつぶって聞いても、ピアノの音か、フルートの音か、人の声かは、すぐにわかります。同じ高さの音なのに、何がちがうのでしょう。
+
+マイクをつないだスマホやパソコンで音を録音すると、空気の圧力が時間とともにどう変わったかを、グラフ（\textbf{波形}、はけい）で見ることができます。図\ref{bk:9-0:fig-gakki}は、3つの音の波形の例です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+  \foreach \kixay/\kixan/\kixaf in {
+      0/{音C\\（声ににた音）}/{0.5*sin(158.4*x)+0.8*sin(316.8*x)+sin(475.2*x)+0.45*sin(633.6*x)+0.3*sin(792*x)+0.2*sin(950.4*x)},
+      24/{音B\\（ピアノに\\にた音）}/{sin(158.4*x)+0.55*sin(316.8*x)+0.4*sin(475.2*x)+0.25*sin(633.6*x)+0.15*sin(792*x)+0.1*sin(950.4*x)},
+      48/{音A\\（フルートに\\にた音）}/{sin(158.4*x)+0.25*sin(316.8*x)+0.08*sin(475.2*x)}} {
+    \begin{axis}[kixa wave, at={(0mm,\kixay mm)}, width=104mm, height=17mm, xmin=0, xmax=5, ymin=-2.8, ymax=2.8,
+        xtick={0,1,...,5}, ytick=\empty, xticklabels={}, ylabel={}, xlabel={}, extra y tick labels={}]
+      \addplot[kixa sig, domain=0:5, samples=301] {\kixaf};
+    \end{axis}
+    \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkInk, align=right] at (-2mm,\kixay mm+8.5mm) {\kixan};}
+  \begin{axis}[kixa wave, at={(0mm,0mm)}, width=104mm, height=17mm, xmin=0, xmax=5, ymin=-2.8, ymax=2.8,
+      xtick={0,1,...,5}, ytick=\empty, xlabel={時間 $t$（ms）}, ylabel={}, axis line style={draw=none}, extra y ticks={}]
+  \end{axis}
+  \draw[bkRed!80!black, line width=0.8pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (0mm,70mm) -- (47.27mm,70mm);
+  \node[anchor=south, kixa lab, text=bkRed!80!black] at (23.64mm,70.6mm) {\qty{2.27}{ms}（1回分）};
+\end{tikzpicture}
+\bkfigcaption{同じ「ラ」（\qty{440}{Hz}）の3つの音の波形。横は時間（\qty{1}{ms} は1000分の1秒）、たては空気の圧力の変化で、3つとも同じ目もり。どれも \qty{2.27}{ms} ごとに同じ形をくり返すが、くり返す形がちがう（形がわかりやすいように作った例）。}
+\label{bk:9-0:fig-gakki}
+\end{bkfigure}
+
+\noindent 1回分の時間 \qty{2.27}{ms} は、「1秒に440回」から出てきます。1秒を440回で分けると
+\[ \frac{\qty{1}{s}}{440}=\qty{0.00227}{s}=\qty{0.00227}{s}\times\qty{1000}{ms/s}=\qty{2.27}{ms} \]
+です。3つの音は、どれも \qty{2.27}{ms} ごとに同じ形をくり返しているので、高さは同じ「ラ」に聞こえます。ちがうのは、くり返す\textbf{形}です。
+
+\Needspace{8\baselineskip}
+\begin{hatena}
+同じ高さの「ラ」なのに、楽器や声で、波の形がちがいます。\par\vspace{3pt}
+声や楽器の音を、いくつかの「成分」に分けると、何が見えるかな？\enspace 波の形のちがいは、何のちがいかな？
+\end{hatena}
+
+この巻には、もう1つの問いがあります。第2巻（2-18）と第6巻（6-2）では、80\,℃ のお湯が冷めていくようすを、表計算で1分ずつ計算しました。10分後の温度を知るのに、表を10行作りました。では、\textbf{表計算をしないで}、10分後や1時間後の温度を、もっと手軽に予想できないでしょうか。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixa base, width=100mm, height=34mm, xmin=0, xmax=62, ymin=0, ymax=90, xtick={0,10,...,60}, ytick={20,40,60,80}, xlabel={時間 $t$（分）}, ylabel={温度 $T$（℃）}]
+  \addplot[bkGray, line width=0.8pt, dash pattern=on 3pt off 2pt, no markers, domain=0:62, samples=60] {20+60*exp(-0.05*x)};
+  \addplot[only marks, mark=*, mark size=1.5pt, kixaW] coordinates {(0,80) (1,77) (2,74.15) (3,71.44) (4,68.87) (5,66.43) (6,64.11) (7,61.9) (8,59.81) (9,57.81) (10,55.92)};
+  \node[kixa lab, anchor=west, fill=white, text=kixaW] at (axis cs:12,64) {表計算の10行（1分ずつ）：10分後 55.92\,℃};
+  \node[kixa lab, anchor=south, fill=white, text=bkRed!80!black, align=center] (q) at (axis cs:56,40) {1時間後は？};
+  \draw[kixa arr, bkRed!80!black] (q.south) -- (axis cs:60,26.5);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{冷めるお湯（80\,℃・部屋 20\,℃）を、6-2 のオイラー法で1分ずつ計算した点。点線は 6-4 で求めた式のグラフ。1時間後を知るには、表を60行作らなければならない。}
+\label{bk:9-0:fig-oyu0}
+\end{bkfigure}
+
+「音を分ける」と「変化を予想する」。この2つが、第9巻の2つの柱です。
+
+第9巻は、このシリーズの最後の巻です。ここまで8冊を読んできたあなたは、たし算から始めて、微分・積分・行列・ベクトル場までを、自分の手で積み上げてきました。それは、本当にすごいことです。この巻には、前の巻の道具がぜんぶ出てきます。1回読んでわからなくても大丈夫です。思い出せない道具があれば、章の番号をたよりに、前の巻にもどってかまいません。
+
+\begin{yattemiyou}[声や音の「成分」を見よう]
+\textbf{用意するもの}\quad スマホかタブレット（音の「スペクトル」や「周波数」を表示するアプリを入れる。家の人と相談して、無料のものを選ぼう）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item アプリを開いて、静かな部屋で、マイクから \qty{30}{cm} ほどはなれる。
+\item 口笛を、同じ高さで3秒ほど吹く。画面に出る線は何本かな？
+\item 「あー」と、同じ高さで声を出す。線は何本で、どんな間かくで並ぶかな？
+\item 声の高さを少し上げて、もう一度「あー」。線の間かくはどう変わるかな？
+\item 手を1回たたく。画面はどうなるかな？
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 図\ref{bk:9-0:fig-app}は、アプリの画面の例です。横は周波数（\qty{1}{s} に何回ふるえるか）、たては、その周波数の成分の強さです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+  \begin{axis}[kixa spec, at={(0mm,0mm)}, width=36mm, height=24mm, xmin=0, xmax=3000, ymax=1.15, xtick={0,1000,2000,3000}, xticklabels={0,1000,2000,3000}, ytick=\empty, xlabel={}, ylabel={}, tick label style={font=\sffamily\footnotesize}]
+    \addplot[kixa bar] coordinates {(1500,1)};
+  \end{axis}
+  \node[anchor=south, kixa lab, font=\sffamily\bfseries\footnotesize] at (18mm,27mm) {口笛};
+  \begin{axis}[kixa spec, at={(46mm,0mm)}, width=36mm, height=24mm, xmin=0, xmax=3000, ymax=1.15, xtick={0,1000,2000,3000}, xticklabels={0,1000,2000,3000}, ytick=\empty, xlabel={周波数（Hz）}, ylabel={}]
+    \addplot[kixa bar, line width=1.6pt] coordinates {(200,0.35) (400,0.5) (600,0.8) (800,1) (1000,0.75) (1200,0.62) (1400,0.4) (1600,0.22) (1800,0.15) (2000,0.12) (2200,0.1) (2400,0.13) (2600,0.12) (2800,0.08)};
+  \end{axis}
+  \node[anchor=south, kixa lab, font=\sffamily\bfseries\footnotesize] at (64mm,27mm) {声「あー」};
+  \begin{axis}[kixa spec, at={(92mm,0mm)}, width=36mm, height=24mm, xmin=0, xmax=3000, ymax=1.15, xtick={0,1000,2000,3000}, xticklabels={0,1000,2000,3000}, ytick=\empty, xlabel={}, ylabel={}]
+    \addplot[fill=kixaF!35, draw=kixaF, line width=1pt, domain=0:3000, samples=120, smooth] {0.55+0.25*exp(-((x-900)/500)^2)-0.15*x/3000} \closedcycle;
+  \end{axis}
+  \node[anchor=south, kixa lab, font=\sffamily\bfseries\footnotesize] at (110mm,27mm) {手をたたく};
+\end{tikzpicture}
+\bkfigcaption{スペクトルのアプリの画面の例（形がわかりやすいように作った図。本物は、人・声の高さ・マイクでちがう）。口笛は線が1本。声は、同じ間かく（この例では \qty{200}{Hz} ごと）に線が並ぶ。手をたたく音は、線にならず、広く広がる。}
+\label{bk:9-0:fig-app}
+\end{bkfigure}
+
+口笛の音は、ほとんど1つの $\sin$ の波（4-8）です。だから線が1本です。声の線は、いちばん左の線の周波数の2倍・3倍・4倍…の所に、同じ間かくで並びます。声を高くすると、いちばん左の線が右へ動き、線の間かくも広がります。手をたたく音は、くり返さない短い音です。このような音は、たくさんの周波数にまたがって広がります（9-4 で、自分の声で確かめます）。
+
+\begin{omoidasou}
+\bkrecall{4-8}{$\sin$ のグラフは、角が $2\pi$（$360°$）進むごとに同じ形をくり返す。}
+\bkrecall{4-9}{$\sin\theta+\tfrac13\sin3\theta+\tfrac15\sin5\theta+\tfrac17\sin7\theta$ は、四角い波（方形波）に近い形。$\theta=90°$ では約0.724。}
+\bkrecall{6-4}{冷めるお湯（80\,℃、部屋 20\,℃）は $T=20+60e^{-0.05t}$（$t$ は分）。オイラー法（6-2）では、10分後は 55.92\,℃。}
+\bkrecall{6-12}{$x=e^{st}$ を入れると特性方程式。車A $s^2+3s+2=0$ は $s=-1,\ -2$、車B $s^2+2s+5=0$ は $s=-1\pm2j$。}
+\bkrecall{7-10}{$\vec x$ に $(I+A\Delta t)$ を何回もかけると、少し先の状態が次々に出る（行列のオイラー法）。}
+\bkrecall{8-13}{波動方程式の答えは $f(x-ct)$：形を保ったまま、速さ $c$ で走る波。}
+\end{omoidasou}
+
+%% ================= 音を分ける =================
+\Needspace{12\baselineskip}\bksection{doguu}{音を分ける}
+
+\bksubsection{1}{音は、空気の圧力の波}
+
+\label{bk:9-0:oto}スピーカーのまくが前に出ると、すぐ前の空気がおされて、圧力が少し高くなります。まくが後ろへもどると、圧力が少し低くなります。この「少し高い所」と「少し低い所」が、となりの空気をおし、となりがまたそのとなりをおして、空気の中を伝わっていきます。これが音です。空気そのものが遠くへ流れていくのではありません。圧力の高い・低いという\textbf{形}だけが伝わっていきます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % スピーカー
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (0,4) rectangle (6,14);
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.7pt] (6,6) -- (12,1) -- (12,17) -- (6,12) -- cycle;
+  \node[anchor=north, kixa lab] at (6,-1) {スピーカー};
+  % 空気の圧力（こい所が圧力の高い所）
+  \foreach \kixai in {0,...,95} {
+    \pgfmathtruncatemacro\kixac{round(42+38*cos(14.087*\kixai))}
+    \fill[bkBlue!\kixac] ({13+0.9*\kixai},2) rectangle ++(0.92,14);}
+  \draw[bkInk, line width=0.5pt] (13,2) rectangle (99.4,16);
+  \draw[kixa arr, bkRed!80!black] (60,20) -- (78,20) node[anchor=west, kixa lab, text=bkRed!80!black] {速さ \qty{340}{m/s} で走る};
+  % マイク
+  \draw[bkInk, line width=1pt] (110,-4) -- (110,6);
+  \filldraw[fill=bkGray!70, draw=bkInk, line width=0.7pt] (110,9) circle (3);
+  \node[anchor=north, kixa lab] at (110,-5) {マイク};
+  \draw[bkRed!80!black, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (110,12.5) -- (110,24);
+  \node[anchor=south, kixa lab] at (110,24.5) {この場所で、時間ごとに見る};
+  \node[anchor=north, kixa lab, align=center] at (56,0.5) {こい所：圧力が少し高い\quad うすい所：圧力が少し低い};
+  \draw[bkInk!60, line width=0.6pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (13,-7) -- (36,-7) node[midway, below, kixa lab] {波長 \qty{0.77}{m}};
+\end{tikzpicture}
+\bkfigcaption{スピーカーから出た音（\qty{440}{Hz}）。ある時刻の空気の圧力を、こさで表した。こい所とうすい所の並びが、形を保ったまま右へ走る。マイクは1つの場所で、圧力の変化を時間ごとにはかる（長さは実際の割合ではない）。}
+\label{bk:9-0:fig-oto}
+\end{bkfigure}
+
+8-13 で学んだように、空気の圧力の変化 $p$ は、波動方程式にしたがいます。その答えは $f(x-ct)$ の形で、\textbf{形を保ったまま、速さ $c$ で走る波}でした（8-13）。空気の中の音の速さは、およそ $c=\qty{340}{m/s}$ です（15\,℃ ぐらいの空気の値。温度で少し変わります）。
+
+マイクは、1つの場所 $x$ に止まって、圧力の変化をはかります。場所 $x$ を止めると（8-2 の「止める」）、$f(x-ct)$ は時間 $t$ だけで決まる量になります。これが、図\ref{bk:9-0:fig-gakki}のような\textbf{時間の波形} $p(t)$ です。この巻では、おもにこの「1つの場所で見た、時間の波形」をあつかいます。
+
+1秒に何回ふるえるかを\textbf{周波数}（しゅうはすう）といい、単位は Hz（ヘルツ）です。\bkidx{しゅうはすう}{周波数}理科で学んだ「振動数」と同じものです。この巻では、電気や通信の本にそろえて「周波数」とよびます。
+
+\qty{440}{Hz} の音では、1回分の時間（周期）は \qty{2.27}{ms} でした。その間に、波は \qty{340}{m/s} で進むので、こい所から次のこい所までの長さ（波長）は
+\[ \qty{340}{m/s}\times\qty{0.00227}{s}=\qty{0.77}{m} \]
+です。8-13 の例題で求めた、\qty{440}{Hz} の音の波長 \qty{0.773}{m} と同じです。
+
+光も波です。8-14 で、電気と磁気の4つの式から、電場と磁場の波（電磁波）が、速さ
+\[ c=\frac{1}{\sqrt{\mu_0\varepsilon_0}}\approx\qty{3.00e8}{m/s} \]
+で伝わることを見ました（$\varepsilon_0=8.854\times10^{-12}$ F/m、$\mu_0\approx4\pi\times10^{-7}$ N/A²。$\mu_0$ は、2019年の SI の改定からは測って決める値で、ほぼこの値）。テレビ・ラジオ・スマホの電波も電磁波です。電波は、周波数ごとに使う人を決めて、たがいにまざらないようにしています。どの電波も、受ける場所で見れば、時間の波形です。この巻の「分ける」道具は、音にも電波にも、同じように使えます。
+
+\bksubsection{2}{3つの sin をたすと、1つの音}
+
+\label{bk:9-0:tasu}では、図\ref{bk:9-0:fig-gakki}のような形は、どうやってできるのでしょう。ためしに、次の3つの $\sin$ の波をたしてみます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=26mm] Q[c,m,wd=26mm] Q[l,m,wd=36mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+成分 & 周波数 & 大きさ（振幅） & 1回分の時間 \\
+1つめ & \qty{440}{Hz} & 1 & \qty{2.27}{ms} \\
+2つめ & \qty{880}{Hz}（2倍） & 0.5 & \qty{1.14}{ms}（半分） \\
+3つめ & \qty{1320}{Hz}（3倍） & 0.25 & \qty{0.76}{ms}（3分の1） \\
+\end{bktable}
+\bktabcaption{たしてみる3つの成分（この巻で何回も使う例。9-4 でも同じ数を使う）}
+\end{bkcenter}
+
+2つめと3つめの周波数が、1つめのちょうど2倍・3倍になっているのは、楽器の弦や管の空気が、「全体で1回」「半分ずつで1回」「3分の1ずつで1回」のふるえ方を、同時にしているからです（くわしくは 9-1 の弦）。2倍・3倍の周波数の成分は、1つめの \qty{2.27}{ms} の間に、ちょうど2回・3回くり返します。だから、たしたものも \qty{2.27}{ms} ごとに同じ形をくり返します。
+
+表計算で、時刻ごとに3つの成分の値を出して、たします。この巻の表計算は、\textbf{行が時刻、列が成分}です。1行めに成分の周波数、2行めに大きさを入れ、3行めから下のA列に時刻を入れます。
+
+B3 には \texttt{=B\$2*SIN(2*PI()*B\$1*\$A3/1000)} という式を入れます（表\ref{bk:9-0:tab-tasu}の上の数式バー）。この式の1つ1つの部分には、わけがあります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \texttt{2*PI()*B\$1}\par\nobreak\noindent 1秒に進む角（角周波数）です。1回ふるえると角は $2\pi$ 進む（4-2 の弧度法で、1周は $2\pi$）ので、1秒に440回なら $2\pi\times440$ 進みます。
+\item \texttt{\$A3/1000}\par\nobreak\noindent 時刻を ms から s に直しています（\qty{1000}{ms/s} でわる）。①は「1秒あたり」なので、時刻も秒にそろえます。
+\item \texttt{B\$2*SIN(…)}\par\nobreak\noindent 大きさ1の $\sin$ に、その成分の大きさをかけます。
+\item \texttt{\$} の印\par\nobreak\noindent \texttt{B\$1}・\texttt{B\$2} は「いつも1行め・2行めを読む」、\texttt{\$A3} は「いつもA列の時刻を読む」という印です（2-18）。だから、1つの式をコピーするだけで、どのマスも「その列の成分の、その行の時刻の値」になります。
+\end{enumerate}
+B3 の式を B3:D12 にコピーし、E3 に \texttt{=SUM(B3:D3)}（3つの成分の合計）を入れて下へコピーすると、次の表ができます。
+
+\begin{bkcenter}
+\kixafx{B3}{=B\$2*SIN(2*PI()*B\$1*\$A3/1000)}\par\vspace{1mm}
+\bksheet{5}{17}{%
+1 & \SetCell{c} $t$＼Hz & \SetCell{bg=kixaN} 440 & \SetCell{bg=kixaN} 880 & \SetCell{bg=kixaN} 1320 & \SetCell{c} 合計 \\
+2 & \SetCell{c} 大きさ & \SetCell{bg=kixaK} 1 & \SetCell{bg=kixaK} 0.5 & \SetCell{bg=kixaK} 0.25 & \\
+3 & 0 & 0.000 & 0.000 & 0.000 & 0.000 \\
+4 & 0.25 & 0.637 & 0.491 & 0.219 & \SetCell{bg=kixaS} 1.348 \\
+5 & 0.5 & 0.982 & 0.184 & $-0.211$ & 0.955 \\
+6 & 0.75 & 0.876 & $-0.422$ & $-0.016$ & 0.438 \\
+7 & 1 & 0.368 & $-0.342$ & 0.226 & 0.252 \\
+8 & 1.25 & $-0.309$ & 0.294 & $-0.202$ & $-0.217$ \\
+9 & 1.5 & $-0.844$ & 0.452 & $-0.031$ & $-0.423$ \\
+10 & 1.75 & $-0.992$ & $-0.124$ & 0.232 & $-0.884$ \\
+11 & 2 & $-0.685$ & $-0.499$ & $-0.193$ & $-1.376$ \\
+12 & 2.25 & $-0.063$ & $-0.063$ & $-0.047$ & $-0.172$ \\}
+\bktabcaption{3つの成分をたす表（小数第3位まで）。A列の時刻 $t$ の単位は ms、1行めは成分の周波数（Hz）、2行めは成分の大きさ。}
+\label{bk:9-0:tab-tasu}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixa wave, width=110mm, height=44mm, xmin=0, xmax=4.6, ymin=-1.6, ymax=1.6, xtick={0,0.5,...,4.5}, ytick={-1.5,-1,-0.5,0.5,1,1.5}, xlabel={時間 $t$（ms）}, ylabel={}]
+  \addplot[kixa part, domain=0:4.6, samples=241] {sin(158.4*x)};
+  \addplot[kixa part, domain=0:4.6, samples=241, dash pattern=on 1.2pt off 1.2pt] {0.5*sin(316.8*x)};
+  \addplot[kixa part, domain=0:4.6, samples=241, dash pattern=on 4pt off 1.2pt on 1pt off 1.2pt] {0.25*sin(475.2*x)};
+  \addplot[kixa sig, domain=0:4.6] {sin(158.4*x)+0.5*sin(316.8*x)+0.25*sin(475.2*x)};
+  \addplot[only marks, mark=*, mark size=1.5pt, kixaW] coordinates {(0,0) (0.25,1.348) (0.5,0.955) (0.75,0.438) (1,0.252) (1.25,-0.217) (1.5,-0.423) (1.75,-0.884) (2,-1.376) (2.25,-0.172)};
+  \draw[kixaW, line width=1.4pt] (axis cs:0.1,1.95) -- (axis cs:0.45,1.95) node[kixa lab, anchor=west] {合計};
+  \draw[bkGreen!45!black, line width=0.8pt, dash pattern=on 3pt off 1.5pt] (axis cs:1.25,1.95) -- (axis cs:1.6,1.95) node[kixa lab, anchor=west] {\qty{440}{Hz}};
+  \draw[bkGreen!45!black, line width=0.8pt, dash pattern=on 1.2pt off 1.2pt] (axis cs:2.55,1.95) -- (axis cs:2.9,1.95) node[kixa lab, anchor=west] {\qty{880}{Hz}};
+  \draw[bkGreen!45!black, line width=0.8pt, dash pattern=on 4pt off 1.2pt on 1pt off 1.2pt] (axis cs:3.85,1.95) -- (axis cs:4.2,1.95) node[kixa lab, anchor=west] {\qty{1320}{Hz}};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{3つの成分（細い線：\qty{440}{Hz} は破線、\qty{880}{Hz} は点線、\qty{1320}{Hz} は一点鎖線）と、たした音（太い線）。点は表の E列の値。たした形も \qty{2.27}{ms} ごとにくり返す。}
+\label{bk:9-0:fig-tasu}
+\end{bkfigure}
+
+たした波は、もう $\sin$ の形ではありません。山がとがり、左右が対称でない形になりました。それでも、\qty{2.27}{ms} ごとに同じ形をくり返すので、高さは「ラ」に聞こえます。2つめ・3つめの大きさを変えると、くり返す形が変わります。つまり、\textbf{波の形は、どの成分をどれだけたすかで決まる}のです。
+
+\bksubsection{3}{2つの世界：時間の世界と周波数の世界}
+
+\label{bk:9-0:sekai}今の音は、2通りに表せます。1つは、図\ref{bk:9-0:fig-tasu}の太い線のように、時刻ごとの圧力の値を並べた\textbf{波形}です。もう1つは、「\qty{440}{Hz} が1、\qty{880}{Hz} が0.5、\qty{1320}{Hz} が0.25」のように、\textbf{どの周波数の成分がどれだけあるか}を並べたものです。2つめは、横に周波数、たてに大きさをとった棒グラフにできます。この棒グラフを\textbf{スペクトル}といいます。\bkidx{すぺくとる}{スペクトル}
+
+図\ref{bk:9-0:fig-sekai}のように、2つの表し方を左右に並べてみます。右から左へ行くのは、表\ref{bk:9-0:tab-tasu}でしたこと（成分をたす）です。では、左から右へ、つまり\textbf{波形だけを見て、どの成分がどれだけ入っているかを見つける}には、どうすればよいでしょう。これが第1部（9-1〜9-4）のテーマで、\textbf{フーリエ解析}（フーリエかいせき）とよばれる数学です。9-2 で、「成分の波をかけて、1回分たし合わせる（積分する）と、ほしい成分だけが残る」という方法を作ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixaworlds{時間の世界}{周波数の世界}{分ける}{たし合わせる}
+\begin{axis}[kixa wave, at={(0mm,0mm)}, xmin=0, xmax=5, ymin=-1.6, ymax=1.6, xtick={0,1,...,5}, ytick={-1,1}, xlabel={時間 $t$（ms）}, ylabel={$p$}]
+  \addplot[kixa sig, domain=0:5] {sin(158.4*x)+0.5*sin(316.8*x)+0.25*sin(475.2*x)};
+\end{axis}
+\begin{axis}[kixa spec, at={(76mm,0mm)}, xmin=0, xmax=2000, ymax=1.2, xtick={0,440,880,1320,2000}, ytick={0.25,0.5,1}, xlabel={周波数（Hz）}, ylabel={大きさ}]
+  \addplot[kixa bar] coordinates {(440,1) (880,0.5) (1320,0.25)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ音の、2つの表し方。左は時間の世界の波形（$p$ は空気の圧力の変化）、右は周波数の世界のスペクトル。左から右へ行くのが「分ける」、右から左へ行くのが「たし合わせる」。}
+\label{bk:9-0:fig-sekai}
+\end{bkfigure}
+
+\Needspace{6\baselineskip}
+\noindent\textbf{\bkhatenaref の答え}\par
+図\ref{bk:9-0:fig-gakki}の3つの音を、同じように分けたものが、図\ref{bk:9-0:fig-kotae}です。
+3つの音のスペクトル（図\ref{bk:9-0:fig-kotae}）は、どれも \qty{440}{Hz} の1倍・2倍・3倍…の所にだけ棒が立っています。だから、どれも \qty{2.27}{ms} ごとにくり返し、同じ高さの「ラ」に聞こえます。ちがうのは\textbf{棒の高さの並び}です。音Aは1つめの棒がほとんどで、$\sin$ に近い、やわらかい音です。音Bは2倍・3倍…の棒が、だんだん小さくなりながら長く続きます。音Cは、3倍の棒がいちばん高くなっています。
+
+1つめの成分（ここでは \qty{440}{Hz}）を\textbf{基本波}（きほんは）、2倍・3倍…の成分を\textbf{倍音}（ばいおん）といいます。\bkidx{ばいおん}{倍音}倍音の大きさの並びが、その楽器や声の「らしさ」、つまり\textbf{音色}（ねいろ）です。\bkidx{ねいろ}{音色}声や楽器の音を成分に分けると、\textbf{どの周波数の成分が、どれだけ強いか}が見えます。それが音色のちがいの正体です。
+
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixaworlds[71mm]{時間の世界}{周波数の世界}{分ける}{たし合わせる}
+\kixasound{48mm}{音A}{sin(158.4*x)+0.25*sin(316.8*x)+0.08*sin(475.2*x)}{(440,1) (880,0.25) (1320,0.08)}
+\kixasound{24mm}{音B}{sin(158.4*x)+0.55*sin(316.8*x)+0.4*sin(475.2*x)+0.25*sin(633.6*x)+0.15*sin(792*x)+0.1*sin(950.4*x)}{(440,1) (880,0.55) (1320,0.4) (1760,0.25) (2200,0.15) (2640,0.1)}
+\kixasound{0mm}{音C}{0.5*sin(158.4*x)+0.8*sin(316.8*x)+sin(475.2*x)+0.45*sin(633.6*x)+0.3*sin(792*x)+0.2*sin(950.4*x)}{(440,0.5) (880,0.8) (1320,1) (1760,0.45) (2200,0.3) (2640,0.2)}
+\begin{axis}[kixa wave, at={(0mm,0mm)}, height=17mm, xmin=0, xmax=5, ymin=-2.8, ymax=2.8, xtick={0,1,...,5}, ytick=\empty, xlabel={時間 $t$（ms）}, ylabel={}, axis line style={draw=none}, extra y ticks={}]
+\end{axis}
+\begin{axis}[kixa spec, at={(76mm,0mm)}, height=17mm, xmin=0, xmax=2900, ymax=1.15, xtick={440,880,1320,1760,2200,2640}, xticklabels={440,,1320,,2200,}, ytick=\empty, xlabel={周波数（Hz）}, ylabel={}, axis line style={draw=none}]
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{3つの音を、成分に分けたもの（図\ref{bk:9-0:fig-gakki}と同じ作った例）。棒は、左から \qty{440}{Hz}・\qty{880}{Hz}・\qty{1320}{Hz}・…（\qty{440}{Hz} の1倍・2倍・3倍・…）の成分の大きさ。どの音も同じ所に棒が立つが、高さの並びがちがう。}
+\label{bk:9-0:fig-kotae}
+\end{bkfigure}
+
+\Needspace{8\baselineskip}
+\begin{seikaku}
+図\ref{bk:9-0:fig-gakki}・図\ref{bk:9-0:fig-kotae}の3つの音は、形がわかりやすいように、成分の大きさを決めて作ったものです。本物の楽器の成分は、楽器の種類・作り・ひき方で変わり、同じ音でも、鳴りはじめと消えるまぎわでは並びが変わります。また、本物の音は、ずっと同じ形をくり返すわけではありません。くり返さない音の成分の見方は、9-4 で学びます。
+\end{seikaku}
+
+\Needspace{7\baselineskip}
+\begin{motto}[3]
+ピアノの「ラ」（\qty{440}{Hz}）から、鍵盤（白と黒をあわせて）を12個右へ進むと、1オクターブ上の「ラ」で、周波数はちょうど2倍の \qty{880}{Hz} です。となりの鍵盤どうしの周波数は $2^{1/12}\approx1.0595$ 倍ずつちがい、12回かけると2倍です（3-11 の倍々）。2倍音は1オクターブ上の「ラ」、3倍音の \qty{1320}{Hz} はその上の「ミ」（約 \qty{1318.5}{Hz}）にとても近い音です。
+\end{motto}
+
+\begin{column}{フーリエと、熱の研究}
+この巻の第1部の名前になっているフーリエ（1768〜1830年）は、フランスの数学者です。1798年には、ナポレオンのエジプト遠征に、学者の一人として加わりました。フランスにもどったあと、イゼール県（グルノーブルのある県）の知事を務めながら、1804年ごろから、熱が物の中をどう伝わるかを研究しました。
+
+1807年12月21日、フーリエは、パリの学士院で、熱の伝わり方の論文を発表しました。「どんな形の温度の分布も、$\sin$ や $\cos$ の波のたし合わせで表せる」という考えは、ラグランジュやラプラスのような大数学者にも、すぐには受け入れられませんでした。それでもフーリエは研究を続け、1811年の学士院の賞を受け、1822年に『熱の解析的理論』という本にまとめました（6-3 のコラム）。
+
+熱の問題を解くために作られた「$\sin$ のたし合わせ」の考えは、いまでは、音・電波・画像・地震の波など、あらゆる波を調べる道具になっています。9-1 では、フーリエのもとの問題（8-13 の金属の棒の熱）を、フーリエの方法で解きます。
+\end{column}
+
+\bksubsection{4}{コンピュータは、どうやって分ける？}
+
+\label{bk:9-0:fft}スマホのアプリは、マイクの音を1秒に何千回もはかり、その数の並びから、成分の大きさを計算して画面に出しています。この計算には、\textbf{FFT}（高速フーリエ変換）という、とても速い計算の手順が使われています（9-4）。Python の numpy にも、FFT の命令 \texttt{np.fft.rfft} があります。
+
+次のプログラムは、表\ref{bk:9-0:tab-tasu}と同じ音を、1秒に8000回はかった数の並びにして、FFT で成分の大きさを求めるものです。
+
+\Needspace{17\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+fs = 8000                       \# 1秒に何回はかるか
+t = np.arange(fs) / fs          \# 1/8000 秒ごとの 8000 個の時刻
+x = (np.sin(2*np.pi*440*t) + 0.5*np.sin(2*np.pi*880*t)
+     + 0.25*np.sin(2*np.pi*1320*t))   \# 3つの成分をたした音
+X = np.fft.rfft(x)              \# FFT（周波数の世界へ）
+freq = np.fft.rfftfreq(len(x), 1/fs)  \# 1つ1つの成分の周波数
+A = 2*np.abs(X) / len(x)        \# 成分の大きさ（振幅）にそろえる
+print(freq[A > 0.1])            \# 大きさが 0.1 より大きい周波数
+print(np.round(A[A > 0.1], 3))  \# その大きさ（小数第3位まで）
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[ 440.  880. 1320.]
+[1.   0.5  0.25]
+\end{bkcodeout}
+
+\noindent FFT は、8000個の数の並び（時間の世界）だけを受けとって、「\qty{440}{Hz} に1、\qty{880}{Hz} に0.5、\qty{1320}{Hz} に0.25」（周波数の世界）を見つけ出しました。表\ref{bk:9-0:tab-tasu}で入れた数が、そのままもどってきています。\texttt{2*np.abs(X)/len(x)} で2をかけてデータの個数でわるのは、FFT の答えを振幅の大きさにそろえるためです（なぜこの形になるかは 9-4）。1秒に8000回もはかるのは、\qty{1320}{Hz} のような速い成分でも、1回のふるえの間に何回かはかれるようにするためです。はかる回数が少なすぎると、成分を取りちがえます（9-4 のエイリアシング）。
+
+%% ================= 変化を予想する =================
+\bksection{doguu}{変化を予想する}
+
+\bksubsection{5}{冷めるお湯を、表を引いて予想する}
+
+\label{bk:9-0:oyu}2つめの問いにもどりましょう。80\,℃ のお湯が、20\,℃ の部屋で冷めていきます。温度 $T$〔℃〕の変わる速さは、部屋との差の0.05倍でした（6-1）。
+\[ \frac{\dd T}{\dd t}=-0.05\,(T-20),\qquad T(0)=80 \]
+$t$ の単位は分です。この式を、これまでに2通りで解きました。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[l,m,wd=56mm] Q[c,m,wd=30mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+方法 & すること & 10分後 \\
+オイラー法（6-2） & 1分ずつ、表計算で10行 & 55.92\,℃ \\
+変数分離（6-4） & 式を変形して積分する & 56.39\,℃ \\
+ラプラス変換（9-5） & 表を引いて、かけ算・わり算 & 56.39\,℃ \\
+\end{bktable}
+\bktabcaption{冷めるお湯の10分後の温度を求める3つの方法}
+\end{bkcenter}
+
+オイラー法の 55.92\,℃ が少し低いのは、「1分の間ずっと、はじめの（速い）冷め方で冷める」として計算したからです。本当は、冷めるにつれて冷め方はゆっくりになります。$\Delta t$ を小さくすれば、56.39\,℃ に近づきます（6-2）。
+
+第2部（9-5〜9-9）では、3つめの方法を学びます。考え方は、\textbf{翻訳}です。時間の世界の式を、「$s$ の世界」という別の世界のことばに翻訳すると、微分が $s$ のかけ算に変わります。すると、微分方程式が、かけ算とわり算だけの式になります。それを解いてから、時間の世界に翻訳しもどします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[kixa world, draw=kixaW] at (25,55) {時間の世界};
+  \node[kixa world, draw=kixaF] at (103,55) {$s$ の世界};
+  \node[kixa eq, draw=kixaW, text width=46mm] (a) at (25,40) {$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$\\[2pt]$T(0)=80$};
+  \node[kixa eq, draw=kixaF, text width=52mm] (b) at (103,40) {$sT(s)-80=-0.05\,T(s)+\dfrac{1}{s}$};
+  \node[kixa eq, draw=kixaF, text width=46mm] (c) at (103,6) {$T(s)=\dfrac{20}{s}+\dfrac{60}{s+0.05}$};
+  \node[kixa eq, draw=kixaW, text width=46mm] (d) at (25,6) {$T=20+60e^{-0.05t}$};
+  \draw[kixa bridge, shorten <=1.5mm, shorten >=1.5mm] (a) -- node[kixa step, above] {①翻訳する} node[kixa step, below] {（表を引く）} (b);
+  \draw[kixa bridge, shorten <=1.5mm, shorten >=1.5mm] (b) -- node[kixa step, right=1mm] {②かけ算・わり算で\\\hphantom{②}$T(s)$ を求める} (c);
+  \draw[kixa bridge, shorten <=1.5mm, shorten >=1.5mm] (c) -- node[kixa step, above] {③翻訳しもどす} node[kixa step, below] {（表を逆に引く）} (d);
+  \draw[bkInk!60, line width=0.9pt, dash pattern=on 3pt off 2pt, -{Stealth[length=2.2mm]}, shorten <=1.5mm, shorten >=1.5mm] (a) -- node[kixa step, left=1mm] {6-4：変数分離\\で積分する} (d);
+\end{tikzpicture}
+\bkfigcaption{冷めるお湯をラプラス変換で解く道すじ（9-5 の予告）。①〜③の式は、いまはわからなくてよい。点線は、6-4 でたどった道。}
+\label{bk:9-0:fig-honyaku}
+\end{bkfigure}
+
+①の翻訳を\textbf{ラプラス変換}といいます。9-5 で、「微分は、$s$ のかけ算になる」しくみが、第5巻の部分積分（5-16）であることを見ます。③の答え $T=20+60e^{-0.05t}$ に $t=10$ を入れると、
+\[ T=20+60\times e^{-0.5}=20+60\times0.6065=56.39 \]
+です（$e^{-0.5}=0.6065$ は電卓で）。表を10行作らなくても、表を引いて分数を分けるだけで、10分後も1時間後も、すぐに求められます。2つめの問いの答えは「できる」です。
+
+\bksubsection{6}{$s$ の世界の点が、動きを教える}
+
+\label{bk:9-0:ten}$s$ の世界には、もう1つうれしいことがあります。3-10・6-12・7-8 で何回も出てきた、車のばね（サスペンション）の2つの例を思い出しましょう。どちらも、はじめの位置を1、はじめの速さを0にして（$x(0)=1$、$\dot x(0)=0$）、静かに手をはなします。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=30mm] Q[c,m,wd=28mm] Q[l,m,wd=46mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+ & 式 & 特性方程式の解 & 動き \\
+車A & $\ddot x+3\dot x+2x=0$ & $s=-1,\ -2$ & $x=2e^{-t}-e^{-2t}$（ゆれずにもどる） \\
+車B & $\ddot x+2\dot x+5x=0$ & $s=-1\pm2j$ & $x=e^{-t}(\cos2t+\tfrac12\sin2t)$（ゆれながらもどる） \\
+\end{bktable}
+\bktabcaption{車A・車B（6-12 と同じ。$x(0)=1$、$\dot x(0)=0$）}
+\end{bkcenter}
+
+特性方程式の解は、Python の \texttt{np.roots} でも求められます。かっこの中には、方程式の係数を、次数の高い順に並べます。
+
+\Needspace{9\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+print(np.roots([1, 3, 2]))    \# 車A の特性方程式の解
+print(np.roots([1, 2, 5]))    \# 車B の特性方程式の解
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-2. -1.]
+[-1.+2.j -1.-2.j]
+\end{bkcodeout}
+
+\noindent \texttt{j} は虚数単位です（6-8）。表の解と同じ数が出ました。
+
+この解 $s$ を、複素数の平面（6-9）に×でかき入れて、動きのグラフと並べます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixaworlds[63mm]{時間の世界}{$s$ の世界}{翻訳する}{もどす}
+\begin{axis}[kixa wave, at={(0mm,0mm)}, height=47mm, xmin=0, xmax=5, ymin=-0.4, ymax=1.1, xtick={0,1,...,5}, ytick={-0.2,0.2,0.4,0.6,0.8,1}, yticklabel style={/pgf/number format/fixed}, xlabel={時間 $t$}, ylabel={$x$}]
+  \addplot[kixa sig, domain=0:5] {2*exp(-x)-exp(-2*x)};
+  \addplot[kixaF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=241, smooth, domain=0:5] {exp(-x)*(cos(deg(2*x))+0.5*sin(deg(2*x)))};
+  \node[kixa lab, anchor=south west, text=kixaW, fill=white] at (axis cs:1.6,0.52) {車A（実線）};
+  \node[kixa lab, anchor=north west, text=kixaF, fill=white] at (axis cs:2.2,-0.18) {車B（破線）};
+\end{axis}
+\begin{axis}[kixa splane, at={(76mm,0mm)}, xmin=-3, xmax=2, ymin=-2.5, ymax=2.5, xtick={-2,-1}, ytick={-2,-1,1,2}, xticklabel style={yshift=-1.4mm}, xlabel={実部}, ylabel={虚部}]
+  \fill[bkGreen!10] (axis cs:-3,-2.5) rectangle (axis cs:0,2.5);
+  \kixapole[kixaW]{-1}{0}\kixapole[kixaW]{-2}{0}
+  \kixapole[kixaF]{-1}{2}\kixapole[kixaF]{-1}{-2}
+  \node[kixa lab, anchor=south, text=kixaW, fill=white] at (axis cs:-1.5,0.3) {車A};
+  \node[kixa lab, anchor=west, text=kixaF, fill=white] at (axis cs:-0.8,1.55) {車B};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{車A・車B の動き（左）と、特性方程式の解の場所（右の×）。右のうすい緑は、実部が負の左半分。}
+\label{bk:9-0:fig-ten}
+\end{bkfigure}
+
+図\ref{bk:9-0:fig-ten}の右の×の場所を見るだけで、左のグラフの形がわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{×が横の線（実数の軸）の上}\par\nobreak\noindent 車A のように、ゆれずにもどります。
+\item \textbf{×が上下に1組}\par\nobreak\noindent 車B のように、ゆれながらもどります。上下にはなれているほど（虚部が大きいほど）、速くゆれます（車B の虚部2は、$\cos2t$ の2）。
+\item \textbf{×が左半分にある}\par\nobreak\noindent どちらも、やがて0に落ち着きます。×が右半分にあると、動きはどんどん大きくなります（6-12）。
+\end{enumerate}
+
+6-12 では、「解を左半分に置くことが、第9巻の制御工学の大きな目標です（9-9 では、この点を『極』とよびます）」と予告しました。この $s$ が、ラプラス変換の $s$ と同じ文字なのは、偶然ではありません。9-5 で、そのわけを見ます。
+
+\bksubsection{7}{たくさんの量を、行列でいっぺんに}
+
+\label{bk:9-0:gyoretsu}手のひらに、ほうきをさかさまに立ててみましょう。ほうきは、すぐにたおれそうになります。手を左右に動かせば、立たせておくことができます。このとき、手を動かす人は、「いまの角度」と「たおれていく速さ」の2つを見て、手の動かし方を決めています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt, rounded corners=1mm] (0,4) rectangle (30,13);
+  \filldraw[fill=bkInk!70, draw=bkInk] (6,3) circle (3) (24,3) circle (3);
+  \draw[bkInk, line width=0.6pt] (-6,0) -- (40,0);
+  \draw[bkInk!50, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (15,13) -- (15,52);
+  \draw[bkOrange!80!black, line width=2.4pt, line cap=round] (15,13) -- ($(15,13)+(76:38)$);
+  \filldraw[fill=bkOrange!60, draw=bkOrange!80!black, line width=0.8pt] ($(15,13)+(76:38)$) circle (3.2);
+  \draw[bkRed!80!black, line width=0.9pt, -{Stealth[length=1.8mm]}] (15,37) arc (90:76:24);
+  \node[kixa lab, text=bkRed!80!black] at (20.5,41) {$\theta$};
+  \draw[kixa arr, kixaW, line width=1.3pt] (-20,8.5) -- (-2.5,8.5);
+  \node[kixa lab, anchor=south east, text=kixaW] at (-3,10.6) {台車を動かす $u$};
+  \node[kixa lab, anchor=west, align=left] at (36,52) {棒のかたむき $\theta$〔rad〕\\たおれる速さ $\dot\theta$〔rad/s〕};
+  \begin{scope}[shift={(68,8)}]
+    \node[kixa eq, text width=56mm] at (0,22) {状態 $\vec x=\begin{pmatrix}\theta\\ \dot\theta\end{pmatrix}$};
+    \node[kixa eq, text width=56mm] at (0,4) {$\dot{\vec x}=A\vec x+B\,u$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{台車の上に立てた棒（倒立振子）。棒のかたむきと、たおれる速さの2つの数で「状態」を表し、2つの式をまとめて行列で書く（9-10）。}
+\label{bk:9-0:fig-furiko}
+\end{bkfigure}
+
+台車の上に立てた棒を、\textbf{倒立振子}（とうりつふりこ）といいます。5-18 では、少しかたむいた棒のかたむき $\theta$ が、$\ddot\theta=4\theta$ にしたがって大きくなる例を見ました。2つの数「かたむき $\theta$」と「たおれる速さ $\dot\theta$」をたてに並べて、1つのベクトル $\vec x$（\textbf{状態}）にすると、2つの式を、行列を使って1行で書けます。7-11 で予告した $\dot{\vec x}=A\vec x+B\vec u$ の形（\textbf{状態方程式}、じょうたいほうていしき）です（入れるもの $u$ が1つなので、ここでは矢印をつけていません）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=50mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+かたむき $\theta$〔rad〕 & 0秒 & 1秒後 & 2秒後 \\
+台車を動かさない & 0.0100 & 0.0376 & 0.2731 \\
+状態を見て台車を動かす & 0.0100 & 0.0041 & 0.0009 \\
+\end{bktable}
+\bktabcaption{はじめに 0.01 rad かたむけたとき（9-10 の例）。動かさないとたおれ、うまく動かすと立ち直る。}
+\end{bkcenter}
+
+上の行は、5-18 の答え $\theta=0.01\cosh2t$（6-11）に $t=1,\ 2$ を入れた値です。下の行は、9-10 で、状態を見て台車の動かし方 $u$ を決めたときの値です。状態方程式の答えは、7-10 で予告した\textbf{行列の指数関数} $e^{At}$ で書けます。第3部（9-10〜9-12）では、行列の固有値（7-8）を見るだけで、「落ち着くか、たおれるか」を見分ける方法と、落ち着くように $u$ の決め方を選ぶ方法を学びます。ドローンの姿勢や、エレベーターの位置を決めるしくみも、同じ考え方です。
+
+%% ================= この巻の地図 =================
+\bksection{goal}{この巻の地図}
+
+\bksubsection{8}{3つの部と終章}
+
+\label{bk:9-0:chizu}第9巻は、3つの部と終章に分かれています。どの章も、大学（工学部の1〜2年）で学ぶ内容です。★★★★★の章は、「目でわかる」「手でわかる」「式でわかる」の3段に分けてあり、「ここまでで十分」の旗の所まで読めば、その章のゴールです（第6〜8巻と同じ）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixapart{0}{第1部\enspace フーリエ解析}{9-1〜9-4}%
+    {\draw[bkGray, line width=0.4pt] (-15,0) -- (15,0);
+     \draw[kixaW, line width=1pt, domain=-15:15, samples=60, smooth] plot (\x,{6*(sin(36*(\x+15))+0.33*sin(108*(\x+15)))});}
+    {\kixaitem{$\sin$ をたして、四角い波を作る（フーリエ級数 9-1）。}\kixaitem{かけて積分して、成分を取り出す（直交性 9-2）。複素数でまとめる（9-3）。}\kixaitem{くり返さない音も、周波数に分ける（フーリエ変換・FFT 9-4）。}}
+\end{tikzpicture}
+\end{bkfigure}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixapart{0}{第2部\enspace ラプラス変換}{9-5〜9-9}%
+    {\draw[bkGray, line width=0.4pt] (-15,0) -- (15,0) (5,-11) -- (5,11);
+     \foreach \kixax/\kixay in {-3/0, -10/0, -3/6, -3/-6} {\draw[kixaP, line width=1.1pt] (\kixax-1.4,\kixay-1.4) -- (\kixax+1.4,\kixay+1.4) (\kixax-1.4,\kixay+1.4) -- (\kixax+1.4,\kixay-1.4);}}
+    {\kixaitem{微分を $s$ のかけ算に変える翻訳機（9-5）と、その翻訳表（9-6）。}\kixaitem{部分分数に分けて、微分方程式を解く（9-7）。}\kixaitem{入れると出てくるを $s$ の式で（伝達関数 9-8）。極の場所で、落ち着くかがわかる（9-9）。}}
+\end{tikzpicture}
+\end{bkfigure}
+
+第1部は「分ける」、第2部は「予想する」ための道具です。第1部の「時間の世界と周波数の世界の行き来」と、第2部の「時間の世界と $s$ の世界の行き来」は、同じ形をしています。9-5 で、周波数の世界は、$s$ の世界の一部（$s=j\omega$ の所）だとわかります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixapart{0}{第3部\enspace 行列と微分方程式}{9-10〜9-12}%
+    {\draw[bkInk, line width=0.7pt] (-11,-8) -- (-13,-8) -- (-13,8) -- (-11,8) (-1,-8) -- (1,-8) -- (1,8) -- (-1,8);
+     \foreach \kixax/\kixay in {-9/4, -3/4, -9/-4, -3/-4} {\fill[bkInk] (\kixax,\kixay) circle (0.9);}
+     \draw[kixaW, line width=0.9pt, domain=0:600, samples=80, smooth] plot ({9+7*exp(-0.0035*\x)*cos(\x)},{7*exp(-0.0035*\x)*sin(\x)});}
+    {\kixaitem{たくさんの微分方程式を、行列で1行に（状態方程式 9-10）。}\kixaitem{答えは行列の指数関数 $e^{At}$。固有値で、落ち着くかがわかる（9-11）。}\kixaitem{音楽の圧縮やエアコンの制御（読みもの 9-12）。}}
+\end{tikzpicture}
+\end{bkfigure}
+
+第3部では、第7巻の行列と、第2部の道具を組み合わせます。最後の終章で、全9巻をふり返ります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixapart{0}{終章\enspace 工学の数学の地図}{9-13}%
+    {\foreach \kixai/\kixaa in {1/90,2/141,3/193,4/244,5/296,6/347,7/39} {\draw[bkRoute\kixai, line width=1.6pt, line cap=round] (\kixaa:12) -- (0,0);}
+     \filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (2.6);}
+    {\kixaitem{小学1年から乗ってきた7本の路線が、どこで合流したかをふり返る。}\kixaitem{専門書の読み方ガイドと、物理シリーズへのつながり。}}
+\end{tikzpicture}
+\bkfigcaption{第9巻の3つの部と終章。左上の札が部の名前、右上が章の番号。}
+\end{bkfigure}
+
+%% ================= この巻の約束 =================
+\bksection{hon}{この巻の約束：「名前」と、実際の操作}
+
+\bksubsection{9}{記号は、まだ計算していない「名前」}
+
+\label{bk:9-0:yakusoku}第8巻では、$\iint$ や $\oint$ のような積分の記号は、「タイルに分けて、量をかけて、たし合わせる」という\textbf{操作の名前}で、実際の値は、ふつうの定積分に直して求める、と学びました。
+
+第9巻にも、新しい記号がたくさん出てきます。そして、第8巻よりもさらに、\textbf{記号の見かけと、実際にする計算がはなれています}。たとえば、ラプラス変換の記号 $\mathcal L[f(t)]$ は、「$f$ に $e^{-st}$ をかけて、0から $\infty$ までたす」という積分の名前です。けれども実際には、ほとんどの場合、積分はしません。\textbf{表を引くだけ}です。
+
+この巻の記号は、どれも、次の4つの道具のどれかに直して計算します。「\textbf{ふつうの定積分}」「\textbf{表を引く}」「\textbf{部分分数}」「\textbf{行列の計算}」です。この4つを\textbf{実際の操作}とよびます。\bkidx{じっさいのそうさ}{実際の操作}この巻では、名前を\textbf{点線}の枠、実際の操作を\textbf{実線}の枠でかこんで、見分けられるようにします。
+
+\[ \kixaNt{b_n}=\kixaSt{1}{\frac{2}{T}\int_0^T f(t)\sin n\omega_0t\,\dd t} \]
+\[ \kixaNt{\mathcal L[e^{-0.05t}]}=\kixaSt{2}{\frac{1}{s+0.05}} \]
+\[ \kixaNt{\mathcal L^{-1}\Bigl[\frac{1}{(s+1)(s+2)}\Bigr]}=\kixaSt{3}{\frac{1}{s+1}-\frac{1}{s+2}}\to e^{-t}-e^{-2t} \]
+\[ \kixaNt{e^{At}}=\kixaSt{4}{Pe^{Dt}P^{-1}} \]
+
+1行めは 9-2、2行めは冷めるお湯の①の翻訳（9-5）、3行めは 3-8 で「全体は、その差です（9-7）」と予告した計算、4行めは 7-9 の対角化を使う計算（9-11）です。どの式も、いまはわからなくてかまいません。「\textbf{記号を見ただけでは、まだ数は出ない。実際の値は、4つの道具のどれかに直して出す}」ということだけ、覚えておいてください。
+
+この巻で出てくる名前と、実際の操作の対応を、表にまとめておきます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,17mm] Q[c,m,24mm] X[l,m] Q[l,m,26mm] Q[c,m,11mm]}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}, row{2-Z}={font=\small}, rowsep=3pt, colsep=3pt}
+絵 & 名前（記号） & 名前の意味 & 実際の操作 & 章 \\
+\kixapic{1} & $a_n$・$b_n$ & 1回分（1周期）で、$f$ に $\cos$・$\sin$ をかけてたす & \kixaop{1} & 9-1・9-2 \\
+\kixapic{2} & $c_n$ & 1周期で、$f$ に $e^{-jn\omega_0t}$ をかけてたす & \kixaop{1} & 9-3 \\
+\kixapic{3} & $F(\omega)$ & $-\infty$〜$\infty$ で、$f$ に $e^{-j\omega t}$ をかけてたす & \kixaop{1}\par\kixaop{2} & 9-4 \\
+\kixapic{4} & $\mathcal L[f(t)]$ & $0$〜$\infty$ で、$f$ に $e^{-st}$ をかけてたす & \kixaop{2} & 9-5・9-6 \\
+\kixapic{5} & $\mathcal L^{-1}[F(s)]$ & ラプラス変換すると $F(s)$ になる $f(t)$ & \kixaop{3}\par\kixaop{2} & 9-7 \\
+\kixapic{6} & $G(s)$ & はじめの値を0にして、出てくるもの÷入れるもの & \kixaop{2} & 9-8 \\
+\kixapic{7} & $e^{At}$ & $I+At+\frac{(At)^2}{2!}+\cdots$（無限に続くたし算） & \kixaop{4} & 9-10・9-11 \\
+\end{bktable}
+\bktabcaption{第9巻の名前と、実際の操作（どの道具に直すか）。意味は、それぞれの章でていねいに学ぶ。巻末の「変換の地図」にも同じ表がある。このほかに、極と安定の表9-9（9-9）、状態方程式の立て方の表9-10（9-10）がある。}
+\end{bkcenter}
+
+\bksubsection{10}{3つの段と、全体の流れ図}
+
+\label{bk:9-0:dan}どう直すかは、場合によってちがいます。そこで、変換や係数が出てくる章（9-1〜9-11）では、どの計算も次の3つの段で考え、「こんなときは、こうする」という\textbf{場合分けの表}と\textbf{流れ図}を置きます（第8巻と同じ形）。\par\vspace{3pt}
+\noindent\kixadan{1}\enspace 記号を読む：何に・何をかけて・どこからどこまで・何を何でわるか。\par\vspace{2pt}
+\noindent\kixadan{2}\enspace 4つの道具のどれに直すかを決め、区間や形を決めて、計算する。\par\vspace{2pt}
+\noindent\kixadan{3}\enspace 計算する前に、楽な道をさがす：積分しない（公式・表・性質）、対称性、分ける、数値（表計算・Python）。「直す」の前に必ず確かめる。
+
+図\ref{bk:9-0:fig-flow}の流れ図は、この巻のどの章の道具を使えばよいかを決める、いちばん大きな流れ図です。各章の流れ図は、この図の四角の1つを、大きくしたものです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.9mm]
+  \node[kixa do, text width=100mm] (s) at (58,0) {記号を読む（名前の段）：何に・何をかけて・どこからどこまで};
+  \node[kixa q] (q1) at (33,-20) {くり返す波の成分がほしい？};
+  \node[kixa do, text width=40mm, anchor=west] (r1) at (71,-20) {フーリエ係数\\表9-2（9-1〜9-3）};
+  \node[kixa q] (q2) at (33,-40) {くり返さない波の成分？};
+  \node[kixa do, text width=40mm, anchor=west] (r2) at (71,-40) {フーリエ変換\\表9-4（9-4）};
+  \node[kixa q] (q3) at (33,-60) {時間の関数を $s$ の式に？};
+  \node[kixa do, text width=40mm, anchor=west] (r3) at (71,-60) {ラプラス変換\\表9-6（9-5・9-6）};
+  \node[kixa q] (q4) at (33,-80) {$s$ の式を時間の関数に？};
+  \node[kixa do, text width=40mm, anchor=west] (r4) at (71,-80) {逆ラプラス変換\\表9-7（9-7）};
+  \node[kixa q] (q5) at (33,-100) {「出てくる÷入れる」がほしい？};
+  \node[kixa do, text width=40mm, anchor=west] (r5) at (71,-100) {伝達関数・極\\表9-8・9-9（9-8・9-9）};
+  \node[kixa q] (q6) at (33,-120) {行列の形の微分方程式？};
+  \node[kixa do, text width=40mm, anchor=west] (r6) at (71,-120) {状態方程式・$e^{At}$\\表9-10・9-11（9-10・9-11）};
+  \node[kixa do, text width=74mm] (r0) at (45,-142) {問題の文をもう一度読み、\\ほしいもの（成分・動き・落ち着くか）を書き出す};
+  \node[kixa do, text width=104mm] (end) at (60,-160) {確かめ：表計算・Python の数値と同じか／$t=0$ の値・最後の値が合うか};
+  \draw[kixa go] (s.south -| q1) -- (q1);
+  \foreach \kixaq/\kixar in {q1/r1,q2/r2,q3/r3,q4/r4,q5/r5,q6/r6} {\draw[kixa go] (\kixaq) -- node[kixa yn, above] {はい} (\kixar);}
+  \foreach \kixaq/\kixar in {q1/q2,q2/q3,q3/q4,q4/q5,q5/q6} {\draw[kixa go] (\kixaq) -- node[kixa yn, left=1mm] {いいえ} (\kixar);}
+  \draw[kixa go] (q6) -- node[kixa yn, left=1mm] {いいえ} (q6 |- r0.north);
+  % 書き出したら、もう一度はじめの四角へ
+  \draw[kixa go, shorten >=0.5mm] (r0.west) -- (-4,-142) |- (s.west);
+  % 計算が終わる四角は、右はしの線にまとめて「確かめ」へ
+  \foreach \kixan in {r1,r2,r3,r4,r5,r6} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixan.east) -- (\kixan.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-20) -- (127,-160);
+  \draw[kixa go, shorten <=0pt] (127,-160) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{第9巻の全体の流れ図。ひし形は問い、四角はすること。「はい」なら右の四角の章の道具を使い、右の線をたどって最後の「確かめ」へ。全部「いいえ」なら、ほしいものを書き出して、はじめにもどる。}
+\label{bk:9-0:fig-flow}
+\end{bkfigure}
+
+この章で出てきた場面を、流れ図でたどってみましょう（書いていない問いは「いいえ」）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=58mm] Q[c,m,wd=22mm] Q[l,m,wd=38mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+場面 & 「はい」の問い & 着いた所 \\
+楽器の「ラ」の成分（図\ref{bk:9-0:fig-kotae}） & 1つめ & フーリエ係数（9-1〜9-3） \\
+手を1回たたいた音の成分 & 2つめ & フーリエ変換（9-4） \\
+お湯の式を $s$ の世界へ（図\ref{bk:9-0:fig-honyaku}の①） & 3つめ & ラプラス変換（9-5） \\
+$T(s)$ を時間の世界へ（図\ref{bk:9-0:fig-honyaku}の③） & 4つめ & 逆ラプラス変換（9-7） \\
+倒立振子を状態方程式で解く & 6つめ & 状態方程式・$e^{At}$（9-10・9-11） \\
+\end{bktable}
+\bktabcaption{この章の場面を、全体の流れ図でたどった結果}
+\end{bkcenter}
+
+%% ================= 主役 =================
+\bksection{butsuri}{この巻の主役}
+
+\bksubsection{11}{くり返し出てくる場面}
+
+\label{bk:9-0:shuyaku}この巻では、同じ場面を、同じ数のまま、いくつもの章で使います。前の章で求めた答えを、あとの章で別の方法でも求めて、同じになることを確かめられるようにするためです。前の巻で出会った場面も、たくさんもどってきます。まず、第1部（フーリエ解析）の主役です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=64mm] Q[c,m,wd=28mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+場面 & どんな場面か & 出てくる章 \\
+四角い波（方形波） & 4-9 の $\sin\theta+\tfrac13\sin3\theta+\cdots$。デジタル回路の0と1の信号 & 9-1〜9-4 \\
+ラの音 & \qty{440}{Hz}・\qty{880}{Hz}・\qty{1320}{Hz} の成分（大きさ1・0.5・0.25） & 9-0・9-4 \\
+金属の棒の熱 & 8-13 の \qty{0.1}{m} の棒が冷めていくようす & 9-1・9-2・9-11 \\
+ギターの弦 & A弦（\qty{110}{Hz}）の倍音 & 9-1・9-2 \\
+\end{bktable}
+\bktabcaption{第1部でくり返し出てくる場面}
+\end{bkcenter}
+
+第2部（ラプラス変換）と第3部（行列と微分方程式）では、第6巻・第7巻で微分方程式を立てて解いた場面が、そのままもどってきます。前の巻の答えと、この巻の新しい方法の答えが同じになることを、何回も確かめます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=64mm] Q[c,m,wd=28mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+場面 & どんな場面か & 出てくる章 \\
+冷めるお湯 & 2-18・6-4 の 80\,℃ のお湯 & 9-5・9-13 \\
+RC 回路 & 6-4 の充電（時定数 \qty{2}{s}）、3-12 の低い音だけ通す回路 & 9-3・9-5・9-7・9-8 \\
+車A・車B & 3-10・6-12・7-8 の車のばね & 9-7・9-9〜9-11 \\
+モーター・エアコン & 速さや温度を、はかりながら調節するしくみ & 9-8・9-9・9-12 \\
+倒立振子 & 5-17・5-18 のたおれる棒 & 9-9〜9-11 \\
+水そう・送電線 & 6-14 の2つの水そう、7-11 の送電線 & 9-10・9-11 \\
+\end{bktable}
+\bktabcaption{第2部・第3部でくり返し出てくる場面（くわしくは、それぞれの章で）}
+\end{bkcenter}
+
+%% ================= 表計算と Python =================
+\bksection{doguu}{表計算と Python}
+
+\bksubsection{12}{行は時刻、列は成分}
+
+\label{bk:9-0:dougu}この巻でも、表計算（2-18）と Python（2-19）をたくさん使います。初めての考えは、まず表計算で数を見てから、式で確かめます。この巻の表計算の表は、次の形にそろえます（表\ref{bk:9-0:tab-tasu}と同じ形）。
+
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{A列は時刻}（または、はかった点の番号）。上から下へ、時間が進む。
+\item \textbf{1行めは成分の名前}（周波数・番号 $n$）、\textbf{2行めは成分の大きさ}。
+\item 式は1つのマスに1つだけ入れて、\texttt{\$} の印を使って、表全体にコピーする。
+\item 右の列に、合計（\texttt{SUM}）や、かけ算した値を置く。
+\end{enumerate}
+
+Python では、numpy と scipy という道具を使います。この巻で使う命令は、次のとおりです。どれも、手で計算したあとに、答えを確かめるために使います。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=42mm] Q[l,m,wd=62mm] Q[c,m,wd=18mm]}, rowsep=1.2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+命令 & すること & 章 \\
+\texttt{np.fft.rfft} & 数の並びを、周波数の成分に分ける（FFT） & 9-4 \\
+\texttt{np.roots} & 方程式の解（$s$ の世界の点）を求める & 9-9 \\
+\texttt{scipy.signal.residue} & 部分分数の係数と極を求める（確かめ） & 9-7 \\
+\texttt{np.linalg.eig} & 行列の固有値と固有ベクトル（7-8） & 9-10・9-11 \\
+\texttt{scipy.linalg.expm} & 行列の指数関数 $e^{At}$ を数で求める & 9-11 \\
+\end{bktable}
+\bktabcaption{この巻で使う Python の命令}
+\end{bkcenter}
+
+図は、Python の matplotlib でもかけます。この本の図は、どれも「時間の世界」を左、「周波数の世界」や「$s$ の世界」を右に並べて、同じ形にかき直してあります（図\ref{bk:9-0:fig-sekai}・図\ref{bk:9-0:fig-ten}）。
+
+%% ================= 新しい記号 =================
+\bksection{card}{この巻で出会う新しい記号}
+
+\label{bk:9-0:kigo}第9巻では、次のような新しい記号に出会います。いまは意味がわからなくても大丈夫です。どの記号も、使う前に、数の例と図でていねいに説明します（記号カードは巻末にも並べてあります）。第1部では、波の成分を表す記号が出てきます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=27mm] Q[l,m,wd=41mm] Q[l,m,wd=44mm] Q[c,m,wd=11mm]}, rowsep=0.6pt, colsep=3pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+記号 & 読み方 & ひとことで言うと & 章 \\
+$a_n$、$b_n$、$\omega_0$ & エー・エヌ、ビー・エヌ、オメガ・ゼロ & フーリエ係数、基本角周波数 & 9-1 \\
+$c_n$ & シー・エヌ & 複素数で書いた成分 & 9-3 \\
+$F(\omega)$、$f_{\mathrm s}$ & エフ・オメガ、エフ・エス & くり返さない波の成分、はかる回数 & 9-4 \\
+\end{bktable}
+\bktabcaption{第1部で出会う記号}
+\end{bkcenter}
+
+第2部と第3部では、$s$ の世界と行列の記号が出てきます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=27mm] Q[l,m,wd=41mm] Q[l,m,wd=44mm] Q[c,m,wd=11mm]}, rowsep=0.6pt, colsep=3pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+記号 & 読み方 & ひとことで言うと & 章 \\
+$\mathcal L$、$H(t)$ & ラプラス、エイチ・ティー & ラプラス変換、階段の形の関数 & 9-5 \\
+$\delta(t)$、$*$ & デルタ・ティー、たたみこみ & 細いパルス、答えのたし合わせ方 & 9-6 \\
+$\mathcal L^{-1}$ & ラプラス・インバース（逆ラプラス変換） & 時間の世界へもどす & 9-7 \\
+$G(s)$ & ジー・エス & 伝達関数（出てくる÷入れる） & 9-8 \\
+×、○ & 極、零点 & $s$ の世界の大事な点 & 9-9 \\
+$\dot{\vec x}=A\vec x+B\vec u$ & 状態方程式 & たくさんの微分方程式を1行で & 9-10 \\
+$e^{At}$ & イー・エー・ティー & 行列の指数関数 & 9-11 \\
+\end{bktable}
+\bktabcaption{第2部・第3部で出会う記号（くわしくはそれぞれの章で）}
+\end{bkcenter}
+
+第8巻までの記号（$j$、$s$、$e^{j\theta}$、行列、$\vec x$ のたて書き、$\int$ など）も、そのまま使います。とくに虚数単位は、第6巻と同じく $j$ と書きます（数学の本では $i$ が多い。9-13 の専門書の読み方ガイドで見くらべます）。
+
+%% ================= 路線 =================
+\bksection{kixaroute}{この巻が通る路線と終点}
+
+\label{bk:9-0:rosen}第9巻を通る路線は4本です。4本とも、この巻に\textbf{終点}があります。さらに、終章 9-13 には、7本の路線がすべて集まります。第1巻・第2巻の「角の大きさ」「目もり」「何回もかける」「九九の表」から始まった路線が、この巻で、音や電気や機械を動かす道具に着きます。のこりの3本（変化・たし合わせ・矢印）は、第8巻で終点に着きました。終章 9-13 で、7本の路線がどこで出会い、合流したのかを、1枚の地図にします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixaroute{42}{4}{6-10}{9-0・{\bfseries 9-1}・9-2・9-3}{終点}
+  \kixaroute{28}{7}{3-14}{{\bfseries 9-4}・9-12}{終点}
+  \kixaroute{14}{3}{6-4}{{\bfseries 9-5}・9-6〜9-9}{終点}
+  \kixaroute{0}{5}{7-1}{{\bfseries 9-10}・9-11}{終点}
+  \node[font=\sffamily\bfseries\small, text=bkGray] at (24,52) {前の駅};
+  \node[font=\sffamily\bfseries\small, text=bkDeep] at (74,52) {この巻（第9巻）};
+\end{tikzpicture}
+\bkfigcaption{第9巻を通る4本の路線。四角の中がこの巻の駅（太字が終点の駅）。右はしの四角が終点の印。終点のあとの駅（9-2 など）は、終点で作った道具を使う駅。}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=7mm] Q[l,m,wd=18mm] Q[l,m,wd=96mm]}, rowsep=0.8pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+ & 路線 & 大きな駅のつながり \\
+\bkrouteicon{4} & 回転と波 & 角（1-20）→ 三角関数（4-8）→ $\sin$ の微分（5-15）→ オイラーの公式（6-10）→ \textbf{フーリエ級数}（9-1、終点「音・交流」） \\
+\bkrouteicon{7} & はかる & 目もり（1-11）→ ずれ（2-6）→ 標準偏差（3-14）→ \textbf{フーリエ変換}（9-4、終点「計測・診断」） \\
+\bkrouteicon{3} & 倍々 & 累乗（2-7）→ 指数関数（3-11）→ $e$（5-14）→ 冷めるお湯（6-4）→ \textbf{ラプラス変換}（9-5、終点「制御」） \\
+\bkrouteicon{5} & 表 & 九九の表（1-13）→ 表計算（2-18）→ 連立方程式（3-6）\mbox{→ 行列（7-1）}→ \textbf{状態方程式}（9-10、終点「回路網・制御」） \\
+\end{bktable}
+\bktabcaption{4本の路線の、大きな駅}
+\end{bkcenter}
+
+
+
+
+%% ================= この巻の読み方 =================
+\Needspace{27\baselineskip}\bksection{hon}{この巻の読み方}
+
+\label{bk:9-0:yomikata}この巻は、次の4つの約束で書いてあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixacard{(0,0)}{me}{bkGreen}{①\enspace 2つの世界の図で}
+    {新しい計算は、2つの世界を並べて見ます。\par\vspace{2pt}
+     \kixaitem{左は時間の世界（波形・動き）。}\kixaitem{右は周波数・$s$ の世界。}}
+  \kixacard{(68,0)}{te}{bkOrange}{②\enspace 表計算で先に数を見る}
+    {初めての考えは、図と表の2通りで。\par\vspace{2pt}
+     \kixaitem{表計算で、たす・かけて平均する。}\kixaitem{式の答えと、表の数をくらべる。}}
+  \kixacard{(0,-48)}{shiki}{bkNavy}{③\enspace 名前と、実際の操作}
+    {記号は「操作の名前」です。\par\vspace{2pt}
+     \kixaitem{名前・直す・楽をするの3つの段。}\kixaitem{場合分けの表と流れ図で直し方を選ぶ。}}
+  \kixacard{(68,-48)}{goal}{bkDeep}{④\enspace ★5の章は3段}
+    {大学の内容の章は、3つの段です。\par\vspace{2pt}
+     \kixaitem{目・手・式で「わかる」の3段。}\kixaitem{「ここまでで十分」の旗でゴール。}}
+\end{tikzpicture}
+\end{bkfigure}
+
+この巻を読み終えると、音・電気・機械の専門書に出てくる、次のような式が読めるようになります。どれも、いまは読めなくてかまいません。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=58mm] Q[l,m,wd=44mm] Q[c,m,wd=20mm]}, rowsep=2pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+専門書の式 & 何の式か & この巻の章 \\
+$y=\displaystyle\sum_{n=1}^{\infty}b_n\sin\frac{n\pi x}{L}\cos\frac{n\pi ct}{L}$ & 弦のゆれ（振動・音の本） & 9-1 \\
+$X(\omega)=\displaystyle\int_{-\infty}^{\infty}x(t)\,e^{-j\omega t}\,\dd t$ & 信号のスペクトル（信号処理の本） & 9-4 \\
+$V(s)=\Bigl(R+sL+\dfrac{1}{sC}\Bigr)I(s)$ & RLC 回路（電気回路の本） & 9-5・9-8 \\
+$G(s)=\dfrac{K}{Ts+1}$ & 1次おくれ（制御の本。$T$ はこの本の時定数 $\tau$） & 9-8・9-9 \\
+$\dot{\vec x}=A\vec x+B\vec u$、$y=C\vec x$ & 状態方程式（制御の本） & 9-10・9-11 \\
+\end{bktable}
+\bktabcaption{この巻を読むと読めるようになる、専門書の式の例}
+\end{bkcenter}
+
+この巻では、前の巻の道具をたくさん使います。とくによく使う章を並べておきます。読んでいてわからなくなったら、この章にもどりましょう。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[l,m,wd=66mm] Q[l,m,wd=40mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+章 & 道具 & 使う第9巻の章 \\
+3-8 & 部分分数（1つの分数を、たし算に分ける） & 9-7 \\
+4-9 & 加法定理・積と和の式、四角い波 & 9-1・9-2 \\
+5-14 & $e$ と指数関数 & 9-5 \\
+5-16 & 部分積分 & 9-1・9-5・9-6 \\
+6-4 & 冷めるお湯（1次の微分方程式） & 9-5・9-7 \\
+6-10 & オイラーの公式 $e^{j\theta}=\cos\theta+j\sin\theta$ & 9-3・9-5 \\
+6-12 & 特性方程式 & 9-7・9-9 \\
+7-8・7-9 & 固有値・固有ベクトル、対角化 & 9-9〜9-11 \\
+8-13 & 熱方程式・波動方程式 & 9-0・9-1・9-11 \\
+\end{bktable}
+\bktabcaption{第9巻でとくによく使う、前の巻の章}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixatalk{0}{sora}{ソラ}{いよいよ最後の巻だね。フーリエにラプラス……名前だけは聞いたことがあるけど、むずかしそう。}
+  \kixatalk{-22}{mina}{ミナ}{でも、音を成分に分けるのは、スマホのアプリでもう見たよ。お湯の冷め方も、車のばねも、前の巻で計算したものばかり。}
+  \kixatalk{-50}{delta}{デルタ}{そのとおり。この巻は、8冊分の道具が集まる場所だよ。小学1年の「リンゴは何個？」から、よくここまで来たね。1回でわからなくても大丈夫。2つの世界の図と、表計算の数で、ゆっくり確かめていこう。}
+\end{tikzpicture}
+\end{bkfigure}
+
+終章 9-13 では、小学1年から乗ってきた7本の路線を、1枚の地図にしてふり返ります。その地図をかくための最後の道具を、これから1つずつ手に入れていきましょう。

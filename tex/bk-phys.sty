@@ -1,0 +1,446 @@
+%% bk-phys.sty
+%% 『工学を理解するための物理』（仮）全5巻：表紙（表1）・表2・扉・もくじ・裏表紙（表4）・背・カバー展開図
+%% 本文の書式は数学シリーズの bk-b5.sty をそのまま使う（第4巻以降と同じく、ルビなし・常用漢字まで）。
+%% bk-b5.sty（vol=5 で読む）・bk-matter.sty の後に読む。座標は mm、原点は仕上がりの左下。
+%% 第9回編集委員会（2026-10-18）で作成し、最終確認の指摘（要6・望15・任4）を直した（v0.2）。
+%% 第10回編集委員会（2026-10-18）：第2〜5巻の4つの顔の絵と名前、表紙の一文を巻ごとにした（v0.3）。
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bk-phys}[2026/10/18 v0.3 physics series covers and toc]
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=ph, prefix=ph@opt@}
+\DeclareStringOption[1]{vol}
+\ProcessKeyvalOptions*
+\edef\phvol{\ph@opt@vol}
+
+%% ------------------------------------------------------------
+%% 1. 色：物理シリーズの5色と、シリーズ共通の墨の帯
+%%    どの巻の色も、白い字とのコントラスト 4.5:1 以上（組んだ画像で測った値）
+%% ------------------------------------------------------------
+\definecolor{phVol1}{cmyk}{1,0.60,0,0.10}       % 群青（力学）      白 6.9:1
+\definecolor{phVol2}{cmyk}{0,0.85,0.95,0.18}    % 朱赤（熱学）      白 5.3:1
+\definecolor{phVol3}{cmyk}{0.88,0.05,0.50,0.30} % 青緑（波動）      白 4.9:1
+\definecolor{phVol4}{cmyk}{0.05,0.45,1,0.35}    % 金茶（電磁気学）  白 4.8:1
+\definecolor{phVol5}{cmyk}{0.65,0.85,0,0.10}    % 紫（原子）        白 8.7:1
+\colorlet{phOn1}{white}\colorlet{phOn2}{white}\colorlet{phOn3}{white}\colorlet{phOn4}{white}\colorlet{phOn5}{white}
+\colorlet{phDeep1}{phVol1!85!black}\colorlet{phDeep2}{phVol2!90!black}\colorlet{phDeep3}{phVol3!90!black}
+\colorlet{phDeep4}{phVol4!85!black}\colorlet{phDeep5}{phVol5!90!black}
+\definecolor{phInk}{cmyk}{0.75,0.65,0.45,0.70}  % シリーズ共通の墨の帯（数学シリーズとの見分け）
+\definecolor{phHook}{cmyk}{0,0,0,0.78}           % もくじの「なぜ？」の字（白に 8:1）
+\colorlet{phHatena}{bkYellow!60!black}           % 「なぜ？」のアイコン
+% 本文の部品（柱・つめ・ノンブル・帯）も物理の巻の色にする
+\colorlet{bkVol}{phVol\phvol}\colorlet{bkOn}{phOn\phvol}\colorlet{bkDeep}{phDeep\phvol}
+\colorlet{bkTheme}{bkVol}
+\foreach \i in {0,...,8} {\global\colorlet{bkPart\i}{bkVol}}\global\colorlet{bkPartA}{bkVol}
+% 使う数学の巻の札の字の色：第1〜7巻の色は明るいので濃い字、第8・9巻は白い字（どれも 4.4:1 以上）
+\colorlet{phChipOn1}{phInk}\colorlet{phChipOn2}{phInk}\colorlet{phChipOn3}{phInk}\colorlet{phChipOn4}{phInk}
+\colorlet{phChipOn5}{phInk}\colorlet{phChipOn6}{phInk}\colorlet{phChipOn7}{phInk}
+\colorlet{phChipOn8}{white}\colorlet{phChipOn9}{white}
+
+%% ------------------------------------------------------------
+%% 2. 巻のデータ（ph<n>-meta.tex が呼ぶ）
+%% ------------------------------------------------------------
+\newcommand\phdefvol[4]{\@namedef{ph@title@#1}{#2}\@namedef{ph@sub@#1}{#3}\@namedef{ph@catch@#1}{#4}}
+\newcommand\phdefpart[5]{% 番号, ラベル, 名前, 章の範囲, 顔（1〜4）
+  \@namedef{ph@plabel@#1}{#2}\@namedef{ph@pname@#1}{#3}\@namedef{ph@prange@#1}{#4}\@namedef{ph@pface@#1}{#5}}
+\newcommand\phdefface[2]{\@namedef{ph@fword@#1}{#2}}% 顔の番号, 名前（部の名前の「：」の前）
+\newcommand\phFace[1]{\@nameuse{ph@fword@#1}}
+\providecommand\phFrontLine{}
+\newcommand\phTitle[1]{\@nameuse{ph@title@#1}}
+\newcommand\phSub[1]{\@nameuse{ph@sub@#1}}
+\newcommand\phCatch[1]{\@nameuse{ph@catch@#1}}
+\newcommand\phSeries{工学を理解するための物理}
+\newcommand\phEditor{「\phSeries」編集委員会}
+\newcommand\phVolLabel{第\phvol 巻}
+
+%% ------------------------------------------------------------
+%% 3. 4つの顔のピクトグラム（動く・回る・ゆがむ・流れる）
+%%    \phfaceat{(x,y)}{大きさ}{番号}{色}{線の太さ}
+%%      たて・よこ −1〜1 の枠に描く。矢じりと角の丸みも大きさに合わせて縮む。
+%%    \phfacesmat{(x,y)}{大きさ}{番号}{色}{線の太さ}
+%%      直径10 mm 以下の丸に入れるときの、形をへらした絵（指摘 No.3）
+%% ------------------------------------------------------------
+\tikzset{ph arrow/.style={-{Stealth[length=0.26*\ph@u, width=0.25*\ph@u]}},
+  ph arrow sm/.style={-{Stealth[length=0.48*\ph@u, width=0.52*\ph@u]}}}
+\def\ph@u{1cm}
+\newcommand\ph@face@i[2]{% 動く：走る車と、速度の矢印
+  \fill[#1, rounded corners=0.10*\ph@u] (-0.98,-0.28) rectangle (0.24,0.06);
+  \fill[#1, rounded corners=0.06*\ph@u] (-0.76,0.04) -- (-0.58,0.34) -- (-0.10,0.34) -- (0.08,0.04) -- cycle;
+  \fill[#1] (-0.66,-0.31) circle (0.16) (-0.04,-0.31) circle (0.16);
+  \draw[#1, line width=0.6*#2, line cap=round] (-1.0,-0.52) -- (1.0,-0.52);
+  \draw[#1, line width=#2, line cap=round, ph arrow] (0.38,-0.11) -- (0.98,-0.11);}
+\newcommand\ph@face@ii[2]{% 回る：はずみ車と、回る向きの矢印（右へ進む車の車輪と同じ、時計回り）
+  \draw[#1, line width=#2] (0,0) circle (0.44);
+  \fill[#1] (0,0) circle (0.10);
+  \foreach \a in {0,60,...,300} \draw[#1, line width=0.8*#2] (\a:0.10) -- (\a:0.44);
+  \draw[#1, line width=#2, line cap=round, ph arrow] (155:0.66) arc (155:28:0.66);
+  \draw[#1, line width=#2, line cap=round, ph arrow] (335:0.66) arc (335:208:0.66);}
+\newcommand\ph@face@iii[2]{% ゆがむ：左を回転支点、右を移動支点で支えたはりが、まん中の力でたわむ
+  \draw[#1, line width=0.55*#2, dash pattern=on 0.05*\ph@u off 0.05*\ph@u] (-0.85,0.05) -- (0.85,0.05);
+  \draw[#1, line width=1.6*#2, line cap=round] (-0.85,0.05) .. controls (-0.30,-0.32) and (0.30,-0.32) .. (0.85,0.05);
+  % 回転支点：三角と、斜線をつけた地面
+  \fill[#1] (-0.85,0.02) -- (-0.69,-0.24) -- (-1.01,-0.24) -- cycle;
+  \draw[#1, line width=0.6*#2] (-1.07,-0.26) -- (-0.63,-0.26);
+  \foreach \x in {-1.03,-0.91,-0.79,-0.67} \draw[#1, line width=0.45*#2] (\x+0.04,-0.26) -- (\x-0.03,-0.36);
+  % 移動支点：三角と、ころ、地面
+  \fill[#1] (0.85,0.02) -- (1.01,-0.20) -- (0.69,-0.20) -- cycle;
+  \fill[#1] (0.76,-0.255) circle (0.045) (0.94,-0.255) circle (0.045);
+  \draw[#1, line width=0.6*#2] (0.63,-0.31) -- (1.07,-0.31);
+  \draw[#1, line width=#2, line cap=round, ph arrow] (0,0.80) -- (0,-0.19);}
+\newcommand\ph@face@iv[2]{% 流れる：細くなる管の中で、流れが速くなる（のどの矢印が長い）
+  \draw[#1, line width=1.3*#2, line join=round] (-1.0,0.56) -- (-0.40,0.56) -- (-0.12,0.24) -- (0.12,0.24) -- (0.40,0.56) -- (1.0,0.56);
+  \draw[#1, line width=1.3*#2, line join=round] (-1.0,-0.56) -- (-0.40,-0.56) -- (-0.12,-0.24) -- (0.12,-0.24) -- (0.40,-0.56) -- (1.0,-0.56);
+  \draw[#1, line width=0.45*#2] (-1.0,0.30) -- (-0.42,0.30) .. controls (-0.22,0.30) and (-0.20,0.12) .. (0,0.12)
+    .. controls (0.20,0.12) and (0.22,0.30) .. (0.42,0.30) -- (1.0,0.30);
+  \draw[#1, line width=0.45*#2] (-1.0,-0.30) -- (-0.42,-0.30) .. controls (-0.22,-0.30) and (-0.20,-0.12) .. (0,-0.12)
+    .. controls (0.20,-0.12) and (0.22,-0.30) .. (0.42,-0.30) -- (1.0,-0.30);
+  \draw[#1, line width=0.9*#2, line cap=round, ph arrow] (-0.95,0) -- (-0.66,0);
+  \draw[#1, line width=0.9*#2, line cap=round, ph arrow] (-0.33,0) -- (0.35,0);
+  \draw[#1, line width=0.9*#2, line cap=round, ph arrow] (0.64,0) -- (0.95,0);}
+% 小さな丸に入れる形（線を太く、部品を少なく、矢じりを大きく）
+\newcommand\ph@facesm@i[2]{% 動く：小さな車と、長い矢印
+  \fill[#1, rounded corners=0.07*\ph@u] (-0.98,-0.24) rectangle (-0.12,0.06);
+  \fill[#1, rounded corners=0.05*\ph@u] (-0.84,0.04) -- (-0.70,0.30) -- (-0.36,0.30) -- (-0.24,0.04) -- cycle;
+  \fill[#1] (-0.76,-0.27) circle (0.14) (-0.34,-0.27) circle (0.14);
+  \draw[#1, line width=#2, line cap=round, ph arrow sm] (0.04,-0.06) -- (0.98,-0.06);}
+\newcommand\ph@facesm@ii[2]{% 回る：時計回りの矢印
+  \fill[#1] (0,0) circle (0.17);
+  \draw[#1, line width=#2, line cap=butt, ph arrow sm] (110:0.66) arc (110:-200:0.66);}
+\newcommand\ph@facesm@iii[2]{% ゆがむ
+  \draw[#1, line width=1.2*#2, line cap=round] (-0.80,0.0) .. controls (-0.28,-0.36) and (0.28,-0.36) .. (0.80,0.0);
+  \fill[#1] (-0.80,-0.04) -- (-0.60,-0.40) -- (-1.0,-0.40) -- cycle;
+  \fill[#1] (0.80,-0.04) -- (1.0,-0.40) -- (0.60,-0.40) -- cycle;
+  \draw[#1, line width=#2, line cap=butt, ph arrow sm] (0,0.90) -- (0,-0.18);}
+\newcommand\ph@facesm@iv[2]{% 流れる
+  \draw[#1, line width=#2, line join=round] (-0.95,0.54) -- (-0.36,0.54) -- (-0.10,0.26) -- (0.10,0.26) -- (0.36,0.54) -- (0.95,0.54);
+  \draw[#1, line width=#2, line join=round] (-0.95,-0.54) -- (-0.36,-0.54) -- (-0.10,-0.26) -- (0.10,-0.26) -- (0.36,-0.54) -- (0.95,-0.54);
+  \draw[#1, line width=#2, line cap=butt, ph arrow sm] (-0.70,0) -- (0.72,0);}
+% 第1巻の絵の名前を巻の番号つきにする（第2〜5巻の絵は bk-phys-faces.tex）
+\expandafter\let\csname ph@face@1@i\endcsname\ph@face@i
+\expandafter\let\csname ph@face@1@ii\endcsname\ph@face@ii
+\expandafter\let\csname ph@face@1@iii\endcsname\ph@face@iii
+\expandafter\let\csname ph@face@1@iv\endcsname\ph@face@iv
+\expandafter\let\csname ph@facesm@1@i\endcsname\ph@facesm@i
+\expandafter\let\csname ph@facesm@1@ii\endcsname\ph@facesm@ii
+\expandafter\let\csname ph@facesm@1@iii\endcsname\ph@facesm@iii
+\expandafter\let\csname ph@facesm@1@iv\endcsname\ph@facesm@iv
+\input{bk-phys-faces.tex}
+\newcommand\phfaceat[5]{\begin{scope}[shift={#1}, x=#2, y=#2]\def\ph@u{#2}%
+  \csname ph@face@\phvol @\romannumeral#3\endcsname{#4}{#5}\end{scope}}
+\newcommand\phfacesmat[5]{\begin{scope}[shift={#1}, x=#2, y=#2]\def\ph@u{#2}%
+  \csname ph@facesm@\phvol @\romannumeral#3\endcsname{#4}{#5}\end{scope}}
+% 文中に置く丸いアイコン  \phfaceicon[直径]{番号}（形をへらした絵。丸の内側に 1.5 mm 以上の余白）
+\newcommand\phfaceicon[2][7mm]{\tikz[baseline=-0.38em]{\fill[bkVol] (0,0) circle (#1/2);
+  \phfacesmat{(0,0)}{#1*0.31}{#2}{white}{0.06*#1}}}
+
+%% ------------------------------------------------------------
+%% 4. 小さな部品：使う数学の巻の札・★・方眼
+%% ------------------------------------------------------------
+% \phmathchip[大きさ]{巻}  数学シリーズの巻の色の四角に巻の番号
+\newcommand\phmathchip[2][4.2mm]{\tikz[baseline=-0.36em]\node[fill=bkVol#2, text=phChipOn#2, rounded corners=0.6mm, minimum width=#1,
+  minimum height=#1, inner sep=0pt, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont] {#2};}
+% ★のメーター（指摘 No.4）：最小まで ★（塗り）、最大まで ☆（白ぬき）、その先は うすい★。白黒でも形で見分けられる
+\newcommand\phstarmeter[2]{{\sffamily\scriptsize\@tempcnta=0\relax
+  \loop\advance\@tempcnta\@ne
+    \ifnum\@tempcnta>#2\relax\textcolor{bkLine}{★}%
+    \else\ifnum\@tempcnta>#1\relax\textcolor{bkStar}{☆}%
+    \else\textcolor{bkStar}{★}\fi\fi
+  \ifnum\@tempcnta<5\repeat}}
+% 「なぜ？」のアイコン
+\newcommand\phhatena[1][1em]{\bkicon[#1]{hatena}{phHatena}}
+% 方眼（設計図の紙）  \ph@grid{x0}{y0}{x1}{y1}
+\newcommand\ph@grid[4]{%
+  \begin{scope}\clip (#1,#2) rectangle (#3,#4);
+    \draw[white, opacity=0.10, line width=0.25pt, step=5] (#1-10,#2-10) grid (#3+10,#4+10);
+    \draw[white, opacity=0.22, line width=0.45pt, step=25] (#1-25,#2-25) grid (#3+25,#4+25);
+  \end{scope}}
+
+%% ------------------------------------------------------------
+%% 5. 表紙（表1）
+%% ------------------------------------------------------------
+\newcommand\phFrontArt{%
+  \fill[bkVol] (-3,60) rectangle (185,260);
+  \ph@grid{-3}{60}{185}{232}
+  \fill[white] (-3,-3) rectangle (185,60);
+  % 墨の帯（シリーズ名）と巻の番号
+  \fill[phInk] (-3,232) rectangle (185,260);
+  \node[anchor=base west, inner sep=0pt, text=white, font=\sffamily\bfseries\fontsize{12.5}{15}\selectfont] at (16,243) {\phSeries};
+  \node[anchor=base west, inner sep=0pt, text=white!80!phInk, font=\sffamily\fontsize{8.5}{10}\selectfont] at (16,236.2)
+    {数学から物理へ。身のまわりの「なぜ？」を、工学の目で解き明かす};
+  % 丸の右はしを、4枚のカードの右の線（x＝165.7）にそろえる。字のかたまりの中心を丸の中心に合わせる（指摘 No.16）
+  \fill[white] (149.7,232) circle (16);
+  \draw[bkVol, line width=1.2pt] (149.7,232) circle (14.4);
+  \node[anchor=base, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries] at (149.7,228.3)
+    {\fontsize{13}{13}\selectfont 第\hspace{0.5pt}{\fontsize{32}{32}\selectfont\phvol}\hspace{0.5pt}巻};
+  % 題名・副題・キャッチ（題名は字の左の空きを引いて、字面の左はしを x＝16 にそろえる。指摘 No.15）
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{54}{60}\selectfont] at (15.2,192) {\phTitle{\phvol}};
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{17}{20}\selectfont] at (16,177) {\phSub{\phvol}};
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{11.5}{14}\selectfont] at (16,166.5) {\phCatch{\phvol}};
+  % 4つの顔（部と同じ番号・同じ絵）
+  \foreach \k in {1,...,4} {\edef\n{\phFace{\k}}%
+    \pgfmathsetmacro\ph@tx{16+(\k-1)*38.7}
+    \fill[white, opacity=0.12, rounded corners=3mm] (\ph@tx,90) rectangle ++(33.6,58);
+    \draw[white, line width=0.9pt, rounded corners=3mm] (\ph@tx,90) rectangle ++(33.6,58);
+    \phfaceat{(\ph@tx+16.8,127)}{13mm}{\k}{white}{1.8pt}
+    \node[anchor=base, inner sep=0pt, text=bkOn, font=\sffamily\bfseries\fontsize{14}{16}\selectfont] at (\ph@tx+16.8,99.5) {\n};
+    \node[anchor=base, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{8.5}{10}\selectfont] at (\ph@tx+16.8,93.3) {第\k 部};
+  }
+  \node[anchor=base west, inner sep=0pt, text=bkOn, font=\sffamily\fontsize{9}{11}\selectfont] at (16,73)
+    {\phFrontLine};
+  % 全5巻のならび
+  \ph@lineup{16}{30}
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{8.5}{10}\selectfont] at (91,15) {全5巻　\phSeries\hspace{0.6em}（「物理を理解するための数学」全9巻のあとに読む本）};
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{8}{10}\selectfont] at (91,8) {\phEditor\hspace{1pt}編};
+}
+% 全5巻の帯  \ph@lineup{x}{y}
+\newcommand\ph@lineup[2]{%
+  \foreach \i/\t in {1/力学, 2/熱学, 3/波動, 4/電磁気学, 5/原子} {
+    \pgfmathsetmacro\ph@lx{#1+(\i-1)*30.5}
+    \ifnum\i=\phvol\relax
+      \fill[phVol\i] (\ph@lx,#2-4) rectangle ++(28,22);
+      \fill[phVol\i] (\ph@lx+14-2.6,#2+17.6) -- ++(5.2,0) -- ++(-2.6,3.4) -- cycle;
+      \node[anchor=base, text=phOn\i, font=\sffamily\bfseries\fontsize{16}{16}\selectfont] at (\ph@lx+14,#2+6.6) {\i};
+      \node[anchor=base, text=phOn\i, font=\sffamily\bfseries\fontsize{9.5}{10}\selectfont] at (\ph@lx+14,#2-0.8) {\t};
+    \else
+      \fill[phVol\i] (\ph@lx,#2) rectangle ++(28,14);
+      \node[anchor=base, text=phOn\i, font=\sffamily\bfseries\fontsize{11}{11}\selectfont] at (\ph@lx+14,#2+6.6) {\i};
+      \node[anchor=base, text=phOn\i, font=\sffamily\bfseries\fontsize{9}{10}\selectfont] at (\ph@lx+14,#2+1.7) {\t};
+    \fi
+  }}
+\newcommand\phFrontCoverPage{\bkartpage{表1}{\phFrontArt}}
+
+%% ------------------------------------------------------------
+%% 6. 表2：いっしょに学ぶなかま（物理シリーズ用。語の途中で改行しないよう、改行の位置を決めておく：指摘 No.6）
+%% ------------------------------------------------------------
+\newcommand\phInsideFrontArt{%
+  \fill[bkVol!7] (-3,-3) rectangle (185,260);
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{22}{28}\selectfont] at (91,222) {いっしょに学ぶなかま};
+  \draw[bkVol, line width=1pt] (56,215) -- (126,215);
+  \foreach \x in {40,91,142} {
+    \fill[white, rounded corners=3mm] (\x-23.5,58) rectangle (\x+23.5,204);
+    \fill[bkVol!14] (\x-23.5,129) rectangle (\x+23.5,131);}
+  \begin{scope}\clip[rounded corners=3mm] (16.5,58) rectangle (63.5,204);\bkChar{sora}{(40,131)}{64mm}\end{scope}
+  \begin{scope}\clip[rounded corners=3mm] (67.5,58) rectangle (114.5,204);\bkChar{mina}{(91,131)}{64mm}\end{scope}
+  \bkChar{delta}{(142,140)}{38mm}% 第11回：数学シリーズの表2と同じ位置・大きさにそろえる（依頼者の指摘）
+  \foreach \x/\n in {40/ソラ, 91/ミナ, 142/デルタ}
+    \node[fill=bkVol, text=bkOn, rounded corners=2mm, inner xsep=4mm, inner ysep=1.6mm,
+      font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (\x,130) {\n};
+  \foreach \x/\t in {40/{「なぜ？」と聞くのが\\大好き。\\たしかめるまで、\\なっとくしない。},
+                     91/{図やグラフをかくのが\\とくい。\\手を動かして考える。},
+                     142/{計算と記録がとくいな\\ロボット。名前は\\「変化」を表す\\記号Δから。}}
+    {\node[anchor=north, text width=40mm, align=left, text=bkInk, font=\fontsize{10}{17}\selectfont] at (\x,121) {\t};}
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{10.5}{14}\selectfont] at (91,40)
+    {こまったら、3人のことばをヒントにしよう。};
+}
+\newcommand\phInsideFrontPage{\bkartpage{表2}{\phInsideFrontArt}}
+
+%% ------------------------------------------------------------
+%% 7. 裏表紙（表4）
+%% ------------------------------------------------------------
+\newcommand\phBackArt{%
+  \fill[bkVol!8] (-3,-3) rectangle (185,260);
+  % 天の帯：表1・背と同じ高さの墨の帯（指摘 No.17）
+  \fill[phInk] (-3,232) rectangle (185,260);
+  \fill[bkVol] (-3,226) rectangle (185,232);
+  \node[anchor=base west, inner sep=0pt, text=white!80!phInk, font=\sffamily\fontsize{9.5}{12}\selectfont] at (16,246) {\phSeries};
+  \node[anchor=base west, inner sep=0pt, text=white, font=\sffamily\bfseries\fontsize{19}{24}\selectfont] at (16,236)
+    {\phVolLabel\hspace{0.8em}\phTitle{\phvol}\hspace{0.6em}{\fontsize{12}{14}\selectfont\phSub{\phvol}}};
+  % この巻で学ぶこと
+  \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (16,211) {この巻で学ぶこと};
+  \draw[bkVol, line width=0.8pt] (16,207) -- (166,207);
+  \foreach \p in {1,...,4} {
+    \pgfmathsetmacro\ph@py{198-(\p-1)*9.5}
+    \fill[bkVol] (20.2,\ph@py) circle (4.2);
+    \phfacesmat{(20.2,\ph@py)}{2.5mm}{\@nameuse{ph@pface@\p}}{white}{0.6pt}
+    \node[anchor=west, fill=bkVol, text=bkOn, rounded corners=1.2mm, inner xsep=2mm, inner ysep=1.1mm,
+      font=\sffamily\bfseries\fontsize{9}{11}\selectfont] (pp) at (27,\ph@py) {\@nameuse{ph@plabel@\p}};
+    \node[anchor=west, inner sep=0pt, text=bkInk, font=\sffamily\bfseries\fontsize{11}{14}\selectfont] (pn) at ([xshift=3mm]pp.east) {\@nameuse{ph@pname@\p}};
+    \node[anchor=west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{9}{10}\selectfont] at ([xshift=2.5mm]pn.east) {\@nameuse{ph@prange@\p}};
+  }
+  % この巻で答える「なぜ？」：章番号とページは右の列にそろえる（指摘 No.20）
+  \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (16,155) {この巻で答える「なぜ？」};
+  \draw[bkVol, line width=0.8pt] (16,151) -- (166,151);
+  \foreach \q/\r [count=\k] in {\ph@whyA/\ph@whyrA,\ph@whyB/\ph@whyrB,\ph@whyC/\ph@whyrC,\ph@whyD/\ph@whyrD,\ph@whyE/\ph@whyrE} {
+    \pgfmathsetmacro\ph@qy{142.5-(\k-1)*7.8}
+    \node[inner sep=0pt] at (19.2,\ph@qy) {\phhatena[4.4mm]};
+    \node[anchor=west, inner sep=0pt, text=bkInk, font=\sffamily\fontsize{9.5}{12}\selectfont] at (23.5,\ph@qy-0.2) {\q};
+    \node[anchor=east, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{9}{10}\selectfont] at (166,\ph@qy-0.2) {\r};
+  }
+  % 全5巻のならび
+  \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{13}{16}\selectfont] at (16,96) {全5巻のならび};
+  \draw[bkVol, line width=0.8pt] (16,92) -- (100,92);
+  \foreach \i/\t/\s in {1/力学/動く・回る・ゆがむ・流れる, 2/熱学/エネルギーを使いこなす, 3/波動/ゆれと波を読む,
+                       4/電磁気学/場から回路・機械・電波へ, 5/原子/量子から半導体・原子力へ} {
+    \pgfmathsetmacro\ph@ly{84.5-(\i-1)*7.5}
+    \ifnum\i=\phvol\relax
+      \fill[white, rounded corners=1.5mm] (14,\ph@ly-3.3) rectangle (100,\ph@ly+3.6);
+      \draw[bkVol, line width=0.8pt, rounded corners=1.5mm] (14,\ph@ly-3.3) rectangle (100,\ph@ly+3.6);
+    \fi
+    \fill[phVol\i, rounded corners=0.8mm] (16,\ph@ly-2.7) rectangle ++(5.4,5.4);
+    \node[text=phOn\i, font=\sffamily\bfseries\fontsize{8.5}{8.5}\selectfont] at (18.7,\ph@ly) {\i};
+    \node[anchor=west, inner sep=0pt, text=bkInk, font=\sffamily\fontsize{9}{10}\selectfont] at (24.5,\ph@ly-0.3)
+      {\ifnum\i=\phvol\relax\bfseries\fi\t\hspace{0.5em}{\color{bkGray}\fontsize{8.5}{9}\selectfont\s}};
+  }
+  \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8.5}{10}\selectfont] at (16,42)
+    {先に読む本：「物理を理解するための数学」全9巻};
+  % 案内役の3人と、この巻のひとこと（ふきだし・台・ISBN 欄の左はしを x＝107 にそろえる）
+  \node[rectangle callout, callout absolute pointer={(136.5,80.5)}, anchor=south, draw=bkVol, line width=0.8pt, fill=white,
+    rounded corners=3mm, inner xsep=3.5mm, inner ysep=2.5mm, minimum width=59mm, text width=52mm, align=center, text=bkDeep,
+    font=\sffamily\bfseries\fontsize{10}{15}\selectfont] at (136.5,84.5) {\phBackCatch};
+  \fill[bkVol!22, rounded corners=2mm] (107,46) rectangle (166,50);
+  \bkChar{sora}{(117,49.5)}{28mm}\bkChar{mina}{(136.5,49.5)}{28mm}\bkChar{delta}{(156,49.5)}{17.5mm}
+  % バーコード欄（入稿時に配置）
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt, fill=white] (107,10) rectangle (166,36);
+  \node[text=bkGray, align=center, font=\sffamily\fontsize{8}{10}\selectfont] at (136.5,23) {ISBN・バーコード\\（入稿時に配置）};
+  \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8.5}{10}\selectfont] at (16,20) {\phSeries　\phVolLabel};
+  \node[anchor=base west, inner sep=0pt, text=bkGray, font=\sffamily\fontsize{8.5}{10}\selectfont] at (16,12) {\phEditor\hspace{1pt}編};
+}
+\newcommand\phBackCoverPage{\bkartpage{表4}{\phBackArt}}
+
+%% ------------------------------------------------------------
+%% 8. 背（カバー展開図用）  \phSpineArt{幅}
+%%    色の面は両側へ 0.5 mm 広げ、表1・表4 の下に敷く（折り目に細いすき間が出ないように。指摘 No.18）
+%% ------------------------------------------------------------
+\newcommand\phSpineArt[1]{%
+  \fill[bkVol] (-0.5,-3) rectangle (#1+0.5,260);
+  \fill[phInk] (-0.5,232) rectangle (#1+0.5,260);% 表1・表4 の墨の帯とつなげる
+  \fill[bkVol] (-0.5,226) rectangle (#1+0.5,232);
+  \node[anchor=base, inner sep=0pt, text=white, font=\sffamily\bfseries\fontsize{8}{8}\selectfont] at (#1/2,250) {物理};
+  \node[circle, fill=white, text=bkDeep, minimum size=0.74*#1 mm, inner sep=0pt,
+    font=\sffamily\bfseries\fontsize{13}{13}\selectfont] at (#1/2,240.5) {\phvol};
+  \node[anchor=north, inner sep=0pt, text=bkOn] at (#1/2,216)
+    {\hbox{\tate\sffamily\bfseries\fontsize{16}{16}\selectfont\phTitle{\phvol}}};
+  \node[anchor=north, inner sep=0pt, text=bkOn] at (#1/2,180)
+    {\hbox{\tate\sffamily\fontsize{8.5}{8.5}\selectfont\phSub{\phvol}}};
+  \node[anchor=south, inner sep=0pt, text=bkOn] at (#1/2,12)
+    {\hbox{\tate\sffamily\fontsize{8}{8}\selectfont\phSeries}};
+}
+
+%% ------------------------------------------------------------
+%% 9. 扉（p.1）
+%% ------------------------------------------------------------
+\newcommand\phTitleArt{%
+  \fill[phInk] (-3,252) rectangle (185,260);
+  \fill[bkVol] (-3,240) rectangle (185,252);
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{15}\selectfont] at (91,206) {\phSeries};
+  \node[anchor=base, fill=bkVol, text=bkOn, rounded corners=2mm, inner xsep=4mm, inner ysep=2mm,
+    font=\sffamily\bfseries\fontsize{15}{18}\selectfont] at (91,185) {\phVolLabel};
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{40}{46}\selectfont] at (91,156) {\phTitle{\phvol}};
+  \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{15}{18}\selectfont] at (91,142) {\phSub{\phvol}};
+  \node[anchor=base, text=bkGray, font=\fontsize{11}{15}\selectfont] at (91,128) {\phCatch{\phvol}};
+  \foreach \k in {1,...,4} {\edef\n{\phFace{\k}}%
+    \pgfmathsetmacro\ph@fx{91+(\k-2.5)*24}
+    \fill[bkVol] (\ph@fx,100) circle (8.5);
+    \phfacesmat{(\ph@fx,100)}{5.3mm}{\k}{white}{1.6pt}
+    \node[anchor=base, text=bkDeep, font=\sffamily\bfseries\fontsize{10}{11}\selectfont] at (\ph@fx,85) {\n};
+  }
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{9}{11}\selectfont] at (91,74.5) {4つの部で、\phTitle{\phvol}の4つの顔を学びます};
+  \node[anchor=base, text=bkGray, font=\sffamily\fontsize{9}{12}\selectfont] at (91,34) {\phEditor\hspace{1pt}編};
+  \fill[bkVol] (-3,-3) rectangle (185,4);
+}
+\newcommand\phTitlePage{%
+  \clearpage\setcounter{page}{1}%
+  \begingroup\global\bk@decofalse\bkfolio{false}%
+  \AddToHookNext{shipout/background}{\put(0,-\paperheight){%
+    \begin{tikzpicture}[overlay, x=1mm, y=1mm]\phTitleArt\end{tikzpicture}}}%
+  \null\clearpage\endgroup\global\bk@decotrue\bkfolio{true}}
+
+%% ------------------------------------------------------------
+%% 10. もくじ
+%%    行の右側：使う数学の巻の札・★・ページ。2行目は、その章で答える身近な「なぜ？」（9.5 pt・濃い灰色）
+%% ------------------------------------------------------------
+\newcommand\ph@tocTitle{\sffamily\bfseries\fontsize{11}{15}\selectfont}
+\newcommand\ph@tocHook{\rmfamily\fontsize{9.5}{14}\selectfont}
+\newdimen\ph@tocgap \ph@tocgap=0.75mm
+\newcommand\ph@tocmeta[4]{% 数学の巻（カンマ区切り、空もよい）, ★最小, ★最大, ページ
+  \begin{tikzpicture}[baseline=-0.38em, x=1mm, y=1mm]
+    \path[use as bounding box] (0,-1) rectangle (42,1);
+    \node[anchor=east, inner sep=0pt, text=bkInk, font=\sffamily\bfseries\fontsize{11}{12}\selectfont] (pg) at (42,0) {\bkpageno{#4}};
+    \node[anchor=east, inner sep=0pt] (st) at (29,0) {\phstarmeter{#2}{#3}};
+    \def\ph@mv{#1}%
+    \ifx\ph@mv\@empty\else
+      \foreach \m [count=\k] in {#1} {\xdef\ph@nm{\k}}%
+      \foreach \m [count=\k] in {#1} {
+        \node[anchor=east, inner sep=0pt] at ([xshift={-2mm-(\ph@nm-\k)*4.8mm}]st.west) {\phmathchip{\m}};}
+    \fi
+  \end{tikzpicture}}
+% 章の行  \phtocchap{番号}{題名}{なぜ？}{数学の巻}{★最小}{★最大}{ページ}{種類}
+\newcommand\phtocchap[8]{%
+  \par\noindent
+  \parbox[t]{14mm}{\leavevmode\raisebox{0.3mm}{\bk@tocpill{#1}{#8}}}%
+  \parbox[t]{\dimexpr\linewidth-14mm-42mm\relax}{\setlength\parskip{0pt}%
+    \leavevmode{\ph@tocTitle\color{bkInk}#2\def\bk@k{#8}\def\bk@R{R}\ifx\bk@k\bk@R\hspace{0.5em}{\fontsize{8.5}{9}\selectfont\color{bkDeep}［読みもの］}\fi}}%
+  \parbox[t]{42mm}{\leavevmode{\ph@tocTitle\ph@tocmeta{#4}{#5}{#6}{#7}}}%
+  \par\nobreak\vspace{-1.3mm}\noindent\hspace{14mm}%
+  \parbox[t]{\dimexpr\linewidth-14mm\relax}{\setlength\parskip{0pt}%
+    \leavevmode{\ph@tocHook\color{phHook}\phhatena[0.95em]\hspace{0.35em}#3}}%
+  \par\nobreak\vspace{\dimexpr\ph@tocgap+1.3mm\relax}{\color{bkLine}\hrule height 0.35pt}\vspace{\ph@tocgap}}
+\newcommand\phtocbreak{\par\clearpage}
+% 部の途中でページが変わるときの、つづきの行  \phtocpartcont{ラベル}{名前}{顔}（ページ番号なし、帯はうすく）
+\newcommand\phtocpartcont[3]{%
+  \par\noindent
+  \begin{tikzpicture}[baseline=(t.base)]
+    \fill[bkVol!7, rounded corners=1.5mm] (0,-2.0mm) rectangle (\linewidth,5.2mm);
+    \node[inner sep=0pt] (f) at (4.6mm,1.6mm) {\phfaceicon[6mm]{#3}};
+    \node[anchor=west, text=bkDeep, font=\sffamily\bfseries\fontsize{10}{12}\selectfont] (t) at (9.6mm,1.6mm) {#1　#2（つづき）};
+  \end{tikzpicture}\par\nobreak\vspace{\ph@tocgap}}
+% 部の行  \phtocpart{ラベル}{名前}{ページ}{顔}
+\newcommand\phtocpart[4]{%
+  \par\addvspace{1.2mm}\noindent
+  \begin{tikzpicture}[baseline=(t.base)]
+    \fill[bkVol!14, rounded corners=1.5mm] (0,-2.6mm) rectangle (\linewidth,5.8mm);
+    \node[inner sep=0pt] (f) at (4.6mm,1.6mm) {\phfaceicon[7mm]{#4}};
+    \node[anchor=west, fill=bkVol, text=bkOn, rounded corners=1.2mm, inner xsep=2mm, inner ysep=1mm,
+      font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont] (l) at (9.6mm,1.6mm) {#1};
+    \node[anchor=west, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{14}\selectfont] (t) at ([xshift=2mm]l.east) {#2};
+    \node[anchor=east, text=bkGray, font=\sffamily\fontsize{9}{10}\selectfont] at (\linewidth-2mm,1.6mm) {\bkpageno{#3}};
+  \end{tikzpicture}\par\nobreak\vspace{\ph@tocgap}}
+% 前付・巻末の項目：2列の格子にして、ページ番号を列の右でそろえる（指摘 No.24）
+%   \phtocgrid{\phgi{名前}{ページ}\phgi{…}{…}…}
+\newcommand\ph@gitem[2]{\makebox[61mm][l]{{\sffamily\bfseries\fontsize{9.5}{13}\selectfont\color{bkDeep}#1}\hfill
+  {\sffamily\bfseries\fontsize{10}{13}\selectfont\bkpageno{#2}}}}
+\newcount\ph@gcount
+\newcommand\phgi[2]{\advance\ph@gcount\@ne\ifodd\ph@gcount\else\hspace{4mm}\fi\ph@gitem{#1}{#2}\ifodd\ph@gcount\else\par\fi}
+\newcommand\phtocgrid[1]{\par\vspace{0.6mm}{\parindent=0pt\leftskip=14mm\ph@gcount=0\relax #1\par}\vspace{0.6mm}}
+% もくじの見出し（凡例は図の外の文字にして、札と文字の高さをそろえる）
+\newcommand\phTocHead{%
+  \noindent\begin{tikzpicture}
+    \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{30}{36}\selectfont] (h) at (0,0) {もくじ};
+    \node[anchor=base west, inner sep=0pt, text=bkDeep, font=\sffamily\bfseries\fontsize{12}{15}\selectfont] at ([xshift=6mm]h.base east) {\phVolLabel\hspace{0.6em}\phTitle{\phvol}};
+    \draw[bkVol, line width=1.6pt, overlay] (0,-3.5mm) -- (\linewidth,-3.5mm);
+  \end{tikzpicture}\par\vspace{3mm}
+  {\raggedleft\sffamily\fontsize{9}{14}\selectfont\color{bkGray}
+    \phmathchip[3.8mm]{5}\,＝使う数学の巻\hspace{1.2em}\phstarmeter{3}{4}\,＝★3〜★4（★は必ず、☆の所まで）\hspace{1.2em}\bkpageno{8}＝8ページ\par
+    \phhatena[0.95em]\,＝その章で答える「なぜ？」\hspace{1.2em}気になる「なぜ？」からは、巻末の「\mbox{なぜ？}の道すじ」（\bkpageno{\ph@whypage}）へ\par}
+  \vspace{2.5mm}}
+\newcommand\phTocPages[1]{%
+  \clearpage\setcounter{page}{2}%
+  \global\bk@decofalse\bkfolio{true}\bksetrunning{}{}{}%
+  \phTocHead #1\par
+  \clearpage
+  \global\bk@decotrue}
+
+%% ------------------------------------------------------------
+%% 11. カバー展開図（入稿用）：背を先に描き、表4・表1 をその上に重ねる
+%% ------------------------------------------------------------
+\newcommand\phCoverWrapArt[1]{%
+  \pgfmathsetmacro\bk@W{182+#1+182}%
+  \begin{scope}
+    \clip (-3,-3) rectangle (\bk@W+3,260);
+    \begin{scope}[shift={(182,0)}]\phSpineArt{#1}\end{scope}
+    \begin{scope}\clip (-3,-3) rectangle (182,260);\phBackArt\end{scope}
+    \begin{scope}[shift={(182+#1,0)}]\clip (0,-3) rectangle (185,260);\phFrontArt\end{scope}
+  \end{scope}
+  \bk@cropmarks{0}{0}{\bk@W}{257}
+  \foreach \x in {182, 182+#1} {\draw[line width=0.25pt] (\x,-3) -- (\x,-13) (\x,260) -- (\x,270);}
+  % 説明はトンボにかからないよう、表4 の上に2行で（指摘 No.25）
+  \node[anchor=base west, inner sep=0pt, font=\sffamily\fontsize{6.5}{8}\selectfont] at (16,266.5)
+    {\phSeries　第\phvol 巻　カバー展開図（表4・背・表1）　仕上がり B5（182×257 mm）};
+  \node[anchor=base west, inner sep=0pt, font=\sffamily\fontsize{6.5}{8}\selectfont] at (16,262.6)
+    {背幅 #1 mm（本文\bk@totalpages ページ・紙厚0.09 mmで計算）　塗り足し 3 mm　CMYK};
+}
+\newcommand\phCoverWrapPage[1]{%
+  \AddToHookNext{shipout/background}{\put(0,-\paperheight){%
+    \begin{tikzpicture}[overlay, x=1mm, y=1mm]\begin{scope}[shift={(18,18)}]\phCoverWrapArt{#1}\end{scope}\end{tikzpicture}}}%
+  \thispagestyle{empty}\null\clearpage}
+
+\endinput

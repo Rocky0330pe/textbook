@@ -1,0 +1,800 @@
+%% 7-9 対角化：まっすぐな方向に分けて考える（第14回：組 V7-5。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   物理 p1-09：σ'=R^T σ R を「7-9 の『軸を変えて見る』形」とよんでいる → 節の名前・言い方に「軸を変えて見る」を使う。主方向 15.5°（tan2θ=0.6）。
+%%   6-14：和と差でほどけた（m=1、k=100、K=10、ω=10・10.95）→ 和と差＝固有ベクトルの物差し、\vec x=P\vec q でほどく。
+%%   4-11 のななめの物差し → 固有ベクトルを物差しにする。「基底」は1回だけ名前を出す（brief7 2-2）。
+%%   A^n=PD^nP^{-1} は 7-10 の予告。対角化できない例（ずらし）は 6-12 の重解 te^{st} と結ぶ。ジョルダン標準形は名前だけ。
+%%   主役の行列 A=(2 1; 1 2)、P=(1 1; 1 −1)、D=diag(3,1)。型は tools/kata7.md（V7-1）。
+\usetikzlibrary{matrix}
+\makeatletter
+% ---- kata7 の型（頭文字 kviij に置きかえ）----
+\tikzset{
+  kviij mat/.style={matrix of math nodes, ampersand replacement=\&,
+    left delimiter=(, right delimiter=),
+    nodes={minimum width=8mm, minimum height=6.5mm, inner sep=0pt, anchor=center},
+    column sep=0pt, row sep=0pt, inner sep=0.6mm},
+  kviij row/.style={fill=bkOrange!20, draw=bkOrange!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviij col/.style={fill=bkBlue!14, draw=bkBlue!80!black, line width=0.9pt, rounded corners=1.5mm},
+  kviij ans/.style={fill=bkGreen!20, draw=bkGreen!60!black, line width=0.9pt, rounded corners=1.5mm}}
+\newcommand\kviijhl[3]{\begin{scope}[on background layer]
+  \draw[#1] ([xshift=-0.6mm, yshift=0.3mm]#2.north west) rectangle ([xshift=0.6mm, yshift=-0.3mm]#3.south east);\end{scope}}
+% 方眼と軸  \kviijgrid{xmin}{xmax}{ymin}{ymax}（tikzpicture[x=5mm, y=5mm] の中で）
+\newcommand\kviijgrid[4]{%
+  \draw[bkLine, line width=0.4pt, step=1] (#1,#3) grid (#2,#4);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (#1,0) -- ({#2+0.7},0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,#3) -- (0,{#4+0.7}) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \node[below left, font=\sffamily\footnotesize, inner sep=1.2pt] at (0,0) {O};}
+\newcommand\kviijhousezero{%
+  \filldraw[fill=bkGray!12, draw=bkGray, line width=0.8pt, dashed, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkGray, line width=0.6pt, dashed] (1.25,0) -- (1.25,1) -- (1.75,1) -- (1.75,0);}
+\newcommand\kviijhouse[5][bkOrange]{%
+  \begin{scope}[cm={#2,#4,#3,#5,(0,0)}]
+    \filldraw[fill=#1!25, draw=#1!80!black, line width=1.1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+    \filldraw[fill=white, draw=#1!80!black, line width=0.8pt] (1.25,0) -- (1.75,0) -- (1.75,1) -- (1.25,1) -- cycle;
+  \end{scope}}
+% 数式バー  \kviijfx{セル}{式}
+\newcommand\kviijfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=86mm, text width=82mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+% ---- この章の部品 ----
+% 小見出し（太字の1行）
+\newcommand\kviijhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviijbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kviijline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kviijframe[はば]{中身}
+\newcommand\kviijframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kviija{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kviijb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kviijs{\rightskip=0pt plus 8em\relax}
+% ばね（横）・台車・かべ（6-14 と同じ形）
+\newcommand\kviijspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.3mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] #1 -- #2;}
+\newcommand\kviijcart[3]{\begin{scope}[shift={#1}]
+  \filldraw[fill=#3!25, draw=#3!80!black, line width=0.8pt, rounded corners=0.8mm] (0,1.6) rectangle (12,10);
+  \filldraw[fill=bkInk!60, draw=bkInk] (3,0.8) circle (0.8) (9,0.8) circle (0.8);
+  \node[font=\sffamily\bfseries\small] at (6,5.8) {#2};
+\end{scope}}
+\newcommand\kviijwall[3]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,#2);
+  \foreach \kviijy in {0,2.5,...,#2} {\draw[bkInk!60, line width=0.4pt] (0,\kviijy) -- ({-1.6*#3},{\kviijy+1.6});}
+\end{scope}}
+% 小さな矢印の図  \kviijpanel{(原点)}{vx}{vy}{wx}{wy}{下のことば}   1目もり 6.5 mm
+\newcommand\kviijpanel[6]{\begin{scope}[shift={#1}]
+  \draw[bkLine, line width=0.5pt] (-4,0) -- (17,0) (0,-6) -- (0,16);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1pt off 1pt] (0,0) circle (6.5);
+  \draw[bkGray!80!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- ({6.5*#2},{6.5*#3});
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=2.6mm]}] (0,0) -- ({6.5*#4},{6.5*#5});
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (6,-7.5) {#6};
+\end{scope}}
+\colorlet{kviijM}{bkTheme!12}\colorlet{kviijV}{bkGreen!14}\colorlet{kviijR}{bkYellow!35}
+\makeatother
+
+
+\bkchapter{7}{9}{対角化：\\まっすぐな方向に分けて考える}{\bklevel{5}}{対角化：まっすぐな方向に分けて考える}
+\bkmichishirube{4-11,6-14,7-3,7-5,7-6,7-8}{7-10,7-11,9-10,9-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 固有ベクトルの「ななめの物差し」で見ると、行列の変換が「のびるだけ」になることを、図で説明できる。
+\item \bklevel{4}\enspace 固有ベクトルを並べた $P$ と固有値を並べた $D$ を作り、$P^{-1}AP=D$ を計算で確かめられる。
+\item \bklevel{5}\enspace 対角化を使って、$A^n$ を計算したり、台車の式をモードの座標でほどいたりできる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+主役の行列 $A$ をふつうの方眼にかけると、正方形はななめにゆがんだ平行四辺形になります（7-2）。\par\vspace{4pt}
+ところが、7-8 で見つけた2本の向き $(1,\ 1)$・$(1,\ -1)$ でできた「ななめの正方形」にかけると、ゆがまずに長方形になります（灰色のななめの正方形が、オレンジの長方形に）。ななめの物差しで測ると、$A$ はどんな簡単なことをしているように見えるでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=6mm, y=6mm]
+  \draw[bkLine, line width=0.4pt, step=1] (-0.5,-1.5) grid (4.5,3.5);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-0.5,0) -- (4.9,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-1.5) -- (0,3.9);
+  \draw[bkRed, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (-0.5,-0.5) -- (3.5,3.5);
+  \draw[bkRed, line width=0.7pt, dash pattern=on 2pt off 1.5pt] (-0.5,0.5) -- (1.5,-1.5);
+  \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=1.1pt] (0,0) -- (3,3) -- (4,2) -- (1,-1) -- cycle;
+  \filldraw[fill=bkGray!20, draw=bkGray!80!black, line width=0.8pt, dashed] (0,0) -- (1,1) -- (2,0) -- (1,-1) -- cycle;
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 灰色のななめの正方形に $A$ をかけると、オレンジの長方形になる。}
+\end{minipage}
+\end{hatena}
+
+\noindent 7-8 で、主役の行列 $A$ には「向きの変わらない矢印」が2本あることを見つけました。$(1,\ 1)$ の向きは3倍に、$(1,\ -1)$ の向きは1倍（そのまま）になります。
+
+この章では、この2本の矢印を、新しい「物差し」として使います。4-11 で、ななめの2本の物差しで矢印を測ったのと同じです。ふつうの方眼（$x$ 軸・$y$ 軸）で見るとこみいった変換も、固有ベクトルの物差しで見ると、「それぞれの向きにのびるだけ」の、とても簡単な変換になります。この見方は、6-14 で2つの台車の式を「和と差」でほどいた方法を、行列の計算にしたものです。
+
+★★★★★の章ですが、「目でわかる」の段は作図だけ、「手でわかる」の段は行列のかけ算（7-3）と逆行列（7-5）だけで読めます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ななめの物差しで、家の絵を変換しよう]
+方眼紙に 7-2 の家の絵（頂点①〜⑤）をかき、原点を通る2本の直線 $y=x$ と $y=-x$ を引きます。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item それぞれの頂点が、矢印 $(1,\ 1)$ を何本分と、矢印 $(1,\ -1)$ を何本分たした所にあるかを読む。この2つの数を $q_1$、$q_2$ とする。
+\item $q_1$ を3倍し、$q_2$ はそのままにする。
+\item 「$(1,\ 1)$ を $3q_1$ 本分」と「$(1,\ -1)$ を $q_2$ 本分」をたした点をかく。
+\item その点が、頂点に主役の行列 $A$ を直接かけた点（7-2）と同じになるか、くらべよう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent たとえば頂点② $(2,\ 0)$ は、$(1,\ 1)$ を1本分と $(1,\ -1)$ を1本分たした所です（$(1+1,\ 1-1)=(2,\ 0)$）。だから $q_1=1$、$q_2=1$。$q_1$ を3倍すると、$3\times(1,\ 1)+1\times(1,\ -1)=(4,\ 2)$ になり、$A$ を直接かけた $(2\times2+1\times0,\ 1\times2+2\times0)=(4,\ 2)$ と同じです。5つの頂点をまとめると、次のようになります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=17mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=12mm] Q[c,m,wd=34mm] Q[c,m,wd=20mm]}, colsep=2pt, rowsep=1.5pt, row{1}={font=\sffamily\footnotesize}}
+頂点 & もとの点 & $q_1$ & $q_2$ & $3q_1$ & $3q_1(1,1)+q_2(1,-1)$ & $A$ をかけた点 \\
+① & $(0,\ 0)$ & 0 & 0 & 0 & $(0,\ 0)$ & $(0,\ 0)$ \\
+② & $(2,\ 0)$ & 1 & 1 & 3 & $(4,\ 2)$ & $(4,\ 2)$ \\
+③ & $(2,\ 2)$ & 2 & 0 & 6 & $(6,\ 6)$ & $(6,\ 6)$ \\
+④ & $(1,\ 3)$ & 2 & $-1$ & 6 & $(5,\ 7)$ & $(5,\ 7)$ \\
+⑤ & $(0,\ 2)$ & 1 & $-1$ & 3 & $(2,\ 4)$ & $(2,\ 4)$ \\
+\end{bktable}
+\bktabcaption{ななめの物差しで読み、$(1,\ 1)$ の向きだけ3倍にしてもどすと、$A$ をかけた点とぴったり同じになる。}
+\end{bkcenter}
+
+\noindent 5つの頂点すべてで、同じ点になりました。主役の行列 $A$ のしていることは、「$(1,\ 1)$ の向きに3倍、$(1,\ -1)$ の向きに1倍のばすこと」と、まったく同じなのです。
+
+\begin{omoidasou}
+\bkrecall{4-11}{ななめの2本の物差し：平行でない2本の矢印 $\vec a$、$\vec b$ があれば、平面のどんな矢印も $s\vec a+t\vec b$ と表せる（$\vec a=(2,\ 1)$、$\vec b=(1,\ 3)$ なら $(5,\ 5)=2\vec a+1\vec b$）。}
+\bkrecall{6-14}{2つの台車の式は、和 $u=x_1+x_2$ と差 $w=x_1-x_2$ に組みかえると、ばらばらの 6-6 の形にほどけた。}
+\bkrecall{7-3}{行列の積 $AB$ の1列めは「$A$×（$B$ の1列め）」。かける順番を変えると、ふつうは答えが変わる。}
+\bkrecall{7-5}{2×2 の逆行列は、$a$ と $d$ を入れかえ、$b$ と $c$ の符号を変え、全体を $ad-bc$ でわったもの。$ad-bc=0$ なら逆行列はない。}
+\bkrecall{7-6}{回転行列は、転置するだけで逆行列になる：$R(\theta)^{\mathsf T}=R(-\theta)=R(\theta)^{-1}$。}
+\bkrecall{7-8}{$A\vec v=\lambda\vec v$。主役の行列の固有値は3と1、固有ベクトルは $(1,\ 1)$ と $(1,\ -1)$。対称な行列の固有ベクトルは直交する。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{ななめの方眼で見る}{\bklevel{3}}
+
+\bksubsection{1}{ななめの物差しで測る}
+
+\label{bk:7-9:naname}やってみようの「$(1,\ 1)$ を何本分、$(1,\ -1)$ を何本分」という読み方は、4-11 のななめの物差しと同じです。2本の固有ベクトルを、それぞれ物差しの矢印にしたのです。この物差しで方眼をかくと、ななめの方眼になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=4.3mm, y=4.3mm]
+  \begin{scope}
+    \clip (-2,-2) rectangle (7,8);
+    \foreach \kviijk in {-1,...,7} {\draw[bkRed!45, line width=0.5pt] ({2*\kviijk-10},10) -- ({2*\kviijk+10},-10);}
+    \foreach \kviijk in {-5,...,4} {\draw[bkGreen!50, line width=0.5pt] ({2*\kviijk-10},-10) -- ({2*\kviijk+10},10);}
+  \end{scope}
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-2,0) -- (7.6,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2) -- (0,8.6) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \filldraw[fill=bkGray!20, draw=bkGray!80!black, line width=1pt, line join=round] (0,0) -- (2,0) -- (2,2) -- (1,3) -- (0,2) -- cycle;
+  \draw[bkRed, line width=1.4pt, -{Stealth[length=2.2mm]}] (0,0) -- (1,1);
+  \draw[bkGreen!60!black, line width=1.4pt, -{Stealth[length=2.2mm]}] (0,0) -- (1,-1);
+  \node[font=\sffamily\footnotesize, anchor=north] at (2.5,-2.3) {もとの家};
+  \begin{scope}[xshift=62mm]
+    \begin{scope}
+      \clip (-2,-2) rectangle (7,8);
+      \foreach \kviijk in {-1,...,3} {\draw[bkRed!45, line width=0.5pt] ({6*\kviijk-10},10) -- ({6*\kviijk+10},-10);}
+      \foreach \kviijk in {-5,...,4} {\draw[bkGreen!50, line width=0.5pt] ({2*\kviijk-10},-10) -- ({2*\kviijk+10},10);}
+    \end{scope}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-2,0) -- (7.6,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2) -- (0,8.6) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+    \filldraw[fill=bkOrange!25, draw=bkOrange!80!black, line width=1.1pt, line join=round] (0,0) -- (4,2) -- (6,6) -- (5,7) -- (2,4) -- cycle;
+    \draw[bkRed, line width=1.4pt, -{Stealth[length=2.2mm]}] (0,0) -- (3,3);
+    \draw[bkGreen!60!black, line width=1.4pt, -{Stealth[length=2.2mm]}] (0,0) -- (1,-1);
+    \node[font=\sffamily\footnotesize, anchor=north] at (2.5,-2.3) {$A$ をかけた家};
+  \end{scope}
+  \draw[bk arrow, line width=1pt] (8.6,3) -- (11.6,3) node[midway, above, font=\sffamily\footnotesize] {$A$};
+\end{tikzpicture}
+\bkfigcaption{ななめの方眼（赤：$(1,\ 1)$ の何本分かが同じ線、緑：$(1,\ -1)$ の何本分かが同じ線）。$A$ をかけると、赤い線のあいだが3倍に広がり、緑の線のあいだはそのまま。}
+\label{bk:7-9:fig-naname}
+\end{bkfigure}
+
+左の図の赤い線は、$q_1$（$(1,\ 1)$ の本数）が同じ点を結んだ線、緑の線は、$q_2$（$(1,\ -1)$ の本数）が同じ点を結んだ線です。$A$ をかけると、赤い線と赤い線のあいだが3倍に広がるだけで、緑の線のあいだは変わりません。家の絵は、ななめの方眼ごと、$(1,\ 1)$ の向きに3倍にのばされたのです。ふつうの方眼で見ると「ななめにゆがむ」のに、ななめの方眼で見ると「1つの向きにのびるだけ」です。
+
+\kviijhead{なぜ、のびるだけになるのか}
+わけは、7-2 の「線形」（たしてからかけても、かけてからたしても同じ）と、7-8 の固有ベクトルの性質です。$\vec v_1=(1,\ 1)$、$\vec v_2=(1,\ -1)$ として、
+\begin{bkhenkei}[0.32]
+A(q_1\vec v_1+q_2\vec v_2) & ななめの物差しで $q_1$、$q_2$ と読める点に、$A$ をかける \\
+=q_1A\vec v_1+q_2A\vec v_2 & 線形（7-2）：たしてからかけても、かけてからたしても同じ \\
+=q_1\times3\vec v_1+q_2\times1\vec v_2 & 固有ベクトル（7-8）：$A\vec v_1=3\vec v_1$、$A\vec v_2=1\vec v_2$ \\
+=(3q_1)\vec v_1+(1q_2)\vec v_2 & $q_1$ が3倍、$q_2$ が1倍になった \\
+\end{bkhenkei}
+ななめの物差しで読んだ数 $(q_1,\ q_2)$ は、$A$ をかけると $(3q_1,\ 1q_2)$ になります。それぞれの数に、別々の数をかけるだけです。
+
+\kviijhead{ななめの物差しの読み方}
+点 $(x,\ y)$ を、ななめの物差しで $q_1$、$q_2$ と読むには、次の連立方程式を解きます。
+\kviijline{$q_1\begin{pmatrix}1\\1\end{pmatrix}+q_2\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}x\\y\end{pmatrix}$\qquad つまり\qquad $q_1+q_2=x$、\quad $q_1-q_2=y$}
+2つの式をたすと $2q_1=x+y$、ひくと $2q_2=x-y$ です（3-6 の加減法）。
+\kviijframe[92mm]{$q_1=\dfrac{x+y}{2}$\qquad $q_2=\dfrac{x-y}{2}$}
+頂点④ $(1,\ 3)$ なら、$q_1=(1+3)\div2=2$、$q_2=(1-3)\div2=-1$ で、表と同じです。
+
+\bksubsection{2}{6-14 の和と差は、ななめの物差しだった}
+
+\label{bk:7-9:wasa}6-14 では、2つの台車の位置 $x_1$、$x_2$ を、和 $u=x_1+x_2$ と差 $w=x_1-x_2$ に組みかえて、式をほどきました。①の読み方とくらべると、
+\kviijline{$q_1=\dfrac{x_1+x_2}{2}=\dfrac{u}{2}$\qquad $q_2=\dfrac{x_1-x_2}{2}=\dfrac{w}{2}$}
+です。和と差は、2でわるかどうかのちがいだけで、ななめの物差しの読み $q_1$、$q_2$ そのものです。7-8 で見たように、台車の係数の行列 $B$ の固有ベクトルは $(1,\ 1)$ と $(1,\ -1)$ でした。\textbf{6-14 で和と差を使ったのは、台車の動きを、固有ベクトルの物差しで測ったことだった}のです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=34mm, align=center] (a) at (0,0) {ふつうの物差し\\$x_1$、$x_2$};
+  \node[bk node, minimum width=34mm, align=center] (b) at (64,0) {ななめの物差し\\$q_1=\dfrac{x_1+x_2}{2}$、$q_2=\dfrac{x_1-x_2}{2}$};
+  \draw[bk link] (a) -- node[bk link label, above] {読みかえる} (b);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-12) {式がからみあう\\（$x_1$ の式に $x_2$ が入る）};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (64,-12) {式がほどける\\（$q_1$ の式には $q_1$ だけ）};
+\end{tikzpicture}
+\bkfigcaption{同じ動きを、ちがう物差しで測る。固有ベクトルの物差しなら、式がばらばらにほどける。}
+\end{bkfigure}
+
+\kviijhead{\bkhatenaref の答え}
+ななめの物差し $(1,\ 1)$・$(1,\ -1)$ で測ると、主役の行列 $A$ は、$(1,\ 1)$ の向きに3倍、$(1,\ -1)$ の向きに1倍のばすだけです。だから、ななめの正方形は、$(1,\ 1)$ の向きに3倍にのびた長方形になります。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 固有ベクトルを物差しにして測ると、行列の変換は「それぞれの向きに固有値倍のびるだけ」になる。
+\item 主役の行列なら、$q_1=\dfrac{x+y}{2}$ が3倍、$q_2=\dfrac{x-y}{2}$ が1倍。
+\item 6-14 の和と差は、固有ベクトルの物差しで測った読みだった。
+\end{itemize}
+\end{taisetsu}
+
+\Needspace{12\baselineskip}\bkstage{te}{手でわかる}{軸を変えて見る}{\bklevel{4}}
+
+\bksubsection{3}{軸を変えて見る：$\vec x=P\vec q$}
+
+\label{bk:7-9:jiku}①の「ななめの物差しで読む」「のばす」「もどす」の3つを、行列で書きます。まず、2本の固有ベクトルを、たてに並べて行列を作ります。
+\[ P=\begin{pmatrix}1&1\\1&-1\end{pmatrix}\qquad\text{（1列めが $\vec v_1=(1,\ 1)$、2列めが $\vec v_2=(1,\ -1)$）} \]
+7-2 で学んだように、行列×ベクトルは「列の矢印を、成分の数ずつたしたもの」です。
+\kviijline{$P\begin{pmatrix}q_1\\q_2\end{pmatrix}=q_1\begin{pmatrix}1\\1\end{pmatrix}+q_2\begin{pmatrix}1\\-1\end{pmatrix}=\begin{pmatrix}q_1+q_2\\q_1-q_2\end{pmatrix}$}
+だから、$\vec x=P\vec q$ は「ななめの物差しで $q_1$、$q_2$ と読める点は、ふつうの座標で $\vec x$」という意味です。$P$ は、\textbf{ななめの物差しの読みを、ふつうの座標にもどす機械}です。逆に、ふつうの座標をななめの物差しで読むのは、逆行列 $P^{-1}$ です（7-5）。
+\kviijline{$\det P=1\times(-1)-1\times1=-2$\qquad $P^{-1}=\dfrac{1}{-2}\begin{pmatrix}-1&-1\\-1&1\end{pmatrix}=\begin{pmatrix}\dfrac12&\dfrac12\\[4pt]\dfrac12&-\dfrac12\end{pmatrix}$}
+$P^{-1}\vec x$ の成分は $\dfrac{x+y}{2}$ と $\dfrac{x-y}{2}$ で、①の読み方そのものです。
+
+「のばす」は、$q_1$ を3倍、$q_2$ を1倍にすることでした。これは、ななめに固有値を並べた行列 $D$ をかけることです。
+\kviijline{$D=\begin{pmatrix}3&0\\0&1\end{pmatrix}$\qquad $D\begin{pmatrix}q_1\\q_2\end{pmatrix}=\begin{pmatrix}3q_1+0\times q_2\\0\times q_1+1\times q_2\end{pmatrix}=\begin{pmatrix}3q_1\\q_2\end{pmatrix}$}
+$D$ のように、対角成分のほかがすべて0の行列を、\textbf{対角行列}（たいかくぎょうれつ）といいます。\bkidx{たいかくぎょうれつ}{対角行列}対角行列をかけることは、それぞれの成分を別々に何倍かすることです。成分どうしがまざらないので、いちばん簡単な行列です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=19mm, align=center] (x) at (9,0) {$\vec x$\\{\footnotesize ふつう}};
+  \node[bk node, minimum width=19mm, align=center] (q) at (48,0) {$\vec q$\\{\footnotesize ななめ}};
+  \node[bk node, minimum width=19mm, align=center] (dq) at (87,0) {$D\vec q$\\{\footnotesize ななめ}};
+  \node[bk node, minimum width=19mm, align=center] (ax) at (126,0) {$A\vec x$\\{\footnotesize ふつう}};
+  \draw[bk link] (x) -- node[bk link label, above] {$P^{-1}$} node[bk link label, below, align=center] {ななめに\\読む} (q);
+  \draw[bk link] (q) -- node[bk link label, above] {$D$} node[bk link label, below, align=center] {3倍と\\1倍} (dq);
+  \draw[bk link] (dq) -- node[bk link label, above] {$P$} node[bk link label, below, align=center] {ふつうに\\もどす} (ax);
+  \draw[bk link, bkOrange!80!black] (x.north) .. controls +(0,14) and +(0,14) .. node[bk link label, above] {$A$ を直接かける} (ax.north);
+\end{tikzpicture}
+\bkfigcaption{上の道（$A$ を直接かける）と、下の道（ななめに読む→のばす→もどす）は、同じ所に着く。}
+\label{bk:7-9:fig-michi}
+\end{bkfigure}
+
+上の道と下の道が同じ所に着くので、どんな $\vec x$ でも $A\vec x=PDP^{-1}\vec x$ です。行列の積は右から順に働く（7-3）ので、$PDP^{-1}$ は「$P^{-1}$ が先、$D$ が次、$P$ が最後」です。点 $(1,\ 3)$ で確かめます。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item ななめに読む：$\dfrac{1+3}{2}=2$、$\dfrac{1-3}{2}=-1$ なので、$P^{-1}\vec x$ は $(2,\ -1)$。
+\item のばす：$D$ をかけて、1つめだけ3倍。$D\vec q$ は $(6,\ -1)$。
+\item もどす：$P$ をかけて、$(6-1,\ 6+1)=(5,\ 7)$。これは、$A$ を直接かけた $A(1,\ 3)=(5,\ 7)$ と同じです。
+\end{enumerate}
+このように、座標の軸（物差し）を、問題に合わせて取りかえて考えることを、物理の本では「\textbf{軸を変えて見る}」といいます（物理 力-9）。\bkidx{じくをかえてみる}{軸を変えて見る}
+
+\bksubsection{4}{表計算と Python で $P^{-1}AP$ を計算する}
+
+\label{bk:7-9:keisan}$A=PDP^{-1}$ の両辺に、左から $P^{-1}$、右から $P$ をかけると、$P^{-1}AP=D$ になるはずです（くわしくは⑤）。ななめの物差しで見た $A$ が、対角行列 $D$ になるか、表計算で確かめます。$P$ を A2:B3 に、$A$ を C2:D3 に入れ、E2 に次の式を入れて、7-1 と同じように確定します。
+\begin{bkcenter}
+\kviijfx{E2}{=MMULT(MMULT(MINVERSE(A2:B3), C2:D3),A2:B3)}\par\vspace{1mm}
+\bksheet{6}{13}{%
+1 & \SetCell[c=2]{c} $P$ & & \SetCell[c=2]{c} $A$ & & \SetCell[c=2]{c} $P^{-1}AP$ & \\
+2 & \SetCell{bg=kviijV} 1 & \SetCell{bg=kviijV} 1 & \SetCell{bg=kviijM} 2 & \SetCell{bg=kviijM} 1 & \SetCell{bg=kviijR} 3 & \SetCell{bg=kviijR} 0 \\
+3 & \SetCell{bg=kviijV} 1 & \SetCell{bg=kviijV} $-1$ & \SetCell{bg=kviijM} 1 & \SetCell{bg=kviijM} 2 & \SetCell{bg=kviijR} 0 & \SetCell{bg=kviijR} 1 \\}
+\bktabcaption{\texttt{MINVERSE(A2:B3)} が $P^{-1}$、内側の \texttt{MMULT} が $P^{-1}A$、外側の \texttt{MMULT} で右から $P$ をかける。}
+\end{bkcenter}
+
+\noindent 答えは、対角成分が3と1、ほかが0の対角行列 $D$ です。Python でも同じです。\par\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[2, 1],
+              [1, 2]])
+P = np.array([[1, 1],
+              [1, -1]])            \# 固有ベクトルを列に並べる
+print(np.linalg.inv(P) @ A @ P)   \# P の逆行列、A、P の順にかける
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[3. 0.]
+ [0. 1.]]
+\end{bkcodeout}
+\texttt{@} は行列のかけ算です（7-1）。左から順に計算されますが、$(P^{-1}A)P$ と $P^{-1}(AP)$ は同じなので（7-3 のつなぎ方の自由）、どちらで考えてもかまいません。
+
+\kviijhead{numpy の固有ベクトルを、そのまま $P$ に使う}
+7-8⑤ で見たように、\texttt{np.linalg.eig} は固有ベクトルを\textbf{列}に並べた行列 $V$ を返します。これは、そのまま $P$ として使えます（長さが1にそろえてあっても、固有ベクトルの長さは自由なので、対角化には関係ありません。⑤の「気をつけること」②）。\par\Needspace{12\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+np.set\_printoptions(precision=3, suppress=True)  \# 小数第3位まで表示
+A = np.array([[2, 1],
+              [1, 2]])
+w, V = np.linalg.eig(A)            \# V の列が固有ベクトル
+print(np.linalg.inv(V) @ A @ V)   \# V を P として使う
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[[ 3.+0.j  0.+0.j]
+ [-0.+0.j  1.+0.j]]
+\end{bkcodeout}
+対角成分は、$w$ と同じ順の固有値3と1、ほかは0です（\texttt{+0.j} は虚部0、\texttt{-0.} は丸めのずれでできたごく小さな負の数を0と表示したもの）。表示を小数第3位までにしないと、0のかわりに \texttt{4.8e-17}（$4.8\times10^{-17}$）のような、とても小さな数が出ます。2-19 の0.1の話と同じ、丸めのずれです。
+
+\bkkokomade[固有ベクトルの物差しで見ると「のびるだけ」になることを、図と数で確かめられれば十分です。この先は、式で一般の形にします。]
+
+\Needspace{12\baselineskip}\bkstage{shiki}{式でわかる}{対角化と、その使いみち}{\bklevel{5}}
+
+\bksubsection{5}{対角化：$P^{-1}AP=D$}
+
+\label{bk:7-9:taikaku}③④を、どんな2×2 の行列でも使える形にします。行列 $A$ の固有値を $\lambda_1$、$\lambda_2$、固有ベクトルを $\vec v_1$、$\vec v_2$ とし、$\vec v_1$ を1列め、$\vec v_2$ を2列めに並べた行列を $P$、固有値を同じ順に対角に並べた行列を $D$ とします。
+
+\kviijhead{$AP=PD$ は、固有ベクトルの式を2つまとめたもの}
+7-3 で学んだように、積 $AP$ の1列めは「$A$×（$P$ の1列め）」、2列めは「$A$×（$P$ の2列め）」です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{$AP$ の1列め}\par\nobreak\noindent $A\vec v_1=\lambda_1\vec v_1$（固有ベクトルの式）
+\item \textbf{$PD$ の1列め}\par\nobreak\noindent $P\times(D$ の1列め $(\lambda_1,\ 0))=\lambda_1\vec v_1+0\times\vec v_2=\lambda_1\vec v_1$
+\end{itemize}
+1列めどうしが等しく、2列めも同じように $\lambda_2\vec v_2$ で等しくなります。主役の行列なら、次のとおりです。
+\kviijline{$AP=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1&1\\1&-1\end{pmatrix}=\begin{pmatrix}3&1\\3&-1\end{pmatrix}$\qquad $PD=\begin{pmatrix}1&1\\1&-1\end{pmatrix}\begin{pmatrix}3&0\\0&1\end{pmatrix}=\begin{pmatrix}3&1\\3&-1\end{pmatrix}$}
+$AP=PD$ から、1行ずつ変形します。
+\begin{bkhenkei}[0.36]
+AP=PD & 固有ベクトルの式2つを、まとめて書いた \\
+P^{-1}AP=P^{-1}PD & 両辺に、左から $P^{-1}$ をかけた \\
+P^{-1}AP=D & $P^{-1}P=I$、$ID=D$（7-3・7-5） \\
+\end{bkhenkei}
+同じように、$AP=PD$ の両辺に右から $P^{-1}$ をかけると、$A=PDP^{-1}$ です。
+\kviijframe[104mm]{\Large $P^{-1}AP=D$\qquad $A=PDP^{-1}$\\[2pt]\normalsize\sffamily $P$：固有ベクトルを列に並べた行列\quad $D$：固有値を対角に並べた行列}
+このように、固有ベクトルを使って行列を対角行列に直すことを、\textbf{対角化}（たいかくか）といいます。\bkidx{たいかくか}{対角化}
+
+\kviijhead{気をつけること}
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{$P$ の列の順と、$D$ の対角の順をそろえる。}\par\nobreak\noindent $P$ の1列めが固有値3の固有ベクトルなら、$D$ の左上は3。順を入れかえて $P$ の1列めを $(1,\ -1)$ にすれば、$D$ は左上が1、右下が3になります。どちらも正しい対角化です。
+\item \textbf{固有ベクトルの長さは自由。}\par\nobreak\noindent $(1,\ 1)$ のかわりに $(2,\ 2)$ を使っても、$P^{-1}AP$ は同じ $D$ になります（7-8：何倍しても固有ベクトル）。
+\item \textbf{$P$ に逆行列がなければ、できない。}\par\nobreak\noindent 2本の固有ベクトルが平行だと、$\det P=0$ で逆行列がありません（7-4・7-5）。⑨で見るように、そういう行列は対角化できません。
+\end{enumerate}
+
+2本の固有ベクトルの組 $\vec v_1$、$\vec v_2$ のように、平面のどんな矢印もそのたし算で表せる「物差しの矢印の組」を、大学の本では\textbf{基底}（きてい）とよびます。\bkidx{きてい}{基底}対角化は、「その行列にいちばん合った基底をえらぶこと」とも言えます。
+
+\bksubsection{6}{対称な行列は、回転行列で対角化できる}
+
+\label{bk:7-9:kaiten}主役の行列は対称な行列なので、2本の固有ベクトルは直交しています（7-8⑨）。長さを1にそろえると、
+\kviijline{$\dfrac{1}{\sqrt2}\begin{pmatrix}1\\1\end{pmatrix}=\begin{pmatrix}\cos45°\\\sin45°\end{pmatrix}$\qquad $\dfrac{1}{\sqrt2}\begin{pmatrix}-1\\1\end{pmatrix}=\begin{pmatrix}-\sin45°\\\cos45°\end{pmatrix}$}
+です。2本めは $(1,\ -1)$ の $-1$ 倍ですが、同じ固有ベクトルです。この2本を列に並べると、7-6 の回転行列 $R(45°)$ になります。つまり、\textbf{ななめの物差しは、ふつうの物差しを $45°$ 回したもの}です。
+
+回転行列は、転置するだけで逆行列になりました（7-6：$R^{\mathsf T}=R^{-1}$）。だから $P^{-1}AP=D$ は、$R^{\mathsf T}AR=D$ と書けます。計算して確かめます（$\dfrac{1}{\sqrt2}$ を前に出しておく）。
+まず $AR$ を計算します。
+\kviijline{$AR=\dfrac{1}{\sqrt2}\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1&-1\\1&1\end{pmatrix}=\dfrac{1}{\sqrt2}\begin{pmatrix}3&-1\\3&1\end{pmatrix}$}
+次に、左から $R^{\mathsf T}$（$R$ のたてと横を入れかえたもの）をかけます。$\dfrac{1}{\sqrt2}\times\dfrac{1}{\sqrt2}=\dfrac12$ です。
+\kviijline{$R^{\mathsf T}AR=\dfrac12\begin{pmatrix}1&1\\-1&1\end{pmatrix}\begin{pmatrix}3&-1\\3&1\end{pmatrix}=\dfrac12\begin{pmatrix}6&0\\0&2\end{pmatrix}=\begin{pmatrix}3&0\\0&1\end{pmatrix}$}
+\kviijframe[110mm]{\sffamily 対称な行列は、回転行列 $R$ で\quad $R^{\mathsf T}AR=D$\quad と対角化できる}
+座標の軸を $45°$ 回して見ると、主役の行列は「のびるだけ」に見える、ということです。$R^{\mathsf T}AR$ は、物理の本（力-9）が「軸を変えて見る形」とよんでいる形です。
+
+\kviijhead{応力の行列：主方向で、ずらす力が消える}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+物理の本（力-9）の応力の行列 $\symbfit{\sigma}$（MPa）は、7-8 で固有値 $88.3$・$-28.3$、固有ベクトル $(1,\ 0.277)$・$(1,\ -3.61)$ でした。$(1,\ 0.277)$ の向きの角は、$\tan\theta=0.277$ から $\theta\approx15.5°$ です。軸を $15.5°$ 回して見ると、
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (-14,0) -- (19,0) node[right, font=\footnotesize, inner sep=1pt] {$x$};
+  \draw[bkGray, line width=0.6pt, -{Stealth[length=1.8mm]}] (0,-14) -- (0,17) node[above, font=\footnotesize, inner sep=1pt] {$y$};
+  \begin{scope}[rotate=15.5]
+    \draw[bkInk, line width=0.8pt, -{Stealth[length=1.8mm]}] (-14,0) -- (16,0) node[above, font=\footnotesize, inner sep=1.5pt] {$x'$};
+    \draw[bkInk, line width=0.8pt, -{Stealth[length=1.8mm]}] (0,-14) -- (0,16) node[left, font=\footnotesize, inner sep=1.5pt] {$y'$};
+    \filldraw[fill=bkBlue!14, draw=bkBlue!70!black, line width=0.8pt] (-4.5,-4.5) rectangle (4.5,4.5);
+  \end{scope}
+  \draw[bkRed, line width=0.7pt] (9,0) arc (0:15.5:9);
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (10,-1.5) {$15.5°$};
+\end{tikzpicture}
+\end{minipage}
+\[ R^{\mathsf T}\symbfit{\sigma} R=\begin{pmatrix}88.3&0\\0&-28.3\end{pmatrix}\qquad\text{（$R=R(15.5°)$。numpy で確かめた）} \]
+になります。応力の行列の右上・左下の成分は、切り口を「ずらす力」（せん断応力）でした。軸を主方向（固有ベクトルの向き）にそろえると、ずらす力が0になり、引く・押す力（主応力）だけが残ります。物理の本で見た「主方向ではせん断が0」は、対称な行列の対角化だったのです。
+
+\bksubsection{7}{台車の式を、モードの座標でほどく}
+
+\label{bk:7-9:hodoku}いよいよ、6-14 の台車の式を、行列のまま、ほどきます。7-8 で、台車の式は $\ddot{\vec x}=B\vec x$（$B$ の対角成分 $-110$、ほかは10）と書けました。固有値は $-100$ と $-120$、固有ベクトルは $(1,\ 1)$ と $(1,\ -1)$ なので、
+\kviijline{$P=\begin{pmatrix}1&1\\1&-1\end{pmatrix}$\qquad $D=\begin{pmatrix}-100&0\\0&-120\end{pmatrix}$\qquad $P^{-1}BP=D$}
+です。台車の位置を、ななめの物差し（モードの物差し）で読みます。
+\begin{bkhenkei}[0.4]
+\vec x=P\vec q & 位置 $\vec x$ を、モードの物差しで $\vec q$ と読む \\
+\ddot{\vec x}=P\ddot{\vec q} & 2回微分した。$P$ は時間で変わらない数なので、そのまま \\
+P\ddot{\vec q}=BP\vec q & $\ddot{\vec x}=B\vec x$ に入れた \\
+\ddot{\vec q}=P^{-1}BP\vec q & 両辺に、左から $P^{-1}$ をかけた \\
+\ddot{\vec q}=D\vec q & $P^{-1}BP=D$（⑤） \\
+\end{bkhenkei}
+$D$ は対角行列なので、最後の式を成分で書くと、
+\kviijframe[90mm]{$\ddot q_1=-100q_1$\qquad $\ddot q_2=-120q_2$}
+です。$q_1$ の式には $q_1$ だけ、$q_2$ の式には $q_2$ だけ。ばらばらの、6-6 の「2回微分すると自分の $-\omega^2$ 倍」の式2つにほどけました。$q_1$ は角振動数 $\sqrt{100}=10$、$q_2$ は $\sqrt{120}\approx10.95$（rad/s）でゆれます。
+
+\kviijhead{はじめの状態から、動きを求める}
+6-14 と同じく、台車1だけを\qty{0.1}{m}引いて、静かにはなします。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item はじめの $\vec q$ を求める：$\vec q=P^{-1}\vec x$ です。速度は0です。
+\par\nobreak\kviijline{$q_1=\dfrac{0.1+0}{2}=0.05$\qquad $q_2=\dfrac{0.1-0}{2}=0.05$}
+\item 6-6 の形で解く：はじめの位置が0.05、速度が0なので、$q_1=0.05\cos10t$、$q_2=0.05\cos10.95t$。
+\item もとの位置にもどす：$\vec x=P\vec q$ なので、$x_1=q_1+q_2$、$x_2=q_1-q_2$。
+\end{enumerate}
+\kviijline{$x_1=0.05\cos10t+0.05\cos10.95t$\qquad $x_2=0.05\cos10t-0.05\cos10.95t$}
+6-14 の答え（$X=0.1$ の $\dfrac X2(\cos\omega_1t\pm\cos\omega_2t)$）と同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=25mm, align=center] (a) at (13,0) {からみあった式\\$\ddot{\vec x}=B\vec x$};
+  \node[bk node, minimum width=25mm, align=center] (b) at (59,0) {ほどけた式\\$\ddot q_1=\lambda_1q_1$\\$\ddot q_2=\lambda_2q_2$};
+  \node[bk node, minimum width=22mm, align=center] (c) at (93,0) {1つずつ解く\\（6-6・6-4）};
+  \node[bk node, minimum width=15mm, align=center] (d) at (124.5,0) {答え\\$\vec x=P\vec q$};
+  \draw[bk link] (a) -- node[bk link label, above] {$\vec x=P\vec q$} (b);
+  \draw[bk link] (b) -- (c);
+  \draw[bk link] (c) -- node[bk link label, above] {$P$} (d);
+\end{tikzpicture}
+\bkfigcaption{対角化で、連立の微分方程式を解く道すじ。台車が3つ、4つ…とふえても、同じ道すじで解ける。}
+\end{bkfigure}
+
+6-14 の水そう $\dot{\vec h}=H\vec h$ も同じです。$\vec h=P\vec q$ とすると $\dot{\vec q}=D\vec q$、$D$ の対角成分は0と $-0.2$ なので、$\dot q_1=0$（合計の半分は変わらない）、$\dot q_2=-0.2q_2$（差の半分は 6-4 の形でへる）にほどけます。台車がたくさんあっても、$P$ と $D$ をコンピュータ（\texttt{np.linalg.eig}）で求めれば、同じ道すじで解けます。建物や車のゆれを調べる「モード解析」は、この方法です。
+
+\bksubsection{8}{何回もかける：$A^n=PD^nP^{-1}$}
+
+\label{bk:7-9:jijou}対角化のもう1つの使いみちは、同じ行列を何回もかける計算です。$A=PDP^{-1}$ を、2回かけてみます。
+\begin{bkhenkei}[0.44]
+A^2=(PDP^{-1})(PDP^{-1}) & $A=PDP^{-1}$ を2つ並べた \\
+\phantom{A^2}=PD(P^{-1}P)DP^{-1} & かっこのつけかえ（7-3：$(AB)C=A(BC)$） \\
+\phantom{A^2}=PDDP^{-1}=PD^2P^{-1} & $P^{-1}P=I$ は、かけても変わらない \\
+\end{bkhenkei}
+まん中の $P^{-1}P$ が消えるので、何回かけても、$A^n=PD^nP^{-1}$ です。そして、対角行列の $n$ 乗は、対角成分を $n$ 乗するだけです。
+\kviijline{$D^2=\begin{pmatrix}3&0\\0&1\end{pmatrix}\begin{pmatrix}3&0\\0&1\end{pmatrix}=\begin{pmatrix}3\times3&0\\0&1\times1\end{pmatrix}$\qquad $D^n=\begin{pmatrix}3^n&0\\0&1^n\end{pmatrix}$}
+（ほかの成分は、0をかけるので0のまま。）$A^5$ を計算します。
+\kviijline{$A^5=PD^5P^{-1}=\begin{pmatrix}1&1\\1&-1\end{pmatrix}\begin{pmatrix}243&0\\0&1\end{pmatrix}\dfrac12\begin{pmatrix}1&1\\1&-1\end{pmatrix}$}
+\kviijline{$=\dfrac12\begin{pmatrix}243+1&243-1\\243-1&243+1\end{pmatrix}=\begin{pmatrix}122&121\\121&122\end{pmatrix}$}
+（$P^{-1}$ は③で求めたもの。）$A$ を5回かけるには、2×2 のかけ算が4回いりますが、対角化すれば「$3^5$」を1回計算するだけです。1列めの $(122,\ 121)$ は、7-8④ で $(1,\ 0)$ に $A$ を5回かけた答えと同じです。$n$ が大きくなると、$3^n$ の部分がどんどん大きくなり、$A^n$ の列は $(1,\ 1)$ の向きにそろっていきます。このくり返しの計算は、7-10 でくわしく学びます。
+
+\begin{bkfigure}
+\begin{minipage}[c]{0.5\linewidth}
+\centering
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=12mm] Q[c,m,wd=26mm] Q[c,m,wd=14mm]}, colsep=2pt, rowsep=0.5pt, row{1}={font=\sffamily\footnotesize}}
+$n$ & $3^n$ & $A^n$ の1列め & 向き \\
+1 & 3 & $(2,\ 1)$ & $26.6°$ \\
+2 & 9 & $(5,\ 4)$ & $38.7°$ \\
+3 & 27 & $(14,\ 13)$ & $42.9°$ \\
+5 & 243 & $(122,\ 121)$ & $44.8°$ \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-2,0) -- (42,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-2) -- (0,36);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1pt off 1pt] (32,0) arc (0:90:32);
+  \draw[bkRed, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (0,0) -- (27,27);
+  \foreach \kviijang in {26.57, 38.66, 42.88} {
+    \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (0,0) -- (\kviijang:32);}
+  \node[font=\sffamily\footnotesize] at (26.57:36.5) {1};
+  \node[font=\sffamily\footnotesize] at (35.5:36.5) {2};
+  \node[font=\sffamily\footnotesize] at (40.6:40) {3};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south east] at (26,28) {$(1,\ 1)$};
+\end{tikzpicture}
+\end{minipage}
+\bkfigcaption{$A^n$ の1列めは $\dfrac{3^n+1}{2}$ と $\dfrac{3^n-1}{2}$。$n$ が大きくなると、2つの成分の差1は $3^n$ にくらべて小さくなり、向きは $(1,\ 1)$ に近づく（右の図の数字は $n$。7-8 図7と同じ）。}
+\end{bkfigure}
+
+\Needspace{18\baselineskip}\begin{seikaku}
+\textbf{対角化できない行列もあります。}7-2 の「ずらし」の行列で調べます。
+\kviijline{$S=\begin{pmatrix}1&1\\0&1\end{pmatrix}$\qquad $\det(S-\lambda I)=(1-\lambda)(1-\lambda)-1\times0=(1-\lambda)^2$}
+特性方程式 $(1-\lambda)^2=0$ の解は $\lambda=1$ だけ（重解）です。$S-I$ の行は $(0,\ 1)$ と $(0,\ 0)$ なので、$(S-I)\vec v=\vec 0$ は $y=0$ だけを表し、固有ベクトルは $(1,\ 0)$ の向き1本しかありません。家の絵で見ても、ずらしても向きが変わらないのは、$x$ 軸の上の矢印だけです。平行でない2本の固有ベクトルがないので、$P$ を作れず、対角化できません。
+
+これは、6-12 で特性方程式が重解のとき、$e^{st}$ だけでは答えが足りず、$te^{st}$ が出てきたのと同じことが、行列で起きているのです。大学の本では、このような行列は、対角行列に近い「ジョルダン標準形」という形に直して考えます。
+
+いっぽう、2×2 の行列で2つの固有値がちがえば、2本の固有ベクトルは平行にならないので、かならず対角化できます。また、回転行列 $R(30°)$ のように固有値が複素数の行列は、実数の範囲では対角化できません（複素数を使えば対角化できます）。
+\end{seikaku}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[8.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{ななめの物差し}固有ベクトルで測ると、変換は「固有値倍のびるだけ」\\[3pt]
+\tsl{軸を変えて見る}$\vec x=P\vec q$、\ $\vec q=P^{-1}\vec x$\\[3pt]
+\tsl{対角化}$P^{-1}AP=D$、\ $A=PDP^{-1}$（$P$ の列と $D$ の順をそろえる）\\[3pt]
+\tsl{対称な行列}回転行列で\ $R^{\mathsf T}AR=D$\\[3pt]
+\tsl{連立の式}$\vec x=P\vec q$ でモードごとにほどける\\[3pt]
+\tsl{くり返し}$A^n=PD^nP^{-1}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{対角行列}{対角成分のほかが、すべて0の行列。かけると、それぞれの成分を別々に何倍かする。}
+\bkword{対角化}{固有ベクトルを並べた $P$ で、$P^{-1}AP$ を対角行列 $D$ にすること。}
+\bkword{軸を変えて見る}{座標の軸（物差し）を、問題に合ったものに取りかえて考えること。座標変換ともいう。}
+\bkword{基底}{平面のどんな矢印もそのたし算で表せる、物差しの矢印の組。2次元なら平行でない2本。}
+\bkword{モード解析}{連立の振動の式を、固有ベクトル（モード）の座標でほどいて調べる方法。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$D$}{ディー}{対角行列。固有値を対角に並べたもの。3-10 の判別式の $D$ とは別}{diagonal matrix}{7-9}}
+{\bkkigocard{$P$}{ピー}{固有ベクトルを列に並べた行列。$P^{-1}AP=D$。$\vec x=P\vec q$ で軸を変える}{modal matrix}{7-9}}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+$n$ 次正方行列 $A$ が $n$ 個の一次独立な固有ベクトル $\symbf{p}_1,\ \dots,\ \symbf{p}_n$ をもつとき、$P=(\symbf{p}_1\ \cdots\ \symbf{p}_n)$ とおけば、$P^{-1}AP=\mathrm{diag}(\lambda_1,\ \dots,\ \lambda_n)$ となる。このとき $A$ は対角化可能であるという。特に実対称行列は、直交行列 $T$ によって ${}^tTAT$ の形に対角化される。
+\end{bkhonbun}
+\bkyaku{「一次独立」は、2本なら「平行でない」こと（どの1本もほかのたし算で作れない）。$(\symbf{p}_1\ \cdots\ \symbf{p}_n)$ は「固有ベクトルを列に並べた行列」で、この本の $P$。$\mathrm{diag}(\lambda_1,\ \dots)$ は対角行列 $D$ の書き方。「直交行列」は回転（や裏返し）の行列（7-6）、${}^tT$ は転置 $T^{\mathsf T}$ の別の書き方。}
+\end{senmonsho}
+
+\begin{motto}[5]
+\kviijbox{だ円の軸：$\vec x^{\mathsf T}A\vec x$}
+7-8①で、主役の行列は円をななめのだ円にしました。対称な行列は、だ円の式にもあらわれます。$\vec x=(x,\ y)$ をよこにした $\vec x^{\mathsf T}$（7-1 の転置）を左からかけると、
+\kviijline{$\vec x^{\mathsf T}A\vec x=2x^2+2xy+2y^2$}
+になります（$A\vec x=(2x+y,\ x+2y)$ と $\vec x$ の内積）。$xy$ の項があるので、式を見ても形がわかりません。ところが、軸を $45°$ 回した座標 $\vec x=R\vec q$ で書くと、$\vec x^{\mathsf T}A\vec x=\vec q^{\mathsf T}R^{\mathsf T}AR\vec q=3q_1^2+q_2^2$ になり、$xy$ のような項が消えます。$2x^2+2xy+2y^2=3$ は、$45°$ の向きに半径1、$135°$ の向きに半径 $\sqrt3$ のだ円です。物の回りにくさ（慣性の行列）や、応力のモールの円（物理 力-9）も、この考え方で軸を見つけます。
+\end{motto}
+
+
+
+
+
+\begin{column}{コンピュータは、どうやって対角化する？}
+2×2 なら特性方程式（2次方程式）で固有値が求まりますが、建物や飛行機の設計では、何千×何千もの行列を対角化します。そんなに大きな方程式は、式では解けません。
+
+そこで、対称な行列なら「右上と左下のいちばん大きな成分を0にするように、2つの軸だけを少し回す」ことを、何回もくり返す方法があります。回すたびに、ななめ以外の成分は小さくなり、最後には対角行列にほとんど近づきます。⑥の「回転行列で対角化する」を、少しずつ行う方法です。19世紀のなかごろ、ドイツの数学者ヤコビが考えた方法と伝えられ、ヤコビ法とよばれています。いまのコンピュータでは、さらに速い方法も使われていて、\texttt{np.linalg.eig} もその1つを使っています。
+\end{column}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[ななめの物差しで点を変換する]
+主役の行列 $A$（1行め $(2,\ 1)$、2行め $(1,\ 2)$）を、点 $(3,\ 1)$ にかけた点を、ななめの物差し $(1,\ 1)$・$(1,\ -1)$ を使って求めましょう。また、$A$ を直接かけて確かめましょう。\par
+\kangaekata ①の手順。$q_1=\dfrac{x+y}{2}$、$q_2=\dfrac{x-y}{2}$ で読み、$q_1$ だけ3倍してもどす。\par
+\shiki\kviijs\hangindent=2.6\zw\hangafter=1 読む：$q_1=\dfrac{3+1}{2}=2$、\ $q_2=\dfrac{3-1}{2}=1$\par
+\kviija のばす：$3q_1=6$、\ $q_2=1$\par
+\kviija もどす：$6(1,\ 1)+1(1,\ -1)=(6+1,\ 6-1)=(7,\ 5)$\par
+\kviija 確かめ：$A(3,\ 1)=(2\times3+1\times1,\ 1\times3+2\times1)=(7,\ 5)$\par
+\kotae\kviijs\hangindent=2.6\zw\hangafter=1 $(7,\ 5)$
+\end{reidai}
+
+\begin{jibun}
+主役の行列 $A$ を、点 $(4,\ 0)$ にかけた点を、ななめの物差し $(1,\ 1)$・$(1,\ -1)$ を使って求め、$A$ を直接かけて確かめましょう。
+\bkjans{$q_1=2$、$q_2=2$。のばすと $3q_1=6$、$q_2=2$。$6(1,\ 1)+2(1,\ -1)=(8,\ 4)$。$A(4,\ 0)=(8,\ 4)$ で同じ。}
+\end{jibun}
+
+\begin{reidai}[$P$ と $D$ を作り、$P^{-1}AP$ を確かめる]
+7-8 の例題1の行列 $A$（固有値5、固有ベクトル $(1,\ 1)$。固有値2、固有ベクトル $(1,\ -2)$）を対角化します。
+\kviijline{$A=\begin{pmatrix}4&1\\2&3\end{pmatrix}$}
+$P$ と $D$ を作り、$P^{-1}AP=D$ になることを計算で確かめましょう。\par
+\kangaekata 固有ベクトルを、固有値の順に列に並べて $P$。$P^{-1}$ は 7-5 の公式。先に $AP$ を計算する。\par
+\shiki\kviijs\hangindent=2.6\zw\hangafter=1 $P$ は1列め $(1,\ 1)$、2列め $(1,\ -2)$。$D$ は対角成分が5と2\par
+\kviija $\det P=1\times(-2)-1\times1=-3$\par
+\kviija $P^{-1}=\dfrac{1}{-3}\begin{pmatrix}-2&-1\\-1&1\end{pmatrix}=\dfrac13\begin{pmatrix}2&1\\1&-1\end{pmatrix}$\par
+\kviija $AP=\begin{pmatrix}4+1&4-2\\2+3&2-6\end{pmatrix}=\begin{pmatrix}5&2\\5&-4\end{pmatrix}$\par
+\kviija $P^{-1}AP=\dfrac13\begin{pmatrix}10+5&4-4\\5-5&2+4\end{pmatrix}=\dfrac13\begin{pmatrix}15&0\\0&6\end{pmatrix}=\begin{pmatrix}5&0\\0&2\end{pmatrix}$\par
+\kotae\kviijs\hangindent=2.6\zw\hangafter=1 $P^{-1}AP$ は、対角成分が5と2の $D$ になる
+\end{reidai}
+
+\begin{jibun}
+7-8 の例題5の行列 $A$（固有値6、固有ベクトル $(2,\ 1)$。固有値1、固有ベクトル $(1,\ -2)$）を対角化します。$P$ と $D$ を作り、$P^{-1}AP=D$ を確かめましょう。
+\kviijline{$A=\begin{pmatrix}5&2\\2&2\end{pmatrix}$}
+\bkjans{$P$ は1列め $(2,\ 1)$、2列め $(1,\ -2)$。$\det P=-5$、$P^{-1}=\dfrac15\begin{pmatrix}2&1\\1&-2\end{pmatrix}$。$AP=\begin{pmatrix}12&1\\6&-2\end{pmatrix}$。$P^{-1}AP=\dfrac15\begin{pmatrix}30&0\\0&5\end{pmatrix}$ で、対角成分が6と1。}
+\end{jibun}
+
+\begin{reidai}[対称な行列を、回転行列で対角化する]
+次の行列を、回転行列 $R(45°)$ で $R^{\mathsf T}AR$ と対角化しましょう。
+\kviijline{$A=\begin{pmatrix}3&1\\1&3\end{pmatrix}$\qquad $R(45°)=\dfrac{1}{\sqrt2}\begin{pmatrix}1&-1\\1&1\end{pmatrix}$}
+\kangaekata ⑥。$\dfrac{1}{\sqrt2}$ を外に出して、先に $AR$、次に $R^{\mathsf T}$ を左からかける。$\dfrac{1}{\sqrt2}\times\dfrac{1}{\sqrt2}=\dfrac12$。\par
+\shiki\kviijs\hangindent=2.6\zw\hangafter=1 $AR=\dfrac{1}{\sqrt2}\begin{pmatrix}3+1&-3+1\\1+3&-1+3\end{pmatrix}=\dfrac{1}{\sqrt2}\begin{pmatrix}4&-2\\4&2\end{pmatrix}$\par
+\kviija $R^{\mathsf T}=\dfrac{1}{\sqrt2}\begin{pmatrix}1&1\\-1&1\end{pmatrix}$（たてと横を入れかえた）\par
+\kviija $R^{\mathsf T}AR=\dfrac12\begin{pmatrix}4+4&-2+2\\-4+4&2+2\end{pmatrix}=\dfrac12\begin{pmatrix}8&0\\0&4\end{pmatrix}=\begin{pmatrix}4&0\\0&2\end{pmatrix}$\par
+\kotae\kviijs\hangindent=2.6\zw\hangafter=1 対角成分が4と2の対角行列（固有値4・2）
+\end{reidai}
+
+\begin{jibun}
+次の行列を、回転行列 $R(45°)$ で $R^{\mathsf T}AR$ と対角化しましょう。
+\kviijline{$A=\begin{pmatrix}5&-2\\-2&5\end{pmatrix}$}
+\bkjans{$AR=\dfrac{1}{\sqrt2}\begin{pmatrix}3&-7\\3&7\end{pmatrix}$。$R^{\mathsf T}AR=\dfrac12\begin{pmatrix}6&0\\0&14\end{pmatrix}$ で、対角成分が3と7（固有値3の固有ベクトルが $(1,\ 1)$、7 が $(-1,\ 1)$）。}
+\end{jibun}
+
+\begin{reidai}[応力を主方向で見る]
+7-8 の例題8の応力の行列（MPa）は、固有値60（固有ベクトル $(2,\ 1)$）と10（固有ベクトル $(1,\ -2)$）でした。
+\kviijline{$\symbfit{\sigma}=\begin{pmatrix}50&20\\20&20\end{pmatrix}$}
+（1）主方向の角 $\theta$（$\tan\theta=\dfrac12$）の回転行列 $R$ を、$\sqrt5$ を使って書きましょう。\par
+（2）$R^{\mathsf T}\symbfit{\sigma} R$ を計算し、ずらす力が0になることを確かめましょう。\par
+\kangaekata 固有ベクトルを長さ1にして列に並べる。$(2,\ 1)$ の長さは $\sqrt{2^2+1^2}=\sqrt5$。2列めは $(1,\ -2)$ の $-1$ 倍の $(-1,\ 2)$ にすると回転行列になる。\par
+\shiki\kviijs\hangindent=4.3\zw\hangafter=1 （1）$R=\dfrac{1}{\sqrt5}\begin{pmatrix}2&-1\\1&2\end{pmatrix}$（$\cos\theta=\dfrac{2}{\sqrt5}$、$\sin\theta=\dfrac{1}{\sqrt5}$）\par
+\kviijb （2）$\symbfit{\sigma} R=\dfrac{1}{\sqrt5}\begin{pmatrix}100+20&-50+40\\40+20&-20+40\end{pmatrix}=\dfrac{1}{\sqrt5}\begin{pmatrix}120&-10\\60&20\end{pmatrix}$\par
+\kviijb $R^{\mathsf T}\symbfit{\sigma} R=\dfrac15\begin{pmatrix}240+60&-20+20\\-120+120&10+40\end{pmatrix}=\begin{pmatrix}60&0\\0&10\end{pmatrix}$\par
+\kotae\kviijs\hangindent=4.3\zw\hangafter=1 （1）式の段の $R$（$\theta\approx26.6°$）\par
+\kviijb （2）右上・左下が0で、主応力60\,MPa と10\,MPa だけが残る
+\end{reidai}
+
+\begin{jibun}
+7-8 のじぶんでとこう8の応力の行列（MPa）は、固有値40（固有ベクトル $(2,\ -1)$）と $-10$（固有ベクトル $(1,\ 2)$）でした。次の回転行列 $R$ で、$R^{\mathsf T}\symbfit{\sigma} R$ を計算しましょう。
+\kviijline{$\symbfit{\sigma}=\begin{pmatrix}30&-20\\-20&0\end{pmatrix}$\qquad $R=\dfrac{1}{\sqrt5}\begin{pmatrix}2&1\\-1&2\end{pmatrix}$}
+\bkjans{$\symbfit{\sigma} R=\dfrac{1}{\sqrt5}\begin{pmatrix}80&-10\\-40&-20\end{pmatrix}$。$R^{\mathsf T}\symbfit{\sigma} R=\dfrac15\begin{pmatrix}200&0\\0&-50\end{pmatrix}$ で、対角成分が40と $-10$。$R$ は $\theta\approx-26.6°$ の回転。}
+\end{jibun}
+
+\begin{reidai}[台車の式を、モードの座標でほどく]
+$m=\qty{2}{kg}$、$k=\qty{200}{N/m}$、$K=\qty{100}{N/m}$ の台車2つ（7-8 の例題2）は、$\ddot{\vec x}=B\vec x$ の $B$ の固有値が $-100$（$(1,\ 1)$）と $-200$（$(1,\ -1)$）でした。$x_1=0.05$、$x_2=0.01$（m）だけずらして静かにはなしたときの $x_1$、$x_2$ を、$\vec x=P\vec q$ で求めましょう。\par
+\kangaekata ⑦の手順。$\vec q=P^{-1}\vec x$ ではじめの $q$ を出し、$\ddot q_1=-100q_1$、$\ddot q_2=-200q_2$ を 6-6 の形で解いて、$\vec x=P\vec q$ でもどす。\par
+\shiki\kviijs\hangindent=2.6\zw\hangafter=1 はじめ：$q_1=\dfrac{0.05+0.01}{2}=0.03$、$q_2=\dfrac{0.05-0.01}{2}=0.02$\par
+\kviija 解く：$q_1=0.03\cos10t$、\ $q_2=0.02\cos\sqrt{200}\,t\approx0.02\cos14.1t$\par
+\kviija もどす：$x_1=q_1+q_2$、\ $x_2=q_1-q_2$\par
+\kotae\kviijs\hangindent=2.6\zw\hangafter=1 $x_1=0.03\cos10t+0.02\cos14.1t$\par
+\kviija $x_2=0.03\cos10t-0.02\cos14.1t$（6-14 の例題6と同じ）
+\end{reidai}
+
+\begin{jibun}
+$m=\qty{1}{kg}$、$k=\qty{16}{N/m}$、$K=\qty{10}{N/m}$ の台車2つ（$B$ の固有値 $-16$：$(1,\ 1)$、$-36$：$(1,\ -1)$）を、$x_1=0$、$x_2=0.06$（m）だけずらして静かにはなしました。$x_1$、$x_2$ を $\vec x=P\vec q$ で求めましょう。
+\bkjans{$q_1=0.03$、$q_2=-0.03$。$q_1=0.03\cos4t$、$q_2=-0.03\cos6t$。$x_1=0.03\cos4t-0.03\cos6t$、$x_2=0.03\cos4t+0.03\cos6t$。}
+\end{jibun}
+
+\begin{reidai}[$A^n$ を対角化で計算する]
+主役の行列 $A$ の3乗 $A^3$ を、$A^3=PD^3P^{-1}$ で計算しましょう。また、$A^2$ を求めてから $A$ をかけて確かめましょう。\par
+\kangaekata ⑧。$D^3$ は対角成分を3乗するだけ。$P^{-1}=\dfrac12\begin{pmatrix}1&1\\1&-1\end{pmatrix}$。\par
+\shiki\kviijs\hangindent=2.6\zw\hangafter=1 $D^3$ の対角成分：$3^3=27$、$1^3=1$\par
+\kviija $PD^3=\begin{pmatrix}27&1\\27&-1\end{pmatrix}$（$P$ の1列めを27倍、2列めを1倍）\par
+\kviija $PD^3P^{-1}=\dfrac12\begin{pmatrix}27+1&27-1\\27-1&27+1\end{pmatrix}=\begin{pmatrix}14&13\\13&14\end{pmatrix}$\par
+\kviija 確かめ：$A^2=\begin{pmatrix}5&4\\4&5\end{pmatrix}$、\ $A^3=AA^2=\begin{pmatrix}10+4&8+5\\5+8&4+10\end{pmatrix}=\begin{pmatrix}14&13\\13&14\end{pmatrix}$\par
+\kotae\kviijs\hangindent=2.6\zw\hangafter=1 $A^3$ は、対角成分が14、ほかが13の行列
+\end{reidai}
+
+\begin{jibun}
+例題3の行列 $A$（1行め $(3,\ 1)$、2行め $(1,\ 3)$。固有値4：$(1,\ 1)$、固有値2：$(1,\ -1)$）の3乗を、$A^3=PD^3P^{-1}$ で計算し、$A^2$ を求めてから $A$ をかけて確かめましょう。
+\bkjans{$D^3$ の対角成分は64と8。$PD^3P^{-1}=\dfrac12\begin{pmatrix}72&56\\56&72\end{pmatrix}$ で、対角成分36、ほか28。$A^2$ は対角成分10、ほか6。$AA^2$ も対角成分36、ほか28。}
+\end{jibun}
+
+\begin{reidai}[対角化できるかを調べる]
+次の2つの行列が対角化できるかを調べ、できるなら $P$ と $D$ を答えましょう。
+\kviijline{（1）$\begin{pmatrix}2&1\\0&2\end{pmatrix}$\qquad（2）$\begin{pmatrix}2&1\\0&3\end{pmatrix}$}
+\kangaekata 固有値を求め、平行でない固有ベクトルが2本あるかを見る（⑨）。左下が0なので、特性方程式は対角成分の積になる。\par
+\shiki\kviijs\hangindent=4.3\zw\hangafter=1 （1）$\det(A-\lambda I)=(2-\lambda)^2$ より $\lambda=2$（重解）\par
+\kviijb $A-2I$ の行は $(0,\ 1)$ と $(0,\ 0)$。式は $y=0$ だけ。固有ベクトルは $(1,\ 0)$ の向き1本\par
+\kviija （2）$\det(A-\lambda I)=(2-\lambda)(3-\lambda)$ より $\lambda=2,\ 3$\par
+\kviijb $\lambda=2$：行 $(0,\ 1)$ から $y=0$、$(1,\ 0)$\par
+\kviijb $\lambda=3$：行 $(-1,\ 1)$ から $y=x$、$(1,\ 1)$\par
+\kotae\kviijs\hangindent=4.3\zw\hangafter=1 （1）できない\par
+\kviijb （2）できる。$P$ は1列め $(1,\ 0)$、2列め $(1,\ 1)$、$D$ の対角成分は2と3
+\end{reidai}
+
+\begin{jibun}
+次の2つの行列が対角化できるかを調べ、できるなら $P$ と $D$ を答えましょう。
+\kviijline{（1）$\begin{pmatrix}3&0\\1&3\end{pmatrix}$\qquad（2）$\begin{pmatrix}1&2\\0&3\end{pmatrix}$}
+\bkjans{（1）\nobreak $\lambda=3$（重解）。$A-3I$ の行は $(0,\ 0)$ と $(1,\ 0)$ で、式は $x=0$ だけ。固有ベクトルは $(0,\ 1)$ の1本なので、できない。（2）\nobreak $\lambda=1,\ 3$。$\lambda=1$ は $(1,\ 0)$、$\lambda=3$ は $-2x+2y=0$ で $(1,\ 1)$。できる。$P$ は1列め $(1,\ 0)$、2列め $(1,\ 1)$、$D$ の対角成分は1と3。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① かける順をまちがえる}
+\bkng{$D=PAP^{-1}$}
+\bkok{$D=P^{-1}AP$（$A=PDP^{-1}$）}
+$P^{-1}AP$ は、右から「もどす→$A$→ななめに読む」の順に働きます。例題2の行列で $PAP^{-1}$ を計算すると、右上が $\dfrac23$ になり、対角行列になりません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{② $P$ の列の順と $D$ の順がちがう}
+\bkng{$P$ の1列め $(1,\ 1)$、$D$ の左上を1にする}
+\bkok{$P$ の1列めが $(1,\ 1)$ なら、$D$ の左上は固有値3}
+$P$ の何列めの固有ベクトルの固有値が、$D$ の何番めの対角成分になります。順がずれると $AP=PD$ が成り立ちません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{③ 固有ベクトルを行に並べる}
+\bkng{$P$ の1行めを $(1,\ 1)$、2行めを $(1,\ -1)$}
+\bkok{$P$ の1列めを $(1,\ 1)$、2列めを $(1,\ -1)$}
+主役の行列と例題2では、$P$ がたまたま対称なので同じになりますが、ふつうは対角行列になりません。固有ベクトルは、numpy と同じく列に並べます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{④ $R^{\mathsf T}AR$ で長さを1にしない}
+\bkng{列が $(1,\ 1)$・$(-1,\ 1)$ の $P$ のまま、$P^{\mathsf T}AP$ を計算する}
+\bkok{$\dfrac{1}{\sqrt2}$ をかけて長さ1にした $R$ で $R^{\mathsf T}AR$}
+転置が逆行列になるのは、列の長さが1の回転行列のときだけです。長さ $\sqrt2$ のままだと、$P^{\mathsf T}AP$ は $D$ の2倍になってしまいます。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kviijEHA}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ どれも対角化できると思う}
+\raggedright\bkng{ずらしの行列も $P^{-1}AP=D$ にできる}
+\bkok{固有ベクトルが1本しかないので、できない}
+平行でない固有ベクトルが2本あるときだけ、対角化できます。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ $A^n$ を成分の $n$ 乗にする}
+\raggedright\bkng{$A^2$ の対角成分は $2^2=4$}
+\bkok{$A^2$ の対角成分は5}
+成分ごとに $n$ 乗してよいのは、対角行列 $D$ のときだけです。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+
+
+%% ---------------- 物理・工学ではこう使う ----------------
+\begin{butsuri}
+\kviijbox{車の乗りごこち：上下のゆれと、前後のかたむき}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+車体は、前輪と後輪のばねの上にのった、長い板のようなものです。車体の動きには、全体が上下するゆれ（バウンス）と、前後にゆらゆらかたむくゆれ（ピッチ）があり、ふつうはこの2つがまじって起きます。前と後ろの上下の動きを2つの量として運動方程式を立て、行列を対角化すると、2つの振動モードと、それぞれの振動数がわかります。乗りごこちの設計では、モードごとに、ばねとダンパーの強さを決めます（6-12・6-13）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (-2,0) -- (44,0);
+  \filldraw[fill=bkInk!60, draw=bkInk] (8,3) circle (3) (34,3) circle (3);
+  \kviijspring{(8,6)}{(8,15)}
+  \kviijspring{(34,6)}{(34,15)}
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.8pt, rounded corners=1mm] (0,15) rectangle (42,22);
+  \draw[bkRed, line width=1.1pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (21,24) -- (21,32);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!80!black] at (22,28) {バウンス};
+  \draw[bkGreen!60!black, line width=1.1pt, -{Stealth[length=2mm]}] (4,27) arc (150:120:18);
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkGreen!50!black] at (12,33) {ピッチ};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kviijbox{たくさんのデータの「いちばん大事な向き」}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+クラス全員の身長と腕の長さをはかって点をかくと、点はななめのだ円の形に集まります。データのばらつきを表す対称な行列（分散と共分散の表）を対角化すると、だ円のいちばん長い軸（体の大きさ）と短い軸の向きが、固有ベクトルとしてわかります。たくさんの量のデータを、大事な向き何本かだけで表す方法を\textbf{主成分分析}といい、顔の写真の見分けや、工場の機械の調子の見守りに使われています（7-11）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (0,0) -- (40,0) node[below left, font=\sffamily\footnotesize, inner sep=1pt] {身長};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (0,0) -- (0,32) node[below right, font=\sffamily\footnotesize, inner sep=1pt] {腕};
+  \foreach \kviijx/\kviijy in {8/7,10/10,12/9,14/13,15/11,17/15,18/14,20/17,21/16,22/20,24/19,26/22,27/20,29/24,31/25,13/11,19/16,23/18,25/22,16/14} {\fill[bkBlue!70!black] (\kviijx,\kviijy) circle (0.7);}
+  \draw[bkOrange!85!black, line width=0.9pt, rotate around={38:(19.5,16)}] (19.5,16) ellipse (16 and 4);
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=2mm]}] (19.5,16) -- ++(38:13);
+  \draw[bkGreen!60!black, line width=1.2pt, -{Stealth[length=2mm]}] (19.5,16) -- ++(128:5);
+\end{tikzpicture}
+\end{minipage}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem 主役の行列 $A$ を、点 $(2,\ 4)$ にかけた点を、ななめの物差し $(1,\ 1)$・$(1,\ -1)$ を使って求め、$A$ を直接かけて確かめましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$q_1=3$、$q_2=-1$。のばすと $9$、$-1$。$9(1,\ 1)-1(1,\ -1)=(8,\ 10)$。$A(2,\ 4)=(8,\ 10)$ で同じ。}
+
+\bkproblem 次の行列 $A$ は、固有値6（固有ベクトル $(1,\ 1)$）と3（固有ベクトル $(1,\ -2)$）をもちます。$P$ と $D$ を作り、$P^{-1}AP=D$ を確かめましょう\mbox{（\bkreidairef{2}）}。
+\par\nobreak\kviijline{$A=\begin{pmatrix}5&1\\2&4\end{pmatrix}$}
+\bkpans{$P$ は1列め $(1,\ 1)$、2列め $(1,\ -2)$。$P^{-1}=\dfrac13\begin{pmatrix}2&1\\1&-1\end{pmatrix}$。$AP=\begin{pmatrix}6&3\\6&-6\end{pmatrix}$。$P^{-1}AP=\dfrac13\begin{pmatrix}18&0\\0&9\end{pmatrix}$ で、対角成分が6と3。}
+
+\bkproblem 次の行列を、回転行列 $R(45°)$ で $R^{\mathsf T}AR$ と対角化しましょう\mbox{（\bkreidairef{3}）}。
+\par\nobreak\kviijline{$A=\begin{pmatrix}4&2\\2&4\end{pmatrix}$}
+\bkpans{$AR=\dfrac{1}{\sqrt2}\begin{pmatrix}6&-2\\6&2\end{pmatrix}$。$R^{\mathsf T}AR=\dfrac12\begin{pmatrix}12&0\\0&4\end{pmatrix}$ で、対角成分が6と2。}
+
+\bkproblem 応力の行列（MPa）は、固有値70（固有ベクトル $(2,\ 1)$）と20（固有ベクトル $(1,\ -2)$）をもちます。次の $R$ で $R^{\mathsf T}\symbfit{\sigma} R$ を計算しましょう\mbox{（\bkreidairef{4}）}。
+\par\nobreak\kviijline{$\symbfit{\sigma}=\begin{pmatrix}60&20\\20&30\end{pmatrix}$\qquad $R=\dfrac{1}{\sqrt5}\begin{pmatrix}2&-1\\1&2\end{pmatrix}$}
+\bkpans{$\symbfit{\sigma} R=\dfrac{1}{\sqrt5}\begin{pmatrix}140&-20\\70&40\end{pmatrix}$。$R^{\mathsf T}\symbfit{\sigma} R=\dfrac15\begin{pmatrix}350&0\\0&100\end{pmatrix}$ で、対角成分が70と20。}
+
+\bkproblem $m=\qty{1}{kg}$、$k=\qty{36}{N/m}$、$K=\qty{32}{N/m}$ の台車2つ（$B$ の固有値 $-36$：$(1,\ 1)$、$-100$：$(1,\ -1)$）を、$x_1=0.04$、$x_2=0$（m）だけずらして静かにはなしました。$x_1$、$x_2$ を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$q_1=0.02$、$q_2=0.02$。$q_1=0.02\cos6t$、$q_2=0.02\cos10t$。$x_1=0.02\cos6t+0.02\cos10t$、$x_2=0.02\cos6t-0.02\cos10t$。}
+
+\bkproblem 主役の行列 $A$ の4乗を、対角化を使って計算しましょう（$A^4=PD^4P^{-1}$）\mbox{（\bkreidairef{6}）}。
+\bkpans{$D^4$ の対角成分は81と1。$PD^4P^{-1}=\dfrac12\begin{pmatrix}82&80\\80&82\end{pmatrix}$ で、対角成分41、ほか40（7-8④ の $(41,\ 40)$ と同じ）。}
+
+\bkproblem 次の行列 $A$ は、固有値 $-1$（固有ベクトル $(2,\ -1)$）と5（固有ベクトル $(1,\ 1)$）をもちます。$P$ と $D$ を作り、$P^{-1}AP=D$ を確かめましょう\mbox{（\bkreidairef{2}）}。
+\par\nobreak\kviijline{$A=\begin{pmatrix}1&4\\2&3\end{pmatrix}$}
+\bkpans{$P$ は1列め $(2,\ -1)$、2列め $(1,\ 1)$。$\det P=3$、$P^{-1}=\dfrac13\begin{pmatrix}1&-1\\1&2\end{pmatrix}$。$AP=\begin{pmatrix}-2&5\\1&5\end{pmatrix}$。$P^{-1}AP=\dfrac13\begin{pmatrix}-3&0\\0&15\end{pmatrix}$ で、対角成分が $-1$ と5。}
+
+\bkproblem $m=\qty{1}{kg}$、$k=\qty{16}{N/m}$、$K=\qty{10}{N/m}$ の台車2つ（$B$ の固有値 $-16$：$(1,\ 1)$、$-36$：$(1,\ -1)$）を、$x_1=0.04$、$x_2=0.02$（m）だけずらして静かにはなしました。$x_1$、$x_2$ を求めましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$q_1=0.03$、$q_2=0.01$。$q_1=0.03\cos4t$、$q_2=0.01\cos6t$。$x_1=0.03\cos4t+0.01\cos6t$、$x_2=0.03\cos4t-0.01\cos6t$。}
+
+\bkproblem 主役の行列 $A$ を、点 $(5,\ 1)$ にかけた点を、ななめの物差し $(1,\ 1)$・$(1,\ -1)$ を使って求め、$A$ を直接かけて確かめましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$q_1=3$、$q_2=2$。のばすと9、2。$9(1,\ 1)+2(1,\ -1)=(11,\ 7)$。$A(5,\ 1)=(11,\ 7)$ で同じ。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 次の2つの行列が対角化できるかを調べ、できるなら $P$ と $D$ を答えましょう\mbox{（\bkreidairef{7}）}。
+\par\nobreak\kviijline{（1）$\begin{pmatrix}4&1\\0&4\end{pmatrix}$\qquad（2）$\begin{pmatrix}4&1\\0&2\end{pmatrix}$}
+\bkpans{（1）\nobreak $\lambda=4$（重解）、固有ベクトルは $(1,\ 0)$ だけなので、できない。（2）\nobreak $\lambda=4$ は $(1,\ 0)$、$\lambda=2$ は $2x+y=0$ で $(1,\ -2)$。できる。$P$ は1列め $(1,\ 0)$、2列め $(1,\ -2)$、$D$ の対角成分は4と2。}
+
+\bkproblem 例題3の行列 $A$（1行め $(3,\ 1)$、2行め $(1,\ 3)$）の5乗を、対角化で求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$D^5$ の対角成分は $4^5=\num{1024}$ と $2^5=32$。$PD^5P^{-1}=\dfrac12\begin{pmatrix}1056&992\\992&1056\end{pmatrix}$ で、対角成分528、ほか496。}
+
+\bkproblem 次の行列を、回転行列 $R(45°)$ で $R^{\mathsf T}AR$ と対角化し、固有値と固有ベクトルを答えましょう\mbox{（\bkreidairef{3}）}。
+\par\nobreak\kviijline{$A=\begin{pmatrix}6&-2\\-2&6\end{pmatrix}$}
+\bkpans{$AR=\dfrac{1}{\sqrt2}\begin{pmatrix}4&-8\\4&8\end{pmatrix}$。$R^{\mathsf T}AR=\dfrac12\begin{pmatrix}8&0\\0&16\end{pmatrix}$ で、対角成分が4と8。固有値4の固有ベクトルは $(1,\ 1)$、固有値8は $(-1,\ 1)$。}
+
+\bkproblem 1行めが $(3,\ 2)$、2行めが $(0,\ 1)$ の行列と、1行めが $(5,\ 0)$、2行めが $(2,\ 5)$ の行列が、それぞれ対角化できるかを調べ、できるなら $P$ と $D$ を答えましょう\mbox{（\bkreidairef{7}）}。
+\bkpans{1つめ：$\lambda=3$ は $(1,\ 0)$、$\lambda=1$ は $2x+2y=0$ で $(1,\ -1)$。できる。$P$ は1列め $(1,\ 0)$、2列め $(1,\ -1)$、$D$ の対角成分は3と1。2つめ：$\lambda=5$（重解）、$A-5I$ の行は $(0,\ 0)$ と $(2,\ 0)$ で、式は $x=0$ だけ。固有ベクトルは $(0,\ 1)$ の1本なので、できない。}
+
+\bkproblem 主役の行列 $A$ の6乗を、対角化を使って求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$D^6$ の対角成分は $3^6=729$ と1。$PD^6P^{-1}=\dfrac12\begin{pmatrix}730&728\\728&730\end{pmatrix}$ で、対角成分365、ほか364。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 固有ベクトルの物差しで見ると「のびるだけ」になることを、図で説明できる。\bkfurref{bk:7-9:naname}
+\item $P$ と $D$ を作り、$P^{-1}AP=D$ を計算で確かめられる。\bkfurref{bk:7-9:jiku}
+\item 対角化で $A^n$ を計算したり、台車の式をモードの座標でほどいたりできる。\bkfurref{bk:7-9:hodoku}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{軸を変えて見るだけで、からみあった式がほどけた。次は、何回もかけるとどうなるかだね。}

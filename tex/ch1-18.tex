@@ -1,0 +1,771 @@
+%% 1-18 おれ線グラフ：かわり方を 見る（10ページ、p.182〜191）
+%% 第1巻のきまり：分かち書き、漢字はすべてルビ、式は全角の＋－＝、数と単位のあいだは \,
+%% 路線：①変化。線のかたむきが急なほど はやく かわる（5巻の「微分」の種）。小3〜4の内容を早めにやさしく。
+%% 気温のデータ（はてな？・やってみよう・数学の道具で共通）
+%%   8時 15、9時 16、10時 18、11時 21、12時 23、13時 24、14時 24、15時 23、16時 21、17時 19（℃）
+%%   1時間で上がった数：1, 2, 3, 2, 1, 0, −1, −2, −2 → いちばん はやく上がったのは 10時〜11時（3℃）
+
+\makeatletter
+%% ---- 1-18 で使う部品（名前は \bkqq…） ----
+% おれ線グラフの設定  \bkqqset{よこの間 mm}{いちばん下の目もりの値}{1目もりの高さ mm}{〰の高さ mm（0なら〰なし）}
+\newcommand\bkqqset[4]{\def\bkqq@dx{#1}\def\bkqq@lo{#2}\def\bkqq@dy{#3}\def\bkqq@gap{#4}\def\bkqq@mul{1}}
+% 目もりの数字を何倍にして書くか（1目もりが 10\,cm のときは \bkqqmul{10}）。\bkqqset のあとに書く
+\newcommand\bkqqmul[1]{\def\bkqq@mul{#1}}
+\bkqqset{10}{0}{3}{0}
+% 目もり  \bkqqgrid{点の数}{いちばん上の目もりの値}{数字を書く間}{たての単位}
+\newcommand\bkqqgrid[4]{%
+  \pgfmathsetmacro\bkqq@w{(#1)*\bkqq@dx}%
+  \pgfmathtruncatemacro\bkqq@n{#2-\bkqq@lo}%
+  \pgfmathsetmacro\bkqq@top{\bkqq@gap+\bkqq@n*\bkqq@dy}%
+  \foreach \i in {1,...,#1} {\draw[bkLine, line width=0.4pt] ({(\i-0.5)*\bkqq@dx},\bkqq@gap) -- ({(\i-0.5)*\bkqq@dx},\bkqq@top);}
+  \foreach \k in {0,...,\bkqq@n} {\pgfmathtruncatemacro\bkqq@v{\bkqq@lo+\k}\pgfmathtruncatemacro\bkqq@m{mod(\bkqq@v,#3)}%
+    \pgfmathsetmacro\bkqq@y{\bkqq@gap+\k*\bkqq@dy}%
+    \ifnum\bkqq@m=0
+      \draw[bkGray!60, line width=0.5pt] (0,\bkqq@y) -- (\bkqq@w,\bkqq@y);
+      \pgfmathtruncatemacro\bkqq@lab{\bkqq@v*\bkqq@mul}%
+      \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, text=bkInk, inner sep=0pt] at (-1.4,\bkqq@y) {\bkqq@lab};
+    \else\draw[bkLine, line width=0.4pt] (0,\bkqq@y) -- (\bkqq@w,\bkqq@y);\fi}
+  \ifdim\bkqq@gap pt>0pt
+    \draw[bkInk, line width=0.9pt] (0,0) -- (0,\bkqq@gap*0.32) (0,\bkqq@gap*0.68) -- (0,\bkqq@top+1.5);
+    \foreach \yy in {0.32,0.68} {\draw[bkInk, line width=0.7pt] (-1.8,\bkqq@gap*\yy-0.4) .. controls (-0.9,\bkqq@gap*\yy+0.6) and (-0.3,\bkqq@gap*\yy-1) .. (0.6,\bkqq@gap*\yy) .. controls (1,\bkqq@gap*\yy+0.5) .. (1.8,\bkqq@gap*\yy+0.4);}
+    \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, text=bkInk, inner sep=0pt] at (-1.4,0) {0};
+  \else
+    \draw[bkInk, line width=0.9pt] (0,0) -- (0,\bkqq@top+1.5);
+  \fi
+  \draw[bkInk, line width=0.9pt] (0,0) -- (\bkqq@w,0);
+  \node[anchor=south east, font=\sffamily\fontsize{8.5}{9}\selectfont, text=bkInk, inner sep=0pt] at (-0.4,\bkqq@top+2.2) {（#4）};}
+% よこの目もりの名前  \bkqqx{名前,…}{よこの単位}
+\newcommand\bkqqx[2]{%
+  \foreach \t [count=\i] in {#1} {\node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkInk, inner sep=0pt] at ({(\i-0.5)*\bkqq@dx},-1.5) {\t};\xdef\bkqq@cnt{\i}}
+  \ifx\relax#2\relax\else
+  \node[anchor=north west, font=\sffamily\fontsize{8.5}{10}\selectfont, text=bkInk, inner sep=0pt] at ({\bkqq@cnt*\bkqq@dx+0.5},-1.5) {（#2）};\fi}
+% 点と線  \bkqqplot{値,…}{色}   点に (bkqq@p1) (bkqq@p2) … の名前がつく
+\newcommand\bkqqplot[2]{%
+  \foreach \v [count=\i] in {#1} {\coordinate (bkqq@p\i) at ({(\i-0.5)*\bkqq@dx},{\bkqq@gap+(\v-\bkqq@lo)*\bkqq@dy});\xdef\bkqq@last{\i}}
+  \ifnum\bkqq@last>1 \foreach \i in {2,...,\bkqq@last} {\pgfmathtruncatemacro\bkqq@j{\i-1}\draw[#2, line width=1.4pt] (bkqq@p\bkqq@j) -- (bkqq@p\i);}\fi
+  \foreach \i in {1,...,\bkqq@last} {\fill[#2] (bkqq@p\i) circle (0.95);}}
+% 温度計  \bkqqthermo{(x,y) 球のまん中}{管の長さ}{赤の高さ（球のまん中から）}
+\newcommand\bkqqthermo[3]{\begin{scope}[shift={#1}]
+  \filldraw[fill=white, draw=bkGray!80, line width=0.6pt, rounded corners=1.5mm] (-1.7,0) rectangle (1.7,#2);
+  \filldraw[fill=bkRed, draw=bkGray!80, line width=0.6pt] (0,0) circle (2.3);
+  \fill[bkRed] (-0.75,0) rectangle (0.75,#3);
+\end{scope}}
+% 〰（とちゅうを はぶく しるし）を文の中で  \bkqqnami
+\newcommand\bkqqnami{\tikz[baseline=-0.55ex, x=1mm, y=1mm]{\foreach \yy in {-0.7,0.7} {\draw[bkInk, line width=0.7pt, line cap=round] (0,\yy) .. controls (0.9,\yy+1) and (1.5,\yy-1) .. (2.4,\yy) .. controls (3.3,\yy+1) and (3.9,\yy-1) .. (4.8,\yy);}}}
+% 太陽  \bkqqsun{(x,y)}{半径}
+\newcommand\bkqqsun[2]{\begin{scope}[shift={#1}]
+  \foreach \a in {0,45,...,315} {\draw[bkYellow, line width=1pt, line cap=round] (\a:#2+1) -- (\a:#2+2.4);}
+  \fill[bkYellow] (0,0) circle (#2);\end{scope}}
+\makeatother
+
+\bkchapter{1}{18}{おれ\R{線}{せん}グラフ：\\かわり\R{方}{かた}を \R{見}{み}る}{\bklevel{1}}{おれせんグラフ：かわりかたを みる}
+\bkmichishirube{1-5,1-10,1-11,1-17}{3-4,3-5,5-1}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item \R{表}{ひょう}を、 おれ\R{線}{せん}グラフに かける。
+\item \R{線}{せん}の むきで、 ふえる・へるが わかる。
+\item かたむきで、 かわる はやさが わかる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[white, rounded corners=3mm] (0,-6) rectangle (122,64);
+  \bkqqsun{(8.6,58.6)}{2.3}
+  \foreach \t in {15,20,25} {
+    \draw[bkGray!50, line width=0.5pt, dash pattern=on 1.5pt off 1.5pt] (15.5,{8+(\t-10)*2.4}) -- (116.5,{8+(\t-10)*2.4});
+    \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, text=bkGray] at (15,{8+(\t-10)*2.4}) {\t};}
+  \node[anchor=east, font=\sffamily\fontsize{8.5}{9}\selectfont, text=bkGray] at (15,50) {（℃）};
+  \foreach \h/\t [count=\i] in {8/15,9/16,10/18,11/21,12/23,13/24,14/24,15/23,16/21,17/19} {
+    \pgfmathsetmacro\x{21+(\i-1)*10.4}
+    \bkqqthermo{(\x,4)}{44}{{4+(\t-10)*2.4}}
+    \node[font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkRed!85!black] at (\x,51.5) {\t};
+    \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkInk, inner sep=0pt] at (\x,0.3) {\h\R{時}{じ}};}
+\end{tikzpicture}
+\end{bkfigure}
+\noindent 1\R{時間}{じ|かん}ごとに、 \R{気温}{き|おん}を はかりました。\\
+\R{気温}{き|おん}が いちばん はやく \R{上}{あ}がったのは、 \R{何時}{なん|じ}ごろ かな？
+\end{hatena}
+
+\clearpage
+%% ---------------- p.183 やってみよう ----------------
+\begin{yattemiyou}[\R{点}{てん}を うって、 \R{線}{せん}で むすぼう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt]
+\item よこの \R{目}{め}もりで \R{時}{じ}こくを、 たての \R{目}{め}もりで \R{気温}{き|おん}を さがそう。
+\item 2つが かさなる ところに、 \R{点}{てん}を うとう。 8\R{時}{じ}と 9\R{時}{じ}は もう うって あるよ。
+\item となりの \R{点}{てん}を、 じょうぎで まっすぐ むすぼう。
+\end{enumerate}
+\par\vspace{2pt}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,wd=27mm] *{10}{Q[c,wd=6.8mm]}}, colsep=1.5pt, rowsep=2pt, row{1}={bg=bkGreen!15}, cell{1-2}{1}={bg=bkGreen!15, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{時}{じ}こく（\R{時}{じ}） & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 & 16 & 17 \\
+\R{気温}{き|おん}（℃） & 15 & 16 & 18 & 21 & 23 & 24 & 24 & 23 & 21 & 19 \\
+\end{bktable}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[white] (-8,-7) rectangle (118,57);
+  \bkqqset{10.5}{10}{2.8}{6}
+  \node[font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont, text=bkInk] at (55,52) {1\R{日}{にち}の \R{気温}{き|おん}};
+  \bkqqgrid{10}{25}{5}{℃}
+  \bkqqx{8,9,10,11,12,13,14,15,16,17}{\R{時}{じ}}
+  \bkqqplot{15,16}{bkBlue}
+\end{tikzpicture}
+\end{bkfigure}
+\end{yattemiyou}
+
+\bkfukidashi{sora}{\R{左}{ひだり}の ページの \R{温度計}{おん|ど|けい}の、 \R{赤}{あか}い ところの はしを つないだ みたいだね！}
+
+\clearpage
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の \R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{点}{てん}を うって、 おれ\R{線}{せん}グラフに する}
+
+\label{bk:1-18:kaku}やってみようの \R{点}{てん}の うち\R{方}{かた}を、 くわしく \R{見}{み}よう。
+10\R{時}{じ}の \R{気温}{き|おん}は 18\,℃です。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{14}{14}{3.4}{5}
+  \bkqqgrid{4}{22}{2}{℃}
+  \bkqqx{8,9,10,11}{\R{時}{じ}}
+  \bkqqplot{15,16}{bkBlue}
+  \draw[bkTheme, line width=1pt, -{Stealth[length=4pt]}] (35,0.6) -- (35,{5+4*3.4-1.4});
+  \draw[bkGreen!70!black, line width=1pt, -{Stealth[length=4pt]}] (0.6,{5+4*3.4}) -- (33.6,{5+4*3.4});
+  \fill[bkRed] (35,{5+4*3.4}) circle (1.2);
+  \node[anchor=south west, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkRed, inner sep=1pt] at (36,{5+4*3.4+0.4}) {ここ！};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}
+\begin{enumerate}[label={\bkcircled[bkTheme]{\arabic*}}, leftmargin=2\zw, itemsep=0pt, topsep=0pt]
+\item たての 1\R{目}{め}もりを たしかめる。 \R{数}{かず}は 2\R{目}{め}もりごと なので、 1\R{目}{め}もりは 1\,℃（1-17）。
+\item よこの 10\R{時}{じ}から、 まっすぐ \R{上}{うえ}へ。
+\item たての 18から、 まっすぐ \R{右}{みぎ}へ。
+\item 2つが ぶつかる ところに \R{点}{てん}を うつ。
+\end{enumerate}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent \R{点}{てん}を ぜんぶ うったら、 となりの \R{点}{てん}どうしを じょうぎで まっすぐ むすびます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{11}{10}{2.1}{6}
+  \node[font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont, text=bkInk] at (55,42.5) {1\R{日}{にち}の \R{気温}{き|おん}};
+  \bkqqgrid{10}{25}{5}{℃}
+  \bkqqx{8,9,10,11,12,13,14,15,16,17}{\R{時}{じ}}
+  \bkqqplot{15,16,18,21,23,24,24,23,21,19}{bkBlue}
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent \R{点}{てん}を じゅんに \R{線}{せん}で むすんだ グラフを、 おれ\R{線}{せん}グラフ\bkidx{おれせんぐらふ}{おれ\R{線}{せん}グラフ}と いいます。
+\R{線}{せん}が \R{点}{てん}の ところで おれまがって いるからです。
+
+\bksubsection{2}{とちゅうを はぶく しるし \bkqqnami}
+
+\noindent \R{上}{うえ}の グラフでは、 0から 10までの \R{目}{め}もりを \bkqqnami\,で はぶいて います。
+なぜ はぶいて よいのでしょう。 はぶかない グラフと くらべて みよう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}[shift={(8,0)}]
+    \bkqqset{4.8}{0}{1.44}{0}
+    \bkqqgrid{10}{25}{5}{℃}
+    \bkqqplot{15,16,18,21,23,24,24,23,21,19}{bkGray}
+    \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkInk, inner sep=0pt] at (24,-2) {0から ぜんぶ かいた};
+    \draw[bkOrange, line width=0.8pt, decorate, decoration={brace, amplitude=1.4mm, mirror}] (50,0.3) -- (50,14.1)
+      node[midway, right=2.4mm, font=\sffamily\bfseries\fontsize{8}{10}\selectfont, text=bkOrange!80!black, align=left, inner sep=0pt] {つかわない\\ところ};
+  \end{scope}
+  \begin{scope}[shift={(84,0)}]
+    \bkqqset{4.8}{10}{2}{6}
+    \bkqqgrid{10}{25}{5}{℃}
+    \bkqqplot{15,16,18,21,23,24,24,23,21,19}{bkBlue}
+    \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkInk, inner sep=0pt] at (24,-2) {\bkqqnami\,で はぶいた};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent \R{気温}{き|おん}は、 15\,℃から 24\,℃の \R{間}{あいだ}だけです。
+0から 10までの \R{目}{め}もりは、 1つも つかいません。
+はぶくと、 その \R{分}{ぶん} 1\R{目}{め}もりを \R{大}{おお}きく かけるので、 \R{上}{あ}がり\R{下}{さ}がりが よく \R{見}{み}えます。
+
+\par\vspace{3pt}
+\noindent ぼうグラフ（1-17）では はぶきません。
+ぼうグラフは ぼうの \R{高}{たか}さで \R{数}{かず}を くらべるので、 はぶくと \R{高}{たか}さの くらべ\R{方}{かた}が くるって しまうからです（1-17の まちがえやすい ところ）。
+
+\bksubsection{3}{ぼうグラフと くらべよう}
+
+\label{bk:1-18:chigai}\noindent\begin{minipage}[t]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k in {1,2,3,4,6,7,8,9} {\draw[bkLine, line width=0.45pt] (0,\k*2.1) -- (48,\k*2.1);}
+  \foreach \k in {5,10} {\draw[bkGray!60, line width=0.5pt] (0,\k*2.1) -- (48,\k*2.1);}
+  \draw[bkInk, line width=0.9pt] (0,22.5) -- (0,0) -- (48,0);
+  \foreach \v [count=\i] in {8,7,5,4} {\filldraw[fill=bkBlue!55, draw=bkBlue!55!black, line width=0.5pt] ({(\i-0.5)*12-3.5},0) rectangle ({(\i-0.5)*12+3.5},\v*2.1);}
+  \foreach \t [count=\i] in {カレー,あげパン,ラーメン,やきそば} {\node[anchor=north, font=\sffamily\bfseries\fontsize{7.5}{9}\selectfont, inner sep=0pt] at ({(\i-0.5)*12},-1.4) {\t};}
+\end{tikzpicture}\par\vspace{3pt}
+{\sffamily\bfseries\color{bkBlue!80!black}ぼうグラフ}\par
+\R{大}{おお}きさを くらべる
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{4.8}{14}{1.8}{0}
+  \foreach \k in {1,...,12} {\draw[bkLine, line width=0.45pt] (0,\k*1.8) -- (48,\k*1.8);}
+  \draw[bkInk, line width=0.9pt] (0,22.5) -- (0,0) -- (48,0);
+  \bkqqplot{15,16,18,21,23,24,24,23,21,19}{bkTheme}
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{7.5}{9}\selectfont, inner sep=0pt] at (24,-1.4) {8\R{時}{じ} → 17\R{時}{じ}};
+\end{tikzpicture}\par\vspace{3pt}
+{\sffamily\bfseries\color{bkTheme}おれ\R{線}{せん}グラフ}\par
+かわり\R{方}{かた}を \R{見}{み}る
+\end{minipage}
+
+\par\vspace{6pt}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\R{時}{じ}こくは、 8\R{時}{じ}と 9\R{時}{じ}の \R{間}{あいだ}にも 8\R{時}{じ}\R{半}{はん}が あります。
+\R{気温}{き|おん}も、 その \R{間}{あいだ}に すこしずつ かわって います。
+\R{線}{せん}で むすぶと、 8\R{時}{じ}\R{半}{はん}の \R{気温}{き|おん}は 15\,℃と 16\,℃の \R{間}{あいだ}ぐらい、 と だいたい わかります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{24}{14}{7}{0}
+  \foreach \k in {0,...,3} {\pgfmathtruncatemacro\v{14+\k}\draw[bkLine, line width=0.45pt] (0,\k*7) -- (48,\k*7);
+    \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-1.4,\k*7) {\v};}
+  \draw[bkInk, line width=0.9pt] (0,23) -- (0,0) -- (48,0);
+  \node[anchor=south east, font=\sffamily\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-0.4,24) {（℃）};
+  \bkqqplot{15,16}{bkBlue}
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (24,0) -- (24,10.5);
+  \fill[bkTheme] (24,10.5) circle (1);
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, inner sep=0pt] at (12,-1.5) {8\R{時}{じ}};
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkTheme, inner sep=0pt] at (24,-1.5) {8\R{時}{じ}\R{半}{はん}};
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, inner sep=0pt] at (36,-1.5) {9\R{時}{じ}};
+\end{tikzpicture}
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent カレーと あげパンの \R{間}{あいだ}には、 なにも ありません。
+だから、 しゅるいを くらべる ときは ぼうグラフ、 \R{時}{じ}こくの ように つながって かわる ものは おれ\R{線}{せん}グラフに します。
+
+\bksubsection{4}{\R{線}{せん}の むきを よむ}
+
+\label{bk:1-18:muki}\R{線}{せん}の むきを \R{見}{み}ると、 ふえたか へったかが わかります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\ya/\yb/\c/\t in {0/2/12/bkRed/{\R{右}{みぎ}\R{上}{あ}がり\\ふえて いる},1/7/7/bkGreen/{たいら\\かわらない},2/12/2/bkBlue/{\R{右}{みぎ}\R{下}{さ}がり\\へって いる}} {
+    \begin{scope}[shift={(\i*44,0)}]
+      \fill[white, rounded corners=2mm] (0,-13) rectangle (40,17);
+      \draw[bkLine, line width=0.4pt] (6,1) grid[step=4] (34,13);
+      \draw[\c, line width=1.8pt] (8,\ya) -- (32,\yb);
+      \fill[\c] (8,\ya) circle (1.1) (32,\yb) circle (1.1);
+      \node[anchor=north, font=\sffamily\bfseries\small, text=bkInk, align=center, inner sep=0pt] at (20,-1) {\t};
+    \end{scope}}
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent \R{数}{かず}でも たしかめよう。 1\R{時間}{じ|かん}で どれだけ かわったかは、 あと － まえ（1-5）で わかります。
+
+\begin{bkcenter}
+\begin{tblr}{colspec={Q[c,m,wd=36mm] Q[c,m,wd=42mm] Q[c,m,wd=28mm]}, hlines={0.6pt,bkGray!50}, vlines={0.6pt,bkGray!50}, rowsep=2pt, colsep=3pt, row{1}={bg=bkTheme!10, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{時}{じ}こく & あと － まえ & \R{線}{せん}の むき \\
+9\R{時}{じ} → 10\R{時}{じ} & 18 － 16 ＝ 2 & \R{右}{みぎ}\R{上}{あ}がり \\
+13\R{時}{じ} → 14\R{時}{じ} & 24 － 24 ＝ 0 & たいら \\
+15\R{時}{じ} → 16\R{時}{じ} & 23 － 21 ＝ 2 \R{下}{さ}がる & \R{右}{みぎ}\R{下}{さ}がり \\
+\end{tblr}
+\end{bkcenter}
+
+\noindent 8\R{時}{じ}から 13\R{時}{じ}は \R{右}{みぎ}\R{上}{あ}がり\bkidx{みぎあがり}{\R{右}{みぎ}\R{上}{あ}がり}で、 \R{気温}{き|おん}が \R{上}{あ}がって います。
+13\R{時}{じ}から 14\R{時}{じ}は たいら、 その あとは \R{右}{みぎ}\R{下}{さ}がりです。
+\R{下}{さ}がる ときは、 \R{気温}{き|おん}が \R{高}{たか}い まえの \R{方}{ほう}から ひいて、 「2\,℃ \R{下}{さ}がった」と いいます。
+
+\clearpage
+\bksubsection{5}{かたむきが \R{急}{きゅう}なほど、 はやく かわる}
+
+\label{bk:1-18:kyuu}1\R{時間}{じ|かん}ごとの ちがいを、 グラフの \R{上}{うえ}に かいて みよう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{17}{13}{2.5}{0}
+  \bkqqgrid{6}{24}{5}{℃}
+  \bkqqplot{15,16,18,21,23,24}{bkBlue}
+  \foreach \i/\dd/\cc in {1/1/bkGray,2/2/bkGray,3/3/bkTheme,4/2/bkGray,5/1/bkGray} {
+    \pgfmathtruncatemacro\j{\i+1}
+    \draw[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.2pt] (bkqq@p\i) -- (bkqq@p\i -| bkqq@p\j);
+    \draw[\cc, line width=1.2pt] (bkqq@p\i -| bkqq@p\j) -- (bkqq@p\j);
+    \node[anchor=north west, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=\cc, inner sep=0pt] at ($(bkqq@p\i -| bkqq@p\j)+(0.8,-0.6)$) {\dd\,℃};}
+  \draw[bkTheme, line width=2.6pt] (bkqq@p3) -- (bkqq@p4);
+  \fill[bkTheme] (bkqq@p3) circle (1.2) (bkqq@p4) circle (1.2);
+  \bkqqx{8,9,10,11,12,13}{\R{時}{じ}}
+  \draw[bkGray, line width=0.6pt, decorate, decoration={brace, amplitude=1.2mm}] ($(bkqq@p2 -| bkqq@p1)+(0,2.5)$) -- ($(bkqq@p2)+(0,2.5)$)
+    node[midway, above=1.8mm, font=\sffamily\bfseries\fontsize{7.5}{9}\selectfont, text=bkGray!80!black, inner sep=0pt] {1\R{時間}{じ|かん}};
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent グラフの \R{点}{てん}と \R{点}{てん}の \R{間}{あいだ}の よこの はばは、 どこも \R{同}{おな}じ 1\R{時間}{じ|かん}です。
+よこが \R{同}{おな}じなら、 たてに \R{上}{あ}がる \R{数}{かず}が \R{大}{おお}きいほど、 \R{線}{せん}は \R{急}{きゅう}に なります。
+かいだんで、 1だんの \R{高}{たか}さが \R{高}{たか}いほど \R{急}{きゅう}なのと \R{同}{おな}じです。
+
+\par\vspace{3pt}
+\noindent 10\R{時}{じ}から 11\R{時}{じ}は \mbox{21 － 18 ＝ 3}（1-7の ひっ\R{算}{ざん}）で、 1、 2、 3、 2、 1の \R{中}{なか}で いちばん \R{大}{おお}きい。
+\R{線}{せん}の かたむき\bkidx{かたむき}{かたむき}も、 いちばん \R{急}{きゅう}です。\\
+\bkhatenaref の \R{答}{こた}えは、 10\R{時}{じ}から 11\R{時}{じ}の あいだ です。
+
+\begin{taisetsu}
+\R{線}{せん}の かたむきが \R{急}{きゅう}な ところほど、\\
+はやく かわって いる。
+\end{taisetsu}
+
+\clearpage
+%% ---------------- 例題 ----------------
+
+\begin{reidai}[おれ\R{線}{せん}グラフを かく]
+\R{教室}{きょう|しつ}の \R{気温}{き|おん}を、 おれ\R{線}{せん}グラフに しよう。\par
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{bktable}{colspec={Q[c,wd=24mm] *{4}{Q[c,wd=8mm]}}, colsep=1.5pt, rowsep=2pt, row{1}={bg=bkBlue!12}, cell{1-2}{1}={bg=bkBlue!12}, cells={font=\small}}
+\R{時}{じ}こく（\R{時}{じ}） & 9 & 10 & 11 & 12 \\
+\R{気温}{き|おん}（℃） & 18 & 20 & 21 & 23 \\
+\end{bktable}
+\par\vspace{3pt}
+\kangaekata
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2\zw, itemsep=0pt, topsep=0pt]
+\item 1\R{目}{め}もりは 1\,℃（\R{数}{かず}は 2\R{目}{め}もりごと）。
+\item 9\R{時}{じ}の \R{上}{うえ}、 18の \R{横}{よこ}に \R{点}{てん}。 10\R{時}{じ}・11\R{時}{じ}・12\R{時}{じ}も \R{同}{おな}じ。
+\item となりの \R{点}{てん}を \R{線}{せん}で むすぶ。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{10}{14}{2}{5}
+  \bkqqgrid{4}{24}{2}{℃}
+  \bkqqx{9,10,11,12}{\R{時}{じ}}
+  \bkqqplot{18,20,21,23}{bkBlue}
+  \node[anchor=south east, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkBlue!80!black, inner sep=1pt] at ($(bkqq@p4)+(0.5,1)$) {\R{教室}{きょう|しつ}};
+\end{tikzpicture}
+\end{minipage}
+\end{reidai}
+
+\begin{jibun}
+ろうかの \R{気温}{き|おん}も、 \R{上}{うえ}の グラフに かきこもう。\par
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,wd=24mm] *{4}{Q[c,wd=8mm]}}, colsep=1.5pt, rowsep=2pt, row{1}={bg=bkTheme!12}, cell{1-2}{1}={bg=bkTheme!12}, cells={font=\small}}
+\R{時}{じ}こく（\R{時}{じ}） & 9 & 10 & 11 & 12 \\
+\R{気温}{き|おん}（℃） & 16 & 17 & 19 & 20 \\
+\end{bktable}
+\end{bkcenter}
+\bkjans{16、 17、 19、 20\,℃の ところに \R{点}{てん}を うち、 \R{線}{せん}で むすぶ}
+\end{jibun}
+
+\begin{reidai}[おれ\R{線}{せん}グラフを よむ]
+プールの \R{水}{みず}の \R{温度}{おん|ど}。 いちばん \R{高}{たか}いのは？\par
+\noindent\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{7.5}{21}{2}{5}
+  \bkqqgrid{7}{29}{2}{℃}
+  \bkqqx{9,10,11,12,13,14,15}{\R{時}{じ}}
+  \bkqqplot{22,23,25,26,27,28,27}{bkBlue}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}
+\kangaekata いちばん \R{上}{うえ}の \R{点}{てん}を さがす。
+14\R{時}{じ}の \R{点}{てん}。 \R{横}{よこ}に たどると 28。
+
+\kotae 14\R{時}{じ}、 28\,℃
+\end{minipage}
+\end{reidai}
+
+\begin{jibun}
+\R{上}{うえ}の グラフで、 11\R{時}{じ}の \R{水}{みず}の \R{温度}{おん|ど}は？\enspace\bkkakikomi\,℃
+\bkjans{25\,℃}
+\end{jibun}
+
+\begin{reidai}[\R{線}{せん}の むきを よむ]
+\R{気温}{き|おん}が かわらないのは、 \R{何時}{なん|じ}から \R{何時}{なん|じ}まで？\par
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{7.5}{16}{2}{5}
+  \bkqqgrid{7}{24}{2}{℃}
+  \bkqqx{9,10,11,12,13,14,15}{\R{時}{じ}}
+  \bkqqplot{18,20,22,22,22,20,19}{bkBlue}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}
+\kangaekata \R{線}{せん}が たいらな ところ。
+11\R{時}{じ}も 12\R{時}{じ}も 13\R{時}{じ}も 22\,℃。
+
+\kotae 11\R{時}{じ}から 13\R{時}{じ}
+\end{minipage}
+\end{reidai}
+
+\begin{jibun}
+\R{上}{うえ}の グラフで、 \R{下}{さ}がって いるのは？\enspace\bkkakikomi\,\R{時}{じ}から\enspace\bkkakikomi\,\R{時}{じ}まで
+\bkjans{13\R{時}{じ}から 15\R{時}{じ}まで}
+\end{jibun}
+
+\begin{reidai}[いちばん はやく かわった ところ]
+ヒマワリの \R{高}{たか}さ。 いちばん よく のびたのは いつ？\par
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{7}{0}{2.2}{0}\bkqqmul{10}
+  \bkqqgrid{6}{10}{2}{cm}
+  \bkqqx{1,2,3,4,5,6}{\R{週目}{しゅう|め}}
+  \bkqqplot{1,2,4,7,9,10}{bkBlue}
+  \draw[bkTheme, line width=2.4pt] (bkqq@p3) -- (bkqq@p4);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+\kangaekata
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2\zw, itemsep=0pt, topsep=0pt]
+\item \R{数}{かず}は 0、 20、 40 と 2\R{目}{め}もりごと。 1\R{目}{め}もりは 10\,cm。
+\item \R{高}{たか}さは 10、 20、 40、 70、 90、 100\,cm。
+\item 1\R{週}{しゅう}ごとの ちがいは 10、 20、 30、 20、 10。
+\item いちばん \R{大}{おお}きいのは 70 － 40 ＝ 30。 \R{線}{せん}も いちばん \R{急}{きゅう}。
+\end{enumerate}
+\kotae 3\R{週目}{しゅう|め}から 4\R{週目}{しゅう|め}
+\end{minipage}
+\end{reidai}
+
+\begin{jibun}
+ゆうがたの \R{気温}{き|おん}です。 いちばん はやく \R{下}{さ}がったのは？\par
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{bktable}{colspec={Q[c,wd=24mm] *{5}{Q[c,wd=7.5mm]}}, colsep=1.5pt, rowsep=2pt, row{1}={bg=bkTheme!12}, cell{1-2}{1}={bg=bkTheme!12}, cells={font=\small}}
+\R{時}{じ}こく（\R{時}{じ}） & 16 & 17 & 18 & 19 & 20 \\
+\R{気温}{き|おん}（℃） & 22 & 21 & 19 & 16 & 15 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\raggedleft
+\bkkakikomi\,\R{時}{じ}から\\ \bkkakikomi\,\R{時}{じ}まで
+\end{minipage}\par
+{\small\color{bkOrange!58!black}ヒント：グラフが なくても、 1\R{時間}{じ|かん}ごとの ちがいを \R{計算}{けい|さん}すれば わかるよ。}
+\bkjans{18\R{時}{じ}から 19\R{時}{じ}まで（ちがいは 1、 2、 3、 1\,℃。 19 － 16 ＝ 3\,℃ \R{下}{さ}がった のが いちばん \R{大}{おお}きい）}
+\end{jibun}
+
+\begin{reidai}[\R{点}{てん}と \R{点}{てん}の \R{間}{あいだ}を よむ]
+1\R{日}{にち}の \R{気温}{き|おん}の グラフ（\R{数学}{すう|がく}の \R{道具}{どう|ぐ}①）で、 10\R{時}{じ}\R{半}{はん}の \R{気温}{き|おん}は だいたい \R{何}{なん}\,℃？\par
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{24}{17}{5}{0}
+  \foreach \k in {0,...,5} {\pgfmathtruncatemacro\v{17+\k}\draw[bkLine, line width=0.45pt] (0,\k*5) -- (48,\k*5);
+    \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-1.4,\k*5) {\v};}
+  \draw[bkInk, line width=0.9pt] (0,26.5) -- (0,0) -- (48,0);
+  \node[anchor=south east, font=\sffamily\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-0.4,27.5) {（℃）};
+  \bkqqplot{18,21}{bkBlue}
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (24,0) -- (24,12.5) -- (0.5,12.5);
+  \fill[bkTheme] (24,12.5) circle (1);
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, inner sep=0pt] at (12,-1.5) {10\R{時}{じ}};
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, text=bkTheme, inner sep=0pt] at (24,-1.5) {\R{半}{はん}};
+  \node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, inner sep=0pt] at (36,-1.5) {11\R{時}{じ}};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+\kangaekata
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2\zw, itemsep=0pt, topsep=0pt]
+\item 10\R{時}{じ}は 18\,℃、 11\R{時}{じ}は 21\,℃。
+\item 10\R{時}{じ}\R{半}{はん}は、 2つの \R{時}{じ}こくの まん\R{中}{なか}。
+\item \R{線}{せん}の まん\R{中}{なか}から \R{横}{よこ}に たどると、 19と 20の \R{間}{あいだ}。
+\end{enumerate}
+\end{minipage}\par
+\kotae だいたい 19\,℃と 20\,℃の \R{間}{あいだ}\par
+{\small ほんとうの \R{気温}{き|おん}は はかって いないので、 「だいたい」です。}
+\end{reidai}
+
+\begin{jibun}
+\R{同}{おな}じ グラフで、 15\R{時}{じ}\R{半}{はん}の \R{気温}{き|おん}は だいたい \R{何}{なん}\,℃？ （15\R{時}{じ}は 23\,℃、 16\R{時}{じ}は 21\,℃）\par
+\noindent\hfill だいたい\enspace\bkkakikomi\,℃と\enspace\bkkakikomi\,℃の \R{間}{あいだ}
+\bkjans{だいたい 21\,℃と 23\,℃の \R{間}{あいだ}（まん\R{中}{なか}は 22\,℃ぐらい）}
+\end{jibun}
+
+\begin{reidai}[2\R{本}{ほん}の おれ\R{線}{せん}を くらべる]
+A\R{町}{まち}と B\R{町}{まち}の \R{気温}{き|おん}を、 1つの グラフに かきました。 \R{気温}{き|おん}の ちがいが いちばん \R{大}{おお}きいのは \R{何時}{なん|じ}？\par
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{9}{12}{2.4}{5}
+  \bkqqgrid{5}{24}{2}{℃}
+  \bkqqx{9,10,11,12,13}{\R{時}{じ}}
+  \bkqqplot{14,16,19,21,22}{bkBlue}
+  \node[anchor=west, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkBlue!80!black, inner sep=1pt] at ($(bkqq@p5)+(1,0)$) {A};
+  \bkqqplot{15,16,17,18,18}{bkTheme}
+  \node[anchor=west, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkTheme, inner sep=1pt] at ($(bkqq@p5)+(1,0)$) {B};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}
+\kangaekata おなじ \R{時}{じ}こくの 2つの \R{点}{てん}の \R{間}{あいだ}を \R{見}{み}る。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2\zw, itemsep=0pt, topsep=0pt]
+\item A は 14、 16、 19、 21、 22\,℃。
+\item B は 15、 16、 17、 18、 18\,℃。
+\item 13\R{時}{じ}は 22 － 18 ＝ 4。 2つの \R{点}{てん}が いちばん はなれて いる。
+\end{enumerate}
+\end{minipage}\par
+\kotae 13\R{時}{じ}（4\,℃ ちがう）
+\end{reidai}
+
+\begin{jibun}
+\R{上}{うえ}の グラフで、 A\R{町}{まち}と B\R{町}{まち}の \R{気温}{き|おん}が \R{同}{おな}じなのは \R{何時}{なん|じ}？\enspace\bkkakikomi\,\R{時}{じ}\par
+\R{線}{せん}の かたむきが \R{急}{きゅう}で、 \R{気温}{き|おん}が はやく \R{上}{あ}がって いるのは A\R{町}{まち}・B\R{町}{まち}の どちら？\enspace\bkkakikomi[16mm]
+\bkjans{10\R{時}{じ}（どちらも 16\,℃。 \R{点}{てん}が かさなる）。 A\R{町}{まち}}
+\end{jibun}
+
+\begin{yattemiyou}[きょうの \R{気温}{き|おん}を おれ\R{線}{せん}グラフに しよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt]
+\item 9\R{時}{じ}から 15\R{時}{じ}まで、 1\R{時間}{じ|かん}ごとに \R{気温}{き|おん}を はかって、 \R{表}{ひょう}に かこう。 \R{気温}{き|おん}は、 \R{日}{ひ}かげで、 \R{地面}{じ|めん}から 1.5\,mほどの \R{高}{たか}さで はかります（\R{学校}{がっ|こう}の \R{百葉箱}{ひゃく|よう|ばこ}も \R{同}{おな}じ）。
+\item いちばん ひくい \R{気温}{き|おん}と いちばん \R{高}{たか}い \R{気温}{き|おん}を \R{見}{み}て、 たての \R{数}{かず}を かきこもう。 0の \R{近}{ちか}くを つかわないなら、 \bkqqnami\ で はぶこう。
+\item \R{点}{てん}を うって、 じょうぎで むすぼう。
+\item いちばん はやく \R{上}{あ}がった ところを、 かたむきで さがそう。
+\end{enumerate}
+\par\vspace{3pt}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,wd=24mm] *{7}{Q[c,wd=10mm]}}, colsep=1.5pt, rowsep=3pt, row{1}={bg=bkGreen!15}, cell{1-2}{1}={bg=bkGreen!15, font=\sffamily\bfseries\small}, cells={font=\small}}
+\R{時}{じ}こく（\R{時}{じ}） & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\
+\R{気温}{き|おん}（℃） & & & & & & & \\
+\end{bktable}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[white] (-10,-7) rectangle (112,64);
+  \foreach \i in {1,...,7} {\draw[bkLine, line width=0.4pt] ({(\i-0.5)*14},6) -- ({(\i-0.5)*14},58);}
+  \foreach \k in {0,...,13} {\draw[bkLine, line width=0.4pt] (0,6+\k*4) -- (98,6+\k*4);
+    \pgfmathtruncatemacro\m{mod(\k,5)}\ifnum\m=0 \draw[bkGray!60, line width=0.5pt] (0,6+\k*4) -- (98,6+\k*4);
+      \filldraw[fill=white, draw=bkTheme, line width=0.6pt] (-9,6+\k*4-2) rectangle (-1.5,6+\k*4+2);\fi}
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,6*0.32) (0,6*0.68) -- (0,59.5);
+  \foreach \yy in {0.32,0.68} {\draw[bkInk, line width=0.7pt] (-1.8,6*\yy-0.4) .. controls (-0.9,6*\yy+0.6) and (-0.3,6*\yy-1) .. (0.6,6*\yy) .. controls (1,6*\yy+0.5) .. (1.8,6*\yy+0.4);}
+  \node[anchor=east, font=\sffamily\bfseries\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-1.4,0) {0};
+  \draw[bkInk, line width=0.9pt] (0,0) -- (98,0);
+  \node[anchor=south east, font=\sffamily\fontsize{8.5}{9}\selectfont, inner sep=0pt] at (-0.4,60.5) {（℃）};
+  \foreach \t [count=\i] in {9,10,11,12,13,14,15} {\node[anchor=north, font=\sffamily\bfseries\fontsize{8.5}{10}\selectfont, inner sep=0pt] at ({(\i-0.5)*14},-1.5) {\t};}
+  \node[anchor=north west, font=\sffamily\fontsize{8.5}{10}\selectfont, inner sep=0pt] at (98.5,-1.5) {（\R{時}{じ}）};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent いちばん はやく \R{上}{あ}がったのは\enspace\bkkakikomi\,\R{時}{じ}から\enspace\bkkakikomi\,\R{時}{じ}
+\end{yattemiyou}
+
+\clearpage
+%% ---------------- p.188 まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすい ところ}
+
+\begin{tsumazuki}{\R{高}{たか}さと かたむきを まちがえる}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+いちばん はやく \R{上}{あ}がったのは？\\
+\bkbatsu\enspace 13\R{時}{じ}（\R{高}{たか}い）\\
+\bkmaru\enspace 10\R{時}{じ}から 11\R{時}{じ}（\R{急}{きゅう}）\\
+13\R{時}{じ}は いちばん \R{高}{たか}い 24\,℃。 でも 12\R{時}{じ}から 13\R{時}{じ}は 24 － 23 ＝ 1で、 1\,℃しか \R{上}{あ}がって いません。
+「\R{高}{たか}い」と 「はやく \R{上}{あ}がる」は ちがいます。 \R{高}{たか}さでは なく、 かたむきを \R{見}{み}よう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{7}{14}{2.4}{0}
+  \foreach \k in {0,...,10} {\draw[bkLine, line width=0.4pt] (0,\k*2.4) -- (42,\k*2.4);}
+  \bkqqplot{15,16,18,21,23,24}{bkBlue!60}
+  \draw[bkTheme, line width=2.4pt] (bkqq@p3) -- (bkqq@p4);
+  \draw[bkRed, line width=0.9pt] (bkqq@p6) circle (2.2);
+  \node[anchor=south, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkRed, inner sep=1pt] at ($(bkqq@p6)+(0,2.4)$) {\R{高}{たか}い};
+  \node[anchor=east, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, text=bkTheme, inner sep=1pt] at ($(bkqq@p3)!0.5!(bkqq@p4)+(-1.5,1)$) {\R{急}{きゅう}};
+  \bkqqx{8,9,10,11,12,13}{\R{時}{じ}}
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{しゅるいを \R{線}{せん}で むすぶ}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+きゅう\R{食}{しょく}の しゅるいを \R{線}{せん}で むすんでも、 いみは ありません。\\
+\bkmaru\enspace ぼうグラフ（1-17）
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k in {1,...,10} {\draw[bkLine, line width=0.4pt] (0,\k*2.2) -- (52,\k*2.2);}
+  \draw[bkInk, line width=0.8pt] (0,23) -- (0,0) -- (52,0);
+  \bkqqset{13}{0}{2.2}{0}
+  \bkqqplot{8,7,5,4}{bkGray}
+  \bkqqx{カレー,あげパン,ラーメン,やきそば}{}
+  \node[anchor=north east] at (52,27) {\bkbatsu};
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{1\R{目}{め}もりの ちがう グラフの かたむき}
+\noindent\begin{minipage}[c]{0.5\linewidth}
+A は 1\R{目}{め}もり 1\,℃、 B は 1\R{目}{め}もり 5\,℃の グラフです。
+B の \R{線}{せん}の ほうが ゆるやかに \R{見}{み}えますが、 A は 2\,℃、 B は 5\,℃ \R{上}{あ}がって います。
+1\R{目}{め}もりが ちがう グラフどうしは、 かたむきでは くらべられません。 \R{数}{かず}を よんで くらべよう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.48\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \foreach \k in {0,...,4} {\pgfmathtruncatemacro\v{10+\k}\draw[bkLine, line width=0.45pt] (0,\k*5) -- (22,\k*5);
+      \node[anchor=east, font=\sffamily\bfseries\fontsize{7.5}{8}\selectfont, inner sep=0pt] at (-1.2,\k*5) {\v};}
+    \draw[bkInk, line width=0.8pt] (0,21.5) -- (0,0) -- (22,0);
+    \draw[bkBlue, line width=1.4pt] (5.5,5) -- (16.5,15);
+    \fill[bkBlue] (5.5,5) circle (0.9) (16.5,15) circle (0.9);
+    \node[anchor=north, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, inner sep=0pt] at (11,-1.6) {A　2\,℃};
+  \end{scope}
+  \begin{scope}[shift={(34,0)}]
+    \foreach \k in {0,...,4} {\pgfmathtruncatemacro\v{10+5*\k}\draw[bkLine, line width=0.45pt] (0,\k*5) -- (22,\k*5);
+      \node[anchor=east, font=\sffamily\bfseries\fontsize{7.5}{8}\selectfont, inner sep=0pt] at (-1.2,\k*5) {\v};}
+    \draw[bkInk, line width=0.8pt] (0,21.5) -- (0,0) -- (22,0);
+    \draw[bkTheme, line width=1.4pt] (5.5,5) -- (16.5,10);
+    \fill[bkTheme] (5.5,5) circle (0.9) (16.5,10) circle (0.9);
+    \node[anchor=north, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, inner sep=0pt] at (11,-1.6) {B　5\,℃};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{tsumazuki}
+
+\begin{column}{いちばん \R{暑}{あつ}いのは \R{何時}{なん|じ}ごろ？}
+お\R{日}{ひ}さまが いちばん \R{高}{たか}く のぼるのは、 12\R{時}{じ}ごろです。
+でも、 \R{道具}{どう|ぐ}①の グラフでは、 \R{気温}{き|おん}が いちばん \R{高}{たか}いのは 13\R{時}{じ}から 14\R{時}{じ}です。
+お\R{日}{ひ}さまは まず \R{地面}{じ|めん}を あたため、 あたたまった \R{地面}{じ|めん}が \R{空気}{くう|き}を あたためます。
+それに \R{時間}{じ|かん}が かかるので、 \R{気温}{き|おん}の いちばん \R{高}{たか}い \R{時}{じ}こくは、 すこし おくれるのです。
+\end{column}
+
+\clearpage
+%% ---------------- p.189 つかわれているところ ----------------
+\begin{butsuri}
+\R{線}{せん}の かたむきで、 きかいは 「\R{急}{きゅう}な かわり\R{方}{かた}」を \R{見}{み}つけます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 工場の温度
+  \fill[white, rounded corners=3mm] (0,0) rectangle (59,48);
+  \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkInk] at (29.5,43.5) {きかいの \R{温度}{おん|ど}};
+  \begin{scope}[shift={(8,9)}]
+    \foreach \k in {0,...,6} {\draw[bkLine, line width=0.4pt] (0,\k*4.5) -- (46,\k*4.5);}
+    \draw[bkInk, line width=0.8pt] (0,28) -- (0,0) -- (46,0);
+    \draw[bkBlue, line width=1.4pt] (2,6) -- (10,7) -- (18,6.5) -- (26,7.5) -- (30,24);
+    \draw[bkRed, line width=2pt] (26,7.5) -- (30,24);
+    \node[anchor=north, font=\sffamily\fontsize{8}{9}\selectfont, text=bkInk] at (23,-1) {\R{時間}{じ|かん} →};
+  \end{scope}
+  % ブザー
+  \begin{scope}[shift={(48,32)}]
+    \fill[bkRed] (0,0) circle (4.2);
+    \fill[white] (0,0) circle (1.6);
+    \foreach \a in {20,0,-20} {\draw[bkRed, line width=0.9pt] (\a:5.6) arc (\a:\a+0.1:5.6);}
+    \draw[bkRed, line width=0.9pt] (6,3) arc (30:-30:6) (8,4.6) arc (30:-30:9);
+  \end{scope}
+  % 車のスピード
+  \begin{scope}[shift={(63,0)}]
+  \fill[white, rounded corners=3mm] (0,0) rectangle (59,48);
+  \node[font=\sffamily\bfseries\fontsize{9}{10}\selectfont, text=bkInk] at (29.5,43.5) {\R{車}{くるま}の スピード};
+  \begin{scope}[shift={(8,9)}]
+    \foreach \k in {0,...,6} {\draw[bkLine, line width=0.4pt] (0,\k*4.5) -- (46,\k*4.5);}
+    \draw[bkInk, line width=0.8pt] (0,28) -- (0,0) -- (46,0);
+    \draw[bkBlue, line width=1.4pt] (2,2) -- (12,16) -- (24,20) -- (34,20) -- (38,3);
+    \draw[bkRed, line width=2pt] (34,20) -- (38,3);
+    \node[anchor=north, font=\sffamily\fontsize{8}{9}\selectfont, text=bkInk] at (23,-1) {\R{時間}{じ|かん} →};
+    \node[font=\sffamily\bfseries\fontsize{7.5}{9}\selectfont, text=bkRed, fill=white, inner sep=1pt] at (39,24) {\R{急}{きゅう}ブレーキ};
+  \end{scope}
+  \bkcar{(42,36)}{0.42}{bkRoute6}
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\begin{itemize}[label={\color{bkPurple}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item \R{工場}{こう|じょう}では、 きかいの \R{温度}{おん|ど}を いつも はかって います。 \R{線}{せん}が \R{急}{きゅう}に \R{上}{あ}がると、 ブザーで しらせます。
+\item ドライブレコーダーは、 \R{車}{くるま}の スピードを きろくします。 \R{急}{きゅう}ブレーキは、 \R{線}{せん}が \R{急}{きゅう}に \R{下}{さ}がります。
+\item \R{体温}{たい|おん}の きろくや、 \R{植物}{しょく|ぶつ}の のび\R{方}{かた}も おれ\R{線}{せん}グラフで \R{見}{み}ます。
+\end{itemize}
+\end{butsuri}
+
+\bkfukidashi{delta}{\R{線}{せん}の かたむきは、 かわる 「はやさ」。 \R{第}{だい}5\R{巻}{かん}の 「びぶん」で、 もっと くわしく しらべるよ。}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkRoute1, line width=3pt, line cap=round] (10,0) -- (128,0);
+  \node[anchor=west, inner sep=0pt] at (0,12) {\bkrouteicon[1.4em]{1}\hspace{0.3em}{\sffamily\bfseries\small\color{bkRoute1!80!black}\R{変化}{へん|か}の \R{路線}{ろ|せん}}};
+  \foreach \x/\c/\t/\s in {10/bkVol1/{1-10}/{\R{時間}{じ|かん}},40/bkVol1/{1-14}/{1つ\R{分}{ぶん}},70/bkVol1/{1-18}/{おれ\R{線}{せん}グラフ},100/bkVol2/{2-3}/{{\ltjsetparameter{jacharrange={+200}}＋－×÷}},128/bkVol3/{3-5}/{かたむき}} {
+    \fill[white, draw=\c, line width=1.6pt] (\x,0) circle (2.6);
+    \node[anchor=base, font=\sffamily\bfseries\footnotesize, text=\c!85!black] at (\x,-6.8) {\t};
+    \node[anchor=base, font=\sffamily\footnotesize, text=bkInk] at (\x,-13.6) {\s};}
+  \node[fill=bkTheme, text=white, rounded corners=1mm, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, inner sep=1.5pt] at (70,5.5) {いま ここ};
+\end{tikzpicture}
+\end{bkfigure}
+
+\clearpage
+%% ---------------- p.190〜191 もんだい ----------------
+\bkendproblems
+
+\bkproblemgroup{きほん}{1}
+
+\bkproblem
+\begin{minipage}[t]{0.46\linewidth}
+\R{水}{みず}そうの \R{水}{みず}の \R{温度}{おん|ど}を、 おれ\R{線}{せん}グラフに かきましょう。
+\par\vspace{3pt}
+\begin{bktable}{colspec={Q[c,wd=8mm] *{4}{Q[c,wd=8.5mm]}}, colsep=1.5pt, rowsep=2pt, cells={font=\small}}
+\R{時}{じ} & 9 & 10 & 11 & 12 \\
+℃ & 18 & 19 & 21 & 22 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\linewidth}\centering\vspace{0pt}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{10}{14}{2.2}{5}
+  \bkqqgrid{4}{24}{2}{℃}
+  \bkqqx{9,10,11,12}{\R{時}{じ}}
+\end{tikzpicture}
+\end{minipage}
+\bkpans{18、 19、 21、 22\,℃の ところに \R{点}{てん}を うち、 \R{線}{せん}で むすぶ}
+
+\bkproblem
+\begin{minipage}[t]{0.46\linewidth}
+（1）11\R{時}{じ}は \R{何}{なん}\,℃？\enspace\bkkakikomi\,℃\par
+（2）いちばん \R{高}{たか}い \R{気温}{き|おん}は？\par
+\hfill\bkkakikomi\,℃
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\linewidth}\centering\vspace{0pt}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{6.5}{12}{2.4}{5}
+  \node[font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont, text=bkInk] at (23,34.5) {ある \R{日}{ひ}の \R{気温}{き|おん}};
+  \bkqqgrid{7}{22}{2}{℃}
+  \bkqqx{9,10,11,12,13,14,15}{\R{時}{じ}}
+  \bkqqplot{14,16,19,20,20,18,15}{bkBlue}
+\end{tikzpicture}
+\end{minipage}
+\bkpans{（1）19\,℃\quad（2）20\,℃}
+
+\bkproblem 2の グラフで、 \R{答}{こた}えましょう。\par
+\noindent\hspace*{1\zw}（1）かわらないのは\enspace\bkkakikomi\,\R{時}{じ}から\enspace\bkkakikomi\,\R{時}{じ}まで\par
+\noindent\hspace*{1\zw}（2）\R{下}{さ}がって いるのは\enspace\bkkakikomi\,\R{時}{じ}から\enspace\bkkakikomi\,\R{時}{じ}まで
+\bkpans{（1）12\R{時}{じ}から 13\R{時}{じ}まで\quad（2）13\R{時}{じ}から 15\R{時}{じ}まで}
+
+\bkproblem 2の グラフで、 10\R{時}{じ}から 11\R{時}{じ}に \R{何}{なん}\,℃ \R{上}{あ}がりましたか。
+\bkshikiran
+\bkpans{19 － 16 ＝ 3\quad 3\,℃}
+
+\clearpage
+\bkproblemgroup{チャレンジ}{1}
+
+\bkproblem ミニトマトの \R{高}{たか}さです。 いちばん よく のびたのは \R{何週目}{なん|しゅう|め}から \R{何週目}{なん|しゅう|め}？\enspace{\small\color{bkOrange!58!black}ヒント：ちがいは ひっ\R{算}{ざん}（1-7）で}\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{bktable}{colspec={Q[c,wd=26mm] *{5}{Q[c,wd=7.5mm]}}, colsep=1.5pt, rowsep=2pt, cell{1-2}{1}={bg=bkTheme!12}, cells={font=\small}}
+\R{週目}{しゅう|め} & 1 & 2 & 3 & 4 & 5 \\
+\R{高}{たか}さ（cm） & 8 & 12 & 20 & 26 & 30 \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\raggedleft
+\bkkakikomi\,\R{週目}{しゅう|め}から\\ \bkkakikomi\,\R{週目}{しゅう|め}まで
+\end{minipage}
+\bkpans{2\R{週目}{しゅう|め}から 3\R{週目}{しゅう|め}まで（20 － 12 ＝ 8\,cm）}
+
+\bkproblem
+\begin{minipage}[t]{0.46\linewidth}
+（1）いちばん はやく \R{上}{あ}がったのは？\par
+\hfill\bkkakikomi\,\R{時}{じ}から\enspace\bkkakikomi\,\R{時}{じ}\par
+（2）\R{何}{なん}\,℃ \R{上}{あ}がった？\enspace\bkkakikomi\,℃
+\end{minipage}\hfill
+\begin{minipage}[t]{0.44\linewidth}\centering\vspace{0pt}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkqqset{9.5}{6}{2.6}{5}
+  \node[font=\sffamily\bfseries\fontsize{9.5}{11}\selectfont, text=bkInk] at (24,37) {あさの \R{気温}{き|おん}};
+  \bkqqgrid{5}{16}{2}{℃}
+  \bkqqx{5,6,7,8,9}{\R{時}{じ}}
+  \bkqqplot{8,9,11,14,16}{bkBlue}
+\end{tikzpicture}
+\end{minipage}
+\bkpans{（1）7\R{時}{じ}から 8\R{時}{じ}\quad（2）14 － 11 ＝ 3\quad 3\,℃}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{表}{ひょう}を、 おれ\R{線}{せん}グラフに かける。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-18:kaku}ページ}
+\item \R{線}{せん}の むきで、 ふえる・へるが わかる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-18:muki}ページ}
+\item かたむきで、 かわる はやさが わかる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-18:kyuu}ページ}
+\end{checklist}
+チェックが つかなかったら、 →の ページに もどろう。
+\end{furikaeri}
+
+\bkfukidashi{mina}{1\R{日}{にち}の \R{気温}{き|おん}を はかって、 おれ\R{線}{せん}グラフに して みよう！}
+\clearpage

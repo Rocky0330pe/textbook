@@ -1,0 +1,956 @@
+%% 8-2 偏微分：ほかを止めて1つだけ動かす（第14回：組 V8-2。ページ制限なし。偶数ページ）
+%% ほかの巻・物理の本との約束：
+%%   3-5（ch3-05:957）「東へ進むときと北へ進むときの傾きは、8-2で学びます」→ 東＝x、北＝y。3-5 の「傾き＝変化の速さ」と等高線の間かくから入る。
+%%   物理 力-11（p1-11:438）「ほかの力を止めて1つの力 F_i で偏微分（数学 8-2）」→ 同じ言い方「ほかを止めて1つだけ動かす」。カスティリアーノは物理・工学ではこう使うで。
+%%   物理 力-12（p1-12:340）「∂p/∂x=0、∂p/∂y=0、∂p/∂z=−ρg（8-2 の偏微分）」→ ⑨と物理・工学で。
+%%   主役の山 h=100−0.01x^2−0.02y^2（m）、点 (30, 20)：h=83、∂h/∂x=−0.6、∂h/∂y=−0.8（brief8 5章の約束1）。
+%%   偏微分の短い書き方 f_x は本文で使わない（委員会の決定5）。専門書をのぞいてみようで紹介だけ。
+%%   数はすべて Python（numpy 2.5）で確かめた（scratchpad/v8-2/py/c2.py・ex82b.py・book82.py）。
+\makeatletter
+% 本文の小見出し（太字の1行）
+\newcommand\kviiichead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kviiicbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{2pt}\noindent\ignorespaces}
+% 大事な式のわく
+\newcommand\kviiicframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（2.6字下げ。折り返しも同じ位置から）
+\newcommand\kviiicq{\par\vspace{3pt}\noindent\rightskip=0pt plus 6em\relax\hangindent=2.6\zw\hangafter=0\relax}
+% 表計算の数式バー（kata7 の型）
+\newcommand\kviiicfx[2]{\tikz[baseline=(f.base)]{\node[draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, font=\sffamily\footnotesize, minimum width=12mm] (c) {#1};
+  \node[anchor=west, draw=bkLine, line width=0.6pt, fill=white, minimum height=5.5mm, inner xsep=2mm, minimum width=64mm, text width=60mm, align=left, font=\ttfamily\footnotesize] (f) at ([xshift=1mm]c.east) {#2};}}
+% ---- kata8 の型（V8-1。頭文字 kviiic に置きかえ）----
+\pgfmathdeclarefunction{kviiich}{2}{\pgfmathparse{100-0.01*(#1)^2-0.02*(#2)^2}}
+\colorlet{kviiicX}{bkOrange!16}\colorlet{kviiicY}{bkGreen!16}\colorlet{kviiicP}{bkYellow!45}
+\colorlet{kviiicC}{bkGreen!60!black}
+\tikzset{
+  kviiic note/.style={font=\sffamily\footnotesize, text=bkRed!75!black, fill=white, inner sep=1pt, align=left},
+  kviiic leader/.style={bkRed!75!black, line width=0.6pt, shorten >=1.6mm, shorten <=0.6mm}}
+\pgfplotsset{
+  kviiic map/.style={bkplot, axis equal image, grid=none, clip=true, axis lines=box, axis line style={-, line width=0.6pt, bkInk},
+    xtick distance=20, ytick distance=20, tick align=outside, xlabel={$x$（m）}, ylabel={$y$（m）},
+    every axis x label/.style={at={(axis description cs:1,0)}, anchor=north east, yshift=-5.2mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.2mm, font=\sffamily\small, text=bkInk}},
+  kviiic line/.style={kviiicC, line width=0.8pt, no markers, samples=91, domain=0:360},
+  kviiic bold/.style={kviiicC, line width=1.6pt, no markers, samples=91, domain=0:360},
+  kviiic aux/.style={kviiicC, line width=0.6pt, dash pattern=on 2.5pt off 1.5pt, no markers, samples=361, domain=0:360},
+  kviiic bird/.style={view={30}{35}, axis lines=none, grid=none, xmin=-115, xmax=115, ymin=-85, ymax=85, zmin=0, zmax=100,
+    unit vector ratio=1 1 1, clip=false},
+  kviiic surf/.style={surf, shader=flat, draw=kviiicC, line width=0.35pt, samples=11, samples y=37, domain=0:100, y domain=0:360,
+    z buffer=sort, colormap={kviiic}{color=(bkGreen!28) color=(bkYellow!50) color=(bkOrange!50)}}}
+\newcommand\kviiiccontour[2][kviiic line]{\addplot[#1] ({sqrt((100-(#2))/0.01)*cos(x)},{sqrt((100-(#2))/0.02)*sin(x)});}
+\newcommand\kviiicclabel[2]{\pgfmathsetmacro\kviiic@a{sqrt((100-(#1))/0.01)*cos(#2)}\pgfmathsetmacro\kviiic@b{sqrt((100-(#1))/0.02)*sin(#2)}%
+  \edef\kviiic@t{\noexpand\node[fill=white, inner sep=0.8pt, font=\noexpand\sffamily\noexpand\footnotesize, text=bkGreen!35!black]
+    at (axis cs:\kviiic@a,\kviiic@b) {#1};}\kviiic@t}
+\newcommand\kviiicpt[2]{\node[circle, fill=bkRed, draw=white, line width=0.6pt, inner sep=0pt, minimum size=2.6mm] (kviiicP) at (axis cs:#1,#2) {};}
+\newcommand\kviiicbird[2]{%
+  \draw[bkGray!70, line width=0.5pt, fill=bkGray!8] (axis cs:-115,-85,0) -- (axis cs:115,-85,0) -- (axis cs:115,85,0) -- (axis cs:-115,85,0) -- cycle;
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:-115,-85,0) -- (axis cs:-55,-85,0) node[anchor=north west, font=\sffamily\footnotesize, inner sep=1.5pt] {東（$x$）};
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:-115,-85,0) -- (axis cs:-115,-35,0) node[anchor=south east, font=\sffamily\footnotesize, inner sep=1.5pt] {北（$y$）};
+  #1
+  \addplot3[kviiic surf] ({sqrt(1-x/100)*100*cos(y)},{sqrt(1-x/100)*70.71*sin(y)},{x});
+  #2}
+% ---- この章の部品 ----
+\colorlet{kviiicE}{bkRed!80!black}% 東の坂
+\colorlet{kviiicN}{bkGreen!55!black}% 北の坂
+\makeatother
+
+\bkchapter{8}{2}{偏微分：\\ほかを止めて1つだけ動かす}{\bklevel{4}}{偏微分：ほかを止めて1つだけ動かす}
+\bkmichishirube{3-5,5-3,5-4,5-6,5-15,8-1}{8-3,8-4,8-6,8-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 等高線の地図や数の表から、東へ進むときの坂と北へ進むときの坂を、別々に読みとれる。
+\item \bklevel{4}\enspace ほかの文字を止めて1つの文字で微分する「偏微分」を計算し、点での値の意味を言える。
+\item \bklevel{4}\enspace 2回の偏微分を計算して順番によらないことを確かめ、3つの変数の量や物理の式に使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.53\linewidth}
+\raggedright
+8-1 の主役の山 $h(x,\ y)=100-0.01x^2-0.02y^2$ の、点 P$(30,\ 20)$ に立っています。$x$ は東へ、$y$ は北へはかった長さ（m）で、高さ $h$ も m です。P の高さは \qty{83}{m} です。\par\vspace{4pt}
+P から\textbf{東へ \qty{1}{m}} 進むと、高さは何 m 変わるでしょう。\textbf{北へ \qty{1}{m}} 進むときはどうでしょう。どちらの向きのほうが、坂は急でしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.44\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[kviiic map, width=58mm, xmin=0, xmax=70, ymin=0, ymax=50, xtick distance=20, ytick distance=20]
+  \pgfplotsinvokeforeach{60,70,80,90}{\kviiiccontour{#1}}
+  \kviiiccontour[kviiic bold]{50}
+  \pgfplotsinvokeforeach{60,70,80,90}{\kviiicclabel{#1}{82}}
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=0.8pt, anchor=south west] at (axis cs:0.8,0.8) {▲100};
+  \draw[kviiicE, line width=1.3pt, -{Stealth[length=2mm]}] (axis cs:30,20) -- (axis cs:46,20);
+  \draw[kviiicN, line width=1.3pt, -{Stealth[length=2mm]}] (axis cs:30,20) -- (axis cs:30,36);
+  \kviiicpt{30}{20}
+  \node[font=\sffamily\footnotesize, text=kviiicE, fill=white, inner sep=0.8pt, anchor=west] at (axis cs:47,20) {東};
+  \node[font=\sffamily\footnotesize, text=kviiicN, fill=white, inner sep=0.8pt, anchor=south] at (axis cs:30,37) {北};
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=0.8pt, anchor=north east] at (axis cs:28.5,18.5) {P};
+\end{axis}
+\end{tikzpicture}\par\vspace{2pt}
+{\footnotesize 主役の山の、頂上（左下のかど）から北東の部分の等高線（\qty{10}{m} ごと。太い線は \qty{50}{m}）}
+\end{minipage}
+\end{hatena}
+
+\noindent 3-5 では、グラフの傾きが「変化の速さ」だと学びました。そして、地図の等高線を見て、「山では、進む向きによって坂の急さがちがう」ことにも気づきました。3-5 で約束した「東へ進むときと北へ進むときの傾き」を、この章で求めます。
+
+道が1本なら、坂の急さは1つの数で言えました（第5巻の微分）。でも、山の斜面には、東にも、北にも、ななめにも進めます。向きがたくさんあって、どこから手をつければよいのでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGreen!12] (0,0) -- (44,0) -- (44,16) -- cycle;
+  \draw[bkInk, line width=1pt] (0,0) -- (44,16);
+  \draw[bkInk!60, line width=0.6pt] (0,0) -- (48,0);
+  \draw[bkRed!80!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (14,5.1) -- (30,10.9);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (24,-2) {道が1本：坂の急さは1つの数\\（傾き＝上がった高さ÷進んだ長さ）};
+  \begin{scope}[shift={(96,8)}]
+    \foreach \kviiicr in {5,9,13,17} {\draw[kviiicC, line width=0.8pt] (0,0) ellipse ({1.4*\kviiicr} and {\kviiicr});}
+    \fill[bkInk] (0,0) circle (0.9);
+    \fill[bkRed] (13,7) circle (1.2);
+    \draw[kviiicE, line width=1.3pt, -{Stealth[length=2.2mm]}] (13,7) -- (23,7) node[anchor=west, font=\sffamily\footnotesize, fill=white, inner sep=1pt] {東};
+    \draw[kviiicN, line width=1.3pt, -{Stealth[length=2.2mm]}] (13,7) -- (13,17) node[anchor=south, font=\sffamily\footnotesize, fill=white, inner sep=1pt] {北};
+    \draw[bkPurple!80!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (13,7) -- (20,14) node[anchor=south west, font=\sffamily\footnotesize, fill=white, inner sep=1pt] {北東};
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-19) {山の斜面：向きで坂の急さがちがう};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{道が1本なら坂は1つ（左）。山の斜面では、東・北・北東…と、向きによって坂の急さがちがう（右。黒い点が頂上、線は等高線）。}
+\end{bkfigure}
+
+この章のアイデアは、とても簡単です。\textbf{ほかを止めて、1つだけ動かす}。北には動かずに、東へだけ進む。東には動かずに、北へだけ進む。そうすれば、どちらも「道が1本」の場合と同じになり、第5巻の微分がそのまま使えます。理科の実験で「調べたい条件だけを変えて、ほかの条件はそろえる」のと同じ考え方です。
+
+★★★★の章ですが、「目でわかる」「手でわかる」の段は、地図と表のひき算だけで読めるように書きました。「式でわかる」の段は、1回でわからなくても大丈夫です。表の差で見積もれれば、先の章は読めます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[等高線から、東の坂と北の坂を読もう]
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+P のまわりを大きくした地図です。実線の等高線は \qty{10}{m} ごと、点線は \qty{5}{m} ごとです。赤と緑の線の目もりは \qty{1}{m} ごとです。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.0\zw, itemsep=1pt, topsep=3pt]
+\item P を通る東西の線（赤）が、\qty{85}{m} と \qty{80}{m} の等高線と交わる点の $x$ を読もう。
+\item 2つの点の間の長さで、高さの差 \qty{5}{m} をわろう（東へ進むと下がるので、マイナスをつける）。これが東の坂。
+\item P を通る南北の線（緑）でも、同じようにして北の坂を求めよう。
+\item どちらの坂が急かな？
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[kviiic map, width=54mm, xmin=20, xmax=40, ymin=10, ymax=30, xtick distance=5, ytick distance=5]
+  \kviiiccontour[kviiic line, samples=361]{80}\kviiiccontour[kviiic line, samples=361]{90}
+  \kviiiccontour[kviiic aux]{85}\kviiiccontour[kviiic aux]{75}
+  \addplot[kviiicE, line width=1.1pt, no markers] coordinates {(20,20) (40,20)};
+  \addplot[kviiicN, line width=1.1pt, no markers, dash pattern=on 4pt off 1.5pt] coordinates {(30,10) (30,30)};
+  \pgfplotsinvokeforeach{21,...,39}{\draw[kviiicE, line width=0.5pt] (axis cs:#1,19.6) -- (axis cs:#1,20.4);}
+  \pgfplotsinvokeforeach{11,...,29}{\draw[kviiicN, line width=0.5pt] (axis cs:29.6,#1) -- (axis cs:30.4,#1);}
+  \kviiicclabel{90}{46}\kviiicclabel{85}{56}\kviiicclabel{80}{56}\kviiicclabel{75}{40.5}
+  \kviiicpt{30}{20}
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=0.8pt, anchor=south west] at (axis cs:30.6,20.6) {P};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent ①の赤い線（$y=20$）は、\qty{85}{m} の等高線と $x\approx26.5$ で、\qty{80}{m} の等高線と $x\approx34.6$ で交わります。間の長さは約 \qty{8.1}{m} です。\qty{8.1}{m} 東へ進むあいだに \qty{5}{m} 下がるので、1 m あたりでは
+\[ -\frac{5}{8.1}\approx-0.62 \]
+です。③の緑の線（$x=30$）は、$y\approx17.3$ と $y\approx23.5$ で交わり、間は約 \qty{6.2}{m} です。
+\[ -\frac{5}{6.2}\approx-0.81 \]
+北の坂のほうが急です（読みとりの小さなずれは気にしなくてよい）。\textbf{北のほうが、等高線の間がせまい}からです（3-5）。
+
+\begin{omoidasou}
+\bkrecall{3-5}{傾き＝（上がった高さ）÷（進んだ横の長さ）。下がるときはマイナス。等高線の間がせまい所ほど、坂は急。}
+\bkrecall{8-1}{主役の山 $h=100-0.01x^2-0.02y^2$〔m〕。$x$ は東、$y$ は北（m）。$y$ を1つの数に止めて切ると、切り口は放物線。表計算の表では、1行めに東の $x$、A列に北の $y$ を並べ、北を上にする。}
+\bkrecall{5-3}{微分係数 $f'(a)$：$a$ から少し進んだ点までの傾きで、進む長さを0にかぎりなく近づけた先の値。接線の傾き。}
+\bkrecall{5-4}{$(x^n)'=nx^{n-1}$。数（定数）を微分すると0。数をかけた式は、数を外に出して微分する。}
+\bkrecall{5-6}{積の微分 $(fg)'=f'g+fg'$。合成関数の微分：中身の微分をかける（歯車をつなぐとかけ算）。}
+\bkrecall{5-14}{$(e^{ax})'=ae^{ax}$（$a$ は数）。}
+\bkrecall{5-15}{$(\sin x)'=\cos x$、$(\cos x)'=-\sin x$（角はラジアン）。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{山を、2つの向きに切る}{\bklevel{3}}
+
+\bksubsection{1}{東西に切る・南北に切る}
+
+\leavevmode\label{bk:8-2:kiru}主役の山を、P を通る2枚の板で切ってみます。1枚は東西の向きの板（$y=20$ の板）、もう1枚は南北の向きの板（$x=30$ の板）です。図\ref{bk:8-2:fig-3d}の赤と緑の線が、板で切った切り口です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kviiic bird, view={80}{35}, width=104mm]
+  \draw[bkGray!70, line width=0.5pt, fill=bkGray!8] (axis cs:-115,-85,0) -- (axis cs:115,-85,0) -- (axis cs:115,85,0) -- (axis cs:-115,85,0) -- cycle;
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:60,-85,0) -- (axis cs:115,-85,0) node[anchor=north, font=\sffamily\footnotesize, inner sep=2pt] {東（$x$）};
+  \draw[-{Stealth[length=2.4mm]}, line width=1pt, bkInk] (axis cs:115,-85,0) -- (axis cs:115,-30,0) node[anchor=north west, font=\sffamily\footnotesize, inner sep=2pt] {北（$y$）};
+  \addplot3[kviiic surf] ({sqrt(1-x/100)*100*cos(y)},{sqrt(1-x/100)*70.71*sin(y)},{x});
+  \addplot3[kviiicE, line width=1.8pt, no markers, samples=50, samples y=0, domain=-28:56.5] ({x},{20},{92-0.01*x^2});
+  \addplot3[kviiicN, line width=1.8pt, dash pattern=on 5pt off 1.5pt, no markers, samples=50, samples y=0, domain=-39.3:39.3] ({30},{x},{91-0.02*x^2});
+  \node[circle, fill=bkRed, draw=white, line width=0.6pt, inner sep=0pt, minimum size=2.6mm] (kviiicP) at (axis cs:30,20,83) {};
+  \node[kviiic note, anchor=west] (n) at (axis cs:-20,90,120) {P（高さ \qty{83}{m}）};
+  \draw[kviiic leader] (n.west) -- (kviiicP);
+  \node[font=\sffamily\footnotesize, text=kviiicE, fill=white, inner sep=1pt, anchor=west, align=left] (e) at (axis cs:60,85,40) {東西に切った\\切り口（$y=20$）};
+  \draw[kviiicE, line width=0.6pt, shorten >=1mm] (e.west) -- (axis cs:50,20,67);
+  \node[font=\sffamily\footnotesize, text=kviiicN, fill=white, inner sep=1pt, anchor=east, align=right] (nn) at (axis cs:-20,-95,110) {南北に切った\\切り口（$x=30$）};
+  \draw[kviiicN, line width=0.6pt, shorten >=1mm] (nn.east) -- (axis cs:30,-25,78.5);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{主役の山を東の空から見た図に、P を通る2枚の板で切った切り口をかいた。赤の線は東西の板（$y=20$）の切り口、緑の点線は南北の板（$x=30$）の切り口（赤の線は、山の向こう側にかくれる所をかいていない）。}\label{bk:8-2:fig-3d}
+\end{bkfigure}
+
+東西の板の上では、$y$ はずっと20です。$y=20$ を山の式に入れると、$x$ だけの関数になります。
+\begin{bkhenkei}[0.46]
+h=100-0.01x^2-0.02y^2 & 主役の山の式 \\
+h=100-0.01x^2-0.02\times20^2 & 東西の板の上では $y=20$ に止まっている \\
+h=100-0.01x^2-8 & $0.02\times400=8$ \\
+h=92-0.01x^2 & 東西の切り口の式（放物線） \\
+\end{bkhenkei}
+南北の板の上では、$x$ がずっと30なので、同じようにして $y$ だけの関数になります。
+\begin{bkhenkei}[0.46]
+h=100-0.01\times30^2-0.02y^2 & 南北の板の上では $x=30$ に止まっている \\
+h=91-0.02y^2 & $0.01\times900=9$。南北の切り口の式 \\
+\end{bkhenkei}
+どちらの切り口も、変わる文字が1つだけの関数です。1つの文字の関数なら、第5巻の微分で、P での傾き（接線の傾き）が求められます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=52mm, xmin=0, xmax=52, ymin=60, ymax=97, xtick={10,20,30,40,50}, ytick={70,80,90}, xlabel={$x$（m）}, ylabel={$h$（m）}, title={\footnotesize 東西の切り口（$y=20$）}, title style={text=kviiicE}]
+  \addplot[kviiicE, line width=1.4pt, domain=0:46.9, samples=50] {92-0.01*x^2};
+  \addplot[bkInk, line width=0.8pt, dashed, domain=14:46] {83-0.6*(x-30)};
+  \addplot[only marks, mark=*, mark size=2pt, bkRed] coordinates {(30,83)};
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:31,84.5) {P};
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:51,89) {接線の傾き $-0.6$};
+\end{axis}
+\end{tikzpicture}\hspace{4mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=52mm, xmin=0, xmax=40, ymin=60, ymax=97, xtick={10,20,30,40}, ytick={70,80,90}, xlabel={$y$（m）}, ylabel={$h$（m）}, title={\footnotesize 南北の切り口（$x=30$）}, title style={text=kviiicN}]
+  \addplot[kviiicN, line width=1.4pt, dash pattern=on 5pt off 1.5pt, domain=0:32.4, samples=50] {91-0.02*x^2};
+  \addplot[bkInk, line width=0.8pt, dashed, domain=8:31] {83-0.8*(x-20)};
+  \addplot[only marks, mark=*, mark size=2pt, bkRed] coordinates {(20,83)};
+  \node[font=\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:21,84.5) {P};
+  \node[font=\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:39.5,89) {接線の傾き $-0.8$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2つの切り口のグラフ。黒い点線は P での接線。東西の切り口の傾きは $-0.6$、南北の切り口の傾きは $-0.8$（⑥で計算する）。}\label{bk:8-2:fig-kiriguchi}
+\end{bkfigure}
+
+図\ref{bk:8-2:fig-kiriguchi}で、P での接線を見ると、南北の切り口のほうが、接線が急に下がっています。山の形は1つでも、\textbf{切る向きによって、ちがう放物線が出てくる}のです。だから坂の急さも、向きによってちがいます。
+
+\bksubsection{2}{等高線の間かくで、2つの坂を読む}
+
+\leavevmode\label{bk:8-2:toukousen}やってみようでは、地図の上で、P を通る東西の線と南北の線にそって、等高線の間かくを読みました。東西の線にそって読むことは、東西の板で山を切ることと同じです。線の上では $y=20$ のまま、$x$ だけが変わるからです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=27mm] Q[c,m,wd=23mm] Q[c,m,wd=23mm] Q[c,m,wd=36mm]}, rowsep=1.5pt}
+進む線 & \qty{85}{m} の等高線 & \qty{80}{m} の等高線 & 坂（1 m あたり） \\
+東西（$y=20$） & $x=26.5$ & $x=34.6$ & $-5\div8.1\approx-0.62$ \\
+南北（$x=30$） & $y=17.3$ & $y=23.5$ & $-5\div6.2\approx-0.81$ \\
+\end{bktable}
+\bktabcaption{やってみようの読みとり。2本の等高線の間の、平均の坂（5-1 の平均の速さと同じ考え）。}
+\end{bkcenter}
+この表の坂は、\qty{85}{m} から \qty{80}{m} までの「平均の坂」です（5-1 の平均の速さ）。P の「その場所の坂」を知るには、進む長さをもっと短くしていきます。それが次の「手でわかる」の段です。
+
+\begin{column}{山の地図と「東の坂」「北の坂」}
+国土地理院の地形図では、等高線はふつう \qty{10}{m} ごと（2万5千分の1の地図）にかかれています。登山の人は、等高線のつまり方を見て、どこが急な登りかを読みとります。でも、地図の上で読めるのは、いつも「ある線にそった坂」です。東西の線にそって読めば東の坂、南北の線にそって読めば北の坂。この章で学ぶ偏微分は、この「線にそった坂」に名前をつけ、式で計算できるようにしたものです。8-4 では、2つの坂を組み合わせて、どの向きがいちばん急かを求めます。
+\end{column}
+
+\bkstage{te}{手でわかる}{表の差で、坂を見積もる}{\bklevel{4}}
+
+\bksubsection{3}{表の行にそって差、列にそって差}
+
+\leavevmode\label{bk:8-2:hyou}8-1 では、山の高さを表計算の表にしました。列（よこ）が東の $x$、行（たて）が北の $y$ です。地図と同じように、北を上にするため、上の行ほど $y$ が大きくなるように並べます。P のまわりを \qty{1}{m} ごとに計算した表が、次の表です。
+\begin{bkcenter}
+\kviiicfx{D4}{=100-0.01*D\$1\^{}2-0.02*\$A4\^{}2}\par\vspace{1mm}
+\bksheet{6}{15}{%
+1 & \SetCell{c} $y$＼$x$ & \SetCell{bg=kviiicX} 28 & \SetCell{bg=kviiicX} 29 & \SetCell{bg=kviiicX} 30 & \SetCell{bg=kviiicX} 31 & \SetCell{bg=kviiicX} 32 \\
+2 & \SetCell{bg=kviiicY} 22 & 82.48 & 81.91 & 81.32 & 80.71 & 80.08 \\
+3 & \SetCell{bg=kviiicY} 21 & 83.34 & 82.77 & \SetCell{bg=kviiicY} 82.18 & 81.57 & 80.94 \\
+4 & \SetCell{bg=kviiicY} 20 & 84.16 & 83.59 & \SetCell{bg=kviiicP} 83.00 & \SetCell{bg=kviiicX} 82.39 & 81.76 \\
+5 & \SetCell{bg=kviiicY} 19 & 84.94 & 84.37 & 83.78 & 83.17 & 82.54 \\
+6 & \SetCell{bg=kviiicY} 18 & 85.68 & 85.11 & 84.52 & 83.91 & 83.28 \\}
+\bktabcaption{主役の山の高さ（m）の表。1行めに $x$、A列に $y$ を入れ、B2 に \texttt{=100-0.01*B\$1\^{}2-0.02*\$A2\^{}2} と入れて表全体にコピーした（\texttt{\$} は、コピーしても1行め・A列を指したままにする印）。数式バーは P$(30,\ 20)$ のマス D4（黄色）の式。}
+\end{bkcenter}
+北を上にしたので、行の番号が大きいほど南になります。この表で、P（D4、黄色）から東へ \qty{1}{m} 進むことは、\textbf{同じ行の右どなり}（E4、オレンジ）へ動くことです。北へ \qty{1}{m} 進むことは、\textbf{同じ列の上どなり}（D3、緑）へ動くことです。表計算なら、東の差は \texttt{=E4-D4}、北の差は \texttt{=D3-D4} と入れます。
+\begin{bkhenkei}[0.46]
+82.39-83.00=-0.61 & 東へ \qty{1}{m}：同じ行の右どなり－P \\
+82.18-83.00=-0.82 & 北へ \qty{1}{m}：同じ列の上どなり－P \\
+\end{bkhenkei}
+東へ \qty{1}{m} 進むと約 \qty{0.61}{m}、北へ \qty{1}{m} 進むと約 \qty{0.82}{m} 下がります。等高線から読んだ $-0.62$、$-0.81$ とほぼ同じです。\bkhatenaref の答えは、まず「ちょうど \qty{1}{m} 進むと、東は \qty{0.61}{m}、北は \qty{0.82}{m} 下がる。北のほうが急」です。
+
+\noindent 大事なのは、\textbf{行にそって動くときは $y$ が止まっていて、列にそって動くときは $x$ が止まっている}ことです。表の上で「行にそって差をとる」「列にそって差をとる」ことが、「ほかを止めて1つだけ動かす」ことなのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiicr in {0,1,2} {\foreach \kviiicc in {0,1,2} {\draw[bkLine, line width=0.6pt, fill=white] (\kviiicc*22,\kviiicr*11) rectangle ++(22,11);}}
+  \fill[kviiicP] (22.3,11.3) rectangle (43.7,21.7);
+  \fill[kviiicX] (44.3,11.3) rectangle (65.7,21.7);
+  \fill[kviiicY] (22.3,22.3) rectangle (43.7,32.7);
+  \node[font=\footnotesize] at (33,16.5) {83.00};
+  \node[font=\footnotesize] at (55,16.5) {82.39};
+  \node[font=\footnotesize] at (33,27.5) {82.18};
+  \node[font=\footnotesize, text=bkGray] at (11,16.5) {83.59};
+  \node[font=\footnotesize, text=bkGray] at (33,5.5) {83.78};
+  \draw[kviiicE, line width=1.3pt, -{Stealth[length=2.2mm]}] (37.5,13.5) -- (50.5,13.5);
+  \draw[kviiicN, line width=1.3pt, -{Stealth[length=2.2mm]}] (29.5,20) -- (29.5,24.5);
+  \node[font=\sffamily\footnotesize, text=kviiicE, anchor=west, align=left] at (69,16.5) {東へ：行にそって右へ\\（$y=20$ のまま）};
+  \node[font=\sffamily\footnotesize, text=kviiicN, anchor=west, align=left] at (69,29) {北へ：列にそって上へ\\（$x=30$ のまま）};
+  \node[font=\sffamily\footnotesize, anchor=south] at (33,34) {$x=30$ の列};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-2,16.5) {$y=20$ の行};
+\end{tikzpicture}
+\bkfigcaption{表の上の「東へ」と「北へ」。東へ動くと $x$ だけが変わり、北へ動くと $y$ だけが変わる。}\label{bk:8-2:fig-gyouretsu}
+\end{bkfigure}
+
+\bksubsection{4}{進む長さを短くすると、ある値に近づく}
+
+\leavevmode\label{bk:8-2:chikazuku}\qty{1}{m} 進んだ差 $-0.61$ は、P から \qty{1}{m} 先までの平均の坂です。5-2 で、時間をどんどん短くして瞬間の速さを求めたように、進む長さ $\Delta x$ を短くしていきます。東の坂は「高さの差÷$\Delta x$」、北の坂は「高さの差÷$\Delta y$」で、1 m あたりにそろえます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] Q[c,m,wd=40mm] Q[c,m,wd=40mm]}, rowsep=1.5pt}
+進む長さ（m） & 東の坂 $\dfrac{h(30+\Delta x,\ 20)-83}{\Delta x}$ & 北の坂 $\dfrac{h(30,\ 20+\Delta y)-83}{\Delta y}$ \\
+1 & $-0.61$ & $-0.82$ \\
+0.1 & $-0.601$ & $-0.802$ \\
+0.01 & $-0.6001$ & $-0.8002$ \\
+0.001 & $-0.60001$ & $-0.80002$ \\
+\end{bktable}
+\bktabcaption{進む長さを $\frac{1}{10}$ ずつにしたときの坂（表計算で、1行めの $x$ やA列の $y$ の間かくを細かくして計算した）。}
+\end{bkcenter}
+東の坂は $-0.6$ に、北の坂は $-0.8$ に、かぎりなく近づいていきます。これが、\textbf{P という1つの点での}東の坂と北の坂です。\bkhatenaref の答えは、「P での東の坂は $-0.6$、北の坂は $-0.8$。東へ \qty{1}{m} で約 \qty{0.6}{m}、北へ \qty{1}{m} で約 \qty{0.8}{m} 下がる。北のほうが急」となります。
+
+\kviiichead{両どなりの差で見積もると}
+表の \qty{1}{m} ごとの数だけでも、もっとよい見積もりができます。右どなりと左どなりの差を、間の長さ \qty{2}{m} でわるのです。P をまん中にはさむので、片側だけの差よりも、P での坂に近くなります。
+\begin{bkhenkei}[0.46]
+\frac{82.39-83.59}{2}=-0.60 & 東：右どなり－左どなり、を2でわる \\
+\frac{82.18-83.78}{2}=-0.80 & 北：上どなり－下どなり、を2でわる \\
+\end{bkhenkei}
+主役の山では、両どなりの差は、ちょうど $-0.6$ と $-0.8$ になります。山の式が2乗までの式（2次式）なので、右どなりの高さにも左どなりの高さにも、同じ $-0.01\Delta x^2$ の分が入っていて、ひき算で消えるからです（⑥の計算で確かめられる）。
+
+\bksubsection{5}{坂の地図：坂そのものが、場所で変わる}
+
+\leavevmode\label{bk:8-2:sakachizu}坂は P だけでなく、山のどこでも求められます。両どなりの差のやり方で、山のあちこちの東の坂と北の坂を計算して、表にしました（$x$、$y$ は \qty{20}{m}・\qty{15}{m} ごと）。
+\begin{bkcenter}
+\begin{minipage}[t]{0.49\linewidth}\centering
+{\sffamily\bfseries\small\color{kviiicE}東の坂}\par\vspace{1mm}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] *{5}{Q[c,m,wd=8.8mm]}}, colsep=1.6pt, rowsep=1.2pt, cells={font=\small}}
+$y$＼$x$ & $-40$ & $-20$ & 0 & 20 & 40 \\
+30 & 0.8 & 0.4 & 0 & $-0.4$ & $-0.8$ \\
+15 & 0.8 & 0.4 & 0 & $-0.4$ & $-0.8$ \\
+0 & 0.8 & 0.4 & 0 & $-0.4$ & $-0.8$ \\
+$-15$ & 0.8 & 0.4 & 0 & $-0.4$ & $-0.8$ \\
+$-30$ & 0.8 & 0.4 & 0 & $-0.4$ & $-0.8$ \\
+\end{bktable}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}\centering
+{\sffamily\bfseries\small\color{kviiicN}北の坂}\par\vspace{1mm}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] *{5}{Q[c,m,wd=8.8mm]}}, colsep=1.6pt, rowsep=1.2pt, cells={font=\small}}
+$y$＼$x$ & $-40$ & $-20$ & 0 & 20 & 40 \\
+30 & $-1.2$ & $-1.2$ & $-1.2$ & $-1.2$ & $-1.2$ \\
+15 & $-0.6$ & $-0.6$ & $-0.6$ & $-0.6$ & $-0.6$ \\
+0 & 0 & 0 & 0 & 0 & 0 \\
+$-15$ & 0.6 & 0.6 & 0.6 & 0.6 & 0.6 \\
+$-30$ & 1.2 & 1.2 & 1.2 & 1.2 & 1.2 \\
+\end{bktable}
+\end{minipage}
+\bktabcaption{主役の山の、場所ごとの東の坂（左）と北の坂（右）。両どなりの差を2でわって求めた。}\label{bk:8-2:tab-sakachizu}
+\end{bkcenter}
+表から、次のことがわかります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{坂は、場所によってちがう。}山の西側（$x<0$）では、東の坂がプラスです。西側から東へ進むと、頂上に近づくので、上り坂になるからです。東側（$x>0$）ではマイナス（下り坂）です。
+\item \textbf{東の坂は $x$ だけで決まり、$x$ に $-0.02$ をかけた値になっている。}$x=20$ なら $-0.4$、$x=40$ なら $-0.8$ です。北へ動いても（同じ列なら）変わりません。
+\item \textbf{北の坂は $y$ だけで決まり、$y$ に $-0.04$ をかけた値になっている。}
+\item \textbf{頂上 $(0,\ 0)$ では、どちらの坂も0。}頂上は平らです（5-7 の「いちばん高い点では、傾きが0」と同じ）。
+\end{enumerate}
+1つの点の坂は1つの数ですが、山全体で見ると、\textbf{坂そのものが、場所 $(x,\ y)$ で決まる関数}になっています。②と③の「きまり」は、次の段で、式から作れることを確かめます。
+
+\kviiichead{Python で、表の差をとる}
+表の差は、Python でも計算できます。表全体を一度に計算し、行にそった差と列にそった差を、まとめてとります。
+\Needspace{16\baselineskip}
+\begin{bkcode}[Python]
+import numpy as np
+np.set\_printoptions(precision=2, suppress=True)  \# 小数第2位まで表示
+x = np.arange(28, 33)            \# 東へ 28〜32 m
+y = np.arange(22, 17, -1)        \# 北から南へ 22〜18 m（地図と同じ向き）
+X, Y = np.meshgrid(x, y)         \# マスごとの x と y の表
+H = 100 - 0.01*X**2 - 0.02*Y**2  \# 主役の山の高さの表
+east = H[:, 1:] - H[:, :-1]      \# 右どなり－自分（行にそって差）
+north = H[:-1, :] - H[1:, :]     \# 上どなり－自分（列にそって差）
+print(H[2, 2])                   \# 3行め3列め：(30, 20) の高さ
+print(east[2])                   \# y=20 の行の、東へ1 m の差
+print(north[:, 2])               \# x=30 の列の、北へ1 m の差
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+83.0
+[-0.57 -0.59 -0.61 -0.63]
+[-0.86 -0.82 -0.78 -0.74]
+\end{bkcodeout}
+\texttt{np.meshgrid} は、表のマスごとに、そのマスの $x$ と $y$ を並べた2つの表を作る関数です（8-1）。\texttt{H[:, 1:]} は「全部の行の、2列めから右」、\texttt{H[:, :-1]} は「全部の行の、いちばん右の列を除いたもの」です。2つをひくと、どのマスでも「右どなり－自分」になります。Python では、行と列の番号を0から数えるので、\texttt{H[2, 2]} が表の3行め3列め、つまり P です。
+
+\noindent 2行めの4つの数は、$y=20$ の行で、$x$ が28から29、29から30、30から31、31から32へ進んだときの差です。P から東へ進む差は、3つめの $-0.61$ です。3行めの4つの数は、$x=30$ の列で、上から順に $y$ が21から22、20から21、19から20、18から19へ北に進んだときの差です。P から北へ進む差は、2つめの $-0.82$ です。どちらも、表で求めた値と同じです。
+
+\bkkokomade[表の「行にそった差」「列にそった差」で、東の坂と北の坂を見積もれれば、8-3〜8-4 の「目でわかる」「手でわかる」の段は読めます。この先は、坂を式でぴったり求めます。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{ほかを止めて、1つだけ微分する}{\bklevel{4}}
+
+\bksubsection{6}{偏微分：止めた文字は、数と同じ}
+
+\leavevmode\label{bk:8-2:henbibun}①で、東西の切り口の式 $h=92-0.01x^2$ を作りました。これを $x$ で微分すると（5-4）、
+\[ \frac{\dd h}{\dd x}=-0.02x \]
+です。P（$x=30$）では $-0.02\times30=-0.6$ になり、表で近づいた値と同じです。
+
+\noindent でも、$y=20$ のときだけでなく、どの $y$ のときにも使える式がほしいのです。そこで、$y$ を20と決めずに、\textbf{文字のまま止めておきます}。$y$ は「止まっている、何かの数」です。
+
+\kviiichead{東の坂を、式で作る}
+進む長さ $\Delta x$ を使って、P$(x,\ y)$ から東へ $\Delta x$ 進んだときの平均の坂を、1行ずつ計算します（5-3 と同じやり方）。$y$ は両方の点で同じ値です。
+\begin{bkhenkei}[0.62]
+h(x+\Delta x,\ y)=100-0.01(x+\Delta x)^2-0.02y^2 & 東へ $\Delta x$ 進んだ点（$y$ はそのまま） \\
+h(x,\ y)=100-0.01x^2-0.02y^2 & もとの点 \\
+\text{差}=-0.01(x+\Delta x)^2+0.01x^2 & 上の式－下の式。100 と $-0.02y^2$ は消える \\
+\text{差}=-0.01(2x\Delta x+\Delta x^2) & かっこの2乗を開いた \\
+\frac{\text{差}}{\Delta x}=-0.02x-0.01\Delta x & $\Delta x$ でわった（1 m あたりの平均の坂） \\
+\end{bkhenkei}
+$\Delta x$ を0にかぎりなく近づけると、$-0.01\Delta x$ は0に近づくので、東の坂は $-0.02x$ です。表の②の「きまり」と同じです。$\Delta x=1$ のときは $-0.02\times30-0.01=-0.61$ で、③の表の値とも合います。
+
+\noindent 3行めで、$-0.02y^2$ が消えたことに注目しましょう。$y$ が止まっているので、$-0.02y^2$ は、進む前も後も同じ数です。\textbf{止まっている文字だけの部分は、ひき算で消える}のです。つまり、ふつうの数と同じで、微分すると0になります。
+
+\kviiichead{名前と記号}
+このように、\textbf{ほかの文字を止めて、1つの文字だけを動かして微分する}ことを、\textbf{偏微分}（へんびぶん）といいます。\bkidx{へんびぶん}{偏微分}「偏」は「かたよる」という意味で、1つの向きにだけかたよって動かす微分、ということです。
+
+\noindent $h$ を $x$ で偏微分したものを、次のように書きます。
+\kviiicframe{$\dfrac{\partial h}{\partial x}=\lim\limits_{\Delta x\to0}\dfrac{h(x+\Delta x,\ y)-h(x,\ y)}{\Delta x}$\qquad（$y$ は止めておく）}
+$\partial$ は、$\dd$ を丸めた形の文字で、「ラウンドディー」（丸い d）と読みます。「デル」「パーシャル」と読む人もいて、どれでもかまいません。$\dfrac{\partial h}{\partial x}$ は「ラウンドディー エイチ、ラウンドディー エックス」と読みます。$y$ で偏微分したものは $\dfrac{\partial h}{\partial y}$ で、こんどは $x$ を止めておきます。
+
+\noindent 主役の山では、どちらも同じやり方で計算できます。
+\begin{bkhenkei}[0.46]
+\frac{\partial h}{\partial x}=-0.02x & $y$ を止めて、$x$ で微分（$-0.02y^2$ は数と同じで、微分すると0） \\
+\frac{\partial h}{\partial y}=-0.04y & $x$ を止めて、$y$ で微分（$-0.01x^2$ は数と同じで、微分すると0） \\
+\end{bkhenkei}
+$-0.02y^2$ を $y$ で微分すると、$-0.02\times2y=-0.04y$ です（5-4）。⑤の坂の地図の③の「きまり」と同じになりました。
+
+\kviiichead{点での値}
+点 $(a,\ b)$ での偏微分の値は、$x=a$、$y=b$ を入れて求めます。この本では、$\dfrac{\partial h}{\partial x}(30,\ 20)$ のように、うしろに点を書きます。
+\[ \frac{\partial h}{\partial x}(30,\ 20)=-0.02\times30=-0.6,\qquad \frac{\partial h}{\partial y}(30,\ 20)=-0.04\times20=-0.8 \]
+\bkhatenaref の答えを、式でも確かめられました。\textbf{東の坂は $-0.6$、北の坂は $-0.8$} です。「P から東へ少し進むと、進んだ長さの0.6倍だけ下がり、北へ少し進むと0.8倍だけ下がる」という意味です。$-0.6$ や $-0.8$ の単位は「m ÷ m」で、1 m 進むあたりに何 m 上がるか、です。
+
+\kviiichead{どうして $\dd$ ではなく $\partial$ なのか}
+第5巻の $\dfrac{\dd y}{\dd x}$ は、$y$ が $x$ だけで決まるときの書き方でした。$h$ は $x$ と $y$ の2つで決まります。もし $\dfrac{\dd h}{\dd x}$ と書くと、「$x$ が動くあいだ、$y$ はどうしているのか」がわかりません。$y$ も一緒に動いているかもしれないからです（その場合は 8-3 で学びます）。そこで、\textbf{「ほかは止めている」という約束がついた微分}を、別の文字 $\partial$ で書いて区別するのです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=24mm] Q[l,m,wd=48mm] Q[l,m,wd=42mm]}, rowsep=1.5pt}
+書き方 & 使うとき & 例 \\
+$\dfrac{\dd y}{\dd x}$ & $y$ が $x$ だけで決まる（変数が1つ） & $y=x^2$ なら $2x$ \\
+$\dfrac{\partial h}{\partial x}$ & $h$ が2つ以上の変数で決まり、$x$ だけを動かす & $h=x^2y$ なら $2xy$ \\
+\end{bktable}
+\bktabcaption{$\dd$ と $\partial$ の使い分け。}
+\end{bkcenter}
+
+\begin{column}{∂ の記号は、だれが使いはじめた？}
+丸い d の形の記号 ∂ は、18世紀のフランスで、コンドルセ（1770年の論文）やルジャンドル（1786年の論文）が使いはじめたと伝えられています。ルジャンドルは「まぎらわしさをさけるために」偏微分を $\dfrac{\partial u}{\partial x}$ と書くことにしましたが、のちにこの記号を使うのをやめてしまいました。この記号を広めたのは、ドイツの数学者ヤコビです。1841年の論文で、偏微分を ∂ で書くことを決めて使いました。その論文は、8-3 で学ぶ「ヤコビアン」（たくさんの偏微分を並べた表の行列式）の研究でした（7-4 のコラム）。いま世界中の工学の本で使われている ∂ は、ヤコビ行列と同じ論文から広まったのです。
+\end{column}
+
+\begin{seikaku}
+「偏微分」ということばは、「偏微分する」（する操作）にも、「偏微分したもの」（できた関数 $\dfrac{\partial h}{\partial x}$）にも使います。できた関数のほうを、とくに\textbf{偏導関数}（へんどうかんすう）\bkidx{へんどうかんすう}{偏導関数}ともよびます（5-4 の導関数と同じ）。また、点 $(a,\ b)$ での値を偏微分係数とよぶこともあります。極限 $\lim$ が1つの値に決まらない（とがった所などの）点では、偏微分はできません。この章の関数は、どこでも偏微分できます。
+\end{seikaku}
+
+\bksubsection{7}{偏微分の計算}
+
+\leavevmode\label{bk:8-2:keisan}偏微分の計算に、新しい公式はいりません。\textbf{止めた文字を、ふつうの数（たとえば3）だと思って、第5巻の微分をするだけ}です。いくつかの形で、1行ずつ見ていきます。
+
+\kviiichead{止めた文字がかかっている項}
+$f(x,\ y)=x^2y$ を $x$ で偏微分します。$y$ を止めるので、$x^2y$ は「$x^2$ に数 $y$ をかけたもの」です。$3x^2$ を微分すると $3\times2x$ になるように、数 $y$ は外に出したままです。
+\begin{bkhenkei}[0.46]
+\frac{\partial}{\partial x}(x^2y)=y\times\frac{\dd}{\dd x}(x^2) & $y$ は止めた数なので、外に出す（5-4） \\
+=y\times2x=2xy & $x^2$ を微分した \\
+\end{bkhenkei}
+こんどは $y$ で偏微分します。$x$ を止めるので、$x^2$ が数です。$x^2y$ は「数 $x^2$ に $y$ をかけたもの」です。
+\begin{bkhenkei}[0.46]
+\frac{\partial}{\partial y}(x^2y)=x^2\times\frac{\dd}{\dd y}(y) & $x^2$ は止めた数なので、外に出す \\
+=x^2\times1=x^2 & $y$ を $y$ で微分すると1 \\
+\end{bkhenkei}
+同じ式でも、どの文字で偏微分するかで、答えがまったくちがいます。たとえば、$x$ と $y$ がかけ算になった $xy$ なら、$\dfrac{\partial}{\partial x}(xy)=y$、$\dfrac{\partial}{\partial y}(xy)=x$ です。
+
+\kviiichead{項がいくつもある式}
+$f=3x^2y+2y^3$ を、1つの項ずつ偏微分して、たします（5-4：たし算の微分は、項ごとに微分してたす）。
+\begin{bkhenkei}[0.54]
+\frac{\partial f}{\partial x}=3y\times2x+0=6xy & $3x^2y$ は $3y$ が数。$2y^3$ は全体が数なので0 \\
+\frac{\partial f}{\partial y}=3x^2\times1+2\times3y^2=3x^2+6y^2 & $3x^2y$ は $3x^2$ が数。$2y^3$ は $6y^2$ \\
+\end{bkhenkei}
+
+\kviiichead{$e$ と $\sin$ が入った式}
+$f=e^{-x}\sin y$ では、$x$ で偏微分するとき $\sin y$ が数、$y$ で偏微分するとき $e^{-x}$ が数です。
+\begin{bkhenkei}[0.46]
+\frac{\partial f}{\partial x}=(e^{-x})'\times\sin y=-e^{-x}\sin y & $(e^{ax})'=ae^{ax}$ で $a=-1$（5-14） \\
+\frac{\partial f}{\partial y}=e^{-x}\times(\sin y)'=e^{-x}\cos y & $(\sin y)'=\cos y$（5-15） \\
+\end{bkhenkei}
+2つの関数の「積」でも、片方が止めた文字だけの式なら、積の微分（5-6）を使う必要はありません。止めた文字だけの式は、ただの数だからです。
+
+\kviiichead{合成関数：中身の偏微分をかける}
+$f=\sin(2x+3y)$ では、$\sin$ の中身 $u=2x+3y$ が $x$ と $y$ の両方で変わります。5-6 の合成関数の微分（歯車）を使います。$x$ で偏微分するとき、$y$ は止まっているので、中身 $u=2x+3y$ を $x$ で微分すると2です（$3y$ は数）。
+\begin{bkhenkei}[0.56]
+\frac{\partial f}{\partial x}=\cos(2x+3y)\times\frac{\partial u}{\partial x} & 外側の $\sin$ を微分して、中身の偏微分をかける \\
+=\cos(2x+3y)\times2=2\cos(2x+3y) & $u=2x+3y$ を $x$ で偏微分すると2 \\
+\frac{\partial f}{\partial y}=\cos(2x+3y)\times3=3\cos(2x+3y) & $u$ を $y$ で偏微分すると3 \\
+\end{bkhenkei}
+外側の微分 $\cos(2x+3y)$ は、どちらでも同じです。ちがうのは、中身の偏微分（2か3か）だけです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, draw=bkGray, fill=bkGray!10, minimum width=34mm, align=center, font=\small] (in) at (0,0) {$f(x,\ y)$\\の式};
+  \node[bk node, draw=kviiicE, fill=bkRed!8, minimum width=44mm, align=center, font=\small] (ex) at (58,9) {$y$ を数とみて\\$x$ で微分};
+  \node[bk node, draw=kviiicN, fill=bkGreen!10, minimum width=44mm, align=center, font=\small] (ny) at (58,-9) {$x$ を数とみて\\$y$ で微分};
+  \node[anchor=west, font=\small] (a1) at (85,9) {$\dfrac{\partial f}{\partial x}$};
+  \node[anchor=west, font=\small] (a2) at (85,-9) {$\dfrac{\partial f}{\partial y}$};
+  \draw[bk link] (in) -- (ex);
+  \draw[bk link] (in) -- (ny);
+\end{tikzpicture}
+\bkfigcaption{偏微分の計算は、2つに分かれる道。どちらの道でも、止めた文字はふつうの数と同じにあつかう。}
+\end{bkfigure}
+
+\bksubsection{8}{2回の偏微分と、その順番}
+
+\leavevmode\label{bk:8-2:nikai}第5巻（5-5）で、2回微分すると、グラフの曲がり方（上に出っぱっているか、下にへこんでいるか）がわかりました。偏微分も2回できます。主役の山で、まず東の坂 $\dfrac{\partial h}{\partial x}=-0.02x$ を、もう一度 $x$ で偏微分します。
+\[ \frac{\partial}{\partial x}\Bigl(\frac{\partial h}{\partial x}\Bigr)=\frac{\partial}{\partial x}(-0.02x)=-0.02 \]
+これを短く $\dfrac{\partial^2h}{\partial x^2}$ と書きます（5-5 の $\dfrac{\dd^2y}{\dd x^2}$ と同じ書き方）。$-0.02$ は、「東へ \qty{1}{m} 進むごとに、東の坂が0.02ずつ下がる」という意味です。③の表で、$y=20$ の行の東の差は $-0.57$、$-0.59$、$-0.61$、$-0.63$ と、0.02ずつ下がっていました。東西の切り口が上に出っぱった放物線（∩の形）であることを表しています。同じように、$\dfrac{\partial^2h}{\partial y^2}=-0.04$ です。
+
+\kviiichead{ちがう文字で、続けて偏微分する}
+東の坂を、こんどは $y$ で偏微分することもできます。「北へ進むと、東の坂はどう変わるか」です。
+\[ \frac{\partial}{\partial y}\Bigl(\frac{\partial h}{\partial x}\Bigr)=\frac{\partial}{\partial y}(-0.02x)=0 \]
+$-0.02x$ には $y$ が入っていないので、$y$ で偏微分すると0です。⑤の坂の地図で、東の坂は北へ動いても変わりませんでした。これを短く、分母に2つの文字を並べて $\dfrac{\partial^2h}{\partial y\,\partial x}$ と書きます。反対の順の $\dfrac{\partial}{\partial x}\Bigl(\dfrac{\partial h}{\partial y}\Bigr)=\dfrac{\partial}{\partial x}(-0.04y)=0$ は、$\dfrac{\partial^2h}{\partial x\,\partial y}$ です。主役の山では、どちらも0でした。
+
+\kviiichead{2つの順番の答えは、いつも同じ}
+主役の山では、たまたまどちらも0だったのでしょうか。$f=x^2y$ で調べます。
+\begin{bkhenkei}[0.5]
+\frac{\partial f}{\partial x}=2xy,\quad \frac{\partial}{\partial y}(2xy)=2x & $x$ で偏微分してから、$y$ で偏微分 \\
+\frac{\partial f}{\partial y}=x^2,\quad \frac{\partial}{\partial x}(x^2)=2x & $y$ で偏微分してから、$x$ で偏微分 \\
+\end{bkhenkei}
+途中の式（$2xy$ と $x^2$）はちがうのに、最後はどちらも $2x$ になりました。表でも確かめます。点 $(1,\ 2)$ のまわりで、$\Delta x=\Delta y=0.1$ の4つのマスの値です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiicsx in {0,72} {\begin{scope}[shift={(\kviiicsx,0)}]
+  \draw[bkLine, line width=0.7pt] (0,0) rectangle (36,24);
+  \fill[bkInk] (0,0) circle (1) (36,0) circle (1) (0,24) circle (1) (36,24) circle (1);
+  \node[font=\footnotesize, anchor=north] at (0,-1.5) {$f(1,\ 2)=2$};
+  \node[font=\footnotesize, anchor=north] at (36,-1.5) {$f(1.1,\ 2)=2.42$};
+  \node[font=\footnotesize, anchor=south] at (0,25.5) {$f(1,\ 2.1)=2.1$};
+  \node[font=\footnotesize, anchor=south] at (36,25.5) {$f(1.1,\ 2.1)=2.541$};
+  \end{scope}}
+  \draw[kviiicE, line width=1.1pt, -{Stealth[length=2mm]}] (3,3.5) -- (33,3.5);
+  \draw[kviiicE, line width=1.1pt, -{Stealth[length=2mm]}] (3,20.5) -- (33,20.5);
+  \node[font=\footnotesize, text=kviiicE, fill=white, inner sep=1pt] at (18,8) {東の坂 4.2};
+  \node[font=\footnotesize, text=kviiicE, fill=white, inner sep=1pt] at (18,16) {東の坂 4.41};
+  \draw[kviiicN, line width=1.1pt, -{Stealth[length=2mm]}] (75.5,3) -- (75.5,21);
+  \draw[kviiicN, line width=1.1pt, -{Stealth[length=2mm]}] (104.5,3) -- (104.5,21);
+  \node[font=\footnotesize, text=kviiicN, fill=white, inner sep=1pt, align=center] at (83,12) {北の坂\\1.0};
+  \node[font=\footnotesize, text=kviiicN, fill=white, inner sep=1pt, align=center] at (97,12) {北の坂\\1.21};
+\end{tikzpicture}
+\bkfigcaption{$f=x^2y$ の、4つの角の値。左：下の辺と上の辺で東の坂を求めた。右：左の辺と右の辺で北の坂を求めた（どちらも差を0.1でわった）。}\label{bk:8-2:fig-yosumi}
+\end{bkfigure}
+\begin{bkhenkei}[0.5]
+\frac{4.41-4.2}{0.1}=2.1 & 東の坂が、北へ0.1進むとどれだけ変わるか（左の図） \\
+\frac{1.21-1.0}{0.1}=2.1 & 北の坂が、東へ0.1進むとどれだけ変わるか（右の図） \\
+\end{bkhenkei}
+どちらも2.1です。0.1をもっと小さくすると、どちらも2（点 $(1,\ 2)$ での $2x$ の値）に近づきます（0.01なら2.01）。
+
+\noindent なぜ同じになるのでしょう。4つの角の値を、それぞれ右上 $A$、左上 $B$、右下 $C$、左下 $D$ とします。左の図の計算は、「（上の東の坂）－（下の東の坂）」を0.1でわったもので、
+\[ \frac{1}{0.1}\Bigl(\frac{A-B}{0.1}-\frac{C-D}{0.1}\Bigr)=\frac{A-B-C+D}{0.1^2} \]
+です。右の図の計算は、「（右の北の坂）－（左の北の坂）」を0.1でわったもので、
+\[ \frac{1}{0.1}\Bigl(\frac{A-C}{0.1}-\frac{B-D}{0.1}\Bigr)=\frac{A-C-B+D}{0.1^2} \]
+です。分子は、どちらも\textbf{右上－左上－右下＋左下}で、まったく同じ式です。4つの角の値の、たす・ひくの組み合わせが同じなので、順番を変えても同じ答えになるのです。数で確かめると $2.541-2.1-2.42+2=0.021$、$0.021\div0.01=2.1$ です。
+\kviiicframe{$\dfrac{\partial^2f}{\partial x\,\partial y}=\dfrac{\partial^2f}{\partial y\,\partial x}$\qquad（偏微分の順番を入れかえても同じ）}
+だから、2回の偏微分では、計算しやすい順番を選んでかまいません。
+
+\begin{seikaku}
+順番を入れかえても同じになるのは、2回の偏微分が、場所について切れ目なくなめらかに変わるときです（「連続」という）。工学で出てくる関数は、ほとんどこの条件を満たしています。条件を満たさない、特別に作った関数では、順番によって答えがちがうこともあります。この性質は、数学者の名前から、シュワルツの定理（クレローの定理）とよばれます。4つの角の考え方は、その証明の出発点です。
+\end{seikaku}
+
+\bksubsection{9}{3つの変数：部屋の温度と、水の中の圧力}
+
+\leavevmode\label{bk:8-2:mittsu}量が3つの変数で決まるときも、同じです。\textbf{2つを止めて、1つだけ動かします}。
+
+\kviiichead{ストーブのある部屋の温度}
+ストーブのある部屋の温度 $T$〔℃〕が、場所 $(x,\ y,\ z)$（m）で、次のように表されるとします。$x$ はストーブから遠ざかる向き、$y$ は横の向き、$z$ は床からの高さです。
+\[ T(x,\ y,\ z)=22-0.5x+1.5z \]
+\begin{bkhenkei}[0.42]
+\frac{\partial T}{\partial x}=-0.5 & $y$、$z$ を止める。ストーブから \qty{1}{m} はなれると、\qty{0.5}{℃} 下がる \\
+\frac{\partial T}{\partial y}=0 & $x$、$z$ を止める。横に動いても変わらない \\
+\frac{\partial T}{\partial z}=1.5 & $x$、$y$ を止める。\qty{1}{m} 高くなると、\qty{1.5}{℃} 上がる \\
+\end{bkhenkei}
+単位は、どれも「℃÷m」、つまり ℃/m です。\textbf{偏微分の単位は、（出てくる量の単位）÷（動かした量の単位）}です。$\dfrac{\partial T}{\partial z}$ がプラスなのは、あたたかい空気が上に集まるからです。
+
+\kviiichead{水の中の圧力（物理 力-12）}
+静かな水の中の圧力 $p$〔Pa〕を考えます。水面を $z=0$ とし、$z$ は上向きにはかります（水の中は $z<0$）。水の密度 $\rho=\qty{1000}{kg/m^3}$、重力の加速度 $g=\qty{9.8}{m/s^2}$、水面の大気圧を $p_0$ とすると、
+\[ p=p_0-\rho gz \]
+です（深さ $-z$ の所では、上にある水の重さの分だけ圧力が大きい）。偏微分すると、
+\[ \frac{\partial p}{\partial x}=0,\qquad \frac{\partial p}{\partial y}=0,\qquad \frac{\partial p}{\partial z}=-\rho g=-1000\times9.8=-9800 \]
+単位は Pa/m です。水平にどちらへ動いても、圧力は変わりません。上へ \qty{1}{m} 動くと \qty{9800}{Pa} 下がり、下へ \qty{1}{m} もぐると \qty{9800}{Pa} 上がります。物理第1巻の力-12 で「$\dfrac{\partial p}{\partial x}=0$、$\dfrac{\partial p}{\partial y}=0$、$\dfrac{\partial p}{\partial z}=-\rho g$ です（8-2 の偏微分）」と書いたのは、このことです。
+
+\Needspace{20\baselineskip}
+\begin{motto}[4]
+\kviiicbox{場所と時間の関数：ロープを伝わる波}
+ロープの片方のはしをゆらすと、波が伝わっていきます。ロープの各点の高さ $y$〔m〕は、場所 $x$〔m〕と時刻 $t$〔s〕の2つで決まります。右へ進む波 $y(x,\ t)=0.2\sin(x-2t)$
+で考えます。ここでも「ほかを止めて1つだけ動かす」です。
+\begin{bkhenkei}[0.46]
+\frac{\partial y}{\partial x}=0.2\cos(x-2t) & $t$ を止める：ある瞬間の写真で見た、ロープの傾き \\
+\frac{\partial y}{\partial t}=-0.4\cos(x-2t) & $x$ を止める：1つの点が、上下に動く速度 \\
+\end{bkhenkei}
+$x=\pi$（約 \qty{3.14}{m}）、$t=0$ では、傾きは $0.2\cos\pi=-0.2$、速度は $-0.4\cos\pi=0.4$ で、上向きに \qty{0.4}{m/s} です。図\ref{bk:8-2:fig-nami}で、$t=0$ の写真（青）と、0.25秒後の写真（オレンジの点線）をくらべると、$x=\pi$ の点が上がっていることがわかります。波の形は右へ動いていますが、ロープの点そのものは、上下に動くだけです。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=40mm, xmin=0, xmax=7.6, ymin=-0.3, ymax=0.34, xtick={2,4,6}, ytick={-0.2,0.2}, xlabel={$x$（m）}, ylabel={$y$（m）}]
+  \addplot[\bkTT, line width=1.3pt, domain=0:7.6, samples=90] {0.2*sin(deg(x))};
+  \addplot[bkOrange!85!black, line width=1.3pt, dash pattern=on 4pt off 2pt, domain=0:7.6, samples=90] {0.2*sin(deg(x-0.5))};
+  \draw[bkRed, line width=1pt, -{Stealth[length=2mm]}] (axis cs:3.1416,0.012) -- (axis cs:3.1416,0.085);
+  \addplot[only marks, mark=*, mark size=2pt, bkRed] coordinates {(3.1416,0) (3.1416,0.0959)};
+  \node[font=\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:3.45,0.27) {$x=\pi$ の点は上へ動く};
+  \draw[bkInk!70, line width=0.8pt, -{Stealth[length=2mm]}] (axis cs:0.3,0.28) -- (axis cs:1.3,0.28) node[anchor=west, font=\footnotesize] {波の形は右へ};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ロープの波。青が $t=0$ の形、オレンジの点線が0.25秒後の形。赤い点は $x=\pi$ の点。}\label{bk:8-2:fig-nami}
+\end{bkcenter}
+熱が伝わる棒の温度 $T(x,\ t)$ のように、場所と時刻で変わる量のきまりを偏微分で書いた式を\textbf{偏微分方程式}といい、8-13 で学びます（6-1 の予告）。
+\end{motto}
+
+%% ---------------- 専門書・まとめ ----------------
+\begin{senmonsho}[微分積分の教科書ふうの書き方]
+\begin{bkhonbun}
+2変数関数 $z=f(x,\ y)$ において、$y$ を固定して $x$ の関数とみたとき、点 $(a,\ b)$ で微分可能ならば、その微分係数を $f$ の点 $(a,\ b)$ における $x$ に関する偏微分係数といい、$f_x(a,\ b)$ または $\dfrac{\partial f}{\partial x}(a,\ b)$ で表す。$f_{xy}=f_{yx}$ が成り立つ条件については…
+\end{bkhonbun}
+\bkyaku{「固定して」は「止めて」。$f_x$ は $\dfrac{\partial f}{\partial x}$ の短い書き方で、多くの専門書が使う（$z_x$、$\partial_xf$ と書く本もある）。この本では、矢印の $x$ 成分 $F_x$ とまぎれるので使わない。$f_{xy}$ は「$x$ で偏微分してから $y$ で偏微分」（左から順）で、この本の $\dfrac{\partial^2f}{\partial y\,\partial x}$。順番によらないので、ふつうは区別しなくてよい。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{偏微分}ほかの文字を止めて、1つの文字だけを動かして微分する\\[4pt]
+\tsl{記号}$\dfrac{\partial f}{\partial x}$（$y$ を止める）、$\dfrac{\partial f}{\partial y}$（$x$ を止める）\\[4pt]
+\tsl{計算}止めた文字は、ふつうの数と同じにあつかう\\[4pt]
+\tsl{表では}行にそった差÷間かく（東）、列にそった差÷間かく（北）\\[4pt]
+\tsl{2回}$\dfrac{\partial^2f}{\partial x\,\partial y}=\dfrac{\partial^2f}{\partial y\,\partial x}$（順番によらない）\\[4pt]
+\tsl{単位}（出てくる量の単位）÷（動かした量の単位）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{偏微分}{2つ以上の変数の関数で、ほかの変数を止めて、1つの変数だけを動かして微分すること。また、そうしてできた関数。}
+\bkword{偏導関数}{偏微分してできた関数。主役の山の $\dfrac{\partial h}{\partial x}=-0.02x$ など。}
+\bkword{2回の偏微分}{偏微分した関数を、もう一度偏微分したもの。順番を入れかえても同じ。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\dfrac{\partial f}{\partial x}$}{ラウンドディー エフ ラウンドディー エックス}{偏微分。ほかの変数を止めて、$x$ だけ動かしたときの変化の割合}{partial derivative}{8-2}}{\bkkigocard{$\dfrac{\partial^2f}{\partial x\,\partial y}$}{ラウンドディー2乗エフ、ラウンドディーエックス ラウンドディーワイ}{2回の偏微分。順番によらない}{second partial derivative}{8-2}}
+
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[表の差で、偏微分を見積もる]
+\noindent\begin{minipage}[c]{0.44\linewidth}\raggedright
+主役の山の、点 $(40,\ 10)$ のまわりの高さ（m）の表です（列が $x$、行が $y$）。\par
+（1）右どなり・上どなりとの差で、$(40,\ 10)$ の東の坂と北の坂を見積もりましょう。\par
+（2）両どなりの差を2でわって、見積もりましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{bktable}{colspec={Q[c,m,wd=11mm] *{3}{Q[c,m,wd=11mm]}}, colsep=3pt, rowsep=1pt}
+$y$＼$x$ & 39 & 40 & 41 \\
+11 & 82.37 & 81.58 & 80.77 \\
+10 & 82.79 & 82.00 & 81.19 \\
+9 & 83.17 & 82.38 & 81.57 \\
+\end{bktable}
+\end{minipage}\par
+\kangaekata 東は同じ行（$y=10$）を右へ、北は同じ列（$x=40$）を上へ。表の間かくは \qty{1}{m}。\par
+\shiki（1）東：$81.19-82.00=-0.81$。北：$81.58-82.00=-0.42$\kviiicq
+（2）東：$(81.19-82.79)\div2=-1.60\div2=-0.80$\kviiicq
+北：$(81.58-82.38)\div2=-0.80\div2=-0.40$\par
+\kotae（1）\nobreak 東 $-0.81$、北 $-0.42$。（2）\nobreak 東 $-0.80$、北 $-0.40$
+\end{reidai}
+\noindent 式で求めると、次のようになり、（2）と同じです。
+\[ \frac{\partial h}{\partial x}(40,\ 10)=-0.02\times40=-0.8,\qquad \frac{\partial h}{\partial y}(40,\ 10)=-0.04\times10=-0.4 \]
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.44\linewidth}\raggedright
+主役の山の、点 $(10,\ 30)$ のまわりの高さ（m）の表です。（1）右どなり・上どなりとの差で、（2）両どなりの差を2でわって、$(10,\ 30)$ の東の坂と北の坂を見積もりましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{bktable}{colspec={Q[c,m,wd=11mm] *{3}{Q[c,m,wd=11mm]}}, colsep=3pt, rowsep=1pt}
+$y$＼$x$ & 9 & 10 & 11 \\
+31 & 79.97 & 79.78 & 79.57 \\
+30 & 81.19 & 81.00 & 80.79 \\
+29 & 82.37 & 82.18 & 81.97 \\
+\end{bktable}
+\end{minipage}
+\bkjans{（1）\nobreak 東 $80.79-81.00=-0.21$、北 $79.78-81.00=-1.22$。（2）\nobreak 東 $(80.79-81.19)\div2=-0.20$、北 $(79.78-82.18)\div2=-1.20$。}
+\end{jibun}
+
+\begin{reidai}[多項式の偏微分]
+$f(x,\ y)=3x^2y+2y^3$ について、$\dfrac{\partial f}{\partial x}$ と $\dfrac{\partial f}{\partial y}$ を求めましょう。\par
+\kangaekata 項ごとに偏微分する。止めた文字は数と同じ。止めた文字だけの項は0。\par
+\shiki $\dfrac{\partial f}{\partial x}$：$y$ を止める。$3x^2y$ は $3y$ が数なので $3y\times2x=6xy$\kviiicq
+$2y^3$ は $x$ が入っていないので、数と同じで0\kviiicq
+$\dfrac{\partial f}{\partial y}$：$x$ を止める。$3x^2y$ は $3x^2$ が数なので $3x^2\times1=3x^2$\kviiicq
+$2y^3$ は $2\times3y^2=6y^2$\par
+\kotae $\dfrac{\partial f}{\partial x}=6xy$、$\dfrac{\partial f}{\partial y}=3x^2+6y^2$
+\end{reidai}
+
+\begin{jibun}
+$f(x,\ y)=x^3-4xy^2+5y$ について、$\dfrac{\partial f}{\partial x}$ と $\dfrac{\partial f}{\partial y}$ を求めましょう。
+\bkjans{$\dfrac{\partial f}{\partial x}=3x^2-4y^2$（$5y$ は0）。$\dfrac{\partial f}{\partial y}=-8xy+5$（$x^3$ は0）。}
+\end{jibun}
+
+\begin{reidai}[主役の山の、点での坂]
+主役の山 $h=100-0.01x^2-0.02y^2$ の、点 $(-20,\ 10)$ での $\dfrac{\partial h}{\partial x}$ と $\dfrac{\partial h}{\partial y}$ を求め、その意味を言いましょう。\par
+\kangaekata ⑥の偏導関数 $\dfrac{\partial h}{\partial x}=-0.02x$、$\dfrac{\partial h}{\partial y}=-0.04y$ に、$x=-20$、$y=10$ を入れる。符号がプラスなら上り、マイナスなら下り。\par
+\shiki $\dfrac{\partial h}{\partial x}(-20,\ 10)=-0.02\times(-20)=0.4$\kviiicq
+$\dfrac{\partial h}{\partial y}(-20,\ 10)=-0.04\times10=-0.4$\par
+\kotae $\dfrac{\partial h}{\partial x}=0.4$、$\dfrac{\partial h}{\partial y}=-0.4$。東へ少し進むと、進んだ長さの0.4倍上がり（上り坂）、北へ少し進むと0.4倍下がる（下り坂）。
+\end{reidai}
+\noindent\begin{minipage}[c]{0.46\linewidth}\raggedright
+\hspace*{1\zw}$(-20,\ 10)$ は頂上の西にあります。だから、東へ進むと頂上に近づき、上り坂になります。北へ進むと頂上から遠ざかるので、下り坂です。\par\vspace{3pt}
+\hspace*{1\zw}東の坂と北の坂の大きさは、どちらも0.4で同じです。この点では、東へ進んでも北へ進んでも、同じ急さで、上るか下るかだけがちがうのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.51\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[kviiic map, width=62mm, xmin=-50, xmax=10, ymin=-15, ymax=35, xtick distance=20, ytick distance=10]
+  \pgfplotsinvokeforeach{70,80,90}{\kviiiccontour{#1}}
+  \pgfplotsinvokeforeach{70,80,90}{\kviiicclabel{#1}{235}}
+  \node[font=\sffamily\footnotesize, fill=white, inner sep=0.8pt] at (axis cs:0,0) {▲100};
+  \draw[kviiicE, line width=1.3pt, -{Stealth[length=2mm]}] (axis cs:-20,10) -- (axis cs:-6,10);
+  \draw[kviiicN, line width=1.3pt, -{Stealth[length=2mm]}] (axis cs:-20,10) -- (axis cs:-20,24);
+  \kviiicpt{-20}{10}
+  \node[font=\sffamily\footnotesize, text=kviiicE, fill=white, inner sep=0.8pt, anchor=north] at (axis cs:-8,8) {東：上り};
+  \node[font=\sffamily\footnotesize, text=kviiicN, fill=white, inner sep=0.8pt, anchor=south] at (axis cs:-20,25) {北：下り};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\begin{jibun}
+主役の山の、点 $(20,\ -30)$ での $\dfrac{\partial h}{\partial x}$ と $\dfrac{\partial h}{\partial y}$ を求め、その意味を言いましょう。また、東へ進むときと北へ進むときでは、どちらの坂が急ですか。
+\bkjans{$\dfrac{\partial h}{\partial x}=-0.02\times20=-0.4$（東へは下り）。$\dfrac{\partial h}{\partial y}=-0.04\times(-30)=1.2$（北へは上り）。北の坂のほうが急（$1.2>0.4$）。}
+\end{jibun}
+
+\begin{reidai}[$e$・$\sin$ と合成関数]
+次の関数を、$x$ と $y$ で偏微分しましょう。\par
+（1）$f=e^{-x}\sin y$\qquad（2）$g=\sin(2x+3y)$\par
+\kangaekata（1）片方が止めた文字だけの式なら、それは数。（2）中身 $2x+3y$ の偏微分をかける（5-6）。\par
+\shiki（1）$\dfrac{\partial f}{\partial x}=(e^{-x})'\sin y=-e^{-x}\sin y$\kviiicq
+$\dfrac{\partial f}{\partial y}=e^{-x}(\sin y)'=e^{-x}\cos y$\kviiicq
+（2）$\dfrac{\partial g}{\partial x}=\cos(2x+3y)\times2=2\cos(2x+3y)$\kviiicq
+$\dfrac{\partial g}{\partial y}=\cos(2x+3y)\times3=3\cos(2x+3y)$\par
+\kotae（1）\nobreak $-e^{-x}\sin y$、$e^{-x}\cos y$。（2）\nobreak $2\cos(2x+3y)$、$3\cos(2x+3y)$
+\end{reidai}
+
+
+
+\begin{reidai}[3つの変数の偏微分]
+$f(x,\ y,\ z)=xy^2z^3$ について、$\dfrac{\partial f}{\partial x}$、$\dfrac{\partial f}{\partial y}$、$\dfrac{\partial f}{\partial z}$ を求め、点 $(1,\ 2,\ 1)$ での値を計算しましょう。\par
+\kangaekata 2つの文字を止めて、残りの1つで微分する。\par
+\shiki $\dfrac{\partial f}{\partial x}=y^2z^3$（$y^2z^3$ が数）、\ $\dfrac{\partial f}{\partial y}=x\times2y\times z^3=2xyz^3$（$xz^3$ が数）\kviiicq
+$\dfrac{\partial f}{\partial z}=xy^2\times3z^2=3xy^2z^2$（$xy^2$ が数）\kviiicq
+点 $(1,\ 2,\ 1)$：$2^2\times1^3=4$、$2\times1\times2\times1^3=4$、$3\times1\times2^2\times1^2=12$\par
+\kotae $y^2z^3$、$2xyz^3$、$3xy^2z^2$。点 $(1,\ 2,\ 1)$ では4、4、12
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+次の関数を、$x$ と $y$ で偏微分しましょう。\par
+（1）$f=e^{-2x}\sin y$\par
+（2）$g=\sin(3x+y)$
+\bkjans{（1）\nobreak $\dfrac{\partial f}{\partial x}=-2e^{-2x}\sin y$、$\dfrac{\partial f}{\partial y}=e^{-2x}\cos y$。（2）\nobreak $\dfrac{\partial g}{\partial x}=3\cos(3x+y)$、$\dfrac{\partial g}{\partial y}=\cos(3x+y)$。}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+次の関数の、3つの偏微分を求め、点 $(1,\ 3,\ 2)$ での値を計算しましょう。\par
+$f(x,\ y,\ z)=x^2yz+z^2$
+\bkjans{$\dfrac{\partial f}{\partial x}=2xyz$、$\dfrac{\partial f}{\partial y}=x^2z$、$\dfrac{\partial f}{\partial z}=x^2y+2z$。点 $(1,\ 3,\ 2)$ では12、2、7。}
+\end{jibun}
+\end{minipage}\par
+
+\begin{reidai}[2回の偏微分と、その順番]
+次の関数の $\dfrac{\partial^2f}{\partial x^2}$、$\dfrac{\partial^2f}{\partial y^2}$ を求め、$\dfrac{\partial^2f}{\partial x\,\partial y}$ と $\dfrac{\partial^2f}{\partial y\,\partial x}$ が等しいことを確かめましょう。\par
+（1）$f=x^3y^2$\qquad（2）$f=e^{2x}\sin y$\par
+\kangaekata まず1回ずつ偏微分し、それをもう一度偏微分する。2つの順番で計算してくらべる。\par
+\shiki（1）$\dfrac{\partial f}{\partial x}=3x^2y^2$、$\dfrac{\partial f}{\partial y}=2x^3y$\kviiicq
+$\dfrac{\partial^2f}{\partial x^2}=6xy^2$、$\dfrac{\partial^2f}{\partial y^2}=2x^3$\kviiicq
+$\dfrac{\partial}{\partial y}(3x^2y^2)=6x^2y$、$\dfrac{\partial}{\partial x}(2x^3y)=6x^2y$（同じ）\kviiicq
+（2）$\dfrac{\partial f}{\partial x}=2e^{2x}\sin y$、$\dfrac{\partial f}{\partial y}=e^{2x}\cos y$\kviiicq
+$\dfrac{\partial^2f}{\partial x^2}=4e^{2x}\sin y$、$\dfrac{\partial^2f}{\partial y^2}=-e^{2x}\sin y$（$(\cos y)'=-\sin y$）\kviiicq
+$\dfrac{\partial}{\partial y}(2e^{2x}\sin y)=2e^{2x}\cos y$、$\dfrac{\partial}{\partial x}(e^{2x}\cos y)=2e^{2x}\cos y$（同じ）\par
+\kotae（1）\nobreak $6xy^2$、$2x^3$、2つの順番はどちらも $6x^2y$。（2）\nobreak $4e^{2x}\sin y$、$-e^{2x}\sin y$、どちらも $2e^{2x}\cos y$
+\end{reidai}
+
+\begin{jibun}
+次の関数の $\dfrac{\partial^2f}{\partial x^2}$、$\dfrac{\partial^2f}{\partial y^2}$ を求め、2つの順番の $\dfrac{\partial^2f}{\partial x\,\partial y}$、$\dfrac{\partial^2f}{\partial y\,\partial x}$ が等しいことを確かめましょう。\par
+（1）$f=x^2y^4$\qquad（2）$f=e^{3x}\cos y$
+\bkjans{（1）\nobreak $\dfrac{\partial f}{\partial x}=2xy^4$、$\dfrac{\partial f}{\partial y}=4x^2y^3$。$\dfrac{\partial^2f}{\partial x^2}=2y^4$、$\dfrac{\partial^2f}{\partial y^2}=12x^2y^2$。2つの順番はどちらも $8xy^3$。（2）\nobreak $\dfrac{\partial f}{\partial x}=3e^{3x}\cos y$、$\dfrac{\partial f}{\partial y}=-e^{3x}\sin y$。$\dfrac{\partial^2f}{\partial x^2}=9e^{3x}\cos y$、$\dfrac{\partial^2f}{\partial y^2}=-e^{3x}\cos y$。2つの順番はどちらも $-3e^{3x}\sin y$。}
+\end{jibun}
+
+\begin{reidai}[物理の式を偏微分する]
+（1）抵抗 $R$〔Ω〕に電圧 $V$〔V〕をかけたときの電力は $P=\dfrac{V^2}{R}$〔W〕です。$V=12$、$R=6$ での $\dfrac{\partial P}{\partial V}$ と $\dfrac{\partial P}{\partial R}$ を求め、意味を言いましょう。\par
+（2）水の中の圧力 $p=p_0-9800z$〔Pa〕（$z$ は上向き、m）で、\qty{10}{m} もぐると圧力は何 Pa 上がりますか。\par
+\kangaekata（1）$\dfrac{V^2}{R}=V^2\times R^{-1}$ と見る。$V$ で偏微分するときは $R^{-1}$ が数、$R$ で偏微分するときは $V^2$ が数。（2）$\dfrac{\partial p}{\partial z}$ は一定なので、それに $z$ の変化をかける。\par
+\shiki（1）$\dfrac{\partial P}{\partial V}=\dfrac{2V}{R}=\dfrac{2\times12}{6}=4$\kviiicq
+$\dfrac{\partial P}{\partial R}=V^2\times(-R^{-2})=-\dfrac{V^2}{R^2}=-\dfrac{144}{36}=-4$\kviiicq
+（2）$\dfrac{\partial p}{\partial z}=-9800$。もぐると $z$ は $-10$ 変わるので $-9800\times(-10)=\num{98000}$\par
+\kotae（1）\nobreak $\dfrac{\partial P}{\partial V}=\qty{4}{W/V}$：$R$ はそのままで電圧を \qty{1}{V} 上げると、電力は約 \qty{4}{W} ふえる。$\dfrac{\partial P}{\partial R}=\qty{-4}{W/\ohm}$：電圧はそのままで抵抗を \qty{1}{\ohm} ふやすと、約 \qty{4}{W} へる。（2）\nobreak \qty{98000}{Pa} 上がる
+\end{reidai}
+\noindent $(R^{-1})'=-R^{-2}$ は、5-4 の $(x^n)'=nx^{n-1}$ で $n=-1$ としたものです。いまの電力は $\dfrac{144}{6}=\qty{24}{W}$ です。
+
+\begin{jibun}
+（1）質量 $m$〔kg〕、速さ $v$〔m/s〕の物の運動エネルギーは $K=\dfrac{1}{2}mv^2$〔J〕です。$m=2$、$v=3$ での $\dfrac{\partial K}{\partial m}$ と $\dfrac{\partial K}{\partial v}$ を求めましょう。\par
+（2）部屋の温度 $T=22-0.5x+1.5z$〔℃〕（$z$ は高さ、m）で、\qty{2}{m} 高い所へ動くと、温度は何℃上がりますか。
+\bkjans{（1）\nobreak $\dfrac{\partial K}{\partial m}=\dfrac{1}{2}v^2=\qty{4.5}{J/kg}$、$\dfrac{\partial K}{\partial v}=mv=\qty{6}{J/(m/s)}$。（2）\nobreak $\dfrac{\partial T}{\partial z}=1.5$ なので $1.5\times2=\qty{3}{℃}$ 上がる。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{止めた文字まで微分する}
+\bkng{$\dfrac{\partial}{\partial x}(x^2y)=2xy+x^2$}
+\bkok{$\dfrac{\partial}{\partial x}(x^2y)=2xy$}
+$x$ で偏微分するとき、$y$ は止まった数です。$3x^2$ の微分が $6x$ になるのと同じで、$y$ は外に出したまま。積の微分のように $y$ まで微分してはいけません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{止めた文字だけの項を残す}
+\bkng{$\dfrac{\partial}{\partial x}(x^2+y^2)=2x+y^2$}
+\bkok{$\dfrac{\partial}{\partial x}(x^2+y^2)=2x$}
+$x$ で偏微分するとき、$y^2$ はただの数です。数を微分すると0です（5-4）。⑥の東の坂で、$-0.02y^2$ がひき算で消えたことを思い出しましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\dd$ と $\partial$ をまぜる}
+\bkng{$h=100-0.01x^2-0.02y^2$ で、$\dfrac{\dd h}{\dd x}=-0.02x$}
+\bkok{$\dfrac{\partial h}{\partial x}=-0.02x$}
+$h$ は $x$ と $y$ の2つの変数の関数なので、「$y$ を止めた」ことがわかる $\partial$ で書きます。切り口の式 $h=92-0.01x^2$ のように、変数が1つになった式なら $\dd$ でかまいません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{どの点での値か}
+\bkng{主役の山の東の坂は $-0.6$}
+\bkok{点 $(30,\ 20)$ での東の坂は $-0.6$。東の坂は $-0.02x$ で、場所で変わる}
+偏微分の値は、点ごとに決まります。⑤の坂の地図のように、$x=-20$ では $+0.4$（上り坂）です。値を答えるときは、どの点の値かを必ず書きましょう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{中身の偏微分をかけ忘れる}
+\bkng{$\dfrac{\partial}{\partial x}\sin(2x+3y)=\cos(2x+3y)$}
+\bkok{$\dfrac{\partial}{\partial x}\sin(2x+3y)=2\cos(2x+3y)$}
+$\sin$ の中身 $2x+3y$ も $x$ で変わるので、中身を $x$ で偏微分した2をかけます（5-6 の合成関数の微分）。$y$ で偏微分するときにかけるのは3です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{2回の偏微分を2乗とまちがえる}
+\bkng{$f=x^2y$ で、$\dfrac{\partial^2f}{\partial x^2}=(2xy)^2=4x^2y^2$}
+\bkok{$\dfrac{\partial^2f}{\partial x^2}=\dfrac{\partial}{\partial x}(2xy)=2y$}
+$\dfrac{\partial^2f}{\partial x^2}$ の「2」は、2回偏微分するという印です。1回めの答えを2乗するのではありません（5-5 の $\dfrac{\dd^2y}{\dd x^2}$ と同じ）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{表の差の向き}
+\bkng{北の坂を、表の「下どなり－自分」で求める}
+\bkok{北の坂は「上どなり－自分」（地図と同じく、上が北）}
+この章の表は、北を上にして、上の行ほど $y$ が大きくなるように並べています。下どなりとひくと、南へ進んだ差になり、符号が逆になります。表を作るときは、どちらが北かを必ず確かめましょう。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学 ----------------
+\begin{column}{理科の実験と「ほかを止める」}
+小学5年の理科では、ふりこが1往復する時間を、ふりこの長さ・おもりの重さ・ふれはばを\textbf{1つずつ変えて}調べました。調べたい条件だけを変え、ほかの条件はそろえておく実験です。もし長さと重さをいっしょに変えたら、時間が変わったのがどちらのせいなのか、わからなくなってしまいます。偏微分は、この「1つずつ変えて調べる」を、式の上で行う方法です。そして 8-3 では、いくつもの条件が同時に変わったときの変化も、1つずつ調べた結果（偏微分）をたし合わせれば求められることを学びます。
+\end{column}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{水の圧力と、水面が平らなわけ（物理 力-12）}\par\noindent\begin{minipage}[c]{0.66\linewidth}
+静かな水の中では、⑨のように横の偏微分は0、$\dfrac{\partial p}{\partial z}=-\rho g$ です。同じ深さなら、どこでも同じ圧力です。ダムのかべは、深い所ほど大きな圧力を受けるので、下ほど厚く作られています。つながった容器（連通管）で水面の高さがそろうのも、横の圧力に差があると水が流れて差をなくすからです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.31\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!15] (0,0) rectangle (30,24);
+  \draw[bkInk, line width=0.8pt] (0,28) -- (0,0) -- (30,0) -- (30,28);
+  \draw[\bkTT, line width=0.8pt] (0,24) -- (30,24);
+  \foreach \kviiicd/\kviiicl in {20/3,12/6,4/9} {\draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.6mm]}] ({30-\kviiicl},\kviiicd) -- (29.5,\kviiicd);}
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (-4,10) -- (-4,22) node[anchor=south, font=\footnotesize] {$z$};
+\end{tikzpicture}\par
+{\footnotesize 深いほど大きく押す}
+\end{minipage}
+\item \textbf{ばねの「のび」を、エネルギーの偏微分で求める（物理 力-11）}\par\noindent\begin{minipage}[c]{0.66\linewidth}
+天井から、ばね A（$k_{\mathrm A}=\qty{100}{N/m}$）、点1、ばね B（$k_{\mathrm B}=\qty{50}{N/m}$）、点2 の順につるし、点1に $F_1=\qty{2}{N}$、点2に $F_2=\qty{1}{N}$ の力を下向きにかけます。ばね A は $F_1+F_2$、ばね B は $F_2$ の力で引かれます。ばねにたまるエネルギーは、のび $x=\dfrac{F}{k}$ を $\dfrac{1}{2}kx^2$（5-12）に入れて $\dfrac{F^2}{2k}$ なので、全体では
+\end{minipage}\hfill
+\begin{minipage}[c]{0.31\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkInk!35] (-6,40) rectangle (6,42);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.4mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] (0,40) -- (0,24);
+  \fill[bkOrange] (0,22) circle (2);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.4mm, segment length=2.2mm, pre length=1.5mm, post length=1.5mm}] (0,20) -- (0,6);
+  \fill[bkOrange] (0,4) circle (2);
+  \node[font=\footnotesize, anchor=east] at (-3,32) {A};
+  \node[font=\footnotesize, anchor=east] at (-3,13) {B};
+  \node[font=\footnotesize, anchor=west] at (3,22) {点1};
+  \node[font=\footnotesize, anchor=west] at (3,4) {点2};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.6mm]}] (9,22) -- (9,15) node[anchor=west, font=\footnotesize] {$F_1$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.6mm]}] (9,4) -- (9,-3) node[anchor=west, font=\footnotesize] {$F_2$};
+\end{tikzpicture}
+\end{minipage}
+\[ U=\frac{(F_1+F_2)^2}{2k_{\mathrm A}}+\frac{F_2^{\,2}}{2k_{\mathrm B}} \]
+です。$F_2$ を止めて $F_1$ で偏微分すると $\dfrac{F_1+F_2}{k_{\mathrm A}}=\dfrac{3}{100}=\qty{0.03}{m}$、$F_1$ を止めて $F_2$ で偏微分すると $\dfrac{F_1+F_2}{k_{\mathrm A}}+\dfrac{F_2}{k_{\mathrm B}}=0.03+0.02=\qty{0.05}{m}$ です。これは、点1と点2が下がる長さ（ばね A ののび、ばね A と B ののびの和）とぴったり同じです。「ほかの力を止めて1つの力で偏微分すると、その力の点の動きになる」。これが物理 力-11 の\textbf{カスティリアーノの定理}\bkidx{かすてぃりあーののていり}{カスティリアーノの定理}で、橋のはりや骨組みのたわみを計算するのに使われます。
+\end{itemize}
+\end{butsuri}
+
+\begin{butsuri}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=3pt, topsep=0pt, label={\color{bkPurple}●}]
+\item \textbf{トランジスタの「増幅する力」}\par\noindent スマホやパソコンの中には、トランジスタ（MOSFET）という部品が何十億個も入っています。トランジスタを流れる電流 $I_{\mathrm D}$ は、ゲートという入口の電圧 $V_{\mathrm{GS}}$ と、出口側の電圧 $V_{\mathrm{DS}}$ の2つで決まる、2つの変数の関数です。$V_{\mathrm{DS}}$ を止めて $V_{\mathrm{GS}}$ で偏微分した $\dfrac{\partial I_{\mathrm D}}{\partial V_{\mathrm{GS}}}$ を\textbf{相互コンダクタンス}といい、入口の電圧の小さな変化を、どれだけ大きな電流の変化にできるか（増幅する力）を表します。
+\item \textbf{写真の輪郭を見つける}\par\noindent\begin{minipage}[c]{0.6\linewidth}
+デジタル写真は、小さな点（画素）の明るさ $I$ を並べた表です。明るさは場所 $(x,\ y)$ で決まる、2つの変数の関数です。③と同じように、表の行にそって「右どなり－自分」の差をとると、物のふち（明るさが急に変わる所）でだけ大きな数になります。これは $\dfrac{\partial I}{\partial x}$ を表の差で見積もったものです。列にそって差をとれば $\dfrac{\partial I}{\partial y}$ です。カメラのピント合わせや、自動車が道路の白線を見つける計算などに、この考え方が使われています。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kviiicv/\kviiicx in {20/0,20/7,20/14,200/21,200/28} {\pgfmathsetmacro\kviiicg{\kviiicv/255*100}\fill[white!\kviiicg!bkInk] (\kviiicx,8) rectangle ++(7,7);}
+  \draw[bkLine, line width=0.5pt] (0,8) grid[step=7] (35,15);
+  \foreach \kviiicv/\kviiicx in {20/0,20/7,20/14,200/21,200/28} {\node[font=\footnotesize, text=bkInk, fill=white, inner sep=0.5pt] at ({\kviiicx+3.5},5) {\kviiicv};}
+  \foreach \kviiicd/\kviiicx in {0/7,0/14,180/21,0/28} {\node[font=\footnotesize, text=bkRed!80!black] at (\kviiicx,-1) {\kviiicd};}
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (17.5,-3.5) {上の数：明るさ\\下の数：右どなり－自分};
+\end{tikzpicture}
+\end{minipage}
+\item \textbf{設計の「感度」：条件を1つずつ変える}\par\noindent 機械や電気回路を設計するときは、「この寸法（抵抗の値、電圧）を少し変えたら、性能はどれだけ変わるか」を調べます。ほかの条件を止めて1つだけ変えたときの変わり方、つまり偏微分を\textbf{感度}といいます。例題7の $\dfrac{\partial P}{\partial V}=\qty{4}{W/V}$ も感度です。感度の大きい部品ほど、ていねいに作ります。いくつもの条件が同時にずれたときは、8-3 で考えます。
+\end{itemize}
+\end{butsuri}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem 主役の山の、点 $(20,\ -10)$ のまわりの高さ（m）の表です（列が $x$、行が $y$）。（1）右どなり・上どなりとの差で、（2）両どなりの差を2でわって、$(20,\ -10)$ の東の坂と北の坂を見積もりましょう。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] *{3}{Q[c,m,wd=12mm]}}, colsep=3pt, rowsep=1pt}
+$y$＼$x$ & 19 & 20 & 21 \\
+$-9$ & 94.77 & 94.38 & 93.97 \\
+$-10$ & 94.39 & 94.00 & 93.59 \\
+$-11$ & 93.97 & 93.58 & 93.17 \\
+\end{bktable}
+\end{bkcenter}
+\bkpans{（1）\nobreak 東 $93.59-94.00=-0.41$、北 $94.38-94.00=0.38$。（2）\nobreak 東 $(93.59-94.39)\div2=-0.40$、北 $(94.38-93.58)\div2=0.40$。}
+
+\bkproblem $f(x,\ y)=2x^3y-5xy^2+y$ について、$\dfrac{\partial f}{\partial x}$ と $\dfrac{\partial f}{\partial y}$ を求めましょう。
+\bkpans{$\dfrac{\partial f}{\partial x}=6x^2y-5y^2$。$\dfrac{\partial f}{\partial y}=2x^3-10xy+1$。}
+
+\bkproblem 主役の山の、点 $(-10,\ -20)$ での $\dfrac{\partial h}{\partial x}$ と $\dfrac{\partial h}{\partial y}$ を求め、東へ進むときと北へ進むときの坂の意味を言いましょう。
+\bkpans{$\dfrac{\partial h}{\partial x}=0.2$（東へは上り）、$\dfrac{\partial h}{\partial y}=0.8$（北へは上り）。どちらも頂上に近づく向きなので上り。北のほうが急。}
+
+\bkproblem 次の関数を、$x$ と $y$ で偏微分しましょう。\par
+（1）$f=e^{-3x}\sin y$\qquad（2）$g=\sin(x+5y)$
+\bkpans{（1）\nobreak $-3e^{-3x}\sin y$、$e^{-3x}\cos y$。（2）\nobreak $\cos(x+5y)$、$5\cos(x+5y)$。}
+
+\bkproblem $f=x^4y^3$ の $\dfrac{\partial^2f}{\partial x^2}$、$\dfrac{\partial^2f}{\partial y^2}$ を求め、2つの順番の2回の偏微分が等しいことを確かめましょう。
+\bkpans{$\dfrac{\partial f}{\partial x}=4x^3y^3$、$\dfrac{\partial f}{\partial y}=3x^4y^2$。$\dfrac{\partial^2f}{\partial x^2}=12x^2y^3$、$\dfrac{\partial^2f}{\partial y^2}=6x^4y$。2つの順番はどちらも $12x^3y^2$。}
+
+\bkproblem $f(x,\ y,\ z)=x^3yz^2$ について、3つの偏微分を求め、点 $(1,\ 1,\ 2)$ での値を計算しましょう。
+\bkpans{$\dfrac{\partial f}{\partial x}=3x^2yz^2$、$\dfrac{\partial f}{\partial y}=x^3z^2$、$\dfrac{\partial f}{\partial z}=2x^3yz$。点 $(1,\ 1,\ 2)$ では12、4、4。}
+
+\bkproblem 電力 $P=\dfrac{V^2}{R}$〔W〕で、$V=100$、$R=20$ のときの $\dfrac{\partial P}{\partial V}$ と $\dfrac{\partial P}{\partial R}$ を求め、意味を言いましょう。
+\bkpans{$\dfrac{\partial P}{\partial V}=\dfrac{2\times100}{20}=\qty{10}{W/V}$：電圧を \qty{1}{V} 上げると約 \qty{10}{W} ふえる。$\dfrac{\partial P}{\partial R}=-\dfrac{10000}{400}=\qty{-25}{W/\ohm}$：抵抗を \qty{1}{\ohm} ふやすと約 \qty{25}{W} へる。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem 別の山 $h=60-0.01x^2-0.01xy-0.02y^2$〔m〕の、点 $(10,\ 10)$ での高さ、東の坂、北の坂を求めましょう。東と北では、どちらが急ですか。
+\bkpans{高さ $60-1-1-2=\qty{56}{m}$。$\dfrac{\partial h}{\partial x}=-0.02x-0.01y=-0.3$、$\dfrac{\partial h}{\partial y}=-0.01x-0.04y=-0.5$。北のほうが急。}
+
+\bkproblem $f=x^2e^{3y}$ の $\dfrac{\partial^2f}{\partial x^2}$、$\dfrac{\partial^2f}{\partial y^2}$ と、2つの順番の2回の偏微分を求めましょう。
+\bkpans{$\dfrac{\partial f}{\partial x}=2xe^{3y}$、$\dfrac{\partial f}{\partial y}=3x^2e^{3y}$。$\dfrac{\partial^2f}{\partial x^2}=2e^{3y}$、$\dfrac{\partial^2f}{\partial y^2}=9x^2e^{3y}$。2つの順番はどちらも $6xe^{3y}$。}
+
+\bkproblem 海水の中の圧力は $p=p_0-1030\times9.8\times z$〔Pa〕（$z$ は上向き、m。海水の密度を \qty{1030}{kg/m^3} とした）です。$\dfrac{\partial p}{\partial x}$、$\dfrac{\partial p}{\partial y}$、$\dfrac{\partial p}{\partial z}$ を求め、\qty{5}{m} もぐると圧力が何 Pa 上がるかを答えましょう。
+\bkpans{$\dfrac{\partial p}{\partial x}=0$、$\dfrac{\partial p}{\partial y}=0$、$\dfrac{\partial p}{\partial z}=\qty{-10094}{Pa/m}$。$-\num{10094}\times(-5)=\num{50470}$ で、約 \qty{50000}{Pa} 上がる。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 等高線や数の表から、東の坂と北の坂を別々に読みとれる。\bkfurref{bk:8-2:hyou}
+\item ほかを止めて1つだけ動かす偏微分を計算し、点での値の意味を言える。\bkfurref{bk:8-2:henbibun}
+\item 2回の偏微分を計算して順番によらないことを確かめ、3つの変数の量に使える。\bkfurref{bk:8-2:nikai}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{東の坂と北の坂が別々にわかったね。8-3 では、ななめに進んだときの変わり方を、この2つの坂から組み立てるよ。}

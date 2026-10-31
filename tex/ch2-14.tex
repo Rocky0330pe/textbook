@@ -1,0 +1,654 @@
+%% 2-14 式を変形して、ほしい量をとり出そう（第11回で書き足し）
+\makeatletter
+% 式の変形を1行ずつ書く表（左辺｜＝右辺｜この行で使ったきまり）。\begin{bkiiohenkei}{} … \end{bkiiohenkei}
+\NewTblrEnviron{bkiiohenkei}
+\SetTblrInner[bkiiohenkei]{colspec={Q[r,m] Q[l,m] Q[l,m]}, colsep=0pt, rowsep=2.6pt, stretch=0.85,
+  column{2}={rightsep=5mm}, column{3}={leftsep=4mm, font=\sffamily\small, fg=bkDeep},
+  vline{3}={0.8pt, bkTheme!45}}
+% 数と文字で同じ変形を並べる表（数の左辺｜＝右辺｜文字の左辺｜＝右辺｜きまり）
+\NewTblrEnviron{bkiiohenkeiw}
+\SetTblrInner[bkiiohenkeiw]{colspec={Q[r,m] Q[l,m] Q[r,m] Q[l,m] Q[l,m]}, colsep=0pt, rowsep=3pt, stretch=0.85,
+  column{2}={rightsep=6mm}, column{3}={leftsep=6mm}, column{4}={rightsep=5mm}, column{5}={leftsep=4mm, font=\sffamily\small, fg=bkDeep},
+  vline{3}={0.5pt, bkLine}, vline{5}={0.8pt, bkTheme!45}}
+% 1円玉を横から見た山  \bkiiocoins{(x,y)}{枚数}  (x,y) は山の下のまん中
+\newcommand\bkiiocoins[2]{\begin{scope}[shift={#1}]
+  \foreach \k in {1,...,#2} {\filldraw[fill=bkGray!22, draw=bkGray!85, line width=0.4pt, rounded corners=0.4pt] (-3.2,{(\k-1)*0.8}) rectangle (3.2,{\k*0.8});}
+\end{scope}}
+% 上皿てんびん（皿がうでの上にのる形。つり糸がないので、皿の上の物と線が重ならない）
+%   \bkiiobalance{(x,y)}  (x,y) は台の下のまん中。皿の上の点は (bkiioL) (bkiioR)
+\newcommand\bkiiobalance[1]{\begin{scope}[shift={#1}]
+  \fill[bkGray!70, rounded corners=0.6mm] (-13,0) rectangle (13,3.5);
+  \fill[bkGray!80] (-1.6,3.5) rectangle (1.6,20);
+  \fill[bkInk!75, rounded corners=0.8mm] (-25,20) rectangle (25,22.2);
+  \fill[bkRed] (0,21.1) circle (1.5);
+  \foreach \s in {-1,1} {
+    \fill[bkGray!80] ({\s*21-0.9},22.2) rectangle ({\s*21+0.9},25);
+    \fill[bkGray!55, rounded corners=0.5mm] ({\s*21-10},25) rectangle ({\s*21+10},26.8);}
+  \coordinate (bkiioL) at (-21,26.8); \coordinate (bkiioR) at (21,26.8);
+\end{scope}}
+% ねんど玉  \bkiionendo{(x,y)}{半径}  (x,y) は玉の下
+\newcommand\bkiionendo[2]{\begin{scope}[shift={#1}]
+  \fill[bkStem!75] (0,#2) ellipse ({#2*1.15} and {#2});
+  \fill[white, opacity=0.35] (-#2*0.45,#2*1.35) ellipse ({#2*0.3} and {#2*0.2});
+\end{scope}}
+% 等式の性質の1行（前のてんびん → 後のてんびん）
+%   \bkiiorow{y}{見出し}{前の左}{前の右}{後の左}{後の右}{前の式}{後の式}{矢印の文字}
+\newcommand\bkiiorow[9]{%
+  \node[bk node, minimum width=15mm, font=\sffamily\bfseries\small] at (7,#1+9) {#2};
+  \begin{scope}[shift={(38,#1)}, scale=0.55] \bkiiobalance{(0,0)} #3 #4 \end{scope}
+  \begin{scope}[shift={(104,#1)}, scale=0.55] \bkiiobalance{(0,0)} #5 #6 \end{scope}
+  \draw[bk arrow, bkTheme] (60,#1+9) -- (82,#1+9);
+  \node[font=\sffamily\footnotesize, align=center, anchor=south] at (71,#1+10.5) {#9};
+  \node[font=\normalsize, anchor=north] at (38,#1-1.2) {#7};
+  \node[font=\normalsize, anchor=north] at (104,#1-1.2) {#8};}
+% 小さなねんど玉を皿に3つ  \bkiiothree{(皿の点)}
+\newcommand\bkiiothree[1]{\foreach \bkiio@d in {-6.6,0,6.6} {\bkiionendo{($#1+(\bkiio@d,0)$)}{2.8}}}
+% テープ図の1本  \bkiiotape{(x,y)}{長さ}{色}{文字}
+\newcommand\bkiiotape[4]{\node[draw=bkInk, line width=0.7pt, fill=#3!22, minimum width=#2 mm, minimum height=6.5mm, inner sep=0pt, anchor=south west, font=\small] at #1 {#4};}
+\makeatother
+
+\bkchapter{2}{14}{\R{式}{しき}を\R{変形}{へん|けい}して、\\ほしい\R{量}{りょう}をとり\R{出}{だ}そう}{\bklevel{2}}{\R{式}{しき}を\R{変形}{へん|けい}して、ほしい\R{量}{りょう}をとり\R{出}{だ}そう}
+\bkmichishirube{2-3,2-11,2-12,2-13}{2-15,2-16,3-6,5-0}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace \R{等式}{とう|しき}の\R{両辺}{りょう|へん}に\R{同}{おな}じ\R{数}{かず}をたす・ひく・かける・わっても、\R{等式}{とう|しき}が\R{成}{な}り\R{立}{た}つことを、\R{天}{てん}びんで\R{説明}{せつ|めい}できる。
+\item \bklevel{2}\enspace $x=vt$ を、$t=\dfrac{x}{v}$ や $v=\dfrac{x}{t}$ に\R{変形}{へん|けい}できる。
+\item \bklevel{2}\enspace \R{移項}{い|こう}を\R{使}{つか}い、1\R{行}{ぎょう}ずつ\R{使}{つか}ったきまりを\R{書}{か}きながら\R{式}{しき}を\R{変形}{へん|けい}できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\R{家}{いえ}から\R{駅}{えき}まで\qty{1200}{m}あります。\R{自転車}{じ|てん|しゃ}で\R{秒速}{びょう|そく}\qty{4}{m}（\qty{4}{m/s}）で\R{走}{はし}ると、\R{何秒}{なん|びょう}かかるかな？　\R{何分}{なん|ぷん}かな？
+
+2-11 で、「\R{道}{みち}のり＝\R{速}{はや}さ×\R{時間}{じ|かん}」を $x=vt$ と\R{書}{か}きました。でも、この\R{式}{しき}は\R{道}{みち}のりを\R{求}{もと}める\R{形}{かたち}です。\R{時間}{じ|かん}を\R{求}{もと}める\R{式}{しき}と、\R{速}{はや}さを\R{求}{もと}める\R{式}{しき}は、べつべつに\R{覚}{おぼ}えないといけないのかな？
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=33mm, minimum height=17mm] (a) at (0,0)
+    {{\footnotesize \R{道}{みち}のりを\R{求}{もと}める}\\[2pt]{\large $x=vt$}};
+  \node[bk node, draw=bkGray, dashed, minimum width=33mm, minimum height=17mm] (b) at (42,0)
+    {{\footnotesize \R{時間}{じ|かん}を\R{求}{もと}める}\\[2pt]{\large $t=\,?$}};
+  \node[bk node, draw=bkGray, dashed, minimum width=33mm, minimum height=17mm] (c) at (84,0)
+    {{\footnotesize \R{速}{はや}さを\R{求}{もと}める}\\[2pt]{\large $v=\,?$}};
+\end{tikzpicture}
+\bkfigcaption{\R{公式}{こう|しき}は、3つ\R{覚}{おぼ}えるの？　それとも1つから\R{作}{つく}れる？}
+\end{bkfigure}
+\end{hatena}
+
+\clearpage
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[\R{天}{てん}びんで、ねんど\R{玉}{だま}の\R{重}{おも}さを\R{知}{し}ろう]
+1\R{円玉}{えん|だま}は、1\R{枚}{まい}がちょうど\qty{1}{g}です。これをおもりにして、\R{重}{おも}さのわからないねんど\R{玉}{だま}の\R{重}{おも}さを\R{調}{しら}べます。\R{理科室}{り|か|しつ}の\R{上皿}{うわ|ざら}てんびんか、ハンガーと\R{紙}{かみ}コップで\R{作}{つく}ったてんびんを\R{使}{つか}います。
+\par\vspace{4pt}\noindent
+\begin{minipage}[c]{0.56\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item \R{左}{ひだり}の\R{皿}{さら}に、ねんど\R{玉}{だま}と1\R{円玉}{えん|だま}3\R{枚}{まい}をのせよう。
+\item \R{右}{みぎ}の\R{皿}{さら}に1\R{円玉}{えん|だま}を1\R{枚}{まい}ずつのせて、つり\R{合}{あ}う\R{枚数}{まい|すう}をさがそう。
+\item \R{両方}{りょう|ほう}の\R{皿}{さら}から、1\R{円玉}{えん|だま}を3\R{枚}{まい}ずつとろう。てんびんは、どうなるかな？
+\item \R{右}{みぎ}の\R{皿}{さら}に\R{残}{のこ}った1\R{円玉}{えん|だま}は\R{何枚}{なん|まい}かな？\hspace{1\zw}ねんど\R{玉}{だま}は\R{何}{なん}gかな？
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{scope}[scale=0.72]
+  \bkiiobalance{(0,0)}
+  \bkiionendo{($(bkiioL)+(-4.6,0)$)}{3.6}
+  \bkiiocoins{($(bkiioL)+(4.6,0)$)}{3}
+  \bkiiocoins{(bkiioR)}{11}
+\end{scope}
+  \node[bk label, anchor=north, align=center] at (-15.1,12.6) {ねんど\R{玉}{だま}\\と3\R{枚}{まい}};
+  \node[bk label, anchor=north] at (15.1,12.6) {11\R{枚}{まい}};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\R{右}{みぎ}に11\R{枚}{まい}のせたところで、つり\R{合}{あ}ったとします。\R{両方}{りょう|ほう}の\R{皿}{さら}から\R{同}{おな}じ\R{枚数}{まい|すう}をとると、つり\R{合}{あ}いはくずれるかな？
+\end{yattemiyou}
+
+\begin{omoidasou}
+\bkrecall{2-11}{\R{道}{みち}のり＝\R{速}{はや}さ×\R{時間}{じ|かん}。\R{文字}{も|じ}で\R{書}{か}くと $x=v\times t$（$x$ \R{道}{みち}のり、$v$ \R{速}{はや}さ、$t$ \R{時間}{じ|かん}）}
+\bkrecall{2-12}{×は\R{省}{はぶ}いて $vt$ と\R{書}{か}く。÷は\R{分数}{ぶん|すう}で\R{書}{か}く：$x\div v=\dfrac{x}{v}$}
+\bkrecall{2-13}{\R{代入}{だい|にゅう}：$x=vt$ に $v=5$、$t=4$ を\R{入}{い}れると、$x=5\times4=20$}
+\bkrecall{2-4}{\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}を\R{同}{おな}じ\R{数}{かず}でわる（\R{約分}{やく|ぶん}）：$\dfrac{12}{8}=\dfrac{3}{2}$}
+\bkrecall{1-14}{0でわることはできない。}
+\end{omoidasou}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=30mm] (a) at (0,0) {\R{天}{てん}びんが\\つり\R{合}{あ}う};
+  \node[bk node, minimum width=30mm] (b) at (45,0) {\R{左}{ひだり}と\R{右}{みぎ}が\\\R{同}{おな}じ\R{重}{おも}さ};
+  \node[bk node, minimum width=30mm] (c) at (90,0) {「＝」で\\\R{結}{むす}べる};
+  \draw[bk link] (a) -- (b);
+  \draw[bk link] (b) -- (c);
+\end{tikzpicture}
+\bkfigcaption{\R{天}{てん}びんと「＝」は、\R{同}{おな}じことを\R{表}{あらわ}している。}
+\end{bkfigure}
+
+\bkfukidashi{mina}{\R{両方}{りょう|ほう}から\R{同}{おな}じだけとっても、つり\R{合}{あ}ったままだね。このことを\R{式}{しき}で\R{書}{か}くと、どうなるのかな？}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の\R{道具}{どう|ぐ}}
+
+\bksubsection{1}{\R{等式}{とう|しき}は\R{天}{てん}びん}
+
+\leavevmode\label{bk:2-14:tenbin}2-13では、\R{式}{しき}に\R{数}{かず}を\R{代入}{だい|にゅう}して、\R{答}{こた}えを\R{求}{もと}めました。この\R{章}{しょう}では\R{反対}{はん|たい}に、\R{答}{こた}えのほうがわかっていて、\R{式}{しき}の\R{中}{なか}のわからない\R{数}{かず}を\R{求}{もと}めます。\R{手}{て}がかりは\R{天}{てん}びんです。
+
+やってみようの\R{天}{てん}びんを、\R{式}{しき}で\R{書}{か}いてみましょう。ねんど\R{玉}{だま}の\R{重}{おも}さはわからないので、$x$\,g とします（2-11：わからない\R{数}{かず}も\R{文字}{も|じ}で\R{書}{か}ける）。\R{左}{ひだり}の\R{皿}{さら}は、ねんど\R{玉}{だま}と1\R{円玉}{えん|だま}3\R{枚}{まい}なので $x+3$（g）、\R{右}{みぎ}の\R{皿}{さら}は1\R{円玉}{えん|だま}11\R{枚}{まい}なので11（g）です。つり\R{合}{あ}っているので、\R{左}{ひだり}と\R{右}{みぎ}は\R{同}{おな}じ\R{重}{おも}さです。だから、$x+3=11$ と\R{書}{か}けます。
+
+このように、「＝」で\R{結}{むす}んだ\R{式}{しき}を\textbf{\R{等式}{とう|しき}}といいます。\bkidx{とうしき}{\R{等式}{とう|しき}}「＝」の\R{左}{ひだり}の\R{式}{しき}を\textbf{\R{左辺}{さ|へん}}、\R{右}{みぎ}の\R{式}{しき}を\textbf{\R{右辺}{う|へん}}、2つをあわせて\textbf{\R{両辺}{りょう|へん}}といいます。「\R{辺}{へん}」は、ここでは「がわ」という\R{意味}{い|み}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+\begin{scope}[scale=0.62]
+  \bkiiobalance{(0,0)}
+  \bkiionendo{($(bkiioL)+(-4.6,0)$)}{3.6}
+  \bkiiocoins{($(bkiioL)+(4.6,0)$)}{3}
+  \bkiiocoins{(bkiioR)}{11}
+\end{scope}
+\begin{scope}[shift={(80,0)}, scale=0.62]
+  \bkiiobalance{(0,0)}
+  \bkiionendo{(bkiioL)}{3.6}
+  \bkiiocoins{(bkiioR)}{8}
+\end{scope}
+  \foreach \cx/\l/\r in {0/{x+3}/{11}, 80/{x}/{8}} {
+    \node[font=\large, inner sep=0pt] at (\cx-13,-5) {$\l$};
+    \node[font=\large, inner sep=0pt] at (\cx,-5) {$=$};
+    \node[font=\large, inner sep=0pt] at (\cx+13,-5) {$\r$};}
+  \node[bk note, anchor=north] at (-13,-8.5) {\R{左辺}{さ|へん}};
+  \node[bk note, anchor=north] at (13,-8.5) {\R{右辺}{う|へん}};
+  \draw[bk arrow, bkTheme] (27,9) -- (53,9);
+  \node[font=\sffamily\footnotesize, text=bkInk, align=center, anchor=south] at (40,11) {\R{両方}{りょう|ほう}から\\3\R{枚}{まい}ずつとる};
+\end{tikzpicture}
+\bkfigcaption{\R{両方}{りょう|ほう}の\R{皿}{さら}から\R{同}{おな}じ\qty{3}{g}をとっても、つり\R{合}{あ}ったまま。}
+\end{bkfigure}
+
+\R{両方}{りょう|ほう}から3\R{枚}{まい}ずつとっても、\R{天}{てん}びんはつり\R{合}{あ}ったままです。\R{同}{おな}じ\R{重}{おも}さのものから、\R{同}{おな}じ\R{重}{おも}さをとったのだから、\R{残}{のこ}りも\R{同}{おな}じ\R{重}{おも}さのはずですね。\R{式}{しき}では、\R{両辺}{りょう|へん}から3をひいたことになります。
+\[ x+3-3=11-3 \]
+\R{左辺}{さ|へん}は、3をたしてから3をひいたので、$x$ だけが\R{残}{のこ}ります。\R{右辺}{う|へん}は $11-3=8$ です。だから $x=8$。ねんど\R{玉}{だま}は\qty{8}{g}です。
+
+\R{確}{たし}かめてみましょう。$x=8$ を $x+3=11$ に\R{代入}{だい|にゅう}すると（2-13）、$8+3=11$ で、\R{両辺}{りょう|へん}が\R{等}{ひと}しくなります。\R{答}{こた}えは\R{正}{ただ}しいとわかります。
+
+\textbf{たす・かける・わるも\R{同}{おな}じ}\quad ひくだけでなく、たす・かける・わるも、\R{両方}{りょう|ほう}の\R{皿}{さら}に\R{同}{おな}じことをすれば、つり\R{合}{あ}ったままです。\qty{8}{g}のねんど\R{玉}{だま}で、\R{確}{たし}かめてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkiiorow{56}{たす}{\bkiionendo{(bkiioL)}{3.6}}{\bkiiocoins{(bkiioR)}{8}}%
+    {\bkiionendo{($(bkiioL)+(-4.6,0)$)}{3.6}\bkiiocoins{($(bkiioL)+(4.6,0)$)}{2}}{\bkiiocoins{(bkiioR)}{10}}%
+    {$x=8$}{$x+2=8+2$}{\R{両方}{りょう|ほう}に\\2\R{枚}{まい}ずつのせる}
+  \bkiiorow{28}{かける}{\bkiionendo{(bkiioL)}{3.6}}{\bkiiocoins{(bkiioR)}{8}}%
+    {\bkiionendo{($(bkiioL)+(-4.6,0)$)}{3.6}\bkiionendo{($(bkiioL)+(4.6,0)$)}{3.6}}{\bkiiocoins{($(bkiioR)+(-3.6,0)$)}{8}\bkiiocoins{($(bkiioR)+(3.6,0)$)}{8}}%
+    {$x=8$}{$2x=8\times2$}{\R{両方}{りょう|ほう}を\\2\R{倍}{ばい}にする}
+  \bkiiorow{0}{わる}{\bkiiothree{(bkiioL)}}{\bkiiocoins{($(bkiioR)+(-3.6,0)$)}{12}\bkiiocoins{($(bkiioR)+(3.6,0)$)}{12}}%
+    {\bkiionendo{(bkiioL)}{3.6}}{\bkiiocoins{(bkiioR)}{8}}%
+    {$3x=24$}{$\dfrac{3x}{3}=\dfrac{24}{3}$}{\R{両方}{りょう|ほう}を3つに\\\R{分}{わ}けて1つ\R{分}{ぶん}}
+\end{tikzpicture}
+\bkfigcaption{\R{両方}{りょう|ほう}の\R{皿}{さら}に\R{同}{おな}じことをすれば、つり\R{合}{あ}ったまま。}
+\end{bkfigure}
+
+いちばん\R{下}{した}の「わる」を\R{見}{み}てください。\R{左}{ひだり}にねんど\R{玉}{だま}3\R{個}{こ}、\R{右}{みぎ}に1\R{円玉}{えん|だま}24\R{枚}{まい}でつり\R{合}{あ}っています（$3x=24$）。\R{左}{ひだり}を3つに\R{分}{わ}けると、1つ\R{分}{ぶん}はねんど\R{玉}{だま}1\R{個}{こ}。\R{右}{みぎ}も3つに\R{分}{わ}けると、1つ\R{分}{ぶん}は $24\div3=8$ \R{枚}{まい}。\R{同}{おな}じ\R{重}{おも}さを\R{同}{おな}じ\R{数}{かず}に\R{分}{わ}けたので、1つ\R{分}{ぶん}どうしも\R{同}{おな}じ\R{重}{おも}さです。だから $x=8$ です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=14mm] Q[l,m,wd=50mm] Q[c,m,wd=52mm]}, rowsep=0.5pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+すること & \R{天}{てん}びんでは & \R{式}{しき}では（$A=B$ のとき） \\
+たす & \R{両方}{りょう|ほう}に\R{同}{おな}じ\R{重}{おも}さをのせる & $A+C=B+C$ \\
+ひく & \R{両方}{りょう|ほう}から\R{同}{おな}じ\R{重}{おも}さをとる & $A-C=B-C$ \\
+かける & \R{両方}{りょう|ほう}を\R{同}{おな}じ\R{数}{かず}の\R{倍}{ばい}にする & $AC=BC$ \\
+わる & \R{両方}{りょう|ほう}を\R{同}{おな}じ\R{数}{かず}に\R{分}{わ}けて、1つ\R{分}{ぶん}にする & $\dfrac{A}{C}=\dfrac{B}{C}$\enspace{\footnotesize（$C$ は0でない）} \\
+\end{bktable}
+\bktabcaption{\R{等式}{とう|しき}の\R{性質}{せい|しつ}（$A$、$B$、$C$ には、どんな\R{数}{かず}や\R{式}{しき}が\R{入}{はい}ってもよい）}
+\end{bkcenter}
+
+この4つのきまりを、\textbf{\R{等式}{とう|しき}の\R{性質}{せい|しつ}}といいます。\bkidx{とうしきのせいしつ}{\R{等式}{とう|しき}の\R{性質}{せい|しつ}}0でわることはできないので（1-14）、わる\R{数}{かず}は0でない\R{数}{かず}にします。0こに\R{分}{わ}けることは、できませんね。また、\R{天}{てん}びんを\R{反対}{はん|たい}がわから\R{見}{み}てもつり\R{合}{あ}っているように、\R{左辺}{さ|へん}と\R{右辺}{う|へん}を\R{入}{い}れかえてもかまいません。
+
+\textbf{\R{片方}{かた|ほう}だけにすると？}\quad \R{右}{みぎ}の\R{皿}{さら}からだけ3\R{枚}{まい}とると、\R{右}{みぎ}が\R{軽}{かる}くなって\R{天}{てん}びんはかたむきます。\R{式}{しき}でも、$x+3=11-3$ は $x+3=8$ になってしまい、$x=8$ を\R{代入}{だい|にゅう}すると $11=8$ でまちがいです。\R{必}{かなら}ず\R{両辺}{りょう|へん}に\R{同}{おな}じことをします。
+
+\bksubsection{2}{$x=vt$ から、\R{時間}{じ|かん}を\R{求}{もと}める\R{式}{しき}を\R{作}{つく}る}
+
+\leavevmode\label{bk:2-14:vt}\bkhatenaref の\R{自転車}{じ|てん|しゃ}で、かかる\R{時間}{じ|かん}を $t$ \R{秒}{びょう}とします。$x=vt$ に、わかっている $x=1200$ と $v=4$ を\R{代入}{だい|にゅう}すると（2-13）、
+\[ 1200=4t \]
+となります。$4t$ は $4\times t$、つまり「$t$ の4つ\R{分}{ぶん}」です。これが1200と\R{等}{ひと}しいのです。この $t$ を、2つのやり\R{方}{かた}で\R{求}{もと}めてみます。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}
+\textbf{テープ\R{図}{ず}で}\quad $t$ のテープを4\R{本}{ほん}つなぐと、1200の\R{長}{なが}さになります。4\R{本}{ほん}は\R{同}{おな}じ\R{長}{なが}さなので、1\R{本}{ぽん}\R{分}{ぶん}は $1200\div4=300$ です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,...,3} {\bkiiotape{(\i*13,0)}{13}{bkBlue}{$t$}}
+  \bkbrace{(0,7.5)}{(52,7.5)}{1200}{1}
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{4pt}
+\textbf{\R{天}{てん}びんで}\quad $t$ だけを\R{残}{のこ}すために、\R{両辺}{りょう|へん}を4でわります。\R{等式}{とう|しき}の\R{性質}{せい|しつ}の\R{図}{ず}の「わる」と\R{同}{おな}じです。
+\[ \frac{1200}{4}=\frac{4t}{4}\qquad\text{だから}\qquad 300=t \]
+$\dfrac{4t}{4}$ が $t$ になるのは、$t$ を4\R{倍}{ばい}してから4でわると、もとの $t$ にもどるからです（\R{分子}{ぶん|し}と\R{分母}{ぶん|ぼ}の4を\R{約分}{やく|ぶん}した、と\R{考}{かんが}えてもよい。2-4）。
+
+\textbf{\R{単位}{たん|い}もつけると}\quad \R{単位}{たん|い}ごと\R{計算}{けい|さん}すると（2-13）、
+\[ t=\frac{1200\,\mathrm{m}}{4\,\mathrm{m/s}}=300\,\mathrm{s} \]
+となります。mをm/sでわると、なぜsになるのでしょう。\qty{4}{m/s}は「1\R{秒}{びょう}あたり\qty{4}{m}」です。\qty{1200}{m}の\R{中}{なか}に\qty{4}{m}がいくつあるかを\R{数}{かず}えると300こで、その1こ1こに1\R{秒}{びょう}ずつかかるので、300\R{秒}{びょう}です。\R{分}{ふん}に\R{直}{なお}すには、\qty{60}{s/min}でわります（2-13）。
+\[ \qty{300}{s}\div\qty{60}{s/min}=300\,\cancel{\mathrm{s}}\times\frac{1\,\mathrm{min}}{60\,\cancel{\mathrm{s}}}=\qty{5}{min} \]
+\R{家}{いえ}から\R{駅}{えき}まで、300\R{秒}{びょう}、つまり5\R{分}{ふん}かかります。
+
+\textbf{\R{文字}{も|じ}のまま、\R{同}{おな}じ\R{変形}{へん|けい}をする}\quad \R{式}{しき}を\R{変}{か}えていくことを、\R{式}{しき}の\textbf{\R{変形}{へん|けい}}といいます。1\R{行}{ぎょう}に1つのきまりだけを\R{使}{つか}い、\R{使}{つか}ったきまりを\R{右}{みぎ}に\R{書}{か}きます。\R{数}{かず}が\R{変}{か}わっても、することは「\R{両辺}{りょう|へん}を\R{速}{はや}さでわる」で\R{同}{おな}じです。そこで、\R{数}{かず}を\R{入}{い}れる\R{前}{まえ}の\R{文字}{も|じ}のまま、\R{同}{おな}じ\R{変形}{へん|けい}をしてみましょう（\R{表}{ひょう}の\R{右}{みぎ}）。
+
+\begin{bkcenter}
+\begin{bkiiohenkeiw}{}
+\SetRow{font=\sffamily\bfseries\footnotesize, fg=bkGray}\SetCell[c=2]{c}\R{数}{かず}で & & \SetCell[c=2]{c}\R{文字}{も|じ}で & & この\R{行}{ぎょう}で\R{使}{つか}ったきまり \\
+$1200$ & ${}=4t$ & $x$ & ${}=vt$ & \\
+$\dfrac{1200}{4}$ & ${}=\dfrac{4t}{4}$ & $\dfrac{x}{v}$ & ${}=\dfrac{vt}{v}$ & \R{両辺}{りょう|へん}を4（$v$）でわる \\
+$300$ & ${}=t$ & $\dfrac{x}{v}$ & ${}=t$ & \R{計算}{けい|さん}する（$v$ を\R{約分}{やく|ぶん}） \\
+$t$ & ${}=300$ & $t$ & ${}=\dfrac{x}{v}$ & \R{左辺}{さ|へん}と\R{右辺}{う|へん}を\R{入}{い}れかえる \\
+\end{bkiiohenkeiw}
+\bktabcaption{\R{数}{かず}でも\R{文字}{も|じ}でも、\R{同}{おな}じ\R{変形}{へん|けい}をする。}
+\end{bkcenter}
+
+$\dfrac{vt}{v}$ は、\R{分子}{ぶん|し}にも\R{分母}{ぶん|ぼ}にも\R{同}{おな}じ $v$ があるので、$\dfrac{4t}{4}$ と\R{同}{おな}じように\R{約分}{やく|ぶん}でき、$t$ になります。「\R{時間}{じ|かん}＝\R{道}{みち}のり÷\R{速}{はや}さ」の\R{式}{しき}ができました。$x=1200$、$v=4$ を\R{代入}{だい|にゅう}すると $t=300$ で、\R{数}{かず}で\R{解}{と}いた\R{答}{こた}えと\R{同}{おな}じです。なお、$v$ でわるので、$v$ は0ではないとします。\R{速}{はや}さが0（\R{止}{と}まっている）なら、いつまでも\R{駅}{えき}に\R{着}{つ}きませんね。
+
+\R{同}{おな}じように、$x=vt$ の\R{両辺}{りょう|へん}を $t$ でわれば、$\dfrac{x}{t}=\dfrac{vt}{t}=v$ なので、$v=\dfrac{x}{t}$（\R{速}{はや}さ＝\R{道}{みち}のり÷\R{時間}{じ|かん}）もできます。2-3で\R{学}{まな}んだ「\R{速}{はや}さ＝\R{道}{みち}のり÷\R{時間}{じ|かん}」と\R{同}{おな}じですね。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=26mm, minimum height=12mm, font=\large, inner ysep=1.5mm] (t) at (0,0) {$t=\dfrac{x}{v}$};
+  \node[bk node, minimum width=26mm, minimum height=12mm, font=\large, inner ysep=1.5mm, line width=1.6pt] (x) at (54,0) {$x=vt$};
+  \node[bk node, minimum width=26mm, minimum height=12mm, font=\large, inner ysep=1.5mm] (v) at (108,0) {$v=\dfrac{x}{t}$};
+  \draw[bk link] (x) -- (t);
+  \draw[bk link] (x) -- (v);
+  \node[bk link label, anchor=south] at (27,1.5) {\R{両辺}{りょう|へん}を $v$ でわる};
+  \node[bk link label, anchor=south] at (81,1.5) {\R{両辺}{りょう|へん}を $t$ でわる};
+\end{tikzpicture}
+\bkfigcaption{1つの\R{式}{しき}から、のこりの2つの\R{式}{しき}が\R{作}{つく}れる。}
+\end{bkfigure}
+
+\bkhatenaref の\R{答}{こた}え：300\R{秒}{びょう}（5\R{分}{ふん}）かかります。そして、\R{公式}{こう|しき}は $x=vt$ の1つだけ\R{覚}{おぼ}えておけば、のこりの2つは、\R{等式}{とう|しき}の\R{性質}{せい|しつ}でいつでも\R{作}{つく}れます。
+
+$t=\dfrac{x}{v}$ のように、ほしい\R{量}{りょう}が\R{左辺}{さ|へん}に1つだけある\R{形}{かたち}にすることを、その\R{量}{りょう}について\textbf{\R{解}{と}く}といいます。$t=\dfrac{x}{v}$ は、$x=vt$ を $t$ について\R{解}{と}いた\R{式}{しき}です。\bkidx{とく}{（〜について）\R{解}{と}く}\R{解}{と}いた\R{式}{しき}があれば、2-13のように\R{何回}{なん|かい}も\R{代入}{だい|にゅう}してはさまなくても、1\R{回}{かい}の\R{代入}{だい|にゅう}で\R{答}{こた}えが\R{出}{で}ます。
+
+\bksubsection{3}{\R{移項}{い|こう}：たす・ひくを1\R{行}{ぎょう}で}
+
+\leavevmode\label{bk:2-14:ikou}\R{数学}{すう|がく}の\R{道具}{どう|ぐ}1（\pageref{bk:2-14:tenbin}ページ）では、$x+3=11$ の\R{両辺}{りょう|へん}から3をひきました。その3\R{行}{ぎょう}を、ならべてみます。
+\begin{bkcenter}
+\begin{bkiiohenkei}{}
+$x+3$ & ${}=11$ & \\
+$x+3-3$ & ${}=11-3$ & \R{両辺}{りょう|へん}から3をひく \\
+$x$ & ${}=11-3$ & \R{左辺}{さ|へん}は ${}+3-3=0$ で、$x$ だけ\R{残}{のこ}る \\
+\end{bkiiohenkei}
+\end{bkcenter}
+1\R{行目}{ぎょう|め}と3\R{行目}{ぎょう|め}だけをくらべてみましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\Large, inner sep=1pt] (a1) at (0,9) {$x$};
+  \node[font=\Large, inner sep=1pt, text=bkRed!80!black, anchor=west] (p) at (a1.east) {${}+3$};
+  \node[font=\Large, inner sep=1pt, anchor=west] (e1) at (p.east) {${}={}$};
+  \node[font=\Large, inner sep=1pt, anchor=west] (r1) at (e1.east) {$11$};
+  \node[font=\Large, inner sep=1pt, anchor=east] (a2) at ($(a1.east)+(0,-15)$) {$x$};
+  \node[font=\Large, inner sep=1pt, anchor=west] (e2) at (e1.west |- a2) {${}={}$};
+  \node[font=\Large, inner sep=1pt, anchor=west] (r2) at (e2.east) {$11$};
+  \node[font=\Large, inner sep=1pt, text=bkBlue!80!black, anchor=west] (m) at (r2.east) {${}-3$};
+  \draw[-{Stealth[length=6pt]}, line width=1.2pt, bkGray, shorten <=1.5mm, shorten >=1.5mm] (p.south) .. controls +(0,-6) and +(-4,6) .. (m.north);
+  \node[anchor=west, font=\sffamily\small, text=bkInk, align=left] at (42,1.5) {\R{左辺}{さ|へん}の ${}+3$ が「＝」をこえて\\\R{右辺}{う|へん}にうつると、${}-3$ になる};
+\end{tikzpicture}
+\bkfigcaption{\R{移項}{い|こう}。「＝」の\R{向}{む}こうへうつすと、\R{符号}{ふ|ごう}が\R{反対}{はん|たい}になる。}
+\end{bkfigure}
+
+\R{左辺}{さ|へん}にあった ${}+3$ が\R{消}{き}えて、\R{右辺}{う|へん}に ${}-3$ が\R{出}{で}てきたように\R{見}{み}えます。このように、\R{等式}{とう|しき}の\R{一方}{いっ|ぽう}の\R{辺}{へん}にある\R{項}{こう}（2-12）を、\R{符号}{ふ|ごう}を\R{変}{か}えてもう\R{一方}{いっ|ぽう}の\R{辺}{へん}にうつすことを、\textbf{\R{移項}{い|こう}}といいます。\bkidx{いこう}{\R{移項}{い|こう}}\R{移項}{い|こう}は、\R{新}{あたら}しいきまりではありません。「\R{両辺}{りょう|へん}から\R{同}{おな}じ\R{数}{かず}をひく（たす）」を、まん\R{中}{なか}の\R{行}{ぎょう}を\R{書}{か}かずに1\R{行}{ぎょう}で\R{書}{か}いたものです。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}
+\textbf{マイナスの\R{項}{こう}の\R{移項}{い|こう}}\quad $x-5=7$ では、\R{両辺}{りょう|へん}に5をたします。$-5+5=0$ なので、\R{左辺}{さ|へん}は $x$ だけになります。${}-5$ を\R{移項}{い|こう}すると ${}+5$ になる、ということです。$x=12$ を\R{代入}{だい|にゅう}すると $12-5=7$ で、\R{正}{ただ}しいとわかります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\raggedleft
+\begin{bkiiohenkei}{}
+$x-5$ & ${}=7$ & \\
+$x-5+5$ & ${}=7+5$ & \R{両辺}{りょう|へん}に5をたす \\
+$x$ & ${}=12$ & ${}-5+5=0$ \\
+\end{bkiiohenkei}
+\end{minipage}
+
+\vspace{4pt}
+\textbf{\R{移項}{い|こう}とわり\R{算}{ざん}を\R{続}{つづ}けて\R{使}{つか}う}\quad 1\R{個}{こ}\qty{3}{g}のビーズを、\qty{5}{g}の\R{箱}{はこ}に $x$ \R{個}{こ}\R{入}{い}れると、\R{全体}{ぜん|たい}の\R{重}{おも}さは $y=3x+5$（g）です（ビーズ $x$ \R{個}{こ}で $3\times x$\,g、それに\R{箱}{はこ}の\qty{5}{g}をたす）。\R{重}{おも}さから\R{個数}{こ|すう}がわかるように、$x$ について\R{解}{と}きます。
+
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{bkiiohenkei}{}
+$y$ & ${}=3x+5$ & \\
+$y-5$ & ${}=3x$ & ${}+5$ を\R{移項}{い|こう} \\
+$\dfrac{y-5}{3}$ & ${}=x$ & \R{両辺}{りょう|へん}を3でわる \\
+$x$ & ${}=\dfrac{y-5}{3}$ & \R{入}{い}れかえる \\
+\end{bkiiohenkei}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm] (x1) at (0,9) {$x$};
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm] (m1) at (21,9) {$3x$};
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm] (y1) at (42,9) {$y$};
+  \draw[bk link] (x1) -- node[bk link label, above] {${}\times3$} (m1);
+  \draw[bk link] (m1) -- node[bk link label, above] {${}+5$} (y1);
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm, draw=bkBlue] (y2) at (42,-8) {$y$};
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm, draw=bkBlue] (m2) at (21,-8) {$y-5$};
+  \node[bk node, minimum width=9mm, inner xsep=1.5mm, draw=bkBlue] (x2) at (0,-8) {$x$};
+  \draw[bk link] (y2) -- node[bk link label, above] {${}-5$} (m2);
+  \draw[bk link] (m2) -- node[bk link label, above] {${}\div3$} (x2);
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+\R{図}{ず}の\R{上}{うえ}の\R{段}{だん}は、$x$ から $y$ を\R{作}{つく}る\R{順番}{じゅん|ばん}です（×3してから＋5）。\R{下}{した}の\R{段}{だん}は、$y$ から $x$ にもどす\R{順番}{じゅん|ばん}です。もどすときは、あとからしたこと（＋5）を\R{先}{さき}にもどします。くつ\R{下}{した}をはいてからくつをはいたら、ぬぐときはくつが\R{先}{さき}なのと\R{同}{おな}じです。
+
+$y=50$ のときは、
+\[ x=\frac{50-5}{3}=\frac{45}{3}=15 \]
+で、15\R{個}{こ}です。\R{確}{たし}かめると、$3\times15+5=45+5=50$ で\R{合}{あ}っています。
+
+\bksubsection{4}{わり\R{算}{ざん}をもどすには、\R{両辺}{りょう|へん}にかける}
+
+\leavevmode\label{bk:2-14:kakeru}\noindent\begin{minipage}[c]{0.55\linewidth}
+$\dfrac{x}{3}=7$ は、「$x$ を3つに\R{分}{わ}けた1つ\R{分}{ぶん}が7」という\R{意味}{い|み}です（2-12：÷は\R{分数}{ぶん|すう}で\R{書}{か}く）。\R{右}{みぎ}のテープ\R{図}{ず}のように、\R{全体}{ぜん|たい}の $x$ は、7が3つ\R{分}{ぶん}で $7\times3=21$ です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,1,2} {\bkiiotape{(\i*15,0)}{15}{bkOrange}{7}}
+  \bkbrace{(0,7.5)}{(45,7.5)}{$x$}{1}
+  \bkbrace{(0,-1)}{(15,-1)}{$\dfrac{x}{3}$}{-1}
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{3pt}
+\R{式}{しき}では、\R{両辺}{りょう|へん}に3をかけます。3でわったものに3をかけると、もとにもどるからです。
+\begin{bkcenter}
+\begin{bkiiohenkei}{}
+$\dfrac{x}{3}$ & ${}=7$ & \\
+$\dfrac{x}{3}\times3$ & ${}=7\times3$ & \R{両辺}{りょう|へん}に3をかける \\
+$x$ & ${}=21$ & ÷3と×3で、もとにもどる \\
+\end{bkiiohenkei}
+\end{bkcenter}
+\R{確}{たし}かめると、$\dfrac{21}{3}=7$ で\R{合}{あ}っています。
+
+\textbf{かけてから\R{移項}{い|こう}する}\quad テストの\R{点}{てん}を2\R{回}{かい}とったとき、1\R{回目}{かい|め}を $a$ \R{点}{てん}、2\R{回目}{かい|め}を $b$ \R{点}{てん}とすると、\R{平均}{へい|きん} $m$ は $m=\dfrac{a+b}{2}$ です（2-6：\R{合計}{ごう|けい}を\R{回数}{かい|すう}でわる）。「\R{平均}{へい|きん}を80\R{点}{てん}にするには、1\R{回目}{かい|め}が74\R{点}{てん}なら2\R{回目}{かい|め}は\R{何点}{なん|てん}？」のような\R{問}{と}いに\R{答}{こた}えるために、$b$ について\R{解}{と}いてみましょう。
+\begin{bkcenter}
+\begin{bkiiohenkei}{}
+$m$ & ${}=\dfrac{a+b}{2}$ & \\
+$2m$ & ${}=a+b$ & \R{両辺}{りょう|へん}に2をかける（\R{分母}{ぶん|ぼ}の2が\R{消}{き}える） \\
+$2m-a$ & ${}=b$ & ${}+a$ を\R{移項}{い|こう} \\
+$b$ & ${}=2m-a$ & \R{入}{い}れかえる \\
+\end{bkiiohenkei}
+\end{bkcenter}
+$m=80$、$a=74$ を\R{代入}{だい|にゅう}すると、$b=2\times80-74=160-74=86$（\R{点}{てん}）。\R{確}{たし}かめると、$\dfrac{74+86}{2}=\dfrac{160}{2}=80$ です。2\R{行目}{ぎょう|め}で、\R{右辺}{う|へん}の $\dfrac{a+b}{2}$ に2をかけると、$a$ と $b$ の\R{両方}{りょう|ほう}がそろって\R{分母}{ぶん|ぼ}から\R{出}{で}てきます。$a+b$ はひとまとまりだからです（2-13）。
+
+\textbf{もどす\R{計算}{けい|さん}の\R{表}{ひょう}}\quad ここまでの\R{変形}{へん|けい}をまとめると、$x$ についている\R{計算}{けい|さん}を、\R{反対}{はん|たい}の\R{計算}{けい|さん}で\R{両辺}{りょう|へん}からとりのぞいていました。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=34mm] Q[c,m,wd=44mm] Q[c,m,wd=30mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small}}
+$x$ についている\R{計算}{けい|さん} & \R{両辺}{りょう|へん}にする\R{反対}{はん|たい}の\R{計算}{けい|さん} & \R{例}{れい} \\
+${}+2$ & 2をひく（\R{移項}{い|こう}） & $x+2=9\to x=7$ \\
+${}-3$ & 3をたす（\R{移項}{い|こう}） & $x-3=5\to x=8$ \\
+${}\times4$ & 4でわる & $4x=20\to x=5$ \\
+${}\div2$ & 2をかける & $\dfrac{x}{2}=6\to x=12$ \\
+\end{bktable}
+\bktabcaption{たし\R{算}{ざん}とひき\R{算}{ざん}、かけ\R{算}{ざん}とわり\R{算}{ざん}は、たがいにもどし\R{合}{あ}う\R{計算}{けい|さん}。}
+\end{bkcenter}
+
+\begin{taisetsu}
+\R{等式}{とう|しき}の\R{両辺}{りょう|へん}に\R{同}{おな}じ\R{数}{かず}をたしても、ひいても、かけても、\R{同}{おな}じ\R{数}{かず}（0でない）でわっても、\R{等式}{とう|しき}は\R{成}{な}り\R{立}{た}つ。\par\vspace{2pt}
+\R{移項}{い|こう}：\R{項}{こう}を「＝」の\R{向}{む}こうへうつすと、\R{符号}{ふ|ごう}が\R{反対}{はん|たい}になる（\R{両辺}{りょう|へん}に\R{同}{おな}じ\R{数}{かず}をたす・ひくのと\R{同}{おな}じ）。\par\vspace{2pt}
+もどすときは、あとからしたことを\R{先}{さき}にもどす。\par\vspace{2pt}
+\R{式}{しき}の\R{変形}{へん|けい}は1\R{行}{ぎょう}ずつ。その\R{行}{ぎょう}で\R{使}{つか}ったきまりを\R{書}{か}く。\R{答}{こた}えは\R{代入}{だい|にゅう}して\R{確}{たし}かめる。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{\R{等式}{とう|しき}・\R{左辺}{さ|へん}・\R{右辺}{う|へん}・\R{両辺}{りょう|へん}}{「＝」で\R{結}{むす}んだ\R{式}{しき}と、その\R{左}{ひだり}・\R{右}{みぎ}・\R{両方}{りょう|ほう}の\R{辺}{へん}。}
+\bkword{\R{等式}{とう|しき}の\R{性質}{せい|しつ}}{\R{両辺}{りょう|へん}に\R{同}{おな}じ\R{数}{かず}をたす・ひく・かける・わっても、\R{等式}{とう|しき}は\R{成}{な}り\R{立}{た}つ。}
+\bkword{\R{移項}{い|こう}}{\R{項}{こう}の\R{符号}{ふ|ごう}を\R{変}{か}えて、「＝」の\R{向}{む}こうの\R{辺}{へん}へうつすこと。}
+\bkword{〜について\R{解}{と}く}{ほしい\R{量}{りょう}が\R{左辺}{さ|へん}に1つだけある\R{形}{かたち}にすること。}
+\end{kotoba}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{\R{例題}{れい|だい}でたしかめよう}
+
+\begin{reidai}[4つのきまりで $x$ を\R{求}{もと}める]
+\R{次}{つぎ}の\R{等式}{とう|しき}を $x$ について\R{解}{と}きましょう。\quad（1）\nobreak $x+5=12$\quad（2）\nobreak $x-4=9$\quad（3）\nobreak $6x=42$\quad（4）\nobreak $\dfrac{x}{5}=3$\par
+\kangaekata $x$ についている\R{計算}{けい|さん}の\R{反対}{はん|たい}を、\R{両辺}{りょう|へん}にします。＋5なら5をひく、−4なら4をたす、×6なら6でわる、÷5なら5をかけます。\par
+\shiki（1）\R{両辺}{りょう|へん}から5をひく\quad $x=12-5=7$\par
+\hspace*{2.6\zw}（2）\R{両辺}{りょう|へん}に4をたす\quad $x=9+4=13$\par
+\hspace*{2.6\zw}（3）\R{両辺}{りょう|へん}を6でわる\quad $x=\dfrac{42}{6}=7$\par
+\hspace*{2.6\zw}（4）\R{両辺}{りょう|へん}に5をかける\quad $x=3\times5=15$\par
+\R{確}{たし}かめ：$7+5=12$、$13-4=9$、$6\times7=42$、$\dfrac{15}{5}=3$\par
+\kotae（1）\nobreak $x=7$\quad（2）\nobreak $x=13$\quad（3）\nobreak $x=7$\quad（4）\nobreak $x=15$
+\end{reidai}
+
+\begin{jibun}
+\R{次}{つぎ}の\R{等式}{とう|しき}を $x$ について\R{解}{と}きましょう。\quad（1）\nobreak $x+7=10$\quad（2）\nobreak $x-9=2$\quad（3）\nobreak $4x=36$\quad（4）\nobreak $\dfrac{x}{2}=8$
+\bkjans{（1）\nobreak $x=3$\quad（2）\nobreak $x=11$\quad（3）\nobreak $x=9$\quad（4）\nobreak $x=16$}
+\end{jibun}
+
+\begin{reidai}[\R{両辺}{りょう|へん}から\R{同}{おな}じ\R{数}{かず}をひく]
+ばねの\R{長}{なが}さ $L$（cm）とのび $x$（cm）には、$L=x+12$ の\R{関係}{かん|けい}があります（12はのびる\R{前}{まえ}の\R{長}{なが}さ）。$x$ について\R{解}{と}き、$L=17$ のときの、のびを\R{求}{もと}めましょう。\par
+\kangaekata \R{求}{もと}めたい $x$ を\R{左辺}{さ|へん}にして、1つだけ\R{残}{のこ}します。\par
+\shiki\begin{bkiiohenkei}[t]{}
+$L$ & ${}=x+12$ & \\
+$x+12$ & ${}=L$ & \R{左辺}{さ|へん}と\R{右辺}{う|へん}を\R{入}{い}れかえる \\
+$x$ & ${}=L-12$ & \R{両辺}{りょう|へん}から12をひく \\
+\end{bkiiohenkei}\par
+\kotae $x=L-12$。$L=17$ なら $x=17-12=5$ で、\qty{5}{cm}
+\end{reidai}
+
+\begin{reidai}[\R{両辺}{りょう|へん}を\R{同}{おな}じ\R{数}{かず}でわる]
+\R{電圧}{でん|あつ} $V$（V）、\R{電流}{でん|りゅう} $I$（A）、\R{抵抗}{てい|こう} $R$（Ω）には、$V=RI$ の\R{関係}{かん|けい}があります。Ω（オーム）は\R{電気}{でん|き}の\R{通}{とお}りにくさ（\R{抵抗}{てい|こう}）の\R{単位}{たん|い}です（くわしくは2-15）。$I$ について\R{解}{と}き、$V=6$、$R=3$ のときの $I$ を\R{求}{もと}めましょう。\par
+\kangaekata $RI$ は $R\times I$。$I$ にかかっている $R$ を、わってはずします。\par
+\shiki\begin{bkiiohenkei}[t]{}
+$V$ & ${}=RI$ & \\
+$RI$ & ${}=V$ & \R{左辺}{さ|へん}と\R{右辺}{う|へん}を\R{入}{い}れかえる \\
+$\dfrac{RI}{R}$ & ${}=\dfrac{V}{R}$ & \R{両辺}{りょう|へん}を $R$ でわる \\
+$I$ & ${}=\dfrac{V}{R}$ & $R$ を\R{約分}{やく|ぶん} \\
+\end{bkiiohenkei}\par
+\kotae $I=\dfrac{V}{R}$。\R{代入}{だい|にゅう}して $I=\dfrac{6}{3}=2$ で、\qty{2}{A}
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkiiojA}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\R{朝}{あさ}の\R{気温}{き|おん} $a$\,℃と\R{昼}{ひる}の\R{気温}{き|おん} $b$\,℃には、$b=a+6$ の\R{関係}{かん|けい}がありました。$a$ について\R{解}{と}き、$b=21$ のときの $a$ を\R{求}{もと}めましょう。
+\bkjans{$a=b-6$（\R{両辺}{りょう|へん}から6をひく）。$a=21-6=15$ で\qty{15}{\degreeCelsius}}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+$x=vt$ を $v$ について\R{解}{と}き、\qty{150}{m}を30\R{秒}{びょう}で\R{走}{はし}ったときの\R{速}{はや}さを\R{求}{もと}めましょう。
+\bkjans{$v=\dfrac{x}{t}$（\R{両辺}{りょう|へん}を $t$ でわる）。$v=\dfrac{150}{30}=5$ で\qty{5}{m/s}}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[\R{両辺}{りょう|へん}に\R{同}{おな}じ\R{数}{かず}をかける]
+$t=\dfrac{x}{v}$ を、$v$ について\R{解}{と}きましょう。\par
+\kangaekata \R{分母}{ぶん|ぼ}にある $v$ は、\R{両辺}{りょう|へん}に $v$ をかけて\R{分母}{ぶん|ぼ}から\R{出}{だ}します。$\dfrac{x}{v}\times v=x$ です（\R{数}{かず}なら $\dfrac{1200}{4}\times4=1200$）。\par
+\shiki\begin{bkiiohenkei}[t]{}
+$t$ & ${}=\dfrac{x}{v}$ & \\
+$t\times v$ & ${}=\dfrac{x}{v}\times v$ & \R{両辺}{りょう|へん}に $v$ をかける \\
+$tv$ & ${}=x$ & ÷$v$ と×$v$ で、もとにもどる \\
+$v$ & ${}=\dfrac{x}{t}$ & \R{両辺}{りょう|へん}を $t$ でわる \\
+\end{bkiiohenkei}\par
+\kotae $v=\dfrac{x}{t}$（\pageref{bk:2-14:vt}ページで\R{作}{つく}った\R{式}{しき}と\R{同}{おな}じ）
+\end{reidai}
+
+\begin{reidai}[\R{移項}{い|こう}してからわる]
+\R{日本}{に|ほん}で\R{使}{つか}う\R{温度}{おん|ど} $C$（℃）と、アメリカで\R{使}{つか}う\R{温度}{おん|ど} $F$ には、$F=1.8C+32$ の\R{関係}{かん|けい}があります（2-13）。$C$ について\R{解}{と}き、$F=86$ のときの $C$ を\R{求}{もと}めましょう。\par
+\kangaekata $C$ から $F$ を\R{作}{つく}るときは「×1.8」→「＋32」の\R{順}{じゅん}です。もどすときは、あとからした「＋32」を\R{先}{さき}にもどします。\par
+\shiki\begin{bkiiohenkei}[t]{}
+$F$ & ${}=1.8C+32$ & \\
+$1.8C+32$ & ${}=F$ & \R{左辺}{さ|へん}と\R{右辺}{う|へん}を\R{入}{い}れかえる \\
+$1.8C$ & ${}=F-32$ & ${}+32$ を\R{移項}{い|こう} \\
+$C$ & ${}=\dfrac{F-32}{1.8}$ & \R{両辺}{りょう|へん}を1.8でわる \\
+\end{bkiiohenkei}\par
+\kotae $C=\dfrac{F-32}{1.8}$。$C=\dfrac{86-32}{1.8}=\dfrac{54}{1.8}=30$ で、\qty{30}{\degreeCelsius}（\R{確}{たし}かめ：$1.8\times30+32=86$）
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkiiojB}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+$I=\dfrac{V}{R}$ を $R$ について\R{解}{と}き、\qty{3}{V}で\qty{0.1}{A}の\R{電流}{でん|りゅう}が\R{流}{なが}れたときの\R{抵抗}{てい|こう}を\R{求}{もと}めましょう。
+\bkjans{\R{両辺}{りょう|へん}に $R$ をかけて $IR=V$、\R{両辺}{りょう|へん}を $I$ でわって $R=\dfrac{V}{I}$。$R=\dfrac{3}{0.1}=30$ で\qty{30}{\ohm}}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\R{地下}{ち|か}\qty{10}{m}（\R{高}{たか}さ $-10$\,m、2-2）から\R{毎秒}{まい|びょう}\qty{2}{m}で\R{上}{あ}がるエレベーターの、$t$ \R{秒後}{びょう|ご}の\R{高}{たか}さは $h=2t-10$（m）です。$t$ について\R{解}{と}き、\R{何秒後}{なん|びょう|ご}に\R{高}{たか}さ\qty{30}{m}に\R{着}{つ}くかを\R{求}{もと}めましょう。
+\bkjans{${}-10$ を\R{移項}{い|こう}して $h+10=2t$、\R{両辺}{りょう|へん}を2でわって $t=\dfrac{h+10}{2}$。$t=\dfrac{30+10}{2}=20$ で20\nobreak\R{秒後}{びょう|ご}}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+\begin{reidai}[\R{両辺}{りょう|へん}にかけてから\R{移項}{い|こう}する]
+$y=\dfrac{x+4}{3}$ を $x$ について\R{解}{と}き、$y=5$ のときの $x$ を\R{求}{もと}めましょう。\par
+\kangaekata \R{分母}{ぶん|ぼ}の3を、\R{両辺}{りょう|へん}に3をかけて\R{消}{け}します。$x+4$ はひとまとまりなので、そのあと ${}+4$ を\R{移項}{い|こう}します。\par
+\shiki\begin{bkiiohenkei}[t]{}
+$y$ & ${}=\dfrac{x+4}{3}$ & \\
+$3y$ & ${}=x+4$ & \R{両辺}{りょう|へん}に3をかける \\
+$3y-4$ & ${}=x$ & ${}+4$ を\R{移項}{い|こう} \\
+$x$ & ${}=3y-4$ & \R{入}{い}れかえる \\
+\end{bkiiohenkei}\par
+\kotae $x=3y-4$。$y=5$ なら $x=3\times5-4=11$（\R{確}{たし}かめ：$\dfrac{11+4}{3}=5$）
+\end{reidai}
+
+\begin{reidai}[\R{解}{と}いてから、\R{単位}{たん|い}ごと\R{代入}{だい|にゅう}する]
+カーナビは、のこりの\R{道}{みち}のり $x$ と\R{平均}{へい|きん}の\R{速}{はや}さ $v$ から、あとどれだけ\R{時間}{じ|かん}がかかるかを\R{計算}{けい|さん}します。のこり\qty{3}{km}、\R{平均}{へい|きん}\R{時速}{じ|そく}\qty{15}{km}（\qty{15}{km/h}）のとき、あと\R{何分}{なん|ぷん}かかりますか。\par
+\kangaekata $x=vt$ を $t$ について\R{解}{と}いた $t=\dfrac{x}{v}$ に、\R{単位}{たん|い}ごと\R{代入}{だい|にゅう}します。kmどうしが\R{約分}{やく|ぶん}されて、\R{時間}{じ|かん}（h）が\R{出}{で}ます。\R{分}{ふん}に\R{直}{なお}すには \qty{60}{min/h} をかけます。\par
+\shiki $t=\dfrac{x}{v}=\dfrac{3\,\mathrm{km}}{15\,\mathrm{km/h}}=\qty{0.2}{h}$\par
+\hspace*{2.6\zw}$\qty{0.2}{h}\times\qty{60}{min/h}=\qty{12}{min}$\quad hが\R{約分}{やく|ぶん}されてmin\par
+\kotae 12\R{分}{ふん}
+\end{reidai}
+
+\begingroup\tcbset{equal height group=bkiiojC}%
+\noindent\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+2\R{回}{かい}のテストの\R{平均}{へい|きん}は $m=\dfrac{a+b}{2}$ です。$a$ について\R{解}{と}き、\R{平均}{へい|きん}が70\R{点}{てん}、2\R{回目}{かい|め}が65\R{点}{てん}のときの1\R{回目}{かい|め}の\R{点}{てん}を\R{求}{もと}めましょう。
+\bkjans{$2m=a+b$、$a=2m-b$。$a=2\times70-65=75$ で75\R{点}{てん}}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\begin{jibun}
+\qty{6}{km}の\R{道}{みち}を、\qty{4}{m/s}で\R{走}{はし}ります。$t=\dfrac{x}{v}$ を\R{使}{つか}って、かかる\R{時間}{じ|かん}を\R{秒}{びょう}と\R{分}{ふん}で\R{求}{もと}めましょう（\R{先}{さき}に、kmをmに\R{直}{なお}そう）。
+\bkjans{$\qty{6}{km}\times\qty{1000}{m/km}=\qty{6000}{m}$。$t=\dfrac{6000}{4}=1500$ で\qty{1500}{s}。$\qty{1500}{s}\div\qty{60}{s/min}=\qty{25}{min}$}
+\end{jibun}
+\end{minipage}\par
+\endgroup
+
+%% ---------------- まちがえやすいところ・物理工学 ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{\R{移項}{い|こう}で、\R{符号}{ふ|ごう}を\R{変}{か}えわすれる}
+\bkng{$x+3=11$ から\quad $x=11+3$}
+\bkok{$x+3=11$ から\quad $x=11-3$}
+\R{移項}{い|こう}は「\R{両辺}{りょう|へん}から3をひく」ことです。$x=14$ を\R{代入}{だい|にゅう}すると $14+3=17$ で、11にならないので、まちがいに\R{気}{き}づけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{右辺}{う|へん}の\R{一部}{いち|ぶ}だけをわってしまう}
+\bkng{$y=3x+5$ から\quad $\dfrac{y}{3}=x+5$}
+\vspace{2pt}
+\bkok{$y=3x+5$ から\quad $\dfrac{y}{3}=x+\dfrac{5}{3}$}
+\vspace{2pt}
+\R{右辺}{う|へん}の\R{全体}{ぜん|たい}（$3x$ も5も）を3でわります（2-12）。\R{先}{さき}に ${}+5$ を\R{移項}{い|こう}すれば、まちがえにくくなります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{\R{左辺}{さ|へん}の\R{一部}{いち|ぶ}にだけかけてしまう}
+\bkng{$\dfrac{x}{3}+2=5$ の\R{両辺}{りょう|へん}に3をかけて\quad $x+2=15$}
+\vspace{2pt}
+\bkok{$\dfrac{x}{3}+2=5$ の\R{両辺}{りょう|へん}に3をかけて\quad $x+6=15$}
+\vspace{2pt}
+\R{左辺}{さ|へん}は $\dfrac{x}{3}$ と2の2つの\R{項}{こう}です。\R{両方}{りょう|ほう}に3をかけます（2-12の\R{分配法則}{ぶん|ぱい|ほう|そく}）。\R{先}{さき}に ${}+2$ を\R{移項}{い|こう}して $\dfrac{x}{3}=3$ にしてもよく、どちらも $x=9$ です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{わる\R{式}{しき}を\R{逆}{ぎゃく}にしてしまう}
+\bkng{$x=vt$ から\quad $t=v\div x$}
+\bkok{$x=vt$ から\quad $t=x\div v$}
+\qty{1200}{m}を\qty{4}{m/s}で\R{走}{はし}るなら $1200\div4=300$ \R{秒}{びょう}。$4\div1200$ では\R{短}{みじか}すぎますね。\R{単位}{たん|い}でも\R{確}{たし}かめられます。$\mathrm{m/s}\div\mathrm{m}$ では、\R{時間}{じ|かん}の\R{単位}{たん|い}sになりません。
+\end{tsumazuki}
+
+\begin{butsuri}
+\noindent\begin{minipage}[c]{0.555\linewidth}
+\par\addvspace{3pt}\textbf{LEDを\R{光}{ひか}らせる\R{抵抗}{てい|こう}}\par\noindent LED は、\R{電流}{でん|りゅう}が\R{流}{なが}れすぎるとこわれます。そこで\R{抵抗}{てい|こう}をつなぎ、\R{電流}{でん|りゅう}をちょうどよくします。\R{電池}{でん|ち}の\qty{3}{V}は、LEDと\R{抵抗}{てい|こう}で\R{分}{わ}けて\R{使}{つか}われます。\R{赤}{あか}いLEDは\R{約}{やく}\qty{2}{V}を\R{使}{つか}うので、\R{抵抗}{てい|こう}にかかる\R{電圧}{でん|あつ}は $3-2=1$ で\R{約}{やく}\qty{1}{V}。\R{流}{なが}したい\R{電流}{でん|りゅう}が\qty{0.02}{A}なら、$V=RI$ を $R$ について\R{解}{と}いた $R=\dfrac{V}{I}$ に\R{代入}{だい|にゅう}して、
+\[ R=\frac{V}{I}=\frac{1}{0.02}=50 \]
+\qty{50}{\ohm}の\R{抵抗}{てい|こう}を\R{選}{えら}びます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 回路（電流は電池の＋から出て、抵抗・LEDを通り、電池の−へもどる）
+  \draw[bkInk, line width=0.9pt] (0,17) -- (0,30) -- (36,30) -- (36,21);
+  \draw[bkInk, line width=0.9pt] (36,13) -- (36,0) -- (0,0) -- (0,13);
+  % 電池（長い線が＋）
+  \draw[bkInk, line width=1.1pt] (-4.5,16.5) -- (4.5,16.5);
+  \draw[bkInk, line width=2.2pt] (-2.2,13.5) -- (2.2,13.5);
+  \node[font=\sffamily\scriptsize, text=bkInk, anchor=east] at (-4.8,18.3) {$+$};
+  % 抵抗
+  \filldraw[fill=bkYellowBg, draw=bkInk, line width=0.9pt] (12,27.6) rectangle (24,32.4);
+  % LED（三角は電流の向き＝下を向く）
+  \filldraw[fill=bkRed!70, draw=bkInk, line width=0.8pt] (32.5,21) -- (39.5,21) -- (36,15) -- cycle;
+  \draw[bkInk, line width=1.1pt] (32.5,15) -- (39.5,15);
+  \draw[bkInk, line width=0.9pt] (36,15) -- (36,13);
+  \foreach \dy in {0,3.2} \draw[-{Stealth[length=3pt]}, bkOrange, line width=0.7pt] (40.5,17.5+\dy) -- (43.5,19.5+\dy);
+  % 電流の向き
+  \draw[-{Stealth[length=5pt]}, bkBlue, line width=1.1pt] (27,33.5) -- (33,33.5);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=south] at (30,35) {\R{電流}{でん|りゅう}};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=north] at (18,26) {\R{抵抗}{てい|こう}};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=east] at (31.5,10) {LED};
+  \node[font=\sffamily\footnotesize, text=bkInk, anchor=west] at (6,15) {\R{電池}{でん|ち}\,\qty{3}{V}};
+\end{tikzpicture}
+\end{minipage}
+
+\vspace{4pt}
+\par\addvspace{3pt}\textbf{カーナビの\R{到着予想}{とう|ちゃく|よ|そう}}\par\noindent カーナビは、のこりの\R{道}{みち}のり $x$ と\R{平均}{へい|きん}の\R{速}{はや}さ $v$ から、$t=\dfrac{x}{v}$ であとどれだけかかるかを\R{計算}{けい|さん}します（\R{例題}{れい|だい}7）。のこり\qty{30}{km}、\R{平均}{へい|きん}\R{時速}{じ|そく}\qty{40}{km}なら、$\dfrac{30}{40}=0.75$ で\qty{0.75}{h}。$\qty{0.75}{h}\times\qty{60}{min/h}=\qty{45}{min}$ で、あと45\R{分}{ふん}です。
+
+\vspace{2pt}
+\par\addvspace{3pt}\textbf{ロボットのうで}\par\noindent ロボットの\R{手}{て}を、ほしい\R{位置}{い|ち}に\R{動}{うご}かすには、「うでの\R{角度}{かく|ど}から\R{手}{て}の\R{位置}{い|ち}を\R{求}{もと}める\R{式}{しき}」を、\R{角度}{かく|ど}について\R{解}{と}きます。\R{大学}{だい|がく}では、これを\textbf{\R{逆運動学}{ぎゃく|うん|どう|がく}}とよびます（4-0）。
+\end{butsuri}
+
+\begin{column}{2\R{乗}{じょう}をもどすには $\sqrt{\phantom{x}}$}
+\R{物}{もの}が\R{落}{お}ちはじめて $t$ \R{秒}{びょう}で\R{落}{お}ちる\R{距離}{きょ|り}は、およそ $x=5t^2$（m）です（2-13）。\R{両辺}{りょう|へん}を5でわると $t^2=\dfrac{x}{5}$。$t$ は2\R{回}{かい}かけると $\dfrac{x}{5}$ になる0\R{以上}{い|じょう}の\R{数}{かず}なので、$t=\sqrt{\dfrac{x}{5}}$ です（2-8）。\qty{20}{m}なら $t=\sqrt{4}=2$ で、\R{落}{お}ちるのに2\R{秒}{びょう}かかります。2-13のものさしキャッチ（\qty{0.15}{m}）なら、$t=\sqrt{0.03}$ で、\R{電卓}{でん|たく}の√キーを\R{使}{つか}うと0.173…\R{秒}{びょう}。2-13で、はさんで\R{調}{しら}べた「0.17\R{秒}{びょう}と0.18\R{秒}{びょう}のあいだ」と\R{合}{あ}います。2\R{乗}{じょう}は $\sqrt{\phantom{x}}$ でもどせます。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{\R{基本}{き|ほん}}{2}
+
+\bkproblem \R{次}{つぎ}の\R{等式}{とう|しき}を $x$ について\R{解}{と}きましょう。\par
+\hspace*{1\zw}（1）\nobreak $x+8=15$\quad（2）\nobreak $x-6=4$\quad（3）\nobreak $5x=35$\quad（4）\nobreak $\dfrac{x}{3}=7$
+\bkpans{（1）\nobreak $x=7$\quad（2）\nobreak $x=10$\quad（3）\nobreak $x=7$\quad（4）\nobreak $x=21$}
+
+\bkproblem \R{次}{つぎ}の\R{変形}{へん|けい}で、①と②の\R{行}{ぎょう}では、どんなきまりを\R{使}{つか}ったでしょう。
+\begin{bkcenter}
+\begin{bkiiohenkei}{}
+$4x-2$ & ${}=10$ & \\
+$4x$ & ${}=12$ & ① \\
+$x$ & ${}=3$ & ② \\
+\end{bkiiohenkei}
+\end{bkcenter}
+\bkpans{①\nobreak ${}-2$ を\R{移項}{い|こう}する（\R{両辺}{りょう|へん}に2をたす）\quad ②\nobreak \R{両辺}{りょう|へん}を4でわる}
+
+\bkproblem $x=vt$ を $t$ について\R{解}{と}き、\qty{3000}{m}を\qty{5}{m/s}で\R{走}{はし}るのにかかる\R{時間}{じ|かん}を、\R{秒}{びょう}と\R{分}{ふん}で\R{求}{もと}めましょう。
+\bkpans{$t=\dfrac{x}{v}$。$t=\dfrac{3000}{5}=600$ で\qty{600}{s}。$\qty{600}{s}\div\qty{60}{s/min}=\qty{10}{min}$}
+
+\bkproblem $V=RI$ を $R$ について\R{解}{と}き、\qty{12}{V}で\qty{0.5}{A}の\R{電流}{でん|りゅう}が\R{流}{なが}れたときの\R{抵抗}{てい|こう}を\R{求}{もと}めましょう。
+\bkpans{$R=\dfrac{V}{I}$。$R=\dfrac{12}{0.5}=24$ で\qty{24}{\ohm}}
+
+\bkproblem 1\R{本}{ぽん}\qty{4}{g}のくぎを、\qty{30}{g}の\R{箱}{はこ}に $x$ \R{本}{ほん}\R{入}{い}れると、\R{全体}{ぜん|たい}の\R{重}{おも}さは $y=4x+30$（g）です。$x$ について\R{解}{と}き、\R{全体}{ぜん|たい}が\qty{70}{g}のときの\R{本数}{ほん|すう}を\R{求}{もと}めましょう。
+\bkpans{$x=\dfrac{y-30}{4}$。$x=\dfrac{70-30}{4}=10$ で10\nobreak\R{本}{ぽん}}
+
+\bkproblem \R{次}{つぎ}の\R{式}{しき}を、［　］の\R{中}{なか}の\R{文字}{も|じ}について\R{解}{と}きましょう。\par
+\hspace*{1\zw}（1）\nobreak $a+b=c$［$b$］\quad（2）\nobreak $S=ab$［$a$］\quad（3）\nobreak $m=\dfrac{a+b}{2}$［$a$］
+\bkpans{（1）\nobreak $b=c-a$\quad（2）\nobreak $a=\dfrac{S}{b}$\quad（3）\nobreak $a=2m-b$}
+
+\bkproblemgroup{チャレンジ}{2}
+
+\bkproblem $C=\dfrac{F-32}{1.8}$ を $F$ について\R{解}{と}きましょう。また、\qty{25}{\degreeCelsius}は、$F$ ではいくつですか。
+\bkpans{\R{両辺}{りょう|へん}に1.8をかけて $1.8C=F-32$、$-32$ を\R{移項}{い|こう}して $F=1.8C+32$。$F=1.8\times25+32=77$}
+
+\bkproblem \R{円周}{えん|しゅう}＝\R{直径}{ちょっ|けい}×\R{円周率}{えん|しゅう|りつ}（2-9）を、\R{円周}{えん|しゅう} $\ell$、\R{直径}{ちょっ|けい} $d$ で $\ell=\pi d$ と\R{書}{か}きます。\R{自動車}{じ|どう|しゃ}のタイヤが1\R{回転}{かい|てん}すると、ちょうど\qty{2}{m}\R{進}{すす}みました。$d$ について\R{解}{と}き、タイヤの\R{直径}{ちょっ|けい}を\R{求}{もと}めましょう。$\pi=3.14$ とし、\R{答}{こた}えは $\dfrac{1}{100}$ の\R{位}{くらい}までのがい\R{数}{すう}にします（2-6）。
+\bkpans{$d=\dfrac{\ell}{\pi}$。$d=\dfrac{2}{3.14}=0.636\cdots$ で\R{約}{やく}\qty{0.64}{m}}
+
+\bkproblem ソラさんは、$y=2x+6$ を $x$ について\R{解}{と}いて、$x=\dfrac{y+6}{2}$ としました。$y=10$ を\R{入}{い}れて\R{確}{たし}かめると、まちがいだとわかります。どこでまちがえたのでしょう。\R{正}{ただ}しく\R{解}{と}きましょう。
+\bkpans{${}+6$ を\R{移項}{い|こう}するとき、\R{符号}{ふ|ごう}を\R{変}{か}えていない。\R{正}{ただ}しくは $y-6=2x$ より $x=\dfrac{y-6}{2}$（$y=10$ なら $x=2$ で、$2\times2+6=10$）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{等式}{とう|しき}の\R{性質}{せい|しつ}を、\R{天}{てん}びんで\R{説明}{せつ|めい}できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-14:tenbin}ページ}
+\item $x=vt$ を $t$ や $v$ について\R{解}{と}ける。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-14:vt}ページ}
+\item \R{移項}{い|こう}を\R{使}{つか}い、1\R{行}{ぎょう}ずつきまりを\R{書}{か}いて\R{変形}{へん|けい}できる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:2-14:ikou}ページ}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{mina}{\R{公式}{こう|しき}は1つ\R{覚}{おぼ}えれば、あとは\R{天}{てん}びんで\R{作}{つく}れるんだね。\R{次}{つぎ}の\R{章}{しょう}では、ばねや\R{電気}{でん|き}の\R{式}{しき}を、\R{実験}{じっ|けん}から\R{作}{つく}るよ。}

@@ -1,0 +1,650 @@
+%% 1-9 かさと おもさ  第2部「はかる」（第11回で 説明を ふやした）
+%% 第1巻のきまり：分かち書き、漢字はすべてルビ、式は全角の＋－＝。数と単位のあいだは \,
+%% 1円玉の絵（数学の道具④）は、ほんとうの 大きさ（直径 20 mm）で かいてある。
+
+\makeatletter
+%% ---- 1-9 の 絵の部品（\bkqh…） ----
+% ふうせん（ひもなし。てんびんに のせる）  \bkqhballoon{(x,y)}{半径}{いろ}   (x,y) は むすびめの下
+\newcommand\bkqhballoon[3]{\begin{scope}[shift={#1}]
+  \fill[#3] (0,{1.27*#2}) ellipse ({#2} and {1.15*#2});
+  \fill[#3] ({-0.2*#2},0) -- ({0.2*#2},0) -- (0,{0.2*#2}) -- cycle;
+  \fill[white, opacity=0.4] ({-0.4*#2},{1.67*#2}) ellipse ({0.18*#2} and {0.28*#2});
+\end{scope}}
+% 石  \bkqhstone{(x,y)}{はば}   (x,y) は 下の まん中
+\newcommand\bkqhstone[2]{\begin{scope}[shift={#1}, scale=#2/10]
+  \fill[bkGray!80!bkInk] (-5,0.4) .. controls (-5.4,3) and (-3,6) .. (0.2,5.8) .. controls (3.4,5.6) and (5.4,3.3) .. (5,0.6) .. controls (4.6,-0.1) and (-4.6,-0.2) .. (-5,0.4) -- cycle;
+  \fill[white, opacity=0.25] (-2.2,3.9) ellipse (1.3 and 0.6);
+\end{scope}}
+% 牛にゅうパック  \bkqhcarton{(x,y)}{たかさ}{いろ}   (x,y) は 下の まん中、はば は たかさの 半分
+\newcommand\bkqhcarton[3]{\begin{scope}[shift={#1}, scale=#2/20]
+  \filldraw[fill=white, draw=bkGray, line width=0.6pt, line join=round] (-5,0) -- (-5,15) -- (0,18) -- (5,15) -- (5,0) -- cycle;
+  \fill[#3] (-5,3.5) rectangle (5,9.5);
+  \filldraw[fill=white, draw=bkGray, line width=0.6pt] (-1.4,17.6) rectangle (1.4,20);
+  \draw[bkGray, line width=0.6pt] (-5,15) -- (5,15);
+\end{scope}}
+% けしゴム  \bkqheraser{(x,y)}{はば}{カバーの いろ}   左下が (x,y)、たかさ は はばの 1/2.3（本物に 近い 形）
+\newcommand\bkqheraser[3]{\bkeraser[#3]{#1}{#2}{#2/2.3}}% 第11回：全巻共通の消しゴム（bk-pict1.sty）
+% 1円玉を つみかさねた ところ  \bkqhcoins{(x,y)}{まい数}   (x,y) は 下の まん中
+\newcommand\bkqhcoins[2]{\begin{scope}[shift={#1}]
+  \foreach \bkqh@k in {1,...,#2} {\filldraw[fill=bkGray!22, draw=bkGray!90, line width=0.4pt] (0,{(\bkqh@k-1)*1.1}) ++(-5,0) -- ++(0,1.1) arc (180:0:5 and 1.3) -- ++(0,-1.1) arc (0:-180:5 and 1.3) -- cycle;}
+  \filldraw[fill=bkGray!12, draw=bkGray!90, line width=0.4pt] (0,{#2*1.1}) ellipse (5 and 1.3);
+\end{scope}}
+% はかり（数字を 大きめに した もの）  \bkqhhakari{(x,y)}{半径}{はりの g}{数字の 間（100 か 200）}
+%   1回り 1000 g。目もりは 50 g ごと（100 g ごとに 長い 目もり）
+\newcommand\bkqhhakari[4]{\begin{scope}[shift={#1}]
+  \fill[bkGray!35, rounded corners=2mm] (-#2-3,-#2-5) rectangle (#2+3,#2+3);
+  \fill[bkGray!55, rounded corners=0.6mm] (-#2-1,#2+3) rectangle (#2+1,#2+5);
+  \filldraw[fill=white, draw=bkInk!70, line width=0.8pt] (0,0) circle (#2);
+  \foreach \bkqh@k in {0,...,19} {\pgfmathsetmacro\bkqh@a{90-\bkqh@k*18}\pgfmathtruncatemacro\bkqh@e{mod(\bkqh@k,2)}%
+    \ifnum\bkqh@e=0 \draw[bkInk, line width=0.7pt] (\bkqh@a:#2*0.96) -- (\bkqh@a:#2*0.8);
+    \else\draw[bkInk!80, line width=0.4pt] (\bkqh@a:#2*0.96) -- (\bkqh@a:#2*0.87);\fi}
+  \pgfmathsetmacro\bkqh@na{90-#3*0.36}%
+  \draw[bkRed, line width=1.3pt, line cap=round] (0,0) -- (\bkqh@na:#2*0.86);
+  \pgfmathsetmacro\bkqh@fs{#2*(#4==100 ? 0.47 : 0.6)}%
+  \pgfmathtruncatemacro\bkqh@n{1000/#4-1}%
+  \foreach \bkqh@k in {0,...,\bkqh@n} {\pgfmathsetmacro\bkqh@a{90-\bkqh@k*#4*0.36}\pgfmathtruncatemacro\bkqh@v{\bkqh@k*#4}%
+    \node[font=\sffamily\bfseries\fontsize{\bkqh@fs}{\bkqh@fs}\selectfont, text=bkInk, fill=white, fill opacity=0.85, text opacity=1, inner sep=0.25pt] at (\bkqh@a:#2*0.62) {\bkqh@v};}
+  \node[font=\sffamily\bfseries\fontsize{\bkqh@fs}{\bkqh@fs}\selectfont, text=bkGray] at (0,-#2*0.3) {g};
+  \fill[bkRed] (0,0) circle (1);
+\end{scope}}
+\makeatother
+
+\bkchapter{1}{9}{かさと おもさ}{\bklevel{1}}{かさと おもさ}
+\bkmichishirube{1-8}{1-11,1-16,2-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item \R{水}{みず}の かさを、 L・dL・mL で いえる。
+\item てんびんで、 おもさを くらべられる。
+\item おもさを、 g・kg で いえる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent{\sffamily\bfseries \R{大}{おお}きい ほうが、 おもいとは かぎらない？}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[white, rounded corners=3mm] (0,0) rectangle (122,42);
+  \fill[bkStem!25] (4,9) rectangle (118,10.2);
+  % A：大きな ふうせん（くうきを 入れた もの）
+  \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries, minimum size=6.5mm, inner sep=0pt] at (6,36) {A};
+  \bkqhballoon{(26,10.2)}{11.5}{bkAppleRed}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (26,8) {\R{大}{おお}きな ふうせん};
+  % まん中の 子ども
+  \bkkid{(63,10.2)}{22}{bkGreen}{bkHair}
+  \node[draw=bkGray, fill=white, rounded corners=2mm, font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=2pt] at (63,37.5) {どっちが おもい？};
+  % B：小さな 石
+  \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries, minimum size=6.5mm, inner sep=0pt] at (88,36) {B};
+  \bkqhstone{(100,10.2)}{12}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (100,8) {\R{小}{ちい}さな \R{石}{いし}};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent A の ふうせんは \R{大}{おお}きく、 B の \R{石}{いし}は \R{小}{ちい}さいね。 \R{見}{み}た \R{目}{め}で きめて いいのかな？ おもさは、 どう やって くらべたら いいだろう？
+\end{hatena}
+
+\clearpage
+%% ---------------- p.89 やってみよう ----------------
+\begin{yattemiyou}[おもさを くらべよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt]
+\item ふうせんと \R{石}{いし}を、 りょう\R{手}{て}に もって くらべよう。
+\item てんびんに のせて くらべよう。 さがった ほうが おもいよ。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ① りょう手で もつ
+  \node[font=\sffamily\bfseries\small, text=bkGreen!70!black] at (24,38) {①};
+  \bkkid{(24,0)}{30}{bkBlue}{bkHair}
+  \bkqhballoon{(15.5,11.5)}{6}{bkAppleRed}
+  \fill[bkSkin] (17.2,11.5) circle (1.3) (30.8,11.5) circle (1.3);
+  \bkqhstone{(32,10.5)}{7}
+  % ② てんびん
+  \node[font=\sffamily\bfseries\small, text=bkGreen!70!black] at (46,38) {②};
+  \bkbalance{(85,0)}{-12}
+  \bkqhballoon{(balL)}{6}{bkAppleRed}
+  \bkqhstone{(balR)}{9}
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkBlue!80!black] at ($(balL)+(-10,2)$) {かるい};
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkRed!85!black] at ($(balR)+(10,2)$) {おもい};
+\end{tikzpicture}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.2\zw, itemsep=2pt, topsep=0pt, start=3]
+\item けしゴムは、 \mbox{1\R{円玉}{えん|だま}} なんこと つりあうかな？ 1こずつ のせて しらべよう。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkbalance{(0,0)}{0}
+  \bkqheraser{($(balL)+(-8,0)$)}{16}{bkBlue}
+  \bkqhcoins{(balR)}{8}
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkInk] at ($(balR)+(9,5)$) {1\R{円玉}{えん|だま}};
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkInk] at ($(balL)+(-10,3)$) {けしゴム};
+  \node[font=\sffamily\bfseries\small, text=bkGreen!70!black] at (0,36) {つりあった！};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent\hfill けしゴムは、 \mbox{1\R{円玉}{えん|だま}}\enspace\bkkakikomi\enspace こ\R{分}{ぶん}\hfill\null
+\end{yattemiyou}
+
+\bkfukidashi{sora}{\R{大}{おお}きい ふうせんの ほうが、 かるかったよ！ \R{見}{み}た \R{目}{め}だけでは、 おもさは わからないね。}
+
+\clearpage
+%% ---------------- 数学の道具（第11回：説明の段を ふやした） ----------------
+\bksection{doguu}{\R{数学}{すう|がく}の \R{道具}{どう|ぐ}}
+
+\bksubsection{1}{かさの たんい：L と dL}
+
+\label{bk:1-9:kasa}\bkidx{でしりっとる}{デシリットル（dL）}\R{水}{みず}とうの \R{水}{みず}を コップで はかると、 コップに よって \R{数}{かず}が かわります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 水とう
+  \filldraw[fill=bkBlue!25, draw=bkBlue!70!black, line width=0.8pt, rounded corners=2mm] (0,0) rectangle (13,18);
+  \fill[bkBlue!70!black, rounded corners=1mm] (2,18) rectangle (11,21.5);
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (6.5,-1) {\R{水}{みず}とう};
+  \draw[bk arrow, bkGray] (16,11) -- (24,16);
+  \draw[bk arrow, bkGray] (16,9) -- (24,4);
+  % A：大きい コップ 4はい
+  \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries\footnotesize, minimum size=5mm, inner sep=0pt] at (29,16) {A};
+  \foreach \i in {0,...,3} {\bkcup{(39+\i*11,11)}{8.5}{10}{0.8}{0}}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkInk] at (82,16) {4はい};
+  % B：小さい コップ 6ぱい
+  \node[circle, fill=bkYellow, text=white, font=\sffamily\bfseries\footnotesize, minimum size=5mm, inner sep=0pt] at (29,4) {B};
+  \foreach \i in {0,...,5} {\bkcup{(37+\i*7.6,0)}{5.6}{7}{0.8}{0}}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkInk] at (82,4) {6ぱい};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkRed!85!black, align=left] at (98,10) {\R{人}{ひと}に よって\\ちがって\\こまるね};
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent これは、 1-8の えんぴつと おなじ こまりかたです。 「1つ\R{分}{ぶん}」の \R{大}{おお}きさが ちがうと、 「いくつ\R{分}{ぶん}」も ちがいます。\\
+そこで、 だれでも おなじ \R{大}{おお}きさの 「ます」で はかります。 \R{水}{みず}などが どれだけ あるかを、 かさ と いいます。\bkidx{かさ}{かさ}\bkidx{りっとる}{リットル（L）}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkmasu{(8,0)}{14}{1}{1}
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkBlue!75!black] at (8,-1) {1\,L{\scriptsize（リットル）}};
+  \node[font=\fontsize{18}{18}\selectfont\bfseries, text=bkTheme] at (25,9) {＝};
+  \foreach \i in {0,...,4} {\bkmasu{(34+\i*9.2,10)}{5.4}{1}{0}\bkmasu{(34+\i*9.2,0)}{5.4}{1}{0}}
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkBlue!75!black] at (52.4,-1) {1\,dL{\scriptsize（デシリットル）}の 10ぱい\R{分}{ぶん}};
+  \node[draw=bkTheme, line width=1.2pt, fill=white, rounded corners=3mm, inner xsep=4mm, inner ysep=2mm, font=\fontsize{22}{26}\selectfont] at (107,9) {1\,L ＝ 10\,dL};
+\end{tikzpicture}
+\end{bkfigure}
+\noindent 1\,L の ますに、 1\,dL の ますで \R{水}{みず}を \R{入}{い}れて いくと、 ちょうど 10ぱいで いっぱいに なります。 だから 1\,L ＝ 10\,dL。 「デシ」は 「10に \R{分}{わ}けた 1つ」と いう いみです。
+
+\clearpage
+\noindent{\sffamily\bfseries\color{bkTheme}1\,L ますの \R{目}{め}もりを よもう}\par
+1\,L ますの よこには、 \R{線}{せん}が 9\R{本}{ほん} あって、 10に \R{分}{わ}かれて います。 1つの あいだが 1\,dL です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkmasu{(12,0)}{20}{0.4}{1}
+  \foreach \k in {1,...,4} {\node[anchor=east, font=\sffamily\bfseries\scriptsize, text=bkBlue!80!black] at (0.5,{25*(\k-0.5)/10}) {\k};}
+  \draw[bkTheme, line width=1pt, -{Stealth[length=4pt]}] (32,10) -- (24,10);
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkTheme] at (33,10) {\R{下}{した}から 4つめの \R{線}{せん}まで};
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkInk] at (33,3.5) {→ 4\,dL};
+  % 1L 3dL
+  \begin{scope}[shift={(78,0)}]
+  \bkmasu{(10,0)}{16}{1}{1}
+  \bkmasu{(32,0)}{16}{0.3}{1}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize] at (10,-1) {1\,L};
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize] at (32,-1) {3\,dL};
+  \node[font=\sffamily\bfseries\small, text=bkInk] at (21,26) {1\,L 3\,dL};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\noindent \R{右}{みぎ}の ように、 1\,L ますが いっぱいで、 もう 1つに 3\,dL あると、 「1\,L 3\,dL」と いいます。 1\,L は 10\,dL なので、 10\,dL と 3\,dL で 13\,dL とも いえます（1-8の 6\,cm 4\,mm ＝ 64\,mm と おなじ かんがえ）。
+
+\bksubsection{2}{ペットボトルの mL}
+
+\label{bk:1-9:ml}ジュースの パックには、 「200\,mL」の ような \R{数}{かず}が かいて あります。 1\,L を 1000に \R{分}{わ}けた 1つ\R{分}{ぶん}が 1\,mL（ミリリットル）です。\bkidx{みりりっとる}{ミリリットル（mL）}\\
+1\,L ますの 1\,dL の あいだを mL で いうと、 1つが 100\,mL です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkmasu{(10,0)}{20}{1}{1}
+  \foreach \k in {1,...,10} {\pgfmathtruncatemacro\v{100*\k}\node[anchor=west, font=\sffamily\bfseries\scriptsize, text=bkBlue!80!black] at (24,{25*\k/10-0.6}) {\v};}
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkInk, align=left] at (36,13) {100\,mL が 10こで\\1000\,mL（1-2）};
+  \node[draw=bkTheme, line width=1.2pt, fill=white, rounded corners=3mm, inner xsep=3mm, inner ysep=1.5mm, font=\fontsize{15}{19}\selectfont, align=left] at (100,13) {1\,dL ＝ 100\,mL\\1\,L ＝ 1000\,mL};
+\end{tikzpicture}
+\end{bkfigure}
+
+\clearpage
+\noindent 1\,dL ごとに 100、 200、 300… と かぞえて いくと（1-7の \R{何百}{なん|びゃく}）、 10こめで 1000に なります。 だから 1\,L ＝ 1000\,mL です。\\
+500\,mL の ペットボトル 2\R{本}{ほん}なら、 500 ＋ 500 ＝ 1000で 1000\,mL。 ちょうど 1\,L です。
+
+\par\vspace{3pt}
+\noindent\begin{minipage}[c]{68mm}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkbottle{(6,0)}{30}{0.9}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (6,-1) {2\,L};
+  \bkqhcarton{(24,0)}{24}{bkBlue}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk, align=center] at (24,-1) {1\,L\\（1000\,mL）};
+  \bkbottle{(43,0)}{20}{0.9}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (43,-1) {500\,mL};
+  \bkqhcarton{(60,0)}{11}{bkGreen}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (60,-1) {200\,mL};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{68mm}
+\bkkigocard{\sffamily L}{リットル}{かさの たんい。 1\,L ＝ 10\,dL}{liter}{1-9}
+\end{minipage}
+
+\bksubsection{3}{おもさは てんびんで くらべる}
+
+\label{bk:1-9:tenbin}おもさは、 \R{見}{み}た \R{目}{め}では わかりません。 てんびんに のせると、 おもい ほうが さがります。\bkidx{てんびん}{てんびん} こうえんの シーソーで、 おもい \R{人}{ひと}の ほうが \R{下}{した}に なるのと おなじです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.85mm, y=0.85mm]
+  \bkbalance{(0,0)}{-12}
+  \bkqhballoon{(balL)}{7}{bkAppleRed}
+  \bkqhstone{(balR)}{10}
+  \node[anchor=south, font=\sffamily\bfseries\small, text=bkBlue!80!black] at ($(balL)+(0,19)$) {かるい};
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkRed!85!black] at ($(balR)+(0,-3)$) {おもい};
+  \begin{scope}[shift={(78,0)}]
+  \bkbalance{(0,0)}{0}
+  \bkqhstone{(balL)}{9}
+  \bkqhstone{(balR)}{9}
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkGreen!60!black] at (0,-1.5) {つりあう ＝ おなじ おもさ};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+
+\noindent\bkhatenaref の こたえ：\R{大}{おお}きい ほうが、 おもいとは かぎりません。 ふうせんは \R{大}{おお}きくても、 \R{中}{なか}は くうきなので かるいのです。 \R{大}{おお}きさ（かさ）と おもさは べつの ものです。\\
+てんびんが まっすぐに なって とまる ことを、 「つりあう」と いいます。 つりあった ときは、 りょうほうが おなじ おもさです。
+
+\bksubsection{4}{おもさの たんい：g と kg}
+
+\label{bk:1-9:g}てんびんで くらべると、 どちらが おもいかは わかります。 でも、 「どれだけ」 おもいかを \R{数}{かず}で いうには、 おもさの 「1つ\R{分}{ぶん}」が いります。\\
+\mbox{1\R{円玉}{えん|だま}} 1この おもさは、 ちょうど 1\,g（グラム）です。\bkidx{ぐらむ}{グラム（g）}\bkidx{おもさ}{おもさ}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1円玉（ほんとうの 大きさ）
+  \filldraw[fill=bkGray!18, draw=bkGray, line width=0.8pt] (10,16) circle (10);
+  \draw[bkGray!70, line width=0.4pt] (10,16) circle (8.8);
+  \node[font=\sffamily\bfseries\fontsize{22}{22}\selectfont, text=bkGray!90!black] at (10,16) {1};
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkInk] at (10,4.5) {1\,g};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray] at (10,-0.5) {ほんとうの \R{大}{おお}きさ};
+  % てんびん：けしゴムと 1円玉 12こ
+  \begin{scope}[shift={(70,0)}]
+  \bkbalance{(0,0)}{0}
+  \bkqheraser{($(balL)+(-8,0)$)}{16}{bkBlue}
+  \bkqhcoins{(balR)}{12}
+  \node[anchor=west, font=\sffamily\bfseries\footnotesize, text=bkInk] at ($(balR)+(9,6)$) {1\,g が 12こ};
+  \node[anchor=east, font=\sffamily\bfseries\footnotesize, text=bkInk] at ($(balL)+(-10,3)$) {けしゴム};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\noindent けしゴムが \mbox{1\R{円玉}{えん|だま}} 12こと つりあえば、 けしゴムは 1\,g の 12こ\R{分}{ぶん}で 12\,g です。 ながさの 「1\,cm の いくつ\R{分}{ぶん}」と おなじ かんがえです。
+
+\par\vspace{3pt}
+\noindent{\sffamily\bfseries\color{bkTheme}おもい ものは kg}\par
+1000\,g を 1\,kg（キログラム）と いいます。\bkidx{きろぐらむ}{キログラム（kg）} \mbox{1\R{円玉}{えん|だま}} 1000こ\R{分}{ぶん}の おもさです。 ランドセルや \R{体}{からだ}の おもさは、 kg で いいます。\\
+1\,kg と 300\,g は 1\,kg 300\,g。 1\,kg は 1000\,g なので、 1000 と 300で 1300\,g とも いえます。
+
+\noindent\begin{minipage}[c]{66mm}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % はかりと りんご
+  \bkqhhakari{(20,14)}{13}{300}{100}
+  \bkapple{(20,35.5)}{4.6}{bkAppleRed}
+  \node[anchor=north, font=\sffamily\bfseries\small, text=bkInk] at (20,-5) {りんご 300\,g};
+  \node[anchor=west, font=\sffamily\footnotesize, text=bkGray, align=left] at (37,14) {はりが 300を\\さして いる};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{68mm}
+\bkkigocard{\sffamily g}{グラム}{おもさの たんい。 1000\,g ＝ 1\,kg}{gram}{1-9}
+\end{minipage}
+
+\bksubsection{5}{かさと おもさの 「かんかく」}
+
+\label{bk:1-9:kankaku}みの まわりの ものの かさや おもさを おぼえて おくと、 「だいたい これくらい」と けんとうが つきます。
+
+\begin{center}
+\begin{tblr}{colspec={Q[l,m,wd=17mm]Q[l,m,wd=42mm]Q[l,m,wd=17mm]Q[l,m,wd=42mm]}, hlines={0.6pt,bkLine}, vlines={0.6pt,bkLine}, rowsep=1.5pt, colsep=2pt,
+  cells={font=\small}, column{1,3}={font=\sffamily\bfseries\small}}
+200\,mL & きゅうしょくの ぎゅうにゅう & 1\,g & 1\R{円玉}{えん|だま} 1こ \\
+500\,mL & \R{小}{ちい}さい ペットボトル & 1\,kg & \R{水}{みず} 1\,L \\
+1\,L & ぎゅうにゅうパック & 1\,kg 200\,g & からの ランドセル（だいたい） \\
+\end{tblr}
+\end{center}
+\noindent{\sffamily\bfseries\color{bkTheme}はかって みよう}\quad ふでばこは だいたい\enspace\bkkakikomi[14mm]\,g
+
+\begin{taisetsu}
+かさ：1\,L ＝ 10\,dL\quad 1\,L ＝ 1000\,mL\quad 1\,dL ＝ 100\,mL\\
+おもさ：1\,kg ＝ 1000\,g\\
+おなじ たんいどうしで けいさんする（1-8と おなじ）。
+\end{taisetsu}
+
+\clearpage
+%% ---------------- 例題 ----------------
+
+\begin{reidai}[かさを よむ]
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\R{水}{みず}の かさは、 なん L なん dL？ また、 なん dL？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkmasu{(5,0)}{10}{1}{1}
+  \foreach \i in {0,...,3} {\bkmasu{(17.5+\i*9.4,0)}{5.2}{1}{0}}
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray] at (5,-0.5) {1\,L};
+  \foreach \i in {0,...,3} {\node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner xsep=0pt] at (17.5+\i*9.4,-0.5) {1\,dL};}
+\end{tikzpicture}
+\end{minipage}
+\kangaekata 1\,L ますが 1つと、 1\,dL ますが 4つ。 だから 1\,L 4\,dL。\\
+1\,L ＝ 10\,dL だから、 10\,dL と 4\,dL で 14\,dL。
+
+\kotae 1\,L 4\,dL、 14\,dL
+\end{reidai}
+
+\begin{jibun}
+\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,1} {\bkmasu{(6+\i*16,0)}{12}{1}{1}}
+  \foreach \i in {0,...,2} {\bkmasu{(38+\i*9.8,0)}{5.6}{1}{0}}
+  \foreach \i in {0,1} {\node[anchor=north, font=\sffamily\footnotesize, text=bkGray] at (6+\i*16,-0.5) {1\,L};}
+  \foreach \i in {0,...,2} {\node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner xsep=0pt] at (38+\i*9.8,-0.5) {1\,dL};}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\R{水}{みず}の かさは？\par
+\bkkakikomi\,L\enspace\bkkakikomi\,dL\par
+\bkkakikomi\,dL
+\end{minipage}
+\bkjans{2\,L 3\,dL、 23\,dL（10\,dL が 2こで 20\,dL、 20と 3で 23）}
+\end{jibun}
+
+\begin{reidai}[かさの たし\R{算}{ざん}]
+\R{水}{みず} 1\,L 2\,dL と 5\,dL を あわせると？
+
+\kangaekata L どうし、 dL どうしを たす。 dL は 2 ＋ 5 ＝ 7。 5\,dL には L が ないので、 L は 1の まま。
+
+\shiki 1\,L 2\,dL ＋ 5\,dL ＝ 1\,L 7\,dL
+
+\kotae 1\,L 7\,dL
+\end{reidai}
+
+\begin{jibun}
+2\,L 3\,dL と 4\,dL を あわせると？\par
+\noindent\hspace*{1\zw}2\,L 3\,dL ＋ 4\,dL ＝ \bkkakikomi\,L\enspace\bkkakikomi\,dL
+\bkjans{2\,L 7\,dL}
+\end{jibun}
+
+\begin{reidai}[L から dL を ひく]
+ジュース 1\,L から 4\,dL のむと、 のこりは なん dL？
+
+\noindent\begin{minipage}[c]{0.66\linewidth}
+\kangaekata 1\,L を dL に なおすと 10\,dL。 10\,dL から 4\,dL を ひく。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkmasu{(10,0)}{16}{0.6}{1}
+  \fill[bkRed!25] (2.6,12) rectangle (17.4,20);
+  \draw[bkRed!80!black, line width=0.8pt, dash pattern=on 1.5pt off 1pt] (2,12) rectangle (18,20);
+  \node[anchor=west, font=\sffamily\bfseries\scriptsize, text=bkRed!85!black] at (21,16) {のんだ 4\,dL};
+  \node[anchor=west, font=\sffamily\bfseries\scriptsize, text=bkBlue!80!black] at (21,6) {のこり};
+\end{tikzpicture}
+\end{minipage}
+
+\shiki 10\,dL － 4\,dL ＝ 6\,dL \kotaenext 6\,dL
+\end{reidai}
+
+\begin{jibun}
+\R{水}{みず}が 1\,L あります。 3\,dL つかうと、 のこりは なん dL？
+\bkshikiran
+\bkjans{1\,L ＝ 10\,dL、 10\,dL － 3\,dL ＝ 7\,dL\quad 7\,dL}
+\end{jibun}
+
+\begin{reidai}[mL と L・dL]
+（1）500\,mL の ペットボトル 2\R{本}{ほん}で、 なん mL？ なん L？\\
+（2）3\,dL は、 なん mL？
+
+\kangaekata （1）500 ＋ 500 ＝ 1000（100が 5 ＋ 5 ＝ 10こ）。 1000\,mL ＝ 1\,L。\\
+（2）1\,dL ＝ 100\,mL。 3\,dL は 100\,mL が 3こで 300\,mL。
+
+\kotae （1）1000\,mL、 1\,L\hspace{2\zw}（2）300\,mL
+\end{reidai}
+
+\begin{jibun}
+□に あう \R{数}{かず}を かきましょう。\par\vspace{3pt}
+\noindent\hspace*{1\zw}（1）1\,dL ＝ \bkkakikomi[16mm]\,mL\hspace{3\zw}（2）5\,dL ＝ \bkkakikomi[16mm]\,mL
+\bkjans{（1）100\quad（2）500}
+\end{jibun}
+
+\begin{reidai}[1\R{円玉}{えん|だま}で はかる]
+\noindent\begin{minipage}[c]{0.6\linewidth}
+えんぴつと \mbox{1\R{円玉}{えん|だま}} 5こが つりあった。 えんぴつは なん g？
+
+\kangaekata つりあったので おなじ おもさ。 1\,g の 5こ\R{分}{ぶん}。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=0.66mm, y=0.66mm]
+  \bkbalance{(0,0)}{0}
+  \bkpencil{($(balL)+(-8,1.7)$)}{18}{bkGreen}
+  \bkqhcoins{(balR)}{5}
+\end{tikzpicture}
+\end{minipage}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k in {0,...,4} {\filldraw[fill=bkGray!18, draw=bkGray, line width=0.6pt] (\k*16,0) circle (4.5);
+    \node[font=\sffamily\bfseries\footnotesize, text=bkGray!90!black] at (\k*16,0) {1};
+    \node[anchor=north, font=\sffamily\bfseries\scriptsize] at (\k*16,-5.5) {1\,g};}
+  \foreach \k in {0,...,3} {\node[font=\sffamily\bfseries\small, text=bkTheme] at (\k*16+8,0) {＋};}
+  \node[anchor=west, font=\sffamily\bfseries\small, text=bkTheme] at (70,0) {＝ 5\,g};
+\end{tikzpicture}
+\end{bkfigure}
+\kotae 5\,g
+\end{reidai}
+
+\begin{jibun}
+\noindent（1）\mbox{1\R{円玉}{えん|だま}} 25こと つりあう のりは \mbox{なん g？}\unskip\nobreak\hfil\penalty50\hskip1em\null\nobreak\hfill\mbox{{\sffamily\bfseries\small\color{bkOrange}\bkkotaelabel}\enspace\bkkakikomi[16mm]}\par
+\noindent（2）\mbox{1\R{円玉}{えん|だま}} 30こと つりあう はさみは \mbox{なん g？}\unskip\nobreak\hfil\penalty50\hskip1em\null\nobreak\hfill\mbox{{\sffamily\bfseries\small\color{bkOrange}\bkkotaelabel}\enspace\bkkakikomi[16mm]}\par
+\bkjans{（1）25\,g\quad（2）30\,g}
+\end{jibun}
+
+\begin{reidai}[おもさの ひき\R{算}{ざん}]
+かごだけで 200\,g。 みかんを \R{入}{い}れると 600\,g。 みかんは なん g？
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bktape{(0,0)}{30}{bkStem}{かご 200\,g}
+  \bktape{(30,0)}{60}{bkOrange}{みかん ？}
+  \bkbrace{(0,8)}{(90,8)}{ぜんぶで 600\,g}{1}
+\end{tikzpicture}
+\end{bkfigure}
+\kangaekata ぜんぶから かごの \R{分}{ぶん}を ひくと みかん。 100が 6 － 2 ＝ 4こ（1-7）。
+
+\shiki 600 － 200 ＝ 400 \kotaenext 400\,g
+\end{reidai}
+
+\begin{jibun}
+ボウルは 200\,g。 こむぎこを \R{入}{い}れて 500\,g。 こむぎこは？
+\bkshikiran
+\bkjans{500 － 200 ＝ 300（100が 5 － 2 ＝ 3こ）\quad 300\,g}
+\end{jibun}
+
+\begin{reidai}[kg と g を かえる]
+（1）1\,kg 300\,g は、 なん g？\hspace{2\zw}（2）2\,kg は、 なん g？
+
+\kangaekata （1）1\,kg ＝ 1000\,g。 1000\,g と 300\,g で 1300\,g。\\
+（2）1\,kg が 2こ。 1000\,g が 2こで、 1000 ＋ 1000 ＝ 2000。
+
+\kotae （1）1300\,g\hspace{3\zw}（2）2000\,g
+\end{reidai}
+
+\begin{jibun}
+□に あう \R{数}{かず}を かきましょう。\par\vspace{3pt}
+\noindent\hspace*{1\zw}（1）1\,kg 500\,g ＝ \bkkakikomi[16mm]\,g\hspace{3\zw}（2）3\,kg ＝ \bkkakikomi[16mm]\,g
+\bkjans{（1）1500\quad（2）3000}
+\end{jibun}
+
+\begin{reidai}[おもさの たし\R{算}{ざん}]
+ランドセルが 1\,kg 200\,g、 \R{中}{なか}の \R{本}{ほん}が 600\,g。 あわせて なん kg なん g？
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bktape{(0,0)}{62}{bkBlue}{ランドセル 1\,kg 200\,g}
+  \bktape{(62,0)}{30}{bkOrange}{\R{本}{ほん} 600\,g}
+  \bkbrace{(0,8)}{(92,8)}{あわせて ？}{1}
+\end{tikzpicture}
+\end{bkfigure}
+\kangaekata kg どうし、 g どうしを たす（1-8と おなじ）。 g は 200 ＋ 600 ＝ 800、 kg は 1の まま。
+
+\shiki 1\,kg 200\,g ＋ 600\,g ＝ 1\,kg 800\,g \kotaenext 1\,kg 800\,g
+\end{reidai}
+
+\begin{jibun}
+\noindent（1）2\,kg 100\,g ＋ 500\,g ＝ \bkkakikomi\,kg\enspace\bkkakikomi[14mm]\,g\par\vspace{3pt}
+\noindent（2）3\,kg 400\,g ＋ 300\,g ＝ \bkkakikomi\,kg\enspace\bkkakikomi[14mm]\,g\par\vspace{3pt}
+\noindent（3）1\,kg 500\,g ＋ 1\,kg 200\,g ＝ \bkkakikomi\,kg\enspace\bkkakikomi[14mm]\,g
+\bkjans{（1）2\,kg 600\,g\quad（2）3\,kg 700\,g\quad（3）2\,kg 700\,g（kg は 1 ＋ 1 ＝ 2、 g は 500 ＋ 200 ＝ 700）}
+\end{jibun}
+
+
+\clearpage
+%% ---------------- p.94 まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすい ところ}
+
+\begin{tsumazuki}{\R{水}{みず}が たかい ほうが おおい？}
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \bkcup{(8,0)}{8}{30}{0.8}{0}
+  \bkcup{(30,0)}{20}{14}{0.686}{0}
+  \node[font=\sffamily\bfseries\footnotesize] at (8,33) {A};
+  \node[font=\sffamily\bfseries\footnotesize] at (30,17) {B};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.62\linewidth}
+\bkbatsu\enspace A の ほうが おおい\par
+\bkmaru\enspace どちらも 3\,dL で おなじ\par
+\R{入}{い}れものの かたちが ちがうと、 たかさでは くらべられません。 おなじ ますで はかろう。
+\end{minipage}
+\end{tsumazuki}
+
+\begin{tsumazuki}{1\,L は 100\,mL？}
+\bkbatsu\enspace 1\,L ＝ 100\,mL\hspace{3\zw}\bkmaru\enspace 1\,L ＝ 1000\,mL\par
+1\,L ＝ 10\,dL と まぜないように しよう。
+\end{tsumazuki}
+
+\begin{tsumazuki}{L と dL の \R{数}{かず}を たす}
+\bkbatsu\enspace 1\,L ＋ 3\,dL ＝ 4\,L\par
+\bkmaru\enspace 1\,L ＋ 3\,dL ＝ 1\,L 3\,dL\par
+1と 3は、 たんいが ちがうので たせません。
+\end{tsumazuki}
+
+\begin{column}{1\,kg の はじまり}
+むかし、 1\,kg は 「\R{水}{みず} 1\,L の おもさ」と きめられました。 だから、 \R{水}{みず} 1\,L は だいたい 1\,kg。 2\,L の ペットボトルの \R{水}{みず}は、 だいたい 2\,kg です。
+\end{column}
+
+\clearpage
+%% ---------------- p.95 つかわれているところ ----------------
+\begin{butsuri}
+かさや おもさを はかって、 きかいが はたらいて います。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % エレベーター
+  \fill[white, rounded corners=3mm] (0,0) rectangle (59,44);
+  \fill[bkGray!35] (5,3) rectangle (33,37);
+  \fill[bkYellow!18] (8,3) rectangle (30,34);
+  \foreach \x/\c in {11.5/bkBlue,16.5/bkOrange,21.5/bkGreen,26.5/bkRoute6} {\bkperson{(\x,3)}{15}{\c}}
+  \fill[bkInk!80] (3,2) rectangle (56,3.2);
+  \fill[bkInk!75, rounded corners=0.6mm] (14,38.5) rectangle (24,42.5);
+  \fill[bkYellow] (17,39.3) -- (18.6,41.7) -- (16.4,41.7) -- cycle;
+  \fill[white] (20.5,41.7) -- (22.1,39.3) -- (18.9,39.3) -- cycle;
+  \node[draw=bkInk!70, fill=white, rounded corners=1mm, font=\sffamily\bfseries\footnotesize, align=center, inner sep=2pt] at (46,22) {600\,kg まで};
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (46,13) {エレベーター};
+  % ガソリンスタンド
+  \begin{scope}[shift={(63,0)}]
+  \fill[white, rounded corners=3mm] (0,0) rectangle (59,44);
+  \fill[bkRed!80, rounded corners=1.5mm] (5,3) rectangle (25,38);
+  \bkdisplay{(7,24)}{16}{30}
+  \node[font=\sffamily\bfseries\footnotesize, text=white] at (15,20) {L};
+  \fill[bkInk!80] (25,28) rectangle (28,30);
+  \draw[bkInk!80, line width=1.2pt] (28,29) .. controls (36,29) and (34,14) .. (41,14);
+  \fill[bkInk!80] (40,12.5) rectangle (44,15.5);
+  \bkcar{(31,3)}{0.8}{bkBlue}
+  \node[anchor=north, font=\sffamily\bfseries\footnotesize, text=bkInk] at (15,13) {ガソリン};
+  \end{scope}
+\end{tikzpicture}
+\end{bkfigure}
+\begin{itemize}[label={\color{bkPurple}●}, leftmargin=1.4\zw, itemsep=0pt, topsep=0pt]
+\item エレベーターには、 「600\,kg まで」と かいて あります。 のった \R{人}{ひと}の おもさを はかり、 600\,kg を こえると ブザーが なって うごきません。
+\item ガソリンを \R{入}{い}れる きかいは、 \R{入}{い}れた かさを L で はかって \R{見}{み}せます。
+\item かぜぐすりの シロップは、 mL で はかって のみます。 くすりは おとなが はかります。
+\end{itemize}
+\end{butsuri}
+
+\bkfukidashi{delta}{エレベーターは、 はかった おもさを \R{見}{み}て、 うごくか どうかを じぶんで きめて いるんだ！}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkRoute7, line width=3pt] (10,0) -- (128,0);
+  \node[anchor=west, inner sep=0pt] at (0,12) {\bkrouteicon[1.4em]{7}\hspace{0.3em}{\sffamily\bfseries\small\color{bkRoute7!80!black}「はかる」の \R{路線}{ろ|せん}}};
+  \foreach \x/\c/\t/\s in {10/bkVol1/{1-8}/{ながさ},33.6/bkVol1/{1-9}/{かさ・おもさ},57.2/bkVol1/{1-11}/{\R{目}{め}もり},80.8/bkVol1/{1-16}/{\R{小数}{しょう|すう}},104.4/bkVol2/{2-6}/{ずれ},128/bkVol3/{3-14}/{ばらつき}} {
+    \fill[white, draw=\c, line width=1.6pt] (\x,0) circle (2.6);
+    \node[anchor=base, font=\sffamily\bfseries\footnotesize, text=\c!85!black] at (\x,-8.4) {\t};
+    \node[anchor=base, font=\sffamily\footnotesize, text=bkInk] at (\x,-15.4) {\s};}
+  \node[fill=bkTheme, text=white, rounded corners=1mm, font=\sffamily\bfseries\fontsize{8}{9}\selectfont, inner sep=1.5pt] at (33.6,5.5) {いま ここ};
+\end{tikzpicture}
+\end{bkfigure}
+
+\clearpage
+%% ---------------- p.96〜97 もんだい ----------------
+\bkendproblems
+
+\bkproblemgroup{きほん}{1}
+
+\bkproblem \R{水}{みず}の かさは、 なん L なん dL ですか。 また、 なん dL ですか。
+\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.6\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,1} {\bkmasu{(6+\i*16,0)}{12}{1}{1}}
+  \foreach \i in {0,...,4} {\bkmasu{(40+\i*9,0)}{5.2}{1}{0}}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}
+\bkkakikomi\,L\enspace\bkkakikomi\,dL\par\vspace{4pt}
+\noindent\bkkakikomi\,dL
+\end{minipage}
+\bkpans{2\,L 5\,dL、 25\,dL}
+
+\bkproblem □に あう \R{数}{かず}を かきましょう。
+\par
+\noindent\begin{tblr}{colspec={Q[l,m,wd=70mm]Q[l,m,wd=69mm]}, colsep=0pt, rowsep=1pt}
+（1）1\,L ＝ \bkkakikomi[13mm]\,dL & （2）1\,L ＝ \bkkakikomi[16mm]\,mL \\
+（3）1\,kg ＝ \bkkakikomi[16mm]\,g & （4）1\,L 6\,dL ＝ \bkkakikomi[13mm]\,dL \\
+（5）4\,dL ＝ \bkkakikomi[16mm]\,mL & （6）1\,kg 200\,g ＝ \bkkakikomi[16mm]\,g \\
+\end{tblr}
+\bkpans{（1）10\quad（2）1000\quad（3）1000\quad（4）16\quad（5）400\quad（6）1200}
+
+\bkproblem けいさんを しましょう。
+\par
+\noindent\hspace*{1\zw}\begin{tblr}{colspec={Q[l,m,wd=130mm]}, colsep=0pt, rowsep=1pt}
+（1）3\,L ＋ 4\,L ＝ \bkkakikomi[13mm]\,L \\
+（2）9\,dL － 4\,dL ＝ \bkkakikomi[13mm]\,dL \\
+（3）1\,L 2\,dL ＋ 6\,dL ＝ \bkkakikomi\,L\enspace\bkkakikomi\,dL \\
+（4）800\,g － 300\,g ＝ \bkkakikomi[16mm]\,g \\
+\end{tblr}
+\bkpans{（1）7\,L\quad（2）5\,dL\quad（3）1\,L 8\,dL\quad（4）500\,g（100が 8 － 3 ＝ 5こ）}
+
+\bkproblem ボールペンと \mbox{1\R{円玉}{えん|だま}} 10こが つりあいました。 ボールペンは なん g ですか。
+\bkkotaeran
+\bkpans{10\,g}
+
+\clearpage
+\bkproblemgroup{チャレンジ}{1}
+
+\bkproblem ジュースが 1\,L あります。 3\,dL のみました。 のこりは なん dL ですか。\par
+{\small\color{bkOrange!58!black}ヒント：1\,L は なん dL かな？}
+\bkshikiran
+\bkpans{1\,L ＝ 10\,dL、 10\,dL － 3\,dL ＝ 7\,dL\quad 7\,dL}
+
+\bkproblem 500\,mL の ペットボトル 2\R{本}{ほん}で、 なん mL ですか。 それは なん L ですか。
+\bkshikiran[11\zw]
+\bkpans{500\,mL ＋ 500\,mL ＝ 1000\,mL\quad 1000\,mL、 1\,L（100が 5 ＋ 5 ＝ 10こ）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item \R{水}{みず}の かさを、 L・dL・mL で いえる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-9:kasa}ページ}
+\item てんびんで、 おもさを くらべられる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-9:tenbin}ページ}
+\item おもさを、 g・kg で いえる。\hfill{\footnotesize\sffamily\color{bkTheme}→\pageref{bk:1-9:g}ページ}
+\end{checklist}
+チェックが つかなかったら、 →の ページに もどろう。
+\end{furikaeri}
+
+\bkfukidashi{mina}{おうちの ペットボトルや ぎゅうにゅうパックで、 なん mL か さがして みよう！}
+\clearpage

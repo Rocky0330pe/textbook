@@ -1,0 +1,1317 @@
+%% 9-10 連立微分方程式を行列で：状態方程式（第15回：組 V9-7。ページ制限なし。偶数ページ）
+%% 「名前と操作」の型（tools/kata9-int.md、頭文字 kixk）。立て方と使い方の小さな表（表9-10：brief9-parts 3-2-7）と流れ図。
+%% ほかの巻との約束：5-17:533（ほうき・線形化 sinθ≈θ）、5-18（θ''=4θ、s=±2、2秒で0.273）、6-14:353（状態の点）、
+%%   7-8:678（ẋ=Ax+(外から加える量の項) を状態方程式）、7-11:517（ẋ=Ax+Bu、ゆれずに・こわれずに落ち着く）、
+%%   7-10:1069（次の状態＝行列×今の状態＋命令、固有値が単位円の中）、6-14 の水そうの H は A と書く（第15回の決定3）。
+%%   倒立振子 θ''=4θ+u、u=−(8θ+4θ')（組どうしの約束）。車A・6-13 のばね・RLC（10 mH・1 µF・20 Ω）・水そう（6-14）。
+%%   数はすべて Python で検算した（scratchpad/v9-7/chk10.py）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md、組 V9-2）。頭文字 kixk は章ごとに置きかえる =====
+\colorlet{kixkNc}{bkOrange!85!black}% 名前の枠の線（点線）
+\colorlet{kixkSc}{bkTheme}% 実際の操作の枠の線（実線）
+\colorlet{kixkSb}{bkTheme!8}% 実際の操作の地
+\tikzset{
+  kixk dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixk dan1/.style={kixk dan, draw=kixkNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixk dan2/.style={kixk dan, draw=kixkSc, fill=kixkSb, text=bkInk},
+  kixk dan3/.style={kixk dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixk name/.style={draw=kixkNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixk seki/.style={draw=kixkSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixkSb},
+  kixk tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm},
+  kixk q/.style={diamond, aspect=4.6, draw=bkYellow!75!black, line width=0.9pt, fill=bkYellowBg, font=\sffamily\footnotesize, align=flush center, inner sep=0.2mm, text=bkInk},
+  kixk do/.style={rectangle, draw=\bkTT, line width=0.9pt, fill=white, rounded corners=0.6mm, font=\sffamily\footnotesize, align=flush center, inner xsep=1.5mm, inner ysep=1.2mm, text=bkInk},
+  kixk go/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, bkInk!75, shorten <=1.5mm, shorten >=1.5mm},
+  kixk yn/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, fill=white, inner sep=0.5mm},
+}
+% 実際の操作の4種類の名前（実線の札の字）  1 ふつうの定積分　2 表を引く　3 部分分数　4 行列の計算
+\def\kixk@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+% 段の札（例題の中で）  \kixkdan{1|2|3}
+\newcommand\kixkdan[1]{\tikz[baseline=(d.base)]\node[kixk dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+% 直す段の札に、どの道具かをそえる（例題の中で）  \kixknaosu{1|2|3|4} →「直す：表を引く」
+\newcommand\kixknaosu[1]{\tikz[baseline=(d.base)]\node[kixk dan2] (d) {\vphantom{あ}直す：\kixk@op{#1}};}
+% 実線の札だけ（表の「手順」の頭・本文）  \kixkop{1|2|3|4}
+\newcommand\kixkop[1]{\tikz[baseline=(d.base)]\node[kixk dan2] (d) {\vphantom{あ}\kixk@op{#1}};}
+% 段の見出し（本文で）  \kixkdanhead{1|2|3}{見出し}
+\newcommand\kixkdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixk dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+% 場合の札  \kixkcase{C}（′ は \kixkcase{A$'$}）
+\newcommand\kixkcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+% 例題の1行め  \kixkbaai{ことば}{9-2}{C}（場合が2つなら {D,B}：通った順）
+\newcommand\kixkbaai[3]{{\sffamily\bfseries 場合：}#1（表#2の\kixk@cases#3,\@nil）}
+\def\kixk@cases#1,#2\@nil{\kixkcase{#1}\ifx\relax#2\relax\else と\kixk@cases#2\@nil\fi}
+% 式の中の「名前」（点線）と「実際の操作」（実線）
+\newcommand\kixkN[1]{\tikz[baseline=(n.base)]\node[kixk name] (n) {$\displaystyle #1$};}
+\newcommand\kixkNt[1]{\tikz[baseline=(n.base)]{\node[kixk name] (n) {$\displaystyle #1$};\node[kixk tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixkS[1]{\tikz[baseline=(n.base)]\node[kixk seki] (n) {$\displaystyle #1$};}
+% 札つきの実線の枠  \kixkSt{1|2|3|4}{式}（札の字：ふつうの定積分・表を引く・部分分数・行列の計算）
+\newcommand\kixkSt[2]{\tikz[baseline=(n.base)]{\node[kixk seki] (n) {$\displaystyle #2$};\node[kixk tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixk@op{#1}};}}
+% 場合分けの表の題の帯  \kixkcasetitle{9-2}{題}
+\newcommand\kixkcasetitle[2]{\par\addvspace{6pt}\Needspace{8\baselineskip}\noindent\begin{tikzpicture}[baseline=(t.base)]
+  \node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=1mm, inner xsep=2mm, inner ysep=1mm] (t) {場合分けの表\,#1};
+  \node[anchor=west, font=\sffamily\bfseries, text=\bkTT, inner sep=0pt] at ([xshift=2mm]t.east) {#2};
+  \end{tikzpicture}\par\nobreak\vspace{3pt}}
+% 名前と操作の対応表の小さな絵  \kixkpic{1〜7}
+%  1 フーリエ係数（1周期で cos をかける）　2 複素係数（回る矢印）　3 フーリエ変換（−∞〜∞）
+%  4 ラプラス変換（0から、e^{-st} で小さく）　5 逆ラプラス変換（s の平面の極）　6 伝達関数（箱）　7 e^{At}（行列とうずまき）
+\newcommand\kixkpic[1]{\begin{tikzpicture}[x=1mm, y=1mm, baseline=(current bounding box.center)]
+  \ifcase#1\or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4);
+  \draw[bkInk, line width=0.8pt] (1,4) -- (1,7) -- (7,7) -- (7,1) -- (13,1) -- (13,4);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1:13, samples=40, smooth] plot (\x,{4+2.6*cos(30*(\x-1))});
+  \draw[bkInk, line width=0.5pt] (1,-0.6) -- (1,-1.6) -- (13,-1.6) -- (13,-0.6);
+  \or
+  \draw[bkGray, line width=0.4pt] (2,4) -- (12,4) (7,-0.5) -- (7,8.5);
+  \draw[bkInk, line width=0.7pt] (7,4) circle (3.6);
+  \draw[bkTheme, line width=1.1pt, -{Stealth[length=1.6mm]}] (7,4) -- ({7+3.6*cos(-40)},{4+3.6*sin(-40)});
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.3mm]}] ({7+5*cos(10)},{4+5*sin(10)}) arc (10:-60:5);
+  \or
+  \draw[bkInk, line width=0.6pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (0,1) -- (14,1);
+  \draw[bkInk, line width=0.8pt] (1.5,1) -- (5.5,1) -- (5.5,6.5) -- (8.5,6.5) -- (8.5,1);
+  \draw[bkTheme, line width=0.8pt, dash pattern=on 1.6pt off 0.9pt, domain=1.5:12.5, samples=50, smooth] plot (\x,{1+2.2*(1+cos(80*(\x-7)))/2});
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (1,1) -- (14,1);
+  \draw[bkInk, line width=0.6pt] (1,0) -- (1,8.5);
+  \fill[bkTheme!25, domain=1:13, samples=40, smooth] (1,1) -- plot (\x,{1+6.5*exp(-0.3*(\x-1))}) -- (13,1) -- cycle;
+  \draw[bkTheme, line width=0.8pt, domain=1:13, samples=40, smooth] plot (\x,{1+6.5*exp(-0.3*(\x-1))});
+  \or
+  \draw[bkGray, line width=0.4pt] (0,4) -- (14,4) (10,-0.5) -- (10,8.5);
+  \foreach \kixkx/\kixky in {3/4,6.5/6.8,6.5/1.2} {\draw[bkRed, line width=1pt] ({\kixkx-1},{\kixky-1}) -- ({\kixkx+1},{\kixky+1}) ({\kixkx-1},{\kixky+1}) -- ({\kixkx+1},{\kixky-1});}
+  \or
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (0,4) -- (4,4);
+  \draw[bkTheme, line width=0.8pt, fill=bkTheme!12] (4.4,1) rectangle (9.6,7);
+  \node[font=\footnotesize, text=bkInk, inner sep=0pt] at (7,4) {$G$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.4mm]}] (10,4) -- (14,4);
+  \or
+  \draw[bkInk, line width=0.6pt] (1.6,0.5) -- (0.6,0.5) -- (0.6,7.5) -- (1.6,7.5) (5.4,0.5) -- (6.4,0.5) -- (6.4,7.5) -- (5.4,7.5);
+  \foreach \kixkx/\kixky in {2.3/2.3,4.7/2.3,2.3/5.7,4.7/5.7} {\fill[bkInk] (\kixkx,\kixky) circle (0.5);}
+  \draw[bkTheme, line width=0.8pt, domain=0:600, samples=80, smooth] plot ({10.5+3.4*exp(-0.0035*\x)*cos(\x)},{4+3.4*exp(-0.0035*\x)*sin(\x)});
+  \fi
+\end{tikzpicture}}
+\makeatother
+\makeatletter
+%% ===== この章の部品（9-10）=====
+% 小見出し（太字の1行）
+\newcommand\kixkhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\kixkbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\vspace{3pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\kixkline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく  \kixkframe[はば]{中身}
+\newcommand\kixkframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の2行め以降
+\newcommand\kixka{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=2.6\zw\hangafter=0\relax}
+\newcommand\kixkb{\par\vspace{2pt}\noindent\rightskip=0pt plus 8em\relax\hangindent=4.3\zw\hangafter=0\relax}
+\newcommand\kixks{\rightskip=0pt plus 8em\relax}
+% bkhenkei の中の行列（行の間をふつうに）  \kixkpm{a&b\\c&d}
+\newcommand\kixkpm[1]{{\renewcommand\arraystretch{1}\begin{pmatrix}#1\end{pmatrix}}}
+% 手のひらに立てた棒  \kixkpend{x}{y}{かたむき（度、右が正）}{棒の長さ(mm)}
+\newcommand\kixkpend[4]{\begin{scope}[shift={(#1,#2)}]
+  \filldraw[fill=bkOrange!25, draw=bkInk, line width=0.6pt, rounded corners=1.6mm] (-7,-4.5) rectangle (7,0);
+  \draw[bkInk, line width=0.6pt] (-7,-2.2) -- (-10,-2.2) (7,-2.2) -- (10,-2.2);
+  \draw[bkInk, line width=1.6pt, line cap=round] (0,0) -- ({#4*sin(#3)},{#4*cos(#3)});
+  \filldraw[fill=bkBlue!55, draw=bkInk, line width=0.6pt] ({#4*sin(#3)},{#4*cos(#3)}) circle (2.4);
+  \end{scope}}
+\makeatother
+
+\bkchapter{9}{10}{連立微分方程式を行列で：\\状態方程式}{\bklevel{5}}{連立微分方程式を行列で：状態方程式}
+\bkmichishirube{3-6,5-17,5-18,6-14,6-15,7-5,7-8,7-9,7-10,7-11,9-8,9-9}{9-11,9-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 手のひらに立てた棒の「かたむき」と「たおれる速さ」を状態の点として、点の動きの図を読める。
+\item \bklevel{4}\enspace ばね・水そう・回路・倒立振子の式を、状態方程式 $\dot{\vec x}=A\vec x+B u$ に書き、$A$ の固有値で落ち着くかを判定できる。
+\item \bklevel{5}\enspace 状態フィードバック $u=-K\vec x$ で固有値を選び、コンピュータの中のくり返しで落ち着く条件も判定できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\raggedright
+長い棒を手のひらに立ててみましょう。棒は少しでもかたむくと、どんどんたおれていきます（5-18 の「たおれる動き」）。それでも、手を左右に動かせば、しばらく立て続けることができます。\par\vspace{4pt}
+\textbf{人は、棒の何を見て、手をどう動かしているのでしょう。同じことを、ロボットにさせることはできるでしょうか。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixkpend{12}{6}{14}{30}
+  \draw[bkRed, line width=1pt, -{Stealth[length=2mm]}] (24,34) arc (70:40:12);
+  \node[font=\footnotesize, anchor=west, text=bkInk] at (28,36) {たおれる};
+  \draw[bkGreen!60!black, line width=1.1pt, -{Stealth[length=2mm]}] (14,-1) -- (24,-1);
+  \node[font=\footnotesize, anchor=north, text=bkInk] at (17,-2.5) {手を動かす};
+  % 2輪で立つロボット
+  \begin{scope}[shift={(44,0)}]
+    \fill[bkGray!70] (-6,4) rectangle (6,8);
+    \draw[bkInk, line width=0.7pt] (-4,2) circle (2.2) (4,2) circle (2.2);
+    \draw[bkInk, line width=1.6pt] (0,8) -- (2,32);
+    \filldraw[fill=bkGray!40, draw=bkInk, line width=0.6pt, rounded corners=1mm] (-2,30) rectangle (6,37);
+    \node[font=\footnotesize, anchor=north] at (0,-1.5) {ロボット};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 第6巻では、2つの水そうのように、2つ以上の量がおたがいの変わり方を決めあう「連立微分方程式」を解きました（6-14）。第7巻では、その係数を行列 $A$ に並べて $\dot{\vec x}=A\vec x$ と書き、固有値が動きを決めることを学びました（7-8）。7-11 では、外から加える量 $\vec u$ を足した $\dot{\vec x}=A\vec x+B\vec u$ を状態方程式とよび、「固有値が、ゆれずに・こわれずに落ち着く場所にくるように、$\vec u$ の入れ方を決める」のが制御だ、と予告しました。
+
+この章では、状態方程式をいろいろな機械や回路について立て、最後に、たおれる棒を立たせる「手の動かし方」を行列の計算で決めます。ドローンやロボットの制御で、本当に使われている方法です。
+
+新しい記号が一度にたくさん出てきますが、1回でわからなくても大丈夫です。行列のかけ算（7-1）と固有値（7-8）を思い出しながら、ゆっくり進みましょう。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[棒を手のひらに立ててみよう]
+長さのちがう2本の棒（たとえば、長さ1\,m くらいのほうきと、えんぴつ）を用意します。まわりに人や物がない所で行いましょう。
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item ほうきの柄の先を、手のひらに立てる。棒の上のはしを見ながら、たおれないように手を動かす。何秒立てていられたかを3回はかる。
+\item えんぴつでも同じことをする。どちらが立てやすいかをくらべる。
+\item ほうきで、こんどは「棒がどれだけかたむいているか」だけを考えて手を動かしてみる。次に、「どちらへ、どれだけの速さでたおれかけているか」も見て、早めに手を動かしてみる。
+\item 気づいたことを、下の表に書く。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,46mm] Q[c,m,28mm] Q[c,m,28mm]}, row{2-Z}={font=\small}, rowsep=2pt}
+ & ほうき（長い） & えんぴつ（短い） \\
+立てていられた時間（秒） & & \\
+たおれ方（ゆっくり・速い） & & \\
+\end{bktable}
+\end{bkcenter}
+\end{yattemiyou}
+
+\noindent やってみると、長いほうきのほうがずっと立てやすいことがわかります。長い棒はゆっくりたおれるので、手を動かす時間があるからです（このわけは⑤で数で確かめます）。また、かたむきだけを見ていると、手の動きがおくれて、棒は左右にゆれながら、やがてたおれてしまいます。上手な人は、かたむきと一緒に、\textbf{たおれる速さ}も見ています。このことも、⑦で式から確かめます。
+
+\begin{omoidasou}
+\bkrecall{5-18}{少しかたむいた棒は $\ddot\theta=4\theta$ にしたがってたおれる。$\theta(0)=0.01$、$\dot\theta(0)=0$ なら、2秒後に約0.273\,rad。$e^{2t}$ の部分がどんどん大きくなる。}
+\bkrecall{5-17}{$\theta$ が小さいときは、$\sin\theta\approx\theta$（テイラー展開の1項め）、$\cos\theta\approx1$。}
+\bkrecall{6-14}{おたがいに変わり方を決めあう式の組が、連立微分方程式。2階の式は「位置と速度」の1階の式2つにできる。状態の点 $(x,\ v)$ の動きで見る。}
+\bkrecall{7-8}{$\dot{\vec x}=A\vec x$ に $\vec x=\vec v e^{st}$ を入れると $A\vec v=s\vec v$。6-12 の $s$ は、$A$ の固有値。固有値が全部「左半分」（実部が負）なら落ち着く。}
+\bkrecall{7-10}{くり返し $\vec x_{n+1}=G\vec x_n$ は、$G$ の固有値の大きさがすべて1より小さければ0に近づく（単位円の中）。オイラー法の1歩の行列は $I+A\,\Delta t$。}
+\bkrecall{9-9}{伝達関数の分母が0になる $s$ が極。極がすべて左半分にあれば、落ち着く。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{「状態」で見る}{\bklevel{3}}
+
+\bksubsection{1}{今の様子を決める数の組：状態}
+
+\label{bk:9-10:jotai}ボールを投げ上げた1秒後に、ボールがどこにあるかを当てるには、何を知っていればよいでしょう。今の高さだけでは足りません。同じ高さでも、上へ向かって速く動いていれば、1秒後はもっと高い所にあり、下へ向かって動いていれば、低い所にあります。\textbf{今の高さと、今の速さ}の2つがわかれば、その先の動きは決まります（6-6 で、ばねの動きが「はじめの位置とはじめの速度」で決まったのと同じです）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixkpend{14}{4}{12}{32}
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.2mm]}] ({14+32*sin(12)+3*cos(12)},{4+32*cos(12)-3*sin(12)}) -- ++({5*cos(12)},{-5*sin(12)});
+  \node[font=\footnotesize, anchor=north, align=center] at (14,-6) {かたむき $0.2$\,rad\\ゆっくりたおれかけ};
+  \kixkpend{64}{4}{12}{32}
+  \draw[bkRed, line width=1.6pt, -{Stealth[length=2.6mm]}] ({64+32*sin(12)+3*cos(12)},{4+32*cos(12)-3*sin(12)}) -- ++({14*cos(12)},{-14*sin(12)});
+  \node[font=\footnotesize, anchor=north, align=center] at (64,-6) {かたむき $0.2$\,rad\\速くたおれかけ};
+  \kixkpend{112}{4}{12}{32}
+  \draw[bkBlue, line width=1.3pt, -{Stealth[length=2.2mm]}] ({112+32*sin(12)-3*cos(12)},{4+32*cos(12)+3*sin(12)}) -- ++({-9*cos(12)},{9*sin(12)});
+  \node[font=\footnotesize, anchor=north, align=center] at (112,-6) {かたむき $0.2$\,rad\\起き上がりかけ};
+\end{tikzpicture}
+\bkfigcaption{かたむきは3本とも同じ。でも、上のはしの動き（矢印）がちがうので、この先の動きはまったくちがう。かたむき $\theta$ と、たおれる速さ $\dot\theta$ の2つで、今の様子が決まる。}
+\label{bk:9-10:fig-onaji}
+\end{bkfigure}
+
+手のひらの棒も同じです。図\ref{bk:9-10:fig-onaji}の3本の棒は、どれも同じだけかたむいています。でも、左は少しずつたおれかけ、まん中は速くたおれかけ、右は起き上がりかけています。この先の動きは、まったくちがいます。だから、棒の今の様子を決めるには、かたむき $\theta$〔rad〕と、たおれる速さ（かたむきの変わる速さ）$\dot\theta$〔rad/s〕の2つの数が必要です。
+
+このように、\textbf{その先の動きを決めるのに必要な、今の数の組}を、\textbf{状態}（じょうたい）といいます。\bkidx{じょうたい}{状態}数の組なので、ベクトルにして $\vec x$ と書きます（たて書き。第7巻）。
+\[ \vec x=\begin{pmatrix}\theta\\\dot\theta\end{pmatrix} \]
+\bkhatenaref の答えの半分は、ここにあります。上手な人は、棒の\textbf{状態}（かたむきと、たおれる速さ）の両方を見て、手を動かしています。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,40mm] Q[l,m,46mm] Q[c,m,26mm]}, row{2-Z}={font=\small}, rowsep=2pt}
+もの & 状態（今の数の組） & 数の数 \\
+冷めるお湯（6-4） & 温度 $T$ & 1 \\
+ばねとおもり（6-6） & 位置 $x$、速度 $\dot x$ & 2 \\
+つながった水そう（6-14） & 左の水位 $h_1$、右の水位 $h_2$ & 2 \\
+RLC の回路（6-12） & コンデンサーの電圧 $v_C$、電流 $i$ & 2 \\
+手のひらの棒 & かたむき $\theta$、たおれる速さ $\dot\theta$ & 2 \\
+ドローンの姿勢 & 3つの向きの角度と、その速さ & 6 \\
+\end{bktable}
+\bktabcaption{いろいろなものの状態。2階の微分の式で動くもの（ばね・棒）は、位置と速度の2つが状態になる。}
+\label{bk:9-10:tab-jotai}
+\end{bkcenter}
+
+\bksubsection{2}{状態の点の動きを見る}
+
+\label{bk:9-10:ten}状態 $(\theta,\ \dot\theta)$ を、横軸にかたむき $\theta$、たて軸にたおれる速さ $\dot\theta$ をとった平面の1つの点で表します。時間がたつと、状態が変わるので、点が動きます。6-14 で、ばねの $(x,\ v)$ の点がだ円を回ったり、うずをまいて原点に近づいたりした図と同じ考えです。原点 $(0,\ 0)$ は「まっすぐ立って、止まっている」状態です。
+
+図\ref{bk:9-10:fig-ten}の左は、何もしないで手を止めているときです。たとえば、右に少しかたむいて止まっている点（横軸の上の右のオレンジの点）から出発すると、点は右上へ動きます。かたむきがふえ、たおれる速さもふえていく、つまり右へたおれていきます。どこから出発しても、点はやがて原点から遠ざかっていきます。
+
+ただ1つの例外が、右下と左上を結ぶ灰色の点線の上です。「右にかたむいているが、ちょうどよい速さで起き上がりかけている」状態で、このときだけは、点が原点に近づきます。でも、ほんの少しでもずれると、やがて遠ざかります。いつもこの線の上に乗せておくのは無理なので、何もしなければ、棒は必ずたおれます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \begin{scope}
+    \clip (-25,-24.5) rectangle (25,24.5);
+    \draw[bkLine, line width=0.4pt] (-25,-24) grid[step=12.5] (25,24);
+    \draw[bkGray, line width=0.8pt, dash pattern=on 2pt off 1.5pt] (-24.5,24.5) -- (24.5,-24.5);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(3.75,0.00) (3.77,0.39) (3.83,0.77) (3.93,1.17) (4.07,1.58) (4.25,2.01) (4.48,2.46) (4.76,2.93) (5.08,3.43) (5.46,3.97) (5.90,4.56) (6.40,5.19) (6.97,5.87) (7.61,6.62) (8.33,7.44) (9.14,8.33) (10.04,9.31) (11.05,10.39) (12.17,11.58) (13.43,12.89) (14.82,14.34) (16.38,15.94) (18.10,17.71) (20.01,19.66) (22.14,21.82) (24.50,24.21)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (7.61,6.62) -- (8.33,7.44);
+\fill[bkOrange!85!black] (3.75,0.00) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(-3.75,0.00) (-3.77,-0.39) (-3.83,-0.77) (-3.93,-1.17) (-4.07,-1.58) (-4.25,-2.01) (-4.48,-2.46) (-4.76,-2.93) (-5.08,-3.43) (-5.46,-3.97) (-5.90,-4.56) (-6.40,-5.19) (-6.97,-5.87) (-7.61,-6.62) (-8.33,-7.44) (-9.14,-8.33) (-10.04,-9.31) (-11.05,-10.39) (-12.17,-11.58) (-13.43,-12.89) (-14.82,-14.34) (-16.38,-15.94) (-18.10,-17.71) (-20.01,-19.66) (-22.14,-21.82) (-24.50,-24.21)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (-7.61,-6.62) -- (-8.33,-7.44);
+\fill[bkOrange!85!black] (-3.75,0.00) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(15.00,-13.75) (13.67,-12.28) (12.48,-10.94) (11.42,-9.72) (10.48,-8.60) (9.65,-7.56) (8.93,-6.61) (8.29,-5.73) (7.75,-4.91) (7.28,-4.14) (6.90,-3.41) (6.58,-2.72) (6.34,-2.06) (6.16,-1.42) (6.05,-0.79) (6.00,-0.18) (6.01,0.44) (6.09,1.06) (6.23,1.69) (6.44,2.34) (6.71,3.01) (7.05,3.72) (7.47,4.46) (7.97,5.25) (8.55,6.10) (9.22,7.01) (9.99,8.00) (10.87,9.07) (11.86,10.23) (12.97,11.50) (14.22,12.89) (15.62,14.42) (17.18,16.10) (18.93,17.95) (20.87,19.99) (23.04,22.24)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (6.23,1.69) -- (6.44,2.34);
+\fill[bkOrange!85!black] (15.00,-13.75) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(-15.00,13.75) (-13.67,12.28) (-12.48,10.94) (-11.42,9.72) (-10.48,8.60) (-9.65,7.56) (-8.93,6.61) (-8.29,5.73) (-7.75,4.91) (-7.28,4.14) (-6.90,3.41) (-6.58,2.72) (-6.34,2.06) (-6.16,1.42) (-6.05,0.79) (-6.00,0.18) (-6.01,-0.44) (-6.09,-1.06) (-6.23,-1.69) (-6.44,-2.34) (-6.71,-3.01) (-7.05,-3.72) (-7.47,-4.46) (-7.97,-5.25) (-8.55,-6.10) (-9.22,-7.01) (-9.99,-8.00) (-10.87,-9.07) (-11.86,-10.23) (-12.97,-11.50) (-14.22,-12.89) (-15.62,-14.42) (-17.18,-16.10) (-18.93,-17.95) (-20.87,-19.99) (-23.04,-22.24)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (-6.23,-1.69) -- (-6.44,-2.34);
+\fill[bkOrange!85!black] (-15.00,13.75) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(15.00,-16.25) (13.41,-14.79) (11.96,-13.49) (10.64,-12.34) (9.42,-11.31) (8.31,-10.40) (7.29,-9.60) (6.34,-8.90) (5.46,-8.30) (4.63,-7.78) (3.86,-7.35) (3.13,-6.99) (2.42,-6.70) (1.75,-6.49) (1.09,-6.34) (0.44,-6.27) (-0.20,-6.25) (-0.84,-6.31) (-1.49,-6.43) (-2.16,-6.61) (-2.85,-6.87) (-3.57,-7.20) (-4.33,-7.60) (-5.14,-8.09) (-5.99,-8.66) (-6.92,-9.32) (-7.91,-10.08) (-8.99,-10.95) (-10.16,-11.93) (-11.44,-13.03) (-12.84,-14.28) (-14.37,-15.67) (-16.06,-17.23) (-17.91,-18.97) (-19.96,-20.91) (-22.21,-23.07)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (-1.49,-6.43) -- (-2.16,-6.61);
+\fill[bkOrange!85!black] (15.00,-16.25) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(-15.00,16.25) (-13.41,14.79) (-11.96,13.49) (-10.64,12.34) (-9.42,11.31) (-8.31,10.40) (-7.29,9.60) (-6.34,8.90) (-5.46,8.30) (-4.63,7.78) (-3.86,7.35) (-3.13,6.99) (-2.42,6.70) (-1.75,6.49) (-1.09,6.34) (-0.44,6.27) (0.20,6.25) (0.84,6.31) (1.49,6.43) (2.16,6.61) (2.85,6.87) (3.57,7.20) (4.33,7.60) (5.14,8.09) (5.99,8.66) (6.92,9.32) (7.91,10.08) (8.99,10.95) (10.16,11.93) (11.44,13.03) (12.84,14.28) (14.37,15.67) (16.06,17.23) (17.91,18.97) (19.96,20.91) (22.21,23.07)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (1.49,6.43) -- (2.16,6.61);
+\fill[bkOrange!85!black] (-15.00,16.25) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(0.00,4.38) (0.45,4.40) (0.90,4.47) (1.37,4.58) (1.85,4.75) (2.34,4.96) (2.87,5.23) (3.42,5.55) (4.01,5.93) (4.64,6.38) (5.32,6.89) (6.05,7.47) (6.85,8.13) (7.72,8.88) (8.67,9.72) (9.72,10.66) (10.86,11.71) (12.13,12.89) (13.51,14.20) (15.04,15.67) (16.73,17.30) (18.60,19.11) (20.66,21.12) (22.94,23.35)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (6.85,8.13) -- (7.72,8.88);
+\fill[bkOrange!85!black] (0.00,4.38) circle (0.8);
+\draw[bkRed, line width=0.9pt] plot[smooth] coordinates {(0.00,-4.38) (-0.45,-4.40) (-0.90,-4.47) (-1.37,-4.58) (-1.85,-4.75) (-2.34,-4.96) (-2.87,-5.23) (-3.42,-5.55) (-4.01,-5.93) (-4.64,-6.38) (-5.32,-6.89) (-6.05,-7.47) (-6.85,-8.13) (-7.72,-8.88) (-8.67,-9.72) (-9.72,-10.66) (-10.86,-11.71) (-12.13,-12.89) (-13.51,-14.20) (-15.04,-15.67) (-16.73,-17.30) (-18.60,-19.11) (-20.66,-21.12) (-22.94,-23.35)};
+\draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (-6.85,-8.13) -- (-7.72,-8.88);
+\fill[bkOrange!85!black] (0.00,-4.38) circle (0.8);
+    \end{scope}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-26,0) -- (27,0) node[right, font=\footnotesize, inner sep=1pt] {$\theta$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-25.5) -- (0,27) node[above, font=\footnotesize, inner sep=1pt] {$\dot\theta$};
+    \fill[bkInk] (0,0) circle (0.9);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-27.5) {制御なし（$\ddot\theta=4\theta$）\\点は原点から遠ざかる};
+  \end{scope}
+  \begin{scope}[xshift=68mm]
+    \begin{scope}
+    \clip (-25,-24.5) rectangle (25,24.5);
+    \draw[bkLine, line width=0.4pt] (-25,-24) grid[step=12.5] (25,24);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(22.50,0.00) (22.09,-3.76) (21.05,-6.12) (19.64,-7.48) (18.03,-8.13) (16.34,-8.27) (14.66,-8.09) (13.04,-7.69) (11.52,-7.15) (10.11,-6.56) (8.83,-5.93) (7.67,-5.32) (6.64,-4.72) (5.73,-4.17) (4.93,-3.66) (4.23,-3.19) (3.62,-2.77) (3.09,-2.40) (2.63,-2.07) (2.24,-1.78) (1.90,-1.53) (1.61,-1.31) (1.36,-1.11) (1.15,-0.95) (0.97,-0.81) (0.82,-0.68) (0.69,-0.58) (0.58,-0.49) (0.49,-0.41) (0.41,-0.35) (0.34,-0.29) (0.29,-0.25) (0.24,-0.21) (0.20,-0.17) (0.17,-0.15) (0.14,-0.12) (0.12,-0.10) (0.10,-0.09) (0.08,-0.07) (0.07,-0.06)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (1.90,-1.53) -- (1.61,-1.31);
+\fill[bkOrange!85!black] (22.50,0.00) circle (0.8);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(-22.50,0.00) (-22.09,3.76) (-21.05,6.12) (-19.64,7.48) (-18.03,8.13) (-16.34,8.27) (-14.66,8.09) (-13.04,7.69) (-11.52,7.15) (-10.11,6.56) (-8.83,5.93) (-7.67,5.32) (-6.64,4.72) (-5.73,4.17) (-4.93,3.66) (-4.23,3.19) (-3.62,2.77) (-3.09,2.40) (-2.63,2.07) (-2.24,1.78) (-1.90,1.53) (-1.61,1.31) (-1.36,1.11) (-1.15,0.95) (-0.97,0.81) (-0.82,0.68) (-0.69,0.58) (-0.58,0.49) (-0.49,0.41) (-0.41,0.35) (-0.34,0.29) (-0.29,0.25) (-0.24,0.21) (-0.20,0.17) (-0.17,0.15) (-0.14,0.12) (-0.12,0.10) (-0.10,0.09) (-0.08,0.07) (-0.07,0.06)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (-1.90,1.53) -- (-1.61,1.31);
+\fill[bkOrange!85!black] (-22.50,0.00) circle (0.8);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(0.00,22.50) (3.76,14.57) (6.12,8.80) (7.48,4.68) (8.13,1.78) (8.27,-0.21) (8.09,-1.52) (7.69,-2.33) (7.15,-2.79) (6.56,-3.01) (5.93,-3.04) (5.32,-2.96) (4.72,-2.81) (4.17,-2.61) (3.66,-2.38) (3.19,-2.15) (2.77,-1.93) (2.40,-1.71) (2.07,-1.51) (1.78,-1.32) (1.53,-1.15) (1.31,-1.00) (1.11,-0.87) (0.95,-0.75) (0.81,-0.64) (0.68,-0.55) (0.58,-0.47) (0.49,-0.40) (0.41,-0.34) (0.35,-0.29) (0.29,-0.25) (0.25,-0.21) (0.21,-0.18) (0.17,-0.15) (0.15,-0.13) (0.12,-0.11) (0.10,-0.09) (0.09,-0.07) (0.07,-0.06) (0.06,-0.05)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (1.53,-1.15) -- (1.31,-1.00);
+\fill[bkOrange!85!black] (0.00,22.50) circle (0.8);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(0.00,-22.50) (-3.76,-14.57) (-6.12,-8.80) (-7.48,-4.68) (-8.13,-1.78) (-8.27,0.21) (-8.09,1.52) (-7.69,2.33) (-7.15,2.79) (-6.56,3.01) (-5.93,3.04) (-5.32,2.96) (-4.72,2.81) (-4.17,2.61) (-3.66,2.38) (-3.19,2.15) (-2.77,1.93) (-2.40,1.71) (-2.07,1.51) (-1.78,1.32) (-1.53,1.15) (-1.31,1.00) (-1.11,0.87) (-0.95,0.75) (-0.81,0.64) (-0.68,0.55) (-0.58,0.47) (-0.49,0.40) (-0.41,0.34) (-0.35,0.29) (-0.29,0.25) (-0.25,0.21) (-0.21,0.18) (-0.17,0.15) (-0.15,0.13) (-0.12,0.11) (-0.10,0.09) (-0.09,0.07) (-0.07,0.06) (-0.06,0.05)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (-1.53,1.15) -- (-1.31,1.00);
+\fill[bkOrange!85!black] (0.00,-22.50) circle (0.8);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(12.50,-22.50) (8.51,-16.66) (5.57,-12.21) (3.43,-8.83) (1.89,-6.29) (0.80,-4.39) (0.06,-2.98) (-0.44,-1.94) (-0.76,-1.18) (-0.94,-0.64) (-1.03,-0.26) (-1.05,0.01) (-1.03,0.18) (-0.98,0.29) (-0.92,0.35) (-0.84,0.38) (-0.76,0.39) (-0.68,0.38) (-0.61,0.36) (-0.54,0.33) (-0.47,0.31) (-0.41,0.28) (-0.36,0.25) (-0.31,0.22) (-0.27,0.19) (-0.23,0.17) (-0.20,0.15) (-0.17,0.13) (-0.14,0.11) (-0.12,0.10) (-0.10,0.08) (-0.09,0.07) (-0.07,0.06) (-0.06,0.05) (-0.05,0.04) (-0.05,0.04) (-0.04,0.03) (-0.03,0.03) (-0.03,0.02) (-0.02,0.02)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (-0.47,0.31) -- (-0.41,0.28);
+\fill[bkOrange!85!black] (12.50,-22.50) circle (0.8);
+\draw[bkBlue, line width=0.9pt] plot[smooth] coordinates {(-12.50,22.50) (-8.51,16.66) (-5.57,12.21) (-3.43,8.83) (-1.89,6.29) (-0.80,4.39) (-0.06,2.98) (0.44,1.94) (0.76,1.18) (0.94,0.64) (1.03,0.26) (1.05,-0.01) (1.03,-0.18) (0.98,-0.29) (0.92,-0.35) (0.84,-0.38) (0.76,-0.39) (0.68,-0.38) (0.61,-0.36) (0.54,-0.33) (0.47,-0.31) (0.41,-0.28) (0.36,-0.25) (0.31,-0.22) (0.27,-0.19) (0.23,-0.17) (0.20,-0.15) (0.17,-0.13) (0.14,-0.11) (0.12,-0.10) (0.10,-0.08) (0.09,-0.07) (0.07,-0.06) (0.06,-0.05) (0.05,-0.04) (0.05,-0.04) (0.04,-0.03) (0.03,-0.03) (0.03,-0.02) (0.02,-0.02)};
+\draw[bkBlue, line width=0.9pt, -{Stealth[length=2mm]}] (0.47,-0.31) -- (0.41,-0.28);
+\fill[bkOrange!85!black] (-12.50,22.50) circle (0.8);
+    \end{scope}
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-26,0) -- (27,0) node[right, font=\footnotesize, inner sep=1pt] {$\theta$};
+    \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-25.5) -- (0,27) node[above, font=\footnotesize, inner sep=1pt] {$\dot\theta$};
+    \fill[bkInk] (0,0) circle (0.9);
+    \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-27.5) {制御あり（⑦で作る手の動かし方）\\点は原点に吸いこまれる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{状態の点の動き。オレンジの点がスタート。左：何もしないと、どこから出発しても（灰色の点線の上をのぞいて）原点から遠ざかる。右：かたむきと速さに合わせて手を動かすと、どこから出発しても原点（立って止まった状態）に近づく。}
+\label{bk:9-10:fig-ten}
+\end{bkfigure}
+
+
+
+図の右は、⑦で作る「手の動かし方」を使ったときです。どこから出発しても、点は原点に近づきます。棒が立ち続けるとは、\textbf{状態の点を、原点に引き寄せ続けること}なのです。
+
+\kixkhead{気づくこと}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item 状態の点の動きは、今いる場所だけで決まる。同じ場所から出発すれば、同じ道を通る。
+\item 制御をするとは、点の動き方（平面の上の流れ）を変えることである。
+\end{itemize}
+
+\bkstage{te}{手でわかる}{状態方程式を立てる}{\bklevel{4}}
+
+\bksubsection{3}{2階の式を、行列の1行に：状態方程式}
+
+\label{bk:9-10:tateru}3-10・6-12・7-8 の車A を使います。車のおもりの位置 $x$〔m〕が、外から加える力をおもりの質量でわった量 $u$〔m/s²〕を受けて、
+\kixkline{$\ddot x+3\dot x+2x=u$}
+にしたがって動くとします（$u=0$ なら 3-10 の車A そのものです）。2階の微分の式なので、状態は位置 $x$ と速度 $\dot x$ の2つです（表\ref{bk:9-10:tab-jotai}）。6-14④でしたように、2つに名前をつけて、1階の式2つに直します。
+\begin{bkhenkei}[0.42]
+x_1=x,\quad x_2=\dot x & 状態の2つの数に名前をつける \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\dot x_1=x_2 & 位置の変わる速さは、速度（$x_1$ を微分すると $\dot x$） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\ddot x=-2x-3\dot x+u & もとの式を $\ddot x$ について解いた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\dot x_2=-2x_1-3x_2+u & $\ddot x=\dot x_2$、$x=x_1$、$\dot x=x_2$ を入れた \\
+\end{bkhenkei}
+右辺を、$x_1$・$x_2$ の係数と、$u$ の係数に分けて並べると（7-1 の行列とベクトルのかけ算の形）、次のようになります。
+\[ \begin{pmatrix}\dot x_1\\\dot x_2\end{pmatrix}=\begin{pmatrix}0&1\\-2&-3\end{pmatrix}\begin{pmatrix}x_1\\x_2\end{pmatrix}+\begin{pmatrix}0\\1\end{pmatrix}u \]
+1行めを計算すると $0\times x_1+1\times x_2+0\times u=x_2$、2行めは $-2x_1-3x_2+1\times u$ で、上の2つの式にもどります。この行列（1行め $(0,\ 1)$、2行め $(-2,\ -3)$）は、7-8 で車A の「状態の行列」として出てきたものと同じです。
+
+\kixkdanhead{1}{記号を読む：状態・入れるもの・はかるもの}
+状態のベクトルを $\vec x$、係数の行列を $A$、$u$ の係数の列を $B$ と書くと、2本の式が1行になります。7-11 で予告した形です。
+\kixkframe[112mm]{\Large $\dot{\vec x}=A\vec x+B u$\qquad $y=C\vec x$\\[3pt]\normalsize\sffamily 状態方程式（上の左）と、出力の式（上の右）}
+左の式を\textbf{状態方程式}（じょうたいほうていしき）といいます。\bkidx{じょうたいほうていしき}{状態方程式}右の式は、状態のうち、センサーではかる量（出てくるもの）$y$ を表す式で、\textbf{出力の式}（出力方程式）といいます。車A で位置だけをはかるなら、$y=x_1$ です。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{$\vec x$（状態）}：今の様子を決める数の組。ここでは $(x_1,\ x_2)$＝（位置、速度）。
+\item \textbf{$A$（状態の行列）}：何も入れないとき、状態どうしがどう変わりあうか。$\dot{\vec x}=A\vec x$ は 7-8 の式。
+\item \textbf{$B$ と $u$（入れるもの）}：$u$ は外から入れる量（力・電圧・手の動き）。入れるものが1つなら $u$ は数で、$B$ は「$u$ がどの式に、何倍で入るか」を表す1列の行列。車A では $B$ は $(0,\ 1)$ をたてに並べた1列の行列で、$u$ は2つめの式（速度の変わり方）にだけ入る。
+\item \textbf{$C$（はかるもの）}：$y=C\vec x$ の $C$ は1行の行列。位置だけをはかるなら、$C$ は $(1,\ 0)$ を横に並べた1行の行列。速度だけをはかるなら $(0,\ 1)$。
+\end{enumerate}
+7-11 では入れるものがいくつかある形 $B\vec u$ で書きました。この章の機械は入れるものが1つなので、$u$ を数にして $Bu$ と書きます（$B$ は1列）。$C$ はコンデンサーの $C$〔F〕と同じ字ですが、別のものです。
+
+\kixkhead{記号は、まとめた書き方の名前}
+$\dot{\vec x}=A\vec x+Bu$ は、何本もの微分方程式をまとめた\textbf{名前}（書き方）です。この1行を見ただけでは、まだ何も計算していません。実際に動きを調べるときは、行列のかけ算・固有値・逆行列などの\textbf{行列の計算}に直します。
+\[ \kixkNt{\dot{\vec x}=A\vec x+Bu}=\kixkSt{4}{\begin{pmatrix}\dot x_1\\\dot x_2\end{pmatrix}=\begin{pmatrix}x_2\\-2x_1-3x_2+u\end{pmatrix}} \]
+\vspace{2pt}
+状態が10個ある機械でも、100個ある機械でも、書き方は同じ1行です。コンピュータで計算するときも、$A$・$B$・$C$ の数の表を入れるだけで済みます。これが、状態方程式で書くいちばんの「うれしいこと」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\footnotesize] (u) at (0,0) {$u$};
+  \node[bk node, minimum width=11mm, minimum height=8mm] (b) at (20,0) {$B$};
+  \draw[bkInk, line width=0.8pt] (40,0) circle (3.2);
+  \node[font=\footnotesize] at (40,0) {$+$};
+  \coordinate (sum) at (40,0);
+  \node[bk node, minimum width=16mm, minimum height=8mm, align=center] (in) at (64,0) {ためる\\（積分）};
+  \node[bk node, minimum width=11mm, minimum height=8mm] (c) at (100,0) {$C$};
+  \node[font=\sffamily\footnotesize] (y) at (122,0) {$y$};
+  \node[bk node, minimum width=11mm, minimum height=8mm] (a) at (64,-18) {$A$};
+  \draw[bk link] (u) -- (b);
+  \draw[bk link, shorten >=3.4mm] (b) -- (sum);
+  \draw[bk link, shorten <=3.4mm] (sum) -- node[bk link label, above] {$\dot{\vec x}$} (in);
+  \draw[bk link] (in) -- node[bk link label, above] {$\vec x$} (c);
+  \draw[bk link] (c) -- (y);
+  \draw[bk link, shorten <=0pt] (84,0) |- (a);
+  \draw[bk link, shorten >=3.4mm] (a) -| (sum);
+  \fill[bkInk] (84,0) circle (0.8);
+\end{tikzpicture}
+\bkfigcaption{状態方程式のブロック線図（9-8）。変わる速さ $\dot{\vec x}$ をためていく（積分する）と状態 $\vec x$。その状態に $A$ をかけたものと、入れるもの $u$ に $B$ をかけたものをたすと、また $\dot{\vec x}$。はかる量は $y=C\vec x$。}
+\label{bk:9-10:fig-block}
+\end{bkfigure}
+
+\bksubsection{4}{いろいろなものを状態方程式にする}
+
+\label{bk:9-10:iroiro}2階の式のほかにも、状態方程式の形にできるものはたくさんあります。立て方は、もとの式の形で決まります。
+
+\kixkhead{1階の式がいくつか：つながった水そう}
+6-14 の水そう（同じ形の2つの水そうを細い管でつないだもの。時間は分、水位は cm）の式は、もともと1階の式が2つです。左の水そうに、上から1分に $q$\,cm³ の水を入れることにすると、左の水位は $q\div100$ だけ速くふえます（底面積が \qty{100}{cm^2} だから）。
+\begin{bkhenkei}[0.48]
+\dot h_1=-0.1(h_1-h_2)+0.01q & 左：管で出ていく分と、上から入れる分 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+\dot h_2=0.1(h_1-h_2) & 右：管から入ってくる分 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+\dot h_1=-0.1h_1+0.1h_2+0.01q & かっこをはずして、$h_1$・$h_2$・$q$ の係数を並べる \\
+\end{bkhenkei}
+\[ \begin{pmatrix}\dot h_1\\\dot h_2\end{pmatrix}=\begin{pmatrix}-0.1&0.1\\0.1&-0.1\end{pmatrix}\begin{pmatrix}h_1\\h_2\end{pmatrix}+\begin{pmatrix}0.01\\0\end{pmatrix}q \]
+状態は $\vec x=(h_1,\ h_2)$、入れるものは $u=q$ です。この $A$ は、6-14・7-8・7-10 で $H$ と書いた行列と同じものです。この章では、どの機械でも $A$ と書きます（第9巻では $H(t)$ をステップ関数に使うからです）。
+
+\kixkhead{電気回路：コンデンサーの電圧とコイルの電流}
+6-12 の RLC の回路（コイル $L=\qty{10}{mH}$、コンデンサー $C=\qty{1}{\micro F}$、抵抗 $R=\qty{20}{\ohm}$ を直列にして、電圧 $v$〔V〕を加える）を考えます。回路の状態は、コンデンサーの電圧 $v_C$〔V〕と、コイルを流れる電流 $i$〔A〕の2つです。どちらも、急には変われない量だからです（コンデンサーには電気がたまっていて、コイルは電流の変化をいやがる）。
+\begin{bkhenkei}[0.54]
+C\dot v_C=i & コンデンサーの電気 $Cv_C$ がたまる速さは電流（6-4） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.54]
+L\dot i=v-Ri-v_C & コイルの電圧は、加えた電圧から抵抗とコンデンサーの分をひいた残り（6-12） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.54]
+\dot v_C=\frac{1}{C}\,i=10^6\,i & $C=10^{-6}$ でわった \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.54]
+\dot i=\frac{1}{L}(v-Ri-v_C) & $L$ でわった \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.54]
+\dot i=-100v_C-2000i+100v & $\frac{1}{L}=100$、$\frac{R}{L}=2000$ \\
+\end{bkhenkei}
+\[ \begin{pmatrix}\dot v_C\\\dot i\end{pmatrix}=\begin{pmatrix}0&10^6\\-100&-2000\end{pmatrix}\begin{pmatrix}v_C\\i\end{pmatrix}+\begin{pmatrix}0\\100\end{pmatrix}v \]
+数が大きいのは、回路の動きが速い（1秒に約1600回ゆれる）からです。
+
+\kixkhead{sin が入る式：手のひらの棒（倒立振子）}
+手のひらに立てた棒のように、下を支えられて上に立つ振り子を\textbf{倒立振子}（とうりつふりこ）といいます。\bkidx{とうりつふりこ}{倒立振子}ここでは、長さ $\ell$〔m〕の軽い棒の先におもりがついているとします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \kixkpend{30}{6}{20}{44}
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (30,6) -- (30,54);
+  \draw[bkInk, line width=0.6pt] (30,20) arc (90:70:14);
+  \node[font=\footnotesize] at ({30+18.5*cos(80)},{6+18.5*sin(80)}) {$\theta$};
+  \node[font=\footnotesize] at ({30+22*sin(20)+4.2*cos(20)},{6+22*cos(20)-4.2*sin(20)}) {$\ell$};
+  \coordinate (m) at ({30+44*sin(20)},{6+44*cos(20)});
+  \draw[bkRed, line width=1.3pt, -{Stealth[length=2.2mm]}] ([yshift=-2.6mm]m) -- ++(0,-14);
+  \node[font=\footnotesize, anchor=west] at ({30+44*sin(20)+2},{6+44*cos(20)-12}) {重力 $mg$};
+  \draw[bkRed!70!black, line width=1.1pt, -{Stealth[length=2mm]}] ({30+44*sin(20)+2.6*cos(20)},{6+44*cos(20)-2.6*sin(20)}) -- ++({7*cos(20)},{-7*sin(20)});
+  \node[font=\footnotesize, anchor=west, align=left] at ({30+44*sin(20)+11},{6+44*cos(20)+1}) {重力の、棒に直角な成分\\$mg\sin\theta$（たおす向き）};
+  \draw[bkGreen!60!black, line width=1.3pt, -{Stealth[length=2.2mm]}] (34,-1) -- (46,-1);
+  \node[font=\footnotesize, anchor=west] at (47,-1) {手の加速度 $a$（起こす向きにはたらく）};
+\end{tikzpicture}
+\bkfigcaption{倒立振子。棒のかたむき $\theta$ は、まっすぐ上（点線）からはかり、右が正。手は右向きを正として、加速度 $a$〔m/s²〕で動かす。手をたおれる向きに動かすと、棒の下が先回りして、棒を起こす向きにはたらく。}
+\label{bk:9-10:fig-furiko}
+\end{bkfigure}
+
+おもりの動きを、棒に直角な向きで考えると、物理の本（力学）で学ぶ次の式になります。重力の直角な成分 $mg\sin\theta$ がたおす向き、手を加速度 $a$ で動かしたときの見かけの力の直角な成分 $ma\cos\theta$ が起こす向きにはたらくからです。
+\begin{bkhenkei}[0.42]
+m\ell\ddot\theta=mg\sin\theta-ma\cos\theta & おもりの、棒に直角な向きの運動 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\ddot\theta=\frac{g}{\ell}\sin\theta-\frac{a}{\ell}\cos\theta & 両辺を $m\ell$ でわった \\
+\end{bkhenkei}
+$\sin\theta$ と $\cos\theta$ が入っているので、このままでは行列で書けません（行列で書けるのは、$\theta$ や $\dot\theta$ の1次の式だけ）。そこで、棒がほとんどまっすぐ立っている（$\theta$ が小さい）ときを考え、5-17 の近似 $\sin\theta\approx\theta$、$\cos\theta\approx1$ を使います。
+\begin{bkhenkei}[0.42]
+\ddot\theta=\frac{g}{\ell}\,\theta-\frac{a}{\ell} & $\sin\theta\approx\theta$、$\cos\theta\approx1$ とした \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\ddot\theta=4\theta+u & $\ell=\qty{2.45}{m}$ なら $\frac{g}{\ell}=\frac{9.8}{2.45}=4$。$u=-\frac{a}{\ell}$ と置いた \\
+\end{bkhenkei}
+$u$〔rad/s²〕は「手を動かして、棒を起こす向きに加える角加速度」です（手を右へ動かすと $a>0$ で $u<0$、つまり右へのかたむきを減らす向き）。$u=0$ なら 5-18 の $\ddot\theta=4\theta$ そのもので、5-18 の4は、長さ約 \qty{2.45}{m} の棒の数です。このように、曲がった式を、ある状態のまわりで1次の式に直すことを、\textbf{線形化}（せんけいか）といいます（5-17 で名前を紹介しました）。\bkidx{せんけいか}{線形化}
+9-0 の台車の上の棒でも、手のかわりに台車が動くだけで、同じ式になります。また、ここでは軽い棒の先におもりがあるとしましたが、棒全体に重さがある一様な棒なら、$\frac{g}{\ell}$ が $\frac{3g}{2\ell}$ に変わります（長さの $\frac23$ の所におもりがあるのと同じ）。
+
+車A と同じように、$x_1=\theta$、$x_2=\dot\theta$ として、
+\[ \begin{pmatrix}\dot\theta\\\ddot\theta\end{pmatrix}=\begin{pmatrix}0&1\\4&0\end{pmatrix}\begin{pmatrix}\theta\\\dot\theta\end{pmatrix}+\begin{pmatrix}0\\1\end{pmatrix}u \]
+です。この $A$ と $B$ を、この章の最後まで使います。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,26mm] Q[c,m,18mm] Q[c,m,22mm] Q[c,m,22mm] Q[c,m,22mm]}, row{2-Z}={font=\small}, rowsep=1.5pt}
+$\theta$（rad） & 0.05 & 0.1 & 0.3 & 0.5 \\
+（度にすると） & 2.9° & 5.7° & 17.2° & 28.6° \\
+$\sin\theta$ & 0.04998 & 0.09983 & 0.29552 & 0.47943 \\
+$\theta$ と $\sin\theta$ のちがい & 0.04\,\% & 0.17\,\% & 1.5\,\% & 4.3\,\% \\
+\end{bktable}
+\bktabcaption{$\sin\theta\approx\theta$ の近さ。0.1\,rad（約6°）までなら、ちがいは0.2\,\% より小さい。線形化した式は、棒がほとんど立っている間だけ使える。}
+\label{bk:9-10:tab-sin}
+\end{bkcenter}
+
+\bksubsection{5}{固有値で、落ち着くかを見る}
+
+\label{bk:9-10:koyuchi}何も入れない（$u=0$）とき、状態方程式は $\dot{\vec x}=A\vec x$ です。7-8 で学んだとおり、$\vec x=\vec ve^{st}$ を入れると $A\vec v=s\vec v$ となり、$s$ は $A$ の固有値です。だから、\textbf{$A$ の固有値の実部がすべて負なら、何も入れなくても状態は原点に落ち着きます}。1つでも実部が正のものがあれば、その向きにどんどん大きくなります。これは、9-9 の「極がすべて左半分」と同じ条件です（$A$ の固有値と極が同じものであることは、⑩で確かめます）。
+
+\kixkhead{棒の固有値}
+\begin{bkhenkei}[0.42]
+A-\lambda I=\kixkpm{-\lambda&1\\4&-\lambda} & 対角から $\lambda$ をひく（7-8） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\det(A-\lambda I)=\lambda^2-4=0 & $(-\lambda)(-\lambda)-1\times4$ \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\lambda=2,\ -2 & $\lambda^2=4$ \\
+\end{bkhenkei}
+固有値の1つが $+2$（右半分）なので、何もしなければ棒はたおれます。固有値 $2$ の固有ベクトルは $(1,\ 2)$ で、「かたむきの2倍の速さでたおれかける」向きです。固有値 $-2$ の固有ベクトルは $(1,\ -2)$ で、図\ref{bk:9-10:fig-ten}の左の、灰色の点線の向き（ちょうどよい速さで起き上がりかけている向き）です。この線の上だけは $e^{-2t}$ で原点に近づきますが、少しでも $(1,\ 2)$ の向きがまざると、$e^{2t}$ がどんどん大きくなります。
+
+はじめ $\theta=0.01$、$\dot\theta=0$ なら、5-18 で求めたとおり $\theta=0.01\times\frac{e^{2t}+e^{-2t}}{2}$ で、2秒後に約0.273\,rad（約16°）です。
+
+\kixkhead{長い棒ほど立てやすいわけ}
+棒の長さが $\ell$ なら、$A$ の左下は $\frac{g}{\ell}$ で、固有値は $\pm\sqrt{g/\ell}$ です。$\ell=\qty{2.45}{m}$ なら $\pm2$、$\ell=\qty{0.245}{m}$（10分の1）なら $\frac{9.8}{0.245}=40$ で $\pm\sqrt{40}=\pm6.32$ です。かたむきが10倍になるまでの時間は、$e^{2t}=10$ から $t=\frac{\ln10}{2}=1.15$ 秒と、$e^{6.32t}=10$ から $t=\frac{\ln10}{6.32}=0.36$ 秒。短い棒は、3倍以上速くたおれます。やってみようで、えんぴつがとても立てにくかったのは、このためです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,34mm] Q[c,m,40mm] Q[c,m,26mm] Q[l,m,22mm]}, row{2-Z}={font=\small}, rowsep=1.5pt}
+もの & {$A$\\（上：1行め、下：2行め）} & 固有値 & 動き \\
+車A（7-8） & {$(0,\ 1)$\\$(-2,\ -3)$} & $-1$、$-2$ & ゆれずに落ち着く \\
+6-13 のばね & {$(0,\ 1)$\\$(-16,\ -0.8)$} & $-0.4\pm3.980j$ & ゆれながら落ち着く \\
+水そう（6-14） & {$(-0.1,\ 0.1)$\\$(0.1,\ -0.1)$} & $0$、$-0.2$ & 差は消え、合計は残る \\
+RLC（6-12） & {$(0,\ 10^6)$\\$(-100,\ -2000)$} & $-1000\pm9950j$ & 速くゆれて落ち着く \\
+手のひらの棒 & {$(0,\ 1)$\\$(4,\ 0)$} & $2$、$-2$ & たおれる \\
+\end{bktable}
+\bktabcaption{いろいろなものの $A$ と固有値（7-8 の表と同じ読み方）。水そうの固有値0の向き $(1,\ 1)$ は「水の合計」で、いつまでも変わらない。}
+\label{bk:9-10:tab-koyuchi}
+\end{bkcenter}
+
+\bkkokomade[状態（今の数の組）を状態の点で表し、2階の式・水そう・回路・倒立振子を $\dot{\vec x}=A\vec x+Bu$ の形に書いて、$A$ の固有値で落ち着くかを判定できれば十分です。この先は、落ち着かないものを落ち着かせる「入れ方」を、行列の計算で決めます。]
+
+\Needspace{9\baselineskip}\bkstage{shiki}{式でわかる}{落ち着くように、入れ方を決める}{\bklevel{5}}
+
+\bksubsection{6}{立て方と使い方の表と流れ図}
+
+\label{bk:9-10:hyou}ここまでの「立て方」4通りに、立てた式の「使い方」4通りを加えて、表にしました（A〜D が立て方、E〜H が使い方）。E の「落ち着くか」は、9-11 の表9-11 の I と同じものです。
+
+\kixkdanhead{3}{立てる前に線形化（D）}
+$\sin\theta$ のような曲がった式は、そのままでは行列で書けません。立てる前に、$\sin\theta\approx\theta$、$\cos\theta\approx1$ と楽な形（1次の式）に直すのが、表の D です。D の札が「楽をする」なのは、このためです。
+
+どの順で問えばよいかを、図\ref{bk:9-10:fig-flow}の流れ図にしました。上の4つの問いで状態方程式を立て、下の4つの問いで使い方を選びます。$A$（状態方程式）がはじめから書いてある問題では、立てる問いをとばします。
+
+\kixkhead{流れ図の使い方：手のひらの棒}
+④の棒の式 $\ddot\theta=\frac{g}{\ell}\sin\theta-\frac{a}{\ell}\cos\theta$ を、次の見開きの表9-10と流れ図でたどります。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 名前の段：状態は $(\theta,\ \dot\theta)$、入れるものは手の動き、ほしいのは状態方程式。
+\item $A$（状態方程式）がもう書いてある？\enspace いいえ。\enspace $\sin$・$\cos$ が入る？\enspace はい。線形化して $\ddot\theta=4\theta+u$ \kixkcase{D}。下の問いへ。
+\item 電気回路の式？\enspace いいえ。\enspace 2階の微分の式？\enspace はい → 位置と速度を状態に \kixkcase{A}。
+\item 右の線をたどって、立てるだけでよい？\enspace はい → 状態方程式の形に書いて、確かめへ。
+\end{enumerate}
+こうして「D と A」を通ります。同じ棒でも、ほしいものが「落ち着くか」なら最後の問いで E、「立たせる入れ方」なら F に着きます。1回で全部の場合を覚えなくても大丈夫です。問題を解くたびに、表と流れ図にもどって確かめましょう。
+
+どの使い方でも、実際の計算は\textbf{行列の計算}（固有値・行列のかけ算・逆行列）です。$\dot{\vec x}=A\vec x+Bu$ という名前を、行列の計算に直して答えを出します。この章で使う「実際の操作」は、この1種類だけです。
+
+\kixkhead{どの場合かな？}
+次の問題は、表9-10 のどの場合でしょう。次の見開きの表と流れ図を見ながら、先に自分で考えてから答えを見ましょう。
+\begin{enumerate}[label={\bkcircled[\bkTT]{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=2pt]
+\item $\ddot x+5\dot x+6x=u$ を、状態方程式の形に書きたい。\par\nobreak\noindent 答え：\kixkcase{A}。2階の微分の式で、立てるだけ。
+\item となり合う2つの部屋の温度の式 $\dot T_1=-0.2(T_1-T_2)$、$\dot T_2=0.1(T_1-T_2)$ を、行列で書きたい。\par\nobreak\noindent 答え：\kixkcase{B}。1階の式が2つ。
+\item ぶら下がった振り子 $\ddot\theta=-\frac{g}{\ell}\sin\theta$ を、状態方程式にしたい。\par\nobreak\noindent 答え：\kixkcase{D}→\kixkcase{A}。$\sin$ が入るので線形化してから、2階の式として。
+\item $A$・$B$・$K$ が書いてあり、$\Delta t=0.05$ 秒ごとの計算で落ち着くかを知りたい。\par\nobreak\noindent 答え：\kixkcase{G}。くり返しの行列の固有値の大きさを見る。
+\item $A$・$B$・$C$ が書いてあり、$G(s)$ がほしい。\par\nobreak\noindent 答え：\kixkcase{H}。$C(sI-A)^{-1}B$。
+\end{enumerate}
+
+\kixkcasetitle{9-10}{状態方程式：どう立てて、どう使う？}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,10mm] Q[l,m,34mm] X[l,m] Q[c,m,11mm]}, row{2-Z}={font=\small}, rowsep=3pt, colsep=4pt}
+記号 & こんなとき & 手順 & 例題 \\
+\kixkcase{A} & 2階の微分の式が1つ（ばね・車） & \kixkop{4}\enspace 位置と速度を状態にする。$x_1=x$、$x_2=\dot x$。$\ddot x$ について解いて2行めに & 1・4 \\
+\kixkcase{B} & 1階の式がいくつか（水そう・部屋の温度） & \kixkop{4}\enspace 量をそのまま状態にし、右辺の係数を行列に並べる & 2 \\
+\kixkcase{C} & 電気回路（コイル・コンデンサー） & \kixkop{4}\enspace コンデンサーの電圧 $v_C$ とコイルの電流 $i$ を状態にする。$C\dot v_C=i$、$L\dot i=$（電圧の残り） & 3 \\
+\kixkcase{D} & $\sin\theta$・$\cos\theta$ などが入る（倒立振子・振り子） & \kixkdan{3}\enspace 立った（止まった）状態のまわりで $\sin\theta\approx\theta$、$\cos\theta\approx1$（線形化）。そのあと A & 4 \\
+\kixkcase{E} & 何も入れないで落ち着くかを知りたい & \kixkop{4}\enspace $\det(A-\lambda I)=0$ を解き、固有値の実部がすべて負か & 5 \\
+\kixkcase{F} & 落ち着くように、入れ方 $u$ を決めたい & \kixkop{4}\enspace $u=-K\vec x$。$A-BK$ の特性方程式の係数を、選んだ固有値の式とくらべる & 6 \\
+\kixkcase{G} & コンピュータで $\Delta t$ ごとにくり返す & \kixkop{4}\enspace $I+(A-BK)\Delta t$ の固有値の大きさがすべて1より小さいか（7-10） & 7 \\
+\kixkcase{H} & 伝達関数 $G(s)$ がほしい & \kixkop{4}\enspace $C(sI-A)^{-1}B$（逆行列は 7-5）。表9-8 の E と同じ & 8 \\
+\end{bktable}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=0.84mm]
+  \node[kixk do, text width=108mm] (s) at (62,0) {名前の段：状態 $\vec x$・入れるもの $u$・はかるもの $y$ は何か。何がほしいか};
+  \node[kixk q] (q1) at (33,-20) {$A$（状態方程式）が\\もう書いてある？};
+  \node[kixk q] (q2) at (33,-42) {$\sin$・$\cos$ が入る？};
+  \node[kixk do, text width=40mm, anchor=west] (rD) at (71,-42) {$\sin\theta\approx\theta$、$\cos\theta\approx1$\\下の問いへ\enspace\kixkcase{D}};
+  \node[kixk q] (q3) at (33,-62) {電気回路の式？};
+  \node[kixk do, text width=40mm, anchor=west] (rC) at (71,-62) {$v_C$ と $i$ を状態に\enspace\kixkcase{C}};
+  \node[kixk q] (q4) at (33,-80) {2階の微分の式？};
+  \node[kixk do, text width=40mm, anchor=west] (rA) at (71,-80) {位置と速度を状態に\enspace\kixkcase{A}};
+  \node[kixk do, text width=40mm] (rB) at (33,-98) {1階の式を並べる\enspace\kixkcase{B}};
+  \node[kixk q] (q5) at (33,-120) {立てるだけでよい？};
+  \node[kixk do, text width=40mm, anchor=west] (r5) at (71,-120) {$\dot{\vec x}=A\vec x+Bu$ の形に書く\\（A〜D で立てたもの）};
+  \node[kixk q] (q6) at (33,-138) {伝達関数がほしい？};
+  \node[kixk do, text width=40mm, anchor=west] (rH) at (71,-138) {$C(sI-A)^{-1}B$\enspace\kixkcase{H}};
+  \node[kixk q] (q7) at (33,-156) {$\Delta t$ ごとのくり返し？};
+  \node[kixk do, text width=40mm, anchor=west] (rG) at (71,-156) {$I+(A-BK)\Delta t$ の\\固有値の大きさ\enspace\kixkcase{G}};
+  \node[kixk q] (q8) at (33,-176) {入れ方 $u$ を決める？};
+  \node[kixk do, text width=40mm, anchor=west] (rF) at (71,-176) {$A-BK$ の係数を\\くらべる\enspace\kixkcase{F}};
+  \node[kixk do, text width=40mm] (rE) at (33,-194) {$A$ の固有値の実部\enspace\kixkcase{E}};
+  \node[kixk do, text width=104mm] (end) at (60,-211) {確かめ：もとの式にもどるか（行列のかけ算）。\\表計算・Python で動かして、落ち着くか};
+  \draw[kixk go] (s.south -| q1) -- (q1);
+  \foreach \kixkq/\kixkr in {q2/rD,q3/rC,q4/rA,q5/r5,q6/rH,q7/rG,q8/rF} {\draw[kixk go] (\kixkq) -- node[kixk yn, above] {はい} (\kixkr);}
+  \foreach \kixkq/\kixkr in {q1/q2,q2/q3,q3/q4,q4/rB,q5/q6,q6/q7,q7/q8,q8/rE} {\draw[kixk go] (\kixkq) -- node[kixk yn, left=1mm] {いいえ} (\kixkr);}
+  \draw[kixk go] (rB) -- (q5);
+  % D のあとは、次の問い（回路？）へもどる
+  \draw[kixk go, shorten >=0.4mm] (rD.south) |- (33.8,-52.5);
+  % 立て終わった四角（と、とばす四角）は、左の列の「使う問い」へ
+  \draw[bkInk!75, line width=0.9pt] (q1.east) -- node[kixk yn, above, pos=0.3] {はい} (119,-20);
+  \foreach \kixkn in {rC,rA} {\draw[bkInk!75, line width=0.9pt, shorten <=1.5mm] (\kixkn.east) -- (\kixkn.east -| 119,0);}
+  \draw[bkInk!75, line width=0.9pt] (119,-20) -- (119,-107);
+  \draw[kixk go, shorten <=0pt, shorten >=0pt] (119,-107) -- (34.3,-107);
+  % 答えの出た四角は、右はしの線（バス）にまとめて「確かめ」へ
+  \foreach \kixkn in {r5,rH,rG,rF,rE} {\draw[bkInk!60, line width=0.7pt, shorten <=1.5mm] (\kixkn.east) -- (\kixkn.east -| 127,0);}
+  \draw[bkInk!60, line width=0.7pt] (127,-120) -- (127,-211);
+  \draw[kixk go, shorten <=0pt] (127,-211) -- (end.east);
+\end{tikzpicture}
+\bkfigcaption{状態方程式の流れ図。ひし形は問い、四角はすること。上の4つの問いで立て（D のあとは次の問いへ）、立て終わったら右の黒い線をたどって「立てるだけでよい？」の問いへ。答えの出た四角からは、右はしの灰色の線をたどって最後の「確かめ」へ。}
+\label{bk:9-10:fig-flow}
+\end{bkfigure}
+
+
+\kixkhead{この章の例題を、流れ図でたどってみよう}
+このあとの例題1〜8を図\ref{bk:9-10:fig-flow}の流れ図でたどると、どれも考え方の1行めの場合に着きます（書いていない問いは「いいえ」。じぶんでとこうも同じ）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,38mm] X[l,m] Q[c,m,14mm]}, row{2-Z}={font=\footnotesize}, rowsep=0.5pt, colsep=2.5pt}
+例題 & 題 & 「はい」と答えた問い & 着いた所 \\
+1 & ばねを状態方程式に & 2階の微分の式？ → 立てるだけでよい？ & \kixkcase{A} \\
+2 & 水そうに水を入れる & （上の4つは「いいえ」）→ 立てるだけでよい？ & \kixkcase{B} \\
+3 & RLC の回路 & 電気回路の式？ → 立てるだけでよい？ & \kixkcase{C} \\
+4 & 短い棒の線形化 & $\sin$・$\cos$ が入る？ → 2階の式？ → 立てるだけ？ & \kixkcase{D}\kixkcase{A} \\
+5 & 落ち着くかの判定 & $A$ がもう書いてある？（あとは「いいえ」） & \kixkcase{E} \\
+6 & 棒を立たせる $K$ & $A$ がもう書いてある？ → 入れ方 $u$ を決める？ & \kixkcase{F} \\
+7 & コンピュータのくり返し & $A$ がもう書いてある？ → $\Delta t$ ごとのくり返し？ & \kixkcase{G} \\
+8 & 状態方程式から $G(s)$ & $A$ がもう書いてある？ → 伝達関数がほしい？ & \kixkcase{H} \\
+\end{bktable}
+\bktabcaption{例題1〜8の流れ図の道すじ。}
+\end{bkcenter}
+
+\bksubsection{7}{状態を見て入れ方を決める：状態フィードバック}
+
+\label{bk:9-10:fb}たおれる棒を立たせるには、棒の状態に合わせて手を動かします。もっとも簡単な決め方は、「かたむき $\theta$ の何倍かと、たおれる速さ $\dot\theta$ の何倍かをたしたもの」だけ、起こす向きに入れることです。
+\kixkline{$u=-(k_1\theta+k_2\dot\theta)$}
+$k_1$・$k_2$ は、これから決める数です。マイナスは「たおれる向きと反対（起こす向き）に入れる」という意味です。$k_1$・$k_2$ を横に並べた1行の行列を $K$ と書くと、$u=-K\vec x$ です。このように、状態をはかって、その何倍かを入れる方法を\textbf{状態フィードバック}（じょうたいフィードバック）といいます。\bkidx{じょうたいふぃーどばっく}{状態フィードバック}9-8 のフィードバックは出てくるもの $y$ だけをもどしましたが、こんどは状態のすべてをもどします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=34mm, minimum height=10mm, align=center] (p) at (60,0) {棒（機械）\\$\dot{\vec x}=A\vec x+Bu$};
+  \node[bk node, minimum width=24mm, minimum height=9mm, align=center] (s) at (104,-18) {センサー\\$\theta$ と $\dot\theta$};
+  \node[bk node, minimum width=34mm, minimum height=10mm, align=center] (c) at (60,-18) {コンピュータ\\$u=-K\vec x$};
+  \draw[bk link] (p.east) -| node[bk link label, right, pos=0.75] {$\vec x$} (s.north);
+  \draw[bk link] (s) -- (c);
+  \draw[bk link] (c.west) -- ++(-10,0) |- node[bk link label, left, pos=0.25] {$u$} (p.west);
+\end{tikzpicture}
+\bkfigcaption{状態フィードバック。センサーで状態 $\vec x$ をはかり、コンピュータが $u=-K\vec x$ を計算して、モーター（人なら手）で入れる。7-11 の制御の図と同じ形。}
+\label{bk:9-10:fig-fb}
+\end{bkfigure}
+
+\kixkdanhead{2}{$A-BK$ の固有値を、選んだ値にする}
+$u=-K\vec x$ を状態方程式に入れると、
+\begin{bkhenkei}[0.42]
+\dot{\vec x}=A\vec x+B(-K\vec x) & $u$ に $-K\vec x$ を入れた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\dot{\vec x}=(A-BK)\vec x & $\vec x$ でくくった（7-3 の分配法則） \\
+\end{bkhenkei}
+となり、入れるもののない形 $\dot{\vec x}=(A-BK)\vec x$ にもどります。だから、\textbf{$A-BK$ の固有値の実部がすべて負になるように $K$ を選べば、棒は立ちます}（⑤）。行列の計算に直します。
+\begin{bkhenkei}[0.62]
+BK=\kixkpm{0\\1}\kixkpm{k_1&k_2}=\kixkpm{0&0\\k_1&k_2} & 1列×1行は2×2（7-1） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+A-BK=\kixkpm{0&1\\4-k_1&-k_2} & 2行めだけが変わる \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+\det(A-BK-\lambda I)=-\lambda(-k_2-\lambda)-(4-k_1) & $ad-bc$（7-4） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.62]
+\lambda^2+k_2\lambda+(k_1-4)=0 & 展開して整理した（特性方程式） \\
+\end{bkhenkei}
+固有値を2つとも $-2$ にしたいなら、特性方程式が $(\lambda+2)^2=\lambda^2+4\lambda+4=0$ になればよいので、係数をくらべます（3-8 の係数比べ）。
+\begin{bkhenkei}[0.42]
+k_2=4 & $\lambda$ の係数をくらべた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+k_1-4=4,\quad k_1=8 & 定数の項をくらべた \\
+\end{bkhenkei}
+\kixkframe[110mm]{\Large $u=-(8\theta+4\dot\theta)$\\[2pt]\normalsize\sffamily $A-BK=\begin{pmatrix}0&1\\-4&-4\end{pmatrix}$ の固有値は $-2$、$-2$}
+$-2$ を選んだのは、何もしないときの「たおれる速さ」の固有値 $+2$ と同じくらいの速さで起こすためです（もっと速くも、ゆっくりにもできます。⑧）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=118mm, height=58mm, xmin=0, xmax=3.3, ymin=0, ymax=0.042, xtick={0,0.5,1,1.5,2,2.5,3}, ytick={0.01,0.02,0.03,0.04}, yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=2}, xlabel={$t$（s）}, ylabel={$\theta$（rad）}]
+  \addplot[bkRed, line width=1.5pt, dashed, domain=0:1.07, samples=60] {0.01*cosh(2*x)};
+  \addplot[bkBlue, line width=1.7pt, domain=0:3.2, samples=80] {0.01*(1+2*x)*exp(-2*x)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.12,0.036) {制御なし：$0.01\cosh2t$（2秒で0.273）};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.95,0.0105) {制御あり：$0.01(1+2t)e^{-2t}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はじめ $\theta=0.01$、$\dot\theta=0$ の棒。赤の破線（制御なし）は1秒あまりでグラフの外へ出ていく。青（$u=-(8\theta+4\dot\theta)$）は、ゆれずに0に近づく。}
+\label{bk:9-10:fig-tatsu}
+\end{bkfigure}
+
+固有値が $-2$ の重解なので、答えは 6-12 の重解の形 $(c_1+c_2t)e^{-2t}$ です。はじめの値から $\theta=0.01(1+2t)e^{-2t}$ となります（9-11 のじぶんでとこう6で、別の方法でも確かめます）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,34mm] Q[c,m,14mm] Q[c,m,16mm] Q[c,m,16mm] Q[c,m,16mm] Q[c,m,16mm]}, row{2-Z}={font=\small}, rowsep=1.5pt}
+$t$（s） & 0 & 0.5 & 1 & 2 & 3 \\
+制御なし $\theta$（rad） & 0.01 & 0.0154 & 0.0376 & 0.273 & （たおれた） \\
+制御あり $\theta$（rad） & 0.01 & 0.00736 & 0.00406 & 0.00092 & 0.00017 \\
+\end{bktable}
+\bktabcaption{制御なしと制御ありのかたむき。制御ありでは、1秒ごとにおよそ2分の1から5分の1になる。}
+\end{bkcenter}
+はじめに手を動かす量は $u=-8\times0.01=-0.08$\,rad/s² で、手の加速度にすると $a=-\ell u=2.45\times0.08=\qty{0.196}{m/s^2}$ です。ほんの少し右へ手を動かし始めるだけで、棒は立ちます。
+
+\kixkhead{かたむきだけを見ると、どうなる？}
+やってみよう③の「かたむきだけを見て手を動かす」は、$k_2=0$ にすることです。特性方程式は $\lambda^2+(k_1-4)=0$ になります。$k_1>4$ でも、$\lambda=\pm j\sqrt{k_1-4}$ で実部が0。棒は\textbf{ゆれ続け}、落ち着きません（6-6 の単振動と同じ形）。少しでも手がおくれると、ゆれが大きくなってたおれます。$k_1<4$ なら正の固有値が残り、$k_1=4$ でも0の重解でたおれます。
+
+たおれる速さの項 $k_2\dot\theta$ は、6-7 のダンパーのように、ゆれのエネルギーをうばうはたらきをします。だから、\textbf{かたむきと、たおれる速さの両方を見る}ことが必要なのです。\bkhatenaref の答えは、「人は、かたむきとたおれる速さ（状態）を見て、その何倍かずつ手を動かしている。ロボットも、センサーで状態をはかり、$u=-K\vec x$ を計算すれば同じことができる」です。
+
+\bksubsection{8}{どの固有値を選ぶか}
+
+\label{bk:9-10:erabu}固有値は、自分で選べます。同じ方法で、ほかの固有値にしたときの $K$ をくらべます（$\lambda=-p$ の重解なら $(\lambda+p)^2=\lambda^2+2p\lambda+p^2$ から $k_2=2p$、$k_1=p^2+4$）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,28mm] Q[c,m,14mm] Q[c,m,14mm] Q[c,m,32mm] Q[c,m,30mm]}, row{2-Z}={font=\small}, rowsep=1.5pt}
+選んだ固有値 & $k_1$ & $k_2$ & はじめの手の加速度 & 0.001\,rad になるまで \\
+$-1$、$-1$ & 5 & 2 & \qty{0.123}{m/s^2} & 3.9 秒 \\
+$-2$、$-2$ & 8 & 4 & \qty{0.196}{m/s^2} & 1.9 秒 \\
+$-4$、$-4$ & 20 & 8 & \qty{0.490}{m/s^2} & 1.0 秒 \\
+\end{bktable}
+\bktabcaption{固有値の選び方と、棒の起き上がり方（はじめ $\theta=0.01$、$\dot\theta=0$、$\ell=\qty{2.45}{m}$）。}
+\label{bk:9-10:tab-erabu}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=50mm, xmin=0, xmax=4.2, ymin=0, ymax=0.0112, xtick={0,1,2,3,4}, ytick={0.005,0.01}, yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=3}, scaled y ticks=false, xlabel={$t$（s）}, ylabel={$\theta$（rad）}, legend pos=north east, legend cell align=left, legend style={font=\sffamily\footnotesize, draw=bkGray, fill=white, inner sep=2pt}]
+  \addplot[bkGreen!60!black, line width=1.5pt, dash pattern=on 4pt off 2pt, domain=0:4, samples=80] {0.01*(1+x)*exp(-x)};
+  \addplot[bkBlue, line width=1.7pt, domain=0:4, samples=80] {0.01*(1+2*x)*exp(-2*x)};
+  \addplot[bkRed, line width=1.5pt, dash pattern=on 1.5pt off 1.5pt, domain=0:4, samples=80] {0.01*(1+4*x)*exp(-4*x)};
+  \addlegendentry{固有値 $-1$、$-1$（緑の破線）}
+  \addlegendentry{固有値 $-2$、$-2$（青）}
+  \addlegendentry{固有値 $-4$、$-4$（赤の点線）}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{選んだ固有値と、棒のかたむき（はじめ0.01\,rad）。固有値を左へ置くほど速く0に近づくが、表\ref{bk:9-10:tab-erabu}のように、手を大きく動かす必要がある。}
+\label{bk:9-10:fig-erabu}
+\end{bkfigure}
+
+固有値を左へ（実部をもっと負に）置くほど、速く立ちます（図\ref{bk:9-10:fig-erabu}）。でも、そのぶん手を大きく速く動かさなければなりません。本物のモーターには出せる力の上限があり、センサーの値には雑音がまざるので、むやみに左へ置くことはできません。速さと、入れる量の大きさのかね合いで固有値を選ぶのが、制御を設計する人の仕事です（9-9 で、比例を強くすればいつも良くなるわけではない、と学んだのと同じです）。このように、固有値（極）を選んだ場所に置くことを、\textbf{極配置}（きょくはいち）といいます。
+
+\Needspace{16\baselineskip}
+\begin{seikaku}
+\kixkbox{入れるもので、どの状態にも動かせるか：可制御性}
+⑦・⑧では、$k_1$・$k_2$ を選んで、固有値を好きな場所に置けました。いつでもそうできるとは限りません。たとえば、つながっていない2つの部屋の温度 $x_1$・$x_2$ で、ヒーター $u$ が1つめの部屋にしかないとき（$A$ は対角が $-0.1$・$-0.2$ でほかは0、$B$ は $(1,\ 0)$ のたて書き）、2つめの部屋の温度は、$u$ をどうしても動かせません。2つめの部屋の式に、$x_1$ も $u$ も入らないからです。
+
+$u$ で、どの状態にも動かせることを\textbf{可制御}（かせいぎょ）といいます。\bkidx{かせいぎょせい}{可制御性}2×2では、2つの列 $B$ と $AB$ を並べた行列の行列式が0でないことが、その条件です。
+\[ \text{棒}：\ \begin{pmatrix}B&AB\end{pmatrix}=\begin{pmatrix}0&1\\1&0\end{pmatrix},\qquad \text{2つの部屋}：\ \begin{pmatrix}B&AB\end{pmatrix}=\begin{pmatrix}1&-0.1\\0&0\end{pmatrix} \]
+棒の行列式は $0\times0-1\times1=-1$（0でない）。だから、固有値を好きな場所に置けました。2つの部屋の行列式は $1\times0-(-0.1)\times0=0$ です。
+\end{seikaku}
+
+\bksubsection{9}{コンピュータの中のくり返し}
+
+\label{bk:9-10:kurikaeshi}本物のロボットでは、センサーを読んで $u$ を計算し、モーターに命令することを、短い時間 $\Delta t$ ごとにくり返します（1秒に数百〜数千回）。7-10 で予告したとおり、これは「次の状態＝行列×今の状態＋命令」の漸化式です。6-2 のオイラー法と同じ考えで、1歩の式を作ります。
+\begin{bkhenkei}[0.48]
+\vec x_{k+1}=\vec x_k+\dot{\vec x}_k\,\Delta t & 次の状態＝今の状態＋変わる速さ×時間（6-2） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+\vec x_{k+1}=\vec x_k+(A\vec x_k+Bu_k)\Delta t & 変わる速さに状態方程式を入れた \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+\vec x_{k+1}=(I+A\,\Delta t)\vec x_k+B\,\Delta t\,u_k & $\vec x_k$ でくくった（$\vec x_k=I\vec x_k$） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.48]
+\vec x_{k+1}=\bigl(I+(A-BK)\Delta t\bigr)\vec x_k & 命令 $u_k=-K\vec x_k$ を入れた \\
+\end{bkhenkei}
+3行めが「次の状態＝行列×今の状態＋命令」の形です。$k$ は「何歩め（何回めの計算）か」の番号です。最後の行の行列を $A_{\mathrm d}$ と書くと、$\vec x_{k+1}=A_{\mathrm d}\vec x_k$ で、7-10 のくり返しそのものです。だから、\textbf{$A_{\mathrm d}$ の固有値の大きさがすべて1より小さければ、状態は0に近づきます}（7-10 の単位円の中）。
+
+\kixkhead{$\Delta t=0.1$ 秒で、棒を立たせる}
+⑦の $u=-(8\theta+4\dot\theta)$（$k_1=8$、$k_2=4$）で、$\Delta t=0.1$ 秒とします。
+\begin{bkhenkei}[0.6]
+(A-BK)\Delta t=\kixkpm{0&0.1\\-0.4&-0.4} & ⑦の $A-BK$ の各成分を0.1倍 \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+A_{\mathrm d}=\kixkpm{1&0.1\\-0.4&0.6} & 単位行列 $I$ をたした \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+\det(A_{\mathrm d}-\mu I)=(1-\mu)(0.6-\mu)+0.04 & $ad-bc$。$-bc=-0.1\times(-0.4)$ \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+\mu^2-1.6\mu+0.64=(\mu-0.8)^2=0 & 展開した \\
+\end{bkhenkei}
+$A_{\mathrm d}$ の固有値を、$A$ の $\lambda$ と区別して $\mu$（ミュー）と書きました。$\mu=0.8$（重解）で、大きさは1より小さいので、棒は立ちます。7-10 で学んだとおり、1歩の行列 $I+M\Delta t$ の固有値は「$M$ の固有値を $\lambda$ として $1+\lambda\Delta t$」なので、$1+(-2)\times0.1=0.8$ と、すぐに出すこともできます。
+
+\kixkhead{$\Delta t$ を大きくすると}
+固有値は $\mu=1-2\Delta t$ です。大きさが1より小さい条件は $-1<1-2\Delta t<1$、つまり $0<\Delta t<1$ です。$\Delta t=1.2$ 秒では $\mu=-1.4$ で、大きさが1をこえます。同じ $K$ なのに、計算の間かくが長すぎると、棒は左右にゆれながら、どんどんたおれていきます（0.01、0.01、$-0.048$、0.114、$-0.225$、0.407、…。図\ref{bk:9-10:fig-dt}）。
+
+\begin{bkcenter}
+\bksheet{4}{20}{%
+1 & $k$ & $t$（s） & $\theta$ & $\dot\theta$ \\
+2 & 0 & 0 & 0.01 & 0 \\
+3 & 1 & 0.1 & 0.01 & $-0.004$ \\
+4 & 2 & 0.2 & 0.0096 & $-0.0064$ \\
+5 & 3 & 0.3 & 0.00896 & $-0.00768$ \\
+6 & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+12 & 10 & 1.0 & 0.00376 & $-0.00537$ \\
+22 & 20 & 2.0 & 0.00069 & $-0.00115$ \\
+32 & 30 & 3.0 & 0.00011 & $-0.00019$ \\}
+\bktabcaption{表計算で $\Delta t=0.1$ のくり返し。C3 に \texttt{=C2+0.1*D2}、D3 に \texttt{=-0.4*C2+0.6*D2}（$A_{\mathrm d}$ の1行め・2行め）と入れて下へコピーする。1秒後の0.00376は、本当の値0.00406に近い。}
+\label{bk:9-10:tab-sheet}
+\end{bkcenter}
+
+連続の式 $\dot{\vec x}=A\vec x$ では「固有値の実部が負」、くり返し $\vec x_{k+1}=A_{\mathrm d}\vec x_k$ では「固有値の大きさが1より小さい」が、落ち着く条件です。条件の形がちがうので、取りちがえないようにしましょう（まちがえやすいところ④）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  
+  \draw[bkGreen!60!black, line width=1pt] (0,0) circle (22);
+  \fill[bkGreen!10] (0,0) circle (22);
+  \draw[bkGreen!60!black, line width=1pt] (0,0) circle (22);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (-42,0) -- (38,0) node[right, font=\footnotesize, inner sep=1pt] {実部};
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,-27) -- (0,28) node[above, font=\footnotesize, inner sep=1pt] {虚部};
+  \node[font=\footnotesize, anchor=north west, inner sep=1pt] at (22.5,-0.8) {1};
+  \foreach \kixkx in {17.6,0,-22,-30.8} {\fill[bkRed] (\kixkx,0) circle (1);}
+  \node[font=\footnotesize, anchor=south, fill=white, inner sep=0.8pt] at (13.2,2) {$\Delta t=0.1$};
+  \node[font=\footnotesize, anchor=north, fill=white, inner sep=0.8pt] at (17.6,-2) {0.8};
+  \node[font=\footnotesize, anchor=south east, fill=white, inner sep=0.8pt] at (-0.8,2) {$\Delta t=0.5$};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=0.8pt] at (0.8,-1.2) {0};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=0.8pt] at (-19.2,-6.4) {$\Delta t=1$};
+  \node[font=\footnotesize, anchor=north west, fill=white, inner sep=0.8pt] at (-19.2,-1.6) {$-1$};
+  \node[font=\footnotesize, anchor=south east, fill=white, inner sep=0.8pt] at (-24,2) {$\Delta t=1.2$};
+  \node[font=\footnotesize, anchor=north east, fill=white, inner sep=0.8pt] at (-29.3,-2) {$-1.4$};
+  \node[font=\footnotesize, anchor=west, align=left] at (40,14) {緑の円の中：落ち着く};
+  \node[font=\footnotesize, anchor=west, align=left] at (40,-14) {円の外：こわれる};
+\end{tikzpicture}
+\bkfigcaption{$A_{\mathrm d}$ の固有値 $\mu=1-2\Delta t$ の場所（赤い点）。$\Delta t$ をふやすと左へ動き、$\Delta t=1$ で円のふち（$-1$）、それより大きいと円の外へ出る。}
+\label{bk:9-10:fig-en}
+\end{bkfigure}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=middle, axis y line=left, width=112mm, height=62mm, xmin=0, xmax=6.5, ymin=-0.26, ymax=0.15, xtick={1,2,3,4,5,6}, ytick={-0.2,-0.1,0.1}, yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={$\theta$（rad）}]
+  \addplot[ycomb, bkBlue, line width=0.9pt, mark=*, mark size=1.2pt] coordinates {(0,0.01) (0.1,0.01) (0.2,0.0096) (0.3,0.00896) (0.5,0.00737) (1,0.00376) (2,0.00069) (3,0.00011)};
+  \addplot[ycomb, bkRed, line width=1.2pt, mark=square*, mark size=1.6pt] coordinates {(0,0.01) (1.2,0.01) (2.4,-0.0476) (3.6,0.11368) (4.8,-0.22501)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:4.0,0.12) {赤：$\Delta t=1.2$（$\mu=-1.4$）};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.35,0.06) {青：$\Delta t=0.1$（$\mu=0.8$）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ $u=-(8\theta+4\dot\theta)$ でも、計算の間かくで結果が変わる。$\Delta t=0.1$（青）は0に近づき、$\Delta t=1.2$（赤）は符号を変えながら大きくなる（$-1.4$ 倍ずつ）。}
+\label{bk:9-10:fig-dt}
+\end{bkfigure}
+
+
+\Needspace{16\baselineskip}
+Python では、次のように確かめます。
+\begin{bkcode}[Python]
+import numpy as np
+A = np.array([[0, 1], [4, 0]])
+B = np.array([[0], [1]])
+K = np.array([[8, 4]])
+print(np.linalg.eigvals(A - B @ K))   \# 連続の固有値
+for dt in [0.1, 1.2]:
+    Ad = np.eye(2) + (A - B @ K) * dt  \# 1歩の行列
+    x = np.array([0.01, 0])
+    for k in range(10):                \# 10歩くり返す
+        x = Ad @ x
+    print(dt, np.linalg.eigvals(Ad).real.round(3), x.round(5))
+\end{bkcode}
+\begin{bkcodeout}[実行結果]
+[-2.+0.j -2.+0.j]
+0.1 [0.8 0.8] [ 0.00376 -0.00537]
+1.2 [-1.4 -1.4] [-4.6694  9.9173]
+\end{bkcodeout}
+\texttt{B @ K} は1列×1行の行列のかけ算、\texttt{np.eye(2)} は2×2の単位行列です。$\Delta t=1.2$ では、10歩（12秒）のうちに $\theta$ が $-4.67$\,rad になりました（線形化した式の上の計算なので、本当は、ずっと前にたおれています）。
+
+本物の制御では、$I+A\,\Delta t$ のかわりに、もっと正確な1歩の行列 $e^{A\Delta t}$ を使います。この行列は 9-11 で学びます。くり返しの式を、$s$ のかわりの文字 $z$ で変換する方法（z 変換）もあり、デジタル制御の専門書で使われます。
+
+\bksubsection{10}{伝達関数とのつながり}
+
+\label{bk:9-10:dentatsu}9-8 では、微分方程式から伝達関数 $G(s)$ を作りました。状態方程式からも作れます。はじめの値をすべて0にして、状態方程式をラプラス変換します（9-5：$\dot{\vec x}\to s\vec X$。成分ごとに変換する）。
+\begin{bkhenkei}[0.42]
+s\vec X=A\vec X+BU & 変換した（はじめの値は0） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+s\vec X-A\vec X=BU & $A\vec X$ を左へ移した \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+(sI-A)\vec X=BU & $s\vec X=sI\vec X$ として、$\vec X$ でくくった \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+\vec X=(sI-A)^{-1}BU & 左から逆行列 $(sI-A)^{-1}$ をかけた（7-5） \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.42]
+Y=C\vec X=C(sI-A)^{-1}BU & 出力の式 $y=C\vec x$ も変換した \\
+\end{bkhenkei}
+$G(s)=\dfrac{Y}{U}$ なので、
+\kixkframe[96mm]{\Large $G(s)=C(sI-A)^{-1}B$}
+です。$s\vec X$ を $(sI-A)$ でくくるとき、$s$ を $sI$ と書くのは、行列 $A$ からはひけない「数」の $s$ を、行列の形にそろえるためです。
+
+\kixkhead{車A で確かめる}
+\begin{bkhenkei}[0.6]
+sI-A=\kixkpm{s&-1\\2&s+3} & 対角に $s$、ほかは $A$ の符号を変える \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+\det(sI-A)=s(s+3)+2=s^2+3s+2 & $ad-bc$ \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+(sI-A)^{-1}=\frac{1}{s^2+3s+2}\kixkpm{s+3&1\\-2&s} & 2×2の逆行列（7-5）：$a$ と $d$ を入れかえ、$b$・$c$ の符号を変える \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+(sI-A)^{-1}B=\frac{1}{s^2+3s+2}\kixkpm{1\\s} & $B$（$0$ と $1$ のたて書き）をかけると2列めが残る \\
+\end{bkhenkei}
+\begin{bkhenkei}[0.6]
+C(sI-A)^{-1}B=\frac{1}{s^2+3s+2} & $C$（$(1,\ 0)$ の1行）をかけると1行めだけが残る \\
+\end{bkhenkei}
+9-8 で微分方程式 $\ddot x+3\dot x+2x=u$ から作った伝達関数と同じです。分母の $\det(sI-A)$ は、$A$ の特性方程式 $\det(A-\lambda I)$ と同じ式（$\lambda$ を $s$ に変えたもの）です。だから、\textbf{伝達関数の極（9-9）は、$A$ の固有値と同じ}です。⑤で「同じ条件」と言ったのは、このためです。逆行列 $(sI-A)^{-1}$ は、9-11 で $e^{At}$ を求める道具にもなります。
+
+
+
+\begin{senmonsho}[制御工学の本ふうの書き方]
+\begin{bkhonbun}
+線形時不変系を，次の状態方程式と出力方程式で表す．
+\[ \dot{\symbf{x}}(t)=A\symbf{x}(t)+\symbf{b}u(t),\qquad y(t)=\symbf{c}^{\mathsf T}\symbf{x}(t) \]
+状態フィードバック $u=-\symbf{f}^{\mathsf T}\symbf{x}$ を施すと閉ループ系は $\dot{\symbf{x}}=(A-\symbf{b}\symbf{f}^{\mathsf T})\symbf{x}$ となり，$(A,\symbf{b})$ が可制御ならば，その固有値（極）を任意に配置できる．可制御性行列は $[\symbf{b}\ \ A\symbf{b}\ \cdots\ A^{n-1}\symbf{b}]$ である．伝達関数は $G(s)=\symbf{c}^{\mathsf T}(sI-A)^{-1}\symbf{b}$．
+\end{bkhonbun}
+\bkyaku{「線形時不変系」は、$A$・$B$ が時間で変わらない線形の式。太字の $\symbf{x}$ はこの本の $\vec x$。入れるものが1つのとき、$B$ を小文字の太字 $\symbf{b}$、$C$ を $\symbf{c}^{\mathsf T}$（たてのベクトルを横にしたもの）と書くことが多い。$\symbf{f}^{\mathsf T}$ はこの本の $K$（$F$ と書く本も多い）。「閉ループ系」はフィードバックをかけたあとの式。「任意に配置」は好きな場所に置けること（極配置）。$n$ は状態の数で、2×2なら $[\symbf{b}\ \ A\symbf{b}]$。}
+\end{senmonsho}
+
+\Needspace{16\baselineskip}
+\begin{motto}[5]
+\kixkbox{モーターの2つの状態：電気は速く、回転はゆっくり}
+小さな直流モーター（コイルの $L=\qty{1}{mH}$、抵抗 $R=\qty{1}{\ohm}$、回る部分の慣性モーメント $J=\qty{1e-4}{kg.m^2}$、まさつ $b=10^{-5}$\,N·m·s、トルクと電圧の定数 $0.05$：説明のための数）は、回る速さ $\omega$〔rad/s〕と電流 $i$〔A〕の2つが状態です。電流がトルクを生み（$J\dot\omega=0.05i-b\omega$）、回ると逆向きの電圧が生まれます（$L\dot i=v-Ri-0.05\omega$）。
+\[ \begin{pmatrix}\dot\omega\\\dot i\end{pmatrix}=\begin{pmatrix}-0.1&500\\-50&-1000\end{pmatrix}\begin{pmatrix}\omega\\i\end{pmatrix}+\begin{pmatrix}0\\1000\end{pmatrix}v \]
+固有値は約 $-974$ と $-25.8$ です。$-974$ は電流の速い変化（時定数が約0.001秒）、$-25.8$ は回転のゆっくりした変化（時定数が約0.04秒）を表します。1\,V を加えると、最後は約19.9\,rad/s（1分に約190回転）で回ります。固有値が、速い動きとゆっくりした動きを分けて見せてくれます。
+\end{motto}
+
+\begin{motto}[5]
+\kixkbox{人の手には「おくれ」がある：長い棒が立てやすい、もう1つのわけ}
+人は、棒がかたむいたのを見てから手を動かすまでに、0.2秒くらいかかります（反応のおくれ。人によってちがう）。その間、棒はたおれ続けます。固有値が $\lambda$ なら、0.2秒でかたむきは約 $e^{0.2\lambda}$ 倍です。\qty{2.45}{m} の棒（$\lambda=2$）なら $e^{0.4}=1.49$ 倍ですが、\qty{0.245}{m} の棒（$\lambda=6.32$）なら $e^{1.26}=3.5$ 倍。短い棒は、手が動き出す前に大きくかたむいてしまいます。コンピュータの制御でも、命令までのおくれ（⑨の $\Delta t$ など）が長いほど、立たせるのはむずかしくなります。
+\end{motto}
+
+
+
+
+
+\begin{taisetsu}
+\kixkbox{状態方程式の3つの段}
+\kixkdan{1}\enspace 名前を読む：状態 $\vec x$・入れるもの $u$・はかるもの $y$ は何か。何がほしいか\par
+\kixkdan{3}\enspace 立てる前に：$\sin$・$\cos$ が入っていれば線形化（$\sin\theta\approx\theta$）\par
+\kixkdan{2}\enspace 行列の計算に直す：係数を並べる・固有値・$A-BK$・$C(sI-A)^{-1}B$\par
+\[ \kixkNt{\dot{\vec x}=A\vec x+Bu}=\kixkSt{4}{\begin{pmatrix}\dot x_1\\\dot x_2\end{pmatrix}=\begin{pmatrix}0&1\\-2&-3\end{pmatrix}\begin{pmatrix}x_1\\x_2\end{pmatrix}+\begin{pmatrix}0\\1\end{pmatrix}u} \]
+\vspace{2pt}
+\kixkbox{立て方と使い方の表9-10（まとめ）}
+\begin{bktable}{colspec={Q[c,m,9mm] Q[l,m,42mm] X[l,m]}, row{2-Z}={font=\small}, rowsep=2pt, colsep=3pt}
+記号 & こんなとき & 直し方 \\
+\kixkcase{A} & 2階の式 & 位置と速度を状態に \\
+\kixkcase{B} & 1階の式がいくつか & 係数を並べる \\
+\kixkcase{C} & 電気回路 & $v_C$ と $i$ を状態に \\
+\kixkcase{D} & $\sin$・$\cos$ が入る & $\sin\theta\approx\theta$、$\cos\theta\approx1$ \\
+\kixkcase{E} & 落ち着くか & $A$ の固有値の実部がすべて負か \\
+\kixkcase{F} & 入れ方を決める & $A-BK$ の特性方程式の係数をくらべる \\
+\kixkcase{G} & $\Delta t$ ごとのくり返し & $I+(A-BK)\Delta t$ の固有値の大きさが1より小さいか \\
+\kixkcase{H} & 伝達関数 & $C(sI-A)^{-1}B$ \\
+\end{bktable}
+\end{taisetsu}
+
+
+\begin{kotoba}
+\small
+\bkword{状態}{その先の動きを決めるのに必要な、今の数の組。ばねなら位置と速度。}
+\bkword{状態方程式}{$\dot{\vec x}=A\vec x+Bu$。たくさんの1階の微分方程式を、行列で1行にまとめた書き方。}
+\bkword{倒立振子}{下を支えられて、上に立つ振り子。手のひらの棒や、2輪で立つ乗り物。何もしなければたおれる。}
+\bkword{線形化}{立った状態などのまわりで、$\sin\theta\approx\theta$ などを使って、式を1次の式に直すこと。}
+\bkword{出力の式}{$y=C\vec x$。状態のうち、センサーではかる量（出てくるもの）を表す式。}
+\bkword{状態フィードバック}{状態をはかって、$u=-K\vec x$ のように何倍かずつ入れること。$A-BK$ の固有値が動きを決める。}
+\bkword{極配置}{$A-BK$ の固有値（極）が選んだ場所にくるように、$K$ を決めること。}
+\bkword{可制御}{入れるもの $u$ で、どの状態にも動かせること。2×2では $B$ と $AB$ を並べた行列の行列式が0でない。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{\scalebox{0.68}{\begin{tabular}{@{}c@{}}$\dot{\vec x}=A\vec x$\\[-2pt]$+\,Bu$\end{tabular}}}{じょうたい\newline ほうていしき}{状態の変わる速さを、今の状態 $\vec x$ と入れるもの $u$ で表す式}{state equation}{9-10}}
+{\bkkigocard{$K$}{ケー}{$u=-K\vec x$ の、状態の何倍を入れるかを並べた1行の行列}{feedback gain}{9-10}}
+
+
+
+
+
+
+
+%% ---------------- 例題 ----------------
+\Needspace{25\baselineskip}
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 例題の「考え方」の1行めには、表9-10 のどの場合かを書きました。
+
+
+
+\begin{reidai}[ばねを状態方程式に]
+6-13 のばねに、外から力 $F$〔N〕を加えます。おもりは \qty{0.5}{kg}、ばね定数は \qty{8}{N/m}、ダンパーは \qty{0.4}{N.s/m} です。おもりの位置を $x$〔m〕とすると、$0.5\ddot x+0.4\dot x+8x=F$ です。状態を $\vec x=(x,\ \dot x)$、入れるものを $u=F$ として、状態方程式の $A$ と $B$ を求めましょう。\par
+\kangaekata \kixkbaai{2階の微分の式が1つ}{9-10}{A}\par
+\kixkdan{1}\enspace $\dot{\vec x}=A\vec x+Bu$：2本の1階の式をまとめた名前。$A$・$B$ の数を決める。\par
+\kixknaosu{4}\enspace $x_1=x$、$x_2=\dot x$ として、$\ddot x$ について解き、係数を並べる。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $\dot x_1=x_2$\quad （位置の変わる速さは速度）\par
+\kixka $0.5\ddot x=-8x-0.4\dot x+F$\quad （$\ddot x$ の項だけを左に残す）\par
+\kixka $\ddot x=-16x-0.8\dot x+2F$\quad （両辺を0.5でわる）\par
+\kixka $\dot x_2=-16x_1-0.8x_2+2u$\par
+\kotae $A$ は1行め $(0,\ 1)$、2行め $(-16,\ -0.8)$。$B$ は $(0,\ 2)$ のたて書き（$B$ の2は、質量0.5\,kg でわったから）
+\end{reidai}
+
+\begin{jibun}
+3-10 の車B $\ddot x+2\dot x+5x=u$ を、状態 $\vec x=(x,\ \dot x)$ の状態方程式に書き、$A$ と $B$ を求めましょう。
+\bkjans{$\dot x_1=x_2$、$\dot x_2=-5x_1-2x_2+u$。$A$ は1行め $(0,\ 1)$、2行め $(-5,\ -2)$。$B$ は $(0,\ 1)$ のたて書き。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[水そうに水を入れる]
+6-14 の同じ形の2つの水そう（底面積 \qty{100}{cm^2}、$\dot h_1=-0.1(h_1-h_2)$、$\dot h_2=0.1(h_1-h_2)$、cm と分）の、\textbf{右}の水そうに、上から1分に $q$\,cm³ の水を入れます。状態を $\vec x=(h_1,\ h_2)$、入れるものを $u=q$ として、$A$ と $B$ を求めましょう。\par
+\kangaekata \kixkbaai{1階の式が2つ}{9-10}{B}\par
+\kixkdan{1}\enspace $\dot{\vec x}=A\vec x+Bu$ の $A$・$B$ を決める。\par
+\kixknaosu{4}\enspace 右の水位の式に、入れる分 $q\div100$ を足し、係数を並べる。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $\dot h_1=-0.1h_1+0.1h_2$\quad （入れる分はない）\par
+\kixka $\dot h_2=0.1h_1-0.1h_2+0.01q$\quad （$q$\,cm³ を底面積 \qty{100}{cm^2} でわると、水位が $0.01q$\,cm ふえる）\par
+\kotae $A$ は1行め $(-0.1,\ 0.1)$、2行め $(0.1,\ -0.1)$（6-14 の $H$ と同じ）。$B$ は $(0,\ 0.01)$ のたて書き
+\end{reidai}
+
+\kixkhead{確かめ（例題2）：表計算で動かす}
+はじめ空にして、右に1分に \qty{100}{cm^3} 入れ続けると（$q=100$）、オイラー法（6-2）の表計算でも式でも、水位の平均は1分に0.5\,cm ずつ上がり、差 $h_2-h_1=5(1-e^{-0.2t})$ は5\,cm に落ち着きます。$\dot h_1=0.1\times5=0.5$ が、平均の上がる速さと同じになる差です。なお、左と右の両方に同じ $q$ を入れるなら、どちらの式にも $0.01q$ が入るので、$B$ は $(0.01,\ 0.01)$ のたて書きになります。
+
+\begin{jibun}
+6-14 の底面積 \qty{100}{cm^2}（左）と \qty{300}{cm^2}（右）の水そうを、1分に $10(h_1-h_2)$\,cm³ 流れる管でつなぎ、\textbf{左}の水そうに1分に $q$\,cm³ の水を入れます。状態 $\vec x=(h_1,\ h_2)$、$u=q$ として、$A$ と $B$ を求めましょう（分数のままでよい）。
+\bkjans{$\dot h_1=-0.1(h_1-h_2)+0.01q$、$\dot h_2=\frac{10}{300}(h_1-h_2)=\frac{1}{30}(h_1-h_2)$。$A$ は1行め $(-0.1,\ 0.1)$、2行め $\bigl(\frac{1}{30},\ -\frac{1}{30}\bigr)$。$B$ は $(0.01,\ 0)$ のたて書き。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[RLC の回路]
+コイル $L=\qty{0.1}{H}$、コンデンサー $C=\qty{100}{\micro F}$、抵抗 $R=\qty{20}{\ohm}$ を直列にして、電圧 $v$〔V〕を加えます。状態を $\vec x=(v_C,\ i)$、入れるものを $u=v$ として、$A$ と $B$ を求めましょう。\par
+\kangaekata \kixkbaai{電気回路の式}{9-10}{C}\par
+\kixkdan{1}\enspace $\dot{\vec x}=A\vec x+Bu$ の $A$・$B$ を決める。\par
+\kixknaosu{4}\enspace $C\dot v_C=i$、$L\dot i=v-Ri-v_C$ を、$\dot v_C$・$\dot i$ について解いて並べる。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $\dot v_C=\dfrac{1}{C}\,i=\dfrac{1}{10^{-4}}\,i=10^4\,i$\par
+\kixka $\dot i=\dfrac{1}{L}(v-Ri-v_C)=10(v-20i-v_C)$\quad （$\frac{1}{0.1}=10$）\par
+\kixka $\dot i=-10v_C-200i+10v$\par
+\kotae $A$ は1行め $(0,\ 10^4)$、2行め $(-10,\ -200)$。$B$ は $(0,\ 10)$ のたて書き
+\end{reidai}
+
+\kixkhead{確かめ（例題3）：電圧を入れて動かす}
+例題3の回路に $t=0$ で \qty{10}{V} を加えると（はじめは $v_C=0$、$i=0$）、$A$ の固有値は $\lambda^2+200\lambda+\num{100000}=0$ から $-100\pm300j$ なので、コンデンサーの電圧は1秒に約48回（$300\div2\pi$）ゆれながら、10\,V に落ち着きます。いちばん高くなるのは約0.0105秒後の約13.5\,V です（9-7・9-9 の RLC と同じ読み方）。
+
+\begin{jibun}
+コイル $L=\qty{0.5}{H}$、コンデンサー $C=\qty{200}{\micro F}$、抵抗 $R=\qty{100}{\ohm}$ を直列にして、電圧 $v$〔V〕を加えます。状態 $\vec x=(v_C,\ i)$、$u=v$ として、$A$ と $B$ を求めましょう。
+\bkjans{$\dot v_C=\frac{1}{2\times10^{-4}}i=5000i$、$\dot i=2(v-100i-v_C)=-2v_C-200i+2v$。$A$ は1行め $(0,\ 5000)$、2行め $(-2,\ -200)$。$B$ は $(0,\ 2)$ のたて書き。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[短い棒の線形化]
+長さ $\ell=\qty{0.98}{m}$ の軽い棒の先におもりをつけ、手のひらに立てます。④の棒の式 $\ddot\theta=\frac{g}{\ell}\sin\theta-\frac{a}{\ell}\cos\theta$（$g=\qty{9.8}{m/s^2}$）を、$\theta$ が小さいとして線形化し、$u=-\frac{a}{\ell}$ として状態方程式の $A$ と $B$ を求めましょう。\par
+\kangaekata \kixkbaai{$\sin$・$\cos$ が入る2階の式}{9-10}{D,A}\par
+\kixkdan{1}\enspace $\dot{\vec x}=A\vec x+Bu$ の $A$・$B$ を決める（状態は $(\theta,\ \dot\theta)$）。\par
+\kixkdan{3}\enspace 立った状態のまわりで $\sin\theta\approx\theta$、$\cos\theta\approx1$。\par
+\kixknaosu{4}\enspace 1次の式にしてから、位置と速度を状態に（A）。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $\dfrac{g}{\ell}=\dfrac{9.8}{0.98}=10$\par
+\kixka $\ddot\theta=10\theta-\dfrac{a}{\ell}=10\theta+u$\par
+\kixka $\dot x_1=x_2$、$\dot x_2=10x_1+u$\par
+\kotae $A$ は1行め $(0,\ 1)$、2行め $(10,\ 0)$。$B$ は $(0,\ 1)$ のたて書き
+\end{reidai}
+
+\kixkhead{確かめ（例題4）：短い棒は速くたおれる}
+例題4の $A$ の固有値は $\pm\sqrt{10}=\pm3.16$ です（例題5で求めます）。はじめ $\theta=0.01$、$\dot\theta=0$ なら $\theta=0.01\cosh(3.16t)$ で、0.1\,rad になるのは約0.95秒後。\qty{2.45}{m} の棒（$0.01\cosh2t$）の約1.50秒より速くたおれます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=104mm, height=68mm, xmin=0, xmax=1.8, ymin=0, ymax=0.12, xtick={0,0.5,1,1.5}, ytick={0.05,0.1}, yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={$\theta$（rad）}]
+  \addplot[bkRed, line width=1.5pt, dash pattern=on 4pt off 2pt, domain=0:1.02, samples=60] {0.01*cosh(3.162*x)};
+  \addplot[bkBlue, line width=1.7pt, domain=0:1.6, samples=60] {0.01*cosh(2*x)};
+  \addplot[bkGray, line width=0.6pt, dash pattern=on 1.5pt off 1.5pt, domain=0:1.8] {0.1};
+  \draw[bkGray, line width=0.6pt] (axis cs:0.947,0) -- (axis cs:0.947,0.1);
+  \draw[bkGray, line width=0.6pt] (axis cs:1.497,0) -- (axis cs:1.497,0.1);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt, align=left] at (axis cs:0.04,0.075) {$\ell=\qty{0.98}{m}$（赤の破線）\\0.95 秒};
+  \node[font=\sffamily\footnotesize, anchor=east, fill=white, inner sep=1pt, align=right] at (axis cs:1.48,0.022) {$\ell=\qty{2.45}{m}$（青）\\1.50 秒};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はじめ0.01\,rad の棒が、0.1\,rad（点線）までたおれる時間。短い棒ほど速い。}
+\end{bkfigure}
+
+
+\begin{jibun}
+長さ $\ell=\qty{4.9}{m}$ の軽い棒の先におもりをつけ、手のひらに立てます。例題4と同じように線形化し、$A$ と $B$ を求めましょう（$g=\qty{9.8}{m/s^2}$）。
+\bkjans{$\frac{g}{\ell}=2$ なので $\ddot\theta=2\theta+u$。$A$ は1行め $(0,\ 1)$、2行め $(2,\ 0)$。$B$ は $(0,\ 1)$ のたて書き。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[落ち着くかの判定]
+次の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。固有値を求めて答えましょう。
+\kixkline{（1）$A=\begin{pmatrix}0&1\\-5&-2\end{pmatrix}$\qquad （2）$A=\begin{pmatrix}0&1\\10&0\end{pmatrix}$（例題4の棒）}
+\kangaekata \kixkbaai{何も入れないで落ち着くか}{9-10}{E}\par
+\kixkdan{1}\enspace 「落ち着くか」は、固有値の実部がすべて負か、という問い。\par
+\kixknaosu{4}\enspace $\det(A-\lambda I)=0$ を解く。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 （1）$\det\kixkpm{-\lambda&1\\-5&-2-\lambda}=-\lambda(-2-\lambda)+5=\lambda^2+2\lambda+5=0$\par
+\kixkb $\lambda=-1\pm\sqrt{1-5}=-1\pm2j$\quad （解の公式）\par
+\kixka （2）$\det\kixkpm{-\lambda&1\\10&-\lambda}=\lambda^2-10=0$\par
+\kixkb $\lambda=\pm\sqrt{10}=\pm3.16$\par
+\kotae （1）$-1\pm2j$。実部が負で、ゆれながら落ち着く
+\kixka （2）$3.16$ と $-3.16$。正の固有値があり、たおれる
+\end{reidai}
+
+\kixkhead{確かめ（例題5）}
+（1）は車B と同じ $A$ で、固有値も同じ $-1\pm2j$ です（9-7・9-9）。（2）の $+3.16$ は例題4の確かめと同じです。
+
+\begin{jibun}
+次の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。固有値を求めて答えましょう。（1）$A$ は1行め $(0,\ 1)$、2行め $(-4,\ -4)$。（2）$A$ は1行め $(0,\ 1)$、2行め $(3,\ -2)$。
+\bkjans{（1）$\lambda^2+4\lambda+4=0$、$\lambda=-2$（重解）。落ち着く。\newline （2）$(\lambda+3)(\lambda-1)=0$、$\lambda=1$、$-3$。正の固有値1があるので落ち着かない。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[棒を立たせる $K$]
+例題4の棒に、$u=-(k_1\theta+k_2\dot\theta)$ を入れます。
+\kixkline{$A=\begin{pmatrix}0&1\\10&0\end{pmatrix}$、\quad $B=\begin{pmatrix}0\\1\end{pmatrix}$}$A-BK$ の固有値を2つとも $-4$ にする $k_1$・$k_2$ を求めましょう。\par
+\kangaekata \kixkbaai{落ち着くように入れ方を決める}{9-10}{F}\par
+\kixkdan{1}\enspace $u=-K\vec x$ を入れると $\dot{\vec x}=(A-BK)\vec x$。その固有値を選ぶ。\par
+\kixknaosu{4}\enspace $A-BK$ の特性方程式を作り、$(\lambda+4)^2$ と係数をくらべる。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $A-BK=\kixkpm{0&1\\10-k_1&-k_2}$\quad （2行めから $k_1$・$k_2$ をひく）\par
+\kixka $\det(A-BK-\lambda I)=\lambda^2+k_2\lambda+(k_1-10)$\par
+\kixka $(\lambda+4)^2=\lambda^2+8\lambda+16$\par
+\kixka $k_2=8$、$k_1-10=16$ より $k_1=26$\par
+\kotae $k_1=26$、$k_2=8$（$u=-(26\theta+8\dot\theta)$）
+\end{reidai}
+
+\kixkhead{確かめ（例題6）：立つか}
+はじめ $\theta=0.01$、$\dot\theta=0$ なら、⑦と同じ形で $\theta=0.01(1+4t)e^{-4t}$ となり、約1秒で0.001\,rad より小さくなります（はじめの手の加速度は約 \qty{0.25}{m/s^2}）。
+
+\begin{jibun}
+\qty{2.45}{m} の棒（$A$ は1行め $(0,\ 1)$、2行め $(4,\ 0)$。$B$ は $(0,\ 1)$ のたて書き）で、$A-BK$ の固有値を2つとも $-3$ にする $k_1$・$k_2$ を求めましょう。
+\bkjans{特性方程式 $\lambda^2+k_2\lambda+(k_1-4)$ を $(\lambda+3)^2=\lambda^2+6\lambda+9$ とくらべて、$k_2=6$、$k_1=13$。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[コンピュータのくり返し]
+\qty{2.45}{m} の棒を、⑦の $u=-(8\theta+4\dot\theta)$ で立たせる計算を、コンピュータで $\Delta t=0.2$ 秒ごとに行います。\par
+（1）1歩の行列 $A_{\mathrm d}=I+(A-BK)\Delta t$ とその固有値を求め、落ち着くかを答えましょう。\par
+（2）はじめ $\vec x_0=(0.01,\ 0)$ から2歩の状態を求めましょう。\par
+（3）この $K$ のまま $\Delta t$ を変えるとき、落ち着くのは $\Delta t$ が何秒より小さいときでしょう。\par
+\kangaekata \kixkbaai{$\Delta t$ ごとのくり返し}{9-10}{G}\par
+\kixkdan{1}\enspace $\vec x_{k+1}=A_{\mathrm d}\vec x_k$。$A_{\mathrm d}$ の固有値の大きさがすべて1より小さいか。\par
+\kixknaosu{4}\enspace $A-BK$（⑦）を0.2倍して $I$ をたし、固有値を求める。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 （1）$A_{\mathrm d}=\kixkpm{1&0.2\\-0.8&0.2}$\par
+\kixkb $\det(A_{\mathrm d}-\mu I)=(1-\mu)(0.2-\mu)+0.16$\par
+\kixkb $\phantom{\det(A_{\mathrm d}-\mu I)}=\mu^2-1.2\mu+0.36=(\mu-0.6)^2$\par
+\kixkb $\mu=0.6$（重解。$1+(-2)\times0.2=0.6$ とも合う）\par
+\kixka （2）$\vec x_1=A_{\mathrm d}\vec x_0=(0.01,\ -0.8\times0.01)=(0.01,\ -0.008)$\par
+\kixkb $\vec x_2=A_{\mathrm d}\vec x_1=(0.0084,\ -0.0096)$\par
+\kixka （3）$\mu=1+(-2)\Delta t=1-2\Delta t$（$A-BK$ の固有値は $-2$）\par
+\kixkb $-1<1-2\Delta t<1$ より $0<\Delta t<1$\par
+\kotae （1）固有値0.6。大きさが1より小さいので落ち着く
+\kixka （2）$\vec x_2=(0.0084,\ -0.0096)$
+\kixka （3）$\Delta t$ が1秒より小さいとき（⑨と同じ）
+\end{reidai}
+
+\begin{jibun}
+\qty{2.45}{m} の棒を $u=-(13\theta+6\dot\theta)$（$A-BK$ の固有値 $-3$、$-3$）で立たせる計算を、$\Delta t=0.1$ 秒ごとに行います。\par
+（1）$A_{\mathrm d}$ とその固有値を求め、落ち着くかを答えましょう。\par
+（2）はじめ $(0.01,\ 0)$ から2歩の状態を求めましょう。\par
+（3）落ち着くのは $\Delta t$ が何秒より小さいときでしょう。
+\bkjans{（1）$A-BK$ は1行め $(0,\ 1)$、2行め $(-9,\ -6)$。$A_{\mathrm d}$ は1行め $(1,\ 0.1)$、2行め $(-0.9,\ 0.4)$。$\mu^2-1.4\mu+0.49=(\mu-0.7)^2$ で $\mu=0.7$。落ち着く。\newline （2）$\vec x_1=(0.01,\ -0.009)$、$\vec x_2=(0.0091,\ -0.0126)$。\newline （3）$\mu=1-3\Delta t$。$-1<1-3\Delta t<1$ より $0<\Delta t<\frac23$。$\frac23$ 秒（約0.67秒）より小さいとき。}
+\end{jibun}
+
+\Needspace{12\baselineskip}
+\begin{reidai}[状態方程式から $G(s)$]
+例題1のばねで、位置 $x$ をはかるときの伝達関数 $G(s)$ を求めましょう。
+\kixkline{$A=\begin{pmatrix}0&1\\-16&-0.8\end{pmatrix}$、\quad $B=\begin{pmatrix}0\\2\end{pmatrix}$、\quad $C=\begin{pmatrix}1&0\end{pmatrix}$}\par
+\kangaekata \kixkbaai{伝達関数がほしい}{9-10}{H}\par
+\kixkdan{1}\enspace $G(s)$：はじめの値0のときの $Y\div U$。状態方程式からは $C(sI-A)^{-1}B$。\par
+\kixknaosu{4}\enspace $sI-A$ の逆行列（7-5）を作り、$B$、$C$ の順にかける。\par
+\shiki\kixks\hangindent=2.6\zw\hangafter=1 $sI-A=\kixkpm{s&-1\\16&s+0.8}$、$\det=s^2+0.8s+16$\par
+\kixka $(sI-A)^{-1}=\dfrac{1}{s^2+0.8s+16}\kixkpm{s+0.8&1\\-16&s}$\par
+\kixka $(sI-A)^{-1}B=\dfrac{1}{s^2+0.8s+16}\kixkpm{2\\2s}$\quad （2列めの2倍）\par
+\kixka $C(sI-A)^{-1}B=\dfrac{2}{s^2+0.8s+16}$\quad （1行め）\par
+\kotae $G(s)=\dfrac{2}{s^2+0.8s+16}$
+\end{reidai}
+
+\kixkhead{確かめ（例題8）：ゆっくり押したときの倍率}
+分母分子を2でわると $1\div(0.5s^2+0.4s+8)$ で、9-8 の $1\div(ms^2+cs+k)$ と同じ形です。$s=0$ を入れた $G(0)=\frac{2}{16}=0.125$ は、「とてもゆっくり変わる力を加えたとき、1\,N あたり何 m 動くか」です（9-8 の確かめ）。ばねだけなら $\frac{1}{k}=\frac{1}{8}=\qty{0.125}{m/N}$ で、ぴったり合います。分母 $s^2+0.8s+16$ が0になる $s$（極）は $-0.4\pm3.980j$ で、例題1の $A$ の固有値と同じです（⑩）。
+
+\begin{jibun}
+車B（$A$ は1行め $(0,\ 1)$、2行め $(-5,\ -2)$。$B$ は $(0,\ 1)$ のたて書き）の伝達関数 $G(s)=C(sI-A)^{-1}B$ を求めましょう。\par
+（1）位置をはかるとき（$C$ は $(1,\ 0)$ を横に並べた1行の行列）\par
+（2）速度をはかるとき（$C$ は $(0,\ 1)$ を横に並べた1行の行列）
+\bkjans{$sI-A$ は1行め $(s,\ -1)$、2行め $(5,\ s+2)$、$\det=s^2+2s+5$。$(sI-A)^{-1}B=\frac{1}{s^2+2s+5}(1,\ s)$ のたて書き。\newline （1）1行めを取り出して $G(s)=\frac{1}{s^2+2s+5}$。\newline （2）2行めを取り出して $G(s)=\frac{s}{s^2+2s+5}$。}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{① 状態の並べ方を変えたら、動きも変わると思う}
+\bkng{車A を $(\dot x,\ x)$ の順に並べたら $A$ がちがう行列になったので、落ち着き方もちがう}
+\bkok{並べ方で $A$ の形は変わるが、固有値は同じ（$-1$、$-2$）。動きは変わらない}
+$(\dot x,\ x)$ の順なら、$\dot x$ の式が1行めになり、$A$ は1行め $(-3,\ -2)$、2行め $(1,\ 0)$ です。特性方程式は $(-3-\lambda)(-\lambda)+2=\lambda^2+3\lambda+2=0$ で、$(x,\ \dot x)$ の順と同じです。同じものを別の物差しで見ているだけだからです（7-9）。ただし、$B$・$C$・$K$ も同じ順に並べかえます。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixkEHT}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{② $B$ を、ただの数と思う}
+\raggedright\bkng{$\ddot x+3\dot x+2x=u$ で、\\$\dot{\vec x}=A\vec x+u$（2つの式の両方に $u$）}
+\bkok{$\dot{\vec x}=A\vec x+Bu$、\\$B$ は $(0,\ 1)$ のたて書き}
+$u$ が入るのは、$\ddot x$ の式（2行め）だけです。$B$ は「どの式に何倍で入るか」を表す1列の行列です。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{③ $A-BK$ を $A+BK$ にする}
+\raggedright\bkng{$u=-K\vec x$ を入れて\\$\dot{\vec x}=(A+BK)\vec x$}
+\bkok{$\dot{\vec x}=A\vec x+B(-K\vec x)$\\$=(A-BK)\vec x$}
+$A+BK$ で計算すると、$k_1=8$、$k_2=4$ でも固有値は $2\pm\sqrt{16}$ の形になり、棒は立ちません。符号は、$u$ の式から1行ずつ入れて確かめます。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{④ 連続の条件と、くり返しの条件を取りちがえる}
+\bkng{$A_{\mathrm d}$ の固有値0.8は正（右半分）なので、くり返しの計算はこわれる}
+\bkok{くり返し $\vec x_{k+1}=A_{\mathrm d}\vec x_k$ では、固有値の\textbf{大きさ}が1より小さいか（0.8 は円の中で、落ち着く）}
+反対に、連続の $\dot{\vec x}=(A-BK)\vec x$ の固有値 $-2$ を「大きさが2で1より大きいからこわれる」とするのもまちがいです。連続の式では\textbf{実部が負か}、くり返しでは\textbf{大きさが1より小さいか}で見ます（7-10）。
+\end{tsumazuki}
+
+\begingroup\tcbset{equal height group=kixkEHU}%
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑤ 線形化した式を、大きなかたむきに使う}
+\raggedright\bkng{$\ddot\theta=4\theta$ で、$\theta=1$\,rad（57°）のときのたおれ方を計算する}
+\bkok{線形化した式は、$\theta$ が小さいとき（0.1\,rad ほどまで）だけ使う}
+1\,rad では $\sin1=0.84$ で、$\theta$ と19\,\% ちがいます（表\ref{bk:9-10:tab-sin}）。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{⑥ かたむきだけを見ればよいと思う}
+\raggedright\bkng{$u=-k_1\theta$（$k_2=0$）で、$k_1$ を大きくすれば立つ}
+\bkok{$k_2=0$ では固有値の実部が0で、ゆれ続ける。たおれる速さ $\dot\theta$ も見る}
+$\lambda^2+(k_1-4)=0$ の解は $\pm j\sqrt{k_1-4}$ です（⑦）。
+\end{tsumazuki}
+\end{minipage}\par
+\endgroup
+
+\begin{tsumazuki}{⑦ $A$ の成分の符号だけで、落ち着くかを決める}
+\bkng{$A$（1行め $(0,\ 1)$、2行め $(3,\ -2)$）は、ななめの $-2$ が負なので落ち着く}
+\bkok{固有値を求める：$\lambda^2+2\lambda-3=0$ で $\lambda=1$、$-3$。正の1があるので落ち着かない}
+\[ \kixkN{\text{$\dot{\vec x}=A\vec x$ は落ち着くか}}\ \to\ \kixkS{\det(A-\lambda I)=0\ \text{の解の実部}} \]
+「落ち着くか」は名前の段の問いで、$A$ を見ただけでは答えは出ません。行列の計算（固有値）に直して答えます。
+\end{tsumazuki}
+
+%% ---------------- 物理・工学ではこう使う ----------------
+
+
+\begin{butsuri}
+\kixkbox{ドローンの姿勢を保つ}
+\noindent\begin{minipage}[c]{0.68\linewidth}
+\raggedright
+ドローンは、前後・左右・向き（回る角度）の3つの角度と、その変わる速さの6つの数を状態として、センサー（回る速さをはかるジャイロセンサーと、加速度センサー）ではかります。コンピュータは、状態の何倍かずつを4つのモーターの回る速さに加え、かたむいたら起こし、ゆれたらおさえます。この計算を1秒に数百〜数千回くり返します。風で押されても、状態の点を原点（決めた姿勢）に引き寄せ続けるのは、手のひらの棒と同じ考えです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}
+\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkGray!70] (10,4) rectangle (22,8);
+  \draw[bkInk, line width=0.9pt] (2,8) -- (30,8);
+  \foreach \kixkx in {2,30} {\draw[bkInk, line width=0.6pt] (\kixkx,8) -- (\kixkx,10); \draw[bkInk, line width=0.9pt] ({\kixkx-6},10.5) -- ({\kixkx+6},10.5);}
+  \draw[bkBlue, line width=1pt, -{Stealth[length=1.8mm]}] (16,13) arc (100:40:7);
+  \node[font=\footnotesize, anchor=north] at (16,2.5) {ドローン};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixkbox{2輪で立つ乗り物とロボット}
+\noindent\begin{minipage}[c]{0.68\linewidth}
+\raggedright
+車輪が2つだけの立ち乗りの乗り物や、2輪で立って走るロボットは、倒立振子そのものです。人やロボットの体が前にかたむくと、車輪を前へ回して、棒の下の手を動かすのと同じように起こします。かたむきとその速さに加えて、車輪の位置と速さも状態に入れた、4つの数の状態方程式で設計します。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (8,3) circle (3) (22,3) circle (3);
+  \fill[bkGray!70] (6,6) rectangle (24,8);
+  \draw[bkInk, line width=1.6pt] (15,8) -- (17,24);
+  \fill[bkOrange!50] (17,27) circle (3);
+  \draw[bkInk, line width=1.2pt] (17,24) -- (19,15);
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{4pt}
+\kixkbox{立ったまま着陸するロケット}
+くり返し使うロケットの中には、使い終わった1段めが、エンジンをふかしながら、立ったまま地上や海の上の船に着陸するものがあります。細長いロケットは、下からエンジンで支えられた倒立振子です。エンジンの向きを少しずつ変えて、かたむきとその速さを0に保ちます。
+\end{butsuri}
+
+\begin{column}{カルマンと「現代制御」}
+状態方程式で制御を考える方法は、1960年ごろから、ルドルフ・カルマンらによって形が整えられました。カルマンは、可制御性と、はかる量から状態をすべて知ることができるかを表す\textbf{可観測性}の考えを示し、1960年と1961年には、雑音のあるセンサーの値から状態を推し量る方法（カルマンフィルター）を発表しました。この方法は、アポロ計画などの宇宙船の位置の計算に使われたと伝えられています。それまでの、伝達関数（9-8）で1つの入力と1つの出力を調べる方法を\textbf{古典制御}、状態方程式で多くの量をまとめて調べる方法を\textbf{現代制御}とよぶことがあります。どちらも今も使われていて、この巻の 9-8〜9-11 で、両方の入口に立ったことになります。
+\end{column}
+
+
+
+\begin{column}{2本の足で歩くロボットも、倒立振子}
+人やロボットが2本の足で歩くとき、地面についた足を支点にして、体（重心）が上で前へたおれかかっています。これは、手のひらの棒と同じ倒立振子です。2足歩行のロボットの多くは、体を「足の上に立つ倒立振子」とみなして線形化した状態方程式を使い、次の足をどこにつけば体がたおれずに進めるかを計算しています。歩くことは、たおれかけては足で支え直すことのくり返しなのです。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{5}
+
+\bkproblem $2\ddot x+6\dot x+4x=F$ で動くおもりがあります。状態を $\vec x=(x,\ \dot x)$、入れるものを $u=F$ として、状態方程式の $A$ と $B$ を求めましょう\mbox{（\bkreidairef{1}）}。
+\bkpans{$\ddot x=-2x-3\dot x+0.5F$。$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -3)$（車A と同じ）。$B$ は $(0,\ 0.5)$ のたて書き。}
+
+\bkproblem 6-14 の同じ形の2つの水そうで、左の水そうに1分に $q$\,cm³、右の水そうにも1分に $q$\,cm³ の水を入れます。状態 $\vec x=(h_1,\ h_2)$、$u=q$ として、$A$ と $B$ を求めましょう\mbox{（\bkreidairef{2}）}。
+\bkpans{$A$ は1行め $(-0.1,\ 0.1)$、2行め $(0.1,\ -0.1)$。両方に $0.01q$ 入るので、$B$ は $(0.01,\ 0.01)$ のたて書き。}
+
+\bkproblem 長さ $\ell=\qty{1.96}{m}$ の軽い棒の先におもりをつけて手のひらに立てます。例題4と同じように線形化し、状態方程式の $A$ と $B$ を求め、何も入れないときの固有値を求めましょう（$g=\qty{9.8}{m/s^2}$）\mbox{（\bkreidairef{4}・\bkreidairef{5}）}。
+\bkpans{$\frac{g}{\ell}=5$。$A$ は1行め $(0,\ 1)$、2行め $(5,\ 0)$、$B$ は $(0,\ 1)$ のたて書き。$\lambda^2-5=0$ で $\lambda=\pm\sqrt5=\pm2.24$。正の固有値があるのでたおれる。}
+
+\bkproblem $A$ が1行め $(0,\ 1)$、2行め $(-10,\ -2)$ の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。固有値を求めて答えましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$\lambda^2+2\lambda+10=0$、$\lambda=-1\pm3j$。実部が負なので、ゆれながら落ち着く。}
+
+\bkproblem \qty{2.45}{m} の棒（$A$ は1行め $(0,\ 1)$、2行め $(4,\ 0)$、$B=(0,\ 1)$ のたて書き）で、$A-BK$ の固有値を2つとも $-1$ にする $k_1$・$k_2$ を求めましょう\mbox{（\bkreidairef{6}）}。
+\bkpans{$\lambda^2+k_2\lambda+(k_1-4)$ を $(\lambda+1)^2=\lambda^2+2\lambda+1$ とくらべて、$k_2=2$、$k_1=5$。}
+
+\bkproblem $A$ が1行め $(0,\ 1)$、2行め $(-6,\ -5)$ の $\dot{\vec x}=A\vec x$ は、落ち着くでしょうか。固有値を求めて答えましょう\mbox{（\bkreidairef{5}）}。
+\bkpans{$\lambda^2+5\lambda+6=(\lambda+2)(\lambda+3)=0$、$\lambda=-2$、$-3$。どちらも負なので、ゆれずに落ち着く。}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem コイル $L=\qty{0.2}{H}$、コンデンサー $C=\qty{50}{\micro F}$、抵抗 $R=\qty{40}{\ohm}$ を直列にした回路で、状態 $\vec x=(v_C,\ i)$、$u=v$ として $A$ と $B$ を求めましょう。また、何も入れないときの固有値を求めましょう\mbox{（\bkreidairef{3}・\bkreidairef{5}）}。
+\bkpans{$\dot v_C=2\times10^4i$、$\dot i=5(v-40i-v_C)$。$A$ は1行め $(0,\ \num{20000})$、2行め $(-5,\ -200)$、$B$ は $(0,\ 5)$ のたて書き。$\lambda^2+200\lambda+\num{100000}=0$、$\lambda=-100\pm300j$。}
+
+\bkproblem 例題4の棒（$A$ は1行め $(0,\ 1)$、2行め $(10,\ 0)$）を、例題6の $u=-(26\theta+8\dot\theta)$ で立たせる計算を、$\Delta t=0.1$ 秒ごとに行います。$A_{\mathrm d}$ とその固有値を求め、落ち着くかを答えましょう。また、落ち着くのは $\Delta t$ が何秒より小さいときでしょう\mbox{（\bkreidairef{7}）}。
+\bkpans{$A-BK$ は1行め $(0,\ 1)$、2行め $(-16,\ -8)$。$A_{\mathrm d}$ は1行め $(1,\ 0.1)$、2行め $(-1.6,\ 0.2)$。$\mu^2-1.2\mu+0.36=(\mu-0.6)^2$ で $\mu=0.6$、落ち着く。$\mu=1-4\Delta t$ の大きさが1より小さいのは $\Delta t<0.5$ 秒。}
+
+\bkproblem 車A（$A$ は1行め $(0,\ 1)$、2行め $(-2,\ -3)$、$B=(0,\ 1)$ のたて書き）で、\textbf{速度} $\dot x$ をはかるとき（$C$ は $(0,\ 1)$ を横に並べた1行の行列）の伝達関数 $G(s)=C(sI-A)^{-1}B$ を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$(sI-A)^{-1}B=\frac{1}{s^2+3s+2}(1,\ s)$ のたて書き。$C$ で2行めが残り、$G(s)=\frac{s}{s^2+3s+2}$（位置の伝達関数に $s$ をかけたもの：微分すると速度）。}
+
+\bkproblem 例題2の水そう（右から水を入れる。$A$ は1行め $(-0.1,\ 0.1)$、2行め $(0.1,\ -0.1)$、$B=(0,\ 0.01)$ のたて書き）で、\textbf{左}の水位をはかるとき（$C$ は $(1,\ 0)$ を横に並べた1行の行列）の伝達関数 $G(s)=C(sI-A)^{-1}B$ を求めましょう\mbox{（\bkreidairef{8}）}。
+\bkpans{$sI-A$ は1行め $(s+0.1,\ -0.1)$、2行め $(-0.1,\ s+0.1)$、$\det=(s+0.1)^2-0.01=s^2+0.2s$。逆行列は $\frac{1}{s^2+0.2s}$ に、1行め $(s+0.1,\ 0.1)$、2行め $(0.1,\ s+0.1)$。$B$ をかけて1行めをとると $G(s)=\frac{0.001}{s^2+0.2s}=\frac{0.001}{s(s+0.2)}$。}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 手のひらに立てた棒の「かたむき」と「たおれる速さ」を状態として、状態の点の動きの図を読める。\bkfurref{bk:9-10:jotai}
+\item ばね・水そう・回路・倒立振子の式を状態方程式に書き、$A$ の固有値で落ち着くかを判定できる。\bkfurref{bk:9-10:tateru}
+\item 状態フィードバックで固有値を選び、コンピュータの中のくり返しで落ち着く条件も判定できる。\bkfurref{bk:9-10:fb}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{たおれる棒も、かたむきとたおれる速さを見て行列で計算すれば立てられるんだね。次は、状態方程式の答えそのものを、行列の指数関数 $e^{At}$ で書いてみよう。}

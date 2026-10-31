@@ -1,0 +1,968 @@
+%% 6-13 ゆらし続けると：強制振動と共振（第14回：組 V6-7。ページ制限なし。偶数ページ）
+%% ほかの巻が指している形：5-back の予告カード「小さな力でも、タイミングが合うと大きくゆれる／いちばん大きくなる所を、微分が0の点で見つける（5-7）」
+%%   6-10 の「微分は jω をかけること」を使って特殊解を求める。6-12 の特性方程式・ζ・ω_n・重解の te^{st} を受ける。
+%%   同じ数：ばね 0.5 kg・8 N/m（ω_n=4）、c=0.4（ζ=0.1）。RLC 10 mH・1 μF・20 Ω。
+%%   タコマ橋（1940年）は単純な共振ではなく、風による自励振動（フラッター）なので共振の例にしない。
+\makeatletter
+% 小見出し（太字の1行）
+\newcommand\bkvinhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}}
+% 囲みの中の小見出し（それだけで1行）
+\newcommand\bkvinbox[1]{\par\addvspace{4pt}\noindent\textbf{#1}\par\nobreak\vspace{1pt}\noindent\ignorespaces}
+% 式を、まん中に1行で置く
+\newcommand\bkvinline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+% 大事な式のわく（はばは中身に合わせる）
+\newcommand\bkvinframe[1]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center]{#1};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 例題の途中式の行（そろえた位置から）
+\newcommand\bkvinq{\par\vspace{1pt}\noindent\hangindent=4.6\zw\hangafter=0\relax}
+% 式の変形の表（左の式の列を広くしたもの）  \begin{bkvinhk}[左の列のはば（\linewidth に対する割合）]
+\newenvironment{bkvinhk}[1][0.6]{\par\addvspace{3pt}\noindent\renewcommand\arraystretch{1.5}%
+  \begin{tabular}{@{\hspace{1\zw}}>{$\displaystyle}m{#1\linewidth}<{$}@{\hspace{1.5\zw}}>{\footnotesize\color{bkGray}\raggedright\arraybackslash}m{\dimexpr0.97\linewidth-#1\linewidth-2.5\zw\relax}@{}}}%
+  {\end{tabular}\par\addvspace{3pt}}
+% N·s/m
+\newcommand\bkvinNsm[1]{\qty[inter-unit-product=\ensuremath{\cdot}]{#1}{N.s/m}}
+% ばね（2点のあいだのぎざぎざ）
+\newcommand\bkvinspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=2.2mm, amplitude=1.7mm, pre length=2.5mm, post length=2.5mm}] #1 -- #2;}
+% ダンパー（横向き。左はしを #1、長さ #2 mm）
+\newcommand\bkvindamper[2]{\begin{scope}[shift={#1}]
+  \fill[bkYellow!30] (2.5,-2.6) rectangle ({0.66*#2},2.6);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (2.5,0) (2.5,-2.6) -- (2.5,2.6) (2.5,2.6) -- ({0.66*#2},2.6) (2.5,-2.6) -- ({0.66*#2},-2.6);
+  \draw[bkInk, line width=1.3pt] ({0.42*#2},-2) -- ({0.42*#2},2);
+  \draw[bkInk, line width=0.8pt] ({0.42*#2},0) -- (#2,0);
+\end{scope}}
+\makeatother
+
+\bkchapter{6}{13}{ゆらし続けると：\\強制振動と共振}{\bklevel{5}}{ゆらし続けると：強制振動と共振}
+\bkmichishirube{3-8,5-7,6-6,6-10,6-12}{6-14,9-8,9-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace ゆすり続けたときのゆれを、表計算と共振曲線で説明できる。
+\item \bklevel{5}\enspace ゆすりに合うゆれ（特殊解）を、係数を比べる方法と複素数で求められる。
+\item \bklevel{5}\enspace いちばん大きくゆれる角振動数を微分で求め、RLC 回路の共振周波数を求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\raggedright
+ブランコに乗った友だちを、うしろから軽くおします。1回の力は小さくても、何回もおすうちに、ブランコはどんどん高く上がります。\par\vspace{4pt}
+でも、おすタイミングがでたらめだと、うまく上がりません。いつ、どの向きにおせば、小さな力で大きくゆらせるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}
+\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  % ブランコの柱とはり
+  \draw[bkGray, line width=1.6pt] (2,0) -- (8,34) -- (14,0) (34,0) -- (40,34) -- (46,0);
+  \draw[bkGray, line width=1.8pt] (6,34) -- (42,34);
+  % くさりと板（少しふれた位置）
+  \draw[bkInk, line width=0.8pt] (20,34) -- (27,10) (28,34) -- (35,10);
+  \fill[bkOrange!70!black] (25,8.6) rectangle (37,10.4);
+  % 乗っている子（かんたんな形）
+  \fill[bkBlue!60] (28.5,10.4) rectangle (33.5,18);
+  \fill[bkSkin] (31,21) circle (2.6);
+  % おす手の矢印
+  \draw[bk arrow, bkRed, line width=1.2pt] (13,14) -- (23,14);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=south] at (16,15) {おす};
+  \draw[bkGray, line width=1pt] (-2,0) -- (50,0);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 6-12 では、ばね・質量・ダンパーを「1回はなしたあと」の動きを調べました。ゆれは、やがて止まりました。
+
+この章では、外から\textbf{ゆすり続ける}とどうなるかを調べます。ブランコ、せんたく機の脱水、地震でゆれる建物、そしてラジオの電気の回路。どれも「ゆすり続けられるもの」です。ゆするリズムが、その物が自分でゆれるリズム（6-6 の固有角振動数 $\omega_{\mathrm n}$）に近いと、小さな力でも、とても大きくゆれます。これを「共振」といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=27mm, font=\sffamily\footnotesize] (a) at (0,0) {ゆすり続ける式\\$m\ddot x+c\dot x+kx$\\$=F_0\cos\omega t$};
+  \node[bk node, text width=17mm, font=\sffamily\footnotesize] (b) at (37,0) {表計算で\\ゆれを見る};
+  \node[bk node, text width=19mm, font=\sffamily\footnotesize] (c) at (70,0) {ゆすりに合う\\ゆれを式で};
+  \node[bk node, text width=17mm, font=\sffamily\footnotesize] (d) at (102,0) {共振の山を\\微分で};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b) -- (c); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{この章の道すじ。}
+\end{bkfigure}
+
+%% ---------------- 思い出そう・やってみよう ----------------
+
+
+\begin{yattemiyou}[5円玉の振り子を、手でゆらそう]
+\noindent\begin{minipage}[c]{0.68\linewidth}
+\textbf{用意するもの}\par
+5円玉、糸（約\qty{30}{cm}）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=3pt]
+\item 糸の先に5円玉を結び、糸の上のはしを指でつまむ。指を動かさずにゆらして、5円玉が自分でゆれるリズムを数えよう（1秒に1往復くらい）。
+\item 5円玉を止めてから、指を左右に $\qty{2}{cm}$ くらい、ゆっくり（3秒で1往復くらい）動かそう。5円玉はどう動く？
+\item 指の動きを、①のリズムに合わせよう。
+\item 指を、できるだけ速く（1秒に3往復くらい）動かそう。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.28\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkSkin] (10,40) ellipse (5 and 3);
+  \draw[bkInk!60, line width=0.5pt] (10,40) ellipse (5 and 3);
+  \draw[bk arrow, bkRed, line width=0.9pt, {Stealth[length=4pt]}-{Stealth[length=4pt]}] (1,46) -- (19,46);
+  \node[font=\sffamily\footnotesize, anchor=south] at (10,47.5) {指を動かす};
+  \draw[bkInk, line width=0.6pt] (10,37.5) -- (10,6);
+  \fill[bkYellow!70!black] (10,4) circle (3.2);
+  \fill[bkYellow!45] (10,4) circle (2.6);
+  \fill[white] (10,4) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=west] at (14,4) {5円玉};
+  \node[font=\sffamily\footnotesize, anchor=west] at (11,22) {糸};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=36mm] Q[c,m,wd=46mm]}, rowsep=1.5pt}
+指の動き & 5円玉のゆれの大きさ & 指と同じ向き？ \\
+② ゆっくり & 指と同じくらい & 同じ向き \\
+③ 自分のリズム & どんどん大きくなる & （4分の1周期おくれる） \\
+④ 速く & ほとんど動かない & 反対向き \\
+\end{bktable}
+\bktabcaption{ミナさんの観察。③では、指を少ししか動かしていないのに、5円玉は大きくゆれた。}
+\end{bkcenter}
+
+
+\noindent 同じ指の動きでも、リズムしだいで、ゆれの大きさも向きも、まったくちがいました。\qty{30}{cm} の糸の振り子が自分でゆれる周期は、6-6 の $T=2\pi\sqrt{L/g}$ に $L=\qty{0.3}{m}$ を入れて、
+\bkvinline{$T=2\pi\sqrt{\dfrac{0.3}{9.8}}\approx\qty{1.1}{s}$}
+です。③は、ちょうどこのリズムでゆらしたのです。この章では、この3つのちがいを、表計算と式で説明します。
+
+\begin{omoidasou}
+\bkrecall{3-8}{恒等式：どんな $x$ でも成り立つ式は、両辺の同じ形の項の係数が等しい（係数を比べる）。}
+\bkrecall{5-7}{$f'(x)=0$ の所が、山（いちばん大きい）や谷（いちばん小さい）の候補。増減表で確かめる。}
+\bkrecall{5-18}{線形：答えどうしをたしても答え。一般解（数が決まっていない答え）と特殊解。}
+\bkrecall{6-6}{固有角振動数 $\omega_{\mathrm n}=\sqrt{\dfrac km}$。ばね $0.5$\,kg・$8$\,N/m なら $\omega_{\mathrm n}=4$\,rad/s。}
+\bkrecall{6-10}{$e^{j\omega t}=\cos\omega t+j\sin\omega t$。$e^{j\omega t}$ を微分すると $j\omega$ がかかる（90°進む）。実部をとると $\cos\omega t$。}
+\bkrecall{6-12}{$m\ddot x+c\dot x+kx=0$ の答えは、$e^{-\alpha t}$ でやがて消える。$\zeta=\dfrac{c}{2\sqrt{mk}}$。重解のときは $te^{st}$。}
+\end{omoidasou}
+
+%% ---------------- 数学の道具 ----------------
+\bksection{doguu}{数学の道具}
+
+\bkstage{me}{目でわかる}{ゆすり続ける式}{\bklevel{3}}
+
+\bksubsection{1}{ゆすり続けるときの式}
+
+\label{bk:6-13:shiki}6-12 のばね・質量・ダンパーのおもりに、外から、向きと大きさがくり返し変わる力 $F_0\cos\omega t$ を加え続けます。$F_0$〔N〕は力のいちばん大きい値、$\omega$〔rad/s〕はゆする速さ（ゆすりの角振動数）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[pattern=north east lines, pattern color=bkGray] (-2.5,-9) rectangle (0,9);
+  \draw[bkInk, line width=0.9pt] (0,-9) -- (0,9);
+  \bkvinspring{(0,4.2)}{(30,4.2)}
+  \bkvindamper{(0,-4.2)}{30}
+  \fill[bkBlue!14] (30,-8) rectangle (46,8);
+  \draw[bkBlue!70!black, line width=0.9pt] (30,-8) rectangle (46,8);
+  \node[font=\sffamily\small] at (38,0) {$m$};
+  \fill[bkInk] (33.5,-9.2) circle (1.2) (42.5,-9.2) circle (1.2);
+  \draw[bkGray, line width=0.8pt] (-2.5,-10.4) -- (78,-10.4);
+  \draw[bk arrow, bkRed, line width=1.4pt] (47.5,0) -- (62,0);
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (63,0) {$F_0\cos\omega t$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (15,9.5) {ばね $k$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (15,-12) {ダンパー $c$};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=3pt]}] (38,12) -- (50,12);
+  \node[font=\sffamily\footnotesize, anchor=west] at (51,12) {$x$};
+  \draw[bkInk, line width=0.5pt] (38,10.5) -- (38,13.5);
+\end{tikzpicture}
+\bkfigcaption{ばね・質量・ダンパーのおもりを、力 $F_0\cos\omega t$ でゆすり続ける。}
+\end{bkfigure}
+
+おもりにはたらく力は、ばねの力 $-kx$、ダンパーの力 $-c\dot x$、ゆする力 $F_0\cos\omega t$ の3つです。力の合計＝質量×加速度（5-5）なので、
+\begin{bkvinhk}[0.5]
+m\ddot x=-kx-c\dot x+F_0\cos\omega t & 力の合計＝質量×加速度 \\
+m\ddot x+c\dot x+kx=F_0\cos\omega t & $-kx$ と $-c\dot x$ を左辺へ移した \\
+\end{bkvinhk}
+左辺は 6-12 とまったく同じです。ちがうのは、右辺が0でなく、ゆする力になったことだけです。このように、外からゆすり続けられて起きるゆれを、\textbf{強制振動}（きょうせいしんどう）といいます。\bkidx{きょうせいしんどう}{強制振動}
+
+\begin{seikaku}
+やってみようのように、おもりではなく、つけ根を $Y\cos\omega t$ と動かしてゆらすこともあります。ばねののびは「おもりの位置－つけ根の位置」なので、ダンパーがなければ $m\ddot x=-k(x-Y\cos\omega t)$、つまり $m\ddot x+kx=kY\cos\omega t$ です。右辺の「ゆする力」が $kY\cos\omega t$ になるだけで、同じ形の式になります。
+\end{seikaku}
+
+\Needspace{8\baselineskip}\bkstage{te}{手でわかる}{表計算でゆすってみる}{\bklevel{3}}
+
+\bksubsection{2}{表計算でゆすってみよう}
+
+\label{bk:6-13:hyo}6-12 のばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\bkvinNsm{0.4}$。$\omega_{\mathrm n}=4$\,rad/s、$\zeta=0.1$）を、$F_0=\qty{0.8}{N}$ でゆすります。はじめは静かに止まっていた（$x=0$、$\dot x=0$）とします。
+
+表計算の型は 6-12 と同じです。ちがうのは、加速度の式に「ゆする力」が入ることだけです。$\Delta t$ はF2、ゆすりの角振動数 $\omega$ はG2のセルに入れます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[l,m,wd=26mm] Q[l,m,wd=58mm]}, rowsep=1.5pt}
+列 & 中身 & 3行めの式（下へコピー） \\
+A & 時刻 $t$ & \texttt{=A2+\$F\$2} \\
+B & ゆする力 & \texttt{=0.8*COS(\$G\$2*A3)} \\
+C & 位置 $x$ & \texttt{=C2+D3*\$F\$2} \\
+D & 速度 $v$ & \texttt{=D2+E2*\$F\$2} \\
+E & 加速度 $a$ & \texttt{=(B3-0.4*D3-8*C3)/0.5} \\
+\end{bktable}
+\bktabcaption{2行めは $t=0$、$x=0$、$v=0$。加速度は「（ゆする力－ダンパーの力－ばねの力）÷質量」。}
+\end{bkcenter}
+$\omega$ を2（ゆっくり）、4（ちょうど $\omega_{\mathrm n}$）、8（速く）にして、$\Delta t=\qty{0.01}{s}$ で20秒まで計算しました。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=116mm, height=34mm, xmin=0, xmax=20.5, ymin=-0.24, ymax=0.24, xtick={5,10,15,20}, ytick={-0.2,0.2}, xlabel={$t$（s）}, ylabel={$x$（m）}, every axis x label/.style={at={(ticklabel* cs:1)}, anchor=west, xshift=1mm, font=\sffamily\small}]
+  \addplot[bkGray, line width=0.5pt, domain=0:20.2] {0};
+  \addplot[bkGray, line width=0.8pt, dashed, domain=0:20.2] {0.1322};
+  \addplot[bkGray, line width=0.8pt, dashed, domain=0:20.2] {-0.1322};
+  \addplot[bkcurve, line width=1.2pt, domain=0:20, samples=500] {0.131004*cos(deg(2*x))+0.017467*sin(deg(2*x))+exp(-0.4*x)*(-0.131004*cos(deg(3.97995*x))-0.021944*sin(deg(3.97995*x)))};
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt] at (axis cs:20.3,0.245) {$\omega=2$（ゆっくり）：やがて $\pm0.132$\,m};
+\end{axis}
+\end{tikzpicture}\par\vspace{1mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=116mm, height=44mm, xmin=0, xmax=20.5, ymin=-0.62, ymax=0.62, xtick={5,10,15,20}, ytick={-0.5,0.5}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \addplot[bkGray, line width=0.5pt, domain=0:20.2] {0};
+  \addplot[bkGray, line width=0.8pt, dashed, domain=0:20.2] {0.5};
+  \addplot[bkGray, line width=0.8pt, dashed, domain=0:20.2] {-0.5};
+  \addplot[bkRed, line width=1.2pt, domain=0:20, samples=600] {0.5*sin(deg(4*x))-0.502519*exp(-0.4*x)*sin(deg(3.97995*x))};
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt] at (axis cs:20.3,0.63) {$\omega=4$（ちょうど $\omega_{\mathrm n}$）：やがて $\pm0.5$\,m};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$F_0=\qty{0.8}{N}$ で、ゆっくり（上）と、ちょうど $\omega_{\mathrm n}$（下）でゆすった。たての目もりは上と下でちがう。点線は、やがて落ち着くゆれの大きさ。}
+\label{bk:6-13:fig-hyo}
+\end{bkfigure}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=116mm, height=34mm, xmin=0, xmax=20.5, ymin=-0.24, ymax=0.24, xtick={5,10,15,20}, ytick={-0.2,0.2}, xlabel={$t$（s）}, ylabel={$x$（m）}]
+  \addplot[bkGray, line width=0.5pt, domain=0:20.2] {0};
+  \addplot[bkOrange, line width=1.2pt, domain=0:20, samples=800] {-0.032751*cos(deg(8*x))+0.004367*sin(deg(8*x))+exp(-0.4*x)*(0.032751*cos(deg(3.97995*x))-0.005486*sin(deg(3.97995*x)))};
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt] at (axis cs:20.3,0.245) {$\omega=8$（速く）：やがて $\pm0.033$\,m};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{速く（$\omega=8$）ゆすった。たての目もりは、いちばん上のグラフと同じ。}
+\end{bkfigure}
+
+グラフから、3つのことに気づきます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{はじめはごちゃごちゃ、やがて同じリズムに。}はじめの数秒は、ゆれの山の高さがそろいません。10秒ほどたつと、どれも、ゆすった $\omega$ と同じリズムで、同じ大きさでゆれ続けます。
+\item \textbf{$\omega=\omega_{\mathrm n}$ でとても大きい。}ゆれの大きさは、$\omega=2$ で0.132\,m、$\omega=4$ で0.5\,m、$\omega=8$ で0.033\,m です。力の大きさはどれも同じ0.8\,N なのに、ちょうど $\omega_{\mathrm n}$ でゆすると、ゆっくりのときの約4倍、速いときの約15倍もゆれます。
+\item \textbf{速くゆすると、ほとんど動かない。}おもりは重いので、力の向きがすぐに変わると、ついていけないのです。
+\end{enumerate}
+力を0.8\,N のまま、ばねを「ゆっくりおし続けた」ときののびは、$\frac{F_0}{k}=\frac{0.8}{8}=\qty{0.1}{m}$ です。ちょうど $\omega_{\mathrm n}$ でゆすると、その5倍（0.5\,m）もゆれたことになります。
+
+\bksubsection{3}{ゆれの大きさをグラフに：共振曲線}
+
+\label{bk:6-13:kyoshin}$\omega$ をいろいろ変えて、落ち着いたあとのゆれの大きさ（振幅）を、表計算で読みとりました。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1.2pt, cells={font=\small}}
+$\omega$ & 1 & 2 & 3 & 3.5 & 3.8 & 4 \\
+振幅（m） & 0.107 & 0.132 & 0.216 & 0.342 & 0.468 & 0.500 \\
+\end{bktable}\par\vspace{2pt}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1.2pt, cells={font=\small}}
+$\omega$ & 4.2 & 4.5 & 5 & 6 & 8 & \\
+振幅（m） & 0.428 & 0.287 & 0.162 & 0.078 & 0.033 & \\
+\end{bktable}
+\bktabcaption{$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\bkvinNsm{0.4}$、$F_0=\qty{0.8}{N}$。}
+\end{bkcenter}
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.58\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=78mm, height=52mm, xmin=0, xmax=2.6, ymin=0, ymax=11, xtick={0.5,1,1.5,2,2.5}, ytick={1,5,10}, xlabel={$\dfrac{\omega}{\omega_{\mathrm n}}$}, ylabel={振幅÷$\dfrac{F_0}{k}$}]
+  \addplot[bkPurple, line width=1.3pt, domain=0:2.5, samples=400] {1/sqrt((1-x^2)^2+(0.1*x)^2)};
+  \addplot[bkRed, line width=1.5pt, domain=0:2.5, samples=300] {1/sqrt((1-x^2)^2+(0.2*x)^2)};
+  \addplot[bkcurve, domain=0:2.5, samples=200] {1/sqrt((1-x^2)^2+(0.4*x)^2)};
+  \addplot[bkOrange, line width=1.5pt, domain=0:2.5, samples=100] {1/sqrt((1-x^2)^2+(1.0*x)^2)};
+  \addplot[only marks, mark=*, mark size=1.5pt, bkInk] coordinates {(0.25,1.07) (0.5,1.32) (0.75,2.16) (0.875,3.42) (0.95,4.68) (1,5.0) (1.05,4.28) (1.125,2.87) (1.25,1.62) (1.5,0.78) (2,0.33)};
+  \node[font=\sffamily\footnotesize, text=bkPurple, anchor=west] at (axis cs:1.08,9.6) {$\zeta=0.05$};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (axis cs:1.2,5.6) {$\zeta=0.1$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=west] at (axis cs:1.32,3.2) {$\zeta=0.2$};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=south west] at (axis cs:1.7,1.05) {$\zeta=0.5$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.39\linewidth}
+\raggedright
+たては、振幅を「ゆっくりおし続けたときののび $\frac{F_0}{k}$」でわった値（何倍ゆれるか）です。横は、$\omega$ を $\omega_{\mathrm n}$ でわった値です。黒い点が上の表（$\zeta=0.1$）です。\par\vspace{3pt}
+ダンパー（$\zeta$）を4通りに変えてかきました。
+\end{minipage}\par\vspace{4pt}
+このようなグラフを\textbf{共振曲線}（きょうしんきょくせん）といいます。\bkidx{きょうしんきょくせん}{共振曲線}グラフから、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item ゆする速さ $\omega$ が $\omega_{\mathrm n}$ に近いと、山のように大きくなる。このように、その物が自分でゆれる角振動数の近くでゆすると、大きくゆれることを\textbf{共振}（きょうしん）といいます。\bkidx{きょうしん}{共振}
+\item ダンパーが弱い（$\zeta$ が小さい）ほど、山は高く、細くとがる。$\zeta=0.05$ では約10倍、$\zeta=0.1$ では約5倍、$\zeta=0.5$ では1.15倍ほど。
+\item ゆっくり（$\omega$ が0に近い）なら、ほぼ1倍。速く（$\omega$ が大きい）なると、0に近づく。
+\end{itemize}
+
+\bkkokomade[ここまでわかれば、ゴールです。この先は、式でくわしく調べます。]
+
+\Needspace{10\baselineskip}\bkstage{shiki}{式でわかる}{ゆすりに合うゆれを、式で求める}{\bklevel{5}}
+
+\bksubsection{4}{答えは「ゆすりに合うゆれ」＋「自分のゆれ」}
+
+\label{bk:6-13:wa}\pageref{bk:6-13:fig-hyo}ページのグラフの「はじめはごちゃごちゃ、やがて同じリズム」を、式で考えます。
+
+$m\ddot x+c\dot x+kx=F_0\cos\omega t$ をみたす関数を、1つ見つけたとします。これを $x_{\mathrm p}$ と書きます（ゆすりに合うゆれ。p は particular（特殊な）の頭文字）。一方、6-12 で解いた、右辺が0の式の答えを $x_{\mathrm h}$ と書きます（自分のゆれ）。この2つをたした $x=x_{\mathrm p}+x_{\mathrm h}$ を、式の左辺に入れてみます。
+\begin{bkvinhk}[0.62]
+m\ddot x+c\dot x+kx & $x=x_{\mathrm p}+x_{\mathrm h}$ を入れる \\
+=(m\ddot x_{\mathrm p}+c\dot x_{\mathrm p}+kx_{\mathrm p})+(m\ddot x_{\mathrm h}+c\dot x_{\mathrm h}+kx_{\mathrm h}) & 微分はたし算に分けられる（5-4） \\
+=F_0\cos\omega t+0 & $x_{\mathrm p}$ は右辺に合い、$x_{\mathrm h}$ は0になる \\
+\end{bkvinhk}
+たしたものも答えです（5-18 の線形の考え）。
+\bkvinframe{\sffamily\bfseries 答え\ ＝\ ゆすりに合うゆれ $x_{\mathrm p}$\ ＋\ 自分のゆれ $x_{\mathrm h}$}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 自分のゆれ $x_{\mathrm h}$ は、6-12 の $e^{-\alpha t}(A\cos\omega_{\mathrm d}t+B\sin\omega_{\mathrm d}t)$ です。$e^{-\alpha t}$ がかかっているので、やがて消えます。
+\item だから、時間がたつと、ゆすりに合うゆれ $x_{\mathrm p}$ だけが残ります。これが「やがて同じリズムで、同じ大きさでゆれ続ける」の正体です。
+\item はじめの数秒の「ごちゃごちゃ」は、$\omega$ でゆれる $x_{\mathrm p}$ と、$\omega_{\mathrm d}$ でゆれる $x_{\mathrm h}$ が重なっていたからです。
+\end{itemize}
+$A$、$B$ は、はじめの状態に合わせて決めます。$x_{\mathrm p}$ だけでは、はじめの状態に合わせられないからです。大学の本では、$x_{\mathrm p}$ を\textbf{特殊解}、$x_{\mathrm h}$ をふくめた答えを\textbf{一般解}といいます（5-18）。
+
+\bksubsection{5}{ゆすりに合うゆれの求め方1：係数を比べる}
+
+\label{bk:6-13:keisu}$x_{\mathrm p}$ を見つけます。かぎは、6-12 と同じく「どんな形を置けばよいか」です。
+
+\bkvinhead{ダンパーがないとき}
+まず $\ddot x+4x=3\cos t$ を考えます。右辺が $\cos t$ なので、$x$ も $\cos t$ の形でゆれると考えて、$x=P\cos t$（$P$ は定数）と置きます。$\cos t$ は、2回微分すると $-\cos t$ にもどるので、左辺も $\cos t$ の形になるはずです。
+\begin{bkvinhk}[0.5]
+\ddot x=-P\cos t & $(\cos t)''=-\cos t$（5-15） \\
+\ddot x+4x=-P\cos t+4P\cos t & 左辺に入れた \\
+\phantom{\ddot x+4x}=3P\cos t & まとめた \\
+3P\cos t=3\cos t & 右辺と同じになるように \\
+P=1 & $\cos t$ の係数を比べた（3-8） \\
+\end{bkvinhk}
+答えは $x_{\mathrm p}=\cos t$ です。入れて確かめると、$-\cos t+4\cos t=3\cos t$ で、たしかに右辺と同じです。
+
+\bkvinhead{ダンパーがあるとき}
+次に $\ddot x+2\dot x+5x=10\cos t$ です（6-12 の車B を、力でゆすった式）。こんどは $x=P\cos t$ だけではうまくいきません。$\dot x$ の項から $\sin t$ が出てくるからです。そこで、$\sin t$ も入れて、$x=P\cos t+Q\sin t$ と置きます。
+\begin{bkvinhk}[0.55]
+\dot x=-P\sin t+Q\cos t & 1回微分した \\
+\ddot x=-P\cos t-Q\sin t & もう1回微分した \\
+\end{bkvinhk}
+左辺 $\ddot x+2\dot x+5x$ を、$\cos t$ の項と $\sin t$ の項に分けて集めます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm]}, rowsep=1.5pt}
+ & $\cos t$ の係数 & $\sin t$ の係数 \\
+$\ddot x$ & $-P$ & $-Q$ \\
+$2\dot x$ & $2Q$ & $-2P$ \\
+$5x$ & $5P$ & $5Q$ \\
+合計 & $4P+2Q$ & $-2P+4Q$ \\
+右辺 & 10 & 0 \\
+\end{bktable}
+\bktabcaption{どの時刻でも左辺＝右辺になるには、$\cos t$ の係数どうし、$\sin t$ の係数どうしが等しい（3-8 の恒等式）。}
+\end{bkcenter}
+「係数どうしが等しい」は、$t=0$ と $t=\frac\pi2$ を入れても確かめられます。$t=0$ では $\cos0=1$、$\sin0=0$ なので $\cos t$ の係数だけが残り、$t=\frac\pi2$ では $\sin t$ の係数だけが残るからです。
+\begin{bkvinhk}[0.5]
+4P+2Q=10,\quad -2P+4Q=0 & 係数を比べた \\
+P=2Q & 2つめの式から \\
+8Q+2Q=10,\quad Q=1,\quad P=2 & 1つめの式に入れた \\
+\end{bkvinhk}
+\bkvinframe{\sffamily\bfseries $x_{\mathrm p}=2\cos t+\sin t$}
+4-9 の合成で、$x_{\mathrm p}$ は振幅 $\sqrt{2^2+1^2}=\sqrt5\approx2.24$ の1つの波にまとめられます。
+
+\bkvinhead{自分のゆれを足して、はじめの状態に合わせる}
+はじめ止まっていた（$x(0)=0$、$\dot x(0)=0$）とします。自分のゆれは、6-12 の車B と同じ $e^{-t}(A\cos2t+B\sin2t)$ です。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 答えの形：$x=2\cos t+\sin t+e^{-t}(A\cos2t+B\sin2t)$
+\item 位置：$x(0)=2+A=0$ より $A=-2$
+\item 速度：$\dot x(0)=1+(-A+2B)=0$ より $1+2+2B=0$、$B=-1.5$
+\end{enumerate}
+答えは $x=2\cos t+\sin t-e^{-t}(2\cos2t+1.5\sin2t)$ です。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=78mm, height=48mm, xmin=0, xmax=10.6, ymin=-3, ymax=3, xtick={2,4,6,8,10}, ytick={-2,2}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.5pt, domain=0:10.4] {0};
+  \addplot[bkOrange, line width=1.1pt, dashed, domain=0:10.3, samples=150] {2*cos(deg(x))+sin(deg(x))};
+  \addplot[bkGreen!70!black, line width=1.1pt, dashed, domain=0:10.3, samples=150] {-exp(-x)*(2*cos(deg(2*x))+1.5*sin(deg(2*x)))};
+  \addplot[bkcurve, domain=0:10.3, samples=200] {2*cos(deg(x))+sin(deg(x))-exp(-x)*(2*cos(deg(2*x))+1.5*sin(deg(2*x)))};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\raggedright
+\footnotesize
+{\color{bkOrange!80!black}オレンジの点線}：ゆすりに合うゆれ $2\cos t+\sin t$\par
+{\color{bkGreen!50!black}緑の点線}：自分のゆれ（すぐに消える）\par
+{\color{bkBlue!80!black}青}：たしたもの（本当の動き）\par\vspace{3pt}
+\normalsize
+$t=0$ では、緑がオレンジを打ち消して0から始まります。3秒ほどで緑は消え、青はオレンジにぴったり重なります。
+\end{minipage}
+
+\bksubsection{6}{ゆすりに合うゆれの求め方2：複素数で}
+
+\label{bk:6-13:fukuso}係数を比べる方法は、$\cos$ と $\sin$ の2つを追いかけるので、計算が長くなります。6-10 のオイラーの公式を使うと、もっと短くなります。
+
+\bkvinhead{右辺を、回る矢印の影と見る}
+$\cos t$ は、$e^{jt}=\cos t+j\sin t$ の実部（横への影）です（6-10）。そこで、本当の式のかわりに、
+\bkvinline{$\ddot x+2\dot x+5x=10e^{jt}$}
+を解いて、最後に実部をとることにします。式が線形で、係数がどれも実数なので、「実部をとってから解く」と「解いてから実部をとる」は同じ答えになります。
+
+\bkvinhead{微分は $j$ をかけること}
+$x=Xe^{jt}$（$X$ は複素数の定数）と置きます。6-10 で、$e^{j\omega t}$ を微分すると $j\omega$ がかかることを学びました（ここでは $\omega=1$）。
+\begin{bkvinhk}[0.55]
+\dot x=jXe^{jt},\quad \ddot x=j^2Xe^{jt}=-Xe^{jt} & 微分すると $j$ がかかる。$j^2=-1$ \\
+(-1+2j+5)Xe^{jt}=10e^{jt} & 左辺に入れて、$Xe^{jt}$ でくくった \\
+(4+2j)X=10 & 両辺を $e^{jt}$ でわった \\
+X=\frac{10}{4+2j}=\frac{10(4-2j)}{(4+2j)(4-2j)} & 分母と分子に、分母の共役 $4-2j$ をかけた（6-8） \\
+\phantom{X}=\frac{40-20j}{16+4}=2-j & $(4+2j)(4-2j)=16-4j^2=20$ \\
+\end{bkvinhk}
+微分方程式が、$X$ の1次方程式（わり算1回）になりました。実部をとります。
+\begin{bkvinhk}[0.62]
+x=\mathrm{Re}\bigl[(2-j)(\cos t+j\sin t)\bigr] & $e^{jt}$ をオイラーの公式で \\
+\phantom{x}=\mathrm{Re}\bigl[2\cos t+2j\sin t-j\cos t-j^2\sin t\bigr] & 展開した \\
+\phantom{x}=2\cos t+\sin t & 実部は $2\cos t$ と $-j^2\sin t=\sin t$ \\
+\end{bkvinhk}
+係数を比べた答えと、ぴったり同じです。
+
+\bkvinhead{$X$ の大きさが振幅、角が位相のおくれ}
+$X=2-j$ を複素平面に点で打つと、原点からの距離は $\lvert X\rvert=\sqrt{2^2+1^2}=\sqrt5$ で、これは振幅 $\sqrt5$ と同じです。角は $-26.6°$（$\tan^{-1}\frac12=26.6°$ だけ時計回り）で、ゆれが力より $26.6°$ ぶん、おくれていることを表します（⑧でくわしく）。この $X$ を\textbf{複素振幅}といいます。
+
+\bkkigocards{\bkkigocard{$X$}{エックス（大文字）}{複素振幅。$\lvert X\rvert$ が振幅、偏角が位相（おくれは負の角）}{complex amplitude}{6-13}}
+{\bkkigocard{$Q$}{キュー}{Q値。共振の山の鋭さ。$\zeta$ が小さいとき $Q\approx\frac{1}{2\zeta}$。流量の $Q$ とは別}{quality factor}{6-13}}
+
+\bkvinhead{どんな $m$、$c$、$k$ でも}
+$m\ddot x+c\dot x+kx=F_0\cos\omega t$ で、同じことをします。$x=Xe^{j\omega t}$ と置くと、微分は $j\omega$ をかけることなので、
+\begin{bkvinhk}[0.5]
+\bigl(m(j\omega)^2+c(j\omega)+k\bigr)X=F_0 & $\ddot x\to(j\omega)^2$、$\dot x\to j\omega$ \\
+(k-m\omega^2+jc\omega)X=F_0 & $j^2=-1$ \\
+X=\frac{F_0}{k-m\omega^2+jc\omega} & 両辺を（　）でわった \\
+\end{bkvinhk}
+6-12 の特性方程式の作り方（$\ddot x\to s^2$、$\dot x\to s$）の $s$ に、$j\omega$ を入れた形です。振幅は $X$ の大きさなので、分母の大きさ（三平方の定理、6-9）でわって、
+\bkvinframe{\sffamily\bfseries 振幅\quad $\lvert X\rvert=\dfrac{F_0}{\sqrt{(k-m\omega^2)^2+(c\omega)^2}}$}
+\pageref{bk:6-13:hyo}ページのばね（$m=0.5$、$k=8$、$c=0.4$、$F_0=0.8$）で確かめます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=10mm] Q[c,m,wd=24mm] Q[c,m,wd=14mm] Q[c,m,wd=42mm] Q[c,m,wd=16mm]}, rowsep=1.5pt, cells={font=\small}}
+$\omega$ & $k-m\omega^2$ & $c\omega$ & $\sqrt{(k-m\omega^2)^2+(c\omega)^2}$ & 振幅 \\
+2 & $8-2=6$ & 0.8 & 6.053 & 0.132 \\
+4 & $8-8=0$ & 1.6 & 1.6 & 0.500 \\
+8 & $8-32=-24$ & 3.2 & 24.21 & 0.033 \\
+\end{bktable}
+\bktabcaption{表計算で読んだ振幅（0.132、0.5、0.033）と同じになった。}
+\end{bkcenter}
+
+\bkvinhead{なぜ $\omega_{\mathrm n}$ で大きくなるのか}
+分母の $k-m\omega^2+jc\omega$ を、3つの矢印のたし算と見ます。$k$（ばね）は右向き、$-m\omega^2$（質量）は左向き、$jc\omega$（ダンパー）は上向きです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \foreach \xs/\a/\b/\ttl/\sub in {0/17/3/{ゆっくり}/{分母が大きい\\→ 小さくゆれる}, 44/0/6/{ちょうど $\omega_{\mathrm n}$}/{分母がいちばん小さい\\→ 大きくゆれる}, 88/-22/12/{速く}/{分母が大きい\\→ 小さくゆれる}} {
+    \begin{scope}[xshift=\xs mm]
+      \draw[bkGray, line width=0.5pt] (-24,0) -- (20,0);
+      \draw[bkGray, line width=0.5pt] (0,-2) -- (0,14);
+      \fill[bkInk] (0,0) circle (0.8);
+      \ifdim\a pt=0pt\else\draw[-{Stealth[length=4pt]}, bkBlue, line width=1.3pt] (0,-1.5) -- (\a,-1.5);\fi
+      \draw[-{Stealth[length=4pt]}, bkGreen!60!black, line width=1.3pt] (\a,0) -- (\a,\b);
+      \draw[-{Stealth[length=4.5pt]}, bkInk, line width=1.6pt] (0,0) -- (\a,\b);
+      \node[font=\sffamily\footnotesize, anchor=north, align=center] at (0,-5) {\textbf{\ttl}\\\sub};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{青：$k-m\omega^2$（ばねと質量）、緑：$c\omega$（ダンパー）、黒：分母（たしたもの）。黒い矢印が短いほど、大きくゆれる。}
+\end{bkfigure}
+ゆすりがゆっくりだと、質量の矢印 $-m\omega^2$ は小さく、ばねの $k$ が勝って、分母は右向きに大きい。速いと、$-m\omega^2$ が大きく勝って、分母は左向きに大きい。\textbf{ちょうど $\omega=\omega_{\mathrm n}$（$m\omega^2=k$）のとき、ばねと質量の矢印がぴったり打ち消しあい}、ダンパーの $c\omega$ だけが残ります。だから分母がいちばん小さくなり、ゆれが大きくなるのです。ダンパーが弱いと、この残りがさらに小さいので、もっと大きくゆれます。
+
+\bksubsection{7}{いちばん大きくゆれる $\omega$ を、微分で求める}
+
+\label{bk:6-13:yama}共振の山のてっぺんは、ちょうど $\omega_{\mathrm n}$ でしょうか。5-7 の「$f'=0$ の所が山や谷」を使って調べます。
+
+振幅がいちばん大きいのは、分母 $\sqrt{(k-m\omega^2)^2+(c\omega)^2}$ がいちばん小さいときです。√ の中が小さいほど √ も小さいので、√ の中を $G(\omega)$ として（6-12 の判別式 $D$ と区別するため、$G$ と書きます）、そのいちばん小さい所をさがします。$m=0.5$、$k=8$、$c=0.4$ では、
+\begin{bkvinhk}[0.56]
+G(\omega)=(8-0.5\omega^2)^2+0.16\omega^2 & $(0.4\omega)^2=0.16\omega^2$ \\
+G'(\omega)=2(8-0.5\omega^2)\times(-\omega)+0.32\omega & 合成関数の微分（5-6）。$(8-0.5\omega^2)'=-\omega$ \\
+\phantom{G'(\omega)}=-16\omega+\omega^3+0.32\omega & 展開した \\
+\phantom{G'(\omega)}=\omega(\omega^2-15.68) & $\omega$ でくくった \\
+\end{bkvinhk}
+$G'(\omega)=0$ になるのは、$\omega=0$ か、$\omega^2=15.68$ のときです。$\omega$ は正なので、$\omega=\sqrt{15.68}\approx3.960$ です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=18mm] Q[c,m,wd=10mm] Q[c,m,wd=14mm] Q[c,m,wd=28mm] Q[c,m,wd=14mm]}, rowsep=1.5pt}
+$\omega$ & 0 & $\cdots$ & 3.960 & $\cdots$ \\
+$G'(\omega)$ & 0 & $-$ & 0 & $+$ \\
+$G(\omega)$ & & ↘ & いちばん小さい & ↗ \\
+振幅 & 0.1 & ↗ & いちばん大きい & ↘ \\
+\end{bktable}
+\bktabcaption{増減表（5-7）。$\omega=3.960$ で、振幅は山になる。}
+\end{bkcenter}
+てっぺんは、$\omega_{\mathrm n}=4$ より少しだけ左（$3.960$）でした。そのときの振幅は $0.8\div\sqrt{G(3.960)}\approx0.5025$\,m で、$\omega=4$ のときの0.5\,m より、ほんの少し大きいだけです。
+
+\bkvinhead{どんな $m$、$c$、$k$ でも}
+同じ計算を文字のままします。$G(\omega)=(k-m\omega^2)^2+c^2\omega^2$ です。
+\begin{bkvinhk}[0.56]
+G'(\omega)=2(k-m\omega^2)(-2m\omega)+2c^2\omega & 合成関数の微分 \\
+\phantom{G'(\omega)}=2\omega\bigl\{c^2-2m(k-m\omega^2)\bigr\} & $2\omega$ でくくった \\
+k-m\omega^2=\frac{c^2}{2m},\quad \omega^2=\frac km-\frac{c^2}{2m^2} & $\{\ \}=0$ とおいた \\
+\omega^2=\omega_{\mathrm n}^2(1-2\zeta^2) & $\frac{c^2}{2m^2}=\frac{4\zeta^2mk}{2m^2}=2\zeta^2\frac km$（$c=2\zeta\sqrt{mk}$）\\
+\end{bkvinhk}
+\bkvinframe{\sffamily\bfseries いちばん大きくゆれる角振動数\quad $\omega=\omega_{\mathrm n}\sqrt{1-2\zeta^2}$\\[3pt]
+\sffamily\bfseries そのときの振幅\quad $\dfrac{F_0}{k}\times\dfrac{1}{2\zeta\sqrt{1-\zeta^2}}$}
+（振幅の式は、$\omega^2=\omega_{\mathrm n}^2(1-2\zeta^2)$ を $G$ に入れると $G=4\zeta^2k^2(1-\zeta^2)$ になることから出ます。）
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=26mm] *{4}{Q[c,m,wd=16mm]}}, rowsep=1.5pt}
+$\zeta$ & 0.05 & 0.1 & 0.2 & 0.5 \\
+山の $\omega\div\omega_{\mathrm n}$ & 0.9975 & 0.990 & 0.959 & 0.707 \\
+山の高さ（倍） & 10.0 & 5.03 & 2.55 & 1.15 \\
+\end{bktable}
+\bktabcaption{$\zeta$ が小さいと、山はほぼ $\omega_{\mathrm n}$ にあり、高さはほぼ $\frac{1}{2\zeta}$ 倍。}
+\end{bkcenter}
+$\zeta$ が $\frac{1}{\sqrt2}\approx0.707$ より大きいと、$1-2\zeta^2$ が負になり、山はなくなります（$\omega=0$ のときがいちばん大きい）。
+
+\bksubsection{8}{ゆれのおくれ：位相}
+
+\label{bk:6-13:isou}やってみようでは、ゆっくりゆすると指と同じ向き、速いと反対向きでした。これも $X$ の角でわかります。$X=\frac{F_0}{k-m\omega^2+jc\omega}$ の角は、分母の角の反対（マイナス）です（わり算は角のひき算：6-9）。分母の角を $\phi$ とすると、ゆれは力より $\phi$ だけおくれます。これを\textbf{位相のおくれ}といいます。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=70mm, height=48mm, xmin=0, xmax=2.6, ymin=0, ymax=195, xtick={0.5,1,1.5,2,2.5}, ytick={90,180}, yticklabels={90°,180°}, xlabel={$\dfrac{\omega}{\omega_{\mathrm n}}$}, ylabel={おくれ $\phi$}]
+  \addplot[bkRed, line width=1.5pt, domain=0:2.5, samples=300] {atan2(0.2*x,1-x^2)};
+  \addplot[bkOrange, line width=1.5pt, domain=0:2.5, samples=200] {atan2(1.0*x,1-x^2)};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black, anchor=west] at (axis cs:1.15,55) {$\zeta=0.1$};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=north west] at (axis cs:1.9,128) {$\zeta=0.5$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\raggedright
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{\bkTT}●}]
+\item ゆっくり：分母は右向き。おくれ0°で、力と同じ向き。
+\item $\omega_{\mathrm n}$：分母は真上。おくれ90°。
+\item 速い：分母は左向き。おくれ180°で、力と反対向き。
+\end{itemize}
+\end{minipage}\par\vspace{4pt}
+\pageref{bk:6-13:hyo}ページのばねでは、$\omega=2$ で $7.6°$、$\omega=4$ で $90°$、$\omega=8$ で $172.4°$ です（$\tan\phi=\frac{c\omega}{k-m\omega^2}$）。
+
+\bkvinhead{\bkhatenaref の答え：ブランコは、いつおせばよいか}
+ちょうど $\omega_{\mathrm n}$ でゆするとき、ゆれ（位置）は力より $90°$、つまり $\frac14$ 周期おくれます。位置を微分した速度は、位置より $\frac14$ 周期進んでいます（6-10：微分は $90°$ 進める）。だから、\textbf{速度と力は、ぴったり同じタイミング}になります。
+
+「動いている向きに、いつもおす」。おす力が、いつも動きと同じ向きなので、力はいつも正の仕事（5-12）をして、エネルギーをつぎこみ続けます。ブランコなら、ブランコ自身のリズム（$\omega_{\mathrm n}$）で、前へ動いているときに前へおせばよいのです。\textbf{はてな？の答えは、「その物が自分でゆれるリズムで、動いている向きにおす」}です。
+
+\bksubsection{9}{ダンパーがなく、ちょうど $\omega_{\mathrm n}$ でゆすると}
+
+\label{bk:6-13:fueru}$\ddot x+4x=\cos2t$ を考えます（$\omega_{\mathrm n}=2$ で、ちょうど $\omega=2$ でゆする）。⑤と同じく $x=P\cos2t+Q\sin2t$ と置くと、
+\bkvinline{$\ddot x+4x=(-4P+4P)\cos2t+(-4Q+4Q)\sin2t=0$}
+となり、右辺の $\cos2t$ にはなりません。$\cos2t$ と $\sin2t$ は、それ自身が「自分のゆれ」（右辺が0の式の答え）なので、入れると0になってしまうのです。
+
+6-12 の重解のときと同じように、$t$ をかけた $x=\frac14t\sin2t$ を入れてみます。
+\begin{bkvinhk}[0.56]
+\dot x=\frac14\sin2t+\frac12t\cos2t & 積の微分（5-6） \\
+\ddot x=\frac12\cos2t+\frac12\cos2t-t\sin2t & もう1回、積の微分 \\
+\phantom{\ddot x}=\cos2t-t\sin2t & まとめた \\
+\ddot x+4x=\cos2t-t\sin2t+t\sin2t & $4x=t\sin2t$ をたした \\
+\phantom{\ddot x+4x}=\cos2t & \\
+\end{bkvinhk}
+たしかに答えです。ゆれの大きさ $\frac14t$ は、時間に比例して、どこまでも大きくなり続けます。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=78mm, height=46mm, xmin=0, xmax=21, ymin=-5.6, ymax=5.6, xtick={5,10,15,20}, ytick={-5,5}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.5pt, domain=0:20.5] {0};
+  \addplot[bkGray, line width=0.9pt, dashed, domain=0:20.2] {x/4};
+  \addplot[bkGray, line width=0.9pt, dashed, domain=0:20.2] {-x/4};
+  \addplot[bkRed, line width=1.2pt, domain=0:20, samples=500] {x/4*sin(deg(2*x))};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\raggedright
+$x=\frac14t\sin2t$ のグラフ。点線 $\pm\frac14t$ のあいだで、ゆれがどんどん大きくなる。\par\vspace{3pt}
+本物の物には、かならず少しはダンパー（空気の抵抗、材料の中のまさつ）があるので、ゆれは無限には大きくなりません。でも、$\zeta$ が0.01 なら山の高さは約50倍で、物がこわれることもあります。
+\end{minipage}
+
+\bksubsection{10}{共振の鋭さ：Q 値}
+
+\label{bk:6-13:q}共振曲線の山の「鋭さ」を、1つの数で表します。
+
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=72mm, height=50mm, xmin=2, xmax=6.2, ymin=0, ymax=5.8, xtick={3,4,5,6}, ytick={1,5.025}, yticklabels={1,5.03}, xlabel={$\omega$}, ylabel={倍}]
+  \addplot[bkRed, line width=1.5pt, domain=2:6, samples=300] {1/sqrt((1-(x/4)^2)^2+(0.2*x/4)^2)};
+  \addplot[bkGray, line width=0.8pt, dashed, domain=2:6] {3.553};
+  \draw[bkInk, line width=0.9pt, {Stealth[length=3.5pt]}-{Stealth[length=3.5pt]}] (axis cs:3.535,3.553) -- (axis cs:4.343,3.553);
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:3.94,3.35) {はば 0.81};
+  \node[font=\sffamily\footnotesize, text=bkGray!80!black, anchor=north west] at (axis cs:4.9,3.3) {山の $\frac{1}{\sqrt2}$ 倍};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}
+\raggedright
+山の高さの $\frac{1}{\sqrt2}\approx0.707$ 倍の高さで、山のはばをはかります。振幅の2乗（エネルギーや電力に比例する）で見ると、ちょうど半分になる高さなので、このはばを\textbf{半値幅}（はんちはば）といいます。\par\vspace{3pt}
+$\zeta=0.1$、$\omega_{\mathrm n}=4$ では、はばは約0.81\,rad/s です。
+\end{minipage}\par\vspace{4pt}
+$\omega_{\mathrm n}$ を半値幅でわった数を\textbf{Q 値}（キューち）といいます。\bkidx{きゅーち}{Q値}上の例では $Q=\frac{4}{0.81}\approx4.9$ です。$\zeta$ が小さいときは、$Q\approx\frac{1}{2\zeta}$（$\zeta=0.1$ なら5）で、山の高さ（約5倍）とほぼ同じです。Q 値が大きいほど、山は高く、細くなります。ラジオで1つの放送局だけを選びたいときは Q 値を大きく、建物のゆれをおさえたいときは Q 値を小さくします。
+
+\bksubsection{11}{電気の回路の共振：ラジオの同調}
+
+\label{bk:6-13:rlc}6-12 の RLC 回路に、交流の電源 $V_0\cos\omega t$ をつなぎます。回路を流れる電流 $i$〔A〕を考えます。
+\par\vspace{4pt}\noindent\begin{minipage}[c]{0.43\linewidth}
+\centering
+\begin{tikzpicture}[x=0.72mm, y=0.72mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,7) (0,17) -- (0,24) -- (8,24);
+  \draw[bkInk, line width=0.9pt] (8,24) to[out=90, in=90, looseness=1.6] (12,24) to[out=90, in=90, looseness=1.6] (16,24) to[out=90, in=90, looseness=1.6] (20,24) to[out=90, in=90, looseness=1.6] (24,24);
+  \draw[bkInk, line width=0.9pt] (24,24) -- (40,24) -- (40,18);
+  \draw[bkInk, line width=0.9pt, fill=white] (37.5,6) rectangle (42.5,18);
+  \draw[bkInk, line width=0.9pt] (40,6) -- (40,0) -- (24,0);
+  \draw[bkInk, line width=1.4pt] (20,-4) -- (20,4) (24,-4) -- (24,4);
+  \draw[bkInk, line width=0.9pt] (20,0) -- (0,0);
+  \draw[bkInk, line width=0.9pt, fill=white] (0,12) circle (5);
+  \draw[bkInk, line width=0.8pt, domain=-3.2:3.2, samples=30] plot (\x, {12+2*sin(deg(\x*1.0))});
+  \node[font=\sffamily\footnotesize, anchor=east, align=right] at (-6,12) {交流\\$V_0\cos\omega t$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (16,29) {$L$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (44,12) {$R$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (22,-5) {$C$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}
+\raggedright
+電流を $i=\mathrm{Re}[Ie^{j\omega t}]$ と書きます（$I$ は電流の複素振幅）。電圧を、部品ごとに求めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 抵抗：$Ri$ なので $RI$
+\item コイル：$L\frac{\dd i}{\dd t}$。微分は $j\omega$ をかけるので $j\omega LI$
+\item コンデンサー：$\frac qC$。$q$ は $i$ を積分したもの。積分は微分の逆なので、$j\omega$ でわって $\frac{I}{j\omega C}$
+\end{itemize}
+\end{minipage}\par\vspace{4pt}
+3つの電圧の和が、電源の電圧 $V_0$ と等しいので、
+\begin{bkvinhk}[0.56]
+\Bigl(R+j\omega L+\frac{1}{j\omega C}\Bigr)I=V_0 & 3つの部品の電圧をたした \\
+\Bigl\{R+j\Bigl(\omega L-\frac{1}{\omega C}\Bigr)\Bigr\}I=V_0 & $\frac1j=-j$（6-8） \\
+\lvert I\rvert=\frac{V_0}{\sqrt{R^2+\bigl(\omega L-\frac{1}{\omega C}\bigr)^2}} & 大きさをとった（三平方の定理） \\
+\end{bkvinhk}
+電流がいちばん大きいのは、分母がいちばん小さいとき、つまり $\omega L=\frac{1}{\omega C}$ のときです。$R^2$ は $\omega$ によらないので、もう1つの2乗が0になればよいのです。
+\bkvinframe{\sffamily\bfseries 共振の角振動数\quad $\omega=\dfrac{1}{\sqrt{LC}}$\qquad 共振周波数\quad $f=\dfrac{1}{2\pi\sqrt{LC}}$}
+これは、高校の物理で「共振周波数」として習う式です。6-12 の $\omega_{\mathrm n}=\frac{1}{\sqrt{LC}}$ と同じで、コイルの $j\omega L$ とコンデンサーの $\frac{1}{j\omega C}$ がちょうど打ち消しあう所です（ばねと質量の矢印が打ち消しあうのと同じ）。このとき、電流は $\frac{V_0}{R}$ になり、抵抗だけの回路と同じになります。
+
+\begin{seikaku}
+ばねで「位置の振幅」がいちばん大きくなるのは $\omega_{\mathrm n}\sqrt{1-2\zeta^2}$ でした（⑦）。電気の電流は、ばねでは「速度」にあたります。速度の振幅は $\omega\lvert X\rvert$ で、これがいちばん大きくなるのは、ちょうど $\omega_{\mathrm n}$ です。だから、電流の山は、ちょうど $\frac{1}{\sqrt{LC}}$ にあります。
+\end{seikaku}
+
+\noindent 6-12 の回路（$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$）に $V_0=\qty{1}{V}$ をつなぐと、共振周波数は約\qty{1592}{Hz}、そのときの電流は $\frac{1}{20}=\qty{0.05}{A}=\qty{50}{mA}$ です。\qty{1000}{Hz} では約\qty{10}{mA}、\qty{2000}{Hz} では約\qty{20}{mA} にへります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=46mm, xmin=0, xmax=3400, ymin=0, ymax=58, xtick={1000,1592,2000,3000}, xticklabels={1000,1592,2000,3000}, ytick={10,20,50}, xlabel={$f$（Hz）}, ylabel={電流（mA）}]
+  \addplot[bkRed, line width=1.5pt, domain=300:3300, samples=300] {1000/sqrt(400+(2*pi*x*0.01-1/(2*pi*x*1e-6))^2)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$、$V_0=\qty{1}{V}$ の回路の電流。共振周波数の近くだけ、大きな電流が流れる。}
+\end{bkfigure}
+
+\bkvinhead{ラジオの同調}
+空中には、たくさんの放送局の電波が、それぞれちがう周波数でとびかっています。ラジオのアンテナにつないだ LC の回路は、共振周波数に近い電波の電流だけを大きく流し、ほかの電波はほとんど流しません。ダイヤルを回すと、可変コンデンサーの $C$ が変わり、共振周波数が変わって、別の局が選べます。これを\textbf{同調}といいます。
+
+たとえば $L=\qty{200}{\micro H}$ で\qty{1}{MHz}（\qty{1000}{kHz}）の局を選ぶには、$f=\frac{1}{2\pi\sqrt{LC}}$ を $C$ について解いて、
+\bkvinline{$C=\dfrac{1}{(2\pi f)^2L}=\dfrac{1}{(6.283\times10^6)^2\times200\times10^{-6}}$}
+\bkvinline{$\phantom{C}\approx1.27\times10^{-10}\,\mathrm{F}=\qty{127}{pF}$}
+日本の AM 放送の周波数（\qty{531}{kHz}〜\qty{1602}{kHz}）を全部選ぶには、$C$ を約\qty{49}{pF}から約\qty{449}{pF}まで変えられればよいことになります。
+
+\begin{motto}[5]
+\bkvinbox{防振：ゆれを伝えにくくする}
+モーターやエンジンのように、中で回る部分がある機械は、回る速さ $\omega$ で床をゆすります。そこで、機械を防振ゴム（やわらかいばね $k$ とダンパー $c$）の上にのせます。床に伝わる力は、ばねとダンパーの力 $kx+c\dot x$ です。機械をゆする力の何倍が床に伝わるかを、複素振幅で計算すると、$r=\frac{\omega}{\omega_{\mathrm n}}$ として、
+\bkvinline{伝わる割合\quad $\dfrac{\sqrt{1+(2\zeta r)^2}}{\sqrt{(1-r^2)^2+(2\zeta r)^2}}$}
+になります（大学の本では「振動伝達率」）。$r=\sqrt2$ のとき、分母の $(1-r^2)^2=1$ となり、ちょうど1倍です。$r$ が $\sqrt2$ より大きいと、1倍より小さくなります。たとえば $\zeta=0.1$ で $r=2$ なら0.36倍、$r=3$ なら0.15倍です。
+
+だから、防振ゴムは、$\omega_{\mathrm n}$ が機械の回る $\omega$ の $\frac{1}{\sqrt2}$ 倍より十分小さくなるように、やわらかいものを選びます。ゴムが固すぎて $r$ が1に近いと、かえって共振して、大きなゆれが床に伝わってしまいます。
+\end{motto}
+
+\begin{senmonsho}[大学の教科書ふうの書き方]
+\begin{bkhonbun}
+非同次方程式 $m\ddot x+c\dot x+kx=F_0\cos\omega t$ の一般解は、同次方程式の一般解（過渡解）と、非同次方程式の一つの特殊解（定常解）の和で与えられる。定常解の振幅倍率は、振動数比 $r=\omega/\omega_{\mathrm n}$ を用いて
+\[ \frac{\lvert X\rvert}{F_0/k}=\frac{1}{\sqrt{(1-r^2)^2+(2\zeta r)^2}} \]
+で表され、$\zeta<1/\sqrt2$ のとき $r=\sqrt{1-2\zeta^2}$ で最大値 $1/(2\zeta\sqrt{1-\zeta^2})$ をとる。
+\end{bkhonbun}
+\bkyaku{「非同次」は右辺が0でないこと。「過渡解」はやがて消える自分のゆれ、「定常解」は落ち着いたあとのゆすりに合うゆれ。「振幅倍率」は、ゆっくりおし続けたときののび $F_0/k$ の何倍ゆれるか。この章の共振曲線と⑦の式と同じ。}
+\end{senmonsho}
+
+\begin{motto}[5]
+\bkvinbox{1階の式をゆする：RC 回路は「速いゆれを通しにくい」}
+6-4 の RC 回路（$\tau=RC$）に、交流 $V_0\cos\omega t$ をつなぐと、コンデンサーの電圧 $v$ は $\tau\dot v+v=V_0\cos\omega t$ にしたがいます。$v=\mathrm{Re}[Ve^{j\omega t}]$ と置くと、微分は $j\omega$ をかけることなので、
+\bkvinline{$(1+j\omega\tau)V=V_0$\qquad $\lvert V\rvert=\dfrac{V_0}{\sqrt{1+(\omega\tau)^2}}$}
+ゆっくりの交流（$\omega\tau$ が小さい）はそのまま通り、速い交流（$\omega\tau$ が大きい）は小さくなります。音の雑音を取りのぞく回路（ローパスフィルター）は、このしくみです。$\cos$ でない一般の形の右辺には、「積分因子」「定数変化法」とよばれる方法や、第9巻のラプラス変換・たたみこみ（9-6・9-7）を使います。
+\end{motto}
+
+\begin{taisetsu}
+\def\tsl#1{\par\addvspace{3pt}\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{答えの形}ゆすりに合うゆれ $x_{\mathrm p}$ ＋ 自分のゆれ $x_{\mathrm h}$（やがて消える）
+\tsl{置き方}右辺が $\cos\omega t$ なら $x_{\mathrm p}=P\cos\omega t+Q\sin\omega t$
+\tsl{複素数で}$x=\mathrm{Re}[Xe^{j\omega t}]$、$X=\dfrac{F_0}{k-m\omega^2+jc\omega}$
+\tsl{共振}$\omega$ が $\omega_{\mathrm n}$ に近いと大きくゆれる。山は $\omega_{\mathrm n}\sqrt{1-2\zeta^2}$
+\tsl{RLC}共振周波数 $f=\dfrac{1}{2\pi\sqrt{LC}}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{強制振動}{外からゆすり続けられて起きるゆれ。}
+\bkword{共振}{その物が自分でゆれる角振動数の近くでゆすると、大きくゆれること。}
+\bkword{共振曲線}{ゆする角振動数と、落ち着いたあとの振幅の関係のグラフ。}
+\bkword{位相のおくれ}{ゆれが力より、どれだけ（角で）おくれるか。$\omega_{\mathrm n}$ で90°。}
+\bkword{Q 値・半値幅}{共振の山の鋭さ。半値幅は山の $\frac{1}{\sqrt2}$ の高さでのはば。}
+\end{kotoba}
+
+\bkvinhead{ゆすられる式の解き方の流れ}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (a) at (0,24) {① 右辺を0にした式の特性方程式\\→ 自分のゆれ $x_{\mathrm h}$（6-12）};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (b) at (64,24) {② ゆすりに合うゆれ $x_{\mathrm p}$\\$P\cos\omega t+Q\sin\omega t$ か、複素数 $X$};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (c) at (0,0) {③ たす：$x=x_{\mathrm p}+x_{\mathrm h}$};
+  \node[bk node, text width=50mm, font=\sffamily\footnotesize] (d) at (64,0) {④ はじめの位置と速度で\\$x_{\mathrm h}$ の $A$、$B$ を決める};
+  \draw[bk link] (a) -- (b); \draw[bk link] (b.south) -- (c.north east); \draw[bk link] (c) -- (d);
+\end{tikzpicture}
+\bkfigcaption{ゆすられる式は、この順で解く。共振のようすだけ知りたいときは、②の $\lvert X\rvert$ だけを見ればよい（自分のゆれは、やがて消えるから）。}
+\end{bkfigure}
+
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\begin{reidai}[ダンパーのない強制振動]
+$\ddot x+9x=8\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。\par
+\kangaekata ダンパーがないので、$x_{\mathrm p}=P\cos t$ と置いて係数を比べる（⑤）。自分のゆれは $A\cos3t+B\sin3t$（6-6）。足してから、はじめの状態で $A$、$B$ を決める（④）。\par
+\shiki $x_{\mathrm p}=P\cos t$ を入れる：$-P\cos t+9P\cos t=8P\cos t=8\cos t$、$P=1$\par
+\bkvinq 答えの形：$x=\cos t+A\cos3t+B\sin3t$\par
+\bkvinq 位置：$x(0)=1+A=0$ より $A=-1$。速度：$\dot x(0)=3B=0$ より $B=0$\par
+\kotae $x=\cos t-\cos3t$
+\end{reidai}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, width=120mm, height=40mm, xmin=0, xmax=13, ymin=-2.3, ymax=2.3, xtick={2,4,6,8,10,12}, ytick={-2,2}, xlabel={$t$}, ylabel={$x$}]
+  \addplot[bkGray, line width=0.5pt, domain=0:12.8] {0};
+  \addplot[bkOrange, line width=1pt, dashed, domain=0:12.6, samples=150] {cos(deg(x))};
+  \addplot[bkcurve, line width=1.4pt, domain=0:12.6, samples=300] {cos(deg(x))-cos(deg(3*x))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{例題1の答え $x=\cos t-\cos3t$（青）と、ゆすりに合うゆれ $\cos t$（オレンジの点線）。ダンパーがないので、自分のゆれ $-\cos3t$ はいつまでも消えず、2つのゆれが重なり続ける。}
+\end{bkfigure}
+
+\begin{reidai}[係数を比べる]
+$\ddot x+4\dot x+3x=10\cos t$ の、ゆすりに合うゆれ $x_{\mathrm p}$ と、その振幅を求めましょう。\par
+\kangaekata ダンパーがあるので $x_{\mathrm p}=P\cos t+Q\sin t$ と置き、$\cos t$ と $\sin t$ の係数を比べる（⑤）。振幅は $\sqrt{P^2+Q^2}$（4-9 の合成）。\par
+\shiki $\dot x=-P\sin t+Q\cos t$、$\ddot x=-P\cos t-Q\sin t$\par
+\bkvinq $\cos t$ の係数：$-P+4Q+3P=2P+4Q=10$\par
+\bkvinq $\sin t$ の係数：$-Q-4P+3Q=-4P+2Q=0$ より $Q=2P$\par
+\bkvinq 1つめに入れる：$2P+8P=10$、$P=1$、$Q=2$\par
+\bkvinq 振幅：$\sqrt{1^2+2^2}=\sqrt5\approx2.24$\par
+\kotae $x_{\mathrm p}=\cos t+2\sin t$、振幅 約2.24
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}\raggedright
+$\ddot x+16x=15\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkjans{$x_{\mathrm p}=P\cos t$：$15P=15$、$P=1$。$x=\cos t+A\cos4t+B\sin4t$。$A=-1$、$B=0$。$x=\cos t-\cos4t$}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}\raggedright
+$\ddot x+3\dot x+2x=10\cos t$ の、ゆすりに合うゆれ $x_{\mathrm p}$ と、その振幅を求めましょう。
+\bkjans{$\cos t$：$P+3Q=10$。$\sin t$：$-3P+Q=0$。$P=1$、$Q=3$。$x_{\mathrm p}=\cos t+3\sin t$、振幅 $\sqrt{10}\approx3.16$}
+\end{jibun}
+\end{minipage}
+
+\begin{reidai}[自分のゆれを足して、はじめに合わせる]
+$\ddot x+4\dot x+3x=10\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。\par
+\kangaekata $x_{\mathrm p}$ は例題2の $\cos t+2\sin t$。自分のゆれは、特性方程式 $s^2+4s+3=0$ の解から（6-12）。足してから $A$、$B$ を決める（④）。\par
+\shiki 特性方程式：$(s+1)(s+3)=0$ で $s=-1$、$-3$\par
+\bkvinq 答えの形：$x=\cos t+2\sin t+Ae^{-t}+Be^{-3t}$\par
+\bkvinq 位置：$x(0)=1+A+B=0$ より $A+B=-1$\par
+\bkvinq 速度：$\dot x=-\sin t+2\cos t-Ae^{-t}-3Be^{-3t}$\par
+\bkvinq \phantom{速度：}より $\dot x(0)=2-A-3B=0$\par
+\bkvinq 2つの式をたす：$-2B=-3$、$B=1.5$、$A=-1-B=-2.5$\par
+\kotae $x=\cos t+2\sin t-2.5e^{-t}+1.5e^{-3t}$
+\end{reidai}
+
+\begin{reidai}[複素数で求める]
+$\ddot x+2\dot x+8x=20\cos2t$ の、ゆすりに合うゆれを、複素数で求めましょう。また、振幅と位相のおくれを求めましょう。\par
+\kangaekata $x=\mathrm{Re}[Xe^{j2t}]$ と置くと、微分は $j2$ をかけること（⑥）。$X$ の大きさが振幅、角が位相（⑥⑧）。\par
+\shiki $\bigl((j2)^2+2(j2)+8\bigr)X=20$ より $(-4+4j+8)X=(4+4j)X=20$\par
+\bkvinq $X=\dfrac{20}{4+4j}=\dfrac{20(4-4j)}{16+16}=\dfrac{80-80j}{32}=2.5-2.5j$\par
+\bkvinq $x=\mathrm{Re}\bigl[(2.5-2.5j)(\cos2t+j\sin2t)\bigr]$\par
+\bkvinq \phantom{$x$}${}=2.5\cos2t+2.5\sin2t$\par
+\bkvinq 振幅：$\lvert X\rvert=\sqrt{2.5^2+2.5^2}=2.5\sqrt2\approx3.54$\par
+\bkvinq 角：$2.5-2.5j$ は右下45°の向きなので、おくれは45°\par
+\kotae $x_{\mathrm p}=2.5\cos2t+2.5\sin2t$、振幅 約3.54、おくれ45°
+\end{reidai}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}\raggedright
+$\ddot x+3\dot x+2x=10\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう（$x_{\mathrm p}$ はじぶんでとこう2）。
+\bkjans{$s=-1$、$-2$。$x=\cos t+3\sin t+Ae^{-t}+Be^{-2t}$。$A+B=-1$、$3-A-2B=0$ より $A=-5$、$B=4$。$x=\cos t+3\sin t-5e^{-t}+4e^{-2t}$}
+\end{jibun}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{jibun}\raggedright
+$\ddot x+2\dot x+7x=25\cos2t$ の、ゆすりに合うゆれを、複素数で求めましょう。振幅と位相のおくれも求めましょう（$\tan^{-1}\frac43=53.1°$）。
+\bkjans{$(3+4j)X=25$、$X=\frac{25(3-4j)}{25}=3-4j$。$x_{\mathrm p}=3\cos2t+4\sin2t$。振幅5、おくれ約53.1°}
+\end{jibun}
+\end{minipage}
+
+\begin{reidai}[いちばん大きくゆれる角振動数]
+$m=\qty{1}{kg}$、$k=\qty{100}{N/m}$、$c=\bkvinNsm{4}$ のばね・質量・ダンパーを、$F_0=\qty{10}{N}$ でゆすります。振幅がいちばん大きくなる $\omega$ と、そのときの振幅を、微分で求めましょう。\par
+\kangaekata 振幅 $\frac{F_0}{\sqrt{G}}$ がいちばん大きいのは、$G(\omega)=(k-m\omega^2)^2+(c\omega)^2$ がいちばん小さいとき。$G'(\omega)=0$ をさがす（⑦、5-7）。\par
+\shiki $G(\omega)=(100-\omega^2)^2+16\omega^2$\par
+\bkvinq $G'(\omega)=2(100-\omega^2)(-2\omega)+32\omega$\par
+\bkvinq \phantom{$G'(\omega)$}${}=4\omega(\omega^2-100+8)=4\omega(\omega^2-92)$\par
+\bkvinq $G'=0$ で $\omega>0$ なのは $\omega^2=92$、$\omega=\sqrt{92}\approx9.59$\,rad/s\par
+\bkvinq そのとき $G=(100-92)^2+16\times92=64+1472=1536$\par
+\bkvinq 振幅：$\dfrac{10}{\sqrt{1536}}=\dfrac{10}{39.19}\approx0.255$\,m\par
+\kotae $\omega\approx\qty{9.59}{rad/s}$、振幅 約\qty{0.255}{m}
+\end{reidai}
+$\omega_{\mathrm n}=\sqrt{100}=10$\,rad/s、$\zeta=\frac{4}{2\times10}=0.2$ です。⑦の式でも、
+\bkvinline{$\omega=10\sqrt{1-2\times0.2^2}=10\sqrt{0.92}\approx9.59$\qquad 振幅 $\dfrac{10}{100}\times2.55\approx0.255$}
+で、同じになります。
+
+\begin{jibun}
+$m=\qty{1}{kg}$、$k=\qty{64}{N/m}$、$c=\bkvinNsm{4}$ のばね・質量・ダンパーを、$F_0=\qty{8}{N}$ でゆすります。振幅がいちばん大きくなる $\omega$ と、そのときの振幅を、微分で求めましょう。
+\bkjans{$G=(64-\omega^2)^2+16\omega^2$、$G'=4\omega(\omega^2-56)$。$\omega=\sqrt{56}\approx7.48$\,rad/s。$G=8^2+16\times56=960$、振幅 $\frac{8}{\sqrt{960}}\approx0.258$\,m}
+\end{jibun}
+
+\begin{reidai}[ふえ続けるゆれを確かめる]
+$x=t\sin2t$ が $\ddot x+4x=4\cos2t$ をみたすことを確かめましょう。また、$t=10$ のころのゆれの大きさを答えましょう。\par
+\kangaekata 積の微分（5-6）で2回微分して、左辺に入れる（⑨）。ゆれの大きさは $\sin$ の前の $t$。\par
+\shiki $\dot x=\sin2t+2t\cos2t$\par
+\bkvinq $\ddot x=2\cos2t+2\cos2t-4t\sin2t=4\cos2t-4t\sin2t$\par
+\bkvinq $\ddot x+4x=4\cos2t-4t\sin2t+4t\sin2t=4\cos2t$\par
+\kotae みたす。$t=10$ のころのゆれの大きさは約10
+\end{reidai}
+
+\begin{jibun}
+$x=t\sin3t$ が $\ddot x+9x=6\cos3t$ をみたすことを確かめましょう。また、$t=5$ のころのゆれの大きさを答えましょう。
+\bkjans{$\dot x=\sin3t+3t\cos3t$、$\ddot x=6\cos3t-9t\sin3t$。$\ddot x+9x=6\cos3t$。大きさは約5}
+\end{jibun}
+
+\begin{reidai}[RLC 回路の共振とラジオ]
+（1）$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$ の回路に $V_0=\qty{1}{V}$ の交流をつなぎます。共振周波数と、そのときの電流を求めましょう。\newline
+（2）$L=\qty{200}{\micro H}$ のコイルで、\qty{1}{MHz} の放送を選ぶ $C$ を求めましょう。\par
+\kangaekata 共振周波数 $f=\frac{1}{2\pi\sqrt{LC}}$。共振では電流 $\frac{V_0}{R}$（⑪）。（2）は $f$ の式を $C$ について解く。\par
+\shiki （1）\nobreak $\sqrt{LC}=\sqrt{0.01\times10^{-6}}=\sqrt{10^{-8}}=10^{-4}$\par
+\bkvinq $f=\dfrac{1}{2\pi\times10^{-4}}=\dfrac{10^4}{6.283}\approx1592$\,Hz。電流 $\dfrac{1}{20}=\qty{0.05}{A}$\par
+\bkvinq （2）\nobreak $C=\dfrac{1}{(2\pi f)^2L}=\dfrac{1}{(6.283\times10^6)^2\times2\times10^{-4}}$\par
+\bkvinq \phantom{（2）$C$}${}\approx1.27\times10^{-10}$\,F\par
+\kotae （1）\nobreak 約\qty{1592}{Hz}、\qty{50}{mA}\quad（2）\nobreak 約\qty{127}{pF}
+\end{reidai}
+
+\begin{jibun}
+（1）$L=\qty{1}{mH}$、$C=\qty{0.4}{\micro F}$、$R=\qty{5}{\ohm}$ の回路に $V_0=\qty{1}{V}$ の交流をつなぎます。共振周波数と、そのときの電流を求めましょう。\newline
+（2）$L=\qty{250}{\micro H}$ のコイルで、\qty{800}{kHz} の放送を選ぶ $C$ を求めましょう。
+\bkjans{（1）\nobreak $\sqrt{LC}=\sqrt{4\times10^{-10}}=2\times10^{-5}$、$f=\frac{1}{2\pi\times2\times10^{-5}}\approx7958$\,Hz。電流 \qty{0.2}{A}。（2）\nobreak $C=\frac{1}{(2\pi\times8\times10^5)^2\times2.5\times10^{-4}}\approx\qty{158}{pF}$}
+\end{jibun}
+
+\begin{column}{橋がゆれた：ミレニアム・ブリッジとタコマ橋}
+ロンドンのテムズ川にかかる歩行者用のミレニアム・ブリッジは、2000年6月10日に開通しましたが、たくさんの人がわたると横に大きくゆれ、2日後に通行止めになりました。歩く人の左右のゆれのリズムが、橋の横ゆれの固有周期に近く、ゆれ始めると人が橋に合わせて足をふみ出すので、さらにゆれが大きくなったのです。ダンパーをたくさんとりつけて $\zeta$ を大きくし、2002年に再開しました。
+
+一方、アメリカのタコマ橋（1940年に風でくずれ落ちた）は、「共振の例」としてよく紹介されますが、正しくありません。一定の風がふいていただけで、外から決まったリズムでゆすられたわけではないからです。橋のゆれ自身が、風から力を受けるリズムを作り出して、ゆれを大きくしていました。これを自励振動（フラッター）といい、6-12 の「解が右半分にある」動きに近いものです。
+\end{column}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+
+\begin{tsumazuki}{共振すると、ゆれは無限に大きくなる？}
+\bkng{共振すると、振幅は無限大になる}
+\bkok{ダンパーがあれば、振幅は有限（$\zeta=0.1$ なら約5倍）}
+分母に $c\omega$ が残るので、0にはなりません。ダンパーがまったくないときだけ、時間に比例して大きくなり続けます（⑨）。
+\end{tsumazuki}
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{いちばん大きくゆれるのは、いつも $\omega_{\mathrm n}$？}\raggedright
+\bkng{振幅の山は、いつもちょうど $\omega_{\mathrm n}$}
+\bkok{山は $\omega_{\mathrm n}\sqrt{1-2\zeta^2}$。$\zeta$ が小さければ、ほぼ $\omega_{\mathrm n}$}
+$\zeta=0.5$ なら、山は $0.707\omega_{\mathrm n}$ で、かなりずれます。電流（速度）の山は、ちょうど $\omega_{\mathrm n}$ です。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{ダンパーがあるのに $P\cos t$ だけを置く}\raggedright
+\bkng{$\ddot x+2\dot x+5x=10\cos t$ で $x=P\cos t$}
+\bkok{$x=P\cos t+Q\sin t$}
+$\dot x$ から $\sin t$ が出てくるので、$\sin t$ の項も置かないと、係数を比べたときに $\sin t$ の式が合いません。
+\end{tsumazuki}
+\end{minipage}
+
+
+\noindent\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{複素数のまま答える}\raggedright
+\bkng{$x_{\mathrm p}=(2-j)e^{jt}$}
+\bkok{$x_{\mathrm p}=\mathrm{Re}[(2-j)e^{jt}]$\newline $\phantom{x_{\mathrm p}}=2\cos t+\sin t$}
+複素数は計算の道具です。最後に実部をとって、実数の答えにもどします。
+\end{tsumazuki}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\linewidth}\vspace{0pt}
+\begin{tsumazuki}{$x_{\mathrm p}$ だけで、はじめに合わせる}\raggedright
+\bkng{$x=P\cos t+Q\sin t$ の $P$、$Q$ を、$x(0)$、$\dot x(0)$ で決める}
+\bkok{自分のゆれを足してから、$A$、$B$ をはじめの状態で決める}
+$P$、$Q$ は右辺に合わせて決まってしまう数なので、はじめの状態には合わせられません。
+\end{tsumazuki}
+\end{minipage}
+
+
+%% ---------------- 物理・工学 ----------------
+\begin{butsuri}
+\bkvinbox{建物と地震：免震と制振}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\raggedright
+建物にも固有周期があります。地震のゆれのリズムが建物の固有周期に近いと、共振して大きくゆれます。\textbf{免震}は、建物と地面のあいだに、やわらかい積層ゴムなどを入れて、建物全体の固有周期を長くし、地震のゆれのリズムからはずすしくみです（伝わる割合が1より小さくなる、もっと知りたいの防振と同じ考え）。
+
+\textbf{制振}は、建物にダンパーをつけて $\zeta$ を大きくし、共振の山を低くするしくみです。台湾の高層ビル「台北101」には、建物の固有周期に合わせた重さ約660トンの大きな振り子がつるしてあり、建物のゆれを打ち消す向きにゆれます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.32\linewidth}
+\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!14] (8,8) rectangle (30,48);
+  \draw[bkBlue!70!black, line width=0.9pt] (8,8) rectangle (30,48);
+  \foreach \yy in {16,24,32,40} {\draw[bkBlue!50, line width=0.5pt] (8,\yy) -- (30,\yy);}
+  \draw[bkInk, line width=0.6pt] (19,44) -- (21,36);
+  \fill[bkOrange] (21.3,34.6) circle (2.2);
+  \foreach \xx in {11,17,23,29} {\fill[bkGray!60] (\xx-2,4) rectangle (\xx,8);}
+  \draw[bkGray, line width=1pt] (2,4) -- (36,4);
+  \fill[pattern=north east lines, pattern color=bkGray] (2,0) rectangle (36,4);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (31,35) {大きな\\振り子};
+  \node[font=\sffamily\footnotesize, anchor=north] at (19,-1) {積層ゴム};
+\end{tikzpicture}
+\end{minipage}
+
+\bkvinbox{せんたく機の脱水}
+脱水が始まって回転がだんだん速くなるとき、ある速さで、せんたく機がガタガタと大きくゆれ、そのあと静かになることがあります。回る速さが、せんたく機を支えるばねの $\omega_{\mathrm n}$ を通りすぎるときに共振するのです。回転を上げきってしまえば、$r$ が大きくなり、ゆれは小さくなります。
+
+\bkvinbox{ラジオ・スマホの電波}
+⑪の同調は、ラジオだけでなく、スマホや Wi-Fi の受信回路でも、ほしい周波数の電波だけを選ぶのに使われています（物理シリーズ『電磁気学』の交流回路）。
+\end{butsuri}
+
+
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+
+\bkproblem $\ddot x+25x=24\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$x_{\mathrm p}=P\cos t$：$24P=24$、$P=1$。$x=\cos t+A\cos5t+B\sin5t$、$A=-1$、$B=0$。$x=\cos t-\cos5t$}
+
+\bkproblem $\ddot x+4\dot x+5x=8\cos t$ の、ゆすりに合うゆれ $x_{\mathrm p}$ を、係数を比べて求めましょう。振幅も求めましょう。
+\bkpans{$\cos t$：$4P+4Q=8$。$\sin t$：$-4P+4Q=0$。$P=Q=1$。$x_{\mathrm p}=\cos t+\sin t$、振幅 $\sqrt2\approx1.41$}
+
+\bkproblem $\ddot x+4\dot x+3x=20\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$x_{\mathrm p}=2\cos t+4\sin t$。$x=x_{\mathrm p}+Ae^{-t}+Be^{-3t}$。$A+B=-2$、$4-A-3B=0$ より $A=-5$、$B=3$。$x=2\cos t+4\sin t-5e^{-t}+3e^{-3t}$}
+
+\bkproblem $\ddot x+4\dot x+10x=20\cos2t$ の、ゆすりに合うゆれを、複素数で求めましょう。振幅と位相のおくれも求めましょう（$\tan^{-1}\frac43=53.1°$）。
+\bkpans{$(6+8j)X=20$、$X=\frac{20(6-8j)}{100}=1.2-1.6j$。$x_{\mathrm p}=1.2\cos2t+1.6\sin2t$。振幅2、おくれ約53.1°}
+
+\bkproblem （1）$L=\qty{1}{mH}$、$C=\qty{0.1}{\micro F}$、$R=\qty{10}{\ohm}$ の回路に $V_0=\qty{2}{V}$ の交流をつなぎます。共振周波数と、そのときの電流を求めましょう。\newline
+（2）$L=\qty{200}{\micro H}$ のコイルで、\qty{600}{kHz} の放送を選ぶ $C$ を求めましょう。
+\bkpans{（1）\nobreak $\sqrt{LC}=10^{-5}$、$f=\frac{10^5}{6.283}\approx\qty{15900}{Hz}$。電流 \qty{0.2}{A}。（2）\nobreak $C=\frac{1}{(2\pi\times6\times10^5)^2\times2\times10^{-4}}\approx\qty{352}{pF}$}
+
+\bkproblem $\ddot x+2\dot x+5x=10\cos t$ の、ゆすりに合うゆれを、複素数で求めましょう。振幅と位相のおくれも求めましょう（$\tan^{-1}\frac12=26.6°$）。
+\bkpans{$(4+2j)X=10$、$X=\frac{10(4-2j)}{20}=2-j$。$x_{\mathrm p}=2\cos t+\sin t$。振幅 $\sqrt5\approx2.24$、おくれ約26.6°}
+
+\bkproblem $L=\qty{4}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{8}{\ohm}$ の回路に $V_0=\qty{4}{V}$ の交流をつなぎます。共振周波数と、そのときの電流を求めましょう（$\sqrt{4\times10^{-9}}=6.32\times10^{-5}$）。
+\bkpans{$f=\frac{1}{2\pi\times6.32\times10^{-5}}\approx\qty{2520}{Hz}$。電流 $\frac48=\qty{0.5}{A}$}
+
+\bkproblemgroup{チャレンジ}{5}
+
+\bkproblem $m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\bkvinNsm{0.8}$ のばね・質量・ダンパーを、$F_0=\qty{0.8}{N}$ でゆすります。$\zeta$ を求め、振幅がいちばん大きくなる $\omega$ と、そのときの振幅を、微分で求めましょう（$\sqrt{14.72}=3.837$）。
+\bkpans{$\zeta=\frac{0.8}{2\times2}=0.2$。$G=(8-0.5\omega^2)^2+0.64\omega^2$、$G'=\omega(\omega^2-16+1.28)=\omega(\omega^2-14.72)$。$\omega\approx3.84$\,rad/s。$G\approx9.83$、振幅 $\frac{0.8}{\sqrt{9.83}}\approx0.255$\,m}
+
+\bkproblem $x=t\sin4t$ が $\ddot x+16x=8\cos4t$ をみたすことを確かめましょう。また、$t=5$ のころのゆれの大きさを答えましょう。
+\bkpans{$\dot x=\sin4t+4t\cos4t$、$\ddot x=8\cos4t-16t\sin4t$。$\ddot x+16x=8\cos4t$。大きさは約5}
+
+\bkproblem $m=\qty{1}{kg}$、$k=\qty{25}{N/m}$、$c=\bkvinNsm{2}$ のばね・質量・ダンパーを、$F_0=\qty{5}{N}$ でゆすります。（1）振幅がいちばん大きくなる $\omega$ とその振幅を、微分で求めましょう。（2）ちょうど $\omega=\omega_{\mathrm n}$ でゆすったときの振幅を求めましょう。
+\bkpans{（1）\nobreak $G=(25-\omega^2)^2+4\omega^2$、$G'=4\omega(\omega^2-23)$。$\omega=\sqrt{23}\approx4.80$\,rad/s、$G=4+92=96$、振幅 $\frac{5}{\sqrt{96}}\approx0.510$\,m。（2）\nobreak $\omega_{\mathrm n}=5$、$G=0+4\times25=100$、振幅 $\frac{5}{10}=\qty{0.5}{m}$}
+
+\bkproblem $\ddot x+6\dot x+13x=15\cos t$ の、ゆすりに合うゆれを、複素数で求めましょう。振幅と位相のおくれも求めましょう（$\tan^{-1}\frac12=26.6°$）。
+\bkpans{$(12+6j)X=15$、$X=\frac{15(12-6j)}{180}=1-0.5j$。$x_{\mathrm p}=\cos t+0.5\sin t$。振幅 $\sqrt{1.25}\approx1.12$、おくれ約26.6°}
+
+\bkproblem $\ddot x+2\dot x+2x=5\cos t$ の、ゆすりに合うゆれ $x_{\mathrm p}$ を、係数を比べて求めましょう。振幅も求めましょう。
+\bkpans{$\cos t$：$P+2Q=5$。$\sin t$：$-2P+Q=0$。$P=1$、$Q=2$。$x_{\mathrm p}=\cos t+2\sin t$、振幅 $\sqrt5\approx2.24$}
+
+\bkproblem $\ddot x+4x=3\cos t$、$x(0)=0$、$\dot x(0)=0$ をみたす $x$ を求めましょう。
+\bkpans{$x_{\mathrm p}=P\cos t$：$3P=3$、$P=1$。$x=\cos t+A\cos2t+B\sin2t$、$A=-1$、$B=0$。$x=\cos t-\cos2t$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ゆすり続けたときのゆれを、表計算と共振曲線で説明できる。\bkfurref{bk:6-13:kyoshin}
+\item ゆすりに合うゆれを、係数を比べる方法と複素数で求められる。\bkfurref{bk:6-13:keisu}
+\item いちばん大きくゆれる $\omega$ を微分で求め、RLC 回路の共振周波数を求められる。\bkfurref{bk:6-13:yama}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{ブランコも、ラジオも、建物も、同じ式で説明できた！　次の 6-14 では、ゆれるものが2つ以上つながったときを調べよう。}

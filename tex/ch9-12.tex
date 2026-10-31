@@ -1,0 +1,456 @@
+%% 9-12 フーリエとラプラスの使いみち（読みもの。第15回：組 V9-6。ページ制限なし。偶数ページ）
+%% 読みものの型（7-11・8-14）：現象の場面→どこでこの巻の数学が働いているか→専門書での書き方。例題・問題は置かない。
+%% 「名前と操作」の型（tools/kata9-int.md）は、名前の段だけで読み、直す段は「表9-○の○」と指す（kata9-int 0章・brief9-parts 3-2-7）。
+%% ほかの章との約束（回収するもの）：
+%%   7-11:413 JPEG「8×8 の行列のかけ算（9-12 で読むフーリエの考えの親せき）」→ ②（離散コサイン変換を行列 C で）。
+%%   9-2 のもっと知りたい「最小2乗近似…画像・音の圧縮（9-12）の土台」→ ②。9-2 のパーセバル・ひずみ率 48.3 % → ⑩。
+%%   9-4:1241「MRI…9-12 で、写真の圧縮とあわせて読みます」→ ⑥。9-4 の FFT（1965・ガウス1805）・CD 44100・サンプリング定理 → ①⑤。
+%%   9-6:1113「工場の長い配管…むだ時間が設計のむずかしさ（9-12）」→ ⑧。9-8:1079 ブロック線図（9-9・9-12）→ ⑦。
+%%   9-9 のもっと知りたい「ずれの積分…PID 制御（9-12）」、エアコン（3-1:725、9-8・9-9：外35 ℃・設定26 ℃・RC=60 分・RK_p=9 で 26.9 ℃）→ ⑦。
+%%   9-10 のコラム「カルマンと現代制御」・極配置 → ⑨。9-0 の表（モーター・エアコン 9-8・9-9・9-12）。
+%% 数はすべて Python で検算した（scratchpad/v9-6calc/m12.py）。歴史と規格の数は出典で確かめた（報告に一覧）。
+\makeatletter
+%% ===== 「名前と操作」の型（tools/kata9-int.md）。頭文字 kixm =====
+\colorlet{kixmNc}{bkOrange!85!black}\colorlet{kixmSc}{bkTheme}\colorlet{kixmSb}{bkTheme!8}
+\tikzset{
+  kixm dan/.style={font=\sffamily\bfseries\footnotesize, rounded corners=1.2mm, inner xsep=1.6mm, inner ysep=0.5mm, line width=0.9pt},
+  kixm dan1/.style={kixm dan, draw=kixmNc, dash pattern=on 2.2pt off 1.4pt, fill=white, text=bkInk},
+  kixm dan2/.style={kixm dan, draw=kixmSc, fill=kixmSb, text=bkInk},
+  kixm dan3/.style={kixm dan, draw=bkTheme, fill=bkTheme, text=bkOn},
+  kixm name/.style={draw=kixmNc, line width=0.9pt, dash pattern=on 2.2pt off 1.4pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=white},
+  kixm seki/.style={draw=kixmSc, line width=0.9pt, rounded corners=1.2mm, inner xsep=1.2mm, inner ysep=1.2mm, fill=kixmSb},
+  kixm tag/.style={font=\sffamily\bfseries\footnotesize, text=bkInk, inner sep=0.4mm}}
+\def\kixm@op#1{\ifcase#1\or ふつうの定積分\or 表を引く\or 部分分数\or 行列の計算\fi}
+\newcommand\kixmdan[1]{\tikz[baseline=(d.base)]\node[kixm dan#1] (d) {\vphantom{あ}\ifcase#1\or 名前\or 直す\or 楽をする\fi};}
+\newcommand\kixmop[1]{\tikz[baseline=(d.base)]\node[kixm dan2] (d) {\vphantom{あ}\kixm@op{#1}};}
+\newcommand\kixmdanhead[2]{\par\addvspace{8pt}\Needspace{7\baselineskip}\noindent
+  \tikz[baseline=(d.base)]\node[kixm dan#1, font=\sffamily\bfseries\small, inner ysep=0.8mm] (d) {\vphantom{あ}\ifcase#1\or ①\,名前の段\or ②\,直す段\or ③\,楽をする段\fi};%
+  \hspace{0.7\zw}{\sffamily\bfseries\color{\bkTT}#2}\par\nobreak\vspace{3pt}\noindent\ignorespaces}
+\newcommand\kixmNt[1]{\tikz[baseline=(n.base)]{\node[kixm name] (n) {$\displaystyle #1$};\node[kixm tag, anchor=north] at ([yshift=-0.8mm]n.south) {名前};}}
+\newcommand\kixmSt[2]{\tikz[baseline=(n.base)]{\node[kixm seki] (n) {$\displaystyle #2$};\node[kixm tag, anchor=north] at ([yshift=-0.8mm]n.south) {\kixm@op{#1}};}}
+\newcommand\kixmcase[1]{\tikz[baseline=(c.base)]\node[fill=bkTheme, text=bkOn, font=\sffamily\bfseries\small, rounded corners=0.8mm, inner xsep=1mm, inner ysep=0.6mm, minimum width=5.4mm] (c) {\vphantom{Ag}#1};}
+%% ===== 2つの世界の図の部品（tools/kata9.md）。頭文字 kixm =====
+\colorlet{kixmW}{bkBlue!80!black}\colorlet{kixmF}{bkOrange!85!black}\colorlet{kixmP}{bkRed!80!black}
+\pgfplotsset{
+  kixm base/.style={bkplot, scale only axis, width=47mm, height=28mm, axis lines=left, grid=none,
+    every axis x label/.style={at={(axis description cs:0.5,0)}, anchor=north, yshift=-5mm, font=\sffamily\small, text=bkInk},
+    every axis y label/.style={at={(axis description cs:0,1)}, anchor=south, yshift=1.5mm, font=\sffamily\small, text=bkInk}},
+  kixm wave/.style={kixm base, extra y ticks={0}, extra y tick labels={0}, extra y tick style={grid=major, major grid style={bkInk!45, line width=0.5pt}}},
+  kixm spec/.style={kixm base, ymin=0},
+  kixm sig/.style={kixmW, line width=1.4pt, no markers, samples=241, smooth},
+  kixm bar/.style={ycomb, draw=kixmF, line width=3pt, no markers}}
+\tikzset{
+  kixm world/.style={draw, line width=1pt, rounded corners=1.5mm, fill=white, font=\sffamily\bfseries\small, text=bkInk, minimum width=30mm, minimum height=7mm, inner xsep=2mm},
+  kixm bridge/.style={-{Stealth[length=2.4mm]}, line width=1pt, bkInk!80},
+  kixm blab/.style={font=\sffamily\footnotesize, text=bkInk, inner sep=0.8mm}}
+\newcommand\kixmworlds[5][42mm]{%
+  \node[kixm world, draw=kixmW] (kixmL) at (23.5mm,#1) {#2};
+  \node[kixm world, draw=kixmF] (kixmR) at (99.5mm,#1) {#3};
+  \draw[kixm bridge] ([yshift=1.3mm, xshift=1.5mm]kixmL.east) -- node[kixm blab, above] {#4} ([yshift=1.3mm, xshift=-1.5mm]kixmR.west);
+  \draw[kixm bridge] ([yshift=-1.3mm, xshift=-1.5mm]kixmR.west) -- node[kixm blab, below] {#5} ([yshift=-1.3mm, xshift=1.5mm]kixmL.east);}
+%% ===== この章の部品（9-12）=====
+\newcommand\kixmhead[1]{\par\addvspace{6pt}\Needspace{6\baselineskip}\noindent{\sffamily\bfseries\color{\bkTT}#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+\newcommand\kixmbox[1]{\par\addvspace{3pt}\noindent\textbf{#1}\par\nobreak\vspace{2pt}\noindent\ignorespaces}
+\newcommand\kixmline[1]{\par\addvspace{3pt}{\centering #1\par}\addvspace{3pt}\noindent\ignorespaces}
+\newcommand\kixmframe[2][100mm]{\par\addvspace{4pt}{\centering\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!6, rounded corners=1.5mm, inner xsep=6mm, inner ysep=2.5mm, align=center, text width=#1]{#2};\par}\addvspace{4pt}\noindent\ignorespaces}
+% 「名前の段だけで読む」小さな囲み  \kixmyomu{名前の式}{名前の意味}{計算のしかたの行き先}
+\newcommand\kixmyomu[3]{\par\addvspace{4pt}\noindent\begin{tikzpicture}
+  \node[kixm name, anchor=west, text width=34mm, align=flush center] (a) at (0,0) {#1};
+  \node[kixm tag, anchor=south west] at ([yshift=0.6mm]a.north west) {名前};
+  \node[anchor=west, text width=\dimexpr\linewidth-44mm\relax, font=\small, align=flush left, inner sep=0pt] (b) at ([xshift=4mm]a.east) {#2\par\vspace{1pt}{\sffamily\bfseries 計算のしかた：}#3};
+\end{tikzpicture}\par\addvspace{4pt}\noindent\ignorespaces}
+\makeatother
+
+\bkchapter{9}{12}{フーリエとラプラスの\\使いみち}{\bklevelrange{3}{5}}{フーリエとラプラスの使いみち}
+\bkmichishirube{6-13,7-11,9-2,9-4,9-8,9-9,9-10,9-11}{9-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{\bkTT}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 音楽・写真の圧縮、通信、医療、機械の診断、エアコンの制御で、この巻のどの道具が働いているかを言える。
+\item \bklevel{4}\enspace 圧縮が「周波数の成分に分けて、小さな成分をけずる」しくみであることを、8つの数の例で説明できる。
+\item \bklevel{5}\enspace PID 制御の3つの項の役割を、極と最終値の定理のことばで説明できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.57\linewidth}
+\raggedright
+スマホに入れた1曲は、CD の同じ曲とくらべて、データの大きさが約11分の1しかありません。それなのに、ほとんど同じ音に聞こえます。エアコンは、外が暑くても、部屋を設定温度にぴったり合わせます。\par\vspace{4pt}
+\textbf{データの9割以上を捨てても、なぜ音は変わらないのでしょう。エアコンは、どうやって設定温度に「ぴったり」合わせているのでしょう。}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}
+\centering
+\begin{tikzpicture}[x=0.92mm, y=0.92mm]
+  % スマホ
+  \draw[bkInk, line width=1pt, rounded corners=2mm, fill=white] (0,0) rectangle (20,36);
+  \fill[bkBlue!12] (2,5) rectangle (18,31);
+  \draw[kixmW, line width=1pt, domain=3:17, samples=60] plot (\x,{18+5*sin(\x*60)*exp(-0.05*(\x-3))});
+  \foreach \kixmx/\kixmh in {4/6,7/9,10/4,13/7,16/3} {\fill[kixmF] (\kixmx-0.8,7) rectangle (\kixmx+0.8,7+\kixmh*0.5);}
+  \fill[bkInk!60] (10,2.3) circle (1.1);
+  % エアコン
+  \draw[bkInk, line width=1pt, rounded corners=1.5mm, fill=white] (26,22) rectangle (52,34);
+  \draw[bkInk!60, line width=0.7pt] (28,25) -- (50,25);
+  \node[font=\sffamily\bfseries\footnotesize, text=\bkTT] at (39,29.5) {26\,℃};
+  \foreach \kixmx in {30,36,42,48} {\draw[bkBlue!60, line width=0.8pt, -{Stealth[length=1.4mm]}] (\kixmx,21) -- (\kixmx-2,15);}
+  \node[font=\sffamily\bfseries\Large, text=\bkTT] at (39,6) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\begin{omoidasou}
+\bkrecall{9-2}{直交する $\sin$・$\cos$ にかけてたすと、ほしい成分だけが残る。電力は成分ごとの和（パーセバルの等式）。$N$ 項でやめたフーリエ級数は、いちばん近い近似。}
+\bkrecall{9-4}{データの周波数の成分は FFT で求める。サンプリング周波数の半分より高い音は記録できない（サンプリング定理）。CD は1秒に \num{44100} 回。}
+\bkrecall{9-8}{伝達関数は「出てくるもの÷入れるもの」。フィードバックでつなぐと全体は $G_1/(1+G_1G_2)$。倍率は dB で表すと、直列でたし算。}
+\bkrecall{9-9}{すべての極の実部が負なら安定。比例制御だけでは、ずれが残る（エアコン：設定26\,℃に対して26.9\,℃）。ずれの積分を足すと、ずれが消える。}
+\bkrecall{9-10}{状態方程式 $\dot{\vec x}=A\vec x+B\vec u$。$\vec u=-K\vec x$ で固有値（極）を選んだ場所に置く（極配置）。}
+\end{omoidasou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=37mm] Q[c,m,wd=33mm] Q[l,m,wd=52mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+場面 & 働いている名前 & 計算のしかた（章と表） \\
+音楽の圧縮（①） & $F(\omega)$ & FFT（表9-4の \kixmcase{G}） \\
+写真の圧縮（②） & cos の係数 & 行列のかけ算（7-11・9-2） \\
+雑音を消す（③） & たし合わせ、$e^{-sL}$ & 9-1（たし合わせ）、9-6（むだ時間） \\
+機械の診断（④） & $F(\omega)$ & FFT（表9-4の \kixmcase{G}） \\
+スマホ・Wi-Fi（⑤） & $c_n$、直交性 & 逆向きの FFT と FFT（9-3・9-4） \\
+MRI（⑥） & 2次元の $F$ & FFT（表9-4の \kixmcase{G}） \\
+エアコン・PID（⑦⑧） & $G(s)$、極 & 表9-8の \kixmcase{D}、表9-7の \kixmcase{H} \\
+ドローン（⑨） & $\dot{\vec x}=A\vec x+B\vec u$ & 固有値（表9-11の \kixmcase{I}） \\
+電力の品質（⑩） & $a_n$・$b_n$ & 定積分（表9-2）、パーセバル（9-2） \\
+\end{bktable}
+\bktabcaption{この章の場面と、働いている「名前」、それを計算するしかた（章と表の場合）。}
+\label{bk:9-12:tab-basho}
+\end{bkcenter}
+
+\noindent この章は\textbf{読みもの}です。例題や問題はありません。第9巻で学んだフーリエ解析とラプラス変換が、身のまわりのどこで働いているかを、実際の機械で見ていきます。主な場面で、まず「名前の段」で記号を読み、「その名前を実際に計算するには、どの章の表のどの場合を使うか」（計算のしかた）を、章番号と表の記号で示します（表\ref{bk:9-12:tab-basho}）。計算のくわしい手順は、そこへもどれば確かめられます。
+
+ここまで、波を分ける話と、変化を予想する話を、たくさん学んできました。この章は、そのごほうびのような章です。式を全部追いかけなくても大丈夫です。「あ、これはあの章の道具だ」と気づけたら、それで十分です。
+
+
+%% ================= 音と画像を小さくする =================
+\bksection{butsuri}{音と写真を小さくする：圧縮}
+
+\bksubsection{1}{音楽の圧縮：聞こえない成分をけずる}
+
+\label{bk:9-12:asshuku}音楽の CD は、9-4 で見たとおり、1秒に \num{44100} 回、音の大きさをはかって記録しています。1回の値は16ビット（$2^{16}=\num{65536}$ 段階）の数で、左右2つのマイクの分があります。だから、1秒あたりのデータの量は
+\kixmline{$\num{44100}\ \text{回/s}\times16\ \text{ビット/回}\times2=\num{1411200}$ ビット/s（\num{1411.2} kbit/s）}
+です。4分（240秒）の曲なら、$\num{1411200}\times240\div8\approx\num{42300000}$ バイト、約42\,MB（メガバイト）になります（8ビットが1バイト）。
+
+スマホで音楽を聞くときによく使われる \textbf{MP3} という形式では、ふつう1秒に128\,kbit で記録します。$\num{1411.2}\div128\approx11$ で、データは約11分の1、4分の曲で約3.8\,MB です。MP3 は、1993年に国際規格（MPEG-1 の音声の第3層）として決められました。\bkidx{あっしゅく}{圧縮}このように、データを小さくすることを\textbf{圧縮}（あっしゅく）といいます。
+
+\kixmhead{どこをけずるのか}
+MP3 は、音を約 \qty{26}{ms} の短い区間（\num{1152} 個の値）に区切り、区間ごとに周波数の成分に分けます（9-4 のスペクトル）。そして、人の耳に聞こえにくい成分を、あらく記録したり、捨てたりします。聞こえにくい成分には、次のようなものがあります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item 人が聞こえる上限（若い人で約 \qty{20000}{Hz}）より高い成分（9-4）。
+\item 大きな音のすぐ近くの周波数にある、小さな音。大きな音にかくされて、聞こえにくくなります。これを\textbf{マスキング}といいます。
+\item 人の耳がにぶい、とても低い音やとても高い音のうち、小さな成分。
+\end{itemize}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\kixmworlds{時間の世界}{周波数の世界}{分ける}{たし合わせる}
+\begin{axis}[kixm wave, at={(0mm,0mm)}, xmin=0, xmax=5, ymin=-1.8, ymax=1.8, xtick={0,1,...,5}, ytick={-1,1}, xlabel={時間 $t$（ms）}, ylabel={音}]
+  \addplot[kixm sig, domain=0:5] {sin(158.4*x)+0.5*sin(316.8*x)+0.25*sin(475.2*x)+0.08*sin(648*x)+0.05*sin(1044*x)};
+\end{axis}
+\begin{axis}[kixm spec, at={(76mm,0mm)}, xmin=0, xmax=3000, ymax=1.2, xtick={0,1000,2000,3000}, ytick={0.5,1}, xlabel={周波数（Hz）}, ylabel={大きさ}]
+  \addplot[kixm bar] coordinates {(440,1) (880,0.5) (1320,0.25)};
+  \addplot[ycomb, draw=bkGray!70, line width=3pt, no markers] coordinates {(1800,0.08) (2900,0.05)};
+  \addplot[bkInk!70, line width=0.9pt, dash pattern=on 3pt off 1.5pt, domain=0:3000, samples=80] {0.12+0.12*exp(-((x-500)/700)^2)+0.06*exp(-((x-1000)/600)^2)};
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=0.8pt] at (axis cs:2200,0.42) {聞こえる境め（点線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{MP3 の考え方（形を見るための作った例）。左は短い区間の音の波形、右はそのスペクトル。点線より下の成分（灰色の棒）は、大きな音にかくされて聞こえにくいので、けずってもほとんど気づかない。}
+\label{bk:9-12:fig-mp3}
+\end{bkfigure}
+
+\kixmyomu{$F(\omega)$}{短い区間の音 $f(t)$ に $e^{-j\omega t}$ をかけてたす（9-4）。区間ごとのスペクトル。}{データなので積分しない。FFT で和を計算する（表9-4の \kixmcase{G}）。}
+
+MP3 の中では、音をいくつかの周波数の帯に分けたあと、$\cos$ だけを使う「変形離散コサイン変換」（MDCT）という、フーリエ変換の親せきが使われています。名前は長いですが、していることは 9-2 と同じ「波にかけてたして、成分を取り出す」です（物理シリーズ 波-11）。
+
+\bksubsection{2}{写真の圧縮：8×8 のブロックを cos に分ける}
+
+\label{bk:9-12:jpeg}スマホやデジタルカメラの写真の多くは、\textbf{JPEG}（ジェイペグ）という形式で記録されています（1992年に規格が公開）。7-11 で、「JPEG は画像を $8\times8$ 画素の小さなブロックに分け…この表し直しは、$8\times8$ の行列のかけ算です（9-12 で読むフーリエの考えの親せき）」と予告しました。ここで、そのしくみを読みます。
+
+\kixmhead{8つの明るさを、8つの cos の形に分ける}
+話を簡単にするため、写真の中の横1列の8個の画素だけを考えます。それぞれの明るさ（0〜255）が、次の8つの数だったとします。
+\kixmline{52,\quad 55,\quad 61,\quad 66,\quad 70,\quad 61,\quad 64,\quad 73}
+JPEG は、この8つの数を、次の図の8つの「cos の形」のたし算に直します。0番めは平らな形（平均の明るさ）、1番めはゆっくり変わる形、7番めはいちばん細かく変わる形です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \kixmk in {0,...,7} {
+    \begin{scope}[shift={(\kixmk*16,0)}]
+    \draw[bkGray, line width=0.4pt] (0,0) -- (13,0);
+    \foreach \kixmm in {0,...,7} {
+      \fill[kixmW] ({0.6+\kixmm*1.6},0) rectangle ({1.6+\kixmm*1.6},{6*cos((2*\kixmm+1)*\kixmk*11.25)});}
+    \node[font=\sffamily\footnotesize, anchor=north] at (6.5,-7.5) {\kixmk 番め};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{8個の画素のための、8つの cos の形（$k$ 番めの形の $m$ 番めの値は $\cos\frac{(2m+1)k\pi}{16}$）。$k$ が大きいほど細かい。}
+\label{bk:9-12:fig-dct}
+\end{bkfigure}
+
+この8つの形は、9-2 で学んだように\textbf{直交}しています（ちがう2つの形の、同じ番めの値どうしをかけてたすと0）。だから、9-2 と同じく「その形をかけてたす」だけで、それぞれの形がどれだけ入っているか（係数）がわかります。この変換を\textbf{離散コサイン変換}（DCT）といいます。\bkidx{りさんこさいんへんかん}{離散コサイン変換}$\cos$ だけですむのは、8つの数を鏡に映したように左右へ折り返してつなぐと、偶関数（9-2）になるからです。
+
+\kixmyomu{DCT の係数 $X_k$}{8つの明るさ $x_m$ に、$k$ 番めの cos の形をかけてたす（大きさをそろえる数をかける）。}{8つの係数をまとめて、$8\times8$ の行列 $C$ をかける：$\vec X=C\vec x$（\kixmop{4}。7-2・7-11）。}
+
+上の8つの数で計算すると（Python）、係数は次のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m] *{8}{Q[c,m,10mm]}}, rowsep=2pt, row{1}={font=\sffamily\small}, cells={font=\small}}
+$k$ & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+係数 $X_k$ & 177.5 & $-14.4$ & $-5.7$ & $-6.7$ & 7.1 & $-3.1$ & $-0.7$ & 2.4 \\
+\end{bktable}
+\bktabcaption{8つの明るさの DCT の係数（大きさは、行列 $C$ の行の長さを1にそろえた形で計算した）。}
+\end{bkcenter}
+0番め（平均の明るさ）がとびぬけて大きく、細かい形ほど小さくなっています。パーセバルの等式（9-2）で見ると、0番めだけで全体の「明るさの2乗の和」の98.9\,\%をもっています。写真のふつうの部分は、となりどうしの明るさがあまり変わらない、なめらかな形だからです。
+
+\kixmhead{小さな係数をけずって、もどす}
+そこで、細かい形の係数を0にして（けずって）、残りだけで8つの明るさにもどしてみます。もどすには、行列 $C$ の転置 $C^{\mathsf T}$ をかけます（$C$ は直交行列なので、逆行列は転置：7-5・7-6）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,19mm] *{8}{Q[c,m,8mm]} Q[c,m,12mm]}, rowsep=2pt, colsep=2pt, row{1}={font=\sffamily\small}, cells={font=\small}}
+ & \SetCell[c=8]{c} 8つの明るさ & & & & & & & & 最大のずれ \\
+もとの値 & 52 & 55 & 61 & 66 & 70 & 61 & 64 & 73 & ― \\
+0番めだけ & 62.8 & 62.8 & 62.8 & 62.8 & 62.8 & 62.8 & 62.8 & 62.8 & 10.8 \\
+0〜1番め & 55.7 & 56.8 & 58.7 & 61.3 & 64.2 & 66.8 & 68.7 & 69.8 & 5.8 \\
+0〜3番め & 50.3 & 56.3 & 63.1 & 65.8 & 64.9 & 64.5 & 67.0 & 70.0 & 5.1 \\
+\end{bktable}
+\bktabcaption{残す係数をへらしてもどした値（Python で計算）。半分（0〜3番め）だけでも、0〜255 の明るさのうち、ずれは最大5ほど。}
+\label{bk:9-12:tab-jpeg}
+\end{bkcenter}
+9-2 のもっと知りたいで、「$N$ 項でやめたフーリエ級数は、いちばん近い近似」と学びました。ここでも同じで、係数を残す数を決めたとき、もどした値は、もとの明るさに（2乗の平均の意味で）いちばん近い形になっています。
+
+本物の JPEG は、横と縦の両方の向きで同じことをします。$8\times8$ のブロックの明るさを行列 $X$ とすると、64個の係数は $CXC^{\mathsf T}$ という行列のかけ算で求まります。細かい形の係数ほどあらく丸めて（小さいものは0にして）記録し、データをふつう10分の1ほどにします。JPEG の写真を強く圧縮すると、$8\times8$ のます目のようなもようが見えることがあるのは、ブロックごとに係数をけずっているからです。
+
+\bksubsection{3}{雑音を消す：ノイズキャンセリング}
+
+\label{bk:9-12:noise}9-4 の物理・工学ではこう使うで、録音した音を FFT して、雑音の周波数の成分だけを小さくしてもどす方法を読みました。ここでは、ちがうやり方で雑音を消すヘッドホンを読みます。
+
+\textbf{ノイズキャンセリング}のヘッドホンは、外側の小さなマイクでまわりの雑音を拾い、それと大きさが同じで、向き（符号）が反対の音をスピーカーから出します。9-1 で学んだように、波はたし合わせられるので、$\sin\omega t$ と $-\sin\omega t$ をたすと0になり、耳に届く雑音が小さくなります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[kixm wave, at={(0mm,0mm)}, width=47mm, height=24mm, xmin=0, xmax=2, ymin=-1.3, ymax=1.3, xtick={0,1,2}, ytick=\empty, xlabel={時間（ms）}, ylabel={}]
+  \addplot[kixm sig, domain=0:2] {sin(360*x)};
+  \addplot[kixmF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=241, domain=0:2] {-sin(360*x)};
+\end{axis}
+\begin{axis}[kixm wave, at={(76mm,0mm)}, width=47mm, height=24mm, xmin=0, xmax=2, ymin=-1.3, ymax=1.3, xtick={0,1,2}, ytick=\empty, xlabel={時間（ms）}, ylabel={}]
+  \addplot[kixm sig, domain=0:2] {sin(360*x)};
+  \addplot[kixmF, line width=1.4pt, dash pattern=on 4pt off 2pt, no markers, samples=241, domain=0:2] {-sin(360*(x-0.1))};
+  \addplot[kixmP, line width=1.2pt, no markers, samples=241, domain=0:2] {sin(360*x)-sin(360*(x-0.1))};
+\end{axis}
+\node[font=\sffamily\footnotesize, anchor=south] at (23.5mm,26mm) {反対の音がぴったり合うと、たして0};
+\node[font=\sffamily\footnotesize, anchor=south] at (99.5mm,26mm) {0.1\,ms おくれると、残る（赤）};
+\end{tikzpicture}
+\bkfigcaption{1000\,Hz の雑音（青の実線）と、反対の音（オレンジの破線）。右は、反対の音が \qty{0.1}{ms} おくれた場合で、たした音（赤）が残る。}
+\label{bk:9-12:fig-noise}
+\end{bkfigure}
+
+ところが、反対の音を作るには、マイクで拾ってから計算して出すまでに、わずかな時間がかかります。この「おくれ」は、9-6 のむだ時間 $e^{-sL}$ と同じものです。おくれが \qty{0.1}{ms} あると、残る音の大きさ（もとの雑音を1として）は、6-10 の回る矢印で考えて $|1-e^{-j\theta}|=2\sin\frac\theta2$（$\theta$ はおくれの角）になります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,22mm] Q[c,m,30mm] Q[c,m,26mm] Q[c,m,22mm]}, rowsep=2pt, row{1}={font=\sffamily\small}, cells={font=\small}}
+雑音の周波数 & おくれの角 $\theta$ & 残る大きさ & dB \\
+\qty{100}{Hz} & $3.6°$ & 0.063 & $-24$ \\
+\qty{500}{Hz} & $18°$ & 0.31 & $-10$ \\
+\qty{1000}{Hz} & $36°$ & 0.62 & $-4$ \\
+\end{bktable}
+\bktabcaption{おくれ \qty{0.1}{ms} のときに残る雑音（$\theta=360°\times$周波数$\times$おくれ）。dB は 3-12・9-8 の $20\log_{10}$。}
+\end{bkcenter}
+同じおくれでも、周波数が高いほど角 $\theta$ が大きくなり、消し残りがふえます。だから、ノイズキャンセリングは、電車や飛行機の「ゴー」という低い音を消すのが得意で、人の話し声のような高い音は、イヤーパッドなどでさえぎるしかけと組み合わせて小さくしています。
+
+%% ================= 見えない所を見る =================
+\bksection{butsuri}{見えない所を、周波数で見る}
+
+\bksubsection{4}{機械の診断：回転数の何倍か}
+
+\label{bk:9-12:shindan}9-4 で、機械の振動を FFT で調べると、故障を見つける手がかりになることを読みました。工場のポンプやモーターは、1分に \num{1800} 回転なら、1秒に30回転（\qty{30}{Hz}）です。振動のスペクトルを見て、30\,Hz（回転数の1倍）の成分が大きければ「回る部分の重さのかたより」、60\,Hz（2倍）が大きければ「軸の中心のずれ」をうたがう、というように、回転数の何倍の成分が大きいかで、悪い所の見当をつける方法が使われています（目安とされる例。くわしくは物理シリーズ 波-10）。
+
+\kixmyomu{振動のスペクトル $F(\omega)$}{はかった振動のデータに $e^{-j\omega t}$ をかけてたす。}{データなので FFT（表9-4の \kixmcase{G}）。サンプリング定理を守る（9-4）。}
+
+人が機械の音を聞いて「いつもと音がちがう」と気づくのも、耳と脳が音を周波数に分けて聞いているからです。FFT は、それを数でできるようにした道具です。
+
+\bksubsection{5}{スマホ・Wi-Fi・地デジ：たくさんの周波数で送る}
+
+\label{bk:9-12:ofdm}スマホの通信（4G・5G）、Wi-Fi、テレビの地上デジタル放送では、\textbf{OFDM}（直交周波数分割多重）という方式が使われています。\bkidx{おーえふでぃーえむ}{OFDM}名前のとおり、「直交」する（9-2）たくさんの周波数の波に、データを少しずつのせて、いっしょに送る方法です。
+
+たとえば、Wi-Fi の規格の1つ（IEEE 802.11a、1999年）では、20\,MHz のはばの中に、間かく \qty{312.5}{kHz} の52本の波を並べ、そのうち48本でデータを送ります。312.5\,kHz は $\num{20000000}\div64$ で、64点の FFT にちょうど合うように決めた数です（くわしくは物理シリーズ 波-14）。
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{送る側}：それぞれの周波数にのせる数（係数）を決め、それを「たし合わせて」1つの波にします。これは、9-3 の複素フーリエ級数 $\sum c_ne^{jn\omega_0t}$ を作ることで、計算は逆向きの FFT です。
+\item \textbf{受ける側}：受けた波を FFT して、それぞれの周波数の係数を取り出します。9-2 の直交性があるので、となりの周波数の波がまざっていても、ほしい係数だけが取り出せます。
+\end{itemize}
+となりどうしの周波数の差（\qty{312.5}{kHz}）から、$1\div\qty{312.5}{kHz}=\qty{3.2}{\micro s}$ の間に、どの波もちょうど整数回ゆれます（だから直交する：9-2）。データは、この長さに反射に備えたすき間 \qty{0.8}{\micro s} を足した \qty{4}{\micro s} ごとに送られます。1本1本はゆっくり変わる波なので、建物で反射しておくれて届く電波があっても、データが乱れにくいのです。
+
+\bksubsection{6}{MRI：体の中の写真を、フーリエ変換で作る}
+
+\label{bk:9-12:mri}病院の \textbf{MRI}（磁気共鳴画像）は、強い磁石の中で、体の中の水素の原子核から出る弱い電波をはかって、体の中の断面の写真を作る装置です。体に、場所によって強さが少しずつちがう磁場をかけると、出てくる電波の周波数が場所によってちがってきます。だから、はかった信号の周波数の成分を調べれば、どこにどれだけ水素があるかがわかります。
+
+MRI がはかるデータは、写真を横と縦の2つの向きにフーリエ変換したもの（9-4 の物理・工学ではこう使うで読んだ、2次元の変換）になっていることが知られています。だから、データを2次元の FFT でもどすと、写真ができます。②の JPEG は「写真→周波数」、MRI は「周波数（はかったデータ）→写真」と、向きが反対の使い方です。MRI の写真を初めて作ったのはローターバーで、1973年に科学雑誌『ネイチャー』に発表しました。
+
+\kixmyomu{2次元のフーリエ変換}{写真の明るさに、横と縦の2つの向きの $e^{-j\omega t}$ の形をかけてたす。}{データなので、2次元の FFT（表9-4の \kixmcase{G} を2つの向きに）。}
+
+%% ================= 制御 =================
+\bksection{butsuri}{機械を思いどおりに動かす：制御}
+
+\bksubsection{7}{エアコンの温度制御：PID 制御}
+
+\label{bk:9-12:pid}3-1 で、「エアコンは部屋の温度をはかりつづけ、設定温度との差が大きいほど強く冷やします（このしくみは第9巻の制御で学びます）」と書きました。9-8・9-9 で、これが比例制御で、外が35\,℃・設定26\,℃・部屋の時定数60分のとき、比例の強さ $RK_{\mathrm p}=9$ では、26.9\,℃で落ち着いて0.9\,℃のずれが残ることを計算しました。
+
+9-9 のもっと知りたいで、「ずれの積分」を足すと、ずれが消えることを見ました。ずれが少しでも残っていると、その積分がどんどんふえて冷やす力を強めつづけ、ずれがちょうど0になったときに、はじめて力が一定になるからです。同じ部屋で、比例の強さはそのまま（$RK_{\mathrm p}=9$）、ずれの積分の強さを $RK_{\mathrm i}=0.15$（1/分）にして計算すると、次のようになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=50mm, xmin=0, xmax=62, ymin=24, ymax=35.5, xtick={10,20,30,40,50,60}, ytick={24,26,28,30,32,34}, xlabel={$t$（分）}, ylabel={部屋の温度（℃）}]
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:0,26) -- (axis cs:62,26);
+  \addplot[kixmF, line width=1.4pt, dash pattern=on 4pt off 2pt, smooth] coordinates {(0,35.000) (2,32.704) (4,31.058) (6,29.880) (8,29.035) (10,28.430) (12,27.996) (14,27.685) (16,27.463) (18,27.303) (20,27.189) (22,27.107) (24,27.048) (26,27.006) (28,26.976) (30,26.955) (32,26.939) (34,26.928) (36,26.920) (38,26.914) (40,26.910) (42,26.907) (44,26.905) (46,26.904) (48,26.903) (50,26.902) (52,26.901) (54,26.901) (56,26.901) (58,26.901) (60,26.900)};
+  \addplot[kixmW, line width=1.4pt, smooth] coordinates {(0,35.000) (2,32.667) (4,30.939) (6,29.659) (8,28.710) (10,28.008) (12,27.487) (14,27.102) (16,26.816) (18,26.605) (20,26.448) (22,26.332) (24,26.246) (26,26.182) (28,26.135) (30,26.100) (32,26.074) (34,26.055) (36,26.041) (38,26.030) (40,26.022) (42,26.017) (44,26.012) (46,26.009) (48,26.007) (50,26.005) (52,26.004) (54,26.003) (56,26.002) (58,26.002) (60,26.001)};
+  \node[font=\sffamily\footnotesize, text=kixmF, anchor=south west, fill=white, inner sep=1pt] at (axis cs:36,27.15) {比例だけ（破線）：26.9\,℃のまま};
+  \node[font=\sffamily\footnotesize, text=kixmW, anchor=north west, fill=white, inner sep=1pt] at (axis cs:30,25.75) {比例＋積分（実線）：26\,℃に着く};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{外35\,℃の部屋（はじめ35\,℃）を、設定26\,℃で冷やすときの温度（Python で計算）。比例だけでは0.9\,℃のずれが残り、ずれの積分を足すと、ずれが消える。}
+\label{bk:9-12:fig-pid}
+\end{bkfigure}
+
+比例＋積分の全体の分母は $60s^2+10s+0.15$ で、極は $-0.15$ と $-\frac{1}{60}$\mbox{（1/分）}です。どちらも左半分なので安定で（9-9）、最終値の定理（9-6）が使え、最後のずれは0になります。
+
+\kixmhead{3つの項：P・I・D}
+これに、「ずれの変わる速さ」（ずれの微分）の項を足したものを、\textbf{PID 制御}といいます。\bkidx{ぴーあいでぃーせいぎょ}{PID 制御}ずれを $\varepsilon$（イプシロン）と書くと（ネイピア数の $e$ とまぎれないように）、加える量 $u$ は次の式で決めます。
+\kixmframe[112mm]{\large $u=K_{\mathrm p}\,\varepsilon+K_{\mathrm i}\displaystyle\int\varepsilon\,\dd t+K_{\mathrm d}\dfrac{\dd\varepsilon}{\dd t}$\\[4pt]\sffamily\small $s$ の世界では、制御の箱は\quad $K_{\mathrm p}+\dfrac{K_{\mathrm i}}{s}+K_{\mathrm d}s$}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,12mm] Q[l,m,34mm] X[l,m]}, rowsep=1pt, row{1}={font=\sffamily\small}, cells={font=\small}}
+項 & 見ている量 & 役割（この巻の章） \\
+P（比例） & 今のずれ & ずれが大きいほど強く。強くすると極が左へ動いて速くなるが、ずれは残る（9-9 ⑨⑪） \\
+I（積分） & これまでのずれのたまり & 残ったずれを0にする（9-9 のもっと知りたい：最終値の定理） \\
+D（微分） & ずれの変わる速さ & ずれが急に変わるのを見て先回りし、行きすぎやゆれをおさえる（9-10 の倒立振子で「たおれる速さ」を見たのと同じ考え） \\
+\end{bktable}
+\bktabcaption{PID 制御の3つの項。Proportional（比例）・Integral（積分）・Derivative（微分）の頭文字。}
+\end{bkcenter}
+3つの強さ $K_{\mathrm p}$・$K_{\mathrm i}$・$K_{\mathrm d}$ を決めることは、全体の極をどこに置くかを決めることと同じです（9-9 の根軌跡、9-10 の極配置）。工場の温度・圧力・流れの量の制御、ドローンの姿勢、車の速さを一定に保つしくみなど、今も多くの機械で PID 制御が使われています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\footnotesize, anchor=east] (r) at (-6,0) {設定温度};
+  \node[draw=bkInk, line width=0.8pt, circle, minimum size=5mm, inner sep=0pt] (c) at (8,0) {};
+  \node[bk node, minimum width=30mm, align=center, font=\sffamily\footnotesize] (p) at (36,0) {PID\\$K_{\mathrm p}+\frac{K_{\mathrm i}}{s}+K_{\mathrm d}s$};
+  \node[bk node, minimum width=26mm, align=center, font=\sffamily\footnotesize] (a) at (74,0) {エアコンと部屋\\（9-8 の箱）};
+  \node[font=\sffamily\footnotesize, anchor=west] (y) at (97,0) {部屋の温度};
+  \node[bk node, minimum width=20mm, font=\sffamily\footnotesize] (s) at (54,-16) {温度センサー};
+  \draw[bk link] (r) -- (c);
+  \draw[bk link] (c) -- node[bk link label, above, pos=0.4] {ずれ $\varepsilon$} (p);
+  \draw[bk link] (p) -- node[bk link label, above] {$u$} (a);
+  \draw[bk link] (a) -- (y);
+  \draw[bk link] (93,0) |- (s);
+  \fill[bkInk] (93,0) circle (0.7);
+  \draw[bk link] (s) -| (c.south);
+  \node[font=\sffamily\footnotesize, anchor=north west] at (9.6,-3.4) {$-$};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (6,1.6) {$+$};
+\end{tikzpicture}
+\bkfigcaption{エアコンの PID 制御のブロック線図（9-8）。○は加え合わせ点で、設定温度からはかった温度を引いて、ずれを作る。}
+\label{bk:9-12:fig-block}
+\end{bkfigure}
+
+\kixmyomu{$G(s)$ と極}{はじめの値を0にして、出てくるもの÷入れるもの。分母$=0$ の解が極。}{フィードバックは表9-8の \kixmcase{D}、最後の値は表9-7の \kixmcase{H}、極は表9-9。}
+
+\kixmhead{インバーター：力の大きさを変えられるエアコン}
+むかしのエアコンは、コンプレッサー（冷やすためのポンプ）を「全力で動かす・止める」のくり返しで温度を調節していました。今の多くのエアコンは、\textbf{インバーター}という回路でモーターの回る速さを変え、冷やす力を少しずつ変えられます。PID 制御のように「ずれに応じて力を変える」ことができるのは、このためです。
+
+\bksubsection{8}{むだ時間と、周波数で見る設計}
+
+\label{bk:9-12:mudajikan}9-6 で、シャワーの温度調節がむずかしいのは、むだ時間 $e^{-sL}$ があるからだと読みました。工場の長い配管やベルトコンベアでも、調節した効き目が $L$ 秒おくれて出ます。9-9 の3次の電気炉で、おくれが重なると、強くしすぎたとたんにゆれがふくらむことを見ました。むだ時間は、そのおくれがもっと大きい場合で、PID の強さを大きくしすぎると不安定になりやすいのです。
+
+むだ時間のある機械や、ゆれやすい機械（6-13 の共振）の設計では、$s=j\omega$ を入れた周波数応答 $G(j\omega)$（9-8）を、横軸に周波数を対数目もりで、たて軸に倍率を dB でとったグラフ、\textbf{ボード線図}（3-12・9-8）で調べます。「1周してもどってくる倍率が1（0\,dB）になる周波数で、おくれが $180°$ にどれだけ足りないか」（位相余裕）などを見て、安定に余裕があるかを判断します。くわしい読み方は、物理シリーズ（波-2・波-4）で学びます。
+
+\bksubsection{9}{ドローン・自動運転：状態方程式とカルマンフィルター}
+
+\label{bk:9-12:drone}ドローンの姿勢（前後・左右のかたむきと向き）は、角度と、角度の変わる速さを全部まとめた状態 $\vec x$ で表され、9-10 の状態方程式 $\dot{\vec x}=A\vec x+B\vec u$ で動きます。4つのプロペラの回る速さ（$\vec u$）を、$\vec u=-K\vec x$ のように状態から決め、固有値（極）を左半分のよい場所に置きます（9-10 の極配置、9-11 の「固有値で落ち着くかがわかる」）。
+
+ところが、センサーではかった値には、いつも雑音がまざっています。また、速さのように、直接ははかりにくい状態もあります。9-10 のコラムで紹介したように、カルマンは1960年ごろ、雑音のあるセンサーの値と状態方程式を組み合わせて、状態をいちばんよく推し量る方法を示しました。これが\textbf{カルマンフィルター}です。スマホの位置の計算（GPS と加速度センサーを合わせる）、ドローン、自動運転の車などで、名前を聞くことがあるでしょう。
+
+\kixmyomu{$e^{At}$ と固有値}{状態方程式の答え $\vec x=e^{At}\vec x_0$。固有値の実部が負なら落ち着く。}{落ち着くかだけなら固有値を見る（表9-11の \kixmcase{I}）。}
+
+\bksubsection{10}{電力の品質：高調波}
+
+\label{bk:9-12:koucho}スマホの充電器、パソコン、インバーターのついたエアコンや冷蔵庫は、電気をいったん直流に直して使うので、コンセントから流れる電流が、きれいな $\sin$ の形からくずれます。くずれた波は、9-1・9-2 で学んだように、50\,Hz（または60\,Hz）の基本波と、その整数倍の\textbf{高調波}の和です。9-2 で、方形波のひずみ率が48.3\,\%になることを計算しました。高調波の電流が多いと、電線や変圧器がよけいに熱くなったり、ほかの機械に雑音が入ったりするので、電気製品には、高調波をどれだけ出してよいかの決まりがあります。ここでも、電流をフーリエ級数に分けて考えることが出発点です。
+
+\begin{column}{PID 制御のはじまり：船のかじ取り}
+ずれの比例・積分・微分で船のかじを動かす考えを、数式で調べた最初の論文の1つが、1922年に、アメリカでミノルスキーが発表した「自動でかじを取る物体の方向の安定性」です。ミノルスキーは、船員がかじを取るようすを観察して、「今のずれ」だけでなく、「ずれの変わる速さ」や「これまでのずれ」も見てかじを動かしていることに気づき、それを式にしたといわれています。9-9 のコラムのワットの調速機（1788年ころ）とマクスウェルの論文（1868年）から始まった「フィードバックの数学」は、こうして船や工場へ広がっていきました。
+\end{column}
+
+%% ================= まとめ =================
+\par\Needspace{15\baselineskip}
+\kixmhead{この巻の道具と、働く場面}
+この章の場面で、第9巻の3つの部の道具が、どこで働いていたかを表にまとめます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=24mm] Q[c,m,wd=28mm] Q[c,m,wd=24mm]}, rowsep=0.5pt, row{1}={font=\sffamily\footnotesize}, cells={font=\small}}
+場面 & フーリエ解析\newline（9-1〜9-4） & ラプラス変換・極\newline（9-5〜9-9） & 行列と状態\newline（9-10・9-11） \\
+音楽・写真の圧縮（①②） & ● & & \\
+ノイズキャンセリング（③） & ● & ● & \\
+機械の診断（④） & ● & & \\
+スマホ・Wi-Fi（⑤） & ● & & \\
+MRI（⑥） & ● & & \\
+エアコン・PID（⑦⑧） & & ● & \\
+ドローン・自動運転（⑨） & & ● & ● \\
+電力の品質（⑩） & ● & & \\
+\end{bktable}
+\bktabcaption{●は、その場面で使っている道具（主なもの）。}
+\end{bkcenter}
+
+
+%% ================= 専門書 =================
+\bksection{card}{専門書をのぞいてみよう}
+
+\bksubsection{11}{信号処理・制御の本の書き方}
+
+\label{bk:9-12:senmon}信号処理や制御工学の本では、この巻と同じものを、少しちがう記号で書いていることがあります。下の囲みは、制御工学の教科書ふうの書き方の例です。この巻と専門書の記号の対応は、表\ref{bk:9-12:tab-kigou} にまとめました。
+\begin{senmonsho}[制御工学の教科書ふうの書き方]
+\begin{bkhonbun}
+PID 制御則は $u(t)=K_P e(t)+K_I\displaystyle\int_0^t e(\tau)\,\dd\tau+K_D\dfrac{\dd e(t)}{\dd t}$ で与えられる。ここで $e(t)=r(t)-y(t)$ は偏差である。補償器の伝達関数（初期値を0として $U(s)/E(s)$）は $C(s)=K_P+K_I/s+K_Ds$ となる。積分動作により，ステップ状の目標値に対する定常偏差は0となる（閉ループ系が安定であることが前提）。
+\end{bkhonbun}
+\bkyaku{$e(t)$ はこの章のずれ $\varepsilon$（ネイピア数の $e$ ではない）。$r(t)$ は目標の値、$y(t)$ は出てくる量。「制御則」は $u$ の決め方、「偏差」はずれ。積分の中の $\tau$ は、9-6 のたたみこみの $t_1$ と同じ「前の時刻」の文字（この本の $\tau$ は時定数）。$U(s)$・$E(s)$ は $u(t)$・$e(t)$ のラプラス変換で、「補償器」は制御の箱。$C(s)$ はその伝達関数。「定常偏差」は落ち着いたあとのずれ。「閉ループ系が安定」は、フィードバックでつないだ全体の極がすべて左半分（9-9）。}
+\end{senmonsho}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=34mm] Q[c,m,wd=50mm]}, rowsep=1pt, cells={font=\small}, row{1}={font=\sffamily\bfseries\small, bg=bkTheme!10}}
+もの & この本 & 専門書でよく見る書き方 \\
+フーリエ変換 & $F(\omega)$ & $X(\omega)$、$X(f)$、$X(j\omega)$ \\
+伝達関数 & $G(s)$ & $G(s)$、$H(s)$、$P(s)$ \\
+フィードバックの箱 & $G_2$ & $H(s)$（$\frac{G}{1+GH}$） \\
+ステップ関数 & $H(t)$ & $u(t)$、$1(t)$ \\
+ずれ（偏差） & $\varepsilon$ & $e(t)$ \\
+z 変換（名前だけ） & ― & $X(z)$、$H(z)$ \\
+\end{bktable}
+\bktabcaption{この巻の記号と、信号処理・制御の本でよく見る記号。$e(t)$ のように、ネイピア数と同じ文字を使う本もあるので、前後から読み分ける。z 変換は、とびとびのデータのための、ラプラス変換の親せき（デジタルの制御・信号処理で使う）。}
+\label{bk:9-12:tab-kigou}
+\end{bkcenter}
+
+\begin{taisetsu}
+\kixmbox{名前を読めば、どの章の道具かがわかる}
+・音・写真・電波・MRI・機械の振動：データを周波数の成分に分ける（$F(\omega)$・$c_n$・DCT）。計算は FFT や行列のかけ算（9-2〜9-4、7-11）。\par
+・圧縮：小さな成分をけずっても、いちばん近い近似が残る（9-2）。\par
+・制御：伝達関数と極で、落ち着くか・ずれが残るかがわかる（9-8・9-9）。PID の I はずれを消し、D は先回りしてゆれをおさえる。状態方程式では固有値を選ぶ（9-10・9-11）。
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{圧縮}{データの大きさを小さくすること。聞こえない・見えない成分をけずる。}
+\bkword{マスキング}{大きな音の近くの周波数の小さな音が、聞こえにくくなること。}
+\bkword{離散コサイン変換（DCT）}{とびとびの値を、$\cos$ の形だけの成分に分ける変換。JPEG・MP3 の中で使う。}
+\bkword{ノイズキャンセリング}{雑音と反対の音を出して、たし合わせて雑音を小さくするしくみ。}
+\bkword{OFDM}{直交するたくさんの周波数にデータをのせて送る方式。FFT で作り、FFT で取り出す。}
+\bkword{PID 制御}{ずれの比例・積分・微分で、加える量を決める制御。}
+\bkword{カルマンフィルター}{雑音のあるはかった値と状態方程式から、状態を推し量る方法。}
+\bkword{ボード線図}{周波数応答の倍率（dB）とおくれを、周波数の対数目もりでかいたグラフ。}
+\end{kotoba}
+
+\begin{column}{人の耳も、周波数に分けて聞いている}
+耳のおくには、カタツムリのからのようにまいた「うずまき管」があり、その中に細長い膜が張られています。音が入ると、この膜は、入口に近い所ほど高い音で、おくの所ほど低い音で、大きくゆれることが知られています。ゆれた場所の神経が、脳に信号を送ります。つまり耳は、音を時間の波形のまま聞くのではなく、場所ごとに周波数の成分に分けて聞いているのです。MP3 が「聞こえにくい成分」をけずれるのも、ノイズキャンセリングが低い音を得意とするのも、この耳のしくみと、9-4 のスペクトルの考えを組み合わせているからです。
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 音楽・写真の圧縮で、周波数の成分に分けて小さな成分をけずっていることを説明できる。\bkfurref{bk:9-12:asshuku}
+\item 通信・MRI・機械の診断で、FFT と直交性が働いていることを言える。\bkfurref{bk:9-12:ofdm}
+\item PID 制御の3つの項の役割を、極と最終値の定理のことばで説明できる。\bkfurref{bk:9-12:pid}
+\end{checklist}
+\end{furikaeri}
+
+\bkfukidashi{sora}{スマホの中にも、エアコンの中にも、この巻の sin と cos、極と固有値が入っていたね。最後の 9-13 では、全9巻の路線がどこで合流したかを、地図にしてふりかえろう。}
