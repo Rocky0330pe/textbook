@@ -37,7 +37,8 @@
 | `texmf/` | 固定版の LuaTeX-ja・luaotfload など | 3章、`texmf/README.md` |
 | `tools/` | ページ合わせ（`syncpages.py`・`check_pages.py`）、もくじ・索引・付録の表などを作るスクリプト、執筆・確認の指示書（`BRIEF-*`・`PROMPT-*`・`FIX-*`） | 生成スクリプトを直したら、作ったファイルもコミットする（Actions で動かす生成スクリプトは `gen.py` だけ） |
 | `checks/` | 検算の Python（巻ごと） | numpy・scipy を使うものがある。Actions では動かさない |
-| `scripts/` | `ci-build.sh`（組む）・`changed-targets.py`（組む巻を決める）・`name-pdfs.py`（リリースのファイル名） | |
+| `scripts/` | `ci-build.sh`（組む）・`changed-targets.py`（組む巻を決める）・`release-plan.py`（リリースを決める）・`name-pdfs.py`（リリースのファイル名） | |
+| `versions.json` | 各巻のいまの版の番号（`{"6": 2, …}`） | 版を渡すときに Claude が上げる。上がった巻を Actions がリリースする（第18回） |
 | `.github/workflows/build.yml` | GitHub Actions の設定 | 5章 |
 | `docs/` | `仕様書/`・`議事録/`・`修正事項/`・`作業メモ/`・`GitHub/` | |
 
@@ -96,6 +97,8 @@ scripts/ci-build.sh 対象…    対象：1〜9（数学の巻）・guide（ガ�
 | `main` への push（プルリクエストの取りこみを含む） | 変わった巻だけ（5.2） | Artifacts（7日間） |
 | リポジトリに初めて入れたときの push | 組まない（初回は手動で組む） | ― |
 | 手動（Actions →「組版」→ Run workflow） | 入力した巻（既定は `guide`。`all`・`6 7` など） | Artifacts（7日間） |
+| `versions.json` で巻の番号を上げたプルリクエストを `main` に取りこむ（第18回） | 番号が上がった巻 | タグ `volN-verM` などとリリースを Actions が作る（8章） |
+| 手動で「リリースするタグ」を入れる（第18回） | そのタグの巻（版は `versions.json` と同じであること） | 同上 |
 | タグ `volN-verM` の push | 第N巻 | リリース（8章） |
 | タグ `guide-verM` の push | ガイドブック2冊 | リリース |
 | タグ `pN-verM` の push | 物理第N巻 | リリース |
@@ -104,7 +107,7 @@ scripts/ci-build.sh 対象…    対象：1〜9（数学の巻）・guide（ガ�
 
 - `docs/`・`checks/`・README だけを変えたときは組まない（無料枠の節約）。
 - 同じプルリクエストに続けて push したときは、古い実行を止める。手動の実行・`main` への push・タグの実行は止めない（途中の巻が組まれないままになるのを防ぐ）。
-- タグは、組んだジョブが**すべて成功したときだけ**リリースを作る（「Releases」の画面でリリースを先に作ったときは、そのリリースに PDF を足す。第18回）。
+- リリースは、組んだジョブが**すべて成功したときだけ**作る（「Releases」の画面でリリースを先に作ったときは、そのリリースに PDF を足す）。`versions.json` だけを変えたときも、番号が上がった巻を組む。
 - プルリクエストを取りこむと `main` への push として変わった巻が組まれ、そのあとタグをつけると同じ巻がもう一度組まれる（同じ巻を2回組む）。6章の見積もりはこれを含めている。
 
 ### 5.2 どの巻を組むか（`scripts/changed-targets.py`）
@@ -181,7 +184,7 @@ scripts/ci-build.sh 対象…    対象：1〜9（数学の巻）・guide（ガ�
 | 直す | 作業用のブランチにコミット。1つのコミットは1つの直し（コミットの説明に指摘の番号を書く） |
 | 組んで確かめる | 委員会の作業環境で組み、push すると Actions も組む |
 | 委員会の最終確認 | プルリクエスト。確認の結果と議事録（`docs/議事録/`）を同じプルリクエストに入れる |
-| 依頼者に渡す | 依頼者がプルリクエストを `main` に取りこむ（Merge）→ 依頼者が「Releases」の画面でタグ `volN-verM` のリリースを作る（Claude の作業環境からはタグを送れないため。第18回）→ Actions がその巻を組み、そのリリースに PDF を足す |
+| 依頼者に渡す | Claude がプルリクエストの中で `versions.json` のその巻の番号を上げる → 依頼者がプルリクエストを `main` に取りこむ（Merge）→ Actions がその巻を組み、タグ `volN-verM` とリリースを作る（第18回。Claude の作業環境からはタグを送れないため、タグは Actions が作る） |
 | 依頼者からの指摘 | チャット、または Issue |
 
 **リリースの形**：GitHub はリリースに添付するファイルの名前に日本語を使えない（英数字と一部の記号のほかは「.」に置きかえられる）。そこで次の2つを添付する。
