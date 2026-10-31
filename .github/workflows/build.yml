@@ -2,7 +2,10 @@
 # ・プルリクエスト／main への push：変わった巻だけを組む（scripts/changed-targets.py が決める）
 #   （リポジトリに初めて入れたときの push では組まない。初回は手動で組む）
 # ・手動（Actions タブ →「組版」→「Run workflow」）：組む巻を入力して組む（例: guide、6 7、all）
-# ・タグの push：組んで、リリース（Releases）に PDF を添付する
+# ・版を渡す（第18回）：versions.json で巻の番号を上げたプルリクエストを main に取りこむと、
+#   その巻を組んで、タグ（vol6-ver3 など）とリリース（Releases）を自動で作り、PDF を添付する
+#   （scripts/release-plan.py が決める）。手動の実行で「リリースするタグ」を入れても作れる。
+# ・タグの push（Releases の画面でタグを作ったときも）：組んで、リリースに PDF を添付する
 #     vol6-ver2  → 第6巻だけ
 #     guide-ver2 → ガイドブックだけ
 #     p1-ver2    → 物理第1巻だけ
@@ -22,6 +25,7 @@ on:
       - 'series.py'
       - 'gen.py'
       - 'pages_actual.json'
+      - 'versions.json'
       - 'tools/*.py'
       - 'scripts/**'
       - '.github/workflows/build.yml'
@@ -42,6 +46,10 @@ on:
         description: '組む巻（空白区切り）。1〜9・guide・p1〜p5・all（all は時間がかかる）'
         required: true
         default: 'guide'
+      release_tags:
+        description: 'リリースするタグ（空白区切り。例 vol7-ver2 vol8-ver2）。入れると「組む巻」の欄は使わず、そのタグの巻を組んでリリースを作る。版は versions.json と同じにする'
+        required: false
+        default: ''
 
 # プルリクエストだけ、同じブランチに新しい push が来たら古い実行を止める。
 # 手動の実行・main への push・タグは止めない（途中の巻が組まれないままになるのを防ぐ）。
@@ -58,6 +66,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.t.outputs.targets }}
+      releases: ${{ steps.t.outputs.releases }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -68,25 +77,35 @@ jobs:
           REF_TYPE: ${{ github.ref_type }}
           TAG: ${{ github.ref_name }}
           INPUT: ${{ github.event.inputs.targets }}
+          RELEASE_TAGS: ${{ github.event.inputs.release_tags }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          ALL='["1","2","3","4","5","6","7","8","9","guide"]'
+          set -e
+          R='[]'
           if [ "$EVENT" = workflow_dispatch ]; then
-            T=$(python3 scripts/changed-targets.py --input "$INPUT")
+            if [ -n "$(echo "$RELEASE_TAGS" | tr -d '[:space:]')" ]; then
+              R=$(python3 scripts/release-plan.py tags "$RELEASE_TAGS")
+              T=$(python3 scripts/release-plan.py targets "$R")
+            else
+              T=$(python3 scripts/changed-targets.py --input "$INPUT")
+            fi
           elif [ "$REF_TYPE" = tag ]; then
-            if [[ "$TAG" =~ ^vol([1-9])-ver[0-9]+$ ]]; then T="[\"${BASH_REMATCH[1]}\"]"
-            elif [[ "$TAG" =~ ^guide-ver[0-9]+$ ]]; then T='["guide"]'
-            elif [[ "$TAG" =~ ^(p[1-5])-ver[0-9]+$ ]]; then T="[\"${BASH_REMATCH[1]}\"]"
-            elif [[ "$TAG" =~ ^all-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then T="$ALL"
-            else echo "::error::このタグの形は決まりにない: $TAG（volN-verM・guide-verM・pN-verM・all-YYYY-MM-DD）"; T='[]'; fi
+            # Releases の画面で作ったタグも、ここを通る（版の番号は versions.json と照らさない）
+            R=$(python3 scripts/release-plan.py tags "$TAG" --no-check) || R='[]'
+            T=$(python3 scripts/release-plan.py targets "$R")
           elif [ "$EVENT" = pull_request ]; then
             T=$(python3 scripts/changed-targets.py --pr "$PR_BASE" "$PR_HEAD")
           else
             T=$(python3 scripts/changed-targets.py "$BEFORE" "$AFTER")
+            R=$(python3 scripts/release-plan.py push "$BEFORE" "$AFTER")
+            T=$(python3 scripts/release-plan.py union "$T" "$R")
           fi
+          echo "リリース: $R"
+          echo "リリース: \`$R\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "releases=$R" >> "$GITHUB_OUTPUT"
           echo "組む巻: $T"
           echo "組む巻: \`$T\`" >> "$GITHUB_STEP_SUMMARY"
           echo "targets=$T" >> "$GITHUB_OUTPUT"
@@ -169,9 +188,9 @@ jobs:
 
   release:
     name: リリースに PDF を添付する
-    needs: build
-    # 組んだジョブがすべて成功したときだけ
-    if: github.ref_type == 'tag' && success()
+    needs: [plan, build]
+    # リリースするものがあり、組んだジョブがすべて成功したときだけ
+    if: needs.plan.outputs.releases != '[]' && needs.plan.outputs.releases != '' && success()
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -183,24 +202,33 @@ jobs:
         with:
           pattern: pdf-*
           path: dist
-          merge-multiple: true
+          merge-multiple: false
       - env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          RELEASES: ${{ needs.plan.outputs.releases }}
         run: |
-          # 版の番号：volN-verM などは VerM、all-YYYY-MM-DD は日付
-          if [[ "$TAG" =~ -ver([0-9]+)$ ]]; then VER="Ver${BASH_REMATCH[1]}"; else VER="${TAG#all-}"; fi
-          # GitHub はリリースのファイル名に日本語を使えないので、ファイル名は英数字、表示名を日本語にする。
-          # あわせて、中のファイルを納品の名前にした zip を添付する。
-          python3 src/scripts/name-pdfs.py "$VER" "$TAG" dist release
-          mapfile -t ASSETS < release/assets.txt
-          NOTES="タグ $TAG の時点のソースから自動で組んだ PDF です。納品の名前のファイルは ${TAG}_pdf.zip の中にあります。委員会の確認は docs/議事録 を参照。"
-          # 依頼者が「Releases」の画面でタグを作ったとき（リリースがもうある）は、そのリリースに PDF を足す（第18回）
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            gh release upload "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --clobber
-            if [ -z "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)" ]; then
-              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES"
+          echo "$RELEASES" > releases.json
+          n=$(jq length releases.json)
+          for i in $(seq 0 $((n - 1))); do
+            TARGET=$(jq -r ".[$i].target" releases.json)
+            TAG=$(jq -r ".[$i].tag" releases.json)
+            VER=$(jq -r ".[$i].ver" releases.json)   # VerM（all-YYYY-MM-DD は日付）
+            SRC="work/$TAG"; mkdir -p "$SRC"
+            if [ "$TARGET" = all ]; then cp dist/pdf-*/*.pdf "$SRC"/; else cp dist/pdf-"$TARGET"/*.pdf "$SRC"/; fi
+            # GitHub はリリースのファイル名に日本語を使えないので、ファイル名は英数字、表示名を日本語にする。
+            # あわせて、中のファイルを納品の名前にした zip を添付する。
+            python3 src/scripts/name-pdfs.py "$VER" "$TAG" "$SRC" "release/$TAG"
+            mapfile -t ASSETS < "release/$TAG/assets.txt"
+            NOTES="タグ $TAG の時点のソースから自動で組んだ PDF です。納品の名前のファイルは ${TAG}_pdf.zip の中にあります。委員会の確認は docs/議事録 を参照。"
+            # Releases の画面でタグを作ったとき（リリースがもうある）は、そのリリースに PDF を足す
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              gh release upload "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+              if [ -z "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)" ]; then
+                gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes "$NOTES"
+              fi
+            else
+              # タグがまだないときは、組んだコミットにタグを作る
+              gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$TAG" --notes "$NOTES"
             fi
-          else
-            gh release create "$TAG" "${ASSETS[@]}" --repo "$GITHUB_REPOSITORY" --title "$TAG" --notes "$NOTES"
-          fi
+            echo "リリース $TAG を作った（$TARGET）" >> "$GITHUB_STEP_SUMMARY"
+          done

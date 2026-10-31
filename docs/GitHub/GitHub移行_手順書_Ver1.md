@@ -122,7 +122,7 @@ git tag migration-2026-10-31 && git push origin migration-2026-10-31
 | --- | --- |
 | 直しを頼む | これまでどおりチャットで指示する（または GitHub の「Issues」に書く） |
 | 途中の PDF を見る | これまでどおりチャットにも PDF を添付します。GitHub で見るときは、Claude が知らせるプルリクエスト →「Checks」→ 実行の「Artifacts」 |
-| 版を確定する（渡してもらう） | プルリクエストを開き、「Merge pull request」を押して `main` に取りこむ。そのあと「Releases」→「Draft a new release」で、タグ（例 `vol6-ver2`）を入れて「Create new tag」、Target は `main` のまま「Publish release」を押す。Actions がその巻を組み、20〜30分でそのリリースに PDF が並ぶ（下の「タグのつけ方」） |
+| 版を確定する（渡してもらう） | プルリクエストを開き、「Merge pull request」を押して `main` に取りこむ（Claude に「取りこんでよい」と伝えるだけでもよい）。それだけで、Actions がその巻を組み、20〜30分で「Releases」にその版（例 `vol6-ver3`）の PDF が並ぶ（下の「版を渡すしくみ」） |
 | 確定した PDF・tex 一式をもらう | 「Releases」→ その版 →「…_納品の名前のPDF一式.zip」（中は納品の名前の PDF）と「Source code (zip)」（これが tex 一式） |
 | 好きな巻をいま組む | 「Actions」→「組版」→「Run workflow」→ 巻を入力（`6`、`6 7`、`guide` など） |
 
@@ -133,17 +133,17 @@ git tag migration-2026-10-31 && git push origin migration-2026-10-31
 3. 直してコミットし、委員会の作業環境で組んで確かめる。委員会の最終確認をし、議事録を `docs/議事録/` に入れる。
 4. push してプルリクエストを作る。Actions が第6巻を組み、合否が出る。
 5. 依頼者に、PDF（チャットに添付）とプルリクエストのリンクを知らせる。
-6. 依頼者が取りこんだら、「Releases」の画面でタグ `vol6-ver2` のリリースを作る → Actions が第6巻を組み、そのリリースに PDF を添付する。
+6. Claude は、プルリクエストの中で `versions.json` のその巻の番号を上げておく（例 `"6": 3`）。依頼者が取りこむと、Actions が第6巻を組み、タグ `vol6-ver3` とリリースを作って PDF を添付する。
 
-### タグのつけ方（第18回で決定）
+### 版を渡すしくみ（第18回で決定）
 
-Claude の作業環境（クラウド）からはタグを送れない（ブランチは送れる）ため、タグは依頼者が「Releases」の画面で作る。
+依頼者の操作は「取りこみ（Merge）」だけ。タグやリリースを画面で作る必要はない。
 
-1. https://github.com/（ユーザー名）/（リポジトリ）/releases/new を開く。
-2. 「Choose a tag」にタグ（`vol6-ver2` など、決まりの形）を入れ、「Create new tag: … on publish」を選ぶ。Target は `main`。
-3. Release title にタグと同じ名前を入れ、「Publish release」を押す（説明は空でよい。空なら Actions が書く）。
-4. Actions がその巻を組み、組めたら同じリリースに PDF と納品の名前の zip を足す。赤い×のときは PDF は付かない（Claude に知らせる）。
-5. 何冊かまとめて渡すときは、巻ごとに 1〜4 をくり返す（1回に1つのタグ）。
+1. リポジトリの `versions.json` に、各巻のいまの版の番号を書いておく（例 `{"6": 2, "7": 2, "guide": 1}`）。
+2. Claude は、Ver3 などを作るプルリクエストの中で、その巻の番号を1つ上げる。
+3. プルリクエストが `main` に取りこまれると、Actions が番号の上がった巻を見つけて、組む → タグ（`vol6-ver3` など）を作る → リリースに PDF と納品の名前の zip を添付する、までを行う。
+4. 組版が赤い×になったときは、タグもリリースも作らない。Claude が直して、手動の実行（「Run workflow」の「リリースするタグ」の欄に `vol6-ver3` など）でやり直す。
+5. これまでどおり、「Releases」の画面で決まりの形のタグを作っても、その巻を組んで PDF を添付する（予備の方法）。
 
 これまでの納品（PDF・tex の zip・検算ファイル・議事録をチャットに添付）も、必要なあいだは続けます。
 
