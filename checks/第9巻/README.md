@@ -52,3 +52,4 @@
 | rev9/r4/py/series_check.py | 委員確認 r4 | 9-13 の路線・駅・章名を series.py と照らす |
 | rev9/r4/py/phys_check.py | 委員確認 r4 | 9-13・巻末の物理シリーズの表を series_phys.py と照らす |
 | tools/mkmap9.py | 巻末の組 B9 | --check：巻末の変換の地図と本文の表の一致。--flow：この巻の例題103題を地図の流れ図でたどる（ちがう所0） |
+| ver2/c_motor.py | 第9巻 Ver2 | 9-10 の DC モーター（回る速さの記号を $y$ に変えた No.13）：行列・固有値 −974・−25.8・1 V で 19.9 rad/s（約190回転/分） |
