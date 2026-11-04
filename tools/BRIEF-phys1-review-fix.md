@@ -1,7 +1,7 @@
 # 物理第1巻 委員確認の指摘を直す組への手引き（第21回）
 
 ## 始める前に
-1. worktree の HEAD が `d1dd658` より古いときは、`git merge --ff-only d1dd65867b9d221e3ed7b3b234c3e4427c9be672` で進める。
+1. worktree の HEAD が `d260e22` をふくまないときは、`git merge --ff-only d260e22` で進める。
 2. 組むときは `export TEXMFHOME=$PWD/texmf`（リポジトリの根で）。
 3. 読むもの：
    - `docs/修正事項/物理第1巻_委員確認/決定_第21回.md`（巻全体の決定 K-1〜K-20。いちばん優先）
