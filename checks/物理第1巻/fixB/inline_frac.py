@@ -12,8 +12,9 @@ for path in sys.argv[1:]:
         for e in skip_env:
             depth[e] += L.count('\\begin{%s}' % e) - L.count('\\end{%s}' % e)
         busy = any(depth[e] > 0 for e in skip_env) or L.lstrip().startswith('\\phflowrow') or '\\bksheet' in L
-        # \[ … \] と \pheq を取りのぞく
-        t = re.sub(r'\\\[.*?\\\]', '', L)
+        # \\[3pt] の行送りと、\[ … \] と \pheq を取りのぞく
+        t = re.sub(r'\\\\\[[0-9.]*pt\]', '', L)
+        t = re.sub(r'\\\[.*?\\\]', '', t)
         t = re.sub(r'\\pheq\{.*', '', t)
         if '\\[' in t and '\\]' not in t:
             indisp = True
