@@ -128,3 +128,8 @@
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_01Q88U4g24nbFPimYUMadros
   ```
+
+## 6. あとから足した決まり（まとめ役）
+
+- **℃ の書き方**（熱W1 の報告から）：物理の共通部品で、`\qty{20}{\celsius}` も本文と同じ「℃」の1字で組むようにした。どちらの書き方でもよい（`\qty{20}{\celsius}` か「20\,℃」）。単位の積 `J/(kg.K)` は「J/(kg·K)」と、点の前後をあけずに組まれる。
+- **ph2-pages.tex**：`tools/tryp.py` が、なければ自動で作る（`phys/gen_phys.py`）。
