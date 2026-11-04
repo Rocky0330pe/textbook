@@ -1,0 +1,1034 @@
+%% 熱-3 ふくらむ・縮む気体：理想気体の状態変化（第22回編集委員会 物理第2巻：組 熱W2）
+%% 記号（この章の中だけの分け方。巻全体は計画書 C-1）：
+%%   圧力 p（いつも絶対圧。ゲージ圧はことばで書き分ける）、体積 V、物質量 n（mol）、絶対温度 T（K）、セルシウス温度 θ（℃）。
+%%   モル気体定数 R＝8.31 J/(mol·K)、比気体定数 R_s＝R/M（空気 287 J/(kg·K)）、モル質量 M（kg/mol）、密度 ρ。
+%%   モル比熱 C_V・C_p（J/(mol·K)）、比熱 c_v・c_p（J/(kg·K)）、比熱比 γ＝C_p/C_V（機械の本では κ）。
+%%   ポリトロープ指数 k（物質量 n とぶつけない。専門書では n）。高さ z（上向き）。大気の高さの目安 H（この章だけ。エンタルピーは熱-4）。
+%%   第一法則は熱-2 の決まり：ΔU＝Q＋W（Q は受けとる熱、W は気体が「される」仕事）。気体が「する」仕事は W′＝−W。
+%%   重さは mg（W は仕事だけ）。音速の式は熱-4 ⑥ で導く（この章は予告だけ）。
+%% 数値はすべて Python で確かめた：checks/物理第2巻/熱-3/calc_p2_03.py（出力 calc_p2_03_out.txt）。
+%% ほかの章との約束（計画書 C-5-1・C-4）：
+%%   力-12 の「くわしくは熱-3」（富士山頂 約63 kPa、密度一定 約57 kPa）→ ⑥・例題5（等温 65 kPa、温度が下がる大気 63.5 kPa）。
+%%   力-12 の空気の K「すばやく押すと約1.4倍の約0.14 MPa（熱-3）」→ ⑧・例題13。
+%%   力-12「高さで密度が大きく変わる流体（熱-3）」→ ⑥。力-12「気体の pV の計算には必ず絶対圧（3-7⑥・熱-3）」→ ①・例題2。
+%%   力-11 の空気タンク（内半径 0.25 m、ゲージ 0.8 MPa）→ ⑨・例題15（長さ1 m とした）。
+%%   数学 3-7⑥ の注射器の表（pV≈2000 kPa·mL）とコラム（富士山頂 約63 kPa、袋 100→160 mL）→ ②・例題1。
+%%   熱-2 のはてな？（空気入れ）→ 例題6 で数の答え（約180 ℃）。熱-7（ディーゼル）→ 例題7（圧縮比18・27 ℃で約680 ℃）。
+%%   熱-5 例題8（カルノー 1 mol・300 K・体積2倍で 1729 J）→ 例題10 と同じ数。熱-15（大気の式）→ ⑥ の H＝RT/(Mg)。
+%%   波-9（物理シリーズの『波動』）は ⑧ の γp を使う。ここでは「熱-4 で音速 343 m/s」と予告だけ。
+%% 出典：
+%%   ボイル 1662年（『空気のばね』第2版の付録）。シャルル 1787年ごろ（発表していない）、ゲイ＝リュサック 1802年に発表。
+%%   アボガドロ 1811年。クラペイロン 1834年（状態方程式の形）。マイヤー 1842年。ポアソン 1823年（断熱の式）。
+%%   R＝8.314462618 J/(mol·K)：2019年の SI で決めた k_B（1.380649×10^-23 J/K）と N_A（6.02214076×10^23 /mol）の積。
+%%   比熱の表：CoolProp 8.0 で計算（300 K・101.325 kPa）。He・Ar 12.5/20.8、N2 20.8/29.2、空気 20.8/29.2、CO2 29.0/37.5。
+%%     空気の圧縮係数 Z＝0.9997（300 K・1気圧）：理想気体からのずれは 0.03 %（CoolProp 8.0）。
+%%   国際標準大気（ISO 2533）：海面 15 ℃・101.325 kPa、高さ 11 km まで 6.5 K/km で下がる。富士山頂の観測 約63 kPa（3-7・力-12 と同じ数）。
+%%   旅客機の客室の気圧：多くの旅客機は、客室の気圧を高さ 8000 フィート（約2400 m）の大気と同じ程度（約75 kPa）より下げない。
+%%   まだわかっていないこと：IPCC 第6次評価報告書 第1作業部会 第7章（2021）。雲のフィードバックは、気候感度の見積もりの
+%%     不確かさのいちばん大きな原因の1つ。AR6 の雲のフィードバックの評価 ＋0.42（−0.10〜0.94）W/(m^2·℃)。〔要確認：原文の照合〕
+\makeatletter
+% 袋（おかしの袋）  \qxdbag{(中心)}{はば}{高さ}{ふくらみ}
+\newcommand\qxdbag[4]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkOrange!25, draw=bkOrange!70!black, line width=0.8pt, rounded corners=#4 mm]
+    (-#2/2,-#3/2) rectangle (#2/2,#3/2);
+  \fill[bkOrange!55] (-#2/2,#3/2-2) rectangle (#2/2,#3/2);
+  \fill[bkOrange!55] (-#2/2,-#3/2) rectangle (#2/2,-#3/2+2);
+\end{scope}}
+% ピストンつきの筒（横向き）  \qxdcyl{(左下)}{長さ}{高さ}{ピストンの位置}
+\newcommand\qxdcyl[4]{\begin{scope}[shift={#1}]
+  \fill[bkBlue!12] (0,0) rectangle (#4,#3);
+  \draw[bkInk, line width=1pt] (#2,0) -- (0,0) -- (0,#3) -- (#2,#3);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (#4,-0.6) rectangle (#4+3,#3+0.6);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.6pt] (#4+3,#3/2-1) rectangle (#2+6,#3/2+1);
+\end{scope}}
+\makeatother
+\tikzset{qxd f/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.3pt},
+  qxd lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxd dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{3}{ふくらむ・縮む気体：\\理想気体の状態変化}{高い山の上で、おかしの袋がふくらむのはなぜ？}{\bklevelrange{3}{4}}{ふくらむ・縮む気体：理想気体の状態変化}
+\bkmichishirube{3-7,3-11,5-14,6-4,力-11,力-12,熱-1,熱-2}{熱-4,熱-7,熱-14,波-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace ボイル・シャルルの法則と状態方程式で、気体の圧力・体積・温度を求められる。
+\item \bklevel{3}\enspace 定積・定圧・等温・断熱の4つの変化で、熱と仕事と内部エネルギーの出入りを数えられる。
+\item \bklevel{4}\enspace 断熱変化・ポリトロープ変化の式で、空気入れ・エンジン・圧縮機・大気の温度と圧力を計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{空気は温めると体積が増える}{小学校理科}{ph:熱-3:charles}
+\phk{上昇する空気は膨張して温度が下がる}{中学理科}{ph:熱-3:kumo}
+\phk{$pV=$一定（ボイル）、$V/T=$一定（シャルル）}{高校物理}{ph:熱-3:boyle}
+\phk{$pV/T=$一定、$pV=nRT$（状態方程式）}{高校物理}{ph:熱-3:joutai}
+\phk{$Q=nC_V\Delta T$、$Q=nC_p\Delta T$、$C_p=C_V+R$}{高校物理}{ph:熱-3:mayer}
+\phk{等温変化 $Q=nRT\ln(V_2/V_1)$、断熱変化 $pV^{\gamma}=$一定}{高校物理（発展）}{ph:熱-3:toon}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+ふもとの店で買ったポテトチップスの袋を持って、バスで高い山に登りました。頂上に着くと、袋がぱんぱんにふくらんでいます。袋に空気を入れた人はいません。
+
+袋の中の空気は、なぜふくらんだのでしょう。どれくらいふくらむかを、計算で予想できるかな？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxdbag{(8,10)}{14}{20}{2}
+  \qxdbag{(36,15)}{17}{24}{6}
+  \node[qxd lab, anchor=north] at (8,-1) {ふもと};
+  \node[qxd lab, anchor=north] at (36,1) {山の頂上};
+  \draw[qxd f, bkGray] (17,12) -- (25,15);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-2 では、気体を押すと内部エネルギーが増えることを学びました。この章では、気体がふくらんだり縮んだりするときの、圧力・体積・温度の関係を調べます。はじめに、気体の量と圧力・体積・温度を結ぶ1本の式（状態方程式）を作ります。次に、熱-2 の第一法則 $\Delta U=Q+W$ と組み合わせて、「熱を入れるとどうなるか」「すばやく押すとどうなるか」を計算します。山の上の空気が冷たいわけも、エンジンの中の空気が熱くなるわけも、同じ式で説明できます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ペットボトルを冷やしてみよう]
+\textbf{用意するもの}\par
+空の\qty{500}{mL}のペットボトル（炭酸用のかたいものでなく、やわらかいもの）、冷蔵庫、ぬるま湯を入れたボウル
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 部屋の空気が入ったペットボトルのふたを、しっかり閉める。
+\item 冷蔵庫に1時間入れてから取り出し、形を見る。
+\item そのまま、ぬるま湯のボウルにつけて、形がどうなるかを見る。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 冷やすと、ペットボトルはへこみます。温めると、もとにもどります。中の空気の量は変わっていないのに、温度で体積（または圧力）が変わるのです。どれだけ変わるかは②で計算します。
+
+\begin{omoidasou}
+\bkrecall{3-7}{温度が変わらなければ、注射器の空気は $pV$ が一定（$pV\approx2000$\,kPa·mL）。$p$ は $V$ に反比例。}
+\bkrecall{力-12}{絶対圧＝ゲージ圧＋大気圧。大気圧は約\qty{101}{kPa}。止まった流体の中では、高さ $\Delta z$ 上がると圧力は $\rho g\Delta z$ 下がる。}
+\bkrecall{熱-1}{絶対温度 $T$〔K〕＝セルシウス温度 $\theta$〔℃〕＋273.15。温度の差は K でも ℃ でも同じ数。}
+\bkrecall{熱-2}{第一法則 $\Delta U=Q+W$。$W$ は気体が\textbf{される}仕事で、体積が $\Delta V$ 増えるとき $W=-p\Delta V$。気体が\textbf{する}仕事は $W'=-W$。}
+\bkrecall{5-14}{$\displaystyle\int\frac{1}{x}\,\dd x=\ln x+C$。$\ln$ は $e$ を底とする対数。}
+\bkrecall{6-4}{変数分離：$\dfrac{\dd y}{\dd x}$ の式を、$y$ だけの側と $x$ だけの側に分けて、両辺を積分する。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{気体の状態を決める4つの量}
+
+\leavevmode\label{ph:熱-3:sec1}ふたをした容器の中の気体を思いうかべましょう。気体の様子（\textbf{状態}）は、次の4つの量でほぼ決まります。\bkidx{じょうたい}{状態（気体の）}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{圧力 $p$}〔Pa〕：気体が壁を押す、\qty{1}{m^2}あたりの力。
+\item \textbf{体積 $V$}〔m$^3$〕：気体が入っている入れ物の大きさ。気体は入れ物いっぱいに広がる。
+\item \textbf{温度 $T$}〔K〕：絶対温度。セルシウス温度 $\theta$〔℃〕に 273.15 をたした数。
+\item \textbf{量 $n$}〔mol〕：気体の分子が何個あるか（物質量）。$1$ mol は $6.02\times10^{23}$ 個。
+\end{enumerate}
+
+\noindent\textbf{気体の式には、必ず絶対圧と絶対温度}\par\nobreak
+力-12 で学んだように、圧力計（ゲージ）の多くは、大気圧を0としたゲージ圧を示します。でも、気体を押しているのは、大気圧の分もふくめた全部の圧力です。真空から測った\textbf{絶対圧}を使います。温度も同じで、0 ℃は「熱の動きがなくなる温度」ではありません。気体の式では、0 K（$-273.15$ ℃）から数えた絶対温度 $T$ を使います。なぜ 0 K から数えるとよいのかは、②でわかります。
+\[ \text{絶対圧}=\text{ゲージ圧}+\text{大気圧},\qquad T\,[\mathrm{K}]=\theta\,[\text{℃}]+273.15 \]
+この章の計算では、2けたの答えには 273 を使ってもかまいません。
+
+\bksubsection{2}{ボイルの法則とシャルルの法則}
+
+\leavevmode\label{ph:熱-3:sec2}\noindent\textbf{温度が一定なら、$pV$ が一定}\par\nobreak
+3-7 のやってみようで、先をふさいだ注射器の空気を押し縮めると、体積 $V$ と圧力 $p$ の積がいつも約 2000\,kPa·mL になりました（3-7⑥の表）。体積を半分にすると、圧力は2倍になります。
+\pheq{pV=\text{一定}\qquad(\text{温度一定})}{Pa·m$^3$ ＝ J}
+\label{ph:熱-3:boyle}これを\textbf{ボイルの法則}といいます。\bkidx{ぼいるのほうそく}{ボイルの法則}イギリスのボイルが、1662年に、J 字の管に閉じこめた空気に水銀を注いで確かめました。$pV$ の単位 Pa·m$^3$＝(N/m$^2$)·m$^3$＝N·m は、エネルギーの単位 J と同じです（⑤で意味がわかります）。
+
+\noindent\textbf{圧力が一定なら、体積は絶対温度に比例する}\par\nobreak
+今度は、圧力を一定にしたまま温度を変えます。ガラスの管に空気を閉じこめ、管の中の水銀の短い柱をふたにすると、ふたは自由に動くので、中の圧力はいつも大気圧と同じです。管を水につけて、水の温度を変えながら空気の体積を読むと、表1のようになります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] *{6}{Q[c,m,wd=11mm]}}, rowsep=1.2pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+温度 $\theta$〔℃〕 & 0 & 20 & 40 & 60 & 80 & 100 \\
+体積 $V$〔mL〕 & 100.0 & 107.3 & 114.6 & 122.0 & 129.3 & 136.6 \\
+\end{bktable}
+\bktabcaption{圧力一定で空気を温めたときの体積（0 ℃で\qty{100}{mL}の空気）。}
+\label{ph:熱-3:tab-charles}
+\end{bkcenter}
+温度が\qty{20}{K}上がるごとに、体積は約\qty{7.3}{mL}ずつ増えています。1 K あたり、0 ℃の体積の約 $1/273$ です。図\ref{ph:熱-3:fig-charles}のようにグラフにすると、点はまっすぐに並びます。この直線を左へのばすと、$\theta=-273$ ℃のところで体積が0になります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=52mm, xmin=-290, xmax=120, ymin=0, ymax=150, xtick={-273,-200,-100,0,100}, xticklabels={$-273$,$-200$,$-100$,0,100}, ytick={50,100,136.6}, yticklabels={50,100,137}, xmajorgrids=false, xlabel={$\theta$（℃）}, ylabel={$V$（mL）}]
+  \addplot[bkcurve, domain=0:100] {100*(x+273.15)/273.15};
+  \addplot[bkthin, dashed, domain=-273.15:0] {100*(x+273.15)/273.15};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(0,100) (20,107.3) (40,114.6) (60,122.0) (80,129.3) (100,136.6)};
+  \addplot[only marks, mark=o, mark size=2.2pt, bkInk, line width=0.8pt] coordinates {(-273.15,0)};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:-285,112) {$-273$ ℃で体積が0（＝0 K）};
+  \draw[bkGray, line width=0.5pt] (axis cs:-262,110) -- (axis cs:-271,6);
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:-115,78) {のばした直線（点線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{圧力一定で温めた空気の体積。直線を左へのばすと、$-273$ ℃で体積が0になる。}
+\label{ph:熱-3:fig-charles}
+\end{bkfigure}
+本当の気体は、そこまで冷やす前に液体になってしまいます。それでも、どんな気体で測っても、のばした直線は同じ $-273$ ℃で0になります。だから、この温度を0とした目もり（絶対温度 $T$〔K〕）で測ると、体積は温度に比例します。
+\pheq{\frac{V}{T}=\text{一定}\qquad(\text{圧力一定})}{m$^3$/K}
+\label{ph:熱-3:charles}これを\textbf{シャルルの法則}といいます。\bkidx{しゃるるのほうそく}{シャルルの法則}フランスのシャルルが1787年ごろに見つけましたが発表せず、1802年にゲイ＝リュサックがくわしく測って発表しました。小学校理科の「空気は温めると体積が増え、冷やすと減る」を、数で表したものです。
+
+\begin{phyomi}[$V/T=$一定]
+「圧力を変えなければ、気体の体積は絶対温度に比例する」。絶対温度が1\,\% 上がれば、体積も1\,\% 増えます。
+\end{phyomi}
+\begin{phmijika}[ペットボトルと熱気球]
+やってみようのペットボトルを、\qty{25}{\celsius}の部屋から\qty{5}{\celsius}の冷蔵庫へ入れると、中の空気は、圧力が同じなら体積が $278\div298\approx0.93$ 倍になろうとします。約7\,\% 縮むので、やわらかいボトルはへこみます。熱気球は反対に、中の空気を温めてふくらませ、外へ追い出して軽くしています（\bkreidairef{14}）。
+\end{phmijika}
+\begin{phbaisuru}{絶対温度 $T$}
+体積も2倍になります。ただし、2倍にするのは\textbf{絶対温度}です。\qty{20}{\celsius}（\qty{293}{K}）を\qty{40}{\celsius}（\qty{313}{K}）にしても、℃ の数は2倍ですが、体積は $313\div293\approx1.07$ 倍にしかなりません。体積を2倍にするには、\qty{293}{K}を\qty{586}{K}（\qty{313}{\celsius}）まで上げます。
+\end{phbaisuru}
+
+\noindent\textbf{2つをまとめる：ボイル・シャルルの法則}\par\nobreak
+圧力も体積も温度も変わるときは、図\ref{ph:熱-3:fig-nidan}のように、変化を2段に分けて考えます（8-3⑤の全微分と同じ考え：東へ進んでから北へ進む）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[draw=bkInk, line width=0.7pt, rounded corners=1.5mm, align=center, font=\sffamily\footnotesize, minimum width=26mm, minimum height=12mm] (a) at (0,0) {はじめ\\$p_1,\ V_1,\ T_1$};
+  \node[draw=bkInk, line width=0.7pt, rounded corners=1.5mm, align=center, font=\sffamily\footnotesize, minimum width=26mm, minimum height=12mm] (b) at (52,0) {とちゅう\\$p_2,\ V',\ T_1$};
+  \node[draw=bkInk, line width=0.7pt, rounded corners=1.5mm, align=center, font=\sffamily\footnotesize, minimum width=26mm, minimum height=12mm] (c) at (104,0) {おわり\\$p_2,\ V_2,\ T_2$};
+  \draw[bk link] (a) -- (b);
+  \draw[bk link] (b) -- (c);
+  \node[qxd lab, align=center, anchor=south] at (26,1.5) {温度一定\\（ボイル）};
+  \node[qxd lab, align=center, anchor=south] at (78,1.5) {圧力一定\\（シャルル）};
+  \node[qxd lab, anchor=north] at (26,-2) {$p_1V_1=p_2V'$};
+  \node[qxd lab, anchor=north] at (78,-2) {$\dfrac{V'}{T_1}=\dfrac{V_2}{T_2}$};
+\end{tikzpicture}
+\bkfigcaption{圧力・体積・温度がみな変わる変化を、温度一定の段と圧力一定の段に分ける。}
+\label{ph:熱-3:fig-nidan}
+\end{bkfigure}
+1段めのボイルの法則から、$V'=p_1V_1/p_2$ です。これを、2段めのシャルルの法則 $V'/T_1=V_2/T_2$ に入れると
+\[ \frac{p_1V_1}{p_2T_1}=\frac{V_2}{T_2}\qquad\text{両辺に }p_2\text{ をかけて}\qquad \frac{p_1V_1}{T_1}=\frac{p_2V_2}{T_2} \]
+\pheq{\frac{pV}{T}=\text{一定}}{J/K}
+\label{ph:熱-3:bc}これを\textbf{ボイル・シャルルの法則}といいます。\bkidx{ぼいるしゃるるのほうそく}{ボイル・シャルルの法則}気体の量が変わらなければ、どんな変化のあとでも成り立ちます。$p$ と $T$ は、必ず絶対圧と絶対温度で入れます。
+
+\noindent\textbf{おかしの袋がふくらむわけ}\par\nobreak
+\label{ph:熱-3:hatena}\bkhatenaref に答えましょう。袋の空気は、まわりの大気と同じ圧力になるまでふくらみます（袋が空気を押す力は小さいので無視します）。ふもとで $p_1=\qty{101}{kPa}$、$\theta_1=\qty{20}{\celsius}$（$T_1=\qty{293}{K}$）、$V_1=\qty{100}{mL}$ の空気が、富士山の頂上（約\qty{63}{kPa}、約\qty{5}{\celsius}＝\qty{278}{K}）へ行くと
+\[ V_2=V_1\times\frac{p_1}{p_2}\times\frac{T_2}{T_1}=100\times\frac{101}{63}\times\frac{278}{293}\approx\qty{152}{mL} \]
+\textbf{\bkhatenaref の答え}：山の上は大気圧が低いので、袋の中の空気が押し返されなくなり、まわりと同じ圧力になるまでふくらみます。圧力だけなら約1.6倍（3-7 のコラムの\qty{160}{mL}）ですが、頂上は気温が低いので、その分少し縮み、約1.5倍（約\qty{150}{mL}）になります。高い所ほど大気圧が低いわけと、気温が低いわけは、⑥で調べます。
+
+\bksubsection{3}{理想気体の状態方程式 $pV=nRT$}
+
+\leavevmode\label{ph:熱-3:sec3}ボイル・シャルルの法則の「一定」の値は、気体の量で決まります。同じ温度・同じ圧力なら、気体の量を2倍にすると、体積も2倍になるからです。
+
+\noindent\textbf{1 mol の気体は、どの気体でも同じ体積}\par\nobreak
+イタリアのアボガドロは1811年に、「同じ温度・同じ圧力・同じ体積の気体には、気体の種類によらず、同じ数の分子が入っている」と考えました（アボガドロの法則）。0 ℃・1気圧（\qty{101.325}{kPa}）では、どの気体でも 1 mol は約\qty{22.4}{L}です（\bkreidairef{3}）。だから $pV/T$ は物質量 $n$ に比例し、その比例の定数はどの気体でも同じです。この定数を\textbf{気体定数} $R$ と書くと
+\pheq{pV=nRT}{Pa·m$^3$ ＝ mol × J/(mol·K) × K}
+\label{ph:熱-3:joutai}これを\textbf{理想気体の状態方程式}といいます。\bkidx{りそうきたいのじょうたいほうていしき}{理想気体の状態方程式}1834年に、フランスのクラペイロンがこの形にまとめました。$R$ の値は
+\[ R=\frac{pV}{nT}=\frac{\qty{101325}{Pa}\times\qty{0.022414}{m^3}}{\qty{1}{mol}\times\qty{273.15}{K}}\approx\qty{8.31}{J/(mol·K)} \]
+です。2019年からは、ボルツマン定数 $k_{\mathrm B}$ とアボガドロ定数 $N_{\mathrm A}$ が決めた値になり、$R=N_{\mathrm A}k_{\mathrm B}=8.314462618$\,J/(mol·K) とぴったり決まりました（熱-1・熱-14）。
+
+\begin{phyomi}[$pV=nRT$]
+左辺の $pV$ は「気体が入れ物を押し広げる働き」、右辺の $nRT$ は「分子の数×温度」。分子が多いほど、温度が高いほど、気体は強く押し広げます。4つの量のうち3つがわかれば、残りの1つが決まります。
+\end{phyomi}
+\begin{phbaisuru}{物質量 $n$}
+同じ体積・同じ温度なら、圧力が2倍になります。自転車のタイヤに空気を入れると、タイヤの体積はほとんど変わらないので、入れた空気の量に比例して圧力が上がります（絶対圧で考えます）。
+\end{phbaisuru}
+
+\noindent\textbf{等温線}\par\nobreak
+$n$ と $T$ を決めると、$p=nRT/V$ は $V$ に反比例します（3-7）。図\ref{ph:熱-3:fig-toonsen}は、1 mol の気体の $p$ と $V$ の関係を、3つの温度でかいたものです。この図を\textbf{$p$-$V$ 線図}といい、1本1本の曲線を\textbf{等温線}といいます。温度が高い等温線ほど、右上にあります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=34, ymin=0, ymax=420, xtick={10,20,30}, ytick={100,200,300,400}, xlabel={$V$（L）}, ylabel={$p$（kPa）}]
+  \addplot[bkcurve, domain=4.5:32] {8.314*200/x};
+  \addplot[bkcurve2, domain=6:29] {8.314*300/x};
+  \addplot[bkcurve3, domain=8:26] {8.314*400/x};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(10,249.4) (20,124.7)};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:32.3,52) {200 K};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:29.3,86) {300 K};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:26.3,128) {400 K};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{1 mol の理想気体の等温線。300 K の線の上の黒丸は\qty{10}{L}・\qty{249}{kPa}と\qty{20}{L}・\qty{125}{kPa}で、体積が2倍になると圧力は半分になる。}
+\label{ph:熱-3:fig-toonsen}
+\end{bkfigure}
+
+\noindent\textbf{1 kg あたりの形 $p=\rho R_{\mathrm s}T$}\par\nobreak
+工学では、気体の量を mol ではなく kg で数えることが多いです。気体の質量を $m$、1 mol の質量（モル質量）を $M$〔kg/mol〕とすると、$n=m/M$ です。これを $pV=nRT$ に入れて、両辺を $V$ でわると、密度 $\rho=m/V$ を使って
+\[ pV=\frac{m}{M}RT\qquad\text{より}\qquad p=\frac{m}{V}\cdot\frac{R}{M}\cdot T \]
+\pheq{p=\rho R_{\mathrm s}T,\qquad R_{\mathrm s}=\frac{R}{M}}{Pa ＝ kg/m$^3$ × J/(kg·K) × K}
+\label{ph:熱-3:rho}$R_{\mathrm s}$ を\textbf{比気体定数}といい、気体ごとにちがう値です。空気（窒素と酸素などのまざったもの）は $M=\qty{0.02896}{kg/mol}$ なので $R_{\mathrm s}=8.314\div0.02896\approx\qty{287}{J/(kg·K)}$ です。\bkidx{ひきたいていすう}{比気体定数}
+
+\begin{phmodel}[理想気体（この章の基本のモデル）]
+\phignore{分子1つ1つの大きさ。分子どうしが引き合う力。}
+\phassume{分子は小さな点で、壁や分子どうしにぶつかるとき以外は力をおよぼし合わない。どの温度・圧力でも $pV=nRT$。}
+\phlimit{高い圧力（数 MPa より上）や、液体になる温度に近いとき（熱-10）。水蒸気や冷媒の計算（熱-8・熱-9）。}
+\end{phmodel}
+\noindent ふつうの温度と圧力の空気では、$pV=nRT$ からのずれは 0.03\,\% ほどで（\qty{300}{K}・1気圧、CoolProp 8.0 で計算）、このモデルで十分です。
+
+\bksubsection{4}{定積・定圧の熱と、マイヤーの関係}
+
+\leavevmode\label{ph:熱-3:sec4}ここから、第一法則 $\Delta U=Q+W$（熱-2）と状態方程式を組み合わせます。
+
+\noindent\textbf{理想気体の内部エネルギーは、温度だけで決まる}\par\nobreak
+熱-2 ⑥ のジュールの実験（真空へのふくらみ）で、理想気体の内部エネルギー $U$ は、体積や圧力によらず、温度 $T$ だけで決まることを学びました。分子どうしが力をおよぼし合わないので、分子の間の距離が変わっても、エネルギーは変わらないのです。
+
+\noindent\textbf{体積一定で温める：定積モル比熱 $C_V$}\par\nobreak
+図\ref{ph:熱-3:fig-teiseki}の左のように、ピストンを止めて体積を一定にし、気体を温めます。体積が変わらないので、気体がされる仕事は $W=0$ です。第一法則から $\Delta U=Q$。入れた熱は全部、内部エネルギーになります。1 mol の気体を 1 K 上げるのに要る熱を\textbf{定積モル比熱} $C_V$〔J/(mol·K)〕といいます。\bkidx{ていせきもるひねつ}{定積モル比熱}
+\pheq{Q=nC_V\Delta T\qquad(\text{体積一定})}{J ＝ mol × J/(mol·K) × K}
+\label{ph:熱-3:teiseki}このとき $\Delta U=Q$ なので、$\Delta U=nC_V\Delta T$ です。$U$ は温度だけで決まるので、この式は、体積一定のときだけでなく、\textbf{どんな変化でも}使えます。温度が同じだけ上がれば、内部エネルギーの増え方は同じだからです。
+\pheq{\Delta U=nC_V\Delta T\qquad(\text{理想気体のどんな変化でも})}{J}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 定積
+  \fill[bkBlue!12] (0,6) rectangle (34,26);
+  \draw[bkInk, line width=1pt] (0,26) -- (0,6) -- (34,6) -- (34,26);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (-1,26) rectangle (35,29);
+  \foreach \x in {6,28} \fill[bkInk] (\x-1.5,29) rectangle (\x+1.5,32);
+  \node[qxd lab] at (17,34.5) {ピストンを止める};
+  \draw[qxd f, bkRed!75!black] (17,-4) -- (17,5);
+  \node[qxd lab, anchor=north] at (17,-4.5) {熱 $Q$};
+  \node[qxd lab, align=center] at (17,16) {$\Delta U=Q$\\$W=0$};
+  \node[qxd lab, anchor=north, font=\sffamily\small\bfseries] at (17,-11) {定積};
+  % 定圧
+  \begin{scope}[shift={(66,0)}]
+  \fill[bkBlue!12] (0,6) rectangle (34,30);
+  \draw[bkInk, line width=1pt] (0,38) -- (0,6) -- (34,6) -- (34,38);
+  \draw[bkGray, dashed, line width=0.5pt] (0,23) -- (34,23);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (0.3,30) rectangle (33.7,33);
+  \draw[qxd f, bkBlue!80!black] (40,24) -- (40,32);
+  \node[qxd lab, anchor=west, align=left] at (41.5,28) {押し上げる\\（仕事 $p\Delta V$）};
+  \node[qxd lab, anchor=east] at (-1.5,23) {はじめの位置};
+  \draw[qxd f, bkRed!75!black] (17,-4) -- (17,5);
+  \node[qxd lab, anchor=north] at (17,-4.5) {熱 $Q$};
+  \node[qxd lab, align=center] at (17,15) {$\Delta U=Q-p\Delta V$};
+  \node[qxd lab, anchor=north, font=\sffamily\small\bfseries] at (17,-11) {定圧};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{体積一定で温める（左）と、圧力一定で温める（右）。右では、気体がピストンを押し上げる仕事の分だけ、余分に熱が要る。}
+\label{ph:熱-3:fig-teiseki}
+\end{bkfigure}
+
+\noindent\textbf{圧力一定で温める：定圧モル比熱 $C_p$}\par\nobreak
+図\ref{ph:熱-3:fig-teiseki}の右では、ピストンは自由に動き、気体の圧力はいつも同じ $p$ です。温めると気体はふくらみ、体積が $\Delta V$ 増えます。このとき気体は、ピストンを押し上げる仕事 $p\Delta V$ をします。この本の $W$ は「される仕事」なので $W=-p\Delta V$ です。第一法則から
+\[ Q=\Delta U-W=nC_V\Delta T+p\Delta V \]
+圧力一定なので、状態方程式から $p\Delta V=nR\Delta T$ です。だから
+\[ Q=nC_V\Delta T+nR\Delta T=n(C_V+R)\Delta T \]
+1 mol を 1 K 上げるのに要る熱を\textbf{定圧モル比熱} $C_p$ といいます。\bkidx{ていあつもるひねつ}{定圧モル比熱}
+\pheq{Q=nC_p\Delta T,\qquad C_p=C_V+R}{J/(mol·K)}
+\label{ph:熱-3:mayer}$C_p=C_V+R$ を\textbf{マイヤーの関係}といいます。\bkidx{まいやーのかんけい}{マイヤーの関係}ドイツの医師マイヤーが1842年に、この差を使って「熱と仕事の換算の割合」（熱の仕事当量。熱-2 ①）を見つもりました。
+
+\begin{phyomi}[$C_p=C_V+R$]
+「圧力一定で温めると、体積一定より、1 mol・1 K あたり $R$（約\qty{8.3}{J}）だけ多く熱が要る」。この $R$ は、気体がふくらんでピストンを押し上げる仕事の分です。温まるのは同じなので、内部エネルギーの増え方は同じ。余分の熱は、全部、外への仕事になります。
+\end{phyomi}
+\begin{seikaku}
+この本の第一法則は $\Delta U=Q+W$（$W$ は気体がされる仕事）です。機械の熱力学の本では、エンジンやタービンが「する」仕事を正にとって、$Q=\Delta U+W$（この $W$ は、この本の $W'$）と書くことが多いです。同じ法則を、仕事の向きの決め方を変えて書いているだけです。上の定圧の熱も、機械の本の形なら $Q=\Delta U+p\Delta V$ と、そのまま読めます。どちらの本を読むときも、図\ref{ph:熱-3:fig-teiseki}のような矢印の図で「入る熱」「出る熱」「される仕事」「する仕事」をたしかめれば、まちがえません。
+\end{seikaku}
+
+\noindent\textbf{比熱比 $\gamma$}\par\nobreak
+$C_p$ と $C_V$ の比を\textbf{比熱比}といい、$\gamma$（ガンマ）で書きます。\bkidx{ひねつひ}{比熱比}
+\pheq{\gamma=\frac{C_p}{C_V}}{（単位なし）}
+表\ref{ph:熱-3:tab-hinetsu}は、測った値です（\qty{300}{K}・1気圧）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[c,m,wd=22mm] Q[c,m,wd=22mm] Q[c,m,wd=20mm] Q[c,m,wd=14mm]}, rowsep=1.2pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+気体 & $C_V$〔J/(mol·K)〕 & $C_p$〔J/(mol·K)〕 & $C_p-C_V$ & $\gamma$ \\
+ヘリウム He（単原子） & 12.5 & 20.8 & 8.3 & 1.67 \\
+アルゴン Ar（単原子） & 12.5 & 20.8 & 8.4 & 1.67 \\
+窒素 N$_2$（2原子） & 20.8 & 29.2 & 8.4 & 1.40 \\
+空気（おもに2原子） & 20.8 & 29.2 & 8.4 & 1.40 \\
+二酸化炭素 CO$_2$（3原子） & 29.0 & 37.5 & 8.5 & 1.29 \\
+\end{bktable}
+\bktabcaption{気体のモル比熱と比熱比（\qty{300}{K}・1気圧。CoolProp 8.0 で計算）。$C_p-C_V$ は、どの気体でもほぼ $R=8.3$。}
+\label{ph:熱-3:tab-hinetsu}
+\end{bkcenter}
+\label{ph:熱-3:gamma}表から、次のことがわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $C_p-C_V$ は、どの気体でもほぼ $R$（マイヤーの関係）。
+\item 単原子の気体は $C_V\approx\tfrac{3}{2}R=12.5$、$\gamma\approx\tfrac{5}{3}=1.67$。
+\item 2原子の気体（空気も）は $C_V\approx\tfrac{5}{2}R=20.8$、$\gamma\approx\tfrac{7}{5}=1.40$。
+\end{itemize}
+なぜ $\tfrac{3}{2}R$ や $\tfrac{5}{2}R$ というきりのよい数になるのかは、分子の動きを数える熱-14 で導きます。この章では、表の値を「測った値」として使います。
+
+\noindent\textbf{1 kg あたりの比熱}\par\nobreak
+1 kg を 1 K 上げる熱は、モル比熱をモル質量 $M$ でわった $c_v=C_V/M$、$c_p=C_p/M$〔J/(kg·K)〕です（熱-1 の比熱 $c$ と同じ量）。マイヤーの関係は $c_p-c_v=R_{\mathrm s}$ になります。空気では $c_p=\qty{1005}{J/(kg·K)}$、$c_v=1005-287=\qty{718}{J/(kg·K)}$ です（\bkreidairef{9}）。
+
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\Delta U=Q+W$\\$W=-p\Delta V$}{体積一定\\（$\Delta V=0$）}{$Q=\Delta U=nC_V\Delta T$}
+\phflowrow{$\Delta U=Q+W$\\$W=-p\Delta V$}{圧力一定\\$p\Delta V=nR\Delta T$}{$Q=nC_p\Delta T$\\$C_p=C_V+R$}
+\end{phflow}
+
+\bksubsection{5}{温度一定の変化：等温変化}
+
+\leavevmode\label{ph:熱-3:sec5}気体の入った筒を、温度一定の大きな水そうにつけて、ピストンをゆっくり引きます。気体はふくらみますが、温度はまわりの水と同じに保たれます。これを\textbf{等温変化}といいます。\bkidx{とうおんへんか}{等温変化}
+
+温度が変わらないので、内部エネルギーも変わりません（$\Delta U=0$）。第一法則から $0=Q+W$、つまり $Q=-W=W'$。\textbf{気体が受けとった熱は、全部、気体が外にする仕事になります}。
+
+\noindent\textbf{仕事を積分で求める}\par\nobreak
+気体がする仕事は、$p$-$V$ 線図の曲線の下の面積 $W'=\int_{V_1}^{V_2}p\,\dd V$ です（熱-2 ③）。等温では $p=nRT/V$ で、$nRT$ は一定なので積分の外に出せます。$\int\frac{1}{V}\dd V=\ln V$（5-14⑨）を使って
+\[ W'=\int_{V_1}^{V_2}\frac{nRT}{V}\,\dd V=nRT\Bigl[\ln V\Bigr]_{V_1}^{V_2}=nRT(\ln V_2-\ln V_1) \]
+\pheq{Q=W'=nRT\ln\frac{V_2}{V_1}\qquad(\text{等温})}{J ＝ mol × J/(mol·K) × K}
+\label{ph:熱-3:toon}ふくらむとき（$V_2>V_1$）は $\ln$ が正で、気体は熱を受けとり、仕事をします。縮むとき（$V_2<V_1$）は負で、気体は仕事をされ、同じだけの熱を外へ出します。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=52mm, xmin=0, xmax=56, ymin=0, ymax=320, xtick={24.9,49.9}, xticklabels={$V_1$,$V_2=2V_1$}, ytick={100,200,300}, xlabel={$V$（L）}, ylabel={$p$（kPa）}]
+  \addplot[draw=none, fill=bkOrange!25, domain=24.94:49.88] {8.314*300/x} \closedcycle;
+  \addplot[bkcurve, domain=8.5:54] {8.314*300/x};
+  \node[font=\sffamily\footnotesize, align=center, anchor=south] at (axis cs:44,150) {色の面積＝気体がする仕事\\$nRT\ln2\approx\qty{1730}{J}$};
+  \draw[bkGray, line width=0.5pt] (axis cs:42,148) -- (axis cs:38,40);
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:12,215) {300 K の等温線（1 mol）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{1 mol・\qty{300}{K}の気体が、等温で体積2倍にふくらむときの仕事（色の面積）。}
+\label{ph:熱-3:fig-toon}
+\end{bkfigure}
+
+\begin{phbaisuru}{体積の比 $V_2/V_1$}
+仕事は2倍にはなりません。$\ln2\approx0.69$ が $\ln4\approx1.39$ になるだけで、ちょうど「体積2倍の分」を2回くり返した分（$0.69+0.69$）です。体積がふくらむほど圧力が下がり、同じ $\Delta V$ でできる仕事が小さくなるからです。反対に、温度 $T$ を2倍にすると、同じ体積の比で、仕事も熱も2倍になります。
+\end{phbaisuru}
+
+\bksubsection{6}{熱の出入りがない変化：断熱変化}
+
+\leavevmode\label{ph:熱-3:sec6}熱-2 のはてな？では、自転車の空気入れの筒の先が熱くなりました。空気をすばやく押すと、熱が外へ逃げる時間がありません。熱の出入りがない変化を\textbf{断熱変化}といいます。\bkidx{だんねつへんか}{断熱変化}
+
+\noindent\textbf{第一法則で考える}\par\nobreak
+$Q=0$ なので、第一法則は $\Delta U=W$。押す仕事（$W>0$）は全部、内部エネルギーになり、温度が上がります。反対に、気体がふくらんで外に仕事をすると（$W<0$）、その分、内部エネルギーが減り、温度が下がります。炭酸飲料のふたをあけたとき、口の所に白い霧ができるのは、中の気体が急にふくらんで冷え、水蒸気が小さな水のつぶになるからです。
+
+\noindent\textbf{ポアソンの式を導く}\par\nobreak
+断熱で、体積がほんの少し $\dd V$ 変わる間を考えます。される仕事は $-p\,\dd V$、内部エネルギーの変化は $nC_V\,\dd T$（④）なので
+\[ nC_V\,\dd T=-p\,\dd V \]
+状態方程式から $p=nRT/V$ を入れて、両辺を $nT$ でわると
+\[ C_V\frac{\dd T}{T}=-R\frac{\dd V}{V} \]
+左は $T$ だけ、右は $V$ だけの式になりました（6-4③の変数分離）。両辺を積分すると（5-14⑨）
+\[ C_V\ln T=-R\ln V+\text{一定}\qquad\text{より}\qquad \ln T+\frac{R}{C_V}\ln V=\text{一定} \]
+ここで、マイヤーの関係から
+\[ \frac{R}{C_V}=\frac{C_p-C_V}{C_V}=\gamma-1 \]
+です。対数のきまり（3-12③）で
+\[ \ln T+(\gamma-1)\ln V=\ln(TV^{\gamma-1}) \]
+なので
+\pheq{TV^{\gamma-1}=\text{一定}\qquad(\text{断熱})}{K·m$^{3(\gamma-1)}$}
+$T=pV/(nR)$ を入れると、$pV\cdot V^{\gamma-1}=pV^{\gamma}$ なので
+\pheq{pV^{\gamma}=\text{一定}\qquad(\text{断熱})}{Pa·m$^{3\gamma}$}
+\label{ph:熱-3:poisson}これを\textbf{ポアソンの式}といいます。\bkidx{ぽあそんのしき}{ポアソンの式}フランスのポアソンが1823年に示しました。圧力と温度の関係にすると、$\dfrac{T}{p^{(\gamma-1)/\gamma}}=$一定 です。
+
+\begin{phyomi}[$pV^\gamma=$一定]
+「熱の出入りがなければ、体積を縮めたときの圧力の上がり方は、温度一定のときより大きい」。等温の $pV=$一定 の、$V$ の指数が1から $\gamma$（空気で1.4）に大きくなったものです。縮めると温度も上がるので、そのぶん圧力がさらに上がるのです。
+\end{phyomi}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=1.12, ymin=0, ymax=500, xtick={0.333,0.5,1}, xticklabels={$\frac{1}{3}$,$\frac{1}{2}$,1}, ytick={100,200,264,300,466}, xlabel={$V/V_1$}, ylabel={$p$（kPa）}]
+  \addplot[bkcurve2, domain=0.3:1.08] {100/x};
+  \addplot[bkcurve, domain=0.3:1.08] {100/x^1.4};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkInk] coordinates {(1,100) (0.5,200) (0.5,263.9) (0.3333,300) (0.3333,465.6)};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.35,470) {断熱 $pV^{1.4}=$一定};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:0.82,72) {等温 $pV=$一定（下の線）};
+  \draw[bkGray, line width=0.5pt] (axis cs:0.76,74) -- (axis cs:0.72,136);
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:0.52,262) {断熱で半分：2.64倍};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (axis cs:0.49,195) {等温で半分：2倍};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{空気（$\gamma=1.4$、はじめ\qty{100}{kPa}）の等温線と断熱線。断熱線のほうが急。}
+\label{ph:熱-3:fig-dannetsu}
+\end{bkfigure}
+\begin{phbaisuru}[半分]{体積 $V$}
+断熱では、圧力は $2^{1.4}\approx2.64$ 倍、絶対温度は $2^{0.4}\approx1.32$ 倍になります（図\ref{ph:熱-3:fig-dannetsu}）。\qty{20}{\celsius}（\qty{293}{K}）の空気なら、$293\times1.32\approx\qty{387}{K}$、約\qty{114}{\celsius}です。温度一定なら圧力はちょうど2倍で、温度は変わりません。
+\end{phbaisuru}
+
+\noindent\textbf{表計算で確かめる}\par\nobreak
+ポアソンの式は、積分を使って導きました。積分を使わずに、小さな段に区切って確かめてみましょう（6-2①のオイラー法）。\qty{1}{L}・\qty{100}{kPa}・\qty{300}{K}の空気（$n=0.0401$ mol、$C_V=\tfrac{5}{2}R$）を、20回に分けて $\tfrac13$ まで押し縮めます。1回に縮める体積は $\Delta V=-\qty{0.0333}{L}$ です。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 今の圧力 $p$ で押すとして、される仕事は $-p\Delta V$。断熱なので、内部エネルギーがその分増える。
+\item 温度の上がりは $\Delta T=-p\Delta V/(nC_V)$。
+\item 新しい体積と温度から、状態方程式で新しい圧力 $p=nRT/V$。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & $V$（L） & $T$（K） & $p$（kPa） & $pV^{1.4}$ の比 \\
+2 & 1.000 & 300.0 & 100.0 & 1.000 \\
+3 & 0.867 & 317.2 & 122.0 & 0.999 \\
+4 & 0.733 & 338.5 & 153.9 & 0.997 \\
+5 & 0.600 & 365.8 & 203.2 & 0.994 \\
+6 & 0.467 & 402.7 & 287.7 & 0.990 \\
+7 & 0.333 & 457.3 & 457.3 & 0.982 \\}
+\bktabcaption{20段の計算のうち、4段ごとに表示した。$pV^{1.4}$ の比は、はじめの値を1としたもの。}
+\end{bkcenter}
+$pV^{1.4}$ は、ほぼ一定のままです。最後の温度は\qty{457}{K}です。ポアソンの式の答えは $300\times3^{0.4}\approx\qty{466}{K}$ なので、近い値になりました。少し低いのは、1段の間、圧力を段のはじめの値（少し小さい）として計算したからです。200段に分けると\qty{465}{K}になり、式の答えに近づきます。
+
+\noindent\textbf{高い所ほど、大気圧が低いわけ}\par\nobreak
+\label{ph:熱-3:taiki}力-12 で、空気の密度を一定（\qty{1.2}{kg/m^3}）として富士山の頂上（\qty{3776}{m}）の気圧を計算すると、約\qty{57}{kPa}になり、本当の約\qty{63}{kPa}とずれました。空気は縮みやすく、上へ行くほど上から押す空気が少なくなるので、密度も小さくなるからです。
+
+高さ $z$ から $z+\dd z$ までのうすい空気の層を考えます。止まった空気の圧力の式（力-12）は $\dd p=-\rho g\,\dd z$。密度は、③の式から $\rho=pM/(RT)$ です。
+\[ \frac{\dd p}{\dd z}=-\frac{Mg}{RT}\,p \]
+「圧力の減る速さが、圧力そのものに比例する」形です（3-11①・5-14⑪）。まず、温度が高さによらず一定（等温）とします。$H=RT/(Mg)$ とおいて変数分離すると $\dfrac{\dd p}{p}=-\dfrac{\dd z}{H}$ で、両辺を積分して
+\pheq{p=p_0\,e^{-z/H},\qquad H=\frac{RT}{Mg}}{$H$ の単位は m}
+$H$ は、気圧が $1/e$（約37\,\%）になる高さの目安です。\qty{15}{\celsius}（\qty{288}{K}）では
+\[ H=\frac{8.314\times288}{0.02896\times9.8}\approx\num{8430}\,\mathrm{m}\approx\qty{8.4}{km} \]
+です。富士山の頂上（\qty{3776}{m}）では、$p=101.3\times e^{-3776/8430}\approx\qty{65}{kPa}$ です。密度一定の\qty{57}{kPa}より、ずっと本当の値に近くなりました。
+
+\noindent\textbf{上へ行くと冷える：断熱で膨張する空気}\par\nobreak
+\label{ph:熱-3:kumo}本当の大気は、高い所ほど気温が低くなります。地面で温められた空気のかたまりが上へ上がると、まわりの気圧が下がるので、かたまりはふくらみます。空気は熱を伝えにくく、かたまりは大きいので、熱の出入りはほとんどありません。だから、ふくらむ分だけ外に仕事をして、温度が下がります（断熱膨張）。中学理科の「上昇する空気は膨張して温度が下がり、露点に達すると雲ができる」は、このことです。
+
+下がり方を計算しましょう。ポアソンの式を圧力と温度で書いた $T/p^{(\gamma-1)/\gamma}=$一定 の両辺の対数をとって微分すると、$\dfrac{\dd T}{T}=\dfrac{\gamma-1}{\gamma}\,\dfrac{\dd p}{p}$ です。ここに上の $\dd p/p=-Mg\,\dd z/(RT)$ を入れると
+\[ \frac{\dd T}{\dd z}=-\frac{\gamma-1}{\gamma}\cdot\frac{Mg}{R}=-\frac{0.4}{1.4}\times\frac{0.02896\times9.8}{8.314}\approx-0.0098\ \mathrm{K/m} \]
+$\dfrac{\gamma-1}{\gamma}\cdot\dfrac{R}{M}$ は $c_p$ の逆数になるので（$c_p=\dfrac{\gamma}{\gamma-1}R_{\mathrm s}$）、この式は $\dd T/\dd z=-g/c_p$ とも書けます。乾いた空気は、\qty{1}{km}上がるごとに約\qty{9.8}{K}（約\qty{10}{K}）冷えます。これを\textbf{乾燥断熱減率}といいます。\bkidx{かんそうだんねつげんりつ}{乾燥断熱減率}
+
+ところが、本当の大気の気温は、平均すると\qty{1}{km}に約\qty{6.5}{K}しか下がりません（国際標準大気）。空気にふくまれる水蒸気が雲になるとき、熱（潜熱。熱-1）を出して空気を温めるからです。気温が $T=T_0-Lz$（$L=\qty{0.0065}{K/m}$）で下がる大気では、同じように積分して
+\[ p=p_0\Bigl(1-\frac{Lz}{T_0}\Bigr)^{Mg/(RL)},\qquad \frac{Mg}{RL}\approx5.26 \]
+となり、富士山の頂上で約\qty{63.5}{kPa}です（\bkreidairef{5}）。観測の約\qty{63}{kPa}とよく合います。
+
+\Needspace{9\baselineskip}
+\begin{phflow}
+\phflowrow{$\dfrac{\dd p}{\dd z}=-\rho g$\\$\rho=\dfrac{pM}{RT}$}{温度が一定\\（等温の大気）}{$p=p_0e^{-z/H}$}
+\phflowrow{$\dfrac{\dd p}{\dd z}=-\rho g$}{密度が一定\\（低い所だけ）}{$p=p_0-\rho gz$\\（力-12）}
+\phflowrow{$TV^{\gamma-1}=$一定\\$\dfrac{\dd p}{\dd z}=-\rho g$}{上がる空気\\熱の出入りなし}{1 km で\\約10 K 下がる}
+\end{phflow}
+
+\noindent\textbf{プログラム：大気を 100 m ずつ積み上げる}\par\nobreak
+積分を使わずに、地面から\qty{100}{m}ずつ上へ進みながら、$\Delta p=-\rho g\Delta z$ で圧力を減らしていきます。密度は、その高さの圧力と温度から $\rho=pM/(RT)$ で出します。密度一定・等温・温度が下がる大気の3つをくらべます。
+\begin{phcode}[Python]
+R, M, g = 8.314, 0.02896, 9.8
+dz = 100.0
+for model in ['密度一定', '等温', '温度が下がる']:
+    p, z = 101325.0, 0.0
+    while z < 3800:
+        T = 288.15 - 0.0065 * z if model == '温度が下がる' else 288.15
+        rho = 1.2 if model == '密度一定' else p * M / (R * T)
+        p = p - rho * g * dz        \# 100 m 上がると減る分
+        z = z + dz
+    print(model, round(p / 1000, 1))
+\end{phcode}
+\begin{phcodeout}
+密度一定 56.6
+等温 64.4
+温度が下がる 63.1
+\end{phcodeout}
+\qty{3800}{m}での値です。密度一定より、密度が変わる2つのほうが、富士山の頂上（\qty{3776}{m}、約\qty{63}{kPa}）に近くなります。\texttt{dz} を小さくすると、式の答えに近づきます。
+
+\begin{phmada}[本当の大気の気温は、どう決まる？]
+⑥の乾燥断熱減率（1 km で約\qty{10}{K}）は、熱の出入りのない、乾いた空気の計算です。本当の大気では、水蒸気が雲になるときに出す熱、雲が太陽の光をはね返したり地面からの熱をさえぎったりする働きが、気温の高さによる変わり方を大きく変えます。
+
+雲がどこに、どれだけできるかは、小さな水のつぶの1つ1つから、何千 km の大きさの雲の集まりまでがかかわるので、天気予報や気候の計算でも、細かい所は近似のきまり（モデル）で表すしかありません。地球が温まったとき、雲がふえるのか減るのか、その結果、温暖化を強めるのか弱めるのかは、気候の予測で、まだ幅が大きい所の1つとされています。国連の気候変動に関する政府間パネル（IPCC）の2021年の報告書でも、雲の働きは、地球の温まりやすさの見つもりの、いちばん大きな不確かさの原因の1つとされています。
+\end{phmada}
+
+\bksubsection{7}{ポリトロープ変化と、4つの変化のまとめ}
+
+\leavevmode\label{ph:熱-3:sec7}本当の圧縮機やエンジンの中では、熱が少しずつ逃げるので、変化は等温と断熱の間になります。そこで、指数を $k$ として
+\pheq{pV^{k}=\text{一定}}{Pa·m$^{3k}$}
+\label{ph:熱-3:poly}と書ける変化を\textbf{ポリトロープ変化}といい、$k$ を\textbf{ポリトロープ指数}といいます。\bkidx{ぽりとろーぷへんか}{ポリトロープ変化}（専門書では $n$ と書きますが、この本では $n$ を物質量に使うので $k$ と書きます。）$k$ を選ぶと、これまでの変化がみな、この形に入ります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $k=0$：$p=$一定（定圧変化）
+\item $k=1$：$pV=$一定（等温変化）
+\item $k=\gamma$：$pV^\gamma=$一定（断熱変化）
+\item $k\to\infty$：両辺を $1/k$ 乗すると $p^{1/k}V=$一定 で、$p^{1/k}\to1$ なので $V=$一定（定積変化）
+\end{itemize}
+空気の圧縮機では $k=1.2$〜$1.35$ くらいになります。温度と圧力の関係は、断熱と同じ形で $T/p^{(k-1)/k}=$一定 です（\bkreidairef{12}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=60mm, xmin=0, xmax=2.3, ymin=0, ymax=3.4, xtick={0.5,1,1.5,2}, ytick={1,2,3}, xlabel={$V/V_1$}, ylabel={$p/p_1$}, legend style={font=\sffamily\footnotesize, at={(0.98,0.80)}, anchor=north east, draw=bkLine, fill=white}, legend cell align=left]
+  \addplot[bkthin, line width=1.4pt, domain=0.4:2.2, forget plot] {1};
+  \addplot[bkcurve2, dashed, domain=0.4:2.2] {1/x};
+  \addlegendentry{$k=1$（等温）}
+  \addplot[bkcurve3, densely dotted, domain=0.45:2.2] {1/x^1.25};
+  \addlegendentry{$k=1.25$}
+  \addplot[bkcurve, domain=0.47:2.2] {1/x^1.4};
+  \addlegendentry{$k=1.4$（断熱）}
+  \addplot[bkInk, line width=1.4pt, forget plot] coordinates {(1,0.25) (1,3.2)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk, forget plot] coordinates {(1,1)};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:2.0,1.02) {$k=0$ 定圧};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:1.03,3.15) {$k=\infty$ 定積};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ点（黒丸）から出るポリトロープ変化の線（破線 $k=1$、点線 $k=1.25$、実線 $k=1.4$）。$k$ が大きいほど急になる。}
+\label{ph:熱-3:fig-poly}
+\end{bkfigure}
+
+\noindent\textbf{気体がする仕事}\par\nobreak
+$pV^k=C$（一定）のとき、$p=CV^{-k}$ を積分すると（$k\neq1$）
+\[ W'=\int_{V_1}^{V_2}CV^{-k}\,\dd V=\frac{C}{1-k}\bigl(V_2^{1-k}-V_1^{1-k}\bigr)=\frac{p_1V_1-p_2V_2}{k-1} \]
+（$CV^{1-k}=pV^k\cdot V^{1-k}=pV$ を使いました）。断熱（$k=\gamma$）のときは、$pV=nRT$ と $R/(\gamma-1)=C_V$ から
+\[ W'=\frac{p_1V_1-p_2V_2}{\gamma-1}=\frac{nR(T_1-T_2)}{\gamma-1}=nC_V(T_1-T_2) \]
+です。減った内部エネルギーが、そのまま外への仕事になっていることがわかります。
+
+\noindent\textbf{4つの変化のまとめ}\par\nobreak
+理想気体の4つの変化で、内部エネルギーの変化・される仕事・受けとる熱を表\ref{ph:熱-3:tab-matome}にまとめます。どの行でも $\Delta U=Q+W$ が成り立っています。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=17mm] Q[l,m,wd=19mm] Q[c,m,wd=22mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm]}, rowsep=1.6pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+変化 & 一定の量 & $\Delta U$ & される仕事 $W$ & 受けとる熱 $Q$ \\
+定積 & $V$ & $nC_V\Delta T$ & 0 & $nC_V\Delta T$ \\
+定圧 & $p$ & $nC_V\Delta T$ & $-p\Delta V=-nR\Delta T$ & $nC_p\Delta T$ \\
+等温 & $T$ & 0 & $-nRT\ln\dfrac{V_2}{V_1}$ & $nRT\ln\dfrac{V_2}{V_1}$ \\
+断熱 & （$Q=0$） & $nC_V\Delta T$ & $nC_V\Delta T$ & 0 \\
+\end{bktable}
+\bktabcaption{理想気体の4つの変化。$W$ は気体がされる仕事（気体がする仕事は $W'=-W$）。}
+\label{ph:熱-3:tab-matome}
+\end{bkcenter}
+
+\Needspace{12\baselineskip}
+\begin{phflow}
+\phflowrow{$pV^k=$一定}{$k=0$}{$p=$一定（定圧）}
+\phflowrow{$pV^k=$一定}{$k=1$}{$pV=$一定（ボイル）}
+\phflowrow{$pV^k=$一定}{$k=\gamma$\\（$Q=0$）}{$pV^\gamma=$一定}
+\phflowrow{$pV=nRT$}{$p$ 一定}{$\dfrac{V}{T}=$一定（シャルル）}
+\end{phflow}
+
+\bksubsection{8}{すばやく押すと縮みにくい：断熱の体積弾性率}
+
+\leavevmode\label{ph:熱-3:sec8}力-12 で、体積が縮む割合と圧力の増え方の比を\textbf{体積弾性率} $K$ と学びました。ほんの少しの変化で書くと
+\[ K=-V\frac{\dd p}{\dd V} \]
+です。温度一定でゆっくり押すとき、$pV=$一定 を微分すると $V\,\dd p+p\,\dd V=0$ なので $K=p$。空気の $K$ は今の圧力と同じ約\qty{0.10}{MPa}でした（力-12）。
+
+すばやく押して熱が逃げないときは、$pV^\gamma=$一定 です。積の微分（5-6②）で $V^\gamma\dd p+\gamma pV^{\gamma-1}\dd V=0$。両辺を $V^{\gamma-1}$ でわると $V\,\dd p=-\gamma p\,\dd V$ なので
+\pheq{K_{\mathrm s}=\gamma p\qquad(\text{断熱})}{Pa ＝ 1 × Pa}
+\label{ph:熱-3:Ks}空気（$\gamma=1.4$）では $K_{\mathrm s}=1.4\times\qty{0.101}{MPa}\approx\qty{0.14}{MPa}$ です（\bkreidairef{13}）。力-12 で「すばやく押して空気の温度が上がるときは、$K$ は約1.4倍の約\qty{0.14}{MPa}になります（熱-3）」と書いたのは、このことです。押すと温度も上がり、その分さらに強く押し返すので、縮みにくくなるのです。
+
+\begin{phmijika}[音が伝わるとき]
+音は、空気がすばやく押し縮められたり、ふくらんだりしながら伝わる波です。1秒に何百回もの速さで押し縮めるので、熱が移る時間はありません。だから、音の速さを決めるのは断熱の $K_{\mathrm s}=\gamma p$ です。熱-4 ⑥ で、音の速さが $\sqrt{K_{\mathrm s}/\rho}=\sqrt{\gamma p/\rho}$ になることを導き、\qty{20}{\celsius}の空気で約\qty{343}{m/s}になることを確かめます（物理シリーズの『波動』（波-9）でも、この式を使います）。
+\end{phmijika}
+
+\bksubsection{9}{圧縮機の仕事と、空気タンク}
+
+\leavevmode\label{ph:熱-3:sec9}工場では、圧縮機（コンプレッサー）で空気を\qty{0.7}{MPa}（ゲージ圧）ほどに押し縮め、タンクにためて、エアツールや機械を動かします。圧縮機は、空気を「吸いこむ→押し縮める→押し出す」をくり返す機械です。1回に要る仕事を、$p$-$V$ 線図で数えましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=64mm, xmin=0, xmax=1.25, ymin=0, ymax=820, xtick={0.249,1}, xticklabels={$V_2$,$V_1$}, ytick={100,700}, yticklabels={$p_1$,$p_2$}, xlabel={$V$}, ylabel={$p$}]
+  \addplot[draw=none, fill=bkOrange!25] coordinates {(0,100) (1,100) (0.9,115.9) (0.8,136.7) (0.7,164.7) (0.6,204.5) (0.5,263.9) (0.4,360.8) (0.3,539.6) (0.249,700) (0,700)} -- cycle;
+  \addplot[bkcurve, domain=0.249:1] {100/x^1.4};
+  \addplot[bkInk, line width=1.2pt, -{Stealth[length=4pt]}] coordinates {(0.02,100) (0.6,100)};
+  \addplot[bkInk, line width=1.2pt] coordinates {(0.6,100) (1,100)};
+  \addplot[bkInk, line width=1.2pt, -{Stealth[length=4pt]}] coordinates {(0.249,700) (0.1,700)};
+  \addplot[bkInk, line width=1.2pt] coordinates {(0.1,700) (0.0,700)};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:0.6,97) {① 吸いこむ（$p_1$ のまま）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.48,330) {② 押し縮める（断熱）};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:0.27,712) {③ 押し出す（$p_2$ のまま）};
+  \node[font=\sffamily\footnotesize, align=center] at (axis cs:0.13,380) {1回の\\仕事};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{圧縮機の1回の働き（すき間のない理想の圧縮機）。色の面積が、1回に要る仕事。}
+\label{ph:熱-3:fig-asshuku}
+\end{bkfigure}
+図\ref{ph:熱-3:fig-asshuku}の①で、吸いこむ空気はピストンを押してくれるので、圧縮機は $p_1V_1$ の仕事をもらいます。②で押し縮める仕事は⑦の式で $\dfrac{p_2V_2-p_1V_1}{k-1}$。③で押し出すには $p_2V_2$ の仕事が要ります。合計は
+\[ -p_1V_1+\frac{p_2V_2-p_1V_1}{k-1}+p_2V_2=\frac{k}{k-1}(p_2V_2-p_1V_1) \]
+で、これは図の色の面積（曲線の左側の面積）です。$V_2=V_1(p_1/p_2)^{1/k}$ を使って、吸いこむ状態で書くと
+\pheq{W_{\text{圧縮機}}=\frac{k}{k-1}\,p_1V_1\Bigl\{\Bigl(\frac{p_2}{p_1}\Bigr)^{(k-1)/k}-1\Bigr\}}{J ＝ Pa × m$^3$}
+\label{ph:熱-3:compressor}等温（$k=1$）で押し縮められれば、仕事は $p_1V_1\ln(p_2/p_1)$ ですみます（②が等温なら $p_2V_2=p_1V_1$ なので、①と③が打ち消し合い、②の $nRT\ln(V_1/V_2)$ だけが残る）。断熱で押すと、温度が上がって押し返す力が強くなるので、仕事が増えます。そこで大きな圧縮機では、2段に分けて押し縮め、段と段の間で空気を冷やします（\bkreidairef{11}）。この仕事は、熱-4 で学ぶエンタルピーを使うと、もっと楽に計算できます。
+
+\noindent\textbf{タンクの中の空気}\par\nobreak
+押し縮めた空気は、タンクにためます。タンクの中の空気の質量は、$p=\rho R_{\mathrm s}T$ から $m=pV/(R_{\mathrm s}T)$ で求めます（\bkreidairef{15}）。ここでも $p$ は絶対圧です。力-11 で壁の応力を計算したのはゲージ圧（壁の内と外の圧力の差）でしたが、中の空気の量を数えるのは絶対圧です。
+
+%% ---------------- まとめ ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 気体の式には絶対圧と絶対温度（K）。$\dfrac{pV}{T}=$一定（ボイル・シャルル）、$pV=nRT$、$p=\rho R_{\mathrm s}T$（$R=\qty{8.31}{J/(mol·K)}$、空気の $R_{\mathrm s}=\qty{287}{J/(kg·K)}$）。
+\item 理想気体の $\Delta U=nC_V\Delta T$（どんな変化でも）。定圧の熱 $nC_p\Delta T$、$C_p=C_V+R$、$\gamma=C_p/C_V$（単原子 5/3、2原子 7/5）。
+\item 等温：$Q=W'=nRT\ln(V_2/V_1)$。断熱：$Q=0$、$pV^\gamma=$一定、$TV^{\gamma-1}=$一定。ポリトロープ：$pV^k=$一定。
+\item 大気：等温なら $p=p_0e^{-z/H}$（$H\approx\qty{8.4}{km}$）。上がる空気は 1 km で約\qty{10}{K}冷える。断熱の体積弾性率は $\gamma p$。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{絶対圧・絶対温度}{真空から測った圧力、0 K から測った温度。気体の式には必ずこれを使う。}
+\bkword{理想気体}{分子の大きさと、分子どうしの力を無視した気体のモデル。$pV=nRT$ が成り立つ。}
+\bkword{定積モル比熱・定圧モル比熱}{1 mol を 1 K 上げる熱。体積一定なら $C_V$、圧力一定なら $C_p$。}
+\bkword{比熱比}{$\gamma=C_p/C_V$。空気は1.40。}
+\bkword{等温変化・断熱変化}{温度一定の変化と、熱の出入りがない変化。}
+\bkword{ポリトロープ変化}{$pV^k=$一定 と書ける変化。$k$ がポリトロープ指数。}
+\bkword{乾燥断熱減率}{乾いた空気が上がるとき、1 km で約\qty{9.8}{K}ずつ下がる温度の割合。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$\gamma$}{ガンマ}{比熱比 $C_p/C_V$。空気は1.40。機械の本では $\kappa$（カッパ）と書く}{ratio of specific heats}{熱-3}}{\bkkigocard{$R_{\mathrm s}$}{アール・エス}{比気体定数 $R/M$（1 kg あたり）。空気は 287 J/(kg·K)。機械の本では添字なしの $R$ と書くことが多い}{specific gas constant}{熱-3}}
+
+
+\begin{senmonsho}[理想気体の状態変化]
+\begin{bkhonbun}
+理想気体の状態式は $pv=RT$ で表される。可逆断熱変化では $pv^{\kappa}=\text{const.}$ が成り立ち、このとき気体のなす絶対仕事は
+\[ L_{12}=\int_1^2p\,\mathrm{d}v=\frac{1}{\kappa-1}(p_1v_1-p_2v_2)=\frac{R}{\kappa-1}(T_1-T_2) \]
+となる。一般に $pv^n=\text{const.}$ で表される変化をポリトロープ変化といい、$n$ をポリトロープ指数という。
+\end{bkhonbun}
+\bkyaku{$v$ は比体積（1 kg の体積、$1/\rho$）で、$R$ はこの本の $R_{\mathrm s}$（1 kg あたり）。$\kappa$ はこの本の $\gamma$、$n$ はこの本の $k$。「絶対仕事」は、閉じこめた気体がふくらんで外に\textbf{する}仕事（この本の $W'$ の1 kg あたり）。「可逆」は、ゆっくりで摩擦のない変化のこと（熱-6）。const. は「一定」。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent とくにことわりがなければ、気体は理想気体とします。$R=\qty{8.31}{J/(mol·K)}$、空気の $R_{\mathrm s}=\qty{287}{J/(kg·K)}$、$\gamma=1.4$、$c_p=\qty{1005}{J/(kg·K)}$、$g=\qty{9.8}{m/s^2}$、大気圧は\qty{101}{kPa}とします。温度は $T=\theta+273$ で K に直します。
+
+\begin{phreidai}[山の上のおかしの袋]
+\label{ph:熱-3:ex1}ふもと（\qty{101}{kPa}、\qty{20}{\celsius}）で、袋に\qty{100}{mL}の空気が入っています。富士山の頂上（\qty{63}{kPa}、\qty{5}{\celsius}）へ持って行くと、袋の空気は何 mL になりますか。袋は破れず、自由にふくらむとします。
+\phbamen
+\bkhatenaref の場面です。袋の中の空気の量は変わらず、圧力・体積・温度がみな変わります。
+\phmushi
+袋のフィルムが空気を押す力（袋の中の圧力は、まわりの大気圧と同じとする）。袋から空気がもれること。
+\phzu
+ふもと：$p_1=\qty{101}{kPa}$、$V_1=\qty{100}{mL}$、$T_1=20+273=\qty{293}{K}$。頂上：$p_2=\qty{63}{kPa}$、$V_2$（求める）、$T_2=5+273=\qty{278}{K}$。
+\phriyu
+気体の量が変わらず、$p$・$V$・$T$ がみな変わるので、ボイル・シャルルの法則 $\dfrac{p_1V_1}{T_1}=\dfrac{p_2V_2}{T_2}$。
+\phtateru
+\[ V_2=V_1\times\frac{p_1}{p_2}\times\frac{T_2}{T_1} \]
+\phtoku
+\[ V_2=100\times\frac{101}{63}\times\frac{278}{293}=100\times1.603\times0.949\approx\qty{152}{mL} \]
+\phtashikame
+単位：mL×（Pa÷Pa）×（K÷K）＝mL。大きさ：圧力が約6割になるので、体積は約1.6倍に増えるはず。気温が下がる分、少し縮む。極端な場合：温度が変わらなければ $100\times101\div63\approx\qty{160}{mL}$（3-7 の答え）。
+\kotae 約\qty{150}{mL}
+\end{phreidai}
+\begin{jibun}
+\qty{25}{\celsius}・\qty{101}{kPa}で、ふたを閉めた\qty{500}{mL}のやわらかいペットボトルを、\qty{80}{kPa}・\qty{10}{\celsius}の山の上へ持って行きました。ボトルが自由にふくらめるとすると、中の空気は何 mL になりますか。
+\bkjans{$500\times\tfrac{101}{80}\times\tfrac{283}{298}\approx\qty{599}{mL}$。約\qty{600}{mL}}
+\end{jibun}
+
+\begin{phreidai}[走ったあとのタイヤの空気圧]
+\label{ph:熱-3:ex2}朝、\qty{15}{\celsius}のとき、車のタイヤの空気圧をゲージで測ると\qty{220}{kPa}でした。高速道路を走ったあと、タイヤの中の空気が\qty{45}{\celsius}になりました。ゲージは何 kPa を示しますか。
+\phbamen
+タイヤの中の空気が、走っている間に、路面とのこすれやゴムの変形で温まります。
+\phmushi
+タイヤの体積の変化（ゴムは少しふくらむが、ほぼ一定とする）。空気のもれ。
+\phzu
+朝：ゲージ圧\qty{220}{kPa}、絶対圧 $p_1=220+101=\qty{321}{kPa}$、$T_1=15+273=\qty{288}{K}$。走ったあと：$p_2$（絶対圧）、$T_2=45+273=\qty{318}{K}$。
+\phriyu
+体積一定なので、ボイル・シャルルの法則で $V_1=V_2$ とおいた $\dfrac{p_1}{T_1}=\dfrac{p_2}{T_2}$。気体の式なので、必ず絶対圧・絶対温度で入れる。
+\phtateru
+\[ p_2=p_1\times\frac{T_2}{T_1},\qquad \text{ゲージ圧}=p_2-101 \]
+\phtoku
+\[ p_2=321\times\frac{318}{288}\approx\qty{354}{kPa},\qquad \text{ゲージ圧}=354-101=\qty{253}{kPa} \]
+\phtashikame
+単位：kPa。大きさ：絶対温度が約1割上がるので、絶対圧も約1割上がる。ゲージ圧のまま比をとると $220\times318\div288\approx\qty{243}{kPa}$ になり、約\qty{10}{kPa}ずれる（まちがえやすいところ）。℃ のまま比をとると $220\times45\div15=660$ kPa で、とんでもない値になる。
+\kotae 約\qty{250}{kPa}
+\end{phreidai}
+\begin{jibun}
+\qty{10}{\celsius}でゲージ圧\qty{200}{kPa}のタイヤが、日なたで\qty{40}{\celsius}になりました。体積が変わらないとして、ゲージ圧を求めましょう。
+\bkjans{絶対圧 $301\times\tfrac{313}{283}\approx\qty{333}{kPa}$。ゲージ圧 $333-101\approx\qty{232}{kPa}$}
+\end{jibun}
+
+\begin{reidai}[1 mol の気体の体積]
+\label{ph:熱-3:ex3}0 ℃・\qty{101.3}{kPa}の理想気体 1 mol の体積は何 L ですか。\qty{20}{\celsius}ではどうですか。
+\par\bkstep{理想化} 分子の大きさと分子どうしの力を無視する（理想気体）。
+\par\kangaekata $pV=nRT$ を $V$ について解く。\qty{1}{m^3}＝\qty{1000}{L}。
+\par\shiki
+\[ V=\frac{nRT}{p}=\frac{1\times8.31\times273}{\num{101300}}\approx0.0224\,\mathrm{m^3},\qquad \frac{1\times8.31\times293}{\num{101300}}\approx0.0240\,\mathrm{m^3} \]
+\par\bkstep{確かめ} 絶対温度の比 $293\div273\approx1.07$ だけ大きい（シャルルの法則）。
+\par\kotae 0 ℃で約\qty{22.4}{L}、\qty{20}{\celsius}で約\qty{24.0}{L}
+\end{reidai}
+\begin{jibun}
+\qty{100}{\celsius}・\qty{101.3}{kPa}の理想気体 2.0 mol の体積は何 L ですか。
+\bkjans{$V=nRT/p$。$2.0\times8.31\times373\approx6200$、$6200\div\num{101300}\approx0.0612$\,m$^3$。約\qty{61}{L}}
+\end{jibun}
+
+\begin{reidai}[空気の密度]
+\label{ph:熱-3:ex4}\qty{20}{\celsius}・\qty{101.3}{kPa}の空気の密度を求めましょう。
+\par\bkstep{理想化} 空気を、比気体定数 $R_{\mathrm s}=\qty{287}{J/(kg·K)}$ の理想気体とする。
+\par\kangaekata $p=\rho R_{\mathrm s}T$ を $\rho$ について解く。
+\par\shiki
+\[ \rho=\frac{p}{R_{\mathrm s}T}=\frac{\num{101300}}{287\times293}\approx\qty{1.20}{kg/m^3} \]
+\par\bkstep{確かめ} 力-12 の表の空気の密度（\qty{20}{\celsius}で1.2）と同じ。\qty{1}{m^3}の空気は約\qty{1.2}{kg}。
+\par\kotae 約\qty{1.20}{kg/m^3}
+\end{reidai}
+\begin{jibun}
+富士山の頂上（\qty{63}{kPa}、$-5$ ℃）の空気の密度を求めましょう。
+\bkjans{$\num{63000}\div(287\times268)\approx\qty{0.82}{kg/m^3}$（ふもとの約7割）}
+\end{jibun}
+
+\begin{phreidai}[富士山の頂上の気圧]
+\label{ph:熱-3:ex5}海面の気圧を\qty{101.3}{kPa}、気温を\qty{15}{\celsius}とします。富士山の頂上（\qty{3776}{m}）の気圧を、(1) 空気の密度が一定（\qty{1.2}{kg/m^3}）、(2) 気温が一定（等温）、(3) 気温が\qty{1}{km}に\qty{6.5}{K}ずつ下がる、の3つのモデルで求めましょう。空気のモル質量は\qty{0.02896}{kg/mol}とします。
+\phbamen
+力-12 で「くわしくは熱-3 で」と約束した計算です。上へ行くほど、上にある空気が少なくなり、空気の密度も小さくなります。
+\phmushi
+風（空気は止まっているとする）。水蒸気の量のちがい。高さによる $g$ の変化（\qty{4}{km}で 0.1\,\% ほど）。
+\phzu
+高さ $z$（上向き）、海面の気圧 $p_0=\qty{101.3}{kPa}$、海面の気温 $T_0=\qty{288}{K}$、気温の下がり方 $L=\qty{0.0065}{K/m}$。
+\phriyu
+どのモデルも、止まった流体の $\dd p/\dd z=-\rho g$（力-12）から出発する。(2)(3) は密度を $\rho=pM/(RT)$ で表し、⑥で積分した式を使う。
+\phtateru
+\[ (1)\ p=p_0-\rho gz,\qquad (2)\ p=p_0e^{-z/H},\quad H=\frac{RT_0}{Mg} \]
+\[ (3)\ p=p_0\Bigl(1-\frac{Lz}{T_0}\Bigr)^{Mg/(RL)} \]
+\phtoku
+(1) 密度一定のとき
+\[ p=\num{101300}-1.2\times9.8\times3776\approx\num{56900}\ \mathrm{Pa} \]
+(2) 等温のとき
+\[ H=\frac{8.31\times288}{0.02896\times9.8}\approx\num{8430}\ \mathrm{m} \]
+\[ p=101.3\times e^{-3776/8430}=101.3\times e^{-0.448}\approx\qty{64.8}{kPa} \]
+(3) 気温が下がるとき
+\[ 1-\frac{0.0065\times3776}{288}\approx0.915,\qquad \frac{Mg}{RL}=\frac{0.02896\times9.8}{8.31\times0.0065}\approx5.26 \]
+\[ p=101.3\times0.915^{5.26}\approx\qty{63.5}{kPa} \]
+\phtashikame
+単位：(2) の $H$ は J/(mol·K)×K÷(kg/mol×m/s$^2$)＝(kg·m$^2$/s$^2$)÷(kg·m/s$^2$)＝m。大きさ：観測の約\qty{63}{kPa}に、(3) がいちばん近い。(1) は、上の空気ほど密度が小さいことを無視したので、圧力を減らしすぎた。極端な場合：$z\ll H$ なら $e^{-z/H}\approx1-z/H$ となり、(2) は (1) と同じ形になる。
+\kotae (1) 約\qty{57}{kPa}、(2) 約\qty{65}{kPa}、(3) 約\qty{64}{kPa}（63.5 kPa）
+\end{phreidai}
+\begin{jibun}
+例題5 の (2) と (3) のモデルで、高さ\qty{2000}{m}の気圧を求めましょう。
+\bkjans{(2) $e^{-2000/8430}\approx0.789$、$101.3\times0.789\approx\qty{80}{kPa}$。(3) $1-0.0065\times2000\div288\approx0.955$、$0.955^{5.26}\approx0.785$、$101.3\times0.785\approx\qty{79}{kPa}$（79.5 kPa）}
+\end{jibun}
+
+\begin{phreidai}[空気入れの筒の先の温度]
+\label{ph:熱-3:ex6}自転車の空気入れの筒に、\qty{20}{\celsius}・\qty{101}{kPa}の空気が入っています。ピストンをすばやく押して、体積を $\tfrac{1}{3}$ にしました。熱が逃げないとすると、空気の温度と圧力はいくらになりますか。
+\phbamen
+熱-2 のはてな？の場面に、数で答えます。すばやく押すので、熱が逃げる時間がありません。
+\phmushi
+筒の壁への熱の移動（断熱とする）。ピストンと筒の摩擦。空気のもれ（タイヤの弁が開く前とする）。
+\phzu
+はじめ $T_1=\qty{293}{K}$、$p_1=\qty{101}{kPa}$、$V_1$。押したあと $V_2=V_1/3$、$T_2$、$p_2$。空気の $\gamma=1.4$。
+\phriyu
+熱の出入りがない（断熱）ので、ポアソンの式 $TV^{\gamma-1}=$一定 と $pV^\gamma=$一定。
+\phtateru
+\[ T_2=T_1\Bigl(\frac{V_1}{V_2}\Bigr)^{\gamma-1}=T_1\times3^{0.4},\qquad p_2=p_1\times3^{1.4} \]
+\phtoku
+電卓で $3^{0.4}\approx1.552$（3-11⑥）。$T_2=293\times1.552\approx\qty{455}{K}$、つまり $455-273\approx\qty{182}{\celsius}$。$3^{1.4}\approx4.66$ なので $p_2=101\times4.66\approx\qty{470}{kPa}$（約4.7気圧）。
+\phtashikame
+単位：K×（単位なし）＝K。大きさ：温度一定なら3倍の圧力だが、温度が上がる分だけ大きい4.7倍。極端な場合：この温度は「熱がまったく逃げない」ときの上限。本当の空気入れでは、押している間に筒の壁へ熱が逃げ、空気はすぐタイヤへ出ていくので、筒の先が「温かい」くらいですむ（モデルの限界）。
+\kotae 約\qty{180}{\celsius}、約\qty{470}{kPa}（約4.7倍）
+\end{phreidai}
+\begin{jibun}
+\qty{20}{\celsius}・\qty{101}{kPa}の空気を、すばやく体積 $\tfrac{1}{2}$ に押し縮めました。熱が逃げないとして、温度（℃）と圧力を求めましょう。
+\bkjans{$293\times2^{0.4}\approx\qty{387}{K}$、約\qty{114}{\celsius}。$101\times2^{1.4}\approx\qty{267}{kPa}$}
+\end{jibun}
+
+\begin{reidai}[ディーゼルエンジンの圧縮]
+\label{ph:熱-3:ex7}ディーゼルエンジンでは、シリンダーに吸いこんだ空気を、体積 $\tfrac{1}{18}$ まですばやく押し縮めます（圧縮比18）。\qty{27}{\celsius}の空気を断熱で押し縮めると、何 ℃になりますか。
+\par\bkstep{理想化} 断熱・摩擦なしとし、空気の $\gamma=1.4$ は温度によらず一定とする。
+\par\kangaekata $TV^{\gamma-1}=$一定 から $T_2=T_1\times18^{0.4}$。
+\par\shiki $18^{0.4}\approx3.18$。$T_2=300\times3.18\approx\qty{954}{K}$、$954-273=\qty{681}{\celsius}$
+\par\bkstep{確かめ} 軽油が自然に燃えだす温度（約\qty{250}{\celsius}）より、ずっと高い。だから火花なしで燃える（熱-7 で回収）。
+\par\kotae 約\qty{680}{\celsius}
+\end{reidai}
+\begin{jibun}
+圧縮比16 のディーゼルエンジンで、\qty{30}{\celsius}の空気を断熱で押し縮めると、何 ℃になりますか。
+\bkjans{$16^{0.4}\approx3.03$。$303\times3.03\approx\qty{919}{K}$、約\qty{646}{\celsius}}
+\end{jibun}
+
+\begin{phreidai}[定積と定圧で温める熱]
+\label{ph:熱-3:ex8}2原子分子の理想気体（$C_V=\tfrac{5}{2}R$）1 mol を、温度を\qty{10}{K}上げます。(1) 体積一定のとき、(2) 圧力一定のときに、要る熱を求めましょう。(2) で、気体が外にする仕事はいくらですか。
+\phbamen
+同じだけ温めるのに、ピストンを止めるか自由にするかで、要る熱がちがう場面です（図\ref{ph:熱-3:fig-teiseki}）。
+\phmushi
+容器やピストンを温める熱。ピストンの摩擦。
+\phzu
+$n=\qty{1}{mol}$、$\Delta T=\qty{10}{K}$、$C_V=\tfrac{5}{2}R$、$C_p=C_V+R=\tfrac{7}{2}R$。
+\phriyu
+体積一定は $Q=nC_V\Delta T$、圧力一定は $Q=nC_p\Delta T$（④）。する仕事は $W'=p\Delta V=nR\Delta T$。
+\phtateru
+\[ (1)\ Q=n\cdot\frac{5}{2}R\cdot\Delta T,\qquad (2)\ Q=n\cdot\frac{7}{2}R\cdot\Delta T,\qquad W'=nR\Delta T \]
+\phtoku
+(1) $Q=1\times2.5\times8.31\times10\approx\qty{208}{J}$。(2) $Q=1\times3.5\times8.31\times10\approx\qty{291}{J}$。$W'=1\times8.31\times10\approx\qty{83}{J}$。
+\phtashikame
+単位：mol×J/(mol·K)×K＝J。大きさ：(2) と (1) の差 $291-208=83$ が、ちょうど外にする仕事 $W'$ と同じ（第一法則：$Q=\Delta U+W'$ で、$\Delta U=\qty{208}{J}$ は同じ）。極端な場合：単原子なら $C_V=\tfrac32R$ で、どちらも小さくなる。
+\kotae (1) 約\qty{208}{J}、(2) 約\qty{291}{J}、外にする仕事 約\qty{83}{J}
+\end{phreidai}
+\begin{jibun}
+単原子分子の理想気体（$C_V=\tfrac{3}{2}R$）2.0 mol を\qty{30}{K}温めます。体積一定のときと、圧力一定のときの熱を求めましょう。
+\bkjans{体積一定 $2.0\times1.5\times8.31\times30\approx\qty{748}{J}$。圧力一定 $2.0\times2.5\times8.31\times30\approx\qty{1250}{J}$（1247 J）}
+\end{jibun}
+
+\begin{reidai}[空気の比気体定数と比熱]
+\label{ph:熱-3:ex9}空気のモル質量を\qty{0.02896}{kg/mol}、定圧比熱を $c_p=\qty{1005}{J/(kg·K)}$ とします。空気の比気体定数 $R_{\mathrm s}$ と定積比熱 $c_v$、比熱比 $\gamma$ を求めましょう。
+\par\bkstep{理想化} 空気を1種類の理想気体として扱う。
+\par\kangaekata $R_{\mathrm s}=R/M$、マイヤーの関係 $c_p-c_v=R_{\mathrm s}$、$\gamma=c_p/c_v$。
+\par\shiki $R_{\mathrm s}=8.314\div0.02896\approx\qty{287}{J/(kg·K)}$。$c_v=1005-287=\qty{718}{J/(kg·K)}$。$\gamma=1005\div718\approx1.40$
+\par\bkstep{確かめ} 表\ref{ph:熱-3:tab-hinetsu}の空気の $\gamma=1.40$ と同じ。$c_v\times M=718\times0.02896\approx20.8$ で $C_V$ とも合う。
+\par\kotae $R_{\mathrm s}\approx\qty{287}{J/(kg·K)}$、$c_v\approx\qty{718}{J/(kg·K)}$、$\gamma\approx1.40$
+\end{reidai}
+\begin{jibun}
+ヘリウムのモル質量は\qty{0.00400}{kg/mol}です。ヘリウムの比気体定数を求めましょう。\qty{20}{\celsius}・\qty{101.3}{kPa}の密度はいくらですか。
+\bkjans{$R_{\mathrm s}=8.314\div0.00400\approx\qty{2080}{J/(kg·K)}$（2077）。$\rho=p/(R_{\mathrm s}T)$、$2077\times293\approx\num{608600}$、$\num{101300}\div\num{608600}\approx\qty{0.17}{kg/m^3}$}
+\end{jibun}
+
+\begin{reidai}[温度一定でふくらむ気体]
+\label{ph:熱-3:ex10}\qty{300}{K}の理想気体 1 mol が、温度一定のまま、体積が2倍になるまでふくらみました。気体が受けとった熱と、外にした仕事を求めましょう。
+\par\bkstep{理想化} ゆっくりふくらみ、気体の温度はいつも\qty{300}{K}（等温）。
+\par\kangaekata 等温なので $\Delta U=0$、$Q=W'=nRT\ln(V_2/V_1)$（⑤）。
+\par\shiki $Q=W'=1\times8.31\times300\times\ln2=2493\times0.693\approx\qty{1730}{J}$
+\par\bkstep{確かめ} 図\ref{ph:熱-3:fig-toon}の面積と同じ。熱-5 のカルノーサイクル（例題8）でも、この数を使う。
+\par\kotae 熱も仕事も約\qty{1.7}{kJ}（\qty{1729}{J}）
+\end{reidai}
+\begin{jibun}
+\qty{300}{K}の理想気体 2.0 mol を、温度一定のまま体積 $\tfrac{1}{3}$ に押し縮めます。気体がされる仕事と、外へ出す熱を求めましょう。
+\bkjans{される仕事 $2.0\times8.31\times300\times\ln3\approx\qty{5480}{J}$。同じだけ（約\qty{5.5}{kJ}）の熱を外へ出す}
+\end{jibun}
+
+\begin{phreidai}[圧縮機の仕事：等温・断熱・2段]
+\label{ph:熱-3:ex11}\qty{20}{\celsius}・\qty{100}{kPa}の空気\qty{1}{m^3}を、圧縮機で\qty{700}{kPa}にします。圧縮機の仕事を、(1) 等温、(2) 断熱（$k=\gamma=1.4$）、(3) 2段の断熱（\qty{265}{kPa}まで押し縮めてから\qty{20}{\celsius}まで冷やし、そこから\qty{700}{kPa}まで押し縮める）で求めましょう。(2) の出口の温度は何 ℃ですか。
+\phbamen
+工場の圧縮空気をつくる場面です（図\ref{ph:熱-3:fig-asshuku}）。
+\phmushi
+シリンダーのすき間に残る空気。弁を通るときの圧力の損失。ピストンの摩擦。
+\phzu
+$p_1=\qty{100}{kPa}$、$V_1=\qty{1}{m^3}$、$p_2=\qty{700}{kPa}$、圧力比7、$T_1=\qty{293}{K}$。中間の圧力は $100\sqrt7\approx\qty{265}{kPa}$（各段の圧力比 $\sqrt7\approx2.65$）。
+\phriyu
+吸いこみ・押し縮め・押し出しの3つを合わせた仕事の式（⑨）。等温は $p_1V_1\ln(p_2/p_1)$。2段は、各段が同じ温度から始まり、同じ圧力比なので、1段の式を2回たす。
+\phtateru
+\[ (1)\ p_1V_1\ln7,\qquad (2)\ \frac{1.4}{0.4}\,p_1V_1(7^{0.4/1.4}-1),\qquad (3)\ 2\times\frac{1.4}{0.4}\,p_1V_1(\sqrt7^{\,0.4/1.4}-1) \]
+\phtoku
+$p_1V_1=\qty{100}{kJ}$。(1) $100\times\ln7=100\times1.946\approx\qty{195}{kJ}$。\par
+(2) $7^{0.2857}\approx1.745$。$3.5\times100\times0.745\approx\qty{260}{kJ}$。出口の温度 $293\times1.745\approx\qty{511}{K}$、約\qty{238}{\celsius}。\par
+(3) $\sqrt7^{\,0.2857}\approx1.321$。$2\times3.5\times100\times0.321\approx\qty{224}{kJ}$。
+\phtashikame
+単位：Pa×m$^3$＝J。大きさ：断熱は等温より約3割多い。2段にして間で冷やすと、その差が半分ほどに減る。極端な場合：段の数をどんどんふやして、間でいつも冷やすと、等温の\qty{195}{kJ}に近づく。
+\kotae (1) 約\qty{195}{kJ}、(2) 約\qty{260}{kJ}（出口 約\qty{240}{\celsius}）、(3) 約\qty{224}{kJ}
+\end{phreidai}
+\begin{jibun}
+\qty{20}{\celsius}・\qty{100}{kPa}の空気\qty{1}{m^3}を\qty{400}{kPa}にします。等温、断熱（1段）、2段の断熱（中間\qty{200}{kPa}で\qty{20}{\celsius}に冷やす）の仕事を求めましょう。
+\bkjans{等温 $100\ln4\approx\qty{139}{kJ}$。断熱 $3.5\times100\times(4^{0.2857}-1)\approx\qty{170}{kJ}$。2段 $2\times3.5\times100\times(2^{0.2857}-1)\approx\qty{153}{kJ}$}
+\end{jibun}
+
+\begin{reidai}[本当の圧縮機の出口の温度]
+\label{ph:熱-3:ex12}空気の圧縮機で、\qty{20}{\celsius}の空気を圧力比7まで押し縮めます。ポリトロープ指数を $k=1.3$ とすると、出口の温度は何 ℃ですか。
+\par\bkstep{理想化} 押し縮める間の変化を $pV^{1.3}=$一定 とする（熱が少し逃げる）。
+\par\kangaekata $T/p^{(k-1)/k}=$一定 から $T_2=T_1\times7^{0.3/1.3}$。
+\par\shiki $0.3\div1.3\approx0.231$、$7^{0.231}\approx1.567$。$T_2=293\times1.567\approx\qty{459}{K}$、約\qty{186}{\celsius}
+\par\bkstep{確かめ} 断熱（$k=1.4$）の\qty{238}{\celsius}より低い。熱が逃げた分だけ温度が上がらない。
+\par\kotae 約\qty{190}{\celsius}
+\end{reidai}
+\begin{jibun}
+$k=1.25$ の圧縮機で、\qty{20}{\celsius}の空気を圧力比5まで押し縮めると、出口は何 ℃ですか。
+\bkjans{$5^{0.25/1.25}=5^{0.2}\approx1.380$。$293\times1.380\approx\qty{404}{K}$、約\qty{131}{\celsius}}
+\end{jibun}
+
+\begin{reidai}[空気の体積弾性率]
+\label{ph:熱-3:ex13}1気圧（\qty{101}{kPa}）の空気の体積弾性率を、(1) 温度一定でゆっくり押すとき、(2) 熱が逃げないようにすばやく押すとき、で求めましょう。
+\par\bkstep{理想化} (1) は等温、(2) は断熱（$\gamma=1.4$）。体積の変化はほんの少しとする。
+\par\kangaekata ⑧の $K=p$（等温）と $K_{\mathrm s}=\gamma p$（断熱）。
+\par\shiki (1) $K=\qty{0.101}{MPa}$。(2) $K_{\mathrm s}=1.4\times0.101\approx\qty{0.14}{MPa}$
+\par\bkstep{確かめ} 力-12 の「約\qty{0.1}{MPa}」と「すばやく押すと約1.4倍の約\qty{0.14}{MPa}」と同じ。水（\qty{2.2}{GPa}）の約1万5千分の1。
+\par\kotae (1) 約\qty{0.10}{MPa}、(2) 約\qty{0.14}{MPa}
+\end{reidai}
+\begin{jibun}
+\qty{100}{kPa}のヘリウム（$\gamma=5/3$）の断熱の体積弾性率を求めましょう。
+\bkjans{$K_{\mathrm s}=\tfrac{5}{3}\times\qty{100}{kPa}\approx\qty{0.17}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[熱気球が持ち上げられる重さ]
+\label{ph:熱-3:ex14}体積\qty{2000}{m^3}の熱気球の球皮の中の空気を\qty{100}{\celsius}に温めます。外の空気は\qty{15}{\celsius}、気圧は\qty{101.3}{kPa}です。球皮・かご・人などを合わせて、何 kg まで持ち上げられますか。
+\phbamen
+球皮の下は開いているので、温まってふくらんだ空気は外へ出ていき、中の空気が軽くなります。
+\phmushi
+球皮の布の体積。中と外の圧力の差（下が開いているので、どちらも同じ\qty{101.3}{kPa}とする）。高さによる気圧の変化。
+\phzu
+体積 $V=\qty{2000}{m^3}$、外 $T_{\text{外}}=\qty{288}{K}$・密度 $\rho_{\text{外}}$、中 $T_{\text{中}}=\qty{373}{K}$・密度 $\rho_{\text{中}}$。
+\phriyu
+浮力は、押しのけた外の空気の重さ $\rho_{\text{外}}Vg$（力-12 のアルキメデスの原理）。中の空気の重さ $\rho_{\text{中}}Vg$ を引いた残りで、ほかの物を持ち上げる。密度は $p=\rho R_{\mathrm s}T$ から。
+\phtateru
+\[ m=(\rho_{\text{外}}-\rho_{\text{中}})V,\qquad \rho=\frac{p}{R_{\mathrm s}T} \]
+\phtoku
+$\rho_{\text{外}}=\num{101300}\div(287\times288)\approx\qty{1.226}{kg/m^3}$、$\rho_{\text{中}}=\num{101300}\div(287\times373)\approx\qty{0.946}{kg/m^3}$。\par
+$m=(1.226-0.946)\times2000\approx\qty{560}{kg}$
+\phtashikame
+単位：kg/m$^3$×m$^3$＝kg。大きさ：中の空気の密度は外の $288\div373\approx0.77$ 倍で、約23\,\% 軽い。外の空気約\qty{2450}{kg}の23\,\% で約\qty{560}{kg}。極端な場合：中の温度が外と同じなら0。中を\qty{120}{\celsius}にすると約\qty{650}{kg}に増える。
+\kotae 約\qty{560}{kg}
+\end{phreidai}
+\begin{jibun}
+体積\qty{2800}{m^3}の熱気球で、外が\qty{5}{\celsius}、中が\qty{90}{\celsius}のとき、何 kg まで持ち上げられますか（気圧\qty{101.3}{kPa}）。
+\bkjans{$\rho_{\text{外}}\approx1.270$、$\rho_{\text{中}}\approx0.972$。$(1.270-0.972)\times2800\approx\qty{830}{kg}$}
+\end{jibun}
+
+\begin{reidai}[空気タンクの中の空気]
+\label{ph:熱-3:ex15}力-11 の空気タンク（内半径\qty{0.25}{m}、長さ\qty{1.0}{m}の円筒とする）に、ゲージ圧\qty{0.80}{MPa}・\qty{20}{\celsius}の空気が入っています。(1) 中の空気は何 kg ですか。(2) このタンクを、大気圧の空気が入った同じ体積のタンクにつなぎ、温度が\qty{20}{\celsius}にもどったときの圧力（ゲージ圧）を求めましょう。
+\par\bkstep{理想化} タンクの壁のふくらみと、つなぐ管の体積を無視する。
+\par\kangaekata (1) 絶対圧にして $m=pV/(R_{\mathrm s}T)$。(2) 空気の量は全部で変わらない。温度も同じなので、$pV$ の和が変わらない：$p_1V+p_0V=p(2V)$。
+\par\shiki (1) $V=\pi\times0.25^2\times1.0\approx\qty{0.196}{m^3}$、$p=0.80+0.101=\qty{0.901}{MPa}$。$m=\num{901000}\times0.196\div(287\times293)\approx\qty{2.10}{kg}$。\par
+(2) $p=(901+101)\div2=\qty{501}{kPa}$（絶対圧）、ゲージ圧 $501-101=\qty{400}{kPa}$
+\par\bkstep{確かめ} (1) 同じタンクに大気圧の空気なら約\qty{0.24}{kg}で、絶対圧の比（約9倍）と合う。(2) ゲージ圧はちょうど半分になる（もう1つのタンクのゲージ圧が0だから）。
+\par\kotae (1) 約\qty{2.1}{kg}、(2) ゲージ圧 約\qty{0.40}{MPa}
+\end{reidai}
+\begin{jibun}
+内容積\qty{50}{L}のボンベに、ゲージ圧\qty{15}{MPa}・\qty{20}{\celsius}の空気が入っています。(1) 空気は何 kg ですか。(2) 大気圧の空気が入った\qty{10}{L}の容器につなぎ、\qty{20}{\celsius}にもどったときの絶対圧を求めましょう。
+\bkjans{(1) 絶対圧\qty{15.1}{MPa}。$15.1\times10^6\times0.050=\num{755000}$、$287\times293=\num{84091}$、$\num{755000}\div\num{84091}\approx\qty{9.0}{kg}$。(2) $15.1\times50+0.101\times10\approx756$、$756\div60\approx\qty{12.6}{MPa}$}
+\end{jibun}
+
+\begin{phreidai}[雲ができる高さ]
+\label{ph:熱-3:ex16}地面の空気が\qty{25}{\celsius}で、露点（その空気の水蒸気が水になりはじめる温度）が\qty{15}{\celsius}です。この空気が上がっていくと、何 m の高さで雲ができはじめますか。露点は高さで変わらないとして求めましょう。
+\phbamen
+夏の昼、地面で温まった空気が上がり、もくもくとした雲ができる場面です（中学理科の「雲のでき方」）。
+\phmushi
+空気のかたまりとまわりの熱のやりとり（断熱とする）。高さによる露点の変化（本当は少し下がる）。
+\phzu
+地面の気温 $\theta_0=\qty{25}{\celsius}$、露点 $\theta_{\mathrm d}=\qty{15}{\celsius}$、上がる高さ $z$。乾燥断熱減率 $g/c_p$。
+\phriyu
+雲ができるまでの空気は水蒸気が水にならないので、乾いた空気と同じように、断熱で上がって $g/c_p$ ずつ冷える（⑥）。気温が露点まで下がった所で雲ができる。
+\phtateru
+\[ \theta_0-\frac{g}{c_p}z=\theta_{\mathrm d}\qquad\text{より}\qquad z=\frac{\theta_0-\theta_{\mathrm d}}{g/c_p} \]
+\phtoku
+$\dfrac{g}{c_p}=\dfrac{9.8}{1005}\approx\qty{0.00975}{K/m}$。$z=\dfrac{25-15}{0.00975}\approx\qty{1030}{m}$
+\phtashikame
+単位：K÷(K/m)＝m。大きさ：「\qty{100}{m}上がると約\qty{1}{K}下がる」と覚えると、\qty{10}{K}で約\qty{1000}{m}。極端な場合：本当は、上がると水蒸気の分圧も下がり、露点が少し下がる（熱-9）。それも入れて計算すると約\qty{1260}{m}になり、夏の積雲の底の高さ（\qtyrange{1}{2}{km}）と合う。
+\kotae 約\qty{1000}{m}（露点の変化も入れると約\qty{1.3}{km}）
+\end{phreidai}
+\begin{jibun}
+地面の気温が\qty{30}{\celsius}、露点が\qty{18}{\celsius}の空気が上がると、何 m で雲ができはじめますか。露点は変わらないとします。
+\bkjans{$(30-18)\div0.00975\approx\qty{1230}{m}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{ゲージ圧のまま、ボイル・シャルルの法則に入れる}
+\bkng{タイヤのゲージ圧\qty{220}{kPa}を、そのまま $p_1$ に入れる。}
+\bkok{絶対圧 $220+101=\qty{321}{kPa}$ を入れ、答えから大気圧を引いてゲージ圧にもどす。}
+気体を押し縮めているのは、大気圧の分もふくめた全部の圧力です。ゲージ圧のまま比をとると、\bkreidairef{2} では答えが約\qty{10}{kPa}ずれます。真空に近いときは、ゲージ圧が負になり、比をとると意味のない答えになります。
+\end{tsumazuki}
+\begin{tsumazuki}{℃ のまま比をとる}
+\bkng{\qty{20}{\celsius}を\qty{40}{\celsius}にすると、体積は2倍になる。}
+\bkok{$313\div293\approx1.07$ 倍。比をとるときは、必ず K に直す。}
+0 ℃は、水がこおる温度に合わせて決めた目もりで、気体の体積が0になる温度ではありません。温度の「差」は ℃ でも K でも同じ数ですが、「比」は K でとります。
+\end{tsumazuki}
+\begin{tsumazuki}{$\Delta U=nC_V\Delta T$ は、体積一定のときだけ？}
+\bkng{圧力一定の変化では、$\Delta U=nC_p\Delta T$。}
+\bkok{理想気体の $\Delta U$ は、どんな変化でも $nC_V\Delta T$。$nC_p\Delta T$ は、圧力一定のときの熱 $Q$。}
+理想気体の内部エネルギーは温度だけで決まるので、温度の変わり方が同じなら、どんな道すじでも $\Delta U$ は同じです。$C_V$ は「体積一定で測ると、$\Delta U$ を測ったことになる」ので、名前に「定積」がついているだけです。
+\end{tsumazuki}
+\begin{tsumazuki}{断熱で冷えるのは、熱が逃げたから？}
+\bkng{ふくらんだ空気が冷えるのは、まわりへ熱が出ていったから。}
+\bkok{熱の出入りはない。外に仕事をした分だけ、内部エネルギーが減ったから。}
+断熱変化は $Q=0$ です。温度が下がるのは、気体がまわりを押しのける仕事をしたからです（$\Delta U=W<0$）。「熱」と「温度」は別のものです。熱が出入りしなくても、仕事で温度は変わります。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[圧縮空気・エンジン・天気予報]
+\phboxhead{① 工場の圧縮空気}
+工場では、圧縮機で空気を約\qty{0.7}{MPa}（ゲージ圧）に押し縮め、タンクにためて、エアドライバー・塗装・機械の動き（空気圧シリンダー）に使います。圧縮機の出口の空気は、⑨のように\qty{150}{\celsius}をこえることもあるので、冷やしてからためます。冷やすと、空気にふくまれていた水蒸気が水になって出てくるので、ドレン（たまった水）をぬく弁がついています。圧縮空気は、工場で使う電気のかなりの部分を食うので、もれを止めること、要る圧力より高くしないこと、多段で押し縮めて間で冷やすこと（\bkreidairef{11}）が、省エネルギーの基本です。
+
+\phboxhead{② エンジンの圧縮}
+ガソリンエンジンもディーゼルエンジンも、燃やす前に空気（と燃料）を押し縮めます。押し縮めるほど、燃えたあとに取り出せる仕事の割合（熱効率）が大きくなります（熱-7）。ディーゼルエンジンは、⑥の断熱圧縮で空気を数百 ℃にし、そこへ燃料を吹きこんで、火花なしで燃やします（\bkreidairef{7}）。ガソリンエンジンは、押し縮めすぎると、火花の前に勝手に燃えてしまう（ノッキング）ので、圧縮比は10前後にします。
+
+\phboxhead{③ 天気予報と飛行機}
+天気予報では、気球につけた測定器（ラジオゾンデ）で、高さごとの気温・気圧・湿度を測ります。上がる空気が乾燥断熱減率（1 km で約\qty{10}{K}）より急に冷えるかどうかで、雲や雷雲のできやすさを判断します。飛行機の高度計は、⑥の大気の式で、気圧を高さに直しています。旅客機の客室は、外（高さ\qty{10}{km}で約\qty{26}{kPa}）よりずっと高い圧力に保たれていますが、地上と同じではなく、高さ約\qty{2400}{m}の大気と同じくらい（約\qty{75}{kPa}）です。だから、機内でもおかしの袋が少しふくらみます。
+
+\begin{phketa}[気体の圧力・温度の目安]
+\phketaline{自転車・車のタイヤの空気圧}{ゲージ圧で約\qtyrange{200}{700}{kPa}（車は約\qty{250}{kPa}）}
+\phketaline{工場の圧縮空気}{ゲージ圧で約\qty{0.7}{MPa}}
+\phketaline{ディーゼルエンジンの圧縮比}{約15〜20（圧縮した空気は\qtyrange{500}{700}{\celsius}）}
+\phketaline{富士山の頂上の気圧}{約\qty{63}{kPa}（地上の約6割）}
+\phketaline{旅客機の客室の気圧}{約\qty{75}{kPa}（高さ約\qty{2400}{m}と同じ）}
+\phketaline{乾燥断熱減率／平均の気温の下がり方}{1 km で約\qty{10}{K}／約\qty{6.5}{K}}
+\phboxhead{答えが桁で合っているか}
+空気\qty{1}{m^3}は約\qty{1.2}{kg}、1 mol は約\qty{24}{L}（\qty{20}{\celsius}）。$pV$〔Pa·m$^3$〕は J なので、\qty{100}{kPa}の空気\qty{1}{m^3}の $pV$ は\qty{100}{kJ}。圧縮機の仕事も、この $p_1V_1$ の何倍かで見当がつきます（\bkreidairef{11}）。
+\end{phketa}
+\end{phkougaku}
+\phstation{熱力学,流体機械,内燃機関,気象学}{理想気体、状態方程式、比気体定数、定積比熱・定圧比熱、比熱比、等温変化、断熱変化、ポリトロープ変化、乾燥断熱減率}
+
+\begin{phsaki}{本物の気体と、大気の温度}
+この章では、気体を理想気体として扱いました。高い圧力や低い温度では、分子の大きさと分子どうしの引き合いが効いて、$pV=nRT$ からずれます。ずれを表す式（ファンデルワールスの式など）と、気体が液体になるときの様子は、熱-10 で学びます。
+
+気象学では、空気のかたまりを断熱で海面の気圧（ふつうは\qty{1000}{hPa}）まで下ろしたときの温度を「温位」とよび、高さがちがう空気をくらべるのに使います。断熱で上下しても温位は変わらないので、⑥の乾燥断熱減率をもっと便利に使えます。水蒸気が雲になるときの熱まで入れた「湿潤断熱減率」とあわせて、専門の本で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem ふもと（\qty{100}{kPa}、\qty{27}{\celsius}）で\qty{90}{mL}の空気が入った袋を、\qty{75}{kPa}・\qty{12}{\celsius}の山の上へ持って行きました。袋の空気は何 mL になりますか（\bkreidairef{1}）。
+\bkpans{$90\times\tfrac{100}{75}\times\tfrac{285}{300}=\qty{114}{mL}$}
+\bkproblem \qty{20}{\celsius}でゲージ圧\qty{250}{kPa}だったタイヤが、冬の朝\qty{0}{\celsius}になりました。体積が変わらないとして、ゲージ圧を求めましょう（\bkreidairef{2}）。
+\bkpans{絶対圧 $351\times\tfrac{273}{293}\approx\qty{327}{kPa}$。ゲージ圧 約\qty{226}{kPa}}
+\bkproblem \qty{27}{\celsius}・\qty{200}{kPa}の空気の密度を求めましょう（\bkreidairef{4}）。
+\bkpans{$\num{200000}\div(287\times300)\approx\qty{2.3}{kg/m^3}$}
+\bkproblem 2原子分子の理想気体 0.50 mol を、圧力一定で\qty{20}{K}温めます。要る熱と、気体が外にする仕事を求めましょう（\bkreidairef{8}）。
+\bkpans{$Q=0.50\times3.5\times8.31\times20\approx\qty{291}{J}$。$W'=0.50\times8.31\times20\approx\qty{83}{J}$}
+\bkproblem \qty{400}{K}の理想気体 1.0 mol が、温度一定で体積3倍にふくらみました。受けとった熱を求めましょう（\bkreidairef{10}）。
+\bkpans{$1.0\times8.31\times400\times\ln3\approx\qty{3650}{J}$（約\qty{3.7}{kJ}）}
+\bkproblem \qty{27}{\celsius}の空気を、断熱で体積 $\tfrac{1}{10}$ に押し縮めると、何 ℃・何倍の圧力になりますか（\bkreidairef{6}）。
+\bkpans{$300\times10^{0.4}\approx\qty{754}{K}$、約\qty{481}{\celsius}。$10^{1.4}\approx25$ 倍}
+\bkproblem 地面の気温が\qty{28}{\celsius}、露点が\qty{20}{\celsius}の空気が上がると、何 m で雲ができはじめますか。露点は変わらないとします（\bkreidairef{16}）。
+\bkpans{$8\div0.00975\approx\qty{820}{m}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem \qty{20}{\celsius}・\qty{101}{kPa}の空気を、すばやく体積 $\tfrac{1}{3}$ に押し縮め（断熱）、そのあと体積を変えずに置いておくと、まわりと同じ\qty{20}{\celsius}にもどりました。(1) 押し縮めた直後の圧力、(2) \qty{20}{\celsius}にもどったあとの圧力を求めましょう。(3) 空気入れの筒の先が熱くなったあと、ピストンを止めておくと、押し返す力はどうなりますか（\bkreidairef{6}と\bkreidairef{2}）。
+\bkpans{(1) $101\times3^{1.4}\approx\qty{470}{kPa}$。(2) 温度が $455\to293$ K に下がるので $470\times\tfrac{293}{455}\approx\qty{303}{kPa}$（ちょうど3倍）。(3) 冷えるにつれて弱くなり、温度一定で押したときと同じ3倍の圧力になる}
+\bkproblem 富士山の頂上の気圧と気温を、例題5 の (3) のモデルの値（\qty{63.5}{kPa}、$-9.5$ ℃）とします。ふもと（\qty{101}{kPa}、\qty{20}{\celsius}）で\qty{100}{mL}の袋の空気は、頂上で何 mL になりますか（\bkreidairef{5}と\bkreidairef{1}）。
+\bkpans{$100\times\tfrac{101}{63.5}\times\tfrac{263.5}{293}\approx\qty{143}{mL}$}
+\bkproblem 例題15 のタンク（\qty{0.196}{m^3}、\qty{20}{\celsius}）に、はじめ大気圧（\qty{101}{kPa}）の空気が入っています。1分あたり、\qty{20}{\celsius}・\qty{101}{kPa}の空気\qty{100}{L}を吸いこんでタンクへ送る圧縮機で、ゲージ圧\qty{0.80}{MPa}にするには、何分かかりますか。タンクの空気はいつも\qty{20}{\celsius}とします（\bkreidairef{15}と\bkreidairef{4}）。
+\bkpans{入れる空気 $2.10-0.24\approx\qty{1.87}{kg}$。1分に入る空気は、密度 $\num{101000}\div(287\times293)\approx\qty{1.20}{kg/m^3}$ の\qty{0.100}{m^3}で\qty{0.120}{kg}。$1.87\div0.120\approx16$ 分}
+\bkproblem \qty{1}{m^3}・\qty{100}{kPa}・\qty{20}{\celsius}の空気を、圧力比4まで断熱で押し縮める圧縮機と、等温で押し縮める圧縮機があります。断熱の仕事は等温の何倍ですか。また、2段（中間\qty{200}{kPa}で\qty{20}{\celsius}に冷やす）にすると、断熱の1段より何\,\% 仕事が減りますか（\bkreidairef{11}）。
+\bkpans{等温 $100\ln4\approx139$、断熱 $3.5\times100\times(4^{0.2857}-1)\approx170$ kJ。約1.23倍。2段 $153$ kJ で、$(170-153)\div170\approx10\,\%$ 減る}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ボイル・シャルルの法則と状態方程式で、気体の圧力・体積・温度を求められる。\bkfurref{ph:熱-3:sec2}
+\item 定積・定圧・等温・断熱の4つの変化で、熱と仕事と内部エネルギーの出入りを数えられる。\bkfurref{ph:熱-3:sec4}
+\item 断熱変化・ポリトロープ変化の式で、空気入れ・エンジン・圧縮機・大気の温度と圧力を計算できる。\bkfurref{ph:熱-3:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{この章では、閉じこめた気体をふくらませたり縮めたりしたね。次の熱-4 では、気体がパイプやノズルを「流れながら」温度や速さを変えるようすを数えるよ。}
