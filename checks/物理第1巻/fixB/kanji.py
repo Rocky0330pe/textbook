@@ -1,5 +1,5 @@
 # 組B（第19回 6-4 の2）：物理シリーズは高校卒業程度の漢字。よく使う常用漢字だけを、読みやすさを見て置きかえる。
-# コメント行・\bksection（共通の見出し）・\phchapter（もくじと同じ題）・\bkidx（さくいんの読み）は変えない。
+# コメント行・\bksection をふくむ行（共通の見出し）・\phchapter（もくじと同じ題）・\bkidx（さくいんの読み）は変えない。
 import re, sys
 R = [
     (r'はか(ろう|って|ります|り方|った|る|れ)', r'測\1'),
@@ -25,7 +25,7 @@ for path in sys.argv[1:]:
     out = []; cnt = 0
     for L in open(path, encoding='utf-8').read().split('\n'):
         s = L.lstrip()
-        if s.startswith('%') or s.startswith('\\bksection') or s.startswith('\\phchapter'):
+        if s.startswith('%') or '\\bksection' in s or '\\phchapter' in s:
             out.append(L); continue
         # \bkidx{よみ}{語} の読みは変えない
         keep = {}
