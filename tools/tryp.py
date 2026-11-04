@@ -3,6 +3,7 @@
 使い方:  python3 tools/tryp.py 力-3 [画像を書き出すフォルダ] [--kotae]
          python3 tools/tryp.py 3 …           （第1巻の 力-3 と同じ）
          python3 tools/tryp.py sample …      （見本の章 tex/p1-sample.tex を 力-1 の場所で組む。本には入らない）
+         python3 tools/tryp.py 熱-3 …        （第21回：第2巻の章。tex/p2-03.tex。p2-sample は 熱-1 の場所で組む）
   → tex/tryp-p1-03.tex を作って lualatex を2回まわし、章の始まりと終わりのページ、
     エラー、はみ出し（1.7pt超の Overfull \\hbox）、ページの下へのはみ出し（Overfull \\vbox）、未定義の参照を表示する。
     フォルダを指定すると、章のページを並べた画像と、1ページずつの画像（120dpi）を書き出す。
@@ -21,9 +22,13 @@ if len(argv) < 2:
     sys.exit(__doc__)
 arg = argv[1]
 outdir = argv[2] if len(argv) > 2 else None
+# 第21回：第2巻から先も組めるように、章の頭文字（熱-3 など）か pN-（p2-03 など）で巻を決める。数だけなら第1巻
 vol = 1
+for _k, _c in enumerate('力熱波電原', 1):
+    if arg.startswith(_c + '-') or re.match(r'^p%d-' % _k, arg) or arg == 'p%d-sample' % _k:
+        vol = _k
 key = '力熱波電原'[vol - 1]
-sample = arg in ('sample', 'p1-sample')
+sample = arg in ('sample', 'p%d-sample' % vol)
 if sample:
     cid = key + '-1'
     chfile = 'p%d-sample' % vol
@@ -31,7 +36,7 @@ if sample:
 else:
     m = re.match(r'^(?:%s-|p%d-)?(\d+)$' % (key, vol), arg)
     if not m:
-        sys.exit('章の書き方：力-3、3、sample のどれか')
+        sys.exit('章の書き方：力-3、熱-3、3、sample、p2-sample のどれか')
     ch = int(m.group(1))
     cid = '%s-%d' % (key, ch)
     chfile = 'p%d-%02d' % (vol, ch)
@@ -97,7 +102,7 @@ en = re.search(r'BKPAGE end (\d+)', logj)
 over = re.findall(r'Overfull \\hbox \(([\d.]+)pt too wide\) (?:in paragraph at lines (\d+)--\d+|detected at line (\d+)|in alignment at lines (\d+)--\d+)', log)
 bad_over = ['%.1fpt@L%s' % (float(w), a or b or c) for w, a, b, c in over if float(w) > 1.7]
 endpage = int(en.group(1)) if en else None
-print('章 %s%s  計画: p.%d から（次の項目は p.%d）' % (cid, '（見本 p1-sample.tex）' if sample else '', start, nxt))
+print('章 %s%s  計画: p.%d から（次の項目は p.%d）' % (cid, '（見本 p%d-sample.tex）' % vol if sample else '', start, nxt))
 print('実際: はじまり p.%s、 次のページ p.%s' % (st.group(1) if st else '?', endpage))
 plen = (endpage - int(st.group(1))) if st and en else None
 if plen is None:

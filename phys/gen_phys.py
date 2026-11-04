@@ -105,7 +105,8 @@ for v in P.VOLS:
 \phBackCoverPage
 \end{document}
 """ % dict(n=n)
-    if n == 1:
+    if n == 1 or os.path.exists(os.path.join(OUT, "ph%d-body.tex" % n)):
+        # 第21回：本文の原稿（ph<n>-body.tex）がある巻は、第1巻と同じ本文入りの親ファイルにする（第2巻『熱学』から）
         # 第13回編集委員会（物理第1巻）：本文入りの親ファイル。表1・表2・扉・もくじ・保存則と相似の地図・この本の使い方・
         # 本文（部扉・部の中もくじ・章：ph1-body.tex）・巻末（ph1-back.tex）・奥付・表4 を組む（数学 gen.py の n==3 のやり方）
         main = r"""%% 第13回編集委員会（物理第1巻）
