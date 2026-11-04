@@ -1,0 +1,1115 @@
+%% 熱-13 光で伝わる熱：ふく射と熱交換器（第22回編集委員会 物理第2巻：組 熱W7）
+%% 記号（この章の中だけの分け方。巻全体は計画書 C-1）：
+%%   放射率 ε、吸収率 α、反射率 ρ、透過率 τ（この章では密度・熱拡散率・時定数を使わない）、ステファン・ボルツマン定数 σ、
+%%   波長 λ、振動数 f、光の速さ c_0（比熱 c とぶつけない）、形態係数 F_12、黒体の放射の強さ E_b（W/m^2）、
+%%   熱の流れ Q-dot（W）、熱流束 q（W/m^2）、熱通過率 U（W/(m^2·K)。熱-11 の熱貫流率と同じ量。この章には内部エネルギーが出ない）、
+%%   熱容量流量 C＝m-dot c_p（W/K。熱容量 C_th とは別。この章では C_th を使わない）、C_min・C_max、熱容量流量比 C_r、
+%%   温度効率 η_T（工学の本の ε は放射率と同じ字なので使わない）、NTU（立体）、対数平均温度差 ΔT_lm、両はしの温度差 ΔT_1・ΔT_2。
+%%   温度 T は σT^4 の式ではかならず K。熱交換器の温度は ℃ のまま（差だけを使う）。
+%% 数値はすべて Python で確かめた：checks/物理第2巻/熱-13/c13.py（出力 c13_out.txt）、planck.py（出力 planck_out.txt。本文の出力はそのまま写した）。
+%% 公式の持ち主：σT^4・ウィーンの変位則（N42）、放射率・形態係数・2面の間の放射・対数平均温度差・温度効率と NTU（N55）はこの章。
+%%   熱伝導・熱抵抗・熱貫流率は熱-11 ③④、熱伝達率 h は熱-12 ②（まだない章なので、文字で指す）。プランクの式は物理シリーズの『原子』（原-2）。
+%%   光の波長と色は物理シリーズの『波動』（波-12・13）の予告だけ。電磁波としての光は『電磁気学』（電-15）。
+%% 出典：
+%%   σ＝5.670374419×10^-8 W/(m^2·K^4)、ウィーンの定数 2.897771955×10^-3 m·K、第1・第2放射定数 c_1＝3.741771852×10^-16 W·m^2、c_2＝1.438776877×10^-2 m·K：CODATA 2018（NIST）。
+%%   太陽の有効温度 5772 K、太陽の半径 6.957×10^8 m、太陽定数（太陽周期23の平均）1361 W/m^2：IAU 2015 Resolution B3（Prša ほか、AJ 152, 41 (2016)）。
+%%   1 au＝1.495978707×10^11 m：IAU 2012 Resolution B2。地球の反射率（アルベド）約0.30、地表の平均気温 約15 ℃：理科年表・NASA の教材の目安。
+%%   平衡気候感度：IPCC AR6 WG1 SPM A.4.4（最良の推定 3 ℃、可能性が高い範囲 2.5〜4 ℃、可能性がとても高い範囲 2〜5 ℃）。
+%%   ハーシェルの赤外線の発見 1800年。キルヒホッフの法則 1859〜1860年。シュテファン 1879年（チンダルの測定から）、ボルツマン 1884年（理論）。ウィーン 1893年。プランク 1900年。
+%%   放射率の表は目安（Incropera ほか『伝熱工学の基礎』付録、日本機械学会『伝熱工学資料』の代表値の範囲）。表面の状態で大きく変わる。
+\makeatletter
+% 小さな太陽（光線つき）  \qxnsun{(x,y)}{半径}
+\newcommand\qxnsun[2]{\begin{scope}[shift={#1}]
+  \foreach \a in {0,45,...,315}{\draw[bkOrange!85!black, line width=0.8pt] (\a:#2*1.3) -- (\a:#2*1.8);}
+  \filldraw[fill=bkYellow!70, draw=bkOrange!85!black, line width=0.7pt] (0,0) circle (#2);
+\end{scope}}
+% たき火（まきとほのお）  \qxnfire{(x,y)}
+\newcommand\qxnfire[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkOrange!70!black, draw=bkInk, line width=0.5pt, rotate=18] (-9,-1.2) rectangle (9,1.2);
+  \filldraw[fill=bkOrange!60!black, draw=bkInk, line width=0.5pt, rotate=-18] (-9,-1.2) rectangle (9,1.2);
+  \filldraw[fill=bkRed!70, draw=bkRed!80!black, line width=0.5pt] (-6,1) .. controls (-7,8) and (-2,9) .. (0,16) .. controls (2,9) and (7,8) .. (6,1) -- cycle;
+  \filldraw[fill=bkYellow!80, draw=bkOrange, line width=0.4pt] (-3,1.5) .. controls (-3.5,6) and (-1,7) .. (0,10) .. controls (1,7) and (3.5,6) .. (3,1.5) -- cycle;
+\end{scope}}
+% 横顔（左向き）  \qxnface{(x,y)}
+\newcommand\qxnface[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkYellow!25, draw=bkInk, line width=0.6pt] (0,0) circle (5);
+  \fill[bkInk] (-2.6,1.2) circle (0.45);
+  \draw[bkInk, line width=0.5pt] (-5,-0.5) -- (-6.2,-1.4) -- (-4.8,-2);
+  \filldraw[fill=bkBlue!35, draw=bkInk, line width=0.6pt] (-4,-4.5) -- (-6,-16) -- (6,-16) -- (4,-4.5) -- cycle;
+\end{scope}}
+\makeatother
+\tikzset{qxn lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxn ray/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkRed!80!black},
+  qxn ray2/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkBlue!80!black},
+  qxn dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{13}{光で伝わる熱：\\ふく射と熱交換器}{たき火に向いた顔だけが熱くなるのはなぜ？}{\bklevelrange{3}{5}}{光で伝わる熱：ふく射と熱交換器}
+\bkmichishirube{3-12,5-10,5-14,6-4,8-8,熱-11,熱-12}{熱-16,波-12,波-13,原-2}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 物が出す放射の強さ $\sigma T^4$ と、いちばん強い波長を計算できる。
+\item \bklevel{4}\enspace 放射率と形態係数を使って、2つの面の間で放射で移る熱を計算できる。
+\item \bklevel{5}\enspace 対数平均温度差と温度効率で、熱交換器の熱の量と大きさを求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$E_{\mathrm b}=\sigma T^4$（シュテファン・ボルツマンの法則）}{高校物理（発展）}{ph:熱-13:sb}
+\phk{$\lambda_{\max}T=\qty{2898}{\micro m.K}$（ウィーンの変位則）}{高校物理（発展）}{ph:熱-13:wien}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.60\linewidth}\raggedright
+たき火にあたると、火に向いた顔はすぐに熱くなるのに、背中はひんやりしたままです。まわりの空気はどちらも冷たいのに、なぜ火に向いた側だけが熱くなるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=0.7mm, y=0.7mm]
+  \qxnfire{(0,0)}
+  \qxnface{(38,18)}
+  \draw[qxn ray] (8,11) -- (28,16);
+  \draw[qxn ray] (8,6) -- (28,8);
+  \node[qxn lab, anchor=south] at (17,15.5) {熱い};
+  \node[qxn lab, anchor=north] at (38,1) {背中は？};
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (49,24) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱の伝わり方には、伝導・対流・放射の3つがあります（熱-11 ①）。熱-11 と熱-12 では、物の中を伝わる熱（伝導）と、流れが運ぶ熱（対流）を学びました。この章では3つめの\textbf{放射}を学びます。放射は、物が出す光（目に見えない光をふくむ）が熱を運ぶしくみです。光は何もない宇宙も通れるので、太陽の熱は、この方法だけで地球に届いています。熱が光として飛んでいくことを\textbf{熱ふく射}、または\textbf{熱放射}といいます。「ふく射」と「放射」は同じ意味で、この章では短く「放射」と書きます。\bkidx{ねつふくしゃ}{熱ふく射（熱放射）}
+
+章の後半では、熱い流体から冷たい流体へ、壁ごしに熱を渡す\textbf{熱交換器}の計算を学びます。エアコンの室外機、車のラジエーター、給湯器、発電所のボイラーや復水器など、熱を運ぶ機械のほとんどに入っている部品です。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[黒い紙と白い紙、どちらが温まる？]
+\textbf{用意するもの}\par
+同じ大きさの黒い画用紙と白い画用紙、温度計2本（または放射温度計）、アルミはく、段ボールの板
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 晴れた日に、2枚の紙を日なたに並べ、それぞれの紙の下に温度計の先を差しこむ。
+\item はじめの温度と、10分後の温度を記録する。どちらがどれだけ上がったかな？
+\item 冬にストーブ（または日なた）に顔を向け、顔とストーブの間に、アルミはくをはった段ボールの板を立てる。顔の熱さはどう変わるかな？（ストーブに板を近づけすぎない。大人といっしょに）
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ②の結果は④で、③の結果は⑥で説明します。
+
+\begin{omoidasou}
+\bkrecall{熱-1}{絶対温度 $T$〔K〕＝セルシウス温度〔℃〕＋273.15。温度の差は K でも ℃ でも同じ数。}
+\bkrecall{熱-11}{熱の流れ＝温度差÷熱抵抗 $R_{\mathrm{th}}$。熱貫流率 $U$ は、壁 \qty{1}{m^2}・温度差 \qty{1}{K} あたりに通る熱の流れ。}
+\bkrecall{熱-12}{流体と壁の間の熱の流れ $\dot Q=hA\Delta T$（$h$ は熱伝達率）。}
+\bkrecall{3-12}{対数：$\log$ は「何乗か」を数える。かけ算がたし算になる。}
+\bkrecall{5-10}{細い長方形に分けてたすと、グラフの下の面積（定積分）が求まる。}
+\bkrecall{6-4}{$\dd u/\dd t=-ku$ は、変数分離（6-4③）で $u=u_0e^{-kt}$。差が同じ割合でへっていく。}
+\bkrecall{8-8}{立体角：点から見た面の見かけの大きさ。半径1の球面の上の面積で、まわり全体は $4\pi$（8-8⑬）。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{放射を目で見る}{3}
+
+\bksubsection{1}{物は光を出している：光と赤外線}
+
+\leavevmode\label{ph:熱-13:sec1}電気ストーブのスイッチを入れると、ヒーターの線は、はじめは何も見えないのに、もう手に熱さを感じます。少したつと暗い赤にかがやき、やがて明るいだいだい色になります。熱い物は\textbf{光}を出していて、温度が上がるほど、出す光の量が増え、色も変わっていくのです。
+
+\Needspace{5\baselineskip}\noindent\textbf{光は波：波長と色}\par\nobreak
+光は、電気と磁気のゆれが空間を伝わっていく波（\textbf{電磁波}）です。山から山までの長さを\textbf{波長}といい、$\lambda$（ラムダ）と書きます。1秒に来る山の数（振動数）を $f$ とすると、1秒に $f$ 個の山が、それぞれ $\lambda$ ずつ進むので
+\pheq{c_0=f\lambda}{m/s ＝ 1/s × m}
+です。$c_0$ は真空の中の\textbf{光の速さ}で、$c_0=\qty{299792458}{m/s}$（約 $3.00\times10^8$\,m/s）と決められています。比熱の $c$ と区別するため、この本では光の速さを $c_0$ と書きます。\bkidx{はちょう}{波長}
+
+目に見える光（\textbf{可視光}）の波長は、約 \qty{0.38}{\micro m}（紫）から約 \qty{0.78}{\micro m}（赤）までです（\qty{1}{\micro m}＝$10^{-6}$\,m）。赤より波長の長い光を\textbf{赤外線}、紫より短い光を\textbf{紫外線}といいます。1800年、ハーシェルは、プリズムで分けた太陽の光の、赤の外側（何も見えない所）に温度計を置くと、温度が上がることを見つけました。これが赤外線の発見です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 対数の目もり：x = 20*(log10(λ/μm)+2)  0.01 μm→0、1000 μm→100
+  \fill[bkPurple!25] (0,0) rectangle (31.6,8);
+  \shade[left color=bkPurple!60, right color=bkRed!70] (31.6,0) rectangle (37.8,8);
+  \fill[bkRed!20] (37.8,0) rectangle (100,8);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (120,8);
+  \fill[bkGray!20] (100,0) rectangle (120,8);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (120,8);
+  \node[qxn lab] at (16,4) {紫外線};
+  \node[qxn lab] at (68,4) {赤外線};
+  \node[qxn lab] at (110,4) {電波};
+  \draw[bkInk, line width=0.5pt] (34.7,8) -- (34.7,12);
+  \node[qxn lab, anchor=south] at (34.7,12.2) {可視光};
+  \foreach \x/\t in {0/0.01,20/0.1,40/1,60/10,80/100,100/1000}{\draw[bkInk] (\x,0) -- (\x,-1.5); \node[qxn lab, anchor=north] at (\x,-2) {\t};}
+  \node[qxn lab, anchor=south east] at (120,8.8) {波長（\unit{\micro m}）};
+  % 主な放射のいちばん強い波長
+  \draw[qxn ray] (34,-12) -- (34,-6);
+  \node[qxn lab, anchor=north] at (34,-12.5) {太陽 \qty{0.50}{\micro m}};
+  \draw[qxn ray] (48.3,-18) -- (48.3,-6);
+  \node[qxn lab, anchor=north] at (52,-18.5) {たき火 \qty{2.6}{\micro m}};
+  \draw[qxn ray] (79.5,-12) -- (79.5,-6);
+  \node[qxn lab, anchor=north] at (79.5,-12.5) {人の体 \qty{9.5}{\micro m}};
+\end{tikzpicture}
+\bkfigcaption{電磁波の波長の帯（目もりは10倍ごとに同じ間かく）。矢印は、太陽・たき火・人の体が出す光のうち、いちばん強い波長（③で計算する）。}
+\label{ph:熱-13:fig-obi}
+\end{bkfigure}
+
+図\ref{ph:熱-13:fig-obi}のように、ふだんの温度の物は赤外線を、太陽は可視光をいちばん多く出しています。光の波長と色、光が波であることのくわしい話は、物理シリーズの『波動』（波-12・13）で学びます。光が電気と磁気の波であることは、物理シリーズの『電磁気学』（電-15）で学びます。この章では、「光は波長ごとに分けられ、物は温度で決まる光を出す」ことだけを使います。
+
+\begin{seikaku}
+「赤外線は熱線」と書かれることがありますが、これは言いすぎです。どの波長の光も、物に吸われればその物を温めます。日なたが暖かいのは、太陽の光のうち、可視光と赤外線がほぼ半分ずつ届くからです。ふだんの温度（約 \qty{300}{K}）の物が出す光は、ほとんどが波長 \qtyrange{3}{50}{\micro m} の赤外線なので、「物と物の間の熱のやりとり＝赤外線のやりとり」と考えてよいことが多い、というのが正確な言い方です。
+\end{seikaku}
+
+\bksubsection{2}{黒い物ほどよく出し、よく吸う：放射の強さは $T^4$}
+
+\leavevmode\label{ph:熱-13:sec2}\noindent\textbf{黒体}\par\nobreak
+光をまったく反射せず、来た光を全部吸いこむ物を\textbf{黒体}といいます。\bkidx{こくたい}{黒体}本当の黒体はありませんが、とても近いものは作れます。内側を黒くぬった箱に、小さな穴をあけます。穴に入った光は、中で何度も反射するうちに吸われてしまい、穴から外へはほとんど出てきません。だから、外から見た穴は、ほぼ完全な黒体です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.8pt] (0,0) rectangle (40,26);
+  \fill[white] (2,2) rectangle (38,24);
+  \fill[bkInk!85] (2,2) rectangle (38,24);
+  \fill[white] (-1,11) rectangle (2.5,15);
+  \draw[bkYellow!90!black, line width=1pt, -{Stealth[length=3pt]}] (-16,13) -- (2,13) -- (20,22) -- (34,4) -- (12,3) -- (24,16);
+  \node[qxn lab, anchor=south] at (-9,13.6) {光};
+  \node[qxn lab, anchor=west, align=left] at (45,18) {穴に入った光は、中で反射を\\くり返すうちに吸われる};
+  \node[qxn lab, anchor=west, align=left] at (45,6) {箱をあたためると、穴から\\黒体の光が出てくる};
+\end{tikzpicture}
+\bkfigcaption{黒体に近いもの：小さな穴のあいた箱。温度計の目もりを合わせる「黒体炉」は、このしくみで作る。}
+\label{ph:熱-13:fig-kuudou}
+\end{bkfigure}
+
+この箱を温めると、穴から光が出てきます。19世紀の終わりに、その光の強さが温度でどう変わるかが、くわしく測られました。
+
+\Needspace{5\baselineskip}\noindent\textbf{シュテファン・ボルツマンの法則}\par\nobreak
+黒体の表面 \qty{1}{m^2} から、1秒あたりに、すべての波長の光で出ていくエネルギー（放射の強さ）$E_{\mathrm b}$ は、絶対温度 $T$ の4乗に比例します。
+\pheq{E_{\mathrm b}=\sigma T^4}{W/m$^2$ ＝ W/(m$^2$·K$^4$) × K$^4$}
+\label{ph:熱-13:sb}これを\textbf{シュテファン・ボルツマンの法則}といいます。\bkidx{しゅてふぁんぼるつまんのほうそく}{シュテファン・ボルツマンの法則}比例の定数 $\sigma$（シグマ）は\textbf{シュテファン・ボルツマン定数}で、
+\[ \sigma=5.67\times10^{-8}\ \mathrm{W/(m^2\cdot K^4)} \]
+です。1879年にシュテファンが測定の値から見つけ、1884年にボルツマンが、光の圧力と熱力学を使って理論で導きました。$T$ は必ず \textbf{K} で入れます。下つきの b は黒体（black body）のしるしです。
+
+\begin{phyomi}[$E_{\mathrm b}=\sigma T^4$]
+「黒い面 \qty{1}{m^2} が1秒に出す光のエネルギーは、絶対温度の4乗に比例する」。温度が少し上がるだけで、放射は大きく増えます。0 K でないかぎり、どんな物も光を出しています。氷（\qty{273}{K}）も、1 m$^2$ あたり約 \qty{316}{W} の赤外線を出しています。
+\end{phyomi}
+\begin{phbaisuru}{絶対温度 $T$}
+$2^4=16$ 倍になります。\qty{25}{\celsius}（\qty{298}{K}）の2倍は \qty{596}{K}、つまり \qty{323}{\celsius} です。\qty{25}{\celsius} の机も \qty{323}{\celsius} のフライパンも同じしくみで光を出していますが、強さは16倍もちがいます。℃ の数を2倍にしても16倍にはならないことに注意しましょう。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=46mm, xmin=0, xmax=1250, ymin=0, ymax=140, xtick={0,300,600,900,1200}, ytick={0,40,80,120}, xlabel={$T$（K）}, ylabel={$E_{\mathrm b}$（kW/m$^2$）}]
+  \addplot[bkcurve, domain=0:1240, samples=100] {5.670e-8*x^4/1000};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(300,0.459) (600,7.35) (1200,117.6)};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:300,6) {0.46};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:585,19) {7.3（16倍）};
+  \node[font=\sffamily\footnotesize, anchor=east] at (axis cs:1180,118) {118（さらに16倍）};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+\begin{phmijika}[オーブントースター・サーモグラフィ]
+オーブントースターのヒーターは、約 \qty{1000}{K} まで熱くなり、赤くかがやきながら強い放射でパンを焼きます。空気を温めているのではないので、表面がこんがりと焼けるのです。駅や空港で体温を見るサーモグラフィは、人の体が出す赤外線の強さを測って、温度の分布を色の絵にしています。
+\end{phmijika}
+
+\Needspace{5\baselineskip}\noindent\textbf{光は、まっすぐ届き、空気を温めない}\par\nobreak
+\label{ph:熱-13:hatena1}\bkhatenaref の答えの1つめです。たき火の燃えているまきは約 \qty{1100}{K} で、1 m$^2$ あたり約 \qty{83}{kW} の放射を出しています（\nobreak\bkreidairef{1}\nobreak）。この光はまっすぐ進み、空気にはほとんど吸われません（乾いた空気の窒素と酸素は、赤外線をほとんど吸わない）。だから、まわりの空気は冷たいまま、光が当たった顔の表面だけが温まります。背中には、火からの光がまったく届きません。どれだけ届くかを数で表す方法は、⑤で学びます。
+
+\Needspace{5\baselineskip}\noindent\textbf{どの物も、出しながら吸っている}\par\nobreak
+顔も、約 \qty{306}{K}（\qty{33}{\celsius}）の物として、1 m$^2$ あたり約 \qty{0.5}{kW} の赤外線を出しています。たき火の前の顔は、火から光を受けとり、同時に自分も光を出しています。顔が温まるのは、受けとる量のほうが多いからです。背中は、冷たい夜空や暗い林から来るわずかな光を受けとり、自分はそれより多くの光を出すので、熱を失って冷えていきます。熱の移る量は、いつも\textbf{受けとる量－出す量}で決まります。
+
+\Needspace{12\baselineskip}
+\phstage{te}{表計算とプログラムで放射を数える}{3}
+
+\bksubsection{3}{表計算：太陽・人・たき火の放射}
+
+\leavevmode\label{ph:熱-13:sec3}温度のちがう黒体が、どれだけの放射を出し、どの波長がいちばん強いかを、表計算で並べてみましょう。いちばん強い波長は、次のウィーンの変位則で計算します。
+
+\Needspace{5\baselineskip}\noindent\textbf{ウィーンの変位則}\par\nobreak
+熱い物の光を、プリズムなどで波長ごとに分けて強さを測ると、温度ごとに1つの山の形になります（図\ref{ph:熱-13:fig-planck}）。山のいちばん高い所の波長 $\lambda_{\max}$ は、絶対温度に反比例します。
+\pheq{\lambda_{\max}T=\qty{2898}{\micro m.K}}{\unit{\micro m} × K}
+\label{ph:熱-13:wien}これを\textbf{ウィーンの変位則}といいます（ウィーン、1893年）。温度が2倍になると、いちばん強い波長は半分になり、色は赤から白、青白へと変わっていきます。\bkidx{うぃーんのへんいそく}{ウィーンの変位則}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=116mm, height=58mm, xmin=0, xmax=6, ymin=0, ymax=490, xtick={0,1,2,3,4,5,6}, ytick={0,100,200,300,400}, xlabel={波長 $\lambda$（\unit{\micro m}）}, ylabel={強さ（kW/(m$^2$·\unit{\micro m})）}]
+  \fill[bkYellow!35] (axis cs:0.38,0) rectangle (axis cs:0.78,490);
+  \addplot[bkcurve, domain=0.2:6, samples=160] {3.742e8/(x^5*(exp(14388/(x*2000))-1))/1000};
+  \addplot[bkcurve2, domain=0.2:6, samples=160] {3.742e8/(x^5*(exp(14388/(x*1600))-1))/1000};
+  \addplot[bkcurve3, domain=0.2:6, samples=160] {3.742e8/(x^5*(exp(14388/(x*1200))-1))/1000};
+  \addplot[bkGray, dashed, line width=0.7pt, domain=1.449:2.6, samples=30] {3.742e8/(x^5*(exp(14388/2898)-1))/1000};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:1.6,405) {\qty{2000}{K}};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:2.0,140) {\qty{1600}{K}};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (axis cs:3.0,330) {実線は上から \qty{2000}{K}・\qty{1600}{K}・\qty{1200}{K}\\点線：山のいちばん高い所を\\つないだ線（ウィーンの変位則）};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:0.82,484) {←可視光};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{黒体の光の強さの分布（プランクの式で計算）。温度が上がると山は高く左へ動き、曲線の下の面積（全体の強さ $\sigma T^4$）は急に大きくなる。\qty{2000}{K} でも、可視光の帯（黄色の帯）に入るのは、ほんの少し。}
+\label{ph:熱-13:fig-planck}
+\end{bkfigure}
+
+\begin{bkcenter}
+\bksheet{4}{28}{%
+1 & 物 & $T$（K） & $\sigma T^4$（W/m$^2$） & $\lambda_{\max}$（\unit{\micro m}） \\
+2 & 氷（\qty{0}{\celsius}） & 273.15 & 316 & 10.6 \\
+3 & 皮膚（\qty{33}{\celsius}） & 306.15 & 498 & 9.5 \\
+4 & 湯（\qty{100}{\celsius}） & 373.15 & \num{1099} & 7.8 \\
+5 & なべ（\qty{300}{\celsius}） & 573.15 & \num{6119} & 5.1 \\
+6 & たき火のまき & 1100 & \num{83020} & 2.6 \\
+7 & 電球の線 & 2800 & \num{3485000} & 1.0 \\
+8 & 太陽の表面 & 5772 & \num{62940000} & 0.50 \\}
+\bktabcaption{B 列は絶対温度、C2 は \texttt{=5.670E-8*B2\^{}4}、D2 は \texttt{=2898/B2}。下へコピーする。}
+\label{ph:熱-13:tab-sheet}
+\end{bkcenter}
+
+表から、次のことが読みとれます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 人の皮膚から湯までの温度では、いちばん強い光は波長 \qtyrange{8}{10}{\micro m} の赤外線。目には見えない。
+\item 電球のフィラメント（約 \qty{2800}{K}）でも、いちばん強いのは波長約 \qty{1.0}{\micro m} の赤外線。白熱電球が「明かりより熱をたくさん出す」のはこのため。
+\item 太陽の表面は、いちばん強い波長が約 \qty{0.50}{\micro m}（緑のあたり）で、ちょうど可視光のまん中。
+\end{enumerate}
+
+\begin{phmijika}[鉄の色で温度を読む]
+かじ屋さんや製鉄所の人は、熱した鉄の色で温度を見分けてきました。暗い赤は約 \qty{900}{K}、明るいだいだいは約 \qty{1300}{K}、白っぽい黄色は約 \qty{1500}{K} が目安です。温度が上がると、山が可視光のほうへ動き、赤の外側だけでなく、だいだい・黄の光も出るからです。
+\end{phmijika}
+
+\Needspace{5\baselineskip}\noindent\textbf{プログラム：分布の面積は $\sigma T^4$}\par\nobreak
+図\ref{ph:熱-13:fig-planck}の曲線は、プランク（1900年）が見つけた次の式で計算しました。
+\[ E_{\mathrm b\lambda}=\frac{c_1}{\lambda^5\,\bigl(e^{c_2/(\lambda T)}-1\bigr)} \]
+$c_1=3.742\times10^{8}$\,W·\unit{\micro m}$^4$/m$^2$、$c_2=\num{14388}$\,\unit{\micro m}·K は、測定の値から決まる定数です。この式がなぜこの形になるのかは、光がとびとびのエネルギーの粒として出入りすることを使って説明します。それは物理シリーズの『原子』（原-2）で学びます。ここでは式を「測定に合う分布の表」として使い、細い長方形に分けてたし（5-10）、全体の強さと山の位置を確かめます。
+\begin{phcode}[Python]
+from math import exp
+c1 = 3.742e8     \# 第1放射定数
+c2 = 14388       \# 第2放射定数
+def E(lam, T):   \# 波長 lam（マイクロメートル）の所の強さ
+    return c1 / (lam**5 * (exp(c2 / (lam * T)) - 1))
+dl = 0.01        \# 細い長方形のはば
+for T in [300, 600, 1200, 5772]:
+    total, best, lbest = 0.0, 0.0, 0.0
+    lam = 0.1 + dl / 2
+    while lam < 1000:
+        e = E(lam, T)
+        total = total + e * dl      \# 細い長方形をたす
+        if e > best:
+            best, lbest = e, lam    \# いちばん強い所
+        lam = lam + dl
+    print(T, '\%.4g' \% total, '\%.4g' \% (total / T**4),
+          round(lbest, 2), round(lbest * T))
+\end{phcode}
+\begin{phcodeout}
+300 459.3 5.67e-08 9.65 2896
+600 7349 5.67e-08 4.82 2895
+1200 1.176e+05 5.67e-08 2.41 2898
+5772 6.294e+07 5.67e-08 0.51 2915
+\end{phcodeout}
+2列めが曲線の下の面積（全体の強さ、W/m$^2$）、3列めがそれを $T^4$ でわった値です。どの温度でも $5.67\times10^{-8}$ になりました。面積が $\sigma T^4$ になること、つまりシュテファン・ボルツマンの法則が、分布の式から確かめられたのです。4・5列めは、山の波長と、それに $T$ をかけた値です。ほぼ \num{2898} で、ウィーンの変位則になっています。太陽で少しずれているのは、山がせまいので、はば \qty{0.01}{\micro m} の区切りでは山の位置が細かく決まらないからです（\texttt{dl} を小さくすると \num{2898} に近づきます）。
+
+\bksubsection{4}{放射率・吸収率と、キルヒホッフの法則}
+
+\leavevmode\label{ph:熱-13:sec4}\noindent\textbf{光が当たると、3つに分かれる}\par\nobreak
+物に光が当たると、一部は\textbf{反射}し、一部は\textbf{吸収}され、残りは物を\textbf{通りぬけ}ます。来た光を1としたときの割合を、\textbf{吸収率} $\alpha$（アルファ）、\textbf{反射率} $\rho$（ロー）、\textbf{透過率} $\tau$（タウ）といいます。光はどれかになるので
+\pheq{\alpha+\rho+\tau=1}{（単位なし）}
+です。金属・れんが・木・人の体など、たいていの固体は赤外線を通さないので $\tau=0$、$\alpha+\rho=1$ です。黒体は $\alpha=1$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!30] (30,0) rectangle (60,20);
+  \draw[bkInk, line width=0.7pt] (30,0) rectangle (60,20);
+  \node[qxn lab, anchor=south] at (45,20.5) {物};
+  \draw[qxn ray, bkOrange!85!black, line width=1.6pt] (0,22) -- (29.5,11);
+  \node[qxn lab, anchor=south] at (8,21) {来た光 1};
+  \draw[qxn ray, bkOrange!85!black] (29.5,11) -- (4,0);
+  \node[qxn lab, anchor=north] at (8,-0.5) {反射 $\rho$};
+  \draw[bkRed!80!black, line width=1pt, decorate, decoration={snake, amplitude=0.8mm, segment length=3mm}] (31,11) -- (44,11);
+  \node[qxn lab, anchor=north] at (45,-1) {吸収 $\alpha$（物が温まる）};
+  \draw[qxn ray, bkOrange!85!black, dashed] (60.5,11) -- (84,5);
+  \node[qxn lab, anchor=west] at (85,5) {透過 $\tau$};
+\end{tikzpicture}
+\bkfigcaption{物に当たった光の行き先。$\alpha+\rho+\tau=1$。}
+\label{ph:熱-13:fig-wakare}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{放射率：黒体の何倍出すか}\par\nobreak
+ふつうの物は、同じ温度の黒体より少ない光しか出しません。物の表面が出す放射の強さ $E$ を、同じ温度の黒体の $E_{\mathrm b}=\sigma T^4$ でわった値を\textbf{放射率} $\varepsilon$（イプシロン）といいます。\bkidx{ほうしゃりつ}{放射率}
+\pheq{E=\varepsilon\sigma T^4,\qquad 0\le\varepsilon\le1}{W/m$^2$}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[c,m,wd=24mm] Q[l,m,wd=56mm]}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+表面（ふだんの温度） & 放射率 $\varepsilon$ & ひとこと \\
+人の皮膚・水・氷 & 0.95〜0.98 & 赤外線ではほぼ黒体 \\
+黒いペンキ・すす & 0.95前後 & \\
+白いペンキ・白い紙 & 0.9前後 & 赤外線では「黒い」 \\
+れんが・コンクリート・木 & 0.9前後 & \\
+ガラス & 0.9前後 & 可視光は通し、赤外線は通さない \\
+さびた鉄 & 0.6〜0.8 & \\
+みがいたアルミ・アルミはく & 0.03〜0.05 & よく反射する \\
+銀めっき & 0.02前後 & 魔法びんの内側 \\
+\end{bktable}
+\bktabcaption{いろいろな表面の放射率の目安。表面の状態（よごれ・さび・あらさ）で大きく変わる。}
+\label{ph:熱-13:tab-eps}
+\end{bkcenter}
+
+\Needspace{5\baselineskip}\noindent\textbf{よく出す物は、よく吸う：キルヒホッフの法則}\par\nobreak
+温度がどこも同じ $T$ の、閉じた箱の中に、小さな物を入れて長い時間おきます。物は箱の内側から光を受けとり、同時に自分も光を出します。やがて物も箱と同じ温度になり、そのあとは、物の温度は変わりません（熱平衡：熱-1 ①）。温度が変わらないのは、吸う量と出す量が同じだからです。箱の中を飛ぶ光は、黒体の光と同じ強さ $\sigma T^4$ になっていることが知られているので（下のせいかくに言うと）、
+\[ \text{吸う量}=\alpha\,\sigma T^4,\qquad\text{出す量}=\varepsilon\,\sigma T^4\qquad\text{より}\qquad \alpha=\varepsilon \]
+\label{ph:熱-13:kirchhoff}同じ温度・同じ波長の光について、\textbf{吸収率と放射率は等しい}。これを\textbf{キルヒホッフの法則}といいます（1859〜1860年）。よく吸う物（黒い物）はよく出し、よく反射する物（みがいた金属）はあまり出しません。\bkidx{きるひほっふのほうそく}{キルヒホッフの法則}
+
+\begin{seikaku}
+箱の中の光が黒体の光と同じになることは、次のように考えます。もし箱の内側の光が黒体より弱いと、箱の中に置いた黒体は、出す量 $\sigma T^4$ のほうが吸う量より多くなり、まわりより冷たくなっていきます。同じ温度の物の間で、ひとりでに温度の差が生まれることになり、熱力学の第二法則（熱-5 ③）に反します。キルヒホッフの法則は、本当は\textbf{波長ごと・向きごと}に成り立つ法則（$\alpha_\lambda=\varepsilon_\lambda$）です。
+\end{seikaku}
+
+\Needspace{5\baselineskip}\noindent\textbf{灰色体}\par\nobreak
+放射率が波長によらない（どの波長でも同じ $\varepsilon$）物を\textbf{灰色体}といいます。⑥から先の計算は、すべての面を灰色体とみなして行います。でも、本当の物は、波長で放射率が大きく変わることがあります。
+
+\Needspace{5\baselineskip}\noindent\textbf{やってみようの答え：白い紙はなぜ温まりにくい？}\par\nobreak
+白い紙は、太陽の可視光をよく反射します（太陽の光に対する吸収率は約0.2〜0.3）。黒い紙は可視光も赤外線もよく吸います（約0.9以上）。だから、日なたでは黒い紙のほうがずっと温まります。ところが、白い紙もふだんの温度の赤外線（波長 \qty{10}{\micro m} 前後）では、表\ref{ph:熱-13:tab-eps}のように放射率が約0.9で、黒い紙とほとんど同じです。白い紙は「太陽の光はあまり吸わず、自分の熱は赤外線でよく出す」ので、日なたでも温まりにくいのです。夏の屋根に白い塗料をぬるのは、このしくみを使っています。
+
+\bksubsection{5}{見える割合：形態係数と立体角}
+
+\leavevmode\label{ph:熱-13:sec5}たき火の熱さは、火に近づくほど強くなり、火の大きさが大きいほど強くなります。これを数で表すのが\textbf{形態係数}です。\bkidx{けいたいけいすう}{形態係数}
+
+\Needspace{5\baselineskip}\noindent\textbf{形態係数は「出た光のうち、相手に当たる割合」}\par\nobreak
+面1から出た光は、いろいろな向きに広がります。そのうち、面2に直接当たる割合を\textbf{形態係数} $F_{12}$（エフ・いち・に）といいます。0から1までの、単位のない数です。面2が面1から「大きく見える」ほど、$F_{12}$ は大きくなります。
+
+\Needspace{5\baselineskip}\noindent\textbf{点から見た見かけの大きさ}\par\nobreak
+「見かけの大きさ」は、8-8⑬の\textbf{立体角}で表せました。小さな面から見て、相手の面が占める立体角が大きいほど、多くの光が当たります。ただし、正面の向き（面に直角）には光が多く出て、横の向きには少ししか出ないので、正面にある物ほど形態係数への効き方が大きくなります。くわしい計算は下のもっと知りたいで行い、ここでは結果を使います。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkRed!25, draw=bkRed!80!black, line width=0.8pt] (0,0) ellipse (3 and 14);
+  \node[qxn lab, anchor=east, align=right] at (-5,0) {たき火（面2）\\温度 $T_2$};
+  \draw[bkInk, line width=0.6pt, {Stealth[length=2.5pt]}-{Stealth[length=2.5pt]}] (0,0.3) -- (0,13.7);
+  \node[qxn lab, anchor=west] at (0.8,9) {$R$};
+  \filldraw[fill=bkYellow!40, draw=bkInk, line width=0.8pt] (70,-2.5) rectangle (72,2.5);
+  \node[qxn lab, anchor=west, align=left] at (73.5,0) {顔の小さな面\\（面1）};
+  \draw[bkGray, line width=0.5pt, dashed] (0,14) -- (70,0) -- (0,-14);
+  \draw[bkGray, line width=0.5pt] (0,0) -- (70,0);
+  \draw[qxn dim] (0,-18) -- (71,-18);
+  \node[qxn lab, anchor=north] at (35,-18.6) {距離 $d$};
+  \draw[bkInk, line width=0.5pt] (58,0) arc (180:168.7:12);
+  \node[qxn lab, anchor=east] at (56.6,1.4) {$\alpha$};
+\end{tikzpicture}
+\bkfigcaption{顔の小さな面と、その正面の円板（たき火）。顔から見て、円板のはしは中心の線から角 $\alpha$ の所に見える。}
+\label{ph:熱-13:fig-keitai}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{小さな面と、正面の円板}\par\nobreak
+図\ref{ph:熱-13:fig-keitai}のように、顔の小さな面（面1）の正面、距離 $d$ の所に、半径 $R$ の円板（面2）があるとき
+\pheq{F_{12}=\frac{R^2}{R^2+d^2}=\sin^2\alpha}{（単位なし）}
+です。$d$ が $R$ よりずっと大きいときは、分母の $R^2$ が無視できて
+\[ F_{12}\approx\frac{R^2}{d^2}=\frac{\pi R^2}{\pi d^2}\qquad\text{（相手の面積}\ \pi R^2\ \text{を}\ \pi d^2\ \text{でわった値）} \]
+になります。遠くの小さな物からの放射は、距離の2乗に反比例して弱くなるのです。
+
+\begin{phbaisuru}{たき火からの距離 $d$}
+遠いときは $F_{12}\approx R^2/d^2$ なので、およそ $\tfrac14$ になります。半径 \qty{0.30}{m} のたき火なら、\qty{2.0}{m} で $F_{12}=0.022$、\qty{4.0}{m} で $0.0056$（約4分の1）です。反対に、たき火の半径 $R$ を2倍にすると、遠くでは約4倍になります。「火から少しはなれる」は、とてもよく効く工夫です。
+\end{phbaisuru}
+
+\Needspace{5\baselineskip}\noindent\textbf{2つの決まり}\par\nobreak
+形態係数には、計算を楽にする2つの決まりがあります。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{相反の関係}：$A_1F_{12}=A_2F_{21}$。「面1が出して面2に当たる光」と「面2が出して面1に当たる光」は、同じ温度なら同じ量にならないといけない（そうでないと、同じ温度の2つの面の間に、ひとりでに熱が流れてしまう）からです。$A_1$・$A_2$ は面積です。
+\item \textbf{和の関係}：閉じた部屋の内側の面1から出た光は、どれかの面に必ず当たるので、$F_{11}+F_{12}+F_{13}+\cdots=1$。平らな面やふくらんだ面は自分自身を見ないので、$F_{11}=0$ です。
+\end{enumerate}
+
+\Needspace{5\baselineskip}\noindent\textbf{はてな？の答え}\par\nobreak
+\label{ph:熱-13:hatena}\bkhatenaref に答えます。たき火の熱は、おもに放射（赤外線）で、まっすぐ届きます（②）。届く量は、顔がたき火を「見る」割合、つまり形態係数で決まります。顔の正面 \qty{2.0}{m} の、半径 \qty{0.30}{m} のたき火なら $F_{12}=0.022$ で、顔は 1 m$^2$ あたり約 \qty{1.8}{kW} の放射を受けとります（\nobreak\bkreidairef{1}\nobreak）。日なたの太陽の光（約 \qty{1}{kW/m^2}）の2倍ほどです。背中から見ると、たき火は自分の体のかげにかくれていて、$F_{12}=0$ です。だから背中には火からの熱が届かず、冷たい夜空や林に向かって自分の熱を出すばかりで、冷えていくのです。
+
+\begin{motto}[5]
+\phboxhead{円板の形態係数を、立体角から導く}
+小さな面1から出る光の強さは、面に直角な向き（$\theta=0$）がいちばん強く、角 $\theta$ の向きには $\cos\theta$ 倍になります（光る面を斜めから見ると、見かけの面積が $\cos\theta$ 倍になるため。ランベルトの余弦法則）。だから、相手の面が占める立体角 $\dd\Omega$ の1つ1つに $\cos\theta$ の重みをつけてたし、全体（半球）でわった値が形態係数です。半球全体のたし算は、8-8⑨の球面のタイル（$\dd\Omega=\sin\theta\,\dd\theta\,\dd\varphi$）で
+\[ \int_0^{2\pi}\!\!\int_0^{\pi/2}\cos\theta\sin\theta\,\dd\theta\,\dd\varphi=2\pi\Bigl[\frac{\sin^2\theta}{2}\Bigr]_0^{\pi/2}=\pi \]
+です。正面の円板は、中心の線から角 $\alpha$ までの円すいなので
+\[ F_{12}=\frac{1}{\pi}\int_0^{2\pi}\!\!\int_0^{\alpha}\cos\theta\sin\theta\,\dd\theta\,\dd\varphi=\frac{1}{\pi}\times2\pi\times\frac{\sin^2\alpha}{2}=\sin^2\alpha \]
+$\sin\alpha=R/\sqrt{R^2+d^2}$ なので、$F_{12}=R^2/(R^2+d^2)$ になります。重みをつけない立体角の、半球（$2\pi$）に対する割合 $1-\cos\alpha$ とは、ちがう値になることに注意しましょう（$\alpha$ が小さいとき、$\sin^2\alpha$ は $1-\cos\alpha$ のほぼ2倍。正面に近い向きほど、重みが大きいから）。
+\end{motto}
+
+\phkokomade
+
+\Needspace{12\baselineskip}
+\phstage{shiki}{バランス式から導く}{5}
+
+\bksubsection{6}{2つの面の間の放射と、しゃへい板}
+
+\leavevmode\label{ph:熱-13:sec6}向かい合った2つの面の間で、放射でどれだけ熱が移るかを計算します。ここからは、すべての面を灰色体（④）とし、面と面の間の空気は光を吸わないとします。
+
+\Needspace{5\baselineskip}\noindent\textbf{黒い2枚の板}\par\nobreak
+まず、温度 $T_1$ と $T_2$（$T_1>T_2$）の、2枚の黒い大きな平らな板が、すぐ近くで向かい合っているとします。板が大きいので、片方から出た光は全部もう片方に当たります（$F_{12}=F_{21}=1$）。1 m$^2$ あたり、板1は $\sigma T_1^4$ を出して板2に全部吸われ、板2は $\sigma T_2^4$ を出して板1に全部吸われます。板1から板2へ移る熱は、差し引き
+\pheq{q=\sigma\bigl(T_1^4-T_2^4\bigr)}{W/m$^2$}
+です。
+
+\Needspace{5\baselineskip}\noindent\textbf{灰色の面：出ていく光の合計 $J$}\par\nobreak
+灰色の面は、自分で出す光 $\varepsilon\sigma T^4$ のほかに、来た光の $\rho=1-\varepsilon$ を反射します。面から出ていく光の合計（自分で出す分＋反射する分）を\textbf{射度} $J$ といいます。面に来る光（1 m$^2$ あたり）を $G$ とすると
+\[ J=\varepsilon\sigma T^4+(1-\varepsilon)G \]
+です。面が失う熱は「出ていく $J$ －来る $G$」なので、面積 $A$ の面から出ていく熱の流れは $\dot Q=A(J-G)$。上の式から $G$ を消すと
+\[ \dot Q=\frac{\sigma T^4-J}{(1-\varepsilon)/(\varepsilon A)} \]
+となります。（$G=(J-\varepsilon\sigma T^4)/(1-\varepsilon)$ を $A(J-G)$ に入れて整理しました。）
+
+この式は、熱-11 ③の「熱の流れ＝温度差÷熱抵抗」と同じ形です。「$\sigma T^4$ と $J$ の差」を押す力、$(1-\varepsilon)/(\varepsilon A)$ を抵抗と見ると、熱の流れが計算できます。これを\textbf{表面の抵抗}といいます。黒体（$\varepsilon=1$）では抵抗が0で、$J=\sigma T^4$ です。
+
+面1から出た光 $A_1J_1$ のうち、面2に当たるのは $A_1F_{12}J_1$、面2から出て面1に当たるのは $A_2F_{21}J_2=A_1F_{12}J_2$（相反の関係）です。差し引き、面1から面2へ
+\[ \dot Q=A_1F_{12}(J_1-J_2)=\frac{J_1-J_2}{1/(A_1F_{12})} \]
+が移ります。$1/(A_1F_{12})$ を\textbf{空間の抵抗}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{res/.style={draw=bkInk, line width=0.8pt, fill=bkRed!12, minimum width=17mm, minimum height=6mm, inner sep=1pt, font=\sffamily\footnotesize}}
+  \node[circle, fill=bkInk, inner sep=1.3pt] (a) at (0,0) {};
+  \node[res] (r1) at (20,0) {$\dfrac{1-\varepsilon_1}{\varepsilon_1A_1}$};
+  \node[circle, fill=bkInk, inner sep=1.3pt] (j1) at (38,0) {};
+  \node[res] (r2) at (56,0) {$\dfrac{1}{A_1F_{12}}$};
+  \node[circle, fill=bkInk, inner sep=1.3pt] (j2) at (74,0) {};
+  \node[res] (r3) at (92,0) {$\dfrac{1-\varepsilon_2}{\varepsilon_2A_2}$};
+  \node[circle, fill=bkInk, inner sep=1.3pt] (b) at (112,0) {};
+  \draw[bkInk, line width=0.8pt] (a) -- (r1) -- (j1) -- (r2) -- (j2) -- (r3) -- (b);
+  \node[qxn lab, anchor=south] at (0,2.5) {$\sigma T_1^4$};
+  \node[qxn lab, anchor=south] at (38,2.5) {$J_1$};
+  \node[qxn lab, anchor=south] at (74,2.5) {$J_2$};
+  \node[qxn lab, anchor=south] at (112,2.5) {$\sigma T_2^4$};
+  \node[qxn lab, anchor=north] at (20,-5.5) {面1の表面};
+  \node[qxn lab, anchor=north] at (56,-5.5) {面の間の空間};
+  \node[qxn lab, anchor=north] at (92,-5.5) {面2の表面};
+  \draw[-{Stealth[length=3.2pt]}, line width=0.9pt, bkRed!80!black] (28,10) -- (84,10);
+  \node[qxn lab, anchor=south] at (56,10.5) {熱の流れ $\dot Q$};
+\end{tikzpicture}
+\bkfigcaption{2つの面の間の放射を、3つの抵抗の直列で表す（熱-11 ③の熱抵抗と同じ考え）。}
+\label{ph:熱-13:fig-kairo}
+\end{bkfigure}
+
+3つの抵抗は直列なので、図\ref{ph:熱-13:fig-kairo}のように足して
+\pheq{\dot Q=\frac{\sigma\bigl(T_1^4-T_2^4\bigr)}{\dfrac{1-\varepsilon_1}{\varepsilon_1A_1}+\dfrac{1}{A_1F_{12}}+\dfrac{1-\varepsilon_2}{\varepsilon_2A_2}}}{W ＝ W/m$^2$ ÷ (1/m$^2$)}
+となります。これが2つの面の間の放射の一般の式です。ここから、よく使う2つの場合を導きます。
+
+\Needspace{5\baselineskip}\noindent\textbf{平行な2枚の大きな板}\par\nobreak
+$A_1=A_2=A$、$F_{12}=1$ とおくと、分母は
+\[ \frac{1}{A}\Bigl(\frac{1-\varepsilon_1}{\varepsilon_1}+1+\frac{1-\varepsilon_2}{\varepsilon_2}\Bigr)=\frac{1}{A}\Bigl(\frac{1}{\varepsilon_1}+\frac{1}{\varepsilon_2}-1\Bigr) \]
+なので
+\pheq{q=\frac{\dot Q}{A}=\frac{\sigma\bigl(T_1^4-T_2^4\bigr)}{\dfrac{1}{\varepsilon_1}+\dfrac{1}{\varepsilon_2}-1}}{W/m$^2$}
+\label{ph:熱-13:heikou}です。両方黒体（$\varepsilon=1$）なら分母は1で、はじめの式にもどります。
+
+\Needspace{5\baselineskip}\noindent\textbf{広い部屋の中の小さな物}\par\nobreak
+物（面1）が部屋（面2）に囲まれ、$A_1$ が $A_2$ よりずっと小さいとき、物から出た光はすべて部屋の壁に当たり（$F_{12}=1$）、$(1-\varepsilon_2)/(\varepsilon_2A_2)$ は $A_2$ が大きいので無視できます。
+\pheq{\dot Q=\varepsilon_1\sigma A_1\bigl(T_1^4-T_2^4\bigr)}{W}
+\label{ph:熱-13:chiisai}部屋の壁の放射率によらないのは、部屋が大きいので、物から出た光が壁で何度も反射するうちに吸われてしまい、部屋全体が黒体のように働くからです（図\ref{ph:熱-13:fig-kuudou}の箱と同じ）。
+
+\Needspace{14\baselineskip}
+\begin{phflow}[2つの面の間の放射]
+\phflowrow{抵抗3つの直列\\（2つの灰色の面）}{2枚の大きな平行な板\\$A_1=A_2$、$F_{12}=1$}{$q=\dfrac{\sigma(T_1^4-T_2^4)}{1/\varepsilon_1+1/\varepsilon_2-1}$}
+\phflowrow{$q=\dfrac{\sigma(T_1^4-T_2^4)}{1/\varepsilon_1+1/\varepsilon_2-1}$}{両方とも黒体\\$\varepsilon_1=\varepsilon_2=1$}{$q=\sigma(T_1^4-T_2^4)$}
+\phflowrow{抵抗3つの直列\\（2つの灰色の面）}{小さな物が広い部屋に\\$A_1\ll A_2$、$F_{12}=1$}{$\dot Q=\varepsilon_1\sigma A_1(T_1^4-T_2^4)$}
+\end{phflow}
+
+\Needspace{5\baselineskip}\noindent\textbf{しゃへい板}\par\nobreak
+2枚の板の間に、うすい板（\textbf{しゃへい板}）を1枚入れます。しゃへい板は、片側から光を受けとり、反対側へ光を出して、熱を中つぎします。抵抗の図では、同じ大きさの抵抗の組がもう1つ直列に入ります。すべての面の放射率が同じなら、抵抗は2倍、熱の流れは\textbf{半分}になります。$N$ 枚入れると $1/(N+1)$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed!30] (0,0) rectangle (6,30); \draw[bkInk, line width=0.7pt] (0,0) rectangle (6,30);
+  \fill[bkBlue!25] (60,0) rectangle (66,30); \draw[bkInk, line width=0.7pt] (60,0) rectangle (66,30);
+  \fill[bkGray!40] (32,0) rectangle (34,30); \draw[bkInk, line width=0.5pt] (32,0) rectangle (34,30);
+  \node[qxn lab, anchor=north] at (3,-1) {熱い板 $T_1$};
+  \node[qxn lab, anchor=north] at (63,-1) {冷たい板 $T_2$};
+  \node[qxn lab, anchor=north] at (33,-1) {しゃへい板};
+  \draw[qxn ray] (7,22) -- (31,22); \draw[qxn ray2] (31,16) -- (7,16);
+  \draw[qxn ray] (35,22) -- (59,22); \draw[qxn ray2] (59,16) -- (35,16);
+  \node[qxn lab, anchor=west, align=left] at (72,22) {しゃへい板の温度は\\$T_1$ と $T_2$ の間になる};
+  \node[qxn lab, anchor=west, align=left] at (72,9) {熱の流れは半分\\（すべて同じ放射率のとき）};
+\end{tikzpicture}
+\bkfigcaption{しゃへい板。熱い板と冷たい板の間に1枚入れると、抵抗が2倍になり、熱の流れは半分になる。}
+\label{ph:熱-13:fig-shahei}
+\end{bkfigure}
+
+\noindent やってみようの③で、アルミはくをはった板を立てると顔の熱さがやわらいだのは、この板がしゃへい板として働くからです。アルミはくは放射率が約0.04で、ストーブの光の大部分を反射します。宇宙船や人工衛星は、アルミをはったうすい膜を何十枚も重ねた\textbf{多層断熱材}でおおわれていて、太陽の光と宇宙の冷たさから中の機械を守っています。
+
+\Needspace{5\baselineskip}\noindent\textbf{放射の熱伝達率}\par\nobreak
+$T_1$ と $T_2$ が近いときは、因数分解 $T_1^4-T_2^4=(T_1^2+T_2^2)(T_1+T_2)(T_1-T_2)$ を使って
+\[ \dot Q=\varepsilon_1\sigma A_1\bigl(T_1^2+T_2^2\bigr)(T_1+T_2)\,(T_1-T_2)\approx\underbrace{4\varepsilon_1\sigma T_{\mathrm m}^3}_{h_{\mathrm r}}A_1\,(T_1-T_2) \]
+と書けます。$T_{\mathrm m}$ は2つの温度の平均（K）です。これは熱-12 の $\dot Q=hA\Delta T$ と同じ形で、$h_{\mathrm r}$ を\textbf{放射の熱伝達率}といいます。室温（$T_{\mathrm m}=\qty{300}{K}$）の黒体なら
+\[ h_{\mathrm r}=4\times5.67\times10^{-8}\times300^3\approx\qty{6.1}{W/(m^2.K)} \]
+で、静かな空気の自然対流（熱-12 の目安で数 W/(m$^2$·K)）と同じくらいです。部屋の中の物は、対流と放射でほぼ半分ずつ熱をやりとりしているのです。
+
+\bksubsection{7}{地球のつり合いの温度と、温室効果の入口}
+
+\leavevmode\label{ph:熱-13:sec7}地球は、太陽から光を受けとり、宇宙へ赤外線を出しています。地球全体の温度があまり変わらないのは、受けとる量と出す量がつり合っているからです。このバランス式で、地球の温度を見積もりましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \y in {-12,-6,0,6,12}{\draw[qxn ray, bkOrange!85!black] (0,\y) -- (22,\y);}
+  \node[qxn lab, anchor=south] at (11,13.5) {太陽の光 $S$};
+  \draw[bkGray, dashed, line width=0.5pt] (34,-14) -- (34,14);
+  \node[qxn lab, anchor=north] at (34,-15) {断面 $\pi R^2$};
+  \filldraw[fill=bkBlue!25, draw=bkInk, line width=0.8pt] (48,0) circle (14);
+  \node[qxn lab] at (48,0) {地球};
+  \foreach \a in {30,90,150,210,270,330}{\draw[qxn ray] (48,0) ++(\a:15) -- ++(\a:9);}
+  \node[qxn lab, anchor=west, align=left] at (74,10) {表面全体 $4\pi R^2$ から\\赤外線 $\sigma T^4$ を出す};
+  \node[qxn lab, anchor=west, align=left] at (74,-7) {受けとるのは、断面の\\円 $\pi R^2$ に当たる分だけ};
+\end{tikzpicture}
+\bkfigcaption{地球のつり合い。太陽の光は、地球の断面（円）に当たる分だけ受けとり、赤外線は表面全体（球）から出す。}
+\label{ph:熱-13:fig-chikyu}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{つり合いの温度}\par\nobreak
+地球の所の太陽の光の強さ（\textbf{太陽定数}）を $S$、地球の半径を $R$、地球が太陽の光を反射する割合（反射率）を $\rho$ とします。地球が受けとるのは、図\ref{ph:熱-13:fig-chikyu}のように断面の円に当たる光から、反射した分を引いた $\pi R^2S(1-\rho)$ です。地球を温度 $T$ の黒体とすると、表面全体から $4\pi R^2\sigma T^4$ を出します。つり合いの式は
+\[ \pi R^2S(1-\rho)=4\pi R^2\sigma T^4\qquad\text{より}\qquad T=\Bigl(\frac{S(1-\rho)}{4\sigma}\Bigr)^{1/4} \]
+です。4でわるのは、「断面 $\pi R^2$ で受けとり、表面 $4\pi R^2$ で出す」からです（昼と夜、赤道と北極・南極をならした平均）。$S=\qty{1361}{W/m^2}$、$\rho=0.30$ を入れると、$T\approx\qty{255}{K}$（\qty{-18}{\celsius}）になります（\nobreak\bkreidairef{3}\nobreak）。ところが、地表の平均の気温は約 \qty{15}{\celsius}（\qty{288}{K}）です。約 \qty{33}{K} のちがいは、大気のはたらきによるものです。
+
+\Needspace{5\baselineskip}\noindent\textbf{大気の層を1枚入れる}\par\nobreak
+大気の水蒸気や二酸化炭素は、太陽の可視光はほとんど通しますが、地面が出す赤外線の一部を吸います。いちばん簡単なモデルとして、地面の上に温度 $T_{\mathrm a}$ の大気の層が1枚あり、太陽の光はすべて通し、地面の赤外線は割合 $f$ だけ吸うとします。キルヒホッフの法則（④）から、この層の赤外線の放射率も $f$ で、上と下の両方へ $f\sigma T_{\mathrm a}^4$ ずつ出します。地面の温度を $T_{\mathrm s}$、地面が 1 m$^2$ あたりに受けとる太陽の光（平均）を $S_0=S(1-\rho)/4$ として、バランス式を2つ立てます。
+\[ \text{大気の層}：\ f\sigma T_{\mathrm s}^4=2f\sigma T_{\mathrm a}^4,\qquad \text{地面}：\ S_0+f\sigma T_{\mathrm a}^4=\sigma T_{\mathrm s}^4 \]
+1つめから $\sigma T_{\mathrm a}^4=\tfrac12\sigma T_{\mathrm s}^4$。2つめに入れると $S_0=\sigma T_{\mathrm s}^4(1-f/2)$ なので、$S_0=\sigma T_{\mathrm e}^4$（$T_{\mathrm e}$ は上のつり合いの温度 \qty{255}{K}）とおいて
+\pheq{T_{\mathrm s}=T_{\mathrm e}\Bigl(\frac{2}{2-f}\Bigr)^{1/4}}{K}
+\label{ph:熱-13:onshitsu}です。大気が赤外線を吸わない（$f=0$）なら $T_{\mathrm s}=T_{\mathrm e}$、全部吸う（$f=1$）なら $T_{\mathrm s}=2^{1/4}T_{\mathrm e}\approx\qty{303}{K}$ です。大気が地面に「かけ布団」のように赤外線をもどすので、地面は大気がないときより暖かくなります。これを\textbf{温室効果}といいます。\bkidx{おんしつこうか}{温室効果}本当の大気は、赤外線の一部（波長 \qtyrange{8}{13}{\micro m} の「窓」）を通し、空気の上下の流れ（対流）や雲も熱を運ぶので、このモデルは入口にすぎません。
+
+\begin{phmada}[二酸化炭素が2倍になると、何℃上がる？]
+大気の二酸化炭素が産業革命の前の2倍になり、長い時間がたって落ち着いたときに、地球の平均気温が何℃上がるかを\textbf{平衡気候感度}といいます。二酸化炭素だけの効果なら、放射の計算で約 \qty{1}{\celsius} とわかっています。ところが、温まると大気の水蒸気が増える、氷がとけて反射率が下がる、雲の量や高さが変わる、といった「温度の変化がさらに温度を変える」効果（フィードバック）が加わります。とくに雲の効果は、雲の粒の大きさや、雲ができる場所の細かい空気の動きによるため、計算で正確に求めるのが難しいのです。
+
+国連の気候変動に関する政府間パネル（IPCC）の第6次評価報告書（2021年）は、観測・過去の気候・計算機のモデルを合わせて、平衡気候感度を「最もありそうな値は \qty{3}{\celsius}、\qtyrange{2.5}{4}{\celsius} の可能性が高い」としました。それまでの報告書より範囲はせまくなりましたが、まだ幅があります。この幅をせばめることは、気候の研究の大きな課題の1つです。
+\end{phmada}
+
+\bksubsection{8}{熱交換器：対数平均温度差}
+
+\leavevmode\label{ph:熱-13:sec8}熱い流体から冷たい流体へ、壁ごしに熱を渡す装置を\textbf{熱交換器}といいます。\bkidx{ねつこうかんき}{熱交換器}いちばん簡単な形は、管の中に細い管を通した\textbf{二重管}です。内側の管に熱い流体、外側の管と内側の管の間に冷たい流体を流します。2つの流体が同じ向きに流れるものを\textbf{並流}、反対の向きに流れるものを\textbf{向流}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 並流
+  \node[qxn lab, anchor=west] at (0,30) {並流};
+  \fill[bkBlue!15] (0,14) rectangle (54,26);
+  \fill[bkRed!25] (0,18) rectangle (54,22);
+  \draw[bkInk, line width=0.8pt] (0,14) -- (54,14) (0,26) -- (54,26);
+  \draw[bkInk, line width=0.6pt] (0,18) -- (54,18) (0,22) -- (54,22);
+  \draw[qxn ray] (2,20) -- (14,20); \draw[qxn ray] (40,20) -- (52,20);
+  \draw[qxn ray2] (2,24) -- (14,24); \draw[qxn ray2] (40,24) -- (52,24);
+  \draw[qxn ray2] (2,16) -- (14,16); \draw[qxn ray2] (40,16) -- (52,16);
+  \node[qxn lab, anchor=north] at (27,13) {熱い流体（内側）も冷たい流体（外側）も右へ};
+  % 向流
+  \node[qxn lab, anchor=west] at (66,30) {向流};
+  \fill[bkBlue!15] (66,14) rectangle (120,26);
+  \fill[bkRed!25] (66,18) rectangle (120,22);
+  \draw[bkInk, line width=0.8pt] (66,14) -- (120,14) (66,26) -- (120,26);
+  \draw[bkInk, line width=0.6pt] (66,18) -- (120,18) (66,22) -- (120,22);
+  \draw[qxn ray] (68,20) -- (80,20); \draw[qxn ray] (106,20) -- (118,20);
+  \draw[qxn ray2] (80,24) -- (68,24); \draw[qxn ray2] (118,24) -- (106,24);
+  \draw[qxn ray2] (80,16) -- (68,16); \draw[qxn ray2] (118,16) -- (106,16);
+  \node[qxn lab, anchor=north] at (93,13) {熱い流体は右へ、冷たい流体は左へ};
+\end{tikzpicture}
+\par\vspace{1mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=a1, width=57mm, height=50mm, xmin=0, xmax=1, ymin=10, ymax=100, xtick=\empty, ytick={20,45,60,90}, xlabel={位置}, ylabel={温度（℃）}]
+  \addplot[bkRed!80!black, line width=1.6pt, domain=0:1, samples=40] {90-30*(1-exp(-1.5404*x))/(1-exp(-1.5404))};
+  \addplot[bkBlue, line width=1.6pt, domain=0:1, samples=40] {20+25*(1-exp(-1.5404*x))/(1-exp(-1.5404))};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:0.45,76) {熱い流体};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:0.5,33) {冷たい流体};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:0.02,99) {並流};
+\end{axis}
+\begin{axis}[bkplot, at={(a1.east)}, anchor=west, xshift=13mm, width=57mm, height=50mm, xmin=0, xmax=1, ymin=10, ymax=100, xtick=\empty, ytick={20,50,60,90}, xlabel={位置}]
+  \addplot[bkRed!80!black, line width=1.6pt, domain=0:1] {90-40*x};
+  \addplot[bkBlue, line width=1.6pt, domain=0:1] {60-40*x};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:0.5,78) {熱い流体 →};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:0.33,30) {← 冷たい流体};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (axis cs:0.98,99) {向流};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{二重管の熱交換器（上）と、管にそった温度（下）。左は並流（熱い流体 90→\qty{60}{\celsius}、冷たい流体 20→\qty{45}{\celsius}）、右は向流（熱い流体 90→\qty{50}{\celsius}、冷たい流体 20→\qty{60}{\celsius}）。上の線が熱い流体、下の線が冷たい流体。横軸の左はしが熱い流体の入口。数は\bkreidairef{9}で使う。}
+\label{ph:熱-13:fig-koukan}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{熱容量流量}\par\nobreak
+流体の温度の変わり方は、1秒に流れる質量 $\dot m$〔kg/s〕と比熱 $c_p$ の積で決まります。
+\[ C=\dot mc_p\qquad\text{〔W/K〕} \]
+これを\textbf{熱容量流量}といいます。「1秒に流れる流体を \qty{1}{K} 温めるのに要る熱」です。熱い流体の熱容量流量を $C_{\mathrm h}$、冷たい流体を $C_{\mathrm c}$ と書きます（h は hot、c は cold）。熱容量 $C_{\mathrm{th}}$〔J/K〕（熱-1 ③）とは別の量です。熱い流体が出す熱の流れ $\dot Q$ は、熱い流体の入口と出口の温度差に $C_{\mathrm h}$ をかけたもので、冷たい流体が受けとる熱の流れと等しくなります（まわりへの熱のもれは無視します）。
+
+\Needspace{5\baselineskip}\noindent\textbf{どの温度差を使うか}\par\nobreak
+壁を通る熱の流れは、熱-11 ④のとおり「熱通過率 $U$ × 面積 $A$ × 温度差」です。ところが、図\ref{ph:熱-13:fig-koukan}の並流では、温度差は入口の \qty{70}{K} から出口の \qty{15}{K} まで変わっていきます。どの温度差を使えばよいのでしょう。それを、6-4 と同じ形の微分方程式を立てて導きます。
+
+\Needspace{5\baselineskip}\noindent\textbf{小さな区間のバランス式}\par\nobreak
+熱い流体の入口から測った壁の面積を $A$ とし、その所の熱い流体と冷たい流体の温度差を $\Delta=T_{\mathrm h}-T_{\mathrm c}$ とします。面積 $A$ から $A+\dd A$ までの小さな区間を考えます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 壁を通る熱：$\dd\dot Q=U\,\Delta\,\dd A$。
+\item 熱い流体は、この熱を失うので、温度が $\dd T_{\mathrm h}=-\dd\dot Q/C_{\mathrm h}$ だけ変わる。
+\item 冷たい流体は、この熱を受けとる。並流では、熱い流体と同じ向きに進みながら温まるので $\dd T_{\mathrm c}=+\dd\dot Q/C_{\mathrm c}$。向流では、反対の向きに進みながら温まるので、熱い流体の進む向きに見ると温度が下がっていき、$\dd T_{\mathrm c}=-\dd\dot Q/C_{\mathrm c}$。
+\end{enumerate}
+温度差の変化は $\dd\Delta=\dd T_{\mathrm h}-\dd T_{\mathrm c}$ なので
+\[ \dd\Delta=-M\,\dd\dot Q,\qquad M=\frac{1}{C_{\mathrm h}}\pm\frac{1}{C_{\mathrm c}}\quad\text{（＋は並流、－は向流）} \]
+です。$\dd\dot Q=U\Delta\,\dd A$ を入れて、両辺を $\dd A$ でわると
+\pheq{\frac{\dd\Delta}{\dd A}=-MU\,\Delta}{K/m$^2$}
+となります。これは、6-4 の「冷めるお湯」の $\dfrac{\dd u}{\dd t}=-ku$ と、まったく同じ形です。時間 $t$ の代わりに面積 $A$、差 $u$ の代わりに温度差 $\Delta$ です。温度差は、面積に対して「同じ割合で」へっていきます。
+
+\Needspace{5\baselineskip}\noindent\textbf{解いて、両はしをくらべる}\par\nobreak
+変数分離（6-4③）で解きます。入口（$A=0$）の温度差を $\Delta T_1$、出口（全体の面積 $A$）の温度差を $\Delta T_2$ とします。
+\begin{bkhenkei}
+\int_{\Delta T_1}^{\Delta T_2}\frac{\dd\Delta}{\Delta}=-MU\int_0^{A}\dd A & 両辺を $\Delta$ でわって、入口から出口まで積分する \\
+\ln\frac{\Delta T_2}{\Delta T_1}=-MUA & 左辺は $\ln$（5-14）。$\ln a-\ln b=\ln(a/b)$（3-12） \\
+\Delta T_2-\Delta T_1=-M\dot Q & 一方、$\dd\Delta=-M\,\dd\dot Q$ を入口から出口まで積分する \\
+\end{bkhenkei}
+3行めを2行めでわると、$M$ が消えて
+\[ \frac{\Delta T_2-\Delta T_1}{\ln(\Delta T_2/\Delta T_1)}=\frac{\dot Q}{UA}\qquad\text{つまり}\qquad \dot Q=UA\,\frac{\Delta T_1-\Delta T_2}{\ln(\Delta T_1/\Delta T_2)} \]
+となります（分子と分母の両方の符号を変えても値は同じ）。
+\pheq{\dot Q=UA\,\Delta T_{\mathrm{lm}},\qquad \Delta T_{\mathrm{lm}}=\frac{\Delta T_1-\Delta T_2}{\ln(\Delta T_1/\Delta T_2)}}{W ＝ W/(m$^2$·K) × m$^2$ × K}
+\label{ph:熱-13:lmtd}$\Delta T_{\mathrm{lm}}$ を\textbf{対数平均温度差}といいます（lm は log mean）。\bkidx{たいすうへいきんおんどさ}{対数平均温度差}並流でも向流でも同じ式で、$\Delta T_1$・$\Delta T_2$ に、それぞれの両はしの温度差を入れます。
+
+\begin{phyomi}[$\Delta T_{\mathrm{lm}}=(\Delta T_1-\Delta T_2)/\ln(\Delta T_1/\Delta T_2)$]
+「両はしの温度差の差を、温度差の比の対数でわったもの」。温度差は指数関数でへるので、ふつうの平均（たして2でわる）より小さい側に寄った平均になります。並流の $\Delta T_1=70$、$\Delta T_2=15$ なら、たして2でわると \qty{42.5}{K} ですが、対数平均は \qty{35.7}{K} です。
+\end{phyomi}
+\begin{phbaisuru}{両はしの温度差（両方とも）}
+$\Delta T_1$ と $\Delta T_2$ を両方2倍にすると、分子は2倍、分母の比 $\Delta T_1/\Delta T_2$ は変わらないので、$\Delta T_{\mathrm{lm}}$ も2倍です。熱の流れも2倍になります。熱交換器は、温度差が大きいほどたくさんの熱を渡せるのです。
+\end{phbaisuru}
+
+\begin{seikaku}
+$\Delta T_1=\Delta T_2$ のときは、分子も分母も0になって、式がそのままでは使えません。$\Delta T_1=\Delta T_2(1+x)$ とおき、$x$ が小さいとき $\ln(1+x)\approx x$（5-17 の1次近似）を使うと、$\Delta T_{\mathrm{lm}}\approx\Delta T_2x/x=\Delta T_2$ になります。両はしの温度差が同じなら、対数平均温度差もその値です。向流で $C_{\mathrm h}=C_{\mathrm c}$（$M=0$）のときがそうで、温度差は管のどこでも同じになります（図\ref{ph:熱-13:fig-koukan}の右）。
+\end{seikaku}
+
+\bksubsection{9}{温度効率と NTU}
+
+\leavevmode\label{ph:熱-13:sec9}対数平均温度差を使うには、出口の温度がわかっていなければなりません。でも、すでにある熱交換器に流体を流すとき、「出口は何℃になるか」を知りたいことがよくあります。そのときは、次の2つの数を使うと便利です。
+
+\Needspace{5\baselineskip}\noindent\textbf{温度効率}\par\nobreak
+熱交換器の中で移る熱には上限があります。熱容量流量の小さいほうを $C_{\min}$、大きいほうを $C_{\max}$ とします。$C_{\min}$ の流体の温度は、どんなに長い熱交換器でも、もう一方の入口の温度までしか変わりません。だから、移る熱の上限は $\dot Q_{\max}=C_{\min}(T_{\mathrm h,\text{入}}-T_{\mathrm c,\text{入}})$ です。本当に移る熱の、上限に対する割合を\textbf{温度効率} $\eta_{\mathrm T}$ といいます。\bkidx{おんどこうりつ}{温度効率}
+\pheq{\eta_{\mathrm T}=\frac{\dot Q}{C_{\min}\,(T_{\mathrm h,\text{入}}-T_{\mathrm c,\text{入}})}}{（単位なし）}
+工学の本では、温度効率を $\varepsilon$ と書くことが多いのですが、この章では放射率と区別するため $\eta_{\mathrm T}$ と書きます。
+
+\Needspace{5\baselineskip}\noindent\textbf{NTU：熱交換器の大きさの数}\par\nobreak
+\[ \mathrm{NTU}=\frac{UA}{C_{\min}},\qquad C_{\mathrm r}=\frac{C_{\min}}{C_{\max}} \]
+NTU（エヌ・ティー・ユー、number of transfer units）は、熱交換器の大きさ $UA$ を、流体の熱容量流量と比べた単位のない数です。$C_{\mathrm r}$ を\textbf{熱容量流量比}といいます。
+
+\Needspace{5\baselineskip}\noindent\textbf{向流の温度効率を導く}\par\nobreak
+熱い流体のほうが $C_{\min}$（$C_{\mathrm h}=C_{\min}$）の向流で導きます。入口の温度差 $\theta=T_{\mathrm h,\text{入}}-T_{\mathrm c,\text{入}}$ とおくと、$\dot Q=\eta_{\mathrm T}C_{\mathrm h}\theta$ です。向流の両はしの温度差は
+\[ \Delta T_1=T_{\mathrm h,\text{入}}-T_{\mathrm c,\text{出}}=\theta-\frac{\dot Q}{C_{\mathrm c}}=\theta(1-C_{\mathrm r}\eta_{\mathrm T}) \]
+\[ \Delta T_2=T_{\mathrm h,\text{出}}-T_{\mathrm c,\text{入}}=\theta-\frac{\dot Q}{C_{\mathrm h}}=\theta(1-\eta_{\mathrm T}) \]
+です。⑧の2行めから $\Delta T_2/\Delta T_1=e^{-MUA}$ で、向流では
+\[ MUA=\frac{UA}{C_{\mathrm h}}\Bigl(1-\frac{C_{\mathrm h}}{C_{\mathrm c}}\Bigr)=\mathrm{NTU}\,(1-C_{\mathrm r}) \]
+です。$x=e^{-\mathrm{NTU}(1-C_{\mathrm r})}$ とおくと $1-\eta_{\mathrm T}=x(1-C_{\mathrm r}\eta_{\mathrm T})$ なので、$\eta_{\mathrm T}$ について解いて
+\pheq{\text{向流}：\ \eta_{\mathrm T}=\frac{1-x}{1-C_{\mathrm r}x},\qquad x=e^{-\mathrm{NTU}(1-C_{\mathrm r})}}{（単位なし）}
+同じ道すじで、並流では
+\pheq{\text{並流}：\ \eta_{\mathrm T}=\frac{1-e^{-\mathrm{NTU}(1+C_{\mathrm r})}}{1+C_{\mathrm r}}}{（単位なし）}
+\label{ph:熱-13:ntu}となります（冷たい流体が $C_{\min}$ のときも、同じ式になります）。
+
+\Needspace{5\baselineskip}\noindent\textbf{片方がわいている・凝縮しているとき}\par\nobreak
+エアコンの室外機や発電所の復水器のように、片方の流体が沸騰や凝縮をしている（温度が変わらない）ときは、その流体の $C$ が限りなく大きいとみなせて、$C_{\mathrm r}=0$ です。どちらの式も
+\[ \eta_{\mathrm T}=1-e^{-\mathrm{NTU}} \]
+になり、並流と向流の区別がなくなります。
+
+\bksubsection{10}{向流と並流：どちらがよく渡せる？}
+
+\leavevmode\label{ph:熱-13:sec10}⑨の式をグラフにします（図\ref{ph:熱-13:fig-ntu}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=58mm, xmin=0, xmax=5, ymin=0, ymax=1.05, xtick={0,1,2,3,4,5}, ytick={0,0.2,0.4,0.6,0.8,1}, xlabel={NTU}, ylabel={温度効率 $\eta_{\mathrm T}$}]
+  \addplot[bkGreen!70!black, line width=1.7pt, domain=0:5, samples=80] {1-exp(-x)};
+  \addplot[bkcurve, domain=0:5, samples=80] {(1-exp(-0.5*x))/(1-0.5*exp(-0.5*x))};
+  \addplot[bkcurve2, dashed, domain=0:5, samples=80] {(1-exp(-1.5*x))/1.5};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(2,0.7746) (2,0.6335) (4,0.9274) (4,0.6650)};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:4.9,0.985) {$C_{\mathrm r}=0$（どちらも）};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:2.9,0.81) {向流 $C_{\mathrm r}=0.5$};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:2.6,0.61) {並流 $C_{\mathrm r}=0.5$（上限 0.67）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{温度効率と NTU。実線（上）は片方がわいているとき（$C_{\mathrm r}=0$）、実線（中）は向流、点線は並流（どちらも $C_{\mathrm r}=0.5$）。黒い点は NTU＝2 と 4。}
+\label{ph:熱-13:fig-ntu}
+\end{bkfigure}
+
+\begin{phbaisuru}{熱交換器の面積 $A$}
+NTU が2倍になります。$C_{\mathrm r}=0.5$ で NTU を2から4にすると、向流の温度効率は 0.77 から 0.93 へ上がりますが、並流は 0.63 から 0.67 にしかなりません。並流では、熱い流体と冷たい流体が出口で同じ温度に近づくと、それ以上は熱を渡せなくなるからです（上限は $1/(1+C_{\mathrm r})=0.67$）。向流では、冷たい流体の出口が熱い流体の入口と向かい合うので、面積を大きくすれば、温度効率は1に近づいていきます。
+\end{phbaisuru}
+
+\noindent 同じ大きさなら、\textbf{向流のほうがたくさんの熱を渡せます}。向流では、管のどの所でも温度差がそろいやすく、冷たい流体を熱い流体の出口の温度より高く温めることもできます（図\ref{ph:熱-13:fig-koukan}の右：冷たい流体の出口 \qty{60}{\celsius} は熱い流体の出口 \qty{50}{\celsius} より高い）。だから、工場の熱交換器の多くは向流で作られます。並流は、冷たい流体を入口で急に温めたい、壁の温度をそろえて材料をいためないようにしたい、といったときに使います。
+
+\Needspace{5\baselineskip}\noindent\textbf{表計算：区間に分けて確かめる}\par\nobreak
+並流の熱交換器を、面積で20の区間に分けて、温度を入口から順に進めます。熱い流体は $C_{\mathrm h}=\qty{2100}{W/K}$（水 \qty{0.50}{kg/s}）、冷たい流体は $C_{\mathrm c}=\qty{2520}{W/K}$（水 \qty{0.60}{kg/s}）、全体の $UA=\qty{1765}{W/K}$ で、1区間の $UA$ は約 \qty{88.2}{W/K} です。1つの区間の間は温度差が一定とします（6-2 のオイラー法と同じ考え）。
+\begin{bkcenter}
+\bksheet{4}{28}{%
+1 & 区間 & $T_{\mathrm h}$（℃） & $T_{\mathrm c}$（℃） & 差（K） \\
+2 & 0 & 90.00 & 20.00 & 70.00 \\
+3 & 1 & 87.06 & 22.45 & 64.61 \\
+4 & 2 & 84.35 & 24.71 & 59.64 \\
+5 & 3 & 81.84 & 26.80 & 55.04 \\
+12 & 10 & 68.95 & 37.54 & 31.41 \\
+22 & 20 & 59.51 & 45.41 & 14.10 \\}
+\bktabcaption{B3 は \texttt{=B2-88.2*D2/2100}、C3 は \texttt{=C2+88.2*D2/2520}、D2 は \texttt{=B2-C2}。下へコピーする（途中の行は省いた）。}
+\label{ph:熱-13:tab-kukan}
+\end{bkcenter}
+差は、1区間ごとに約0.923倍になっています。⑧で導いたとおり、面積に対して同じ割合でへっていくのです。出口は熱い流体 \qty{59.5}{\celsius}、冷たい流体 \qty{45.4}{\celsius} で、対数平均温度差の式で求めた\bkreidairef{9}の値（\qty{60}{\celsius}・\qty{45}{\celsius}）に近い値です。区間を200にすると \qty{59.95}{\celsius}・\qty{45.04}{\celsius} となり、式の値に近づきます。
+
+\begin{phmijika}[エアコンの熱交換器と、給湯器の潜熱回収]
+エアコンの室内機・室外機の中には、細い銅の管にうすいアルミのひれ（フィン：熱-12）を何百枚もつけた熱交換器が入っています。管の中では冷媒が蒸発・凝縮していて温度がほぼ一定なので、$C_{\mathrm r}\approx0$ の熱交換器です。家庭用の「潜熱回収型」の給湯器は、燃えたガスの湯気（水蒸気）を、水が入ってくる管で冷やして凝縮させ、その潜熱（熱-1 ⑤）まで水に渡します。熱交換器を1つ足すだけで、捨てていた熱の多くを取りもどしているのです。
+\end{phmijika}
+
+%% ---------------- たいせつ・ことば・記号 ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]\raggedright
+\item 黒体の放射 $E_{\mathrm b}=\sigma T^4$（$T$ は K、$\sigma=5.67\times10^{-8}$\,W/(m$^2$·K$^4$)）。ウィーンの変位則 $\lambda_{\max}T=\qty{2898}{\micro m.K}$。
+\item ふつうの面は $E=\varepsilon\sigma T^4$。キルヒホッフの法則：吸収率＝放射率。形態係数 $F_{12}$：相反 $A_1F_{12}=A_2F_{21}$、和は1。
+\item 2つの面の間の放射は、$\sigma(T_1^4-T_2^4)$ を3つの抵抗の和でわる。平行な板は分母が $1/\varepsilon_1+1/\varepsilon_2-1$。
+\item 広い部屋の中の小さな物は $\dot Q=\varepsilon_1\sigma A_1(T_1^4-T_2^4)$。
+\item 熱交換器：$\dot Q=UA\Delta T_{\mathrm{lm}}$、$\Delta T_{\mathrm{lm}}=(\Delta T_1-\Delta T_2)/\ln(\Delta T_1/\Delta T_2)$。温度効率 $\eta_{\mathrm T}$ は NTU と $C_{\mathrm r}$ で決まる。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{熱ふく射（放射）}{物が出す光（電磁波）が熱を運ぶしくみ。真空でも伝わる。}
+\bkword{黒体}{来た光を全部吸う物。同じ温度でいちばん多く光を出す。}
+\bkword{放射率・吸収率}{黒体の何倍の光を出すか・来た光の何割を吸うか。同じ温度・波長で等しい。}
+\bkword{灰色体}{放射率が波長によらない物（計算のためのモデル）。}
+\bkword{形態係数}{面1から出た光のうち、面2に直接当たる割合 $F_{12}$。}
+\bkword{熱容量流量}{1秒に流れる流体を \qty{1}{K} 温める熱 $C=\dot mc_p$〔W/K〕。}
+\bkword{対数平均温度差}{熱交換器の両はしの温度差から作る平均 $\Delta T_{\mathrm{lm}}$。}
+\bkword{温度効率・NTU}{移る熱の上限に対する割合 $\eta_{\mathrm T}$。熱交換器の大きさの数 $UA/C_{\min}$。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$\varepsilon$}{イプシロン}{放射率（単位なし）。熱-7 の圧縮比 $\varepsilon$ とは別の量（別の章）。工学の本の熱交換器の温度効率 $\varepsilon$ は、この本では $\eta_{\mathrm T}$}{emissivity}{熱-13}}{\bkkigocard{$C$}{シー}{熱容量流量 $\dot mc_p$（W/K）。熱容量 $C_{\mathrm{th}}$（J/K）、モル比熱 $C_V$ とは別の量}{heat capacity rate}{熱-13}}
+
+\begin{senmonsho}[灰色体2面間の放射伝熱と熱交換器]
+\begin{bkhonbun}
+灰色体の二面間の放射伝熱量は
+\[ Q_{12}=\frac{\sigma\,(T_1^4-T_2^4)}{\dfrac{1-\varepsilon_1}{\varepsilon_1A_1}+\dfrac{1}{A_1F_{12}}+\dfrac{1-\varepsilon_2}{\varepsilon_2A_2}} \]
+で与えられる。また、熱交換器の交換熱量は、熱通過率を $K$、伝熱面積を $A$ として $Q=KA\,\Delta\theta_{\mathrm m}$ と表され、$\Delta\theta_{\mathrm m}$ は対数平均温度差である。
+\end{bkhonbun}
+\bkyaku{$Q_{12}$ は面1から面2へ1秒に移る熱（この本の $\dot Q$）。上の点を省いて書く本が多い。熱通過率を $K$、温度を $\theta$ と書く本もある（この本の $U$ と $T$）。$\Delta\theta_{\mathrm m}$ の m は mean（平均）。「交換熱量」は、この本の「熱の流れ」。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent $\sigma=5.67\times10^{-8}$\,W/(m$^2$·K$^4$)、ウィーンの定数は \qty{2898}{\micro m.K} とします。$\sigma T^4$ の $T$ は、必ず K に直して入れます（\qty{0}{\celsius}＝\qty{273.15}{K}）。水の比熱は \qty{4.2}{kJ/(kg.K)} を使います。
+
+\begin{phreidai}[たき火にあたる顔]
+\label{ph:熱-13:ex1}たき火の燃えているまきを、顔に向いた半径 \qty{0.30}{m}・温度 \qty{1100}{K} の黒い円板とみなします。(1) この円板の表面 \qty{1}{m^2} から出る放射の強さを求めましょう。(2) 顔が円板の中心の正面 \qty{2.0}{m} にあるとき、顔の小さな面が 1 m$^2$ あたりに受けとる放射を求めましょう。
+\phbamen
+\bkhatenaref の場面です。火から顔へ、光がまっすぐ届きます。
+\phmushi
+ほのおの形（円板とみなす）、ほのおの中のすすやガスの放射の性質（黒体とみなす）、空気による光の吸収、地面の反射を無視します。
+\phzu
+図\ref{ph:熱-13:fig-keitai}。円板の半径 $R=\qty{0.30}{m}$、温度 $T_2=\qty{1100}{K}$、顔までの距離 $d=\qty{2.0}{m}$。顔の小さな面を面1、円板を面2とする。
+\phriyu
+(1) は黒体の放射なので $E_{\mathrm b}=\sigma T^4$。(2) は、相反の関係から、面1が受けとる光は「面1から見た形態係数 $F_{12}$ × 相手の $E_{\mathrm b}$」になる（$A_2F_{21}E_{\mathrm b}=A_1F_{12}E_{\mathrm b}$ を $A_1$ でわる）。形態係数は⑤の円板の式。
+\phtateru
+\[ E_{\mathrm b}=\sigma T_2^4,\qquad F_{12}=\frac{R^2}{R^2+d^2},\qquad q=F_{12}E_{\mathrm b} \]
+\phtoku
+$1100^4=1.4641\times10^{12}$ なので
+\[ E_{\mathrm b}=5.67\times10^{-8}\times1.4641\times10^{12}\approx8.30\times10^4\ \mathrm{W/m^2} \]
+\[ F_{12}=\frac{0.30^2}{0.30^2+2.0^2}=\frac{0.09}{4.09}\approx0.0220 \]
+\[ q=0.0220\times8.30\times10^4\approx1.83\times10^3\ \mathrm{W/m^2} \]
+\phtashikame
+単位：（単位なし）×W/m$^2$＝W/m$^2$。大きさ：日なたの太陽の光（約 \qty{1}{kW/m^2}）の約2倍で、「熱い」と感じる強さとして自然。極端な場合：$d\to0$（火にくっつく）なら $F_{12}\to1$ で $q\to E_{\mathrm b}$。$d$ が大きいと $F_{12}\approx R^2/d^2=0.0225$ で、ほぼ同じ値。背中では $F_{12}=0$。
+\kotae (1) 約 \qty{83}{kW/m^2}　(2) 約 \qty{1.8}{kW/m^2}
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{1}のたき火から、\qty{4.0}{m} はなれると、顔が受けとる放射は 1 m$^2$ あたり何 W になりますか。\qty{2.0}{m} のときの何分の1ですか。
+\bkjans{$F_{12}=0.09\div16.09\approx0.0056$、$q\approx0.0056\times8.30\times10^4$ $\approx\qty{460}{W/m^2}$。約4分の1}
+\end{jibun}
+
+\begin{phreidai}[太陽の放射と、地球に届く光]
+\label{ph:熱-13:ex2}太陽の表面を温度 \qty{5772}{K} の黒体とします。(1) 表面 \qty{1}{m^2} から出る放射の強さを求めましょう。(2) 太陽の半径を $6.96\times10^8$\,m、太陽から地球までの距離を $1.50\times10^{11}$\,m として、地球の所で太陽の光に直角な面が 1 m$^2$ あたりに受けとる強さ（太陽定数）を求めましょう。
+\phbamen
+太陽は、表面から全部の向きに光を出しています。その光が、地球の所まで広がって届きます。
+\phmushi
+太陽の表面の温度のむら、宇宙での光の吸収を無視します。太陽の光は、太陽の中心から広がるとします。
+\phzu
+太陽の半径 $R_{\mathrm s}$、地球までの距離 $D$、表面の放射 $E_{\mathrm b}$、地球の所の強さ $S$。
+\phriyu
+(1) は $\sigma T^4$。(2) は、太陽が1秒に出す光のエネルギー（$4\pi R_{\mathrm s}^2E_{\mathrm b}$）が、半径 $D$ の球面全体（$4\pi D^2$）に広がる、というエネルギーのバランス。宇宙では光は吸われないので、どの半径の球面を通る量も同じ。
+\phtateru
+\[ E_{\mathrm b}=\sigma T^4,\qquad 4\pi R_{\mathrm s}^2E_{\mathrm b}=4\pi D^2S\quad\text{より}\quad S=E_{\mathrm b}\Bigl(\frac{R_{\mathrm s}}{D}\Bigr)^2 \]
+\phtoku
+$5772^4\approx1.110\times10^{15}$ なので
+\[ E_{\mathrm b}=5.67\times10^{-8}\times1.110\times10^{15}\approx6.29\times10^7\ \mathrm{W/m^2} \]
+\[ \Bigl(\frac{6.96\times10^8}{1.50\times10^{11}}\Bigr)^2=(4.64\times10^{-3})^2\approx2.15\times10^{-5} \]
+\[ S\approx6.29\times10^7\times2.15\times10^{-5}\approx1.35\times10^3\ \mathrm{W/m^2} \]
+\phtashikame
+単位：W/m$^2$×（単位なし）。大きさ：人工衛星で測った太陽定数 \qty{1361}{W/m^2} とほぼ合う（距離を $1.496\times10^{11}$\,m にすると \qty{1361}{W/m^2}）。極端な場合：距離が2倍なら $S$ は4分の1（遠くの惑星ほど暗い）。
+\kotae (1) 約 \qty{63}{MW/m^2}　(2) 約 \qty{1.4}{kW/m^2}
+\end{phreidai}
+\begin{jibun}
+火星は、太陽から地球の約1.52倍の距離にあります。火星の所の太陽定数を、地球の所の値 \qty{1361}{W/m^2} から求めましょう。
+\bkjans{$1361\div1.52^2\approx\qty{589}{W/m^2}$（約 \qty{590}{W/m^2}）}
+\end{jibun}
+
+\begin{phreidai}[地球のつり合いの温度]
+\label{ph:熱-13:ex3}太陽定数を \qty{1361}{W/m^2}、地球の反射率を0.30として、地球のつり合いの温度を求めましょう。実際の地表の平均気温（約 \qty{15}{\celsius}）とくらべましょう。
+\phbamen
+宇宙に浮かぶ地球は、太陽から光をもらい、赤外線を宇宙へ出しています。
+\phmushi
+大気の温室効果、地球の中から出てくる熱（とても小さい）、昼と夜・場所による温度のちがい（全体を1つの温度とする）を無視します。地球は赤外線では黒体とします。
+\phzu
+図\ref{ph:熱-13:fig-chikyu}。地球の半径 $R$、太陽定数 $S$、反射率 $\rho$、地球の温度 $T$。
+\phriyu
+温度が変わらないので、受けとる量＝出す量（⑦のバランス式）。受けとるのは断面の円の分、出すのは球の表面全体から。
+\phtateru
+\[ \pi R^2S(1-\rho)=4\pi R^2\sigma T^4\qquad\text{より}\qquad T=\Bigl(\frac{S(1-\rho)}{4\sigma}\Bigr)^{1/4} \]
+\phtoku
+\[ \frac{S(1-\rho)}{4\sigma}=\frac{1361\times0.70}{4\times5.67\times10^{-8}}=\frac{952.7}{2.268\times10^{-7}}\approx4.20\times10^9 \]
+$4.20\times10^9$ の $\tfrac14$ 乗は、平方根を2回とって $\sqrt{\sqrt{4.20\times10^9}}\approx\sqrt{6.48\times10^4}\approx255$。
+\phtashikame
+単位：（W/m$^2$）÷（W/(m$^2$·K$^4$)）＝K$^4$ の $\tfrac14$ 乗で K。大きさ：\qty{255}{K}＝\qty{-18}{\celsius}。実際の \qty{15}{\celsius} より約 \qty{33}{K} 低い。この差が大気の温室効果（⑦）。極端な場合：反射率0（真っ黒な地球）なら \qty{278}{K}。地球の大きさ $R$ は答えに入らない。
+\kotae 約 \qty{255}{K}（\qty{-18}{\celsius}）。実際より約 \qty{33}{K} 低い
+\end{phreidai}
+\begin{jibun}
+火星の所の太陽定数を \qty{589}{W/m^2}、火星の反射率を0.25として、火星のつり合いの温度を求めましょう。
+\bkjans{$\bigl(589\times0.75\div(4\times5.67\times10^{-8})\bigr)^{1/4}=(1.95\times10^9)^{1/4}\approx\qty{210}{K}$（約 \qty{-63}{\celsius}）}
+\end{jibun}
+
+\begin{reidai}[いちばん強い波長]
+\label{ph:熱-13:ex4}太陽の表面（\qty{5772}{K}）と、人の皮膚（\qty{33}{\celsius}）が出す光の、いちばん強い波長を求めましょう。
+\par\bkstep{理想化} どちらも黒体とみなす（皮膚は赤外線で放射率約0.98）。
+\par\kangaekata ウィーンの変位則 $\lambda_{\max}=2898/T$（$T$ は K、答えは \unit{\micro m}）。皮膚は $33+273.15=\qty{306.15}{K}$。
+\par\shiki 太陽：$2898\div5772\approx0.502$。皮膚：$2898\div306.15\approx9.47$
+\par\bkstep{確かめ} 太陽は可視光（\qtyrange{0.38}{0.78}{\micro m}）のまん中、皮膚は赤外線で、図\ref{ph:熱-13:fig-obi}と合う。温度が約19倍なので、波長は約19分の1。
+\par\kotae 太陽 約 \qty{0.50}{\micro m}、人の皮膚 約 \qty{9.5}{\micro m}
+\end{reidai}
+\begin{jibun}
+白熱電球のフィラメント（\qty{2800}{K}）が出す光の、いちばん強い波長を求めましょう。それは可視光ですか。
+\bkjans{$2898\div2800\approx\qty{1.0}{\micro m}$。可視光（\qty{0.78}{\micro m} まで）より長い赤外線}
+\end{jibun}
+
+\begin{phreidai}[部屋の中の人が放射で失う熱]
+\label{ph:熱-13:ex5}服を着ていない人（皮膚の温度 \qty{33}{\celsius}、放射率0.98、体の表面積 \qty{1.8}{m^2}）が、壁の温度が \qty{20}{\celsius} の広い部屋にいます。人が放射で失う熱の流れを求めましょう。
+\phbamen
+人の体は赤外線を出し、壁からも赤外線を受けとっています。差し引きで、人は熱を失います。
+\phmushi
+空気による対流の熱（熱-12）、服、手足どうしがたがいを見ること（体のすべての面が壁を見るとする）を無視します。
+\phzu
+人を面1（$T_1=\qty{306.15}{K}$、$\varepsilon_1=0.98$、$A_1=\qty{1.8}{m^2}$）、部屋の壁を面2（$T_2=\qty{293.15}{K}$）。
+\phriyu
+部屋は人よりずっと大きいので、⑥の「広い部屋の中の小さな物」の式。壁の放射率は要らない。
+\phtateru
+\[ \dot Q=\varepsilon_1\sigma A_1\bigl(T_1^4-T_2^4\bigr) \]
+\phtoku
+$306.15^4\approx8.785\times10^9$、$293.15^4\approx7.385\times10^9$ なので、差は $1.400\times10^9$。
+\[ \dot Q=0.98\times5.67\times10^{-8}\times1.8\times1.400\times10^9\approx\qty{140}{W} \]
+\phtashikame
+単位：W/(m$^2$·K$^4$)×m$^2$×K$^4$＝W。大きさ：静かに休んでいる人の体が出す熱（約 \qty{100}{W}）より大きい。実際には、腕と胴が向き合う所は壁を見ないので、壁を見る面積は表面積の7〜8割になり、服も着るので、もっと小さい。極端な場合：壁も \qty{33}{\celsius} なら0。差が \qty{13}{K} と小さいので、⑥の $h_{\mathrm r}$ を使っても $0.98\times6.1\times1.8\times13\approx\qty{140}{W}$ とほぼ同じ。
+\kotae 約 \qty{140}{W}
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{5}の人のへやで、冬に壁の温度が \qty{10}{\celsius} に下がりました。人が放射で失う熱の流れを求めましょう。
+\bkjans{$283.15^4\approx6.428\times10^9$。差は $2.357\times10^9$。$0.98\times5.67\times10^{-8}\times1.8$ $\times2.357\times10^9\approx\qty{240}{W}$}
+\end{jibun}
+
+\begin{phreidai}[平行な2枚の板と、しゃへい板]
+\label{ph:熱-13:ex6}放射率がどちらも0.80の、大きな平行な2枚の板があり、温度は \qty{500}{K} と \qty{300}{K} です。(1) 1 m$^2$ あたりに放射で移る熱を求めましょう。(2) 間に、両面の放射率が0.80のうすい板を1枚入れると、どうなりますか。
+\phbamen
+炉の壁と、その外側の板の間のような、向かい合った大きな面の間の放射です。
+\phmushi
+板と板の間の空気の伝導・対流、板のはしから出入りする光を無視します（板は大きいとする）。
+\phzu
+板1（$T_1=\qty{500}{K}$）、板2（$T_2=\qty{300}{K}$）、$\varepsilon_1=\varepsilon_2=0.80$、$F_{12}=1$。
+\phriyu
+⑥で導いた平行な2枚の板の式。しゃへい板は、同じ大きさの抵抗の組をもう1つ直列に足す（⑥）。
+\phtateru
+\[ q=\frac{\sigma\bigl(T_1^4-T_2^4\bigr)}{\dfrac{1}{\varepsilon_1}+\dfrac{1}{\varepsilon_2}-1} \]
+\phtoku
+\[ 500^4-300^4=6.25\times10^{10}-0.81\times10^{10}=5.44\times10^{10} \]
+分母は $1.25+1.25-1=1.5$。
+\[ q=\frac{5.67\times10^{-8}\times5.44\times10^{10}}{1.5}=\frac{3084}{1.5}\approx\qty{2060}{W/m^2} \]
+しゃへい板を入れると、分母は $1.5+1.5=3.0$ になるので、$3084\div3.0\approx\qty{1030}{W/m^2}$。
+\phtashikame
+単位：W/m$^2$。大きさ：黒体どうし（\qty{3084}{W/m^2}）より小さい。しゃへい板でちょうど半分。しゃへい板の温度は、$T^4$ が2つの板の $T^4$ の平均になる温度で、約 \qty{433}{K}（\qty{400}{K} ではない）。極端な場合：$\varepsilon\to0$ なら分母が大きくなり $q\to0$。
+\kotae (1) 約 \qty{2.1}{kW/m^2}　(2) 約 \qty{1.0}{kW/m^2}（半分になる）
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{6}で、2枚の板の放射率をどちらも0.50にすると（しゃへい板なし）、1 m$^2$ あたりに移る熱は何 W ですか。
+\bkjans{分母 $2+2-1=3$。$3084\div3\approx\qty{1.0}{kW/m^2}$（しゃへい板1枚と同じ）}
+\end{jibun}
+
+\begin{phreidai}[魔法びんの銀めっき]
+\label{ph:熱-13:ex7}魔法びんは、ガラスの2重の壁の間を真空にし、向かい合う面に銀めっき（放射率0.020）をしています。内側の面が \qty{90}{\celsius}、外側の面が \qty{20}{\celsius} のとき、1 m$^2$ あたりに放射で移る熱を求めましょう。黒い面どうしのときとくらべましょう。
+\phbamen
+お湯の熱が、魔法びんの壁を通って逃げていきます。真空なので、伝導と対流はほとんどなく、残るのは放射だけです。
+\phmushi
+真空の中のわずかな気体、びんの口（せん）から逃げる熱、面の曲がり（すき間がせまいので平行な板とみなす）を無視します。
+\phzu
+内側の面 $T_1=\qty{363.15}{K}$、外側の面 $T_2=\qty{293.15}{K}$、$\varepsilon_1=\varepsilon_2=0.020$。
+\phriyu
+すき間がせまく、面が大きいので、平行な2枚の板の式（⑥）。
+\phtateru
+\[ q=\frac{\sigma\bigl(T_1^4-T_2^4\bigr)}{\dfrac{1}{\varepsilon_1}+\dfrac{1}{\varepsilon_2}-1} \]
+\phtoku
+$363.15^4-293.15^4\approx1.739\times10^{10}-0.739\times10^{10}=1.001\times10^{10}$。分子は $5.67\times10^{-8}\times1.001\times10^{10}\approx\qty{567}{W/m^2}$。分母は $50+50-1=99$。
+\[ q=\frac{567}{99}\approx\qty{5.7}{W/m^2} \]
+\phtashikame
+単位：W/m$^2$。大きさ：黒い面どうし（分母1）なら \qty{567}{W/m^2} で、銀めっきで約100分の1になった。極端な場合：放射率を $\tfrac12$ 倍にすると分母はほぼ2倍で、熱はほぼ半分。
+\kotae 約 \qty{5.7}{W/m^2}（黒い面どうしの約 \qty{570}{W/m^2} の約100分の1）
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{7}の魔法びんの銀めっきがくもって、放射率が0.050になりました。同じ温度で、1 m$^2$ あたりに移る熱を求めましょう。
+\bkjans{分母 $20+20-1=39$。$567\div39\approx\qty{15}{W/m^2}$}
+\end{jibun}
+
+\begin{phreidai}[放射温度計の放射率の設定]
+\label{ph:熱-13:ex8}放射温度計は、物が出す赤外線の強さを測り、設定した放射率で温度に直します。放射率を0.95に設定した放射温度計で、本当は放射率0.80・温度 \qty{400}{K} の面を測りました。温度計は何 K と表示しますか。
+\phbamen
+工場で、動いている物や熱い物の温度を、ふれずに測る場面です。
+\phmushi
+まわりから来て面で反射する光、温度計と面の間の空気の吸収、波長による放射率のちがい（灰色体とする）を無視します。
+\phzu
+本当の放射率 $\varepsilon=0.80$、本当の温度 $T=\qty{400}{K}$、設定の放射率 $\varepsilon_{\text{設}}=0.95$、表示の温度 $T_{\text{表}}$。
+\phriyu
+温度計が受けとる強さは本当の $\varepsilon\sigma T^4$。温度計はそれを $\varepsilon_{\text{設}}\sigma T_{\text{表}}^4$ だと思って $T_{\text{表}}$ を計算する（④の $E=\varepsilon\sigma T^4$）。
+\phtateru
+\[ \varepsilon_{\text{設}}\sigma T_{\text{表}}^4=\varepsilon\sigma T^4\qquad\text{より}\qquad T_{\text{表}}=T\Bigl(\frac{\varepsilon}{\varepsilon_{\text{設}}}\Bigr)^{1/4} \]
+\phtoku
+$0.80\div0.95\approx0.842$。$0.842$ の $\tfrac14$ 乗は $\sqrt{\sqrt{0.842}}\approx\sqrt{0.918}\approx0.958$。$T_{\text{表}}\approx400\times0.958\approx\qty{383}{K}$。
+\phtashikame
+単位：K×（単位なし）。大きさ：設定の放射率が大きすぎると、「よく出す物なのにこれしか来ない」と考えて、低く表示する。\qty{17}{K} の誤差。極端な場合：設定が本当の値と同じなら、正しく \qty{400}{K}。$\tfrac14$ 乗なので、放射率の16\,\% のずれが、温度では約4\,\% のずれになる。
+\kotae 約 \qty{383}{K}（\qty{17}{K} 低く表示する）
+\end{phreidai}
+\begin{jibun}
+放射率を0.95に設定した放射温度計で、本当は放射率0.60・\qty{500}{K} のさびた鉄の面を測りました。表示は何 K ですか。
+\bkjans{$0.60\div0.95\approx0.632$。$500\times0.632^{1/4}$ $\approx500\times0.891\approx\qty{446}{K}$}
+\end{jibun}
+
+\begin{phreidai}[向流と並流の対数平均温度差]
+\label{ph:熱-13:ex9}熱い水を 90→\qty{50}{\celsius} に冷やし、冷たい水を 20→\qty{60}{\celsius} に温めます。(1) 向流の対数平均温度差を求めましょう。(2) 同じ入口と出口の温度で、並流にできますか。(3) 並流で、熱い水 90→\qty{60}{\celsius}、冷たい水 20→\qty{45}{\celsius} のときの対数平均温度差を求めましょう。
+\phbamen
+図\ref{ph:熱-13:fig-koukan}の2つの熱交換器です。
+\phmushi
+まわりへの熱のもれ、熱通過率 $U$ の場所によるちがい（一定とする）を無視します。
+\phzu
+両はしの温度差 $\Delta T_1$（熱い流体の入口の側）、$\Delta T_2$（出口の側）。向流では、熱い流体の入口と冷たい流体の出口が同じ側。
+\phriyu
+⑧で導いた対数平均温度差の式。両はしでどの温度とどの温度が向き合うかを、流れの向きで決める。
+\phtateru
+\[ \Delta T_{\mathrm{lm}}=\frac{\Delta T_1-\Delta T_2}{\ln(\Delta T_1/\Delta T_2)} \]
+\phtoku
+(1) 向流：$\Delta T_1=90-60=30$、$\Delta T_2=50-20=30$。両はしが同じなので（⑧のせいかくに言うと）$\Delta T_{\mathrm{lm}}=\qty{30}{K}$。
+(2) 並流：入口の側は $90-20=70$、出口の側は $50-60=-10$。出口で冷たい水のほうが熱くなっていて、熱が冷たい水から熱い水へもどってしまう。並流では、冷たい流体の出口は、熱い流体の出口より熱くなれない。
+(3) 並流：$\Delta T_1=90-20=70$、$\Delta T_2=60-45=15$。
+\[ \Delta T_{\mathrm{lm}}=\frac{70-15}{\ln(70/15)}=\frac{55}{\ln4.667}=\frac{55}{1.540}\approx\qty{35.7}{K} \]
+\phtashikame
+単位：K。大きさ：(3) はふつうの平均 \qty{42.5}{K} より小さく、15 と 70 の間にある。極端な場合：両はしが近いほど、ふつうの平均に近づく。
+\kotae (1) \qty{30}{K}　(2) できない　(3) 約 \qty{36}{K}
+\end{phreidai}
+\begin{jibun}
+熱い水 70→\qty{40}{\celsius}、冷たい水 15→\qty{35}{\celsius} の向流の熱交換器の、対数平均温度差を求めましょう。
+\bkjans{$\Delta T_1=70-35=35$、$\Delta T_2=40-15=25$。$10\div\ln1.4=10\div0.336\approx\qty{30}{K}$}
+\end{jibun}
+
+\begin{reidai}[温度効率：向流と並流]
+\label{ph:熱-13:ex10}NTU＝2、熱容量流量比 $C_{\mathrm r}=0.5$ の熱交換器の温度効率を、向流と並流で求めましょう。
+\par\bkstep{理想化} 熱通過率 $U$ は一定、まわりへの熱のもれはないとする。
+\par\kangaekata ⑨の2つの式。向流は $x=e^{-\mathrm{NTU}(1-C_{\mathrm r})}=e^{-1}$。並流は $e^{-\mathrm{NTU}(1+C_{\mathrm r})}=e^{-3}$。
+\par\shiki 向流：$x=e^{-1}\approx0.368$
+\[ \eta_{\mathrm T}=\frac{1-0.368}{1-0.5\times0.368}=\frac{0.632}{0.816}\approx0.775 \]
+並流：$e^{-3}\approx0.0498$、$\eta_{\mathrm T}=(1-0.0498)\div1.5\approx0.633$
+\par\bkstep{確かめ} どちらも0と1の間。向流のほうが大きい（図\ref{ph:熱-13:fig-ntu}の黒い点）。並流は上限 $1/1.5=0.67$ をこえない。
+\par\kotae 向流 約0.77、並流 約0.63
+\end{reidai}
+\begin{jibun}
+NTU＝1、$C_{\mathrm r}=0.5$ の熱交換器の温度効率を、向流と並流で求めましょう。
+\bkjans{向流：$x=e^{-0.5}\approx0.607$、$(1-0.607)\div(1-0.303)\approx0.56$。並流：$(1-e^{-1.5})\div1.5\approx0.52$}
+\end{jibun}
+
+\begin{phreidai}[熱交換器の面積を決める]
+\label{ph:熱-13:ex11}熱い水 \qty{0.50}{kg/s} を 90→\qty{50}{\celsius} に冷やし、冷たい水 \qty{0.50}{kg/s} を 20→\qty{60}{\celsius} に温める向流の熱交換器を作ります。熱通過率を \qty{1000}{W/(m^2.K)} として、要る面積を求めましょう。
+\phbamen
+工場で、使い終わったお湯の熱を、入ってくる水に渡して燃料を節約する装置を設計します。
+\phmushi
+まわりへの熱のもれ、比熱の温度によるちがい、管の汚れ（熱通過率は一定とする）を無視します。
+\phzu
+熱容量流量 $C_{\mathrm h}=C_{\mathrm c}=0.50\times4200=\qty{2100}{W/K}$。両はしの温度差は\bkreidairef{9}の(1)と同じ。
+\phriyu
+熱の流れは、熱い水のエネルギーのバランス（$\dot Q=C_{\mathrm h}\times$温度の変化）で決まる。面積は ⑧の $\dot Q=UA\Delta T_{\mathrm{lm}}$ から。
+\phtateru
+\[ \dot Q=C_{\mathrm h}(90-50),\qquad A=\frac{\dot Q}{U\,\Delta T_{\mathrm{lm}}} \]
+\phtoku
+$\dot Q=2100\times40=\num{84000}$\,W。冷たい水が受けとる熱も $2100\times(60-20)=\num{84000}$\,W で合う。$\Delta T_{\mathrm{lm}}=\qty{30}{K}$ なので
+\[ A=\frac{\num{84000}}{1000\times30}=\qty{2.8}{m^2} \]
+\phtashikame
+単位：W÷(W/(m$^2$·K)×K)＝m$^2$。大きさ：内径 \qty{2}{cm} の管なら長さ約 \qty{45}{m} に相当し、ふつうは管を何十本も束ねて作る。極端な場合：$U$ が2倍なら面積は半分。並流ではこの出口の温度はつくれない（\bkreidairef{9}）。
+\kotae 約 \qty{2.8}{m^2}
+\end{phreidai}
+\begin{jibun}
+熱い水 \qty{0.30}{kg/s} を 80→\qty{40}{\celsius} に冷やし、冷たい水 \qty{0.30}{kg/s} を 15→\qty{55}{\celsius} に温める向流の熱交換器の、要る面積を求めましょう。熱通過率は \qty{800}{W/(m^2.K)} とします。
+\bkjans{$\dot Q=0.30\times4200\times40=\num{50400}$\,W。$\Delta T_1=\Delta T_2=\qty{25}{K}$。$A=\num{50400}\div(800\times25)\approx\qty{2.5}{m^2}$}
+\end{jibun}
+
+\begin{reidai}[形態係数の2つの決まり]
+\label{ph:熱-13:ex12}半径 \qty{0.10}{m} の球（面1）が、半径 \qty{0.50}{m} の中空の球（面2）の内側に入っています。$F_{12}$、$F_{21}$、$F_{22}$ を求めましょう。
+\par\bkstep{理想化} 球の面は、光をどの向きにも同じように出すとする（⑤のランベルトの法則）。
+\par\kangaekata 内側の球から出た光は、必ず外側の球に当たるので $F_{12}=1$。相反の関係 $A_1F_{12}=A_2F_{21}$ と、和の関係 $F_{21}+F_{22}=1$ を使う。
+\par\shiki $F_{21}=\dfrac{A_1}{A_2}F_{12}=\Bigl(\dfrac{0.10}{0.50}\Bigr)^2=0.04$、$F_{22}=1-0.04=0.96$
+\par\bkstep{確かめ} 外側の球はくぼんだ面なので、自分自身を見る（$F_{22}\neq0$）。外側の球から出た光のほとんどは、外側の球の別の所に当たる。
+\par\kotae $F_{12}=1$、$F_{21}=0.04$、$F_{22}=0.96$
+\end{reidai}
+\begin{jibun}
+半径 \qty{0.20}{m} の球が、1辺 \qty{2.0}{m} の立方体の部屋の中にあります。部屋の壁全体（面2）から見た球（面1）の形態係数 $F_{21}$ を求めましょう。
+\bkjans{$F_{12}=1$。$A_1=4\pi\times0.20^2\approx0.503$\,m$^2$、$A_2=6\times2.0^2=24$\,m$^2$。$F_{21}=A_1\div A_2\approx0.021$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{$\sigma T^4$ に ℃ の数を入れてしまう}
+\bkng{\qty{100}{\celsius} の湯は $5.67\times10^{-8}\times100^4\approx\qty{5.7}{W/m^2}$ の放射を出す。}
+\bkok{$T=100+273.15=\qty{373.15}{K}$ を入れて、$5.67\times10^{-8}\times373.15^4\approx\qty{1100}{W/m^2}$。}
+\qty{0}{\celsius} の物も光を出しているので、$T=0$ で放射が0になる ℃ は使えません。4乗の式・比をとる式・対数の式には、必ず K を入れます。差 $T_1^4-T_2^4$ も、$(T_1-T_2)^4$ ではありません。
+\end{tsumazuki}
+\begin{tsumazuki}{白い物は、赤外線もよく反射する？}
+\bkng{白いペンキは光を反射するので、放射率が小さい。部屋の中の白い壁は、ほとんど赤外線を出さない。}
+\bkok{白いペンキが反射するのは可視光。ふだんの温度の赤外線では、放射率は約0.9で、黒いペンキとほとんど同じ。}
+「白い・黒い」は、目で見た可視光での性質です。ふだんの温度の物が出す赤外線は波長が約20倍長く、まったく別の光と考えます。赤外線をよく反射するのは、みがいた金属です（④の表）。
+\end{tsumazuki}
+\begin{tsumazuki}{熱交換器の温度差に、ふつうの平均を使う}
+\bkng{並流の両はしの温度差が \qty{70}{K} と \qty{15}{K} なので、平均の \qty{42.5}{K} を使う。}
+\bkok{温度差は指数関数でへるので、対数平均温度差 $55/\ln(70/15)\approx\qty{35.7}{K}$ を使う。}
+ふつうの平均を使うと、熱の流れを約2割大きく見積もり、熱交換器を小さく作りすぎてしまいます。両はしの温度差が近いとき（比が1.5くらいまで）だけ、ふつうの平均でもほぼ同じ値になります。
+\end{tsumazuki}
+\begin{tsumazuki}{向流の両はしの温度差を、入口どうし・出口どうしで引いてしまう}
+\bkng{向流でも、熱い流体の入口と冷たい流体の入口の差を $\Delta T_1$ にする。}
+\bkok{向流では、熱い流体の入口と\textbf{冷たい流体の出口}が同じはしにある。$\Delta T_1=T_{\mathrm h,\text{入}}-T_{\mathrm c,\text{出}}$。}
+対数平均温度差の $\Delta T_1$ と $\Delta T_2$ は、「同じはしで向き合っている2つの温度」の差です。必ず図\ref{ph:熱-13:fig-koukan}のような絵をかいてから引き算しましょう。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[放射を止める・使う、熱を渡す]
+\phboxhead{① 宇宙と真空の断熱}
+人工衛星や宇宙望遠鏡は、太陽側と日かげ側で、温度が数百 K もちがう環境にいます。空気がないので、熱の出入りは放射だけです。アルミや金をめっきしたうすい膜（放射率0.03〜0.05）を何十枚も重ねた多層断熱材で包み、⑥のしゃへい板の効果で熱の出入りを小さくします。反対に、熱を捨てたい所には、放射率の大きい白いペンキや、特別な鏡をはった「放熱面」をつけます。家庭の魔法びんも、同じしくみで真空と銀めっきを使っています。
+
+\phboxhead{② ふれずに温度を測る}
+放射温度計とサーモグラフィは、物が出す赤外線の強さから温度を計算します。正しく測るには、放射率の設定が大切です（\bkreidairef{8}）。みがいた金属は放射率が小さいうえ、まわりの物の光を反射するので、黒いテープをはってから測るなどの工夫をします。製鉄所では、2つの波長の光の強さの比から温度を求める「2色温度計」も使われます。比をとると、放射率の多くが打ち消されるからです。
+
+\phboxhead{③ 熱交換器の設計}
+発電所のボイラー（燃焼ガス→水）、復水器（蒸気→海水）、化学工場の熱交換器、エアコン、車のラジエーターなど、熱交換器はあらゆる所で使われます。設計では、まず熱のバランスで $\dot Q$ を決め、対数平均温度差で要る面積を出します（\bkreidairef{11}）。すでにある熱交換器の性能を調べるときは、NTU と温度効率を使います。長く使うと管の内側に水あかや汚れがつき、熱通過率が下がるので、はじめから面積に余裕をもたせます。
+
+\begin{phketa}[放射と熱交換器の数]
+\phketaline{太陽定数（地球の所）}{約 \qty{1.36}{kW/m^2}}
+\phketaline{室温の黒体の放射}{約 \qty{0.46}{kW/m^2}}
+\phketaline{室温の放射の熱伝達率}{約 \qty{6}{W/(m^2.K)}}
+\phketaline{水どうしの熱交換器の熱通過率}{約 \qtyrange{1000}{3000}{W/(m^2.K)}}
+\phketaline{空気と冷媒の熱交換器（エアコン）}{約 \qtyrange{30}{100}{W/(m^2.K)}}
+\phboxhead{答えが桁で合っているか}
+$\sigma T^4$ は、$T=\qty{300}{K}$ で約 \qty{460}{W/m^2}、温度が2倍で16倍、10倍で1万倍。「1000 K なら 57 kW/m$^2$」を目安にすると、たき火・炉・太陽の答えの桁がすぐ確かめられます。
+\end{phketa}
+\end{phkougaku}
+\phstation{伝熱工学,宇宙機の熱設計,熱交換器の設計,赤外線計測}{放射率、吸収率、灰色体、形態係数、射度、放射の熱抵抗、熱通過率、対数平均温度差、温度効率、NTU}
+
+\begin{column}{晴れた夜は、なぜ冷える？（放射冷却）}
+晴れて風のない冬の朝は、くもりの朝よりずっと冷えこみ、車の屋根や草に霜がおります。夜の間、地面や屋根は赤外線を空へ出し続けています。くもりの夜は、雲（水のつぶ）が赤外線をよく吸い、自分も赤外線を地面へ返してくれます。ところが晴れた夜は、大気の「窓」（⑦）を通って、赤外線が宇宙へそのまま逃げていきます。晴れた夜空は、赤外線で見ると、地面よりずっと冷たい物のようにふるまうのです（どれくらい冷たいかは、空気の湿り気で変わります）。
+
+たとえば、夜空を \qty{-20}{\celsius}（\qty{253}{K}）の黒体とみなすと、\qty{0}{\celsius}・放射率0.95の屋根は、⑥の「広い部屋の中の小さな物」と同じ考えで、1 m$^2$ あたり $0.95\times5.67\times10^{-8}\times(273^4-253^4)\approx\qty{79}{W}$ を失います。まわりの空気から対流で入る熱がこれより小さいと、屋根は気温より低く冷え、霜がおりるのです。この「放射冷却」を昼間にも起こせるように、太陽の光はよく反射し、大気の窓の波長の赤外線はよく出す塗料やフィルムの研究が進んでいます。
+\end{column}
+
+\begin{phsaki}{光の粒と、ガスの放射}
+この章では、黒体の光の分布（プランクの式）を「測定に合う式」として使いました。この式は、光がとびとびのエネルギーの粒（光子）として出入りすると考えると導けます。1900年にプランクがこの考えにたどりついたことが、量子力学の始まりになりました。物理シリーズの『原子』（原-2）で学びます。
+
+また、この章では、面と面の間の空気は光を吸わないとしました。ところが、ボイラーの中の燃焼ガスや大気のように、水蒸気や二酸化炭素を多くふくむ厚い気体の層は、特定の波長の赤外線を強く吸い、出します。ガスの放射、雲や火炎の中の放射の計算は、放射伝熱の専門の本で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 温度 \qty{300}{K} と \qty{600}{K} の黒体の表面 \qty{1}{m^2} から出る放射の強さを、それぞれ求めましょう。何倍ですか（\nobreak\bkreidairef{1}\nobreak）。
+\bkpans{$5.67\times10^{-8}\times300^4\approx\qty{459}{W/m^2}$、$5.67\times10^{-8}\times600^4\approx\qty{7350}{W/m^2}$。16倍}
+\bkproblem \qty{1500}{K} に熱した鉄が出す光の、いちばん強い波長を求めましょう（\nobreak\bkreidairef{4}\nobreak）。
+\bkpans{$2898\div1500\approx\qty{1.9}{\micro m}$（赤外線）}
+\bkproblem 放射率0.90、表面積 \qty{0.50}{m^2} の \qty{80}{\celsius} の板が、壁の温度が \qty{20}{\celsius} の広い部屋の中にあります。板が放射で失う熱の流れを求めましょう（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{$353.15^4\approx1.555\times10^{10}$、$293.15^4\approx0.739\times10^{10}$、差は $0.817\times10^{10}$。$0.90\times5.67\times10^{-8}\times0.50$ $\times0.817\times10^{10}\approx\qty{210}{W}$}
+\bkproblem 大きな平行な2枚の板（\qty{400}{K} と \qty{300}{K}）の間で、1 m$^2$ あたりに放射で移る熱を、(1) 放射率がどちらも0.90のとき、(2) 片方が0.90・もう片方が0.10のときで求めましょう（\nobreak\bkreidairef{6}\nobreak）。
+\bkpans{$\sigma(400^4-300^4)\approx\qty{992}{W/m^2}$。(1) 分母 $1.111+1.111-1=1.222$ で約 \qty{810}{W/m^2}　(2) 分母 $1.111+10-1=10.11$ で約 \qty{98}{W/m^2}}
+\bkproblem 熱い流体 80→\qty{40}{\celsius}、冷たい流体 10→\qty{30}{\celsius} の向流の熱交換器の、対数平均温度差を求めましょう（\nobreak\bkreidairef{9}\nobreak）。
+\bkpans{$\Delta T_1=80-30=50$、$\Delta T_2=40-10=30$。$20\div\ln(5/3)=20\div0.511\approx\qty{39}{K}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 人工衛星の多層断熱材を、\qty{300}{K} と \qty{100}{K} の2枚の大きな平行な板の間に、うすい板を10枚入れたものとみなします。すべての面の放射率を0.030として、1 m$^2$ あたりに放射で移る熱を求めましょう。しゃへい板がないときとくらべましょう（\nobreak\bkreidairef{6}\nobreak）。
+\bkpans{すき間は11。1つのすき間の分母 $2\div0.030-1\approx65.7$、合計 $11\times65.7\approx722$。$\sigma(300^4-100^4)\approx\qty{454}{W/m^2}$ なので、$454\div722\approx\qty{0.63}{W/m^2}$。板なし（分母65.7）は約 \qty{6.9}{W/m^2} で、約11分の1}
+\bkproblem 熱い水 \qty{0.10}{kg/s}（\qty{80}{\celsius}）と冷たい水 \qty{0.20}{kg/s}（\qty{15}{\celsius}）を、面積 \qty{1.5}{m^2}・熱通過率 \qty{800}{W/(m^2.K)} の向流の熱交換器に流します。温度効率、熱の流れ、2つの水の出口の温度を求めましょう（\nobreak\bkreidairef{10}\nobreak・\bkreidairef{11}\nobreak）。
+\bkpans{$C_{\mathrm h}=420$、$C_{\mathrm c}=840$ W/K、$C_{\mathrm r}=0.5$、NTU $=800\times1.5\div420\approx2.86$。$x=e^{-1.43}\approx0.240$、$\eta_{\mathrm T}=0.760\div0.880\approx0.86$。$\dot Q\approx0.86\times420\times65\approx\qty{23.6}{kW}$。熱い水の出口 約 \qty{24}{\celsius}、冷たい水の出口 約 \qty{43}{\celsius}}
+\bkproblem ⑦の大気の層のモデルで、地面の温度が \qty{288}{K} になるのは、大気が地面の赤外線の何割を吸うときですか。また、吸う割合が0.80に増えると、地面の温度は何 K になりますか。つり合いの温度 $T_{\mathrm e}$ は \qty{255}{K} とします（⑦・\nobreak\bkreidairef{3}\nobreak）。
+\bkpans{$(288/255)^4\approx1.627=2/(2-f)$ より $2-f\approx1.229$、$f\approx0.77$（約8割）。$f=0.80$ では $(2/1.2)^{1/4}\approx1.136$、$255\times1.136\approx\qty{290}{K}$（約 \qty{2}{K} 上がる）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 物が出す放射の強さ $\sigma T^4$ と、いちばん強い波長を計算できる。\bkfurref{ph:熱-13:sec2}
+\item 放射率と形態係数を使って、2つの面の間で放射で移る熱を計算できる。\bkfurref{ph:熱-13:sec6}
+\item 対数平均温度差と温度効率で、熱交換器の熱の量と大きさを求められる。\bkfurref{ph:熱-13:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{伝導・対流・放射の3つがそろったね。次の熱-14 では、目に見えない分子の動きから、「温度とは何か」を考えるよ。}

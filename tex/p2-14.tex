@@ -1,0 +1,948 @@
+%% 熱-14 温度の正体：気体分子運動論（第22回編集委員会 物理第2巻：組 熱W7）
+%% 記号（この章の中だけの分け方。巻全体は計画書 C-1）：
+%%   ボルツマン定数 k_B（いつも添字 B。この章には熱伝導率 k も出る）、アボガドロ定数 N_A、モル気体定数 R＝N_A k_B、
+%%   分子1個の質量 m、分子の数 N、物質量 n、数密度 n_V（＝N/V。物質量 n とぶつけない）、モル質量 M、
+%%   分子の速度 (v_x, v_y, v_z)・速さ v、二乗平均 ⟨v^2⟩、二乗平均の速さ √⟨v^2⟩、平均の速さ v-bar、いちばん多い速さ v_p、
+%%   速度の分布 f(v_x)、速さの分布 F(v)、平均自由行程 λ、分子の直径 d、粘度 μ、熱伝導率 k、拡散係数 D、
+%%   定積比熱 c_v（1 kg あたり）、定積モル比熱 C_V、比熱比 γ、固体のばね定数 k_s。
+%%   積分の文字 a は ∫x^n e^(-a x^2) dx だけで使う（この章では音速を文字で書かない）。
+%%   温度 T はかならず K。
+%% 数値はすべて Python で確かめた：checks/物理第2巻/熱-14/c14.py（出力 c14_out.txt）、sim.py（出力 sim_out.txt。本文の出力はそのまま写した）。
+%% 公式の持ち主：pV＝(1/3)Nm⟨v^2⟩・(1/2)m⟨v^2⟩＝(3/2)k_B T・√⟨v^2⟩＝√(3RT/M)（N34）、U＝(3/2)nRT（N35）、γ の理由（N33）、
+%%   平均自由行程（N41）、マクスウェル分布・等分配・輸送係数の分子論（N56）はこの章。pV＝nRT・C_V の値は熱-3（④）。
+%%   ボルツマン分布の導き方は熱-15 ⑥（ここでは結果だけを名前で予告）。数学にない ∫x^n e^(-a x^2) dx と誤差関数はこの章の⑤で作る。
+%% 第1巻との約束：力-14（p1-14.tex 366行）「気体は分子が層の間を行き来して運動量を運ぶこと。熱-14」→ ⑧と例題8で果たす。
+%%   第1巻巻末の記号カード「k：ボルツマン定数（熱-14）」→ この章では k_B と添字つきで書く（記号カード）。
+%% 第3巻との境目：分子の平均の速さ（20 ℃の窒素 471 m/s）と音の速さ（343 m/s）の比 約0.73 を③で書く（波-9 ② が指す）。
+%% 出典：
+%%   k_B＝1.380649×10^-23 J/K、N_A＝6.02214076×10^23 /mol：2019年の SI で決めた値（BIPM, SI Brochure 9th ed.）。R＝N_A k_B＝8.314 J/(mol·K)。
+%%   クラウジウス 1857年（気体分子運動論の論文）・1858年（平均自由行程）。マクスウェル 1860年（速さの分布、粘度が圧力によらないこと）、
+%%   1866年（粘度の測定で確かめた）。ボルツマン 1872年（分布へ近づくこと）。ロシュミット 1865年（分子の大きさの見積もり）。
+%%   ブラウン 1827年（花粉から出た小さな粒の動き）。アインシュタイン 1905年。ペラン 1908〜1909年の実験、1926年ノーベル物理学賞。
+%%   デュロン・プティ 1819年。グラハム（グレアム）の法則 1846年ごろ。アボガドロ 1811年。
+%%   空気の粘度 1.85×10^-5 Pa·s・熱伝導率 0.026 W/(m·K)（300 K、1気圧）：CoolProp 8.0 で計算（第1巻巻末の 0.0181 mPa·s は 20 ℃の値）。
+%%   空気の分子の直径 0.37 nm：粘度から求めた有効な直径の目安（窒素の動力学的な直径 0.364 nm）。
+%%   気体の定積モル比熱（25 ℃付近）：He・Ar 12.5、N2 20.8、O2 21.1、CO2 28.9 J/(mol·K) は便覧の C_p から R を引いた目安。
+%%   鉄の比熱 0.449 J/(g·K)、銅 0.385、アルミニウム 0.897（25 ℃。理科年表・CRC Handbook の値）。
+%%   ウラン濃縮：天然ウランの U-235 は約0.72 %、軽水炉の燃料は3〜5 %。
+\makeatletter
+% 分子（小さな球）  \qxomol{(x,y)}{色}
+\newcommand\qxomol[2]{\filldraw[fill=#2!45, draw=#2!70!black, line width=0.5pt] #1 circle (1.6);}
+\makeatother
+\tikzset{qxo lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxo v/.style={-{Stealth[length=3.2pt, width=3pt]}, line width=0.9pt, bkBlue!80!black},
+  qxo f/.style={-{Stealth[length=3.8pt, width=3.4pt]}, line width=1.2pt, bkRed!80!black},
+  qxo dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{14}{温度の正体：\\気体分子運動論}{空気の分子は、どれくらいの速さで飛んでいる？}{\bklevelrange{3}{4}}{温度の正体：気体分子運動論}
+\bkmichishirube{3-14,3-17,5-16,8-6,力-3,力-14,熱-3}{熱-15,波-9,原-6}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 分子が壁にぶつかる力積から、気体の圧力と温度の意味を説明できる。
+\item \bklevel{3}\enspace 気体の内部エネルギーと比熱を、分子の運動から計算できる。
+\item \bklevel{4}\enspace 速さの分布と平均自由行程から、粘度・熱伝導率・拡散を見積もれる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$pV=\frac{1}{3}Nm\langle v^2\rangle$（分子の運動と圧力）}{高校物理}{ph:熱-14:press}
+\phk{$\frac{1}{2}m\langle v^2\rangle=\frac{3}{2}k_{\mathrm B}T$、$\sqrt{\langle v^2\rangle}=\sqrt{3RT/M}$}{高校物理}{ph:熱-14:temp}
+\phk{$U=\frac{3}{2}nRT$、$C_V=\frac{3}{2}R$（単原子分子）}{高校物理}{ph:熱-14:U}
+\phk{比熱比 $\gamma=\frac{5}{3}$・$\frac{7}{5}$ になるわけ}{高校物理}{ph:熱-14:gamma}
+\phk{平均自由行程 $\lambda=1/(\sqrt2\,\pi d^2n_V)$}{高校物理（発展）}{ph:熱-14:mfp}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.62\linewidth}\raggedright
+まわりの空気は、目に見えない小さな分子の集まりで、分子はたえず飛びまわっています。その速さはどれくらいでしょう。自転車くらい？　新幹線くらい？　それとも、もっと速い？
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\linewidth}\centering
+\begin{tikzpicture}[x=0.7mm, y=0.7mm]
+  \draw[bkInk, line width=0.7pt, rounded corners=1mm] (0,0) rectangle (42,28);
+  \foreach \x/\y/\a in {6/6/30, 15/20/200, 25/9/120, 34/22/250, 30/16/340, 10/14/80, 20/4/10, 37/7/150}{
+    \qxomol{(\x,\y)}{bkBlue}
+    \draw[qxo v] (\x,\y) ++(\a:2) -- ++(\a:5);}
+  \node[font=\sffamily\bfseries\large, text=bkGray] at (46,24) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-1 から熱-13 までは、温度・熱・圧力を、温度計や圧力計で測る「目に見える量」として扱ってきました。この章では、気体を「とても小さな分子がたくさん飛びまわっているもの」と考えて、その運動から、圧力とは何か、温度とは何かを導きます。力学（第1巻）の運動量と力積が、そのまま使えます。これを\textbf{気体分子運動論}といいます。\bkidx{きたいぶんしうんどうろん}{気体分子運動論}
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[においは、どれくらいの速さで広がる？]
+\textbf{用意するもの}\par
+香水（またはお酢・コーヒーなど、においの強い物）、ストップウォッチ、メジャー、扇風機
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 窓とドアを閉めたへやで、1人が香水をハンカチに1滴たらす。
+\item 1 m、2 m、3 m はなれた所の人が、においがしたらすぐ手をあげる。たらしてからの時間を記録する。
+\item 扇風機で、においの物から人のほうへ弱い風を送り、もう一度測る。何秒くらい変わったかな？
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent 分子が数百 m/s で飛ぶのに、においは何秒もかかって届きます。そのわけは⑨で説明します。
+
+\begin{omoidasou}
+\bkrecall{力-3}{力積＝運動量の変化。$F\Delta t=mv'-mv$。はね返ると、運動量の変化は2倍。}
+\bkrecall{力-4}{運動エネルギー $\tfrac{1}{2}mv^2$。ばねの位置エネルギー $\tfrac{1}{2}k_{\mathrm s}x^2$。}
+\bkrecall{熱-3}{理想気体の状態方程式 $pV=nRT$。定積モル比熱 $C_V$（測った値）、比熱比 $\gamma=C_p/C_V$。}
+\bkrecall{力-14}{ニュートンの粘性の法則 $\tau=\mu\,\dd u/\dd y$。$\mu$ は粘度。}
+\bkrecall{3-17}{たくさんの偶然を足すと、つりがね形の正規分布になる。}
+\bkrecall{5-16}{置換積分と部分積分。$\int f\,g'\,\dd x=fg-\int f'g\,\dd x$。}
+\bkrecall{8-6}{ガウス積分 $\int_{-\infty}^{\infty}e^{-x^2}\dd x=\sqrt\pi$（8-6⑦のもっと知りたい）。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{分子の大きさと数}
+
+\leavevmode\label{ph:熱-14:sec1}\noindent\textbf{1 mol の中の分子の数}\par\nobreak
+物質 \qty{1}{mol} には、\textbf{アボガドロ定数} $N_{\mathrm A}=6.02214076\times10^{23}$\,/mol 個の分子がふくまれます。この値は、2019年から国際単位系（SI）で「この数」と決められた値です。分子1個あたりの気体定数を\textbf{ボルツマン定数} $k_{\mathrm B}$ といい、これも決められた値です。\bkidx{ぼるつまんていすう}{ボルツマン定数}
+\[ k_{\mathrm B}=1.380649\times10^{-23}\ \mathrm{J/K},\qquad R=N_{\mathrm A}k_{\mathrm B}=\qty{8.314}{J/(mol.K)} \]
+$N$ 個の分子は $n=N/N_{\mathrm A}$〔mol〕なので、熱-3 の状態方程式 $pV=nRT$ は
+\pheq{pV=Nk_{\mathrm B}T}{J ＝ 個 × J/K × K}
+とも書けます。この本では、熱伝導率の $k$ とまちがえないように、ボルツマン定数は必ず添字をつけて $k_{\mathrm B}$ と書きます。
+
+\Needspace{5\baselineskip}\noindent\textbf{1 m$^3$ に何個？}\par\nobreak
+1 m$^3$ あたりの分子の数を\textbf{数密度} $n_V$ といいます（物質量の $n$ と区別するため、添字 $V$ をつけます）。上の式から $n_V=N/V=p/(k_{\mathrm B}T)$ です。1気圧（\qty{101325}{Pa}）・\qty{20}{\celsius}（\qty{293.15}{K}）の空気では
+\[ n_V=\frac{\num{101325}}{1.380649\times10^{-23}\times293.15}\approx2.5\times10^{25}\ \text{個/m}^3 \]
+です（\nobreak\bkreidairef{2}\nobreak）。1 cm$^3$（角砂糖くらい）の中にも $2.5\times10^{19}$ 個、つまり2500京個もの分子があります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 気体
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (44,30);
+  \foreach \x/\y in {4/5,14/3,25/6,36/4,8/15,19/13,31/16,40/14,3/25,13/24,24/26,35/25,42/27}{\fill[bkBlue!70] (\x,\y) circle (0.45);}
+  \node[qxo lab, anchor=north] at (22,-1.5) {気体：間は約 \qty{3.4}{nm}};
+  % 液体
+  \draw[bkInk, line width=0.6pt] (66,0) rectangle (110,30);
+  \foreach \i in {0,...,9}{\foreach \j in {0,...,7}{\fill[bkBlue!70] ({70+\i*4+mod(\j,2)*1.2},{2.4+\j*3.6}) circle (1.5);}}
+  \node[qxo lab, anchor=north] at (88,-1.5) {水（液体）：ほとんどすき間がない};
+\end{tikzpicture}
+\bkfigcaption{気体と液体の分子の混み具合（大きさと間かくの比を、だいたい合わせてかいた）。気体の分子は、自分の大きさ（約 \qty{0.37}{nm}）の約10倍ずつはなれている。}
+\label{ph:熱-14:fig-mitsudo}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{分子と分子の間かく}\par\nobreak
+1個の分子が占める体積は $1/n_V$ です。それを立方体と考えると、1辺 $(1/n_V)^{1/3}\approx\qty{3.4}{nm}$ で、これが分子と分子のおよその間かくです（\qty{1}{nm}＝$10^{-9}$\,m）。空気の分子（窒素・酸素）の直径は約 \qty{0.37}{nm} なので、間かくは直径の約10倍です（図\ref{ph:熱-14:fig-mitsudo}）。気体の体積のほとんどは、何もない空間なのです。水（液体）では、\qty{1}{mol}（約 \qty{18}{cm^3}）に同じ数の分子がつまっているので、間かくは約 \qty{0.31}{nm} で、分子どうしがほとんどくっついています。
+
+\bksubsection{2}{壁が受ける力積から、圧力を導く}
+
+\leavevmode\label{ph:熱-14:sec2}風船がふくらんでいるのは、中の空気の分子が、内側から風船のゴムに次々とぶつかっているからです。1個1個の分子がぶつかる力は小さくても、1秒に数えきれないほどぶつかるので、ならすと一定の力（圧力）になります。この力を、力-3 の力積で計算しましょう。
+
+\begin{phmodel}[気体分子運動論の基本のモデル]
+\phignore{分子の大きさ（点とみなす）。分子どうしが引き合う力。重力。}
+\phassume{分子は同じ質量 $m$ の小さな球で、壁と弾性衝突する（速さを失わずにはね返る）。分子の向きはばらばらで、どの向きも同じ。分子の数はとても多い。}
+\phlimit{圧力がとても高いとき、温度が低く液体になりかけているとき（分子の大きさや引き合う力が効く：熱-10 のファンデルワールスの式）。}
+\end{phmodel}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!6] (0,0) rectangle (50,30);
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (50,30);
+  \fill[bkGray!40] (50,0) rectangle (53,30);
+  \draw[bkInk, line width=0.7pt] (50,0) rectangle (53,30);
+  \node[qxo lab, anchor=west, align=left] at (55,25) {面積 $A$ の壁};
+  \qxomol{(20,14)}{bkBlue}
+  \draw[qxo v] (21.8,14.8) -- (32,19.5);
+  \node[qxo lab, anchor=south] at (27,18.5) {$\vec v$};
+  \draw[qxo v, bkOrange!85!black] (21.8,14) -- (32,14);
+  \node[qxo lab, anchor=north] at (27,13) {$v_x$};
+  \draw[bkGray, dashed, line width=0.5pt] (32,19.5) -- (50,27.8) -- (45.2,30);
+  \draw[qxo dim] (0,-4) -- (50,-4);
+  \node[qxo lab, anchor=north] at (25,-4.6) {長さ $L$};
+  % 拡大
+  \begin{scope}[shift={(78,4)}]
+    \fill[bkGray!40] (20,0) rectangle (23,22);
+    \draw[bkInk, line width=0.7pt] (20,0) rectangle (23,22);
+    \qxomol{(12,15)}{bkBlue}
+    \draw[qxo v] (0,15) -- (10,15);
+    \node[qxo lab, anchor=south] at (5,15.8) {$+mv_x$};
+    \qxomol{(12,6)}{bkBlue}
+    \draw[qxo v] (10,6) -- (0,6);
+    \node[qxo lab, anchor=north] at (5,5.2) {$-mv_x$};
+    \node[qxo lab, anchor=north] at (11,-1) {はね返ると $2mv_x$ 変わる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{長さ $L$ の箱の中の分子。右の壁にぶつかると、$x$ の向きの速度が $+v_x$ から $-v_x$ に変わる（$y$・$z$ の向きは変わらない）。}
+\label{ph:熱-14:fig-kabe}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{1個の分子が、1回ぶつかるとき}\par\nobreak
+図\ref{ph:熱-14:fig-kabe}のように、1辺 $L$ の立方体の箱に、分子が1個入っています。速度の $x$ 成分を $v_x$ とします。右の壁（面積 $A=L^2$）にぶつかると、$x$ 成分は $+v_x$ から $-v_x$ になり、運動量は $mv_x-(-mv_x)=2mv_x$ だけ変わります。運動量の変化は力積に等しい（力-3）ので、壁は分子に $2mv_x$ の力積を与え、作用・反作用で、分子は壁に \textbf{$2mv_x$ の力積}を与えます。
+
+\Needspace{5\baselineskip}\noindent\textbf{1秒あたりに何回ぶつかる？}\par\nobreak
+分子は右の壁ではね返ってから、左の壁ではね返り、また右の壁にもどってきます。$x$ の向きに往復 $2L$ を、速さ $v_x$ で動くので、1往復にかかる時間は $2L/v_x$、1秒あたりにぶつかる回数は $v_x/(2L)$ 回です。だから、1個の分子が右の壁におよぼす、時間でならした力は
+\[ \text{力}=\text{1回の力積}\times\text{1秒の回数}=2mv_x\times\frac{v_x}{2L}=\frac{mv_x^2}{L} \]
+です（1秒あたりの力積が、ならした力です）。
+
+\Needspace{5\baselineskip}\noindent\textbf{$N$ 個の分子をたし合わせる}\par\nobreak
+箱の中の $N$ 個の分子の $v_x^2$ はばらばらですが、その平均を $\langle v_x^2\rangle$ と書きます（$\langle\ \rangle$ は「すべての分子の平均」のしるし）。$N$ 個分の力は $Nm\langle v_x^2\rangle/L$ で、圧力はこれを面積 $L^2$ でわって
+\[ p=\frac{Nm\langle v_x^2\rangle}{L^3}=\frac{Nm\langle v_x^2\rangle}{V} \]
+です（$V=L^3$ は箱の体積）。
+
+\Needspace{5\baselineskip}\noindent\textbf{向きはばらばら}\par\nobreak
+速さの2乗は、三平方の定理（4-13）で $v^2=v_x^2+v_y^2+v_z^2$ です。分子の向きはばらばらで、$x$・$y$・$z$ のどの向きも同じなので、平均は3つとも等しく、$\langle v_x^2\rangle=\langle v_y^2\rangle=\langle v_z^2\rangle=\tfrac13\langle v^2\rangle$ です。これを入れると
+\pheq{pV=\frac{1}{3}Nm\langle v^2\rangle}{J ＝ 個 × kg × m$^2$/s$^2$}
+\label{ph:熱-14:press}が導けました。$Nm$ は気体全体の質量なので、密度 $\rho=Nm/V$ を使うと $p=\tfrac13\rho\langle v^2\rangle$ とも書けます。
+
+\begin{phyomi}[$pV=\frac{1}{3}Nm\langle v^2\rangle$]
+「圧力×体積は、分子の数×質量×速さの2乗の平均の $\tfrac13$」。$\tfrac13$ は、3つの向きのうち、壁に向かう1つの向きの分だけが圧力になるからです。分子が多いほど、重いほど、速いほど、圧力は大きくなります。
+\end{phyomi}
+
+\begin{seikaku}
+分子どうしがぶつかっても、この式は変わりません。2つの分子がぶつかると、それぞれの速度は変わりますが、2つの運動量の和は変わらない（運動量保存：力-3）ので、壁へ運ばれてくる運動量の合計は同じだからです。また、箱が立方体でなくても、壁が平らでなくても、同じ式になります。箱の形によらない、気体そのものの性質なのです。
+\end{seikaku}
+
+\bksubsection{3}{温度は、分子の運動エネルギーの平均}
+
+\leavevmode\label{ph:熱-14:sec3}②で導いた $pV=\tfrac13Nm\langle v^2\rangle$ と、実験の法則 $pV=Nk_{\mathrm B}T$（①）をくらべます。左辺はどちらも $pV$ なので
+\[ \frac{1}{3}Nm\langle v^2\rangle=Nk_{\mathrm B}T \]
+です。両辺を $N$ でわり、$\tfrac32$ をかけて、運動エネルギーの形にすると
+\pheq{\frac{1}{2}m\langle v^2\rangle=\frac{3}{2}k_{\mathrm B}T}{J ＝ J/K × K}
+\label{ph:熱-14:temp}になります。左辺は、分子1個の\textbf{運動エネルギーの平均}です。\bkidx{ねつうんどう}{熱運動}
+
+\begin{phyomi}[$\frac{1}{2}m\langle v^2\rangle=\frac{3}{2}k_{\mathrm B}T$]
+「分子1個の運動エネルギーの平均は、絶対温度に比例する」。これが\textbf{温度の正体}です。温度計が示す温度は、気体の分子がどれだけ激しく飛びまわっているか（熱運動）を表していたのです。$T=0$（\qty{0}{K}）は、この運動エネルギーが0になる温度です。左辺には分子の種類（$m$）が入っていますが、右辺には入っていません。同じ温度なら、軽い分子も重い分子も、運動エネルギーの平均は同じです。
+\end{phyomi}
+
+\Needspace{5\baselineskip}\noindent\textbf{分子の速さ}\par\nobreak
+上の式を $\langle v^2\rangle$ について解き、平方根をとった値を\textbf{二乗平均の速さ}といいます。$m/k_{\mathrm B}$ の分母と分子に $N_{\mathrm A}$ をかけると、$N_{\mathrm A}m=M$（モル質量、kg/mol）、$N_{\mathrm A}k_{\mathrm B}=R$ なので
+\pheq{\sqrt{\langle v^2\rangle}=\sqrt{\frac{3k_{\mathrm B}T}{m}}=\sqrt{\frac{3RT}{M}}}{m/s ＝ $\sqrt{\text{J/kg}}$}
+です。$M$ は g/mol ではなく \textbf{kg/mol} で入れます（窒素は \qty{0.028}{kg/mol}）。
+
+\Needspace{5\baselineskip}\noindent\textbf{はてな？の答え}\par\nobreak
+\label{ph:熱-14:hatena}\bkhatenaref に答えます。\qty{20}{\celsius}（\qty{293.15}{K}）の窒素（$M=\qty{0.028}{kg/mol}$）では
+\[ \sqrt{\langle v^2\rangle}=\sqrt{\frac{3\times8.314\times293.15}{0.028}}\approx\qty{511}{m/s} \]
+です。⑤で求める平均の速さは約 \qty{471}{m/s}（時速約1700 km）で、新幹線（時速約300 km）の5倍以上、ジェット旅客機より速く、音の速さ（\qty{343}{m/s}）より速いのです（\nobreak\bkreidairef{1}\nobreak）。音は、空気の分子が押し合って伝わる波なので、分子の速さと同じくらい（平均の速さの約0.73倍）の速さになります。音の速さは物理シリーズの『波動』（波-9）でくわしく学びます。
+
+\begin{phbaisuru}{温度 $T$}
+速さは $\sqrt2\approx1.41$ 倍です。速さは絶対温度の平方根に比例します。速さを2倍にするには、温度を4倍にします（\qty{300}{K} → \qty{1200}{K}）。反対に、分子の質量 $M$ を4倍にすると、同じ温度で速さは半分になります。水素（\qty{0.002}{kg/mol}）の分子は、酸素（\qty{0.032}{kg/mol}、16倍重い）の分子の約4倍の速さで飛んでいます。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=1250, ymin=0, ymax=1100, xtick={0,300,600,900,1200}, ytick={0,250,500,750,1000}, xlabel={$T$（K）}, ylabel={$\sqrt{\langle v^2\rangle}$（m/s）}]
+  \addplot[bkcurve, domain=0:1240, samples=120] {sqrt(3*8.314*x/0.028)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(300,517) (1200,1034)};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:310,500) {\qty{300}{K}：\qty{517}{m/s}};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (axis cs:1190,640) {4倍の \qty{1200}{K}：2倍の \qty{1034}{m/s}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phmijika}[軽い分子ほど速く逃げる]
+ヘリウムの風船は、空気の風船より早くしぼみます。ヘリウムの原子は空気の分子の約7分の1の質量なので、同じ温度で約2.7倍の速さで飛び、ゴムのすき間から早くぬけ出すからです。小さな穴から気体がもれ出る速さは $\sqrt{M}$ に反比例します。これを\textbf{グレアムの法則}といいます（1846年ごろ）。
+\end{phmijika}
+
+\bksubsection{4}{内部エネルギーと比熱：エネルギー等分配}
+
+\leavevmode\label{ph:熱-14:sec4}\noindent\textbf{単原子分子の内部エネルギー}\par\nobreak
+ヘリウム・ネオン・アルゴンのように、1個の原子がそのまま飛んでいる気体を\textbf{単原子分子}の気体といいます。原子どうしは引き合わないので（②のモデル）、気体の内部エネルギー $U$ は、原子の運動エネルギーの合計です。
+\[ U=N\times\frac{1}{2}m\langle v^2\rangle=N\times\frac{3}{2}k_{\mathrm B}T \]
+$Nk_{\mathrm B}=nR$ なので
+\pheq{U=\frac{3}{2}nRT}{J ＝ mol × J/(mol·K) × K}
+\label{ph:熱-14:U}です。内部エネルギーは温度だけで決まり、体積によりません。熱-2 ⑥のジュールの自由膨張の実験で、理想気体の $U$ が温度だけで決まることを学びましたが、その理由がここにあります。
+
+体積を変えずに \qty{1}{mol} の温度を \qty{1}{K} 上げるのに要る熱が、定積モル比熱 $C_V$ です（熱-3 ④）。$U$ が $\tfrac32RT$ だけ増えるので
+\[ C_V=\frac{3}{2}R\approx\qty{12.5}{J/(mol.K)} \]
+です。熱-3 ④で「測った値」として使ったヘリウムやアルゴンの $C_V$ は、ちょうどこの値です。
+
+\Needspace{5\baselineskip}\noindent\textbf{2原子分子：回転の分も入る}\par\nobreak
+窒素や酸素は、2個の原子がつながった\textbf{2原子分子}です。分子は飛ぶだけでなく、くるくる回ります。$x$・$y$・$z$ の3つの向きの運動エネルギー $\tfrac12mv_x^2$・$\tfrac12mv_y^2$・$\tfrac12mv_z^2$ の平均は、③の $\tfrac32k_{\mathrm B}T$ を3つに分けて、それぞれ $\tfrac12k_{\mathrm B}T$ です。同じように、回転の運動エネルギーも、1つの回り方ごとに平均 $\tfrac12k_{\mathrm B}T$ になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 単原子
+  \qxomol{(10,14)}{bkBlue}
+  \draw[qxo v] (12,14) -- (20,14); \draw[qxo v] (10,16) -- (10,24); \draw[qxo v] (8.6,12.6) -- (4,8);
+  \node[qxo lab, anchor=north, align=center] at (11,4) {単原子分子\\飛ぶ向き3つ};
+  % 2原子
+  \begin{scope}[shift={(58,14)}]
+    \draw[bkInk, line width=1.2pt] (-5,0) -- (5,0);
+    \filldraw[fill=bkRed!45, draw=bkRed!70!black, line width=0.5pt] (-5,0) circle (2.3);
+    \filldraw[fill=bkRed!45, draw=bkRed!70!black, line width=0.5pt] (5,0) circle (2.3);
+    \draw[bkInk, dashed, line width=0.5pt] (-10,0) -- (10,0);
+    \draw[qxo v, bkOrange!85!black] (0,0) ++(25:7.5) arc (25:155:7.5);
+    \draw[qxo v, bkOrange!85!black] (-9,-1.8) arc (180:350:9 and 3);
+    \node[qxo lab, anchor=north, align=center] at (0,-10) {2原子分子\\飛ぶ向き3つ＋回り方2つ};
+    \node[qxo lab, anchor=west, align=left] at (16,2) {つないだ線のまわりの回転は\\数えない（せいかくに言うと）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{エネルギーをためる「入れ物」の数（自由度）。単原子分子は3つ、2原子分子は5つ。それぞれに平均 $\frac12k_{\mathrm B}T$ ずつ入る。}
+\label{ph:熱-14:fig-jiyudo}
+\end{bkfigure}
+
+2原子分子が回る回り方は、図\ref{ph:熱-14:fig-jiyudo}のように、つないだ線に直角な2つの軸のまわりの2つです。エネルギーの入れ物（\textbf{自由度}）は、飛ぶ3つと回る2つの合計5つで、内部エネルギーは $U=\tfrac52nRT$、$C_V=\tfrac52R\approx\qty{20.8}{J/(mol.K)}$ です。
+
+\Needspace{5\baselineskip}\noindent\textbf{エネルギー等分配の法則}\par\nobreak
+このように、「速さの2乗」や「ばねののびの2乗」の形で書けるエネルギーの入れ物1つごとに、平均 $\tfrac12k_{\mathrm B}T$ のエネルギーが分けられます。これを\textbf{エネルギー等分配の法則}といいます。\bkidx{えねるぎーとうぶんぱいのほうそく}{エネルギー等分配の法則}どの入れ物にも同じだけ分けられる理由は、⑤の速さの分布と、熱-15 のボルツマン分布で確かめられます。
+
+\Needspace{5\baselineskip}\noindent\textbf{比熱比 $\gamma$ のわけ}\par\nobreak
+\label{ph:熱-14:gamma}熱-3 ④のマイヤーの関係 $C_p=C_V+R$ を使うと
+\[ \text{単原子}：\ \gamma=\frac{C_p}{C_V}=\frac{\frac52R}{\frac32R}=\frac53\approx1.67,\qquad \text{2原子}：\ \gamma=\frac{\frac72R}{\frac52R}=\frac75=1.40 \]
+です。熱-3 で使った空気の $\gamma=1.40$ は、空気がほぼ2原子分子（窒素と酸素）だからです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=32mm] Q[c,m,wd=26mm] Q[c,m,wd=30mm] Q[c,m,wd=34mm]}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+物質 & 自由度 & 等分配の $C_V$〔J/(mol·K)〕 & 測った $C_V$〔J/(mol·K)〕 \\
+ヘリウム・アルゴン & 3 & 12.5 & 12.5 \\
+窒素・酸素 & 5 & 20.8 & 20.8・21.1 \\
+二酸化炭素 & 5（直線の形） & 20.8 & 28.9 \\
+鉄・銅（固体） & 6 & 24.9 & 25.1・24.4 \\
+\end{bktable}
+\bktabcaption{定積モル比熱（\qty{25}{\celsius}付近の目安。固体は定圧の値）。二酸化炭素は、分子の振動が少し加わるため大きい。}
+\label{ph:熱-14:tab-cv}
+\end{bkcenter}
+
+\Needspace{5\baselineskip}\noindent\textbf{固体の比熱：デュロン・プティの法則}\par\nobreak
+固体の原子は、決まった場所のまわりで、ばねにつながれたように振動しています。$x$・$y$・$z$ の3つの向きに、運動エネルギー（$\tfrac12mv_x^2$ など）とばねの位置エネルギー（$\tfrac12k_{\mathrm s}x^2$ など。力-4）があるので、入れ物は6つ。1 mol の内部エネルギーは $6\times\tfrac12RT=3RT$、モル比熱は
+\[ C=3R\approx\qty{24.9}{J/(mol.K)} \]
+です。多くの金属のモル比熱がほぼこの値になることは、1819年にデュロンとプティが実験で見つけていました。これを\textbf{デュロン・プティの法則}といいます（\nobreak\bkreidairef{4}\nobreak）。
+
+\begin{seikaku}
+2原子分子の「つないだ線のまわりの回転」と「2つの原子の間の振動」は、ふだんの温度では、なぜかエネルギーを受けとりません。また、固体の比熱は、温度を下げると3Rより小さくなり、\qty{0}{K} に近づくと0に近づきます。19世紀の物理学者たちは、等分配の法則がうまく合わないこの問題に、長い間なやみました。これは、分子の回転や振動のエネルギーが、とびとびの値しかとれないこと（量子力学）で説明されます。熱-15 ⑧で固体の比熱を、物理シリーズの『原子』（原-6）でとびとびのエネルギーを学びます。
+\end{seikaku}
+
+\bksubsection{5}{マクスウェルの速さの分布}
+
+\leavevmode\label{ph:熱-14:sec5}③の $\sqrt{\langle v^2\rangle}$ は「平均」の速さです。でも、実際の分子は、ゆっくりなものから、とても速いものまでいろいろです。どの速さの分子が、どれだけの割合いるのでしょう。1860年、マクスウェルは、次のように考えて、その分布を導きました。
+
+\Needspace{5\baselineskip}\noindent\textbf{速度の $x$ 成分の分布}\par\nobreak
+速度の $x$ 成分が $v_x$ と $v_x+\dd v_x$ の間にある分子の割合を $f(v_x)\,\dd v_x$ と書きます。$f$ を\textbf{分布の関数}といいます（3-17 の正規分布の曲線と同じく、曲線の下の面積が割合です）。マクスウェルは、2つのことを仮定しました。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item $x$・$y$・$z$ の3つの成分は、たがいに関係なく決まる。だから、速度が $(v_x,v_y,v_z)$ のあたりにある割合は、3つの割合のかけ算 $f(v_x)f(v_y)f(v_z)$。
+\item 向きはばらばらなので、この割合は速さ $v$ だけで、つまり $v^2=v_x^2+v_y^2+v_z^2$ だけで決まる。
+\end{enumerate}
+かけ算が「2乗のたし算」だけで決まる関数は、指数関数です。$f(v_x)=Ce^{-av_x^2}$ とおくと
+\[ f(v_x)f(v_y)f(v_z)=C^3e^{-a(v_x^2+v_y^2+v_z^2)}=C^3e^{-av^2} \]
+で、たしかに $v^2$ だけで決まります（$e^{p}e^{q}=e^{p+q}$：3-11）。$a$ は正の定数（$a<0$ だと、速い分子ほど多くなってしまう）、$C$ は全体の割合を1にする定数です。
+\pheq{f(v_x)=Ce^{-av_x^2}}{s/m}
+\label{ph:熱-14:maxwell1}これは、3-17 の正規分布と同じ、つりがね形の分布です。
+
+\Needspace{5\baselineskip}\noindent\textbf{道具：$\int x^ne^{-ax^2}\dd x$ を作る}\par\nobreak
+$C$ と $a$ を決めるには、次の積分が要ります。数学の本（8-6⑦）では $n=0$ のガウス積分だけを作ったので、ここで $n=1,2,3,4$ に広げます。
+\[ I_n=\int_0^{\infty}x^ne^{-ax^2}\,\dd x\qquad(a>0) \]
+\begin{bkhenkei}[0.5]
+I_0=\frac{1}{2}\sqrt{\frac{\pi}{a}} & ガウス積分（8-6⑦）の半分（$0$ から $\infty$ まで）で、$x=u/\sqrt a$ と置換（5-16⑤） \\
+I_1=\int_0^{\infty}xe^{-ax^2}\dd x=\frac{1}{2a} & $u=ax^2$ と置換（$\dd u=2ax\,\dd x$）。$\frac{1}{2a}\int_0^{\infty}e^{-u}\dd u=\frac{1}{2a}$ \\
+I_{n+2}=\frac{n+1}{2a}\,I_n & 部分積分（5-16⑦）。下の式 \\
+I_2=\frac{1}{4a}\sqrt{\frac{\pi}{a}},\quad I_4=\frac{3}{8a^2}\sqrt{\frac{\pi}{a}} & $n=0$、$n=2$ を入れる \\
+I_3=\frac{1}{2a^2} & $n=1$ を入れる \\
+\end{bkhenkei}
+3行めの部分積分は、$x^{n+2}e^{-ax^2}=x^{n+1}\cdot(xe^{-ax^2})$ と分け、$xe^{-ax^2}$ の原始関数が $-\frac{1}{2a}e^{-ax^2}$ であることを使います。
+\[ I_{n+2}=\Bigl[x^{n+1}\Bigl(-\frac{1}{2a}e^{-ax^2}\Bigr)\Bigr]_0^{\infty}+\frac{n+1}{2a}\int_0^{\infty}x^ne^{-ax^2}\dd x=0+\frac{n+1}{2a}I_n \]
+$[\ ]$ の中は、$x=0$ でも、$x\to\infty$ でも0です（$e^{-ax^2}$ は、どんな $x^{n+1}$ よりも速く0に近づく）。$a=1$ のとき、細い長方形の数値積分（5-10）でも、$I_0\approx0.8862$、$I_1=0.5$、$I_2\approx0.4431$、$I_3=0.5$、$I_4\approx0.6647$ となり、式の値と合います（\texttt{c14.py}）。
+
+\Needspace{5\baselineskip}\noindent\textbf{$C$ と $a$ を決める}\par\nobreak
+$f$ は $v_x$ の正と負で同じ形なので、$-\infty$ から $\infty$ までの積分は $0$ から $\infty$ までの2倍です。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 全体の割合は1：$2CI_0=C\sqrt{\pi/a}=1$ なので、$C=\sqrt{a/\pi}$。
+\item $v_x^2$ の平均は、③の $\tfrac12m\langle v_x^2\rangle=\tfrac12k_{\mathrm B}T$ から $k_{\mathrm B}T/m$。一方、分布から計算すると
+\[ \langle v_x^2\rangle=2CI_2=\sqrt{\frac{a}{\pi}}\times\frac{1}{2a}\sqrt{\frac{\pi}{a}}=\frac{1}{2a} \]
+なので、$1/(2a)=k_{\mathrm B}T/m$、$a=m/(2k_{\mathrm B}T)$。
+\end{enumerate}
+\pheq{f(v_x)=\sqrt{\frac{m}{2\pi k_{\mathrm B}T}}\;e^{-mv_x^2/(2k_{\mathrm B}T)}}{s/m}
+これは、平均0・標準偏差 $\sqrt{k_{\mathrm B}T/m}$ の正規分布です（3-14 の標準偏差 $\sigma$、3-17 の正規分布）。肩の $\tfrac12mv_x^2/(k_{\mathrm B}T)$ は「運動エネルギー÷$k_{\mathrm B}T$」です。$e^{-(\text{エネルギー})/(k_{\mathrm B}T)}$ の形の分布を\textbf{ボルツマン分布}といい、熱-15 ⑥で、場合の数を数えて一般に導きます。
+
+\Needspace{5\baselineskip}\noindent\textbf{速さの分布}\par\nobreak
+次に、速さ（向きは問わない）が $v$ と $v+\dd v$ の間にある分子の割合 $F(v)\,\dd v$ を求めます。速度を矢印で表して、その先の点を考えると、速さが $v$ と $v+\dd v$ の間の点は、半径 $v$・厚さ $\dd v$ のうすい球の殻の中にあります。殻の体積は $4\pi v^2\dd v$（球の表面積×厚さ）なので
+\pheq{F(v)=4\pi v^2\Bigl(\frac{m}{2\pi k_{\mathrm B}T}\Bigr)^{3/2}e^{-mv^2/(2k_{\mathrm B}T)}}{s/m}
+\label{ph:熱-14:maxwell}です。これを\textbf{マクスウェルの速さの分布}といいます。\bkidx{まくすうぇるのはやさのぶんぷ}{マクスウェルの速さの分布}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=116mm, height=56mm, xmin=0, xmax=2600, ymin=0, ymax=2.25, xtick={0,500,1000,1500,2000,2500}, ytick={0,0.5,1,1.5,2}, xlabel={速さ $v$（m/s）}, ylabel={$F(v)$（1/(km/s)）}]
+  \addplot[bkcurve, domain=0:2600, samples=150] {4/sqrt(pi)*x^2/421.99^3*exp(-(x/421.99)^2)*1000};
+  \addplot[bkcurve2, dashed, domain=0:2600, samples=150] {4/sqrt(pi)*x^2/770.45^3*exp(-(x/770.45)^2)*1000};
+  \addplot[bkcurve3, domain=0:2600, samples=150] {4/sqrt(pi)*x^2/1116.4^3*exp(-(x/1116.4)^2)*1000};
+  \draw[bkGray, line width=0.6pt] (axis cs:422,0) -- (axis cs:422,1.967);
+  \draw[bkGray, line width=0.6pt] (axis cs:476,0) -- (axis cs:476,1.93);
+  \draw[bkGray, line width=0.6pt] (axis cs:517,0) -- (axis cs:517,1.87);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (axis cs:560,2.05) {窒素 \qty{300}{K}（実線）\\縦の線は左から $v_{\mathrm p}$・$\bar v$・$\sqrt{\langle v^2\rangle}$};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:950,1.1) {窒素 \qty{1000}{K}（点線）};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:1550,0.62) {ヘリウム \qty{300}{K}};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{マクスウェルの速さの分布。曲線の下の面積は、どれも1（すべての分子）。温度が高いほど、分子が軽いほど、山は低く右へ広がる。}
+\label{ph:熱-14:fig-bunpu}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{3つの「代表の速さ」}\par\nobreak
+図\ref{ph:熱-14:fig-bunpu}の分布から、3つの速さが計算できます（$a=m/(2k_{\mathrm B}T)$ とおく）。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{いちばん多い速さ} $v_{\mathrm p}$：$v^2e^{-av^2}$ を微分して0とおくと $2v-2av^3=0$ なので $v_{\mathrm p}=1/\sqrt a=\sqrt{2k_{\mathrm B}T/m}$。
+\item \textbf{平均の速さ} $\bar v$：$\int_0^\infty vF(v)\,\dd v=4\pi(a/\pi)^{3/2}I_3$ を計算して $\bar v=\sqrt{8k_{\mathrm B}T/(\pi m)}$。
+\item \textbf{二乗平均の速さ}：$\int_0^\infty v^2F(v)\,\dd v=4\pi(a/\pi)^{3/2}I_4=3/(2a)$ で、$\sqrt{3k_{\mathrm B}T/m}$。③の値と合う。
+\end{enumerate}
+比は $v_{\mathrm p}:\bar v:\sqrt{\langle v^2\rangle}=1:1.128:1.225$ で、いつも同じです。\qty{20}{\celsius}の窒素では、417・471・\qty{511}{m/s} です（\nobreak\bkreidairef{1}\nobreak）。
+
+\Needspace{5\baselineskip}\noindent\textbf{道具：誤差関数}\par\nobreak
+「速さが○○より大きい分子は何\,\%？」に答えるには、つりがね形の曲線の、ある所から先の面積が要ります。$e^{-t^2}$ の原始関数は、知っている関数では書けない（8-6⑦）ので、新しい関数として名前をつけます。
+\pheq{\operatorname{erf}(x)=\frac{2}{\sqrt\pi}\int_0^xe^{-t^2}\,\dd t}{（単位なし）}
+これを\textbf{誤差関数}といいます（測定の誤差の分布を計算するために作られた関数です）。\bkidx{ごさかんすう}{誤差関数}$x\to\infty$ でガウス積分の半分 $\sqrt\pi/2$ になるので、$\operatorname{erf}(\infty)=1$ です。値は、細い長方形の数値積分（5-10）で計算できます。たとえば、$\operatorname{erf}(1)$ をはば0.1の長方形10本で計算すると0.8430で、正しい値0.8427に近い値です。表計算では \texttt{=ERF(1)}、Python では \texttt{math.erf(1)} で求まります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=20mm] *{6}{Q[c,m,wd=14mm]}}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+$x$ & 0.5 & 1.0 & 1.5 & 2.0 & 2.4 & 3.0 \\
+$\operatorname{erf}(x)$ & 0.5205 & 0.8427 & 0.9661 & 0.9953 & 0.99931 & 0.99998 \\
+\end{bktable}
+\bktabcaption{誤差関数の値。}
+\label{ph:熱-14:tab-erf}
+\end{bkcenter}
+
+速さが $v_{\mathrm p}$ の $x$ 倍より大きい分子の割合は、$F(v)$ を $xv_{\mathrm p}$ から $\infty$ まで積分して求めます。$u=v/v_{\mathrm p}$ とおくと $F$ は $\frac{4}{\sqrt\pi}u^2e^{-u^2}$ になり、$u^2e^{-u^2}=u\cdot(ue^{-u^2})$ として部分積分すると
+\pheq{\text{速さが}\ xv_{\mathrm p}\ \text{より大きい割合}=1-\operatorname{erf}(x)+\frac{2x}{\sqrt\pi}e^{-x^2}}{（単位なし）}
+\label{ph:熱-14:erf}です。$x=0$ なら1（全部）、$x$ が大きいと急に0に近づきます（\nobreak\bkreidairef{12}\nobreak）。
+
+\begin{phbaisuru}{温度 $T$}
+いちばん多い速さ $v_{\mathrm p}$ は $\sqrt2$ 倍になり、山は右へ動いて低くなります（面積はいつも1）。図\ref{ph:熱-14:fig-bunpu}の窒素 \qty{300}{K} と \qty{1000}{K} をくらべましょう。ある決まった速さ（たとえば \qty{2000}{m/s}）より速い分子の割合は、約400万倍にも増えます。化学反応は、速くぶつかる分子だけで起きることが多いので、温度を少し上げると反応が急に速くなるのです。
+\end{phbaisuru}
+
+\Needspace{5\baselineskip}\noindent\textbf{プログラム：ぶつかり合って、分布ができる}\par\nobreak
+はじめは全部の分子が同じ速さでも、ぶつかり合ううちにマクスウェルの分布になることを、プログラムで確かめましょう（1872年にボルツマンが理論で示しました）。簡単にするため、分子は平面の上を動くとし、でたらめに2つ選んでぶつけることをくり返します。1回の衝突では、2つの分子の運動量の和とエネルギーの和は変わらず、はね返る向きだけがでたらめに決まるとします。
+\begin{phcode}[Python]
+import random, math
+random.seed(1)
+N = 400                     \# 分子の数（平面の上を動く）
+vx = []; vy = []
+for i in range(N):          \# はじめは、みな速さ 1、向きはばらばら
+    a = random.uniform(0, 2 * math.pi)
+    vx.append(math.cos(a)); vy.append(math.sin(a))
+for k in range(20000):      \# 2つ選んでぶつける（弾性衝突）
+    i, j = random.sample(range(N), 2)
+    gx = (vx[i] + vx[j]) / 2    \# 重心の速度
+    gy = (vy[i] + vy[j]) / 2
+    u = math.hypot(vx[i] - vx[j], vy[i] - vy[j]) / 2
+    a = random.uniform(0, 2 * math.pi)   \# はね返る向き
+    vx[i] = gx + u * math.cos(a); vy[i] = gy + u * math.sin(a)
+    vx[j] = gx - u * math.cos(a); vy[j] = gy - u * math.sin(a)
+cnt = [0] * 6
+for i in range(N):
+    v = math.hypot(vx[i], vy[i])
+    cnt[min(int(v / 0.5), 5)] += 1
+for b in range(6):          \# 平面の分布の式とくらべる
+    v1, v2 = b * 0.5, b * 0.5 + 0.5
+    if b < 5:
+        th = N * (math.exp(-v1**2) - math.exp(-v2**2))
+    else:
+        th = N * math.exp(-v1**2)
+    print(v1, cnt[b], round(th))
+\end{phcode}
+\begin{phcodeout}
+0.0 87 88
+0.5 154 164
+1.0 122 105
+1.5 29 35
+2.0 7 7
+2.5 1 1
+\end{phcodeout}
+1列めは速さの区切り（0〜0.5、0.5〜1.0、…、2.5より上）、2列めは数えた分子の数、3列めは分布の式から計算した数です。はじめは400個全部が「1.0〜1.5」の区切りにいましたが、1個あたり平均100回ぶつかったあとには、式とよく合う分布になりました（\texttt{u} は、重心から見た2つの分子の速さ）。平面の上の分子の速さの分布は $2ve^{-v^2}$（速さの2乗の平均を1とした形）で、空間の $v^2e^{-v^2}$ のかわりに $v$ がかかります（球の殻のかわりに円の輪 $2\pi v\,\dd v$ を使うため）。
+
+\bksubsection{6}{分子は、どれだけ進んでぶつかる？：平均自由行程}
+
+\leavevmode\label{ph:熱-14:sec6}空気の分子は、ほかの分子にぶつかるまでに、平均でどれだけ進むでしょう。この長さを\textbf{平均自由行程} $\lambda$ といいます。\bkidx{へいきんじゆうこうてい}{平均自由行程}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!25] (0,-6) rectangle (90,6);
+  \draw[bkOrange!85!black, line width=0.6pt] (0,6) -- (90,6) (0,-6) -- (90,-6);
+  \draw[bkOrange!85!black, line width=0.6pt] (0,0) ellipse (1.5 and 6) (90,0) ellipse (1.5 and 6);
+  \qxomol{(0,0)}{bkRed}
+  \draw[qxo v, bkRed!80!black] (2,0) -- (12,0);
+  \foreach \x/\y in {22/3.5,41/-2.5,63/1.5,80/-4.5}{\qxomol{(\x,\y)}{bkBlue}}
+  \foreach \x/\y in {30/-10,52/-10.5,80/-10,15/-11}{\qxomol{(\x,\y)}{bkGray}}
+  \draw[qxo dim] (95,-6) -- (95,6);
+  \node[qxo lab, anchor=west] at (96,0) {$2d$};
+  \draw[qxo dim] (0,-15) -- (90,-15);
+  \node[qxo lab, anchor=north] at (45,-15.6) {1秒に進む長さ $\bar v$};
+  \node[qxo lab, anchor=south] at (45,6.6) {断面積 $\pi d^2$ の円柱の中の分子（青）とぶつかる};
+\end{tikzpicture}
+\bkfigcaption{平均自由行程の考え方。直径 $d$ の分子（赤）は、中心どうしが $d$ より近づく分子とぶつかる。だから、半径 $d$（断面積 $\pi d^2$）の円柱の中にいる分子の数が、ぶつかる回数になる。}
+\label{ph:熱-14:fig-mfp}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{円柱の中の分子を数える}\par\nobreak
+直径 $d$ の2つの分子は、中心どうしが $d$ より近づくとぶつかります。図\ref{ph:熱-14:fig-mfp}のように、1つの分子が長さ $l$ だけ進む間に、断面積 $\pi d^2$・長さ $l$ の円柱の中に中心がある分子と、1回ずつぶつかります。円柱の中の分子の数は $n_V\pi d^2l$ なので、これが1個になる長さが、ぶつかるまでの平均の長さです。まわりの分子も動いていることを考えると（せいかくに言うと）、
+\pheq{\lambda=\frac{1}{\sqrt2\,\pi d^2n_V}=\frac{k_{\mathrm B}T}{\sqrt2\,\pi d^2p}}{m ＝ 1/(m$^2$ × 1/m$^3$)}
+\label{ph:熱-14:mfp}です。2つめの形は、$n_V=p/(k_{\mathrm B}T)$（①）を入れました。\qty{300}{K}・1気圧の空気（$d=\qty{0.37}{nm}$）では $\lambda\approx\qty{67}{nm}$ で、分子の間かく（約 \qty{3.4}{nm}）の約20倍です（\nobreak\bkreidairef{6}\nobreak）。1秒にぶつかる回数は $\bar v/\lambda\approx\num{470}\div(6.7\times10^{-8})\approx7\times10^9$ 回、つまり1秒に70億回もぶつかっています。
+
+\begin{seikaku}
+$\sqrt2$ は、まわりの分子も動いていることから来ます。2つの分子の速度を $\vec v_1$、$\vec v_2$ とすると、たがいに近づく速さ（相対速度）$\vec v_1-\vec v_2$ の2乗の平均は $\langle v_1^2\rangle+\langle v_2^2\rangle=2\langle v^2\rangle$（向きがばらばらなので、$\vec v_1\cdot\vec v_2$ の平均は0）です。だから、相対速度は自分の速さの約 $\sqrt2$ 倍で、ぶつかる回数も $\sqrt2$ 倍、平均自由行程は $1/\sqrt2$ 倍になります（くわしい計算でも、平均の速さで $\sqrt2$ 倍になります）。
+\end{seikaku}
+
+\begin{phbaisuru}[半分]{圧力 $p$}
+$\lambda$ は圧力に反比例するので2倍になります。真空ポンプで圧力を下げていくと、平均自由行程はどんどん長くなります。
+\par\vspace{2pt}\centering
+\begin{bktable}{colspec={Q[l,m,wd=26mm] *{5}{Q[c,m,wd=14.5mm]}}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+圧力 $p$〔Pa〕 & \num{101325} & \num{1000} & 1 & $10^{-3}$ & $10^{-6}$ \\
+平均自由行程 $\lambda$ & \qty{67}{nm} & \qty{6.8}{\micro m} & \qty{6.8}{mm} & \qty{6.8}{m} & \qty{6.8}{km} \\
+\end{bktable}
+\end{phbaisuru}
+\noindent\qty{1}{Pa} より低い圧力では、$\lambda$ が装置の大きさ（数 cm〜数 m）と同じくらいになり、分子は、ほかの分子より先に壁にぶつかるようになります。半導体の工場の真空装置は、この性質を使って、分子をまっすぐ飛ばして膜をつけたり、けずったりしています（\nobreak\bkreidairef{7}\nobreak）。
+
+\bksubsection{7}{ブラウン運動：分子が見えた}
+
+\leavevmode\label{ph:熱-14:sec7}19世紀の終わりまで、分子や原子は「本当にあるかどうかわからない、計算に便利な考え」だと考える科学者もいました。分子は小さすぎて、直接見ることができなかったからです。
+
+1827年、植物学者のブラウンは、水にうかべた花粉から出てきた小さな粒を顕微鏡で見て、粒がたえず、でたらめに動き回ることを見つけました。生きていない物の粒でも同じでした。これを\textbf{ブラウン運動}といいます。\bkidx{ぶらうんうんどう}{ブラウン運動}1905年、アインシュタインは、この動きは、まわりの水の分子が四方八方から粒にぶつかり、そのぶつかり方が少しかたよるために起きると考え、粒が動く距離を計算しました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (56,34);
+  \draw[bkRed!80!black, line width=0.8pt] (28,17) -- (31,19) -- (29,23) -- (34,22) -- (36,26) -- (32,28) -- (35,31) -- (40,29) -- (38,24) -- (43,22) -- (41,17) -- (46,15) -- (44,10) -- (39,12) -- (36,8) -- (31,10) -- (33,14);
+  \filldraw[fill=bkRed!45, draw=bkRed!70!black] (28,17) circle (1.3);
+  \filldraw[fill=bkRed!20, draw=bkRed!70!black] (33,14) circle (1.3);
+  \node[qxo lab, anchor=north west] at (1,33) {顕微鏡で見た粒の動き};
+  \node[qxo lab, anchor=west, align=left] at (62,24) {一定の時間ごとの粒の位置を\\直線でつないだ図。};
+  \node[qxo lab, anchor=west, align=left] at (62,10) {動いた距離の2乗の平均は\\時間に比例する：$\langle x^2\rangle=2Dt$};
+\end{tikzpicture}
+\bkfigcaption{ブラウン運動。粒は、まわりの分子に押されて、でたらめに動く（ランダムウォーク）。}
+\label{ph:熱-14:fig-brown}
+\end{bkfigure}
+
+アインシュタインの結果は、粒が時間 $t$ の間に $x$ の向きに動く距離の2乗の平均が
+\pheq{\langle x^2\rangle=2Dt,\qquad D=\frac{k_{\mathrm B}T}{6\pi\mu r}}{m$^2$ ＝ m$^2$/s × s}
+になる、というものです。$D$ は粒の\textbf{拡散係数}、$r$ は粒の半径、$\mu$ は水の粘度です。距離ではなく「距離の2乗」が時間に比例するのは、でたらめな向きの小さな移動をたし合わせると、打ち消し合いながら少しずつ広がるからです（3-14⑤の「$n$ 回の平均で、ずれは $1/\sqrt n$」と同じしくみ）。たとえば、\qty{20}{\celsius}の水（$\mu=1.0\times10^{-3}$\,Pa·s）の中の直径 \qty{1}{\micro m} の粒では
+\[ D=\frac{1.38\times10^{-23}\times293}{6\pi\times1.0\times10^{-3}\times0.5\times10^{-6}}\approx4.3\times10^{-13}\ \mathrm{m^2/s} \]
+で、1秒間に $x$ の向きに $\sqrt{2\times4.3\times10^{-13}\times1}\approx\qty{0.93}{\micro m}$ ほど動きます。顕微鏡でよく見える動きです。
+
+1908〜1909年、ペランは顕微鏡でたくさんの粒の動きを測り、この式から $k_{\mathrm B}$、つまりアボガドロ定数 $N_{\mathrm A}=R/k_{\mathrm B}$ を求めました。その値は、まったく別の方法で求めた値とよく合いました。こうして、分子が本当にあることが、多くの科学者に認められたのです。ペランは1926年にノーベル物理学賞を受けました。
+
+\bksubsection{8}{気体のねばりと熱の伝わり方の正体}
+
+\leavevmode\label{ph:熱-14:sec8}力-14 では、空気の粘度は温度が上がると大きくなり、その原因は「分子が層の間を行き来して運動量を運ぶこと（熱-14）」と予告しました。ここで、その約束を果たします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!18] (0,14) rectangle (70,28);
+  \fill[bkBlue!6] (0,0) rectangle (70,14);
+  \draw[bkGray, dashed, line width=0.6pt] (0,14) -- (70,14);
+  \draw[qxo v, line width=1.4pt] (2,24) -- (22,24);
+  \node[qxo lab, anchor=west] at (23,24) {速い層};
+  \draw[qxo v, line width=1.4pt] (2,4) -- (10,4);
+  \node[qxo lab, anchor=west] at (11,4) {遅い層};
+  \qxomol{(46,22)}{bkRed}
+  \draw[qxo f, bkRed!80!black] (46,20.2) -- (50,8);
+  \qxomol{(58,6)}{bkBlue}
+  \draw[qxo f, bkBlue!80!black] (58,7.8) -- (62,20);
+  \draw[qxo dim] (74,4) -- (74,24);
+  \node[qxo lab, anchor=west] at (75,14) {約 $\lambda$};
+  \node[qxo lab, anchor=west, align=left] at (83,24) {速い層から来た分子は、\\遅い層を前へ押す};
+  \node[qxo lab, anchor=west, align=left] at (83,6) {遅い層から来た分子は、\\速い層を後ろへ引く};
+\end{tikzpicture}
+\bkfigcaption{気体の粘性のしくみ。層の間を行き来する分子が運動量を運び、速さの差をならそうとする。}
+\label{ph:熱-14:fig-nensei}
+\end{bkfigure}
+
+\Needspace{5\baselineskip}\noindent\textbf{運動量を運ぶ：粘度}\par\nobreak
+図\ref{ph:熱-14:fig-nensei}のように、上の層ほど速く（流れの速さ $u$）流れる気体を考えます。分子は熱運動で上下にも飛んでいて、平均自由行程 $\lambda$ くらい進むと、その場所の分子とぶつかって、運動量をやりとりします。上の速い層から下へ飛んできた分子は、流れの向きの運動量を多く持ちこんで、下の層を前へ押します。下の遅い層から上へ飛んだ分子は、上の層を後ろへ引きもどします。これが気体のねばり（粘性）です。
+
+上下に飛ぶ分子の数と速さを、ならして数えると（向きをならす計算は⑤の分布を使う。ここでは目安の形）
+\[ \tau=\frac{1}{3}\rho\bar v\lambda\,\frac{\dd u}{\dd y}\qquad\text{より}\qquad \mu\approx\frac{1}{3}\rho\bar v\lambda \]
+となります。力-14 のニュートンの粘性の法則 $\tau=\mu\,\dd u/\dd y$ とくらべて、粘度が分子の量で書けました。$\rho\bar v$ は1秒に1 m$^2$ を通りぬける分子の質量の目安、$\lambda$ は分子が運動量を運ぶ距離です。
+
+\Needspace{5\baselineskip}\noindent\textbf{粘度は、圧力によらない}\par\nobreak
+$\rho=n_Vm$、$\lambda=1/(\sqrt2\pi d^2n_V)$ を入れると、$n_V$ が消えて
+\pheq{\mu\approx\frac{1}{3}\rho\bar v\lambda=\frac{m\bar v}{3\sqrt2\,\pi d^2}}{Pa·s ＝ kg × m/s ÷ m$^2$}
+\label{ph:熱-14:nendo}となります。圧力を下げて気体をうすくすると、層の間を飛ぶ分子の数は減りますが、そのかわり1個の分子が運ぶ距離 $\lambda$ がのびて、ちょうど打ち消し合うのです。1860年にマクスウェルがこの意外な結果を導き、1866年に自分の実験で確かめました。また、$\bar v\propto\sqrt T$ なので、粘度は温度が上がると大きくなります。液体の粘度が温度で小さくなるのとは反対で、力-14 の表のとおりです（\nobreak\bkreidairef{8}\nobreak）。
+
+\Needspace{5\baselineskip}\noindent\textbf{熱を運ぶ・物を運ぶ}\par\nobreak
+同じ考えで、運ぶものを変えると、ほかの「ならす」性質も分子から導けます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] Q[l,m,wd=24mm] Q[c,m,wd=30mm] Q[l,m,wd=36mm]}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+運ぶもの & ならすもの & 分子から見た目安 & 式 \\
+運動量 & 速さの差 & $\mu\approx\frac{1}{3}\rho\bar v\lambda$ & $\tau=\mu\,\dd u/\dd y$（力-14） \\
+エネルギー & 温度の差 & $k\approx\frac{1}{3}\rho c_v\bar v\lambda$ & $q=-k\,\dd T/\dd x$（熱-11） \\
+分子そのもの & こさの差 & $D\approx\frac{1}{3}\bar v\lambda$ & 拡散の式（8-14⑧） \\
+\end{bktable}
+\bktabcaption{気体の3つの輸送の性質。どれも「分子が $\lambda$ だけ飛んで、何かを運ぶ」で説明できる。$c_v$ は1 kg あたりの定積比熱。}
+\label{ph:熱-14:tab-yuso}
+\end{bkcenter}
+熱伝導率 $k$ は、運動量のかわりに分子のエネルギー（1 kg あたり $c_vT$）を運ぶと考えた式です（\nobreak\bkreidairef{9}\nobreak）。拡散係数 $D$ は、においの分子のように、分子そのものが運ばれる速さを表します（\nobreak\bkreidairef{10}\nobreak）。
+
+\begin{phmada}[液体のねばりは、分子から計算できる？]
+この章の考えで、うすい気体の粘度や熱伝導率は、分子の大きさと質量から2倍以内で見積もれます。さらに、ボルツマン方程式を使ったくわしい理論（チャップマンとエンスコッグ、1910年代）で、うすい気体の値はかなり正確に計算できるようになりました。
+
+ところが液体では、分子どうしがいつも押し合い、引き合っていて、「ぶつかるまで自由に飛ぶ」という考えが使えません。水や油の粘度や熱伝導率を、分子の性質から簡単な式で正確に計算する方法は、まだ見つかっていません。今は、計算機で何万個もの分子の動きを1つずつ追いかける計算（分子動力学シミュレーション）や、実験で求めています。とくに、温度を下げたときに液体の粘度が何けたも急に大きくなっていくしくみ（ガラスになる手前のふるまい）は、物理の大きな研究の課題です。
+\end{phmada}
+
+\bksubsection{9}{においは、なぜゆっくり広がる？}
+
+\leavevmode\label{ph:熱-14:sec9}分子は1秒に数百 m も飛ぶのに、やってみようで、においが届くには何秒もかかりました。分子は1秒に70億回もぶつかり、そのたびに向きを変えるので、まっすぐには進めないからです。ブラウン運動の粒と同じく、においの分子の広がりは
+\[ \langle x^2\rangle\approx2Dt\qquad\text{より}\qquad t\approx\frac{x^2}{2D} \]
+で決まります。空気の中の拡散係数を $D\approx1\times10^{-5}$\,m$^2$/s とすると、\qty{10}{cm} 広がるのに約8分、\qty{1}{m} 広がるのに約13時間もかかります（\nobreak\bkreidairef{10}\nobreak）。距離が10倍になると、時間は100倍になるのです。
+
+\Needspace{5\baselineskip}\noindent\textbf{やってみようの答え}\par\nobreak
+それでも、においは数 m 先に数十秒〜数分で届きます。へやの空気は、人の動きや、温度の差による空気の流れ（熱-12 の自然対流）で、いつもゆっくり動いていて、においの分子は\textbf{流れに運ばれて}届くからです。扇風機で風を送ると、もっと早く届きます。分子の拡散だけで広がるのは、流れのない、ほんの数 cm の所です。
+
+\begin{phmijika}[コーヒーにミルクを入れる]
+コーヒーにミルクをたらして、かき混ぜずに置いておくと、ミルクはなかなか全体に広がりません。液体の中の拡散係数は約 $10^{-9}$\,m$^2$/s で、気体の1万分の1くらいだからです。スプーンでかき混ぜると、流れが運んでくれるので、一瞬で混ざります。工場で液体を混ぜるときも、拡散を待たずに、かき混ぜる羽根で流れを作ります。
+\end{phmijika}
+
+%% ---------------- たいせつ・ことば・記号 ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]\raggedright
+\item 壁への力積の和から $pV=\frac13Nm\langle v^2\rangle$。$pV=Nk_{\mathrm B}T$ とくらべて $\frac12m\langle v^2\rangle=\frac32k_{\mathrm B}T$。温度は分子の運動エネルギーの平均。
+\item $\sqrt{\langle v^2\rangle}=\sqrt{3RT/M}$（$M$ は kg/mol）。\qty{20}{\celsius}の窒素で約 \qty{510}{m/s}。
+\item 等分配：入れ物1つに $\frac12k_{\mathrm B}T$。単原子 $C_V=\frac32R$・2原子 $\frac52R$・固体 $3R$。$\gamma=\frac53$、$\frac75$。
+\item マクスウェルの分布 $F(v)\propto v^2e^{-mv^2/(2k_{\mathrm B}T)}$。$v_{\mathrm p}:\bar v:\sqrt{\langle v^2\rangle}=1:1.128:1.225$。
+\item 平均自由行程 $\lambda=k_{\mathrm B}T/(\sqrt2\pi d^2p)$。$\mu\approx\frac13\rho\bar v\lambda$（圧力によらない）、$D\approx\frac13\bar v\lambda$。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{気体分子運動論}{気体を、飛びまわる分子の集まりとして、圧力・温度・比熱を導く考え方。}
+\bkword{二乗平均の速さ}{速さの2乗の平均の平方根 $\sqrt{\langle v^2\rangle}$。}
+\bkword{エネルギー等分配}{エネルギーの入れ物（自由度）1つごとに、平均 $\frac12k_{\mathrm B}T$ が分けられること。}
+\bkword{マクスウェルの分布}{気体の分子の速さの分布。}
+\bkword{誤差関数}{$\operatorname{erf}(x)=\frac{2}{\sqrt\pi}\int_0^xe^{-t^2}\dd t$。つりがね形の曲線の面積を表す関数。}
+\bkword{平均自由行程}{分子がほかの分子にぶつかるまでに進む距離の平均。}
+\bkword{ブラウン運動}{液体の中の小さな粒が、分子に押されてでたらめに動くこと。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$k_{\mathrm B}$}{ケイ・ビー}{ボルツマン定数（J/K）。分子1個あたりの気体定数。熱伝導率 $k$ と区別して、いつも添字 B をつける}{Boltzmann constant}{熱-14}}{\bkkigocard{$n_V$}{エヌ・ブイ}{数密度（1 m$^3$ あたりの分子の数、1/m$^3$）。物質量 $n$〔mol〕と区別する}{number density}{熱-14}}
+
+\begin{senmonsho}[気体分子運動論]
+\begin{bkhonbun}
+単位体積中の分子数を $n$、分子の質量を $m$ とすれば、圧力は $p=\frac13nm\overline{c^2}$ で与えられる。これを理想気体の状態式と比較して、分子一個の平均並進運動エネルギーは $\frac12m\overline{c^2}=\frac32kT$ となる。ここで $k$ はボルツマン定数である。
+\end{bkhonbun}
+\bkyaku{専門書では、分子の速さを $c$、平均を上の線 $\overline{\phantom{c}}$ で書くことが多い（この本の $v$ と $\langle\ \rangle$）。$n$ は数密度（この本の $n_V$）、$k$ はボルツマン定数（この本の $k_{\mathrm B}$）。並進運動は「飛ぶ」動き（回転・振動ではない運動）。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent $k_{\mathrm B}=1.38\times10^{-23}$\,J/K、$N_{\mathrm A}=6.02\times10^{23}$\,/mol、$R=\qty{8.314}{J/(mol.K)}$、1気圧＝\qty{101325}{Pa} とします。モル質量は kg/mol で入れます（窒素 0.028、酸素 0.032、水素 0.0020、ヘリウム 0.0040、空気 0.029）。温度は K に直します。
+
+\begin{phreidai}[20 ℃の窒素の分子の速さ]
+\label{ph:熱-14:ex1}\qty{20}{\celsius}の窒素の分子の、二乗平均の速さ・平均の速さ・いちばん多い速さを求めましょう。
+\phbamen
+\bkhatenaref の場面です。空気の約8割をしめる窒素の分子が、どれくらいの速さで飛んでいるかを見積もります。
+\phmushi
+分子どうしが引き合う力（②のモデル）を無視します。窒素は理想気体とします。
+\phzu
+$T=\qty{293.15}{K}$、$M=\qty{0.028}{kg/mol}$、$R=\qty{8.314}{J/(mol.K)}$。
+\phriyu
+二乗平均の速さは③の $\sqrt{3RT/M}$。ほかの2つは⑤のマクスウェルの分布から求めた式（$m/k_{\mathrm B}$ を $M/R$ に書きかえる）。
+\phtateru
+\[ \sqrt{\langle v^2\rangle}=\sqrt{\frac{3RT}{M}},\qquad \bar v=\sqrt{\frac{8RT}{\pi M}},\qquad v_{\mathrm p}=\sqrt{\frac{2RT}{M}} \]
+\phtoku
+$RT/M=8.314\times293.15\div0.028\approx8.70\times10^4$\,m$^2$/s$^2$。
+\[ \sqrt{\langle v^2\rangle}=\sqrt{3\times8.70\times10^4}\approx\qty{511}{m/s} \]
+\[ \bar v=\sqrt{\frac{8\times8.70\times10^4}{\pi}}\approx\qty{471}{m/s},\qquad v_{\mathrm p}=\sqrt{2\times8.70\times10^4}\approx\qty{417}{m/s} \]
+\phtashikame
+単位：$\sqrt{\text{J/kg}}=\sqrt{\text{m}^2/\text{s}^2}$＝m/s。大きさ：比は $1.225:1.128:1$ で⑤と合う。音の速さ \qty{343}{m/s} と同じくらい。極端な場合：$T\to0$ ですべて0。
+\kotae 二乗平均 約 \qty{511}{m/s}、平均 約 \qty{471}{m/s}、いちばん多い 約 \qty{417}{m/s}
+\end{phreidai}
+\begin{jibun}
+\qty{20}{\celsius}の酸素の分子の、二乗平均の速さと平均の速さを求めましょう。
+\bkjans{$RT/M=8.314\times293.15$ $\div0.032\approx7.62\times10^4$。二乗平均 $\sqrt{3\times7.62\times10^4}$ $\approx\qty{478}{m/s}$、平均 $\sqrt{8\times7.62\times10^4/\pi}$ $\approx\qty{440}{m/s}$}
+\end{jibun}
+
+\begin{reidai}[1 m$^3$ の中の分子の数]
+\label{ph:熱-14:ex2}1気圧・\qty{20}{\celsius}の空気 \qty{1}{m^3} の中の分子の数と、分子と分子のおよその間かくを求めましょう。
+\par\bkstep{理想化} 空気は理想気体。分子は1個ずつ同じ大きさの立方体を占めるとする。
+\par\kangaekata ①の $n_V=p/(k_{\mathrm B}T)$。間かくは、1個が占める体積 $1/n_V$ の立方根。
+\par\shiki $n_V=\num{101325}\div(1.38\times10^{-23}\times293.15)\approx2.5\times10^{25}$。$(1/n_V)^{1/3}=(4.0\times10^{-26})^{1/3}\approx3.4\times10^{-9}$\,m
+\par\bkstep{確かめ} 1 mol（約 \qty{24}{L}）に $6.0\times10^{23}$ 個なので、1 m$^3$ には $6.0\times10^{23}\div0.024=2.5\times10^{25}$ 個で合う。
+\par\kotae 約 $2.5\times10^{25}$ 個、間かく約 \qty{3.4}{nm}
+\end{reidai}
+\begin{jibun}
+富士山頂（\qty{63}{kPa}）で、気温を \qty{0}{\celsius} とすると、空気 \qty{1}{m^3} の中の分子の数はいくつですか。
+\bkjans{$k_{\mathrm B}T=1.38\times10^{-23}\times273.15$ $\approx3.77\times10^{-21}$。$\num{63000}\div(3.77\times10^{-21})$ $\approx1.7\times10^{25}$ 個}
+\end{jibun}
+
+\begin{reidai}[ヘリウムの内部エネルギー]
+\label{ph:熱-14:ex3}ヘリウム \qty{1}{mol} が \qty{300}{K} のときの内部エネルギーを求めましょう。
+\par\bkstep{理想化} ヘリウムは単原子分子の理想気体（原子どうしは引き合わない）。
+\par\kangaekata ④の $U=\tfrac32nRT$。
+\par\shiki $U=1.5\times1\times8.314\times300\approx\num{3740}$\,J
+\par\bkstep{確かめ} 単位：mol×J/(mol·K)×K＝J。原子1個あたりは $\tfrac32k_{\mathrm B}T=6.2\times10^{-21}$\,J で、$N_{\mathrm A}$ 倍すると同じ値。
+\par\kotae 約 \qty{3.7}{kJ}
+\end{reidai}
+\begin{jibun}
+アルゴン \qty{2.0}{mol} が \qty{400}{K} のときの内部エネルギーを求めましょう。
+\bkjans{$1.5\times2.0\times8.314\times400$ $\approx\num{9980}$\,J、約 \qty{10}{kJ}}
+\end{jibun}
+
+\begin{phreidai}[鉄の比熱を、等分配で見積もる]
+\label{ph:熱-14:ex4}鉄（モル質量 \qty{0.05585}{kg/mol}）の比熱を、デュロン・プティの法則で見積もり、測った値 \qty{449}{J/(kg.K)} とくらべましょう。
+\phbamen
+フライパンや機械の部品の鉄を温めるのに要る熱を、原子の振動から予想します。
+\phmushi
+自由に動く電子の比熱（小さい）、原子の振動のエネルギーがとびとびになること（ふだんの温度の鉄では効きが小さい）を無視します。
+\phzu
+1 mol の原子の数 $N_{\mathrm A}$、モル比熱 $C$、1 kg あたりの比熱 $c$、モル質量 $M$。
+\phriyu
+固体の原子は3つの向きに振動し、入れ物は運動3つ＋ばね3つの6つ（④の等分配）なので $C=3R$。1 kg あたりに直すには $M$ でわる。
+\phtateru
+\[ C=3R,\qquad c=\frac{C}{M}=\frac{3R}{M} \]
+\phtoku
+\[ C=3\times8.314\approx\qty{24.9}{J/(mol.K)},\qquad c=\frac{24.9}{0.05585}\approx\qty{447}{J/(kg.K)} \]
+\phtashikame
+単位：J/(mol·K)÷(kg/mol)＝J/(kg·K)。大きさ：測った \qty{449}{J/(kg.K)} と1\,\%以内で合う。極端な場合：重い原子ほど1 kg あたりの原子の数が少ないので、比熱は小さい（鉛は約 \qty{120}{J/(kg.K)}）。
+\kotae 約 \qty{450}{J/(kg.K)}（測った値とほぼ同じ）
+\end{phreidai}
+\begin{jibun}
+銅（\qty{0.06355}{kg/mol}）とアルミニウム（\qty{0.02698}{kg/mol}）の比熱を、デュロン・プティの法則で見積もりましょう。
+\bkjans{銅 $24.9\div0.06355\approx\qty{390}{J/(kg.K)}$（測ると385）、アルミニウム $24.9\div0.02698\approx\qty{920}{J/(kg.K)}$（測ると897）}
+\end{jibun}
+
+\begin{phreidai}[地球の上空から、水素が逃げていく]
+\label{ph:熱-14:ex5}地球の大気のいちばん上の層（熱圏）は、温度が約 \qty{1000}{K} です。そこでの水素の分子の二乗平均の速さを求め、地球から宇宙へ逃げ出せる速さ（脱出速度 \qty{11.2}{km/s}）とくらべましょう。
+\phbamen
+地球の大気に水素やヘリウムがほとんどなく、窒素や酸素が残っているのはなぜかを考えます。
+\phmushi
+重力による速さの変化、ほかの分子とのぶつかり（熱圏の上のほうでは、とても少ない）を無視します。
+\phzu
+$T=\qty{1000}{K}$、水素 $M=\qty{0.0020}{kg/mol}$。
+\phriyu
+③の $\sqrt{3RT/M}$ で、分子の速さの代表を見る。分布の速い分子の割合は⑤。
+\phtateru
+\[ \sqrt{\langle v^2\rangle}=\sqrt{\frac{3RT}{M}} \]
+\phtoku
+\[ \sqrt{\frac{3\times8.314\times1000}{0.0020}}=\sqrt{1.25\times10^7}\approx3.5\times10^3\ \mathrm{m/s} \]
+\phtashikame
+単位：m/s。大きさ：脱出速度の約3分の1で、平均の分子は逃げられない。でも、⑤の分布で速い分子がわずかにいて、何億年もの間に少しずつ逃げていく。窒素（\qty{0.028}{kg/mol}）は約 \qty{0.94}{km/s} で、脱出速度の約12分の1しかなく、ほとんど逃げない。
+\kotae 約 \qty{3.5}{km/s}（脱出速度の約3分の1）
+\end{phreidai}
+\begin{jibun}
+\qty{1000}{K} のヘリウム（\qty{0.0040}{kg/mol}）の原子の二乗平均の速さを求めましょう。
+\bkjans{$3\times8.314\times1000\div0.0040$ $\approx6.24\times10^6$。平方根をとって約 \qty{2.5}{km/s}}
+\end{jibun}
+
+\begin{phreidai}[空気の分子の平均自由行程]
+\label{ph:熱-14:ex6}\qty{300}{K}・1気圧の空気の、平均自由行程と、1個の分子が1秒にぶつかる回数を求めましょう。空気の分子の直径を \qty{0.37}{nm}、平均の速さを \qty{468}{m/s} とします。
+\phbamen
+へやの空気の中で、分子がどれだけ進むごとにぶつかっているかを見積もります。
+\phmushi
+分子は同じ大きさのかたい球とし、ぶつかる力の細かい性質を無視します。窒素と酸素の区別をしません。
+\phzu
+図\ref{ph:熱-14:fig-mfp}。$d=0.37\times10^{-9}$\,m、$T=\qty{300}{K}$、$p=\qty{101325}{Pa}$、$\bar v=\qty{468}{m/s}$。
+\phriyu
+⑥の平均自由行程の式。1秒に進む長さ $\bar v$ を $\lambda$ でわると、ぶつかる回数。
+\phtateru
+\[ \lambda=\frac{k_{\mathrm B}T}{\sqrt2\,\pi d^2p},\qquad \text{回数}=\frac{\bar v}{\lambda} \]
+\phtoku
+分子は $1.38\times10^{-23}\times300=4.14\times10^{-21}$。分母は $1.414\times3.14\times(0.37\times10^{-9})^2\times\num{101325}\approx6.16\times10^{-14}$。
+\[ \lambda\approx\frac{4.14\times10^{-21}}{6.16\times10^{-14}}\approx6.7\times10^{-8}\ \mathrm{m},\qquad \frac{468}{6.7\times10^{-8}}\approx7.0\times10^9 \]
+\phtashikame
+単位：J÷(m$^2$×Pa)＝N·m÷N＝m。大きさ：分子の間かく \qty{3.4}{nm} の約20倍、分子の直径の約180倍。極端な場合：分子が小さい（$d\to0$）と、ぶつからずにどこまでも進む。
+\kotae 約 \qty{67}{nm}、1秒に約 $7\times10^9$ 回
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{6}の空気を、\qty{300}{K} のまま0.10気圧にすると、平均自由行程は何 nm になりますか。
+\bkjans{圧力に反比例するので10倍、約 \qty{670}{nm}}
+\end{jibun}
+
+\begin{reidai}[真空の中の平均自由行程]
+\label{ph:熱-14:ex7}\qty{300}{K}、圧力 \qty{1}{Pa} の空気の平均自由行程を求めましょう（分子の直径 \qty{0.37}{nm}）。
+\par\bkstep{理想化} \bkreidairef{6}と同じかたい球のモデル。
+\par\kangaekata $\lambda$ は圧力に反比例するので、\bkreidairef{6}の値を $\num{101325}$ 倍する。
+\par\shiki $6.72\times10^{-8}\times\num{101325}\approx6.8\times10^{-3}$\,m
+\par\bkstep{確かめ} 式に直接入れると、分母は $\sqrt2\pi d^2p=4.44\times1.37\times10^{-19}\times1$ で、$4.14\times10^{-21}$ をこれでわっても約 $6.8\times10^{-3}$\,m。
+\par\kotae 約 \qty{7}{mm}
+\end{reidai}
+\begin{jibun}
+\qty{300}{K}、$10^{-4}$\,Pa（高い真空）の空気の平均自由行程を求めましょう。
+\bkjans{$6.8\times10^{-3}\times10^4\approx\qty{68}{m}$}
+\end{jibun}
+
+\begin{phreidai}[空気の粘度を、分子から見積もる]
+\label{ph:熱-14:ex8}\qty{300}{K}・1気圧の空気（密度 \qty{1.18}{kg/m^3}、平均の速さ \qty{468}{m/s}、平均自由行程 \qty{67}{nm}）の粘度を、$\mu\approx\tfrac13\rho\bar v\lambda$ で見積もり、測った値 $1.85\times10^{-5}$\,Pa·s とくらべましょう。また、圧力を半分にすると粘度はどうなりますか。
+\phbamen
+力-14 で使った空気の粘度が、分子の運動からどこまで説明できるかを確かめます。力-14 の約束です。
+\phmushi
+分子の速さの分布の細かい効果（平均の速さで代表させる）、分子どうしの力のくわしい形を無視します。
+\phzu
+図\ref{ph:熱-14:fig-nensei}。$\rho=\qty{1.18}{kg/m^3}$、$\bar v=\qty{468}{m/s}$、$\lambda=6.7\times10^{-8}$\,m。
+\phriyu
+⑧の運動量を運ぶモデル。圧力を変えたときは、$\rho$ と $\lambda$ の両方が変わることに注意して、⑧の2つめの形 $m\bar v/(3\sqrt2\pi d^2)$ を見る。
+\phtateru
+\[ \mu\approx\frac{1}{3}\rho\bar v\lambda \]
+\phtoku
+\[ \mu\approx\frac{1}{3}\times1.18\times468\times6.7\times10^{-8}\approx1.2\times10^{-5}\ \mathrm{Pa\cdot s} \]
+圧力を半分にすると、$\rho$ は半分、$\lambda$ は2倍になるので、$\mu$ は変わらない。
+\phtashikame
+単位：kg/m$^3$×m/s×m＝kg/(m·s)＝Pa·s。大きさ：測った値の約3分の2で、桁は合っている。係数のずれは、速さの分布と、ぶつかったあと向きがどれだけ変わるかをくわしく計算すると、ほぼなくなる（専門の本で）。極端な場合：とても低い圧力（$\lambda$ が装置より長い）では、このモデルは使えない。
+\kotae 約 $1.2\times10^{-5}$\,Pa·s（測った値の約3分の2）。圧力によらない
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{8}の考えで、空気の温度を（圧力を変えずに）2倍にすると、粘度はおよそ何倍になりますか。分子の直径は変わらないとします。
+\bkjans{$\mu\approx m\bar v/(3\sqrt2\pi d^2)$ で、$\bar v$ は $\sqrt T$ に比例するので、約 $\sqrt2\approx1.4$ 倍}
+\end{jibun}
+
+\begin{reidai}[空気の熱伝導率を見積もる]
+\label{ph:熱-14:ex9}\bkreidairef{8}の空気の熱伝導率を、$k\approx\tfrac13\rho c_v\bar v\lambda$（$c_v=\qty{718}{J/(kg.K)}$）で見積もり、測った値 \qty{0.026}{W/(m.K)} とくらべましょう。
+\par\bkstep{理想化} 分子は1 kg あたり $c_vT$ のエネルギーを運ぶとする（⑧の表）。
+\par\kangaekata $k\approx\mu c_v$（\bkreidairef{8}の $\mu$ に $c_v$ をかける）。
+\par\shiki $1.23\times10^{-5}\times718\approx8.9\times10^{-3}$\,W/(m·K)
+\par\bkstep{確かめ} 単位：Pa·s×J/(kg·K)＝W/(m·K)。測った値の約3分の1。速い分子ほど多くのエネルギーを運ぶこと、回転のエネルギーの運ばれ方などを入れると、ずれは小さくなる。簡単なモデルの限界。
+\par\kotae 約 0.009 W/(m·K)（測った値の約3分の1）
+\end{reidai}
+\begin{jibun}
+簡単なモデルでは $k/(\mu c_v)=1$ です。測った値 $k=\qty{0.0264}{W/(m.K)}$、$\mu=1.85\times10^{-5}$\,Pa·s、$c_v=\qty{718}{J/(kg.K)}$ で、$k/(\mu c_v)$ を計算しましょう。
+\bkjans{$1.85\times10^{-5}\times718\approx0.0133$。$0.0264\div0.0133\approx2.0$（モデルの約2倍）}
+\end{jibun}
+
+\begin{phreidai}[においの分子が広がる時間]
+\label{ph:熱-14:ex10}\bkreidairef{8}の空気の中の拡散係数を $D\approx\tfrac13\bar v\lambda$ で見積もりましょう。流れがまったくないとき、においの分子が \qty{1}{m} 広がるのにかかる時間の目安を、$\langle x^2\rangle=2Dt$ で求めましょう。
+\phbamen
+やってみようの場面です。ただし、空気の流れがない場合を考えます。
+\phmushi
+空気の流れ（対流）、においの分子と空気の分子の大きさのちがい（同じとする）を無視します。
+\phzu
+$\bar v=\qty{468}{m/s}$、$\lambda=6.7\times10^{-8}$\,m、広がる距離 $x=\qty{1}{m}$。
+\phriyu
+⑧の表の拡散係数の目安と、⑦・⑨の「距離の2乗が時間に比例する」式。
+\phtateru
+\[ D\approx\frac{1}{3}\bar v\lambda,\qquad t\approx\frac{x^2}{2D} \]
+\phtoku
+\[ D\approx\frac{1}{3}\times468\times6.7\times10^{-8}\approx1.0\times10^{-5}\ \mathrm{m^2/s} \]
+\[ t\approx\frac{1^2}{2\times1.0\times10^{-5}}=5\times10^4\ \mathrm{s} \]
+$5\times10^4\div3600\approx14$ 時間（\texttt{c14.py} の $D=1.05\times10^{-5}$ では約13時間）。
+\phtashikame
+単位：m$^2$÷(m$^2$/s)＝s。大きさ：実際の空気の中の小さな分子の拡散係数も $10^{-5}$\,m$^2$/s の桁で合う。においが数十秒で届くのは流れのため（⑨）。極端な場合：距離が半分なら、時間は4分の1。
+\kotae $D$ は約 $1\times10^{-5}$\,m$^2$/s、\qty{1}{m} に約半日（十数時間）
+\end{phreidai}
+\begin{jibun}
+流れのない空気の中で、においの分子が \qty{10}{cm} 広がるのにかかる時間の目安を求めましょう（$D=1.0\times10^{-5}$\,m$^2$/s）。
+\bkjans{$0.10^2\div(2\times1.0\times10^{-5})=500$\,s、約8分}
+\end{jibun}
+
+\begin{reidai}[ウランの濃縮と、グレアムの法則]
+\label{ph:熱-14:ex11}原子力発電の燃料を作るには、ウラン235 をふくむ気体 $^{235}$UF$_6$（モル質量 \qty{349.0}{g/mol}）と、ウラン238 をふくむ $^{238}$UF$_6$（\qty{352.0}{g/mol}）を分けます。小さな穴を通るとき、軽いほうは重いほうの何倍の速さでもれ出ますか。
+\par\bkstep{理想化} もれ出る速さは分子の平均の速さに比例する（グレアムの法則）。温度は同じ。
+\par\kangaekata 平均の速さは $\sqrt{1/M}$ に比例する（③・⑤）ので、比は $\sqrt{M_{238}/M_{235}}$。
+\par\shiki $\sqrt{352.0\div349.0}=\sqrt{1.0086}\approx1.0043$
+\par\bkstep{確かめ} 比は1にとても近い。1回の分離では0.43\,\%しか変わらないので、穴を通す段を何百回もつなぐ必要がある（今の工場では、多くは遠心分離という別の方法を使う）。
+\par\kotae 約1.0043倍
+\end{reidai}
+\begin{jibun}
+同じ温度の水素（\qty{2.0}{g/mol}）と酸素（\qty{32}{g/mol}）では、小さな穴からもれ出る速さは何倍ちがいますか。
+\bkjans{$\sqrt{32\div2.0}=4.0$ 倍（水素が速い）}
+\end{jibun}
+
+\begin{reidai}[速い分子の割合]
+\label{ph:熱-14:ex12}マクスウェルの分布で、いちばん多い速さ $v_{\mathrm p}$ の2倍より速い分子の割合を求めましょう。
+\par\bkstep{理想化} 気体は理想気体で、速さはマクスウェルの分布になっている。
+\par\kangaekata ⑤の式 $1-\operatorname{erf}(x)+\frac{2x}{\sqrt\pi}e^{-x^2}$ に $x=2$。$\operatorname{erf}(2)=0.9953$（表\ref{ph:熱-14:tab-erf}）。
+\par\shiki
+\[ 1-0.9953+\frac{4}{1.772}\times e^{-4}=0.0047+2.257\times0.0183 \]
+\[ \approx0.0047+0.0413=0.046 \]
+\par\bkstep{確かめ} 図\ref{ph:熱-14:fig-bunpu}の曲線の、$2v_{\mathrm p}$ から右の面積は小さい。温度にも気体の種類にもよらない値。
+\par\kotae 約4.6\,\%
+\end{reidai}
+\begin{jibun}
+いちばん多い速さ $v_{\mathrm p}$ より速い分子の割合を求めましょう（$\operatorname{erf}(1)=0.8427$、$e^{-1}=0.368$）。
+\bkjans{$1-0.8427=0.157$、$(2\div1.772)\times0.368$ $\approx0.415$。合計約0.57、約57\,\%}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{モル質量を g/mol のまま入れてしまう}
+\bkng{窒素 \qty{20}{\celsius}：$\sqrt{3\times8.314\times293\div28}\approx\qty{16}{m/s}$}
+\bkok{$M=\qty{0.028}{kg/mol}$ を入れて、$\sqrt{3\times8.314\times293\div0.028}\approx\qty{511}{m/s}$}
+$R$ の単位 J/(mol·K) の J は kg·m$^2$/s$^2$ なので、$M$ も kg/mol で入れないと単位が合いません。g/mol のままだと、答えは $\sqrt{1000}\approx32$ 分の1になってしまいます。
+\end{tsumazuki}
+\begin{tsumazuki}{温度が2倍なら、分子の速さも2倍？}
+\bkng{\qty{300}{K} の気体を \qty{600}{K} にすると、分子の速さは2倍になる。}
+\bkok{運動エネルギー（速さの2乗）が2倍になるので、速さは $\sqrt2\approx1.4$ 倍。}
+温度に比例するのは $\tfrac12m\langle v^2\rangle$ です。また、$\qty{20}{\celsius}$ を $\qty{40}{\celsius}$ にしても、温度は2倍ではありません（\qty{293}{K} → \qty{313}{K} で約1.07倍）。
+\end{tsumazuki}
+\begin{tsumazuki}{同じ温度なら、どの分子も同じ速さ？}
+\bkng{同じ温度の気体の中では、どの分子も $\sqrt{\langle v^2\rangle}$ の速さで飛んでいる。}
+\bkok{速さは、0から何倍も速いものまでマクスウェルの分布でばらつく。同じなのは、運動エネルギーの「平均」。}
+同じ温度の空気の中でも、ある瞬間の分子の速さはばらばらで、ぶつかるたびに変わります。また、種類のちがう分子（水素と酸素）では、平均の運動エネルギーが同じで、速さはちがいます。
+\end{tsumazuki}
+\begin{tsumazuki}{気体はうすいほど、ねばりが小さい？}
+\bkng{圧力を下げて空気をうすくすると、分子が少ないので粘度も小さくなる。}
+\bkok{分子の数が減るかわりに、平均自由行程がのびるので、ふつうの圧力の範囲では粘度は変わらない。}
+⑧の $\mu\approx m\bar v/(3\sqrt2\pi d^2)$ には、圧力も密度も入っていません。ただし、平均自由行程が装置の大きさをこえるほどの真空では、このモデルは使えなくなります。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[分子の運動を工学で使う]
+\phboxhead{① 真空の技術}
+スマートフォンの半導体の部品は、真空の容器の中で、うすい膜をつけたり、けずったりして作ります。圧力を \qty{1}{Pa} 以下にすると、平均自由行程が装置の大きさに近くなり（⑥）、材料の分子をまっすぐ飛ばしたり、まじり物の分子を減らしたりできます。真空ポンプの選び方や、どれだけの時間で真空にできるかの計算にも、分子の速さと平均自由行程を使います。
+
+\phboxhead{② 気体の性質を予想する}
+新しい冷媒やガスの粘度・熱伝導率・拡散係数を、すべて実験で測るのはたいへんです。気体については、⑧の考えをくわしくした式（チャップマン・エンスコッグの理論）と、分子の大きさや引き合う力の値から、かなり正確に予想できます。化学工場の装置や、ガスの配管の設計に使われています。
+
+\phboxhead{③ 同位体を分ける・気体を分ける}
+ウランの濃縮（\bkreidairef{11}）のように、分子の質量のちがいで速さがちがうことを使うと、気体を分けられます。今は遠心分離が多く使われますが、ヘリウムのもれを探す装置や、空気から酸素を取り出す膜の性能も、分子の速さと大きさのちがいで決まります。
+
+\begin{phketa}[分子の世界の数]
+\phketaline{空気の分子の平均の速さ（\qty{20}{\celsius}）}{約 \qty{470}{m/s}}
+\phketaline{1 m$^3$ の分子の数（1気圧）}{約 $2.5\times10^{25}$ 個}
+\phketaline{分子の間かく／直径}{約 \qty{3.4}{nm}／約 \qty{0.37}{nm}}
+\phketaline{平均自由行程（1気圧・\qty{1}{Pa}）}{約 \qty{67}{nm}・約 \qty{7}{mm}}
+\phketaline{1秒にぶつかる回数（1気圧）}{約70億回}
+\phketaline{気体・液体の拡散係数}{約 $10^{-5}$・$10^{-9}$\,m$^2$/s}
+\phboxhead{答えが桁で合っているか}
+気体の分子の速さは、ほとんどの気体でふだんの温度なら数百 m/s〜\qty{2}{km/s}（いちばん軽い水素で約 \qty{1.9}{km/s}）。答えが数 m/s や数万 m/s になったら、$M$ の単位（kg/mol）か、$T$ の単位（K）を見直しましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{真空工学,物性物理,化学工学,半導体プロセス}{気体分子運動論、数密度、二乗平均速度、マクスウェル分布、エネルギー等分配、平均自由行程、輸送係数、拡散係数}
+
+\begin{phsaki}{分布が時間で変わるようす：ボルツマン方程式}
+この章では、気体がすでに落ち着いた（熱平衡の）ときのマクスウェルの分布を使いました。分布が時間とともにどう変わり、なぜマクスウェルの分布に近づくのかは、1872年にボルツマンが導いた\textbf{ボルツマン方程式}で表されます。粘度や熱伝導率の正確な値、とても速い流れや、平均自由行程が長い真空の中の流れ（宇宙船が大気に入るときなど）は、この方程式で計算します。専門の本（気体分子運動論・希薄気体力学）で学びます。また、「場合の数」から温度とエントロピーを考える統計力学は、次の熱-15 で学びます。
+\end{phsaki}
+
+\begin{column}{分子の速さの分布を、本当に測るには}
+マクスウェルの分布は、はじめは計算から出てきたものでした。分子の速さを直接測る実験は、1920年にシュテルンが銀の原子で行い、その後、何人もの研究者が工夫を重ねました。
+
+よく知られているのは、切れこみ（すき間）のある円板を2枚、同じ軸につけて速く回す方法です。炉で熱した金属の蒸気を小さな穴から真空の中へ出し、原子の細い流れ（原子のビーム）を作ります。1枚めの切れこみを通った原子が2枚めに届くまでに、円板は少し回ります。2枚めの切れこみを、その分だけずらしておくと、ちょうどよい速さの原子だけが通りぬけます。回る速さを変えながら、通りぬけた原子の数を数えると、速さの分布が測れるのです。
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!40, draw=bkInk, line width=0.6pt] (0,-6) rectangle (12,6);
+  \node[qxo lab] at (6,-9) {炉};
+  \draw[qxo v, bkRed!80!black] (12.5,0) -- (106,0);
+  \foreach \x in {36,76}{
+    \fill[bkBlue!30] (\x-1,-12) rectangle (\x+1,12);
+    \draw[bkInk, line width=0.6pt] (\x-1,-12) rectangle (\x+1,12);}
+  \fill[white] (35,-1.2) rectangle (37,1.2);
+  \fill[white] (75,-1.2) rectangle (77,1.2);
+  \draw[bkInk, line width=0.6pt] (36,-16) -- (76,-16);
+  \node[qxo lab, anchor=north] at (56,-16.6) {同じ軸で回る2枚の円板（切れこみの位置を少しずらす）};
+  \filldraw[fill=bkYellow!40, draw=bkInk, line width=0.6pt] (106,-5) rectangle (114,5);
+  \node[qxo lab, anchor=north] at (110,-6) {数える};
+\end{tikzpicture}
+\end{bkcenter}
+1955年のミラーとクッシュの実験（カリウムとタリウムの原子）では、測った分布が、マクスウェルの分布（原子のビームが穴から出てくることを考えに入れた形）と、数\,\%の精度で合いました。計算で予想した「見えない分子の世界」が、測定でも確かめられたのです。
+\end{column}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem \qty{300}{K} のアルゴン（\qty{0.040}{kg/mol}）の原子の、二乗平均の速さを求めましょう（\nobreak\bkreidairef{1}\nobreak）。
+\bkpans{$3\times8.314\times300\div0.040$ $\approx1.87\times10^5$。平方根をとって約 \qty{430}{m/s}}
+\bkproblem 0 ℃・1気圧の気体 \qty{1}{L} の中の分子の数を求めましょう（\nobreak\bkreidairef{2}\nobreak）。
+\bkpans{$n_V\approx2.69\times10^{25}$ 個/m$^3$。\qty{1}{L}＝$10^{-3}$\,m$^3$ なので約 $2.7\times10^{22}$ 個}
+\bkproblem ネオン \qty{0.50}{mol} が \qty{400}{K} のときの内部エネルギーを求めましょう。ネオンは単原子分子です（\nobreak\bkreidairef{3}\nobreak）。
+\bkpans{$1.5\times0.50\times8.314\times400$ $\approx\num{2490}$\,J、約 \qty{2.5}{kJ}}
+\bkproblem \qty{1000}{K} の窒素（\qty{0.028}{kg/mol}）と \qty{300}{K} の水素（\qty{0.0020}{kg/mol}）では、どちらの分子の二乗平均の速さが大きいですか（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{窒素 $\sqrt{3\times8.314\times1000\div0.028}\approx\qty{940}{m/s}$、水素 $\sqrt{3\times8.314\times300\div0.0020}\approx\qty{1900}{m/s}$。水素のほうが大きい}
+\bkproblem ヘリウム \qty{2.0}{mol} を、体積を変えずに \qty{300}{K} から \qty{350}{K} まで温めるのに要る熱を求めましょう（④・\bkreidairef{3}\nobreak）。
+\bkpans{体積が変わらないので、熱はすべて内部エネルギーの増加になる。$\tfrac32\times2.0\times8.314\times50\approx\num{1250}$\,J}
+\bkproblem 鉛（\qty{0.2072}{kg/mol}）の比熱を、デュロン・プティの法則で見積もりましょう（\nobreak\bkreidairef{4}\nobreak）。
+\bkpans{$24.9\div0.2072\approx\qty{120}{J/(kg.K)}$（測ると約129）}
+\bkproblem \qty{300}{K}、\qty{0.010}{Pa} の空気の平均自由行程を求めましょう（分子の直径 \qty{0.37}{nm}。\hspace{0.3\zw}\bkreidairef{7}\nobreak）。
+\bkpans{$6.8\times10^{-3}\times100\approx\qty{0.68}{m}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem \qty{20}{\celsius}の窒素の分子のうち、速さが \qty{1000}{m/s} より大きいものの割合を求めましょう。$v_{\mathrm p}=\qty{417}{m/s}$、$\operatorname{erf}(2.40)=0.99931$、$e^{-5.75}=0.00319$ とします（\nobreak\bkreidairef{1}\nobreak・\bkreidairef{12}\nobreak）。
+\bkpans{$x=1000\div417\approx2.40$。$1-0.99931\approx0.0007$、$(4.80\div1.772)\times0.00319$ $\approx0.0086$。合計約0.0093、約0.9\,\%}
+\bkproblem 空気の粘度の測った値 $1.82\times10^{-5}$\,Pa·s（\qty{20}{\celsius}）と、⑧の $\mu\approx m\bar v/(3\sqrt2\pi d^2)$ から、空気の分子の直径 $d$ を見積もりましょう。分子1個の質量 $m=4.8\times10^{-26}$\,kg、平均の速さ $\bar v=\qty{463}{m/s}$ とします（\nobreak\bkreidairef{6}\nobreak・\bkreidairef{8}\nobreak。1865年にロシュミットは、これと同じ考えで、はじめて分子の大きさを見積もりました）。
+\bkpans{$d^2=m\bar v\div(3\sqrt2\pi\mu)$ $=2.22\times10^{-23}\div(2.43\times10^{-4})$ $\approx9.2\times10^{-20}$。$d\approx\qty{0.30}{nm}$}
+\bkproblem \qty{20}{\celsius}の水（粘度 $1.0\times10^{-3}$\,Pa·s）の中の、直径 \qty{2.0}{\micro m} の粒のブラウン運動を考えます。粒の拡散係数と、$x$ の向きに $\sqrt{\langle x^2\rangle}=\qty{10}{\micro m}$ 動くまでの時間の目安を求めましょう（⑦）。
+\bkpans{$D=4.04\times10^{-21}\div(1.88\times10^{-8})$ $\approx2.1\times10^{-13}$\,m$^2$/s。$t=10^{-10}\div(4.3\times10^{-13})$ $\approx240$\,s（約4分）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 分子が壁にぶつかる力積から、気体の圧力と温度の意味を説明できる。\bkfurref{ph:熱-14:sec2}
+\item 気体の内部エネルギーと比熱を、分子の運動から計算できる。\bkfurref{ph:熱-14:sec4}
+\item 速さの分布と平均自由行程から、粘度・熱伝導率・拡散を見積もれる。\bkfurref{ph:熱-14:sec5}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{分子1個1個の動きから、温度や圧力が見えてきたね。次の熱-15 では、分子の「並び方の数」を数えて、エントロピーの正体にせまるよ。}
