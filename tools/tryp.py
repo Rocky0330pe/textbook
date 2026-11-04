@@ -58,6 +58,9 @@ for k, o in enumerate(out):
 if start is None:
     sys.exit('章 %s が見つかりません' % cid)
 tex = os.path.join(root, 'tex')
+# 第22回：ph<n>-meta.tex・ph<n>-pages.tex（第2巻から先は git に入れない自動生成）がなければ、先に作る
+if not all(os.path.exists(os.path.join(tex, 'ph%d-%s.tex' % (vol, k))) for k in ('meta', 'pages')):
+    subprocess.run([sys.executable, os.path.join(root, 'phys', 'gen_phys.py')], stdout=subprocess.DEVNULL, check=True)
 if not os.path.exists(os.path.join(tex, chfile + '.tex')):
     sys.exit('tex/%s.tex がありません' % chfile)
 partdef = (r"\phpartbegin{%d}" % mypart) if mypart else ""
