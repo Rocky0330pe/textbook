@@ -1,0 +1,817 @@
+%% 熱-9 冷やす・湿り気をはかる：冷凍と湿り空気（第22回編集委員会 物理第2巻：組 熱W5）
+%% 記号と言い方（計画書 C-1・B の熱-9）：
+%%   絶対湿度 x〔kg/kg(DA)〕（空気線図の習慣。この章では乾き度に文字を使わない。膨張弁の出口は h_4＝h_3 で数える）、
+%%   相対湿度 φ〔%〕、水蒸気の分圧 p_v、飽和蒸気圧 p_s（熱-8 の p_s(T)）、全体の圧力 p（大気圧 101.325 kPa）、
+%%   比エンタルピー h（冷媒は1 kg あたり、湿り空気は「乾いた空気1 kg あたり」kJ/kg(DA) と毎回書く）、
+%%   温度 T（℃ でも K でも。COP・カルノーの式は K）。
+%%   冷凍サイクルの熱と仕事は、大きさ（正の数）で書く（第22回 2章の3・熱-5 の Q_H・Q_L と同じ）：
+%%   蒸発器で冷媒が受けとる熱 q_L（冷凍効果）、凝縮器で捨てる熱 q_H、圧縮機に入れる仕事 w_入。1秒あたりは Q̇_L・P。
+%%   成績係数 COP（熱-5。冷房は COP_R、暖房は COP_H）。窓の熱の通りやすさ（熱貫流率）は記号を使わずことばで（U は熱-11・13）。
+%% 数値：checks/物理第2巻/熱-9/calc_p2_09.py（出力 calc_p2_09_out.txt、状態点の一覧 states_p2_09.csv）。
+%%   水の飽和蒸気圧：IAPWS-IF97（iapws 1.5.5）。湿り空気の線図・表：CoolProp 8.0（HAPropsSI、101.325 kPa）。
+%%   冷媒：CoolProp 8.0（比エンタルピーの基準は 0 ℃の飽和液で 200 kJ/kg、比エントロピー 1 kJ/(kg·K)。IIR の決まり。日本冷凍空調学会の表と同じ基準）。
+%%   本文の式 x＝0.622p_v/(p−p_v)、h＝1.006θ＋x(2501＋1.86θ) は理想気体の式。CoolProp（実在の湿り空気）より x が 0.4 % ほど小さく出る（増大係数）。本文で断る。
+%% 出典・確かめたこと：
+%%   GWP（100年値）：IPCC 第4次評価報告書（AR4）の値（R12 10900、R22 1810、R134a 1430、R410A 2088、R32 675、R744 1）。
+%%     日本のフロン排出抑制法の告示も AR4 の値を使う。R600a・R290 は 約3（炭化水素。IIR などの資料。AR4 の表にはない）〔要確認：告示の本文〕。
+%%   安全区分（ISO 817 / ASHRAE 34）：R134a・R744 は A1、R32 は A2L（微燃性）、R600a・R290 は A3（強燃性）。
+%%   モントリオール議定書 1987年。キガリ改正 2016年採択・2019年1月1日発効。先進国の HFC 削減：基準（2011〜2013年の平均）から 2019年 10 %、2024年 40 %、2029年 70 %、2034年 80 %、2036年 85 %（環境省の資料）。
+%%   日本：オゾン層保護法の改正（2018年）で HFC の生産・消費を削減。フロン排出抑制法（2015年4月施行）の指定製品：家庭用エアコンは GWP 750 以下（目標年度 2018年度）〔要確認：経済産業省の告示〕。
+%%   人の発熱：ASHRAE Handbook—Fundamentals の表（座って軽い作業：顕熱 約70 W・潜熱 約45 W）〔要確認：最新版の表の値、空気調和・衛生工学便覧〕。
+%%   1枚ガラスの窓の熱貫流率 約6 W/(m^2·K)（建築の教科書の典型値 6.0〜6.5）〔要確認：JIS A 2102 などの計算値〕。
+%%   マグヌスの式の係数：O. A. Alduchov, R. E. Eskridge, J. Appl. Meteor. 35 (1996) 601（6.1094 hPa、17.625、243.04 ℃）。
+%%   パーキンスの蒸気圧縮式の冷凍機の特許 1834年。キャリアの空気調和 1902年、湿り空気の線図の論文 1911年（"Rational Psychrometric Formulae"）。
+%%   中学の飽和水蒸気量の表（25 ℃で約23 g/m^3）：教科書の表は 23.0〜23.1。ここでは IF97 と理想気体から計算した値を使う。
+\makeatletter
+\tikzset{qxj lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxj arr/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt},
+  qxj flow/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.4pt, bkBlue!80!black},
+  qxj heat/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.4pt, bkRed!80!black},
+  qxj work/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.4pt, bkOrange!85!black},
+  qxj num/.style={circle, draw=bkInk, fill=white, line width=0.6pt, inner sep=0.6pt, font=\sffamily\footnotesize\bfseries}}
+% 冷凍サイクルの装置の図（圧縮機・凝縮器・膨張弁・蒸発器）
+\newcommand\qxjcycle{%
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 凝縮器（上）
+  \filldraw[fill=bkRed!7, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (20,36) rectangle (90,48);
+  \draw[bkInk!70, line width=0.6pt] (24,42) -- (30,45) -- (36,39) -- (42,45) -- (48,39) -- (54,45) -- (60,39) -- (66,45) -- (72,39) -- (78,45) -- (86,42);
+  \node[qxj lab, font=\sffamily\small\bfseries, anchor=south] at (40,49) {凝縮器（外の機械）};
+  \draw[qxj heat] (76,48.6) -- (76,60);
+  \node[qxj lab, anchor=west] at (77.5,57) {$q_{\mathrm H}$（外へ捨てる熱）};
+  % 蒸発器（下）
+  \filldraw[fill=bkBlue!8, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (20,-12) rectangle (90,0);
+  \draw[bkInk!70, line width=0.6pt] (24,-6) -- (30,-3) -- (36,-9) -- (42,-3) -- (48,-9) -- (54,-3) -- (60,-9) -- (66,-3) -- (72,-9) -- (78,-3) -- (86,-6);
+  \node[qxj lab, font=\sffamily\small\bfseries, anchor=north] at (40,-13) {蒸発器（部屋の中の機械）};
+  \draw[qxj heat] (76,-26) -- (76,-12.6);
+  \node[qxj lab, anchor=west] at (77.5,-23) {$q_{\mathrm L}$（部屋から受けとる熱）};
+  % 圧縮機（右）
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.8pt] (100,18) circle (7);
+  \draw[bkInk, line width=0.8pt] (95.5,13.5) -- (104.5,22.5) (95.5,22.5) -- (104.5,13.5);
+  \node[qxj lab, anchor=west] at (108,24) {圧縮機};
+  \draw[qxj work] (122,18) -- (107.6,18);
+  \node[qxj lab, anchor=north] at (116,16.5) {$w_{\text{入}}$};
+  % 膨張弁（左）
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.8pt] (5,14) -- (15,22) -- (15,14) -- (5,22) -- cycle;
+  \node[qxj lab, anchor=east] at (3,18) {膨張弁};
+  % 流れ
+  \draw[qxj flow] (90.6,-6) -- (100,-6) -- (100,10.4);
+  \draw[qxj flow] (100,25.6) -- (100,42) -- (90.6,42);
+  \draw[qxj flow] (19.4,42) -- (10,42) -- (10,22.8);
+  \draw[qxj flow] (10,13.2) -- (10,-6) -- (19.4,-6);
+  \node[qxj num] at (104,4) {1};
+  \node[qxj num] at (104,32) {2};
+  \node[qxj num] at (6,32) {3};
+  \node[qxj num] at (6,4) {4};
+\end{tikzpicture}}
+\makeatother
+
+\phchapter{9}{冷やす・湿り気をはかる：\\冷凍と湿り空気}{冷たいコップのまわりに、なぜ水がつく？}{\bklevelrange{1}{4}}{冷やす・湿り気をはかる：冷凍と湿り空気}
+\bkmichishirube{2-5,2-13,3-5,熱-4,熱-5,熱-8}{熱-10,熱-11,熱-16,波-4}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace 湿度と露点を使って、コップや窓に水がつくわけを説明できる。
+\item \bklevel{4}\enspace 絶対湿度・比エンタルピー・空気線図で、エアコンが空気から取る水と熱を計算できる。
+\item \bklevel{4}\enspace 冷凍サイクルの成績係数（COP）を、冷媒の表から計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{水は蒸発して空気中にふくまれ、冷やすと水になって出てくる}{小学校理科}{ph:熱-9:ketsuro}
+\phk{湿度〔\%〕＝空気\qty{1}{m^3}の水蒸気量÷飽和水蒸気量×100、露点}{中学理科}{ph:熱-9:shitsudo}
+\phk{空気が上昇すると温度が下がり、露点に達すると雲ができる}{中学理科}{ph:熱-9:kumo}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+夏、氷の入った冷たいジュースをコップに注いでおくと、しばらくして、コップの外側に水のつぶがびっしりつきます。
+
+コップの中のジュースが、ガラスをしみ出してきたのでしょうか。それとも、どこか別の所から来た水なのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (2,1) -- (0,36) -- (30,36) -- (28,1) -- cycle;
+  \fill[bkOrange!35] (2.2,3) -- (0.6,28) -- (29.4,28) -- (27.8,3) -- cycle;
+  \foreach \p in {(6,22),(15,25),(22,20),(11,17),(19,13)} {\filldraw[fill=white, draw=bkBlue!50, line width=0.5pt] \p ++(-3,-2.5) rectangle ++(6,5);}
+  \draw[bkInk, line width=0.9pt] (0,37) -- (2,0) -- (28,0) -- (30,37);
+  \foreach \p in {(0.6,30),(1.0,22),(1.3,14),(1.6,7),(29.4,31),(29.0,24),(28.7,16),(28.4,9),(28.2,4)} {\fill[bkBlue!70!black] \p circle (0.9);}
+  \node[qxj lab, anchor=west] at (31,20) {水のつぶ};
+  \draw[bkGray, line width=0.4pt] (30.8,20) -- (29.6,24);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-8 では、水をわかすと水蒸気になり、水蒸気を冷やすと水にもどることを、蒸気表で数えました。この章では、その「わかす・もどす」を使って\textbf{物を冷やす}機械（冷蔵庫・エアコン）のしくみと、私たちのまわりの空気にふくまれる\textbf{水蒸気}（湿り気）の数え方を学びます。コップにつく水の正体も、エアコンから水が出てくるわけも、同じ考え方で説明できます。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[コップがくもり始める温度を測ろう]
+\textbf{用意するもの}\par
+金属のコップ（よくみがいたもの）、水、氷、温度計、かきまぜる棒
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 部屋の温度を測る。コップに、部屋と同じ温度の水を半分入れる。
+\item 氷を少しずつ入れてかきまぜながら、水の温度を測る。
+\item コップの外側がくもり始めたときの水の温度を記録する。その日の天気予報の湿度も調べておく。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent くもり始めた温度は、⑥で学ぶ\textbf{露点}です。部屋の温度と露点がわかると、⑥と⑦の方法で、部屋の湿度を計算できます。天気予報の湿度とくらべてみましょう。
+
+\begin{omoidasou}
+\bkrecall{熱-8}{水の飽和蒸気圧 $p_{\mathrm s}(T)$ は温度だけで決まる（\qty{20}{\celsius}で\qty{2.339}{kPa}、\qty{25}{\celsius}で\qty{3.170}{kPa}）。蒸発熱は $h''-h'$。}
+\bkrecall{熱-4}{流れる物のバランス式 $q_{\text{入}}-w_{\text{出}}=h_2-h_1$。絞り弁（膨張弁）では、熱も仕事も出入りしないので $h$ が一定。}
+\bkrecall{熱-5}{冷凍機の成績係数 $\mathrm{COP_R}=Q_{\mathrm L}/W$。上限はカルノーの $T_{\mathrm L}/(T_{\mathrm H}-T_{\mathrm L})$（温度は K）。$\mathrm{COP_H}=\mathrm{COP_R}+1$。}
+\bkrecall{熱-3}{理想気体の状態方程式 $pV=nRT$。混ぜた気体の圧力は、それぞれの気体の圧力（分圧）の和。}
+\bkrecall{2-5}{割合＝くらべる量÷もとにする量。百分率は、もとを100とみる。}
+\bkrecall{2-13}{式に数を入れて、答えをはさんで、少しずつ近づけていく。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{蒸発させて冷やす：冷蔵庫とエアコンのしくみ}
+
+\leavevmode\label{ph:熱-9:sec1}暑い日に打ち水をすると、地面が冷えます。運動して汗をかくと、汗が乾くときに体が冷えます。アルコールの消毒液を手につけると、ひんやりします。どれも、液体が蒸発するときに、まわりから蒸発熱（熱-1・熱-8）をうばうからです。熱-4 のやってみようで、スプレー缶を続けて吹くと缶が冷えたのも、缶の中の液化ガスが蒸発して、缶から熱をうばったためでした。
+
+ところが、打ち水は一度蒸発してしまえば終わりです。冷蔵庫のように何年も冷やし続けるには、蒸発した気体を集めて、もう一度液体にもどして使います。気体を液体にもどすには、熱-8 で学んだように、冷やすか、圧力を上げてわく温度を上げればよいのです。冷蔵庫やエアコンは、次の4つの機械で、液体を\textbf{回して}使います（図\ref{ph:熱-9:fig-sochi}）。この回る液体を\textbf{冷媒}といいます。\bkidx{れいばい}{冷媒}
+\begin{bkfigure}
+\qxjcycle
+\bkfigcaption{蒸気圧縮冷凍サイクルの装置（エアコンの冷房）。管の中の矢印が冷媒の流れ。$q$ の札が熱、$w$ の札が仕事。丸の番号は状態の番号。}
+\label{ph:熱-9:fig-sochi}
+\end{bkfigure}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{4→1 蒸発器}：低い圧力の冷媒が、部屋の空気から熱 $q_{\mathrm L}$ をうばって蒸発する。圧力が低いので、わく温度が\qty{5}{\celsius}くらいと低い。
+\item \textbf{1→2 圧縮機}：蒸発した冷媒の気体を押し縮めて、圧力を上げる。仕事 $w_{\text{入}}$ を入れる。気体は熱くなる。
+\item \textbf{2→3 凝縮器}：圧力が高いので、わく温度（もどる温度）が\qty{45}{\celsius}くらいと高い。\qty{35}{\celsius}の外の空気でも冷やせて、冷媒は液体にもどる。熱 $q_{\mathrm H}$ を外へ捨てる。
+\item \textbf{3→4 膨張弁}：細いすき間を通して、圧力を一気に下げる。一部が蒸発して、温度が下がる。
+\end{itemize}
+これを\textbf{蒸気圧縮冷凍サイクル}といいます。\bkidx{じょうきあっしゅくれいとうさいくる}{蒸気圧縮冷凍サイクル}熱-8 のランキンサイクルを、逆向きに回したものです。ランキンでは、高い温度で熱を受けとり、低い温度で捨てて、仕事を取り出しました。冷凍サイクルでは、仕事を入れて、低い温度の所（部屋の中）から熱を受けとり、高い温度の所（外）へ捨てます。熱-5 で学んだとおり、熱を低い温度から高い温度へ運ぶには、必ず仕事が要ります。
+
+\begin{phmijika}[冷蔵庫の後ろが温かいわけ]
+冷蔵庫の後ろや横にさわると、温かいことがあります。そこに凝縮器があり、庫内からうばった熱と、圧縮機に入れた電気の分の熱を、部屋へ捨てているからです（熱-5 のやってみよう）。だから、冷蔵庫の扉を開けっぱなしにしても、部屋は冷えません。むしろ、圧縮機の電気の分だけ部屋は温まります。エアコンが冷房のときに、凝縮器（外の機械）を部屋の外に置くのはこのためです。暖房のときは、弁を切りかえて冷媒の流れを逆にし、外の機械を蒸発器、部屋の中の機械を凝縮器にして使います（ヒートポンプ。熱-5④）。
+\end{phmijika}
+
+\bksubsection{2}{冷凍サイクルを数える：$p$-$h$ 線図}
+
+\leavevmode\label{ph:熱-9:sec2}4つの機械は、どれも冷媒が流れぬける機械なので、熱-4 のバランス式（速さ・高さの差は無視）をそれぞれに使います。
+\begin{phmodel}[理論冷凍サイクル]
+\phignore{管の中の圧力の下がり（摩擦）。機械からまわりへにげる熱。入口と出口の速さ・高さの差。}
+\phassume{流れは定常。蒸発器の出口は飽和蒸気、凝縮器の出口は飽和液。圧縮機は断熱で可逆（$s$ が一定）。膨張弁は熱も仕事も出入りしない（$h$ が一定）。}
+\phlimit{実際の圧縮機の中の摩擦・熱のにげ（仕事が1〜3割増える）。蒸発器の出口で少し温まった蒸気（過熱）、凝縮器の出口で少し冷えた液（過冷却）。}
+\end{phmodel}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 蒸発器（仕事なし）：$q_{\mathrm L}=h_1-h_4$（1 kg の冷媒が部屋からうばう熱。\textbf{冷凍効果}という）
+\item 圧縮機（熱の出入りなし）：$w_{\text{入}}=h_2-h_1$
+\item 凝縮器（仕事なし）：$q_{\mathrm H}=h_2-h_3$
+\item 膨張弁（熱・仕事なし）：$h_4=h_3$
+\end{enumerate}
+熱-5 の成績係数（冷房）は、うばう熱÷入れた仕事なので
+\pheq{\mathrm{COP_R}=\frac{q_{\mathrm L}}{w_{\text{入}}}=\frac{h_1-h_4}{h_2-h_1}}{単位なし}
+です。\label{ph:熱-9:cop}暖房に使うときは、凝縮器で捨てる熱が役に立つ熱なので、$\mathrm{COP_H}=q_{\mathrm H}/w_{\text{入}}=(h_2-h_3)/(h_2-h_1)$ です。1周で $h$ はもとにもどるので $q_{\mathrm H}=q_{\mathrm L}+w_{\text{入}}$、つまり $\mathrm{COP_H}=\mathrm{COP_R}+1$（熱-5）です。
+\Needspace{10\baselineskip}
+\begin{phflow}
+\phflowrow{$q_{\text{入}}-w_{\text{出}}=h_2-h_1$\\（熱-4）}{機械ごとに\\仕事なし・断熱}{$q_{\mathrm L}=h_1-h_4$\quad$w_{\text{入}}=h_2-h_1$\\$q_{\mathrm H}=h_2-h_3$\quad$h_4=h_3$}
+\phflowrow{$\mathrm{COP_R}=q_{\mathrm L}/w_{\text{入}}$\\（熱-5）}{1 kg あたりで\\数える}{$\mathrm{COP_R}=\dfrac{h_1-h_4}{h_2-h_1}$}
+\end{phflow}
+
+\noindent\textbf{冷媒の表を読む}\par\nobreak
+今の家庭用エアコンの多くは、R32（ジフルオロメタン）という冷媒を使っています。表\ref{ph:熱-9:tab-r32}は、R32 の飽和表の抜き出しです。冷媒の表は、0 ℃の飽和液で $h'=\qty{200}{kJ/kg}$ になるように0の点を決めるのが国際的な約束で、水の蒸気表（熱-8）とは0の点がちがいます。ここでも、$h$ の\textbf{差}だけに意味があります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,13mm] Q[r,15mm] Q[r,16mm] Q[r,16mm] Q[r,20mm]}, rowsep=1.2pt, row{1}={font=\sffamily\footnotesize\bfseries, halign=c}, cells={font=\footnotesize}}
+{$T$\\〔℃〕} & {$p$\\〔MPa〕} & {$h'$\\〔kJ/kg〕} & {$h''$\\〔kJ/kg〕} & {$s''$\\〔kJ/(kg·K)〕} \\
+$-20$ & 0.406 & 165.9 & 510.0 & 2.2310 \\
+$-10$ & 0.583 & 182.8 & 513.0 & 2.1915 \\
+0 & 0.813 & 200.0 & 515.3 & 2.1543 \\
+5 & 0.951 & 208.8 & 516.1 & 2.1363 \\
+10 & 1.107 & 217.7 & 516.7 & 2.1185 \\
+20 & 1.475 & 236.1 & 516.9 & 2.0831 \\
+30 & 1.928 & 255.3 & 515.7 & 2.0471 \\
+40 & 2.478 & 275.6 & 512.7 & 2.0091 \\
+45 & 2.795 & 286.3 & 510.3 & 1.9888 \\
+50 & 3.141 & 297.5 & 507.1 & 1.9670 \\
+\end{bktable}
+\bktabcaption{冷媒 R32 の飽和表（CoolProp 8.0 で計算。巻末の冷媒の表の抜き出し）。臨界点は\qty{78.1}{\celsius}・\qty{5.78}{MPa}。}
+\label{ph:熱-9:tab-r32}
+\end{bkcenter}
+
+\noindent\textbf{$p$-$h$ 線図}\par\nobreak
+冷凍サイクルは、縦に圧力 $p$（対数の目もり）、横に比エンタルピー $h$ をとった \textbf{$p$-$h$ 線図}にかくと、よくわかります（図\ref{ph:熱-9:fig-ph}）。\bkidx{ぴーえいちせんず}{$p$-$h$ 線図}蒸発器と凝縮器は圧力が一定なので水平の線、膨張弁は $h$ が一定なので垂直の線になります。そして、それぞれの線の\textbf{横の長さ}が、そのまま熱や仕事になります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=108mm, height=70mm, xmin=100, xmax=640, ymode=log, ymin=0.1, ymax=8, xtick={100,200,300,400,500,600}, ytick={0.1,0.2,0.5,1,2,5}, yticklabels={0.1,0.2,0.5,1,2,5}, xlabel={$h$（kJ/kg）}, ylabel={$p$（MPa）}]
+  \addplot[bkcurve, smooth] coordinates {(133.2,0.1774) (165.9,0.4058) (200.0,0.8131) (236.1,1.4746) (275.6,2.4783) (321.9,3.9332) (351.7,4.8768) (378.0,5.5315) (400.4,5.7697) (414.1,5.783)};
+  \addplot[bkcurve, smooth] coordinates {(414.1,5.783) (428.9,5.7697) (455.9,5.5315) (479.5,4.8768) (497.4,3.9332) (512.7,2.4783) (516.9,1.4746) (515.3,0.8131) (510.0,0.4058) (502.0,0.1774)};
+  \addplot[bkcurve2, line width=1.8pt] coordinates {(286.3,0.9514) (516.1,0.9514)};
+  \addplot[bkcurve2, line width=1.8pt, smooth] coordinates {(516.1,0.9514) (533.5,1.5) (545.1,2.0) (554.4,2.5) (559.2,2.795)};
+  \addplot[bkcurve2, line width=1.8pt] coordinates {(559.2,2.795) (286.3,2.795) (286.3,0.9514)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(516.1,0.9514) (559.2,2.795) (286.3,2.795) (286.3,0.9514) (414.1,5.783)};
+  \node[qxj lab, font=\sffamily\footnotesize\bfseries, anchor=north west] at (axis cs:519,0.93) {1};
+  \node[qxj lab, font=\sffamily\footnotesize\bfseries, anchor=south west] at (axis cs:562,2.85) {2};
+  \node[qxj lab, font=\sffamily\footnotesize\bfseries, anchor=south east] at (axis cs:283,2.85) {3};
+  \node[qxj lab, font=\sffamily\footnotesize\bfseries, anchor=north east] at (axis cs:283,0.93) {4};
+  \node[qxj lab, anchor=north] at (axis cs:400,0.88) {蒸発器（\qty{5}{\celsius}）：$q_{\mathrm L}$};
+  \node[qxj lab, anchor=south] at (axis cs:400,2.95) {凝縮器（\qty{45}{\celsius}）：$q_{\mathrm H}$};
+  \node[qxj lab, anchor=west] at (axis cs:560,1.6) {圧縮機};
+  \node[qxj lab, anchor=west] at (axis cs:292,1.6) {膨張弁};
+  \node[qxj lab, anchor=south] at (axis cs:414,6.1) {臨界点};
+  \node[qxj lab] at (axis cs:160,2) {液};
+  \node[qxj lab] at (axis cs:390,0.3) {液と蒸気がまざる};
+  \node[qxj lab] at (axis cs:600,0.3) {蒸気};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{冷媒 R32 の $p$-$h$ 線図（縦は対数の目もり）と、蒸発\qty{5}{\celsius}・凝縮\qty{45}{\celsius}の理論冷凍サイクル（太い線。\bkreidairef{6}）。山の形の線が飽和の線。}
+\label{ph:熱-9:fig-ph}
+\end{bkfigure}
+
+\begin{phyomi}[$\mathrm{COP_R}=(h_1-h_4)/(h_2-h_1)$]
+「1 kg の冷媒が部屋からうばう熱（線図の下の横線の長さ）÷圧縮機に入れる仕事（ななめの線の横はば）」。図\ref{ph:熱-9:fig-ph}では、下の横線が約\qty{230}{kJ/kg}、圧縮機の横はばが約\qty{43}{kJ/kg}なので、COP は5くらいです。1 の電気で、5 の熱を部屋から運び出せます。
+\end{phyomi}
+
+\bksubsection{3}{成績係数と、カルノーの COP}
+
+\leavevmode\label{ph:熱-9:sec3}熱-5 では、温度 $T_{\mathrm L}$ から $T_{\mathrm H}$ へ熱を運ぶ冷凍機の COP には、カルノーの上限 $T_{\mathrm L}/(T_{\mathrm H}-T_{\mathrm L})$ があることを学びました。蒸発\qty{5}{\celsius}（\qty{278.15}{K}）・凝縮\qty{45}{\celsius}（\qty{318.15}{K}）なら、上限は $278.15\div40\approx6.95$ です。\bkreidairef{6}で計算する R32 の理論サイクルの COP は5.33で、上限の約77\,\% です。
+
+上限に届かないのは、2つの所でエントロピーが生まれる（熱-6）からです。1つめは膨張弁で、液が勢いよく細いすき間を通るとき、仕事をせずに圧力を下げてしまう（もどらない変化）ことです。2つめは、圧縮機を出た気体が\qty{74}{\celsius}くらいまで熱くなり、\qty{45}{\celsius}の凝縮温度よりずっと高い温度から熱を捨てることです。実際のエアコンでは、さらに圧縮機の摩擦や、熱交換器の中の温度差（部屋の空気\qty{27}{\celsius}と蒸発温度\qty{5}{\celsius}の差など）が加わり、COP は3〜6くらいになります。
+
+\begin{phbaisuru}[半分]{温度の差 $T_{\mathrm H}-T_{\mathrm L}$}
+COP は2倍よりも大きくなります。表\ref{ph:熱-9:tab-copdt}は、R32 の理論サイクルで、蒸発と凝縮の温度の差を変えたときの COP です。温度の差を\qty{40}{K}から\qty{20}{K}に半分にすると、COP は5.33から12.4へ、2倍以上になります。カルノーの COP も、分母の温度の差が半分になり、分子の $T_{\mathrm L}$ も少し上がるので、2倍より少し大きくなります。夏に外の機械に日が当たらないようにしたり、冷房の設定温度を少し上げたりすると電気が減るのは、この温度の差が小さくなるからです（章末問題）。
+\par\vspace{2pt}\centering
+\begin{bktable}{colspec={Q[c,26mm] Q[c,20mm] Q[c,18mm] Q[c,22mm]}, rowsep=1.2pt, row{1}={font=\sffamily\footnotesize\bfseries}, cells={font=\footnotesize}}
+蒸発・凝縮〔℃〕 & 温度の差〔K〕 & COP（R32） & カルノーの COP \\
+5・45 & 40 & 5.33 & 6.95 \\
+10・40 & 30 & 7.68 & 9.44 \\
+15・35 & 20 & 12.4 & 14.4 \\
+20・30 & 10 & 26.5 & 29.3 \\
+\end{bktable}
+\bktabcaption{温度の差と COP（理論冷凍サイクル。CoolProp で計算）。}
+\label{ph:熱-9:tab-copdt}
+\end{phbaisuru}
+
+\bksubsection{4}{冷媒の選び方}
+
+\leavevmode\label{ph:熱-9:sec4}冷媒には、次のような性質が求められます。① 使いたい温度（\qtyrange{-30}{50}{\celsius}くらい）で、ほどよい圧力でわく・もどる（圧力が高すぎると管が厚くなり、低すぎると空気が入りこむ）。② 蒸発熱が大きく、少しの流量で多くの熱を運べる。③ 燃えにくく、毒がない。④ 地球の環境をこわさない。
+
+1930年代から、燃えず毒もないフロン（CFC。R12 など）が広く使われました。ところが1970年代に、フロンが空の高い所でオゾン層をこわすことがわかり、1987年のモントリオール議定書で、生産をやめていくことが決まりました。かわりに使われた代替フロン（HFC。R134a・R410A など）は、オゾン層はこわしませんが、二酸化炭素の何千倍も地球を温める力（\textbf{地球温暖化係数} GWP）があります。\bkidx{ちきゅうおんだんかけいすう}{地球温暖化係数（GWP）}そこで2016年のキガリ改正で、HFC も減らしていくことになり、日本などの先進国は、2036年には基準の量から85\,\% 減らします。日本では、フロン排出抑制法やオゾン層保護法で、機器ごとに GWP の目標を決めたり、こわれた機器から冷媒を回収することを義務にしたりしています。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,17mm] Q[l,26mm] Q[r,14mm] Q[c,16mm] Q[l,30mm]}, rowsep=1.2pt, row{1}={font=\sffamily\footnotesize\bfseries, halign=c}, cells={font=\footnotesize}}
+冷媒 & 種類 & GWP & 燃えやすさ & おもな使い道 \\
+R12 & CFC（フロン） & \num{10900} & 燃えない & 昔の冷蔵庫（今は使えない） \\
+R134a & HFC（代替フロン） & 1430 & 燃えない & カーエアコン・冷蔵庫 \\
+R410A & HFC（2種をまぜた物） & 2088 & 燃えない & エアコン（少し前まで） \\
+R32 & HFC & 675 & 燃えにくい & 家庭用エアコン \\
+R600a & イソブタン & 約3 & 燃えやすい & 家庭用冷蔵庫 \\
+R744 & 二酸化炭素 & 1 & 燃えない & 給湯機（エコキュート） \\
+\end{bktable}
+\bktabcaption{おもな冷媒（GWP は二酸化炭素を1とした100年の値。IPCC の第4次評価報告書の値。イソブタンは炭化水素の目安）。}
+\label{ph:熱-9:tab-reibai}
+\end{bkcenter}
+
+\begin{phmada}[「決定版」の冷媒は、まだ見つかっていない]
+GWP が小さく、燃えにくく、毒がなく、効率もよく、安い——そんな理想の冷媒は、まだ見つかっていません。イソブタンや二酸化炭素は GWP がとても小さいのですが、イソブタンは燃えやすいので、冷媒の量が少ない冷蔵庫でしか使えません。二酸化炭素は燃えませんが、臨界温度が\qty{31}{\celsius}と低いので、夏の外の空気で液にもどせず、圧力も10倍くらい高くなり、エアコンでは効率が下がります。分子の形を工夫した新しい冷媒（HFO と呼ばれる仲間）も使われはじめていますが、燃えやすさや、大気の中でこわれてできる物質の環境への影響などについて、調べられている最中です。どの性質をどれだけゆずるかの選択が、今も続いています。
+\end{phmada}
+
+\begin{column}{氷を「つくる」機械から、空気を「ととのえる」機械へ}
+19世紀のはじめまで、夏に物を冷やすには、冬に湖などで切り出して、おがくずに包んで保存した天然の氷を使うしかありませんでした。1834年、アメリカ生まれでイギリスで活躍した技術者パーキンスが、エーテルを蒸発させては押し縮めてもどす、この章と同じしくみの冷凍機の特許をとりました。19世紀の後半には、アンモニアを冷媒にした冷凍機で、氷をつくったり、肉を船で運んだりできるようになりました。
+
+1902年、アメリカの技術者キャリアは、印刷工場で紙が湿気で伸び縮みして、色がずれる問題を解決するため、空気の温度だけでなく\textbf{湿度}をととのえる装置をつくりました。これが空気調和（エアコン）の始まりとされています。キャリアは、⑦で使う空気線図のもとになる式も発表しました。エアコンは、はじめは「人を涼しくする」ためではなく、「物をつくる工場の湿気をととのえる」ための機械だったのです。
+\end{column}
+
+\bksubsection{5}{空気の中の水蒸気を数える：湿り空気}
+
+\leavevmode\label{ph:熱-9:sec5}ここからは、私たちのまわりの空気にふくまれる水蒸気を数えます。水蒸気をふくむ空気を\textbf{湿り空気}、水蒸気をまったくふくまない空気を\textbf{乾き空気}といいます。\bkidx{しめりくうき}{湿り空気}
+
+\noindent\textbf{分圧：空気の圧力を分ける}\par\nobreak
+大気の圧力 $p$（約\qty{101.3}{kPa}）は、乾き空気の分子がぶつかる分と、水蒸気の分子がぶつかる分の和です（熱-3 の分圧。ドルトンの法則）。水蒸気の分の圧力を\textbf{水蒸気分圧} $p_{\mathrm v}$ といいます。
+\[ p=p_{\mathrm a}+p_{\mathrm v}\qquad(p_{\mathrm a}\text{：乾き空気の分圧}) \]
+熱-8 で学んだように、空気の中の水蒸気は、その温度の飽和蒸気圧 $p_{\mathrm s}(T)$ より多くはふくめません（飽和）。そこで、$p_{\mathrm v}$ が $p_{\mathrm s}$ の何割かを\textbf{相対湿度} $\varphi$ といいます。\bkidx{そうたいしつど}{相対湿度}
+\pheq{\varphi=\frac{p_{\mathrm v}}{p_{\mathrm s}(T)}\times100}{\%：kPa÷kPa}
+天気予報の「湿度60\,\%」は、この相対湿度です。$\varphi=100\,\%$ で、空気は水蒸気で飽和しています。
+
+\noindent\textbf{絶対湿度：乾き空気 1 kg あたりの水蒸気}\par\nobreak
+相対湿度は、温度が変わると、水蒸気の量が同じでも変わってしまいます（⑧）。エアコンの計算では、水蒸気の\textbf{質量}を数えたいので、「乾き空気\qty{1}{kg}あたり、水蒸気が何 kg あるか」を使います。これを\textbf{絶対湿度} $x$ といいます。\bkidx{ぜったいしつど}{絶対湿度}単位は kg/kg(DA) と書きます。DA は dry air（乾き空気）の頭文字で、「乾き空気1 kg あたり」の印です。乾き空気は、エアコンを通っても増えも減りもしないので、数えるもとにするのに便利なのです。
+
+同じ体積 $V$・同じ温度 $T$ の中にいる乾き空気と水蒸気を、それぞれ理想気体（熱-3）とみなします。質量は「物質量×モル質量」で、物質量は $pV/(RT)$ なので
+\[ m_{\mathrm v}=\frac{p_{\mathrm v}V}{RT}M_{\mathrm v},\qquad m_{\mathrm a}=\frac{p_{\mathrm a}V}{RT}M_{\mathrm a} \]
+です。比をとると $V$・$R$・$T$ が消えて
+\[ x=\frac{m_{\mathrm v}}{m_{\mathrm a}}=\frac{M_{\mathrm v}}{M_{\mathrm a}}\times\frac{p_{\mathrm v}}{p_{\mathrm a}}=\frac{18.015}{28.965}\times\frac{p_{\mathrm v}}{p-p_{\mathrm v}} \]
+となります。$18.015\div28.965\approx0.622$ なので
+\pheq{x=0.622\,\frac{p_{\mathrm v}}{p-p_{\mathrm v}}}{kg/kg ＝ kPa÷kPa}
+です。\label{ph:熱-9:x}0.622 は、水の分子が空気の分子（の平均）より軽いことから出てくる数です。
+\begin{phyomi}[$x=0.622\,p_{\mathrm v}/(p-p_{\mathrm v})$]
+「水蒸気の圧力と乾き空気の圧力の比に、分子1個あたりの重さの比0.622をかけると、質量の比になる」。$p_{\mathrm v}$ は $p$ よりずっと小さいので、だいたい $x\approx0.622\,p_{\mathrm v}/p$、つまり水蒸気分圧に比例します。
+\end{phyomi}
+\begin{phbaisuru}{水蒸気分圧 $p_{\mathrm v}$}
+$x$ もほぼ2倍です（少しだけ2倍より大きい。分母の $p-p_{\mathrm v}$ が少し小さくなるから）。\qty{1.5}{kPa}で $x\approx\qty{0.00935}{kg/kg(DA)}$、\qty{3.0}{kPa}で $x\approx\qty{0.0190}{kg/kg(DA)}$ で、2.03倍です。
+\end{phbaisuru}
+
+\noindent\textbf{湿り空気の比エンタルピー}\par\nobreak
+エアコンが空気から取る熱を数えるには、湿り空気の比エンタルピー $h$（乾き空気\qty{1}{kg}と、それにふくまれる水蒸気 $x$〔kg〕の分）を使います。0 ℃の乾き空気と、0 ℃の水（液）を0の点として、温度 $\theta$〔℃〕の湿り空気をつくる道すじで数えます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 乾き空気\qty{1}{kg}を 0 ℃から $\theta$ まで温める：$c_p\theta=1.006\,\theta$〔kJ〕（空気の定圧比熱 \qty{1.006}{kJ/(kg.K)}）
+\item 0 ℃の水 $x$〔kg〕を蒸発させる：$2501\,x$〔kJ〕（0 ℃の蒸発熱\qty{2501}{kJ/kg}。熱-8 の表）
+\item その水蒸気を 0 ℃から $\theta$ まで温める：$1.86\,\theta\,x$〔kJ〕（水蒸気の定圧比熱 \qty{1.86}{kJ/(kg.K)}）
+\end{enumerate}
+合わせて
+\pheq{h=1.006\,\theta+x\,(2501+1.86\,\theta)}{kJ/kg(DA)}
+となります。\label{ph:熱-9:h}右辺の $2501x$ の項が大きく、湿り空気の「熱」の多くは、水蒸気の蒸発熱の形でふくまれています。
+\begin{seikaku}
+ここで作った $x$ と $h$ の式は、空気も水蒸気も理想気体とみなした式です。本物の湿り空気では、空気の分子と水の分子が引き合うため、同じ温度・湿度でも水蒸気がわずかに多く入れます（増大係数という、約1.004倍）。巻末の空気線図と表は、この効果も入れた式（CoolProp で計算）でかいてあるので、この章の式で計算した $x$ は、線図の値より0.4\,\% ほど小さくなります（$h$ は\qty{0.1}{kJ/kg(DA)}ほど小さい）。この章の例題は式で計算し、線図の値も並べて書きます。
+\end{seikaku}
+
+\bksubsection{6}{露点と結露：コップに水がつくわけ}
+
+\leavevmode\label{ph:熱-9:sec6}水蒸気分圧 $p_{\mathrm v}$ の空気を、水蒸気の量を変えずに冷やしていきます。$p_{\mathrm v}$ はそのままですが、飽和蒸気圧 $p_{\mathrm s}(T)$ は温度とともに下がるので、相対湿度は上がっていきます。そして
+\pheq{p_{\mathrm s}(T_{\mathrm d})=p_{\mathrm v}}{kPa ＝ kPa}
+となる温度 $T_{\mathrm d}$ で、相対湿度が100\,\% になります。この温度を\textbf{露点}といいます。\bkidx{ろてん}{露点}露点より冷やすと、空気はそれ以上水蒸気をふくめないので、あまった水蒸気が水になって出てきます。これが\textbf{結露}です。熱-8 の「わく温度は $p_{\mathrm s}(T)=p$」と同じ形の式で、まわりの圧力 $p$ のかわりに水蒸気分圧 $p_{\mathrm v}$ が入っています。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=52mm, xmin=0, xmax=32, ymin=0, ymax=4.6, xtick={0,5,...,30}, ytick={1,2,3,4}, xlabel={温度（℃）}, ylabel={圧力（kPa）}]
+  \addplot[bkcurve, smooth] coordinates {(0,0.611) (5,0.873) (10,1.228) (15,1.706) (20,2.339) (25,3.170) (30,4.247)};
+  \draw[bkOrange!85!black, line width=1.4pt, -{Stealth[length=4pt]}] (axis cs:25,1.902) -- (axis cs:17.0,1.902);
+  \addplot[only marks, mark=*, mark size=2pt, bkOrange!85!black] coordinates {(25,1.902) (16.70,1.902)};
+  \addplot[only marks, mark=o, mark size=2pt, bkInk] coordinates {(25,3.170)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:16.70,0) -- (axis cs:16.70,1.902);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:25,0) -- (axis cs:25,3.170);
+  \node[qxj lab, anchor=west] at (axis cs:25.5,1.85) {部屋の空気（\qty{25}{\celsius}・$p_{\mathrm v}=\qty{1.90}{kPa}$）};
+  \node[qxj lab, anchor=south east] at (axis cs:16.4,2.0) {露点 \qty{16.7}{\celsius}};
+  \node[qxj lab, anchor=west] at (axis cs:25.5,3.17) {$p_{\mathrm s}(\qty{25}{\celsius})=\qty{3.17}{kPa}$};
+  \node[qxj lab, anchor=south east, rotate=24] at (axis cs:12,1.45) {飽和蒸気圧の線};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\qty{25}{\celsius}・相対湿度60\,\% の空気を冷やす（矢印）。水蒸気分圧は変わらず、飽和蒸気圧の線にぶつかった温度が露点。}
+\label{ph:熱-9:fig-roten}
+\end{bkfigure}
+
+\label{ph:熱-9:ketsuro}\bkhatenaref の答えです。\qty{25}{\celsius}・相対湿度60\,\% の部屋の空気は、$p_{\mathrm v}=0.60\times3.170\approx\qty{1.90}{kPa}$ の水蒸気をふくんでいます。この空気の露点は約\qty{16.7}{\celsius}です（\bkreidairef{1}、図\ref{ph:熱-9:fig-roten}）。氷の入ったコップの表面は\qty{16.7}{\celsius}よりずっと冷たいので、そのそばの空気が露点より冷え、空気の中の水蒸気が水になって、コップの外側につくのです。水はジュースがしみ出したのではなく、\textbf{部屋の空気から}来たものです。小学校理科の「水は蒸発して空気中にふくまれ、冷やすと水になって出てくる」は、この $p_{\mathrm s}(T_{\mathrm d})=p_{\mathrm v}$ で数で説明できます。
+
+\noindent\textbf{中学の「飽和水蒸気量」の表とのつながり}\par\nobreak
+中学理科では、空気\qty{1}{m^3}にふくむことのできる水蒸気の質量（\textbf{飽和水蒸気量}〔g/m$^3$〕）の表を使って、湿度を「空気\qty{1}{m^3}の水蒸気量÷飽和水蒸気量×100」と計算しました。この表も、飽和蒸気圧から計算できます。水蒸気を理想気体（水蒸気の $R_{\mathrm s}=\qty{461.5}{J/(kg.K)}$）とみなすと、\qty{1}{m^3}の中の水蒸気の質量（密度）は
+\[ \rho_{\mathrm v}=\frac{p_{\mathrm v}}{R_{\mathrm s}T}\qquad(T\text{ は K}) \]
+です。飽和のときは $p_{\mathrm v}=p_{\mathrm s}(T)$ です。たとえば\qty{25}{\celsius}では
+\[ \rho_{\mathrm{vs}}=\frac{3170}{461.5\times298.15}\approx\qty{0.0230}{kg/m^3}=\qty{23.0}{g/m^3} \]
+で、中学の表の値（約\qty{23}{g/m^3}）と同じです（表\ref{ph:熱-9:tab-chugaku}）。同じ温度なら、密度は圧力に比例するので
+\[ \frac{\rho_{\mathrm v}}{\rho_{\mathrm{vs}}}=\frac{p_{\mathrm v}}{p_{\mathrm s}} \]
+となり、中学の湿度の式は、⑤の相対湿度 $\varphi$ と同じものだとわかります。\label{ph:熱-9:shitsudo}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,22mm] Q[r,11mm] Q[r,11mm] Q[r,11mm] Q[r,11mm] Q[r,11mm] Q[r,11mm] Q[r,11mm]}, colsep=3pt, rowsep=1.2pt, column{1}={font=\sffamily\footnotesize\bfseries}, cells={font=\footnotesize}}
+$T$〔℃〕 & 5 & 10 & 15 & 20 & 25 & 30 & 35 \\
+$p_{\mathrm s}$〔kPa〕 & 0.873 & 1.228 & 1.706 & 2.339 & 3.170 & 4.247 & 5.629 \\
+{飽和水蒸気量\\〔g/m$^3$〕} & 6.8 & 9.4 & 12.8 & 17.3 & 23.0 & 30.4 & 39.6 \\
+\end{bktable}
+\bktabcaption{飽和蒸気圧（IAPWS-IF97）と、それから計算した飽和水蒸気量。中学の教科書の表とは、もとにした測定の違いで、最後のけたが1ちがうことがある。}
+\label{ph:熱-9:tab-chugaku}
+\end{bkcenter}
+
+\begin{seikaku}
+中学の表で露点を求めるときは、「その空気の水蒸気量〔g/m$^3$〕と、飽和水蒸気量が等しくなる温度」を表から読みます。ところが、空気を冷やすと空気そのものが縮むので、\qty{1}{m^3}の中の水蒸気量は少し増えます。そのため、中学の表で読んだ露点は、分圧で求めた本当の露点より\qty{0.5}{K}くらい低めに出ます（\qty{20}{\celsius}・50\,\% の空気で、表から約\qty{8.8}{\celsius}、分圧からは\qty{9.3}{\celsius}）。分圧 $p_{\mathrm v}$ は空気が縮んでも変わらない（全体の圧力が一定なら）ので、露点は分圧で求めるのが正確です。
+\end{seikaku}
+
+\begin{motto}[3]
+\phboxhead{雲のできる高さ}
+\label{ph:熱-9:kumo}中学理科では、「空気が上昇すると膨張して温度が下がり、露点に達すると雲ができる」と学びます。熱-3 で学んだように、乾いた空気のかたまりが上昇すると、断熱膨張で\qty{1}{km}につき約\qty{9.8}{K}温度が下がります。一方、かたまりの水蒸気の量（絶対湿度 $x$）は変わりませんが、まわりの圧力が下がるので水蒸気分圧も下がり、露点も\qty{1}{km}につき約\qty{1.7}{K}下がります。温度と露点の差は\qty{1}{km}で約\qty{8}{K}ずつ縮まり、0になった高さで雲ができはじめます。地上で\qty{25}{\celsius}・60\,\%（露点\qty{16.7}{\celsius}、差\qty{8.3}{K}）の空気なら、$8.3\div8\approx1.0$ で、約\qty{1}{km}の高さです。プログラムで少しずつ持ち上げて計算すると\qty{1040}{m}になりました。天気の世界で「雲の底の高さ≒\qty{125}{m}×（気温－露点）」という目安が使われるのは、このためです。
+\end{motto}
+
+\bksubsection{7}{空気線図を読む・湿球温度}
+
+\leavevmode\label{ph:熱-9:sec7}温度と絶対湿度を横と縦にとり、相対湿度や比エンタルピーが一定の線をかきこんだ図を\textbf{空気線図}といいます（図\ref{ph:熱-9:fig-senzu}）。\bkidx{くうきせんず}{空気線図}2つの量（たとえば温度と相対湿度）がわかれば、図の上の1点が決まり、ほかの量（絶対湿度・比エンタルピー・露点・湿球温度）を読めます。空調の設計では、この図の上に空気の変化を矢印でかきこんで考えます（⑧）。アメリカのキャリアが、1911年に湿り空気の式と線図をまとめ、空気調和（エアコン）の設計の基礎を作りました。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=112mm, height=78mm, xmin=0, xmax=40, ymin=0, ymax=30, xtick={0,5,...,40}, ytick={0,5,...,30}, xlabel={温度（℃）}, ylabel={$x$（g/kg(DA)）}]
+  \addplot[bkGray, line width=0.7pt] coordinates {(5.68,5.69) (19.88,0)};
+  \addplot[bkGray, line width=0.7pt] coordinates {(14.23,10.17) (39.75,0)};
+  \addplot[bkGray, line width=0.7pt] coordinates {(20.71,15.43) (40,5.77)};
+  \addplot[bkGray, line width=0.7pt] coordinates {(25.82,21.21) (40,14.08)};
+  \addplot[bkGray, line width=0.7pt] coordinates {(30.00,27.33) (40,22.31)};
+  \addplot[bkcurve2, smooth] coordinates {(0,0.75) (4,1.00) (8,1.33) (12,1.73) (16,2.25) (20,2.90) (24,3.70) (28,4.70) (32,5.92) (36,7.42) (40,9.24)};
+  \addplot[bkcurve2, smooth] coordinates {(0,1.51) (4,2.01) (8,2.66) (12,3.48) (16,4.52) (20,5.82) (24,7.45) (28,9.47) (32,11.96) (36,15.02) (40,18.77)};
+  \addplot[bkcurve2, smooth] coordinates {(0,2.27) (4,3.02) (8,3.99) (12,5.23) (16,6.80) (20,8.77) (24,11.24) (28,14.31) (32,18.12) (34,20.34) (36,22.81) (38,25.55) (39.2,27.3)};
+  \addplot[bkcurve2, smooth] coordinates {(0,3.03) (4,4.04) (8,5.34) (12,6.99) (16,9.10) (20,11.75) (24,15.08) (28,19.23) (30,21.68) (32,24.40) (34,27.42) (35.0,29.0)};
+  \addplot[bkInk, line width=1.6pt, smooth] coordinates {(0,3.79) (4,5.05) (8,6.68) (12,8.77) (16,11.42) (20,14.76) (24,18.97) (26,21.45) (28,24.23) (30,27.33) (31.2,29.3)};
+  \addplot[only marks, mark=*, mark size=2.2pt, bkRed!80!black] coordinates {(25,11.95)};
+  \draw[bkRed!80!black, dashed, line width=0.6pt] (axis cs:25,11.95) -- (axis cs:16.70,11.95);
+  \node[qxj lab, anchor=west] at (axis cs:25.6,11.4) {A（\qty{25}{\celsius}・60\,\%）};
+  \node[qxj lab, anchor=south east] at (axis cs:16.3,12.1) {露点};
+  \node[qxj lab, anchor=south east] at (axis cs:30.8,29.4) {100\,\%};
+  \node[qxj lab, anchor=south west] at (axis cs:35.1,28.9) {80\,\%};
+  \node[qxj lab, anchor=west] at (axis cs:39.4,27.3) {60\,\%};
+  \node[qxj lab, anchor=west] at (axis cs:40.2,18.77) {40\,\%};
+  \node[qxj lab, anchor=west] at (axis cs:40.2,9.24) {20\,\%};
+  \node[qxj lab, anchor=south east] at (axis cs:5.1,6.0) {20};
+  \node[qxj lab, anchor=south east] at (axis cs:13.6,10.5) {40};
+  \node[qxj lab, anchor=south east] at (axis cs:20.1,15.8) {60};
+  \node[qxj lab, anchor=south east] at (axis cs:25.2,21.6) {80};
+  \node[qxj lab, anchor=south east] at (axis cs:29.4,27.7) {100};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{空気線図（大気圧\qty{101.325}{kPa}。CoolProp で計算した巻末の線図を縮めたもの）。太い黒い線が相対湿度100\,\%（飽和）、だいだいの線は相対湿度20〜80\,\%（右のはしの数）。灰色のななめの線は比エンタルピーが一定の線（左上のはしの数、kJ/kg(DA)）。}
+\label{ph:熱-9:fig-senzu}
+\end{bkfigure}
+
+\noindent 点A（\qty{25}{\celsius}・60\,\%）から左へ水平に進む（$x$ を変えずに冷やす）と、飽和の線にぶつかる所が露点（\qty{16.7}{\celsius}）です。点Aは、比エンタルピーが\qtyrange{40}{60}{kJ/kg(DA)}の線の間で、60に近い所にあります（\qty{55.6}{kJ/kg(DA)}）。
+
+\noindent\textbf{湿球温度：乾湿計のしくみ}\par\nobreak
+学校の百葉箱などにある乾湿計は、2本の温度計の1本（湿球）の先を、水でぬらしたガーゼで包んだものです。ガーゼの水が蒸発するとき、蒸発熱をうばうので、湿球はまわりの空気（乾球）より低い温度を示します。空気が乾いているほど、よく蒸発するので、湿球の温度は低くなります。湿球の温度を\textbf{湿球温度}といいます。\bkidx{しっきゅうおんど}{湿球温度}
+
+ガーゼのそばを通る空気は、温度が下がるかわりに、蒸発した水蒸気をもらいます。空気が失った熱が、ちょうど水の蒸発熱になるので、空気の比エンタルピーはほとんど変わりません。だから、湿球温度は、空気線図で\textbf{比エンタルピーが一定の線}を飽和の線までたどった温度に、ほぼ等しくなります（くわしい湿球温度の線は、比エンタルピー一定の線とわずかにかたむきがちがう）。点Aでは約\qty{19.5}{\celsius}です（\bkreidairef{10}）。中学の乾湿計の表は、このしくみで作られています。
+
+\begin{phcode}[Python]
+from CoolProp.HumidAirProp import HAPropsSI   \# 湿り空気（実在の空気の式）
+P = 101325                                     \# 大気圧（Pa）
+for phi in (0.2, 0.6, 1.0):                    \# 相対湿度の線
+    xs = [HAPropsSI('W', 'T', t+273.15, 'P', P, 'R', phi)*1000
+          for t in (0, 10, 20, 30, 40)]
+    print(phi, [round(x, 2) for x in xs])
+for out in ('W', 'H', 'D', 'B'):  \# 点A の x・h・露点・湿球
+    print(out, round(HAPropsSI(out, 'T', 298.15, 'P', P, 'R', 0.6), 5))
+\end{phcode}
+\begin{phcodeout}
+0.2 [0.75, 1.52, 2.9, 5.28, 9.24]
+0.6 [2.27, 4.58, 8.77, 16.12, 28.58]
+1.0 [3.79, 7.66, 14.76, 27.33, 49.14]
+W 0.01195
+H 55573.94667
+D 289.85354
+B 292.61743
+\end{phcodeout}
+\noindent 出力の W は絶対湿度（kg/kg(DA)）、H は比エンタルピー（J/kg(DA)）、D は露点、B は湿球温度（どちらも K）です。点Aの露点は $289.85-273.15=\qty{16.7}{\celsius}$、湿球温度は\qty{19.5}{\celsius}です。図\ref{ph:熱-9:fig-senzu}は、この計算を温度1 ℃ごとにくり返してかきました。
+
+\bksubsection{8}{空気をととのえる：加熱・冷却除湿・加湿}
+
+\leavevmode\label{ph:熱-9:sec8}エアコンの中で、空気は次のように変わります（図\ref{ph:熱-9:fig-henka}）。空気の流れも定常な流れなので、乾き空気1 kg あたりで、水のバランス（$x$）と熱のバランス（$h$）を数えます。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{加熱}（暖房）：水蒸気は増えも減りもしないので、$x$ は一定。線図の上を\textbf{右へ水平に}進む。温度が上がると $p_{\mathrm s}$ が増えるので、相対湿度は下がる（冬の部屋が乾燥するわけ。\bkreidairef{5}）。加える熱は $h_2-h_1$。
+\item \textbf{冷却除湿}（冷房）：露点までは $x$ 一定で左へ進み、露点に着くと、飽和の線にそって左下へ進む。その間、水蒸気が水になって出ていく（エアコンのホースから出る水）。とる熱は $h_1-h_2$（出ていく水が持ち去る小さな分を引く。\bkreidairef{4}）。
+\item \textbf{加湿}：水を蒸発させて加える。$x$ が増え、線図の上を上へ進む。加湿器に入れる水の量は $x_2-x_1$。
+\end{itemize}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=108mm, height=62mm, xmin=0, xmax=35, ymin=0, ymax=24, xtick={0,5,...,35}, ytick={0,5,...,20}, xlabel={温度（℃）}, ylabel={$x$（g/kg(DA)）}]
+  \addplot[bkInk, line width=1.4pt, smooth] coordinates {(0,3.79) (4,5.05) (8,6.68) (12,8.77) (16,11.42) (20,14.76) (24,18.97) (26,21.45) (27.3,23.2)};
+  \draw[bkRed!80!black, line width=1.5pt, -{Stealth[length=4.5pt]}] (axis cs:30,18.88) -- (axis cs:23.95,18.88) -- (axis cs:19,13.9) -- (axis cs:15.2,10.75);
+  \addplot[only marks, mark=*, mark size=2pt, bkRed!80!black] coordinates {(30,18.88) (15,10.69)};
+  \node[qxj lab, anchor=west] at (axis cs:30.3,18.9) {\qty{30}{\celsius}・70\,\%};
+  \node[qxj lab, anchor=east] at (axis cs:14.4,11.8) {\qty{15}{\celsius}・100\,\%};
+  \node[qxj lab, anchor=north] at (axis cs:27.2,18.3) {冷却除湿};
+  \draw[bkBlue!80!black, line width=1.5pt, -{Stealth[length=4.5pt]}] (axis cs:0,3.03) -- (axis cs:19.6,3.03);
+  \addplot[only marks, mark=*, mark size=2pt, bkBlue!80!black] coordinates {(0,3.03) (20,3.03)};
+  \node[qxj lab, anchor=south] at (axis cs:10,3.3) {加熱（暖房）};
+  \node[qxj lab, anchor=north west] at (axis cs:20.3,2.9) {\qty{20}{\celsius}・21\,\%};
+  \draw[bkOrange!85!black, line width=1.5pt, -{Stealth[length=4.5pt]}] (axis cs:20,3.2) -- (axis cs:20,7.0);
+  \node[qxj lab, anchor=west] at (axis cs:20.5,5.4) {加湿};
+  \addplot[only marks, mark=*, mark size=2pt, bkOrange!85!black] coordinates {(20,7.29)};
+  \node[qxj lab, anchor=west] at (axis cs:20.6,7.6) {\qty{20}{\celsius}・50\,\%};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{空気線図の上の空気の変化（太い黒い線は飽和の線）。冷却除湿（\bkreidairef{4}）、冬の外気（\qty{0}{\celsius}・80\,\%）の加熱（\bkreidairef{5}）と加湿。}
+\label{ph:熱-9:fig-henka}
+\end{bkfigure}
+
+\bksubsection{9}{冷房・暖房の熱負荷}
+
+\leavevmode\label{ph:熱-9:sec9}エアコンの大きさを決めるには、部屋に1秒あたりどれだけの熱が入ってくるか（\textbf{冷房負荷}）を見積もります。\bkidx{れいぼうふか}{冷房負荷}おもなものは、次のとおりです。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{人}：座って軽い作業をする人1人から、温度を上げる熱（顕熱）約\qty{70}{W}と、汗や息の水蒸気の形の熱（潜熱）約\qty{45}{W}。
+\item \textbf{窓や壁を通る熱}：1枚ガラスの窓は、面積\qty{1}{m^2}・内外の温度差\qty{1}{K}あたり約\qty{6}{W}の熱を通す（熱の通りやすさ。くわしくは熱-11）。窓から入る日射は、もっと大きいことが多い。
+\item \textbf{機器}：テレビ・パソコン・照明の電力は、ほとんどすべてが部屋の熱になる。
+\item \textbf{換気}：入れかえた外の空気を冷やし、除湿する熱（\bkreidairef{4}の形）。
+\end{itemize}
+冷房負荷 $\dot Q_{\mathrm L}$ がわかれば、要る電力は $P=\dot Q_{\mathrm L}/\mathrm{COP_R}$ です。エアコンの「冷房能力\qty{2.8}{kW}」は、この $\dot Q_{\mathrm L}$ を何 kW まで運び出せるかを表しています。部屋の温度をちょうどよく保つために、エアコンが冷やす強さをどう変えるか（制御）は、物理シリーズの『波動』（波-4）で学びます。
+
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 冷凍サイクル：蒸発器 $q_{\mathrm L}=h_1-h_4$、圧縮機 $w_{\text{入}}=h_2-h_1$、凝縮器 $q_{\mathrm H}=h_2-h_3$、膨張弁 $h_4=h_3$。$\mathrm{COP_R}=(h_1-h_4)/(h_2-h_1)$。
+\item 温度の差が小さいほど COP は大きい。上限はカルノーの $T_{\mathrm L}/(T_{\mathrm H}-T_{\mathrm L})$。
+\item 相対湿度 $\varphi=p_{\mathrm v}/p_{\mathrm s}(T)$、絶対湿度 $x=0.622\,p_{\mathrm v}/(p-p_{\mathrm v})$、比エンタルピー $h=1.006\theta+x(2501+1.86\theta)$。
+\item 露点 $T_{\mathrm d}$：$p_{\mathrm s}(T_{\mathrm d})=p_{\mathrm v}$。物の表面が露点より冷たいと結露する。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{冷媒}{冷凍サイクルの中を回り、蒸発・凝縮をくり返して熱を運ぶ物質。}
+\bkword{冷凍効果}{冷媒1 kg が蒸発器でうばう熱 $q_{\mathrm L}=h_1-h_4$。}
+\bkword{$p$-$h$ 線図}{縦に圧力（対数）、横に比エンタルピーをとった線図。冷凍サイクルの計算に使う。}
+\bkword{地球温暖化係数（GWP）}{同じ質量の二酸化炭素とくらべて、地球を温める力が何倍か。}
+\bkword{相対湿度・絶対湿度}{$p_{\mathrm v}$ が $p_{\mathrm s}$ の何割か。乾き空気1 kg あたりの水蒸気の質量。}
+\bkword{露点・結露}{冷やして相対湿度が100\,\% になる温度。露点より冷えた所に水がつくこと。}
+\bkword{空気線図・湿球温度}{湿り空気の状態を読む図。ぬれたガーゼで包んだ温度計の温度。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$x$}{エックス}{絶対湿度。乾き空気1 kg あたりの水蒸気の質量（kg/kg(DA)）。熱-8 の乾き度 $x$ とは別の量（章が違う）}{humidity ratio}{熱-9}}{\bkkigocard{$\varphi$}{ファイ}{相対湿度。水蒸気分圧が飽和蒸気圧の何\,\% か}{relative humidity}{熱-9}}
+
+\begin{senmonsho}[空気線図と冷凍サイクル]
+\begin{bkhonbun}
+湿り空気の絶対湿度は $x=0.622\,p_{w}/(P-p_{w})$〔kg/kg$'$〕、比エンタルピーは $h=1.006\,t+(2501+1.805\,t)\,x$〔kJ/kg$'$〕で与えられる。冷凍サイクルの成績係数は、$\varepsilon_{R}=(h_1-h_4)/(h_2-h_1)$ である。
+\end{bkhonbun}
+\bkyaku{日本の空調の本の書き方。kg$'$ は「乾き空気1 kg」のこと（この本の kg(DA)）。$p_{w}$ は水蒸気分圧（この本の $p_{\mathrm v}$）、$t$ は温度〔℃〕。水蒸気の比熱を1.805とする本と1.86とする本があり、計算の結果は小数第1位で少しちがう。成績係数を $\varepsilon$ と書く本も多い（この本の COP）。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 大気圧は\qty{101.325}{kPa}とします。水の飽和蒸気圧は巻末の蒸気表（熱-8）、冷媒の値は表\ref{ph:熱-9:tab-r32}と巻末の冷媒の表を使います。表の値を使う例題は、答えを3けたで書きます。
+
+\begin{phreidai}[冷たいコップに水がつく温度（露点）]
+\label{ph:熱-9:ex1}\qty{25}{\celsius}・相対湿度60\,\% の部屋で、冷たいコップの表面が何℃より冷たいと、水がつきますか。巻末の蒸気表には、\qty{16}{\celsius}で $p_{\mathrm s}=\qty{1.819}{kPa}$、\qty{17}{\celsius}で $p_{\mathrm s}=\qty{1.938}{kPa}$ とあります。
+\phbamen
+\bkhatenaref の場面です。コップのそばの空気が冷やされます。
+\phmushi
+コップのすぐそばの空気は、コップの表面と同じ温度まで冷えるとします。部屋の空気の湿度はどこでも同じで、コップのまわりで水蒸気の量は変わらない（冷やされるだけ）とします。
+\phzu
+部屋の温度 $T=\qty{25}{\celsius}$、相対湿度 $\varphi=60\,\%$、水蒸気分圧 $p_{\mathrm v}$、露点 $T_{\mathrm d}$。
+\phriyu
+冷やしても $p_{\mathrm v}$ は変わらない。$p_{\mathrm s}(T_{\mathrm d})=p_{\mathrm v}$ になる温度を、表ではさんでさがし（2-13⑤）、直線補間（熱-8③）で読む。
+\phtateru
+\[ p_{\mathrm v}=\frac{\varphi}{100}\times p_{\mathrm s}(\qty{25}{\celsius}),\qquad T_{\mathrm d}=16+\frac{p_{\mathrm v}-1.819}{1.938-1.819} \]
+\phtoku
+$p_{\mathrm v}=0.60\times3.170\approx\qty{1.902}{kPa}$。\qty{16}{\celsius}（1.819）と\qty{17}{\celsius}（1.938）の間なので
+\[ T_{\mathrm d}=16+\frac{1.902-1.819}{1.938-1.819}=16+\frac{0.083}{0.119}\approx\qty{16.7}{\celsius} \]
+\phtashikame
+単位：℃＋（kPa÷kPa）×1 K。大きさ：部屋の温度\qty{25}{\celsius}より低い。湿度が100\,\% なら露点は部屋の温度と同じ\qty{25}{\celsius}、湿度が低いほど露点は低くなる。巻末の空気線図（CoolProp）でも\qty{16.7}{\celsius}。
+\kotae 表面が約\qty{16.7}{\celsius}より冷たいと、水がつく
+\end{phreidai}
+\begin{jibun}
+\qty{30}{\celsius}・相対湿度50\,\% の空気の露点を求めましょう。\qty{30}{\celsius}の $p_{\mathrm s}$ は\qty{4.247}{kPa}、\qty{18}{\celsius}は\qty{2.065}{kPa}、\qty{19}{\celsius}は\qty{2.198}{kPa}です。
+\bkjans{$p_{\mathrm v}=0.50\times4.247\approx\qty{2.123}{kPa}$。$2.123-2.065=0.058$、$2.198-2.065=0.133$、$0.058\div0.133\approx0.44$。約\qty{18.4}{\celsius}}
+\end{jibun}
+
+\begin{reidai}[絶対湿度を求める]
+\label{ph:熱-9:ex2}\bkreidairef{1}の部屋の空気（\qty{25}{\celsius}・60\,\%、$p_{\mathrm v}=\qty{1.902}{kPa}$）の絶対湿度を求めましょう。
+\par\bkstep{理想化} 乾き空気も水蒸気も理想気体とする（⑤）。
+\par\kangaekata $x=0.622\,p_{\mathrm v}/(p-p_{\mathrm v})$。
+\par\shiki $x=0.622\times1.902\div(101.325-1.902)=1.1830\div99.423$
+\par\bkstep{確かめ} 乾き空気1 kg に水蒸気約12 g。空気線図（CoolProp）では0.01195で、0.4\,\% ほど大きい（⑤のせいかくに言うと）。
+\par\kotae 約\qty{0.0119}{kg/kg(DA)}
+\end{reidai}
+\begin{jibun}
+\qty{20}{\celsius}・相対湿度60\,\% の空気の絶対湿度を求めましょう（\qty{20}{\celsius}の $p_{\mathrm s}=\qty{2.339}{kPa}$）。
+\bkjans{$p_{\mathrm v}=0.60\times2.339\approx\qty{1.4034}{kPa}$。$x=0.622\times1.4034\div99.922$ $\approx\qty{0.00874}{kg/kg(DA)}$}
+\end{jibun}
+
+\begin{reidai}[湿り空気の比エンタルピー]
+\label{ph:熱-9:ex3}\bkreidairef{2}の空気（\qty{25}{\celsius}、$x=0.0119$）の比エンタルピーを求めましょう。
+\par\bkstep{理想化} 空気と水蒸気の比熱は一定（1.006 と 1.86）とする。
+\par\kangaekata $h=1.006\,\theta+x(2501+1.86\,\theta)$（⑤）。
+\par\shiki $h=1.006\times25+0.0119\times(2501+1.86\times25)$\\ \hspace*{2\zw}$=25.15+0.0119\times2547.5=25.15+30.32$
+\par\bkstep{確かめ} 乾き空気を温めた分（\qty{25}{kJ}）より、水蒸気の分（\qty{30}{kJ}）のほうが大きい。空気線図では\qty{55.6}{kJ/kg(DA)}。
+\par\kotae 約\qty{55.5}{kJ/kg(DA)}
+\end{reidai}
+\begin{jibun}
+\qty{20}{\celsius}・$x=0.00874$ の空気の比エンタルピーを求めましょう。
+\bkjans{$20.12+0.00874\times2538.2$ $=20.12+22.18\approx\qty{42.3}{kJ/kg(DA)}$}
+\end{jibun}
+
+\begin{phreidai}[エアコンが空気から取る水と熱（冷却除湿）]
+\label{ph:熱-9:ex4}\qty{30}{\celsius}・相対湿度70\,\% の空気が、エアコンの蒸発器を通って\qty{15}{\celsius}の飽和の空気（100\,\%）になって出てきます。乾き空気1 kg あたり、出てくる水の量と、取り去る熱を求めましょう。\qty{30}{\celsius}の $p_{\mathrm s}$ は\qty{4.247}{kPa}、\qty{15}{\celsius}の $p_{\mathrm s}$ は\qty{1.706}{kPa}です。
+\phbamen
+夏の冷房です（図\ref{ph:熱-9:fig-henka}の冷却除湿）。エアコンのホースから水が出てくるわけを、数で確かめます。
+\phmushi
+⑤の理想気体の式を使います。出ていく水は\qty{15}{\celsius}の水（比エンタルピー $4.19\times15\approx\qty{63}{kJ/kg}$）とし、エアコンのまわりへの熱の出入りは無視します。
+\phzu
+入口1（\qty{30}{\celsius}・70\,\%）、出口2（\qty{15}{\celsius}・100\,\%）。乾き空気1 kg あたりの水 $x_1-x_2$、熱 $q$。
+\phriyu
+乾き空気は増えも減りもしないので、水のバランス：入る水蒸気＝出る水蒸気＋出る水。熱のバランス：入る $h_1$ ＝出る $h_2$＋水の分＋取り去る熱 $q$（熱-4）。
+\phtateru
+\[ x_1-x_2=\text{出てくる水},\qquad q=(h_1-h_2)-(x_1-x_2)\times63 \]
+\phtoku
+入口：$p_{\mathrm v}=0.70\times4.247\approx\qty{2.973}{kPa}$。
+\[ x_1=0.622\times\frac{2.973}{98.352}\approx0.01880 \]
+\[ h_1=30.18+0.01880\times2556.8\approx\qty{78.25}{kJ/kg(DA)} \]
+出口：$p_{\mathrm v}=\qty{1.706}{kPa}$。
+\[ x_2=0.622\times\frac{1.706}{99.619}\approx0.01065 \]
+\[ h_2=15.09+0.01065\times2528.9\approx\qty{42.02}{kJ/kg(DA)} \]
+出てくる水：$x_1-x_2=0.00815$\,kg/kg(DA)（約\qty{8.2}{g}）。
+
+熱：$h_1-h_2=\qty{36.23}{kJ/kg(DA)}$、水が持ち去る分 $0.00815\times63\approx\qty{0.51}{kJ}$。
+\[ q\approx36.23-0.51\approx\qty{35.7}{kJ/kg(DA)} \]
+\phtashikame
+単位：kJ/kg(DA)。大きさ：取り去る熱のうち、温度を下げる分は $1.006\times15\approx\qty{15}{kJ}$ だけで、残りの約\qty{21}{kJ}は水蒸気を水にもどす（蒸発熱を取り去る）分。冷房では除湿の熱が大きいことがわかる。1時間に\qty{500}{m^3}の空気（約\qty{565}{kg}の乾き空気）を通すと、1時間に約\qty{4.6}{kg}（約\qty{4.6}{L}）の水が出て、取る熱は約\qty{5.6}{kW}。空気線図（CoolProp）で読むと、水\qty{8.2}{g}、$h_1-h_2=\qty{36.3}{kJ}$。
+\kotae 水 約\qty{8.2}{g}、熱 約\qty{36}{kJ}（乾き空気1 kg あたり）
+\end{phreidai}
+\begin{jibun}
+\qty{26}{\celsius}・50\,\% の空気（$x=0.01050$・$h=\qty{52.92}{kJ/kg(DA)}$）が、\qty{13}{\celsius}の飽和の空気（$x=0.00933$・$h=\qty{36.65}{kJ/kg(DA)}$）になって出てきます。乾き空気1 kg あたりの水の量と、取り去る熱を求めましょう（水の持ち去りは $4.19\times13\approx\qty{54}{kJ/kg}$）。
+\bkjans{水 $0.01050-0.00933=0.00117$（約\qty{1.2}{g}）。熱 $52.92-36.65=16.27$、$0.00117\times54\approx0.06$、$16.27-0.06\approx\qty{16.2}{kJ/kg(DA)}$}
+\end{jibun}
+
+\begin{reidai}[冬の部屋が乾燥するわけ]
+\label{ph:熱-9:ex5}冬の外の空気（\qty{0}{\celsius}・相対湿度80\,\%）を、そのまま\qty{20}{\celsius}に温めると、相対湿度は何\,\% になりますか（\qty{0}{\celsius}の $p_{\mathrm s}=\qty{0.611}{kPa}$、\qty{20}{\celsius}は\qty{2.339}{kPa}）。
+\par\bkstep{理想化} 温めても水蒸気の量は変わらず、全体の圧力も一定なので、$p_{\mathrm v}$ は変わらない（加熱は $x$ 一定）。
+\par\kangaekata $\varphi=p_{\mathrm v}/p_{\mathrm s}(T)$ の分母だけが変わる。
+\par\shiki $p_{\mathrm v}=0.80\times0.611\approx\qty{0.489}{kPa}$。$\varphi=0.489\div2.339\times100$
+\par\bkstep{確かめ} 外の湿度は高くても、温めると $p_{\mathrm s}$ が約3.8倍になるので、相対湿度は約4分の1になる。20\,\% くらいだと、のどや肌が乾く。50\,\% にするには、乾き空気1 kg あたり約\qty{4}{g}の水を加湿する必要がある。
+\par\kotae 約21\,\%
+\end{reidai}
+\begin{jibun}
+\qty{5}{\celsius}・60\,\% の外の空気（\qty{5}{\celsius}の $p_{\mathrm s}=\qty{0.873}{kPa}$）を\qty{22}{\celsius}（$p_{\mathrm s}=\qty{2.645}{kPa}$）に温めると、相対湿度は何\,\% になりますか。
+\bkjans{$p_{\mathrm v}=0.60\times0.873\approx\qty{0.524}{kPa}$。$0.524\div2.645\approx0.198$。約20\,\%}
+\end{jibun}
+
+\begin{phreidai}[エアコンの理論冷凍サイクル（R32）]
+\label{ph:熱-9:ex6}冷媒 R32 のエアコンが、蒸発温度\qty{5}{\celsius}・凝縮温度\qty{45}{\celsius}の理論冷凍サイクル（②のモデル）で動いています。圧縮機の出口（\qty{2.795}{MPa}で、入口と $s$ が同じ点）は、巻末の冷媒の表で $h_2=\qty{559.2}{kJ/kg}$・\qty{74.5}{\celsius}です。冷凍効果・圧縮機の仕事・COP を求め、カルノーの COP とくらべましょう。
+\phbamen
+夏のエアコンの冷房です（図\ref{ph:熱-9:fig-sochi}・図\ref{ph:熱-9:fig-ph}）。部屋の空気（\qty{27}{\celsius}くらい）より低い\qty{5}{\celsius}で冷媒を蒸発させ、外の空気（\qty{35}{\celsius}くらい）より高い\qty{45}{\celsius}で凝縮させます。
+\phmushi
+管の摩擦、まわりへの熱、速さ・高さの差を無視します。圧縮機は断熱・可逆です。
+\phzu
+1：蒸発器の出口（\qty{5}{\celsius}の飽和蒸気）、2：圧縮機の出口、3：凝縮器の出口（\qty{45}{\celsius}の飽和液）、4：膨張弁の出口（$h_4=h_3$）。
+\phriyu
+4つの機械にバランス式（②）。COP は冷凍効果÷圧縮機の仕事。カルノーの COP は熱-5 の式（K で）。
+\phtateru
+\[ q_{\mathrm L}=h_1-h_4,\qquad w_{\text{入}}=h_2-h_1,\qquad \mathrm{COP_R}=\frac{q_{\mathrm L}}{w_{\text{入}}} \]
+\phtoku
+表\ref{ph:熱-9:tab-r32}から $h_1=h''(\qty{5}{\celsius})=\qty{516.1}{kJ/kg}$、$h_3=h'(\qty{45}{\celsius})=\qty{286.3}{kJ/kg}$ で、$h_4=\qty{286.3}{kJ/kg}$。
+\[ q_{\mathrm L}=516.1-286.3=\qty{229.8}{kJ/kg},\qquad w_{\text{入}}=559.2-516.1=\qty{43.1}{kJ/kg} \]
+\[ \mathrm{COP_R}=\frac{229.8}{43.1}\approx5.33 \]
+カルノーの COP：
+\[ \frac{278.15}{318.15-278.15}=\frac{278.15}{40}\approx6.95 \]
+\phtashikame
+単位：比なので単位なし。大きさ：カルノーの約77\,\%（$5.33\div6.95$）で、上限をこえていない。凝縮器で捨てる熱は $q_{\mathrm H}=559.2-286.3=\qty{272.9}{kJ/kg}$ で、$q_{\mathrm L}+w_{\text{入}}$ と等しい。圧力は蒸発側\qty{0.951}{MPa}・凝縮側\qty{2.795}{MPa}で、どちらも大気圧より高い（空気が入りこまない）。
+\kotae 冷凍効果\qty{230}{kJ/kg}、圧縮機\qty{43.1}{kJ/kg}、COP 約5.33（カルノーは6.95）
+\end{phreidai}
+\begin{jibun}
+\bkreidairef{6}で、凝縮温度を\qty{40}{\celsius}に下げると（外の空気がすずしいとき）、COP はいくらになりますか。\qty{40}{\celsius}の飽和液は $h_3=\qty{275.6}{kJ/kg}$、圧縮機の出口（\qty{2.478}{MPa}）は $h_2=\qty{554.1}{kJ/kg}$ です。
+\bkjans{$q_{\mathrm L}=516.1-275.6=\qty{240.5}{kJ/kg}$、$w_{\text{入}}=554.1-516.1=\qty{38.0}{kJ/kg}$、COP $\approx6.33$}
+\end{jibun}
+
+\begin{reidai}[冷蔵庫の冷媒をくらべる]
+\label{ph:熱-9:ex7}冷蔵庫（蒸発\qty{-25}{\celsius}・凝縮\qty{40}{\celsius}）で、蒸発器の出口の蒸気が\qty{10}{K}温まってから（過熱度\qty{10}{K}）圧縮機に入るとします。巻末の冷媒の表で、R600a（イソブタン）は $h_1=535.9$、$h_2=621.3$、$h_3=\qty{296.3}{kJ/kg}$、R134a は $h_1=391.4$、$h_2=440.9$、$h_3=\qty{256.4}{kJ/kg}$ です。それぞれの COP を求めましょう。
+\par\bkstep{理想化} ②の理論冷凍サイクル（過熱の分も、庫内から受けとる熱に数える）。
+\par\kangaekata $\mathrm{COP_R}=(h_1-h_4)/(h_2-h_1)$、$h_4=h_3$。
+\par\shiki R600a：$(535.9-296.3)\div(621.3-535.9)=239.6\div85.4$。R134a：$(391.4-256.4)\div(440.9-391.4)=135.0\div49.5$
+\par\bkstep{確かめ} どちらもカルノーの COP（$248.15\div65\approx3.82$）より小さい。2つの COP はほとんど同じで、冷媒の選び方は効率より GWP で決まる（表\ref{ph:熱-9:tab-reibai}）。R600a は1 kg あたりで運ぶ熱が大きい（冷媒の量が少なくてすむ）。蒸発器の中の圧力は R600a で\qty{0.058}{MPa}と大気圧より低い。
+\par\kotae R600a 約2.81、R134a 約2.73
+\end{reidai}
+\begin{jibun}
+R600a の冷蔵庫で、蒸発\qty{-20}{\celsius}・凝縮\qty{35}{\celsius}（過熱度\qty{10}{K}）のとき、$h_1=542.8$、$h_2=614.8$、$h_3=\qty{283.7}{kJ/kg}$ です。COP を求めましょう。
+\bkjans{$542.8-283.7=259.1$、$614.8-542.8=72.0$、$259.1\div72.0\approx3.60$}
+\end{jibun}
+
+\begin{reidai}[冷房能力 2.8 kW に要る冷媒の量]
+\label{ph:熱-9:ex8}\bkreidairef{6}のエアコンで、冷房能力（部屋から運び出す熱）を\qty{2.8}{kW}にするには、1秒に何 g の冷媒を回せばよいですか。圧縮機の動力も求めましょう。
+\par\bkstep{理想化} \bkreidairef{6}の理論冷凍サイクルで、圧縮機の損失は無視する。
+\par\kangaekata 冷媒の質量流量 $\dot m$ に、1 kg あたりの冷凍効果をかけると冷房能力。動力＝能力÷COP。
+\par\shiki $\dot m=2.8\div229.8\approx\qty{0.0122}{kg/s}$。動力 $2.8\div5.33\approx\qty{0.525}{kW}$
+\par\bkstep{確かめ} 単位：kW÷（kJ/kg）＝kg/s。大きさ：1秒に約\qty{12}{g}。動力は\qty{0.5}{kW}くらいで、家庭用エアコンの消費電力（数百 W）の程度。
+\par\kotae 約\qty{12.2}{g/s}、約\qty{0.53}{kW}
+\end{reidai}
+\begin{jibun}
+\bkreidairef{6}のエアコンで、冷房能力を\qty{4.0}{kW}にするときの冷媒の流量と、圧縮機の動力を求めましょう。
+\bkjans{$4.0\div229.8\approx\qty{0.0174}{kg/s}$（約\qty{17.4}{g/s}）、$4.0\div5.33\approx\qty{0.75}{kW}$}
+\end{jibun}
+
+\begin{phreidai}[部屋の冷房負荷を見積もる]
+\label{ph:熱-9:ex9}6畳くらいの部屋に、人が3人いて、テレビとパソコンで合わせて\qty{300}{W}の電気を使っています。面積\qty{2}{m^2}の1枚ガラスの窓があり、外は\qty{33}{\celsius}、部屋は\qty{25}{\celsius}です。人の顕熱・窓を通る熱・機器の熱を合わせた冷房負荷を見積もりましょう。
+\phbamen
+エアコンを選ぶとき、どれくらいの冷房能力が要るかを見積もる場面です（⑨）。
+\phmushi
+窓から入る日射、壁・天井を通る熱、換気の熱、人の潜熱（汗・息の水蒸気）は、ここでは無視します（実際の設計では足す）。
+\phzu
+人1人の顕熱\qty{70}{W}、窓の熱の通りやすさ\qty{6.3}{W/(m^2.K)}（1枚ガラス）、温度差 $\Delta T=33-25=\qty{8}{K}$。
+\phriyu
+1秒あたりの熱の足し算（バランス式の「入る」の合計）。窓を通る熱は、通りやすさ×面積×温度差（熱-11 で導く）。
+\phtateru
+\[ \dot Q_{\mathrm L}=3\times70+6.3\times2\times8+300 \]
+\phtoku
+\[ \dot Q_{\mathrm L}=210+100.8+300=\qty{610.8}{W} \]
+\phtashikame
+単位：W。大きさ：約\qty{0.6}{kW}。\bkreidairef{6}の COP 5.3 なら電力は約\qty{115}{W}、実際の COP（3くらい）なら約\qty{200}{W}。実際のエアコン（冷房能力\qty{2.2}{kW}〜）がずっと大きいのは、ここで無視した日射・壁・換気・潜熱が大きいことと、すばやく冷やすための余裕のため。
+\kotae 約\qty{0.61}{kW}
+\end{phreidai}
+\begin{jibun}
+人が4人、機器が\qty{200}{W}、1枚ガラスの窓が\qty{3}{m^2}、内外の温度差が\qty{7}{K}の部屋の冷房負荷を、\bkreidairef{9}と同じ方法で見積もりましょう。
+\bkjans{$4\times70+6.3\times3\times7+200$ $=280+132.3+200$ $\approx\qty{612}{W}$（約\qty{0.61}{kW}）}
+\end{jibun}
+
+\begin{reidai}[空気線図で湿球温度を読む]
+\label{ph:熱-9:ex10}\qty{25}{\celsius}・60\,\% の空気（点A、$h=\qty{55.6}{kJ/kg(DA)}$）の湿球温度を、空気線図の比エンタルピー一定の線で読みましょう。
+\par\bkstep{理想化} 湿球温度は、比エンタルピー一定の線が飽和の線に当たる温度にほぼ等しい（⑦）。
+\par\kangaekata 図\ref{ph:熱-9:fig-senzu}で、点Aを通る比エンタルピーの線にそって左上へ進み、100\,\% の線に当たる温度を読む。
+\par\shiki 飽和の線で $h=\qty{55.6}{kJ/kg(DA)}$ になる温度は約\qty{19.4}{\celsius}（巻末の表）
+\par\bkstep{確かめ} 乾球（\qty{25}{\celsius}）より低く、露点（\qty{16.7}{\celsius}）より高い。湿球温度の線でくわしく読むと\qty{19.5}{\celsius}で、ほとんど同じ。乾湿計では、乾球と湿球の差が\qty{5.5}{K}くらいになる。
+\par\kotae 約\qty{19.5}{\celsius}
+\end{reidai}
+\begin{jibun}
+\qty{30}{\celsius}・50\,\% の空気の湿球温度は、巻末の空気線図で約何℃ですか。乾球との差も答えましょう。
+\bkjans{約\qty{22.0}{\celsius}（差 約\qty{8}{K}）}
+\end{jibun}
+
+\begin{reidai}[窓ガラスに結露する温度]
+\label{ph:熱-9:ex11}冬、\qty{20}{\celsius}・相対湿度50\,\% の部屋で、窓ガラスの部屋側の表面が何℃より冷たいと、結露しますか。\qty{9}{\celsius}の $p_{\mathrm s}$ は\qty{1.148}{kPa}、\qty{10}{\celsius}は\qty{1.228}{kPa}です。
+\par\bkstep{理想化} ガラスにふれた空気は、ガラスの表面と同じ温度まで冷えるとする。
+\par\kangaekata \bkreidairef{1}と同じ。$p_{\mathrm v}=0.50\times2.339$、$p_{\mathrm s}(T_{\mathrm d})=p_{\mathrm v}$ をはさんでさがす。
+\par\shiki $p_{\mathrm v}\approx\qty{1.170}{kPa}$。$9+(1.170-1.148)\div(1.228-1.148)=9+0.022\div0.080$
+\par\bkstep{確かめ} 外が寒い日は、1枚ガラスの部屋側の表面が露点より冷えやすく、結露しやすい。二重窓にすると表面の温度が上がり、結露しにくくなる（ガラスの表面の温度の計算は熱-11）。
+\par\kotae 約\qty{9.3}{\celsius}
+\end{reidai}
+\begin{jibun}
+\qty{22}{\celsius}・40\,\% の部屋（\qty{22}{\celsius}の $p_{\mathrm s}=\qty{2.645}{kPa}$）の露点を求めましょう。\qty{7}{\celsius}の $p_{\mathrm s}$ は\qty{1.002}{kPa}、\qty{8}{\celsius}は\qty{1.073}{kPa}です。
+\bkjans{$p_{\mathrm v}=0.40\times2.645\approx\qty{1.058}{kPa}$。$1.058-1.002=0.056$、$1.073-1.002=0.071$、$0.056\div0.071\approx0.79$。約\qty{7.8}{\celsius}}
+\end{jibun}
+
+\begin{reidai}[中学の表で湿度を求める]
+\label{ph:熱-9:ex12}\qty{25}{\celsius}の空気\qty{1}{m^3}に、水蒸気が\qty{13.8}{g}ふくまれています。表\ref{ph:熱-9:tab-chugaku}の飽和水蒸気量から湿度を求め、\bkreidairef{1}の空気と同じかどうか確かめましょう。
+\par\bkstep{理想化} 水蒸気は理想気体とする（表の値はこの考えで計算した）。
+\par\kangaekata 湿度＝水蒸気量÷飽和水蒸気量×100（中学理科）。⑥のとおり、これは相対湿度 $\varphi$ と同じ。
+\par\shiki $13.8\div23.0\times100$
+\par\bkstep{確かめ} \bkreidairef{1}の空気の水蒸気の密度は $p_{\mathrm v}/(R_{\mathrm s}T)=1902\div(461.5\times298.15)\approx\qty{0.0138}{kg/m^3}$ で、同じ空気。2つのやり方で同じ答え。
+\par\kotae 60\,\%（\bkreidairef{1}と同じ空気）
+\end{reidai}
+\begin{jibun}
+\qty{20}{\celsius}の空気\qty{1}{m^3}に、水蒸気が\qty{8.7}{g}ふくまれています。表\ref{ph:熱-9:tab-chugaku}から湿度を求めましょう。
+\bkjans{$8.7\div17.3\times100\approx50\,\%$}
+\end{jibun}
+
+\begin{reidai}[飽和蒸気圧の近似式（マグヌスの式）]
+\label{ph:熱-9:ex13}天気や空調の計算では、飽和蒸気圧を簡単な近似式で出すことがあります。そのひとつ（マグヌスの式）は
+\[ p_{\mathrm s}\approx0.61094\times e^{\,17.625\,\theta/(\theta+243.04)}\ \text{〔kPa〕}\qquad(\theta\text{ は ℃}) \]
+です。\qty{25}{\celsius}での値を計算し、IAPWS-IF97 の値（\qty{3.170}{kPa}）とくらべましょう。
+\par\bkstep{理想化} 近似式は、測った値に合うように係数を決めた経験式（3-11 の指数関数の形）。
+\par\kangaekata $\theta=25$ を代入し、電卓の $e^x$ で計算する。
+\par\shiki 指数 $17.625\times25\div268.04\approx1.6439$、$e^{1.6439}\approx5.175$、$0.61094\times5.175$
+\par\bkstep{確かめ} IF97 との差は約0.25\,\%。天気予報の湿度の計算には十分だが、蒸気表の4けたには足りない。$\theta=0$ で $0.61094$ になり、0 ℃の $p_{\mathrm s}$（\qty{0.611}{kPa}）と合う。
+\par\kotae 約\qty{3.162}{kPa}（IF97 より約0.25\,\% 小さい）
+\end{reidai}
+\begin{jibun}
+マグヌスの式で、\qty{10}{\celsius}の飽和蒸気圧を計算し、IF97 の値（\qty{1.228}{kPa}）とくらべましょう。
+\bkjans{指数 $176.25\div253.04\approx0.6965$、$e^{0.6965}\approx2.007$、$0.61094\times2.007\approx\qty{1.226}{kPa}$（約0.2\,\% 小さい）}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{温めると、空気の水蒸気が増える？}
+\bkng{部屋を暖房すると湿度が下がるのは、空気の中の水蒸気が減るから。}
+\bkok{水蒸気の量（$x$・$p_{\mathrm v}$）は変わらない。温度が上がって $p_{\mathrm s}$ が増えたので、割合（相対湿度）が下がった。}
+相対湿度は「割合」なので、もとにする量（$p_{\mathrm s}$）が変わると、くらべる量が同じでも変わります（2-5）。水の量そのものを数えたいときは、絶対湿度を使います。
+\end{tsumazuki}
+\begin{tsumazuki}{冷蔵庫の扉を開けると、部屋が冷える？}
+\bkng{冷蔵庫の扉を開けておけば、部屋の冷房になる。}
+\bkok{冷蔵庫は、庫内からうばった熱と電気の分を、後ろから部屋へ捨てる。部屋全体では、電気の分だけ温まる。}
+冷やす機械は、熱を「消す」のではなく、別の場所へ「運ぶ」機械です。運んだ先が同じ部屋なら、冷えません。
+\end{tsumazuki}
+\begin{tsumazuki}{COP が1より大きいのは、エネルギーの保存に反する？}
+\bkng{電気\qty{1}{kW}で\qty{5}{kW}の熱を運ぶのは、エネルギーが増えていておかしい。}
+\bkok{電気の\qty{1}{kW}が\qty{5}{kW}の熱に変わったのではない。部屋の\qty{5}{kW}の熱を運んだだけで、外には\qty{6}{kW}を捨てている。}
+バランス式は $q_{\mathrm H}=q_{\mathrm L}+w_{\text{入}}$ で、ちゃんと保存しています。COP は「効率」ではなく、「運んだ熱÷入れた仕事」の比です。
+\end{tsumazuki}
+\begin{tsumazuki}{露点の計算で、$p_{\mathrm s}$ をかけ忘れる}
+\bkng{25 ℃・60\,\% の空気の水蒸気分圧は 0.60 kPa。}
+\bkok{$p_{\mathrm v}=0.60\times p_{\mathrm s}(\qty{25}{\celsius})=0.60\times3.170\approx\qty{1.90}{kPa}$。}
+相対湿度は、その温度の飽和蒸気圧に対する割合です。もとにする量（$p_{\mathrm s}$）をかけてはじめて、分圧（kPa）になります。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\Needspace{16\baselineskip}
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[エアコン・冷凍・建物の湿気]
+\phboxhead{① エアコンの省エネ}
+エアコンのカタログには、COP のほかに、1年の使い方を考えた「通年エネルギー消費効率（APF）」がのっています。インバーターで圧縮機の回る速さを変え、必要な分だけ冷やすことで、蒸発と凝縮の温度の差を小さく保ち、COP の高い所で動かしています。外の機械のまわりをふさがない、フィルターをそうじする（熱交換器の温度差を小さくする）のも、同じ理由で省エネになります。
+
+\phboxhead{② 冷凍倉庫と食品の冷凍}
+\qty{-20}{\celsius}より低い冷凍倉庫では、温度の差が大きいので COP が小さくなります。そこで、圧縮機を2段にして圧力を2回に分けて上げる（2段圧縮）など、熱-8 ⑦の再熱・再生に似たくふうをします。アンモニアや二酸化炭素など、GWP の小さい自然冷媒も使われています。
+
+\phboxhead{③ 建物の結露と、かびの対策}
+冬の窓や、外に面した壁の内側が露点より冷えると結露し、かびや木材のくさりの原因になります。建物の設計では、壁の中の温度を計算して（熱-11）、どこが露点より冷えるかを調べ、断熱材や、水蒸気を通しにくいシートの位置を決めます。浴室や台所の換気は、室内の水蒸気（$p_{\mathrm v}$）を下げて、露点を下げるためでもあります。
+\begin{phketa}[冷房と湿り空気の数]
+\phketaline{家庭用エアコンの冷房能力}{\qtyrange{2.2}{7.1}{kW}くらい}
+\phketaline{エアコンの COP（冷房）}{約3〜6（理論サイクルは5〜7）}
+\phketaline{夏の部屋の空気の絶対湿度}{約\qtyrange{0.010}{0.015}{kg/kg(DA)}}
+\phketaline{冷房で出る水}{1時間に数 L}
+\phketaline{人1人の発熱}{顕熱 約\qty{70}{W}＋潜熱 約\qty{45}{W}}
+\phboxhead{答えが桁で合っているか}
+相対湿度は0〜100\,\%、絶対湿度は地上の空気ならふつう\qty{0.03}{kg/kg(DA)}より小さい（\qty{30}{\celsius}の飽和で\qty{0.027}{kg/kg(DA)}）。家庭用エアコンの COP が10をこえる答えになったら、温度を K にしたか、$h_1$ と $h_4$ を取りちがえていないかを見直す。
+\end{phketa}
+\end{phkougaku}
+\phstation{冷凍空調工学,建築設備,食品の冷凍・低温工学,環境と冷媒}{蒸気圧縮冷凍サイクル、冷媒、$p$-$h$ 線図、冷凍効果、成績係数（COP・APF）、ヒートポンプ、湿り空気、絶対湿度、相対湿度、露点、湿球温度、空気線図、冷房負荷}
+
+\begin{phsaki}{冷凍空調と建物の熱}
+この章では、冷凍サイクルを「理論サイクル」で、部屋の熱負荷を簡単な足し算で見積もりました。実際の空調の設計では、1日の日射や外気温の変化、壁や家具がたくわえる熱（熱容量）まで入れて、1時間ごとの負荷を計算します。部屋の温度を一定に保つエアコンの運転のしかた（制御）は物理シリーズの『波動』（波-4）で、壁や窓を通る熱は熱-11 で学びます。冷媒の性質の式や、熱交換器の設計は、冷凍空調工学・建築設備の専門の本で扱います。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{1}
+\bkproblem \qty{28}{\celsius}・相対湿度70\,\% の空気の露点を求めましょう。\qty{28}{\celsius}の $p_{\mathrm s}$ は\qty{3.783}{kPa}、\qty{22}{\celsius}は\qty{2.645}{kPa}、\qty{23}{\celsius}は\qty{2.811}{kPa}です（\nobreak\bkreidairef{1}\nobreak）。
+\bkpans{$p_{\mathrm v}=0.70\times3.783\approx\qty{2.648}{kPa}$。$(2.648-2.645)\div0.166\approx0.02$。約\qty{22.0}{\celsius}}
+\bkproblem 問題1の空気の絶対湿度と比エンタルピーを求めましょう（\nobreak\bkreidairef{2}・\bkreidairef{3}\nobreak）。
+\bkpans{$x=0.622\times2.648\div98.677$ $\approx\qty{0.0167}{kg/kg(DA)}$。$h=28.17+0.0167\times2553.1$ $\approx\qty{70.8}{kJ/kg(DA)}$}
+\bkproblem \qty{30}{\celsius}の空気\qty{1}{m^3}に、水蒸気が\qty{18.2}{g}ふくまれています。表\ref{ph:熱-9:tab-chugaku}を使って湿度を求めましょう（\nobreak\bkreidairef{12}\nobreak）。
+\bkpans{$18.2\div30.4\times100\approx60\,\%$}
+\bkproblem \qty{5}{\celsius}・90\,\% の空気（$p_{\mathrm s}=\qty{0.873}{kPa}$）を\qty{20}{\celsius}（$p_{\mathrm s}=\qty{2.339}{kPa}$）に温めると、相対湿度は何\,\% になりますか（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{$p_{\mathrm v}=0.90\times0.873\approx\qty{0.786}{kPa}$。$0.786\div2.339\approx0.336$。約34\,\%}
+\bkproblem 冷房能力\qty{3.6}{kW}、COP 4.5のエアコンの消費電力を求めましょう。1日8時間使うと、電力量は何 kWh ですか（\nobreak\bkreidairef{8}\nobreak）。
+\bkpans{$3.6\div4.5=\qty{0.80}{kW}$。$0.80\times8=\qty{6.4}{kWh}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 寒い日のエアコンの暖房を考えます。蒸発\qty{0}{\celsius}・凝縮\qty{50}{\celsius}の理論冷凍サイクルで、$h_1=\qty{515.3}{kJ/kg}$、$h_2=\qty{570.8}{kJ/kg}$、$h_3=\qty{297.5}{kJ/kg}$ です。冷房としての COP、暖房としての COP、暖房のカルノーの COP を求めましょう（\nobreak\bkreidairef{6}\nobreak）。
+\bkpans{$\mathrm{COP_R}=217.8\div55.5\approx3.92$。$\mathrm{COP_H}=273.3\div55.5\approx4.92$（$=\mathrm{COP_R}+1$）。カルノー（暖房）$323.15\div50\approx6.46$}
+\bkproblem 夏、エアコンの外の機械に日が当たり、凝縮温度が\qty{45}{\celsius}から\qty{55}{\celsius}に上がりました。\qty{55}{\celsius}のときは $h_2=\qty{569.3}{kJ/kg}$、$h_3=\qty{309.3}{kJ/kg}$ です（$h_1$ は\bkreidairef{6}と同じ）。COP を求め、同じ冷房能力に要る電力が何\,\% 増えるか求めましょう（\nobreak\bkreidairef{6}・\bkreidairef{8}\nobreak）。
+\bkpans{COP $=206.8\div53.2\approx3.89$。電力は COP に反比例するので $5.33\div3.89\approx1.37$、約37\,\% 増える}
+\bkproblem 外の空気（\qty{32}{\celsius}・60\,\%、$p_{\mathrm s}=\qty{4.759}{kPa}$）を、1時間に\qty{600}{m^3}、エアコンで\qty{14}{\celsius}の飽和の空気（$p_{\mathrm s}=\qty{1.599}{kPa}$）にします。入口の空気\qty{1}{m^3}には乾き空気が\qty{1.125}{kg}あるとして、1時間に出る水の量と、取り去る熱（kW）を求めましょう（\nobreak\bkreidairef{4}\nobreak）。
+\bkpans{$x_1\approx0.01804$、$h_1\approx\qty{78.4}{kJ/kg(DA)}$、$x_2\approx0.00997$、$h_2\approx\qty{39.3}{kJ/kg(DA)}$。乾き空気 $600\times1.125=\qty{675}{kg/h}$。水 $675\times0.00807$ $\approx\qty{5.4}{kg/h}$。熱 $675\times(39.1-0.5)\div3600$ $\approx\qty{7.2}{kW}$}
+\bkproblem 室温\qty{20}{\celsius}の部屋で、窓ガラスの表面が\qty{8}{\celsius}（$p_{\mathrm s}=\qty{1.073}{kPa}$）まで冷えています。結露しないためには、部屋の相対湿度を何\,\% 以下にすればよいですか。上限なので、切り捨てて整数で答えましょう（\nobreak\bkreidairef{11}\nobreak）。
+\bkpans{露点が\qty{8}{\celsius}以下になればよい。$p_{\mathrm v}\leqq\qty{1.073}{kPa}$、$1.073\div2.339\approx0.459$。45\,\% 以下}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 湿度と露点を使って、コップや窓に水がつくわけを説明できる。\bkfurref{ph:熱-9:sec6}
+\item 絶対湿度・比エンタルピー・空気線図で、エアコンが空気から取る水と熱を計算できる。\bkfurref{ph:熱-9:sec5}
+\item 冷凍サイクルの成績係数（COP）を、冷媒の表から計算できる。\bkfurref{ph:熱-9:sec2}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{わかす・もどすで熱を運ぶしくみと、空気の中の水蒸気がわかったね。次の熱-10 では、圧力なべの中で水が何℃でわくかを、わく温度と圧力の関係の式で調べるよ。}
