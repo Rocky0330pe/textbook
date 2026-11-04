@@ -1,0 +1,880 @@
+%% 熱-4 流れる気体の熱：エンタルピーとノズル（第22回編集委員会 物理第2巻：組 熱W2）。3段の章（★4〜5）。
+%% 記号（この章の中だけの分け方。巻全体は計画書 C-1）：
+%%   流れの速さ v（比体積の v は使わず、1 kg の体積は 1/ρ と書く）、密度 ρ、圧力 p（絶対圧）、高さ z（h を高さに使わない）。
+%%   比内部エネルギー u、比エンタルピー h＝u＋p/ρ、エンタルピー H＝U＋pV。
+%%   1 kg あたりの熱 q（受けとる熱）・仕事 w（流体が「される」仕事。熱-2 の ΔU＝Q＋W と同じ向き）。取り出す仕事は w_出＝−w。
+%%   質量流量 m-dot、1秒あたりの熱 Q-dot・仕事 W-dot。音速 a、マッハ数 Ma（立体の2文字。モル質量 M とぶつけない）。
+%%   添字 0 はよどみ点（タンクの中の止まった気体）、* は Ma＝1 になる所（のど）。断面積 A。
+%%   比熱 c_p・比気体定数 R_s・比熱比 γ は熱-3 のとおり（空気 1005 J/(kg·K)・287 J/(kg·K)・1.4）。
+%% 数値はすべて Python で確かめた：checks/物理第2巻/熱-4/calc_p2_04.py（出力 calc_p2_04_out.txt）。
+%% ほかの章との約束（計画書 C-5-1・C-5-2）：
+%%   力-3「ロケットのノズルの形のひみつは、熱-4 で学びます」→ はてな？・⑤（表で答える）・⑧（式で答える）・例題13。
+%%   力-13 ⑤の札「空気の速さが約100 m/s（音の速さの約3割）をこえるとき（密度が変わる：熱-4）」→ ⑦・例題11（Ma 0.3 で 4.4 %）。
+%%   力-13「この先の学び」（定常流動のエネルギーの式、ノズルをいったん細くしてから広げる）→ ③④⑧。
+%%   気体の音速 a＝√(γR_sT) はこの章 ⑥ で導く（第22回の決定7）。物理シリーズの『波動』（波-9）は ⑥ を指して液体・固体へ広げる。
+%%   熱-3 ⑧ の K_s＝γp、熱-3 ⑥ の断熱の式、熱-3 ⑨ の圧縮機の仕事（例題4 で同じ数になることを確かめる）。
+%%   ニュートンとラプラスの話は ⑥・例題8 に置く（波-9 ではくり返さない、と計画書 C-5-2）。
+%%   衝撃波は ⑨ で入口だけ（エントロピーが増えることは熱-6、マッハ円すいは波-8）。絞り弁のジュール・トムソン効果は熱-10。
+%% 出典：
+%%   ニュートン『プリンキピア』（1687年）で、音の速さを等温として計算（約 290 m/s、測った値より約15 % 小さい）。
+%%   ラプラスの直し（断熱として √γ 倍）：1816年。
+%%   ド・ラバルの先細末広ノズル：1888年（衝動蒸気タービン用。ベルギーの特許 1888年9月、イギリスの特許 1889年4月）。
+%%   ゴダードの液体燃料ロケット（1926年）もこの形のノズルを使った。
+%%   X-43A（NASA）：2004年3月にマッハ約6.8、11月にマッハ約9.6。スクラムジェットが燃えたのは約10秒。〔要確認：NASA の公式資料の照合〕
+%%   X-51A（アメリカ空軍）：2013年5月に、スクラムジェットで約210秒、マッハ約5.1 で飛んだとする資料がある。〔要確認：空軍の公式資料〕
+%%   旅客機の巡航：マッハ0.78〜0.85 程度。高さ 11 km の標準大気の気温 216.65 K（ISO 2533）。
+%%   臨界圧力比 0.528（γ＝1.4）、面積比（Ma2 で 1.688、Ma3 で 4.235）：式から計算。
+%%   ロケットエンジンの噴き出す速さ：液体水素と液体酸素で約4.4 km/s（真空中の比推力 約450 秒から）。
+\makeatletter
+% 先細末広ノズル（横向き）  \qxenozzle{(のどの中心)}{倍率}  入口の半径 8、のどの半径 3、出口の半径 7（倍率をかける）
+\newcommand\qxenozzle[2]{\begin{scope}[shift={#1}, scale=#2]
+  \fill[bkBlue!12] (-30,8) .. controls (-12,8) and (-6,3) .. (0,3) .. controls (8,3) and (24,6) .. (40,7) -- (40,-7) .. controls (24,-6) and (8,-3) .. (0,-3) .. controls (-6,-3) and (-12,-8) .. (-30,-8) -- cycle;
+  \draw[bkInk, line width=1pt] (-30,8) .. controls (-12,8) and (-6,3) .. (0,3) .. controls (8,3) and (24,6) .. (40,7);
+  \draw[bkInk, line width=1pt] (-30,-8) .. controls (-12,-8) and (-6,-3) .. (0,-3) .. controls (8,-3) and (24,-6) .. (40,-7);
+\end{scope}}
+\makeatother
+\tikzset{qxe f/.style={-{Stealth[length=4.2pt, width=3.8pt]}, line width=1.3pt},
+  qxe v/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkBlue!80!black},
+  qxe lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxe dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray}}
+
+\phchapter{4}{流れる気体の熱：\\エンタルピーとノズル}{ロケットのノズルは、なぜ一度細くしてから広げる？}{\bklevelrange{4}{5}}{流れる気体の熱：エンタルピーとノズル}
+\bkmichishirube{5-6,8-8,8-11,力-3,力-13,熱-2,熱-3}{熱-6,熱-7,熱-8,熱-9,波-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 定常流動のエネルギーの式で、タービン・圧縮機・ノズル・ドライヤーのエネルギーを計算できる。
+\item \bklevel{4}\enspace 音の速さ・マッハ数・よどみ点の温度を計算できる。
+\item \bklevel{5}\enspace 先細末広ノズルの、のどの状態と出口の面積を求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{音の速さは、空気中で約\qty{340}{m/s}}{中学理科}{ph:熱-4:onsoku}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+ロケットのノズルは、燃焼室からいったん細くしぼり、また広げた形です。ガスを速く噴き出したいなら、出口までずっと細くすればよさそうです。なぜ、一度細くしてから広げるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \fill[bkGray!35] (-30,-10) rectangle (-19.5,10);
+  \draw[bkInk, line width=0.8pt] (-30,-10) rectangle (-19.5,10);
+  \node[qxe lab, align=center] at (-24.75,0) {燃焼\\室};
+  \qxenozzle{(0,0)}{0.65}
+  \draw[qxe v] (-15,0) -- (-6,0);
+  \draw[qxe v, line width=1.6pt] (12,0) -- (24,0);
+  \node[qxe lab, anchor=south] at (0,3.2) {のど};
+  \node[qxe lab, anchor=north] at (14,-5.6) {広げる};
+  \node[qxe lab, anchor=north] at (-9,-7) {しぼる};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-3 では、ピストンで閉じこめた気体をふくらませたり縮めたりしました。工学で使う気体の多くは、閉じこめられているのではなく、管やノズル、タービンの中を\textbf{流れて}います。この章では、力-13 の「検査体積」で、流れる気体が運ぶエネルギーを数えます。そのとき便利なのが\textbf{エンタルピー}という量です。後半では、気体の流れが音の速さに近づくと、何が起きるかを調べます。ロケットのノズルの形のひみつ（力-3 の約束）も、そこでわかります。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[吹き出す気体の温度を感じよう]
+\textbf{用意するもの}\par
+炭酸飲料のペットボトル（よく冷やしたもの）、パソコンのほこりを飛ばすエアダスターの缶（大人といっしょに）
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 炭酸のペットボトルのふたを、すばやくあけて、口の所を横から見る。白い霧ができるか。
+\item エアダスターを、数秒ずつ3回吹き、缶をさわって温度の変化を感じる。火の近くでは使わない。人の体に向けない。続けて長く吹かない。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent ①の霧は、中の気体が急にふくらんで冷えたためです（熱-3 ⑥の断熱膨張）。②で缶が冷えるのは、缶の中の液体が気体になるときに熱を吸うからです（潜熱。熱-1・熱-8）。流れる気体の温度は、ふくらみ方や、速さの変わり方で決まります。どれだけ変わるかを、この章で計算します。
+
+\begin{omoidasou}
+\bkrecall{力-13}{検査体積：空間に固定した囲みで、入る量－出る量＋生じる量＝たまる量。連続の式 $\rho Av=$一定、ベルヌーイの式 $p+\tfrac12\rho v^2+\rho gz=$一定、運動量の法則 $\Sigma\vec F=\dot m(\vec v_{\text{出}}-\vec v_{\text{入}})$。}
+\bkrecall{熱-2}{第一法則 $\Delta U=Q+W$（$W$ は気体がされる仕事）。}
+\bkrecall{熱-3}{$p=\rho R_{\mathrm s}T$。断熱では $T/p^{(\gamma-1)/\gamma}=$一定、$K_{\mathrm s}=\gamma p$。空気は $c_p=1005$\,J/(kg·K)、$R_{\mathrm s}=287$\,J/(kg·K)、$\gamma=1.4$。}
+\bkrecall{5-6}{合成関数の微分。$\ln x$ を微分すると $1/x$ なので、$\ln(\rho Av)$ を微分すると $\dfrac{\dd\rho}{\rho}+\dfrac{\dd A}{A}+\dfrac{\dd v}{v}$。}
+\end{omoidasou}
+
+%% ---------------- 物理の道具 ----------------
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{流れる気体のエネルギーを見る}{4}
+
+\bksubsection{1}{流れる気体が働く機械}
+
+\leavevmode\label{ph:熱-4:sec1}身のまわりや工場には、気体や液体を流しながら、熱や仕事をやりとりする機械がたくさんあります。表\ref{ph:熱-4:tab-kikai}は、その例です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=42mm] Q[l,m,wd=46mm]}, rowsep=1.4pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+機械 & 入口 → 出口で変わること & エネルギーのやりとり \\
+ドライヤー & 空気の温度が上がる & ヒーターの熱が入る \\
+空気の圧縮機 & 圧力と温度が上がる & モーターの仕事が入る \\
+蒸気タービン & 圧力と温度が下がる & 羽根を回す仕事が出る \\
+ノズル & 圧力が下がり、速くなる & 熱も仕事も出入りしない \\
+混合水栓 & 湯と水がまざる & 熱も仕事も出入りしない \\
+\end{bktable}
+\bktabcaption{流れながら働く機械の例。どれも、流れが時間で変わらない（定常）ときを考える。}
+\label{ph:熱-4:tab-kikai}
+\end{bkcenter}
+
+どの機械も、1秒ごとに同じだけの流体が入り、同じだけ出ていきます。そこで、機械を力-13 の\textbf{検査体積}（空間に固定した囲み）でかこみ、「1 kg の流体が通りぬける間に、何がどれだけ変わるか」を数えます（図\ref{ph:熱-4:fig-kensa}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkTheme, line width=1.2pt, dashed, rounded corners=3mm] (24,-14) rectangle (96,16);
+  \node[qxe lab, text=bkDeep, anchor=south] at (60,16.8) {検査体積（機械をかこむ囲み）};
+  \fill[bkGray!35] (44,-8) rectangle (76,8);
+  \draw[bkInk, line width=0.8pt] (44,-8) rectangle (76,8);
+  \node[qxe lab] at (60,0) {機械};
+  \draw[qxe f, bkBlue!80!black] (0,0) -- (43,0);
+  \node[qxe lab, anchor=south, align=center] at (11,1.2) {入口 1\\$p_1,\ T_1,\ v_1,\ z_1$};
+  \draw[qxe f, bkBlue!80!black] (77,0) -- (120,0);
+  \node[qxe lab, anchor=south, align=center] at (109,1.2) {出口 2\\$p_2,\ T_2,\ v_2,\ z_2$};
+  \draw[qxe f, bkRed!75!black] (52,-24) -- (52,-9);
+  \node[qxe lab, anchor=north] at (52,-24.5) {熱 $q$};
+  \draw[qxe f, bkOrange!85!black] (68,-24) -- (68,-9);
+  \node[qxe lab, anchor=north] at (68,-24.5) {仕事 $w$};
+\end{tikzpicture}
+\bkfigcaption{機械をかこむ検査体積。1 kg の流体が入口1から出口2へ通りぬける間に、熱 $q$ を受けとり、仕事 $w$ をされる（どちらも、出ていくときは負の数）。}
+\label{ph:熱-4:fig-kensa}
+\end{bkfigure}
+
+\bksubsection{2}{流れに乗って運ばれるエネルギー：エンタルピー}
+
+\leavevmode\label{ph:熱-4:sec2}1 kg の流体が持っているエネルギーは、内部エネルギー $u$〔J/kg〕、運動エネルギー $\tfrac12v^2$、位置エネルギー $gz$ です（1 kg あたりなので、どれも J/kg）。ところが、流れる流体を数えるときは、もう1つ数えるものがあります。
+
+\noindent\textbf{押しこむ仕事（流れの仕事）}\par\nobreak
+1 kg の流体を、圧力 $p$ の囲みの中へ押しこむことを考えます。1 kg の体積は $1/\rho$ です。うしろの流体は、断面積 $A$ の面を力 $pA$ で押しながら、長さ $(1/\rho)/A$ だけ進めます。だから、押しこむ仕事は
+\[ pA\times\frac{1/\rho}{A}=\frac{p}{\rho} \]
+です。力-13 ②で、ベルヌーイの式を作るとき「うしろの水が押す仕事 $p_1V$」と数えたのと同じものです。入口では、この $p_1/\rho_1$ をうしろの流体からもらい、出口では $p_2/\rho_2$ を前の流体にわたします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (0,-7) rectangle (110,7);
+  \draw[bkInk, line width=1pt] (0,7) -- (110,7) (0,-7) -- (110,-7);
+  \fill[bkBlue!40] (30,-7) rectangle (56,7);
+  \node[qxe lab, align=center] at (43,0) {1 kg\\体積 $1/\rho$};
+  \draw[bkTheme, line width=1.2pt, dashed] (56,-11) -- (56,11);
+  \node[qxe lab, text=bkDeep, anchor=south] at (56,11.5) {検査体積の入口};
+  \draw[qxe f, bkRed!75!black] (14,0) -- (29,0);
+  \node[qxe lab, anchor=south] at (19,1) {$pA$};
+  \draw[qxe dim] (30,-10) -- (56,-10);
+  \node[qxe lab, anchor=north] at (43,-10.6) {長さ $(1/\rho)/A$};
+  \node[qxe lab, anchor=west] at (60,0) {囲みの中（圧力 $p$）};
+\end{tikzpicture}
+\bkfigcaption{1 kg の流体を、圧力 $p$ の囲みへ押しこむ。うしろの流体がする仕事は、力 $pA$ × 長さ $(1/\rho)/A$ ＝ $p/\rho$。}
+\label{ph:熱-4:fig-oshikomu}
+\end{bkfigure}
+
+\noindent\textbf{$u$ と $p/\rho$ をひとまとめにする}\par\nobreak
+流体が囲みに入るたびに、内部エネルギー $u$ と、押しこむ仕事 $p/\rho$ が、いつもいっしょに入ってきます。そこで、この2つをたした量に名前をつけます。
+\pheq{h=u+\frac{p}{\rho}}{J/kg ＝ J/kg ＋ Pa ÷ kg/m$^3$}
+\label{ph:熱-4:h}$h$ を\textbf{比エンタルピー}（1 kg あたりのエンタルピー）といいます。\bkidx{ひえんたるぴー}{比エンタルピー}全体のエンタルピーは $H=U+pV$ です。エンタルピーは「流れに乗って運ばれるエネルギー」と考えるとわかりやすいでしょう。Pa ÷（kg/m$^3$）＝（N/m$^2$）×（m$^3$/kg）＝N·m/kg＝J/kg なので、$p/\rho$ も J/kg です。
+
+\noindent\textbf{理想気体では $\Delta h=c_p\Delta T$}\par\nobreak
+理想気体では、$u$ は温度だけで決まり（$\Delta u=c_v\Delta T$）、$p/\rho=R_{\mathrm s}T$ です（熱-3 ③）。だから
+\[ \Delta h=c_v\Delta T+R_{\mathrm s}\Delta T=(c_v+R_{\mathrm s})\Delta T=c_p\Delta T \]
+となり、熱-3 ④のマイヤーの関係 $c_p=c_v+R_{\mathrm s}$ から、定圧比熱 $c_p$ が出てきます。空気では、温度が\qty{1}{K}変わると、比エンタルピーは約\qty{1.0}{kJ/kg}変わります。
+\pheq{\Delta h=c_p\Delta T\qquad(\text{理想気体})}{J/kg ＝ J/(kg·K) × K}
+
+\begin{phyomi}[$h=u+p/\rho$]
+「流体1 kg が、入口から運びこむエネルギー」。中に持っているエネルギー $u$ と、うしろから押しこまれてもらう仕事 $p/\rho$ の和です。$h$ の値そのものより、入口と出口の\textbf{差} $\Delta h$ が大事です（どこを0にするかは、本によってちがいます）。
+\end{phyomi}
+\begin{phmijika}[\qty{20}{\celsius}・1気圧の空気\qty{1}{kg}]
+押しこむ仕事は $p/\rho=R_{\mathrm s}T=287\times293\approx\qty{84}{kJ/kg}$ です。空気の流れでは、これは無視できない大きさです。だから、流れる気体の温度を計算するときは、$c_v$ ではなく $c_p$ を使います。
+\end{phmijika}
+
+\Needspace{12\baselineskip}
+\phstage{te}{バランス式で機械を計算する}{4}
+
+\bksubsection{3}{定常流動のエネルギーの式}
+
+\leavevmode\label{ph:熱-4:sec3}図\ref{ph:熱-4:fig-kensa}の検査体積に、1秒あたりのエネルギーのバランス式（力-13 ⑥）を立てます。流れが時間で変わらない（\textbf{定常}）とき、中のエネルギーは増えも減りもしないので、「入る＝出る」です。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 入口から入る：1秒に $\dot m$〔kg/s〕の流体が、1 kg あたり $u_1+\tfrac12v_1^2+gz_1$ を持って入り、押しこむ仕事 $p_1/\rho_1$ ももらう。合わせて $\dot m\bigl(h_1+\tfrac12v_1^2+gz_1\bigr)$。
+\item 出口から出る：同じように $\dot m\bigl(h_2+\tfrac12v_2^2+gz_2\bigr)$。
+\item 壁から：1秒に受けとる熱 $\dot Q$ と、軸（羽根車など）からされる仕事 $\dot W$。
+\end{enumerate}
+入る＝出る なので
+\[ \dot Q+\dot W+\dot m\Bigl(h_1+\frac12v_1^2+gz_1\Bigr)=\dot m\Bigl(h_2+\frac12v_2^2+gz_2\Bigr) \]
+両辺を $\dot m$ でわり、1 kg あたりの熱 $q=\dot Q/\dot m$ と仕事 $w=\dot W/\dot m$ で書くと
+\pheq{q+w=(h_2-h_1)+\frac12(v_2^2-v_1^2)+g(z_2-z_1)}{J/kg}
+\label{ph:熱-4:sfee}これを\textbf{定常流動のエネルギーの式}といいます。\bkidx{ていじょうりゅうどうのえねるぎーのしき}{定常流動のエネルギーの式}$q$ は流体が受けとる熱、$w$ は流体がされる仕事です（熱-2 の $\Delta U=Q+W$ と同じ向き）。タービンのように流体から仕事を取り出すときは $w$ が負になり、取り出す仕事は $w_{\text{出}}=-w$ です。
+
+\begin{phyomi}[$q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$]
+「1 kg の流体が受けとった熱と仕事は、流体のエンタルピー・運動エネルギー・位置エネルギーの増え方の和になる」。閉じた気体の第一法則 $\Delta U=Q+W$ の、流れる流体の版です。$U$ のかわりに $h$ が出てくるのは、出入りのたびに押しこむ仕事がついてくるからです。
+\end{phyomi}
+
+\noindent\textbf{3つの項の大きさをくらべる}\par\nobreak
+空気で、右辺の3つの項がそれぞれ\qty{1}{kJ/kg}になるのは、次のときです。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item エンタルピー：温度が\qty{1}{K}変わる（$c_p\times1\approx\qty{1.0}{kJ/kg}$）。
+\item 運動エネルギー：速さが0から約\qty{45}{m/s}になる（$\tfrac12\times45^2\approx\qty{1.0}{kJ/kg}$）。
+\item 位置エネルギー：約\qty{100}{m}上がる（$9.8\times100\approx\qty{1.0}{kJ/kg}$）。
+\end{itemize}
+機械の中で温度が何十 K も変わるときは、ふつう高さの差は無視でき、速さの差も、数十 m/s までなら小さいことがわかります。
+
+\begin{phmodel}[定常流動（この章の基本のモデル）]
+\phignore{入口と出口の断面の中での、速さ・温度のちがい（断面の平均の値を使う）。}
+\phassume{流れは時間で変わらない（定常）。1秒に入る質量と出る質量は同じ。流体は1つの入口から入り、1つの出口から出る。}
+\phlimit{動き始め・止める直前など、時間で変わるとき。入口や出口がいくつもあるとき（混合のように、出入りごとにたす）。}
+\end{phmodel}
+
+\noindent\textbf{機械ごとに、どの項が0になるか}\par\nobreak
+定常流動のエネルギーの式は、どの機械にも使えます。機械ごとに、小さくて無視できる項を0にすると、表\ref{ph:熱-4:tab-kiki}のような簡単な式になります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=27mm] Q[l,m,wd=40mm] Q[l,m,wd=52mm]}, rowsep=1.6pt, row{1}={font=\sffamily\bfseries\footnotesize, bg=bkTheme!10}, cells={font=\small}}
+機械 & 0とする項 & 式 \\
+タービン & $q$、速さと高さの差 & $w_{\text{出}}=h_1-h_2$ \\
+圧縮機・ポンプ & $q$、速さと高さの差 & $w=h_2-h_1$（液体のポンプは $\approx\Delta p/\rho$） \\
+ボイラー・熱交換器・ドライヤー & $w$、速さと高さの差 & $q=h_2-h_1$ \\
+ノズル & $q$、$w$、高さの差 & $v_2=\sqrt{v_1^2+2(h_1-h_2)}$ \\
+絞り弁 & $q$、$w$、速さと高さの差 & $h_1=h_2$ \\
+混合 & $q$、$w$、速さと高さの差 & $\dot m_1h_1+\dot m_2h_2=(\dot m_1+\dot m_2)h_3$ \\
+\end{bktable}
+\bktabcaption{定常流動のエネルギーの式を、機械ごとに簡単にした式。}
+\label{ph:熱-4:tab-kiki}
+\end{bkcenter}
+
+\Needspace{14\baselineskip}
+\begin{phflow}
+\phflowrow{$q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$}{$q=0$\\速さ・高さの差なし}{$w_{\text{出}}=h_1-h_2$\\（タービン）}
+\phflowrow{$q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$}{$q=0$、$w=0$\\高さの差なし}{$v_2=\sqrt{2(h_1-h_2)}$\\（ノズル、入口は止まる）}
+\phflowrow{$q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$}{$q=0$、$w=0$\\速さの差なし}{$h_1=h_2$\\（絞り弁）}
+\end{phflow}
+
+\begin{phbaisuru}{エンタルピーの差 $h_1-h_2$}
+ノズルの出口の速さ $v_2=\sqrt{2(h_1-h_2)}$ は、$\sqrt2\approx1.41$ 倍にしかなりません。速さを2倍にするには、エンタルピーの差を4倍にします。差が\qty{100}{kJ/kg}で約\qty{450}{m/s}、\qty{400}{kJ/kg}で約\qty{890}{m/s}です。空気なら、\qty{100}{kJ/kg}は温度にして約\qty{100}{K}の下がりです。ロケットが何千 ℃もの高温のガスを使うのは、大きなエンタルピーの差から、速い噴流を作るためです。
+\end{phbaisuru}
+
+\bksubsection{4}{ベルヌーイの式は、特別な場合}
+
+\leavevmode\label{ph:熱-4:sec4}力-13 では、水の流れで、流線にそって $p+\tfrac12\rho v^2+\rho gz$ が一定（ベルヌーイの式）になることを学びました。この式は、定常流動のエネルギーの式の特別な場合です。
+
+管の中を水が流れ、熱も仕事も出入りしない（$q=0$、$w=0$）とします。$h=u+p/\rho$ を入れると
+\[ 0=(u_2-u_1)+\Bigl(\frac{p_2}{\rho}-\frac{p_1}{\rho}\Bigr)+\frac12(v_2^2-v_1^2)+g(z_2-z_1) \]
+水の密度 $\rho$ は一定です（力-12②）。さらに、摩擦（粘性）がなければ、流れのエネルギーが熱に変わらないので、水の温度は変わらず、$u_2=u_1$ です。両辺に $\rho$ をかけて並べかえると
+\[ p_1+\frac12\rho v_1^2+\rho gz_1=p_2+\frac12\rho v_2^2+\rho gz_2 \]
+となり、力-13 のベルヌーイの式が出てきました。力-13 では\qty{1}{m^3}あたり（Pa）で数え、ここでは\qty{1}{kg}あたり（J/kg）で数えたちがいだけです。
+
+\begin{phflow}
+\phflowrow{$q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$\\$h=u+p/\rho$}{$q=0$、$w=0$\\$\rho$ 一定・摩擦なし\\（$\Delta u=0$）}{$p+\frac12\rho v^2+\rho gz$\\＝一定（力-13）}
+\end{phflow}
+
+\begin{seikaku}
+本当の管の流れには摩擦があり、流れのエネルギーの一部が熱に変わって、水の内部エネルギー $u$ が少し増えます。力-14 の「損失ヘッド」は、この分です。損失ヘッドが\qty{10}{m}でも、水の温度の上がりは $9.8\times10\div4180\approx\qty{0.02}{K}$ ほどで、温度計ではほとんどわかりません。でも、エネルギーとしては、圧力の\qty{98}{kPa}分が失われています。
+\end{seikaku}
+
+\bksubsection{5}{表計算：ノズルの中の速さと温度}
+
+\leavevmode\label{ph:熱-4:sec5}\bkhatenaref に、表計算で答えましょう。\qty{700}{kPa}・\qty{300}{K}の空気が入った大きなタンクから、ノズルで空気を噴き出します。タンクの中の空気は止まっています。ノズルの中を進むにつれて、圧力が下がっていきます。それぞれの圧力の所で、温度・速さ・密度と、\qty{1}{kg/s}を流すのに要る断面積を計算します。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 温度：熱が出入りせず、摩擦もないとして、熱-3 ⑥の断熱の式 $T/p^{0.4/1.4}=$一定 を使う。$T=300\times(p/700)^{0.2857}$。
+\item 速さ：定常流動のエネルギーの式（ノズル）で、$v=\sqrt{2c_p(300-T)}$。
+\item 密度：$\rho=p/(R_{\mathrm s}T)$。
+\item 1秒に\qty{1}{m^2}を通る質量は $\rho v$。\qty{1}{kg/s}を流すのに要る断面積は $A=1/(\rho v)$。
+\end{enumerate}
+\begin{bkcenter}
+\bksheet{7}{13}{%
+1 & $p$（kPa） & $T$（K） & $v$（m/s） & $\rho$ & $\rho v$ & $A$（cm$^2$） & $\sqrt{\gamma R_{\mathrm s}T}$ \\
+2 & 700 & 300.0 & 0 & 8.13 & 0 & ― & 347 \\
+3 & 600 & 287.1 & 161 & 7.28 & 1174 & 8.52 & 340 \\
+4 & 500 & 272.5 & 235 & 6.39 & 1503 & 6.65 & 331 \\
+5 & 400 & 255.7 & 299 & 5.45 & 1627 & 6.15 & 321 \\
+6 & 370 & 250.0 & 317 & 5.16 & 1634 & 6.12 & 317 \\
+7 & 300 & 235.5 & 360 & 4.44 & 1598 & 6.26 & 308 \\
+8 & 200 & 209.7 & 426 & 3.32 & 1415 & 7.07 & 290 \\
+9 & 101 & 172.7 & 506 & 2.04 & 1034 & 9.67 & 263 \\}
+\bktabcaption{タンク（\qty{700}{kPa}・\qty{300}{K}）からノズルで噴き出す空気。$\rho$ の単位は kg/m$^3$、$\rho v$ の単位は kg/(m$^2$·s)、$A$ は\qty{1}{kg/s}を流す断面積。G 列はその場所の音の速さ（⑥で導く式）。}
+\label{ph:熱-4:tab-nozzle}
+\end{bkcenter}
+
+表\ref{ph:熱-4:tab-nozzle}を、上から順に見ていきましょう。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 圧力が下がるにつれて、温度が下がり、その分だけ速くなる（エンタルピーが運動エネルギーになる）。
+\item 密度も下がる。はじめは、速さの増え方のほうが大きいので、$\rho v$ は増え、要る断面積 $A$ は\textbf{小さく}なる。
+\item \qty{370}{kPa}あたりで $A$ がいちばん小さくなる。ここから先は、密度の下がり方のほうが大きくなり、$A$ は\textbf{大きく}なる。
+\item $A$ がいちばん小さい所で、速さ（\qty{317}{m/s}）は、その場所の音の速さ（G 列の\qty{317}{m/s}）とちょうど同じになる。
+\end{itemize}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=44mm, xmin=0, xmax=560, ymin=0, ymax=11, xtick={100,200,317,400,506}, ytick={2,4,6.12,8,10}, yticklabels={2,4,6.1,8,10}, xlabel={$v$（m/s）}, ylabel={$A$（cm$^2$）}]
+  \addplot[bkcurve, smooth] coordinates {(110.0,10.98) (161.2,8.52) (235.1,6.65) (298.5,6.15) (316.9,6.12) (360.1,6.26) (425.9,7.07) (505.9,9.67) (530,10.9)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(161.2,8.52) (235.1,6.65) (298.5,6.15) (316.9,6.12) (360.1,6.26) (425.9,7.07) (505.9,9.67)};
+  \draw[bkGray, dashed, line width=0.6pt] (axis cs:316.9,0) -- (axis cs:316.9,10.2);
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:316.9,10.2) {ここで音の速さ（のど）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:190,4.6) {速くするには細く};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:450,4.6) {速くするには太く};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表\ref{ph:熱-4:tab-nozzle}の速さ $v$ と、\qty{1}{kg/s}を流すのに要る断面積 $A$。$A$ は、速さが音の速さになる所でいちばん小さい。}
+\label{ph:熱-4:fig-av}
+\end{bkfigure}
+
+\label{ph:熱-4:hatena1}\textbf{\bkhatenaref の答え}：気体を速くしていくと、音の速さより遅い間は、細くするほど速くなります。ところが、音の速さをこえると、気体は速くなる以上にふくらんで（密度が下がって）しまうので、通り道を\textbf{広げないと}、もっと速くはなれません。だからロケットのノズルは、いったん細くしぼって、いちばん細い所（\textbf{のど}）で音の速さにし、そこから広げて、音の速さの何倍もの速さで噴き出すのです。\bkidx{のど}{のど（ノズルの）}出口まで細くするだけのノズルでは、出口で音の速さになったところで止まってしまいます。なぜ、ちょうど音の速さが境目になるのかは、⑥〜⑧で式を使って確かめます。
+
+\phkokomade
+
+\Needspace{12\baselineskip}
+\phstage{shiki}{音の速さとノズルの式を導く}{5}
+
+\bksubsection{6}{音の速さ $a=\sqrt{\gamma R_{\mathrm s}T}$}
+
+\leavevmode\label{ph:熱-4:sec6}長い管の中の、止まっている気体を考えます。左のはしのピストンを、急に少しだけ押すと、ピストンの前の気体がわずかに押し縮められ、その「押し縮められた所」が、右へ速さ $a$ で伝わっていきます。これが音（小さな圧力の波）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!25] (6,-7) rectangle (58,7);
+  \fill[bkBlue!10] (58,-7) rectangle (118,7);
+  \draw[bkInk, line width=1pt] (0,7) -- (118,7) (0,-7) -- (118,-7);
+  \filldraw[fill=bkGray!55, draw=bkInk, line width=0.7pt] (3,-7) rectangle (6,7);
+  \draw[bkRed!75!black, line width=2.2pt] (58,-9) -- (58,9);
+  \draw[qxe f, bkRed!75!black] (60,10) -- (74,10);
+  \node[qxe lab, anchor=west] at (75,10) {波の先が速さ $a$ で進む};
+  \node[qxe lab, align=center] at (32,0) {$p+\dd p,\ \rho+\dd\rho$\\速さ $\dd v$ で動く};
+  \node[qxe lab, align=center] at (90,0) {$p,\ \rho$\\止まっている};
+  \draw[qxe v] (14,-11) -- (24,-11);
+  \node[qxe lab, anchor=west] at (25,-11) {$\dd v$};
+  \draw[bkTheme, line width=1.1pt, dashed] (52,-13) rectangle (64,13);
+  \node[qxe lab, text=bkDeep, anchor=north] at (58,-13.6) {波の先をかこむ検査体積};
+\end{tikzpicture}
+\bkfigcaption{ピストンを急に押すと、押し縮められた所の先（縦の太い線）が、速さ $a$ で右へ進む。}
+\label{ph:熱-4:fig-onpa}
+\end{bkfigure}
+
+\noindent\textbf{波の先といっしょに動いて見る}\par\nobreak
+波の先といっしょに速さ $a$ で右へ動く人から見ると、波の先は止まっていて、右から気体が速さ $a$ で流れこみ、左へ速さ $a-\dd v$ で流れ出ていきます。これは定常な流れなので、波の先を、断面積 $A$ のうすい検査体積でかこんで、力-13 のバランス式を使えます。
+
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{質量}（連続の式）：入る $\rho aA$ と、出る $(\rho+\dd\rho)(a-\dd v)A$ が等しい。小さな量どうしの積 $\dd\rho\,\dd v$ を無視すると、$a\,\dd\rho=\rho\,\dd v$。
+\item \textbf{運動量}（運動量の法則、力-13 ⑧）：力も速さも左向きを正とする。気体にはたらく力は、右の面を左へ押す $pA$ と、左の面を右へ押す $(p+\dd p)A$ で、合わせて $-A\,\dd p$。1秒に通る質量 $\dot m=\rho aA$ の速さは、入るとき $a$、出るとき $a-\dd v$ なので、$-A\,\dd p=\rho aA\{(a-\dd v)-a\}=-\rho aA\,\dd v$。だから $\dd p=\rho a\,\dd v$。
+\end{enumerate}
+①から $\dd v=a\,\dd\rho/\rho$。これを②に入れると、$\dd p=\rho a\cdot a\,\dd\rho/\rho=a^2\,\dd\rho$。だから
+\[ a^2=\frac{\dd p}{\dd\rho} \]
+「音の速さの2乗は、密度を少し増やしたときの、圧力の増え方」です。
+
+\noindent\textbf{音は断熱で伝わる}\par\nobreak
+音の波は、1秒に何百回も押し縮めたり、ふくらませたりします。熱が移る時間はなく、変化はほんのわずかなので、摩擦によるむだもありません。だから、熱-3 ⑥の断熱の式 $p/\rho^{\gamma}=$一定（$pV^\gamma=$一定 で、$V$ は $1/\rho$ に比例）を使います。両辺の対数をとって微分すると $\dfrac{\dd p}{p}=\gamma\dfrac{\dd\rho}{\rho}$ なので
+\[ \frac{\dd p}{\dd\rho}=\frac{\gamma p}{\rho}=\gamma R_{\mathrm s}T \]
+（$p/\rho=R_{\mathrm s}T$ を使いました）。音の速さは
+\pheq{a=\sqrt{\frac{\gamma p}{\rho}}=\sqrt{\gamma R_{\mathrm s}T}}{m/s ＝ $\sqrt{\text{J/(kg·K)} \times \text{K}}$}
+\label{ph:熱-4:onsoku}です。\bkidx{おとのはやさ}{音の速さ（音速）}$\gamma p$ は熱-3 ⑧の断熱の体積弾性率 $K_{\mathrm s}$ なので、$a=\sqrt{K_{\mathrm s}/\rho}$ とも書けます。「縮みにくく（$K_{\mathrm s}$ が大きく）、軽い（$\rho$ が小さい）ほど、音は速く伝わる」と読めます。\qty{20}{\celsius}の空気では $a=\sqrt{1.4\times287\times293}\approx\qty{343}{m/s}$ で、中学理科の「音の速さは約\qty{340}{m/s}」が出てきました（\bkreidairef{8}）。
+
+\begin{phyomi}[$a=\sqrt{\gamma R_{\mathrm s}T}$]
+「気体の音の速さは、絶対温度の平方根に比例し、圧力にはよらない」。圧力を上げると、縮みにくさ $\gamma p$ も密度 $\rho$ も同じ割合で大きくなるので、打ち消し合うのです。
+\end{phyomi}
+\begin{phbaisuru}{絶対温度 $T$}
+音の速さは $\sqrt2\approx1.41$ 倍になります。4倍にすると2倍です。\qty{-40}{\celsius}から\qty{40}{\celsius}までなら、グラフのように、ほぼ直線で、1 K で約\qty{0.6}{m/s}ずつ変わります（くわしくは、物理シリーズの『波動』（波-9）で）。
+\par\vspace{2pt}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=-45, xmax=48, ymin=290, ymax=365, xtick={-40,-20,0,20,40}, ytick={306,319,331,343,355}, xlabel={$\theta$（℃）}, ylabel={$a$（m/s）}, axis x line*=bottom, axis y line*=left]
+  \addplot[bkcurve, domain=-42:44] {sqrt(1.4*287*(x+273.15))};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(-40,306.1) (-20,318.9) (0,331.3) (20,343.2) (40,354.7)};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{column}{ニュートンの計算は、なぜ15\,\% 小さかった？}
+音の速さを、はじめて式で求めたのはニュートンです。1687年の本『プリンキピア』で、空気をボイルの法則（温度一定）で押し縮めるとして、今の式の $\gamma$ がない $a=\sqrt{p/\rho}$ を出しました。\qty{20}{\celsius}の空気では約\qty{290}{m/s}で、測った値より約15\,\% 小さかったのです。ニュートンは、空気の中のちりや水蒸気のせいではないかと考えましたが、説明はつきませんでした。
+
+1816年、フランスのラプラスが「音で押し縮められた所は、熱が逃げる前に、すぐにまたふくらむ。だから温度一定ではなく断熱で考えるべきだ」と気づき、$\sqrt{\gamma}=\sqrt{1.4}\approx1.18$ 倍に直しました。$290\times1.18\approx343$ で、測った値とよく合いました。比熱比 $\gamma$ を、音の速さから求めることもできるようになりました。
+\end{column}
+
+\bksubsection{7}{マッハ数と、よどみ点の温度}
+
+\leavevmode\label{ph:熱-4:sec7}流れの速さ $v$ を、その場所の音の速さ $a$ でわった数を\textbf{マッハ数}といい、Ma と書きます（立体の2文字。オーストリアのマッハの名前から）。\bkidx{まっはすう}{マッハ数}
+\pheq{\mathrm{Ma}=\frac{v}{a}}{単位なし}
+$\mathrm{Ma}<1$ を\textbf{亜音速}、$\mathrm{Ma}>1$ を\textbf{超音速}といいます。同じ速さでも、気温が低い高い空では音の速さが小さいので、マッハ数は大きくなります（\bkreidairef{9}）。
+
+\noindent\textbf{流れを止めると温まる：よどみ点の温度}\par\nobreak
+速さ $v$・温度 $T$ の流れを、物の正面で止めます（よどみ点。力-13 のピトー管の先と同じ所）。止めるまでの間に熱も仕事も出入りしないとすると、表\ref{ph:熱-4:tab-kiki}のノズルの式を逆向きに使って、$h_0=h+\tfrac12v^2$。理想気体では $c_pT_0=c_pT+\tfrac12v^2$ なので
+\pheq{T_0=T+\frac{v^2}{2c_p}}{K ＝ (m/s)$^2$ ÷ J/(kg·K)}
+\label{ph:熱-4:yodomi}$T_0$ を\textbf{よどみ点温度}といいます。\bkidx{よどみてんおんど}{よどみ点温度}運動エネルギーが、止めた所でエンタルピーにもどり、温度が上がるのです。\qty{250}{m/s}（旅客機くらい）では、$250^2\div(2\times1005)\approx\qty{31}{K}$ 上がります（\bkreidairef{10}）。
+
+$v=\mathrm{Ma}\cdot a$、$a^2=\gamma R_{\mathrm s}T$、$c_p=\dfrac{\gamma}{\gamma-1}R_{\mathrm s}$（熱-3 ⑥）を使うと、$\dfrac{v^2}{2c_pT}=\dfrac{\gamma-1}{2}\mathrm{Ma}^2$ なので、マッハ数で書けます。
+\pheq{\frac{T_0}{T}=1+\frac{\gamma-1}{2}\mathrm{Ma}^2}{単位なし}
+止めるまでの変化を、熱-3 ⑥の断熱の式（摩擦なし）とすると、密度と圧力も決まります。$\rho\propto T^{1/(\gamma-1)}$、$p\propto T^{\gamma/(\gamma-1)}$ なので、空気（$\gamma=1.4$）では
+\[ \frac{\rho_0}{\rho}=\Bigl(1+0.2\,\mathrm{Ma}^2\Bigr)^{2.5},\qquad \frac{p_0}{p}=\Bigl(1+0.2\,\mathrm{Ma}^2\Bigr)^{3.5} \]
+
+\noindent\textbf{密度が変わる目安は、マッハ0.3}\par\nobreak
+\label{ph:熱-4:mitsudo}力-13 では、水も空気も、密度が変わらないとしてベルヌーイの式を使いました。そのとき「空気の速さが約\qty{100}{m/s}（音の速さの約3割）をこえるとき（密度が変わる：熱-4）」は使えない、と約束しました。止めたときに、流れの密度が止めた所の密度より何\,\% 小さいかを、上の式で計算すると、図\ref{ph:熱-4:fig-mitsudo}のようになります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=50mm, xmin=0, xmax=1.08, ymin=0, ymax=40, xtick={0.1,0.3,0.5,0.8,1}, ytick={4.4,11.5,26,36.6}, yticklabels={4.4,11.5,26,37}, xmajorgrids=false, xlabel={Ma}, ylabel={密度の変化（\%）}]
+  \addplot[bkcurve, domain=0:1.05] {100*(1-(1+0.2*x^2)^(-2.5))};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkOrange] coordinates {(0.1,0.50) (0.3,4.36) (0.5,11.48) (0.8,26.0) (1,36.61)};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.04,30) {Ma 0.3（約\qty{100}{m/s}）で約4\,\%};
+  \draw[bkGray, line width=0.5pt] (axis cs:0.24,28) -- (axis cs:0.295,5.6);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{流れの密度が、止めた所の密度より何\,\% 小さいか（空気、断熱・摩擦なし）。}
+\label{ph:熱-4:fig-mitsudo}
+\end{bkfigure}
+マッハ0.3（\qty{20}{\celsius}で約\qty{100}{m/s}）では約4\,\%、マッハ0.1（約\qty{34}{m/s}）では0.5\,\% です（\bkreidairef{11}）。この程度なら、密度が一定として計算しても、答えの2けたにはほとんど効きません。マッハ0.3 をこえると差が大きくなり、マッハ1 では約37\,\% にもなります。これが、力-13 の「約\qty{100}{m/s}」の意味です。
+
+\bksubsection{8}{先細末広ノズル}
+
+\leavevmode\label{ph:熱-4:sec8}⑤の表で見た「音の速さで、細くするか広げるかが入れかわる」ことを、式で確かめます。
+
+\noindent\textbf{面積と速さの関係}\par\nobreak
+ノズルの中の流れで、断面積 $A$ の所の密度・速さを $\rho$・$v$ とします。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{質量}：$\rho Av=$一定。対数をとって微分すると（5-6）、$\dfrac{\dd\rho}{\rho}+\dfrac{\dd A}{A}+\dfrac{\dd v}{v}=0$。
+\item \textbf{運動量}：流線にそった運動方程式（力-13 ⑦。高さの差は無視）で、$\rho v\,\dd v=-\dd p$。
+\item \textbf{断熱・摩擦なし}：⑥と同じく $\dd p=a^2\,\dd\rho$。
+\end{enumerate}
+②と③から $\dd\rho=-\rho v\,\dd v/a^2$、つまり $\dfrac{\dd\rho}{\rho}=-\dfrac{v^2}{a^2}\cdot\dfrac{\dd v}{v}=-\mathrm{Ma}^2\dfrac{\dd v}{v}$。これを①に入れると
+\pheq{\frac{\dd A}{A}=(\mathrm{Ma}^2-1)\frac{\dd v}{v}}{単位なし}
+\label{ph:熱-4:areavel}\bkhatenaref の答えを、この式がはっきり示しています。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $\mathrm{Ma}<1$（亜音速）：$\mathrm{Ma}^2-1<0$ なので、速くする（$\dd v>0$）には、断面積を\textbf{小さく}する（$\dd A<0$）。
+\item $\mathrm{Ma}>1$（超音速）：$\mathrm{Ma}^2-1>0$ なので、速くするには、断面積を\textbf{大きく}する。
+\item $\mathrm{Ma}=1$：$\dd A=0$。音の速さになれるのは、断面積がいちばん小さい所（のど）だけ。
+\end{itemize}
+②・③から $\dd\rho/\rho=-\mathrm{Ma}^2\,\dd v/v$ でした。亜音速では、速さが1\,\% 増えても密度は1\,\% より少ししか減らないので、通り道は細くてすみます。超音速では、速さが1\,\% 増えると密度は1\,\% より多く減るので、通り道を広げなければなりません。
+
+\noindent\textbf{面積とマッハ数の式}\par\nobreak
+のど（$\mathrm{Ma}=1$）の断面積を $A^*$ とします。$\rho v=$（密度）×（マッハ数）×（音の速さ）を、⑦の式でタンクの $\rho_0$・$a_0$ と $X=1+\tfrac{\gamma-1}{2}\mathrm{Ma}^2$ で書くと、$\rho=\rho_0X^{-1/(\gamma-1)}$、$a=a_0X^{-1/2}$ なので
+\[ \rho v=\rho_0a_0\,\mathrm{Ma}\,X^{-\frac{\gamma+1}{2(\gamma-1)}} \]
+$\rho Av$ はどこでも同じなので、$A$ は $\rho v$ に反比例します。のどでは $\mathrm{Ma}=1$、$X=\tfrac{\gamma+1}{2}$ なので、比をとって
+\pheq{\frac{A}{A^*}=\frac{1}{\mathrm{Ma}}\Biggl\{\frac{2}{\gamma+1}\Bigl(1+\frac{\gamma-1}{2}\mathrm{Ma}^2\Bigr)\Biggr\}^{\frac{\gamma+1}{2(\gamma-1)}}}{単位なし}
+空気（$\gamma=1.4$）では、指数は $\tfrac{2.4}{0.8}=3$ で、$\dfrac{A}{A^*}=\dfrac{1}{\mathrm{Ma}}\Bigl(\dfrac{1+0.2\,\mathrm{Ma}^2}{1.2}\Bigr)^3$ です。
+
+\noindent\textbf{プログラム：ノズルの表を作る}\par\nobreak
+\begin{phcode}[Python]
+Ms = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4,
+      1.6, 1.8, 2.0, 2.5, 3.0]
+for Ma in Ms:
+    X = 1 + 0.2 * Ma**2
+    A = (X / 1.2)**3 / Ma          \# A/A*
+    p = X**(-3.5)                  \# p/p0
+    T = 1 / X                      \# T/T0
+    print(Ma, round(A, 3), round(p, 3), round(T, 3))
+\end{phcode}
+\begin{phcodeout}
+0.2 2.964 0.972 0.992
+0.4 1.59 0.896 0.969
+0.6 1.188 0.784 0.933
+0.8 1.038 0.656 0.887
+1.0 1.0 0.528 0.833
+1.2 1.03 0.412 0.776
+1.4 1.115 0.314 0.718
+1.6 1.25 0.235 0.661
+1.8 1.439 0.174 0.607
+2.0 1.688 0.128 0.556
+2.5 2.637 0.059 0.444
+3.0 4.235 0.027 0.357
+\end{phcodeout}
+出力をグラフにしたのが図\ref{ph:熱-4:fig-laval}です。$A/A^*$ は $\mathrm{Ma}=1$ でいちばん小さい1になり、その両側で大きくなります。同じ面積比でも、亜音速と超音速の2つの答えがあります。どちらになるかは、ノズルの出口の外の圧力で決まります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=3.2, ymin=0, ymax=4.6, xtick={0.5,1,1.5,2,2.5,3}, ytick={0.528,1,1.688,3,4.235}, yticklabels={0.53,1,1.69,3,4.24}, xlabel={Ma}, ylabel={}]
+  \addplot[bkcurve, domain=0.15:3.05, samples=150] {(1/x)*((1+0.2*x^2)/1.2)^3};
+  \addplot[bkcurve2, dashed, domain=0:3.05] {(1+0.2*x^2)^(-3.5)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkInk] coordinates {(1,1) (2,1.688) (3,4.235) (1,0.528)};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.22,3.9) {$A/A^*$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:1.6,0.35) {$p/p_0$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:1,1.12) {のど};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{空気のノズルの、マッハ数と面積比 $A/A^*$（実線）・圧力の比 $p/p_0$（破線）。のど（Ma＝1）で $A/A^*=1$、$p/p_0=0.528$。}
+\label{ph:熱-4:fig-laval}
+\end{bkfigure}
+
+\noindent\textbf{のどの状態：臨界圧力比}\par\nobreak
+のどで $\mathrm{Ma}=1$ のとき、⑦の式から
+\[ \frac{T^*}{T_0}=\frac{2}{\gamma+1}=0.833,\qquad \frac{p^*}{p_0}=\Bigl(\frac{2}{\gamma+1}\Bigr)^{\frac{\gamma}{\gamma-1}}=0.528 \]
+です（空気）。$p^*/p_0$ を\textbf{臨界圧力比}といいます。\bkidx{りんかいあつりょくひ}{臨界圧力比}
+
+\noindent\textbf{流れが詰まる：チョーク}\par\nobreak
+先がだんだん細くなるだけのノズル（先細ノズル）で、タンクの圧力を一定にして、出口の外の圧力（背圧）を下げていきます。背圧がタンクの圧力に近いうちは、背圧を下げるほど流量が増えます。ところが、背圧がタンクの圧力の0.528倍まで下がると、出口（のど）の流れは音の速さになり、それ以上背圧を下げても、流量はもう増えません。これを\textbf{チョーク}（詰まる）といいます。\bkidx{ちょーく}{チョーク}のどの下流の圧力の変化は、音の速さで上流へ伝わります。のどの流れが音の速さになると、背圧が下がったという「知らせ」が、流れにさからってタンク側へ届かなくなるのです。このときの流量は
+\[ \dot m=\rho^*a^*A^*\qquad(\text{空気では、およそ }\dot m\approx0.0404\,\frac{A^*p_0}{\sqrt{T_0}}) \]
+で、タンクの圧力 $p_0$ に比例します（\bkreidairef{12}）。
+
+\noindent\textbf{先細末広ノズル}\par\nobreak
+のどの先を広げたノズルを、\textbf{先細末広ノズル}（ラバルノズル）といいます。\bkidx{さきぼそすえひろのずる}{先細末広ノズル}スウェーデンのド・ラバルが、1888年に蒸気タービンのために作りました。背圧が十分に低ければ、のどで音の速さになった流れは、広がる部分でさらに速くなり、超音速で噴き出します。出口で $\mathrm{Ma}=2$ にしたければ、出口の面積を、のどの1.69倍にします（\bkreidairef{13}）。1926年に、アメリカのゴダードが打ち上げた、はじめての液体燃料ロケットも、この形のノズルを使っていました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxenozzle{(42,0)}{1.3}
+  \node[qxe lab] at (8,0) {タンクから};
+  \draw[bkGray, dashed, line width=0.5pt] (42,-6) -- (42,-12);
+  \node[qxe lab, anchor=north] at (42,-12.5) {のど Ma＝1};
+  \node[qxe lab, anchor=north] at (14,-12.5) {Ma＜1（亜音速）};
+  \node[qxe lab, anchor=north] at (80,-12.5) {Ma＞1（超音速）};
+  \draw[qxe v] (20,0) -- (30,0);
+  \draw[qxe v, line width=1.5pt] (70,0) -- (92,0);
+  \node[qxe lab, anchor=south] at (14,11) {細くすると速くなる};
+  \node[qxe lab, anchor=south] at (80,11) {広げると速くなる};
+\end{tikzpicture}
+\bkfigcaption{先細末広ノズル。のどの手前は亜音速で、細くするほど速くなる。のどで音の速さになり、その先は超音速で、広げるほど速くなる。}
+\label{ph:熱-4:fig-shape}
+\end{bkfigure}
+
+\bksubsection{9}{衝撃波の入口}
+
+\leavevmode\label{ph:熱-4:sec9}先細末広ノズルの背圧が、超音速で噴き出すのに要る圧力より高いと、広がる部分の中に\textbf{衝撃波}という、とても薄い（分子が数回ぶつかる程度の厚さの）面ができます。\bkidx{しょうげきは}{衝撃波}衝撃波を通りぬけると、流れは急に亜音速になり、圧力・温度・密度が跳ね上がります。たとえば、マッハ2 の空気の流れが、流れに垂直な衝撃波を通ると、マッハ約0.58 になり、圧力は約4.5倍、温度は約1.7倍になります（この数を導く式は、専門の本で学びます）。
+
+衝撃波の中では、急な変化のために、流れのエネルギーの一部が「使いにくい形」に変わってしまいます。エネルギーの合計は保存しますが（定常流動のエネルギーの式は成り立つ）、断熱の式 $p/\rho^\gamma=$一定 は成り立ちません。この「もとにもどせない変化」を数える量がエントロピーで、衝撃波を通ると必ず増えます（熱-6）。超音速の飛行機やロケットのうしろにできる円すい形の衝撃波（マッハ円すい）は、物理シリーズの『波動』（波-8）で、波の重なりとして調べます。
+
+\begin{phmada}[空気を吸いこむ超音速のエンジン：スクラムジェット]
+ジェットエンジンは、まわりの空気を吸いこみ、燃料を燃やして噴き出します。マッハ5 をこえるような速さでは、吸いこんだ空気を亜音速まで減速するだけで温度が上がりすぎるので、空気を超音速のまま燃やす「スクラムジェット」が考えられています。アメリカの実験機 X-43A は、2004年にスクラムジェットでマッハ約9.6 を記録しましたが、燃えていたのは約10秒でした。その後の X-51A は、数分間の燃焼を目指して試験されました。
+
+むずかしいのは、超音速で流れる空気の中で、燃料を千分の数秒のうちにまぜて、消えないように燃やし続けることです。衝撃波・乱れた流れ・燃える化学反応が、同じ所で同時に起きるので、計算でも実験でも、まだすべてを予想することはできません。人や荷物を運ぶ乗り物のエンジンとして使えるまでには、燃え方の理解と、熱に耐える材料の両方で、研究が続いています。
+\end{phmada}
+
+%% ---------------- まとめ ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 比エンタルピー $h=u+p/\rho$（流れに乗って運ばれるエネルギー）。理想気体では $\Delta h=c_p\Delta T$。
+\item 定常流動のエネルギーの式 $q+w=\Delta h+\Delta(\tfrac12v^2)+g\Delta z$（$q$ は受けとる熱、$w$ はされる仕事）。タービン $w_{\text{出}}=h_1-h_2$、ノズル $v_2=\sqrt{v_1^2+2(h_1-h_2)}$、絞り弁 $h_1=h_2$。
+\item 音の速さ $a=\sqrt{\gamma R_{\mathrm s}T}$（\qty{20}{\celsius}の空気で\qty{343}{m/s}）。マッハ数 $\mathrm{Ma}=v/a$。よどみ点温度 $T_0=T+v^2/(2c_p)$。
+\item $\dd A/A=(\mathrm{Ma}^2-1)\,\dd v/v$：亜音速は細くすると、超音速は広げると速くなる。のどで $\mathrm{Ma}=1$、$p^*/p_0=0.528$。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{比エンタルピー}{1 kg あたりの $u+p/\rho$。流れる流体が運ぶエネルギー。}
+\bkword{定常流動}{時間で変わらない流れ。入る質量と出る質量が同じ。}
+\bkword{音の速さ（音速）}{小さな圧力の波が伝わる速さ。気体では $\sqrt{\gamma R_{\mathrm s}T}$。}
+\bkword{マッハ数}{流れの速さ÷音の速さ。1より小さいと亜音速、大きいと超音速。}
+\bkword{よどみ点温度}{流れを断熱で止めたときの温度 $T+v^2/(2c_p)$。}
+\bkword{のど・臨界圧力比}{ノズルのいちばん細い所。Ma＝1 になる所の圧力とタンクの圧力の比（空気 0.528）。}
+\bkword{チョーク}{のどが音の速さになり、背圧を下げても流量が増えなくなること。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$h$}{エイチ}{比エンタルピー $u+p/\rho$（J/kg）。熱-11〜13 の熱伝達率 $h$ とは別の量（章が違う）}{specific enthalpy}{熱-4}}{\bkkigocard{Ma}{マッハ}{マッハ数 $v/a$。立体の2文字で書き、モル質量 $M$ とは別。$a$ は音の速さ}{Mach number}{熱-4}}
+
+\begin{senmonsho}[開いた系のエネルギー式]
+\begin{bkhonbun}
+定常流れ系において、作動流体 1 kg あたりのエネルギー式は
+\[ q_{12}=(h_2-h_1)+\frac{1}{2}(c_2^2-c_1^2)+g(z_2-z_1)+w_{t12} \]
+で表される。ここで $w_{t12}$ は工業仕事であり、可逆変化では $w_t=-\int v\,\mathrm{d}p$ となる。タービンでは $w_t>0$、圧縮機では $w_t<0$ である。
+\end{bkhonbun}
+\bkyaku{$c$ はこの本の流れの速さ $v$、式の中の $v$ は比体積（この本の $1/\rho$）。$w_t$（工業仕事）は、流体が軸を通して外に\textbf{する}仕事で、この本の $w_{\text{出}}=-w$。この本の式 $q+w=\Delta h+\cdots$ の $w$ を右辺へ移して $w=-w_t$ とおくと、同じ式になる。「開いた系」は、流体が出入りする系（検査体積）。$-\int v\,\mathrm dp$ は、熱-3 ⑨の圧縮機の図の「曲線の左側の面積」のこと。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent とくにことわりがなければ、空気は $c_p=1005$\,J/(kg·K)、$R_{\mathrm s}=287$\,J/(kg·K)、$\gamma=1.4$ の理想気体とし、流れは定常とします。水の比熱は\qty{4.2}{kJ/(kg·K)}、密度は\qty{1000}{kg/m^3}とします。
+
+\begin{phreidai}[ドライヤーを流れる空気の量]
+\label{ph:熱-4:ex1}消費電力\qty{1200}{W}のドライヤーで、吸いこんだ空気が\qty{60}{K}温まって出てきます。ヒーターの熱が全部空気に入るとすると、1秒に何 g の空気が流れていますか。
+\phbamen
+ドライヤーを検査体積でかこむと、入口から室温の空気が入り、出口から温まった空気が出ていきます（表\ref{ph:熱-4:tab-kiki}のドライヤーの行）。
+\phmushi
+ファンを回す仕事（ヒーターよりずっと小さい）。入口と出口の速さの差。ドライヤーの外へ逃げる熱。
+\phzu
+電力 $\dot Q=\qty{1200}{W}$、温度の上がり $\Delta T=\qty{60}{K}$、質量流量 $\dot m$（求める）。
+\phriyu
+熱だけが入り、仕事・速さ・高さの差がないので、定常流動のエネルギーの式は $q=h_2-h_1=c_p\Delta T$。1秒あたりでは $\dot Q=\dot m c_p\Delta T$。
+\phtateru
+\[ \dot m=\frac{\dot Q}{c_p\Delta T} \]
+\phtoku
+\[ \dot m=\frac{1200}{1005\times60}\approx\qty{0.0199}{kg/s}=\qty{19.9}{g/s} \]
+\phtashikame
+単位：W÷（J/(kg·K)×K）＝（J/s）÷（J/kg）＝kg/s。大きさ：空気の密度\qty{1.2}{kg/m^3}で割ると、1秒に約\qty{17}{L}。ドライヤーの吹き出し口から出る量として、ありそうな値。極端な場合：同じ電力で風を弱める（$\dot m$ を半分にする）と、温度の上がりは2倍の\qty{120}{K}になる。
+\kotae 約\qty{20}{g/s}
+\end{phreidai}
+\begin{jibun}
+\qty{600}{W}のヒーターで空気を\qty{40}{K}温める装置があります。1秒に何 g の空気が流れていますか。
+\bkjans{$600\div(1005\times40)\approx\qty{0.0149}{kg/s}$。約\qty{15}{g/s}}
+\end{jibun}
+
+\begin{reidai}[混合水栓の湯の温度]
+\label{ph:熱-4:ex2}\qty{60}{\celsius}の湯と\qty{15}{\celsius}の水を、毎分\qty{6}{L}ずつまぜて出す混合水栓があります。出てくる水の温度を求めましょう。
+\par\bkstep{理想化} 熱も仕事も出入りせず、速さ・高さの差は無視する。水の比熱は温度によらず一定とする。
+\par\kangaekata 表\ref{ph:熱-4:tab-kiki}の混合の式。水では $h=c\theta+$（定数）なので、$\dot m_1\theta_1+\dot m_2\theta_2=(\dot m_1+\dot m_2)\theta_3$。
+\par\shiki $\theta_3=(6\times60+6\times15)\div(6+6)=450\div12=\qty{37.5}{\celsius}$
+\par\bkstep{確かめ} 同じ量をまぜたので、ちょうど平均。熱-1 の「まぜた温度」と同じ答えが、流れのバランス式からも出る。
+\par\kotae \qty{37.5}{\celsius}
+\end{reidai}
+\begin{jibun}
+\qty{60}{\celsius}の湯を毎分\qty{4}{L}、\qty{15}{\celsius}の水を毎分\qty{8}{L}まぜると、何 ℃になりますか。
+\bkjans{$(4\times60+8\times15)\div12=\qty{30}{\celsius}$}
+\end{jibun}
+
+\begin{phreidai}[火力発電所の蒸気タービン]
+\label{ph:熱-4:ex3}火力発電所の蒸気タービンに、比エンタルピー\qty{3400}{kJ/kg}の蒸気が毎秒\qty{100}{kg}入り、\qty{2400}{kJ/kg}になって出ていきます。タービンの出力を求めましょう。蒸気の値は表の値なので、3けたで書きます。
+\phbamen
+高温・高圧の蒸気が、羽根車を回しながらふくらみ、冷えて出ていく場面です（熱-8 のランキンサイクルの心臓部）。
+\phmushi
+タービンの外へ逃げる熱（よく断熱してある）。入口と出口の速さの差と高さの差。
+\phzu
+$h_1=\qty{3400}{kJ/kg}$、$h_2=\qty{2400}{kJ/kg}$、$\dot m=\qty{100}{kg/s}$。取り出す仕事 $w_{\text{出}}$、出力 $P=\dot mw_{\text{出}}$。
+\phriyu
+$q=0$ で、速さ・高さの差がないので、表\ref{ph:熱-4:tab-kiki}のタービンの式 $w_{\text{出}}=h_1-h_2$。
+\phtateru
+\[ P=\dot m(h_1-h_2) \]
+\phtoku
+\[ P=100\times(3400-2400)=\num{100000}\ \mathrm{kW}=\qty{100}{MW} \]
+\phtashikame
+単位：kg/s×kJ/kg＝kJ/s＝kW。大きさ：大きな火力発電所の1台のタービンは数百 MW なので、ありそうな値。極端な場合：速さが\qty{50}{m/s}から\qty{100}{m/s}に変わっても、運動エネルギーの差は $(100^2-50^2)\div2=\qty{3.75}{kJ/kg}$ で、\qty{1000}{kJ/kg}の 0.4\,\% にすぎない。無視してよかった。
+\kotae \qty{100}{MW}
+\end{phreidai}
+\begin{jibun}
+比エンタルピー\qty{3200}{kJ/kg}の蒸気が毎秒\qty{50}{kg}タービンに入り、\qty{2500}{kJ/kg}で出ていきます。出力を求めましょう。
+\bkjans{$50\times(3200-2500)=\num{35000}$\,kW＝\qty{35}{MW}}
+\end{jibun}
+
+\begin{phreidai}[空気の圧縮機]
+\label{ph:熱-4:ex4}\qty{300}{K}の空気を、圧縮機で圧力比8まで、断熱・摩擦なしで押し縮めます。出口の温度と、空気\qty{1}{kg}あたりに要る仕事を求めましょう。
+\phbamen
+ジェットエンジンやガスタービンの前の部分の圧縮機です（熱-7 のブレイトンサイクル）。
+\phmushi
+外へ逃げる熱（断熱）。羽根と空気の摩擦。入口と出口の速さの差。
+\phzu
+$T_1=\qty{300}{K}$、圧力比 $p_2/p_1=8$、出口 $T_2$、1 kg あたりにされる仕事 $w$。
+\phriyu
+出口の温度は熱-3 ⑥の断熱の式 $T/p^{(\gamma-1)/\gamma}=$一定。仕事は、表\ref{ph:熱-4:tab-kiki}の圧縮機の式 $w=h_2-h_1=c_p(T_2-T_1)$。
+\phtateru
+\[ T_2=T_1\times8^{0.4/1.4},\qquad w=c_p(T_2-T_1) \]
+\phtoku
+$8^{0.2857}\approx1.811$ なので $T_2=300\times1.811\approx\qty{543}{K}$。
+\[ w=1005\times(543-300)\approx\num{245000}\ \mathrm{J/kg}=\qty{245}{kJ/kg} \]
+\phtashikame
+単位：J/(kg·K)×K＝J/kg。大きさ：熱-3 ⑨の圧縮機の式 $\frac{\gamma}{\gamma-1}R_{\mathrm s}T_1\{(p_2/p_1)^{(\gamma-1)/\gamma}-1\}=3.5\times287\times300\times0.811\approx\qty{244}{kJ/kg}$ と同じ（$\frac{\gamma}{\gamma-1}R_{\mathrm s}=c_p$）。エンタルピーを使うと、圧縮機の図の面積を数えなくても、温度の差だけで仕事が出る。極端な場合：圧力比1なら仕事は0。
+\kotae 出口 約\qty{543}{K}（約\qty{270}{\celsius}）、約\qty{245}{kJ/kg}
+\end{phreidai}
+\begin{jibun}
+\qty{290}{K}の空気を、断熱・摩擦なしで圧力比5まで押し縮める圧縮機の、出口の温度と、1 kg あたりの仕事を求めましょう。
+\bkjans{$5^{0.2857}\approx1.584$、$T_2\approx\qty{459}{K}$。$w=1005\times169\approx\qty{170}{kJ/kg}$}
+\end{jibun}
+
+\begin{reidai}[ノズルから噴き出す速さ]
+\label{ph:熱-4:ex5}止まっている気体が、ノズルを通る間に、比エンタルピーが\qty{100}{kJ/kg}下がりました。出口の速さを求めましょう。
+\par\bkstep{理想化} 熱も仕事も出入りせず、高さの差は無視する。入口の速さは0。
+\par\kangaekata 表\ref{ph:熱-4:tab-kiki}のノズルの式 $v_2=\sqrt{v_1^2+2(h_1-h_2)}$。kJ を J に直して入れる。
+\par\shiki $v_2=\sqrt{2\times\num{100000}}=\sqrt{\num{200000}}\approx\qty{447}{m/s}$
+\par\bkstep{確かめ} 単位：$\sqrt{\text{J/kg}}=\sqrt{\text{m}^2/\text{s}^2}$＝m/s。空気なら温度が約\qty{100}{K}下がる分。kJ のまま入れると $\sqrt{200}\approx14$ になり、まちがい。
+\par\kotae 約\qty{450}{m/s}
+\end{reidai}
+\begin{jibun}
+入口の速さ\qty{100}{m/s}の気体が、ノズルで比エンタルピーが\qty{50}{kJ/kg}下がります。出口の速さを求めましょう。
+\bkjans{$\sqrt{100^2+2\times\num{50000}}=\sqrt{\num{110000}}\approx\qty{332}{m/s}$}
+\end{jibun}
+
+\begin{reidai}[水のポンプの仕事]
+\label{ph:熱-4:ex6}水の圧力を、ポンプで\qty{1}{MPa}上げます。水\qty{1}{kg}あたりの仕事を求めましょう。
+\par\bkstep{理想化} 摩擦なし。水は縮まず（$\rho$ 一定）、温度も変わらない（$\Delta u=0$）。速さ・高さの差は無視する。
+\par\kangaekata 圧縮機・ポンプの式 $w=h_2-h_1$。$\Delta u=0$ なので $w=\Delta(p/\rho)=\Delta p/\rho$。
+\par\shiki $w=\num{1000000}\div1000=\num{1000}$\,J/kg＝\qty{1.0}{kJ/kg}
+\par\bkstep{確かめ} 空気を圧力比8まで押し縮める仕事（\bkreidairef{4}の\qty{245}{kJ/kg}）の約250分の1。液体は縮まないので、押し縮める仕事が要らない。熱-8 のランキンサイクルで、ポンプの仕事が小さいのはこのため。
+\par\kotae \qty{1.0}{kJ/kg}
+\end{reidai}
+\begin{jibun}
+ボイラーへ水を送るポンプが、毎秒\qty{100}{kg}の水の圧力を\qty{5}{MPa}上げます。ポンプの動力（理想）を求めましょう。
+\bkjans{$w=5\times10^6\div1000=\qty{5.0}{kJ/kg}$。$100\times5.0=\qty{500}{kW}$}
+\end{jibun}
+
+\begin{reidai}[絞り弁を通る空気]
+\label{ph:熱-4:ex7}\qty{20}{\celsius}・\qty{500}{kPa}の空気が、少しだけ開いた弁（絞り弁）を通って\qty{100}{kPa}になります。弁を通ったあとの空気の温度は何 ℃ですか。
+\par\bkstep{理想化} 熱・仕事の出入りと、速さ・高さの差を無視する。空気は理想気体。
+\par\kangaekata 表\ref{ph:熱-4:tab-kiki}の絞り弁の式 $h_1=h_2$。理想気体では $\Delta h=c_p\Delta T$ なので $\Delta T=0$。
+\par\shiki $c_p(T_2-T_1)=0$ より $T_2=T_1$
+\par\bkstep{確かめ} 圧力が5分の1になっても温度は変わらない（密度は5分の1）。外に仕事をせず、弁の中のうずで速さのエネルギーもエンタルピーにもどるので、冷えない。本当の気体では少し変わる（ジュール・トムソン効果。熱-10）。
+\par\kotae \qty{20}{\celsius}（変わらない）
+\end{reidai}
+\begin{jibun}
+絞り弁を通った空気の速さが、\qty{10}{m/s}から\qty{40}{m/s}に変わりました。速さの差も入れると、空気の温度は何 K 下がりますか。
+\bkjans{$(40^2-10^2)\div2=\qty{750}{J/kg}$。$750\div1005\approx\qty{0.75}{K}$ 下がる}
+\end{jibun}
+
+\begin{phreidai}[空気の中の音の速さ]
+\label{ph:熱-4:ex8}\qty{20}{\celsius}の空気の中の音の速さを求めましょう。ニュートンのように、温度一定（$\gamma$ のかわりに1）で計算すると、いくらになりますか。
+\phbamen
+中学理科で習う「音の速さ 約\qty{340}{m/s}」を、⑥の式で確かめます。
+\phmushi
+空気の中の水蒸気（湿度で音の速さは少し変わる）。風。音が強すぎない（小さな圧力の波）とする。
+\phzu
+$T=293$\,K、$R_{\mathrm s}=287$\,J/(kg·K)、$\gamma=1.4$、音の速さ $a$。
+\phriyu
+音は断熱で伝わるので、⑥の $a=\sqrt{\gamma R_{\mathrm s}T}$。ニュートンの計算は $\sqrt{R_{\mathrm s}T}$。
+\phtateru
+\[ a=\sqrt{\gamma R_{\mathrm s}T},\qquad a_{\text{ニュートン}}=\sqrt{R_{\mathrm s}T} \]
+\phtoku
+$R_{\mathrm s}T=287\times293=\num{84091}$。
+\[ a=\sqrt{1.4\times\num{84091}}=\sqrt{\num{117727}}\approx\qty{343}{m/s},\qquad a_{\text{ニュートン}}=\sqrt{\num{84091}}\approx\qty{290}{m/s} \]
+\phtashikame
+単位：$\sqrt{\text{J/(kg·K)}\times\text{K}}=\sqrt{\text{m}^2/\text{s}^2}$＝m/s。大きさ：測った値（約\qty{343}{m/s}）と合う。ニュートンの値は $\sqrt{1.4}\approx1.18$ 倍だけ小さい。極端な場合：0 ℃では\qty{331}{m/s}。
+\kotae 約\qty{343}{m/s}（温度一定なら約\qty{290}{m/s}）
+\end{phreidai}
+\begin{jibun}
+\qty{20}{\celsius}のヘリウム（$\gamma=5/3$、$R_{\mathrm s}=2077$\,J/(kg·K)）の中の音の速さを求めましょう。
+\bkjans{$\sqrt{1.667\times2077\times293}\approx\qty{1010}{m/s}$（1007 m/s）。空気の約3倍}
+\end{jibun}
+
+\begin{reidai}[旅客機のマッハ数]
+\label{ph:熱-4:ex9}高さ\qty{11}{km}の空気の温度は\qty{216.65}{K}（$-56.5$ ℃）です。ここで\qty{250}{m/s}で飛ぶ旅客機のマッハ数を求めましょう。
+\par\bkstep{理想化} 標準大気の気温を使い、空気は理想気体とする。
+\par\kangaekata $a=\sqrt{\gamma R_{\mathrm s}T}$ で音の速さを出し、$\mathrm{Ma}=v/a$。
+\par\shiki $a=\sqrt{1.4\times287\times216.65}\approx\qty{295}{m/s}$。$\mathrm{Ma}=250\div295\approx0.85$
+\par\bkstep{確かめ} 地上（\qty{20}{\celsius}）なら $250\div343\approx0.73$。高い空は寒いので、マッハ数は大きい。旅客機の巡航（約0.78〜0.85）と合う。
+\par\kotae マッハ約0.85（音の速さ 約\qty{295}{m/s}）
+\end{reidai}
+\begin{jibun}
+気温 $-50$ ℃の空を、時速\qty{900}{km}で飛ぶ飛行機のマッハ数を求めましょう。
+\bkjans{\qty{250}{m/s}。$a=\sqrt{1.4\times287\times223}\approx\qty{299}{m/s}$。$250\div299\approx0.84$}
+\end{jibun}
+
+\begin{reidai}[風を正面で止めると温まる]
+\label{ph:熱-4:ex10}\qty{250}{m/s}で飛ぶ旅客機の機首の先（よどみ点）では、空気の温度が、まわりより何 K 上がりますか。
+\par\bkstep{理想化} 止めるまでに熱も仕事も出入りしない。機首の材料への熱の移動は無視する。
+\par\kangaekata ⑦のよどみ点温度 $T_0-T=v^2/(2c_p)$。
+\par\shiki $250^2\div(2\times1005)=\num{62500}\div2010\approx\qty{31}{K}$
+\par\bkstep{確かめ} 単位：(m/s)$^2$÷(J/(kg·K))＝K。速さが2倍の\qty{500}{m/s}なら4倍の約\qty{124}{K}。超音速の飛行機の機首や、宇宙から帰る船の先が熱くなるわけ。
+\par\kotae 約\qty{31}{K}
+\end{reidai}
+\begin{jibun}
+\qty{600}{m/s}の空気の流れを正面で止めると、温度は何 K 上がりますか。
+\bkjans{$600^2\div2010\approx\qty{179}{K}$}
+\end{jibun}
+
+\begin{reidai}[密度が変わらないとしてよい速さ]
+\label{ph:熱-4:ex11}空気の流れを止めたとき、流れの密度は、止めた所の密度より何\,\% 小さいですか。マッハ0.1、0.3、0.5 のそれぞれで求めましょう。
+\par\bkstep{理想化} 止めるまでの変化は断熱・摩擦なし。
+\par\kangaekata ⑦の $\rho_0/\rho=(1+0.2\,\mathrm{Ma}^2)^{2.5}$ から、$1-\rho/\rho_0$ を計算する。
+\par\shiki Ma 0.1：$1.002^{2.5}\approx1.0050$、$1-1/1.0050\approx0.5\,\%$。Ma 0.3：$1.018^{2.5}\approx1.0456$、$4.4\,\%$。Ma 0.5：$1.05^{2.5}\approx1.1297$、$11.5\,\%$
+\par\bkstep{確かめ} 力-13 の「約\qty{100}{m/s}（音の速さの約3割）」は、密度の変化が約4\,\% の所。それより遅ければ、密度一定のベルヌーイの式でよい。
+\par\kotae 約0.5\,\%、約4.4\,\%、約11.5\,\%
+\end{reidai}
+\begin{jibun}
+\qty{20}{\celsius}の空気が\qty{100}{m/s}で流れています。マッハ数と、止めたときの密度の変化（\%）を求めましょう。
+\bkjans{$\mathrm{Ma}=100\div343\approx0.29$。$(1+0.2\times0.29^2)^{2.5}\approx1.043$、約4.1\,\%}
+\end{jibun}
+
+\begin{phreidai}[タンクから噴き出す空気：チョーク]
+\label{ph:熱-4:ex12}\qty{700}{kPa}・\qty{300}{K}の空気が入った大きなタンクに、のどの断面積\qty{1.0}{cm^2}の先細ノズルがついていて、大気（\qty{101}{kPa}）へ空気が噴き出しています。のどの温度・速さ・圧力と、1秒に噴き出す空気の質量を求めましょう。
+\phbamen
+タイヤやボンベの高い圧力の空気が、穴から一気に噴き出す場面です。⑤の表と同じタンクです。
+\phmushi
+ノズルの中の摩擦と、壁との熱のやりとり（断熱・摩擦なし）。タンクの圧力が下がること（短い間だけを考える）。
+\phzu
+タンク $p_0=\qty{700}{kPa}$、$T_0=\qty{300}{K}$。のど $A^*=\qty{1.0}{cm^2}$、$T^*$、$a^*$、$p^*$、密度 $\rho^*$。
+\phriyu
+背圧\qty{101}{kPa}は、$0.528\times700\approx\qty{370}{kPa}$ より低いので、のどは音の速さになる（チョーク）。⑧の $T^*/T_0=2/(\gamma+1)$、$p^*/p_0=0.528$ と、$\dot m=\rho^*a^*A^*$。
+\phtateru
+\[ T^*=\frac{2}{2.4}T_0,\quad a^*=\sqrt{\gamma R_{\mathrm s}T^*},\quad p^*=0.528\,p_0,\quad \rho^*=\frac{p^*}{R_{\mathrm s}T^*},\quad \dot m=\rho^*a^*A^* \]
+\phtoku
+$T^*=300\times0.833=\qty{250}{K}$、$a^*=\sqrt{1.4\times287\times250}\approx\qty{317}{m/s}$、$p^*=0.528\times700\approx\qty{370}{kPa}$。
+\[ \rho^*=\frac{\num{370000}}{287\times250}\approx\qty{5.15}{kg/m^3} \]
+\[ \dot m=5.15\times317\times(1.0\times10^{-4})\approx\qty{0.163}{kg/s} \]
+\phtashikame
+単位：kg/m$^3$×m/s×m$^2$＝kg/s。大きさ：⑤の表の\qty{370}{kPa}の行（$\rho v\approx1634$、$1634\times10^{-4}\approx0.163$）と合う。$0.0404\times A^*p_0/\sqrt{T_0}=0.0404\times10^{-4}\times\num{700000}\div17.3\approx0.163$ とも合う。極端な場合：タンクの圧力を2倍にすると、のどの密度が2倍になり、流量も2倍になる（背圧によらない）。
+\kotae のど \qty{250}{K}・\qty{317}{m/s}・\qty{370}{kPa}、約\qty{163}{g/s}
+\end{phreidai}
+\begin{jibun}
+\qty{400}{kPa}・\qty{290}{K}のタンクから、のどの断面積\qty{0.50}{cm^2}の先細ノズルで大気へ空気が噴き出します。のどの圧力と、1秒に噴き出す質量を求めましょう。
+\bkjans{$p^*=0.528\times400\approx\qty{211}{kPa}$（大気より高いのでチョーク）。$T^*\approx\qty{242}{K}$、$a^*\approx\qty{312}{m/s}$、$\rho^*\approx\qty{3.05}{kg/m^3}$。$\rho^*a^*\approx950$、$950\times0.50\times10^{-4}\approx\qty{0.048}{kg/s}$。約\qty{48}{g/s}}
+\end{jibun}
+
+\begin{phreidai}[ロケットのノズルの出口の大きさ]
+\label{ph:熱-4:ex13}先細末広ノズルで、出口のマッハ数を2にしたい。出口の断面積は、のどの何倍にすればよいですか。マッハ3 ではどうですか。また、タンクが\qty{700}{kPa}・\qty{300}{K}のとき、マッハ2 の出口の圧力・温度・速さを求めましょう（空気とします）。
+\phbamen
+\bkhatenaref のノズルの設計の第一歩です。出口の面積で、噴き出すマッハ数が決まります。
+\phmushi
+摩擦・熱の出入り（断熱・摩擦なし）。断面の中での速さのちがい。背圧は、ちょうど出口の圧力と同じとする。
+\phzu
+のどの面積 $A^*$、出口の面積 $A$、出口のマッハ数 Ma。タンク $p_0$、$T_0$。
+\phriyu
+⑧の面積とマッハ数の式。出口の状態は⑦の $T_0/T=1+0.2\,\mathrm{Ma}^2$、$p_0/p=(1+0.2\,\mathrm{Ma}^2)^{3.5}$。
+\phtateru
+\[ \frac{A}{A^*}=\frac{1}{\mathrm{Ma}}\Bigl(\frac{1+0.2\,\mathrm{Ma}^2}{1.2}\Bigr)^3,\qquad T=\frac{T_0}{1+0.2\,\mathrm{Ma}^2},\qquad v=\mathrm{Ma}\sqrt{\gamma R_{\mathrm s}T} \]
+\phtoku
+Ma 2：$1+0.2\times4=1.8$、$(1.8/1.2)^3=1.5^3=3.375$、$A/A^*=3.375\div2\approx1.69$。\par
+Ma 3：$1+0.2\times9=2.8$、$(2.8/1.2)^3\approx12.70$、$A/A^*=12.70\div3\approx4.23$。\par
+Ma 2 の出口：$T=300\div1.8\approx\qty{167}{K}$、$p=700\div1.8^{3.5}\approx700\div7.82\approx\qty{89.5}{kPa}$、$v=2\times\sqrt{1.4\times287\times167}\approx2\times259\approx\qty{518}{m/s}$。
+\phtashikame
+単位：面積比は単位なし。大きさ：プログラムの表（Ma 2 で 1.688、Ma 3 で 4.235）と合う。出口の圧力は大気（\qty{101}{kPa}）より少し低いので、大気へ噴き出すと、出口のあとで流れが少し縮む。極端な場合：Ma 1 なら $A/A^*=1$（広げない）。
+\kotae Ma 2 で約1.69倍、Ma 3 で約4.23倍。出口 約\qty{90}{kPa}・約\qty{167}{K}・約\qty{520}{m/s}
+\end{phreidai}
+\begin{jibun}
+出口のマッハ数を2.5 にするには、出口の面積を、のどの何倍にすればよいですか（空気）。
+\bkjans{$1+0.2\times6.25=2.25$、$(2.25/1.2)^3\approx6.59$、$6.59\div2.5\approx2.64$ 倍}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{流れる気体の温度の計算に $c_v$ を使う}
+\bkng{ドライヤーの空気の温度の上がりを $\dot Q=\dot mc_v\Delta T$ で計算する。}
+\bkok{流れる流体は $\dot Q=\dot m c_p\Delta T$（$\Delta h=c_p\Delta T$）。}
+流れる流体には、出入りのたびに押しこむ仕事 $p/\rho$ がついてきます。そのため、エネルギーを数えるのは $u$ ではなく $h=u+p/\rho$ で、温度の変化には $c_p$ を使います。閉じこめた気体を温めるとき（熱-3 ④の定積）とのちがいです。
+\end{tsumazuki}
+\begin{tsumazuki}{kJ/kg のまま、速さの計算に入れる}
+\bkng{$\Delta h=\qty{100}{kJ/kg}$ なので $v=\sqrt{2\times100}\approx\qty{14}{m/s}$。}
+\bkok{$\Delta h=\num{100000}$\,J/kg なので $v=\sqrt{2\times\num{100000}}\approx\qty{447}{m/s}$。}
+$v^2/2$ の単位は (m/s)$^2$＝J/kg です。蒸気表のエンタルピーは kJ/kg で書いてあるので、速さを出すときは必ず J/kg（1000倍）に直します。
+\end{tsumazuki}
+\begin{tsumazuki}{ノズルを細くすれば、いくらでも速くなる}
+\bkng{ホースの先をつまむように、出口を細くするほど、ガスはいくらでも速く噴き出す。}
+\bkok{先細ノズルでは、出口で音の速さになると、それ以上は速くならない（チョーク）。}
+音の速さより速くするには、のどの先を広げる先細末広ノズルが要ります（⑧）。また、⑤の表のように、のどで音の速さになったあとも、ただ細いだけでは流量は増えません。流量を増やすには、のどの面積を大きくするか、タンクの圧力を上げます。
+\end{tsumazuki}
+\begin{tsumazuki}{口をすぼめて吹く息が冷たいのは、断熱膨張？}
+\bkng{口をすぼめると、息がふくらんで、断熱膨張で冷える。}
+\bkok{息の圧力は大気圧より1\,\% ほど高いだけで、ふくらんで冷える分は\qty{1}{K}ほど。冷たく感じるおもな理由は、速い息がまわりの空気を巻きこんでまざることと、肌の水分の蒸発を速めること。}
+大きく口をあけて「はー」と吹くと、体温に近い息がそのまま手に当たるので温かく感じます。断熱膨張で大きく冷えるのは、⑤の表のように、圧力が何倍も変わるときです。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[ガスタービン・ロケット・流量の基準]
+\phboxhead{① ガスタービンとジェットエンジン}
+ジェットエンジンや発電用のガスタービンは、圧縮機（\bkreidairef{4}）→燃焼器（$q$ が入る）→タービン（$w_{\text{出}}$ を取り出す）→ノズル（速さにする）と、この章の機械をつないだものです。どの部分も、定常流動のエネルギーの式と表\ref{ph:熱-4:tab-kiki}の式で計算します。タービンで取り出した仕事の一部で圧縮機を回し、残りを発電機（ガスタービン）や、噴き出すガスの運動量（ジェットエンジンの推力。力-13 の運動量の法則）にします。全体の熱効率は、熱-7 のブレイトンサイクルで学びます。
+
+\phboxhead{② ロケットエンジン}
+ロケットのエンジンは、燃焼室で燃料と酸化剤を燃やして、何千 ℃・何 MPa のガスを作り、先細末広ノズルで超音速にして噴き出します（\bkreidairef{13}）。ノズルの出口の面積は、のどの数十倍になることもあります。地上ではまわりの大気圧が高いので、出口を広げすぎると、ノズルの中で流れがはがれてしまいます。そのため、空気のない宇宙で使うエンジンほど、出口の大きいノズルを使います。
+
+\phboxhead{③ 流量の基準：臨界ノズル}
+チョークした先細ノズル（臨界ノズル）は、背圧が多少ゆれても、流量がタンクの圧力と温度だけで決まります（\bkreidairef{12}）。この性質を使って、気体の流量計を正しく合わせる（校正する）ときの「ものさし」にしています。ガスの安全弁や、ボンベの減圧器の流量の見つもりにも、同じ式を使います。
+
+\begin{phketa}[流れる気体の速さと温度]
+\phketaline{\qty{20}{\celsius}の空気の音の速さ}{約\qty{343}{m/s}}
+\phketaline{旅客機の巡航}{マッハ約0.78〜0.85（高さ約\qty{11}{km}で約\qty{250}{m/s}）}
+\phketaline{蒸気タービンの比エンタルピーの差}{数百〜\qty{1000}{kJ/kg}ほど}
+\phketaline{ロケットのガスの噴き出す速さ}{秒速\qtyrange{2}{4.5}{km}（液体水素と液体酸素で約\qty{4.4}{km/s}）}
+\phketaline{密度が変わらないとしてよい速さ}{マッハ約0.3 まで（空気で約\qty{100}{m/s}）}
+\phboxhead{答えが桁で合っているか}
+空気では、\qty{1}{K}・\qty{45}{m/s}・\qty{100}{m}が、どれも約\qty{1}{kJ/kg}。ノズルで\qty{100}{K}冷えれば約\qty{450}{m/s}、\qty{250}{m/s}の風を止めれば約\qty{30}{K}温まる、と見当がつきます。
+\end{phketa}
+\end{phkougaku}
+\phstation{熱力学,流体工学,ガスタービン,ロケット工学}{開いた系、エンタルピー、定常流動のエネルギー式、工業仕事、音速、マッハ数、よどみ点、臨界圧力比、チョーク、ラバルノズル、衝撃波}
+
+\begin{phsaki}{圧縮性流体力学}
+この章では、摩擦も熱の出入りもないノズルの流れ（等エントロピー流れ）を扱いました。本当の管の中では、壁の摩擦で流れがだんだんマッハ1 に近づいていく流れ（ファノ流れ）や、壁から熱が入ってマッハ数が変わる流れ（レイリー流れ）が起きます。衝撃波の前後の圧力や温度の式、ななめの衝撃波、超音速の翼のまわりの流れなどは、圧縮性流体力学（気体力学）の専門の本で学びます。エントロピーが増えることの意味は、熱-6 で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{4}
+\bkproblem \qty{900}{W}のヒーターで、流れる空気を\qty{50}{K}温めます。1秒に何 g の空気が流れていますか（\bkreidairef{1}）。
+\bkpans{$900\div(1005\times50)\approx\qty{0.0179}{kg/s}$。約\qty{18}{g/s}}
+\bkproblem 比エンタルピー\qty{3300}{kJ/kg}の蒸気が毎秒\qty{80}{kg}タービンに入り、\qty{2600}{kJ/kg}で出ていきます。出力を求めましょう（\bkreidairef{3}）。
+\bkpans{$80\times700=\num{56000}$\,kW＝\qty{56}{MW}}
+\bkproblem \qty{300}{K}の空気を、断熱・摩擦なしで圧力比4まで押し縮めます。出口の温度と、1 kg あたりの仕事を求めましょう（\bkreidairef{4}）。
+\bkpans{$4^{0.2857}\approx1.486$、$T_2\approx\qty{446}{K}$。$w=1005\times146\approx\qty{147}{kJ/kg}$}
+\bkproblem 止まっている気体がノズルを通り、比エンタルピーが\qty{200}{kJ/kg}下がりました。出口の速さを求めましょう（\bkreidairef{5}）。
+\bkpans{$\sqrt{2\times\num{200000}}\approx\qty{632}{m/s}$}
+\bkproblem $-20$ ℃の空気の中の音の速さを求めましょう（\bkreidairef{8}）。
+\bkpans{$\sqrt{1.4\times287\times253}\approx\qty{319}{m/s}$}
+\bkproblem \qty{300}{m/s}の空気の流れを正面で止めると、温度は何 K 上がりますか（\bkreidairef{10}）。
+\bkpans{$300^2\div2010\approx\qty{45}{K}$}
+\bkproblem マッハ0.4 の流れの密度は、止めた所の密度より何\,\% 小さいですか（\bkreidairef{11}）。
+\bkpans{$(1+0.2\times0.16)^{2.5}=1.032^{2.5}\approx1.082$、$1-1/1.082\approx7.6\,\%$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 比エンタルピー\qty{3300}{kJ/kg}・速さ\qty{50}{m/s}の蒸気が、毎秒\qty{10}{kg}タービンに入り、\qty{2500}{kJ/kg}・\qty{200}{m/s}で出ていきます。タービンの外へ、1秒に\qty{20}{kJ}の熱が逃げます。タービンの出力を求めましょう。蒸気の値なので3けたで答えます（\bkreidairef{3}、表\ref{ph:熱-4:tab-kiki}）。
+\bkpans{1 kg あたり $q=-20\div10=\qty{-2}{kJ/kg}$。$\tfrac12(200^2-50^2)=\qty{18.75}{kJ/kg}$。$w_{\text{出}}=800-18.75-2=\qty{779}{kJ/kg}$。出力 $10\times779\approx\qty{7.79}{MW}$}
+\bkproblem 高さ\qty{11}{km}（\qty{216.65}{K}）をマッハ2 で飛ぶ超音速機の、(1) 速さと、(2) 機首の先（よどみ点）の空気の温度（℃）を求めましょう。(3) (2) を $T_0=T+v^2/(2c_p)$ でも計算して確かめましょう（\bkreidairef{9}と\bkreidairef{10}）。
+\bkpans{(1) $2\times295\approx\qty{590}{m/s}$。(2) $216.65\times(1+0.2\times4)=\qty{390}{K}$、約\qty{117}{\celsius}。(3) $590^2\div2010\approx\qty{173}{K}$、$216.65+173\approx\qty{390}{K}$}
+\bkproblem \qty{1.0}{MPa}・\qty{300}{K}のタンクから、のど\qty{2.0}{cm^2}の先細末広ノズルで、出口でマッハ2 の噴流を作ります。(1) 1秒に噴き出す質量、(2) 出口の面積、(3) 出口の圧力・温度・速さを求めましょう。(4) 推力 $\dot mv$ は何 N ですか（\bkreidairef{12}と\bkreidairef{13}、力-13）。
+\bkpans{(1) のどは\qty{250}{K}・\qty{528}{kPa}・\qty{7.36}{kg/m^3}・\qty{317}{m/s}。約\qty{0.47}{kg/s}。(2) 約\qty{3.4}{cm^2}。(3) 約\qty{128}{kPa}・\qty{167}{K}・\qty{518}{m/s}。(4) $0.467\times518\approx\qty{240}{N}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 定常流動のエネルギーの式で、タービン・圧縮機・ノズル・ドライヤーのエネルギーを計算できる。\bkfurref{ph:熱-4:sec3}
+\item 音の速さ・マッハ数・よどみ点の温度を計算できる。\bkfurref{ph:熱-4:sec6}
+\item 先細末広ノズルの、のどの状態と出口の面積を求められる。\bkfurref{ph:熱-4:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{第1部では、第一法則で熱と仕事を数えたね。次の熱-5 では、熱を全部仕事に変えられるのかを考えるよ。}
