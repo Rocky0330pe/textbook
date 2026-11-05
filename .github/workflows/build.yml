@@ -162,6 +162,32 @@ jobs:
             { echo; echo "<details><summary>$(basename "$f")</summary>"; echo; echo '```'; cat "$f"; echo '```'; echo "</details>"; } >> "$GITHUB_STEP_SUMMARY"
           done
 
+      # 第19回：図と字の重なりの候補を調べる（知らせるだけ。赤い枠の画像は Artifacts の overlap-…）
+      - name: 図と字の重なりを調べる
+        if: always()
+        run: |
+          pip install -q pymupdf > /dev/null 2>&1 || { echo "pymupdf を入れられなかったので、重なりの調べを飛ばす"; exit 0; }
+          { echo; echo '### 図と字の重なりの候補（tools/check_overlap.py）'; echo; } >> "$GITHUB_STEP_SUMMARY"
+          for f in out/*.pdf; do
+            [ -f "$f" ] || continue
+            b=$(basename "$f" .pdf)
+            case "$b" in wrap*|phwrap*) continue;; esac
+            python3 tools/check_overlap.py "$f" --out "out/overlap/$b" > "out/overlap-$b.txt" 2> "out/overlap-$b.sum" || true
+            n=$(awk -F'\t' '{print $1}' "out/overlap-$b.txt" | sort -u | wc -l)
+            echo "- $b：$(cat "out/overlap-$b.sum")。候補のあるページ $n（PDF のページ番号）" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: 重なりの候補の画像を保存する
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: overlap-${{ matrix.target }}
+          path: |
+            out/overlap/
+            out/overlap-*.txt
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: PDF を保存する
         if: always()
         uses: actions/upload-artifact@v6

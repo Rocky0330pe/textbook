@@ -12,7 +12,7 @@
   tex/guide-*・tools/mkguidetables.py             → guide
   tools/mkmap9.py・tools/mkseriesidx.py           → 9
   tex/p1-*・tex/phN*・tex/phwrapN.tex             → pN（物理シリーズ）
-  phys/*・tex/bk-phys*                            → p1（物理は第1巻だけ本文がある）
+  phys/*・tex/bk-phys*                            → 本文のある物理の巻（p1、ph<n>-body.tex がある pN）
   pages_actual.json                               → 値が変わった巻だけ
   組み上がりに効く共通の部品（tex/bk-*・tex/series-data.tex・tex/fonts/・tex/img/・texmf/・
     series.py・gen.py・tools/syncpages.py・tools/check_pages.py・scripts/ci-build.sh）
@@ -24,6 +24,7 @@
 比較元が見つからない（force push など）ときは guide だけ組み、警告を出す。
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -70,7 +71,8 @@ def classify(files, base, head):
         if f in ('tools/mkmap9.py', 'tools/mkseriesidx.py'):
             t.add('9'); continue
         if f.startswith(('phys/', 'tex/bk-phys')):
-            t.add('p1'); continue
+            # 第21回：本文のある物理の巻（tex/ph<n>-body.tex がある巻。第1巻と、第2巻『熱学』から）
+            t.update('p%d' % n for n in range(1, 6) if n == 1 or os.path.exists('tex/ph%d-body.tex' % n)); continue
         if m := re.match(r'tex/(?:p|ph|phwrap)([1-5])[-.a-z]', f):
             t.add('p' + m.group(1)); continue
         if f == 'pages_actual.json':
