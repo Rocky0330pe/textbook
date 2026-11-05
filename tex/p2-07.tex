@@ -1,0 +1,1022 @@
+%% 熱-7　エンジンの中のサイクル：ガスサイクル（第22回編集委員会 物理第2巻：組「熱W3」）
+%% ★3〜4（series_phys.py のとおり）。3段にしない。
+%% 記号（計画書 C-1・B の熱-7 と手引き2章の3）：
+%%   1 kg あたりの量で書く（C-2）：受けとる熱 q_入、捨てる熱 q_出、1周で外へ出す正味の仕事 w_出（どれも正の数。熱-5 の Q_H・Q_L・W_出 にあたる）。
+%%   ガスタービンでは、タービンがする仕事 w_タービン、圧縮機に入れる仕事 w_圧縮機（どちらも正の数）、w_出＝w_タービン−w_圧縮機。
+%%   熱-2 の第一法則の W（された仕事）とは、1周で W＝−w_出（1 kg あたり）の関係。記号カードに書いた。
+%%   圧縮比 ε（この章では放射率を使わない）、締切比 σ（応力・ステファン・ボルツマン定数はこの章に出さない）、圧力上昇比 ξ、圧力比 r_p、
+%%   行程体積 V_s、平均有効圧 p_m、回転数 n（毎分○回転）。物質量はこの章では使わない（例題13 だけ「単原子分子の理想気体」と書き、n は使わない）。
+%%   空気の値（熱-3 と同じ）：c_p＝1.005、c_v＝0.718 kJ/(kg·K)、R_s＝0.287 kJ/(kg·K)、γ＝1.40。
+%% 公式の持ち主（計画書 A）：N49（オットー・ディーゼル・サバテ・ブレイトンの理論熱効率）をこの章で導く。中学・高校の公式はこの章では導かないので、
+%%   「この章で導く中学・高校の公式」の欄は置かない（第19回 6-1-2）。サイクルの熱効率 1−Q_L/Q_H は熱-5 ②、断熱の TV^(γ−1) 一定は熱-3 ⑥、
+%%   定常流動のエネルギーの式は熱-4 ③ が持ち主（導き直さない）。
+%% ほかの章との約束：ディーゼルの圧縮（圧縮比18・27 ℃→約680 ℃）は熱-3 例7 と同じ数。コンバインドサイクルは熱-0（63.08 %）と熱-16 と同じ。
+%%   数学 3-11 のコラム（圧縮比16、約640 ℃、軽油が自然に燃える温度 約250 ℃）を受ける。数学 8-7 のコラム「エンジンの1回の仕事は閉じた道の面積」を ① で受ける。
+%%   第1巻の巻末「なぜ？の道すじ」（車：…→熱-7→電-12）。
+%% 数値はすべて Python で計算した：checks/物理第2巻/熱-7/calc_p2_07.py（出力 calc_p2_07_out.txt）、本文のプログラムは otto_sim.py（出力をそのまま写した）。
+%% 出典（本文で使った事実・実機の値）
+%%   ・ニコラウス・オットーの4ストロークエンジン 1876年。ルドルフ・ディーゼルの特許 1892年（93年に出願が認められる）・実用の機関 1897年。ブレイトンの機関 1872年。
+%%   ・軽油が自然に燃えだす温度 約250 ℃：数学 3-11 と同じ値〔要確認：軽油の安全データシートの発火点。ENEOS の SDS のサイトに届かなかった〕。
+%%   ・量産の乗用車のガソリンエンジンの最大の熱効率 40 %（ハイブリッド用 41 %）：トヨタの発表（2016年12月6日、2.5 L のエンジン）。
+%%   ・大型の船の2ストロークディーゼルエンジンの熱効率 50 % をこえる（低位発熱量の基準）：三菱重工の技術論文（検索で確かめた）。
+%%   ・ガソリンエンジンの圧縮比 約10〜14、ディーゼルエンジン 約15〜20（各社の公開の諸元で、ふつうの範囲として）。
+%%   ・コンバインドサイクル 63.08 %（西名古屋火力発電所7-1号、2018年。計画書 熱-0 の〔確〕：GE のプレスリリース）。大型ガスタービンの入口 1600 ℃級、圧力比 約20。
+\makeatletter
+% シリンダーの断面  \qxhcyl{(左下)}{ピストンの高さ}{吸気弁 0/1}{排気弁 0/1}{ガスの色}
+\newcommand\qxhcyl[5]{\begin{scope}[shift={#1}]
+  \fill[#5] (2,#2+3) rectangle (18,30);
+  \fill[bkGray!45] (0,0) rectangle (2,30) (18,0) rectangle (20,30) (0,30) rectangle (20,33);
+  \filldraw[fill=bkGray!65, draw=bkInk!70, line width=0.5pt] (2.2,#2) rectangle (17.8,#2+3);
+  \draw[bkInk!80, line width=1.2pt] (10,#2+1.5) -- (10,#2-6);
+  \ifnum#3=1 \fill[bkBlue!70] (4,26.6) rectangle (8,27.7); \draw[bkInk, line width=0.9pt] (6,27.7) -- (6,35);
+  \else \fill[bkBlue!70] (4,29.6) rectangle (8,30.6); \draw[bkInk, line width=0.9pt] (6,30.6) -- (6,35); \fi
+  \ifnum#4=1 \fill[bkRed!70] (12,26.6) rectangle (16,27.7); \draw[bkInk, line width=0.9pt] (14,27.7) -- (14,35);
+  \else \fill[bkRed!70] (12,29.6) rectangle (16,30.6); \draw[bkInk, line width=0.9pt] (14,30.6) -- (14,35); \fi
+\end{scope}}
+\makeatother
+\tikzset{qxh lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  qxh heat/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkRed!80!black},
+  qxh cold/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkBlue!80!black},
+  qxh work/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkGreen!55!black},
+  qxh flow/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.1pt, bkInk}}
+
+\phchapter{7}{エンジンの中のサイクル：\\ガスサイクル}{ディーゼルエンジンは、なぜ火花なしで燃える？}{\bklevelrange{3}{4}}{エンジンの中のサイクル：ガスサイクル}
+\bkmichishirube{3-11,5-7,8-7,熱-3,熱-4,熱-5}{熱-8,熱-16,電-12}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 4ストロークのエンジンの動きを $p$-$V$ 図で説明し、断熱圧縮のあとの温度を求められる。
+\item \bklevel{3}\enspace オットーサイクルとディーゼルサイクルの理論熱効率を、圧縮比から計算できる。
+\item \bklevel{4}\enspace ガスタービンの仕事比・再生・コンバインドサイクルの効率と、エンジンの出力を計算できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+ガソリンエンジンは、シリンダーの中の空気とガソリンの混ざったガスに、点火プラグの火花で火をつけて燃やします。
+
+ところが、トラックやバスに多いディーゼルエンジンには、点火プラグがありません。燃料の軽油を、シリンダーの中にふきこむだけで燃えだします。火花もないのに、なぜ燃えるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxhcyl{(0,0)}{14}{0}{0}{bkOrange!30}
+  \fill[bkInk!80] (8.6,33) rectangle (11.4,37);
+  \draw[bkOrange!80!black, line width=0.8pt] (10,29) -- (7,24) (10,29) -- (10,23.5) (10,29) -- (13,24);
+  \node[qxh lab, anchor=west] at (13,39) {燃料をふきこむ};
+  \draw[bkGray, line width=0.4pt] (12.5,38.5) -- (11,36);
+  \node[font=\sffamily\bfseries\large, text=bkRed] at (31,22) {火花は？};
+  \draw[qxh flow, bkBlue] (24,4) -- (24,13);
+  \node[qxh lab, anchor=west] at (25,8) {押し縮める};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-5 では、熱機関の効率の上限がカルノーの効率 $1-T_{\mathrm L}/T_{\mathrm H}$ で決まることを学びました。この章では、本物のエンジン（自動車のエンジン、ガスタービン）の中で、気体がどんなサイクルを回っているかを、$p$-$V$ 図で調べます。そして、エンジンの効率が「どれだけ押し縮めるか（圧縮比）」で決まることや、ガスタービンと蒸気タービンを組み合わせると発電所の効率が60\,\%をこえるわけを、熱-3 の断熱変化の式と熱-5 の熱効率の式から導きます。
+
+\begin{yattemiyou}[空気を押し縮めると、どれだけ押し返す？]
+\textbf{用意するもの}\par
+自転車の空気入れ（先をふさげるもの）か、プラスチックの注射器（\qty{50}{mL}くらい）、キッチンばかり、メモ\par\vspace{2pt}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 注射器に空気を\qty{50}{mL}入れ、先を指でしっかりふさぐ。
+\item 注射器を台ばかりの上に立て、ゆっくり押して、体積が\qty{40}{mL}・\qty{30}{mL}・\qty{25}{mL}のときの台ばかりの目もりを読む。
+\item 同じことを、すばやく押して（1秒くらいで）やってみる。目もりの読み方は、友だちに手伝ってもらう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent やってみようの答え：ゆっくり押すと、空気の温度はまわりと同じのまま（等温）で、体積を半分にすると圧力は2倍になります（3-7⑥・熱-3）。すばやく押すと、押し返す力はそれより大きくなります。熱が逃げる間がなく、押した仕事で空気の温度が上がるからです（断熱圧縮、熱-3 ⑥）。エンジンの中の空気は、1秒に何十回も押し縮められるので、断熱圧縮に近くなります。
+
+\begin{omoidasou}
+\bkrecall{熱-3}{断熱変化では $pV^{\gamma}$ も $TV^{\gamma-1}$ も一定。空気は $\gamma=1.40$。定積なら $q=c_v\Delta T$、定圧なら $q=c_p\Delta T$。}
+\bkrecall{熱-4}{流れる気体の機械（タービン・圧縮機）の仕事は、熱の出入りがなければ比エンタルピーの差。理想気体なら $c_p\Delta T$。}
+\bkrecall{熱-5}{熱効率 $\eta=\dfrac{W_{\text{出}}}{Q_{\mathrm H}}=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$。上限はカルノーの効率 $1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$。}
+\bkrecall{3-11}{$a^{0.4}$ のような整数でない指数は電卓で計算する。$\bigl(\tfrac{1}{16}\bigr)^{1.4}=0.0206$。}
+\bkrecall{8-7}{エンジンの中の気体の1回の仕事 $\oint p\,\dd V$ は、$p$-$V$ 図の閉じた道が囲む面積（8-7⑩のコラム）。}
+\end{omoidasou}
+
+%% ======================== 物理の道具 ========================
+\Needspace{14\baselineskip}\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{4ストロークのエンジンの1回と、$p$-$V$ 図}
+\label{ph:熱-7:sec1}
+自動車のガソリンエンジンの中では、ピストンが上下に動いて、次の4つの行程（ストローク）をくり返します（図\ref{ph:熱-7:fig-4st}）。ピストンが2往復する間に、1回燃えます。これを\textbf{4ストロークエンジン}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxhcyl{(0,0)}{6}{1}{0}{bkBlue!14}
+  \qxhcyl{(33,0)}{20}{0}{0}{bkBlue!28}
+  \qxhcyl{(66,0)}{6}{0}{0}{bkOrange!40}
+  \qxhcyl{(99,0)}{20}{0}{1}{bkGray!25}
+  \draw[qxh flow, bkBlue] (6,40) -- (6,36);
+  \draw[qxh flow] (16,16) -- (16,8);
+  \draw[qxh flow] (49,10) -- (49,18);
+  \fill[bkYellow] (76,30) circle (1.5);
+  \draw[qxh flow] (82,16) -- (82,8);
+  \draw[qxh flow, bkRed] (113,36) -- (113,40);
+  \draw[qxh flow] (115,10) -- (115,18);
+  \node[qxh lab, align=center, anchor=north] at (10,-7) {①吸気\\空気を吸う};
+  \node[qxh lab, align=center, anchor=north] at (43,-7) {②圧縮\\押し縮める};
+  \node[qxh lab, align=center, anchor=north] at (76,-7) {③燃焼・膨張\\燃えて押す};
+  \node[qxh lab, align=center, anchor=north] at (109,-7) {④排気\\ガスを出す};
+  \node[qxh lab, anchor=south, text=bkBlue!80!black] at (6,40.5) {吸気弁};
+  \node[qxh lab, anchor=south, text=bkRed!80!black] at (113,40.5) {排気弁};
+\end{tikzpicture}
+\bkfigcaption{4ストロークのガソリンエンジン。①吸気弁を開けてピストンを下げ、空気（とガソリン）を吸う。②弁を閉じて押し縮める。③火花で燃やし、高い圧力でピストンを押し下げる（仕事をする）。④排気弁を開けて、燃えたガスを押し出す。}\label{ph:熱-7:fig-4st}
+\end{bkfigure}
+
+ピストンがいちばん上にあるとき（上死点）のシリンダーの中の体積を $V_2$、いちばん下にあるとき（下死点）の体積を $V_1$ とします。ピストンが動いて押しのける体積 $V_{\mathrm s}=V_1-V_2$ を\textbf{行程体積}（排気量）、体積の比
+\pheq{\varepsilon=\frac{V_1}{V_2}}{m$^3$/m$^3$ ＝ 1}
+を\textbf{圧縮比}といいます。\bkidx{あっしゅくひ}{圧縮比}「体積を何分の1まで押し縮めるか」を表す数で、ガソリンエンジンでは約10〜14、ディーゼルエンジンでは約15〜20です。ε はギリシャ文字の「イプシロン」です。
+
+シリンダーの中の圧力と体積を、エンジンを動かしながら測って $p$-$V$ 図にかくと、図\ref{ph:熱-7:fig-indicator}のような閉じた道になります（\textbf{指圧線図}）。8-7⑩のコラムで学んだとおり、1回のサイクルで気体がピストンにする仕事は、閉じた道が囲む面積です。吸気と排気の行程では、圧力がほぼ大気圧のままピストンが動くので、細い輪になり、その面積はわずかです（むしろ、ガスを出し入れするのに少し仕事が要る）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (96,0) node[anchor=west, font=\sffamily\small] {$V$};
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (0,52) node[anchor=south, font=\sffamily\small] {$p$};
+  \fill[bkOrange!22] (12,8) .. controls (13,30) and (15,46) .. (18,46) .. controls (26,46) and (40,22) .. (86,9) -- (86,5) .. controls (60,6) and (30,9) .. (12,8) -- cycle;
+  \draw[bkInk, line width=1.3pt] (86,5) .. controls (60,6) and (30,9) .. (12,8);
+  \draw[bkRed!80!black, line width=1.3pt] (12,8) .. controls (13,30) and (15,46) .. (18,46);
+  \draw[bkInk, line width=1.3pt] (18,46) .. controls (26,46) and (40,22) .. (86,9) -- (86,5);
+  \draw[bkGray, line width=1pt] (86,4.2) -- (12,4.2);
+  \draw[bkGray, line width=1pt, dashed] (12,3.6) -- (86,3.6);
+  \draw[bkGray, dashed, line width=0.4pt] (12,0) -- (12,8) (86,0) -- (86,5);
+  \node[qxh lab, anchor=north] at (12,-1) {$V_2$（上死点）};
+  \node[qxh lab, anchor=north] at (86,-1) {$V_1$（下死点）};
+  \node[qxh lab, anchor=west, text=bkRed!75!black] at (19,48) {燃焼で圧力が急に上がる};
+  \node[qxh lab, anchor=west] at (60,22) {膨張（ピストンを押す）};
+  \node[qxh lab, anchor=south] at (55,9.5) {圧縮};
+  \node[qxh lab] at (30,18) {面積＝1回の仕事};
+  \node[qxh lab, anchor=west, text=bkGray] at (89,4) {吸気・排気（細い輪）};
+\end{tikzpicture}
+\bkfigcaption{ガソリンエンジンの $p$-$V$ 図（指圧線図）の形のようす。囲む面積が、1回にピストンにする仕事。吸気・排気の細い輪の面積はわずか。}\label{ph:熱-7:fig-indicator}
+\end{bkfigure}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{空気標準サイクル：エンジンを理想化する}
+\label{ph:熱-7:sec2}
+本物のエンジンの中では、燃料が燃えてガスの成分が変わり、ガスは入れかわり、熱は壁へ少し逃げます。このままでは計算が難しいので、次のように理想化します。
+
+\begin{phmodel}[空気標準サイクル]
+\phignore{燃料の量と、燃えてガスの成分が変わること。壁へ逃げる熱。摩擦。吸気と排気の細い輪の仕事。}
+\phassume{中はいつも同じ空気（理想気体、比熱は一定、$\gamma=1.40$）。燃焼は外から熱を入れること、排気と吸気は熱を捨ててもとにもどすことにおきかえる。圧縮と膨張は断熱で可逆。}
+\phlimit{燃えたガスが約\qty{2000}{K}以上になり、比熱が大きく変わるとき。燃え方が遅いとき。}
+\end{phmodel}
+
+このように理想化したサイクルを\textbf{空気標準サイクル}といい、その熱効率を\textbf{理論熱効率}といいます。本物の効率は理論熱効率よりかなり低くなりますが（⑤）、「何を変えると効率が上がるか」は、理論熱効率でよくわかります。
+
+この章では、空気1 kg あたりの量で数えます（熱-4 と同じ）。1周の間に空気が受けとる熱を $q_{\text{入}}$、捨てる熱を $q_{\text{出}}$、外へ出す正味の仕事を $w_{\text{出}}$ とし、どれも正の数で書きます。熱-5 の $Q_{\mathrm H}$・$Q_{\mathrm L}$・$W_{\text{出}}$ を 1 kg あたりにしたものです。1周で $\Delta u=0$ なので、熱-5 ②と同じく
+\pheq{w_{\text{出}}=q_{\text{入}}-q_{\text{出}},\qquad\eta=\frac{w_{\text{出}}}{q_{\text{入}}}=1-\frac{q_{\text{出}}}{q_{\text{入}}}}{kJ/kg}
+です。熱が決まった温度の熱源から入るのではなく、空気の温度が変わりながら出入りするので、カルノーの効率の式 $1-T_{\mathrm L}/T_{\mathrm H}$ はそのままでは使えません。そこで、区間ごとに熱を数えます。
+
+%% ---------------------------------------------------------------
+\bksubsection{3}{オットーサイクル：効率は圧縮比で決まる}
+\label{ph:熱-7:sec3}
+\phboxhead{4つの変化}
+ガソリンエンジンの空気標準サイクルを、\textbf{オットーサイクル}といいます（1876年に4ストロークエンジンを作ったドイツのニコラウス・オットーの名前から）。\bkidx{おっとーさいくる}{オットーサイクル}4つの変化からできています（図\ref{ph:熱-7:fig-otto}）。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 1→2 断熱圧縮：体積 $V_1$ から $V_2$ まで押し縮める。温度が $T_1$ から $T_2$ に上がる。
+\item 2→3 定積加熱：ピストンがいちばん上で止まっている短い間に燃える。体積 $V_2$ のまま熱 $q_{\text{入}}$ を受けとり、$T_3$ になる。
+\item 3→4 断熱膨張：ピストンを押しながらふくらみ、$T_4$ に下がる。
+\item 4→1 定積放熱：排気と吸気のかわりに、体積 $V_1$ のまま熱 $q_{\text{出}}$ を捨て、$T_1$ にもどる。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=68mm, xmin=0, xmax=9.6, ymin=0, ymax=55, xtick={1,8}, xticklabels={$V_2$,$V_1$}, ytick=\empty, xlabel={$V$}, ylabel={$p$}]
+  \fill[bkOrange!25] (axis cs:1,21.38) -- (axis cs:1,48.95)
+    \foreach \v in {1.25,1.5,2,2.5,3,4,5,6,7,8} {-- (axis cs:\v,{45.95*\v^(-1.4)+3})}
+    -- (axis cs:8,4)
+    \foreach \v in {7,6,5,4,3,2.5,2,1.5,1.25,1} {-- (axis cs:\v,{(8/\v)^1.4+3})} -- cycle;
+  \addplot[bkInk, line width=1.7pt, domain=1:8] {(8/x)^1.4+3};
+  \addplot[bkInk, line width=1.7pt, domain=1:8] {45.95*x^(-1.4)+3};
+  \draw[bkRed!80!black, line width=1.9pt] (axis cs:1,21.38) -- (axis cs:1,48.95);
+  \draw[bkBlue!80!black, line width=1.9pt] (axis cs:8,5.5) -- (axis cs:8,4);
+  \fill[bkInk] (axis cs:8,4) circle (2pt) (axis cs:1,21.38) circle (2pt) (axis cs:1,48.95) circle (2pt) (axis cs:8,5.5) circle (2pt);
+  \node[qxh lab, anchor=north east] at (axis cs:7.9,3.5) {1};
+  \node[qxh lab, anchor=east] at (axis cs:0.9,21.38) {2};
+  \node[qxh lab, anchor=east] at (axis cs:0.9,48.95) {3};
+  \node[qxh lab, anchor=south east] at (axis cs:7.9,5.7) {4};
+  \draw[qxh heat] (axis cs:-0.2,29) -- (axis cs:0.85,33);
+  \node[qxh lab, anchor=east, text=bkRed!75!black] at (axis cs:-0.25,29) {$q_{\text{入}}$};
+  \draw[qxh cold] (axis cs:8.15,5) -- (axis cs:9.2,5);
+  \node[qxh lab, anchor=west, text=bkBlue!75!black] at (axis cs:9.3,5) {$q_{\text{出}}$};
+  \node[qxh lab, anchor=west] at (axis cs:2.6,21) {3→4 断熱膨張};
+  \node[qxh lab] at (axis cs:1.62,19) {$w_{\text{出}}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{オットーサイクルの $p$-$V$ 図（圧縮比8。縦の目もりは形を見るためのもの）。1→2 断熱圧縮（下の線）、2→3 で熱を受けとり、3→4 断熱膨張、4→1 で熱を捨てる。囲む面積が1周の仕事。}\label{ph:熱-7:fig-otto}
+\end{bkfigure}
+
+\phboxhead{熱を区間ごとに数える}
+熱を受けとるのは定積の 2→3、捨てるのは定積の 4→1 だけです（断熱の区間は熱の出入りなし）。定積の熱は $c_v\Delta T$（熱-3 ④）なので、
+\[q_{\text{入}}=c_v(T_3-T_2),\qquad q_{\text{出}}=c_v(T_4-T_1)\]
+です。断熱の2つの区間では $TV^{\gamma-1}$ が一定（熱-3 ⑥）なので、
+\[T_2=T_1\Bigl(\frac{V_1}{V_2}\Bigr)^{\gamma-1}=T_1\varepsilon^{\gamma-1},\qquad T_3=T_4\Bigl(\frac{V_1}{V_2}\Bigr)^{\gamma-1}=T_4\varepsilon^{\gamma-1}\]
+です。2つの断熱の区間は、どちらも体積が $V_1$ と $V_2$ の間を変わるので、同じ $\varepsilon^{\gamma-1}$ 倍になるのです。だから、$T_3-T_2=(T_4-T_1)\varepsilon^{\gamma-1}$ で、
+\[\frac{q_{\text{出}}}{q_{\text{入}}}=\frac{c_v(T_4-T_1)}{c_v(T_4-T_1)\varepsilon^{\gamma-1}}=\frac{1}{\varepsilon^{\gamma-1}}\]
+となります。熱効率の式に入れると、
+\pheq{\eta_{\text{オットー}}=1-\frac{1}{\varepsilon^{\gamma-1}}}{1}
+\label{ph:熱-7:otto}です。\textbf{オットーサイクルの理論熱効率は、圧縮比 $\varepsilon$ と比熱比 $\gamma$ だけで決まり}、受けとる熱の量や温度にはよりません。
+
+\begin{phflow}[オットーサイクル]
+\phflowrow{$\eta=1-\dfrac{q_{\text{出}}}{q_{\text{入}}}$（熱-5）}{定積で熱が出入り\\断熱で圧縮・膨張}{$\eta=1-\dfrac{1}{\varepsilon^{\gamma-1}}$}
+\end{phflow}
+
+\begin{phyomi}[$\eta=1-\dfrac{1}{\varepsilon^{\gamma-1}}$]
+「たくさん押し縮めるほど、効率がよい」。圧縮比10、$\gamma=1.4$ なら、$10^{0.4}=2.51$ で、$\eta=1-\dfrac{1}{2.51}=0.60$ です。断熱圧縮で空気の温度を $\varepsilon^{\gamma-1}$ 倍に上げてから熱を受けとるので、高い温度で熱を受けとることになり、カルノーの考え（熱-5）のとおり効率が上がります。
+\end{phyomi}
+
+\phboxhead{\bkhatenaref の答え：押し縮めるだけで、空気が熱くなる}
+断熱圧縮のあとの温度 $T_2=T_1\varepsilon^{\gamma-1}$ を、ディーゼルエンジンで計算します。圧縮比18、はじめの空気が27\,℃（\qty{300}{K}）なら、$18^{0.4}=3.18$ なので、
+\[T_2=300\times3.18=\qty{954}{K}\qquad\text{（約680\,℃）}\]
+です（熱-3 例7 と同じ数）。軽油が火を近づけなくてもひとりでに燃えだす温度は約250\,℃なので、それよりずっと高い温度です。\textbf{ディーゼルエンジンは、空気をおよそ18分の1まで急に押し縮めて約680\,℃まで温め、そこへ軽油を霧にしてふきこむので、火花がなくても燃えだすのです}。数学 3-11 のコラムでは、圧縮比16で約640\,℃と計算しました。
+
+ガソリンエンジンで同じことをすると、ガソリンは軽油より自然に燃えだしにくいものの、燃えてほしくない時期に燃えてしまいます（⑤のノッキング）。だから、ガソリンエンジンは圧縮比を低めにして、火花で燃やす時期を決めています。
+
+\begin{phbaisuru}{圧縮比 $\varepsilon$}
+圧縮比を10から2倍の20にすると、理論熱効率は0.60から0.70になります。$1-\eta=\dfrac{1}{\varepsilon^{0.4}}$ は、圧縮比を2倍にするたびに $2^{-0.4}=0.76$ 倍になるので、効率の増え方はだんだん小さくなります。圧縮比を5から10にすると0.13増えますが、10から20にしても0.10しか増えません。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=50mm, xmin=0, xmax=23, ymin=0, ymax=0.8, xtick={5,10,15,20}, ytick={0.2,0.4,0.6,0.7}, xlabel={$\varepsilon$}, ylabel={$\eta$}]
+  \addplot[bkcurve, domain=1:21] {1-x^(-0.4)};
+  \addplot[bkcurve2, dashed, domain=2:21] {1-x^(-0.4)*(2^1.4-1)/(1.4)};
+  \fill[bkRed] (axis cs:10,0.602) circle (1.8pt) (axis cs:20,0.698) circle (1.8pt) (axis cs:5,0.475) circle (1.8pt);
+  \node[qxh lab, anchor=south east, text=bkBlue!80!black] at (axis cs:9.4,0.62) {オットー};
+  \draw[bkGray, dashed, line width=0.4pt] (axis cs:10,0) -- (axis cs:10,0.602) (axis cs:20,0) -- (axis cs:20,0.698);
+  \node[qxh lab, anchor=west, text=bkOrange!75!black, fill=white] at (axis cs:10.5,0.32) {ディーゼル（$\sigma=2$。点線）};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{phbaisuru}
+
+\phboxhead{Python で、オットーサイクルを区切って確かめる}
+\begin{phcode}[Python：オットーサイクルを区切って計算する]
+g, cv, R = 1.4, 0.718, 0.287   \# 空気（kJ/(kg K)）
+def otto(eps, T1=300.0, q=1500.0, N=2000):
+    V1 = R*T1/100.0             \# 1 kg の体積（m3）。100 kPa
+    V2 = V1/eps
+    T = T1; w = 0.0
+    for i in range(N):          \# 1→2 断熱圧縮を区切る
+        V = V1 + (V2-V1)*i/N; dV = (V2-V1)/N
+        dw = R*T/(V+dV/2)*dV    \# p dV（負：された仕事）
+        T = T - dw/cv; w = w + dw
+    T = T + q/cv                \# 2→3 定積で q を受けとる
+    for i in range(N):          \# 3→4 断熱膨張を区切る
+        V = V2 + (V1-V2)*i/N; dV = (V1-V2)/N
+        dw = R*T/(V+dV/2)*dV
+        T = T - dw/cv; w = w + dw
+    return w/q                  \# 熱効率
+for eps in (5, 10, 15, 20):
+    print(eps, round(otto(eps), 3), round(1-eps**(1-g), 3))
+\end{phcode}
+\begin{phcodeout}
+5 0.475 0.475
+10 0.602 0.602
+15 0.662 0.661
+20 0.698 0.698
+\end{phcodeout}
+断熱の区間を2000に区切り、小さな体積の変化 $\Delta V$ ごとに、仕事 $p\Delta V$（$p$ は区間のまん中の体積で計算）の分だけ内部エネルギー（$c_v T$）を変えて温度を進めました（熱の出入りがないので、第一法則で $\Delta u=-p\Delta V$）。これは熱-3 のシミュレーションと同じ考えです。1列めは圧縮比、2列めは区切って足した仕事から求めた熱効率、3列めは式 $1-\varepsilon^{1-\gamma}$ の値です。2つはよく合っています。\texttt{q} を変えても効率はほとんど変わらないこと（受けとる熱によらない）も確かめられます。
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{ディーゼルサイクルとサバテサイクル}
+\label{ph:熱-7:sec4}
+\phboxhead{ディーゼルサイクル：定圧で燃える}
+ディーゼルエンジンでは、圧縮した熱い空気に燃料をふきこみ続けるので、ピストンが下がり始めても、しばらく燃え続けます。その間、圧力はほぼ一定です。そこで、2→3 の加熱を\textbf{定圧}におきかえたものを\textbf{ディーゼルサイクル}といいます（1892年に特許をとったドイツのルドルフ・ディーゼルの名前から）。\bkidx{でぃーぜるさいくる}{ディーゼルサイクル}燃え終わったときの体積 $V_3$ と $V_2$ の比
+\[\sigma=\frac{V_3}{V_2}\]
+を\textbf{締切比}（燃料のふきこみを締め切るときの体積の比）といいます。$\sigma$ はギリシャ文字の「シグマ」です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=56mm, xmin=0, xmax=9.6, ymin=0, ymax=27, xtick={1,2,8}, xticklabels={$V_2$,$V_3$,$V_1$}, ytick=\empty, xlabel={$V$}, ylabel={$p$}]
+  \fill[bkOrange!25] (axis cs:1,21.38) -- (axis cs:2,21.38)
+    \foreach \v in {2.5,3,4,5,6,7,8} {-- (axis cs:\v,{18.38*(2/\v)^1.4+3})}
+    -- (axis cs:8,4)
+    \foreach \v in {7,6,5,4,3,2.5,2,1.5,1.25,1} {-- (axis cs:\v,{(8/\v)^1.4+3})} -- cycle;
+  \addplot[bkInk, line width=1.7pt, domain=1:8] {(8/x)^1.4+3};
+  \addplot[bkInk, line width=1.7pt, domain=2:8] {18.38*(2/x)^1.4+3};
+  \draw[bkRed!80!black, line width=1.9pt] (axis cs:1,21.38) -- (axis cs:2,21.38);
+  \draw[bkBlue!80!black, line width=1.9pt] (axis cs:8,5.64) -- (axis cs:8,4);
+  \fill[bkInk] (axis cs:8,4) circle (2pt) (axis cs:1,21.38) circle (2pt) (axis cs:2,21.38) circle (2pt) (axis cs:8,5.64) circle (2pt);
+  \node[qxh lab, anchor=north east] at (axis cs:7.9,3.5) {1};
+  \node[qxh lab, anchor=east] at (axis cs:0.9,21.38) {2};
+  \node[qxh lab, anchor=south west] at (axis cs:2.05,21.5) {3};
+  \node[qxh lab, anchor=south east] at (axis cs:7.9,5.8) {4};
+  \draw[qxh heat] (axis cs:1.5,25.5) -- (axis cs:1.5,22);
+  \node[qxh lab, anchor=west, text=bkRed!75!black] at (axis cs:1.65,25.3) {$q_{\text{入}}$（定圧）};
+  \draw[qxh cold] (axis cs:8.15,5) -- (axis cs:9.2,5);
+  \node[qxh lab, anchor=west, text=bkBlue!75!black] at (axis cs:9.3,5) {$q_{\text{出}}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ディーゼルサイクルの $p$-$V$ 図（圧縮比8、締切比2。形を見るための図）。2→3 で、圧力を保ったまま熱を受けとる。}\label{ph:熱-7:fig-diesel}
+\end{bkfigure}
+
+\phboxhead{熱効率を導く}
+受けとる熱は定圧の $c_p(T_3-T_2)$、捨てる熱は定積の $c_v(T_4-T_1)$ です。温度を $T_1$ で表します。
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item 1→2 断熱：$T_2=T_1\varepsilon^{\gamma-1}$。
+\item 2→3 定圧：$pV=$（1 kg あたり）$R_{\mathrm s}T$ で $p$ が一定なので、温度は体積に比例し、$T_3=\sigma T_2=\sigma\varepsilon^{\gamma-1}T_1$。
+\item 3→4 断熱：$V_3/V_1=\sigma V_2/V_1=\sigma/\varepsilon$ なので、
+\[T_4=T_3\Bigl(\frac{V_3}{V_1}\Bigr)^{\gamma-1}=\sigma\varepsilon^{\gamma-1}T_1\Bigl(\frac{\sigma}{\varepsilon}\Bigr)^{\gamma-1}=\sigma^{\gamma}T_1\]
+\end{itemize}
+だから、$\dfrac{c_p}{c_v}=\gamma$ を使って、
+\[\frac{q_{\text{出}}}{q_{\text{入}}}=\frac{c_v(\sigma^{\gamma}-1)T_1}{c_p(\sigma-1)\varepsilon^{\gamma-1}T_1}=\frac{1}{\varepsilon^{\gamma-1}}\cdot\frac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}\]
+となり、
+\pheq{\eta_{\text{ディーゼル}}=1-\frac{1}{\varepsilon^{\gamma-1}}\cdot\frac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}}{1}
+\label{ph:熱-7:diesel}です。オットーの式に、$\dfrac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}$ という「1より大きい数」がかかった形です。$\sigma=2$ なら $\dfrac{2^{1.4}-1}{1.4\times1}=1.17$ です。
+
+\begin{phyomi}[$\dfrac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}$]
+「定圧で燃やすために、効率が少し下がる割合」。$\sigma$ を1に近づける（すぐに燃え終わる）とこの数は1に近づき、オットーの式にもどります。$\sigma$ が大きい（長く燃やす）ほど、ピストンが下がってから熱を受けとる分が多くなり、効率が下がります。
+\end{phyomi}
+
+同じ圧縮比なら、ディーゼルサイクルの効率はオットーサイクルより低くなります（③のグラフの点線）。それでも、実際のディーゼルエンジンの効率がガソリンエンジンより高いのは、ノッキングの心配がなく、圧縮比をずっと高くできるからです。たとえば、ガソリンの $\varepsilon=10$ なら0.60、ディーゼルの $\varepsilon=18$・$\sigma=2$ なら0.63です。
+
+\phboxhead{サバテサイクル：はじめは定積、あとは定圧}
+今の高速のディーゼルエンジンでは、燃料をふきこむとはじめに一気に燃えて圧力が上がり（定積に近い）、あとは定圧に近い燃え方をします。そこで、加熱を「定積で圧力を $\xi$ 倍に上げる」と「定圧で体積を $\sigma$ 倍にする」の2段に分けたものを\textbf{サバテサイクル}（複合サイクル）といいます。$\xi$（クシー）を\textbf{圧力上昇比}といいます。同じように区間ごとに熱を数えると、
+\pheq{\eta_{\text{サバテ}}=1-\frac{1}{\varepsilon^{\gamma-1}}\cdot\frac{\xi\sigma^{\gamma}-1}{(\xi-1)+\gamma\xi(\sigma-1)}}{1}
+\label{ph:熱-7:sabathe}となります（例題4で、温度を順に計算して確かめます）。$\sigma=1$ ならオットー、$\xi=1$ ならディーゼルの式になります。
+
+%% ---------------------------------------------------------------
+\bksubsection{5}{ノッキングと、本物のエンジンの効率}
+\label{ph:熱-7:sec5}
+\phboxhead{ノッキング：圧縮比の上限}
+ガソリンエンジンで圧縮比を上げすぎると、火花で火がついた炎が広がる前に、まだ燃えていないガスが、押し縮められて熱くなったために、ひとりでに一気に燃えてしまうことがあります。圧力が急に変わってシリンダーをたたくようなカリカリという音が出て、ひどいとピストンをいためます。これを\textbf{ノッキング}といいます。\bkidx{のっきんぐ}{ノッキング}ガソリンの「オクタン価」は、ノッキングの起きにくさを表す数です。ガソリンエンジンの圧縮比が約10〜14に抑えられているのは、主にノッキングのためです。
+
+\phboxhead{本物の効率は、理論熱効率より低い}
+本物のエンジンの効率は、空気標準サイクルの理論熱効率よりかなり低くなります。量産の乗用車のガソリンエンジンでいちばん効率のよい運転のときでも約40\,\%（2016年の発表）、大きな船の2ストロークディーゼルエンジンで約50\,\%をこえるくらいです。ふだんの街の中の運転では、それよりずっと低い効率で動いている時間が長くなります。理論熱効率との差が出るのは、次のようなわけです。
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item 燃えたガスは\qty{2000}{K}をこえる高温で、比熱が大きくなり、$\gamma$ が1.4より小さくなる（同じ圧縮比でも効率が下がる）。
+\item 燃えるのに時間がかかり、定積では燃えきらない。
+\item 熱がシリンダーの壁へ逃げる。摩擦や、吸気・排気に仕事が要る。
+\end{itemize}
+
+\begin{phmada}[炎は、エンジンの中でどう広がる？]
+シリンダーの中のガスは、はげしく乱れて渦を巻いています。その中を火炎がどう広がるか、そしてノッキングがいつ、どこで起きるかを、計算だけで正確に予測することは、今もとても難しい問題です。燃料の化学反応は何百もの段階に分かれていて、乱れた流れはとても小さな渦までふくむからです。エンジンの開発では、コンピュータの計算（燃焼のシミュレーション）と実験を組み合わせて、燃焼室の形や燃料をふきこむ時期を決めています。ガソリンを圧縮で自然に燃やして効率を上げる方式も研究され、実用にもなり始めていますが、燃えだす時期を思いどおりに制御することが大きな課題とされています。
+\end{phmada}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{ブレイトンサイクル：ガスタービン}
+\label{ph:熱-7:sec6}
+\phboxhead{流れながら回るサイクル}
+飛行機のジェットエンジンや、発電所のガスタービンは、ピストンを使いません。空気を流しながら、圧縮機で押し縮め、燃焼器で燃料を燃やし、タービンで膨張させて羽根車を回します（図\ref{ph:熱-7:fig-gt}）。タービンが出す仕事の一部で圧縮機を回し、残りで発電機を回します。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkBlue!18, draw=bkInk, line width=0.8pt] (10,6) -- (30,11) -- (30,25) -- (10,30) -- cycle;
+  \filldraw[fill=bkOrange!30, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (40,27) rectangle (64,37);
+  \filldraw[fill=bkRed!18, draw=bkInk, line width=0.8pt] (74,11) -- (94,6) -- (94,30) -- (74,25) -- cycle;
+  \draw[bkInk!70, line width=2pt] (30,18) -- (74,18) (94,18) -- (104,18);
+  \filldraw[fill=bkGreen!25, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (104,11) rectangle (124,25);
+  \node[qxh lab, align=center] at (20,18) {圧縮機};
+  \node[qxh lab] at (52,32) {燃焼器};
+  \node[qxh lab, align=center] at (84,18) {タービン};
+  \node[qxh lab] at (114,18) {発電機};
+  \draw[qxh flow] (0,18) -- (9,18);
+  \node[qxh lab, anchor=south] at (4,19) {1};
+  \draw[qxh flow] (30,24) -- (35,24) -- (35,32) -- (39,32);
+  \node[qxh lab, anchor=east] at (34.5,28) {2};
+  \draw[qxh flow] (65,32) -- (69,32) -- (69,24) -- (73,24);
+  \node[qxh lab, anchor=west] at (69.5,28) {3};
+  \draw[qxh flow] (94,27) -- (99,27) -- (99,38);
+  \node[qxh lab, anchor=west] at (100,34) {4（排気）};
+  \draw[qxh heat] (52,46) -- (52,38);
+  \node[qxh lab, anchor=west, text=bkRed!75!black] at (53,44) {燃料：$q_{\text{入}}$};
+  \node[qxh lab, anchor=north, align=center] at (52,15.5) {軸：タービンが\\圧縮機を回す};
+\end{tikzpicture}
+\bkfigcaption{ガスタービンのしくみ。1 空気を吸う、1→2 圧縮機で押し縮める、2→3 燃焼器で燃やす（圧力はほぼ一定）、3→4 タービンで膨張して回す、4 排気。}\label{ph:熱-7:fig-gt}
+\end{bkfigure}
+
+空気標準サイクルにすると、1→2 断熱圧縮、2→3 \textbf{定圧}加熱、3→4 断熱膨張、4→1 \textbf{定圧}放熱（排気を大気の中で冷やしてもどすことにおきかえる）になります。これを\textbf{ブレイトンサイクル}といいます（1872年ごろに定圧で燃やす機関を作ったアメリカのジョージ・ブレイトンの名前から）。\bkidx{ぶれいとんさいくる}{ブレイトンサイクル}高い圧力 $p_2$ と低い圧力 $p_1$ の比 $r_{\mathrm p}=\dfrac{p_2}{p_1}$ を\textbf{圧力比}といいます。
+
+\phboxhead{熱効率は圧力比で決まる}
+空気は流れながら機械を通るので、熱-4 の定常流動のエネルギーの式を使います。速さと高さの変化を無視すると、燃焼器で受けとる熱は $q_{\text{入}}=h_3-h_2=c_p(T_3-T_2)$、捨てる熱は $q_{\text{出}}=c_p(T_4-T_1)$ です。断熱の区間では $pV^{\gamma}$ 一定と $pV=R_{\mathrm s}T$（1 kg あたり）から $T\propto p^{(\gamma-1)/\gamma}$ なので、
+\[\frac{T_2}{T_1}=\frac{T_3}{T_4}=r_{\mathrm p}^{\,(\gamma-1)/\gamma}\]
+です。オットーのときと同じ形で $T_3-T_2=(T_4-T_1)\,r_{\mathrm p}^{\,(\gamma-1)/\gamma}$ となるので、
+\pheq{\eta_{\text{ブレイトン}}=1-\frac{1}{r_{\mathrm p}^{\,(\gamma-1)/\gamma}}}{1}
+\label{ph:熱-7:brayton}です。$\gamma=1.4$ なら $\dfrac{\gamma-1}{\gamma}=0.286$ で、圧力比15なら $15^{0.286}=2.17$、$\eta=0.54$ です。
+
+\begin{phflow}[3つのサイクル]
+\phflowrow{$\eta=1-\dfrac{q_{\text{出}}}{q_{\text{入}}}$}{定積で熱が出入り\\断熱で圧縮・膨張}{$1-\dfrac{1}{\varepsilon^{\gamma-1}}$（オットー）}
+\phflowrow{$\eta=1-\dfrac{q_{\text{出}}}{q_{\text{入}}}$}{定圧で受けとり\\定積で捨てる}{ディーゼルの式}
+\phflowrow{$\eta=1-\dfrac{q_{\text{出}}}{q_{\text{入}}}$}{定圧で熱が出入り\\断熱で圧縮・膨張}{$1-\dfrac{1}{r_{\mathrm p}^{\,(\gamma-1)/\gamma}}$（ブレイトン）}
+\end{phflow}
+
+\phboxhead{仕事比：圧縮機が仕事を食う}
+ガスタービンでは、圧縮機を回すのに、タービンの仕事の大きな割合を使います。タービンがする仕事 $w_{\text{タービン}}=c_p(T_3-T_4)$、圧縮機に入れる仕事 $w_{\text{圧縮機}}=c_p(T_2-T_1)$ とすると、正味の仕事は
+\pheq{w_{\text{出}}=w_{\text{タービン}}-w_{\text{圧縮機}}}{kJ/kg}
+です。$\dfrac{w_{\text{出}}}{w_{\text{タービン}}}$ を\textbf{仕事比}といいます。たとえば、入口の空気が\qty{300}{K}、タービンの入口が\qty{1500}{K}、圧力比15なら、タービンの仕事の約4割を圧縮機が使い、仕事比は約0.57です（例題6）。仕事比が小さいと、タービンや圧縮機のわずかな損失で、正味の仕事が大きく減ってしまいます。
+
+\phboxhead{正味の仕事がいちばん大きい圧力比}
+圧力比を上げると効率は上がりますが、正味の仕事 $w_{\text{出}}$ は、ある圧力比でいちばん大きくなり、その先は減っていきます（図\ref{ph:熱-7:fig-wnet}）。圧力比を上げすぎると、圧縮機の出口の温度 $T_2$ がタービンの入口の温度 $T_3$ に近づき、燃料を入れる余地（$T_3-T_2$）がなくなるからです。$w_{\text{出}}$ を $r_{\mathrm p}$ で微分して0とおくと（5-7）、いちばん大きくなるのは $T_2=\sqrt{T_1T_3}$、つまり
+\[r_{\mathrm p}=\Bigl(\frac{T_3}{T_1}\Bigr)^{\gamma/(2(\gamma-1))}\]
+のときです（例題7）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=64, ymin=0, ymax=540, xtick={5,10,16.7,30,40,60}, xticklabels={5,10,16.7,30,40,60}, ytick={100,200,300,400,461}, xlabel={$r_{\mathrm p}$}, ylabel={$w_{\text{出}}$（kJ/kg）}]
+  \addplot[bkcurve, domain=1:62, samples=120] {1.005*(1500-1500/x^(0.285714))-1.005*(300*x^(0.285714)-300)};
+  \fill[bkRed] (axis cs:16.72,460.7) circle (2pt) (axis cs:15,460) circle (1.4pt);
+  \draw[bkGray, dashed, line width=0.4pt] (axis cs:16.72,0) -- (axis cs:16.72,460.7);
+  \node[qxh lab, anchor=south] at (axis cs:16.72,470) {いちばん大きい（$r_{\mathrm p}\approx17$）};
+  \node[qxh lab, anchor=north west, text=bkGray] at (axis cs:30,300) {$T_1=\qty{300}{K}$、$T_3=\qty{1500}{K}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ブレイトンサイクルの正味の仕事と圧力比。効率は圧力比とともに上がり続けるが、正味の仕事は圧力比 約17 でいちばん大きくなる。}\label{ph:熱-7:fig-wnet}
+\end{bkfigure}
+
+\begin{phbaisuru}{タービンの入口の温度と入口の温度の比 $T_3/T_1$}
+正味の仕事がいちばん大きい圧力比は $(T_3/T_1)^{1.75}$ です。$T_3/T_1$ を5から2倍の10にすると、$10^{1.75}\div5^{1.75}=2^{1.75}=3.4$ 倍の圧力比で、いちばん大きな仕事が出せます。タービンの入口の温度を上げられるほど、圧力比を上げて、効率も仕事も大きくできるのです。だから、ガスタービンの開発は、熱に強い羽根の材料と、羽根を中から冷やす工夫の歴史でもあります。
+\end{phbaisuru}
+
+\begin{motto}[4]
+\phboxhead{ジェットエンジン：正味の仕事を、噴き出す速さに使う}
+飛行機のジェットエンジン（ターボジェット）は、発電機を回すかわりに、タービンでは圧縮機を回すのに要る分だけ仕事を取り出し、残りの比エンタルピーをノズルで噴き出す空気の速さに変えます。熱-4 のノズルの式 $v=\sqrt{2\Delta h}$ に、例題6の正味の仕事 $\Delta h=\qty{460}{kJ/kg}$ を入れると、
+\[v=\sqrt{2\times460\times10^3}\approx\qty{960}{m/s}\]
+となります（空気標準サイクルの理想の値で、はじめの速さを0とした場合）。噴き出す空気の運動量の変化が、飛行機を前へ押す力（推力）になります（力-3）。今の旅客機のターボファンエンジンは、たくさんの空気をもっと遅い速さで後ろへ送り出すほうが燃料の効率がよいので、タービンの仕事で大きなファンも回しています。
+\end{motto}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{再生：捨てる熱を使い回す}
+\label{ph:熱-7:sec7}
+圧力比があまり高くないガスタービンでは、タービンの出口の排気の温度 $T_4$ が、圧縮機の出口の空気の温度 $T_2$ より高くなります（例題8では $T_4=\qty{947}{K}$、$T_2=\qty{475}{K}$）。そこで、熱交換器（\textbf{再生器}）で、排気の熱を圧縮機から出た空気に移してから燃焼器へ送ると、燃料で入れる熱を減らせます。これを\textbf{再生}といいます。\bkidx{さいせい}{再生（再生サイクル）}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkBlue!18, draw=bkInk, line width=0.8pt] (10,4) -- (26,8) -- (26,20) -- (10,24) -- cycle;
+  \filldraw[fill=bkRed!18, draw=bkInk, line width=0.8pt] (78,8) -- (94,4) -- (94,24) -- (78,20) -- cycle;
+  \draw[bkInk!70, line width=2pt] (26,14) -- (78,14);
+  \filldraw[fill=bkOrange!30, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (62,30) rectangle (82,38);
+  \filldraw[fill=bkPurple!15, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (30,40) rectangle (58,50);
+  \node[qxh lab] at (18,14) {圧縮機};
+  \node[qxh lab] at (86,14) {タービン};
+  \node[qxh lab] at (72,34) {燃焼器};
+  \node[qxh lab] at (44,45) {再生器};
+  \draw[qxh flow] (26,20) -- (34,20) -- (34,39.5);
+  \node[qxh lab, anchor=east] at (33.5,28) {2};
+  \draw[qxh flow] (40,40) -- (40,34) -- (61.5,34);
+  \node[qxh lab, anchor=north] at (50,33.5) {温めた空気};
+  \draw[qxh flow] (82.5,34) -- (88,34) -- (88,23.5);
+  \node[qxh lab, anchor=west] at (88.5,28) {3};
+  \draw[qxh flow, bkRed!80!black] (94,22) -- (100,22) -- (100,47) -- (58.5,47);
+  \node[qxh lab, anchor=west] at (100.5,40) {4（熱い排気）};
+  \draw[qxh flow, bkGray] (29.5,47) -- (16,47);
+  \node[qxh lab, anchor=east] at (15.5,47) {冷えた排気};
+  \draw[qxh flow] (0,14) -- (9.5,14);
+  \node[qxh lab, anchor=south] at (4,15) {1};
+\end{tikzpicture}
+\bkfigcaption{再生をするガスタービン。タービンの熱い排気（4）の熱を、再生器で圧縮機の出口の空気（2）に移す。}\label{ph:熱-7:fig-regen}
+\end{bkfigure}
+
+いちばんよく熱を移せたとき（理想の再生）、圧縮機の出口の空気は $T_4$ まで温まり、燃焼器で入れる熱は $q_{\text{入}}=c_p(T_3-T_4)$ になります。これはタービンの仕事 $w_{\text{タービン}}$ と同じです。正味の仕事は再生しても変わらないので、
+\pheq{\eta_{\text{再生}}=\frac{w_{\text{出}}}{q_{\text{入}}}=\frac{w_{\text{タービン}}-w_{\text{圧縮機}}}{w_{\text{タービン}}}=1-\frac{T_1}{T_3}\,r_{\mathrm p}^{\,(\gamma-1)/\gamma}}{1}
+です（最後の形は、$T_2=T_1r_{\mathrm p}^{\,(\gamma-1)/\gamma}$、$T_4=T_3/r_{\mathrm p}^{\,(\gamma-1)/\gamma}$ を入れて整理したもの）。再生なしとは逆に、\textbf{圧力比が低いほど効率が高く}なります。ただし、$T_4$ が $T_2$ より低くなる高い圧力比では、再生器で熱が逆に流れてしまうので、再生は使えません。
+
+%% ---------------------------------------------------------------
+\bksubsection{8}{コンバインドサイクル：2つの熱機関を重ねる}
+\label{ph:熱-7:sec8}
+大きなガスタービンの排気は、まだ約600\,℃もあります。この熱で水を水蒸気にし、蒸気タービン（熱-8 のランキンサイクル）を回せば、捨てるはずだった熱から、さらに仕事を取り出せます。ガスタービンを「上の段」、蒸気タービンを「下の段」に重ねたこのしくみを\textbf{コンバインドサイクル}（複合発電）といいます。\bkidx{こんばいんどさいくる}{コンバインドサイクル}
+
+燃料の熱を1とします。ガスタービンの効率を $\eta_{\mathrm G}$ とすると、ガスタービンは $\eta_{\mathrm G}$ を仕事にし、$1-\eta_{\mathrm G}$ を排気に捨てます。その排気の熱を、効率 $\eta_{\mathrm S}$ の蒸気の側が受けとると、$(1-\eta_{\mathrm G})\eta_{\mathrm S}$ を仕事にします。全体の効率は
+\pheq{\eta=\eta_{\mathrm G}+(1-\eta_{\mathrm G})\,\eta_{\mathrm S}}{1}
+\label{ph:熱-7:combined}です。$\eta_{\mathrm G}=0.40$、$\eta_{\mathrm S}=0.35$ なら、$0.40+0.60\times0.35=0.61$ で、どちらか1つだけのときよりずっと高い効率になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed!35] (0,10) rectangle (8,40);
+  \node[qxh lab, align=center, anchor=east] at (-1,25) {燃料の\\熱 100};
+  \fill[bkGreen!45] (8,30) -- (40,30) -- (40,40) -- (8,40) -- cycle;
+  \fill[bkOrange!35] (8,10) -- (40,10) -- (40,30) -- (8,30) -- cycle;
+  \node[qxh lab] at (24,35) {ガスの仕事 40};
+  \node[qxh lab] at (24,20) {排気の熱 60};
+  \fill[bkGreen!30] (40,22.9) -- (76,22.9) -- (76,30) -- (40,30) -- cycle;
+  \fill[bkBlue!25] (40,10) -- (76,10) -- (76,22.9) -- (40,22.9) -- cycle;
+  \node[qxh lab] at (58,26.4) {蒸気の仕事 21};
+  \node[qxh lab] at (58,16.4) {海へ 39};
+  \draw[bkInk, line width=0.6pt] (40,8) -- (40,42);
+  \node[qxh lab, anchor=south] at (24,41) {上の段（ガス）};
+  \node[qxh lab, anchor=south] at (58,41) {下の段（蒸気）};
+  \fill[bkGreen!45] (82,22.9) rectangle (90,40);
+  \node[qxh lab, align=left, anchor=west] at (92,31.5) {電気になる\\$40+21=61$};
+  \fill[bkBlue!25] (82,10) rectangle (90,22.9);
+  \node[qxh lab, align=left, anchor=west] at (92,16.4) {捨てる 39};
+\end{tikzpicture}
+\bkfigcaption{コンバインドサイクルのエネルギーの割合（燃料の熱を100とする。$\eta_{\mathrm G}=0.40$、$\eta_{\mathrm S}=0.35$）。}\label{ph:熱-7:fig-cc}
+\end{bkfigure}
+
+熱-0 で見た、効率63.08\,\%（2018年の記録）の発電所も、このコンバインドサイクルです。ガスタービンの入口は1600\,℃級で、熱-5 で学んだように、高い温度で熱を受けとり、低い温度（海水）で熱を捨てる、という熱機関の効率を上げる考えを、2つの機関で分担して実現しているのです。
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{平均有効圧と、エンジンの出力}
+\label{ph:熱-7:sec9}
+エンジンの大きさがちがっても性能をくらべられるように、1回のサイクルの正味の仕事を行程体積でわった
+\pheq{p_{\mathrm m}=\frac{W_{\text{1回}}}{V_{\mathrm s}}}{J/m$^3$ ＝ Pa}
+を\textbf{平均有効圧}といいます。\bkidx{へいきんゆうこうあつ}{平均有効圧}単位は J/m$^3$＝N·m/m$^3$＝N/m$^2$＝Pa で、圧力と同じです。「この一定の圧力でピストンを1行程押すと、1回のサイクルと同じ仕事になる」という圧力です。図\ref{ph:熱-7:fig-indicator}の閉じた道の面積を、横の長さ $V_{\mathrm s}$ の長方形にならし直したときの高さにあたります。
+
+4ストロークエンジンは、クランクが2回まわるごとに1回燃えます。排気量（すべてのシリンダーの行程体積の和）$V_{\mathrm s}$、毎分 $n$ 回転なら、1秒あたりの燃える回数は $\dfrac{n}{2\times60}$ なので、出力（仕事率）は
+\pheq{P=p_{\mathrm m}V_{\mathrm s}\frac{n}{2\times60}}{W ＝ Pa × m$^3$ × 1/s}
+です。排気量\qty{2.0}{L}、毎分3000回転、平均有効圧\qty{1.0}{MPa}なら、
+\[P=(1.0\times10^6)\times(2.0\times10^{-3})\times\frac{3000}{120}=\qty{5.0e4}{W}=\qty{50}{kW}\]
+です（例題11）。
+
+\begin{phmijika}[1秒に何回燃える？]
+毎分3000回転のエンジンでは、クランクが1秒に50回まわり、1つのシリンダーで1秒に25回燃えます（出力の式の $\dfrac{n}{2\times60}$）。1回の燃焼・膨張の行程は、約100分の1秒です。こんなに速いので、ガスの熱はシリンダーの壁へあまり逃げず、圧縮と膨張は断熱変化に近くなります（②の理想化の理由の1つ）。
+\end{phmijika}
+
+\begin{phbaisuru}{回転数 $n$}
+平均有効圧と排気量が同じなら、出力は回転数に比例し、2倍になります。速く回すほど、1秒あたりの燃える回数が増えるからです。ただし、回転数を上げすぎると、空気を吸いこむ時間が足りなくなって平均有効圧が下がり、摩擦も増えるので、出力はある回転数でいちばん大きくなります。車のカタログの「最高出力 ○ kW／○ rpm」は、その回転数を表しています。
+\end{phbaisuru}
+
+\begin{phsaki}{内燃機関工学・燃焼工学}
+本物のエンジンの性能を予測するには、燃料が燃えたガスの成分と、その比熱が温度でどう変わるかを入れた計算（燃料空気サイクル）や、燃焼の速さ・熱の逃げ・吸気と排気の流れの計算が要ります。専門の本では、これらを内燃機関工学・燃焼工学として学びます。ガスタービンの圧縮機やタービンの羽根の形は、熱-4 の流れる気体の熱と、流体の力学（第1巻 力-13〜15）を組み合わせて設計します。
+\end{phsaki}
+
+\begin{senmonsho}[機械の熱力学の本の書き方]
+\begin{bkhonbun}
+オットーサイクルの理論熱効率は $\eta_{\mathrm{th}}=1-1/\varepsilon^{\kappa-1}$ であり，圧縮比 $\varepsilon$ と比熱比 $\kappa$ のみで定まる．ディーゼルサイクルでは締切比を $\sigma$ として $\eta_{\mathrm{th}}=1-\dfrac{1}{\varepsilon^{\kappa-1}}\dfrac{\sigma^{\kappa}-1}{\kappa(\sigma-1)}$ となる．
+\end{bkhonbun}
+\bkyaku{機械の本では、比熱比を $\kappa$（カッパ）と書くことが多い。この本の $\gamma$ と同じもの。「のみで定まる」は「だけで決まる」。$\eta_{\mathrm{th}}$ の th は thermal（熱の）。③と④の式と同じ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{1 kg あたり}$w_{\text{出}}=q_{\text{入}}-q_{\text{出}}$、$\eta=1-\dfrac{q_{\text{出}}}{q_{\text{入}}}$\\[3pt]
+\tsl{断熱圧縮}$T_2=T_1\varepsilon^{\gamma-1}$（$\varepsilon=V_1/V_2$）\\[3pt]
+\tsl{オットー}$\eta=1-\dfrac{1}{\varepsilon^{\gamma-1}}$\\[3pt]
+\tsl{ディーゼル}$\eta=1-\dfrac{1}{\varepsilon^{\gamma-1}}\cdot\dfrac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}$\\[3pt]
+\tsl{ブレイトン}$\eta=1-\dfrac{1}{r_{\mathrm p}^{\,(\gamma-1)/\gamma}}$、$w_{\text{出}}=w_{\text{タービン}}-w_{\text{圧縮機}}$\\[3pt]
+\tsl{コンバインド}$\eta=\eta_{\mathrm G}+(1-\eta_{\mathrm G})\eta_{\mathrm S}$\\[3pt]
+\tsl{出力}$P=p_{\mathrm m}V_{\mathrm s}\dfrac{n}{120}$（4ストローク、$n$ は毎分の回転数）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{圧縮比}{下死点と上死点の体積の比 $\varepsilon=V_1/V_2$。}
+\bkword{空気標準サイクル}{エンジンの中を同じ空気が回るとみなし、燃焼を熱の受けとりにおきかえた理想のサイクル。}
+\bkword{オットーサイクル}{定積で熱を受けとり・捨てるサイクル（ガソリンエンジン）。}
+\bkword{ディーゼルサイクル}{定圧で熱を受けとり、定積で捨てるサイクル。締切比 $\sigma$。}
+\bkword{ブレイトンサイクル}{定圧で熱を受けとり・捨てるサイクル（ガスタービン）。圧力比 $r_{\mathrm p}$。}
+\bkword{仕事比}{正味の仕事÷タービンの仕事。}
+\bkword{平均有効圧}{1回の正味の仕事÷行程体積。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{\shortstack{$w_{\text{出}}$\\[2pt]$q_{\text{入}}$}}{ダブリュー、キュー}{1 kg あたり1周で出す仕事・受けとる熱（正の数）。第一法則の $W$ とは $W=-w_{\text{出}}$}{net work, heat input}{熱-7}}
+{\bkkigocard{$\varepsilon$}{イプシロン}{圧縮比 $V_1/V_2$。熱-13 の放射率とは別}{compression ratio}{熱-7}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\noindent この章の例題は、空気を理想気体とし、比熱は一定とします。値は熱-3 と同じで、$c_p=\qty{1.005}{kJ/(kg.K)}$、$c_v=\qty{0.718}{kJ/(kg.K)}$、$\gamma=1.40$ です。$a^{0.4}$ のような累乗は電卓で計算します（3-11）。
+
+\label{ph:熱-7:ex1}
+\begin{phreidai}[ディーゼルエンジンの圧縮（はてな？）]
+ディーゼルエンジンで、27\,℃・\qty{100}{kPa}の空気を、圧縮比18で断熱圧縮します。圧縮したあとの温度と圧力を求めましょう。
+\phbamen
+ピストンで空気を急に押し縮めます。燃料をふきこむ直前の空気の温度を知りたいのです。
+\phmushi
+壁へ逃げる熱をなくし、断熱で可逆な変化とします。燃料はまだ入っていません。
+\phzu
+$T_1=\qty{300}{K}$、$p_1=\qty{100}{kPa}$、$\varepsilon=\dfrac{V_1}{V_2}=18$。あとの温度 $T_2$、圧力 $p_2$。
+\phriyu
+断熱で可逆なら、$TV^{\gamma-1}$ と $pV^{\gamma}$ が一定です（熱-3 ⑥）。体積の比がわかっているので、そのまま使えます。
+\phtateru
+\[T_2=T_1\varepsilon^{\gamma-1}=300\times18^{0.4},\qquad p_2=p_1\varepsilon^{\gamma}=100\times18^{1.4}\]
+\phtoku
+電卓で $18^{0.4}=3.18$、$18^{1.4}=18\times3.18=57.2$ なので、
+\[T_2=300\times3.18=\qty{954}{K},\qquad p_2=100\times57.2=\qty{5720}{kPa}\]
+\phtashikame
+$T_2$ は約680\,℃で、軽油がひとりでに燃えだす温度（約250\,℃）よりずっと高い温度です。圧力は約\qty{5.7}{MPa}、大気圧の57倍です。温度が一定のまま押し縮めたなら、圧力は18倍にしかなりません。断熱では温度も上がるので、$18\times3.18=57.2$ 倍になります。実際は熱が少し逃げるので、これより少し低い値です。
+\kotae 約\qty{950}{K}（約680\,℃）、約\qty{5.7}{MPa}
+\end{phreidai}
+\begin{jibun}
+20\,℃・\qty{100}{kPa}の空気を、圧縮比16で断熱圧縮したあとの温度と圧力を求めましょう（$16^{0.4}=3.03$）。
+\bkjans{$T_2=293\times3.03\approx\qty{890}{K}$（約620\,℃）、$p_2=100\times16\times3.03\approx\qty{4.9}{MPa}$}
+\end{jibun}
+
+\label{ph:熱-7:ex2}
+\begin{phreidai}[ガソリンエンジンの理論熱効率]
+圧縮比10のオットーサイクルの理論熱効率を求めましょう。
+\phbamen
+ガソリンエンジンを、空気標準サイクルで理想化します。
+\phmushi
+②の空気標準サイクルの理想化（燃料の量・熱の逃げ・摩擦を無視）。
+\phzu
+$\varepsilon=10$、$\gamma=1.40$。
+\phriyu
+オットーサイクルの理論熱効率は、圧縮比と比熱比だけで決まります（③）。
+\phtateru
+\[\eta=1-\frac{1}{\varepsilon^{\gamma-1}}=1-\frac{1}{10^{0.4}}\]
+\phtoku
+\[10^{0.4}=2.512,\qquad\eta=1-\frac{1}{2.512}=1-0.398=0.602\]
+\phtashikame
+0と1の間の値です。実際のガソリンエンジンの効率（いちばんよいときで約40\,\%）は、これより低くなっています（⑤）。
+\kotae 約0.60（60\,\%）
+\end{phreidai}
+\begin{jibun}
+圧縮比8のオットーサイクルの理論熱効率を求めましょう（$8^{0.4}=2.297$）。
+\bkjans{$1-\tfrac{1}{2.297}\approx0.56$}
+\end{jibun}
+
+\label{ph:熱-7:ex3}
+\begin{phreidai}[ディーゼルサイクルの理論熱効率]
+圧縮比18、締切比2のディーゼルサイクルの理論熱効率を求めましょう。同じ圧縮比のオットーサイクルとくらべましょう。
+\phbamen
+燃料をふきこみながら、定圧で燃やすエンジンです。
+\phmushi
+空気標準サイクルの理想化。
+\phzu
+$\varepsilon=18$、$\sigma=2$、$\gamma=1.40$。
+\phriyu
+ディーゼルサイクルの理論熱効率の式（④）を使います。
+\phtateru
+\[\eta=1-\frac{1}{\varepsilon^{\gamma-1}}\cdot\frac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}\]
+\phtoku
+$\dfrac{1}{18^{0.4}}=\dfrac{1}{3.178}=0.315$、$\dfrac{2^{1.4}-1}{1.4\times(2-1)}=\dfrac{2.639-1}{1.4}=1.171$ なので、
+\[\eta=1-0.315\times1.171=1-0.369=0.631\]
+同じ圧縮比のオットーサイクルは $1-0.315=0.685$ です。
+\phtashikame
+ディーゼルのほうが低いのは、$\dfrac{\sigma^{\gamma}-1}{\gamma(\sigma-1)}$ が1より大きいからです。それでも、圧縮比10のガソリンエンジン（例題2の0.60）よりは高くなります。
+\kotae 約0.63（同じ圧縮比のオットーは約0.69）
+\end{phreidai}
+\begin{jibun}
+圧縮比16、締切比2.5のディーゼルサイクルの理論熱効率を求めましょう（$16^{0.4}=3.031$、$2.5^{1.4}=3.607$）。
+\bkjans{$\tfrac{3.607-1}{1.4\times1.5}=1.241$、$\eta=1-\tfrac{1.241}{3.031}\approx0.59$}
+\end{jibun}
+
+\label{ph:熱-7:ex4}
+\begin{phreidai}[サバテサイクルを温度で追う]
+圧縮比16、圧力上昇比1.5、締切比1.6のサバテサイクルで、はじめの空気が\qty{300}{K}のとき、各点の温度を順に求め、熱を数えて理論熱効率を求めましょう。④の式の値とくらべましょう。
+\phbamen
+加熱を、定積（圧力が1.5倍）と定圧（体積が1.6倍）の2段に分けたサイクルです。式を覚えていなくても、温度を順に追えば効率が出せることを確かめます。
+\phmushi
+空気標準サイクルの理想化。
+\phzu
+1→2 断熱圧縮、2→3 定積加熱、3→4 定圧加熱、4→5 断熱膨張、5→1 定積放熱。$T_1=\qty{300}{K}$。
+\phriyu
+断熱は $TV^{\gamma-1}$ 一定、定積では温度は圧力に比例、定圧では温度は体積に比例します（$pV=R_{\mathrm s}T$）。熱は定積なら $c_v\Delta T$、定圧なら $c_p\Delta T$ です。
+\phtateru
+\[T_2=T_1\varepsilon^{0.4},\quad T_3=\xi T_2,\quad T_4=\sigma T_3,\quad T_5=T_4\Bigl(\frac{\sigma}{\varepsilon}\Bigr)^{0.4}\]
+\phtoku
+$16^{0.4}=3.031$、$(1.6/16)^{0.4}=0.1^{0.4}=0.398$ なので、
+\[T_2=\qty{909}{K},\qquad T_3=\qty{1364}{K}\]
+\[T_4=\qty{2183}{K},\qquad T_5=\qty{869}{K}\]
+受けとる熱（定積と定圧の2段）と捨てる熱は、
+\[q_{\text{入}}=0.718\times(1364-909)+1.005\times(2183-1364)=327+823=\qty{1150}{kJ/kg}\]
+\[q_{\text{出}}=0.718\times(869-300)=\qty{409}{kJ/kg}\]
+です。
+\[\eta=1-\frac{409}{1150}=0.644\]
+\phtashikame
+④の式では、$\dfrac{1.5\times1.6^{1.4}-1}{0.5+1.4\times1.5\times0.6}=\dfrac{1.5\times1.931-1}{1.76}=1.077$、$\eta=1-\dfrac{1.077}{3.031}=0.645$ で、四捨五入のずれの範囲で合います。同じ圧縮比16のオットー（0.67）とディーゼル（$\sigma=2$ で0.61）の間です。
+\kotae 約0.64（式の値0.645と合う）
+\end{phreidai}
+\begin{jibun}
+圧縮比14、圧力上昇比1.4、締切比1.5のサバテサイクルの理論熱効率を、④の式で求めましょう（$14^{0.4}=2.873$、$1.5^{1.4}=1.764$）。
+\bkjans{$\tfrac{1.4\times1.764-1}{0.4+1.4\times1.4\times0.5}=\tfrac{1.470}{1.38}=1.065$、$\eta=1-\tfrac{1.065}{2.873}\approx0.63$}
+\end{jibun}
+
+\label{ph:熱-7:ex5}
+\begin{phreidai}[ガスタービンの理論熱効率]
+圧力比15のブレイトンサイクルの理論熱効率を求めましょう。
+\phbamen
+発電所のガスタービンを、空気標準サイクルで理想化します。
+\phmushi
+圧縮機・タービンの損失、燃焼器の中の圧力の下がりを無視します。
+\phzu
+$r_{\mathrm p}=15$、$\gamma=1.40$、$\dfrac{\gamma-1}{\gamma}=\dfrac{0.4}{1.4}=0.2857$。
+\phriyu
+ブレイトンサイクルの理論熱効率は、圧力比だけで決まります（⑥）。
+\phtateru
+\[\eta=1-\frac{1}{r_{\mathrm p}^{\,(\gamma-1)/\gamma}}=1-\frac{1}{15^{0.2857}}\]
+\phtoku
+\[15^{0.2857}=2.168,\qquad\eta=1-\frac{1}{2.168}=1-0.461=0.539\]
+\phtashikame
+$15^{0.2857}$ は、断熱圧縮で温度が何倍になるかを表します（300 K なら約650 K）。圧縮比で書けば、体積が $15^{1/1.4}=6.9$ 分の1なので、オットーの式で $\varepsilon=6.9$ とした値と同じになります。
+\kotae 約0.54（54\,\%）
+\end{phreidai}
+\begin{jibun}
+圧力比20と圧力比10のブレイトンサイクルの理論熱効率を求めましょう（$20^{0.2857}=2.354$、$10^{0.2857}=1.931$）。
+\bkjans{圧力比20：$1-\tfrac{1}{2.354}\approx0.58$、圧力比10：$1-\tfrac{1}{1.931}\approx0.48$}
+\end{jibun}
+
+\label{ph:熱-7:ex6}
+\begin{phreidai}[ガスタービンの仕事と仕事比]
+入口の空気が\qty{300}{K}、タービンの入口が\qty{1500}{K}、圧力比15のブレイトンサイクルで、空気1 kg あたりのタービンの仕事、圧縮機の仕事、正味の仕事、仕事比を求めましょう。
+\phbamen
+タービンの仕事の一部で、圧縮機を回すしくみです。
+\phmushi
+空気標準サイクルの理想化。速さと高さの変化を無視します。
+\phzu
+$T_1=\qty{300}{K}$、$T_3=\qty{1500}{K}$、$r_{\mathrm p}^{\,0.2857}=2.168$（例題5）。
+\phriyu
+タービンと圧縮機は、熱の出入りのない流れの機械なので、仕事は $c_p\times$（温度の差）です（熱-4）。断熱の温度の比は $r_{\mathrm p}^{\,(\gamma-1)/\gamma}$（⑥）。
+\phtateru
+\[T_2=T_1\times2.168,\qquad T_4=\frac{T_3}{2.168}\]
+\[w_{\text{タービン}}=c_p(T_3-T_4),\qquad w_{\text{圧縮機}}=c_p(T_2-T_1)\]
+\phtoku
+$T_2=\qty{650}{K}$、$T_4=\qty{692}{K}$ なので、
+\[w_{\text{タービン}}=1.005\times(1500-692)=\qty{812}{kJ/kg}\]
+\[w_{\text{圧縮機}}=1.005\times(650-300)=\qty{352}{kJ/kg}\]
+\[w_{\text{出}}=812-352=\qty{460}{kJ/kg},\qquad\text{仕事比}=\frac{460}{812}=0.57\]
+\phtashikame
+受けとる熱は $1.005\times(1500-650)=\qty{854}{kJ/kg}$ で、$\dfrac{460}{854}=0.54$ は例題5の効率と合います。タービンの仕事の43\,\%を圧縮機が使っています。
+\kotae タービン\qty{812}{kJ/kg}、圧縮機\qty{352}{kJ/kg}、正味\qty{460}{kJ/kg}、仕事比 約0.57
+\end{phreidai}
+\begin{jibun}
+入口\qty{300}{K}、タービンの入口\qty{1200}{K}、圧力比10（$10^{0.2857}=1.931$）のブレイトンサイクルで、タービンの仕事、圧縮機の仕事、正味の仕事、仕事比を求めましょう。
+\bkjans{$T_2=579$\,K、$T_4=621$\,K。タービン 約\qty{581}{kJ/kg}、圧縮機 約\qty{281}{kJ/kg}、正味 約\qty{301}{kJ/kg}、仕事比 約0.52}
+\end{jibun}
+
+\label{ph:熱-7:ex7}
+\begin{phreidai}[正味の仕事がいちばん大きい圧力比]
+例題6と同じ温度（\qty{300}{K}と\qty{1500}{K}）で、正味の仕事がいちばん大きくなる圧力比を求めましょう。
+\phbamen
+圧力比を変えたとき、正味の仕事がどう変わるかを調べます。
+\phmushi
+空気標準サイクルの理想化。$T_1$ と $T_3$ は変えません。
+\phzu
+$x=r_{\mathrm p}^{\,(\gamma-1)/\gamma}$ とおくと、$T_2=T_1x$、$T_4=T_3/x$。
+\phriyu
+正味の仕事を $x$ の関数で書き、微分して0になる所を探します（5-7）。
+\phtateru
+\[w_{\text{出}}=c_p\Bigl(T_3-\frac{T_3}{x}\Bigr)-c_p(T_1x-T_1)\]
+\[\frac{\dd w_{\text{出}}}{\dd x}=c_p\Bigl(\frac{T_3}{x^2}-T_1\Bigr)=0\]
+\phtoku
+$x^2=\dfrac{T_3}{T_1}=5$ なので $x=\sqrt5=2.236$、つまり $T_2=T_1x=\sqrt{T_1T_3}=\qty{671}{K}$ です。$r_{\mathrm p}=x^{1.4/0.4}=x^{3.5}$ なので、
+\[r_{\mathrm p}=2.236^{3.5}=5^{1.75}=16.7\]
+\phtashikame
+図\ref{ph:熱-7:fig-wnet}のグラフのいちばん高い所（約\qty{461}{kJ/kg}）と合います。例題6の圧力比15はそれに近いので、正味の仕事もほぼ同じ\qty{460}{kJ/kg}でした。このとき $T_2=T_4$ で、圧縮機の出口と排気の温度が等しくなっています。
+\kotae 約17
+\end{phreidai}
+\begin{jibun}
+入口\qty{300}{K}、タービンの入口\qty{1200}{K}のブレイトンサイクルで、正味の仕事がいちばん大きくなる圧力比を求めましょう（$4^{1.75}$ を電卓で）。
+\bkjans{$(1200/300)^{1.75}=4^{1.75}\approx11$}
+\end{jibun}
+
+\label{ph:熱-7:ex8}
+\begin{phreidai}[再生をしたガスタービン]
+入口\qty{300}{K}、タービンの入口\qty{1500}{K}、圧力比5のブレイトンサイクルで、再生をしないときと、理想の再生をしたときの理論熱効率を求めましょう（$5^{0.2857}=1.584$）。
+\phbamen
+排気の熱を、圧縮機の出口の空気に移すしくみです（図\ref{ph:熱-7:fig-regen}）。
+\phmushi
+再生器で、排気から空気へ熱がいちばんよく移る（空気が $T_4$ まで温まる）とします。
+\phzu
+$T_2=300\times1.584=\qty{475}{K}$、$T_4=1500\div1.584=\qty{947}{K}$。
+\phriyu
+再生なしはブレイトンの式（⑥）、再生ありは⑦の式です。$T_4>T_2$ なので、再生が使えます。
+\phtateru
+\[\eta_{\text{再生なし}}=1-\frac{1}{1.584},\qquad\eta_{\text{再生}}=1-\frac{T_1}{T_3}\times1.584\]
+\phtoku
+\[\eta_{\text{再生なし}}=1-0.631=0.369,\qquad\eta_{\text{再生}}=1-\frac{300}{1500}\times1.584=1-0.317=0.683\]
+\phtashikame
+再生で効率がほぼ2倍になりました。正味の仕事（$1.005\times(1500-947)-1.005\times(475-300)=\qty{380}{kJ/kg}$）は変わらず、燃料で入れる熱が $1.005\times(1500-475)=\qty{1030}{kJ/kg}$ から $1.005\times(1500-947)=\qty{556}{kJ/kg}$ に減ったからです。
+\kotae 再生なし 約0.37、理想の再生 約0.68
+\end{phreidai}
+\begin{jibun}
+入口\qty{300}{K}、タービンの入口\qty{1200}{K}、圧力比4（$4^{0.2857}=1.486$）のブレイトンサイクルで、再生なしと理想の再生の理論熱効率を求めましょう。
+\bkjans{再生なし $1-\tfrac{1}{1.486}\approx0.33$、理想の再生 $1-\tfrac{300}{1200}\times1.486\approx0.63$}
+\end{jibun}
+
+\label{ph:熱-7:ex9}
+\begin{phreidai}[オットーサイクルの最高温度]
+圧縮比10のオットーサイクルで、\qty{300}{K}・\qty{100}{kPa}の空気1 kg に、定積で\qty{1500}{kJ}の熱を入れます。いちばん高い温度と、そのときの圧力を求めましょう。
+\phbamen
+ガソリンが燃えたあとの温度と圧力を、空気標準サイクルで見積もります。
+\phmushi
+空気標準サイクルの理想化。比熱は温度によらず一定とします。
+\phzu
+$T_1=\qty{300}{K}$、$p_1=\qty{100}{kPa}$、$\varepsilon=10$、$q_{\text{入}}=\qty{1500}{kJ/kg}$。
+\phriyu
+断熱圧縮の温度は $T_1\varepsilon^{\gamma-1}$（③）。定積の熱は $c_v\Delta T$。定積では温度と圧力は比例します。
+\phtateru
+\[T_2=T_1\varepsilon^{0.4},\qquad T_3=T_2+\frac{q_{\text{入}}}{c_v},\qquad p_3=p_1\varepsilon^{1.4}\times\frac{T_3}{T_2}\]
+\phtoku
+\[T_2=300\times2.512=\qty{754}{K},\qquad T_3=754+\frac{1500}{0.718}=754+2089=\qty{2843}{K}\]
+$p_2=100\times10^{1.4}=100\times25.1=\qty{2510}{kPa}$ なので、$p_3=2510\times\dfrac{2843}{754}=\qty{9460}{kPa}$ です。
+\phtashikame
+約\qty{2800}{K}・約\qty{9.5}{MPa}です。実際のエンジンの燃焼の最高温度は、これより低くなります。高温では空気の比熱が大きくなる（同じ熱でも温度が上がりにくい）うえ、燃えるのに時間がかかり、熱が壁へ逃げるからです。②の「仮定がくずれるのは」にあたります。
+\kotae 約\qty{2800}{K}、約\qty{9.5}{MPa}
+\end{phreidai}
+\begin{jibun}
+圧縮比8のオットーサイクルで、\qty{300}{K}の空気1 kg に定積で\qty{1800}{kJ}の熱を入れるときの、いちばん高い温度を求めましょう（$8^{0.4}=2.297$）。
+\bkjans{$T_2=689$\,K、$T_3=689+\tfrac{1800}{0.718}\approx\qty{3200}{K}$}
+\end{jibun}
+
+\label{ph:熱-7:ex10}
+\begin{phreidai}[平均有効圧]
+例題9のサイクルの平均有効圧を求めましょう（$R_{\mathrm s}=\qty{0.287}{kJ/(kg.K)}$）。
+\phbamen
+1回の仕事を、行程体積でならした圧力を求めます。
+\phmushi
+空気標準サイクルの理想化。
+\phzu
+空気1 kg の体積 $V_1$、$V_2=V_1/10$、正味の仕事 $w_{\text{出}}$。
+\phriyu
+平均有効圧は「正味の仕事÷行程体積」（⑨）。仕事は効率×受けとる熱（例題2の0.602）、体積は $pV=R_{\mathrm s}T$ から出ます。
+\phtateru
+\[w_{\text{出}}=0.602\times1500,\qquad V_1=\frac{R_{\mathrm s}T_1}{p_1},\qquad p_{\mathrm m}=\frac{w_{\text{出}}}{V_1-V_2}\]
+\phtoku
+$w_{\text{出}}=\qty{903}{kJ/kg}$。$V_1=\dfrac{0.287\times300}{100}=\qty{0.861}{m^3}$（kJ÷kPa＝m$^3$）、$V_1-V_2=0.861\times0.9=\qty{0.775}{m^3}$ なので、
+\[p_{\mathrm m}=\frac{903}{0.775}=\qty{1165}{kPa}\approx\qty{1.2}{MPa}\]
+\phtashikame
+単位：kJ/m$^3$＝kPa。実際の自動車のガソリンエンジンの平均有効圧も、約\qty{1}{MPa}の桁です。最高の圧力（約\qty{9.5}{MPa}）よりずっと小さいのは、ピストンが下がるにつれて圧力がどんどん下がるからです。
+\kotae 約\qty{1.2}{MPa}
+\end{phreidai}
+\begin{jibun}
+例題9のじぶんでとこう（圧縮比8・\qty{1800}{kJ}）のサイクルの平均有効圧を求めましょう（効率は $1-\tfrac{1}{2.297}=0.565$）。
+\bkjans{$w_{\text{出}}=0.565\times1800\approx\qty{1020}{kJ/kg}$、$V_1-V_2=0.861\times\tfrac{7}{8}=\qty{0.753}{m^3}$、$p_{\mathrm m}\approx\qty{1.35}{MPa}$}
+\end{jibun}
+
+\label{ph:熱-7:ex11}
+\begin{phreidai}[エンジンの出力]
+排気量\qty{2.0}{L}の4ストロークエンジンが、毎分3000回転、平均有効圧\qty{1.0}{MPa}で動いています。出力を求めましょう。
+\phbamen
+平均有効圧から、エンジンの1秒あたりの仕事を求めます。
+\phmushi
+どのシリンダーも同じように動き、平均有効圧は一定とします。
+\phzu
+$V_{\mathrm s}=\qty{2.0}{L}=\qty{2.0e-3}{m^3}$、$n=3000$（毎分）、$p_{\mathrm m}=\qty{1.0e6}{Pa}$。
+\phriyu
+1回の燃焼の仕事は $p_{\mathrm m}V_{\mathrm s}$。4ストロークは2回転に1回燃えるので、1秒の燃える回数は $\dfrac{n}{2\times60}$ です（⑨）。
+\phtateru
+\[P=p_{\mathrm m}V_{\mathrm s}\frac{n}{2\times60}\]
+\phtoku
+\[P=(1.0\times10^6)\times(2.0\times10^{-3})\times\frac{3000}{120}=2000\times25=\qty{5.0e4}{W}\]
+\phtashikame
+単位：Pa×m$^3$×(1/s)＝J/s＝W。\qty{50}{kW}は、ふつうの乗用車のエンジンの出力の桁です。トルクに直すと $\dfrac{P}{2\pi n/60}=\dfrac{50000}{314}\approx\qty{160}{N.m}$ です（力-6 の仕事率＝トルク×角速度）。
+\kotae \qty{50}{kW}
+\end{phreidai}
+\begin{jibun}
+排気量\qty{1.5}{L}の4ストロークエンジンが、毎分6000回転、平均有効圧\qty{1.2}{MPa}で動くときの出力を求めましょう。
+\bkjans{$1.2\times10^6\times1.5\times10^{-3}\times\tfrac{6000}{120}=\qty{9.0e4}{W}$（\qty{90}{kW}）}
+\end{jibun}
+
+\label{ph:熱-7:ex12}
+\begin{phreidai}[コンバインドサイクルの効率]
+効率0.40のガスタービンの排気の熱を、効率0.35の蒸気タービンのサイクルで使います。全体の効率を求めましょう。
+\phbamen
+2つの熱機関を重ねた発電所です（⑧）。
+\phmushi
+ガスタービンの排気の熱は、すべて蒸気の側が受けとるとします（煙突から出る熱は、蒸気の側の効率にふくめる）。
+\phzu
+燃料の熱を1とします。$\eta_{\mathrm G}=0.40$、$\eta_{\mathrm S}=0.35$。
+\phriyu
+ガスタービンが捨てる熱 $1-\eta_{\mathrm G}$ が、蒸気の側の受けとる熱です（⑧の式）。
+\phtateru
+\[\eta=\eta_{\mathrm G}+(1-\eta_{\mathrm G})\eta_{\mathrm S}\]
+\phtoku
+\[\eta=0.40+0.60\times0.35=0.40+0.21=0.61\]
+\phtashikame
+どちらか1つ（0.40、0.35）よりずっと高く、熱-0 の記録（63.08\,\%）に近い値です。$1-\eta=(1-0.40)\times(1-0.35)=0.39$ と、捨てる割合のかけ算でも確かめられます。
+\kotae 0.61
+\end{phreidai}
+\begin{jibun}
+効率0.42のガスタービンと、効率0.36の蒸気の側を組み合わせたコンバインドサイクルの効率を求めましょう。
+\bkjans{$0.42+0.58\times0.36\approx0.63$}
+\end{jibun}
+
+\label{ph:熱-7:ex13}
+\begin{phreidai}[$p$-$V$ 図のサイクル（入試の型）]
+単原子分子の理想気体（$C_V=\dfrac{3}{2}R$）を、A→B 断熱圧縮（体積を $\dfrac{1}{8}$ に）、B→C 定積加熱、C→D 断熱膨張（体積をもとにもどす）、D→A 定積放熱 のサイクルで回します。A の温度が\qty{300}{K}、C の温度が\qty{2400}{K}のとき、B・D の温度と、このサイクルの熱効率を求めましょう。
+\phbamen
+入試でよく出る、オットーサイクルと同じ形の $p$-$V$ 図のサイクルです。気体が空気ではないので、$\gamma$ がちがいます。
+\phmushi
+理想気体で、変化は準静的とします。
+\phzu
+$\gamma=\dfrac{C_p}{C_V}=\dfrac{5/2}{3/2}=\dfrac{5}{3}$、$\gamma-1=\dfrac{2}{3}$。$\varepsilon=8$。
+\phriyu
+断熱の区間は $TV^{\gamma-1}$ が一定（熱-3 ⑥）。熱は定積の区間だけで出入りし、物質量を $n$ とすると $nC_V\Delta T$。効率は $1-\dfrac{\text{捨てる熱}}{\text{受けとる熱}}$（熱-5 ②）。
+\phtateru
+\[T_{\mathrm B}=T_{\mathrm A}\times8^{2/3},\qquad T_{\mathrm D}=\frac{T_{\mathrm C}}{8^{2/3}},\qquad\eta=1-\frac{nC_V(T_{\mathrm D}-T_{\mathrm A})}{nC_V(T_{\mathrm C}-T_{\mathrm B})}\]
+\phtoku
+$8^{2/3}=(\sqrt[3]{8})^2=2^2=4$ なので、$T_{\mathrm B}=\qty{1200}{K}$、$T_{\mathrm D}=\qty{600}{K}$ です。
+\[\eta=1-\frac{600-300}{2400-1200}=1-\frac{300}{1200}=0.75\]
+\phtashikame
+オットーの式 $1-\dfrac{1}{\varepsilon^{\gamma-1}}=1-\dfrac{1}{4}=0.75$ と合います。同じ圧縮比でも、空気（$\gamma=1.4$）なら0.56で、単原子分子の気体のほうが効率が高くなります。$\gamma$ が大きいほど、断熱圧縮で温度がよく上がるからです。
+\kotae $T_{\mathrm B}=\qty{1200}{K}$、$T_{\mathrm D}=\qty{600}{K}$、熱効率0.75
+\end{phreidai}
+\begin{jibun}
+例題と同じサイクルで、A の温度が\qty{250}{K}、C の温度が\qty{2000}{K}のとき、B・D の温度と熱効率を求めましょう。
+\bkjans{$T_{\mathrm B}=\qty{1000}{K}$、$T_{\mathrm D}=\qty{500}{K}$、$\eta=1-\tfrac{250}{1000}=0.75$（温度を変えても同じ）}
+\end{jibun}
+
+\label{ph:熱-7:ex14}
+\begin{phreidai}[発電所のガスタービンが吸いこむ空気の量]
+例題6のガスタービン（正味の仕事\qty{460}{kJ/kg}、受けとる熱\qty{854}{kJ/kg}）で、\qty{300}{MW}の仕事を取り出すには、1秒に何 kg の空気を流す必要がありますか。また、燃料で1秒に入れる熱はいくらですか。
+\phbamen
+1 kg あたりの仕事から、発電所の大きさに必要な空気の流れを見積もります。
+\phmushi
+空気標準サイクルの理想化。燃料の質量は空気にくらべて小さいので無視します。発電機の損失も無視します。
+\phzu
+正味の仕事 $w_{\text{出}}=\qty{460}{kJ/kg}$、出力 $P=\qty{300}{MW}=\qty{3.0e5}{kW}$、空気の質量流量 $\dot m$〔kg/s〕。
+\phriyu
+定常に流れる機械では、出力＝（1 kg あたりの仕事）×（1秒に流れる質量）です（熱-4 の $\dot m$）。熱も同じように数えます。
+\phtateru
+\[P=\dot m\,w_{\text{出}},\qquad\dot Q_{\text{入}}=\dot m\,q_{\text{入}}\]
+\phtoku
+\[\dot m=\frac{P}{w_{\text{出}}}=\frac{3.0\times10^5}{460}\approx\qty{650}{kg/s},\qquad\dot Q_{\text{入}}=650\times854\approx\qty{5.6e5}{kW}\]
+\phtashikame
+単位：kW÷（kJ/kg）＝（kJ/s）÷（kJ/kg）＝kg/s。1秒に約\qty{650}{kg}、20\,℃の空気の体積にすると約\qty{540}{m^3}（$650\div1.2$）を吸いこみます。燃料の熱は約\qty{560}{MW}で、$\dfrac{300}{560}=0.54$ は例題5の効率と合います。仕事比が小さく正味の仕事が小さいほど、同じ出力に多くの空気が要り、機械が大きくなります。
+\kotae 約\qty{650}{kg/s}、燃料の熱 約\qty{560}{MW}
+\end{phreidai}
+\begin{jibun}
+例題6のじぶんでとこうのガスタービン（正味の仕事 約\qty{301}{kJ/kg}）で\qty{100}{MW}を取り出すには、1秒に何 kg の空気が要りますか。
+\bkjans{$\dot m=\tfrac{1.0\times10^5}{301}\approx\qty{330}{kg/s}$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{圧縮比は圧力の比？}
+\bkng{圧縮比18なら、圧縮したあとの圧力は18倍。}
+\bkok{圧縮比は体積の比 $V_1/V_2$。断熱圧縮なら圧力は $18^{1.4}=57$ 倍。}
+ガスタービンの「圧力比」は圧力の比ですが、エンジンの「圧縮比」は体積の比です（例題1・5）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{指数は $\gamma$ か、$\gamma-1$ か}
+\bkng{断熱圧縮のあとの温度は $T_2=T_1\varepsilon^{\gamma}$。}
+\bkok{温度は $T_2=T_1\varepsilon^{\gamma-1}$、圧力は $p_2=p_1\varepsilon^{\gamma}$。}
+$pV^{\gamma}$ が一定なのは圧力、$TV^{\gamma-1}$ が一定なのは温度です。温度の比と圧力の比のちがいは、体積の比 $\varepsilon$ の1つ分です（$pV\propto T$）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{定圧の熱に $c_v$ を使う}
+\bkng{ディーゼルサイクルの受けとる熱は $c_v(T_3-T_2)$。}
+\bkok{定圧で受けとるので $c_p(T_3-T_2)$。捨てる熱は定積なので $c_v(T_4-T_1)$。}
+区間ごとに、体積が一定か圧力が一定かを見て、$c_v$ と $c_p$ を使い分けます（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{理論熱効率と、本物の効率}
+\bkng{圧縮比10のガソリンエンジンの効率は60\,\%。}
+\bkok{60\,\%は空気標準サイクルの理論熱効率。本物はいちばんよいときで約40\,\%。}
+理論熱効率は、熱の逃げ・摩擦・比熱の変化を無視した理想の値です。「圧縮比を上げると効率が上がる」という向きを知るのに使います（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{4ストロークの燃える回数}
+\bkng{毎分3000回転なら、1秒に50回燃える。}
+\bkok{4ストロークは2回転に1回燃えるので、1秒に25回。}
+出力の式に $\dfrac{n}{2\times60}$ が出てくるのは、このためです（⑨、例題11）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{12\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[効率を上げる工夫を、サイクルで読む]
+エンジンやガスタービンの新しい技術の多くは、この章のサイクルの式で、なぜ効率が上がるのかを説明できます。
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item ガソリンエンジンの高い圧縮比（約14）：ノッキングを防ぐために、燃焼室の形や燃料のふきこみ方を工夫して、$\varepsilon$ を上げる（③）。
+\item 吸気弁を閉じる時期を遅らせる（アトキンソンサイクル、ハイブリッド車で多い）：押し縮める体積の比より、ふくらむ体積の比を大きくして、膨張の仕事を多く取り出す。
+\item ジェットエンジンの高い圧力比（40をこえる）：圧力比を上げて効率を上げる（⑥）。そのぶん、タービンの入口の温度を上げる。
+\item コンバインドサイクル：ガスタービンの排気の熱で蒸気を作る（⑧）。
+\end{itemize}
+
+\begin{phketa}[エンジンとガスタービンの数]
+\phketaline{ガソリンエンジンの圧縮比}{約10〜14}
+\phketaline{ディーゼルエンジンの圧縮比}{約15〜20}
+\phketaline{乗用車のガソリンエンジンの最大の熱効率}{約40\,\%}
+\phketaline{大きな船の2ストロークディーゼルエンジンの熱効率}{50\,\%をこえる}
+\phketaline{発電用の大きなガスタービンの入口の温度}{1600\,℃級}
+\phketaline{コンバインドサイクルの効率（2018年の記録）}{63.08\,\%}
+\phboxhead{答えが桁で合っているか}
+断熱圧縮のあとの温度は、圧縮比10〜20で入口の2.5〜3.3倍（K で）。理論熱効率は0.5〜0.7くらい。平均有効圧は\qty{1}{MPa}の桁。乗用車の出力は数十〜百数十 kW。理論熱効率が0.9をこえたり、平均有効圧が数十 MPa になったりしたら、$\gamma$ と $\gamma-1$、L と m$^3$、毎分と毎秒の取りちがえを確かめます。
+\end{phketa}
+\end{phkougaku}
+\phstation{内燃機関,ガスタービン,燃焼工学,動力プラント}{圧縮比、理論熱効率、空気標準サイクル、オットーサイクル、ディーゼルサイクル、ブレイトンサイクル、平均有効圧、再生}
+
+\begin{column}{オットー、ディーゼル、ブレイトン}
+1876年、ドイツのニコラウス・オットーは、吸気・圧縮・燃焼・排気の4ストロークで動くガスエンジンを作り、それまでの機関よりずっと少ない燃料で動くことを示しました。今の自動車のガソリンエンジンの祖先です。同じドイツのルドルフ・ディーゼルは、カルノーの考え（熱-5）を学び、「空気を強く押し縮めて高い温度にし、そこへ燃料を入れれば、効率のよい機関ができる」と考えて、1892年に特許をとり、1897年に実際に動く機関を完成させました。アメリカのジョージ・ブレイトンは、1872年ごろ、燃料を定圧で燃やす機関を作りました。その考えが、今のジェットエンジンや発電所のガスタービンのサイクルに名前を残しています。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 圧縮比12で、20\,℃の空気を断熱圧縮したあとの温度を求めましょう（$12^{0.4}=2.703$）。また、この圧縮比のオットーサイクルの理論熱効率を求めましょう。
+\bkpans{$293\times2.703\approx\qty{792}{K}$（約520\,℃）。$1-\tfrac{1}{2.703}\approx0.63$}
+\bkproblem 圧縮比9と12のオットーサイクルの理論熱効率を求めましょう（$9^{0.4}=2.408$、$12^{0.4}=2.703$）。
+\bkpans{圧縮比9：$1-\tfrac{1}{2.408}\approx0.58$、圧縮比12：約0.63}
+\bkproblem 圧縮比20、締切比2のディーゼルサイクルの理論熱効率を、$20^{0.4}=3.314$ と $2^{1.4}=2.639$ を使って求めましょう。
+\bkpans{$1-\tfrac{1}{3.314}\times\tfrac{1.639}{1.4}\approx0.65$}
+\bkproblem 圧力比8と25のブレイトンサイクルの理論熱効率を求めましょう（$8^{0.2857}=1.811$、$25^{0.2857}=2.509$）。
+\bkpans{圧力比8：$1-\tfrac{1}{1.811}\approx0.45$、圧力比25：$1-\tfrac{1}{2.509}\approx0.60$}
+\bkproblem コンバインドサイクルの問題です。\\
+（1）効率0.38のガスタービンと、効率0.33の蒸気の側を組み合わせたときの効率を求めましょう。\\
+（2）効率0.42のガスタービンで全体の効率を0.63にするには、蒸気の側の効率がいくら要りますか。
+\bkpans{（1）\nobreak $0.38+0.62\times0.33\approx0.58$。（2）\nobreak $0.42+0.58\eta_{\mathrm S}=0.63$ より $\eta_{\mathrm S}=0.21\div0.58\approx0.36$}
+\bkproblem 排気量\qty{0.66}{L}の4ストロークエンジン（軽自動車）が、毎分6000回転、平均有効圧\qty{0.90}{MPa}で動きます。（1）出力を求めましょう。（2）このときのトルクを、例題11の確かめのように求めましょう。
+\bkpans{（1）\nobreak $p_{\mathrm m}V_{\mathrm s}\times\tfrac{6000}{120}$ に入れて、約\qty{3.0e4}{W}（約\qty{30}{kW}）。（2）\nobreak $\tfrac{29700}{2\pi\times6000/60}\approx\qty{47}{N.m}$}
+\bkproblem 単原子分子の理想気体で、例題13と同じ形のサイクル（断熱圧縮で体積を $\tfrac{1}{8}$ に）を回します。A の温度が\qty{280}{K}、C の温度が\qty{2240}{K}のとき、B・D の温度と熱効率を求めましょう。
+\bkpans{$T_{\mathrm B}=280\times4=\qty{1120}{K}$、$T_{\mathrm D}=2240\div4=\qty{560}{K}$、$\eta=1-\tfrac{280}{1120}=0.75$}
+\bkproblem 入口\qty{290}{K}、タービンの入口\qty{1400}{K}、圧力比12のブレイトンサイクルで、空気1 kg あたりのタービンの仕事、圧縮機の仕事、正味の仕事、仕事比を求めましょう（$12^{0.2857}=2.034$）。
+\bkpans{$T_2\approx\qty{590}{K}$、$T_4\approx\qty{688}{K}$。タービン 約\qty{715}{kJ/kg}、圧縮機 約\qty{301}{kJ/kg}、正味 約\qty{414}{kJ/kg}、仕事比 約0.58}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 圧縮比18、締切比2のディーゼルサイクルで、はじめの空気が\qty{300}{K}のとき、例題4のように各点の温度を順に求め、受けとる熱と捨てる熱を数えて、理論熱効率を求めましょう。例題3の答えとくらべましょう（$18^{0.4}=3.178$、$(2/18)^{0.4}=0.415$）。また、締切比を3にすると理論熱効率はいくらになりますか（$3^{1.4}=4.656$）。
+\bkpans{$T_2\approx\qty{953}{K}$、$T_3=2T_2\approx\qty{1907}{K}$、$T_4\approx\qty{792}{K}$。受けとる熱 $1.005\times954\approx\qty{958}{kJ/kg}$、捨てる熱 $0.718\times492\approx\qty{353}{kJ/kg}$、$\eta\approx0.63$（例題3と合う）。締切比3なら $1-\tfrac{1}{3.178}\times\tfrac{3.656}{2.8}\approx0.59$ に下がる}
+\bkproblem 例題6のガスタービン（\qty{300}{K}・\qty{1500}{K}・圧力比15）で、圧縮機には理想の仕事の $\tfrac{1}{0.85}$ 倍の仕事が要り、タービンは理想の仕事の0.90倍しか出せないとします。正味の仕事と仕事比を求め、例題6とくらべましょう。また、燃焼器で入れる熱は、圧縮機の出口の空気の温度が上がった分だけ減ることに注意して、熱効率を求めましょう。
+\bkpans{圧縮機 $352\div0.85\approx\qty{414}{kJ/kg}$、タービン $812\times0.90\approx\qty{731}{kJ/kg}$、正味 約\qty{317}{kJ/kg}（理想の約7割）、仕事比 約0.43。圧縮機の出口 $300+414\div1.005\approx\qty{712}{K}$ なので入れる熱 $1.005\times(1500-712)\approx\qty{792}{kJ/kg}$、熱効率 約0.40}
+
+\bkproblem 圧縮比9のオットーサイクルで、\qty{300}{K}・\qty{100}{kPa}の空気1 kg に定積で\qty{1600}{kJ}の熱を入れます。いちばん高い温度と、平均有効圧を求めましょう（$9^{0.4}=2.408$）。
+\bkpans{$T_2\approx\qty{723}{K}$、$T_3=723+\tfrac{1600}{0.718}\approx\qty{2950}{K}$。効率 約0.585、$w_{\text{出}}\approx\qty{936}{kJ/kg}$、$V_1-V_2=0.861\times\tfrac{8}{9}\approx\qty{0.765}{m^3}$、平均有効圧 約\qty{1.2}{MPa}}
+\bkproblem 入口\qty{300}{K}、タービンの入口\qty{1200}{K}、圧力比10のブレイトンサイクルで、（1）圧縮機の出口の温度 $T_2$ とタービンの出口の温度 $T_4$ を求め、再生が使えるかどうかを答えましょう。（2）使えるなら、理想の再生をしたときの理論熱効率を求め、再生なしとくらべましょう（$10^{0.2857}=1.931$）。
+\bkpans{（1）\nobreak $T_2=300\times1.931\approx\qty{579}{K}$、$T_4=1200\div1.931\approx\qty{621}{K}$。$T_4>T_2$ なので使える。（2）\nobreak 理想の再生 $1-\tfrac{300}{1200}\times1.931\approx0.52$、再生なし $1-\tfrac{1}{1.931}\approx0.48$。圧力比が最大の仕事の圧力比（約11）に近いので、$T_4$ と $T_2$ の差が小さく、再生の効き目は小さい}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 4ストロークのエンジンの動きを $p$-$V$ 図で説明し、断熱圧縮のあとの温度を求められる。\bkfurref{ph:熱-7:sec1}
+\item オットーサイクルとディーゼルサイクルの理論熱効率を、圧縮比から計算できる。\bkfurref{ph:熱-7:sec3}
+\item ガスタービンの仕事比・再生・コンバインドサイクルの効率と、エンジンの出力を計算できる。\bkfurref{ph:熱-7:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{たくさん押し縮めるほど、高い温度で熱を受けとれるから効率が上がるんだね。ディーゼルは、その熱で火までつけているんだ。}
