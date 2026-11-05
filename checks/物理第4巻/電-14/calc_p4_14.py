@@ -34,8 +34,9 @@ for k in range(N):
     r=a+(b-a)*(k+0.5)/N; s+= V/(r*L)*I/(2*math.pi*r)*2*math.pi*r*(b-a)/N
 print("integral=",s)
 print("Z0=60/sqrt(2.3)*ln=",60/math.sqrt(2.3)*L, " exact:", math.sqrt(mu0/(eps0*2.3))/(2*math.pi)*L)
-print("jibun: 5 V, 75 Ω, a=0.5mm b=2.0mm?", )
-a2=0.5e-3;b2=2.0e-3; L2=math.log(b2/a2); V2=5; I2=5/75
+print("S(b)/S(a)=(a/b)^2=",(a/b)**2," 1/that=",(b/a)**2,"  S(b)/S(1mm)=",(1e-3/b)**2,"（確認 E5-5：内側の導線の表面に比べて約13分の1）")
+print("jibun: 5 V, 75 Ω, 同じケーブル a=0.45mm b=1.6mm（確認 E5-30 で寸法を紙面にそろえた）")
+a2=0.45e-3;b2=1.6e-3; L2=math.log(b2/a2); V2=5; I2=5/75
 print(" P=",V2*I2," S(1mm)=",V2/(1e-3*L2)*I2/(2*math.pi*1e-3))
 print("== 例題7 コンデンサーに入るエネルギー R=5cm d=1mm V=100 I=1")
 R=0.05; d=1e-3; V=100; I=1
