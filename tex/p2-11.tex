@@ -1,0 +1,1200 @@
+%% 第22回編集委員会（物理第2巻）：組 熱W6
+%% p2-11.tex  熱-11　壁を通りぬける熱：熱伝導と熱抵抗（★1〜5・3段）
+%% 中身は計画書 tools/phys2-plan.md の B「熱-11」。公式の持ち主は A（N2・N11・N20・N53）。
+%% 数値はすべて Python で計算した：checks/物理第2巻/熱-11/calc_p2_11.py（出力 calc_p2_11_out.txt）、plate_code.py（⑨の囲みのプログラム）
+%% 記号（この章）：熱伝導率 k、熱流束 q〔W/m²〕、熱の流れ \dot Q〔W〕、熱抵抗 R_th〔K/W〕、熱貫流率 U〔W/(m²·K)〕（熱-11・13 だけ。内部エネルギーはこの章に出ない）、
+%%   表面の熱伝達率 h（比エンタルピーはこの章に出ない）、熱拡散率 α、熱容量 C_th、ビオ数 Bi、厚さ L、セルシウス温度 θ〔℃〕、温度差 ΔT〔K〕、
+%%   絶対温度 T〔K〕（この章では、放射の式の T⁴ だけ）、時刻 t、時定数 τ、角振動数 ω（地中の温度）。周期は ω だけで書き、T と書かない。
+%% 数学の本が引いている所（変えない数）：6-3⑦のかべ（0.2 m、20 ℃／0 ℃、T＝20−100x）、6-3 の断熱材の壁（1.6 と 0.04、40倍）、8-4（160 W/m²）、
+%%   8-13（アルミ α＝1×10⁻⁴、Δx＝0.01、Δt＝0.25、15.5秒）、9-1⑧（変数分離、9.47秒、焼き入れ「厚さ2倍で4倍」：9-1 のコラムが熱-11 を指す）、
+%%   6-15（CPU 100 W・0.3 K/W）、8-11（熱の袋：物理 熱-11 を指す）、6-4⑥のせいかくに言うと（中の温度がそろう物ほど合う：⑧のビオ数で受ける）。
+%% 出典（本文で使った実機の値・事実）
+%%   ・熱伝導率の代表値（銅 約400、アルミ 237、鋼 約50、ステンレス 16、ガラス 約1.0、コンクリート 1.6、れんが 0.6、水 0.60、木 約0.15、
+%%       グラスウール 0.04、空気 0.026）：F. P. Incropera ほか "Fundamentals of Heat and Mass Transfer" の付表の代表値と、数学 8-4・8-13・6-3 の数。
+%%       空気・水の値は CoolProp 8.0 で計算した（空気 20 ℃：0.0259、水 20 ℃：0.598）。理科年表との照合は〔要確認〕（報告に書いた）
+%%   ・表面の熱抵抗 室内側 0.11、外気側 0.04 m²·K/W：建築研究所「外皮の熱貫流率の計算」の資料
+%%       （https://www.kenken.go.jp/becc/documents/building/calc_WallHeatTransmission_v3.pdf）
+%%   ・複層ガラスの空気層（12 mm）の熱抵抗 0.17 m²·K/W：空気の伝導（k＝0.025）と、2枚のガラス（放射率0.84）のあいだの放射から見積もった値 0.172
+%%       （calc_p2_11.py）。建築研究所の二重窓の計算で、中空層の熱抵抗を 0.173 としている資料とも合う。
+%%       板硝子協会の表の熱貫流率：透明単板 5.8・透明複層 2.9 W/(m²·K)（表面の熱伝達の決め方がちがうので、本文の 6.5・3.1 より少し小さい）
+%%   ・露点：20 ℃・相対湿度50 % で 9.3 ℃（IAPWS-IF97 の飽和蒸気圧から計算。熱-9 と同じ数にする）
+%%   ・土の熱拡散率 5×10⁻⁷ m²/s：湿った土の代表値（0.3〜0.8×10⁻⁶ の中ほど）。〔要確認：理科年表・地盤の便覧〕
+%%   ・フーリエ『熱の解析的理論』1822年。ビオ（J.-B. Biot）が1804年に棒の温度の実験をしたこと。
+%%   ・まだわかっていないこと：G. Chen, "Non-Fourier phonon heat conduction at the microscale and nanoscale",
+%%       Nature Reviews Physics 3, 555–569 (2021)。
+\makeatletter
+% 壁の層（1 m² の断面を横から）  \qxlwall{左下x}{はば}{高さ}{色}
+\newcommand\qxlwall[4]{\fill[#4] (#1,0) rectangle ++(#2,#3);\draw[bkInk!70, line width=0.5pt] (#1,0) rectangle ++(#2,#3);}
+% 熱の流れの太い矢印  \qxlheat{(始め)}{(終わり)}
+\newcommand\qxlheat[2]{\draw[bkOrange!85!black, line width=1.6pt, -{Stealth[length=3.2mm, width=2.6mm]}] #1 -- #2;}
+% 電気の抵抗の記号（横向き） \qxlres{(左はし)}{長さ}
+\newcommand\qxlres[2]{\draw[bkInk, line width=0.7pt] #1 -- ++(1.5,0) -- ++(0.75,1.4) -- ++(1.5,-2.8) -- ++(1.5,2.8) -- ++(1.5,-2.8) -- ++(1.5,2.8) -- ++(0.75,-1.4) -- ++(#2-9,0);}
+\makeatother
+
+\phchapter{11}{壁を通りぬける熱：\\熱伝導と熱抵抗}{二重窓にすると、なぜ部屋が冷えにくい？}{\bklevelrange{1}{5}}{壁を通りぬける熱：熱伝導と熱抵抗}
+\bkmichishirube{6-3,6-4,8-4,8-13,9-1,力-16}{熱-12,熱-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace 熱の伝わり方（伝導・対流・放射）を、身近な例で見分けられる。
+\item \bklevel{3}\enspace フーリエの法則で、平らな壁を通りぬける熱の流れを求められる。
+\item \bklevel{4}\enspace 熱抵抗の直列と熱貫流率で、窓や壁から逃げる熱と、表面の温度を求められる。
+\item \bklevel{3}\enspace 壁を小さな箱に分けた表計算で、壁の中の温度の変わり方を追える。
+\item \bklevel{4}\enspace 管の保温材の熱抵抗と、ビオ数・時定数を使って、冷え方を見積もれる。
+\item \bklevel{5}\enspace 熱方程式を導き、板の冷え方や地中の温度を、変数分離の答えで読める。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{金属は、熱した所から順に温まる}{小学校理科}{ph:熱-11:kinzoku}
+\phk{熱の伝わり方は、伝導・対流・放射の3つ}{中学理科・高校物理基礎}{ph:熱-11:mittsu}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+冬の朝、窓ガラスの内側に水てきがびっしりついていることがあります。ガラスにさわると、とても冷たい。部屋の暖かさが、窓から外へどんどん逃げているのです。
+
+ガラスを2枚にして、あいだに空気をとじこめた窓（\textbf{複層ガラス}、二重窓）にすると、部屋が冷えにくくなり、水てきもつきにくくなります。ガラスはたった\qty{3}{mm}ほどで、あいだの空気も\qty{12}{mm}ほどです。こんなにうすいのに、なぜ効くのでしょう（部屋は\qty{20}{\celsius}、外は\qty{0}{\celsius}とします）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!12] (0,0) rectangle (12,30);
+  \fill[bkBlue!12] (14,0) rectangle (22,30);
+  \fill[bkBlue!30] (12,0) rectangle (14,30);
+  \draw[bkInk, line width=0.6pt] (12,0) rectangle (14,30);
+  \foreach \yy in {5,9,13} {\fill[bkBlue!60] (11.2,\yy) circle (0.7);}
+  \qxlheat{(2,19)}{(21,19)}
+  \node[font=\sffamily\footnotesize, anchor=north] at (11,-1) {1枚のガラス};
+  \begin{scope}[shift={(27,0)}]
+  \fill[bkOrange!12] (0,0) rectangle (10,30);
+  \fill[bkBlue!12] (22,0) rectangle (28,30);
+  \fill[bkBlue!30] (10,0) rectangle (12,30) (20,0) rectangle (22,30);
+  \fill[bkYellow!25] (12,0) rectangle (20,30);
+  \draw[bkInk, line width=0.6pt] (10,0) rectangle (12,30) (20,0) rectangle (22,30);
+  \node[font=\sffamily\footnotesize, align=center] at (16,9) {空気};
+  \draw[bkOrange!85!black, line width=0.8pt, -{Stealth[length=2.2mm]}] (2,19) -- (27,19);
+  \node[font=\sffamily\footnotesize, anchor=north] at (14,-1) {複層ガラス};
+  \end{scope}
+  \node[font=\sffamily\footnotesize, anchor=south] at (6,30.5) {部屋};
+  \node[font=\sffamily\footnotesize, anchor=south] at (18,30.5) {外};
+  \node[font=\sffamily\footnotesize, anchor=south] at (32,30.5) {部屋};
+  \node[font=\sffamily\footnotesize, anchor=south] at (52,30.5) {外};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-1から熱-10では、熱を「どれだけ」出し入れしたかを数えてきました。この章からの3つの章（第3部）では、熱が「どれだけの速さで」伝わるかを考えます。熱が伝わる速さがわかると、家の窓や壁、パソコンの放熱器、管の保温材、焼き入れした部品の冷え方まで、同じ考えで計算できます。この章の主役は、物の中を伝わる熱（\textbf{熱伝導}）です。
+
+\begin{yattemiyou}[熱が伝わる速さを、手でくらべよう]
+\textbf{用意するもの}\par
+金属・木・プラスチックのスプーン（同じくらいの大きさ）、コップ、お湯（\qty{60}{\celsius}くらい。やけどに気をつける）、氷2つ、アルミはく、発泡スチロールの板\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.55\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 3本のスプーンを、同時にお湯に入れる。1分たったら、柄のはしを指でさわって、温かさの順をくらべる。
+\item アルミはくを何重にもたたんで台にし、発泡スチロールの板と並べる。どちらにも指でさわってみる。
+\item 2つの台に同じ大きさの氷を1つずつのせ、どちらが早くとけるかを見る。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkBlue!15] (0,0) rectangle (18,14);
+  \draw[bkInk, line width=0.6pt] (0,16) -- (0,0) -- (18,0) -- (18,16);
+  \draw[bkGray!80!black, line width=1.6pt] (4,3) -- (1,26);
+  \draw[bkOrange!70!black, line width=1.6pt] (9,3) -- (9,26);
+  \draw[bkGreen!60!black, line width=1.6pt] (14,3) -- (17,26);
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,26.5) {金属};
+  \node[font=\sffamily\footnotesize, anchor=south] at (9,26.5) {木};
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (21,26.5) {プラス\\チック};
+  \fill[bkGray!55] (24,0) rectangle (38,2.4);
+  \fill[bkYellow!30] (24,10) rectangle (38,14);
+  \draw[bkInk!60, line width=0.4pt] (24,10) rectangle (38,14);
+  \fill[bkBlue!30] (28,2.4) rectangle (34,7.4) (28,14) rectangle (34,19);
+  \node[font=\sffamily\footnotesize, anchor=west] at (38.5,1.2) {アルミ};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (38.5,13) {発泡\\スチロール};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：柄が温かくなるのは、金属のスプーンがいちばん早く、木とプラスチックはなかなか温かくなりません。アルミはくの台は指でさわると冷たく感じ、発泡スチロールは冷たく感じません。台はどちらも部屋の温度なのに、です。そして氷は、冷たく感じたアルミはくの台の上のほうが、ずっと早くとけます。アルミは熱をよく伝えるので、指の熱をすばやく奪い（だから冷たく感じる）、部屋の空気の熱を氷へすばやく運ぶ（だから早くとける）のです。「冷たく感じる」「早くとける」の2つは、どちらも\textbf{熱を伝える速さ}の話でした。この章では、この速さを数で表します。
+
+\begin{omoidasou}
+\bkrecall{6-3}{かべの中の温度は、定常なら直線。厚さ\qty{0.2}{m}のかべの両面が\qty{20}{\celsius}と\qty{0}{\celsius}なら、$T=20-100x$。}
+\bkrecall{6-4}{熱容量 $C_{\mathrm{th}}$〔J/K〕と熱抵抗 $R_{\mathrm{th}}$〔K/W〕。熱流＝温度差÷$R_{\mathrm{th}}$。時定数 $\tau=C_{\mathrm{th}}R_{\mathrm{th}}$。}
+\bkrecall{8-4}{熱の流れ $\vec q=-k\,\mathrm{grad}\,T$（$k$ は熱伝導率）。}
+\bkrecall{8-13}{棒をマスに分けた表計算。次の温度は、今の温度に、となりとの差の $r$ 倍をたす。$r=\alpha\Delta t/\Delta x^2$ は $\tfrac12$ 以下。熱拡散率は $\alpha=k/(\rho c)$。}
+\bkrecall{9-1}{熱方程式を「分けて解いて、たし直す」：$e^{-\alpha(n\pi/L)^2t}\sin\tfrac{n\pi x}{L}$ をたす。}
+\bkrecall{熱-1}{熱の量 $Q=mc\,\Delta T$。温度差の 1\,K と 1\,℃ は同じ大きさ。}
+\end{omoidasou}
+
+\noindent この章の温度の書き方：数学の本（6-3・8-13・9-1）は、℃ で表した温度も $T$ と書きました。この本では、℃ で表した温度（セルシウス温度）を $\theta$（シータ）、K で表した温度（絶対温度）を $T$、温度の差を $\Delta T$〔K〕と書きます（熱-1）。熱の伝わり方は温度の\textbf{差}だけで決まるので、この章の式は、ほとんど $\theta$ と $\Delta T$ で書けます。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{熱が伝わるようすを見る}{1}
+
+\bksubsection{1}{熱の伝わり方は3つ}
+\label{ph:熱-11:sec1}
+\label{ph:熱-11:mittsu}なべでお湯をわかすときを考えましょう。熱は、3つのちがう道すじで伝わっています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % こんろの火
+  \fill[bkGray!40] (10,0) rectangle (62,3);
+  \foreach \xx in {18,26,34,42,50} {\fill[bkRed!70] (\xx,3) .. controls (\xx-2,6) and (\xx-1,8) .. (\xx,10) .. controls (\xx+1,8) and (\xx+2,6) .. (\xx,3);}
+  % なべ
+  \fill[bkBlue!15] (14,12) rectangle (58,30);
+  \draw[bkInk, line width=1pt] (14,34) -- (14,11) -- (58,11) -- (58,34);
+  \draw[bkInk!80, line width=1.6pt] (58,30) -- (84,32);
+  \fill[bkOrange!80] (66,30.6) circle (0.8) (72,31.1) circle (0.8) (78,31.5) circle (0.8);
+  % 対流のうず
+  \draw[bkBlue!70!black, line width=0.9pt, -{Stealth[length=2.2mm]}] (36,14) .. controls (36,24) and (36,27) .. (30,28) .. controls (22,28) and (20,22) .. (22,16) .. controls (24,13) and (30,13) .. (33,14);
+  \draw[bkBlue!70!black, line width=0.9pt, -{Stealth[length=2.2mm]}] (36,14) .. controls (36,24) and (36,27) .. (42,28) .. controls (50,28) and (52,22) .. (50,16) .. controls (48,13) and (42,13) .. (39,14);
+  % 放射
+  \foreach \yy in {4,7} {\draw[bkRed!80!black, line width=0.8pt, decorate, decoration={snake, amplitude=0.7mm, segment length=3mm, post length=1.6mm}, -{Stealth[length=2mm]}] (15,\yy) -- (-4,\yy);}
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (2,9) {③ 放射};
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (36,35.5) {② 対流};
+  \node[font=\sffamily\footnotesize, anchor=south west, align=left] at (70,33.5) {① 伝導};
+  % 説明の枠
+  \node[anchor=west, font=\footnotesize, text width=34mm, align=left] at (88,30) {①取っ手が、なべに近い所から熱くなる。};
+  \node[anchor=west, font=\footnotesize, text width=34mm, align=left] at (88,17) {②温まった水が上がり、冷たい水が下がる。};
+  \node[anchor=west, font=\footnotesize, text width=34mm, align=left] at (88,4) {③火の横に手をかざしても熱い。};
+\end{tikzpicture}
+\bkfigcaption{なべの3つの熱の伝わり方。①伝導（物の中を順に伝わる）、②対流（温まった水や空気が動いて運ぶ）、③放射（光や赤外線として、間に物がなくても伝わる）。}\label{ph:熱-11:fig-mittsu}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \label{ph:熱-11:kinzoku}\textbf{伝導}（でんどう）：金属の取っ手は、なべに近い所から順に、遠い所へと温まっていきます。物そのものは動かずに、物の中を熱が伝わっていきます。これを\textbf{熱伝導}といいます。\bkidx{ねつでんどう}{熱伝導}
+
+物は、目に見えない小さな粒（原子や分子）でできています。粒はいつも細かくふるえていて、温度が高いほど、はげしくふるえます（熱-14）。熱い所の粒は、となりの粒をゆさぶって、ふるえを渡していきます。金属では、それに加えて、原子のあいだを自由に動ける電子が、熱をすばやく運びます。だから金属は熱をよく伝えます。
+
+\item \textbf{対流}（たいりゅう）：なべの底で温まった水は、ふくらんで軽くなり（熱-1）、上へ上がります。上の冷たい水は下へ下がり、水全体がぐるぐる回って温まります。このように、温まった水や空気そのものが動いて熱を運ぶことを\textbf{対流}といいます。\bkidx{たいりゅう}{対流}くわしくは熱-12で学びます。
+
+\item \textbf{放射}（ほうしゃ）：こんろの火に横から手をかざすと、空気が上へ流れているのに、手が熱くなります。熱い物は、光や、目に見えない\textbf{赤外線}を出していて、それが手に当たって吸収されると、手が温まるのです。間に物がなくても伝わるので、太陽の熱は、何もない宇宙を通って地球に届きます。これを\textbf{熱放射}（ふく射）といいます。\bkidx{ねつほうしゃ}{熱放射}くわしくは熱-13で学びます。
+\end{enumerate}
+
+ふつうは、3つが同時に起きています。窓ガラスから逃げる熱も、ガラスの中は伝導、ガラスの表面と空気のあいだは対流と放射です。どれがいちばん効いているかを見分けることが、熱を「止める」「逃がす」くふうの第一歩です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=16mm] Q[l,m,wd=44mm] Q[c,m,wd=34mm] Q[c,m,wd=14mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+伝わり方 & 何が熱を運ぶか & 熱流束 $q$〔W/m$^2$〕 & 章 \\
+伝導 & 物の中の粒のふるえ・電子 & $q=k\,\dfrac{\Delta T}{L}$ & 熱-11 \\
+対流 & 動く水や空気 & $q=h\,\Delta T$ & 熱-12 \\
+放射 & 光・赤外線 & $q=\varepsilon\sigma T^4$ & 熱-13 \\
+\end{bktable}
+\bktabcaption{3つの熱の伝わり方と、それぞれの式（この章では伝導の式を作る。$h$ は熱-12、$\varepsilon\sigma T^4$ は熱-13 で学ぶ。$T^4$ の $T$ は K で入れる）。}\label{ph:熱-11:tab-mittsu}
+\end{bkcenter}
+
+\begin{phmijika}[魔法びん]
+魔法びんは、3つの伝わり方を全部止めるくふうのかたまりです。2重のびんのあいだを真空にして、伝導と対流を止めます（運ぶ粒がないから）。びんの内側を銀色のめっきにして、放射を反射して止めます（熱-13）。熱いお茶が、1日たってもまだ温かいのはこのためです。
+\end{phmijika}
+
+\bksubsection{2}{フーリエの法則：熱は温度の坂を下る}
+\label{ph:熱-11:sec2}
+厚さ $L$、面積 $A$ の板の片面を温度 $\theta_1$、反対の面を $\theta_2$（$\theta_1>\theta_2$）に保ちます。長い時間がたって板の中の温度が変わらなくなったとき（\textbf{定常}、6-3⑦）、1秒あたりに板を通りぬける熱 $\dot Q$〔W＝J/s〕は、実験で次のように決まります。\bkidx{ていじょう}{定常}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!12] (-14,0) rectangle (0,30);
+  \fill[bkBlue!12] (24,0) rectangle (38,30);
+  \qxlwall{0}{24}{30}{bkGray!35}
+  \draw[bkRed, line width=1.4pt] (0,26) -- (24,6);
+  \fill[bkRed] (0,26) circle (0.9) (24,6) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1,26) {$\theta_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (25,6) {$\theta_2$};
+  \qxlheat{(3,14)}{(21,14)}
+  \node[font=\sffamily\footnotesize, anchor=south] at (12,15.5) {$\dot Q$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (0,-3) -- (24,-3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (12,-3.5) {厚さ $L$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (12,30.5) {面積 $A$ の板};
+  \node[anchor=west, font=\small, text width=72mm, align=left] at (44,15) {%
+  ・温度差 $\theta_1-\theta_2$ が2倍なら、$\dot Q$ も2倍\par
+  ・面積 $A$ が2倍なら、$\dot Q$ も2倍\par
+  ・厚さ $L$ が2倍なら、$\dot Q$ は半分\par
+  ・同じ形でも、物によって $\dot Q$ がちがう（金属は大きく、木は小さい）};
+\end{tikzpicture}
+\bkfigcaption{板を通りぬける熱の実験。定常では、板の中の温度は直線になる（6-3⑦）。}\label{ph:熱-11:fig-fourier}
+\end{bkfigure}
+
+\noindent この4つをまとめると、
+\pheq{\dot Q=kA\,\frac{\theta_1-\theta_2}{L}=kA\,\frac{\Delta T}{L}}{W ＝ $\dfrac{\text{W}}{\text{m·K}}$×m$^2$×$\dfrac{\text{K}}{\text{m}}$}
+です。比例の定数 $k$ を\textbf{熱伝導率}（ねつでんどうりつ）といい、単位は W/(m·K) です。\bkidx{ねつでんどうりつ}{熱伝導率}1 m$^2$ あたりの熱の流れ $q=\dot Q/A$〔W/m$^2$〕を\textbf{熱流束}（ねつりゅうそく）といいます（8-4 と同じ）。\bkidx{ねつりゅうそく}{熱流束}
+\pheq{q=k\,\frac{\Delta T}{L}}{W/m$^2$ ＝ $\dfrac{\text{W}}{\text{m·K}}$×$\dfrac{\text{K}}{\text{m}}$}
+これを\textbf{フーリエの法則}といいます（フーリエ、1822年）。\bkidx{ふーりえのほうそく}{フーリエの法則}$\Delta T/L$ は、板の中の温度の坂の急さ（1 m あたり何 K 下がるか）です。熱は、温度の坂を下る向きに、坂が急なほどたくさん流れます。
+
+\begin{phyomi}[$q=k\,\dfrac{\Delta T}{L}$]
+「1 m$^2$ を1秒に通る熱は、温度の坂の急さ $\Delta T/L$ に比例する。比例の定数が、物ごとに決まった熱伝導率 $k$」。$k$ は、厚さ\qty{1}{m}の板に\qty{1}{K}の温度差をつけたとき、1 m$^2$ を1秒に通る熱〔J〕です。
+\end{phyomi}
+
+熱伝導率は、物によって1万倍以上もちがいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \nm/\kk/\yy/\cc in {銅/400/50/bkOrange, アルミ/237/45/bkOrange, 鋼/50/40/bkOrange, ステンレス/16/35/bkOrange, コンクリート/1.6/30/bkGray, ガラス/1.0/25/bkGray, れんが/0.6/20/bkGray, 水/0.60/15/bkBlue, 木/0.15/10/bkGreen, グラスウール/0.04/5/bkYellow, 空気/0.026/0/bkBlue} {%
+    \pgfmathsetmacro\len{(log10(\kk)+2)*20}
+    \fill[\cc!45] (0,\yy) rectangle (\len,\yy+3.6);
+    \draw[\cc!70!black, line width=0.4pt] (0,\yy) rectangle (\len,\yy+3.6);
+    \node[font=\sffamily\footnotesize, anchor=east] at (-1,\yy+1.8) {\nm};
+    \node[font=\sffamily\footnotesize, anchor=west] at (\len+1,\yy+1.8) {\kk};}
+  \draw[bkInk, line width=0.5pt] (0,-1.5) -- (104,-1.5);
+  \foreach \xx/\lab in {0/0.01, 20/0.1, 40/1, 60/10, 80/100, 100/1000} {\draw[bkInk, line width=0.5pt] (\xx,-1.5) -- (\xx,-3); \node[font=\sffamily\footnotesize, anchor=north] at (\xx,-3.2) {\lab};}
+  \node[font=\sffamily\footnotesize, anchor=north] at (52,-8) {熱伝導率 $k$〔W/(m·K)〕（目もりは10倍ごと）};
+\end{tikzpicture}
+\bkfigcaption{いろいろな物の熱伝導率（\qty{20}{\celsius}くらいの代表の値）。棒の長さは、10倍ごとに同じ長さの目もり（3-12 の対数の目もり）。金属は空気の1万倍くらい熱を伝える。}\label{ph:熱-11:fig-k}
+\end{bkfigure}
+
+\noindent 金属は大きく、空気はとても小さい値です。グラスウール（ガラスの細い繊維を綿のようにしたもの）や発泡スチロールの $k$ が小さいのは、細かいすきまに空気をとじこめて、空気が動けない（対流が起きない）ようにしているからです。断熱材の正体は「動けない空気」なのです。
+
+\begin{phmijika}[アルミはくの台が冷たく感じるわけ]
+指（約\qty{33}{\celsius}）でアルミにさわると、アルミは $k$ が大きいので、指の熱がどんどん奥へ流れ、指の表面の温度が下がります。発泡スチロールは $k$ が小さいので、熱がほとんど流れず、指の表面はすぐ指と同じ温度になって、冷たく感じません。わたしたちの手は、物の温度ではなく、\textbf{手から出ていく熱の速さ}を感じているのです。冬の鉄棒が冷たく、木のベンチが冷たくないのも同じです。
+\end{phmijika}
+
+\begin{phbaisuru}{厚さ $L$}
+温度差が同じなら、温度の坂の急さ $\Delta T/L$ が半分になるので、熱の流れは半分です。6-3⑦のコンクリートのかべ（$k=1.6$、温度差\qty{20}{K}）では、厚さ\qty{0.2}{m}で $1.6\times20\div0.2=\qty{160}{W/m^2}$、厚さ\qty{0.4}{m}にすると\qty{80}{W/m^2}です。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=40mm, xmin=0, xmax=0.84, ymin=0, ymax=360, xtick={0.1,0.2,0.4,0.8}, xticklabel style={/pgf/number format/fixed}, ytick={80,160,320}, xlabel={厚さ $L$（m）}, ylabel={$q$（W/m$^2$）}]
+  \addplot[bkcurve, domain=0.09:0.82, samples=60] {32/x};
+  \fill[bkRed] (axis cs:0.2,160) circle (1.8pt) (axis cs:0.4,80) circle (1.8pt) (axis cs:0.8,40) circle (1.8pt) (axis cs:0.1,320) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:0.42,82) {厚さ2倍で半分};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkGray, fill=white, inner sep=1pt] at (axis cs:0.82,340) {コンクリート、温度差 \qty{20}{K}};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{seikaku}
+熱伝導率は、温度によって少し変わります（空気は\qty{0}{\celsius}で0.024、\qty{100}{\celsius}で0.032 W/(m·K)くらい）。この章では、温度の範囲がせまいので一定とします。また、木のように繊維の向きがある物は、繊維にそった向きと、横切る向きで $k$ がちがいます（木はおよそ2倍）。表の値は、代表の値です。
+\end{seikaku}
+
+\Needspace{9\baselineskip}\phstage{te}{熱抵抗と表計算で、壁と窓を計算する}{3}
+
+\bksubsection{3}{熱抵抗：直列と並列}
+\label{ph:熱-11:sec3}
+②の式を、温度差について解いてみます。
+\[\Delta T=\dot Q\times\frac{L}{kA}\]
+「熱を $\dot Q$ だけ流すと、$\dot Q$ の $L/(kA)$ 倍の温度差がつく」と読めます。これは、電気のオームの法則「電圧＝電流×抵抗」（2-15）と同じ形です。そこで、
+\pheq{R_{\mathrm{th}}=\frac{L}{kA}\qquad\Delta T=\dot Q\,R_{\mathrm{th}}}{K/W ＝ $\dfrac{\text{m}}{\text{W/(m·K)}\times\text{m}^2}$}
+を板の\textbf{熱抵抗}（ねつていこう）とよびます（6-4⑥と同じ記号・単位）。\bkidx{ねつていこう}{熱抵抗}厚いほど、熱伝導率が小さいほど、面積が小さいほど、熱は通りにくくなります。温度差が電圧、熱の流れが電流、熱抵抗が電気の抵抗の役わりです（6-15③の相似の表）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!12] (-12,0) rectangle (0,32);
+  \fill[bkBlue!12] (50,0) rectangle (62,32);
+  \qxlwall{0}{40}{32}{bkGray!35}
+  \qxlwall{40}{10}{32}{bkYellow!35}
+  \draw[bkRed, line width=1.4pt] (0,29) -- (40,26.6) -- (50,3);
+  \fill[bkRed] (0,29) circle (0.9) (40,26.6) circle (0.9) (50,3) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-1,29) {\qty{20}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (40,32.3) {\qty{18.2}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=west] at (51,3) {\qty{0}{\celsius}};
+  \node[font=\sffamily\footnotesize, align=center] at (20,13) {コンクリート\\\qty{0.20}{m}};
+  \node[font=\sffamily\footnotesize, align=center, anchor=north] at (46,-0.6) {断熱材\\\qty{0.05}{m}};
+  % 回路
+  \begin{scope}[shift={(-6,-20)}]
+  \fill[bkOrange!70] (0,0) circle (1.2); \fill[bkBlue!70] (68,0) circle (1.2);
+  \draw[bkInk, line width=0.7pt] (1.2,0) -- (12,0);
+  \qxlres{(12,0)}{14}
+  \draw[bkInk, line width=0.7pt] (26,0) -- (36,0);
+  \qxlres{(36,0)}{14}
+  \draw[bkInk, line width=0.7pt] (50,0) -- (66.8,0);
+  \node[font=\sffamily\footnotesize, anchor=north] at (19,-2.5) {$R_1=0.125$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (43,-2.5) {$R_2=1.25$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-2) {\qty{20}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=north] at (68,-2) {\qty{0}{\celsius}};
+  \draw[bkOrange!85!black, line width=1pt, -{Stealth[length=2.4mm]}] (28,4) -- (36,4);
+  \node[font=\sffamily\footnotesize, anchor=south] at (32,4.5) {$\dot Q$};
+  \end{scope}
+  \node[anchor=west, font=\small, text width=50mm, align=left] at (72,16) {%
+  どの層にも同じ熱 $\dot Q$ が流れる（定常）。\par\vspace{2pt}
+  温度差は、層ごとの $\dot Q R$ の和。\par\vspace{2pt}
+  だから $R_{\text{全体}}=R_1+R_2$。\par\vspace{2pt}
+  温度は、熱抵抗の大きい断熱材の中で大きく下がる。};
+\end{tikzpicture}
+\bkfigcaption{コンクリートと断熱材の壁（1 m$^2$、熱抵抗の単位は K/W）。下は、同じ形の電気の回路。}\label{ph:熱-11:fig-chokuretsu}
+\end{bkfigure}
+
+\phboxhead{直列：同じ熱が順に通る}
+2つの層を重ねた壁では、定常なら、どちらの層にも同じ熱 $\dot Q$ が流れます（途中の層に熱がたまらないから）。温度差は、層ごとの温度差の和です。
+\[\Delta T=\dot Q R_1+\dot Q R_2=\dot Q\,(R_1+R_2)\]
+だから、重ねた壁の熱抵抗は、それぞれの熱抵抗の\textbf{和}です（電気の抵抗の直列と同じ）。
+
+6-3 の「断熱材の入ったかべ」で計算してみましょう。面積 1 m$^2$、コンクリート（$k=1.6$）\qty{0.20}{m}と、断熱材（$k=0.04$）\qty{0.05}{m}です。
+\[R_1=\frac{0.20}{1.6\times1}=\qty{0.125}{K/W},\qquad R_2=\frac{0.05}{0.04\times1}=\qty{1.25}{K/W}\]
+\[R_1+R_2=0.125+1.25=\qty{1.375}{K/W}\]
+温度差\qty{20}{K}なら、$\dot Q=20\div1.375\approx\qty{14.5}{W}$。コンクリートだけ（\qty{160}{W}）の約11分の1です。6-3 で「10分の1ほど」と書いたのは、この計算です。コンクリートの中の温度差は $14.5\times0.125\approx\qty{1.8}{K}$ だけで、残りの\qty{18.2}{K}は、うすい断熱材の中で下がります。
+
+\phboxhead{並列：同じ温度差で、横に並んで通る}
+壁の一部が窓になっているときは、壁と窓の両方に、同じ温度差がかかります。熱の流れは、それぞれの和です。
+\[\dot Q=\frac{\Delta T}{R_1}+\frac{\Delta T}{R_2}\qquad\text{だから}\qquad\frac{1}{R_{\text{全体}}}=\frac{1}{R_1}+\frac{1}{R_2}\]
+電気の抵抗の並列と同じです。熱抵抗の小さい所（窓）から、熱がたくさん逃げます。
+
+\phboxhead{表面の熱抵抗}
+熱は、壁の表面から空気へも、対流と放射で逃げていきます。その熱の流れは、表面と空気の温度差に比例し、$\dot Q=hA\,\Delta T$ と書けます。$h$〔W/(m$^2$·K)〕を\textbf{熱伝達率}（ねつでんたつりつ）といいます（くわしくは熱-12）。\bkidx{ねつでんたつりつ}{熱伝達率}これも熱抵抗の形にすると、
+\[R_{\mathrm{th}}=\frac{1}{hA}\]
+です。表面にも、空気のうすい層による熱抵抗があるのです。
+
+\begin{phmodel}[熱抵抗の直列・並列]
+\phignore{層と層のすきま（接触熱抵抗）。壁のすみや柱の所で、熱が横に回りこむこと。}
+\phassume{定常（温度が時間で変わらない）。熱は壁の面に直角に、まっすぐ流れる（1次元）。$k$ は一定。}
+\phlimit{外の温度が急に変わった直後（⑤）。柱や窓わくのように、熱が横に回る所（熱橋）。}
+\end{phmodel}
+
+\bksubsection{4}{窓と壁の熱貫流率：はてな？の答え}
+\label{ph:熱-11:sec4}
+建物の設計では、部屋の空気から外の空気までの熱抵抗を全部たし、その逆数を、面積 1 m$^2$ あたりで表します。
+\pheq{\frac{1}{U}=\frac{1}{h_{\text{室内}}}+\frac{L_1}{k_1}+\frac{L_2}{k_2}+\cdots+\frac{1}{h_{\text{外}}}\qquad\dot Q=UA\,\Delta T}{m$^2$·K/W}
+$U$〔W/(m$^2$·K)〕を\textbf{熱貫流率}（ねつかんりゅうりつ）といいます。\bkidx{ねつかんりゅうりつ}{熱貫流率}「空気と空気の温度差\qty{1}{K}あたり、1 m$^2$ から1秒に逃げる熱」で、建築では「U 値」とよばれます。$U$ が小さいほど、熱が逃げにくい窓や壁です。右辺の1つずつ（$1/h$ や $L/k$）は、面積 1 m$^2$ の熱抵抗です。日本の建物の計算では、表面の熱抵抗を、室内側\qty{0.11}{m^2.K/W}、外の側\qty{0.04}{m^2.K/W}（風がある）とします。
+
+\phboxhead{はてな？の答え}
+\textbf{1枚のガラス}（厚さ\qty{5}{mm}、$k=1.0$）：
+\[\frac{1}{U}=0.11+\frac{0.005}{1.0}+0.04=0.155,\qquad U\approx\qty{6.5}{W/(m^2.K)}\]
+\textbf{複層ガラス}（\qty{3}{mm}のガラス2枚、あいだに\qty{12}{mm}の空気の層）：空気の層の熱抵抗は、約\qty{0.17}{m^2.K/W}です。
+\[\frac{1}{U}=0.11+0.003+0.17+0.003+0.04=0.326,\qquad U\approx\qty{3.1}{W/(m^2.K)}\]
+1枚のガラスでは、熱抵抗の大部分が2つの表面（0.11と0.04）で、ガラスそのもの（0.005）はほとんど効いていません。ガラスを厚くしても、あまり変わらないのです。複層ガラスでは、あいだの空気の層が、2つの表面の和と同じくらいの熱抵抗（0.17）を足します。だから\textbf{熱抵抗の合計が約2倍になり、逃げる熱が約半分}になります。これがはてな？の答えです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+  \fill[bkOrange!10] (0,0) rectangle (24,30);
+  \fill[bkBlue!10] (28,0) rectangle (52,30);
+  \fill[bkBlue!30] (24,0) rectangle (28,30);
+  \draw[bkInk, line width=0.5pt] (24,0) rectangle (28,30);
+  \draw[bkRed, line width=1.3pt] (2,28) -- (12,28) -- (24,8.13) -- (28,7.22) -- (40,0) -- (50,0);
+  \fill[bkRed] (24,8.13) circle (0.9);
+  \draw[bkGray, line width=0.4pt, dashed] (0,13) -- (52,13);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGray] at (31,13.4) {露点 \qty{9.3}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=east] at (23.5,6) {\qty{5.8}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (7,28.4) {\qty{20}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=north] at (26,-1) {1枚のガラス};
+  \end{scope}
+  \begin{scope}[shift={(62,0)}]
+  \fill[bkOrange!10] (0,0) rectangle (22,30);
+  \fill[bkBlue!10] (38,0) rectangle (60,30);
+  \fill[bkBlue!30] (22,0) rectangle (24,30) (36,0) rectangle (38,30);
+  \fill[bkYellow!20] (24,0) rectangle (36,30);
+  \draw[bkInk, line width=0.5pt] (22,0) rectangle (24,30) (36,0) rectangle (38,30);
+  \draw[bkRed, line width=1.3pt] (2,28) -- (10,28) -- (22,18.55) -- (24,18.3) -- (36,3.70) -- (38,3.43) -- (48,0) -- (58,0);
+  \fill[bkRed] (22,18.55) circle (0.9);
+  \draw[bkGray, line width=0.4pt, dashed] (0,13) -- (60,13);
+  \node[font=\sffamily\footnotesize, anchor=east] at (21,16) {\qty{13}{\celsius}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (6,28.4) {\qty{20}{\celsius}};
+  \node[font=\sffamily\footnotesize] at (30,24) {空気};
+  \node[font=\sffamily\footnotesize, anchor=north] at (30,-1) {複層ガラス};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (59,0.6) {\qty{0}{\celsius}};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{窓の断面の温度（左が部屋、右が外。たての長さは温度）。温度は、熱抵抗の大きい所で大きく下がる。1枚のガラスでは室内側の表面で大きく下がり、表面が露点（\qty{20}{\celsius}・湿度50\,\% の空気）より冷たくなる。}\label{ph:熱-11:fig-mado}
+\end{bkfigure}
+
+\noindent 温度は、熱抵抗の大きい所で大きく下がります（熱の流れ×熱抵抗）。部屋\qty{20}{\celsius}・外\qty{0}{\celsius}のとき、1枚のガラスでは、熱の流れ $q=6.45\times20\approx\qty{129}{W/m^2}$ で、室内側の表面の温度は $20-129\times0.11\approx\qty{5.8}{\celsius}$ です。複層ガラスでは $q\approx\qty{61}{W/m^2}$、表面は約\qty{13}{\celsius}です。部屋の空気（\qty{20}{\celsius}・湿度50\,\%）は、\qty{9.3}{\celsius}より冷たい物にふれると水てきが出ます（露点。熱-9）。1枚のガラスには結露し、複層ガラスには結露しません（例題11）。
+
+\begin{phbaisuru}{ガラスの厚さ}
+1枚のガラスを\qty{5}{mm}から\qty{10}{mm}にしても、$1/U$ は0.155から0.160になるだけで、$U$ は6.45から6.25（約3\,\%減）です。熱抵抗の大部分は表面にあるので、ガラスを厚くしてもあまり効きません。直列の熱抵抗では、\textbf{いちばん大きい所}が全体を決めます。
+\end{phbaisuru}
+
+\begin{seikaku}
+空気だけが伝導で熱を運ぶなら、\qty{12}{mm}の空気の層の熱抵抗は、$0.012\div0.026\approx0.46$ になるはずです。実際が約0.17なのは、向かい合う2枚のガラスのあいだで、放射（赤外線）でも熱が運ばれるからです。空気の層をもっと厚くすると、こんどは空気が対流を始めて、あまり良くなりません。ガラスに放射を通しにくいうすい膜をつけた「Low-E ガラス」は、この放射の分を減らして、$U$ を2以下にしています（放射は熱-13）。
+\end{seikaku}
+
+\bksubsection{5}{表計算：壁を小さな箱に分けて、時間を進める}
+\label{ph:熱-11:sec5}
+③④は、温度が時間で変わらない（定常）ときの計算でした。夕方に外の温度が急に下がったとき、壁の中の温度は、どのように③の折れ線へ近づいていくのでしょう。8-13 の表計算と同じ考えで、壁を小さな箱に分けて、時間を少しずつ進めます。
+
+\phboxhead{箱の熱のバランス}
+壁を厚さ $\Delta x$ の箱に分けます（面積は 1 m$^2$）。1つの箱について、短い時間 $\Delta t$ のあいだの熱のバランス（熱-1）を書きます。
+\[\underbrace{C_i\,\bigl(\theta_i^{\,\text{次}}-\theta_i\bigr)}_{\text{箱にたまる熱}}=\Bigl(\underbrace{\frac{\theta_{\text{左}}-\theta_i}{R_{\text{左}}}}_{\text{左から入る熱}}+\underbrace{\frac{\theta_{\text{右}}-\theta_i}{R_{\text{右}}}}_{\text{右から入る熱}}\Bigr)\Delta t\]
+$C_i=\rho c\,\Delta x$〔J/K〕は箱の熱容量（$\rho$ は密度、$c$ は比熱）、$R_{\text{左}}$・$R_{\text{右}}$ は、となりの箱の中心までの熱抵抗です。右から入る熱が負なら、右へ出ていく熱です。両辺を $C_i$ でわると、
+\pheq{\theta_i^{\,\text{次}}=\theta_i+\frac{\Delta t}{C_i}\Bigl(\frac{\theta_{\text{左}}-\theta_i}{R_{\text{左}}}+\frac{\theta_{\text{右}}-\theta_i}{R_{\text{右}}}\Bigr)}{K ＝ $\dfrac{\text{s}}{\text{J/K}}$×$\dfrac{\text{K}}{\text{K/W}}$}
+「次の温度＝今の温度＋（入る熱の和）×$\Delta t$÷熱容量」。6-2 のオイラー法と同じ形です。
+
+同じ材料で、箱がみな同じ厚さなら、$C_i=\rho c\,\Delta x$、$R_{\text{左}}=R_{\text{右}}=\Delta x/k$ なので、
+\[\frac{\Delta t}{C_iR}=\frac{k\,\Delta t}{\rho c\,\Delta x^2}=\frac{\alpha\,\Delta t}{\Delta x^2}=r\]
+となり、8-13 の1歩の式 $\theta_i^{\,\text{次}}=\theta_i+r(\theta_{\text{左}}-2\theta_i+\theta_{\text{右}})$ とまったく同じになります。箱の考えのよい所は、\textbf{材料のちがう層が重なっていても、そのまま使える}ことです。
+
+\phboxhead{2層の壁を表計算で}
+③のコンクリート（\qty{0.15}{m}）とグラスウール（\qty{0.10}{m}）の壁（例題3）を、\qty{0.05}{m}ずつの5つの箱に分けます。部屋の側がコンクリート、外の側がグラスウールです（\textbf{外断熱}）。はじめ、壁はどこも\qty{20}{\celsius}です。時刻0に外の側の表面が\qty{0}{\celsius}になり、そのまま\qty{0}{\celsius}に保たれます。部屋の側の表面は\qty{20}{\celsius}のままとします。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] Q[c,m,wd=34mm] Q[c,m,wd=34mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+ & コンクリートの箱 & グラスウールの箱 \\
+$k$〔W/(m·K)〕 & 1.6 & 0.04 \\
+$\rho c$〔J/(m$^3$·K)〕 & \num{2024000} & \num{13440} \\
+箱の熱容量 $C$〔J/K〕 & \num{101200} & 672 \\
+箱の半分の熱抵抗〔K/W〕 & 0.015625 & 0.625 \\
+\end{bktable}
+\bktabcaption{箱の値（面積 1 m$^2$）。コンクリートは $\rho=2300$、$c=880$、グラスウールは $\rho=16$、$c=840$（単位は kg/m$^3$ と J/(kg·K)）。箱の半分の熱抵抗は、$0.025\div1.6$ と $0.025\div0.04$。となりの箱の中心までの熱抵抗は、2つの「半分」の和。}\label{ph:熱-11:tab-hako}
+\end{bkcenter}
+A列が時刻〔分〕、B〜F列が箱1〜5の温度〔℃〕です（$\Delta t=\qty{60}{s}$）。たとえば、外のはしの箱5（F列）の式は、
+\begin{bkcenter}
+\texttt{F3 = F2 + 60/672*((E2-F2)/1.25 + (0-F2)/0.625)}
+\end{bkcenter}
+で、「左の箱4から入る熱」と「外の表面（\qty{0}{\celsius}）へ出ていく熱」をたしています。ほかの箱も、となりとの熱抵抗を入れて同じように作り、下へコピーします。
+\begin{bkcenter}
+\bksheet{7}{15}{%
+1 & $t$（分） & 箱1 & 箱2 & 箱3 & 箱4 & 箱5 & 外へ（W） \\
+2 & 0 & 20 & 20 & 20 & 20 & 20 & 32.00 \\
+3 & 1 & 20 & 20 & 20 & 20 & 17.14 & 27.43 \\
+4 & 2 & 20 & 20 & 20 & 19.80 & 14.90 & 23.84 \\
+5 & 3 & 20 & 20 & 20 & 19.48 & 13.12 & 20.99 \\
+\SetCell[c=8]{c} $\vdots$ & & & & & & & \\
+62 & 60 & 19.99 & 19.95 & 19.84 & 14.80 & 4.94 & 7.90 \\
+242 & 240 & 19.92 & 19.76 & 19.57 & 14.59 & 4.86 & 7.78 \\
+482 & 480 & 19.89 & 19.67 & 19.45 & 14.50 & 4.83 & 7.73 \\}
+\bktabcaption{外断熱の壁の表計算（箱1〜3がコンクリート、箱4・5がグラスウール）。G列は外へ出ていく熱（F列÷0.625）。1440行め（24時間後）まで進めると、G列は7.71になる。}\label{ph:熱-11:tab-sheet}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pa, width=62mm, height=50mm, xmin=0, xmax=0.25, ymin=-1, ymax=22, xtick={0,0.05,0.10,0.15,0.20,0.25}, xticklabels={0,,0.1,,0.2,}, xticklabel style={/pgf/number format/fixed}, ytick={0,5,10,15,20}, xlabel={$x$（m）}, ylabel={$\theta$（℃）}]
+  \fill[bkYellow!25] (axis cs:0.15,-1) rectangle (axis cs:0.25,22);
+  \addplot[bkGray, line width=0.7pt, mark=square*, mark size=1.4pt] coordinates {(0,20) (0.025,20) (0.075,20) (0.125,19.989) (0.175,16.938) (0.225,7.31) (0.25,0)};
+  \addplot[bkOrange!85!black, line width=0.9pt, mark=triangle*, mark size=1.8pt] coordinates {(0,20) (0.025,19.99) (0.075,19.949) (0.125,19.835) (0.175,14.797) (0.225,4.936) (0.25,0)};
+  \addplot[bkNavy, line width=1pt, mark=*, mark size=1.3pt] coordinates {(0,20) (0.025,19.88) (0.075,19.639) (0.125,19.398) (0.175,14.458) (0.225,4.819) (0.25,0)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.005,1) {外断熱};
+\end{axis}
+\begin{axis}[bkplot, at={(pa.east)}, anchor=west, xshift=14mm, width=62mm, height=50mm, xmin=0, xmax=0.25, ymin=-1, ymax=22, xtick={0,0.05,0.10,0.15,0.20,0.25}, xticklabels={0,,0.1,,0.2,}, xticklabel style={/pgf/number format/fixed}, ytick={0,5,10,15,20}, xlabel={$x$（m）}]
+  \fill[bkYellow!25] (axis cs:0,-1) rectangle (axis cs:0.10,22);
+  \addplot[bkGray, line width=0.7pt, mark=square*, mark size=1.4pt] coordinates {(0,20) (0.025,20) (0.075,19.995) (0.125,19.973) (0.175,19.495) (0.225,14.062) (0.25,0)};
+  \addplot[bkOrange!85!black, line width=0.9pt, mark=triangle*, mark size=1.8pt] coordinates {(0,20) (0.025,19.6) (0.075,18.582) (0.125,17.707) (0.175,14.013) (0.225,5.647) (0.25,0)};
+  \addplot[bkNavy, line width=1pt, mark=*, mark size=1.3pt] coordinates {(0,20) (0.025,15.184) (0.075,5.552) (0.125,0.615) (0.175,0.371) (0.225,0.124) (0.25,0)};
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:0.245,8) {内断熱};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{壁の中の温度（点は箱のまん中、両はしは表面）。左は外断熱（部屋の側がコンクリート）、右は内断熱（部屋の側がグラスウール）。黄色の所がグラスウール。■は10分後、▲は1時間後、●は24時間後。24時間後には、どちらも③の折れ線（定常）とほぼ同じになる。}\label{ph:熱-11:fig-hako}
+\end{bkfigure}
+
+\phboxhead{表とグラフから読みとれること}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 外断熱では、グラスウールの中の温度は数十分で直線に近づきますが、コンクリートはほとんど\qty{20}{\celsius}近くのままです。24時間たつと、外へ出ていく熱は、③の定常の値 $20\div2.59\approx\qty{7.7}{W/m^2}$ になります（例題3）。
+\item 層の順番を入れかえた\textbf{内断熱}（部屋の側がグラスウール）でも、落ち着いた先の熱の流れは同じ\qty{7.7}{W/m^2}です（熱抵抗の和は順番によらない）。でも、途中はちがいます。内断熱では、コンクリートが外の温度近くまで冷えます。その間、コンクリートにたまっていた熱が外へ出ていくので、はじめの数時間は、外へ出る熱が定常の何十倍にもなります（1時間後で約\qty{360}{W/m^2}）。
+\item 外断熱では、重いコンクリートが部屋の側で温かいまま、熱をたくわえています。暖房を止めても部屋が急に冷えにくく、壁の中で結露もしにくい（コンクリートが冷えないから）のが、外断熱のよい所です。
+\end{enumerate}
+
+\begin{seikaku}
+グラスウールの箱は熱容量がとても小さい（672 J/K）ので、$\Delta t$ を大きくすると計算がこわれます（8-13⑤の $r\leqq\tfrac12$ と同じ理由）。1つの箱について、「$\Delta t$×（となりとの熱抵抗の逆数の和）」が熱容量をこえないこと、つまり $\Delta t\leqq672\div(1\div1.25+1\div0.625)=\qty{280}{s}$ が条件です。ここでは余裕をみて\qty{60}{s}にしました。また、部屋の側から壁に入る熱の時間変化は、外断熱と内断熱でぴったり同じになります（計算してみよう）。これは偶然ではなく、熱の伝わり方の式がもつ「相反性」という性質から来ています（専門の本で）。
+\end{seikaku}
+
+\begin{phmodel}[箱に分けた壁の計算]
+\phignore{壁の面の向きの温度のちがい（1次元）。空気の湿り気が壁にしみこむこと。}
+\phassume{箱の中の温度はどこも同じ。$\Delta t$ のあいだ、となりとの熱の流れは一定。表面の温度は決まった値（部屋\qty{20}{\celsius}、外\qty{0}{\celsius}）。}
+\phlimit{箱が粗すぎるとき。$\Delta t$ が安定の条件をこえるとき。表面の温度が空気の温度と大きくちがうとき（表面の熱抵抗を、箱のとなりの熱抵抗として入れれば計算できる）。}
+\end{phmodel}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{熱のバランス式から熱方程式へ}{5}
+
+\bksubsection{6}{熱のバランス式から熱方程式}
+\label{ph:熱-11:sec6}
+⑤の箱の考えを、箱を小さくした先の式にします。棒や壁の中で、$x$ から $x+\Delta x$ までのうすい箱（面積 $A$）を考えます。$x$ の面を右向きに通る熱流束を $q(x)$ とし、箱の中で1 m$^3$ あたり1秒に $\dot q_{\mathrm g}$〔W/m$^3$〕の熱が生まれる（電流の熱など）とします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!20] (0,0) rectangle (90,20);
+  \fill[bkOrange!25] (36,0) rectangle (54,20);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (90,20) (36,0) -- (36,20) (54,0) -- (54,20);
+  \qxlheat{(16,8)}{(35,8)}
+  \qxlheat{(55,8)}{(74,8)}
+  \node[font=\sffamily\footnotesize, anchor=south] at (24,10) {$q(x)A$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (66,10) {$q(x+\Delta x)A$};
+  \node[font=\sffamily\footnotesize, align=center] at (45,10) {たまる\\生まれる};
+  \draw[bkInk, line width=0.5pt] (36,0) -- (36,-3) (54,0) -- (54,-3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (36,-3.3) {$x$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (54,-3.3) {$x+\Delta x$};
+  \node[anchor=west, font=\small, text width=32mm, align=left] at (94,10) {入る－出る\\＋生まれる＝たまる};
+\end{tikzpicture}
+\bkfigcaption{うすい箱の熱のバランス（力-13 の検査体積と同じ考え）。}\label{ph:熱-11:fig-baransu}
+\end{bkfigure}
+
+\noindent $\Delta t$ のあいだのバランスは、「たまる＝入る－出る＋生まれる」です。
+\[\rho cA\,\Delta x\,\Delta\theta=\bigl\{q(x)-q(x+\Delta x)\bigr\}A\,\Delta t+\dot q_{\mathrm g}A\,\Delta x\,\Delta t\]
+両辺を $A\,\Delta x\,\Delta t$ でわり、$\Delta x$ と $\Delta t$ を0に近づけます（5-3 の微分の定義）。
+\[\frac{\Delta\theta}{\Delta t}\to\frac{\partial\theta}{\partial t},\qquad\frac{q(x+\Delta x)-q(x)}{\Delta x}\to\frac{\partial q}{\partial x}\]
+なので、
+\[\rho c\,\frac{\partial\theta}{\partial t}=-\frac{\partial q}{\partial x}+\dot q_{\mathrm g}\]
+ここに、②のフーリエの法則を、どの場所でも成り立つ形
+\[q=-k\,\frac{\partial\theta}{\partial x}\]
+（温度が下がる向きに流れるので負の符号）で入れ、$k$ を一定とすると、
+\pheq{\frac{\partial\theta}{\partial t}=\alpha\,\frac{\partial^2\theta}{\partial x^2}+\frac{\dot q_{\mathrm g}}{\rho c}\qquad\alpha=\frac{k}{\rho c}}{K/s ＝ $\dfrac{\text{m}^2}{\text{s}}$×$\dfrac{\text{K}}{\text{m}^2}$}
+となります。これが\textbf{熱方程式}（熱伝導方程式）です（8-13⑥と同じ式に、熱の生まれる項がついた）。\bkidx{ねつほうていしき}{熱方程式}$\alpha$〔m$^2$/s〕は\textbf{熱拡散率}です（8-13）。
+
+3次元では、箱から出ていく熱は $\mathrm{div}\,\vec q$（8-9⑬）、熱の流れは $\vec q=-k\,\mathrm{grad}\,\theta$（8-4）なので、$\mathrm{div}\,\mathrm{grad}=\nabla^2$（8-12）を使って、
+\[\frac{\partial\theta}{\partial t}=\alpha\nabla^2\theta+\frac{\dot q_{\mathrm g}}{\rho c}\]
+です。どんな形の袋で囲んでも、「袋から出る熱＝袋の中で生まれる熱－袋の中にたまる熱」になるのは、8-11 のガウスの定理のとおりです。
+
+\begin{phyomi}[$\dfrac{\partial\theta}{\partial t}=\alpha\dfrac{\partial^2\theta}{\partial x^2}$]
+「となりの平均より冷たい所（下に凸、$\partial^2\theta/\partial x^2>0$）は温まり、熱い所は冷える。その速さは熱拡散率 $\alpha$ に比例する」（8-12・8-13）。$\alpha=k/(\rho c)$ は「熱を伝える力÷熱をためる力」です。$k$ が大きくても、$\rho c$ が大きい物（水）は温度がゆっくり変わります。
+\end{phyomi}
+
+\begin{phflow}[熱方程式]
+\phflowrow{$\dfrac{\partial\theta}{\partial t}=\alpha\nabla^2\theta+\dfrac{\dot q_{\mathrm g}}{\rho c}$}{定常・1次元・熱が生まれない\\両面の温度 $\theta_1$・$\theta_2$}{$q=k\,\dfrac{\theta_1-\theta_2}{L}$}
+\end{phflow}
+定常で1次元なら、熱方程式は $\dd^2\theta/\dd x^2=0$ になり、2回積分して直線（6-3⑦）、その傾きから②のフーリエの法則 $q=k\Delta T/L$ がもどってきます。②で「実験で決まる」とした式は、熱方程式のいちばん簡単な場合だったのです。
+
+\phboxhead{熱が生まれる板}
+熱が生まれる板（電気のヒーターの板など、厚さ $2b$、両面の温度 $\theta_{\mathrm s}$）では、定常で
+\[k\,\frac{\dd^2\theta}{\dd x^2}=-\dot q_{\mathrm g}\]
+です（$x$ は板のまん中から測る）。2回積分して、まん中で傾き0、両面で $\theta_{\mathrm s}$ とすると、
+\[\theta=\theta_{\mathrm s}+\frac{\dot q_{\mathrm g}}{2k}\bigl(b^2-x^2\bigr)\]
+の放物線です。8-9⑬の板（$\dot q_{\mathrm g}=\qty{5000}{W/m^3}$）で、$k=1.0$、$b=\qty{0.05}{m}$ なら、まん中は表面より $5000\times0.05^2\div2=\qty{6.25}{K}$ 高くなります。熱の流れ $q=-k\,\dd\theta/\dd x=\dot q_{\mathrm g}x$ は、8-9⑬の $q_x=5000x$ と同じです。
+
+\bksubsection{7}{管と球の熱抵抗、保温材の臨界半径}
+\label{ph:熱-11:sec7}
+お湯や蒸気の管には、保温材を巻きます。管のように丸い形では、熱が外へ広がるにつれて、通る面積が大きくなります。
+
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!35] (0,0) circle (20);
+  \fill[bkOrange!40] (0,0) circle (10);
+  \draw[bkInk, line width=0.7pt] (0,0) circle (10) (0,0) circle (20);
+  \draw[bkInk, line width=0.4pt, dashed] (0,0) circle (15);
+  \foreach \a in {20,110,200,290} {\draw[bkOrange!85!black, line width=1pt, -{Stealth[length=2.2mm]}] (\a:11) -- (\a:24);}
+  \draw[bkInk, line width=0.5pt] (0,0) -- (-30:10);
+  \node[font=\sffamily\footnotesize, anchor=north] at (5,-3.2) {$r_1$};
+  \draw[bkInk, line width=0.5pt] (0,0) -- (150:20);
+  \node[font=\sffamily\footnotesize, anchor=south east] at (-17.6,10.4) {$r_2$};
+  \node[font=\sffamily\footnotesize] at (2.5,5) {$\theta_1$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-21) {外側 $\theta_2$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+長さ $l$ の管のまわりの保温材（内半径 $r_1$・温度 $\theta_1$、外半径 $r_2$・温度 $\theta_2$）を考えます。定常なら、どの半径の円筒の面（点線）を通る熱 $\dot Q$ も同じです（8-11 の袋）。半径 $r$ の面の面積は $2\pi rl$ なので、フーリエの法則は
+\[\dot Q=-k\,(2\pi rl)\,\frac{\dd\theta}{\dd r}\]
+です。外へ行くほど面積が広いので、温度の坂はゆるくなります。
+\end{minipage}
+
+\par\vspace{4pt}
+この式を
+\[\frac{\dd\theta}{\dd r}=-\frac{\dot Q}{2\pi kl}\cdot\frac{1}{r}\]
+と書きかえ、$r_1$ から $r_2$ まで積分します（5-14：$1/r$ の原始関数は $\ln r$）。
+\[\theta_2-\theta_1=-\frac{\dot Q}{2\pi kl}\,\ln\frac{r_2}{r_1}\qquad\text{だから}\qquad\dot Q=\frac{2\pi kl\,(\theta_1-\theta_2)}{\ln(r_2/r_1)}\]
+\pheq{R_{\mathrm{th}}=\frac{\ln(r_2/r_1)}{2\pi kl}\quad\text{（円筒）}\qquad R_{\mathrm{th}}=\frac{1}{4\pi k}\Bigl(\frac{1}{r_1}-\frac{1}{r_2}\Bigr)\quad\text{（球）}}{K/W}
+球の殻も、面積 $4\pi r^2$ で同じように積分すると求まります。保温材の中の温度は、円筒では $\ln r$ の形、球では $1/r$ の形です（8-12⑦の表のとおり）。
+
+\begin{phflow}[円筒の熱抵抗]
+\phflowrow{$R_{\mathrm{th}}=\dfrac{\ln(r_2/r_1)}{2\pi kl}$}{うすい保温材\\$r_2=r_1+t$、$t\ll r_1$}{$R_{\mathrm{th}}=\dfrac{t}{k\,(2\pi r_1l)}$}
+\end{phflow}
+保温材の厚さ $t$ が管の半径よりずっとうすいときは、$\ln(1+t/r_1)\approx t/r_1$（5-17 の展開の1項め）なので、面積 $2\pi r_1l$ の平らな板の熱抵抗 $L/(kA)$（③）と同じになります。
+
+\begin{phbaisuru}{保温材の厚さ}
+内半径\qty{30}{mm}の管に $k=0.04$ の保温材を巻き、温度差\qty{100}{K}とします。1 m あたりの熱は、外半径\qty{60}{mm}（厚さ\qty{30}{mm}）で約\qty{36}{W}、\qty{90}{mm}（厚さ2倍）で約\qty{23}{W}です。厚さを2倍にしても、熱は半分にはなりません。$\ln$ が効くので、外側に巻き足した保温材ほど、効きめが小さくなります（例題4）。
+\end{phbaisuru}
+
+\phboxhead{巻くと、かえって熱が逃げることがある：臨界半径}
+保温材の外側の表面からは、熱伝達率 $h$ で空気へ熱が逃げます。管から空気までの熱抵抗は、
+\[R(r_2)=\frac{\ln(r_2/r_1)}{2\pi kl}+\frac{1}{2\pi r_2\,l\,h}\]
+です。保温材を厚くすると、1つめ（保温材の中）は増えますが、2つめ（表面）は、表面積が増えるので減ります。$R$ を $r_2$ で微分して0とおくと（5-7）、
+\[\frac{\dd R}{\dd r_2}=\frac{1}{2\pi kl\,r_2}-\frac{1}{2\pi l h\,r_2^{\,2}}=0\qquad\text{より}\qquad r_2=\frac{k}{h}\]
+この $r_{\mathrm c}=k/h$ を\textbf{臨界半径}といいます。\bkidx{りんかいはんけい}{臨界半径}$r_2$ が $r_{\mathrm c}$ より小さい間は、巻くほど $R$ が\textbf{小さく}なり、熱がよく逃げるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=90mm, height=50mm, xmin=0, xmax=42, ymin=0, ymax=0.36, xtick={1,10,20,30,40}, ytick={0.1,0.2,0.3}, yticklabel style={/pgf/number format/fixed}, xlabel={$r_2$（mm）}, ylabel={1 m・1 K あたりの熱（W）}]
+  \addplot[bkcurve, domain=1:42, samples=120] {1/(ln(x/1)/(2*pi*0.2)+1/(2*pi*x/1000*10))};
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:20,0) -- (axis cs:20,0.3145);
+  \fill[bkRed] (axis cs:20,0.3145) circle (1.8pt);
+  \fill[bkInk] (axis cs:1,0.0628) circle (1.6pt);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:20,0.322) {臨界半径 \qty{20}{mm}：いちばん多く逃げる};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:2,0.05) {被覆のない電線（半径\qty{1}{mm}）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{半径\qty{1}{mm}の電線に、$k=0.2$ の被覆を外半径 $r_2$ まで巻いたときの、逃げる熱（空気の $h=10$）。被覆の外半径が\qty{20}{mm}までは、巻くほど熱がよく逃げる。}\label{ph:熱-11:fig-rinkai}
+\end{bkfigure}
+
+\noindent 細い電線の被覆（$k\approx0.2$）では、$r_{\mathrm c}=0.2\div10=\qty{0.02}{m}$ です。半径\qty{1}{mm}の電線に被覆を巻くと、熱は、何も巻かないときの2倍、3倍と、よく逃げるようになります（例題5）。電線が熱くなりにくいのは、被覆のおかげでもあるのです。反対に、太い蒸気の管（半径が $r_{\mathrm c}$ よりずっと大きい）では、巻けば巻くほど熱が逃げにくくなります。
+
+\phboxhead{熱が生まれる円柱}
+電線や原子炉の燃料棒のように、円柱の中で熱が生まれる（1 m$^3$ あたり $\dot q_{\mathrm g}$）ときは、半径 $r$ の中で生まれる熱 $\dot q_{\mathrm g}\,\pi r^2l$ が、半径 $r$ の面を外へ通ります。$\dot q_{\mathrm g}\pi r^2l=-k\,(2\pi rl)\,\dd\theta/\dd r$ を積分して、半径 $R_0$ の円柱の中心と表面の温度差は
+\[\theta_{\text{中心}}-\theta_{\text{表面}}=\frac{\dot q_{\mathrm g}R_0^{\,2}}{4k}\]
+です（章末問題）。
+
+\bksubsection{8}{中の温度がそろう物：ビオ数と時定数}
+\label{ph:熱-11:sec8}
+6-4 では、冷めるお湯を「熱容量 $C_{\mathrm{th}}$ と熱抵抗 $R_{\mathrm{th}}$ の1つの箱」として扱いました。そして、せいかくに言うとで「中の温度がすぐにそろう物ほど、よく合う」と書きました。どんなとき、中の温度がそろうと考えてよいのでしょうか。
+
+熱い物を空気や水で冷やすとき、熱は、物の中を伝導で表面まで来て（中の熱抵抗）、表面から流体へ逃げます（表面の熱抵抗 $1/(hA)$）。物の大きさの目安を $l_{\mathrm c}=V/A$（体積÷表面積）として、2つの熱抵抗の比をとります。
+\pheq{\mathrm{Bi}=\frac{\text{中の熱抵抗}}{\text{表面の熱抵抗}}=\frac{l_{\mathrm c}/(kA)}{1/(hA)}=\frac{hl_{\mathrm c}}{k}}{1 ＝ $\dfrac{\text{W/(m}^2\text{·K)}\times\text{m}}{\text{W/(m·K)}}$}
+これを\textbf{ビオ数}（Bi）といいます。\bkidx{びおすう}{ビオ数}単位のない数です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,1,2} {%
+  \begin{scope}[shift={(\i*44,0)}]
+    \fill[bkGray!25] (6,0) rectangle (30,26);
+    \fill[bkBlue!10] (0,0) rectangle (6,26) (30,0) rectangle (36,26);
+    \draw[bkInk, line width=0.5pt] (6,0) rectangle (30,26);
+  \end{scope}}
+  \draw[bkRed, line width=1.3pt] (0,4) .. controls (3,4) and (4,20) .. (6,20.5) -- (30,20.5) .. controls (32,20) and (33,4) .. (36,4);
+  \begin{scope}[shift={(44,0)}]
+  \draw[bkRed, line width=1.3pt] (0,4) .. controls (3,4) and (4,11) .. (6,12) .. controls (12,18.5) and (24,18.5) .. (30,12) .. controls (32,11) and (33,4) .. (36,4);
+  \end{scope}
+  \begin{scope}[shift={(88,0)}]
+  \draw[bkRed, line width=1.3pt] (0,4) -- (6,5.5) .. controls (12,21) and (24,21) .. (30,5.5) -- (36,4);
+  \end{scope}
+  \node[font=\sffamily\footnotesize, anchor=north] at (18,-1) {$\mathrm{Bi}=0.01$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (62,-1) {$\mathrm{Bi}=1$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (106,-1) {$\mathrm{Bi}=10$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (18,26.5) {中の温度がそろう};
+  \node[font=\sffamily\footnotesize, anchor=south] at (106,26.5) {表面だけ冷える};
+\end{tikzpicture}
+\bkfigcaption{熱い板を両側の流体（青）で冷やしている途中の温度（赤い線）。ビオ数が小さいと板の中の温度はほぼ平ら、大きいと中に大きな温度差ができる。}\label{ph:熱-11:fig-bio}
+\end{bkfigure}
+
+ビオ数が小さい（目安は $\mathrm{Bi}<0.1$）と、物の中は熱がすぐに伝わるので、温度がほぼそろったまま、表面の熱抵抗の分だけで冷えていきます。そのときは、物全体を1つの箱として、6-4 の式がそのまま使えます。
+\[C_{\mathrm{th}}\,\frac{\dd\theta}{\dd t}=-hA\,(\theta-\theta_\infty)\qquad C_{\mathrm{th}}=\rho cV\]
+\pheq{\tau=C_{\mathrm{th}}R_{\mathrm{th}}=\frac{\rho cV}{hA}\qquad\theta-\theta_\infty=(\theta_0-\theta_\infty)\,e^{-t/\tau}}{s ＝ $\dfrac{\text{J/K}}{\text{W/K}}$}
+$\theta_\infty$ は流体の温度、$\theta_0$ ははじめの温度です。このように、物を1つの箱（温度が1つ）として扱う考え方を\textbf{集中定数系}といいます。\bkidx{しゅうちゅうていすうけい}{集中定数系}
+
+\begin{phflow}[ビオ数]
+\phflowrow{$\dfrac{\partial\theta}{\partial t}=\alpha\nabla^2\theta$\\表面で $q=h(\theta-\theta_\infty)$}{$\mathrm{Bi}=\dfrac{hl_{\mathrm c}}{k}\ll1$\\中の温度がそろう}{$\tau=\dfrac{\rho cV}{hA}$（6-4）}
+\end{phflow}
+
+\noindent 小さな金属の球を空気で冷やすときは、Bi がとても小さく（例題6）、6-4 の式がよく合います。反対に、ガラスや食べ物のように $k$ が小さい物、水で強く冷やす物は Bi が大きく、中に温度差が残ります。そのときは⑨の方法を使います。
+
+\bksubsection{9}{板の冷え方：変数分離の答えを読む}
+\label{ph:熱-11:sec9}
+はじめ温度 $\theta_{\mathrm i}$ の厚さ $L$ の板を、時刻0に、両面が $\theta_{\mathrm s}$ になるように急に冷やします（焼き入れで、表面を水で強く冷やす場合。$\mathrm{Bi}$ がとても大きい）。板の温度と表面の温度の差を $\Delta T(x,\ t)=\theta-\theta_{\mathrm s}$ とすると、熱方程式は $\Delta T$ についても同じ形で、両面で $\Delta T=0$、はじめはどこも $\Delta T_{\mathrm i}=\theta_{\mathrm i}-\theta_{\mathrm s}$ です。
+
+これは、9-1⑧で「分けて解いて、たし直す」方法で解いた問題（アルミの棒、両はし\qty{0}{\celsius}、はじめ\qty{100}{\celsius}）と同じ形です。9-1⑧の答えで、100を $\Delta T_{\mathrm i}$ にかえて、
+\pheq{\Delta T(x,\ t)=\sum_{n=1,3,5,\cdots}\frac{4\Delta T_{\mathrm i}}{n\pi}\,e^{-\alpha(n\pi/L)^2t}\sin\frac{n\pi x}{L}}{K}
+です。$n$ 番めの項は、時定数 $L^2/(n^2\pi^2\alpha)$ で小さくなります。$n=3$ の項は $n=1$ の9倍の速さで消えるので、少し時間がたつと、1項めだけが残ります。まん中（$x=L/2$）では、
+\pheq{\Delta T_{\text{中心}}\approx\frac{4}{\pi}\Delta T_{\mathrm i}\,e^{-t/\tau_1}\qquad\tau_1=\frac{L^2}{\pi^2\alpha}}{s ＝ $\dfrac{\text{m}^2}{\text{m}^2/\text{s}}$}
+\textbf{冷える時間は、厚さの2乗に比例します}。9-1 のコラム「焼き入れした部品の冷え方」で、「厚さが2倍なら、冷える時間はおよそ4倍」と書いたのは、この $L^2$ のためです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=54mm, xmin=0, xmax=26, ymin=0, ymax=115, xtick={3,6,12,18,24}, ytick={20,40,60,80,100}, xlabel={時刻 $t$（s）}, ylabel={まん中の $\Delta T$（K）}, legend style={font=\sffamily\footnotesize, at={(0.98,0.97)}, anchor=north east, draw=bkLine, fill=white, inner sep=1pt}, legend cell align=left]
+  \addplot[bkcurve, domain=0.15:26, samples=160] {400/pi*(exp(-x/2.895)-exp(-9*x/2.895)/3+exp(-25*x/2.895)/5-exp(-49*x/2.895)/7+exp(-81*x/2.895)/9)};
+  \addlegendentry{厚さ\qty{2}{cm}（全部の項）}
+  \addplot[bkOrange!85!black, line width=1pt, dash pattern=on 3pt off 1.5pt, domain=0.5:26, samples=80] {400/pi*exp(-x/2.895)};
+  \addlegendentry{厚さ\qty{2}{cm}（1項めだけ）}
+  \addplot[bkcurve2, domain=0.15:26, samples=160] {400/pi*(exp(-x/11.58)-exp(-9*x/11.58)/3+exp(-25*x/11.58)/5-exp(-49*x/11.58)/7+exp(-81*x/11.58)/9)};
+  \addlegendentry{厚さ\qty{4}{cm}（全部の項）}
+  \addplot[bkRed, only marks, mark=*, mark size=1.6pt] coordinates {(1,88.2) (2,63.5) (5,22.5)};
+  \addlegendentry{差分（Python）}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はじめの温度差 $\Delta T_{\mathrm i}=\qty{100}{K}$ の鋼の板（$\alpha=\qty{1.4e-5}{m^2/s}$）を両面から急に冷やしたときの、まん中の温度差。厚さ\qty{4}{cm}は\qty{2}{cm}の4倍ゆっくり冷える。}\label{ph:熱-11:fig-ita}
+\end{bkfigure}
+
+\noindent 鋼の熱拡散率は、$k=50$、$\rho=7850$、$c=460$ から約\qty{1.4e-5}{m^2/s}です。厚さ\qty{2}{cm}の鋼の板なら、$\tau_1=0.02^2\div(9.87\times1.4\times10^{-5})\approx\qty{2.9}{s}$ です（例題8）。
+
+\phboxhead{差分と変数分離を、同じグラフに}
+8-13 の差分（⑤の箱の計算）でも、同じ問題が解けます。次のプログラムは、板を20のマスに分けた差分と、9-1⑧の級数（奇数番の項を200個）で、まん中の温度差を計算します。
+\begin{phcode}[Python]
+from math import pi, exp, sin
+L, a = 0.02, 1.4e-5      \# 板の厚さ〔m〕、熱拡散率〔m²/s〕
+N = 20; dx = L/N         \# 20 マスに分ける
+dt = 0.4*dx**2/a         \# r = 0.4（こわれない）
+T = [0.0] + [100.0]*(N-1) + [0.0]   \# はじめ100、両面0
+t = 0.0
+for goal in [1, 2, 5]:
+    while t < goal - 1e-9:
+        T = [T[0]] + [T[i] + 0.4*(T[i-1]-2*T[i]+T[i+1])
+                      for i in range(1, N)] + [T[N]]
+        t += dt
+    s = sum(400/(n*pi)*exp(-a*(n*pi/L)**2*goal)*sin(n*pi/2)
+            for n in range(1, 400, 2))
+    print(goal, round(T[N//2], 1), round(s, 1))
+\end{phcode}
+\begin{phcodeout}
+1 88.2 88.2
+2 63.5 63.7
+5 22.5 22.6
+\end{phcodeout}
+左から、時刻〔s〕、差分、級数です。2つの方法の答えはよく合います（差分は、$t$ がちょうど1・2・5秒をわずかにこえた所の値なので、少し小さめに出る）。式で解けない形（2層の壁、形がこみ入った部品）は差分で、式で解ける形は変数分離で、と使い分けます。
+
+\begin{phbaisuru}{板の厚さ $L$}
+$\tau_1=L^2/(\pi^2\alpha)$ なので、時定数は4倍になります。厚さ\qty{2}{cm}の鋼の板は約\qty{2.9}{s}、\qty{4}{cm}では約\qty{12}{s}です（図\ref{ph:熱-11:fig-ita}）。熱が届く時間は「厚さの2乗÷熱拡散率」で決まる、と覚えておくと、いろいろな物の見当がつきます（例題9のゆで卵）。
+\end{phbaisuru}
+
+\bksubsection{10}{地中の温度：表面の温度のゆれが、しみこむ}
+\label{ph:熱-11:sec10}
+井戸の水や、地下室の温度は、夏は冷たく、冬は温かく感じます。地面の表面の温度は、1年の周期で上がったり下がったりしますが、その変化は、地中へしみこむうちに小さくなり、おくれていきます。
+
+表面（深さ $z=0$）の温度が、平均 $\theta_{\mathrm m}$ のまわりに $\theta=\theta_{\mathrm m}+\Delta T_0\sin\omega t$ でゆれるとします（$\Delta T_0$ はゆれの大きさ、$\omega$ は角振動数で、1年で1回なら $\omega=2\pi\div(1\ \text{年})$）。深さ $z$ の温度が
+\[\theta(z,\ t)=\theta_{\mathrm m}+\Delta T_0\,e^{-z/\delta}\sin\Bigl(\omega t-\frac{z}{\delta}\Bigr)\]
+の形になると考えて、熱方程式\[\frac{\partial\theta}{\partial t}=\alpha\frac{\partial^2\theta}{\partial z^2}\]に代入してみます（8-13⑦の、答えを代入して確かめる方法）。$u=\omega t-z/\delta$、$E=\Delta T_0e^{-z/\delta}$ と書くと、
+\begin{bkhenkei}[0.5]
+\frac{\partial\theta}{\partial t}=\omega E\cos u & $t$ で微分（$E$ は $t$ によらない） \\
+\frac{\partial\theta}{\partial z}=-\frac{E}{\delta}(\sin u+\cos u) & 積の微分（5-6）。$\partial u/\partial z=-1/\delta$ \\
+\frac{\partial^2\theta}{\partial z^2}=\frac{2E}{\delta^2}\cos u & もう一度微分すると、$\sin u$ が消える \\
+\omega E\cos u=\alpha\,\frac{2E}{\delta^2}\cos u & 熱方程式に入れる \\
+\delta=\sqrt{\frac{2\alpha}{\omega}} & $\omega=2\alpha/\delta^2$ を解く \\
+\end{bkhenkei}
+$\delta$ をこのように選べば、どの $z$・$t$ でも熱方程式をみたします。$\delta$ を、温度のゆれが\textbf{しみこむ深さ}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=58mm, xmin=3, xmax=27, ymin=-8, ymax=0, xtick={5,10,15,20,25}, ytick={-8,-6,-4,-2,0}, yticklabels={8,6,4,2,0}, xlabel={温度 $\theta$（℃）}, ylabel={深さ $z$（m）}]
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:8, samples=60] ({15+10*exp(-x/2.24)}, {-x});
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:8, samples=60] ({15-10*exp(-x/2.24)}, {-x});
+  \addplot[bkRed, line width=1.2pt, domain=0:8, samples=80] ({15+10*exp(-x/2.24)*sin(deg(pi/2-x/2.24))}, {-x});
+  \addplot[bkBlue, line width=1.2pt, domain=0:8, samples=80] ({15+10*exp(-x/2.24)*sin(deg(3*pi/2-x/2.24))}, {-x});
+  \addplot[bkOrange!85!black, line width=1pt, dash pattern=on 3pt off 1.5pt, domain=0:8, samples=80] ({15+10*exp(-x/2.24)*sin(deg(pi-x/2.24))}, {-x});
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:24.5,-1.0) {夏};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkBlue, fill=white, inner sep=1pt] at (axis cs:5.5,-1.0) {冬};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black, fill=white, inner sep=1pt] at (axis cs:15.5,-2.6) {秋};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:20,-5) {ゆれのはば $e^{-z/\delta}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{地中の温度（表面の平均\qty{15}{\celsius}、ゆれ±\qty{10}{K}、$\delta=\qty{2.2}{m}$。数はおよその例）。表面がいちばん暑い日（夏）と寒い日（冬）、その中間（秋）の形。深いほどゆれが小さく、おくれる。}\label{ph:熱-11:fig-chichuu}
+\end{bkfigure}
+
+\noindent 深さ $z$ では、ゆれの大きさが $e^{-z/\delta}$ 倍になり、ゆれが $(z/\delta)\div\omega$ だけおくれます。土（$\alpha\approx\qty{5e-7}{m^2/s}$）の1年のゆれでは、$\omega=2\pi\div(365.25\times86400)\approx\qty{1.99e-7}{rad/s}$ なので、$\delta=\sqrt{2\times5\times10^{-7}\div(1.99\times10^{-7})}\approx\qty{2.2}{m}$ です。深さ\qty{5}{m}では、ゆれは約1割になり、約130日（4か月あまり）おくれます（例題7）。真夏に、地下\qty{5}{m}の温度はまだ春先くらいで、まわりより冷たく感じます。井戸の水が「夏に冷たく、冬に温かい」のはこのためです。
+
+\begin{phbaisuru}[365倍]{ゆれの速さ $\omega$}
+$\delta=\sqrt{2\alpha/\omega}$ は $\sqrt{\omega}$ に反比例するので、ゆれが365倍速いと、しみこむ深さは $\sqrt{365}\approx19$ 分の1になります。1日のゆれ（昼と夜）では $\delta\approx\qty{0.12}{m}$ で、深さ\qty{30}{cm}ほどで、昼と夜の差はほとんど消えます。速いゆれほど、浅い所でならされてしまうのです。
+\end{phbaisuru}
+
+\begin{phmada}[とても小さな物の中では、熱はどう伝わる？]
+フーリエの法則は、物の中で、熱を運ぶ原子の振動の波（フォノン）が、何度もぶつかって向きを変えながら、少しずつ進むことを前提にしています。ところが、ナノメートル（\qty{1e-9}{m}）から数マイクロメートルの、とてもうすい膜や細い線では、ぶつかる前に向こう側まで通りぬけてしまうフォノンがあり、熱の流れがフーリエの法則から大きくずれることが、実験でわかってきました。半導体のトランジスターは、今ではこの大きさです。どこまでフーリエの法則が使えるのか、それに代わる式をどう書けばよいのかは、今も研究が続いています（2021年の総説：G.~Chen、Nature Reviews Physics）。
+\end{phmada}
+
+\begin{phsaki}{伝熱工学の熱伝導}
+この章では、1次元（平らな壁・管・球）の定常と、板の非定常を扱いました。伝熱工学の専門の本では、2次元・3次元の非定常（部品のすみの冷え方）、ふれあう面のすきまの熱抵抗（接触熱抵抗）、温度で $k$ が変わるとき、物がとけたり固まったりしながら熱が伝わるとき（鋳物）、そしてそれらをコンピュータで解く数値計算（有限要素法）を学びます。また、熱方程式と同じ形の式は、物質の拡散（熱-14）にも出てきます。熱方程式は「ならす」式ですが、よく似た形の波動方程式は「伝わる」式です（物理シリーズの『波動』（波-5））。2つのちがいは、時間で1回微分するか2回微分するかです（8-13⑧）。
+\end{phsaki}
+
+\begin{senmonsho}[伝熱工学の専門書の書き方]
+\begin{bkhonbun}
+非定常熱伝導は $\rho c\,\partial T/\partial t=\nabla\cdot(k\nabla T)+\dot q$ で表される．$k$ が一定ならば $\partial T/\partial t=\alpha\nabla^2T+\dot q/(\rho c)$ となる．ここで $\alpha=k/(\rho c)$ は温度伝導率である．
+\end{bkhonbun}
+\bkyaku{$\nabla\cdot(k\nabla T)$ は $\mathrm{div}(k\,\mathrm{grad}\,T)$（8-4⑦・8-9⑨）で、$k$ が場所で変わってもよい形。専門書は、℃ の温度も $T$ と書くことが多い（式は温度の差だけで決まるので、どちらでも同じ）。熱拡散率 $\alpha$ を「温度伝導率」とよぶ本もある。$\dot q$ はこの章の $\dot q_{\mathrm g}$。建築・JIS の本では、熱伝導率を $\lambda$ と書く。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{フーリエの法則}$q=k\,\dfrac{\Delta T}{L}$、一般には $\vec q=-k\,\mathrm{grad}\,\theta$\\[3pt]
+\tsl{熱抵抗}平板 $\dfrac{L}{kA}$、表面 $\dfrac{1}{hA}$、円筒 $\dfrac{\ln(r_2/r_1)}{2\pi kl}$。直列は和\\[3pt]
+\tsl{熱貫流率}$\dfrac{1}{U}=\dfrac{1}{h_{\text{室内}}}+\sum\dfrac{L}{k}+\dfrac{1}{h_{\text{外}}}$、$\dot Q=UA\,\Delta T$\\[3pt]
+\tsl{熱方程式}$\dfrac{\partial\theta}{\partial t}=\alpha\nabla^2\theta+\dfrac{\dot q_{\mathrm g}}{\rho c}$、$\alpha=\dfrac{k}{\rho c}$\\[3pt]
+\tsl{ビオ数}$\mathrm{Bi}=\dfrac{hl_{\mathrm c}}{k}<0.1$ なら $\tau=\dfrac{\rho cV}{hA}$\\[3pt]
+\tsl{届く時間}板 $\tau_1=\dfrac{L^2}{\pi^2\alpha}$。しみこむ深さ $\delta=\sqrt{\dfrac{2\alpha}{\omega}}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{熱伝導}{物そのものは動かずに、物の中を熱が伝わること。}
+\bkword{熱伝導率}{厚さ1 m・温度差1 K の板の 1 m$^2$ を、1秒に通る熱。単位 W/(m·K)。}
+\bkword{熱抵抗}{1 W の熱を流すのに要る温度差。単位 K/W。直列は和、並列は逆数の和。}
+\bkword{熱貫流率}{空気から空気まで、温度差1 K・1 m$^2$ あたりに通る熱。建築の U 値。}
+\bkword{熱方程式}{熱のバランス式とフーリエの法則から作った、温度の時間変化の式。}
+\bkword{ビオ数}{中の熱抵抗と表面の熱抵抗の比。小さければ、中の温度がそろう。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$k$}{ケー}{熱伝導率〔W/(m·K)〕。数学 8-4 と同じ。建築・JIS の本では $\lambda$。ボルツマン定数は $k_{\mathrm B}$ と添字つきで書く}{thermal conductivity}{熱-11}}
+{\bkkigocard{$U$}{ユー}{熱貫流率〔W/(m$^2$·K)〕。この巻では熱-11・13 だけで使う（ほかの章の $U$ は内部エネルギー）}{overall heat transfer coefficient}{熱-11}}
+\bkkigocards{\bkkigocard{$R_{\mathrm{th}}$}{アールティーエイチ}{熱抵抗〔K/W〕。数学 6-4 と同じ。建築の本は1 m$^2$ あたりの値を $R$〔m$^2$·K/W〕と書く}{thermal resistance}{熱-11}}
+{\bkkigocard{$\alpha$}{アルファ}{熱拡散率 $k/(\rho c)$〔m$^2$/s〕。数学 8-13 と同じ。線膨張係数の $\alpha$（熱-1）とは別の量}{thermal diffusivity}{熱-11}}
+\bkkigocards{\bkkigocard{$h$}{エイチ}{熱伝達率〔W/(m$^2$·K)〕（熱-12）。この章には比エンタルピーの $h$ は出ない}{heat transfer coefficient}{熱-11}}
+{\bkkigocard{Bi}{ビオ数}{$hl_{\mathrm c}/k$。中と表面の熱抵抗の比。単位なし。名前なので立体で書く}{Biot number}{熱-11}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:熱-11:ex1}
+\begin{phreidai}[1枚のガラスと複層ガラスの窓]
+面積\qty{2}{m^2}の窓があります。部屋は\qty{20}{\celsius}、外は\qty{0}{\celsius}です。（1）厚さ\qty{5}{mm}の1枚のガラス、（2）\qty{3}{mm}のガラス2枚のあいだに\qty{12}{mm}の空気の層がある複層ガラスのとき、窓から1秒に逃げる熱を求めましょう。ガラスの $k=1.0$、空気の層の熱抵抗は\qty{0.17}{m^2.K/W}、表面の熱抵抗は室内側0.11、外の側\qty{0.04}{m^2.K/W}とします。
+\phbamen
+部屋の空気から、窓を通って外の空気へ、熱が逃げていく場面です。
+\phmushi
+窓わく（サッシ）を通る熱、すきま風、日射を無視します。温度は時間で変わらない（定常）とします。
+\phzu
+④の図\ref{ph:熱-11:fig-mado}。面積 $A=\qty{2}{m^2}$、温度差 $\Delta T=\qty{20}{K}$。
+\phriyu
+空気から空気まで、層を順に熱が通るので、熱抵抗の直列（③）です。1 m$^2$ あたりの熱抵抗の和の逆数が熱貫流率 $U$（④）です。
+\phtateru
+\[\frac{1}{U}=0.11+\sum\frac{L}{k}+0.04,\qquad\dot Q=UA\,\Delta T\]
+\phtoku
+（1）\[\frac{1}{U}=0.11+0.005+0.04=0.155,\qquad U=6.45\]
+\[\dot Q=6.45\times2\times20\approx\qty{258}{W}\]
+（2）\[\frac{1}{U}=0.11+0.003+0.17+0.003+0.04=0.326,\qquad U=3.07\]
+\[\dot Q=3.07\times2\times20\approx\qty{123}{W}\]
+\phtashikame
+単位：$\text{W/(m}^2\text{·K)}\times\text{m}^2\times\text{K}=\text{W}$。\\
+大きさ：1枚のガラスの窓1つから、小さな電気ストーブ（数百 W）1台の半分ほどの熱が逃げています。複層ガラスでは約半分になりました。\\
+極端な場合：表面の熱抵抗を0にすると、1枚のガラスは $U=200$ になり、ありえないほど大きくなります。熱抵抗の大部分は表面にあるのです。
+\kotae （1）約\qty{260}{W}、（2）約\qty{120}{W}（複層ガラスで約半分）
+\end{phreidai}
+\begin{jibun}
+（1）面積\qty{3}{m^2}の窓で、部屋\qty{20}{\celsius}・外 $\qty{-5}{\celsius}$ のとき、例題1の1枚のガラスと複層ガラスの窓から逃げる熱を求めましょう。（2）例題1の複層ガラスの窓（\qty{2}{m^2}）が、$U=0.40$ の壁\qty{8}{m^2}と並んでいます（並列）。温度差\qty{20}{K}のとき、壁と窓から逃げる熱の合計を求めましょう。
+\bkjans{（1）1枚 $6.45\times3\times25\approx\qty{480}{W}$、複層 $3.07\times3\times25\approx\qty{230}{W}$。（2）$(0.40\times8+3.07\times2)\times20\approx\qty{190}{W}$}
+\end{jibun}
+
+\label{ph:熱-11:ex2}
+\begin{phreidai}[コンクリートの壁]
+厚さ\qty{0.2}{m}のコンクリートの壁（$k=1.6$）の、部屋の側の表面が\qty{20}{\celsius}、外の側の表面が\qty{0}{\celsius}です（6-3⑦のかべ）。1 m$^2$ あたりの熱の流れと、面積\qty{10}{m^2}の壁から逃げる熱を求めましょう。
+\phbamen
+壁の両面の温度がわかっているときの、壁の中の熱伝導です。
+\phmushi
+表面と空気のあいだの熱抵抗は考えません（表面の温度がわかっているので）。壁のすみで熱が横に回ることを無視します。
+\phzu
+②の図\ref{ph:熱-11:fig-fourier}。$L=\qty{0.2}{m}$、$k=1.6$、$\Delta T=\qty{20}{K}$。
+\phriyu
+定常で、平らな壁の中を1つの向きに熱が流れるので、フーリエの法則（②）がそのまま使えます。
+\phtateru
+\[q=k\,\frac{\Delta T}{L},\qquad\dot Q=qA\]
+\phtoku
+\[q=1.6\times\frac{20}{0.2}=\qty{160}{W/m^2},\qquad\dot Q=160\times10=\qty{1600}{W}\]
+\phtashikame
+6-3⑦の温度の式 $T=20-100x$ の傾き $\qty{-100}{K/m}$ に $-k$ をかけた値と同じです（8-4 の $\vec q=-k\,\mathrm{grad}\,T$ でも\qty{160}{W/m^2}）。\\
+大きさ：\qty{1.6}{kW}は、エアコン1台の暖房の力くらいです。コンクリートだけの壁は、熱をよく逃がします。
+\kotae \qty{160}{W/m^2}、\qty{1.6}{kW}
+\end{phreidai}
+\begin{jibun}
+厚さ\qty{0.3}{m}のれんがの壁（$k=0.6$）の両面の温度差が\qty{15}{K}のとき、1 m$^2$ あたりの熱の流れを求めましょう。
+\bkjans{$0.6\times15\div0.3=\qty{30}{W/m^2}$}
+\end{jibun}
+
+\label{ph:熱-11:ex3}
+\begin{phreidai}[断熱材の効きめ]
+コンクリート\qty{0.15}{m}（$k=1.6$）の外側に、グラスウール\qty{0.10}{m}（$k=0.04$）をはった壁（外断熱）があります。部屋の側の表面が\qty{20}{\celsius}、外の側の表面が\qty{0}{\celsius}のとき、1 m$^2$ の熱抵抗、熱の流れ、コンクリートとグラスウールの境目の温度を求めましょう。また、コンクリートだけのときの何分の1になりますか。
+\phbamen
+2つの層を重ねた壁の熱の流れです。
+\phmushi
+層のあいだのすきまの熱抵抗を無視します。定常とします。
+\phzu
+③の図\ref{ph:熱-11:fig-chokuretsu}と同じ形。$R_1=0.15/1.6$、$R_2=0.10/0.04$（1 m$^2$）。
+\phriyu
+どちらの層にも同じ熱が流れるので、熱抵抗の直列（③）です。境目の温度は、部屋の側から、コンクリートの中で下がる分（$\dot QR_1$）を引けば出ます。
+\phtateru
+\[R=R_1+R_2,\qquad\dot Q=\frac{\Delta T}{R},\qquad\theta_{\text{境目}}=20-\dot QR_1\]
+\phtoku
+\[R=0.094+2.5=\qty{2.59}{K/W},\qquad\dot Q=\frac{20}{2.59}\approx\qty{7.7}{W}\]
+\[\theta_{\text{境目}}=20-7.7\times0.094\approx\qty{19.3}{\celsius}\]
+コンクリートだけなら $20\div0.094\approx\qty{213}{W}$ なので、約28分の1です。
+\phtashikame
+グラスウールの熱抵抗（2.5）は、コンクリート（0.094）の約27倍で、温度差の大部分（約\qty{19.3}{K}）はグラスウールの中でつきます。断熱材の $k$ はコンクリートの40分の1、厚さは $\tfrac{2}{3}$ 倍なので、$40\times\tfrac{2}{3}\approx27$ 倍で合います。
+\kotae \qty{2.6}{K/W}（1 m$^2$）、約\qty{7.7}{W/m^2}、境目約\qty{19}{\celsius}、約28分の1
+\end{phreidai}
+\begin{jibun}
+厚さ\qty{12}{mm}の木の板（$k=0.15$）と、グラスウール\qty{50}{mm}（$k=0.04$）を重ねた壁の、温度差\qty{20}{K}のときの 1 m$^2$ あたりの熱の流れを求めましょう。
+\bkjans{$R=0.08+1.25=\qty{1.33}{K/W}$、$20\div1.33\approx\qty{15}{W/m^2}$}
+\end{jibun}
+
+\label{ph:熱-11:ex4}
+\begin{phreidai}[お湯の管の保温材]
+外半径\qty{30}{mm}のお湯の管に、$k=0.04$ の保温材を巻いて、外半径を\qty{60}{mm}にしました。保温材の内側と外側の温度差が\qty{100}{K}のとき、管1 m あたりに逃げる熱を求めましょう。保温材を外半径\qty{90}{mm}まで厚くすると、どうなりますか。
+\phbamen
+丸い管のまわりの熱伝導です。外へ行くほど、熱の通る面積が広くなります。
+\phmushi
+管の金属の熱抵抗（とても小さい）と、保温材の外の表面の熱抵抗を無視し、保温材の両面の温度差だけで考えます。
+\phzu
+⑦の図。$r_1=\qty{0.030}{m}$、$r_2=\qty{0.060}{m}$、$l=\qty{1}{m}$。
+\phriyu
+円筒の殻では面積が半径とともに変わるので、平板の式ではなく、円筒の熱抵抗（⑦）を使います。
+\phtateru
+\[\dot Q=\frac{2\pi kl\,\Delta T}{\ln(r_2/r_1)}\]
+\phtoku
+\[\dot Q=\frac{2\times3.14\times0.04\times1\times100}{\ln2}=\frac{25.1}{0.693}\approx\qty{36}{W}\]
+外半径\qty{90}{mm}なら $\ln3=1.099$ で、$25.1\div1.099\approx\qty{23}{W}$。
+\phtashikame
+保温材を2倍の厚さにしても、熱は半分（\qty{18}{W}）にはならず、\qty{23}{W}です。外側の保温材ほど、面積が広いのでうすく効きます。\\
+平板で見積もると：厚さ\qty{0.03}{m}、平均の半径\qty{0.045}{m}の面積 $2\pi\times0.045\approx\qty{0.283}{m^2}$ で、$0.04\times0.283\times100\div0.03\approx\qty{38}{W}$。円筒の答えと近い値です。
+\kotae 約\qty{36}{W}。外半径\qty{90}{mm}で約\qty{23}{W}
+\end{phreidai}
+\begin{jibun}
+例題4の管で、保温材の外半径を\qty{45}{mm}にしたとき、1 m あたりに逃げる熱を求めましょう（$\ln1.5\approx0.405$）。
+\bkjans{$25.1\div0.405\approx\qty{62}{W}$}
+\end{jibun}
+
+\label{ph:熱-11:ex5}
+\begin{phreidai}[電線の被覆の臨界半径]
+半径\qty{1}{mm}の電線に、$k=0.2$ のビニルの被覆を巻きます。被覆の表面から空気への熱伝達率を $h=10$ とします。（1）臨界半径を求めましょう。（2）被覆の外半径を\qty{2}{mm}にすると、何も巻かないときの何倍の熱が逃げますか。電線の温度は同じとします。
+\phbamen
+電流で熱くなる電線から、空気へ熱が逃げる場面です。
+\phmushi
+電線の中の温度差、放射の分（$h$ に入れたとする）、電線の長さの向きの熱の流れを無視します。
+\phzu
+⑦の図\ref{ph:熱-11:fig-rinkai}。$r_1=\qty{0.001}{m}$、被覆の外半径 $r_2$、長さ $l=\qty{1}{m}$。
+\phriyu
+被覆の中（円筒の熱抵抗）と、表面から空気（$\tfrac{1}{hA}$）の直列です。$r_2$ を変えたときの $R$ のいちばん小さい所が臨界半径（⑦）です。
+\phtateru
+\[r_{\mathrm c}=\frac{k}{h},\qquad R=\frac{\ln(r_2/r_1)}{2\pi kl}+\frac{1}{2\pi r_2lh}\]
+\phtoku
+（1）$r_{\mathrm c}=0.2\div10=\qty{0.02}{m}=\qty{20}{mm}$。\\
+（2）巻かないとき：\[R=\frac{1}{2\pi\times0.001\times10}\approx\qty{15.9}{K/W}\]
+外半径\qty{2}{mm}：\[R=\frac{\ln2}{2\pi\times0.2}+\frac{1}{2\pi\times0.002\times10}\approx0.55+7.96=\qty{8.5}{K/W}\]
+熱の流れは $R$ に反比例するので、$15.9\div8.5\approx1.9$ 倍。
+\phtashikame
+極端な場合：被覆を限りなく厚くすると、1つめの項がどこまでも大きくなり、熱は逃げなくなります（$r_2$ が\qty{20}{mm}をこえると減りはじめる）。細い電線にとって、被覆はうすい「放熱器」なのです。
+\kotae （1）\qty{20}{mm}、（2）約1.9倍
+\end{phreidai}
+\begin{jibun}
+被覆の $k=0.15$、表面の $h=15$ のときの臨界半径を求めましょう。
+\bkjans{$0.15\div15=\qty{0.01}{m}=\qty{10}{mm}$}
+\end{jibun}
+
+\label{ph:熱-11:ex6}
+\begin{phreidai}[小さな鋼の球を空気で冷やす]
+直径\qty{10}{mm}の鋼の球（$k=50$、$\rho=7850$、$c=460$）を\qty{300}{\celsius}に熱し、\qty{20}{\celsius}の空気の中に置きました（$h=10$）。ビオ数と時定数を求め、球が\qty{50}{\celsius}まで冷えるのにかかる時間を求めましょう。
+\phbamen
+熱処理した小さな部品が、空気で冷える場面です。
+\phmushi
+放射の分は $h$ に入れたとし、$h$ は温度によらず一定とします。台に置いた所から逃げる熱を無視します。
+\phzu
+半径 $r=\qty{0.005}{m}$。球では\[l_{\mathrm c}=\frac{V}{A}=\frac{\frac43\pi r^3}{4\pi r^2}=\frac{r}{3}\]
+\phriyu
+まず、ビオ数で「中の温度がそろうか」を確かめます（⑧）。そろうなら、6-4 の時定数の式が使えます。
+\phtateru
+\[\mathrm{Bi}=\frac{h\,(r/3)}{k},\qquad\tau=\frac{\rho c\,(r/3)}{h},\qquad t=\tau\ln\frac{\theta_0-\theta_\infty}{\theta-\theta_\infty}\]
+\phtoku
+\[\mathrm{Bi}=\frac{10\times0.00167}{50}\approx3.3\times10^{-4}\]
+\[\tau=\frac{7850\times460\times0.00167}{10}\approx\qty{602}{s}\approx10\text{分}\]
+\[t=602\times\ln\frac{280}{30}=602\times2.23\approx\qty{1345}{s}\approx22\text{分}\]
+\phtashikame
+Bi は0.1よりずっと小さいので、球の中の温度はほぼそろっています。\\
+大きさ：はじめの温度差が $\tfrac{30}{280}\approx0.11$ 倍になるまでに、時定数の約2.2倍の時間です。\\
+単位：\[\frac{\text{kg/m}^3\times\text{J/(kg·K)}\times\text{m}}{\text{W/(m}^2\text{·K)}}=\frac{\text{J}}{\text{W}}=\text{s}\]
+\kotae ビオ数 約 $3\times10^{-4}$、時定数 約10分、約22分
+\end{phreidai}
+\begin{jibun}
+直径\qty{20}{mm}のアルミの球（$k=237$、$\rho=2700$、$c=897$）を、$h=20$ の空気で冷やします。ビオ数と時定数を求めましょう。
+\bkjans{$l_{\mathrm c}=0.01\div3$。$\mathrm{Bi}\approx2.8\times10^{-4}$、$\tau\approx\qty{404}{s}$（約6.7分）}
+\end{jibun}
+
+\label{ph:熱-11:ex7}
+\begin{phreidai}[井戸の水は、夏に冷たく冬に温かい]
+地面の表面の温度が、1年の周期で平均のまわりにゆれています。土の熱拡散率を $\alpha=\qty{5e-7}{m^2/s}$ とします。温度のゆれがしみこむ深さ $\delta$ と、深さ\qty{5}{m}でのゆれの大きさ（表面の何倍か）とおくれを求めましょう。
+\phbamen
+1年の気温の変化が、地中へ伝わっていく場面です。
+\phmushi
+地下水の流れ、雪や草がつくる表面の熱抵抗、1日のゆれを無視します。表面の温度は、きれいな $\sin$ の形でゆれるとします。土はどこも同じとします。
+\phzu
+⑩の図\ref{ph:熱-11:fig-chichuu}。深さ $z$、$\omega=2\pi\div(365.25\times86400\ \text{s})$。
+\phriyu
+表面の温度が周期的にゆれるときの熱方程式の答え（⑩）を使います。
+\phtateru
+\[\delta=\sqrt{\frac{2\alpha}{\omega}},\qquad\text{ゆれの比}=e^{-z/\delta},\qquad\text{おくれ}=\frac{z/\delta}{\omega}\]
+\phtoku
+$\omega\approx\qty{1.99e-7}{rad/s}$ なので、
+\[\delta=\sqrt{\frac{2\times5\times10^{-7}}{1.99\times10^{-7}}}=\sqrt{5.02}\approx\qty{2.2}{m},\qquad e^{-5/2.24}=e^{-2.23}\approx0.11\]
+おくれは、角で $2.23$ rad。1年が $2\pi$ rad なので、$365\times2.23\div(2\pi)\approx130$ 日。
+\phtashikame
+深さ\qty{5}{m}では、ゆれは表面の約1割、季節は4か月あまりおくれます。夏の盛りに、地下\qty{5}{m}はまだ春先の温度です。\\
+極端な場合：$\alpha$ が4倍の岩なら、$\delta$ は2倍の\qty{4.5}{m}で、ゆれは深くまで届きます。
+\kotae $\delta$ 約\qty{2.2}{m}、深さ\qty{5}{m}でゆれは約0.11倍、約130日おくれる
+\end{phreidai}
+\begin{jibun}
+例題7の土で、1日の周期のゆれ（昼と夜）のしみこむ深さ $\delta$ と、ゆれが表面の10分の1になる深さを求めましょう（$\ln10\approx2.30$）。
+\bkjans{$\omega\approx\qty{7.27e-5}{rad/s}$、$\delta\approx\qty{0.12}{m}$。深さ $0.117\times2.30\approx\qty{0.27}{m}$}
+\end{jibun}
+
+\label{ph:熱-11:ex8}
+\begin{phreidai}[焼き入れの板が冷える時間]
+厚さ\qty{2}{cm}の鋼の板（$\alpha=\qty{1.4e-5}{m^2/s}$）を熱してから、両面を水で急に冷やします。表面はすぐに水の温度になるとします。（1）1項めの時定数 $\tau_1$、（2）まん中の温度差が、はじめの温度差の1割になるまでの時間を求めましょう。（3）厚さ\qty{4}{cm}の板では、どうなりますか。
+\phbamen
+焼き入れで、板の中心まで冷えるのにかかる時間を見積もる場面です。
+\phmushi
+表面の熱抵抗（$\mathrm{Bi}$ がとても大きいとする）、板の横のはしからの冷え、温度による $\alpha$ の変化を無視します。
+\phzu
+⑨の図\ref{ph:熱-11:fig-ita}。$L=\qty{0.02}{m}$、はじめの温度差 $\Delta T_{\mathrm i}$。
+\phriyu
+両面の温度が決まった板の冷え方は、9-1⑧の変数分離の答え（⑨）です。しばらくたてば、1項めだけで十分です。
+\phtateru
+\[\tau_1=\frac{L^2}{\pi^2\alpha},\qquad\frac{4}{\pi}\,e^{-t/\tau_1}=0.1\]
+\phtoku
+（1）\[\tau_1=\frac{0.02^2}{9.87\times1.4\times10^{-5}}=\frac{4\times10^{-4}}{1.38\times10^{-4}}\approx\qty{2.9}{s}\]
+（2）\[e^{-t/\tau_1}=\frac{0.1\pi}{4}=0.0785,\qquad t=\tau_1\ln12.7=2.9\times2.54\approx\qty{7.4}{s}\]
+（3）$L$ が2倍なので、時定数も時間も4倍：$\tau_1\approx\qty{12}{s}$、約\qty{29}{s}。
+\phtashikame
+1項めだけを使ったので、はじめの短い時間では合いませんが、7秒もたてば3項め以下は $e^{-9\times7.4/2.9}$ ほどで、ないのと同じです。\\
+9-1 のコラムの「厚さ2倍で4倍」と合います。
+\kotae （1）約\qty{2.9}{s}、（2）約\qty{7.4}{s}、（3）4倍（約\qty{12}{s}、約\qty{29}{s}）
+\end{phreidai}
+\begin{jibun}
+厚さ\qty{1}{cm}のアルミの板（$\alpha=\qty{9.8e-5}{m^2/s}$）を、例題8と同じように冷やすときの $\tau_1$ を求めましょう。
+\bkjans{$0.01^2\div(9.87\times9.8\times10^{-5})\approx\qty{0.10}{s}$}
+\end{jibun}
+
+\label{ph:熱-11:ex9}
+\begin{phreidai}[ゆで卵の中心に熱が届く時間]
+半径\qty{2}{cm}の卵（熱拡散率 $\alpha=\qty{1.4e-7}{m^2/s}$、水とほぼ同じ）を、\qty{100}{\celsius}のお湯に入れます。はじめ卵は\qty{20}{\celsius}です。中心に熱が届く時間を、（1）目安の「長さの2乗÷熱拡散率」で、（2）球の1項めの答えで見積もりましょう。（2）では、中心が\qty{70}{\celsius}（卵の黄身が固まる温度の目安）になる時間を求めます。専門の本によると、球の表面の温度を急に変えたときの中心の温度差は、少したつと $2\Delta T_{\mathrm i}\,e^{-t/\tau}$、$\tau=r^2/(\pi^2\alpha)$ になります。
+\phbamen
+料理の時間を、熱伝導で見積もる場面です。
+\phmushi
+殻と白身・黄身のちがい、卵の形（球とする）、お湯の温度が下がることを無視します。表面はすぐ\qty{100}{\celsius}になるとします。
+\phzu
+半径 $r=\qty{0.02}{m}$、はじめの温度差 $\Delta T_{\mathrm i}=100-20=\qty{80}{K}$、中心が\qty{70}{\celsius}のとき温度差は\qty{30}{K}。
+\phriyu
+（1）は⑨の「届く時間は長さの2乗÷熱拡散率」の目安。（2）は板と同じく、1項めだけが残った形を使います。
+\phtateru
+\[（1）\ t\approx\frac{r^2}{\alpha}\qquad（2）\ 2\times80\,e^{-t/\tau}=30,\quad\tau=\frac{r^2}{\pi^2\alpha}\]
+\phtoku
+（1）\[t\approx\frac{0.02^2}{1.4\times10^{-7}}\approx\qty{2860}{s}\approx48\text{分}\]
+（2）\[\tau=\frac{2860}{9.87}\approx\qty{290}{s}\ \text{（約4.8分）},\qquad t=\tau\ln\frac{160}{30}=290\times1.67\approx\qty{485}{s}\approx8\text{分}\]
+\phtashikame
+ゆで卵は、ふつう沸とうしたお湯で10分前後でかたゆでになります。（1）の48分は長すぎ、（2）の8分は近い値です。目安の $r^2/\alpha$ は、桁をつかむためのもので、$\pi^2\approx10$ の分だけ大きく出ます。どちらの目安を使っているかを、いつも確かめましょう。
+\kotae （1）約48分、（2）約8分
+\end{phreidai}
+\begin{jibun}
+半径\qty{1.3}{cm}のうずらの卵で、例題9の（2）の時間を求めましょう。
+\bkjans{$\tau\approx\qty{122}{s}$、$t=122\times1.67\approx\qty{204}{s}$（約3.4分）}
+\end{jibun}
+
+\label{ph:熱-11:ex10}
+\begin{phreidai}[CPU の温度]
+パソコンの CPU が\qty{100}{W}の熱を出しています。チップから空気までの熱抵抗は、チップからふた（\qty{0.05}{K/W}）、熱を伝えるグリス（\qty{0.05}{K/W}）、放熱器から空気（\qty{0.20}{K/W}）の和です。パソコンの中の空気が\qty{35}{\celsius}のとき、チップの温度を求めましょう（6-15 の数）。
+\phbamen
+電子部品の熱の設計です。熱の通り道を、熱抵抗の列で表します。
+\phmushi
+熱容量（温度が上がっていく途中）を無視し、定常で考えます。基板の側へ逃げる熱を無視します。
+\phzu
+チップ→ふた→グリス→放熱器→空気の直列。$\dot Q=\qty{100}{W}$。
+\phriyu
+同じ熱が順に通るので、熱抵抗の直列（③）です。
+\phtateru
+\[\theta_{\text{チップ}}=\theta_{\text{空気}}+\dot Q\,(R_1+R_2+R_3)\]
+\phtoku
+\[R=0.05+0.05+0.20=\qty{0.30}{K/W},\qquad\theta_{\text{チップ}}=35+100\times0.30=\qty{65}{\celsius}\]
+\phtashikame
+6-15 の「$100\times0.3=\qty{30}{K}$ 高くなる」と同じです。温度差の3分の2は、放熱器から空気の所でつきます。チップを冷やすには、まずここの熱抵抗を小さくします（ファンで風を送る：熱-12）。
+\kotae \qty{65}{\celsius}
+\end{phreidai}
+\begin{jibun}
+\qty{65}{W}の熱を出す CPU で、チップから空気までの熱抵抗が\qty{0.5}{K/W}のとき、チップは空気より何 K 高くなりますか。
+\bkjans{$65\times0.5\approx\qty{33}{K}$}
+\end{jibun}
+
+\label{ph:熱-11:ex11}
+\begin{phreidai}[窓は結露するか]
+部屋が\qty{20}{\celsius}・湿度50\,\%（露点\qty{9.3}{\celsius}）、外が\qty{0}{\celsius}です。例題1の（1）1枚のガラス、（2）複層ガラスの、室内側の表面の温度を求め、結露するかどうかを判断しましょう。
+\phbamen
+窓の内側に水てきがつくかどうかを、表面の温度で判断する場面です。
+\phmushi
+カーテンや家具で、窓の前の空気が動きにくくなる効果を無視します（室内側の熱抵抗は0.11のまま）。
+\phzu
+④の図\ref{ph:熱-11:fig-mado}。熱流束 $q=U\Delta T$。室内側の表面の温度 $\theta_{\text{表面}}$。
+\phriyu
+同じ熱流束が、部屋の空気から表面までの熱抵抗（0.11）も通るので、その分だけ温度が下がります（③の直列）。結露は、表面が露点より冷たいときに起きます（熱-9）。
+\phtateru
+\[\theta_{\text{表面}}=20-q\times0.11,\qquad q=U\times20\]
+\phtoku
+（1）$q=6.45\times20=\qty{129}{W/m^2}$、$\theta_{\text{表面}}=20-129\times0.11\approx\qty{5.8}{\celsius}$。露点\qty{9.3}{\celsius}より低いので\textbf{結露する}。\\
+（2）$q=3.07\times20=\qty{61}{W/m^2}$、$\theta_{\text{表面}}=20-61\times0.11\approx\qty{13}{\celsius}$。露点より高いので\textbf{結露しない}。
+\phtashikame
+比で確かめる：表面の温度は、部屋と外の温度差20 K を、熱抵抗の比で分けた所です。（1）は $20\times\tfrac{0.11}{0.155}\approx\qty{14.2}{K}$ 下がり、（2）は $20\times\tfrac{0.11}{0.326}\approx\qty{6.7}{K}$ 下がります。
+\kotae （1）約\qty{6}{\celsius}で結露する、（2）約\qty{13}{\celsius}で結露しない
+\end{phreidai}
+\begin{jibun}
+外が $\qty{-5}{\celsius}$ のとき、複層ガラスの室内側の表面の温度を求めましょう。部屋が\qty{20}{\celsius}・湿度60\,\%（露点\qty{12.0}{\celsius}）なら結露しますか。
+\bkjans{$20-25\times0.11\div0.326\approx\qty{11.6}{\celsius}$。露点\qty{12.0}{\celsius}より低いので、少し結露する}
+\end{jibun}
+
+\label{ph:熱-11:ex12}
+\begin{phreidai}[箱に分けた2層の壁の、はじめの2歩]
+⑤の外断熱の壁（表\ref{ph:熱-11:tab-hako}）で、外の表面が\qty{0}{\celsius}になってから1分後と2分後の、箱4・箱5（グラスウール）の温度を、箱の式で手で計算しましょう（$\Delta t=\qty{60}{s}$）。
+\phbamen
+表計算の1行めと2行めが、本当に熱のバランスになっているかを、手で確かめる場面です。
+\phmushi
+⑤と同じ（1次元、箱の中の温度はそろっている）。
+\phzu
+箱4・箱5の熱容量は\qty{672}{J/K}。箱3（コンクリート）と箱4のあいだの熱抵抗 $0.015625+0.625=0.640625$、箱4と箱5のあいだ1.25、箱5と外の表面のあいだ0.625（K/W）。
+\phriyu
+⑤の「次の温度＝今の温度＋（入る熱の和）×$\Delta t$÷熱容量」を、1つずつの箱に使います。
+\phtateru
+\[\theta_i^{\,\text{次}}=\theta_i+\frac{60}{672}\Bigl(\frac{\theta_{\text{左}}-\theta_i}{R_{\text{左}}}+\frac{\theta_{\text{右}}-\theta_i}{R_{\text{右}}}\Bigr),\qquad\frac{60}{672}\approx0.0893\]
+\phtoku
+1分後（はじめはどこも20）：\\
+箱4：左右とも20なので、変わらず\qty{20}{\celsius}。\\
+箱5：\[20+0.0893\times\Bigl(\frac{20-20}{1.25}+\frac{0-20}{0.625}\Bigr)=20-0.0893\times32\approx\qty{17.14}{\celsius}\]
+2分後：\\
+箱4：\[20+0.0893\times\Bigl(0+\frac{17.14-20}{1.25}\Bigr)=20-0.0893\times2.29\approx\qty{19.80}{\celsius}\]
+箱5：\[17.14+0.0893\times\Bigl(\frac{20-17.14}{1.25}+\frac{0-17.14}{0.625}\Bigr)\]
+\[=17.14-0.0893\times25.1\approx\qty{14.90}{\celsius}\]
+\phtashikame
+表\ref{ph:熱-11:tab-sheet}の3行め・4行めと同じです。\\
+熱のバランス：1分めに外へ出た熱と、箱5が失った熱をくらべます。\[32\times60=\qty{1920}{J},\qquad672\times(20-17.14)\approx\qty{1920}{J}\]同じになりました。
+\kotae 1分後：箱4 \qty{20}{\celsius}、箱5 約\qty{17.1}{\celsius}。2分後：箱4 約\qty{19.8}{\celsius}、箱5 約\qty{14.9}{\celsius}
+\end{phreidai}
+\begin{jibun}
+内断熱の壁（外の側の箱5がコンクリート、$C=\qty{101200}{J/K}$、外の表面との熱抵抗0.015625、箱4（コンクリート）との熱抵抗0.03125）で、1分後の箱5の温度を求めましょう。
+\bkjans{$20-1280\times60\div101200\approx\qty{19.24}{\celsius}$（入る熱の和は\qty{-1280}{W}）}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{熱抵抗は、逆数でたす？}
+\bkng{重ねた壁の熱抵抗は、$1/R=1/R_1+1/R_2$ で求める。}
+\bkok{重ねた壁（同じ熱が順に通る）は直列で、$R=R_1+R_2$。逆数の和は、窓と壁のように横に並ぶ並列のとき。}
+熱が「順に通る」のか「横に分かれて通る」のかを、図にかいて確かめましょう（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{表面の熱抵抗を忘れる}
+\bkng{\qty{5}{mm}のガラスの熱抵抗は $0.005\div1.0=0.005$ なので、$U=200$。}
+\bkok{空気から空気までなら、表面の熱抵抗0.11と0.04を足して $U\approx6.5$。}
+ガラスの両面の温度がわかっているときだけ、ガラスの熱抵抗だけで計算できます（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{保温材は、厚いほどいつも効く？}
+\bkng{保温材を2倍の厚さにすれば、逃げる熱は半分になる。}
+\bkok{管では $\ln(r_2/r_1)$ が効くので、半分にはならない。細い電線では、巻くと逆に熱がよく逃げることもある（臨界半径）。}
+平らな壁と丸い管では、熱の通る面積の変わり方がちがいます（⑦）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{熱伝導率と熱拡散率}
+\bkng{水は $k=0.6$ で空気（0.026）の20倍以上なので、水のほうが温度が速く変わる。}
+\bkok{温度の変わる速さを決めるのは、熱拡散率 $\alpha=k/(\rho c)$。水は $\rho c$ がとても大きいので、$\alpha$ は空気の約100分の1。}
+定常の熱の流れは $k$、温度が変わっていく速さは $\alpha$ で考えます（⑥・⑨）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{℃ と K}
+\bkng{\qty{20}{\celsius}と\qty{0}{\celsius}の差を K で表すと、$293-273=\qty{20}{K}$ なので、熱伝導の式に入れるときは必ず K に直す。}
+\bkok{温度の差は、℃ でも K でも同じ数（20 K）。熱伝導の式は差だけなので、℃ のまま計算してよい。ただし、放射の $T^4$ には K を入れる（熱-13）。}
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[家の断熱と、電子機器の熱の設計]
+\textbf{家の断熱}：家の壁・屋根・床・窓の熱貫流率 $U$ と面積から、$\sum UA$ を計算すると、家全体から温度差\qty{1}{K}あたりに逃げる熱〔W/K〕がわかります。冬に部屋を暖め続けるための暖房の力は、これに部屋と外の温度差をかけた値（とすきま風の分）です。窓は $U$ が壁の何倍も大きいので、面積は小さくても、逃げる熱の大部分をしめます（章末問題）。だから、断熱は窓から始めるのが効きます。
+
+\textbf{電子機器}：パソコンや電気自動車のインバーター、LED の照明では、部品の温度が上がりすぎると、こわれたり寿命が短くなったりします。設計では、チップから空気までの熱の道すじを熱抵抗の回路にして（例題10）、どこの熱抵抗がいちばん大きいかを探します。
+
+\textbf{熱処理}：焼き入れでは、部品の中心まで冷える時間が、かたさを決めます。厚さの2乗に比例する（⑨）ので、厚い部品は冷やし方をくふうします。
+
+\begin{phketa}[熱伝導の数の目安]
+\phketaline{熱伝導率（W/(m·K)）}{金属 10〜400、ガラス・コンクリート 約1、断熱材 約0.04}
+\phketaline{窓の熱貫流率（W/(m$^2$·K)）}{1枚のガラス 約6、複層ガラス 約3}
+\phketaline{熱が届く時間の目安}{（長さ）$^2$÷熱拡散率。鋼の\qty{1}{cm}で数秒、卵で数分}
+\phketaline{地中の温度の1年のゆれ}{\qty{5}{m}で表面の約1割、4か月あまりおくれる}
+\phboxhead{答えが桁で合っているか}
+家の窓1枚から逃げる熱は数十〜数百 W、家全体では数 kW です。1 m$^2$ の壁から数 kW も逃げる答えが出たら、熱抵抗の分母と分子（$L/k$ を $k/L$）や、mm と m を取りちがえています。
+\end{phketa}
+\end{phkougaku}
+\phstation{伝熱工学,建築環境工学,電子機器の熱設計,熱処理}{熱伝導率、熱抵抗、熱貫流率（U 値）、熱方程式、熱拡散率、ビオ数、フーリエ数}
+
+\begin{column}{フーリエと『熱の解析的理論』}
+ジョゼフ・フーリエ（1768〜1830年）は、フランスの数学者・物理学者です。ナポレオンのエジプト遠征に加わったあと、県の長官として働きながら、熱が物の中をどう伝わるかを研究しました。1807年に論文を出しましたが、「どんな形の温度も $\sin$ の和で書ける」という考えは、当時の大数学者たちに疑われ、すぐには認められませんでした。15年後の1822年に出した本『熱の解析的理論』で、この章の熱方程式と、その解き方（フーリエ級数、9-1）をまとめました。熱を調べるために作られた方法が、今では、音・電気の信号・画像の圧縮など、あらゆる所で使われています。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 温度差\qty{20}{K}の壁から逃げる熱を、1 m$^2$ あたり\qty{10}{W}以下にしたい。$k=0.04$ の断熱材だけで止めるとすると、厚さは何 m 以上いりますか。
+\bkpans{$0.04\times20\div L\leqq10$ より、$L\geqq\qty{0.08}{m}$}
+\bkproblem $U=0.5$ の壁\qty{12}{m^2}と、$U=6.5$ の1枚のガラスの窓\qty{3}{m^2}が並んでいます。部屋と外の温度差が\qty{25}{K}のとき、壁と窓から逃げる熱の合計と、そのうち窓から逃げる割合を求めましょう。
+\bkpans{$(0.5\times12+6.5\times3)\times25=25.5\times25\approx\qty{640}{W}$。窓は $19.5\div25.5\approx76\,\%$}
+\bkproblem 外半径\qty{50}{mm}の蒸気の管に、$k=0.05$ の保温材を厚さ\qty{50}{mm}巻きました。保温材の両面の温度差が\qty{150}{K}のとき、長さ\qty{10}{m}の管から逃げる熱を求めましょう。
+\bkpans{$2\pi\times0.05\times10\times150\div\ln2\approx\qty{680}{W}$}
+\bkproblem 直径\qty{6}{mm}の銅の球（$k=400$、$\rho=8900$、$c=385$）を、$h=50$ の流れで冷やします。ビオ数と時定数を求めましょう。
+\bkpans{$l_{\mathrm c}=0.001$、$\mathrm{Bi}=50\times0.001\div400\approx1.3\times10^{-4}$、$\tau=8900\times385\times0.001\div50\approx\qty{69}{s}$}
+\bkproblem 例題7の土で、1日の温度のゆれは、深さ\qty{0.1}{m}で表面の何倍になり、何時間おくれますか（$\delta=\qty{0.117}{m}$ とする）。
+\bkpans{$e^{-0.1/0.117}=e^{-0.855}\approx0.43$ 倍。おくれは $0.855\div(2\pi)\times24\approx3.3$ 時間}
+\bkproblem 部屋\qty{20}{\celsius}・湿度50\,\%（露点\qty{9.3}{\celsius}）、外 $\qty{-10}{\celsius}$ のとき、例題1の複層ガラスは結露しますか。
+\bkpans{表面は $20-30\times0.11\div0.326\approx\qty{9.9}{\celsius}$。露点より少し高いので、結露しない（ぎりぎり）}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 原子炉の燃料棒（半径\qty{4.1}{mm}、$k=3$）の中で、1 m$^3$ あたり\qty{4e8}{W}の熱が生まれています。⑦の式で、中心と表面の温度差を求めましょう。また、燃料棒1 m あたりに生まれる熱を求めましょう。
+\bkpans{温度差は $4\times10^8\times0.0041^2\div(4\times3)\approx\qty{560}{K}$。1 m あたり $4\times10^8\times\pi\times0.0041^2\approx\qty{21}{kW}$}
+\bkproblem 地面の表面の温度は、1年で平均のまわりに $\pm\qty{12}{K}$ ゆれます。土の $\delta=\qty{2.24}{m}$ として、1年のゆれが $\pm\qty{1}{K}$ 以下になる地下室の深さと、そこでのおくれ（日）を求めましょう（$\ln12\approx2.48$）。
+\bkpans{$z\geqq2.24\times2.48\approx\qty{5.6}{m}$。おくれは $2.48\div(2\pi)\times365\approx144$ 日}
+\bkproblem ⑤の壁（1 m$^2$）が、はじめどこも\qty{20}{\celsius}で、外の表面を\qty{0}{\celsius}にしてから十分に時間がたちました。箱のまん中の温度を、③の折れ線（定常、熱流束\qty{7.71}{W/m^2}）から求め、表\ref{ph:熱-11:tab-hako}の熱容量を使って、壁から出ていった熱（たくわえていた熱の減った分）を、外断熱と内断熱のそれぞれで求めましょう。
+\bkpans{外断熱：コンクリートの箱は19.88・19.64・19.40\,℃、グラスウールの箱は14.46・4.82\,℃。出ていった熱は、コンクリートが約\qty{0.11}{MJ}、グラスウールが約\qty{0.014}{MJ}で、合わせて約\qty{0.12}{MJ}。内断熱：グラスウールの箱は15.18・5.54\,℃、コンクリートの箱は0.60・0.36・0.12\,℃。コンクリートが約\qty{5.96}{MJ}、グラスウールが約\qty{0.013}{MJ}で、合わせて約\qty{6.0}{MJ}（外断熱の約50倍）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 熱の伝わり方（伝導・対流・放射）を、身近な例で見分けられる。\bkfurref{ph:熱-11:sec1}
+\item フーリエの法則で、平らな壁を通りぬける熱の流れを求められる。\bkfurref{ph:熱-11:sec2}
+\item 熱抵抗の直列と熱貫流率で、窓や壁から逃げる熱と、表面の温度を求められる。\bkfurref{ph:熱-11:sec4}
+\item 壁を小さな箱に分けた表計算で、壁の中の温度の変わり方を追える。\bkfurref{ph:熱-11:sec5}
+\item 管の保温材の熱抵抗と、ビオ数・時定数を使って、冷え方を見積もれる。\bkfurref{ph:熱-11:sec8}
+\item 熱方程式を導き、板の冷え方や地中の温度を、変数分離の答えで読める。\bkfurref{ph:熱-11:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{二重窓のひみつは、ガラスじゃなくて、とじこめた空気の層だったんだね。熱抵抗をたし算するだけで、結露するかどうかまでわかるなんて！}
