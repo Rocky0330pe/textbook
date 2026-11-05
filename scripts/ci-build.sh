@@ -126,7 +126,8 @@ for t in "${expanded[@]}"; do
       echo "== 物理第${n}巻 =="
       python3 phys/gen_phys.py > /dev/null
       lua2 "ph$n"
-      z=$(zure_of "p$n")
+      # 第21回：本文のない巻（表紙・もくじだけ）は章のページがないので、もくじのずれは調べない
+      if [ "$n" = 1 ] || [ -f "tex/ph$n-body.tex" ]; then z=$(zure_of "p$n"); else z=-; fi
       ( cd tex && timeout "$TIMEOUT" lualatex -interaction=nonstopmode "phwrap$n.tex" > /dev/null 2>&1 || true )
       [ -f "tex/phwrap$n.pdf" ] && cp "tex/phwrap$n.pdf" "$OUT/"
       stats "ph$n" "物理第${n}巻" "${z:-?}" $(( $(date +%s) - t0 ))

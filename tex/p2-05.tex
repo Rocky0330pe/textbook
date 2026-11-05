@@ -1,0 +1,1075 @@
+%% 熱-5　熱機関の限界：第二法則とカルノーサイクル（第22回編集委員会 物理第2巻：組「熱W3」）
+%% ★2〜4（series_phys.py のとおり）。3段にしない。
+%% 記号（計画書 C-1 と手引き2章の3）：
+%%   高温の熱源から受けとる熱 Q_H、低温の熱源へ捨てる熱 Q_L（どちらも大きさ。正の数）。熱源の温度 T_H・T_L〔K〕。
+%%   仕事は添字で分ける：熱機関が外へ出す（正味の）仕事 W_出、冷凍機・ヒートポンプに外から入れる（正味の）仕事 W_入（どちらも正の数）。
+%%   熱-2 の第一法則 ΔU＝Q＋W（W は気体が「された」仕事）とは、1周で W＝−W_出（熱機関）、W＝W_入（冷凍機）の関係。記号カードに書いた。
+%%   効率 η、カルノーの効率 η_C、成績係数 COP（立体）。冷凍機は COP_冷、ヒートポンプは COP_暖（専門書の COP_R・COP_H。この章では H を「高温」に使うので）。
+%%   セルシウス温度の記号 θ はこの章では使わない（温度は「600 ℃」のように数と単位で書き、式の中は必ず K）。
+%%   物質量 n、モル気体定数 R＝8.31 J/(mol·K)（数学 8-3 例題9 と同じ。3けたの例題もこれで出す）。比熱比 γ。
+%% 公式の持ち主（計画書 A）：N21・N22・N36・N37・N39 をこの章で導く。N47（COP）もここ。
+%%   等温の熱 nRT ln(V2/V1) は熱-3 ⑤、断熱の TV^(γ−1) 一定は熱-3 ⑥、第一法則とサイクルの ∮dU＝0 は熱-2 ④⑧、変換効率は力-4 ⑧ が持ち主（導き直さない）。
+%%   エントロピーは熱-6 の持ち主。この章では名前の予告だけ（⑤の終わりと「この先の学び」）。
+%% ほかの章との約束（計画書 C-4 の2）：カルノーサイクル1 mol・600 K/300 K・等温で体積2倍（Q_H＝3456 J≈3460 J、W＝1728 J≈1730 J）は熱-6 例6 と同じ数。
+%%   熱-2 の長方形のサイクル（200/100 kPa、1→3 L、正味の仕事 200 J）を例題12 で使う（熱-2 例6 と同じ道）。電気ストーブ（熱-2 例12）とくらべる。
+%% 数値はすべて Python で計算した：checks/物理第2巻/熱-5/calc_p2_05.py（出力 calc_p2_05_out.txt）、本文のプログラムは carnot_sim.py（出力をそのまま写した）。
+%% 出典（本文で使った事実・実機の値）
+%%   ・サディ・カルノー（1796〜1832年）『火の動力についての考察』1824年。
+%%   ・クラウジウス（1822〜1888年）1850年の論文、トムソン（のちのケルビン、1824〜1907年）1851年の論文で第二法則の2つの言い方。トムソンの絶対温度の提案 1848年。
+%%   ・ケルビンの定義（2019年5月20日から、ボルツマン定数 k_B＝1.380649×10^−23 J/K を決めた値にして定義。それまでは水の三重点 273.16 K）：計画書 C-3〔確〕。
+%%   ・最大出力のときの効率 1−√(T_L/T_H)：F. L. Curzon and B. Ahlborn, Am. J. Phys. 43, 22 (1975)（ADS の抄録で確かめた）。それより前にも同じ結果があったこと：arXiv:2412.13925 の序論。
+%%   ・加圧水型原子炉の蒸気：蒸気発生器の出口 約6.5 MPa・約280 ℃（スロベニア・クルスコ原子力発電所 NEK の技術情報 280.1 ℃）、熱効率 約33 %（パリ国立高等鉱業学校の教材・ケンブリッジ大の演習の解答 34 %）。
+%%   ・久米島の海洋温度差発電の実証設備：2013年4月に出力 50 kW で発電を始めた（沖縄県の資料）。表層の海水 年平均 約26 ℃（25.7 ℃）、深層の海水（深さ 612 m）年平均 約9 ℃（琉球新報）。
+%%   ・家庭用エアコンの暖房の定格の成績係数 約4〜6（日立 RAS-XR2525S：定格暖房 2.8 kW・消費電力 490 W で 5.71 ほか、メーカーのカタログの値）。
+%%   ・石炭火力（超々臨界圧、蒸気 約600 ℃）の熱効率 約40 %：計画書 熱-5 例1 の注記「実際の汽力発電は約40 %」〔要確認：電力会社の公開値〕。
+%%   ・コンバインドサイクル 63.08 %（西名古屋火力発電所7-1号、2018年。計画書 熱-0 の〔確〕：GE のプレスリリース）。ガスタービンの入口 1600 ℃級。
+\makeatletter
+% 熱源の箱  \qxfres{(中心)}{はば}{文字}{色}
+\newcommand\qxfres[4]{\node[draw=#4!70!black, fill=#4!14, line width=0.7pt, rounded corners=1.2mm, minimum width=#2 mm, minimum height=7mm, font=\sffamily\footnotesize, inner sep=1pt] at #1 {#3};}
+% 機械の箱  \qxfmach{名前}{(中心)}{文字}
+\newcommand\qxfmach[3]{\node[draw=bkInk, fill=white, line width=0.8pt, rounded corners=2.5mm, minimum width=19mm, minimum height=8mm, font=\sffamily\footnotesize\bfseries, inner xsep=2.2mm, inner ysep=1pt] (#1) at #2 {#3};}
+\makeatother
+\tikzset{qxf heat/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkRed!80!black},
+  qxf cold/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkBlue!80!black},
+  qxf work/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkGreen!55!black},
+  qxf lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+
+\phchapter{5}{熱機関の限界：\\第二法則とカルノーサイクル}{エンジンは、燃料の熱を全部、動きに変えられる？}{\bklevelrange{2}{4}}{熱機関の限界：第二法則とカルノーサイクル}
+\bkmichishirube{3-7,5-14,8-7,熱-2,熱-3}{熱-6,熱-7,熱-8,熱-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 熱機関の熱効率と、冷凍機・ヒートポンプの成績係数を、熱と仕事の矢印から計算できる。
+\item \bklevel{3}\enspace 第二法則の2つの言い方を説明し、カルノーの効率 $1-T_{\mathrm L}/T_{\mathrm H}$ を求められる。
+\item \bklevel{4}\enspace カルノーの定理から、熱機関と冷凍機の上限と、熱力学温度の考えを導ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{熱は自然には低温から高温へ移らない（不可逆変化）}{高校物理基礎}{ph:熱-5:fukagyaku}
+\phk{熱機関の熱効率 $\eta=W_{\text{出}}/Q_{\mathrm H}$（高校では $e=W/Q_1$）}{高校物理基礎}{ph:熱-5:kouritsu}
+\phk{サイクルの熱効率 $\eta=1-Q_{\mathrm L}/Q_{\mathrm H}$（$p$-$V$ 図のサイクル）}{高校物理}{ph:熱-5:cycle}
+\phk{熱力学第二法則（クラウジウスの原理・トムソンの原理）}{高校物理}{ph:熱-5:dai2}
+\phk{カルノーの効率 $\eta_{\mathrm C}=1-T_{\mathrm L}/T_{\mathrm H}$}{高校物理（発展）}{ph:熱-5:carnot}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+自動車は、ガソリンを燃やして走ります。燃やしてできる熱が、車を動かすもとです。
+
+でも、エンジンのそばのマフラーからは熱いガスが出ていますし、エンジンを冷やすラジエーターからも熱が逃げています。エンジンを上手に作れば、燃料の熱を全部、車を動かす仕事に変えられるのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \bkcar{(12,6)}{1.0}{bkBlue}
+  \draw[qxf heat] (2,30) -- (13,21);
+  \node[qxf lab, anchor=south, text=bkRed!75!black] at (2,30.6) {燃料の熱};
+  \draw[qxf work] (41,12) -- (55,12);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (48,13) {動き};
+  \draw[qxf heat, bkOrange!85!black, decorate, decoration={snake, amplitude=0.6mm, segment length=3mm, post length=1.5mm}] (8,9) -- (-5,9);
+  \node[qxf lab, anchor=north, text=bkOrange!70!black] at (0,6) {熱いガス};
+  \node[font=\sffamily\bfseries\large, text=bkRed] at (48,27) {全部？};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-2 では、熱と仕事を、どちらもエネルギーの出入りとして数えました（第一法則）。エネルギーは、増えも減りもしません。それなら、入った熱を全部仕事に変えても、第一法則には反しません。ところが、どんなに工夫しても、熱をくり返し仕事に変える機械は、熱の一部を必ず低い温度の所へ捨てています。この章では、その「捨てる熱」がなぜ必要なのか、どれだけ減らせるのかを調べます。答えは、第一法則とは別の、もう1つの法則（\textbf{第二法則}）から出てきます。そして、エンジン・発電所・冷蔵庫・エアコンの性能の上限が、2つの温度だけで決まることがわかります。
+
+\begin{yattemiyou}[冷蔵庫は、どこから熱を出している？]
+\textbf{用意するもの}\par
+冷蔵庫、温度計（料理用の温度計か、デジタル温度計）、時計、メモ\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.64\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 部屋の温度を測る。
+\item 冷蔵庫の横の面（または後ろ・下の吹き出し口）に、温度計の先を当てて温度を測る。冷蔵庫の取り扱い説明書で、放熱する場所を確かめておく。
+\item 冷蔵庫のとびらを何回か開け閉めしたあとや、温かい物を入れたあと、しばらくしてもう一度測る。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.33\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!12, draw=bkInk, line width=0.8pt, rounded corners=1mm] (0,0) rectangle (18,36);
+  \draw[bkInk, line width=0.6pt] (0,22) -- (18,22);
+  \draw[bkInk, line width=1pt] (16,25) -- (16,31) (16,14) -- (16,19);
+  \node[qxf lab, text=bkBlue!80!black] at (7.5,29) {冷たい};
+  \foreach \yy in {6,14,22,30} {\draw[bkRed!80!black, line width=0.8pt, decorate, decoration={snake, amplitude=0.5mm, segment length=2.4mm}] (19.5,\yy) -- (26,\yy);}
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (24,38) {横から熱};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：冷蔵庫の横の面や吹き出し口は、部屋より温かくなっています。冷蔵庫は、中の熱をくみ出して、外へ出しているのです。中をよく冷やしているときほど、外へ出る熱も多くなります。外へ出る熱は、中からくみ出した熱より多く、その差は電気が冷蔵庫にした仕事の分です（②と④で数えます）。
+
+\begin{omoidasou}
+\bkrecall{熱-2}{第一法則 $\Delta U=Q+W$（$Q$ は気体が受けとる熱、$W$ は気体がされる仕事）。1周してもとの状態にもどると $\Delta U=0$。}
+\bkrecall{熱-3}{理想気体 $pV=nRT$。等温でふくらむとき受けとる熱は $nRT\ln\dfrac{V_2}{V_1}$。断熱では $TV^{\gamma-1}$ が一定。}
+\bkrecall{3-7}{$xy$ が一定なら反比例。温度が一定の気体は $pV$ が一定（3-7⑥）。}
+\bkrecall{5-14}{$\ln x$ は自然対数。$\displaystyle\int\frac{1}{x}\,\dd x=\ln x+C$（5-14⑨）。$\ln2\approx0.693$。}
+\bkrecall{8-7}{$p$-$V$ 図の閉じた道を1周するとき、気体がする仕事 $\oint p\,\dd V$ は、道が囲む面積（8-7⑩）。}
+\bkrecall{力-4}{効率＝取り出せたエネルギー÷入れたエネルギー（力-4 ⑧）。}
+\end{omoidasou}
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{熱をくり返し仕事に変える機械}
+\label{ph:熱-5:sec1}
+\phboxhead{1回だけなら、熱を全部仕事にできる}
+シリンダーの中の気体を、温度が一定になるように温めながら、ゆっくりふくらませます（等温膨張。熱-3 ⑤）。理想気体の内部エネルギーは温度だけで決まるので、$\Delta U=0$ です。だから、受けとった熱は、全部ピストンを押す仕事になります。熱を100\,\%仕事に変えられたのです。
+
+でも、これは1回きりです。ふくらみ続けると、シリンダーはどこまでも長くなり、圧力はどんどん小さくなります。エンジンのように、同じことを何回もくり返すには、気体を\textbf{もとの状態にもどす}必要があります。もとの状態にもどってまた同じことをくり返す変化を\textbf{サイクル}といい、サイクルをくり返して熱から仕事を取り出し続ける機械を\textbf{熱機関}といいます。\bkidx{ねつきかん}{熱機関}
+
+気体をもとの体積にもどすには、ピストンを押して縮めなければなりません。ふくらんだときと同じ道でもどすと、ふくらむときにした仕事と同じだけの仕事が要り、差し引きは0です。差し引きで仕事を取り出すには、気体を冷やして圧力を下げてから縮めます。圧力が小さいうちに縮めれば、縮めるのに要る仕事は、ふくらむときの仕事より小さくなるからです。この「冷やす」ときに、気体は熱を外へ捨てます。
+
+\phboxhead{3つの機械を、同じ形の図で表す}
+熱を受けとる所を\textbf{高温の熱源}（温度 $T_{\mathrm H}$）、熱を捨てる所を\textbf{低温の熱源}（温度 $T_{\mathrm L}$）とよびます。熱源は、熱を出し入れしても温度が変わらないほど大きな物です（燃えているガス、海、まわりの空気など）。H は high（高い）、L は low（低い）の頭文字です。図\ref{ph:熱-5:fig-three}のように、機械を箱でかき、熱と仕事の出入りを矢印でかきます。矢印に書く量は、どれも大きさ（正の数）で、向きは矢印で表します。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \cx/\nm in {20/熱機関, 64/冷凍機, 108/ヒートポンプ} {%
+    \qxfres{(\cx,40)}{34}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+    \qxfres{(\cx,0)}{34}{低温の熱源 $T_{\mathrm L}$}{bkBlue}
+    \qxfmach{m\cx}{(\cx,20)}{\nm}}
+  % 熱機関
+  \draw[qxf heat] (20,36) -- (m20.north);
+  \node[qxf lab, anchor=east, text=bkRed!75!black] at (19,31) {$Q_{\mathrm H}$};
+  \draw[qxf cold] (m20.south) -- (20,4);
+  \node[qxf lab, anchor=east, text=bkBlue!75!black] at (19,9) {$Q_{\mathrm L}$};
+  \draw[qxf work] (m20.east) -- ++(8,0);
+  \node[qxf lab, anchor=south east, text=bkGreen!45!black] at ([xshift=8mm, yshift=1mm]m20.east) {$W_{\text{出}}$};
+  % 冷凍機・ヒートポンプ
+  \foreach \cx in {64,108} {%
+    \draw[qxf heat] (m\cx.north) -- (\cx,36);
+    \node[qxf lab, anchor=west, text=bkRed!75!black] at (\cx+1,31) {$Q_{\mathrm H}$};
+    \draw[qxf cold] (\cx,4) -- (m\cx.south);
+    \node[qxf lab, anchor=west, text=bkBlue!75!black] at (\cx+1,9) {$Q_{\mathrm L}$};
+    \draw[qxf work] ([xshift=-8mm]m\cx.west) -- (m\cx.west);
+    \node[qxf lab, anchor=south west, text=bkGreen!45!black] at ([xshift=-8mm, yshift=1mm]m\cx.west) {$W_{\text{入}}$};}
+  \node[qxf lab, anchor=north, align=center] at (20,-5) {ほしいもの：$W_{\text{出}}$\\（エンジン・発電所）};
+  \node[qxf lab, anchor=north, align=center] at (64,-5) {ほしいもの：$Q_{\mathrm L}$\\（冷蔵庫・冷房）};
+  \node[qxf lab, anchor=north, align=center] at (108,-5) {ほしいもの：$Q_{\mathrm H}$\\（暖房・給湯器）};
+\end{tikzpicture}
+\bkfigcaption{3つの機械。熱機関は熱を高温から低温へ流しながら仕事を取り出す。冷凍機とヒートポンプは、仕事を入れて、熱を低温から高温へくみ上げる（同じしくみで、ほしいものがちがう）。}\label{ph:熱-5:fig-three}
+\end{bkfigure}
+
+この章では、仕事を次の2つの記号で書き分けます。
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item $W_{\text{出}}$：熱機関が、サイクル1周の間に外へ出す仕事（ふくらむときにした仕事から、縮めるときにされた仕事を引いた残り。正味の仕事）。
+\item $W_{\text{入}}$：冷凍機やヒートポンプに、サイクル1周の間に外から入れる仕事（正味の仕事）。
+\end{itemize}
+熱-2 の第一法則の $W$ は「気体がされた仕事」でした。熱機関では $W=-W_{\text{出}}$、冷凍機では $W=W_{\text{入}}$ です。どちらの書き方でも、矢印の図を見て「入るか出るか」を数えれば、まちがえません。
+
+\begin{phmijika}[身のまわりの3つの機械]
+自動車のエンジンと発電所は熱機関です。高温の熱源は燃料が燃えたガス（発電所では、それで作った高温の蒸気）、低温の熱源はまわりの空気や海の水です。冷蔵庫は冷凍機で、低温の熱源は庫内、高温の熱源は台所の空気です。エアコンの暖房はヒートポンプで、低温の熱源は冬の外の空気、高温の熱源は部屋の空気です。エアコンは、冷房のときは冷凍機として、暖房のときはヒートポンプとして、同じ機械が熱をくみ上げる向きを変えて働いています。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{熱効率と成績係数}
+\label{ph:熱-5:sec2}
+\phboxhead{1周の矢印を数える}
+熱機関の箱の中の気体（\textbf{作動流体}。はたらく流体）は、1周するともとの状態にもどります。内部エネルギーは状態だけで決まるので（熱-2 ⑦）、1周での変化は $\Delta U=0$ です。箱に入る矢印は $Q_{\mathrm H}$、出る矢印は $Q_{\mathrm L}$ と $W_{\text{出}}$ です。「入る－出る＝たまる」で、たまる分が0なので、
+\pheq{Q_{\mathrm H}-Q_{\mathrm L}-W_{\text{出}}=0\qquad\text{だから}\qquad W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}}{J ＝ J}
+です。取り出せる仕事は、受けとった熱と捨てた熱の差です。
+
+受けとった熱のうち、どれだけの割合を仕事にできたかを\textbf{熱効率}といい、$\eta$（イータ）で表します。\bkidx{ねつこうりつ}{熱効率}力-4 ⑧ の「効率＝取り出せたもの÷入れたもの」と同じ考えです。
+\pheq{\eta=\frac{W_{\text{出}}}{Q_{\mathrm H}}=\frac{Q_{\mathrm H}-Q_{\mathrm L}}{Q_{\mathrm H}}=1-\frac{Q_{\mathrm L}}{Q_{\mathrm H}}}{J/J ＝ 1}
+\label{ph:熱-5:kouritsu}\label{ph:熱-5:cycle}熱効率は、単位のない数です。高校の教科書では、熱効率を $e$、受けとる熱を $Q_1$ と書いて $e=\dfrac{W}{Q_1}$ と書くことが多いですが、同じ式です。
+
+\begin{phflow}[サイクルの熱効率]
+\phflowrow{$\Delta U=Q+W$（熱-2）}{1周で $\Delta U=0$\\$Q=Q_{\mathrm H}-Q_{\mathrm L}$、$W=-W_{\text{出}}$}{$W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}$}
+\phflowrow{$W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}$}{両辺を\\$Q_{\mathrm H}$ でわる}{$\eta=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$}
+\end{phflow}
+
+\begin{phyomi}[$\eta=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$]
+「受けとった熱のうち、捨てなかった割合が、仕事になった割合」。たとえば\qty{100}{kJ}受けとって\qty{60}{kJ}捨てるなら、$W_{\text{出}}=\qty{40}{kJ}$、$\eta=0.40$（40\,\%）です。捨てる熱 $Q_{\mathrm L}$ が小さいほど、効率は1（100\,\%）に近づきます。
+\end{phyomi}
+
+\begin{phbaisuru}[半分]{捨てる熱 $Q_{\mathrm L}$}
+$Q_{\mathrm H}$ が同じで、$Q_{\mathrm L}$ を半分にすると、$\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$ も半分です。$\eta$ は「1から引く数」が半分になるので、2倍にはなりません。上の例で $Q_{\mathrm L}$ を\qty{60}{kJ}から\qty{30}{kJ}にすると、$\eta$ は0.40から0.70に増えます（1.75倍）。$\eta$ は $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$ の1次関数で、グラフは右下がりの直線です。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=92mm, height=42mm, xmin=0, xmax=1.12, ymin=0, ymax=1.15, xtick={0.3,0.6,1}, ytick={0.4,0.7,1}, xlabel={$Q_{\mathrm L}/Q_{\mathrm H}$}, ylabel={$\eta$}]
+  \addplot[bkcurve, domain=0:1] {1-x};
+  \fill[bkRed] (axis cs:0.6,0.4) circle (1.8pt) (axis cs:0.3,0.7) circle (1.8pt);
+  \node[qxf lab, anchor=south west, text=bkRed!75!black] at (axis cs:0.62,0.42) {60 kJ 捨てる};
+  \node[qxf lab, anchor=south west, text=bkRed!75!black] at (axis cs:0.32,0.72) {30 kJ 捨てる};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{phbaisuru}
+
+\phboxhead{$p$-$V$ 図では、閉じた道の面積が $W_{\text{出}}$}
+気体の状態を $p$-$V$ 図にかくと、サイクルは閉じた道になります（図\ref{ph:熱-5:fig-loop}）。8-7⑩で学んだように、ふくらむ道（右へ進む道）では気体は道の下の面積だけ仕事をし、縮む道（左へ進む道）では道の下の面積だけ仕事をされます。差し引きの $W_{\text{出}}=\oint p\,\dd V$ は、道が囲む面積です。道を時計回りに回ると $W_{\text{出}}>0$ で熱機関、反時計回りに回ると仕事を入れる冷凍機・ヒートポンプになります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (62,0) node[anchor=west, font=\sffamily\small] {$V$};
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (0,40) node[anchor=south, font=\sffamily\small] {$p$};
+  \fill[bkOrange!25] plot[smooth cycle, tension=0.8] coordinates {(10,30) (30,33) (50,22) (52,10) (30,8) (12,14)};
+  \draw[bkInk, line width=1.2pt] plot[smooth cycle, tension=0.8] coordinates {(10,30) (30,33) (50,22) (52,10) (30,8) (12,14)};
+  \draw[-{Stealth[length=6pt, width=5pt]}, bkInk, line width=1.2pt] (28,33.05) -- (31,32.95);
+  \draw[-{Stealth[length=6pt, width=5pt]}, bkInk, line width=1.2pt] (32,7.95) -- (29,8.05);
+  \node[qxf lab] at (30,20) {$W_{\text{出}}$（面積）};
+  \node[qxf lab, anchor=south, text=bkRed!75!black] at (32,34) {ふくらむ道（気体がする）};
+  \node[qxf lab, anchor=north, text=bkBlue!75!black] at (32,6.5) {縮む道（気体がされる）};
+  \begin{scope}[xshift=72mm]
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (52,0) node[anchor=west, font=\sffamily\small] {$V$};
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (0,40) node[anchor=south, font=\sffamily\small] {$p$};
+  \fill[bkBlue!16] plot[smooth cycle, tension=0.8] coordinates {(8,30) (26,33) (44,22) (46,10) (26,8) (10,14)};
+  \draw[bkInk, line width=1.2pt] plot[smooth cycle, tension=0.8] coordinates {(8,30) (26,33) (44,22) (46,10) (26,8) (10,14)};
+  \draw[-{Stealth[length=6pt, width=5pt]}, bkInk, line width=1.2pt] (27,32.95) -- (24,33.05);
+  \draw[-{Stealth[length=6pt, width=5pt]}, bkInk, line width=1.2pt] (24,8.05) -- (27,7.95);
+  \node[qxf lab, align=center] at (27,20) {$W_{\text{入}}$\\（面積）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：時計回りのサイクル（熱機関）。囲む面積が取り出す仕事。右：反時計回りのサイクル（冷凍機・ヒートポンプ）。囲む面積が入れる仕事。}\label{ph:熱-5:fig-loop}
+\end{bkfigure}
+
+\phboxhead{冷凍機とヒートポンプの成績係数}
+冷凍機・ヒートポンプの箱でも、1周で $\Delta U=0$ です。入る矢印は $Q_{\mathrm L}$ と $W_{\text{入}}$、出る矢印は $Q_{\mathrm H}$ なので、
+\pheq{Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}}{J ＝ J ＋ J}
+です。高温の側へ出す熱は、くみ上げた熱と入れた仕事の和です（やってみようで、冷蔵庫の横が温かかったわけ）。
+
+冷凍機でほしいのは、冷やす熱 $Q_{\mathrm L}$ です。入れた仕事1あたり、どれだけの熱をくみ出せたかを\textbf{成績係数}（COP、coefficient of performance）といいます。\bkidx{せいせきけいすう}{成績係数（COP）}ヒートポンプでほしいのは、温める熱 $Q_{\mathrm H}$ なので、成績係数は $Q_{\mathrm H}$ を $W_{\text{入}}$ でわります。
+\[\mathrm{COP}_{\text{冷}}=\frac{Q_{\mathrm L}}{W_{\text{入}}},\qquad\mathrm{COP}_{\text{暖}}=\frac{Q_{\mathrm H}}{W_{\text{入}}}=\frac{Q_{\mathrm L}+W_{\text{入}}}{W_{\text{入}}}=\mathrm{COP}_{\text{冷}}+1\]
+\label{ph:熱-5:cop}成績係数は「効率」ではありません。くみ上げる熱は、電気などで入れた仕事とは別に、低温の熱源からもらうので、\textbf{成績係数は1より大きくてよく}、ふつうは3〜6くらいです。
+
+\begin{seikaku}
+機械の熱力学の本では、熱機関の仕事を「系がする仕事」を正として $W$ と書き、第一法則を $Q=\Delta U+W$ と書くことが多いです。1周で $\Delta U=0$ なので $W=Q_{\mathrm H}-Q_{\mathrm L}$ で、この章の $W_{\text{出}}$ と同じものです。この本の本文の $\Delta U=Q+W$ とは、$W$ の向きの決め方がちがうだけで、同じ法則です。サイクルの章（この章・熱-7・熱-8）では、まぎれないように「出」「入」の添字で書き分けています。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{3}{もとにもどらない変化と、第二法則の2つの言い方}
+\label{ph:熱-5:sec3}
+\phboxhead{ひとりでには、逆向きに起きない}
+熱いお茶を部屋に置いておくと、やがて部屋と同じ温度になります。逆に、部屋の温度のお茶が、まわりから熱を集めて、ひとりでに熱くなることはありません。床をすべる本は、摩擦で止まり、そのとき床と本が少し温まります。逆に、温まった床と本が冷えながら、本がひとりでに動き出すことはありません。
+
+どちらも、逆向きの変化は第一法則（エネルギーの保存）には反しません。それでも起きないのです。このように、ひとりでには逆向きに起きない変化を\textbf{不可逆変化}といいます。\bkidx{ふかぎゃくへんか}{不可逆変化}\label{ph:熱-5:fukagyaku}熱が高温の物から低温の物へ移ること、摩擦で仕事が熱になること、気体が真空へ広がること、インクが水に広がることは、どれも不可逆変化です。
+
+\phboxhead{第二法則の2つの言い方}
+1850年ごろ、ドイツのクラウジウスとイギリスのトムソン（のちのケルビン）は、たくさんの実験と、うまくいかなかった機械の経験から、次のことを自然の法則として認めることにしました。\label{ph:熱-5:dai2}
+\begin{itemize}[leftmargin=2\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{クラウジウスの言い方}：熱は、ほかに何の変化も残さずに、低温の物から高温の物へ移ることはない。
+\item \textbf{トムソンの言い方}：1つの熱源から熱を受けとり、それを全部仕事に変えて、ほかに何の変化も残さずにもとにもどるサイクルはない。
+\end{itemize}
+これを\textbf{熱力学の第二法則}といいます。\bkidx{ねつりきがくのだいにほうそく}{熱力学の第二法則}どちらも、「ないこと」を言う法則です。第一法則と同じく、ほかの法則から導いたものではなく、経験から認めたもの（経験則）です。今まで、この法則に反する機械が作られたことは一度もありません。
+
+トムソンの言い方で否定されている機械、つまり海や空気の熱だけを受けとって、それを全部仕事に変え続ける機械を\textbf{第二種永久機関}といいます。エネルギーを無から作る機械（第一種永久機関）は第一法則で否定され、第二種永久機関は第二法則で否定されます。
+
+「ほかに何の変化も残さずに」が大切です。冷蔵庫は熱を低温から高温へ移しますが、電気の仕事を使い、その分の熱を高温の側に残しています（②）。①の等温膨張は熱を全部仕事に変えますが、気体がふくらんだまま、もとにもどっていません。どちらも、第二法則には反しません。
+
+\phboxhead{2つの言い方は、同じことを言っている}
+2つの言い方は、ちがうことを言っているように見えますが、実は一方が成り立てば他方も成り立ちます。「一方が破れる機械があれば、それを組み合わせて他方を破る機械が作れる」ことを示します。
+
+\textbf{（a）トムソンの言い方が破れるなら、クラウジウスの言い方も破れる}。図\ref{ph:熱-5:fig-eq}（a）のように、高温の熱源から熱 $Q$ を受けとって全部仕事 $W=Q$ に変える機械 X があったとします。この仕事で、ふつうの冷凍機 R を動かし、低温から熱 $Q_{\mathrm L}$ をくみ上げて、高温へ $Q_{\mathrm L}+Q$ を出させます。2つを1つの箱とみると、外から仕事は入らず、低温から $Q_{\mathrm L}$ が出ていき、高温には差し引き $(Q_{\mathrm L}+Q)-Q=Q_{\mathrm L}$ が入ります。熱が、何も残さずに低温から高温へ移ったことになり、クラウジウスの言い方が破れます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\small\bfseries, anchor=south west] at (-2,45) {（a）};
+  \qxfres{(30,40)}{64}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+  \qxfres{(30,0)}{64}{低温の熱源 $T_{\mathrm L}$}{bkBlue}
+  \qxfmach{X}{(12,20)}{X（破る機械）}
+  \qxfmach{R}{(48,20)}{R（冷凍機）}
+  \draw[qxf heat] (12,36) -- (X.north);
+  \node[qxf lab, anchor=east, text=bkRed!75!black] at (11,30.5) {$Q$};
+  \draw[qxf work] (X.east) -- (R.west);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (30,21) {$W=Q$};
+  \draw[qxf cold] (48,4) -- (R.south);
+  \node[qxf lab, anchor=west, text=bkBlue!75!black] at (49,9) {$Q_{\mathrm L}$};
+  \draw[qxf heat] (R.north) -- (48,36);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (49,30.5) {$Q_{\mathrm L}+Q$};
+  \node[font=\sffamily\bfseries\Large] at (74,20) {＝};
+  \qxfres{(104,40)}{34}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+  \qxfres{(104,0)}{34}{低温の熱源 $T_{\mathrm L}$}{bkBlue}
+  \draw[qxf heat, bkPurple] (104,4) -- (104,36);
+  \node[qxf lab, anchor=west, text=bkPurple] at (105,23) {$Q_{\mathrm L}$};
+  \node[qxf lab, anchor=east, align=right, text=bkPurple] at (102,17) {仕事なしで\\低温→高温};
+\end{tikzpicture}
+\par\vspace{4mm}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\small\bfseries, anchor=south west] at (-2,45) {（b）};
+  \qxfres{(30,40)}{64}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+  \qxfres{(30,0)}{64}{低温の熱源 $T_{\mathrm L}$}{bkBlue}
+  \qxfmach{C}{(12,20)}{Y（破る機械）}
+  \qxfmach{E}{(48,20)}{E（熱機関）}
+  \draw[qxf cold] (12,4) -- (C.south);
+  \node[qxf lab, anchor=east, text=bkBlue!75!black] at (11,9) {$Q_{\mathrm L}$};
+  \draw[qxf heat] (C.north) -- (12,36);
+  \node[qxf lab, anchor=east, text=bkRed!75!black] at (11,30.5) {$Q_{\mathrm L}$};
+  \draw[qxf heat] (48,36) -- (E.north);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (49,30.5) {$Q_{\mathrm H}$};
+  \draw[qxf cold] (E.south) -- (48,4);
+  \node[qxf lab, anchor=west, text=bkBlue!75!black] at (49,9) {$Q_{\mathrm L}$};
+  \draw[qxf work] (E.east) -- (66,20);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (62,21) {$W_{\text{出}}$};
+  \node[font=\sffamily\bfseries\Large] at (74,20) {＝};
+  \qxfres{(104,40)}{34}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+  \node[qxf lab, text=bkGray] at (104,0) {（低温の熱源は差し引き0）};
+  \qxfmach{EE}{(104,20)}{X と同じ}
+  \draw[qxf heat] (104,36) -- (EE.north);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (105,30.5) {$Q_{\mathrm H}-Q_{\mathrm L}$};
+  \draw[qxf work] (EE.east) -- (128,20);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (122,21) {$W_{\text{出}}$};
+\end{tikzpicture}
+\bkfigcaption{2つの言い方が同じであることを示す組み合わせ。（a）トムソンの言い方を破る機械 X と冷凍機 R を合わせると、仕事なしで熱を低温から高温へ移す機械になる。（b）クラウジウスの言い方を破る機械 Y と熱機関 E を合わせると、1つの熱源の熱を全部仕事にする機械になる。}\label{ph:熱-5:fig-eq}
+\end{bkfigure}
+
+\textbf{（b）クラウジウスの言い方が破れるなら、トムソンの言い方も破れる}。図\ref{ph:熱-5:fig-eq}（b）のように、仕事なしで熱 $Q_{\mathrm L}$ を低温から高温へ移す機械 Y があったとします。これと、ふつうの熱機関 E（$Q_{\mathrm H}$ を受けとり、$Q_{\mathrm L}$ を捨て、$W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}$ を出す）を組み合わせます。低温の熱源には $Q_{\mathrm L}$ が入って、同じ $Q_{\mathrm L}$ が出ていくので、差し引き何も変わりません。全体は、高温の熱源だけから $Q_{\mathrm H}-Q_{\mathrm L}$ を受けとり、それを全部仕事 $W_{\text{出}}$ にする機械で、トムソンの言い方が破れます。
+
+（a）と（b）から、2つの言い方は、どちらか一方が正しければもう一方も正しい、同じ内容の法則です。
+
+\phboxhead{\bkhatenaref の答え（その1）}
+エンジンは、燃料の熱を全部仕事に変えることはできません。もし全部変えられるなら、トムソンの言い方に反するからです。熱からくり返し仕事を取り出すには、熱の一部を必ず低い温度の所（まわりの空気・冷却水）へ捨てる必要があります。では、どこまで減らせるのか。それを⑤で求めます。
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{ヒートポンプは、なぜ得をする？}
+\label{ph:熱-5:sec4}
+電気ストーブ（電熱線のヒーター）は、\qty{1}{kW}の電気を使うと、\qty{1}{kW}の熱を部屋に出します（熱-2）。電気の仕事を、全部そのまま熱にしているのです。
+
+エアコンの暖房（ヒートポンプ）は、同じ\qty{1}{kW}の電気で、たとえば\qty{4}{kW}の熱を部屋に出します（$\mathrm{COP}_{\text{暖}}=4$）。エネルギーが増えたように見えますが、そうではありません。差の\qty{3}{kW}は、冬の外の空気からくみ上げた熱です。外の空気は、0\,℃でも熱をもっています（K で測れば 273 K もある、熱い物です）。ヒートポンプは、電気の仕事を「熱を低温から高温へ運ぶ」ために使っているのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxfres{(22,40)}{40}{部屋（20\,℃）}{bkRed}
+  \qxfmach{s}{(22,20)}{電気ストーブ}
+  \draw[qxf work] (0,20) -- (s.west);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (4,21) {電気 1 kW};
+  \draw[qxf heat] (s.north) -- (22,36);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (23,30.5) {熱 1 kW};
+  \node[qxf lab, anchor=north, text=bkGray] at (22,6) {$\text{熱}=\text{電気}$};
+  \begin{scope}[xshift=66mm]
+  \qxfres{(30,40)}{40}{部屋（20\,℃）}{bkRed}
+  \qxfres{(30,0)}{40}{外の空気（0\,℃）}{bkBlue}
+  \qxfmach{h}{(30,20)}{ヒートポンプ}
+  \draw[qxf work] (6,20) -- (h.west);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (10.5,21) {電気 1 kW};
+  \draw[qxf heat] (h.north) -- (30,36);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (31,30.5) {熱 4 kW};
+  \draw[qxf cold] (30,4) -- (h.south);
+  \node[qxf lab, anchor=west, text=bkBlue!75!black] at (31,9.5) {熱 3 kW（外から）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{同じ1 kW の電気で、電気ストーブは1 kW、COP 4 のヒートポンプは4 kW の熱を部屋に出す。差の3 kW は外の空気からくみ上げた熱。}\label{ph:熱-5:fig-hp}
+\end{bkfigure}
+
+ヒートポンプは、第二法則にも反しません。熱は低温から高温へ移りますが、その代わりに電気の仕事が使われ、その分が熱として部屋に残っています（「ほかの変化」が残っている）。クラウジウスの言い方が否定しているのは、仕事を使わずに、熱をひとりでに低温から高温へ移すことです。
+
+\begin{phmijika}[ヒートポンプの給湯器と、夏の室外機]
+空気の熱でお湯をわかす給湯器（ヒートポンプ給湯器）は、電気の3倍以上の熱をお湯に入れられるものがあります。冷房のときのエアコンは冷凍機として働き、部屋からくみ出した熱と電気の仕事の和を、室外機から外へ出しています。夏に室外機のそばが暑いのは、そのためです。
+\end{phmijika}
+
+\begin{phmijika}[カタログから成績係数を読む]
+エアコンのカタログには、決まった温度の条件（暖房では外 7\,℃・部屋 20\,℃）での「暖房能力」と「消費電力」が書いてあります。たとえば、暖房能力\qty{2.8}{kW}、消費電力\qty{0.49}{kW}の機種なら、$\mathrm{COP}_{\text{暖}}=\dfrac{2.8}{0.49}\approx5.7$ です。同じ\qty{0.49}{kW}の電気ストーブなら、出る熱は\qty{0.49}{kW}だけです。家庭のエアコンの暖房の成績係数は、この条件で約4〜6です。
+\end{phmijika}
+
+ヒートポンプの成績係数は、いくらでも大きくできるのでしょうか。ここにも第二法則による上限があり、それも2つの温度だけで決まります（⑤）。
+
+%% ---------------------------------------------------------------
+\Needspace{12\baselineskip}\bksubsection{5}{カルノーサイクルとカルノーの定理}
+\label{ph:熱-5:sec5}
+\phboxhead{いちばんむだのない熱機関}
+1824年、フランスの技術者サディ・カルノーは、『火の動力についての考察』という本で、「熱機関の効率には、どれだけ工夫しても越えられない上限があるのか」を考えました。蒸気機関がイギリスで広まり、どうすれば少ない石炭で多くの仕事ができるかが、大きな問題になっていた時代です。
+
+熱機関の中で、熱がむだになるのは、どんなときでしょう。熱い物と冷たい物を直接触れさせると、熱は流れますが、仕事は何も取り出せません。温度差がある所で熱を移すと、仕事を取り出せたはずの機会をむだにしているのです。摩擦も、仕事を熱に変えてしまいます。
+
+そこでカルノーは、次の2つを守る熱機関を考えました。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 熱は、作動流体と熱源の温度がほとんど同じときにだけ、ゆっくり移す（温度差のない熱の移動）。
+\item 摩擦をなくし、圧力が少しずつつり合いながら、ゆっくり変化させる（熱-2 の準静的な変化）。
+\end{enumerate}
+このような変化は、向きを逆にすると、作動流体も熱源もまわりも、すべてもとにもどせます。このような変化を\textbf{可逆変化}といいます。すべての変化が可逆なサイクルをくり返す熱機関を\textbf{可逆機関}といいます。
+
+\phboxhead{4つの変化：2本の等温線と2本の断熱線}
+理想気体を作動流体にして、2つの熱源の間で可逆にまわすサイクルは、次の4つの変化を組み合わせたものになります（図\ref{ph:熱-5:fig-carnot}）。これを\textbf{カルノーサイクル}といいます。\bkidx{かるのーさいくる}{カルノーサイクル}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 1→2 等温膨張：温度 $T_{\mathrm H}$ のまま、高温の熱源から熱 $Q_{\mathrm H}$ を受けとって、ふくらむ。
+\item 2→3 断熱膨張：熱の出入りをなくしてふくらみ、温度が $T_{\mathrm H}$ から $T_{\mathrm L}$ まで下がる。
+\item 3→4 等温圧縮：温度 $T_{\mathrm L}$ のまま、低温の熱源へ熱 $Q_{\mathrm L}$ を捨てながら、縮む。
+\item 4→1 断熱圧縮：熱の出入りをなくして縮み、温度が $T_{\mathrm L}$ から $T_{\mathrm H}$ まで上がって、1にもどる。
+\end{enumerate}
+熱を移すのは等温の変化のときだけで、そのとき気体の温度は熱源と同じです（①の約束）。温度を変えるのは断熱の変化で、熱源とは熱をやりとりしません。だから、温度差のある所で熱が移ることが、1回もありません。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=80mm, xmin=0, xmax=66, ymin=0, ymax=560, xtick={10,20,28.28,56.57}, xticklabels={10,20,28.3,56.6}, ytick={100,200,300,400,500}, xlabel={$V$（L）}, ylabel={$p$（kPa）}]
+  \fill[bkOrange!25] (axis cs:10.00,498.6) -- (axis cs:11.25,443.2) -- (axis cs:12.50,398.9) -- (axis cs:13.75,362.6) -- (axis cs:15.00,332.4) -- (axis cs:16.25,306.8) -- (axis cs:17.50,284.9) -- (axis cs:18.75,265.9) -- (axis cs:20.00,249.3) -- (axis cs:24.57,176.9) -- (axis cs:29.14,133.1) -- (axis cs:33.71,104.4) -- (axis cs:38.28,84.5) -- (axis cs:42.86,70.0) -- (axis cs:47.43,59.1) -- (axis cs:52.00,50.7) -- (axis cs:56.57,44.1) -- (axis cs:53.03,47.0) -- (axis cs:49.50,50.4) -- (axis cs:45.96,54.2) -- (axis cs:42.43,58.8) -- (axis cs:38.89,64.1) -- (axis cs:35.36,70.5) -- (axis cs:31.82,78.3) -- (axis cs:28.28,88.1) -- (axis cs:26.00,101.4) -- (axis cs:23.71,118.2) -- (axis cs:21.43,140.0) -- (axis cs:19.14,169.0) -- (axis cs:16.86,208.8) -- (axis cs:14.57,266.2) -- (axis cs:12.29,353.8) -- cycle;
+  \addplot[bkthin, dashed, domain=9:62] {8.31*600/x};
+  \addplot[bkthin, dashed, domain=9:62] {8.31*300/x};
+  \addplot[bkRed!80!black, line width=1.7pt, domain=10:20] {8.31*600/x};
+  \addplot[bkInk, line width=1.7pt, domain=20:56.57] {249.3*(20/x)^(5/3)};
+  \addplot[bkBlue!80!black, line width=1.7pt, domain=28.28:56.57] {8.31*300/x};
+  \addplot[bkInk, line width=1.7pt, domain=10:28.28] {88.14*(28.28/x)^(5/3)};
+  \fill[bkInk] (axis cs:10,498.6) circle (2pt) (axis cs:20,249.3) circle (2pt) (axis cs:56.57,44.1) circle (2pt) (axis cs:28.28,88.1) circle (2pt);
+  \node[qxf lab, anchor=south west] at (axis cs:10.5,500) {1};
+  \node[qxf lab, anchor=south west] at (axis cs:20.5,252) {2};
+  \node[qxf lab, anchor=south west] at (axis cs:57,46) {3};
+  \node[qxf lab, anchor=north east] at (axis cs:27.8,86) {4};
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (axis cs:14,455) {等温（$T_{\mathrm H}=\qty{600}{K}$）：$Q_{\mathrm H}$ を受けとる};
+  \node[qxf lab, anchor=west] at (axis cs:40,165) {断熱膨張};
+  \draw[bkGray, line width=0.5pt] (axis cs:40.5,160) -- (axis cs:34,104);
+  \node[qxf lab, anchor=west, text=bkBlue!75!black] at (axis cs:24,24) {等温（$T_{\mathrm L}=\qty{300}{K}$）：$Q_{\mathrm L}$ を捨てる};
+  \draw[bkGray, line width=0.5pt] (axis cs:17,62) -- (axis cs:22,128);
+  \node[qxf lab, anchor=east] at (axis cs:18,58) {断熱圧縮};
+  \draw[bkGray, line width=0.5pt] (axis cs:29,292) -- (axis cs:18.5,232);
+  \node[qxf lab, anchor=west] at (axis cs:29,300) {$W_{\text{出}}$（囲む面積）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{単原子分子の理想気体 \qty{1}{mol} のカルノーサイクル（$T_{\mathrm H}=\qty{600}{K}$、$T_{\mathrm L}=\qty{300}{K}$、1→2 で体積が2倍）。点線は、同じ温度の等温線（$pV$ が一定の反比例のグラフ。3-7⑥）。囲む面積が1周の仕事 $W_{\text{出}}$。}\label{ph:熱-5:fig-carnot}
+\end{bkfigure}
+
+\phboxhead{理想気体で、$Q_{\mathrm L}/Q_{\mathrm H}$ を計算する}
+物質量 $n$ の理想気体で、熱を計算します。等温の変化で受けとる熱は、熱-3 ⑤で求めたとおりです。
+\[Q_{\mathrm H}=nRT_{\mathrm H}\ln\frac{V_2}{V_1},\qquad Q_{\mathrm L}=nRT_{\mathrm L}\ln\frac{V_3}{V_4}\]
+$Q_{\mathrm L}$ は捨てる熱の大きさなので、縮むときの体積の比を $\dfrac{V_3}{V_4}$（1より大きい）と書きました。2つの断熱の変化では、熱-3 ⑥の $TV^{\gamma-1}=$ 一定 が使えます。
+\[T_{\mathrm H}V_2^{\,\gamma-1}=T_{\mathrm L}V_3^{\,\gamma-1},\qquad T_{\mathrm H}V_1^{\,\gamma-1}=T_{\mathrm L}V_4^{\,\gamma-1}\]
+左の式を右の式でわると、$T_{\mathrm H}$ と $T_{\mathrm L}$ が消えて、
+\[\Bigl(\frac{V_2}{V_1}\Bigr)^{\gamma-1}=\Bigl(\frac{V_3}{V_4}\Bigr)^{\gamma-1}\qquad\text{だから}\qquad\frac{V_2}{V_1}=\frac{V_3}{V_4}\]
+です。等温でふくらむ割合と、等温で縮む割合が同じになるのです。だから2つの $\ln$ は等しく、
+\pheq{\frac{Q_{\mathrm L}}{Q_{\mathrm H}}=\frac{nRT_{\mathrm L}\ln(V_3/V_4)}{nRT_{\mathrm H}\ln(V_2/V_1)}=\frac{T_{\mathrm L}}{T_{\mathrm H}}}{K/K ＝ 1}
+です。熱の比が、2つの熱源の温度の比と同じになりました。$n$ も $R$ も $\gamma$ も、ふくらませる割合も、答えには残りません。②の $\eta=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$ に入れると、
+\pheq{\eta_{\mathrm C}=1-\frac{T_{\mathrm L}}{T_{\mathrm H}}=\frac{T_{\mathrm H}-T_{\mathrm L}}{T_{\mathrm H}}}{K/K ＝ 1}
+\label{ph:熱-5:carnot}です。これを\textbf{カルノーの効率}といいます。\textbf{温度は必ず K で入れます}。
+
+\begin{phyomi}[$\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$]
+「可逆なら、捨てる熱と受けとる熱の比は、熱源の温度の比と同じ」。\qty{600}{K}で受けとって\qty{300}{K}で捨てるなら、受けとった熱のちょうど半分を捨てます。捨てる温度が低いほど、捨てる熱の割合が小さくなります。
+\end{phyomi}
+
+\begin{phmodel}[カルノーサイクル]
+\phignore{ピストンの摩擦。熱を移すのにかかる時間（ゆっくりすぎて、出力はほとんど0）。シリンダーの壁の熱容量。}
+\phassume{作動流体は理想気体。熱源は温度が変わらない。どの変化も準静的で可逆。}
+\phlimit{実際の機械のように、速く動かして大きな出力を出すとき（熱を移すには温度差が要る。⑦）。}
+\end{phmodel}
+
+\phboxhead{Python で、道を区切って仕事を足す}
+⑤の計算が正しいかを、$p$-$V$ 図の道を細かく区切って $p\times\Delta V$ を足す方法（8-7③と同じ手順）で確かめます。
+\begin{phcode}[Python：カルノーサイクルの仕事を足し合わせる]
+R, g = 8.31, 5/3              \# 単原子の理想気体 1 mol
+TH, TL = 600.0, 300.0         \# 熱源の温度（K）
+V1, V2 = 10.0, 20.0           \# 体積（L）
+V3, V4 = V2*(TH/TL)**1.5, V1*(TH/TL)**1.5  \# 断熱の終わり
+def work(Va, Vb, T, adi, N=100):   \# Va→Vb で気体がする仕事
+    W = 0.0
+    for i in range(N):
+        a, b = Va+(Vb-Va)*i/N, Va+(Vb-Va)*(i+1)/N
+        m = (a+b)/2                \# まん中の体積
+        Tm = T*(Va/m)**(g-1) if adi else T
+        W = W + R*Tm/m*(b-a)       \# p×ΔV（J）
+    return W
+w = [work(V1,V2,TH,False), work(V2,V3,TH,True),
+     work(V3,V4,TL,False), work(V4,V1,TL,True)]
+print([round(x) for x in w])
+print('W =', round(sum(w)), ' eta =', round(sum(w)/w[0], 4))
+\end{phcode}
+\begin{phcodeout}
+[3456, 3739, -1728, -3739]
+W = 1728  eta = 0.5
+\end{phcodeout}
+図\ref{ph:熱-5:fig-carnot}のサイクルの4つの道を、それぞれ100に区切り、$p\times\Delta V$（kPa×L＝J）を足しました。圧力は $p=\dfrac{RT}{V}$（kPa。$V$ は L）で、断熱の道の温度は $TV^{\gamma-1}$ が一定の式（\texttt{Tm} の行）で計算しています。1行めは4つの道の仕事（負の数は、縮むときにされた仕事）で、断熱の2つの道の仕事は打ち消し合います。等温で受けとる熱 $Q_{\mathrm H}$ は、等温でふくらむときの仕事 \texttt{w[0]} と同じなので（$\Delta U=0$）、効率は $W/Q_{\mathrm H}=0.5$ で、$1-T_{\mathrm L}/T_{\mathrm H}=0.5$ とぴったり合いました。\texttt{TH} を900や1200に変えて動かすと、効率が $1-T_{\mathrm L}/T_{\mathrm H}$ のとおりに変わることを確かめられます。
+
+\phboxhead{カルノーの定理：どんな機関も、可逆機関より効率がよくはない}
+上の計算は理想気体のときでした。では、水蒸気や、ほかの物を作動流体にしたら、もっとよい効率が出せるのでしょうか。カルノーは、出せないことを示しました（今の言い方に直して説明します）。
+
+同じ2つの熱源の間で働く、可逆機関 C と、それより効率のよい機関 X があったとします。X が出す仕事 $W_{\text{出}}$ で、C を逆向きに動かします。可逆機関は逆に回せるので、C は冷凍機になって、低温から熱をくみ上げ、高温へ $Q_{\mathrm H}$ を出します。X の効率のほうがよいので、同じ仕事を出すのに、X が高温から受けとる熱 $Q'_{\mathrm H}$ は $Q_{\mathrm H}$ より小さくてすみます（$\eta=W_{\text{出}}/Q_{\mathrm H}$ が大きいほど $Q_{\mathrm H}$ は小さい）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxfres{(40,40)}{76}{高温の熱源 $T_{\mathrm H}$}{bkRed}
+  \qxfres{(40,0)}{76}{低温の熱源 $T_{\mathrm L}$}{bkBlue}
+  \qxfmach{X}{(16,20)}{X（効率がよい？）}
+  \qxfmach{C}{(64,20)}{C（逆に回す）}
+  \draw[qxf heat] (16,36) -- (X.north);
+  \node[qxf lab, anchor=east, text=bkRed!75!black] at (15,30.5) {$Q'_{\mathrm H}$};
+  \draw[qxf cold] (X.south) -- (16,4);
+  \node[qxf lab, anchor=east, text=bkBlue!75!black] at (15,9) {$Q'_{\mathrm H}-W_{\text{出}}$};
+  \draw[qxf work] (X.east) -- (C.west);
+  \node[qxf lab, anchor=south, text=bkGreen!45!black] at (40,21) {$W_{\text{出}}$};
+  \draw[qxf cold] (64,4) -- (C.south);
+  \node[qxf lab, anchor=west, text=bkBlue!75!black] at (65,9) {$Q_{\mathrm H}-W_{\text{出}}$};
+  \draw[qxf heat] (C.north) -- (64,36);
+  \node[qxf lab, anchor=west, text=bkRed!75!black] at (65,30.5) {$Q_{\mathrm H}$};
+  \node[qxf lab, anchor=west, align=left] at (88,20) {全体では、\\低温から高温へ\\$Q_{\mathrm H}-Q'_{\mathrm H}$ が\\仕事なしで移る};
+\end{tikzpicture}
+\bkfigcaption{カルノーの定理を示す組み合わせ。可逆機関 C より効率のよい機関 X があれば、仕事を入れずに熱を低温から高温へ移せてしまう。}\label{ph:熱-5:fig-theorem}
+\end{bkfigure}
+
+図\ref{ph:熱-5:fig-theorem}の2つを1つの箱とみると、外との仕事のやりとりはなく（X が出した仕事を C が全部使う）、高温の熱源には差し引き $Q_{\mathrm H}-Q'_{\mathrm H}>0$ が入り、同じだけの熱が低温の熱源から出ていきます。仕事なしで熱が低温から高温へ移ったので、クラウジウスの言い方に反します。だから、そんな X はありません。これを\textbf{カルノーの定理}といいます。\bkidx{かるのーのていり}{カルノーの定理}
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item 同じ2つの熱源の間で働く熱機関の効率は、可逆機関の効率をこえない。
+\item 可逆機関どうしなら、作動流体が何であっても、効率は同じ（X も可逆なら、X と C の役を入れかえて同じ組み合わせが作れるので、どちらも相手をこえられない）。
+\end{itemize}
+可逆機関の効率はどれも同じなので、理想気体のカルノーサイクルで求めた $1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ は、\textbf{どんな作動流体の可逆機関にも、そのまま当てはまります}。そして、どんな熱機関の効率も、これをこえられません。
+
+\Needspace{10\baselineskip}\begin{phflow}[カルノーの効率]
+\phflowrow{$\eta=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$}{可逆（カルノーの定理）\\理想気体で計算}{$\eta_{\mathrm C}=1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$}
+\phflowrow{$\mathrm{COP}_{\text{冷}}=\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}-Q_{\mathrm L}}$}{可逆\\$Q_{\mathrm L}/Q_{\mathrm H}=T_{\mathrm L}/T_{\mathrm H}$}{$\dfrac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}$}
+\phflowrow{$\mathrm{COP}_{\text{暖}}=\dfrac{Q_{\mathrm H}}{Q_{\mathrm H}-Q_{\mathrm L}}$}{可逆\\$Q_{\mathrm L}/Q_{\mathrm H}=T_{\mathrm L}/T_{\mathrm H}$}{$\dfrac{T_{\mathrm H}}{T_{\mathrm H}-T_{\mathrm L}}$}
+\end{phflow}
+冷凍機・ヒートポンプの式は、分子と分母を $Q_{\mathrm H}$ でわって $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ を入れ、さらに分子と分母に $T_{\mathrm H}$ をかけると出てきます。冷凍機・ヒートポンプでも、可逆なものがいちばん成績係数が大きくなります（逆に回した熱機関で、同じ組み合わせの議論ができる）。\label{ph:熱-5:copc}
+
+\begin{phyomi}[$\eta_{\mathrm C}=\dfrac{T_{\mathrm H}-T_{\mathrm L}}{T_{\mathrm H}}$]
+「熱機関が仕事にできる割合の上限は、温度差を、高いほうの温度（K）でわったもの」。熱を仕事に変えるには温度差が要り、温度差が大きいほど多く仕事にできます。$T_{\mathrm L}=0$\,K にしないかぎり、上限は1（100\,\%）に届きません。
+\end{phyomi}
+
+\begin{phmijika}[発電所の上限]
+石炭火力発電所の蒸気は約600\,℃（約\qty{873}{K}）、それを冷やす海の水は約30\,℃（約\qty{303}{K}）です。カルノーの効率は $1-\dfrac{303}{873}\approx0.65$ で、どんなによい発電所でも、燃料の熱の約35\,\%以上は海へ捨てなければなりません（例題1）。発電所が海辺にあり、たくさんの海水を使うのは、この熱を運び去るためです。
+\end{phmijika}
+
+\begin{phbaisuru}{温度差（$T_{\mathrm H}-T_{\mathrm L}$）}
+$T_{\mathrm L}=\qty{300}{K}$、$T_{\mathrm H}=\qty{600}{K}$（差\qty{300}{K}）なら $\eta_{\mathrm C}=0.50$。$T_{\mathrm H}$ を上げて差を2倍の\qty{600}{K}にすると（$T_{\mathrm H}=\qty{900}{K}$）、$\eta_{\mathrm C}=0.67$ で、2倍にはなりません。$T_{\mathrm H}$ を上げるほど、効率の増え方は小さくなります。一方、$T_{\mathrm L}$ を下げて差を広げるほうが、同じ\qty{1}{K}あたりでよく効きます（例題10）。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=48mm, xmin=0, xmax=2150, ymin=0, ymax=1.1, xtick={300,600,900,1500,2000}, ytick={0.25,0.5,0.67,0.8,1}, yticklabels={0.25,0.50,0.67,0.80,1}, xlabel={$T_{\mathrm H}$（K）}, ylabel={$\eta_{\mathrm C}$}]
+  \addplot[bkthin, dashed, domain=0:2000] {1};
+  \addplot[bkcurve, domain=300:2000] {1-300/x};
+  \fill[bkRed] (axis cs:600,0.5) circle (1.8pt) (axis cs:900,0.6667) circle (1.8pt) (axis cs:1500,0.8) circle (1.8pt);
+  \node[qxf lab, anchor=north west, text=bkGray] at (axis cs:1000,0.6) {$T_{\mathrm L}=\qty{300}{K}$ のとき};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+ヒートポンプでは逆に、温度差が小さいほど成績係数が大きくなります。部屋に40\,℃の空気を吹き出すとして、外が0\,℃（差\qty{40}{K}）なら $\mathrm{COP}_{\text{暖}}$ の上限は $\dfrac{313}{40}\approx7.8$、外が20\,℃（差が半分の\qty{20}{K}）なら約15.7で、ほぼ2倍です。寒い日ほど、エアコンの暖房は苦しくなります。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=48mm, xmin=-24, xmax=26, ymin=0, ymax=24, xtick={-20,-10,0,10,20}, ytick={5,10,15,20}, xlabel={外の温度（℃）}, ylabel={$\mathrm{COP}_{\text{暖}}$ の上限}, axis x line=bottom, axis y line=left]
+  \addplot[bkcurve2, domain=-20:22] {313.15/(40-x)};
+  \fill[bkRed] (axis cs:0,7.83) circle (1.8pt) (axis cs:20,15.66) circle (1.8pt) (axis cs:-20,5.22) circle (1.8pt);
+  \node[qxf lab, anchor=south east] at (axis cs:-0.5,8.3) {7.8};
+  \node[qxf lab, anchor=south east] at (axis cs:19.5,16.2) {15.7};
+  \node[qxf lab, anchor=south] at (axis cs:-20,5.8) {5.2};
+  \node[qxf lab, anchor=north west, text=bkGray] at (axis cs:-20,21) {吹き出し40\,℃のとき};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{phbaisuru}
+
+\phboxhead{\bkhatenaref の答え（その2）}
+燃料の熱を全部仕事に変えることはできず、変えられる割合の上限は $1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ です。この上限は、エンジンのしくみや燃料の種類によらず、熱を受けとる温度と捨てる温度だけで決まります。燃えたガスの温度が高いほど、また捨てる先の温度が低いほど、上限は高くなります。実際のエンジンは、可逆ではないので、この上限よりさらに低い効率になります（⑦、熱-7）。
+
+\phboxhead{エントロピーへの予告}
+カルノーサイクルでは、$\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$、つまり $\dfrac{Q_{\mathrm H}}{T_{\mathrm H}}=\dfrac{Q_{\mathrm L}}{T_{\mathrm L}}$ でした。「熱÷温度」という量が、受けとるときと捨てるときで同じ大きさになっています。この「熱÷温度」を数える量が\textbf{エントロピー}で、熱-6 の主役です。可逆でない機関では、この2つが等しくなくなります。
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{熱力学温度：物質によらない温度}
+\label{ph:熱-5:sec6}
+温度計の目もりは、水銀の膨張、気体の圧力、金属の電気抵抗など、物の性質を使って決めています。物がちがえば、0\,℃と100\,℃で目もりを合わせても、そのあいだやその外では、少しずつ目もりがずれます。どの物にもよらない「本当の温度の目もり」はあるのでしょうか。
+
+カルノーの定理は、その答えをくれます。2つの熱源の間で働く可逆機関の $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$ は、作動流体によらず、2つの熱源だけで決まります。そこで、1848年にトムソンは、温度の比を、熱の比で決めることを考えました。
+\pheq{\frac{T_{\mathrm L}}{T_{\mathrm H}}=\frac{Q_{\mathrm L}}{Q_{\mathrm H}}\quad\text{（可逆機関で）}}{1 ＝ 1}
+このように決めた温度を\textbf{熱力学温度}（絶対温度）といいます。\bkidx{ねつりきがくおんど}{熱力学温度}どの物の性質も使っていないので、物によらない温度の目もりです。比だけでは大きさが決まらないので、1つの温度の値を決めて目もりの大きさをそろえます。2019年まではそれを水の三重点（氷・水・水蒸気がいっしょにある温度）の\qty{273.16}{K}として決め、今はボルツマン定数の値を決めて決めています（熱-1 ②）。
+
+⑤では、理想気体の状態方程式の温度 $T$ を使って $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ を導きました。だから、\textbf{理想気体の温度計で測った温度は、熱力学温度と同じ}です。気体の温度計（熱-3）が、温度の目もりの手本になるのはこのためです。
+
+\begin{phmijika}[0\,K に届かないわけ]
+可逆な冷凍機の成績係数の上限 $\dfrac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}$ は、冷やす温度 $T_{\mathrm L}$ が低いほど小さくなり、$T_{\mathrm L}\to0$ で0に近づきます。低い温度から熱をくみ出すほど、同じ熱をくみ出すのに大きな仕事が要るのです。物を 0\,K ちょうどまで冷やすことは、どんな方法でもできないことが知られています（熱力学の第三法則の1つの言い方。専門の本で扱います）。それでも実験では、\qty{1}{K}の100万分の1より低い温度まで冷やすことができています。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{実際の機関と、カルノーの効率}
+\label{ph:熱-5:sec7}
+実際の発電所の効率を、カルノーの効率とくらべてみましょう（表\ref{ph:熱-5:tab-real}）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=22mm] Q[c,m,wd=19mm] Q[c,m,wd=16mm] Q[c,m,wd=16mm]}, colsep=3pt, rowsep=1pt, row{1}={bg=bkTheme!10, font=\sffamily\footnotesize}, cells={font=\footnotesize}}
+機関 & 熱を受けとる温度〔℃〕 & 捨てる温度〔℃〕 & カルノーの効率 & 実際の効率 \\
+原子力（加圧水型） & 約280（蒸気） & 約30 & 約45\,\% & 約33\,\% \\
+石炭火力 & 約600（蒸気） & 約30 & 約65\,\% & 約40\,\% \\
+コンバインドサイクル & 約1600（ガス） & 約30 & 約84\,\% & 約60\,\% \\
+海洋温度差（久米島） & 約26（海面） & 約9（深層） & 約5.7\,\% & もっと低い \\
+\end{bktable}
+\bktabcaption{実際の機関の効率と、同じ温度の間のカルノーの効率。実際の効率は、上限の6〜7割ほど。}\label{ph:熱-5:tab-real}
+\end{bkcenter}
+
+実際の効率は、カルノーの効率の6〜7割くらいです。差が出るのは、次のような不可逆変化があるからです。
+\begin{itemize}[leftmargin=2\zw, itemsep=1pt, topsep=2pt]
+\item 熱を移すのに温度差がいる：短い時間で多くの熱を移すには、燃えたガスと蒸気、蒸気と海水の間に、大きな温度差がいります。原子力発電所の燃料は、蒸気よりずっと高い温度です。
+\item 摩擦・流れの乱れ：タービンや配管の中で、流れの勢いの一部が熱になります。
+\item まわりへ逃げる熱、ポンプや送風機を動かす電気など。
+\end{itemize}
+コンバインドサイクルが高い効率を出せるのは、ガスタービンで約1600\,℃という高い温度で熱を受けとり、その出口の熱い排気でもう一度蒸気を作って使うからです（熱-7 ⑧）。
+
+\begin{phmada}[いちばん大きな出力を出すときの効率は？]
+カルノーの効率は、熱をゆっくり移す可逆機関の効率で、そのときの出力（1秒あたりの仕事）はほとんど0です。実際の発電所は、決まった時間に多くの電気を出す必要があり、熱を移すのに温度差をつけています。1975年、カーゾンとアルボーンは、熱の移り方を簡単なモデル（温度差に比例して熱が移る）で表し、出力がいちばん大きくなるときの効率が $1-\sqrt{T_{\mathrm L}/T_{\mathrm H}}$ になることを示しました（それより前にも、同じ結果を出した研究者がいたことが知られています）。この式は、いくつかの実際の発電所の効率に近い値になります。しかし、熱の移り方や機械の中の損失によって答えは変わり、どんな機関にも成り立つ「出力つきの効率の上限」の理論は、まだできていません。有限の時間で働く機関の熱力学として、今も研究が続いています。
+\end{phmada}
+
+\begin{phsaki}{熱力学の組み立てと、エントロピー}
+この章では、第二法則を「経験から認めた法則」として出発しました。専門の本では、「どんな状態からどんな状態へは、まわりに何も残さずには行けないか」という考えから、温度・エントロピーを順序立てて組み立てる方法も学びます（熱力学の公理的な組み立て）。また、電気を流すと片側が冷え、片側が温まる部品（ペルチェ素子）のように、気体を使わないヒートポンプも、同じ第二法則の上限にしたがいます。そのしくみは、物理シリーズの『原子』の半導体の章で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[機械の熱力学の本の書き方]
+\begin{bkhonbun}
+高温熱源 $T_{\mathrm H}$ から熱量 $Q_{\mathrm H}$ を受け，低温熱源 $T_{\mathrm L}$ に熱量 $Q_{\mathrm L}$ を放出して仕事 $W$ を行う熱機関の熱効率は $\eta_{\mathrm{th}}=W/Q_{\mathrm H}=1-Q_{\mathrm L}/Q_{\mathrm H}$ である．二つの熱源間で作動する可逆サイクルの熱効率は作動流体によらず $\eta_{\mathrm{rev}}=1-T_{\mathrm L}/T_{\mathrm H}$ となり，これが熱効率の最大値を与える．
+\end{bkhonbun}
+\bkyaku{「熱量」は熱、「放出して」は捨てて。$W$ はこの章の $W_{\text{出}}$（機械の本では、系がする仕事を $W$ と書く。②のせいかくに言うと）。$\eta_{\mathrm{th}}$ の th は thermal（熱の）、$\eta_{\mathrm{rev}}$ の rev は reversible（可逆）で、この章の $\eta_{\mathrm C}$。②と⑤を2つの文にまとめたもの。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{1周の数え方}$W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}$、$Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}$\\[3pt]
+\tsl{熱効率}$\eta=\dfrac{W_{\text{出}}}{Q_{\mathrm H}}=1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$\\[3pt]
+\tsl{成績係数}$\mathrm{COP}_{\text{冷}}=\dfrac{Q_{\mathrm L}}{W_{\text{入}}}$、$\mathrm{COP}_{\text{暖}}=\dfrac{Q_{\mathrm H}}{W_{\text{入}}}=\mathrm{COP}_{\text{冷}}+1$\\[3pt]
+\tsl{第二法則}熱はひとりでに低温→高温へ移らない\\[3pt]
+\tsl{}1つの熱源の熱を全部仕事にするサイクルはない\\[3pt]
+\tsl{カルノー}可逆なら $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$、$\eta_{\mathrm C}=1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$（K で）\\[3pt]
+\tsl{上限}どんな機関も $\eta\leqq\eta_{\mathrm C}$\\[3pt]
+\tsl{}冷凍機 $\dfrac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}$、ヒートポンプ $\dfrac{T_{\mathrm H}}{T_{\mathrm H}-T_{\mathrm L}}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{熱機関}{サイクルをくり返して、熱から仕事を取り出し続ける機械。}
+\bkword{$Q_{\mathrm H}$・$Q_{\mathrm L}$}{1周で高温の熱源とやりとりする熱、低温の熱源とやりとりする熱の大きさ（正の数）。}
+\bkword{成績係数}{冷凍機・ヒートポンプで、入れた仕事1あたりにくみ出す（出す）熱。1より大きくてよい。}
+\bkword{不可逆変化}{ひとりでには逆向きに起きない変化。}
+\bkword{可逆変化}{逆向きにすると、まわりもふくめてすべてもとにもどせる変化。}
+\bkword{熱力学温度}{可逆機関の熱の比で決めた、物によらない温度。単位 K。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{\shortstack{$W_{\text{出}}$\\[2pt]$W_{\text{入}}$}}{ダブリュー}{1周で外へ出す仕事・外から入れる仕事（正の数）。第一法則の $W$ とは $W=-W_{\text{出}}$}{net work}{熱-5}}
+{\bkkigocard{COP}{シーオーピー}{成績係数。冷凍機 $Q_{\mathrm L}/W_{\text{入}}$、ヒートポンプ $Q_{\mathrm H}/W_{\text{入}}$}{COP}{熱-5}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:熱-5:ex1}
+\begin{phreidai}[発電所の効率の上限（はてな？）]
+石炭火力発電所で、約600\,℃の蒸気から熱を受けとり、約30\,℃の海の水へ熱を捨てます。この発電所の熱効率は、どれだけ工夫しても何\,\%をこえられませんか。
+\phbamen
+熱を受けとる温度と、捨てる温度がわかっている熱機関です。効率の上限をたずねています。
+\phmushi
+蒸気がボイラーの中で温度を変えながら熱を受けとることは考えず、すべての熱を600\,℃で受けとり、30\,℃で捨てるとします。
+\phzu
+高温の熱源 $T_{\mathrm H}$、低温の熱源 $T_{\mathrm L}$、効率の上限 $\eta_{\mathrm C}$（図\ref{ph:熱-5:fig-three}の熱機関の図）。
+\phriyu
+どんな熱機関も、同じ2つの温度の間で働く可逆機関の効率をこえられません（カルノーの定理、⑤）。その効率が $\eta_{\mathrm C}=1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ です。
+\phtateru
+温度を K にします。$T_{\mathrm H}=600+273=\qty{873}{K}$、$T_{\mathrm L}=30+273=\qty{303}{K}$。
+\[\eta_{\mathrm C}=1-\frac{T_{\mathrm L}}{T_{\mathrm H}}=1-\frac{303}{873}\]
+\phtoku
+\[\eta_{\mathrm C}=1-0.347=0.653\]
+\phtashikame
+単位：K÷K で単位のない数。\\
+大きさ：0と1の間にあります。実際の石炭火力は約40\,\%で、上限より低くなっています（⑦）。\\
+まちがいの確かめ：℃のまま $1-\dfrac{30}{600}=0.95$ とすると、95\,\%という大きすぎる答えになります。
+\kotae 約65\,\%
+\end{phreidai}
+\begin{jibun}
+約500\,℃の熱を受けとり、約20\,℃のまわりへ熱を捨てる熱機関の効率の上限を求めましょう。
+\bkjans{$1-\tfrac{293}{773}\approx0.62$。約62\,\%}
+\end{jibun}
+
+\label{ph:熱-5:ex2}
+\begin{phreidai}[熱機関の熱の出入り]
+ある熱機関は、1周の間に高温の熱源から\qty{1000}{J}の熱を受けとり、\qty{350}{J}の仕事を外へ出します。低温の熱源へ捨てる熱と、熱効率を求めましょう。
+\phbamen
+1周の熱と仕事の出入りの問題です。
+\phmushi
+まわりへ逃げる熱は、低温の熱源へ捨てる熱にふくめて考えます。
+\phzu
+$Q_{\mathrm H}=\qty{1000}{J}$、$W_{\text{出}}=\qty{350}{J}$、捨てる熱 $Q_{\mathrm L}$、効率 $\eta$。
+\phriyu
+1周で作動流体はもとにもどるので $\Delta U=0$。「入る－出る＝0」から $Q_{\mathrm L}$ が出ます（②）。
+\phtateru
+\[Q_{\mathrm H}-Q_{\mathrm L}-W_{\text{出}}=0,\qquad\eta=\frac{W_{\text{出}}}{Q_{\mathrm H}}\]
+\phtoku
+\[Q_{\mathrm L}=1000-350=\qty{650}{J},\qquad\eta=\frac{350}{1000}=0.35\]
+\phtashikame
+$1-\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=1-0.65=0.35$ でも同じです。捨てる熱は、仕事より多くなっています。
+\kotae 捨てる熱\qty{650}{J}、熱効率0.35（35\,\%）
+\end{phreidai}
+\begin{jibun}
+1周の間に、高温の熱源から\qty{800}{J}を受けとり、低温の熱源へ\qty{520}{J}を捨てる熱機関の、1周の仕事と熱効率を求めましょう。
+\bkjans{$W_{\text{出}}=800-520=\qty{280}{J}$、$\eta=280\div800=0.35$}
+\end{jibun}
+
+\label{ph:熱-5:ex3}
+\begin{phreidai}[冷凍庫の成績係数の上限]
+冷凍庫の中を$-18$\,℃に保ち、30\,℃の台所へ熱を捨てます。成績係数 $\mathrm{COP}_{\text{冷}}$ は、いくらまで大きくできますか。
+\phbamen
+熱を低温（庫内）から高温（台所）へくみ上げる冷凍機です。
+\phmushi
+熱をやりとりするときの温度差を考えず、庫内と台所の温度で熱をやりとりするとします。
+\phzu
+$T_{\mathrm L}=-18+273=\qty{255}{K}$、$T_{\mathrm H}=30+273=\qty{303}{K}$、$\mathrm{COP}_{\text{冷}}$。
+\phriyu
+可逆な冷凍機がいちばん大きな成績係数をもち、その値は $\dfrac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}$ です（⑤の流れ図）。
+\phtateru
+\[\mathrm{COP}_{\text{冷}}=\frac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}=\frac{255}{303-255}\]
+\phtoku
+\[\mathrm{COP}_{\text{冷}}=\frac{255}{48}=5.3\]
+\phtashikame
+温度差 $T_{\mathrm H}-T_{\mathrm L}$ は\qty{48}{K}で、℃の差と同じです。分子は K で入れます。実際の冷凍庫は、熱を移すための温度差や圧縮機の損失があるので、これよりずっと小さい値です（熱-9 で計算します）。
+\kotae 約5.3まで
+\end{phreidai}
+\begin{jibun}
+冷蔵室を3\,℃に保ち、30\,℃の台所へ熱を捨てる冷蔵庫の、成績係数の上限を求めましょう。
+\bkjans{$\tfrac{276}{27}\approx10$}
+\end{jibun}
+
+\label{ph:熱-5:ex4}
+\begin{phreidai}[暖房のヒートポンプの上限]
+冬、外の空気が0\,℃のとき、エアコンの暖房で40\,℃の空気を部屋へ吹き出します。成績係数 $\mathrm{COP}_{\text{暖}}$ の上限を求めましょう。また、外が$-10$\,℃になると、上限はどうなりますか。
+\phbamen
+外の空気（低温）から熱をくみ上げ、部屋（高温）へ出すヒートポンプです。
+\phmushi
+熱を外の空気から受けとるのは0\,℃、部屋へ出すのは40\,℃として、熱交換器の温度差は考えません。
+\phzu
+$T_{\mathrm L}=\qty{273}{K}$、$T_{\mathrm H}=\qty{313}{K}$、$\mathrm{COP}_{\text{暖}}$。
+\phriyu
+可逆なヒートポンプがいちばん大きな成績係数をもち、$\dfrac{T_{\mathrm H}}{T_{\mathrm H}-T_{\mathrm L}}$ です（⑤）。
+\phtateru
+\[\mathrm{COP}_{\text{暖}}=\frac{T_{\mathrm H}}{T_{\mathrm H}-T_{\mathrm L}}=\frac{313}{313-273}\]
+\phtoku
+\[\mathrm{COP}_{\text{暖}}=\frac{313}{40}=7.8\]
+外が$-10$\,℃なら、$T_{\mathrm L}=\qty{263}{K}$ で、$\dfrac{313}{50}=6.3$ です。
+\phtashikame
+$\mathrm{COP}_{\text{暖}}=\mathrm{COP}_{\text{冷}}+1$ でも確かめられます：$\dfrac{273}{40}+1=6.8+1=7.8$。外が寒くなって温度差が増えると、上限は小さくなります。家庭のエアコンの暖房の成績係数は、カタログの決まった条件で約4〜6です。
+\kotae 約7.8。外が$-10$\,℃なら約6.3に下がる
+\end{phreidai}
+\begin{jibun}
+外が5\,℃のとき、45\,℃のお湯や空気を作るヒートポンプの、成績係数の上限を求めましょう。
+\bkjans{$\tfrac{318}{40}\approx8.0$}
+\end{jibun}
+
+\label{ph:熱-5:ex5}
+\begin{phreidai}[ヒートポンプと電気ストーブ]
+部屋を温めるのに\qty{3}{kW}の熱が要ります。成績係数4のエアコンの暖房を使うと、電気は何 kW 要りますか。外の空気からくみ上げる熱はいくらですか。電気ストーブで温めるときとくらべましょう。
+\phbamen
+同じ熱を、2つの方法で出すときの電気の量をくらべます。
+\phmushi
+成績係数は、運転の間ずっと4のままとします。
+\phzu
+$Q_{\mathrm H}$（1秒あたり）＝\qty{3}{kW}、$\mathrm{COP}_{\text{暖}}=4$、電気 $W_{\text{入}}$（1秒あたり）、外からの熱 $Q_{\mathrm L}$（1秒あたり）。図\ref{ph:熱-5:fig-hp}。
+\phriyu
+成績係数の決め方 $\mathrm{COP}_{\text{暖}}=\dfrac{Q_{\mathrm H}}{W_{\text{入}}}$ と、1周の矢印の数え方 $Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}$（②）を使います。1秒あたりの量でも同じ式が成り立ちます。
+\phtateru
+\[W_{\text{入}}=\frac{Q_{\mathrm H}}{\mathrm{COP}_{\text{暖}}},\qquad Q_{\mathrm L}=Q_{\mathrm H}-W_{\text{入}}\]
+\phtoku
+\[W_{\text{入}}=\frac{3}{4}=\qty{0.75}{kW},\qquad Q_{\mathrm L}=3-0.75=\qty{2.25}{kW}\]
+電気ストーブなら、電気がそのまま熱になるので、\qty{3}{kW}の電気が要ります。
+\phtashikame
+電気は電気ストーブの4分の1です。エネルギーは増えていません（$0.75+2.25=3$）。
+\kotae 電気\qty{0.75}{kW}、外からの熱\qty{2.25}{kW}（電気ストーブなら\qty{3}{kW}）
+\end{phreidai}
+\begin{jibun}
+\qty{2.4}{kW}の熱を、成績係数3のヒートポンプで出します。要る電気と、外からくみ上げる熱を求めましょう。
+\bkjans{電気 $2.4\div3=\qty{0.8}{kW}$、外からの熱 $2.4-0.8=\qty{1.6}{kW}$}
+\end{jibun}
+
+\label{ph:熱-5:ex6}
+\begin{phreidai}[海の温度差で発電する]
+沖縄県の久米島では、海面近くの約26\,℃の海水と、深さ約\qty{600}{m}からくみ上げた約9\,℃の海水の温度差で発電する実験が行われています（海洋温度差発電）。この温度差の熱機関の効率の上限を求めましょう。また、\qty{50}{kW}の電気を出すには、表面の海水から少なくとも何 kW の熱を受けとる必要がありますか。
+\phbamen
+温度差の小さい2つの熱源の間で働く熱機関です。
+\phmushi
+熱を受けとる温度を26\,℃、捨てる温度を9\,℃とし、ポンプなどに使う電気は考えません。
+\phzu
+$T_{\mathrm H}=\qty{299}{K}$、$T_{\mathrm L}=\qty{282}{K}$、$W_{\text{出}}$（1秒あたり）＝\qty{50}{kW}、$Q_{\mathrm H}$（1秒あたり）。
+\phriyu
+効率の上限はカルノーの効率（⑤）。上限の効率で動いても要る熱が、いちばん少ない熱です。
+\phtateru
+\[\eta_{\mathrm C}=1-\frac{282}{299},\qquad Q_{\mathrm H}=\frac{W_{\text{出}}}{\eta_{\mathrm C}}\]
+\phtoku
+\[\eta_{\mathrm C}=\frac{17}{299}=0.057,\qquad Q_{\mathrm H}=\frac{50}{0.057}\approx\qty{880}{kW}\]
+\phtashikame
+効率の上限は約5.7\,\%で、とても小さい値です。上限で動いても、\qty{880}{kW}の熱を受けとって、約\qty{830}{kW}を深層の海水に捨てます。実際の効率はさらに低いので、たくさんの海水をくみ上げる必要があります。それでも、燃料がいらず、昼も夜も発電できることが利点です。
+\kotae 約5.7\,\%。少なくとも約\qty{880}{kW}
+\end{phreidai}
+\begin{jibun}
+約90\,℃の温泉の湯から熱を受けとり、約20\,℃の川の水へ熱を捨てて発電する熱機関の、効率の上限を求めましょう。
+\bkjans{$1-\tfrac{293}{363}\approx0.19$。約19\,\%}
+\end{jibun}
+
+\label{ph:熱-5:ex7}
+\begin{phreidai}[原子力発電所の効率を上限とくらべる]
+加圧水型の原子力発電所では、約280\,℃の蒸気でタービンを回し、約30\,℃の海水で冷やします。実際の熱効率は約33\,\%です。カルノーの効率の何割にあたりますか。
+\phbamen
+実際の効率と、上限の効率をくらべます。
+\phmushi
+蒸気はすべて280\,℃で熱を受けとり、30\,℃で捨てるとします。
+\phzu
+$T_{\mathrm H}=\qty{553}{K}$、$T_{\mathrm L}=\qty{303}{K}$、実際の効率 $\eta=0.33$。
+\phriyu
+上限は $\eta_{\mathrm C}=1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$（⑤）。割合は、実際÷上限です。
+\phtateru
+\[\eta_{\mathrm C}=1-\frac{303}{553},\qquad\frac{\eta}{\eta_{\mathrm C}}=\frac{0.33}{\eta_{\mathrm C}}\]
+\phtoku
+\[\eta_{\mathrm C}=1-0.548=0.452,\qquad\frac{0.33}{0.452}=0.73\]
+\phtashikame
+原子力発電所の蒸気は、石炭火力（約600\,℃）より温度が低いので、上限も実際の効率も低くなります。燃料の熱の約3分の2は、海へ捨てています。
+\kotae カルノーの効率は約45\,\%で、実際の効率はその約7割
+\end{phreidai}
+\begin{jibun}
+600\,℃の蒸気・30\,℃の海水で働く石炭火力発電所の実際の効率が0.42のとき、カルノーの効率の何割にあたりますか。
+\bkjans{$0.42\div0.653\approx0.64$。約6割}
+\end{jibun}
+
+\label{ph:熱-5:ex8}
+\begin{phreidai}[理想気体のカルノーサイクルを計算する]
+単原子分子の理想気体 \qty{1}{mol} で、$T_{\mathrm H}=\qty{600}{K}$、$T_{\mathrm L}=\qty{300}{K}$ のカルノーサイクルを回します。1→2 の等温膨張で体積が2倍になるとき、1周で受けとる熱 $Q_{\mathrm H}$、捨てる熱 $Q_{\mathrm L}$、仕事 $W_{\text{出}}$ を求めましょう。熱-6 と同じ数で使うので、3けたで書きます（$R=\qty{8.31}{J/(mol.K)}$、$\ln2=0.693$）。
+\phbamen
+図\ref{ph:熱-5:fig-carnot}のサイクルです。
+\phmushi
+摩擦・熱の逃げをなくし、どの変化も可逆とします。
+\phzu
+$n=\qty{1}{mol}$、$\dfrac{V_2}{V_1}=2$。等温の変化で熱が出入りし、断熱の変化では熱の出入りがありません。
+\phriyu
+等温の熱は熱-3 ⑤の $nRT\ln\dfrac{V_2}{V_1}$。断熱の変化から $\dfrac{V_3}{V_4}=\dfrac{V_2}{V_1}$（⑤）。仕事は②の $W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}$。
+\phtateru
+\[Q_{\mathrm H}=nRT_{\mathrm H}\ln2,\qquad Q_{\mathrm L}=nRT_{\mathrm L}\ln2,\qquad W_{\text{出}}=Q_{\mathrm H}-Q_{\mathrm L}\]
+\phtoku
+\[Q_{\mathrm H}=1\times8.31\times600\times0.693=\qty{3460}{J}\]
+\[Q_{\mathrm L}=1\times8.31\times300\times0.693=\qty{1730}{J},\qquad W_{\text{出}}=3460-1730=\qty{1730}{J}\]
+\phtashikame
+効率は $\dfrac{1730}{3460}=0.50$ で、$1-\dfrac{300}{600}=0.50$ と合います。⑤の Python で道を区切って足した仕事（1728 J）とも合います。断熱の2つの道の仕事（約\qty{3740}{J}）は、ふくらむときと縮むときで打ち消し合います。
+\kotae $Q_{\mathrm H}=\qty{3460}{J}$、$Q_{\mathrm L}=\qty{1730}{J}$、$W_{\text{出}}=\qty{1730}{J}$
+\end{phreidai}
+\begin{jibun}
+理想気体 \qty{1}{mol} のカルノーサイクルで、$T_{\mathrm H}=\qty{500}{K}$、$T_{\mathrm L}=\qty{300}{K}$、等温膨張で体積が3倍になります。$Q_{\mathrm H}$ と $W_{\text{出}}$ を3けたで求めましょう（$\ln3=1.099$）。
+\bkjans{$Q_{\mathrm H}=8.31\times500\times1.099\approx\qty{4570}{J}$、$Q_{\mathrm L}\approx\qty{2740}{J}$、$W_{\text{出}}\approx\qty{1830}{J}$（効率0.40）}
+\end{jibun}
+
+\label{ph:熱-5:ex9}
+\begin{phreidai}[冷房と暖房の成績係数の関係]
+あるエアコンを、冷凍機として使うときの成績係数が3.2でした。同じ温度の間で、同じ機械をヒートポンプとして見ると、成績係数はいくらですか。
+\phbamen
+同じ機械の、2つの見方です。冷やす側を見れば冷凍機、温める側を見ればヒートポンプです。
+\phmushi
+どちらの見方でも、1周の熱と仕事は同じ（同じ運転）とします。
+\phzu
+$Q_{\mathrm L}$、$Q_{\mathrm H}$、$W_{\text{入}}$。$\mathrm{COP}_{\text{冷}}=3.2$。
+\phriyu
+1周の数え方 $Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}$（②）を、$W_{\text{入}}$ でわります。
+\phtateru
+\[\frac{Q_{\mathrm H}}{W_{\text{入}}}=\frac{Q_{\mathrm L}}{W_{\text{入}}}+1\qquad\text{つまり}\qquad\mathrm{COP}_{\text{暖}}=\mathrm{COP}_{\text{冷}}+1\]
+\phtoku
+\[\mathrm{COP}_{\text{暖}}=3.2+1=4.2\]
+\phtashikame
+上限の式でも、$\dfrac{T_{\mathrm H}}{T_{\mathrm H}-T_{\mathrm L}}-\dfrac{T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}=\dfrac{T_{\mathrm H}-T_{\mathrm L}}{T_{\mathrm H}-T_{\mathrm L}}=1$ で、差はいつも1です。
+\kotae 4.2
+\end{phreidai}
+\begin{jibun}
+ヒートポンプとしての成績係数が4.5の機械を、同じ運転で冷凍機として見たときの成績係数を求めましょう。
+\bkjans{$4.5-1=3.5$}
+\end{jibun}
+
+\label{ph:熱-5:ex10}
+\begin{phreidai}[高い温度を上げるか、低い温度を下げるか]
+600\,℃と30\,℃の間で働く熱機関の効率の上限を、もっと上げたいとします。（ア）低温の側を10\,℃下げて20\,℃にする、（イ）高温の側を10\,℃上げて610\,℃にする、のどちらが、上限を多く上げますか。
+\phbamen
+同じ\qty{10}{K}の変化を、どちらの温度に使うと効くかをくらべます。
+\phmushi
+どちらの温度も熱源の温度で、ほかは変わらないとします。
+\phzu
+もとは $T_{\mathrm H}=\qty{873}{K}$、$T_{\mathrm L}=\qty{303}{K}$。（ア）$T_{\mathrm L}=\qty{293}{K}$、（イ）$T_{\mathrm H}=\qty{883}{K}$。
+\phriyu
+上限は $\eta_{\mathrm C}=1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$（⑤）。3つの場合を計算してくらべます。差が小さいので、℃に273.15をたしてKにし、0.01\,\%まで出します。
+\phtateru
+\[\text{もと}：1-\frac{303}{873},\qquad\text{（ア）}：1-\frac{293}{873},\qquad\text{（イ）}：1-\frac{303}{883}\]
+\phtoku
+もとは65.28\,\%、（ア）は66.43\,\%、（イ）は65.67\,\%。上がった分は（ア）1.15ポイント、（イ）0.39ポイントです。
+\phtashikame
+（ア）のほうが約3倍よく効きます。$T_{\mathrm L}$ を下げると分子が小さくなり、$T_{\mathrm H}$ を上げると分母が大きくなりますが、分母の $T_{\mathrm H}$ は大きい数なので、10増えても割合はあまり変わりません。2つの効き方の比は、ほぼ $\dfrac{T_{\mathrm H}}{T_{\mathrm L}}=\dfrac{873}{303}\approx2.9$ です。ただし、低温の熱源は海や空気で、自由には下げられません。だから実際には、材料が耐えられるかぎり $T_{\mathrm H}$ を上げる工夫をしています。
+\kotae （ア）（1.15ポイント上がる。（イ）は0.39ポイント）
+\end{phreidai}
+\begin{jibun}
+280\,℃と30\,℃の間で働く熱機関で、低温の側を10\,℃下げるときと、高温の側を10\,℃上げるときの、上限の上がり方を求めましょう。
+\bkjans{低温を下げる：約1.81ポイント、高温を上げる：約0.97ポイント}
+\end{jibun}
+
+\label{ph:熱-5:ex11}
+\begin{phreidai}[熱の比で温度を測る]
+\qty{600}{K}の熱源と、温度のわからない熱源の間で可逆機関を動かすと、600\,K の熱源から受けとる熱の半分を、もう1つの熱源へ捨てました。もう1つの熱源の温度は何 K ですか。
+\phbamen
+温度計を使わず、可逆機関の熱の比で温度を決めます。
+\phmushi
+機関は可逆とします。
+\phzu
+$T_{\mathrm H}=\qty{600}{K}$、$\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}=0.5$、わからない温度 $T_{\mathrm L}$。
+\phriyu
+熱力学温度は、可逆機関の熱の比で決めた温度です（⑥）。
+\phtateru
+\[\frac{T_{\mathrm L}}{T_{\mathrm H}}=\frac{Q_{\mathrm L}}{Q_{\mathrm H}}\qquad\text{だから}\qquad T_{\mathrm L}=T_{\mathrm H}\times\frac{Q_{\mathrm L}}{Q_{\mathrm H}}\]
+\phtoku
+\[T_{\mathrm L}=600\times0.5=\qty{300}{K}\]
+\phtashikame
+\qty{300}{K}は約27\,℃で、部屋の温度くらいです。この機関の効率は $1-0.5=0.5$ です。
+\kotae \qty{300}{K}
+\end{phreidai}
+\begin{jibun}
+\qty{750}{K}の熱源から受けとる熱の0.40倍を、もう1つの熱源へ捨てる可逆機関があります。もう1つの熱源の温度を求めましょう。
+\bkjans{$750\times0.40=\qty{300}{K}$}
+\end{jibun}
+
+\label{ph:熱-5:ex12}
+\begin{phreidai}[$p$-$V$ 図の長方形のサイクルの効率]
+2原子分子の理想気体を、図の長方形のサイクル A→B→C→D→A で回します（熱-2 の長方形のサイクルと同じ道）。この気体の定積モル比熱は $C_V=\dfrac{5}{2}R$、定圧モル比熱は $C_p=\dfrac{7}{2}R$ です（熱-3 ④）。1周の仕事、受けとる熱の合計、熱効率を求めましょう。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (66,0) node[anchor=west, font=\sffamily\small] {$V$（L）};
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=0.8pt] (0,0) -- (0,34) node[anchor=south, font=\sffamily\small] {$p$（kPa）};
+  \fill[bkOrange!25] (15,12) rectangle (45,24);
+  \draw[bkInk, line width=1.3pt] (15,12) rectangle (45,24);
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=1.3pt] (15,12) -- (15,19);
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=1.3pt] (15,24) -- (32,24);
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=1.3pt] (45,24) -- (45,17);
+  \draw[-{Stealth[length=5pt]}, bkInk, line width=1.3pt] (45,12) -- (28,12);
+  \node[qxf lab, anchor=north east] at (14.5,11.5) {A};
+  \node[qxf lab, anchor=south east] at (14.5,24.5) {B};
+  \node[qxf lab, anchor=south west] at (45.5,24.5) {C};
+  \node[qxf lab, anchor=north west] at (45.5,11.5) {D};
+  \draw[bkGray, dashed, line width=0.4pt] (0,12) -- (15,12) (0,24) -- (15,24) (15,0) -- (15,12) (45,0) -- (45,12);
+  \node[qxf lab, anchor=east] at (-1,12) {100};
+  \node[qxf lab, anchor=east] at (-1,24) {200};
+  \node[qxf lab, anchor=north] at (15,-1) {1};
+  \node[qxf lab, anchor=north] at (45,-1) {3};
+\end{tikzpicture}
+\end{center}
+\phbamen
+入試でよく出る形の、$p$-$V$ 図のサイクルです。どの区間で熱を受けとり、どの区間で捨てるかを分けて数えます。
+\phmushi
+理想気体で、比熱は温度によらず一定とします。変化は準静的とします。
+\phzu
+A（\qty{1}{L}・\qty{100}{kPa}）、B（\qty{1}{L}・\qty{200}{kPa}）、C（\qty{3}{L}・\qty{200}{kPa}）、D（\qty{3}{L}・\qty{100}{kPa}）。
+\phriyu
+熱効率は「仕事÷受けとる熱の合計」（②）。仕事は長方形の面積（8-7⑩）。定積の熱は $nC_V\Delta T$、定圧の熱は $nC_p\Delta T$ で、$pV=nRT$ から $n\Delta T=\dfrac{\Delta(pV)}{R}$ と書けるので、$n$ や $T$ を知らなくても計算できます。
+\phtateru
+\[W_{\text{出}}=(200-100)\times(3-1)\ \text{kPa·L}\]
+\[Q_{\mathrm{AB}}=\frac{5}{2}V\Delta p,\qquad Q_{\mathrm{BC}}=\frac{7}{2}p\Delta V\]
+\phtoku
+\qty{1}{kPa}×\qty{1}{L}＝\qty{1}{J}なので、$W_{\text{出}}=\qty{200}{J}$。受けとるのは、温度が上がる A→B と B→C です。
+\[Q_{\mathrm{AB}}=\frac{5}{2}\times1\times(200-100)=\qty{250}{J},\qquad Q_{\mathrm{BC}}=\frac{7}{2}\times200\times(3-1)=\qty{1400}{J}\]
+受けとる熱の合計は $250+1400=\qty{1650}{J}$ で、熱効率は
+\[\eta=\frac{200}{1650}=0.12\]
+\phtashikame
+捨てる熱は C→D の $\dfrac{5}{2}\times3\times100=\qty{750}{J}$ と D→A の $\dfrac{7}{2}\times100\times2=\qty{700}{J}$ で、合計\qty{1450}{J}。$1650-1450=200$ で、仕事と合います。いちばん高い温度は C、いちばん低い温度は A で、$pV$ の比から $T_{\mathrm C}=6T_{\mathrm A}$ です。この2つの温度の間のカルノーの効率は $1-\dfrac{1}{6}=0.83$ で、長方形のサイクルはそれよりずっと低い効率です。温度差のある所で熱をやりとりしているからです。
+\kotae 仕事\qty{200}{J}、受けとる熱\qty{1650}{J}、熱効率 約0.12（12\,\%）
+\end{phreidai}
+\begin{jibun}
+例題と同じ長方形のサイクルを、単原子分子の理想気体（$C_V=\dfrac{3}{2}R$、$C_p=\dfrac{5}{2}R$）で回します。受けとる熱の合計と熱効率を求めましょう。
+\bkjans{受けとる熱 $\tfrac{3}{2}\times1\times100+\tfrac{5}{2}\times200\times2=150+1000=\qty{1150}{J}$、$\eta=200\div1150\approx0.17$}
+\end{jibun}
+
+\label{ph:熱-5:ex13}
+\begin{phreidai}[海の熱だけで走る船]
+「海の水は温かい。船のエンジンで海の水から熱を受けとって仕事に変え、冷えた水を海へもどせば、燃料なしで走れる」という案があります。この船は作れますか。理由を、第一法則と第二法則で説明しましょう。
+\phbamen
+新しい機械の案を、法則で確かめます。数は使いません。
+\phmushi
+船のまわりの海は、どこでも同じ温度とします（温度差のある深い海の水は使わない）。
+\phzu
+高温の熱源は海の水だけ。熱の矢印は海→エンジンの1本、仕事の矢印はエンジン→船。
+\phriyu
+エネルギーの数え方（第一法則）と、熱を仕事に変える向きの制限（第二法則、トムソンの言い方）の両方を確かめます。
+\phtateru
+第一法則：海から受けとる熱 $Q$ と、出す仕事 $W_{\text{出}}=Q$ は等しく、エネルギーは保存しています。第一法則には反しません。\par
+第二法則：1つの熱源（海）から熱を受けとり、それを全部仕事に変えて、エンジンはもとの状態にもどってくり返します。これは、トムソンの言い方が「ない」と言っているサイクルそのものです。
+\phtoku
+この船は、第二種永久機関なので作れません。
+\phtashikame
+もしこの船があれば、図\ref{ph:熱-5:fig-eq}（a）のように冷凍機と組み合わせて、熱を何も残さずに低温から高温へ移すこともできてしまい、クラウジウスの言い方にも反します。温度のちがう深層の海水を使えば、例題6のように小さな効率で発電できますが、それは2つの熱源の間で働くふつうの熱機関です。
+\kotae 作れない（第一法則には反しないが、1つの熱源の熱を全部仕事にするので第二法則に反する）
+\end{phreidai}
+\begin{jibun}
+「部屋の空気から熱を受けとって全部電気に変え、その電気でエアコンを動かせば、電気代0で冷房できる」という案を、第二法則で調べましょう。
+\bkjans{1つの熱源（部屋の空気）の熱を全部仕事（電気）に変える部分が、トムソンの言い方に反するので作れない}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{温度を℃のまま入れる}
+\bkng{600\,℃と30\,℃の間のカルノーの効率は $1-\dfrac{30}{600}=0.95$。}
+\bkok{K にして $1-\dfrac{303}{873}=0.65$。}
+$\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ は、熱の比 $\dfrac{Q_{\mathrm L}}{Q_{\mathrm H}}$ と同じもので、温度の「比」です。比は、0の位置が本当の0（0\,K）でないと意味をもちません。温度の差（分子の $T_{\mathrm H}-T_{\mathrm L}$）だけは、℃でもKでも同じです（例題1・3）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{成績係数が1をこえるのはおかしい？}
+\bkng{エネルギーは増えないので、ヒートポンプが出す熱は、入れた電気より多くなれない。}
+\bkok{$Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}$。外からくみ上げた熱 $Q_{\mathrm L}$ の分だけ、多く出せる。}
+ヒートポンプはエネルギーを作るのではなく、運びます。数えるときは、低温の熱源から入る矢印 $Q_{\mathrm L}$ を忘れないようにします（④、例題5）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{熱効率を何でわる？}
+\bkng{熱効率は、仕事÷捨てた熱 $\dfrac{W_{\text{出}}}{Q_{\mathrm L}}$。}
+\bkok{熱効率は、仕事÷受けとった熱 $\dfrac{W_{\text{出}}}{Q_{\mathrm H}}$。}
+効率は「取り出せたもの÷入れたもの」です。熱機関に入れたのは $Q_{\mathrm H}$ です。$\dfrac{W_{\text{出}}}{Q_{\mathrm L}}$ では、1をこえることもあり、効率になりません（②）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{摩擦をなくせば100\,\%？}
+\bkng{摩擦も熱の逃げもない、理想の熱機関なら、効率は100\,\%になる。}
+\bkok{理想の（可逆な）熱機関でも、効率は $1-\dfrac{T_{\mathrm L}}{T_{\mathrm H}}$ まで。}
+捨てる熱 $Q_{\mathrm L}$ は、むだではなく、熱からくり返し仕事を取り出すために必ず要るものです（③の第二法則）。摩擦をなくしても、0にはできません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{冷房と暖房の成績係数}
+\bkng{同じエアコンなら、冷凍機としての成績係数とヒートポンプとしての成績係数は同じ。}
+\bkok{同じ運転なら $\mathrm{COP}_{\text{暖}}=\mathrm{COP}_{\text{冷}}+1$。わる数は同じ $W_{\text{入}}$ でも、わられる数がちがう。}
+冷凍機でほしいのはくみ出す熱 $Q_{\mathrm L}$、ヒートポンプでほしいのは出す熱 $Q_{\mathrm H}=Q_{\mathrm L}+W_{\text{入}}$ です。どちらの熱を数えているかを、矢印の図で確かめます（例題9）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{サイクルの「受けとる熱」}
+\bkng{$p$-$V$ 図のサイクルの効率は、仕事÷（受けとる熱－捨てる熱）。}
+\bkok{仕事÷受けとる熱の合計。受けとる区間の熱だけを全部たす。}
+受けとる熱から捨てる熱を引いたものは、仕事そのものです。それでわると、いつも1になってしまいます。区間ごとに、温度が上がる（熱を受けとる）か、下がる（捨てる）かを分けて数えます（例題12）。
+\end{tsumazuki}
+
+\begin{column}{カルノーとトムソン}
+サディ・カルノー（1796〜1832年）は、フランスの陸軍の技術者でした。1824年の本『火の動力についての考察』で、熱機関の効率は熱を受けとる温度と捨てる温度で決まり、作動流体にはよらないと論じました。熱を「熱素」という物質と考えた説明でしたが、効率の上限の考えは正しかったのです。
+
+しばらく忘れられていたこの本に目をとめたのが、イギリスのウィリアム・トムソン（1824〜1907年。のちのケルビン）で、1848年に、カルノーの考えから物質によらない温度の目もりを提案しました。温度の単位 K（ケルビン）は、その名前からとったものです。1850年ごろ、クラウジウスとトムソンは、ジュールの実験でわかった「熱はエネルギーの1つの形」（熱-2）とカルノーの考えを1つにまとめ、第一法則と第二法則を作りあげました。
+\end{column}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{12\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[上限を知って、機械の「伸びしろ」を測る]
+新しい発電所やエアコンを作る技術者は、まず、使える2つの温度からカルノーの効率（成績係数）の上限を計算します。実際の機械の値を上限でわった割合を見れば、あとどれだけ改良できるか（伸びしろ）がわかります。表\ref{ph:熱-5:tab-real}の発電所では、上限の6〜7割まで来ていることがわかります。
+
+効率を上げる工夫は、カルノーの式のとおり、「高い温度で熱を受けとる」「低い温度で熱を捨てる」「温度差のある所での熱の移動を減らす」の3つです。発電所を海辺に建てるのは、温度の低い海水が手に入るからでもあります。
+
+ヒートポンプは、熱をくみ上げる温度差が小さいほど得をします。床暖房のように低めの温度のお湯で暖房したり、地中の温度（冬でも外の空気より温かい）から熱をくみ上げたりするのは、そのためです。
+
+\begin{phketa}[効率と成績係数]
+\phketaline{大きな発電所の熱効率}{約33\,\%（原子力）〜約60\,\%（コンバインドサイクル）}
+\phketaline{コンバインドサイクルの記録（2018年）}{63.08\,\%}
+\phketaline{家庭のエアコンの暖房の成績係数（カタログの条件）}{約4〜6}
+\phketaline{冷凍庫（$-18$\,℃/30\,℃）の成績係数の上限}{約5.3}
+\phboxhead{答えが桁で合っているか}
+熱効率は必ず1より小さく、カルノーの効率より小さくなります。成績係数は1より大きいのがふつうで、温度差が数十 K なら上限は数〜十数です。熱効率に1をこえる答えや、上限より大きい答えが出たら、温度を℃で入れていないか、わる数がちがっていないかを確かめます。
+\end{phketa}
+\end{phkougaku}
+\phstation{熱力学,動力プラント,冷凍空調,エネルギー変換}{熱効率、成績係数、可逆、不可逆、カルノーサイクル、第二法則、熱力学温度}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{2}
+\bkproblem 熱機関の熱と仕事の問題です。\\
+（1）1周で\qty{500}{J}の熱を受けとり、\qty{150}{J}の仕事を出す熱機関の、捨てる熱と熱効率を求めましょう。\\
+（2）熱効率0.25の熱機関に、1周で\qty{200}{J}の仕事をさせたいとき、受けとる熱と捨てる熱を求めましょう。
+\bkpans{（1）\nobreak 捨てる熱\qty{350}{J}、熱効率0.30。（2）\nobreak 受けとる熱 $200\div0.25=\qty{800}{J}$、捨てる熱\qty{600}{J}}
+\bkproblem 527\,℃と27\,℃の間で働く熱機関の、効率の上限を求めましょう。高温の側を727\,℃にすると、上限はいくらになりますか。
+\bkpans{$1-\tfrac{300}{800}=0.625$（約63\,\%）。727\,℃なら $1-\tfrac{300}{1000}=0.70$}
+\bkproblem 1周で、低温の側から\qty{600}{J}の熱をくみ出し、\qty{200}{J}の仕事を入れられる冷凍機があります。高温の側へ出す熱、冷凍機としての成績係数、ヒートポンプとしての成績係数を求めましょう。
+\bkpans{高温の側へ\qty{800}{J}、$\mathrm{COP}_{\text{冷}}=3$、$\mathrm{COP}_{\text{暖}}=4$}
+\bkproblem ヒートポンプ給湯器で、お湯に\qty{14}{kWh}の熱を入れます。成績係数が3.5のとき、使う電気と、空気からくみ上げる熱を求めましょう。
+\bkpans{電気 $14\div3.5=\qty{4.0}{kWh}$、空気からの熱 $14-4.0=\qty{10}{kWh}$}
+\bkproblem 冷蔵庫の中を5\,℃に保ち、35\,℃の部屋へ熱を捨てるときの、成績係数の上限を求めましょう。中を$-5$\,℃にすると、上限はどうなりますか。
+\bkpans{$\tfrac{278}{30}\approx9.3$。$-5$\,℃なら $\tfrac{268}{40}\approx6.7$ に下がる}
+\bkproblem 次の（ア）〜（ウ）のうち、第二法則に反するものをすべて選び、理由を書きましょう。\\
+（ア）冷蔵庫が、電気を使って、庫内の熱を部屋へ出す。\\
+（イ）海の水から熱を受けとり、全部を仕事に変えて回り続けるエンジン。\\
+（ウ）お茶が、まわりの空気から熱を集めて、ひとりでに熱くなる。
+\bkpans{（イ）と（ウ）。（イ）は1つの熱源の熱を全部仕事にし続けるのでトムソンの言い方に反する。（ウ）は何も残さずに熱が低温から高温へ移るのでクラウジウスの言い方に反する。（ア）は電気の仕事を使うので反しない}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 単原子分子の理想気体（$C_V=\dfrac{3}{2}R$、$C_p=\dfrac{5}{2}R$）を、$p$-$V$ 図の長方形のサイクル A（\qty{2}{L}・\qty{100}{kPa}）→B（\qty{2}{L}・\qty{300}{kPa}）→C（\qty{4}{L}・\qty{300}{kPa}）→D（\qty{4}{L}・\qty{100}{kPa}）→A で回します。1周の仕事、受けとる熱の合計、熱効率を求めましょう。また、このサイクルのいちばん高い温度といちばん低い温度の間のカルノーの効率とくらべましょう。
+\bkpans{仕事\qty{400}{J}。受けとる熱 A→B $\tfrac{3}{2}\times2\times200=\qty{600}{J}$、B→C $\tfrac{5}{2}\times300\times2=\qty{1500}{J}$、合計\qty{2100}{J}。熱効率 約0.19。最高と最低の温度の比は $1200\div200=6$ で、カルノーの効率 約0.83 よりずっと低い}
+\bkproblem \qty{1000}{K}の熱源と\qty{300}{K}の熱源の間に、中間の温度 $T_{\mathrm M}$ の熱源をはさみ、上の可逆機関（1000 K→$T_{\mathrm M}$）が捨てた熱を、下の可逆機関（$T_{\mathrm M}$→300 K）が全部受けとるようにつなぎます。（1）2つをまとめた全体の効率を求めましょう。（2）2つの機関の仕事が同じになる $T_{\mathrm M}$ を求めましょう。
+\bkpans{（1）\nobreak $1-\tfrac{300}{1000}=0.70$（つないでも1つの可逆機関と同じ）。（2）\nobreak 上の仕事 $Q_{\mathrm H}\Bigl(1-\tfrac{T_{\mathrm M}}{1000}\Bigr)$ と下の仕事 $Q_{\mathrm H}\tfrac{T_{\mathrm M}}{1000}\Bigl(1-\tfrac{300}{T_{\mathrm M}}\Bigr)$ が等しいので、$1000-T_{\mathrm M}=T_{\mathrm M}-300$ より $T_{\mathrm M}=\qty{650}{K}$}
+\bkproblem まだわかっていないことの囲みの式 $1-\sqrt{T_{\mathrm L}/T_{\mathrm H}}$ を、600\,℃・30\,℃の石炭火力発電所と、280\,℃・30\,℃の原子力発電所に当てはめ、表\ref{ph:熱-5:tab-real}の実際の効率とくらべましょう。
+\bkpans{石炭火力 $1-\sqrt{303/873}\approx0.41$（実際 約0.40）、原子力 $1-\sqrt{303/553}\approx0.26$（実際 約0.33）。石炭火力ではよく合うが、原子力では実際のほうが高く、いつも合うわけではない}
+\bkproblem 30\,℃の部屋へ熱を捨てる可逆な冷凍機の成績係数 $\mathrm{COP}_{\text{冷}}$ が3になるのは、低温の側が何\,℃のときですか。冷やす温度を下げるほど、成績係数がどうなるかも答えましょう。
+\bkpans{$\tfrac{T_{\mathrm L}}{303-T_{\mathrm L}}=3$ より $T_{\mathrm L}=\tfrac{3}{4}\times303\approx\qty{227}{K}$（約$-46$\,℃）。冷やす温度を下げるほど温度差が大きくなり、成績係数は小さくなる（0 K に近づくと0に近づく）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 熱機関の熱効率と、冷凍機・ヒートポンプの成績係数を、熱と仕事の矢印から計算できる。\bkfurref{ph:熱-5:sec2}
+\item 第二法則の2つの言い方を説明し、カルノーの効率 $1-T_{\mathrm L}/T_{\mathrm H}$ を求められる。\bkfurref{ph:熱-5:sec3}
+\item カルノーの定理から、熱機関と冷凍機の上限と、熱力学温度の考えを導ける。\bkfurref{ph:熱-5:sec5}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{捨てる熱は、むだじゃなくて「くり返すための代金」なんだね。上限は温度だけで決まるから、温度で機械の実力がわかるんだ。}
