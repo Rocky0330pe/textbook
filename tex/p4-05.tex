@@ -1,0 +1,1194 @@
+%% 電-5 回路を行列で解く：直流回路の解析（第26回編集委員会 物理第4巻：組 電W3）。★1〜4、3段にしない。
+%% 記号（計画書 C-1・Y-3・B の電-5。この章の中だけの分け方）：
+%%   電池・電源装置の起電力 𝓔（\mathcal E。電-4 ⑨と同じ。電場 E とは書体で分ける）、内部抵抗 r、端子の電圧・抵抗の電圧 V。
+%%   回路の章（電-9 から）では電源の電圧を E（直流）・e（瞬時）と書くことを、①の前の「この章の書き方」で一言。
+%%   直流なので電流は大文字 I（Y-3。計画書 B の「網目電流は小文字でよい」は、Y-3 の i＝瞬時値とぶつかるので使わず、数学 3-6・7-5 と同じ I にした）。
+%%   網目電流 I_1・I_2…、網目の抵抗の行列 \mathbf R、節点の電位 φ_1・φ_2…（電位は φ：Y-3）、コンダクタンス G＝1/R〔S〕、
+%%   節点のコンダクタンスの行列 \mathbf G（立てた太字。1つの抵抗 R・1つのコンダクタンス G と分ける。計画書 B の案のとおり）、
+%%   節点に流しこむ電流 \vec I_s、テブナンの等価起電力 𝓔_th・等価抵抗 R_th、ノートンの電流 I_N、負荷 R_L、電気量 Q（⑪のコンデンサー）。
+%%   この章は時間を使わない（t なし）。周期・角周波数も使わない。
+%% 公式の持ち主（計画書 A）：A34（ホイートストン）・A35（分流器・倍率器）・A36（コンデンサーを含む直流回路）・A68（網目・節点・重ね合わせ・テブナン・最大電力）はこの章。
+%%   オームの法則・キルヒホッフ・合成抵抗・電力・内部抵抗は電-4（③⑤⑦⑨）を指す。q＝Cv は電-3 ④、RC の時間の変化は電-9 ③。
+%% ほかの巻との約束（計画書 A-6）：P2（力-5 → 電-5：④で節点の行列はトラス・ばねの網と同じ形）、P5（力-9 ひずみゲージ 120 Ω・ゲージ率約2・500×10^-6 → 0.12 Ω：⑦・例題10）、
+%%   P6（力-16 → 電-5：⑩で回路シミュレーターも剛性行列と同じ連立方程式）、P33（波-10 ⑩ 120 Ω・200×10^-6 → 0.048 Ω：例題10 のじぶんでとこう）。
+%% 数学の本との約束（計画書 C-6-2）：3-6⑦（9 V・6 V・2 Ω×3 → 2 A・0.5 A・2.5 A：例題4・6・7・8）、7-5（逆行列・np.linalg.solve・:944 回路シミュレーション：③⑩）、
+%%   7-11④（ばねの網と抵抗の網、K V＝I、力↔電流の相似は「もう1つの組み方」：④）。
+%% 数値はすべて Python で確かめた：checks/物理第4巻/電-5/calc_p4_05.py（出力 calc_p4_05_out.txt）。
+%% 出典（11月5日、組 電W3。書くときに確かめた）：
+%%   ・アルカリ乾電池（単3）の内部抵抗 新品で約0.15〜0.3 Ω：Energizer E91 の製品データシート（"Impedance 150-300 milliohms (fresh)"、
+%%     farnell.com の datasheets/1968873.pdf ほか、WebSearch の抜粋で2つの版が合う）。本文の例題は「0.5 Ω とします」（少し使った電池）と書いた。
+%%   ・テスター（デジタルマルチメーター）の直流電圧の入力抵抗 約10 MΩ：Fluke の技術資料 KA-04308（機種ごとの入力インピーダンスの表）、Fluke 17B+ の仕様書（>10 MΩ）。〔確〕
+%%   ・連立1次方程式の計算の回数（まだわかっていないこと）：消去法は約 n^3/3 回（数学 7-5⑤）。行列のかけ算の指数 ω の上限は
+%%     arXiv:2404.16349（Alman, Duan, Vassilevska Williams, Xu, Xu, Zhou "More Asymmetry Yields Faster Matrix Multiplication"）の最新版で ω<2.371177。
+%%     下限は2（答えの n^2 個の数を書くだけで n^2 回かかる）。逆行列・連立方程式が行列のかけ算と同じ指数で解けることは、Bunch・Hopcroft（1974）からの
+%%     よく知られた結果。本文は「約2.37乗」「2乗まで下げられるかは、わかっていない」とだけ書いた。〔確〕
+%%   ・鳥の例題の電線の抵抗 0.5 Ω/km、鳥の体 1 kΩ、電流 200 A は仮の数（「とします」と書いた）。配電線の「数千 V」は電-0・電-16 の持ち主に合わせる。
+%%   ・SPICE（1973年、カリフォルニア大学バークレー校の Nagel・Pederson）：UC Berkeley EECS の技術報告 UCB/ERL M382（www2.eecs.berkeley.edu/Pubs/TechRpts/1973/22871.html）、
+%%     Iowa State の講義資料「The Life of SPICE」。本文は「1970年代に大学で作られて」とだけ書いた。〔確〕
+%%   〔要確認〕のまま：なし（Wikipedia は出典にしていない）。
+\makeatletter
+\tikzset{sxf lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  sxf w/.style={draw=bkInk, line width=0.8pt},
+  sxf arr/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkRed!85!black},
+  sxf loop/.style={-{Stealth[length=3.4pt, width=3pt]}, line width=0.8pt, bkGreen!55!black, densely dashed},
+  sxf dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray},
+  pics/sxf res/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (-4,-1.4) rectangle (4,1.4);}},
+  pics/sxf resv/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (-1.4,-4) rectangle (1.4,4);}},
+  % 電池（たての線の途中。＋が上）
+  pics/sxf batt/.style={code={\fill[white] (-4.6,-1.1) rectangle (4.6,1.1);
+     \draw[bkInk, line width=0.8pt] (-4,1.1) -- (4,1.1); \draw[bkInk, line width=2.4pt] (-2,-1.1) -- (2,-1.1);}},
+  % 電池（横の線の途中。＋が右）
+  pics/sxf batth/.style={code={\fill[white] (-1.1,-4.6) rectangle (1.1,4.6);
+     \draw[bkInk, line width=0.8pt] (1.1,-4) -- (1.1,4); \draw[bkInk, line width=2.4pt] (-1.1,-2) -- (-1.1,2);}},
+  % コンデンサー（たての線の途中）
+  pics/sxf cap/.style={code={\fill[white] (-4.6,-1) rectangle (4.6,1);
+     \draw[bkInk, line width=1.6pt] (-3.6,1) -- (3.6,1) (-3.6,-1) -- (3.6,-1);}},
+  % 計器（丸に字）
+  pics/sxf meter/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (3.2);
+     \node[font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (0,0) {#1};}},
+  % 豆電球（たての線の途中）
+  pics/sxf lamp/.style={code={\filldraw[fill=bkYellow!45, draw=bkInk, line width=0.8pt] (0,0) circle (3.2);
+     \draw[bkInk, line width=0.7pt] (-2.26,-2.26) -- (2.26,2.26) (-2.26,2.26) -- (2.26,-2.26);}},
+  % 電位0の記号（アース）
+  pics/sxf gnd/.style={code={\draw[bkInk, line width=0.8pt] (0,0) -- (0,-1.6) (-2.6,-1.6) -- (2.6,-1.6) (-1.7,-2.4) -- (1.7,-2.4) (-0.8,-3.2) -- (0.8,-3.2);}}}
+\newcommand\sxfdot[1]{\fill[bkInk] #1 circle (0.85);}
+% 数学 3-6⑦ の回路（左の電源・左の抵抗・まん中の抵抗・右の抵抗・右の電源）。左 x=0、まん中 x=36、右 x=72、上 y=36、下 y=0
+\newcommand\sxfthree[5]{%
+  \draw[sxf w] (0,0) rectangle (72,36) (36,0) -- (36,36);
+  \path (0,11) pic {sxf batt} (72,11) pic {sxf batt} (0,25) pic {sxf resv} (36,18) pic {sxf resv} (72,25) pic {sxf resv};
+  \sxfdot{(36,36)}\sxfdot{(36,0)}
+  \node[sxf lab, anchor=east] at (-5,11) {#1};
+  \node[sxf lab, anchor=east] at (-2.6,25) {#2};
+  \node[sxf lab, anchor=west] at (38.6,18) {#3};
+  \node[sxf lab, anchor=west] at (74.6,25) {#4};
+  \node[sxf lab, anchor=west] at (77,11) {#5};
+  \node[sxf lab, anchor=south west] at (4.6,12.3) {＋};
+  \node[sxf lab, anchor=south east] at (67.4,12.3) {＋};}
+\makeatother
+
+\phchapter{5}{回路を行列で解く：\\直流回路の解析}{鳥は、なぜ電線にとまっても感電しない？}{\bklevelrange{1}{4}}{回路を行列で解く：直流回路の解析}
+\bkmichishirube{2-15,3-6,7-5,7-11,電-4,力-5,力-9,力-16}{電-9,電-10,電-13,原-9,原-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace 乾電池と豆電球の直列・並列で、電流と明るさがどう変わるかを説明できる。
+\item \bklevel{3}\enspace 電流の分かれ方・ブリッジ・電流計と電圧計・コンデンサーをふくむ回路を、キルヒホッフの法則で計算できる。
+\item \bklevel{4}\enspace 網目電流法・節点電位法で回路を行列の式にし、テブナンの定理や Python で解ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{ホイートストンブリッジのつり合い $R_1R_4=R_2R_3$}{高校物理}{ph:電-5:A34}
+\phk{電流計の分流器・電圧計の倍率器}{高校物理}{ph:電-5:A35}
+\phk{コンデンサーをふくむ直流回路（十分時間がたつと、コンデンサーに電流は流れない）}{高校物理}{ph:電-5:A36}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+電線には、たくさんの家へ送る電流が流れていて、地面との間には何千 V もの電圧があります。人がさわれば、命にかかわります。それなのに、電線にとまった鳥は平気です。鳥の足は、電気を通さないのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.78mm, y=0.62mm]
+  \fill[bkGray!35] (0,0) rectangle (3,40) (61,0) rectangle (64,40);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (3,40) (61,0) rectangle (64,40);
+  \draw[bkInk, line width=0.9pt] (1.5,36) .. controls (20,29) and (44,29) .. (62.5,36);
+  % 鳥
+  \begin{scope}[shift={(32,31.2)}, yscale=1.25]
+    \draw[bkOrange!70!black, line width=0.7pt] (-1.6,0) -- (-2.1,3.2) (1.6,0) -- (1.9,3.2);
+    \filldraw[fill=bkOrange!45, draw=bkInk, line width=0.6pt] (0,6.2) ellipse (5.2 and 3.4);
+    \filldraw[fill=bkOrange!45, draw=bkInk, line width=0.6pt] (4.6,9.4) circle (2.2);
+    \filldraw[fill=bkYellow, draw=bkInk, line width=0.5pt] (6.6,9.9) -- (8.9,9.3) -- (6.6,8.7) -- cycle;
+    \fill[bkInk] (5.2,10.1) circle (0.4);
+    \filldraw[fill=bkOrange!25, draw=bkInk, line width=0.5pt] (-5,6.6) -- (-9.6,8.6) -- (-8.6,5.2) -- cycle;
+  \end{scope}
+  \node[sxf lab, anchor=north] at (32,27.5) {電線};
+  \fill[bkGreen!25] (-2,-3) rectangle (66,0);
+  \draw[bkInk, line width=0.6pt] (-2,0) -- (66,0);
+  \node[sxf lab, anchor=south] at (32,0.8) {地面};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 電-4 では、1本の輪の回路で、電流・電圧・抵抗の関係（オームの法則）と、電流と電圧の2つのきまり（キルヒホッフの法則）を学びました。実際の回路は、輪がいくつもつながった網の形をしています。家の配線、車の電気、スマホの基板、そして電線にとまった鳥も、網の形の回路です。この章では、網の形の回路を、キルヒホッフの法則から連立方程式に書き、\textbf{行列}にまとめて解く方法を学びます。行列にすると、輪が何千あっても、同じ手順でコンピュータに解かせることができます。電子回路の設計で使う回路シミュレーターも、建物の強さを計算する有限要素法（力-16）も、中で同じ形の連立方程式を解いています。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[乾電池2本で、豆電球をつけてみよう]
+\textbf{用意するもの}\par
+単3の乾電池2本、電池ボックス（2本用・1本用×2）、豆電球（\qty{2.5}{V}用）とソケット、導線、ストップウォッチ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 乾電池1本で豆電球をつけ、明るさを見ておく。
+\item 2本を\textbf{直列}（1本の＋と、もう1本の−をつなぐ）にしてつけ、明るさを比べる。
+\item 2本を\textbf{並列}（＋どうし、−どうしをつなぐ）にしてつけ、明るさを比べる。
+\item 余裕があれば、使い古した電池で、並列と1本とで、つけていられる時間を比べる（1時間ごとに見る）。
+\end{enumerate}
+\textbf{約束}：電池の＋と−を、豆電球を通さずに導線だけでつながない（大きな電流が流れて、電池と導線が熱くなる）。新しい電池と古い電池をまぜて使わない。家のコンセントは使わない。
+\end{yattemiyou}
+
+\noindent 直列にすると、豆電球はずっと明るくなります。並列にすると、明るさは1本のときとほとんど同じですが、長くつけていられます。小学校で見たこの違いは、②で、電池の中の小さな抵抗（内部抵抗）まで入れて、数で確かめます（\bkreidairef{3}）。
+
+\begin{omoidasou}
+\bkrecall{電-4}{オームの法則 $V=RI$（③）。直列の合成抵抗 $R_1+R_2$、並列の合成抵抗 $\dfrac{1}{R}=\dfrac{1}{R_1}+\dfrac{1}{R_2}$（⑦）。電力 $P=VI=RI^2$（⑤）。}
+\bkrecall{電-4}{キルヒホッフの法則（⑦）。\textbf{電流則}：1つの点に入る電流の和＝出る電流の和（電荷は消えも生まれもしない）。\textbf{電圧則}：輪を1周すると、電圧の上がり下がりの和は0（電位は場所で1つに決まる）。}
+\bkrecall{電-4}{電池の起電力 $\mathcal E$ と内部抵抗 $r$：電流 $I$ を取り出すと、端子の電圧は $V=\mathcal E-rI$（⑨）。}
+\bkrecall{3-6}{電源2つ・抵抗3つの回路を、2つの輪の式の連立方程式で解いた（⑦：\qty{9}{V}・\qty{6}{V}・\qty{2}{\ohm}×3 → \qty{2}{A}・\qty{0.5}{A}）。}
+\bkrecall{7-5}{$A\vec x=\vec b$ の答えは $\vec x=A^{-1}\vec b$（②）。Python では \texttt{np.linalg.solve(A, b)}（⑤）。}
+\bkrecall{7-11}{ばねの網と抵抗の網は、同じ形の行列になる（④）。}
+\end{omoidasou}
+
+\noindent\textbf{この章の書き方}\par\nobreak
+電池や電源装置の起電力は、電-4 と同じく $\mathcal E$（筆記体のイー）と書き、抵抗にかかる電圧や端子の電圧は $V$ と書きます。この章の電流は、時間で変わらない直流なので、大文字の $I$ です。回路の章（電-9 から先）では、時間で変わる電源の電圧を $e$、直流の電源の電圧を $E$、時間で変わる電流を小文字の $i$ と書き分けます。回路の図では、抵抗を長方形、電池を長い線（＋）と短い太い線（−）で表します（図\ref{ph:電-5:fig-kigou}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxf w] (0,0) -- (16,0); \path (8,0) pic {sxf res}; \node[sxf lab, anchor=north, align=center] at (8,-7.5) {抵抗\\$R$};
+  \draw[sxf w] (30,-6) -- (30,6); \path (30,0) pic {sxf batt}; \node[sxf lab, anchor=west] at (35,1.1) {＋};
+  \node[sxf lab, anchor=north, align=center] at (30,-7.5) {電池・電源\\$\mathcal E$};
+  \draw[sxf w] (52,-6) -- (52,6); \path (52,0) pic {sxf cap}; \node[sxf lab, anchor=north, align=center] at (52,-7.5) {コンデンサー\\$C$};
+  \draw[sxf w] (70,-6) -- (70,6); \path (70,0) pic {sxf lamp}; \node[sxf lab, anchor=north] at (70,-7.5) {豆電球};
+  \draw[sxf w] (85,-6) -- (85,6); \path (85,0) pic {sxf meter=A}; \node[sxf lab, anchor=north] at (85,-7.5) {電流計};
+  \draw[sxf w] (100,-6) -- (100,6); \path (100,0) pic {sxf meter=V}; \node[sxf lab, anchor=north] at (100,-7.5) {電圧計};
+  \draw[sxf w] (115,4) -- (115,2); \path (115,2) pic {sxf gnd}; \node[sxf lab, anchor=north, align=center] at (115,-7.5) {電位0\\の点};
+  \sxfdot{(129,0)} \node[sxf lab, anchor=north, align=center] at (129,-7.5) {つながる\\点};
+\end{tikzpicture}
+\bkfigcaption{この章の回路の記号。電池は、長い線が＋、短い太い線が−。黒い点は、導線がつながっている所（節点）。}
+\label{ph:電-5:fig-kigou}
+\end{bkfigure}
+
+%% ---------------- 物理の道具 ----------------
+\Needspace{16\baselineskip}
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{並列の電流は、抵抗の逆の比に分かれる}
+
+\leavevmode\label{ph:電-5:sec1}\bkhatenaref を、回路として考えます。電線にとまった鳥の左足を点 P、右足を点 Q とします（図\ref{ph:電-5:fig-tori}）。電線を流れてきた電流が P から Q へ進む道は、2つあります。1つは、電線そのもの（P と Q の間の数 cm）。もう1つは、鳥の体（左足 → 体 → 右足）です。2つの道は、どちらも P と Q をつないでいるので、\textbf{並列}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：電線と鳥
+  \draw[bkInk, line width=1.6pt] (0,10) -- (56,10);
+  \draw[sxf arr] (2,13) -- (12,13); \node[sxf lab, anchor=south] at (7,13.6) {$I$};
+  \draw[bkOrange!70!black, line width=0.8pt] (22,10) -- (24,16) (34,10) -- (32,16);
+  \filldraw[fill=bkOrange!45, draw=bkInk, line width=0.6pt] (28,20) ellipse (8 and 4.8);
+  \filldraw[fill=bkOrange!45, draw=bkInk, line width=0.6pt] (35,25) circle (2.6);
+  \sxfdot{(22,10)}\sxfdot{(34,10)}
+  \node[sxf lab, anchor=north] at (22,8.6) {P}; \node[sxf lab, anchor=north] at (34,8.6) {Q};
+  \draw[sxf dim] (22,3) -- (34,3); \node[sxf lab, anchor=north] at (28,2.2) {約\qty{5}{cm}};
+  \node[sxf lab, anchor=west, align=left] at (43,20) {鳥の体\\$R_{\mathrm b}$};
+  % 右：回路
+  \begin{scope}[xshift=76mm]
+    \draw[sxf w] (0,10) -- (52,10) (14,10) -- (14,24) -- (38,24) -- (38,10);
+    \path (26,10) pic {sxf res} (26,24) pic {sxf res};
+    \sxfdot{(14,10)}\sxfdot{(38,10)}
+    \node[sxf lab, anchor=south east] at (13.4,10.4) {P}; \node[sxf lab, anchor=south west] at (38.6,10.4) {Q};
+    \node[sxf lab, anchor=north] at (26,7.4) {電線 $r$（とても小さい）};
+    \node[sxf lab, anchor=south] at (26,26.4) {鳥の体 $R_{\mathrm b}$（大きい）};
+    \draw[sxf arr] (1,12.5) -- (9,12.5); \node[sxf lab, anchor=south] at (5,13) {$I$};
+    \draw[sxf arr] (16,21) -- (20.5,21); \node[sxf lab, anchor=west] at (21,20.6) {$I_{\mathrm b}$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{電線にとまった鳥。左：足の間の電線と鳥の体は、どちらも P と Q をつなぐ。右：回路にすると、電線の抵抗 $r$ と鳥の体の抵抗 $R_{\mathrm b}$ の並列。}
+\label{ph:電-5:fig-tori}
+\end{bkfigure}
+
+\noindent\textbf{2つの抵抗の並列：電流の分かれ方}\par\nobreak
+抵抗 $R_1$ と $R_2$ を並列につなぎ、全体に電流 $I$ を流します。それぞれの電流を $I_1$、$I_2$ とします。電-4 ⑦の2つのきまりを使います。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{電圧則}：2つの抵抗は、同じ2点 P・Q の間にあるので、かかる電圧 $V$ は同じ。だから $I_1=V/R_1$、$I_2=V/R_2$。
+\item \textbf{電流則}：P に入る電流 $I$ は、2つに分かれるだけなので、$I_1+I_2=I$。
+\end{itemize}
+2つめの式に1つめを入れると、$V\Bigl(\dfrac{1}{R_1}+\dfrac{1}{R_2}\Bigr)=I$。$V$ について解くと $V=\dfrac{R_1R_2}{R_1+R_2}\,I$ です（右辺の分数が、並列の合成抵抗）。これを $I_1=V/R_1$ にもどすと、
+\pheq{I_1=\frac{R_2}{R_1+R_2}\,I,\qquad I_2=\frac{R_1}{R_1+R_2}\,I}{A ＝ Ω÷Ω × A}
+\label{ph:電-5:bunryu}となります。2つを割り算すると $I_1:I_2=R_2:R_1$。\textbf{並列の電流は、抵抗の逆の比に分かれます}。抵抗の小さいほうに多く流れ、大きいほうには少ししか流れません。
+
+\begin{phyomi}[$I_1=\dfrac{R_2}{R_1+R_2}\,I$]
+「$R_1$ に流れる電流は、全体の電流に『相手の抵抗÷2つの和』をかけたもの」。自分の抵抗ではなく、\textbf{相手の}抵抗が分子にくるのがポイントです。相手が大きいほど、電流は自分の側へ来ます。$R_1=\qty{1}{\ohm}$、$R_2=\qty{3}{\ohm}$ に\qty{12}{A}なら、$R_1$ に $\tfrac34\times12=\qty{9}{A}$、$R_2$ に\qty{3}{A}（\bkreidairef{2}）。
+\end{phyomi}
+
+\noindent\textbf{はてな？の答え}\par\nobreak
+電線の抵抗を\qty{1}{km}あたり\qty{0.5}{\ohm}とすると、足の間の\qty{5}{cm}の抵抗は
+\[ r=0.5\times\frac{0.05}{1000}=\qty{2.5e-5}{\ohm} \]
+です。鳥の体（足から足まで）の抵抗を $R_{\mathrm b}=\qty{1}{k\ohm}$ としても、鳥の体の抵抗は電線の4000万倍です。並列の電流の分かれ方から、鳥の体に流れる電流は
+\[ I_{\mathrm b}=\frac{r}{r+R_{\mathrm b}}\,I\approx\frac{r}{R_{\mathrm b}}\,I=\frac{2.5\times10^{-5}}{1000}\times200=\qty{5e-6}{A} \]
+です（電線に\qty{200}{A}流れているとき）。わずか\qty{5}{\micro A}です。足の間の電圧も、$V=rI=\qty{5}{mV}$ しかありません（\bkreidairef{1}）。
+
+\textbf{鳥が感電しないのは、両足が、ほとんど同じ電位の2点にふれているからです}。鳥の体は、電線といっしょに地面から何千 V も高い電位になっていますが、体の中に電位の差がないので、電流がほとんど流れません。足が電気を通さないから、ではありません。
+
+ところが、鳥が片足で電線にとまったまま、翼で電柱の金具（地面とつながっている）や、となりの電線にふれると、体の両はしに何千 V の差がかかり、大きな電流が流れます。大きな鳥が感電する事故は、このようにして起こります。人が電線や、電線が切れて地面に落ちたものにさわってはいけないのも、同じわけです。
+
+\begin{phmodel}[電線にとまった鳥]
+\phignore{電線を流れる電流が時間で変わること（交流）。鳥の体の中のつくり（抵抗を1つとみる）。}
+\phassume{電線の抵抗は長さに比例する（電-4 ③）。鳥の両足は電線にしっかりふれていて、それ以外はどこにもふれていない。}
+\phlimit{鳥が翼や体で、電柱の金具・となりの電線・地面とつながる物にふれたとき（回路の形が変わる）。}
+\end{phmodel}
+
+\noindent\textbf{2つの抵抗の直列：電圧の分かれ方}\par\nobreak
+同じ考えで、抵抗 $R_1$ と $R_2$ を直列にして、両はしに電圧 $V$ をかけると、電流はどちらも同じ $I=V/(R_1+R_2)$ なので、
+\pheq{V_1=\frac{R_1}{R_1+R_2}\,V,\qquad V_2=\frac{R_2}{R_1+R_2}\,V}{V ＝ Ω÷Ω × V}
+\label{ph:電-5:bunatsu}です。直列の電圧は、\textbf{抵抗の比のまま}分かれます（こんどは自分の抵抗が分子）。並列の「逆の比」と取り違えないようにしましょう。
+
+\Needspace{10\baselineskip}
+\begin{phflow}
+\phflowrow{電流則・電圧則\\（電-4 ⑦）}{2つの抵抗の\\並列}{$I_1=\dfrac{R_2}{R_1+R_2}\,I$\\（電流は逆の比）}
+\phflowrow{電流則・電圧則\\（電-4 ⑦）}{2つの抵抗の\\直列}{$V_1=\dfrac{R_1}{R_1+R_2}\,V$\\（電圧はそのままの比）}
+\end{phflow}
+
+\begin{phbaisuru}{抵抗の比 $R_2/R_1$}
+$R_2$ に流れる電流の割合 $\dfrac{R_1}{R_1+R_2}=\dfrac{1}{1+R_2/R_1}$ は、図\ref{ph:電-5:fig-wariai}の線のように減ります。比が1なら半分ずつ、2倍で $\tfrac13$、10倍で $\tfrac1{11}$。比が4000万倍の鳥では、約4000万分の1です。比を2倍にするたびに、割合はおよそ半分になっていきます（比が大きい所では、割合 $\approx R_1/R_2$）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, xmode=log, axis x line*=bottom, axis y line*=left, width=100mm, height=46mm, xmin=0.1, xmax=100, ymin=0, ymax=1.05, xtick={0.1,1,10,100}, xticklabels={0.1,1,10,100}, ytick={0,0.25,0.5,0.75,1}, xlabel={抵抗の比 $R_2/R_1$}, ylabel={$R_2$ の電流の割合}, every axis x label/.style={at={(axis description cs:0.5,-0.2)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkcurve, domain=0.1:100, samples=150] {1/(1+x)};
+  \fill[bkRed] (axis cs:1,0.5) circle (1.8pt) (axis cs:2,0.3333) circle (1.8pt) (axis cs:10,0.0909) circle (1.8pt);
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:1.25,0.62) {1 で $\frac12$};
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:2.6,0.45) {2 で $\frac13$};
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:12.5,0.22) {10 で $\frac1{11}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{抵抗の比と、$R_2$ に流れる電流の割合。横の目もりは、1目もりで10倍になる対数の目もり（3-12）。}
+\label{ph:電-5:fig-wariai}
+\end{bkfigure}
+\end{phbaisuru}
+
+\begin{phmijika}[家のコンセントは、すべて並列]
+家の中のコンセントや照明は、すべて並列につながっています。だから、どの電気製品にも同じ\qty{100}{V}がかかり、1つを消してもほかは消えません。そのかわり、たくさんつなぐほど、元の線を流れる電流は、それぞれの電流の和になって大きくなります。延長コードに電気製品をつなぎすぎると、コードが熱くなるのはこのためです（電-4 の電気の安全）。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{電池のつなぎ方：直列と並列}
+
+\leavevmode\label{ph:電-5:sec2}電池は、起電力 $\mathcal E$ の「電気を押し上げるポンプ」と、中の小さな抵抗（内部抵抗）$r$ が直列になったものと考えられます（電-4 ⑨）。新しい単3のアルカリ乾電池の内部抵抗は、およそ0.15〜\qty{0.3}{\ohm}で、使っていくと大きくなります。同じ電池（起電力 $\mathcal E$、内部抵抗 $r$）を $n$ 本つなぎ、抵抗 $R$ の豆電球に電流を流します（図\ref{ph:電-5:fig-tsunagi}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xs/\ttl in {0/1本, 40/直列（2本）, 80/並列（2本）} {\node[sxf lab, font=\sffamily\small\bfseries] at (\xs+16,33) {\ttl};}
+  \draw[sxf w] (4,4) rectangle (28,26); \path (4,15) pic {sxf batt} (28,15) pic {sxf lamp};
+  \draw[sxf w] (44,2) rectangle (68,28); \path (44,9) pic {sxf batt} (44,21) pic {sxf batt} (68,15) pic {sxf lamp};
+  \draw[sxf w] (84,4) rectangle (108,26) (94,4) -- (94,26); \path (84,15) pic {sxf batt} (94,15) pic {sxf batt} (108,15) pic {sxf lamp};
+  \sxfdot{(94,4)}\sxfdot{(94,26)}
+\end{tikzpicture}
+\bkfigcaption{乾電池2本の直列と並列（電池の長い線が＋）。}
+\label{ph:電-5:fig-tsunagi}
+\end{bkfigure}
+
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{直列}：電圧則で輪を1周すると、ポンプの押し上げは $n\mathcal E$、内部抵抗も $n$ 個直列で $nr$。だから
+\[ I_{\text{直列}}=\frac{n\mathcal E}{nr+R} \]
+\item \textbf{並列}：$n$ 本は同じ2点の間にあるので、どの電池も端子の電圧は同じで、電流は等しく $I/n$ ずつ分けて流します。端子の電圧は $\mathcal E-rI/n$ で、これが豆電球の電圧 $RI$ と等しいので
+\[ I_{\text{並列}}=\frac{\mathcal E}{r/n+R} \]
+\end{itemize}
+並列は、起電力は1本と同じで、内部抵抗だけが $1/n$ になった1本の電池と同じです。
+
+
+
+\noindent 内部抵抗\qty{0.5}{\ohm}の電池で、\qty{5}{\ohm}の豆電球をつけると（\bkreidairef{3}）、1本で\qty{0.27}{A}、直列で\qty{0.50}{A}、並列で\qty{0.29}{A}です。並列は1本とほとんど変わりません。豆電球の抵抗が、内部抵抗よりずっと大きいので、内部抵抗が半分になってもあまり効かないのです。そのかわり、並列ではそれぞれの電池が半分ずつしか電流を出さないので、電池が長もちします。これが、やってみようで見たことのわけです（図\ref{ph:電-5:fig-denchi}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=100mm, height=48mm, xmin=0, xmax=20.5, ymin=0, ymax=2.2, xtick={0,5,10,15,20}, ytick={0,0.5,1,1.5,2}, xlabel={豆電球などの抵抗 $R$（$\Omega$）}, ylabel={電流（A）}, every axis x label/.style={at={(axis description cs:0.5,-0.16)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=0.37:20, samples=120] {3/(1+x)};
+  \addplot[bkOrange!85!black, line width=1.5pt, dashed, domain=0.44:20, samples=120] {1.5/(0.25+x)};
+  \addplot[bkGray!80!black, line width=1.2pt, densely dotted, domain=0.19:20, samples=120] {1.5/(0.5+x)};
+  \draw[bkGray, line width=0.5pt] (axis cs:5,0) -- (axis cs:5,1.9);
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:5.3,1.75) {豆電球 \qty{5}{\ohm}};
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:7.2,0.62) {直列（実線）};
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:9,1.0) {並列（破線）・1本（点線）は下の2本};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{1本（起電力\qty{1.5}{V}、内部抵抗\qty{0.5}{\ohm}）・直列・並列で、つないだ抵抗 $R$ と電流。$R$ が内部抵抗よりずっと大きいと、並列の電流は1本とほとんど同じ。$R$ が小さいと、並列のほうが電流が大きい。}
+\label{ph:電-5:fig-denchi}
+\end{bkfigure}
+
+
+\begin{phbaisuru}{直列にする電池の数}
+起電力は2倍、内部抵抗も2倍になります。豆電球のように $R\gg r$ なら、電流はほぼ2倍、明るさ（電力 $RI^2$）はほぼ4倍です。$R$ が内部抵抗と同じくらい小さいときは、内部抵抗も2倍になるので、電流は2倍よりずっと小さくなります。
+\end{phbaisuru}
+
+\begin{phmijika}[新しい電池と古い電池を並列にしない]
+起電力の少し違う電池（たとえば\qty{1.6}{V}の新品と\qty{1.3}{V}の古いもの）を並列にすると、豆電球をつけていないときでも、新しい電池から古い電池へ、2つの内部抵抗だけを通る電流が流れ続けます。2本の内部抵抗が合わせて\qty{0.6}{\ohm}なら、$(1.6-1.3)\div0.6=\qty{0.5}{A}$ もの電流です。電池がむだに減るうえ、古い電池がもれたり熱くなったりします。電池の向きを1本だけ逆に入れたときも、同じように大きな電流が流れます。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{3}{網目電流法：輪ごとに電流を回す}
+
+\leavevmode\label{ph:電-5:sec3}3-6⑦の回路（図\ref{ph:電-5:fig-moku}）をもう一度見ます。3-6 では、左の電源が流す電流を $I_1$、右の電源が流す電流を $I_2$ とし、まん中の抵抗には電流則から $I_1+I_2$ が流れる、として2つの輪の式を作りました。
+
+この考えを、次のように言いかえます。\textbf{左の輪には $I_1$ が、右の輪には $I_2$ が、ぐるぐる回っている}。まん中の抵抗は2つの輪にはさまれているので、両方の電流が重なって $I_1+I_2$ になる。このように、網の目（輪）の1つ1つに回る電流を\textbf{網目電流}といい、網目電流をわからない数にして電圧則の式を立てる方法を\textbf{網目電流法}といいます。\bkidx{もうめでんりゅうほう}{網目電流法}網目電流を使うと、電流則は、はじめから成り立っています（どの点にも、輪の電流が入った分だけ出ていく）。だから、書く式は電圧則だけですみます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxfthree{\qty{9}{V}}{\qty{2}{\ohm}}{\qty{2}{\ohm}}{\qty{2}{\ohm}}{\qty{6}{V}}
+  \draw[sxf loop] ($(18,18)+(60:7.5)$) arc (60:-230:7.5);
+  \node[sxf lab, text=bkGreen!45!black] at (18,18) {$I_1$};
+  \draw[sxf loop] ($(54,18)+(120:7.5)$) arc (120:410:7.5);
+  \node[sxf lab, text=bkGreen!45!black] at (54,18) {$I_2$};
+  \draw[sxf arr] (33.6,34) -- (33.6,28); \node[sxf lab, anchor=east, text=bkRed!80!black] at (33,31) {$I_1+I_2$};
+\end{tikzpicture}
+\bkfigcaption{3-6⑦の回路と網目電流。左の輪に時計回りの $I_1$、右の輪に反時計回りの $I_2$（破線の矢印）。まん中の抵抗では、2つが同じ下向きに重なる。}
+\label{ph:電-5:fig-moku}
+\end{bkfigure}
+
+左の輪を $I_1$ の向きに1周します。電池で\qty{9}{V}上がり、左の抵抗で $2I_1$、まん中の抵抗で $2(I_1+I_2)$ 下がるので、$9=2I_1+2(I_1+I_2)$。右の輪も同じようにして、次の2つの式になります。
+\[ \begin{cases} (2+2)I_1+2I_2=9\\ 2I_1+(2+2)I_2=6 \end{cases}\qquad\text{行列で}\qquad \begin{pmatrix}4&2\\2&4\end{pmatrix}\begin{pmatrix}I_1\\I_2\end{pmatrix}=\begin{pmatrix}9\\6\end{pmatrix} \]
+7-5②で、この式を逆行列で解き、$I_1=\qty{2}{A}$、$I_2=\qty{0.5}{A}$ を得ました（\bkreidairef{4}）。
+
+\noindent\textbf{行列は、回路を見ただけで書ける}\par\nobreak
+行列の数は、回路の図から直接読みとれます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{対角（左上から右下）}：その輪の中の抵抗を全部たしたもの。左の輪は $2+2=4$。
+\item \textbf{対角の外}：2つの輪が\textbf{共有している}抵抗。2つの網目電流がそこを同じ向きに通るなら $+$、反対向きに通るなら $-$。
+\item \textbf{右辺}：その輪の中の電池の起電力。網目電流が電池を−から＋へ通る（押し上げられる）なら $+$、逆なら $-$。
+\end{enumerate}
+すべての網目電流を時計回りにそろえると、となりの輪の電流は、共有する抵抗を必ず反対向きに通ります。だから対角の外は、いつもマイナスになります。どちらの決め方でも、答えの電流（向きをふくめて）は同じです。行列にまとめると、網目の抵抗の行列 $\mathbf R$（1つの抵抗 $R$ と分けるため、立てた太字で書く）、網目電流のベクトル $\vec I$、起電力のベクトル $\vec{\mathcal E}$ で
+\pheq{\mathbf R\,\vec I=\vec{\mathcal E}}{V ＝ Ω × A}
+\label{ph:電-5:mesh}と書けます。$\mathbf R$ は、左上から右下の線について対称（$R_{12}=R_{21}$）です。2つの輪が共有する抵抗は、どちらの輪から見ても同じ1つだからです。
+
+\begin{phyomi}[$\mathbf R\vec I=\vec{\mathcal E}$]
+「抵抗の行列×網目電流＝電池の起電力」。電-4 のオームの法則 $RI=V$ を、輪がたくさんある回路にまとめて書いたものです。1つの輪だけなら $\mathbf R$ はただの数（輪の抵抗の和）になり、$I=\mathcal E/R$ にもどります。
+\end{phyomi}
+
+\Needspace{16\baselineskip}
+\begin{phflow}
+\phflowrow{電圧則（電-4 ⑦）\\＋網目電流}{輪が $n$ 個}{$\mathbf R\vec I=\vec{\mathcal E}$\\（$n$ 行 $n$ 列）}
+\phflowrow{$\mathbf R\vec I=\vec{\mathcal E}$}{輪が2つ\\共有の抵抗1つ}{3-6⑦の連立方程式\\$4I_1+2I_2=9$ など}
+\end{phflow}
+
+\noindent\textbf{はしご形の回路}\par\nobreak
+図\ref{ph:電-5:fig-hashigo}は、抵抗をはしごのように並べた回路です。輪が3つあるので、網目電流 $I_1$、$I_2$、$I_3$（すべて時計回り）で、行列を①〜③のきまりで書きます。
+\[ \begin{pmatrix}1+2&-2&0\\-2&2+3+4&-4\\0&-4&4+5\end{pmatrix}\begin{pmatrix}I_1\\I_2\\I_3\end{pmatrix}=\begin{pmatrix}10\\0\\0\end{pmatrix} \]
+左の輪と右の輪は抵抗を共有していないので、右上と左下は0です。この3×3の式は、表計算の MINVERSE・MMULT や Python で解きます（\bkreidairef{5}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxf w] (0,0) -- (0,30) -- (78,30) -- (78,0) -- cycle (26,0) -- (26,30) (52,0) -- (52,30);
+  \path (0,15) pic {sxf batt} (13,30) pic {sxf res} (26,15) pic {sxf resv} (39,30) pic {sxf res} (52,15) pic {sxf resv} (78,15) pic {sxf resv};
+  \foreach \x in {26,52} {\sxfdot{(\x,30)}\sxfdot{(\x,0)}}
+  \node[sxf lab, anchor=east] at (-5,15) {\qty{10}{V}};
+  \node[sxf lab, anchor=south] at (13,32) {\qty{1}{\ohm}};
+  \node[sxf lab, anchor=east] at (24.2,15) {\qty{2}{\ohm}};
+  \node[sxf lab, anchor=south] at (39,32) {\qty{3}{\ohm}};
+  \node[sxf lab, anchor=east] at (50.2,15) {\qty{4}{\ohm}};
+  \node[sxf lab, anchor=west] at (80.6,15) {\qty{5}{\ohm}};
+  \node[sxf lab, anchor=south] at (26,31.2) {A}; \node[sxf lab, anchor=south] at (52,31.2) {B};
+  \foreach \c/\t in {13/$I_1$, 39/$I_2$, 65/$I_3$} {\draw[sxf loop] ($(\c,15)+(60:5)$) arc (60:-230:5); \node[sxf lab, text=bkGreen!45!black] at (\c,15) {\t};}
+\end{tikzpicture}
+\bkfigcaption{はしご形の回路と、3つの網目電流（すべて時計回り）。A・B は④で使う節点。}
+\label{ph:電-5:fig-hashigo}
+\end{bkfigure}
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{節点電位法：点の電位をわからない数にする}
+
+\leavevmode\label{ph:電-5:sec4}こんどは、電流ではなく、\textbf{点の電位}をわからない数にします。導線がつながる点を\textbf{節点}といいます。\bkidx{せってん}{節点}節点の1つを「電位0の点」（基準）に決め、ほかの節点の電位 $\phi_1$、$\phi_2$、… をわからない数にして、節点ごとに電流則の式を立てます。この方法を\textbf{節点電位法}といいます。\bkidx{せってんでんいほう}{節点電位法}
+
+2つの節点 a・b の間に抵抗 $R$ があると、a から b へ流れる電流は、オームの法則で $(\phi_{\mathrm a}-\phi_{\mathrm b})/R$ です。ここで、抵抗の逆数 $G=1/R$ を\textbf{コンダクタンス}（電気の通りやすさ）といい、単位は\textbf{ジーメンス}（S。$\qty{1}{S}=\qty{1}{A/V}$）です（7-11④）。\bkidx{こんだくたんす}{コンダクタンス}電流は $G(\phi_{\mathrm a}-\phi_{\mathrm b})$ と、かけ算で書けます。
+
+\noindent\textbf{3-6⑦の回路を、節点電位法で}\par\nobreak
+図\ref{ph:電-5:fig-setten}のように、下の線を電位0にします。上のまん中の節点の電位を $\phi$ とすると、わからない数は $\phi$ の1つだけです。左の枝は、電位0から電池で\qty{9}{V}上がり、そこから\qty{2}{\ohm}を通って節点へつながっています。だから、節点から左の枝へ流れ出る電流は $(\phi-9)/2$ です。同じように、右の枝へは $(\phi-6)/2$、まん中の抵抗へは $\phi/2$ が流れ出ます。節点から流れ出る電流の和は0（電流則）なので、
+\[ \frac{\phi-9}{2}+\frac{\phi}{2}+\frac{\phi-6}{2}=0\qquad\text{より}\qquad 3\phi=15,\quad \phi=\qty{5}{V} \]
+です。左の枝の電流は $(9-5)/2=\qty{2}{A}$、右は $(6-5)/2=\qty{0.5}{A}$、まん中は $5/2=\qty{2.5}{A}$ で、網目電流法と同じ答えです（\bkreidairef{6}）。わからない数が2つから1つに減りました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxfthree{\qty{9}{V}}{\qty{2}{\ohm}}{\qty{2}{\ohm}}{\qty{2}{\ohm}}{\qty{6}{V}}
+  \path (36,0) pic {sxf gnd};
+  \node[sxf lab, anchor=south, fill=white] at (36,37.5) {電位 $\phi$};
+  \node[sxf lab, anchor=north west] at (38.5,-1.5) {電位0};
+  \draw[sxf arr] (32,33.5) -- (20,33.5); \node[sxf lab, anchor=north] at (24,32.6) {$\dfrac{\phi-9}{2}$};
+  \draw[sxf arr] (40,33.5) -- (52,33.5); \node[sxf lab, anchor=north] at (48,32.6) {$\dfrac{\phi-6}{2}$};
+  \draw[sxf arr] (33.2,13) -- (33.2,7); \node[sxf lab, anchor=east] at (32.4,10) {$\dfrac{\phi}{2}$};
+\end{tikzpicture}
+\bkfigcaption{節点電位法。下の線を電位0（アースの記号）にし、上のまん中の節点の電位 $\phi$ だけをわからない数にする。矢印は、節点から流れ出る電流。}
+\label{ph:電-5:fig-setten}
+\end{bkfigure}
+
+\noindent\textbf{節点がいくつあっても：$\mathbf G\vec\phi=\vec I_{\mathrm s}$}\par\nobreak
+図\ref{ph:電-5:fig-hashigo}のはしご形では、下の線を電位0にすると、わからない数は節点 A・B の電位 $\phi_{\mathrm A}$、$\phi_{\mathrm B}$ の2つです（網目電流法では3つ）。A では、\qty{1}{\ohm}を通って電池の＋（\qty{10}{V}）へ、\qty{2}{\ohm}を通って電位0へ、\qty{3}{\ohm}を通って B へ、電流が流れ出ます。B も同じように書いて、整理すると
+\[ \begin{pmatrix}\dfrac11+\dfrac12+\dfrac13&-\dfrac13\\[8pt]-\dfrac13&\dfrac13+\dfrac14+\dfrac15\end{pmatrix}\begin{pmatrix}\phi_{\mathrm A}\\[8pt] \phi_{\mathrm B}\end{pmatrix}=\begin{pmatrix}\dfrac{10}{1}\\[8pt]0\end{pmatrix} \]
+となります。右辺の $10/1$ は、電池の\qty{10}{V}が\qty{1}{\ohm}を通して A に流しこもうとする電流です。行列も、回路から直接読みとれます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{対角}：その節点につながっているコンダクタンスの和。
+\item \textbf{対角の外}：2つの節点の間のコンダクタンスに、マイナスをつけたもの。
+\item \textbf{右辺}：電池（起電力 $\mathcal E$ と抵抗 $R$ の枝）がその節点に流しこもうとする電流 $\mathcal E/R$。
+\end{enumerate}
+コンダクタンスの行列 $\mathbf G$、電位のベクトル $\vec\phi$、流しこむ電流のベクトル $\vec I_{\mathrm s}$ で
+\pheq{\mathbf G\,\vec\phi=\vec I_{\mathrm s}}{A ＝ S × V}
+\label{ph:電-5:node}です。答えは $\phi_{\mathrm A}\approx\qty{5.91}{V}$、$\phi_{\mathrm B}\approx\qty{2.52}{V}$ で、網目電流法の答え（\bkreidairef{5}）とぴったり合います。
+
+\noindent\textbf{ばねの網・トラスと同じ形}\par\nobreak
+この行列は、力-16 の剛性行列 $K\vec u=\vec F$（ばね・棒の網の、節点の変位 $\vec u$ と力 $\vec F$）や、力-5 のトラスの行列と、まったく同じ形をしています（7-11④の「ばねの網と抵抗の網」）。対角がつながっているものの和、対角の外がマイナス、という作り方まで同じです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=56mm] Q[c,m,wd=56mm]}, rowsep=1.5pt, row{1}={font=\sffamily\small}}
+ばね・トラスの網（力-5・力-16） & 抵抗の網（電-5 ④） \\
+節点の変位 $\vec u$〔m〕 & 節点の電位 $\vec\phi$〔V〕 \\
+節点に加える力 $\vec F$〔N〕 & 節点に流しこむ電流 $\vec I_{\mathrm s}$〔A〕 \\
+ばね定数 $k$〔N/m〕 & コンダクタンス $G=1/R$〔S〕 \\
+剛性行列 $K$ & コンダクタンスの行列 $\mathbf G$ \\
+\end{bktable}
+\bktabcaption{ばねの網と抵抗の網の対応（7-11④と同じ組）。力を電流に対応させる組み方。}
+\label{ph:電-5:tab-ami}
+\end{bkcenter}
+表\ref{ph:電-5:tab-ami}は、力を\textbf{電流}に対応させています。この巻の前付の相似の表（電-9 で回路の法則から回収します）は、力を\textbf{電圧}に対応させています。どちらも正しい相似で、網の形を比べるときは表\ref{ph:電-5:tab-ami}、ゆれを比べるときは前付の表が使いやすいのです。
+
+\begin{phmijika}[網目電流法と節点電位法、どちらを使う？]
+わからない数が少ないほうを選びます。網目電流法は「輪の数」、節点電位法は「節点の数 $-1$」だけ、わからない数があります。はしご形では輪が3つ、節点（電位0を除く）が2つなので、節点電位法が楽です。電子回路のシミュレーターは、節点電位法をもとにした方法を使っています。回路の図から行列を自動で作りやすいからです（⑩）。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{5}{重ね合わせの理：電池を1つずつ働かせる}
+
+\leavevmode\label{ph:電-5:sec5}網目電流法の式 $\mathbf R\vec I=\vec{\mathcal E}$ は、左辺が電流の1次式です（$I^2$ や $I_1I_2$ が出てこない）。このような式を\textbf{線形}といいます。線形の式では、右辺をたし算に分けると、答えもたし算に分けられます。
+\[ \mathbf R\vec I_{\mathrm a}=\vec{\mathcal E}_{\mathrm a},\quad \mathbf R\vec I_{\mathrm b}=\vec{\mathcal E}_{\mathrm b}\qquad\text{なら}\qquad \mathbf R(\vec I_{\mathrm a}+\vec I_{\mathrm b})=\vec{\mathcal E}_{\mathrm a}+\vec{\mathcal E}_{\mathrm b} \]
+回路で言うと、\textbf{電池がいくつもあるときの電流は、電池を1つずつ働かせたとき（ほかの電池は導線におきかえる）の電流の和}です。これを\textbf{重ね合わせの理}といいます。\bkidx{かさねあわせのり}{重ね合わせの理}
+
+3-6⑦の回路で確かめます（図\ref{ph:電-5:fig-kasane}）。\qty{9}{V}の電池だけを働かせると、全体の抵抗は $2+(2\text{ と }2\text{ の並列})=2+1=\qty{3}{\ohm}$ なので、左の枝に\qty{3}{A}。まん中と右に\qty{1.5}{A}ずつ分かれます（右の枝は、右の電池の向きと逆に流れる）。\qty{6}{V}だけなら、右の枝に\qty{2}{A}、まん中と左に\qty{1}{A}ずつ。たし合わせると、まん中は $1.5+1=\qty{2.5}{A}$、左は $3-1=\qty{2}{A}$、右は $2-1.5=\qty{0.5}{A}$ で、③④の答えと同じです（\bkreidairef{7}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 1つの回路は横 28 mm・たて 20 mm。電池の長い線が＋。抵抗はどれも 2 Ω
+  \foreach \xs/\L/\Rr in {4/1/1, 50/1/0, 96/0/1} {%
+  \begin{scope}[xshift=\xs mm]
+    \draw[sxf w] (0,0) rectangle (28,20) (14,0) -- (14,20);
+    \ifnum\L=1 \path (0,5) pic[scale=0.8] {sxf batt}; \node[sxf lab, anchor=south west] at (1.0,6.4) {＋}; \node[sxf lab, anchor=west] at (3.8,5) {9\,V};
+    \else \node[sxf lab, anchor=west] at (1.2,5) {導線}; \fi
+    \ifnum\Rr=1 \path (28,5) pic[scale=0.8] {sxf batt}; \node[sxf lab, anchor=south east] at (27.0,6.4) {＋}; \node[sxf lab, anchor=east] at (24.2,5) {6\,V};
+    \else \node[sxf lab, anchor=east] at (26.8,5) {導線}; \fi
+    \path (0,14.5) pic[scale=0.8] {sxf resv} (14,10.5) pic[scale=0.8] {sxf resv} (28,14.5) pic[scale=0.8] {sxf resv};
+    \node[sxf lab, anchor=west] at (1.8,14.5) {\qty{2}{\ohm}};
+    \node[sxf lab, anchor=west] at (15.8,10.5) {\qty{2}{\ohm}};
+    \node[sxf lab, anchor=east] at (26.2,14.5) {\qty{2}{\ohm}};
+  \end{scope}}
+  \node[font=\sffamily\bfseries] at (41,10) {＝}; \node[font=\sffamily\bfseries] at (87,10) {＋};
+  \node[sxf lab, align=center, anchor=north] at (18,-2) {左 2\,A・中 2.5\,A\\右 0.5\,A};
+  \node[sxf lab, align=center, anchor=north] at (64,-2) {左 3\,A・中 1.5\,A\\右 $-1.5$\,A};
+  \node[sxf lab, align=center, anchor=north] at (110,-2) {左 $-1$\,A・中 1\,A\\右 2\,A};
+\end{tikzpicture}
+\bkfigcaption{重ね合わせの理。2つの電池の回路（左）の電流は、\qty{9}{V}だけ（まん中）と\qty{6}{V}だけ（右）の電流の和。働かせない電池は導線にする。マイナスは、電池から流れ出る向きと逆に流れること。}
+\label{ph:電-5:fig-kasane}
+\end{bkfigure}
+
+\begin{phbaisuru}{すべての電池の起電力}
+線形なので、どの電流もちょうど2倍になります。電池を1つだけ2倍にしたときは、その電池の受け持ちの分だけが2倍になります。3-6⑦の回路で左を\qty{18}{V}にすると、まん中の電流は $2\times1.5+1=\qty{4}{A}$ です。
+\end{phbaisuru}
+
+\begin{seikaku}
+重ね合わせができるのは、電流と電圧のように、式に1次で入る量だけです。電力 $RI^2$ は電流の2乗なので、電池ごとの電力をたしても、本当の電力になりません。まん中の\qty{2}{\ohm}では、$2\times1.5^2+2\times1^2=\qty{6.5}{W}$ ではなく、$2\times2.5^2=\qty{12.5}{W}$ です。また、ダイオードや電球のフィラメント（温度で抵抗が変わる）のような、電圧と電流が比例しない部品があると、式が線形でなくなり、重ね合わせは使えません。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{テブナンの定理：どんな回路も「電池1つと抵抗1つ」}
+
+\leavevmode\label{ph:電-5:sec6}回路の中の1つの抵抗（\textbf{負荷}）だけを、いろいろに取りかえて調べたいことがあります。そのたびに全体の行列を解き直すのは大変です。ところが、線形の回路なら、負荷をつなぐ2つの端子 a・b から見た「回路の残り」は、どんなに複雑でも、\textbf{起電力 $\mathcal E_{\mathrm{th}}$ の電池1つと、抵抗 $R_{\mathrm{th}}$ 1つの直列}と同じはたらきをします（図\ref{ph:電-5:fig-thev}）。これを\textbf{テブナンの定理}といいます。\bkidx{てぶなんのていり}{テブナンの定理}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $\mathcal E_{\mathrm{th}}$：負荷をはずしたとき（a・b の間に何もつながないとき）の、a・b の間の電圧。
+\item $R_{\mathrm{th}}$：回路の残りの電池を、すべて導線におきかえたときの、a・b の間の合成抵抗。
+\end{itemize}
+こうしておけば、負荷 $R_L$ に流れる電流は、1つの輪の式で
+\pheq{I_L=\frac{\mathcal E_{\mathrm{th}}}{R_{\mathrm{th}}+R_L}}{A ＝ V ÷ Ω}
+\label{ph:電-5:thev}と、すぐに出ます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!12, draw=bkInk, line width=0.8pt, rounded corners=2pt] (0,2) rectangle (34,28);
+  \node[sxf lab, align=center] at (17,15) {電池と抵抗の\\網（線形）};
+  \draw[sxf w] (34,24) -- (48,24) -- (48,6) -- (34,6);
+  \path (48,15) pic {sxf resv}; \node[sxf lab, anchor=west] at (50.5,15) {$R_L$};
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (40,24) circle (1.1) (40,6) circle (1.1);
+  \node[sxf lab, anchor=south] at (40,25.4) {a}; \node[sxf lab, anchor=north] at (40,4.6) {b};
+  \node[font=\sffamily\bfseries] at (60,15) {＝};
+  \begin{scope}[xshift=78mm]
+    \draw[sxf w] (0,6) -- (0,24) -- (34,24) -- (34,6) -- cycle;
+    \path (0,15) pic {sxf batt} (14,24) pic {sxf res} (34,15) pic {sxf resv};
+    \filldraw[fill=white, draw=bkInk, line width=0.7pt] (26,24) circle (1.1) (26,6) circle (1.1);
+    \node[sxf lab, anchor=east] at (-6.5,14) {$\mathcal E_{\mathrm{th}}$};
+    \node[sxf lab, anchor=south] at (14,26.4) {$R_{\mathrm{th}}$};
+    \node[sxf lab, anchor=west] at (36.5,15) {$R_L$};
+    \node[sxf lab, anchor=south] at (26,25.4) {a}; \node[sxf lab, anchor=north] at (26,4.6) {b};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{テブナンの定理。端子 a・b から見た回路の残り（左の灰色の箱）は、電池 $\mathcal E_{\mathrm{th}}$ と抵抗 $R_{\mathrm{th}}$ の直列（右）と同じはたらきをする。}
+\label{ph:電-5:fig-thev}
+\end{bkfigure}
+
+\noindent なぜそう言えるのでしょう。負荷のかわりに、負荷と同じ電圧 $V$ の電池を a・b の間に入れても、回路の電流は変わりません。端子 a から負荷の側へ流れ出る電流 $I_L$ を、重ね合わせの理で2つに分けます。(ア) 回路の残りの電池だけを働かせ、入れた電池は導線にする（a・b を導線でつなぐ）と、ある電流 $I_{\mathrm N}$ が流れます。(イ) 入れた電池 $V$ だけを働かせ、回路の残りの電池を導線にすると、回路の残りはただの抵抗 $R_{\mathrm{th}}$ なので、端子には $V/R_{\mathrm{th}}$ が逆向きに流れこみます。たし合わせて $I_L=I_{\mathrm N}-V/R_{\mathrm{th}}$ です。負荷をはずした（$I_L=0$）ときの $V$ が $\mathcal E_{\mathrm{th}}$ なので、$I_{\mathrm N}=\mathcal E_{\mathrm{th}}/R_{\mathrm{th}}$。これを入れて整理すると $V=\mathcal E_{\mathrm{th}}-R_{\mathrm{th}}I_L$ になり、図\ref{ph:電-5:fig-thev}の右の回路の式と同じです。これは、電-4 ⑨の電池の式 $V=\mathcal E-rI$ と同じ形です。\textbf{電池そのものが、テブナンの形（起電力と内部抵抗）をしていた}のです。
+
+3-6⑦の回路で、まん中の\qty{2}{\ohm}を負荷とすると、$\mathcal E_{\mathrm{th}}$ は、まん中をはずして左右の輪だけにしたときの上の点の電位で、$(9+6)\div2=\qty{7.5}{V}$。$R_{\mathrm{th}}$ は、電池を導線にすると2つの\qty{2}{\ohm}の並列で\qty{1}{\ohm}。だから負荷の電流は $7.5\div(1+2)=\qty{2.5}{A}$ です（\bkreidairef{8}）。
+
+\begin{phflow}
+\phflowrow{テブナンの定理\\$\mathcal E_{\mathrm{th}}$・$R_{\mathrm{th}}$}{負荷 $R_L$ を\\つなぐ}{$I_L=\dfrac{\mathcal E_{\mathrm{th}}}{R_{\mathrm{th}}+R_L}$}
+\phflowrow{$I_L=\dfrac{\mathcal E_{\mathrm{th}}}{R_{\mathrm{th}}+R_L}$}{端子の電圧\\$V=R_LI_L$}{$V=\mathcal E_{\mathrm{th}}-R_{\mathrm{th}}I_L$\\（電池の式と同じ形）}
+\end{phflow}
+
+\noindent\textbf{ノートンの定理}\par\nobreak
+同じ回路の残りは、「電流 $I_{\mathrm N}=\mathcal E_{\mathrm{th}}/R_{\mathrm{th}}$ を流し続ける電流源と、抵抗 $R_{\mathrm{th}}$ の並列」とも同じはたらきをします（\textbf{ノートンの定理}）。$I_{\mathrm N}$ は、a・b を導線でつないだとき（短絡）に流れる電流です。④の節点電位法の右辺 $\mathcal E/R$ は、電池と抵抗の枝を、このノートンの形に直したものでした。
+
+\begin{phmijika}[車のバッテリーと、セルモーター]
+車のエンジンをかけるセルモーターは、一瞬に100\,A 以上の電流を流します。バッテリーには、起電力が約\qty{12}{V}でも、内部抵抗と、太い電線・つなぎ目の抵抗があり、それがテブナンの $R_{\mathrm{th}}$ です。大きな電流が流れると $R_{\mathrm{th}}I$ だけ電圧が下がり、ライトが一瞬暗くなります。寒い朝は、バッテリーの中の化学反応がにぶって内部抵抗が大きくなるので、エンジンがかかりにくくなります。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{ブリッジ回路：小さな抵抗の変化をはかる}
+
+\leavevmode\label{ph:電-5:sec7}4つの抵抗をひし形に組み、上下に電池、左右の点 C・D の間に、小さな電流でもふれる電流計（検流計 G）をつないだ回路を、\textbf{ホイートストンブリッジ}といいます（図\ref{ph:電-5:fig-bridge}）。\bkidx{ほいーとすとんぶりっじ}{ホイートストンブリッジ}「ブリッジ」は、C と D の間にかけた「橋」のことです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \coordinate (A) at (0,30); \coordinate (C) at (-20,15); \coordinate (D) at (20,15); \coordinate (B) at (0,0);
+  \draw[sxf w] (A) -- (C) -- (B) -- (D) -- cycle (C) -- (D);
+  \path ($(A)!0.5!(C)$) pic[rotate=36.87] {sxf res} ($(C)!0.5!(B)$) pic[rotate=-36.87] {sxf res}
+        ($(A)!0.5!(D)$) pic[rotate=-36.87] {sxf res} ($(D)!0.5!(B)$) pic[rotate=36.87] {sxf res} (0,15) pic {sxf meter=G};
+  \foreach \p in {A,B,C,D} {\sxfdot{(\p)}}
+  \draw[sxf w] (A) -- (0,36) -- (-38,36) -- (-38,-6) -- (0,-6) -- (B);
+  \path (-38,15) pic {sxf batt}; \node[sxf lab, anchor=east] at (-43,15) {$\mathcal E$};
+  \node[sxf lab, anchor=south east] at (-11.5,23.5) {$R_1$}; \node[sxf lab, anchor=north east] at (-11.5,6.5) {$R_2$};
+  \node[sxf lab, anchor=south west] at (11.5,23.5) {$R_3$}; \node[sxf lab, anchor=north west] at (11.5,6.5) {$R_4$};
+  \node[sxf lab, anchor=south] at (0,36.8) {A}; \node[sxf lab, anchor=north] at (0,-6.8) {B};
+  \node[sxf lab, anchor=east] at (-21.5,15) {C}; \node[sxf lab, anchor=west] at (21.5,15) {D};
+\end{tikzpicture}
+\bkfigcaption{ホイートストンブリッジ。C と D の電位が等しいと、検流計 G に電流が流れない（つり合い）。}
+\label{ph:電-5:fig-bridge}
+\end{bkfigure}
+
+検流計に電流が流れないとき、ブリッジは\textbf{つり合っている}といいます。そのとき C と D の電位は等しく、検流計はないのと同じです。だから左の枝（$R_1$・$R_2$）と右の枝（$R_3$・$R_4$）は、それぞれ直列の電圧の分かれ方（①）にしたがいます。B の電位を0とすると
+\[ \phi_{\mathrm C}=\frac{R_2}{R_1+R_2}\,\mathcal E,\qquad \phi_{\mathrm D}=\frac{R_4}{R_3+R_4}\,\mathcal E \]
+これが等しいので、$R_2(R_3+R_4)=R_4(R_1+R_2)$。両辺から $R_2R_4$ を引くと
+\pheq{R_1R_4=R_2R_3}{Ω$^2$ ＝ Ω$^2$}
+\label{ph:電-5:A34}です。\textbf{向かい合う抵抗のかけ算が等しい}ときに、つり合います。電池の起電力 $\mathcal E$ は消えてしまうので、電池が古くなって電圧が変わっても、つり合いの条件は変わりません。3つの抵抗がわかっていれば、4つめの抵抗の値が、検流計の針を0に合わせるだけで正確にわかります（\bkreidairef{9}）。
+
+\begin{phyomi}[$R_1R_4=R_2R_3$]
+「ひし形の、向かい合う辺のかけ算が等しい」。$\dfrac{R_1}{R_2}=\dfrac{R_3}{R_4}$ と書くと、「左の枝の上下の比と、右の枝の上下の比が同じ」です。比が同じなら、電圧が同じ割合で分かれるので、C と D が同じ高さ（電位）になるのです。
+\end{phyomi}
+
+\noindent\textbf{ひずみゲージの小さな変化を、電圧にする}\par\nobreak
+力-9 ⑩では、\qty{120}{\ohm}のひずみゲージ（ゲージ率約2）にひずみ $500\times10^{-6}$ がかかると、抵抗が $120\times2\times500\times10^{-6}=\qty{0.12}{\ohm}$ だけ増えることを見ました（抵抗が増えるわけは電-4 ⑧）。\qty{120}{\ohm}の1000分の1の変化です。抵抗をそのまま電流計ではかったのでは、この小さな変化はわかりません。
+
+そこで、$R_1$ をゲージにし、ほかの3つを同じ\qty{120}{\ohm}にしたブリッジ（\textbf{1ゲージ法}）を作ります。ひずみがないとつり合っていて、C と D の間の電圧は0です。ゲージの抵抗が $R+\Delta R$ になると、D と C の電位の差は
+\[ V_{\text{出}}=\phi_{\mathrm D}-\phi_{\mathrm C}=\frac{\mathcal E}{2}-\frac{R}{2R+\Delta R}\,\mathcal E=\frac{\Delta R}{2(2R+\Delta R)}\,\mathcal E \]
+$\Delta R$ が $R$ よりずっと小さいので、分母の $\Delta R$ を無視して
+\pheq{V_{\text{出}}\approx\frac{\mathcal E}{4}\,\frac{\Delta R}{R}}{V ＝ V × Ω÷Ω}
+\label{ph:電-5:gauge}です。$\mathcal E=\qty{5}{V}$ なら、$\tfrac54\times0.001=\qty{1.25}{mV}$（\bkreidairef{10}）。「0からのずれ」を見るので、増幅器で大きくすれば、はっきりはかれます。波-10 ⑩で、振動のひずみを記録したのも、このブリッジです。
+
+\begin{phmijika}[キッチンスケールと体重計]
+デジタルのキッチンスケールや体重計の中には、金属のブロック（ロードセル）にひずみゲージをはったものが入っています。上にのせた物の重さでブロックがわずかに曲がり、ゲージの抵抗が変わります。ゲージを4枚使って、ブリッジの4つの辺を全部ゲージにすると（\textbf{4ゲージ法}）、出力は1ゲージ法の約4倍になり、温度で抵抗が変わる分は打ち消し合います。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{8}{電流計と電圧計：はかる範囲を広げる}
+
+\leavevmode\label{ph:電-5:sec8}電流計は、はかりたい所に\textbf{直列}に入れます。電流計の中にも小さな抵抗（内部抵抗 $r_{\mathrm A}$）があるので、入れると回路の電流がわずかに変わります。だから、電流計の内部抵抗はできるだけ小さく作ります。電圧計は、はかりたい2点の間に\textbf{並列}につなぎます。電圧計に電流が流れると回路の電流が変わるので、電圧計の内部抵抗 $r_{\mathrm V}$ はできるだけ大きく作ります。テスター（デジタルマルチメーター）の電圧をはかる部分の抵抗は、約\qty{10}{M\ohm}です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 分流器
+  \draw[sxf w] (0,12) -- (10,12) (10,22) -- (10,2) (10,22) -- (40,22) -- (40,2) -- (10,2) (40,12) -- (50,12);
+  \path (25,22) pic[rotate=90] {sxf meter=A} (25,2) pic {sxf res};
+  \sxfdot{(10,12)}\sxfdot{(40,12)}
+  \node[sxf lab, anchor=south] at (25,25.6) {電流計 $r_{\mathrm A}$、$I_{\mathrm A}$};
+  \node[sxf lab, anchor=north] at (25,-0.2) {分流器 $R_{\mathrm s}$};
+  \draw[sxf arr] (1,14.5) -- (8,14.5); \node[sxf lab, anchor=south] at (4.5,15) {$I$};
+  \node[sxf lab, font=\sffamily\small\bfseries, anchor=north] at (25,-6) {電流計に分流器を並列};
+  % 倍率器
+  \begin{scope}[xshift=68mm]
+  \draw[sxf w] (0,12) -- (50,12);
+  \path (14,12) pic {sxf meter=V} (34,12) pic {sxf res};
+  \node[sxf lab, anchor=south] at (14,15.6) {電圧計 $r_{\mathrm V}$};
+  \node[sxf lab, anchor=south] at (34,14.6) {倍率器 $R_{\mathrm m}$};
+  \draw[sxf dim] (0,4) -- (50,4); \node[sxf lab, anchor=north] at (25,3) {はかりたい電圧 $V$};
+  \node[sxf lab, font=\sffamily\small\bfseries, anchor=north] at (25,-6) {電圧計に倍率器を直列};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{はかれる範囲を広げる。左：電流計に小さな抵抗（分流器）を並列にして、電流の大部分をそちらへ流す。右：電圧計に大きな抵抗（倍率器）を直列にして、電圧の大部分をそちらで受けもつ。}
+\label{ph:電-5:fig-keiki}
+\end{bkfigure}
+
+\noindent\textbf{分流器}\par\nobreak
+最大\qty{10}{mA}まではかれる電流計（内部抵抗 $r_{\mathrm A}$）で、\qty{1}{A}まではかりたいとします。電流計に抵抗 $R_{\mathrm s}$（\textbf{分流器}）を並列につなぎ、全体の電流 $I$ のうち、電流計には $I_{\mathrm A}$ だけを流すようにします。並列なので電圧が等しく、$r_{\mathrm A}I_{\mathrm A}=R_{\mathrm s}(I-I_{\mathrm A})$。はかる範囲を $n=I/I_{\mathrm A}$ 倍にするには
+\pheq{R_{\mathrm s}=\frac{r_{\mathrm A}I_{\mathrm A}}{I-I_{\mathrm A}}=\frac{r_{\mathrm A}}{n-1}}{Ω ＝ Ω}
+\label{ph:電-5:A35}です。$n=100$、$r_{\mathrm A}=\qty{10}{\ohm}$ なら $R_{\mathrm s}=10\div99\approx\qty{0.101}{\ohm}$（\bkreidairef{11}）。
+
+\noindent\textbf{倍率器}\par\nobreak
+最大\qty{1}{V}まではかれる電圧計（内部抵抗 $r_{\mathrm V}$）で\qty{100}{V}まではかるには、抵抗 $R_{\mathrm m}$（\textbf{倍率器}）を直列につなぎ、電圧の大部分を $R_{\mathrm m}$ にかけます。直列の電圧はそのままの比で分かれる（①）ので、電圧計の電圧を $\tfrac1n$ にするには、$r_{\mathrm V}:R_{\mathrm m}=1:(n-1)$、つまり
+\pheq{R_{\mathrm m}=(n-1)\,r_{\mathrm V}}{Ω ＝ Ω}
+\label{ph:電-5:baiki}です。$r_{\mathrm V}=\qty{1}{k\ohm}$、$n=100$ なら $R_{\mathrm m}=\qty{99}{k\ohm}$（\bkreidairef{12}）。
+
+\begin{phbaisuru}{はかる範囲 $n$}
+分流器は $\tfrac{1}{n-1}$ 倍なので、$n$ を2倍にすると、分流器の抵抗はほぼ半分になります。倍率器は $n-1$ 倍なので、ほぼ2倍になります。テスターのつまみを回して「範囲」を切りかえると、中で、この分流器と倍率器が切りかわっています。
+\end{phbaisuru}
+
+\begin{phmijika}[電圧計をつなぐと、はかりたい電圧が変わる]
+\qty{10}{V}の電池に、\qty{10}{k\ohm}の抵抗2つを直列につなぎます。片方の抵抗の電圧は、本当は\qty{5}{V}です。ここに内部抵抗\qty{10}{k\ohm}の電圧計をつなぐと、その抵抗と電圧計の並列で\qty{5}{k\ohm}になり、電圧は $10\times\dfrac{5}{10+5}\approx\qty{3.3}{V}$ と、大きくずれて表示されます。内部抵抗\qty{10}{M\ohm}のテスターなら、約\qty{5.00}{V}（ずれは0.05\,\%）です。はかる道具も回路の一部になることを、いつも忘れないようにしましょう。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{いちばん大きな電力を取り出す}
+
+\leavevmode\label{ph:電-5:sec9}起電力 $\mathcal E$、内部抵抗 $r$ の電源（テブナンの形）に負荷 $R_L$ をつなぎます。負荷で使われる電力は、電流 $I=\mathcal E/(r+R_L)$ を電-4 ⑤の $RI^2$ に入れて
+\[ P=R_LI^2=\frac{\mathcal E^2R_L}{(r+R_L)^2} \]
+です。$R_L$ が小さいと、電流は大きいのに、負荷の電圧が小さくて電力は小さい。$R_L$ が大きいと、電圧は大きいのに、電流が小さくて電力は小さい。その間に、電力がいちばん大きくなる $R_L$ があります。$P$ を $R_L$ で微分して0とおくと（商の微分 5-6、最大 5-7）、分子が $(r+R_L)^2-2R_L(r+R_L)=(r+R_L)(r-R_L)$ となるので、
+\pheq{R_L=r\quad\text{のとき}\quad P_{\max}=\frac{\mathcal E^2}{4r}}{W ＝ V$^2$ ÷ Ω}
+\label{ph:電-5:maxp}です。これを\textbf{最大電力の供給}の条件、または\textbf{整合}といいます。\bkidx{せいごう}{整合}このとき、電源が出す全体の電力 $\mathcal EI$ のうち、負荷で使われる割合（効率）は $R_L/(r+R_L)=\tfrac12$ で、半分は電源の中で熱になります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=100mm, height=50mm, xmin=0, xmax=6.3, ymin=0, ymax=1.12, xtick={0,1,2,3,4,5,6}, ytick={0,0.5,1}, xlabel={負荷と内部抵抗の比 $R_L/r$}, ylabel={最大の電力との比・効率}, every axis x label/.style={at={(axis description cs:0.5,-0.16)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=0:6.2, samples=150] {4*x/(1+x)^2};
+  \addplot[bkOrange!85!black, line width=1.4pt, dashed, domain=0:6.2, samples=100] {x/(1+x)};
+  \fill[bkRed] (axis cs:0.5,0.8889) circle (1.8pt) (axis cs:1,1) circle (1.8pt) (axis cs:2,0.8889) circle (1.8pt);
+  \draw[bkGray, line width=0.5pt, densely dotted] (axis cs:1,0) -- (axis cs:1,1);
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:4.1,0.47) {電力 $P/P_{\max}$（実線）};
+  \node[sxf lab, anchor=west, fill=white] at (axis cs:3.6,0.96) {効率（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{負荷 $R_L$ を内部抵抗 $r$ の何倍にするかで、取り出せる電力（最大を1とする）と効率が変わる。電力の山は $R_L=r$ で、そのとき効率は50\,\%。}
+\label{ph:電-5:fig-maxp}
+\end{bkfigure}
+
+\begin{phbaisuru}[半分・2倍]{負荷 $R_L$（$r$ の1倍から）}
+$R_L=r/2$ でも $R_L=2r$ でも、電力は最大の $\tfrac89\approx0.89$ 倍で、山の近くでは電力はあまり変わりません（図\ref{ph:電-5:fig-maxp}）。けれども効率は、$r/2$ で33\,\%、$2r$ で67\,\% と大きく違います。負荷を大きめにすると、電力を少しあきらめるかわりに、むだな熱を大きく減らせます。
+\end{phbaisuru}
+
+\begin{phmijika}[整合を使う所、使わない所]
+アンテナとテレビ、マイクと増幅器のように、弱い信号をむだなく受けわたしたい所では、整合させます（電-13 で、ケーブルの\qty{50}{\ohm}・\qty{75}{\ohm}として学びます）。一方、発電所から家へ電気を送るときに整合させると、半分が送電の途中で熱になってしまいます。電力の世界では、電源と送電線の抵抗を負荷よりずっと小さくして、効率を上げています。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{10}{大きな回路は、コンピュータで解く}
+
+\leavevmode\label{ph:電-5:sec10}網目電流法でも節点電位法でも、回路は $\mathbf R\vec I=\vec{\mathcal E}$ や $\mathbf G\vec\phi=\vec I_{\mathrm s}$ の形の連立1次方程式になります。式の数がふえても、解く手順は7-5の消去法そのままなので、コンピュータに任せられます。図\ref{ph:電-5:fig-hashigo}のはしご形を、Python で解きます。
+\begin{phcode}[Python]
+import numpy as np
+R = np.array([[3, -2, 0],
+              [-2, 9, -4],
+              [0, -4, 9]])        \# 網目の抵抗の行列（Ω）
+E = np.array([10, 0, 0])          \# 起電力（V）
+I = np.linalg.solve(R, E)         \# 網目電流（A）
+print(I)
+print(R @ I)                      \# 確かめ（E にもどるか）
+\end{phcode}
+\begin{phcodeout}[実行結果]
+[4.08805031 1.13207547 0.50314465]
+[ 1.00000000e+01 -2.22044605e-15  9.99200722e-16]
+\end{phcodeout}
+網目電流は $I_1\approx\qty{4.09}{A}$、$I_2\approx\qty{1.13}{A}$、$I_3\approx\qty{0.503}{A}$ です。2行めの確かめで、$-2.22\times10^{-15}$ のような数は、コンピュータの丸めのずれで、0と同じです。\qty{2}{\ohm}の抵抗には $I_1-I_2\approx\qty{2.96}{A}$、\qty{4}{\ohm}には $I_2-I_3\approx\qty{0.629}{A}$ が流れます（\bkreidairef{5}）。
+
+\noindent\textbf{表計算で解く}\par\nobreak
+表計算でも、同じ式を解けます。数学の本（7-5）で2×2の回路を解いたのと同じく、行列をセルに並べ、逆行列の関数 MINVERSE と、行列のかけ算の関数 MMULT を使います（表\ref{ph:電-5:tab-sheet}）。E2〜E4 の3つのセルを選んでから式を入れ、まとめて確定すると、3つの網目電流が一度に出ます。行列がもっと大きくなっても、セルの範囲を広げるだけです。
+\begin{bkcenter}
+\bksheet{5}{15}{%
+1 & $\mathbf R$〔Ω〕 & & & $\mathcal E$〔V〕 & $I$〔A〕 \\
+2 & 3 & $-2$ & 0 & 10 & 4.088 \\
+3 & $-2$ & 9 & $-4$ & 0 & 1.132 \\
+4 & 0 & $-4$ & 9 & 0 & 0.503 \\}
+\bktabcaption{はしご形の回路を表計算で解く。A2:C4 に網目の抵抗の行列、D2:D4 に起電力を入れ、E2:E4 を選んで ＝MMULT(MINVERSE(A2:C4),D2:D4) と入れる。答えは Python と同じ。}\label{ph:電-5:tab-sheet}
+\end{bkcenter}
+
+\noindent\textbf{回路シミュレーターと有限要素法}\par\nobreak
+スマホの中の電子回路は、何万もの部品でできています。設計する人は、回路の図をコンピュータに入れ、\textbf{回路シミュレーター}で電流と電圧を計算します。\bkidx{かいろしみゅれーたー}{回路シミュレーター}回路シミュレーターは、④の節点電位法と同じ考えで、図から行列 $\mathbf G$ を自動で組み立て、連立方程式を解いています（7-5⑤）。トランジスタのように電流と電圧が比例しない部品があるときは、少しずつ直しながら、線形の連立方程式を何度も解いて答えに近づけます（詳しくは物理シリーズの『原子』（原-10））。力-16 の有限要素法も、表\ref{ph:電-5:tab-ami}のとおり、同じ形の行列を組み立てて解いていました。電気の回路と建物の骨組みは、コンピュータの中では、同じ問題なのです。
+
+\begin{motto}[4]
+\phboxhead{はしごを長くすると、黄金比が出てくる}
+どの抵抗も\qty{1}{\ohm}のはしご形で、段の数をふやしていくと、入口（電池の所）から見た抵抗はどうなるでしょう。節点電位法の行列を、段の数 $n$ に合わせて作るプログラムで調べます。
+\begin{phcode}[Python]
+def nyuguchi(n):                  \# n 段のはしご（どの抵抗も 1 Ω）
+    G = np.zeros((n, n))
+    Is = np.zeros(n)
+    for k in range(n):
+        G[k, k] += 1              \# 節点 k から電位0へ 1 Ω
+        if k == 0:
+            G[0, 0] += 1          \# 電池（10 V）から 1 Ω
+            Is[0] = 10 / 1
+        else:
+            G[k, k] += 1; G[k-1, k-1] += 1   \# となりの節点と 1 Ω
+            G[k, k-1] -= 1; G[k-1, k] -= 1
+    phi = np.linalg.solve(G, Is)  \# 節点の電位
+    return 10 / (10 - phi[0])     \# 入口から見た抵抗
+for n in [1, 2, 3, 6, 10, 100]:
+    print(n, round(nyuguchi(n), 6))
+\end{phcode}
+\begin{phcodeout}[実行結果]
+1 2.0
+2 1.666667
+3 1.625
+6 1.618056
+10 1.618034
+100 1.618034
+\end{phcodeout}
+入口の抵抗は $2$、$\tfrac53$、$\tfrac{13}{8}$、… と、フィボナッチ数（1、1、2、3、5、8、13、…）の比になり、$\dfrac{1+\sqrt5}{2}\approx1.618034$（黄金比）に近づきます。はしごが限りなく長いとき、入口の抵抗を $x$ とすると、1段ふやしても $x$ は変わらないので $x=1+\dfrac{1\times x}{1+x}$。これを整理した $x^2-x-1=0$ の正の解が黄金比です（3-10）。
+\end{motto}
+
+\begin{phmada}[大きな連立方程式は、どこまで速く解ける？]
+式が $n$ 個の連立方程式を消去法で解くと、かけ算が約 $\tfrac{n^3}{3}$ 回いります（7-5⑤）。式が10倍になると、手間は1000倍です。数学者は、行列のかけ算を工夫して減らす方法を研究していて、理論の上では、手間を $n$ の約2.37乗にまで減らせることがわかっています。けれども、答えの数を書き出すだけで $n^2$ 回の手間がかかるので、2乗より速くはできません。では、2乗にどこまで近づけられるのか。この問題は、今もわかっていません。最近も、指数の上限が少しずつ小さくなっています。実際の回路シミュレーターでは、行列のほとんどが0であること（どの節点も、近くの数個としかつながらない）を使って、計算を大きく減らしています。
+\end{phmada}
+
+%% ---------------------------------------------------------------
+\bksubsection{11}{コンデンサーをふくむ直流回路}
+
+\leavevmode\label{ph:電-5:sec11}直流の回路にコンデンサーがあると、スイッチを入れてしばらくの間は、コンデンサーに電荷がたまっていくので電流が流れます。けれども、十分に時間がたつと、電荷がたまりきって、\textbf{コンデンサーの枝には電流が流れなくなります}。だから、十分時間がたった回路は、コンデンサーの所を「切れている」とみなして、これまでの方法で解けます。コンデンサーにたまる電気量は、コンデンサーの両はしの電圧 $V$ から $Q=CV$（電-3 ①）で求めます。
+
+図\ref{ph:電-5:fig-cond}の回路では、十分時間がたつと、電流は\qty{4}{\ohm}と\qty{2}{\ohm}だけを流れ、$12\div(4+2)=\qty{2}{A}$。コンデンサーは\qty{2}{\ohm}と並列なので、電圧は $2\times2=\qty{4}{V}$ で、電気量は $Q=CV=\qty{40}{\micro C}$ です（\bkreidairef{14}）。
+\label{ph:電-5:A36}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxf w] (0,0) rectangle (40,28) (40,28) -- (62,28) -- (62,0) -- (40,0);
+  \path (0,14) pic {sxf batt} (20,28) pic {sxf res} (40,14) pic {sxf resv} (62,14) pic {sxf cap};
+  \sxfdot{(40,28)}\sxfdot{(40,0)}
+  \node[sxf lab, anchor=east] at (-5,14) {\qty{12}{V}};
+  \node[sxf lab, anchor=south] at (20,30.4) {\qty{4}{\ohm}};
+  \node[sxf lab, anchor=west] at (42.6,14) {\qty{2}{\ohm}};
+  \node[sxf lab, anchor=west] at (67,14) {\qty{10}{\micro F}};
+  \node[sxf lab, anchor=west, align=left] at (84,20) {十分時間がたつと\\コンデンサーの枝は\\電流0（切れている\\のと同じ）};
+\end{tikzpicture}
+\bkfigcaption{コンデンサーをふくむ直流回路。十分時間がたつと、コンデンサーの電圧は、並列の\qty{2}{\ohm}の電圧と同じ\qty{4}{V}になる。}
+\label{ph:電-5:fig-cond}
+\end{bkfigure}
+
+\noindent スイッチを入れた直後は、反対に、コンデンサーにまだ電荷がないので電圧は0で、コンデンサーは「導線」と同じです。この回路なら、直後は\qty{2}{\ohm}に電流が流れず、\qty{4}{\ohm}だけで $12\div4=\qty{3}{A}$ が流れます。その間、どのように電流が変わっていくか（指数関数で、時定数 $RC$ ごとに変わる）は、電-9 ③で学びます。
+
+\begin{phflow}
+\phflowrow{電流則・電圧則\\＋$Q=CV$（電-3 ①）}{十分時間がたつ\\（電荷が動かない）}{コンデンサーの枝は\\電流0}
+\phflowrow{電流則・電圧則\\＋$Q=CV$（電-3 ①）}{スイッチを入れた直後\\（$Q=0$）}{コンデンサーは\\電圧0（導線と同じ）}
+\end{phflow}
+
+%% ---------------- たいせつ・ことば ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 並列の電流は抵抗の逆の比 $I_1=R_2I/(R_1+R_2)$、直列の電圧はそのままの比 $V_1=R_1V/(R_1+R_2)$。
+\item 網目電流法 $\mathbf R\vec I=\vec{\mathcal E}$（対角＝輪の抵抗の和、外＝共有する抵抗）。節点電位法 $\mathbf G\vec\phi=\vec I_{\mathrm s}$（対角＝コンダクタンスの和、外＝$-G$）。
+\item 線形の回路は、電池を1つずつ働かせてたせる（重ね合わせ）。回路の残りは $\mathcal E_{\mathrm{th}}$ と $R_{\mathrm{th}}$ の直列（テブナン）。
+\item ブリッジのつり合い $R_1R_4=R_2R_3$。分流器 $R_{\mathrm s}=r_{\mathrm A}/(n-1)$、倍率器 $R_{\mathrm m}=(n-1)r_{\mathrm V}$。
+\item 最大電力は $R_L=r$ で $\mathcal E^2/(4r)$（効率50\,\%）。十分時間がたつと、コンデンサーの枝の電流は0。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{網目電流法}{回路の輪の1つ1つに回る電流をわからない数にして、電圧則の式を立てる方法。}
+\bkword{節点電位法}{つながる点（節点）の電位をわからない数にして、電流則の式を立てる方法。}
+\bkword{コンダクタンス}{抵抗の逆数 $G=1/R$。電気の通りやすさ。単位は S（ジーメンス）。}
+\bkword{重ね合わせの理}{線形の回路の電流は、電池を1つずつ働かせたときの電流の和になること。}
+\bkword{テブナンの定理}{2つの端子から見た回路の残りが、電池1つと抵抗1つの直列と同じはたらきをすること。}
+\bkword{ホイートストンブリッジ}{4つの抵抗をひし形にした回路。つり合いから抵抗を正確にはかる。}
+\bkword{分流器・倍率器}{電流計・電圧計のはかる範囲を広げるため、並列・直列に入れる抵抗。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$G$}{ジー}{コンダクタンス〔S〕。抵抗の逆数 $1/R$。電-5 の立てた太字 $\mathbf G$ は、節点のコンダクタンスを並べた行列}{conductance}{電-5}}{\bkkigocard{$R_{\mathrm{th}}$}{アール・ティー・エイチ}{テブナンの等価抵抗〔Ω〕。$\mathcal E_{\mathrm{th}}$ は等価起電力。電池をすべて導線にして、端子から見た抵抗}{Thevenin resistance}{電-5}}
+
+\begin{senmonsho}[電気回路の本の書き方]
+\begin{bkhonbun}
+節点解析法では，基準節点を除く $n$ 個の節点の電位を未知数とし，各節点に KCL を適用して節点方程式 $\symbfit Y\symbfit V=\symbfit J$ を得る．$\symbfit Y$ は節点アドミタンス行列で，対角要素は節点に接続する枝のアドミタンスの和，非対角要素は節点間のアドミタンスの符号を変えたものである．線形回路網では重ね合わせの理が成り立ち，任意の二端子から見た回路網はテブナンの定理により等価電圧源と内部インピーダンスの直列回路で置き換えられる．
+\end{bkhonbun}
+\bkyaku{「節点解析法」は節点電位法、「KCL」はキルヒホッフの電流則（KVL は電圧則）。$\symbfit V$ は節点の電位（この本の $\vec\phi$）、$\symbfit J$ は流しこむ電流（この本の $\vec I_{\mathrm s}$）。直流ではアドミタンス $\symbfit Y$ はコンダクタンス（この本の $\mathbf G$）と同じ（交流のアドミタンスは電-10）。「等価電圧源」はこの本の $\mathcal E_{\mathrm{th}}$、「内部インピーダンス」は直流では $R_{\mathrm{th}}$。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\Needspace{14\baselineskip}
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 電池の起電力は $\mathcal E$、抵抗の電圧は $V$ と書きます。答えは2けたが基本で、3-6・7-5 と同じ数を見る例題は、その本と同じけたで書きます。
+
+\begin{phreidai}[電線にとまった鳥]
+\label{ph:電-5:ex1}電線に\qty{200}{A}の電流が流れています。電線の抵抗は\qty{1}{km}あたり\qty{0.5}{\ohm}、鳥の両足の間は\qty{5}{cm}、鳥の体の抵抗（足から足まで）は\qty{1}{k\ohm}とします。足の間の電圧と、鳥の体に流れる電流を求めましょう。
+\phbamen
+\bkhatenaref の場面です。電線の上の2点 P・Q に、鳥の両足がふれている。
+\phmushi
+電流が交流であること（ある瞬間で考える）。鳥の体のつくり（抵抗1つとみる）。
+\phzu
+足の間の電線の抵抗 $r$、鳥の体の抵抗 $R_{\mathrm b}=\qty{1000}{\ohm}$、電線の電流 $I=\qty{200}{A}$、鳥の電流 $I_{\mathrm b}$（図\ref{ph:電-5:fig-tori}）。
+\phriyu
+電線と鳥の体は、どちらも P と Q をつなぐので並列。並列の電流の分かれ方（①）が使える。電線の抵抗は長さに比例する（電-4 ③）。
+\phtateru
+\[ r=0.5\times\frac{0.05}{1000},\qquad V=rI,\qquad I_{\mathrm b}=\frac{r}{r+R_{\mathrm b}}\,I\approx\frac{V}{R_{\mathrm b}} \]
+\phtoku
+$r=\qty{2.5e-5}{\ohm}$。$V=2.5\times10^{-5}\times200=\qty{5e-3}{V}=\qty{5}{mV}$。
+\[ I_{\mathrm b}\approx\frac{5\times10^{-3}}{1000}=\qty{5e-6}{A}=\qty{5}{\micro A} \]
+\phtashikame
+単位：Ω × A ＝ V、V ÷ Ω ＝ A。大きさ：電線の電流の4000万分の1。極端な場合：鳥の体の抵抗が0でも、足の間は\qty{5}{mV}のまま。
+\kotae 足の間 約\qty{5}{mV}、鳥の電流 約\qty{5}{\micro A}
+\end{phreidai}
+\begin{jibun}
+電線の抵抗が\qty{1}{km}あたり\qty{0.2}{\ohm}、電流が\qty{300}{A}、鳥の足の間が\qty{10}{cm}、鳥の体の抵抗が\qty{2}{k\ohm}とします。足の間の電圧と、鳥の電流を求めましょう。
+\bkjans{$r=0.2\times0.10\div1000=\qty{2e-5}{\ohm}$。$V=2\times10^{-5}\times300=\qty{6}{mV}$。$I_{\mathrm b}\approx0.006\div2000=\qty{3}{\micro A}$}
+\end{jibun}
+
+\begin{reidai}[並列の電流の分かれ方]
+\label{ph:電-5:ex2}\qty{1}{\ohm}と\qty{3}{\ohm}の抵抗を並列にして、全体に\qty{12}{A}流します。それぞれの抵抗の電流を求めましょう。
+\par\bkstep{理想化} 導線の抵抗は0とする。
+\par\kangaekata 並列の電流は、抵抗の逆の比に分かれる（①）。自分の電流＝全体×相手の抵抗÷2つの和。
+\par\shiki $\qty{1}{\ohm}$：$12\times\dfrac{3}{1+3}=\qty{9}{A}$、\qty{3}{\ohm}：$12\times\dfrac{1}{1+3}=\qty{3}{A}$
+\par\bkstep{確かめ} $9+3=12$ で電流則に合う。電圧は $1\times9=3\times3=\qty{9}{V}$ で等しい。
+\par\kotae \qty{1}{\ohm}に\qty{9}{A}、\qty{3}{\ohm}に\qty{3}{A}
+\end{reidai}
+\begin{jibun}
+\qty{2}{\ohm}と\qty{4}{\ohm}の並列に、全体で\qty{6}{A}流します。それぞれの電流を求めましょう。
+\bkjans{\qty{2}{\ohm}：$6\times4\div6=\qty{4}{A}$、\qty{4}{\ohm}：$6\times2\div6=\qty{2}{A}$}
+\end{jibun}
+
+\begin{phreidai}[乾電池2本のつなぎ方]
+\label{ph:電-5:ex3}起電力\qty{1.5}{V}、内部抵抗\qty{0.5}{\ohm}（少し使った乾電池）の電池2本で、抵抗\qty{5}{\ohm}の豆電球をつけます。1本・直列・並列のときの電流と、豆電球の電力を求めましょう。
+\phbamen
+やってみようの実験。小学校で見た「直列は明るい、並列は1本と同じくらい」を数で確かめる。
+\phmushi
+豆電球の抵抗が温度で変わること（\qty{5}{\ohm}で一定とする）。導線の抵抗。
+\phzu
+起電力 $\mathcal E=\qty{1.5}{V}$、内部抵抗 $r=\qty{0.5}{\ohm}$、豆電球 $R=\qty{5}{\ohm}$（図\ref{ph:電-5:fig-denchi}）。
+\phriyu
+電池は起電力と内部抵抗の直列（電-4 ⑨）。直列は起電力も内部抵抗も2倍、並列は起電力そのまま・内部抵抗半分の1本と同じ（②）。電力は $RI^2$（電-4 ⑤）。
+\phtateru
+\[ I_{1\text{本}}=\frac{\mathcal E}{r+R},\qquad I_{\text{直列}}=\frac{2\mathcal E}{2r+R},\qquad I_{\text{並列}}=\frac{\mathcal E}{r/2+R} \]
+\phtoku
+\[ I_{1\text{本}}=\frac{1.5}{5.5}\approx\qty{0.27}{A},\qquad I_{\text{直列}}=\frac{3}{6}=\qty{0.50}{A},\qquad I_{\text{並列}}=\frac{1.5}{5.25}\approx\qty{0.29}{A} \]
+電力は $5\times0.273^2\approx\qty{0.37}{W}$、$5\times0.5^2=\qty{1.25}{W}$、$5\times0.286^2\approx\qty{0.41}{W}$。
+\phtashikame
+単位：V ÷ Ω ＝ A、Ω × A$^2$ ＝ W。大きさ：直列は1本の約3.4倍の明るさ、並列は1本の約1.1倍で、実験と合う。極端な場合：内部抵抗が0なら、並列は1本とまったく同じ。
+\kotae 1本 約\qty{0.27}{A}（\qty{0.37}{W}）、直列 \qty{0.50}{A}（\qty{1.25}{W}）、並列 約\qty{0.29}{A}（\qty{0.41}{W}）
+\end{phreidai}
+\begin{jibun}
+起電力\qty{1.5}{V}、内部抵抗\qty{0.3}{\ohm}の電池2本を、直列と並列にして、\qty{3}{\ohm}の豆電球につなぎます。それぞれの電流を求めましょう。
+\bkjans{直列：$3\div(0.6+3)\approx\qty{0.83}{A}$。並列：$1.5\div(0.15+3)\approx\qty{0.48}{A}$}
+\end{jibun}
+
+\begin{phreidai}[3-6の回路を、網目電流法と行列で]
+\label{ph:電-5:ex4}図\ref{ph:電-5:fig-moku}の回路（\qty{9}{V}・\qty{6}{V}の電池、\qty{2}{\ohm}の抵抗3つ）の網目電流を、行列の式にして、逆行列で求めましょう。まん中の抵抗の電流も求めましょう。
+\phbamen
+3-6⑦と7-5②で解いた回路。網目電流法の手順を、知っている答えで確かめる。
+\phmushi
+電池の内部抵抗と導線の抵抗（3-6と同じく0とする）。
+\phzu
+左の輪に時計回りの $I_1$、右の輪に反時計回りの $I_2$（3-6と同じ向き）。まん中の抵抗は2つの電流が同じ向きに通る。
+\phriyu
+輪が2つで、電池は両方の輪にある。網目電流法なら電流則を書かずにすむ（③）。行列は①〜③のきまりで書ける。
+\phtateru
+対角は輪の抵抗の和 $2+2=4$、共有するまん中の抵抗は同じ向きなので $+2$。
+\[ \begin{pmatrix}4&2\\2&4\end{pmatrix}\begin{pmatrix}I_1\\I_2\end{pmatrix}=\begin{pmatrix}9\\6\end{pmatrix} \]
+\phtoku
+行列式 $4\times4-2\times2=12$。逆行列 $\dfrac{1}{12}\begin{pmatrix}4&-2\\-2&4\end{pmatrix}$ を右辺にかけて（7-5②）
+\[ I_1=\frac{4\times9-2\times6}{12}=\qty{2}{A},\qquad I_2=\frac{-2\times9+4\times6}{12}=\qty{0.5}{A} \]
+まん中は $I_1+I_2=\qty{2.5}{A}$。
+\phtashikame
+単位：V ÷ Ω ＝ A。3-6⑦の答えと同じ。左の輪：$2\times2+2\times2.5=9$ で電池と合う。極端な場合：右の電池を0にすると、$I_1=36\div12=\qty{3}{A}$ で、重ね合わせ（⑤）の\qty{3}{A}と合う。
+\kotae $I_1=\qty{2}{A}$、$I_2=\qty{0.5}{A}$、まん中 \qty{2.5}{A}
+\end{phreidai}
+\begin{jibun}
+同じ回路で、左の電池を\qty{12}{V}、右の電池を\qty{3}{V}にします。網目電流 $I_1$、$I_2$ と、まん中の電流を求めましょう。マイナスの答えは何を表しますか。
+\bkjans{$I_1=(48-6)\div12=\qty{3.5}{A}$、$I_2=(-24+12)\div12=\qty{-1}{A}$、まん中 \qty{2.5}{A}。$I_2$ がマイナスなのは、右の輪の電流が、決めた向きと反対（右の電池に＋側から流れこむ向き）に\qty{1}{A}流れること}
+\end{jibun}
+
+\begin{phreidai}[はしご形の回路を、Python で]
+\label{ph:電-5:ex5}図\ref{ph:電-5:fig-hashigo}のはしご形の回路（\qty{10}{V}、\qty{1}{\ohm}〜\qty{5}{\ohm}）の網目電流を、行列の式にして Python で求めましょう。\qty{2}{\ohm}と\qty{4}{\ohm}の抵抗の電流も求めましょう。
+\phbamen
+輪が3つある回路。手で解くと大変なので、行列にしてコンピュータに解かせる。
+\phmushi
+電池の内部抵抗、導線の抵抗。
+\phzu
+網目電流 $I_1$、$I_2$、$I_3$（すべて時計回り）。節点 A・B。
+\phriyu
+輪が3つ、電池は左の輪だけ。網目電流法の①〜③のきまりで行列を書き（③）、\texttt{np.linalg.solve} で解く（⑩、7-5⑤）。
+\phtateru
+\[ \begin{pmatrix}3&-2&0\\-2&9&-4\\0&-4&9\end{pmatrix}\begin{pmatrix}I_1\\I_2\\I_3\end{pmatrix}=\begin{pmatrix}10\\0\\0\end{pmatrix} \]
+\phtoku
+⑩のプログラムで、$I_1\approx\qty{4.09}{A}$、$I_2\approx\qty{1.13}{A}$、$I_3\approx\qty{0.503}{A}$。\qty{2}{\ohm}は $I_1$ と $I_2$ が反対向きに通るので $I_1-I_2\approx\qty{2.96}{A}$、\qty{4}{\ohm}は $I_2-I_3\approx\qty{0.629}{A}$。
+\phtashikame
+単位：V ÷ Ω ＝ A。電圧則：左の輪 $1\times4.09+2\times2.96\approx10.0$ で電池と合う。節点電位法（④）の $\phi_{\mathrm B}\approx\qty{2.52}{V}$ とも、$5\times0.503\approx2.52$ で合う。極端な場合：電池から遠い輪ほど電流が小さくなる（はしごの先へ行くほど、横の抵抗へ逃げていく）。
+\kotae $I_1\approx\qty{4.09}{A}$、$I_2\approx\qty{1.13}{A}$、$I_3\approx\qty{0.503}{A}$。\qty{2}{\ohm}に約\qty{2.96}{A}、\qty{4}{\ohm}に約\qty{0.629}{A}
+\end{phreidai}
+\begin{jibun}
+同じ形のはしごで、5つの抵抗をすべて\qty{1}{\ohm}にします（電池は\qty{10}{V}）。網目電流の行列の式を書き、網目電流を求めましょう。入口から見た抵抗（\qty{10}{V}÷$I_1$）はいくらですか。
+\bkjans{$2I_1-I_2=10$、$-I_1+3I_2-I_3=0$、$-I_2+2I_3=0$。$I_1=\qty{6.25}{A}$、$I_2=\qty{2.5}{A}$、$I_3=\qty{1.25}{A}$。入口の抵抗 $10\div6.25=\qty{1.6}{\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[節点電位法で、まん中の点の電位]
+\label{ph:電-5:ex6}図\ref{ph:電-5:fig-setten}の回路を、下の線を電位0として節点電位法で解き、上のまん中の点の電位と、3つの枝の電流を求めましょう。
+\phbamen
+\bkreidairef{4}と同じ回路を、わからない数1つで解く。
+\phmushi
+電池の内部抵抗、導線の抵抗。
+\phzu
+まん中の節点の電位 $\phi$。節点から左・まん中・右へ流れ出る電流を、それぞれ $(\phi-9)/2$、$\phi/2$、$(\phi-6)/2$ と書く。
+\phriyu
+節点（電位0を除く）が1つだけなので、節点電位法なら式が1本ですむ（④）。電流則：流れ出る電流の和は0。
+\phtateru
+\[ \frac{\phi-9}{2}+\frac{\phi}{2}+\frac{\phi-6}{2}=0 \]
+\phtoku
+両辺に2をかけて $3\phi-15=0$、$\phi=\qty{5}{V}$。左の枝は $(9-5)\div2=\qty{2}{A}$（電池から節点へ）、右は $(6-5)\div2=\qty{0.5}{A}$、まん中は $5\div2=\qty{2.5}{A}$。
+\phtashikame
+単位：V ÷ Ω ＝ A。\bkreidairef{4}と同じ答え。電流則：$2+0.5=2.5$。極端な場合：2つの電池が同じ\qty{9}{V}なら、$\phi=18\div3=\qty{6}{V}$ で、左右から\qty{1.5}{A}ずつ。
+\kotae $\phi=\qty{5}{V}$。左\qty{2}{A}、右\qty{0.5}{A}、まん中\qty{2.5}{A}
+\end{phreidai}
+\begin{jibun}
+左の電池が\qty{12}{V}、右の電池が\qty{3}{V}（抵抗は\qty{2}{\ohm}×3）のとき、まん中の点の電位と、左右の枝の電流を節点電位法で求めましょう。
+\bkjans{$(\phi-12)/2+\phi/2+(\phi-3)/2=0$ から $\phi=\qty{5}{V}$。左 $(12-5)\div2=\qty{3.5}{A}$、右 $(3-5)\div2=\qty{-1}{A}$（右の電池へ流れこむ）}
+\end{jibun}
+
+\begin{phreidai}[重ね合わせの理で解く]
+\label{ph:電-5:ex7}図\ref{ph:電-5:fig-moku}の回路の3つの枝の電流を、重ね合わせの理で求めましょう。
+\phbamen
+電池が2つある回路を、電池1つの回路2つに分けて解く。
+\phmushi
+電池の内部抵抗（電池を導線におきかえるとき、抵抗は残らない）。
+\phzu
+\qty{9}{V}だけのときの電流、\qty{6}{V}だけのときの電流（図\ref{ph:電-5:fig-kasane}）。電池から流れ出る向きを正とする。
+\phriyu
+抵抗だけの回路は線形なので、重ね合わせの理が使える（⑤）。電池1つなら、直列・並列の合成抵抗と電流の分かれ方（①）だけで解ける。
+\phtateru
+\qty{9}{V}だけ：全体 $2+\dfrac{2\times2}{2+2}=\qty{3}{\ohm}$。\qty{6}{V}だけ：同じく\qty{3}{\ohm}。
+\phtoku
+\qty{9}{V}だけ：左に $9\div3=\qty{3}{A}$、まん中と右に\qty{1.5}{A}ずつ（右は逆向き）。\qty{6}{V}だけ：右に\qty{2}{A}、まん中と左に\qty{1}{A}ずつ（左は逆向き）。たして、左 $3-1=\qty{2}{A}$、まん中 $1.5+1=\qty{2.5}{A}$、右 $2-1.5=\qty{0.5}{A}$。
+\phtashikame
+単位：V ÷ Ω ＝ A。\bkreidairef{4}・\bkreidairef{6}と同じ。電力は重ね合わせできない（まん中は $2\times2.5^2=\qty{12.5}{W}$ で、$2\times1.5^2+2\times1^2=\qty{6.5}{W}$ ではない）。
+\kotae 左\qty{2}{A}、まん中\qty{2.5}{A}、右\qty{0.5}{A}
+\end{phreidai}
+\begin{jibun}
+左\qty{12}{V}・右\qty{3}{V}（抵抗は\qty{2}{\ohm}×3）の回路を、重ね合わせの理で解きましょう。
+\bkjans{\qty{12}{V}だけ：左\qty{4}{A}、まん中と右に\qty{2}{A}ずつ。\qty{3}{V}だけ：右\qty{1}{A}、まん中と左に\qty{0.5}{A}ずつ。左 $4-0.5=\qty{3.5}{A}$、まん中 $2+0.5=\qty{2.5}{A}$、右 $1-2=\qty{-1}{A}$}
+\end{jibun}
+
+\begin{phreidai}[テブナンの定理で、負荷を取りかえる]
+\label{ph:電-5:ex8}図\ref{ph:電-5:fig-moku}の回路で、まん中の\qty{2}{\ohm}を負荷と考えます。テブナンの $\mathcal E_{\mathrm{th}}$ と $R_{\mathrm{th}}$ を求め、負荷が\qty{2}{\ohm}・\qty{4}{\ohm}・\qty{0.5}{\ohm}のときの電流を求めましょう。
+\phbamen
+負荷だけを何度も取りかえて調べたい。そのたびに全体を解き直さないですむようにする。
+\phmushi
+電池の内部抵抗（電池は導線におきかえられる）。
+\phzu
+負荷をつなぐ端子 a（上のまん中）・b（下のまん中）。
+\phriyu
+回路の残りは線形なので、テブナンの定理（⑥）が使える。$\mathcal E_{\mathrm{th}}$ は負荷をはずしたときの電圧、$R_{\mathrm{th}}$ は電池を導線にしたときの合成抵抗。
+\phtateru
+負荷をはずすと、左右の電池と2つの\qty{2}{\ohm}が1つの輪になる。輪の電流は、左の電池から右の電池へ
+\[ \frac{9-6}{2+2}=\qty{0.75}{A} \]
+\[ \mathcal E_{\mathrm{th}}=9-2\times0.75,\qquad R_{\mathrm{th}}=\frac{2\times2}{2+2},\qquad I_L=\frac{\mathcal E_{\mathrm{th}}}{R_{\mathrm{th}}+R_L} \]
+\phtoku
+$\mathcal E_{\mathrm{th}}=\qty{7.5}{V}$、$R_{\mathrm{th}}=\qty{1}{\ohm}$。負荷\qty{2}{\ohm}：$7.5\div3=\qty{2.5}{A}$。\qty{4}{\ohm}：$7.5\div5=\qty{1.5}{A}$。\qty{0.5}{\ohm}：$7.5\div1.5=\qty{5}{A}$。
+\phtashikame
+単位：V ÷ Ω ＝ A。\qty{2}{\ohm}の\qty{2.5}{A}は\bkreidairef{4}と同じ。極端な場合：負荷を導線（\qty{0}{\ohm}）にすると $7.5\div1=\qty{7.5}{A}$ で、ノートンの電流 $I_{\mathrm N}=\mathcal E_{\mathrm{th}}/R_{\mathrm{th}}$ と同じ。負荷を大きくすると電流は0に近づく。
+\kotae $\mathcal E_{\mathrm{th}}=\qty{7.5}{V}$、$R_{\mathrm{th}}=\qty{1}{\ohm}$。\qty{2}{\ohm}で\qty{2.5}{A}、\qty{4}{\ohm}で\qty{1.5}{A}、\qty{0.5}{\ohm}で\qty{5}{A}
+\end{phreidai}
+\begin{jibun}
+左\qty{10}{V}・右\qty{4}{V}の電池、左右の抵抗は\qty{2}{\ohm}ずつ、まん中の負荷は\qty{6}{\ohm}です。$\mathcal E_{\mathrm{th}}$、$R_{\mathrm{th}}$ と負荷の電流を求めましょう。
+\bkjans{はずすと輪の電流 $(10-4)\div4=\qty{1.5}{A}$、$\mathcal E_{\mathrm{th}}=10-2\times1.5=\qty{7}{V}$。$R_{\mathrm{th}}=\qty{1}{\ohm}$。$I_L=7\div(1+6)=\qty{1}{A}$}
+\end{jibun}
+
+\begin{reidai}[ホイートストンブリッジのつり合い]
+\label{ph:電-5:ex9}図\ref{ph:電-5:fig-bridge}のブリッジで、$R_1=\qty{100}{\ohm}$、$R_2=\qty{200}{\ohm}$、$R_3=\qty{150}{\ohm}$ のとき、検流計に電流が流れなくなりました。$R_4$ はいくらですか。
+\par\bkstep{理想化} 抵抗は温度で変わらないとする。検流計の針がちょうど0。
+\par\kangaekata つり合いの条件 $R_1R_4=R_2R_3$（⑦）。向かい合う抵抗のかけ算が等しい。
+\par\shiki $R_4=\dfrac{R_2R_3}{R_1}=\dfrac{200\times150}{100}=\qty{300}{\ohm}$
+\par\bkstep{確かめ} 左の枝の比 $100:200=1:2$、右の枝の比 $150:300=1:2$ で同じ。電池の起電力は使っていない。
+\par\kotae $R_4=\qty{300}{\ohm}$
+\end{reidai}
+\begin{jibun}
+$R_1=\qty{120}{\ohm}$、$R_3=\qty{240}{\ohm}$、$R_4=\qty{500}{\ohm}$ でつり合いました。$R_2$ はいくらですか。
+\bkjans{$R_2=R_1R_4\div R_3=120\times500\div240=\qty{250}{\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[ひずみゲージの1ゲージ法]
+\label{ph:電-5:ex10}力-9 ⑩のひずみゲージ（\qty{120}{\ohm}、ゲージ率2）にひずみ $500\times10^{-6}$ がかかりました。このゲージを $R_1$ にし、ほかの3辺を\qty{120}{\ohm}にしたブリッジに\qty{5}{V}をかけます。C・D の間の電圧を、近似の式と正確な式で求めましょう。
+\phbamen
+鉄の橋や車の部品の、目に見えない小さな伸びを、電圧にしてはかる。
+\phmushi
+温度による抵抗の変化。検流計（電圧をはかる道具）に流れる電流（とても大きな抵抗の電圧計でつなぐ）。
+\phzu
+$R=\qty{120}{\ohm}$、$\Delta R=120\times2\times500\times10^{-6}$、$\mathcal E=\qty{5}{V}$、出力 $V_{\text{出}}=\phi_{\mathrm D}-\phi_{\mathrm C}$。
+\phriyu
+ひずみがないとつり合って出力0。ゲージの抵抗が増えると C の電位が下がる。直列の電圧の分かれ方（①）から正確な式、$\Delta R\ll R$ で近似の式（⑦）。
+\phtateru
+\[ \Delta R=R\times2\times\varepsilon,\qquad V_{\text{出}}=\frac{\Delta R}{2(2R+\Delta R)}\,\mathcal E\approx\frac{\mathcal E}{4}\,\frac{\Delta R}{R} \]
+\phtoku
+$\Delta R=120\times2\times500\times10^{-6}=\qty{0.12}{\ohm}$（力-9 と同じ）。
+\[ \text{近似}\ \frac{5}{4}\times\frac{0.12}{120}=\qty{1.25}{mV},\qquad \text{正確}\ \frac{0.12\times5}{2\times240.12}\approx\qty{1.249}{mV} \]
+\phtashikame
+単位：Ω ÷ Ω × V ＝ V。大きさ：\qty{5}{V}の4000分の1の小さな電圧なので、増幅してはかる。近似と正確な値の差は0.05\,\% で、近似で十分。極端な場合：ひずみ0なら出力0（つり合い）。
+\kotae 近似で\qty{1.25}{mV}、正確には約\qty{1.249}{mV}
+\end{phreidai}
+\begin{jibun}
+波-10 ⑩の振動の記録では、ゲージ（\qty{120}{\ohm}）の抵抗の変化は\qty{0.048}{\ohm}でした。同じ1ゲージ法のブリッジ（\qty{5}{V}）の出力を、近似の式で求めましょう。
+\bkjans{$\dfrac{5}{4}\times\dfrac{0.048}{120}=\qty{5.0e-4}{V}=\qty{0.50}{mV}$}
+\end{jibun}
+
+\begin{phreidai}[電流計の分流器]
+\label{ph:電-5:ex11}内部抵抗\qty{10}{\ohm}、最大\qty{10}{mA}まではかれる電流計で、\qty{1}{A}まではかれるようにしたい。どんな抵抗を、どうつなげばよいですか。
+\phbamen
+テスターの電流の範囲を切りかえる。
+\phmushi
+導線とつなぎ目の抵抗。抵抗の温度による変化。
+\phzu
+電流計の内部抵抗 $r_{\mathrm A}=\qty{10}{\ohm}$、電流計の電流 $I_{\mathrm A}=\qty{0.01}{A}$、全体 $I=\qty{1}{A}$、分流器 $R_{\mathrm s}$（図\ref{ph:電-5:fig-keiki}）。
+\phriyu
+電流の大部分を別の道へ流したいので、並列（⑧）。並列では電圧が等しい。
+\phtateru
+\[ r_{\mathrm A}I_{\mathrm A}=R_{\mathrm s}(I-I_{\mathrm A}) \]
+\phtoku
+\[ R_{\mathrm s}=\frac{10\times0.01}{1-0.01}=\frac{0.1}{0.99}\approx\qty{0.101}{\ohm} \]
+\phtashikame
+単位：Ω × A ÷ A ＝ Ω。大きさ：$n=100$ で $r_{\mathrm A}/(n-1)=10/99$ と合う。電流計の抵抗の約100分の1なので、電流の99\,\% が分流器へ行く。
+\kotae 約\qty{0.101}{\ohm}の抵抗を、電流計に並列につなぐ
+\end{phreidai}
+\begin{jibun}
+内部抵抗\qty{5}{\ohm}、最大\qty{20}{mA}の電流計で、\qty{2}{A}まではかるには、何 Ω の分流器がいりますか。
+\bkjans{$5\times0.02\div(2-0.02)\approx\qty{0.0505}{\ohm}$（$n=100$、$5\div99$）}
+\end{jibun}
+
+\begin{phreidai}[電圧計の倍率器]
+\label{ph:電-5:ex12}内部抵抗\qty{1}{k\ohm}、最大\qty{1}{V}まではかれる電圧計で、\qty{100}{V}まではかれるようにしたい。どんな抵抗を、どうつなげばよいですか。
+\phbamen
+テスターの電圧の範囲を切りかえる。
+\phmushi
+はかる回路から電圧計に流れこむ電流で、はかりたい電圧が変わること（⑧の身近な例）。
+\phzu
+電圧計の内部抵抗 $r_{\mathrm V}=\qty{1000}{\ohm}$、範囲 $n=100$ 倍、倍率器 $R_{\mathrm m}$（図\ref{ph:電-5:fig-keiki}）。
+\phriyu
+電圧の大部分を別の抵抗で受けもちたいので、直列（⑧）。直列の電圧は抵抗の比で分かれる（①）。
+\phtateru
+電圧計に\qty{1}{V}、倍率器に\qty{99}{V}がかかるように
+\[ r_{\mathrm V}:R_{\mathrm m}=1:99 \]
+\phtoku
+\[ R_{\mathrm m}=99\times1000=\qty{99000}{\ohm}=\qty{99}{k\ohm} \]
+\phtashikame
+単位：Ω。全体の抵抗は\qty{100}{k\ohm}で、\qty{100}{V}のとき流れる電流は\qty{1}{mA}。電圧計だけで\qty{1}{V}のときと同じ電流なので、針はちょうどいっぱいにふれる。
+\kotae \qty{99}{k\ohm}の抵抗を、電圧計に直列につなぐ
+\end{phreidai}
+\begin{jibun}
+内部抵抗\qty{2}{k\ohm}、最大\qty{3}{V}の電圧計で、\qty{300}{V}まではかるには、何 kΩ の倍率器がいりますか。
+\bkjans{$n=100$。$R_{\mathrm m}=99\times2=\qty{198}{k\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[電源から、いちばん大きな電力を取り出す]
+\label{ph:電-5:ex13}起電力\qty{12}{V}、内部抵抗\qty{0.5}{\ohm}の電源に、負荷 $R_L$ をつなぎます。負荷の電力がいちばん大きくなる $R_L$ と、そのときの電力・効率を求めましょう。$R_L=\qty{1}{\ohm}$ のときとも比べましょう。
+\phbamen
+電池から、ヒーターやモーターへ電力を取り出す。
+\phmushi
+内部抵抗が電流や温度で変わること。
+\phzu
+$\mathcal E=\qty{12}{V}$、$r=\qty{0.5}{\ohm}$、負荷 $R_L$、電流 $I$、負荷の電力 $P$（図\ref{ph:電-5:fig-maxp}）。
+\phriyu
+電源はテブナンの形（⑥）。負荷の電力は $R_LI^2$ で、$R_L=r$ のとき最大（⑨）。効率は負荷の電力÷電源の電力 $=R_L/(r+R_L)$。
+\phtateru
+\[ P=\frac{\mathcal E^2R_L}{(r+R_L)^2},\qquad P_{\max}=\frac{\mathcal E^2}{4r} \]
+\phtoku
+$R_L=\qty{0.5}{\ohm}$ で $P_{\max}=144\div2=\qty{72}{W}$（電流\qty{12}{A}）、効率50\,\%。$R_L=\qty{1}{\ohm}$ では $I=12\div1.5=\qty{8}{A}$、$P=1\times64=\qty{64}{W}$、効率 $1\div1.5\approx67$\,\%。
+\phtashikame
+単位：V$^2$ ÷ Ω ＝ W。大きさ：$R_L=2r$ で最大の $\tfrac89$ 倍（$72\times\tfrac89=64$）と合う。極端な場合：$R_L=0$ でも $\infty$ でも、負荷の電力は0。
+\kotae $R_L=\qty{0.5}{\ohm}$ で\qty{72}{W}（効率50\,\%）。$R_L=\qty{1}{\ohm}$ では\qty{64}{W}（効率約67\,\%）
+\end{phreidai}
+\begin{jibun}
+起電力\qty{1.5}{V}、内部抵抗\qty{0.25}{\ohm}の乾電池から取り出せる、いちばん大きな電力はいくらですか。そのときの負荷の抵抗と電流も答えましょう。
+\bkjans{$R_L=\qty{0.25}{\ohm}$、電流 $1.5\div0.5=\qty{3}{A}$、電力 $1.5^2\div(4\times0.25)=\qty{2.25}{W}$}
+\end{jibun}
+
+\begin{phreidai}[コンデンサーをふくむ回路]
+\label{ph:電-5:ex14}図\ref{ph:電-5:fig-cond}の回路（\qty{12}{V}、\qty{4}{\ohm}と\qty{2}{\ohm}の直列、\qty{2}{\ohm}に\qty{10}{\micro F}を並列）で、スイッチを入れて十分時間がたちました。コンデンサーの電圧と電気量を求めましょう。
+\phbamen
+電子回路の電源の所には、電圧をならすためのコンデンサーがよく入っている。落ち着いたあとの電圧を知りたい。
+\phmushi
+電池の内部抵抗。コンデンサーの中を少しずつもれる電流。
+\phzu
+回路の電流 $I$、\qty{2}{\ohm}の電圧 $V$、コンデンサーの電圧 $V_C$、電気量 $Q$。
+\phriyu
+十分時間がたつと、コンデンサーの枝の電流は0（⑪）。コンデンサーは\qty{2}{\ohm}と並列なので、電圧は等しい。電気量は $Q=CV$（電-3 ①）。
+\phtateru
+\[ I=\frac{12}{4+2},\qquad V_C=2I,\qquad Q=CV_C \]
+\phtoku
+$I=\qty{2}{A}$、$V_C=\qty{4}{V}$、$Q=10\times10^{-6}\times4=\qty{4e-5}{C}=\qty{40}{\micro C}$。
+\phtashikame
+単位：F × V ＝ C。大きさ：電池の電圧\qty{12}{V}を4：2に分けた\qty{4}{V}（直列の電圧の分かれ方）。スイッチを入れた直後は、コンデンサーの電圧は0で、電流は $12\div4=\qty{3}{A}$（電-9 で、\qty{3}{A}から\qty{2}{A}へ移っていく様子を学ぶ）。
+\kotae $V_C=\qty{4}{V}$、$Q=\qty{40}{\micro C}$
+\end{phreidai}
+\begin{jibun}
+\qty{9}{V}の電池に\qty{2}{\ohm}と\qty{1}{\ohm}を直列につなぎ、\qty{1}{\ohm}に\qty{20}{\micro F}のコンデンサーを並列につなぎます。十分時間がたったときの、コンデンサーの電圧と電気量を求めましょう。
+\bkjans{電流 $9\div3=\qty{3}{A}$、$V_C=1\times3=\qty{3}{V}$、$Q=20\times10^{-6}\times3=\qty{60}{\micro C}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\Needspace{9\baselineskip}
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{並列の電流を、自分の抵抗の比で分ける}
+\bkng{\qty{1}{\ohm}と\qty{3}{\ohm}の並列に\qty{12}{A}。\qty{1}{\ohm}には $12\times\tfrac14=\qty{3}{A}$。}
+\bkok{電流は抵抗の\textbf{逆の}比。\qty{1}{\ohm}には $12\times\tfrac34=\qty{9}{A}$。}
+抵抗が小さいほうが通りやすいので、多く流れます。分子にくるのは相手の抵抗です（直列の電圧は自分の抵抗）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{網目電流を、そのまま抵抗の電流と思う}
+\bkng{\bkreidairef{5}の\qty{2}{\ohm}の抵抗には、$I_1=\qty{4.09}{A}$ が流れる。}
+\bkok{\qty{2}{\ohm}は2つの輪が共有しているので、$I_1-I_2\approx\qty{2.96}{A}$。}
+網目電流は「輪を回る電流」です。抵抗の電流は、その抵抗を通る網目電流を、向きを考えてたしたものです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{電力も重ね合わせる}
+\bkng{電池を1つずつ働かせたときの電力をたすと、本当の電力になる。}
+\bkok{重ね合わせられるのは電流と電圧だけ。電流をたしてから $RI^2$ を計算する。}
+電力は電流の2乗なので、$(I_{\mathrm a}+I_{\mathrm b})^2\neq I_{\mathrm a}^2+I_{\mathrm b}^2$ です（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{分流器を直列、倍率器を並列につなぐ}
+\bkng{電流計の範囲を広げるには、抵抗を直列につなぐ。}
+\bkok{電流の一部を別の道へ流すので、分流器は\textbf{並列}。電圧の一部を受けもつ倍率器は\textbf{直列}。}
+「電流を分ける」は並列、「電圧を分ける」は直列、と①の2つの分かれ方にもどって考えます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{十分時間がたっても、コンデンサーに電流が流れ続ける}
+\bkng{コンデンサーも抵抗のように、電流を通し続ける。}
+\bkok{直流では、電荷がたまりきるとコンデンサーの枝は電流0。電圧は並列の部品と同じ。}
+コンデンサーの2枚の板の間は、絶縁体でへだてられています。電流が流れるのは、電荷がたまっていく間だけです。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\Needspace{8\baselineskip}
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[はかる・設計する・シミュレートする]
+\phboxhead{① テスター（デジタルマルチメーター）}
+テスターは、1つの道具で電圧・電流・抵抗をはかります。中の回路は、⑧の分流器・倍率器を、つまみで切りかえる形をしています。抵抗をはかるときは、テスターの中の電池で小さな電流を流し、電圧と電流から抵抗を出します。だから、抵抗をはかるときは、はかる部品の電源を必ず切っておきます（回路の電池の電流がまざるため）。
+
+\begin{phketa}[直流回路の数の目安]
+\phketaline{単3アルカリ乾電池}{起電力 約\qty{1.5}{V}、内部抵抗（新品）約0.15〜\qty{0.3}{\ohm}}
+\phketaline{車のバッテリー}{約\qty{12}{V}。セルモーターの電流 100\,A 以上}
+\phketaline{テスターの電圧の入力抵抗}{約\qty{10}{M\ohm}}
+\phketaline{ひずみゲージ}{\qty{120}{\ohm}、ゲージ率約2。1ゲージ法の出力は\qty{1}{mV}ほど}
+\phboxhead{答えが桁で合っているか}
+並列の電流が、全体の電流より大きくなったら、比を逆にしていないか見直す。網目電流法と節点電位法で、同じ抵抗の電流が合うかを確かめる。電力の答えが電源の $\mathcal E^2/(4r)$ をこえたら、どこかが間違っている。
+\end{phketa}
+
+\phboxhead{② 電子はかり・体重計の中のブリッジ}
+ロードセル（⑦の身近な例）の4枚のゲージで作ったブリッジに、数 V をかけ、出てくる数 mV の電圧を増幅して、数字にして表示します。使う前に、何ものせないで「0」を合わせるのは、ブリッジのわずかなつり合いのずれを打ち消すためです。
+
+\phboxhead{③ 回路シミュレーター}
+電子回路の設計では、試作する前に、回路シミュレーター（⑩）で動きを確かめます。部品の種類と値、つながり方を入れると、節点の電位を連立方程式で求めます。SPICE とよばれる回路シミュレーターは、1970年代に大学で作られてから、形を変えながら、今も世界中で使われています。
+\end{phkougaku}
+\phstation{電気回路,電気計測,電子回路,回路シミュレーション}{キルヒホッフの法則、網目電流法、節点電位法（節点解析）、コンダクタンス、重ね合わせの理、テブナンの定理、ノートンの定理、ブリッジ回路、分流器、倍率器、内部抵抗、最大電力の供給、整合}
+
+\begin{phsaki}{回路理論・回路網}
+この章では、抵抗と電池だけの直流の回路を、行列で解きました。交流になると、コイルとコンデンサーのはたらきを複素数で表して、同じ行列の方法で解けます（電-10）。回路の網の「どこがどこにつながっているか」だけを数える数学（グラフ理論）を使うと、独立な輪の数は「枝の数−節点の数＋1」になることが示せます。ダイオードやトランジスタのように、電流と電圧が比例しない部品をふくむ回路（物理シリーズの『原子』（原-9・原-10））の解き方、何百万もの節点の行列を速く解く方法は、電気回路・電子回路・数値計算の専門の本で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem \qty{2}{\ohm}と\qty{6}{\ohm}の抵抗を並列にして、全体に\qty{8}{A}流します。それぞれの抵抗の電流を求めましょう（\nobreak\bkreidairef{2}\nobreak）。
+\bkpans{\qty{2}{\ohm}：$8\times6\div8=\qty{6}{A}$、\qty{6}{\ohm}：$8\times2\div8=\qty{2}{A}$}
+\bkproblem 起電力\qty{1.5}{V}、内部抵抗\qty{0.2}{\ohm}の電池3本を、（1）直列、（2）並列にして、\qty{4.4}{\ohm}の抵抗につなぎます。それぞれの電流を求めましょう（\nobreak\bkreidairef{3}\nobreak）。
+\bkpans{（1）$4.5\div(0.6+4.4)=\qty{0.90}{A}$。（2）内部抵抗は $0.2\div3\approx\qty{0.067}{\ohm}$。$1.5\div4.47\approx\qty{0.34}{A}$}
+\bkproblem 図\ref{ph:電-5:fig-moku}の回路で、左の電池を\qty{8}{V}、右の電池を\qty{7}{V}にします（抵抗は\qty{2}{\ohm}×3）。（1）網目電流法の行列の式を書き、$I_1$、$I_2$ を求めましょう。（2）節点電位法で、まん中の点の電位を求め、（1）と合うか確かめましょう（\nobreak\bkreidairef{4}・\bkreidairef{6}\nobreak）。
+\bkpans{（1）$4I_1+2I_2=8$、$2I_1+4I_2=7$。$I_1=(32-14)\div12=\qty{1.5}{A}$、$I_2=(-16+28)\div12=\qty{1}{A}$。（2）$(\phi-8)/2+\phi/2+(\phi-7)/2=0$ から $\phi=\qty{5}{V}$。まん中の電流 $5\div2=\qty{2.5}{A}=I_1+I_2$ で合う}
+\bkproblem ホイートストンブリッジで、$R_1=\qty{200}{\ohm}$、$R_2=\qty{300}{\ohm}$、$R_4=\qty{450}{\ohm}$ のとき、つり合いました。$R_3$ はいくらですか（\nobreak\bkreidairef{9}\nobreak）。
+\bkpans{$R_3=R_1R_4\div R_2=200\times450\div300=\qty{300}{\ohm}$}
+\bkproblem （1）内部抵抗\qty{0.9}{\ohm}、最大\qty{100}{mA}の電流計で\qty{1}{A}まではかるための分流器。（2）内部抵抗\qty{3}{k\ohm}、最大\qty{3}{V}の電圧計で\qty{15}{V}まではかるための倍率器。それぞれ何 Ω で、どうつなぎますか（\nobreak\bkreidairef{11}・\bkreidairef{12}\nobreak）。
+\bkpans{（1）$n=10$、$0.9\div9=\qty{0.1}{\ohm}$ を並列。（2）$n=5$、$4\times3=\qty{12}{k\ohm}$ を直列}
+\bkproblem 起電力\qty{6}{V}、内部抵抗\qty{2}{\ohm}の電源から取り出せる、いちばん大きな電力と、そのときの負荷の抵抗を求めましょう（\nobreak\bkreidairef{13}\nobreak）。
+\bkpans{$R_L=\qty{2}{\ohm}$、電流 $6\div4=\qty{1.5}{A}$、電力 $36\div8=\qty{4.5}{W}$}
+\bkproblem \qty{6}{V}の電池に\qty{1}{k\ohm}と\qty{2}{k\ohm}を直列につなぎ、\qty{2}{k\ohm}に\qty{5}{\micro F}のコンデンサーを並列につなぎます。十分時間がたったときの、コンデンサーの電圧と電気量を求めましょう（\nobreak\bkreidairef{14}\nobreak）。
+\bkpans{電流 $6\div3000=\qty{2}{mA}$、$V_C=2000\times0.002=\qty{4}{V}$、$Q=5\times10^{-6}\times4=\qty{20}{\micro C}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 左\qty{10}{V}・右\qty{4}{V}の電池、左右の抵抗\qty{2}{\ohm}ずつの回路で、まん中の負荷 $R_L$ を取りかえます。負荷の電力がいちばん大きくなる $R_L$ と、そのときの電力を求めましょう（\nobreak\bkreidairef{8}・\bkreidairef{13}\nobreak）。
+\bkpans{$\mathcal E_{\mathrm{th}}=\qty{7}{V}$、$R_{\mathrm{th}}=\qty{1}{\ohm}$（\bkreidairef{8}のじぶんでとこう）。$R_L=R_{\mathrm{th}}=\qty{1}{\ohm}$ で、$P=7^2\div(4\times1)=\qty{12.25}{W}$（約\qty{12}{W}）}
+\bkproblem ホイートストンブリッジ（図\ref{ph:電-5:fig-bridge}）で、$\mathcal E=\qty{10}{V}$、$R_1=R_2=R_3=\qty{100}{\ohm}$、$R_4=\qty{110}{\ohm}$、検流計の内部抵抗が\qty{50}{\ohm}です。検流計をはずしたときの C・D の電位を求め、テブナンの定理で、検流計に流れる電流を求めましょう（\nobreak\bkreidairef{8}・\bkreidairef{9}\nobreak）。
+\bkpans{B を電位0として $\phi_{\mathrm C}=10\times100\div200=\qty{5}{V}$、$\phi_{\mathrm D}=10\times110\div210\approx\qty{5.238}{V}$。$\mathcal E_{\mathrm{th}}\approx\qty{0.238}{V}$。電池を導線にすると $R_{\mathrm{th}}=50+52.38\approx\qty{102.4}{\ohm}$。電流 $0.238\div(102.4+50)\approx\qty{1.56}{mA}$（D から C へ）}
+\bkproblem どの抵抗も\qty{2}{\ohm}の、図\ref{ph:電-5:fig-hashigo}と同じ形のはしご（電池\qty{10}{V}）の網目電流を求めましょう。\bkreidairef{5}のじぶんでとこう（すべて\qty{1}{\ohm}）の答えと比べて、わかることを書きましょう（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{$4I_1-2I_2=10$、$-2I_1+6I_2-2I_3=0$、$-2I_2+4I_3=0$。$I_1=\qty{3.125}{A}$、$I_2=\qty{1.25}{A}$、$I_3=\qty{0.625}{A}$。どれもすべて\qty{1}{\ohm}のときのちょうど半分。抵抗の行列がすべて2倍なので、同じ起電力なら電流は $\tfrac12$ 倍（入口の抵抗は\qty{3.2}{\ohm}で2倍）}
+
+%% ふりかえりと吹き出しを同じページに組むため。修4-2：新しいページに送られたときも、電-3・4 と同じく下へ寄せる（\null のあとの \vfill が効く）
+\Needspace{16\baselineskip}\null
+\begin{furikaeri}
+\begin{checklist}
+\item 乾電池と豆電球の直列・並列で、電流と明るさがどう変わるかを説明できる。\bkfurref{ph:電-5:sec2}
+\item 電流の分かれ方・ブリッジ・電流計と電圧計・コンデンサーをふくむ回路を、キルヒホッフの法則で計算できる。\bkfurref{ph:電-5:sec1}
+\item 網目電流法・節点電位法で回路を行列の式にし、テブナンの定理や Python で解ける。\bkfurref{ph:電-5:sec3}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{どんなに大きな回路も、行列の式にすれば同じ手順で解けたね。次の電-6 からは、電流が周りにつくる磁場の世界へ進むよ。}

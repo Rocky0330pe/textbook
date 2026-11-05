@@ -1,0 +1,1129 @@
+%% 第26回編集委員会（物理第4巻）：組 電W2
+%% p4-04.tex  電-4　電気の流れと熱：電流と抵抗（★1〜4・3段にしない）
+%% 中身は計画書 tools/phys4-plan.md の B「電-4」。公式の持ち主は A（A1・A6〜A9・A14〜A16・A31〜A33・A37・A66・A67）。
+%%   前の巻との約束（計画書 A-6）：P5（力-9 ひずみゲージ→⑧・例題8）、P7（電流 I のカード）、P8・P21（σ・ρ・R・Ω のカード）、
+%%   P10（電力 P のカード。第1巻の巻末の「電-11」は「電-4」に直す：報告）、P14・P23・P44（電荷保存・キルヒホッフの電流則→⑥⑦）、
+%%   P15（熱-1 の熱電対→⑩・例題11）、P16（熱-1 の 1200 W×60 s＝72 kJ→⑤・例題1）、P18（熱-10 の燃料電池 1.23 V→⑨・例題10）、
+%%   P45（W-9：キルヒホッフ→⑦。部品のきまり v＝Ri）。数学 2-15④（オームの表 50 Ω）・5-12⑥⑦（kWh・5 C）・8-9⑫（連続の式）。
+%%   電-1・電-2 は計画書 B の節の番号で指す（電-1 ① 電荷の保存・電気素量、電-2 ⑤ 電位、⑥ V＝Ed、⑨ rot E＝0）。
+%%   ブリッジ回路・行列・最大電力の式（R_L＝r）は電-5 が持ち主（⑦⑨）。この章の⑨の表計算は、その予告として数で見せるだけ。
+%% 数値はすべて Python で計算した：checks/物理第4巻/電-4/calc_p4_04.py（出力 calc_p4_04_out.txt）
+%% 記号（この章）：電流 I、電荷 q・Q、電流密度 j（ベクトル）、電場 E、電位 φ、電圧 V、抵抗 R、抵抗率 ρ、導電率 σ、
+%%   電荷密度 ρ_q（抵抗率 ρ とぶつけない：Y-4）、電気素量 e、自由電子の数密度 n、ドリフトの速さ v_d、断面積 S、長さ l、
+%%   抵抗の温度係数 α、セルシウス温度 θ（第2巻と同じ）、電力 P、電力量 W（J・kWh）、熱 Q_熱（電荷 Q と分ける）、
+%%   起電力 ℰ（\mathcal E。電場 E と書体で分ける：Y-3）、内部抵抗 r、ゲージ率 K、ひずみ ε（第1巻と同じ）、ポアソン比 ν（力-8）、
+%%   衝突の間の平均の時間 τ、電子の質量 m_e。ファラデー定数は文字にしない（熱-10 と同じ）。
+%% 出典（第26回 手引き 2章の16：書くときに確かめた。11月5日）
+%%   ・電気素量 e（定義値）、ファラデー定数 96485 C/mol、電子の質量：計画書 D4・D8・D9（NIST CODATA 2022）
+%%   ・家庭の電圧 101±6 V：電気事業法施行規則 第38条（計画書 D11、e-Gov）
+%%   ・標準軟銅の抵抗率 1/58 Ω·mm²/m＝1.7241×10⁻⁸ Ω·m（20 ℃）、温度係数 0.00393 /K（IEC 60028・米国標準局の銅線表）：
+%%       govinfo.gov の NBS "Copper wire tables"（国際的な銅の抵抗の標準にもとづく）と、cabledatasheet.com の IEC 60028 の引用の2つで照らし合わせた（WebSearch）
+%%   ・銀・アルミ・タングステン・鉄の抵抗率（1.59・2.65・5.6・9.7×10⁻⁸ Ω·m）、ニクロム 1.1×10⁻⁶：HyperPhysics の表（Giancoli のデータ）と
+%%       大学の表（faculty.ksu.edu.sa）を検索の抜粋で照らし合わせた（2つのサイトとも作業環境から直接は届かず）
+%%   ・タングステンの温度係数 約 0.0045 /K（20 ℃付近）。高温では一定でなく、電球のフィラメントの熱いときと冷たいときの抵抗の比は 10〜15 ほど：
+%%       検索の抜粋（industrialmonitordirect.com の解説、physicsforums の回答）で照らし合わせた。本文は「〜とします」と書き、比が 10〜15 であることをせいかくに言うとで書いた
+%%   ・Pt100：0 ℃で 100.00 Ω、100 ℃で 138.51 Ω（JIS C 1604:2013・IEC 60751:2008。α＝0.00385）：okazaki.media-tec.jp の規準抵抗値表、
+%%       Fluke の計算ツールの説明（JIS C 1604:1997・IEC 60751:2008 を挙げる）、sab-cable.com の表で照らし合わせた（WebSearch）
+%%   ・K 熱電対（基準接点 0 ℃）300 ℃で 12.209 mV、20 ℃で 0.798 mV（NIST Monograph 175 の ITS-90 の表）：minco.com、UBC の資料、
+%%       Omega の表の写し、thermocouple-its90（NIST の式の実装）で照らし合わせた（srdata.nist.gov は作業環境から 403）
+%%   ・燃料電池 ΔG＝−237.13 kJ/mol（液体の水）・−228.59 kJ/mol（水蒸気）：熱-10（tex/p2-10.tex）と同じ値
+%%   ・超伝導：1911年 カマリン・オネス（水銀）、1957年 BCS 理論（1972年ノーベル賞）、1986年 ベドノルツとミュラー（1987年ノーベル賞）：
+%%       nobelprize.org の 1913年のオネスの紹介・1972年の受賞の要約・1987年の発表文（curl で読んだ）。
+%%       高温超伝導の未解決の問題：Keimer ら arXiv:1409.4673（計画書 D20）
+%%   ・オーム 1827年（"Die galvanische Kette"）、キルヒホッフ 1845年、ゼーベック 1821年、ジュール 1841年：ETHW（IEEE）"Ohm's Law"、
+%%       パドヴァ大学の回路理論の資料、バイエルン学術アカデミーの資料などの検索の抜粋で照らし合わせた
+%%   ・電気料金の目安単価 31 円/kWh（税込。公益社団法人 全国家庭電気製品公正取引協議会。2022年に 27 円から改めた）：
+%%       日本照明工業会 ガイド A139-2024（jlma.or.jp）、selectra.jp の解説の2つで照らし合わせた（WebSearch）
+%%   ・感電：約 1 mA で感じ始め、約 10 mA で自分で離れられなくなり、100 mA ほどで心室細動の危険（交流・1秒ほど）。
+%%       漏電遮断器は 30 mA・0.1 秒以内で切るものが多い：国立病院機構の資料（fukushima.hosp.go.jp）、パナソニックの解説、
+%%       厚生労働省「職場のあんぜんサイト」の用語集（電流×時間 50 mA·s）の3つを検索の抜粋で照らし合わせた（anzeninfo.mhlw.go.jp は作業環境から届かず）
+%% 修4-2（第27回の確認の直し。11月5日）で直した所の出典：
+%%   ・自由電子のばらばらな動きの速さ：銅のフェルミの速さ 約 1.57×10⁶ m/s（Ashcroft・Mermin『Solid State Physics』表2.1。E2 組の確認の約1600 km/s と合う）。
+%%       本文は「1秒に千 km 以上」
+%%   ・感電の電流の目安（1・10・100 mA、交流・1秒ほど）は、上の資料では電流の通り道を決めていない（IEC 60479 の基準の通り道は
+%%       左手から両足：E2 組の確認）。本文の「手から手へ」をけずり、資料にある条件（交流・1秒ほど）だけで書いた。
+%%       漏電遮断器は「30 mA・0.1 秒以内」（高速形。パナソニックの解説・製品の仕様書）
+%% 〔要確認〕
+%%   ・銅の自由電子の数 8.49×10²⁸ 個/m³：銅の密度 8.96 g/cm³・モル質量 63.55 g/mol・1原子に1個として計算した値（密度は理科年表で確かめる）
+%%   ・テーブルタップ（延長コード）の「15 A・1500 W」：製品の表示の代表の値として「〜とします」と書いた
+\makeatletter
+% 抵抗（横）  \sxeres{(左はし)}{長さ}
+\newcommand\sxeres[2]{\filldraw[fill=white, draw=bkInk, line width=0.8pt] #1 rectangle ++(#2,4);}
+% 乾電池（たての導線の上に置く記号）  \sxecell{(x,y)}：上の長い線が＋
+\newcommand\sxecell[1]{\begin{scope}[shift={#1}]
+  \fill[white] (-4.5,-1.2) rectangle (4.5,1.2);
+  \draw[bkInk, line width=1.1pt] (-4,1.2) -- (4,1.2);
+  \draw[bkInk, line width=2.4pt] (-2,-1.2) -- (2,-1.2);
+  \node[font=\sffamily\footnotesize, anchor=south east] at (-4,1.4) {$+$};\end{scope}}
+% 豆電球（記号）  \sxebulb{(中心)}
+\newcommand\sxebulb[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkYellow!40, draw=bkInk, line width=0.8pt] (0,0) circle (3.4);
+  \draw[bkInk, line width=0.7pt] (-2.4,-2.4) -- (2.4,2.4) (-2.4,2.4) -- (2.4,-2.4);\end{scope}}
+% 電子（小さな丸と－）  \sxeel{(x,y)}
+\newcommand\sxeel[1]{\filldraw[fill=bkBlue!25, draw=bkBlue!70!black, line width=0.4pt] #1 circle (1.3); \node[font=\sffamily\scriptsize, text=bkBlue!80!black, inner sep=0pt] at #1 {$-$};}
+\makeatother
+
+\phchapter{4}{電気の流れと熱：\\電流と抵抗}{ドライヤーは、電気でどうやって熱をつくる？}{\bklevelrange{1}{4}}{電気の流れと熱：電流と抵抗}
+\bkmichishirube{2-15,5-12,8-8,8-9,電-1,電-2,電-3,熱-1,熱-10,力-9}{電-5,電-8,電-9,電-16,原-1,原-8,原-9,原-10}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace オームの法則・直列と並列・電力 $P=VI$ で、回路を調べられる。
+\item \bklevel{2}\enspace 抵抗率から抵抗を求め、電子の流れとジュール熱を説明できる。
+\item \bklevel{3}\enspace 抵抗の温度変化、電池の内部抵抗、キルヒホッフの法則を使える。
+\item \bklevel{4}\enspace $\vec j=\sigma\vec E$・連続の式から、オームの法則と電流則を導ける。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{$V=RI$（オームの法則）}{中学理科}{ph:電-4:ohm}
+\phk{合成抵抗 $R_1+R_2$、$1/R=1/R_1+1/R_2$（直列・並列）}{中学理科}{ph:電-4:gousei}
+\phk{$P=VI$、電力量・熱量 $W=Pt$}{中学理科}{ph:電-4:power}
+\phk{$I=envS$（自由電子の流れ）}{高校物理基礎}{ph:電-4:envs}
+\phk{$R=\rho l/S$（抵抗率）}{高校物理基礎}{ph:電-4:rho}
+\phk{ジュール熱 $Q=RI^2t=VIt$}{高校物理基礎}{ph:電-4:joule}
+\phk{$\rho=\rho_0(1+\alpha\theta)$（抵抗率の温度変化）}{高校物理}{ph:電-4:ondo}
+\phk{キルヒホッフの法則（電流則・電圧則）}{高校物理}{ph:電-4:kirchhoff}
+\phk{$V=\mathcal E-rI$（起電力と内部抵抗）}{高校物理}{ph:電-4:naibu}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+ドライヤーのスイッチを入れると、すぐに熱い風が出てきます。中をのぞくと、ぐるぐる巻いた細い金属の線が、赤くなっています。火も燃料も使っていないのに、金属の線は、なぜ熱くなるのでしょう。\qty{1200}{W}のドライヤーは、1分でどれだけの熱を出すのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt, rounded corners=2mm] (0,8) rectangle (38,24);
+  \filldraw[fill=bkGray!40, draw=bkInk, line width=0.8pt, rounded corners=1mm] (8,8) -- (6,-8) -- (14,-8) -- (16,8) -- cycle;
+  \foreach \xx in {12,16,20,24,28} {\draw[bkRed!80!black, line width=0.9pt] (\xx,12) .. controls (\xx+1,20) and (\xx+2,20) .. (\xx+2,12);}
+  \foreach \yy in {11,16,21} {\draw[bkOrange!85!black, line width=1pt, -{Stealth[length=2mm]}] (40,\yy) -- (50,\yy);}
+  \node[font=\sffamily\footnotesize, anchor=north west] at (17,6.5) {電熱線};
+  \node[font=\sffamily\footnotesize, anchor=north] at (46,8) {熱い風};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 電-1〜電-3では、止まっている電荷と、その電場を調べました。電荷が動くと、\textbf{電流}になります。この章では、電流の正体（電子の流れ）、電流の流れにくさ（\textbf{抵抗}）、電流がつくる熱（\textbf{ジュール熱}）を調べます。中学校で習うオームの法則 $V=RI$ や、電力 $P=VI$、直列・並列のきまりは、どれも、もっと一般的な電場と電流の関係と、「電荷は生まれも消えもしない」という保存則から導けます。物理シリーズの『熱学』（熱-1）で「しくみは『電磁気学』で」と約束したジュール熱と熱電対、熱-10 の燃料電池の電圧も、この章で説明します。
+
+\begin{yattemiyou}[乾電池と豆電球で、電気の通り道を調べる]
+\textbf{用意するもの}：乾電池（\qty{1.5}{V}）1個、豆電球とソケット、導線（みのむしクリップつき）3本、身の回りの物（くぎ、アルミはく、10円玉、消しゴム、紙、プラスチックの定規、鉛筆の芯（シャープペンシルの芯））、あればテスター\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 乾電池・豆電球・導線で輪を作り、とちゅうの2本のクリップのあいだに、調べる物をはさむ。豆電球がつく物と、つかない物に分ける。
+\item シャープペンシルの芯（長さ\qty{6}{cm}ほど）をはさみ、クリップのあいだの長さを\qty{1}{cm}・\qty{3}{cm}・\qty{5}{cm}と変えて、明るさを比べる。
+\item テスターがあれば、新しい乾電池と、使い終わった乾電池の電圧を、豆電球をつないだときとつながないときではかる。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (0,22) -- (36,22) -- (36,0) -- (24,0) (12,0) -- (0,0);
+  \sxecell{(0,11)}
+  \sxebulb{(18,22)}
+  \fill[bkInk!70] (12,-1.2) rectangle (24,1.2);
+  \fill[bkRed!80!black] (11,0) circle (1.2) (25,0) circle (1.2);
+  \node[font=\sffamily\footnotesize, anchor=north] at (18,-2.5) {調べる物};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：くぎ・アルミはく・10円玉のような金属は、豆電球がつきます。消しゴム・紙・プラスチックはつきません（小学校理科）。アルミ缶の表面のように、色をぬってある所は、ぬった膜が電気を通さないので、けずらないとつきません。鉛筆の芯（黒鉛）は電気を通し、はさむ長さが短いほど明るくなります。芯の電気の通しにくさが長さに比例するからです（③）。新しい乾電池は、豆電球をつないでもつながなくても約\qty{1.5}{V}ですが、使い終わった乾電池は、つながないときは\qty{1.4}{V}ほどあるのに、豆電球をつなぐと大きく下がります（⑨）。
+
+\begin{omoidasou}
+\bkrecall{2-15}{電圧 $V$ と電流 $I$ は比例し、$V\div I$ が一定の値 $R$（抵抗）。$V=RI$ をオームの法則という。表の例：乾電池1〜4個（1.5〜6.0 V）で 0.03〜0.12 A、$R=\qty{50}{\ohm}$（2-15④）。}
+\bkrecall{5-12}{電流は1秒あたりに通る電気の量（A＝C/s）。$\qty{0.5}{A}$で10秒なら\qty{5}{C}（5-12⑦）。電力×時間が電力量。$\qty{1}{kWh}=\qty{3.6e6}{J}$（5-12⑥）。}
+\bkrecall{電-2}{電位 $\phi$ は1 C あたりの位置エネルギー、その差が電圧 $V$。一様な電場では $V=Ed$（電-2 ⑥）。静電場では1周すると電位はもとにもどる（電-2 ⑨）。}
+\bkrecall{8-9}{連続の式 $\partial\rho/\partial t+\mathrm{div}(\rho\vec v)=0$：物は勝手に生まれも消えもしない（8-9⑫）。}
+\bkrecall{熱-1}{熱量＝電力×時間。\qty{1200}{W}のヒーターを\qty{60}{s}使うと\qty{72}{kJ}（熱-1）。}
+\end{omoidasou}
+
+\noindent この章の記号：抵抗率を $\rho$（ロー）と書くので、この章では、1 m$^3$ あたりの電荷（電荷密度）を $\rho_{\mathrm q}$ と書きます（電-2 の $\rho$ と同じ量です）。電池の起電力は、電場 $E$ と分けるため、筆記体の $\mathcal E$（イー）で書きます。熱の量は、電荷 $Q$ と分けて $Q_{\text{熱}}$ と書きます。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{電流とは：電荷の流れ}
+\label{ph:電-4:sec1}
+導線のある断面を、1秒あたりに通りぬける電荷の量を\textbf{電流}といいます。\bkidx{でんりゅう}{電流}時間 $\Delta t$ のあいだに電荷 $\Delta q$ が通るなら、電流は $I=\Delta q/\Delta t$、時間を細かくして
+\pheq{I=\frac{\dd q}{\dd t}}{A ＝ C/s}
+です（5-12⑦の「電流を積分すると電気の量」の逆）。単位は A（\textbf{アンペア}）で、1秒に\qty{1}{C}通るのが\qty{1}{A}です。2019年から、SI では電気素量 $e$ の値を $1.602176634\times10^{-19}$\,C と決めて、それをもとに1 A を決めています。1 A は、1秒に電子約 $6.24\times10^{18}$ 個分の電荷が通る電流です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.9pt] (0,0) -- (0,24) -- (60,24) -- (60,0) -- cycle;
+  \sxecell{(0,12)}
+  \sxebulb{(30,24)}
+  \draw[bkRed!80!black, line width=1.3pt, -{Stealth[length=2.6mm]}] (8,27.5) -- (20,27.5);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!70!black] at (14,28.5) {電流 $I$ の向き};
+  \foreach \xx in {38,46,54} {\sxeel{(\xx,24)}}
+  \draw[bkBlue!70!black, line width=1.1pt, -{Stealth[length=2.4mm]}] (54,28) -- (40,28);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkBlue!70!black] at (47,29) {電子の動く向き};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5,8) {電池};
+  \node[anchor=west, font=\small, text width=54mm, align=left] at (66,12) {%
+  電流は電池の＋から出て、回路を回って－にもどる向き。\par\vspace{2pt}
+  金属の中で本当に動いているのは負の電荷の電子で、向きは電流と反対。};
+\end{tikzpicture}
+\bkfigcaption{電流の向きと、電子の動く向き。}\label{ph:電-4:fig-muki}
+\end{bkfigure}
+
+\phboxhead{電流の向きと電子の向きは反対}
+電流の向きは「正の電荷が流れる向き」と決められていて、電池の＋極から出て、回路を回って－極にもどる向きです。ところが、金属の中で実際に動いているのは負の電荷をもつ電子で、向きは電流と反対です（図\ref{ph:電-4:fig-muki}）。電流の向きは、電子が見つかる（1897年。物理シリーズの『原子』（原-1））よりずっと前に、正と負の電気の名前とともに決められていました。あとで、本当に動くのが負の電荷だとわかりましたが、約束はそのまま使われています。負の電荷が左へ動くのと、同じ量の正の電荷が右へ動くのとでは、運ぶ電荷も、つくる磁場（電-6）も同じなので、困ることはありません。
+
+\phboxhead{電気を通す物・通さない物}
+小学校で調べたように、金属は電気を通し（\textbf{導体}）、ガラス・ゴム・紙・プラスチックはほとんど通しません（\textbf{絶縁体}。電-3 ③）。電気の通しやすさは、物によって、とても大きく違います（③の表で $10^{20}$ 倍以上）。そのあいだにあって、温度や光で通しやすさが大きく変わる物（ケイ素など）を\textbf{半導体}といいます（④）。
+
+\bksubsection{2}{電子の流れの速さ：$I=envS$}
+\label{ph:電-4:sec2}
+金属の導線の中を、自由電子はどれくらいの速さで流れているのでしょう。断面積 $S$ の導線の中に、1 m$^3$ あたり $n$ 個の自由電子があり、どれも平均の速さ $v_{\mathrm d}$ で流れているとします。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!15] (0,0) rectangle (90,16);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (90,0) (0,16) -- (90,16);
+  \fill[bkYellow!40, opacity=0.8] (60,0) rectangle (88,16);
+  \draw[bkInk, line width=0.6pt] (60,8) ellipse (3 and 8);
+  \draw[bkInk, line width=0.6pt, dashed] (88,8) ellipse (3 and 8);
+  \foreach \p in {(6,4),(14,11),(22,6),(36,4),(42,12),(50,7),(56,3),(66,11),(74,5),(82,10),(28,13),(46,2)} {\sxeel{\p}}
+  \draw[bkBlue!70!black, line width=1pt, -{Stealth[length=2.2mm]}] (20,19) -- (8,19);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkBlue!70!black] at (14,19.5) {電子の速さ $v_{\mathrm d}$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (60,-3) -- (88,-3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (74,-3.5) {$v_{\mathrm d}\,\Delta t$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (60,17) {断面 $S$};
+  \node[anchor=west, font=\small, text width=30mm, align=left] at (93,8) {断面 $S$ から $v_{\mathrm d}\,\Delta t$ までの部分の電子が、時間 $\Delta t$ のうちに断面 $S$ を通る。};
+\end{tikzpicture}
+\bkfigcaption{導線の中の自由電子の流れ。電子は左へ動き、電流は右向き。}\label{ph:電-4:fig-envs}
+\end{bkfigure}
+
+\noindent 時間 $\Delta t$ のあいだに断面を通りぬける電子は、断面から $v_{\mathrm d}\,\Delta t$ の距離の中にあった電子です（図\ref{ph:電-4:fig-envs}の、断面 $S$ と破線の断面ではさまれた部分）。その体積は $Sv_{\mathrm d}\,\Delta t$、電子の数は $nSv_{\mathrm d}\,\Delta t$、電荷の大きさは $enSv_{\mathrm d}\,\Delta t$ です（$e$ は電気素量）。これを $\Delta t$ でわると、
+\pheq{I=env_{\mathrm d}S}{A ＝ C × 1/m$^3$ × m/s × m$^2$}
+\label{ph:電-4:envs}です。高校の教科書では $I=envS$ と書きます。電流の流れる断面 1 m$^2$ あたりの電流 $j=I/S=env_{\mathrm d}$ を\textbf{電流密度}といいます（③）。\bkidx{でんりゅうみつど}{電流密度}
+
+\phboxhead{電子は、とてもゆっくり流れる}
+銅では、原子1個から自由電子が1個ずつ出ていると考えられます。銅の密度 \qty{8.96}{g/cm^3}（1 m$^3$ で $8.96\times10^6$\,g）、1 mol の質量\qty{63.55}{g}から、1 m$^3$ の原子の数は
+\[n=\frac{8.96\times10^6}{63.55}\times6.02\times10^{23}\approx8.49\times10^{28}\ \text{個}\]
+で、これが $n$ です。断面積 1 mm$^2$ の銅線に\qty{1}{A}流れているときの速さは、
+\[v_{\mathrm d}=\frac{I}{enS}=\frac{1}{1.60\times10^{-19}\times8.49\times10^{28}\times1\times10^{-6}}\approx7.4\times10^{-5}\,\text{m/s}\]
+で、1秒に $\qty{0.074}{mm}$ しか進みません。1 m 進むのに約4時間かかります（ドライヤーの電流では約38分：例題2）。
+
+\begin{phyomi}[$I=envS$]
+「電流が大きいのは、電荷を運ぶ物が多い（$n$）か、速く流れる（$v$）か、通り道が太い（$S$）から」。車の流れにたとえると、1台あたりの人数（$e$）×車の混み具合（$n$）×速さ（$v$）×車線の数（$S$）が、1秒に通る人数（電流）です。銅の $n$ はとても大きいので、ゆっくりでも大きな電流になります。
+\end{phyomi}
+
+\begin{phbaisuru}{導線の断面積 $S$}
+同じ電流なら、電子の速さは半分になります。電流を2倍にすると、速さも2倍です。
+\end{phbaisuru}
+
+\phboxhead{電子はゆっくりでも、電灯はすぐつく}
+スイッチを入れると、電灯はすぐにつきます。電子が1秒に 0.1 mm 足らずしか進まないのに、なぜでしょう。導線の中は、はじめから自由電子でぎっしりです。スイッチを入れると、「押せ」という知らせ（電場）が、光の速さに近い速さで導線にそって伝わり、回路じゅうの電子が、ほとんど同時に動き出すのです。水がいっぱいに入ったホースの口を開けると、水道の蛇口から入った水が届くのを待たずに、すぐ水が出るのと似ています（知らせが伝わる速さは電-0・電-13）。また、自由電子は、流れとは別に、ばらばらな向きに1秒に千 km 以上の速さで動き回っています（詳しくは原-8）。その上に、ごくゆっくりした流れが重なっているのです（⑪）。
+
+\bksubsection{3}{オームの法則：電場が電流を押す}
+\label{ph:電-4:sec3}
+金属の中では、電場が電子を押して電流を流します。電-3 ③では「導体の中の電場は0」でしたが、それは電荷が止まって落ち着いたときの話です。電池をつないで電流が流れ続けているときは、導線の中に電場があり、電子を押し続けています。
+
+\phboxhead{一般の式：$\vec j=\sigma\vec E$}
+多くの金属では、温度が一定なら、ある場所の電流密度 $\vec j$（向きもある量）は、その場所の電場 $\vec E$ に比例します。
+\pheq{\vec j=\sigma\vec E}{A/m$^2$ ＝ S/m × V/m}
+比例定数 $\sigma$ を\textbf{導電率}といい、\bkidx{どうでんりつ}{導電率}単位は S/m（ジーメンス毎メートル。S＝1/Ω）です。$\sigma$ の逆数 $\rho=1/\sigma$ を\textbf{抵抗率}といい、\bkidx{ていこうりつ}{抵抗率}単位は Ω·m です。どちらも、物の種類と温度だけで決まる値です。なぜ比例するのかは、⑪で電子の運動から考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!15] (0,0) rectangle (80,12);
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (80,12);
+  \draw[bkInk, line width=0.6pt] (0,6) ellipse (2 and 6);
+  \foreach \yy in {3,6,9} {\draw[bkOrange!85!black, line width=0.8pt, -{Stealth[length=2mm]}] (8,\yy) -- (72,\yy);}
+  \node[font=\sffamily\footnotesize, anchor=south, fill=bkOrange!15, inner sep=1pt] at (40,7.4) {電場 $E=V/l$、電流密度 $j=\sigma E$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (0,-3) -- (80,-3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (40,-3.5) {長さ $l$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,13) {断面積 $S$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-3,6) {電位 $\phi_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (83,6) {電位 $\phi_2$（$V=\phi_1-\phi_2$）};
+\end{tikzpicture}
+\bkfigcaption{長さ $l$、断面積 $S$ の一様な導線。両はしの電圧が $V$ なら、中の電場は一様で $E=V/l$。}\label{ph:電-4:fig-dousen}
+\end{bkfigure}
+
+\phboxhead{一様な導線では}
+長さ $l$、断面積 $S$ のどこでも同じ太さの導線の両はしに、電圧 $V$ をかけます。電流が落ち着いて流れているとき、導線の中の電場は一様で、大きさは $E=V/l$ です（電-2 ⑥の $V=Ed$ と同じ）。電流密度はどこでも $j=\sigma E$ で、電流は $I=jS$ です。
+\[I=jS=\sigma ES=\sigma\frac{V}{l}S\qquad\text{より}\qquad V=\frac{l}{\sigma S}\,I=\rho\frac{l}{S}\,I\]
+電圧と電流は比例します。比例定数を $R$ と書くと、
+\pheq{V=RI,\qquad R=\rho\frac{l}{S}}{V ＝ Ω × A、Ω ＝ Ω·m × m ÷ m$^2$}
+\label{ph:電-4:ohm}\label{ph:電-4:rho}です。$V=RI$ が\textbf{オームの法則}、\bkidx{おーむのほうそく}{オームの法則}$R$ が\textbf{電気抵抗}（抵抗）です。\bkidx{でんきていこう}{電気抵抗}数学の本（2-15④）で、表から「$V\div I$ が一定」と見つけた比例のきまりが、電場と電流の比例から導けました。ドイツのオームが、この関係を本にまとめたのは1827年です。
+
+\Needspace{8\baselineskip}
+\begin{phflow}[電場と電流の比例からオームの法則へ]
+\phflowrow{$\vec j=\sigma\vec E$}{太さが一様\\長さ $l$・断面積 $S$}{$V=RI$、$R=\rho\dfrac{l}{S}$}
+\phflowrow{$R=\rho\dfrac{l}{S}$}{抵抗の部品\\（形が決まっている）}{部品のきまり $v=Ri$}
+\end{phflow}
+
+\begin{phyomi}[$R=\rho\dfrac{l}{S}$]
+「長いほど流れにくく、太いほど流れやすい」。長さが2倍の導線は、同じ導線を2本つないだ（直列）のと同じで、抵抗は2倍。断面積が2倍の導線は、同じ導線を2本並べた（並列）のと同じで、電流が2つの道に分かれるので、抵抗は半分です（⑦）。物の種類による違いは $\rho$ がまとめて受けもちます。
+\end{phyomi}
+
+\begin{phbaisuru}{導線の直径}
+断面積は直径の2乗に比例するので4倍になり、抵抗は $\tfrac14$ になります。長さを2倍にすると、抵抗は2倍です。やってみようの鉛筆の芯で、はさむ長さを短くすると明るくなったのは、抵抗が長さに比例して小さくなったからです。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=42mm, xmin=0, xmax=2.3, ymin=0, ymax=0.075, xtick={0.5,1,1.5,2}, ytick={0.0172,0.0688}, yticklabels={0.017,0.069}, xlabel={銅線の直径（mm）}, ylabel={1 m の抵抗（Ω）}, xticklabel style={/pgf/number format/fixed}]
+  \addplot[bkcurve, domain=0.5:2.2, samples=80] {1.7241e-8/(3.14159*(x/2)^2*1e-6)};
+  \fill[bkRed] (axis cs:1.128,0.01724) circle (1.8pt) (axis cs:0.564,0.06897) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!75!black] at (axis cs:0.7,0.06) {直径半分で4倍};
+\end{axis}
+\end{tikzpicture}
+\par\noindent（直径 1.13 mm は断面積 1 mm$^2$。）
+\end{phbaisuru}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=34mm] Q[l,m,wd=42mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+物 & 抵抗率 $\rho$〔Ω·m〕（\qty{20}{\celsius}） & 長さ 1 m・断面積 1 mm$^2$ の抵抗 \\
+銀 & $1.59\times10^{-8}$ & \qty{0.016}{\ohm} \\
+銅（電線の標準の銅） & $1.72\times10^{-8}$ & \qty{0.017}{\ohm} \\
+アルミニウム & $2.65\times10^{-8}$ & \qty{0.027}{\ohm} \\
+タングステン & $5.6\times10^{-8}$ & \qty{0.056}{\ohm} \\
+鉄 & $9.7\times10^{-8}$ & \qty{0.097}{\ohm} \\
+ニクロム（電熱線） & $1.1\times10^{-6}$ & \qty{1.1}{\ohm} \\
+黒鉛（鉛筆の芯） & 約 $10^{-5}$ & 約\qty{10}{\ohm} \\
+ガラス & $10^{10}$〜$10^{14}$ & 電気をほとんど通さない \\
+ポリエチレン & $10^{16}$ 以上 & 電気をほとんど通さない \\
+\end{bktable}
+\bktabcaption{いろいろな物の抵抗率（目安の値）。銅は、電線の銅の国際的な標準の値（1 mm$^2$・1 m で $\tfrac1{58}$\,Ω）。金属とプラスチックでは $10^{24}$ 倍も違う。}\label{ph:電-4:tab-rho}
+\end{bkcenter}
+
+\begin{phmijika}[電線に銅を使うわけ、電熱線にニクロムを使うわけ]
+家の配線には、銀の次に抵抗率の小さい銅を使います。銀よりずっと安いからです。送電線には、銅より抵抗率は大きいのですが、軽くて安いアルミニウムを使います。ドライヤーやトースターの電熱線には、抵抗率が銅の約60倍のニクロム（ニッケルとクロムの合金）を使います。熱を出したい所の抵抗を大きくするためです。ニクロムは、赤くなるほど熱くしても、さびにくいのも大切な点です。同じ銅の電線でも、細いほど抵抗が大きく、同じ電流で出る熱が多くなります（⑤）。だから、大きな電流を流す電線ほど、太いものを使います（例題3）。
+\end{phmijika}
+
+\begin{phmodel}[オームの法則]
+\phignore{電流が流れて熱くなり、抵抗が変わること（④）。}
+\phassume{温度が一定。物はどこでも同じで、電流密度が電場に比例する。}
+\phlimit{電球のフィラメントのように温度が大きく変わるとき（例題5）。ダイオードやLEDのような半導体の部品（電流と電圧が比例しない）。電場がとても強いとき。}
+\end{phmodel}
+
+\bksubsection{4}{抵抗率と温度}
+\label{ph:電-4:sec4}
+金属の抵抗率は、温度が上がると大きくなります。ふつうの温度の範囲では、温度とほぼ直線の関係にあり、
+\pheq{\rho=\rho_0(1+\alpha\theta)}{Ω·m ＝ Ω·m}
+\label{ph:電-4:ondo}と書けます。$\theta$ はセルシウス温度〔℃〕、$\rho_0$ は\qty{0}{\celsius}の抵抗率、$\alpha$〔1/K〕は\textbf{抵抗の温度係数}です。\bkidx{ていこうのおんどけいすう}{抵抗の温度係数}形が同じなら、抵抗も $R=R_0(1+\alpha\theta)$ と変わります。高校の教科書では、セルシウス温度を $t$ と書きますが、この本では時刻の $t$ と分けて $\theta$ と書きます（熱-1）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=110mm, height=56mm, xmin=0, xmax=220, ymin=0, ymax=200, xtick={0,50,100,150,200}, ytick={50,100,138.5,177}, yticklabels={50,100,138.5,177}, xlabel={温度 $\theta$（℃）}, ylabel={抵抗（Ω）}]
+  \addplot[bkcurve, domain=0:210] {100*(1+0.00385*x)};
+  \addplot[bkOrange, line width=1.6pt, dash pattern=on 4pt off 2pt, domain=9:210, samples=60] {100*exp(3400*(1/(x+273.15)-1/298.15))};
+  \fill[bkRed] (axis cs:0,100) circle (1.8pt) (axis cs:100,138.5) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (axis cs:205,162) {金属（Pt100）};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:62,62) {半導体（サーミスター）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{温度と抵抗。実線：白金の測温抵抗体 Pt100（\qty{0}{\celsius}で\qty{100}{\ohm}、$\alpha=0.00385$）。破線：半導体の温度センサー（サーミスター。\qty{25}{\celsius}で\qty{100}{\ohm}のものの例）は、温度が上がると抵抗が大きく下がる。}\label{ph:電-4:fig-ondo}
+\end{bkfigure}
+
+\begin{phyomi}[$\rho=\rho_0(1+\alpha\theta)$]
+「1 K 上がるごとに、0 ℃のときの値の $\alpha$ 倍ずつ増える」。銅の $\alpha$ は約0.0039（20 ℃のとき）なので、100 K 上がると抵抗は約1.4倍になります。金属の中の原子が熱で激しくゆれるほど、流れる電子がぶつかりやすくなるからです（⑪）。
+\end{phyomi}
+
+\phboxhead{温度計に使う：測温抵抗体}
+抵抗が温度で変わることを使うと、抵抗をはかって温度がわかります。白金の線で作った\textbf{測温抵抗体} Pt100 は、\qty{0}{\celsius}で\qty{100}{\ohm}、$\alpha=0.00385$ と規格（JIS C 1604）で決まっていて、工場の温度の管理や、気象の観測に使われています（例題4）。
+
+\phboxhead{半導体は、温度が上がると抵抗が下がる}
+ケイ素などの\textbf{半導体}は、金属と反対に、温度が上がると抵抗率が大きく下がります（図\ref{ph:電-4:fig-ondo}の破線）。温度が上がると、電気を運べる電子の数そのものが増えるからです。そのしくみは、物理シリーズの『原子』（原-9）で学びます。この性質を使った温度センサーを\textbf{サーミスター}といい、電子体温計などに使われています。
+
+\bksubsection{5}{ジュール熱と電力：$P=VI$}
+\label{ph:電-4:sec5}
+電荷 $q$ が、電圧 $V$ の2点のあいだを、電位の高い所から低い所へ移ると、電場は電荷に $qV$ の仕事をします（電-2 ⑤）。電流 $I$ が流れていると、1秒に $I$〔C〕の電荷が移るので、電場は1秒に $VI$ の仕事をします。1秒あたりの仕事が\textbf{電力} $P$〔W〕です。\bkidx{でんりょく}{電力}
+\pheq{P=VI}{W ＝ V × A ＝ J/C × C/s}
+\label{ph:電-4:power}抵抗では、$V=RI$ を使って、
+\pheq{P=VI=RI^2=\frac{V^2}{R}}{W ＝ Ω × A$^2$}
+と書けます。時間 $t$ のあいだの\textbf{電力量}は $W=Pt$〔J〕です（電力が変わるときは積分：5-12⑥）。家庭では kWh を使い、$\qty{1}{kWh}=\qty{3.6e6}{J}$ です。
+
+\phboxhead{はてな？の答え：仕事は、どこへ行くのか}
+\label{ph:電-4:hatena}\bkhatenaref の答えです。金属の中の電子は、電場に押されて加速しますが、すぐに、熱でゆれている金属の原子（正確には、原子が規則正しく並んだ結晶のゆれや乱れ）にぶつかって、向きをばらばらに変えられます。電子は、電場からもらった運動エネルギーを、ぶつかるたびに原子のゆれに渡します。原子のゆれが大きくなることが、温度が上がること、つまり\textbf{熱}です（熱-1）。電場がした仕事 $VI$ は、1秒ごとに、全部、抵抗の中の熱になります。この熱を\textbf{ジュール熱}といいます。\bkidx{じゅーるねつ}{ジュール熱}イギリスのジュールが、1841年に、電流が出す熱が電流の2乗と抵抗に比例することを示しました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xx in {6,18,30,42,54,66,78,90} {\foreach \yy in {4,14,24} {\filldraw[fill=bkOrange!35, draw=bkOrange!70!black, line width=0.5pt] (\xx,\yy) circle (2.4);}}
+  \foreach \xx in {6,30,54,78} {\draw[bkOrange!70!black, line width=0.4pt] (\xx-4,14) -- (\xx-3,14) (\xx+3,14) -- (\xx+4,14);}
+  \draw[bkBlue!70!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (96,9) -- (84,10) -- (79,7) -- (64,9.5) -- (58,11) -- (44,9) -- (35,7) -- (22,9.6) -- (12,8.5);
+  \sxeel{(96,9)}
+  \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=2.2mm]}] (14,31) -- (88,31);
+  \node[font=\sffamily\footnotesize, anchor=south] at (51,31.5) {電場 $E$（電子は左へ押される）};
+  \node[anchor=west, font=\small, text width=27mm, align=left] at (99,16) {電子は、ゆれる原子にぶつかり、エネルギーを渡す。};
+\end{tikzpicture}
+\bkfigcaption{金属の中の電子の動き（大きくかいた図）。電子は電場に押されて進むが、ゆれる原子にぶつかって向きを変える。ぶつかるたびに、電場からもらったエネルギーが原子のゆれ（熱）に移る。}\label{ph:電-4:fig-joule}
+\end{bkfigure}
+
+\noindent ドライヤー（\qty{100}{V}・\qty{1200}{W}）の電流は、$I=P/V$ から\qty{12}{A}です。電熱線の抵抗は、$R=V/I$ から約\qty{8.3}{\ohm}です。1分（\qty{60}{s}）に出る熱は、
+\pheq{Q_{\text{熱}}=Pt=VIt=RI^2t=\frac{V^2}{R}t}{J ＝ W × s}
+\label{ph:電-4:joule}で、$1200\times60=\qty{72000}{J}=\qty{72}{kJ}$ です（例題1）。熱-1 の「熱量＝電力×時間」と同じ数です。ファンでこの熱を空気に渡し、熱い風にして送り出しています。
+
+\Needspace{8\baselineskip}
+\begin{phflow}[電場の仕事からジュール熱へ]
+\phflowrow{1 m$^3$ あたり $\vec j\cdot\vec E$\\の仕事率}{一様な導線\\体積 $Sl$ をかける}{$P=jE\times Sl=VI$}
+\phflowrow{$P=VI$}{抵抗 $R$\\$V=RI$}{$P=RI^2=\dfrac{V^2}{R}$}
+\phflowrow{$P=RI^2$}{時間 $t$ のあいだ\\電流が一定}{$Q_{\text{熱}}=RI^2t$}
+\end{phflow}
+
+\noindent 1段目の $\vec j\cdot\vec E$ は、電流密度と電場の内積で、1 m$^3$ あたり1秒に電場がする仕事です。一様な導線では $\vec j$ と $\vec E$ が同じ向きなので $jE$、体積 $Sl$ をかけると $jS\times El=I\times V$ になります。
+
+\begin{phyomi}[$P=RI^2$ と $P=\dfrac{V^2}{R}$]
+「同じ電流なら、抵抗の大きいほうが熱くなる。同じ電圧なら、抵抗の小さいほうが熱くなる」。どちらも正しく、何が同じかで見方が変わります。直列の電熱線（電流が同じ）では抵抗の大きいほうが、家庭のコンセントにつなぐ器具（電圧が同じ）では抵抗の小さいほうが、電力が大きくなります。
+\end{phyomi}
+
+\begin{phbaisuru}{電圧 $V$}
+同じ抵抗では、電流も2倍になるので、電力は4倍になります。\qty{100}{V}用のドライヤーを\qty{200}{V}につなぐと、4倍の電力で電熱線が焼き切れてしまうので、決してしてはいけません。
+\end{phbaisuru}
+
+\begin{phmijika}[電気代と、電子機器の熱]
+電気料金は、使った電力量（kWh）で決まります。家電の電気代の目安には、1 kWh あたり31円（税込）がよく使われています（例題7）。パソコンやスマホの中の部品も、電流が流れるとジュール熱を出します。部品が熱くなりすぎないように、熱を外へ逃がすくふう（ファン、金属の板：熱-11・熱-12）が欠かせません。
+\end{phmijika}
+
+\bksubsection{6}{電荷の保存と連続の式}
+\label{ph:電-4:sec6}
+電荷は、生まれも消えもしません（電-1 ①）。この保存則を、電流を使って書きましょう。空間のある部分を、閉じた袋で囲みます。袋の中の電荷 $Q$ が減るのは、袋の面を通って、電流が外へ出ていくときだけです。
+\pheq{\oiint_S\vec j\cdot\vec n\,\dd S=-\frac{\dd Q}{\dd t}}{A ＝ C/s}
+左辺は、袋から外へ出ていく電流の合計（$\vec j$ の流束：8-8）です。袋を小さくして、1 m$^3$ あたりの式にすると、8-9⑫と同じ形の
+\pheq{\frac{\partial\rho_{\mathrm q}}{\partial t}+\mathrm{div}\,\vec j=0}{C/(m$^3$·s) ＝ (A/m$^2$)÷m}
+\label{ph:電-4:renzoku}になります（$\rho_{\mathrm q}$ は電荷密度。$\vec j=\rho_{\mathrm q}\vec v$）。これを電荷の\textbf{連続の式}といいます。\bkidx{れんぞくのしき}{連続の式（電荷）}本の前付の「保存則と相似の地図」の「電荷」の行（流れるもの：電流）は、この式です。
+
+\phboxhead{電流が落ち着いて流れているとき}
+電流が時間で変わらない（\textbf{定常電流}）とき、回路のどこにも電荷がたまり続けることはないので、$\dd Q/\dd t=0$ です。どんな袋で囲んでも、
+\[\oiint_S\vec j\cdot\vec n\,\dd S=0\qquad\text{（入る電流の合計＝出る電流の合計）}\]
+です。導線が分かれる点を小さな袋で囲めば、これがキルヒホッフの電流則（⑦）になります。
+
+\begin{seikaku}
+コンデンサーに電流が流れこんでいるときは、極板に電荷がたまっていくので、極板の片方だけを囲む袋では、入る電流と出る電流は等しくなりません（$\dd Q/\dd t=I$）。コンデンサー全体を囲めば、片方の極板に入る電流と、もう片方から出る電流は等しくなります（電-3 ①の $+Q$ と $-Q$）。極板の間で電流がとぎれているように見えるこの問題は、電-14 の変位電流につながります。
+\end{seikaku}
+
+\bksubsection{7}{キルヒホッフの法則：直列と並列}
+\label{ph:電-4:sec7}
+いくつもの電池や抵抗をつないだ回路の電流は、次の2つの法則で決まります。ドイツのキルヒホッフが1845年に、学生のときにまとめました。\bkidx{きるひほっふのほうそく}{キルヒホッフの法則}
+\label{ph:電-4:kirchhoff}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=3pt, topsep=3pt]
+\item \textbf{電流則}：導線が分かれる点（\textbf{節点}）に入る電流の合計は、出る電流の合計に等しい。\[\sum I_{\text{入}}=\sum I_{\text{出}}\]
+⑥の「定常電流では、袋に入る電流＝出る電流」の、袋を節点にした形です。電荷の保存がもとです。
+\item \textbf{電圧則}：回路の中の、どの閉じた道（\textbf{網目}）を1周しても、電圧の上がり（電池の起電力）の合計は、電圧の下がり（抵抗の $RI$）の合計に等しい。\[\sum\mathcal E=\sum RI\]
+回路の中の電場（電池の外）は、止まった電荷がつくる電場と同じく保存力の場なので、1周すると電位はもとの値にもどります（電-2 ⑨）。電池は、化学のはたらきで電位を $\mathcal E$ だけ持ち上げます（⑨）。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 直列
+  \draw[bkInk, line width=0.8pt] (8,24) -- (0,24) -- (0,0) -- (48,0) -- (48,24) -- (42,24) (20,24) -- (30,24);
+  \sxeres{(8,22)}{12}
+  \sxeres{(30,22)}{12}
+  \sxecell{(0,12)}
+  \node[font=\sffamily\footnotesize, anchor=south] at (14,26.5) {$R_1$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (36,26.5) {$R_2$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-5,9) {$\mathcal E$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (22,19) -- (28,19);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!70!black] at (25,18) {$I$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (24,-2) {直列};
+  % 並列
+  \begin{scope}[shift={(72,0)}]
+  \draw[bkInk, line width=0.8pt] (0,0) -- (0,30) -- (40,30) (16,30) -- (16,24) (16,20) -- (16,0) (40,30) -- (40,24) (40,20) -- (40,0) (0,0) -- (40,0);
+  \draw[bkInk, line width=0.8pt] (16,24) -- (16,23.5) (40,24) -- (40,23.5);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (14,10) rectangle (18,22);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (38,10) rectangle (42,22);
+  \draw[bkInk, line width=0.8pt] (16,22) -- (16,24) (40,22) -- (40,24) (16,10) -- (16,0) (40,10) -- (40,0);
+  \sxecell{(0,15)}
+  \fill[bkInk] (16,30) circle (0.9) (16,0) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=west] at (19,16) {$R_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (43,16) {$R_2$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (16,31) {節点};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (5,33) -- (12,33);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!70!black] at (8.5,33.5) {$I$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (12.5,27) -- (12.5,23);
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkRed!70!black] at (12,25) {$I_1$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (24,33) -- (32,33);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!70!black] at (28,33.5) {$I_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,-2) {並列};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{抵抗の直列と並列。直列では、どこにも分かれ道がないので電流は同じ。並列では、節点で電流が分かれる（$I=I_1+I_2$）。導線の抵抗は0とする。}\label{ph:電-4:fig-setsuzoku}
+\end{bkfigure}
+
+\phboxhead{直列}
+直列（図\ref{ph:電-4:fig-setsuzoku}左）では、分かれ道がないので、電流則から、どこでも同じ電流 $I$ が流れます。電圧則で1周すると、$\mathcal E=R_1I+R_2I=(R_1+R_2)I$ です。2つの抵抗を1つの抵抗 $R$ とみると、
+\pheq{R=R_1+R_2}{Ω ＝ Ω＋Ω}
+で、それぞれの抵抗の電圧 $V_1=R_1I$、$V_2=R_2I$ の和が、全体の電圧になります。
+
+\phboxhead{並列}
+並列（図\ref{ph:電-4:fig-setsuzoku}右）では、電池→$R_1$→電池、電池→$R_2$→電池の2つの網目で、電圧則から $\mathcal E=R_1I_1$、$\mathcal E=R_2I_2$ です。どちらの抵抗にも同じ電圧がかかります。節点の電流則から、$I=I_1+I_2=\mathcal E/R_1+\mathcal E/R_2$ なので、1つの抵抗とみると、
+\pheq{\frac1R=\frac1{R_1}+\frac1{R_2}}{1/Ω ＝ 1/Ω＋1/Ω}
+\label{ph:電-4:gousei}です。合わせた抵抗 $R$ を\textbf{合成抵抗}といいます。\bkidx{ごうせいていこう}{合成抵抗}並列の合成抵抗は、どちらの1つよりも小さくなります。電流の通り道がふえるからです。
+
+\Needspace{8\baselineskip}
+\begin{phflow}[保存則から直列・並列のきまりへ]
+\phflowrow{電荷の保存\\（連続の式）}{電流が落ち着いて\\流れている}{電流則 $\sum I_{\text{入}}=\sum I_{\text{出}}$}
+\phflowrow{静電場は保存力\\（1周の電位差0）}{電池の分を\\起電力に入れる}{電圧則 $\sum\mathcal E=\sum RI$}
+\phflowrow{電流則・電圧則}{抵抗が2つ\\$V=RI$}{直列 $R_1+R_2$、並列 $\dfrac1R=\dfrac1{R_1}+\dfrac1{R_2}$}
+\end{phflow}
+
+\begin{phyomi}[直列と並列]
+中学で習う「直列：電流はどこも同じ、電圧は分かれる。並列：電圧はどこも同じ、電流は分かれる」は、電流則と電圧則をそのまま言いかえたものです。高さにたとえると、電池はエスカレーターで電荷を高い所へ持ち上げ、抵抗は電荷が下りる坂です。1周すれば、もとの高さにもどります。
+\end{phyomi}
+
+\begin{phbaisuru}{並列につなぐ同じ抵抗の数}
+同じ抵抗 $R_1$ を2つ並列にすると $R_1/2$、3つで $R_1/3$ になります。家のコンセントにつなぐ器具は、どれも並列につながっているので、器具をふやすほど合成抵抗が小さくなり、全体の電流が大きくなります（例題12）。
+\end{phbaisuru}
+
+\phboxhead{回路の部品のきまりがそろう}
+キルヒホッフの法則と、抵抗のきまり $v=Ri$、コンデンサーのきまり $q=Cv$（電-3 ①）、コイルのきまり $v=L\,\dd i/\dd t$（電-8 ⑥）がそろうと、数学の本（6-6〜6-13）や物理シリーズの『波動』（波-1・2）で「同じ形の式」として使った RLC 回路の式が、法則から導けます（電-9）。部品がたくさんある回路を、行列でまとめて解く方法は、電-5 で学びます。
+
+\bksubsection{8}{ひずみゲージ：のびると抵抗が増える}
+\label{ph:電-4:sec8}
+物理シリーズの『力学』（力-9 ⑩）で、部品にはりつけて、ひずみをはかる\textbf{ひずみゲージ}を学びました。金属のはくが細長くなって、抵抗がわずかに増えるのでした。その増え方を、$R=\rho l/S$ から求めましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!20] (0,0) rectangle (40,8);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (40,8);
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,-1.5) {もとの線（長さ $l$、断面積 $S$）};
+  \begin{scope}[shift={(56,0.6)}]
+  \fill[bkOrange!20] (0,0) rectangle (52,6.8);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (52,6.8);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (53,3.4) -- (60,3.4);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (-1,3.4) -- (-8,3.4);
+  \node[font=\sffamily\footnotesize, anchor=north] at (26,-2.1) {のびた線：長くなり（$1+\varepsilon$ 倍）、細くなる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{金属の線をのばす（大きくかいた図）。長さが増え、断面積が減るので、どちらも抵抗を増やす。}\label{ph:電-4:fig-gauge}
+\end{bkfigure}
+
+\noindent 線の長さを $l$ から $l(1+\varepsilon)$ にのばすと（$\varepsilon$ はひずみ。力-8）、線は細くなり、太さ（直径）は $1-\nu\varepsilon$ 倍になります（$\nu$ はポアソン比：力-8）。断面積は直径の2乗に比例するので、$(1-\nu\varepsilon)^2\approx1-2\nu\varepsilon$ 倍です（$\varepsilon$ はとても小さいので、$\varepsilon^2$ は無視）。抵抗率が変わらないとすると、
+\[\frac{R+\Delta R}{R}=\frac{1+\varepsilon}{1-2\nu\varepsilon}\approx(1+\varepsilon)(1+2\nu\varepsilon)\approx1+(1+2\nu)\varepsilon\]
+なので（$1/(1-x)\approx1+x$：5-17）、抵抗の増える割合は
+\pheq{\frac{\Delta R}{R}=K\varepsilon,\qquad K\approx1+2\nu}{単位なし}
+です。$K$ を\textbf{ゲージ率}といいます。\bkidx{げーじりつ}{ゲージ率}金属のポアソン比は約0.3なので、形の変化だけで $K\approx1.6$ です。実際のゲージの $K$ は約2で、のびると金属の中で電子の流れやすさ（抵抗率）も少し変わる分が加わっています。力-9 の「ゲージ率約2」は、この値です。
+
+\begin{phyomi}[$\dfrac{\Delta R}{R}=K\varepsilon$]
+「抵抗の変わる割合は、ひずみのおよそ2倍」。\qty{120}{\ohm}のゲージで、ひずみ $500\times10^{-6}$（1 m の棒が\qty{0.5}{mm}のびる）なら、$\Delta R=120\times2\times500\times10^{-6}=\qty{0.12}{\ohm}$ です（例題8。力-9 と同じ数）。とても小さな変化なので、ブリッジ回路（電-5 ⑦）ではかります。
+\end{phyomi}
+
+\bksubsection{9}{電池の起電力と内部抵抗}
+\label{ph:電-4:sec9}
+乾電池は、中の化学の反応で、電荷を－極から＋極へ運び、電位を持ち上げます。1 C の電荷を運ぶあいだに、化学の反応が電荷にする仕事を、電池の\textbf{起電力} $\mathcal E$〔V〕といいます。\bkidx{きでんりょく}{起電力}乾電池1個の起電力は約\qty{1.5}{V}です。
+
+\phboxhead{内部抵抗}
+電池の中にも、電流を流れにくくする部分（電解液や電極の抵抗）があります。これを\textbf{内部抵抗} $r$ といいます。\bkidx{ないぶていこう}{内部抵抗}電流 $I$ が流れると、電池の中で $rI$ だけ電圧が下がるので、電池の両はしの電圧（\textbf{端子電圧}）$V$ は、
+\pheq{V=\mathcal E-rI}{V ＝ V － Ω × A}
+\label{ph:電-4:naibu}です。外に抵抗 $R$ をつなぐと、電圧則で1周して $\mathcal E=RI+rI$ なので、$I=\mathcal E/(R+r)$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray!70!black, line width=0.6pt, dashed, rounded corners=2mm] (-8,2) rectangle (8,30);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,1.2) {電池};
+  \draw[bkInk, line width=0.8pt] (0,6) -- (0,0) -- (40,0) -- (40,8) (40,24) -- (40,34) -- (0,34) -- (0,15);
+  \sxecell{(0,20.5)}
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (-2,6) rectangle (2,15);
+  \draw[bkInk, line width=0.8pt] (0,15) -- (0,16.5);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (38,8) rectangle (42,24);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-3,10.5) {$r$};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-9,20.5) {$\mathcal E$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (43,16) {$R$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (14,37) -- (26,37);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!70!black] at (20,37.5) {$I$};
+\end{tikzpicture}\hspace{4mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=50mm, height=46mm, xmin=0, xmax=8, ymin=0, ymax=1.7, xtick={2,4,6}, ytick={0.5,1,1.5}, xlabel={$I$（A）}, ylabel={端子電圧 $V$（V）}]
+  \addplot[bkcurve, domain=0:7.5] {1.5-0.2*x};
+  \fill[bkRed] (axis cs:0.5,1.4) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.7,1.42) {例題9};
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (axis cs:7.3,0.6) {傾き $-r$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{内部抵抗のある電池（左）と、端子電圧（右。$\mathcal E=\qty{1.5}{V}$、$r=\qty{0.2}{\ohm}$）。電流を多く取り出すほど、端子電圧は下がる。}\label{ph:電-4:fig-naibu}
+\end{bkfigure}
+
+\begin{phyomi}[$V=\mathcal E-rI$]
+「電流をたくさん流すほど、電池の中で電圧が使われ、外に出せる電圧が下がる」。電流が0のときの端子電圧が起電力です。使い終わった乾電池は、化学の反応が進みにくくなって内部抵抗が大きくなり、豆電球をつなぐと端子電圧が大きく下がります（やってみよう③）。
+\end{phyomi}
+
+\phboxhead{表計算で、取り出せる電力を調べる}
+起電力\qty{1.5}{V}・内部抵抗\qty{0.2}{\ohm}の電池に、いろいろな抵抗 $R$ をつないで、外の抵抗で使われる電力 $P=RI^2$ と、電池が出す電力のうち外で使われる割合（効率 $R/(R+r)$）を計算します。
+\begin{bkcenter}
+\bksheet{5}{21}{%
+1 & $R$〔Ω〕 & $I$〔A〕 & $V$〔V〕 & $P$〔W〕 & 効率 \\
+2 & 0.05 & 6.00 & 0.30 & 1.80 & 0.20 \\
+3 & 0.1 & 5.00 & 0.50 & 2.50 & 0.33 \\
+4 & 0.2 & 3.75 & 0.75 & 2.81 & 0.50 \\
+5 & 0.4 & 2.50 & 1.00 & 2.50 & 0.67 \\
+6 & 0.8 & 1.50 & 1.20 & 1.80 & 0.80 \\
+7 & 1.6 & 0.83 & 1.33 & 1.11 & 0.89 \\
+8 & 2.8 & 0.50 & 1.40 & 0.70 & 0.93 \\}
+\bktabcaption{B2＝1.5/(A2＋0.2)、C2＝1.5－0.2*B2、D2＝A2*B2\^{}2、E2＝A2/(A2＋0.2)。}\label{ph:電-4:tab-sheet}
+\end{bkcenter}
+外の抵抗で使われる電力は、$R$ が内部抵抗と同じ\qty{0.2}{\ohm}のときにいちばん大きく（\qty{2.81}{W}）、そのときの効率はちょうど半分です。なぜそうなるのかは、電-5 ⑨で導きます。乾電池をショートさせる（$R\to0$）と、外では仕事をせず、大きな電流で電池の中だけが熱くなり、危険です。
+
+\phboxhead{燃料電池の起電力は $\Delta G$ で決まる}
+物理シリーズの『熱学』（熱-10 ⑨）で、水素と酸素から水を作る燃料電池が、取り出せる電気の仕事はいちばん多くて $-\Delta G$（ギブズエネルギーの減り）であることを学びました。水素\qty{1}{mol}が反応すると、電子が\qty{2}{mol}、つまり電荷 $2\times\num{96485}$\,C が回路を回ります。起電力 $\mathcal E$ の電池が電荷 $q$ を運ぶ仕事は $q\mathcal E$ なので、
+\[2\times\num{96485}\times\mathcal E=-\Delta G\qquad\text{より}\qquad\mathcal E=\frac{-\Delta G}{2\times\num{96485}\ \text{C/mol}}\]
+\qty{25}{\celsius}・1気圧で液体の水ができるとき、$\Delta G=\qty{-237.13}{kJ/mol}$ なので、$\mathcal E\approx\qty{1.23}{V}$ です（例題10。熱-10 と同じ数）。電池の起電力は、反応のエネルギーを「1 C あたり」で表したものなのです。乾電池の\qty{1.5}{V}も、中の物質の反応のギブズエネルギーで決まっています。
+
+\bksubsection{10}{熱電対：温度の差で電圧が出る}
+\label{ph:電-4:sec10}
+物理シリーズの『熱学』（熱-1）で、2種類の金属線の先をつないだ\textbf{熱電対}は、つないだ所の温度で数 mV の電圧を出す、と学びました。\bkidx{ねつでんつい}{熱電対}1821年に、ドイツのゼーベックが、2種類の金属で作った輪の片方のつなぎ目を温めると、電流が流れることを見つけました（\textbf{ゼーベック効果}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkRed!80!black, line width=1.6pt] (10,18) -- (60,18);
+  \draw[bkBlue!80!black, line width=1.6pt] (10,6) -- (60,6);
+  \draw[bkRed!80!black, line width=1.6pt] (60,18) -- (66,12);
+  \draw[bkBlue!80!black, line width=1.6pt] (60,6) -- (66,12);
+  \fill[bkInk] (66,12) circle (1.2);
+  \fill[bkOrange!60] (66,12) circle (4) ; \fill[bkInk] (66,12) circle (1.2);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (71,12) {はかる所（$\theta$）\\温接点};
+  \filldraw[fill=bkYellow!30, draw=bkInk, line width=0.7pt] (-14,2) rectangle (6,22);
+  \node[font=\sffamily\footnotesize, align=center] at (-4,12) {電圧計\\（基準 0 ℃）};
+  \draw[bkInk, line width=0.8pt] (6,18) -- (10,18) (6,6) -- (10,6);
+  \node[font=\sffamily\footnotesize, anchor=south] at (35,18.5) {金属 A（クロメル）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (35,5.5) {金属 B（アルメル）};
+\end{tikzpicture}
+\bkfigcaption{K 熱電対。2種類の合金の線の先をつなぎ（温接点）、もう一方のはし（基準接点）を基準の温度にして、電圧をはかる。電圧は、2つの接点の温度の差でほぼ決まる。}\label{ph:電-4:fig-netsudentsui}
+\end{bkfigure}
+
+\noindent 金属の線の片方のはしを温めると、熱い側の電子のほうが激しく動き回り、冷たい側へ広がろうとします。そのため、線の両はしのあいだに、わずかな電圧ができます。その大きさは金属の種類で違うので、2種類の金属をつなぐと、差の分が電圧としてはかれます。どの金属でどれだけの電圧ができるかを、電子の性質から説明するには、固体の中の電子の考え（物理シリーズの『原子』（原-8・原-9））が要ります。
+
+工場や炉でよく使う\textbf{K 熱電対}（クロメルとアルメルという2つの合金）では、基準の接点を\qty{0}{\celsius}にしたとき、はかる所が\qty{300}{\celsius}で\qty{12.209}{mV}です。1 K あたり平均約\qty{41}{\micro V}の、とても小さな電圧です（例題11）。逆に、2種類の金属のつなぎ目に電流を流すと、熱を運んで片方が冷え、片方が温まる現象（\textbf{ペルチエ効果}）もあり、小さな冷蔵庫や、電子部品の冷却に使われています。
+
+\bksubsection{11}{抵抗のモデル：ぶつかりながら進む電子}
+\label{ph:電-4:sec11}
+なぜ電流密度は電場に比例する（$\vec j=\sigma\vec E$）のでしょう。1900年にドイツのドルーデが考えたモデルで説明します。\bkidx{どるーでのもでる}{ドルーデのモデル}
+
+\phboxhead{電子の運動方程式}
+質量 $m_{\mathrm e}$、電荷 $-e$ の電子が、電場 $\vec E$ の中で力 $-e\vec E$ を受けて加速します。ところが、平均して時間 $\tau$ に1回、原子のゆれや乱れにぶつかり、向きがばらばらになって、流れの向きの速さを失います。たくさんの電子の流れの速さ（平均）$\vec v_{\mathrm d}$ について、ぶつかることを「速さに比例する抵抗の力」とみなすと、
+\[m_{\mathrm e}\frac{\dd\vec v_{\mathrm d}}{\dd t}=-e\vec E-\frac{m_{\mathrm e}}{\tau}\vec v_{\mathrm d}\]
+です（力-2 の、速さに比例する空気の抵抗と同じ形）。電流が落ち着いたとき（$\dd\vec v_{\mathrm d}/\dd t=0$）、
+\[\vec v_{\mathrm d}=-\frac{e\tau}{m_{\mathrm e}}\vec E\]
+で、流れの速さは電場に比例します（雨つぶの終わりの速さと同じ考え）。電流密度は $\vec j=-en\vec v_{\mathrm d}$ なので、
+\pheq{\vec j=\frac{ne^2\tau}{m_{\mathrm e}}\vec E,\qquad\sigma=\frac{ne^2\tau}{m_{\mathrm e}}}{S/m ＝ 1/m$^3$ × C$^2$ × s ÷ kg}
+\label{ph:電-4:drude}です。$\vec j=\sigma\vec E$ が導けました。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=10mm, y=12mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (10.6,0);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (0,0) -- (0,1.8);
+  \node[font=\sffamily\footnotesize, anchor=north] at (10.2,-0.1) {時間};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (0.1,1.8) {流れの向きの速さ};
+  \draw[bkBlue!80!black, line width=1.1pt] (0,0) -- (0.8,0.8) -- (0.8,0) -- (2.0,1.2) -- (2.0,0) -- (2.6,0.6) -- (2.6,0) -- (3.9,1.3) -- (3.9,0) -- (4.6,0.7) -- (4.6,0) -- (5.7,1.1) -- (5.7,0) -- (6.3,0.6) -- (6.3,0) -- (7.5,1.2) -- (7.5,0) -- (8.2,0.7) -- (8.2,0) -- (9.4,1.2) -- (9.4,0) -- (10,0.6);
+  \draw[bkOrange!85!black, line width=1.1pt, dashed] (0,0.5) -- (10.4,0.5);
+  \node[font=\sffamily\footnotesize, anchor=west] at (10.45,0.5) {平均 $v_{\mathrm d}$};
+  \draw[bkInk!60, line width=0.4pt] (3.9,1.3) -- (4.3,1.55);
+  \node[font=\sffamily\footnotesize, anchor=west] at (4.3,1.55) {ぶつかって0にもどる};
+\end{tikzpicture}
+\bkfigcaption{ドルーデのモデルの、1つの電子の流れの向きの速さ（模式図）。電場で一定の割合で速くなり、ぶつかるたびに0にもどる。平均すると一定の流れの速さになる。}\label{ph:電-4:fig-drude}
+\end{bkfigure}
+
+\begin{phyomi}[$\sigma=\dfrac{ne^2\tau}{m_{\mathrm e}}$]
+「運び手が多く（$n$）、ぶつかるまでの時間が長い（$\tau$）ほど、電気を通しやすい」。温度が上がると、原子のゆれが激しくなってぶつかりやすくなり、$\tau$ が短くなるので、金属の抵抗率は大きくなります（④）。$e$ が2乗なのは、電場から受ける力と、運ぶ電荷の両方に $e$ が入るからです。
+\end{phyomi}
+
+\noindent 銅の値を入れると、$\tau\approx2.4\times10^{-14}$\,s です（例題13）。100兆分の数秒に1回ぶつかっているのです。このモデルは、オームの法則と温度変化の向きをうまく説明しますが、電子の速さを、ふつうの気体の分子と同じように考えると、合わない所も出てきます。電子が金属の中でどのように動くかを正しく説明するには、量子力学が要ります（物理シリーズの『原子』（原-8））。
+
+\begin{phmodel}[ドルーデのモデル]
+\phignore{電子どうしの力。電子の波としての性質（量子力学）。ぶつかり方の細かい違い（平均の時間 $\tau$ にまとめる）。}
+\phassume{ぶつかると流れの向きの速さを失い、その効果は速さに比例する抵抗の力と同じ。$n$ と $\tau$ は電場によらない。}
+\phlimit{とても低い温度（超伝導、不純物の効果）。半導体（運び手の数が温度で大きく変わる）。磁場の中の金属の詳しいふるまい。}
+\end{phmodel}
+
+%% 修4-2（E2-14）：まだわかっていないことがページで分かれないよう、ドルーデのモデルの札をモデルの説明のすぐあとへ、
+%%   超伝導の段落とこの囲みをプログラムの前へ移し、囲みの前に \Needspace を置いた
+\phboxhead{抵抗が0になる：超伝導}
+1911年、オランダのカマリン・オネスは、水銀を液体ヘリウムで $-269$\,℃近くまで冷やすと、抵抗がまったくなくなることを見つけました。これを\textbf{超伝導}といいます。\bkidx{ちょうでんどう}{超伝導}超伝導の輪では、電流が熱を出さずに流れ続けます。病院の MRI やリニアモーターカーの強い電磁石は、超伝導のコイルで作られています（電-7）。金属などのふつうの超伝導のしくみは、1957年に、電子が2つずつ組になって動くという理論（BCS 理論）で説明されました。
+
+\Needspace{11\baselineskip}
+\begin{phmada}[高温超伝導は、なぜ起きる？]
+1986年、ベドノルツとミュラーは、銅と酸素をふくむセラミックスが、それまでの超伝導の物より高い温度で超伝導になることを見つけました。そのあと、液体窒素（$-196$\,℃）で冷やすだけで超伝導になる物も次々に見つかりました（\textbf{高温超伝導}）。ところが、銅の酸化物の高温超伝導が、なぜこんなに高い温度で起きるのかは、BCS 理論ではうまく説明できず、見つかってから何十年もたった今も、物理学の大きな未解決の問題の1つです。超伝導になる前の状態でも、電子がふつうの金属とはまったく違うふるまいをすることがわかっていて、その全体をまとめて説明する理論は、まだできていません。しくみがわかれば、室温で超伝導になる物を設計できるかもしれないと考えられ、研究が続いています。
+\end{phmada}
+
+\phboxhead{プログラムで、流れの速さが落ち着くようすを見る}
+電場をかけた瞬間から、流れの速さ $v_{\mathrm d}$ がどのように落ち着くかを、運動方程式を細かい時間で進めて計算します（力-2 ⑨と同じ方法）。銅の中（$\tau=2.4\times10^{-14}$\,s）に、例題2の銅線の中と同じ大きさの電場（約\qty{0.10}{V/m}：章末問題）をかけます。
+\begin{phcode}[Python]
+e, m, tau = 1.60e-19, 9.11e-31, 2.4e-14   \# e、電子の質量、τ（例題13）
+E = 0.10                  \# 電場（V/m）：例題2の銅線の中
+dt = tau / 10             \# 1歩の時間
+v = 0.0                   \# 流れの向きの速さ（はじめは0）
+for step in range(1, 61):
+    a = (-e * E - m * v / tau) / m      \# 運動方程式から加速度
+    v = v + a * dt
+    if step \% 10 == 0:
+        print(f"\{step * dt:.1e\}", round(v * 1000, 3))   \# s と mm/s
+print(round(-e * tau * E / m * 1000, 3))                \# 落ち着いた速さ
+\end{phcode}
+\begin{phcodeout}
+2.4e-14 -0.275
+4.8e-14 -0.37
+7.2e-14 -0.404
+9.6e-14 -0.415
+1.2e-13 -0.419
+1.4e-13 -0.421
+-0.422
+\end{phcodeout}
+左から、時刻〔s〕と流れの向きの速さ〔mm/s〕です（負は電場と反対向き）。$\tau$ の数倍の約 $10^{-13}$\,s で、最後の行の式 $e\tau E/m_{\mathrm e}$ の値\qty{0.42}{mm/s}に落ち着きます。例題2の\qty{0.44}{mm/s}ともほぼ同じです（違いは $\tau$ と $E$ の丸め）。流れは、1兆分の1秒よりずっと短い時間で落ち着くのです。
+
+\bksubsection{12}{電気の安全}
+\label{ph:電-4:sec12}
+家庭のコンセントの電圧は、法律（電気事業法施行規則）で\qty{101}{V}の上下\qty{6}{V}の範囲に保つことになっています。乾電池の約70倍で、間違った使い方をすると命にかかわります。この本の「やってみよう」は、乾電池・磁石・方位磁針などだけを使います。コンセントや高い電圧を使う実験は、決して自分でしてはいけません。
+
+\begin{column}{電気の安全（1）：感電}
+\textbf{感電}：電気が体を通って流れることを感電といいます。神経や心臓は小さな電気の信号で動いているので、外から電流が流れこむと、はたらきが乱されます。交流の電流が体を1秒ほど流れたとき、約\qty{1}{mA}でびりびりと感じ始め、約\qty{10}{mA}で筋肉が自分の思いどおりに動かせなくなって手を離せなくなり、\qty{100}{mA}ほどでは心臓のリズムがくずれて（心室細動）命にかかわる、とされています。ぬれた手は、皮膚の抵抗が小さくなり、同じ電圧でも大きな電流が流れるので、とくに危険です（$I=V/R$）。
+\end{column}
+
+\begin{column}{電気の安全（2）：漏電}
+\textbf{漏電}：電気製品の中で電線の被覆が傷むと、電流が本来の道をはずれて、金属のケースや地面へもれます（漏電）。家の分電盤の\textbf{漏電遮断器}は、行きの電流と帰りの電流のわずかな差（ふつう\qty{30}{mA}）を見つけて、0.1秒以内に電気を止めます。電流則（⑦）で、行きと帰りは等しいはずなので、差があれば、どこかにもれているとわかるのです。洗濯機などのアース線は、もれた電流を人の体ではなく地面へ流す道です。
+
+\end{column}
+
+\begin{column}{電気の安全（3）：コードの熱}
+\textbf{コードの熱}：延長コードやテーブルタップには、流してよい電流（定格。たとえば\qty{15}{A}、\qty{100}{V}で\qty{1500}{W}）が書いてあります。コンセントにつないだ器具は並列なので、器具をふやすと電流がたし算でふえます（例題12）。定格をこえると、コードの抵抗のジュール熱（$RI^2$）で熱くなり、火事の原因になります。束ねたり巻いたりしたまま使うと、熱が逃げにくく、さらに危険です。ブレーカーやヒューズは、大きすぎる電流が流れたときに電気を止める安全装置です。
+\end{column}
+
+\begin{phsaki}{固体の中の電子と、電気を変える部品}
+金属・半導体・絶縁体の抵抗率が $10^{24}$ 倍も違う理由、温度による抵抗の変わり方、熱電対の電圧の大きさは、固体の中の電子のエネルギーの並び方（バンド）で説明されます（物理シリーズの『原子』（原-8・原-9））。ダイオードやトランジスタのように、オームの法則に従わない部品も、半導体の性質から作られています（原-9・原-10）。電池の中の化学の反応のしくみは、電気化学の分野で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[電気工学の専門書の書き方]
+\begin{bkhonbun}
+導体中の電流密度 $\symbfit{J}$〔A/m$^2$〕は電界 $\symbfit{E}$ に比例し，$\symbfit{J}=\sigma\symbfit{E}$ と表される．これをオームの法則の微分形という．$\sigma$ は導電率〔S/m〕，その逆数 $\rho=1/\sigma$ は抵抗率〔Ω·m〕である．電荷保存則は $\nabla\cdot\symbfit{J}+\partial\rho_v/\partial t=0$ と書ける．
+\end{bkhonbun}
+\bkyaku{「電界」はこの本の電場。専門書は電流密度を大文字の $\symbfit{J}$ で書き、電荷密度を $\rho_v$ と書くことがある（この章の $\rho_{\mathrm q}$）。$\nabla\cdot$ は div（8-9⑨）。「オームの法則の微分形」は、この章の $\vec j=\sigma\vec E$ で、$V=RI$ は「積分した形」にあたる。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{電流}$I=\dfrac{\dd q}{\dd t}$、$I=env_{\mathrm d}S$（電流の向きと電子の向きは反対）\\[3pt]
+\tsl{オームの法則}$\vec j=\sigma\vec E$ → $V=RI$、$R=\rho\dfrac{l}{S}$、$\rho=\rho_0(1+\alpha\theta)$\\[3pt]
+\tsl{電力・熱}$P=VI=RI^2=\dfrac{V^2}{R}$、$Q_{\text{熱}}=Pt$、$\qty{1}{kWh}=\qty{3.6e6}{J}$\\[3pt]
+\tsl{保存}$\dfrac{\partial\rho_{\mathrm q}}{\partial t}+\mathrm{div}\,\vec j=0$ → 電流則 $\sum I_{\text{入}}=\sum I_{\text{出}}$\\[3pt]
+\tsl{電圧則}$\sum\mathcal E=\sum RI$。直列 $R_1+R_2$、並列 $\dfrac1R=\dfrac1{R_1}+\dfrac1{R_2}$\\[3pt]
+\tsl{電池}$V=\mathcal E-rI$、燃料電池 $\mathcal E=\dfrac{-\Delta G}{2\times\num{96485}}$\\[3pt]
+\tsl{ゲージ・モデル}$\dfrac{\Delta R}{R}=K\varepsilon$（$K\approx2$）、$\sigma=\dfrac{ne^2\tau}{m_{\mathrm e}}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{電流}{1秒あたりに断面を通る電荷。単位 A（＝C/s）。向きは正の電荷が動く向き。}
+\bkword{電流密度}{電流の流れる断面 1 m$^2$ あたりの電流。向きもある量 $\vec j$。}
+\bkword{抵抗率・導電率}{物の電流の流れにくさ $\rho$〔Ω·m〕と、その逆数の流れやすさ $\sigma$〔S/m〕。}
+\bkword{ジュール熱}{電流が抵抗の中で出す熱。1秒あたり $RI^2$。}
+\bkword{キルヒホッフの法則}{電流則（節点で入る電流＝出る電流）と、電圧則（1周で起電力の和＝電圧の下がりの和）。}
+\bkword{起電力・内部抵抗}{電池が1 C の電荷を運ぶ仕事 $\mathcal E$ と、電池の中の抵抗 $r$。}
+\bkword{超伝導}{とても低い温度で、抵抗がまったく0になること。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$I$}{アイ}{電流〔A〕。時間で変わる電流（瞬時値）は $i$。第1巻の慣性モーメント、第3巻の波の強さとは別}{electric current}{電-4}}
+{\bkkigocard{$R$}{アール}{電気抵抗〔Ω〕。熱抵抗は $R_{\mathrm{th}}$（熱-11）、気体定数 $R$（熱-3）とは別}{resistance}{電-4}}
+\bkkigocards{\bkkigocard{$\rho$}{ロー}{抵抗率〔Ω·m〕。密度 $\rho$ とは別。電-4 では電荷密度を $\rho_{\mathrm q}$ と書く}{resistivity}{電-4}}
+{\bkkigocard{$\sigma$}{シグマ}{導電率〔S/m〕。$\sigma=1/\rho$。面電荷密度 $\sigma$（電-1〜3）、応力 $\sigma$（力-8）とは別}{conductivity}{電-4}}
+\bkkigocards{\bkkigocard{$P$}{ピー}{電力〔W〕。$P=VI$。第1巻の仕事率と同じ量。分極 $\vec P$（電-3）とは別}{electric power}{電-4}}
+{\bkkigocard{$\mathcal E$}{イー（筆記体）}{起電力〔V〕。電場 $E$ と書体で分ける。回路の章（電-9〜13）では電源の電圧を $e$・$E$ と書く}{electromotive force}{電-4}}
+\bkkigocards{\bkkigocard{$\vec j$}{ジェイ}{電流密度〔A/m$^2$〕（②）。断面 1 m$^2$ あたりの電流。$\vec j=\sigma\vec E$}{current density}{電-4}}
+{\bkkigocard{$n$}{エヌ}{自由電子の数密度〔1/m$^3$〕（②）。1 m$^3$ あたりの個数。電-6 の1 m あたりの巻数 $n$、波-12 の屈折率 $n$ とは別}{number density}{電-4}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:電-4:ex1}
+\begin{phreidai}[ドライヤーの電流と熱（はてな？）]
+\qty{100}{V}で\qty{1200}{W}のドライヤーがあります。流れる電流、電熱線の抵抗、1分間に出る熱を求めましょう。
+\phbamen
+電気の仕事が、全部、電熱線の熱になる場面です。
+\phmushi
+コンセントの電圧の変動（\qty{95}{V}〜\qty{107}{V}）、電熱線の抵抗の温度変化、ファンのモーターの電力を無視します。
+\phzu
+$V=\qty{100}{V}$、$P=\qty{1200}{W}$、$t=\qty{60}{s}$。
+\phriyu
+電力は $P=VI$、抵抗は $V=RI$、熱は $Q_{\text{熱}}=Pt$（⑤）。
+\phtateru
+\[I=\frac{P}{V},\qquad R=\frac{V}{I},\qquad Q_{\text{熱}}=Pt\]
+\phtoku
+\[I=\frac{1200}{100}=\qty{12}{A},\qquad R=\frac{100}{12}\approx\qty{8.3}{\ohm},\qquad Q_{\text{熱}}=1200\times60=\qty{72000}{J}\]
+\phtashikame
+$RI^2=8.33\times12^2\approx\qty{1200}{W}$ で合います。\qty{72}{kJ}は熱-1 の数と同じです。\qty{72}{kJ}で、\qty{1}{kg}の水の温度を約\qty{17}{K}上げられます（$72000\div(4.18\times10^3\times1)$）。
+\kotae \qty{12}{A}、約\qty{8.3}{\ohm}、\qty{72}{kJ}
+\end{phreidai}
+\begin{jibun}
+\qty{100}{V}で\qty{600}{W}の電気ポットの電流、抵抗、5分間に出る熱を求めましょう。
+\bkjans{\qty{6.0}{A}、約\qty{17}{\ohm}、$600\times300=\qty{180}{kJ}$}
+\end{jibun}
+
+\label{ph:電-4:ex2}
+\begin{phreidai}[銅線の中の電子の速さ]
+断面積\qty{2.0}{mm^2}の銅線に\qty{12}{A}（例題1のドライヤー）が流れています。自由電子の流れの速さを求めましょう。電子が\qty{1}{m}進むのに何分かかりますか。銅の自由電子の数は1 m$^3$ あたり $8.49\times10^{28}$ 個とします。
+\phbamen
+導線の中を流れる自由電子の、平均の速さを求める場面です。
+\phmushi
+電子のばらばらな熱の動き（平均すると0）。交流の向きの変化（直流とみる）。
+\phzu
+図\ref{ph:電-4:fig-envs}。$I=\qty{12}{A}$、$S=\qty{2.0e-6}{m^2}$、$n=8.49\times10^{28}$。
+\phriyu
+電流は「電荷×数密度×速さ×断面積」（②）。
+\phtateru
+\[v_{\mathrm d}=\frac{I}{enS}\]
+\phtoku
+\[v_{\mathrm d}=\frac{12}{1.60\times10^{-19}\times8.49\times10^{28}\times2.0\times10^{-6}}\approx4.4\times10^{-4}\,\text{m/s}\]
+\qty{1}{m}進むのは $1\div(4.4\times10^{-4})\approx\qty{2300}{s}$、約38分です。
+\phtashikame
+単位：A÷(C×1/m$^3$×m$^2$)＝(C/s)÷(C/m)＝m/s。\\
+大きさ：1秒に\qty{0.44}{mm}で、かたつむりよりずっと遅い速さです（それでもすぐ動くわけは②）。家庭の電気は交流で、1秒に50回（60回）行ったり来たりを繰り返すので、電子は、その場で前後に小さくゆれているだけです。
+\kotae 約\qty{0.44}{mm/s}、約38分
+\end{phreidai}
+\begin{jibun}
+断面積\qty{1.25}{mm^2}の銅線に\qty{5.0}{A}流れているときの、電子の流れの速さを求めましょう。
+\bkjans{$v_{\mathrm d}=I/(enS)$ に数を入れて、約\qty{0.29}{mm/s}}
+\end{jibun}
+
+\label{ph:電-4:ex3}
+\begin{phreidai}[延長コードの電圧の下がり]
+断面積\qty{2.0}{mm^2}の銅線2本でできた延長コード（長さ\qty{20}{m}。行きと帰りで\qty{40}{m}）に、\qty{12}{A}を流します。コードの抵抗と、コードで下がる電圧、コードで熱になる電力を求めましょう。銅の抵抗率は $1.72\times10^{-8}$\,Ω·m とします。
+\phbamen
+長い延長コードの抵抗で、器具にかかる電圧が下がる場面です。
+\phmushi
+コードの温度による抵抗の変化、コンセントとプラグのつなぎ目の抵抗を無視します。
+\phzu
+図\ref{ph:電-4:fig-dousen}。$l=\qty{40}{m}$、$S=\qty{2.0e-6}{m^2}$、$\rho=\qty{1.72e-8}{\ohm.m}$、$I=\qty{12}{A}$。
+\phriyu
+一様な導線の抵抗は $R=\rho l/S$（③）。電圧の下がりは $V=RI$、熱は $RI^2$（⑤）。電流は行きも帰りも同じなので、長さは往復の分を数えます。
+\phtateru
+\[R=\rho\frac{l}{S},\qquad V=RI,\qquad P=RI^2\]
+\phtoku
+\[R=1.72\times10^{-8}\times\frac{40}{2.0\times10^{-6}}\approx\qty{0.34}{\ohm}\]
+\[V=0.34\times12\approx\qty{4.1}{V},\qquad P=0.34\times12^2\approx\qty{50}{W}\]
+\phtashikame
+ドライヤーの抵抗（\qty{8.3}{\ohm}）に比べればずっと小さく、電圧は約4\,\% 下がるだけです。それでも、コードの中で約\qty{50}{W}の熱が出ます。コードを巻いたまま使うと、この熱がこもって危ないのです（⑫）。
+\kotae 約\qty{0.34}{\ohm}、約\qty{4.1}{V}、約\qty{50}{W}
+\end{phreidai}
+\begin{jibun}
+（1）断面積\qty{1.25}{mm^2}の銅線で、往復\qty{20}{m}のコードの抵抗を求めましょう。\qty{10}{A}流すと何 V 下がりますか。（2）同じ銅線を、長さを2倍にして直径を半分にすると、抵抗は何倍になりますか。
+\bkjans{（1）約\qty{0.28}{\ohm}、約\qty{2.8}{V}。（2）長さ2倍・断面積 $\tfrac14$ で、8倍}
+\end{jibun}
+
+\label{ph:電-4:ex4}
+\begin{phreidai}[白金の温度計 Pt100]
+測温抵抗体 Pt100（\qty{0}{\celsius}で\qty{100.0}{\ohm}、$\alpha=0.00385$）を、わき立つ湯（\qty{100}{\celsius}）に入れました。抵抗はいくらになりますか。
+\phbamen
+抵抗の変化で温度をはかる温度計です。
+\phmushi
+抵抗と温度の関係のわずかな曲がり、つなぐ導線の抵抗を無視します。
+\phzu
+図\ref{ph:電-4:fig-ondo}。$R_0=\qty{100.0}{\ohm}$、$\alpha=0.00385$、$\theta=\qty{100}{\celsius}$。
+\phriyu
+抵抗は温度にほぼ比例して増える：$R=R_0(1+\alpha\theta)$（④）。
+\phtateru
+\[R=R_0(1+\alpha\theta)\]
+\phtoku
+\[R=100.0\times(1+0.00385\times100)=\qty{138.5}{\ohm}\]
+\phtashikame
+規格の表の値も\qty{138.51}{\ohm}で、よく合います。1 K で\qty{0.385}{\ohm}変わるので、抵抗を\qty{0.04}{\ohm}の細かさではかれば、温度が約\qty{0.1}{K}の細かさでわかります。
+\kotae \qty{138.5}{\ohm}
+\end{phreidai}
+\begin{jibun}
+（1）Pt100 の抵抗が\qty{119.25}{\ohm}でした。温度は何 ℃ ですか。（2）\qty{-20}{\celsius}では、抵抗はいくらですか。
+\bkjans{（1）$(119.25\div100-1)\div0.00385=\qty{50}{\celsius}$　（2）$100\times(1-0.00385\times20)=\qty{92.3}{\ohm}$}
+\end{jibun}
+
+\label{ph:電-4:ex5}
+\begin{phreidai}[電球をつけた瞬間の電流]
+\qty{100}{V}・\qty{100}{W}の白熱電球のフィラメント（タングステン）は、点灯中は約\qty{2500}{\celsius}になるとします。点灯中の抵抗と、冷えているとき（\qty{20}{\celsius}）の抵抗、スイッチを入れた瞬間の電流を求めましょう。タングステンの抵抗の温度係数を、\qty{20}{\celsius}を基準にして 0.0045 とし、温度によらず一定とします。
+\phbamen
+温度で抵抗が大きく変わる部品の、つけた瞬間の電流（突入電流）を見積もる場面です。
+\phmushi
+温度係数が高い温度でも一定とする（本当は一定ではない）。フィラメントが温まるまでの時間（電-9）は考えません。
+\phzu
+$P=\qty{100}{W}$、$V=\qty{100}{V}$、温度差 $2500-20=\qty{2480}{K}$。
+\phriyu
+点灯中の抵抗は $R=V^2/P$（⑤）。冷えたときの抵抗は、$R_{\text{熱}}=R_{\text{冷}}(1+\alpha\Delta\theta)$（④）から。
+\phtateru
+\[R_{\text{熱}}=\frac{V^2}{P},\qquad R_{\text{冷}}=\frac{R_{\text{熱}}}{1+\alpha\Delta\theta},\qquad I=\frac{V}{R_{\text{冷}}}\]
+\phtoku
+\[R_{\text{熱}}=\frac{100^2}{100}=\qty{100}{\ohm}\]
+\[R_{\text{冷}}=\frac{100}{1+0.0045\times2480}=\frac{100}{12.2}\approx\qty{8.2}{\ohm}\]
+\[I=\frac{100}{8.2}\approx\qty{12}{A}\]
+\phtashikame
+つけた瞬間は、点灯中（\qty{1.0}{A}）の約12倍の電流が流れます。電球が切れるのが、つけた瞬間に多いのは、このためです。実際のタングステンでは、高い温度ほど抵抗が速く増え、熱いときと冷たいときの比は10〜15ほどです。このモデルは、桁と向きを見積もるためのものです。
+\kotae 点灯中\qty{100}{\ohm}、冷えているとき約\qty{8.2}{\ohm}、つけた瞬間 約\qty{12}{A}
+\end{phreidai}
+\begin{jibun}
+同じモデルで、\qty{100}{V}・\qty{60}{W}の電球の、点灯中の抵抗、冷えているときの抵抗、つけた瞬間の電流を求めましょう。
+\bkjans{点灯中 約\qty{167}{\ohm}、冷えているとき約\qty{14}{\ohm}、つけた瞬間 約\qty{7.3}{A}}
+\end{jibun}
+
+\label{ph:電-4:ex6}
+\begin{phreidai}[\qty{10}{\ohm}と\qty{30}{\ohm}の直列と並列]
+\qty{10}{\ohm}と\qty{30}{\ohm}の抵抗を、（1）直列、（2）並列にして、\qty{12}{V}の電池（内部抵抗は無視）につなぎます。合成抵抗、全体の電流、それぞれの抵抗の電圧と電流を求めましょう。
+\phbamen
+中学校で学ぶ、2つの抵抗の回路です。
+\phmushi
+電池の内部抵抗と、導線の抵抗を無視します。
+\phzu
+図\ref{ph:電-4:fig-setsuzoku}。$R_1=\qty{10}{\ohm}$、$R_2=\qty{30}{\ohm}$、$\mathcal E=\qty{12}{V}$。
+\phriyu
+直列は電流が同じ（電流則）、並列は電圧が同じ（電圧則）。合成抵抗は⑦の式。
+\phtateru
+（1）\[R=R_1+R_2,\quad I=\frac{\mathcal E}{R},\quad V_1=R_1I,\quad V_2=R_2I\]
+（2）\[\frac1R=\frac1{R_1}+\frac1{R_2},\quad I_1=\frac{\mathcal E}{R_1},\quad I_2=\frac{\mathcal E}{R_2}\]
+\phtoku
+（1）$R=\qty{40}{\ohm}$、$I=12\div40=\qty{0.30}{A}$、$V_1=\qty{3.0}{V}$、$V_2=\qty{9.0}{V}$。\\
+（2）\[\frac1R=\frac1{10}+\frac1{30}=\frac4{30}\qquad\text{より}\qquad R=\qty{7.5}{\ohm}\]$I_1=\qty{1.2}{A}$、$I_2=\qty{0.40}{A}$、全体 $I=\qty{1.6}{A}$（$12\div7.5$ と同じ）。
+\phtashikame
+（1）$V_1+V_2=\qty{12}{V}$（電圧則）。（2）$I_1+I_2=\qty{1.6}{A}$（電流則）。並列の合成抵抗\qty{7.5}{\ohm}は、小さいほうの\qty{10}{\ohm}より小さくなっています。
+\kotae （1）\qty{40}{\ohm}、\qty{0.30}{A}、電圧\qty{3.0}{V}と\qty{9.0}{V}　（2）\qty{7.5}{\ohm}、\qty{1.6}{A}、電流\qty{1.2}{A}と\qty{0.40}{A}
+\end{phreidai}
+\begin{jibun}
+\qty{20}{\ohm}と\qty{30}{\ohm}を、（1）直列、（2）並列にして\qty{6.0}{V}につなぎます。合成抵抗と、全体の電流を求めましょう。並列のときは、それぞれの電流も求めましょう。
+\bkjans{（1）\qty{50}{\ohm}、\qty{0.12}{A}　（2）\qty{12}{\ohm}、\qty{0.50}{A}（\qty{0.30}{A}と\qty{0.20}{A}）}
+\end{jibun}
+
+\label{ph:電-4:ex7}
+\begin{phreidai}[ドライヤーの1か月の電気代]
+\qty{1200}{W}のドライヤーを、毎日15分、30日使いました。電力量は何 kWh ですか。1 kWh あたり31円とすると、電気代はいくらですか。
+\phbamen
+家電の電力量と電気代を見積もる場面です。
+\phmushi
+電力は使っているあいだずっと\qty{1200}{W}とし、使っていないときの電力（待機電力）は無視します。
+\phzu
+$P=\qty{1.2}{kW}$、1日 $\qty{0.25}{h}$、30日。
+\phriyu
+電力量＝電力×時間（⑤、5-12⑥）。kW と h で計算すると kWh で出ます。
+\phtateru
+\[W=Pt,\qquad\text{電気代}=W\times31\]
+\phtoku
+\[W=1.2\times0.25\times30=\qty{9.0}{kWh},\qquad9.0\times31=279\ \text{円}\]
+\phtashikame
+J で書くと $9.0\times3.6\times10^6=\qty{3.2e7}{J}$ です。1日分（\qty{0.3}{kWh}）は約9円です。
+\kotae \qty{9.0}{kWh}、約280円（279円）
+\end{phreidai}
+\begin{jibun}
+\qty{600}{W}の電気ポットを毎日8時間、30日使うと、電力量と電気代はいくらですか（31円/kWh）。
+\bkjans{$0.6\times8\times30=\qty{144}{kWh}$、$144\times31=4464$ 円（約4500円）}
+\end{jibun}
+
+\label{ph:電-4:ex8}
+\begin{phreidai}[ひずみゲージの抵抗の変化]
+抵抗\qty{120}{\ohm}・ゲージ率2.0のひずみゲージを、鋼の部品にはりました。部品のひずみが $500\times10^{-6}$ になると、ゲージの抵抗はどれだけ変わりますか。また、形の変化だけで考えたゲージ率（ポアソン比0.30）はいくらですか。
+\phbamen
+力-9 ⑩のひずみゲージで、ひずみを抵抗の変化に変える場面です。
+\phmushi
+ゲージの温度の変化、接着剤の変形を無視し、ゲージは部品と同じだけのびるとします。
+\phzu
+図\ref{ph:電-4:fig-gauge}。$R=\qty{120}{\ohm}$、$K=2.0$、$\varepsilon=500\times10^{-6}$、$\nu=0.30$。
+\phriyu
+抵抗の変わる割合はゲージ率×ひずみ（⑧）。形だけのゲージ率は $1+2\nu$（⑧）。
+\phtateru
+\[\Delta R=RK\varepsilon,\qquad K_{\text{形}}=1+2\nu\]
+\phtoku
+\[\Delta R=120\times2.0\times500\times10^{-6}=\qty{0.12}{\ohm},\qquad K_{\text{形}}=1+2\times0.30=1.6\]
+\phtashikame
+変化の割合は $0.12\div120=0.1$\,\% で、とても小さな変化です。ゲージ率2.0のうち、1.6が形の変化、残りの0.4が抵抗率の変化による分です。力-9 と同じ\qty{0.12}{\ohm}になりました。
+\kotae \qty{0.12}{\ohm}、形だけのゲージ率1.6
+\end{phreidai}
+\begin{jibun}
+抵抗\qty{350}{\ohm}・ゲージ率2.1のゲージで、ひずみが $1000\times10^{-6}$ のとき、抵抗の変化はいくらですか。
+\bkjans{$350\times2.1\times1000\times10^{-6}\approx\qty{0.74}{\ohm}$}
+\end{jibun}
+
+\label{ph:電-4:ex9}
+\begin{phreidai}[乾電池の端子電圧]
+起電力\qty{1.5}{V}、内部抵抗\qty{0.20}{\ohm}の乾電池に、\qty{2.8}{\ohm}の豆電球をつなぎます。流れる電流と、乾電池の端子電圧を求めましょう。電池の中で熱になる電力はいくらですか。
+\phbamen
+電池の中の抵抗を考えて、回路の電流を求める場面です。
+\phmushi
+豆電球の抵抗の温度変化と、導線の抵抗を無視します。
+\phzu
+図\ref{ph:電-4:fig-naibu}。$\mathcal E=\qty{1.5}{V}$、$r=\qty{0.20}{\ohm}$、$R=\qty{2.8}{\ohm}$。
+\phriyu
+内部抵抗は、電池の中に直列に入った抵抗と考えます（⑨）。電圧則（⑦）で1周すると、$\mathcal E=RI+rI$ です。
+\phtateru
+\[I=\frac{\mathcal E}{R+r},\qquad V=\mathcal E-rI,\qquad P_{\text{中}}=rI^2\]
+\phtoku
+\[I=\frac{1.5}{2.8+0.20}=\qty{0.50}{A},\qquad V=1.5-0.20\times0.50=\qty{1.4}{V}\]
+\[P_{\text{中}}=0.20\times0.50^2=\qty{0.050}{W}\]
+\phtashikame
+豆電球の電圧 $RI=2.8\times0.50=\qty{1.4}{V}$ と、端子電圧が一致します。豆電球で使われる電力は\qty{0.70}{W}で、電池の中で熱になる\qty{0.050}{W}は、その約7\,\% です。
+\kotae \qty{0.50}{A}、\qty{1.4}{V}、\qty{0.050}{W}
+\end{phreidai}
+\begin{jibun}
+同じ乾電池（\qty{1.5}{V}・\qty{0.20}{\ohm}）に\qty{0.40}{\ohm}の抵抗をつなぐと、電流と端子電圧はいくらですか。
+\bkjans{$I=1.5\div0.60=\qty{2.5}{A}$、$V=1.5-0.20\times2.5=\qty{1.0}{V}$}
+\end{jibun}
+
+\label{ph:電-4:ex10}
+\begin{phreidai}[燃料電池の起電力]
+水素と酸素から液体の水を作る燃料電池（\qty{25}{\celsius}・1気圧）で、水素\qty{1}{mol}あたり $\Delta G=\qty{-237.13}{kJ}$ です。電池1個の起電力（理論の値）を求めましょう。電子\qty{1}{mol}の電荷は\qty{96485}{C}です。
+\phbamen
+熱-10 の燃料電池の電圧を、電気の側から求める場面です。
+\phmushi
+電池の中の抵抗や、反応の進みにくさによる電圧の損失を無視します（理論の値）。
+\phzu
+水素\qty{1}{mol}で電子\qty{2}{mol}、電荷 $2\times\num{96485}$\,C。
+\phriyu
+取り出せる電気の仕事はいちばん多くて $-\Delta G$（熱-10）。起電力 $\mathcal E$ の電池が電荷 $q$ を運ぶ仕事は $q\mathcal E$（⑨）。
+\phtateru
+\[q\mathcal E=-\Delta G,\qquad\mathcal E=\frac{-\Delta G}{q}\]
+\phtoku
+\[\mathcal E=\frac{\num{237130}}{2\times\num{96485}}\approx\qty{1.23}{V}\]
+\phtashikame
+単位：J÷C＝V。熱-10 例題10 と同じ\qty{1.23}{V}です。実際の燃料電池は、電流を取り出すと内部抵抗などで電圧が下がり、0.6〜0.8 V くらいで使うことが多いので、何個も直列につないで使います。
+\kotae 約\qty{1.23}{V}
+\end{phreidai}
+\begin{jibun}
+水蒸気ができるとき（$\Delta G=\qty{-228.59}{kJ/mol}$）の燃料電池の起電力を求めましょう。
+\bkjans{$\num{228590}\div(2\times\num{96485})$ で、約\qty{1.18}{V}}
+\end{jibun}
+
+\label{ph:電-4:ex11}
+\begin{phreidai}[K 熱電対の電圧]
+K 熱電対の基準の接点を\qty{0}{\celsius}にして、\qty{300}{\celsius}の炉の中の温度をはかると、電圧は\qty{12.209}{mV}でした。\qty{0}{\celsius}から\qty{300}{\celsius}までの、1 K あたりの平均の電圧を求めましょう。
+\phbamen
+熱-1 の熱電対で、温度の差を電圧に変える場面です。
+\phmushi
+導線の途中の温度、電圧計に流れる電流を無視します。
+\phzu
+図\ref{ph:電-4:fig-netsudentsui}。温度差\qty{300}{K}、電圧\qty{12.209}{mV}。
+\phriyu
+熱電対の電圧は、2つの接点の温度で決まります（⑩）。平均の割合は電圧÷温度差。
+\phtateru
+\[\text{平均}=\frac{\text{電圧}}{\text{温度差}}\]
+\phtoku
+\[\frac{12.209\times10^{-3}}{300}\approx4.07\times10^{-5}\,\text{V/K}=\qty{40.7}{\micro V/K}\]
+\phtashikame
+熱-1 の「数 mV」と合います。とても小さな電圧なので、電子回路で増幅して読みます。電圧と温度は、きっちり比例してはいないので、精密にはかるときは規格の表を使います。
+\kotae 約 $\qty{41}{\micro V/K}$
+\end{phreidai}
+\begin{jibun}
+K 熱電対（平均 $\qty{41}{\micro V/K}$ とする）で、基準の接点を\qty{0}{\celsius}にして\qty{5.0}{mV}が出ました。はかる所の温度は約何 ℃ ですか。
+\bkjans{$5.0\times10^{-3}\div(41\times10^{-6})$ で、約\qty{120}{\celsius}（規格の表では\qty{122}{\celsius}くらい）}
+\end{jibun}
+
+\label{ph:電-4:ex12}
+\begin{phreidai}[延長コードにつなぎすぎる]
+流してよい電流が\qty{15}{A}と書かれた延長コード（\qty{100}{V}）に、\qty{1200}{W}のドライヤーと\qty{800}{W}の電気ストーブを同時につなぎました。コードに流れる電流を求め、使ってよいかを判断しましょう。
+\phbamen
+1本の延長コードに、いくつも器具をつなぐ場面です。
+\phmushi
+コードの抵抗による電圧の下がり（例題3）を無視し、どの器具にも\qty{100}{V}がかかるとします。
+\phzu
+2つの器具は、コードの先で並列につながる。
+\phriyu
+並列の器具の電流は、たし算になります（電流則：⑦）。それぞれの電流は $I=P/V$（⑤）。
+\phtateru
+\[I=\frac{P_1}{V}+\frac{P_2}{V}\]
+\phtoku
+\[I=\frac{1200}{100}+\frac{800}{100}=12+8=\qty{20}{A}\]
+\phtashikame
+\qty{20}{A}は、定格の\qty{15}{A}をこえています。コードの熱 $RI^2$ は、\qty{15}{A}のときの約1.8倍（$(20/15)^2$）になり、コードが熱くなって危険です。同時に使えるのは、合わせて\qty{1500}{W}までです。
+\kotae \qty{20}{A}。定格をこえるので、使ってはいけない
+\end{phreidai}
+\begin{jibun}
+\qty{15}{A}の延長コードに\qty{1200}{W}のドライヤーをつないでいます。あと何 W までの器具を同時につなげますか。
+\bkjans{合わせて\qty{1500}{W}までなので、\qty{300}{W}まで}
+\end{jibun}
+
+\label{ph:電-4:ex13}
+\begin{phreidai}[銅の中の電子がぶつかるまでの時間]
+銅の導電率を $5.8\times10^7$\,S/m（抵抗率 $1.72\times10^{-8}$\,Ω·m）、自由電子の数を1 m$^3$ あたり $8.49\times10^{28}$ 個として、ドルーデのモデルで、電子が原子のゆれなどにぶつかるまでの平均の時間 $\tau$ を求めましょう。電子の質量は $9.11\times10^{-31}$\,kg です。
+\phbamen
+電子のモデルから、目に見えない時間の長さを見積もる場面です。
+\phmushi
+電子の量子力学の性質を無視し、ぶつかることを速さに比例する抵抗の力とみなします。
+\phzu
+図\ref{ph:電-4:fig-drude}。$\sigma=5.8\times10^7$、$n=8.49\times10^{28}$、$e=1.60\times10^{-19}$、$m_{\mathrm e}=9.11\times10^{-31}$。
+\phriyu
+ドルーデのモデルで $\sigma=ne^2\tau/m_{\mathrm e}$（⑪）。これを $\tau$ について解きます。
+\phtateru
+\[\tau=\frac{m_{\mathrm e}\sigma}{ne^2}\]
+\phtoku
+\[\tau=\frac{9.11\times10^{-31}\times5.8\times10^7}{8.49\times10^{28}\times(1.60\times10^{-19})^2}\approx2.4\times10^{-14}\,\text{s}\]
+\phtashikame
+単位：kg×S/m÷(1/m$^3$×C$^2$)。S＝A/V＝C$^2$/(J·s) を使うと s になります。\\
+大きさ：とても短い時間です。そのあいだに電場で流れの向きに進む距離は、原子の大きさよりずっと小さく、電子は、ほとんど同じ場所で、ぶつかりながら少しずつ流れています。
+\kotae 約 $2.4\times10^{-14}$\,s
+\end{phreidai}
+\begin{jibun}
+アルミニウム（抵抗率 $2.65\times10^{-8}$\,Ω·m、自由電子 $1.8\times10^{29}$ 個/m$^3$）で、同じように $\tau$ を求めましょう。
+\bkjans{$\sigma=1/(2.65\times10^{-8})\approx3.8\times10^7$\,S/m。$\tau\approx7.5\times10^{-15}$\,s}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{電流は電池から出て、使われて減る？}
+\bkng{電流は、豆電球で使われるので、豆電球を通ったあとは小さくなる。}
+\bkok{電流は、豆電球の前と後で同じ。使われるのは電荷ではなく、電荷が運ぶエネルギー。}
+電荷は保存するので、分かれ道のない所の電流はどこも同じです（⑥⑦）。豆電球では、電位が下がる分のエネルギーが光と熱になります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{電子は光の速さで流れる？}
+\bkng{スイッチを入れるとすぐ電灯がつくので、電子は光の速さで流れている。}
+\bkok{電子は1秒に1 mm も進まない。すぐ伝わるのは、電子を押す「知らせ」（電場）。}
+導線の中は、はじめから電子でいっぱいです（②）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{並列の合成抵抗}
+\bkng{\qty{10}{\ohm}と\qty{30}{\ohm}の並列は、平均して\qty{20}{\ohm}。}
+\bkok{$\tfrac1{10}+\tfrac1{30}=\tfrac4{30}$ で\qty{7.5}{\ohm}。どちらよりも小さい。}
+並列は通り道がふえるので、流れやすくなります（⑦）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{抵抗が大きいほど熱くなる？}
+\bkng{抵抗が大きいほど、ジュール熱 $RI^2$ が大きくなるので、コンセントにつなぐ電熱線は抵抗を大きくする。}
+\bkok{電圧が同じなら $P=V^2/R$ で、抵抗が小さいほど電力が大きい。}
+何が同じかで、どちらの式を使うかが決まります（⑤）。\qty{1200}{W}のドライヤー（\qty{8.3}{\ohm}）は、\qty{600}{W}のポット（\qty{17}{\ohm}）より抵抗が小さいのです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{電池の電圧はいつも\qty{1.5}{V}？}
+\bkng{乾電池をつないだ回路では、電池の電圧はいつも\qty{1.5}{V}。}
+\bkok{電流を流すと、内部抵抗の分だけ端子電圧が下がる（$V=\mathcal E-rI$）。}
+起電力\qty{1.5}{V}は、電流が0のときの値です（⑨）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{9\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[電流と抵抗の工学]
+\textbf{配線の設計}：電線の太さは、流す電流で決めます。抵抗が小さすぎると電圧の下がりとジュール熱で困り（例題3）、太すぎると重く高価になります。家の配線は、ふつう直径 1.6 mm か 2.0 mm の銅線です。
+
+\textbf{温度をはかる}：測温抵抗体（例題4）、サーミスター、熱電対（例題11）は、どれも電気の量の変化で温度をはかるセンサーです。工場の炉、エンジン、体温計、エアコンに使われています。
+
+\textbf{力をはかる}：ひずみゲージ（例題8）は、橋や飛行機の部品、体重計やはかりの中で、のびを抵抗の変化に変えています。
+
+\textbf{電気を運ぶ・ためる}：超伝導の電線は、熱を出さずに大きな電流を流せるので、MRI の電磁石や、送電の実験に使われています。燃料電池は、自動車や家庭の発電に使われ始めています（例題10）。
+
+\begin{phketa}[電流と抵抗の数の目安]
+\phketaline{家庭の電圧}{\qty{101}{V}の上下\qty{6}{V}（法令で決まった範囲）}
+\phketaline{家電の電流}{LED 電球 約\qty{0.1}{A}、ドライヤー 約\qty{12}{A}}
+\phketaline{銅線（1 mm$^2$・1 m）}{約\qty{0.017}{\ohm}}
+\phketaline{電子の流れの速さ}{1秒に 1 mm 以下}
+\phboxhead{答えが桁で合っているか}
+家庭の器具の電流が\qty{100}{A}をこえたら、どこかで kW と W を取り違えています（家全体でも数十 A）。電線の抵抗が何 Ω にもなったら、mm$^2$ を m$^2$ に直し忘れていないか（$10^{-6}$ 倍）を確かめます。
+\end{phketa}
+\end{phkougaku}
+\phstation{電気回路,電気材料,計測工学,電気設備}{電流密度、導電率、抵抗率、抵抗温度係数、ジュール損、許容電流、電圧降下、起電力、内部抵抗、熱起電力、ゲージ率}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem \qty{100}{V}・\qty{1000}{W}の電気ケトルの（1）電流と抵抗、（2）2分間に出る熱を求めましょう。（3）その熱が全部\qty{0.50}{kg}の水に移ると、水の温度は何 K 上がりますか（比熱 $4.18\times10^3$\,J/(kg·K)）。
+\bkpans{（1）\qty{10}{A}、\qty{10}{\ohm}　（2）$1000\times120=\qty{120}{kJ}$　（3）$\num{120000}\div(4.18\times10^3\times0.50)$ で、約\qty{57}{K}}
+\bkproblem （1）長さ\qty{50}{m}・断面積\qty{1.25}{mm^2}の銅線の抵抗は何 Ω ですか。（2）同じ長さ・同じ抵抗のアルミニウムの線の断面積は何 mm$^2$ ですか（表\ref{ph:電-4:tab-rho}）。
+\bkpans{（1）約\qty{0.69}{\ohm}　（2）$R=\rho l/S$ で $R$ と $l$ が同じなら $S$ は $\rho$ に比例する。$1.25\times2.65\div1.72$ で、約\qty{1.9}{mm^2}}
+\bkproblem \qty{12}{\ohm}と\qty{4.0}{\ohm}の並列に、\qty{6.0}{\ohm}を直列につなぎ、\qty{9.0}{V}の電池（内部抵抗は無視）につなぎます。合成抵抗、全体の電流、\qty{12}{\ohm}と\qty{4.0}{\ohm}に流れる電流を求めましょう。
+\bkpans{並列の部分は\qty{3.0}{\ohm}、合成抵抗\qty{9.0}{\ohm}、全体の電流\qty{1.0}{A}。並列の部分の電圧は\qty{3.0}{V}なので、\qty{12}{\ohm}に\qty{0.25}{A}、\qty{4.0}{\ohm}に\qty{0.75}{A}}
+\bkproblem 起電力\qty{1.5}{V}の電池に\qty{2.4}{\ohm}の抵抗をつなぐと、端子電圧が\qty{1.2}{V}でした。電流と内部抵抗を求めましょう。
+\bkpans{電流 $1.2\div2.4=\qty{0.50}{A}$。内部抵抗 $(1.5-1.2)\div0.50=\qty{0.60}{\ohm}$}
+\bkproblem \qty{20}{\celsius}で\qty{10.0}{\ohm}の銅線のコイルが、使っているうちに\qty{70}{\celsius}になりました。抵抗はいくらですか（\qty{20}{\celsius}を基準にした温度係数を0.00393とする）。
+\bkpans{$10.0\times(1+0.00393\times50)$ で、約\qty{12.0}{\ohm}}
+\bkproblem \qty{10}{W}の LED 電球を、毎日5時間、30日つけました。電力量と電気代（31円/kWh）を求めましょう。
+\bkpans{\qty{1.5}{kWh}、約47円（46.5円）}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 断面積\qty{1.0}{mm^2}のアルミニウムの線（自由電子 $1.8\times10^{29}$ 個/m$^3$）に\qty{10}{A}。（1）電子の流れの速さ、（2）$E=\rho j$ と例題13のじぶんでとこうの $\tau$ から求めた速さ $e\tau E/m_{\mathrm e}$ を求め、比べましょう。
+\bkpans{（1）約\qty{0.35}{mm/s}（同じ電流の銅線の約\qty{0.74}{mm/s}より遅い。自由電子が多いため）　（2）$j=\qty{1.0e7}{A/m^2}$、$E\approx\qty{0.27}{V/m}$。$e\tau E/m_{\mathrm e}\approx\qty{0.35}{mm/s}$ で、（1）と合う（$\tau$ を $\sigma$ と $n$ から求めたので、同じ答えになる）}
+\bkproblem K 熱電対で、基準の接点が室温の\qty{20}{\celsius}のとき、\qty{11.4}{mV}でした。表（基準\qty{0}{\celsius}）で\qty{20}{\celsius}は\qty{0.798}{mV}、\qty{300}{\celsius}は\qty{12.209}{mV}です。はかる所は約何 ℃ ですか。
+\bkpans{基準\qty{0}{\celsius}に直すと $11.4+0.798=\qty{12.198}{mV}$。\qty{300}{\celsius}の\qty{12.209}{mV}にとても近いので、約\qty{300}{\celsius}（0.798 mV を足し忘れると、約\qty{280}{\celsius}と間違える）}
+\bkproblem 金属の線にひずみ $1.0\times10^{-3}$ を与えると、抵抗が0.15\,\% 増えました（抵抗率は一定）。（1）ゲージ率とポアソン比、（2）体積の変わる割合を求めましょう。
+\bkpans{（1）$K=0.0015\div0.0010=1.5$。$K=1+2\nu$ から $\nu=0.25$　（2）長さは $1+\varepsilon$ 倍、断面積は $1-2\nu\varepsilon$ 倍なので、体積は $1+(1-2\nu)\varepsilon=1+0.5\times10^{-3}$ 倍。0.05\,\% 増える}
+\bkproblem 断面積\qty{2.0}{mm^2}の銅線（抵抗率 $1.72\times10^{-8}$\,Ω·m）に\qty{12}{A}が流れています。（1）銅線1 m あたりで、1秒に出るジュール熱を求めましょう。（2）電流密度 $j$ と電場 $E$ を求め、1 m$^3$ あたりの仕事率 $jE$ に体積をかけて、（1）と同じになることを確かめましょう。
+\bkpans{（1）1 m の抵抗は約 $\qty{8.6e-3}{\ohm}$、$RI^2\approx\qty{1.2}{W}$　（2）$j=\qty{6.0e6}{A/m^2}$、$E=\rho j\approx0.10$\,V/m。$jE\approx\qty{6.2e5}{W/m^3}$。体積 $\qty{2.0e-6}{m^3}$ をかけて、約\qty{1.2}{W}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item オームの法則・直列と並列・電力 $P=VI$ で、回路を調べられる。\bkfurref{ph:電-4:sec3}
+\item 抵抗率から抵抗を求め、電子の流れとジュール熱を説明できる。\bkfurref{ph:電-4:sec5}
+\item 抵抗の温度変化、電池の内部抵抗、キルヒホッフの法則を使える。\bkfurref{ph:電-4:sec7}
+\item $\vec j=\sigma\vec E$・連続の式から、オームの法則と電流則を導ける。\bkfurref{ph:電-4:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{ドライヤーが熱くなるのは、電子が原子にぶつかってエネルギーを渡していたからなんだ。電子は、思っていたよりずっとゆっくり流れているんだね！}

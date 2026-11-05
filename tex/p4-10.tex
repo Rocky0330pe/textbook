@@ -1,0 +1,1022 @@
+%% 電-10 向きが変わる電気：交流回路とフェーザ（第26回編集委員会 物理第4巻：組 電W3）。★2〜4、3段にしない。
+%% 修4-4（第27回の確認の直し）：E4-1〜27・G-1〜G-14 の直しは tools/FIX-phys4-review-4.md（G-4：位相のずれ φ のカードを足し、Z のカードを短くした。G-2：章末問題の差しかえ。例題13 を足した）。検算は checks/物理第4巻/確認/fix44_p4_09_11.py。
+%% 記号（計画書 C-1・Y-3・Y-8・B の電-10。この章の中だけの分け方）：
+%%   電源の電圧は瞬時値 e・実効値 E、部品の電圧の瞬時値 v・実効値 V、電流の瞬時値 i・実効値 I（Y-3。数学 6-15「物理シリーズでは電源の電圧を小文字の e」）。
+%%   ③から、電圧・電流を複素数（フェーザ）で表し、同じ大文字 E・V・I で書く。その大きさ |V|・|I| が実効値、角が位相。
+%%   計画書 B の「\dot V は使わず、複素数の V・I と書く案」のとおり。\dot V は専門書の囲みで読み方だけ。数学 4-9 の V_e は「思い出そう」で一言。
+%%   山の値（振幅）は V_0・I_0（数学 4-9・5-15 と同じ）。周波数 f、角周波数 ω＝2πf、周期 T（この章では周期の T だけ。トルクは出ない）。
+%%   インピーダンス Z＝R＋jX、リアクタンス X（X_L＝ωL、X_C＝1/(ωC)）、アドミタンス Y＝1/Z（サセプタンス B は使わない：磁場とぶつける。C-1）。
+%%   位相のずれ φ（電位はこの章で使わない）、Q 値 Q（電荷は小文字 q。この章では電荷はほとんど使わない）、共振の角周波数 ω_0・共振周波数 f_0、遮断周波数 f_c。
+%%   虚数単位 j（数学 6-8 と同じ。電流 i とぶつけないため）。
+%% 公式の持ち主（計画書 A）：A52（実効値・平均電力）・A53（リアクタンス・位相のずれ）・A54（RLC のインピーダンス）・A55（共振周波数）・A77（フェーザ・インピーダンス・
+%%   アドミタンス・Q 値・半値幅）はこの章。部品のきまり q＝Cv は電-3 ①、v＝L di/dt は電-8 ⑥、電圧則・電流則は電-4 ⑦、RLC の式と LC の電気振動は電-9 ②⑦、
+%%   力率と交流の電力は電-11 ③、周波数（東 50 Hz・西 60 Hz）の由来は電-16 ③。計算は数学 4-9⑧・5-15⑨・6-10⑨⑩・6-13⑩⑪・9-8⑧⑨・9-2⑪ を指す（Y-9・W-6）。
+%% ほかの巻との約束（計画書 A-6）：P27（波-2 ⑤「交流の回路の Q は電-10」→ ⑦・例題6。Q＝(1/R)√(L/C)、ζ＝0.1 で Q＝5）、
+%%   W-9・P45（第3巻 波-1・2 の RLC：電気の法則から ④⑤⑦ で回収。相似の表は電-9 ⑨）、P21・P41（インピーダンス Z の記号カード）。
+%%   Y-8：①で「周波数は、物理シリーズの『波動』の振動数と同じ量」と一言。
+%% 数学の本との約束（計画書 C-6-2）：4-9⑧・5-15⑨（実効値 V_e、100 V の山 141 V：②）、6-8:857・6-10⑨⑩（90°のずれ、フェーザ、微分は jω：③④）、
+%%   6-13⑪・:911（RLC 10 mH・1 μF・20 Ω・1592 Hz・50 mA・1000 Hz で 10 mA・2000 Hz で 20 mA、ラジオ 200 μH・1 MHz・127 pF、同調：⑦・例題6・7）。
+%% 数値はすべて Python で確かめた：checks/物理第4巻/電-10/calc_p4_10.py（出力 calc_p4_10_out.txt）。
+%% 出典（11月5日、組 電W3。書くときに確かめた）：
+%%   ・家庭の電圧：電気事業法施行規則 第38条（標準電圧 100 V は「101 V の上下 6 V を超えない値」、200 V は「202 V の上下 20 V」）。
+%%     e-Gov 法令 API https://laws.e-gov.go.jp/api/1/lawdata/407M50000400077 を curl で読んで確かめた。〔確〕
+%%   ・中波（AM）放送の周波数 526.5〜1606.5 kHz（放送法第2条・電波法施行規則第2条）：総務省 関東総合通信局「ラジオ放送の概要」
+%%     https://www.soumu.go.jp/soutsu/kanto/bc/radio/gaiyo/index.html を curl で読んで確かめた。〔確〕
+%%     局の周波数が 9 kHz おき（531〜1602 kHz）であることは数学 6-13⑪の書き方にそろえた（9 の倍数：594＝66×9、954＝106×9）。局の名前は書かない。
+%%   ・1/f ゆらぎ（まだわかっていないこと）：E. Milotti, "1/f noise: a pedagogical review", arXiv:physics/0204033（2002）。
+%%     まとめの節で「本当の共通のしくみはなく、多くはそれぞれのモデルで説明されている、というのが著者の見方」と書いている。共通の深い理由を探す研究があったことも
+%%     同じ総説の1節。Dutta & Horn, Rev. Mod. Phys. 53, 497 (1981) は DOI の登録だけ（計画書 D）。本文は「意見が分かれている」と書いた。〔確〕
+%%   ・東 50 Hz・西 60 Hz の境（おおむね富士川・糸魚川）：日本原子力研究開発機構 ATOMICA の解説（dic_detail_2498）、電気学会の資料（renkei.iee.jp）、
+%%     日立エナジーの飛騨信濃周波数変換設備の記事。WebSearch の抜粋で3つが合う。本文は「おおむね」と書き、由来は電-16 にゆずった。〔確〕
+%%   ・高調波の決まり：JIS C 61000-3-2（高調波電流発生限度値、1相あたり入力電流 20 A 以下の機器。現行 2019 年版）。JEITA の実施要領
+%%     （home.jeita.or.jp/anzen/taisaku/pdf/07_02.pdf）の抜粋と、JSA の正誤表の題で確かめた。本文は「決まりがあります」とだけ書いた。〔確〕
+%%   ・IH 調理器の周波数（20.05〜100 kHz）は電-8 の持ち主。この章では使わない。
+%%   〔要確認〕のまま：なし（Wikipedia は出典にしていない）。
+\makeatletter
+\tikzset{sxk lab/.style={font=\sffamily\footnotesize, inner sep=1pt},
+  sxk w/.style={draw=bkInk, line width=0.8pt},
+  sxk arr/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1pt, bkRed!85!black},
+  sxk vec/.style={-{Stealth[length=4.5pt, width=4pt]}, line width=1.5pt},
+  sxk dim/.style={{Stealth[length=3pt]}-{Stealth[length=3pt]}, line width=0.5pt, bkGray},
+  pics/sxk res/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (-4,-1.4) rectangle (4,1.4);}},
+  pics/sxk resv/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (-1.4,-4) rectangle (1.4,4);}},
+  % コイル（横の線の途中）
+  pics/sxk coil/.style={code={\fill[white] (-5,-0.3) rectangle (5,2.8);
+     \draw[bkInk, line width=0.8pt] (-5,0) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25);}},
+  % コイル（たての線の途中）
+  pics/sxk coilv/.style={code={\fill[white] (-2.8,-5) rectangle (0.3,5);
+     \draw[bkInk, line width=0.8pt] (0,5) arc (90:270:1.25) arc (90:270:1.25) arc (90:270:1.25) arc (90:270:1.25);}},
+  % コンデンサー（横の線の途中）
+  pics/sxk cap/.style={code={\fill[white] (-1,-4.6) rectangle (1,4.6);
+     \draw[bkInk, line width=1.6pt] (-1,-3.6) -- (-1,3.6) (1,-3.6) -- (1,3.6);}},
+  % コンデンサー（たての線の途中）
+  pics/sxk capv/.style={code={\fill[white] (-4.6,-1) rectangle (4.6,1);
+     \draw[bkInk, line width=1.6pt] (-3.6,1) -- (3.6,1) (-3.6,-1) -- (3.6,-1);}},
+  % 可変コンデンサー（たて）
+  pics/sxk varcap/.style={code={\fill[white] (-4.6,-1) rectangle (4.6,1);
+     \draw[bkInk, line width=1.6pt] (-3.6,1) -- (3.6,1) (-3.6,-1) -- (3.6,-1);
+     \draw[bkInk, line width=0.7pt, -{Stealth[length=3pt]}] (-4.5,-4) -- (4.5,4);}},
+  % 交流電源（たての線の途中）
+  pics/sxk ac/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (3.6);
+     \draw[bkInk, line width=0.7pt, domain=-2.5:2.5, samples=25] plot (\x,{1.3*sin(\x*72)});}},
+  pics/sxk meter/.style={code={\filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,0) circle (3.2);
+     \node[font=\sffamily\bfseries\footnotesize, inner sep=0pt] at (0,0) {#1};}}}
+\newcommand\sxkdot[1]{\fill[bkInk] #1 circle (0.85);}
+% フェーザの目もり（原点のまわりの、うすい十字）
+\newcommand\sxkaxes[4]{\draw[bkGray!70, line width=0.5pt, -{Stealth[length=2.6pt]}] (#1,0) -- (#2,0);
+  \draw[bkGray!70, line width=0.5pt, -{Stealth[length=2.6pt]}] (0,#3) -- (0,#4);}
+\makeatother
+
+\phchapter{10}{向きが変わる電気：\\交流回路とフェーザ}{ラジオは、たくさんの電波からどうやって1つの局を選ぶ？}{\bklevelrange{2}{4}}{向きが変わる電気：交流回路とフェーザ}
+\bkmichishirube{4-9,5-15,6-9,6-10,6-13,9-2,9-8,電-3,電-5,電-8,電-9,波-2}{電-11,電-12,電-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 家の交流の周波数と実効値の意味を説明し、\qty{100}{V}の交流の山の電圧を求められる。
+\item \bklevel{3}\enspace コイル・コンデンサーのリアクタンスと位相のずれ、RLC 直列回路のインピーダンスと共振周波数を求められる。
+\item \bklevel{4}\enspace 電圧・電流を複素数（フェーザ）で表して交流回路を解き、Q 値・フィルター・交流ブリッジを計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{実効値 $V=\dfrac{V_0}{\sqrt2}$、抵抗の平均の電力 $P=VI$}{高校物理}{ph:電-10:A52}
+\phk{リアクタンス $\omega L$・$\dfrac{1}{\omega C}$ と、電圧と電流の90°のずれ}{高校物理}{ph:電-10:A53}
+\phk{RLC 直列回路のインピーダンス $Z=\sqrt{R^2+\Bigl(\omega L-\dfrac{1}{\omega C}\Bigr)^2}$}{高校物理}{ph:電-10:A54}
+\phk{共振周波数 $f_0=\dfrac{1}{2\pi\sqrt{LC}}$}{高校物理}{ph:電-10:A55}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+空の中には、たくさんの放送局の電波が、同時に飛びかっています。ラジオのダイヤルを回すと、その中から1つの局の声だけが聞こえてきます。ラジオは、どうやって1つの局を選び出しているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.78mm, y=0.78mm]
+  \filldraw[fill=bkOrange!25, draw=bkInk, line width=0.7pt, rounded corners=2pt] (0,0) rectangle (40,22);
+  \draw[bkInk, line width=0.8pt] (34,22) -- (44,40);
+  \fill[bkInk] (44,40) circle (0.8);
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (4,4) rectangle (20,18);
+  \foreach \yy in {6,8,...,16} {\draw[bkGray, line width=0.4pt] (5,\yy) -- (19,\yy);}
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.6pt] (30,11) circle (5);
+  \draw[bkInk, line width=0.8pt] (30,11) -- (33,14.5);
+  \node[sxk lab, anchor=north] at (30,5.4) {ダイヤル};
+  \foreach \rr/\cc in {4/bkBlue, 7/bkRed, 10/bkGreen!60!black} {\draw[\cc, line width=0.7pt] ([shift={(-30:\rr)}]44,40) arc (-30:30:\rr);}
+  \node[sxk lab, anchor=west] at (55,40) {電波};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 家のコンセントの電気は、1秒に50回または60回、行ったり来たりを繰り返す\textbf{交流}です（向きが入れかわるのは、1秒に100回または120回）。ラジオの電波も、1秒に何十万回も繰り返す交流の仲間です。この章では、向きが変わる電気が、抵抗・コイル・コンデンサーを通るときに何が起きるかを調べます。交流の電圧と電流を「回る矢印」として表し、複素数で計算すると（6-10）、直流の回路（電-5）とほとんど同じ方法で解けるようになります。そしてラジオの「同調」のしくみ（共振）を、回路の法則から説明します。
+
+%% ---------------- やってみよう・思い出そう ----------------
+\begin{yattemiyou}[ラジオのダイヤルで、局を数えよう]
+\textbf{用意するもの}\par
+乾電池で動く AM ラジオ（ダイヤルに周波数の目もりがあるもの。ポケットラジオでよい）、メモ
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item AM（中波）に切りかえ、ダイヤルを低い周波数のはしからゆっくり回す。
+\item 放送がはっきり聞こえた所の周波数（kHz）を、すべてメモする。
+\item となりの局と局の周波数の差を計算する。少しずれた所で、声がどう変わるかも聞く。
+\item ラジオの向きを変えて、聞こえ方が変わるかを調べる。
+\end{enumerate}
+\textbf{約束}：電池で動くラジオを使い、コンセントにはつながない。
+\end{yattemiyou}
+
+\noindent 日本の AM 放送の局の周波数は、9\,kHz の倍数（531〜\qty{1602}{kHz}）に決まっています。メモした周波数の差は、9\,kHz の倍数になっているはずです。ダイヤルを少しずらすと声が小さくなり、となりの局がまざって聞こえることもあります。「どれだけ鋭く1つの局を選べるか」が、⑦の Q 値です。
+
+\begin{omoidasou}
+\bkrecall{4-9}{交流の電力と $\sin^2$ の平均（⑧）。山の高さ $V_0=\sqrt2\,V_{\mathrm e}$。$V_{\mathrm e}$ が\textbf{実効値}で、\qty{100}{V}の交流の山は約\qty{141}{V}。電流がおくれると、平均の電力は $V_{\mathrm e}I_{\mathrm e}\times\cos$（おくれの角）。この巻では、実効値を添字なしの大文字 $V$・$I$ で書きます。}
+\bkrecall{6-10}{交流は回る矢印の影（⑨：フェーザ）。$e^{j\omega t}$ を微分すると $j\omega$ がかかる。微分は「$\omega$ 倍して90°進める」（⑩）。}
+\bkrecall{6-13}{RLC 回路の共振（⑪）。$\omega L=1/(\omega C)$ のとき電流がいちばん大きい。\qty{200}{\micro H}のコイルで\qty{1}{MHz}を選ぶには\qty{127}{pF}。}
+\bkrecall{電-3}{コンデンサーにたまる電荷 $q=Cv$（①）。}
+\bkrecall{電-8}{コイルの電圧 $v=L\,\dd i/\dd t$（⑥）。}
+\bkrecall{波-2}{共振の鋭さ Q 値（⑤）。$Q\approx1/(2\zeta)$。電気の回路では $Q=\dfrac{1}{R}\sqrt{\dfrac{L}{C}}$。}
+\end{omoidasou}
+
+\noindent\textbf{この章の書き方}\par\nobreak
+時間で変わる値は小文字、実効値は大文字で書きます。電源の電圧は瞬時値 $e$・実効値 $E$、部品（抵抗・コイル・コンデンサー）の電圧は瞬時値 $v$・実効値 $V$、電流は瞬時値 $i$・実効値 $I$ です。山の高さ（振幅）は $V_0$ のように添字0をつけます。③からは、同じ大文字 $E$・$V$・$I$ で、大きさと位相をあわせもつ複素数（フェーザ）を表し、その大きさ $\lvert V\rvert$ が実効値です。虚数単位は、電流の $i$ と間違えないよう、6-8 と同じ $j$ を使います。交流の電源は、丸の中に波をかいた記号、コイルは輪を並べた記号で表します（図\ref{ph:電-10:fig-kigou}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxk w] (0,-6) -- (0,6); \path (0,0) pic {sxk ac}; \node[sxk lab, anchor=north] at (0,-8) {交流電源 $e$};
+  \draw[sxk w] (22,0) -- (40,0); \path (31,0) pic {sxk res}; \node[sxk lab, anchor=north] at (31,-8) {抵抗 $R$};
+  \draw[sxk w] (52,0) -- (72,0); \path (62,0) pic {sxk coil}; \node[sxk lab, anchor=north] at (62,-8) {コイル $L$};
+  \draw[sxk w] (84,0) -- (100,0); \path (92,0) pic {sxk cap}; \node[sxk lab, anchor=north] at (92,-8) {コンデンサー $C$};
+  \draw[sxk w] (118,-6) -- (118,6); \path (118,0) pic {sxk varcap}; \node[sxk lab, anchor=north, align=center] at (118,-8) {可変\\コンデンサー};
+\end{tikzpicture}
+\bkfigcaption{この章の回路の記号。可変コンデンサーは、ダイヤルで静電容量を変えられるコンデンサー。}
+\label{ph:電-10:fig-kigou}
+\end{bkfigure}
+
+%% ---------------- 物理の道具 ----------------
+\Needspace{16\baselineskip}
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{交流とは：向きが入れかわる電気}
+
+\leavevmode\label{ph:電-10:sec1}乾電池の電気は、いつも同じ向きに流れる\textbf{直流}です。発電所の発電機は、磁石とコイルの一方を回して電気を作るので、生まれる電圧は自然に $\sin$ の形で、＋と−を行ったり来たりします（電-8 ⑤）。このように、向きと大きさが周期的に変わる電気を\textbf{交流}といいます。\bkidx{こうりゅう}{交流}家のコンセントの電圧は
+\pheq{e=E_0\sin\omega t=E_0\sin2\pi ft}{V ＝ V}
+\label{ph:電-10:sec1eq}の形をしています。$E_0$ は山の高さ（振幅）、$f$ は1秒に繰り返す回数で\textbf{周波数}（単位 Hz）、$\omega=2\pi f$ は\textbf{角周波数}（単位 rad/s）です。\bkidx{しゅうはすう}{周波数}1回の繰り返しにかかる時間（周期）は $T=1/f$ です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 東日本（おおむね静岡県の富士川・新潟県の糸魚川より東）は\qty{50}{Hz}、西日本は\qty{60}{Hz}。\qty{50}{Hz}なら周期は\qty{20}{ms}、角周波数は約\qty{314}{rad/s}。
+\item 「\qty{100}{V}」は②の実効値で、法令では「\qty{101}{V}の上下\qty{6}{V}をこえない」ように保つと決められています。
+\end{itemize}
+東と西で周波数が違うわけは、電-16 で学びます。
+
+\textbf{周波数は、物理シリーズの『波動』で「振動数」とよんだ量と同じものです}。どちらも1秒に繰り返す回数で、単位も Hz です。電気の世界では「周波数」とよぶならわしなので、この巻では「周波数」と書きます。角周波数 $\omega$ も、『波動』の角振動数と同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=108mm, height=54mm, xmin=0, xmax=42, ymin=-160, ymax=175, xtick={0,10,20,30,40}, ytick={-141,-100,0,100,141}, xlabel={時刻 $t$（ms）}, ylabel={電圧 $e$（V）}, every axis x label/.style={at={(axis description cs:0.5,-0.14)}, anchor=north, font=\sffamily\small}]
+  \draw[bkGray, line width=0.5pt] (axis cs:0,0) -- (axis cs:42,0);
+  \addplot[bkBlue!80!black, line width=1.4pt, domain=0:40, samples=200] {141.4*sin(360*x/20)};
+  \addplot[bkOrange!85!black, line width=0.8pt, dashed, domain=0:40] {100};
+  \addplot[bkOrange!85!black, line width=0.8pt, dashed, domain=0:40] {-100};
+  \draw[sxk dim] (axis cs:5,155) -- (axis cs:25,155);
+  \node[sxk lab, anchor=south] at (axis cs:15,157) {周期 $T=\qty{20}{ms}$};
+  \node[sxk lab, anchor=west] at (axis cs:30.5,62) {実効値 \qty{100}{V}（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{東日本の家のコンセントの電圧（\qty{50}{Hz}、実効値\qty{100}{V}）。山は約\qty{141}{V}で、\qty{20}{ms}ごとに繰り返す。1秒に100回、電圧が0になる。}
+\label{ph:電-10:fig-kouryu}
+\end{bkfigure}
+
+\begin{phmijika}[交流が使われるわけ]
+交流は、変圧器（電-12）でかんたんに電圧を上げ下げできます。発電所では高い電圧にして遠くへ送り（電線の熱の損失が小さくなる：電-11）、家の近くで\qty{100}{V}・\qty{200}{V}に下げます。発電機が回ると自然に交流が生まれることも、交流が使われる理由の1つです。一方、スマホやパソコンの中は直流で動くので、充電器（ACアダプター）で交流を直流に変えています（電-16）。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{実効値：交流の「はたらき」を直流で言う}
+
+\leavevmode\label{ph:電-10:sec2}交流の電圧は、0から山まで、たえず変わっています。では、「この交流は何 V か」と言うとき、どの値を使えばよいでしょう。電気の「はたらき」は電力（1秒あたりのエネルギー）なので、\textbf{同じ抵抗につないだとき、平均して同じ電力を出す直流の電圧}で、交流の大きさを表すことにします。
+
+抵抗 $R$ に $e=E_0\sin\omega t$ をかけると、電流は $i=e/R$ で、電圧と同じ形でゆれます。電力は $p=ei=\dfrac{E_0^2}{R}\sin^2\omega t$ です。$\sin^2$ の1周期の平均は $\tfrac12$ なので（4-9⑧・5-15⑨）、平均の電力は
+\[ P=\frac{1}{T}\int_0^T ei\,\dd t=\frac{E_0^2}{R}\times\frac12=\frac{(E_0/\sqrt2)^2}{R} \]
+です。直流の電圧 $E$ の電力 $E^2/R$ と同じになるのは、$E=E_0/\sqrt2$ のときです。この $E$ を\textbf{実効値}といいます。\bkidx{じっこうち}{実効値}電流も同じで、
+\pheq{V=\frac{V_0}{\sqrt2},\qquad I=\frac{I_0}{\sqrt2},\qquad P=VI=RI^2}{V ＝ V、W ＝ V × A}
+\label{ph:電-10:A52}です。抵抗につないだ交流の平均の電力は、実効値を使えば、直流と同じ $P=VI$ で計算できます。4-9⑧で $V_{\mathrm e}$ と書いた実効値を、この巻では添字なしの $V$ と書きます。\qty{100}{V}の山は $\sqrt2\times100\approx\qty{141}{V}$ です（\bkreidairef{1}）。
+
+\begin{phyomi}[$V=\dfrac{V_0}{\sqrt2}$]
+「実効値は、山の高さの約0.707倍」。$\sqrt2$ が出てくるのは、電力が電圧の\textbf{2乗}で決まり、$\sin^2$ の平均が $\tfrac12$ だからです。2乗の平均の平方根なので、英語では root mean square（rms）とよび、テスターにも「RMS」と書いてあることがあります。
+\end{phyomi}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=104mm, height=42mm, xmin=0, xmax=21, ymin=0, ymax=2700, xtick={0,5,10,15,20}, ytick={0,1200,2400}, xlabel={時刻 $t$（ms）}, ylabel={電力 $p$（W）}, every axis x label/.style={at={(axis description cs:0.5,-0.22)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkBlue!80!black, line width=1.4pt, domain=0:20, samples=160, fill=bkBlue!10] {2400*sin(360*x/20)^2} \closedcycle;
+  \addplot[bkOrange!85!black, line width=1.2pt, dashed, domain=0:20] {1200};
+  \node[sxk lab, anchor=south] at (axis cs:10,2430) {平均 \qty{1200}{W}（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\qty{1200}{W}のドライヤー（抵抗）の電力の時間変化（\qty{50}{Hz}）。電力は0と\qty{2400}{W}の間を1秒に100回ゆれ、平均すると\qty{1200}{W}。山の上の部分を谷に移すと、ちょうど平らになる。}
+\label{ph:電-10:fig-p}
+\end{bkfigure}
+
+\Needspace{16\baselineskip}
+\begin{phflow}
+\phflowrow{$P=\dfrac{1}{T}\displaystyle\int_0^T ei\,\dd t$}{抵抗 $R$\\正弦波}{$P=\dfrac{E_0^{\,2}}{2R}$}
+\phflowrow{$P=\dfrac{E_0^{\,2}}{2R}$}{同じ電力の\\直流 $E$ と比べる}{$E=\dfrac{E_0}{\sqrt2}$\\（実効値）}
+\end{phflow}
+
+\begin{phbaisuru}{山の高さ $V_0$}
+実効値も2倍、抵抗の電力は4倍です。周波数を2倍にしても、山の高さが同じなら実効値は変わりません（$\sin^2$ の平均は、速くゆれても $\tfrac12$）。
+\end{phbaisuru}
+
+%% ---------------------------------------------------------------
+\bksubsection{3}{フェーザ：交流を回る矢印と複素数で表す}
+
+\leavevmode\label{ph:電-10:sec3}6-10⑨で、交流は「回る矢印の影」として見られることを学びました。電気の本では、次のように決めます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 長さが\textbf{実効値} $\lvert V\rvert$、角が $\theta$ の矢印を、複素数 $V=\lvert V\rvert e^{j\theta}$ で表す。
+\item この矢印を $\sqrt2$ 倍し、角周波数 $\omega$ で左回りに回す。
+\item その横の影（実部）が、時間で変わる電圧になる。
+\end{enumerate}
+\pheq{v=\sqrt2\,\lvert V\rvert\cos(\omega t+\theta)=\mathrm{Re}\bigl[\sqrt2\,V e^{j\omega t}\bigr]}{V ＝ V}
+\label{ph:電-10:phasor}この複素数 $V$ を、電圧の\textbf{フェーザ}といいます。\bkidx{ふぇーざ}{フェーザ}「回り始める前の矢印」なので、時間 $t$ は入っていません。①の $\sin\omega t$ は $\cos(\omega t-90°)$ と同じなので、$\sin$ で書いても、時刻のはかり始めを $\tfrac14$ 周期ずらしただけです。この巻では、6-13 と同じく横の影（$\cos$）を使います。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \sxkaxes{-20}{22}{-20}{22}
+    \draw[bkGray!60, line width=0.5pt, dashed] (0,0) circle (16);
+    \draw[sxk vec, bkBlue!80!black] (0,0) -- (55:16);
+    \draw[bkInk, line width=0.5pt] (5,0) arc (0:55:5);
+    \node[sxk lab, anchor=west] at (17.2,3.4) {角 $\omega t+\theta$};
+    \draw[bkBlue!80!black, line width=0.6pt, densely dotted] (55:16) -- ({16*cos(55)},0);
+    \fill[bkRed] ({16*cos(55)},0) circle (1);
+    \node[sxk lab, anchor=north, text=bkRed!80!black] at ({16*cos(55)},-1.4) {影 $v$};
+    \draw[-{Stealth[length=3pt]}, bkGreen!55!black, line width=0.7pt] (50:19) arc (50:85:19);
+    \node[sxk lab, anchor=south west] at (2,19.5) {左回り $\omega$};
+    \node[sxk lab, anchor=north] at (0,-21) {長さ $\sqrt2\lvert V\rvert$ の矢印};
+  \end{scope}
+  \begin{scope}[xshift=44mm]
+    \draw[bkGray!70, line width=0.5pt, -{Stealth[length=2.6pt]}] (0,0) -- (72,0) node[sxk lab, anchor=west, text=bkInk] {$t$};
+    \draw[bkGray!70, line width=0.5pt] (0,-18) -- (0,18);
+    \draw[bkBlue!80!black, line width=1.3pt, domain=0:68, samples=120] plot (\x, {16*cos(5.3*\x+55)});
+    \node[sxk lab, anchor=east] at (-1,16) {$\sqrt2\lvert V\rvert$};
+    \draw[bkGray, line width=0.4pt, dashed] (0,16) -- (68,16);
+    \node[sxk lab, anchor=north] at (34,-19) {影の動き：$v=\sqrt2\lvert V\rvert\cos(\omega t+\theta)$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{フェーザ。長さ $\sqrt2\lvert V\rvert$ の矢印が角周波数 $\omega$ で回ると、横の影が交流の電圧になる。止めた矢印（$t=0$）を、長さ $\lvert V\rvert$ にちぢめたものが、フェーザ $V$。}
+\label{ph:電-10:fig-phasor}
+\end{bkfigure}
+
+\noindent\textbf{なぜ、わざわざ複素数にするのか}\par\nobreak
+同じ $\omega$ の交流は、同じ速さで回る矢印です。だから、\textbf{交流のたし算は、矢印（複素数）のたし算}でできます（6-10⑨）。たとえば、山の位置が90°ずれた実効値\qty{60}{V}と\qty{80}{V}の電圧をたすと、$60+80j$ の大きさ $\sqrt{60^2+80^2}=\qty{100}{V}$ です。$60+80=140$ ではありません。さらに、\textbf{微分は $j\omega$ をかけるだけ}になります（6-10⑩）。コイルやコンデンサーのきまりにある微分が、かけ算1回におきかわるのです。これが、④からの計算を、直流の回路とほとんど同じにしてくれます。
+
+\begin{seikaku}
+6-10⑨では、矢印の長さを山の高さ（振幅）にし、たての影（$\sin$）を使いました。6-13 では、振幅の矢印と横の影（$\cos$）を使いました。電気の本では、電力の計算（⑤・電-11）が楽になるように、矢印の長さを実効値にします。どれを使っても、矢印のたし算・かけ算のきまりは同じで、最後に $\sqrt2$ 倍するかどうかが違うだけです。1つの計算の中では、どれか1つに決めて使います。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{抵抗・コイル・コンデンサー：リアクタンスと位相のずれ}
+
+\leavevmode\label{ph:電-10:sec4}部品1つに交流の電圧をかけたとき、流れる電流をフェーザで求めます。使うのは、それぞれの部品の「電圧と電流のきまり」です。
+
+\noindent\textbf{抵抗}\par\nobreak
+$v=Ri$（電-4 ③）。時間によらないので、フェーザでもそのまま
+\[ V=RI \]
+です。電圧と電流の矢印は同じ向きで、山は同時に来ます（位相がそろう）。
+
+\noindent\textbf{コイル}\par\nobreak
+$v=L\,\dfrac{\dd i}{\dd t}$（電-8 ⑥）。電流が増えると、それをさまたげる向きに電圧が生まれます（電磁誘導）。微分は $j\omega$ をかけることなので（6-10⑩）
+\[ V=j\omega L\,I \]
+です。$j$ をかけると矢印が90°左へ回るので、\textbf{コイルの電圧は電流より90°進み}、言いかえると、\textbf{電流は電圧より90°おくれます}。大きさの比 $\lvert V\rvert/\lvert I\rvert=\omega L$ を、コイルの\textbf{誘導リアクタンス} $X_L$ といいます。
+
+\noindent\textbf{コンデンサー}\par\nobreak
+$q=Cv$（電-3 ①）、電流はたまる電荷の増える速さ $i=\dfrac{\dd q}{\dd t}=C\,\dfrac{\dd v}{\dd t}$ です。フェーザでは $I=j\omega C\,V$、つまり
+\[ V=\frac{1}{j\omega C}\,I=-\frac{j}{\omega C}\,I \]
+です。\textbf{コンデンサーの電流は電圧より90°進みます}（6-8・6-10⑩）。大きさの比 $1/(\omega C)$ を、\textbf{容量リアクタンス} $X_C$ といいます。
+
+\pheq{X_L=\omega L=2\pi fL,\qquad X_C=\frac{1}{\omega C}=\frac{1}{2\pi fC}}{Ω ＝ 1/s × H ＝ 1 ÷ (1/s × F)}
+\label{ph:電-10:A53}リアクタンス（単位 Ω）は、交流に対する「流れにくさ」です。\bkidx{りあくたんす}{リアクタンス}抵抗と違うのは、周波数で変わることと、電流と電圧の山が90°ずれることです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.95mm, y=1mm]
+  \foreach \xs/\ttl/\ang/\tx in {0/{抵抗：\\電流と電圧がそろう}/0/{$V=RI$}, 44/{コイル：\\電流が90°おくれる}/-90/{$V=j\omega LI$}, 88/{コンデンサー：\\電流が90°進む}/90/{$V=I/(j\omega C)$}} {%
+  \begin{scope}[xshift=\xs mm]
+    \node[sxk lab, font=\sffamily\footnotesize\bfseries, text width=40mm, align=center] at (18,32) {\ttl};
+    \begin{scope}[shift={(12,10)}]
+      \sxkaxes{-6}{22}{-14}{14}
+      \draw[sxk vec, bkBlue!80!black] (0,0) -- (16,0);
+      \ifnum\ang=0 \draw[sxk vec, bkOrange!85!black, dashed] (0,-3) -- (12,-3); \else \draw[sxk vec, bkOrange!85!black, dashed] (0,0) -- (\ang:11); \fi
+    \end{scope}
+    \node[sxk lab, anchor=north] at (18,-6) {\tx};
+  \end{scope}}
+  \node[sxk lab, anchor=west, text=bkBlue!70!black] at (0,-12) {実線の矢印：電圧 $V$};
+  \node[sxk lab, anchor=west, text=bkOrange!70!black] at (44,-12) {破線の矢印：電流 $I$};
+\end{tikzpicture}
+\bkfigcaption{電圧を右向き（角0）にそろえたときの、電流のフェーザ。抵抗は同じ向き、コイルは90°おくれ（右回りに90°）、コンデンサーは90°進む（左回りに90°）。}
+\label{ph:電-10:fig-rlc3}
+\end{bkfigure}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, xmode=log, ymode=log, axis x line*=bottom, axis y line*=left, width=104mm, height=54mm, xmin=10, xmax=100000, ymin=0.5, ymax=20000, xtick={10,100,1000,10000,100000}, xticklabels={10,100,1000,\num{10000},\num{100000}}, ytick={1,10,100,1000,10000}, yticklabels={1,10,100,1000,\num{10000}}, xlabel={周波数 $f$（Hz）}, ylabel={リアクタンス（$\Omega$）}, every axis x label/.style={at={(axis description cs:0.5,-0.16)}, anchor=north, font=\sffamily\small}, grid=major]
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=10:100000, samples=60] {2*pi*x*0.01};
+  \addplot[bkOrange!85!black, line width=1.5pt, dashed, domain=10:100000, samples=60] {1/(2*pi*x*1e-6)};
+  \fill[bkRed] (axis cs:1592,100) circle (2pt);
+  \node[sxk lab, anchor=west] at (axis cs:2700,100) {\qty{1592}{Hz}・\qty{100}{\ohm}};
+  \node[sxk lab, anchor=west] at (axis cs:2500,6000) {コイル $X_L$（実線）};
+  \node[sxk lab, anchor=west] at (axis cs:12,110) {コンデンサー $X_C$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\qty{10}{mH}のコイルと\qty{1}{\micro F}のコンデンサーのリアクタンス（たて・横とも対数の目もり）。$X_L$ は周波数に比例して上がり、$X_C$ は反比例して下がる。2本は約\qty{1592}{Hz}で交わる。}
+\label{ph:電-10:fig-react}
+\end{bkfigure}
+
+\begin{phyomi}[$X_L=\omega L$、$X_C=\dfrac{1}{\omega C}$]
+コイルは「電流の\textbf{変わり方}」に逆らう部品です。周波数が高いほど、電流が速く変わるので、強く逆らいます（$X_L$ は $f$ に比例）。コンデンサーは「電荷をためる」部品です。周波数が高いほど、たまりきる前に向きが変わるので、電流をよく通します（$X_C$ は $f$ に反比例）。直流（$f=0$）では、コイルはただの導線（$X_L=0$）、コンデンサーは切れた線（$X_C=\infty$）で、電-5 ⑪の「十分時間がたったコンデンサーには電流が流れない」と合います。
+\end{phyomi}
+
+\begin{phbaisuru}{周波数 $f$}
+コイルのリアクタンスは2倍、コンデンサーのリアクタンスは半分になります（図\ref{ph:電-10:fig-react}）。\qty{10}{mH}のコイルと\qty{1}{\micro F}のコンデンサーでは、\qty{50}{Hz}で $X_L\approx\qty{3.1}{\ohm}$、$X_C\approx\qty{3.2}{k\ohm}$ ですが（\bkreidairef{3}・\bkreidairef{4}）、約\qty{1592}{Hz}でどちらも\qty{100}{\ohm}になり、等しくなります。この周波数が、⑦の共振周波数です。
+\end{phbaisuru}
+
+\begin{phmijika}[スピーカーの、高い音と低い音の分け方]
+大きなスピーカーには、低い音用（ウーファー）と高い音用（ツイーター）が入っています。ツイーターにはコンデンサーを直列につなぎ、低い音（$X_C$ が大きい）を通しにくくします。ウーファーにはコイルを直列につなぎ、高い音（$X_L$ が大きい）を通しにくくします。部品を1つずつ入れるだけで、周波数で音を分けられるのです（\bkreidairef{13}）。
+\end{phmijika}
+
+\noindent\textbf{コイルとコンデンサーは、平均すると電力を使わない}\par\nobreak
+コイルとコンデンサーでは、電流と電圧が90°ずれているので、電力 $p=vi$ は、正と負に同じだけゆれ、平均すると0です。コイルは磁場に、コンデンサーは電場に、$\tfrac14$ 周期ごとにエネルギーをためては電源へ返しています（ためるエネルギーは電-8 ⑧・電-3 ⑦）。この「行ったり来たりする電力」をどう扱うかは、電-11 で学びます。
+
+%% ---------------------------------------------------------------
+\bksubsection{5}{インピーダンス：交流のオームの法則}
+
+\leavevmode\label{ph:電-10:sec5}④の3つの式は、どれも「電圧のフェーザ＝（複素数）×電流のフェーザ」の形をしています。このかける数を\textbf{インピーダンス} $Z$（単位 Ω）といいます。\bkidx{いんぴーだんす}{インピーダンス}電圧（押すもの）÷電流（流れるもの）なので、『波動』（波-7 ③）で「押す力÷動く速さ」として決めたインピーダンスと同じ考えです。
+\pheq{V=ZI,\qquad Z_R=R,\quad Z_L=j\omega L,\quad Z_C=\frac{1}{j\omega C}}{V ＝ Ω × A}
+\label{ph:電-10:ohm}$V=ZI$ は、直流のオームの法則 $V=RI$ を、複素数に広げたものです。キルヒホッフの法則（電-4 ⑦）は、どの瞬間にも成り立つので、フェーザでもそのまま成り立ちます。だから、\textbf{直流の回路の方法（直列・並列の合成、網目電流法・節点電位法、テブナンの定理：電-5）が、$R$ を $Z$ にかえるだけで、そのまま使えます}。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 直列：$Z=Z_1+Z_2+\cdots$。並列：$\dfrac{1}{Z}=\dfrac{1}{Z_1}+\dfrac{1}{Z_2}+\cdots$。
+\item インピーダンスの逆数 $Y=1/Z$ を\textbf{アドミタンス}（単位 S）といいます。\bkidx{あどみたんす}{アドミタンス}並列のときは、アドミタンスをたすだけです。
+\end{itemize}
+インピーダンスを $Z=R+jX$ と書くと、実部 $R$ が抵抗、虚部 $X$ がリアクタンスです。大きさ $\lvert Z\rvert=\sqrt{R^2+X^2}$ が「電圧の実効値÷電流の実効値」、角 $\phi=\tan^{-1}(X/R)$ が、電流が電圧よりおくれる角です。
+
+\noindent\textbf{RLC 直列回路}\par\nobreak
+抵抗 $R$・コイル $L$・コンデンサー $C$ を直列にして、交流の電源 $E$ をつなぎます（図\ref{ph:電-10:fig-rlc}）。電圧則（電-4 ⑦）から、3つの部品の電圧の和が電源の電圧です。フェーザで書くと
+\[ E=V_R+V_L+V_C=\Bigl(R+j\omega L+\frac{1}{j\omega C}\Bigr)I=\Bigl\{R+j\Bigl(\omega L-\frac{1}{\omega C}\Bigr)\Bigr\}I \]
+なので、インピーダンスの大きさは
+\pheq{\lvert Z\rvert=\sqrt{R^2+\Bigl(\omega L-\dfrac{1}{\omega C}\Bigr)^2}}{Ω ＝ Ω}
+\label{ph:電-10:A54}です（6-13⑪と同じ式）。電流の実効値は $\lvert I\rvert=\lvert E\rvert/\lvert Z\rvert$ です。電-9 ②で、同じ回路の電荷 $q$ が $L\ddot q+R\dot q+q/C=e$ にしたがうことを導きました。上の式は、その式の $e$ が正弦波のときの答えを、フェーザで一度に出したものです。
+
+\Needspace{16\baselineskip}
+\begin{phflow}
+\phflowrow{電圧則（電-4 ⑦）\\＋部品のきまり}{正弦波の電源\\フェーザで書く\\（微分→$j\omega$）}{$E=ZI$\\$Z=R+j\omega L+\dfrac{1}{j\omega C}$}
+\phflowrow{$E=ZI$}{抵抗だけ\\（$L$・$C$ なし）}{$E=RI$\\（直流と同じ形）}
+\phflowrow{$E=ZI$}{大きさをとる\\（三平方の定理）}{$\lvert Z\rvert=\sqrt{R^2+X^2}$\\$X=\omega L-1/(\omega C)$}
+\end{phflow}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxk w] (0,0) rectangle (66,26);
+  \path (0,13) pic {sxk ac} (16,26) pic {sxk res} (36,26) pic {sxk coil} (66,13) pic {sxk capv};
+  \node[sxk lab, anchor=east] at (-5,13) {$E$};
+  \node[sxk lab, anchor=south] at (16,28.4) {$R$};
+  \node[sxk lab, anchor=south] at (36,29.6) {$L$};
+  \node[sxk lab, anchor=west] at (71,13) {$C$};
+  \draw[sxk arr] (48,23.5) -- (56,23.5); \node[sxk lab, anchor=north] at (52,22.8) {$I$};
+  \node[sxk lab, anchor=north, align=center] at (33,-2) {電圧則：$E=V_R+V_L+V_C$};
+\end{tikzpicture}
+\bkfigcaption{RLC 直列回路。3つの部品には、同じ電流 $I$ が流れる。}
+\label{ph:電-10:fig-rlc}
+\end{bkfigure}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{フェーザ図：電圧の矢印をつなぐ}
+
+\leavevmode\label{ph:電-10:sec6}直列回路では電流が共通なので、電流の矢印を右向き（角0）に置き、部品ごとの電圧の矢印をつないでいくと、回路のようすが1枚の図でわかります。これを\textbf{フェーザ図}といいます。抵抗\qty{4}{\ohm}とコイル（$X_L=\qty{3}{\ohm}$）の直列に、実効値\qty{100}{V}をかけると、$\lvert Z\rvert=\sqrt{4^2+3^2}=\qty{5}{\ohm}$、$\lvert I\rvert=\qty{20}{A}$ で、抵抗の電圧は $4\times20=\qty{80}{V}$（電流と同じ向き）、コイルの電圧は $3\times20=\qty{60}{V}$（90°進む）です（\bkreidairef{5}）。
+
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=0.42mm, y=0.42mm]
+  \sxkaxes{-8}{100}{-22}{75}
+  \draw[sxk vec, bkOrange!85!black, dashed] (0,-16) -- (40,-16);
+  \node[sxk lab, anchor=west] at (42,-16) {電流 $I$（破線）};
+  \draw[sxk vec, bkBlue!80!black] (0,0) -- (80,0.01);
+  \draw[sxk vec, bkGreen!55!black] (80,0) -- (80,60);
+  \draw[sxk vec, bkRed!80!black] (0,0) -- (80,60);
+  \node[sxk lab, anchor=north] at (60,-2) {$V_R=80$};
+  \node[sxk lab, anchor=west] at (82,30) {$V_L=60$};
+  \node[sxk lab, anchor=south east] at (38,32) {$E=100$};
+  \draw[bkInk, line width=0.5pt] (18,0) arc (0:36.87:18);
+  \node[sxk lab, anchor=west] at (20,6) {37°};
+\end{tikzpicture}
+\bkfigcaption{抵抗とコイルの直列のフェーザ図。}\label{ph:電-10:fig-phasor}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+抵抗の電圧（電流と同じ向き）の先に、コイルの電圧（90°上向き）をつなぐと、電源の電圧の矢印（斜め）になります。直角三角形の辺が80・60・100で、$80+60=140$ にはなりません。電流は電源の電圧より $\tan^{-1}\tfrac34\approx37°$ おくれています。
+\end{minipage}
+\par\vspace{4pt}
+\noindent テスターで部品ごとの電圧をはかって、和が電源の電圧と合わなくても、間違いではありません。実効値は矢印の長さなので、向きの違う矢印の長さは、そのままたせないのです。
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{共振：ラジオが1つの局を選ぶしくみ}
+
+\leavevmode\label{ph:電-10:sec7}RLC 直列回路のインピーダンス $\lvert Z\rvert=\sqrt{R^2+(\omega L-1/(\omega C))^2}$ は、コイルとコンデンサーのリアクタンスが打ち消し合う $\omega L=1/(\omega C)$ のとき、いちばん小さくなって $R$ だけになります。このとき電流がいちばん大きくなることを、\textbf{共振}といいます。\bkidx{きょうしん}{共振}
+\pheq{\omega_0=\frac{1}{\sqrt{LC}},\qquad f_0=\frac{1}{2\pi\sqrt{LC}}}{1/s ＝ 1 ÷ $\sqrt{\text{H × F}}$}
+\label{ph:電-10:A55}$f_0$ を\textbf{共振周波数}といいます。コイルの電圧（90°進む）とコンデンサーの電圧（90°おくれる）は、向きが正反対で大きさが等しいので、フェーザ図では打ち消し合います。電源から見ると、抵抗だけがつながっているのと同じです。
+
+6-13⑪の回路（$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$）に実効値\qty{1}{V}をつなぐと、$f_0\approx\qty{1592}{Hz}$ で電流は $1/20=\qty{50}{mA}$、\qty{1000}{Hz}では約\qty{10}{mA}、\qty{2000}{Hz}では約\qty{20}{mA}です（\bkreidairef{6}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=108mm, height=52mm, xmin=500, xmax=3200, ymin=0, ymax=108, xtick={1000,1592,2000,3000}, xticklabels={1000,1592,2000,3000}, ytick={25,50,100}, xlabel={周波数 $f$（Hz）}, ylabel={電流（mA）}, every axis x label/.style={at={(axis description cs:0.5,-0.15)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkRed!80!black, line width=1.3pt, densely dotted, domain=500:3200, samples=400] {1000/sqrt(100+(2*pi*x*0.01-1/(2*pi*x*1e-6))^2)};
+  \addplot[bkBlue!80!black, line width=1.6pt, domain=500:3200, samples=400] {1000/sqrt(400+(2*pi*x*0.01-1/(2*pi*x*1e-6))^2)};
+  \addplot[bkOrange!85!black, line width=1.4pt, dashed, domain=500:3200, samples=400] {1000/sqrt(1600+(2*pi*x*0.01-1/(2*pi*x*1e-6))^2)};
+  \node[sxk lab, anchor=west] at (axis cs:1660,98) {$R=\qty{10}{\ohm}$、$Q=10$（点線）};
+  \node[sxk lab, anchor=west] at (axis cs:1900,52) {$R=\qty{20}{\ohm}$、$Q=5$（実線）};
+  \node[sxk lab, anchor=west] at (axis cs:2150,30) {$R=\qty{40}{\ohm}$、$Q=2.5$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{RLC 直列回路（\qty{10}{mH}・\qty{1}{\micro F}、電源\qty{1}{V}）の共振曲線。抵抗が小さいほど、山が高く細くなる（Q が大きい）。}
+\label{ph:電-10:fig-kyoshin}
+\end{bkfigure}
+
+\noindent\textbf{Q 値：共振の鋭さ}\par\nobreak
+共振の山の鋭さは、波-2 ⑤と同じ \textbf{Q 値}で表します。\bkidx{きゅーち}{Q値}電気の回路では
+\pheq{Q=\frac{\omega_0L}{R}=\frac{1}{R}\sqrt{\frac{L}{C}},\qquad \text{半値幅}\ \Delta f=\frac{f_0}{Q}}{単位なし}
+\label{ph:電-10:q}です。半値幅は、電力（電流の2乗）が山の半分になる2つの周波数の差です。上の回路では $Q=\dfrac{1}{20}\sqrt{\dfrac{0.01}{10^{-6}}}=5$、半値幅は約\qty{318}{Hz}です。波-2 例題1のばね（$\zeta=0.1$、$Q\approx5$）と、まったく同じ Q です。波-1 ⑩の相似の表で、$c\to R$、$m\to L$、$k\to1/C$ と読みかえた $\zeta=\tfrac{R}{2}\sqrt{\tfrac{C}{L}}=0.1$ と、$Q=\tfrac{1}{2\zeta}$ の関係が、電気の回路でもそのまま成り立っているのです。波-1・2 で「形だけ」借りた RLC 回路の式は、ここで、電圧則と部品のきまり（電-3・電-8）から導かれました。
+
+\begin{phbaisuru}{抵抗 $R$}
+共振のときの電流 $\lvert E\rvert/R$ は半分、Q は半分、半値幅は2倍になります（図\ref{ph:電-10:fig-kyoshin}）。山の位置 $f_0$ は $L$ と $C$ だけで決まるので、変わりません。$L$ を4倍にすると、$f_0$ は半分になります。
+\end{phbaisuru}
+
+\begin{motto}[4]
+\phboxhead{Q 値をエネルギーで読む}
+波-2 ⑤では、ばねの Q 値を「たくわえたエネルギーと、1周期に失うエネルギーの比の $2\pi$ 倍」と読みました。電気の回路でも同じです。共振のとき、コイルとコンデンサーにたくわえられたエネルギーの合計は、いつも $L\lvert I\rvert^2$ で一定です（コイルの $\tfrac12Li^2$ と、コンデンサーの $\tfrac12Cv^2$ の間を行き来する：電-8 ⑧・電-3 ⑦）。1周期（$T=2\pi/\omega_0$）に抵抗で熱になるエネルギーは $R\lvert I\rvert^2T$ です。比をとると
+\[ 2\pi\times\frac{L\lvert I\rvert^2}{R\lvert I\rvert^2\times2\pi/\omega_0}=\frac{\omega_0L}{R}=Q \]
+で、⑦の式と同じになります。\bkreidairef{6}の回路（\qty{50}{mA}）では、たくわえたエネルギーは $0.01\times0.05^2=\qty{2.5e-5}{J}$、1周期の損失は $20\times0.05^2\div1592\approx\qty{3.1e-5}{J}$ で、$2\pi\times2.5\div3.14\approx5$ です。Q が大きい回路は、電源を切ったあとも、何周期も電気振動を続けます（電-9 ⑦）。
+\end{motto}
+
+\noindent\textbf{共振すると、部品の電圧は電源より大きくなる}\par\nobreak
+共振のとき、コイルの電圧は $\omega_0L\lvert I\rvert=\omega_0L\lvert E\rvert/R=Q\lvert E\rvert$ です。コンデンサーの電圧も同じ $Q\lvert E\rvert$ です。上の回路では、電源\qty{1}{V}に対して、コイルとコンデンサーにはそれぞれ\qty{5}{V}がかかります。2つは逆向きで打ち消し合うので、電圧則はやぶれていません。Q が100の回路なら100倍です。共振する回路の部品は、電源の電圧よりずっと高い電圧にたえるものを選びます。
+
+\noindent\textbf{はてな？の答え：ラジオの同調}\par\nobreak
+\bkhatenaref の答えです。アンテナには、たくさんの局の電波がつくる、いろいろな周波数の小さな交流の電圧が、同時に生まれています。アンテナにつないだコイルと可変コンデンサーの回路（図\ref{ph:電-10:fig-radio}）は、共振周波数 $f_0$ に近い周波数の電流だけを大きく流し、ほかの周波数の電流はほとんど流しません。ダイヤルを回すと可変コンデンサーの $C$ が変わり、$f_0$ が変わって、別の局が選べます。これを\textbf{同調}といいます。\bkidx{どうちょう}{同調}\qty{200}{\micro H}のコイルで\qty{1}{MHz}の局を選ぶには、$C=1/((2\pi f_0)^2L)\approx\qty{127}{pF}$ です（6-13⑪。\bkreidairef{7}）。Q が大きいほど、となりの局（9\,kHz 離れている）を分けて選べます（\bkreidairef{8}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxk w] (10,30) -- (10,40) (4,40) -- (10,34) -- (16,40);
+  \draw[sxk w] (10,30) -- (10,24) -- (36,24) (10,0) -- (36,0);
+  \draw[sxk w] (10,24) -- (10,0);
+  \path (10,12) pic {sxk coilv};
+  \draw[sxk w] (36,0) -- (36,24); \path (36,12) pic {sxk varcap};
+  \draw[sxk w] (36,24) -- (62,24) (36,0) -- (62,0);
+  \sxkdot{(36,24)}\sxkdot{(36,0)}
+  \filldraw[fill=bkGray!15, draw=bkInk, line width=0.7pt, rounded corners=2pt] (62,-3) rectangle (90,27);
+  \node[sxk lab, align=center] at (76,12) {音を取り出す\\回路・\\スピーカー};
+  \node[sxk lab, anchor=west] at (17,38) {アンテナ};
+  \node[sxk lab, anchor=east] at (5.5,12) {$L$};
+  \node[sxk lab, anchor=west, align=left] at (41,12) {$C$\\（ダイヤル）};
+  \node[sxk lab, anchor=west, align=left] at (93,18) {$f_0=\dfrac{1}{2\pi\sqrt{LC}}$ の\\電波だけ、大きな\\電流が流れる};
+\end{tikzpicture}
+\bkfigcaption{ラジオの同調回路（形を簡単にしたもの）。コイルと可変コンデンサーが共振する周波数の局だけが選ばれる。}
+\label{ph:電-10:fig-radio}
+\end{bkfigure}
+
+\begin{phmodel}[ラジオの同調回路]
+\phignore{音を取り出す回路が同調回路から取る電流。}
+\phassume{損失は1つの抵抗 $R$ にまとめる。部品は波長よりずっと小さい（集中定数）。}
+\phlimit{配線の長さが波長に近づくとき（電-13）。鉄心が飽和するほど強い電波。}
+\end{phmodel}
+
+%% ---------------------------------------------------------------
+\bksubsection{8}{並列共振：電流を通しにくくなる共振}
+
+\leavevmode\label{ph:電-10:sec8}コイルとコンデンサーを\textbf{並列}につなぐと、反対のことが起きます。コイル（抵抗 $R$ をふくむ）とコンデンサーの並列回路（図\ref{ph:電-10:fig-heiretsu}）では、共振の近くで、コイルの電流とコンデンサーの電流がほぼ逆向きで打ち消し合い、電源から流れこむ電流が小さくなります。つまり、インピーダンスが大きくなります。電源の電圧と電流の位相がそろうとき（インピーダンスが実数になるとき）、インピーダンスは
+\pheq{Z=\frac{L}{CR}}{Ω ＝ H ÷ (F × Ω)}
+\label{ph:電-10:heiretsu}になります（\bkreidairef{10}）。$R$ が小さいほど大きくなり、$R\to0$ では無限大（電流が流れない）です。中のコイルとコンデンサーの間では、大きな電流が行ったり来たりしていて、電-9 ⑦の電気振動が続いている状態です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxk w] (0,0) -- (0,26) -- (40,26) -- (40,0) -- cycle (20,26) -- (20,0);
+  \path (0,13) pic {sxk ac} (20,18) pic {sxk coilv} (20,7) pic {sxk resv} (40,13) pic {sxk capv};
+  \sxkdot{(20,26)}\sxkdot{(20,0)}
+  \node[sxk lab, anchor=east] at (-5,13) {$E$};
+  \node[sxk lab, anchor=east] at (16,18) {$L$}; \node[sxk lab, anchor=east] at (17.4,7) {$R$};
+  \node[sxk lab, anchor=west] at (45,13) {$C$};
+\end{tikzpicture}\hspace{6mm}%
+\begin{tikzpicture}[baseline={(0,-4mm)}]
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=66mm, height=40mm, xmin=500, xmax=3200, ymin=0, ymax=620, xtick={1000,2000,3000}, ytick={100,500}, xlabel={$f$（Hz）}, ylabel={$\lvert Z\rvert$（$\Omega$）}, every axis x label/.style={at={(axis description cs:0.5,-0.2)}, anchor=north, font=\sffamily\small}]
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=500:3200, samples=400] {sqrt(400+(2*pi*x*0.01)^2)/sqrt((1-(2*pi*x)^2*1e-8)^2+(2*pi*x*20e-6)^2)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{並列共振。左：コイル（抵抗 $R$ をふくむ）とコンデンサーの並列。右：$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$ のインピーダンスの大きさ。共振の近くで、約\qty{500}{\ohm}の山になる。}
+\label{ph:電-10:fig-heiretsu}
+\end{bkfigure}
+
+\noindent 直列共振は「ある周波数だけ通す」、並列共振は「ある周波数だけ止める（その周波数で大きな電圧を取り出す）」はたらきをします。ラジオの中や、決まった周波数の電気の振動を作る回路（発振回路）で、両方が使われています。
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{フィルター：周波数で信号を分ける}
+
+\leavevmode\label{ph:電-10:sec9}抵抗 $R$ とコンデンサー $C$ を直列にし、コンデンサーの電圧を取り出す回路（図\ref{ph:電-10:fig-rc}）を考えます。入力の電圧 $V_{\text{入}}$ に対する出力の電圧 $V_{\text{出}}$ は、直列の電圧の分かれ方（電-5 ①）を、インピーダンスで書いて
+\pheq{\frac{V_{\text{出}}}{V_{\text{入}}}=\frac{1/(j\omega C)}{R+1/(j\omega C)}=\frac{1}{1+j\omega RC}}{単位なし}
+\label{ph:電-10:lpf}です。周波数が低いと $\omega RC\ll1$ で、出力は入力とほぼ同じ。周波数が高いと分母が大きくなり、出力は小さくなります。低い周波数だけを通すので、\textbf{ローパスフィルター}といいます。\bkidx{ふぃるたー}{フィルター}出力の大きさが入力の $1/\sqrt2$（電力で半分、$-3$\,dB）になる周波数
+\pheq{f_{\mathrm c}=\frac{1}{2\pi RC}}{1/s ＝ 1 ÷ (Ω × F)}
+\label{ph:電-10:fc}を、\textbf{遮断周波数}といいます。\bkidx{しゃだんしゅうはすう}{遮断周波数}これは 9-8⑧⑨の伝達関数 $\dfrac{1}{\tau s+1}$（$\tau=RC$）に $s=j\omega$ を入れたものと同じで、遮断周波数より高い所では、周波数が10倍になるごとに出力が $-20$\,dB（10分の1）になります（ボード線図）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[sxk w] (0,20) -- (30,20) (0,0) -- (30,0) (22,20) -- (22,0);
+  \path (10,20) pic {sxk res} (22,10) pic {sxk capv};
+  \sxkdot{(22,20)}\sxkdot{(22,0)}
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (0,20) circle (1.1) (0,0) circle (1.1) (30,20) circle (1.1) (30,0) circle (1.1);
+  \node[sxk lab, anchor=south] at (10,22.4) {$R$}; \node[sxk lab, anchor=west] at (27,10) {$C$};
+  \draw[sxk dim] (-3,18) -- (-3,2); \node[sxk lab, anchor=east] at (-4,10) {$V_{\text{入}}$};
+  \draw[sxk dim] (34,18) -- (34,2); \node[sxk lab, anchor=west] at (35,10) {$V_{\text{出}}$};
+\end{tikzpicture}\hspace{5mm}%
+\begin{tikzpicture}[baseline={(0,-5mm)}]
+\begin{axis}[bkplot, xmode=log, axis x line*=bottom, axis y line*=left, width=74mm, height=44mm, xmin=100, xmax=100000, ymin=-42, ymax=4, xtick={100,1000,10000,100000}, xticklabels={100,1000,\num{10000},\num{100000}}, ytick={-40,-30,-20,-10,0}, xlabel={周波数 $f$（Hz）}, ylabel={出力（dB）}, every axis x label/.style={at={(axis description cs:0.5,-0.2)}, anchor=north, font=\sffamily\small}, grid=major]
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=100:100000, samples=120] {-10*log10(1+(x/1591.5)^2)};
+  \fill[bkRed] (axis cs:1591.5,-3.01) circle (2pt);
+  \node[sxk lab, anchor=north east] at (axis cs:1400,-6) {$f_{\mathrm c}$ で $-3$\,dB};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{RC ローパスフィルター（\qty{1}{k\ohm}・\qty{0.1}{\micro F}、$f_{\mathrm c}\approx\qty{1.6}{kHz}$）と、ボード線図（大きさ）。$f_{\mathrm c}$ より上では、周波数10倍で $-20$\,dB。}
+\label{ph:電-10:fig-rc}
+\end{bkfigure}
+
+\Needspace{7\baselineskip}
+\begin{phmijika}[音の雑音を取る・電源の雑音を止める]
+オーディオの機械では、聞こえない高い周波数の雑音をローパスフィルターで取りのぞきます。$R$ と $C$ を入れかえて抵抗の電圧を取り出すと、高い周波数だけを通す\textbf{ハイパスフィルター}になります。電子レンジやパソコンの電源の入口には、コイルとコンデンサーのフィルターが入っていて、機械の中で生まれた高い周波数の雑音が、コンセントの線へもれ出さないようにしています。
+\end{phmijika}
+
+\Needspace{11\baselineskip}
+\begin{phmada}[$1/f$ ゆらぎは、なぜどこにでもあるの？]
+抵抗やトランジスタに流れる電流には、小さなでたらめなゆらぎ（雑音）がまざっています。その雑音を周波数ごとに分けると、多くの物で、周波数 $f$ が低いほど大きく、およそ $1/f$ に比例することが知られています（$1/f$ ゆらぎ）。似た形は、電子部品だけでなく、海流の速さや、音楽の音の大きさの変わり方などでも見つかっています。1つ1つの物では、それぞれのしくみで説明するモデルが作られてきました。けれども、これほど多くの所で同じ形が現れるのに、共通の深いわけがあるのか、たまたま似ているだけなのかについては、研究者の意見が分かれていて、決着していません。小さな信号をはかる機械にとって、低い周波数の雑音を減らすことは、今も大切な課題です。
+\end{phmada}
+
+%% ---------------------------------------------------------------
+\bksubsection{10}{交流ブリッジ：コイルとコンデンサーをはかる}
+
+\leavevmode\label{ph:電-10:sec10}電-5 ⑦のホイートストンブリッジの抵抗を、インピーダンスにおきかえ、交流の電源と、交流用の検出器をつなぎます。つり合いの条件は、同じ計算で
+\pheq{Z_1Z_4=Z_2Z_3}{Ω$^2$ ＝ Ω$^2$}
+\label{ph:電-10:bridge}です。ただし、複素数の等式なので、\textbf{実部と虚部の2つの条件}が同時に成り立つ必要があります。2つのつまみ（抵抗とコンデンサーなど）を交互に調節して、検出器の電圧を0にします。
+
+\noindent\textbf{マクスウェルブリッジ}\par\nobreak
+$Z_1$ に、はかりたいコイル（インダクタンス $L_x$、抵抗 $R_x$）を入れ、$Z_2=R_2$、$Z_3=R_3$、$Z_4$ は抵抗 $R_4$ とコンデンサー $C_4$ の並列にします（図\ref{ph:電-10:fig-maxwell}）。$Z_4$ のアドミタンスは $\dfrac{1}{R_4}+j\omega C_4$ なので、つり合いの式 $Z_1=Z_2Z_3/Z_4=R_2R_3\Bigl(\dfrac{1}{R_4}+j\omega C_4\Bigr)$ の実部と虚部を比べて
+\pheq{L_x=R_2R_3C_4,\qquad R_x=\frac{R_2R_3}{R_4}}{H ＝ Ω$^2$ × F}
+\label{ph:電-10:maxwell}が得られます。$\omega$ が消えるので、電源の周波数によらずにつり合います。正確な抵抗とコンデンサーがあれば、コイルのインダクタンスがはかれるのです（\bkreidairef{11}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \coordinate (A) at (0,30); \coordinate (C) at (-22,15); \coordinate (D) at (22,15); \coordinate (B) at (0,0);
+  \draw[sxk w] (A) -- (C) -- (B) -- (D) -- cycle (C) -- (D);
+  \path ($(A)!0.5!(C)$) pic[rotate=34.3] {sxk coil} ($(C)!0.5!(B)$) pic[rotate=-34.3] {sxk res}
+        ($(A)!0.5!(D)$) pic[rotate=-34.3] {sxk res} (0,15) pic {sxk meter=D};
+  \path ($(D)!0.5!(B)$) pic[rotate=34.3] {sxk res};
+  \foreach \p in {A,B,C,D} {\sxkdot{(\p)}}
+  \draw[sxk w] (A) -- (0,36) -- (-40,36) -- (-40,-6) -- (0,-6) -- (B);
+  \path (-40,15) pic {sxk ac};
+  \node[sxk lab, anchor=south east] at (-12,24.5) {$Z_1$：$L_x$・$R_x$}; \node[sxk lab, anchor=north east] at (-12,5.5) {$Z_2$：$R_2$};
+  \node[sxk lab, anchor=south west] at (12,24.5) {$Z_3$：$R_3$};
+  \node[sxk lab, anchor=north west] at (12,5.5) {$Z_4$};
+  % Z4 の中身
+  \begin{scope}[shift={(40,2)}]
+    \draw[sxk w] (0,6) -- (6,6) (6,0) -- (6,12) -- (26,12) -- (26,0) -- (6,0) (26,6) -- (32,6);
+    \path (16,12) pic {sxk res} (16,0) pic {sxk cap};
+    \sxkdot{(6,6)}\sxkdot{(26,6)}
+    \node[sxk lab, anchor=south] at (16,14) {$R_4$};
+    \node[sxk lab, anchor=north] at (16,-5) {$C_4$};
+    \node[sxk lab, anchor=south, font=\sffamily\footnotesize\bfseries] at (16,19) {$Z_4$ の中身（並列）};
+  \end{scope}
+  \node[sxk lab, anchor=west, align=left] at (26,30) {D：交流の検出器};
+\end{tikzpicture}
+\bkfigcaption{マクスウェルブリッジ。左上の辺に、はかりたいコイルを入れる。右下の辺は、抵抗 $R_4$ とコンデンサー $C_4$ の並列。}
+\label{ph:電-10:fig-maxwell}
+\end{bkfigure}
+
+%% ---------------------------------------------------------------
+\bksubsection{11}{ひずんだ波：高調波と実効値}
+
+\leavevmode\label{ph:電-10:sec11}家のコンセントの電圧は、きれいな正弦波に近いのですが、パソコンや LED 照明の電源回路が電流を細切れに取りこむと、電流の波の形がひずみます。ひずんだ波は、もとの周波数（基本波）の整数倍の周波数の正弦波（\textbf{高調波}）の和で表せます（9-2 のフーリエ級数）。\bkidx{こうちょうは}{高調波}
+
+基本波の実効値を $V_1$、3倍の高調波の実効値を $V_3$、… とすると、ひずんだ波の実効値は
+\pheq{V=\sqrt{V_1^{\,2}+V_3^{\,2}+V_5^{\,2}+\cdots}}{V ＝ V}
+\label{ph:電-10:hizumi}です。周波数の違う正弦波どうしのかけ算は、1周期で平均すると0になる（9-2③の直交）ので、2乗の平均は、それぞれの2乗の平均の和になるのです（9-2⑪のパーセバルの等式）。実効値\qty{100}{V}の基本波に、3倍の高調波が\qty{10}{V}まざっていても、実効値は約\qty{100.5}{V}にしかなりません（\bkreidairef{12}）。それでも、高調波はモーターや変圧器をむだに熱くし、ほかの機械の雑音の原因になるので、電気製品が出してよい高調波の量には決まりがあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=108mm, height=44mm, xmin=0, xmax=21, ymin=-175, ymax=190, xtick={0,5,10,15,20}, ytick={-141,0,141}, xlabel={時刻 $t$（ms）}, ylabel={電圧（V）}, every axis x label/.style={at={(axis description cs:0.5,-0.15)}, anchor=north, font=\sffamily\small}]
+  \draw[bkGray, line width=0.5pt] (axis cs:0,0) -- (axis cs:21,0);
+  \addplot[bkGray!80!black, line width=1.1pt, densely dotted, domain=0:20, samples=200] {141.4*sin(360*x/20)};
+  \addplot[bkOrange!85!black, line width=1.0pt, dashed, domain=0:20, samples=200] {28.3*sin(3*360*x/20)};
+  \addplot[bkBlue!80!black, line width=1.5pt, domain=0:20, samples=200] {141.4*sin(360*x/20)+28.3*sin(3*360*x/20)};
+  \node[sxk lab, anchor=west] at (axis cs:10.6,172) {和（実線）：山が平らに};
+  \node[sxk lab, anchor=west] at (axis cs:0.4,-150) {3倍の高調波 \qty{20}{V}（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{実効値\qty{100}{V}の基本波（点線）に、3倍の高調波\qty{20}{V}（破線）をたすと、山の平らな、ひずんだ波（実線）になる。実効値は $\sqrt{100^2+20^2}\approx\qty{102}{V}$。}
+\label{ph:電-10:fig-hizumi}
+\end{bkfigure}
+
+%% ---------------- たいせつ・ことば ----------------
+\begin{taisetsu}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=0pt, label={\color{bkNavy}●}]
+\item 実効値 $V=V_0/\sqrt2$（\qty{100}{V}の山は\qty{141}{V}）。抵抗の平均の電力 $P=VI$。周波数＝振動数、$\omega=2\pi f$。
+\item フェーザ：長さ＝実効値、角＝位相の複素数。微分は $j\omega$ をかける。$V=ZI$（交流のオームの法則）。
+\item $Z_R=R$、$Z_L=j\omega L$（電流は90°おくれ）、$Z_C=1/(j\omega C)$（電流は90°進む）。直列はたし算、並列はアドミタンスのたし算。
+\item RLC 直列：$\lvert Z\rvert=\sqrt{R^2+X^2}$（$X=\omega L-1/(\omega C)$）。共振 $f_0=1/(2\pi\sqrt{LC})$、$Q=\omega_0L/R$、半値幅 $f_0/Q$。
+\item ローパス $f_{\mathrm c}=1/(2\pi RC)$。交流ブリッジ $Z_1Z_4=Z_2Z_3$。ひずんだ波の実効値 $\sqrt{V_1^{\,2}+V_3^{\,2}+\cdots}$。
+\end{itemize}
+\end{taisetsu}
+
+\begin{kotoba}\small
+\bkword{交流}{向きと大きさが周期的に変わる電気。家の電気は正弦波の交流。}
+\bkword{実効値}{同じ抵抗で同じ平均の電力を出す直流の値。正弦波では山の $1/\sqrt2$ 倍。}
+\bkword{フェーザ}{交流の大きさ（実効値）と位相を、矢印（複素数）で表したもの。}
+\bkword{リアクタンス}{コイル・コンデンサーの、交流の流れにくさ。$\omega L$、$1/(\omega C)$。}
+\bkword{インピーダンス}{電圧のフェーザと電流のフェーザの比。$Z=R+jX$。逆数はアドミタンス。}
+\bkword{共振・同調}{リアクタンスが打ち消し合う周波数で電流が大きくなること。それで局を選ぶこと。}
+\bkword{遮断周波数}{フィルターの出力が $1/\sqrt2$（$-3$\,dB）になる周波数。}
+\bkword{高調波}{もとの周波数の整数倍の周波数の正弦波。ひずんだ波にふくまれる。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$Z$}{ゼット}{インピーダンス〔Ω〕。電圧のフェーザ÷電流のフェーザ。$Z=R+jX$}{impedance}{電-10}}{\bkkigocard{$X$}{エックス}{リアクタンス〔Ω〕。インピーダンスの虚部。$X_L=\omega L$、$X_C=1/(\omega C)$}{reactance}{電-10}}
+\bkkigocards{\bkkigocard{$\phi$}{ファイ}{位相のずれ〔°〕。電流が電圧よりおくれる角。力率は $\cos\phi$。電-2 の電位 $\phi$ とは別}{phase difference}{電-10}}{}
+
+\begin{senmonsho}[電気回路の本の書き方]
+\begin{bkhonbun}
+正弦波交流 $v=\sqrt2V\sin(\omega t+\theta)$ を複素数 $\dot V=Ve^{j\theta}$ で表す．回路素子の電圧と電流の関係は $\dot V=\dot Z\dot I$ となり，$\dot Z_R=R$，$\dot Z_L=j\omega L$，$\dot Z_C=1/(j\omega C)$ である．RLC 直列回路は $\omega_0=1/\sqrt{LC}$ で直列共振し，選択度 $Q=\omega_0L/R$ は共振の鋭さを表す．
+\end{bkhonbun}
+\bkyaku{電気回路の本では、フェーザ（複素数）であることを、文字の上の点で $\dot V$・$\dot I$・$\dot Z$ と表すことが多い（この本では点をつけず、大きさを $\lvert V\rvert$ と書いた）。$V$ だけなら実効値。ラジオなどでは、Q 値を「選択度」ともよぶ。}
+\end{senmonsho}
+
+%% ---------------- 例題 ----------------
+\Needspace{7\baselineskip}
+\bksection{reidai}{例題でたしかめよう}
+
+\noindent 交流の電圧・電流は、ことわらないかぎり実効値です。$\pi=3.14$ とし、答えは2けたが基本です（6-13 と同じ数を見る例題は、6-13 と同じけた）。
+
+\begin{reidai}[\qty{100}{V}の交流の山]
+\label{ph:電-10:ex1}家のコンセントの電圧（実効値\qty{100}{V}）の、山の高さを求めましょう。
+\par\bkstep{理想化} 電圧の波はきれいな正弦波とする。
+\par\kangaekata 実効値は山の $1/\sqrt2$ 倍（②）。山＝実効値×$\sqrt2$。
+\par\shiki $E_0=\sqrt2\times100\approx1.414\times100\approx\qty{141}{V}$
+\par\bkstep{確かめ} 3-10・4-9 の「\qty{100}{V}の山は約\qty{141}{V}」と同じ。法令の幅\qty{95}{V}〜\qty{107}{V}では、山は約\qty{134}{V}〜\qty{151}{V}。
+\par\kotae 約\qty{141}{V}
+\end{reidai}
+\begin{jibun}
+\qty{200}{V}のエアコン用のコンセントの電圧の山は、約何 V ですか。
+\bkjans{$\sqrt2\times200\approx\qty{283}{V}$}
+\end{jibun}
+
+\begin{phreidai}[ドライヤーの電流の実効値と山]
+\label{ph:電-10:ex2}消費電力\qty{1200}{W}のドライヤーを\qty{100}{V}のコンセントにつなぎます。電流の実効値と山の高さ、ドライヤーの抵抗を求めましょう。
+\phbamen
+電-4 例題1のドライヤー。家の電気は交流なので、電流も時間で変わる。
+\phmushi
+抵抗が温度で変わること。モーター（風を送る部分）の電流（電熱線だけとする）。
+\phzu
+電圧の実効値 $E=\qty{100}{V}$、平均の電力 $P=\qty{1200}{W}$、電流の実効値 $I$、山 $I_0$、抵抗 $R$。
+\phriyu
+抵抗につないだ交流の平均の電力は、実効値で $P=EI$（②）。山は実効値の $\sqrt2$ 倍。
+\phtateru
+\[ I=\frac{P}{E},\qquad I_0=\sqrt2\,I,\qquad R=\frac{E}{I} \]
+\phtoku
+$I=1200\div100=\qty{12}{A}$、$I_0=1.414\times12\approx\qty{17}{A}$、$R=100\div12\approx\qty{8.3}{\ohm}$。
+\phtashikame
+単位：W ÷ V ＝ A、V ÷ A ＝ Ω。電-4 例題1の\qty{12}{A}・\qty{8.3}{\ohm}と同じ（直流の計算と同じ形になるのが実効値のよさ）。電流は向きを変えながら、1秒に100回、大きさ\qty{17}{A}の山に達する。
+\kotae 実効値\qty{12}{A}、山 約\qty{17}{A}、抵抗 約\qty{8.3}{\ohm}
+\end{phreidai}
+\begin{jibun}
+\qty{800}{W}の電気ストーブ（抵抗）を\qty{100}{V}のコンセントにつなぎます。電流の実効値と山を求めましょう。
+\bkjans{$I=800\div100=\qty{8}{A}$、山 $\sqrt2\times8\approx\qty{11}{A}$}
+\end{jibun}
+
+\begin{phreidai}[コイルのリアクタンス]
+\label{ph:電-10:ex3}\qty{10}{mH}のコイルの、\qty{50}{Hz}と\qty{1592}{Hz}でのリアクタンスを求めましょう。\qty{50}{Hz}で\qty{100}{V}をかけたら、電流は何 A ですか。
+\phbamen
+6-13 の RLC 回路のコイル。周波数で交流の流れにくさが変わる。
+\phmushi
+コイルの導線の抵抗。
+\phzu
+$L=\qty{0.01}{H}$、周波数 $f$、リアクタンス $X_L$。
+\phriyu
+コイルの電圧は $V=j\omega LI$ なので、大きさの比は $X_L=\omega L=2\pi fL$（④）。
+\phtateru
+\[ X_L=2\pi fL,\qquad \lvert I\rvert=\frac{\lvert V\rvert}{X_L} \]
+\phtoku
+\qty{50}{Hz}：$2\times3.14\times50\times0.01\approx\qty{3.1}{\ohm}$。\qty{1592}{Hz}：$2\times3.14\times1592\times0.01\approx\qty{100}{\ohm}$。\qty{50}{Hz}・\qty{100}{V}の電流は $100\div3.14\approx\qty{32}{A}$。
+\phtashikame
+単位：1/s × H ＝ Ω。周波数が約32倍でリアクタンスも約32倍（比例）。極端な場合：直流（$f=0$）ならリアクタンス0で、導線と同じ（実際には導線の抵抗だけで電流が決まる）。
+\kotae \qty{50}{Hz}で約\qty{3.1}{\ohm}、\qty{1592}{Hz}で約\qty{100}{\ohm}。電流 約\qty{32}{A}
+\end{phreidai}
+\begin{jibun}
+\qty{20}{mH}のコイルの、\qty{60}{Hz}でのリアクタンスを求めましょう。
+\bkjans{$2\times3.14\times60\times0.02\approx\qty{7.5}{\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[コンデンサーのリアクタンス]
+\label{ph:電-10:ex4}\qty{1}{\micro F}のコンデンサーの、\qty{50}{Hz}でのリアクタンスを求めましょう。\qty{50}{Hz}・\qty{100}{V}をかけたときの電流と、電流と電圧の山のずれを答えましょう。
+\phbamen
+蛍光灯やモーターの回路に入っているコンデンサー。コンデンサーは直流は通さないが、交流は通す。
+\phmushi
+コンデンサーの中のもれ電流・損失。
+\phzu
+$C=\qty{1e-6}{F}$、$f=\qty{50}{Hz}$、リアクタンス $X_C$。
+\phriyu
+コンデンサーは $V=I/(j\omega C)$ なので、大きさの比は $X_C=1/(2\pi fC)$、電流は電圧より90°進む（④）。
+\phtateru
+\[ X_C=\frac{1}{2\pi fC},\qquad \lvert I\rvert=\frac{\lvert V\rvert}{X_C} \]
+\phtoku
+\[ X_C=\frac{1}{2\times3.14\times50\times10^{-6}}\approx\qty{3180}{\ohm}\approx\qty{3.2}{k\ohm} \]
+電流は $100\div3180\approx\qty{0.031}{A}=\qty{31}{mA}$。電流の山は、電圧の山より $\tfrac14$ 周期（\qty{5}{ms}）早く来る。
+\phtashikame
+単位：1 ÷ (1/s × F) ＝ Ω（F ＝ C/V、A ＝ C/s から）。\qty{1592}{Hz}では約\qty{100}{\ohm}（図\ref{ph:電-10:fig-react}）。極端な場合：直流（$f\to0$）でリアクタンスは無限大、電流は流れない（電-5 ⑪）。
+\kotae 約\qty{3.2}{k\ohm}、電流 約\qty{31}{mA}、電流が90°（\qty{5}{ms}）進む
+\end{phreidai}
+\begin{jibun}
+\qty{2}{\micro F}のコンデンサーの、\qty{60}{Hz}でのリアクタンスを求めましょう。
+\bkjans{$\omega C\approx7.54\times10^{-4}$\,S。$X_C=1/(\omega C)\approx\qty{1.3}{k\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[抵抗とコイルの直列]
+\label{ph:電-10:ex5}抵抗\qty{4}{\ohm}と、リアクタンス\qty{3}{\ohm}のコイルを直列にして、\qty{100}{V}の交流をかけます。インピーダンスの大きさ、電流、電流のおくれの角、それぞれの部品の電圧を求めましょう。
+\phbamen
+モーターのように、抵抗とコイルの両方の性質をもつ機械を、交流の電源につなぐ。
+\phmushi
+コイルの鉄心の損失。電源の内部のインピーダンス。
+\phzu
+$Z=4+3j$〔Ω〕、電源の電圧 $E=100$（角0）、電流 $I$、抵抗の電圧 $V_R$、コイルの電圧 $V_L$（図\ref{ph:電-10:fig-phasor}）。
+\phriyu
+直列なのでインピーダンスはたし算（⑤）。交流のオームの法則 $E=ZI$。大きさは三平方の定理、角は $\tan^{-1}$（6-9）。
+\phtateru
+\[ \lvert Z\rvert=\sqrt{4^2+3^2},\qquad \lvert I\rvert=\frac{100}{\lvert Z\rvert},\qquad \phi=\tan^{-1}\frac{3}{4} \]
+\phtoku
+$\lvert Z\rvert=\qty{5}{\ohm}$、$\lvert I\rvert=\qty{20}{A}$、$\phi\approx37°$（おくれ）。複素数では
+\[ I=\frac{100}{4+3j}=\frac{100(4-3j)}{25}=16-12j \]
+$V_R=4\times20=\qty{80}{V}$、$V_L=3\times20=\qty{60}{V}$。
+\phtashikame
+単位：Ω、A。フェーザ図で $\sqrt{80^2+60^2}=100$ と電源に合う（$80+60=140$ ではない）。極端な場合：コイルがなければ\qty{25}{A}で、おくれ0。
+\kotae $\lvert Z\rvert=\qty{5}{\ohm}$、電流\qty{20}{A}（約37°おくれ）、$V_R=\qty{80}{V}$、$V_L=\qty{60}{V}$
+\end{phreidai}
+\begin{jibun}
+抵抗\qty{3}{\ohm}とリアクタンス\qty{4}{\ohm}のコイルの直列に、\qty{50}{V}をかけます。インピーダンスの大きさ、電流、おくれの角、2つの部品の電圧を求めましょう。
+\bkjans{$\lvert Z\rvert=5$\,Ω、電流\qty{10}{A}、おくれ $\tan^{-1}(4/3)\approx53°$、$V_R=\qty{30}{V}$、$V_L=\qty{40}{V}$}
+\end{jibun}
+
+\begin{phreidai}[RLC 直列回路の共振と Q 値]
+\label{ph:電-10:ex6}6-13⑪の回路（$L=\qty{10}{mH}$、$C=\qty{1}{\micro F}$、$R=\qty{20}{\ohm}$）に、実効値\qty{1}{V}の交流をつなぎます。共振周波数、そのときの電流と Q 値、コイルの電圧を求めましょう。\qty{1000}{Hz}と\qty{2000}{Hz}の電流も求めましょう（6-13 と同じ数を見るので、6-13 と同じけたで書く）。
+\phbamen
+6-13⑪の計算を、電圧則と部品のきまりから確かめ、波-2 の Q 値と比べる。
+\phmushi
+コイルの鉄心の損失（損失はすべて $R$ にまとめる）。配線のインピーダンス。
+\phzu
+$L=\qty{0.01}{H}$、$C=\qty{1e-6}{F}$、$R=\qty{20}{\ohm}$、$E=\qty{1}{V}$（図\ref{ph:電-10:fig-rlc}）。
+\phriyu
+共振は $\omega L=1/(\omega C)$（⑦）。共振では $\lvert Z\rvert=R$。Q 値は $\omega_0L/R$。ほかの周波数は⑤の $\lvert Z\rvert$ の式。
+\phtateru
+\[ \omega_0=\frac{1}{\sqrt{LC}},\qquad Q=\frac{\omega_0L}{R},\qquad \lvert I\rvert=\frac{\lvert E\rvert}{\sqrt{R^2+(\omega L-1/(\omega C))^2}} \]
+\phtoku
+$\omega_0=1/\sqrt{10^{-8}}=\qty{10000}{rad/s}$、$f_0=10000\div(2\pi)\approx\qty{1592}{Hz}$。電流 $1\div20=\qty{50}{mA}$、$Q=10000\times0.01\div20=5$、コイルの電圧 $Q\lvert E\rvert=\qty{5}{V}$。\\
+\qty{1000}{Hz}：$\omega L\approx62.8$、$1/(\omega C)\approx159.2$ で、
+\[ \lvert Z\rvert\approx\sqrt{20^2+(62.8-159.2)^2}\approx98.4 \]
+なので約\qty{10}{mA}。\qty{2000}{Hz}：$\lvert Z\rvert\approx50.2$ で約\qty{20}{mA}。
+\phtashikame
+単位：$1/\sqrt{\text{H × F}}$ ＝ 1/s。6-13⑪と同じ。$\zeta=\tfrac{R}{2}\sqrt{C/L}=0.1$ で、$Q=1/(2\zeta)=5$（波-2 例題1のばねと同じ）。コイルの電圧が電源の5倍でも、コンデンサーの電圧と打ち消し合う。
+\kotae $f_0\approx\qty{1592}{Hz}$、\qty{50}{mA}、$Q=5$、コイルの電圧\qty{5}{V}。\qty{1000}{Hz}で約\qty{10}{mA}、\qty{2000}{Hz}で約\qty{20}{mA}
+\end{phreidai}
+\begin{jibun}
+$L=\qty{50}{mH}$、$C=\qty{0.2}{\micro F}$、$R=\qty{50}{\ohm}$ の RLC 直列回路に\qty{2}{V}をつなぎます。共振周波数、共振のときの電流、Q 値を求めましょう。
+\bkjans{$\omega_0=1/\sqrt{10^{-8}}=\qty{10000}{rad/s}$、$f_0\approx\qty{1592}{Hz}$。電流 $2\div50=\qty{40}{mA}$。$Q=10000\times0.05\div50=10$}
+\end{jibun}
+
+\begin{phreidai}[ラジオの同調に必要な静電容量]
+\label{ph:電-10:ex7}ラジオの同調回路のコイルが\qty{200}{\micro H}です。\qty{1}{MHz}（\qty{1000}{kHz}）と\qty{594}{kHz}の局を選ぶには、可変コンデンサーを何 pF にすればよいですか（6-13⑪と同じけたで書く）。
+\phbamen
+\bkhatenaref のラジオ。ダイヤルで $C$ を変えて、局を選ぶ。
+\phmushi
+コイルの抵抗（共振の周波数にはほとんど効かない）。アンテナのコイルどうしのつながり。
+\phzu
+$L=\qty{2e-4}{H}$、選びたい周波数 $f_0$、静電容量 $C$。
+\phriyu
+選ばれるのは共振周波数 $f_0=1/(2\pi\sqrt{LC})$ の局（⑦）。$C$ について解く。
+\phtateru
+\[ C=\frac{1}{(2\pi f_0)^2L} \]
+\phtoku
+\qty{1}{MHz}：$C=1\div\bigl((6.283\times10^6)^2\times2\times10^{-4}\bigr)\approx\qty{1.27e-10}{F}=\qty{127}{pF}$。\qty{594}{kHz}：$(6.283\times0.594\times10^6)^2\approx1.393\times10^{13}$ で、$C\approx\qty{359}{pF}$。
+\phtashikame
+単位：1 ÷ ((1/s)$^2$ × H) ＝ F。周波数が $1/1.68$ になると $C$ は $1.68^2\approx2.8$ 倍（$C\propto1/f_0^{\,2}$）。AM 放送の全部（531〜\qty{1602}{kHz}）を選ぶには、約49〜\qty{449}{pF}。
+\kotae \qty{1}{MHz}で約\qty{127}{pF}、\qty{594}{kHz}で約\qty{359}{pF}
+\end{phreidai}
+\begin{jibun}
+同じ\qty{200}{\micro H}のコイルで、\qty{954}{kHz}の局を選ぶには、何 pF にすればよいですか。
+\bkjans{$\omega_0=2\pi\times954\times10^3\approx5.99\times10^6$。$C=1/(\omega_0^{\,2}L)\approx\qty{139}{pF}$}
+\end{jibun}
+
+\begin{reidai}[Q 値と、となりの局]
+\label{ph:電-10:ex8}Q＝100の同調回路で\qty{1}{MHz}の局を選ぶとき、半値幅は何 kHz ですか。となりの局（9\,kHz 離れている）と比べましょう。
+\par\bkstep{理想化} 半値幅の式 $f_0/Q$（⑦）は、Q が大きいときによく合う。
+\par\kangaekata 半値幅は $\Delta f=f_0/Q$。中心から $\Delta f/2$ より遠いと、電力は半分以下。
+\par\shiki $\Delta f=1000\div100=\qty{10}{kHz}$
+\par\bkstep{確かめ} となりの局（9\,kHz 先）は山のふもと（電力は約24\,\%）で、少しまざる。
+\par\kotae 約\qty{10}{kHz}。となりの局との間かく9\,kHz と同じくらい
+\end{reidai}
+\begin{jibun}
+Q＝50の同調回路で\qty{594}{kHz}の局を選ぶとき、半値幅は何 kHz ですか。
+\bkjans{$594\div50\approx\qty{11.9}{kHz}$}
+\end{jibun}
+
+\begin{phreidai}[RC ローパスフィルター]
+\label{ph:電-10:ex9}\qty{1}{k\ohm}の抵抗と\qty{0.1}{\micro F}のコンデンサーで、図\ref{ph:電-10:fig-rc}のローパスフィルターを作ります。遮断周波数と、\qty{10}{kHz}の信号が何 dB 小さくなるかを求めましょう。
+\phbamen
+音の信号から、高い周波数の雑音を取りのぞく。
+\phmushi
+出力につないだ回路に流れる電流（出力は何もつながないとする）。信号源の内部抵抗。
+\phzu
+$R=\qty{1000}{\ohm}$、$C=\qty{1e-7}{F}$、入力 $V_{\text{入}}$、出力 $V_{\text{出}}$。
+\phriyu
+直列の電圧の分かれ方をインピーダンスで書くと $V_{\text{出}}/V_{\text{入}}=1/(1+j\omega RC)$（⑨）。dB は電圧の比の $20\log_{10}$（3-12）。
+\phtateru
+\[ f_{\mathrm c}=\frac{1}{2\pi RC},\qquad \Bigl\lvert\frac{V_{\text{出}}}{V_{\text{入}}}\Bigr\rvert=\frac{1}{\sqrt{1+(f/f_{\mathrm c})^2}} \]
+\phtoku
+$RC=10^{-4}$\,s、$f_{\mathrm c}=1\div(6.283\times10^{-4})\approx\qty{1.6}{kHz}$（\qty{1592}{Hz}）。\qty{10}{kHz}では $f/f_{\mathrm c}\approx6.28$、比は $1/\sqrt{1+39.5}\approx0.157$、$20\log_{10}0.157\approx-16$\,dB。
+\phtashikame
+単位：1 ÷ (Ω × F) ＝ 1/s（Ω × F ＝ s）。$f_{\mathrm c}$ より10倍高いと約 $-20$\,dB の目安（9-8⑨）と合う（約6倍で $-16$\,dB）。極端な場合：直流では比1（コンデンサーに電流が流れず、$R$ の電圧が0）。
+\kotae 遮断周波数 約\qty{1.6}{kHz}、\qty{10}{kHz}で約 $-16$\,dB（約0.16倍）
+\end{phreidai}
+\begin{jibun}
+\qty{2.2}{k\ohm}と\qty{0.047}{\micro F}の RC ローパスフィルターの遮断周波数と、\qty{20}{kHz}での出力（dB）を求めましょう。
+\bkjans{$RC\approx1.03\times10^{-4}$\,s。$f_{\mathrm c}=1/(2\pi RC)\approx\qty{1.5}{kHz}$。$20\div1.54\approx13$、$1/\sqrt{1+13^2}\approx0.077$ で約 $-22$\,dB}
+\end{jibun}
+
+\begin{phreidai}[並列共振のインピーダンス]
+\label{ph:電-10:ex10}\bkreidairef{6}のコイル（\qty{10}{mH}、抵抗\qty{20}{\ohm}）とコンデンサー（\qty{1}{\micro F}）を並列にします（図\ref{ph:電-10:fig-heiretsu}）。電圧と電流の位相がそろうときの、インピーダンスを求めましょう。
+\phbamen
+決まった周波数だけ止める回路（発振回路・ラジオの中の回路）。
+\phmushi
+コンデンサーの損失。
+\phzu
+$L=\qty{0.01}{H}$、$R=\qty{20}{\ohm}$、$C=\qty{1e-6}{F}$。コイルの枝のインピーダンス $R+j\omega L$、コンデンサーの枝 $1/(j\omega C)$。
+\phriyu
+並列はアドミタンスのたし算（⑤）。位相がそろう＝アドミタンスの虚部が0。
+\phtateru
+\[ Y=j\omega C+\frac{1}{R+j\omega L}=j\omega C+\frac{R-j\omega L}{R^2+\omega^2L^2} \]
+虚部が0：$\omega C=\dfrac{\omega L}{R^2+\omega^2L^2}$、つまり $R^2+\omega^2L^2=\dfrac{L}{C}$。
+\phtoku
+そのとき $Y=\dfrac{R}{R^2+\omega^2L^2}=\dfrac{RC}{L}$ なので、$Z=\dfrac{L}{CR}=\dfrac{0.01}{10^{-6}\times20}=\qty{500}{\ohm}$。周波数は $\omega^2=\dfrac{1}{LC}-\dfrac{R^2}{L^2}$ から約\qty{1559}{Hz}（直列共振の\qty{1592}{Hz}より少し低い）。
+\phtashikame
+単位：H ÷ (F × Ω) ＝ Ω（H ＝ Ω·s、F ＝ s/Ω）。$R$ が小さいほど大きい（$R=\qty{10}{\ohm}$ なら\qty{1000}{\ohm}）。部品1つ（\qty{20}{\ohm}）より、ずっと大きなインピーダンスになる。
+\kotae 約\qty{500}{\ohm}（周波数 約\qty{1559}{Hz}）
+\end{phreidai}
+\begin{jibun}
+\qty{200}{\micro H}（抵抗\qty{10}{\ohm}）のコイルと\qty{127}{pF}のコンデンサーの並列共振の、インピーダンスを求めましょう。
+\bkjans{$CR=1.27\times10^{-9}$。$L/(CR)=2\times10^{-4}\div(1.27\times10^{-9})$ $\approx\qty{157}{k\ohm}$}
+\end{jibun}
+
+\begin{phreidai}[マクスウェルブリッジでコイルをはかる]
+\label{ph:電-10:ex11}図\ref{ph:電-10:fig-maxwell}のマクスウェルブリッジで、$R_2=R_3=\qty{1}{k\ohm}$、$C_4=\qty{0.01}{\micro F}$、$R_4=\qty{50}{k\ohm}$ のとき、つり合いました。コイルのインダクタンスと抵抗を求めましょう。
+\phbamen
+部品のコイルのインダクタンスを、正確な抵抗とコンデンサーと比べてはかる。
+\phmushi
+配線のインピーダンス。検出器の電流（つり合いでは0）。
+\phzu
+$Z_1=R_x+j\omega L_x$、$Z_2=R_2$、$Z_3=R_3$、$Z_4$ は $R_4$ と $C_4$ の並列。
+\phriyu
+つり合いは $Z_1Z_4=Z_2Z_3$（⑩）。実部と虚部を比べた結果が⑩の式。
+\phtateru
+\[ L_x=R_2R_3C_4,\qquad R_x=\frac{R_2R_3}{R_4} \]
+\phtoku
+$L_x=1000\times1000\times10^{-8}=\qty{0.01}{H}=\qty{10}{mH}$、$R_x=10^6\div(5\times10^4)=\qty{20}{\ohm}$。
+\phtashikame
+単位：Ω$^2$ × F ＝ Ω × s ＝ H。\bkreidairef{6}のコイル（\qty{10}{mH}・\qty{20}{\ohm}）と同じ。\qty{1}{kHz}で $Z_1Z_4$ を計算すると、$Z_2Z_3=10^6$ に合う（周波数によらない）。
+\kotae $L_x=\qty{10}{mH}$、$R_x=\qty{20}{\ohm}$
+\end{phreidai}
+\begin{jibun}
+$R_2=\qty{500}{\ohm}$、$R_3=\qty{2}{k\ohm}$、$C_4=\qty{0.02}{\micro F}$、$R_4=\qty{25}{k\ohm}$ でつり合いました。$L_x$ と $R_x$ を求めましょう。
+\bkjans{$L_x=500\times2000\times0.02\times10^{-6}=\qty{0.02}{H}=\qty{20}{mH}$、$R_x=10^6\div25000=\qty{40}{\ohm}$}
+\end{jibun}
+
+\begin{reidai}[高調波がまざった電圧の実効値]
+\label{ph:電-10:ex12}実効値\qty{100}{V}の正弦波に、3倍の周波数の高調波が実効値\qty{10}{V}まざっています。全体の実効値を求めましょう。
+\par\bkstep{理想化} 基本波と高調波のほかは、まざっていないとする。
+\par\kangaekata 周波数の違う波の実効値は、2乗してたして平方根（⑪）。
+\par\shiki $V=\sqrt{100^2+10^2}=\sqrt{10100}\approx\qty{100.5}{V}$
+\par\bkstep{確かめ} 2つの波を1周期の間、細かく区切って2乗の平均を計算しても、同じ値になる。$100+10=110$ ではない。
+\par\kotae 約\qty{100.5}{V}
+\end{reidai}
+\begin{jibun}
+実効値\qty{100}{V}の基本波に、3倍の高調波\qty{20}{V}と5倍の高調波\qty{10}{V}がまざっています。全体の実効値を求めましょう。
+\bkjans{$\sqrt{100^2+20^2+10^2}=\sqrt{10500}\approx\qty{102}{V}$}
+\end{jibun}
+
+\begin{phreidai}[スピーカーで、高い音と低い音を分ける]
+\label{ph:電-10:ex13}④の身近な例の、スピーカーの分け方を設計します。\qty{8}{\ohm}のツイーター（高い音用）にコンデンサーを直列に、\qty{8}{\ohm}のウーファー（低い音用）にコイルを直列につなぎ、どちらも\qty{3}{kHz}で出力が $1/\sqrt2$（$-3$\,dB）になるようにします。コンデンサーとコイルの大きさを求めましょう。
+\phbamen
+スピーカーの中のネットワーク（周波数で音を分ける回路）を選ぶ。
+\phmushi
+スピーカーを\qty{8}{\ohm}の抵抗とみなす（本物のスピーカーのインピーダンスは、周波数で少し変わる）。部品の損失。
+\phzu
+$R=\qty{8}{\ohm}$、$f_{\mathrm c}=\qty{3000}{Hz}$。ツイーターの側は $R$ と $C$ の直列、ウーファーの側は $R$ と $L$ の直列で、どちらも $R$ の電圧が出力。
+\phriyu
+ツイーターの側は、⑨のローパスの $R$ と $C$ を入れかえたハイパスで、$1/(\omega C)=R$ のとき出力が $1/\sqrt2$。ウーファーの側は $\omega L=R$ のとき $1/\sqrt2$（どちらも大きさは $R/\lvert Z\rvert$。⑤）。
+\phtateru
+\[ C=\frac{1}{2\pi f_{\mathrm c}R},\qquad L=\frac{R}{2\pi f_{\mathrm c}} \]
+\phtoku
+\[ C=\frac{1}{2\times3.14\times3000\times8}\approx\qty{6.6e-6}{F}=\qty{6.6}{\micro F} \]
+\[ L=\frac{8}{2\times3.14\times3000}\approx\qty{4.2e-4}{H}=\qty{0.42}{mH} \]
+\phtashikame
+単位：1 ÷ (1/s × Ω) ＝ s/Ω ＝ F、Ω ÷ (1/s) ＝ Ω·s ＝ H。\\
+大きさ：10分の1の\qty{300}{Hz}では、ツイーターの出力は $1/\sqrt{1+10^2}\approx0.10$（約 $-20$\,dB）で、低い音はほとんど届かない（⑨のボード線図と同じ）。\\
+極端な場合：$C$ を大きくすると、もっと低い音までツイーターに届く。
+\kotae コンデンサー 約\qty{6.6}{\micro F}、コイル 約\qty{0.42}{mH}
+\end{phreidai}
+\begin{jibun}
+\qty{4}{\ohm}のスピーカーで、\qty{2}{kHz}で分けるには、コンデンサーとコイルをいくらにすればよいですか。
+\bkjans{$C=1\div(2\times3.14\times2000\times4)\approx\qty{20}{\micro F}$、$L=4\div(2\times3.14\times2000)\approx\qty{0.32}{mH}$}
+\end{jibun}
+
+%% ---------------- まちがえやすいところ ----------------
+\Needspace{9\baselineskip}
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{部品の電圧の実効値を、そのままたす}
+\bkng{抵抗に\qty{80}{V}、コイルに\qty{60}{V}なら、電源は\qty{140}{V}。}
+\bkok{90°ずれた矢印のたし算なので $\sqrt{80^2+60^2}=\qty{100}{V}$。}
+実効値は矢印の長さです。向きの違う矢印は、フェーザ（複素数）でたしてから長さを求めます（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{コイルとコンデンサーで、進む・おくれるを逆にする}
+\bkng{コンデンサーは電流をためるので、電流は電圧よりおくれる。}
+\bkok{コンデンサーは $i=C\,\dd v/\dd t$ で、電流は電圧より90°\textbf{進む}。コイルの電流は90°おくれる。}
+「コンデンサーは、電圧が変わり始めると先に電流が流れて電荷を運ぶ」と覚えます。$j\omega C$（左回り）と $1/(j\omega L)$（右回り）の向きで確かめられます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{角周波数と周波数を取り違える}
+\bkng{\qty{50}{Hz}の\qty{10}{mH}のリアクタンスは $50\times0.01=\qty{0.5}{\ohm}$。}
+\bkok{$X_L=\omega L=2\pi fL=2\times3.14\times50\times0.01\approx\qty{3.1}{\ohm}$。}
+式の $\omega$ は角周波数（rad/s）で、周波数 $f$（Hz）の $2\pi$ 倍です。共振周波数の $2\pi$ も同じ理由です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{共振のとき、コイルの電圧は電源より小さい}
+\bkng{部品の電圧は、電源の電圧を分けたものなので、電源より大きくならない。}
+\bkok{直列共振では、コイルとコンデンサーの電圧は電源の Q 倍になることがある。}
+2つは逆向きで打ち消し合うので、電圧則（矢印の和）はやぶれていません（⑦）。
+\end{tsumazuki}
+
+%% ---------------- 工学ではこう使う ----------------
+\Needspace{8\baselineskip}
+\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[選ぶ・分ける・はかる]
+\phboxhead{① ラジオ・テレビ・スマホのチューナー}
+今のラジオやスマホでは、可変コンデンサーのかわりに、電圧で静電容量が変わる部品や、デジタルの計算で周波数を選ぶ回路が使われています。それでも、アンテナのすぐ後ろには、ほしい周波数の帯だけを通すフィルター（コイルとコンデンサーの共振を使う）が入っていて、⑦⑧⑨の考えがそのまま生きています。
+
+\begin{phketa}[交流回路の数の目安]
+\phketaline{家の電圧と周波数}{\qty{100}{V}（\qty{101}{V}±\qty{6}{V}）、東\qty{50}{Hz}・西\qty{60}{Hz}}
+\phketaline{AM（中波）放送の周波数}{526.5〜\qty{1606.5}{kHz}（局は9\,kHz おき）}
+\phketaline{同調回路の Q}{数十〜数百}
+\phketaline{\qty{10}{mH}・\qty{1}{\micro F}の共振}{約\qty{1.6}{kHz}（どちらも約\qty{100}{\ohm}）}
+\phboxhead{答えが桁で合っているか}
+$2\pi$ を忘れると、リアクタンスや共振周波数が約6倍ずれる。「\si{k\ohm}×\si{\micro F}＝ms」や「\qty{10}{mH}・\qty{1}{\micro F}で $\omega_0=\qty{10000}{rad/s}$、$LC$ が100倍なら $f_0$ は10分の1」で桁を確かめる。部品の電圧の和が電源より大きくても、位相がずれていればおかしくない。
+\end{phketa}
+
+\phboxhead{② スピーカーのネットワーク・電源のノイズフィルター}
+④の身近な例のように、コイルとコンデンサーを組み合わせると、周波数で信号を分けられます。電子レンジやエアコンの電源の入口のフィルターは、機械の中で生まれた高い周波数の雑音を止め、家の配線を通ってほかの機械にもれないようにしています。
+
+\phboxhead{③ LCR メーター}
+部品のインダクタンス・静電容量・抵抗をはかる道具（LCR メーター）は、⑩の交流ブリッジの考えを、電子回路で自動にしたものです。決まった周波数（\qty{1}{kHz}など）の交流をかけ、電圧と電流のフェーザの比 $Z$ の実部と虚部から、$R$ と $L$（または $C$）を求めます。
+\end{phkougaku}
+\phstation{電気回路,電子回路,通信工学,計測}{正弦波交流、実効値、フェーザ、複素数表示、インピーダンス、アドミタンス、リアクタンス、直列共振、並列共振、選択度（Q）、フィルター、遮断周波数、ボード線図、交流ブリッジ、高調波、ひずみ率}
+
+\begin{phsaki}{回路網の周波数特性・高周波回路}
+この章では、正弦波の交流を、フェーザで解きました。スイッチを入れた直後のような、正弦波でない変化は、電-9 のラプラス変換で、フェーザと同じように「$s$ のかけ算」として扱えます（$s=j\omega$ がフェーザ）。たくさんの部品をつないだ回路の周波数による変わり方（周波数特性）や、ほしい周波数だけを通すフィルターの設計は、回路網理論・フィルター設計の専門の本で学びます。周波数がさらに高くなり、配線の長さが波長に近づくと、電線の上を電気の波が伝わることを考えなければなりません（電-13 の分布定数回路）。交流の電力の扱い方は、電-11 で学びます。
+\end{phsaki}
+
+%% ---------------- 章末問題 ----------------
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 消費電力\qty{1000}{W}の電気ケトル（抵抗）を\qty{100}{V}のコンセントにつなぎます。電流の実効値と山の高さを求めましょう（\nobreak\bkreidairef{2}\nobreak）。
+\bkpans{$I=1000\div100=\qty{10}{A}$、山 $\sqrt2\times10\approx\qty{14}{A}$}
+\bkproblem （1）\qty{0.1}{H}のコイルの\qty{60}{Hz}でのリアクタンス、（2）\qty{10}{\micro F}のコンデンサーの\qty{50}{Hz}でのリアクタンスを求めましょう（\nobreak\bkreidairef{3}・\bkreidairef{4}\nobreak）。
+\bkpans{（1）$2\times3.14\times60\times0.1\approx\qty{38}{\ohm}$。（2）$1\div(2\times3.14\times50\times10^{-5})\approx\qty{318}{\ohm}$}
+\bkproblem 抵抗\qty{6}{\ohm}とリアクタンス\qty{8}{\ohm}のコイルの直列に、\qty{100}{V}の交流をかけます。インピーダンスの大きさ、電流、電流のおくれの角、それぞれの部品の電圧を求めましょう（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{$\lvert Z\rvert=\sqrt{36+64}=\qty{10}{\ohm}$、電流\qty{10}{A}、おくれ $\tan^{-1}(8/6)\approx53°$、$V_R=\qty{60}{V}$、$V_L=\qty{80}{V}$}
+\bkproblem $L=\qty{1}{mH}$、$C=\qty{10}{nF}$ の RLC 直列回路の共振周波数を求めましょう（\nobreak\bkreidairef{6}\nobreak）。
+\bkpans{$\omega_0=1/\sqrt{10^{-11}}$ $\approx\qty{3.16e5}{rad/s}$、$f_0\approx\qty{50}{kHz}$（50.3\,kHz）}
+\bkproblem 抵抗\qty{40}{\ohm}、リアクタンス\qty{60}{\ohm}のコイル、リアクタンス\qty{30}{\ohm}のコンデンサーを直列にして、\qty{100}{V}の交流をかけます。インピーダンスの大きさと電流を求めましょう（\nobreak\bkreidairef{5}\nobreak）。
+\bkpans{$\lvert Z\rvert=\sqrt{40^2+(60-30)^2}=\qty{50}{\ohm}$、電流 $100\div50=\qty{2}{A}$}
+\bkproblem 実効値\qty{100}{V}の基本波に、3倍の高調波が\qty{30}{V}まざっています。全体の実効値を求めましょう（\nobreak\bkreidairef{12}\nobreak）。
+\bkpans{$\sqrt{100^2+30^2}=\sqrt{10900}\approx\qty{104}{V}$}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 基本4 の回路（\qty{1}{mH}・\qty{10}{nF}）に、\qty{10}{\ohm}の抵抗が直列に入っています。Q 値と半値幅を求めましょう（\nobreak\bkreidairef{6}・\bkreidairef{8}\nobreak）。
+\bkpans{$Q=\omega_0L/R=3.16\times10^5\times10^{-3}\div10\approx32$、半値幅 $50.3\div31.6\approx\qty{1.6}{kHz}$}
+\bkproblem \qty{4.7}{k\ohm}の抵抗と\qty{0.01}{\micro F}のコンデンサーで RC ローパスフィルターを作ります。（1）遮断周波数を求めましょう。（2）遮断周波数の10倍の周波数の信号は、何 dB になりますか（\nobreak\bkreidairef{9}\nobreak）。
+\bkpans{（1）$RC=4.7\times10^{-5}$\,s、$1\div(2\pi\times4.7\times10^{-5})\approx\qty{3.4}{kHz}$。（2）比は $1/\sqrt{1+10^2}\approx0.0995$ で、約 $-20$\,dB}
+\bkproblem ラジオの同調回路のコイルを\qty{300}{\micro H}にします。AM 放送の局（531〜\qty{1602}{kHz}）をすべて選ぶには、可変コンデンサーを何 pF から何 pF まで変えられればよいですか（\nobreak\bkreidairef{7}\nobreak）。
+\bkpans{\qty{1602}{kHz}で $\omega_0\approx1.007\times10^7$、$C=1/(\omega_0^{\,2}L)\approx\qty{33}{pF}$。\qty{531}{kHz}で約\qty{299}{pF}。約33〜\qty{299}{pF}}
+\bkproblem \qty{1}{MHz}の局を、半値幅が9\,kHz 以下になるように選びたい。\qty{200}{\micro H}のコイルを使うとき、Q 値はいくら以上要りますか。また、回路の抵抗は何 Ω 以下にすればよいですか（\nobreak\bkreidairef{6}・\bkreidairef{8}\nobreak）。
+\bkpans{$Q\geqq1000\div9=111.1\cdots$ なので、約112以上（下限は切り上げ）。$\omega_0L=2\pi\times10^6\times2\times10^{-4}\approx\qty{1257}{\ohm}$、$R=\omega_0L/Q$ $\leqq1257\div111.1\approx11.3$ で、約\qty{11}{\ohm}以下（上限は切り捨て）}
+\bkproblem マクスウェルブリッジで、$R_2=R_3=\qty{2}{k\ohm}$、$C_4=\qty{0.05}{\micro F}$、$R_4=\qty{100}{k\ohm}$ のときつり合いました。コイルのインダクタンスと抵抗を求めましょう。このコイルを\qty{1}{\micro F}のコンデンサーと直列にしたときの共振周波数と Q 値も求めましょう（\nobreak\bkreidairef{6}・\bkreidairef{11}\nobreak）。
+\bkpans{$L_x=\qty{0.2}{H}$、$R_x=4\times10^6\div10^5=\qty{40}{\ohm}$。$\omega_0=1/\sqrt{2\times10^{-7}}\approx\qty{2236}{rad/s}$、$f_0\approx\qty{356}{Hz}$。$Q=2236\times0.2\div40\approx11$}
+\bkproblem \bkreidairef{6}の RLC 直列回路（\qty{1}{V}）を、\qty{1000}{Hz}で使います。抵抗・コイル・コンデンサーの電圧の実効値を求め、3つをフェーザでたすと、電源の\qty{1}{V}になることを確かめましょう（\nobreak\bkreidairef{5}・\bkreidairef{6}\nobreak）。
+\bkpans{$\lvert Z\rvert\approx98.4$\,Ω、電流 約\qty{10.2}{mA}。抵抗 約\qty{0.20}{V}、コイル $62.8\times0.0102\approx\qty{0.64}{V}$、コンデンサー $159.2\times0.0102\approx\qty{1.62}{V}$（電源より大きい）。コイルとコンデンサーは逆向きで、和は約\qty{0.98}{V}（コンデンサーの向き）。抵抗の電圧と直角なので $\sqrt{0.20^2+0.98^2}\approx\qty{1.0}{V}$}
+
+%% ふりかえりと吹き出しを同じページに組むため
+\Needspace{16\baselineskip}
+\begin{furikaeri}
+\begin{checklist}
+\item 家の交流の周波数と実効値の意味を説明し、\qty{100}{V}の交流の山の電圧を求められる。\bkfurref{ph:電-10:sec2}
+\item コイル・コンデンサーのリアクタンスと位相のずれ、RLC 直列回路のインピーダンスと共振周波数を求められる。\bkfurref{ph:電-10:sec4}
+\item 電圧・電流を複素数（フェーザ）で表して交流回路を解き、Q 値・フィルター・交流ブリッジを計算できる。\bkfurref{ph:電-10:sec5}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{コイルとコンデンサーの「ずれ」を矢印でたすと、ラジオの同調まで説明できたね。次の電-11 では、交流の電力と、送電線の3本の線のなぞに進むよ。}
