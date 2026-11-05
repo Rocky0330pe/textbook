@@ -1,0 +1,580 @@
+%% 第24回編集委員会（物理第3巻）：組 波W8
+%% p3-14.tex  波-14　読みもの　波で情報を送る（★3〜5。読みもの。3段にしない）
+%% 中身は計画書 tools/phys3-plan.md の B「波-14」。読みもの（例題は「見本の計算」。じぶんでとこう・章末問題はなし）。第2巻の読みもの p2-16.tex と同じ形。
+%% 中学・高校の公式を導かないので「この章で導く中学・高校の公式」の欄は置かない（計画書 0 の1）。
+%% 公式は導き直さず、持ち主の章を指す：c＝fλ（波-5 ②）、情報量・エントロピー（波-11 ⑨）、通信路容量 C＝B log2(1+P_s/P_n)（波-11 ⑩）、
+%%   サンプリング（波-11 ⑤）、v＝c/n・全反射・光ファイバ（波-12 ③④）、dB（3-12⑦・波-9 ⑥）、こだまの距離（波-10 ①）、ドップラーで速さ（波-8 ⑦）、
+%%   共振と Q（波-2 ⑤、6-13⑪）、整合（波-7 ⑧）、フーリエ変換で cos をかけるとスペクトルが移る（9-4 の性質の表）、OFDM（9-12⑤）。
+%%   変調・アンテナ・電波の出し方は、物理シリーズの『電磁気学』（電-13・電-15）への予告にとどめた（電気の法則は導かない：W-9 と同じ考え）。
+%% 数学・ほかの章との約束（この章で果たしたもの）：
+%%   ・9-12:277「312.5 kHz は 20 MHz÷64 …（くわしくは物理シリーズ 波-14）」→ ④（OFDM の1記号 4 μs・48 本・54 Mbit/s）・見本の計算3。
+%%   ・9-4:613「AM ラジオ … 局ごとに ω_c がちがうので、たくさんの局の電波がまざらずに届きます（物理の波-14）」→ ②。
+%%   ・波-4 のこの先の学び「電波の周波数を合わせる制御（波-14）」→ ②の最後（受ける側で周波数を合わせ続ける）。
+%%   ・波-11 のこの先の学び「電波に信号をのせて送るしくみは、この巻の読みもの（波-14）で見ます」→ ②③④。
+%%   ・波-13 のふきだし「次の波-14 では、波を使って情報を送るしくみ」→ 全体。
+%% 記号（この章。第4部なので c は光の速さ（W-4））：搬送波の振動数 f_c、信号の振動数 f_m（9-4 の ω_c と同じ添え字。
+%%   波-11 の RC フィルターの f_c とは別の量なので、記号カードに書いた）、波長 λ、帯域幅 B、通信路容量 C、信号と雑音の電力 P_s・P_n、
+%%   時間 t、距離 d・L、屈折率 n。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-14/calc_p3_14.py（出力 calc_p3_14_out.txt）。
+%% ほかの章とそろえた数値：光の速さ 3.00×10^8 m/s（波-8・波-12）、コア 1.48（波-12 ④）、CD 1411.2 kbit/s・MP3 128 kbit/s（9-12①・波-11）、
+%%   電話の声 64 kbit/s（波-11、ITU-T G.711）、3 kHz・30 dB → 約30 kbit/s（波-11 ⑩）、Wi-Fi の 20 MHz・312.5 kHz・52 本・48 本（9-12⑤）。
+%% 出典（第24回の追記（11月5日）により、書くときに確かめた。WebSearch で2つ以上の資料を照らし合わせたものは「照合」と書いた）
+%%   ・中波（AM）放送：531〜1602 kHz の 9 kHz おき（総務省「基幹放送用周波数使用計画」の告示の文。総務省の PDF の検索の抜粋で確かめた）、
+%%     中波放送の帯 526.5〜1606.5 kHz（総務省関東総合通信局「ラジオ放送の概要」https://www.soumu.go.jp/soutsu/kanto/bc/radio/gaiyo/index.html を curl で読んだ。
+%%     放送法第2条・電波法施行規則第2条）。
+%%   ・AM の電波のはば（修3-6、P6-10。11月5日）：e-Gov 法令の API（laws.e-gov.go.jp/api/2/law_data/325M50080000018）を curl で読んだ。
+%%     無線設備規則（昭和25年電波監理委員会規則第18号。令和8年10月1日施行の版、令和8年総務省令第115号による改正まで）第6条「発射電波に許容される
+%%     占有周波数帯幅の値は、別表第二号に定めるとおりとする」、別表第二号 第1「占有周波数帯幅の許容値の表」の A3E 電波の行：
+%%     「15 kHz　地上基幹放送局及び放送中継を行う無線局の無線設備」（ほかは 5.6 kHz（8.33 kHz 間隔の航空）・8 kHz（国際放送の伝送）・6 kHz（その他））。
+%%     もとの「1つの局の電波は、およそ 9 kHz のはばに収める……のせられる音は、およそ 4.5 kHz まで」は、9 kHz（搬送波の間かく）をはばと取り違えていた。
+%%     本文は「搬送波は 9 kHz おき、占有周波数帯幅は 15 kHz 以内、はばが 15 kHz ならのせられる音はその半分の約 7.5 kHz まで（上下に同じ形が出るため）」に直した。
+%%     「近い地域では、すぐとなりの周波数を使わない」という割り当ての決まりは、総務省の資料（基幹放送用周波数使用計画の検索の抜粋）では確かめられなかったので、
+%%     本文は「近くの局どうしで、すぐとなりの振動数を使うと、まざって聞こえる」という、はばの重なりから言えることだけにした。
+%%   ・FM 放送の周波数 76.1〜94.9 MHz（ワイド FM は 90.0〜94.9 MHz）：総務省東海総合通信局 報道資料（2024年1月9日）
+%%     https://www.soumu.go.jp/soutsu/tokai/kohosiryo/2024/0109.html を curl で読んだ。
+%%   ・無線 LAN の 2.4 GHz 帯（2400〜2483.5 MHz）：総務省の周波数表・電波監理審議会の資料（soumu.go.jp/main_content/000687271.pdf ほか）の検索の抜粋。
+%%     電子レンジも同じ帯の電波を使い、近くで使うと無線 LAN に影響することがある：エレコム・日立ソリューションズの無線 LAN の資料で照合。
+%%   ・IEEE 802.11a（1999年）の OFDM：52 本のうち 48 本がデータ・4 本がパイロット、1記号 4 μs（うち保護の間 0.8 μs）、64QAM・符号化率 3/4 で
+%%     1記号 288 ビット中 216 ビットがデータ、54 Mbit/s：ミュンヘン工科大学の演習の解答（cns.net.in.tum.de/tutorial04-solution.pdf）、
+%%     Keysight のヘルプ（Coding and Modulation）で照合。数学 9-12⑤ と同じ数。
+%%   ・静止軌道の高さ 35 786 km：ESA「Types of orbits」https://www.esa.int/Enabling_Support/Space_Transportation/Types_of_orbits を curl で読んだ。
+%%   ・GPS の衛星の高さ 約20 200 km（1日に2周）：米国政府 gps.gov「Space Segment」（検索の抜粋。Air & Space Forces Magazine で照合）。
+%%   ・光ファイバ（シングルモード）の損失：1550 nm で約 0.2 dB/km（Corning SMF-28 Ultra の製品資料 PI-1424 で最大 0.18 dB/km、
+%%     Prysmian の G.652.D のデータシートで 0.19（典型）・0.21（最大）dB/km、ITU-T G.652.D の上限 0.3 dB/km を引く比較表 stl.tech で照合）。
+%%   ・マルコーニとブラウンの 1909 年のノーベル物理学賞（無線電信の発達への貢献）：nobelprize.org を curl で読んだ。
+%%   ・シャノンの 1948 年の論文：波-11 の出典と同じ。電話の声 64 kbit/s（ITU-T G.711）：波-11 と同じ。
+%%   ・光ファイバの非線形の通信路の容量が、まだわかっていないこと：K. Keykhosravi の学位論文（Chalmers 工科大学、2017、
+%%     publications.lib.chalmers.se/records/fulltext/252064/252064.pdf「an open problem」）、Turitsyn ら arXiv:physics/0303109（下限だけ）、
+%%     Wei & Plant arXiv:physics/0307020 で照合。
+%%   ・〔要確認〕なし。
+\makeatletter
+% 箱（流れ図）  \rxobox{名前}{(位置)}{はば(mm)}{字}{色}
+\newcommand\rxobox[5]{\node[draw=#5!75!black, fill=#5!10, line width=0.8pt, rounded corners=1.4mm, minimum width=#3 mm, minimum height=10mm,
+  text width=#3 mm-2mm, align=center, font=\sffamily\footnotesize, inner sep=1pt] (#1) at #2 {#4};}
+% 電波の弧  \rxowaves{(中心)}{向きの角}
+\newcommand\rxowaves[2]{\foreach \r in {3,5.5,8} {\draw[bkOrange!80!black, line width=0.8pt] #1 ++(#2-35:\r) arc[start angle=#2-35, end angle=#2+35, radius=\r];}}
+% スマホ  \rxophone{(左下)}
+\newcommand\rxophone[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!15, draw=bkInk, line width=0.7pt, rounded corners=1.2mm] (0,0) rectangle (8,15);
+  \fill[bkBlue!25] (1,2.2) rectangle (7,13);\fill[bkInk] (4,1.1) circle (0.45);\end{scope}}
+% 鉄塔（基地局）  \rxotower{(根もと)}
+\newcommand\rxotower[1]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.8pt] (-4,0) -- (0,22) -- (4,0) (-3,5) -- (3,5) (-2.1,10) -- (2.1,10) (-1.3,15) -- (1.3,15)
+    (-3,5) -- (2.1,10) (3,5) -- (-2.1,10) (-2.1,10) -- (1.3,15) (2.1,10) -- (-1.3,15);
+  \filldraw[fill=bkGray!30, draw=bkInk, line width=0.6pt] (-1.2,19) rectangle (1.2,24);\end{scope}}
+\makeatother
+\tikzset{rxo lab/.style={font=\sffamily\footnotesize, inner sep=1pt, text=bkInk},
+  rxo arr/.style={-{Stealth[length=2.4mm, width=2mm]}, line width=1pt, bkInk!80},
+  rxo dim/.style={bkGray!80!black, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+
+\phchapter[読みもの]{14}{波で情報を送る}{スマホの声は、どうやって電波にのせて送る？}{\bklevelrange{3}{5}}{波で情報を送る}
+\bkmichishirube{9-4,9-12,波-2,波-8,波-10,波-11,波-12}{電-13,電-15}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 電波の振動数からアンテナの大きさを、電波が往復する時間から距離を、見積もれる。
+\item \bklevel{4}\enspace AM・FM・ディジタルの変調を、波の振幅・振動数・位相を変えることとして説明できる。
+\item \bklevel{5}\enspace たくさんの周波数で同時に送る方式（OFDM）の速さを計算し、通信路容量の上限とくらべられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+スマホで電話をかけると、遠くにいる友だちの声が、ほとんどおくれずに聞こえます。スマホとスマホの間には、電線はつながっていません。声は、電波にのって空気の中を飛んでいきます。\par\vspace{3pt}
+でも、電波は1秒に何十億回もゆれる波で、声は1秒に数百回ゆれる空気の波です。声を、どうやって電波に「のせる」のでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \fill[bkGray!25] (-2,-2) rectangle (52,0);
+  \draw[bkInk, line width=0.6pt] (-2,0) -- (52,0);
+  \rxophone{(0,4)}
+  \rxowaves{(9,15)}{20}
+  \rxotower{(42,0)}
+  \rxowaves{(38,22)}{200}
+  \node[font=\sffamily\bfseries\Large, text=phHatena!80!black] at (24,28) {?};
+  \node[rxo lab, anchor=north] at (4,-2.5) {スマホ};
+  \node[rxo lab, anchor=north] at (42,-2.5) {基地局};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この章は読みものです。じぶんでとこう・章末問題はありません（見本の計算の例題はあります）。これまでの章で学んだ「波の速さと波長」「共振」「スペクトル」「情報量」「光ファイバ」などの道具が、情報を送るしくみの中でどう使われているかを見ていきます。先に結論を言うと、声は、まず数の列になり、その数に合わせて、電波の振幅・振動数・位相（ずれ）を少しずつ変えて送られます。この章で使う、これまでの章の道具を、先に見ておきましょう（図\ref{ph:波-14:fig-michi}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{src/.style={bk node, text width=22mm, inner xsep=1mm, align=center, minimum height=17mm, font=\sffamily\footnotesize}}
+  \node[src] (a) at (0,24) {波の速さ\\$c=f\lambda$\\（波-5）};
+  \node[src] (b) at (27.2,24) {共振で選ぶ\\Q 値\\（波-2）};
+  \node[src] (c) at (54.4,24) {スペクトル\\FFT\\（9-4・波-11）};
+  \node[src] (d) at (81.6,24) {情報量\\通信路容量\\（波-11）};
+  \node[src] (e) at (108.8,24) {光ファイバ\\全反射\\（波-12）};
+  \node[bk node, draw=bkTheme, line width=1pt, text width=96mm, align=left, minimum height=11mm, font=\sffamily\small] (f) at (54.4,-2) {声や動画を、電波や光にのせて送る（波-14）};
+  \foreach \n in {a,b,c,d,e} {\draw[bk link] (\n.south) -- (\n.south |- f.north);}
+\end{tikzpicture}
+\bkfigcaption{これまでの章の道具が、情報を送るしくみの中で使われている。}\label{ph:波-14:fig-michi}
+\end{bkfigure}
+
+\begin{yattemiyou}[ラジオの周波数と、Wi-Fi の周波数を調べよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 住んでいる地域の AM ラジオ局と FM ラジオ局の周波数を、新聞のラジオ欄やラジオ局のウェブページで調べる。AM は kHz、FM は MHz で書いてある。
+\item 家の Wi-Fi のルーターの説明書や本体のシールで、使う周波数（\qty{2.4}{GHz}か\qty{5}{GHz}か）を調べる。
+\item それぞれの波長を、$\lambda=c/f$（光の速さ $c=\qty{3.00e8}{m/s}$）で計算し、ラジオのアンテナやルーターのアンテナの長さとくらべよう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent たとえば、\qty{80}{MHz}の FM 放送の波長は $3.00\times10^8\div(80\times10^6)=\qty{3.75}{m}$、\qty{2.4}{GHz}の Wi-Fi は\qty{12.5}{cm}です。FM ラジオの、のばすアンテナは1 m ほど、Wi-Fi のルーターのアンテナは数 cm〜10 cm ほどです。アンテナの長さは、波長と関係があるのです（⑤）。
+
+\begin{omoidasou}
+\bkrecall{波-5}{波の速さは、振動数と波長の積で $c=f\lambda$（②）。電波も光も、真空の中を $c=\qty{3.00e8}{m/s}$ で進む。}
+\bkrecall{波-2}{固有振動数に近い振動数でゆすると大きくゆれる（共振）。その鋭さが Q 値（⑤）。}
+\bkrecall{9-4}{$f(t)\cos\omega_ct$ のスペクトルは、$f$ のスペクトルを $\pm\omega_c$ だけずらして半分ずつたしたもの（フーリエ変換の性質）。}
+\bkrecall{波-11}{1秒に送る数＝サンプリング周波数×ビット数（データの量）。通信路容量 $C=B\log_2(1+P_{\mathrm s}/P_{\mathrm n})$（⑩）。}
+\end{omoidasou}
+
+%% ================================================================
+\Needspace{16\baselineskip}
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{波で知らせる：何が伝わるのか}
+\leavevmode\label{ph:波-14:sec1}昔の人は、山の上で煙を上げる「のろし」や、太鼓・鐘の音で、遠くへ知らせを送りました。今は、電波や光を使います。どれも、物を運ばずに、遠くへ\textbf{知らせ（情報）}を届ける方法です。波は、物を運ばずにエネルギーと形を運ぶので（波-5・波-7）、情報を運ぶのに向いているのです。
+
+ただし、同じ音を同じ大きさで鳴らし続けても、何も伝わりません。「鳴った」「鳴らない」「高い」「低い」のような\textbf{変化}があって、はじめて情報が伝わります。波-11 ⑨では、確率 $p$ のできごとを知ったときの情報量を $\log_2(1/p)$ ビットと決めました。いつも同じ音（確率1）なら、情報量は0です。
+\begin{bkcenter}
+\small
+\begin{tblr}{colspec={Q[l,m,wd=24mm] Q[l,m,wd=26mm] Q[l,m,wd=30mm] X[l,m]}, width=\linewidth, rowsep=1.1pt, colsep=3pt,
+  hlines={0.4pt,bkLine}, row{1}={bg=bkTheme!12, font=\sffamily\bfseries\footnotesize}}
+方法 & 波 & 速さ & 向いているところ \\
+音（声・太鼓） & 空気の圧力の波 & 約\qty{340}{m/s} & 近くの人へ。機械が要らない \\
+電波（ラジオ・スマホ） & 電場と磁場の波 & \qty{3.00e8}{m/s} & 線がなくても届く。動きながら使える \\
+光ファイバ & 光（電場と磁場の波） & 約\qty{2.0e8}{m/s} & とても多くの情報を、遠くまで \\
+\end{tblr}
+\bktabcaption{情報を運ぶ波。電波と光は、どちらも電磁波で、振動数だけが違う（序章の振動数のものさし）。}\label{ph:波-14:tab-hoho}
+\end{bkcenter}
+電波と光は、どちらも電場と磁場がゆれながら進む\textbf{電磁波}で、ゆれを伝える物（空気など）がなくても進めます。だから、宇宙の衛星とも電波で話ができます。電磁波がどうやって生まれ、なぜ光の速さで進むのかは、物理シリーズの『電磁気学』（電-15）で学びます。\bkidx{でんじは}{電磁波}
+
+\bksubsection{2}{波に信号をのせる：変調}
+\leavevmode\label{ph:波-14:sec2}声の波（数百〜数千 Hz）を、そのまま電波にして出すことは、ほとんどできません。⑤で見るように、1000 Hz の電波の波長は\qty{300}{km}もあり、それに合うアンテナを作れないからです。そこで、振動数の高い電波を「運び役」にして、その電波の形を、声に合わせて少しずつ変えます。運び役の波を\textbf{搬送波}（はんそうは）、その振動数を $f_{\mathrm c}$ と書きます。\bkidx{はんそうは}{搬送波}のせたい声などの波を\textbf{信号}、その振動数を $f_{\mathrm m}$ と書きます。搬送波の形を信号に合わせて変えることを\textbf{変調}（へんちょう）といいます。\bkidx{へんちょう}{変調}
+
+正弦波 $A\sin(2\pi f_{\mathrm c}t+\varphi)$ には、変えられるものが3つあります。振幅 $A$、振動数 $f_{\mathrm c}$、位相（ずれ）$\varphi$ です。どれを変えるかで、変調の名前が変わります（図\ref{ph:波-14:fig-hencho}）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{AM}（振幅変調）：振幅を、信号に合わせて大きくしたり小さくしたりする。AM ラジオ。
+\item \textbf{FM}（周波数変調）：振動数を、信号に合わせて少し高くしたり低くしたりする。FM ラジオ。
+\item \textbf{PSK}（位相変調）：位相を、0と1に合わせてずらす。ディジタルの通信（③）。
+\end{itemize}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, at={(0mm,56mm)}, width=126mm, height=28mm, xmin=0, xmax=2, ymin=-1.8, ymax=1.8, xtick=\empty, ytick=\empty, ylabel={信号}, axis x line=middle, axis y line=left]
+  \addplot[bkcurve2, domain=0:2, samples=120] {sin(360*x)};
+\end{axis}
+\begin{axis}[bkplot, at={(0mm,28mm)}, width=126mm, height=28mm, xmin=0, xmax=2, ymin=-1.8, ymax=1.8, xtick=\empty, ytick=\empty, ylabel={AM}, axis x line=middle, axis y line=left]
+  \addplot[bkcurve, line width=0.9pt, domain=0:2, samples=500] {(1+0.6*sin(360*x))*sin(360*14*x)};
+  \addplot[bkthin, dashed, domain=0:2, samples=120] {1+0.6*sin(360*x)};
+\end{axis}
+\begin{axis}[bkplot, at={(0mm,0mm)}, width=126mm, height=28mm, xmin=0, xmax=2, ymin=-1.8, ymax=1.8, xtick=\empty, ytick=\empty, ylabel={FM}, axis x line=middle, axis y line=left]
+  \addplot[bkcurve, line width=0.9pt, domain=0:2, samples=600] {sin(360*14*x-286*cos(360*x))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{変調（横軸は時間）。上が信号（のせたい声の波）。AM は振幅（破線がつつみの形）が、FM は波の混み具合（振動数）が、信号に合わせて変わる。}\label{ph:波-14:fig-hencho}
+\end{bkfigure}
+
+\phboxhead{AM の電波のスペクトル：局ごとに場所を分ける}
+AM の電波は、信号を $m(t)$ として $\{1+m(t)\}\cos(2\pi f_{\mathrm c}t)$ の形です。9-4 の性質「$\cos$ をかけると、スペクトルが $\pm f_{\mathrm c}$ だけ移る」から、信号のスペクトルは、$f_{\mathrm c}$ の周りへ移されます（図\ref{ph:波-14:fig-am}）。振動数 $f_{\mathrm m}$ の音をのせると、電波には $f_{\mathrm c}-f_{\mathrm m}$ と $f_{\mathrm c}+f_{\mathrm m}$ の成分が加わります。たとえば、\qty{1000}{kHz}の搬送波に\qty{1}{kHz}の音をのせると、\qty{999}{kHz}と\qty{1001}{kHz}です。のせる音の振動数が高いほど、電波が使う振動数のはば（\textbf{帯域幅}、波-11 ⑩）は広くなります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2.2mm]}] (0,0) -- (124,0);
+  \node[rxo lab, anchor=north west] at (104,-1.5) {振動数};
+  % 局A
+  \fill[bkBlue!25] (26,0) -- (30,14) -- (34,0) -- cycle; \fill[bkBlue!25] (38,0) -- (42,14) -- (46,0) -- cycle;
+  \draw[bkBlue!80!black, line width=1.6pt] (36,0) -- (36,26);
+  \node[rxo lab, anchor=north] at (36,-1.5) {$f_{\mathrm c}$};
+  \node[rxo lab, anchor=south] at (36,27) {局A};
+  \draw[rxo dim] (26,-6) -- (46,-6); \node[rxo lab, anchor=north] at (36,-7) {電波のはば（15\,kHz 以内）};
+  % 局B
+  \fill[bkOrange!35] (62,0) -- (66,14) -- (70,0) -- cycle; \fill[bkOrange!35] (74,0) -- (78,14) -- (82,0) -- cycle;
+  \draw[bkOrange!80!black, line width=1.6pt] (72,0) -- (72,26);
+  \node[rxo lab, anchor=north, align=center] at (72,-1.5) {$f_{\mathrm c}$ より 9\,kHz の\\何倍か高い所};
+  \node[rxo lab, anchor=south] at (72,27) {局B};
+  \node[rxo lab, align=left, anchor=west] at (86,16) {信号のスペクトルが\\搬送波の左右に\\うつる};
+\end{tikzpicture}
+\bkfigcaption{AM の電波のスペクトル（形を見るための図）。太い線が搬送波、三角が信号の成分（$f_{\mathrm c}\pm f_{\mathrm m}$ の所）。搬送波の振動数を 9\,kHz の何倍かずつずらして、2つの局の電波が重ならないようにすれば、まざらない。}\label{ph:波-14:fig-am}
+\end{bkfigure}
+日本の AM 放送は、搬送波の振動数を、\qty{531}{kHz}から\qty{1602}{kHz}まで、\qty{9}{kHz}おきに決めています。一方、1つの局の電波が使ってよいはば（占有周波数帯幅）は、法令（無線設備規則）で\qty{15}{kHz}以内と決められていて、搬送波の間かくの\qty{9}{kHz}より広くなることがあります。そのため、すぐとなりの振動数の2つの局の電波は、はしが重なります。近くの局どうしで、すぐとなりの振動数を使うと、まざって聞こえてしまいます。上下に同じ形が出るので、はばが\qty{15}{kHz}なら、のせられる音は、その半分の約\qty{7.5}{kHz}までです。
+
+ラジオは、たくさんの局の電波の中から、聞きたい局の $f_{\mathrm c}$ だけを、コイルとコンデンサーの回路の\textbf{共振}で選びます（波-2 ⑤、6-13⑪）。Q 値が大きいほど、となりの局をよく切り分けられます。今の受信機の多くは、受けた電波の振動数をはかり続け、自分の中で作る波の振動数をそれに合わせ続けるフィードバックの制御（波-4）も使っています。
+
+\begin{phyomi}[AM と FM]
+AM は「大きさ」で、FM は「混み具合」で信号を表す。雷などの雑音は、電波の大きさを乱しやすい。FM は大きさの乱れに強いので、音がきれいに聞こえる。そのかわり、FM はふつう、AM より広い帯域幅を使う。
+\end{phyomi}
+
+\bksubsection{3}{ディジタルの変調：点の数でビットを運ぶ}
+\leavevmode\label{ph:波-14:sec3}今のスマホや Wi-Fi は、声や動画を、まず0と1の数の列にします（波-11 ①）。そして、その数に合わせて、搬送波の振幅と位相を、とびとびの決まった値に切りかえます。
+
+搬送波 $\cos(2\pi f_{\mathrm c}t+\varphi)$ を、振幅 $A$ と位相 $\varphi$ で決まる1つの点として、平面にかいてみます。原点からの距離が振幅、角が位相です（6-10 のオイラーの公式で、$Ae^{j\varphi}$ と書く複素数の点と同じ）。決まった時間（1記号）ごとに、どの点を送るかを選ぶのが、ディジタルの変調です（図\ref{ph:波-14:fig-qam}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % QPSK
+  \begin{scope}[shift={(24,0)}]
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=1.8mm]}] (-20,0) -- (21,0);
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=1.8mm]}] (0,-20) -- (0,21);
+  \draw[bkGray, line width=0.5pt, dashed] (0,0) circle (14.1);
+  \foreach \x/\y/\t in {10/10/00, -10/10/01} {\fill[bkBlue] (\x,\y) circle (1.5); \node[rxo lab, anchor=south] at (\x+1.5,\y+2.4) {\t};}
+  \foreach \x/\y/\t in {-10/-10/11, 10/-10/10} {\fill[bkBlue] (\x,\y) circle (1.5); \node[rxo lab, anchor=north] at (\x+1.5,\y-2.4) {\t};}
+  \node[rxo lab, anchor=north] at (0,-26) {(a)\enspace 4点：1記号で2ビット};
+  \end{scope}
+  % 16QAM
+  \begin{scope}[shift={(88,0)}]
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=1.8mm]}] (-22,0) -- (23,0);
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=1.8mm]}] (0,-22) -- (0,23);
+  \foreach \x in {-15,-5,5,15} {\foreach \y in {-15,-5,5,15} {\fill[bkBlue!25] (\x,\y) circle (2.4); \fill[bkBlue] (\x,\y) circle (1.2);}}
+  \node[rxo lab, anchor=north] at (0,-26) {(b)\enspace 16点：1記号で4ビット};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ディジタルの変調の点（原点からの距離が振幅、角が位相）。(a) は振幅が同じで位相だけを4通りに変える。(b) は振幅と位相の両方を変える（QAM）。(b) の点の周りのうすい丸は、雑音で点がずれる範囲。}\label{ph:波-14:fig-qam}
+\end{bkfigure}
+点が $M$ 個あれば、1つの点で $\log_2M$ ビットを送れます（波-11 ⑨：同じ確率の $M$ 通りの情報量）。4点なら2ビット、16点なら4ビット、64点なら6ビットです。振幅と位相の両方を変えて、点を格子の形に並べる方式を \textbf{QAM}（直交振幅変調）といいます。\bkidx{きゅーえーえむ}{QAM}
+
+\begin{phbaisuru}{点の数 $M$}
+点の数を2倍にすると、1記号のビット数は1つ増えます（$\log_2 2M=\log_2M+1$）。でも、同じ大きさの電力で送ると、点と点の間がせまくなります。届いた電波には雑音がのるので、点は図\ref{ph:波-14:fig-qam}(b) のうすい丸のようにずれます。間がせまいと、となりの点とまちがえやすくなります。だから、点を増やせるのは、雑音にくらべて信号が強いとき（S/N 比が大きいとき）だけです。スマホが、電波の強い所では速く、弱い所では遅くなるのは、電波の強さに合わせて点の数を変えているからです。
+\end{phbaisuru}
+
+\bksubsection{4}{たくさんの周波数で同時に送る：OFDM}
+\leavevmode\label{ph:波-14:sec4}9-12⑤で見たように、Wi-Fi やスマホの通信、テレビの地上デジタル放送は、\textbf{OFDM}（直交周波数分割多重）という方式を使っています。1本の搬送波で速く切りかえるかわりに、少しずつ振動数の違う何十本もの搬送波に、データを少しずつのせて、いっしょに送ります。\bkidx{おーえふでぃーえむ}{OFDM}
+
+Wi-Fi の規格の1つ（IEEE 802.11a）では、\qty{20}{MHz}を64に分けた\qty{312.5}{kHz}おきに搬送波を並べ、そのうち52本を使います（48本でデータ、4本は受ける側が電波の具合を調べる目印）。1本1本の搬送波は、$1\div\qty{312.5}{kHz}=\qty{3.2}{\micro s}$ の間に、ちょうど整数回ゆれます。このとき、違う搬送波どうしは\textbf{直交}して（9-2）、受ける側の FFT（9-4）で、1本ずつの点をまぜずに取り出せます（図\ref{ph:波-14:fig-ofdm}）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line*=bottom, axis y line*=left, width=118mm, height=54mm, xmin=-3.6, xmax=3.6, ymin=-0.3, ymax=1.2, xtick={-2,-1,0,1,2}, xticklabels={$-2$,$-1$,0,1,2}, ytick=\empty, xlabel={振動数}, ylabel={強さ}]
+  \addplot[bkGray, line width=1.1pt, domain=-3.6:3.6, samples=241] {abs(x-(-2))<0.0001 ? 1 : sin(180*(x-(-2)))/(pi*(x-(-2)))};
+  \addplot[bkOrange, line width=1.1pt, domain=-3.6:3.6, samples=241] {abs(x-(-1))<0.0001 ? 1 : sin(180*(x-(-1)))/(pi*(x-(-1)))};
+  \addplot[bkBlue, line width=1.1pt, domain=-3.6:3.6, samples=241] {abs(x-(0))<0.0001 ? 1 : sin(180*(x-(0)))/(pi*(x-(0)))};
+  \addplot[bkGreen!60!black, line width=1.1pt, domain=-3.6:3.6, samples=241] {abs(x-(1))<0.0001 ? 1 : sin(180*(x-(1)))/(pi*(x-(1)))};
+  \addplot[bkPurple, line width=1.1pt, domain=-3.6:3.6, samples=241] {abs(x-(2))<0.0001 ? 1 : sin(180*(x-(2)))/(pi*(x-(2)))};
+  \draw[bkRed, line width=0.6pt, dashed] (axis cs:0,-0.3) -- (axis cs:0,1.12);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{OFDM の5本の搬送波のスペクトル（横軸の目もりは、となりとの間かく\qty{312.5}{kHz}を1とした振動数。\qty{3.2}{\micro s} の間だけ送った正弦波。9-4 の方形パルスの変換の形）。まん中の山の頂上（破線）では、ほかの4本はちょうど0。どの山の頂上でも、ほかの搬送波は0になるので、となりどうしが重なっていても取り出せる。}\label{ph:波-14:fig-ofdm}
+\end{bkfigure}
+\noindent 1つの記号の長さは、\qty{3.2}{\micro s} に、建物ではね返っておくれて届く電波に備えたすき間\qty{0.8}{\micro s}を足した\qty{4.0}{\micro s}です。1本1本はゆっくり切りかわるので、\qty{0.8}{\micro s}（電波が\qty{240}{m}進む時間）までのおくれなら、記号どうしがまざりません。この方式で1秒に何ビット送れるかは、\bkreidairef{3}で計算します。
+
+\begin{phmijika}[電子レンジと Wi-Fi]
+電子レンジも、Wi-Fi と同じ\qty{2.4}{GHz}帯の電波で食べ物を温めます。この帯は、免許がなくても使えるように開かれていて、Wi-Fi・Bluetooth・電子レンジなどが同じ帯を分け合っています。電子レンジを使っている間、近くの Wi-Fi が遅くなることがあるのはこのためです。5 GHz 帯を使うと、影響を受けにくくなります。
+\end{phmijika}
+
+%% ================================================================
+\bksubsection{5}{アンテナの大きさと波長}
+\leavevmode\label{ph:波-14:sec5}アンテナは、電線の中の電気のゆれを電波にして出したり、電波を受けて電気のゆれにもどしたりする部品です。いちばん基本の形は、まっすぐな電線を2本、一直線に並べたもので、全体の長さを波長の半分（$\lambda/2$）にすると、電波をよく出し、よく受けます。地面や金属の板の上に1本だけ立てるなら、長さは $\lambda/4$ です（図\ref{ph:波-14:fig-antenna}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 半波長
+  \draw[bkInk, line width=1.6pt] (20,2) -- (20,18) (20,22) -- (20,38);
+  \fill[bkOrange] (20,20) circle (1.6);
+  \draw[bkBlue, line width=0.9pt, domain=0:1, samples=40, smooth, variable=\t] plot ({20+8*sin(180*\t)},{2+36*\t});
+  \draw[rxo dim] (6,2) -- (6,38); \node[rxo lab, anchor=east] at (5,20) {$\lambda/2$};
+  \node[rxo lab, anchor=west] at (29,20) {電流の大きさ};
+  \node[rxo lab, anchor=north] at (20,-5) {(a)\enspace 半波長のアンテナ};
+  % 1/4波長
+  \fill[pattern=north east lines, pattern color=bkGray] (78,-2) rectangle (118,0);
+  \draw[bkInk, line width=0.9pt] (78,0) -- (118,0);
+  \draw[bkInk, line width=1.6pt] (98,2) -- (98,20);
+  \fill[bkOrange] (98,1) circle (1.6);
+  \draw[bkBlue, line width=0.9pt, domain=0:1, samples=40, smooth, variable=\t] plot ({98+8*cos(90*\t)},{2+18*\t});
+  \draw[rxo dim] (86,2) -- (86,20); \node[rxo lab, anchor=east] at (85,11) {$\lambda/4$};
+  \node[rxo lab, anchor=west] at (107,14) {電流};
+  \node[rxo lab, anchor=north] at (98,-5) {(b)\enspace 地面の上の $\tfrac14$ 波長};
+\end{tikzpicture}
+\bkfigcaption{アンテナと電流の大きさ（曲線）。はしで電流が0、まん中（根もと）で大きい定在波になる。弦の定在波（波-6）と同じ形。丸は、電気のゆれを送りこむ所。}\label{ph:波-14:fig-antenna}
+\end{bkfigure}
+アンテナの電線の中では、電気のゆれが行ったり来たりして、弦と同じような定在波ができます（波-6 ②）。はしでは電流が0（固定端と同じ）なので、半波長のアンテナには、ちょうど腹が1つの定在波ができ、よくゆれます（共振）。共振しているアンテナほど、送りこんだ電気のゆれが、はね返らずに電波として出ていきます（波-7 ⑧の整合）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=28mm] Q[c,m,wd=22mm] Q[c,m,wd=22mm]}, rowsep=1.2pt, row{1}={bg=bkTheme!10, font=\sffamily\footnotesize}}
+電波 & 振動数 $f$ & 波長 $\lambda$ & $\lambda/4$ \\
+AM ラジオ & \qty{1000}{kHz} & \qty{300}{m} & \qty{75}{m} \\
+FM ラジオ & \qty{80}{MHz} & \qty{3.75}{m} & \qty{0.94}{m} \\
+Wi-Fi & \qty{2.4}{GHz} & \qty{12.5}{cm} & \qty{3.1}{cm} \\
+Wi-Fi & \qty{5}{GHz} & \qty{6.0}{cm} & \qty{1.5}{cm} \\
+\end{bktable}
+\bktabcaption{電波の振動数と、アンテナの長さの目安。振動数が高いほど、アンテナは小さくてすむ。}\label{ph:波-14:tab-antenna}
+\end{bkcenter}
+\begin{phbaisuru}{振動数 $f$}
+$\lambda=c/f$ なので、振動数を2倍にすると、波長も、アンテナの長さも半分になります。AM ラジオの放送所は、波長が数百 m もあるので、高い鉄塔そのものをアンテナにしています。スマホの中には、何 cm かの小さなアンテナがいくつも入っています。スマホが GHz の電波を使えるのは、アンテナが手のひらに収まるからでもあります。
+\end{phbaisuru}
+アンテナから電波が出るしくみ（電気のゆれが、電場と磁場の波になって離れていくこと）は、物理シリーズの『電磁気学』（電-15）で、アンテナにつなぐケーブルの中の電気の波は電-13 で学びます。
+
+%% ================================================================
+\bksubsection{6}{光で送る：光ファイバと dB/km}
+\leavevmode\label{ph:波-14:sec6}遠くの町や国の間で、たくさんのデータを運んでいるのは、電波ではなく光ファイバです（波-12 ④）。光の振動数は約 $2\times10^{14}$\,Hz で、電波よりずっと高いので、使える帯域幅もとても広く、たくさんの情報を送れます（⑧）。
+
+光は、ガラスの中を進むうちに、少しずつ吸収されたり散らばったりして弱くなります（波-7 ⑦の吸収、波-13 ⑧の散乱）。今の光ファイバは、とても透明なガラスで作られていて、波長\qty{1550}{nm}（目に見えない赤外線）の光では、\qty{1}{km}進んで約 0.2\,dB しか弱まりません。dB は、強さの比の対数の10倍でした（3-12⑦・波-9 ⑥）。
+\pheq{\text{弱まり〔dB〕}=\text{1 km あたりの弱まり〔dB/km〕}\times\text{長さ〔km〕}}{dB ＝ dB/km × km}
+\label{ph:波-14:dbkm}同じ長さごとに同じ割合で弱まるので、dB で書くと、長さに比例します。0.2\,dB/km で\qty{50}{km}なら10\,dB（$\tfrac{1}{10}$）、\qty{100}{km}なら20\,dB（$\tfrac{1}{100}$）です（\bkreidairef{4}）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, ymode=log, axis x line*=bottom, axis y line*=left, width=104mm, height=50mm, xmin=0, xmax=210, ymin=0.00005, ymax=2, xtick={0,50,100,150,200}, ytick={0.0001,0.001,0.01,0.1,1}, yticklabels={$10^{-4}$,$10^{-3}$,$10^{-2}$,0.1,1}, xlabel={長さ（km）}, ylabel={残る光の強さ（はじめを1）}]
+  \addplot[bkcurve, domain=0:200, samples=41] {10^(-0.02*x)};
+  \fill[bkRed] (axis cs:50,0.1) circle (2pt) (axis cs:100,0.01) circle (2pt) (axis cs:150,0.001) circle (2pt);
+  \node[rxo lab, anchor=south west] at (axis cs:52,0.12) {10\,dB};
+  \node[rxo lab, anchor=south west] at (axis cs:102,0.012) {20\,dB};
+  \node[rxo lab, anchor=south west] at (axis cs:152,0.0012) {30\,dB};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{0.2\,dB/km の光ファイバの中で、光が弱まるようす（たて軸は10倍ごとの目もり）。目もりを対数にすると直線になる。}\label{ph:波-14:fig-fiber}
+\end{bkfigure}
+\noindent 何十 km かごとに、光を強くし直す装置（光増幅器）を置けば、海の底を通って、ほかの国まで光を届けられます。光ファイバの中で光が進む速さは、真空の約 $1/1.48$ で（波-12 ③）、\qty{1}{km}進むのに約\qty{4.9}{\micro s}かかります。
+
+\bksubsection{7}{時間で距離をはかる：レーダーと GPS}
+\leavevmode\label{ph:波-14:sec7}電波は情報を運ぶだけでなく、「届くまでの時間」から距離をはかる道具にもなります。
+
+\phboxhead{レーダー：電波のこだま}
+電波を出し、物ではね返ってもどるまでの時間 $t$ をはかれば、距離は $ct/2$ です。コウモリや魚群探知機が音のこだまでしていること（波-10 ①）を、電波でするのが\textbf{レーダー}です。\bkidx{れーだー}{レーダー}\qty{100}{\micro s}でもどれば、$3.00\times10^8\times100\times10^{-6}\div2=\qty{15}{km}$ 先です。はね返った電波の振動数のずれから、相手の速さもわかります（波-8 ⑦のドップラー効果）。
+
+\phboxhead{GPS：時刻の差で位置を知る}
+GPS の衛星は、高さ約\qty{20200}{km}を1日に2周しながら、「この電波は何時何分何秒に出した」という時刻をのせた電波を送り続けています。スマホは、受けとった時刻との差 $t$ から、衛星までの距離 $d=ct$ を計算します。3つの衛星からの距離がわかれば、3つの球が交わる所として、自分の位置が決まります（図\ref{ph:波-14:fig-gps}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.55mm, y=0.55mm]
+  \draw[bkBlue!70, line width=0.8pt] (20,30) circle (30.4);
+  \draw[bkOrange!80!black, line width=0.8pt, dashed] (100,34) circle (39.6);
+  \draw[bkGreen!60!black, line width=0.8pt, densely dotted] (62,62) circle (31.6);
+  \foreach \p/\n in {(20,30)/1, (100,34)/2, (62,62)/3} {\filldraw[fill=bkGray!20, draw=bkInk, line width=0.6pt] \p ++(-2.4,-1.6) rectangle ++(4.8,3.2); \node[rxo lab, anchor=south] at \p {\raisebox{1.8mm}{衛星\n}};}
+  \fill[bkRed] (62,30.4) circle (1.8);
+  \draw[bkRed, line width=0.5pt] (62,30.4) -- (80,12);
+  \node[rxo lab, anchor=north] at (82,11) {スマホ};
+\end{tikzpicture}
+\bkfigcaption{GPS の考え方（平面にかいた図）。スマホは、衛星1を中心とする実線の円、衛星2の破線の円、衛星3の点線の円の、どれの上にもいる。3つの円が交わる1点が、スマホの位置。}\label{ph:波-14:fig-gps}
+\end{bkfigure}
+電波は1秒に30万 km 進むので、時刻が\qty{1}{\micro s}ずれると、距離は\qty{300}{m}もずれます（\bkreidairef{5}）。だから、衛星はとても正確な原子時計をのせています。スマホの時計はそれほど正確ではないので、4つめの衛星の電波も使って、スマホの時計のずれもいっしょに求めます。
+
+\begin{motto}[5]
+\phboxhead{衛星の時計の進み方}
+衛星の時計は、地上の時計と、ほんの少し違う速さで進みます。速く動く時計はおくれ、重力の弱い高い所の時計は進むことが、相対性理論からわかっているからです。GPS は、このずれを前もって計算に入れて動いています。日常の道具の中で、相対性理論が必要になる、めずらしい例です。相対性理論は、物理シリーズの『原子』（原-11）で学びます。
+\end{motto}
+
+%% ================================================================
+\bksubsection{8}{送れる量の限界：通信路容量と圧縮}
+\leavevmode\label{ph:波-14:sec8}1秒にどれだけの情報を送れるかには、上限があります。波-11 ⑩のシャノンの式です。
+\[C=B\log_2\Bigl(1+\frac{P_{\mathrm s}}{P_{\mathrm n}}\Bigr)\]
+帯域幅 $B$〔Hz〕と、信号と雑音の電力の比 $P_{\mathrm s}/P_{\mathrm n}$ が決まれば、まちがいなく送れる速さ $C$〔ビット/s〕の上限が決まります。波-11 では、電話の線（\qty{3}{kHz}・30\,dB）で約\qty{30}{kbit/s}でした。Wi-Fi の\qty{20}{MHz}のはばで、S/N 比が30\,dB（1000倍）なら、
+\[C=20\times10^6\times\log_2(1+1000)\approx\qty{2.0e8}{bit/s}\]
+で、約200 Mbit/s です。\bkreidairef{3}の 54 Mbit/s は、この上限の約4分の1にあたります。新しい方式ほど、点の数を増やし（③）、誤りを見つけて直す符号を使って、この上限に近づいています。速く送りたいときは、まず帯域幅 $B$ を広げるのが効く（波-11 ⑩）ので、新しい方式は、より広いはばの電波を使うようになっています。
+
+\begin{motto}[3]
+\phboxhead{誤りを見つけて直す：わざと余分に送る}
+雑音で点を読みまちがえると、0と1が入れかわります。そこで、送りたいビットに、わざと余分なビットを足して送ります。いちばん簡単なのは、同じビットを3回繰り返す方法です。
+\begin{bkcenter}
+\small
+\begin{tblr}{colspec={Q[l,m,wd=36mm] Q[c,m,wd=18mm] Q[c,m,wd=20mm] X[l,m]}, width=\linewidth, rowsep=1.1pt, colsep=3pt,
+  hlines={0.4pt,bkLine}, row{1}={bg=bkTheme!12, font=\sffamily\bfseries\footnotesize}}
+方法 & 送るビット & 届いたビット & 受けた側の判断 \\
+3回繰り返す & 1\,1\,1 & 1\,0\,1 & 1が多いので「1」と直せる \\
+1の数を偶数にそろえる & 1011\,1 & 1001\,1 & 1の数が奇数なので、どこかが誤り \\
+\end{tblr}
+\bktabcaption{誤りを見つける・直すための余分なビット（例）。2行めは、4ビットの最後に「1の数が偶数になるように」1ビット足した。}\label{ph:波-14:tab-ayamari}
+\end{bkcenter}
+3回繰り返すと、1つの誤りは多数決で直せますが、本当のデータは送ったビットの $\tfrac13$ に減ります。1の数をそろえる方法は、データの割合は $\tfrac45$ と大きいのですが、誤りがあることしかわからず、どこが誤りかはわかりません。ハミング符号のように、4ビットに3ビットを足して、1つの誤りの場所まで見つけて直せる、うまい足し方もあります。\bkreidairef{3}の「データの割合 $\tfrac34$」も、残りの $\tfrac14$ が、このような直すための余分なビットです。余分なビットを増やすほど誤りに強くなり、データは遅くなります。シャノンは、うまく足せば、通信路容量（$C$）より遅い速さなら、誤りをいくらでも少なくできることを示しました（波-11 ⑩）。
+\end{motto}
+
+\phboxhead{送る量を減らす：圧縮}
+送れる量に限りがあるなら、送るデータそのものを小さくするのも方法です。音楽の CD は1秒に約\qty{1411}{kbit}ですが、MP3 では約\qty{128}{kbit}で、約11分の1です（9-12①）。電話の声は、1秒に8000回・8ビットで\qty{64}{kbit/s}にし（波-11）、スマホではさらに小さく縮めて送ります。人の耳に聞こえにくい成分を捨てる（9-12①）、よく出る記号を短く書く（波-11 ⑨）、という2つの考えで小さくしています。写真や動画も、9-12②の方法で小さくしてから送ります。
+
+\begin{phmada}[光ファイバ1本で、どこまで送れるか]
+雑音がたし算でのるだけの通信路なら、シャノンの式で上限が決まります。ところが、光ファイバに強い光を入れると、ガラスの屈折率が光の強さで少し変わる（非線形）ため、光の信号どうしが、たがいに乱し合います。信号を強くすれば雑音に勝てる、という考えが、ある所から通用しなくなるのです。この「非線形」の光ファイバで、1本あたり、どこまでの情報を送れるのか、その本当の上限は、まだわかっていません。下からの見積もりと上からの見積もりの間に、大きな差が残っていて、研究が続いています。
+\end{phmada}
+
+%% ================================================================
+\bksubsection{9}{はてな？の答え：声が電波になるまで}
+\leavevmode\label{ph:波-14:sec9}\bkhatenaref に答えましょう。スマホで話した声は、次の順に形を変えて、相手まで届きます（図\ref{ph:波-14:fig-flow}）。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxobox{a}{(11,30)}{20}{声\\（空気の波）}{bkOrange}
+  \rxobox{b}{(45,30)}{22}{数の列\\（波-11）}{bkGreen}
+  \rxobox{c}{(77,30)}{22}{小さく縮める\\（圧縮）}{bkGreen}
+  \rxobox{d}{(112,30)}{29}{電波の点を選ぶ\\（QAM・OFDM）}{bkBlue}
+  \rxobox{e}{(112,6)}{29}{基地局\\（アンテナ）}{bkBlue}
+  \rxobox{f}{(75,6)}{28}{光ファイバ\\（遠くまで）}{bkRed}
+  \rxobox{g}{(37,6)}{30}{相手の基地局\\→相手のスマホ}{bkBlue}
+  \draw[rxo arr] (a) -- node[rxo lab, above=1pt] {マイク} (b);
+  \draw[rxo arr] (b) -- (c);
+  \draw[rxo arr] (c) -- (d);
+  \draw[rxo arr] (d) -- node[rxo lab, right=1pt] {電波} (e);
+  \draw[rxo arr] (e) -- (f);
+  \draw[rxo arr] (f) -- (g);
+\end{tikzpicture}
+\bkfigcaption{スマホの声が相手に届くまで。相手のスマホでは、逆の順に、電波から数の列、数の列から声にもどす。}\label{ph:波-14:fig-flow}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{声を数にする}　マイクで声の空気の波を電圧のゆれにし、1秒に何千回もとって数の列にします（波-11 ①⑤）。
+\item \textbf{小さく縮める}　聞こえにくい成分を捨て、よく出る記号を短く書いて、データを小さくします（⑧）。
+\item \textbf{電波にのせる}　数の列を、何ビットかずつ区切り、その数に合わせて搬送波の振幅と位相（点）を選びます（③）。たくさんの搬送波に分けて、いっしょに送ります（④）。電波の振動数は GHz なので、アンテナはスマホの中に収まります（⑤）。
+\item \textbf{近くの基地局へ}　電波は、近くの基地局のアンテナまで、光の速さで届きます。基地局から先は、多くの場合、光ファイバで相手の近くの基地局まで運ばれます（⑥）。
+\item \textbf{もとにもどす}　相手のスマホは、受けた電波を FFT で搬送波ごとに分け、点を読みとって数の列にもどし、声にもどします。
+\end{enumerate}
+\noindent つまり、声は「そのまま」電波になるのではありません。声を一度、数の列（情報）にして、その数で電波の形を変えて送るのです。波の速さ・波長・共振・スペクトル・情報量など、この巻で学んだ道具が、1本の電話の中で全部はたらいています。
+
+\begin{phsaki}{通信工学と電波工学}
+電波がアンテナからどう出ていくのか、電波がどう反射し回りこんで届くのかは\textbf{電波工学}で、物理シリーズの『電磁気学』（電-15）がその入口です。アンテナや機械をつなぐケーブルの中を電気の波がどう進むかは、電-13 で学びます。通信工学・情報理論の専門の本では、雑音の中から点を正しく読みとる方法、誤りを直す符号、たくさんの人が同じ電波を分け合う方法などを学びます。
+\end{phsaki}
+
+\begin{kotoba}\small
+\bkword{搬送波}{信号をのせて運ぶ、振動数の高い波。振動数を $f_{\mathrm c}$ と書く。}
+\bkword{変調}{搬送波の振幅・振動数・位相を、信号に合わせて変えること。AM・FM・PSK・QAM など。}
+\bkword{QAM}{振幅と位相の両方を変えて、格子の形に並べた点で、何ビットかずつ送る方式。}
+\bkword{OFDM}{直交するたくさんの搬送波に、データを少しずつのせて、いっしょに送る方式。}
+\bkword{電磁波}{電場と磁場がゆれながら進む波。電波も光も電磁波で、真空の中を光の速さで進む。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$f_{\mathrm c}$}{エフ・シー}{搬送波の振動数〔Hz〕。波-11 の RC フィルターの $f_{\mathrm c}$（境めの周波数）とは別の量}{carrier frequency}{波-14}}{\bkkigocard{$f_{\mathrm m}$}{エフ・エム}{搬送波にのせる信号の振動数〔Hz〕}{modulating frequency}{波-14}}
+
+%% ================================================================
+\Needspace{8\baselineskip}\bksection{reidai}{見本の計算}
+
+\begin{phreidai}[Wi-Fi のアンテナの長さ]\label{ph:波-14:ex1}
+\qty{2.4}{GHz}の Wi-Fi の電波を出す、地面（金属の板）の上に立てる $\tfrac14$ 波長のアンテナの長さを求めましょう。光の速さは\qty{3.00e8}{m/s}とします。
+\phbamen
+ルーターの中の電気のゆれを、アンテナで電波にして出します。
+\phmushi
+アンテナの太さ、周りのプラスチックのケース、金属の板の大きさを無視します。アンテナは真空の中にあるとします。
+\phzu
+振動数 $f=\qty{2.4e9}{Hz}$、光の速さ $c=\qty{3.00e8}{m/s}$、波長 $\lambda$、アンテナの長さ $l_{\mathrm a}=\lambda/4$。
+\phriyu
+電波の波長は $c=f\lambda$（波-5 ②）から出せます。地面の上の1本のアンテナは、$\lambda/4$ のときに共振して、電波をよく出します（⑤）。
+\phtateru
+\[\lambda=\frac{c}{f},\qquad l_{\mathrm a}=\frac{\lambda}{4}\]
+\phtoku
+\[\lambda=\frac{3.00\times10^8}{2.4\times10^9}=\qty{0.125}{m},\qquad l_{\mathrm a}=\frac{0.125}{4}\approx\qty{0.031}{m}=\qty{3.1}{cm}\]
+\phtashikame
+単位：（m/s）÷（1/s）＝ m。\\
+大きさ：ルーターのアンテナ（数 cm〜10 cm）と同じくらい。\\
+2倍にすると：\qty{5}{GHz}なら波長は\qty{6.0}{cm}、アンテナは\qty{1.5}{cm}で、約半分。\qty{80}{MHz}の FM なら\qty{94}{cm}です。
+\kotae 約\qty{3.1}{cm}
+\end{phreidai}
+
+\begin{phreidai}[静止衛星を使う電話のおくれ]\label{ph:波-14:ex2}
+赤道の上、高さ\qty{35786}{km}を、地球の自転と同じ速さで回る衛星（静止衛星）は、地上から見ると、いつも同じ所に止まって見えるので、通信に使われます。衛星のほぼ真下にいる2人が、この衛星を通して話すとき、声が地上から衛星を通って地上に届くまでの時間を求めましょう。
+\phbamen
+話す人の電波が衛星まで上がり、衛星がそれを地上へ送り返します。
+\phmushi
+衛星の中で電波を受けて送り直す時間と、声を数にする時間を無視します。空気の中でも、電波は真空と同じ速さで進むとします。2人とも衛星のほぼ真下にいて、衛星までの距離は高さ $h$ と同じとします。
+\phzu
+高さ $h=\qty{3.5786e7}{m}$、光の速さ $c=\qty{3.00e8}{m/s}$、時間 $t$。電波は上りと下りで、$2h$ 進みます。
+\phriyu
+電波は一定の速さ $c$ で進むので、「時間＝距離÷速さ」です。
+\phtateru
+\[t=\frac{2h}{c}\]
+\phtoku
+\[t=\frac{2\times3.5786\times10^7}{3.00\times10^8}\approx\qty{0.24}{s}\]
+\phtashikame
+単位：m ÷（m/s）＝ s。\\
+大きさ：相手の返事が届くまでには、その2倍の約0.48秒かかります。会話で「間」を感じる長さです。地球の反対側まで光ファイバで送っても約\qty{0.1}{s}なので、遠くとの電話では、衛星より光ファイバが多く使われます。\\
+極端な場合：衛星が真下にないときは、斜めに進むので、もう少し長くなります。
+\kotae 約\qty{0.24}{s}
+\end{phreidai}
+
+\begin{phreidai}[Wi-Fi で1秒に送れるデータ]\label{ph:波-14:ex3}
+Wi-Fi の規格（IEEE 802.11a）では、48本の搬送波でデータを送り、1つの記号の長さは\qty{4.0}{\micro s}です。それぞれの搬送波は64点の QAM（1記号で6ビット）を使い、誤りを直すために、送るビットの $\tfrac34$ だけを本当のデータにします（残りは誤りを直すための記号）。1秒に送れるデータは何ビットですか。
+\phbamen
+48本の搬送波が、\qty{4.0}{\micro s}ごとに、いっせいに次の点に切りかわります。
+\phmushi
+電波の具合を調べる目印の4本の搬送波と、送り始めの合図などの時間を無視します。点を読みまちがえないとします。
+\phzu
+搬送波の数 48、1記号のビット数 6、データの割合 $\tfrac34$。\\
+1記号の長さ $\qty{4.0}{\micro s}=\qty{4.0e-6}{s}$。
+\phriyu
+1記号で送るデータのビット数を求め、1秒にいくつ記号を送るかをかけます（④）。
+\phtateru
+\[\text{1秒のデータ}=\frac{48\times6\times\tfrac34}{\qty{4.0e-6}{s}}\]
+\phtoku
+\[48\times6=288\ \text{ビット},\quad 288\times\tfrac34=216\ \text{ビット},\quad \frac{216}{4.0\times10^{-6}}=\qty{5.4e7}{bit/s}\]
+\phtashikame
+単位：ビット÷s＝ビット/s。\\
+大きさ：54 Mbit/s です。⑧の上限（\qty{20}{MHz}・30\,dB で約 200 Mbit/s）より小さく、矛盾はありません。\\
+変えると：電波が弱いときは、2点（1ビット）・データの割合 $\tfrac12$ に切りかえて、$48\times1\times\tfrac12\div(4.0\times10^{-6})=\qty{6.0e6}{bit/s}$ まで下げ、まちがいを減らします。
+\kotae 1秒に $5.4\times10^7$ ビット（54 Mbit/s）
+\end{phreidai}
+
+\begin{phreidai}[光ファイバで 100 km 送る]\label{ph:波-14:ex4}
+1\,km で 0.2\,dB 弱まる光ファイバに、強さ\qty{1}{mW}の光を入れます。\qty{100}{km}先では、光の強さはいくらになりますか。
+\phbamen
+光が、ガラスの中を進むうちに、少しずつ吸収・散乱されて弱まります。
+\phmushi
+つなぎ目や曲がりで弱まる分を無視します。どこでも同じ割合で弱まるとします。
+\phzu
+1 km あたりの弱まり 0.2\,dB/km、長さ\qty{100}{km}、入れる強さ $P_0=\qty{1}{mW}$、出てくる強さ $P$。
+\phriyu
+dB で書いた弱まりは長さに比例します（⑥）。dB から比にもどすには、3-12⑦の $10\log_{10}$（強さの比）を逆にたどります。
+\phtateru
+\[\text{弱まり}=0.2\times100\ \text{dB},\qquad 10\log_{10}\frac{P_0}{P}=\text{弱まり}\]
+\phtoku
+\[\text{弱まり}=\qty{20}{dB},\qquad \frac{P_0}{P}=10^{20/10}=100,\qquad P=\frac{1}{100}\ \text{mW}=\qty{0.01}{mW}\]
+\phtashikame
+単位：dB/km × km ＝ dB。強さの比は単位なし。\\
+大きさ：\qty{100}{km}で100分の1。dB を長さに比例してたせるのは、強さが「同じ長さごとに同じ割合」でかけ算で減るからです。\\
+2倍にすると：\qty{200}{km}なら 40\,dB で1万分の1。100分の1の2倍（50分の1）ではありません。
+\kotae 約\qty{0.01}{mW}（100分の1）
+\end{phreidai}
+
+\begin{phreidai}[GPS の時計が \qty{1}{\micro s} ずれると]\label{ph:波-14:ex5}
+GPS で、衛星までの距離を電波の届く時間から求めます。時間のはかり方が\qty{1}{\micro s}（100万分の1秒）ずれると、距離は何 m ずれますか。真上の衛星（高さ\qty{20200}{km}）から電波が届くまでの時間も求めましょう。
+\phbamen
+衛星が出した時刻と、スマホが受けた時刻の差から、距離を計算します。
+\phmushi
+電波が空気の中で少し遅くなったり曲がったりすることを無視し、真空と同じ速さでまっすぐ進むとします。
+\phzu
+光の速さ $c=\qty{3.00e8}{m/s}$、時間のずれ $\Delta t=\qty{1e-6}{s}$、距離のずれ $\Delta d$、衛星の高さ $h=\qty{2.02e7}{m}$。
+\phriyu
+距離は $d=ct$ なので、時間が $\Delta t$ ずれると、距離は $c\,\Delta t$ ずれます。
+\phtateru
+\[\Delta d=c\,\Delta t,\qquad t=\frac{h}{c}\]
+\phtoku
+\[\Delta d=3.00\times10^8\times1\times10^{-6}=\qty{300}{m},\qquad t=\frac{2.02\times10^7}{3.00\times10^8}\approx\qty{0.067}{s}\]
+\phtashikame
+単位：m/s × s ＝ m。\\
+大きさ：\qty{300}{m}ずれると、どの道にいるかもわかりません。数 m の正しさがほしければ、時間を 10\,ns（1億分の1秒）ほどの正しさではかる必要があります。\\
+極端な場合：時間のずれが0なら、距離のずれも0です。
+\kotae 距離のずれ 約\qty{300}{m}、届くまで 約\qty{0.067}{s}
+\end{phreidai}
+
+%% ================================================================
+\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{電波を運ぶもの}
+\bkng{電波は、音と同じように、空気がゆれて伝わる。}
+\bkok{電波は電場と磁場の波で、空気がなくても進む。宇宙の衛星とも話せる。}
+音は空気がないと伝わりませんが（波-9）、電波と光は真空の中も進みます（①）。
+\end{tsumazuki}
+\begin{tsumazuki}{dB と長さ}
+\bkng{\qty{100}{km}で100分の1になる光ファイバなら、\qty{200}{km}では200分の1になる。}
+\bkok{\qty{100}{km}ごとに100分の1倍されるので、\qty{200}{km}では1万分の1（40\,dB）。}
+dB は、かけ算をたし算に直したものです（3-12）。dB はたせますが、比はかけます（\bkreidairef{4}）。
+\end{tsumazuki}
+\begin{tsumazuki}{ビットとバイト}
+\bkng{54 Mbit/s の Wi-Fi なら、1秒に 54 MB（メガバイト）のファイルを送れる。}
+\bkok{8ビットが1バイトなので、上限でも1秒に約 6.8 MB。実際は、さらに少なくなる。}
+「b（ビット）」と「B（バイト）」を見分けましょう（9-12①）。電波を分け合う人の数や、電波の具合でも、実際の速さは下がります。
+\end{tsumazuki}
+
+%% ================================================================
+\Needspace{12\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[電波は分け合って使う]
+電波は、目に見えない「道路」のようなものです。同じ場所で、同じ振動数の電波を2つの局が出すと、まざって、どちらも聞こえなくなります。そこで、日本では、どの振動数の電波を、だれが、どんな目的に使うかを、国（総務省）が電波法にもとづいて決めています。AM ラジオは\qty{531}{kHz}から\qty{1602}{kHz}まで\qty{9}{kHz}おき、FM ラジオは\qty{76.1}{MHz}から\qty{94.9}{MHz}まで、というように割り当てられています。
+
+技術者は、限られた振動数のはばを、なるべくたくさんの人が、なるべく速く使えるように、変調（③）・OFDM（④）・アンテナ（⑤）・誤りを直す符号（⑧）を組み合わせて設計します。どれも、この巻で学んだ波の性質と、シャノンの通信路容量（波-11 ⑩）の上で行われています。
+\begin{phketa}[情報を送る波の数]
+\phketaline{AM ラジオ／FM ラジオ}{\qty{531}{kHz}〜\qty{1602}{kHz}／\qty{76.1}{MHz}〜\qty{94.9}{MHz}}
+\phketaline{Wi-Fi}{\qty{2.4}{GHz}帯・5 GHz 帯（波長 \qty{12.5}{cm}・\qty{6}{cm}）}
+\phketaline{光ファイバの光}{波長\qty{1550}{nm}、約 0.2\,dB/km}
+\phketaline{静止衛星までの高さ／GPS の衛星}{\qty{35786}{km}／約\qty{20200}{km}}
+\phketaline{電話の声／CD の音}{\qty{64}{kbit/s}／約\qty{1411}{kbit/s}}
+\phboxhead{答えが桁で合っているか}
+アンテナの長さは波長の $\tfrac14$〜$\tfrac12$ くらい。スマホのアンテナが何 m にもなったら、Hz と kHz・GHz を取り違えています。電波の届く時間は、\qty{300}{km}で\qty{1}{ms}です。bit と byte（8倍）、dB と比（10のべき）の取り違えにも気をつけます。
+\end{phketa}
+\end{phkougaku}
+\phstation{通信工学,電波工学,光通信,情報理論}{搬送波、変調（AM・FM・PSK・QAM）、帯域幅、OFDM、アンテナ、伝送損失（dB/km）、通信路容量、誤り訂正符号}
+
+\begin{column}{電波で知らせた人たち}
+振動数の単位 Hz は、電波が本当にあることを実験で確かめた、ドイツのヘルツの名前からとったものです。電波を使って、線のない電信（無線電信）を実用にしたマルコーニと、その発達に力をつくしたブラウンは、1909年にノーベル物理学賞を受けました。そして1948年、シャノンが、雑音のある通信路で送れる情報の上限（波-11 ⑩）を示しました。電波で知らせるしくみは、実験で見つけた波の性質と、情報を数で表す理論の、両方の上にできているのです。
+\end{column}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 電波の振動数からアンテナの大きさを、電波が往復する時間から距離を、見積もれる。\bkfurref{ph:波-14:sec5}
+\item AM・FM・ディジタルの変調を、波の振幅・振動数・位相を変えることとして説明できる。\bkfurref{ph:波-14:sec2}
+\item たくさんの周波数で同時に送る方式（OFDM）の速さを計算し、通信路容量の上限とくらべられる。\bkfurref{ph:波-14:ex3}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{delta}{声も動画も、数にしてから波にのせて送る。この巻で学んだ波の道具が、毎日のスマホの中で全部はたらいているんだね。}

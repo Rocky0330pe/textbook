@@ -72,7 +72,8 @@ def cmd_push(base, head):
         return []
     out = []
     for k in order(new):
-        if k in old and isinstance(new[k], int) and new[k] > old[k]:
+        # 第23回：はじめて入った巻（物理第2巻など）も、0 から上がったとみなしてリリースする
+        if isinstance(new[k], int) and new[k] > old.get(k, 0):
             tag = tag_name(k, new[k])
             if tag_exists(tag):
                 print(f'::notice::タグ {tag} はもうあるので、リリースを作らない', file=sys.stderr)

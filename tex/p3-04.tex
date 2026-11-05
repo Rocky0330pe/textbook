@@ -1,0 +1,1069 @@
+%% 第24回編集委員会（物理第3巻）：組 波W2
+%% p3-04.tex  波-4　ねらいどおりに動かす：フィードバック制御（★4〜5・3段）
+%% 中身は計画書 tools/phys3-plan.md の B「波-4」。公式の持ち主は A53（伝達関数・ステップ応答・PID）。中学・高校の公式はないので \phkoushiki は置かない。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-4/calc_p3_04.py（出力 calc_p3_04_out.txt）。図の点は同じ出力の %SEG の行。
+%% 記号（この章）：伝達関数 G(s)（もどす箱 G_2）、時定数 τ、比例ゲイン K_p・積分時間 T_i・微分時間 T_d（周期 T はこの章で使わない）、
+%%   むだ時間 L（波-3 のラグランジアン L とは別。この章にラグランジアンは出ない）、ずれ ε（9-12 と同じ。ネイピア数 e と分ける）、
+%%   ラプラスの s、極、固有角振動数 ω_n・減衰比 ζ、セルシウス温度 θ〔℃〕・温度差 K（第2巻と同じ）、熱抵抗 R・熱容量 C（6-4・9-8 と同じ。熱-11 の R_th・C_th）、
+%%   制御する量 y・目標 r・加える量 u（9-8 と同じ）、外乱 d。
+%% 数学の本が引いている所（変えない数）：9-8・9-9・9-12 のエアコン（外 35 ℃・設定 26 ℃・RC＝60 分・RK_p＝9 → 26.9 ℃、時定数 6 分、RK_i＝0.15/分）、
+%%   モーター 10/(0.5s+1)（K_p＝1 で極 −22、ずれ 9.1 %）、車 1/(1000s+50)（τ＝20 s、500 N で 10 m/s）、ロボットの腕 s²+2s+K（K＝4 で ζ＝0.5）、
+%%   電気炉 (s+1)³+K（K＜8）、4次 s⁴+2.6s³+4.8s²+11.2s+8（9-9 例題10、不安定）、倒立振子 θ̈＝4θ+u、u＝−(8θ+4θ̇)（9-10）。
+%%   9-9:900「ラウス・フルビッツの判定（物理シリーズ）」の約束を⑧で果たす。9-12⑧「くわしい読み方は物理シリーズ（波-2・波-4）」を⑨で受ける。
+%%   9-6:409「ベルトコンベアや長い配管の工場の制御（物理 波-4）」のむだ時間を⑤⑨で受ける。
+%% 第2巻との約束：熱-9（エアコンの制御は波-4）、熱-11 の道しるべ（壁の熱抵抗・熱容量の部屋）→ ③④・例題1。熱-11 例題1（複層ガラス U≈3.07）・
+%%   章末問題3（例題3 の壁に表面の熱抵抗を入れて U≈0.36）、熱-12 例題2（缶コーヒー：熱容量 1000 J/K・熱抵抗 1.2 K/W・時定数 20 分）→ ④・例題2。
+%% 第1巻との約束：力-7 の道しるべ（波-4：モーターの制御）→ ④・⑩。
+%% 出典（本文で使った事実。第24回の追記 2章の13 に従い、書くときに確かめた）
+%%   ・ワットの遠心調速機 1788年（ボールトンの提案。ワット自身は発明者と言っていない）：Science Museum Group の所蔵品「Rotative Steam Engine by Boulton and Watt, 1788」
+%%       （collection.sciencemuseumgroup.org.uk/objects/co50948、Google Arts & Culture の同じ所蔵品の説明で「遠心調速機をつけた最初のもの」）、Make 誌の記事
+%%       （makezine.com/projects/remaking-history-james-watt-and-the-flyball-governor）。Wikipedia は使わない。
+%%       本文は「使いました」と書き、発明したとは書かない。
+%%   ・マクスウェル "On Governors"（Proc. Roy. Soc. 1868）、1877年のアダムズ賞（題は運動の安定）でラウスが受賞：arXiv:1109.6640（Jenkins, Self-oscillation）、
+%%       イリノイ大学 ECE486 講義資料、香港城市大学の資料（ee.cityu.edu.hk/~gchen/pdf/JCMaxwell.pdf）。
+%%   ・フルビッツ：Math. Ann. 46 (1895) 273–284（EuDML https://eudml.org/doc/157760）。1893年とする資料もあるが論文は 1895年。
+%%   ・ナイキスト "Regeneration Theory", Bell Syst. Tech. J. 11 (1932) 126–147（IEEE Xplore 6773211）。
+%%   ・ジーグラとニコルス "Optimum settings for automatic controllers", Trans. ASME 64 (1942) 759–768（11月号）。Taylor Instruments の空気式調節計で作った規則。
+%%   ・余裕の目安（ゲイン 6〜12 dB、位相 30〜60°）：MATLAB margin の説明、Texas Instruments の資料（SPRUHJ1I）、MIT の講義資料（introcontrol.mit.edu）。
+%%   ・人の目で見る単純反応時間 約 0.2 s：Clinical Optometry 2019（平均 208〜224 ms）、Harvard BioNumbers（0.27 s）。
+%%   ・まだわかっていないこと：J. D. G. Kooijman, J. P. Meijaard, J. M. Papadopoulos, A. Ruina, A. L. Schwab,
+%%       "A bicycle can be self-stable without gyroscopic or caster effects", Science 332 (6027), 339–342 (2011)（swov.nl・ScienceDaily で照らし合わせた）。
+%%       人が乗ったときのバランスのとり方は研究が続いている（一般的な記述にとどめた）。
+%%   ・部屋の熱抵抗 0.05 K/W・熱容量 72 kJ/K は、熱-11 の壁と窓の値から作った仮の値（本文にそう書いた）。換気・すき間の分 6.6 W/K も仮の値。
+%%   ・ドローンの姿勢の制御の回数「1秒に数百回以上」：Betaflight の説明（https://betaflight.com/docs/wiki/app/configuration-tab。PID の計算は 1〜8 kHz）。
+\makeatletter
+% 加え合わせ点（○）  \rxesum{名前}{(位置)}
+\newcommand\rxesum[2]{\node[draw=bkInk, line width=0.8pt, circle, minimum size=5mm, inner sep=0pt, fill=white] (#1) at #2 {};}
+% 箱  \rxeblk{名前}{(位置)}{文字}
+\newcommand\rxeblk[3]{\node[bk node, minimum height=9mm, font=\sffamily\footnotesize] (#1) at #2 {#3};}
+\makeatother
+
+\phchapter{4}{ねらいどおりに動かす：\\フィードバック制御}{エアコンは、どうやって部屋をちょうどよい温度に保つ？}{\bklevelrange{4}{5}}{ねらいどおりに動かす：フィードバック制御}
+\bkmichishirube{9-6,9-8,9-9,9-10,9-12,熱-9,熱-11,熱-12,力-7,波-1,波-3}{波-10,波-11,波-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace フィードバックのしくみを、ブロック線図で説明できる。
+\item \bklevel{4}\enspace 表計算で部屋の温度の比例・積分の制御を追える。
+\item \bklevel{4}\enspace 物理の法則から伝達関数を作り、応答の速さを読める。
+\item \bklevel{4}\enspace 残るずれと PID の働きを、最終値の定理で説明できる。
+\item \bklevel{4}\enspace ラウスの表で、安定かどうかを判定できる。
+\item \bklevel{5}\enspace ゲイン余裕・位相余裕と状態フィードバックで、安定の度合いを考えられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+夏の暑い日、外は\qty{35}{\celsius}。エアコンの設定を\qty{26}{\celsius}にすると、部屋はすぐに冷えはじめ、やがて\qty{26}{\celsius}あたりで落ち着きます。人が部屋に入ってきても、日がさしてきても、温度はほとんど変わりません。エアコンは、どうやって「ちょうどよい」強さで冷やし続けているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.72mm, y=0.72mm]
+  \fill[bkBlue!8] (0,0) rectangle (50,40);
+  \draw[bkInk, line width=0.8pt] (0,0) rectangle (50,40);
+  \filldraw[fill=white, draw=bkInk!70, line width=0.6pt, rounded corners=1mm] (8,30) rectangle (36,37);
+  \foreach \xx in {12,18,24,30} {\draw[bkBlue!70!black, line width=0.7pt, -{Stealth[length=1.6mm]}] (\xx,29) -- (\xx-2,22);}
+  \draw[bkInk, line width=0.6pt] (42,10) -- (42,22);
+  \filldraw[fill=bkRed!60, draw=bkInk] (42,9) circle (1.6);
+  \node[font=\sffamily\footnotesize, anchor=north] at (40,6.6) {温度計};
+  \fill[bkOrange!25] (52,0) rectangle (62,40);
+  \node[font=\sffamily\footnotesize, align=center] at (57,20) {外\\35\,℃};
+  \node[font=\sffamily\footnotesize] at (22,12) {部屋};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 波-1〜波-3 では、ものが「ひとりでに」どうゆれるかを調べました。この章では、ものを「ねらいどおりに」動かす方法を考えます。エアコン、炊飯器、車のクルーズコントロール、ロボットの腕、ドローン。どれも、今の様子をはかって、ねらいとのずれを見ながら、加えるもの（力や熱）を決めています。このしくみを\textbf{フィードバック制御}といいます。数学の 9-8〜9-12 では、伝達関数・極・PID の計算を学びました。この章では、(a) 物理の法則から、どうやってその式を作るか、(b) 本物の機械の数で何が起きるか、(c) 式の仮定がくずれるとどうなるか、を中心に学びます。
+
+\begin{yattemiyou}[手のひらに棒を立てよう]
+\textbf{用意するもの}\par
+長さ\qty{1}{m}くらいの棒（ほうきの柄、新聞紙を丸めた棒）と、長さ\qty{30}{cm}くらいの短い棒（定規）\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 長い棒を手のひらに立て、たおれないように手を動かす。何秒立てていられるかをはかる。
+\item 短い棒でも同じことをする。どちらが立てやすいか。
+\item 目をつぶるとどうなるか（すぐにやめる。周りに物や人がないことを確かめる）。
+\item 棒の先を見て立てるときと、手もとを見て立てるときを比べる。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkOrange!80!black, line width=2pt] (10,6) -- (16,40);
+  \fill[bkYellow!50] (4,2) rectangle (16,6);
+  \draw[bkInk, line width=0.5pt] (4,2) rectangle (16,6);
+  \node[font=\sffamily\footnotesize, anchor=north] at (10,1) {手のひら};
+  \draw[bkRed!80!black, line width=0.8pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] (2,-6) -- (18,-6);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (19,-6) {手を動かす};
+  \draw[bkInk!60, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (10,6) -- (10,40);
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：長い棒のほうが、ずっと立てやすいはずです。長い棒はゆっくりたおれるので、目で見てから手を動かすまでの\textbf{おくれ}があっても、間に合うからです。短い棒はすぐにたおれるので、少しのおくれでも間に合いません。目をつぶると、たおれかけていることがわからないので、立てていられません。わたしたちは、棒の傾きと、たおれる速さを目で\textbf{はかり}、そのずれを打ち消す向きに手を\textbf{動かし}続けています。これがフィードバックです（9-10 の倒立振子。⑩）。
+
+\begin{omoidasou}
+\bkrecall{6-4}{冷めるお湯の式 $C\dot\theta=-(\theta-\theta_{\mathrm a})/R$。時定数 $\tau=RC$ で、$\tau$ たつと差の 63.2\,\% が進む。}
+\bkrecall{9-8}{伝達関数 $G(s)=Y(s)/U(s)$（はじめの値を0にして）。フィードバックの全体は $G_1/(1+G_1G_2)$。周波数応答は $s=j\omega$ を入れる。}
+\bkrecall{9-9}{極（分母$=0$ の解）の実部がすべて負なら安定。2次おくれの行き過ぎは $\zeta$ だけで決まる。3次の判定は、係数がすべて正で $a_2a_1>a_0$。}
+\bkrecall{9-6}{最終値の定理：安定なら $\lim_{t\to\infty}y(t)=\lim_{s\to0}sY(s)$。むだ時間は $e^{-sL}$。}
+\bkrecall{9-10}{状態方程式 $\dot{\vec x}=A\vec x+Bu$、状態フィードバック $u=-K\vec x$。$A-BK$ の固有値が極。}
+\bkrecall{熱-11}{熱抵抗の直列・並列、窓と壁の熱貫流率（複層ガラス $U\approx\qty{3.1}{W/(m^2.K)}$）。}
+\end{omoidasou}
+
+\noindent この章の記号の約束：温度は、第2巻と同じく、セルシウス温度を $\theta$〔℃〕、温度の差を K で書きます（数学の 9-8・9-9 は温度を $T$ と書きました）。ねらいの値（目標）を $r$、制御したい量を $y$、ずれを $\varepsilon=r-y$（9-12 と同じ。ネイピア数の $e$ とまぎれないように）、加える量を $u$ と書きます。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{フィードバックを見る}{4}
+
+\bksubsection{1}{フィードバックとは}
+\label{ph:波-4:sec1}
+ものを思いどおりに動かす方法は、大きく2つあります。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\small, anchor=west, text=\bkTT] at (0,26) {① 決めたとおりに動かす（オープンループ）};
+  \rxeblk{a1}{(14,14)}{タイマー}
+  \rxeblk{a2}{(52,14)}{ストーブ}
+  \rxeblk{a3}{(90,14)}{部屋}
+  \draw[bk link] (a1) -- node[bk link label, above] {入・切} (a2);
+  \draw[bk link] (a2) -- node[bk link label, above] {熱} (a3);
+  \node[font=\sffamily\footnotesize, anchor=west, text width=22mm, align=left] at (102,14) {部屋の温度は見ていない};
+  \node[font=\sffamily\small, anchor=west, text=\bkTT] at (0,-4) {② はかってもどす（フィードバック）};
+  \rxesum{s}{(8,-16)}
+  \rxeblk{b1}{(36,-16)}{決める}
+  \rxeblk{b2}{(70,-16)}{エアコン}
+  \rxeblk{b3}{(102,-16)}{部屋}
+  \rxeblk{b4}{(70,-34)}{温度計}
+  \draw[bk link, shorten <=0mm] (-6,-16) -- (s);
+  \node[font=\sffamily\footnotesize, anchor=south] at (-3,-15) {設定};
+  \draw[bk link] (s) -- node[bk link label, above] {ずれ} (b1);
+  \draw[bk link] (b1) -- (b2);
+  \draw[bk link] (b2) -- (b3);
+  \draw[bk link] (b3.south) |- (b4);
+  \draw[bk link] (b4) -| (s.south);
+  \node[font=\sffamily\footnotesize] at (5,-11.5) {$+$};
+  \node[font=\sffamily\footnotesize] at (11.5,-21.5) {$-$};
+\end{tikzpicture}
+\bkfigcaption{2つの動かし方。①は、決めた時間だけ動かすので、外の暑さが変わると温度がずれる。②は、温度をはかって設定と比べ、ずれに応じて強さを変えるので、外の様子が変わっても設定に近づく。}\label{ph:波-4:fig-loop}
+\end{bkfigure}
+
+①のように、決めたとおりに動かすだけの方法を\textbf{オープンループ}（開ループ）制御、②のように、結果をはかって、ねらいとのずれから次の動かし方を決める方法を\textbf{フィードバック制御}といいます。\bkidx{ふぃーどばっくせいぎょ}{フィードバック制御}フィードバックは「もどす」という意味で、はかった結果を入口へもどすからです。
+
+\begin{phmijika}[身の周りのフィードバック]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phMijikaDeep}●}]
+\item 自転車のハンドル：傾きを感じて、ハンドルを切ってもどす。
+\item トイレのタンクの浮き：水面が上がると浮きが上がり、弁をしめて水を止める（水面の高さのずれに比例して弁が開く）。
+\item 炊飯器・電気ポット：温度センサーではかって、ヒーターの強さを変える。
+\item 体温：暑いと汗をかき、寒いとふるえて、体温を約\qty{37}{\celsius}に保つ（体の中のフィードバック）。
+\end{itemize}
+\end{phmijika}
+
+\phboxhead{おくれがあると、行き過ぎる}
+シャワーの温度を合わせるとき、水栓を少し回しても、新しいお湯が出てくるまで数秒かかります。それを待たずに「まだぬるい」とさらに回すと、熱すぎるお湯が出てきて、あわてて反対へ回し、今度は冷たすぎる……と繰り返します。はかってから効き目が出るまでの\textbf{おくれ}があると、フィードバックは行き過ぎやすく、強く回すほど、ゆれが大きくなります。この「おくれ」と「強さ」のかね合いが、制御の中心の問題です（③・⑨）。
+
+\bksubsection{2}{ブロック線図を絵で}
+\label{ph:波-4:sec2}
+フィードバックのしくみは、箱と矢印の図（\textbf{ブロック線図}、9-8）で表します。\bkidx{ぶろっくせんず}{ブロック線図}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxesum{s}{(8,0)}
+  \rxeblk{c}{(36,0)}{制御器\\（決める）}
+  \rxeblk{p}{(80,0)}{制御対象\\（部屋）}
+  \rxeblk{m}{(58,-22)}{センサー\\（温度計）}
+  \draw[bk link, shorten <=0mm] (-6,0) -- (s);
+  \node[font=\sffamily\footnotesize, anchor=south east, align=center] at (2.5,1.5) {目標 $r$\\（\qty{26}{\celsius}）};
+  \draw[bk link] (s) -- node[bk link label, above] {ずれ $\varepsilon$} (c);
+  \draw[bk link] (c) -- node[bk link label, above] {操作量 $u$} (p);
+  \draw[bk link, shorten >=0mm] (p) -- (120,0);
+  \node[font=\sffamily\footnotesize, anchor=south, align=center] at (112,1.5) {制御量 $y$\\（室温）};
+  \fill[bkInk] (102,0) circle (0.7);
+  \draw[bk link] (102,0) |- (m);
+  \draw[bk link] (m) -| (s.south);
+  \draw[bk link] (80,19) -- (p);
+  \node[font=\sffamily\footnotesize, anchor=west] at (82,17) {外乱 $d$（日ざし・人の熱）};
+  \node[font=\sffamily\footnotesize] at (5,4.5) {$+$};
+  \node[font=\sffamily\footnotesize] at (11.5,-5) {$-$};
+\end{tikzpicture}
+\bkfigcaption{エアコンのブロック線図。○（加え合わせ点）で目標からはかった値を引いて、ずれを作る。外から勝手に加わる熱（外乱）があっても、それによる温度のずれをはかって打ち消す。}\label{ph:波-4:fig-block}
+\end{bkfigure}
+
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{制御対象}：動かしたいもの（部屋、モーター、車）。その性質は物理の法則で決まる（④）。
+\item \textbf{制御量} $y$：制御したい量（室温）。\textbf{目標} $r$：そのねらいの値（設定温度）。
+\item \textbf{ずれ}（偏差）$\varepsilon=r-y$。\textbf{操作量} $u$：制御対象に加える量（エアコンなら冷房の出力）。
+\item \textbf{制御器}：ずれから操作量を決めるきまり（③・⑦の比例・積分・微分）。
+\item \textbf{外乱} $d$：外から勝手に加わり、制御量を動かしてしまうもの（日ざし、人の体の熱、坂道）。
+\end{itemize}
+フィードバックのよい所は、外乱の大きさがわからなくても、その結果（温度のずれ）をはかれば打ち消せることです。オープンループの制御は、外乱があると、ずれたままになります。
+
+\phstage{te}{表計算で部屋の温度を制御する}{4}
+
+\bksubsection{3}{表計算で、部屋の温度を制御する}
+\label{ph:波-4:sec3}
+エアコンのついた部屋を、6-4 の「熱容量と熱抵抗の1つの箱」で表します。部屋の熱容量を $C=\qty{72}{kJ/K}$、部屋から外までの熱抵抗を $R=\qty{0.05}{K/W}$（温度差\qty{1}{K}ごとに、熱が1秒に\qty{20}{J}（\qty{20}{W}）逃げる。数の決め方は④）とします。外は\qty{35}{\celsius}、はじめ部屋も\qty{35}{\celsius}、設定は\qty{26}{\celsius}です。$\Delta t$ の間の熱のつり合い（熱-11 ⑤の箱の考え）は、
+\[C\,\Delta\theta=\Bigl(\underbrace{\frac{35-\theta}{R}}_{\text{外から入る熱}}-\underbrace{P}_{\text{エアコンが取る熱}}\Bigr)\Delta t\]
+です。$P$〔W〕はエアコンが1秒に部屋から取りさる熱（冷房の出力）です。$\Delta t=\qty{1}{min}=\qty{60}{s}$ にすると、$60\div\num{72000}=1/1200$、$1/R=20$ なので、
+\pheq{\theta^{\text{次}}=\theta+\frac{20\,(35-\theta)-P}{1200}}{℃ ＝ ℃＋$\dfrac{\text{W}}{\text{W/K}}$}
+です（1200 W/K は「1分で1 K 変えるのに要る熱の流れ」）。
+
+\phboxhead{比例制御：ずれに比例して冷やす}
+ずれ $\theta-26$（部屋のほうが熱い分）に比例して、$P=K_{\mathrm p}(\theta-26)$ で冷やします。$K_{\mathrm p}=\qty{180}{W/K}$（\qty{1}{K}ずれるごとに\qty{180}{W}）とします（9-8 の $RK_{\mathrm p}=0.05\times180=9$ と同じ）。A列を時刻〔分〕、B列を $\theta$、C列をずれ、D列を $P$ にします。
+
+\begin{bkcenter}\small
+\texttt{C2 = B2-26}\qquad\texttt{D2 = 180*C2}\qquad\texttt{B3 = B2+(20*(35-B2)-D2)/1200}
+\end{bkcenter}
+
+\begin{bkcenter}
+\bksheet{4}{22}{%
+1 & $t$〔分〕 & $\theta$〔℃〕 & ずれ〔K〕 & $P$〔W〕 \\
+2 & 0 & 35 & 9 & 1620 \\
+3 & 1 & 33.650 & 7.650 & 1377.0 \\
+4 & 2 & 32.525 & 6.525 & 1174.5 \\
+5 & 3 & 31.587 & 5.587 & 1005.7 \\
+\SetCell[c=5]{c} $\vdots$ & & & & \\
+32 & 30 & 26.934 & 0.934 & 168.1 \\
+62 & 60 & 26.900 & 0.900 & 162.0 \\}
+\bktabcaption{比例だけの制御の表計算（$\Delta t=1$ 分）。はじめは\qty{1620}{W}で強く冷やし、60分で26.90\,℃・\qty{162}{W}に落ち着く。}\label{ph:波-4:tab-sheet}
+\end{bkcenter}
+
+\noindent 比例だけでは、はじめ $P=180\times9=\qty{1620}{W}$ で強く冷やし、部屋が冷えるにつれて弱めます。6分ほどで残りの差が約3分の1になり（時定数 $60\div10=6$ 分）、30分ほどで\qty{26.9}{\celsius}に落ち着きます。でも、\qty{26}{\celsius}には届きません。
+
+\phboxhead{なぜ、ずれが残るのか}
+落ち着いたとき（$\theta$ が変わらない）、外から入る熱 $20\times(35-\theta)$ と、エアコンが取る熱 $180\times(\theta-26)$ がつり合います。もし $\theta=26$ になったら、ずれが0なので $P=0$、エアコンは止まり、外から入る熱で部屋はまた温まってしまいます。比例制御は「ずれがあるから冷やす」ので、冷やし続けるには、\textbf{ずれが少し残る}ことが必要なのです。$20(35-\theta)=180(\theta-26)$ を解くと、$\theta=26.9$ です。
+
+\phboxhead{積分を足す：ずれのたまりで冷やす}
+そこで、ずれを時間でたし合わせた量（ずれのたまり $S$〔K·分〕）にも比例して冷やします。E列に $S$ を作り（\texttt{E2 = 0}、\texttt{E3 = E2+C2}）、D列の式を次のように変えます。
+\[P=180\times(\theta-26)+3\times S\qquad\text{（\texttt{D2 = 180*C2+3*E2}）}\]
+（3 W/(K·分) は、9-12 の $RK_{\mathrm i}=0.15$/分を $R$ でわったもの。）ずれが少しでも残っていると、$S$ は増え続け、冷房の出力を上げ続けます。ずれがちょうど0になったときに、はじめて $S$ が増えなくなり、$P$ が一定（\qty{180}{W}）になります。表計算では、1分後 $\theta=33.650$、2分後 32.502 と、はじめは比例だけとほとんど同じですが、30分で\qty{26.07}{\celsius}、60分で\qty{26.00}{\celsius}になります（$P$ は\qty{180}{W}）。
+
+\phboxhead{同じ計算を Python で}
+表計算の1行が、繰り返しの1回にあたります。
+\begin{phcode}[Python]
+R, C = 0.05, 72000.0
+Kp, Ki = 180.0, 3.0          \# W/K、W/(K・分)
+th, S = 35.0, 0.0            \# 室温〔℃〕、ずれのたまり〔K・分〕
+for n in range(61):          \# 1 分ずつ 60 分
+    e = th - 26
+    P = Kp*e + Ki*S
+    if n \% 10 == 0:
+        print(n, round(th, 2), round(P))
+    th = th + 60/C*((35-th)/R - P)
+    S = S + e
+\end{phcode}
+\begin{phcodeout}
+0 35.0 1620
+10 27.77 463
+20 26.35 236
+30 26.07 191
+40 26.01 182
+50 26.0 180
+60 26.0 180
+\end{phcodeout}
+左から、時刻〔分〕、室温〔℃〕、冷房の出力〔W〕です。\texttt{Ki = 0.0} にすれば比例だけ、\texttt{Ki = 40.0} にすれば積分の強すぎる場合になります（図\ref{ph:波-4:fig-room}）。むだ時間を入れるには、はかった温度をリストにためておき、5つ前の値でずれを計算します。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=56mm, xmin=0, xmax=62, ymin=22.5, ymax=35.5, xtick={0,10,20,30,40,50,60}, ytick={24,26,28,30,32,34}, xlabel={$t$（分）}, ylabel={室温（℃）}]
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (axis cs:0,26) -- (axis cs:62,26);
+  \draw[bkOrange, line width=1.3pt, dash pattern=on 4pt off 2pt] plot[smooth] coordinates {(0.0,35.000) (2.0,32.671) (4.0,31.012) (6.0,29.829) (8.0,28.987) (10.0,28.387) (12.0,27.959) (14.0,27.655) (16.0,27.438) (18.0,27.283) (20.0,27.173) (22.0,27.095) (24.0,27.039) (26.0,26.999) (28.0,26.970) (30.0,26.950) (32.0,26.936) (34.0,26.925) (36.0,26.918) (38.0,26.913) (40.0,26.909) (42.0,26.907) (44.0,26.905) (46.0,26.903) (48.0,26.902) (50.0,26.902) (52.0,26.901) (54.0,26.901) (56.0,26.901) (58.0,26.900) (60.0,26.900)};
+  \draw[bkBlue, line width=1.5pt] plot[smooth] coordinates {(0.0,35.000) (2.0,32.637) (4.0,30.894) (6.0,29.609) (8.0,28.661) (10.0,27.963) (12.0,27.447) (14.0,27.067) (16.0,26.787) (18.0,26.580) (20.0,26.428) (22.0,26.316) (24.0,26.233) (26.0,26.172) (28.0,26.127) (30.0,26.093) (32.0,26.069) (34.0,26.051) (36.0,26.037) (38.0,26.028) (40.0,26.020) (42.0,26.015) (44.0,26.011) (46.0,26.008) (48.0,26.006) (50.0,26.004) (52.0,26.003) (54.0,26.002) (56.0,26.002) (58.0,26.001) (60.0,26.001)};
+  \draw[bkRed!80!black, line width=1.2pt, dash pattern=on 1.2pt off 1.4pt] plot[smooth] coordinates {(0.0,35.000) (2.0,32.218) (4.0,29.497) (6.0,27.131) (8.0,25.293) (10.0,24.046) (12.0,23.369) (14.0,23.181) (16.0,23.367) (18.0,23.803) (20.0,24.369) (22.0,24.965) (24.0,25.514) (26.0,25.966) (28.0,26.296) (30.0,26.501) (32.0,26.591) (34.0,26.589) (36.0,26.520) (38.0,26.411) (40.0,26.285) (42.0,26.161) (44.0,26.054) (46.0,25.970) (48.0,25.912) (50.0,25.881) (52.0,25.872) (54.0,25.880) (56.0,25.900) (58.0,25.925) (60.0,25.952)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:33,27.1) {比例だけ（破線）：26.9\,℃};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:12,29.4) {比例＋積分（実線）：26\,℃};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:22,24.9) {積分が強すぎる（点線）：行き過ぎ};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{部屋の温度の制御（Python で $\Delta t=\qty{0.2}{min}$ として計算）。積分が強すぎると（3 W/(K·分) の13倍あまり、$RK_{\mathrm i}=2$/分）、26\,℃を通りこして約23\,℃まで冷えすぎてから、もどってくる。}\label{ph:波-4:fig-room}
+\end{bkfigure}
+
+\noindent 積分は強いほどよいわけではありません。積分を強くしすぎると（図\ref{ph:波-4:fig-room}の点線）、たまったずれの分で冷やしすぎ、設定を通りこして\qty{23}{\celsius}あたりまで冷えてしまいます。たまりが減るのに時間がかかるからです。
+
+\phboxhead{はかるのがおくれると：むだ時間}
+エアコンの温度センサーが、吹き出し口から遠い所にあって、冷えた空気が届くまで5分かかるとします（\textbf{むだ時間}）。\bkidx{むだじかん}{むだ時間}表計算では、ずれを計算するとき、5行上（5分前）の温度を使えば作れます（\texttt{C8 = B3-26}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=52mm, xmin=0, xmax=122, ymin=17, ymax=36, xtick={0,20,40,60,80,100,120}, ytick={18,22,26,30,34}, xlabel={$t$（分）}, ylabel={室温（℃）}]
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (axis cs:0,26) -- (axis cs:122,26);
+  \draw[bkBlue, line width=1.4pt] plot[smooth] coordinates {(0.0,35.000) (2.0,32.340) (4.0,29.768) (6.0,27.360) (8.0,25.700) (10.0,24.855) (12.0,24.746) (14.0,25.144) (16.0,25.790) (18.0,26.459) (20.0,26.997) (22.0,27.331) (24.0,27.458) (26.0,27.420) (28.0,27.281) (30.0,27.106) (32.0,26.946) (34.0,26.830) (36.0,26.769) (38.0,26.757) (40.0,26.780) (42.0,26.822) (44.0,26.867) (46.0,26.903) (48.0,26.927) (50.0,26.936) (52.0,26.935) (54.0,26.926) (56.0,26.915) (58.0,26.904) (60.0,26.896) (62.0,26.892) (64.0,26.891) (66.0,26.892) (68.0,26.895) (70.0,26.898) (72.0,26.900) (74.0,26.902) (76.0,26.902) (78.0,26.902) (80.0,26.902) (82.0,26.901) (84.0,26.900) (86.0,26.900) (88.0,26.899) (90.0,26.899) (92.0,26.899) (94.0,26.900) (96.0,26.900) (98.0,26.900) (100.0,26.900) (102.0,26.900) (104.0,26.900) (106.0,26.900) (108.0,26.900) (110.0,26.900) (112.0,26.900) (114.0,26.900) (116.0,26.900) (118.0,26.900) (120.0,26.900)};
+  \draw[bkRed!80!black, line width=1.2pt, dash pattern=on 4pt off 2pt] plot[smooth] coordinates {(0.0,35.000) (2.0,29.680) (4.0,24.535) (6.0,19.881) (8.0,18.052) (10.0,19.328) (12.0,23.280) (14.0,28.278) (16.0,32.447) (18.0,34.245) (20.0,33.078) (22.0,29.479) (24.0,24.872) (26.0,21.014) (28.0,19.322) (30.0,20.360) (32.0,23.651) (34.0,27.891) (36.0,31.464) (38.0,33.055) (40.0,32.133) (42.0,29.124) (44.0,25.221) (46.0,21.913) (48.0,20.417) (50.0,21.235) (52.0,23.986) (54.0,27.579) (56.0,30.642) (58.0,32.047) (60.0,31.322) (62.0,28.807) (64.0,25.501) (66.0,22.666) (68.0,21.346) (70.0,21.987) (72.0,24.286) (74.0,27.328) (76.0,29.952) (78.0,31.191) (80.0,30.625) (82.0,28.525) (84.0,25.725) (86.0,23.296) (88.0,22.134) (90.0,22.633) (92.0,24.552) (94.0,27.128) (96.0,29.376) (98.0,30.465) (100.0,30.027) (102.0,28.274) (104.0,25.904) (106.0,23.824) (108.0,22.802) (110.0,23.187) (112.0,24.788) (114.0,26.968) (116.0,28.893) (118.0,29.850) (120.0,29.514)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:62,31.2) {$K_{\mathrm p}=\qty{360}{W/K}$（破線）：ゆれ続ける};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:62,21.6) {$K_{\mathrm p}=\qty{180}{W/K}$（実線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{温度を5分おくれてはかるときの比例制御（Python で計算）。$K_{\mathrm p}=\qty{180}{W/K}$ でも一度は冷えすぎ（最低約24.7\,℃）、2倍の\qty{360}{W/K}にすると、2時間たっても上下に大きくゆれ続ける。}\label{ph:波-4:fig-dead}
+\end{bkfigure}
+
+\noindent むだ時間があると、$K_{\mathrm p}=\qty{180}{W/K}$ でも一度は冷えすぎます。冷えたことがわかるのが5分おくれるので、その間も強く冷やし続けるからです（シャワーと同じ）。$K_{\mathrm p}$ を2倍にすると、冷えすぎと温まりすぎを繰り返し、ゆれがおさまりません。\textbf{おくれのあるフィードバックを強くしすぎると、不安定になる}のです（⑨で式から理由を見ます）。
+
+\phboxhead{はてな？の答え（表計算で見えたこと）}
+\bkhatenaref の答え：エアコンは、部屋の温度をはかり続け、設定温度とのずれを計算して、ずれが大きいほど強く冷やします（比例）。それだけでは少しずれが残るので、ずれのたまりに応じて冷やす分（積分）を足し、ずれがなくなるまで冷房の出力を調節します。人や日ざしの熱（外乱）が加わっても、温度のずれとしてはかれるので、自動的に強く冷やして打ち消します。ただし、強くしすぎると、はかるおくれのために行き過ぎたり、ゆれ続けたりするので、ちょうどよい強さに調整してあります（⑦）。
+
+\begin{phmodel}[部屋の温度の制御]
+\phignore{部屋の中の温度のむら（どこも同じ温度とする）。壁そのものの熱容量の時間変化（熱-11 ⑤）。湿度と除湿。}
+\phassume{部屋は熱容量 $C$ と熱抵抗 $R$ の1つの箱。エアコンは、言われた出力 $P$ ですぐに冷やせる。外は\qty{35}{\celsius}で一定。}
+\phlimit{エアコンの出力に上限があるとき（はじめ\qty{1620}{W}が出せないと、もっとゆっくり冷える）。センサーが遠く、むだ時間があるとき。}
+\end{phmodel}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{物理のモデルから伝達関数を作る}{5}
+
+\bksubsection{4}{物理のモデルから伝達関数を作る}
+\label{ph:波-4:sec4}
+制御を設計するには、まず制御対象の性質を式にします。9-8 では、伝達関数（はじめの値を0にして、出てくるもの÷入れるもの）を、与えられた微分方程式から作りました。ここでは、その微分方程式を\textbf{物理の法則から立てる}ことから始めます。
+
+\phboxhead{部屋：熱容量と熱抵抗（熱-11）}
+③の部屋の熱のつり合いを、$\Delta t\to0$ にして微分方程式にします（熱-11 ⑥と同じ考え）。
+\[C\,\frac{\dd\theta}{\dd t}=\frac{\theta_{\text{外}}-\theta}{R}-P\]
+外との差 $y=\theta_{\text{外}}-\theta$（部屋が外より何 K 低いか）を使うと、$C\dot y=P-y/R$、つまり $RC\dot y+y=RP$ です。$y(0)=0$ でラプラス変換すると（9-8）、
+\pheq{G(s)=\frac{Y(s)}{P(s)}=\frac{R}{RCs+1}}{K/W}
+の\textbf{1次おくれ}です。$R$ は「\qty{1}{W}で冷やし続けたとき、最後に何 K 下がるか」、$\tau=RC$ は時定数です。この $R$・$C$ は、熱-11・熱-12 の熱抵抗 $R_{\mathrm{th}}$・熱容量 $C_{\mathrm{th}}$（6-4）と同じ量です。この章では、9-8 にそろえて添字を省きます。
+
+数の決め方：③の部屋は、床\qty{10}{m^2}ほどの部屋で、外に面した壁\qty{20}{m^2}・窓\qty{2}{m^2}としました。壁は熱-11 例題3 の壁（コンクリートとグラスウール、1 m$^2$ の熱抵抗 2.6 K/W）に表面の熱抵抗を足した $U\approx\qty{0.36}{W/(m^2.K)}$（熱-11 章末問題3）、窓は複層ガラスの $U\approx\qty{3.1}{W/(m^2.K)}$（熱-11 例題1）です。
+\[UA=0.36\times20+3.07\times2\approx7.3+6.1=\qty{13.4}{W/K}\]
+これにすき間・換気で逃げる分（約\qty{6.6}{W/K}、仮の値）を足して\qty{20}{W/K}、熱抵抗は $R=1/20=\qty{0.05}{K/W}$ です（熱抵抗の並列、熱-11 ③）。熱容量は、空気（約\qty{24}{m^3}で約\qty{29}{kJ/K}）に、家具や壁の表面の分を足して\qty{72}{kJ/K}（仮の値）としました。すると、
+\[\tau=RC=0.05\times\num{72000}=\qty{3600}{s}=60\ \text{分}\]
+で、9-8・9-9 のエアコンの数と同じになります。
+
+\phboxhead{缶コーヒーの保温：熱-12 の数で}
+熱-12 例題2 の缶コーヒー（熱容量 $C=\qty{1000}{J/K}$、周りへの熱抵抗 $R=\qty{1.2}{K/W}$、時定数20分）を、ヒーター（$P$〔W〕）で温めると、周りより何 K 高いか $y$ の伝達関数は、部屋と同じ形の
+\[G(s)=\frac{1.2}{1200s+1}\quad\text{（$s$ は 1/s）}\]
+です。\qty{1}{W}ごとに最後は\qty{1.2}{K}上がり、20分の時定数で近づきます（\bkreidairef{2}）。
+
+\phboxhead{モーター（電-12）}
+直流のモーター（DC モーター）の軸の回る速さ $\omega$ は、軸の回転の運動方程式（力-6）
+\[I\frac{\dd\omega}{\dd t}=\tau_{\mathrm m}-b\,\omega\]
+（$I$ は回る部分の慣性モーメント（力-6。制御の本では $J$ と書くことが多い）、$b\omega$ は軸の摩擦）にしたがいます。モーターが出すトルク $\tau_{\mathrm m}$ は、加えた電圧 $V$ に比例し、速く回るほど小さくなることが、電気と磁気の法則からわかります（物理シリーズの『電磁気学』（電-12）で導きます）。$\tau_{\mathrm m}=aV-a'\omega$ と書くと、
+\[I\dot\omega+(b+a')\omega=aV\qquad\text{より}\qquad G(s)=\frac{K}{\tau s+1},\quad K=\frac{a}{b+a'},\ \tau=\frac{I}{b+a'}\]
+の1次おくれです。9-8 のモーター $10/(0.5s+1)$ は、$K=10$（1 V で\qty{10}{rad/s}）、$\tau=\qty{0.5}{s}$ の例です。
+
+\phboxhead{水そう（力-13）とばね・ダンパー（波-1）}
+底面積 $S$ の水そうに流量 $q$ で水を入れ、穴から $h/R_{\mathrm h}$ で出ていくとすると（水面の近くで、トリチェリの $\sqrt{2gh}$（力-13）を直線で近似）、$S\dot h=q-h/R_{\mathrm h}$ で、$G(s)=R_{\mathrm h}/(SR_{\mathrm h}s+1)$ の1次おくれです（面積は、状態方程式の行列 $A$（9-10）と分けて $S$ と書く）。質量・ばね・ダンパー（波-1）に力 $F$ を加えると、$m\ddot x+c\dot x+kx=F$ で、
+\pheq{G(s)=\frac{1}{ms^2+cs+k}=\frac{1}{k}\cdot\frac{\omega_{\mathrm n}^2}{s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2}}{m/N}
+の\textbf{2次おくれ}です（$\omega_{\mathrm n}=\sqrt{k/m}$、$\zeta=c/(2\sqrt{mk})$。波-1）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=27mm] Q[l,m,wd=30mm] Q[l,m,wd=28mm] Q[c,m,wd=32mm]}, rowsep=4pt, row{1}={bg=bkTheme!10, font=\sffamily\small}, cells={font=\small}}
+制御対象 & ためるもの & 逃がすもの & 伝達関数 \\
+部屋・缶 & 熱容量 $C$ & 熱抵抗 $R$ & $\dfrac{R}{RCs+1}$ \\
+モーター & 慣性モーメント $I$ & 摩擦と逆起電力 & $\dfrac{K}{\tau s+1}$ \\
+水そう & 底面積 $S$ & 穴の抵抗 $R_{\mathrm h}$ & $\dfrac{R_{\mathrm h}}{SR_{\mathrm h}s+1}$ \\
+車（9-8） & 質量 \qty{1000}{kg} & 抵抗 50 N·s/m & $\dfrac{1}{1000s+50}$ \\
+ばね・ダンパー & 質量とばね & ダンパー $c$ & $\dfrac{1}{ms^2+cs+k}$ \\
+\end{bktable}
+\bktabcaption{物理の法則から作った伝達関数。「ためるもの」が1つなら1次おくれ、エネルギーを2つの形（運動とばね）でやりとりすると2次おくれになる（前付の「保存則と相似の地図」）。}\label{ph:波-4:tab-model}
+\end{bkcenter}
+
+\begin{phflow}[部屋の伝達関数]
+\phflowrow{$C\dfrac{\dd\theta}{\dd t}=\dfrac{\theta_{\text{外}}-\theta}{R}-P$}{$y=\theta_{\text{外}}-\theta$（はじめ0）\\ラプラス変換}{$G(s)=\dfrac{R}{RCs+1}$}
+\end{phflow}
+
+\bksubsection{5}{1次おくれ・2次おくれ・むだ時間の応答}
+\label{ph:波-4:sec5}
+入れるものを、時刻0に急に一定の値にしたときの応答（\textbf{ステップ応答}、9-8④）で、制御対象の「速さ」を表します。
+
+\phboxhead{1次おくれ：時定数}
+$G(s)=K/(\tau s+1)$ に高さ $U$ のステップを入れると、$y=KU(1-e^{-t/\tau})$ です（6-4・9-8）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=20mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+時刻 & $\tau$ & $2\tau$ & $3\tau$ & $4\tau$ & $5\tau$ \\
+進んだ割合 & 63.2\,\% & 86.5\,\% & 95.0\,\% & 98.2\,\% & 99.3\,\% \\
+\end{bktable}
+\bktabcaption{1次おくれのステップ応答（$1-e^{-t/\tau}$）。$3\tau$ でほぼ（95\,\%）、$4\tau$ で98\,\%落ち着く。}
+\end{bkcenter}
+
+\phboxhead{2次おくれ：行き過ぎと整定時間}
+$\omega_{\mathrm n}^2/(s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2)$ のステップ応答は、$\zeta<1$ のとき、最後の値1をこえてから落ち着きます（9-9⑤）。
+\pheq{\text{行き過ぎ}=e^{-\pi\zeta/\sqrt{1-\zeta^2}},\qquad t_{\text{ピーク}}=\frac{\pi}{\omega_{\mathrm n}\sqrt{1-\zeta^2}},\qquad t_{\text{整定}}\approx\frac{4}{\zeta\omega_{\mathrm n}}}{1・s・s}
+\textbf{行き過ぎ量}は $\zeta$ だけで決まります（$\zeta=0.5$ で16\,\%、0.7 で4.6\,\%）。\bkidx{いきすぎりょう}{行き過ぎ量}\textbf{整定時間}（最後の値の±2\,\%の中に入って、もう出なくなるまでの時間）は、ゆれのつつみ $e^{-\zeta\omega_{\mathrm n}t}$ が $0.02$ ほどになる時間で、$\ln50\approx3.9$ から $4/(\zeta\omega_{\mathrm n})$ が目安です。\bkidx{せいていじかん}{整定時間}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=56mm, xmin=0, xmax=10.3, ymin=0, ymax=1.55, xtick={0,2,4,6,8,10}, ytick={0.5,1,1.37,1.16}, yticklabels={0.5,1,1.37,1.16}, xlabel={$\omega_{\mathrm n}t$}, ylabel={$y$}]
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (axis cs:0,1) -- (axis cs:10.3,1);
+  \addplot[bkRed!80!black, line width=1.1pt, dash pattern=on 1.2pt off 1.4pt, domain=0:10, samples=200] {1-exp(-0.3*x)*(cos(deg(sqrt(1-0.09)*x))+0.3/sqrt(1-0.09)*sin(deg(sqrt(1-0.09)*x)))};
+  \addplot[bkBlue, line width=1.5pt, domain=0:10, samples=200] {1-exp(-0.5*x)*(cos(deg(sqrt(0.75)*x))+0.5/sqrt(0.75)*sin(deg(sqrt(0.75)*x)))};
+  \addplot[bkOrange, line width=1.2pt, dash pattern=on 4pt off 2pt, domain=0:10, samples=200] {1-exp(-0.7*x)*(cos(deg(sqrt(0.51)*x))+0.7/sqrt(0.51)*sin(deg(sqrt(0.51)*x)))};
+  \addplot[bkGray, line width=1.2pt, domain=0:10, samples=100] {1-exp(-x)*(1+x)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:3.6,1.43) {$\zeta=0.3$（点線）37\,\%};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:5.5,1.24) {$\zeta=0.5$（実線）16\,\%};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:5.5,0.78) {$\zeta=0.7$（破線）4.6\,\%};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:5.5,0.6) {$\zeta=1$（灰色）行き過ぎなし};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{2次おくれのステップ応答。横の軸は $\omega_{\mathrm n}t$（$\omega_{\mathrm n}$ が2倍なら、同じ形が半分の時間で起きる）。$\zeta$ が小さいほど行き過ぎが大きく、長くゆれる。}\label{ph:波-4:fig-step2}
+\end{bkfigure}
+
+\begin{phbaisuru}{$\omega_{\mathrm n}$}
+$\zeta$ が同じなら、グラフの形はまったく同じで、時間だけが半分になります（横の軸が $\omega_{\mathrm n}t$ だから）。行き過ぎ量は同じ、整定時間は半分です。比例を強くして速くしたいときは、$\zeta$ が小さくならないように（行き過ぎが増えないように）、微分（⑦）などで $\zeta$ を保ちます。
+\end{phbaisuru}
+
+\phboxhead{むだ時間}
+ベルトコンベアの先で量る、長い管の先で温度をはかる、シャワーのお湯が管を通ってくる。入れたものが、形を変えずに $L$ だけおくれて出てくるとき、伝達関数は $e^{-Ls}$ です（9-6⑤）。周波数応答（9-8⑧）にすると $e^{-j\omega L}$ で、大きさは1、\textbf{おくれの角は $\omega L$ rad}。速いゆれほど、大きくおくれます（\bkreidairef{9}）。
+
+\begin{phyomi}[$e^{-j\omega L}$：大きさ1、角 $-\omega L$]
+「むだ時間は、ゆれの大きさは変えないが、1周期の何分の1ずれるかをおくらせる」。周期 $2\pi/\omega$ のゆれが $L$ だけずれると、角は $2\pi\times L\div(2\pi/\omega)=\omega L$ だけおくれます。おくれが半周（$\pi$ rad、$180°$）になると、もどした信号が反対向きになり、打ち消すつもりが強め合ってしまいます（⑨）。
+\end{phyomi}
+
+\bksubsection{6}{残るずれと、最終値の定理}
+\label{ph:波-4:sec6}
+③で見た「比例だけでは、ずれが残る」を、式で確かめます。前向きの道を $G_1(s)=K_{\mathrm p}G(s)$、はかる箱を $G_2=1$ とすると、ずれは $E=R_{\text{目標}}-Y$ で、9-8 のフィードバックの式から、
+\[E=\frac{1}{1+K_{\mathrm p}G(s)}R_{\text{目標}}\]
+目標を高さ $r$ のステップ（$r/s$）にすると、安定なら最終値の定理（9-6⑨）で、
+\pheq{\varepsilon(\infty)=\lim_{s\to0}s\cdot\frac{1}{1+K_{\mathrm p}G(s)}\cdot\frac{r}{s}=\frac{r}{1+K_{\mathrm p}G(0)}}{K など}
+です。$G(0)$ は、ゆっくり変えたときの倍率（\textbf{定常ゲイン}）です。部屋なら $K_{\mathrm p}G(0)=K_{\mathrm p}R=9$ で、ずれは目標の $1/(1+9)=1/10$、$r=\qty{9}{K}$（外より9 K 下げたい）なら\qty{0.9}{K}。③と同じです。
+
+\begin{phflow}[残るずれ]
+\phflowrow{$\varepsilon(\infty)=\displaystyle\lim_{s\to0}\dfrac{s}{1+G_1(s)}\cdot\dfrac{r}{s}$}{比例だけ\\$G_1=K_{\mathrm p}G$}{$\varepsilon(\infty)=\dfrac{r}{1+K_{\mathrm p}G(0)}$}
+\phflowrow{$\varepsilon(\infty)=\displaystyle\lim_{s\to0}\dfrac{s}{1+G_1(s)}\cdot\dfrac{r}{s}$}{積分を足す\\$G_1=(K_{\mathrm p}+K_{\mathrm i}/s)G$}{$\varepsilon(\infty)=0$}
+\end{phflow}
+積分を足すと、$s\to0$ で $K_{\mathrm i}/s$ がかぎりなく大きくなるので、ずれは0です（9-9 のもっと知りたい）。
+
+\phboxhead{外乱によるずれ}
+外乱（日ざしの熱、坂道で車にかかる力）も、同じ考えで扱えます。制御対象の入口に外乱 $d$ が加わると、比例だけなら、出てくる量は外乱の $G(0)/(1+K_{\mathrm p}G(0))$ 倍だけずれます。比例を強くするほどずれは小さくなりますが、0にはなりません。積分があれば、外乱が一定なら、ずれはやがて0になります（\bkreidairef{7}）。
+
+\begin{phmijika}[トイレのタンクの浮き]
+タンクの浮きは、水面が下がるほど弁を大きく開けます（比例制御）。水が少しずつもれていると、弁を少し開けたままにしておく必要があるので、水面は決めた高さより少し低い所で落ち着きます。比例制御の「残るずれ」です。
+\end{phmijika}
+
+\bksubsection{7}{PID 制御と、その調整}
+\label{ph:波-4:sec7}
+比例（P）・積分（I）・微分（D）の3つを合わせた制御を \textbf{PID 制御}といいます（9-12⑦）。\bkidx{ぴーあいでぃーせいぎょ}{PID 制御}工場の計器では、次の形で書くことが多いです。
+\pheq{u=K_{\mathrm p}\Bigl(\varepsilon+\frac{1}{T_{\mathrm i}}\int\varepsilon\,\dd t+T_{\mathrm d}\frac{\dd\varepsilon}{\dd t}\Bigr)\qquad G_{\mathrm c}(s)=K_{\mathrm p}\Bigl(1+\frac{1}{T_{\mathrm i}s}+T_{\mathrm d}s\Bigr)}{$u$ の単位}
+$T_{\mathrm i}$ を\textbf{積分時間}、$T_{\mathrm d}$ を\textbf{微分時間}といいます。9-12 の $K_{\mathrm i}$・$K_{\mathrm d}$ とは、$K_{\mathrm i}=K_{\mathrm p}/T_{\mathrm i}$、$K_{\mathrm d}=K_{\mathrm p}T_{\mathrm d}$ の関係です。
+
+\begin{phyomi}[$T_{\mathrm i}$ と $T_{\mathrm d}$]
+$T_{\mathrm i}$ は「同じずれが続いたとき、積分の分が比例の分に追いつくまでの時間」。短いほど積分が強い。$T_{\mathrm d}$ は「今の変わり方が続くと、$T_{\mathrm d}$ 後にずれがどうなるかを先取りして動く」時間。長いほど微分が強い。
+\end{phyomi}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=18mm] Q[l,m,wd=46mm] Q[l,m,wd=50mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}, cells={font=\small}}
+項 & よい所 & 強くしすぎると \\
+P（比例） & すばやく大きく動く & 行き過ぎ・ゆれ。ずれは残る \\
+I（積分） & 残るずれを0にする & ゆっくり大きくゆれる（③の点線） \\
+D（微分） & 先回りしてゆれをおさえる（$\zeta$ を大きく） & はかった値の細かい雑音を大きくする \\
+\end{bktable}
+\bktabcaption{PID の3つの項のはたらき。}
+\end{bkcenter}
+
+\phboxhead{限界感度法：実物で調整する}
+制御対象の式がよくわからないときでも、PID を調整できる方法があります。ジーグラとニコルス（1942年）が工場の装置の経験から作った\textbf{限界感度法}です。\bkidx{げんかいかんどほう}{限界感度法}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 積分と微分を切り、比例だけにする。
+\item $K_{\mathrm p}$ を少しずつ大きくし、ゆれが大きくも小さくもならず、続くようになる所（安定の限界）を探す。そのときの $K_{\mathrm p}$ を $K_{\mathrm u}$、ゆれの周期を $T_{\mathrm u}$ とする。
+\item 次の表で決める。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=20mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+制御 & $K_{\mathrm p}$ & $T_{\mathrm i}$ & $T_{\mathrm d}$ \\
+P & $0.5K_{\mathrm u}$ & ― & ― \\
+PI & $0.45K_{\mathrm u}$ & $T_{\mathrm u}/1.2$ & ― \\
+PID & $0.6K_{\mathrm u}$ & $0.5T_{\mathrm u}$ & $0.125T_{\mathrm u}$ \\
+\end{bktable}
+\bktabcaption{ジーグラ・ニコルスの限界感度法（\bkreidairef{11}）。}\label{ph:波-4:tab-zn}
+\end{bkcenter}
+この表は、理論から導いたものではなく、ゆれが1周期で約4分の1になるくらいを目安にした経験則です。行き過ぎが大きめになることが多く、実際にはこれを出発点にして、さらに細かく合わせます。
+
+\Needspace{9\baselineskip}\begin{seikaku}
+\textbf{積分のたまりすぎ（ワインドアップ）}\par
+本物のエアコンやモーターには、出力の上限があります（飽和）。大きなずれが長く続くと、積分のたまりがどんどん大きくなりますが、出力は上限で頭打ちなので、たまりは減りません。やっと目標に近づいたときには、たまりすぎた積分のために、大きく行き過ぎてしまいます。これを\textbf{ワインドアップ}といいます。実際の制御器では、出力が上限に達している間は積分を止める、などの工夫をします。この章の式は「線形」（出力が比例のまま、いくらでも出せる）を仮定していて、その仮定がくずれる所です。
+\end{seikaku}
+
+\bksubsection{8}{ラウスの表で、安定を判定する}
+\label{ph:波-4:sec8}
+フィードバックを強くすると不安定になることがあります（③のむだ時間、9-9⑩の電気炉）。安定かどうかは、全体の伝達関数の分母（特性多項式）の根、つまり極が、すべて左半分（実部が負）にあるかで決まりました（9-9⑦）。9-9 では、2次と3次は係数だけで判定でき、4次以上は Python で根を求めました。そして、係数だけで判定する方法が4次以上にもあり、物理シリーズで学ぶと約束しました。それが\textbf{ラウスの表}を使う判定（ラウス・フルビッツの判定）です。\bkidx{らうすのひょう}{ラウスの表}
+
+\phboxhead{表の作り方}
+特性多項式 $a_ns^n+a_{n-1}s^{n-1}+\cdots+a_1s+a_0$（$a_n>0$）について、次の手順で表を作ります。4次の $a_4s^4+a_3s^3+a_2s^2+a_1s+a_0$ で示します。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 1行め（$s^4$ の行）に、1つおきの係数 $a_4$、$a_2$、$a_0$ を並べる。
+\item 2行め（$s^3$ の行）に、残りの係数 $a_3$、$a_1$ を並べる（足りない所は0）。
+\item 3行めから下は、すぐ上の2行から作る。左の数は、「上の2行の左はしの列と、その右の列でたすきがけをして、すぐ上の行の左はしでわる」：
+\[b_1=\frac{a_3a_2-a_4a_1}{a_3},\qquad b_2=\frac{a_3a_0-a_4\cdot0}{a_3}=a_0\]
+\item 同じことを、$s^0$ の行まで続ける。
+\end{enumerate}
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=40mm] Q[c,m,wd=24mm] Q[c,m,wd=12mm]}, rowsep=3pt, row{1}={bg=bkTheme!10, font=\sffamily\small}, column{1}={bg=bkLine!40}}
+行 & 1列め & 2列め & 3列め \\
+$s^4$ & $a_4$ & $a_2$ & $a_0$ \\
+$s^3$ & $a_3$ & $a_1$ & 0 \\
+$s^2$ & $b_1=\dfrac{a_3a_2-a_4a_1}{a_3}$ & $b_2=a_0$ & \\
+$s^1$ & $c_1=\dfrac{b_1a_1-a_3b_2}{b_1}$ & 0 & \\
+$s^0$ & $b_2=a_0$ & & \\
+\end{bktable}
+\bktabcaption{4次のラウスの表。$s^1$ の行の $c_1$ は、$s^3$ の行と $s^2$ の行で、同じたすきがけをしたもの。}\label{ph:波-4:tab-routh}
+\end{bkcenter}
+
+\phboxhead{判定のきまり}
+\begin{bkcenter}
+\tikz\node[draw=\bkTT, line width=0.9pt, fill=bkTheme!10, rounded corners=1.5mm, inner xsep=8mm, inner ysep=2.5mm, align=center]{1列めの数が\textbf{すべて正}なら安定。\\1列めの符号が変わる\textbf{回数}が、右半分にある極の数。};
+\end{bkcenter}
+このきまりがなぜ成り立つかの証明は、制御工学の専門の本で扱います（複素数の関数の「偏角の原理」を使います）。ここでは、9-9 の3次の判定と同じ答えになることで確かめます。
+
+\phboxhead{3次で確かめる}
+$s^3+a_2s^2+a_1s+a_0$ では、表の1列めは、上から $1$、$a_2$、$(a_2a_1-a_0)/a_2$、$a_0$ です。すべて正であることは、「$a_2>0$、$a_0>0$、$a_2a_1>a_0$」と同じで、9-9 の3次の判定（係数がすべて正で $a_2a_1>a_0$）とぴったり合います。電気炉 $(s+1)^3+K=s^3+3s^2+3s+(1+K)$ なら、3行めは $(9-1-K)/3$ で、$K<8$ です（\bkreidairef{8}）。
+
+\phboxhead{4次で確かめる：9-9 例題10}
+9-9 例題10 の $s^4+2.6s^3+4.8s^2+11.2s+8$（係数はすべて正なのに、Python で調べると不安定だった式）の表を作ります。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=74mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm]}, rowsep=2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}, column{1}={bg=bkLine!40}}
+行 & 1列め & 2列め & 3列め \\
+$s^4$ & 1 & 4.8 & 8 \\
+$s^3$ & 2.6 & 11.2 & 0 \\
+$s^2$ & $(2.6\times4.8-1\times11.2)\div2.6\approx0.492$ & 8 & \\
+$s^1$ & $(0.492\times11.2-2.6\times8)\div0.492\approx-31.1$ & 0 & \\
+$s^0$ & 8 & & \\
+\end{bktable}
+\bktabcaption{9-9 例題10 の式のラウスの表。}
+\end{bkcenter}
+1列めは $1$、$2.6$、$0.492$、$-31.1$、$8$ で、正→負→正と符号が2回変わります。だから、右半分の極が2つあり、不安定です。Python の答え（$0.2\pm1.99j$ が右半分）と合います。手で、根を求めずに判定できました。
+
+\phboxhead{4つおくれをつなぐ：正方形の極}
+時定数1の1次おくれを4つつないで、比例 $K$ でフィードバックすると、特性多項式は $(s+1)^4+K=s^4+4s^3+6s^2+4s+(1+K)$ です。表の1列めは $1$、$4$、$(24-4)/4=5$、$\{5\times4-4(1+K)\}/5=(16-4K)/5$、$1+K$ なので、安定なのは $K<4$ のときです。3つつないだ電気炉（$K<8$）より、強くできる限界が下がりました。おくれが重なるほど、不安定になりやすいのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=10mm, y=10mm]
+  \fill[bkGreen!8] (-3.6,-1.9) rectangle (0,1.9);
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=5pt]}] (-3.6,0) -- (1.4,0) node[anchor=west, font=\sffamily\footnotesize] {実部};
+  \draw[bkInk, line width=0.8pt, -{Stealth[length=5pt]}] (0,-1.9) -- (0,2.1) node[anchor=south, font=\sffamily\footnotesize] {虚部};
+  \foreach \xx in {-3,-1} {\draw[bkInk] (\xx,0.06) -- (\xx,-0.06); \node[font=\footnotesize, anchor=north] at (\xx,-0.08) {$\xx$};}
+  \node[font=\footnotesize, anchor=north] at (-2,-1.95) {$-2$};
+  \draw[bkInk!50, line width=0.3pt] (-2,-1.0) -- (-2,-1.9);
+  \node[font=\footnotesize, anchor=west] at (0.12,1) {$j$};
+  \draw[bkBlue, line width=0.9pt] (-1.707,0.707) -- (-0.293,0.707) -- (-0.293,-0.707) -- (-1.707,-0.707) -- cycle;
+  \draw[bkOrange!90!black, line width=0.9pt, dash pattern=on 4pt off 2pt] (-2,1) -- (0,1) -- (0,-1) -- (-2,-1) -- cycle;
+  \foreach \pp in {(-1.707,0.707),(-0.293,0.707),(-0.293,-0.707),(-1.707,-0.707)} {\node[bkBlue, font=\small] at \pp {$\times$};}
+  \foreach \pp in {(-2,1),(0,1),(0,-1),(-2,-1)} {\node[bkOrange!90!black, font=\small] at \pp {$\times$};}
+  \fill[bkInk] (-1,0) circle (0.05);
+  \node[anchor=north west, font=\sffamily\footnotesize] at (-3.55,1.85) {安定な側};
+  \node[anchor=north west, font=\sffamily\footnotesize, text width=46mm, align=left] at (2.6,1.9) {実線：$K=1$\\破線：$K=4$\\（右の2つが、たての軸の\\$\pm j$ に着く。安定の限界）};
+\end{tikzpicture}
+\bkfigcaption{$(s+1)^4+K=0$ の4つの極は、$-1$ を中心とする正方形の頂点に並ぶ（9-9⑩の正三角形の4次版）。$K$ を大きくすると正方形が大きくなり、$K=4$ でたての軸に届く。うすくぬった所は、実部が負の側（安定な側）。}\label{ph:波-4:fig-square}
+\end{bkfigure}
+
+\begin{seikaku}
+\textbf{1列めに0が出たとき}\par
+とちゅうで1列めが0になると、次の行が計算できません。電気炉で $K=8$ のときは、$s^1$ の行が全部0になります。これは、たての軸の上に極がある（ゆれ続ける、安定の限界）ことの合図です。専門の本では、1つ上の行から補助の多項式を作って続けるなどの方法で扱います。また、フルビッツは、同じ係数で作った行列式がすべて正であることを条件とする、別の形の判定を示しました（1895年）。2つは同じ答えを出すので、合わせてラウス・フルビッツの判定とよびます。
+\end{seikaku}
+
+\bksubsection{9}{ゲイン余裕と位相余裕：ボード線図で読む}
+\label{ph:波-4:sec9}
+ラウスの表は、特性多項式がわかっているときの方法です。むだ時間 $e^{-Ls}$ は多項式でないので使えません。そこで、周波数応答（9-8⑧）で「1周してもどってくる信号」を調べる方法を学びます。
+
+フィードバックの1周の伝達関数 $G_1G_2$ を考えます（\textbf{一巡伝達関数}、9-8 のフィードバックの式の分母の $G_1G_2$）。ある角振動数のゆれが1周して、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item おくれがちょうど $180°$（向きが反対）になり、
+\item 大きさが1倍（0 dB）以上
+\end{itemize}
+だと、引くはずの信号が「たす」向きでもどり、自分で自分を大きくして、ゆれが続いたり大きくなったりします（ブランコを押すタイミングと同じ）。だから、安定に余裕があるかは、次の2つではかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{ゲイン余裕}：おくれが $180°$ になる角振動数（位相交差）で、大きさが1倍まであと何 dB あるか。\bkidx{げいんよゆう}{ゲイン余裕}
+\item \textbf{位相余裕}：大きさが1倍になる角振動数（ゲイン交差）で、おくれが $180°$ まであと何度あるか。\bkidx{いそうよゆう}{位相余裕}
+\end{itemize}
+
+
+
+図\ref{ph:波-4:fig-bode}は、\bkreidairef{10}の一巡伝達関数のボード線図です。余裕の目安は、ゲイン余裕 6〜12 dB、位相余裕 30〜60°くらいがよく使われます。位相余裕が小さいほど、行き過ぎが大きく、ゆれやすくなります。
+
+\phboxhead{むだ時間は、位相余裕を食う}
+むだ時間 $e^{-Ls}$ は、大きさを変えずに、おくれだけを $\omega L$ 増やします。だから、ゲイン交差の角振動数 $\omega_{\mathrm{gc}}$ で、位相余裕がちょうど $\omega_{\mathrm{gc}}L$〔rad〕減ります。③の部屋に5分のむだ時間があると、比例 $RK_{\mathrm p}=9$ のゲイン交差は約\qty{0.15}{rad/min}で、おくれが約 $0.15\times5=0.75$ rad（約43°）増えました。2倍の比例ではゲイン交差が約\qty{0.30}{rad/min}に上がり、おくれは約1.5 rad（約86°）も増えて、ほとんど余裕がなくなり、ゆれ続けたのです（図\ref{ph:波-4:fig-dead}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=104mm, height=46mm, xmin=-1, xmax=1, ymin=-40, ymax=26, xtick={-1,-0.5,0,0.5,1}, xticklabels={0.1,0.32,1,3.2,10}, ytick={-40,-20,-9.54,0,20}, yticklabels={$-40$,$-20$,$-9.5$,0,20}, xlabel={$\omega$（rad/s）}, ylabel={大きさ（dB）}]
+  \addplot[bkBlue, line width=1.5pt, domain=-1:0.74, samples=120] {20*log10(2/(10^x*sqrt(10^(2*x)+1)*sqrt(10^(2*x)+4)))};
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (axis cs:-1,0) -- (axis cs:1,0);
+  \draw[bkRed!80!black, line width=1.2pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (axis cs:0.1505,0) -- (axis cs:0.1505,-9.54);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.2,-5) {ゲイン余裕 9.5 dB};
+\end{axis}
+\end{tikzpicture}\par\vspace{2mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=104mm, height=46mm, xmin=-1, xmax=1, ymin=-260, ymax=-80, xtick={-1,-0.5,-0.125,0.1505,0.5,1}, xticklabels={0.1,0.32,0.75,1.41,3.2,10}, ytick={-240,-180,-147.4,-120,-90}, yticklabels={240,180,147,120,90}, xlabel={$\omega$（rad/s）}, ylabel={おくれ（°。下ほど大きい）}]
+  \addplot[bkOrange, line width=1.5pt, domain=-1:1, samples=120] {-90-atan(10^x)-atan(10^x/2)};
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (axis cs:-1,-180) -- (axis cs:1,-180);
+  \draw[bkRed!80!black, line width=1.2pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (axis cs:-0.1253,-180) -- (axis cs:-0.1253,-147.4);
+  \node[font=\sffamily\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:-0.17,-165) {位相余裕 33°};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$2/\{s(s+1)(s+2)\}$ のボード線図（横の軸は対数の目もり、3-12）。大きさの図で0 dB になる所（ゲイン交差 0.75 rad/s）でおくれは $147°$、おくれの図で $180°$ になる所（位相交差 1.41 rad/s）で大きさは $-9.5$ dB（\bkreidairef{10}）。}\label{ph:波-4:fig-bode}
+\end{bkfigure}
+
+\begin{seikaku}
+\textbf{ナイキストの考え方}\par
+一巡伝達関数 $G_1G_2(j\omega)$ の値を、$\omega$ を0からかぎりなく大きくしながら複素数の平面（6-8）に点で打っていくと、1本の曲線ができます（ナイキスト線図）。この曲線が点 $-1$（大きさ1、おくれ $180°$）をどちら側に通るかで、安定かどうかを判定できます（ナイキスト、1932年）。ゲイン余裕・位相余裕は、曲線が点 $-1$ からどれだけ離れているかを、2つの向きではかったものです。むだ時間があっても使えるのが、この方法の強みです。詳しくは制御工学の専門の本で扱います。
+\end{seikaku}
+
+\bksubsection{10}{状態方程式と状態フィードバック}
+\label{ph:波-4:sec10}
+ロボットの腕や倒立振子のように、角度と角速度の両方が大事な制御対象は、状態方程式（9-10）で扱うと見通しがよくなります。運動方程式は、力の図か、ラグランジュの式（波-3 ④⑨）で作ります。
+
+\phboxhead{倒立振子：物理のモデルから}
+台の上に立てた長さ $l$ の棒（手のひらの棒）を考えます。棒を質量 $m$ の点が先についた軽い棒とし、台の加速度 $a$ を加える量とすると、台といっしょに動く立場（力-2 の慣性力）で、棒の角 $\theta$（真上から）は
+\[ml^2\ddot\theta=mgl\sin\theta-mla\cos\theta\]
+にしたがいます（重力が棒をたおし、台の加速度による慣性力が棒を起こす）。小さな角（$\sin\theta\approx\theta$、$\cos\theta\approx1$）では、
+\[\ddot\theta=\frac{g}{l}\theta-\frac{a}{l}\]
+です。$g/l=4$（$l=\qty{2.45}{m}$）、$u=-a/l$ とおくと、9-10 の $\ddot\theta=4\theta+u$ になります。状態を $\vec x=(\theta,\ \dot\theta)$ にすると
+\[\dot{\vec x}=\begin{pmatrix}0&1\\4&0\end{pmatrix}\vec x+\begin{pmatrix}0\\1\end{pmatrix}u\]
+で、制御しないときの固有値（極）は $\pm2$。$+2$ が右半分にあるので、たおれます。
+
+\phboxhead{状態フィードバック：傾きと、たおれる速さを見る}
+$u=-(k_1\theta+k_2\dot\theta)$ とすると、全体の行列と特性方程式は
+\[\begin{pmatrix}0&1\\4-k_1&-k_2\end{pmatrix},\qquad\lambda^2+k_2\lambda+(k_1-4)=0\]
+です（9-10⑦）。これは、⑤の2次おくれの分母 $s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2$ と同じ形なので、
+\pheq{\omega_{\mathrm n}^2=k_1-4,\qquad2\zeta\omega_{\mathrm n}=k_2}{1/s$^2$・1/s}
+と読めます。$k_1$（傾きを見る強さ）は棒を起こすばねの役、$k_2$（たおれる速さを見る強さ）はダンパーの役です。$k_2=0$ だと $\zeta=0$ で、ゆれ続けてしまいます（9-10）。やってみようで長い棒が立てやすいのは、$g/l$ が小さく、たおれる速さ（極 $\sqrt{g/l}$）が小さいので、おくれのある人の目と手でも間に合うからです。
+
+\Needspace{10\baselineskip}\begin{phflow}[倒立振子]
+\phflowrow{$l\ddot\theta=g\sin\theta-a\cos\theta$}{小さな角\\$u=-a/l$、$g/l=4$}{$\ddot\theta=4\theta+u$（9-10）}
+\end{phflow}
+
+\begin{phmada}[自転車のバランスのとり方]
+自転車は、止まっているとたおれますが、ある程度の速さで走ると、手をはなしても自分で立ち直ることがあります。昔は、車輪のジャイロ効果や、前輪の接地点がハンドルの軸より後ろにあること（キャスター効果）で説明されてきました。ところが2011年、どちらの効果もない特別な自転車でも、自分で立ち直る場合があることが、計算と実験で示されました。質量の配置など、いくつもの効果が組み合わさっているのです。さらに、人が乗ったとき、目・耳の奥の平衡感覚・体の感覚からの信号を、脳がどのように組み合わせて、ハンドルと体の動きを決めているのかは、まだ完全にはわかっておらず、研究が続いています。人の脳の「制御器」は、むだ時間（目で見てから手が動くまでの反応のおくれ）が約0.2秒もあるのに、うまく働いているのです。
+\end{phmada}
+
+\begin{phsaki}{制御の、その先}
+この章では、1つの量をはかって1つの量を動かす、線形の制御を学びました。制御工学の専門の本では、たくさんの量を同時に扱う状態方程式の設計（9-10・9-11）、あるルールでいちばんよい制御を求める最適制御、モデルのまちがいに強いロバスト制御、少し先まで予測して決めるモデル予測制御、ディジタル計算機の中の離散時間の制御、雑音のある測定から状態を推し量るカルマンフィルター（9-12⑨）などを学びます。ゆれを止める制御（波-3 のアクティブ・マス・ダンパー）、音を打ち消す制御（波-11・9-12③のノイズキャンセリング）、電波の周波数を合わせる制御（波-14）も、この章の考えの上に立っています。
+\end{phsaki}
+
+\begin{senmonsho}[制御工学の専門書の書き方]
+\begin{bkhonbun}
+閉ループ系の特性方程式を $a_ns^n+a_{n-1}s^{n-1}+\cdots+a_0=0$ とする．ラウス表の第1列の要素がすべて同符号であることが，系が安定であるための必要十分条件である．第1列の符号変化の回数は，右半平面にある特性根の数に等しい．また，一巡伝達関数 $L(j\omega)$ のゲイン余裕 $g_{\mathrm m}$ と位相余裕 $\phi_{\mathrm m}$ は，それぞれ位相交差周波数および ゲイン交差周波数において定義される．
+\end{bkhonbun}
+\bkyaku{「閉ループ系」はフィードバックをつないだ全体。「特性根」は極。「同符号」は同じ符号（$a_n>0$ ならすべて正）。専門書は一巡伝達関数を $L(s)$ と書くことが多い（この章のむだ時間 $L$ とは別）。「周波数」は角振動数 $\omega$ のこともふくめて言う。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{1次おくれ}$\dfrac{K}{\tau s+1}$：$\tau$ で63\,\%、$3\tau$ で95\,\%\\[3pt]
+\tsl{2次おくれ}行き過ぎ $e^{-\pi\zeta/\sqrt{1-\zeta^2}}$、整定 $\approx\dfrac{4}{\zeta\omega_{\mathrm n}}$\\[3pt]
+\tsl{残るずれ}比例だけ $\dfrac{r}{1+K_{\mathrm p}G(0)}$、積分があれば0\\[3pt]
+\tsl{PID}$K_{\mathrm p}\Bigl(1+\dfrac{1}{T_{\mathrm i}s}+T_{\mathrm d}s\Bigr)$\\[3pt]
+\tsl{ラウスの表}1列めがすべて正なら安定\\[3pt]
+\tsl{むだ時間}$e^{-Ls}$：おくれ $\omega L$、位相余裕を減らす
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{フィードバック制御}{結果をはかって、ねらいとのずれから、加える量を決める制御。}
+\bkword{ブロック線図}{制御対象・制御器・センサーを箱、信号を矢印で表した図。}
+\bkword{むだ時間}{入れたものが、形を変えずにおくれて出てくる時間。伝達関数は $e^{-Ls}$。}
+\bkword{行き過ぎ量・整定時間}{ステップ応答が最後の値をこえる割合と、±2\,\%の中に落ち着くまでの時間。}
+\bkword{PID 制御}{ずれの比例・積分・微分の和で、加える量を決める制御。}
+\bkword{ラウスの表}{特性多項式の係数から作る表。1列めの符号で安定を判定する。}
+\bkword{ゲイン余裕・位相余裕}{安定の限界まで、大きさ（dB）とおくれ（°）にどれだけ余裕があるか。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$K_{\mathrm p}$}{ケー・ピー}{比例ゲイン。ずれ1あたりに加える量（部屋なら W/K）。体積弾性率 $K$ とは別}{proportional gain}{波-4}}
+{\bkkigocard{$T_{\mathrm i}$・$T_{\mathrm d}$}{ティー・アイ、ティー・ディー}{積分時間・微分時間〔s〕。波-4 では周期 $T$ を使わない}{integral time, derivative time}{波-4}}
+\bkkigocards{\bkkigocard{$\varepsilon$}{イプシロン}{ずれ（偏差）$r-y$。9-12 と同じ。ネイピア数 $e$ と区別する}{error}{波-4}}
+{\bkkigocard{$\tau$}{タウ}{時定数〔s〕。1次おくれで63.2\,\%進む時間。トルクは $\tau_{\mathrm m}$（波-3 ⑨では $\tau$）。波-7 では振幅の透過係数}{time constant}{波-4}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-4:ex1}
+\begin{phreidai}[エアコンの比例制御（はてな？）]
+③の部屋（熱容量\qty{72}{kJ/K}、熱抵抗\qty{0.05}{K/W}、外\qty{35}{\celsius}）を、設定\qty{26}{\celsius}・$K_{\mathrm p}=\qty{180}{W/K}$ の比例制御で冷やします。落ち着く温度、時定数、落ち着いたときの冷房の出力を求めましょう（9-8 と同じ数なので、3けたで書きます）。
+\phbamen
+エアコンの比例制御で、部屋の温度がどこに落ち着くかを求める場面です。
+\phmushi
+部屋の中の温度のむら、湿度、エアコンの出力の上限、センサーのおくれを無視します。
+\phzu
+$y=35-\theta$（外より何 K 低いか）、目標 $r=35-26=9$。部屋の箱 $G=R/(RCs+1)$、$RC=60$ 分、$RK_{\mathrm p}=9$。
+\phriyu
+比例制御のフィードバック（9-8 の式）と、残るずれの式（⑥）を使います。
+\phtateru
+\[\frac{Y}{R_{\text{目標}}}=\frac{RK_{\mathrm p}}{RCs+1+RK_{\mathrm p}},\qquad\varepsilon(\infty)=\frac{r}{1+RK_{\mathrm p}}\]
+\phtoku
+\[\frac{Y}{R_{\text{目標}}}=\frac{9}{60s+10}\qquad\text{（$s$ は 1/分）}\]
+ずれ $9\div10=\qty{0.9}{K}$ なので、$\theta=26+0.9=\qty{26.9}{\celsius}$。時定数は $60\div10=6$ 分。冷房の出力は $180\times0.9=\qty{162}{W}$。
+\phtashikame
+熱のつり合い：外から入る熱 $(35-26.9)\div0.05=\qty{162}{W}$ と、冷房の出力が等しい。\\
+極端な場合：$K_{\mathrm p}$ をかぎりなく大きくすると、ずれは0に近づき、時定数も0に近づく。ただし、はじめの出力 $K_{\mathrm p}\times9$ もかぎりなく大きくなり、本物のエアコンでは出せない。
+\kotae \qty{26.9}{\celsius}、時定数6分、\qty{162}{W}
+\end{phreidai}
+\begin{jibun}
+例題1で、$K_{\mathrm p}=\qty{80}{W/K}$（$RK_{\mathrm p}=4$）にすると、落ち着く温度と時定数はどうなりますか。
+\bkjans{ずれ $9\div5=\qty{1.8}{K}$ で\qty{27.8}{\celsius}。時定数 $60\div5=12$ 分}
+\end{jibun}
+
+\label{ph:波-4:ex2}
+\begin{phreidai}[缶コーヒーを保温するヒーター]
+熱-12 例題2 の缶コーヒー（熱容量\qty{1000}{J/K}、周りへの熱抵抗\qty{1.2}{K/W}）を、\qty{20}{\celsius}の部屋で\qty{60}{\celsius}に保ちたい。（1）要るヒーターの出力を求めましょう。（2）\qty{20}{\celsius}の缶に、時刻0からその出力で温め続けると、20分後・60分後に何℃になりますか。
+\phbamen
+1次おくれの制御対象に、一定の入力（ステップ）を入れる場面です。
+\phmushi
+缶の中の温度のむら、熱抵抗の温度による変化を無視します。
+\phzu
+周りより何 K 高いか $y$、ヒーター $P$。$G=1.2/(1200s+1)$（$s$ は 1/s）、$\tau=RC=\qty{1200}{s}=20$ 分。
+\phriyu
+1次おくれのステップ応答 $y=G(0)P(1-e^{-t/\tau})$（⑤）を使います。
+\phtateru
+\[P=\frac{40}{R},\qquad y=RP\bigl(1-e^{-t/\tau}\bigr)\]
+\phtoku
+（1）$P=40\div1.2\approx\qty{33}{W}$。\\
+（2）$RP=\qty{40}{K}$。20分（$t=\tau$）：$40\times0.632\approx\qty{25.3}{K}$ で約\qty{45}{\celsius}。60分（$3\tau$）：$40\times0.950=\qty{38.0}{K}$ で\qty{58}{\celsius}。
+\phtashikame
+単位：K/W×W＝K。\\
+大きさ：\qty{33}{W}は、熱-12 の缶が1秒に逃がす熱（温度差\qty{40}{K}÷\qty{1.2}{K/W}）と同じ。3時定数で95\,\%なので、1時間でほぼ\qty{60}{\celsius}になる。速く温めたいなら、はじめは強く、近づいたら弱める（比例制御）。
+\kotae （1）約\qty{33}{W}、（2）20分後 約\qty{45}{\celsius}、60分後 約\qty{58}{\celsius}
+\end{phreidai}
+\begin{jibun}
+熱-12 のカップのお湯（熱容量\qty{840}{J/K}、熱抵抗\qty{3.61}{K/W}）を、\qty{20}{\celsius}の部屋で\qty{50}{\celsius}に保つヒーターの出力と、時定数を求めましょう。\qty{20}{\celsius}からその出力で温めると、50分後には何℃ですか。
+\bkjans{$30\div3.61\approx\qty{8.3}{W}$。$\tau=840\times3.61\approx\qty{3030}{s}$、約51分。50分後は $20+30\times(1-e^{-50/50.5})$ $\approx20+30\times0.63$ $\approx\qty{39}{\celsius}$}
+\end{jibun}
+
+\label{ph:波-4:ex3}
+\begin{phreidai}[荷物を積んだ車の沈み方]
+車の1輪分のサスペンション（質量\qty{250}{kg}、ばね\qty{16000}{N/m}、ダンパー\qty{2000}{N.s/m}。9-9 と同じ）に、荷物の重さで\qty{1000}{N}の力が急にかかりました。最後に沈む量、行き過ぎ量（最大で何 mm 余分に沈むか）、そのときの時刻を求めましょう。
+\phbamen
+2次おくれ（ばね・ダンパー）に、ステップの力が入る場面です。
+\phmushi
+タイヤのばね、ほかの車輪とのつながり、ダンパーの力が速さに比例しない所を無視します。
+\phzu
+$G=1/(ms^2+cs+k)$、$\omega_{\mathrm n}=\sqrt{k/m}$、$\zeta=c/(2\sqrt{mk})$。
+\phriyu
+ばね・ダンパー（④）の2次おくれなので、行き過ぎ量とピーク時刻の式（⑤）が使えます。
+\phtateru
+\[x_{\infty}=\frac{F}{k},\qquad\text{行き過ぎ}=e^{-\pi\zeta/\sqrt{1-\zeta^2}},\qquad t_{\text{ピーク}}=\frac{\pi}{\omega_{\mathrm n}\sqrt{1-\zeta^2}}\]
+\phtoku
+\[\omega_{\mathrm n}=\sqrt{\frac{16000}{250}}=\qty{8}{rad/s},\qquad\zeta=\frac{2000}{2\sqrt{250\times16000}}=\frac{2000}{4000}=0.5\]
+$x_{\infty}=1000\div16000=\qty{0.0625}{m}$。行き過ぎは $e^{-\pi\times0.5/0.866}=e^{-1.81}\approx0.163$ で、$62.5\times0.163\approx\qty{10}{mm}$。$t_{\text{ピーク}}=\pi\div(8\times0.866)\approx\qty{0.45}{s}$。
+\phtashikame
+$\zeta=0.5$ の行き過ぎ16\,\%（9-9 の腕の $K=4$ と同じ）。\\
+極端な場合：ダンパーがなければ $\zeta=0$ で行き過ぎ100\,\%、いつまでもゆれる。
+\kotae 最後に約\qty{63}{mm}、行き過ぎ約\qty{10}{mm}（16\,\%）、約\qty{0.45}{s}後
+\end{phreidai}
+\begin{jibun}
+$\zeta=0.3$ の2次おくれの行き過ぎ量を求めましょう。
+\bkjans{$e^{-\pi\times0.3/\sqrt{0.91}}=e^{-0.988}\approx0.37$。約37\,\%}
+\end{jibun}
+
+\label{ph:波-4:ex4}
+\begin{phreidai}[ロボットの腕の整定時間]
+9-9 のロボットの腕 $s^2+2s+K$ を、$K=4$ で比例制御します。$\omega_{\mathrm n}$・$\zeta$・行き過ぎ量・ピーク時刻・整定時間の目安を求めましょう（時間の単位は秒とします）。
+\phbamen
+ロボットの腕を、決めた角度へ動かすときの速さと行き過ぎを見積もる場面です。
+\phmushi
+腕の慣性モーメント・摩擦は一定、モーターのトルクの上限を無視します。
+\phzu
+全体の伝達関数 $K/(s^2+2s+K)$。
+\phriyu
+分母が $s^2+2\zeta\omega_{\mathrm n}s+\omega_{\mathrm n}^2$ の形なので、係数を比べて（3-8）$\omega_{\mathrm n}$ と $\zeta$ を読み、⑤の式を使います。
+\phtateru
+\[\omega_{\mathrm n}^2=K,\qquad2\zeta\omega_{\mathrm n}=2\]
+\phtoku
+$\omega_{\mathrm n}=\sqrt4=\qty{2}{rad/s}$、$\zeta=2\div(2\times2)=0.5$。行き過ぎ約16\,\%。$t_{\text{ピーク}}=\pi\div(2\times0.866)\approx\qty{1.8}{s}$。整定時間 $\approx4\div(0.5\times2)=\qty{4}{s}$。
+\phtashikame
+Python でステップ応答を計算すると、±2\,\%に入るのは約\qty{4.0}{s}で、目安と合います。\\
+$K$ を大きくしても $\zeta\omega_{\mathrm n}=1$ のままなので、整定時間は約4秒のまま、行き過ぎだけが大きくなります（9-9⑨）。
+\kotae $\omega_{\mathrm n}=\qty{2}{rad/s}$、$\zeta=0.5$、行き過ぎ約16\,\%、約\qty{1.8}{s}、約\qty{4}{s}
+\end{phreidai}
+\begin{jibun}
+例題4で $K=2$ にすると、$\omega_{\mathrm n}$・$\zeta$・行き過ぎ量・整定時間の目安はいくらですか。
+\bkjans{$\omega_{\mathrm n}=\sqrt2\approx\qty{1.41}{rad/s}$、$\zeta\approx0.71$、行き過ぎ約4.3\,\%、整定約\qty{4}{s}}
+\end{jibun}
+
+\label{ph:波-4:ex5}
+\begin{phreidai}[モーターの速度制御]
+9-8 のモーター $10/(0.5s+1)$（電圧→回る速さ）を、$K_{\mathrm p}=1$ の比例制御で動かします。全体の極、時定数、目標に対して残るずれの割合を求めましょう（3けたで書きます）。
+\phbamen
+モーターの速さを、目標の速さに合わせる場面です。
+\phmushi
+モーターのインダクタンス（電流の変化のおくれ）、電圧の上限を無視します。
+\phzu
+$G=10/(0.5s+1)$、$G(0)=10$。
+\phriyu
+極は全体の分母（9-8）、残るずれは⑥の式です。
+\phtateru
+\[0.5s+1+10K_{\mathrm p}=0,\qquad\varepsilon(\infty)=\frac{1}{1+K_{\mathrm p}G(0)}\]
+\phtoku
+極 $s=-2\times(1+10)=-22$、時定数 $1\div22\approx\qty{0.0455}{s}$、ずれ $1\div11\approx0.0909$。
+\phtashikame
+9-8・9-9 の表と同じ。\\
+フィードバックなしの時定数\qty{0.5}{s}が、11分の1に速くなった。
+\kotae 極 $-22$、時定数 約\qty{0.0455}{s}、ずれ 約9.09\,\%
+\end{phreidai}
+\begin{jibun}
+例題5で、$K_{\mathrm p}=4$ にすると、極と残るずれはいくらですか。
+\bkjans{極 $-2\times41=-82$、ずれ $1\div41\approx2.44\,\%$}
+\end{jibun}
+
+\label{ph:波-4:ex6}
+\begin{phreidai}[積分を足すと、ずれが消える]
+例題5のモーターに、比例 $K_{\mathrm p}=1$ と積分 $K_{\mathrm i}=2$（$T_{\mathrm i}=0.5$ s）の PI 制御をします。全体の極を求め、安定を確かめてから、最終値の定理で残るずれを求めましょう。
+\phbamen
+比例だけでは残ったずれを、積分で消す場面です（9-9 のもっと知りたい）。
+\phmushi
+例題5と同じ。
+\phzu
+制御器 $K_{\mathrm p}+K_{\mathrm i}/s=1+2/s$、$G=10/(0.5s+1)$。
+\phriyu
+最終値の定理は安定なときだけ使えるので、先に極を調べます（9-6⑨）。
+\phtateru
+\[1+\Bigl(1+\frac2s\Bigr)\frac{10}{0.5s+1}=0\qquad\text{より}\qquad0.5s^2+11s+20=0\]
+\phtoku
+$s^2+22s+40=0$、$s=-11\pm\sqrt{121-40}=-11\pm9$ で、極は $-2$、$-20$（左半分）。安定なので、
+\[\varepsilon(\infty)=\lim_{s\to0}\frac{1}{1+(1+2/s)\cdot\dfrac{10}{0.5s+1}}=\lim_{s\to0}\frac{s(0.5s+1)}{s(0.5s+1)+10(s+2)}=0\]
+\phtashikame
+分子に $s$ が残るので0。積分の $1/s$ が、$s\to0$ で分母をかぎりなく大きくするからです。\\
+極 $-2$ はゆっくり（時定数\qty{0.5}{s}）で、最後のずれが消えるまでには、比例だけより時間がかかります。
+\kotae 極 $-2$、$-20$（安定）、残るずれ0
+\end{phreidai}
+\begin{jibun}
+例題6で $K_{\mathrm i}=5$ にすると、全体の極はいくらですか。安定ですか。
+\bkjans{$0.5s^2+11s+50=0$、$s^2+22s+100=0$、$s=-11\pm\sqrt{21}\approx-6.42$、$-15.6$。安定（ずれは0）}
+\end{jibun}
+
+\label{ph:波-4:ex7}
+\begin{phreidai}[クルーズコントロールと坂道]
+9-8 の車（質量\qty{1000}{kg}、空気などの抵抗を速さに比例する $50v$〔N〕とする）は、伝達関数 $1/(1000s+50)$（力→速さ）です。（1）時定数と、\qty{500}{N}で走り続けたときの速さを求めましょう。（2）目標\qty{20}{m/s}、比例 $K_{\mathrm p}=\qty{450}{N/(m/s)}$ のクルーズコントロールで、平らな道と、2\,\%の上り坂（坂の力\qty{196}{N}）での速さを求めましょう。
+\phbamen
+車の速さを一定に保つ制御に、坂道（外乱）が加わる場面です。
+\phmushi
+抵抗を速さに比例するとした（本当は速さの2乗に近い。力-15）。エンジンの力のおくれ、上限を無視。
+\phzu
+$G(0)=1/50$（m/s）/N。外乱 $d=\qty{196}{N}$（$1000\times9.8\times0.02$）。
+\phriyu
+1次おくれ（④）と、外乱によるずれ（⑥）を、つり合いの式で求めます。
+\phtateru
+（1）$\tau=1000\div50$、$v=500\div50$。\\
+（2）落ち着いたとき：$50v=K_{\mathrm p}(20-v)-d$。
+\phtoku
+（1）$\tau=\qty{20}{s}$、$v=\qty{10}{m/s}$。\\
+（2）平らな道：$500v=450\times20$ で $v=\qty{18.0}{m/s}$。坂道：$500v=9000-196$ で $v\approx\qty{17.6}{m/s}$。
+\phtashikame
+比例だけでは平らでも10\,\%遅く、坂でさらに\qty{0.39}{m/s}（$196\div500$）遅くなる。積分を足せば、どちらのずれも0になる（⑥）。\\
+フィードバックをつないだ時定数は $1000\div500=\qty{2}{s}$ と速くなる。
+\kotae （1）\qty{20}{s}、\qty{10}{m/s}、（2）平ら\qty{18.0}{m/s}、坂 約\qty{17.6}{m/s}
+\end{phreidai}
+\begin{jibun}
+例題7で $K_{\mathrm p}=950$ にすると、平らな道と坂道での速さはいくらですか。
+\bkjans{平ら $950\times20\div1000=\qty{19.0}{m/s}$、坂 $(19000-196)\div1000\approx\qty{18.8}{m/s}$}
+\end{jibun}
+
+\label{ph:波-4:ex8}
+\begin{phreidai}[ラウスの表で、電気炉と4つのおくれ]
+（1）9-9 の電気炉の特性多項式 $s^3+3s^2+3s+(1+K)$ のラウスの表を作り、安定な $K$ の範囲を求めましょう。（2）1次おくれを4つつないだ $s^4+4s^3+6s^2+4s+(1+K)$ でも求めましょう（$K>0$）。
+\phbamen
+比例を強くできる限界を、根を求めずに係数だけで調べる場面です。
+\phmushi
+各おくれは理想的な1次おくれとします。
+\phzu
+表\ref{ph:波-4:tab-routh}の作り方。
+\phriyu
+4次以上では、9-9 の3次の判定は使えないので、ラウスの表（⑧）を使います。
+\phtateru
+1列めがすべて正となる条件を求めます。
+\phtoku
+（1）$s^3$：1、3。$s^2$：3、$1+K$。$s^1$：$(3\times3-1\times(1+K))\div3=(8-K)/3$。$s^0$：$1+K$。\\
+$8-K>0$ より $0<K<8$。\\
+（2）$s^4$：1、6、$1+K$。$s^3$：4、4。$s^2$：$(4\times6-1\times4)\div4=5$、$1+K$。$s^1$：$\{5\times4-4(1+K)\}\div5=(16-4K)/5$。$s^0$：$1+K$。\\
+$16-4K>0$ より $0<K<4$。
+\phtashikame
+（1）は 9-9 の正三角形の答え $K<8$ と同じ。\\
+（2）$K=4$ の極を Python で求めると $-2\pm j$、$\pm j$ で、たての軸の上にある（図\ref{ph:波-4:fig-square}）。
+\kotae （1）$0<K<8$、（2）$0<K<4$
+\end{phreidai}
+\begin{jibun}
+時定数0.5の1次おくれを4つつなぐと、特性多項式は $(s+2)^4+16K=s^4+8s^3+24s^2+32s+(16+16K)$ です。ラウスの表で、安定な $K$ の範囲を求めましょう。
+\bkjans{$s^2$ の行 $(8\times24-32)\div8=20$。$s^1$ の行 $\{20\times32-8(16+16K)\}\div20=(512-128K)\div20$。$0<K<4$}
+\end{jibun}
+
+\label{ph:波-4:ex9}
+\begin{phreidai}[むだ時間のおくれ]
+むだ時間\qty{2}{s}の制御対象に、角振動数\qty{0.5}{rad/s}のゆれが入ると、出てくるゆれは何度おくれますか。周期\qty{4}{s}のゆれではどうですか。
+\phbamen
+シャワーや長い配管のむだ時間が、どれだけおくれを作るかを見積もる場面です。
+\phmushi
+むだ時間の間に、形は変わらないとします。
+\phzu
+$e^{-Ls}$、$L=\qty{2}{s}$。
+\phriyu
+周波数応答にすると $e^{-j\omega L}$ で、おくれの角は $\omega L$（⑤）。
+\phtateru
+\[\text{おくれ}=\omega L\ \text{〔rad〕}=\omega L\times\frac{180°}{\pi}\]
+\phtoku
+$0.5\times2=\qty{1}{rad}\approx57°$。周期\qty{4}{s}なら $\omega=2\pi\div4\approx\qty{1.57}{rad/s}$、$1.57\times2=\pi$ rad で $180°$。
+\phtashikame
+周期4秒のゆれでは、2秒のおくれは半周期で、ちょうど反対向きになる。このゆれをもどすと、打ち消すつもりが強め合ってしまう。
+\kotae 約57°、$180°$
+\end{phreidai}
+\begin{jibun}
+③の部屋に5分のむだ時間があるとき、角振動数 0.1 rad/分のゆれは何度おくれますか。
+\bkjans{$0.1\times5=\qty{0.5}{rad}\approx29°$}
+\end{jibun}
+
+\label{ph:波-4:ex10}
+\begin{phreidai}[ゲイン余裕と位相余裕]
+一巡伝達関数 $2/\{s(s+1)(s+2)\}$ のゲイン余裕を求めましょう。また、ラウスの表で求めた安定の限界と比べましょう。
+\phbamen
+ロボットの位置の制御のような、積分（$1/s$）をふくむ制御対象の余裕を調べる場面です。
+\phmushi
+むだ時間はないとします。
+\phzu
+$G(j\omega)=\dfrac{2}{j\omega(j\omega+1)(j\omega+2)}$。おくれ $90°+\tan^{-1}\omega+\tan^{-1}(\omega/2)$。
+\phriyu
+位相交差でゲイン余裕（⑨）。
+\phtateru
+\[\tan^{-1}\omega+\tan^{-1}\frac{\omega}{2}=90°\qquad\text{（おくれ $180°$）}\]
+\phtoku
+2つの角 $a$・$b$ の和が $90°$ なら、$b=90°-a$ で $\tan b=1/\tan a$（4-6）、つまり $\tan$ の積が1です。$\tan a=\omega$、$\tan b=\omega/2$ なので、$\omega\times\omega/2=1$、$\omega=\sqrt2\approx\qty{1.41}{rad/s}$。
+\[|G(j\sqrt2)|=\frac{2}{\sqrt2\times\sqrt3\times\sqrt6}=\frac{2}{6}=\frac13\]
+ゲイン余裕 $20\log_{10}3\approx\qty{9.5}{dB}$。\\
+ラウス：全体の分母 $s^3+3s^2+2s+2K'$（$2$ を $2K'$ 倍した）で、$3\times2>2K'$ より $K'<3$。
+\phtashikame
+大きさを3倍（9.5 dB）にすると限界になる、という2つの答えが合う。\\
+数値で求めると、ゲイン交差 約\qty{0.75}{rad/s}で位相余裕 約33°（図\ref{ph:波-4:fig-bode}）。
+\kotae 約\qty{9.5}{dB}（あと3倍まで）
+\end{phreidai}
+\begin{jibun}
+一巡伝達関数 $1/\{s(s+1)(s+2)\}$ のゲイン余裕を求めましょう。
+\bkjans{位相交差は同じ $\sqrt2$。$|G|=1\div6$ で、$20\log_{10}6\approx\qty{15.6}{dB}$}
+\end{jibun}
+
+\label{ph:波-4:ex11}
+\begin{phreidai}[限界感度法で PID を決める]
+ある温度の制御で、比例だけにして $K_{\mathrm p}$ を大きくしていくと、$K_{\mathrm u}=4$ でゆれが続くようになり、その周期は $T_{\mathrm u}=\qty{10}{s}$ でした。限界感度法で、PID の $K_{\mathrm p}$・$T_{\mathrm i}$・$T_{\mathrm d}$ を決めましょう。9-12 の形の $K_{\mathrm i}$・$K_{\mathrm d}$ にも直しましょう。
+\phbamen
+制御対象の式がわからないまま、実験で PID を合わせる場面です。
+\phmushi
+限界のゆれが、きれいに一定の大きさで続くとします。
+\phzu
+$K_{\mathrm u}=4$、$T_{\mathrm u}=\qty{10}{s}$。
+\phriyu
+ジーグラ・ニコルスの表（表\ref{ph:波-4:tab-zn}）を使います。
+\phtateru
+\[K_{\mathrm p}=0.6K_{\mathrm u},\quad T_{\mathrm i}=0.5T_{\mathrm u},\quad T_{\mathrm d}=0.125T_{\mathrm u},\quad K_{\mathrm i}=\frac{K_{\mathrm p}}{T_{\mathrm i}},\quad K_{\mathrm d}=K_{\mathrm p}T_{\mathrm d}\]
+\phtoku
+$K_{\mathrm p}=2.4$、$T_{\mathrm i}=\qty{5}{s}$、$T_{\mathrm d}=\qty{1.25}{s}$。$K_{\mathrm i}=2.4\div5=0.48$〔1/s〕、$K_{\mathrm d}=2.4\times1.25=3$〔s〕。
+\phtashikame
+$K_{\mathrm p}$ は限界の6割で、安定の側。積分時間は限界のゆれの半周期、微分時間は8分の1周期で、ゆれの周期に合わせた時間になっている。
+\kotae $K_{\mathrm p}=2.4$、$T_{\mathrm i}=\qty{5}{s}$、$T_{\mathrm d}=\qty{1.25}{s}$（$K_{\mathrm i}=0.48$、$K_{\mathrm d}=3$）
+\end{phreidai}
+\begin{jibun}
+9-9 の電気炉（$K_{\mathrm u}=8$、限界のゆれの周期 $T_{\mathrm u}=2\pi/\sqrt3\approx3.63$ 分）を、限界感度法で PID 制御するときの $K_{\mathrm p}$・$T_{\mathrm i}$・$T_{\mathrm d}$ を求めましょう。
+\bkjans{$K_{\mathrm p}=4.8$、$T_{\mathrm i}\approx1.81$ 分、$T_{\mathrm d}\approx0.45$ 分}
+\end{jibun}
+
+\label{ph:波-4:ex12}
+\begin{phreidai}[倒立振子の状態フィードバック]
+⑩の倒立振子 $\ddot\theta=4\theta+u$ を、$u=-(8\theta+4\dot\theta)$ で制御します（9-10 と同じ）。全体の極と、$\omega_{\mathrm n}$・$\zeta$ を求めましょう。はじめ $\theta=\qty{0.01}{rad}$、$\dot\theta=0$ のとき、1秒後の傾きはいくらですか。
+\phbamen
+手のひらの棒を、傾きとたおれる速さを見て立てる場面です。
+\phmushi
+小さな角（線形化）。台の動ける広さ、センサーのおくれを無視します。
+\phzu
+$k_1=8$、$k_2=4$。特性方程式 $\lambda^2+k_2\lambda+(k_1-4)=0$。
+\phriyu
+状態フィードバックの特性方程式を、2次おくれの形（⑩）として読みます。
+\phtateru
+\[\lambda^2+4\lambda+4=0,\qquad\omega_{\mathrm n}^2=k_1-4,\quad2\zeta\omega_{\mathrm n}=k_2\]
+\phtoku
+$(\lambda+2)^2=0$ で極は $-2$ の重解。$\omega_{\mathrm n}=2$、$\zeta=4\div4=1$（ちょうどゆれない）。$\theta=0.01(1+2t)e^{-2t}$（9-10）で、1秒後 $0.01\times3\times e^{-2}\approx\qty{0.0041}{rad}$。
+\phtashikame
+制御しないと $0.01\cosh2t$ で、1秒後は約\qty{0.038}{rad}と大きくなる（9-9⑫）。\\
+$\zeta=1$ なので行き過ぎなく、もとにもどる。
+\kotae 極 $-2$（重解）、$\omega_{\mathrm n}=2$、$\zeta=1$、約\qty{0.0041}{rad}
+\end{phreidai}
+\begin{jibun}
+例題12で、極を $-3$ の重解にしたい。$k_1$・$k_2$ をいくらにすればよいですか。
+\bkjans{$(\lambda+3)^2=\lambda^2+6\lambda+9$ より $k_2=6$、$k_1-4=9$ で $k_1=13$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{比例を強くすれば、いつもよくなる？}
+\bkng{$K_{\mathrm p}$ を大きくするほど、ずれが小さく、速くなるので、いつもよい。}
+\bkok{おくれが重なったり、むだ時間があったりすると、強くしすぎたとたんに不安定になる（③・⑧・⑨）。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{安定でないのに、最終値の定理を使う}
+\bkng{$K=10$ の電気炉でも、$\lim sY$ を計算すれば、落ち着く温度がわかる。}
+\bkok{最終値の定理は、安定なときだけ使える。先にラウスの表などで安定を確かめる（例題6）。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{係数がすべて正なら安定？}
+\bkng{$s^4+2.6s^3+4.8s^2+11.2s+8$ は係数がすべて正なので安定。}
+\bkok{係数がすべて正なのは、必要な条件にすぎない。4次以上はラウスの表の1列めで判定する（⑧）。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{ラウスの表の行を、まちがえて並べる}
+\bkng{1行めに $a_4$、$a_3$、$a_2$ と順に並べる。}
+\bkok{1行めは1つおきの $a_4$、$a_2$、$a_0$、2行めは $a_3$、$a_1$。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{rad と度、Hz と rad/s}
+\bkng{むだ時間\qty{2}{s}、$\omega=\qty{0.5}{rad/s}$ のおくれは $0.5\times2=1°$。}
+\bkok{$\omega L$ は rad。$1\ \text{rad}\approx57°$。周波数 $f$〔Hz〕なら $\omega=2\pi f$ に直してから。}
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{8\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[身の周りと工場の制御]
+\textbf{エアコンのインバーター}：今の多くのエアコンは、インバーターでコンプレッサーのモーターの回る速さを変え、冷房の出力を少しずつ変えます（9-12）。むかしの「全力・停止」の繰り返し（オン・オフ制御）に比べて、温度のゆれが小さく、電気も少なくてすみます（熱-9 の COP は、温度差が小さいほど大きい）。
+
+\textbf{工場のプロセス制御}：化学工場や発電所では、温度・圧力・流量・液面の高さを、何百・何千という PID 制御器で一定に保っています。多くの制御器は、限界感度法のような方法で調整を始め、運転しながら細かく合わせます。
+
+\textbf{ロボットとドローン}：ロボットの関節は、モーターの電流・速さ・角度を、内側から外側へ何重にもフィードバックしています（カスケード制御）。ドローンは、角速度センサー（ジャイロ）と加速度センサーで姿勢をはかり、4つのプロペラの回る速さを1秒に数百回以上も調整して、空中で止まっています。
+
+\textbf{ゆれを止める}：高いビルのアクティブ・マス・ダンパー（波-3）は、建物のゆれをはかって、重りをモーターで動かし、ゆれを打ち消します。
+
+\begin{phketa}[制御の数の目安]
+\phketaline{部屋の温度の時定数}{数十分〜1時間くらい}
+\phketaline{小さなモーターの時定数}{数十ミリ秒〜1秒くらい}
+\phketaline{2次おくれの $\zeta$ のよく使う値}{0.5〜0.7（行き過ぎ16〜5\,\%）}
+\phketaline{余裕の目安}{ゲイン 6〜12 dB、位相 30〜60°}
+\phketaline{人の反応のおくれ（目で見て手を動かす）}{約0.2秒}
+\phboxhead{答えが桁で合っているか}
+部屋の温度が数秒で落ち着く、モーターが数十分かかる、という答えが出たら、時間の単位（秒・分）や、$s$ の単位を取り違えていないか確かめましょう。9-8 のエアコンの式は、$s$ が 1/分です。
+\end{phketa}
+\end{phkougaku}
+\phstation{制御工学,プロセス制御,ロボット工学,メカトロニクス}{フィードバック制御、ブロック線図、伝達関数、1次おくれ・2次おくれ、むだ時間、定常偏差、PID 制御、限界感度法、ラウス・フルビッツの安定判別、ゲイン余裕・位相余裕、ボード線図、状態フィードバック}
+
+\begin{column}{ワットの調速機とマクスウェル}
+1788年ごろ、ジェームズ・ワットは、蒸気機関の回る速さを一定に保つために、回る軸に2つの重い球をつけた装置（遠心調速機）を使いました。速く回ると、遠心力で球が外へ開き、その動きで蒸気の弁をしめます。速さをはかって、弁を動かす、機械仕掛けのフィードバックです。ところが、機関によっては、速さが上がったり下がったりしてゆれ続ける「ハンチング」が起き、技術者を悩ませました。1868年、電磁気の式で有名なマクスウェルは、論文「調速機について」で、このゆれを微分方程式で調べ、安定かどうかが特性方程式の根で決まることを示しました。そして、何次の式でも係数だけで判定できる方法を求める問題が、ケンブリッジ大学の賞の課題になり、1877年にラウスが答えました。この章の⑧の表です。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+\bkproblem 例題1の部屋を、$K_{\mathrm p}=\qty{380}{W/K}$（$RK_{\mathrm p}=19$）の比例制御で冷やすと、落ち着く温度と時定数はいくらですか。
+\bkpans{ずれ $9\div20=\qty{0.45}{K}$ で約\qty{26.5}{\celsius}。時定数 $60\div20=3$ 分}
+\bkproblem 時定数5分の1次おくれにステップを入れました。5分後・10分後・15分後に、最後の値の何\,\%に達していますか。
+\bkpans{63\,\%、86\,\%、95\,\%}
+\bkproblem $\omega_{\mathrm n}=\qty{5}{rad/s}$、$\zeta=0.6$ の2次おくれの、行き過ぎ量と整定時間の目安を求めましょう。
+\bkpans{$e^{-\pi\times0.6/0.8}\approx0.095$ で約9.5\,\%。整定 $4\div(0.6\times5)\approx\qty{1.3}{s}$}
+\bkproblem 例題5のモーターで、残るずれを1\,\%以下にしたい。$K_{\mathrm p}$ はいくら以上ですか。そのときの極はいくらですか。
+\bkpans{$1/(1+10K_{\mathrm p})\leqq0.01$ より $K_{\mathrm p}\geqq9.9$。極 $-2\times(1+99)=-200$}
+\bkproblem むだ時間\qty{0.5}{s}で、角振動数\qty{2}{rad/s}のゆれは何度おくれますか。
+\bkpans{$2\times0.5=\qty{1}{rad}\approx57°$}
+\bkproblem 比例だけで調べると、$K_{\mathrm u}=2.5$、$T_{\mathrm u}=\qty{4}{s}$ でした。限界感度法の PID の値を求めましょう。
+\bkpans{$K_{\mathrm p}=1.5$、$T_{\mathrm i}=\qty{2}{s}$、$T_{\mathrm d}=\qty{0.5}{s}$}
+\bkproblem 特性多項式 $s^4+2s^3+3s^2+4s+5$ のラウスの表を作り、安定かどうか、右半分の極がいくつあるかを答えましょう。
+\bkpans{1列めは 1、2、$(6-4)\div2=1$、$(4-10)\div1=-6$、5。符号が2回変わるので不安定、右半分の極は2つ}
+\bkproblem 特性多項式 $2s^3+4s^2+3s+1$ のラウスの表を作り、安定かどうかを答えましょう。
+\bkpans{1列めは 2、4、$(12-2)\div4=2.5$、1。すべて正なので安定}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 制御対象 $1/\{(s+1)^2(s+3)\}$ を比例 $K$ でフィードバックします。特性多項式を作り、ラウスの表で安定な $K$ の範囲を求めましょう。限界の $K$ でのゆれの角振動数と周期も求めましょう。
+\bkpans{$(s+1)^2(s+3)+K=s^3+5s^2+7s+(3+K)$。$s^1$ の行 $\{35-(3+K)\}\div5$ より $0<K<32$。限界では $s^2$ の行から $5s^2+35=0$、$\omega=\sqrt7\approx\qty{2.65}{rad/s}$、周期 約\qty{2.4}{s}}
+\bkproblem 特性多項式 $s^4+3s^3+5s^2+4s+K$（$K>0$）が安定になる $K$ の範囲を、ラウスの表で求めましょう。
+\bkpans{$s^2$ の行 $(15-4)\div3=11/3$、$K$。$s^1$ の行 $(\tfrac{11}{3}\times4-3K)\div\tfrac{11}{3}$。$\tfrac{44}{3}>3K$ より $0<K<\tfrac{44}{9}\approx4.9$}
+\bkproblem 例題10の一巡伝達関数を1.5倍の $3/\{s(s+1)(s+2)\}$ にすると、ゲイン余裕は何 dB になりますか。
+\bkpans{$|G(j\sqrt2)|=3\div6=0.5$。$20\log_{10}2\approx\qty{6.0}{dB}$（あと2倍まで）}
+\bkproblem ③の部屋に3分のむだ時間があるとき、比例だけの安定の限界は $RK_{\mathrm u}\approx32$、そのゆれの周期は $T_{\mathrm u}\approx11.8$ 分と計算できます。限界感度法の PID の値（$RK_{\mathrm p}$・$T_{\mathrm i}$・$T_{\mathrm d}$）を求め、$K_{\mathrm p}$ を W/K で答えましょう。
+\bkpans{$RK_{\mathrm p}=0.6\times32\approx19$（$K_{\mathrm p}\approx\qty{380}{W/K}$）、$T_{\mathrm i}=0.5\times11.8\approx5.9$ 分、$T_{\mathrm d}=0.125\times11.8\approx1.5$ 分}
+
+\begin{furikaeri}
+\begin{checklist}
+\item フィードバックのしくみを、ブロック線図で説明できる。\bkfurref{ph:波-4:sec2}
+\item 表計算で部屋の温度の比例・積分の制御を追える。\bkfurref{ph:波-4:sec3}
+\item 物理の法則から伝達関数を作り、応答の速さを読める。\bkfurref{ph:波-4:sec4}
+\item 残るずれと PID の働きを、最終値の定理で説明できる。\bkfurref{ph:波-4:sec6}
+\item ラウスの表で、安定かどうかを判定できる。\bkfurref{ph:波-4:sec8}
+\item ゲイン余裕・位相余裕と状態フィードバックで、安定の度合いを考えられる。\bkfurref{ph:波-4:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{はかって、比べて、もどす。エアコンも、手のひらの棒も、同じしくみだったんだ！}

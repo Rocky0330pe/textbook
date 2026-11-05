@@ -1,0 +1,1214 @@
+%% 第24回編集委員会（物理第3巻）：組 波W3
+%% p3-06.tex  波-6　はね返って重なる：反射・定在波・固有振動（★2〜5・3段）
+%% 中身は計画書 tools/phys3-plan.md の B「波-6」。公式の持ち主は A（A15・A16・A19 の振動数・A20・気柱の共鳴）。
+%% はりの振動の4階の式と cos βL cosh βL＝1 の数値解（はさみうち 2-13⑤）は、この章の⑨で作る（数学の本にない道具。C-6-1）。
+%% 膜の振動のベッセル関数は、名前と値の表だけ（⑦）。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-6/calc_p3_06.py（出力 calc_p3_06_out.txt）
+%% 記号（この章）：波の速さ c、波長 λ、振動数 f、n 番めの固有振動数 f_n、モードの番号 n、弦・管・棒の長さ L、張力 F_T、線密度 μ、
+%%   振幅 A、断面積 S（波-5 と同じ。振幅 A とぶつけない）、はりのモードの形 Y(x)、はりの定数 β〔1/m〕、ヤング率 E、
+%%   断面二次モーメント I（この章に強さ I は出ない）、密度 ρ、膜の張力（1 m あたり）F_s〔N/m〕、膜の面密度 σ〔kg/m²〕、
+%%   開口端補正 Δ、管の半径 r、軸の向きの圧縮力 F・座屈荷重 F_cr（力-11 と同じ）。周期は T。
+%%   弦をつまむ高さ h（⑤・例題7）、板の厚さ H（例題12。h と分ける。確認 P3-15）。
+%% 第1巻との約束：力-10 の道しるべ（波-6）と p1-10:813「はりの振動は EI ∂⁴y/∂x⁴ に慣性の項が加わった式で、波-6 で学ぶ」→ ⑨。
+%%   力-10 の SGP 50A（I＝2.73×10⁻⁷ m⁴、水入り w＝73.6 N/m）→ 例題13。力-11 ⑨の座屈の固有値問題 → ⑩・例題14。
+%% 数学の本との約束：9-1⑨（変数分離、f_n＝nc/(2L)、A弦 110 Hz・0.65 m・143 m/s）、9-2⑩（まん中ではじくと偶数番なし、1/5 で5番めなし）→ ③⑤。
+%%   熱-11 ⑨（熱方程式を「分けて解いて、たし直す」）と同じ手順 → ⑤。6-11（cosh・sinh）→ ⑨。2-13⑤（はさんで調べる）→ ⑨。
+%% 出典（書くときに確かめた）
+%%   ・ギターの A弦 0.65 m・110 Hz・143 m/s：数学 9-1⑨。張力 129 N（D'Addario EJ16 の A弦 .042 の表 28.93 lb。波-5 例題7 と同じ）
+%%   ・平均律のフレットの位置 L(1−2^(−m/12))：計算
+%%   ・開口端補正：管の半径の約 0.61 倍（フランジのない円い管。Levine & Schwinger, Phys. Rev. 73, 383 (1948) の 0.6133。
+%%       Acta Acustica 2025 の論文と J. Fluid Mech. の論文の引用で照合）。本文は「約 0.6 r」
+%%   ・電子レンジの周波数 2450 MHz（±50 MHz）：総務省の高周波利用設備の資料（https://www.soumu.go.jp/main_content/000706197.pdf ほか）
+%%   ・光の速さ 299 792 458 m/s（定義値）
+%%   ・ティンパニは膜の上の空気の効果で倍音が整数倍に近づく：T. D. Rossing の総説（打楽器の音響）と Springer の音響ハンドブックの章で照合
+%%   ・バイオリンの聞き比べ：C. Fritz ら, PNAS 109, 760 (2012)（21人の奏者、新しい3本と古い3本、いちばん好まれたのは新しい楽器）。
+%%       C. Fritz ら, PNAS 111, 7224 (2014)（独奏者10人、古いイタリアの6本と新しい6本、偶然より良くは聞き分けられない）。
+%%       2014年の論文は HAL（https://hal.archives-ouvertes.fr/hal-01461742）と NASA ADS（2014PNAS..111.7224F）の書誌・要旨で、
+%%       2012年の論文は National Geographic の記事と Fritz の研究ページ（dalembert.upmc.fr）で照合（pnas.org は作業環境から届かない）
+%%   ・クラドニ『音の理論についての発見』1787年（ライプツィヒ）、砂で節の線を見せた：Linda Hall Library の解説（lindahall.org）と、
+%%       古書店の初版の記載（lynge.com）で照合
+%%   ・斜張橋のケーブルの張力を固有振動数から求める（振動法）：日本PC建設業協会の論文（https://www.jpci.or.jp/eeee/v56/560609.pdf）、
+%%       神戸製鋼 技術レビュー 74-2 で照合
+%%   ・SGP 50A：第1巻 力-10（JIS G 3452）
+%%   ・鋼 205 GPa・7850 kg/m³・G 79 GPa、アルミニウム合金 69 GPa・2700 kg/m³：第1巻の巻末の表
+%%   ・ベッセル関数の零点（2.405、3.832、5.136、5.520）：SciPy（scipy.special.jn_zeros）で計算
+%% 「この章で導く中学・高校の公式」の校種は計画書 A の案。
+\makeatletter
+% 弦の固有振動の形  \rxgmode{x0}{y0}{長さ}{n}{振幅}
+\newcommand\rxgmode[5]{%
+  \draw[bkGray, line width=0.4pt] (#1,#2) -- ++(#3,0);
+  \draw[bkBlue, line width=1.1pt, domain=0:#3, samples=80, smooth] plot ({#1+\x}, {#2+#5*sin(180*#4/#3*\x)});
+  \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:#3, samples=80, smooth] plot ({#1+\x}, {#2-#5*sin(180*#4/#3*\x)});
+  \fill[bkInk] (#1,#2) circle (0.8) ($(#1,#2)+(#3,0)$) circle (0.8);}
+% 管  \rxgpipe{x0}{y0}{長さ}{高さ}{左を閉じるか 1/0}
+\newcommand\rxgpipe[5]{%
+  \fill[bkYellow!18] (#1,#2) rectangle ++(#3,#4);
+  \draw[bkInk, line width=0.8pt] (#1,#2) -- ++(#3,0) (#1,#2+#4) -- ++(#3,0);
+  \ifnum#5=1 \draw[bkInk, line width=1.6pt] (#1,#2) -- ++(0,#4);\fi}
+% 波の太い矢印
+\newcommand\rxgarrow[2]{\draw[bkRed!80!black, line width=1.2pt, -{Stealth[length=2.6mm, width=2.2mm]}] #1 -- #2;}
+\makeatother
+
+\phchapter{6}{はね返って重なる：\\反射・定在波・固有振動}{ギターの弦は、なぜおさえる場所で音の高さが変わる？}{\bklevelrange{2}{5}}{はね返って重なる：反射・定在波・固有振動}
+\bkmichishirube{2-13,6-11,9-1,9-2,力-10,力-11,波-5}{波-7,波-9,波-11,原-5}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 固定端・自由端の反射と、定在波の腹と節を説明できる。
+\item \bklevel{2}\enspace 弦の固有振動数を求め、フレットと音の高さの関係がわかる。
+\item \bklevel{2}\enspace 閉管・開管の固有振動数と共鳴から、音の速さを求められる。
+\item \bklevel{4}\enspace 変数分離とフーリエ級数で、はじいた弦の倍音を求められる。
+\item \bklevel{5}\enspace はりの振動の式を解き、鉄琴や配管の固有振動数を求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{固定端・自由端での反射}{高校物理基礎}{ph:波-6:hansha}
+\phk{定在波（腹・節。節の間は $\lambda/2$）}{高校物理基礎}{ph:波-6:teizai}
+\phk{弦の固有振動 $f_n=\dfrac{nv}{2L}$}{高校物理基礎}{ph:波-6:gen}
+\phk{気柱の固有振動（閉管・開管）、開口端補正、共鳴}{高校物理基礎}{ph:波-6:kichuu}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.46\linewidth}\raggedright
+ギターをひく人は、左手の指で弦を「フレット」とよばれる金属の棒の所におさえながら、右手で弦をはじきます。同じ弦でも、おさえる場所を変えると、音の高さが変わります。
+
+胴（ボディ）のほう（はじく側）に近い所をおさえるほど、音は高くなります。弦は同じなのに、なぜでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}[x=0.73mm, y=1mm]
+  \fill[bkOrange!35!brown!40] (0,6) rectangle (62,14);
+  \foreach \m in {1,...,12} {\pgfmathsetmacro\fx{2+60*(1-2^(-\m/12))*1.6}\draw[bkGray!70!black, line width=0.8pt] (\fx,6) -- (\fx,14);}
+  \fill[bkInk!80] (1,6) rectangle (2.4,14);
+  \fill[bkOrange!50!brown!60] (62,0) .. controls (70,-4) and (82,2) .. (84,10) .. controls (82,18) and (70,24) .. (62,20) -- cycle;
+  \fill[bkInk!80] (74,7.5) rectangle (76,12.5);
+  \draw[bkInk, line width=0.6pt] (1.7,10) -- (75,10);
+  \fill[bkRed!70] (33.6,10.8) ellipse (2.6 and 1.8);
+  \node[font=\sffamily\footnotesize, anchor=south] at (33.6,15) {おさえる};
+  \draw[bkBlue, line width=1pt, domain=34.6:75, samples=40, smooth] plot (\x, {10+1.6*sin(180*(\x-34.6)/40.4)});
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.5mm]}-{Stealth[length=1.5mm]}] (34.6,3) -- (75,3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (54.8,2.6) {ゆれる長さ};
+  \node[font=\sffamily\footnotesize, anchor=north] at (2,5.6) {ナット};
+  \node[font=\sffamily\footnotesize, anchor=north] at (75,-0.2) {};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 波-5 では、波が媒質の中を進むようすを調べました。でも、弦にも、笛の中の空気にも、はしがあります。はしまで来た波は、はね返ってもどってきます。行く波ともどる波が重なると、その場でゆれ続ける特別な波ができます。それが、楽器の音、配管や建物のゆれ、電子レンジの中の電波など、身の回りの「決まった高さの音」「決まった速さのゆれ」の正体です。この章では、はね返り（反射）から始めて、弦・管・棒・膜・はりの\textbf{固有振動}を調べます。波-3 で、おもりがいくつかつながったときに見つけた「固有振動のモード」が、おもりを限りなく増やすと、どうなるかを見る章でもあります。
+
+\begin{yattemiyou}[輪ゴムとストローで、音の高さを変えよう]
+\textbf{用意するもの}：輪ゴム、空き箱、ストロー、はさみ、ものさし\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 空き箱に輪ゴムをかけてはじく。輪ゴムのまん中を指でおさえて、半分の長さだけをはじく。音の高さを比べる。
+\item 輪ゴムを強く引っぱってからはじく。音の高さはどう変わるかな。
+\item ストローの先をつぶして、はさみで三角に切り、吹いて鳴らす。ストローを少しずつ切って短くしながら、音の高さを聞く。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkOrange!20, draw=bkOrange!70!black, line width=0.6pt] (0,0) rectangle (40,10);
+  \fill[bkInk!80] (12,9) rectangle (28,11);
+  \draw[bkRed!70!black, line width=1pt] (2,10.5) -- (38,10.5);
+  \draw[bkRed!70!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (2,10.5) .. controls (12,13.5) and (28,13.5) .. (38,10.5);
+  \fill[bkBlue!70] (20,12.6) circle (1.4);
+  \node[font=\sffamily\footnotesize, anchor=south] at (20,14.4) {まん中をおさえる};
+  \filldraw[fill=bkYellow!30, draw=bkInk!70, line width=0.5pt] (2,-12) rectangle (36,-9);
+  \draw[bkInk!70, line width=0.5pt] (36,-12) -- (39,-10.5) -- (36,-9);
+  \draw[bkRed, line width=0.6pt, dashed] (24,-14) -- (24,-7);
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,-14.4) {少しずつ切る};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：まん中をおさえて半分の長さにすると、音はずっと高くなります（ちょうど1オクターブ高い音になります）。輪ゴムを強く引っぱっても、高くなります。ストローは、短く切るほど高い音が出ます。どれも、「ゆれる部分が短いほど」「波が速く伝わるほど」高い音になっています。どうしてそうなるのかを、はね返る波から考えていきます。
+
+\begin{omoidasou}
+\bkrecall{波-5}{波の速さ $c=f\lambda$。弦では $c=\sqrt{F_{\mathrm T}/\mu}$、棒では $\sqrt{E/\rho}$。重ね合わせの原理。正弦波 $y=A\sin(\omega t-kx)$、$k=2\pi/\lambda$。}
+\bkrecall{9-1}{波動方程式を「分けて解いて、たし直す」と、$y=\sum b_n\sin(n\pi x/L)\cos(n\pi ct/L)$。周波数は $nc/(2L)$。A弦は 110 Hz・0.65 m・143 m/s。}
+\bkrecall{9-2}{まん中ではじくと偶数番の倍音が出ない。はしから $L/5$ ではじくと5番めが出ない。}
+\bkrecall{6-11}{$\cosh x=(e^x+e^{-x})/2$、$\sinh x=(e^x-e^{-x})/2$。$y''=a^2y$ の答え。}
+\bkrecall{力-10}{はりのたわみの式 $EI\,\dd^4y/\dd x^4=w$（$w$ は1 m あたりの荷重。$y$ は下向きが正）。}
+\bkrecall{力-11}{座屈：$EI\,y''=-Fy$ が0でない答えをもつのは $F=\pi^2EI/L^2$ のとき（固有値問題）。}
+\end{omoidasou}
+
+\noindent この章の記号：高校の教科書では、弦の固有振動数を $f_n=nv/(2L)$、気柱では音の速さを $V$ と書きます。この本では、どちらも波の速さを $c$ と書きます。弦・管・棒・はりの長さは $L$ です（この章には、ふりこは出てきません）。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{はね返る波と、その場でゆれる波を見る}{2}
+
+\bksubsection{1}{反射：固定端と自由端}
+\label{ph:波-6:sec1}
+\label{ph:波-6:hansha}長いなわの一方のはしを柱に結び、もう一方のはしを手で1回だけ上にふって、山のパルスを送ります。パルスは柱まで行くと、はね返ってもどってきます。このとき、もどってくるのは\textbf{谷}です。山が、さかさまになってはね返るのです。
+
+こんどは、なわのはしに軽い輪をつけて、すべりのよい棒に通します。輪は棒にそって上下に自由に動けます。同じように山を送ると、こんどは\textbf{山のまま}はね返ってきます。
+
+はしが動けないように止めてある所を\textbf{固定端}（こていたん）、自由に動ける所を\textbf{自由端}（じゆうたん）といいます。\bkidx{こていたん}{固定端}\bkidx{じゆうたん}{自由端}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item 固定端では、山は谷に（ずれの向きが逆に）なってはね返る。
+\item 自由端では、山は山のまま（ずれの向きはそのまま）はね返る。
+\end{itemize}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm, declare function={rxgp(\x,\c)=max(0,6-0.6*abs(\x-\c));}]
+  \foreach \row/\c/\lab in {0/16/{はじめ}, 1/38/{はしについた}, 2/62/{はね返った}} {%
+    \begin{scope}[shift={(0,-\row*19)}]
+    \node[font=\sffamily\footnotesize, anchor=south west] at (-2,7.5) {\lab};
+    % 固定端
+    \draw[bkGray, line width=0.4pt] (0,0) -- (42,0);
+    \fill[bkGray!50] (42,-7) rectangle (44.5,7);
+    \draw[bkBlue!50, line width=0.6pt, dash pattern=on 2pt off 1pt, samples at={0,0.5,...,42}] plot ({\x}, {rxgp(\x,\c)});
+    \draw[bkOrange!80, line width=0.6pt, dash pattern=on 2pt off 1pt, samples at={0,0.5,...,42}] plot ({\x}, {-rxgp(\x,84-\c)});
+    \draw[bkInk, line width=1.2pt, samples at={0,0.5,...,42}] plot ({\x}, {rxgp(\x,\c)-rxgp(\x,84-\c)});
+    % 自由端
+    \begin{scope}[shift={(66,0)}]
+    \draw[bkGray, line width=0.4pt] (0,0) -- (42,0);
+    \draw[bkGray!70!black, line width=1.2pt] (43.2,-7) -- (43.2,13);
+    \draw[bkBlue!50, line width=0.6pt, dash pattern=on 2pt off 1pt, samples at={0,0.5,...,42}] plot ({\x}, {rxgp(\x,\c)});
+    \draw[bkOrange!80, line width=0.6pt, dash pattern=on 2pt off 1pt, samples at={0,0.5,...,42}] plot ({\x}, {rxgp(\x,84-\c)});
+    \draw[bkInk, line width=1.2pt, samples at={0,0.5,...,42}] plot ({\x}, {rxgp(\x,\c)+rxgp(\x,84-\c)});
+    \pgfmathsetmacro\rxgend{2*rxgp(42,\c)}
+    \draw[bkInk, line width=0.7pt, fill=white] (43.2,\rxgend) circle (1.1);
+    \end{scope}
+    \end{scope}}
+  \node[font=\sffamily\footnotesize, anchor=south] at (21,14.5) {（あ）固定端（柱）};
+  \node[font=\sffamily\footnotesize, anchor=south] at (87,14.5) {（い）自由端（棒に通した輪）};
+\end{tikzpicture}
+\bkfigcaption{はしでの反射。太い線がなわの本当の形。破線は、はしの向こうから来ると考えた「鏡のパルス」（固定端では上下さかさま、自由端ではそのまま）と、はしへ向かうもとのパルス。2つの和を、はしの手前だけ見たものが、なわの形になる。}\label{ph:波-6:fig-hansha}
+\end{bkfigure}
+
+\phboxhead{なぜ、さかさまになる？：鏡のパルスで考える}
+固定端では、はしのずれはいつも0です。そこで、はしの向こう側にもなわが続いていて、そこから、上下さかさまの「鏡のパルス」が、同じ速さでこちらへ向かってくると考えます（図\ref{ph:波-6:fig-hansha}（あ）の破線）。2つのパルスは、はしの所でいつも打ち消し合うので、はしのずれは0のままです。重ね合わせ（波-5 ⑥）で、2つは互いに通りぬけるので、はしを過ぎた後は、鏡のパルス（谷）が、こちら側を進んでいきます。これが、谷になってはね返ったパルスです。
+
+自由端では、棒は輪を上下には押しません（輪は棒にそって、上下に自由にすべる）。軽い輪がつり合うには、なわが輪を引く力に、たての成分がないこと、つまり、なわがはしで水平であること（傾きが0）が要ります。上下そのままの鏡のパルスを考えると、2つの山がはしで左右対称に重なるので、はしの傾きはいつも0です。だから、山は山のままはね返ります。はしの輪は、山が来ると、山の2倍の高さまで上がります。
+
+\begin{phmijika}[音の反射]
+音も、かべではね返ります（山びこ）。空気の管の中の音では、閉じたはしでは空気が動けないので、空気のずれについて固定端です。開いたはしでは、空気が自由に出入りできるので、ずれについてはほぼ自由端になります（④）。はね返る割合や、さかさまになるかどうかを、もっと一般に決める方法は、波-7 で学びます（はしの向こうの媒質のかたさと重さで決まる）。
+\end{phmijika}
+
+\begin{motto}[3]
+\phboxhead{表計算で、はね返りを確かめる}
+波-5 ⑧の波の表計算（$s=1$、はじめの山は点9・10・11 に0.5・1・0.5）で、左はし（点0）の決まりを2通りにして、左へ進んだ山がはね返るようすを見ます。固定端では点0をいつも0にします。自由端では、傾きが0になるように、点0に点1と同じ値を入れます（B列のセルを \texttt{=C2} のようにする）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=16mm] Q[c,m,wd=8mm] *{7}{Q[c,m,wd=10mm]}}, colsep=1.5pt, rowsep=0.6pt, row{1}={bg=bkTheme!10, font=\sffamily\small}, cell{2}{1}={r=4}{l}, cell{6}{1}={r=4}{l}, hline{6}={0.4pt, bkGray}}
+ & 歩 & 点0 & 点1 & 点2 & 点3 & 点4 & 点5 & 点6 \\
+固定端 & 6 & 0 & 0 & 0 & 0.25 & 0.5 & 0.25 & 0 \\
+ & 8 & 0 & 0.25 & 0.5 & 0.25 & 0 & 0 & 0 \\
+ & 10 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ & 12 & 0 & $-0.25$ & $-0.5$ & $-0.25$ & 0 & 0 & 0 \\
+自由端 & 6 & 0 & 0 & 0 & 0.25 & 0.5 & 0.25 & 0 \\
+ & 8 & 0.25 & 0.25 & 0.5 & 0.25 & 0 & 0 & 0 \\
+ & 10 & 0.75 & 0.75 & 0.25 & 0 & 0 & 0 & 0 \\
+ & 12 & 0 & 0 & 0.25 & 0.5 & 0.25 & 0 & 0 \\
+\end{bktable}
+\bktabcaption{左はしでのはね返り（波-5 ⑧の表計算）。固定端では、10歩めに一瞬まっすぐになり、12歩めには谷になって右へもどる。自由端では、はしが大きく持ち上がったあと、山のままもどる。}\label{ph:波-6:tab-hansha}
+\end{bkcenter}
+固定端の10歩めで、なわが一瞬まっすぐになるのは、波-5 ⑥の「山と谷がぴったり重なった瞬間」と同じです。①の鏡のパルスの考えが、表計算でもそのまま確かめられました。自由端のはしが山の2倍（1）まで上がらず0.75なのは、山の形をたった3つの点で表した粗い計算だからです。
+\end{motto}
+
+\bksubsection{2}{定在波：腹と節}
+\label{ph:波-6:sec2}
+\label{ph:波-6:teizai}なわの一方を柱に結び、もう一方のはしを、同じリズムで上下にゆらし続けます。右へ進む波と、柱ではね返って左へ進む波が、重なります。ゆらす速さをうまく選ぶと、なわは、図\ref{ph:波-6:fig-teizai}のように、\textbf{まったく動かない点}と、\textbf{大きくゆれる所}が、交互に並んだ形でゆれます。形は左へも右へも進まず、その場で上下にゆれるだけです。このような波を\textbf{定在波}（ていざいは。定常波ともいう）といいます。\bkidx{ていざいは}{定在波}これに対して、波-5 の進んでいく波を\textbf{進行波}（しんこうは）といいます。\bkidx{しんこうは}{進行波}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=44mm, xmin=0, xmax=2.1, ymin=-2.5, ymax=2.9, xtick={0.25,0.5,1,1.5,2}, xticklabels={$\frac{\lambda}{4}$,$\frac{\lambda}{2}$,$\lambda$,$\frac{3\lambda}{2}$,$2\lambda$}, ytick=\empty, axis x line*=bottom, axis y line=none, xlabel={柱からの距離}]
+  \draw[bkInk, line width=0.4pt] (axis cs:0,0) -- (axis cs:2.05,0);
+  \addplot[bkBlue, line width=1pt, domain=0:2, samples=120] {2*cos(0)*sin(deg(2*pi*x))};
+  \addplot[bkBlue!75, line width=1pt, domain=0:2, samples=120] {2*cos(45)*sin(deg(2*pi*x))};
+  \addplot[bkBlue!55, line width=1pt, domain=0:2, samples=120] {2*cos(90)*sin(deg(2*pi*x))};
+  \addplot[bkOrange!75, line width=1pt, domain=0:2, samples=120] {2*cos(135)*sin(deg(2*pi*x))};
+  \addplot[bkOrange, line width=1pt, domain=0:2, samples=120] {2*cos(180)*sin(deg(2*pi*x))};
+  \fill[bkRed] (axis cs:0,0) circle (2pt) (axis cs:0.5,0) circle (2pt) (axis cs:1,0) circle (2pt) (axis cs:1.5,0) circle (2pt) (axis cs:2,0) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (axis cs:0.75,2.1) {腹};
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (axis cs:1.25,2.1) {腹};
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (axis cs:1,-0.35) {節};
+  \node[font=\sffamily\footnotesize, anchor=north, fill=white, inner sep=1pt] at (axis cs:0.5,-0.35) {節};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{定在波（柱は左はし）。8分の1周期ごとの形を重ねてかいた（いちばん高い山の形から、まっすぐな形を通って、上下さかさまの形まで、半周期のあいだ）。●は節（まったく動かない点）で、間かくは半波長 $\lambda/2$。節と節のまん中が腹（いちばん大きくゆれる所）。}\label{ph:波-6:fig-teizai}
+\end{bkfigure}
+
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item まったく動かない点を\textbf{節}（ふし）、いちばん大きくゆれる所を\textbf{腹}（はら）といいます。\bkidx{ふし}{節（定在波の）}\bkidx{はら}{腹（定在波の）}
+\item となりどうしの節の間は、\textbf{半波長 $\lambda/2$}。節と腹の間は $\lambda/4$。
+\item 腹のゆれの大きさ（振幅）は、もとの波の振幅の2倍。
+\item 節をはさんだとなりの区間どうしは、いつも反対向きに動く（逆位相）。同じ区間の中は、みな同じ向きに動く。
+\end{itemize}
+
+\phboxhead{なぜ、節ができる？}
+右へ進む波と左へ進む波が、ある点にいつも反対のずれを運んでくれば、その点は止まったままです。左へ進む波は、右へ進む波を左右に裏返したものなので、1波長の中に、そのような点が2つあります。だから節の間は $\lambda/2$ です。式で確かめるのは③の表計算と、⑤の変数分離です。固定端のはしは、いつも節です。自由端のはしは、腹になります。
+
+\begin{phmijika}[電子レンジの中の定在波]
+電子レンジの中では、電波（波長約\qty{12}{cm}の電磁波）が金属のかべではね返って重なり、定在波ができます。電波の腹の所はよく温まり、節の所はあまり温まりません。食べ物の温まり方にむらができるのはこのためで、多くの電子レンジは、皿を回したり、電波をかき混ぜる羽根を回したりして、むらを減らしています。節の間かくから、光の速さを求めることもできます（\bkreidairef{11}）。
+\end{phmijika}
+
+\Needspace{9\baselineskip}\phstage{te}{弦と管の固有振動を数で求める}{2}
+
+\bksubsection{3}{弦の固有振動}
+\label{ph:波-6:sec3}
+\label{ph:波-6:gen}ギターの弦は、両はし（ナットとブリッジ、またはおさえたフレットとブリッジ）が止まっています。両はしとも固定端です。弦をはじくと、波が両はしではね返りを何度も繰り返し、行く波ともどる波が重なって、定在波になります。
+
+両はしが節なので、弦の長さ $L$ の中に、半波長 $\lambda/2$ がちょうど何個か（$n$ 個）入る定在波しか、続くことができません（入らない波は、はね返るたびに打ち消し合って消えてしまう）。
+\[L=n\times\frac{\lambda_n}{2}\qquad\text{だから}\qquad\lambda_n=\frac{2L}{n}\qquad(n=1,\ 2,\ 3,\ \cdots)\]
+波の速さ $c$ は弦で決まっているので、$c=f\lambda$（波-5 ②）から、振動数は
+\pheq{f_n=\frac{c}{\lambda_n}=\frac{nc}{2L}=\frac{n}{2L}\sqrt{\frac{F_{\mathrm T}}{\mu}}}{Hz ＝ $\dfrac{\text{m/s}}{\text{m}}$}
+です。このとびとびの振動数を、弦の\textbf{固有振動数}といいます。\bkidx{こゆうしんどうすう}{固有振動数}9-1⑨で、波動方程式を変数分離して出てきた式と同じです。$n=1$ を\textbf{基本振動}、$n=2,\ 3,\ \cdots$ を2倍振動、3倍振動といい、その音をそれぞれ基本音・倍音といいます。\bkidx{きほんしんどう}{基本振動}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \n/\f in {1/110,2/220,3/330,4/440} {%
+    \pgfmathsetmacro\yy{-(\n-1)*14}
+    \rxgmode{0}{\yy}{80}{\n}{5}
+    \node[font=\sffamily\footnotesize, anchor=west] at (84,\yy+1) {$n=\n$：$\lambda=2L/\n$、\f\,Hz};}
+\end{tikzpicture}
+\bkfigcaption{両はしを止めた弦の固有振動（ギターの A弦、$L=\qty{0.65}{m}$、$c=\qty{143}{m/s}$）。実線と破線は、半周期ずれた形。$n$ 番めは、節が $n+1$ 個、腹が $n$ 個で、振動数は基本の $n$ 倍。}\label{ph:波-6:fig-genmode}
+\end{bkfigure}
+
+\begin{phflow}[弦の固有振動]
+\phflowrow{$\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$}{両はしが固定端\\（$x=0$・$L$ で $y=0$）}{$f_n=\dfrac{nc}{2L}$}
+\phflowrow{$f_n=\dfrac{nc}{2L}$}{$n=1$\\$c=\sqrt{F_{\mathrm T}/\mu}$}{$f_1=\dfrac{1}{2L}\sqrt{\dfrac{F_{\mathrm T}}{\mu}}$}
+\end{phflow}
+1段めの式の出し方は、⑤でもう一度、変数分離からていねいに見ます。
+
+\phboxhead{はてな？の答え}
+\bkhatenaref の答えです。弦をおさえると、ゆれる部分の長さ $L$ が短くなります。弦の張力も線密度も変わらないので、波の速さ $c$ は同じです。$f_1=c/(2L)$ なので、$L$ が短いほど振動数が大きくなり、高い音になります。ギターの A弦（$L=\qty{0.65}{m}$、$c=\qty{143}{m/s}$）では、$f_1=143\div1.30=\qty{110}{Hz}$ です。弦のちょうどまん中（12番めのフレット）をおさえると、$L$ が半分なので\qty{220}{Hz}、ちょうど1オクターブ上の音です（\bkreidairef{1}）。
+
+\phboxhead{フレットの位置：2の12乗根}
+今の楽器の音の並び（平均律）では、1オクターブ（振動数2倍）を12の半音に等しい比で分けます。半音1つで、振動数は $2^{1/12}\approx1.0595$ 倍です。振動数を $2^{1/12}$ 倍にするには、ゆれる長さを $2^{-1/12}\approx0.9439$ 倍にします。だから、$m$ 番めのフレットのナットからの距離は
+\pheq{d_m=L\bigl(1-2^{-m/12}\bigr)}{m}
+です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=38mm] *{5}{Q[c,m,wd=15mm]}}, rowsep=1.2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+フレットの番号 $m$ & 1 & 2 & 5 & 7 & 12 \\
+ナットからの距離〔mm〕 & 36.5 & 70.9 & 163 & 216 & 325 \\
+A弦の振動数〔Hz〕 & 116.5 & 123.5 & 146.8 & 164.8 & 220 \\
+\end{bktable}
+\bktabcaption{$L=\qty{650}{mm}$ のギターのフレットの位置と、A弦（110 Hz）をおさえたときの振動数。フレットの間かくは、ブリッジに近づくほどせまくなる（1と2の間 \qty{34.4}{mm}、11と12の間 \qty{19.3}{mm}）。}\label{ph:波-6:tab-fret}
+\end{bkcenter}
+
+\begin{phbaisuru}[半分]{弦の長さ $L$}
+振動数は2倍（1オクターブ上）になります。張力 $F_{\mathrm T}$ を2倍にすると、$c$ が $\sqrt2$ 倍になるので、振動数は約1.41倍です。線密度を4倍（太い弦）にすると、振動数は半分です。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=40mm, xmin=0, xmax=0.72, ymin=0, ymax=480, xtick={0.1625,0.325,0.65}, xticklabels={0.1625,0.325,0.65}, ytick={110,220,440}, xlabel={$L$（m）}, ylabel={$f_1$（Hz）}]
+  \addplot[bkcurve, domain=0.15:0.7, samples=100] {143/(2*x)};
+  \fill[bkRed] (axis cs:0.65,110) circle (1.8pt) (axis cs:0.325,220) circle (1.8pt) (axis cs:0.1625,440) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.34,225) {長さ半分で2倍};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\phboxhead{表計算で定在波を作る}
+行く波ともどる波を、表計算でたして、定在波ができることを確かめましょう。A列に、柱（固定端）からの距離 $x$ を0から\qty{2}{m}まで\qty{0.05}{m}ずつ入れます（波長 $\lambda=\qty{1}{m}$ とする）。B列に柱へ向かう波 $\sin2\pi(t/T+x/\lambda)$、C列に柱ではね返った波（固定端なので、さかさまで反対へ進む）$-\sin2\pi(t/T-x/\lambda)$、D列にその和を作ります。時刻 $t/T$ をセルに入れて変えていくと、D列は図\ref{ph:波-6:fig-teizai}と同じ形になります。B列とC列はそれぞれ進んでいくのに、D列は $x=0,\ 0.5,\ 1,\ \cdots$ でいつも0です。加法定理（4-9②）で計算すると、
+\[\sin2\pi\Bigl(\frac{t}{T}+\frac{x}{\lambda}\Bigr)-\sin2\pi\Bigl(\frac{t}{T}-\frac{x}{\lambda}\Bigr)=2\cos\frac{2\pi t}{T}\,\sin\frac{2\pi x}{\lambda}\]
+で、「場所だけの関数（$\sin$）」と「時間だけの関数（$\cos$）」の積になっています。場所で決まる $2\sin(2\pi x/\lambda)$ がその点の振幅で、$\sin(2\pi x/\lambda)=0$ の点（$x=0,\ \lambda/2,\ \lambda,\ \cdots$）が節です。
+
+\begin{phmodel}[弦の固有振動]
+\phignore{弦の曲げのこわさ。空気の抵抗と、ブリッジから胴へ逃げるエネルギー（だから音はやがて消える）。}
+\phassume{両はしは完全に止まっている。張力・線密度は一定。ゆれは小さい。}
+\phlimit{ピアノの低音の太い弦（曲げのこわさで、高い倍音ほど整数倍より少し高くなる）。強くはじいたとき（張力が変わり、音の高さが少し上がる）。}
+\end{phmodel}
+
+\bksubsection{4}{気柱の固有振動と共鳴}
+\label{ph:波-6:sec4}
+\label{ph:波-6:kichuu}笛や管楽器は、管の中の空気（\textbf{気柱}）の縦波の定在波で鳴ります。\bkidx{きちゅう}{気柱}管のはしでの決まりは、①の反射のとおりです。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{閉じたはし}：空気は動けないので、空気のずれの\textbf{節}。
+\item \textbf{開いたはし}：空気は自由に出入りするので、空気のずれの\textbf{腹}（圧力は外の大気圧のままなので、圧力の変化の節）。
+\end{itemize}
+両はしが開いた管を\textbf{開管}（かいかん）、一方のはしが閉じた管を\textbf{閉管}（へいかん）といいます。\bkidx{かいかん}{開管}\bkidx{へいかん}{閉管}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \n in {1,2,3} {%
+    \pgfmathsetmacro\yy{-(\n-1)*16}
+    \rxgpipe{0}{\yy-5}{48}{10}{0}
+    \draw[bkBlue, line width=1pt, domain=0:48, samples=60, smooth] plot (\x, {\yy+4*cos(180*\n/48*\x)});
+    \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:48, samples=60, smooth] plot (\x, {\yy-4*cos(180*\n/48*\x)});
+    \node[font=\sffamily\footnotesize, anchor=east] at (-1,\yy) {$n=\n$};
+    \pgfmathsetmacro\kk{2*\n-1}
+    \begin{scope}[shift={(66,0)}]
+    \rxgpipe{0}{\yy-5}{48}{10}{1}
+    \draw[bkBlue, line width=1pt, domain=0:48, samples=60, smooth] plot (\x, {\yy+4*sin(90*\kk/48*\x)});
+    \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:48, samples=60, smooth] plot (\x, {\yy-4*sin(90*\kk/48*\x)});
+    \end{scope}}
+  \node[font=\sffamily\footnotesize, anchor=south] at (24,6.5) {開管：$L=n\cdot\dfrac{\lambda}{2}$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (90,6.5) {閉管：$L=(2n-1)\cdot\dfrac{\lambda}{4}$};
+\end{tikzpicture}
+\bkfigcaption{管の中の空気の定在波。線の高さは、空気のずれ（縦波を横波表示した振幅。波-5 ①）。開いたはしは腹、閉じたはし（太い線）は節。閉管の右の列は、上から基本・3倍・5倍振動。}\label{ph:波-6:fig-kan}
+\end{bkfigure}
+
+\noindent 開管は両はしが腹なので、長さ $L$ に半波長が $n$ 個入ります。閉管は、一方が節・一方が腹なので、$\lambda/4$ が奇数個入ります。
+\pheq{\text{開管}\ f_n=\frac{nc}{2L}\qquad\text{閉管}\ f_n=\frac{(2n-1)c}{4L}\qquad(n=1,\ 2,\ 3,\ \cdots)}{Hz}
+閉管には、偶数倍の振動がありません。同じ長さなら、閉管の基本振動数は開管の半分（1オクターブ低い）です（\bkreidairef{2}）。
+
+\phboxhead{開口端補正}
+開いたはしの腹は、本当は管の口より少し外にできます。管から出た空気は、口のすぐ外でも少し押されたり引かれたりするからです。そこで、管が少し長いとみなして計算します。このはみ出しを\textbf{開口端補正}（かいこうたんほせい）といい、細い円い管では、口の半径 $r$ の約0.6倍です。\bkidx{かいこうたんほせい}{開口端補正}
+\[\text{開管}\ f_1=\frac{c}{2(L+2\times0.6r)},\qquad\text{閉管}\ f_1=\frac{c}{4(L+0.6r)}\]
+この0.6という数は、口の外の空気の流れを解くと出てくる値（約0.61）ですが、口の形（縁に広い板がついているかなど）で変わるので、実際には実験で確かめます（\bkreidairef{3}）。
+
+\phboxhead{共鳴：気柱で音の速さをはかる}
+\label{ph:波-6:kyoumei}ある振動数でゆすると、その振動数に固有振動数が合った物が、大きくゆれ始めます。これを\textbf{共鳴}（共振）といいます（波-2）。\bkidx{きょうめい}{共鳴}音さを鳴らして管の口に近づけ、管の長さを変えていくと、ある長さでとつぜん音が大きく響きます。
+
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkYellow!18] (0,0) rectangle (10,60);
+  \fill[bkBlue!25] (0,0) rectangle (10,22);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (0,60) (10,0) -- (10,60);
+  \draw[bkBlue!70!black, line width=0.8pt] (0,22) -- (10,22);
+  \draw[bkBlue, line width=1pt, domain=22:60, samples=60, smooth] plot ({5+3.6*sin(90*(\x-22)/(61.5-22)*3)}, \x);
+  \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=22:60, samples=60, smooth] plot ({5-3.6*sin(90*(\x-22)/(61.5-22)*3)}, \x);
+  \draw[bkGray, line width=0.4pt, dashed] (-3,61.5) -- (16,61.5);
+  \draw[bkGray, line width=0.4pt, dashed] (-3,48.3) -- (14,48.3);
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (13,48.3) -- (13,60);
+  \node[font=\sffamily\footnotesize, anchor=west] at (14,54) {$L_1$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.4mm]}-{Stealth[length=1.4mm]}] (20,22) -- (20,60);
+  \node[font=\sffamily\footnotesize, anchor=west] at (21,38) {$L_2$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=1.2mm]}-{Stealth[length=1.2mm]}] (-2,60) -- (-2,61.5);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-3,63) {$\Delta$};
+  \fill[bkGray!60] (2,64) rectangle (3,74) (7,64) rectangle (8,74);
+  \node[font=\sffamily\footnotesize, anchor=west] at (9,71) {音さ};
+  \node[font=\sffamily\footnotesize, anchor=west] at (11,8) {水};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+水を入れた管の水面を下げていくと、口から水面までの長さが $L_1$ のとき1回めの共鳴、$L_2$ のとき2回めの共鳴が起きます。水面は閉じたはし（節）、口のすぐ外が腹です。
+
+1回めは $\lambda/4$、2回めは $3\lambda/4$ が入っているので、
+\[L_2-L_1=\frac{\lambda}{2}\]
+です。口の外のはみ出し $\Delta$（開口端補正）は、引き算で消えます。だから、$c=f\lambda=2f(L_2-L_1)$ で、音の速さがはかれます。$\Delta=\lambda/4-L_1$ もわかります（\bkreidairef{4}）。
+\end{minipage}
+
+\begin{phmodel}[気柱の固有振動]
+\phignore{管のかべのゆれ。空気のねばりと、かべとの間の熱の出入り。}
+\phassume{管の太さは波長よりずっと小さい（管の中の音は、管にそって進む平面の波）。開いたはしは腹（開口端補正だけずらす）。}
+\phlimit{太い管、口の形が複雑な管（トランペットのベル）。音が大きすぎるとき。}
+\end{phmodel}
+
+\begin{phmijika}[ペットボトルの笛と管楽器]
+ペットボトルの口に下くちびるを当てて吹くと、ボーッと鳴ります。ボトルの中の空気が鳴っているのです（細長いボトルなら、閉管と考えてよい）。水を入れると空気の柱が短くなって、音が高くなります。フルートは両はしが開いた開管、クラリネットは、リードのある側が閉じたはしのようにはたらく閉管に近い楽器です。だから、同じくらいの長さでも、クラリネットのほうが約1オクターブ低い音まで出せます。
+\end{phmijika}
+
+\begin{seikaku}
+楽器の音の高さは、気温でも少し変わります。管楽器では、気温が上がると音の速さが $\sqrt{T}$（$T$ は絶対温度。熱-4 ⑥）に比例して大きくなるので、\qty{20}{\celsius}から\qty{30}{\celsius}になると、振動数は $\sqrt{303.15/293.15}\approx1.017$ 倍（約1.7\,\%、半音の約3割）高くなります。反対に、弦楽器は、温まった弦が伸びて張力が下がるので、音が低くなりがちです（熱-1 の線膨張）。演奏の前に、楽器を部屋の温度になじませてから音を合わせるのはこのためです。
+\end{seikaku}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{境界の条件から固有振動を導く}{5}
+
+\bksubsection{5}{変数分離とフーリエ級数で解く}
+\label{ph:波-6:sec5}
+③では、「両はしに節がある定在波」を、図から見つけました。ここでは、波動方程式（波-5 ④）
+\[\frac{\partial^2y}{\partial t^2}=c^2\,\frac{\partial^2y}{\partial x^2}\]
+と、両はしの条件（\textbf{境界条件}）$y(0,\ t)=y(L,\ t)=0$ から、弦のあらゆる動きを導きます。方法は、9-1⑨と、熱-11 ⑨で熱方程式に使った「分けて解いて、たし直す」です。\bkidx{きょうかいじょうけん}{境界条件}
+
+\phboxhead{分けて解く}
+$y=X(x)\,\Theta(t)$ とおいて、波動方程式に入れ、両辺を $c^2X\Theta$ でわります。左辺は $t$ だけ、右辺は $x$ だけの式なので、両方とも同じ定数です。両はしで0になる答えが0以外に出るのは、定数が負のときだけでした（9-1⑨のせいかくに言うと）。この章では、その定数を $-k^2$ と書きます。
+\begin{bkhenkei}[0.52]
+\frac{\Theta''}{c^2\Theta}=\frac{X''}{X}=-k^2 & 分ける \\
+X=\sin kx & $X(0)=0$ から $\cos$ の項はない \\
+\sin kL=0,\quad k=\frac{n\pi}{L} & $X(L)=0$ \\
+\Theta''=-(ck)^2\Theta,\quad\Theta=\cos\omega_nt & $\omega_n=ck=n\pi c/L$。はじめ止まっている \\
+\end{bkhenkei}
+ここの $k$ は、波-5 ③の波数そのものです。境界条件が、波数を $k_n=n\pi/L$（波長 $2L/n$）のとびとびの値に決め、分散関係 $\omega=ck$ が、振動数を $f_n=\omega_n/(2\pi)=nc/(2L)$ に決めます。③の式が、図を使わずに出てきました。
+
+\phboxhead{たし直す}
+波動方程式は線形なので（波-5 ⑥）、どの $n$ の答えをたしても、また答えです。手をはなしたとき止まっている弦の動きは、
+\pheq{y(x,\ t)=\sum_{n=1}^{\infty}b_n\sin\frac{n\pi x}{L}\cos\frac{n\pi ct}{L}}{m}
+です。$b_n$ は、はじめの形 $y_0(x)$ を $\sin(n\pi x/L)$ の和で書いた係数で、9-2⑩の半区間の展開で求めます。
+\[b_n=\frac{2}{L}\int_0^Ly_0(x)\sin\frac{n\pi x}{L}\,\dd x\]
+$n$ 番めの項を、$n$ 番めの\textbf{固有振動のモード}（振動モード）といいます。\bkidx{しんどうもーど}{振動モード}弦のどんな動きも、モードの重ね合わせです。波-3 で、おもりが2つ・3つのときに見つけたモードが、弦では限りなくたくさんあるのです（⑩）。
+
+\phboxhead{はじく場所と倍音}
+弦の、はしから $pL$（$0<p<1$）の所を高さ $h$ だけつまんで、はなします。はじめの形は三角形で、9-2⑩と同じように積分すると、
+\pheq{b_n=\frac{2h}{n^2\pi^2p(1-p)}\sin n\pi p}{m}
+です。まん中（$p=1/2$）では
+\[b_n=\frac{8h}{n^2\pi^2}\sin\frac{n\pi}{2}\]
+で、偶数番が0、奇数番は $1:\dfrac19:\dfrac{1}{25}:\cdots$ と、$n^2$ に反比例して小さくなります（\bkreidairef{7}）。$p=1/5$ では、$\sin(5\pi/5)=0$ なので5番め・10番め…が出ません。$n$ 番めのモードの\textbf{節}の所をはじくと、そのモードはまったく生まれないのです（図\ref{ph:波-6:fig-pick}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \n in {1,2,3,4,5} {%
+    \pgfmathsetmacro\yy{-(\n-1)*11}
+    \rxgmode{0}{\yy}{90}{\n}{3.6}
+    \node[font=\sffamily\footnotesize, anchor=west] at (93,\yy) {$n=\n$};}
+  \draw[bkRed!80!black, line width=0.8pt, dashed] (18,6) -- (18,-48);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!80!black] at (18,-48.5) {$x=L/5$};
+  \fill[bkRed] (18,-44) circle (1.2);
+\end{tikzpicture}
+\bkfigcaption{弦のモード $n=1$〜5。はしから $L/5$ の所（破線）は、$n=5$ のモードの節（●）。ここではじいても、ここにピックアップを置いても、5番めのモードは出てこない。}\label{ph:波-6:fig-pick}
+\end{bkfigure}
+
+\begin{phflow}[はじいた弦]
+\phflowrow{$\dfrac{\partial^2y}{\partial t^2}=c^2\dfrac{\partial^2y}{\partial x^2}$\\$y(0)=y(L)=0$}{はじめの形 $y_0$\\はじめ止まっている}{$y=\sum b_n\sin\dfrac{n\pi x}{L}\cos\omega_nt$}
+\phflowrow{$b_n=\dfrac{2}{L}\displaystyle\int_0^Ly_0\sin\dfrac{n\pi x}{L}\dd x$}{まん中を\\高さ $h$ でつまむ}{$b_n=\dfrac{8h}{n^2\pi^2}\sin\dfrac{n\pi}{2}$}
+\end{phflow}
+
+\begin{phmijika}[エレキギターのピックアップ]
+エレキギターは、弦の下に置いた磁石とコイル（ピックアップ）で、弦の上下の速さを電気の信号に変えます。ピックアップの真上が、あるモードの節なら、そのモードの音は信号にのりません。ブリッジに近いピックアップは、低いモードの腹から遠く高いモードの腹に近いので、高い倍音の多い、かたい音になります。ネックに近いピックアップは、やわらかい音になります（\bkreidairef{8}）。
+\end{phmijika}
+
+\begin{seikaku}
+$b_n$ の式は、つまんではなす（はじめの速さが0）場合です。ピアノのように、ハンマーでたたく（はじめの形は平らで、速さを与える）場合は、$\cos\omega_nt$ のかわりに $\sin\omega_nt$ の項になり、係数の決め方が変わります（専門の本で）。また、実際の弦の音は、高い倍音ほど早く消えていきます（空気の抵抗や、弦の中の摩擦が、速いゆれほど強くはたらく）。
+\end{seikaku}
+
+\bksubsection{6}{棒の縦振動とねじり振動}
+\label{ph:波-6:sec6}
+細い金属の棒のまん中を指でつまみ、松やにをつけた布で、棒にそってこすると、キーンと高い音が鳴ります。棒の中を縦波（波-5 ⑤、速さ $c=\sqrt{E/\rho}$）が往復してできる定在波です。
+
+棒のはしが自由なら、はしの面には力がはたらかないので、ひずみ $\partial u/\partial x$ が0です。ずれ $u$ の傾きが0なので、自由端は\textbf{ずれの腹}になります。両はしが自由な棒は、開管と同じ形の定在波になり、
+\pheq{f_n=\frac{nc}{2L}=\frac{n}{2L}\sqrt{\frac{E}{\rho}}\quad\text{（両はし自由）},\qquad f_n=\frac{(2n-1)c}{4L}\quad\text{（片はし固定）}}{Hz}
+です。$n=1$ のモードでは、まん中が節なので、まん中をつまんでも音は止まりません。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \n/\yy in {1/0,2/-18} {%
+    \fill[bkGray!25] (0,\yy-3) rectangle (80,\yy+3);
+    \draw[bkInk!70, line width=0.5pt] (0,\yy-3) rectangle (80,\yy+3);
+    \draw[bkBlue, line width=1.1pt, domain=0:80, samples=60, smooth] plot (\x, {\yy+6*cos(180*\n/80*\x)});
+    \draw[bkBlue!60, line width=0.8pt, dash pattern=on 2pt off 1.2pt, domain=0:80, samples=60, smooth] plot (\x, {\yy-6*cos(180*\n/80*\x)});
+    \node[font=\sffamily\footnotesize, anchor=west] at (84,\yy) {$n=\n$};}
+  \fill[bkRed!70] (40,6.5) ellipse (2.4 and 1.4);
+  \node[font=\sffamily\footnotesize, anchor=south] at (40,8.4) {つまむ所（節）};
+  \node[font=\sffamily\footnotesize, anchor=west, text width=26mm, align=left] at (98,-9) {線の高さは、棒の向きのずれ（横波表示）};
+\end{tikzpicture}
+\bkfigcaption{両はしが自由な棒の縦振動。はしはずれの腹、$n=1$ ではまん中が節。}\label{ph:波-6:fig-bou}
+\end{bkfigure}
+
+\noindent 長さ\qty{1}{m}の鋼の棒なら、$f_1=5110\div2\approx\qty{2.6}{kHz}$ です（\bkreidairef{6}）。棒をねじる振動（ねじり振動）も、同じように定在波になります。ねじりの波の速さは $\sqrt{G/\rho}$（$G$ は横弾性係数、力-8 ④）で、鋼では約\qty{3200}{m/s}。同じ棒なら、ねじり振動の振動数は縦振動の約0.62倍です。
+
+\bksubsection{7}{膜の振動：倍音が整数倍にならない}
+\label{ph:波-6:sec7}
+太鼓の膜は、2つの向きに広がった「弦」です。膜を1 m の線で切ったとき、その線をはさんで引き合う力（1 m あたりの張力）を $F_{\mathrm s}$〔N/m〕、1 m$^2$ あたりの質量（面密度）を $\sigma$〔kg/m$^2$〕とします。弦と同じように、膜の小さな部分の運動方程式を立てると、たての向き（$x$）と横の向き（$y$）の曲がりがどちらも効いて、
+\pheq{\frac{\partial^2z}{\partial t^2}=c^2\Bigl(\frac{\partial^2z}{\partial x^2}+\frac{\partial^2z}{\partial y^2}\Bigr)\qquad c=\sqrt{\frac{F_{\mathrm s}}{\sigma}}}{m/s ＝ $\sqrt{\text{N/m}\div\text{kg/m}^2}$}
+となります（$z$ は膜の上下のずれ。括弧の中は8-12のラプラシアン $\nabla^2z$）。
+
+\phboxhead{四角い膜}
+たて $a$・横 $b$ の四角い膜で、ふちが止まっているときは、
+\[z=\sin\frac{m\pi x}{a}\sin\frac{n\pi y}{b}\cos\omega t\]
+とおくと、⑤と同じ計算で
+\[\omega^2=c^2\Bigl\{\Bigl(\frac{m\pi}{a}\Bigr)^2+\Bigl(\frac{n\pi}{b}\Bigr)^2\Bigr\},\qquad f_{mn}=\frac{c}{2}\sqrt{\Bigl(\frac{m}{a}\Bigr)^2+\Bigl(\frac{n}{b}\Bigr)^2}\]
+です。正方形（$a=b$）なら、$f_{mn}$ は $\sqrt{m^2+n^2}$ に比例し、低いほうから $\sqrt2:\sqrt5:\sqrt8:\sqrt{10}$、つまり $1:1.58:2:2.24$ で、整数倍になりません。
+
+\phboxhead{円い膜：ベッセル関数}
+太鼓のような円い膜では、半径 $R$ のふちで止まった定在波を、中心からの距離と角度で分けて解きます。そのとき、$\sin$ のかわりに\textbf{ベッセル関数}とよばれる関数が出てきます。\bkidx{べっせるかんすう}{ベッセル関数}この関数の性質は専門の本で学びます（この先の学び）。ここでは、結果の値だけを使います。固有振動数は
+\pheq{f=\frac{j\,c}{2\pi R}}{Hz}
+で、$j$ はベッセル関数が0になる所の値（表\ref{ph:波-6:tab-bessel}）です。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=13mm]}}, rowsep=1.2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+モード（節の直径・円） & (0,1) & (1,1) & (2,1) & (0,2) & (3,1) & (1,2) \\
+$j$ & 2.405 & 3.832 & 5.136 & 5.520 & 6.380 & 7.016 \\
+基本との比 & 1 & 1.59 & 2.14 & 2.30 & 2.65 & 2.92 \\
+\end{bktable}
+\bktabcaption{円い膜の固有振動数を決める数 $j$（ベッセル関数の零点。SciPy で計算）。モードの記号の1つめは節になる直径の数、2つめは節になる円の数（ふちもふくむ）。}\label{ph:波-6:tab-bessel}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\lab in {0/{(0,1)},1/{(1,1)},2/{(2,1)},3/{(0,2)}} {%
+    \begin{scope}[shift={(\i*30,0)}]
+    \fill[bkBlue!25] (0,0) circle (11);
+    \draw[bkInk, line width=0.8pt] (0,0) circle (11);
+    \node[font=\sffamily\footnotesize, anchor=north] at (0,-12.5) {\lab};
+    \end{scope}}
+  \begin{scope}[shift={(30,0)}]
+    \fill[bkOrange!35] (0,0) -- (0,11) arc (90:270:11) -- cycle;
+    \draw[bkRed!80!black, line width=0.9pt, dashed] (0,-11) -- (0,11);
+  \end{scope}
+  \begin{scope}[shift={(60,0)}]
+    \fill[bkOrange!35] (0,0) -- (45:11) arc (45:135:11) -- cycle;
+    \fill[bkOrange!35] (0,0) -- (225:11) arc (225:315:11) -- cycle;
+    \draw[bkRed!80!black, line width=0.9pt, dashed] (45:11) -- (225:11) (135:11) -- (315:11);
+  \end{scope}
+  \begin{scope}[shift={(90,0)}]
+    \fill[bkOrange!35] (0,0) circle (11);
+    \fill[bkBlue!25] (0,0) circle (4.8);
+    \draw[bkInk, line width=0.8pt] (0,0) circle (11);
+    \draw[bkRed!80!black, line width=0.9pt, dashed] (0,0) circle (4.8);
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{円い膜のモード。破線は節の線で、破線をはさんだとなりの部分（色の濃さが違う）は、いつも反対向きに動く。}\label{ph:波-6:fig-maku}
+\end{bkfigure}
+
+\noindent 円い膜の倍音は、1.59倍・2.14倍・2.30倍…で、整数倍になりません（\bkreidairef{9}）。弦や管の音が「ド」「ラ」のように高さのはっきりした音に聞こえるのは、倍音が整数倍に並んでいるからでした。太鼓の音の高さがはっきりしないのは、このためです。ただし、オーケストラのティンパニは、膜の上下の空気が膜といっしょに動く効果（空気の重さ）で、いくつかの倍音が整数倍に近づくように作られていて、音の高さがわかります。
+
+\bksubsection{8}{部屋と電子レンジの定在波}
+\label{ph:波-6:sec8}
+部屋の中の空気も、かべ・床・天井ではね返る音の定在波をもちます。かべの所では空気がかべの中へ動けないので、ずれの節（圧力の変化の腹）です。長さ $L$ の向きの定在波は、両はしが閉じた管と同じ形（どちらのはしもずれの節）で、振動数の式は開管と同じ $f=nc/(2L)$ です。たて・横・高さが $L_x$・$L_y$・$L_z$ の部屋では、膜の式を3つの向きに広げて、
+\pheq{f=\frac{c}{2}\sqrt{\Bigl(\frac{n_x}{L_x}\Bigr)^2+\Bigl(\frac{n_y}{L_y}\Bigr)^2+\Bigl(\frac{n_z}{L_z}\Bigr)^2}}{Hz}
+です（$n_x$・$n_y$・$n_z$ は0以上の整数。全部0は除く）。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{8}{Q[c,m,wd=10.2mm]}}, rowsep=1.2pt, colsep=2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+$(n_x,\ n_y,\ n_z)$ & (1,0,0) & (0,1,0) & (0,0,1) & (1,1,0) & (1,0,1) & (2,0,0) & (0,1,1) & (1,1,1) \\
+$f$〔Hz〕 & 43 & 57 & 69 & 72 & 81 & 86 & 89 & 99 \\
+\end{bktable}
+\bktabcaption{たて\qty{4}{m}・横\qty{3}{m}・高さ\qty{2.5}{m}の部屋の、低いほうから8つの定在波（$c=\qty{343}{m/s}$）。}\label{ph:波-6:tab-heya}
+\end{bkcenter}
+低い音では、定在波の振動数がまばらにしかありません。その振動数の音だけが強く響き、ほかは響かないので、低音が「ボンボン」とこもって聞こえます。小さな部屋（カラオケの部屋や車の中）ほど、まばらな所が高い音まで続きます（\bkreidairef{10}）。部屋のどこにいるかでも、低音の大きさが変わります（腹の所で大きく、節の所で小さい）。
+
+\phboxhead{電子レンジの中の電波}
+電子レンジは、振動数\qty{2.45}{GHz}（毎秒24億5千万回）の電波で食べ物を温めます。電波（電磁波）も、金属のかべではね返り、中に定在波ができます（電磁波の式は物理シリーズの『電磁気学』（電-15））。光の速さ $c=\qty{3.00e8}{m/s}$ で、波長は $\lambda=c/f\approx\qty{12.2}{cm}$、腹と腹の間は約\qty{6.1}{cm}です。皿を回さずに板チョコを温めると、約\qty{6}{cm}おきにとけた所ができます。逆に、とけた所の間かくをはかれば、光の速さが求まります（\bkreidairef{11}）。
+
+\bksubsection{9}{はりの曲げ振動}
+\label{ph:波-6:sec9}\bkidx{はりのまげしんどう}{はりの曲げ振動}%
+鉄琴の板、配管、橋、ビルの床のように、曲がってゆれる物（はり）の振動を調べます。力-10 で、はりのたわみが $EI\,\dd^4y/\dd x^4=w$（$w$ は 1 m あたりの荷重、$y$ は下向きが正）で決まることを学びました（力-10 ⑧）。
+
+\phboxhead{慣性の項を加える}
+ゆれているはりの小さな部分（長さ $\Delta x$、質量 $\rho S\,\Delta x$。$S$ は断面積）は、下向きに加速度 $\partial^2y/\partial t^2$ で動いています。運動方程式「質量×加速度＝力」を、「力$-$質量×加速度＝0」と書くと、$-\rho S\,\partial^2y/\partial t^2$ を「1 m あたりの荷重」とみなして、つり合いの式に入れられます（力-2 の慣性力と同じ考え）。重さの荷重はつり合いの位置をずらすだけなので除くと、
+\pheq{EI\,\frac{\partial^4y}{\partial x^4}+\rho S\,\frac{\partial^2y}{\partial t^2}=0}{N/m}
+となります。力-10 の終わりで「はりの振動は、$EI\,\partial^4y/\partial x^4$ に慣性の項が加わった式で学ぶ」と約束したのは、この式です。弦の波動方程式は $x$ で2回微分でしたが、はりは4回微分です。曲げモーメントは曲がり方（2回微分）で決まり、部分を押しもどす力は、その曲げモーメントの変わり方の変わり方（さらに2回微分）で決まるからです。
+
+\phboxhead{分けて解く}
+$y=Y(x)\cos\omega t$ とおくと、$\partial^2y/\partial t^2=-\omega^2y$ なので、
+\[EI\,Y''''=\rho S\omega^2\,Y\qquad\text{つまり}\qquad Y''''=\beta^4Y,\qquad\beta^4=\frac{\rho S\omega^2}{EI}\]
+です。4回微分すると、もとの $\beta^4$ 倍になる関数は、$\sin\beta x$、$\cos\beta x$（4回微分で $(-1)^2=1$ 倍）と、$\sinh\beta x$、$\cosh\beta x$（6-11）の4つです。だから
+\[Y=C_1\cos\beta x+C_2\cosh\beta x+C_3\sin\beta x+C_4\sinh\beta x\]
+で、4つの定数を、両はしで2つずつの条件で決めます。そのうえで、
+\pheq{\omega=\beta^2\sqrt{\frac{EI}{\rho S}},\qquad f=\frac{(\beta L)^2}{2\pi L^2}\sqrt{\frac{EI}{\rho S}}}{Hz ＝ $\dfrac{1}{\text{m}^2}\sqrt{\dfrac{\text{N·m}^2}{\text{kg/m}}}$}
+です。
+
+\phboxhead{両はしを単純に支えたはり}
+両はしを、ピンとローラーで支えたはり（力-10 の本棚の板・配管）では、はしでたわみ $Y=0$、曲げモーメント0（$Y''=0$）です。$Y=\sin(n\pi x/L)$ がこの4つの条件を全部みたすので、$\beta L=n\pi$ で、
+\pheq{f_n=\frac{n^2\pi}{2L^2}\sqrt{\frac{EI}{\rho S}}}{Hz}
+です。弦の $f_n\propto n$ と違い、$f_n\propto n^2$ で、2番めは基本の4倍、3番めは9倍です。また、長さの2乗に反比例します（\bkreidairef{13}）。
+
+\begin{phbaisuru}{はりの長さ $L$}
+はりの固有振動数は $1/L^2$ に比例するので、$\dfrac14$ になります。弦なら $\dfrac12$ でした。はりは、長くすると、ずっとゆれやすく（振動数が低く）なります。
+\end{phbaisuru}
+
+\phboxhead{両はしが自由なはり：$\cos\beta L\cosh\beta L=1$}
+鉄琴の板は、ひもで軽くつってあるだけで、両はしは自由です。自由なはしでは、曲げモーメントもせん断力もはたらかないので、$Y''=0$、$Y'''=0$ です（力-10 ⑥の $M$ と $Q$）。$x=0$ の2つの条件から、$C_2=C_1$、$C_4=C_3$ となるので、
+\[Y=C_1(\cos\beta x+\cosh\beta x)+C_3(\sin\beta x+\sinh\beta x)\]
+です。$x=L$ の2つの条件を書くと（$\beta L$ を $b$ と書く）、
+\begin{bkhenkei}[0.52]
+C_1(\cosh b-\cos b)+C_3(\sinh b-\sin b)=0 & $Y''(L)=0$ \\
+C_1(\sinh b+\sin b)+C_3(\cosh b-\cos b)=0 & $Y'''(L)=0$ \\
+\end{bkhenkei}
+$C_1$・$C_3$ が両方0（はりが動かない）でない答えがあるのは、この連立方程式の係数の行列式が0のときです（7-4。座屈の力-11 ⑨で「0でない答え」を探したのと同じ）。
+\begin{bkhenkei}[0.66]
+(\cosh b-\cos b)^2-(\sinh b-\sin b)(\sinh b+\sin b)=0 & 行列式＝0 \\
+(\cosh^2b-\sinh^2b)+(\cos^2b+\sin^2b)-2\cosh b\cos b=0 & 展開して並べかえる \\
+2-2\cosh b\cos b=0 & 6-11 と三平方（4-8） \\
+\end{bkhenkei}
+\pheq{\cos\beta L\,\cosh\beta L=1}{1}
+が、両はし自由のはりの振動数を決める式です。これは、$\cos x=1/\cosh x$ の解を探すことと同じです（図\ref{ph:波-6:fig-coscosh}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=44mm, xmin=0, xmax=12.3, ymin=-1.15, ymax=1.2, xtick={3.1416,4.73,6.2832,7.853,9.4248,10.996}, xticklabels={$\pi$,4.73,$2\pi$,7.85,$3\pi$,11.00}, ytick={-1,1}, xlabel={$x$}, axis x line*=bottom]
+  \draw[bkInk, line width=0.5pt] (axis cs:0,0) -- (axis cs:12.3,0);
+  \addplot[bkcurve, domain=0:12, samples=200] {cos(deg(x))};
+  \addplot[bkcurve2, dash pattern=on 5pt off 2pt, domain=0:12, samples=200] {1/cosh(x)};
+  \fill[bkRed] (axis cs:4.73,0.0177) circle (2pt) (axis cs:7.853,0.00077) circle (2pt) (axis cs:10.996,0.00003) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.9,0.62) {$1/\cosh x$};
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (axis cs:2.9,-0.55) {$\cos x$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$\cos x$（実線）と $1/\cosh x$（破線）。$1/\cosh x$ はすぐに0に近づくので、交わる所（●）は、$\cos x=0$ の所（$\tfrac32\pi$、$\tfrac52\pi$、…）にどんどん近づく。$x=0$ の交わりは、はりが動かない場合なので除く。}\label{ph:波-6:fig-coscosh}
+\end{bkfigure}
+
+\phboxhead{はさんで調べる（2-13⑤）}
+この式は、式の変形では解けません。2-13⑤の「代入を繰り返して、はさんで調べる」方法（はさみうち）で、数として求めます。$g(x)=\cos x\cosh x-1$ とおくと、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=12mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm] Q[c,m,wd=20mm] Q[c,m,wd=22mm]}, rowsep=1pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+回 & 下の端 & 上の端 & まん中 & $g$（まん中） \\
+1 & 4.5 & 5.0 & 4.75 & $+1.17$ \\
+2 & 4.5 & 4.75 & 4.625 & $-5.45$ \\
+3 & 4.625 & 4.75 & 4.6875 & $-2.35$ \\
+4 & 4.6875 & 4.75 & 4.71875 & $-0.64$ \\
+5 & 4.71875 & 4.75 & 4.734375 & $+0.25$ \\
+6 & 4.71875 & 4.734375 & 4.7265625 & $-0.20$ \\
+\end{bktable}
+\bktabcaption{$g(x)=\cos x\cosh x-1$ のはさみうち（$g(4.5)<0$、$g(5.0)>0$ から始める）。まん中の $g$ と同じ符号の端を、まん中に取りかえる。1回ではさむ幅が半分になり、10回で約1000分の1になる。}\label{ph:波-6:tab-hasami}
+\end{bkcenter}
+繰り返すと、$\beta_1L=4.7300$ に近づきます。同じように、$\beta_2L=7.8532$、$\beta_3L=10.9956$ です。振動数の比は $(\beta_nL)^2$ の比なので、
+\[f_1:f_2:f_3=4.730^2:7.853^2:10.996^2=1:2.76:5.40\]
+で、整数倍ではありません（\bkreidairef{12}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=40mm, xmin=0, xmax=1.08, ymin=-2.3, ymax=2.3, xtick={0.2245,0.5,0.776,1}, xticklabels={0.224,0.5,0.776,1}, ytick=\empty, axis x line*=bottom, axis y line=none, xlabel={$x/L$}]
+  \draw[bkInk, line width=0.5pt] (axis cs:0,0) -- (axis cs:1.05,0);
+  \addplot[bkcurve, domain=0:1, samples=120] {cos(deg(4.73004*x))+cosh(4.73004*x)-0.982502*(sin(deg(4.73004*x))+sinh(4.73004*x))};
+  \addplot[bkcurve2, dash pattern=on 4pt off 1.5pt, domain=0:1, samples=120] {cos(deg(7.8532*x))+cosh(7.8532*x)-1.000777*(sin(deg(7.8532*x))+sinh(7.8532*x))};
+  \fill[bkRed] (axis cs:0.2245,0) circle (2pt) (axis cs:0.776,0) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:0.36,-1.3) {1番め（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.55,1.25) {2番め（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{両はしが自由なはりのモードの形。1番めの節（●）は、両はしから長さの約22\,\%の所。鉄琴の板は、ここをひもや台で支えると、ゆれをじゃませずに長く鳴る。}\label{ph:波-6:fig-harimode}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] Q[c,m,wd=34mm] Q[c,m,wd=34mm]}, rowsep=1.2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+はしの支え方 & 振動数を決める式 & $\beta_1L$・$\beta_2L$ \\
+両はし単純支持 & $\sin\beta L=0$ & $\pi$・$2\pi$ \\
+両はし自由 & $\cos\beta L\cosh\beta L=1$ & 4.730・7.853 \\
+片持ち（一方を固定） & $\cos\beta L\cosh\beta L=-1$ & 1.875・4.694 \\
+\end{bktable}
+\bktabcaption{はりのはしの支え方と $\beta L$。振動数は、この $\beta L$ を⑨の $f$ の式に入れて求める。}\label{ph:波-6:tab-hari}
+\end{bkcenter}
+
+\begin{phflow}[はりの曲げ振動]
+\phflowrow{$EI\dfrac{\partial^4y}{\partial x^4}+\rho S\dfrac{\partial^2y}{\partial t^2}=0$}{両はし単純支持\\$Y=Y''=0$}{$f_n=\dfrac{n^2\pi}{2L^2}\sqrt{\dfrac{EI}{\rho S}}$}
+\phflowrow{$EI\dfrac{\partial^4y}{\partial x^4}+\rho S\dfrac{\partial^2y}{\partial t^2}=0$}{両はし自由\\$Y''=Y'''=0$}{$\cos\beta L\cosh\beta L=1$\\$\beta_1L=4.730$}
+\end{phflow}
+
+\begin{phmodel}[はりの曲げ振動]
+\phignore{はりがせん断でゆがむこと。断面が回転する重さ（回転の慣性）。空気と支えのまさつ。}
+\phassume{細長いはり（長さが高さの10倍以上）。断面は平らなまま（力-10）。ゆれは小さい。}
+\phlimit{短く太いはりや、高いモード（波長がはりの高さと同じくらい）：振動数は、この式より低くなる（専門の本のチモシェンコばり）。}
+\end{phmodel}
+
+\begin{seikaku}
+はりの式に、正弦波の形 $y=\cos(\omega t-kx)$ を入れてみましょう。すると $EIk^4=\rho S\omega^2$、つまり $\omega=k^2\sqrt{EI/(\rho S)}$ となります。波-5 ⑦の言い方では、これが曲げの波の分散関係です。位相速度 $\omega/k=k\sqrt{EI/(\rho S)}$ は波長が短いほど速く、群速度 $\dd\omega/\dd k$ はその2倍です。はりをたたいたとき、高い音（短い波）が先に届くのはこのためです。
+\end{seikaku}
+
+\bksubsection{10}{固有値問題として見る}
+\label{ph:波-6:sec10}
+弦・管・棒・膜・はりのどれでも、「運動方程式」と「はしの条件」から、とびとびの振動数と、それぞれの形（モード）が決まりました。このように、条件をみたす0でない答えがある特別な値を探す問題を、\textbf{固有値問題}といいます（力-11 ⑨、7-8）。\bkidx{こゆうちもんだい}{固有値問題}
+
+\phboxhead{おもりの列から弦へ}
+波-3 で、おもりが $N$ 個のときは、質量行列とこわさ行列の固有値問題から、$N$ 個のモードが出てきました。波-5 ⑦のばねとおもりの列で、両はしを止め、おもりを $N$ 個にすると、モードは $N$ 個で、$n$ 番めの角振動数は
+\[\omega_n=2\sqrt{\frac{k_{\mathrm s}}{m}}\,\sin\frac{n\pi}{2(N+1)}\]
+です。これを、同じ長さの弦の $\omega_n=n\pi c/L$ と比べると、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, rowsep=1.2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+ & $n=1$ & $n=2$ & $n=N$ \\
+$N=5$（列÷弦） & 0.989 & 0.955 & 0.738 \\
+$N=20$（列÷弦） & 0.999 & 0.996 & 0.667 \\
+\end{bktable}
+\bktabcaption{両はしを止めたおもりの列（$N$ 個）と、同じ長さで、線密度 $m/a$・張力 $k_{\mathrm s}a$ の弦の角振動数の比。低いモードは、$N$ を増やすほど弦に近づく。}\label{ph:波-6:tab-retsu}
+\end{bkcenter}
+低いモードは、おもりが5個でも弦とほぼ同じです。おもりを限りなく増やすと、モードは限りなく増えて、弦の $f_n=nc/(2L)$ になります。\textbf{連続した物の固有振動は、限りなく大きな行列の固有値問題}なのです。モードどうしが直交する（9-2③）
+\[\int_0^L\sin\frac{m\pi x}{L}\sin\frac{n\pi x}{L}\,\dd x=0\qquad(m\neq n)\]
+のも、7-8⑨の「対称な行列の固有ベクトルは直交する」と同じです。だから、複雑な構造のゆれも、モードに分けて1つずつ計算し、たし直せます（モード解析。波-3 ⑦）。
+
+\phboxhead{座屈とゆれ：押されたはりは、ゆれがおそくなる}
+両はしを単純に支えたはりを、軸の向きに力 $F$ で押すと、曲がったはりには、押す力が曲げをさらに大きくするようにはたらきます。力-11 ⑨の座屈の式の考えを加えると、運動方程式は
+\[EI\,\frac{\partial^4y}{\partial x^4}+F\,\frac{\partial^2y}{\partial x^2}+\rho S\,\frac{\partial^2y}{\partial t^2}=0\]
+です。$y=\sin(\pi x/L)\cos\omega t$ を入れると、
+\[EI\Bigl(\frac{\pi}{L}\Bigr)^4-F\Bigl(\frac{\pi}{L}\Bigr)^2-\rho S\omega^2=0\]
+なので、押さないときの角振動数を $\omega_0$、座屈荷重を $F_{\mathrm{cr}}=\pi^2EI/L^2$（力-11 ⑨）とすると、
+\pheq{\omega^2=\omega_0^{\,2}\Bigl(1-\frac{F}{F_{\mathrm{cr}}}\Bigr)}{rad$^2$/s$^2$}
+となります。押す力が座屈荷重に近づくと、振動数は0に近づき、$F=F_{\mathrm{cr}}$ では、はりは曲がったままもどってこなくなります。\textbf{座屈は「ゆれの振動数が0になること」}だったのです（\bkreidairef{14}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=42mm, xmin=-0.5, xmax=1.08, ymin=0, ymax=1.32, xtick={-0.5,0.5,0.75,1}, xticklabels={$-0.5$,0.5,0.75,1}, ytick={0.5,1,1.22}, yticklabels={0.5,1,1.22}, xlabel={$F/F_{\mathrm{cr}}$}, ylabel={$\omega/\omega_0$}]
+  \addplot[bkcurve, domain=-0.5:1, samples=200] {sqrt(1-x)};
+  \fill[bkRed] (axis cs:0.75,0.5) circle (1.8pt) (axis cs:-0.5,1.2247) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:0.55,0.62) {押す};
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (axis cs:-0.06,0.95) {引っぱる};
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:0.98,0.07) {座屈};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{軸の向きの力 $F$ と、はりの基本の角振動数（押すと正、引っぱると負）。座屈荷重の4分の3で押すと、振動数は半分になる。}\label{ph:波-6:fig-zakutsu}
+\end{bkfigure}
+
+\noindent 反対に、引っぱる（$F$ が負、つまり張力 $F_{\mathrm T}=-F$）と、振動数は上がります。曲げのこわさ $EI$ がとても小さい物では、
+\[\omega^2\approx\frac{F_{\mathrm T}}{\rho S}\Bigl(\frac{\pi}{L}\Bigr)^2=\Bigl(\frac{\pi c}{L}\Bigr)^2\qquad c=\sqrt{\frac{F_{\mathrm T}}{\mu}}\ \ (\mu=\rho S)\]
+となり、③の弦の基本振動数にもどります。弦は「曲げのこわさのない、引っぱったはり」なのです。ピアノの太い弦は、$EI$ が少し残っているので、高い倍音ほど整数倍より少し高くなります。
+
+\begin{phyomi}[$\omega^2=\omega_0^{\,2}(1-F/F_{\mathrm{cr}})$]
+「押す力は、もどそうとする力（こわさ）を減らす。引く力は増やす」。こわさが0になる所が座屈です。橋のケーブルや、ビルの柱のように、大きな力がかかった部材の振動数をはかると、その力がわかります（工学ではこう使う）。
+\end{phyomi}
+
+\begin{phmada}[名器のバイオリンの音は、何が違う？]
+300年ほど前にストラディヴァリやグァルネリが作ったバイオリンは、何億円もの値がつく名器として知られています。その秘密を、板の振動のモードの測定や、木やニスの分析から説明しようとする研究が、長く続けられてきました。ところが、2012年と2014年に、目かくしをして弾き比べる実験が行われると、一流の奏者たちも、名器と新しい良いバイオリンを確かに聞き分けることはできず、新しい楽器を好む人も多いという結果が出ました。楽器の「良い音」が、板のどんなゆれ方で決まり、人がそれをどう聞き分けているのかは、物理と心理の両方にまたがる問題で、まだわかっていません。
+\end{phmada}
+
+\begin{phsaki}{板の振動・量子の箱・コンピュータで解くモード}
+円い膜のベッセル関数や、板の振動（曲げの4階の式を2つの向きに広げた式）は、専門の本で学びます。物理シリーズの『原子』（原-5）では、箱の中に閉じこめられた電子が、この章の弦と同じ「定在波」になり、とびとびのエネルギーしかもてないことを学びます。形の複雑な機械や建物のモードは、有限要素法（力-16）で大きな行列の固有値問題にして、コンピュータで求めます（波-3 ⑦）。
+\end{phsaki}
+
+\begin{senmonsho}[振動工学の専門書の書き方]
+\begin{bkhonbun}
+連続体の自由振動は，境界条件のもとで固有値問題に帰着し，固有角振動数 $\omega_n$ と固有関数（固有モード）$\phi_n(x)$ の組が無限個得られる．固有関数は直交性 $\int_0^L\rho A\,\phi_m\phi_n\,\dd x=0\ (m\neq n)$ をもち，任意の応答は $w(x,t)=\sum_n\phi_n(x)q_n(t)$ とモード展開できる．
+\end{bkhonbun}
+\bkyaku{$w$ ははりのたわみ（この章の $y$）、$A$ は断面積（この章の $S$）。$\phi_n$（ファイ）は $n$ 番めのモードの形で、この章の $\sin(n\pi x/L)$ や $Y(x)$。$q_n(t)$ は、そのモードがどれだけゆれているかを表す時間の関数で、モード座標という。「自由振動」は、外から力を加えずにゆれること。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{反射}固定端は山が谷に、自由端は山のまま\\[3pt]
+\tsl{定在波}節の間は $\dfrac{\lambda}{2}$。固定端は節、自由端は腹\\[3pt]
+\tsl{弦・開管}$f_n=\dfrac{nc}{2L}$（弦は $c=\sqrt{F_{\mathrm T}/\mu}$）\\[3pt]
+\tsl{閉管}$f_n=\dfrac{(2n-1)c}{4L}$。開口端補正は口の半径の約0.6倍\\[3pt]
+\tsl{はじいた弦}$y=\sum b_n\sin\dfrac{n\pi x}{L}\cos\dfrac{n\pi ct}{L}$。節ではじいたモードは出ない\\[3pt]
+\tsl{膜・部屋}倍音は整数倍にならない。円い膜は $f=\dfrac{jc}{2\pi R}$\\[3pt]
+\tsl{はり}$EI\dfrac{\partial^4y}{\partial x^4}+\rho S\dfrac{\partial^2y}{\partial t^2}=0$。$f=\dfrac{(\beta L)^2}{2\pi L^2}\sqrt{\dfrac{EI}{\rho S}}$\\[3pt]
+\tsl{押されたはり}$\omega^2=\omega_0^{\,2}(1-F/F_{\mathrm{cr}})$。座屈で振動数0
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{$f_n$}{エフ・エヌ}{$n$ 番めの固有振動数〔Hz〕（$n$ はモードの番号）。波-1 の固有角振動数 $\omega_{\mathrm n}$（立体の n）とは別}{$n$-th natural frequency}{波-6}}
+{\bkkigocard{$\beta$}{ベータ}{はりの曲げ振動の定数〔1/m〕。$\beta^4=\rho S\omega^2/(EI)$。曲げの波の波数にあたる}{beam wavenumber}{波-6}}
+\bkkigocards{\bkkigocard{$F_{\mathrm s}$}{エフ・エス}{膜の張力（膜を1 m の線で切ったとき、その線をはさんで引き合う力）〔N/m〕}{membrane tension}{波-6}}
+{\bkkigocard{$\sigma$}{シグマ}{膜の面密度（1 m$^2$ あたりの質量）〔kg/m$^2$〕。応力の $\sigma$（力-8）とは別の量}{areal density}{波-6}}
+
+\begin{kotoba}
+\small
+\bkword{固定端・自由端}{はしが止められている所と、自由に動ける所。固定端では、ずれが逆向きになって反射する。}
+\bkword{定在波・進行波}{その場でゆれて進まない波と、進んでいく波。反対向きの2つの進行波を重ねると定在波になる。}
+\bkword{腹・節}{定在波でいちばん大きくゆれる所と、まったく動かない所。}
+\bkword{固有振動数}{はしの条件で決まる、とびとびの振動数。いちばん低いものが基本振動数。}
+\bkword{開口端補正}{管の開いた口の外にはみ出す腹の位置のずれ。口の半径の約0.6倍。}
+\bkword{共鳴}{ゆらす振動数が固有振動数に合ったとき、大きくゆれること。}
+\bkword{振動モード}{固有振動のときのゆれの形。どんなゆれも、モードの重ね合わせで書ける。}
+\bkword{固有値問題}{条件をみたす0でない答えがある、特別な値（固有値）を探す問題。}
+\end{kotoba}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-6:ex1}
+\begin{phreidai}[ギターのフレット]
+ギターの A弦は、長さ\qty{0.65}{m}で、何もおさえないと\qty{110}{Hz}で鳴ります。（1）12番めのフレット（弦のまん中）をおさえたときの振動数を求めましょう。（2）1番めのフレットは、半音（振動数 $2^{1/12}$ 倍）上げる所です。ナットから何 mm の所にありますか。そのときの振動数も求めましょう。表\ref{ph:波-6:tab-fret}と比べるので、小数第1位まで書きます。
+\phbamen
+弦をおさえて、ゆれる部分の長さを変え、音の高さを変える場面です（はてな？）。
+\phmushi
+おさえても張力は変わらないとし、弦の曲げのこわさを無視します。
+\phzu
+ゆれる長さ $L'$、波の速さ $c=2\times0.65\times110=\qty{143}{m/s}$（9-1⑨）、基本振動数 $f_1=c/(2L')$。
+\phriyu
+両はしが固定端の弦の基本振動数は $f_1=c/(2L)$（③）。$c$ は変わらないので、$f_1$ は $L'$ に反比例します。
+\phtateru
+\[f_1'=f_1\times\frac{L}{L'},\qquad L'=L\times2^{-1/12}\ \text{（1番め）}\]
+\phtoku
+（1）$L'=\qty{0.325}{m}$ なので、$f_1'=110\times2=\qty{220}{Hz}$。\\
+（2）\[L'=650\times2^{-1/12}=650\times0.94387\approx\qty{613.5}{mm}\]
+ナットからの距離は、$650-613.5=\qty{36.5}{mm}$ です。振動数は、
+\[110\times2^{1/12}=110\times1.0595\approx\qty{116.5}{Hz}\]
+\phtashikame
+（1）は1オクターブ上で、やってみようの輪ゴムと同じです。（2）の\qty{36.5}{mm}は、実際のギターの1番めのフレットの位置とよく合います。弦の長さの約18分の1です。
+\kotae （1）\qty{220}{Hz}（2）ナットから約\qty{36.5}{mm}、約\qty{116.5}{Hz}
+\end{phreidai}
+\begin{jibun}
+例題1のギターの7番めのフレット（7半音上げる所）は、ナットから何 mm の所にありますか。そのときの A弦の振動数も求めましょう。
+\bkjans{$650\times(1-2^{-7/12})\approx\qty{216}{mm}$。$110\times2^{7/12}\approx\qty{165}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex2}
+\begin{phreidai}[開管と閉管の音の高さ]
+長さ\qty{0.50}{m}の管で、（1）両はしが開いているとき、（2）一方のはしを閉じたとき、の基本振動数を求めましょう。（3）閉管の、2番めに低い固有振動数はいくらですか。音の速さは\qty{343}{m/s}、開口端補正は無視します。答えは3けたで書きます。
+\phbamen
+同じ管で、はしを閉じるかどうかで音の高さが変わることを確かめる場面です（④）。
+\phmushi
+開口端補正と、管のかべのゆれを無視します。
+\phzu
+$L=\qty{0.50}{m}$、$c=\qty{343}{m/s}$。開いたはしはずれの腹、閉じたはしは節。
+\phriyu
+開管は半波長の整数倍、閉管は $\lambda/4$ の奇数倍が入る（④）。
+\phtateru
+\[\text{開管}\ f_n=\frac{nc}{2L},\qquad\text{閉管}\ f_n=\frac{(2n-1)c}{4L}\]
+\phtoku
+（1）$f_1=343\div(2\times0.50)=\qty{343}{Hz}$\\
+（2）$f_1=343\div(4\times0.50)\approx\qty{172}{Hz}$\\
+（3）$n=2$ で $3\times343\div2.0\approx\qty{515}{Hz}$（基本の3倍）
+\phtashikame
+閉管の基本は開管の半分で、1オクターブ低い音です。閉管には基本の2倍（\qty{343}{Hz}）の振動がありません。
+\kotae （1）\qty{343}{Hz}（2）約\qty{172}{Hz}（3）約\qty{515}{Hz}
+\end{phreidai}
+\begin{jibun}
+フルートを、長さ\qty{0.60}{m}の開管と考えます。基本振動数と、2番めに低い固有振動数を求めましょう（\qty{343}{m/s}、開口端補正は無視）。
+\bkjans{$343\div1.2\approx\qty{286}{Hz}$、$2\times286\approx\qty{572}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex3}
+\begin{phreidai}[ペットボトルの笛]
+細長いペットボトルの口を吹くと、中の空気の柱（長さ\qty{0.20}{m}）が閉管として鳴ります。（1）開口端補正を無視したときと、（2）口の半径\qty{1.0}{cm}の開口端補正（$0.6r$）を入れたときの、基本振動数を求めましょう（\qty{343}{m/s}）。補正による小さな違いを見るので、3けたで書きます。
+\phbamen
+身近な物で閉管の音を鳴らす場面です（④）。
+\phmushi
+ボトルの肩や口の細くなった形を無視し、太さが一様な管とみなします。
+\phzu
+$L=\qty{0.20}{m}$、$r=\qty{0.010}{m}$、補正 $\Delta=0.6r=\qty{0.006}{m}$。
+\phriyu
+底が閉じたはし、口が開いたはしの閉管です（④）。開口端補正は、口の側の長さに足します。
+\phtateru
+\[f_1=\frac{c}{4L},\qquad f_1'=\frac{c}{4(L+\Delta)}\]
+\phtoku
+（1）$343\div(4\times0.20)\approx\qty{429}{Hz}$\\
+（2）$343\div(4\times0.206)\approx\qty{416}{Hz}$
+\phtashikame
+補正で約3\,\% 低くなりました。半音（約6\,\%）より小さいずれですが、楽器を作るときは無視できません。
+\kotae （1）約\qty{429}{Hz}（2）約\qty{416}{Hz}
+\end{phreidai}
+\begin{jibun}
+例題3のボトルに水を入れて、空気の柱を\qty{0.15}{m}にしました。開口端補正を入れた基本振動数を求めましょう。
+\bkjans{$343\div(4\times0.156)\approx\qty{550}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex4}
+\begin{phreidai}[気柱の共鳴で音の速さをはかる]
+\qty{440}{Hz}の音さを管の口で鳴らしながら、水面を下げていくと、口から水面までの長さが\qty{0.18}{m}と\qty{0.57}{m}のときに共鳴しました。音の速さと、開口端補正を求めましょう。音の速さは3けたで書きます。
+\phbamen
+学校の実験で、気柱の共鳴から音の速さを求める場面です（④）。
+\phmushi
+管の太さは一様で、水面は完全な閉じたはしとします。
+\phzu
+$f=\qty{440}{Hz}$、$L_1=\qty{0.18}{m}$、$L_2=\qty{0.57}{m}$、開口端補正 $\Delta$。
+\phriyu
+1回めは $L_1+\Delta=\lambda/4$、2回めは $L_2+\Delta=3\lambda/4$。引くと $\Delta$ が消えます（④）。
+\phtateru
+\[L_2-L_1=\frac{\lambda}{2},\qquad c=f\lambda,\qquad\Delta=\frac{\lambda}{4}-L_1\]
+\phtoku
+\[\lambda=2\times(0.57-0.18)=\qty{0.78}{m},\qquad c=440\times0.78\approx\qty{343}{m/s}\]
+$\Delta=0.78\div4-0.18=0.195-0.18=\qty{0.015}{m}$
+\phtashikame
+$c=\qty{343}{m/s}$ は\qty{20}{\celsius}の音の速さ（熱-4 ⑥）と合います。$\Delta=\qty{1.5}{cm}$ は、半径約\qty{2.5}{cm}の管の0.6倍にあたり、ありそうな大きさです。
+\kotae 音の速さ約\qty{343}{m/s}、開口端補正約\qty{1.5}{cm}
+\end{phreidai}
+\begin{jibun}
+\qty{500}{Hz}の音さで、$L_1=\qty{0.16}{m}$、$L_2=\qty{0.50}{m}$ で共鳴しました。音の速さと開口端補正を求めましょう。
+\bkjans{$\lambda=2\times0.34=\qty{0.68}{m}$、$c=500\times0.68=\qty{340}{m/s}$、$\Delta=0.17-0.16=\qty{0.01}{m}$}
+\end{jibun}
+
+\label{ph:波-6:ex5}
+\begin{phreidai}[弦の張力と音の高さ]
+ギターの A弦（長さ\qty{0.65}{m}、線密度\qty{6.3}{g/m}）を、張力\qty{129}{N}で張っています。（1）基本振動数を求めましょう。（2）半音（振動数 $2^{1/12}$ 倍）上げるには、張力を何 N にすればよいですか。答えは3けたで書きます。
+\phbamen
+糸巻きを回して張力を変え、弦の音の高さを合わせる場面です（③）。
+\phmushi
+張力を変えても、弦の長さと線密度は変わらないとします。
+\phzu
+$L=\qty{0.65}{m}$、$\mu=\qty{0.0063}{kg/m}$、$F_{\mathrm T}=\qty{129}{N}$。
+\phriyu
+弦の基本振動数の式（③）。振動数は張力の平方根に比例します。
+\phtateru
+\[f_1=\frac{1}{2L}\sqrt{\frac{F_{\mathrm T}}{\mu}},\qquad\frac{F_{\mathrm T}'}{F_{\mathrm T}}=\Bigl(\frac{f'}{f_1}\Bigr)^2=2^{1/6}\]
+\phtoku
+（1）\[f_1=\frac{1}{1.30}\sqrt{\frac{129}{0.0063}}=\frac{143.1}{1.30}\approx\qty{110}{Hz}\]
+（2）\[F_{\mathrm T}'=129\times2^{1/6}=129\times1.1225\approx\qty{145}{N}\]
+\phtashikame
+半音上げるのに、張力を約12\,\%（約\qty{16}{N}）も増やします。振動数の変化の割合（約6\,\%）の約2倍で、波-5 例題7 と同じ関係です。
+\kotae （1）約\qty{110}{Hz}（2）約\qty{145}{N}
+\end{phreidai}
+\begin{jibun}
+例題5の弦の張力を2倍にすると、基本振動数はいくらになりますか。
+\bkjans{$110\times\sqrt2\approx\qty{156}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex6}
+\begin{phreidai}[鳴る金属の棒]
+長さ\qty{1.0}{m}の鋼の棒（$E=\qty{205}{GPa}$、$\rho=\qty{7850}{kg/m^3}$）のまん中をつまみ、棒にそってこすって鳴らします。（1）鳴る音の振動数（縦振動の基本）を求めましょう。（2）一方のはしを万力で固定したら、基本振動数はいくらになりますか。
+\phbamen
+棒の縦波の定在波を鳴らす場面です（⑥）。
+\phmushi
+棒の太さによる効果（横へのふくらみ）を無視し、細い棒とします。つまむ指の影響を無視します。
+\phzu
+$c=\sqrt{E/\rho}\approx\qty{5110}{m/s}$（波-5 ⑤）、$L=\qty{1.0}{m}$。
+\phriyu
+両はし自由はずれの腹が両はしの、開管と同じ形（⑥）。片はし固定は閉管と同じ形です。
+\phtateru
+\[f_1=\frac{c}{2L}\quad\text{（両はし自由）},\qquad f_1=\frac{c}{4L}\quad\text{（片はし固定）}\]
+\phtoku
+（1）$5110\div2\approx\qty{2560}{Hz}$（約\qty{2.6}{kHz}）\\
+（2）$5110\div4\approx\qty{1280}{Hz}$（約\qty{1.3}{kHz}）
+\phtashikame
+空気の管なら\qty{1}{m}で数百 Hz ですが、鋼の棒は波が約15倍速いので、高い音になります。（1）では、まん中が節なので、つまんでも音は止まりません。
+\kotae （1）約\qty{2.6}{kHz}（2）約\qty{1.3}{kHz}
+\end{phreidai}
+\begin{jibun}
+長さ\qty{0.50}{m}のアルミニウム合金の棒（$c\approx\qty{5060}{m/s}$）の、両はし自由の縦振動の基本振動数を求めましょう。
+\bkjans{$5060\div(2\times0.50)\approx\qty{5.1}{kHz}$}
+\end{jibun}
+
+\label{ph:波-6:ex7}
+\begin{phreidai}[まん中ではじいた弦の倍音]
+長さ $L$ の弦のまん中を、高さ\qty{5}{mm}つまんではなしました。1番め・3番め・5番めのモードの振幅を求めましょう。2番めのモードはどうなりますか。$b_1$ は3けたで書きます。
+\phbamen
+はじいた弦の音に、どの倍音がどれだけ入っているかを調べる場面です（⑤）。
+\phmushi
+弦の曲げのこわさと、ゆれの弱まりを無視します。はじめは止まっているとします。
+\phzu
+$h=\qty{5}{mm}$、$p=1/2$。$n$ 番めのモードの振幅 $b_n$。
+\phriyu
+はじめの三角形の形を、半区間の展開で $\sin(n\pi x/L)$ の和に分けた係数（⑤・9-2⑩）。
+\phtateru
+\[|b_n|=\frac{8h}{n^2\pi^2}\quad(n\ \text{が奇数}),\qquad b_n=0\quad(n\ \text{が偶数})\]
+\phtoku
+\[|b_1|=\frac{8\times5}{9.87}\approx\qty{4.05}{mm}\]
+\[|b_3|=\frac{4.05}{9}\approx\qty{0.45}{mm},\qquad|b_5|=\frac{4.05}{25}\approx\qty{0.16}{mm}\]
+2番めは、まん中が節なので0（生まれない）。
+\phtashikame
+$b_1$ は $h$ より少し小さい（三角形を1つの $\sin$ の山で近づけると、少し低くなる）。高い倍音ほど $1/n^2$ で小さくなるので、まん中ではじいた音は、やわらかい音になります。
+\kotae $b_1\approx\qty{4.05}{mm}$、$b_3\approx\qty{0.45}{mm}$、$b_5\approx\qty{0.16}{mm}$。偶数番は0
+\end{phreidai}
+\begin{jibun}
+弦のはしから $L/4$ の所を高さ\qty{5}{mm}つまんではなしました。生まれないモードはどれですか。1番めのモードの振幅も求めましょう。
+\bkjans{$\sin(n\pi/4)=0$ の $n=4,\ 8,\ \cdots$。1番めは、$2\times5\times\sin45°$ を $\pi^2\times\tfrac{3}{16}$ でわって、約\qty{3.8}{mm}}
+\end{jibun}
+
+\label{ph:波-6:ex8}
+\begin{phreidai}[ピックアップの位置と倍音]
+長さ\qty{0.65}{m}の弦の、ブリッジから\qty{0.13}{m}の所にピックアップがあります。（1）ピックアップが拾えないモードはどれですか。（2）1〜4番めのモードについて、ピックアップの位置でのゆれの大きさ（腹を1とした割合）を求めましょう。
+\phbamen
+エレキギターの音色が、ピックアップの位置で決まることを確かめる場面です（⑤）。
+\phmushi
+ピックアップは、真上の1点のゆれだけを拾うとします。
+\phzu
+ピックアップの位置 $x_{\mathrm p}=0.13=L/5$。$n$ 番めのモードの形 $\sin(n\pi x/L)$。
+\phriyu
+$n$ 番めのモードの、$x_{\mathrm p}$ でのゆれの大きさは $\sin(n\pi x_{\mathrm p}/L)$ に比例します（⑤）。
+\phtateru
+\[\sin\frac{n\pi}{5}\qquad(n=1,\ 2,\ 3,\ \cdots)\]
+\phtoku
+（1）$\sin(n\pi/5)=0$ になる $n=5,\ 10,\ \cdots$ は拾えない。\\
+（2）$\sin36°\approx0.59$、$\sin72°\approx0.95$、$\sin108°\approx0.95$、$\sin144°\approx0.59$。
+\phtashikame
+1番めより2・3番めのほうが大きく拾われます。ブリッジ近くのピックアップの音が、高い倍音の多いかたい音になる理由です。
+\kotae （1）5番め・10番め…（2）0.59、0.95、0.95、0.59
+\end{phreidai}
+\begin{jibun}
+ピックアップを、ブリッジから $L/8$ の所に置くと、拾えないのは何番めのモードですか。1番めのモードの割合も求めましょう。
+\bkjans{8番め・16番め…。$\sin(\pi/8)\approx0.38$}
+\end{jibun}
+
+\label{ph:波-6:ex9}
+\begin{phreidai}[太鼓の音の高さ]
+半径\qty{0.25}{m}の円い膜を、1 m あたり\qty{2000}{N/m}の張力で張りました。膜の面密度は\qty{0.25}{kg/m^2}です。（1）膜を伝わる波の速さを求めましょう。（2）いちばん低い固有振動数と、2番めのモード（1,1）の振動数を求めましょう。振動数は3けたで書きます。
+\phbamen
+太鼓の膜の固有振動数を求める場面です（⑦）。
+\phmushi
+膜の上下の空気の重さと、胴の中の空気のばねのはたらきを無視します。膜のこわさ（曲げにくさ）も無視します。
+\phzu
+$F_{\mathrm s}=\qty{2000}{N/m}$、$\sigma=\qty{0.25}{kg/m^2}$、$R=\qty{0.25}{m}$。表\ref{ph:波-6:tab-bessel}の $j=2.405$、3.832。
+\phriyu
+膜の波の速さ $c=\sqrt{F_{\mathrm s}/\sigma}$、円い膜の固有振動数 $f=jc/(2\pi R)$（⑦）。
+\phtateru
+\[c=\sqrt{\frac{F_{\mathrm s}}{\sigma}},\qquad f=\frac{jc}{2\pi R}\]
+\phtoku
+（1）$c=\sqrt{2000\div0.25}=\sqrt{8000}\approx\qty{89}{m/s}$\\
+（2）\[f_{01}=\frac{2.405\times89.4}{2\pi\times0.25}\approx\qty{137}{Hz},\qquad f_{11}=\frac{3.832\times89.4}{2\pi\times0.25}\approx\qty{218}{Hz}\]
+\phtashikame
+$218\div137\approx1.59$ で、表の比と合います。弦なら2番めは基本の2倍ですが、膜では1.59倍で、整数倍になりません。
+\kotae （1）約\qty{89}{m/s}（2）約\qty{137}{Hz}、約\qty{218}{Hz}
+\end{phreidai}
+\begin{jibun}
+ふちを止めた正方形の膜で、（1,2）のモードと（2,2）のモードの振動数は、いちばん低い（1,1）のモードの何倍ですか。
+\bkjans{$\sqrt{1+4}\div\sqrt{1+1}=\sqrt{2.5}\approx1.58$ 倍、$\sqrt8\div\sqrt2=2$ 倍}
+\end{jibun}
+
+\label{ph:波-6:ex10}
+\begin{phreidai}[部屋のこもる音]
+たて\qty{4}{m}・横\qty{3}{m}・高さ\qty{2.5}{m}の部屋で、いちばん低い3つの定在波の振動数を求めましょう（\qty{343}{m/s}）。
+\phbamen
+部屋の中で低い音がこもって聞こえるわけを調べる場面です（⑧）。
+\phmushi
+かべ・床・天井は音を全部はね返す（吸わない）とし、家具を無視します。
+\phzu
+$L_x=4$、$L_y=3$、$L_z=\qty{2.5}{m}$。$(n_x,\ n_y,\ n_z)$。
+\phriyu
+かべの所はずれの節なので、それぞれの向きは両はし閉じた管と同じ形。3つの向きを合わせた式（⑧）を使います。
+\phtateru
+\[f=\frac{c}{2}\sqrt{\Bigl(\frac{n_x}{L_x}\Bigr)^2+\Bigl(\frac{n_y}{L_y}\Bigr)^2+\Bigl(\frac{n_z}{L_z}\Bigr)^2}\]
+\phtoku
+(1,0,0)：$343\div8\approx\qty{43}{Hz}$、(0,1,0)：$343\div6\approx\qty{57}{Hz}$、(0,0,1)：$343\div5\approx\qty{69}{Hz}$
+\phtashikame
+次は (1,1,0) の約\qty{72}{Hz}です（表\ref{ph:波-6:tab-heya}）。100 Hz までに8つしかなく、その間の振動数の低音は響きにくいのです。
+\kotae \qty{43}{Hz}、\qty{57}{Hz}、\qty{69}{Hz}
+\end{phreidai}
+\begin{jibun}
+たて\qty{5}{m}の部屋で、たての向きだけの定在波の、低いほうから2つの振動数を求めましょう。
+\bkjans{$343\div10\approx\qty{34}{Hz}$、$343\div5\approx\qty{69}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex11}
+\begin{phreidai}[電子レンジで光の速さをはかる]
+（1）電子レンジの電波（\qty{2.45}{GHz}）の波長と、定在波の腹と腹の間かくを求めましょう（光の速さ $c=\qty{3.00e8}{m/s}$）。（2）皿を回さずに板チョコを温めたら、とけた所の間かくが\qty{6.0}{cm}でした。ここから光の速さを求めましょう。
+\phbamen
+電磁波の定在波を使って、光の速さを台所ではかる場面です（⑧）。
+\phmushi
+電子レンジの中の電波を、1つの向きの定在波とみなします（本当は3つの向きの定在波が重なっている）。
+\phzu
+$f=\qty{2.45e9}{Hz}$、腹の間かく $d=\lambda/2$。
+\phriyu
+定在波の腹と腹の間は $\lambda/2$（②）。$c=f\lambda$（波-5 ②）は電磁波でも成り立ちます。
+\phtateru
+\[\lambda=\frac{c}{f},\qquad d=\frac{\lambda}{2},\qquad c=2df\]
+\phtoku
+（1）\[\lambda=\frac{3.00\times10^8}{2.45\times10^9}\approx\qty{0.122}{m},\qquad d\approx\qty{6.1}{cm}\]
+（2）\[c=2\times0.060\times2.45\times10^9\approx\qty{2.9e8}{m/s}\]
+\phtashikame
+本当の値 $\qty{3.00e8}{m/s}$ と、約2\,\% の違いで合いました。間かくは1 mm 違うと約2\,\% 変わるので、ものさしで読める精度に合った結果です。
+\kotae （1）約\qty{12}{cm}、約\qty{6.1}{cm}（2）約\qty{2.9e8}{m/s}
+\end{phreidai}
+\begin{jibun}
+例題11で、とけた所の間かくが\qty{6.2}{cm}だったら、光の速さはいくらになりますか。
+\bkjans{$2\times0.062\times2.45\times10^9$ で、約\qty{3.0e8}{m/s}}
+\end{jibun}
+
+\label{ph:波-6:ex12}
+\begin{phreidai}[鉄琴の板の音]
+鉄琴の板を、厚さ\qty{6}{mm}・長さ\qty{0.20}{m}の鋼の板（$E=\qty{205}{GPa}$、$\rho=\qty{7850}{kg/m^3}$、両はし自由）とします。（1）基本振動数を求めましょう。（2）2番めのモードの振動数は、基本の何倍ですか。（3）板を支える位置は、はしから何 cm ですか。音の高さと比べるので、（1）（2）は3けたで書きます。
+\phbamen
+鉄琴の板（はり）の曲げ振動の音の高さを求める場面です（⑨）。
+\phmushi
+板を支えるひもの影響と、せん断のゆがみを無視します。板の幅は振動数に関係しません（$I$ も $S$ も幅に比例するので、$I/S$ に幅が入らない）。
+\phzu
+厚さ $H=\qty{0.006}{m}$（⑤のつまむ高さ $h$ と分けて、大文字で書く）、$L=\qty{0.20}{m}$。長方形の断面なら $I=bH^3/12$、$S=bH$（$b$ は幅）なので $I/S=H^2/12$。$\beta_1L=4.730$、$\beta_2L=7.853$（⑨）。
+\phriyu
+両はし自由のはりの振動数の式（⑨）に、$\beta_1L=4.730$ を入れます。
+\phtateru
+\[\sqrt{\frac{EI}{\rho S}}=\sqrt{\frac{E}{\rho}}\times\frac{H}{\sqrt{12}},\qquad f_1=\frac{4.730^2}{2\pi L^2}\sqrt{\frac{EI}{\rho S}}\]
+\phtoku
+（1）\[\sqrt{\frac{EI}{\rho S}}=5110\times\frac{0.006}{3.464}\approx\qty{8.85}{m^2/s}\]
+\[f_1=\frac{22.37}{2\pi\times0.04}\times8.85\approx\qty{788}{Hz}\]
+（2）$(7.853\div4.730)^2\approx2.76$ 倍（約\qty{2170}{Hz}）\\
+（3）節は両はしから長さの22.4\,\%：$0.224\times20\approx\qty{4.5}{cm}$
+\phtashikame
+\qty{788}{Hz}は、高いソの音（約\qty{784}{Hz}）に近く、鉄琴の音の高さとして、ありそうな値です。2番めが2.76倍で整数倍でないことが、鉄琴の「キーン」という金属らしい音色の一因です。実際の鉄琴や木琴の板は、裏をけずって、倍音の比を整えてあるものもあります。
+\kotae （1）約\qty{788}{Hz}（2）約2.76倍（3）約\qty{4.5}{cm}
+\end{phreidai}
+\begin{jibun}
+厚さ\qty{8}{mm}・長さ\qty{0.25}{m}のアルミニウム合金の板（$\sqrt{E/\rho}\approx\qty{5060}{m/s}$、両はし自由）の基本振動数を求めましょう。
+\bkjans{$5060\times0.008\div3.464\approx11.7$（$\sqrt{EI/(\rho S)}$ の値）。これに $22.37\div(2\pi\times0.0625)$ をかけて、約\qty{670}{Hz}}
+\end{jibun}
+
+\label{ph:波-6:ex13}
+\begin{phreidai}[水を満たした配管のゆれ]
+力-10 の例題11の配管（SGP 50A）は、水を満たすと1 m あたり\qty{73.6}{N}の重さで、$I=\qty{2.73e-7}{m^4}$、$E=\qty{205}{GPa}$ です。この配管を、間かく\qty{4}{m}の支えにのせます（両はし単純支持）。（1）1次の固有振動数を求めましょう。（2）毎分1800回転（\qty{30}{Hz}）のポンプの振動と共振しますか。（3）支えの間かくを\qty{6}{m}にすると、どうなりますか。
+\phbamen
+機械の振動と配管の固有振動数が近いと、配管が大きくゆれる（共振、波-2）。それを設計で調べる場面です（⑨）。
+\phmushi
+配管の中の水は、配管といっしょに動く重さとしてだけ考えます。支えはピンとローラーとします。
+\phzu
+1 m あたりの質量 $\rho S=73.6\div9.8\approx\qty{7.51}{kg/m}$（水もふくむ）、$L=\qty{4}{m}$。
+\phriyu
+両はし単純支持のはりの振動数の式（⑨）で、$n=1$ とします。
+\phtateru
+\[f_1=\frac{\pi}{2L^2}\sqrt{\frac{EI}{\rho S}}\]
+\phtoku
+（1）\[\sqrt{\frac{205\times10^9\times2.73\times10^{-7}}{7.51}}=\sqrt{7452}\approx86.3,\qquad f_1=\frac{3.1416}{2\times16}\times86.3\approx\qty{8.5}{Hz}\]
+（2）\qty{30}{Hz}とは大きく離れているので、1次では共振しません（2次は $4\times8.5=\qty{34}{Hz}$ で近いので、注意がいる）。\\
+（3）$L^2$ に反比例するので、$8.5\times(4/6)^2\approx\qty{3.8}{Hz}$。
+\phtashikame
+力-10 では、\qty{4}{m}で\qty{4.4}{mm}たわむことを計算しました。たわみ $\delta$ が大きい（やわらかい）ほど、振動数は低くなります。2次の\qty{34}{Hz}がポンプの\qty{30}{Hz}に近いように、高いモードもいっしょに確かめるのが大切です。
+\kotae （1）約\qty{8.5}{Hz}（2）1次は共振しない（2次の約\qty{34}{Hz}に注意）（3）約\qty{3.8}{Hz}
+\end{phreidai}
+\begin{jibun}
+例題13の配管の支えの間かくを\qty{3}{m}にしたときの、1次の固有振動数を求めましょう。
+\bkjans{$8.47\times(4/3)^2\approx\qty{15}{Hz}$}
+\end{jibun}
+
+\label{ph:波-6:ex14}
+\begin{phreidai}[振動数から力を知る]
+（1）斜張橋のケーブル（長さ\qty{50}{m}、1 m あたり\qty{50}{kg}）の基本振動数をはかったら\qty{1.0}{Hz}でした。ケーブルを弦とみなして張力を求めましょう。（2）両はしを単純に支えた柱を、座屈荷重の4分の3の力で押しています。押さないときに比べて、基本振動数は何倍ですか。
+\phbamen
+大きな力がかかった部材の振動数をはかって、力を知る（または、力から振動数の変化を知る）場面です（⑩）。
+\phmushi
+（1）ケーブルの曲げのこわさと、たるみを無視します。（2）柱の重さによる力を無視します。
+\phzu
+（1）$L=\qty{50}{m}$、$\mu=\qty{50}{kg/m}$、$f_1=\qty{1.0}{Hz}$。（2）$F/F_{\mathrm{cr}}=0.75$。
+\phriyu
+（1）弦の基本振動数の式（③）を、張力 $F_{\mathrm T}$ について解きます。（2）押されたはりの式 $\omega^2=\omega_0^{\,2}(1-F/F_{\mathrm{cr}})$（⑩）を使います。
+\phtateru
+\[F_{\mathrm T}=4\mu L^2f_1^{\,2},\qquad\frac{f}{f_0}=\sqrt{1-\frac{F}{F_{\mathrm{cr}}}}\]
+\phtoku
+（1）\[F_{\mathrm T}=4\times50\times50^2\times1.0^2=\qty{5.0e5}{N}\ (\qty{500}{kN})\]
+（2）$f/f_0=\sqrt{1-0.75}=0.5$
+\phtashikame
+（1）は約50トンのおもりの重さです。振動数は張力の平方根に比例するので、振動数が1割（\qty{1.1}{Hz}）上がれば、張力は約2割（\qty{605}{kN}）上がっています。（2）は、押す力が座屈荷重に近いほど、振動数が0に近いことを表しています。
+\kotae （1）約\qty{500}{kN}（2）0.5倍（半分）
+\end{phreidai}
+\begin{jibun}
+（1）例題14のケーブルの基本振動数が\qty{0.9}{Hz}だったら、張力はいくらですか。（2）柱を座屈荷重の0.96倍で押すと、振動数は押さないときの何倍ですか。
+\bkjans{（1）\nobreak $4\times50\times2500\times0.81$、約\qty{405}{kN}。（2）\nobreak $\sqrt{0.04}=0.2$ 倍}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{固定端の反射}
+\bkng{山のパルスは、かべではね返っても山のままもどってくる。}
+\bkok{固定端では、山は谷になってもどる。山のままもどるのは、自由端のとき。}
+はしの条件（ずれが0か、傾きが0か）で決まります（①）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{節の間かく}
+\bkng{定在波の節と節の間は、1波長 $\lambda$。}
+\bkok{節と節の間は半波長 $\lambda/2$。節と腹の間は $\lambda/4$。}
+電子レンジのチョコレートの間かくは $\lambda/2$ です（②・\bkreidairef{11}）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{閉管の倍音}
+\bkng{閉管にも、基本の2倍・3倍・4倍…の振動がある。}
+\bkok{閉管は $\lambda/4$ の奇数倍だけが入るので、基本の3倍・5倍…の奇数倍だけ。}
+開管は整数倍が全部あります（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{開口端補正}
+\bkng{共鳴管の1回めの長さ $L_1$ から $\lambda=4L_1$ として、音の速さを求める。}
+\bkok{$L_1$ には開口端補正が入っていないので、$\lambda=2(L_2-L_1)$ と引き算で補正を消す。}
+$4L_1$ では、\bkreidairef{4}の音の速さが約8\,\% 小さく出ます（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{はりの長さと振動数}
+\bkng{はりの長さを2倍にすると、弦と同じように、振動数は半分になる。}
+\bkok{はりの振動数は $1/L^2$ に比例するので、$\tfrac14$ になる。}
+弦は2回微分、はりは4回微分の式だからです（⑨）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{10\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[固有振動数を避ける・使う・はかる]
+\textbf{避ける：配管・機械の共振}　工場の配管や機械の台は、モーターやポンプの回転数と、自分の固有振動数が近いと、大きくゆれて、こわれたり音を出したりします（波-2）。設計では、⑨の式やコンピュータのモード解析で固有振動数を求め、支えの間かくを変えるなどして、回転数から離します（\bkreidairef{13}）。
+
+\textbf{使う：楽器}　弦・管・板の長さと太さを、固有振動数の式から決めます。鉄琴の板は、1番めのモードの節（はしから約22\,\%）で支えて、長く鳴るようにしています（\bkreidairef{12}）。
+
+\textbf{はかる：橋のケーブルの張力}　斜張橋やつり橋のケーブルの張力は、ケーブルを軽くたたくか、風によるゆれを加速度計やレーザーではかり、その固有振動数から求めます（振動法。⑩・\bkreidairef{14}）。ケーブルの曲げのこわさの効果は、高いモードの振動数もいっしょに使って取り除きます。大きな力計をつけなくても、何本ものケーブルの張力を調べられます。
+
+\begin{phketa}[固有振動数の目安]
+\phketaline{ギターの弦}{\qtyrange{82}{330}{Hz}（開放弦の基本）}
+\phketaline{部屋の低い定在波}{数十 Hz（たて4 m で約\qty{43}{Hz}）}
+\phketaline{配管・床・橋}{数 Hz〜数十 Hz}
+\phketaline{鉄琴の板・金属の棒}{数百 Hz〜数 kHz}
+\phboxhead{答えが桁で合っているか}
+長さが数 m の構造が数 kHz で鳴る、手のひらの大きさの金属板が数 Hz でゆれる、といった答えは、$EI$ の単位（N·m$^2$）や $I$ の m$^4$ をまちがえていないか確かめましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{振動工学,音響工学,構造力学,楽器の設計}{固有振動数、振動モード、定在波、境界条件、開口端補正、モード解析、振動法}
+
+\begin{column}{砂で見る「節の線」：クラドニ図形}
+1787年、ドイツのクラドニは、『音の理論についての発見』という本を出しました。薄い金属の板の上に砂をまき、板のふちを弓でこすって鳴らすと、砂は、ゆれている所からはじき出され、動かない節の線の上に集まって、美しい模様を描きました。板を鳴らす振動数（音の高さ）を変えると、模様が変わります。⑦の膜の節の線を、目で見られるようにしたのです。この模様は、今では\textbf{クラドニ図形}とよばれ、バイオリンやギターの板を作る人が、板のゆれ方を確かめるのにも使われることがあります。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{2}
+\bkproblem 長さ\qty{0.60}{m}の弦を伝わる波の速さが\qty{240}{m/s}です。基本振動数と、2番め・3番めの固有振動数を求めましょう。
+\bkpans{$f_n=n\times240\div1.2$。\qty{200}{Hz}、\qty{400}{Hz}、\qty{600}{Hz}}
+\bkproblem 長さ\qty{0.34}{m}の閉管と開管の基本振動数を求めましょう（音の速さ\qty{340}{m/s}、開口端補正は無視）。
+\bkpans{閉管 $340\div1.36=\qty{250}{Hz}$、開管 $340\div0.68=\qty{500}{Hz}$}
+\bkproblem 音の定在波で、となりどうしの節の間が\qty{0.25}{m}でした。音の速さを\qty{340}{m/s}として、波長と振動数を求めましょう。
+\bkpans{$\lambda=2\times0.25=\qty{0.50}{m}$、$f=340\div0.50=\qty{680}{Hz}$}
+\bkproblem 長さ\qty{650}{mm}のギターで、5番めのフレット（5半音上げる所）はナットから何 mm ですか。A弦（\qty{110}{Hz}）をそこでおさえたときの振動数も求めましょう。
+\bkpans{$650\times(1-2^{-5/12})\approx\qty{163}{mm}$。$110\times2^{5/12}\approx\qty{147}{Hz}$}
+\bkproblem 弦の張力を4倍にすると、基本振動数は何倍になりますか。また、張力を変えずに、ゆれる長さを $\tfrac23$ にすると何倍になりますか。
+\bkpans{$\sqrt4=2$ 倍。長さ $\tfrac23$ で $\tfrac32=1.5$ 倍}
+\bkproblem \qty{680}{Hz}の音さで気柱の共鳴を調べると、$L_1=\qty{0.12}{m}$、$L_2=\qty{0.37}{m}$ でした。音の速さと開口端補正を求めましょう。
+\bkpans{$\lambda=2\times0.25=\qty{0.50}{m}$、$c=680\times0.50=\qty{340}{m/s}$、$\Delta=0.125-0.12=\qty{0.005}{m}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 両はしを単純に支えたはりの長さを2倍にすると、1次の固有振動数は何倍になりますか。同じ長さの弦なら何倍ですか。
+\bkpans{はりは $1/L^2$ で $\tfrac14$ 倍。弦は $1/L$ で $\tfrac12$ 倍}
+\bkproblem 例題12の鉄琴（厚さ\qty{6}{mm}の鋼の板、両はし自由、$\sqrt{EI/(\rho S)}\approx\qty{8.85}{m^2/s}$）で、基本振動数を\qty{880}{Hz}にするには、板の長さを何 m にすればよいですか。
+\bkpans{$22.37\times8.85$ を $2\pi\times880$ でわった約0.0358 が $L^2$ なので、$L\approx\qty{0.19}{m}$}
+\bkproblem 弦のはしから $L/3$ の所をつまんではなしました。生まれないモードはどれですか。また、1番めと2番めのモードの振幅の比を求めましょう。
+\bkpans{$\sin(n\pi/3)=0$ の $n=3,\ 6,\ \cdots$。$b_n\propto\sin(n\pi/3)/n^2$ なので、$b_1:b_2=1:\tfrac14$（$\sin60°$ と $\sin120°\div4$ の比）}
+\bkproblem 両はしを単純に支えた柱を、座屈荷重の半分の力で押しました。基本振動数は、押さないときの何倍ですか。また、振動数が押さないときの0.6倍になったとき、押す力は座屈荷重の何倍ですか。
+\bkpans{$\sqrt{0.5}\approx0.71$ 倍。$1-0.6^2=0.64$ 倍}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 固定端・自由端の反射と、定在波の腹と節を説明できる。\bkfurref{ph:波-6:sec1}
+\item 弦の固有振動数を求め、フレットと音の高さの関係がわかる。\bkfurref{ph:波-6:sec3}
+\item 閉管・開管の固有振動数と共鳴から、音の速さを求められる。\bkfurref{ph:波-6:sec4}
+\item 変数分離とフーリエ級数で、はじいた弦の倍音を求められる。\bkfurref{ph:波-6:sec5}
+\item はりの振動の式を解き、鉄琴や配管の固有振動数を求められる。\bkfurref{ph:波-6:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{弦も笛も鉄琴も、はね返った波が重なって、決まった高さで鳴っていたんだね。橋のケーブルの力まで、音の高さでわかるなんて！}
