@@ -211,7 +211,8 @@ def sup_col(p):
         rows[t] = (f_v2(st.v), f_h(st.h), f_s(st.s)); n_S += 1
     return head, satrow, rows
 out = []
-spec = (r'colspec={Q[c,m,wd=10mm] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m]}, width=\linewidth, rowhead=3, colsep=3.2pt, rowsep=0.3pt,'
+# 修2-6（Q6-16）：ページをまたいだとき、続きのページでくり返すのは見出しの2行だけ（「飽和」の行はくり返さない）
+spec = (r'colspec={Q[c,m,wd=10mm] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m]}, width=\linewidth, rowhead=2, colsep=3.2pt, rowsep=0.3pt,'
         r' hlines={0.3pt,bkLine}, vline{2,5}={0.4pt,bkLine}, cell{1}{2,5}={c=3}{c}, row{1-2}={bg=bkVol!14, font=\sffamily\bfseries\scriptsize, halign=c},'
         r' row{3}={bg=bkLine!35}, cells={font=\scriptsize}')
 for i in range(0, len(SUP_P), 2):
@@ -307,7 +308,7 @@ def tsat_of_x(xgkg):
 
 plots = []
 labels = []
-MM_X, MM_Y = (2 * 140 - 15) / (TMAX - TMIN), 130 / XMAX   # 図の1目もりの長さ（mm）。札を線にそわせる角度に使う
+MM_X, MM_Y = ((140 - 11) * 120 / 65) / (TMAX - TMIN), 130 / XMAX   # 図の1目もりの長さ（mm）。ph2-back.tex の \phPsychroSpread の図のはば
 
 
 def ang(p, q):
@@ -340,7 +341,10 @@ for rh in range(10, 101, 10):
         if pe[1] >= XMAX - 1e-6:
             labels.append(r'\node[phPsyRHlab, anchor=south] at (axis cs:%.2f,%.3f) {%d\,\%%};' % (pe[0], XMAX + 0.15, rh))
         else:
-            labels.append(r'\node[phPsyRHlab, anchor=west] at (axis cs:%.2f,%.3f) {%d\,\%%};' % (TMAX + 0.15, pe[1], rh))
+            # 修2-6（Q6-14）：右のふちの外には絶対湿度の目もりを置くので、数はふちの内側の、線のすぐ上に置く
+            te = TMAX - 0.3
+            labels.append(r'\node[phPsyRHlab, fill=white, anchor=south east] at (axis cs:%.2f,%.3f) {%d\,\%%};'
+                          % (te, xg(T=te + 273.15, R=rh / 100) + 0.25, rh))
 # 比エンタルピー（−10〜130 kJ/kg(DA)、10 ごと）。飽和線から右下へ
 for h in range(-10, 131, 10):
     pts = []
@@ -374,21 +378,49 @@ for h in range(-10, 131, 10):
         p0 = pts[0]
         if p0[1] < XMAX - 0.5 and p0[0] > TMIN + 0.3:
             labels.append(r'\node[phPsyHlab, anchor=south east] at (axis cs:%.2f,%.3f) {%d};' % (p0[0] - 0.2, p0[1] + 0.15, h))
+        elif p0[1] >= XMAX - 0.5 and p0[0] < TMAX - 4:
+            # 修2-6（Q6-15）：飽和線が上のふちの外にある線（110・120）は、上のふちから入った少し先の、線の上に数を置く
+            tl = p0[0] + 3.0
+            labels.append(r'\node[phPsyHlab, fill=white, inner sep=0.8pt] at (axis cs:%.2f,%.3f) {%d};'
+                          % (tl, xg(T=tl + 273.15, H=h * 1000), h))
 # 湿球温度（−5〜30 ℃、5 ごと）
+def x_wb(t, tw):
+    """乾球温度 t・湿球温度 tw の絶対湿度〔g/kg(DA)〕。HAPropsSI(W; T, B) がエラーのとき（湿球 0 ℃の近く）は、
+    HAPropsSI(B; T, W) を見ながら W を2分法で求める（修2-6：前は 0 ℃の線が 1 ℃までしか引けていなかった）"""
+    try:
+        return xg(T=t + 273.15, B=tw + 273.15)
+    except ValueError:
+        pass
+    lo, hi = 0.0, xg(T=t + 273.15, R=1.0) / 1000
+    if CP.HAPropsSI('B', 'T', t + 273.15, 'W', 0.0, 'P', P_ATM) - 273.15 >= tw:
+        return -1.0          # 乾いた空気（x=0）でも湿球温度が tw より高い：線は終わっている
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if CP.HAPropsSI('B', 'T', t + 273.15, 'W', mid, 'P', P_ATM) - 273.15 < tw: lo = mid
+        else: hi = mid
+    return lo * 1000
+
+
 for tw in range(-5, 31, 5):
     pts = []
     t = tw
     while t <= TMAX + 1e-9:
-        try:
-            x = xg(T=t + 273.15, B=tw + 273.15)
-        except ValueError:
-            break
+        x = x_wb(t, tw)
         if x < 0:
             break
         pts.append((t, x))
         t += 1.0
     if len(pts) >= 2:
         plots.append(r'\addplot[phPsyWB] coordinates {%s};' % coords(pts))
+        # 修2-6（Q6-15）：湿球温度の数（単位 ℃ をつけて、比エンタルピーの数と分ける）。線の下のはしの近く
+        # （x が 1.2 g/kg(DA) になる所）、そこまで行かずに右のふちに着く線は、右のふちの少し手前の、線の上に置く
+        low = [q for q in pts if q[1] <= 1.2]
+        if low:
+            tl = low[0][0] - 0.5
+        else:
+            tl = TMAX - 2.5
+        labels.append(r'\node[phPsyWBlab, fill=white] at (axis cs:%.2f,%.3f) {%s\,℃};'
+                      % (tl, x_wb(tl, tw), ('$-$%d' % -tw) if tw < 0 else '%d' % tw))
 # 比体積（0.76〜0.92、0.02 ごと）
 for vv in [0.76, 0.78, 0.80, 0.82, 0.84, 0.86, 0.88, 0.90, 0.92]:
     pts = []
@@ -413,7 +445,8 @@ PTS = [('A', 20, 50, '熱-9 ⑥'), ('B', 25, 60, '熱-9 例題10'), ('C', 30, 70
 for lab, th, rh, where in PTS:
     x = xg(T=th + 273.15, R=rh / 100)
     plots.append(r'\addplot[phPsyPt] coordinates {(%.2f,%.4f)};' % (th, x))
-    labels.append((r'\node[phPsyPtlab, anchor=north west] at (axis cs:%.2f,%.3f) {%s};' % (th + 0.3, x - 0.1, lab)) if lab == 'A' else (r'\node[phPsyPtlab, anchor=east] at (axis cs:%.2f,%.3f) {%s};' % (th - 0.3, x - 0.05, lab)))
+    # 修2-6：D は、左にある比エンタルピーの数「40」と並んで「40 D」と読めたので、A と同じく右下に置く
+    labels.append((r'\node[phPsyPtlab, anchor=north west] at (axis cs:%.2f,%.3f) {%s};' % (th + 0.3, x - 0.1, lab)) if lab in ('A', 'D') else (r'\node[phPsyPtlab, anchor=east] at (axis cs:%.2f,%.3f) {%s};' % (th - 0.3, x - 0.05, lab)))
 psy = HEAD + r'''%% 空気線図（101.325 kPa）。横：乾球温度、縦：絶対湿度。線：相対湿度・比エンタルピー・湿球温度・比体積（CoolProp の HAPropsSI）
 \pgfplotsset{
   phPsyRH/.style={bkBlue!80!black, line width=0.6pt, mark=none},
@@ -425,6 +458,7 @@ psy = HEAD + r'''%% 空気線図（101.325 kPa）。横：乾球温度、縦：�
 \tikzset{phPsyRHlab/.style={font=\sffamily\scriptsize, text=bkBlue!80!black, inner sep=0.8pt},
   phPsyHlab/.style={font=\sffamily\scriptsize, text=bkRed!75!black, inner sep=0.6pt},
   phPsyVlab/.style={font=\sffamily\scriptsize, text=bkPurple!75!black, inner sep=0.8pt},
+  phPsyWBlab/.style={font=\sffamily\scriptsize, text=bkGreen!50!black, inner sep=0.6pt},
   phPsyPtlab/.style={font=\sffamily\bfseries\scriptsize, text=bkInk, inner sep=0.6pt}}
 \newcommand\phPsychroAxis[2]{%% #1＝図のはば、#2＝高さ
 \begin{tikzpicture}
@@ -439,11 +473,18 @@ psy = HEAD + r'''%% 空気線図（101.325 kPa）。横：乾球温度、縦：�
 %s
 %s
 \end{axis}
+%% 修2-6（Q6-14）：右のふちにも絶対湿度の目もりと名前（見開きの右のページで、左のページまで線をたどらずに x を読む）
+\begin{axis}[at={(psy.south west)}, anchor=south west, width=#1, height=#2, scale only axis, xmin=%d, xmax=%d, ymin=0, ymax=%g,
+  hide x axis, axis y line*=right, axis line style={draw=none}, ytick={0,2,...,30}, yticklabel pos=right, ylabel near ticks,
+  tick label style={font=\sffamily\footnotesize, text=bkInk}, major tick length=0pt,
+  ylabel={絶対湿度 $x$〔g/kg(DA)〕}, label style={font=\sffamily\small, text=bkInk}, scaled ticks=false]
+\addplot[draw=none] coordinates {(%d,0)};
+\end{axis}
 %% 図の左はしから軸の左のふちまでの長さを \ph@psyoff に残す（見開きの切れ目を、軸の上の決まった温度に置くため）
 \pgfextractx{\pgf@xa}{\pgfpointanchor{psy}{south west}}\pgfextractx{\pgf@xb}{\pgfpointanchor{current bounding box}{south west}}%%
 \global\ph@psyoff=\dimexpr\pgf@xa-\pgf@xb\relax
 \end{tikzpicture}}
-''' % (TMIN, TMAX, XMAX, '\n'.join(plots), '\n'.join(labels))
+''' % (TMIN, TMAX, XMAX, '\n'.join(plots), '\n'.join(labels), TMIN, TMAX, XMAX, TMIN)
 write('ph2-psychro.tex', psy)
 log.append('空気線図：線 %d 本（相対湿度10本・比エンタルピー・湿球温度・比体積）、点 %d' % (len(plots) - len(PTS), len(PTS)))
 
@@ -452,17 +493,20 @@ fl = []
 GASES = [('ヘリウム He', 'Helium'), ('アルゴン Ar', 'Argon'), ('水素 H$_2$', 'Hydrogen'), ('窒素 N$_2$', 'Nitrogen'),
          ('酸素 O$_2$', 'Oxygen'), ('空気', 'Air'), ('二酸化炭素 CO$_2$', 'CarbonDioxide'), ('メタン CH$_4$', 'Methane')]
 lines = []
+a_gas = {}
 for nm, f in GASES:
     M = CP.PropsSI('M', f)
     cpm = CP.PropsSI('CPMOLAR', 'T', 300, 'P', P_ATM, f); cvm = CP.PropsSI('CVMOLAR', 'T', 300, 'P', P_ATM, f)
     a = CP.PropsSI('A', 'T', 293.15, 'P', P_ATM, f)
     Z = CP.PropsSI('Z', 'T', 300, 'P', P_ATM, f)
+    a_gas[f] = a
     lines.append(r'%s & %.3f & %.0f & %.1f & %.1f & %.2f & %.0f & %.4f \\' % (nm, M * 1000, 8.314462618 / M, cvm, cpm, cpm / cvm, a, Z))
 spec = r'colspec={Q[l,m,wd=24mm] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m] Q[r,m]}, ' + STYLE % (1, 1)
 hdr = (r"気体 & {モル質量 $M$\\〔g/mol〕} & {$R_{\mathrm s}=R/M$\\〔J/(kg·K)〕} & {$C_V$\\〔J/(mol·K)〕} & {$C_p$\\〔J/(mol·K)〕} & "
        r"{比熱比\\$\gamma$} & {音速 $a$\\〔m/s〕} & {圧縮係数\\$Z$} \\")
 fl.append(r'\begin{longtblr}{%s}' % spec + '\n' + hdr + '\n' + '\n'.join(lines) + '\n\\end{longtblr}')
-fl.append(r'\par{\footnotesize\color{bkGray}$C_V$・$C_p$・$\gamma$・$Z$ は\qty{300}{K}、音速は\qty{20}{\celsius}の値（1気圧。CoolProp %s で計算）。熱-3 の表、熱-4 の音速（空気 343、ヘリウム 1007）、熱-14 の等分配と同じ値。\par}\vspace{2mm}' % CoolProp.__version__[:3])
+fl.append(r'\par{\footnotesize\color{bkGray}$C_V$・$C_p$・$\gamma$・$Z$ は\qty{300}{K}、音速は\qty{20}{\celsius}の値（1気圧。CoolProp %s で計算）。熱-3 の表、熱-4 の音速（空気 %.0f、ヘリウム %.0f）、熱-14 の等分配と同じ値。\par}\vspace{2mm}'
+          % (CoolProp.__version__[:3], a_gas['Air'], a_gas['Helium']))   # 修2-6（U-10）：前は手で「1007」と書いていた
 # 空気（1気圧）
 lines = []
 for th in [-20, 0, 20, 27, 40, 60, 100, 200]:
