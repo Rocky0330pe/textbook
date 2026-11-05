@@ -36,7 +36,7 @@ if phys:
     import series_phys as S
     missing = re.findall(r'BKPAGE missing p\d+-(\d\d)', log)
     if missing:
-        print('注意：まだない章があります（%d章）。組んだ章のページだけを書きます。ない章は計画のページのまま' % len(missing))
+        print('注意：まだない章があります（%d章）' % len(missing))
 else:
     import series as S
 v = S.VOLS[int(n) - 1]
@@ -61,6 +61,15 @@ for i, (k, cid) in enumerate(items):
         nxt = backs[0][1] if backs else None
     if nxt is not None:
         lens[cid] = nxt - st - 2 * parts
+if phys and missing:
+    # 第22回（物理第2巻）：まだない章（組むときに飛ばした章。熱-0・熱-16 など）は0ページとして書く。
+    # 組んだ紙面とそろうので、もくじ・部扉・巻末のページがずれない。章ができたら、組み直して syncpages をもう一度かければ、その章の実際のページになる。
+    key = '力熱波電原'[int(n) - 1]
+    for nn in missing:
+        cid = '%s-%d' % (key, int(nn))
+        if cid not in chap and any(c == cid for _, c in items):
+            lens[cid] = 0
+    print('まだない章は0ページとして書きます：%s' % '・'.join('%s-%d' % (key, int(nn)) for nn in missing))
 names = [b[0] for b in back_plan]
 blens = {}
 if len(backs) != len(names):
