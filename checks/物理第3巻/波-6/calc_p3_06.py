@@ -186,3 +186,28 @@ p('フルート 0.60 m 開管 f1,f2', c / 1.2, 2 * c / 1.2)
 p('部屋 5 m (1,0,0),(2,0,0)', c / 10, c / 5)
 p('鉄琴の支え 22.4 % → 0.20 m で cm', 0.2245 * 20)
 p('基本：弦 0.60 m c=240, 1/3 はじき', 200)
+
+print('== もっと知りたい：表計算で反射（s=1、左はし固定と自由）')
+def run(free, steps=16, N=20):
+    y0 = [0.0] * (N + 1)
+    y0[9], y0[10], y0[11] = 0.5, 1.0, 0.5
+    y1 = [0.0] * (N + 1)
+    for i in range(1, N):
+        y1[i] = (y0[i + 1] + y0[i - 1]) / 2
+    if free:
+        y1[0] = y1[1]
+    rows = [y0, y1]
+    for n in range(2, steps + 1):
+        a_, b_ = rows[-2], rows[-1]
+        nx = [0.0] * (N + 1)
+        for i in range(1, N):
+            nx[i] = b_[i + 1] + b_[i - 1] - a_[i]
+        if free:
+            nx[0] = nx[1]
+        rows.append(nx)
+    return rows
+for free in (False, True):
+    rows = run(free)
+    print('自由' if free else '固定')
+    for n in (6, 8, 9, 10, 12):
+        print('  n=%d' % n, ' '.join('%.2f' % x for x in rows[n][0:9]))
