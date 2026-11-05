@@ -1,0 +1,982 @@
+%% 第26回編集委員会（物理第4巻）：組 電W5
+%% p4-09.tex  電-9　スイッチを入れた瞬間：過渡現象（★3〜4・3段にしない）
+%% 中身は計画書 tools/phys4-plan.md の B「電-9」。公式の持ち主は A（A57・A76）。A36（コンデンサーを含む直流回路の t→∞）は電-5 ⑪。
+%%   ほかの組の章は、計画書 B の節の番号で指した（電-3 ④⑦、電-4 ③④⑤⑥⑦、電-5 ⑪、電-8 ⑥⑧⑨・例題6、電-10 ⑦、電-13、電-16）。
+%% 数値はすべて Python で計算した：checks/物理第4巻/電-9/calc_p4_09.py（出力 calc_p4_09_out.txt）、code_p4_09.py（⑩の囲みのプログラム）。
+%% 数学との重なり（Y-9・W-6）：6-4⑦（RC・RL）、6-6⑧（LC）、6-7⑦・6-12⑧（RLC・臨界抵抗・ζ）、9-5:901（sL・1/(sC)）、9-7⑩（17.29 V）、
+%%   6-2⑪（速度を先に進める）、6-15③（相似の表）と同じ計算は指して使い、この章は②（式がどの法則から出るか）・⑥（エネルギー）・
+%%   ⑨（相似の理由）・⑪（実物）を主にした。数学の本の数（10 V・20 kΩ・100 μF・2 s・0.5 mA、12 V・400 Ω・0.2 H・0.5 ms・30 mA、
+%%   10 mH・1 μF・20 Ω・1592 Hz・200 Ω・ζ=0.1・17.29 V）は変えずに名指しした。
+%% 前の巻・数学の本との約束（計画書 A-6・C-6-2）
+%%   ・P14・P23・P26・P43：前付の「保存則と相似の地図」の「出会う章 電-9（回路）」、波-1 ⑩の相似の表 → ⑨（ph:電-9:souji）。
+%%       記号は前付・波-1 ⑩と同じ（力 F ↔ 電圧 e、速度 ↔ 電流 i、m ↔ L、c ↔ R、1/k ↔ C）。この章では速度を \dot x と書いた（v は電圧）。
+%%       熱の列（C_th・R_th）も並べた（第2巻の前付）。0.5 kg・8 N/m・c=0.4 ↔ 10 mH・1 μF・20 Ω（ζ=0.1）を名指しした。
+%%   ・P4：力-6 ⑨のモーターの立ち上がり（I=0.02・c_r=0.01・τ=2 s・ω∞=200 rad/s）→ ④・⑨・例題11
+%%   ・P45：RLC の式を電圧則と部品のきまりから → ②
+%%   ・数学 6-4（RC・リレー）→ 例題1・3、6-6・6-7・6-12 → ⑦・例題6・7、9-5:901・9-7⑩ → ⑧・例題8、6-12:930 のリンギング → ⑪
+%%   ・数学 6-15:212「物理シリーズでは、電源の電圧を小文字の e と書く」→ ②⑨（Y-3）
+%%   ・電-8 例題6（リレーを切ると 60 V）→ 例題4
+%% 記号（この章）：電源の電圧 e（時間で変わる。直流の電池は E）、部品の電圧 v_R・v_L・v_C（瞬時値）、電流 i、電荷 q、抵抗 R、
+%%   静電容量 C、インダクタンス L、時定数 τ、減衰比 ζ、固有角周波数 ω_n、減衰する振動の角周波数 ω_d、周波数 f、ラプラス変換の s、
+%%   エネルギー U。速度は \dot x（v は電圧に使うため）。指数関数の e（ネイピア数）は、肩に式がのっている形だけで使い、記号カードに断った。
+%%   熱の列の熱容量 C_th・熱抵抗 R_th は第2巻と同じ。
+%% 出典
+%%   ・ホジキンとハクスリー：1952年の論文（J. Physiol. 117, 500。DOI 10.1113/jphysiol.1952.sp004764）、1963年ノーベル生理学・医学賞
+%%       （エクルズと共同）：https://www.nobelprize.org/prizes/medicine/1963/summary/（計画書 D22 で確かめた）。
+%%   ・電球のフィラメントの冷たいときの抵抗 8.2 Ω（100 W）は、計画書 C-4 の約束の数（電-4 ④とそろえる）。
+%%   ・充電器のコンデンサー 470 μF・LED の回路 10 kΩ・消える電圧 2 V、フラッシュの 100 μF・300 V は、例題のための仮の値（本文に「とします」）。
+%%   ・やってみようの表は作ったデータ（τ が C に比例することに合わせた。6-4-7）。
+\makeatletter
+% 回路の部品（tikzpicture[x=1mm, y=1mm] の中。導線を先にかき、その上に置く。角は導線の向き）
+\newcommand\sxjR[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (-4.5,-1.6) rectangle (4.5,1.6);\end{scope}}
+\newcommand\sxjC[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-1.0,-3.6) rectangle (1.0,3.6);
+  \draw[bkInk, line width=1.1pt] (-1.0,-3.4) -- (-1.0,3.4) (1.0,-3.4) -- (1.0,3.4);\end{scope}}
+\newcommand\sxjL[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-5.2,-0.6) rectangle (5.2,3.0);
+  \draw[bkInk, line width=0.7pt] (-5,0) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25) arc (180:0:1.25);\end{scope}}
+\newcommand\sxjE[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-1.2,-4.2) rectangle (1.2,4.2);
+  \draw[bkInk, line width=0.7pt] (-1.0,-4.0) -- (-1.0,4.0);
+  \draw[bkInk, line width=1.8pt] (1.0,-2.0) -- (1.0,2.0);\end{scope}}
+\newcommand\sxjS[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-3.5,-0.6) rectangle (3.5,3.6);
+  \fill[bkInk] (-3,0) circle (0.6) (3,0) circle (0.6);
+  \draw[bkInk, line width=0.8pt] (-3,0) -- (2.6,3.0);\end{scope}}
+% 交流・時間で変わる電源（丸に e）
+\newcommand\sxjsrc[2]{\filldraw[fill=white, draw=bkInk, line width=0.7pt] #1 circle (4); \node[font=\footnotesize] at #1 {#2};}
+% ダイオード（三角の向きに電流を通す）
+\newcommand\sxjD[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-2.4,-2.6) rectangle (2.4,2.6);
+  \filldraw[fill=bkInk!15, draw=bkInk, line width=0.7pt] (-2,-2.2) -- (-2,2.2) -- (2,0) -- cycle;
+  \draw[bkInk, line width=1.1pt] (2,-2.2) -- (2,2.2);\end{scope}}
+% LED（ダイオードに光の矢印）
+\newcommand\sxjLED[2]{\sxjD{#1}{#2}\begin{scope}[shift={#1}, rotate=#2]
+  \draw[bkOrange!85!black, line width=0.6pt, -{Stealth[length=1.4mm]}] (0.5,2.6) -- (2.2,5);
+  \draw[bkOrange!85!black, line width=0.6pt, -{Stealth[length=1.4mm]}] (1.9,2.2) -- (3.6,4.6);\end{scope}}
+\tikzset{sxj lab/.style={font=\sffamily\footnotesize, text=bkInk}, sxj arr/.style={line width=1pt, -{Stealth[length=2.2mm]}},
+  sxj dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+\makeatother
+
+\phchapter{9}{スイッチを入れた瞬間：\\過渡現象}{充電器をコンセントからぬいても、ランプがしばらく光っているのはなぜ？}{\bklevelrange{3}{4}}{スイッチを入れた瞬間：過渡現象}
+\bkmichishirube{6-2,6-4,6-6,6-7,6-12,6-15,9-5,9-7,力-6,波-1,電-3,電-4,電-8}{電-10,電-12,電-13,電-16}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace スイッチを入れた瞬間と、十分に時間がたったあとの回路を、コンデンサーとコイルの性質から説明できる。
+\item \bklevel{3}\enspace 電圧則と部品のきまりから RC・RL 回路の式を立て、時定数と、エネルギーの行き先を求められる。
+\item \bklevel{3}\enspace LC 回路の電気振動の周波数とエネルギーの行き来、RLC 回路の臨界抵抗を求められる。
+\item \bklevel{4}\enspace ラプラス変換と数値計算で RLC 回路の過渡現象を求め、力学と電気の相似の表を、電気の法則から説明できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{電気振動 $f=\dfrac{1}{2\pi\sqrt{LC}}$（エネルギー $\tfrac12Li^2+\dfrac{q^2}{2C}$ は一定）}{高校物理}{ph:電-9:lc}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+スマホの充電器（AC アダプター）には、電源が入っていることを知らせる小さなランプ（LED）がついているものがあります。充電器をコンセントからぬくと、ランプはすぐには消えません。数秒のあいだ光り続け、だんだん暗くなって消えます。
+
+コンセントからぬいたのですから、電気はもう来ていません。では、ランプを光らせている電気は、どこから来ているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!20, draw=bkInk, line width=0.8pt, rounded corners=2mm] (10,4) rectangle (34,30);
+  \fill[bkGreen!70] (22,24) circle (1.6);
+  \foreach \a in {30,60,90,120,150} \draw[bkGreen!70!black, line width=0.6pt] (22,24) ++(\a:2.6) -- ++(\a:2);
+  \draw[bkInk, line width=1.2pt] (14,4) -- (14,-1) (20,4) -- (20,-1);
+  \draw[bkInk, line width=0.8pt] (34,14) .. controls (42,14) and (42,4) .. (48,4);
+  \fill[bkGray!50] (6,-12) rectangle (28,-6);
+  \draw[bkInk, line width=0.6pt] (6,-12) rectangle (28,-6);
+  \fill[bkInk] (12,-9.5) rectangle (13.2,-7.8) (20.8,-9.5) rectangle (22,-7.8);
+  \draw[bkInk, sxj arr] (17,-1.5) -- (17,1.5);
+  \node[sxj lab, anchor=west] at (29,-9) {コンセント};
+  \node[sxj lab, anchor=south] at (22,31) {ぬいても光る};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 電-8 までの章では、電流や電圧が一定のときや、決まった形でゆれ続けるときを考えてきました。けれども、スイッチを入れた瞬間や切った瞬間には、回路の電流と電圧は、新しい状態に落ち着くまでのあいだ、特別な変わり方をします。この変わり方を\textbf{過渡現象}といいます。\bkidx{かとげんしょう}{過渡現象}この章では、過渡現象の式を、これまでの章で学んだ法則から立て、その答えを、数学の本（6-4・6-6・6-7・6-12・9-7）で解いた答えにつなぎます。そして、前付の「保存則と相似の地図」で約束した、力学と電気が同じ形の式になるわけを、電気の法則から明らかにします。
+
+\begin{yattemiyou}[コンデンサーにためた電気で LED をつけよう]
+\textbf{用意するもの}\par
+手回し発電機、コンデンサー（電気二重層コンデンサー、理科の実験用。同じ物を2個）、LED（豆電球でもよい）、ストップウォッチ\par\vspace{2pt}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item コンデンサー1個を手回し発電機につなぎ、ハンドルを1秒に2回の速さで、30回まわして電気をためる。
+\item 発電機をはずして LED につなぎ、LED が消えるまでの時間をはかる（2回はかる）。
+\item コンデンサー2個を並列につないで、①と②を同じようにする（回す回数は60回にする）。
+\end{enumerate}
+\textbf{気をつけること}：コンデンサーの＋と−を、発電機と LED の向きに合わせる。コンデンサーに書いてある電圧より高くしないように、決められた速さでゆっくり回す。
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=24mm] Q[c,m,wd=24mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+コンデンサー & 1回め & 2回め \\
+1個（30回まわす） & \qty{42}{s} & \qty{41}{s} \\
+2個を並列（60回まわす） & \qty{85}{s} & \qty{83}{s} \\
+\end{bktable}
+\bktabcaption{やってみようで、ソラさんがはかった LED がつく時間}\label{ph:電-9:tab-yattemiyou}
+\end{bkcenter}
+
+\noindent やってみようの答え：コンデンサーを2個並列にする（静電容量を2倍にする）と、LED のつく時間は、ほぼ2倍になりました。並列にすると、同じ電圧でためられる電気の量が2倍になるからです（電-3 ⑤）。LED は、はじめは明るく、だんだん暗くなって消えます。コンデンサーの電圧がしだいに下がり、LED が光るのに要る電圧を下回るからです。電圧がどんな形で下がるのか、時間を決めているのは何なのかを、この章の③⑤で調べます。
+
+\noindent この章の記号：この章からの回路の章では、数学の本（6-15）や前付の相似の表と同じく、時間とともに変わる電源の電圧を小文字の $e$、電池のように一定の電圧を大文字の $E$ と書きます。抵抗・コイル・コンデンサーにかかる電圧（瞬時の値）は $v_R$・$v_L$・$v_C$ です（数学 6-4 の $V$・$V_L$ と同じもの）。$v$ を電圧に使うので、この章では、物の速度を $\dot x$ と書きます。なお、$e^{-t/\tau}$ のように肩に式がのった $e$ は、指数関数の $e$（2.718…）で、電源の電圧とは別のものです。
+
+\begin{omoidasou}
+\bkrecall{電-4}{オームの法則 $v_R=Ri$。電圧則：回路を1周すると、電圧の上がり下がりの合計は0。電流則：つなぎ目に入る電流と出る電流は等しい。}
+\bkrecall{電-3}{コンデンサーの電荷は電圧に比例する：$q=Cv_C$。たまるエネルギーは $\tfrac12Cv_C^{\,2}=\dfrac{q^2}{2C}$。}
+\bkrecall{電-8}{コイルの電圧は $v_L=L\,\dd i/\dd t$（ファラデーの法則から）。たまるエネルギーは $\tfrac12Li^2$。}
+\bkrecall{6-4}{RC 回路の充電 $V=E(1-e^{-t/RC})$、時定数 $\tau=RC$。\qty{20}{k\ohm}・\qty{100}{\micro F}で $\tau=\qty{2}{s}$。RL 回路は $\tau=L/R$。}
+\bkrecall{6-7}{RLC 回路 $L\ddot q+R\dot q+q/C=0$ は、ばね・質量・ダンパーと同じ形。臨界の抵抗 $2\sqrt{L/C}$、減衰比 $\zeta=\dfrac{R}{2}\sqrt{\dfrac{C}{L}}$。}
+\bkrecall{9-7}{\qty{10}{mH}・\qty{1}{\micro F}・\qty{20}{\ohm}の回路に\qty{10}{V}の電池をつなぐと、コンデンサーには一時 17.29 V かかる。}
+\bkrecall{力-6}{モーターの立ち上がり $I\dfrac{\dd\omega}{\dd t}=N_{\mathrm m}-c_{\mathrm r}\omega$、時定数 $\tau=I/c_{\mathrm r}$。}
+\end{omoidasou}
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{スイッチを入れた瞬間に起きること}
+\label{ph:電-9:sec1}
+スイッチを入れたり切ったりした瞬間に起きる、身近な3つのことから始めます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{電球の突入電流}：白熱電球は、スイッチを入れた瞬間に、ついているときの10倍以上の電流が流れます。冷たいフィラメントは抵抗が小さく（電-4 ④）、温まるにつれて抵抗が大きくなるからです。電球がスイッチを入れた瞬間に切れることが多いのも、このためです。
+\item \textbf{コイルの火花}：コイルに電流が流れているときにスイッチを切ると、スイッチのすき間に火花がとびます（電-8 例題6）。
+\item \textbf{コンデンサーの充電}：コンデンサーに電池をつなぐと、はじめに大きな電流が流れ、電気がたまるにつれて電流は減り、やがて0になります。
+\end{itemize}
+コイルとコンデンサーのふるまいは、次の1つのきまりにまとめられます。
+\begin{phyomi}[瞬間には変われないもの]
+\textbf{コンデンサーの電圧と、コイルの電流は、急には変わらない}。コンデンサーのエネルギーは $\tfrac12Cv_C^{\,2}$、コイルのエネルギーは $\tfrac12Li^2$ でした。もし $v_C$ や $i$ が一瞬で変わると、エネルギーが一瞬で増える（または減る）ことになり、無限に大きな仕事率がいります。ふつうの回路では、そんなことは起きません。だから、スイッチを入れる直前と直後で、$v_C$ と $i_L$（コイルの電流）は同じ値です。
+\end{phyomi}
+このきまりから、スイッチを入れた直後と、十分に時間がたったあとの回路は、表\ref{ph:電-9:tab-okikae}のように、部品を導線か、切れた線に置きかえて考えられます（十分に時間がたったあとの直流の回路は、電-5 ⑪でも学びます）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[l,m,wd=40mm] Q[l,m,wd=40mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10}}
+ & スイッチを入れた直後 & 十分に時間がたったあと（直流） \\
+コンデンサー（はじめ空） & $v_C=0$ のまま：\textbf{導線}と同じ & 電流0：\textbf{切れた線}と同じ \\
+コイル（はじめ電流0） & $i=0$ のまま：\textbf{切れた線}と同じ & $v_L=0$：\textbf{導線}と同じ \\
+\end{bktable}
+\bktabcaption{スイッチを入れた直後と、十分にたったあとの置きかえ。コンデンサーとコイルは、ちょうど反対のふるまいをする。}\label{ph:電-9:tab-okikae}
+\end{bkcenter}
+その「あいだ」がどう移り変わるのかを、②から式で調べます。
+
+\Needspace{14\baselineskip}\bksubsection{2}{回路の式を立てる：どの法則から出るか}
+\label{ph:電-9:sec2}
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (40,28);
+  \sxjsrc{(0,14)}{$e$}
+  \sxjR{(12,28)}{0}
+  \sxjL{(28,28)}{0}
+  \sxjC{(40,14)}{90}
+  \draw[bkRed!80!black, sxj arr] (3,31) -- (7,31);
+  \node[sxj lab, text=bkRed!80!black, anchor=south] at (5,31.5) {$i$};
+  \node[sxj lab, anchor=south] at (12,30.5) {$R$};
+  \node[sxj lab, anchor=south] at (28,31.5) {$L$};
+  \node[sxj lab, anchor=west] at (44,14) {$C$};
+  \node[sxj lab, anchor=north] at (12,25.5) {$v_R$};
+  \node[sxj lab, anchor=north] at (28,25.5) {$v_L$};
+  \node[sxj lab, anchor=east] at (37.5,14) {$v_C$};
+  \node[sxj lab, anchor=west] at (2,24) {$+$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+電源 $e$、抵抗 $R$、コイル $L$、コンデンサー $C$ を1列につなぎます。電流 $i$ は図の矢印の向きを正とし、コンデンサーの上の板（電流が流れこむ側）の電荷を $q$ とします。電流は電荷の増える速さなので、$i=\dd q/\dd t$ です。
+\end{minipage}
+\par\vspace{3pt}
+回路を1周すると、電源が上げた電圧は、3つの部品で下がる電圧の合計に等しくなります（\textbf{電圧則}、電-4 ⑦）。
+\pheq{e=v_R+v_L+v_C}{V ＝ V ＋ V ＋ V}
+それぞれの部品の電圧は、次のきまり（部品のきまり）で決まります。どれも、これまでの章で、場の法則から導いたものです。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=24mm] Q[c,m,wd=30mm] Q[l,m,wd=62mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10}}
+部品 & 部品のきまり & どの法則から出たか \\
+抵抗 & $v_R=Ri$ & 電流の密度 $\vec j=\sigma\vec E$（電-4 ③。オームの法則） \\
+コンデンサー & $v_C=\dfrac{q}{C}$ & ガウスの法則（電-3 ④。平行板の電場） \\
+コイル & $v_L=L\dfrac{\dd i}{\dd t}$ & ファラデーの法則（電-8 ⑥。自己誘導） \\
+回路のつなぎ方 & $e=v_R+v_L+v_C$ & 電圧則（電-4 ⑦）と、電荷の保存（電-4 ⑥） \\
+\end{bktable}
+\bktabcaption{回路の式の部品と、そのもとになった法則}\label{ph:電-9:tab-buhin}
+\end{bkcenter}
+入れると、
+\pheq{L\frac{\dd i}{\dd t}+Ri+\frac{q}{C}=e,\qquad i=\frac{\dd q}{\dd t}}{V}
+\label{ph:電-9:rlc}です。電荷 $q$ で書けば、
+\[ L\ddot q+R\dot q+\frac{1}{C}\,q=e \]
+数学の本（6-7）で、ばね・質量・ダンパーと同じ形だとわかった式です。数学の本は、部品のきまりを「そういうものだ」として使いましたが、ここでは、そのきまりがどの法則から出たかがわかりました。
+
+\phboxhead{電圧則と、コイルの中のうずの電場}
+電-8 ⑨で見たように、磁場が変わる所では、電場の1周の線積分は0になりません。だから、電圧則は「いつでも成り立つ法則」ではありません。それでも使えるのは、変わる磁場がコイルの中に閉じこめられていて、そのうずの電場の効果を、コイルの両はしの電圧 $v_L=L\,\dd i/\dd t$ として数えているからです。コイルの外の導線にそった道では、うずの電場はほとんどないので、1周の電圧の合計は0とみなせます。
+
+\begin{phmodel}[集中定数の回路]
+\phignore{導線の抵抗とインダクタンス、部品のあいだの静電容量、出ていく電波。}
+\phassume{部品の性質は部品の中だけにある（集中定数）。$R$・$L$・$C$ は一定。}
+\phlimit{回路が大きく、変化が速いとき（電-13）。鉄心の飽和。電球の抵抗の変化。}
+\end{phmodel}
+
+\Needspace{12\baselineskip}\bksubsection{3}{RC 回路：充電・放電と時定数}
+\label{ph:電-9:sec3}
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.7pt] (0,0) rectangle (30,24);
+  \sxjE{(0,12)}{-90}
+  \sxjR{(15,24)}{0}
+  \sxjC{(30,12)}{90}
+  \sxjS{(15,0)}{0}
+  \node[sxj lab, anchor=east] at (-5,12) {$E$};
+  \node[sxj lab, anchor=south] at (15,26.5) {$R$};
+  \node[sxj lab, anchor=west] at (34,12) {$C$};
+  \draw[bkRed!80!black, sxj arr] (2,27.5) -- (8,27.5);
+  \node[sxj lab, text=bkRed!80!black, anchor=south] at (5,28) {$i$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+電池 $E$、抵抗 $R$、はじめ空のコンデンサー $C$ を1列につなぎ、$t=0$ でスイッチを入れます。コイルがないので②の式で $L=0$、電源は一定の $E$ です。
+\[ Ri+\frac{q}{C}=E \]
+\end{minipage}
+\par\vspace{3pt}
+この式は、数学の本（6-4⑦）で解いた式と同じです（$q=Cv_C$ で書きかえると、6-4 の $RC\,\dd V/\dd t=E-V$）。答えは
+\pheq{v_C=E\bigl(1-e^{-t/\tau}\bigr),\qquad i=\frac{E}{R}\,e^{-t/\tau},\qquad \tau=RC}{s ＝ Ω × F}
+です。スイッチを入れた直後（$t=0$）は $v_C=0$ で、コンデンサーは導線と同じ。電流は $E/R$ です。十分たつと $v_C\to E$、$i\to0$ で、切れた線と同じになります（①の表\ref{ph:電-9:tab-okikae}）。放電（電池をはずして、$v_C=E$ のコンデンサーを抵抗につなぐ）では、$v_C=E\,e^{-t/\tau}$ です。$\tau$ を\textbf{時定数}といいます。\bkidx{じていすう}{時定数}
+
+\begin{phyomi}[$\tau=RC$]
+「時定数は、抵抗と静電容量のかけ算」と読みます。$t=\tau$ ごとに、落ち着く先との差が $e^{-1}\approx0.37$ 倍になります。抵抗が大きいと電流が流れにくく、静電容量が大きいとたまるまでに多くの電気がいるので、どちらも時間を長くします。単位は Ω×F＝s で、\si{k\ohm}×\si{\micro F}＝ms（6-4）と覚えると便利です。
+\end{phyomi}
+
+
+
+\begin{phbaisuru}{抵抗 $R$}
+\noindent\begin{minipage}[c]{0.45\linewidth}\raggedright
+時定数 $RC$ が2倍になり、同じ電圧までためるのに2倍の時間がかかります。最後の電圧 $E$ は変わりません。はじめの電流 $E/R$ は半分になります。数学の本（6-4）の 10 V・\qty{20}{k\ohm}・\qty{100}{\micro F}（$\tau=\qty{2}{s}$）と、抵抗を \qty{40}{k\ohm} にしたとき（$\tau=\qty{4}{s}$）です。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=44mm, height=40mm, xmin=0, xmax=13, ymin=0, ymax=11.8, xtick={2,4,6,8,10,12}, ytick={6.32,10}, yticklabels={6.32,10}, xlabel={$t$（s）}, ylabel={$v_C$（V）}]
+  \addplot[bkthin, dashed, domain=0:12.5] {10};
+  \addplot[bkcurve, domain=0:12.5, samples=60] {10*(1-exp(-x/2))};
+  \addplot[bkcurve2, densely dotted, domain=0:12.5, samples=60] {10*(1-exp(-x/4))};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, anchor=north west, inner sep=1pt] at (axis cs:4.5,4.6) {\qty{20}{k\ohm}（実線）};
+  \node[font=\sffamily\footnotesize, text=bkOrange!80!black, anchor=north west, inner sep=1pt] at (axis cs:4.5,2.4) {\qty{40}{k\ohm}（点線）};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=28mm] *{5}{Q[c,m,wd=14mm]}}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+時間 $t$ & $\tau$ & $2\tau$ & $3\tau$ & $4\tau$ & $5\tau$ \\
+充電：$v_C/E$ & 0.632 & 0.865 & 0.950 & 0.982 & 0.993 \\
+放電：$v_C/E$ & 0.368 & 0.135 & 0.050 & 0.018 & 0.007 \\
+\end{bktable}
+\bktabcaption{時定数の何倍たったかと、電圧の割合。回路の設計では、ふつう $3\tau$〜$5\tau$ で「落ち着いた」とみなす。}\label{ph:電-9:tab-tau}
+\end{bkcenter}
+
+\phboxhead{四角い波を RC 回路に通すと}
+\noindent\begin{minipage}[c]{0.44\linewidth}\raggedright
+電池をつないだり、はずして導線でつないだりを、決まった周期 $T$ で繰り返すと、電圧は四角い波（点線）になります。これを RC 回路に入れると、コンデンサーの電圧は、時定数 $\tau$ が $T$ よりずっと短ければ、角が丸くなるだけで入力に近い形（実線）、$\tau$ が $T$ と同じくらいより長ければ、ぎざぎざの小さな、なだらかな形（破線）になります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=56mm, height=38mm, xmin=0, xmax=3.3, ymin=0, ymax=1.3, xtick={1,2,3}, xticklabels={$T$,$2T$,$3T$}, ytick={1}, yticklabels={$E$}, xlabel={$t$}, ylabel={$v_C$}]
+  \draw[bkGray, line width=0.9pt, densely dotted] (axis cs:0,0) -- (axis cs:0,1) -- (axis cs:0.5,1) -- (axis cs:0.5,0) -- (axis cs:1,0) -- (axis cs:1,1) -- (axis cs:1.5,1) -- (axis cs:1.5,0) -- (axis cs:2,0) -- (axis cs:2,1) -- (axis cs:2.5,1) -- (axis cs:2.5,0) -- (axis cs:3,0);
+  \addplot[bkcurve, domain=0:0.5, samples=40] {1+(0.0000-1)*exp(-(x-0)/0.05)};
+  \addplot[bkcurve, domain=0.5:1, samples=40] {0+(1.0000-0)*exp(-(x-0.5)/0.05)};
+  \addplot[bkcurve, domain=1:1.5, samples=40] {1+(0.0000-1)*exp(-(x-1)/0.05)};
+  \addplot[bkcurve, domain=1.5:2, samples=40] {0+(1.0000-0)*exp(-(x-1.5)/0.05)};
+  \addplot[bkcurve, domain=2:2.5, samples=40] {1+(0.0000-1)*exp(-(x-2)/0.05)};
+  \addplot[bkcurve, domain=2.5:3, samples=40] {0+(1.0000-0)*exp(-(x-2.5)/0.05)};
+  \addplot[bkcurve2, dashed, domain=0:0.5, samples=20] {1+(0.0000-1)*exp(-(x-0)/0.5)};
+  \addplot[bkcurve2, dashed, domain=0.5:1, samples=20] {0+(0.6321-0)*exp(-(x-0.5)/0.5)};
+  \addplot[bkcurve2, dashed, domain=1:1.5, samples=20] {1+(0.2325-1)*exp(-(x-1)/0.5)};
+  \addplot[bkcurve2, dashed, domain=1.5:2, samples=20] {0+(0.7177-0)*exp(-(x-1.5)/0.5)};
+  \addplot[bkcurve2, dashed, domain=2:2.5, samples=20] {1+(0.2640-1)*exp(-(x-2)/0.5)};
+  \addplot[bkcurve2, dashed, domain=2.5:3, samples=20] {0+(0.7292-0)*exp(-(x-2.5)/0.5)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+$\tau\ll T$ のとき、抵抗の電圧 $v_R=E-v_C$（電池をはずした半周期では $-v_C$）は、入力が変わる瞬間だけ大きくとがった形になり、「変化だけを取り出す」回路（微分回路）として使えます。$\tau\gg T$ のとき、コンデンサーの電圧は入力の平均に近い一定の値になり、「でこぼこをならす」回路（平滑回路）になります。充電器の出口のコンデンサー（⑤）は、この「ならす」働きのために入っているのです。
+
+
+\begin{phflow}[電圧則から、充電の式へ]
+\phflowrow{$L\dfrac{\dd i}{\dd t}+Ri+\dfrac{q}{C}=e$}{コイルがない\\電源は一定の $E$}{$Ri+\dfrac{q}{C}=E$}
+\phflowrow{$Ri+\dfrac{q}{C}=E$}{はじめ $q=0$\\（6-4⑦で解く）}{$v_C=E(1-e^{-t/RC})$}
+\end{phflow}
+
+\Needspace{12\baselineskip}\bksubsection{4}{RL 回路：コイルの電流は急に増えない}
+\label{ph:電-9:sec4}
+コンデンサーのかわりにコイル $L$ をつなぐと、②の式で $C$ の項がなくなり（コンデンサーがないことは、$C\to\infty$ と同じ）、
+\[ L\frac{\dd i}{\dd t}+Ri=E \]
+です。数学の本（6-4⑦）と同じ式で、答えは
+\pheq{i=\frac{E}{R}\bigl(1-e^{-t/\tau}\bigr),\qquad\tau=\frac{L}{R}}{s ＝ H ÷ Ω}
+です。スイッチを入れた直後は $i=0$ で、コイルは切れた線と同じ。十分たつと $v_L=0$ になり、導線と同じで、電流は $E/R$ です。RC 回路とは、ちょうど反対です。数学の本のリレーのコイル（12 V・400 Ω・0.2 H）では、$\tau=\qty{0.5}{ms}$ で、電流は 30 mA に近づきます（例題3）。
+
+\begin{phmijika}[モーターの立ち上がりと同じ形]
+第1巻（力-6 ⑨）で、モーターの回る速さの立ち上がり $I\,\dd\omega/\dd t=N_{\mathrm m}-c_{\mathrm r}\omega$ を解きました。これは、RL 回路の式 $L\,\dd i/\dd t=E-Ri$ と、まったく同じ形です。慣性モーメント $I$ がインダクタンス $L$ に、摩擦の係数 $c_{\mathrm r}$ が抵抗 $R$ に、モーターのトルクが電池の電圧に、回る速さが電流にあたります。どちらも、「速さ（流れ）を変えるのをきらうもの」と「速さに比例するブレーキ」でできているからです（⑨、例題11）。
+\end{phmijika}
+
+\phboxhead{スイッチを切るとき：電流の逃げ道を作る}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+コイルに電流 $I_0$ が流れているときにスイッチを切ると、コイルは電流を流し続けようとします。流れる道がないと、電流は一瞬で0になろうとし、$v_L=L\,\dd i/\dd t$ がとても大きくなって、スイッチのすき間に火花がとびます（電-8 例題6）。そこで、コイルと並べて、ふだんは電流が流れない向きに\textbf{ダイオード}（一方向にしか電流を通さない部品。ここでは理想の弁とします）をつなぎます。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \draw[bkInk, line width=0.7pt] (0,0) -- (0,24) -- (34,24) -- (34,0) -- cycle;
+  \draw[bkInk, line width=0.7pt] (22,24) -- (22,0);
+  \sxjE{(0,12)}{-90}
+  \sxjS{(11,24)}{0}
+  \sxjL{(34,15)}{-90}
+  \sxjR{(34,5.5)}{90}
+  \sxjD{(22,12)}{90}
+  \node[sxj lab, anchor=east] at (-5,12) {$E$};
+  \node[sxj lab, anchor=west] at (37.5,15) {$L$};
+  \node[sxj lab, anchor=west] at (37,5.5) {$R$};
+  \node[sxj lab, anchor=east] at (19,12) {D};
+  \draw[bkRed!80!black, sxj arr, dashed] (28,21) -- (28,3);
+  \node[sxj lab, anchor=south] at (17,26.5) {スイッチ};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{3pt}
+スイッチを切ると、コイルの電流は同じ向きに流れ続け（図の破線の矢印：コイルを上から下へ）、ダイオードを下から上へ通ってコイルにもどる輪を回りながら、コイル自身の抵抗 $R$ で、時定数 $L/R$ で減っていきます。コイルの両はしの電圧は、ダイオードのおかげでほぼ0のまま、スイッチにかかる電圧も電池の $E$ だけです。コイルにたまっていたエネルギー $\tfrac12LI_0^{\,2}$ は、火花ではなく、コイルの抵抗の熱になります（例題4）。
+
+\begin{senmonsho}[電気回路の専門書の書き方]
+\begin{bkhonbun}
+$R$-$L$ 直列回路に $t=0$ において直流電圧 $E$ を加えるとき，回路方程式 $L\,\dfrac{di}{dt}+Ri=E$ を初期条件 $i(0)=0$ のもとで解けば
+\[ i=\frac{E}{R}\Bigl(1-\varepsilon^{-\frac{R}{L}t}\Bigr) \]
+を得る．ここに $\varepsilon$ は自然対数の底であり，$T=L/R$ を時定数という．第1項を定常解，第2項を過渡解という．
+\end{bkhonbun}
+\bkyaku{日本の電気工学の本には、指数関数の $e$（2.718…）を $\varepsilon$ と書くものがある。電源の電圧 $e$・$E$ や電気素量 $e$ とまぎらわしいからである（この本は $e^{-t/\tau}$ と書く）。時定数は $\tau$ でなく $T$ と書くことも多い。「定常解」は十分たったあとの $E/R$、「過渡解」は、時間とともに消えていく $-\dfrac{E}{R}e^{-t/\tau}$ の部分。}
+\end{senmonsho}
+
+\Needspace{14\baselineskip}\bksubsection{5}{はてな？の答え：充電器のコンデンサー}
+\label{ph:電-9:sec5}
+\noindent\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=0.82mm, y=0.82mm]
+  \draw[bkInk, line width=0.7pt] (8,0) rectangle (44,24);
+  \draw[bkInk, line width=0.7pt] (0,24) -- (8,24) (0,0) -- (8,0);
+  \fill[bkGray!40] (-8,-2) rectangle (0,26);
+  \node[sxj lab, align=center] at (-4,12) {電\\源\\の\\回\\路};
+  \sxjC{(20,12)}{90}
+  \sxjR{(44,17)}{90}
+  \sxjLED{(44,6)}{-90}
+  \node[sxj lab, anchor=east] at (16.5,12) {$C$};
+  \node[sxj lab, anchor=west] at (47,17) {$R$};
+  \node[sxj lab, anchor=west] at (48,6) {LED};
+  \draw[bkInk, line width=0.7pt] (20,24) -- (20,15.4) (20,8.6) -- (20,0);
+  \node[sxj lab, anchor=south] at (26,25) {出口（5 V）};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.57\linewidth}\raggedright
+\label{ph:電-9:hatena}\bkhatenaref の答えです。充電器の出口には、電圧のでこぼこをならすための、大きめのコンデンサーがつないであります。充電器をコンセントからぬくと、このコンデンサーにたまっていた電気が、LED とそれにつながる抵抗を通って流れ出します。これは RC 回路の放電で、電圧は
+\[ v_C=E\,e^{-t/RC} \]
+と、時定数 $RC$ ごとに 37 \% に減っていきます。
+\end{minipage}
+\par\vspace{3pt}
+LED は、かかる電圧がある値（色によって違い、赤で約 2 V）より下がると、ほとんど電流が流れなくなって消えます。たとえば、\qty{470}{\micro F}のコンデンサーが 5 V にたまっていて、LED の回路を \qty{10}{k\ohm}の抵抗とみなし、2 V で消えるとすると、$\tau=\qty{4.7}{s}$ で、約\qty{4.3}{s}光り続けます（例題2）。\textbf{ランプを光らせているのは、充電器の中のコンデンサーにためてあった電気}だったのです。電圧が指数関数で下がるので、ランプは急に消えるのではなく、だんだん暗くなって消えます。やってみようで、コンデンサーを2個並列にしたら時間が2倍になったのも、$\tau=RC$ が2倍になったからです。
+
+\bksubsection{6}{エネルギーの行き先：充電では、半分が熱になる}
+\label{ph:電-9:sec6}
+③の RC 回路で、空のコンデンサーを電池 $E$ で充電しきるとき、エネルギーの出入りを数えます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{電池がした仕事}：電荷 $q=CE$ を電圧 $E$ だけ押し上げたので、$CE^2$。
+\item \textbf{コンデンサーにたまったエネルギー}：$\tfrac12CE^2$（電-3 ⑦）。
+\item \textbf{抵抗で出た熱}：$Ri^2$ を時間で積分します（5-12）。$i=(E/R)\,e^{-t/RC}$ を入れて、
+\[ \int_0^\infty R\Bigl(\frac{E}{R}\Bigr)^2e^{-2t/RC}\,\dd t=\frac{E^2}{R}\times\frac{RC}{2}=\frac12CE^2 \]
+\end{enumerate}
+①＝②＋③で、エネルギーは保存しています。おどろくのは、③が \textbf{$R$ によらない}ことです。抵抗を小さくすると、電流は大きく、時間は短くなり、その効果がちょうど打ち消し合います。電池が出したエネルギーの\textbf{半分は、いつも熱になる}のです。
+\begin{phyomi}[$\int Ri^2\,\dd t=\tfrac12CE^2$]
+「一気にためると、半分は熱になって消える」と読みます。抵抗を0に近づけても、損は減りません。実際の回路では、導線の小さな抵抗や、火花・電波として、やはり半分が出ていきます（例題12）。損を減らすには、電池の電圧を少しずつ上げて、コンデンサーとの電圧の差を小さく保ちながらためます（章末問題のチャレンジ1）。
+\end{phyomi}
+
+\Needspace{14\baselineskip}\bksubsection{7}{LC 回路の電気振動と、RLC 回路の減衰}
+\label{ph:電-9:sec7}
+電圧 $V_0$ にためたコンデンサーを、スイッチでコイル $L$ につなぎます。②の式で $R=0$、$e=0$ とすると、
+\[ L\ddot q+\frac{q}{C}=0\qquad\text{つまり}\qquad \ddot q=-\frac{1}{LC}\,q \]
+です。ばねの $\ddot x=-(k/m)x$ と同じ形で、電荷 $q$ は単振動します（数学 6-6⑧）。
+\pheq{\omega_{\mathrm n}=\frac{1}{\sqrt{LC}},\qquad f=\frac{1}{2\pi\sqrt{LC}}}{1/s ＝ 1 ÷ $\sqrt{\text{H×F}}$}
+\label{ph:電-9:lc}これを\textbf{電気振動}といい、$f$ を\textbf{固有周波数}といいます。\bkidx{でんきしんどう}{電気振動}数学の本（6-6）の\qty{10}{mH}・\qty{1}{\micro F}では、$f\approx\qty{1.59}{kHz}$ です（例題6）。
+
+\phboxhead{エネルギーが行ったり来たりする}
+$L\,\dd i/\dd t+q/C=0$ の両辺に $i=\dd q/\dd t$ をかけると、
+\[ Li\frac{\dd i}{\dd t}+\frac{q}{C}\frac{\dd q}{\dd t}=\frac{\dd}{\dd t}\Bigl(\frac12Li^2+\frac{q^2}{2C}\Bigr)=0 \]
+なので、
+\pheq{\frac12Li^2+\frac{q^2}{2C}=\text{一定}}{J ＝ J}
+です。コンデンサーの電場のエネルギー（電-3 ⑦）と、コイルの磁場のエネルギー（電-8 ⑧）の和が保たれ、2つのあいだをエネルギーが行ったり来たりします。$q$ が0（コンデンサーが空）のとき電流がいちばん大きく、電流が0のときコンデンサーがいちばんたまっています。ばねの位置エネルギーと、おもりの運動エネルギーの行き来（波-1 ⑥）と同じです。
+
+\phboxhead{抵抗があると：減衰振動と臨界抵抗}
+抵抗 $R$ を入れると、②の式 $L\ddot q+R\dot q+q/C=0$ です。同じように $i$ をかけると、
+\[ \frac{\dd}{\dd t}\Bigl(\frac12Li^2+\frac{q^2}{2C}\Bigr)=-Ri^2 \]
+で、エネルギーは抵抗の熱として減っていきます。数学の本（6-7⑦・6-12⑧）で解いたとおり、ふるまいは減衰比
+\pheq{\zeta=\frac{R}{2}\sqrt{\frac{C}{L}}=\frac{R}{R_{\mathrm c}},\qquad R_{\mathrm c}=2\sqrt{\frac{L}{C}}}{Ω ＝ $\sqrt{\text{H÷F}}$}
+で決まり、$\zeta<1$ ならゆれながら減り、$\zeta=1$（臨界抵抗 $R_{\mathrm c}$）ならゆれずにいちばん早く落ち着き、$\zeta>1$ ならゆっくり減ります。\bkidx{りんかいていこう}{臨界抵抗}\qty{10}{mH}・\qty{1}{\micro F}では $R_{\mathrm c}=\qty{200}{\ohm}$ です（例題7）。
+
+\begin{phflow}[RLC 回路から、電気振動と臨界抵抗へ]
+\phflowrow{$L\ddot q+R\dot q+\dfrac{q}{C}=e$}{$R=0$、$e=0$\\（抵抗も電源もない）}{$f=\dfrac{1}{2\pi\sqrt{LC}}$}
+\phflowrow{$L\ddot q+R\dot q+\dfrac{q}{C}=0$}{$\zeta=1$\\（ゆれずに最速）}{$R_{\mathrm c}=2\sqrt{\dfrac{L}{C}}$}
+\end{phflow}
+
+\begin{phbaisuru}[臨界の0.1倍・1倍・2倍]{抵抗 $R$}
+\noindent\begin{minipage}[c]{0.4\linewidth}\raggedright
+10 V にためた\qty{1}{\micro F}のコンデンサーを、\qty{10}{mH}のコイルと抵抗につないだときの、コンデンサーの電圧です。$R=\qty{20}{\ohm}$（$\zeta=0.1$、実線）はゆれながら、$\qty{200}{\ohm}$（$\zeta=1$、破線）はゆれずに早く、$\qty{400}{\ohm}$（$\zeta=2$、点線）はゆっくり0に近づきます。静電容量を2倍にすると、ゆれの周期は $\sqrt2$ 倍になります。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.58\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=62mm, height=46mm, xmin=0, xmax=2.1, ymin=-8.5, ymax=11.5, xtick={0.5,1,1.5,2}, ytick={-5,5,10}, xlabel={$t$（ms）}, ylabel={$v_C$（V）}]
+  \draw[bkGray, line width=0.5pt] (axis cs:0,0) -- (axis cs:2.1,0);
+  \addplot[bkcurve, domain=0:2, samples=200] {10*exp(-1*x)*(cos(deg(9.95*x))+0.1005*sin(deg(9.95*x)))};
+  \addplot[bkcurve2, dashed, domain=0:2, samples=80] {10*(1+10*x)*exp(-10*x)};
+  \addplot[bkcurve3, densely dotted, domain=0:2, samples=80] {10*(-37.3205*exp(-2.6795*x)+2.6795*exp(-37.3205*x))/(-37.3205+2.6795)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\Needspace{12\baselineskip}\bksubsection{8}{ラプラス変換で解く：コイルは $sL$、コンデンサーは $1/(sC)$}
+\label{ph:電-9:sec8}
+数学の本（9-5・9-7）で学んだラプラス変換を使うと、過渡現象の式を、オームの法則と同じ形の計算で解けます。はじめの電流と電荷が0のとき、部品のきまりを変換すると、
+\[ v_R=Ri\ \to\ V_R=RI,\qquad v_L=L\frac{\dd i}{\dd t}\ \to\ V_L=sL\,I \]
+\[ v_C=\frac{1}{C}\int_0^t i\,\dd t\ \to\ V_C=\frac{1}{sC}\,I \]
+です（大文字は変換したもの。微分は $s$ をかける、積分は $s$ でわる：9-5）。抵抗が $R$、コイルが $sL$、コンデンサーが $1/(sC)$ という「抵抗のようなもの」になり、直列ならたし算できます。
+\pheq{I(s)=\frac{E(s)}{R+sL+\dfrac{1}{sC}}}{A·s ＝ V·s ÷ Ω}
+\label{ph:電-9:laplace}一定の電圧 $E$ を $t=0$ で入れると $E(s)=E/s$ なので、コンデンサーの電圧は
+\[ V_C(s)=\frac{1}{sC}\,I(s)=\frac{E}{s\,(LCs^2+RCs+1)} \]
+です。これを部分分数に分けて表を引くのが、数学の本（9-7⑩）の計算です。$L=\qty{10}{mH}$・$C=\qty{1}{\micro F}$・$R=\qty{20}{\ohm}$・$E=\qty{10}{V}$ では、
+\[ v_C=10-10e^{-1000t}\Bigl(\cos9950t+\frac{1000}{9950}\sin9950t\Bigr) \]
+となり、ゆれの半周期（$t=\pi/9950\approx\qty{0.316}{ms}$）で、$v_C=10\,(1+e^{-1000\pi/9950})\approx\qty{17.29}{V}$ になります（例題8）。電池は 10 V なのに、コンデンサーには 17 V 以上かかるのです。
+
+\begin{phyomi}[電池より高い電圧が出るわけ]
+スイッチを入れると、コンデンサーに電流が流れこみ、$v_C$ が電池の電圧 10 V に追いついたとき、コイルには電流が流れています。コイルは電流を急に止められない（①）ので、電流は流れ続け、$v_C$ は 10 V を通りこします。ばねにつるしたおもりを、ばねがのびていない所で放すと、つり合いの位置を通りこして、2倍近くまで下がるのと同じです。回路の部品は、この行きすぎの電圧にたえるものを選ばなければなりません。
+\end{phyomi}
+
+\phboxhead{はじめの電流や電荷があるとき}
+はじめにコイルに電流 $i(0)$ が流れていると、$v_L$ の変換は $sL\,I-L\,i(0)$ になります（9-5⑥）。コンデンサーがはじめ $v_C(0)$ にたまっていると、$V_C=I/(sC)+v_C(0)/s$ です。どちらも、「はじめの状態」を、回路に入れた小さな電源のように扱えばよいのです。この考えで、スイッチを何度も入れたり切ったりする回路も、順に解いていけます。
+
+\Needspace{14\baselineskip}\bksubsection{9}{相似の表を、電気の法則から作り直す}
+\label{ph:電-9:sec9}
+この本の前付の「保存則と相似の地図」では、ばね・おもり・ダンパーと、コイル・コンデンサー・抵抗の回路が同じ形の式になることを、表にして見せました。その表で「出会う章」として約束していたのが、この章です。第3巻（波-1 ⑩）では、式の形だけを使って、ゆれの速さや減衰比を読みかえました。ここでは、②で、回路の式の1つ1つの項がどの法則から出たかがわかったので、\textbf{なぜ同じ形になるのか}を、電気の側から確かめます。\bkidx{そうじ}{相似}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=13mm] Q[l,m,wd=21mm] Q[l,m,wd=25mm] Q[l,m,wd=30mm] Q[l,m,wd=19mm]}, width=\linewidth, rowsep=2pt, colsep=2.5pt, cells={font=\small}, row{1}={bg=bkTheme!10, font=\sffamily\bfseries\footnotesize}, column{1}={font=\sffamily\bfseries\footnotesize}}
+役わり & 力学（ばね・おもり） & 電気（回路） & 電気の側のきまりと、もとの法則 & 熱（部屋・お湯） \\
+流れるもの & 速度 $\dot x$ & 電流 $i=\dot q$ & 直列の部品には同じ電流（電荷の保存：電-4 ⑥） & 熱流 $\dot Q$ \\
+押すもの & 力 $F$ & 電圧 $e$ & 1周で電圧の和が0（電圧則：電-4 ⑦） & 温度差 $\Delta T$ \\
+ためるもの & ばねのやわらかさ $1/k$（$x=F/k$） & 静電容量 $C$（$q=Cv_C$） & 電荷と電圧が比例（ガウスの法則：電-3 ④） & 熱容量 $C_{\mathrm{th}}$ \\
+慣性 & 質量 $m$（$F=m\ddot x$） & インダクタンス $L$（$v_L=L\,\dd i/\dd t$） & 電流の変化が電圧を生む（ファラデーの法則：電-8 ⑥） & （ない） \\
+失うもの & ダンパー $c$（$F=c\dot x$） & 抵抗 $R$（$v_R=Ri$） & 電流が電場に比例（$\vec j=\sigma\vec E$：電-4 ③） & 熱抵抗 $R_{\mathrm{th}}$ \\
+\end{bktable}
+\bktabcaption{相似の表を、電気の法則から作り直したもの。上の5行の組（力 $\leftrightarrow$ 電圧 $e$、速度 $\leftrightarrow$ 電流 $i$、$m\leftrightarrow L$、$c\leftrightarrow R$、$1/k\leftrightarrow C$）は、前付の地図と波-1 ⑩の表と同じ。この章では、速度を $\dot x$ と書いた。}\label{ph:電-9:souji}
+\end{bkcenter}
+
+\phboxhead{式も、エネルギーの出入りも同じ}
+力学の運動方程式と、②の回路の式を並べます。
+\[ m\ddot x+c\dot x+kx=F\qquad\longleftrightarrow\qquad L\ddot q+R\dot q+\frac{1}{C}\,q=e \]
+左の式に速度 $\dot x$、右の式に電流 $i=\dot q$ をかけると、
+\[ \frac{\dd}{\dd t}\Bigl(\frac12m\dot x^2+\frac12kx^2\Bigr)=F\dot x-c\dot x^2\qquad\longleftrightarrow\qquad\frac{\dd}{\dd t}\Bigl(\frac12Li^2+\frac{q^2}{2C}\Bigr)=ei-Ri^2 \]
+となります。左は「運動エネルギー＋ばねのエネルギーの増え方＝力がする仕事率－ダンパーの熱」、右は「磁場のエネルギー＋電場のエネルギーの増え方＝電源がする仕事率－抵抗の熱」です。対応する量の組は、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 仕事率：力×速度 $F\dot x$ $\leftrightarrow$ 電圧×電流 $ei$（どちらも W）
+\item 動きでためるエネルギー：$\tfrac12m\dot x^2$ $\leftrightarrow$ $\tfrac12Li^2$（コイルの磁場）
+\item 形でためるエネルギー：$\tfrac12kx^2$ $\leftrightarrow$ $\dfrac{q^2}{2C}$（コンデンサーの電場）
+\item 熱になる仕事率：$c\dot x^2$ $\leftrightarrow$ $Ri^2$
+\end{itemize}
+です。相似は、式の形が同じというだけでなく、\textbf{エネルギーの出入りまで1つ1つ同じ}なのです。前付の地図で「力と電圧が組」になっていたのは、力×速度と電圧×電流が、どちらも仕事率になるからです。
+
+\phboxhead{なぜ同じ形になるのか}
+数学の本（6-15）は、相似のわけを「同じ役わりの部品でできていて、部品のきまりがどれも比例で、それを合計でつなぐから」とまとめました。表\ref{ph:電-9:souji}の右から2列めを見ると、電気の側では、その3つが次のように成り立っています。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ためる部品が2種類ある}：電場にためるコンデンサーと、磁場にためるコイル。力学の「形でためる」ばねと「動きでためる」おもりにあたります。2つのあいだでエネルギーが行き来するので、ゆれが生まれます（⑦）。熱には「動きでためる」ものがないので、熱の列は1階の式で、ゆれません（熱-12）。
+\item \textbf{部品のきまりが比例}：ガウスの法則・ファラデーの法則・$\vec j=\sigma\vec E$ は、どれも場の量について1次の式です。だから、電荷・電圧・電流のあいだも比例になります。ばねのフックの法則、ダンパーの「速さに比例する力」と同じです。
+\item \textbf{合計でつなぐ}：電圧則（1周で0）は、力学の「力の合計＝質量×加速度」、つまり運動方程式にあたるバランス式です。
+\end{enumerate}
+第3巻（波-1 ⑩）で見たように、\qty{0.5}{kg}・\qty{8}{N/m}・$c=0.4$ のばねと、\qty{10}{mH}・\qty{1}{\micro F}・\qty{20}{\ohm} の回路は、どちらも $\zeta=0.1$ です。$\zeta=c/(2\sqrt{mk})$ の $c$ を $R$、$m$ を $L$、$k$ を $1/C$ に読みかえると $\zeta=(R/2)\sqrt{C/L}$ になるのは、この表のとおりです。
+
+\phboxhead{相似がくずれるとき}
+相似は、部品のきまりが比例で、回路が小さいときの話です。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{比例でなくなる}：鉄心のコイルは、電流が大きいと飽和して $L$ が小さくなります（電-7）。電球の抵抗は、温まると大きくなります（例題9）。ダイオードは、向きで電流の通しやすさが変わります。力学でも、ばねを大きくのばすと、力はのびに比例しなくなります。
+\item \textbf{回路が大きくなる}：電気の変化は、ほぼ光の速さで伝わります。変化の速さに比べて回路が大きいと、回路の場所ごとに電流が違ってきて、「直列の部品には同じ電流」が成り立ちません。このときは、電線の上を進む波として扱います（電-13）。
+\item \textbf{もう1つの組み方}：力を電流に、速度を電圧に対応させる組み方もあります（数学 7-11 の「ばねの網と抵抗の網」。電-5 ④）。どちらの組み方も、式の形がそろうように選んだものです。
+\end{itemize}
+
+\Needspace{12\baselineskip}\bksubsection{10}{数値で解く：電流を先に進める}
+\label{ph:電-9:sec10}
+式で解けない回路（部品のきまりが比例でないときなど）は、時間を細かく区切って、少しずつ進めます。ゆれる回路を、いちばん簡単なオイラー法で進めると、ばねと同じく、ゆれがだんだんふくらんでしまいます（6-2⑩）。6-2⑪・波-1 ⑪と同じように、\textbf{電流（ばねの速度にあたる）を先に新しくし、その新しい電流で電荷を進める}と、ふくらみません。例題8 の回路（\qty{10}{mH}・\qty{1}{\micro F}・\qty{20}{\ohm}・10 V）を、$\qty{1}{\micro s}$ ずつ進めます。
+\begin{phcode}[Python]
+L, C, R, E = 0.01, 1e-6, 20, 10   \# H, F, Ω, V
+dt = 1e-6                         \# 時間のきざみ（s）
+q, i, t = 0.0, 0.0, 0.0           \# 電荷・電流・時刻
+vmax = 0.0
+for k in range(2001):
+    if k \% 250 == 0:
+        print(round(t*1000, 2), round(q/C, 2))   \# ms と V
+    i = i + (E - R*i - q/C) / L * dt   \# 電流を先に進める
+    q = q + i * dt                     \# 新しい電流で電荷を進める
+    t = t + dt
+    vmax = max(vmax, q/C)
+print("max", round(vmax, 2))
+\end{phcode}
+\begin{phcodeout}
+0.0 0.0
+0.25 15.73
+0.5 8.97
+0.75 7.8
+1.0 13.35
+1.25 7.19
+1.5 11.44
+1.75 9.92
+2.0 9.23
+max 17.29
+\end{phcodeout}
+左が時刻（ms）、右がコンデンサーの電圧（V）です。電圧は 10 V の周りでゆれながら落ち着いていき、いちばん大きいのは 17.29 V で、⑧のラプラス変換の答えと一致します。\texttt{R = 200} にすると臨界、\texttt{R = 400} にするとゆっくり近づく形になります（⑦のグラフ）。表計算でも、数学の本（6-7）の型で、同じ計算ができます。
+
+\Needspace{10\baselineskip}\bksubsection{11}{工学で出会う過渡現象}
+\label{ph:電-9:sec11}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{突入電流}：電球（①）のほか、パソコンやテレビの電源回路は、入口に大きなコンデンサーをもっています。空のコンデンサーは、スイッチを入れた瞬間は導線と同じなので、大きな電流が流れこみます。電源回路には、はじめだけ電流を制限する抵抗などを入れて、ブレーカーが落ちたり、部品がいたんだりしないようにしています。
+\item \textbf{スナバ回路}：コイルを含む回路のスイッチ（リレーの接点や、半導体のスイッチ）と並べて、抵抗とコンデンサーを直列にしたものをつなぎます。スイッチを切った瞬間のコイルの電流をコンデンサーに逃がし、電圧が急に上がるのをおさえます（「スナバ」は「しずめるもの」という意味）。
+\item \textbf{リンギング}：パソコンの基板の配線にも、小さな $L$ と $C$ があります。デジタルの信号が 0 から 1 に切りかわると、⑧と同じように電圧が行きすぎて、ゆれながら落ち着きます（数学 6-12 の「リンギング」）。配線に小さな抵抗を入れて $\zeta$ を大きくし、ゆれをおさえます。
+\item \textbf{カメラのフラッシュ}：電池で、時間をかけてコンデンサーに高い電圧をためておき、1 ms ほどで一気に放電して光らせます（例題10）。電池からは小さな電流しか取り出せなくても、コンデンサーを使うと、短い時間に大きな仕事率が出せます。
+\end{itemize}
+
+%% ---------------------------------------------------------------
+\begin{phmada}[脳の中の電気の信号は、どう情報を運んでいる？]
+神経の細胞の膜は、うすい膜をはさんで電荷がたまるので、コンデンサーと同じ働きをします。膜には、電気を通す小さな通り道（イオンの通り道）もあり、抵抗にあたります。イギリスのホジキンとハクスリーは、イカの太い神経を使って実験し、1952年に、膜を「コンデンサーと、電圧によって変わる抵抗」の回路とみなす式で、神経の信号（電圧のパルス）が生まれて伝わるようすを、みごとに表しました。2人は1963年にノーベル賞を受けました。この式は今も、神経の研究の土台です。けれども、何百億もの神経がつながった脳が、そのパルスを使って、どのように記憶し、考えているのかは、まだよくわかっていません。
+\end{phmada}
+
+\begin{phsaki}{過渡現象の先へ}
+部品がたくさんある回路の過渡現象は、コイルの電流とコンデンサーの電圧を並べたベクトルの微分方程式（状態方程式）にして、行列で解きます（数学 9-7・9-11）。回路シミュレーターは、⑩の方法をもっとていねいにしたもので、何万もの部品の回路を計算できます。送電線に雷が落ちたときに電線を伝わる大きな電圧の波（サージ）は、集中定数では表せない過渡現象で、分布定数回路（電-13）として扱います。電力系統の守り方は、電-16 で読みます。
+\end{phsaki}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{回路の式}$L\dfrac{\dd i}{\dd t}+Ri+\dfrac{q}{C}=e$、$i=\dfrac{\dd q}{\dd t}$（電圧則＋部品のきまり）\\[3pt]
+\tsl{急に変わらない}コンデンサーの電圧 $v_C$、コイルの電流 $i_L$\\[3pt]
+\tsl{時定数}RC 回路 $\tau=RC$、RL 回路 $\tau=\dfrac{L}{R}$。$3\tau$ で95\,\%\\[3pt]
+\tsl{充電の熱}$\tfrac12CE^2$（$R$ によらず、電池の仕事の半分）\\[3pt]
+\tsl{電気振動}$f=\dfrac{1}{2\pi\sqrt{LC}}$、$\tfrac12Li^2+\dfrac{q^2}{2C}=$ 一定\\[3pt]
+\tsl{減衰}$\zeta=\dfrac{R}{2}\sqrt{\dfrac{C}{L}}$、$R_{\mathrm c}=2\sqrt{\dfrac{L}{C}}$。ラプラス変換：$R$、$sL$、$\dfrac{1}{sC}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{過渡現象}{スイッチを入れたり切ったりしたあと、新しい状態に落ち着くまでの、電流や電圧の変わり方。}
+\bkword{時定数}{落ち着く先との差が $e^{-1}\approx0.37$ 倍になるまでの時間。RC 回路は $RC$、RL 回路は $L/R$。}
+\bkword{突入電流}{スイッチを入れた瞬間に流れる、ふだんより大きな電流。}
+\bkword{電気振動}{コイルとコンデンサーのあいだで、エネルギーが行き来して起きる電流のゆれ。}
+\bkword{臨界抵抗}{RLC 回路が、ゆれずにいちばん早く落ち着く抵抗 $2\sqrt{L/C}$。}
+\bkword{集中定数}{抵抗・コイル・コンデンサーの性質が、部品の中だけに集まっていると考えること。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$e$}{イー}{電源の電圧（時間とともに変わる瞬時の値）〔V〕。直流は $E$。電気素量 $e$、指数関数の $e$（2.718…）とは別}{source voltage}{電-9}}
+{\bkkigocard{$v$}{ブイ}{部品の電圧の瞬時値〔V〕（$v_R$・$v_L$・$v_C$）。回路の章では速度を $v$ と書かない（電-9 は $\dot x$）}{instantaneous voltage}{電-9}}
+\bkkigocards{\bkkigocard{$\tau$}{タウ}{時定数〔s〕。RC 回路は $RC$、RL 回路は $L/R$}{time constant}{電-9}}
+{\bkkigocard{$\zeta$}{ゼータ}{減衰比。$\zeta=\dfrac{R}{2}\sqrt{\dfrac{C}{L}}$。1 より小さいとゆれながら落ち着く}{damping ratio}{電-9}}
+\bkkigocards{\bkkigocard{$s$}{エス}{ラプラス変換の変数〔1/s〕。コイルは $sL$、コンデンサーは $1/(sC)$。電-12 のすべり $s$ とは別}{Laplace variable}{電-9}}{}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:電-9:ex1}
+\begin{phreidai}[RC 回路の充電（3けたで書く）]
+数学の本（6-4）と同じ、電池 \qty{10.0}{V}・抵抗 \qty{20.0}{k\ohm}・はじめ空のコンデンサー \qty{100}{\micro F} の直列回路で、スイッチを入れます。時定数、スイッチを入れた直後の電流、$t=\tau$ のときのコンデンサーの電圧を求めましょう（数学の本と比べるので、3けたで書きます）。
+\phbamen
+電池でコンデンサーを充電する、RC 回路の過渡現象です（③）。
+\phmushi
+導線と電池の内部の抵抗、コンデンサーのもれ（ゆっくり放電すること）は無視します。スイッチは一瞬で入るとします。
+\phzu
+③の図。$E=10.0$、$R=\qty{2.00e4}{\ohm}$、$C=\qty{1.00e-4}{F}$。
+\phriyu
+コンデンサーの電圧は急に変わらないので、直後は $v_C=0$ で、電池の電圧が全部抵抗にかかります（①）。その後は $v_C=E(1-e^{-t/RC})$（③）。
+\phtateru
+\[ \tau=RC,\qquad i(0)=\frac{E}{R},\qquad v_C(\tau)=E\,(1-e^{-1}) \]
+\phtoku
+\[ \tau=2.00\times10^4\times1.00\times10^{-4}=\qty{2.00}{s} \]
+\[ i(0)=\frac{10.0}{2.00\times10^4}=\qty{5.00e-4}{A}=\qty{0.500}{mA} \]
+\[ v_C(\tau)=10.0\times(1-0.368)=\qty{6.32}{V} \]
+\phtashikame
+単位：Ω×F＝(V/A)×(C/V)＝C/A＝s。\\
+大きさ：\si{k\ohm}×\si{\micro F}＝ms なので、20×100＝2000 ms＝2 s。数学の本（6-4）の答えと同じです。\\
+極端な場合：$R\to0$ なら、一瞬でたまり、はじめの電流は限りなく大きくなります（実際は導線の抵抗で決まる）。
+\kotae $\tau=\qty{2.00}{s}$、直後の電流 \qty{0.500}{mA}、$t=\tau$ で \qty{6.32}{V}
+\end{phreidai}
+\begin{jibun}
+10.0 V にたまった \qty{100}{\micro F}のコンデンサーを、\qty{20.0}{k\ohm}の抵抗につないで放電します。（1）2.00 s 後の電圧はいくらですか。（2）1.00 V まで下がるのは何秒後ですか（3けたで書く）。
+\bkjans{（1）\qty{3.68}{V}。（2）$t=2.00\times\ln10\approx\qty{4.61}{s}$}
+\end{jibun}
+
+\label{ph:電-9:ex2}
+\begin{phreidai}[充電器のランプが消えるまで（はてな？）]
+充電器の出口のコンデンサーを \qty{470}{\micro F}、コンセントからぬいた瞬間の電圧を 5.0 V、LED とその抵抗をまとめて \qty{10}{k\ohm} の抵抗とみなし、電圧が 2.0 V より下がると LED が消えるとします。LED が光り続ける時間を求めましょう。
+\phbamen
+ぬいたあとの充電器の中で、コンデンサーが LED の回路に放電する場面です（⑤）。
+\phmushi
+充電器のほかの回路に流れる電流は無視し、LED の回路は一定の抵抗とします（実際の LED は、電圧で通しやすさが変わります）。
+\phzu
+⑤の図。$C=\qty{4.7e-4}{F}$、$R=\qty{1.0e4}{\ohm}$、はじめ $v_C=\qty{5.0}{V}$、消える電圧 \qty{2.0}{V}。
+\phriyu
+RC 回路の放電 $v_C=E\,e^{-t/RC}$（③）が使えます。
+\phtateru
+\[ 5.0\,e^{-t/\tau}=2.0,\qquad t=\tau\ln\frac{5.0}{2.0},\qquad\tau=RC \]
+\phtoku
+\[ \tau=1.0\times10^4\times4.7\times10^{-4}=\qty{4.7}{s},\qquad t=4.7\times\ln2.5\approx4.7\times0.92\approx\qty{4.3}{s} \]
+\phtashikame
+単位：s。\\
+大きさ：数秒で、はてな？の「しばらく光っている」と合います。\\
+極端な場合：消える電圧が 5.0 V に近いと、ほとんどすぐに消えます。2.0 V より低い電圧でも光る LED なら、長く光ります。
+\kotae 約\qty{4.3}{s}
+\end{phreidai}
+\begin{jibun}
+例題2 で、コンデンサーが \qty{1000}{\micro F} だったら、LED は何秒光り続けますか。
+\bkjans{$\tau=\qty{10}{s}$、$10\times\ln2.5\approx\qty{9.2}{s}$}
+\end{jibun}
+
+\label{ph:電-9:ex3}
+\begin{phreidai}[リレーのコイルの電流]
+数学の本（6-4）と同じリレーのコイル（抵抗 \qty{400}{\ohm}、インダクタンス \qty{0.20}{H}）に、12 V の電池をつなぎます。時定数と、十分たったあとの電流を求めましょう。また、スイッチを入れて \qty{1.0}{ms} 後の電流はいくらですか。
+\phbamen
+コイルに電流が流れ始める、RL 回路の過渡現象です（④）。
+\phmushi
+コイルの抵抗は 400 Ω のほかになく、電池の内部の抵抗は無視します。鉄心は飽和せず、$L$ は一定とします。
+\phzu
+④の式。$E=12$、$R=400$、$L=0.20$。
+\phriyu
+RL 回路の $i=(E/R)(1-e^{-t/\tau})$、$\tau=L/R$（④）。
+\phtateru
+\[ \tau=\frac{L}{R},\qquad i_\infty=\frac{E}{R},\qquad i=i_\infty\bigl(1-e^{-t/\tau}\bigr) \]
+\phtoku
+\[ \tau=\frac{0.20}{400}=\qty{5.0e-4}{s}=\qty{0.50}{ms},\qquad i_\infty=\frac{12}{400}=\qty{0.030}{A}=\qty{30}{mA} \]
+\[ i(\qty{1.0}{ms})=30\times(1-e^{-2})\approx\qty{26}{mA} \]
+\phtashikame
+単位：H÷Ω＝(V·s/A)÷(V/A)＝s。\\
+大きさ：1 ms 後（$2\tau$）には、最後の電流の86\,\% まで来ています。人の目には、スイッチを入れた瞬間にリレーが動くように見えます。\\
+極端な場合：$L\to0$ なら、電流は一瞬で 30 mA になります。
+\kotae $\tau=\qty{0.50}{ms}$、\qty{30}{mA}、1.0 ms 後は約\qty{26}{mA}
+\end{phreidai}
+\begin{jibun}
+5 V 用の小さなリレーのコイルを、抵抗 \qty{70}{\ohm}、インダクタンス \qty{0.020}{H} とします。5.0 V をつないだときの時定数と、十分たったあとの電流を求めましょう。
+\bkjans{$\tau=0.020\div70\approx\qty{0.29}{ms}$、$5.0\div70\approx\qty{71}{mA}$}
+\end{jibun}
+
+\label{ph:電-9:ex4}
+\begin{phreidai}[コイルにダイオードをつなぐわけ]
+例題3 のリレー（\qty{0.20}{H}・\qty{400}{\ohm}・\qty{30}{mA}）で、④の図のようにダイオードをつないでから、スイッチを切ります。（1）コイルにたまっていたエネルギーは、どこへ行きますか。（2）スイッチを切ってから \qty{0.50}{ms} 後の電流はいくらですか。（3）ダイオードがないと、電-8 例題6 のように 60 V もの電圧がかかりました。ダイオードがあると、スイッチにかかる電圧はいくらですか。
+\phbamen
+コイルの電流を止めるとき、電流の逃げ道を作る場面です（④）。
+\phmushi
+ダイオードは理想の弁（向きが合えば電圧0で電流を通す）とします。導線の抵抗は無視します。
+\phzu
+④の図。$L=0.20$、コイルの抵抗 $R=400$、はじめの電流 $I_0=0.030$。
+\phriyu
+コイルの電流は急に変わらない（①）ので、切った直後もコイルには 30 mA が流れ、ダイオードとコイルの輪を回ります。この輪には電源がないので、$L\,\dd i/\dd t+Ri=0$ で、時定数 $L/R$ で減ります（④）。
+\phtateru
+\[ U=\frac12LI_0^{\,2},\qquad i=I_0\,e^{-t/\tau},\qquad\tau=\frac{L}{R} \]
+\phtoku
+（1）$U=\tfrac12\times0.20\times0.030^2=\qty{9.0e-5}{J}$ は、コイル自身の抵抗で熱になります。\\
+（2）$\tau=\qty{0.50}{ms}$ なので、$i=30\times e^{-1}\approx\qty{11}{mA}$。\\
+（3）コイルの両はしの電圧は、ダイオードのおかげで0のままなので、スイッチにかかるのは電池の 12 V だけです。
+\phtashikame
+単位：H×A$^2$＝J。\\
+大きさ：ダイオードがないときの 60 V に比べて、5分の1の 12 V です。\\
+極端な場合：電流がゆっくり減るので、リレーが離れるのが少しおそくなります。速く離したいときは、ダイオードに抵抗を直列に足します（じぶんでとこう4）。
+\kotae （1）コイルの抵抗の熱（$\qty{9.0e-5}{J}$）。（2）約\qty{11}{mA}。（3）12 V
+\end{phreidai}
+\begin{jibun}
+例題4 で、ダイオードに \qty{400}{\ohm} の抵抗を直列につなぎます。切った直後のコイルの両はしの電圧、スイッチにかかる電圧、時定数を求めましょう。
+\bkjans{コイルの両はし 12 V、スイッチ \qty{24}{V}、$\tau=\qty{0.25}{ms}$（速く離れる）}
+\end{jibun}
+
+\label{ph:電-9:ex5}
+\begin{phreidai}[充電のエネルギーの行き先]
+はじめ空の \qty{100}{\micro F} のコンデンサーを、抵抗を通して 10 V の電池で充電しきります。電池がした仕事、コンデンサーにたまったエネルギー、抵抗で出た熱を求めましょう。
+\phbamen
+充電のあいだのエネルギーの出入りを数える場面です（⑥）。
+\phmushi
+コンデンサーのもれと、電波として出ていくエネルギーは無視します。
+\phzu
+$C=\qty{1.0e-4}{F}$、$E=\qty{10}{V}$。抵抗の大きさは与えない（決まらなくてよい）。
+\phriyu
+電池は電荷 $CE$ を電圧 $E$ で送り出し、コンデンサーには $\tfrac12CE^2$ がたまります。差が抵抗の熱です（⑥）。
+\phtateru
+\[ W_{\text{電池}}=CE^2,\qquad U=\frac12CE^2,\qquad Q_{\text{熱}}=W_{\text{電池}}-U \]
+\phtoku
+\[ W_{\text{電池}}=1.0\times10^{-4}\times10^2=\qty{1.0e-2}{J}=\qty{10}{mJ} \]
+\[ U=\frac12\times1.0\times10^{-4}\times10^2=\qty{5.0}{mJ},\qquad Q_{\text{熱}}=10-5.0=\qty{5.0}{mJ} \]
+\phtashikame
+単位：F×V$^2$＝(C/V)×V$^2$＝C·V＝J。\\
+大きさ：熱は⑥の積分 $\tfrac12CE^2$ と一致します。\\
+極端な場合：抵抗が\qty{1}{k\ohm}でも\qty{100}{k\ohm}でも、熱は 5.0 mJ です。違うのは時間（$\tau=\qty{0.1}{s}$ と \qty{10}{s}）だけです。
+\kotae 電池 \qty{10}{mJ}、コンデンサー \qty{5.0}{mJ}、熱 \qty{5.0}{mJ}
+\end{phreidai}
+\begin{jibun}
+はじめ空の \qty{220}{\micro F} のコンデンサーを、\qty{9.0}{V}の電池で充電しきります。コンデンサーにたまるエネルギーと、抵抗で出る熱を求めましょう。
+\bkjans{どちらも約\qty{8.9}{mJ}}
+\end{jibun}
+
+\label{ph:電-9:ex6}
+\begin{phreidai}[LC 回路の電気振動（3けたで書く）]
+数学の本（6-6）と同じ \qty{10.0}{mH} のコイルと \qty{1.00}{\micro F} のコンデンサーで LC 回路を作り、コンデンサーを 10.0 V にためてから、スイッチでつなぎます。電気振動の周波数と、流れる電流の最大値を求めましょう（3けたで書く）。
+\phbamen
+コイルとコンデンサーのあいだを、エネルギーが行き来する場面です（⑦）。
+\phmushi
+導線とコイルの抵抗は無視します（実際には、少しずつゆれが小さくなる）。
+\phzu
+$L=\qty{1.00e-2}{H}$、$C=\qty{1.00e-6}{F}$、はじめ $v_C=\qty{10.0}{V}$、$i=0$。
+\phriyu
+周波数は $f=1/(2\pi\sqrt{LC})$（⑦）。電流が最大のときはコンデンサーが空なので、エネルギーの保存 $\tfrac12CV_0^{\,2}=\tfrac12LI_{\max}^{\,2}$ が使えます。
+\phtateru
+\[ f=\frac{1}{2\pi\sqrt{LC}},\qquad I_{\max}=V_0\sqrt{\frac{C}{L}} \]
+\phtoku
+\[ \sqrt{LC}=\sqrt{1.00\times10^{-8}}=1.00\times10^{-4}\ \mathrm{s} \]
+\[ f=\frac{1}{2\pi\times1.00\times10^{-4}}\approx\qty{1.59e3}{Hz} \]
+\[ I_{\max}=10.0\times\sqrt{\frac{1.00\times10^{-6}}{1.00\times10^{-2}}}=10.0\times0.0100=\qty{0.100}{A} \]
+\phtashikame
+単位：$\sqrt{\text{H×F}}$＝s。$\sqrt{\text{F/H}}$＝1/Ω なので、V×(1/Ω)＝A。\\
+大きさ：1秒に約1600回のゆれで、数学の本（6-6）の 1592 Hz と同じです。\\
+極端な場合：$C$ を大きくすると周波数は下がり、電流の最大値は大きくなります。
+\kotae 約\qty{1.59}{kHz}、\qty{0.100}{A}
+\end{phreidai}
+\begin{jibun}
+例題6 で、コンデンサーを \qty{4.00}{\micro F} にすると、周波数はいくらになりますか。
+\bkjans{$\sqrt{4}=2$ 倍の周期なので、半分の約\qty{796}{Hz}}
+\end{jibun}
+
+\label{ph:電-9:ex7}
+\begin{phreidai}[ゆれずに止める抵抗]
+例題6 の LC 回路に抵抗を入れて、ゆれずにいちばん早く放電させたいとします。抵抗をいくらにすればよいですか。
+\phbamen
+RLC 回路の放電を、臨界にする場面です（⑦）。
+\phmushi
+抵抗のほかのエネルギーの損失は無視します。
+\phzu
+$L=\qty{0.010}{H}$、$C=\qty{1.0e-6}{F}$。
+\phriyu
+ゆれずにいちばん早く落ち着くのは、減衰比 $\zeta=1$、つまり $R=R_{\mathrm c}=2\sqrt{L/C}$（⑦。数学 6-7）。
+\phtateru
+\[ R_{\mathrm c}=2\sqrt{\frac{L}{C}} \]
+\phtoku
+\[ R_{\mathrm c}=2\sqrt{\frac{0.010}{1.0\times10^{-6}}}=2\sqrt{1.0\times10^4}=\qty{200}{\ohm} \]
+\phtashikame
+単位：$\sqrt{\text{H/F}}$＝Ω（数学 6-12）。\\
+大きさ：\qty{20}{\ohm}（$\zeta=0.1$）ならよくゆれ、\qty{1}{k\ohm}（$\zeta=5$）ならゆっくり。⑦のグラフと合います。\\
+極端な場合：$R\to0$ でいつまでもゆれ（電気振動）、$R\to\infty$ では電流がほとんど流れず、なかなか放電しません。
+\kotae \qty{200}{\ohm}
+\end{phreidai}
+\begin{jibun}
+\qty{10}{mH} のコイルと \qty{0.10}{\micro F} のコンデンサーの臨界抵抗を求めましょう。
+\bkjans{約\qty{630}{\ohm}（632 Ω）}
+\end{jibun}
+
+\label{ph:電-9:ex8}
+\begin{phreidai}[電池より高い電圧（ラプラス変換）]
+\qty{10}{mH}・\qty{1}{\micro F}・\qty{20}{\ohm} の RLC 直列回路に、$t=0$ で 10 V の電池をつなぎます（数学 9-7 と同じ）。減衰比を求め、コンデンサーにかかる電圧のいちばん大きい値を求めましょう。
+\phbamen
+RLC 回路のスイッチを入れたときの、行きすぎの電圧を求める場面です（⑧）。
+\phmushi
+はじめの電流と電荷は0。部品は理想の部品とします。
+\phzu
+$L=0.010$、$C=1.0\times10^{-6}$、$R=20$、$E=10$。
+\phriyu
+ラプラス変換で $V_C(s)=E/\{s(LCs^2+RCs+1)\}$（⑧）。答えは数学の本（9-7⑩）にあり、ゆれの半周期で山になります。
+\phtateru
+\[ \zeta=\frac{R}{2}\sqrt{\frac{C}{L}},\qquad v_{\max}=E\Bigl(1+e^{-\alpha\pi/\omega_{\mathrm d}}\Bigr),\qquad\alpha=\frac{R}{2L},\ \ \omega_{\mathrm d}=\sqrt{\frac{1}{LC}-\alpha^2} \]
+\phtoku
+\[ \zeta=\frac{20}{2}\sqrt{\frac{1.0\times10^{-6}}{0.010}}=0.10 \]
+\[ \alpha=\frac{20}{2\times0.010}=\qty{1000}{s^{-1}},\qquad\omega_{\mathrm d}=\sqrt{10^8-10^6}\approx\qty{9950}{s^{-1}} \]
+\[ v_{\max}=10\times\bigl(1+e^{-1000\times3.14/9950}\bigr)\approx10\times(1+0.729)\approx\qty{17.3}{V} \]
+\phtashikame
+単位：$\alpha$ と $\omega_{\mathrm d}$ はどちらも 1/s なので、肩の数は単位なし。\\
+大きさ：9-7 の 17.29 V と一致します。山の時刻は $\pi/9950\approx\qty{0.32}{ms}$。\\
+極端な場合：$R\to0$ なら $e^0=1$ で、ちょうど2倍の 20 V になります。
+\kotae $\zeta=0.10$、約\qty{17.3}{V}
+\end{phreidai}
+\begin{jibun}
+例題8 で、抵抗を \qty{100}{\ohm} にすると、減衰比と、コンデンサーの電圧のいちばん大きい値はいくらですか。
+\bkjans{$\zeta=0.50$。$\alpha=\qty{5000}{s^{-1}}$、$\omega_{\mathrm d}\approx\qty{8660}{s^{-1}}$、$10\times(1+e^{-1.81})\approx\qty{11.6}{V}$}
+\end{jibun}
+
+\label{ph:電-9:ex9}
+\begin{phreidai}[電球の突入電流]
+\qty{100}{V}・\qty{100}{W} の白熱電球のフィラメントの抵抗は、冷たいときに \qty{8.2}{\ohm} とします。スイッチを入れた瞬間の電流と、ついているときの電流を求め、比べましょう。
+\phbamen
+冷たいフィラメントに、いきなり電圧がかかる場面です（①）。
+\phmushi
+電球と導線のインダクタンスは無視します。電圧は 100 V の一定とします（交流の実効値で考える：電-10）。
+\phzu
+$V=\qty{100}{V}$、冷たいとき $R_0=\qty{8.2}{\ohm}$、ついているときの電力 $P=\qty{100}{W}$。
+\phriyu
+瞬間の電流はオームの法則 $V/R_0$。ついているときは $P=VI$（電-4 ⑤）から求めます。
+\phtateru
+\[ I_0=\frac{V}{R_0},\qquad I=\frac{P}{V} \]
+\phtoku
+\[ I_0=\frac{100}{8.2}\approx\qty{12}{A},\qquad I=\frac{100}{100}=\qty{1.0}{A} \]
+\phtashikame
+単位：V÷Ω＝A。\\
+大きさ：12倍です。ついているときの抵抗は $100\div1.0=\qty{100}{\ohm}$ で、温まると約12倍になったことになります（電-4 ④）。\\
+極端な場合：フィラメントが温まるまでの、ごく短いあいだだけの電流なので、ふつうはブレーカーは落ちません。
+\kotae はじめ約\qty{12}{A}、ついているとき\qty{1.0}{A}（約12倍）
+\end{phreidai}
+\begin{jibun}
+\qty{100}{V}・\qty{40}{W} の電球のフィラメントの抵抗を、冷たいとき \qty{15}{\ohm} とします。スイッチを入れた瞬間の電流は、ついているときの何倍ですか。
+\bkjans{はじめ $100\div15\approx\qty{6.7}{A}$、ついているとき $\qty{0.40}{A}$。約17倍}
+\end{jibun}
+
+\label{ph:電-9:ex10}
+\begin{phreidai}[カメラのフラッシュ]
+フラッシュのコンデンサーを \qty{100}{\micro F}、ためる電圧を \qty{300}{V} とします。たまるエネルギーを求め、それを \qty{1.0}{ms} で全部放電したときの平均の仕事率を求めましょう。
+\phbamen
+コンデンサーにためたエネルギーを、短い時間に一気に使う場面です（⑪）。
+\phmushi
+放電で全部のエネルギーが出るとし、光に変わる割合は考えません。
+\phzu
+$C=\qty{1.0e-4}{F}$、$V=\qty{300}{V}$、$\Delta t=\qty{1.0e-3}{s}$。
+\phriyu
+コンデンサーのエネルギーは $\tfrac12CV^2$（電-3 ⑦）。平均の仕事率は、エネルギー÷時間です。
+\phtateru
+\[ U=\frac12CV^2,\qquad\overline P=\frac{U}{\Delta t} \]
+\phtoku
+\[ U=\frac12\times1.0\times10^{-4}\times300^2=\qty{4.5}{J},\qquad\overline P=\frac{4.5}{1.0\times10^{-3}}=\qty{4.5e3}{W} \]
+\phtashikame
+単位：J÷s＝W。\\
+大きさ：4.5 kW は、家庭のエアコン数台分の仕事率です。乾電池2本（約\qty{3}{V}・1 A）では、1秒あたり約 3 W しか出せないので、1.5秒ほどかけて、ためてから使います（実際は、電圧を上げる回路の損失もある）。\\
+極端な場合：同じエネルギーでも、放電の時間を短くすると、仕事率はもっと大きくなります。
+\kotae \qty{4.5}{J}、約 \qty{4.5}{kW}
+\end{phreidai}
+\begin{jibun}
+例題10 で、ためる電圧を2倍の \qty{600}{V} にすると、エネルギーは何 J になりますか。
+\bkjans{電圧の2乗に比例するので4倍の \qty{18}{J}}
+\end{jibun}
+
+\label{ph:電-9:ex11}
+\begin{phreidai}[モーターの立ち上がりを、電気の回路で表す]
+第1巻（力-6 ⑨）のモーターは、慣性モーメント $I=\qty{0.02}{kg.m^2}$、摩擦の係数 $c_{\mathrm r}=\qty{0.01}{N.m.s}$、トルク $N_{\mathrm m}=\qty{2}{N.m}$ で、時定数 2 s、最後の速さ 200 rad/s でした。⑨の相似の表で、これと同じ形の式になる RL 回路の $L$・$R$・$E$ を決め、電流の時定数と最後の電流を求めましょう。
+\phbamen
+回る物の運動方程式を、電気の回路に読みかえる場面です（⑨）。
+\phmushi
+モーターの軸の摩擦は、回る速さに比例するとします（力-6 と同じ）。
+\phzu
+回転：$I\,\dd\omega/\dd t+c_{\mathrm r}\omega=N_{\mathrm m}$。回路：$L\,\dd i/\dd t+Ri=E$。
+\phriyu
+相似の表で、慣性 $I\to L$、失うもの $c_{\mathrm r}\to R$、押すもの $N_{\mathrm m}\to E$、流れるもの $\omega\to i$ と読みかえれば、2つの式は同じ形です（回る物では、質量のかわりに慣性モーメント、力のかわりにトルク）。
+\phtateru
+\[ L=0.02,\quad R=0.01,\quad E=2\qquad\text{（数の上で同じにする）} \]
+\[ \tau=\frac{L}{R},\qquad i_\infty=\frac{E}{R} \]
+\phtoku
+\[ \tau=\frac{0.02}{0.01}=\qty{2}{s},\qquad i_\infty=\frac{2}{0.01}=\qty{200}{A} \]
+\phtashikame
+単位：H÷Ω＝s。モーターの $I/c_{\mathrm r}$ も kg·m$^2$÷(N·m·s)＝s。\\
+大きさ：時定数も、最後の値の数も、モーターと同じになりました。ただし、\qty{0.01}{\ohm}・\qty{200}{A} は、ふつうの回路にはない値です。アナログ計算機では、電圧と時間の目もりを変えて、扱いやすい部品で同じ形の式を作りました（波-1 ⑩）。\\
+極端な場合：摩擦が0（$R=0$）なら、速さ（電流）は時間に比例して増え続けます。
+\kotae $L=\qty{0.02}{H}$・$R=\qty{0.01}{\ohm}$・$E=\qty{2}{V}$。時定数 \qty{2}{s}、最後の電流 \qty{200}{A}
+\end{phreidai}
+\begin{jibun}
+例題11 で、モーターに負荷をつけて慣性モーメントを $\qty{0.04}{kg.m^2}$ にすると、相似な回路の $L$ と時定数はいくらになりますか。
+\bkjans{$L=\qty{0.04}{H}$、$\tau=\qty{4}{s}$（力-6 の図と同じく2倍）}
+\end{jibun}
+
+\label{ph:電-9:ex12}
+\begin{phreidai}[2つのコンデンサーをつなぐ]
+\qty{10}{V} にためた \qty{10}{\micro F} のコンデンサーと、空の \qty{10}{\micro F} のコンデンサーを、抵抗の小さな導線でつなぎます。十分たったあとの電圧と、つなぐ前後のエネルギーを求めましょう。
+\phbamen
+電荷が2つのコンデンサーに分かれる場面です。高校の入試でよく出る形です。
+\phmushi
+コンデンサーのもれは無視します。導線の抵抗の大きさは、答えに入りません（⑥）。
+\phzu
+$C_1=C_2=\qty{1.0e-5}{F}$、はじめ $v_1=\qty{10}{V}$、$v_2=0$。
+\phriyu
+導線でつながっていて、ほかに電荷の出入りがないので、電荷の合計は保存します（電-4 ⑥）。十分たつと電流が止まり、2つの電圧は等しくなります。
+\phtateru
+\[ C_1v_1=(C_1+C_2)V,\qquad U_{\text{前}}=\frac12C_1v_1^{\,2},\qquad U_{\text{後}}=\frac12(C_1+C_2)V^2 \]
+\phtoku
+\[ V=\frac{1.0\times10^{-5}\times10}{2.0\times10^{-5}}=\qty{5.0}{V},\qquad U_{\text{前}}=\frac12\times1.0\times10^{-5}\times10^2=\qty{0.50}{mJ} \]
+\[ U_{\text{後}}=\frac12\times2.0\times10^{-5}\times5.0^2=\qty{0.25}{mJ} \]
+\phtashikame
+単位：F×V$^2$＝J。\\
+大きさ：エネルギーの半分の 0.25 mJ が、導線の抵抗の熱や、火花・電波になって出ていきます。⑥と同じく、導線の抵抗をどんなに小さくしても、この損は減りません。\\
+極端な場合：$C_2$ がとても小さければ、電圧はほとんど下がらず、損もほとんどありません。
+\kotae \qty{5.0}{V}。エネルギーは \qty{0.50}{mJ} から \qty{0.25}{mJ} へ（半分が熱など）
+\end{phreidai}
+\begin{jibun}
+10 V にためた \qty{10}{\micro F} のコンデンサーを、空の \qty{30}{\micro F} のコンデンサーにつなぎます。十分たったあとの電圧と、失われるエネルギーの割合を求めましょう。
+\bkjans{電荷 $\qty{1.0e-4}{C}$ が \qty{40}{\micro F} に分かれて \qty{2.5}{V}。エネルギーは 0.50 mJ から 0.125 mJ になり、75\,\% が失われる}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{時定数は、半分になるまでの時間？}
+\bkng{$\tau=\qty{2}{s}$ なので、2秒で電圧が半分になる。}
+\bkok{$\tau$ たつと $e^{-1}\approx0.37$ 倍。半分になるのは $\tau\ln2\approx0.69\tau$（約1.4秒）。}
+時定数は「37\,\% になる時間」（充電なら「63\,\% まで来る時間」）です（③の表\ref{ph:電-9:tab-tau}）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{スイッチを入れた瞬間、コンデンサーは電流を通さない？}
+\bkng{コンデンサーの板のあいだは絶縁されているので、スイッチを入れても電流は流れない。}
+\bkok{空のコンデンサーは、スイッチを入れた直後は\textbf{導線と同じ}。いちばん大きな電流が流れ、たまるにつれて減る。}
+電流が流れなくなるのは、十分に時間がたってからです（①の表\ref{ph:電-9:tab-okikae}）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{抵抗を小さくすれば、充電の損が減る？}
+\bkng{抵抗で熱が出るのだから、抵抗の小さな導線で充電すれば、損はなくなる。}
+\bkok{熱は $\tfrac12CE^2$ で、$R$ によらない。抵抗が小さいと、電流が大きくなる。}
+損を減らすには、電池とコンデンサーの電圧の差を小さく保ちながらためます（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{10 V の電池の回路に、10 V より高い電圧はかからない？}
+\bkng{電池が 10 V なので、どの部品の電圧も 10 V をこえない。}
+\bkok{コイルがあると、コンデンサーに 17 V 以上かかることがある。コイルを切るときは、もっと高い電圧が出る。}
+コイルの電流が急に止まれないために起きる、行きすぎです（⑧、例題8）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$e$ は、電源の電圧？}
+\bkng{$v_C=E(1-e^{-t/RC})$ の $e$ は、電源の電圧 $e$ のこと。}
+\bkok{肩に式がのった $e^{-t/RC}$ の $e$ は、指数関数の $e$（2.718…）。電源の電圧とは別。}
+この章の記号の約束と、専門書の囲みを見直しましょう。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[時定数で、時間を作る・時間を守る]
+\textbf{時間を作る}：抵抗とコンデンサーの時定数は、回路の中で「時間をはかる」のに使われます。車のウインカーの点滅、押しボタンを放してからしばらく明かりがついている照明、電子回路のタイマーは、$RC$ の時定数で時間を決めています。$R$ を変えるだけで、時間を自由に変えられます。
+
+\textbf{時間を守る}：電源回路を設計するときは、スイッチを入れた瞬間の突入電流、切った瞬間のコイルの電圧、行きすぎの電圧（⑧）が、部品のたえられる値をこえないかを確かめます。そのために、ダイオード（④）、スナバ回路（⑪）、電流を制限する抵抗を入れます。
+
+\textbf{信号を整える}：センサーの信号のこまかいゆらぎ（雑音）は、$RC$ の回路を通すと、時定数より速い変化がならされて小さくなります（ローパスフィルター：電-10 ⑨）。
+
+\begin{phketa}[時定数の目安]
+\phketaline{例題の回路}{リレー 0.5 ms、RLC 0.6 ms（周期）、RC 2 s、充電器 約5 s}
+\phketaline{単位の早見}{\si{k\ohm}×\si{\micro F}＝ms、\si{\ohm}×\si{\micro F}＝\si{\micro s}、mH÷\si{\ohm}＝\si{\micro s}}
+\phketaline{落ち着いたとみなす時間}{$3\tau$（95\,\%）〜$5\tau$（99.3\,\%）}
+\phboxhead{答えが桁で合っているか}
+時定数を求めたら、「Ω×F」「H÷Ω」が秒になっているかを確かめます。\si{\micro F} や mH の直し忘れで、1000倍・100万倍の答えになりやすいので、単位の早見で桁をつかんでから計算しましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{電気回路,電子回路,パワーエレクトロニクス,制御工学}{過渡現象、時定数、初期条件、突入電流、減衰振動、臨界制動、伝達関数}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem \qty{1.0}{k\ohm} の抵抗と、はじめ空の \qty{470}{\micro F} のコンデンサーを直列にして、電池につなぎます。時定数と、電池の電圧の95\,\% までたまるのにかかる時間を求めましょう。
+\bkpans{$\tau=\qty{0.47}{s}$。95\,\% は約 $3\tau$ で、約\qty{1.4}{s}}
+\bkproblem 抵抗 \qty{100}{\ohm}、インダクタンス \qty{0.50}{H} のコイルに、\qty{6.0}{V}の電池をつなぎます。時定数と、十分たったあとの電流を求めましょう。
+\bkpans{$\tau=0.50\div100=\qty{5.0}{ms}$、$6.0\div100=\qty{60}{mA}$}
+\bkproblem \qty{0.10}{mH} のコイルと \qty{0.010}{\micro F} のコンデンサーの LC 回路の、電気振動の周波数を求めましょう。
+\bkpans{$\sqrt{LC}=\qty{1.0e-6}{s}$ で、約 $\qty{1.6e5}{Hz}$（約160 kHz）}
+\bkproblem はじめ空の \qty{47}{\micro F} のコンデンサーを、抵抗を通して \qty{12}{V}の電池で充電しきります。電池がした仕事、コンデンサーにたまるエネルギー、抵抗で出る熱を求めましょう。
+\bkpans{電池 約\qty{6.8}{mJ}、コンデンサー約\qty{3.4}{mJ}、熱 約\qty{3.4}{mJ}}
+\bkproblem RC 回路の放電で、時定数が \qty{2.0}{s} のとき、電圧がはじめの半分になるのは何秒後ですか。
+\bkpans{$e^{-t/2.0}=0.5$ より $t=2.0\times\ln2\approx\qty{1.4}{s}$}
+\bkproblem \qty{12}{V} の電池に、\qty{4.0}{\ohm} の抵抗 $R_1$ を直列につなぎ、その先に、\qty{8.0}{\ohm} の抵抗 $R_2$ と、はじめ空のコンデンサー $C$ を並列にしてつなぎます。（1）スイッチを入れた直後に電池から流れる電流、（2）十分たったあとに電池から流れる電流と、コンデンサーの電圧を求めましょう。
+\bkpans{（1）コンデンサーは導線と同じで、\qty{3.0}{A}。（2）コンデンサーは切れた線と同じで、\qty{1.0}{A}。電圧は $R_2$ の電圧の \qty{8.0}{V}}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem はじめ空の \qty{100}{\micro F} のコンデンサーを、抵抗を通して充電します。（1）\qty{10}{V} の電池で一気に充電するとき、抵抗で出る熱はいくらですか。（2）はじめに \qty{5.0}{V} の電池で充電しきり、次に \qty{10}{V} の電池にかえて充電しきると、抵抗で出る熱の合計はいくらですか。（3）$n$ 段に分けて同じように電圧を上げると、熱はどうなりますか。
+\bkpans{（1）\qty{5.0}{mJ}。（2）1段あたり $\tfrac12C\times5.0^2=\qty{1.25}{mJ}$ で、合計\qty{2.5}{mJ}（半分）。（3）$\tfrac12CE^2/n$ で、段を増やすほど減る}
+\bkproblem \qty{10}{mH}・\qty{1.0}{\micro F} の RLC 直列回路で、抵抗を \qty{50}{\ohm} にして、$t=0$ で 10 V の電池をつなぎます。減衰比と、コンデンサーの電圧のいちばん大きい値を求めましょう。
+\bkpans{$\zeta=\tfrac{50}{2}\sqrt{10^{-6}/0.010}=0.25$。行きすぎは $10\,e^{-\pi\zeta/\sqrt{1-\zeta^2}}\approx\qty{4.4}{V}$ なので、約\qty{14.4}{V}}
+\bkproblem \qty{10}{mH}・\qty{1.0}{\micro F} の RLC 直列回路に、9.0 V の電池をつなぎます。コンデンサーにかかる電圧が、たえられる 12 V をこえないようにするには、抵抗を少なくともいくらにすればよいですか。ゆれの山の高さ $E\,(1+e^{-\pi\zeta/\sqrt{1-\zeta^2}})$ を使いましょう。
+\bkpans{$e^{-\pi\zeta/\sqrt{1-\zeta^2}}\leqq\tfrac{12}{9.0}-1=\tfrac13$。$\pi\zeta/\sqrt{1-\zeta^2}\geqq\ln3$ より $\zeta\geqq0.330$。$R=\zeta\times200$ なので、約 \qty{66}{\ohm} より大きくする（67 Ω なら十分）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item スイッチを入れた瞬間と、十分に時間がたったあとの回路を、コンデンサーとコイルの性質から説明できる。\bkfurref{ph:電-9:sec1}
+\item 電圧則と部品のきまりから RC・RL 回路の式を立て、時定数と、エネルギーの行き先を求められる。\bkfurref{ph:電-9:sec3}
+\item LC 回路の電気振動の周波数とエネルギーの行き来、RLC 回路の臨界抵抗を求められる。\bkfurref{ph:電-9:sec7}
+\item ラプラス変換と数値計算で RLC 回路の過渡現象を求め、力学と電気の相似の表を、電気の法則から説明できる。\bkfurref{ph:電-9:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{充電器のランプは、コンデンサーにためた電気で光っていたんだ。ばねとおもりと回路が同じ式になるのは、ためる・失う・慣性の部品が、同じきまりでつながっているからなんだね！}
