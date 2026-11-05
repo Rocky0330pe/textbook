@@ -41,7 +41,8 @@ p("== 例題9：電磁石")
 for B in (1.0, 0.5):
     p(f"B={B}: F N（10 cm2・1面）=", B * B * 1e-3 / 2 / mu0)
 p("== 例題10：表皮深さ（25 kHz）")
-sig_cu = 1 / 1.68e-8; sig_al = 1 / 2.65e-8; sig_fe = 1e7
+# 銅は電-4 の表の標準軟銅 1.72e-8 Ω·m（IACS 5.80e7 S/m と同じ量。まとめ役の決定 Z-4）
+sig_cu = 1 / 1.72e-8; sig_al = 1 / 2.65e-8; sig_fe = 1e7
 def skin(f, s, mur=1): return math.sqrt(2 / (2 * pi * f * mur * mu0 * s))
 res = {}
 for name, s, mur in (("鉄 σ1e7 μr100", sig_fe, 100), ("アルミ", sig_al, 1), ("銅", sig_cu, 1)):

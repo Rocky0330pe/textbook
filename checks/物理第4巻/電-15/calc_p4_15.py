@@ -19,6 +19,8 @@ print("== 例題2 FM80M AM1M WiFi2.4G:", c/80e6, c/1e6, c/2.4e9, " jibun IC 13.5
 print("== ④ E=cB: E0=1 V/m -> B0=", 1/c)
 print("== 例題3 太陽 1361")
 I = 1361; E0 = math.sqrt(2*I/(c*eps0)); print("E0=", E0, "B0=", E0/c)
+# 地球の磁場は電-6 ⑫ の 4.6e-5 T にそろえる（まとめ役の決定 Z-6。整合の組）
+print("地球の磁場 4.6e-5 T と B0 の比:", 4.6e-5/(E0/c), " ④の 1 V/m の B0 との比:", 4.6e-5/(1/c))
 print("jibun レーザー 1mW, 1mm^2:", 1e-3/1e-6, math.sqrt(2*1e3/(c*eps0)), math.sqrt(2*1e3/(c*eps0))/c)
 print("== 例題4 放射圧")
 p_abs = I/c; p_ref = 2*I/c
