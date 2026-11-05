@@ -446,7 +446,9 @@ for lab, th, rh, where in PTS:
     x = xg(T=th + 273.15, R=rh / 100)
     plots.append(r'\addplot[phPsyPt] coordinates {(%.2f,%.4f)};' % (th, x))
     # 修2-6：D は、左にある比エンタルピーの数「40」と並んで「40 D」と読めたので、A と同じく右下に置く
-    labels.append((r'\node[phPsyPtlab, anchor=north west] at (axis cs:%.2f,%.3f) {%s};' % (th + 0.3, x - 0.1, lab)) if lab in ('A', 'D') else (r'\node[phPsyPtlab, anchor=east] at (axis cs:%.2f,%.3f) {%s};' % (th - 0.3, x - 0.05, lab)))
+    # 第23回：D は飽和線の上にあるので、札は線の外（上の空いた所）に置く（相対湿度の線にかからないように）
+    labels.append((r'\node[phPsyPtlab, anchor=south] at (axis cs:%.2f,%.3f) {%s};' % (th, x + 0.35, lab)) if lab == 'D' else
+                  (r'\node[phPsyPtlab, anchor=north west] at (axis cs:%.2f,%.3f) {%s};' % (th + 0.3, x - 0.1, lab)) if lab == 'A' else (r'\node[phPsyPtlab, anchor=east] at (axis cs:%.2f,%.3f) {%s};' % (th - 0.3, x - 0.05, lab)))
 psy = HEAD + r'''%% 空気線図（101.325 kPa）。横：乾球温度、縦：絶対湿度。線：相対湿度・比エンタルピー・湿球温度・比体積（CoolProp の HAPropsSI）
 \pgfplotsset{
   phPsyRH/.style={bkBlue!80!black, line width=0.6pt, mark=none},
