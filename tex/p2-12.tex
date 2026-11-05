@@ -21,6 +21,10 @@
 %%   ・ズーバーの限界熱流束の式（1959年、係数 π/24≈0.131）。リーンハルトの係数 0.149。ヌセルトの膜状凝縮の理論（1916年）。
 %%   ・ニュートンの冷却の法則（1701年の論文）。
 %%   ・空気・水の物性：CoolProp 8.0（IAPWS-95・空気の状態式）で計算。表面張力は IAPWS の式（CoolProp）で 0.0589 N/m（100 ℃）
+%%   ・相関式の使える範囲（表5）：Incropera ほか "Fundamentals of Heat and Mass Transfer" 7版の式 7.30（平板の層流 Pr≳0.6）、式 7.38〜7.41（平板の乱流 0.6<Pr<60・Re_L≲10^8、
+%%       前に層流の部分がある板の (0.037Re^0.8−871)Pr^1/3）、式 8.60（ディッタス・ベルター Re≳10^4・0.6≲Pr≲160・L/D≳10）、式 8.62（グニエリンスキー 3000≲Re≲5×10^6）、
+%%       表 9.1（たての板 0.59Ra^¼ 10^4〜10^9・0.10Ra^⅓ 10^9〜10^13）。修2-5 で表5・流れ図・せいかくに言うと・たいせつに書き足した。
+%%   ・混合対流の目安 Gr/Re^2≈1：Incropera 7版 9.9 節。修2-5 でもっと知りたい（⑦のあと）に使った（数は checks/物理第2巻/確認/Q5_fix_check.py）。
 %%   ・作動油 VG46 の熱伝導率 約0.13 W/(m·K)・比熱 約1.9 kJ/(kg·K)：鉱油の代表値〔要確認：作動油のメーカー資料〕
 \makeatletter
 % 熱の流れの太い矢印  \qxmheat{(始め)}{(終わり)}
@@ -42,15 +46,13 @@
 \end{itemize}
 \end{goal}
 
-\phkoushiki{%
-\phk{水や空気は、温まった部分が上へ動いて、全体が温まる}{小学校理科}{ph:熱-12:jouryuu}
-}
+%% 修2-5（Q5-13・U-5）：「この章で導く中学・高校の公式」は、小学校理科の1行だけだったので欄ごとけずった（①の本文はそのまま）。
 
 \begin{hatena}
 \noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
 パソコンの中では、CPU が電気を使って計算するたびに熱が出ます。その熱は、金属の放熱器（ヒートシンク）を通って空気へ逃がします。ノートパソコンの横から、温かい風が出てくるのに気づいたことはありませんか。中の小さなファンが、空気を吹きつけているのです。
 
-ファンを止めても、熱い放熱器のまわりの空気は温まって上へ流れ、少しは冷えるはずです。それなのに、なぜわざわざ電気を使って、風を送るのでしょう。
+ファンを止めても、熱い放熱器の周りの空気は温まって上へ流れ、少しは冷えるはずです。それなのに、なぜわざわざ電気を使って、風を送るのでしょう。
 \end{minipage}\hfill
 \begin{minipage}[c]{0.4\linewidth}\centering
 \begin{tikzpicture}[x=0.78mm, y=0.78mm]
@@ -93,7 +95,7 @@
 風を当てたお湯は、20分で\qty{40}{K}下がり、当てないお湯は\qty{20}{K}しか下がっていません。風を当てると、熱が速く逃げるようです。どれだけ速く逃げるのかを、③で数で表します。
 
 \begin{omoidasou}
-\bkrecall{6-4}{冷めるお湯：$C_{\mathrm{th}}\,\dd\theta/\dd t=-(\theta-\theta_{\mathrm a})/R_{\mathrm{th}}$。温度差は $e^{-t/\tau}$ でへり、時定数 $\tau=C_{\mathrm{th}}R_{\mathrm{th}}$。}
+\bkrecall{6-4}{冷めるお湯：$C_{\mathrm{th}}\,\dd\theta/\dd t=-(\theta-\theta_{\mathrm a})/R_{\mathrm{th}}$。温度差は $e^{-t/\tau}$ で減り、時定数 $\tau=C_{\mathrm{th}}R_{\mathrm{th}}$。}
 \bkrecall{3-12}{片対数のグラフでは、$e^{-t/\tau}$ の形が直線になる。}
 \bkrecall{3-16}{データに直線を引く最小二乗法。}
 \bkrecall{6-11}{冷却フィンの温度差 $\theta$（この章では $\Delta T$ と書く）は $\dd^2\theta/\dd x^2=\beta^2\theta$ をみたし、$\cosh$ の形になる。}
@@ -111,15 +113,16 @@
 \label{ph:熱-12:sec1}
 \label{ph:熱-12:jouryuu}ストーブの上で、空気がゆらゆらとゆれて見えることがあります。温まった空気が上へ上がっているのです。なぜ温まった空気は上へ動くのでしょう。
 
-空気は、圧力が同じなら、絶対温度に反比例して密度が小さくなります（熱-3 の理想気体）。\qty{60}{\celsius}の空気の密度は、\qty{20}{\celsius}の空気の $293\div333\approx0.88$ 倍で、約12\,\%軽いのです。まわりより軽い空気には、まわりの空気から上向きの浮力がはたらき（力-12）、重さより浮力が大きいので、上へ動きます。上へ動いた分、横や下から冷たい空気が流れこみます。水も、温めると少しふくらんで軽くなる（熱-1）ので、同じことが起きます。これが、小学校で学ぶ「水や空気は、温まった部分が上へ動いて、全体が温まる」の理由です。浮力で自然に起きる流れによる対流を\textbf{自然対流}、ファンやポンプで流れを作る対流を\textbf{強制対流}といいます。\bkidx{しぜんたいりゅう}{自然対流}\bkidx{きょうせいたいりゅう}{強制対流}
+空気は、圧力が同じなら、絶対温度に反比例して密度が小さくなります（熱-3 の理想気体）。\qty{60}{\celsius}の空気の密度は、\qty{20}{\celsius}の空気の $293\div333\approx0.88$ 倍で、約12\,\%軽いのです。周りより軽い空気には、周りの空気から上向きの浮力がはたらき（力-12）、重さより浮力が大きいので、上へ動きます。上へ動いた分、横や下から冷たい空気が流れこみます。水も、温めると少しふくらんで軽くなる（熱-1）ので、同じことが起きます。これが、小学校で学ぶ「水や空気は、温まった部分が上へ動いて、全体が温まる」の理由です。浮力で自然に起きる流れによる対流を\textbf{自然対流}、ファンやポンプで流れを作る対流を\textbf{強制対流}といいます。\bkidx{しぜんたいりゅう}{自然対流}\bkidx{きょうせいたいりゅう}{強制対流}
 
 \begin{bkfigure}
 \begin{tikzpicture}[x=1mm, y=1.3mm]
   \fill[bkGray!50] (0,-2) rectangle (90,0);
-  \fill[bkRed!12] (0,0) .. controls (30,3) and (60,5) .. (90,6.5) -- (90,0) -- cycle;
-  \draw[bkRed!80!black, line width=0.8pt, dashed] (0,0) .. controls (30,3) and (60,5) .. (90,6.5);
+  % 修2-5（Q5-8）：空気は Pr＝0.71 なので、温度境界層を速さの境界層より少し厚く（約1.1倍）かく
   \fill[bkBlue!8] (0,0) .. controls (30,6) and (60,9) .. (90,11) -- (90,26) -- (0,26) -- cycle;
+  \fill[bkRed!12] (0,0) .. controls (30,6.7) and (60,10.1) .. (90,12.3) -- (90,0) -- cycle;
   \draw[bkBlue!70!black, line width=0.8pt, dashed] (0,0) .. controls (30,6) and (60,9) .. (90,11);
+  \draw[bkRed!80!black, line width=0.8pt, densely dotted] (0,0) .. controls (30,6.7) and (60,10.1) .. (90,12.3);
   \foreach \yy in {14,18,22} {\draw[qxm flow, line width=0.8pt] (2,\yy) -- (12,\yy);}
   % 速さの形
   \begin{scope}[shift={(62,0)}]
@@ -129,38 +132,38 @@
   % 温度の形
   \begin{scope}[shift={(24,0)}]
     \draw[bkInk!60, line width=0.4pt] (0,0) -- (0,24);
-    \draw[bkRed, line width=1.1pt] (14,0) .. controls (4,2) and (1,3.5) .. (0.5,5.5) -- (0.5,24);
+    \draw[bkRed, line width=1.1pt] (14,0) .. controls (4,1.8) and (1,3.2) .. (0.5,4.9) -- (0.5,24);
     \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (14.5,0.3) {表面 $\theta_{\mathrm s}$};
     \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (1,20) {流れ $\theta_\infty$};
   \end{scope}
   \node[font=\sffamily\footnotesize, anchor=north] at (45,-2.5) {熱い板（流れは左から右）};
-  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!75!black] at (91,6.5) {温度境界層};
-  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!70!black] at (91,11.5) {速さの境界層};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!75!black] at (91,13.2) {温度境界層（点線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!70!black] at (91,9.6) {速さの境界層（破線）};
 \end{tikzpicture}
-\bkfigcaption{熱い板の上を流れる空気（たての向きを大きくかいた）。表面の近くのうすい層の中で、速さ（青い矢印）は0から外の速さまで、温度（赤い線）は表面の温度から流れの温度まで変わる。}\label{ph:熱-12:fig-kyokai}
+\bkfigcaption{熱い板の上を流れる空気（たての向きを大きくかいた）。表面の近くの薄い層の中で、速さ（右の矢印の列）は0から外の速さまで、温度（左の曲線）は表面の温度から流れの温度まで変わる。空気（$\mathrm{Pr}=0.71$）では、温度境界層は速さの境界層より少しだけ厚い（⑤）。}\label{ph:熱-12:fig-kyokai}
 \end{bkfigure}
 
-熱い板の上を空気が流れるときを考えましょう。板の表面では、空気は板にくっついて止まっています（すべりなしの条件。力-14）。表面から少しはなれると、もう外の流れの速さです。速さが変わるうすい層が\textbf{境界層}でした（力-15⑧）。温度も同じで、表面の近くのうすい層の中だけで、表面の温度 $\theta_{\mathrm s}$ から流れの温度 $\theta_\infty$ まで変わります。この層を\textbf{温度境界層}といいます。\bkidx{おんどきょうかいそう}{温度境界層}
+熱い板の上を空気が流れるときを考えましょう。板の表面では、空気は板にくっついて止まっています（滑りなしの条件。力-14）。表面から少し離れると、もう外の流れの速さです。速さが変わる薄い層が\textbf{境界層}でした（力-15 ⑧）。温度も同じで、表面の近くの薄い層の中だけで、表面の温度 $\theta_{\mathrm s}$ から流れの温度 $\theta_\infty$ まで変わります。この層を\textbf{温度境界層}といいます。\bkidx{おんどきょうかいそう}{温度境界層}
 
 表面にくっついて止まっている空気の中では、熱は伝導（熱-11）でしか運べません。温度境界層の厚さを $\delta_T$ とすると、表面から出る熱流束は、およそ
 \[q\approx k\,\frac{\theta_{\mathrm s}-\theta_\infty}{\delta_T}\]
-です（$k$ は流体の熱伝導率）。境界層の外へ出た熱は、流れがどんどん運び去ってくれます。だから、\textbf{温度境界層がうすいほど、熱がよく逃げます}。風を速くすると、境界層はうすくなります（力-15⑧の $\delta\approx5x/\sqrt{\mathrm{Re}_x}$ で、Re が大きくなる）。これが、ファンで風を送るわけの、いちばんもとの理由です。
+です（$k$ は流体の熱伝導率）。境界層の外へ出た熱は、流れがどんどん運び去ってくれます。だから、\textbf{温度境界層が薄いほど、熱がよく逃げます}。風を速くすると、境界層は薄くなります（力-15 ⑧の$\delta\approx5x/\sqrt{\mathrm{Re}_x}$ で、Re が大きくなる）。これが、ファンで風を送るわけの、いちばんもとの理由です。
 
 \begin{phmijika}[熱いスープを、ふうふう吹いて冷ます]
-スープに息を吹きかけると、表面の上の温まった空気（と湯気）が吹き飛ばされ、温度境界層がうすくなります。だから熱がよく逃げ、早く冷めます。冬の風の強い日に寒く感じるのも、体のまわりの温度境界層が風でうすくなり、体から熱がどんどん逃げるからです。
+スープに息を吹きかけると、表面の上の温まった空気（と湯気）が吹き飛ばされ、温度境界層が薄くなります。だから熱がよく逃げ、早く冷めます。冬の風の強い日に寒く感じるのも、体の周りの温度境界層が風で薄くなり、体から熱がどんどん逃げるからです。
 \end{phmijika}
 
 \bksubsection{2}{ニュートンの冷却則と熱伝達率の目安：はてな？の答え}
 \label{ph:熱-12:sec2}
 ①の $k/\delta_T$ は、流れの速さや流体の種類で決まる数です。これをまとめて $h$ と書くと、表面から流体へ逃げる熱は
 \pheq{q=h\,(\theta_{\mathrm s}-\theta_\infty)=h\,\Delta T\qquad\dot Q=hA\,\Delta T}{W/m$^2$ ＝ W/(m$^2$·K)×K}
-と書けます。これを\textbf{ニュートンの冷却則}（ニュートン、1701年）、$h$ を\textbf{熱伝達率}といいます。\bkidx{にゅーとんのれいきゃくそく}{ニュートンの冷却則}6-4 の「冷める速さは温度差に比例する」と同じで、熱抵抗の形にすると $R_{\mathrm{th}}=1/(hA)$ です（熱-11③）。
+と書けます。これを\textbf{ニュートンの冷却則}（ニュートン、1701年）、$h$ を\textbf{熱伝達率}といいます。\bkidx{にゅーとんのれいきゃくそく}{ニュートンの冷却則}\bkidx{ねつでんたつりつ}{熱伝達率}6-4 の「冷める速さは温度差に比例する」と同じで、熱抵抗の形にすると $R_{\mathrm{th}}=1/(hA)$ です（熱-11 ③）。
 
 \begin{phyomi}[$q=h\,\Delta T$]
 「表面 1 m$^2$ から1秒に逃げる熱は、表面と流れの温度差に比例する。比例の定数 $h$ が、熱の逃げやすさ」。$h$ は物の性質ではなく、流れのようすで決まる数です。同じ板でも、風を当てれば $h$ は大きくなります。
 \end{phyomi}
 
-熱伝達率は、流れの種類によって、何万倍もちがいます。
+熱伝達率は、流れの種類によって、何万倍も違います。
 
 \begin{bkfigure}
 \begin{tikzpicture}[x=1mm, y=1mm]
@@ -184,9 +187,9 @@ CPU が\qty{50}{W}の熱を出し、放熱器の表面積が\qty{0.1}{m^2}だと
 空気が\qty{30}{\celsius}なら、放熱器は\qty{130}{\celsius}にもなってしまいます。ファンで風を送ると $h\approx50$ になり、$\Delta T=\qty{10}{K}$ ですみます。\textbf{風を送ると熱伝達率が約10倍になり、同じ熱を逃がすのに要る温度差が約10分の1になる}。これがはてな？の答えです。CPU は\qty{100}{\celsius}くらいをこえると動かなくなるので、ファンが欠かせないのです。
 
 \begin{phbaisuru}{熱伝達率 $h$}
-同じ熱 $\dot Q$ を逃がすのに要る温度差 $\Delta T=\dot Q/(hA)$ は、半分になります。面積 $A$ を2倍にしても同じです。放熱器にうすい板（フィン）をたくさん並べるのは、$A$ を大きくするため（④⑧）、ファンで風を送るのは $h$ を大きくするためです。
+同じ熱 $\dot Q$ を逃がすのに要る温度差 $\Delta T=\dot Q/(hA)$ は、半分になります。面積 $A$ を2倍にしても同じです。放熱器に薄い板（フィン）をたくさん並べるのは、$A$ を大きくするため（④⑧）、ファンで風を送るのは $h$ を大きくするためです。
 \par\smallskip\noindent\begin{tikzpicture}
-\begin{axis}[bkplot, width=96mm, height=40mm, xmin=0, xmax=105, ymin=0, ymax=115, xtick={5,25,50,100}, ytick={10,20,50,100}, xlabel={$h$（W/(m$^2$·K)）}, ylabel={$\Delta T$（K）}]
+\begin{axis}[bkplot, width=96mm, height=40mm, xmin=0, xmax=105, ymin=0, ymax=115, xtick={5,25,50,100}, ytick={10,50,100}, xlabel={$h$（W/(m$^2$·K)）}, ylabel={$\Delta T$（K）}]
   \addplot[bkcurve, domain=4.3:104, samples=100] {500/x};
   \fill[bkRed] (axis cs:5,100) circle (1.8pt) (axis cs:10,50) circle (1.8pt) (axis cs:50,10) circle (1.8pt);
   \node[font=\sffamily\footnotesize, anchor=south west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:40,60) {\qty{50}{W}・\qty{0.1}{m^2}};
@@ -225,19 +228,19 @@ CPU が\qty{50}{W}の熱を出し、放熱器の表面積が\qty{0.1}{m^2}だと
 \phboxhead{表計算で傾きを求める}
 A列に時刻〔分〕、B列に風なしの温度を入れ、C列に \texttt{=LN(B2-20)} を入れて下へコピーします。傾きは、最小二乗法（3-16）で求める関数 \texttt{=SLOPE(C2:C12, A2:A12)} で出ます。
 \begin{bkcenter}
-\begin{bktable}{colspec={Q[l,m,wd=26mm] Q[c,m,wd=26mm] Q[c,m,wd=22mm] Q[c,m,wd=22mm] Q[c,m,wd=20mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
- & 傾き〔1/分〕 & $\tau$〔分〕 & $R_{\mathrm{th}}$〔K/W〕 & $h$ \\
+\begin{bktable}{colspec={Q[l,m,wd=20mm] Q[c,m,wd=24mm] Q[c,m,wd=18mm] Q[c,m,wd=24mm] Q[c,m,wd=30mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+ & 傾き〔1/分〕 & $\tau$〔分〕 & $R_{\mathrm{th}}$〔K/W〕 & $h$〔W/(m$^2$·K)〕 \\
 風なし & $-0.0198$ & 50.6 & 3.61 & 11 \\
 風あり & $-0.0536$ & 18.7 & 1.33 & 30 \\
 \end{bktable}
-\bktabcaption{傾きから求めた時定数・熱抵抗・熱伝達率（$h$ の単位は W/(m$^2$·K)）。$\tau=-1\div\text{傾き}$、$R_{\mathrm{th}}=\tau\div C_{\mathrm{th}}$（$\tau$ は秒にする）、$h=1/(R_{\mathrm{th}}A)$。}\label{ph:熱-12:tab-h}
+\bktabcaption{傾きから求めた時定数・熱抵抗・熱伝達率。$\tau=-1\div\text{傾き}$、$R_{\mathrm{th}}=\tau\div C_{\mathrm{th}}$（$\tau$ は秒にする）、$h=1/(R_{\mathrm{th}}A)$。}\label{ph:熱-12:tab-h}
 \end{bkcenter}
 お湯\qty{200}{g}の熱容量は $C_{\mathrm{th}}=200\times4.2=\qty{840}{J/K}$、カップの外の表面積を $A=\qty{0.025}{m^2}$ とすると、風なしでは
 \[\tau=50.6\times60=\qty{3036}{s},\qquad R_{\mathrm{th}}=\frac{3036}{840}\approx\qty{3.61}{K/W},\qquad h=\frac{1}{3.61\times0.025}\approx11\]
 です。風を当てると $h\approx30$ で、約2.7倍になりました。傾きの比が、そのまま $h$ の比になっています。
 
 \begin{seikaku}
-ここで求めた $h$ には、放射で逃げる熱の分（熱-13。この温度では $h$ にして5〜7くらい）や、ふたのすきまから湯気で逃げる分も入っています。また、カップそのものの熱容量を無視しました（カップの分を入れると $C_{\mathrm{th}}$ は大きくなり、$h$ も少し大きく出る）。実験で求めた $h$ は「その場面全体の熱の逃げやすさ」として使います。
+ここで求めた $h$ には、放射で逃げる熱の分（熱-13。この温度では $h$ にして5〜7くらい）や、ふたのすき間から湯気で逃げる分も入っています。また、カップそのものの熱容量を無視しました（カップの分を入れると $C_{\mathrm{th}}$ は大きくなり、$h$ も少し大きく出る）。実験で求めた $h$ は「その場面全体の熱の逃げやすさ」として使います。
 \end{seikaku}
 
 \begin{phmodel}[冷めるお湯]
@@ -248,7 +251,7 @@ A列に時刻〔分〕、B列に風なしの温度を入れ、C列に \texttt{=L
 
 \bksubsection{4}{フィン：表計算で温度の分布を求める}
 \label{ph:熱-12:sec4}
-放熱器のうすい板（\textbf{フィン}）は、熱を逃がす面積を大きくするための部品です。\bkidx{ふぃん}{フィン}でも、フィンの先へ行くほど、温度は根もとより下がります。熱が根もとから先へ伝導で伝わる間に、表面から空気へ逃げてしまうからです。先のほうの温度が低いと、そこからはあまり熱が逃げません。フィンの温度は、どのように下がっていくのでしょう。
+放熱器の薄い板（\textbf{フィン}）は、熱を逃がす面積を大きくするための部品です。\bkidx{ふぃん}{フィン}でも、フィンの先へ行くほど、温度は根もとより下がります。熱が根もとから先へ伝導で伝わる間に、表面から空気へ逃げてしまうからです。先のほうの温度が低いと、そこからはあまり熱が逃げません。フィンの温度は、どのように下がっていくのでしょう。
 
 \begin{bkfigure}
 \begin{tikzpicture}[x=1mm, y=1mm]
@@ -271,16 +274,15 @@ A列に時刻〔分〕、B列に風なしの温度を入れ、C列に \texttt{=L
 \bkfigcaption{フィンを小さな箱に分ける。1つの箱には、となりから伝導で熱が入り、表面から空気へ熱が逃げる。}\label{ph:熱-12:fig-finbox}
 \end{bkfigure}
 
-\noindent フィンの温度と空気の温度の差を $\Delta T$ とし、フィンを長さ $\Delta x$ の箱に分けます（熱-11⑤と同じ考え）。フィンの断面積を $A_{\mathrm c}$、まわりの長さを $P$ とすると、温度が落ち着いたとき（定常）の箱 $i$ の熱のバランスは、
+\noindent フィンの温度と空気の温度の差を $\Delta T$ とし、フィンを長さ $\Delta x$ の箱に分けます（熱-11 ⑤と同じ考え）。フィンの断面積を $A_{\mathrm c}$、周りの長さを $P$ とすると、温度が落ち着いたとき（定常）の箱 $i$ の熱のバランスは、
 \[\underbrace{kA_{\mathrm c}\frac{\Delta T_{i-1}-\Delta T_i}{\Delta x}}_{\text{左から入る}}-\underbrace{kA_{\mathrm c}\frac{\Delta T_i-\Delta T_{i+1}}{\Delta x}}_{\text{右へ出る}}-\underbrace{hP\,\Delta x\,\Delta T_i}_{\text{空気へ逃げる}}=0\]
 です。両辺を $kA_{\mathrm c}/\Delta x$ でわって、$\Delta T_i$ について解くと、
 \pheq{\Delta T_i=\frac{\Delta T_{i-1}+\Delta T_{i+1}}{2+(m\,\Delta x)^2}\qquad m=\sqrt{\frac{hP}{kA_{\mathrm c}}}}{$m$：1/m}
 となります。「となり2つの平均より、少しだけ低い」というきまりです（8-12 の「まわりの平均との差」。空気へ逃げる分だけ低い）。$m$ は、熱の逃げやすさ（$hP$）と伝わりやすさ（$kA_{\mathrm c}$）の比で決まる数です。
 
-\phboxhead{表計算：ならし直しをくり返す}
+\phboxhead{表計算：ならし直しを繰り返す}
 6-11 の冷却フィン（アルミの板、厚さ\qty{1}{mm}、$k=200$、$h=40$ なら $m=\sqrt{2h/(kt)}=20$〔1/m〕。長さ $l_{\mathrm f}=\qty{0.05}{m}$、根もとの温度差\qty{40}{K}、先は断熱）を、$\Delta x=\qty{0.005}{m}$ の10の箱に分けます。$(m\Delta x)^2=0.01$ です。1行めは、根もとだけ40、ほかは0から始めます。2行めから下は、1つ上の行の値を使って、上の式で全部の箱を計算し直します（先の箱は、外側に同じ温度の箱があると考えて $2\Delta T_{9}\div2.01$）。これを下へコピーしていくと、値が少しずつ落ち着いていきます。
 \begin{bkcenter}
-\bktabcaption{フィンの温度差〔K〕。ならし直しを400回ほどくり返すと、6-11 の $\cosh$ の式の値（下の行）と同じになる。}\label{ph:熱-12:tab-fin}
 \begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=11.5mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
 根もとからの距離〔m〕 & 0 & 0.01 & 0.02 & 0.03 & 0.04 & 0.05 \\
 10回め & 40 & 21.50 & 8.76 & 2.51 & 0.45 & 0.07 \\
@@ -290,12 +292,13 @@ A列に時刻〔分〕、B列に風なしの温度を入れ、C列に \texttt{=L
 400回め & 40 & 34.66 & 30.72 & 28.00 & 26.42 & 25.90 \\
 $\cosh$ の式（6-11） & 40 & 34.67 & 30.73 & 28.02 & 26.44 & 25.92 \\
 \end{bktable}
+\bktabcaption{フィンの温度差〔K〕。ならし直しを400回ほど繰り返すと、6-11 の $\cosh$ の式の値（下の行）と同じになる。}\label{ph:熱-12:tab-fin}
 \end{bkcenter}
 
 \noindent 先の温度差は約\qty{26}{K}で、根もとの約65\,\%です。フィンの全部が根もとと同じ温度なら逃げるはずの熱にくらべて、実際に逃げる熱の割合を\textbf{フィン効率}といいます。\bkidx{ふぃんこうりつ}{フィン効率}表計算では、箱の温度差の平均÷根もとの温度差（はしの箱は半分の重みで平均する）で、約0.76です。このフィンは、全部が根もとの温度のときの76\,\%の熱を逃がしています。
 
 \begin{phmodel}[フィンの表計算]
-\phignore{フィンの厚さの向きの温度差（うすいので）。先の面から逃げる熱（先は断熱とした）。放射。}
+\phignore{フィンの厚さの向きの温度差（薄いので）。先の面から逃げる熱（先は断熱とした）。放射。}
 \phassume{$h$ はフィンのどこでも同じ。定常。空気の温度は一定。}
 \phlimit{フィンが厚く、中に温度差ができるとき。フィンどうしが近すぎて、空気が流れにくいとき（$h$ が場所で変わる）。}
 \end{phmodel}
@@ -308,9 +311,9 @@ $\cosh$ の式（6-11） & 40 & 34.67 & 30.73 & 28.02 & 26.44 & 25.92 \\
 \label{ph:熱-12:sec5}
 ③では、熱伝達率を測って求めました。設計では、まだ作っていない機械の $h$ を、前もって知りたいことがよくあります。$h$ は何で決まるのでしょう。
 
-強制対流で、長さ $l$ の物のまわりを速さ $v$ で流体が流れるとします。$h$ は、$l$・$v$ と、流体の密度 $\rho$・粘度 $\mu$・比熱 $c_p$・熱伝導率 $k$ で決まると考えられます。量は $h$ を入れて7つ、単位のもとは kg・m・s・K の4つなので、力-15⑥のΠ定理から、単位のない数（無次元数）の組は $7-4=3$ つです。単位を合わせると、次の3つが作れます（W＝kg·m$^2$/s$^3$ を使って確かめられる）。
+強制対流で、長さ $l$ の物の周りを速さ $v$ で流体が流れるとします。$h$ は、$l$・$v$ と、流体の密度 $\rho$・粘度 $\mu$・比熱 $c_p$・熱伝導率 $k$ で決まると考えられます。量は $h$ を入れて7つ、単位のもとは kg・m・s・K の4つなので、力-15 ⑥のΠ定理から、単位のない数（無次元数）の組は $7-4=3$ つです。単位を合わせると、次の3つが作れます（W＝kg·m$^2$/s$^3$ を使って確かめられる）。
 \pheq{\mathrm{Nu}=\frac{hl}{k}\qquad\mathrm{Re}=\frac{vl}{\nu}\qquad\mathrm{Pr}=\frac{\nu}{\alpha}=\frac{c_p\mu}{k}}{3つとも単位なし}
-$\nu=\mu/\rho$ は動粘度（力-14）、$\alpha=k/(\rho c_p)$ は熱拡散率（熱-11）です。だから、
+$\nu=\mu/\rho$ は動粘度（力-14）、$\alpha=k/(\rho c_p)$ は熱拡散率（熱-11）です。Nu を\textbf{ヌセルト数}、Pr を\textbf{プラントル数}といいます（Re はレイノルズ数。表\ref{ph:熱-12:tab-musujigen}）。\bkidx{ぬせるとすう}{ヌセルト数}\bkidx{ぷらんとるすう}{プラントル数}だから、
 \[\mathrm{Nu}=f(\mathrm{Re},\ \mathrm{Pr})\]
 の形のきまりがあるはずです。関数 $f$ の形は、次元解析だけでは決まりません。境界層の理論で求められる場合（層流）と、実験で決める場合（乱流など）があります。
 
@@ -318,7 +321,7 @@ $\nu=\mu/\rho$ は動粘度（力-14）、$\alpha=k/(\rho c_p)$ は熱拡散率�
 \begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=26mm] Q[l,m,wd=62mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
 名前 & 式 & 意味 \\
 ヌセルト数 Nu & $\dfrac{hl}{k}$ & 長さ $l$ が、温度境界層の厚さの何倍か（$h\approx k/\delta_T$） \\
-レイノルズ数 Re & $\dfrac{vl}{\nu}$ & 慣性の力と粘性の力の比（力-14⑦）。層流か乱流か \\
+レイノルズ数 Re & $\dfrac{vl}{\nu}$ & 慣性の力と粘性の力の比（力-14 ⑦）。層流か乱流か \\
 プラントル数 Pr & $\dfrac{\nu}{\alpha}$ & 速さが広がる速さと、熱が広がる速さの比 \\
 グラスホフ数 Gr & $\dfrac{g\beta\,\Delta T\,l^3}{\nu^2}$ & 浮力と粘性の力の比（自然対流。⑦） \\
 \end{bktable}
@@ -330,58 +333,58 @@ $\nu=\mu/\rho$ は動粘度（力-14）、$\alpha=k/(\rho c_p)$ は熱拡散率�
 \end{phyomi}
 
 \phboxhead{プラントル数：速さの境界層と温度境界層}
-流体の中で、速さのちがいは動粘度 $\nu$ でならされ、温度のちがいは熱拡散率 $\alpha$ でならされます（どちらも単位は m$^2$/s）。Pr が1より大きい流体（水は約7）では、速さのほうが速く広がるので、温度境界層は速さの境界層よりうすくなります。くわしい計算では、層流の板の上で、およそ
+流体の中で、速さの違いは動粘度 $\nu$ でならされ、温度の違いは熱拡散率 $\alpha$ でならされます（どちらも単位は m$^2$/s）。Pr が1より大きい流体（水は約7）では、速さのほうが速く広がるので、温度境界層は速さの境界層より薄くなります。詳しい計算では、層流の板の上で、およそ
 \[\frac{\delta_T}{\delta}\approx\mathrm{Pr}^{-1/3}\]
 です。空気（$\mathrm{Pr}=0.71$）では2つの厚さはほぼ同じ、水では温度境界層が約半分です（例題6）。
 
 \phboxhead{層流の板：形は境界層の理論から}
-力-15⑧の $\delta\approx5x/\sqrt{\mathrm{Re}_x}$ と、上の $\delta_T\approx\delta\,\mathrm{Pr}^{-1/3}$ を使うと、前のはしから $x$ の所の熱伝達率は
+力-15 ⑧の $\delta\approx5x/\sqrt{\mathrm{Re}_x}$ と、上の $\delta_T\approx\delta\,\mathrm{Pr}^{-1/3}$ を使うと、前のはしから $x$ の所の熱伝達率は
 \[h_x\approx\frac{k}{\delta_T}\approx\frac{k}{x}\cdot\frac{\mathrm{Re}_x^{1/2}\,\mathrm{Pr}^{1/3}}{5}\]
-です。$h_x$ は $\mathrm{Re}_x^{1/2}\propto x^{1/2}$ に比例し $x$ に反比例するので、$x^{-1/2}$ に比例します。前のはしほど境界層がうすく、熱がよく逃げるのです。境界層の方程式をきちんと解くと（ポールハウゼン、1921年）、係数は $\tfrac15$ ではなく0.332になります。長さ $l$ の板全体の平均は、
+です。$h_x$ は $\mathrm{Re}_x^{1/2}\propto x^{1/2}$ に比例し $x$ に反比例するので、$x^{-1/2}$ に比例します。前のはしほど境界層が薄く、熱がよく逃げるのです。境界層の方程式をきちんと解くと（ポールハウゼン、1921年）、係数は $\tfrac15$ ではなく0.332になります。長さ $l$ の板全体の平均は、
 \[\bar h=\frac{1}{l}\int_0^l h_x\,\dd x=\frac{1}{l}\int_0^l Cx^{-1/2}\,\dd x=\frac{2C\,l^{1/2}}{l}=2h_l\]
 （$C$ は定数、$h_l$ は後ろのはしの値）なので、平均のヌセルト数は $2\times0.332=0.664$ 倍になります。
 
 \Needspace{9\baselineskip}\begin{phflow}[層流の板の熱伝達]
-\phflowrow{$\mathrm{Nu}=f(\mathrm{Re},\ \mathrm{Pr})$}{層流の板（$\mathrm{Re}<5\times10^5$）\\境界層の理論、全体の平均}{$\mathrm{Nu}=0.664\,\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}$}
+\phflowrow{$\mathrm{Nu}=f(\mathrm{Re},\ \mathrm{Pr})$}{層流の板（$\mathrm{Re}<5\times10^5$、$\mathrm{Pr}\gtrsim0.6$）\\境界層の理論、全体の平均}{$\mathrm{Nu}=0.664\,\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}$}
 \end{phflow}
 
 \bksubsection{6}{強制対流の相関式の使い方}
 \label{ph:熱-12:sec6}
-実験の結果を、無次元数の式にまとめたものを\textbf{相関式}といいます。\bkidx{そうかんしき}{相関式}よく使うものを並べます。
+実験の結果を、無次元数の式にまとめたものを\textbf{相関式}といいます。\bkidx{そうかんしき}{相関式}よく使うものを、表\ref{ph:熱-12:tab-soukan}に並べます。たとえば、空気（\qty{20}{\celsius}、$\nu=\qty{1.5e-5}{m^2/s}$、$k=0.026$、$\mathrm{Pr}=0.71$）が速さ\qty{5}{m/s}で長さ\qty{0.3}{m}の板に沿って流れるとき、$\mathrm{Re}=5\times0.3\div(1.5\times10^{-5})=1.0\times10^5$ で層流です。$\mathrm{Nu}=0.664\times316\times0.892\approx187$、$h=187\times0.026\div0.3\approx\qty{16}{W/(m^2.K)}$ です（例題3）。
 
 \begin{bkcenter}
-\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[l,m,wd=36mm] Q[c,m,wd=50mm]}, rowsep=2pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
-形 & 流れ & 平均のヌセルト数 \\
-平らな板（長さ $l$） & 層流（$\mathrm{Re}<5\times10^5$） & $0.664\,\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}$ \\
- & 乱流（前のはしから乱流） & $0.037\,\mathrm{Re}^{4/5}\mathrm{Pr}^{1/3}$ \\
-円管の中（内径 $d$） & 層流（$\mathrm{Re}<2300$） & 壁の温度一定 3.66、熱流束一定 4.36 \\
- & 乱流（$\mathrm{Re}>10^4$） & $0.023\,\mathrm{Re}^{0.8}\mathrm{Pr}^{0.4}$ \\
+\begin{bktable}{colspec={Q[l,m,wd=19mm] Q[l,m,wd=23mm] Q[l,m,wd=34mm] Q[l,m,wd=54mm]}, colsep=2.5pt, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+形 & 流れ & 平均のヌセルト数 & 使える範囲 \\
+平らな板（長さ $l$） & 層流 & $0.664\,\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}$ & $\mathrm{Re}<5\times10^5$、$\mathrm{Pr}\gtrsim0.6$ \\
+ & 乱流（前のはしから乱流） & $0.037\,\mathrm{Re}^{4/5}\mathrm{Pr}^{1/3}$ & $\mathrm{Re}\lesssim10^8$、$0.6<\mathrm{Pr}<60$ \\
+円管の中（内径 $d$） & 層流 & 壁の温度一定 3.66、熱流束一定 4.36 & $\mathrm{Re}<2300$、入口から十分離れた所 \\
+ & 遷移の範囲 & この表の式は使えない & $2300<\mathrm{Re}<10^4$ \\
+ & 乱流 & $0.023\,\mathrm{Re}^{0.8}\mathrm{Pr}^{0.4}$ & $\mathrm{Re}>10^4$、$0.6<\mathrm{Pr}<160$、管の長さ／内径＞10 \\
 \end{bktable}
-\bktabcaption{強制対流の相関式（伝熱工学の教科書の代表の式）。物性は、流体の平均の温度（板では表面と流れの平均）の値を使う。円管の乱流の式はディッタス・ベルターの式（1930年）で、流体を温めるとき（冷やすときは指数0.3）。管の層流は、入口から十分はなれた所の値。}\label{ph:熱-12:tab-soukan}
+\bktabcaption{強制対流の相関式と、使える範囲（伝熱工学の教科書の代表の式。$\gtrsim$ は「およそそれ以上」、$\lesssim$ は「およそそれ以下」）。物性は流体の平均の温度（板では表面と流れの平均）の値。円管の乱流はディッタス・ベルターの式（1930年）で、流体を温めるとき（冷やすときは指数0.3）。}\label{ph:熱-12:tab-soukan}
 \end{bkcenter}
 
 \begin{bkfigure}
 \begin{tikzpicture}[x=1mm, y=1mm, box/.style={bk node, font=\sffamily\footnotesize, minimum height=8mm, align=center, inner xsep=1.5mm}]
   \node[box, draw=bkTheme, minimum width=30mm] (a) at (0,0) {形は？};
-  \node[box, minimum width=26mm] (b1) at (-32,-16) {板・物のまわり\\（外の流れ）};
+  \node[box, minimum width=26mm] (b1) at (-32,-16) {板・物の周り\\（外の流れ）};
   \node[box, minimum width=26mm] (b2) at (32,-16) {管の中\\（中の流れ）};
   \node[box, minimum width=26mm] (c1) at (-46,-34) {Re を $l$ で求める\\$5\times10^5$ とくらべる};
-  \node[box, minimum width=26mm] (c2) at (46,-34) {Re を $d$ で求める\\2300 とくらべる};
-  \node[box, draw=bkOrange, minimum width=20mm] (d1) at (-58,-52) {層流\\$0.664$…};
-  \node[box, draw=bkOrange, minimum width=20mm] (d2) at (-30,-52) {乱流\\$0.037$…};
-  \node[box, draw=bkOrange, minimum width=20mm] (d3) at (30,-52) {層流\\3.66};
-  \node[box, draw=bkOrange, minimum width=20mm] (d4) at (58,-52) {乱流\\$0.023$…};
-  \node[box, minimum width=40mm] (e) at (0,-70) {$h=\mathrm{Nu}\times k\div l$（管は $\div d$）};
+  \node[box, minimum width=26mm] (c2) at (42,-34) {Re を $d$ で求める\\2300・$10^4$ とくらべる};
+  \node[box, draw=bkOrange, minimum width=17mm] (d1) at (-58,-57) {層流\\$0.664$…};
+  \node[box, draw=bkOrange, minimum width=17mm] (d2) at (-34,-57) {乱流（前の\\はしから）\\$0.037$…};
+  \node[box, draw=bkOrange, minimum width=15mm] (d3) at (17,-57) {層流\\3.66};
+  \node[box, draw=bkGray, minimum width=21mm] (d5) at (40,-57) {遷移の範囲\\この表の式は\\使えない};
+  \node[box, draw=bkOrange, minimum width=15mm] (d4) at (63,-57) {乱流\\$0.023$…};
+  \node[box, minimum width=40mm] (e) at (0,-79) {$h=\mathrm{Nu}\times k\div l$（管は $\div d$）};
   \draw[bk link] (a) -- (b1); \draw[bk link] (a) -- (b2);
   \draw[bk link] (b1) -- (c1); \draw[bk link] (b2) -- (c2);
   \draw[bk link] (c1) -- (d1); \draw[bk link] (c1) -- (d2);
-  \draw[bk link] (c2) -- (d3); \draw[bk link] (c2) -- (d4);
+  \draw[bk link] (c2) -- (d3); \draw[bk link] (c2) -- (d5); \draw[bk link] (c2) -- (d4);
   \foreach \n in {d1,d2,d3,d4} {\draw[bk link] (\n.south) -- (e);}
 \end{tikzpicture}
-\bkfigcaption{強制対流の相関式を選ぶ流れ図。まず形と Re で流れのようすを決め、表\ref{ph:熱-12:tab-soukan}の式で Nu を出し、$h$ にもどす。}\label{ph:熱-12:fig-erabu}
+\bkfigcaption{強制対流の相関式を選ぶ流れ図。まず形と Re で流れのようすを決め、表\ref{ph:熱-12:tab-soukan}の式で Nu を出し、$h$ にもどす。管の $2300<\mathrm{Re}<10^4$（遷移の範囲）は、表の式の使える範囲の外（⑥のせいかくに言うと）。}\label{ph:熱-12:fig-erabu}
 \end{bkfigure}
-
-\noindent 空気（\qty{20}{\celsius}、$\nu=\qty{1.5e-5}{m^2/s}$、$k=0.026$、$\mathrm{Pr}=0.71$）が速さ\qty{5}{m/s}で長さ\qty{0.3}{m}の板に沿って流れるとき、$\mathrm{Re}=5\times0.3\div(1.5\times10^{-5})=1.0\times10^5$ で層流です。$\mathrm{Nu}=0.664\times316\times0.892\approx187$、$h=187\times0.026\div0.3\approx\qty{16}{W/(m^2.K)}$ です（例題3）。
 
 \begin{phbaisuru}{流れの速さ $v$}
 層流の板では $h\propto\mathrm{Re}^{1/2}\propto v^{1/2}$ なので、$\sqrt2\approx1.4$ 倍。乱流では $v^{0.8}$ なので $2^{0.8}\approx1.7$ 倍です。速さを2倍にしても、熱伝達率は2倍にはなりません。ファンを強くして風速を2倍にするには、ファンの動力はおよそ8倍いる（ファンの動力は風の速さのほぼ3乗に比例する）ので、ほどほどの速さで使うのがふつうです。
@@ -393,22 +396,26 @@ $\nu=\mu/\rho$ は動粘度（力-14）、$\alpha=k/(\rho c_p)$ は熱拡散率�
   \fill[bkRed] (axis cs:2,1.414) circle (1.6pt) (axis cs:2,1.741) circle (1.6pt);
   \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:2.05,1.38) {1.41};
   \node[font=\sffamily\footnotesize, anchor=south east, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:1.95,1.78) {1.74};
-  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:3.0,1.62) {層流 $v^{1/2}$};
-  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:3.0,2.75) {乱流 $v^{0.8}$};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:3.55,1.78) {層流 $v^{1/2}$};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:3.55,2.58) {乱流 $v^{0.8}$};
 \end{axis}
 \end{tikzpicture}
 \end{phbaisuru}
 
 \begin{seikaku}
-相関式の係数や指数は、たくさんの実験のデータに合わせて決めたもので、ずれは $\pm$10〜25\,\%くらいあります。本によって少しちがう式が載っていることもあります。相関式は、その式を作ったときの Re・Pr の範囲の中で使います。
+相関式の係数や指数は、たくさんの実験のデータに合わせて決めたもので、ずれは $\pm$10〜25\,\%くらいあります。本によって少し違う式が載っていることもあります。相関式は、その式を作ったときの Re・Pr の範囲（表\ref{ph:熱-12:tab-soukan}の「使える範囲」）の中で使います。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={・}]
+\item 管の中の $2300<\mathrm{Re}<10^4$ は、層流から乱流へ移っていく\textbf{遷移の範囲}で、流れが乱れたり静まったりします。ディッタス・ベルターの式\bkidx{でぃったすべるたーのしき}{ディッタス・ベルターの式}をここで使うと、大きく出すぎます。この範囲では、グニエリンスキーの式など、専門の本にある式を使います。
+\item 平らな板の $0.037\,\mathrm{Re}^{4/5}\mathrm{Pr}^{1/3}$ は、前のはしから乱流になっている板（前のはしに針金をはって、流れをわざと乱した板など）の式です。前のほうに層流の部分がある板（前のはしから $\mathrm{Re}_x=5\times10^5$ の所までは層流）では、専門の本にある $(0.037\,\mathrm{Re}^{4/5}-871)\,\mathrm{Pr}^{1/3}$ を使います。$\mathrm{Re}=10^6$ の空気では、前のはしから乱流の式は2080、層流の部分を入れた式は1310で、約1.6倍も違います。
+\end{itemize}
 \end{seikaku}
 
 \bksubsection{7}{自然対流の熱伝達}
 \label{ph:熱-12:sec7}
-ファンのない放熱器や、冬の窓・暖房の板のまわりでは、浮力で起きる自然対流が熱を運びます。流れの速さは決まっていないので、Re のかわりに、浮力の強さを表すグラスホフ数 Gr を使います（表\ref{ph:熱-12:tab-musujigen}）。$\beta$ は流体の\textbf{体膨張率}で、1 K あたり体積が何倍ふえるかです（熱-1）。理想気体では、圧力一定で $V\propto T$ なので、
+ファンのない放熱器や、冬の窓・暖房の板の周りでは、浮力で起きる自然対流が熱を運びます。流れの速さは決まっていないので、Re のかわりに、浮力の強さを表すグラスホフ数 Gr を使います（表\ref{ph:熱-12:tab-musujigen}）。\bkidx{ぐらすほふすう}{グラスホフ数}$\beta$ は流体の\textbf{体膨張率}で、1 K あたり体積が何倍増えるかです（熱-1）。理想気体では、圧力一定で $V\propto T$ なので、
 \[\beta=\frac{1}{V}\frac{\partial V}{\partial T}=\frac{1}{T}\qquad\text{（$T$ は K で入れる）}\]
-です。Gr と Pr の積を\textbf{レイリー数} $\mathrm{Ra}=\mathrm{Gr}\,\mathrm{Pr}$ といい、たての板（高さ $l$）では、次の相関式がよく使われます。
-\pheq{\mathrm{Nu}=0.59\,\mathrm{Ra}^{1/4}\quad(10^4<\mathrm{Ra}<10^9)\qquad\mathrm{Nu}=0.10\,\mathrm{Ra}^{1/3}\quad(\mathrm{Ra}>10^9)}{単位なし}
+です。Gr と Pr の積を\textbf{レイリー数} $\mathrm{Ra}=\mathrm{Gr}\,\mathrm{Pr}$ といい、\bkidx{れいりーすう}{レイリー数}たての板（高さ $l$）では、次の相関式がよく使われます。
+\pheq{\mathrm{Nu}=0.59\,\mathrm{Ra}^{1/4}\quad(10^4<\mathrm{Ra}<10^9)\qquad\mathrm{Nu}=0.10\,\mathrm{Ra}^{1/3}\quad(10^9<\mathrm{Ra}<10^{13})}{単位なし}
 $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わります。物性は、表面と流体の平均の温度（\textbf{膜の温度}）で読みます。
 
 \noindent たとえば、\qty{60}{\celsius}・高さ\qty{0.5}{m}のたての板と\qty{20}{\celsius}の空気では、膜の温度は\qty{40}{\celsius}（\qty{313}{K}）です。$\nu=\qty{1.70e-5}{m^2/s}$、$k=0.0274$、$\mathrm{Pr}=0.71$ として、
@@ -420,11 +427,25 @@ $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わりま�
 層流の自然対流では $\mathrm{Nu}\propto\mathrm{Ra}^{1/4}\propto\Delta T^{1/4}$ なので、$h$ は $2^{1/4}\approx1.19$ 倍、熱流束 $q=h\Delta T$ は $2^{5/4}\approx2.4$ 倍になります。温度差が大きいほど浮力の流れが速くなり、熱がよく逃げるのです。ニュートンの冷却則の「$q$ は $\Delta T$ に比例」が近似だというのは、このためです（②のせいかくに言うと）。
 \end{phbaisuru}
 
+\begin{motto}[5]
+\phboxhead{風が弱いと、自然対流も効く：混合対流}
+⑥では風（強制対流）だけ、⑦では浮力（自然対流）だけを考えました。風が弱いと、2つが同じくらい効きます。どちらが効くかは、浮力と慣性の比
+\[\frac{\mathrm{Gr}}{\mathrm{Re}^2}=\frac{g\beta\,\Delta T\,l}{v^2}\]
+でおよそわかります。これが1よりずっと小さければ強制対流の式、ずっと大きければ自然対流の式を使います。1に近いときは両方が効き（\textbf{混合対流}）\bkidx{こんごうたいりゅう}{混合対流}、専門の本の式を使います。たとえば、例題3の板（$l=\qty{0.3}{m}$）を\qty{60}{\celsius}にして、\qty{20}{\celsius}の空気（$\beta=1/313$）を当てると、
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{3}{Q[c,m,wd=24mm]}}, rowsep=1.2pt, row{1}={font=\sffamily\small}}
+風の速さ $v$ & \qty{5}{m/s} & \qty{1}{m/s} & \qty{0.5}{m/s} \\
+$\mathrm{Gr}/\mathrm{Re}^2$ & 0.015 & 0.38 & 1.5 \\
+\end{bktable}
+\end{bkcenter}
+\qty{5}{m/s}の風なら強制対流だけで計算できますが、\qty{0.5}{m/s}くらいのゆるい風では、浮力の流れも同じくらい効きます。部屋の中の空気は、ふつう秒速数十 cm くらいでしか動いていないので、暖房の板や人の体の周りでは、自然対流を無視できません。
+\end{motto}
+
 \bksubsection{8}{フィンの式と、フィン効率}
 \label{ph:熱-12:sec8}
 ④の箱の式で、$\Delta x$ を0に近づけます。$\Delta T_{i-1}-2\Delta T_i+\Delta T_{i+1}=(m\Delta x)^2\Delta T_i$ を $\Delta x^2$ でわると、左辺は2階微分（8-12④）になり、
 \pheq{\frac{\dd^2\Delta T}{\dd x^2}=m^2\,\Delta T\qquad m=\sqrt{\frac{hP}{kA_{\mathrm c}}}}{K/m$^2$ ＝ 1/m$^2$×K}
-です。これが\textbf{フィンの式}で、6-11 の $\dd^2\theta/\dd x^2=\beta^2\theta$ と同じ形です（6-11 の $\beta$ を、この章では $m$ と書く。この章の $\beta$ は体膨張率）。6-11⑤で解いたように、根もと（$x=0$）で $\Delta T_{\mathrm b}$、先（$x=l_{\mathrm f}$）で断熱（傾き0）なら、
+です。これが\textbf{フィンの式}で、\bkidx{ふぃんのしき}{フィンの式}6-11 の $\dd^2\theta/\dd x^2=\beta^2\theta$ と同じ形です（6-11 の $\beta$ を、この章では $m$ と書く。この章の $\beta$ は体膨張率）。6-11⑤で解いたように、根もと（$x=0$）で $\Delta T_{\mathrm b}$、先（$x=l_{\mathrm f}$）で断熱（傾き0）なら、
 \pheq{\Delta T=\Delta T_{\mathrm b}\,\frac{\cosh m(l_{\mathrm f}-x)}{\cosh ml_{\mathrm f}}}{K}
 です。フィンから逃げる熱は、根もとから伝導で入ってくる熱 $-kA_{\mathrm c}\,\dd\Delta T/\dd x$（$x=0$）に等しいので、$\cosh$ を微分すると $\sinh$（6-11④）、$\sinh/\cosh=\tanh$ から、
 \[\dot Q_{\text{フィン}}=kA_{\mathrm c}\,m\,\Delta T_{\mathrm b}\tanh ml_{\mathrm f}=\sqrt{hPkA_{\mathrm c}}\;\Delta T_{\mathrm b}\tanh ml_{\mathrm f}\]
@@ -448,7 +469,7 @@ $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わりま�
 \end{bkfigure}
 
 \begin{phbaisuru}{フィンの長さ $l_{\mathrm f}$}
-直径\qty{3}{mm}のアルミのピン（$k=200$、$h=30$、$m\approx14$〔1/m〕）で、長さを\qty{30}{mm}から\qty{60}{mm}にすると、1本から逃げる熱は0.32 W から0.55 W（1.7倍）になりますが、効率は0.94から0.81に下がります。\qty{120}{mm}にしても0.75 W で、2倍にはなりません。$\tanh$ は1をこえないので、長くしすぎたフィンの先は、ほとんど熱を逃がさないのです。
+直径\qty{3}{mm}のアルミのピン（$k=200$、$h=30$、$m\approx14$〔1/m〕）で、長さを\qty{30}{mm}から\qty{60}{mm}にすると、1本から逃げる熱は0.32 W から0.55 W（1.7倍）になりますが、効率は0.94から0.81に下がります。さらに\qty{60}{mm}の2倍の\qty{120}{mm}にしても、0.55 W から0.75 W（約1.4倍）にしかなりません（効率は0.55）。$\tanh$ は1をこえないので、長くしすぎたフィンの先は、ほとんど熱を逃がさないのです。
 \end{phbaisuru}
 
 \bksubsection{9}{沸騰と凝縮：とても大きな熱伝達率}
@@ -460,15 +481,15 @@ $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わりま�
 
 \begin{bkfigure}
 \begin{tikzpicture}
-\begin{axis}[bkplot, width=110mm, height=62mm, xmode=log, ymode=log, xmin=1, xmax=1500, ymin=1e3, ymax=3e6, xtick={1,10,100,1000}, xticklabels={1,10,100,1000}, ytick={1e3,1e4,1e5,1e6}, yticklabels={$10^3$,$10^4$,$10^5$,$10^6$}, xlabel={$\Delta T$（K）}, ylabel={$q$（W/m$^2$）}]
+\begin{axis}[bkplot, axis lines=left, width=110mm, height=62mm, xmode=log, ymode=log, xmin=1, xmax=1500, ymin=1e3, ymax=3e6, xtick={1,10,100,1000}, xticklabels={1,10,100,1000}, ytick={1e3,1e4,1e5,1e6}, yticklabels={$10^3$,$10^4$,$10^5$,$10^6$}, xlabel={$\Delta T$（K）}, ylabel={$q$（W/m$^2$）}]
   \addplot[bkcurve, line width=1.2pt, smooth] coordinates {(1.5,1.2e3) (3,3.5e3) (5,8e3) (7,3e4) (10,1.2e5) (15,4e5) (22,9e5) (30,1.15e6)};
   \addplot[bkGray, line width=1.1pt, dashed, smooth] coordinates {(30,1.15e6) (45,6e5) (70,1.5e5) (120,2.5e4)};
   \addplot[bkcurve2, line width=1.2pt, smooth] coordinates {(120,2.5e4) (200,4e4) (400,1e5) (700,2.2e5) (1200,4.5e5)};
   \draw[bkRed!70!black, line width=0.9pt, -{Stealth[length=2.5mm]}] (axis cs:32,1.2e6) -- (axis cs:900,1.2e6);
   \fill[bkRed] (axis cs:30,1.15e6) circle (2pt);
   \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:28,1.3e6) {限界熱流束（約\qty{1}{MW/m^2}）};
-  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:300,0.9e6) {熱流束を決めて熱すると、とぶ};
-  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:1.3,2.4e3) {① 自然対流};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black, inner sep=1pt] at (axis cs:200,1.35e6) {熱流束を決めて熱すると、とぶ};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at (axis cs:1.15,7.5e3) {① 自然対流};
   \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:11,7e4) {② 核沸騰};
   \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:55,2.5e5) {③ 遷移沸騰};
   \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:200,3.5e4) {④ 膜沸騰};
@@ -479,11 +500,11 @@ $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わりま�
 
 \begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
 \item \textbf{自然対流}：温度差が数 K までは、泡はできず、温まった水が上がるだけです。
-\item \textbf{核沸騰}：面の小さなくぼみから、次々に泡が生まれて上がります（なべでお湯がわくようす）。泡がまわりの水をかき混ぜるので、$\Delta T$ が少しふえるだけで $q$ が急にふえます。熱伝達率は数万 W/(m$^2$·K) です。
-\item \textbf{遷移沸騰}：泡が多すぎて、面の一部が蒸気の膜でおおわれはじめます。蒸気は熱を伝えにくいので、$\Delta T$ をふやしても $q$ が\textbf{減ります}。
-\item \textbf{膜沸騰}：面が蒸気の膜ですっかりおおわれます。熱は、膜の伝導と放射で伝わります。熱いフライパンに水を落とすと、水の玉が膜の上でころころ動き回るのは、このようすです（ライデンフロスト現象）。
+\item \textbf{核沸騰}\bkidx{かくふっとう}{核沸騰}：面の小さなくぼみから、次々に泡が生まれて上がります（なべでお湯がわくようす）。泡が周りの水をかき混ぜるので、$\Delta T$ が少し増えるだけで $q$ が急に増えます。熱伝達率は数万 W/(m$^2$·K) です。
+\item \textbf{遷移沸騰}：泡が多すぎて、面の一部が蒸気の膜でおおわれはじめます。蒸気は熱を伝えにくいので、$\Delta T$ を増やしても $q$ が\textbf{減ります}。
+\item \textbf{膜沸騰}\bkidx{まくふっとう}{膜沸騰}：面が蒸気の膜ですっかりおおわれます。熱は、膜の伝導と放射で伝わります。熱いフライパンに水を落とすと、水の玉が膜の上でころころ動き回るのは、このようすです（ライデンフロスト現象）。
 \end{enumerate}
-②の終わりの山の頂上が、\textbf{限界熱流束}です。\bkidx{げんかいねつりゅうそく}{限界熱流束}電気のヒーターのように熱流束 $q$ を決めて熱する機械で、$q$ が限界熱流束をこえると、遷移沸騰を飛びこえて、膜沸騰の線（矢印の先）へとびます。そのとき面の温度は千 K 近くまで一気に上がり、金属がとけてしまうことがあります（\textbf{バーンアウト}）。抜山は、線がとける実験からこの山を見つけ、1気圧の水で約1.3〜2.1 MW/m$^2$ と報告しました。原子炉の燃料棒やボイラーの管は、この限界をこえないように設計します。
+②の終わりの山の頂上が、\textbf{限界熱流束}です。\bkidx{げんかいねつりゅうそく}{限界熱流束}電気のヒーターのように熱流束 $q$ を決めて熱する機械で、$q$ が限界熱流束をこえると、遷移沸騰を飛びこえて、膜沸騰の線（矢印の先）へとびます。そのとき面の温度は千 K 近くまで一気に上がり、金属がとけてしまうことがあります（\textbf{バーンアウト}）。\bkidx{ばーんあうと}{バーンアウト}抜山は、線がとける実験からこの山を見つけ、1気圧の水で約1.3〜2.1 MW/m$^2$ と報告しました。原子炉の燃料棒やボイラーの管は、この限界をこえないように設計します。
 
 \phboxhead{限界熱流束の式}
 ズーバー（1959年）は、面の上で上がる蒸気と下りてくる水の流れが不安定になる、という考えから、次の式を作りました。
@@ -491,26 +512,30 @@ $\mathrm{Ra}=10^9$ くらいで、境界層が層流から乱流に変わりま�
 $\rho_{\mathrm l}$・$\rho_{\mathrm v}$ は水と蒸気の密度、$\sigma$ は表面張力です。1気圧の水（$L=\qty{2.257e6}{J/kg}$、$\rho_{\mathrm l}=958$、$\rho_{\mathrm v}=0.598$、$\sigma=\qty{0.0589}{N/m}$）では約\qty{1.1}{MW/m^2}です（例題7）。式の形（どの量が何乗で効くか）は理論から出ますが、係数0.131は、実験に合うように決めたものです（0.149 とする本もある）。
 
 \phboxhead{凝縮：膜状凝縮と滴状凝縮}
-冷たい面に蒸気がふれると、蒸気は水になり（凝縮）、潜熱 $L$ を面に渡します。たての面では、水がうすい膜になって流れ落ちます（\textbf{膜状凝縮}）。熱は、この水の膜を伝導で通るので、膜が厚くなる下のほうほど $h$ が小さくなります。ヌセルト（1916年）は、膜の流れと伝導を解いて、高さ $l$ の面の平均の熱伝達率を
+冷たい面に蒸気が触れると、蒸気は水になり（凝縮）、潜熱 $L$ を面に渡します。たての面では、水が薄い膜になって流れ落ちます（\textbf{膜状凝縮}）。\bkidx{まくじょうぎょうしゅく}{膜状凝縮}熱は、この水の膜を伝導で通るので、膜が厚くなる下のほうほど $h$ が小さくなります。ヌセルト（1916年）は、膜の流れと伝導を解いて、高さ $l$ の面の平均の熱伝達率を
 \pheq{h=0.943\left\{\frac{g\rho_{\mathrm l}(\rho_{\mathrm l}-\rho_{\mathrm v})k_{\mathrm l}^3L}{\mu_{\mathrm l}\,l\,\Delta T}\right\}^{1/4}}{W/(m$^2$·K)}
-と導きました（$\Delta T$ は蒸気の飽和温度と面の温度の差、添字 l は水の値）。水の玉がぽつぽつとつく\textbf{滴状凝縮}では、面の多くが直接蒸気にふれるので、$h$ がさらに数倍大きくなります。
+と導きました（$\Delta T$ は蒸気の飽和温度と面の温度の差、添字 l は水の値）。水の玉がぽつぽつとつく\textbf{滴状凝縮}\bkidx{てきじょうぎょうしゅく}{滴状凝縮}では、面の多くが直接蒸気に触れるので、$h$ がさらに数倍大きくなります。
 
 \begin{motto}[4]
 \phboxhead{ヒートパイプ：沸騰と凝縮で熱を運ぶ管}
-ノートパソコンの中には、CPU から放熱器まで、平たい銅の管がのびています。これは\textbf{ヒートパイプ}という部品で、中を真空にして、少しの水を入れてあります。管の中は圧力が低いので、水は\qty{40}{\celsius}くらいでもわきます（熱-8・熱-10）。CPU の側で水が沸騰して蒸気になり（潜熱を吸う）、蒸気は管の中を冷たい側へ流れて、放熱器の側で凝縮します（潜熱を出す）。水は、管の内側の細かいみぞやあみ目にしみこんで（毛細管の力）、熱い側へもどります。沸騰と凝縮の大きな熱伝達率と、蒸気の速い流れのおかげで、同じ太さの銅の棒の何十倍もの熱を、小さな温度差で運べます。ただし、もどる水の量や、⑨の限界熱流束で、運べる熱には上限があります。
+ノートパソコンの中には、CPU から放熱器まで、平たい銅の管がのびています。これは\textbf{ヒートパイプ}という部品で、\bkidx{ひーとぱいぷ}{ヒートパイプ}中を真空にして、少しの水を入れてあります。管の中は圧力が低いので、水は\qty{40}{\celsius}くらいでもわきます（熱-8・熱-10）。CPU の側で水が沸騰して蒸気になり（潜熱を吸う）、蒸気は管の中を冷たい側へ流れて、放熱器の側で凝縮します（潜熱を出す）。水は、管の内側の細かいみぞやあみ目にしみこんで（毛細管の力）、熱い側へもどります。沸騰と凝縮の大きな熱伝達率と、蒸気の速い流れのおかげで、同じ太さの銅の棒の何十倍もの熱を、小さな温度差で運べます。ただし、もどる水の量や、⑨の限界熱流束で、運べる熱には上限があります。
 \end{motto}
 
 \begin{phmada}[沸騰の限界熱流束を、どんな面でも予測できるか？]
-限界熱流束は、原子炉や電子機器の安全を決める大事な値です。ズーバーの式のように、形は理論から導けても、係数や、面のよごれ・あらさ・ぬれやすさ（水のなじみ方）の効果は、実験で決めています。泡が面のどこで、いくつ生まれるかは、面のごく小さなくぼみの形で決まり、それを前もって予測する理論はまだありません。表面に細かい加工をして限界熱流束を大きくする研究も続いています。乱流の熱伝達も、計算機で流れを細かく解く方法が進んでいますが、ふつうの設計は今も相関式が中心です。
+限界熱流束は、原子炉や電子機器の安全を決める大事な値です。ズーバーの式のように、形は理論から導けても、係数や、面の汚れ・あらさ・ぬれやすさ（水のなじみ方）の効果は、実験で決めています。泡が面のどこで、いくつ生まれるかは、面のごく小さなくぼみの形で決まり、それを前もって予測する理論はまだありません。表面に細かい加工をして限界熱流束を大きくする研究も続いています。乱流の熱伝達も、計算機で流れを細かく解く方法が進んでいますが、ふつうの設計は今も相関式が中心です。
 \end{phmada}
 
 \begin{phsaki}{伝熱工学の対流と沸騰}
-この章では、相関式の使い方と、層流の板の結果を見ました。伝熱工学の専門の本では、境界層の方程式（連続・運動量・エネルギーの式。力-13・14 と熱-11 の熱方程式を流れの中で合わせたもの）を立てて層流の解を導くこと、乱流の熱伝達、円柱のまわりの流れや、管の入口の近く、自然対流と強制対流がまざる場合、沸騰と凝縮のくわしい理論、そして2つの流体のあいだで熱を交換する熱交換器（熱-13）を学びます。
+この章では、相関式の使い方と、層流の板の結果を見ました。伝熱工学の専門の本では、境界層の方程式（連続・運動量・エネルギーの式。力-13・14 と熱-11 の熱方程式を流れの中で合わせたもの）を立てて層流の解を導くこと、乱流の熱伝達、円柱の周りの流れや、管の入口の近く、自然対流と強制対流が混ざる場合、沸騰と凝縮の詳しい理論、そして2つの流体のあいだで熱を交換する熱交換器（熱-13）を学びます。
 \end{phsaki}
 
 \begin{senmonsho}[伝熱工学の専門書の書き方]
 \begin{bkhonbun}
-平板に沿う層流強制対流の平均ヌセルト数は $\overline{Nu}_L=0.664\,Re_L^{1/2}Pr^{1/3}$（$Pr\gtrsim0.6$）で与えられる．円管内乱流には Dittus--Boelter 式 $Nu_D=0.023\,Re_D^{4/5}Pr^n$（加熱 $n=0.4$，冷却 $n=0.3$）が用いられる．
+平板に沿う層流強制対流の平均ヌセルト数は
+\[ \overline{Nu}_L=0.664\,Re_L^{1/2}Pr^{1/3}\qquad(Pr\gtrsim0.6) \]
+で与えられる．円管内乱流には Dittus--Boelter 式
+\[ Nu_D=0.023\,Re_D^{4/5}Pr^n\qquad(\text{加熱}\ n=0.4,\ \text{冷却}\ n=0.3) \]
+が用いられる．
 \end{bkhonbun}
 \bkyaku{専門書は Nu・Re・Pr をななめの字（$Nu$）で書くことが多い。添字の $L$・$D$ は、代表の長さ（この章の $l$・$d$）。上の線 $\overline{Nu}$ は面全体の平均。$\gtrsim$ は「およそそれ以上」。}
 \end{senmonsho}
@@ -520,7 +545,8 @@ $\rho_{\mathrm l}$・$\rho_{\mathrm v}$ は水と蒸気の密度、$\sigma$ は�
 \tsl{冷却則}$q=h\,\Delta T$、熱抵抗 $1/(hA)$。$h\approx k/\delta_T$\\[3pt]
 \tsl{無次元数}$\mathrm{Nu}=\dfrac{hl}{k}$、$\mathrm{Re}=\dfrac{vl}{\nu}$、$\mathrm{Pr}=\dfrac{\nu}{\alpha}$、$\mathrm{Ra}=\dfrac{g\beta\Delta Tl^3}{\nu\alpha}$\\[3pt]
 \tsl{強制対流}板の層流 $0.664\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}$、管の乱流 $0.023\mathrm{Re}^{0.8}\mathrm{Pr}^{0.4}$\\[3pt]
-\tsl{自然対流}たての板 $0.59\mathrm{Ra}^{1/4}$（$\mathrm{Ra}<10^9$）\\[3pt]
+\tsl{使える範囲}相関式は、表\ref{ph:熱-12:tab-soukan}の Re・Pr の範囲の中で使う（管の乱流は $\mathrm{Re}>10^4$）\\[3pt]
+\tsl{自然対流}たての板 $0.59\mathrm{Ra}^{1/4}$（$10^4<\mathrm{Ra}<10^9$）\\[3pt]
 \tsl{フィン}$m=\sqrt{hP/(kA_{\mathrm c})}$、$\eta_{\mathrm f}=\dfrac{\tanh ml_{\mathrm f}}{ml_{\mathrm f}}$\\[3pt]
 \tsl{沸騰}核沸騰で $h$ が大きい。限界熱流束（水1気圧で約\qty{1}{MW/m^2}）
 \end{taisetsu}
@@ -529,7 +555,7 @@ $\rho_{\mathrm l}$・$\rho_{\mathrm v}$ は水と蒸気の密度、$\sigma$ は�
 \small
 \bkword{対流熱伝達}{物の表面から、流れている水や空気へ熱が移ること。}
 \bkword{熱伝達率}{表面と流れの温度差 1 K・1 m$^2$ あたりに、1秒に移る熱。}
-\bkword{温度境界層}{表面の近くの、温度が変わるうすい層。}
+\bkword{温度境界層}{表面の近くの、温度が変わる薄い層。}
 \bkword{相関式}{実験の結果を、無次元数の式にまとめたもの。}
 \bkword{フィン効率}{フィン全体が根もとの温度のときにくらべて、実際に逃げる熱の割合。}
 \bkword{限界熱流束}{核沸騰で流せる熱流束のいちばん大きい値。こえると膜沸騰へとぶ。}
@@ -537,8 +563,8 @@ $\rho_{\mathrm l}$・$\rho_{\mathrm v}$ は水と蒸気の密度、$\sigma$ は�
 
 \bkkigocards{\bkkigocard{Nu}{ヌセルト数}{$hl/k$。流れで、伝導だけのときの何倍熱が逃げるか。単位なし。立体で書く}{Nusselt number}{熱-12}}
 {\bkkigocard{Pr}{プラントル数}{$\nu/\alpha$。速さと熱の広がりやすさの比。空気0.71、水約7}{Prandtl number}{熱-12}}
-\bkkigocards{\bkkigocard{$m$}{エム}{フィンの式の $\sqrt{hP/(kA_{\mathrm c})}$〔1/m〕。数学 6-11 の $\beta$。この章では質量に $m$ を使わない}{fin parameter}{熱-12}}
-{\bkkigocard{$\beta$}{ベータ}{体膨張率〔1/K〕。理想気体では $1/T$。この章ではフィンの式に $\beta$ を使わない}{volumetric thermal expansion coefficient}{熱-12}}
+\bkkigocards{\bkkigocard{$m$}{エム}{フィンの式の $\sqrt{hP/(kA_{\mathrm c})}$〔1/m〕。数学 6-11 の $\beta$。熱-12 では質量に $m$ を使わない}{fin parameter}{熱-12}}
+{}% 修2-5（U-6）：体膨張率 β のカードは熱-1 にあるので、ここではけずった（説明は⑦・⑧の本文）
 
 %% ======================== 例題 ========================
 \Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
@@ -611,7 +637,7 @@ $C_{\mathrm{th}}=\qty{1000}{J/K}$、$\tau=20$ 分＝\qty{1200}{s}、$A=\qty{0.03
 \[\mathrm{Nu}=0.664\times316\times0.892\approx187,\qquad h=\frac{187\times0.026}{0.3}\approx\qty{16}{W/(m^2.K)}\]
 \phtashikame
 大きさ：無風の自然対流（$h\approx5$）の約3倍です。風の日に、ものがよく冷えるのと合います。\\
-境界層の厚さ：後ろのはしで $5\times0.3\div\sqrt{10^5}\approx\qty{4.7}{mm}$（力-15⑧）。$k/\delta\approx0.026\div0.0047\approx5.5$ は後ろのはしの $h$ の目安で、平均の16より小さいのは、前のほうの境界層がうすく、よく冷えるからです。
+境界層の厚さ：後ろのはしで $5\times0.3\div\sqrt{10^5}\approx\qty{4.7}{mm}$（力-15 ⑧）。後ろのはしの $h$ は、⑤の係数0.332を使うと $0.332\times316\times0.892\times0.026\div0.3\approx8.1$ で、平均の16はそのちょうど2倍です（⑤）。前のほうの境界層が薄く、よく冷えるからです。
 \kotae 約\qty{16}{W/(m^2.K)}（層流、$\mathrm{Re}=1.0\times10^5$）
 \end{phreidai}
 \begin{jibun}
@@ -625,7 +651,7 @@ $C_{\mathrm{th}}=\qty{1000}{J/K}$、$\tau=20$ 分＝\qty{1200}{s}、$A=\qty{0.03
 \phbamen
 給湯器や熱交換器の管の中を、水が流れる場面です。
 \phmushi
-管の入口の近くの効果（入口から十分はなれた所とする）、壁のあらさを無視します。
+管の入口の近くの効果（入口から十分離れた所とする）、壁のあらさを無視します。
 \phzu
 $d=\qty{0.02}{m}$、$v=\qty{1}{m/s}$。
 \phriyu
@@ -674,7 +700,7 @@ $d=\qty{0.02}{m}$、$v=\qty{1}{m/s}$。
 \begin{phreidai}[空気と水のプラントル数]
 空気（$\mathrm{Pr}=0.71$）と\qty{20}{\celsius}の水（$\mathrm{Pr}=7.0$）について、層流の板の上の温度境界層の厚さは、速さの境界層の厚さの何倍かを求めましょう。
 \phbamen
-同じ速さの境界層でも、流体によって熱の逃げ方がちがうわけを考えます。
+同じ速さの境界層でも、流体によって熱の逃げ方が違うわけを考えます。
 \phmushi
 層流の板で、$\delta_T/\delta\approx\mathrm{Pr}^{-1/3}$ が成り立つとします（$\mathrm{Pr}$ がおよそ0.6より大きいとき）。
 \phzu
@@ -686,7 +712,7 @@ Pr は、速さのならされやすさ $\nu$ と、温度のならされやす�
 \phtoku
 \[\text{空気：}0.71^{-1/3}\approx1.12\qquad\text{水：}7.0^{-1/3}\approx0.52\]
 \phtashikame
-空気では2つの境界層はほぼ同じ厚さ、水では温度境界層が約半分のうすさです。水の $h$ が大きいのは、熱伝導率が大きいことに加えて、温度境界層がうすいからでもあります。\\
+空気では2つの境界層はほぼ同じ厚さ、水では温度境界層が約半分の薄さです。水の $h$ が大きいのは、熱伝導率が大きいことに加えて、温度境界層が薄いからでもあります。\\
 極端な場合：油（Pr が数百）では、温度境界層は速さの境界層のずっと内側にあります。
 \kotae 空気 約1.1倍、水 約0.52倍
 \end{phreidai}
@@ -723,7 +749,7 @@ Pr は、速さのならされやすさ $\nu$ と、温度のならされやす�
 
 \label{ph:熱-12:ex8}
 \begin{phreidai}[細い管の層流の熱伝達率]
-内径\qty{2}{mm}の細い管（電子機器の水冷の流路）を、水（$k=0.60$）が層流で流れています。壁の温度が一定で、入口から十分はなれた所の熱伝達率を求めましょう。
+内径\qty{2}{mm}の細い管（電子機器の水冷の流路）を、水（$k=0.60$）が層流で流れています。壁の温度が一定で、入口から十分離れた所の熱伝達率を求めましょう。
 \phbamen
 細い流路で、層流のまま熱を運ぶ場面です。
 \phmushi
@@ -737,7 +763,7 @@ $d=\qty{0.002}{m}$、$\mathrm{Nu}=3.66$（表\ref{ph:熱-12:tab-soukan}）。
 \phtoku
 \[h=\frac{3.66\times0.60}{0.002}\approx\qty{1100}{W/(m^2.K)}\]
 \phtashikame
-層流でも、管が細いと $h$ は大きくなります（$h\propto1/d$）。速さを上げても（層流のままなら）$h$ は変わりません。3.66 という数は、管の中の速さの分布（力-14⑧の放物線）と熱方程式から理論で導かれる値です（導き方は専門の本で）。
+層流でも、管が細いと $h$ は大きくなります（$h\propto1/d$）。速さを上げても（層流のままなら）$h$ は変わりません。3.66 という数は、管の中の速さの分布（力-14 ⑧の放物線）と熱方程式から理論で導かれる値です（導き方は専門の本で）。
 \kotae 約\qty{1100}{W/(m^2.K)}
 \end{phreidai}
 \begin{jibun}
@@ -749,11 +775,11 @@ $d=\qty{0.002}{m}$、$\mathrm{Nu}=3.66$（表\ref{ph:熱-12:tab-soukan}）。
 \begin{phreidai}[アルミのピンフィン]
 直径\qty{3}{mm}・長さ\qty{30}{mm}のアルミのピン（$k=200$）が、熱伝達率 $h=30$ の空気の中にあります。フィン効率と、根もとの温度差が\qty{40}{K}のときに1本から逃げる熱を求めましょう。先は断熱とします。
 \phbamen
-放熱器の表面に、細いピンをたくさん立てて面積をふやす場面です。
+放熱器の表面に、細いピンをたくさん立てて面積を増やす場面です。
 \phmushi
 ピンの先から逃げる熱、放射、ピンの中の半径の向きの温度差を無視します。
 \phzu
-直径 $D=\qty{0.003}{m}$、まわりの長さ $P=\pi D$、断面積 $A_{\mathrm c}=\pi D^2/4$、$l_{\mathrm f}=\qty{0.03}{m}$。
+直径 $D=\qty{0.003}{m}$、周りの長さ $P=\pi D$、断面積 $A_{\mathrm c}=\pi D^2/4$、$l_{\mathrm f}=\qty{0.03}{m}$。
 \phriyu
 フィンの式の答え（⑧）を使います。円い棒では $P/A_{\mathrm c}=4/D$ です。
 \phtateru
@@ -787,8 +813,8 @@ $d=\qty{0.002}{m}$、$\mathrm{Nu}=3.66$（表\ref{ph:熱-12:tab-soukan}）。
 \phtoku
 \[（1）\ x=1.5^2=2.25\qquad（2）\ x=1.5^{1/0.8}=1.5^{1.25}\approx1.66\]
 \phtashikame
-どちらも1.5倍より大きな速さがいります。速さを上げるほど、熱伝達率のふえ方はゆるやかです。\\
-ファンの動力は速さの3乗くらいでふえるので、（1）では動力が約11倍になります。風を強くするより、フィンをふやして面積を大きくするほうが得なことも多いのです。
+どちらも1.5倍より大きな速さがいります。速さを上げるほど、熱伝達率の増え方はゆるやかです。\\
+ファンの動力は速さの3乗くらいで増えるので、（1）では動力が約11倍になります。風を強くするより、フィンを増やして面積を大きくするほうが得なことも多いのです。
 \kotae （1）約2.3倍、（2）約1.7倍
 \end{phreidai}
 \begin{jibun}
@@ -802,7 +828,7 @@ $d=\qty{0.002}{m}$、$\mathrm{Nu}=3.66$（表\ref{ph:熱-12:tab-soukan}）。
 \phbamen
 発電所の復水器や、ふろ場の天井で、蒸気が水になる場面です。
 \phmushi
-膜の表面の波、蒸気の流れが膜を引っぱる力、空気のまざりを無視します。膜の中は層流とします。
+膜の表面の波、蒸気の流れが膜を引っぱる力、空気の混ざりを無視します。膜の中は層流とします。
 \phzu
 高さ $l=\qty{0.3}{m}$、$\Delta T=100-90=\qty{10}{K}$。
 \phriyu
@@ -824,21 +850,21 @@ $d=\qty{0.002}{m}$、$\mathrm{Nu}=3.66$（表\ref{ph:熱-12:tab-soukan}）。
 
 \label{ph:熱-12:ex12}
 \begin{phreidai}[熱交換器の予告：どちらの $h$ が効くか]
-うすい金属の板の片側を水（$h=5000$）、反対側を空気（$h=50$）が流れて、熱を交換しています。板の熱抵抗は無視できるとして、熱貫流率 $U$（熱-11④）を求めましょう。熱の流れをふやすには、どちらの側をくふうすればよいでしょう。
+薄い金属の板の片側を水（$h=5000$）、反対側を空気（$h=50$）が流れて、熱を交換しています。板の熱抵抗は無視できるとして、全体の熱の通りやすさ $U$（熱-11 ④の熱貫流率）を求めましょう。熱の流れを増やすには、どちらの側をくふうすればよいでしょう。
 \phbamen
 車のラジエーターやエアコンの室外機のように、水（冷媒）と空気のあいだで熱を移す場面です（熱交換器は熱-13）。
 \phmushi
-板の熱抵抗（金属でうすい）、板の両面のよごれを無視します。
+板の熱抵抗（金属で薄い）、板の両面の汚れを無視します。
 \phzu
 水の側 $h_1=5000$、空気の側 $h_2=50$（単位 W/(m$^2$·K)）。
 \phriyu
-水→板→空気と、同じ熱が順に通るので、表面の熱抵抗の直列（熱-11③）です。
+水→板→空気と、同じ熱が順に通るので、表面の熱抵抗の直列（熱-11 ③）です。
 \phtateru
 \[\frac{1}{U}=\frac{1}{h_1}+\frac{1}{h_2}\]
 \phtoku
 \[\frac{1}{U}=\frac{1}{5000}+\frac{1}{50}=0.0002+0.02=0.0202,\qquad U\approx\qty{49.5}{W/(m^2.K)}\]
 \phtashikame
-$U$ は小さいほうの $h$（空気の50）とほぼ同じです。直列では、いちばん大きい熱抵抗（空気の側）が全体を決めます（熱-11④）。空気の側の $h$ を2倍にすると $U\approx98$ とほぼ2倍、水の側を2倍にしても $U\approx49.75$ でほとんど変わりません。だから、ラジエーターは空気の側にたくさんのフィンをつけて、空気の側の面積を大きくします。
+$U$ は小さいほうの $h$（空気の50）とほぼ同じです。直列では、いちばん大きい熱抵抗（空気の側）が全体を決めます（熱-11 ④）。空気の側の $h$ を2倍にすると $U\approx98$ とほぼ2倍、水の側を2倍にしても $U\approx49.75$ でほとんど変わりません。だから、ラジエーターは空気の側にたくさんのフィンをつけて、空気の側の面積を大きくします。
 \kotae $U\approx\qty{50}{W/(m^2.K)}$。空気の側をくふうする（フィンをつける・風を強くする）
 \end{phreidai}
 \begin{jibun}
@@ -857,13 +883,25 @@ $U$ は小さいほうの $h$（空気の50）とほぼ同じです。直列で�
 \begin{tsumazuki}{ヌセルト数とビオ数}
 \bkng{$\mathrm{Nu}=hl/k$ と $\mathrm{Bi}=hl/k$ は同じ式なので、同じもの。}
 \bkok{Nu の $k$ は\textbf{流体}の熱伝導率、Bi の $k$ は\textbf{固体}の熱伝導率。}
-Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の話です（⑤・熱-11⑧）。
+Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の話です（⑤・熱-11 ⑧）。
 \end{tsumazuki}
 
 \begin{tsumazuki}{代表の長さは、どこを選ぶ？}
 \bkng{管の中の流れの Re も Nu も、管の長さで計算する。}
 \bkok{管の中は内径 $d$、板に沿う流れは流れの向きの長さ $l$、たての板の自然対流は高さ $l$。}
 相関式は、決まった長さで作られています。式を作った人と同じ長さを使わないと、正しい $h$ が出ません（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{相関式は、どんな Re でも使える？}
+\bkng{内径\qty{20}{mm}の管を水が\qty{0.2}{m/s}で流れる（$\mathrm{Re}\approx6100$）。2300 より大きいので、ディッタス・ベルターの式で $h$ を出す。}
+\bkok{$2300<\mathrm{Re}<10^4$ は遷移の範囲で、ディッタス・ベルターの式（$\mathrm{Re}>10^4$）の使える範囲の外。専門の本の式を使う。}
+相関式を使う前に、表\ref{ph:熱-12:tab-soukan}の「使える範囲」に Re と Pr が入っているかを、必ず確かめます（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{平らな板の乱流の式は、どの板にも使える？}
+\bkng{長さ\qty{3}{m}の板で $\mathrm{Re}=10^6$ なので、$0.037\,\mathrm{Re}^{4/5}\mathrm{Pr}^{1/3}$ で平均の $h$ を出す。}
+\bkok{この式は、前のはしから乱流の板の式。ふつうの板は、前のほう（$\mathrm{Re}_x<5\times10^5$ の所）が層流なので、層流の部分を入れた式を使う。}
+前のはしから乱流とすると、$\mathrm{Re}=10^6$ の空気では $h$ を約1.6倍も大きく見積もってしまいます（⑥のせいかくに言うと）。
 \end{tsumazuki}
 
 \begin{tsumazuki}{体膨張率 $\beta=1/T$ の $T$}
@@ -881,7 +919,7 @@ Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の�
 %% ======================== 工学ではこう使う ========================
 \Needspace{10\baselineskip}\bksection{phgear}{工学ではこう使う}
 \begin{phkougaku}[熱を運ぶ流れを設計する]
-\textbf{電子機器の冷却}：パソコン・サーバー・電気自動車のインバーターでは、発熱する部品の温度を決めた値以下にするのが設計の目標です。熱抵抗の列（熱-11）のうち、空気の側の $1/(hA)$ がいちばん大きいことが多いので、フィンで $A$ をふやし（④⑧）、ファンで $h$ を上げます（⑥）。発熱が大きいときは、水冷（$h$ が空気の100倍。例題4）や、液体が沸騰と凝縮をくり返して熱を運ぶヒートパイプを使います。
+\textbf{電子機器の冷却}：パソコン・サーバー・電気自動車のインバーターでは、発熱する部品の温度を決めた値以下にするのが設計の目標です。熱抵抗の列（熱-11）のうち、空気の側の $1/(hA)$ がいちばん大きいことが多いので、フィンで $A$ を増やし（④⑧）、ファンで $h$ を上げます（⑥）。発熱が大きいときは、水冷（$h$ が空気の100倍。例題4）や、液体が沸騰と凝縮を繰り返して熱を運ぶヒートパイプを使います。
 
 \textbf{発電所とボイラー}：ボイラーの管の中では水が沸騰し、復水器ではタービンを出た蒸気が凝縮します（熱-8）。どちらも $h$ がとても大きく、小さな温度差でたくさんの熱を移せます。原子炉では、燃料棒の表面の熱流束が限界熱流束からどれだけ離れているかを、安全の大事な目安として管理しています。
 
@@ -897,14 +935,14 @@ Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の�
 \phstation{伝熱工学,流体工学,電子機器の熱設計,原子炉工学}{熱伝達率、ヌセルト数、プラントル数、相関式、フィン効率、核沸騰、限界熱流束、膜状凝縮}
 
 \begin{column}{抜山四郎と沸騰曲線}
-抜山四郎（1896〜1983年）は、東北帝国大学の教授として、熱の研究をしました。1934年の論文で、金属の細い線を電気で熱して水を沸騰させる実験から、伝わる熱には「いちばん大きい値」（極大値）があり、それをこえると線が一気に熱くなることを示しました。それまで考えられていたより桁ちがいに大きな値でした。この沸騰曲線は、今では世界中の伝熱の教科書に「抜山曲線」としてのっています。日本伝熱学会は、抜山の名をつけた国際的な賞を設けて、伝熱の研究者をたたえています。
+抜山四郎（1896〜1983年）は、東北帝国大学の教授として、熱の研究をしました。1934年の論文で、金属の細い線を電気で熱して水を沸騰させる実験から、伝わる熱には「いちばん大きい値」（極大値）があり、それをこえると線が一気に熱くなることを示しました。それまで考えられていたより桁違いに大きな値でした。この沸騰曲線は、今では世界中の伝熱の教科書に「抜山曲線」としてのっています。日本伝熱学会は、抜山の名をつけた国際的な賞を設けて、伝熱の研究者をたたえています。
 \end{column}
 
 \begin{motto}[5]
 \phboxhead{温度計の先は、どれだけ速く追いつく？}
-6-4 のコラムで、温度計（熱電対）は時定数 $\tau$ ほどおくれて温度に追いつく、と学びました。その $\tau$ を、この章の道具で見積もってみましょう。熱電対の先を、直径 $D=\qty{0.5}{mm}$ の金属の小さな球（$\rho c\approx\qty{3.4e6}{J/(m^3.K)}$、$k\approx20$）とします。球のまわりの流れには、専門の本にある次の相関式（ランツとマーシャル、1952年）を使います。
+6-4 のコラムで、温度計（熱電対）は時定数 $\tau$ ほどおくれて温度に追いつく、と学びました。その $\tau$ を、この章の道具で見積もってみましょう。熱電対の先を、直径 $D=\qty{0.5}{mm}$ の金属の小さな球（$\rho c\approx\qty{3.4e6}{J/(m^3.K)}$、$k\approx20$）とします。球の周りの流れには、専門の本にある次の相関式（ランツとマーシャル、1952年）を使います。
 \[\mathrm{Nu}=\frac{hD}{k_{\text{流体}}}=2+0.6\,\mathrm{Re}^{1/2}\mathrm{Pr}^{1/3}\]
-2 は、流れがないとき（止まった流体の伝導だけ）の値です。球の中の温度がそろうなら（熱-11⑧）、$V/A=D/6$ なので時定数は $\tau=\rho cD/(6h)$ です。
+2 は、流れがないとき（止まった流体の伝導だけ）の値です。球の中の温度がそろうなら（熱-11 ⑧）、$V/A=D/6$ なので時定数は $\tau=\rho cD/(6h)$ です。
 \begin{bkcenter}
 \begin{bktable}{colspec={Q[l,m,wd=32mm] Q[c,m,wd=14mm] Q[c,m,wd=14mm] Q[c,m,wd=26mm] Q[c,m,wd=18mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
 流れ & Re & Nu & $h$〔W/(m$^2$·K)〕 & $\tau$〔s〕 \\
@@ -918,7 +956,7 @@ Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の�
 \end{motto}
 
 \begin{column}{ニュートンが冷やした鉄}
-ニュートンの冷却則の名前は、アイザック・ニュートン（1642〜1727年）が1701年に名前を出さずに発表した短い論文から来ています。当時の温度計では、とけた金属のような高い温度は測れませんでした。そこでニュートンは、真っ赤に熱した鉄を風の当たる所に置いて冷まし、「冷える速さは、まわりとの温度の差に比例する」と考えて、冷えるまでの時間から高い温度の目もりを作ろうとしました。この章で見たように、このきまりは、風の当たり方（$h$）が変わらないときの近似です。それでも、300年以上たった今も、伝熱の計算の出発点として使われています。
+ニュートンの冷却則の名前は、アイザック・ニュートン（1642〜1727年）が1701年に名前を出さずに発表した短い論文から来ています。当時の温度計では、とけた金属のような高い温度は測れませんでした。そこでニュートンは、真っ赤に熱した鉄を風の当たる所に置いて冷まし、「冷える速さは、周りとの温度の差に比例する」と考えて、冷えるまでの時間から高い温度の目もりを作ろうとしました。この章で見たように、このきまりは、風の当たり方（$h$）が変わらないときの近似です。それでも、300年以上たった今も、伝熱の計算の出発点として使われています。
 \end{column}
 
 %% ======================== 章末問題 ========================
@@ -926,19 +964,19 @@ Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の�
 \bkproblemgroup{基本}{4}
 \bkproblem \qty{200}{W}の電気ヒーターの板（表面積\qty{0.2}{m^2}）が、$h=10$ で空気へ熱を逃がしています。板は空気より何 K 高くなりますか。
 \bkpans{$200\div(10\times0.2)=\qty{100}{K}$}
+\bkproblem 表面積\qty{0.05}{m^2}の放熱器から\qty{30}{W}を逃がしています。ファンを強くして、熱伝達率を40から60に上げると、放熱器と空気の温度差は何 K から何 K になりますか（②）。
+\bkpans{$30\div(40\times0.05)=\qty{15}{K}$ から $30\div(60\times0.05)=\qty{10}{K}$ に（$\tfrac23$ 倍）}
 \bkproblem 熱容量\qty{1000}{J/K}のお湯が、\qty{20}{\celsius}の部屋で、10分間に\qty{80}{\celsius}から\qty{50}{\celsius}になりました。時定数と熱抵抗を求めましょう。
 \bkpans{温度差が半分なので $\tau=10\div\ln2\approx14.4$ 分（約\qty{866}{s}）。$R_{\mathrm{th}}\approx\qty{0.87}{K/W}$}
-\bkproblem \qty{20}{\celsius}の空気（$\nu=\qty{1.5e-5}{m^2/s}$、$k=0.026$、$\mathrm{Pr}=0.71$）が\qty{10}{m/s}で、長さ\qty{0.2}{m}の板に沿って流れます。Re と平均の熱伝達率を求めましょう。
-\bkpans{$\mathrm{Re}\approx1.3\times10^5$（層流）。$\mathrm{Nu}\approx216$、$h\approx\qty{28}{W/(m^2.K)}$}
-\bkproblem 例題4の水が、内径\qty{25}{mm}の管を\qty{0.5}{m/s}で流れるときの Re と熱伝達率を求めましょう。
-\bkpans{$\mathrm{Re}\approx1.9\times10^4$（乱流）。$\mathrm{Nu}\approx109$、$h\approx\qty{2800}{W/(m^2.K)}$}
-\bkproblem 直径\qty{5}{mm}・長さ\qty{50}{mm}のアルミのピン（$k=200$）が、$h=20$ の空気の中にあります。フィン効率を求めましょう。
-\bkpans{$m\approx8.94$、$ml_{\mathrm f}\approx0.447$。$\eta_{\mathrm f}\approx0.94$}
 \bkproblem 熱容量\qty{840}{J/K}・表面積\qty{0.025}{m^2}のカップのお湯の温度を測り、$\ln(\theta-20)$ を時刻〔分〕に対してかくと、傾き $-0.04$ の直線になりました（部屋は\qty{20}{\celsius}）。時定数・熱抵抗・熱伝達率を求めましょう。
 \bkpans{$\tau=1\div0.04=25$ 分（\qty{1500}{s}）。$R_{\mathrm{th}}=1500\div840\approx\qty{1.8}{K/W}$、$h\approx\qty{22}{W/(m^2.K)}$}
-\bkproblemgroup{チャレンジ}{5}
-\bkproblem 発電所の復水器の銅の管の中を水が流れ（例題4、$h=5000$）、管の外では蒸気が膜状に凝縮しています（例題11、$h=8600$）。管の壁はうすく、熱抵抗は無視できるとして、熱貫流率 $U$ を求めましょう。蒸気と水の温度差が\qty{20}{K}のとき、1 m$^2$ あたりに移る熱はいくらですか。
+\bkproblem ④の表計算で、1行めの根もとの温度差だけを40から60に変えて、同じようにならし直しを400回ほど繰り返します。根もとから\qty{0.02}{m}の所と、先（\qty{0.05}{m}）の温度差は何 K になりますか。表\ref{ph:熱-12:tab-fin}の値から求めましょう。
+\bkpans{④の式は、すべての箱の値を1.5倍にしても、そのまま成り立つ。だから値は全部1.5倍になり、\qty{0.02}{m}の所は $30.73\times1.5\approx\qty{46}{K}$、先は $25.92\times1.5\approx\qty{39}{K}$（フィン効率は変わらない）}
+\bkproblem 発電所の復水器の銅の管の中を水が流れ（例題4、$h=5000$）、管の外では蒸気が膜状に凝縮しています（例題11、$h=8600$）。管の壁は薄く、熱抵抗は無視できるとして、全体の熱の通りやすさ $U$（熱-11 ④の熱貫流率）を求めましょう。蒸気と水の温度差が\qty{20}{K}のとき、1 m$^2$ あたりに移る熱はいくらですか。
 \bkpans{$U\approx\qty{3200}{W/(m^2.K)}$（$1/5000+1/8600$ の逆数）。約\qty{63}{kW}}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 相関式は、使える範囲（表\ref{ph:熱-12:tab-soukan}）を確かめてから使います。次の Re と平均の熱伝達率を求めましょう。（1）長さ\qty{0.2}{m}の板に沿って、\qty{20}{\celsius}の空気が\qty{10}{m/s}で流れるとき。空気は $\nu=\qty{1.5e-5}{m^2/s}$、$k=0.026$、$\mathrm{Pr}=0.71$ とします。（2）例題4の水が、内径\qty{25}{mm}の管を\qty{0.5}{m/s}で流れるとき。（3）（2）の水の速さを\qty{0.2}{m/s}にすると、ディッタス・ベルターの式は使えますか。
+\bkpans{（1）$\mathrm{Re}\approx1.3\times10^5$（$5\times10^5$ より小さいので層流）。$\mathrm{Nu}\approx216$、$h\approx\qty{28}{W/(m^2.K)}$。（2）$\mathrm{Re}\approx1.9\times10^4$（$10^4$ より大きく、$\mathrm{Pr}=4.3$ も範囲の中なので乱流の式）。$\mathrm{Nu}\approx109$、$h\approx\qty{2800}{W/(m^2.K)}$。（3）$\mathrm{Re}\approx6100$ で、遷移の範囲（2300〜$10^4$）。使えない（専門の本の式を使う）}
 \bkproblem アルミの板のフィン（$k=200$、厚さ\qty{1}{mm}、高さ\qty{30}{mm}、奥行き\qty{50}{mm}）20枚を、はば\qty{60}{mm}・奥行き\qty{50}{mm}の台の上に立てた放熱器があります。$h=40$、根もとの温度差\qty{40}{K}として、（1）フィン効率、（2）フィンから逃げる熱、（3）フィンのあいだの台の面から逃げる熱を求め、フィンのない台だけのときとくらべましょう。フィンの先とはしの面は無視し、$m=\sqrt{2h/(kt)}$（$t$ は厚さ）とします。
 \bkpans{（1）$m=20$、$ml_{\mathrm f}=0.6$、$\eta_{\mathrm f}\approx0.90$。（2）約\qty{86}{W}。（3）台の面は\qty{0.002}{m^2}で約\qty{3.2}{W}。合計約\qty{89}{W}で、台だけ（約\qty{4.8}{W}）の約19倍}
 
@@ -956,4 +994,4 @@ Nu は流体の中の温度境界層の話、Bi は固体の中の温度差の�
 \item 沸騰曲線と限界熱流束、凝縮の熱伝達を説明し、大きさを見積もれる。\bkfurref{ph:熱-12:sec9}
 \end{checklist}
 \end{furikaeri}
-\bkfukidashi{delta}{ファンは、放熱器のまわりの「止まった空気の層」を吹き飛ばしていたんだ。熱を逃がすのは、熱そのものより、流れのしわざなんだね。}
+\bkfukidashi{delta}{ファンは、放熱器の周りの「止まった空気の層」を吹き飛ばしていたんだ。熱を逃がすのは、熱そのものより、流れのしわざなんだね。}

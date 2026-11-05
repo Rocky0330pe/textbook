@@ -414,7 +414,25 @@
 %%   物理シリーズだけ、札のすぐあとで改行しない（行の頭に「）。」が来ない）。
 %%   札の前のすき間を 0.4em に広げ（第21回の組み直しで 0.22em ではまだふれる所があった）、前の句読点・かっこが札の枠にふれないようにする。数学シリーズの紙面は変えない。
 %% ------------------------------------------------------------
-\renewcommand\bkboxref[3]{\hspace{0.4em}\mbox{\tikz[baseline=(t.base)]{%
+% 第23回（第2巻の確認 Q3-35）：前の字で札の前のすき間を変える。句読点・閉じかっこのあとは 0.4em（枠にふれないように）、
+%   開きかっこのあとは 0（「（ 例題」と開かないように）、ふつうの字のあとは前と同じ 0.12em
+\directlua{
+  function phys_chipgap()
+    local n = tex.nest[tex.nest.ptr].tail
+    local glyph = node.id("glyph")
+    local k = 0
+    while n and n.id ~= glyph and k < 6 do n = n.prev; k = k + 1 end
+    local c = (n and n.id == glyph) and n.char or 0
+    if c == 0xFF08 or c == 0x300C or c == 0x300E or c == 0x3010 or c == 0x28 then
+      tex.sprint("\\hspace{0em}")
+    elseif c == 0x3002 or c == 0x3001 or c == 0xFF0C or c == 0xFF0E or c == 0x30FB or c == 0xFF09 or c == 0x300D or c == 0x300F or c == 0x3011 or c == 0x29 then
+      tex.sprint("\\hspace{0.4em}")
+    else
+      tex.sprint("\\hspace{0.12em}")
+    end
+  end
+}
+\renewcommand\bkboxref[3]{\ifhmode\directlua{phys_chipgap()}\else\hspace{0.12em}\fi\mbox{\tikz[baseline=(t.base)]{%
   \node[inner xsep=0.25em, inner ysep=0.12em, fill=#2Bg, draw=#2, line width=0.5pt, rounded corners=0.9mm] (t)
     {\bkicon[1em]{#1}{#2!80!black}\hspace{0.18em}{\sffamily\bfseries\color{#2!70!black}#3}};}}\nobreak\hspace{0.12em}}
 \makeatother

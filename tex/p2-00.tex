@@ -1,0 +1,402 @@
+%% 物理第2巻『熱学』：組 熱W9（第22回編集委員会の手引き tools/BRIEF-phys2.md）
+%% p2-00.tex  熱-0　序章　発電所に入った燃料の熱は、何割が電気になる？（★2〜3。3段にしない）
+%% 計画書 tools/phys2-plan.md の B「熱-0」。本文15章（熱-1〜15）を読んで書いた、この巻の地図。第1巻の序章 p1-00.tex と同じ形。
+%% 序章なので、じぶんでとこう・章末問題はない（例題は7段の見本3つ）。「この章で導く中学・高校の公式」の欄は置かない
+%%   （変換効率 η の持ち主は力-4 ⑧、熱機関の熱効率は熱-5 ②。第19回 6-1-2）。
+%% 記号（この章）：1秒あたりの熱 Q-dot〔W〕（燃料の熱 Q-dot_入、捨てる熱 Q-dot_出）、電気の出力 P〔W〕、効率 η、
+%%   体積流量 V-dot〔m^3/s〕、質量流量 m-dot、温度差 ΔT〔K〕、比熱 c、密度 ρ。ドットは「1秒あたり」の印と、ここで教える。
+%% 数値はすべて Python で計算した：checks/物理第2巻/熱-0/calc_p2_00.py（出力 calc_p2_00_out.txt）。水の比熱は 4.2 kJ/(kg·K)。
+%% ほかの章とそろえた数値：
+%%   ・汽力（石炭火力）の効率 約0.40：熱-5 表（tab-real）の「石炭火力 約40 %」、熱-8 例題6 の理想のランキンサイクル 0.402。
+%%   ・冷却水：100万 kW・捨てる熱 1500 MW・海水の温度差 7 K・海水 1025 kg/m^3・3.99 kJ/(kg·K) → 約52 m^3/s。
+%%     熱-8 例題11（理想のランキン 0.402 で捨てる熱 1488 MW → 約52 m^3/s）と同じ条件・同じ値。
+%%     計画書の「効率0.42 → 約48 m^3/s」は使わない（熱-8 にそろえた。煙突から出る熱などは捨てる熱にふくめて考える、と例題に書いた）。
+%%   ・コンバインドサイクル 63.08 %（西名古屋火力発電所7-1号、2018年。熱-5・熱-7 ⑧ が受けている）。効率 0.40＋0.60×0.35＝0.61（熱-7 例題）。
+%%   ・原子力 約33 %（熱-5 ⑦・熱-8 ⑧）、復水器 約5 kPa（熱-8 ⑧）、カルノーの効率 1−T_L/T_H（熱-5 ⑤）。
+%%   ・熱-6 の図（fig-exergy）の説明が「熱-0 の熱の流れの帯」を指しているので、② の図をその名前で出した。
+%% 出典
+%%   ・西名古屋火力発電所7-1号の発電効率 63.08 %（2018年3月27日にギネス世界記録に認定。英語の記事では gross efficiency）：
+%%     GE のプレスリリース（2018年3月27日）https://www.ge.com/news/press-releases/ges-ha-gas-turbine-delivers-second-world-record-efficiency/jp 、
+%%     Power Engineering の記事。7-1号の営業運転開始 2017年9月29日。発熱量の基準（低位か高位か）は〔要確認〕（紙面には書かない）。
+%%   ・温排水の温度差 7 K（取水と放水の温度差の目安）：熱-8 例題11 と同じ値〔要確認：電力会社の環境アセスメントの資料〕。
+%%   ・都市ガス 13A の 45 MJ/m^3N（高発熱量）：熱-1 ⑧ と同じ値。
+%%   ・1 kWh＝3.6 MJ：数学 5-12⑥。
+\makeatletter
+% 発電所の箱  \qxabox{名前}{(中心)}{はば(mm)}{文字}{色}
+\newcommand\qxabox[5]{\node[draw=#5!70!black, fill=#5!12, line width=0.8pt, rounded corners=1.6mm, minimum width=#3 mm, minimum height=11mm,
+  text width=#3 mm-2mm, align=center, font=\sffamily\footnotesize, inner sep=1pt] (#1) at #2 {#4};}
+% 熱の流れの帯（1つ）  \qxasankey{(左下)}{効率}{電気の文字}{捨てる熱の文字}
+%   燃料の熱を高さ 30 mm の帯にし、上から効率の分が電気、残りが捨てる熱（下へ曲がる）
+\newcommand\qxasankey[4]{\begin{scope}[shift={#1}]
+  \pgfmathsetmacro\qxa@e{30*#2}\pgfmathsetmacro\qxa@w{30-\qxa@e}
+  \fill[bkRed!45] (0,0) rectangle (14,30);
+  \fill[bkGreen!50] (14,\qxa@w) rectangle (50,30);
+  \fill[bkBlue!30] (14,0) .. controls (26,0) and (26,-9) .. (38,-9) -- (50,-9) -- (50,\qxa@w-9)
+     -- (38,\qxa@w-9) .. controls (26,\qxa@w-9) and (26,\qxa@w) .. (14,\qxa@w) -- cycle;
+  \draw[bkInk, line width=0.5pt] (14,0) -- (14,30);
+  \node[font=\sffamily\footnotesize, align=center, rotate=90] at (7,15) {燃料の熱 100};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (51,{30-\qxa@e/2}) {#3};
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (51,{\qxa@w/2-9}) {#4};
+\end{scope}}
+% 会話の1行  \qxatalk{y}{sora|mina|delta}{名前}{せりふ}（p1-00 の \pxatalk と同じ形）
+\newcommand\qxatalk[4]{%
+  \bkChar{#2}{(7,#1-6.5)}{12mm}
+  \node[rectangle callout, callout absolute pointer={(15.5,#1)}, anchor=west, draw=bkTheme!80!black, line width=0.8pt,
+    fill=white, rounded corners=2.5mm, inner xsep=3mm, inner ysep=1.8mm, text width=103mm, align=left,
+    font=\small] at (21,#1) {#4};
+  \node[anchor=north, font=\sffamily\footnotesize, text=bkGray, inner sep=0pt] at (7,#1-7.5) {#3};}
+\makeatother
+\tikzset{qxa heat/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkRed!80!black},
+  qxa cold/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkBlue!80!black},
+  qxa work/.style={-{Stealth[length=4pt, width=3.6pt]}, line width=1.4pt, bkGreen!55!black},
+  qxa flow/.style={-{Stealth[length=3.6pt, width=3.2pt]}, line width=1.1pt, bkInk!80},
+  qxa lab/.style={font=\sffamily\footnotesize, inner sep=1pt}}
+
+\phchapter{0}{発電所に入った燃料の熱は、\\何割が電気になる？}{発電所は、なぜ海の水をたくさん使う？}{\bklevelrange{2}{3}}{発電所に入った燃料の熱は、何割が電気になる？}
+\bkmichishirube{2-10,5-12,力-4,力-13}{熱-1,熱-5,熱-7,熱-8,熱-11}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 発電所に入る燃料の熱・出る電気・捨てる熱を、熱のバランス式と効率で数えられる。
+\item \bklevel{3}\enspace 何を無視したかを書いてから、捨てる熱を運ぶ海水の量を、7つの段で求められる。
+\item \bklevel{2}\enspace 身近な「なぜ？」の答えが、この巻のどの章にあるかを探せる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+日本の大きな火力発電所や原子力発電所は、ほとんどが海辺に建っています。発電所の地図を見ると、海から水を取り入れる口と、海へ水をもどす口が、ちゃんとかいてあります。\par\vspace{3pt}
+電気をつくるのに、なぜ海の水がたくさん要るのでしょう。そもそも、発電所に入れた燃料の熱は、何割が電気になっているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!18] (34,-7) rectangle (54,4);
+  \foreach \yy in {1} {\draw[bkBlue!70, line width=0.5pt] (35,\yy) sin (37,\yy+0.8) cos (39,\yy) sin (41,\yy-0.8) cos (43,\yy) sin (45,\yy+0.8) cos (47,\yy) sin (49,\yy-0.8) cos (51,\yy) sin (53,\yy+0.8);}
+  \fill[bkGray!25] (0,-7) rectangle (34,4);
+  \draw[bkInk, line width=0.7pt] (0,4) -- (34,4);
+  \filldraw[fill=bkGray!10, draw=bkInk, line width=0.7pt] (2,4) rectangle (28,20);
+  \filldraw[fill=bkGray!10, draw=bkInk, line width=0.7pt] (7,20) rectangle (10,34);
+  \fill[bkGray!40] (8.5,35) circle (1.4) (10,37.5) circle (1.8) (12.5,40) circle (2.2);
+  \node[qxa lab] at (15,13) {発電所};
+  \draw[qxa cold] (53,-2) -- (22,-2) -- (22,4.6);
+  \draw[qxa heat] (16,4.6) -- (16,-5) -- (53,-5);
+  \node[font=\sffamily\bfseries\Large, text=phHatena!80!black] at (44,12) {?};
+  \node[font=\sffamily\bfseries\Large, text=phHatena!80!black] at (22,32) {?};
+  \node[qxa lab, anchor=north] at (44,-7.5) {海};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+この本は、身の周りの「熱」の「なぜ？」に、物理で答える本です。序章では、1つの発電所を例にして、この本で何を学ぶか、どの順に学ぶかを見ていきます。答えの詳しい計算は、各章でします。いまはわからない式やことばが出てきても、だいじょうぶです。
+
+\begin{yattemiyou}[1か月に使ったエネルギーを MJ にそろえよう]
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 家の電気の「ご使用量のお知らせ」（検針票）か、電力会社のウェブページで、1か月に使った電気の量を調べる。単位は kWh（キロワット時）。
+\item ガスの検針票で、1か月に使ったガスの量を調べる。都市ガスなら単位は m$^3$。
+\item 電気は、$\qty{1}{kWh}=\qty{3.6}{MJ}$ を使って MJ（メガジュール）に直す。都市ガス（13A）は、\qty{1}{m^3}あたり約\qty{45}{MJ}の熱が出るので、45をかけて MJ に直す。
+\item 電気とガスの、どちらが多いかをくらべよう。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent たとえば、電気を\qty{260}{kWh}使ったなら、3.6をかけて\qty{936}{MJ}です。都市ガスを\qty{30}{m^3}使ったなら、45をかけて\qty{1350}{MJ}です。電気とガスは、どちらも「エネルギー」なので、同じ単位 J にそろえれば、たしたり、くらべたりできます。ところが、家に届いた\qty{936}{MJ}の電気をつくるために、発電所では、そのおよそ2.5倍の\qty{2340}{MJ}もの燃料の熱を使っています。なぜ2.5倍も要るのかが、この序章の話です。
+
+\begin{omoidasou}
+\bkrecall{2-10}{換算は、単位つきの1をかける。\qty{1}{MJ}＝\qty{1000000}{J}、\qty{1}{MW}＝\qty{1000}{kW}。}
+\bkrecall{5-12}{電力〔W〕は1秒あたりのエネルギー。$\qty{1}{kWh}=\qty{1}{kW}\times\qty{3600}{s}=\qty{3.6}{MJ}$（5-12⑥）。}
+\bkrecall{力-4}{効率＝取り出せたエネルギー÷入れたエネルギー。1より小さい（力-4 ⑧）。}
+\bkrecall{力-13}{1秒あたりに流れる量を数える。$\dot m$ は1秒に流れる質量（質量流量）。}
+\end{omoidasou}
+
+%% ================================================================
+\Needspace{16\baselineskip}
+\bksection{hon}{この巻の地図}
+
+\bksubsection{1}{発電所の1日：燃料から電気まで}
+\leavevmode\label{ph:熱-0:sec1}天然ガスを燃料にする、新しい火力発電所を見てみましょう。中のしくみは、図\ref{ph:熱-0:fig-plant}のように、大きく4つの部分に分けられます。
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ガスタービン}　空気を押し縮めて天然ガスを燃やし、1500\,℃をこえる熱いガスにします。熱いガスがふくらみながら羽根車を回し、発電機で電気をつくります。50万 kW の発電所なら、天然ガスを1秒に約\qty{17}{kg}燃やします。
+\item \textbf{排熱回収ボイラー}　ガスタービンを出た排気は、まだ約600\,℃もあります。この熱で水を水蒸気にします。
+\item \textbf{蒸気タービン}　水蒸気がふくらみながら、もう1つのタービンを回し、ここでも電気をつくります。
+\item \textbf{復水器}　タービンを出た水蒸気を、海の水で冷やして、水にもどします。水はポンプでボイラーへもどり、また水蒸気になります。水と水蒸気は、発電所の中を何度もめぐっているのです。
+\end{enumerate}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxabox{fuel}{(6,40)}{16}{燃料\\天然ガス}{bkOrange}
+  \qxabox{gt}{(32,40)}{22}{ガス\\タービン}{bkRed}
+  \qxabox{hr}{(70,40)}{22}{排熱回収\\ボイラー}{bkOrange}
+  \qxabox{st}{(108,40)}{24}{蒸気タービン}{bkRed}
+  \qxabox{cd}{(108,12)}{24}{復水器}{bkBlue}
+  \qxabox{pm}{(70,12)}{22}{ポンプ}{bkGray}
+  \draw[qxa flow] (fuel.east) -- (gt.west);
+  \draw[qxa heat] (gt.east) -- node[qxa lab, above=1pt] {排気} node[qxa lab, below=1pt] {約600\,℃} (hr.west);
+  \draw[qxa heat] (hr.east) -- node[qxa lab, above=1pt] {蒸気} (st.west);
+  \draw[qxa flow] (st.south) -- (cd.north);
+  \draw[qxa flow] (cd.west) -- node[qxa lab, above=1pt] {水} (pm.east);
+  \draw[qxa flow] (pm.north) -- (hr.south);
+  \draw[qxa heat, bkGray!80!black] (70,45.5) -- (70,56);
+  \node[qxa lab, anchor=west] at (71,53) {煙突へ（約100\,℃）};
+  \draw[qxa work] (32,45.5) -- (32,56);
+  \node[qxa lab, anchor=west, text=bkGreen!45!black] at (33,53) {電気};
+  \draw[qxa work] (108,45.5) -- (108,56);
+  \node[qxa lab, anchor=west, text=bkGreen!45!black] at (109,53) {電気};
+  \draw[qxa cold] (96,-6) -- (102,-6) -- (102,6.5);
+  \node[qxa lab, anchor=east] at (95,-6) {海の水が入る};
+  \draw[qxa heat, bkBlue!80!black] (114,6.5) -- (114,-6) -- (120,-6);
+  \node[qxa lab, anchor=north east] at (130,-7.5) {海へ（約7\,K 温まる）};
+  \node[qxa lab, anchor=north, align=center] at (6,32) {1秒に\\約17\,kg};
+\end{tikzpicture}
+\bkfigcaption{天然ガスのコンバインドサイクル発電所のしくみ（50万 kW の発電所の例）。上の段のガスタービンの排気で水をわかし、下の段の蒸気タービンも回す。}\label{ph:熱-0:fig-plant}
+\end{bkfigure}
+ガスタービンを上の段、蒸気タービンを下の段に重ねたこのしくみを、\textbf{コンバインドサイクル}といいます（熱-7 ⑧）。\bkidx{こんばいんどさいくる}{コンバインドサイクル}2018年には、愛知県の西名古屋火力発電所7-1号が、燃料の熱の63.08\,\%を電気にして、世界でいちばん効率のよいコンバインドサイクル発電所として、ギネス世界記録に認められました。それでも、燃料の熱の3分の1以上は、電気になっていません。どこへ行ったのでしょう。
+
+\bksubsection{2}{電気になる割合：熱のバランス式と効率}
+\leavevmode\label{ph:熱-0:sec2}発電所全体を1つの大きな箱と考えて、入るエネルギーと出るエネルギーを数えます。この本では、量に「1秒あたり」をつけて数えることがよくあります。1秒あたりの量は、記号の上に点をつけて書きます。$\dot Q$（キュー・ドット）は\textbf{1秒あたりの熱}で、単位は J/s＝W（ワット）です。\bkidx{いちびょうあたりのねつ}{1秒あたりの熱}力-13 の $\dot m$（1秒に流れる質量）と同じ書き方です。電気は、はじめから1秒あたりの量（電力 $P$〔W〕）です。
+\begin{bkcenter}
+\tikz\node[fill=bkTheme, text=white, rounded corners=2mm, inner xsep=5mm, inner ysep=2.4mm, font=\sffamily\bfseries]
+  {入る量 \,$-$\, 出る量 \,$+$\, 生じる量 \,$=$\, たまる量};
+\end{bkcenter}
+これは、おこづかい帳と同じ形の\textbf{バランス式}です（第1巻の力-0）。エネルギーは、増えたり消えたりしない（生じる量が0）ので、発電所に入るのは燃料の熱 $\dot Q_{\text{入}}$、出ていくのは電気 $P$ と捨てる熱 $\dot Q_{\text{出}}$ です。運転が落ち着いていれば、発電所の中にエネルギーはたまっていきません。
+\begin{phflow}
+\phflowrow{入る量$-$出る量$=$たまる量\\（エネルギーのバランス式）}{運転が落ち着いて\\いる（たまる量0）}{$\dot Q_{\text{入}}=P+\dot Q_{\text{出}}$}
+\phflowrow{$\dot Q_{\text{入}}=P+\dot Q_{\text{出}}$}{効率 $\eta=P/\dot Q_{\text{入}}$\\を入れる}{$\dot Q_{\text{出}}=(1-\eta)\,\dot Q_{\text{入}}$}
+\end{phflow}
+入れた燃料の熱のうち、電気になった割合を、発電所の\textbf{効率}といいます（力-4 ⑧）。記号は $\eta$（エータ）です。\bkidx{こうりつ}{効率}
+\pheq{\eta=\frac{P}{\dot Q_{\text{入}}}}{単位なし ＝ W ÷ W}
+\label{ph:熱-0:eta}
+\begin{phyomi}[$\dot Q_{\text{出}}=(1-\eta)\,\dot Q_{\text{入}}$]
+燃料の熱のうち、電気にならなかった残り $1-\eta$ は、熱として発電所の外へ出ていく。エネルギーは消えないので、「電気にならなかった分」は、必ずどこかへ熱として出る。効率0.40なら、燃料の熱の6割が捨てる熱になる。
+\end{phyomi}
+図\ref{ph:熱-0:fig-sankey}は、燃料の熱を100としたときの行き先を、帯の太さで表したものです。このような図を、\textbf{熱の流れの帯}（エネルギーの流れの図）とよびます。\bkidx{ねつのながれのおび}{熱の流れの帯}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[font=\sffamily\bfseries\footnotesize, anchor=west] at (0,36) {石炭火力（効率 約0.40）};
+  \qxasankey{(0,0)}{0.40}{電気 40}{捨てる熱 60}
+  \node[font=\sffamily\bfseries\footnotesize, anchor=west] at (70,36) {コンバインドサイクル（約0.60）};
+  \qxasankey{(70,0)}{0.60}{電気 60}{捨てる熱 40}
+\end{tikzpicture}
+\bkfigcaption{熱の流れの帯。燃料の熱100のうち、上の帯が電気、下へ曲がる帯が捨てる熱（ほとんどが復水器から海へ、一部は煙突から空へ）。}\label{ph:熱-0:fig-sankey}
+\end{bkfigure}
+\begin{phbaisuru}[0.40から0.60に]{効率}
+同じ電気 $P$ をつくるときの捨てる熱は、上の2つの式から $\dot Q_{\text{入}}$ を消して
+\[\dot Q_{\text{出}}=\frac{1-\eta}{\eta}\,P\]
+です。効率0.40なら電気の1.5倍、0.60なら0.67倍で、効率を1.5倍にすると、捨てる熱は $0.67\div1.5\approx0.44$ 倍と、半分より少なくなります。要る燃料の熱は $1/\eta$ 倍なので、2.5倍から1.67倍へ、$\tfrac{2}{3}$ になります。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=46mm, xmin=0.2, xmax=0.75, ymin=0, ymax=4.2, xtick={0.3,0.4,0.5,0.6,0.7}, ytick={1,2,3,4}, xlabel={効率 $\eta$}, ylabel={電気1あたりの量}, xticklabel style={/pgf/number format/fixed, /pgf/number format/precision=1}]
+  \addplot[bkcurve, domain=0.24:0.74, samples=60] {1/x};
+  \addplot[bkcurve2, dashed, domain=0.24:0.74, samples=60] {(1-x)/x};
+  \fill[bkRed] (axis cs:0.4,1.5) circle (1.8pt) (axis cs:0.6,0.667) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:0.41,1.55) {1.5};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:0.61,0.72) {0.67};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.47,2.6) {実線：要る燃料の熱 $1/\eta$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (axis cs:0.47,3.5) {破線：捨てる熱 $(1-\eta)/\eta$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{同じ電気をつくるときの、燃料の熱（実線）と捨てる熱（破線）。効率が低いほど、急に増える。}
+\end{bkcenter}
+\end{phbaisuru}
+
+\bksubsection{3}{例題の解き方：7つの段}
+\leavevmode\label{ph:熱-0:sec3}この本の例題は、いつも同じ7つの段で解きます。①場面、②何を無視するか（理想化）、③図と記号、④使う式を選ぶ理由、⑤式を立てる、⑥解く、⑦答えを確かめる（単位・大きさ・極端な場合）です。数学の本の例題よりも段が多いのは、式を立てる前の「モデルを作る」部分と、答えを出したあとの「確かめる」部分を、ていねいに書くためです。何を無視したかは、式を立てる前に、次のような「モデル化の札」にも書きます。
+\begin{phmodel}[発電所を1つの箱と考える]
+\phignore{発電所の中の詳しいしくみ（タービン・ボイラー・ポンプの1つ1つ）。発電所の中で使う電気。}
+\phassume{運転が落ち着いていて、入る熱と出るエネルギーが、いつも同じ割合で流れている。}
+\phlimit{動かし始め・止めるときのように、発電所の中の温度がまだ変わっているとき。}
+\end{phmodel}
+\bkidx{もでる}{モデル}このように、知りたいことに関係の小さいものを思い切って無視して作った、簡単にした考え方を\textbf{モデル}といいます。見本を2つ見ておきましょう。
+
+\begin{phreidai}[100万 kW の石炭火力発電所の燃料と、捨てる熱]\label{ph:熱-0:ex1}
+電気を100万 kW（\qty{1000}{MW}）出している石炭火力発電所の効率は0.40です。1秒あたりに入れる燃料の熱と、捨てる熱を求めましょう。
+\phbamen
+発電所は、一定の電気を出し続けています。燃料の熱のうち、電気にならない分を知りたい。
+\phmushi
+モデル化の札のとおり、発電所を1つの箱と考えます。発電所の中で使う電気は、効率の中にふくめます。
+\phzu
+電気 $P=\qty{1000}{MW}$、効率 $\eta=0.40$、燃料の熱 $\dot Q_{\text{入}}$、捨てる熱 $\dot Q_{\text{出}}$（どれも1秒あたり）。
+\phriyu
+燃料の熱は効率の式（②）から、捨てる熱は熱のバランス式（②）から出せます。
+\phtateru
+\[\dot Q_{\text{入}}=\frac{P}{\eta},\qquad \dot Q_{\text{出}}=\dot Q_{\text{入}}-P\]
+\phtoku
+\[\dot Q_{\text{入}}=\frac{1000}{0.40}=\qty{2500}{MW},\qquad \dot Q_{\text{出}}=2500-1000=\qty{1500}{MW}\]
+\phtashikame
+単位：MW÷（単位なし）＝MW。\\
+大きさ：捨てる熱（\qty{1500}{MW}）は、つくる電気（\qty{1000}{MW}）の1.5倍です。②の $(1-\eta)/\eta=1.5$ と合います。\\
+極端な場合：$\eta=1$ なら捨てる熱は0。でも、熱機関では $\eta=1$ にはできません（熱-5）。
+\kotae 燃料の熱 約\qty{2500}{MW}、捨てる熱 約\qty{1500}{MW}
+\end{phreidai}
+
+\begin{phreidai}[電気ポットでお湯をわかす時間]\label{ph:熱-0:ex2}
+電気ポットに20\,℃の水\qty{1.0}{L}を入れて、100\,℃までわかします。ポットの電力は\qty{1.0}{kW}、効率（電気のうち、水に入る熱の割合）は0.90です。わくまでに何分かかりますか。
+\phbamen
+発電所と同じく、「入れたエネルギー」と「役に立った熱」を数えます。
+\phmushi
+水の比熱は温度によらず一定とし、とちゅうの蒸発を無視します。ポットそのものが温まる熱と、周りへ逃げる熱は、効率の中にふくめます。
+\phzu
+水の質量 $m=\qty{1.0}{kg}$（水\qty{1}{L}は約\qty{1}{kg}）、比熱 $c=\qty{4.2}{kJ/(kg.K)}$、温度の差 $\Delta T=100-20=\qty{80}{K}$、電力 $P=\qty{1.0}{kW}$、効率 $\eta=0.90$、時間 $t$。
+\phriyu
+水が受けとる熱は $Q=mc\,\Delta T$（熱-1 ③）。それが「水に入る熱の1秒あたりの量 $\eta P$ × 時間」と等しくなります。
+\phtateru
+\[mc\,\Delta T=\eta P\,t\qquad\text{より}\qquad t=\frac{mc\,\Delta T}{\eta P}\]
+\phtoku
+\[mc\,\Delta T=1.0\times4.2\times80=\qty{336}{kJ},\qquad t=\frac{336}{0.90\times1.0}\approx\qty{373}{s}\approx6.2\ \text{分}\]
+\phtashikame
+単位：kJ÷kW＝kJ÷（kJ/s）＝s。\\
+大きさ：\qty{1}{L}で5〜7分は、台所での実感と合います。\\
+極端な場合：効率が1なら $336\div1.0=\qty{336}{s}$（5.6分）で、いちばん短い時間です。水を\qty{2.0}{L}にすると、時間も2倍になります。
+\kotae 約6.2分（約\qty{370}{s}）
+\end{phreidai}
+
+\bksubsection{4}{捨てる熱の行き先：復水器と海の水}
+\leavevmode\label{ph:熱-0:sec4}発電所が捨てる熱は、なぜ0にできないのでしょう。燃料の熱で蒸気をつくり、タービンを回す機械（\textbf{熱機関}）は、\bkidx{ねつきかん}{熱機関}受けとった熱の一部を、必ず低い温度の所へ捨てなければ、繰り返し動き続けることができません。これは、エネルギーの保存（第一法則）とは別の、もう1つの法則（\textbf{第二法則}）が決めていることで、熱-5 で学びます。しかも、捨てる所の温度が低いほど、効率の上限は高くなります（熱-5 ⑤）。
+
+そこで、発電所はタービンを出た蒸気を、温度の低い海の水で冷やします。その装置が\textbf{復水器}です。\bkidx{ふくすいき}{復水器}復水器の中では、たくさんの細い管の中を海の水が流れ、管の外側で蒸気が冷やされて水にもどります。蒸気が水にもどると体積がとても小さくなるので、復水器の中は約\qty{5}{kPa}（大気圧の約20分の1）と、真空に近くなります（熱-8 ⑧）。管の壁を通して熱が移るようす（熱-11・12）も、この本で学びます。
+
+\begin{phreidai}[100万 kW の発電所が使う海の水（\bkhatenaref）]\label{ph:熱-0:ex3}
+\bkreidairef{1}の発電所は、捨てる熱\qty{1500}{MW}を、復水器で海の水に渡しています。海の水は、復水器を通る間に\qty{7}{K}温まります。1秒に何 m$^3$ の海の水が要りますか。海の水の密度は\qty{1025}{kg/m^3}、比熱は\qty{3.99}{kJ/(kg.K)}とします。
+\phbamen
+海の水が、取り入れ口から入り、復水器の管を通って温まり、もどし口から海へ帰ります。
+\phmushi
+捨てる熱\qty{1500}{MW}は、全部が復水器で海の水に入るとします（煙突から空へ出る熱なども、ここにふくめて考える）。海の水の比熱は、温度によらず一定とします。
+\phzu
+1秒に流れる海の水の体積 $\dot V$〔m$^3$/s〕、質量 $\dot m=\rho\dot V$〔kg/s〕。$\dot Q_{\text{出}}=\qty{1500}{MW}$、$\Delta T=\qty{7}{K}$、$\rho=\qty{1025}{kg/m^3}$、$c=\qty{3.99}{kJ/(kg.K)}$。
+\phriyu
+1秒に流れる海の水 $\dot m$ が、1 kg あたり $c\,\Delta T$ ずつ熱を受けとります。$Q=mc\,\Delta T$（熱-1 ③）を1秒あたりにした式を使います。
+\phtateru
+\[\dot Q_{\text{出}}=\dot m\,c\,\Delta T=\rho\dot V c\,\Delta T\qquad\text{より}\qquad \dot V=\frac{\dot Q_{\text{出}}}{\rho c\,\Delta T}\]
+\phtoku
+\[\dot V=\frac{1500\times10^6}{1025\times3990\times7}\approx\qty{52}{m^3/s}\]
+\phtashikame
+単位：W÷（kg/m$^3$×J/(kg·K)×K）＝（J/s）÷（J/m$^3$）＝m$^3$/s。\\
+大きさ：長さ\qty{25}{m}・はば\qty{10}{m}・深さ\qty{1.2}{m}のプール（\qty{300}{m^3}）が、約6秒でいっぱいになる量です。1日では約450万 m$^3$ になります。熱-8 例題11（理想の蒸気のサイクルで、捨てる熱\qty{1488}{MW}）でも、同じ約\qty{52}{m^3/s}になります。\\
+2倍にすると：温度差を\qty{14}{K}にすれば、海の水は半分の約\qty{26}{m^3/s}ですみます。でも、温かすぎる水を海へもどすと、周りの生き物に影響するので、温度差は小さくおさえています。
+\kotae 約\qty{52}{m^3/s}
+\end{phreidai}
+\noindent 同じ100万 kW でも、効率0.60のコンバインドサイクルなら、捨てる熱は約\qty{670}{MW}で、海の水は約\qty{23}{m^3/s}と、半分以下ですみます。効率を上げることは、燃料を減らすだけでなく、海へ捨てる熱も減らすことなのです。
+
+%% ================================================================
+%% 修2-1（Q1-1）：表1が次のページへ送られて下の約4割が空いたので、⑤と⑥を入れかえた（表1が新しいページの頭に来る）。
+%% ラベルは中身についたまま（地図の節が ph:熱-0:sec6、背骨の節が ph:熱-0:sec5。ph2-checklist.tex がこの名前を引いている）。
+\bksubsection{5}{4つの部と、16のなぜ？}
+\leavevmode\label{ph:熱-0:sec6}この巻は、序章と4つの部（16の章）でできています。図\ref{ph:熱-0:fig-plant}の発電所の中にも、4つの部の物理がつまっています。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{第1部　ふくらむ}：ガスタービンの中で、燃えたガスがふくらんで羽根車を回す。熱と仕事は、どちらもエネルギー（熱-1〜4）。
+\item \textbf{第2部　めぐる}：水と水蒸気が、ボイラー・タービン・復水器・ポンプをめぐる。繰り返し動く機械（サイクル）の効率の上限（熱-5〜10）。
+\item \textbf{第3部　移る}：復水器の管の壁を通して、蒸気の熱が海の水へ移る。伝導・対流・放射（熱-11〜13）。
+\item \textbf{第4部　ぶつかる}：温度とは何か、熱とは何かを、飛び回ってぶつかる分子から考える（熱-14〜16）。
+\end{itemize}
+\begin{bkcenter}
+\small
+\begin{tblr}{colspec={Q[l,m,wd=19mm] X[l,m] Q[l,m,wd=29mm]}, width=\linewidth, rowsep=1.1pt, colsep=3pt,
+  hlines={0.4pt,bkLine}, row{1}={bg=bkTheme!12, font=\sffamily\bfseries\footnotesize},
+  row{2,7,14,18}={bg=bkTheme!6, font=\sffamily\bfseries\footnotesize}}
+章 & 身近な「なぜ？」 & 答えのある所 \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{1}\enspace 第1部　ふくらむ：熱と第一法則} & & \\
+\phchapref{熱-1} & 氷水は、氷がとけきるまで0\,℃のままなのはなぜ？ & ⑤ 状態変化と潜熱 \\
+\phchapref{熱-2} & 自転車の空気入れの筒の先は、なぜ熱くなる？ & ⑤ 押すと温まる \\
+\phchapref{熱-3} & 高い山の上で、おかしの袋がふくらむのはなぜ？ & ② ボイルとシャルル \\
+\phchapref{熱-4} & ロケットのノズルは、なぜ一度細くしてから広げる？ & ⑤⑧ 先細末広ノズル \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{2}\enspace 第2部　めぐる：第二法則とサイクル} & & \\
+\phchapref{熱-5} & エンジンは、燃料の熱を全部、動きに変えられる？ & ③⑤ 第二法則・カルノー \\
+\phchapref{熱-6} & お湯と水をまぜたあと、なぜ元の温度に分かれない？ & ②⑤ エントロピー \\
+\phchapref{熱-7} & ディーゼルエンジンは、なぜ火花なしで燃える？ & ③ 断熱圧縮 \\
+\phchapref{熱-8} & 高い山の上では、なぜ水が100\,℃より低い温度でわく？ & ① 飽和蒸気圧 \\
+\phchapref{熱-9} & 冷たいコップのまわりに、なぜ水がつく？ & ⑥ 露点と結露 \\
+\phchapref{熱-10} & 圧力なべの中では、水は何℃でわく？ & ③④ $\ln p$ と $1/T$ \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{3}\enspace 第3部　移る：伝熱} & & \\
+\phchapref{熱-11} & 二重窓にすると、なぜ部屋が冷えにくい？ & ④ 熱貫流率 \\
+\phchapref{熱-12} & パソコンは、なぜファンで風を送って冷やす？ & ② 熱伝達率 \\
+\phchapref{熱-13} & たき火に向いた顔だけが熱くなるのはなぜ？ & ②⑤ 放射・形態係数 \\
+\SetCell[c=3]{l}{\phfaceicon[5mm]{4}\enspace 第4部　ぶつかる：ミクロから見た熱} & & \\
+\phchapref{熱-14} & 空気の分子は、どれくらいの速さで飛んでいる？ & ③ 温度と運動エネルギー \\
+\phchapref{熱-15} & トランプは、切るほどなぜ順番がばらばらになる？ & ② 並び方の数 \\
+\phchapref{熱-16} & 電気は、どの方法でつくるとよい？　何をくらべる？ & ⑨ 物差しをそろえる \\
+\end{tblr}
+\bktabcaption{この巻の地図。「答えのある所」の丸数字は、その章の「物理の道具」の節の番号。}\label{ph:熱-0:tab-chizu}
+\end{bkcenter}
+\noindent 表\ref{ph:熱-0:tab-chizu}は、それぞれの章で答える身近な「なぜ？」と、その答えがある所です。章の札の横の数は、その章が始まるページです。どの章から読んでもよいのですが、前の章の道具を使うので、はじめは順に読むのがおすすめです。序章の\bkhatenaref の答えは、この序章の最後（⑧）にあります。身近な疑問から、数学と物理のどの章を順に読めばよいかを示した「なぜ？の道すじ」も、巻末にあります。
+
+\bksubsection{6}{どの章にも通る背骨：バランス式}
+\leavevmode\label{ph:熱-0:sec5}②で使ったバランス式は、この巻の多くの章に出てきます。何を数えるかで、違う法則になります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{エネルギー}を数えると、熱力学の第一法則（熱-2）や、流れる気体のエネルギーの式（熱-4）になる。入るのは「熱」と「仕事」です。
+\item \textbf{エントロピー}を数えると、第二法則（熱-6）になる。エントロピーは、生じる量がいつも0以上という、ふしぎな量です。
+\item \textbf{水}を数えると、空気の中の水蒸気の量と、結露の計算（熱-9）になる。
+\item 小さな箱に入る\textbf{熱}を数えると、壁の中の温度の変わり方（熱-11）になる。
+\end{itemize}
+第1巻『力学』では、運動量・角運動量・質量・エネルギーを、同じ形の式で数えました。この巻は、そのエネルギーの数え方に「熱」を入れ、さらに、エネルギーとは別の「エントロピー」という量を数えます。
+
+\bksubsection{7}{この本の読み方}
+\leavevmode\label{ph:熱-0:sec7}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxatalk{0}{sora}{ソラ}{熱って、温度のことだと思っていたよ。違うの？}
+  \qxatalk{-20}{mina}{ミナ}{わたしは、エントロピーっていうことばが、むずかしそう……。}
+  \qxatalk{-44}{delta}{デルタ}{熱は、温度の差で移るエネルギーで、温度とは別のものだよ（熱-1）。★が5つの所は、「目でわかる」「手でわかる」「式でわかる」の3段に分けてあるから、「ここまでで十分」の旗まで読めば、その章のゴールだよ。}
+\end{tikzpicture}
+\end{bkfigure}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{★の数}：内容の高さの目安です。★1つは「はじめの一歩」、★2つは「ふもとを歩く」、★3つは「山を登る」、★4つは「尾根を歩く」、★5つは「頂上をめざす」。物理の本の★は、物理の内容の高さで付けてあり、数学の本の★とは別の物差しです。
+\item \textbf{章の札}：「8-7」のような札は数学の本の章、「熱-5」のような札はこの本の章、「力-13」は第1巻『力学』の章です。札の色は、その本の色です。本文で「（8-7⑩）」と書いたら、数学の本の8-7の⑩の節を見てください。
+\item \textbf{物理の本の囲み}：「この式の読み方」「身近な例では」「〇〇を2倍にすると？」「まだわかっていないこと」「この先の学び」「一般の式から、よく使う式へ」などがあります。見本は、前付の「この本の使い方」にあります。
+\item \textbf{本物の値}：水蒸気の値（蒸気表）や湿った空気の図（空気線図）は、国際的に決められた式から計算して、巻末にのせてあります。
+\end{itemize}
+\begin{taisetsu}
+\def\tsl#1{\par\noindent\hangindent=6.2\zw\hangafter=1\makebox[6.2\zw][l]{\sffamily\bfseries\small\color{bkDeep}#1}}
+\tsl{温度}絶対温度は $T$〔K〕、セルシウス温度は $\theta$〔℃〕。温度の差は $\Delta T$〔K〕で、℃ の差と同じ数（熱-1 ②）。式の中の $T$ は、いつも K。
+\tsl{水の比熱}本文では 4.2\,kJ/(kg·K)。3けた要る例題だけ、はじめに「4.18 を使う」と書く。
+\tsl{第一法則}$\Delta U=Q+W$。$Q$ は受けとる熱、$W$ は\textbf{される}仕事（高校の教科書と同じ。熱-2 ④）。
+\tsl{1秒あたり}記号の上の点は「1秒あたり」（$\dot Q$、$\dot m$、$\dot V$）。
+\tsl{答えのけた}答えは、ふつう2けた。蒸気表を使う例題などは3けたで書く。
+\end{taisetsu}
+
+\bksubsection{8}{はてな？の答え：発電所が海の水を使うわけ}
+\leavevmode\label{ph:熱-0:sec8}\bkhatenaref に答えましょう。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \tikzset{tag/.style={draw=#1, line width=0.9pt, fill=white, rounded corners=1.6mm, text width=58mm, align=left, inner sep=1.8mm, font=\sffamily\footnotesize}}
+  \node[tag=bkBlue, anchor=north west] (n1) at (0,0) {\phfaceicon[5mm]{1}\enspace\textbf{ふくらむ}\\燃えたガスと水蒸気がふくらんで、タービンを回す。\\\phchapref{熱-2}\enspace\phchapref{熱-4}};
+  \node[tag=bkOrange!80!black, anchor=north west] (n2) at (66,0) {\phfaceicon[5mm]{2}\enspace\textbf{めぐる}\\水がめぐるサイクル。熱を捨てないと回り続けない。\\\phchapref{熱-5}\enspace\phchapref{熱-8}};
+  \node[tag=bkGreen!70!black, anchor=north west] (n3) at (0,-31) {\phfaceicon[5mm]{3}\enspace\textbf{移る}\\復水器の管の壁を通して、熱が海の水へ移る。\\\phchapref{熱-11}\enspace\phchapref{熱-12}};
+  \node[tag=bkPurple, anchor=north west] (n4) at (66,-31) {\phfaceicon[5mm]{4}\enspace\textbf{ぶつかる}\\熱いガスの分子は速く飛び、羽根にぶつかって押す。\\\phchapref{熱-14}\enspace\phchapref{熱-15}};
+\end{tikzpicture}
+\bkfigcaption{はてな？の答え。1つの発電所に、4つの部の物理がはたらいている。}
+\end{bkfigure}
+\begin{enumerate}[label={\bkcircled[bkBlue]{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{何割が電気になる？}　燃料の熱のうち、電気になるのは、石炭火力で約4割、コンバインドサイクルで約6割（記録は63.08\,\%）、原子力で約3割です（熱-5 ⑦・熱-8 ⑧）。
+\item \textbf{残りは熱になる}　電気にならなかった分は、エネルギーとして消えることはなく、熱として外へ出ます（②）。100万 kW の石炭火力なら、1秒に\qty{1500}{MJ}です（\bkreidairef{1}）。
+\item \textbf{熱は捨てなければならない}　蒸気でタービンを回し続けるには、タービンを出た蒸気を冷やして水にもどし、熱を低い温度の所へ捨てる必要があります（④、熱-5）。
+\item \textbf{海の水は、冷たくて、たくさんある}　捨てる所の温度が低いほど効率が上がります。海の水は温度が低く、量がいくらでもあるので、捨てる熱を運ぶのに向いています。100万 kW の発電所なら、1秒に約\qty{52}{m^3}の海の水を使います（\bkreidairef{3}）。
+\end{enumerate}
+海のない所の発電所は、川の水や、水を蒸発させて冷やす大きな塔（冷却塔）を使います。どちらにしても、熱機関で電気をつくる発電所は、どこかへ熱を捨てているのです。
+\begin{phketa}[発電所の熱]
+\phketaline{燃料の熱のうち電気になる割合}{約3割（原子力）〜約6割（コンバインドサイクル）}
+\phketaline{コンバインドサイクルの効率（2018年の記録）}{63.08\,\%}
+\phketaline{100万 kW の石炭火力が1秒に捨てる熱}{約\qty{1500}{MJ}（\bkreidairef{1}）}
+\phketaline{その熱を運ぶ海の水}{1秒に約\qty{52}{m^3}（\bkreidairef{3}）}
+\phketaline{\qty{1}{kWh}の電気}{\qty{3.6}{MJ}（効率0.40なら燃料の熱\qty{9.0}{MJ}）}
+\phboxhead{答えが桁で合っているか}
+燃料の熱は、電気の約1.5〜3倍です。捨てる熱が電気より小さいのは、効率が0.5より大きいときだけです。効率が1をこえたり、捨てる熱がマイナスになったりしたら、どこかで MW と kW、J と kJ を取り違えています。
+\end{phketa}
+
+\begin{column}{この本では答えられないこともある}
+「どの方法で電気をつくるのが、いちばんよいか」は、この本の物理だけでは答えられません。効率だけでなく、燃料を燃やして出る二酸化炭素、費用、天気によらずに電気を出せるか、燃料が手に入るか、安全か、といった、いくつもの物差しがあるからです。最後の熱-16（読みもの）では、この本で学んだ効率・温度・エクセルギーの考えを使って、それぞれの物差しで、発電の方法をくらべる材料を集めます。わかっていることと、まだわかっていないこと、人が選ぶことを、分けて考えていきましょう。
+\end{column}
+
+\begin{kotoba}\small
+\bkword{効率}{入れたエネルギーのうち、役に立った（電気になった）割合。$\eta$ と書く。}
+\bkword{1秒あたりの熱}{1秒に移る熱。記号 $\dot Q$、単位 W（＝J/s）。}
+\bkword{熱機関}{熱を受けとって、繰り返し仕事をする機械。エンジンやタービン（熱-5）。}
+\bkword{復水器}{タービンを出た蒸気を、海の水などで冷やして水にもどす装置（熱-8）。}
+\bkword{熱の流れの帯}{エネルギーの行き先を、帯の太さで表した図。}
+\end{kotoba}
+\bkkigocards{\bkkigocard{$\dot Q$}{キュー・ドット}{1秒あたりの熱〔W〕。上の点は「1秒あたり」の印（$\dot m$・$\dot V$ も同じ）}{heat transfer rate}{熱-0}}{\bkkigocard{$\eta$}{エータ}{効率（単位なし）。入れたエネルギーのうち、役に立った割合}{efficiency}{熱-0}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 発電所に入る燃料の熱・出る電気・捨てる熱を、熱のバランス式と効率で数えられる。\bkfurref{ph:熱-0:sec2}
+\item 何を無視したかを書いてから、捨てる熱を運ぶ海の水の量を、7つの段で求められる。\bkfurref{ph:熱-0:ex3}
+\item 身近な「なぜ？」の答えが、この巻のどの章にあるかを探せる。\bkfurref{ph:熱-0:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{燃料の熱の半分くらいは、電気にならずに海へ行くんだね。なぜ全部を電気にできないのか、熱-5 まで読んで確かめよう。}
