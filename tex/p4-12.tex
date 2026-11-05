@@ -1,0 +1,970 @@
+%% 第26回編集委員会（物理第4巻）：組 電W6
+%% p4-12.tex  電-12　モーターと変圧器のしくみ：電気機器（★1〜5・3段）
+%% 中身は計画書 tools/phys4-plan.md の B「電-12」。公式の持ち主は A51（変圧器 V_1:V_2＝N_1:N_2、V_1I_1＝V_2I_2）・A80（変圧器の等価回路・効率、
+%%   直流機 E＝Kω・T＝KI、誘導機のすべり、同期速度）。A17 の変圧器の部分（⑤）。
+%% 数値はすべて Python で計算した：checks/物理第4巻/電-12/calc_p4_12.py（出力 calc_p4_12_out.txt）。図の線は pgfplots の式で、点は同じ出力で確かめた。
+%% 記号（この章）：トルク T〔N·m〕（第1巻 力-6 の N_m（ベクトルは \vec N）、波-4 の τ_m と同じ量。Y-4。周期はこの章で使わない）、
+%%   トルク定数・逆起電力定数 K〔N·m/A＝V·s/rad〕（波-4 の伝達関数のゲイン K とは別）、逆起電力 E（この章に電場は出ない）、
+%%   モーターに加える電圧 V（波-4 と同じ）、電流 I、巻線の抵抗 R、慣性モーメント J（力-6 のカタログの書き方。電流 I とぶつけない）、
+%%   軸の摩擦の係数 b（波-4 と同じ）、波-4 の a・a′、角速度 ω、回転数 n〔min⁻¹〕、同期速度 n_s、すべり s（ラプラスの s はこの章で使わない）、
+%%   極数 p（瞬時電力はこの章で使わない）、巻数 N_1・N_2、磁束の山 Φ_max、効率 η、負荷率 x、鉄損 P_i・銅損 P_c、
+%%   二次の抵抗を一次から見た R_2′、もれリアクタンス X、相電圧 V_p（電-11）。
+%% 前の巻との約束（計画書 A-6）：
+%%   ・P28 波-4 ④「τ_m＝aV−a′ω を電-12 で導く」→ ④（ph:電-12:sec4）・例題4。a＝K/R＝0.1、a′＝K²/R＝0.005、b＝J＝0.005 で 9-8 の 10/(0.5s+1)。
+%%       波-4 の記号 τ_m・a・a′・b・I（慣性モーメント）と、この章の T・K・J の対応を記号カードと本文に書いた。
+%%   ・P3 力-6 の道しるべ（力-6 → 電-12）→ ⑩（慣性モーメント J、加速のトルク T_a＝J·2πn/(60t_a)：力-6 の専門書の囲みと同じ形）・例題13。
+%%       力-6 例題15 のサーボモーター（100 W・3000 min⁻¹・0.318 N·m）を指した。
+%%   ・P11 第1巻の巻末「車はどうして動くの？」→ 電-12、P17 熱-7 の道しるべ → はてな?・⑧（電気自動車）・例題11（回生：力-4）。
+%%   ・A17（物理基礎の変圧器）→ ⑤。電-11 ⑥の「変圧器は電-12 ⑤」を受けた。
+%% 数学の本：4-14⑧（電流が磁場から受ける力、3 A・0.2 m・0.5 T・0.3 N、フレミングの左手、モーターのコイル）→ ①・例題1。
+%%   9-8 のモーター 10/(0.5s+1) → ④。6-9:856（回転磁界）は電-11 ⑨ で受け、ここでは使うだけ。9-back:764 の「モータ」は数学の側の書き方（事務局）。
+%% 出典（本文で使った事実。手引き BRIEF-phys4 2章の16 に従い、書くときに確かめた）
+%%   ・柱上変圧器 6600 V／210-105 V（単相3線）：JIS C 4304:2013 準拠の製品の仕様（ipros の掲載）、防衛省の入札資料の銘板（愛知電機 6600/105 V）。
+%%   ・配電用の高効率変圧器の効率 約99 %（通常は約97 %）：環境省「温室効果ガス削減の対策の手引き」の変圧器の資料
+%%       https://www.env.go.jp/earth/ondanka/gel/ghg-guideline/search/pdf/01_186.pdf（出所は三菱電機の配電用油入変圧器のカタログ）。本文は「約99 %」だけを使った。
+%%   ・三相誘導電動機のトップランナー制度（2015年4月から、IE3（プレミアム効率）、0.75〜375 kW）：MONOist 2014年7月15日の記事、
+%%       明電舎の技報（No352）、日本電機工業会（JEMA）の資料（762_motor.pdf）の検索の抜粋で照らし合わせた。jema-net.or.jp は読んでいない。
+%%   ・2代目の日産リーフ（2017年）のモーター：交流同期電動機 EM57、最高出力 110 kW、最大トルク 320 N·m（webCG の諸元、motor-fan・car-repo の記事）。
+%%   ・鉄損の「残り」（過剰損失）：G. Bertotti, "General properties of power losses in soft ferromagnetic materials", IEEE Trans. Magn. 24 (1), 621–630 (1988),
+%%       DOI 10.1109/20.43994（scilit・ISC の書誌と要旨で確かめた。損失をヒステリシス・古典的な渦電流・過剰の3つに分け、過剰の分を磁壁の動きの
+%%       まわりの渦電流で説明する統計的なモデル）。本文は「研究が続いている」にとどめた。
+%%   ・例題の直流モーター（K＝0.05・R＝0.5・12 V）、変圧器（10 kVA・鉄損 50 W・銅損 150 W）、誘導モーター（R_2′＝0.1 Ω・X＝0.8 Ω）、
+%%       回生の効率 70 %、ファンの慣性モーメント 0.2 kg·m² は仮の値（本文で「〜とします」と書いた）。
+\makeatletter
+% 磁石（N・S のブロック）  \sxmmag{(左下)}{はば}{高さ}{N か S}{色}
+\newcommand\sxmmag[5]{\filldraw[fill=#5, draw=bkInk, line width=0.8pt] #1 rectangle ++(#2,#3); \node[font=\sffamily\small\bfseries, text=bkInk] at ($#1+(#2/2,#3/2)$) {#4};}
+% 抵抗（横）  \sxmres{(左)}{(右)}
+\newcommand\sxmres[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=1.6mm, amplitude=1.1mm, pre length=1.5mm, post length=1.5mm}] #1 -- #2;}
+% コイル（横の巻線）  \sxmcoil{(左)}{(右)}
+\newcommand\sxmcoil[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={coil, aspect=0.5, segment length=2.2mm, amplitude=1.6mm, pre length=1.2mm, post length=1.2mm}] #1 -- #2;}
+\tikzset{sxm lab/.style={font=\sffamily\footnotesize, text=bkInk}}
+\makeatother
+
+\phchapter{12}{モーターと変圧器のしくみ：\\電気機器}{電気自動車のモーターは、どうやって回る？}{\bklevelrange{1}{5}}{モーターと変圧器のしくみ：電気機器}
+\bkmichishirube{4-14,6-9,9-8,電-6,電-7,電-8,電-11,力-6,波-4}{電-13,電-16}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace 磁石とコイルでモーターが回るわけを、電流が磁場から受ける力で説明できる。
+\item \bklevel{3}\enspace 直流モーターのトルクと回る速さの関係を、逆起電力を使って説明できる。
+\item \bklevel{3}\enspace 変圧器の電圧と電流の比を、巻数から求められる。
+\item \bklevel{4}\enspace 変圧器の鉄心の磁束、損失と効率を計算できる。
+\item \bklevel{5}\enspace 誘導モーターのすべりとトルク、同期モーターとインバーターのしくみを説明できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{変圧器の電圧の比 $V_1:V_2=N_1:N_2$}{高校物理}{ph:電-12:hen}
+\phk{理想の変圧器では電力が等しい $V_1I_1=V_2I_2$}{高校物理}{ph:電-12:hen2}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+電気自動車には、エンジンがありません。床の下の大きな電池と、車輪の近くのモーターだけで走ります。音も静かで、止まった状態からぐっと力強く加速します。電池から出てくるのは向きの変わらない直流です。モーターは、その電気でどうやって回り、速さをどうやって変えているのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.41\linewidth}\centering
+\begin{tikzpicture}[x=0.85mm, y=0.85mm]
+  \draw[bkInk, line width=0.9pt, rounded corners=3mm, fill=bkTheme!8] (0,6) -- (0,16) -- (12,17) -- (20,25) -- (40,25) -- (49,17) -- (56,15) -- (56,6) -- cycle;
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (12,6) circle (5);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (44,6) circle (5);
+  \filldraw[fill=bkGreen!25, draw=bkInk, line width=0.6pt] (18,9) rectangle (36,13);
+  \node[sxm lab] at (27,11) {電池};
+  \filldraw[fill=bkRed!20, draw=bkInk, line width=0.6pt] (41,13) rectangle (51,19.5);
+  \node[sxm lab, align=center] at (46,16.2) {M};
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.6mm]}] (36,11) -- (41,14);
+  \node[sxm lab, anchor=south] at (46,25.5) {モーター};
+  \node[sxm lab, anchor=north] at (27,-0.5) {電気自動車};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 電-6 では、磁場の中の電流が力を受けることを、電-8 では、磁場の変化が電圧（起電力）を生むことを学びました。この2つの法則を、電気と回転の運動の間で、どちら向きにも使うのが\textbf{電気機器}です。電気から回転をつくるのがモーター、回転から電気をつくるのが発電機、電気の電圧を変えるのが変圧器です。家の中の扇風機・洗濯機・エアコン、エレベーター、電車、電気自動車、そして発電所。電気を使う所のほとんどに、この章の機械があります。
+
+\begin{yattemiyou}[クリップモーターを作ろう]
+\textbf{用意するもの}\par
+単3の乾電池1本、エナメル線（太さ\qty{0.4}{mm}くらい、\qty{1}{m}くらい）、ゼムクリップ2本、ネオジム磁石1個、セロハンテープ、紙やすり\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item エナメル線を、乾電池に10回ほど巻いて輪のコイルにし、両はしを横にまっすぐ出す。
+\item 片方のはしは、エナメルを紙やすりで全部はがす。もう片方は、上半分だけはがす。
+\item クリップを曲げて台にし、テープで電池の両はしにとめる。電池の上（コイルの真下）に磁石をつける。
+\item コイルをクリップにのせ、指で軽く回す。回る向きを、磁石の向きを変えて比べる。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGreen!20, draw=bkInk, line width=0.7pt, rounded corners=1mm] (4,0) rectangle (36,9);
+  \node[sxm lab] at (20,4.5) {乾電池};
+  \draw[bkGray!80!black, line width=1pt] (8,9) -- (8,26) (32,9) -- (32,26);
+  \draw[bkGray!80!black, line width=1pt] (6.5,26) -- (9.5,26) (30.5,26) -- (33.5,26);
+  \filldraw[fill=bkGray!40, draw=bkInk] (16,9) rectangle (24,12);
+  \node[sxm lab, anchor=north] at (20,-0.5) {磁石は電池の上に};
+  \draw[bkOrange!80!black, line width=1.1pt] (20,26) ellipse (5 and 8);
+  \draw[bkOrange!80!black, line width=1.1pt] (4,26) -- (15,26) (25,26) -- (36,26);
+  \node[sxm lab, anchor=south] at (20,34.5) {コイル};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{6pt}\noindent 注意：コイルが回らないまま長くつなぐと、電池とエナメル線が熱くなります。遊び終わったら、すぐにコイルを外しましょう。
+\end{yattemiyou}
+
+\noindent やってみようの答え：うまく作ると、コイルは同じ向きに回り続けます。磁石の向きを逆にすると、逆向きに回ります。エナメルを半分だけはがすのは、コイルが半回転するごとに電流を流したり止めたりして、力がいつも同じ向きに回す側にはたらくようにするためです（①）。
+
+\begin{omoidasou}
+\bkrecall{4-14}{磁場 $\vec B$ の中の長さ $l$ の導線に電流 $I$ が流れると、力 $\vec F=I\vec l\times\vec B$。直角なら $F=IlB$。\qty{3}{A}・\qty{0.2}{m}・\qty{0.5}{T}で\qty{0.3}{N}。向きはフレミングの左手。}
+\bkrecall{電-8}{ファラデーの法則：巻数 $N$ のコイルを通る磁束 $\Phi$ が変わると、起電力 $N\,\dd\Phi/\dd t$。磁場を横切る棒には $vBl$。回るコイルには $NBS\omega\sin\omega t$。}
+\bkrecall{電-11}{三相交流を3つのコイルに流すと、回る磁場（回転磁界）ができる。同期速度 $n_{\mathrm s}=120f/$（極の数）〔min$^{-1}$〕。}
+\bkrecall{力-6}{回転の運動方程式（慣性モーメント）×（角加速度）＝（トルク）。仕事率＝トルク×角速度。モーターのカタログは慣性モーメントを $J$ と書く。}
+\bkrecall{波-4}{DC モーターのトルクは $\tau_{\mathrm m}=aV-a'\omega$ と書けて（電-12 で導く）、回る速さは1次おくれ。9-8 のモーターは、\qty{1}{V}で最後は\qty{10}{rad/s}、時定数\qty{0.5}{s}。}
+\end{omoidasou}
+
+\noindent この章の記号の約束：トルクを $T$〔N·m〕と書きます。第1巻（力-6）の $N_{\mathrm m}$（ベクトルなら $\vec N$）、第3巻（波-4）の $\tau_{\mathrm m}$ と同じ量で、電気機器の本の書き方にそろえました（巻数 $N$ とまぎれないように）。慣性モーメントは、電流 $I$ と分けるため、カタログと同じ $J$ と書きます。回る速さは、角速度 $\omega$〔rad/s〕か回転数 $n$〔min$^{-1}$〕（1分あたりの回転の数）で表し、$\omega=2\pi n/60$ です。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{モーターと変圧器を見る}{1}
+
+\bksubsection{1}{磁石の中のコイルが回る}
+\label{ph:電-12:sec1}
+磁石の N 極と S 極の間（磁場 $B$）に、長方形のコイルを置き、電流を流します（図\ref{ph:電-12:fig-coil}）。磁場に直角な2つの辺（長さ $l$）は、電流が反対向きなので、反対向きの力 $F=IlB$（巻数 $N$ なら $NIlB$）を受けます（4-14⑧、電-6 ⑧）。2つの力は、コイルの軸を中心に、同じ向きに回そうとします。軸の周りのトルクは、力×うでの長さ（力-6）です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxmmag{(0,-12)}{9}{24}{N}{bkRed!30}
+  \sxmmag{(51,-12)}{9}{24}{S}{bkBlue!25}
+  \foreach \yy in {-8,-3,2,7} {\draw[bkGray, line width=0.5pt, -{Stealth[length=1.6mm]}] (10,\yy) -- (50,\yy);}
+  \node[sxm lab, anchor=south] at (30,12.5) {磁場 $B$};
+  \draw[bkOrange!80!black, line width=1.6pt] (30,0) ++(150:12) -- ++(-30:24);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (30,0) ++(150:12) circle (2.2);
+  \node[sxm lab] at ($(30,0)+(150:12)$) {$\odot$};
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (30,0) ++(-30:12) circle (2.2);
+  \node[sxm lab] at ($(30,0)+(-30:12)$) {$\otimes$};
+  \filldraw[bkInk] (30,0) circle (0.8);
+  \draw[bkRed!80!black, line width=1.3pt, -{Stealth[length=2.2mm]}] ($(30,0)+(150:12)+(0,2.6)$) -- ++(0,8);
+  \draw[bkRed!80!black, line width=1.3pt, -{Stealth[length=2.2mm]}] ($(30,0)+(-30:12)+(0,-2.6)$) -- ++(0,-8);
+  \node[sxm lab, anchor=east] at ($(30,0)+(150:12)+(-1,8)$) {$F$};
+  \node[sxm lab, anchor=west] at ($(30,0)+(-30:12)+(1,-8)$) {$F$};
+  \draw[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt] (30,0) -- (42,0);
+  \draw[bkInk, line width=0.5pt] (36,0) arc (0:-30:6);
+  \node[sxm lab] at (44.2,-0.5) {$\theta$};
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (30,0) ++(80:6.5) arc (80:30:6.5);
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+  \begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=60mm, height=42mm, xmin=0, xmax=370, ymin=-1.25, ymax=1.35, xtick={0,90,180,270,360}, ytick={-1,0,1}, xlabel={$\theta$（°）}, title={トルク（山を1）}, title style={font=\sffamily\footnotesize}, tick label style={font=\sffamily\footnotesize}]
+    \draw[bkGray, line width=0.6pt] (axis cs:0,0) -- (axis cs:370,0);
+    \addplot[bkGray!80!black, line width=1pt, dash pattern=on 3pt off 2pt, domain=0:360, samples=91] {cos(x)};
+    \addplot[bkBlue, line width=1.4pt, domain=0:360, samples=181] {abs(cos(x))};
+  \end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：磁場の中のコイル（軸の向きから見た図。$\odot$ は手前へ、$\otimes$ は奥へ流れる電流）。2つの辺の力が、コイルを同じ向きに回す。右：コイルの面が磁場となす角 $\theta$ とトルク。電流の向きがそのままだと、半回転ごとに逆向きのトルクになる（破線）。半回転ごとに電流を逆にすると、いつも同じ向きになる（実線）。}\label{ph:電-12:fig-coil}
+\end{bkfigure}
+
+\noindent コイルの面が磁場となす角を $\theta$、コイルのはば（軸から辺までの2倍）を $w$ とすると、それぞれの辺の力のうで（軸から力の作用線までの距離）は $\tfrac{w}{2}\cos\theta$ なので、トルクは
+\pheq{T=2\times NIlB\times\frac{w}{2}\cos\theta=NBSI\cos\theta}{N·m ＝ T × m$^2$ × A}
+です（$S=lw$ はコイルの面積）。コイルの面が磁場と平行（$\theta=0°$）のとき最大、磁場に直角（$\theta=90°$）のとき0です。$90°$ をこえると、同じ電流では逆向きのトルクになり、コイルはもどされてしまいます。
+
+\phboxhead{半回転ごとに、電流を逆にする}
+そこで、コイルが半回転するごとに、電流の向きを逆にします。本物の直流モーターでは、軸についた2つに割れた輪（\textbf{整流子}）に、ばねで押しつけた炭の棒（\textbf{ブラシ}）がこすれて、半回転ごとに自動でつなぎかわります（図\ref{ph:電-12:fig-comm}）。\bkidx{せいりゅうし}{整流子}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxmmag{(0,9.5)}{9}{20}{N}{bkRed!30}
+  \sxmmag{(61,9.5)}{9}{20}{S}{bkBlue!25}
+  \draw[bkOrange!80!black, line width=1.5pt] (24,26) -- (46,26) -- (46,12) -- (24,12) -- cycle;
+  \draw[bkOrange!80!black, line width=1.5pt] (33,12) -- (33,6) (37,12) -- (37,6);
+  \draw[bkInk, line width=1pt, fill=bkYellow!40] (35,2) ++(100:4.5) arc (100:260:4.5) -- ++(0,0) -- cycle;
+  \draw[bkInk, line width=1pt, fill=bkYellow!40] (35,2) ++(-80:4.5) arc (-80:80:4.5) -- cycle;
+  \draw[bkOrange!80!black, line width=1.5pt] (33,6) -- (33,6.4) (37,6) -- (37,6.4);
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.7pt] (24,0) rectangle (30.5,4);
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.7pt] (39.5,0) rectangle (46,4);
+  \draw[bkInk, line width=0.8pt] (24,2) -- (14,2) -- (14,-8) -- (33.5,-8);
+  \draw[bkInk, line width=0.8pt] (46,2) -- (56,2) -- (56,-8) -- (36.5,-8);
+  \draw[bkInk, line width=1.3pt] (33.5,-5) -- (33.5,-11);
+  \draw[bkInk, line width=0.8pt] (36.5,-6.5) -- (36.5,-9.5);
+  \node[sxm lab, anchor=north] at (35,-11.5) {電池};
+  \node[sxm lab, anchor=east] at (13,0) {ブラシ};
+  \node[sxm lab, anchor=west] at (57,0) {ブラシ};
+  \node[sxm lab, anchor=west] at (47,5.6) {整流子（2つに割れた輪）};
+  \node[sxm lab, anchor=south] at (35,26.6) {コイル};
+\end{tikzpicture}
+\bkfigcaption{整流子とブラシ。コイルのはしは、2つに割れた輪（整流子）につながり、輪はコイルといっしょに回る。止まっているブラシが輪にこすれて電流を流す。半回転すると、輪の左右が入れかわり、コイルの電流の向きが逆になる。}\label{ph:電-12:fig-comm}
+\end{bkfigure}
+
+クリップモーターは、エナメルを半分だけはがして、逆向きのトルクになる半回転の間だけ電流を止めています（こちらはトルクが半分の時間だけはたらく）。
+
+\begin{phmijika}[身の周りの小さなモーター]
+おもちゃやミニ四駆のモーター、スマホのふるえる部品（おもりをつけた小さなモーター）は、整流子とブラシのある直流モーターです。コイルを何組も、少しずつ角をずらして巻いてあるので、トルクのでこぼこが小さくなり、なめらかに回ります。
+\end{phmijika}
+
+\bksubsection{2}{変圧器：2つのコイルと1つの鉄心}
+\label{ph:電-12:sec2}
+\textbf{変圧器}は、鉄の輪（\textbf{鉄心}）に、2つのコイルを巻いたものです（図\ref{ph:電-12:fig-trans}）。電源につなぐほうを\textbf{一次コイル}、電気を取り出すほうを\textbf{二次コイル}といいます。\bkidx{へんあつき}{変圧器}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt, even odd rule] (20,0) rectangle (80,40) (28,8) rectangle (72,32);
+  \draw[bkRed!80!black, line width=1pt, dash pattern=on 3pt off 1.5pt, -{Stealth[length=2.4mm]}] (24,20) -- (24,36) -- (76,36) -- (76,4) -- (24,4) -- (24,18);
+  \node[sxm lab, anchor=south] at (50,40.6) {磁束 $\Phi$（破線。鉄心の中を回る）};
+  \foreach \yy in {11,14,17,20,23,26,29} {\draw[bkOrange!80!black, line width=1.2pt] (18.5,\yy) -- (29.5,\yy+1.2);}
+  \foreach \yy in {13,17,21,25} {\draw[bkBlue, line width=1.2pt] (70.5,\yy) -- (81.5,\yy+1.2);}
+  \draw[bkInk, line width=0.8pt] (18.5,11) -- (6,11) (18.5,29) -- (6,29);
+  \draw[bkInk, line width=0.8pt] (81.5,13) -- (96,13) (81.5,26.2) -- (96,26.2);
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (6,20) circle (3);
+  \draw[bkInk, line width=0.8pt] (6,11) -- (6,17) (6,23) -- (6,29);
+  \draw[bkInk, line width=0.7pt] (4.2,20) sin (5.1,20.9) cos (6,20) sin (6.9,19.1) cos (7.8,20);
+  \sxmres{(96,26.2)}{(96,13)}
+  \node[sxm lab, anchor=east, align=right] at (2.5,20) {交流\\$V_1$};
+  \node[sxm lab, anchor=west, align=left] at (99,20) {負荷\\$V_2$};
+  \node[sxm lab, anchor=north] at (24,-1) {一次 $N_1$ 巻};
+  \node[sxm lab, anchor=north] at (76,-1) {二次 $N_2$ 巻};
+\end{tikzpicture}
+\bkfigcaption{変圧器。一次コイルの交流の電流が、鉄心の中に向きの変わる磁束 $\Phi$ をつくる。同じ磁束が二次コイルを通り、二次コイルに起電力が生まれる。2つのコイルは電線でつながっていない。}\label{ph:電-12:fig-trans}
+\end{bkfigure}
+
+一次コイルに交流を流すと、鉄心の中に、向きと大きさが変わり続ける磁束ができます。鉄は磁束をよく通すので（電-7）、磁束はほとんど鉄心の中だけを回り、二次コイルも通ります。二次コイルを通る磁束が変わるので、二次コイルに起電力が生まれます（電-8 ⑦の相互誘導）。2つのコイルは電線でつながっていないのに、磁束を通して電力が伝わるのです。直流では磁束が変わらないので、二次コイルに電圧は出ません。電圧を自由に変えられる変圧器が交流でしか使えないことが、電気を交流で送る理由の1つでした（電-11 ⑥）。
+
+\begin{phmijika}[変圧器はあちこちにある]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phMijikaDeep}●}]
+\item 電柱の上の灰色の円筒（柱上変圧器）は、\qty{6600}{V}を\qty{210}{V}・\qty{105}{V}に下げています（電-11 ①）。
+\item スマホの充電器の中にも、小さな変圧器が入っています。今の充電器は、電気を一度とても高い周波数に変えてから変圧器に通すので、変圧器を小さく軽くできます（周波数が高いと、同じ電圧に要る磁束が少なくてすむ：⑥）。
+\item IH 調理器やワイヤレス充電も、2つのコイルの間で磁束を通して電力を伝える、変圧器の仲間です（電-8）。
+\end{itemize}
+\end{phmijika}
+
+\Needspace{16\baselineskip}\phstage{te}{直流モーターと変圧器の式を作る}{3}
+
+\bksubsection{3}{直流モーター：トルクと逆起電力}
+\label{ph:電-12:sec3}
+本物の直流モーターは、回る部分（\textbf{回転子}、電機子）にたくさんのコイルを巻き、整流子でつなぎかえて、どの角でも、磁場に平行に近い向きのコイルに電流が流れるようにしてあります。こうすると、①の $\cos\theta$ のでこぼこがならされ、トルクは電流に比例した、ほぼ一定の値になります。
+\pheq{T=KI}{N·m ＝ $\dfrac{\text{N·m}}{\text{A}}$ × A}
+$K$ は\textbf{トルク定数}で、磁場の強さ・巻数・回転子の大きさで決まります。①の1つのコイルなら、山の値 $K=NBS$ です。
+
+\phboxhead{回ると、逆向きの電圧が生まれる}
+回転子が回ると、コイルの導線は磁場を横切るので、起電力が生まれます（電-8 ④の $vBl$、⑤の $NBS\omega$）。この起電力は、加えた電圧と逆向きで、電流を流しにくくする向きです（レンツの法則）。これを\textbf{逆起電力}といい、回る速さに比例します。\bkidx{ぎゃくきでんりょく}{逆起電力}
+\pheq{E=K\omega}{V ＝ $\dfrac{\text{V·s}}{\text{rad}}$ × $\dfrac{\text{rad}}{\text{s}}$}
+1つのコイルの山の値は、電-8 ⑤の発電機と同じ $NBS\omega$ なので、$T=KI$ と同じ $K=NBS$ が出てきます。
+
+\phboxhead{2つの $K$ は同じ：エネルギー保存から}
+コイルの形によらず、2つの $K$ が同じになることは、エネルギー保存からわかります。回転子のコイルに電流 $I$ が流れ、逆起電力 $E$ にさからって電荷を運ぶとき、電源は1秒に $EI$ の仕事をします（電-4 の電力）。このエネルギーが、トルク $T$ で角速度 $\omega$ で回る仕事（$T\omega$：力-6）になるので、
+\[EI=T\omega\qquad\text{より}\qquad K_E\,\omega I=K_T\,I\,\omega,\qquad K_E=K_T\]
+です。SI の単位では、V·s/rad と N·m/A は同じ単位です（$\text{V}\cdot\text{A}=\text{W}=\text{N·m/s}$）。
+
+\begin{phflow}[直流モーターの2つの式]
+\phflowrow{$\vec F=I\vec l\times\vec B$}{コイルを回転子に巻く\\整流子でつなぎかえる}{$T=KI$}
+\phflowrow{$\mathcal E=-N\dfrac{\dd\Phi}{\dd t}$}{磁場の中で\\コイルが回る}{$E=K\omega$}
+\end{phflow}
+
+\begin{phyomi}[$T=KI$、$E=K\omega$]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{bkTheme}●}]
+\item 電流を2倍にすると、トルクは2倍。回る速さを2倍にすると、逆起電力は2倍。
+\item 同じ $K$ が、電気から回転へ（モーター）と、回転から電気へ（発電機）の両方の「変換の比」になっている。
+\end{itemize}
+\end{phyomi}
+
+\phboxhead{モーターは発電機にもなる}
+直流モーターの軸を外から回すと、逆起電力 $E=K\omega$ がそのまま電源になり、発電機として電気を取り出せます。手回し発電機を2台つないで片方を回すと、もう片方がモーターとして回るのは、このためです。電気自動車や電車のブレーキのときにモーターを発電機として使い、運動エネルギーを電池にもどすのが\textbf{回生ブレーキ}です（力-4、⑧）。
+
+\bksubsection{4}{直流モーターの式：電圧・電流・トルク・速さ}
+\label{ph:電-12:sec4}
+直流モーターに電圧 $V$ を加えます。回転子のコイルには、抵抗 $R$ と逆起電力 $E$ があるので、電圧則（電-4 ⑦）から
+\[V=RI+E=RI+K\omega\]
+です（コイルのインダクタンスは、電流が一定なら効かないので、ここでは無視します）。電流は $I=(V-K\omega)/R$ で、トルクは
+\pheq{T=KI=\frac{K}{R}V-\frac{K^2}{R}\omega}{N·m ＝ $\dfrac{\text{N·m}}{\text{A}}$ × $\dfrac{\text{V}}{\Omega}$}
+です。\label{ph:電-12:dcmotor}止まっているとき（$\omega=0$）は、逆起電力がないので大きな電流 $V/R$ が流れ、トルクが最大（\textbf{起動トルク} $KV/R$）です。回る速さが上がると、逆起電力が増えて電流が減り、トルクが減ります。トルクが0になる速さ（\textbf{無負荷の速さ}）は、$E=V$ となる $\omega=V/K$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=56mm, xmin=0, xmax=255, ymin=0, ymax=1.35, xtick={0,40,80,120,160,200,240}, ytick={0,0.2,0.4,0.6,0.8,1.0,1.2}, xlabel={角速度 $\omega$（rad/s）}, ylabel={トルク $T$（N·m）}, tick label style={font=\sffamily\footnotesize}]
+  \addplot[bkBlue, line width=1.5pt, domain=0:240] {0.1*(12-0.05*x)};
+  \addplot[bkRed!80!black, line width=1.3pt, dash pattern=on 4pt off 2pt, domain=0:240, samples=61] {0.1*(12-0.05*x)*x/80};
+  \fill[bkInk] (axis cs:200,0.2) circle[radius=1.6pt];
+  \node[sxm lab, anchor=south west, fill=white, inner sep=1pt] at (axis cs:202,0.24) {例題3};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{直流モーターのトルク（実線）と出力 $T\omega$（破線。\qty{80}{W}を目もりの1にした）（$K=\qty{0.05}{N.m/A}$、$R=\qty{0.5}{\ohm}$、$V=\qty{12}{V}$）。トルクは速さとともにまっすぐ減る。出力（仕事率）は、無負荷の速さの半分（\qty{120}{rad/s}）で最大の\qty{72}{W}。}\label{ph:電-12:fig-Tw}
+\end{bkfigure}
+
+\begin{phbaisuru}{加える電圧 $V$}
+電圧を2倍にすると、直線は平行に上へ動き、起動トルクも無負荷の速さも2倍になります。だから、直流モーターは、電圧を変えるだけで速さを変えられます。おもちゃのモーターに、電池を2本直列にすると速く回るのは、このためです。
+\end{phbaisuru}
+
+\phboxhead{出力と効率}
+モーターが軸から出す仕事率（出力）は $T\omega$、電源から受けとる電力は $VI$ です。差の $RI^2$ が、コイルの抵抗で熱になります。効率は
+\[\eta=\frac{T\omega}{VI}=\frac{KI\omega}{VI}=\frac{K\omega}{V}=\frac{E}{V}\]
+で、速く回る（逆起電力が電圧に近い）ほど高くなります。止まったまま大きな電流を流し続けると、電力はすべて熱になり、コイルが焼けてしまいます。
+
+\phboxhead{波-4 の約束：$\tau_{\mathrm m}=aV-a'\omega$}
+第3巻の波-4 は、モーターのトルクを $\tau_{\mathrm m}=aV-a'\omega$ と書き、「電気と磁気の法則から導く」と約束しました。いま導いた式とくらべると、
+\pheq{a=\frac{K}{R},\qquad a'=\frac{K^2}{R}}{$\dfrac{\text{N·m}}{\text{V}}$、N·m·s}
+です（波-4 の $\tau_{\mathrm m}$ がこの章の $T$）。$a'\omega$ の項は、逆起電力のために、速く回るほどトルクが減る分で、軸の摩擦 $b\omega$ と同じ形の「電気のブレーキ」です。モーターの軸の回転の運動方程式（力-6）は、慣性モーメントを $J$ として
+\[J\frac{\dd\omega}{\dd t}=T-b\omega=aV-(a'+b)\omega\]
+なので、波-4 と同じ1次おくれです。一定の電圧 $V$ を加え続けると、最後の速さは $aV/(a'+b)$、そこへ近づく時定数は $J/(a'+b)$ です（6-4 の1次の式。\bkreidairef{4}で、9-8 のモーターの数になることを確かめる）。
+
+\begin{motto}[4]
+\textbf{電気の時定数と、機械の時定数}\par
+④では、コイルのインダクタンス $L$ を無視しました。電流が変わるときは、電圧則に $L\,\dd I/\dd t$ が加わり（電-8 ⑥）、電流は時定数 $L/R$ で変わります（電-9 の RL 回路）。一方、回る速さは時定数 $J/(a'+b)$ で変わります。例題2のモーターで $L=\qty{1}{mH}$ とすると（仮の値）、電気の時定数は $0.001\div0.5=\qty{2}{ms}$、機械の時定数（例題4）は\qty{0.5}{s}で、250倍も違います。電流は、速さにくらべてずっと速く落ち着くので、$L$ を無視してよかったのです（波-4 の例題5 も、モーターのインダクタンスを無視した）。速く正確に動かすロボットの制御では、2つの時定数をいっしょに考えます。
+\end{motto}
+
+\bksubsection{5}{理想の変圧器：巻数の比}
+\label{ph:電-12:sec5}
+直流モーターと同じように、まず理想の形で式を作り、⑥で本物に近づけます。鉄は空気よりずっと磁束を通しやすいので（電-7）、一次コイルがつくる磁束のほとんどは鉄心の中を回り、二次コイルも通ります。また、本物の変圧器で失われる電力は、送る電力のほんの少し（配電用の高効率のもので約1\,\%：⑥）です。そこで、②の変圧器を、次のように理想化します。
+\begin{phmodel}[理想の変圧器]
+\phignore{磁束のもれ（どちらかのコイルだけを通る磁束）。コイルの抵抗（銅損）。鉄心の損失（鉄損）。鉄心を磁化するのに要る電流。}
+\phassume{同じ磁束 $\Phi$ が、一次コイルと二次コイルのすべての巻きを通る。電力の損失はない。}
+\phlimit{鉄心が飽和するほど大きな電圧・低い周波数のとき（電-7）。大きな電流で、コイルの抵抗の電圧が無視できないとき（⑥）。}
+\end{phmodel}
+
+\noindent 同じ磁束 $\Phi$ が通るので、1巻きあたりの起電力 $\dd\Phi/\dd t$ は、一次と二次で同じです。巻数をかけると、一次の電圧と二次の電圧は
+\[v_1=N_1\frac{\dd\Phi}{\dd t},\qquad v_2=N_2\frac{\dd\Phi}{\dd t}\]
+です（一次の電圧は、電源の電圧とつり合う）。わり算をすると $\dd\Phi/\dd t$ が消えて、
+\pheq{\frac{V_1}{V_2}=\frac{N_1}{N_2}}{単位なし}
+です。\label{ph:電-12:hen}電圧は巻数に比例します。損失がないので、一次から入る電力と二次から出る電力は等しく、
+\pheq{V_1I_1=V_2I_2,\qquad \frac{I_1}{I_2}=\frac{N_2}{N_1}}{W ＝ W}
+です。\label{ph:電-12:hen2}電圧を上げると、電流はその分だけ小さくなります。
+
+\phboxhead{電流の比を、磁場の側から見る}
+二次コイルに電流 $I_2$ が流れると、それがつくる磁束は、鉄心の磁束を変えようとします（レンツの法則）。ところが、鉄心の磁束は一次の電源の電圧で決まっているので（$v_1=N_1\,\dd\Phi/\dd t$）、変わることができません。そこで、一次コイルに、二次の電流の磁束を打ち消す電流が新たに流れます。鉄心を回るアンペールの法則（電-7 の磁気回路）では、打ち消しあう条件は $N_1I_1=N_2I_2$ で、電力の式と同じ $I_1/I_2=N_2/N_1$ が出てきます。二次で電気を使うと、一次の電流が自動で増えるのは、このためです。
+
+\begin{phflow}[変圧器]
+\phflowrow{$v=N\dfrac{\dd\Phi}{\dd t}$（ファラデー）}{同じ $\Phi$ が\\両方のコイルを通る}{$V_1:V_2=N_1:N_2$}
+\phflowrow{$V_1:V_2=N_1:N_2$}{損失がない}{$V_1I_1=V_2I_2$}
+\end{phflow}
+
+\begin{phbaisuru}{巻数の比 $N_1/N_2$}
+一次の電圧が同じで、巻数の比を2倍にすると、二次の電圧は半分、同じ電力を取り出すときの二次の電流は2倍です。柱上変圧器は $6600\div105\approx63$ 倍の比で、二次の\qty{30}{A}は、一次では $\tfrac{1}{63}$ の約\qty{0.48}{A}です（\bkreidairef{5}）。
+\end{phbaisuru}
+
+\phkokomade
+
+\Needspace{9\baselineskip}\phstage{shiki}{本物の機械を式で読む}{5}
+
+\bksubsection{6}{本物の変圧器：磁束・損失・効率}
+\label{ph:電-12:sec6}
+\phboxhead{鉄心の磁束：4.44 の式}
+鉄心の磁束を $\Phi=\Phi_{\max}\sin\omega t$ とすると、一次の電圧は $v_1=N_1\omega\Phi_{\max}\cos\omega t$ で、その山は $N_1\omega\Phi_{\max}$、実効値はその $1/\sqrt2$ です。$\omega=2\pi f$ なので
+\pheq{V_1=\frac{2\pi}{\sqrt2}fN_1\Phi_{\max}\approx4.44fN_1\Phi_{\max}}{V ＝ $\dfrac{1}{\text{s}}$ × Wb}
+です（$2\pi/\sqrt2\approx4.44$）。電圧と周波数と巻数が決まると、鉄心の磁束の山が決まります。鉄心の断面積を $S$ とすると、磁束密度の山は $\Phi_{\max}/S$ です。これが鉄の飽和（電-7）に近づくと、磁化に要る電流が急に増えるので、その手前で使うように、巻数と断面積を決めます（\bkreidairef{6}）。周波数を高くすると、同じ電圧に要る $N\Phi_{\max}$ が小さくなり、変圧器を小さくできます（充電器の変圧器）。
+
+\phboxhead{等価回路}
+本物の変圧器は、理想の変圧器に、無視していたものを部品として足した回路（\textbf{等価回路}）で表します（図\ref{ph:電-12:fig-equiv}）。コイルの抵抗は直列の抵抗、もれ磁束は直列のコイル（リアクタンス）、鉄心を磁化する電流と鉄心の損失は、並列のコイルと抵抗で表します。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.9mm, y=1mm]
+  \draw[bkInk, line width=0.8pt] (0,20) -- (6,20);
+  \sxmres{(6,20)}{(20,20)}
+  \sxmcoil{(20,20)}{(34,20)}
+  \draw[bkInk, line width=0.8pt] (34,20) -- (66,20);
+  \draw[bkInk, line width=0.8pt] (0,0) -- (66,0);
+  \draw[bkInk, line width=0.8pt] (42,20) -- (42,17) (42,3) -- (42,0);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=1.6mm, amplitude=1.1mm}] (42,17) -- (42,3);
+  \draw[bkInk, line width=0.8pt] (54,20) -- (54,17) (54,3) -- (54,0);
+  \draw[bkInk, line width=0.8pt, decorate, decoration={coil, aspect=0.5, segment length=2.2mm, amplitude=1.6mm}] (54,17) -- (54,3);
+  \filldraw[bkInk] (42,20) circle (0.6) (54,20) circle (0.6) (42,0) circle (0.6) (54,0) circle (0.6);
+  \draw[bkInk, line width=0.9pt, rounded corners=1mm, fill=bkTheme!8] (66,-3) rectangle (84,23);
+  \node[sxm lab, align=center] at (75,10) {理想の\\変圧器\\$N_1:N_2$};
+  \draw[bkInk, line width=0.8pt] (84,20) -- (90,20);
+  \sxmres{(90,20)}{(104,20)}
+  \sxmcoil{(104,20)}{(118,20)}
+  \draw[bkInk, line width=0.8pt] (118,20) -- (124,20) (84,0) -- (124,0);
+  \node[sxm lab, anchor=south] at (13,22) {銅損};
+  \node[sxm lab, anchor=south] at (27,22) {もれ};
+  \node[sxm lab, anchor=south] at (97,22) {銅損};
+  \node[sxm lab, anchor=south] at (111,22) {もれ};
+  \node[sxm lab, anchor=north, align=center] at (48,-1) {鉄損と、鉄心を\\磁化する電流};
+  \node[sxm lab, anchor=east] at (-1,10) {一次};
+  \node[sxm lab, anchor=west] at (125,10) {二次};
+\end{tikzpicture}
+\bkfigcaption{変圧器の等価回路（一例）。理想の変圧器（⑤）の前後に、コイルの抵抗（銅損）ともれ磁束のリアクタンスを直列に、鉄心の損失と磁化の電流を表す抵抗とコイルを並列に入れる。}\label{ph:電-12:fig-equiv}
+\end{bkfigure}
+
+\phboxhead{2つの損失と効率}
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{\bkTT}●}]
+\item \textbf{鉄損} $P_{\mathrm i}$：鉄心のヒステリシス損（電-7）と渦電流損（電-8）。磁束の山と周波数で決まり、負荷（使う電流）によらず、ほぼ一定です。電気を使っていなくても、変圧器がつながっている間ずっと出ています。\bkidx{てっそん}{鉄損}
+\item \textbf{銅損} $P_{\mathrm c}$：コイルの抵抗で出るジュール熱 $RI^2$。電流の2乗に比例します。定格の電流のときの銅損を $P_{\mathrm c}$ とすると、定格の $x$ 倍の負荷（\textbf{負荷率} $x$）では $x^2P_{\mathrm c}$ です。
+\end{itemize}
+容量（定格の皮相電力：電-11 ④）の変圧器が、負荷率 $x$・力率 $\cos\phi$ で送り出す電力を $P_{\text{出}}=x\times\text{容量}\times\cos\phi$ とすると、効率は
+\pheq{\eta=\frac{P_{\text{出}}}{P_{\text{出}}+P_{\mathrm i}+x^2P_{\mathrm c}}}{単位なし}
+です。$P_{\text{出}}$ は $x$ に比例するので、分母を $x$ でわると、損失の部分は $P_{\mathrm i}/x+xP_{\mathrm c}$ で、2つの項の積が一定なので、2つが等しいとき（$P_{\mathrm i}=x^2P_{\mathrm c}$、鉄損＝銅損）に最も小さくなり、効率が最大になります（相加平均と相乗平均の関係）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=104mm, height=50mm, xmin=0, xmax=1.25, ymin=94, ymax=99, xtick={0,0.2,0.4,0.6,0.8,1.0,1.2}, ytick={94,95,96,97,98,99}, xlabel={負荷率 $x$}, ylabel={効率（\%）}, tick label style={font=\sffamily\footnotesize}]
+  \addplot[bkBlue, line width=1.5pt, domain=0.08:1.25, samples=100] {100*x*10000/(x*10000+50+x^2*150)};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:0.577,94) -- (axis cs:0.577,98.3);
+  \fill[bkRed] (axis cs:0.577,98.3) circle[radius=1.6pt];
+  \node[sxm lab, anchor=north west, fill=white, inner sep=1pt] at (axis cs:0.60,97.8) {最大 98.3\,\%（負荷率 0.58、鉄損＝銅損）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{変圧器の効率と負荷率（\qty{10}{kVA}、鉄損\qty{50}{W}、定格の銅損\qty{150}{W}、力率1。\bkreidairef{7}）。軽い負荷では鉄損が、重い負荷では銅損が効率を下げる。}\label{ph:電-12:fig-eff}
+\end{bkfigure}
+
+\noindent 配電に使う高効率の変圧器は、効率が約99\,\% あります。それでも、日本中の変圧器の数はとても多いので、鉄損を減らすことは大きな省エネルギーになります。鉄損を小さくするため、鉄心は、ケイ素を少しまぜた薄い鉄板（電磁鋼板）を、表面を絶縁して重ねて作ります（渦電流の通り道を切る：電-8）。
+
+\begin{phmada}[鉄心の損失の「残り」は、どこから来る？]
+鉄心の損失を、ヒステリシス損（電-7）と、鉄板の中の渦電流の式（電-8）で計算してたすと、はかった損失より小さくなることが多くあります。この差は「過剰損失」（異常渦電流損）とよばれます。鉄の中の磁区の境目（磁壁）が、磁場の変化につれて、ぴくぴくと飛ぶように動き、その周りに局所的な渦電流が流れることが原因と考えられています。1988年にイタリアのベルトッティが、磁壁の動きを統計的に扱うモデルを示し、損失を3つの部分に分けて、周波数や磁束密度による変わり方をよく表せるようになりました。けれども、材料の結晶の大きさや、ひずみ、表面の状態から、損失を前もって正確に計算することは、まだ難しいままです。電気自動車のモーターのように、高い周波数で使う鉄心の損失を減らすため、研究が続いています。
+\end{phmada}
+
+\bksubsection{7}{誘導モーター：回る磁場に引きずられる}
+\label{ph:電-12:sec7}
+工場のポンプや送風機、エレベーターなど、いちばん多く使われているモーターが、三相の\textbf{誘導モーター}（誘導電動機）です。\bkidx{ゆうどうもーたー}{誘導モーター}外側の固定子に三相のコイルを巻いて回転磁界をつくり（電-11 ⑨）、内側の回転子には、アルミや銅の棒を、両はしで輪につないだかごのような導体を入れます（かご形。図\ref{ph:電-12:fig-cage}）。回転子には、電線をつながなくてよいのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k in {0,...,6} {
+    \draw[bkOrange!80!black, line width=1.3pt] ({-3*sin(\k*30)},{8*cos(\k*30)}) -- ({40-3*sin(\k*30)},{8*cos(\k*30)});
+  }
+  \draw[bkInk, line width=1.2pt, fill=bkGray!30] (0,0) ellipse (3 and 8);
+  \draw[bkInk, line width=1.2pt] (40,0) ellipse (3 and 8);
+  \draw[bkInk, line width=0.8pt] (-12,0) -- (-3,0) (43,0) -- (54,0);
+  \node[sxm lab, anchor=south] at (20,9) {導体の棒（アルミ・銅）};
+  \node[sxm lab, anchor=north] at (0,-9) {はしの輪};
+  \node[sxm lab, anchor=north] at (40,-9) {はしの輪};
+  \node[sxm lab, anchor=west] at (55,0) {軸};
+  \begin{scope}[xshift=86mm]
+    \draw[bkGray, line width=0.6pt] (0,0) circle (13);
+    \fill[bkGray!20] (0,0) circle (9);
+    \foreach \k in {0,...,11} {\filldraw[fill=bkOrange!60, draw=bkInk] (\k*30:7.5) circle (1);}
+    \foreach \k in {0,...,5} {\filldraw[fill=bkBlue!25, draw=bkInk, line width=0.5pt] (\k*60+30:11) circle (1.4);}
+    \node[sxm lab, anchor=west, align=left] at (15,6) {固定子のコイル\\（三相）};
+    \node[sxm lab, anchor=west] at (15,-6) {回転子の棒};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{左：かご形の回転子の導体（鉄心を除いた形）。棒どうしは、両はしの輪でつながっている。右：断面。外側の固定子のコイルが回転磁界をつくり、回転子の棒に誘導電流が流れる。}\label{ph:電-12:fig-cage}
+\end{bkfigure}
+
+\phboxhead{すべり：少しおくれて回る}
+回転磁界が回転子の導体を横切ると、導体に起電力が生まれ（電-8 ④）、かごの中を電流が流れます。その電流が磁場から力を受け（①）、回転子は磁場といっしょに回ろうとします（レンツの法則：磁場との速さの差を減らす向き）。電-8 の、磁石を動かすと近くのアルミ板が引きずられるのと同じしくみです。
+
+もし回転子が磁場と同じ速さ（同期速度 $n_{\mathrm s}$）で回ると、導体は磁場を横切らないので、電流が流れず、トルクも0になります。だから誘導モーターは、いつも同期速度より少しだけおそく回ります。そのおくれの割合を\textbf{すべり}といいます。\bkidx{すべり}{すべり}
+\pheq{s=\frac{n_{\mathrm s}-n}{n_{\mathrm s}}}{単位なし}
+止まっているとき $s=1$、同期速度のとき $s=0$ です。回転子から見ると、磁場は $sn_{\mathrm s}$ の速さで回っているので、回転子の電流の周波数は $sf$ です。ふつうに回っているときのすべりは、数\,\% です（\bkreidairef{8}）。
+
+\phboxhead{トルクとすべり}
+1相の等価回路を、固定子の抵抗や磁化の電流を無視して簡単にすると、回転子の抵抗（一次から見た値 $R_2'$）を $s$ でわった $R_2'/s$ と、もれリアクタンス $X$ の直列になります。回転子に流れる電流と、3相分のトルクは
+\[I_2=\frac{V_{\mathrm p}}{\sqrt{(R_2'/s)^2+X^2}},\qquad T=\frac{3I_2^2R_2'/s}{\omega_{\mathrm s}}\]
+です（$V_{\mathrm p}$ は相電圧、$\omega_{\mathrm s}=2\pi n_{\mathrm s}/60$ は同期速度の角速度）。$3I_2^2R_2'/s$ は、回転磁界から回転子へ渡る電力で、そのうち $s$ の割合が回転子の抵抗で熱になり、残りの $1-s$ の割合が軸の仕事になります（効率は $1-s$ より高くなれない）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=56mm, xmin=0, xmax=1560, ymin=0, ymax=185, xtick={0,300,600,900,1200,1500}, ytick={0,40,80,120,160}, xlabel={回転数 $n$（min$^{-1}$）}, ylabel={トルク $T$（N·m）}, tick label style={font=\sffamily\footnotesize}]
+  \addplot[bkBlue, line width=1.5pt, domain=0:1497, samples=300] {3*(200/sqrt(3))^2*(0.1/(1-x/1500))/((0.1/(1-x/1500))^2+0.64)/157.08};
+  \draw[bkGray, line width=0.6pt, dash pattern=on 2pt off 1.5pt] (axis cs:1500,0) -- (axis cs:1500,175);
+  \fill[bkRed] (axis cs:1440,92.4) circle[radius=1.6pt];
+  \fill[bkRed] (axis cs:1312.5,159.2) circle[radius=1.6pt];
+  \node[sxm lab, anchor=south east] at (axis cs:1230,166) {最大トルク（$s=R_2'/X$）};
+  \node[sxm lab, anchor=east] at (axis cs:1380,78) {例題9（$s=0.04$）};
+  \node[sxm lab, anchor=north west] at (axis cs:30,33) {起動トルク（$s=1$）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{誘導モーターのトルクとすべり（\qty{200}{V}・4極・\qty{50}{Hz}、$R_2'=\qty{0.1}{\ohm}$、$X=\qty{0.8}{\ohm}$ とした簡単なモデル）。破線が同期速度（毎分1500回転、$s=0$）。ふつうは、同期速度に近く、トルクがすべりにほぼ比例する所で回る。}\label{ph:電-12:fig-Ts}
+\end{bkfigure}
+
+\noindent すべりが小さい所では、$R_2'/s$ が $X$ よりずっと大きいので、$T\approx3V_{\mathrm p}^2s/(R_2'\omega_{\mathrm s})$ と、トルクはすべりにほぼ比例します。負荷が重くなると、少しだけ速さが落ち（すべりが増え）、その分トルクが増えて、つり合います。トルクが最大になるのは、$R_2'/s=X$、つまり $s=R_2'/X$ のときです（2つの数の和が最小になる⑥と同じ考え）。
+
+\bksubsection{8}{同期モーターと発電機：回る磁場といっしょに回る}
+\label{ph:電-12:sec8}
+回転子に、永久磁石か、直流を流した電磁石を入れると、回転子は回転磁界の N・S に引かれて、同期速度とちょうど同じ速さで回ります。これが\textbf{同期モーター}です。\bkidx{どうきもーたー}{同期モーター}回る速さは、電源の周波数と極の数だけで決まり、負荷が変わっても変わりません（負荷が重くなると、回転子の磁極が、回転磁界より少しおくれた角度で回り、その角度に応じたトルクを出す）。
+\pheq{n_{\mathrm s}=\frac{120f}{p}}{min$^{-1}$ ＝ Hz × s/min}
+（$p$ は\textbf{極数}。電-11 ⑨の同期速度）。
+
+\phboxhead{発電所の発電機}
+発電所の発電機も、同じ形の\textbf{同期発電機}です。蒸気やガスのタービンで回す火力発電所の発電機は、速く回る2極のものが多く、\qty{50}{Hz}の地域なら毎分3000回転です。水車はゆっくり回るので、極数を多くして、同じ周波数を作ります（\bkreidairef{10}）。発電機が回る速さが、そのまま交流の周波数になります（電-16）。
+
+\phboxhead{はてな？の答え}
+\bkhatenaref の答え：今の多くの電気自動車は、永久磁石を回転子に入れた同期モーターで走ります（たとえば、2017年に出た2代目の日産リーフのモーターは交流同期電動機で、最高出力\qty{110}{kW}、最大トルク\qty{320}{N.m}）。電池の直流を、\textbf{インバーター}（⑨）で三相の交流に変えて、モーターの外側のコイルに流し、回る磁場をつくります。回転子の磁石が、その磁場に引かれて同じ速さで回ります。速さは交流の周波数で決まるので、インバーターで周波数を変えて速さを変えます。止まった状態から大きなトルクを出せるのも、電流の大きさを電子回路で自由に決められるからです。ブレーキのときは、モーターを発電機として使い、運動エネルギーを電気にして電池にもどします（回生ブレーキ：\bkreidairef{11}）。
+
+\bksubsection{9}{インバーター：直流から、周波数を変えられる交流をつくる}
+\label{ph:電-12:sec9}
+インバーターは、電池などの直流を、スイッチを速く切りかえて交流にする装置です。ここでは、スイッチを「オンかオフだけの理想の部品」として扱います（実際には、トランジスタなどの半導体のスイッチ。しくみは物理シリーズの『原子』（原-10）で学ぶ）。\bkidx{いんばーたー}{インバーター}
+
+上下2つのスイッチの組で、上を入れると線はプラス側、下を入れるとマイナス側につながります（図\ref{ph:電-12:fig-inv}）。これを3組、120°ずつずらして切りかえると、三相の交流ができます。四角い波のままではモーターの電流がでこぼこするので、実際には、とても速く（1秒に何千回も）入・切を繰り返し、入れている時間の割合を少しずつ変えて、平均の電圧（5-12 の平均）がなめらかな正弦波になるようにします（PWM：パルスはば変調）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.95mm, y=0.95mm]
+  \draw[bkInk, line width=0.8pt] (0,30) -- (52,30) (0,0) -- (52,0);
+  \draw[bkInk, line width=1.2pt] (-3,17) -- (3,17) (-1.8,13) -- (1.8,13);
+  \draw[bkInk, line width=0.8pt] (0,30) -- (0,17) (0,13) -- (0,0);
+  \node[sxm lab, anchor=east, align=right] at (-4,15) {電池\\（直流）};
+  \foreach \xx/\nm in {16/a,30/b,44/c} {
+    \draw[bkInk, line width=0.8pt] (\xx,30) -- (\xx,26) (\xx,19) -- (\xx,11) (\xx,4) -- (\xx,0);
+    \draw[bkInk, line width=0.8pt] (\xx,26) -- (\xx+2.6,20.5);
+    \draw[bkInk, line width=0.8pt] (\xx,11) -- (\xx+2.6,5.5);
+    \filldraw[bkInk] (\xx,15) circle (0.6);
+    \draw[bkInk, line width=0.8pt] (\xx,15) -- (\xx+6,15);
+    \filldraw[fill=white, draw=bkInk, line width=0.7pt] (\xx+6.8,15) circle (0.8);
+    \node[sxm lab, anchor=south] at (\xx+6.8,15.9) {\nm};
+  }
+  \node[sxm lab, anchor=north, align=center] at (30,-1) {a・b・c をモーターの3つのコイルへ};
+  \node[sxm lab, anchor=south] at (30,30.6) {6つのスイッチを順に入・切};
+\end{tikzpicture}\hfill
+\begin{tikzpicture}
+  \begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=58mm, height=36mm, xmin=0, xmax=370, ymin=-1.3, ymax=1.3, xtick={0,180,360}, ytick={-1,0,1}, xlabel={$\omega t$（°）}, tick label style={font=\sffamily\footnotesize}]
+    \draw[bkGray, line width=0.5pt] (axis cs:0,0) -- (axis cs:370,0);
+    \draw[bkOrange!80!black, line width=1.1pt] (axis cs:0,0) -- (axis cs:0,1) -- (axis cs:180,1) -- (axis cs:180,-1) -- (axis cs:360,-1) -- (axis cs:360,0);
+    \addplot[bkBlue, line width=1.2pt, domain=0:360, samples=91] {1.273*sin(x)};
+  \end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：三相のインバーター。上下2つのスイッチの組（1相分）を3組並べ、交互に入・切して、3本の線の電圧をプラスとマイナスに切りかえる。右：1つの組を半周期ずつ切りかえた電圧（四角の波）と、そのいちばん大きな成分の正弦波。切りかえを速くすると、交流の周波数が上がる。}\label{ph:電-12:fig-inv}
+\end{bkfigure}
+
+\phboxhead{電圧と周波数をいっしょに変える（$V/f$ 一定）}
+モーターの速さを変えるには周波数 $f$ を変えますが、⑥の4.44の式 $V\approx4.44fN\Phi_{\max}$ から、電圧を変えずに周波数だけを下げると、鉄心の磁束が大きくなりすぎて飽和してしまいます。反対に、周波数を上げて電圧がそのままだと、磁束が小さくなり、トルクが出なくなります。そこで、磁束を一定に保つように、電圧を周波数に比例させて変えます（$V/f$ 一定。\bkreidairef{12}）。エアコンや洗濯機の「インバーター」は、こうしてモーターの速さを自由に変え、必要なだけの力で動かして、電気を節約しています。
+
+\bksubsection{10}{モーターの選び方}
+\label{ph:電-12:sec10}
+機械に合うモーターを選ぶときは、力-6 の回転の運動方程式を使います（力-6 の専門書の囲みと同じ書き方）。
+\[J\frac{\dd\omega}{\dd t}=T_{\mathrm M}-T_{\mathrm L}\]
+（$T_{\mathrm M}$ はモーターのトルク、$T_{\mathrm L}$ は負荷のトルク、$J$ は回るもの全体の慣性モーメント）。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item 決まった速さで回し続けるのに要るトルク（負荷のトルク $T_{\mathrm L}$）と、そのときの出力 $T_{\mathrm L}\omega$ を求める。
+\item 止まった状態から、時間 $t_{\mathrm a}$ で回転数 $n$ まで一定の割合で加速するのに要るトルク（加速トルク）$T_{\mathrm a}=J\cdot2\pi n/(60t_{\mathrm a})$ を求める。
+\item 加速の間に $T_{\mathrm L}+T_{\mathrm a}$ を出せ、回し続けるのに要る出力より定格出力が大きいモーターを選ぶ（\bkreidairef{13}）。
+\end{enumerate}
+力-6 例題15 のサーボモーター（定格\qty{100}{W}・\qty{3000}{min^{-1}}、定格トルク\qty{0.318}{N.m}）は、こうして選ぶモーターの例です。
+
+\phboxhead{効率のよいモーターを選ぶ}
+モーターは、日本で使われる電力の大きな部分を使っています。そこで、三相の誘導モーターについては、2015年4月から、決められた範囲（定格\qtyrange{0.75}{375}{kW}など）のものは、国際規格の効率の等級の IE3（プレミアム効率）以上にするように決められました（トップランナー制度）。損失が小さいと、熱も小さくなり、モーターが長持ちします。
+
+\begin{phsaki}{電気機器学とモーター制御}
+この章の等価回路は、ゆっくり変わるときだけ使える簡単なモデルです。電気自動車やロボットのモーターでは、回転子の磁極の位置をはかりながら、三相の電流を、トルクを出す成分と磁束をつくる成分に分けて、1つずつ制御します（ベクトル制御）。これを学ぶのは、電気機器学・パワーエレクトロニクス（電-16）・制御工学（波-4）です。インバーターのスイッチになる半導体のしくみは、物理シリーズの『原子』（原-10）で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[電気機器の教科書ふうの書き方]
+\begin{bkhonbun}
+直流電動機の誘導起電力（逆起電力）は $E=K\phi n$〔V〕，発生トルクは $T=K'\phi I_{\mathrm a}$〔N·m〕で表される．ここで $\phi$ は1極あたりの磁束，$n$ は回転速度，$I_{\mathrm a}$ は電機子電流である．端子電圧を $V$，電機子回路の抵抗を $R_{\mathrm a}$ とすると $V=E+R_{\mathrm a}I_{\mathrm a}$ が成り立つ．
+\end{bkhonbun}
+\bkyaku{この章の $K$ は、専門書の $K\phi$（磁束をふくめた定数）にあたる。専門書は電流を $I_{\mathrm a}$（電機子の電流）、抵抗を $R_{\mathrm a}$ と書き、回る速さを $n$〔min$^{-1}$〕で書くことが多いので、$K$ と $K'$ の数が違って見える（$\omega=2\pi n/60$ で直すと同じ）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[6.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{コイルのトルク}$T=NBSI\cos\theta$（整流子で向きをそろえる）\\[3pt]
+\tsl{直流モーター}$T=KI$、$E=K\omega$、$V=RI+E$、$T=\dfrac{K}{R}V-\dfrac{K^2}{R}\omega$\\[3pt]
+\tsl{理想変圧器}$\dfrac{V_1}{V_2}=\dfrac{N_1}{N_2}$、$V_1I_1=V_2I_2$\\[3pt]
+\tsl{本物の変圧器}$V_1\approx4.44fN_1\Phi_{\max}$、効率は鉄損＝銅損で最大\\[3pt]
+\tsl{誘導モーター}$s=\dfrac{n_{\mathrm s}-n}{n_{\mathrm s}}$、小さい $s$ で $T\propto s$\\[3pt]
+\tsl{同期モーター}$n_{\mathrm s}=\dfrac{120f}{p}$、インバーターは $V/f$ 一定
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{整流子・ブラシ}{直流モーターで、半回転ごとにコイルの電流の向きを切りかえる部品。}
+\bkword{トルク定数}{トルク÷電流 $K$。逆起電力÷角速度と同じ値。}
+\bkword{逆起電力}{回るモーターのコイルに生まれる、加えた電圧と逆向きの起電力 $K\omega$。}
+\bkword{理想の変圧器}{磁束のもれも損失もない変圧器。電圧は巻数に比例し、電力は一次と二次で等しい。}
+\bkword{鉄損・銅損}{鉄心のヒステリシス損と渦電流損（負荷によらない）、コイルの抵抗の熱（電流の2乗に比例）。}
+\bkword{すべり}{誘導モーターが同期速度より何割おそく回るか。}
+\bkword{インバーター}{スイッチの入・切で、直流から周波数と電圧を変えられる交流をつくる装置。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$T$}{ティー}{トルク〔N·m〕。電気機器の本の書き方。力-6 の $N_{\mathrm m}$（$\vec N$）、波-4 の $\tau_{\mathrm m}$ と同じ量。電-12 では周期に使わない}{torque}{電-12}}{\bkkigocard{$K$}{ケー}{トルク定数〔N·m/A〕＝逆起電力定数〔V·s/rad〕。波-4 のゲイン $K$ とは別。$a=K/R$、$a'=K^2/R$}{torque constant}{電-12}}
+\bkkigocards{\bkkigocard{$s$}{エス}{すべり（同期速度からのおくれの割合）。単位なし。電-9・波-4 のラプラスの $s$ とは別}{slip}{電-12}}{\bkkigocard{$J$}{ジェイ}{慣性モーメント〔kg·m$^2$〕。力-6 の $I$ と同じ量。電-12 では電流 $I$ と分けて $J$ と書く}{moment of inertia}{電-12}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+
+\label{ph:電-12:ex1}
+\begin{phreidai}[磁場の中のコイルのトルク]
+磁束密度\qty{0.5}{T}の磁場の中に、長さ\qty{0.2}{m}の辺が磁場に直角になるように、はば\qty{0.1}{m}の1巻きのコイルを置き、\qty{3}{A}を流します。1つの辺が受ける力と、コイルの面が磁場と平行なときのトルクを求めましょう。面が磁場と60°をなすときのトルクも求めましょう。
+\phbamen
+4-14⑧の導線（\qty{3}{A}・\qty{0.2}{m}・\qty{0.5}{T}）を、モーターのコイルの1辺にした場面です。
+\phmushi
+コイルの短い辺の力（軸の向きの力で、打ち消しあう）、磁場のむらを無視します。
+\phzu
+$B=\qty{0.5}{T}$、$l=\qty{0.2}{m}$、$w=\qty{0.1}{m}$、$I=\qty{3}{A}$、$N=1$。
+\phriyu
+1辺の力は $F=IlB$、トルクは①の $T=NBSI\cos\theta$ です。
+\phtateru
+\[F=IlB,\qquad T=NBSI\cos\theta,\quad S=lw\]
+\phtoku
+$F=3\times0.2\times0.5=\qty{0.3}{N}$。$S=0.2\times0.1=\qty{0.02}{m^2}$、$\theta=0$ で $T=0.5\times0.02\times3=\qty{0.03}{N.m}$。60°なら $0.03\times\cos60°=\qty{0.015}{N.m}$。
+\phtashikame
+力×うで：$0.3\times0.05\times2=0.03$ で同じ。4-14⑧の\qty{0.3}{N}と同じ。
+\kotae 力\qty{0.3}{N}、トルク\qty{0.03}{N.m}（60°では\qty{0.015}{N.m}）
+\end{phreidai}
+\begin{jibun}
+\qty{0.3}{T}の磁場で、辺の長さ\qty{0.05}{m}・はば\qty{0.04}{m}の10巻きのコイルに\qty{2}{A}を流します。1辺の力と、最大のトルクを求めましょう。
+\bkjans{1辺 $10\times2\times0.05\times0.3=\qty{0.3}{N}$、トルク $0.3\times0.04=\qty{0.012}{N.m}$}
+\end{jibun}
+
+\label{ph:電-12:ex2}
+\begin{phreidai}[直流モーターの無負荷の速さと起動トルク]
+トルク定数 $K=\qty{0.05}{N.m/A}$、コイルの抵抗 $R=\qty{0.5}{\ohm}$ の直流モーターに、\qty{12}{V}を加えます（数は仮のものとします）。無負荷の速さ、止まっているときの電流（起動電流）と起動トルクを求めましょう。
+\phbamen
+ロボットや模型のモーターの、いちばん速い回り方と、いちばん強いトルクを知りたい場面です。
+\phmushi
+軸の摩擦、コイルのインダクタンス（電流の立ち上がり）、ブラシの電圧の下がりを無視します。
+\phzu
+$K=\qty{0.05}{N.m/A}$（$=\qty{0.05}{V.s/rad}$）、$R=\qty{0.5}{\ohm}$、$V=\qty{12}{V}$。
+\phriyu
+無負荷では $T=0$ で電流0、$V=E=K\omega$。止まっているときは $E=0$ で、$V=RI$（④）。
+\phtateru
+\[\omega_0=\frac{V}{K},\qquad I_{\text{起}}=\frac{V}{R},\qquad T_{\text{起}}=KI_{\text{起}}\]
+\phtoku
+$\omega_0=12\div0.05=\qty{240}{rad/s}$（毎分約2290回転）。$I_{\text{起}}=12\div0.5=\qty{24}{A}$、$T_{\text{起}}=0.05\times24=\qty{1.2}{N.m}$。
+\phtashikame
+単位：V÷(V·s/rad)＝rad/s。起動のときの電流は、ふつうに回るとき（数 A：例題3）よりずっと大きい。電池や配線は、この電流に耐える必要がある。
+\kotae 無負荷 \qty{240}{rad/s}、起動電流\qty{24}{A}、起動トルク\qty{1.2}{N.m}
+\end{phreidai}
+\begin{jibun}
+$K=\qty{0.1}{N.m/A}$、$R=\qty{1}{\ohm}$ のモーターに\qty{24}{V}を加えます。無負荷の速さ、起動電流、起動トルクを求めましょう。
+\bkjans{\qty{240}{rad/s}、\qty{24}{A}、\qty{2.4}{N.m}}
+\end{jibun}
+
+\label{ph:電-12:ex3}
+\begin{phreidai}[回っているときの電流・トルク・効率]
+例題2のモーターが、\qty{200}{rad/s}で回っています。逆起電力、電流、トルク、出力、受けとる電力、効率を求めましょう。
+\phbamen
+ふつうに仕事をしているモーターの、エネルギーの行き先を調べる場面です。
+\phmushi
+例題2と同じ（摩擦・鉄心の損失を無視。損失はコイルの熱だけ）。
+\phzu
+$K=0.05$、$R=0.5$、$V=12$、$\omega=\qty{200}{rad/s}$。
+\phriyu
+④の $V=RI+E$ から電流を出し、トルク $KI$・出力 $T\omega$・電力 $VI$ を順に求めます。
+\phtateru
+\[E=K\omega,\quad I=\frac{V-E}{R},\quad T=KI,\quad \eta=\frac{T\omega}{VI}\]
+\phtoku
+$E=0.05\times200=\qty{10}{V}$、$I=(12-10)\div0.5=\qty{4}{A}$、$T=0.05\times4=\qty{0.2}{N.m}$。\\
+出力 $0.2\times200=\qty{40}{W}$、電力 $12\times4=\qty{48}{W}$、効率 $40\div48\approx0.83$。
+\phtashikame
+差の\qty{8}{W}は $RI^2=0.5\times16=\qty{8}{W}$ で合う。効率は $E/V=10/12$ と同じ。図\ref{ph:電-12:fig-Tw}の直線の上の点。
+\kotae $E=\qty{10}{V}$、$I=\qty{4}{A}$、$T=\qty{0.2}{N.m}$、出力\qty{40}{W}、電力\qty{48}{W}、効率約83\,\%
+\end{phreidai}
+\begin{jibun}
+じぶんでとこう（例題2）のモーターが\qty{180}{rad/s}で回るときの電流・トルク・出力・効率を求めましょう。
+\bkjans{$E=\qty{18}{V}$、$I=\qty{6}{A}$、$T=\qty{0.6}{N.m}$、出力\qty{108}{W}、電力\qty{144}{W}、効率75\,\%}
+\end{jibun}
+
+\label{ph:電-12:ex4}
+\begin{phreidai}[波-4 の $a$・$a'$ と、9-8 のモーター]
+例題2のモーターの、波-4 の $a$・$a'$ を求めましょう。また、軸の摩擦の係数を $b=\qty{0.005}{N.m.s}$、回る部分の慣性モーメントを $J=\qty{0.005}{kg.m^2}$ とすると（数は仮のものとします）、\qty{1}{V}あたりの最後の速さと時定数が、9-8 のモーター（\qty{1}{V}で\qty{10}{rad/s}、時定数\qty{0.5}{s}）と同じになることを確かめましょう。
+\phbamen
+第3巻の波-4 で使ったモーターの式の数を、電気の側から決める場面です。
+\phmushi
+コイルのインダクタンス（電気の時定数）を無視します（機械の時定数よりずっと短いとする）。
+\phzu
+$K=0.05$、$R=0.5$、$b=0.005$、$J=0.005$。
+\phriyu
+$a=K/R$、$a'=K^2/R$（④）を、力-6 の回転の運動方程式に入れて、波-4・9-8 と同じ形にします。
+\phtateru
+\[J\frac{\dd\omega}{\dd t}=aV-(a'+b)\omega\quad\Longrightarrow\quad \frac{J}{a'+b}\cdot\frac{\dd\omega}{\dd t}+\omega=\frac{a}{a'+b}V\]
+\phtoku
+$a=0.05\div0.5=\qty{0.1}{N.m/V}$、$a'=0.05^2\div0.5=\qty{0.005}{N.m.s}$。$a'+b=0.01$ なので、\qty{1}{V}あたりの最後の速さは $a/(a'+b)=\qty{10}{rad/s}$、時定数は $J/(a'+b)=\qty{0.5}{s}$。
+\phtashikame
+9-8・波-4 のモーターの数（\qty{1}{V}で\qty{10}{rad/s}、\qty{0.5}{s}）と同じ。逆起電力の「電気のブレーキ」$a'$ が、軸の摩擦 $b$ と同じ大きさで効いている。
+\kotae $a=\qty{0.1}{N.m/V}$、$a'=\qty{0.005}{N.m.s}$。\qty{1}{V}で\qty{10}{rad/s}、時定数\qty{0.5}{s}
+\end{phreidai}
+\begin{jibun}
+じぶんでとこう（例題2）のモーター（$K=0.1$、$R=1$）の $a$・$a'$ を求めましょう。摩擦を無視し（$b=0$）、$J=\qty{0.001}{kg.m^2}$ とすると、\qty{1}{V}あたりの最後の速さと時定数はいくらですか。
+\bkjans{$a=\qty{0.1}{N.m/V}$、$a'=\qty{0.01}{N.m.s}$。\qty{1}{V}で $0.1\div0.01=\qty{10}{rad/s}$、時定数 $0.001\div0.01=\qty{0.1}{s}$}
+\end{jibun}
+
+\label{ph:電-12:ex5}
+\begin{phreidai}[柱上変圧器]
+電柱の上の柱上変圧器は、\qty{6600}{V}を\qty{105}{V}に下げます。巻数の比を求めましょう。二次側（家の側）に\qty{30}{A}流れるとき、一次側の電流はいくらですか。
+\phbamen
+配電線の電気を、家で使える電圧にする場面です。
+\phmushi
+理想の変圧器とします（損失・もれ磁束を無視）。
+\phzu
+$V_1=\qty{6600}{V}$、$V_2=\qty{105}{V}$、$I_2=\qty{30}{A}$。
+\phriyu
+電圧の比は巻数の比、電流の比はその逆です（⑤）。
+\phtateru
+\[\frac{N_1}{N_2}=\frac{V_1}{V_2},\qquad I_1=\frac{V_2}{V_1}I_2\]
+\phtoku
+$N_1/N_2=6600\div105\approx62.9$。$I_1=30\times105\div6600\approx\qty{0.48}{A}$。
+\phtashikame
+電力：二次 $105\times30=\qty{3150}{W}$、一次 $6600\times0.477\approx\qty{3150}{W}$ で等しい。高い電圧の側は、電流が小さい。
+\kotae 巻数の比 約63、一次の電流 約\qty{0.48}{A}
+\end{phreidai}
+\begin{jibun}
+同じ柱上変圧器の\qty{210}{V}の側から\qty{50}{A}を取り出すとき、巻数の比（\qty{6600}{V}：\qty{210}{V}）と一次の電流を求めましょう。
+\bkjans{約31.4、約\qty{1.6}{A}}
+\end{jibun}
+
+\label{ph:電-12:ex6}
+\begin{phreidai}[変圧器の鉄心の磁束]
+\qty{100}{V}・\qty{50}{Hz}の電源に、一次の巻数200の変圧器をつなぎます。鉄心の磁束の山を求めましょう。鉄心の断面積が\qty{20}{cm^2}なら、磁束密度の山はいくらですか。
+\phbamen
+変圧器の鉄心が飽和しないかを確かめる場面です。
+\phmushi
+コイルの抵抗による電圧の下がり、もれ磁束を無視します。
+\phzu
+$V_1=\qty{100}{V}$、$f=\qty{50}{Hz}$、$N_1=200$、$S=\qty{2.0e-3}{m^2}$。
+\phriyu
+⑥の4.44の式は、ファラデーの法則を正弦波に当てはめたものです。
+\phtateru
+\[\Phi_{\max}=\frac{V_1}{4.44fN_1},\qquad B_{\max}=\frac{\Phi_{\max}}{S}\]
+\phtoku
+$\Phi_{\max}=100\div(4.443\times50\times200)\approx\qty{2.25e-3}{Wb}$。$B_{\max}=2.25\times10^{-3}\div(2.0\times10^{-3})\approx\qty{1.1}{T}$。
+\phtashikame
+単位：V÷(1/s)＝V·s＝Wb。電磁鋼板が飽和するより少し低い所（電-7）で使う設計。巻数を半分にすると、磁束は2倍で飽和してしまう。
+\kotae 磁束の山 約\qty{2.3e-3}{Wb}、磁束密度の山 約\qty{1.1}{T}
+\end{phreidai}
+\begin{jibun}
+\qty{200}{V}・\qty{60}{Hz}、一次の巻数300、鉄心の断面積\qty{25}{cm^2}の変圧器の、磁束の山と磁束密度の山を求めましょう。
+\bkjans{約\qty{2.5e-3}{Wb}、約\qty{1.0}{T}}
+\end{jibun}
+
+\label{ph:電-12:ex7}
+\begin{phreidai}[変圧器の効率]
+容量\qty{10}{kVA}、鉄損\qty{50}{W}、定格の負荷での銅損\qty{150}{W}の変圧器があります（数は仮のものとします）。力率1の負荷で、定格の負荷のときの効率を求めましょう。効率が最大になる負荷率と、そのときの効率も求めましょう。
+\phbamen
+工場の変圧器が、どれくらいの負荷のとき最もむだが少ないかを調べる場面です。
+\phmushi
+損失は鉄損と銅損だけとし、温度による抵抗の変化を無視します。
+\phzu
+容量\qty{10000}{VA}、$P_{\mathrm i}=\qty{50}{W}$、$P_{\mathrm c}=\qty{150}{W}$、$\cos\phi=1$ なので $P_{\text{出}}=\num{10000}x$〔W〕。
+\phriyu
+⑥の効率の式と、「鉄損＝銅損で効率が最大」を使います。
+\phtateru
+\[\eta=\frac{P_{\text{出}}}{P_{\text{出}}+P_{\mathrm i}+x^2P_{\mathrm c}},\qquad x^2P_{\mathrm c}=P_{\mathrm i}\]
+\phtoku
+定格（$x=1$）：$\num{10000}\div\num{10200}\approx0.980$。最大：$x=\sqrt{50/150}\approx0.577$、出力 $\qty{5774}{W}$、損失 $50+50=\qty{100}{W}$、$5774\div5874\approx0.983$。
+\phtashikame
+最大のときの効率のほうが少し高い。軽い負荷で使う時間が長い変圧器ほど、鉄損を小さく作るほうが得になる。
+\kotae 定格で約98.0\,\%、負荷率約0.58で最大の約98.3\,\%
+\end{phreidai}
+\begin{jibun}
+容量\qty{20}{kVA}、鉄損\qty{80}{W}、定格の銅損\qty{320}{W}の変圧器の、定格での効率と、最大の効率とそのときの負荷率を求めましょう（力率1）。
+\bkjans{定格 約98.0\,\%。負荷率0.5で最大、約98.4\,\%}
+\end{jibun}
+
+\label{ph:電-12:ex8}
+\begin{phreidai}[誘導モーターのすべり]
+4極の三相の誘導モーターを\qty{50}{Hz}で使うと、毎分1440回転で回りました。すべりと、回転子に流れる電流の周波数を求めましょう。
+\phbamen
+銘板の回転数から、モーターの状態を読みとる場面です。
+\phmushi
+電源の周波数のずれを無視します。
+\phzu
+$f=\qty{50}{Hz}$、$p=4$、$n=\qty{1440}{min^{-1}}$。
+\phriyu
+同期速度は $120f/p$、すべりは⑦の定義です。回転子から見た磁場の速さは $sn_{\mathrm s}$ です。
+\phtateru
+\[n_{\mathrm s}=\frac{120f}{p},\qquad s=\frac{n_{\mathrm s}-n}{n_{\mathrm s}},\qquad f_2=sf\]
+\phtoku
+$n_{\mathrm s}=120\times50\div4=\qty{1500}{min^{-1}}$。$s=(1500-1440)\div1500=0.04$。$f_2=0.04\times50=\qty{2}{Hz}$。
+\phtashikame
+すべりは数\,\%（ふつうの範囲）。同期速度より速いと $s<0$ で、モーターではなく発電機になる。
+\kotae すべり0.04（4\,\%）、回転子の電流は\qty{2}{Hz}
+\end{phreidai}
+\begin{jibun}
+6極の誘導モーターを\qty{60}{Hz}で使うと毎分1140回転でした。すべりと回転子の電流の周波数を求めましょう。
+\bkjans{$n_{\mathrm s}=\qty{1200}{min^{-1}}$、$s=0.05$、\qty{3}{Hz}}
+\end{jibun}
+
+\label{ph:電-12:ex9}
+\begin{phreidai}[誘導モーターのトルク]
+線間電圧\qty{200}{V}・\qty{50}{Hz}・4極の三相の誘導モーターで、⑦の簡単なモデルの $R_2'=\qty{0.1}{\ohm}$、$X=\qty{0.8}{\ohm}$ とします（数は仮のものとします）。すべり0.04のときの回転子の電流とトルク、最大トルクになるすべりを求めましょう。
+\phbamen
+工場のポンプのモーターが出せるトルクを見積もる場面です。
+\phmushi
+固定子の抵抗ともれ、磁化の電流、機械の損失を無視します（⑦のモデル）。
+\phzu
+$V_{\mathrm p}=200\div\sqrt3\approx\qty{115.5}{V}$、$\omega_{\mathrm s}=2\pi\times1500\div60\approx\qty{157.1}{rad/s}$、$s=0.04$。
+\phriyu
+⑦の $I_2$ と $T$ の式に数を入れます。最大はすべりが $R_2'/X$ のときです。
+\phtateru
+\[I_2=\frac{V_{\mathrm p}}{\sqrt{(R_2'/s)^2+X^2}},\qquad T=\frac{3I_2^2R_2'/s}{\omega_{\mathrm s}},\qquad s_{\max}=\frac{R_2'}{X}\]
+\phtoku
+$R_2'/s=0.1\div0.04=\qty{2.5}{\ohm}$、$\sqrt{2.5^2+0.8^2}\approx\qty{2.62}{\ohm}$、$I_2\approx115.5\div2.62\approx\qty{44}{A}$。\\
+$T\approx3\times44.0^2\times2.5\div157.1\approx\qty{92}{N.m}$。$s_{\max}=0.1\div0.8=0.125$。
+\phtashikame
+出力は $T\times\omega_{\mathrm s}(1-s)\approx92\times151\approx\qty{14}{kW}$ で、工場のモーターとしてふつうの大きさ。図\ref{ph:電-12:fig-Ts}の点と同じ。
+\kotae 回転子の電流 約\qty{44}{A}、トルク 約\qty{92}{N.m}、最大トルクのすべり0.125
+\end{phreidai}
+\begin{jibun}
+例題9のモーターで、すべりが0.02のときの回転子の電流とトルクを求めましょう。
+\bkjans{$R_2'/s=\qty{5}{\ohm}$、$I_2\approx\qty{22.8}{A}$、$T\approx\qty{50}{N.m}$（すべり0.04の約半分）}
+\end{jibun}
+
+\label{ph:電-12:ex10}
+\begin{phreidai}[同期速度：発電機と電気自動車]
+同期速度を求めましょう。（1）\qty{50}{Hz}・2極の火力発電所の発電機、（2）\qty{50}{Hz}・24極の水力発電所の発電機、（3）8極で\qty{400}{Hz}の電流を流した電気自動車の同期モーター。
+\phbamen
+同じ式で、発電所と電気自動車の回る速さを比べる場面です。
+\phmushi
+回転磁界はなめらかに回るとします。
+\phzu
+（1）$f=50$、$p=2$。（2）$f=50$、$p=24$。（3）$f=400$、$p=8$。
+\phriyu
+同期機は、同期速度 $120f/p$ でちょうど回ります（⑧）。
+\phtateru
+\[n_{\mathrm s}=\frac{120f}{p}\]
+\phtoku
+（1）$120\times50\div2=\qty{3000}{min^{-1}}$。（2）$120\times50\div24=\qty{250}{min^{-1}}$。（3）$120\times400\div8=\qty{6000}{min^{-1}}$。
+\phtashikame
+ゆっくり回る水車は極数を多く、速く回したい電気自動車は周波数を高くする。
+\kotae （1）毎分3000回転、（2）毎分250回転、（3）毎分6000回転
+\end{phreidai}
+\begin{jibun}
+（1）\qty{60}{Hz}・6極、（2）\qty{60}{Hz}・4極、（3）8極で\qty{200}{Hz}の同期速度を求めましょう。
+\bkjans{（1）毎分1200回転、（2）毎分1800回転、（3）毎分3000回転}
+\end{jibun}
+
+\label{ph:電-12:ex11}
+\begin{phreidai}[回生ブレーキで電池にもどす]
+質量\qty{1500}{kg}の電気自動車が、\qty{20}{m/s}から回生ブレーキで止まります。運動エネルギーの70\,\% が電池にもどるとすると（数は仮のものとします）、何 kJ（何 Wh）もどりますか。
+\phbamen
+力-4 の回生ブレーキを、モーターを発電機にする場面として見る場面です。
+\phmushi
+空気の抵抗・転がりの抵抗で失う分は、70\,\% の効率にふくめます。坂はないとします。
+\phzu
+$m=\qty{1500}{kg}$、$v=\qty{20}{m/s}$、効率0.7。
+\phriyu
+運動エネルギー $\tfrac12mv^2$（力-4）の一部が、発電機（③）を通って電池にもどります。
+\phtateru
+\[W=0.7\times\frac12mv^2\]
+\phtoku
+$\tfrac12\times1500\times20^2=\qty{300000}{J}$、$W=0.7\times300=\qty{210}{kJ}$。\qty{1}{Wh}$=\qty{3600}{J}$ なので約\qty{58}{Wh}。
+\phtashikame
+\qty{58}{Wh}は、数十 kWh の電気自動車の電池の千分の数。1回は小さいが、町の中で何度も止まるので、合わせると大きい。
+\kotae 約\qty{210}{kJ}（約\qty{58}{Wh}）
+\end{phreidai}
+\begin{jibun}
+質量\qty{1200}{kg}の車が\qty{15}{m/s}から止まるとき、効率60\,\% で電池にもどるエネルギーを求めましょう。
+\bkjans{$0.6\times\tfrac12\times1200\times15^2=\qty{81}{kJ}$（約\qty{22.5}{Wh}）}
+\end{jibun}
+
+\label{ph:電-12:ex12}
+\begin{phreidai}[インバーターの $V/f$ 一定]
+\qty{200}{V}・\qty{50}{Hz}用の誘導モーターを、インバーターで\qty{25}{Hz}にして回します。鉄心の磁束をもとと同じにするには、電圧を何 V にすればよいですか。
+\phbamen
+エアコンのコンプレッサーのモーターを、ゆっくり回す場面です。
+\phmushi
+固定子の抵抗による電圧の下がりを無視します（周波数がとても低いときは、この分を足す）。
+\phzu
+$V=\qty{200}{V}$、$f=\qty{50}{Hz}$ → $f'=\qty{25}{Hz}$。
+\phriyu
+4.44の式 $V\approx4.44fN\Phi_{\max}$ で、$\Phi_{\max}$ を同じにするには、$V$ を $f$ に比例させます（⑨）。
+\phtateru
+\[\frac{V'}{f'}=\frac{V}{f}\]
+\phtoku
+$V'=200\times25\div50=\qty{100}{V}$。
+\phtashikame
+電圧を\qty{200}{V}のままにすると、磁束は2倍になり、鉄心が飽和して大きな電流が流れてしまう。
+\kotae \qty{100}{V}
+\end{phreidai}
+\begin{jibun}
+同じモーターを\qty{40}{Hz}で回すときの電圧と、4極のときの同期速度を求めましょう。
+\bkjans{\qty{160}{V}、毎分1200回転}
+\end{jibun}
+
+\label{ph:電-12:ex13}
+\begin{phreidai}[ファンのモーターを選ぶ]
+慣性モーメント $J=\qty{0.2}{kg.m^2}$（モーターの回転子もふくむ）の大きなファンを、止まった状態から3秒で毎分1500回転にし、そのまま回し続けます。毎分1500回転で回し続けるのに要るトルクは\qty{20}{N.m}です（数は仮のものとし、加速の間も負荷のトルクは\qty{20}{N.m}とします）。加速に要るトルク、合計のトルク、回し続けるのに要る出力を求めましょう。
+\phbamen
+工場のファンに合うモーターを選ぶ場面です（⑩、力-6）。
+\phmushi
+加速は一定の割合とし、モーターのトルクが回転数で変わることを無視します。
+\phzu
+$J=0.2$、$n=\qty{1500}{min^{-1}}$、$t_{\mathrm a}=\qty{3}{s}$、$T_{\mathrm L}=\qty{20}{N.m}$。
+\phriyu
+回転の運動方程式（力-6）から、加速トルク $T_{\mathrm a}=J\omega/t_{\mathrm a}$、出力は $T\omega$ です。
+\phtateru
+\[\omega=\frac{2\pi n}{60},\qquad T_{\mathrm a}=\frac{J\omega}{t_{\mathrm a}},\qquad P=T_{\mathrm L}\omega\]
+\phtoku
+$\omega=2\pi\times1500\div60\approx\qty{157}{rad/s}$。$T_{\mathrm a}=0.2\times157\div3\approx\qty{10.5}{N.m}$。合計 $20+10.5=\qty{30.5}{N.m}$。$P=20\times157\approx\qty{3.1}{kW}$。
+\phtashikame
+定格出力\qty{3.1}{kW}以上で、加速の間に\qty{31}{N.m}ほどを出せるモーターを選ぶ（たとえば定格\qty{3.7}{kW}の4極のモーターとします）。加速を6秒にのばせば、加速トルクは半分。
+\kotae 加速トルク 約\qty{10.5}{N.m}、合計 約\qty{30.5}{N.m}、出力 約\qty{3.1}{kW}
+\end{phreidai}
+\begin{jibun}
+$J=\qty{0.01}{kg.m^2}$ の機械を、0.5秒で毎分3000回転にします。負荷のトルクを\qty{2}{N.m}とすると、加速トルク、合計のトルク、回し続けるのに要る出力はいくらですか。
+\bkjans{$\omega\approx\qty{314}{rad/s}$、$T_{\mathrm a}\approx\qty{6.3}{N.m}$、合計 約\qty{8.3}{N.m}、出力 約\qty{630}{W}}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{モーターの電流は、回る速さで決まる？}
+\bkng{\qty{12}{V}・\qty{0.5}{\ohm}のモーターには、いつも $12\div0.5=\qty{24}{A}$ 流れる。}
+\bkok{\qty{24}{A}は止まっているときだけ。回ると逆起電力 $K\omega$ の分だけ電流が減る。}
+わけ：$V=RI+K\omega$ なので、電流は $(V-K\omega)/R$ です。
+\end{tsumazuki}
+
+\begin{tsumazuki}{変圧器で電力が増える？}
+\bkng{変圧器で電圧を10倍にすると、電力も10倍になる。}
+\bkok{電圧が10倍なら電流は $\tfrac1{10}$ で、電力は同じ（理想の変圧器）。本物は少し減る。}
+わけ：変圧器はエネルギーを作らず、磁束を通して運ぶだけです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{変圧器に直流をつなぐ}
+\bkng{\qty{12}{V}の電池を変圧器につなぐと、二次側にも巻数の比の電圧が出る。}
+\bkok{直流では磁束が変わらないので、二次側に電圧は出ない。一次コイルには抵抗の分だけの大きな電流が流れる。}
+わけ：誘導起電力は、磁束が「変わる」ときだけ生まれます（電-8）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{変圧器の電流の比}
+\bkng{一次100巻き・二次10巻きなので、二次の電流も一次の $\tfrac1{10}$。}
+\bkok{電流の比は巻数の比の逆。二次の電流は一次の10倍。}
+わけ：電圧が $\tfrac1{10}$ になるので、同じ電力を運ぶには電流が10倍要ります（$V_1I_1=V_2I_2$）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{誘導モーターは同期速度で回る？}
+\bkng{4極・\qty{50}{Hz}の誘導モーターは、ちょうど毎分1500回転で回る。}
+\bkok{少しおそく回る（毎分1440回転など）。同期速度で回るのは同期モーター。}
+わけ：同期速度では回転子が磁場を横切らず、電流もトルクも0になるからです。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[電気機器が支えるもの]
+\textbf{電車}：今の電車の多くは、架線の電気をインバーターで周波数を変えられる三相の交流にして、誘導モーターを回しています。止まるときは回生ブレーキで、ほかの電車に電気を渡します。
+
+\textbf{エレベーター}：かごとおもり（つり合いのおもり）をロープでつなぎ、モーターは差の分だけを持ち上げます（力-4）。インバーターで速さをなめらかに変え、乗り心地をよくしています。
+
+\textbf{発電所と変圧器}：発電所の同期発電機でつくった電気を、変圧器で高い電圧に上げて送り、使う所の近くで何段にも下げます（電-11 ①）。どの段の変圧器も、⑤⑥のしくみです。
+
+\begin{phketa}[電気機器の数の目安]
+\phketaline{柱上変圧器}{\qty{6600}{V}を\qty{210}{V}・\qty{105}{V}に（巻数の比 約31・約63）}
+\phketaline{配電用の高効率変圧器}{効率 約99\,\%}
+\phketaline{電気自動車のモーター}{2代目の日産リーフ：最高出力\qty{110}{kW}・最大トルク\qty{320}{N.m}}
+\phketaline{誘導モーターのすべり}{ふつうに回っているとき数\,\%}
+\phketaline{同期速度（\qty{50}{Hz}）}{2極 毎分3000回転、4極 毎分1500回転}
+\phboxhead{答えが桁で合っているか}
+小さな直流モーターのトルクは\qty{0.01}{N.m}〜\qty{1}{N.m}くらい、工場のモーターは数〜数百 N·m。すべりが0.5のような大きな答えが出たら、同期速度の計算（極の数）を確かめましょう。効率が100\,\% をこえたら、出力と入力を取り違えています。
+\end{phketa}
+\end{phkougaku}
+\phstation{電気機器学,パワーエレクトロニクス,モーター制御,電気鉄道}{直流電動機、トルク定数、逆起電力、変圧器、巻数比、鉄損、銅損、等価回路、誘導電動機、すべり、同期電動機、同期速度、インバーター、V/f 制御}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem クリップモーターのコイルが、20巻き・辺の長さ\qty{2}{cm}・はば\qty{2}{cm}で、\qty{0.2}{T}の磁場の中にあり、\qty{0.5}{A}が流れています。1辺が受ける力と、最大のトルクを求めましょう。
+\bkpans{1辺 $20\times0.5\times0.02\times0.2=\qty{0.04}{N}$、トルク $0.04\times0.02=\qty{8e-4}{N.m}$}
+\bkproblem \qty{100}{V}を\qty{6}{V}に下げる理想の変圧器の一次の巻数は500です。二次の巻数を求めましょう。二次に\qty{1.2}{A}流れるとき、一次の電流と、伝わる電力を求めましょう。
+\bkpans{二次30巻き、一次 $1.2\times6\div100=\qty{0.072}{A}$、電力\qty{7.2}{W}}
+\bkproblem $K=\qty{0.02}{N.m/A}$、$R=\qty{2}{\ohm}$ の直流モーターに\qty{6}{V}を加えます。（1）無負荷の速さ、起動電流、起動トルクを求めましょう。（2）\qty{200}{rad/s}で回るときの電流・トルク・出力を求めましょう。
+\bkpans{（1）\qty{300}{rad/s}、\qty{3}{A}、\qty{0.06}{N.m}。（2）$I=(6-4)\div2=\qty{1}{A}$、$T=\qty{0.02}{N.m}$、出力\qty{4}{W}}
+\bkproblem 問題3のモーターの電圧を\qty{3}{V}にすると、無負荷の速さと起動トルクはどうなりますか。
+\bkpans{どちらも半分で、\qty{150}{rad/s}、\qty{0.03}{N.m}}
+\bkproblem $K=\qty{0.05}{V.s/rad}$ の直流モーターを、外から\qty{300}{rad/s}で回して発電機にし、\qty{10}{\ohm}の電球をつなぎます。コイルの抵抗は\qty{0.5}{\ohm}です。起電力、電流、電球の電圧、軸を回すのに要るトルクを求めましょう。
+\bkpans{$E=\qty{15}{V}$、$I=15\div10.5\approx\qty{1.43}{A}$、電球 約\qty{14.3}{V}、トルク $0.05\times1.43\approx\qty{0.071}{N.m}$}
+\bkproblem \qty{6600}{V}を\qty{105}{V}に下げる柱上変圧器の二次側で\qty{5}{kW}（力率1）を使います。二次と一次の電流を求めましょう（理想の変圧器）。
+\bkpans{二次 約\qty{47.6}{A}、一次 約\qty{0.76}{A}}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 容量\qty{30}{kVA}・鉄損\qty{90}{W}・定格の銅損\qty{360}{W}の変圧器があります。力率1のとき、（1）定格の負荷、（2）半分の負荷での効率を求め、効率が最大になる負荷率を答えましょう。（3）定格の負荷で力率0.8のときの効率も求めましょう。
+\bkpans{（1）$\num{30000}\div\num{30450}$ で約98.5\,\%。（2）$\num{15000}\div(\num{15000}+90+90)$ で約98.8\,\%。負荷率0.5で最大。（3）$\num{24000}\div\num{24450}$ で約98.2\,\%}
+\bkproblem 4極の誘導モーターを\qty{60}{Hz}で使い、すべりが0.03でした。回転数と、回転子の電流の周波数を求めましょう。
+\bkpans{同期速度 毎分1800回転、回転数 $1800\times0.97=\qty{1746}{min^{-1}}$、回転子は\qty{1.8}{Hz}}
+\bkproblem 例題9のモデルで、すべりが0.02と0.04のトルクを比べると何倍ですか。すべりが小さい所で「トルクはすべりにほぼ比例する」と言えるのはなぜですか。
+\bkpans{約\qty{49.7}{N.m}と約\qty{92.4}{N.m}で、約1.86倍。$R_2'/s$ が $X$ よりずっと大きいと $I_2\approx V_{\mathrm p}s/R_2'$ となり、$T\approx3V_{\mathrm p}^2s/(R_2'\omega_{\mathrm s})$ で $s$ に比例するから（$s=0.04$ では $X$ が少し効いて、2倍より小さい）}
+\bkproblem 8極の永久磁石の同期モーターを、毎分\num{12000}回転で回します。インバーターがつくる交流の周波数はいくらですか。
+\bkpans{$f=12000\times8\div120=\qty{800}{Hz}$}
+\bkproblem 例題4のモーター（$a=0.1$、$a'=0.005$、$b=0.005$、$J=0.005$）に\qty{12}{V}を加えます。最後の速さと時定数を求めましょう。摩擦がない（$b=0$）としたら、どうなりますか。
+\bkpans{最後の速さ $0.1\times12\div0.01=\qty{120}{rad/s}$、時定数\qty{0.5}{s}。$b=0$ なら $0.1\times12\div0.005=\qty{240}{rad/s}$（無負荷の速さと同じ）、時定数 $0.005\div0.005=\qty{1}{s}$}
+
+%% ======================== ふりかえり ========================
+\begin{furikaeri}
+\begin{checklist}
+\item 磁石とコイルでモーターが回るわけを、電流が磁場から受ける力で説明できる。\bkfurref{ph:電-12:sec1}
+\item 直流モーターのトルクと回る速さの関係を、逆起電力を使って説明できる。\bkfurref{ph:電-12:sec4}
+\item 変圧器の電圧と電流の比を、巻数から求められる。\bkfurref{ph:電-12:sec5}
+\item 変圧器の鉄心の磁束、損失と効率を計算できる。\bkfurref{ph:電-12:sec6}
+\item 誘導モーターのすべりとトルク、同期モーターとインバーターのしくみを説明できる。\bkfurref{ph:電-12:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{電気自動車のモーターは、インバーターがつくる回る磁場に、磁石が引っぱられて回っていたんだ。ブレーキで発電までできるなんて！}
