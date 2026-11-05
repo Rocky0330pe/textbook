@@ -1,0 +1,1221 @@
+%% 第24回編集委員会（物理第3巻）：組 波W2
+%% p3-03.tex  波-3　つながるゆれ：多自由度振動とラグランジュの式（★4〜5・3段）
+%% 中身は計画書 tools/phys3-plan.md の B「波-3」。公式の持ち主は A（A51 ラグランジュの式、A52 質量行列のある固有値問題）。
+%%   節の番号は計画書 B の①〜⑩にそろえた（A51 の「波-3 ③」は B の④のこと。報告に書いた）。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-3/calc_p3_03.py（出力 calc_p3_03_out.txt）、fig_p3_03.py（図の点）。
+%% 記号（この章）：運動エネルギー K、位置エネルギー U、ラグランジアン L＝K−U、一般化座標 q、一般化力 Q、
+%%   質量行列 \mathbf M・こわさ行列 \mathbf K（立体の太字。運動エネルギー K と分ける）、モードの形 \vec v、モード座標 η（7-9 の \vec q。一般化座標 q と分ける）、
+%%   固有値 λ＝ω²（7-8 と同じ。この章に波長は出ない）、質量比 μ（波-5〜7 の線密度とは別の章）、つなぎのばね k_c（6-14・7-8 の K。こわさ行列と分ける）、
+%%   減衰係数 c（第1部）、減衰比 ζ、固有角振動数 ω_n、ふりこの長さ l、腕の長さ l_1（力-7）。周期 T（張力はこの章に出ない）。
+%% 数学の本が引いている所（変えない数）：6-14・7-8・7-9 の2台車 m＝1・k＝100・K＝10、ω＝10・10.95、約3.3秒・6.6秒。
+%%   7-8:794（もっと知りたい「質量がちがう台車」K v＝ω²M v、物理 波-3）の続きを⑤⑧で作る。8-7:605（オイラー・ラグランジュ方程式、物理の本（波-3））を④で受ける。
+%% 第1巻との約束：力-7:766（関節がいくつもある腕はラグランジュの式）→ ⑨・例題10、力-16 道しるべ（モード解析）→ ⑦、力-0（クレーンのゆれ）→ ⑨。
+%% 出典（本文で使った実機の値・事実）
+%%   ・台北101 の動吸振器：直径 5.5 m・660 t の鋼の球、87〜92 階（計画書 D：Taiwan News https://www.taiwannews.com.tw/en/news/3683775）。
+%%       つるし方（ワイヤー）と下のダンパーの数は本文に書かない。〔要確認：建物の側の公式資料〕
+%%   ・ラグランジュ『解析力学』1788年。ハミルトンの論文 1834〜1835年。
+%%   ・動吸振器：フラーム（H. Frahm）の特許（1909年の出願）〔要確認〕、オーモンドロイドとデン・ハルトフの論文（1928年）、
+%%       デン・ハルトフ "Mechanical Vibrations"（初版 1934年）の最適同調の式 f＝1/(1+μ)、ζ＝√(3μ/(8(1+μ)³))〔要確認：版と頁〕。
+%%   ・送電線のストックブリッジダンパー（G. H. Stockbridge、1920年代）〔要確認〕。本文には年を書かない。
+%%   ・建物のモードの減衰比は「数 % 以下で、建物ごとにばらつく」とだけ書いた〔要確認：建築学会の資料〕。
+%%   ・ビルの1次の周期 6.0 s・5.0 s、2階建ての家の m・k は、計算のための仮の値（本文にそう書いた）。
+\makeatletter
+% ばね（2点のあいだ）  \rxdspring{(はし)}{(はし)}
+\newcommand\rxdspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, amplitude=1.2mm, segment length=2.1mm, pre length=1.5mm, post length=1.5mm}] #1 -- #2;}
+% ダンパー（横向き）  \rxddamper{(左のはし)}{長さ}
+\newcommand\rxddamper[2]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.8pt] (0,0) -- ({#2*0.4},0);
+  \draw[bkInk, line width=0.8pt] ({#2*0.4},-1.6) -- ({#2*0.4},1.6);
+  \draw[bkInk, line width=0.8pt] ({#2*0.3},-2.2) -- ({#2*0.62},-2.2) ({#2*0.3},2.2) -- ({#2*0.62},2.2) ({#2*0.62},-2.2) -- ({#2*0.62},2.2);
+  \draw[bkInk, line width=0.8pt] ({#2*0.62},0) -- (#2,0);
+\end{scope}}
+% 台車  \rxdcart{(左下)}{文字}{色}
+\newcommand\rxdcart[3]{\begin{scope}[shift={#1}]
+  \filldraw[fill=#3!22, draw=#3!80!black, line width=0.8pt, rounded corners=0.8mm] (0,1.6) rectangle (12,10);
+  \filldraw[fill=bkInk!60, draw=bkInk] (3,0.8) circle (0.8) (9,0.8) circle (0.8);
+  \node[font=\sffamily\small] at (6,5.8) {#2};
+\end{scope}}
+% かべ（ななめの線）  \rxdwall{(下のはし)}{高さ}{向き 1:左のかべ −1:右のかべ}
+\newcommand\rxdwall[3]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=1pt] (0,0) -- (0,#2);
+  \foreach \rxdi in {1.5,4,...,#2} {\draw[bkInk!60, line width=0.4pt] (0,\rxdi) -- ({-1.6*#3},{\rxdi-1.6});}
+\end{scope}}
+% ゆか  \rxdfloor{(左)}{長さ}
+\newcommand\rxdfloor[2]{\draw[bkInk, line width=0.9pt] #1 -- ++(#2,0);}
+% 2つのふりこ（つるす点の間 dx、長さ ll、ずれ a1・a2）  \rxdtwopend{(左のつるす点)}{dx}{ll}{a1}{a2}
+\newcommand\rxdtwopend[5]{\begin{scope}[shift={#1}]
+  \fill[bkGray!35] (-6,0) rectangle ({#2+6},2);
+  \draw[bkInk, line width=0.8pt] (-6,0) -- ({#2+6},0);
+  \draw[bkInk, line width=0.7pt] (0,0) -- ({#4},{-#3});
+  \draw[bkInk, line width=0.7pt] (#2,0) -- ({#2+#5},{-#3});
+  \rxdspring{({#4+2.2},{-#3+1})}{({#2+#5-2.2},{-#3+1})}
+  \filldraw[fill=bkBlue!35, draw=bkBlue!80!black, line width=0.7pt] ({#4},{-#3}) circle (2.2);
+  \filldraw[fill=bkOrange!35, draw=bkOrange!80!black, line width=0.7pt] ({#2+#5},{-#3}) circle (2.2);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (0,0) -- (0,{-#3-3}) (#2,0) -- (#2,{-#3-3});
+\end{scope}}
+% 建物（せん断型）のモードの形  \rxdmode{(x,y)}{1階のずれ}{2階}{3階}  階の高さ 9 mm
+\newcommand\rxdmode[4]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.9pt] (-9,0) -- (9,0);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (0,0) -- (0,29);
+  \draw[bkBlue!80!black, line width=1.1pt] (-5,0) -- ({-5+#2},9) -- ({-5+#3},18) -- ({-5+#4},27);
+  \draw[bkBlue!80!black, line width=1.1pt] (5,0) -- ({5+#2},9) -- ({5+#3},18) -- ({5+#4},27);
+  \foreach \rxdh/\rxds in {9/#2,18/#3,27/#4} {\filldraw[fill=bkBlue!25, draw=bkBlue!80!black, line width=0.8pt] ({-6.5+\rxds},{\rxdh-1}) rectangle ({6.5+\rxds},{\rxdh+1});}
+\end{scope}}
+\makeatother
+
+\phchapter{3}{つながるゆれ：多自由度振動と\\ラグランジュの式}{高いビルの屋上の重りは、どうやってゆれをおさえる？}{\bklevelrange{4}{5}}{つながるゆれ：多自由度振動とラグランジュの式}
+\bkmichishirube{6-14,7-8,7-9,8-2,8-7,力-4,力-7,力-16,波-1,波-2}{波-4,波-5,波-6}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace ゆれが行き来するわけを、2つのモードのたし算で説明できる。
+\item \bklevel{4}\enspace 表計算で2自由度のゆれと、動吸振器の効きめを確かめられる。
+\item \bklevel{5}\enspace ラグランジュの式で、エネルギーから運動方程式を立てられる。
+\item \bklevel{5}\enspace 質量行列のある固有値問題で、モードを求められる。
+\item \bklevel{5}\enspace 動吸振器の同調と、モードの直交・モード解析を説明できる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+台湾の高さ\qty{508}{m}のビル「台北101」の上のほうの階には、直径\qty{5.5}{m}、重さ660 t の鋼の球がつり下げてあります。台風でビルがゆれると、球もゆっくりゆれ動きます。ビルにくらべれば、球はほんの少しの重さです。それなのに、なぜビルのゆれが小さくなるのでしょう。重りなら、なんでもよいのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkGray!20] (8,0) rectangle (32,52);
+  \draw[bkInk, line width=0.7pt] (8,0) rectangle (32,52);
+  \foreach \yy in {6,12,...,48} {\draw[bkGray!70, line width=0.3pt] (8,\yy) -- (32,\yy);}
+  \fill[bkYellow!25] (11,36) rectangle (29,50);
+  \draw[bkInk, line width=0.5pt] (11,36) rectangle (29,50);
+  \draw[bkInk, line width=0.6pt] (18,50) -- (19,41.2) (22,50) -- (21,41.2);
+  \filldraw[fill=bkOrange!45, draw=bkOrange!80!black, line width=0.7pt] (20,39) circle (3);
+  \draw[bkBlue!70!black, line width=1pt, -{Stealth[length=2.4mm]}] (-6,28) -- (6,28);
+  \draw[bkBlue!70!black, line width=1pt, -{Stealth[length=2.4mm]}] (-6,20) -- (6,20);
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,29.5) {風};
+  \draw[bkRed!80!black, line width=0.8pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (14,55) -- (26,55);
+  \node[font=\sffamily\footnotesize, anchor=south] at (20,56) {ゆれ};
+  \draw[bkInk!70, line width=0.5pt] (23.5,40) -- (35,46);
+  \node[font=\sffamily\footnotesize, anchor=south] at (40,46) {鋼の球};
+  \draw[bkInk, line width=0.9pt] (-6,0) -- (44,0);
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 波-1・波-2 では、ばねとおもりが1組だけの「1自由度」のゆれを考えました。けれども、本物の機械や建物は、たくさんの部分がばねのようにつながっています。ビルなら、どの階もゆれます。車なら、車体とタイヤが別々にゆれます。この章では、部分どうしが\textbf{つながったゆれ}を考えます。主役は、2つの道具です。1つは、つながったゆれを「ほどいて」ばらばらの単純なゆれ（モード）に分ける見方（6-14・7-8・7-9 で学んだ固有値の考え）。もう1つは、運動エネルギーと位置エネルギーだけから運動方程式を作る\textbf{ラグランジュの式}です。
+
+\begin{yattemiyou}[2つのふりこを、糸でつなごう]
+\textbf{用意するもの}\par
+5円玉4枚、たこ糸、いす2つ（または、物干しざお）、セロハンテープ\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.56\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 2つのいすの背の間に糸を1本、少したるませて横にはる。
+\item その糸から、同じ長さ（\qty{40}{cm}くらい）のふりこを、\qty{20}{cm}はなして2つつるす（おもりは5円玉2枚ずつ）。
+\item 一方のふりこだけを、横の糸と直角の向きにふって、手をはなす。もう一方は止めておいてからはなす。
+\item 2つのふりこのゆれの大きさが、どう変わっていくかを見る。止まったほうが、また動き出すまでの時間を測る。
+\item 2つを同じ向きに同じだけ引いてはなしたとき、反対向きに引いてはなしたときも見る。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk!70, line width=1.4pt] (0,0) -- (0,30) (50,0) -- (50,30);
+  \draw[bkInk, line width=0.6pt] (0,28) .. controls (20,25.5) and (30,25.5) .. (50,28);
+  \draw[bkInk, line width=0.5pt] (15,26.1) -- (13,8) (35,26.1) -- (35,8);
+  \filldraw[fill=bkYellow!60, draw=bkYellow!50!black] (13,7) circle (1.8) (35,7) circle (1.8);
+  \draw[bkRed!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (9,3) -- (17,3);
+  \node[font=\sffamily\footnotesize, anchor=north] at (13,1.5) {ふる};
+  \node[font=\sffamily\footnotesize, anchor=north] at (35,1.5) {止める};
+  \node[font=\sffamily\footnotesize, anchor=south] at (25,30) {少したるませた糸};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：はじめにふったふりこのゆれは、だんだん小さくなり、止めておいたふりこが、だんだん大きくゆれ始めます。しばらくすると、はじめのふりこはほとんど止まり、ゆれはすっかりもう一方へ移ります。そして、またもどってきます。横の糸を通して、ゆれが\textbf{行ったり来たり}するのです。ところが、2つを同じ向きに引いてはなすと、2つはいつまでもそろってゆれ、ゆれは移りません。反対向きでも同じです。この2つの「そろったゆれ方」が、この章の鍵です。
+
+\begin{omoidasou}
+\bkrecall{6-14}{ばねでつないだ2つの台車（$m=1$、両はしのばね $k=100$、つなぎのばね $K=10$）は、和 $x_1+x_2$ が $\omega_1=\sqrt{k/m}=10$、差 $x_1-x_2$ が $\omega_2=\sqrt{(k+2K)/m}\approx10.95$ でゆれる。この2つを振動モードという。}
+\bkrecall{7-8}{行列 $A$ の固有ベクトル $\vec v$ と固有値 $\lambda$：$A\vec v=\lambda\vec v$。特性方程式 $\det(A-\lambda I)=0$。振動モードの形は固有ベクトル、固有値は $-\omega^2$。対称な行列の固有ベクトルは直交する（7-8⑨）。}
+\bkrecall{7-9}{固有ベクトルを並べた $P$ で $\vec x=P\vec q$ とおくと、台車の式はモードごとの式にほどける。}
+\bkrecall{8-2}{偏微分 $\partial f/\partial x$：ほかの文字を止めて、$x$ だけで微分する。}
+\bkrecall{力-4}{運動エネルギー $K=\tfrac12mv^2$、ばねの位置エネルギー $U=\tfrac12kx^2$、重力の位置エネルギー $U=mgh$。}
+\bkrecall{波-1}{ばねとおもりの単振動 $m\ddot x=-kx$、固有角振動数 $\omega_{\mathrm n}=\sqrt{k/m}$（$\mathrm{rad/s}$）、振動数 $f=\omega/(2\pi)$（Hz）、ふりこは小さなふれで $\omega=\sqrt{g/l}$。}
+\end{omoidasou}
+
+\noindent この章の記号の約束：$K$ と $U$ は、力-4・波-1 と同じく運動エネルギーと位置エネルギーです。6-14・7-8 の「つなぎのばね $K$」は、この章では $k_{\mathrm c}$（c は coupling：つなぐ）と書きます。⑤から出てくる2つの行列は、立てた太字で $\mathbf M$（質量行列）・$\mathbf K$（こわさ行列）と書いて、運動エネルギー $K$ と区別します。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{つながったゆれを見る}{4}
+
+\bksubsection{1}{2つのふりこをつなぐと、ゆれが行き来する}
+\label{ph:波-3:sec1}
+波-1 のばねとおもりは、おもりの位置 $x$ という\textbf{1つの数}がわかれば、全体の形が決まりました。ふりこも、ふれの角 $\theta$ という1つの数で決まります。このように、形を決めるのに要る数の個数を\textbf{自由度}（じゆうど）といいます。\bkidx{じゆうど}{自由度}ばねとおもり、ふりこは\textbf{1自由度}です。
+
+やってみようの2つのふりこは、2つのふれ（$x_1$ と $x_2$）がわからないと、全体の形が決まりません。\textbf{2自由度}です。3階建ての建物を「各階の床が横にずれる量」で表せば3自由度、30階建てなら30自由度です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxdtwopend{(10,34)}{36}{26}{6}{0}
+  \node[font=\sffamily\footnotesize, anchor=north] at (16,3) {$x_1$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (46,3) {$x_2$};
+  \draw[bkBlue!80!black, line width=0.9pt, -{Stealth[length=1.8mm]}] (10,4) -- (16,4);
+  \node[font=\sffamily\footnotesize, anchor=south] at (28,11) {つなぎのばね};
+  \node[anchor=west, font=\small, text width=62mm, align=left] at (64,18) {%
+  同じ長さ・同じ重さの2つのふりこを、弱いばね（やってみようでは、たるませた糸）でつなぐ。\par\vspace{2pt}
+  左のふりこだけをずらしてはなすと、ゆれが右へ移り、また左へもどってくる。\par\vspace{2pt}
+  形を決めるのに、$x_1$ と $x_2$ の2つの数が要る（2自由度）。};
+\end{tikzpicture}
+\bkfigcaption{ばねでつないだ2つのふりこ。$x_1$・$x_2$ は、それぞれのおもりの、真下（破線）からのずれ。}\label{ph:波-3:fig-twopend}
+\end{bkfigure}
+
+ゆれが行き来するようすを、グラフで見ます。図\ref{ph:波-3:fig-uneri}は、6-14 の2つの台車（$m=\qty{1}{kg}$、両はしのばね $k=\qty{100}{N/m}$、つなぎのばね $k_{\mathrm c}=\qty{10}{N/m}$）で、台車1だけを\qty{0.1}{m}引いてはなしたときの計算です。ふりこでも、同じ形のグラフになります（つなぎのばねが弱いとき）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=124mm, height=32mm, xmin=0, xmax=7.2, ymin=-0.13, ymax=0.13, xtick={0,1,2,3,4,5,6,7}, ytick={-0.1,0,0.1}, xlabel={$t$（s）}, ylabel={$x_1$（m）}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt, domain=0:7, samples=80] {0.1*abs(cos(deg(0.4772*x)))};
+  \addplot[bkcurve, line width=0.9pt, domain=0:7, samples=900] {0.05*(cos(deg(10*x))+cos(deg(10.9545*x)))};
+\end{axis}
+\end{tikzpicture}\par\vspace{1mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=124mm, height=32mm, xmin=0, xmax=7.2, ymin=-0.13, ymax=0.13, xtick={0,1,2,3,4,5,6,7}, ytick={-0.1,0,0.1}, xlabel={$t$（s）}, ylabel={$x_2$（m）}, yticklabel style={/pgf/number format/fixed}]
+  \addplot[bkGray, line width=0.5pt, dash pattern=on 2pt off 1.5pt, domain=0:7, samples=80] {0.1*abs(sin(deg(0.4772*x)))};
+  \addplot[bkcurve2, line width=0.9pt, domain=0:7, samples=900] {0.05*(cos(deg(10*x))-cos(deg(10.9545*x)))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{上が台車1、下が台車2のずれ。破線は、ゆれの大きさ（つつみ）。約\qty{3.3}{s}でゆれがすっかり台車2へ移り、約\qty{6.6}{s}で台車1へもどる。}\label{ph:波-3:fig-uneri}
+\end{bkfigure}
+
+\noindent 1回1回のゆれ（約\qty{0.6}{s}で1往復）は速く、ゆれの大きさは、それよりずっとゆっくり（約\qty{6.6}{s}の周期で）行ったり来たりしています。4-9 で学んだ\textbf{うなり}と同じ形です。
+
+\begin{phmijika}[つながったゆれは、身の周りにたくさんある]
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{phMijikaDeep}●}]
+\item 2重ふりこのおもちゃ：ふりこの先に、もう1つふりこをつけたもの（2自由度）。
+\item 車：車体が上下にゆれるのと、前後にかたむくのと、4つのタイヤが別々に上下するのとが、つながっています。
+\item 洗濯機・エアコンの外の機械：本体のゆれが、ゴムの脚を通して床や壁につながります。
+\item 高いビル：どの階の床も横にずれ、階と階は柱でつながっています。
+\end{itemize}
+\end{phmijika}
+
+\bksubsection{2}{2つのモード：いっしょにゆれる・反対にゆれる}
+\label{ph:波-3:sec2}
+やってみようの⑤で見たように、2つのふりこには、ゆれが移らない「そろったゆれ方」が2つあります（図\ref{ph:波-3:fig-mode2}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxdtwopend{(8,34)}{30}{26}{5}{5}
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (10,2) -- (16,2);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (40,2) -- (46,2);
+  \node[font=\sffamily\footnotesize, anchor=south] at (25.5,11) {のびない};
+  \node[font=\sffamily\small, anchor=south, text=\bkTT] at (23,38) {1次モード：いっしょにゆれる};
+  \rxdtwopend{(78,34)}{30}{26}{5}{-5}
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (80,2) -- (86,2);
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=1.8mm]}] (106,2) -- (100,2);
+  \node[font=\sffamily\footnotesize, anchor=south] at (93,11) {ちぢむ};
+  \node[font=\sffamily\small, anchor=south, text=\bkTT] at (93,38) {2次モード：反対にゆれる};
+\end{tikzpicture}
+\bkfigcaption{2つの振動モード。左（1次モード）では、つなぎのばねはのびもちぢみもしないので、ふりこ1つのときと同じ速さでゆれる。右（2次モード）では、つなぎのばねが2つのおもりを押しもどすので、速くゆれる。}\label{ph:波-3:fig-mode2}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{いっしょにゆれる}（$x_1=x_2$）：つなぎのばねの長さは変わりません。だから、それぞれのふりこは、つながっていないときと同じ角振動数 $\omega_1$ でゆれます（ふりこなら $\omega_1=\sqrt{g/l}$、6-14 の台車なら $\sqrt{k/m}=10$）。
+\item \textbf{反対にゆれる}（$x_1=-x_2$）：つなぎのばねが、片方のずれの2倍だけのびちぢみして、両方のおもりをもどす向きに押します。もどす力が強くなるので、少し速い $\omega_2$ でゆれます（6-14 の台車なら $\sqrt{(k+2k_{\mathrm c})/m}\approx10.95$）。
+\end{enumerate}
+全体が1つの角振動数で、形を保ったままそろってゆれる動き方を\textbf{振動モード}（しんどうモード）、その角振動数を\textbf{固有角振動数}（その振動数 $f$ を固有振動数）といいます（6-14⑥）。\bkidx{しんどうもーど}{振動モード}\bkidx{こゆうしんどうすう}{固有振動数}ゆっくりなほうから、1次モード・2次モードとよびます。2自由度には、モードが2つあります。$n$ 自由度なら、モードは $n$ 個です。
+
+\phboxhead{どんなゆれも、モードのたし算}
+片方だけを引いてはなすと、はじめの形 $(x_1,\ x_2)=(0.1,\ 0)$ は、2つのモードの形の和
+\[(0.1,\ 0)=(0.05,\ 0.05)+(0.05,\ -0.05)\]
+です。2つのモードは、それぞれ自分の角振動数でゆれ続けます。
+\[x_1=0.05\cos\omega_1t+0.05\cos\omega_2t,\qquad x_2=0.05\cos\omega_1t-0.05\cos\omega_2t\]
+$\omega_1$ と $\omega_2$ が近いので、はじめは2つのモードの山がそろって（台車1は大きく、台車2は打ち消し合って0）、時間がたつと少しずつずれ、$\omega_2-\omega_1$ の分だけ角がずれた所で、台車1のほうが打ち消し合います。そうなるまでの時間は、角のずれがちょうど $\pi$（半周）になる $t=\pi/(\omega_2-\omega_1)$ です。
+\pheq{t_{\text{移る}}=\frac{\pi}{\omega_2-\omega_1}\qquad T_{\text{うなり}}=\frac{2\pi}{\omega_2-\omega_1}}{s ＝ $\dfrac{\text{rad}}{\text{rad/s}}$}
+6-14 の台車では、$t_{\text{移る}}=\pi\div0.954\approx\qty{3.3}{s}$、$T_{\text{うなり}}\approx\qty{6.6}{s}$ です（図\ref{ph:波-3:fig-uneri}と合う）。
+
+\begin{phyomi}[$T_{\text{うなり}}=\dfrac{2\pi}{\omega_2-\omega_1}$]
+「ゆれが行って帰ってくる時間は、2つのモードの角振動数の\textbf{差}で決まる」。差が小さい（つなぎが弱い）ほど、ゆっくり行き来します。ゆれのエネルギーは、ばねの力が仕事をすることで、つなぎのばねを通って運ばれます。
+\end{phyomi}
+
+\begin{phbaisuru}{つなぎのばね $k_{\mathrm c}$}
+$\omega_2=\sqrt{(k+2k_{\mathrm c})/m}$ が大きくなり、2つの角振動数の差が広がるので、ゆれが速く行き来します。6-14 の台車で、$k_{\mathrm c}=10$ では約\qty{6.6}{s}、2倍の20では約\qty{3.4}{s}です。つなぎのばねが弱い間は、うなりの周期は $k_{\mathrm c}$ にほぼ反比例します。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=42mm, xmin=0, xmax=42, ymin=0, ymax=16, xtick={5,10,20,40}, ytick={3.4,6.6,12.9}, xlabel={つなぎのばね $k_{\mathrm c}$（N/m）}, ylabel={$T_{\text{うなり}}$（s）}]
+  \addplot[bkcurve, domain=4.4:42, samples=80] {2*pi/(sqrt(100+2*x)-10)};
+  \fill[bkRed] (axis cs:5,12.87) circle (1.8pt) (axis cs:10,6.58) circle (1.8pt) (axis cs:20,3.43) circle (1.8pt) (axis cs:40,1.84) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:21,4.2) {2倍にすると、約半分};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phmijika}[ビルのモード]
+3階建ての建物を、各階の床がずれる3自由度と考えると、モードは3つあります（図\ref{ph:波-3:fig-bldmode}）。1次モードは全体が同じ向きに、上ほど大きくずれる形。2次モードは、とちゅうで向きが1回入れかわる形、3次モードは2回入れかわる形です。地震でゆれる建物は、ほとんど1次モードでゆれます。高い建物ほど1次モードの周期が長く、ゆっくりゆれます。
+\end{phmijika}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxdmode{(14,0)}{2.2}{4.0}{5.0}
+  \rxdmode{(56,0)}{5.0}{2.2}{-4.0}
+  \rxdmode{(98,0)}{4.0}{-5.0}{2.2}
+  \node[font=\sffamily\footnotesize, anchor=north] at (14,-1) {1次（\qty{0.71}{Hz}）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (56,-1) {2次（\qty{1.98}{Hz}）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (98,-1) {3次（\qty{2.87}{Hz}）};
+\end{tikzpicture}
+\bkfigcaption{3階建ての建物の3つのモード（どの階も質量\qty{1}{kg}、柱のこわさ\qty{100}{N/m}の模型。\bkreidairef{7}で計算する）。破線がゆれる前の位置。}\label{ph:波-3:fig-bldmode}
+\end{bkfigure}
+
+\phstage{te}{表計算でゆれを追う}{4}
+
+\bksubsection{3}{表計算で2自由度を動かす}
+\label{ph:波-3:sec3}
+6-14③ と同じように、2つの台車の運動方程式を、表計算で少しずつ進めます。台車1と台車2にはたらく力は、
+\[m\ddot x_1=-kx_1+k_{\mathrm c}(x_2-x_1),\qquad m\ddot x_2=-kx_2-k_{\mathrm c}(x_2-x_1)\]
+です（6-14②。つなぎのばねののびは $x_2-x_1$）。時間を $\Delta t=\qty{0.01}{s}$ ずつ進め、波-1 の「速度を先に進めるオイラー法」（6-2⑪）を使います。
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 今の位置から、加速度を出す。
+\[a_1=\frac{-kx_1+k_{\mathrm c}(x_2-x_1)}{m},\qquad a_2=\frac{-kx_2-k_{\mathrm c}(x_2-x_1)}{m}\]
+\item 速度を先に進める：$v_1^{\text{次}}=v_1+a_1\Delta t$、$v_2^{\text{次}}=v_2+a_2\Delta t$。
+\item 新しい速度で、位置を進める：$x_1^{\text{次}}=x_1+v_1^{\text{次}}\Delta t$、$x_2^{\text{次}}=x_2+v_2^{\text{次}}\Delta t$。
+\end{enumerate}
+A列を時刻、B列を $x_1$、C列を $v_1$、D列を $x_2$、E列を $v_2$ にします。3行めの式は次のとおりで、これを下へコピーします。
+\begin{bkcenter}\small
+\texttt{C3 = C2 + (-100*B2 + 10*(D2-B2))*0.01}\\\texttt{B3 = B2 + C3*0.01}\\
+\texttt{E3 = E2 + (-100*D2 - 10*(D2-B2))*0.01}\\\texttt{D3 = D2 + E3*0.01}
+\end{bkcenter}
+
+\begin{bkcenter}
+\bksheet{5}{17}{%
+1 & $t$〔s〕 & $x_1$〔m〕 & $v_1$〔m/s〕 & $x_2$〔m〕 & $v_2$〔m/s〕 \\
+2 & 0 & 0.1 & 0 & 0 & 0 \\
+3 & 0.01 & 0.0989 & $-0.11$ & 0.0001 & 0.01 \\
+4 & 0.02 & 0.09671 & $-0.2188$ & 0.0003 & 0.0198 \\
+5 & 0.03 & 0.09346 & $-0.3251$ & 0.00059 & 0.0291 \\
+\SetCell[c=6]{c} $\vdots$ & & & & & \\
+331 & 3.29 & 0.00038 & 0.0479 & 0.00192 & $-1.0465$ \\
+332 & 3.30 & 0.00086 & 0.0477 & $-0.00857$ & $-1.0486$ \\
+660 & 6.58 & $-0.09972$ & $-0.1495$ & 0.00006 & 0.0039 \\}
+\bktabcaption{2つの台車の表計算（台車1だけを\qty{0.1}{m}引いて、静かにはなす）。3.3秒ごろ、台車1はほとんど動かず、台車2が約\qty{1}{m/s}で動いている。6.58秒には、台車1がふたたび端（$-0.1$）まで来ている。}\label{ph:波-3:tab-sheet}
+\end{bkcenter}
+
+\noindent 3行めを手で確かめます。はじめ $x_1=0.1$、$x_2=0$ なので、
+\[a_1=-100\times0.1+10\times(0-0.1)=\qty{-11}{m/s^2}\]
+\[v_1=-11\times0.01=\qty{-0.11}{m/s},\qquad x_1=0.1-0.11\times0.01=\qty{0.0989}{m}\]
+台車2は、つなぎのばねに引かれて、$a_2=+\qty{1}{m/s^2}$ で動き始めます。B列とD列をグラフにすると、図\ref{ph:波-3:fig-uneri}と同じ形になります。
+
+\phboxhead{表計算で、モードを見つける}
+B2 と D2 に入れるはじめの位置を変えると、モードを探せます。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=1pt, label={\color{\bkTT}●}]
+\item B2 と D2 をどちらも0.1にする（同じ向き）：2つの列はいつまでも同じ数で、1往復は\qty{0.628}{s}（$2\pi/10$）。ゆれは移りません。
+\item B2 を0.1、D2 を $-0.1$ にする（反対向き）：2つの列はいつも符号だけがちがい、1往復は\qty{0.574}{s}（$2\pi/10.95$）。
+\end{itemize}
+1往復の時間は、グラフで、0を同じ向きに横切る時刻の間かくを読めば求まります。
+
+\phboxhead{重りをつけたビルを、表計算でゆする}
+いよいよ、はてな？のビルです。ビルの1次モードだけを考え、ビルを「質量 $m_1$ のおもりと、ばね $k_1$・小さなダンパー $c_1$」の1自由度にします（波-1）。ここに、質量 $m_2$ の重りを、ばね $k_2$ とダンパー $c_2$ でつなぎます。この重りの仕組みを\textbf{動吸振器}（どうきゅうしんき）\bkidx{どうきゅうしんき}{動吸振器}、英語の頭文字で TMD（tuned mass damper：同調させた重りのダンパー）といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxdfloor{(0,0)}{120}
+  \rxdwall{(4,0)}{26}{1}
+  \rxdspring{(4,8.2)}{(34,8.2)}
+  \rxddamper{(4,3.4)}{30}
+  \rxdcart{(34,0)}{$m_1$}{bkBlue}
+  \rxdspring{(46,8.2)}{(80,8.2)}
+  \rxddamper{(46,3.4)}{34}
+  \rxdcart{(80,0)}{$m_2$}{bkOrange}
+  \node[font=\sffamily\footnotesize, anchor=south] at (19,11) {$k_1$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (19,1) {$c_1$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (63,11) {$k_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (63,1) {$c_2$};
+  \draw[bkRed!80!black, line width=1pt, -{Stealth[length=2mm]}] (40,16) -- (40,12);
+  \node[font=\sffamily\footnotesize, anchor=south] at (40,16) {ゆする力 $F_0\cos\omega t$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (40,-1) {ビル（1次モード）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (86,-1) {重り};
+  \node[anchor=west, font=\small, text width=28mm, align=left] at (96,14) {ビル\\$m_1=\qty{1}{kg}$\\$k_1=\qty{100}{N/m}$\\$c_1=\qty{0.2}{N.s/m}$};
+\end{tikzpicture}
+\bkfigcaption{動吸振器のモデル（2自由度）。ビルの模型（$\omega_{\mathrm n}=\qty{10}{rad/s}$、減衰比 $\zeta=0.01$）に、重り（$m_2=\qty{0.05}{kg}$）をばねとダンパーでつなぐ。}\label{ph:波-3:fig-tmd}
+\end{bkfigure}
+
+\noindent ビルの模型を、ちょうど固有角振動数 $\omega=\qty{10}{rad/s}$ の力 $F_0\cos\omega t$（$F_0=\qty{1}{N}$）でゆすり続けます。ゆれが最も大きくなる、いちばん悪い場合（共振。波-2）です。運動方程式は、
+\[m_1\ddot x_1=F_0\cos\omega t-k_1x_1-c_1\dot x_1+k_2(x_2-x_1)+c_2(\dot x_2-\dot x_1)\]
+\[m_2\ddot x_2=-k_2(x_2-x_1)-c_2(\dot x_2-\dot x_1)\]
+です（重りのばねとダンパーは、ビルと重りの位置の差・速度の差で力を出す）。重りは $m_2=\qty{0.05}{kg}$（ビルの5\,\%）、$k_2=\qty{4.54}{N/m}$、$c_2=\qty{0.121}{N.s/m}$ とします（この数の決め方は⑥）。表計算の列を、時刻・$x_1$・$v_1$・$x_2$・$v_2$ にして、さっきと同じ手順で進めます（$\Delta t=\qty{0.01}{s}$、8000行で80秒）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=50mm, xmin=0, xmax=82, ymin=0, ymax=0.56, xtick={0,10,20,30,40,50,60,70,80}, ytick={0.1,0.2,0.3,0.4,0.5}, yticklabel style={/pgf/number format/fixed}, xlabel={$t$（s）}, ylabel={ビルのゆれの大きさ（m）}]
+  \draw[bkOrange, line width=1.2pt, dash pattern=on 4pt off 2pt] plot[smooth] coordinates {(0,0) (2,0.0838) (4,0.1629) (6,0.2210) (8,0.2752) (10,0.3146) (12,0.3464) (14,0.3765) (16,0.3981) (18,0.4152) (20,0.4321) (22,0.4437) (24,0.4533) (26,0.4625) (28,0.4684) (30,0.4744) (32,0.4790) (34,0.4821) (36,0.4856) (38,0.4880) (40,0.4898) (42,0.4917) (44,0.4927) (46,0.4940) (48,0.4950) (50,0.4955) (52,0.4962) (54,0.4967) (56,0.4970) (58,0.4974) (60,0.4976) (62,0.4978) (64,0.4979) (66,0.4980) (68,0.4982) (70,0.4983) (72,0.4983) (74,0.4984) (76,0.4985) (78,0.4985) (80,0.4986)};
+  \draw[bkBlue, line width=1.4pt] plot[smooth] coordinates {(0,0) (2,0.0530) (4,0.0509) (6,0.0480) (8,0.0486) (10,0.0484) (12,0.0485) (14,0.0485) (16,0.0485) (18,0.0485) (20,0.0485) (22,0.0485) (24,0.0485) (26,0.0485) (28,0.0485) (30,0.0485) (32,0.0485) (34,0.0485) (36,0.0485) (38,0.0485) (40,0.0485) (42,0.0485) (44,0.0485) (46,0.0485) (48,0.0485) (50,0.0485) (52,0.0484) (54,0.0485) (56,0.0484) (58,0.0485) (60,0.0485) (62,0.0485) (64,0.0485) (66,0.0485) (68,0.0485) (70,0.0485) (72,0.0485) (74,0.0485) (76,0.0485) (78,0.0485) (80,0.0484)};
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:80,0.36) {重りなし（破線）：\qty{0.5}{m}まで大きくなる};
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:80,0.08) {重りあり（実線）：約\qty{0.05}{m}で止まる};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ビルの模型を、固有角振動数ちょうどの力でゆすり続けたときの、ゆれの大きさ（1周期ごとの最大）。表計算（$\Delta t=\qty{0.01}{s}$）で計算した。}\label{ph:波-3:fig-env}
+\end{bkfigure}
+
+\noindent 重りがないと、ビルのゆれは少しずつ大きくなり、1分ほどで約\qty{0.5}{m}に落ち着きます。ゆする力だけでビルを押したときの静たわみ $F_0/k_1=\qty{0.01}{m}$ の50倍です（共振。減衰比 $\zeta=0.01$ のとき $1/(2\zeta)=50$ 倍。波-2）。重りをつけると、ゆれは約\qty{0.05}{m}で止まり、10分の1ほどになりました。このとき、重りのほうは約\qty{0.18}{m}と大きくゆれています。
+
+\phboxhead{はてな？の答え（表計算で見えたこと）}
+\bkhatenaref の答え：重りは、ビルと\textbf{ほぼ同じ振動数でゆれるように}ばねの強さを選んで（\textbf{同調}）つけてあります。ビルがゆれると、重りは少しおくれて、ビルより大きくゆれます。そのとき重りのばねは、ビルをゆする力とおよそ反対の向きにビルを引き、ビルのゆれを打ち消します。そして、重りのダンパーが、重りのゆれのエネルギーを熱に変えて捨てます。ゆれのエネルギーを重りに「移して」、そこで捨てるのです。やってみようで、ゆれが隣のふりこへ移ったことを思い出しましょう。だから、重りなら何でもよいわけではなく、ばねの強さ（重りのゆれの振動数）とダンパーの強さを、ビルに合わせて選ぶことが大切です（くわしい選び方は⑥）。
+
+\begin{phmodel}[動吸振器のついたビル]
+\phignore{2次から先のモード（ビルを1次モードだけの1自由度にした）。風の力の形のでこぼこ。}
+\phassume{ビルの床は形が変わらない（剛体）、柱はばね（せん断型の建物）。ばねもダンパーも、力が変位・速度に比例する（線形）。ゆする力は1つの角振動数の正弦波。}
+\phlimit{ゆれがとても大きく、ばねが比例しなくなるとき。風や地震のように、いろいろな振動数がまざった力でゆするとき（⑥・⑦で考える）。}
+\end{phmodel}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{エネルギーから運動方程式を作る}{5}
+
+\bksubsection{4}{ラグランジュの運動方程式}
+\label{ph:波-3:sec4}
+①〜③では、おもりにはたらく力を1つずつ図にかいて、運動方程式を作りました。ふりこでは、それがだんだん面倒になります。ふりこのおもりの位置を $(x,\ y)$ で表すと、糸が引く力の大きさがわからないので、それも未知数として解かなければなりません。2重ふりこやロボットの腕では、もっとたいへんです。
+
+そこで、力ではなく\textbf{エネルギー}から運動方程式を作る方法を学びます。形を決める数（ふりこなら角 $\theta$、台車なら $x_1$・$x_2$）を、何でもよいので選んで $q$ と書き、\textbf{一般化座標}（いっぱんかざひょう）とよびます。\bkidx{いっぱんかざひょう}{一般化座標}長さでも角でもかまいません。運動エネルギー $K$ と位置エネルギー $U$ を、$q$ とその速さ $\dot q$ で書いて、その差
+\pheq{L=K-U}{J ＝ J－J}
+を作ります。$L$ を\textbf{ラグランジアン}といいます。\bkidx{らぐらんじあん}{ラグランジアン}このとき、運動は次の式にしたがいます。
+\pheq{\frac{\dd}{\dd t}\Bigl(\frac{\partial L}{\partial\dot q}\Bigr)-\frac{\partial L}{\partial q}=Q}{N または N·m}
+これを\textbf{ラグランジュの運動方程式}（ラグランジュの式）といいます。\bkidx{らぐらんじゅのうんどうほうていしき}{ラグランジュの運動方程式}$Q$ は、位置エネルギーで表せない力（手で押す力、モーターのトルク、ダンパーの力など）の分で、$q$ を少し $\delta q$ だけ動かしたときにその力がする仕事が $Q\,\delta q$ になる量です（\textbf{一般化力}）。そういう力がなければ $Q=0$ です。自由度が2つ以上なら、$q_1$、$q_2$、…のそれぞれについて1本ずつ式ができます。
+
+\begin{phyomi}[ラグランジュの式]
+「運動エネルギーを速さ $\dot q$ で偏微分したもの（8-2）の、時間の変わり方」は「位置エネルギーの坂 $-\partial U/\partial q$ と、外から加わる力 $Q$」で決まる。$q$ が長さ $x$ なら、$\partial K/\partial\dot x=m\dot x$ は運動量で、式は「運動量の変わる速さ＝力」（力-3）そのものです。
+\end{phyomi}
+
+\phboxhead{ばねとおもりで確かめる}
+$q=x$ にします。$K=\tfrac12m\dot x^2$、$U=\tfrac12kx^2$ なので、$L=\tfrac12m\dot x^2-\tfrac12kx^2$ です。
+\begin{bkhenkei}[0.5]
+\frac{\partial L}{\partial\dot x}=m\dot x & $x$ を止めて、$\dot x$ で微分（$\tfrac12\dot x^2\to\dot x$） \\
+\frac{\dd}{\dd t}\Bigl(\frac{\partial L}{\partial\dot x}\Bigr)=m\ddot x & 時間で微分 \\
+\frac{\partial L}{\partial x}=-kx & $\dot x$ を止めて、$x$ で微分 \\
+m\ddot x-(-kx)=0 & ラグランジュの式（$Q=0$） \\
+m\ddot x=-kx & 波-1 と同じ運動方程式 \\
+\end{bkhenkei}
+力の図をかかずに、エネルギーだけから、波-1 の単振動の式が出てきました（\bkreidairef{2}）。
+
+\phboxhead{ふりこで確かめる}
+$q=\theta$ にします。おもりは半径 $l$ の円の上を動くので、速さは $l\dot\theta$（4-8・力-6 の $v=r\omega$）、高さは、つるした点から $l\cos\theta$ だけ下です。
+\[K=\frac12m(l\dot\theta)^2=\frac12ml^2\dot\theta^2,\qquad U=-mgl\cos\theta\]
+\begin{bkhenkei}[0.5]
+\frac{\partial L}{\partial\dot\theta}=ml^2\dot\theta,\quad\frac{\dd}{\dd t}\Bigl(\frac{\partial L}{\partial\dot\theta}\Bigr)=ml^2\ddot\theta & $K$ だけが $\dot\theta$ をふくむ \\
+\frac{\partial L}{\partial\theta}=-\frac{\partial U}{\partial\theta}=-mgl\sin\theta & $\cos$ の微分は $-\sin$（5-15） \\
+ml^2\ddot\theta+mgl\sin\theta=0 & ラグランジュの式 \\
+\end{bkhenkei}
+両辺を $ml$ でわると $l\ddot\theta=-g\sin\theta$ で、波-1 のふりこの運動方程式です。糸が引く力は、一度も出てきませんでした（\bkreidairef{3}）。
+
+\begin{phflow}[ラグランジュの式]
+\phflowrow{$\dfrac{\dd}{\dd t}\Bigl(\dfrac{\partial L}{\partial\dot q}\Bigr)-\dfrac{\partial L}{\partial q}=Q$}{$q=x$、$K=\tfrac12m\dot x^2$\\$U=\tfrac12kx^2$、$Q=0$}{$m\ddot x=-kx$（波-1）}
+\phflowrow{$\dfrac{\dd}{\dd t}\Bigl(\dfrac{\partial L}{\partial\dot q}\Bigr)-\dfrac{\partial L}{\partial q}=Q$}{$q=\theta$、$K=\tfrac12ml^2\dot\theta^2$\\$U=-mgl\cos\theta$}{$ml^2\ddot\theta=-mgl\sin\theta$}
+\end{phflow}
+
+\begin{seikaku}
+\textbf{なぜ、どんな座標でも同じ形の式になるのか}\par
+1つのおもりが、直線の上の位置 $x$ で表され、その $x$ が一般化座標 $q$ で決まる（$x=x(q)$）とします（ふりこなら、$x$ と $y$ の2つで同じことを2回します）。速さは $\dot x=x'\dot q$（$x'=\dd x/\dd q$。合成関数の微分、5-6）なので、$K=\tfrac12mx'^2\dot q^2$ です。
+\begin{bkhenkei}[0.55]
+\frac{\partial K}{\partial\dot q}=mx'^2\dot q=m\dot x\,x' & $\dot x=x'\dot q$ \\
+\frac{\dd}{\dd t}\Bigl(\frac{\partial K}{\partial\dot q}\Bigr)=m\ddot x\,x'+m\dot x\,\frac{\dd x'}{\dd t} & 積の微分（5-6） \\
+\frac{\partial K}{\partial q}=mx'x''\dot q^2=m\dot x\,\frac{\dd x'}{\dd t} & $\dd x'/\dd t=x''\dot q$ \\
+\frac{\dd}{\dd t}\Bigl(\frac{\partial K}{\partial\dot q}\Bigr)-\frac{\partial K}{\partial q}=m\ddot x\,x' & 2つめの項が消える \\
+\end{bkhenkei}
+運動方程式 $m\ddot x=F$ の両辺に $x'$ をかけると、右辺 $Fx'$ は「$q$ を $\delta q$ 動かすと、おもりが $x'\delta q$ 動き、力が $Fx'\delta q$ の仕事をする」ので、一般化力です。$F$ が位置エネルギーから出る力なら $Fx'=-\partial U/\partial q$ です。こうして、ニュートンの運動方程式から、ラグランジュの式が出てきます。
+
+ふりこの糸が引く力は、おもりの動く向きといつも直角なので、仕事をしません（4-12）。だから $Q$ に入らず、式から消えるのです。また、$L=K-U$ を時間で積分した量（作用）がいちばん小さく（正しくは、止まった値に）なる道すじを、ものは実際に選んでいる、と言いかえることもできます。この見方が、8-7 のもっと知りたいの変分法と、オイラー・ラグランジュ方程式です。
+\end{seikaku}
+
+\phboxhead{2つの台車をラグランジュの式で}
+$q_1=x_1$、$q_2=x_2$ とします。つなぎのばねののびは $x_2-x_1$ なので、
+\[K=\frac12m\dot x_1^{\,2}+\frac12m\dot x_2^{\,2},\qquad U=\frac12kx_1^{\,2}+\frac12k_{\mathrm c}(x_2-x_1)^2+\frac12kx_2^{\,2}\]
+$x_1$ の式：$\partial U/\partial x_1=kx_1-k_{\mathrm c}(x_2-x_1)$（2つめの項は、かっこの中を $x_1$ で微分した $-1$ がかかる）なので、
+\[m\ddot x_1=-kx_1+k_{\mathrm c}(x_2-x_1)\]
+$x_2$ の式も同じようにして $m\ddot x_2=-kx_2-k_{\mathrm c}(x_2-x_1)$ です。6-14 で力の図から作った式と同じです。力の向き（つなぎのばねが台車1を右へ、台車2を左へ引く）を考えなくても、$U$ を書くだけで符号まで正しく出てくるのが、ラグランジュの式のよい所です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 2重ふりこ
+  \fill[bkGray!35] (2,40) rectangle (30,42);
+  \draw[bkInk, line width=0.8pt] (2,40) -- (30,40);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (16,40) -- (16,4);
+  \draw[bkInk, line width=0.7pt] (16,40) -- (22,24) -- (24,7);
+  \filldraw[fill=bkBlue!35, draw=bkBlue!80!black] (22,24) circle (2) (24,7) circle (2);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (22,24) -- (22,8);
+  \draw[bkInk, line width=0.5pt] (16,33) arc (-90:-69:7);
+  \node[font=\sffamily\footnotesize, anchor=west] at (21,34) {$\theta_1$};
+  \draw[bkInk, line width=0.5pt] (22,17) arc (-90:-83:7);
+  \node[font=\sffamily\footnotesize, anchor=west] at (22.6,15.4) {$\theta_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (16,2) {2重ふりこ};
+  % クレーン
+  \begin{scope}[shift={(44,0)}]
+  \draw[bkInk, line width=1pt] (0,38) -- (40,38);
+  \filldraw[fill=bkOrange!30, draw=bkOrange!80!black, line width=0.7pt] (12,38) rectangle (24,43);
+  \fill[bkInk] (14,38) circle (0.9) (22,38) circle (0.9);
+  \draw[bkInk, line width=0.6pt] (18,38) -- (25,12);
+  \filldraw[fill=bkGray!45, draw=bkInk] (22.5,6) rectangle (27.5,12);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (18,38) -- (18,6);
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (18,46) -- (26,46);
+  \node[font=\sffamily\footnotesize, anchor=west] at (26.5,46) {$x$};
+  \draw[bkInk, line width=0.5pt] (18,31) arc (-90:-74:7);
+  \node[font=\sffamily\footnotesize, anchor=west] at (22.5,31) {$\theta$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,2) {クレーン（台車とつり荷）};
+  \end{scope}
+  % ロボットの腕
+  \begin{scope}[shift={(96,0)}]
+  \fill[bkGray!40] (-6,8) rectangle (6,12);
+  \filldraw[fill=bkInk!60, draw=bkInk] (0,14) circle (2);
+  \draw[bkBlue!70!black, line width=2.2pt] (0,14) -- (16,26);
+  \filldraw[fill=bkInk!60, draw=bkInk] (16,26) circle (1.6);
+  \draw[bkOrange!80!black, line width=2.2pt] (16,26) -- (26,40);
+  \draw[bkGray, line width=0.4pt, dash pattern=on 1.5pt off 1.5pt] (0,14) -- (16,14) (16,26) -- (26.8,34.1);
+  \draw[bkInk, line width=0.5pt] (8,14) arc (0:37:8);
+  \node[font=\sffamily\footnotesize] at (10.6,16.4) {$\theta_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (27.6,30.5) {$\theta_2$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (6,6) {ロボットの腕};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ラグランジュの式が便利な例。どれも、角や位置を一般化座標に選び、$K$ と $U$ を書けば運動方程式ができる（2重ふりこは\bkreidairef{4}、クレーンとロボットの腕は⑨）。}\label{ph:波-3:fig-lag}
+\end{bkfigure}
+
+\bksubsection{5}{質量行列・こわさ行列と、固有値問題}
+\label{ph:波-3:sec5}
+建物や機械の小さなゆれでは、運動エネルギーは速さの2乗の和、位置エネルギーは位置（ずれ）の2乗の和の形になります。2つの台車なら、
+\[K=\frac12\bigl(m_1\dot x_1^{\,2}+m_2\dot x_2^{\,2}\bigr),\qquad U=\frac12k_1x_1^{\,2}+\frac12k_2(x_2-x_1)^2\]
+のようにです（左の台車はかべとばね $k_1$ で、右の台車は左の台車とばね $k_2$ でつながり、右はしは自由な場合）。ラグランジュの式から運動方程式を作ると、
+\[m_1\ddot x_1+(k_1+k_2)x_1-k_2x_2=0,\qquad m_2\ddot x_2-k_2x_1+k_2x_2=0\]
+です。これを行列で書きます（7-1）。
+\pheq{\mathbf M\ddot{\vec x}+\mathbf K\vec x=\vec 0\qquad\mathbf M=\begin{pmatrix}m_1&0\\0&m_2\end{pmatrix},\quad\mathbf K=\begin{pmatrix}k_1+k_2&-k_2\\-k_2&k_2\end{pmatrix}}{N ＝ kg×m/s$^2$ ＝ N/m×m}
+$\mathbf M$ を\textbf{質量行列}、$\mathbf K$ を\textbf{こわさ行列}（剛性行列。力-16 と同じもの）といいます。\bkidx{しつりょうぎょうれつ}{質量行列}\bkidx{こわさぎょうれつ}{こわさ行列}1自由度の $m\ddot x+kx=0$ の $m$ と $k$ が、それぞれ行列になった形です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxdfloor{(0,0)}{66}
+  \rxdwall{(2,0)}{14}{1}
+  \rxdspring{(2,7)}{(22,7)}
+  \rxdcart{(22,0)}{$m_1$}{bkBlue}
+  \rxdspring{(34,7)}{(52,7)}
+  \rxdcart{(52,0)}{$m_2$}{bkOrange}
+  \node[font=\sffamily\footnotesize, anchor=south] at (12,10) {$k_1$};
+  \node[font=\sffamily\footnotesize, anchor=south] at (43,10) {$k_2$};
+  \node[anchor=west, font=\small, text width=60mm, align=left] at (70,8) {%
+  $\mathbf K$ の対角成分：その台車につながるばねの和（$k_1+k_2$、$k_2$）\par\vspace{1pt}
+  $\mathbf K$ の対角でない成分：2つの台車をつなぐばねに $-$ をつけたもの（$-k_2$）\par\vspace{1pt}
+  $\mathbf M$：対角に、それぞれの質量};
+\end{tikzpicture}
+\bkfigcaption{質量行列とこわさ行列の作り方。$\mathbf K$ は対称な行列になる（7-1）。}\label{ph:波-3:fig-MK}
+\end{bkfigure}
+
+\phboxhead{モードを探す：$(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0$}
+モードは「全体が形 $\vec v$ を保ったまま、$\cos\omega t$ でそろってゆれる」動きでした。$\vec x=\vec v\cos\omega t$ を入れます。
+\begin{bkhenkei}[0.5]
+\ddot{\vec x}=-\omega^2\vec v\cos\omega t & 成分ごとに2回微分（6-6） \\
+-\omega^2\mathbf M\vec v\cos\omega t+\mathbf K\vec v\cos\omega t=\vec 0 & 運動方程式に入れた \\
+(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0 & $\cos\omega t$ でわって、$\vec v$ でくくった \\
+\end{bkhenkei}
+$\vec v=\vec 0$（動かない）でない答えがあるためには、7-8⑥ と同じく、行列式が0でなければなりません。
+\pheq{\det(\mathbf K-\omega^2\mathbf M)=0}{（N/m）$^2$}
+これは $\omega^2$ についての2次方程式（$n$ 自由度なら $n$ 次方程式）で、$\omega^2$ の答えが固有角振動数の2乗、それぞれの $\omega$ について $(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0$ をみたす $\vec v$ がモードの形です。このような問題を\textbf{固有値問題}といいます（$\lambda=\omega^2$ が固有値）。
+
+\begin{phyomi}[$(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0$]
+「ばねがもどそうとする力 $\mathbf K\vec v$ が、質量に $\omega^2$ をかけた $\omega^2\mathbf M\vec v$ と、どの台車でもちょうどつり合う形 $\vec v$ と振動数 $\omega$ を探せ」。1自由度の $k=\omega^2m$（$\omega=\sqrt{k/m}$）を、たくさんの台車に広げた式です。
+\end{phyomi}
+
+\phboxhead{質量が同じなら、7-8 の形にもどる}
+6-14 の台車のように、どの質量も同じ $m$ なら、$\mathbf M=mI$（$I$ は単位行列）なので、
+\[\mathbf K\vec v=\omega^2m\vec v\qquad\text{つまり}\qquad\Bigl(-\frac{\mathbf K}{m}\Bigr)\vec v=-\omega^2\vec v\]
+です。$-\mathbf K/m$ が 7-8 の行列 $B$（対角 $-110$、ほかは10）で、固有値 $-\omega^2$ と書いたのと同じです。
+
+\phboxhead{質量がちがうとき：$\mathbf M^{-1}\mathbf K$ の固有値}
+7-8 のもっと知りたいでは、「質量がちがうと、係数の行列は対称にならない。それでも $-\omega^2$ が固有値、モードの形が固有ベクトルになる」と書いて、続きをこの章にゆずりました。$(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0$ の左から $\mathbf M^{-1}$（7-5 の逆行列。対角行列なら、対角の数の逆数を並べたもの）をかけると、
+\pheq{\mathbf M^{-1}\mathbf K\,\vec v=\omega^2\vec v}{1/s$^2$}
+となり、7-8 のふつうの固有値問題になります。$\mathbf M^{-1}\mathbf K$ は「$i$ 行めを $m_i$ でわった行列」で、運動方程式を質量でわった加速度の式の係数（符号を変えたもの）です。
+
+たとえば $m_1=\qty{2}{kg}$、$m_2=\qty{1}{kg}$、$k_1=\qty{200}{N/m}$、$k_2=\qty{100}{N/m}$ なら、
+\[\mathbf M^{-1}\mathbf K=\begin{pmatrix}\tfrac12&0\\0&1\end{pmatrix}\begin{pmatrix}300&-100\\-100&100\end{pmatrix}=\begin{pmatrix}150&-50\\-100&100\end{pmatrix}\]
+で、確かに対称ではありません（右上 $-50$、左下 $-100$）。特性方程式は（7-8⑥）、
+\[(150-\lambda)(100-\lambda)-(-50)(-100)=\lambda^2-250\lambda+\num{10000}=0\]
+で、$\lambda=50$、200。$\omega=\sqrt{50}\approx\qty{7.07}{rad/s}$、$\sqrt{200}\approx\qty{14.1}{rad/s}$ です。モードの形は、$\lambda=50$ なら1行め $(150-50)v_1-50v_2=0$ から $\vec v_1=(1,\ 2)$、$\lambda=200$ なら $\vec v_2=(1,\ -1)$ です（\bkreidairef{6}）。軽い右の台車のほうが、1次モードで2倍大きくゆれます。
+
+\phboxhead{コンピュータで解く}
+自由度が3つ以上なら、7-8⑤ と同じく Python の numpy を使います。$\mathbf M^{-1}\mathbf K$ を作って、\texttt{np.linalg.eig} に入れるだけです。
+\begin{phcode}[Python]
+import numpy as np
+M = np.diag([2.0, 1.0])                   \# 質量行列
+K = np.array([[300.0, -100], [-100, 100]])  \# こわさ行列
+lam, V = np.linalg.eig(np.linalg.inv(M) @ K)
+print(np.sqrt(lam.real))    \# 固有角振動数〔rad/s〕
+print((V / V[0]).real)      \# 1行めを1にそろえたモードの形（列ごと）
+\end{phcode}
+\begin{phcodeout}[実行結果]
+[14.14213562  7.07106781]
+[[ 1.  1.]
+ [-1.  2.]]
+\end{phcodeout}
+\texttt{@} は行列のかけ算、\texttt{np.diag} は対角行列を作る命令、\texttt{.real} は実部だけを取り出す命令です（\texttt{eig} は、対称でない行列では答えを複素数の形で返すため）。答えの順番は小さい順とはかぎりません（ここでは14.1が先）。モードの形は、列ごとに読みます。1列め $(1,\ -1)$ が\qty{14.1}{rad/s}、2列め $(1,\ 2)$ が\qty{7.07}{rad/s}のモードです。
+
+\begin{phbaisuru}{すべての質量}
+$\det(\mathbf K-\omega^2\mathbf M)=0$ で、$\mathbf M$ を2倍にすると、同じ式が $\omega^2$ を半分にした所で成り立つので、どのモードの $\omega$ も $1/\sqrt2$ 倍（約0.71倍）、モードの形は変わりません。1自由度の $\omega=\sqrt{k/m}$ と同じです。すべてのばねを2倍にすると、反対に $\sqrt2$ 倍です。重い建物ほどゆっくり、かたい建物ほど速くゆれます。
+\end{phbaisuru}
+
+\begin{seikaku}
+$\mathbf M^{-1}\mathbf K$ は対称ではありませんが、固有値はいつも0以上の実数で、モードの形も実数で求まります。わけは、座標を $\tilde x_i=\sqrt{m_i}\,x_i$（質量の平方根をかけた座標）に変えると、運動方程式が $\ddot{\tilde{\vec x}}+\tilde{\mathbf K}\tilde{\vec x}=\vec 0$（$\tilde{\mathbf K}$ の $(i,\ j)$ 成分は $k_{ij}/\sqrt{m_im_j}$）となり、$\tilde{\mathbf K}$ が対称な行列になるからです。対称な行列の固有値は実数（7-8⑨）、さらにばねのエネルギーは負にならないので、固有値は0以上です。専門の本では、\texttt{scipy.linalg.eigh(K, M)} のように、$\mathbf K$ と $\mathbf M$ をそのまま渡して解く命令もよく使います。
+\end{seikaku}
+
+\bksubsection{6}{動吸振器：2つに分かれる振動数と、最適な同調}
+\label{ph:波-3:sec6}
+③の表計算で、重りがビルのゆれを10分の1ほどにしました。重りのばねとダンパーは、どう選べばよいのでしょう。
+
+\phboxhead{ダンパーがないとき：振動数が2つに分かれる}
+はじめに、ビルにも重りにもダンパーがないとします。ビルだけの固有角振動数を $\omega_{\mathrm n}=\sqrt{k_1/m_1}$、重りだけの（ビルを止めたときの）固有角振動数を $\omega_{\mathrm a}=\sqrt{k_2/m_2}$、質量の比を $\mu=m_2/m_1$（\textbf{質量比}）とします。重りをビルに合わせて $\omega_{\mathrm a}=\omega_{\mathrm n}$ に同調させると、⑤の $\det(\mathbf K-\omega^2\mathbf M)=0$ は、$r=\omega/\omega_{\mathrm n}$ を使って
+\pheq{r^4-(2+\mu)r^2+1=0}{1}
+になります（\bkreidairef{8}で導く）。$\mu=0.05$ なら $r^2=1.25$、0.8 で、$r\approx0.894$、1.118 です。ビル1つのときの1つの共振（$r=1$）が、その両側の\textbf{2つの共振に分かれる}のです。
+
+\phboxhead{ちょうど同調した振動数では、ビルが止まる}
+ダンパーのないまま、ビルを $\omega=\omega_{\mathrm a}$ でゆすると、ビルはまったく動かなくなります（反共振）。重りの運動方程式 $m_2\ddot x_2=-k_2(x_2-x_1)$ で $x_1=0$ とおくと、重りは $x_2=X_2\cos\omega t$、$-m_2\omega^2X_2=-k_2X_2$ で、$\omega^2=k_2/m_2$ のときに限り、ビルが止まったまま重りだけがゆれ続けられます。このとき、重りのばねがビルを引く力 $k_2x_2$ が、外からゆする力 $F_0\cos\omega t$ とちょうど打ち消し合います（$X_2=-F_0/k_2$）。③のモデルなら $X_2=-1\div5=\qty{-0.2}{m}$ です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=108mm, height=60mm, xmin=6, xmax=14, ymin=0, ymax=0.4, xtick={6,7,8,9,10,11,12,13,14}, ytick={0.1,0.2,0.3}, yticklabel style={/pgf/number format/fixed}, xlabel={$\omega$（rad/s）}, ylabel={ビルのゆれ（m）}]
+  \draw[bkGray, line width=1.1pt, dash pattern=on 4pt off 2pt] plot coordinates {(6.000,0.0156) (6.200,0.0162) (6.400,0.0169) (6.600,0.0177) (6.800,0.0186) (7.000,0.0196) (7.200,0.0208) (7.400,0.0221) (7.600,0.0237) (7.800,0.0255) (8.000,0.0278) (8.200,0.0305) (8.400,0.0339) (8.600,0.0383) (8.650,0.0396) (8.662,0.0400) (8.675,0.0403) (8.688,0.0407) (8.700,0.0410) (8.713,0.0414) (8.725,0.0418) (8.738,0.0422) (8.750,0.0425) (8.763,0.0429) (8.775,0.0434) (8.787,0.0438) (8.800,0.0442) (8.812,0.0446) (8.825,0.0451) (8.838,0.0455) (8.850,0.0460) (8.863,0.0464) (8.875,0.0469) (8.888,0.0474) (8.900,0.0479) (8.912,0.0484) (8.925,0.0490) (8.938,0.0495) (8.950,0.0501) (8.963,0.0506) (8.975,0.0512) (8.988,0.0518) (9.000,0.0524) (9.013,0.0530) (9.025,0.0537) (9.037,0.0543) (9.050,0.0550) (9.062,0.0557) (9.075,0.0564) (9.088,0.0571) (9.100,0.0579) (9.113,0.0586) (9.125,0.0594) (9.138,0.0602) (9.150,0.0610) (9.162,0.0619) (9.175,0.0628) (9.188,0.0637) (9.200,0.0646) (9.213,0.0656) (9.225,0.0666) (9.238,0.0676) (9.250,0.0687) (9.262,0.0698) (9.275,0.0709) (9.287,0.0721) (9.300,0.0733) (9.312,0.0746) (9.325,0.0759) (9.338,0.0772) (9.350,0.0786) (9.363,0.0801) (9.375,0.0816) (9.387,0.0832) (9.400,0.0848) (9.412,0.0865) (9.425,0.0883) (9.438,0.0901) (9.450,0.0921) (9.463,0.0941) (9.475,0.0962) (9.488,0.0984) (9.500,0.1007) (9.512,0.1031) (9.525,0.1056) (9.537,0.1083) (9.550,0.1111) (9.562,0.1140) (9.575,0.1171) (9.588,0.1204) (9.600,0.1239) (9.613,0.1276) (9.625,0.1315) (9.637,0.1356) (9.650,0.1400) (9.662,0.1447) (9.675,0.1497) (9.688,0.1550) (9.700,0.1608) (9.713,0.1669) (9.725,0.1735) (9.738,0.1807) (9.750,0.1884) (9.762,0.1967) (9.775,0.2058) (9.787,0.2156) (9.800,0.2263) (9.812,0.2380) (9.825,0.2508) (9.838,0.2648) (9.850,0.2801) (9.863,0.2968) (9.875,0.3151) (9.887,0.3349) (9.900,0.3562) (9.912,0.3789) (9.924,0.4000)};
+  \draw[bkGray, line width=1.1pt, dash pattern=on 4pt off 2pt] plot coordinates {(10.074,0.4000) (10.075,0.3976) (10.088,0.3737) (10.100,0.3509) (10.113,0.3295) (10.125,0.3097) (10.137,0.2914) (10.150,0.2747) (10.162,0.2594) (10.175,0.2454) (10.188,0.2326) (10.200,0.2210) (10.213,0.2103) (10.225,0.2004) (10.238,0.1914) (10.250,0.1831) (10.262,0.1754) (10.275,0.1683) (10.287,0.1617) (10.300,0.1555) (10.312,0.1498) (10.325,0.1445) (10.338,0.1395) (10.350,0.1348) (10.363,0.1304) (10.375,0.1263) (10.387,0.1224) (10.400,0.1188) (10.412,0.1153) (10.425,0.1120) (10.438,0.1089) (10.450,0.1060) (10.463,0.1032) (10.475,0.1005) (10.488,0.0980) (10.500,0.0956) (10.512,0.0933) (10.525,0.0911) (10.537,0.0890) (10.550,0.0870) (10.562,0.0851) (10.575,0.0832) (10.588,0.0814) (10.600,0.0797) (10.613,0.0781) (10.625,0.0765) (10.637,0.0750) (10.650,0.0736) (10.662,0.0722) (10.675,0.0708) (10.688,0.0695) (10.700,0.0683) (10.713,0.0671) (10.725,0.0659) (10.738,0.0648) (10.750,0.0637) (10.762,0.0626) (10.775,0.0616) (10.787,0.0606) (10.800,0.0596) (10.812,0.0587) (10.825,0.0577) (10.838,0.0569) (10.850,0.0560) (10.863,0.0552) (10.875,0.0544) (10.887,0.0536) (10.900,0.0528) (10.912,0.0521) (10.925,0.0513) (10.938,0.0506) (10.950,0.0499) (10.963,0.0493) (10.975,0.0486) (10.988,0.0480) (11.000,0.0474) (11.012,0.0468) (11.025,0.0462) (11.037,0.0456) (11.050,0.0450) (11.062,0.0445) (11.075,0.0439) (11.088,0.0434) (11.100,0.0429) (11.113,0.0424) (11.125,0.0419) (11.137,0.0414) (11.150,0.0409) (11.162,0.0405) (11.175,0.0400) (11.188,0.0396) (11.200,0.0392) (11.213,0.0387) (11.225,0.0383) (11.238,0.0379) (11.250,0.0375) (11.262,0.0371) (11.275,0.0367) (11.287,0.0364) (11.300,0.0360) (11.312,0.0356) (11.325,0.0353) (11.338,0.0349) (11.350,0.0346) (11.363,0.0343) (11.375,0.0339) (11.387,0.0336) (11.400,0.0333) (11.412,0.0330) (11.425,0.0327) (11.438,0.0324) (11.450,0.0321) (11.463,0.0318) (11.475,0.0315) (11.488,0.0312) (11.500,0.0309) (11.512,0.0307) (11.525,0.0304) (11.537,0.0301) (11.550,0.0299) (11.562,0.0296) (11.575,0.0294) (11.588,0.0291) (11.600,0.0289) (11.700,0.0271) (11.909,0.0239) (12.118,0.0213) (12.327,0.0192) (12.536,0.0175) (12.745,0.0160) (12.955,0.0147) (13.164,0.0136) (13.373,0.0127) (13.582,0.0118) (13.791,0.0111) (14.000,0.0104)};
+  \draw[bkOrange, line width=1.1pt, dash pattern=on 1.2pt off 1.2pt] plot coordinates {(6.000,0.0163) (6.200,0.0171) (6.400,0.0180) (6.600,0.0190) (6.800,0.0202) (7.000,0.0216) (7.200,0.0234) (7.400,0.0255) (7.600,0.0282) (7.800,0.0318) (8.000,0.0368) (8.200,0.0443) (8.400,0.0570) (8.600,0.0836) (8.650,0.0956) (8.662,0.0992) (8.675,0.1032) (8.688,0.1075) (8.700,0.1122) (8.713,0.1174) (8.725,0.1231) (8.738,0.1295) (8.750,0.1367) (8.763,0.1447) (8.775,0.1538) (8.787,0.1642) (8.800,0.1762) (8.812,0.1900) (8.825,0.2063) (8.838,0.2255) (8.850,0.2486) (8.863,0.2765) (8.875,0.3105) (8.888,0.3519) (8.900,0.4000)};
+  \draw[bkOrange, line width=1.1pt, dash pattern=on 1.2pt off 1.2pt] plot coordinates {(8.986,0.4000) (8.988,0.3950) (9.000,0.3409) (9.013,0.2961) (9.025,0.2594) (9.037,0.2296) (9.050,0.2050) (9.062,0.1845) (9.075,0.1673) (9.088,0.1527) (9.100,0.1402) (9.113,0.1293) (9.125,0.1198) (9.138,0.1114) (9.150,0.1040) (9.162,0.0974) (9.175,0.0914) (9.188,0.0860) (9.200,0.0811) (9.213,0.0766) (9.225,0.0726) (9.238,0.0688) (9.250,0.0653) (9.262,0.0621) (9.275,0.0591) (9.287,0.0564) (9.300,0.0538) (9.312,0.0514) (9.325,0.0491) (9.338,0.0469) (9.350,0.0449) (9.363,0.0430) (9.375,0.0412) (9.387,0.0395) (9.400,0.0379) (9.412,0.0364) (9.425,0.0349) (9.438,0.0335) (9.450,0.0322) (9.463,0.0309) (9.475,0.0296) (9.488,0.0285) (9.500,0.0273) (9.512,0.0262) (9.525,0.0252) (9.537,0.0242) (9.550,0.0232) (9.562,0.0223) (9.575,0.0214) (9.588,0.0205) (9.600,0.0196) (9.613,0.0188) (9.625,0.0180) (9.637,0.0172) (9.650,0.0164) (9.662,0.0157) (9.675,0.0150) (9.688,0.0143) (9.700,0.0136) (9.713,0.0129) (9.725,0.0122) (9.738,0.0116) (9.750,0.0109) (9.762,0.0103) (9.775,0.0097) (9.787,0.0091) (9.800,0.0085) (9.812,0.0079) (9.825,0.0074) (9.838,0.0068) (9.850,0.0063) (9.863,0.0057) (9.875,0.0052) (9.887,0.0046) (9.900,0.0041) (9.912,0.0036) (9.925,0.0030) (9.938,0.0025) (9.950,0.0020) (9.963,0.0015) (9.975,0.0010) (9.988,0.0005) (10.000,0.0000) (10.012,0.0005) (10.025,0.0010) (10.037,0.0015) (10.050,0.0020) (10.062,0.0025) (10.075,0.0030) (10.088,0.0035) (10.100,0.0040) (10.113,0.0045) (10.125,0.0050) (10.137,0.0055) (10.150,0.0060) (10.162,0.0065) (10.175,0.0070) (10.188,0.0075) (10.200,0.0080) (10.213,0.0085) (10.225,0.0091) (10.238,0.0096) (10.250,0.0101) (10.262,0.0107) (10.275,0.0112) (10.287,0.0118) (10.300,0.0123) (10.312,0.0129) (10.325,0.0135) (10.338,0.0141) (10.350,0.0147) (10.363,0.0153) (10.375,0.0159) (10.387,0.0165) (10.400,0.0172) (10.412,0.0179) (10.425,0.0185) (10.438,0.0192) (10.450,0.0199) (10.463,0.0207) (10.475,0.0214) (10.488,0.0222) (10.500,0.0229) (10.512,0.0238) (10.525,0.0246) (10.537,0.0254) (10.550,0.0263) (10.562,0.0272) (10.575,0.0282) (10.588,0.0291) (10.600,0.0302) (10.613,0.0312) (10.625,0.0323) (10.637,0.0334) (10.650,0.0346) (10.662,0.0358) (10.675,0.0371) (10.688,0.0384) (10.700,0.0398) (10.713,0.0413) (10.725,0.0428) (10.738,0.0444) (10.750,0.0461) (10.762,0.0479) (10.775,0.0498) (10.787,0.0518) (10.800,0.0540) (10.812,0.0562) (10.825,0.0586) (10.838,0.0612) (10.850,0.0639) (10.863,0.0669) (10.875,0.0701) (10.887,0.0735) (10.900,0.0772) (10.912,0.0812) (10.925,0.0856) (10.938,0.0904) (10.950,0.0957) (10.963,0.1015) (10.975,0.1080) (10.988,0.1152) (11.000,0.1233) (11.012,0.1324) (11.025,0.1427) (11.037,0.1546) (11.050,0.1682) (11.062,0.1840) (11.075,0.2025) (11.088,0.2242) (11.100,0.2497) (11.113,0.2797) (11.125,0.3144) (11.137,0.3529) (11.150,0.3923) (11.153,0.4000)};
+  \draw[bkOrange, line width=1.1pt, dash pattern=on 1.2pt off 1.2pt] plot coordinates {(11.208,0.4000) (11.213,0.3873) (11.225,0.3498) (11.238,0.3140) (11.250,0.2821) (11.262,0.2546) (11.275,0.2311) (11.287,0.2111) (11.300,0.1940) (11.312,0.1793) (11.325,0.1666) (11.338,0.1555) (11.350,0.1457) (11.363,0.1372) (11.375,0.1295) (11.387,0.1227) (11.400,0.1166) (11.412,0.1110) (11.425,0.1060) (11.438,0.1014) (11.450,0.0972) (11.463,0.0934) (11.475,0.0898) (11.488,0.0866) (11.500,0.0835) (11.512,0.0807) (11.525,0.0781) (11.537,0.0757) (11.550,0.0734) (11.562,0.0712) (11.575,0.0692) (11.588,0.0673) (11.600,0.0655) (11.700,0.0541) (11.909,0.0400) (12.118,0.0320) (12.327,0.0267) (12.536,0.0230) (12.745,0.0202) (12.955,0.0180) (13.164,0.0163) (13.373,0.0148) (13.582,0.0136) (13.791,0.0125) (14.000,0.0116)};
+  \draw[bkBlue, line width=1.5pt] plot coordinates {(6.000,0.0164) (6.200,0.0171) (6.400,0.0180) (6.600,0.0191) (6.800,0.0203) (7.000,0.0217) (7.200,0.0234) (7.400,0.0255) (7.600,0.0280) (7.800,0.0313) (8.000,0.0354) (8.200,0.0406) (8.400,0.0469) (8.600,0.0536) (8.650,0.0551) (8.662,0.0554) (8.675,0.0557) (8.688,0.0561) (8.700,0.0564) (8.713,0.0567) (8.725,0.0569) (8.738,0.0572) (8.750,0.0574) (8.763,0.0577) (8.775,0.0579) (8.787,0.0581) (8.800,0.0582) (8.812,0.0584) (8.825,0.0585) (8.838,0.0586) (8.850,0.0587) (8.863,0.0588) (8.875,0.0588) (8.888,0.0589) (8.900,0.0589) (8.912,0.0589) (8.925,0.0589) (8.938,0.0588) (8.950,0.0588) (8.963,0.0587) (8.975,0.0586) (8.988,0.0585) (9.000,0.0583) (9.013,0.0582) (9.025,0.0580) (9.037,0.0579) (9.050,0.0577) (9.062,0.0575) (9.075,0.0573) (9.088,0.0571) (9.100,0.0569) (9.113,0.0566) (9.125,0.0564) (9.138,0.0562) (9.150,0.0559) (9.162,0.0557) (9.175,0.0554) (9.188,0.0551) (9.200,0.0549) (9.213,0.0546) (9.225,0.0544) (9.238,0.0541) (9.250,0.0538) (9.262,0.0536) (9.275,0.0533) (9.287,0.0531) (9.300,0.0528) (9.312,0.0526) (9.325,0.0523) (9.338,0.0521) (9.350,0.0519) (9.363,0.0516) (9.375,0.0514) (9.387,0.0512) (9.400,0.0510) (9.412,0.0508) (9.425,0.0506) (9.438,0.0504) (9.450,0.0502) (9.463,0.0500) (9.475,0.0499) (9.488,0.0497) (9.500,0.0496) (9.512,0.0494) (9.525,0.0493) (9.537,0.0491) (9.550,0.0490) (9.562,0.0489) (9.575,0.0488) (9.588,0.0487) (9.600,0.0486) (9.613,0.0485) (9.625,0.0485) (9.637,0.0484) (9.650,0.0483) (9.662,0.0483) (9.675,0.0483) (9.688,0.0482) (9.700,0.0482) (9.713,0.0482) (9.725,0.0482) (9.738,0.0482) (9.750,0.0482) (9.762,0.0482) (9.775,0.0482) (9.787,0.0483) (9.800,0.0483) (9.812,0.0483) (9.825,0.0484) (9.838,0.0485) (9.850,0.0485) (9.863,0.0486) (9.875,0.0487) (9.887,0.0488) (9.900,0.0489) (9.912,0.0490) (9.925,0.0491) (9.938,0.0492) (9.950,0.0493) (9.963,0.0494) (9.975,0.0495) (9.988,0.0497) (10.000,0.0498) (10.012,0.0500) (10.025,0.0501) (10.037,0.0503) (10.050,0.0504) (10.062,0.0506) (10.075,0.0508) (10.088,0.0509) (10.100,0.0511) (10.113,0.0513) (10.125,0.0515) (10.137,0.0517) (10.150,0.0519) (10.162,0.0521) (10.175,0.0523) (10.188,0.0524) (10.200,0.0526) (10.213,0.0528) (10.225,0.0530) (10.238,0.0532) (10.250,0.0534) (10.262,0.0536) (10.275,0.0538) (10.287,0.0540) (10.300,0.0542) (10.312,0.0544) (10.325,0.0546) (10.338,0.0548) (10.350,0.0550) (10.363,0.0551) (10.375,0.0553) (10.387,0.0555) (10.400,0.0557) (10.412,0.0558) (10.425,0.0560) (10.438,0.0561) (10.450,0.0562) (10.463,0.0564) (10.475,0.0565) (10.488,0.0566) (10.500,0.0567) (10.512,0.0568) (10.525,0.0569) (10.537,0.0570) (10.550,0.0570) (10.562,0.0571) (10.575,0.0571) (10.588,0.0571) (10.600,0.0571) (10.613,0.0572) (10.625,0.0571) (10.637,0.0571) (10.650,0.0571) (10.662,0.0570) (10.675,0.0570) (10.688,0.0569) (10.700,0.0568) (10.713,0.0567) (10.725,0.0566) (10.738,0.0565) (10.750,0.0563) (10.762,0.0562) (10.775,0.0560) (10.787,0.0558) (10.800,0.0556) (10.812,0.0554) (10.825,0.0552) (10.838,0.0550) (10.850,0.0547) (10.863,0.0545) (10.875,0.0542) (10.887,0.0540) (10.900,0.0537) (10.912,0.0534) (10.925,0.0531) (10.938,0.0528) (10.950,0.0525) (10.963,0.0522) (10.975,0.0519) (10.988,0.0515) (11.000,0.0512) (11.012,0.0508) (11.025,0.0505) (11.037,0.0501) (11.050,0.0498) (11.062,0.0494) (11.075,0.0491) (11.088,0.0487) (11.100,0.0483) (11.113,0.0480) (11.125,0.0476) (11.137,0.0472) (11.150,0.0468) (11.162,0.0465) (11.175,0.0461) (11.188,0.0457) (11.200,0.0453) (11.213,0.0450) (11.225,0.0446) (11.238,0.0442) (11.250,0.0438) (11.262,0.0435) (11.275,0.0431) (11.287,0.0427) (11.300,0.0424) (11.312,0.0420) (11.325,0.0416) (11.338,0.0413) (11.350,0.0409) (11.363,0.0405) (11.375,0.0402) (11.387,0.0398) (11.400,0.0395) (11.412,0.0391) (11.425,0.0388) (11.438,0.0385) (11.450,0.0381) (11.463,0.0378) (11.475,0.0375) (11.488,0.0371) (11.500,0.0368) (11.512,0.0365) (11.525,0.0362) (11.537,0.0359) (11.550,0.0356) (11.562,0.0352) (11.575,0.0349) (11.588,0.0346) (11.600,0.0343) (11.700,0.0321) (11.909,0.0280) (12.118,0.0247) (12.327,0.0220) (12.536,0.0198) (12.745,0.0179) (12.955,0.0163) (13.164,0.0150) (13.373,0.0138) (13.582,0.0128) (13.791,0.0119) (14.000,0.0112)};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:11.4,0.30) {重りなし（破線）};
+  \node[font=\sffamily\footnotesize, anchor=east, fill=white, inner sep=1pt] at (axis cs:8.75,0.30) {同調だけ（点線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:11.9,0.07) {最適（実線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ビルの模型（$\zeta=0.01$）の共振曲線（横の軸はゆする角振動数）。重りなしでは $\omega=10$ に高い山が1つ。ダンパーのない重りを同調させると（点線）、$\omega=10$ ではビルが止まるが、両側の8.94と11.18に新しい山ができる。重りのダンパーとばねを最適に選ぶと（実線）、山は低くなだらかになる（Python で計算）。}\label{ph:波-3:fig-tmdcurve}
+\end{bkfigure}
+
+\noindent けれども、ダンパーのない重りは役に立ちません。風や地震は、いろいろな振動数をふくんでいるので、新しくできた2つの山のどちらかでゆすられると、またビルが大きくゆれてしまうからです（図\ref{ph:波-3:fig-tmdcurve}の点線）。
+
+\phboxhead{ダンパーを入れて、山をならす：最適な同調}
+重りにダンパーをつけると、2つの山は低くなります。ダンパーが弱すぎると山が2つ高く残り、強すぎると重りがビルにくっついて動かなくなり（1つの山にもどる）、効きません。ちょうどよい所があるのです。デン・ハルトフは、2つの山の高さがそろって、いちばん低くなる選び方を求めました。
+\pheq{\frac{\omega_{\mathrm a}}{\omega_{\mathrm n}}=\frac{1}{1+\mu},\qquad\zeta_{\mathrm a}=\sqrt{\frac{3\mu}{8(1+\mu)^3}}}{1}
+$\zeta_{\mathrm a}=c_2/(2m_2\omega_{\mathrm a})$ は、重りの減衰比です。このとき、ビルのゆれの山の高さは、ビルにもともとダンパーがなければ、静たわみのおよそ $\sqrt{1+2/\mu}$ 倍になります。式の導き方は、振動学の専門の本で扱います（どの共振曲線も通る2つの「定点」の高さをそろえる、という方法です）。
+
+$\mu=0.05$ なら、$\omega_{\mathrm a}/\omega_{\mathrm n}=1/1.05\approx0.952$、$\zeta_{\mathrm a}\approx0.127$ です（\bkreidairef{9}）。③で使った重りのばね $k_2=\qty{4.54}{N/m}$ は、$m_2\omega_{\mathrm a}^2=0.05\times9.52^2$ です。ダンパー $c_2=\qty{0.121}{N.s/m}$ は、$2\zeta_{\mathrm a}m_2\omega_{\mathrm a}$ に数を入れたものです。重りのゆれを、ビルより\textbf{少しだけ遅く}するのがこつです。山の高さは $\sqrt{1+2\div0.05}=\sqrt{41}\approx6.4$ 倍で、ダンパーのないビルの共振（かぎりなく大きい）や、$\zeta=0.01$ のビルの50倍とくらべて、ずっと小さくなります（図\ref{ph:波-3:fig-tmdcurve}では5.9倍）。
+
+\phboxhead{Python で共振曲線を計算する}
+ゆすり続けて落ち着いたゆれは、6-13 と同じく複素振幅で求められます。ビルと重りの複素振幅を $\vec X=(X_1,\ X_2)$ として $\vec x=\vec Xe^{j\omega t}$（の実部）を③の運動方程式に入れると、ダンパーの行列 $\mathbf C$ を使って
+\[(\mathbf K-\omega^2\mathbf M+j\omega\mathbf C)\vec X=\begin{pmatrix}F_0\\0\end{pmatrix}\]
+の連立1次方程式（7-5）になります。$\mathbf C$ は、$\mathbf K$ と同じ作り方で、ばねの強さのかわりにダンパーの強さ（$c_1$・$c_2$）を入れた行列です。複素数のまま numpy で解けます（$F_0=\qty{1}{N}$）。
+\begin{phcode}[Python]
+import numpy as np
+m1, k1, c1 = 1.0, 100.0, 0.2       \# ビル
+m2, k2, c2 = 0.05, 4.54, 0.121     \# 重り（最適）
+for w in [9.0, 10.0, 11.0]:
+    A = np.array([[k1+k2-m1*w**2+1j*w*(c1+c2), -(k2+1j*w*c2)],
+                  [-(k2+1j*w*c2), k2-m2*w**2+1j*w*c2]])
+    X = np.linalg.solve(A, [1.0, 0.0])
+    print(w, round(abs(X[0]), 4), round(abs(X[1]), 4))
+\end{phcode}
+\begin{phcodeout}
+9.0 0.0585 0.2288
+10.0 0.0497 0.1802
+11.0 0.0512 0.1202
+\end{phcodeout}
+左から $\omega$〔rad/s〕、ビルのゆれ $|X_1|$、重りのゆれ $|X_2|$〔m〕です。\texttt{1j} は虚数単位 $j$（6-8）です。$\omega=10$ のビルのゆれ\qty{0.0497}{m}は、③の表計算の約\qty{0.05}{m}と合います。$\omega$ を6から14まで細かく変えて計算した線が、図\ref{ph:波-3:fig-tmdcurve}の実線です。重りは、どの $\omega$ でもビルの何倍もゆれて、ゆれを引き受けています。
+
+\begin{phbaisuru}{質量比 $\mu$}
+重りを重くすると、2つに分かれた振動数のはばが広がり（$\mu=0.05$ で0.894と1.118、$\mu=0.10$ で0.854と1.171）、最適にしたときの山も低くなります（$\sqrt{1+2/\mu}$ が6.4から4.6へ）。でも、重りが重いほど建物を支える柱が太くなり、お金もかかります。実際の建物では、$\mu$ は数 \% 以下にすることが多いです。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=44mm, xmin=0, xmax=0.21, ymin=0.75, ymax=1.28, xtick={0.05,0.10,0.15,0.20}, ytick={0.8,0.9,1,1.1,1.2}, xticklabel style={/pgf/number format/fixed}, xlabel={質量比 $\mu$}, ylabel={$\omega/\omega_{\mathrm n}$}]
+  \addplot[bkcurve, domain=0.001:0.21, samples=80] {sqrt((2+x+sqrt(x*x+4*x))/2)};
+  \addplot[bkcurve2, domain=0.001:0.21, samples=80] {sqrt((2+x-sqrt(x*x+4*x))/2)};
+  \fill[bkRed] (axis cs:0.05,1.118) circle (1.6pt) (axis cs:0.05,0.894) circle (1.6pt) (axis cs:0.10,1.171) circle (1.6pt) (axis cs:0.10,0.854) circle (1.6pt);
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:0.12,1.12) {上の山};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:0.12,0.87) {下の山};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\phboxhead{ふりこの形の動吸振器}
+台北101 の重りは、ばねではなく、つり下げたふりこです。ふりこの固有角振動数は $\sqrt{g/l}$（波-1）なので、ばねの強さのかわりに、つるす長さ $l$ で同調させます。ビルの1次モードの周期を $T_{\mathrm b}$ とすると、重りの周期を $T_{\mathrm b}(1+\mu)$ にすればよいので、
+\[l=g\Bigl(\frac{T_{\mathrm b}(1+\mu)}{2\pi}\Bigr)^2\]
+です。周期\qty{6.0}{s}のビル（仮の値）、$\mu=0.05$ なら、約\qty{9.9}{m}です（\bkreidairef{9}）。高いビルほど周期が長いので、長いふりこが要り、何階分もの高さを使います。
+
+\begin{phmodel}[2自由度の動吸振器]
+\phignore{ビルの2次から先のモード。重りの大きなふれ（$\sin\theta\approx\theta$ とした）。}
+\phassume{ビルは1次モードだけの1自由度（質量 $m_1$ は、1次モードに効く質量）。ばね・ダンパーは線形。}
+\phlimit{ビルの1次モードの振動数が、季節（温度）や、人・物の重さで少し変わり、同調がずれるとき。強い地震で、重りが大きくふれるとき。}
+\end{phmodel}
+
+\bksubsection{7}{モード座標でほどく・モード解析}
+\label{ph:波-3:sec7}
+7-9 では、6-14 の台車の位置を「モードの物差し」で読みなおし、からみあった式をばらばらの式にほどきました。質量がちがうときも、同じことができます。$n$ 自由度のモードの形を $\vec v_1$、$\vec v_2$、…、$\vec v_n$ とし、位置をモードのたし算で書きます。
+\pheq{\vec x=\eta_1\vec v_1+\eta_2\vec v_2+\cdots+\eta_n\vec v_n}{m}
+$\eta_i$（イータ）は、それぞれのモードがどれだけまざっているかを表す数で、\textbf{モード座標}といいます（7-9 の $\vec q$ と同じ。この章では一般化座標 $q$ と区別して $\eta$ と書きます）。\bkidx{もーどざひょう}{モード座標}
+
+これを $\mathbf M\ddot{\vec x}+\mathbf K\vec x=\vec 0$ に入れ、左から $\vec v_j^{\mathsf T}$（$\vec v_j$ を転置した行ベクトル、7-1）をかけると、⑧で示すモードの直交
+\[\vec v_j^{\mathsf T}\mathbf M\vec v_i=0,\qquad\vec v_j^{\mathsf T}\mathbf K\vec v_i=0\qquad(i\neq j)\]
+のおかげで、$j$ 番め以外の項がすべて消えて、
+\pheq{\tilde m_j\ddot\eta_j+\tilde k_j\eta_j=0\qquad\tilde m_j=\vec v_j^{\mathsf T}\mathbf M\vec v_j,\quad\tilde k_j=\vec v_j^{\mathsf T}\mathbf K\vec v_j}{N}
+となります。$\tilde m_j$ を\textbf{モード質量}、$\tilde k_j$ を\textbf{モードこわさ}とよびます。それぞれのモードは、質量 $\tilde m_j$ とばね $\tilde k_j$ の\textbf{1自由度の振動}（波-1）と同じで、
+\pheq{\omega_j=\sqrt{\frac{\tilde k_j}{\tilde m_j}}=\sqrt{\frac{\vec v_j^{\mathsf T}\mathbf K\vec v_j}{\vec v_j^{\mathsf T}\mathbf M\vec v_j}}}{rad/s}
+でゆれます。たとえば⑤の台車の1次モード $\vec v_1=(1,\ 2)$ では、$\tilde m_1=2\times1^2+1\times2^2=6$、$\tilde k_1=300$（\bkreidairef{12}）で、$\omega_1=\sqrt{300/6}=\sqrt{50}$ と、⑤の答えに合います。
+
+\begin{phflow}[モードに分ける]
+\phflowrow{$\mathbf M\ddot{\vec x}+\mathbf K\vec x=\vec 0$}{$\vec x=\sum\eta_j\vec v_j$\\モードの直交（⑧）}{$\tilde m_j\ddot\eta_j+\tilde k_j\eta_j=0$}
+\phflowrow{$\tilde m_j\ddot\eta_j+\tilde k_j\eta_j=0$}{1つのモードだけ\\はじめ $A$ で静止}{$\eta_j=A\cos\omega_jt$（波-1）}
+\end{phflow}
+
+\phboxhead{はじめの形から、動きを求める}
+はじめの位置 $\vec x(0)$ がわかれば、はじめの $\eta_j$ は、$\vec v_j^{\mathsf T}\mathbf M$ をかけて
+\[\eta_j(0)=\frac{\vec v_j^{\mathsf T}\mathbf M\,\vec x(0)}{\tilde m_j}\]
+で求まります（ほかのモードの項が直交で消える）。6-14 の台車（$\mathbf M=I$、$\vec v_1=(1,\ 1)$、$\vec v_2=(1,\ -1)$）で台車1だけを0.1引くと、$\eta_1(0)=0.1\div2=0.05$、$\eta_2(0)=0.05$ で、②の「どんなゆれも、モードのたし算」と同じです（\bkreidairef{11}）。
+
+\phboxhead{モード解析：測ってモードを見つける}
+本物の建物や機械では、質量行列やこわさ行列を正確に作れないことがよくあります（つなぎ目のかたさ、壁や家具の重さ）。そこで、実物をたたいたり、小さくゆすったりして、ゆれを測り、固有振動数・モードの形・減衰比を、モードごとに求めます。これを\textbf{モード解析}（実験モード解析）といいます。\bkidx{もーどかいせき}{モード解析}
+
+図\ref{ph:波-3:fig-frf}のように、ゆする振動数を変えてゆれの大きさをグラフにすると、固有振動数の所に山が並びます。それぞれの山の近くでは、ほぼそのモードだけがゆれるので、各階で測ったゆれの比が、そのモードの形です。実際には、ハンマーで1回たたいて、その後のゆれを 9-4 の FFT で振動数ごとに分ける方法がよく使われます（波-11）。自動車のボディ、飛行機のつばさ、橋、ギターの胴なども、この方法で調べます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=100mm, height=52mm, xmin=0.2, xmax=3.4, ymin=-2.2, ymax=1.7, xtick={0.5,1,1.5,2,2.5,3}, ytick={-2,-1,0,1}, yticklabels={0.01,0.1,1,10}, xlabel={ゆする振動数 $f$（Hz）}, ylabel={屋上のゆれの倍率}]
+  \draw[bkBlue, line width=1.2pt] plot coordinates {(0.200,0.0334) (0.210,0.0370) (0.220,0.0408) (0.230,0.0448) (0.240,0.0491) (0.250,0.0536) (0.260,0.0583) (0.270,0.0632) (0.280,0.0685) (0.290,0.0739) (0.300,0.0797) (0.310,0.0858) (0.320,0.0921) (0.330,0.0988) (0.340,0.1058) (0.350,0.1131) (0.360,0.1208) (0.370,0.1288) (0.380,0.1373) (0.390,0.1462) (0.400,0.1555) (0.410,0.1653) (0.420,0.1756) (0.430,0.1865) (0.440,0.1979) (0.450,0.2099) (0.460,0.2226) (0.470,0.2360) (0.480,0.2502) (0.490,0.2652) (0.500,0.2811) (0.510,0.2980) (0.520,0.3160) (0.530,0.3353) (0.540,0.3559) (0.550,0.3780) (0.560,0.4017) (0.570,0.4275) (0.580,0.4554) (0.590,0.4859) (0.600,0.5194) (0.610,0.5564) (0.620,0.5977) (0.630,0.6442) (0.640,0.6972) (0.650,0.7584) (0.660,0.8305) (0.670,0.9172) (0.680,1.0239) (0.690,1.1558) (0.700,1.3003) (0.710,1.3546) (0.720,1.2389) (0.730,1.0853) (0.740,0.9542) (0.750,0.8468) (0.760,0.7572) (0.770,0.6807) (0.780,0.6139) (0.790,0.5547) (0.800,0.5014) (0.810,0.4529) (0.820,0.4084) (0.830,0.3672) (0.840,0.3287) (0.850,0.2927) (0.860,0.2587) (0.870,0.2265) (0.880,0.1959) (0.890,0.1667) (0.900,0.1388) (0.910,0.1120) (0.920,0.0862) (0.930,0.0613) (0.940,0.0372) (0.950,0.0139) (0.960,-0.0087) (0.970,-0.0307) (0.980,-0.0521) (0.990,-0.0730) (1.000,-0.0935) (1.010,-0.1135) (1.020,-0.1330) (1.030,-0.1523) (1.040,-0.1711) (1.050,-0.1897) (1.060,-0.2080) (1.070,-0.2260) (1.080,-0.2438) (1.090,-0.2614) (1.100,-0.2788) (1.110,-0.2960) (1.120,-0.3131) (1.130,-0.3300) (1.140,-0.3469) (1.150,-0.3636) (1.160,-0.3803) (1.170,-0.3969) (1.180,-0.4135) (1.190,-0.4301) (1.200,-0.4466) (1.210,-0.4632) (1.220,-0.4799) (1.230,-0.4966) (1.240,-0.5133) (1.250,-0.5302) (1.260,-0.5472) (1.270,-0.5644) (1.280,-0.5818) (1.290,-0.5993) (1.300,-0.6171) (1.310,-0.6352) (1.320,-0.6536) (1.330,-0.6723) (1.340,-0.6915) (1.350,-0.7110) (1.360,-0.7311) (1.370,-0.7518) (1.380,-0.7730) (1.390,-0.7950) (1.400,-0.8177) (1.410,-0.8413) (1.420,-0.8660) (1.430,-0.8918) (1.440,-0.9188) (1.450,-0.9473) (1.460,-0.9776) (1.470,-1.0097) (1.480,-1.0442) (1.490,-1.0812) (1.500,-1.1213) (1.510,-1.1650) (1.520,-1.2130) (1.530,-1.2660) (1.540,-1.3246) (1.550,-1.3892) (1.560,-1.4590) (1.570,-1.5296) (1.580,-1.5888) (1.590,-1.6150) (1.600,-1.5927) (1.610,-1.5317) (1.620,-1.4544) (1.630,-1.3756) (1.640,-1.3013) (1.650,-1.2328) (1.660,-1.1700) (1.670,-1.1122) (1.680,-1.0586) (1.690,-1.0085) (1.700,-0.9613) (1.710,-0.9166) (1.720,-0.8739) (1.730,-0.8328) (1.740,-0.7930) (1.750,-0.7543) (1.760,-0.7163) (1.770,-0.6790) (1.780,-0.6420) (1.790,-0.6052) (1.800,-0.5683) (1.810,-0.5313) (1.820,-0.4938) (1.830,-0.4558) (1.840,-0.4169) (1.850,-0.3771) (1.860,-0.3359) (1.870,-0.2933) (1.880,-0.2488) (1.890,-0.2022) (1.900,-0.1531) (1.910,-0.1013) (1.920,-0.0465) (1.930,0.0113) (1.940,0.0716) (1.950,0.1327) (1.960,0.1909) (1.970,0.2394) (1.980,0.2689) (1.990,0.2722) (2.000,0.2500) (2.010,0.2104) (2.020,0.1623) (2.030,0.1122) (2.040,0.0634) (2.050,0.0174) (2.060,-0.0255) (2.070,-0.0651) (2.080,-0.1019) (2.090,-0.1359) (2.100,-0.1675) (2.110,-0.1971) (2.120,-0.2247) (2.130,-0.2506) (2.140,-0.2751) (2.150,-0.2982) (2.160,-0.3202) (2.170,-0.3411) (2.180,-0.3610) (2.190,-0.3800) (2.200,-0.3983) (2.210,-0.4159) (2.220,-0.4328) (2.230,-0.4491) (2.240,-0.4649) (2.250,-0.4802) (2.260,-0.4951) (2.270,-0.5095) (2.280,-0.5236) (2.290,-0.5373) (2.300,-0.5508) (2.310,-0.5639) (2.320,-0.5768) (2.330,-0.5895) (2.340,-0.6019) (2.350,-0.6142) (2.360,-0.6263) (2.370,-0.6382) (2.380,-0.6501) (2.390,-0.6618) (2.400,-0.6734) (2.410,-0.6850) (2.420,-0.6965) (2.430,-0.7080) (2.440,-0.7195) (2.450,-0.7310) (2.460,-0.7425) (2.470,-0.7541) (2.480,-0.7657) (2.490,-0.7774) (2.500,-0.7893) (2.510,-0.8014) (2.520,-0.8136) (2.530,-0.8260) (2.540,-0.8387) (2.550,-0.8517) (2.560,-0.8650) (2.570,-0.8787) (2.580,-0.8928) (2.590,-0.9075) (2.600,-0.9227) (2.610,-0.9385) (2.620,-0.9550) (2.630,-0.9723) (2.640,-0.9905) (2.650,-1.0096) (2.660,-1.0296) (2.670,-1.0506) (2.680,-1.0725) (2.690,-1.0949) (2.700,-1.1173) (2.710,-1.1388) (2.720,-1.1575) (2.730,-1.1708) (2.740,-1.1752) (2.750,-1.1669) (2.760,-1.1430) (2.770,-1.1032) (2.780,-1.0497) (2.790,-0.9863) (2.800,-0.9167) (2.810,-0.8443) (2.820,-0.7718) (2.830,-0.7017) (2.840,-0.6370) (2.850,-0.5807) (2.860,-0.5363) (2.870,-0.5060) (2.880,-0.4903) (2.890,-0.4875) (2.900,-0.4944) (2.910,-0.5078) (2.920,-0.5249) (2.930,-0.5438) (2.940,-0.5633) (2.950,-0.5826) (2.960,-0.6012) (2.970,-0.6191) (2.980,-0.6361) (2.990,-0.6522) (3.000,-0.6674) (3.010,-0.6817) (3.020,-0.6953) (3.030,-0.7082) (3.040,-0.7205) (3.050,-0.7321) (3.060,-0.7432) (3.070,-0.7538) (3.080,-0.7640) (3.090,-0.7737) (3.100,-0.7830) (3.110,-0.7920) (3.120,-0.8007) (3.130,-0.8090) (3.140,-0.8171) (3.150,-0.8249) (3.160,-0.8325) (3.170,-0.8398) (3.180,-0.8470) (3.190,-0.8539) (3.200,-0.8607) (3.210,-0.8673) (3.220,-0.8737) (3.230,-0.8800) (3.240,-0.8861) (3.250,-0.8922) (3.260,-0.8980) (3.270,-0.9038) (3.280,-0.9095) (3.290,-0.9150) (3.300,-0.9204) (3.310,-0.9258) (3.320,-0.9311) (3.330,-0.9362) (3.340,-0.9413) (3.350,-0.9463) (3.360,-0.9512) (3.370,-0.9561) (3.380,-0.9609) (3.390,-0.9656) (3.400,-0.9702)};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:0.78,1.3) {1次 \qty{0.71}{Hz}};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:2.05,0.35) {2次 \qty{1.98}{Hz}};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:2.89,-0.4) {3次};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{3階建ての模型（図\ref{ph:波-3:fig-bldmode}、各モードの減衰比0.02）の屋上を、振動数を変えてゆすったときの、屋上のゆれ（静たわみの何倍か。ゆっくりゆすったときを1とする。たての目もりは10倍ごと、3-12）。山の位置が固有振動数。山の高さとはばから減衰比を、各階のゆれの比からモードの形を読みとる。}\label{ph:波-3:fig-frf}
+\end{bkfigure}
+
+\bksubsection{8}{モードの直交：質量で重みをつける}
+\label{ph:波-3:sec8}
+7-8⑨ では、対称な行列の固有ベクトルは直交する（内積が0）ことを学びました。6-14 の台車の $(1,\ 1)$ と $(1,\ -1)$ は直交していました。ところが、⑤の質量がちがう台車のモード $\vec v_1=(1,\ 2)$ と $\vec v_2=(1,\ -1)$ の内積は $1\times1+2\times(-1)=-1$ で、0ではありません。$\mathbf M^{-1}\mathbf K$ が対称でないからです。
+
+そこで、内積の計算に質量の重みをつけます。
+\[\vec v_1^{\mathsf T}\mathbf M\vec v_2=m_1\times1\times1+m_2\times2\times(-1)=2-2=0\]
+こんどは0になりました。モードは、\textbf{質量で重みをつけた内積}で直交しているのです。\bkidx{ちょっこう}{直交（モードの）}
+
+\phboxhead{なぜ、いつも0になるのか}
+2つのモード $(\omega_i,\ \vec v_i)$、$(\omega_j,\ \vec v_j)$（$\omega_i\neq\omega_j$）を考えます。
+\begin{bkhenkei}[0.5]
+\mathbf K\vec v_i=\omega_i^2\mathbf M\vec v_i & モード $i$ の式（⑤） \\
+\vec v_j^{\mathsf T}\mathbf K\vec v_i=\omega_i^2\,\vec v_j^{\mathsf T}\mathbf M\vec v_i & 左から $\vec v_j^{\mathsf T}$ をかけた \\
+\vec v_i^{\mathsf T}\mathbf K\vec v_j=\omega_j^2\,\vec v_i^{\mathsf T}\mathbf M\vec v_j & $i$ と $j$ を入れかえた式 \\
+\vec v_j^{\mathsf T}\mathbf K\vec v_i=\vec v_i^{\mathsf T}\mathbf K\vec v_j & $\mathbf K$ が対称なので等しい \\
+(\omega_i^2-\omega_j^2)\,\vec v_j^{\mathsf T}\mathbf M\vec v_i=0 & 2行め$-$3行め（$\mathbf M$ も対称） \\
+\vec v_j^{\mathsf T}\mathbf M\vec v_i=0 & $\omega_i^2\neq\omega_j^2$ なので \\
+\end{bkhenkei}
+2行めにもどせば $\vec v_j^{\mathsf T}\mathbf K\vec v_i=0$ もわかります。使ったのは、$\mathbf M$ と $\mathbf K$ が対称な行列であることだけです。$\mathbf M$ と $\mathbf K$ が対称なのは、運動エネルギーと位置エネルギーを2乗の形 $\tfrac12\dot{\vec x}^{\mathsf T}\mathbf M\dot{\vec x}$、$\tfrac12\vec x^{\mathsf T}\mathbf K\vec x$ で書けるからで、その根っこには「台車1が台車2を押す力と、台車2が台車1を押す力は等しい」という作用・反作用（力-2）があります。
+
+\begin{phyomi}[$\vec v_j^{\mathsf T}\mathbf M\vec v_i=0$]
+「あるモードでゆれているときの慣性の力（$-\omega_i^2\mathbf M\vec v_i$）は、ほかのモードの形に動いても仕事をしない」。だから、1つのモードだけでゆらし始めると、ほかのモードにはエネルギーが移らず、いつまでもそのモードだけでゆれます（③で、同じ向き・反対向きにずらしたとき、ゆれが移らなかったわけ）。
+\end{phyomi}
+
+\bksubsection{9}{ロボットの腕とクレーン}
+\label{ph:波-3:sec9}
+ラグランジュの式は、角を使う機械で、とくに力を発揮します。
+
+\phboxhead{1本の腕をモーターで回す}
+関節のモーターが、長さ $l_1$、質量 $m_1$ の一様な腕（棒）を、真下から測った角 $\theta$ だけ回し、腕の先に質量 $m$ の荷を持っているとします（力-7 の腕を、たての面で動かす）。腕の関節のまわりの慣性モーメントは $I_1=\tfrac13m_1l_1^{\,2}$（力-6）、荷の速さは $l_1\dot\theta$ なので、
+\[K=\frac12\bigl(I_1+ml_1^{\,2}\bigr)\dot\theta^2,\qquad U=-\Bigl(\frac{m_1}{2}+m\Bigr)gl_1\cos\theta\]
+（腕の重心は関節から $l_1/2$）。モーターのトルク $\tau$ は、$\theta$ を $\delta\theta$ 回すと $\tau\,\delta\theta$ の仕事をするので、一般化力は $Q=\tau$ です。ラグランジュの式から、
+\pheq{\bigl(I_1+ml_1^{\,2}\bigr)\ddot\theta+\Bigl(\frac{m_1}{2}+m\Bigr)gl_1\sin\theta=\tau}{N·m}
+1つめの項は「回す速さを変えるのに要るトルク」、2つめの項は「重力に逆らって腕と荷を支えるのに要るトルク」です。腕が水平（$\theta=90°$）のとき、重力の項がいちばん大きくなります（\bkreidairef{10}）。
+
+\phboxhead{2本の腕：質量行列が姿勢で変わる}
+腕が2本（肩とひじ）になると、角 $\theta_1$・$\theta_2$ の2自由度です。手の位置は力-7 の順運動学の式で、その速さの2乗から $K$ を作ると、
+\[K=\frac12\begin{pmatrix}\dot\theta_1&\dot\theta_2\end{pmatrix}\mathbf M(\theta_2)\begin{pmatrix}\dot\theta_1\\\dot\theta_2\end{pmatrix}\]
+の形になります。$\mathbf M(\theta_2)$ は2×2の対称な行列（慣性行列）で、成分に $\cos\theta_2$ がふくまれ、ひじの曲げ方で変わります。腕をのばしているほど、肩のまわりに回しにくい（慣性モーメントが大きい）からです。ラグランジュの式から、
+\[\mathbf M(\theta_2)\begin{pmatrix}\ddot\theta_1\\\ddot\theta_2\end{pmatrix}+\bigl(\text{速さの2乗の項}\bigr)+\bigl(\text{重力の項}\bigr)=\begin{pmatrix}\tau_1\\\tau_2\end{pmatrix}\]
+が出てきます。「速さの2乗の項」は、片方の腕を回すと、もう一方の腕がふり回される遠心力のような力（力-7）です。ロボットの制御では、この式で、目標の動きに要るトルクを計算してモーターに送ります（波-4）。くわしい式は、ロボット工学の専門の本で扱います。
+
+\phboxhead{クレーン：台車とつり荷}
+天井クレーンの台車（質量 $M_{\mathrm t}$、レールの上の位置 $x$）から、長さ $l$ のロープで荷（質量 $m$）をつるし、ロープのふれの角を $\theta$ とします（図\ref{ph:波-3:fig-lag}）。荷の位置は $(x+l\sin\theta,\ -l\cos\theta)$ なので、その速さの2乗は $\dot x^2+2l\dot x\dot\theta\cos\theta+l^2\dot\theta^2$ です。
+\[K=\frac12M_{\mathrm t}\dot x^2+\frac12m\bigl(\dot x^2+2l\dot x\dot\theta\cos\theta+l^2\dot\theta^2\bigr),\qquad U=-mgl\cos\theta\]
+小さなふれ（$\cos\theta\approx1$、$\sin\theta\approx\theta$）で、台車を押す力がないとき、ラグランジュの式は
+\[(M_{\mathrm t}+m)\ddot x+ml\ddot\theta=0,\qquad ml\ddot x+ml^2\ddot\theta+mgl\theta=0\]
+です。1つめの式は「全体の運動量が変わらない」（力-3）ことを表しています。1つめから $\ddot x=-ml\ddot\theta/(M_{\mathrm t}+m)$ を2つめに入れると、
+\pheq{\ddot\theta=-\frac{g}{l}\Bigl(1+\frac{m}{M_{\mathrm t}}\Bigr)\theta\qquad\omega=\sqrt{\frac{g}{l}\Bigl(1+\frac{m}{M_{\mathrm t}}\Bigr)}}{1/s$^2$}
+です。台車が止まっている（とても重い）ときは $\omega=\sqrt{g/l}$ の、ふつうのふりこです。ロープ\qty{20}{m}なら周期は約\qty{9.0}{s}です（波-1）。台車が自由に動けて、荷が台車の半分の重さなら、周期は約\qty{7.3}{s}に短くなります。荷がゆれると、台車が反対向きにゆれ返すからです。
+
+\begin{phmijika}[クレーンの運転手のわざ]
+クレーンで荷を運ぶとき、上手な運転手は、荷がゆれないように台車を動かします。動き始めと止まる前に、荷のゆれの周期に合わせて台車の加速を調節すると、着いたときにゆれがちょうど消えます。今では、この計算を機械にさせて、ゆれをおさえながら速く運ぶクレーンもあります（波-4 のフィードバック制御）。
+\end{phmijika}
+
+\bksubsection{10}{エネルギーで見る：ハミルトンの形}
+\label{ph:波-3:sec10}
+ラグランジュの式には、もう1つの書き方があります。
+
+\begin{motto}[5]
+\par\addvspace{3pt}\noindent\textbf{運動量と全体のエネルギーで書く}\par\vspace{3pt}\noindent
+$p=\partial L/\partial\dot q$ を、$q$ にともなう\textbf{一般化運動量}といいます（$q=x$ ならふつうの運動量 $m\dot x$、$q=\theta$ なら角運動量 $ml^2\dot\theta$）。全体のエネルギー $H=K+U$ を、$q$ と $p$ で書いたものを\textbf{ハミルトニアン}といい（ばねなら $H=p^2/(2m)+\tfrac12kq^2$）、運動は
+\[\dot q=\frac{\partial H}{\partial p},\qquad\dot p=-\frac{\partial H}{\partial q}\]
+の、1回微分の式2つにしたがいます（ハミルトン、1834〜1835年）。ばねなら $\dot q=p/m$、$\dot p=-kq$ で、9-10 の状態方程式と同じ形です。$q$ と $p$ を横とたての軸にとった平面（9-10 の状態の平面）の上で、ばねの動きは $H$ が一定のだ円をまわります。この形は、エネルギーが保存されることが見やすく、コンピュータで長い時間の動きを計算するときの工夫（波-1・力-16 の「速度を先に進めるオイラー法」が、ばねでふくらまないわけ）や、原子の世界の物理（量子力学）の出発点になっています（物理シリーズの『原子』）。
+\end{motto}
+
+\begin{phmada}[建物のゆれは、どこまで正しく予測できる？]
+建物の質量とこわさから、固有振動数やモードの形は、かなりよく計算できるようになりました。けれども、ゆれがどれだけ速くおさまるか（モードごとの減衰比）は、設計図から正しく予測することが今もできていません。柱とはりのつなぎ目のこすれ、壁や天井の板、家具、地面へ逃げていくゆれなど、たくさんの小さな原因が重なっているからです。実際のビルの減衰比は、数 \% 以下と小さいことが多いのですが、同じような建物でもばらつきます。そのため、大事な建物では、できあがってから実物をゆすって測り（⑦のモード解析）、動吸振器の同調やダンパーの強さを合わせなおします。ゆれが大きくなると減衰比が変わることも知られていて、強い地震や台風のときの値をどう見積もるかは、研究が続いています。
+\end{phmada}
+
+\begin{phsaki}{多自由度の振動の、その先}
+この章では、ばねとおもりの数が数個の場合を扱いました。機械や建物の専門の本では、つながった部分が何万・何百万もある形を、有限要素法（力-16）で質量行列とこわさ行列にして、この章と同じ固有値問題を、コンピュータで解きます。自由度を限りなくふやして、弦や棒のように「どこもゆれる」物にすると、モードは無限に多くなり、波の式（波動方程式、波-5）と定在波（波-6）になります。ゆれが大きくて、ばねが比例しなくなると、2重ふりこのように、はじめのわずかな違いが大きく広がる動き（カオス、6-14 のコラム）も現れます。分子の中の原子のゆれ（分子の振動）も多自由度の振動で、その振動数の測定は、物質を調べる道具になっています（物理シリーズの『原子』）。
+\end{phsaki}
+
+\begin{senmonsho}[振動学の専門書の書き方]
+\begin{bkhonbun}
+$n$ 自由度系の運動方程式は $\symbfit M\ddot{\symbfit x}+\symbfit C\dot{\symbfit x}+\symbfit K\symbfit x=\symbfit f$ で表される．非減衰自由振動 $\symbfit x=\symbfit\phi\,e^{j\omega t}$ を仮定すると，一般化固有値問題 $(\symbfit K-\omega^2\symbfit M)\symbfit\phi=\symbfit 0$ が得られる．固有モード $\symbfit\phi_r$ は質量行列および剛性行列に関して直交し，$\symbfit\phi_r^{\mathsf T}\symbfit M\symbfit\phi_s=m_r\delta_{rs}$ をみたす．
+\end{bkhonbun}
+\bkyaku{太字の $\symbfit x$ は、この本の $\vec x$。$\symbfit C$ はダンパーを並べた減衰行列。$e^{j\omega t}$ は、$\cos\omega t$ の代わりに複素数（6-10）で書いたもの。「一般化固有値問題」は、$\mathbf M$ がはいった固有値問題（⑤）。$\symbfit\phi_r$ はこの章の $\vec v_r$、$m_r$ はモード質量 $\tilde m_r$。$\delta_{rs}$ は「$r=s$ なら1、ちがえば0」を表す記号（クロネッカーのデルタ）。専門書では、運動エネルギーを $T$、位置エネルギーを $V$ と書き、$L=T-V$ とすることが多い。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[8.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{ラグランジュの式}$L=K-U$、\ $\dfrac{\dd}{\dd t}\Bigl(\dfrac{\partial L}{\partial\dot q}\Bigr)-\dfrac{\partial L}{\partial q}=Q$\\[3pt]
+\tsl{多自由度の振動}$\mathbf M\ddot{\vec x}+\mathbf K\vec x=\vec 0$\\[3pt]
+\tsl{モード}$\det(\mathbf K-\omega^2\mathbf M)=0$、\ $\mathbf M^{-1}\mathbf K\vec v=\omega^2\vec v$\\[3pt]
+\tsl{直交}$\vec v_j^{\mathsf T}\mathbf M\vec v_i=0$、\ $\omega_j^2=\dfrac{\vec v_j^{\mathsf T}\mathbf K\vec v_j}{\vec v_j^{\mathsf T}\mathbf M\vec v_j}$\\[3pt]
+\tsl{うなり}ゆれが移る時間 $\dfrac{\pi}{\omega_2-\omega_1}$\\[3pt]
+\tsl{動吸振器}$\dfrac{\omega_{\mathrm a}}{\omega_{\mathrm n}}=\dfrac{1}{1+\mu}$、\ $\zeta_{\mathrm a}=\sqrt{\dfrac{3\mu}{8(1+\mu)^3}}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{自由度}{全体の形を決めるのに要る数の個数。ばねとおもりは1、ばねでつないだ2つの台車は2。}
+\bkword{振動モード}{全体が1つの振動数で、形を保ってそろってゆれる動き方。自由度の数だけある。}
+\bkword{一般化座標}{形を決めるために選んだ数。長さでも角でもよい。}
+\bkword{ラグランジアン}{運動エネルギーから位置エネルギーを引いた $L=K-U$。}
+\bkword{質量行列・こわさ行列}{運動エネルギー・ばねのエネルギーを2乗の形で書いたときの係数の行列。}
+\bkword{動吸振器}{ゆらしたくない物に、同調させた重りをばね・ダンパーでつけ、ゆれのエネルギーを重りに移して捨てる仕組み。}
+\bkword{モード解析}{固有振動数・モードの形・減衰比をモードごとに求めること。実物をゆすって測る方法もある。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$L$}{エル}{ラグランジアン $K-U$〔J〕。専門書では $T-V$ と書く。波-4 のむだ時間 $L$〔s〕とは別}{Lagrangian}{波-3}}
+{\bkkigocard{$q$}{キュー}{一般化座標（長さでも角でもよい）。$\dot q$ はその変わる速さ。7-9 のモード座標はこの章では $\eta$}{generalized coordinate}{波-3}}
+\bkkigocards{\bkkigocard{$\mathbf M$}{エム（太字）}{質量行列〔kg〕。立てた太字で書き、モル質量 $M$（熱-3）や台車の質量と区別する}{mass matrix}{波-3}}
+{\bkkigocard{$\mathbf K$}{ケー（太字）}{こわさ行列（剛性行列）〔N/m〕。立てた太字で書き、運動エネルギー $K$ と区別する（力-16 の剛性行列と同じもの）}{stiffness matrix}{波-3}}
+\bkkigocards{\bkkigocard{$\mu$}{ミュー}{質量比 $m_2/m_1$（動吸振器）。波-5〜7 では弦の線密度に使う}{mass ratio}{波-3}}
+{\bkkigocard{$\eta$}{イータ}{モード座標。それぞれのモードがどれだけまざっているかを表す数}{modal coordinate}{波-3}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-3:ex1}
+\begin{phreidai}[6-14 の2台車のモードとうなり]
+質量\qty{1}{kg}の台車2つを、両はしのばね（\qty{100}{N/m}）でかべに、まん中のばね $k_{\mathrm c}=\qty{10}{N/m}$ でたがいにつなぎます（6-14 の台車。数学の本と同じ数なので、3けたで書きます）。2つの固有角振動数と固有振動数、台車1だけを引いてはなしたときに、ゆれがすっかり台車2へ移るまでの時間と、うなりの周期を求めましょう。
+\phbamen
+つながった2つの台車の間で、ゆれが行き来する場面です。
+\phmushi
+床の摩擦、空気の抵抗、ばねの質量を無視します。
+\phzu
+$m=1$、$k=100$、$k_{\mathrm c}=10$。位置 $x_1$・$x_2$（図\ref{ph:波-3:fig-uneri}）。
+\phriyu
+2つのモード（②）の角振動数を、行列の固有値問題（⑤）で求め、その差からうなりの時間を出します。
+\phtateru
+\[\mathbf M=I,\qquad\mathbf K=\begin{pmatrix}110&-10\\-10&110\end{pmatrix},\qquad\det(\mathbf K-\omega^2I)=0\]
+\phtoku
+$(110-\lambda)^2-100=0$ より、$110-\lambda=\pm10$、$\lambda=100$、120。
+\[\omega_1=\sqrt{100}=\qty{10.0}{rad/s},\qquad\omega_2=\sqrt{120}\approx\qty{10.95}{rad/s}\]
+\[f_1=\frac{10.0}{2\pi}\approx\qty{1.59}{Hz},\qquad f_2=\frac{10.95}{2\pi}\approx\qty{1.74}{Hz}\]
+\[t_{\text{移る}}=\frac{\pi}{10.95-10.0}\approx\qty{3.29}{s},\qquad T_{\text{うなり}}=2\times3.29\approx\qty{6.58}{s}\]
+\phtashikame
+6-14・7-8 の $\omega$ と同じです。表\ref{ph:波-3:tab-sheet}で、3.29秒ごろに台車1がほとんど止まっていたことと合います。\\
+極端な場合：$k_{\mathrm c}\to0$ なら $\omega_2\to\omega_1$ で、うなりの周期は限りなく長くなり、ゆれは移りません（つながっていない）。
+\kotae $\omega=\qty{10.0}{rad/s}$・\qty{10.95}{rad/s}（\qty{1.59}{Hz}・\qty{1.74}{Hz}）、移るまで約\qty{3.29}{s}、うなりの周期 約\qty{6.58}{s}
+\end{phreidai}
+\begin{jibun}
+例題1で、つなぎのばねを $k_{\mathrm c}=\qty{20}{N/m}$ にしたときの $\omega_2$ と、うなりの周期を求めましょう。
+\bkjans{$\omega_2=\sqrt{140}\approx\qty{11.8}{rad/s}$。$T_{\text{うなり}}=2\pi\div1.83\approx\qty{3.4}{s}$}
+\end{jibun}
+
+\label{ph:波-3:ex2}
+\begin{phreidai}[ラグランジュの式で、つるしたばね]
+ばね定数 $k$ のばねの下に、質量 $m$ のおもりをつるします。ばねが自然の長さのときのおもりの位置から、下向きに測った位置を $x$ とします。ラグランジュの式で運動方程式を作り、つり合いの位置と、そこからのゆれの角振動数を求めましょう。
+\phbamen
+つるしたばねのゆれ（波-1 ⑤）を、エネルギーから考えます。
+\phmushi
+ばねの質量、空気の抵抗を無視します。
+\phzu
+一般化座標 $q=x$（下向き正）。速さ $\dot x$。
+\phriyu
+重力とばねの力は、どちらも位置エネルギーで書けるので、$L=K-U$ を作ってラグランジュの式（④）を使います。$Q=0$ です。
+\phtateru
+$K=\tfrac12m\dot x^2$。ばねの位置エネルギーは $\tfrac12kx^2$、重力の位置エネルギーは、下へ $x$ 下がると $mgx$ 減るので $-mgx$。
+\[L=\frac12m\dot x^2-\frac12kx^2+mgx\]
+\phtoku
+\[\frac{\dd}{\dd t}\Bigl(\frac{\partial L}{\partial\dot x}\Bigr)=m\ddot x,\qquad\frac{\partial L}{\partial x}=-kx+mg\]
+\[m\ddot x-(-kx+mg)=0\qquad\text{より}\qquad m\ddot x=-kx+mg\]
+つり合いの位置は $\ddot x=0$ の所で $x_{\mathrm{st}}=mg/k$。$u=x-x_{\mathrm{st}}$ とおくと $m\ddot u=-ku$ で、$\omega=\sqrt{k/m}$。
+\phtashikame
+重力は、つり合いの位置をずらすだけで、ゆれの速さは変えません（波-1 ⑤と同じ）。\\
+単位：$\partial L/\partial x$ は J/m＝N で、力の単位です。
+\kotae $m\ddot x=-kx+mg$。つり合いの位置 $x_{\mathrm{st}}=mg/k$、角振動数 $\sqrt{k/m}$
+\end{phreidai}
+\begin{jibun}
+質量\qty{0.5}{kg}の台車が、左右のかべと、ばね定数\qty{8}{N/m}のばね2本でつながっています（真ん中でどちらのばねも自然の長さ）。台車の位置を $x$ として、ラグランジュの式で運動方程式を作り、角振動数を求めましょう。
+\bkjans{$L=\tfrac12m\dot x^2-\tfrac12kx^2-\tfrac12kx^2$ より $m\ddot x=-2kx$。$\omega=\sqrt{2k/m}=\sqrt{32}\approx\qty{5.7}{rad/s}$}
+\end{jibun}
+
+\label{ph:波-3:ex3}
+\begin{phreidai}[ラグランジュの式で、ふりこ]
+長さ $l$ の軽い棒の先に質量 $m$ のおもりをつけたふりこの運動方程式を、ふれの角 $\theta$ を一般化座標にして作りましょう。また、おもりの位置 $(x,\ y)$ で力の図から作るときとくらべて、何が楽になったかを答えましょう。
+\phbamen
+ふりこ（波-1 ③）の運動方程式を、エネルギーから作る場面です。
+\phmushi
+棒の質量、つるした点の摩擦、空気の抵抗を無視します。
+\phzu
+つるした点を原点、真下から測った角 $\theta$。おもりは半径 $l$ の円の上。
+\phriyu
+おもりの動きは $\theta$ だけで決まる1自由度です。棒が引く力は、おもりの動く向きと直角で仕事をしないので、$Q=0$ です（④のせいかくに言うと）。
+\phtateru
+\[K=\frac12ml^2\dot\theta^2,\qquad U=-mgl\cos\theta,\qquad L=\frac12ml^2\dot\theta^2+mgl\cos\theta\]
+\phtoku
+\[\frac{\dd}{\dd t}\Bigl(\frac{\partial L}{\partial\dot\theta}\Bigr)=ml^2\ddot\theta,\qquad\frac{\partial L}{\partial\theta}=-mgl\sin\theta\]
+\[ml^2\ddot\theta+mgl\sin\theta=0\qquad\text{つまり}\qquad\ddot\theta=-\frac{g}{l}\sin\theta\]
+\phtashikame
+小さなふれ（$\sin\theta\approx\theta$）なら $\omega=\sqrt{g/l}$ で、波-1 ③と同じです。\\
+楽になった所：$(x,\ y)$ で考えると、棒が引く力 $F_{\mathrm T}$ も未知数になり、$x$・$y$ の2本の式から $F_{\mathrm T}$ を消す必要があります。$\theta$ を使うと、$F_{\mathrm T}$ がはじめから出てきません。
+\kotae $ml^2\ddot\theta+mgl\sin\theta=0$。棒が引く力を考えなくてよい
+\end{phreidai}
+\begin{jibun}
+長さ $l=\qty{1}{m}$ の軽い棒の先と、まん中に、同じ質量 $m$ のおもりをつけたふりこがあります。ラグランジュの式で、小さなふれの角振動数と周期を求めましょう（$g=\qty{9.8}{m/s^2}$）。
+\bkjans{$K=\tfrac12m(l^2+\tfrac14l^2)\dot\theta^2$、$U=-mg(l+\tfrac12l)\cos\theta$ より $\tfrac54l\ddot\theta=-\tfrac32g\theta$。$\omega=\sqrt{6g/(5l)}\approx\qty{3.4}{rad/s}$、周期 約\qty{1.8}{s}（おもり1つの\qty{2.0}{s}より短い）}
+\end{jibun}
+
+\label{ph:波-3:ex4}
+\begin{phreidai}[2重ふりこのモード]
+長さ $l=\qty{1}{m}$ の軽い棒2本と、同じ質量 $m$ のおもり2つで、2重ふりこを作ります。小さなふれのとき、2つの固有角振動数と、モードの形（上のふれの角 $\theta_1$ と下の $\theta_2$ の比）を求めましょう。
+\phbamen
+ふりこの先にふりこがつながった、2自由度のゆれです（図\ref{ph:波-3:fig-lag}）。
+\phmushi
+棒の質量、摩擦を無視します。ふれは小さい（$\sin\theta\approx\theta$、$\cos\theta\approx1-\tfrac12\theta^2$）とします。
+\phzu
+角 $\theta_1$（上の棒）、$\theta_2$（下の棒）。どちらも真下から測る。
+\phriyu
+角を一般化座標にすると、棒が引く力を考えずにすみます（④）。小さなふれでは $\mathbf M\ddot{\vec\theta}+\mathbf K\vec\theta=\vec 0$ の形になるので、固有値問題（⑤）で解きます。
+\phtateru
+上のおもりの速さは $l\dot\theta_1$。下のおもりの速度は、上のおもりの速度に、上のおもりのまわりを回る速度 $l\dot\theta_2$ を足したもので、小さなふれでは2つの向きがほぼ同じなので、速さは $l(\dot\theta_1+\dot\theta_2)$ とします。
+\[K=\frac12ml^2\dot\theta_1^{\,2}+\frac12ml^2(\dot\theta_1+\dot\theta_2)^2,\qquad U\approx\frac12mgl\,(2\theta_1^{\,2}+\theta_2^{\,2})+\text{（定数）}\]
+（$U=-mgl\cos\theta_1-mgl(\cos\theta_1+\cos\theta_2)$ に $\cos\theta\approx1-\tfrac12\theta^2$ を入れた。）
+\[\mathbf M=ml^2\begin{pmatrix}2&1\\1&1\end{pmatrix},\qquad\mathbf K=mgl\begin{pmatrix}2&0\\0&1\end{pmatrix}\]
+\phtoku
+$a=g/l=9.8$ とし、$\det(\mathbf K-\omega^2\mathbf M)=0$ を $ml^2$ でわると、
+\[(2a-2\omega^2)(a-\omega^2)-\omega^4=0\qquad\text{より}\qquad2(a-\omega^2)^2=\omega^4\]
+\[a-\omega^2=\pm\frac{\omega^2}{\sqrt2}\qquad\text{より}\qquad\omega^2=\frac{a}{1\pm1/\sqrt2}=a(2\mp\sqrt2)\]
+\[\omega_1=\sqrt{9.8\times0.586}\approx\qty{2.40}{rad/s},\qquad\omega_2=\sqrt{9.8\times3.414}\approx\qty{5.78}{rad/s}\]
+モードの形は1行め $(2a-2\omega^2)\theta_1-\omega^2\theta_2=0$ から、$\theta_2/\theta_1=2(a/\omega^2-1)$。$\omega_1$ では $+\sqrt2\approx1.41$、$\omega_2$ では $-\sqrt2$。
+\phtashikame
+1次モードは2本が同じ向きに折れ（下のほうが1.41倍）、2次モードは反対向きに折れます。\\
+大きさ：1次の周期 $2\pi/2.40\approx\qty{2.6}{s}$ は、長さ\qty{1}{m}のふりこ（約\qty{2.0}{s}）より長く、長さ\qty{2}{m}のふりこ（約\qty{2.8}{s}）より短い。2本合わせた長さの、少し曲がったふりことして合っています。
+\kotae $\omega\approx\qty{2.40}{rad/s}$（$\theta_2/\theta_1=1.41$）と\qty{5.78}{rad/s}（$\theta_2/\theta_1=-1.41$）
+\end{phreidai}
+\begin{jibun}
+例題4の2重ふりこで、棒の長さを2本とも\qty{0.5}{m}にすると、2つの固有角振動数はいくらになりますか。
+\bkjans{$a=g/l=19.6$ で $\omega=\sqrt{19.6\times0.586}\approx\qty{3.39}{rad/s}$、$\sqrt{19.6\times3.414}\approx\qty{8.18}{rad/s}$（どちらも $\sqrt2$ 倍）}
+\end{jibun}
+
+\label{ph:波-3:ex5}
+\begin{phreidai}[2階建ての家の2つのモード]
+2階建ての家を、1階の床と2階の床（屋根）の2つの質量 $m$ と、それを支える柱の、横向きのこわさ $k$（1階・2階とも同じ）で表します。$m=\qty{1.0e4}{kg}$、$k=\qty{1.0e7}{N/m}$（計算のための仮の値）として、2つの固有振動数とモードの形を求めましょう。
+\phbamen
+地震で家が横にゆれる場面を、2自由度で考えます。
+\phmushi
+床の形は変わらない（剛体）、柱は横にずれるばね（せん断型）とします。柱と壁の質量は床にふくめ、減衰を無視します。
+\phzu
+1階の床のずれ $x_1$、2階の床のずれ $x_2$（地面から）。1階の柱ののびは $x_1$、2階の柱ののびは $x_2-x_1$。
+\phriyu
+$U=\tfrac12kx_1^{\,2}+\tfrac12k(x_2-x_1)^2$ から $\mathbf K$ を作り（⑤の図\ref{ph:波-3:fig-MK}と同じ形）、固有値問題を解きます。
+\phtateru
+\[\mathbf M=mI,\qquad\mathbf K=k\begin{pmatrix}2&-1\\-1&1\end{pmatrix},\qquad\det\Bigl(\mathbf K-\omega^2\mathbf M\Bigr)=0\]
+\phtoku
+$\lambda=\omega^2m/k$ とおくと $(2-\lambda)(1-\lambda)-1=\lambda^2-3\lambda+1=0$、$\lambda=\dfrac{3\mp\sqrt5}{2}=0.382$、2.618。
+\[\frac{\omega}{\sqrt{k/m}}=\sqrt{0.382}=0.618,\qquad\sqrt{2.618}=1.618\]
+$\sqrt{k/m}=\sqrt{1000}\approx\qty{31.6}{rad/s}$ なので、$\omega_1\approx\qty{19.5}{rad/s}$（$f_1\approx\qty{3.1}{Hz}$、周期 約\qty{0.32}{s}）、$\omega_2\approx\qty{51.2}{rad/s}$（$f_2\approx\qty{8.1}{Hz}$）。モードの形は1行め $(2-\lambda)x_1-x_2=0$ から $x_2/x_1=2-\lambda$ で、1次は1.618、2次は $-0.618$。
+\phtashikame
+1次モードは、2階が1階の約1.6倍ずれる、同じ向きのゆれ。2次モードは、2つの階が反対向きにゆれます。\\
+0.618 と 1.618 は、かけると1、差が1の数（黄金比）です。$\lambda_1\lambda_2=1$（7-8 の確かめの式：行列式）、$\lambda_1+\lambda_2=3$（対角の和）とも合います。
+\kotae $f\approx\qty{3.1}{Hz}$（2階が1.62倍の同じ向き）、\qty{8.1}{Hz}（$-0.62$ 倍の反対向き）
+\end{phreidai}
+\begin{jibun}
+例題5で、1階の柱だけを2倍のこわさ $2k$ にすると、$\omega/\sqrt{k/m}$ はいくらになりますか。1次モードの $x_2/x_1$ も求めましょう。
+\bkjans{$\mathbf K$ の1行めが $3k$・$-k$、2行めが $-k$・$k$。$\lambda^2-4\lambda+2=0$、$\lambda=2\mp\sqrt2$。$\omega/\sqrt{k/m}\approx0.765$、1.848。1次モードは $x_2/x_1=3-\lambda\approx2.41$}
+\end{jibun}
+
+\label{ph:波-3:ex6}
+\begin{phreidai}[質量のちがう2つの台車]
+かべとばね $k_1=\qty{200}{N/m}$ でつながった質量 $m_1=\qty{2}{kg}$ の台車に、ばね $k_2=\qty{100}{N/m}$ で質量 $m_2=\qty{1}{kg}$ の台車がつながっています（右はしは自由。図\ref{ph:波-3:fig-MK}）。固有角振動数とモードの形を求めましょう。
+\phbamen
+質量がちがう2自由度のゆれ。7-8 のもっと知りたいで止まっていた場合です。
+\phmushi
+摩擦、ばねの質量を無視します。
+\phzu
+$\mathbf M=\begin{pmatrix}2&0\\0&1\end{pmatrix}$、$\mathbf K=\begin{pmatrix}300&-100\\-100&100\end{pmatrix}$（N/m）。
+\phriyu
+質量がちがうので、$\mathbf M^{-1}\mathbf K$ の固有値問題（⑤）にします。
+\phtateru
+\[\det(\mathbf K-\lambda\mathbf M)=(300-2\lambda)(100-\lambda)-(-100)^2=0\]
+\phtoku
+\[2\lambda^2-500\lambda+\num{20000}=0\qquad\text{より}\qquad\lambda^2-250\lambda+\num{10000}=0\]
+\[\lambda=\frac{250\pm\sqrt{\num{62500}-\num{40000}}}{2}=\frac{250\pm150}{2}=50,\ 200\]
+$\omega_1=\sqrt{50}\approx\qty{7.07}{rad/s}$、$\omega_2=\sqrt{200}\approx\qty{14.1}{rad/s}$。モードの形は、1行め $(300-2\lambda)v_1-100v_2=0$ から、$\lambda=50$ で $v_2=2v_1$、$\lambda=200$ で $v_2=-v_1$。
+\phtashikame
+⑤の $\mathbf M^{-1}\mathbf K$ で計算した答え、Python の答えと同じです。\\
+1次モードでは、軽い右の台車が2倍大きくゆれます。
+\kotae $\omega_1\approx\qty{7.07}{rad/s}$（形 $(1,\ 2)$）、$\omega_2\approx\qty{14.1}{rad/s}$（形 $(1,\ -1)$）
+\end{phreidai}
+\begin{jibun}
+例題6で、2つの台車の質量を入れかえて $m_1=\qty{1}{kg}$、$m_2=\qty{2}{kg}$ にすると、固有角振動数とモードの形はどうなりますか（$\mathbf K$ は同じ）。
+\bkjans{$\lambda^2-350\lambda+\num{10000}=0$、$\lambda\approx31.4$、318.6。$\omega\approx\qty{5.60}{rad/s}$（形 $(1,\ 2.69)$）、\qty{17.8}{rad/s}（形 $(1,\ -0.186)$）}
+\end{jibun}
+
+\label{ph:波-3:ex7}
+\begin{phreidai}[3階建ての建物を Python で]
+3階建ての建物の模型で、どの階の床も質量 $m=\qty{1}{kg}$、どの階の柱も横のこわさ $k=\qty{100}{N/m}$ です。3つの固有角振動数・固有振動数と、モードの形を Python で求めましょう。
+\phbamen
+3自由度のゆれ。手で3次方程式を解く代わりに、コンピュータを使う場面です。
+\phmushi
+せん断型の建物とし、減衰を無視します。
+\phzu
+各階の床のずれ $x_1$・$x_2$・$x_3$。柱ののびは $x_1$、$x_2-x_1$、$x_3-x_2$。
+\phriyu
+$U=\tfrac12k\{x_1^{\,2}+(x_2-x_1)^2+(x_3-x_2)^2\}$ から $\mathbf K$ を作り、固有値問題（⑤）を numpy で解きます。$\mathbf M=I$ なので、$\mathbf K$ は対称のままで、7-8 の対称な行列の命令 \texttt{eigh} が使えます。
+\phtateru
+\[\mathbf K=100\begin{pmatrix}2&-1&0\\-1&2&-1\\0&-1&1\end{pmatrix}\]
+\begin{phcode}[Python]
+import numpy as np
+K = 100*np.array([[2.0, -1, 0], [-1, 2, -1], [0, -1, 1]])
+lam, V = np.linalg.eigh(K)     \# M = I（対称な行列）
+print(np.sqrt(lam))
+\end{phcode}
+\begin{phcodeout}[実行結果]
+[ 4.45041868 12.46979604 18.01937736]
+\end{phcodeout}
+\phtoku
+$\omega=\qty{4.45}{rad/s}$、\qty{12.5}{rad/s}、\qty{18.0}{rad/s}。$f=\omega/(2\pi)$ で、\qty{0.71}{Hz}・\qty{1.98}{Hz}・\qty{2.87}{Hz}。\texttt{V} の列から読んだモードの形（いちばん大きい成分を1）は、1次 $(0.445,\ 0.802,\ 1)$、2次 $(1,\ 0.445,\ -0.802)$、3次 $(0.802,\ -1,\ 0.445)$。
+\phtashikame
+図\ref{ph:波-3:fig-bldmode}の形と同じで、向きが入れかわる回数が0回・1回・2回です。\\
+確かめの式：3つの $\lambda$ の和 $19.8+155.5+324.7=500$ は、$\mathbf K$ の対角の和 $200+200+100$ と同じです（7-8）。
+\kotae \qty{0.71}{Hz}・\qty{1.98}{Hz}・\qty{2.87}{Hz}（$\omega=4.45$・12.5・\qty{18.0}{rad/s}）
+\end{phreidai}
+\begin{jibun}
+質量\qty{1}{kg}の台車3つを、ばね定数\qty{100}{N/m}のばね4本で、左のかべ―台車1―台車2―台車3―右のかべ、とつなぎました。こわさ行列を作り、Python で \texttt{np.linalg.eigh} を使うと、$\lambda$ は\texttt{[ 58.58 200. 341.42]} でした。固有角振動数を求めましょう。
+\bkjans{$\mathbf K$ は、対角がどれも200、となりどうしが $-100$、ほかは0。$\omega=\sqrt\lambda\approx\qty{7.65}{rad/s}$、\qty{14.1}{rad/s}、\qty{18.5}{rad/s}}
+\end{jibun}
+
+\label{ph:波-3:ex8}
+\begin{phreidai}[動吸振器で、振動数が2つに分かれる]
+固有角振動数 $\omega_{\mathrm n}$ のビル（質量 $m_1$、ばね $k_1$）に、質量 $m_2=\mu m_1$ の重りを、ばね $k_2$ でつけます。重りはビルに同調させて $k_2/m_2=k_1/m_1$ にします。ダンパーはないとします。固有角振動数を求める式を導き、$\mu=0.05$、$\omega_{\mathrm n}=\qty{10}{rad/s}$ のときの値を求めましょう。
+\phbamen
+はてな？のビルの重りを、ダンパーのない2自由度で考えます（⑥）。
+\phmushi
+減衰、ビルの2次から先のモードを無視します。
+\phzu
+ビル $x_1$、重り $x_2$。$\mathbf M=\begin{pmatrix}m_1&0\\0&m_2\end{pmatrix}$、$\mathbf K=\begin{pmatrix}k_1+k_2&-k_2\\-k_2&k_2\end{pmatrix}$。
+\phriyu
+ばねの並び方が例題6と同じなので、同じ形の行列の固有値問題になります（⑤）。
+\phtateru
+$\det(\mathbf K-\omega^2\mathbf M)=(k_1+k_2-m_1\omega^2)(k_2-m_2\omega^2)-k_2^{\,2}=0$。$k_1=m_1\omega_{\mathrm n}^2$、$k_2=\mu m_1\omega_{\mathrm n}^2$、$m_2=\mu m_1$、$r=\omega/\omega_{\mathrm n}$ を入れ、$\mu m_1^{\,2}\omega_{\mathrm n}^4$ でわります。
+\phtoku
+\[(1+\mu-r^2)(1-r^2)-\mu=0\qquad\text{より}\qquad r^4-(2+\mu)r^2+1=0\]
+$\mu=0.05$：$r^2=\dfrac{2.05\pm\sqrt{2.05^2-4}}{2}=\dfrac{2.05\pm0.45}{2}=0.8$、1.25。
+\[r=0.894,\ 1.118,\qquad\omega=\qty{8.94}{rad/s},\ \qty{11.2}{rad/s}\]
+\phtashikame
+$\mu\to0$ なら $r^4-2r^2+1=(r^2-1)^2=0$ で、$r=1$（ビルだけ）にもどります。\\
+図\ref{ph:波-3:fig-tmdcurve}の点線の2つの山（8.94と11.18）と合います。
+\kotae $r^4-(2+\mu)r^2+1=0$。$\omega\approx\qty{8.94}{rad/s}$、\qty{11.2}{rad/s}
+\end{phreidai}
+\begin{jibun}
+例題8で、重りを軽くして $\mu=0.02$ にすると、$r=\omega/\omega_{\mathrm n}$ はいくらになりますか。
+\bkjans{$r^2=(2.02\pm\sqrt{2.02^2-4})/2=(2.02\pm0.284)/2$。$r\approx0.932$、1.073（分かれ方がせまくなる）}
+\end{jibun}
+
+\label{ph:波-3:ex9}
+\begin{phreidai}[ふりこの動吸振器を最適に同調する]
+1次モードの周期が\qty{6.0}{s}の高いビル（仮の値）に、1次モードに効く質量の5\,\%（$\mu=0.05$）の重りを、ふりこにしてつるします。デン・ハルトフの最適同調の式で、（1）重りの振動数とビルの振動数の比、（2）重りのダンパーの減衰比、（3）ふりこの長さを求めましょう（$g=\qty{9.8}{m/s^2}$）。
+\phbamen
+台北101 のような、ふりこの形の動吸振器を設計する場面です。
+\phmushi
+ビルは1次モードだけ。ふりこのふれは小さい（$\omega_{\mathrm a}=\sqrt{g/l}$）とし、ロープの質量を無視します。
+\phzu
+$T_{\mathrm b}=\qty{6.0}{s}$、$\mu=0.05$。重りの周期 $T_{\mathrm a}$、ふりこの長さ $l$。
+\phriyu
+⑥のデン・ハルトフの式で比を決め、ふりこの周期の式（波-1）で長さに直します。
+\phtateru
+\[\frac{\omega_{\mathrm a}}{\omega_{\mathrm n}}=\frac{1}{1+\mu},\qquad\zeta_{\mathrm a}=\sqrt{\frac{3\mu}{8(1+\mu)^3}},\qquad T_{\mathrm a}=T_{\mathrm b}(1+\mu),\qquad l=g\Bigl(\frac{T_{\mathrm a}}{2\pi}\Bigr)^2\]
+\phtoku
+（1）$1\div1.05\approx0.952$\\
+（2）\[\zeta_{\mathrm a}=\sqrt{\frac{0.15}{8\times1.158}}=\sqrt{0.0162}\approx0.127\]
+（3）$T_{\mathrm a}=6.0\times1.05=\qty{6.3}{s}$。\[l=9.8\times\Bigl(\frac{6.3}{6.283}\Bigr)^2\approx9.8\times1.005\approx\qty{9.9}{m}\]
+\phtashikame
+重りはビルより約5\,\%ゆっくりゆれるように、少し長めのふりこにします。\\
+大きさ：10 m 近いふりこは、3階分ほどの高さです。台北101 の重りも、何階分もの吹きぬけにつるしてあります。
+\kotae （1）約0.952、（2）約0.127、（3）約\qty{9.9}{m}
+\end{phreidai}
+\begin{jibun}
+1次モードの周期が\qty{5.0}{s}のビルに、$\mu=0.02$ のふりこの動吸振器をつけます。最適な振動数の比・減衰比と、ふりこの長さを求めましょう。
+\bkjans{比 $1\div1.02\approx0.980$。$\zeta_{\mathrm a}=\sqrt{0.06\div(8\times1.061)}\approx0.084$。$T_{\mathrm a}=\qty{5.1}{s}$、$l=9.8\times(5.1\div2\pi)^2\approx\qty{6.5}{m}$}
+\end{jibun}
+
+\label{ph:波-3:ex10}
+\begin{phreidai}[ロボットの腕を支えるトルク]
+長さ $l_1=\qty{0.30}{m}$（力-7 の上の腕と同じ）、質量 $m_1=\qty{1.0}{kg}$ の一様な腕の先に、質量 $m=\qty{0.50}{kg}$ の荷を持っています。腕はたての面で、真下から測った角 $\theta$ だけ回ります。（1）腕が水平（$\theta=90°$）のまま止めておくトルク、（2）水平の位置から、角加速度 $\ddot\theta=\qty{10}{rad/s^2}$ で持ち上げ始めるトルクを求めましょう。
+\phbamen
+ロボットの関節のモーターに要るトルクを、ラグランジュの式（⑨）で見積もる場面です。
+\phmushi
+関節の摩擦、モーターの中の回る部分の慣性、荷の大きさ（点とみなす）を無視します。
+\phzu
+$I_1=\tfrac13m_1l_1^{\,2}$、荷は関節から $l_1$。一般化座標 $\theta$、一般化力 $\tau$。
+\phriyu
+角を一般化座標にして $K$・$U$ を書けば、ラグランジュの式（⑨の式）でトルクが直接出ます。
+\phtateru
+\[\bigl(I_1+ml_1^{\,2}\bigr)\ddot\theta+\Bigl(\frac{m_1}{2}+m\Bigr)gl_1\sin\theta=\tau\]
+\phtoku
+\[I_1=\frac13\times1.0\times0.30^2=\qty{0.030}{kg.m^2},\qquad ml_1^{\,2}=0.50\times0.30^2=\qty{0.045}{kg.m^2}\]
+\[\Bigl(\frac{1.0}{2}+0.50\Bigr)\times9.8\times0.30=\qty{2.94}{N.m}\]
+（1）$\ddot\theta=0$、$\sin90°=1$ なので、$\tau=\qty{2.94}{N.m}$。\\
+（2）$\tau=0.075\times10+2.94=0.75+2.94\approx\qty{3.69}{N.m}$。
+\phtashikame
+単位：$\mathrm{kg{\cdot}m^2}\times\mathrm{rad/s^2}=\mathrm{N{\cdot}m}$。\\
+極端な場合：真下（$\theta=0$）からなら重力の項は0で、$\tau=\qty{0.75}{N.m}$ だけ。腕を水平にのばして荷を持つのがいちばんたいへんなのは、手で重い物を持つときと同じです。
+\kotae （1）約\qty{2.9}{N.m}、（2）約\qty{3.7}{N.m}
+\end{phreidai}
+\begin{jibun}
+長さ\qty{0.25}{m}・質量\qty{0.8}{kg}の一様な腕の先に\qty{0.3}{kg}の荷を持つとき、水平に止めておくトルクと、水平の位置から\qty{8}{rad/s^2}で持ち上げ始めるトルクを求めましょう。
+\bkjans{重力の項 $(0.4+0.3)\times9.8\times0.25\approx\qty{1.72}{N.m}$。$I_1+ml_1^{\,2}=0.0167+0.0188\approx\qty{0.0354}{kg.m^2}$ なので、$1.72+0.0354\times8\approx\qty{2.0}{N.m}$}
+\end{jibun}
+
+\label{ph:波-3:ex11}
+\begin{phreidai}[片方だけ引くと、モードのたし算]
+例題1の台車で、台車1だけを\qty{0.1}{m}引いて静かにはなします。モード座標のはじめの値を求め、台車1の動きを式で表しましょう。また、台車1がはじめてほぼ止まるときの、台車2のゆれの大きさを求めましょう。
+\phbamen
+1つのモードだけでなく、2つのモードがまざってゆれる場面です。
+\phmushi
+例題1と同じ。
+\phzu
+$\vec v_1=(1,\ 1)$、$\vec v_2=(1,\ -1)$、$\vec x(0)=(0.1,\ 0)$、はじめの速度0。
+\phriyu
+はじめの位置をモードのたし算に分け（⑦）、それぞれを1自由度の $\cos$ のゆれにします。
+\phtateru
+\[\eta_j(0)=\frac{\vec v_j^{\mathsf T}\mathbf M\vec x(0)}{\vec v_j^{\mathsf T}\mathbf M\vec v_j},\qquad\vec x=\eta_1(0)\cos\omega_1t\,\vec v_1+\eta_2(0)\cos\omega_2t\,\vec v_2\]
+\phtoku
+$\eta_1(0)=\dfrac{0.1+0}{2}=0.05$、$\eta_2(0)=\dfrac{0.1-0}{2}=0.05$。
+\[x_1=0.05\cos10t+0.05\cos10.95t,\qquad x_2=0.05\cos10t-0.05\cos10.95t\]
+台車1がはじめてほぼ止まるのは $t=\pi/(\omega_2-\omega_1)\approx\qty{3.3}{s}$。そのとき2つのモードは逆向きにそろうので、台車2は $0.05+0.05=\qty{0.1}{m}$ の大きさでゆれています。
+\phtashikame
+エネルギーの確かめ：はじめのエネルギーは台車1のばねに $\tfrac12\times100\times0.1^2=\qty{0.5}{J}$（つなぎのばねにも $\tfrac12\times10\times0.1^2=\qty{0.05}{J}$）。3.3秒後には、台車2が同じ大きさ0.1でゆれているので、エネルギーがそっくり移っています。
+\kotae $\eta_1(0)=\eta_2(0)=0.05$。$x_1=0.05\cos10t+0.05\cos10.95t$。台車2のゆれは約\qty{0.1}{m}
+\end{phreidai}
+\begin{jibun}
+例題11で、はじめに台車1を\qty{0.1}{m}、台車2を同じ向きに\qty{0.05}{m}引いてはなすと、$\eta_1(0)$・$\eta_2(0)$ はいくらですか。台車1のゆれの大きさは、どの範囲で大きくなったり小さくなったりしますか。
+\bkjans{$\eta_1(0)=0.075$、$\eta_2(0)=0.025$。台車1のゆれの大きさは $0.075+0.025=\qty{0.1}{m}$ と $0.075-0.025=\qty{0.05}{m}$ の間で変わる}
+\end{jibun}
+
+\label{ph:波-3:ex12}
+\begin{phreidai}[モードの直交とモード質量]
+例題6の台車（$\mathbf M=\begin{pmatrix}2&0\\0&1\end{pmatrix}$、$\mathbf K=\begin{pmatrix}300&-100\\-100&100\end{pmatrix}$）のモード $\vec v_1=(1,\ 2)$、$\vec v_2=(1,\ -1)$ について、（1）ふつうの内積と、質量で重みをつけた内積 $\vec v_1^{\mathsf T}\mathbf M\vec v_2$ を求めましょう。（2）モード質量とモードこわさを求め、固有角振動数を確かめましょう。
+\phbamen
+求めたモードが正しいかを、直交とモード質量で確かめる場面です。
+\phmushi
+例題6と同じ。
+\phzu
+⑦⑧の式。$\vec v^{\mathsf T}\mathbf M\vec w=m_1v_1w_1+m_2v_2w_2$。
+\phriyu
+質量がちがうとき、モードは $\mathbf M$ で重みをつけた内積で直交します（⑧）。モードごとの $\omega^2$ は、モードこわさ÷モード質量（⑦）です。
+\phtateru
+\[\tilde m_j=\vec v_j^{\mathsf T}\mathbf M\vec v_j,\qquad\tilde k_j=\vec v_j^{\mathsf T}\mathbf K\vec v_j,\qquad\omega_j^2=\frac{\tilde k_j}{\tilde m_j}\]
+\phtoku
+（1）ふつうの内積 $1\times1+2\times(-1)=-1$。重みつき $2\times1\times1+1\times2\times(-1)=0$。\\
+（2）$\mathbf K\vec v_1=(300-200,\ -100+200)=(100,\ 100)$ なので $\tilde k_1=100+200=300$、$\tilde m_1=2+4=6$、$\omega_1^2=50$。\\
+$\mathbf K\vec v_2=(400,\ -200)$ なので $\tilde k_2=400+200=600$、$\tilde m_2=2+1=3$、$\omega_2^2=200$。
+\phtashikame
+例題6と同じく、$\omega_1\approx7.07$、$\omega_2\approx14.1$ です。また $\vec v_1^{\mathsf T}\mathbf K\vec v_2=1\times400+2\times(-200)=0$ で、こわさの重みでも直交しています。
+\kotae （1）$-1$ と0（重みつきで直交）、（2）$\tilde m_1=6$・$\tilde k_1=300$、$\tilde m_2=3$・$\tilde k_2=600$。$\omega^2=50$・200
+\end{phreidai}
+\begin{jibun}
+じぶんでとこう6（$m_1=1$、$m_2=2$）のモード $\vec u_1=(1,\ 2.686)$、$\vec u_2=(1,\ -0.186)$ が、$\mathbf M$ で重みをつけた内積で直交していることを確かめましょう。
+\bkjans{$1\times1\times1+2\times2.686\times(-0.186)=1-0.999\approx0$（小さなちがいは丸めのため）}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{質量行列を忘れる}
+\bkng{質量がちがう台車でも、$\mathbf K$ の固有値がそのまま $\omega^2$。}
+\bkok{$\det(\mathbf K-\omega^2\mathbf M)=0$、または $\mathbf M^{-1}\mathbf K$ の固有値が $\omega^2$。}
+例題6の $\mathbf K$ だけの固有値は約58と342で、正しい50・200とはちがいます。質量がみな同じ $m$ のときだけ、$\mathbf K$ の固有値を $m$ でわれば $\omega^2$ になります（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\omega$ と $f$}
+\bkng{例題1の1次モードは\qty{10}{Hz}。}
+\bkok{$\omega=\qty{10}{rad/s}$。振動数は $f=\omega/(2\pi)\approx\qty{1.59}{Hz}$。}
+固有値の平方根は、角振動数 $\omega$〔rad/s〕です。1秒に何回ゆれるかを言うときは、$2\pi$ でわります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{モードの形の大きさ}
+\bkng{例題6の1次モードは、台車1が\qty{1}{m}、台車2が\qty{2}{m}ゆれる。}
+\bkok{モードの形は「比」だけが決まる。$(1,\ 2)$ も $(0.5,\ 1)$ も同じモード。大きさは、はじめの状態で決まる（⑦）。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{$L=K+U$？}
+\bkng{ラグランジアンは全体のエネルギーなので、$L=K+U$。}
+\bkok{$L=K-U$（差）。和 $K+U$ はハミルトニアン $H$（⑩）。}
+$K+U$ で計算すると、ばねの式が $m\ddot x=+kx$ になり、ずれるほど遠くへ押される（こわれる）ばねになってしまいます。ばねで確かめると、符号のまちがいにすぐ気づけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{直交を、ふつうの内積で確かめる}
+\bkng{例題6のモード $(1,\ 2)$ と $(1,\ -1)$ は、内積が $-1$ なので、計算がまちがっている。}
+\bkok{質量がちがうときは、$\vec v_1^{\mathsf T}\mathbf M\vec v_2$ で確かめる。$2-2=0$ で正しい。}
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{8\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[ゆれをおさえる・ゆれを調べる]
+\textbf{高い建物と塔の動吸振器}：台北101 の重りは、直径\qty{5.5}{m}・660 t の鋼の球を、87階から92階の吹きぬけにつるしたものです。日本でも、高いビルや電波塔、長い橋の塔、煙突などに、重りの動吸振器がついています。重りをモーターで動かして、もっと積極的にゆれを打ち消す装置（アクティブ・マス・ダンパー）もあります。これは波-4 のフィードバック制御です。
+
+\textbf{送電線のダンパー}：鉄塔の間の送電線は、風で細かくゆれ続けることがあり、電線が金属の疲れで切れる原因になります。電線には、短いワイヤーの両はしに重りをつけた「ストックブリッジダンパー」がつけてあり、重りのゆれでエネルギーを吸いとります。
+
+\textbf{車とエンジン}：車の車体は、上下のゆれ（バウンス）と前後のかたむき（ピッチ）の2自由度でゆれます。前と後ろのばねの強さを選んで、2つのモードの振動数と形を、乗る人が気持ちよく感じるように決めています。エンジンを支えるゴム（エンジンマウント）の位置と強さも、エンジンのゆれのモードが車体に伝わりにくいように選びます。
+
+\textbf{モード解析}：自動車のボディ、飛行機のつばさ、新しい橋は、作ったあとにハンマーでたたいたり、加振器でゆすったりして、モードを測ります（⑦）。計算（有限要素法、力-16）と合わない所があれば、計算のモデルを直します。
+
+\begin{phketa}[多自由度の振動の数の目安]
+\phketaline{高いビルの1次の周期}{数秒から10秒ほど（高いほど長い）}
+\phketaline{木造の2階建ての家の1次の振動数}{数 Hz（周期 0.2〜0.5 秒くらい）}
+\phketaline{動吸振器の質量比 $\mu$}{1次モードに効く質量の数 \% 以下}
+\phketaline{建物のモードの減衰比}{数 \% 以下}
+\phboxhead{答えが桁で合っているか}
+高いビルの固有振動数が何十 Hz にもなったら、$\omega$ と $f$ の取り違え（$2\pi$ 倍）か、質量の単位（t と kg）の取り違えを疑いましょう。ふりこの動吸振器の長さは、ビルの周期が数秒なら、数 m から十数 m になります。
+\end{phketa}
+\end{phkougaku}
+\phstation{機械力学,構造動力学,ロボット工学,振動の計測}{多自由度系、一般化座標、ラグランジュの運動方程式、質量行列、剛性行列、固有値問題、固有振動数、固有モード、モードの直交性、モード解析、動吸振器（TMD）、最適同調}
+
+\begin{column}{ラグランジュと『解析力学』}
+ジョゼフ＝ルイ・ラグランジュ（1736〜1813年）は、イタリアのトリノに生まれ、ベルリン、そしてパリで活躍した数学者です。1788年に出した本『解析力学』で、この章のラグランジュの式をまとめました。この本には、図が1枚もありません。ラグランジュは「この本には図はない。必要なのは、決まった手順で進む計算だけだ」という意味のことを前書きに書いています。力の矢印を1本ずつ考えるかわりに、エネルギーを書いて決まった手順で微分すれば、どんな複雑な機械の運動方程式も作れる、という考えが、200年あまりたった今、ロボットやコンピュータの計算を支えています。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+\bkproblem 例題1の台車で、つなぎのばねを $k_{\mathrm c}=\qty{5}{N/m}$ にしました。2つの固有角振動数と、うなりの周期を求めましょう。
+\bkpans{$\omega_1=\qty{10}{rad/s}$、$\omega_2=\sqrt{110}\approx\qty{10.49}{rad/s}$。$T_{\text{うなり}}=2\pi\div0.488\approx\qty{13}{s}$}
+\bkproblem ばね定数 $k$ のばね1本で、質量 $m$ の台車がかべとつながっています。台車の上に、別の質量 $m$ の箱を、すべらないようにしっかりのせました。台車の位置 $x$ を一般化座標にして、ラグランジュの式で運動方程式を作り、$m=\qty{1.5}{kg}$、$k=\qty{300}{N/m}$ のときの角振動数を求めましょう。
+\bkpans{$K=\tfrac12(m+m)\dot x^2$、$U=\tfrac12kx^2$ より $2m\ddot x=-kx$。$\omega=\sqrt{k/(2m)}=\sqrt{100}=\qty{10}{rad/s}$}
+\bkproblem 例題5の2階建ての家で、$m=\qty{2.0e4}{kg}$、$k=\qty{3.2e7}{N/m}$ とすると、2つの固有振動数はいくらになりますか。
+\bkpans{$\sqrt{k/m}=\qty{40}{rad/s}$。$\omega=0.618\times40\approx\qty{24.7}{rad/s}$（\qty{3.9}{Hz}）、$1.618\times40\approx\qty{64.7}{rad/s}$（\qty{10}{Hz}）}
+\bkproblem 固有角振動数\qty{8}{rad/s}のビルの模型に、$\mu=0.10$ の重りを、ダンパーなしで同調させてつけました。2つに分かれた固有角振動数を求めましょう。
+\bkpans{$r^4-2.1r^2+1=0$、$r^2=(2.1\pm0.640)/2$。$r\approx0.854$、1.171。$\omega\approx\qty{6.8}{rad/s}$、\qty{9.4}{rad/s}}
+\bkproblem $\mu=0.03$ の動吸振器の、最適な振動数の比と減衰比を求めましょう。
+\bkpans{比 $1\div1.03\approx0.971$。$\zeta_{\mathrm a}=\sqrt{0.09\div(8\times1.093)}\approx0.10$}
+\bkproblem 質量行列 $\mathbf M=\begin{pmatrix}2&0\\0&1\end{pmatrix}$、こわさ行列 $\mathbf K=\begin{pmatrix}600&-200\\-200&200\end{pmatrix}$ の2自由度の台車のモードは、$(1,\ 2)$ と $(1,\ -1)$ です。（1）2つのモードが $\mathbf M$ で重みをつけた内積で直交していることを確かめましょう。（2）モード質量とモードこわさから、2つの固有角振動数を求めましょう。
+\bkpans{（1）$2\times1\times1+1\times2\times(-1)=0$。（2）$\tilde m_1=6$、$\tilde k_1=600$ で $\omega_1=\qty{10}{rad/s}$。$\tilde m_2=3$、$\tilde k_2=1200$ で $\omega_2=\qty{20}{rad/s}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 2重ふりこで、上のおもりを $2m$、下のおもりを $m$、棒の長さを2本とも\qty{1}{m}にします。小さなふれのときの質量行列とこわさ行列を作り、2つの固有角振動数とモードの形を求めましょう（$g=\qty{9.8}{m/s^2}$）。
+\bkpans{$\mathbf M$ は $ml^2$ に、1行め3・1、2行め1・1をかけたもの。$\mathbf K$ は $mgl$ に、対角3・1をかけたもの。$2\lambda^2-6a\lambda+3a^2=0$（$a=9.8$）より $\lambda=a(3\mp\sqrt3)/2$。$\omega\approx\qty{2.49}{rad/s}$（$\theta_2/\theta_1=\sqrt3$）、\qty{4.82}{rad/s}（$-\sqrt3$）}
+\bkproblem 天井クレーンの台車（\qty{4.0}{t}）から、長さ\qty{20}{m}のロープで\qty{2.0}{t}の荷をつるしています。台車を押す力がなく、レールの上を自由に動けるとき、荷の小さなゆれの周期を求めましょう。台車を止めておくときの周期ともくらべましょう（⑨）。
+\bkpans{$\omega=\sqrt{\tfrac{9.8}{20}(1+\tfrac{2.0}{4.0})}\approx\qty{0.857}{rad/s}$、周期 約\qty{7.3}{s}。台車を止めると $2\pi\sqrt{20/9.8}\approx\qty{9.0}{s}$}
+\bkproblem 例題7の3階建ての建物で、3階（屋上）の質量だけを半分の\qty{0.5}{kg}にしました。$\mathbf M^{-1}\mathbf K$ を作り、Python（\texttt{np.linalg.eig}）で求めると、$\omega$ は約5.18・14.14・\qty{19.32}{rad/s} でした。1次モードの形が $(1,\ \sqrt3,\ 2)$ であることを、$(\mathbf K-\omega^2\mathbf M)\vec v=\vec 0$ に入れて確かめましょう（$\omega_1^2=100(2-\sqrt3)$）。
+\bkpans{$\lambda=100(2-\sqrt3)\approx26.8$。1行め $(200-\lambda)\times1-100\sqrt3=100\sqrt3-100\sqrt3=0$、2行め $-100+(200-\lambda)\sqrt3-200=-300+300=0$、3行め $-100\sqrt3+(100-0.5\lambda)\times2=-100\sqrt3+100\sqrt3=0$}
+\bkproblem 例題7の建物で、1次モードの形を「上の階ほど大きい直線」$\vec v=(1,\ 2,\ 3)$ と見当をつけて、$\omega^2\approx\vec v^{\mathsf T}\mathbf K\vec v\div\vec v^{\mathsf T}\mathbf M\vec v$ を計算しましょう。正しい $\omega_1=\qty{4.45}{rad/s}$ とくらべて、何\,\%ちがいますか。
+\bkpans{$\vec v^{\mathsf T}\mathbf K\vec v=100\times(1+1+1)=300$、$\vec v^{\mathsf T}\mathbf M\vec v=14$。$\omega^2\approx21.4$、$\omega\approx\qty{4.63}{rad/s}$。約4\,\%大きい（見当をつけたモードでは、いつも少し大きめに出る）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ゆれが行き来するわけを、2つのモードのたし算で説明できる。\bkfurref{ph:波-3:sec2}
+\item 表計算で2自由度のゆれと、動吸振器の効きめを確かめられる。\bkfurref{ph:波-3:sec3}
+\item ラグランジュの式で、エネルギーから運動方程式を立てられる。\bkfurref{ph:波-3:sec4}
+\item 質量行列のある固有値問題で、モードを求められる。\bkfurref{ph:波-3:sec5}
+\item 動吸振器の同調と、モードの直交・モード解析を説明できる。\bkfurref{ph:波-3:sec6}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{屋上の重りは、ビルのゆれを横取りして、こっそり捨てていたんだね！}
