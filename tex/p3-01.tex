@@ -1,0 +1,1403 @@
+%% 第24回編集委員会（物理第3巻）：組 波W1
+%% p3-01.tex  波-1　ばねとおもりで考える：1自由度の振動（★1〜4・3段にしない）
+%% 中身は計画書 tools/phys3-plan.md の B「波-1」。公式の持ち主は A（A3・A22〜A25・A48）。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-1/calc_p3_01.py（出力 calc_p3_01_out.txt）、code_p3_01.py（⑪の囲みのプログラム）
+%% 第1巻との約束（計画書 A-6）：
+%%   ・力-2 の \phkx「ふりこの周期は『波動』で」・本文「ふれはばが小さいときだけ成り立つ式を、運動方程式から導く」→ ③（ph:波-1:furiko）
+%%   ・力-4 の \phkx と「詳しくは波-1」（200 N/m・0.10 m・1.0 J）→ ⑥・例題3（ph:波-1:energy）
+%%   ・力-15「C＝2π は『波動』（波-1）で運動方程式を解いて確かめる」→ ③
+%%   ・力-0 のクレーン（ゆれの計算は『波動』で）→ 例題13
+%%   ・力-8 ③（直列・並列）・力-10 ⑨（片持ち・単純支持のはりのばね定数）・力-11 ⑥（ねじり）→ ④・⑨（導き直さない）
+%%   ・前付の「保存則と相似の地図」の「出会う章 波-1（ゆれ）」→ ⑩（力学・電気・熱・流体の相似の表）
+%% 数学との重なり（W-6）：6-6（ばね・表計算・初期条件・つるしたばね・エネルギー・ふりこ・LC）、6-7（ダンパー・ζ・δ・RLC）、
+%%   6-12（ω_d・δ＝2πζ/√(1−ζ²)）、6-2⑨⑪（速度を先に進めるオイラー法）、5-17⑧（sinθ≈θ）と同じ計算は指して使う。
+%%   数学 6-6 の数（0.5 kg・8 N/m、ω_n＝4、0.2 kg・20 N/m、10°→2.01 s・90°→2.37 s）は変えずに名指しした。
+%% 記号（この章）：周期 T、振動数 f、角振動数 ω、固有角振動数 ω_n、振幅 A（数学 6-6 は X）、初期位相 φ、ばね定数 k、
+%%   減衰係数 c（第1部の意味）、減衰比 ζ、対数減衰率 δ、静たわみ x_st（δ と分ける）、ふりこの長さ l（数学 5-17・6-6 は L）、
+%%   糸が引く力 F_T（同じ章に周期 T があるので）、慣性モーメント I、断面二次極モーメント I_p（力-11）、ねじりこわさ k_t、
+%%   横弾性係数 G、運動エネルギー K・位置エネルギー U（力-4）、ふりこ・円板の角 θ。
+%%   ねじりモーメント（力-11 の T）は、周期 T とぶつけないために記号を使わず「ねじりのモーメント k_t θ」と書いた。
+%% 出典（本文で使った値・事実）と〔要確認〕
+%%   ・鋼の横弾性係数 G＝79 GPa：力-11 と同じ（E＝205 GPa、ν＝0.3 から）。
+%%   ・大きなふれの周期：T/T₀＝(2/π)K(sin(θ₀/2))（K は第1種完全だ円積分）。SciPy の ellipk で計算した。
+%%   ・ホイヘンスのふりこ時計（1656年12月25日の日付、1657年に特許、1673年『振子時計（Horologium Oscillatorium）』でサイクロイドの
+%%       ふりこ）：Linda Hall Library "Christiaan Huygens"（https://www.lindahall.org/about/news/scientist-of-the-day/christian-huygens/）、
+%%       Wikipedia "Horologium Oscillatorium"。
+%%   ・ガリレオのふりこの等時性：同じ資料。ピサの大聖堂のランプの話は伝説として書いた（確かめようがない、と本文に書いた）。
+%%   ・ブランコの立ちこぎ・座りこぎ：W. B. Case, "The pumping of a swing from the standing position", Am. J. Phys. 64, 215 (1996)
+%%       （ADS の要旨で確かめた）、W. B. Case, M. A. Swanson, "The pumping of a swing from the seated position", Am. J. Phys. 58, 463 (1990)
+%%       （引いている論文 arXiv:2206.09579 で確かめた）。
+%%   ・建物の減衰比：設計の慣用値は鉄骨 2 %、鉄筋コンクリート 3 %（日本建築センター高層評定の建物の整理。原子力規制委員会の資料
+%%       https://www.nra.go.jp/data/000331736.pdf ほか）。強震観測から RC 超高層で 1.5〜3.0 %（日本建築学会技術報告集 23巻53号、2017）。
+%%       本文は「鉄骨 0.01〜0.02、RC 0.02〜0.05」とした。
+%%   ・車の上下のゆれ（ばね上）の固有振動数 約1〜1.5 Hz：車両運動の論文（中型車 1.0〜1.5 Hz）と HP Academy の解説（1〜1.5 Hz）。
+%%   ・人が歩く足の運び 約2 Hz：歩道橋の設計の総説（歩く 1.6〜2.4 Hz、横の力 0.7〜1.2 Hz。Matsumoto ほか を引く論文 2件）。
+%%   ・高い建物の1次固有周期の目安「階数×0.1 秒」：韓国の基準 KBC-2009 の略算 0.1N、日本大学の CFT 造の調べで平均 0.11N
+%%       （0.06N〜0.15N）、気象庁「長周期地震動について」の説明（固有周期は階数・高さと相関があり、幅が広い）。
+%%   ・車のサスペンションの減衰比 約0.2〜0.4：Gillespie "Fundamentals of Vehicle Dynamics"（SAE, 1992）5章を引く講義資料
+%%       （https://bamason2.github.io/ttc066-module/notes/Section_5.html）と eng-tips の議論で照らし合わせた。
+%%   ・鋼の部品1つの減衰比 0.001〜0.01：T. Irvine "Damping characteristics of bolted and welded joints"・"Damping cross-reference"（鋼そのもの 0.001〜0.002）、
+%%       溶接した骨組みの試験 1.2〜2.2 %、米国 NRC Regulatory Guide 1.61（溶接鋼構造 3〜4 %）で照らし合わせた。
+\makeatletter
+% ばね（2点のあいだのぎざぎざ）  \rxbspring{(始め)}{(終わり)}
+\newcommand\rxbspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=2.2mm, amplitude=1.6mm, pre length=2.2mm, post length=2.2mm}] #1 -- #2;}
+% 壁（たて。左側に斜線）  \rxbwall{x}{下の y}{上の y}
+\newcommand\rxbwall[3]{\fill[pattern=north east lines, pattern color=bkGray] ({#1-2.6},#2) rectangle (#1,#3); \draw[bkInk, line width=1pt] (#1,#2) -- (#1,#3);}
+% 天井（上側に斜線）  \rxbceil{左の x}{右の x}{y}
+\newcommand\rxbceil[3]{\fill[pattern=north east lines, pattern color=bkGray] (#1,#3) rectangle (#2,{#3+2.6}); \draw[bkInk, line width=1pt] (#1,#3) -- (#2,#3);}
+% 床（下側に斜線）  \rxbfloor{左の x}{右の x}{y}
+\newcommand\rxbfloor[3]{\fill[pattern=north east lines, pattern color=bkGray] (#1,{#3-2.4}) rectangle (#2,#3); \draw[bkInk, line width=1pt] (#1,#3) -- (#2,#3);}
+% おもり（四角）  \rxbblock{左下 x}{左下 y}{はば}{高さ}{色}
+\newcommand\rxbblock[5]{\filldraw[fill=#5!25, draw=#5!80!black, line width=0.8pt, rounded corners=0.8mm] (#1,#2) rectangle ++(#3,#4);}
+% ふりこのおもり（丸）  \rxbbob{(中心)}{半径}{色}
+\newcommand\rxbbob[3]{\filldraw[fill=#3!35, draw=#3!80!black, line width=0.8pt] #1 circle (#2);}
+% ダンパー（横向き）  \rxbdamper{左の x}{右の x}{y}
+\newcommand\rxbdamper[3]{%
+  \fill[bkYellow!30] ({#1+2.5},{#3-2.4}) rectangle ({#1+0.66*(#2-#1)},{#3+2.4});
+  \draw[bkInk, line width=0.8pt] (#1,#3) -- ({#1+2.5},#3) ({#1+2.5},{#3-2.4}) -- ({#1+2.5},{#3+2.4})
+    ({#1+2.5},{#3+2.4}) -- ({#1+0.66*(#2-#1)},{#3+2.4}) ({#1+2.5},{#3-2.4}) -- ({#1+0.66*(#2-#1)},{#3-2.4});
+  \draw[bkInk, line width=1.3pt] ({#1+0.42*(#2-#1)},{#3-1.8}) -- ({#1+0.42*(#2-#1)},{#3+1.8});
+  \draw[bkInk, line width=0.8pt] ({#1+0.42*(#2-#1)},#3) -- (#2,#3);}
+% 図の中の字
+\tikzset{rxb lab/.style={font=\sffamily\footnotesize, text=bkInk}, rxb dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+\makeatother
+
+\phchapter{1}{ばねとおもりで考える：\\1自由度の振動}{ブランコの1往復の時間は、何で決まる？}{\bklevelrange{1}{4}}{ばねとおもりで考える：1自由度の振動}
+\bkmichishirube{4-8,5-17,6-2,6-6,6-7,6-12,力-2,力-4,力-6,力-15}{波-2,波-3,波-5,電-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace ふりこの1往復の時間が、ふりこの長さで決まり、おもりの重さにはよらないことを、実験で確かめられる。
+\item \bklevel{3}\enspace ばねとおもり・ふりこの運動方程式から、単振動の式と周期を導き、エネルギーで速さを求められる。
+\item \bklevel{4}\enspace 等価ばね定数・静たわみ・実体ふりこ・ねじり振動で、いろいろな物の固有振動数を見積もれる。
+\item \bklevel{4}\enspace ゆれの記録から減衰比を読み、力学・電気・熱・流体の相似の表で、同じ形の式を見分けられる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{ふりこの1往復の時間は長さで決まる（重さによらない）}{小学校理科}{ph:波-1:furiko-shou}
+\phk{単振動 $x=A\sin(\omega t+\phi)$、$a=-\omega^2x$}{高校物理}{ph:波-1:tanshindou}
+\phk{ばねふりこ $T=2\pi\sqrt{m/k}$（鉛直ばねふりこも）}{高校物理}{ph:波-1:bane}
+\phk{単ふりこ $T=2\pi\sqrt{l/g}$}{高校物理}{ph:波-1:furiko}
+\phk{単振動のエネルギー $\tfrac{1}{2}kA^2$}{高校物理}{ph:波-1:energy}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+公園のブランコを、こがずに、軽く押してもらってゆらします。行って、もどって、また行って……。1往復するのに、何秒かかるでしょう。
+
+その時間は、何で決まるのでしょうか。乗る人の重さでしょうか。どれだけ大きくゆれているかでしょうか。それとも、ブランコの鎖の長さでしょうか。大人と子どもが同じブランコに乗ったら、どちらが速く往復するでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray!80!black, line width=1.6pt] (2,0) -- (8,44) -- (44,44) -- (50,0);
+  \fill[bkInk] (26,44) circle (0.9);
+  \draw[bkGray, line width=0.6pt, dotted] (26,44) -- (26,10);
+  \draw[bkInk, line width=0.9pt] (26,44) -- ++(-65:34) coordinate (s);
+  \fill[bkOrange!70!black] ($(s)+(-4.5,-0.9)$) rectangle ($(s)+(4.5,0.9)$);
+  \draw[bkBlue, line width=0.7pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] ($(26,44)+(-118:27)$) arc (-118:-62:27);
+  \node[rxb lab, anchor=east] at ($(26,44)+(-97:18)$) {長さ $l$};
+  \node[rxb lab, anchor=north, text=bkBlue!80!black] at (26,6.5) {1往復は何秒？};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent ブランコ、ばねにつけたおもり、車のサスペンション、風でゆれる高いビル。この巻の第1部では、「行ったり来たりする動き」（\textbf{振動}）を調べます。\bkidx{しんどう}{振動}第1巻『力学』では、物の動きを運動方程式で追いました。ゆれる物にも、同じ運動方程式が使えます。ちがうのは、物をもとの位置へもどそうとする力がはたらくことです。この章では、ゆれる物のうち、いちばん簡単な「1つの数で形が決まる物」を調べ、ゆれの速さが何で決まるかを明らかにします。
+
+\begin{yattemiyou}[5円玉のふりこで、1往復の時間をはかろう]
+\textbf{用意するもの}\par
+糸（\qty{1.2}{m}くらい）、5円玉（3枚）、セロハンテープ、ものさし、分度器、ストップウォッチ（スマホでよい）\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 糸の先に5円玉を1枚結び、机のはしにテープでとめて、つるした点から5円玉のまん中まで\qty{25}{cm}のふりこを作る。
+\item 5円玉を横に引いて（ふれはば約10°）、そっと放す。10往復の時間をはかって、10でわる。
+\item 5円玉を3枚にして、②と同じことをする。
+\item 長さを\qty{1}{m}にして、②をする。次に、ふれはばを約30°にして、もう一度はかる。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!35] (0,40) rectangle (40,42.5);
+  \draw[bkInk, line width=0.6pt] (0,40) -- (40,40);
+  \draw[bkGray, line width=0.5pt, dotted] (8,40) -- (8,28) (28,40) -- (28,4);
+  \draw[bkInk, line width=0.6pt] (8,40) -- ++(-80:8.5);
+  \filldraw[fill=bkYellow!60!bkOrange, draw=bkOrange!70!black, line width=0.5pt] ($(8,40)+(-80:10)$) circle (1.6);
+  \fill[white] ($(8,40)+(-80:10)$) circle (0.5);
+  \draw[bkInk, line width=0.6pt] (28,40) -- ++(-80:34.5);
+  \filldraw[fill=bkYellow!60!bkOrange, draw=bkOrange!70!black, line width=0.5pt] ($(28,40)+(-80:36)$) circle (1.6);
+  \fill[white] ($(28,40)+(-80:36)$) circle (0.5);
+  \node[rxb lab, anchor=north] at (10.5,24) {\qty{25}{cm}};
+  \node[rxb lab, anchor=west] at (35,15) {\qty{1}{m}};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=17mm] Q[c,m,wd=16mm] Q[c,m,wd=16mm] Q[c,m,wd=24mm] Q[c,m,wd=22mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+長さ & 5円玉 & ふれはば & 10往復の時間 & 1往復の時間 \\
+\qty{25}{cm} & 1枚 & 10° & \qty{10.1}{s} & \qty{1.01}{s} \\
+\qty{25}{cm} & 3枚 & 10° & \qty{10.0}{s} & \qty{1.00}{s} \\
+\qty{1}{m} & 1枚 & 10° & \qty{20.1}{s} & \qty{2.01}{s} \\
+\qty{1}{m} & 1枚 & 30° & \qty{20.4}{s} & \qty{2.04}{s} \\
+\end{bktable}
+\bktabcaption{やってみようで、ソラさんがはかった結果}\label{ph:波-1:tab-yattemiyou}
+\end{bkcenter}
+
+\noindent やってみようの答え：表\ref{ph:波-1:tab-yattemiyou}から、3つのことがわかります。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 5円玉を3枚にして重くしても、1往復の時間は変わらない（\qty{1.01}{s}と\qty{1.00}{s}のちがいは、はかり方のずれの大きさです）。
+\item 長さを4倍（\qty{25}{cm}→\qty{1}{m}）にすると、1往復の時間は2倍（約\qty{1}{s}→約\qty{2}{s}）になる。
+\item ふれはばを10°から30°にすると、ほんの少し（約1.5\,\%）長くなる。でも、長さを変えたときにくらべると、ずっと小さなちがいです。
+\end{enumerate}
+1往復が短いので、10往復をまとめてはかり、10でわりました。ストップウォッチを押すタイミングのずれ（0.1〜0.2秒）が、10分の1になるからです。「重さによらない」「長さを4倍にすると2倍」「ふれはばには少しだけよる」の3つがなぜなのかを、この章で、運動方程式から確かめます。
+
+\begin{omoidasou}
+\bkrecall{4-8}{半径 $r$ の円を、角速度 $\omega$ で回る点は $(r\cos\omega t,\ r\sin\omega t)$。周期 $T=\dfrac{2\pi}{\omega}$、1秒の回数 $f=\dfrac{1}{T}$。}
+\bkrecall{5-17}{角 $\theta$ が小さいとき、$\sin\theta\approx\theta$（$\theta$ はラジアン）。ふりこは、小さくゆれれば単振動。}
+\bkrecall{6-6}{$m\ddot x=-kx$ の答えは $x=X\cos(\omega_{\mathrm n}t+\phi)$、$\omega_{\mathrm n}=\sqrt{k/m}$。\qty{0.5}{kg}・\qty{8}{N/m}のばねで $\omega_{\mathrm n}=4$\,rad/s、周期約\qty{1.57}{s}。}
+\bkrecall{6-7}{ダンパーの力は $-c\dot x$。$m\ddot x+c\dot x+kx=0$。減衰比 $\zeta=\dfrac{c}{2\sqrt{mk}}$、対数減衰率 $\delta$。}
+\bkrecall{力-2}{運動方程式 $m\vec a=\vec F$。ばねの力は、のびと反対向きに $F=-kx$。}
+\bkrecall{力-4}{ばねの位置エネルギー $U=\tfrac{1}{2}kx^2$。保存力だけが仕事をするとき $K+U=$ 一定。}
+\bkrecall{力-15}{次元解析で、ふりこの周期は $T=C\sqrt{l/g}$ の形。数 $C$ は次元解析では決まらない。}
+\end{omoidasou}
+
+\noindent この巻の記号：数学の本（6-6）は、振幅を $X$、ふりこの長さを $L$ と書きました。この本では、高校の教科書や第1巻と同じく、振幅を $A$、ふりこの長さを $l$ と書きます（$x=A\sin(\omega t+\phi)$、$T=2\pi\sqrt{l/g}$）。式の形も中身も、数学の本と同じです。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\bksubsection{1}{1自由度：1つの数で形が決まる}
+\label{ph:波-1:sec1}
+ゆれる物の「今の形」を言い表すのに、いくつの数がいるでしょう。図\ref{ph:波-1:fig-ichijiyuudo}の4つは、どれも\textbf{1つの数}で決まります。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % (1) ばねとおもり
+  \rxbfloor{0}{30}{0}
+  \rxbwall{2}{0}{14}
+  \rxbspring{(2,6)}{(17,6)}
+  \rxbblock{17}{0.4}{9}{11}{bkBlue}
+  \draw[bkGray, line width=0.5pt, dashed] (14,-1) -- (14,16);
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (14,16) -- (21.5,16);
+  \node[rxb lab, anchor=south] at (17.8,16.6) {$x$};
+  \node[rxb lab, anchor=north, align=center] at (15,-4) {ばねとおもり\\位置 $x$};
+  % (2) ふりこ
+  \begin{scope}[shift={(34,0)}]
+  \rxbceil{2}{28}{26}
+  \draw[bkGray, line width=0.5pt, dotted] (15,26) -- (15,4);
+  \draw[bkInk, line width=0.7pt] (15,26) -- ++(-65:20) coordinate (b);
+  \rxbbob{(b)}{2}{bkRed}
+  \draw[bkRed!80!black, line width=0.6pt] (15,18) arc (-90:-65:8);
+  \node[rxb lab] at (17.2,15.2) {$\theta$};
+  \node[rxb lab, anchor=north, align=center] at (15,-4) {ふりこ\\角 $\theta$};
+  \end{scope}
+  % (3) 片持ちはりの先のおもり
+  \begin{scope}[shift={(68,0)}]
+  \rxbwall{2}{2}{22}
+  \draw[bkGray, line width=0.5pt, dashed] (2,14) -- (26,14);
+  \draw[bkOrange!70!black, line width=1.6pt] (2,14) .. controls (14,14) and (20,12) .. (26,9);
+  \rxbblock{23}{3}{6}{6}{bkBlue}
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (28,14) -- (28,9.3);
+  \node[rxb lab, anchor=west] at (28.5,12) {$y$};
+  \node[rxb lab, anchor=north, align=center] at (15,-4) {はりの先のおもり\\たわみ $y$};
+  \end{scope}
+  % (4) ねじりの円板
+  \begin{scope}[shift={(102,0)}]
+  \rxbceil{4}{24}{26}
+  \draw[bkGray!70!black, line width=1.6pt] (14,26) -- (14,9);
+  \filldraw[fill=bkGreen!25, draw=bkGreen!60!black, line width=0.8pt] (14,8) ellipse (10 and 3);
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] (6,3.6) arc (210:330:9.2 and 2.6);
+  \node[rxb lab, anchor=west] at (22.5,2.2) {$\theta$};
+  \node[rxb lab, anchor=north, align=center] at (14,-4) {ねじれる円板\\回る角 $\theta$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{1自由度の4つの例。どれも、1つの数（位置・角・たわみ）がわかれば、全体の形が決まる。}\label{ph:波-1:fig-ichijiyuudo}
+\end{bkfigure}
+
+ばねにつけたおもりは、つり合いの位置からのずれ $x$ がわかれば、おもりの場所もばねののびもわかります。ふりこは、糸の角 $\theta$ がわかれば、おもりの場所がわかります（糸がのびないとき）。このように、形を決めるのに要る数の個数を\textbf{自由度}といい、1つで決まる物を\textbf{1自由度}の物といいます。\bkidx{じゆうど}{自由度}ブランコ、車の上下のゆれ（車体を1つのおもりと見たとき）、高いビルの「いちばんゆっくりした」ゆれも、1自由度で考えられます。2台の台車をばねでつないだ物は2自由度（波-3）、ギターの弦は、弦の上の点ごとに位置があるので、自由度は数えきれません（波-5・波-6）。
+
+4つの例には、共通点があります。つり合いの位置からずらすと、\textbf{もとの位置へもどそうとする力}（回るものでは、もどそうとするモーメント）がはたらくことです。この力を\textbf{復元力}といいます。\bkidx{ふくげんりょく}{復元力}もどってきた物は、勢いがついているので、つり合いの位置を通りすぎて反対側へ行き、また引きもどされます。これが「ゆれ」です。復元力がずれに比例するとき、ゆれは、どの例でもまったく同じ形になります。それを、まずばねとおもりで調べます。
+
+%% ---------------------------------------------------------------
+\Needspace{16\baselineskip}\bksubsection{2}{ばねとおもり：単振動}
+\label{ph:波-1:sec2}
+\noindent\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxbfloor{-2}{58}{0}
+  \rxbwall{0}{0}{18}
+  \rxbspring{(0,7)}{(30,7)}
+  \rxbblock{30}{0.4}{12}{12}{bkBlue}
+  \node[rxb lab] at (36,6.4) {$m$};
+  \draw[bkGray, line width=0.5pt, dashed] (22,-1) -- (22,23);
+  \draw[bkGray, line width=0.5pt, dashed] (36,13) -- (36,23);
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=2mm]}] (22,21) -- (35.6,21);
+  \node[rxb lab, anchor=south] at (29,21.4) {ずれ $x$};
+  \node[rxb lab, anchor=north] at (22,-3) {自然の長さ（$x=0$）};
+  \draw[bkRed, line width=1.2pt, -{Stealth[length=2.6mm]}] (29.6,10) -- (19,10);
+  \node[rxb lab, anchor=south, text=bkRed!80!black] at (12,11) {$F=-kx$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.51\linewidth}\raggedright
+なめらかな床の上で、ばね定数 $k$ のばねに、質量 $m$ のおもりをつなぎます。ばねが自然の長さのときのおもりの位置を $x=0$ とし、右を正にします。\par\vspace{2pt}
+おもりを右へ $x$ ずらすと、ばねはのびて、おもりを左へ $kx$ の力で引きます。左へずらすと、縮んだばねが右へ押します。どちらも $F=-kx$ と書けます（力-2）。
+\end{minipage}
+
+\par\vspace{4pt}
+左右の向きにはたらく力は、ばねの力だけです（重力と床が支える力は上下でつり合う）。力-2の運動方程式に入れると、加速度は $\ddot x$ なので、
+\pheq{m\ddot x=-kx}{kg × m/s$^2$ ＝ N/m × m}
+これが、ばねとおもりの運動方程式です。6-6①で、まったく同じ式を立てて解きました。ここでは、答えの形を確かめます。
+
+$x=A\sin(\omega t+\phi)$ という形を考えます（$A$、$\omega$、$\phi$ は定数）。時間で2回微分すると（5-15）、
+\[\dot x=A\omega\cos(\omega t+\phi),\qquad \ddot x=-A\omega^2\sin(\omega t+\phi)=-\omega^2x\]
+です。これを $m\ddot x=-kx$ に入れると $-m\omega^2x=-kx$ で、$\omega^2=k/m$ ならどの時刻でも成り立ちます。だから、
+\pheq{x=A\sin(\omega t+\phi),\qquad \omega=\sqrt{\frac{k}{m}}}{rad/s ＝ $\sqrt{\text{(N/m)}\div\text{kg}}$ ＝ 1/s}
+\label{ph:波-1:tanshindou}が答えです。このように sin で表されるゆれを\textbf{単振動}といいます。\bkidx{たんしんどう}{単振動}$A$ を\textbf{振幅}\bkidx{しんぷく}{振幅}（いちばん大きいずれ）、$\omega t+\phi$ を\textbf{位相}、$\phi$ を\textbf{初期位相}といいます。$A$ と $\phi$ は、はじめにどこから、どんな速さで放したかで決まります（6-6④）。でも $\omega$ は、$k$ と $m$ だけで決まり、放し方によりません。この $\omega$ を\textbf{固有角振動数}といい、$\omega_{\mathrm n}$ と書きます（n は natural の頭文字）。\bkidx{こゆうかくしんどうすう}{固有角振動数}
+
+速度と加速度は、上の微分のとおりです。
+\pheq{v=A\omega\cos(\omega t+\phi),\qquad a=-\omega^2x}{m/s$^2$ ＝ (1/s)$^2$ × m}
+加速度は、いつもずれ $x$ と反対向きで、ずれに比例します。いちばん速いのはまん中（$x=0$）を通るときで $A\omega$、加速度がいちばん大きいのは、はし（$x=\pm A$）で $A\omega^2$ です。
+
+\begin{phflow}[ばねとおもり]
+\phflowrow{$m\ddot x=-kx$}{ばねが軽い\\摩擦がない}{$x=A\sin(\omega t+\phi)$\\$\omega=\sqrt{k/m}$}
+\phflowrow{$x=A\sin(\omega t+\phi)$}{時間で1回・2回\\微分する}{$v=A\omega\cos(\omega t+\phi)$\\$a=-\omega^2x$}
+\end{phflow}
+
+\phboxhead{回る点の影：なぜ sin なのか}
+4-8で、円を一定の速さで回る点に横から光を当てると、影は sin の形で上下することを学びました（図\ref{ph:波-1:fig-kage}）。半径 $A$ の円を、角速度 $\omega$ で回る点Pの、たての座標は $A\sin(\omega t+\phi)$ です。単振動は、この「回る点の影」と同じ動きです。だから $\omega$ を\textbf{角振動数}（1秒に進む位相の角）とよび、単位は rad/s です。\bkidx{かくしんどうすう}{角振動数}
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.92mm, y=0.92mm]
+  \draw[bkGray, line width=0.5pt] (0,0) circle (13);
+  \draw[bkInk, line width=0.5pt, -{Stealth[length=1.8mm]}] (-17,0) -- (17,0);
+  \fill[bkInk] (0,0) circle (0.6);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (40:13) coordinate (P);
+  \fill[bkRed] (P) circle (1.2);
+  \node[rxb lab, anchor=south west] at (P) {P};
+  \draw[bkInk, line width=0.5pt] (5,0) arc (0:40:5);
+  \draw[bkGray, line width=0.4pt] (4.6,1.6) -- (18.6,-5.2);
+  \node[rxb lab, anchor=west] at (18.8,-5.6) {$\omega t+\phi$};
+  \node[rxb lab, anchor=north] at (0,-14.5) {半径 $A$};
+  \draw[bkGray, line width=0.5pt, dashed] (P) -- (30,{13*sin(40)});
+  % 影の軸
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (30,-16) -- (30,17);
+  \node[rxb lab, anchor=south] at (30,17.2) {$x$};
+  \fill[bkBlue] (30,{13*sin(40)}) circle (1.2);
+  % グラフ
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (36,0) -- (124,0);
+  \node[rxb lab, anchor=north] at (121,-1.5) {$t$};
+  \draw[bkInk, line width=0.6pt] (36,-15) -- (36,15);
+  \draw[bkBlue, line width=1.4pt, domain=0:84, samples=120] plot ({36+\x}, {13*sin(40+6.42857*\x)});
+  \draw[bkGray, line width=0.5pt, dashed] (30,{13*sin(40)}) -- (36,{13*sin(40)});
+  \draw[bkGray, line width=0.4pt, dotted] (36,13) -- (124,13) (36,-13) -- (124,-13);
+  \node[rxb lab, anchor=east] at (35.5,13) {$A$};
+  \node[rxb lab, anchor=east] at (35.5,-13) {$-A$};
+  \draw[rxb dim] (43.78,16) -- (99.78,16);
+  \node[rxb lab, anchor=south, fill=white, inner sep=1pt] at (71.78,16.6) {周期 $T$（1周＝$2\pi$ だけ位相が進む）};
+\end{tikzpicture}
+\bkfigcaption{円を回る点Pの影（たての軸の上の点）は、sin の形で上下する。1周する時間が周期 $T$。}\label{ph:波-1:fig-kage}
+\end{bkfigure}
+
+1往復の時間（\textbf{周期} $T$）のあいだに、位相はちょうど1周の $2\pi$ だけ進みます（$\omega T=2\pi$）。1秒あたりの往復の回数（\textbf{振動数} $f$）は、周期の逆数です。単位は Hz（ヘルツ。1秒に1回が\qty{1}{Hz}）です。\bkidx{しゅうき}{周期}\bkidx{しんどうすう}{振動数}
+\pheq{T=\frac{2\pi}{\omega}=2\pi\sqrt{\frac{m}{k}},\qquad f=\frac{1}{T}=\frac{\omega}{2\pi}}{s ＝ $\sqrt{\text{kg}\div\text{(N/m)}}$}
+\label{ph:波-1:bane}高校の教科書は、復元力を $F=-Kx$ と大文字の $K$ で書き、周期を $T=2\pi\sqrt{m/K}$ と書きます。ばねなら $K$ はばね定数 $k$ そのものです。復元力がずれに比例すれば、ばねでなくても（④・⑧・⑨）、「$K$ にあたる数」を見つけるだけで周期がわかります。
+
+\begin{phyomi}[$T=2\pi\sqrt{\dfrac{m}{k}}$]
+「重いほどゆっくり、かたいばねほど速くゆれる。どれだけ大きくゆれているか（振幅）にはよらない」。振幅が2倍なら、ばねの力も2倍で、2倍の道のりを2倍の速さで走るので、時間は同じです（6-6③）。
+\end{phyomi}
+
+\begin{phbaisuru}{質量 $m$}
+周期は $\sqrt2\approx1.41$ 倍、4倍なら2倍です。ばね定数\qty{200}{N/m}のばねなら、\qty{0.5}{kg}で\qty{0.31}{s}、\qty{2}{kg}で\qty{0.63}{s}です。周期は質量の $\sqrt{\phantom{m}}$ に比例して、ゆっくり増えます。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=40mm, xmin=0, xmax=2.3, ymin=0, ymax=0.78, xtick={0.5,1,1.5,2}, ytick={0.314,0.628}, yticklabels={0.31,0.63}, xlabel={$m$（kg）}, ylabel={$T$（s）}]
+  \addplot[bkcurve, domain=0:2.2, samples=80] {2*pi*sqrt(x/200)};
+  \fill[bkRed] (axis cs:0.5,0.314) circle (1.8pt) (axis cs:2,0.628) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!75!black] at (axis cs:1.05,0.40) {質量4倍で周期2倍};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phmijika}[宇宙で体重をはかる]
+宇宙ステーションの中では、体重計に乗っても針が動きません（みんな同じように落ち続けているから）。そこで、ばねで支えたいすに座ってゆらし、周期から質量をはかります（6-6の例題2）。$T=2\pi\sqrt{m/k}$ には重力 $g$ が入っていないので、宇宙でも地上と同じように使えます。
+\end{phmijika}
+
+\begin{phmodel}[ばねとおもり]
+\phignore{ばねの質量（⑥で入れる）。床の摩擦と空気の抵抗（⑦で入れる）。おもりの回転。}
+\phassume{ばねの力はのびに比例する（$F=-kx$）。おもりは左右にだけ動く。}
+\phlimit{ばねを大きくのばして、力がのびに比例しなくなるとき。ばねがおもりにくらべて重いとき。摩擦が大きく、すぐに止まるとき。}
+\end{phmodel}
+
+%% ---------------------------------------------------------------
+\Needspace{20\baselineskip}\bksubsection{3}{ふりこ：周期は長さと $g$ だけで決まる}
+\label{ph:波-1:sec3}
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxbceil{8}{40}{48}
+  \coordinate (O) at (24,48);
+  \draw[bkGray, line width=0.5pt, dotted] (O) -- (24,12);
+  \draw[bkInk, line width=0.8pt] (O) -- ++(-58:40) coordinate (B);
+  \draw[rxb dim] (24,14) arc (-90:-58:34);
+  \draw[bkInk, line width=0.5pt] (24,40) arc (-90:-58:8);
+  \node[rxb lab] at (26.8,37) {$\theta$};
+  \node[rxb lab, anchor=south west] at ($(O)+(-58:18)+(0.8,0.4)$) {$l$};
+  \node[rxb lab, fill=white, inner sep=0.6pt] at ($(O)+(-73:30)$) {$s=l\theta$};
+  % 重力と成分
+  \draw[bkPurple, line width=1.1pt, -{Stealth[length=2.4mm]}] (B) -- ++(0,-16) coordinate (G);
+  \node[rxb lab, anchor=north, text=bkPurple!80!black] at (G) {$mg$};
+  \draw[bkPurple!70, line width=0.8pt, dashed, -{Stealth[length=2mm]}] (B) -- ++(-148:{16*sin(32)}) coordinate (Gt);
+  \node[rxb lab, anchor=north east, text=bkPurple!80!black] at ($(Gt)+(-0.2,-0.2)$) {$mg\sin\theta$};
+  \draw[bkPurple!70, line width=0.8pt, dashed, -{Stealth[length=2mm]}] (B) -- ++(-58:{16*cos(32)});
+  \node[rxb lab, anchor=west, text=bkPurple!80!black] at ($(B)+(-58:{16*cos(32)})+(0.6,0)$) {$mg\cos\theta$};
+  % 糸が引く力
+  \draw[bkGreen!60!black, line width=1.1pt, -{Stealth[length=2.4mm]}] (B) -- ++(122:12);
+  \node[rxb lab, anchor=west, text=bkGreen!50!black] at ($(B)+(122:12)+(0.8,0)$) {$F_{\mathrm T}$};
+  \rxbbob{(B)}{1.8}{bkRed}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+長さ $l$ の軽い糸に、質量 $m$ のおもりをつるします。糸がたての線となす角を $\theta$（右を正、ラジアン）とします。おもりは、半径 $l$ の円の上を動きます。いちばん下から測った円の上の道のりは $s=l\theta$ です（4-2の弧の長さ）。\par\vspace{2pt}
+おもりにはたらく力は、重力 $mg$ と、糸が引く力 $F_{\mathrm T}$ です（この章では周期を $T$ と書くので、糸が引く力は $F_{\mathrm T}$）。
+\end{minipage}
+
+\par\vspace{4pt}
+おもりの動く向き（円の接線の向き）の運動方程式を立てます。糸が引く力は、動く向きと直角なので、この向きには効きません。重力は、接線の向きの成分 $mg\sin\theta$ が、角を小さくする向き（いちばん下へもどす向き）にはたらきます。接線の向きの加速度は $\ddot s=l\ddot\theta$ なので、
+\pheq{ml\ddot\theta=-mg\sin\theta}{kg × m × 1/s$^2$ ＝ kg × m/s$^2$}
+です。両辺に $m$ があるので、わると消えます。
+\[\ddot\theta=-\frac{g}{l}\sin\theta\]
+\label{ph:波-1:furiko-shou}\textbf{質量 $m$ が消えました}。重いおもりは、重力も大きいけれど、動かしにくさ（慣性）も同じ割合で大きいので、打ち消しあうのです。これが、やってみようで、5円玉を3枚にしても1往復の時間が変わらなかったわけで、小学校で学ぶ「ふりこの1往復する時間は、おもりの重さによって変わらない」のもとになっています。
+
+ふれが小さいとき、$\sin\theta\approx\theta$ です（5-17⑧。$\theta$ はラジアン）。すると
+\[\ddot\theta=-\frac{g}{l}\,\theta\]
+になります。これは②の $\ddot x=-\dfrac{k}{m}x$ と同じ形で、$\dfrac{k}{m}$ のかわりに $\dfrac{g}{l}$ が入っているだけです。だから答えも単振動で、
+\pheq{\omega=\sqrt{\frac{g}{l}},\qquad T=2\pi\sqrt{\frac{l}{g}}}{s ＝ $\sqrt{\text{m}\div\text{(m/s}^2\text{)}}$}
+\label{ph:波-1:furiko}です。周期は、\textbf{ふりこの長さ $l$ と重力加速度 $g$ だけ}で決まり、おもりの重さにも、（小さいうちは）ふれはばにもよりません。小学校で学ぶ「ふりこの1往復する時間は、ふりこの長さによって変わる」もこの式からわかり、長さを4倍にすると、$\sqrt4=2$ 倍になります。
+
+\begin{phflow}[ふりこ]
+\phflowrow{$ml\ddot\theta=-mg\sin\theta$}{糸は軽くのびない\\両辺を $ml$ でわる}{$\ddot\theta=-\dfrac{g}{l}\sin\theta$\\（$m$ が消える）}
+\phflowrow{$\ddot\theta=-\dfrac{g}{l}\sin\theta$}{ふれが小さい\\$\sin\theta\approx\theta$}{$T=2\pi\sqrt{\dfrac{l}{g}}$}
+\end{phflow}
+
+\phboxhead{力-15の約束：$C=2\pi$}
+力-15では、次元解析（単位の指数をそろえる方法）で、ふりこの周期が $T=C\sqrt{l/g}$ の形になることまでわかりましたが、数 $C$ は決まりませんでした。運動方程式を解くと、$C=2\pi\approx6.28$ と決まりました。$2\pi$ は、1往復のあいだに位相がちょうど1周（$2\pi$ ラジアン）進むことから来ています。また、力-2で「ふれはばが小さいときだけ成り立つ」と書いたのは、$\sin\theta\approx\theta$ を使ったからです。
+
+\begin{phyomi}[$T=2\pi\sqrt{\dfrac{l}{g}}$]
+「長いふりこほどゆっくり、重力が強いほど速くゆれる」。$g$ が大きいと、引きもどす力が強いからです。$2\pi/\sqrt{9.8}\approx2.007$ なので、地球では $T\approx2.0\sqrt{l}$（$l$ はm、$T$ は秒）と覚えてもよい（2-8の「約2」。6-6⑦）。
+\end{phyomi}
+
+\begin{phbaisuru}[4倍]{長さ $l$}
+周期は $\sqrt4=2$ 倍です。$l=\qty{0.25}{m}$で約\qty{1.0}{s}、\qty{1}{m}で約\qty{2.0}{s}、\qty{4}{m}で約\qty{4.0}{s}。また、同じふりこを月（$g=\qty{1.62}{m/s^2}$）にもっていくと、周期は $\sqrt{9.8/1.62}\approx2.5$ 倍になります（グラフの破線）。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=46mm, xmin=0, xmax=4.5, ymin=0, ymax=8.6, xtick={1,2,3,4}, ytick={1,2,4,6,8}, xlabel={$l$（m）}, ylabel={$T$（s）}]
+  \addplot[bkcurve, domain=0:4.3, samples=100] {2*pi*sqrt(x/9.8)};
+  \addplot[bkOrange, line width=1.5pt, dashed, domain=0:2.95, samples=100] {2*pi*sqrt(x/1.62)};
+  \fill[bkRed] (axis cs:0.25,1.004) circle (1.8pt) (axis cs:1,2.007) circle (1.8pt) (axis cs:4,4.014) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkBlue!80!black] at (axis cs:2.9,3.3) {地球（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black] at (axis cs:0.15,7.8) {月（破線）};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\phboxhead{ふれが大きいと、少し長くなる}
+$\sin\theta\approx\theta$ は、どこまで使えるでしょう。$\sin\theta$ は $\theta$ より少し小さいので（図\ref{ph:波-1:fig-sin}）、本当の引きもどす力 $mg\sin\theta$ は、単振動の式で考えた $mg\theta$ より弱くなります。弱い力で引きもどされるので、ゆっくりもどり、周期は長くなります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=50mm, xmin=0, xmax=1.75, ymin=0, ymax=1.75, xtick={0.524,1.047,1.571}, xticklabels={30°,60°,90°}, ytick={0.5,1}, xlabel={$\theta$}, ylabel={}]
+  \addplot[bkOrange, line width=1.5pt, dashed, domain=0:1.65] {x};
+  \addplot[bkcurve, domain=0:1.65, samples=80] {sin(deg(x))};
+  \draw[bkGray, line width=0.4pt, dotted] (axis cs:0.524,0) -- (axis cs:0.524,0.524) (axis cs:1.047,0) -- (axis cs:1.047,1.047);
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkOrange!75!black] at (axis cs:1.3,1.4) {$\theta$（ラジアン、破線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkBlue!80!black] at (axis cs:1.12,0.86) {$\sin\theta$（実線）};
+  \node[font=\sffamily\footnotesize, align=center] at (axis cs:1.4,0.32) {30°で、$\sin\theta$ は\\$\theta$ の0.955倍};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$\theta$ と $\sin\theta$。30°くらいまでは、ほとんど重なる。90°では $\sin\theta$ は $\theta$ の0.637倍しかない。}\label{ph:波-1:fig-sin}
+\end{bkfigure}
+
+6-6⑦では、$\ddot\theta=-\dfrac{g}{l}\sin\theta$ をそのままコンピュータで解き、長さ\qty{1}{m}のふりこの周期が、10°で\qty{2.01}{s}、90°で\qty{2.37}{s}になることを確かめました。この比は、実は式で表せます。ふれはば（はじめの角）を $\theta_0$、小さいふれの周期を $T_0=2\pi\sqrt{l/g}$ とすると、
+\[\frac{T}{T_0}=\frac{2}{\pi}K\Bigl(\sin\frac{\theta_0}{2}\Bigr)\]
+です。$K$ は\textbf{だ円積分}とよばれる関数で、だ円の周の長さを求めるときにも出てきます（この本では、名前と値だけを使います。値は表計算でも求められます）。\bkidx{だえんせきぶん}{だ円積分}ふれはばがそれほど大きくないときは、
+\[\frac{T}{T_0}\approx1+\frac{\theta_0^{\,2}}{16}\qquad(\theta_0\ \text{はラジアン})\]
+で近似できます。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+ふれはば $\theta_0$ & 10° & 30° & 45° & 60° & 90° & 120° \\
+$T/T_0$（だ円積分） & 1.002 & 1.017 & 1.040 & 1.073 & 1.180 & 1.373 \\
+$1+\theta_0^{\,2}/16$ & 1.002 & 1.017 & 1.039 & 1.069 & 1.154 & 1.274 \\
+\end{bktable}
+\bktabcaption{大きなふれの周期の比。30°で1.7\,\%、90°で18\,\%長い。}\label{ph:波-1:tab-ookina}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=108mm, height=48mm, xmin=0, xmax=160, ymin=0.9, ymax=1.85, xtick={30,60,90,120,150}, xticklabels={30°,60°,90°,120°,150°}, ytick={1,1.2,1.4,1.6,1.8}, xlabel={$\theta_0$}, ylabel={$T/T_0$}, axis x line=bottom]
+  \addplot[bkcurve, smooth] coordinates {(0,1.0000) (10,1.0019) (20,1.0077) (30,1.0174) (40,1.0313) (50,1.0498) (60,1.0732) (70,1.1021) (80,1.1375) (90,1.1803) (100,1.2322) (110,1.2953) (120,1.3729) (130,1.4698) (140,1.5944) (150,1.7622)};
+  \addplot[bkOrange, line width=1.5pt, dashed, domain=0:150, samples=60] {1+(x*pi/180)^2/16};
+  \fill[bkRed] (axis cs:30,1.0174) circle (1.8pt) (axis cs:60,1.0732) circle (1.8pt) (axis cs:90,1.1803) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkBlue!80!black] at (axis cs:128,1.6) {だ円積分（実線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkOrange!75!black] at (axis cs:118,1.25) {$1+\theta_0^{\,2}/16$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ふれはばと周期の比。60°くらいまでは近似の式でよく合う。}\label{ph:波-1:fig-ookina}
+\end{bkfigure}
+
+\phboxhead{\bkhatenaref の答え}
+ブランコは、鎖の長さ（正しくは、つるした点から乗る人の重心までの長さ）$l$ のふりこです。1往復の時間は $T=2\pi\sqrt{l/g}$ で、\textbf{長さ $l$ と重力加速度 $g$ だけで決まり、乗る人の重さにはよりません}。大人と子どもが同じブランコに座れば、ほぼ同じ時間で往復します（座高のちがいで重心の高さが少しちがう分だけ、ずれます）。長さ\qty{2.0}{m}なら約\qty{2.8}{s}です（例題1）。大きくゆれるほど少し長くなりますが、30°で1.7\,\%、60°でも7\,\%です。
+
+\begin{phmodel}[ふりこ]
+\phignore{糸の質量とのび。空気の抵抗。おもりの大きさ（点と考える）。つるした点のこすれ。}
+\phassume{おもりは半径 $l$ の円の上を動く。ふれが小さく $\sin\theta\approx\theta$。}
+\phlimit{ふれはばが30°をこえ、数\,\%の正確さがいるとき（だ円積分を使う）。おもりが大きく、糸の長さとくらべられるとき（⑧の実体ふりこ）。90°をこえて、糸がたるむとき。}
+\end{phmodel}
+
+\begin{phmijika}[ブランコをこぐと、なぜ大きくなる？]
+人が乗ったブランコは、こぐと、だれにも押してもらわなくても、ゆれが大きくなります。立ちこぎでは、いちばん下を通るときに立ち上がって重心を上げ、はしでしゃがんで重心を下げます。1往復のあいだに2回、ふりこの長さ（重心までの長さ）を変えているのです。長さを、ゆれに合わせて周期的に変えてゆれを大きくするしくみを\textbf{パラメータ励振}といいます。\bkidx{ぱらめーたれいしん}{パラメータ励振}外から決まった振動数でゆすって大きくする共振（波-2）とは、しくみがちがいます。座ったままこぐときは、体をたおしたり起こしたりして重心を動かし、ゆれにエネルギーを入れています。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{等価ばね定数：どんな物も、ばねと見る}
+\label{ph:波-1:sec4}
+機械や建物の中には、つるまきばねの形をしていなくても、力をかけると変形し、力をのぞくともどる部品がたくさんあります。はり・棒・軸・ゴムなどです。どれも、「かけた力 $F$」と「その向きの変形 $\delta$」が比例するなら、
+\[k=\frac{F}{\delta}\]
+を\textbf{等価ばね定数}といい、その部品を1本のばねとみなせます。\bkidx{とうかばねていすう}{等価ばね定数}第1巻で求めた変形の式から、すぐに作れます（表\ref{ph:波-1:tab-touka}）。ここでは導き直さず、それぞれの章を指して使います。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=48mm] Q[c,m,wd=40mm] Q[l,m,wd=26mm]}, rowsep=2pt, row{1}={bg=bkTheme!10}}
+つなぎ方・部品 & 等価ばね定数 $k$ & 導いた所 \\
+2本のばねの直列（つなぐ） & $\dfrac{1}{k}=\dfrac{1}{k_1}+\dfrac{1}{k_2}$ & 力-8 ③ \\
+2本のばねの並列（並べる） & $k=k_1+k_2$ & 力-8 ③ \\
+棒を引く・押す（長さ $L$、断面積 $A_{\mathrm s}$） & $\dfrac{EA_{\mathrm s}}{L}$ & 力-8 ③ \\
+片持ちはりの先に力 & $\dfrac{3EI}{L^3}$ & 力-10 ⑨ \\
+両はしで支えたはりのまん中に力 & $\dfrac{48EI}{L^3}$ & 力-10 ⑨ \\
+丸い軸のねじり（⑨） & $\dfrac{GI_{\mathrm p}}{L}$（回る向き） & 力-11 ⑥ \\
+\end{bktable}
+\bktabcaption{等価ばね定数。$E$ はヤング率、$I$ は断面二次モーメント、$G$ は横弾性係数、$I_{\mathrm p}$ は断面二次極モーメント。この表では、振幅の $A$ と分けるため、断面積を $A_{\mathrm s}$ と書いた。}\label{ph:波-1:tab-touka}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 直列
+  \rxbceil{2}{22}{40}
+  \rxbspring{(12,40)}{(12,26)}
+  \fill[bkInk] (12,26) circle (0.6);
+  \rxbspring{(12,26)}{(12,12)}
+  \rxbblock{6}{4}{12}{8}{bkBlue}
+  \node[rxb lab, anchor=west] at (14.5,33) {$k_1$};
+  \node[rxb lab, anchor=west] at (14.5,19) {$k_2$};
+  \node[rxb lab, anchor=north] at (12,1) {直列};
+  % 並列
+  \begin{scope}[shift={(30,0)}]
+  \rxbceil{0}{26}{40}
+  \rxbspring{(6,40)}{(6,16)}
+  \rxbspring{(20,40)}{(20,16)}
+  \draw[bkInk, line width=1.4pt] (4,16) -- (22,16);
+  \rxbblock{7}{4}{12}{8}{bkBlue}
+  \draw[bkInk, line width=0.7pt] (13,16) -- (13,12);
+  \node[rxb lab, anchor=east] at (3.5,28) {$k_1$};
+  \node[rxb lab, anchor=west] at (22.5,28) {$k_2$};
+  \node[rxb lab, anchor=north] at (13,1) {並列};
+  \end{scope}
+  % 片持ちはり
+  \begin{scope}[shift={(66,0)}]
+  \rxbwall{2}{18}{38}
+  \draw[bkGray, line width=0.5pt, dashed] (2,30) -- (30,30);
+  \draw[bkOrange!70!black, line width=1.8pt] (2,30) .. controls (16,30) and (24,28) .. (30,24);
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=2.4mm]}] (30,34) -- (30,25);
+  \node[rxb lab, anchor=west] at (31,31) {$F$};
+  \draw[rxb dim] (2,15) -- (30,15);
+  \node[rxb lab, anchor=north] at (16,14.5) {$L$};
+  \node[rxb lab, anchor=north] at (16,1) {片持ちはり};
+  \end{scope}
+  % 単純支持
+  \begin{scope}[shift={(104,0)}]
+  \draw[bkGray, line width=0.5pt, dashed] (0,30) -- (28,30);
+  \draw[bkOrange!70!black, line width=1.8pt] (0,30) .. controls (8,26) and (20,26) .. (28,30);
+  \fill[bkGray!60] (0,30) -- (-2.2,26.5) -- (2.2,26.5) -- cycle;
+  \fill[bkGray!60] (28,30) -- (25.8,26.5) -- (30.2,26.5) -- cycle;
+  \draw[bkRed, line width=1.1pt, -{Stealth[length=2.4mm]}] (14,36) -- (14,28.2);
+  \node[rxb lab, anchor=west] at (15,34) {$F$};
+  \draw[rxb dim] (0,15) -- (28,15);
+  \node[rxb lab, anchor=north] at (14,14.5) {$L$};
+  \node[rxb lab, anchor=north, align=center] at (14,1) {両はしで支える};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{ばねとみなせる物。直列は「やわらかさ（$1/k$）がたし算」、並列は「かたさ（$k$）がたし算」。はりは、たわみやすいほど $k$ が小さい。}\label{ph:波-1:fig-touka}
+\end{bkfigure}
+
+直列のときは、2本のばねに同じ力がかかり、のびがたし算になるので、やわらかさ $1/k$ がたし算です。並列のときは、2本ののびが同じで、力がたし算になるので、かたさ $k$ がたし算です（力-8③）。こうして全体の $k$ と、動く物の質量 $m$ がわかれば、固有角振動数は $\omega_{\mathrm n}=\sqrt{k/m}$ です（例題6・例題7）。
+
+\begin{phbaisuru}{はりの長さ $L$}
+片持ちはりの $k=3EI/L^3$ は $L^3$ に反比例するので、$\tfrac{1}{8}$ になります。先のおもりが同じなら、固有振動数は $\sqrt{1/8}\approx0.35$ 倍です。長い棚板や、長く張り出したベランダが「ふわふわ」ゆれやすいのはこのためです。反対に、はりの厚さ $h$ を2倍にすると、$I$ が $h^3$ に比例して8倍（力-10②）になり、固有振動数は $\sqrt8\approx2.8$ 倍になります。
+\end{phbaisuru}
+
+\begin{phmijika}[車のサスペンションと洗濯機の脚]
+車の車輪と車体のあいだのばね、洗濯機の脚のゴム、エンジンを車体にとめるゴムは、どれも「動く物を、ばねで支える」部品です。設計では、まず支えるばね全体の等価ばね定数を出し、支える物の質量から固有振動数を見積もります（例題5）。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\Needspace{22\baselineskip}\bksubsection{5}{つるしたばね：静たわみだけで固有振動数がわかる}
+\label{ph:波-1:sec5}
+\noindent\begin{minipage}[c]{0.43\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxbceil{0}{54}{46}
+  % 自然の長さ
+  \rxbspring{(8,46)}{(8,30)}
+  \node[rxb lab, anchor=north, align=center] at (8,27) {自然の\\長さ};
+  % つり合い
+  \rxbspring{(26,46)}{(26,22)}
+  \rxbblock{21}{14}{10}{8}{bkBlue}
+  \node[rxb lab] at (26,18) {$m$};
+  % 動いているとき
+  \rxbspring{(44,46)}{(44,16)}
+  \rxbblock{39}{8}{10}{8}{bkBlue}
+  \node[rxb lab] at (44,12) {$m$};
+  % 寸法
+  \draw[bkGray, line width=0.4pt, dashed] (4,30) -- (50,30);
+  \draw[bkGray, line width=0.4pt, dashed] (22,22) -- (52,22);
+  \draw[rxb dim] (33,30) -- (33,22);
+  \node[rxb lab, anchor=west] at (33.3,26) {$x_{\mathrm{st}}$};
+  \draw[rxb dim] (51,22) -- (51,16);
+  \node[rxb lab, anchor=west] at (51.3,19) {$u$};
+  \draw[bkGray, line width=0.4pt, dashed] (48,16) -- (53,16);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.54\linewidth}\raggedright
+ばねを天井からつるし、おもりをつけると、ばねは $x_{\mathrm{st}}$ だけのびて止まります。この $x_{\mathrm{st}}$ を\textbf{静たわみ}といいます（st は static：静かな）。\bkidx{せいたわみ}{静たわみ}止まっているときは、ばねの力と重さがつり合うので
+\[kx_{\mathrm{st}}=mg\]
+です。そこから、さらに $u$ だけ下にずらして放します（下を正）。
+\end{minipage}
+
+\par\vspace{4pt}
+ばねののびは $x_{\mathrm{st}}+u$ です。下向きを正として、運動方程式は
+\[m\ddot u=mg-k(x_{\mathrm{st}}+u)=\underbrace{(mg-kx_{\mathrm{st}})}_{0}-ku=-ku\]
+です。重さ $mg$ と、静たわみの分のばねの力 $kx_{\mathrm{st}}$ が打ち消しあい、②と同じ $m\ddot u=-ku$ が残りました（6-6⑤の「ずらして考える」）。重力は、ゆれの中心を $x_{\mathrm{st}}$ だけ下げるだけで、ゆれの速さは変えません。高校の「鉛直ばねふりこ」で、つり合いの位置から変位をはかるのは、このためです。
+
+さらに、$k/m=g/x_{\mathrm{st}}$ なので、
+\pheq{\omega_{\mathrm n}=\sqrt{\frac{g}{x_{\mathrm{st}}}},\qquad f_{\mathrm n}=\frac{1}{2\pi}\sqrt{\frac{g}{x_{\mathrm{st}}}}}{Hz ＝ $\sqrt{(\text{m/s}^2)\div\text{m}}$}
+\label{ph:波-1:seitawami}です。\textbf{$k$ も $m$ も知らなくても、静たわみ $x_{\mathrm{st}}$ をはかるだけで、固有振動数がわかります}。たとえば、のせただけで\qty{10}{mm}沈む防振ゴムの上の機械は、約\qty{5}{Hz}でゆれます（例題4）。これは、静たわみと同じ長さのふりこの式（③）と同じ形です。
+
+\begin{phflow}[つるしたばね]
+\phflowrow{$m\ddot u=mg-k(x_{\mathrm{st}}+u)$}{つり合いの位置から\\はかる（$kx_{\mathrm{st}}=mg$）}{$m\ddot u=-ku$\\$T=2\pi\sqrt{m/k}$}
+\phflowrow{$\omega_{\mathrm n}=\sqrt{k/m}$}{$k/m=g/x_{\mathrm{st}}$}{$f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{\dfrac{g}{x_{\mathrm{st}}}}$}
+\end{phflow}
+
+\begin{phbaisuru}[4倍]{静たわみ $x_{\mathrm{st}}$}
+固有振動数は $\tfrac{1}{2}$ 倍です。やわらかく支えるほど（よく沈むほど）、ゆっくりゆれます。静たわみ\qty{1}{mm}で約\qty{16}{Hz}、\qty{10}{mm}で約\qty{5.0}{Hz}、\qty{100}{mm}で約\qty{1.6}{Hz}です。最後の値は、ふつうの乗用車の上下のゆれの固有振動数（約1〜\qty{1.5}{Hz}）と同じくらいです。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=42mm, xmin=0, xmax=115, ymin=0, ymax=17, xtick={10,40,100}, ytick={1.6,5,10,15.8}, yticklabels={1.6,5.0,10,15.8}, xlabel={$x_{\mathrm{st}}$（mm）}, ylabel={$f_{\mathrm n}$（Hz）}]
+  \addplot[bkcurve, domain=0.9:110, samples=150] {sqrt(9.8/(x/1000))/(2*pi)};
+  \fill[bkRed] (axis cs:1,15.76) circle (1.8pt) (axis cs:10,4.98) circle (1.8pt) (axis cs:40,2.49) circle (1.8pt) (axis cs:100,1.58) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:42,3.0) {4倍沈むと、振動数は半分};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{エネルギーで解く：$\tfrac{1}{2}kA^2$ とレイリーの方法}
+\label{ph:波-1:sec6}
+\phboxhead{単振動のエネルギー}
+ばねの力は保存力なので、摩擦がなければ、運動エネルギー $K$ と、ばねの位置エネルギー $U$ の和は変わりません（力-4⑦）。はし（$x=\pm A$）では速さが0なので、和はすべてばねのエネルギー $\tfrac{1}{2}kA^2$ です。だから、どの位置でも
+\pheq{\frac{1}{2}mv^2+\frac{1}{2}kx^2=\frac{1}{2}kA^2}{J ＝ N/m × m$^2$}
+\label{ph:波-1:energy}です。これが\textbf{単振動のエネルギー}です。まん中（$x=0$）では全部が運動エネルギーなので、$\tfrac{1}{2}mv_{\max}^{\,2}=\tfrac{1}{2}kA^2$ から、$v_{\max}=A\sqrt{k/m}=A\omega_{\mathrm n}$ で、②の微分で求めた値と同じです。
+
+力-4のもっと知りたいで予告した数で確かめます。ばね定数\qty{200}{N/m}のばねを\qty{0.10}{m}引いて放すと、和は $\tfrac{1}{2}\times200\times0.10^2=\qty{1.0}{J}$ です。おもりが\qty{0.5}{kg}なら、$\tfrac{1}{2}\times0.5\times v_{\max}^{\,2}=1.0$ から $v_{\max}=\qty{2.0}{m/s}$ で、$A\omega_{\mathrm n}=0.10\times20=\qty{2.0}{m/s}$ と合います（例題3）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=46mm, xmin=0, xmax=0.345, ymin=0, ymax=1.32, xtick={0.0785,0.157,0.2356,0.314}, xticklabels={$\tfrac{T}{4}$,$\tfrac{T}{2}$,$\tfrac{3T}{4}$,$T$}, ytick={0.5,1}, xlabel={$t$}, ylabel={エネルギー（J）}]
+  \addplot[bkcurve, domain=0:0.3142, samples=120] {cos(deg(20*x))^2};
+  \addplot[bkOrange, line width=1.5pt, dashed, domain=0:0.3142, samples=120] {sin(deg(20*x))^2};
+  \draw[bkRed, line width=1.2pt] (axis cs:0,1) -- (axis cs:0.3142,1);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black] at (axis cs:0.157,1.03) {和 $\tfrac{1}{2}kA^2=\qty{1.0}{J}$（一定）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:0.012,0.55) {ばね $U$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:0.168,0.55) {運動 $K$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ばね定数\qty{200}{N/m}、\qty{0.5}{kg}、振幅\qty{0.10}{m}の単振動のエネルギー。1周期に2回ずつ、ばねと運動のあいだを行き来する。}\label{ph:波-1:fig-energy}
+\end{bkfigure}
+
+\begin{phflow}[単振動のエネルギー]
+\phflowrow{$K+U=$ 一定}{ばねの力だけ\\はしで $v=0$}{$\dfrac{1}{2}mv^2+\dfrac{1}{2}kx^2=\dfrac{1}{2}kA^2$}
+\end{phflow}
+
+\begin{phyomi}[$\tfrac{1}{2}mv^2+\tfrac{1}{2}kx^2=\tfrac{1}{2}kA^2$]
+「ばねにためたエネルギーと、動きのエネルギーが、行ったり来たりする。和は、はしで引いた分のばねのエネルギー」。$x$ がわかれば、速さは $v=\omega_{\mathrm n}\sqrt{A^2-x^2}$ で求まります。
+\end{phyomi}
+
+\begin{phbaisuru}{振幅 $A$}
+エネルギーは $A^2$ に比例するので4倍、いちばん速い速さ $A\omega_{\mathrm n}$ は2倍です。周期は変わりません（②）。
+\end{phbaisuru}
+
+\begin{motto}[4]
+\phboxhead{どんなゆれも、小さければ単振動}
+つり合いの位置のまわりで、位置エネルギー $U(x)$ がいちばん低くなっている所を考えます。つり合いの位置を $x=0$ にとって、$U$ をテイラー展開（5-17）すると、
+\[U(x)\approx U(0)+U'(0)\,x+\frac{1}{2}U''(0)\,x^2\]
+です。つり合いの位置では力 $-U'(0)$ が0なので、1次の項は消えます。だから、小さなずれでは $U$ はばねの $\tfrac{1}{2}kx^2$ と同じ形で、\textbf{$k=U''(0)$ のばね}と同じゆれ（単振動）をします。ふりこなら、高さは $l(1-\cos\theta)$ なので $U=mgl(1-\cos\theta)\approx\tfrac{1}{2}mgl\,\theta^2$ で、③と同じ答えになります（グラフ）。おわんの中で転がる玉や、分子の中の原子の小さなゆれも、同じ考えで「ばね」とみなせます。ずれが大きくなると、2乗の形からはずれ、周期が振幅で変わります（③の大きなふれ）。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=40mm, xmin=-2.3, xmax=2.3, ymin=0, ymax=2.3, xtick={-1.571,1.571}, xticklabels={$-90^\circ$,$90^\circ$}, ytick={1,2}, xlabel={$\theta$}, ylabel={$U/(mgl)$}, axis y line=left]
+  \addplot[bkcurve, domain=-2.2:2.2, samples=100] {1-cos(deg(x))};
+  \addplot[bkOrange, line width=1.3pt, dashed, domain=-2.1:2.1, samples=60] {x^2/2};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black] at (axis cs:1.32,0.52) {$1-\cos\theta$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black] at (axis cs:-1.45,1.85) {$\theta^2/2$（破線）};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+\end{motto}
+
+\phboxhead{レイリーの方法：ばねの質量を入れる}
+②では、ばねの質量を無視しました。ばねが軽くないときは、どうすればよいでしょう。エネルギーの考えを使うと、うまく見積もれます。
+
+ばねの全体の質量を $m_{\mathrm s}$、長さを $L$ とします。おもりが速さ $v$ で動くとき、ばねの壁のはしは止まっていて、おもりのはしは $v$ で動きます。ばねが一様にのび縮みするなら、壁から $\xi$ の所の速さは $v\xi/L$ です（図\ref{ph:波-1:fig-rayleigh}）。その所の長さ $\dd\xi$ の部分の質量は $m_{\mathrm s}\,\dd\xi/L$ なので、ばね全体の運動エネルギーは、積分（5-10）で
+\[K_{\text{ばね}}=\int_0^L\frac{1}{2}\cdot\frac{m_{\mathrm s}}{L}\,\dd\xi\cdot\Bigl(\frac{v\xi}{L}\Bigr)^2=\frac{m_{\mathrm s}v^2}{2L^3}\Bigl[\frac{\xi^3}{3}\Bigr]_0^L=\frac{1}{2}\cdot\frac{m_{\mathrm s}}{3}\cdot v^2\]
+です。\textbf{ばねの質量の $\tfrac{1}{3}$ が、おもりといっしょに動く}のと同じです。だから
+\pheq{\omega_{\mathrm n}\approx\sqrt{\frac{k}{m+m_{\mathrm s}/3}}}{rad/s}
+\noindent となります。このように、ゆれの形を仮定して、運動エネルギーの最大と位置エネルギーの最大が等しいことから固有振動数を求める方法を、\textbf{レイリーの方法}といいます（1870年代に、イギリスの物理学者レイリーが音の研究で使いました）。\bkidx{れいりーのほうほう}{レイリーの方法}形の仮定が少しずれていても、答えの振動数はあまりずれないのが、この方法のよい所です。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxbfloor{-2}{70}{0}
+  \rxbwall{0}{0}{18}
+  \rxbspring{(0,7)}{(48,7)}
+  \rxbblock{48}{0.4}{12}{12}{bkBlue}
+  \node[rxb lab] at (54,6.4) {$m$};
+  \foreach \xx/\ll in {12/3.75, 24/7.5, 36/11.25} {\draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=1.6mm]}] (\xx,14) -- ({\xx+\ll},14);}
+  \draw[bkRed!80!black, line width=1.1pt, -{Stealth[length=2mm]}] (54,15) -- (69,15);
+  \node[rxb lab, anchor=south, text=bkRed!75!black] at (62,15.5) {$v$};
+  \node[rxb lab, anchor=south, text=bkRed!75!black] at (24,15.8) {ばねの各部の速さ $v\xi/L$};
+  \draw[rxb dim] (0,-5) -- (24,-5);
+  \node[rxb lab, anchor=north] at (12,-5.5) {$\xi$};
+  \draw[rxb dim] (0,-12) -- (48,-12);
+  \node[rxb lab, anchor=north] at (24,-12.5) {$L$（質量 $m_{\mathrm s}$）};
+\end{tikzpicture}
+\bkfigcaption{ばねの各部は、壁からの距離に比例した速さで動く、と仮定する。}\label{ph:波-1:fig-rayleigh}
+\end{bkfigure}
+
+はりの先におもりをつけたときも、同じ考えで、はりの質量の $\tfrac{33}{140}\approx0.24$ 倍がおもりに加わると見積もれます（片持ちはり。たわみの形を、先に力をかけたときの形とする）。ばねを細かいおもりの列に分けて、コンピュータで正確に解いた値（波-3の方法）とくらべると、レイリーの方法の答えは0.1\,\%しかちがいません（例題12）。
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{減衰：ゆれの記録から減衰比を読む}
+\label{ph:波-1:sec7}
+本物のゆれは、いつかは止まります。空気の抵抗、つなぎ目のこすれ、材料の中の損失などで、ゆれのエネルギーが少しずつ熱になるからです。これらをまとめて、6-7と同じく、速さに比例するダンパーの力 $-c\dot x$ で表します（$c$ は\textbf{減衰係数}〔N·s/m〕）。\bkidx{げんすいけいすう}{減衰係数}
+\pheq{m\ddot x+c\dot x+kx=0}{N ＝ N·s/m × m/s ＝ N/m × m}
+この式の解き方は、6-7（表計算）と6-12（特性方程式）で学びました。結果だけをまとめると、次のとおりです。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item \textbf{減衰比} $\zeta=\dfrac{c}{2\sqrt{mk}}$ が1より小さいと、ゆれながら止まる（減衰振動）。1以上では、ゆれずにもどる。\bkidx{げんすいひ}{減衰比}
+\item ゆれる速さは $\omega_{\mathrm d}=\omega_{\mathrm n}\sqrt{1-\zeta^2}$。$\zeta$ が0.1でも、$\omega_{\mathrm n}$ とのちがいは0.5\,\%です。
+\item となりの山の比は、いつも同じ。その比の自然対数を\textbf{対数減衰率} $\delta$ といい、$\delta=\dfrac{2\pi\zeta}{\sqrt{1-\zeta^2}}$（6-12）。\bkidx{たいすうげんすいりつ}{対数減衰率}
+\end{itemize}
+
+\phboxhead{記録から $\zeta$ を求める}
+機械や建物では、$c$ を設計図から計算することができません（⑦の終わりの「まだわかっていないこと」）。そこで、実物をたたいたり、引いて放したりしてゆれを記録し、そこから $\zeta$ を読みとります。図\ref{ph:波-1:fig-kiroku}のように、山の高さが $x_1$、次の山が $x_2$ なら、
+\[\delta=\ln\frac{x_1}{x_2}\]
+です。$\delta=\dfrac{2\pi\zeta}{\sqrt{1-\zeta^2}}$ を $\zeta$ について解きます。両辺を2乗して $\delta^2(1-\zeta^2)=4\pi^2\zeta^2$、$\zeta^2$ を集めて $\zeta^2(4\pi^2+\delta^2)=\delta^2$ なので、
+\pheq{\zeta=\frac{\delta}{\sqrt{4\pi^2+\delta^2}}\approx\frac{\delta}{2\pi}}{単位なし}
+\label{ph:波-1:gensui}です（$\approx$ は、$\delta$ が小さいとき）。1つとなりの山の比は、はかり方のずれで大きくばらつくので、ふつうは $N$ 回あとの山 $x_{N+1}$ とくらべて、$\delta=\dfrac{1}{N}\ln\dfrac{x_1}{x_{N+1}}$ とします（例題10）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=50mm, xmin=0, xmax=6.3, ymin=-12.5, ymax=13.5, xtick={1,2,3,4,5,6}, ytick={-10,10}, xlabel={$t$（s）}, ylabel={$x$（mm）}, axis x line=bottom]
+  \draw[bkGray, line width=0.4pt] (axis cs:0,0) -- (axis cs:6.2,0);
+  \addplot[bkcurve, domain=0:6, samples=300] {10*exp(-0.2231*x)*cos(deg(2*pi*x))};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:6, samples=60] {10*exp(-0.2231*x)};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:6, samples=60] {-10*exp(-0.2231*x)};
+  \fill[bkRed] (axis cs:0,10) circle (1.8pt) (axis cs:1,8.0) circle (1.8pt) (axis cs:2,6.4) circle (1.8pt) (axis cs:3,5.12) circle (1.8pt) (axis cs:4,4.1) circle (1.8pt) (axis cs:5,3.28) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:0.1,10.3) {$x_1=10$};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:1.1,8.4) {$x_2=8.0$};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:2.08,6.7) {6.4};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:3.08,5.4) {5.1};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkGray, fill=white, inner sep=1pt] at (axis cs:0.75,-9.0) {つつみ（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ゆれの記録。山は、1回ごとに0.8倍になっている（$\delta=\ln1.25\approx0.22$、$\zeta\approx0.036$。例題10）。}\label{ph:波-1:fig-kiroku}
+\end{bkfigure}
+
+\begin{phyomi}[$\zeta\approx\dfrac{\delta}{2\pi}$]
+「1回ゆれるごとに、ゆれの大きさが何割へるか」がわかれば、減衰比がわかる。山が1回で約 $2\pi\zeta$ の割合だけへる（$\zeta=0.01$ なら約6\,\%）。
+\end{phyomi}
+
+\begin{phbaisuru}{減衰比 $\zeta$}
+$\delta$ もほぼ2倍になり、10回ゆれたあとに残る大きさ $e^{-10\delta}$ は、もとの値の2乗になります（0.53→0.28）。$\zeta$ が小さい物ほど、いつまでもゆれ続けます。
+\par\smallskip\noindent
+\begin{bktable}{colspec={Q[l,m,wd=44mm] *{4}{Q[c,m,wd=14mm]}}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+減衰比 $\zeta$ & 0.01 & 0.02 & 0.05 & 0.1 \\
+対数減衰率 $\delta$ & 0.063 & 0.13 & 0.31 & 0.63 \\
+10回あとに残る割合 $e^{-10\delta}$ & 0.53 & 0.28 & 0.043 & 0.0018 \\
+\end{bktable}
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=108mm, height=44mm, xmin=0, xmax=10.6, ymin=-1.15, ymax=1.6, xtick={2,4,6,8,10}, ytick={-1,1}, xlabel={ゆれた回数}, ylabel={$x/A$}, axis x line=bottom]
+  \draw[bkGray, line width=0.4pt] (axis cs:0,0) -- (axis cs:10.4,0);
+  \addplot[bkcurve, domain=0:10, samples=400] {exp(-0.02*2*pi*x)*cos(deg(2*pi*x))};
+  \addplot[bkOrange, line width=1.3pt, densely dashed, domain=0:10, samples=400] {exp(-0.1*2*pi*x)*cos(deg(2*pi*x))};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:0.6,1.38) {$\zeta=0.02$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:4.0,1.38) {$\zeta=0.1$（破線）：5回でほぼ止まる};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phketa}[減衰比の目安]
+\phketaline{鋼の部品を1つだけ（つなぎ目がない）}{0.001〜0.01くらい}
+\phketaline{高い建物（鉄骨）}{0.01〜0.02くらい}
+\phketaline{建物（鉄筋コンクリート）}{0.02〜0.05くらい}
+\phketaline{車のサスペンション（ダンパーつき）}{0.2〜0.4くらい}
+\phboxhead{答えが桁で合っているか}
+建物や機械の構造は、ほとんどが $\zeta<0.1$ です。ダンパーをわざとつけた物（車・ドアクローザー・計器の針）だけが、0.2〜1に近い値になります。記録から $\zeta$ が1をこえたら、ゆれの記録ではなく、ゆれずにもどる動きを見ています。
+\end{phketa}
+
+\begin{phmada}[建物の減衰は、設計図からは決まらない]
+ばね定数 $k$ と質量 $m$ は、材料の性質と形がわかれば、設計の段階でかなり正確に計算できます。ところが、減衰係数 $c$（減衰比 $\zeta$）は、そうはいきません。建物のゆれのエネルギーは、柱とはりのつなぎ目の小さなこすれ、ボルトのゆるみ、壁や床の仕上げ材、材料の中の損失、地面へ逃げるエネルギーなど、たくさんの場所で少しずつ熱になります。どこで、どれだけ失われるかを、1つずつ理論で計算することは、今もできていません。そこで、建てたあとの建物をゆらして記録をとり、それから $\zeta$ を読みとった値を集めて、次の設計に使っています。同じような建物でも $\zeta$ はばらつき、ゆれが大きいほど大きくなる傾向もあります。どうすれば設計の段階で $\zeta$ を予測できるかは、今も研究が続いています。
+\end{phmada}
+
+%% ---------------------------------------------------------------
+\Needspace{20\baselineskip}\bksubsection{8}{実体ふりこ：大きさのある物のふりこ}
+\label{ph:波-1:sec8}
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!50] (13,46) rectangle (27,49);
+  \coordinate (O) at (20,44);
+  \draw[bkGray, line width=0.5pt, dotted] (O) -- (20,4);
+  \begin{scope}[rotate around={22:(O)}]
+    \filldraw[fill=bkOrange!30, draw=bkOrange!70!black, line width=0.8pt, rounded corners=0.6mm] (17.8,46) rectangle (22.2,8);
+    \fill[bkInk] (20,26) circle (0.9);
+  \end{scope}
+  \node[rxb lab, anchor=east] at ($(O)+(-68:18)+(-158:3)$) {G};
+  \fill[white] (O) circle (1.1); \draw[bkInk, line width=0.6pt] (O) circle (1.1);
+  \node[rxb lab, anchor=east] at (17.5,44) {O};
+  \draw[bkInk, line width=0.5pt] (20,31) arc (-90:-72:13);
+  \node[rxb lab] at ($(O)+(-81:15.5)$) {$\theta$};
+  \draw[rxb dim] ($(O)+(-68:1.5)+(22:4.5)$) -- ($(O)+(-68:18)+(22:4.5)$);
+  \node[rxb lab, anchor=west] at ($(O)+(-68:9)+(22:5.5)$) {$h$};
+  \draw[bkPurple, line width=1.1pt, -{Stealth[length=2.4mm]}] ($(O)+(-68:18)$) -- ++(0,-13);
+  \node[rxb lab, anchor=north, text=bkPurple!80!black] at ($(O)+(-68:18)+(0,-13)$) {$mg$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.59\linewidth}\raggedright
+棒や板のように大きさのある物を、1点Oでつるしてゆらす物を\textbf{実体ふりこ}（剛体ふりこ）といいます。\bkidx{じったいふりこ}{実体ふりこ}ふりこ時計のふりこ、メトロノーム、人の足（歩くときの足のふり）も、実体ふりこです。\par\vspace{2pt}
+回る軸Oのまわりの慣性モーメントを $I$（力-6）、軸から重心Gまでの距離を $h$ とします。重力 $mg$ は重心にはたらき、軸のまわりに $mgh\sin\theta$ のモーメントで、角をもどそうとします。
+\end{minipage}
+
+\par\vspace{4pt}
+回る物の運動方程式「慣性モーメント×角加速度＝モーメント」（力-6⑥）から、
+\[I\ddot\theta=-mgh\sin\theta\]
+です。ふれが小さいとき $\sin\theta\approx\theta$ なので、
+\pheq{T=2\pi\sqrt{\frac{I}{mgh}}}{s ＝ $\sqrt{\text{kg·m}^2\div\text{(N·m)}}$}
+です。おもりの大きさが小さく、糸が軽いふりこなら、$I=ml^2$、$h=l$ なので、
+\[T=2\pi\sqrt{\frac{ml^2}{mgl}}=2\pi\sqrt{\frac{l}{g}}\]
+にもどります。
+
+\begin{phflow}[実体ふりこ]
+\phflowrow{$I\ddot\theta=-mgh\sin\theta$}{ふれが小さい\\$\sin\theta\approx\theta$}{$T=2\pi\sqrt{\dfrac{I}{mgh}}$}
+\phflowrow{$T=2\pi\sqrt{\dfrac{I}{mgh}}$}{おもりが点\\$I=ml^2$、$h=l$}{$T=2\pi\sqrt{\dfrac{l}{g}}$}
+\end{phflow}
+
+長さ $l$ の一様な棒を、はしでつるすと、$I=\tfrac{1}{3}ml^2$（力-6⑦）、$h=\tfrac{l}{2}$ なので
+\[T=2\pi\sqrt{\frac{ml^2/3}{mgl/2}}=2\pi\sqrt{\frac{2l}{3g}}\]
+です。長さ $\tfrac{2}{3}l$ の糸のふりこと同じ周期で、同じ長さの糸のふりこより速くゆれます（例題9）。棒の上のほうの部分は、軸の近くで小さくゆれるだけで、ゆれを遅くする「重さ」の働きが小さいからです。
+
+\begin{phmijika}[メトロノーム]
+メトロノームは、軸の下に重いおもり、上に動かせる小さなおもりがついた実体ふりこです。上のおもりを上へずらすと、$I$ が大きくなり、重心 $h$ が軸に近づく（$mgh$ が小さくなる）ので、周期が長く、テンポはゆっくりになります。目もりは、この関係を使って刻まれています。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\Needspace{20\baselineskip}\bksubsection{9}{ねじり振動：回る向きのゆれ}
+\label{ph:波-1:sec9}
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxbceil{4}{36}{44}
+  \draw[bkGray!70!black, line width=2pt] (20,44) -- (20,12);
+  \filldraw[fill=bkGreen!25, draw=bkGreen!60!black, line width=0.8pt] (20,10) ellipse (14 and 4);
+  \draw[bkGreen!60!black, line width=0.8pt] (6,10) -- (6,7.4) (34,10) -- (34,7.4);
+  \draw[bkGreen!60!black, line width=0.8pt] (6,7.4) arc (180:360:14 and 4);
+  \draw[bkRed!80!black, line width=0.9pt, -{Stealth[length=2mm]}] (9,1.6) arc (230:310:17 and 4.6);
+  \node[rxb lab, anchor=west] at (30.5,1.5) {$\theta$};
+  \draw[rxb dim] (25,44) -- (25,14);
+  \node[rxb lab, anchor=west, align=left] at (25.5,30) {長さ $L$\\直径 $d$};
+  \node[rxb lab, anchor=east] at (5,14) {$I$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+丸い鋼の軸の上のはしを固定し、下のはしに円板をつけます。円板を少し回して放すと、軸のねじれがもどろうとして、円板は右へ左へと回りながらゆれます。これを\textbf{ねじり振動}といいます。\bkidx{ねじりしんどう}{ねじり振動}\par\vspace{2pt}
+軸を角 $\theta$ だけねじると、軸はもどそうとするモーメント $k_{\mathrm t}\theta$ を円板にはたらかせます。$k_{\mathrm t}$ を\textbf{ねじりこわさ}といい、力-11⑥の式から $k_{\mathrm t}=GI_{\mathrm p}/L$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+ここで、$G$ は軸の材料の横弾性係数（鋼で約\qty{79}{GPa}）、$I_{\mathrm p}=\pi d^4/32$ は直径 $d$ の丸い軸の断面二次極モーメントです（力-11⑥）。円板の慣性モーメントを $I$ とすると、回る物の運動方程式は
+\[I\ddot\theta=-k_{\mathrm t}\theta\]
+で、②と同じ形です。$m$ のかわりに $I$、$k$ のかわりに $k_{\mathrm t}$ が入ります。
+\pheq{\omega_{\mathrm n}=\sqrt{\frac{k_{\mathrm t}}{I}},\qquad k_{\mathrm t}=\frac{GI_{\mathrm p}}{L}=\frac{\pi Gd^4}{32L}}{1/s ＝ $\sqrt{\text{(N·m/rad)}\div\text{(kg·m}^2\text{)}}$}
+軸の直径 $d$ が4乗で効くので、軸を少し太くするだけで、固有振動数は大きく上がります（直径を2倍にすると $k_{\mathrm t}$ は16倍、振動数は4倍）。
+
+\begin{phmijika}[車の軸と、機械式の腕時計]
+エンジンから車輪へ回転を伝える軸や、発電所のタービンの長い軸は、ねじり振動を起こします。エンジンの爆発のリズムが、軸のねじりの固有振動数と合うと、大きくゆれて軸がこわれることがあるので、設計で確かめます（波-2）。機械式の腕時計の「てんぷ」は、細いうず巻きばね（ひげぜんまい）でもどされる輪のねじり振動で、その周期で時を刻みます。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{10}{相似の表：力学・電気・熱・流体}
+\label{ph:波-1:sec10}
+この巻の前付の「保存則と相似の地図」で、ばねとおもりと電気の回路が「同じ形の式」で書けること（相似）を見ました。そこで「出会う章」として約束したこの章で、相似を表にまとめます。6-6⑧・6-7⑦では、コイル（$L$）・コンデンサー（$C$）・抵抗（$R$）の回路が、ばね・おもり・ダンパーと同じ形の式になることを確かめました。回路の法則そのものは、物理シリーズの『電磁気学』（電-9）で導きます。ここでは、式の形だけを使います。\bkidx{そうじ}{相似}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=16mm] X[l,m] X[l,m] X[l,m] X[l,m]}, width=\linewidth, rowsep=2pt, colsep=3pt, cells={font=\small}, row{1}={bg=bkTheme!10, font=\sffamily\bfseries\footnotesize}, column{1}={font=\sffamily\bfseries\footnotesize}}
+役わり & 力学（ばね・おもり） & 電気（回路） & 熱（部屋・お湯） & 流体（U字管） \\
+流れるもの & 速度 $v$ & 電流 $i$ & 熱流 $\dot Q$ & 体積流量 $Q$ \\
+押すもの & 力 $F$ & 電圧 $e$ & 温度差 $\Delta T$ & 圧力差 $\Delta p$ \\
+ためるもの & ばねのやわらかさ $1/k$ & 静電容量 $C$ & 熱容量 $C_{\mathrm{th}}$ & 液面の広さ $A/(\rho g)$ \\
+慣性 & 質量 $m$ & インダクタンス $L$ & （ない） & 管の中の液 $\rho l/A$ \\
+失うもの & ダンパー $c$ & 抵抗 $R$ & 熱抵抗 $R_{\mathrm{th}}$ & 管のこすれ \\
+式の形 & {$m\ddot x+c\dot x$\\$\quad+kx=F$} & {$L\ddot q+R\dot q$\\$\quad+\dfrac{q}{C}=e$} & {$C_{\mathrm{th}}\dfrac{\dd\Delta T}{\dd t}$\\$\quad+\dfrac{\Delta T}{R_{\mathrm{th}}}=\dot Q$} & $\ddot x+\dfrac{2g}{l}x=0$ \\
+ゆれるか & ゆれる & ゆれる & ゆれない & ゆれる \\
+\end{bktable}
+\bktabcaption{相似の表。式の形は、熱の列だけが1階（慣性がない）。流体の列の式は、こすれのないとき。熱の列の $\Delta T$ は、物とまわりの温度差（熱-12）。}\label{ph:波-1:tab-souji}
+\end{bkcenter}
+
+表\ref{ph:波-1:tab-souji}の上の5行は、前付の地図の表と同じです。下の2行で、新しいことがわかります。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ゆれるには、「ためるもの」と「慣性」の2つがいる}。ばね（エネルギーを形でためる）とおもり（エネルギーを動きでためる）のあいだで、エネルギーが行き来するのがゆれでした（⑥）。電気でも、コンデンサーとコイルのあいだで行き来します。熱には慣性にあたるものがないので、熱い物は、ゆれずに冷めていくだけです（熱-12の冷めるお湯は1階の式）。
+\item \textbf{固有角振動数と減衰比も、表で読みかえられる}。ばねの $\omega_{\mathrm n}=\sqrt{k/m}$ は、$k\to1/C$、$m\to L$ と読みかえて $1/\sqrt{LC}$。減衰比 $\zeta=c/(2\sqrt{mk})$ は、$\zeta=\dfrac{R}{2}\sqrt{\dfrac{C}{L}}$ です。6-7では、\qty{0.5}{kg}・\qty{8}{N/m}・$c=0.4$ のばねと、\qty{10}{mH}・\qty{1}{\micro F}・\qty{20}{\ohm} の回路が、どちらも $\zeta=0.1$ でした。
+\end{enumerate}
+
+\noindent\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!25] (2,4) rectangle (8,30) (24,4) rectangle (30,22) (2,0) rectangle (30,4);
+  \fill[bkBlue!25] (2,0) arc (180:360:14 and 4) -- (30,4) -- (2,4) -- cycle;
+  \draw[bkInk, line width=0.9pt] (2,36) -- (2,4) arc (180:360:14 and 4) -- (30,36);
+  \draw[bkInk, line width=0.9pt] (8,36) -- (8,4) -- (24,4) -- (24,36);
+  \draw[bkGray, line width=0.5pt, dashed] (-2,26) -- (34,26);
+  \draw[rxb dim] (-1,26) -- (-1,30);
+  \node[rxb lab, anchor=east] at (-1.5,28) {$x$};
+  \draw[rxb dim] (33,26) -- (33,22);
+  \node[rxb lab, anchor=west] at (33.5,24) {$x$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.61\linewidth}\raggedright
+\textbf{流体の例：U字管の水のゆれ}\par
+U字形の管に水を入れ、片方を吹いて水面をずらしてから放すと、水面は上下にゆれます。管の中の水の柱の全体の長さを $l$、断面積を $A$、片方の水面が $x$ 上がったとします。もう片方は $x$ 下がるので、高さの差 $2x$ の水の重さ $2\rho gAx$ が、水全体（質量 $\rho Al$）をもどそうとします。こすれがなければ
+\[\rho Al\,\ddot x=-2\rho gA\,x\]
+\end{minipage}
+
+\par\vspace{4pt}
+\noindent なので、
+\[\omega_{\mathrm n}=\sqrt{\frac{2g}{l}},\qquad T=2\pi\sqrt{\frac{l}{2g}}\]
+です。水の柱の長さが\qty{0.40}{m}なら、$T=2\pi\sqrt{0.40/19.6}\approx\qty{0.90}{s}$ です。表の流体の列で、慣性 $\rho l/A$ と、2つの液面の「ためるもの」$A/(2\rho g)$ から $1/\sqrt{\text{慣性}\times\text{ためるもの}}$ を作っても、同じ $\sqrt{2g/l}$ になります。
+
+\begin{phmijika}[相似で、ほかの分野の答えを借りる]
+コンピュータが広まる前は、機械の振動を調べるのに、同じ形の式になる電気の回路を組み、オシロスコープで電圧のゆれを見ることがありました（アナログ計算機）。今でも、スピーカーやマイクの設計では、振動板（力学）と、箱の中の空気（流体）と、コイル（電気）を、1つの電気の回路の形にまとめて計算します。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{11}{数値で解く：速度を先に進める}
+\label{ph:波-1:sec11}
+③の大きなふれのふりこのように、式で解けない運動方程式は、時間を細かく区切って、コンピュータで少しずつ進めます（6-2、力-2⑨）。ただし、ゆれる物を、いちばん簡単なオイラー法（今の速度で位置を、今の加速度で速度を進める）で計算すると、ゆれがだんだんふくらんでしまいます（6-2⑩、7-10⑨）。6-2⑪の「速度を先に新しくし、その新しい速度で位置を進める」方法にすると、ふくらみません。ばね定数\qty{200}{N/m}、\qty{0.5}{kg}、振幅\qty{0.10}{m}（エネルギー\qty{1.0}{J}）のばねで、2つの方法をくらべます。
+\begin{phcode}[Python]
+k, m = 200, 0.5           \# ばね定数、質量
+dt = 0.005                \# Δt（秒）。1周期は約0.314秒
+x1, v1 = 0.1, 0.0         \# オイラー法
+x2, v2 = 0.1, 0.0         \# 速度を先に進めるオイラー法
+for step in range(1, 316):         \# 315歩＝約5周期
+    a1 = -k / m * x1
+    x1, v1 = x1 + v1 * dt, v1 + a1 * dt
+    a2 = -k / m * x2
+    v2 = v2 + a2 * dt              \# 速度を先に新しくし
+    x2 = x2 + v2 * dt              \# 新しい速度で位置を進める
+    if step \% 63 == 0:             \# 約1周期ごとに表示
+        E1 = 0.5 * m * v1**2 + 0.5 * k * x1**2
+        E2 = 0.5 * m * v2**2 + 0.5 * k * x2**2
+        print(round(step * dt, 3), round(E1, 3), round(E2, 3))
+\end{phcode}
+\begin{phcodeout}
+0.315 1.872 0.998
+0.63 3.503 0.996
+0.945 6.558 0.994
+1.26 12.274 0.992
+1.575 22.974 0.99
+\end{phcodeout}
+左から、時刻〔s〕、オイラー法のエネルギー〔J〕、速度を先に進める方法のエネルギー〔J〕です。オイラー法では、1周期ごとにエネルギーが約1.9倍にふくらみ、5周期で23倍です。1歩ごとに、エネルギーがちょうど $1+(\omega_{\mathrm n}\Delta t)^2=1.01$ 倍になるからです（7-10⑨）。速度を先に進める方法では、1周期のあいだに0.95〜\qty{1.05}{J}のあいだを上下しますが、何周期たってもふくらみません。もっと正確にしたいときは、ルンゲ・クッタ法（力-2⑨）を使います。この例では、同じ $\Delta t$ で5周期たっても、エネルギーのずれは0.001\,\%より小さくなります。
+
+\begin{phmodel}[時間を区切った計算]
+\phignore{1歩のあいだの、加速度の変化（区切りのはじめの値で代表させる）。}
+\phassume{$\Delta t$ は周期よりずっと短い（ここでは周期の約60分の1）。}
+\phlimit{$\Delta t$ が周期の数分の1より長いとき。$\omega_{\mathrm n}\Delta t>2$ では、どの方法も答えがこわれる（力-16⑦）。}
+\end{phmodel}
+
+\begin{phsaki}{大きなゆれと、ゆれのカオス}
+この章では、復元力がずれに比例する（線形の）ゆれを主に調べ、ふりこの大きなふれは、周期が少し長くなることだけを見ました。復元力がずれに比例しない「非線形振動」では、周期が振幅によって変わるだけでなく、ゆすり方によって、いくつもの答えがあらわれたり（波-2）、ほんのわずかなはじめのちがいが、時間がたつと大きなちがいになったりします（カオス）。ふりこの先にもう1つふりこをつけた「二重ふりこ」は、カオスの代表的な例です。非線形振動とカオスは、機械力学や力学系の専門の本で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[機械力学の専門書の書き方]
+\begin{bkhonbun}
+1自由度系の自由振動 $m\ddot x+c\dot x+kx=0$ において，$\omega_{\mathrm n}=\sqrt{k/m}$ を固有角振動数，$\zeta=c/(2\sqrt{mk})$ を減衰比という．静たわみ $\delta_{\mathrm{st}}=mg/k$ を用いれば $f_{\mathrm n}=(1/2\pi)\sqrt{g/\delta_{\mathrm{st}}}$ である．ばねの質量 $m_{\mathrm s}$ を考慮する場合は，等価質量 $m+m_{\mathrm s}/3$ を用いる．
+\end{bkhonbun}
+\bkyaku{「1自由度系」は1つの数で形が決まる物（①）。専門書は、静たわみを $\delta_{\mathrm{st}}$ と書くことが多い。この本では、対数減衰率 $\delta$ とぶつけないため $x_{\mathrm{st}}$ と書いた（⑤）。「等価質量」は、レイリーの方法（⑥）でばねの $\tfrac{1}{3}$ を加えた質量。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{単振動}$m\ddot x=-kx$ の答え $x=A\sin(\omega t+\phi)$、$a=-\omega^2x$\\[3pt]
+\tsl{周期}ばね $T=2\pi\sqrt{\dfrac{m}{k}}$、ふりこ $T=2\pi\sqrt{\dfrac{l}{g}}$、$f=\dfrac{1}{T}=\dfrac{\omega}{2\pi}$\\[3pt]
+\tsl{静たわみ}$f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{\dfrac{g}{x_{\mathrm{st}}}}$\\[3pt]
+\tsl{エネルギー}$\dfrac{1}{2}mv^2+\dfrac{1}{2}kx^2=\dfrac{1}{2}kA^2$、$v_{\max}=A\omega_{\mathrm n}$\\[3pt]
+\tsl{いろいろな物}実体ふりこ $2\pi\sqrt{\dfrac{I}{mgh}}$、ねじり $\omega_{\mathrm n}=\sqrt{\dfrac{k_{\mathrm t}}{I}}$\\[3pt]
+\tsl{減衰}$\delta=\ln\dfrac{x_1}{x_2}$、$\zeta=\dfrac{\delta}{\sqrt{4\pi^2+\delta^2}}\approx\dfrac{\delta}{2\pi}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{振動}{行ったり来たりする動き。}
+\bkword{自由度}{形を決めるのに要る数の個数。1つで決まる物が1自由度。}
+\bkword{復元力}{つり合いの位置へもどそうとする力。ずれに比例すると単振動になる。}
+\bkword{単振動}{$x=A\sin(\omega t+\phi)$ で表されるゆれ。回る点の影と同じ動き。}
+\bkword{振幅・周期・振動数}{いちばん大きいずれ・1往復の時間・1秒の往復の回数（Hz）。}
+\bkword{固有角振動数}{その物が自分で決める、ゆれの角振動数。ばねなら $\sqrt{k/m}$。}
+\bkword{等価ばね定数}{はり・棒・軸などを1本のばねとみたときのばね定数。}
+\bkword{静たわみ}{物をのせたときに、ばねが沈む長さ。}
+\bkword{減衰比・対数減衰率}{止まりやすさを表す数。$\zeta\approx\delta/(2\pi)$。}
+\bkword{相似}{分野がちがっても、同じ形の式で書けること。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$T$・$f$}{ティー・エフ}{周期〔s〕と振動数〔Hz〕。$f=1/T$。糸の張力は $F_{\mathrm T}$ と書く}{period, frequency}{波-1}}
+{\bkkigocard{$\omega_{\mathrm n}$・$A$}{オメガエヌ・エー}{固有角振動数〔rad/s〕と振幅。数学 6-6 は振幅を $X$}{natural angular frequency, amplitude}{波-1}}
+\bkkigocards{\bkkigocard{$c$}{シー}{減衰係数〔N·s/m〕（第1部）。第2・3部では波の速さ、第4部では光速}{damping coefficient}{波-1}}
+{\bkkigocard{$\zeta$・$\delta$}{ゼータ・デルタ}{減衰比と対数減衰率。静たわみは $x_{\mathrm{st}}$}{damping ratio, logarithmic decrement}{波-1}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-1:ex1}
+\begin{phreidai}[ブランコの1往復の時間]
+つるした点から座る人の重心までが\qty{2.0}{m}のブランコがあります。小さくゆれているときの1往復の時間を求めましょう。同じブランコを月（$g=\qty{1.62}{m/s^2}$）にもっていくと、何秒になりますか。
+\phbamen
+\bkhatenaref のブランコです。こがずに、軽く押してもらってゆれています。
+\phmushi
+鎖の質量と空気の抵抗を無視し、人を重心に集まった点と考えます。人は姿勢を変えないとします。ふれは小さいとします。
+\phzu
+ふりこの長さ $l=\qty{2.0}{m}$、$g=\qty{9.8}{m/s^2}$、周期 $T$。
+\phriyu
+重心までの長さが決まった点のふりこで、ふれが小さいので、③の $T=2\pi\sqrt{l/g}$ が使えます。
+\phtateru
+\[T=2\pi\sqrt{\frac{l}{g}}\]
+\phtoku
+\[T=2\pi\sqrt{\frac{2.0}{9.8}}=6.283\times0.452\approx\qty{2.8}{s}\]
+月では $g$ が $\tfrac{1.62}{9.8}$ 倍なので、周期は $\sqrt{9.8/1.62}\approx2.46$ 倍の約\qty{7.0}{s}です。
+\phtashikame
+単位：$\sqrt{\text{m}\div(\text{m/s}^2)}=\text{s}$。\\
+大きさ：$T\approx2.0\sqrt{l}=2.0\times1.41=2.8$ と合います。公園のブランコをゆらしてみると、2〜3秒で1往復します。\\
+質量：$m$ は入っていないので、大人でも子どもでも同じです。
+\kotae 約\qty{2.8}{s}。月では約\qty{7.0}{s}
+\end{phreidai}
+\begin{jibun}
+重心までの長さが\qty{2.5}{m}のブランコの、小さなゆれの1往復の時間を求めましょう。
+\bkjans{$2\pi\sqrt{2.5\div9.8}\approx\qty{3.2}{s}$}
+\end{jibun}
+
+\label{ph:波-1:ex2}
+\begin{phreidai}[ふりこで重力加速度をはかる]
+長さ\qty{0.800}{m}のふりこを小さくゆらし、20往復の時間をはかると\qty{35.9}{s}でした。重力加速度 $g$ を3けたで求めましょう。
+\phbamen
+周期と長さがわかれば、ふりこの式から、逆に $g$ が求まります。昔から、$g$ はこの方法ではかられてきました。
+\phmushi
+糸の質量・空気の抵抗・おもりの大きさを無視します。ふれは小さいとします。
+\phzu
+$l=\qty{0.800}{m}$、20往復で\qty{35.9}{s}、周期 $T$、重力加速度 $g$。
+\phriyu
+③の $T=2\pi\sqrt{l/g}$ を、$g$ について解いて使います。
+\phtateru
+\[T=2\pi\sqrt{\frac{l}{g}}\quad\text{の両辺を2乗して}\quad g=\frac{4\pi^2l}{T^2}\]
+\phtoku
+\[T=\frac{35.9}{20}=\qty{1.795}{s},\qquad g=\frac{39.48\times0.800}{1.795^2}=\frac{31.58}{3.222}\approx\qty{9.80}{m/s^2}\]
+\phtashikame
+大きさ：日本の $g$（約\qty{9.80}{m/s^2}）と合います。\\
+ずれの見積もり：20往復の時間が $\pm\qty{0.2}{s}$ ずれると、$g$ は9.69〜9.91になります。時間は2乗で効くので、たくさん往復させてはかるのが大切です。
+\kotae 約\qty{9.80}{m/s^2}
+\end{phreidai}
+\begin{jibun}
+長さ\qty{1.20}{m}のふりこの10往復の時間が\qty{22.0}{s}でした。$g$ を求めましょう（$4\pi^2=39.48$）。
+\bkjans{$T=\qty{2.20}{s}$。$g=39.48\times1.20\div2.20^2$ より、約\qty{9.79}{m/s^2}}
+\end{jibun}
+
+\label{ph:波-1:ex3}
+\begin{phreidai}[ばねとおもりの単振動]
+ばね定数\qty{200}{N/m}のばねに\qty{0.5}{kg}のおもりをつけ、なめらかな床の上で\qty{0.10}{m}引いて放しました。固有角振動数・周期、いちばん大きい速さと加速度、エネルギー、$x=\qty{0.06}{m}$ を通るときの速さを求めましょう（力-4で予告した数）。
+\phbamen
+引いて放したばねのおもりが、行ったり来たりします。
+\phmushi
+ばねの質量、床の摩擦、空気の抵抗を無視します。
+\phzu
+②の図。$k=\qty{200}{N/m}$、$m=\qty{0.5}{kg}$、振幅 $A=\qty{0.10}{m}$。
+\phriyu
+復元力がずれに比例するので単振動（②）。速さはエネルギーの式（⑥）でも求められます。
+\phtateru
+\[\omega_{\mathrm n}=\sqrt{\frac{k}{m}},\quad T=\frac{2\pi}{\omega_{\mathrm n}},\quad v_{\max}=A\omega_{\mathrm n},\quad a_{\max}=A\omega_{\mathrm n}^{\,2},\quad \frac{1}{2}mv^2+\frac{1}{2}kx^2=\frac{1}{2}kA^2\]
+\phtoku
+\[\omega_{\mathrm n}=\sqrt{\frac{200}{0.5}}=\sqrt{400}=\qty{20}{rad/s},\qquad T=\frac{6.283}{20}\approx\qty{0.31}{s}\]
+\[v_{\max}=0.10\times20=\qty{2.0}{m/s},\qquad a_{\max}=0.10\times20^2=\qty{40}{m/s^2}\]
+エネルギーは $\tfrac{1}{2}\times200\times0.10^2=\qty{1.0}{J}$。$x=0.06$ では、ばねに $\tfrac{1}{2}\times200\times0.06^2=\qty{0.36}{J}$ あるので、運動エネルギーは $\qty{0.64}{J}$ で、
+\[\frac{1}{2}\times0.5\times v^2=0.64\qquad v=\qty{1.6}{m/s}\]
+\phtashikame
+別の求め方：$v=\omega_{\mathrm n}\sqrt{A^2-x^2}=20\times\sqrt{0.01-0.0036}=20\times0.08=\qty{1.6}{m/s}$。\\
+大きさ：はしでの加速度\qty{40}{m/s^2}は、重力加速度の約4倍です。かたいばねと軽いおもりでは、ゆれは速く、はげしくなります。
+\kotae $\omega_{\mathrm n}=\qty{20}{rad/s}$、$T\approx\qty{0.31}{s}$、$v_{\max}=\qty{2.0}{m/s}$、$a_{\max}=\qty{40}{m/s^2}$、\qty{1.0}{J}、\qty{1.6}{m/s}
+\end{phreidai}
+\begin{jibun}
+ばね定数\qty{800}{N/m}のばねに\qty{2.0}{kg}のおもりをつけ、\qty{0.05}{m}引いて放しました。周期、いちばん大きい速さ、エネルギー、$x=\qty{0.03}{m}$ を通るときの速さを求めましょう。
+\bkjans{$\omega_{\mathrm n}=\qty{20}{rad/s}$、$T\approx\qty{0.31}{s}$、$v_{\max}=\qty{1.0}{m/s}$、\qty{1.0}{J}、$20\times\sqrt{0.0025-0.0009}=\qty{0.80}{m/s}$}
+\end{jibun}
+
+\label{ph:波-1:ex4}
+\begin{phreidai}[のせると沈む長さから、ゆれる速さを知る]
+エアコンの室外機を、防振ゴムの上にのせたら、ゴムが\qty{10}{mm}沈みました。室外機が上下にゆれるときの固有振動数を求めましょう。
+\phbamen
+室外機の質量も、ゴムのばね定数もわかりません。わかっているのは、沈んだ長さだけです。
+\phmushi
+室外機は上下にだけゆれるとし、ゴムを軽いばねと考えます。ゴムの中の減衰は無視します。
+\phzu
+静たわみ $x_{\mathrm{st}}=\qty{10}{mm}=\qty{0.010}{m}$、固有振動数 $f_{\mathrm n}$。
+\phriyu
+つるしたばね（⑤）と同じく、重さとばねの力のつり合いから $k/m=g/x_{\mathrm{st}}$ なので、静たわみだけで $f_{\mathrm n}$ が求まります。
+\phtateru
+\[f_{\mathrm n}=\frac{1}{2\pi}\sqrt{\frac{g}{x_{\mathrm{st}}}}\]
+\phtoku
+\[f_{\mathrm n}=\frac{1}{6.283}\sqrt{\frac{9.8}{0.010}}=\frac{31.3}{6.283}\approx\qty{5.0}{Hz}\]
+\phtashikame
+単位：$\sqrt{(\text{m/s}^2)\div\text{m}}=1/\text{s}=\text{Hz}$（rad は数として消える）。\\
+極端な場合：ゴムがかたく、ほとんど沈まなければ $x_{\mathrm{st}}\to0$ で $f_{\mathrm n}$ は大きくなる。
+\kotae 約\qty{5.0}{Hz}
+\end{phreidai}
+\begin{jibun}
+機械をのせたら、ばねが\qty{40}{mm}沈みました。上下のゆれの固有振動数を求めましょう。
+\bkjans{$\dfrac{1}{2\pi}\sqrt{9.8\div0.040}\approx\qty{2.5}{Hz}$}
+\end{jibun}
+
+\label{ph:波-1:ex5}
+\begin{phreidai}[車のサスペンションの固有振動数]
+車の4つの車輪のうちの1つが支える車体の質量を\qty{300}{kg}、その車輪のばねのばね定数を\qty{30}{kN/m}とします。車体の上下のゆれの固有振動数と、静たわみを求めましょう。
+\phbamen
+車を、4つの車輪ごとに分けて考える「4分の1の車のモデル」です。
+\phmushi
+タイヤのばね、ダンパー、車体の回転（前後のゆれ）を無視し、車体を1つのおもりとします。
+\phzu
+$m=\qty{300}{kg}$、$k=\qty{30}{kN/m}=\qty{3.0e4}{N/m}$。
+\phriyu
+ばねに支えられたおもりなので、②・⑤の式です。
+\phtateru
+\[\omega_{\mathrm n}=\sqrt{\frac{k}{m}},\qquad f_{\mathrm n}=\frac{\omega_{\mathrm n}}{2\pi},\qquad x_{\mathrm{st}}=\frac{mg}{k}\]
+\phtoku
+\[\omega_{\mathrm n}=\sqrt{\frac{\num{30000}}{300}}=\qty{10}{rad/s},\qquad f_{\mathrm n}=\frac{10}{6.283}\approx\qty{1.6}{Hz}\]
+\[x_{\mathrm{st}}=\frac{300\times9.8}{\num{30000}}\approx\qty{0.098}{m}\]
+\phtashikame
+⑤の式でも：$\tfrac{1}{2\pi}\sqrt{9.8/0.098}=\tfrac{10}{6.283}\approx\qty{1.6}{Hz}$ で同じ。\\
+大きさ：乗用車の上下のゆれは約1〜\qty{1.5}{Hz}が目安です。人が歩くときの体の上下（約\qty{2}{Hz}）に近い、乗り心地のよい速さとされています。
+\kotae 約\qty{1.6}{Hz}、静たわみ約\qty{9.8}{cm}
+\end{phreidai}
+\begin{jibun}
+1つの車輪が支える質量\qty{400}{kg}、ばね定数\qty{25}{kN/m}の車の、上下のゆれの固有振動数と静たわみを求めましょう。
+\bkjans{$\omega_{\mathrm n}=\sqrt{62.5}\approx\qty{7.9}{rad/s}$、$f_{\mathrm n}\approx\qty{1.3}{Hz}$、$x_{\mathrm{st}}=400\times9.8\div\num{25000}\approx\qty{0.16}{m}$}
+\end{jibun}
+
+\label{ph:波-1:ex6}
+\begin{phreidai}[ばねを2本つなぐ]
+ばね定数\qty{100}{N/m}と\qty{300}{N/m}のばねを、（1）直列、（2）並列にして、\qty{1.0}{kg}のおもりをつけます。それぞれの固有角振動数と周期を求めましょう。
+\phbamen
+2本のばねをどうつなぐかで、全体のかたさが変わります。
+\phmushi
+ばねの質量を無視します。並列のときは、2本ののびが同じになるように、おもりをつなぐ棒の中央につけるとします。
+\phzu
+④の図。$k_1=\qty{100}{N/m}$、$k_2=\qty{300}{N/m}$、$m=\qty{1.0}{kg}$。
+\phriyu
+等価ばね定数（④）を出してから、$\omega_{\mathrm n}=\sqrt{k/m}$（②）。
+\phtateru
+\[\text{直列}\quad\frac{1}{k}=\frac{1}{k_1}+\frac{1}{k_2},\qquad\text{並列}\quad k=k_1+k_2\]
+\phtoku
+（1）\ $\dfrac{1}{k}=\dfrac{1}{100}+\dfrac{1}{300}=\dfrac{4}{300}$ より $k=\qty{75}{N/m}$。$\omega_{\mathrm n}=\sqrt{75}\approx\qty{8.7}{rad/s}$、$T\approx\qty{0.73}{s}$。\\
+（2）$k=\qty{400}{N/m}$。$\omega_{\mathrm n}=\sqrt{400}=\qty{20}{rad/s}$、$T\approx\qty{0.31}{s}$。
+\phtashikame
+直列の $k$ は、やわらかいほうの\qty{100}{N/m}より小さく、並列の $k$ は、かたいほうの\qty{300}{N/m}より大きい。これは、いつも成り立ちます。
+\kotae （1）約\qty{8.7}{rad/s}、約\qty{0.73}{s}。（2）\qty{20}{rad/s}、約\qty{0.31}{s}
+\end{phreidai}
+\begin{jibun}
+ばね定数\qty{200}{N/m}のばね2本を、直列と並列にして、\qty{2.0}{kg}のおもりをつけます。それぞれの固有角振動数を求めましょう。
+\bkjans{直列 $k=\qty{100}{N/m}$、$\sqrt{50}\approx\qty{7.1}{rad/s}$。並列 $k=\qty{400}{N/m}$、$\sqrt{200}\approx\qty{14}{rad/s}$}
+\end{jibun}
+
+\label{ph:波-1:ex7}
+\begin{phreidai}[看板をつるしたはりのゆれ]
+力-10の例題6の、かべから\qty{1.0}{m}つき出した鋼のはり（$E=\qty{205}{GPa}$、$I=\qty{1.0e-6}{m^4}$）の先に、質量\qty{100}{kg}の看板をつるしました。風で看板が上下にゆれるときの固有振動数を求めましょう。
+\phbamen
+はりは、先に力をかけるとたわむばねです。看板がおもりになります。
+\phmushi
+はりの質量（看板よりずっと小さいとする）、看板の回転、つるす金具ののびを無視します。
+\phzu
+片持ちはり（④の図）。$L=\qty{1.0}{m}$、$EI=\qty{2.05e5}{N.m^2}$、$m=\qty{100}{kg}$。
+\phriyu
+片持ちはりの先の等価ばね定数 $k=3EI/L^3$（④、力-10⑨）を使い、1自由度のばねとおもり（②）にします。
+\phtateru
+\[k=\frac{3EI}{L^3},\qquad f_{\mathrm n}=\frac{1}{2\pi}\sqrt{\frac{k}{m}}\]
+\phtoku
+\[k=\frac{3\times\num{2.05e5}}{1.0^3}=\qty{6.15e5}{N/m}\]
+\[f_{\mathrm n}=\frac{1}{6.283}\sqrt{\frac{\num{6.15e5}}{100}}=\frac{78.4}{6.283}\approx\qty{12}{Hz}\]
+\phtashikame
+静たわみで確かめる：$x_{\mathrm{st}}=mg/k=980\div\num{6.15e5}\approx\qty{1.6}{mm}$（力-10の例題6の\qty{1.0}{kN}のときと同じくらい）。$\tfrac{1}{2\pi}\sqrt{9.8/0.0016}\approx\qty{12}{Hz}$ で合います。\\
+はりの質量：はりの質量の約 $\tfrac{33}{140}$ を看板に加えると（⑥）、振動数は少し下がります。
+\kotae 約\qty{12}{Hz}
+\end{phreidai}
+\begin{jibun}
+両はしで支えた長さ\qty{2.0}{m}の鋼のはり（$E=\qty{205}{GPa}$、$I=\qty{2.0e-6}{m^4}$）のまん中に、\qty{200}{kg}の機械をのせました。上下のゆれの固有振動数を求めましょう（はりの質量は無視）。
+\bkjans{$k=48EI/L^3=\qty{2.46e6}{N/m}$、$f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{\num{2.46e6}\div200}\approx\qty{18}{Hz}$}
+\end{jibun}
+
+\label{ph:波-1:ex8}
+\begin{phreidai}[ブランコを大きくこぐと]
+例題1のブランコ（$l=\qty{2.0}{m}$）を、ふれはば60°までゆらしました。1往復の時間を求めましょう。小さなふれのときと何\,\%ちがいますか。
+\phbamen
+ふれが大きいので、$\sin\theta\approx\theta$ が使えません。
+\phmushi
+例題1と同じ（鎖の質量・空気の抵抗を無視し、人は点）。
+\phzu
+$l=\qty{2.0}{m}$、ふれはば $\theta_0=60^\circ$、小さなふれの周期 $T_0$。
+\phriyu
+大きなふれの周期は、③の表\ref{ph:波-1:tab-ookina}（だ円積分の値）で、小さなふれの周期の何倍かがわかります。
+\phtateru
+\[T=T_0\times\frac{T}{T_0},\qquad T_0=2\pi\sqrt{\frac{l}{g}}\]
+\phtoku
+$T_0=\qty{2.84}{s}$（例題1）。60°では $T/T_0=1.073$ なので、
+\[T=2.84\times1.073\approx\qty{3.0}{s}\]
+\phtashikame
+近似の式で：$1+\tfrac{(\pi/3)^2}{16}=1+\tfrac{1.097}{16}\approx1.069$。$2.84\times1.069\approx\qty{3.0}{s}$ で、ほとんど同じです。\\
+大きさ：7\,\%ほど長いだけです。大きくこいでも、周期はあまり変わりません。
+\kotae 約\qty{3.0}{s}（約7\,\%長い）
+\end{phreidai}
+\begin{jibun}
+長さ\qty{1.0}{m}のふりこを、90°から放しました。1往復の時間を求めましょう。
+\bkjans{$T_0=\qty{2.01}{s}$、$2.01\times1.180\approx\qty{2.37}{s}$（6-6⑦と同じ）}
+\end{jibun}
+
+\label{ph:波-1:ex9}
+\begin{phreidai}[棒のふりこ]
+長さ\qty{1.0}{m}の一様な細い棒の上のはしを、なめらかな軸で支えて、小さくゆらします。周期を求め、長さ\qty{1.0}{m}の糸のふりことくらべましょう。
+\phbamen
+大きさのある物のふりこ（実体ふりこ）です。
+\phmushi
+軸の摩擦と空気の抵抗を無視し、棒の太さを無視します。ふれは小さいとします。
+\phzu
+⑧の図。棒の長さ $l=\qty{1.0}{m}$、はしのまわりの慣性モーメント $I=\tfrac{1}{3}ml^2$、軸から重心まで $h=\tfrac{l}{2}$。
+\phriyu
+実体ふりこの周期 $T=2\pi\sqrt{I/(mgh)}$（⑧）を使います。
+\phtateru
+\[T=2\pi\sqrt{\frac{ml^2/3}{mg\,l/2}}=2\pi\sqrt{\frac{2l}{3g}}\]
+\phtoku
+\[T=2\pi\sqrt{\frac{2\times1.0}{3\times9.8}}=6.283\times0.261\approx\qty{1.6}{s}\]
+糸のふりこは $2\pi\sqrt{1.0/9.8}\approx\qty{2.0}{s}$ です。
+\phtashikame
+質量 $m$ が消えた：棒が重くても軽くても同じです。\\
+くらべる：棒のふりこは、長さ $\tfrac{2}{3}l$（\qty{0.67}{m}）の糸のふりこと同じ周期です。
+\kotae 約\qty{1.6}{s}（糸のふりこの約\qty{2.0}{s}より短い）
+\end{phreidai}
+\begin{jibun}
+長さ\qty{0.60}{m}の一様な棒のはしを支えてゆらします。周期を求めましょう。
+\bkjans{$2\pi\sqrt{2\times0.60\div(3\times9.8)}\approx\qty{1.3}{s}$}
+\end{jibun}
+
+\label{ph:波-1:ex10}
+\begin{phreidai}[ゆれの記録から減衰比を読む]
+歩道橋をたたいてゆらし、加速度センサーで記録すると、ゆれの山が\qty{10}{mm}、次の山が\qty{8.0}{mm}でした（図\ref{ph:波-1:fig-kiroku}）。対数減衰率と減衰比を求めましょう。
+\phbamen
+橋の減衰比は設計図からは計算できないので、実物の記録から求めます（⑦）。
+\phmushi
+橋のゆれを1自由度とし、減衰は速さに比例するとします。ほかの振動数のゆれはまざっていないとします。
+\phzu
+$x_1=\qty{10}{mm}$、$x_2=\qty{8.0}{mm}$、対数減衰率 $\delta$、減衰比 $\zeta$。
+\phriyu
+となりの山の比から $\delta$、$\delta$ から $\zeta$（⑦）。
+\phtateru
+\[\delta=\ln\frac{x_1}{x_2},\qquad \zeta=\frac{\delta}{\sqrt{4\pi^2+\delta^2}}\]
+\phtoku
+\[\delta=\ln\frac{10}{8.0}=\ln1.25\approx0.223,\qquad \zeta=\frac{0.223}{\sqrt{39.48+0.050}}\approx0.036\]
+\phtashikame
+近似で：$\delta/(2\pi)=0.223\div6.283\approx0.036$ で、同じです。\\
+大きさ：歩道橋のような鋼の構造で、0.01〜0.05ほどはよくある値です（⑦の桁の感覚）。\\
+単位：mm どうしの比なので、単位はなくなります（$\delta$ も $\zeta$ も単位なし）。
+\kotae $\delta\approx0.22$、$\zeta\approx0.036$
+\end{phreidai}
+\begin{jibun}
+ゆれの山が\qty{20}{mm}で、5回あとの山が\qty{8.0}{mm}でした。対数減衰率と減衰比を求めましょう（$\ln2.5=0.916$）。
+\bkjans{$\delta=0.916\div5\approx0.18$、$\zeta=0.183\div\sqrt{39.48+0.034}\approx0.029$}
+\end{jibun}
+
+\label{ph:波-1:ex11}
+\begin{phreidai}[鋼の軸と円板のねじり振動]
+直径\qty{10}{mm}、長さ\qty{0.50}{m}の鋼の軸の先に、慣性モーメント\qty{0.020}{kg.m^2}の円板をつけます。ねじり振動の固有振動数を求めましょう（鋼の $G=\qty{79}{GPa}$）。
+\phbamen
+回るゆれも、ばねとおもりと同じ形の式になります（⑨）。
+\phmushi
+軸の慣性モーメント（円板よりずっと小さい）と、摩擦を無視します。
+\phzu
+⑨の図。$d=\qty{0.010}{m}$、$L=\qty{0.50}{m}$、$I=\qty{0.020}{kg.m^2}$、$G=\qty{79e9}{Pa}$。
+\phriyu
+ねじりこわさ $k_{\mathrm t}=GI_{\mathrm p}/L$（⑨、力-11⑥）を出して、$\omega_{\mathrm n}=\sqrt{k_{\mathrm t}/I}$。
+\phtateru
+\[I_{\mathrm p}=\frac{\pi d^4}{32},\qquad k_{\mathrm t}=\frac{GI_{\mathrm p}}{L},\qquad f_{\mathrm n}=\frac{1}{2\pi}\sqrt{\frac{k_{\mathrm t}}{I}}\]
+\phtoku
+\[I_{\mathrm p}=\frac{3.142\times(0.010)^4}{32}\approx\qty{9.82e-10}{m^4}\]
+\[k_{\mathrm t}=\frac{\num{79e9}\times\num{9.82e-10}}{0.50}\approx\qty{155}{N.m/rad}\]
+\[f_{\mathrm n}=\frac{1}{6.283}\sqrt{\frac{155}{0.020}}=\frac{88.0}{6.283}\approx\qty{14}{Hz}\]
+\phtashikame
+単位：$\sqrt{(\text{N·m})\div(\text{kg·m}^2)}=\sqrt{1/\text{s}^2}$。\\
+2倍にすると：軸の直径を2倍にすると $k_{\mathrm t}$ は16倍、振動数は4倍の約\qty{56}{Hz}。
+\kotae 約\qty{14}{Hz}
+\end{phreidai}
+\begin{jibun}
+直径\qty{12}{mm}、長さ\qty{0.60}{m}の鋼の軸（$G=\qty{79}{GPa}$）の先に、慣性モーメント\qty{0.050}{kg.m^2}の円板をつけます。ねじり振動の固有振動数を求めましょう。
+\bkjans{$I_{\mathrm p}\approx\qty{2.04e-9}{m^4}$、$k_{\mathrm t}\approx\qty{268}{N.m/rad}$、$f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{268\div0.050}\approx\qty{12}{Hz}$}
+\end{jibun}
+
+\label{ph:波-1:ex12}
+\begin{phreidai}[ばねの質量を入れると]
+例題3のばね（\qty{200}{N/m}、おもり\qty{0.5}{kg}）の質量が\qty{0.15}{kg}だったとします。レイリーの方法で、固有角振動数を求めましょう。
+\phbamen
+ばねがおもりの3割もの重さなので、ばねの質量を無視できるか、確かめます。
+\phmushi
+ばねは一様にのび縮みするとします（⑥の仮定）。摩擦を無視します。
+\phzu
+$k=\qty{200}{N/m}$、$m=\qty{0.5}{kg}$、$m_{\mathrm s}=\qty{0.15}{kg}$。
+\phriyu
+ばねの運動エネルギーが、ばねの質量の $\tfrac{1}{3}$ がおもりといっしょに動くのと同じになる（⑥）。
+\phtateru
+\[\omega_{\mathrm n}\approx\sqrt{\frac{k}{m+m_{\mathrm s}/3}}\]
+\phtoku
+\[\omega_{\mathrm n}\approx\sqrt{\frac{200}{0.5+0.05}}=\sqrt{364}\approx\qty{19.1}{rad/s}\]
+ばねの質量を無視したときの\qty{20}{rad/s}より、約5\,\%小さくなります。
+\phtashikame
+くらべる：ばねを200個の小さなおもりとばねの列に分け、コンピュータで正確に解くと\qty{19.05}{rad/s}で、レイリーの方法とのちがいは0.1\,\%ほどです。\\
+極端な場合：$m_{\mathrm s}\to0$ で\qty{20}{rad/s}にもどります。
+\kotae 約\qty{19}{rad/s}
+\end{phreidai}
+\begin{jibun}
+ばね定数\qty{50}{N/m}、質量\qty{0.15}{kg}のばねに、\qty{0.20}{kg}のおもりをつけます。レイリーの方法で固有角振動数を求め、ばねの質量を無視したときとくらべましょう。
+\bkjans{$\sqrt{50\div0.25}\approx\qty{14}{rad/s}$。無視すると $\sqrt{250}\approx\qty{16}{rad/s}$}
+\end{jibun}
+
+\label{ph:波-1:ex13}
+\begin{phreidai}[クレーンのつり荷のゆれ]
+クレーンが、ロープの長さ\qty{20}{m}で荷をつって動かしています（力-0のクレーン）。荷が前後にゆれるときの周期を求めましょう。
+\phbamen
+つり荷は、ロープを糸とするふりこです。クレーンを急に動かしたり止めたりすると、荷がゆれます。
+\phmushi
+ロープの質量とのび、荷の大きさ、風を無視し、荷を点と考えます。ふれは小さいとします。
+\phzu
+ふりこの長さ $l=\qty{20}{m}$。
+\phriyu
+小さなふれのふりこなので、③の $T=2\pi\sqrt{l/g}$ です。
+\phtateru
+\[T=2\pi\sqrt{\frac{l}{g}}\]
+\phtoku
+\[T=2\pi\sqrt{\frac{20}{9.8}}=6.283\times1.43\approx\qty{9.0}{s}\]
+\phtashikame
+大きさ：$2.0\times\sqrt{20}=2.0\times4.47\approx8.9$ で合います。荷が重くても、周期は変わりません。\\
+使い道：ゆれの周期がわかると、ゆらさずに運ぶ動かし方を決められます（工学ではこう使う）。
+\kotae 約\qty{9.0}{s}
+\end{phreidai}
+\begin{jibun}
+ロープの長さ\qty{30}{m}でつった荷の、前後のゆれの周期を求めましょう。
+\bkjans{$2\pi\sqrt{30\div9.8}\approx\qty{11}{s}$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{$\omega$ と $f$ を取りちがえる}
+\bkng{$\omega_{\mathrm n}=\qty{20}{rad/s}$ なので、1秒に20回ゆれる。}
+\bkok{1秒の往復の回数は $f=\omega_{\mathrm n}/(2\pi)\approx\qty{3.2}{Hz}$。}
+$\omega$ は「1秒に進む位相の角」（rad/s）で、1往復で $2\pi$ 進みます。Hz と rad/s を書き分けると、取りちがえに気づけます（②）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{重いふりこほど、ゆっくりゆれる？}
+\bkng{おもりを重くすると、ふりこの周期は長くなる。}
+\bkok{ふりこの周期は $2\pi\sqrt{l/g}$ で、おもりの質量によらない。}
+重いほど重力も大きく、動かしにくさも大きく、2つが打ち消しあいます（③）。ばねのおもり（$2\pi\sqrt{m/k}$）とは、ここがちがいます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{たてにつるすと、周期が変わる？}
+\bkng{たてにつるしたばねは、重力の分だけ周期が変わる。}
+\bkok{重力は、ゆれの中心を静たわみだけ下げるだけ。周期は $2\pi\sqrt{m/k}$ のまま。}
+つり合いの位置からのずれ $u$ で式を立てると、重さが消えます（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{直列のばねも、たし算？}
+\bkng{\qty{100}{N/m}と\qty{300}{N/m}を直列につなぐと\qty{400}{N/m}。}
+\bkok{直列は $\tfrac{1}{k}=\tfrac{1}{100}+\tfrac{1}{300}$ で\qty{75}{N/m}。たし算になるのは並列。}
+直列では2本に同じ力がかかり、のびがたし算になるので、全体はやわらかくなります（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\sin\theta\approx\theta$ の $\theta$ は度？}
+\bkng{ふれはば\qty{10}{\degree}なので、$\sin10\approx10$。}
+\bkok{$\theta$ はラジアン。$10^\circ=0.1745$\,rad で、$\sin10^\circ=0.1736\approx0.1745$。}
+$\sin\theta\approx\theta$ も、「$\sin\omega t$ を2回微分すると $-\omega^2\sin\omega t$」も、角をラジアンで測ったときの式です（5-17）。電卓の DEG と RAD の切りかえにも気をつけます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{対数減衰率の対数}
+\bkng{山の比が1.25なので、$\delta=\log_{10}1.25\approx0.097$。}
+\bkok{$\delta=\ln1.25\approx0.223$（自然対数）。}
+$\zeta\approx\delta/(2\pi)$ は自然対数で作った式です。電卓の「ln」を使います（⑦）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[固有振動数を知って、ゆれを防ぐ]
+\textbf{ゆすられる速さと、固有振動数を離す}：機械や建物は、モーターの回転、エンジンの爆発、人の足音、風、地震などで、いつもゆすられています。ゆすられる速さが固有振動数に近いと、小さな力でも大きくゆれます（共振。波-2）。そこで設計では、まずこの章の方法で固有振動数を見積もり、ゆすられる速さから離れているかを確かめます。歩道橋では、人の歩く速さ（1秒に約2歩）と、橋の固有振動数を離します。
+
+\textbf{クレーンの荷をゆらさずに運ぶ}：例題13の荷（周期約\qty{9.0}{s}）を、一定の加速度で動かし始めると、荷はゆれ始めます。ところが、\textbf{加速する時間をちょうど周期（\qty{9.0}{s}）にする}と、加速が終わった瞬間に、荷はちょうどゆれのない位置に、速さ0でもどってきます。加速しているあいだは、荷のつり合いの位置が少し後ろにずれ、荷はそのまわりで単振動をするので、1周期たつと、はじめの位置（ゆれのない位置）にもどるからです。止めるときも同じです。周期が $2\pi\sqrt{l/g}$ で、荷の重さによらないことが、ここで役に立ちます。
+\par\smallskip\noindent\begin{center}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray!70!black, line width=1.4pt] (0,30) -- (112,30);
+  \foreach \xx/\ang/\lab in {8/0/{動き始め}, 48/-6/{加速中}, 98/0/{1周期後}} {
+    \fill[bkOrange!70!black] (\xx-4,30) rectangle (\xx+4,33.5);
+    \draw[bkInk, line width=0.7pt] (\xx,30) -- ++({-90+\ang}:20) coordinate (q);
+    \filldraw[fill=bkBlue!30, draw=bkBlue!70!black, line width=0.7pt] ($(q)+(-3,-2.5)$) rectangle ($(q)+(3,2.5)$);
+    \node[rxb lab, anchor=north] at (\xx,4) {\lab};}
+  \draw[bkGray, line width=0.4pt, dotted] (48,30) -- (48,8);
+  \draw[bkRed!80!black, line width=0.9pt, -{Stealth[length=2mm]}] (56,36) -- (70,36);
+  \node[rxb lab, anchor=south, text=bkRed!75!black] at (63,36.5) {加速度 $a$};
+  \node[rxb lab, anchor=west, align=left] at (55,18) {つり合いの位置が\\少し後ろへずれる};
+\end{tikzpicture}
+\end{center}
+
+\begin{phketa}[ゆれの速さの目安]
+\phketaline{人が歩く足の運び}{約\qty{2}{Hz}（1秒に約2歩）}
+\phketaline{乗用車の上下のゆれ}{約1〜\qty{1.5}{Hz}}
+\phketaline{高い建物のいちばんゆっくりしたゆれ}{周期の目安は「階数×0.1秒」}
+\phketaline{静たわみ\qty{10}{mm}の防振ゴムの上の機械}{約\qty{5}{Hz}}
+\phboxhead{答えが桁で合っているか}
+30階建ての建物の固有周期は3秒くらい（固有振動数 約\qty{0.3}{Hz}）、機械の部品は数十〜数千 Hz です。建物の固有振動数が数百 Hz、エンジンの部品が\qty{0.1}{Hz}のような答えが出たら、kN と N、mm と m、rad/s と Hz の取りちがえを疑いましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{機械力学,振動工学,建築構造,車両工学}{1自由度系、固有振動数、固有周期、等価ばね定数、静たわみ、減衰比、対数減衰率、等価質量}
+
+\begin{column}{ガリレオのランプと、ホイヘンスのふりこ時計}
+ガリレオ・ガリレイは、若いころ、ピサの大聖堂でゆれるランプを見て、ゆれが小さくなっても1往復の時間が変わらないことに気づいた、と伝えられています（脈をはかって時間をくらべた、という話は、あとの時代の伝記によるもので、本当かどうかはわかりません）。ふりこの「等時性」は、時計に使えるはずです。
+
+それを本当の時計にしたのは、オランダのクリスティアーン・ホイヘンスです。1656年にふりこ時計を作り、それまでの時計よりずっと正確に時を刻めるようになりました。1673年の本『振子時計』では、ふりこの周期の式を導き、さらに、ふれが大きくても周期がまったく変わらないふりこ（糸がサイクロイドという曲線にそって巻きつく形）を考え出しました。③で見た「大きなふれでは少し長くなる」ことを、形のくふうで消そうとしたのです。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem ふりこの周期を求めましょう。\\
+（1）長さ\qty{1.5}{m}のふりこの、小さなふれの周期。\\
+（2）（1）のふりこを月（$g=\qty{1.62}{m/s^2}$）にもっていったときの周期。\\
+（3）長さ\qty{2.0}{m}のふりこを、ふれはば30°でゆらしたときの周期（表\ref{ph:波-1:tab-ookina}を使う）。
+\bkpans{（1）\nobreak $2\pi\sqrt{1.5\div9.8}\approx\qty{2.5}{s}$。（2）\nobreak $2\pi\sqrt{1.5\div1.62}\approx\qty{6.0}{s}$。（3）\nobreak $2.84\times1.017\approx\qty{2.9}{s}$}
+\bkproblem ばね定数\qty{50}{N/m}のばねに\qty{0.50}{kg}のおもりをつけ、\qty{0.08}{m}引いて放しました。周期、いちばん大きい速さ、エネルギー、$x=\qty{0.048}{m}$ を通るときの速さを求めましょう。
+\bkpans{$\omega_{\mathrm n}=\qty{10}{rad/s}$、$T\approx\qty{0.63}{s}$、$v_{\max}=\qty{0.80}{m/s}$、\qty{0.16}{J}、$10\times\sqrt{0.0064-0.0023}\approx\qty{0.64}{m/s}$}
+\bkproblem 洗濯機をのせたら、脚のゴムが\qty{25}{mm}沈みました。上下のゆれの固有振動数と周期を求めましょう。
+\bkpans{$f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{9.8\div0.025}\approx\qty{3.2}{Hz}$、周期約\qty{0.32}{s}}
+\bkproblem ばね定数\qty{60}{N/m}と\qty{40}{N/m}のばねを、（1）直列、（2）並列にして、\qty{0.50}{kg}のおもりをつけます。それぞれの固有角振動数と周期を求めましょう。
+\bkpans{（1）\nobreak $k=\qty{24}{N/m}$、$\sqrt{48}\approx\qty{6.9}{rad/s}$、約\qty{0.91}{s}。（2）\nobreak $k=\qty{100}{N/m}$、$\sqrt{200}\approx\qty{14}{rad/s}$、約\qty{0.44}{s}}
+\bkproblem 機械をたたいたときのゆれの記録で、山が\qty{12}{mm}、次の山が\qty{9.0}{mm}でした。対数減衰率と減衰比を求めましょう。
+\bkpans{$\delta=\ln(12\div9.0)\approx0.29$、$\zeta=0.288\div\sqrt{39.48+0.083}\approx0.046$}
+\bkproblem 長さ\qty{1.000}{m}のふりこの15往復の時間が\qty{30.1}{s}でした。重力加速度を3けたで求めましょう（$4\pi^2=39.48$）。
+\bkpans{$T=30.1\div15\approx\qty{2.007}{s}$。$g=39.48\times1.000\div2.007^2$ より、約\qty{9.80}{m/s^2}}
+\bkproblemgroup{チャレンジ}{4}
+\bkproblem 例題5の車（1つの車輪あたり\qty{300}{kg}、ばね定数\qty{30}{kN/m}）に、減衰係数\qty{3000}{N.s/m}のダンパーをつけました。減衰比、対数減衰率を求め、ゆれの山が、次の山では何倍になるかを求めましょう。
+\bkpans{$\zeta=3000\div(2\sqrt{300\times\num{30000}})=0.50$。$\delta=2\pi\times0.50\div\sqrt{0.75}\approx3.6$。次の山は $e^{-3.63}\approx0.027$ 倍。ほとんどゆれずに止まる}
+\bkproblem 長さ\qty{1.2}{m}の一様な細い棒を、上のはしから\qty{0.30}{m}の所で、なめらかな軸で支えて小さくゆらします。周期を求めましょう（重心のまわりの慣性モーメントは $\tfrac{1}{12}ml^2$。平行軸の定理を使う）。
+\bkpans{軸から重心まで $h=\qty{0.30}{m}$。$I=m(0.12+0.09)=0.21m$。$T=2\pi\sqrt{0.21\div(9.8\times0.30)}\approx\qty{1.7}{s}$}
+\bkproblem 鋼の針金（直径\qty{1.0}{mm}、長さ\qty{0.50}{m}）の先に、慣性モーメント\qty{2.0e-3}{kg.m^2}の円板をつるし、ねじり振動の周期をはかると\qty{2.26}{s}でした。針金の横弾性係数 $G$ を求めましょう。
+\bkpans{$k_{\mathrm t}=4\pi^2I/T^2\approx\qty{0.0155}{N.m/rad}$。断面二次極モーメントは $\pi\times(0.001)^4\div32$ より、約\qty{9.82e-14}{m^4}。$G=k_{\mathrm t}L/I_{\mathrm p}$ より、約\qty{7.9e10}{Pa}（約\qty{79}{GPa}）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item ふりこの1往復の時間が、ふりこの長さで決まり、おもりの重さにはよらないことを、実験で確かめられる。\bkfurref{ph:波-1:sec3}
+\item ばねとおもり・ふりこの運動方程式から、単振動の式と周期を導き、エネルギーで速さを求められる。\bkfurref{ph:波-1:sec2}
+\item 等価ばね定数・静たわみ・実体ふりこ・ねじり振動で、いろいろな物の固有振動数を見積もれる。\bkfurref{ph:波-1:sec4}
+\item ゆれの記録から減衰比を読み、力学・電気・熱・流体の相似の表で、同じ形の式を見分けられる。\bkfurref{ph:波-1:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{ブランコも、車も、ビルも、ねじれる軸も、みんな「ばねとおもり」と同じ式だったんだね。ゆれの速さは、かたさと重さで決まるんだ。}
