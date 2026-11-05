@@ -1,0 +1,984 @@
+%% 第24回編集委員会（物理第3巻）：組 波W1
+%% p3-02.tex  波-2　ゆすり方で変わるゆれ：強制振動と共振（★2〜5・3段）
+%% 中身は計画書 tools/phys3-plan.md の B「波-2」。公式の持ち主は A（A21・A49・A50）。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-2/calc_p3_02.py（出力 calc_p3_02_out.txt）
+%% 数学との重なり（W-6）：6-13（強制振動の式・表計算・共振曲線・特殊解・複素振幅・山の ω・位相・Q 値・半値幅・RLC の共振・
+%%   防振のもっと知りたい）と同じ計算は指して使い、この章は「モデルの仮定・実物の値・仮定がくずれるとき」と、
+%%   不つり合い・危険速度・基礎の励振・カルマン渦・ボード線図の読み方を主にした。
+%%   数学 6-13 の数（0.5 kg・8 N/m・c＝0.4・F₀＝0.8 N、ω＝2・4・8 で 0.132・0.5・0.033 m、山 5.03 倍、はば 0.81、Q≈4.9）は変えずに使った。
+%%   6-13 の √ の中の G(ω) は使わない（9-8 の伝達関数 G(s) と別のもの）。
+%% 第1巻との約束：力-15「カルマン渦のはなれる回数が建物の固有振動数（波-2）と合うと大きくゆれる」→ ⑨・例題12（St≈0.2）
+%%   力-10 ⑨（両はし支持のはりのばね定数 48EI/L³）→ ⑧（危険速度）
+%% 記号（この章）：角振動数 ω（回る機械の角速度も「回転の ω がそのままゆすりの ω」と書き、別の文字を作らない）、
+%%   固有角振動数 ω_n、減衰比 ζ、減衰係数 c、ゆする力の振幅 F₀、複素振幅 X（振幅は |X|）、Q 値 Q、
+%%   振動数比は記号を作らず ω/ω_n、伝達率はことば（記号を使わない）、不つり合いの質量 m_u と回る半径 r_u（偏心の e は自然対数の e とぶつかるので使わない）。
+%%   周期の T はこの章では使わない（f・ω で書く）。
+%% 出典（本文で使った値・事実）と〔要確認〕
+%%   ・洗濯機の本体 40 kg・脚のばね 50 kN/m は、例題のための仮の値（計画書 B 波-2。本文に「例題のための値」と書いた）。
+%%   ・洗濯機の脱水の回転数 毎分 400〜1100 回転ほど：特許 JPH05130760A（ドラム式、脱水で 400〜1100 rpm）、
+%%       Coolblue の解説（欧州の機種 1200〜1600 rpm）。日本のメーカーの仕様表では確かめられなかった〔要確認：機種ごとの値〕。
+%%       本文は「毎分数百〜1000回転ほど（例題は800回転とする）」と幅をもたせて書いた。
+%%   ・工場の4極モーターの回転数 毎分約 1500（50 Hz）・1800（60 Hz）回転（同期速度 120f/極数）：電気機器の一般的な式から。
+%%   ・円柱のストローハル数 約0.2：力-15 と同じ。
+%%   ・ミレニアム橋：2000年6月10日開通、12日に閉鎖、2002年2月22日に再開（Wikipedia "Millennium Bridge, London"、
+%%       Ingenia "Stabilising the London Millennium Bridge"）。横ゆれの固有振動数 0.48・0.95 Hz（中央径間）、0.77 Hz（南径間）
+%%       （Ingenia、JOMMS 2017 の論文）。歩く人の横の力の振動数 0.7〜1.2 Hz（歩道橋の設計の総説数件）。
+%%       Dallard ほか, The Structural Engineer 79(22) (2001)。Strogatz ほか, Nature 438, 43 (2005)。
+%%       別のモデル（横ゆれのつり合い。人の歩調がそろわなくても橋にエネルギーが入る）：J. H. G. Macdonald, "Lateral excitation of bridges
+%%       by balancing pedestrians", Proc. R. Soc. A 465(2104), 1055–1073 (2009)（ブリストル大学の研究者データベースで確かめた）
+%%   ・タコマナローズ橋（1940年11月7日に崩落）は単純な共振ではなく、風による自励振動（フラッター）：数学 6-13 の頭のコメントと同じ扱い。
+%%   ・音さの Q 値（空気中で数千）、水晶振動子（損失の小さい圧電体で数万）：Am. J. Phys. の音さの論文
+%%       （https://www.physics.umd.edu/courses/Phys410/AJP000415.pdf）。NIST の 32 kHz 水晶音さの資料（tf.nist.gov/general/pdf/617.pdf）。
+%%   ・乗用車の上下のゆれの減衰比 約0.2〜0.4：波-1 と同じ（Gillespie の5章を引く講義資料と eng-tips で照らし合わせた）。
+%%   ・ブロートン橋：1831年4月12日、サルフォードで、兵隊の隊列が渡るときに落ちた。調査では行進の振動がボルトの破断を早めた
+%%       （いずれ破断した）とされた。その後、橋では歩調を乱す命令（Wikipedia "Broughton Suspension Bridge"、Grace's Guide）。
+\makeatletter
+% ばね（2点のあいだのぎざぎざ）  \rxcspring{(始め)}{(終わり)}
+\newcommand\rxcspring[2]{\draw[bkInk, line width=0.8pt, decorate, decoration={zigzag, segment length=2mm, amplitude=1.5mm, pre length=2mm, post length=2mm}] #1 -- #2;}
+% ダンパー（たて向き）  \rxcdamperv{x}{下の y}{上の y}
+\newcommand\rxcdamperv[3]{%
+  \fill[bkYellow!30] ({#1-2.2},{#2+2}) rectangle ({#1+2.2},{#2+0.62*(#3-#2)});
+  \draw[bkInk, line width=0.8pt] (#1,#2) -- (#1,{#2+2}) ({#1-2.2},{#2+2}) -- ({#1+2.2},{#2+2})
+    ({#1-2.2},{#2+2}) -- ({#1-2.2},{#2+0.62*(#3-#2)}) ({#1+2.2},{#2+2}) -- ({#1+2.2},{#2+0.62*(#3-#2)});
+  \draw[bkInk, line width=1.3pt] ({#1-1.6},{#2+0.42*(#3-#2)}) -- ({#1+1.6},{#2+0.42*(#3-#2)});
+  \draw[bkInk, line width=0.8pt] (#1,{#2+0.42*(#3-#2)}) -- (#1,#3);}
+% 床（下側に斜線）  \rxcfloor{左の x}{右の x}{y}
+\newcommand\rxcfloor[3]{\fill[pattern=north east lines, pattern color=bkGray] (#1,{#3-2.4}) rectangle (#2,#3); \draw[bkInk, line width=1pt] (#1,#3) -- (#2,#3);}
+\tikzset{rxc lab/.style={font=\sffamily\footnotesize, text=bkInk}, rxc dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+\makeatother
+
+\phchapter{2}{ゆすり方で変わるゆれ：\\強制振動と共振}{洗濯機は、なぜ回り始めにガタガタゆれることがある？}{\bklevelrange{2}{5}}{ゆすり方で変わるゆれ：強制振動と共振}
+\bkmichishirube{3-12,6-10,6-13,9-8,力-10,力-15,波-1}{波-3,波-4,波-6,波-13}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace 共振（共鳴）を、ゆする速さとゆれの大きさの関係で説明できる。
+\item \bklevel{3}\enspace 表計算でばねをゆすって、共振曲線とゆれのおくれを読みとれる。
+\item \bklevel{5}\enspace 共振の倍率・Q 値・伝達率を求め、防振ばねを選べる。
+\item \bklevel{5}\enspace 不つり合い・回る軸・道のでこぼこ・風の渦によるゆれを見積もり、ボード線図で読める。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{共振・共鳴（ゆする振動数が固有振動数に近いと、大きくゆれる）}{高校物理基礎}{ph:波-2:kyoushin}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+洗濯機が脱水を始めると、中の槽がだんだん速く回り始めます。そのとちゅうで、洗濯機全体がガタガタと大きくゆれ、しばらくすると、もっと速く回っているのに、ゆれはおさまって静かになることがあります。
+
+回る速さが速いほど、ゆれも大きくなりそうなのに、なぜ「回り始めのとちゅう」だけ、大きくゆれるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.39\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxcfloor{0}{46}{0}
+  \filldraw[fill=bkGray!12, draw=bkInk!70, line width=0.8pt, rounded corners=1.5mm] (6,4) rectangle (40,40);
+  \draw[bkInk!70, line width=0.6pt] (6,34) -- (40,34);
+  \filldraw[fill=bkBlue!10, draw=bkBlue!70!black, line width=0.8pt] (23,19) circle (11);
+  \filldraw[fill=white, draw=bkBlue!60!black, line width=0.5pt] (23,19) circle (8);
+  \filldraw[fill=bkOrange!60, draw=bkOrange!70!black, line width=0.5pt] (23,25.5) ellipse (3.6 and 1.6);
+  \draw[bkRed!80!black, line width=0.8pt, -{Stealth[length=2mm]}] ($(23,19)+(200:9.6)$) arc (200:320:9.6);
+  \draw[bkInk, line width=0.8pt] (10,4) -- (10,0) (36,4) -- (36,0);
+  \draw[bkPurple!80!black, line width=1pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (1,30) -- (5,30);
+  \draw[bkPurple!80!black, line width=1pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (41,30) -- (45,30);
+  \node[rxc lab, anchor=south] at (23,40.6) {ガタガタ？};
+  \node[rxc lab] at (23,19) {かたより};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 波-1では、ばねとおもりを「引いて放す」と、決まった速さ（固有振動数）でゆれることを学びました。でも、身の回りの物の多くは、外から休まずゆすられ続けています。回るモーターに乗った機械、でこぼこ道を走る車、風を受けるビル、音を受けるガラス。外からゆすられ続けるゆれを\textbf{強制振動}といいます。\bkidx{きょうせいしんどう}{強制振動}この章では、ゆする速さによって、ゆれの大きさとタイミングがどう変わるかを調べ、それを使って、ゆれを伝えない・こわれないように機械を設計する方法を学びます。
+
+\begin{yattemiyou}[ふりこを手でゆすってみよう]
+\textbf{用意するもの}\par
+たこ糸（\qty{50}{cm}くらい）、水を少し入れた小さなペットボトル（おもり）\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 糸の先にペットボトルを結び、もう一方のはしを指でつまんで、ふりこにする。ペットボトルが止まるまで待つ。
+\item 指を、左右に\qty{2}{cm}くらいの幅で、ゆっくり（2秒に1往復くらい）動かし続ける。
+\item 指を、速く（1秒に3往復くらい）動かし続ける。
+\item 指の速さを少しずつ変えて、ペットボトルがいちばん大きくゆれる速さをさがす。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!25] (14,34) ellipse (4 and 2.4);
+  \draw[bkInk!70, line width=0.5pt] (14,34) ellipse (4 and 2.4);
+  \draw[bkPurple!80!black, line width=0.9pt, {Stealth[length=2mm]}-{Stealth[length=2mm]}] (6,39) -- (22,39);
+  \node[rxc lab, anchor=south] at (14,39.5) {指を左右に};
+  \draw[bkInk, line width=0.6pt] (14,33) -- (18,8);
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.7pt, rounded corners=1mm] (15.5,0) rectangle (21.5,8);
+  \fill[bkBlue!40] (15.9,0.4) rectangle (21.1,3.5);
+  \draw[bkGray, line width=0.4pt, dotted] (14,33) -- (14,0);
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：指をゆっくり動かすと、ペットボトルは指と\textbf{同じ向き}に、少しだけ動きます。速く動かすと、ペットボトルはほとんど動かず、少し動くときは指と\textbf{反対の向き}に動きます。そして、ある速さ（長さ\qty{50}{cm}のふりこなら、1往復約1.4秒）で動かすと、指はほんの少ししか動かしていないのに、ペットボトルは大きくゆれます。このとき、ペットボトルは指より少しおくれて動いています。この速さは、ペットボトルを指でつまんだまま、手を止めて自由にゆらしたときの1往復の時間（ふりこの周期。波-1③）と同じです。
+
+\begin{omoidasou}
+\bkrecall{波-1}{ばねとおもりの固有角振動数 $\omega_{\mathrm n}=\sqrt{k/m}$。減衰比 $\zeta=\dfrac{c}{2\sqrt{mk}}$。静たわみ $x_{\mathrm{st}}$ から $f_{\mathrm n}=\dfrac{1}{2\pi}\sqrt{\dfrac{g}{x_{\mathrm{st}}}}$。}
+\bkrecall{6-13}{$m\ddot x+c\dot x+kx=F_0\cos\omega t$。答え＝ゆすりに合うゆれ＋自分のゆれ。複素振幅 $X=\dfrac{F_0}{k-m\omega^2+jc\omega}$、振幅は $\lvert X\rvert$。}
+\bkrecall{6-10}{微分は $j\omega$ をかけること。$\cos\omega t=\mathrm{Re}\,e^{j\omega t}$。}
+\bkrecall{9-8}{周波数応答：伝達関数に $s=j\omega$ を入れる。倍率を dB（$20\log_{10}$）で表したグラフがボード線図。}
+\bkrecall{3-12}{デシベル：倍率 $A$ を $20\log_{10}A$〔dB〕で表す。10倍が\qty{20}{dB}、$\tfrac{1}{100}$ 倍が $\qty{-40}{dB}$。}
+\bkrecall{力-15}{円柱のうしろのカルマン渦がはなれる回数 $f$ は、$fd/v\approx0.2$（ストローハル数）。}
+\end{omoidasou}
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{ゆすると、どうゆれる？}{2}
+
+\bksubsection{1}{共振・共鳴：タイミングが合うと大きくゆれる}
+\label{ph:波-2:sec1}
+左右の柱のあいだに張ったひもに、重いおもりのふりこを1つと、長さのちがう軽いふりこA・B・Cをつるします（図\ref{ph:波-2:fig-barton}）。重いふりこをゆらすと、ひもを伝わって、軽いふりこが少しずつゆすられます。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkGray!40] (0,44) rectangle (4,48) (58,44) rectangle (62,48);
+  \draw[bkInk, line width=0.8pt] (2,45) .. controls (20,42.5) and (42,42.5) .. (60,45);
+  % 重いおもりのふりこ（ゆする役）
+  \draw[bkInk, line width=0.7pt] (9,43.6) -- ++(-80:30) coordinate (D);
+  \filldraw[fill=bkRed!45, draw=bkRed!80!black, line width=0.8pt] (D) circle (3);
+  \node[rxc lab, anchor=north] at ($(D)+(0,-3.6)$) {重い};
+  % 軽いふりこ（長さがちがう）
+  \foreach \xx/\ll/\aa/\nm in {22/14/-88/A, 34/30/-74/B, 46/42/-88.5/C} {
+    \draw[bkInk, line width=0.6pt] (\xx,42.6) -- ++(\aa:\ll) coordinate (q);
+    \filldraw[fill=bkBlue!30, draw=bkBlue!70!black, line width=0.6pt] (q) circle (1.5);
+    \node[rxc lab, anchor=north] at ($(q)+(0,-2)$) {\nm};}
+  \draw[bkGray, line width=0.4pt, dotted] (34,42.6) -- (34,10);
+  \draw[bkBlue!80!black, line width=0.7pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}] ($(34,42.6)+(-106:31)$) arc (-106:-74:31);
+\end{tikzpicture}
+\bkfigcaption{1本のひもにつるしたふりこ。重いふりこと同じ長さのBだけが大きくゆれる。}\label{ph:波-2:fig-barton}
+\end{bkfigure}
+しばらくすると、\textbf{重いふりこと同じ長さのB}だけが大きくゆれ、短いAと長いCは、ほとんどゆれません。
+
+\par\vspace{4pt}
+\label{ph:波-2:kyoushin}Bは、ゆすられるリズム（重いふりこの振動数）が、自分の固有振動数（同じ長さなので同じ）とぴったり合っています。このように、\textbf{物の固有振動数に近い振動数でゆすると、小さな力でも大きくゆれる}ことを、\textbf{共振}といいます。\bkidx{きょうしん}{共振}音（空気のゆれ）で起きるときは、\textbf{共鳴}ともいいます。\bkidx{きょうめい}{共鳴}音さを、同じ振動数の音さの近くで鳴らすと、もう1つの音さも鳴り出すのは共鳴です。音さを木の箱の上に立てるのは、箱の中の空気が音さと共鳴して、大きな音になるようにするためです（箱の中の空気の固有振動数は波-6）。
+
+共振が起きるのは、ゆする力が、ちょうどゆれを大きくするタイミングではたらき続けるからです。ブランコを押すとき、ブランコがこちらへもどってきて、向こうへ動き始めるときに押すと、少しずつ大きくゆれます。ブランコの1往復に1回ずつ、いつも動く向きに押すので、押す力は毎回、ブランコに仕事をしてエネルギーを入れます（力-4）。押すタイミングがずれると、ときにはブランコの動きと反対向きに押してしまい、入れたエネルギーを取り出してしまいます。
+
+\begin{phmijika}[ワイングラスと声]
+ワイングラスのふちを、ぬらした指でこすると、決まった高さの音が出ます。これがグラスの固有振動数の音です。同じ高さの大きな声（音）を当て続けると、グラスが大きくゆれ、強い音ではわれることもあります。共振で大きくなったゆれは、ゆすっている力からは想像できないほど大きくなるのです。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{ゆする速さで、ゆれの大きさとおくれが変わる}
+\label{ph:波-2:sec2}
+やってみようで見たことを、図\ref{ph:波-2:fig-te}にまとめます。上のはしを、指で左右にゆすったふりこです。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \xx/\dx/\ang/\ll/\cap in {0/3/-84/28/{ゆっくり：同じ向きに\\少しだけ（ほとんど同時）}, 44/3/-62/28/{ちょうど：大きくゆれる\\（$\tfrac{1}{4}$ 往復おくれる）}, 88/3/-95/28/{速く：反対向きに\\少しだけ（半往復おくれる）}} {
+    \begin{scope}[shift={(\xx,0)}]
+    \fill[bkOrange!25] (20+\dx,36) ellipse (3.2 and 2);
+    \draw[bkPurple!80!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (16,40) -- (26,40);
+    \draw[bkGray, line width=0.4pt, dotted] (20,36) -- (20,4);
+    \draw[bkInk, line width=0.6pt] (20+\dx,35) -- ++(\ang:\ll) coordinate (q);
+    \filldraw[fill=bkBlue!25, draw=bkBlue!70!black, line width=0.7pt] ($(q)+(-2.4,-3)$) rectangle ($(q)+(2.4,1.6)$);
+    \node[rxc lab, anchor=north, align=center] at (20,-0.5) {\cap};
+    \end{scope}}
+\end{tikzpicture}
+\bkfigcaption{上のはしを右へ動かしたときの、ふりこのようす（矢印は指の動き）。ゆする速さで、ゆれの大きさと向き（おくれ）が変わる。}\label{ph:波-2:fig-te}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{ゆっくりゆする}：おもりは指についていくだけで、指とほとんど同時に、同じ向きに動きます。おもりの重さ（慣性）はあまり効かず、ゆれの大きさは、ばね（ふりこでは重力）が決めます。
+\item \textbf{ちょうど固有振動数でゆする}：ゆれがとても大きくなります。おもりは、指より $\tfrac{1}{4}$ 往復おくれて動きます。おもりがまん中を速く通るときに、指は同じ向きに力を加えているので、力がいつもエネルギーを入れ続けます。
+\item \textbf{速くゆする}：おもりは重くて、すぐに向きを変えられないので、ほとんど動きません。動くときは、指と反対の向き（半往復おくれ）です。
+\end{enumerate}
+このように、強制振動では、ゆれの「大きさ」と、ゆする力に対する「おくれ（位相）」の2つが、ゆする速さで変わります。
+
+\Needspace{12\baselineskip}\phstage{te}{表計算でゆすって、共振曲線をかく}{3}
+
+\bksubsection{3}{表計算でゆすってみる：共振曲線}
+\label{ph:波-2:sec3}
+6-13②の表計算で、ばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\qty{0.4}{N.s/m}$。$\omega_{\mathrm n}=\qty{4}{rad/s}$、$\zeta=0.1$）を、力 $F_0\cos\omega t$（$F_0=\qty{0.8}{N}$）でゆすりました。おもりにはたらく力は、ばね $-kx$、ダンパー $-c\dot x$、ゆする力の3つなので、運動方程式は
+\pheq{m\ddot x+c\dot x+kx=F_0\cos\omega t}{N ＝ N}
+です。表計算では、1行ごとに「加速度 $=(\text{ゆする力}-cv-kx)\div m$」を計算し、速度を先に、位置をあとに進めます（波-1⑪）。図\ref{ph:波-2:fig-yusuri}は、はじめ止まっていたおもりを、$\omega=4$（ちょうど $\omega_{\mathrm n}$）と $\omega=3$ でゆすったときのゆれです。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=40mm, xmin=0, xmax=20.5, ymin=-0.62, ymax=0.75, xtick={5,10,15,20}, ytick={-0.5,0.5}, xlabel={$t$（s）}, ylabel={$x$（m）}, axis x line=bottom]
+  \draw[bkGray, line width=0.4pt] (axis cs:0,0) -- (axis cs:20.2,0);
+  \addplot[bkcurve, line width=1.3pt, domain=0:20, samples=500] {0.5*sin(deg(4*x)) - exp(-0.4*x)*(2/3.98)*sin(deg(3.98*x))};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:20] {0.5};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:20] {-0.5};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:0.3,0.56) {$\omega=4$（ちょうど $\omega_{\mathrm n}$）：だんだん大きくなり、\qty{0.5}{m}で落ち着く};
+\end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=34mm, xmin=0, xmax=20.5, ymin=-0.32, ymax=0.4, xtick={5,10,15,20}, ytick={-0.2,0.2}, xlabel={$t$（s）}, ylabel={$x$（m）}, axis x line=bottom]
+  \draw[bkGray, line width=0.4pt] (axis cs:0,0) -- (axis cs:20.2,0);
+  \addplot[bkOrange, line width=1.3pt, domain=0:20, samples=500] {0.2045*cos(deg(3*x)) + 0.0701*sin(deg(3*x)) + exp(-0.4*x)*(-0.2045*cos(deg(3.98*x)) - 0.0734*sin(deg(3.98*x)))};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:0.3,0.25) {$\omega=3$：はじめは大きくなったり小さくなったり（うなり）、やがて約\qty{0.22}{m}で落ち着く};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{6-13のばねを、はじめ止まった状態からゆすったときのゆれ（$F_0=\qty{0.8}{N}$）。上は $\omega=4$、下は $\omega=3$。たての目もりは上と下でちがう。}\label{ph:波-2:fig-yusuri}
+\end{bkfigure}
+
+ゆすり始めは、ゆする力に合わせたゆれと、おもりが自分の固有振動数でゆれようとするゆれ（自分のゆれ）がまざって、大きくなったり小さくなったりします（$\omega=3$ のうなり）。自分のゆれはダンパーで少しずつ消えるので、10〜20秒たつと、ゆする力と同じ振動数で、同じ大きさのゆれが続きます。この落ち着いたゆれの大きさ（振幅）を、いろいろな $\omega$ で読みとって並べたのが、表\ref{ph:波-2:tab-kyoshin}と図\ref{ph:波-2:fig-kyoshin}です（6-13③と同じ数）。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] *{11}{Q[c,m,wd=8.2mm]}}, rowsep=1pt, colsep=1.5pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+$\omega$〔rad/s〕 & 1 & 2 & 3 & 3.5 & 3.8 & 4 & 4.2 & 4.5 & 5 & 6 & 8 \\
+振幅〔m〕 & 0.107 & 0.132 & 0.216 & 0.342 & 0.468 & 0.500 & 0.428 & 0.287 & 0.162 & 0.078 & 0.033 \\
+おくれ〔°〕 & 3 & 8 & 19 & 37 & 63 & 90 & 116 & 140 & 156 & 167 & 172 \\
+\end{bktable}
+\bktabcaption{表計算で読みとった、落ち着いたあとの振幅と、ゆする力に対するおくれ（6-13のばね、$F_0=\qty{0.8}{N}$）。}\label{ph:波-2:tab-kyoshin}
+\end{bkcenter}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=amp, width=118mm, height=46mm, xmin=0, xmax=8.6, ymin=0, ymax=0.58, xtick={2,4,6,8}, ytick={0.1,0.2,0.3,0.4,0.5}, xlabel={$\omega$（rad/s）}, ylabel={振幅（m）}]
+  \addplot[bkcurve, domain=0.05:8.4, samples=300] {0.1/sqrt((1-(x/4)^2)^2+(0.2*x/4)^2)};
+  \addplot[only marks, mark=*, mark size=1.6pt, bkRed] coordinates {(1,0.107) (2,0.132) (3,0.216) (3.5,0.342) (3.8,0.468) (4,0.5) (4.2,0.428) (4.5,0.287) (5,0.162) (6,0.078) (8,0.033)};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:8.4] {0.1};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkGray, align=right] at (axis cs:8.4,0.105) {ゆっくり押したときののび\\$F_0/k=\qty{0.1}{m}$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:4.3,0.48) {$\omega=\omega_{\mathrm n}$ で5倍};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{共振曲線。点は表計算で読みとった値、実線は式（⑤）の値。}\label{ph:波-2:fig-kyoshin}
+\end{bkfigure}
+
+\phboxhead{表と図から読みとれること}
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item ゆっくり（$\omega=1$）ゆすると、振幅は約\qty{0.1}{m}です。これは、同じ力\qty{0.8}{N}でばねを押し続けたときののび $F_0/k=0.8\div8=\qty{0.1}{m}$ とほぼ同じです。
+\item ちょうど $\omega_{\mathrm n}=4$ でゆすると、その5倍の\qty{0.5}{m}にもなります。このように、振幅を横軸の $\omega$ に対してかいたグラフを\textbf{共振曲線}といいます。\bkidx{きょうしんきょくせん}{共振曲線}
+\item 速く（$\omega=8$）ゆすると、\qty{0.033}{m}しか動きません。$\omega$ が2倍になるごとに、振幅はほぼ $\tfrac{1}{4}$ になっていきます（$\omega=4$ からあとの山のすそでは、$\omega^2$ に反比例）。
+\item おくれは、ゆっくりでは0°に近く、$\omega_{\mathrm n}$ でちょうど90°（$\tfrac{1}{4}$ 往復）、速いと180°（半往復、反対向き）に近づきます。やってみようで見たとおりです。
+\end{enumerate}
+
+\begin{phbaisuru}{ダンパーの強さ $c$（減衰比 $\zeta$）}
+共振の山の高さは約半分になり、山のはばは約2倍に広がります。ゆっくりのときと、速いときの振幅は、ほとんど変わりません。ダンパーが効くのは、共振の近くだけです。
+\par\smallskip\noindent\begin{bktable}{colspec={Q[l,m,wd=46mm] *{4}{Q[c,m,wd=14mm]}}, rowsep=1pt, row{1}={bg=bkTheme!10}}
+減衰比 $\zeta$ & 0.05 & 0.1 & 0.2 & 0.5 \\
+山の高さ（$F_0/k$ の何倍） & 10.0 & 5.03 & 2.55 & 1.15 \\
+\end{bktable}
+\end{phbaisuru}
+
+\begin{phmodel}[ゆすられるばね]
+\phignore{ばねの質量。ゆする力が、おもりのゆれで変わること（ゆする側が十分に強い）。}
+\phassume{ゆする力は正弦波。ばねの力はのびに比例し、ダンパーの力は速さに比例する（線形）。}
+\phlimit{大きくゆれて、ばねやゴムの力がのびに比例しなくなるとき（共振の山が傾く。⑩の終わり）。ゆすられる物が、ゆする側を動かしてしまうとき（洗濯機の脚や床もゆれる）。}
+\end{phmodel}
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{複素振幅で、共振と防振を読む}{5}
+
+\bksubsection{4}{倍率とおくれの式}
+\label{ph:波-2:sec4}
+6-13④で学んだように、$m\ddot x+c\dot x+kx=F_0\cos\omega t$ の答えは、「ゆすりに合うゆれ」と「自分のゆれ」の和です。自分のゆれは、波-1⑦の減衰振動なので、$e^{-\zeta\omega_{\mathrm n}t}$ の割合でへり、やがて消えます。図\ref{ph:波-2:fig-yusuri}で、10〜20秒たつと落ち着いたのはこのためです。落ち着いたあとに残るゆすりに合うゆれは、6-13⑥の複素数の方法で、
+\[x=\mathrm{Re}\bigl[Xe^{j\omega t}\bigr],\qquad X=\frac{F_0}{k-m\omega^2+jc\omega}\]
+と求めました（$X$ を\textbf{複素振幅}といい、振幅は $\lvert X\rvert$）。\bkidx{ふくそしんぷく}{複素振幅}
+
+この式を、どんなばねにも使える形にします。分母と分子を $k$ でわり、$m/k=1/\omega_{\mathrm n}^{\,2}$、$c/k=2\zeta\sqrt{mk}/k=2\zeta/\omega_{\mathrm n}$（波-1⑦の $\zeta=c/(2\sqrt{mk})$ から）を使うと、
+\[\frac{X}{F_0/k}=\frac{1}{1-\Bigl(\dfrac{\omega}{\omega_{\mathrm n}}\Bigr)^2+j\,2\zeta\dfrac{\omega}{\omega_{\mathrm n}}}\]
+です。$F_0/k$ は、同じ大きさの力でばねをゆっくり押したときののびです。その何倍ゆれるか（\textbf{倍率}）と、ゆする力より何度おくれるか（おくれの角 $\phi$）は、複素数の大きさと角（6-9）から
+\pheq{\frac{\lvert X\rvert}{F_0/k}=\frac{1}{\sqrt{\Bigl\{1-\Bigl(\dfrac{\omega}{\omega_{\mathrm n}}\Bigr)^2\Bigr\}^2+\Bigl(2\zeta\dfrac{\omega}{\omega_{\mathrm n}}\Bigr)^2}},\qquad \tan\phi=\frac{2\zeta\,\omega/\omega_{\mathrm n}}{1-(\omega/\omega_{\mathrm n})^2}}{m ÷ m：単位なし}
+\label{ph:波-2:bairitsu}です。倍率とおくれは、\textbf{振動数の比 $\omega/\omega_{\mathrm n}$ と減衰比 $\zeta$ の2つだけ}で決まります。ばねの大きさや重さがちがっても、この2つが同じなら、同じ共振曲線になります。
+
+\begin{phyomi}[倍率の式]
+分母の3つの場合を見ます。\par
+\textbf{ゆっくり}（$\omega/\omega_{\mathrm n}\ll1$）：分母は約1で、倍率は約1。ばねが決める（$\lvert X\rvert\approx F_0/k$）。\par
+\textbf{共振}（$\omega=\omega_{\mathrm n}$）：$1-(\omega/\omega_{\mathrm n})^2=0$ で、残るのは $2\zeta$ だけ。倍率は $1/(2\zeta)$。ダンパーだけが決める。\par
+\textbf{速く}（$\omega/\omega_{\mathrm n}\gg1$）：分母は約 $(\omega/\omega_{\mathrm n})^2$ で、倍率は $(\omega_{\mathrm n}/\omega)^2$。$\lvert X\rvert\approx F_0/(m\omega^2)$ で、質量が決める。
+\end{phyomi}
+
+\begin{phflow}[強制振動]
+\phflowrow{$m\ddot x+c\dot x+kx$\\$=F_0\cos\omega t$}{自分のゆれが\\消えたあと}{倍率の式（上）\\$\omega/\omega_{\mathrm n}$ と $\zeta$ だけで決まる}
+\phflowrow{倍率の式}{ちょうど\\$\omega=\omega_{\mathrm n}$}{倍率 $\dfrac{1}{2\zeta}$、\\おくれ 90°}
+\phflowrow{倍率の式}{ダンパーがない\\（$\zeta=0$）}{倍率 $\dfrac{1}{\lvert1-(\omega/\omega_{\mathrm n})^2\rvert}$}
+\end{phflow}
+ダンパーがないと、$\omega=\omega_{\mathrm n}$ で倍率は限りなく大きくなります。本当は、ゆれは時間に比例して大きくなり続けます（6-13⑨）。本物の物には必ず少しは減衰があるので、無限にはなりませんが、$\zeta=0.01$ なら50倍にもなり、こわれることがあります。
+
+%% ---------------------------------------------------------------
+\bksubsection{5}{共振の鋭さとエネルギー：Q 値}
+\label{ph:波-2:sec5}
+\phboxhead{共振の大きさを、エネルギーで考える}
+共振のとき、なぜ倍率は $1/(2\zeta)$ で止まるのでしょう。エネルギーで考えると、すっきりわかります。
+
+ちょうど $\omega_{\mathrm n}$ でゆすると、おもりは力より90°おくれます。位置 $x=\lvert X\rvert\sin\omega t$ のとき、速度は $\dot x=\lvert X\rvert\omega\cos\omega t$ で、ゆする力 $F_0\cos\omega t$ と\textbf{同じタイミング}です。1周期のあいだに、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item ゆする力がする仕事は、力×速度（仕事率。力-4⑧）を1周期たして、
+\[F_0\lvert X\rvert\omega\times\frac{1}{2}\times\frac{2\pi}{\omega}=\pi F_0\lvert X\rvert\]
+\item ダンパーが熱にするエネルギーは、ダンパーの力 $c\dot x$ ×速度を1周期たして、
+\[c\lvert X\rvert^2\omega^2\times\frac{1}{2}\times\frac{2\pi}{\omega}=\pi c\omega\lvert X\rvert^2\]
+\end{itemize}
+（$\cos^2$ の平均が $\tfrac{1}{2}$ になることは4-9⑦。）ゆれが大きくなると、ダンパーが失う分は $\lvert X\rvert^2$ に比例して、力が入れる分（$\lvert X\rvert$ に比例）より速く増えます。2つがつり合ったところで、大きさが落ち着きます。
+\[\pi F_0\lvert X\rvert=\pi c\omega_{\mathrm n}\lvert X\rvert^2\qquad\text{より}\qquad \lvert X\rvert=\frac{F_0}{c\,\omega_{\mathrm n}}=\frac{F_0}{k}\cdot\frac{1}{2\zeta}\]
+④と同じ答えです（$c\omega_{\mathrm n}=2\zeta k$）。6-13のばねなら $0.8\div(0.4\times4)=\qty{0.5}{m}$ です。
+
+\phboxhead{Q 値：共振の鋭さ}
+6-13⑦⑩で、共振曲線の山は $\omega_{\mathrm n}\sqrt{1-2\zeta^2}$ にあり、山の高さの $1/\sqrt2$ 倍の所のはば（\textbf{半値幅}）で $\omega_{\mathrm n}$ をわった数を\textbf{Q 値}とよぶことを学びました。\bkidx{はんちはば}{半値幅}\bkidx{きゅーち}{Q値}$\zeta$ が小さいときは、
+\pheq{Q\approx\frac{1}{2\zeta},\qquad\text{半値幅}\approx2\zeta\omega_{\mathrm n}=\frac{\omega_{\mathrm n}}{Q}}{単位なし}
+\label{ph:波-2:q}です。6-13のばねでは $Q\approx5$、半値幅は約\qty{0.8}{rad/s}（6-13で求めた0.81とほぼ同じ）です。
+
+物理では、Q 値を、エネルギーの言葉で読みます。共振しているとき、ばねとおもりがたくわえているエネルギーは $\tfrac{1}{2}k\lvert X\rvert^2$（波-1⑥）、1周期にダンパーで失うエネルギーは $\pi c\omega_{\mathrm n}\lvert X\rvert^2$ なので、
+\[2\pi\times\frac{\text{たくわえているエネルギー}}{\text{1周期に失うエネルギー}}=2\pi\times\frac{\tfrac{1}{2}k\lvert X\rvert^2}{\pi c\omega_{\mathrm n}\lvert X\rvert^2}=\frac{k}{c\,\omega_{\mathrm n}}=\frac{1}{2\zeta}=Q\]
+です。\textbf{Q が大きい物は、1回ゆれるあいだに失うエネルギーが、たくわえたエネルギーにくらべてとても小さい物}です。そういう物は、ゆすると鋭く共振し、ゆするのをやめても長く鳴り続けます。ゆれの大きさは $e^{-\zeta\omega_{\mathrm n}t}$ でへるので、1回ゆれるごとに $e^{-\pi/Q}$ 倍になります（$Q=5$ なら約0.53倍、$Q=1000$ なら0.997倍で、0.3\,\%ずつしかへらない）。
+
+\begin{phbaisuru}{Q 値}
+共振の山の高さは2倍、半値幅は $\tfrac{1}{2}$ になり、ゆするのをやめたあと鳴り続ける時間も2倍になります。鋭く共振する物ほど、ほんの少しずれた振動数ではゆれにくくなります。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=44mm, xmin=0.5, xmax=1.5, ymin=0, ymax=11, xtick={0.8,1,1.2}, ytick={2.5,5,10}, xlabel={$\omega/\omega_{\mathrm n}$}, ylabel={倍率}, axis y line=left]
+  \addplot[bkcurve, domain=0.5:1.5, samples=300] {1/sqrt((1-x^2)^2+(0.1*x)^2)};
+  \addplot[bkOrange, line width=1.4pt, dashed, domain=0.5:1.5, samples=300] {1/sqrt((1-x^2)^2+(0.2*x)^2)};
+  \addplot[bkGreen!60!black, line width=1.4pt, densely dotted, domain=0.5:1.5, samples=300] {1/sqrt((1-x^2)^2+(0.4*x)^2)};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:1.06,8.6) {$Q=10$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:1.12,5.0) {$Q=5$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkGreen!50!black, fill=white, inner sep=1pt] at (axis cs:1.2,2.6) {$Q=2.5$（点線）};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phketa}[Q 値の目安]
+\phketaline{車のサスペンション（$\zeta$ 0.2〜0.4）}{約1〜3}
+\phketaline{建物（$\zeta$ 0.01〜0.05）}{約10〜50}
+\phketaline{音さ}{数千}
+\phketaline{時計の水晶振動子}{1万以上}
+\phboxhead{答えが桁で合っているか}
+よく鳴り続ける物（鐘・音さ・水晶）は Q が大きく、すぐ止まる物（ダンパーつきの物・やわらかいゴム）は Q が小さい。たたいた物が「コン」とすぐ止まるのに Q が数千になったら、どこかで $\zeta$ と $Q$ の取りちがえを疑いましょう。
+\end{phketa}
+
+\begin{phmijika}[ラジオの同調と、電気の Q]
+6-13⑪のラジオの同調は、コイル・コンデンサー・抵抗の回路の共振でした。相似の表（波-1⑩）で $c\to R$、$m\to L$、$k\to1/C$ と読みかえると、電気の回路の Q 値は $\dfrac{1}{R}\sqrt{\dfrac{L}{C}}$ です。Q の大きい回路ほど、近い周波数の放送局を分けて選べます（交流の回路の Q は、物理シリーズの『電磁気学』（電-10））。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{振動伝達率と防振：床に伝わる力}
+\label{ph:波-2:sec6}
+\noindent\begin{minipage}[c]{0.38\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \rxcfloor{0}{46}{0}
+  \rxcspring{(11,0)}{(11,16)}
+  \rxcdamperv{35}{0}{16}
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.8pt, rounded corners=1mm] (4,16) rectangle (42,30);
+  \filldraw[fill=white, draw=bkInk!70, line width=0.6pt] (23,23) circle (4.6);
+  \fill[bkRed] ($(23,23)+(50:3.2)$) circle (1);
+  \draw[bkRed!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] ($(23,23)+(110:6.2)$) arc (110:20:6.2);
+  \node[rxc lab, anchor=west] at (14,7) {$k$};
+  \node[rxc lab, anchor=east] at (32,9) {$c$};
+  \node[rxc lab, anchor=south] at (23,30.4) {回る機械（質量 $m$）};
+  \draw[bkPurple!80!black, line width=1pt, -{Stealth[length=2mm]}] (23,-3) -- (23,-9);
+  \node[rxc lab, anchor=west, text=bkPurple!80!black] at (24,-7) {床に伝わる力};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.59\linewidth}\raggedright
+モーターやポンプのように、中で回る部分がある機械は、回る速さ $\omega$ で、自分自身をゆする力 $F_0\cos\omega t$ を出しています（⑦）。この機械を床にじかにボルトでとめると、力がそのまま床に伝わり、床や建物全体がゆれたり、音が出たりします。\par\vspace{2pt}
+そこで、機械を、防振ゴムやばね（ばね定数 $k$、減衰係数 $c$）の上にのせます。床に伝わる力は、ばねとダンパーが床を押す力 $kx+c\dot x$ です。
+\end{minipage}
+
+\par\vspace{4pt}
+複素振幅で書くと、床に伝わる力は $(k+jc\omega)X$ です。これと $X=F_0/(k-m\omega^2+jc\omega)$ から、ゆする力の何倍が床に伝わるか（\textbf{振動伝達率}）は、④と同じように $k$ でわって、
+\pheq{\text{伝達率}=\frac{\sqrt{1+(2\zeta\,\omega/\omega_{\mathrm n})^2}}{\sqrt{\{1-(\omega/\omega_{\mathrm n})^2\}^2+(2\zeta\,\omega/\omega_{\mathrm n})^2}}}{N ÷ N：単位なし}
+\label{ph:波-2:dentatsu}です（6-13のもっと知りたい）。\bkidx{しんどうでんたつりつ}{振動伝達率}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=50mm, xmin=0, xmax=4.2, ymin=0, ymax=4.4, xtick={1,1.414,2,3,4}, xticklabels={1,$\sqrt2$,2,3,4}, ytick={1,2,3,4}, xlabel={$\omega/\omega_{\mathrm n}$}, ylabel={伝達率}, restrict y to domain=0:4.4]
+  \fill[bkGreen!10] (axis cs:1.414,0) rectangle (axis cs:4.1,1);
+  \addplot[bkcurve, domain=0:4.1, samples=400] {sqrt(1+(0.1*x)^2)/sqrt((1-x^2)^2+(0.1*x)^2)};
+  \addplot[bkOrange, line width=1.4pt, dashed, domain=0:4.1, samples=400] {sqrt(1+(0.2*x)^2)/sqrt((1-x^2)^2+(0.2*x)^2)};
+  \addplot[bkGreen!60!black, line width=1.4pt, densely dotted, domain=0:4.1, samples=400] {sqrt(1+(0.6*x)^2)/sqrt((1-x^2)^2+(0.6*x)^2)};
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:1.414,0) -- (axis cs:1.414,4.3);
+  \draw[bkGray, line width=0.5pt] (axis cs:0,1) -- (axis cs:4.1,1);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:1.5,3.6) {$\zeta=0.05$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:1.5,2.95) {$\zeta=0.1$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkGreen!50!black, fill=white, inner sep=1pt] at (axis cs:1.5,2.3) {$\zeta=0.3$（点線）};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (axis cs:3.25,0.95) {防振できる所（1より小さい）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{振動伝達率。$\omega/\omega_{\mathrm n}=\sqrt2$ では、減衰比によらずちょうど1。それより速く回る機械でだけ、床に伝わる力が小さくなる。}\label{ph:波-2:fig-dentatsu}
+\end{bkfigure}
+
+図\ref{ph:波-2:fig-dentatsu}から、防振の設計の決まりが読みとれます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item $\omega/\omega_{\mathrm n}=\sqrt2$ では、分母の $\{1-2\}^2=1$ と分子の1が等しく、$\zeta$ によらず伝達率は1です。\textbf{$\omega/\omega_{\mathrm n}$ が $\sqrt2$ より大きいときだけ、ゴムやばねで支えると、床に伝わる力が小さくなります。}$\sqrt2$ より小さいと、かえって大きくなります。
+\item だから、防振ばねは、$\omega_{\mathrm n}$ が機械の回る $\omega$ よりずっと小さくなるように、やわらかいものを選びます。ダンパーがないとき、伝達率は $1/\{(\omega/\omega_{\mathrm n})^2-1\}$ なので、$\omega/\omega_{\mathrm n}=3$ で $\tfrac{1}{8}$、$\sqrt{11}\approx3.3$ で $\tfrac{1}{10}$ になります。
+\item $\sqrt2$ より右では、ダンパーが強いほど、伝達率は少し大きくなります（ダンパーも床を押すから。例題5）。でも、機械を動かし始めたり止めたりするときに、共振（$\omega=\omega_{\mathrm n}$）を通りすぎる所では、ダンパーがゆれを小さくおさえます。ダンパーの強さは、この2つのかね合いで決めます。
+\end{enumerate}
+必要な $\omega_{\mathrm n}$ が決まると、静たわみ（波-1⑤）$x_{\mathrm{st}}=g/\omega_{\mathrm n}^{\,2}$ から、「どれだけ沈むゴムを選べばよいか」がわかります（例題4）。
+
+\begin{phflow}[防振]
+\phflowrow{伝達率の式}{ダンパーがない\\$\omega/\omega_{\mathrm n}>\sqrt2$}{伝達率 $\dfrac{1}{(\omega/\omega_{\mathrm n})^2-1}$}
+\end{phflow}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{不つり合い：回る物がゆする力}
+\label{ph:波-2:sec7}
+回る物の重心が、回る軸から少しでもずれていると、回るたびに、機械全体をゆする力が生まれます。質量 $m_{\mathrm u}$ の物が、軸から $r_{\mathrm u}$ の所を角速度 $\omega$ で回るには、軸の向きに大きさ $m_{\mathrm u}r_{\mathrm u}\omega^2$ の向心力（力-2⑦）がいります。軸はこの力を出す反作用で、物の向きに同じ大きさの力で引かれます。この力は、物といっしょにぐるぐる向きを変えるので、横向きの成分は
+\pheq{F_0\cos\omega t,\qquad F_0=m_{\mathrm u}r_{\mathrm u}\omega^2}{N ＝ kg × m × (rad/s)$^2$}
+です。これを\textbf{不つり合いの力}といいます。\bkidx{ふつりあい}{不つり合い}回る機械では、回転の $\omega$ が、そのままゆする力の $\omega$ です。$F_0$ は $\omega^2$ に比例するので、回る速さを2倍にすると、ゆする力は4倍になります。
+
+\begin{phbaisuru}{回る速さ $\omega$}
+不つり合いの力は4倍。でも、機械のゆれは4倍にはなりません。ゆれの大きさは「力×倍率」で、速く回すほど倍率は $(\omega_{\mathrm n}/\omega)^2$ で小さくなるので、2つがほぼ打ち消しあいます（図\ref{ph:波-2:fig-sentaku}の右のほう）。
+\end{phbaisuru}
+
+本体（質量 $M$。回る物もふくむ）をばねとダンパーで支えた機械のゆれは、④の倍率に $F_0/k$ をかけて、
+\[\lvert X\rvert=\frac{m_{\mathrm u}r_{\mathrm u}\omega^2}{k}\times\text{倍率}=\frac{m_{\mathrm u}r_{\mathrm u}}{M}\Bigl(\frac{\omega}{\omega_{\mathrm n}}\Bigr)^2\times\text{倍率}\]
+です（$k=M\omega_{\mathrm n}^{\,2}$）。速く回すと、倍率は約 $(\omega_{\mathrm n}/\omega)^2$ なので、$\lvert X\rvert$ は $m_{\mathrm u}r_{\mathrm u}/M$ に近づきます。これは、「機械全体の重心が止まったまま、本体と回る物が、重心のまわりを反対向きに回る」ときの本体のゆれの大きさです。
+
+\phboxhead{\bkhatenaref の答え}
+洗濯機（本体\qty{40}{kg}、脚のばね合わせて\qty{50}{kN/m}、$\zeta=0.1$ とする）で、洗濯物が\qty{0.5}{kg}、回る中心から\qty{0.25}{m}の所にかたよったとします。固有振動数は約\qty{5.6}{Hz}、毎分約340回転です（例題3）。回る速さを変えて本体のゆれを計算すると、図\ref{ph:波-2:fig-sentaku}のようになります。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=118mm, height=48mm, xmin=0, xmax=1050, ymin=0, ymax=18.5, xtick={200,338,600,800,1000}, ytick={5,10,15.6}, yticklabels={5,10,15.6}, xlabel={毎分の回転数}, ylabel={本体のゆれ（mm）}]
+  \addplot[bkcurve, domain=1:1000, samples=400] {3.125*(x/337.6)^2/sqrt((1-(x/337.6)^2)^2+(0.2*x/337.6)^2)};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:1000] {3.125};
+  \fill[bkRed] (axis cs:337.6,15.6) circle (1.8pt) (axis cs:800,3.78) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!75!black] at (axis cs:370,15.2) {約340回転で共振：\qty{16}{mm}};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black] at (axis cs:800,4.6) {脱水（800回転）：\qty{3.8}{mm}};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkGray] at (axis cs:430,1.2) {$m_{\mathrm u}r_{\mathrm u}/M\approx\qty{3.1}{mm}$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{洗濯機の本体のゆれ（例題7の値）。共振の回転数を通りすぎるときだけ、ゆれが大きくなる。}\label{ph:波-2:fig-sentaku}
+\end{bkfigure}
+脱水では、槽を毎分数百〜1000回転ほどまで速めます（ここでは800回転とします）。そのとちゅうで、\textbf{本体の固有振動数（毎分約340回転）を通りすぎる}ので、そこで共振して、ゆれが脱水のときの4倍ほどになります。それより速くなると、倍率が小さくなり、ゆれはむしろ小さくなります。これが、「回り始めのとちゅうだけガタガタする」理由です。今の洗濯機は、槽の回り始めにかたよりをセンサーで調べ、大きいときは洗濯物をほぐし直したり、共振の回転数をすばやく通りすぎたりして、ゆれをおさえています。
+
+%% ---------------------------------------------------------------
+\Needspace{14\baselineskip}\bksubsection{8}{回る軸の危険速度}
+\label{ph:波-2:sec8}
+\noindent\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \fill[bkGray!40] (0,6) rectangle (6,18) (50,6) rectangle (56,18);
+  \draw[bkGray, line width=0.4pt, dashed] (-2,12) -- (58,12);
+  \draw[bkGray!70!black, line width=1.6pt] (3,12) .. controls (16,17) and (40,17) .. (53,12);
+  \filldraw[fill=bkOrange!30, draw=bkOrange!70!black, line width=0.8pt] (26,15.8) ellipse (2.4 and 9);
+  \fill[bkRed] (26,19.6) circle (0.9);
+  \draw[rxc dim] (31,12) -- (31,15.6);
+  \node[rxc lab, anchor=west] at (31.5,13.6) {$y$};
+  \node[rxc lab, anchor=south] at (26,25.4) {円板（質量 $m$）};
+  \node[rxc lab, anchor=north] at (3,5) {軸受};
+  \node[rxc lab, anchor=north] at (53,5) {軸受};
+  \draw[bkRed!80!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (19,22) arc (150:30:8 and 3);
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.55\linewidth}\raggedright
+両はしを軸受で支えた軸のまん中に、円板がついています。円板の重心は、軸の中心から、ほんのわずか $\varepsilon$（イプシロン）だけずれています。回る速さを上げていくと、ある速さで、軸が大きく曲がり、ひどいときは折れてしまいます。この速さを\textbf{危険速度}といいます。\bkidx{きけんそくど}{危険速度}
+\end{minipage}
+
+\par\vspace{4pt}
+軸がまん中で $y$ だけ曲がって回っているとき、円板の重心は軸受を結ぶ線から $y+\varepsilon$ の所を回ります。円板を円運動させる向心力は、曲がった軸のばねの力 $ky$ です（$k$ は力-10⑨の $48EI/L^3$）。だから、
+\[ky=m(y+\varepsilon)\omega^2\qquad\text{より}\qquad y=\frac{\varepsilon\,(\omega/\omega_{\mathrm n})^2}{1-(\omega/\omega_{\mathrm n})^2},\qquad \omega_{\mathrm n}=\sqrt{\frac{k}{m}}\]
+です。$\omega$ が $\omega_{\mathrm n}$ に近づくと、分母が0に近づき、曲がり $y$ は限りなく大きくなります。だから、危険速度は、軸と円板をばねとおもりと見たときの固有角振動数
+\pheq{\omega_{\mathrm c}=\sqrt{\frac{k}{m}}}{rad/s}
+です。危険速度より十分速く回すと、$y\approx-\varepsilon$ になり、円板は自分の重心のまわりを回るようになって、曲がりは小さくなります（自分で中心に寄る）。発電所のタービンのような速く回る機械は、危険速度より速い所で使うことがあり、そのときは、危険速度をすばやく通りすぎるように回します。
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{地面や道がゆれる：基礎の励振と風の渦}
+\label{ph:波-2:sec9}
+\noindent\begin{minipage}[c]{0.44\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=1pt, domain=0:58, samples=80] plot (\x, {2*sin(18*\x)});
+  \draw[rxc dim] (5,-4.5) -- (25,-4.5);
+  \node[rxc lab, anchor=north] at (15,-5) {波長 $\lambda$};
+  \filldraw[fill=bkInk!70, draw=bkInk] (24,5.4) circle (3.4);
+  \rxcspring{(24,8.8)}{(24,20)}
+  \filldraw[fill=bkBlue!20, draw=bkBlue!70!black, line width=0.8pt, rounded corners=1mm] (12,20) rectangle (40,30);
+  \node[rxc lab] at (26,25) {車体 $m$};
+  \draw[bkRed!80!black, line width=0.9pt, -{Stealth[length=2mm]}] (42,25) -- (54,25);
+  \node[rxc lab, anchor=south, text=bkRed!75!black] at (48,25.5) {$v$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\raggedright
+これまでは、物に力を加えてゆすりました。地震で地面がゆれる、車がでこぼこ道を走る、のように、ばねの下のはし（基礎）が動いてゆすられることもあります。これを\textbf{基礎の励振}といいます。\bkidx{きそのれいしん}{基礎の励振}
+\end{minipage}
+
+\par\vspace{4pt}
+基礎の位置を $u$、物の位置を $x$ とすると、ばねののびは $x-u$ なので、運動方程式は
+\[m\ddot x=-k(x-u)-c(\dot x-\dot u)\qquad\text{つまり}\qquad m\ddot x+c\dot x+kx=ku+c\dot u\]
+です。$u=U\cos\omega t$ とすると、右辺は $(k+jc\omega)U$ の複素振幅でゆする力と同じになり、
+\[\frac{\lvert X\rvert}{U}=\frac{\lvert k+jc\omega\rvert}{\lvert k-m\omega^2+jc\omega\rvert}\]
+です。これは、⑥の振動伝達率と\textbf{まったく同じ式}です。「機械から床へ伝わる力」と「地面から物へ伝わるゆれ」は、同じ割合で伝わるのです。だから、地面がゆれる振動数が $\sqrt2\,\omega_{\mathrm n}$ より大きければ、物はゆれにくくなります。建物の下にやわらかい積層ゴムを入れて、建物全体の固有振動数を低くし、地震のゆれを伝えにくくするのが\textbf{免震}です。\bkidx{めんしん}{免震}
+
+\phboxhead{でこぼこ道と速さ}
+波長 $\lambda$（山から山までの長さ）のうねりがある道を、速さ $v$ で走る車は、1秒に $v/\lambda$ 回ゆすられます。車体の上下の固有振動数 $f_{\mathrm n}$（波-1例題5）と同じになるのは、
+\pheq{v=\lambda f_{\mathrm n}}{m/s ＝ m × Hz}
+の速さのときで、このとき車体は大きくゆれます（例題9）。それより速く走ると、ゆれはかえって小さくなります。
+
+\phboxhead{風の渦と共振}
+力-15で、風の中に立つ円柱（煙突・電線・橋のケーブル）のうしろに、カルマン渦が左右かわるがわるはなれ、その回数が $f=\mathrm{St}\,v/d$（ストローハル数 St は約0.2）になることを学びました。渦がはなれるたびに、円柱は横向きに押されます。その回数が、円柱の固有振動数に近づくと、共振して大きくゆれます（例題12）。大きくゆれ始めると、渦のはなれる回数のほうが固有振動数に引きこまれて、風の速さが少し変わっても共振が続くことも知られています。高い煙突のまわりに、らせん形の板を巻くのは、渦がそろってはなれないようにするためです。
+
+%% ---------------------------------------------------------------
+\bksubsection{10}{ボード線図で読む}
+\label{ph:波-2:sec10}
+9-8⑧⑨では、伝達関数に $s=j\omega$ を入れた倍率を dB で表し、横軸の振動数を対数目もりにしたグラフ（\textbf{ボード線図}）を学びました。\bkidx{ぼーどせんず}{ボード線図}④の倍率と、おくれの角を、ボード線図にかくと、図\ref{ph:波-2:fig-bode}のようになります。倍率は $20\log_{10}(\text{倍率})$〔dB〕です（3-12⑦）。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, xmode=log, width=116mm, height=52mm, xmin=0.1, xmax=10, ymin=-44, ymax=24, xtick={0.1,0.2,0.5,1,2,5,10}, xticklabels={0.1,0.2,0.5,1,2,5,10}, ytick={-40,-20,0,20}, xlabel={$\omega/\omega_{\mathrm n}$}, ylabel={倍率（dB）}, grid=major]
+  \addplot[bkcurve, domain=0.1:10, samples=400] {-10*log10((1-x^2)^2+(0.1*x)^2)};
+  \addplot[bkOrange, line width=1.4pt, dashed, domain=0.1:10, samples=400] {-10*log10((1-x^2)^2+(0.6*x)^2)};
+  \addplot[bkGreen!60!black, line width=1.4pt, densely dotted, domain=0.1:10, samples=400] {-10*log10((1-x^2)^2+(1.4*x)^2)};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black, fill=white, inner sep=1pt] at (axis cs:1.15,16) {$\zeta=0.05$（実線）：+20 dB};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black, fill=white, inner sep=1pt] at (axis cs:0.12,10) {$\zeta=0.3$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkGreen!50!black, fill=white, inner sep=1pt] at (axis cs:0.12,-8) {$\zeta=0.7$（点線）：山がない};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:2.2,-33) {10倍で $-40$ dB};
+\end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, xmode=log, width=116mm, height=36mm, xmin=0.1, xmax=10, ymin=-190, ymax=10, xtick={0.1,0.2,0.5,1,2,5,10}, xticklabels={0.1,0.2,0.5,1,2,5,10}, ytick={-180,-90,0}, xlabel={$\omega/\omega_{\mathrm n}$}, ylabel={おくれの角（°）}, grid=major]
+  \addplot[bkcurve, domain=0.1:10, samples=400] {-(atan2(0.1*x,1-x^2))};
+  \addplot[bkOrange, line width=1.4pt, dashed, domain=0.1:10, samples=400] {-(atan2(0.6*x,1-x^2))};
+  \addplot[bkGreen!60!black, line width=1.4pt, densely dotted, domain=0.1:10, samples=400] {-(atan2(1.4*x,1-x^2))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ばね・おもり・ダンパーのボード線図。上は倍率、下はおくれの角（おくれを負の角でかいた）。}\label{ph:波-2:fig-bode}
+\end{bkfigure}
+
+ボード線図では、次のことがひと目でわかります。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=2pt, topsep=2pt, label={\color{bkTheme}●}]
+\item ゆっくりの所は0\,dB（倍率1）の水平な線。速い所は、振動数が10倍になるごとに $\qty{-40}{dB}$（$\tfrac{1}{100}$ 倍）ずつ下がる、まっすぐな線（倍率が $(\omega_{\mathrm n}/\omega)^2$ だから）。
+\item ゆっくりの所の水平な線と、速い所のまっすぐな線をのばすと、$\omega_{\mathrm n}$ でまじわる。そこに高さ $20\log_{10}\dfrac{1}{2\zeta}$ の山ができる（$\zeta=0.1$ なら約\qty{14}{dB}、0.05なら\qty{20}{dB}）。$\zeta$ が約0.7より大きいと、山はなくなる。
+\item おくれは、$\omega_{\mathrm n}$ でちょうど $90^\circ$。$\zeta$ が小さいほど、そこで急に $0^\circ$ から $180^\circ$ へ変わる。
+\end{itemize}
+機械の実験では、ゆする振動数を少しずつ変えて、ゆれの大きさとおくれを測り、ボード線図をかきます。山の位置から $\omega_{\mathrm n}$ が、山の高さ（または半値幅）から $\zeta$ が読みとれます。波-1⑦の「たたいて記録をとる」方法と並ぶ、もう1つの $\zeta$ の測り方です。
+
+\begin{phmada}[人が歩くと橋がゆれる：ミレニアム橋]
+2000年6月、ロンドンのテムズ川にかかる歩行者用の「ミレニアム橋」が開通した日、たくさんの人が渡ると、橋が横に大きくゆれ始め、2日後に閉鎖されました。橋の横ゆれの固有振動数（約0.5〜\qty{1}{Hz}のものがいくつかあった）が、人が歩くときの体の横ゆれ（右足・左足で1往復。約\qty{1}{Hz}）に近かったのです。ふしぎなのは、はじめはばらばらに歩いていた人たちが、橋が少しゆれると、ゆれに合わせて足を開いて歩くようになり、それがさらに橋をゆすったことです。ダンパーをつけて2002年に再開した橋は、今は静かです。
+
+でも、「人がどうやって橋のゆれに合わせるのか」は、今もはっきりとはわかっていません。2005年には、人の歩き方を、たがいにリズムをそろえる「同期」のモデルで説明する研究が発表されました。そのあと、人がリズムをそろえなくても、体の横ゆれのつり合いをとるだけで、橋にエネルギーが入るというモデルも出されています。どのモデルが本当の人の動きに近いのかは、実験で確かめる研究が続いています。
+
+なお、1940年に風で崩れたアメリカのタコマナローズ橋は、よく「共振の例」として紹介されますが、決まった振動数でゆすられた共振ではなく、橋のゆれそのものが風からエネルギーを取りこんで大きくなる「自励振動（フラッター）」だと考えられています（6-13と同じ）。
+\end{phmada}
+
+\begin{phsaki}{大きなゆれ・ばらばらなゆれ・つながったゆれ}
+この章は、ばねもダンパーも線形で、ゆする力が1つの振動数の正弦波のときを調べました。ゴムの防振材のように、大きくのびるとかたくなるばねでは、共振曲線の山が横に傾き、ゆする振動数を少しずつ上げていくと、ゆれの大きさが突然とびはねる（跳躍）ことがあります（非線形振動）。また、地震や風のゆれは、いろいろな振動数がばらばらにまざっているので、「どの振動数がどれくらいまざっているか」（スペクトル。波-11）と確率を使って調べます（ランダム振動）。物がいくつもつながっているときの共振は、波-3で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[機械力学の専門書の書き方]
+\begin{bkhonbun}
+不つり合い質量 $m_{\mathrm u}$，偏心 $e$ をもつ回転機械を支持するばね系の力の伝達率は
+\[ T_{\mathrm R}=\frac{\sqrt{1+(2\zeta\nu)^2}}{\sqrt{(1-\nu^2)^2+(2\zeta\nu)^2}},\qquad \nu=\frac{\omega}{\omega_{\mathrm n}} \]
+で与えられ，$\nu>\sqrt2$ の防振域では $T_{\mathrm R}<1$ となる．
+\end{bkhonbun}
+\bkyaku{「偏心 $e$」はこの章の $r_{\mathrm u}$（この章は自然対数の $e$ と分けた）。「伝達率」の記号は本によってちがい、$T_{\mathrm R}$・$\tau$・$\eta$ などが使われる。$\nu$（ニュー）は振動数比 $\omega/\omega_{\mathrm n}$（本によっては $r$・$\beta$）。この章の⑥の式と同じ。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{共振}固有振動数に近い振動数でゆすると、大きくゆれる\\[3pt]
+\tsl{倍率}$\dfrac{\lvert X\rvert}{F_0/k}=\dfrac{1}{\sqrt{\{1-(\omega/\omega_{\mathrm n})^2\}^2+(2\zeta\omega/\omega_{\mathrm n})^2}}$。共振で $\dfrac{1}{2\zeta}$\\[3pt]
+\tsl{Q 値}$Q\approx\dfrac{1}{2\zeta}=2\pi\times\dfrac{\text{たくわえ}}{\text{1周期の損失}}$、半値幅 $\approx\dfrac{\omega_{\mathrm n}}{Q}$\\[3pt]
+\tsl{防振}伝達率は $\omega/\omega_{\mathrm n}>\sqrt2$ で1より小さい\\[3pt]
+\tsl{いろいろなゆすり}不つり合い $m_{\mathrm u}r_{\mathrm u}\omega^2$、危険速度 $\sqrt{k/m}$、道 $v=\lambda f_{\mathrm n}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{強制振動}{外からゆすられ続けて起きるゆれ。}
+\bkword{共振・共鳴}{固有振動数に近い振動数でゆすると大きくゆれること。音では共鳴ともいう。}
+\bkword{共振曲線}{ゆする振動数を横軸に、振幅をたて軸にかいたグラフ。}
+\bkword{Q 値}{共振の鋭さ。たくわえたエネルギーと、1周期に失うエネルギーの比の $2\pi$ 倍。}
+\bkword{振動伝達率}{ゆする力のうち、床に伝わる力の割合。}
+\bkword{不つり合い}{回る物の重心が軸からずれていること。回るたびにゆする力が生まれる。}
+\bkword{危険速度}{回る軸が大きく曲がる回転の速さ。軸の固有角振動数と同じ。}
+\bkword{ボード線図}{倍率（dB）とおくれを、対数目もりの振動数に対してかいたグラフ。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$X$}{エックス}{複素振幅。振幅は $\lvert X\rvert$、角がおくれ（数学 6-13 と同じ）}{complex amplitude}{波-2}}
+{\bkkigocard{$Q$}{キュー}{Q 値（共振の鋭さ）。単位なし。$Q\approx1/(2\zeta)$}{quality factor}{波-2}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-2:ex1}
+\begin{phreidai}[共振の倍率・Q 値・半値幅]
+6-13のばね（$m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\qty{0.4}{N.s/m}$）を、大きさ\qty{0.8}{N}の正弦波の力でゆすります。いちばん大きくゆれるときの倍率と振幅、Q 値、半値幅を求めましょう（6-13と同じ数を見るので、3けたで書く）。
+\phbamen
+ゆする振動数を変えたとき、山の高さと鋭さがどれくらいかを知りたい場面です。
+\phmushi
+ばねの質量を無視し、ばねとダンパーは線形とします。ゆすり始めの自分のゆれが消えたあとを考えます。
+\phzu
+$\omega_{\mathrm n}$、$\zeta$、ゆっくり押したときののび $F_0/k$、山の倍率、Q、半値幅。
+\phriyu
+山の高さは6-13⑦の $\dfrac{1}{2\zeta\sqrt{1-\zeta^2}}$、Q と半値幅は⑤の近似の式です。
+\phtateru
+\[\omega_{\mathrm n}=\sqrt{\frac{k}{m}},\qquad \zeta=\frac{c}{2\sqrt{mk}},\qquad \text{山の倍率}=\frac{1}{2\zeta\sqrt{1-\zeta^2}}\]
+\[Q\approx\frac{1}{2\zeta},\qquad \text{半値幅}\approx2\zeta\omega_{\mathrm n}\]
+\phtoku
+\[\omega_{\mathrm n}=\sqrt{16}=\qty{4.00}{rad/s},\qquad \zeta=\frac{0.4}{2\sqrt{4}}=0.100,\qquad \frac{F_0}{k}=\frac{0.8}{8}=\qty{0.100}{m}\]
+\[\text{山の倍率}=\frac{1}{0.2\times\sqrt{0.99}}\approx5.03,\qquad \text{振幅}\approx\qty{0.503}{m}\]
+\[Q\approx\frac{1}{0.2}=5.00,\qquad \text{半値幅}\approx2\times0.1\times4=\qty{0.800}{rad/s}\]
+\phtashikame
+6-13とくらべる：山は5.03倍で同じ。半値幅は、6-13で山の形から読んだ0.81とほぼ同じです（近似の式なので少しちがう）。\\
+大きさ：$\zeta=0.1$ は、ダンパーのついた物としては弱いほうです。
+\kotae 倍率約5.03、振幅約\qty{0.503}{m}、$Q\approx5.00$、半値幅約\qty{0.800}{rad/s}
+\end{phreidai}
+\begin{jibun}
+$m=\qty{1}{kg}$、$k=\qty{100}{N/m}$、$c=\qty{1}{N.s/m}$ のばね・おもり・ダンパーの、共振の山の倍率、Q 値、半値幅を求めましょう。
+\bkjans{$\omega_{\mathrm n}=\qty{10}{rad/s}$、$\zeta=0.05$。山の倍率 約10.0、$Q\approx10$、半値幅 約\qty{1.0}{rad/s}}
+\end{jibun}
+
+\label{ph:波-2:ex2}
+\begin{phreidai}[共振の振幅をエネルギーで求める]
+例題1のばねを、ちょうど $\omega_{\mathrm n}=\qty{4}{rad/s}$ でゆすります。1周期に力がする仕事と、ダンパーが熱にするエネルギーのつり合いから振幅を求めましょう。また、そのときのたくわえたエネルギーと1周期の損失から Q 値を求めましょう。
+\phbamen
+共振のとき、ゆれの大きさが何で決まるかを、エネルギーの出入りで確かめます。
+\phmushi
+自分のゆれは消えて、ゆれが一定の大きさで続いているとします。
+\phzu
+$F_0=\qty{0.8}{N}$、$c=\qty{0.4}{N.s/m}$、$k=\qty{8}{N/m}$、$\omega_{\mathrm n}=\qty{4}{rad/s}$、振幅 $\lvert X\rvert$。
+\phriyu
+共振では、速度と力が同じタイミングなので、力がする仕事は $\pi F_0\lvert X\rvert$、ダンパーの損失は $\pi c\omega_{\mathrm n}\lvert X\rvert^2$（⑤）。
+\phtateru
+\[\pi F_0\lvert X\rvert=\pi c\omega_{\mathrm n}\lvert X\rvert^2,\qquad Q=2\pi\times\frac{\tfrac{1}{2}k\lvert X\rvert^2}{\pi c\omega_{\mathrm n}\lvert X\rvert^2}\]
+\phtoku
+\[\lvert X\rvert=\frac{F_0}{c\omega_{\mathrm n}}=\frac{0.8}{0.4\times4}=\qty{0.5}{m}\]
+たくわえたエネルギー $\tfrac{1}{2}\times8\times0.5^2=\qty{1.0}{J}$、1周期の損失 $\pi\times0.4\times4\times0.5^2\approx\qty{1.26}{J}$ なので、
+\[Q=2\pi\times\frac{1.0}{1.26}\approx5.0\]
+\phtashikame
+④の式で：共振の倍率 $1/(2\zeta)=5$ に $F_0/k=\qty{0.1}{m}$ をかけて\qty{0.5}{m}。同じです。\\
+意味：1周期に、たくわえたエネルギーより多い\qty{1.26}{J}が熱になります。Q が小さいので、ゆするのをやめると、ゆれはすぐに止まります。
+\kotae 振幅\qty{0.5}{m}、$Q\approx5.0$
+\end{phreidai}
+\begin{jibun}
+$m=\qty{1}{kg}$、$k=\qty{100}{N/m}$、$c=\qty{1}{N.s/m}$ のばねを、$F_0=\qty{2}{N}$ で、ちょうど $\omega_{\mathrm n}$ でゆすります。振幅と Q 値を、エネルギーのつり合いから求めましょう。
+\bkjans{$\lvert X\rvert=2\div(1\times10)=\qty{0.2}{m}$。たくわえ\qty{2.0}{J}、損失 $\pi\times1\times10\times0.04\approx\qty{1.26}{J}$、$Q\approx10$}
+\end{jibun}
+
+\label{ph:波-2:ex3}
+\begin{phreidai}[洗濯機の固有振動数]
+洗濯機の本体（槽と水と洗濯物をふくめて）の質量を\qty{40}{kg}、本体を支える脚のばねのばね定数を、合わせて\qty{50}{kN/m}とします（例題のための値）。本体の横ゆれの固有振動数を求め、槽の毎分の回転数に直しましょう。
+\phbamen
+\bkhatenaref の洗濯機です。槽の回転が、本体をゆする力になります。
+\phmushi
+本体は横に平行に動くだけとし、回転やほかの向きのゆれは考えません。
+\phzu
+$M=\qty{40}{kg}$、$k=\qty{5.0e4}{N/m}$。
+\phriyu
+ばねとおもりの固有振動数（波-1②）。回転の $\omega$ がそのままゆすりの $\omega$ なので、$f_{\mathrm n}$〔Hz〕を60倍すると毎分の回転数です。
+\phtateru
+\[\omega_{\mathrm n}=\sqrt{\frac{k}{M}},\qquad f_{\mathrm n}=\frac{\omega_{\mathrm n}}{2\pi},\qquad \text{毎分の回転数}=60f_{\mathrm n}\]
+\phtoku
+\[\omega_{\mathrm n}=\sqrt{\frac{\num{50000}}{40}}=\sqrt{1250}\approx\qty{35.4}{rad/s},\qquad f_{\mathrm n}=\frac{35.4}{6.283}\approx\qty{5.6}{Hz}\]
+\[60\times5.63\approx338\quad\text{より、毎分約340回転}\]
+\phtashikame
+大きさ：脱水の回転（毎分数百〜1000回転ほど）より、ずっと遅い回転数です。脱水を始めると、必ずこの回転数を通りすぎます。\\
+静たわみ：$Mg/k=392\div\num{50000}\approx\qty{7.8}{mm}$。
+\kotae 約\qty{5.6}{Hz}（毎分約340回転）
+\end{phreidai}
+\begin{jibun}
+本体\qty{50}{kg}、脚のばね合わせて\qty{80}{kN/m}の洗濯機の、横ゆれの固有振動数と、それにあたる毎分の回転数を求めましょう。
+\bkjans{$\omega_{\mathrm n}=\sqrt{1600}=\qty{40}{rad/s}$、$f_{\mathrm n}\approx\qty{6.4}{Hz}$、毎分約380回転}
+\end{jibun}
+
+\label{ph:波-2:ex4}
+\begin{phreidai}[ポンプの防振ゴムを選ぶ]
+毎分1500回転のポンプを、防振ゴムの上にのせて、床に伝わる力を $\tfrac{1}{10}$ にしたい。ゴムのダンパーの働きを無視して、固有振動数をいくつにすればよいか、また、ポンプをのせたときにゴムが何 mm 沈むものを選べばよいかを求めましょう。
+\phbamen
+回るポンプの不つり合いの力が、床や建物に伝わらないようにします。
+\phmushi
+ゴムの減衰を無視します（$\zeta=0$）。ポンプは上下にだけゆれるとします。
+\phzu
+回転の振動数 $f=1500\div60=\qty{25}{Hz}$、伝達率 $\tfrac{1}{10}$、固有振動数 $f_{\mathrm n}$、静たわみ $x_{\mathrm{st}}$。
+\phriyu
+$\zeta=0$ で $\omega/\omega_{\mathrm n}>\sqrt2$ の伝達率は $1/\{(\omega/\omega_{\mathrm n})^2-1\}$（⑥）。静たわみは波-1⑤。
+\phtateru
+\[\frac{1}{(f/f_{\mathrm n})^2-1}=\frac{1}{10},\qquad x_{\mathrm{st}}=\frac{g}{(2\pi f_{\mathrm n})^2}\]
+\phtoku
+$(f/f_{\mathrm n})^2=11$ なので $f/f_{\mathrm n}=\sqrt{11}\approx3.32$、
+\[f_{\mathrm n}=\frac{25}{3.32}\approx\qty{7.5}{Hz},\qquad x_{\mathrm{st}}=\frac{9.8}{(6.283\times7.54)^2}\approx\qty{4.4e-3}{m}=\qty{4.4}{mm}\]
+\phtashikame
+条件：$f/f_{\mathrm n}=3.3$ は $\sqrt2$ より大きいので、防振できる所です。\\
+2倍にすると：もっとやわらかい（$x_{\mathrm{st}}$ が4倍の）ゴムなら $f_{\mathrm n}$ は半分で、伝達率は約 $\tfrac{1}{43}$ になります。ただし、沈みすぎると、ポンプがぐらつきます。
+\kotae 固有振動数 約\qty{7.5}{Hz}以下、静たわみ約\qty{4.4}{mm}以上のゴム
+\end{phreidai}
+\begin{jibun}
+毎分1800回転のファンを、ばねの上にのせて、床に伝わる力を $\tfrac{1}{8}$ にしたい（減衰は無視）。固有振動数と静たわみを求めましょう。
+\bkjans{$(30/f_{\mathrm n})^2=9$ より $f_{\mathrm n}=\qty{10}{Hz}$。$x_{\mathrm{st}}=9.8\div(2\pi\times10)^2\approx\qty{2.5}{mm}$}
+\end{jibun}
+
+\label{ph:波-2:ex5}
+\begin{phreidai}[ダンパーは防振の味方か]
+振動数の比 $\omega/\omega_{\mathrm n}=3$ でゆすられる機械の伝達率を、減衰比 $\zeta=0$、0.1、0.3 のそれぞれで求めましょう。また、動かし始めに通りすぎる共振（$\omega/\omega_{\mathrm n}=1$）での伝達率も求めましょう。
+\phbamen
+防振ゴムに、ダンパーの働きをどれくらいもたせるとよいかを考えます。
+\phmushi
+ばねとダンパーは線形とし、機械は上下にだけゆれるとします。
+\phzu
+$\omega/\omega_{\mathrm n}=3$ と1、$\zeta=0$・0.1・0.3。
+\phriyu
+⑥の伝達率の式に入れます。
+\phtateru
+\[\text{伝達率}=\frac{\sqrt{1+(2\zeta\,\omega/\omega_{\mathrm n})^2}}{\sqrt{\{1-(\omega/\omega_{\mathrm n})^2\}^2+(2\zeta\,\omega/\omega_{\mathrm n})^2}}\]
+\phtoku
+$\omega/\omega_{\mathrm n}=3$ では $1-9=-8$ なので、\\
+$\zeta=0$：$1/8=0.125$。\quad $\zeta=0.1$：$\sqrt{1+0.36}\div\sqrt{64+0.36}=1.166\div8.02\approx0.15$。\quad $\zeta=0.3$：$\sqrt{1+3.24}\div\sqrt{64+3.24}=2.06\div8.20\approx0.25$。\\
+$\omega/\omega_{\mathrm n}=1$ では分母は $2\zeta$ だけになり、\\
+$\zeta=0$：限りなく大きい。\quad $\zeta=0.1$：$\sqrt{1.04}\div0.2\approx5.1$。\quad $\zeta=0.3$：$\sqrt{1.36}\div0.6\approx1.9$。
+\phtashikame
+ふだん回す所（3倍）では、ダンパーが強いほど伝達率は大きくなります（0.13から0.25へ）。でも、共振を通りすぎる所では、ダンパーが強いほど小さくなります（5.1から1.9へ）。ダンパーの強さは、2つのかね合いで決めます。
+\kotae $\omega/\omega_{\mathrm n}=3$：0.13・0.15・0.25。共振：限りなく大きい・約5.1・約1.9
+\end{phreidai}
+\begin{jibun}
+$\omega/\omega_{\mathrm n}=4$ でゆすられる機械の伝達率を、$\zeta=0$ と0.2 で求めましょう。
+\bkjans{$\zeta=0$：$1/15\approx0.067$。$\zeta=0.2$：$\sqrt{1+2.56}\div\sqrt{225+2.56}\approx0.13$}
+\end{jibun}
+
+\label{ph:波-2:ex6}
+\begin{phreidai}[小さな不つり合いの大きな力]
+モーターの回る部分に、\qty{1}{g}の不つり合い（軸から\qty{0.1}{m}の所に、余分な\qty{1}{g}があるのと同じ）があります。毎分3000回転で回すとき、軸受を押す不つり合いの力の大きさを求めましょう。
+\phbamen
+わずか\qty{1}{g}のずれが、回る速さによって、どれくらいの力になるかを見ます。
+\phmushi
+軸は曲がらず、モーターの本体も動かないとします。
+\phzu
+$m_{\mathrm u}=\qty{1}{g}=\qty{0.001}{kg}$、$r_{\mathrm u}=\qty{0.1}{m}$、毎分3000回転。
+\phriyu
+不つり合いの力は、余分な質量を円運動させる向心力 $m_{\mathrm u}r_{\mathrm u}\omega^2$ の反作用（⑦）。
+\phtateru
+\[\omega=2\pi\times\frac{3000}{60},\qquad F_0=m_{\mathrm u}r_{\mathrm u}\omega^2\]
+\phtoku
+\[\omega=2\pi\times50\approx\qty{314}{rad/s},\qquad F_0=0.001\times0.1\times314^2\approx\qty{9.9}{N}\]
+\phtashikame
+大きさ：\qty{1}{g}の物の重さは約\qty{0.01}{N}なのに、回すと約1000倍の約\qty{10}{N}（\qty{1}{kg}の物の重さ）の力になります。\\
+2倍にすると：毎分6000回転なら4倍の約\qty{39}{N}。速く回る機械ほど、つり合わせ（バランス取り）がたいせつです。
+\kotae 約\qty{9.9}{N}
+\end{phreidai}
+\begin{jibun}
+軸から\qty{0.05}{m}の所に\qty{2}{g}の不つり合いがある回転体を、毎分6000回転で回します。不つり合いの力を求めましょう。
+\bkjans{$\omega\approx\qty{628}{rad/s}$。$0.002\times0.05\times628^2\approx\qty{39}{N}$}
+\end{jibun}
+
+\label{ph:波-2:ex7}
+\begin{phreidai}[脱水の回り始めのゆれ]
+例題3の洗濯機（本体\qty{40}{kg}、毎分約340回転で共振、$\zeta=0.1$ とする）で、洗濯物\qty{0.5}{kg}が、回る中心から\qty{0.25}{m}の所にかたよりました。（1）共振の回転数で回るとき、（2）毎分800回転の脱水のときの、本体の横ゆれの振幅を求めましょう。
+\phbamen
+\bkhatenaref の答えを、数で確かめます。
+\phmushi
+本体は横に平行に動くだけとし、床は動かないとします。かたよりは脱水のあいだ変わらないとします。
+\phzu
+$m_{\mathrm u}r_{\mathrm u}=0.5\times0.25=\qty{0.125}{kg.m}$、$M=\qty{40}{kg}$、$\omega_{\mathrm n}$ は毎分337.6回転にあたる。
+\phriyu
+不つり合いでゆすられる本体のゆれ $\lvert X\rvert=\dfrac{m_{\mathrm u}r_{\mathrm u}}{M}\Bigl(\dfrac{\omega}{\omega_{\mathrm n}}\Bigr)^2\times\text{倍率}$（⑦）。
+\phtateru
+$\dfrac{m_{\mathrm u}r_{\mathrm u}}{M}=\dfrac{0.125}{40}\approx\qty{3.13}{mm}$ に、$(\omega/\omega_{\mathrm n})^2\times$倍率をかけます。
+\phtoku
+（1）$\omega/\omega_{\mathrm n}=1$ では、倍率 $1/(2\zeta)=5$ なので、$3.13\times1\times5\approx\qty{16}{mm}$。\\
+（2）$\omega/\omega_{\mathrm n}=800\div337.6\approx2.37$、2乗は5.62。分母は $\sqrt{(1-5.62)^2+(0.2\times2.37)^2}\approx4.64$ なので、
+\[\lvert X\rvert=3.13\times\frac{5.62}{4.64}\approx\qty{3.8}{mm}\]
+\phtashikame
+（2）は $m_{\mathrm u}r_{\mathrm u}/M=\qty{3.1}{mm}$ に近い（速く回すと、この値に近づく）。共振を通りすぎるときのゆれは、脱水のときの約4倍です。\\
+力：800回転のときの不つり合いの力は $0.125\times(2\pi\times800/60)^2\approx\qty{880}{N}$ もありますが、本体はほとんど動きません。
+\kotae （1）約\qty{16}{mm}、（2）約\qty{3.8}{mm}
+\end{phreidai}
+\begin{jibun}
+例題7の洗濯機が、毎分600回転で回っているときの、本体の横ゆれの振幅を求めましょう。
+\bkjans{$\omega/\omega_{\mathrm n}\approx1.78$、2乗3.16。分母 $\sqrt{(1-3.16)^2+0.36^2}\approx2.19$。$3.13\times3.16\div2.19\approx\qty{4.5}{mm}$}
+\end{jibun}
+
+\label{ph:波-2:ex8}
+\begin{phreidai}[回る軸の危険速度]
+直径\qty{20}{mm}、軸受のあいだの長さ\qty{0.8}{m}の鋼の軸（$E=\qty{205}{GPa}$）のまん中に、質量\qty{5}{kg}の円板がついています。危険速度を、毎分の回転数で求めましょう。
+\phbamen
+回る速さを上げていくと、軸が大きく曲がる速さがあります（⑧）。
+\phmushi
+軸の質量（円板よりずっと小さい）、円板が傾くこと（ジャイロの働き）、軸受のたわみを無視します。
+\phzu
+両はしを支えた軸のまん中に円板。$d=\qty{0.020}{m}$、$L=\qty{0.8}{m}$、$m=\qty{5}{kg}$。
+\phriyu
+まん中の力に対する軸の等価ばね定数 $k=48EI/L^3$（力-10⑨、波-1④）、丸い軸の断面二次モーメント $I=\pi d^4/64$（力-10）。危険速度は $\sqrt{k/m}$（⑧）。
+\phtateru
+\[I=\frac{\pi d^4}{64},\qquad k=\frac{48EI}{L^3},\qquad \omega_{\mathrm c}=\sqrt{\frac{k}{m}}\]
+\phtoku
+\[I=\frac{3.142\times0.020^4}{64}\approx\qty{7.85e-9}{m^4}\]
+\[k=\frac{48\times\num{205e9}\times\num{7.85e-9}}{0.8^3}\approx\qty{1.51e5}{N/m}\]
+\[\omega_{\mathrm c}=\sqrt{\frac{\num{1.51e5}}{5}}\approx\qty{174}{rad/s}\]
+毎分の回転数は $60\times174\div6.283\approx1660$ より、毎分約1700回転。
+\phtashikame
+大きさ：工場の4極モーター（毎分約1500・1800回転）に近く、この軸をそのモーターで直接回すのは危ない設計です。\\
+直すには：軸を太くする（$k$ は $d^4$ に比例）か、軸受のあいだを短くする（$L^3$ に反比例）。
+\kotae 毎分約1700回転（$\omega_{\mathrm c}\approx\qty{174}{rad/s}$）
+\end{phreidai}
+\begin{jibun}
+例題8の軸を、直径\qty{25}{mm}にしました。危険速度を毎分の回転数で求めましょう。
+\bkjans{$I\approx\qty{1.92e-8}{m^4}$、$k\approx\qty{3.69e5}{N/m}$、$\omega_{\mathrm c}\approx\qty{271}{rad/s}$、毎分約2600回転}
+\end{jibun}
+
+\label{ph:波-2:ex9}
+\begin{phreidai}[うねりのある道の危ない速さ]
+\qty{10}{m}おきに山がある、ゆるいうねりの道を、上下の固有振動数\qty{1.5}{Hz}の車が走ります。車体がいちばん大きくゆれる速さを求めましょう。
+\phbamen
+道のうねりが、車輪を通して車体をゆすります（基礎の励振。⑨）。
+\phmushi
+車を4分の1の車のモデル（波-1例題5）とし、タイヤのばねと、前輪と後輪の時間のずれを無視します。
+\phzu
+波長 $\lambda=\qty{10}{m}$、$f_{\mathrm n}=\qty{1.5}{Hz}$、速さ $v$。
+\phriyu
+1秒にゆすられる回数は $v/\lambda$。これが $f_{\mathrm n}$ と同じとき共振（⑨）。
+\phtateru
+\[\frac{v}{\lambda}=f_{\mathrm n}\qquad v=\lambda f_{\mathrm n}\]
+\phtoku
+\[v=10\times1.5=\qty{15}{m/s}=15\times3.6=\qty{54}{km/h}\]
+\phtashikame
+大きさ：ふつうの道で出す速さです。$\zeta=0.3$ のサスペンションなら、車体のゆれは道のうねりの約1.9倍です（伝達率の式）。\\
+速く走ると：\qty{100}{km/h}では $\omega/\omega_{\mathrm n}\approx1.9$ で、ゆれはうねりより小さくなります。
+\kotae 約\qty{15}{m/s}（約\qty{54}{km/h}）
+\end{phreidai}
+\begin{jibun}
+\qty{6}{m}おきにでこぼこがある道を、上下の固有振動数\qty{1.2}{Hz}の車が走ります。車体がいちばん大きくゆれる速さを求めましょう。
+\bkjans{$6\times1.2=\qty{7.2}{m/s}$（約\qty{26}{km/h}）}
+\end{jibun}
+
+\label{ph:波-2:ex10}
+\begin{phreidai}[ボード線図の値を読む]
+減衰比 $\zeta=0.1$ のばね・おもり・ダンパーで、$\omega/\omega_{\mathrm n}=0.1$、1、10 のときの倍率を dB で、おくれを度で求めましょう。
+\phbamen
+ボード線図（⑩）の、ゆっくり・共振・速いの3つの所の値を、式で確かめます。
+\phmushi
+線形のばね・ダンパーとし、自分のゆれが消えたあとを考えます。
+\phzu
+$\zeta=0.1$、$\omega/\omega_{\mathrm n}=0.1$・1・10。
+\phriyu
+④の倍率とおくれの式、dB は $20\log_{10}(\text{倍率})$（3-12⑦）。
+\phtateru
+\[\text{倍率}=\frac{1}{\sqrt{\{1-(\omega/\omega_{\mathrm n})^2\}^2+(0.2\,\omega/\omega_{\mathrm n})^2}},\qquad \tan\phi=\frac{0.2\,\omega/\omega_{\mathrm n}}{1-(\omega/\omega_{\mathrm n})^2}\]
+\phtoku
+0.1：分母 $\sqrt{0.99^2+0.02^2}\approx0.990$、倍率1.01、$20\log_{10}1.01\approx\qty{0.09}{dB}$。$\tan\phi=0.02\div0.99$ で $\phi\approx1.2^\circ$。\\
+1：倍率 $1/0.2=5$、$20\log_{10}5\approx\qty{14}{dB}$。分母の実部が0なので $\phi=90^\circ$。\\
+10：分母 $\sqrt{99^2+2^2}\approx99.0$、倍率約0.0101、約 $\qty{-40}{dB}$。$1-100<0$ なので $\phi$ は $90^\circ$ より大きく、$\phi\approx180^\circ-1.2^\circ\approx179^\circ$。
+\phtashikame
+ボード線図とくらべる：0 dB の水平な線、山の高さ\qty{14}{dB}、10倍で $\qty{-40}{dB}$ の線、と合います。
+\kotae 0.1：約\qty{0.09}{dB}・約1°。1：約\qty{14}{dB}・90°。10：約 $\qty{-40}{dB}$・約179°
+\end{phreidai}
+\begin{jibun}
+$\zeta=0.2$ のとき、$\omega/\omega_{\mathrm n}=1$ での倍率を dB で求めましょう。また、10 のときの倍率は約何 dB ですか。
+\bkjans{$1/0.4=2.5$、$20\log_{10}2.5\approx\qty{8.0}{dB}$。10 のときは約 $\qty{-40}{dB}$}
+\end{jibun}
+
+\label{ph:波-2:ex11}
+\begin{phreidai}[音さの Q 値]
+\qty{440}{Hz}の音さをたたくと、ゆれの大きさが10秒で $\tfrac{1}{10}$ になりました。減衰比と Q 値を求めましょう。
+\phbamen
+よく鳴り続ける物は、Q が大きい物です（⑤）。どれくらい大きいかを確かめます。
+\phmushi
+音さのゆれを1自由度とし、減衰は速さに比例するとします。
+\phzu
+$f=\qty{440}{Hz}$（$\omega_{\mathrm n}=2\pi\times440\approx\qty{2765}{rad/s}$）、$t=\qty{10}{s}$ で $\tfrac{1}{10}$。
+\phriyu
+ゆれの大きさは $e^{-\zeta\omega_{\mathrm n}t}$ でへる（波-1⑦）。Q は $1/(2\zeta)$（⑤）。
+\phtateru
+\[e^{-\zeta\omega_{\mathrm n}t}=\frac{1}{10}\qquad\text{より}\qquad \zeta=\frac{\ln10}{\omega_{\mathrm n}t},\qquad Q=\frac{1}{2\zeta}\]
+\phtoku
+\[\zeta=\frac{2.303}{2765\times10}\approx\num{8.3e-5},\qquad Q=\frac{1}{2\times\num{8.3e-5}}\approx\num{6000}\]
+\phtashikame
+くらべる：6-13のばね（$Q=5$）は、4回ほどゆれると $\tfrac{1}{10}$ になります。音さは、約4400回ゆれてやっと $\tfrac{1}{10}$ です。\\
+共振の鋭さ：半値幅は $440\div6000\approx\qty{0.07}{Hz}$ です。\qty{441}{Hz}の音では、ほとんど共鳴しません。
+\kotae $\zeta\approx\num{8.3e-5}$、$Q\approx\num{6000}$
+\end{phreidai}
+\begin{jibun}
+\qty{1000}{Hz}でゆれる部品をたたくと、ゆれの大きさが\qty{2.0}{s}で $\tfrac{1}{10}$ になりました。Q 値を求めましょう。
+\bkjans{減衰比は $2.303\div(6283\times2.0)$ より、約\num{1.8e-4}。$Q\approx\num{2700}$}
+\end{jibun}
+
+\label{ph:波-2:ex12}
+\begin{phreidai}[風でゆれる煙突]
+直径\qty{1.0}{m}の煙突に、横から\qty{10}{m/s}の風が当たっています。カルマン渦がはなれる回数を求めましょう。また、煙突の横ゆれの固有振動数が\qty{1.5}{Hz}のとき、共振する風の速さを求めましょう（ストローハル数0.2）。
+\phbamen
+力-15で約束した「カルマン渦と固有振動数」の問題です（⑨）。
+\phmushi
+煙突を1自由度とし、高さによる風の速さのちがいを無視します。ストローハル数は一定とします。
+\phzu
+$d=\qty{1.0}{m}$、$v=\qty{10}{m/s}$、$\mathrm{St}=0.2$、$f_{\mathrm n}=\qty{1.5}{Hz}$。
+\phriyu
+渦のはなれる回数 $f=\mathrm{St}\,v/d$（力-15）。これが $f_{\mathrm n}$ と同じときに共振（⑨）。
+\phtateru
+\[f=\frac{\mathrm{St}\,v}{d},\qquad v_{\text{共振}}=\frac{f_{\mathrm n}d}{\mathrm{St}}\]
+\phtoku
+\[f=\frac{0.2\times10}{1.0}=\qty{2.0}{Hz},\qquad v_{\text{共振}}=\frac{1.5\times1.0}{0.2}=\qty{7.5}{m/s}\]
+\phtashikame
+大きさ：\qty{7.5}{m/s}は、ふつうに吹く風の速さです。だから、高い煙突や塔は、渦をみだす板を巻いたり、ダンパーをつけたりします（⑨）。\\
+単位：$\text{Hz}\times\text{m}=\text{m/s}$。
+\kotae 渦は約\qty{2.0}{Hz}。共振は約\qty{7.5}{m/s}の風
+\end{phreidai}
+\begin{jibun}
+直径\qty{0.5}{m}の塔の、横ゆれの固有振動数が\qty{2.4}{Hz}です。共振する風の速さを求めましょう（ストローハル数0.2）。
+\bkjans{$2.4\times0.5\div0.2=\qty{6.0}{m/s}$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{共振すると、振幅は無限大？}
+\bkng{ちょうど固有振動数でゆすると、振幅は無限大になる。}
+\bkok{減衰があれば、倍率は $1/(2\zeta)$ で止まる。$\zeta=0.1$ なら5倍。}
+ダンパーが失うエネルギーが、ゆする力が入れるエネルギーとつり合うからです（⑤）。ただし $\zeta$ が小さい物では、何十倍にもなります。
+\end{tsumazuki}
+
+\begin{tsumazuki}{防振ゴムは、かたいほどよい？}
+\bkng{かたいゴムで、しっかり支えたほうが、ゆれが伝わらない。}
+\bkok{やわらかいゴムで固有振動数を下げ、$\omega/\omega_{\mathrm n}$ を $\sqrt2$ より十分大きくする。}
+かたいゴムで $\omega/\omega_{\mathrm n}$ が1に近いと、共振して、じかにとめるより大きな力が床に伝わります（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{速く回すほど、ゆれは大きい？}
+\bkng{不つり合いの力は $\omega^2$ に比例するから、速く回すほど機械のゆれは大きくなる。}
+\bkok{共振を過ぎると倍率が $(\omega_{\mathrm n}/\omega)^2$ で小さくなり、ゆれは $m_{\mathrm u}r_{\mathrm u}/M$ に近づく。}
+力が大きくなっても、重い本体は速いゆすりについていけないからです（⑦、図\ref{ph:波-2:fig-sentaku}）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{毎分の回転数をそのまま $\omega$ に入れる}
+\bkng{毎分3000回転なので、$\omega=3000$ として $m_{\mathrm u}r_{\mathrm u}\omega^2$ を計算する。}
+\bkok{毎秒 $3000\div60=\qty{50}{Hz}$、$\omega=2\pi\times50\approx\qty{314}{rad/s}$ にしてから入れる。}
+$m_{\mathrm u}r_{\mathrm u}\omega^2$ の $\omega$ は rad/s です。毎分の回転数のまま入れると、力が約 $(60/2\pi)^2\approx91$ 倍も大きく出てしまいます（例題6）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{倍率の dB は $10\log_{10}$？}
+\bkng{倍率5は、$10\log_{10}5\approx\qty{7}{dB}$。}
+\bkok{振幅の倍率は $20\log_{10}5\approx\qty{14}{dB}$。}
+$10\log_{10}$ は、エネルギーや電力のように「振幅の2乗」に比例する量の比に使います（3-12⑦）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{12\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[共振を避ける・おさえる・使う]
+\textbf{避ける}：機械を設計するときは、まず固有振動数を計算し（波-1）、モーターの回転数や、そのおよそ2倍・3倍など、機械をゆする振動数と離れているかを確かめます。回る機械では、つり合わせ（バランス取り）をして、不つり合いの力そのものを小さくします。自動車のタイヤのホイールに小さなおもり（バランスウエイト）がはってあるのは、このためです。
+
+\textbf{おさえる}：避けられないときは、ダンパーで $\zeta$ を大きくして共振の山を低くします（制振）。高いビルの屋上に、建物と同じ固有振動数の大きなおもりをばねでつるし、建物のゆれのエネルギーを吸いとる装置（動吸振器）もあります。2つの物がつながったゆれなので、波-3で学びます。
+
+\textbf{使う}：共振は、いつも悪者ではありません。ラジオや携帯電話は、電気の回路の共振で、ほしい電波だけを選びます。時計の水晶振動子は、Q の大きな共振で、正確なリズムを作ります。楽器の胴は、弦のゆれと共鳴して、大きな音を出します。
+
+\begin{phketa}[ゆする速さの目安]
+\phketaline{工場の4極モーター}{毎分約1500回転（\qty{50}{Hz}の地域）・1800回転（\qty{60}{Hz}）}
+\phketaline{家庭の洗濯機の脱水}{毎分400〜1100回転ほど（機種でちがう）}
+\phketaline{人が歩く足の運び}{約\qty{2}{Hz}（体の横ゆれは約\qty{1}{Hz}）}
+\phketaline{防振の目安}{$\omega/\omega_{\mathrm n}\geqq3$（伝達率 $\tfrac{1}{8}$ 以下）}
+\phboxhead{答えが桁で合っているか}
+回転数〔毎分〕と振動数〔Hz〕は60倍ちがい、Hz と rad/s は $2\pi$ 倍ちがいます。毎分3000回転は\qty{50}{Hz}、\qty{314}{rad/s}です。危険速度や共振の回転数を求めたら、この3つの単位を必ず書き分けましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{機械力学,防振設計,回転機械,振動計測}{強制振動、共振、振幅倍率、位相、Q値、半値幅、振動伝達率、防振、不つり合い、危険速度、基礎励振、ボード線図}
+
+\begin{column}{兵隊は、橋の上では歩調を乱す}
+1831年、イギリスのマンチェスターの近くで、つり橋（ブロートン橋）を兵隊の隊列が歩調をそろえて渡っていたとき、橋が大きくゆれて落ちる事故がありました。それ以来、イギリスの軍隊では、橋を渡るときには歩調をそろえずに歩くように命じた、と伝えられています。
+
+足をそろえて歩くと、たくさんの人の力が同じリズムで橋をゆすります。そのリズムが橋の固有振動数に近ければ、共振します。もともと橋にいたみがあったともいわれ、事故の原因が共振だけだったかどうかはわかりません。それでも、「そろったリズムは危ない」という教えは、ミレニアム橋（⑩のまだわかっていないこと）の170年近く前から語りつがれてきたのです。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 本体\qty{60}{kg}、脚のばね合わせて\qty{60}{kN/m}の洗濯機の、横ゆれの固有振動数と、それにあたる槽の毎分の回転数を求めましょう。
+\bkpans{$\omega_{\mathrm n}=\sqrt{1000}\approx\qty{31.6}{rad/s}$、$f_{\mathrm n}\approx\qty{5.0}{Hz}$、毎分約300回転}
+\bkproblem 軸から\qty{0.2}{m}の所に\qty{5}{g}の不つり合いがある送風機の羽根車を、毎分1800回転で回します。不つり合いの力を求めましょう。
+\bkpans{$\omega=2\pi\times30\approx\qty{188}{rad/s}$。$0.005\times0.2\times188^2\approx\qty{36}{N}$}
+\bkproblem \qty{8}{m}おきにうねりがある道を、上下の固有振動数\qty{1.25}{Hz}の車が走ります。車体がいちばん大きくゆれる速さを、m/s と km/h で求めましょう。
+\bkpans{$8\times1.25=\qty{10}{m/s}$（\qty{36}{km/h}）}
+\bkproblem 直径\qty{2.0}{m}の塔の、横ゆれの固有振動数は\qty{0.80}{Hz}です。共振する風の速さを求めましょう。また、\qty{10}{m/s}の風のとき、渦がはなれる回数は何 Hz ですか（ストローハル数0.2）。
+\bkpans{$0.80\times2.0\div0.2=\qty{8.0}{m/s}$。\qty{10}{m/s}では $0.2\times10\div2.0=\qty{1.0}{Hz}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem $m=\qty{0.5}{kg}$、$k=\qty{8}{N/m}$、$c=\qty{0.2}{N.s/m}$ のばね・おもり・ダンパーの、共振の山の倍率、Q 値、半値幅を求めましょう。
+\bkpans{$\omega_{\mathrm n}=\qty{4}{rad/s}$、$\zeta=0.05$。山の倍率 約10.0、$Q\approx10$、半値幅 約\qty{0.4}{rad/s}}
+\bkproblem 毎分1200回転のモーターを、ばねの上にのせて、床に伝わる力を $\tfrac{1}{5}$ にしたい（減衰は無視）。固有振動数と、のせたときにばねが沈む長さを求めましょう。
+\bkpans{$(20/f_{\mathrm n})^2=6$ より $f_{\mathrm n}=20\div\sqrt6\approx\qty{8.2}{Hz}$。$x_{\mathrm{st}}=9.8\div(2\pi\times8.16)^2\approx\qty{3.7}{mm}$}
+\bkproblem 直径\qty{20}{mm}、軸受のあいだ\qty{1.0}{m}の鋼の軸（$E=\qty{205}{GPa}$）のまん中に、\qty{8}{kg}の円板がついています。危険速度を毎分の回転数で求めましょう。
+\bkpans{$I\approx\qty{7.85e-9}{m^4}$、$k=48EI/L^3\approx\qty{7.73e4}{N/m}$、$\omega_{\mathrm c}=\sqrt{k/8}\approx\qty{98}{rad/s}$、毎分約940回転}
+\bkproblem 減衰比 $\zeta=0.05$ のばね・おもり・ダンパーのボード線図で、$\omega/\omega_{\mathrm n}=1$ の山の高さは何 dB ですか。また、そのときのおくれと、Q 値を答えましょう。
+\bkpans{倍率 $1/(2\times0.05)=10$、$20\log_{10}10=\qty{20}{dB}$。おくれ90°。$Q\approx10$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 共振（共鳴）を、ゆする速さとゆれの大きさの関係で説明できる。\bkfurref{ph:波-2:sec1}
+\item 表計算でばねをゆすって、共振曲線とゆれのおくれを読みとれる。\bkfurref{ph:波-2:sec3}
+\item 共振の倍率・Q 値・伝達率を求め、防振ばねを選べる。\bkfurref{ph:波-2:sec5}
+\item 不つり合い・回る軸・道のでこぼこ・風の渦によるゆれを見積もり、ボード線図で読める。\bkfurref{ph:波-2:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{洗濯機がガタガタするのは、回り始めに共振を通りすぎるときだったんだね。速く回れば、かえって静かになるなんて、ふしぎ！}
