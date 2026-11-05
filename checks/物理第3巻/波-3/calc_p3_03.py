@@ -1,4 +1,5 @@
 # 波-3（tex/p3-03.tex）の数値の検算。python3 checks/物理第3巻/波-3/calc_p3_03.py
+# 注（第25回の確認のあと）：TMD の c2 は 0.127 に直した。今の値は checks/物理第3巻/確認/p2_1_tmd.py を見る。
 import numpy as np
 from math import sqrt, pi, sin, cos, atan2
 
