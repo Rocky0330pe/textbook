@@ -1,0 +1,1248 @@
+%% 第24回編集委員会（物理第3巻）：組 波W6
+%% p3-11.tex  波-11　音を数字にする：信号とスペクトル（★4〜5・3段）
+%% 中身は計画書 tools/phys3-plan.md の B「波-11」。公式の持ち主は A（A58 サンプリング定理。中学・高校の公式はないので \phkoushiki は置かない）。
+%% 数値はすべて Python で計算した：checks/物理第3巻/波-11/calc_p3_11.py（出力 calc_p3_11_out.txt）、fig_data_p3_11.py（図の点。出力 fig_data_p3_11_out.txt）
+%% 記号（この章）：サンプリング周波数 f_s〔Hz〕、データの数 N、周波数の目もり（分解能）Δf＝f_s/N、量子化のビット数 b、量子化のきざみ q〔V〕、
+%%   窓関数 w_m、平均する回数 K、移動平均の点の数 M、電力（強さ）P（信号 P_s・雑音 P_n）、確率 p_i（3-17 の P(A)。大文字の P は電力に使うので小文字）、
+%%   情報量 I〔ビット〕、エントロピー（情報量の平均）H〔ビット〕（熱-15 のエントロピー S と分ける）、通信路容量 C〔ビット/s〕、帯域幅 B〔Hz〕、
+%%   時定数 τ（RC のフィルター。コンデンサーの容量は C と書かない：C は通信路容量）、状態の数 Ω（熱-15 と同じ）。
+%%   この章では波の速さ c・減衰係数 c を使わない。周期 T も書かず、はかる時間を「はかった時間 T_m」とする。
+%% 数学の本が引いている所（変えない数）：9-4⑫⑬⑭（8点の DFT、1024 点で約100分の1、7 kHz→1 kHz、動画の車輪 24コマ・8本・2.75回転→−3.75°、
+%%   CD 44 100 回、440.5 Hz のもれ 0.637・0.21、「窓関数は物理の本（波-11）で」）、9-8⑨（100 Hz の RC、dB のたし算。9-8 の工学の囲み「イコライザー…（⑨。物理 波-11）」）、
+%%   9-12①（CD 1411.2 kbit/s、MP3 と MDCT「物理シリーズ 波-11」）、3-12⑦（dB）、3-17（確率・期待値）、2-17④（b ビットで 2^b 通り）。
+%% 熱の巻との境目：熱-15 ④（S＝k_B ln Ω、状態の数 Ω、ボルツマンの関係）、熱-15 のこの先の学び（シャノンの −Σ P_i ln P_i）、熱-15 例題11（1ビットを消す熱 k_B T ln2 ≈ 2.9×10⁻²¹ J）。
+%% 出典（本文で使った事実。第24回の追記（11月5日）により、書くときに確かめた。WebSearch で2つ以上の資料を照らし合わせたものは「照合」と書いた）
+%%   ・CD：1秒に 44 100 回・16 ビット・2チャンネル。Sony・Philips の Red Book（1980年）、IEC 60908（1987年、第2版1999年）。
+%%       照合：en.wikipedia.org/wiki/Compact_Disc_Digital_Audio、itwissen.info「compact disc digital audio」。数学 9-4・9-12 と同じ数。
+%%   ・固定電話のディジタルの声：ITU-T G.711（1秒に 8000 回・8 ビット＝64 kbit/s）。照合：en.wikipedia.org/wiki/G.711、vocal.com の G.711 の資料。
+%%   ・電話の線のモデム：ITU-T V.34（〜33 600 bit/s）。itu.int の V.34 (10/1996) の目次ページ、pc.watch.impress.co.jp（1996年）。
+%%   ・人の耳に聞こえる範囲 約 20 Hz〜20 kHz（若い人。年れいとともに上限が下がる）：数学 9-4⑭と同じ言い方。arXiv:1209.3767（Music in Terms of Science）ほか。
+%%       年れいごとの数（ISO 7029）は本文に書かないので確かめていない。
+%%   ・照明のちらつき 100 Hz・120 Hz（電源の周波数の2倍）：laserfocusworld.com「So, what about LED flicker?」、richtek.com AN022。
+%%       「古い蛍光灯や一部の LED」の言い方にとどめた（ちらつかない照明も多い）。
+%%   ・ナイキスト（1928年）、シャノン（1949年 サンプリング定理）は数学 9-4⑭と同じ。シャノン「A Mathematical Theory of Communication」
+%%       Bell System Technical Journal 1948年7月・10月。「bit … a word suggested by J. W. Tukey」は論文の文（historyofinformation.com・Wikipedia で照合）。
+%%   ・クーリーとテューキーの FFT（1965年）は数学 9-4 のコラムと同じ。
+%%   ・ハフマン符号：D. A. Huffman, Proc. IRE 40(9), 1098–1101 (1952)（IEEE Xplore 4051119）。
+%%   ・MP3（MPEG-1 Layer III）は量子化した MDCT の係数をハフマン符号で縮める（32 の表）：libmp3lame の解説、every-algorithm.github.io で照合。
+%%   ・カクテルパーティー効果：E. C. Cherry, J. Acoust. Soc. Am. 25, 975–979 (1953), doi:10.1121/1.1907229（mpi.nl・modeldb で照合）。
+%%       仕組みが完全にはわかっていないことは、本文では「わかってきたこと」と「わかっていないこと」を分けて、言いすぎないように書いた。
+%%   ・耳の検査（聴性脳幹反応）の平均の回数 1000〜2000 回：米国特許 8825149、Elberling & Don, Scand. Audiol. 13, 187 (1984) の解説（interacoustics.com）で照合。
+%%       本文は「何百回から何千回」。
+%%   ・〔要確認〕なし。
+\makeatletter
+% 車輪（スポーク8本）  \rxlwheel{(中心)}{回した角}{色}
+\newcommand\rxlwheel[3]{\begin{scope}[shift={#1}]
+  \draw[#3, line width=1.2pt] (0,0) circle (10);
+  \foreach \a in {0,45,...,315} {\draw[#3, line width=0.8pt] (0,0) -- (\a+#2:10);}
+  \fill[#3] (0,0) circle (1.1);\end{scope}}
+% 箱（信号の流れ）  \rxlbox{名前}{(位置)}{字}
+\newcommand\rxlbox[3]{\node[bk node, minimum width=19mm, minimum height=9mm, align=center, font=\sffamily\footnotesize] (#1) at #2 {#3};}
+\makeatother
+
+\phchapter{11}{音を数字にする：\\信号とスペクトル}{動画の車輪が、逆に回って見えることがあるのはなぜ？}{\bklevelrange{4}{5}}{音を数字にする：信号とスペクトル}
+\bkmichishirube{2-17,3-12,3-17,9-4,9-8,熱-15}{波-13,波-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{4}\enspace 音をサンプリングと量子化で数の列にし、データの量を求められる。
+\item \bklevel{4}\enspace エイリアシングで、車輪が逆に回って見えるわけを説明できる。
+\item \bklevel{4}\enspace 目もり $\Delta f=f_{\mathrm s}/N$ を読み、窓関数でもれを小さくできる。
+\item \bklevel{5}\enspace サンプリング定理・フィルター・平均で、S/N 比を見積もれる。
+\item \bklevel{5}\enspace 情報量と通信路容量を計算し、熱のエントロピーとくらべられる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.54\linewidth}\raggedright
+映画や動画で、走っている自動車や馬車の車輪が、止まって見えたり、ゆっくり逆に回って見えたりすることがあります。車は前へ進んでいるのに、車輪だけが後ろへ回るのです。
+
+カメラがこわれているわけではありません。同じことは、扇風機をスマホで動画にとったときにも起きます。動画のどんなしくみが、回る向きを逆にしてしまうのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.43\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \rxlwheel{(0,0)}{0}{bkGray!70}
+  \rxlwheel{(30,0)}{41.25}{bkBlue}
+  \draw[bkGray!70, line width=0.6pt, dashed] (30,0) -- (30+10,0);
+  \draw[bkRed, line width=0.9pt, -{Stealth[length=2mm]}] (30,0)++(0:12.5) arc (0:41.25:12.5);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-11.5) {1コマめ};
+  \node[font=\sffamily\footnotesize, anchor=north] at (30,-11.5) {2コマめ};
+  \node[font=\sffamily\bfseries\large, text=bkRed!80!black, anchor=west] at (41.5,9) {?};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 波-9 では音の大きさをマイクではかり、波-10 では超音波や振動のセンサーを学びました。はかった音や振動は、ほとんどの場合、コンピュータに入れて、記録したり、成分に分けたりします。この章では、なめらかに変わる音を「とびとびの数の列」にするときに何が起きるか、そして、その数の列からどこまで正しく音の中身を読みとれるかを考えます。最後に、数の列が運ぶ「情報」そのものの量をはかります。
+
+\begin{yattemiyou}[スマホで、音と回る物を見てみよう]
+\textbf{用意するもの}\par
+スマホ（音の成分を表示するアプリと、動画のカメラ）、扇風機（羽根に指を近づけない）\par\vspace{2pt}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 音の成分を表示するアプリ（「スペクトル」「FFT」などの名前のもの）で、「あー」と声を出したときと、口笛をふいたときの画面をくらべる。
+\item 扇風機を「強」と「弱」で回し、スマホの動画にとる。再生した画面で、羽根がどう見えるかを観察する。
+\item 部屋の照明の下と、窓の近くの日光の下で、②をくり返す。
+\end{enumerate}
+\end{yattemiyou}
+
+\noindent やってみようの答え：「あー」の声は、いくつもの山が等しい間かくで並んだ形（基本の音とその整数倍の音。9-0）に、口笛は、ほぼ1本の山に見えます。扇風機の羽根は、回る速さによって、ぼやけて見えたり、止まって見えたり、ゆっくり逆に回って見えたりします。照明の下では、日光の下と見え方が変わることもあります。どちらも、この章の「とびとびにとる」ことが原因です。
+
+\begin{omoidasou}
+\bkrecall{2-17}{2進数の1けたが1ビット。$b$ ビットで $2^b$ 通りの数を表せる（8ビットなら256通り）。}
+\bkrecall{3-12}{デシベル＝10×$\log_{10}$（電力の比）＝20×$\log_{10}$（電圧の比）。2倍は約 3\,dB。}
+\bkrecall{3-17}{確率 $P(A)$。期待値＝（値×その確率）を全部たした数。}
+\bkrecall{9-4}{DFT $X_k=\sum x_me^{-j2\pi km/N}$。$X_k$ の周波数は $k\times f_{\mathrm s}/N$、振幅は $2|X_k|/N$。$f_{\mathrm s}/2$ より高い成分は、低い周波数に化ける（エイリアシング）。}
+\bkrecall{9-8}{100\,Hz の RC の回路は、高い音ほど小さくして通す。箱をつなぐと、dB はたし算。}
+\bkrecall{熱-15}{状態の数 $\Omega$ とエントロピーの関係 $S=k_{\mathrm B}\ln\Omega$（ボルツマンの関係）。}
+\end{omoidasou}
+
+\noindent この章の記号の注意：電力（強さ）を $P$ と書くので、確率は小文字の $p_i$ と書きます（3-17 の $P(A)$ と同じもの）。大文字の $C$ は通信路容量（⑩）に使うので、RC の回路では、コンデンサーの容量を記号にせず、時定数 $\tau$（抵抗×静電容量）だけで書きます。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{音が数の列になるようすを見る}{4}
+
+\bksubsection{1}{音を電圧に、電圧を数に}
+\label{ph:波-11:sec1}
+音は、空気の圧力の小さなゆれです（波-9）。マイクの中の薄い膜は、このゆれで前後に動き、その動きが電圧のゆれに変わります。ここまでは、時間とともになめらかに変わる電圧（\textbf{アナログ信号}）です。\bkidx{あなろぐしんごう}{アナログ信号}コンピュータは、なめらかな量をそのまま入れられないので、次の2つの段で、電圧を数の列（\textbf{ディジタル信号}）に変えます。\bkidx{でぃじたるしんごう}{ディジタル信号}この部品を \textbf{AD 変換器}（アナログからディジタルへ）といいます。
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{サンプリング}（標本化）：決まった時間のきざみ $\Delta t$ ごとに、電圧の値をとる（9-4⑫）。1秒にとる回数 $f_{\mathrm s}=1/\Delta t$ がサンプリング周波数です。\bkidx{さんぷりんぐ}{サンプリング}
+\item \textbf{量子化}（りょうしか）：とった値を、決まった段のどれかに丸める。$b$ ビットなら $2^b$ 段です（2-17）。段と段の間かく $q$ を量子化のきざみといいます。\bkidx{りょうしか}{量子化}
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=56mm, xmin=-0.02, xmax=1.08, ymin=-1.15, ymax=1.15, xtick={0.25,0.5,0.75,1}, xticklabels={$3\Delta t$,$6\Delta t$,$9\Delta t$,$12\Delta t$}, ytick={-0.875,-0.625,-0.375,-0.125,0.125,0.375,0.625,0.875}, yticklabels={000,001,010,011,100,101,110,111}, yticklabel style={font=\sffamily\scriptsize}, xlabel={時刻 $t$}, ylabel={電圧}, grid=major, grid style={bkLine!60, line width=0.3pt}]
+  \addplot[bkGray, line width=1pt, domain=0:1, samples=120] {0.95*sin(deg(2*pi*x))};
+  \addplot[bkOrange!85!black, line width=1.2pt, const plot mark mid] coordinates {(0.0,0.125) (0.083,0.375) (0.167,0.875) (0.25,0.875) (0.333,0.875) (0.417,0.375) (0.5,0.125) (0.583,-0.375) (0.667,-0.875) (0.75,-0.875) (0.833,-0.875) (0.917,-0.375) (1.0,-0.125)};
+  \addplot[only marks, mark=*, mark size=1.8pt, bkBlue] coordinates {(0.0,0.0) (0.083,0.475) (0.167,0.823) (0.25,0.95) (0.333,0.823) (0.417,0.475) (0.5,0.0) (0.583,-0.475) (0.667,-0.823) (0.75,-0.95) (0.833,-0.823) (0.917,-0.475) (1.0,-0.0)};
+  \addplot[only marks, mark=square*, mark size=1.5pt, bkOrange!85!black] coordinates {(0.0,0.125) (0.083,0.375) (0.167,0.875) (0.25,0.875) (0.333,0.875) (0.417,0.375) (0.5,0.125) (0.583,-0.375) (0.667,-0.875) (0.75,-0.875) (0.833,-0.875) (0.917,-0.375) (1.0,-0.125)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{1周期に12回とったサンプリング（●）と、3ビット（8段）の量子化（■と階段の線）。細い灰色の線がもとの電圧。左の 000〜111 は、段につけた3ビットの番号。●と■の差が、丸めたことによる誤差（⑧）。}\label{ph:波-11:fig-ad}
+\end{bkfigure}
+
+\noindent 図\ref{ph:波-11:fig-ad}では、わかりやすくするために、とる回数も段の数も少なくしました。実際の機器は、もっと細かくとります。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[c,m,wd=32mm] Q[c,m,wd=20mm] Q[c,m,wd=24mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+使い道 & $f_{\mathrm s}$〔Hz〕 & $b$〔ビット〕 & 段の数 $2^b$ \\
+固定電話のディジタルの声 & 8000 & 8 & 256 \\
+音楽の CD & \num{44100} & 16 & \num{65536} \\
+動画の音・録音の機材 & \num{48000}〜\num{96000} & 16〜24 & \num{65536}〜 \\
+\end{bktable}
+\bktabcaption{サンプリング周波数と量子化のビット数の例。CD はステレオ（左右2つ）で記録する。}\label{ph:波-11:tab-fs}
+\end{bkcenter}
+
+1秒あたりのデータの量は、「1秒にとる回数×1回のビット数×チャンネルの数」です。
+\pheq{\text{データの量}=f_{\mathrm s}\times b\times(\text{チャンネルの数})}{ビット/s ＝ 回/s × ビット/回}
+CD なら、$\num{44100}\times16\times2=\num{1411200}$ ビット/s です（9-12①と同じ数）。
+
+\begin{phyomi}[データの量＝$f_{\mathrm s}\times b\times$チャンネルの数]
+「1秒に何回とるか」が時間の細かさ、「1回を何ビットで書くか」が値の細かさ。細かくとるほど、もとの音に近くなりますが、データは多くなります。どこまで細かくとれば十分かを決めるのが、⑤（時間）と⑧（値）の役目です。
+\end{phyomi}
+
+\begin{phbaisuru}{段の数 $2^b$}
+ビット数 $b$ に1をたすと、段の数は $2^b$ から $2^{b+1}$ へ2倍になり、きざみ $q$ は半分になります。図\ref{ph:波-11:fig-ad}の3ビットを4ビットにすると、階段の段は8から16になり、●と■の差は、およそ半分になります。データの量は $b$ に比例するので、16ビットを17ビットにしても、データは $\tfrac{17}{16}$ 倍にしかなりません。1ビットたすだけで、値の細かさは2倍になるのです（⑧で、この効きめを dB で表します）。
+\end{phbaisuru}
+
+\bksubsection{2}{速すぎるゆれは化ける：エイリアシング}
+\label{ph:波-11:sec2}
+9-4⑭では、1秒に8000回とったデータで、\qty{7000}{Hz}の音と\qty{1000}{Hz}の音がまったく同じ点を通ることを見ました。とる回数が少ないと、速いゆれが、ゆっくりしたゆれに化けてしまうのです。これを\textbf{エイリアシング}（折り返し）といいます。\bkidx{えいりあしんぐ}{エイリアシング}
+
+\phboxhead{化けた先の周波数を求める}
+周波数 $f$ の音を $f_{\mathrm s}$ でとると、$f$ と、$f$ に $f_{\mathrm s}$ の整数倍をたしたり引いたりした周波数とは、区別がつきません（理由は⑤で式にします）。また、$\cos$ の負の周波数は、正の周波数と同じ形です（9-3）。だから、データから読みとれる周波数（見かけの周波数）は、
+\pheq{f_{\text{見}}=\bigl|f-nf_{\mathrm s}\bigr|\qquad（n\ \text{は、これが}\ 0\sim\tfrac{f_{\mathrm s}}{2}\ \text{に入る整数}）}{Hz}
+です。$f_{\mathrm s}=\qty{8000}{Hz}$ なら、\qty{7000}{Hz}は $|7000-8000|=\qty{1000}{Hz}$、\qty{9000}{Hz}も $|9000-8000|=\qty{1000}{Hz}$ に見えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=48mm, xmin=0, xmax=26, ymin=0, ymax=5.6, xtick={4,8,12,16,20,24}, ytick={1,3,4}, xlabel={もとの周波数 $f$（kHz）}, ylabel={見かけ $f_{\text{見}}$（kHz）}]
+  \fill[bkBlue!8] (axis cs:0,0) rectangle (axis cs:4,4);
+  \addplot[bkcurve, line width=1.4pt] coordinates {(0,0) (4,4) (8,0) (12,4) (16,0) (20,4) (24,0) (25.6,1.6)};
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:0,4) -- (axis cs:25.6,4);
+  \fill[bkRed] (axis cs:1,1) circle (2pt) (axis cs:7,1) circle (2pt) (axis cs:9,1) circle (2pt) (axis cs:15,1) circle (2pt);
+  \fill[bkOrange!85!black] (axis cs:3,3) circle (2pt) (axis cs:5,3) circle (2pt) (axis cs:11,3) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt, fill=white] at (axis cs:0.3,4.15) {$f_{\mathrm s}/2=\qty{4}{kHz}$（ナイキスト周波数）};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, inner sep=1pt] at (axis cs:3,1.5) {正しく};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black, inner sep=1pt] at (axis cs:3,0.7) {見える};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$f_{\mathrm s}=\qty{8}{kHz}$ でとったときの、もとの周波数と見かけの周波数。見かけの周波数は、$f_{\mathrm s}/2$ で折り返す線の上にある（だから「折り返し」とよぶ）。色をつけた所（$f_{\mathrm s}/2$ より下）だけが、正しく見える。赤い点（1・7・9・15\,kHz）はどれも 1\,kHz に、だいだいの点（3・5・11\,kHz）はどれも 3\,kHz に見える。}\label{ph:波-11:fig-orikaeshi}
+\end{bkfigure}
+
+\noindent 図\ref{ph:波-11:fig-orikaeshi}のように、見かけの周波数は、$f_{\mathrm s}/2$ と0の間を、のこぎりの歯のように行ったり来たりします。$f_{\mathrm s}/2$ を\textbf{ナイキスト周波数}といいます。\bkidx{ないきすとしゅうはすう}{ナイキスト周波数}ナイキスト周波数より低い音だけが、正しい周波数で記録できます（9-4⑭のサンプリング定理。⑤）。
+
+\noindent 9-4⑭と同じことを、Python で確かめましょう。1秒に8000回とる時刻で、\qty{1000}{Hz}・\qty{7000}{Hz}・\qty{9000}{Hz}の $\cos$ の値を8点ずつ計算します。
+\begin{phcode}[Python]
+import numpy as np
+fs = 8000                          \# 1秒に8000回とる
+m = np.arange(8)                   \# とる点の番号 0〜7
+for f in [1000, 7000, 9000]:
+    x = np.cos(2*np.pi*f*m/fs)     \# とった点の値
+    print(f, np.round(x, 3) + 0)   \# +0 で -0. を 0. にそろえる
+\end{phcode}
+\begin{phcodeout}
+1000 [ 1.     0.707  0.    -0.707 -1.    -0.707  0.     0.707]
+7000 [ 1.     0.707  0.    -0.707 -1.    -0.707  0.     0.707]
+9000 [ 1.     0.707  0.    -0.707 -1.    -0.707  0.     0.707]
+\end{phcodeout}
+3つの音の値は、1つ残らず同じです。データからは、どれがもとの音かを決められません。
+
+\phboxhead{はてな？の答え：車輪が逆に回って見える}
+\label{ph:波-11:hatena}動画は、1秒に24まいなどの写真（コマ）を続けて見せます。これは、車輪の向きを1秒に24回とるサンプリングです。9-4⑭と同じ数で考えましょう。スポークが8本（\ang{45}ごと）の車輪が、1秒に2.75回転しています。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 1コマの間に回る角は、$2.75\times\ang{360}\div24=\ang{41.25}$ です。
+\item スポークは\ang{45}ごとに同じ形なので、写真だけでは、どのスポークがどれかわかりません。\ang{41.25}進んだ車輪の写真は、\ang{3.75}もどった車輪の写真とまったく同じです（$41.25-45=-3.75$）。
+\item 目と脳は、「いちばん少なく動いた」と受けとります。だから、車輪は1コマに\ang{3.75}ずつ、1秒に $\ang{3.75}\times24=\ang{90}$、逆に回って見えるのです。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i/\xx in {0/0,1/30,2/60,3/90} {%
+    \rxlwheel{(\xx,0)}{41.25*\i}{bkBlue}
+    \draw[bkRed, line width=1.6pt] (\xx,0) -- ++(41.25*\i:10);
+    \fill[bkRed] (\xx,0)++(41.25*\i:10) circle (1.2);
+    \node[font=\sffamily\footnotesize, anchor=north] at (\xx,-12) {\i コマめ};}
+  \draw[bkOrange!85!black, line width=0.9pt, -{Stealth[length=2.2mm]}] (0,15) -- (90,15);
+  \node[font=\sffamily\footnotesize, anchor=south, fill=white, inner sep=1pt] at (45,15.5) {時間の向き（1コマ $=\tfrac{1}{24}$ 秒）};
+\end{tikzpicture}
+\bkfigcaption{1コマごとの車輪の写真（1本だけ赤くした）。赤いスポークは左回りに\ang{41.25}ずつ進む。色がなければ、どのスポークも同じに見えるので、前のコマのスポークの位置から右回りに\ang{3.75}ずれた所に、いつもスポークがある。だから目は「スポークが右回りに\ang{3.75}ずつもどった」と受けとる。}\label{ph:波-11:fig-sharin}
+\end{bkfigure}
+
+\noindent これを周波数で言いかえることもできます。スポークの形は1回転に8回くり返すので、スポークの形の周波数は $2.75\times8=\qty{22}{Hz}$ です。これを $f_{\mathrm s}=\qty{24}{Hz}$ でとると、$22-24=\qty{-2}{Hz}$。負の符号は「逆向きに回る」ことを表し、\qty{2}{Hz}は「スポークの形が1秒に2回くり返す」、つまり車輪は1秒に $2\div8=0.25$ 回転（\ang{90}）です。①〜③と同じ答えになりました。
+
+\begin{phmijika}[ストロボで回転数をはかる]
+工場では、回っている機械に、短い時間だけ光る明かり（\textbf{ストロボ}）を当てて、回転数をはかります。\bkidx{すとろぼ}{ストロボ}軸に1か所だけ印をつけ、ストロボの光る回数を変えていくと、光る間に軸がちょうど1回転するとき、印は止まって見えます。止まって見えるいちばん大きい光る回数が、1秒の回転数です。わざとエイリアシングを起こして、速い回転を「止めて」見ているのです。光る回数を少しだけ少なくすると、印はゆっくり前へ回って見え、ゆっくりした動きとして、回転のようすを観察できます。
+\end{phmijika}
+
+\begin{phbaisuru}{サンプリング周波数 $f_{\mathrm s}$}
+ナイキスト周波数 $f_{\mathrm s}/2$ も2倍になり、正しく記録できる音の上限が2倍になります。CD の \num{44100} 回なら上限は \qty{22050}{Hz}、2倍の \num{88200} 回なら \qty{44100}{Hz}です。図\ref{ph:波-11:fig-orikaeshi}ののこぎりの歯は、横に2倍に引きのばされます。動画なら、1秒に48コマにすると、車輪は1コマに $\ang{20.625}$ しか回らないので、正しい向きに回って見えます。
+\end{phbaisuru}
+
+\Needspace{12\baselineskip}\phstage{te}{表計算で、成分を取り出す}{4}
+
+\bksubsection{3}{表計算で DFT：周波数の目もり $\Delta f$}
+\label{ph:波-11:sec3}
+とった数の列から、どの周波数の成分がどれだけあるかを求めるのが、9-4⑫の DFT でした。
+\[X_k=\sum_{m=0}^{N-1}x_m\,e^{-j2\pi km/N},\qquad X_k\ \text{の周波数}=k\times\frac{f_{\mathrm s}}{N},\qquad\text{振幅}=\frac{2|X_k|}{N}\]
+$e^{-j\theta}=\cos\theta-j\sin\theta$（6-10）なので、$X_k$ の実部は「データ×$\cos$」の和、虚部は「データ×$\sin$」の和に負の符号をつけたものです。表計算でやってみましょう。
+
+\phboxhead{16点の DFT}
+1秒に16回（$f_{\mathrm s}=\qty{16}{Hz}$）とった、16個のデータ $x_m$ を考えます。中身は、\qty{2}{Hz}・振幅1の $\sin$ と、\qty{5}{Hz}・振幅0.5の $\cos$ をたしたもの、
+\[x_m=\sin\frac{2\pi\times2m}{16}+0.5\cos\frac{2\pi\times5m}{16}\]
+です（表計算では、答えを知らないふりをして、成分を取り出します）。
+
+表\ref{ph:波-11:tab-dft}のように、A列に $m$、B列に $x_m$ を入れます。C2 と D2 には、
+\begin{bkcenter}
+\texttt{C2 = COS(2*PI()*2*A2/16)}\qquad\texttt{D2 = SIN(2*PI()*2*A2/16)}
+\end{bkcenter}
+を入れて、下へコピーします。合計から、$X_2=0.000-8.000j$、振幅は $2\times8\div16=1$ です。\qty{2}{Hz}の $\sin$ の振幅1が、正しく取り出せました。C列・D列の「2」を「5」にすると、$\cos$ の合計が4.000、$\sin$ の合計が0.000で、振幅 $2\times4\div16=0.5$。\qty{5}{Hz}の $\cos$ の0.5です。$k=1$、3、4 などでは、どちらの合計も0になります。
+
+\begin{bkcenter}
+\bksheet{6}{17}{%
+1 & $m$ & $x_m$ & $\cos\frac{2\pi\cdot2m}{16}$ & $\sin\frac{2\pi\cdot2m}{16}$ & $x\times\cos$ & $x\times\sin$ \\
+2 & 0 & 0.500 & 1.000 & 0.000 & 0.500 & 0.000 \\
+3 & 1 & 0.516 & 0.707 & 0.707 & 0.365 & 0.365 \\
+4 & 2 & 0.646 & 0.000 & 1.000 & 0.000 & 0.646 \\
+5 & 3 & 1.169 & $-0.707$ & 0.707 & $-0.827$ & 0.827 \\
+\SetCell[c=7]{c} $\vdots$ & & & & & & \\
+17 & 15 & $-0.898$ & 0.707 & $-0.707$ & $-0.635$ & 0.635 \\
+18 & & & & 合計 & 0.000 & 8.000 \\}
+\bktabcaption{$k=2$（\qty{2}{Hz}）の成分を取り出す表。B列が $x_m$、C列・D列が $\cos$・$\sin$、E列・F列がかけた値。18行めが合計。}\label{ph:波-11:tab-dft}
+\end{bkcenter}
+
+\phboxhead{周波数の目もりは、はかった時間で決まる}
+$X_k$ の周波数は、$f_{\mathrm s}/N$ ごとのとびとびの値です。このきざみを $\Delta f$ と書きます。$N$ 個のデータをとるのにかかった時間を $T_{\mathrm m}=N\Delta t=N/f_{\mathrm s}$ とすると、
+\pheq{\Delta f=\frac{f_{\mathrm s}}{N}=\frac{1}{T_{\mathrm m}}}{Hz ＝ $\dfrac{1}{\text{s}}$}
+\label{ph:波-11:df}です。$\Delta f$ を\textbf{周波数の分解能}といいます。\bkidx{しゅうはすうのぶんかいのう}{周波数の分解能}
+
+\begin{phyomi}[$\Delta f=1/T_{\mathrm m}$]
+「周波数の目もりの細かさは、はかった時間の逆数」。\qty{1}{s}はかれば\qty{1}{Hz}きざみ、\qty{0.1}{s}なら\qty{10}{Hz}きざみです。$\Delta f$ は、$f_{\mathrm s}$ を上げても細かくなりません。$f_{\mathrm s}$ を2倍にすると、同じ時間にとる $N$ も2倍になるので、$f_{\mathrm s}/N$ は同じだからです。
+\end{phyomi}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pa, width=56mm, height=44mm, xmin=405, xmax=485, ymin=0, ymax=1.45, xtick={420,440,460,480}, ytick={0.5,1}, xlabel={Hz}, ylabel={振幅}]
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (rel axis cs:1,1) {$T_{\mathrm m}=\qty{0.1}{s}$};
+  \addplot[ycomb, bkBlue, line width=2.4pt, no markers] coordinates {(410,0.095) (420,0.131) (430,0.216) (440,1.187) (450,0.633) (460,0.209) (470,0.124) (480,0.088)};
+\end{axis}
+\begin{axis}[bkplot, at={(pa.east)}, anchor=west, xshift=16mm, width=56mm, height=44mm, xmin=405, xmax=485, ymin=0, ymax=1.45, xtick={420,440,460,480}, ytick={0.5,1}, xlabel={Hz}, ylabel={振幅}]
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (rel axis cs:1,1) {$T_{\mathrm m}=\qty{1}{s}$};
+  \addplot[ycomb, bkBlue, line width=1.2pt, no markers] coordinates {(440,1) (445,1)};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:447,0.95) {440 と 445};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{\qty{440}{Hz}と\qty{445}{Hz}（どちらも振幅1）をいっしょに鳴らした音の DFT（横軸は周波数）。左：\qty{0.1}{s}だけはかると（$\Delta f=\qty{10}{Hz}$）、目もりが\qty{10}{Hz}きざみなので、2つの音を区別できない。右：\qty{1}{s}はかると（$\Delta f=\qty{1}{Hz}$）、2本に分かれる。}\label{ph:波-11:fig-bunkai}
+\end{bkfigure}
+
+\noindent 図\ref{ph:波-11:fig-bunkai}の2つの音は、5\,Hz しかはなれていません。2つを分けて見るには、$\Delta f$ が 5\,Hz より細かい（はかった時間が\qty{0.2}{s}より長い）ことが必要です。これは、4-9 のうなり（1秒に5回）を1回以上聞かないと、2つの音だとわからない、ということと同じです。
+
+\begin{phbaisuru}{データの数 $N$（$f_{\mathrm s}$ は同じ）}
+はかった時間 $T_{\mathrm m}$ が2倍になり、$\Delta f$ は半分になります。\qty{44.1}{kHz}で1024点なら $\Delta f\approx\qty{43}{Hz}$、2048点なら約\qty{22}{Hz}です。細かく見たければ、長くはかります。ただし、はかっている間に音が変わってしまうと（話し声など）、その変化はぼやけて見えます。「いつ」と「何 Hz」を両方とも細かく決めることはできません（9-13 の「短い時間だけ見ると、周波数ははっきりしない」）。
+\end{phbaisuru}
+
+\begin{motto}[4]
+\textbf{短く区切って FFT をくり返す：スペクトログラム}\par
+話し声や音楽は、音の高さがどんどん変わります。そこで、録音を短い区間（たとえば\qty{0.1}{s}）に区切り、区間ごとに窓をかけて FFT をくり返します。横に時刻、たてに周波数をとり、成分の大きさを色の濃さで並べた図を\textbf{スペクトログラム}といいます。\bkidx{すぺくとろぐらむ}{スペクトログラム}ピアノで「ド・レ・ミ」（約\qty{262}{Hz}・\qty{294}{Hz}・\qty{330}{Hz}）とひくと、図のように、基本の音と2倍・3倍の音の線が、階段のように上がっていきます。
+\par\smallskip\noindent\begin{minipage}[c]{0.56\linewidth}\centering
+\begin{tikzpicture}[x=0.78mm, y=1mm]
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (62,0);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=2mm]}] (0,0) -- (0,40);
+  \foreach \i/\f in {0/26.2,1/29.4,2/33.0} {
+    \fill[bkBlue!80] (\i*19+1,\f*0.4) rectangle (\i*19+18,\f*0.4+1.2);
+    \fill[bkBlue!50] (\i*19+1,\f*0.8) rectangle (\i*19+18,\f*0.8+1.2);
+    \fill[bkBlue!25] (\i*19+1,\f*1.2) rectangle (\i*19+18,\f*1.2+1.2);}
+  \node[font=\sffamily\footnotesize, anchor=north] at (9.5,-1) {ド};
+  \node[font=\sffamily\footnotesize, anchor=north] at (28.5,-1) {レ};
+  \node[font=\sffamily\footnotesize, anchor=north] at (47.5,-1) {ミ};
+  \node[font=\sffamily\footnotesize, anchor=north east] at (62,-1) {時刻};
+  \node[font=\sffamily\footnotesize, anchor=south] at (0,40.5) {周波数};
+  \foreach \yy/\lab in {10.48/262, 20.96/524, 31.44/786} {\draw[bkInk, line width=0.5pt] (-1,\yy+0.6) -- (0,\yy+0.6); \node[font=\sffamily\footnotesize, anchor=east] at (-1.2,\yy+0.6) {\lab};}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\raggedright\small
+濃い線ほど成分が大きい（Hz の目もりはドの音）。区間を短くすると、音の変わり目がはっきりする代わりに、$\Delta f$ が粗くなり、線が太くぼやけます（③の2倍にすると）。
+\end{minipage}
+\end{motto}
+
+\phboxhead{FFT で速く計算する}
+DFT を式のとおりに計算すると、およそ $N^2$ 回のかけ算が要ります。9-4⑬の FFT は、データを半分ずつに分けてくり返し、およそ $N\log_2N$ 回で同じ答えを出します。1024点なら、約105万回が約1万回になります（例題6）。録音した音を、その場でスペクトルにして表示するアプリ（やってみよう）は、FFT のおかげで動いています。
+
+\bksubsection{4}{窓関数：もれを小さくする}
+\label{ph:波-11:sec4}
+9-4⑬のせいかくに言うとでは、\qty{440.5}{Hz}のように、目もり $\Delta f$ の整数倍でない周波数の音を DFT すると、成分が\qty{440}{Hz}と\qty{441}{Hz}に0.637ずつ、そのとなりにも0.21ずつと、周りに「もれて」出ることを見ました。これを\textbf{もれ}（リーケージ）といいます。\bkidx{もれ}{もれ（リーケージ）}9-4 で「物理の本で学ぶ」と約束した、もれを小さくする方法を作りましょう。
+
+\phboxhead{なぜ、もれるのか}
+DFT は、とった $N$ 個のデータが、そのままくり返していると考えて計算します（9-4⑫：$N\Delta t$ を1周期とした）。\qty{440.5}{Hz}の音を\qty{1}{s}はかると、波は440.5回、つまり半端な所で終わります。これをくり返しにすると、つなぎ目で波がとびます（図\ref{ph:波-11:fig-tsunagi}の上）。9-3 で見たように、角のある波（方形波など）には、たくさんの周波数の成分がふくまれています。つなぎ目のとびが、もとの音にない成分を、周りに作ってしまうのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pa, width=120mm, height=30mm, xmin=0, xmax=2.05, ymin=-1.3, ymax=1.3, xtick={1,2}, xticklabels={$T_{\mathrm m}$,$2T_{\mathrm m}$}, ytick=\empty, xlabel={時刻}, ylabel={窓なし}]
+  \addplot[bkBlue, line width=1.1pt, domain=0:1, samples=120] {sin(deg(2*pi*3.5*x))};
+  \addplot[bkBlue!50, line width=1.1pt, domain=1:2, samples=120] {sin(deg(2*pi*3.5*(x-1)))};
+  \draw[bkRed, line width=0.8pt] (axis cs:1,0) circle (3.4pt);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:1.12,0.65) {とぶ};
+\end{axis}
+\end{tikzpicture}\par\vspace{3mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=30mm, xmin=0, xmax=2.05, ymin=-1.3, ymax=1.3, xtick={1,2}, xticklabels={$T_{\mathrm m}$,$2T_{\mathrm m}$}, ytick=\empty, xlabel={時刻}, ylabel={ハンの窓}]
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:1, samples=60] {0.5-0.5*cos(deg(2*pi*x))};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=1:2, samples=60] {0.5-0.5*cos(deg(2*pi*(x-1)))};
+  \addplot[bkOrange!85!black, line width=1.1pt, domain=0:1, samples=160] {(0.5-0.5*cos(deg(2*pi*x)))*sin(deg(2*pi*3.5*x))};
+  \addplot[bkOrange!50, line width=1.1pt, domain=1:2, samples=160] {(0.5-0.5*cos(deg(2*pi*(x-1))))*sin(deg(2*pi*3.5*(x-1)))};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{はかった時間 $T_{\mathrm m}$ の中に、波が3.5回入っているデータ（濃い線）と、DFT が考えているくり返し（薄い線）。上：つなぎ目で波がとぶ。下：ハンの窓（破線）をかけると、両はしが0になり、なめらかにつながる。}\label{ph:波-11:fig-tsunagi}
+\end{bkfigure}
+
+\phboxhead{窓をかける}
+そこで、データの両はしを、なめらかに0にしてから DFT をします。データ $x_m$ に、はしで0、まん中で1になる数 $w_m$ をかけるのです。この $w_m$ を\textbf{窓関数}（まどかんすう）といいます。\bkidx{まどかんすう}{窓関数}窓から景色の一部だけを見るように、データの一部だけを、ふちをぼかして見るからです。よく使われるのは、$\cos$ を1周期だけ使った\textbf{ハンの窓}です。\bkidx{はんのまど}{ハンの窓}
+\pheq{w_m=0.5-0.5\cos\frac{2\pi m}{N}=\sin^2\frac{\pi m}{N}\qquad(m=0,\ 1,\ \cdots,\ N-1)}{1}
+2つめの形は、4-9 の2倍角の式 $\sin^2\theta=\dfrac{1-\cos2\theta}{2}$ で同じになります。$N=16$ なら、$w_m$ は0、0.038、0.146、0.309、0.5、0.691、0.854、0.962、1、0.962、…、0.038 と、山の形に並びます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=28mm] *{6}{Q[c,m,wd=12mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+周波数〔Hz〕 & 438 & 439 & 440 & 441 & 442 & 443 \\
+窓なし & 0.128 & 0.213 & 0.637 & 0.636 & 0.212 & 0.127 \\
+ハンの窓 & 0.024 & 0.170 & 0.849 & 0.849 & 0.170 & 0.024 \\
+\end{bktable}
+\bktabcaption{\qty{440.5}{Hz}・振幅1の音を、1秒に8000回、\qty{1}{s}とったデータの DFT の振幅（Python）。ハンの窓は、あとで述べる補正（2倍）をしたあとの値。}\label{ph:波-11:tab-more}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=58mm, xmin=408, xmax=473, ymin=-105, ymax=5, xtick={410,420,430,440,450,460,470}, ytick={-100,-80,-60,-40,-20,0}, xlabel={周波数（Hz）}, ylabel={振幅（dB）}, axis x line=bottom, axis y line=left, legend style={font=\sffamily\footnotesize, at={(0.99,0.98)}, anchor=north east, draw=bkLine, fill=white, inner sep=1pt}, legend cell align=left]
+  \addplot[bkBlue, line width=1pt, mark=*, mark size=0.9pt] coordinates {(410.0,-39.3) (412.0,-38.8) (414.0,-38.2) (416.0,-37.5) (418.0,-36.8) (420.0,-36.0) (422.0,-35.1) (424.0,-34.1) (426.0,-33.0) (428.0,-31.8) (430.0,-30.3) (432.0,-28.5) (434.0,-26.1) (435.0,-24.7) (436.0,-23.0) (437.0,-20.8) (438.0,-17.9) (439.0,-13.5) (440.0,-3.9) (441.0,-3.9) (442.0,-13.5) (443.0,-17.9) (444.0,-20.9) (445.0,-23.0) (446.0,-24.8) (447.0,-26.3) (448.0,-27.5) (450.0,-29.6) (452.0,-31.3) (454.0,-32.7) (456.0,-33.9) (458.0,-35.0) (460.0,-35.9) (462.0,-36.8) (464.0,-37.6) (466.0,-38.3) (468.0,-39.0) (470.0,-39.6)};
+  \addlegendentry{窓なし（●）}
+  \addplot[bkOrange!85!black, line width=1pt, dash pattern=on 3pt off 1.5pt, mark=square*, mark size=0.9pt, mark options={solid}] coordinates {(410.0,-99.0) (412.0,-97.2) (414.0,-95.3) (416.0,-93.3) (418.0,-91.1) (420.0,-88.6) (422.0,-85.9) (424.0,-83.0) (426.0,-79.6) (428.0,-75.7) (430.0,-71.1) (432.0,-65.6) (434.0,-58.5) (435.0,-54.1) (436.0,-48.7) (437.0,-41.8) (438.0,-32.3) (439.0,-15.4) (440.0,-1.4) (441.0,-1.4) (442.0,-15.4) (443.0,-32.3) (444.0,-41.8) (445.0,-48.7) (446.0,-54.1) (447.0,-58.5) (448.0,-62.3) (450.0,-68.5) (452.0,-73.5) (454.0,-77.7) (456.0,-81.3) (458.0,-84.5) (460.0,-87.3) (462.0,-89.9) (464.0,-92.2) (466.0,-94.3) (468.0,-96.3) (470.0,-98.1)};
+  \addlegendentry{ハンの窓（■）}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表\ref{ph:波-11:tab-more}の DFT を、振幅の dB（振幅1を 0\,dB とした $20\log_{10}$ の値。3-12）でかいた。窓なしのもれは\qty{30}{Hz}はなれても $-40$\,dB ほどしか下がらないが、ハンの窓では $-90$\,dB 近くまで下がる。}\label{ph:波-11:fig-more}
+\end{bkfigure}
+
+\noindent 表\ref{ph:波-11:tab-more}と図\ref{ph:波-11:fig-more}から、窓のよい所と、引きかえに失うものが読みとれます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{遠くへのもれが、ぐんと小さくなる}：\qty{20}{Hz}はなれた\qty{460}{Hz}では、窓なしの $-36$\,dB に対して、ハンの窓は $-87$\,dB。約 $10^{(87-36)/20}\approx350$ 分の1です。
+\item \textbf{山のてっぺんが、本当の振幅に近くなる}：窓なしの0.637に対して、0.849（本当は1）。
+\item \textbf{そのかわり、山の幅が広がる}：周波数がちょうど目もりにあるとき（\qty{440}{Hz}）、窓なしは1本の線ですが、ハンの窓は\qty{439}{Hz}・\qty{440}{Hz}・\qty{441}{Hz}に0.5・1・0.5 と、3本に広がります（例題7）。近い2つの音を分ける力は、少し下がります。
+\end{enumerate}
+窓をかけると、データの平均の大きさが小さくなります。ハンの窓の $w_m$ の平均は0.5なので、そのままだと振幅は半分に出ます。だから、ハンの窓をかけたときは、振幅を2倍（0.5でわる）にして読みます。表\ref{ph:波-11:tab-more}は、そうした値です。
+
+\phboxhead{大きな音のそばの、小さな音}
+もれがいちばん困るのは、大きな音のそばにある、小さな音を見たいときです。\qty{1000.5}{Hz}・振幅1の音と、\qty{1100.5}{Hz}・振幅0.001（$-60$\,dB）の音をいっしょに鳴らします（機械の大きな回転の音と、小さなきずの音のような場合です）。窓なしでは、大きな音のもれが、\qty{100}{Hz}はなれた所でも $-48$\,dB ほどあり、$-60$\,dB の小さな音は、もれの中にうもれて見えません。ハンの窓をかけると、もれは $-120$\,dB 以下になり、小さな音が $-61$\,dB のはっきりした山として見えます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[l,m,wd=84mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+窓の名前 & 特ちょうと、よく使う所 \\
+方形の窓（窓なし） & 山がいちばんせまい。もれが大きい。周波数が目もりにちょうど合う音、短いパルス \\
+ハンの窓 & もれが小さく、山の幅もほどほど。ふつうはこれを使う \\
+ハミングの窓 & ハンの窓に少し手を加え、すぐとなりのもれを小さくした \\
+フラットトップの窓 & 山の上が平らで、振幅を正しく読める。山の幅は広い \\
+\end{bktable}
+\bktabcaption{よく使われる窓関数（名前と特ちょうだけ。式は専門の本で）。何を見たいかで選ぶ。}\label{ph:波-11:tab-mado}
+\end{bkcenter}
+
+\noindent Python では、$w_m$ の式で窓を作り、データにかけてから FFT をします。
+\begin{phcode}[Python]
+import numpy as np
+fs, N = 8000, 8000                 \# 1秒に8000回、1秒分
+t = np.arange(N) / fs
+x = np.sin(2*np.pi*440.5*t)        \# 目もりにのらない 440.5 Hz
+w = 0.5 - 0.5*np.cos(2*np.pi*np.arange(N)/N)   \# ハンの窓
+A0 = 2*np.abs(np.fft.rfft(x)) / N              \# 窓なし
+Aw = 2*np.abs(np.fft.rfft(x*w)) / N / 0.5      \# 窓あり（平均0.5で補正）
+print(np.round(A0[438:444], 3))
+print(np.round(Aw[438:444], 3))
+\end{phcode}
+\begin{phcodeout}[実行結果]
+[0.128 0.213 0.637 0.636 0.212 0.127]
+[0.024 0.17  0.849 0.849 0.17  0.024]
+\end{phcodeout}
+
+\begin{phmodel}[DFT でスペクトルを読む]
+\phignore{はかっている間の、音の大きさや高さの変化。AD 変換器の雑音（⑦⑧）。}
+\phassume{音は、はかった時間の中で、同じ成分のままくり返す（時間で変わらない）。成分どうしは、たし算で重なるだけ（線形）。$f_{\mathrm s}/2$ より高い成分はない。}
+\phlimit{話し声や楽器の立ち上がりのように、成分が短い時間で変わるとき（はかる時間を短く区切って、何回も DFT をする）。大きな音で機器がひずむとき（もとにない成分が出る）。}
+\end{phmodel}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{定理・雑音・情報量を式で導く}{5}
+
+\bksubsection{5}{サンプリング定理：スペクトルがくり返す}
+\label{ph:波-11:sec5}
+9-4⑭では、サンプリング定理を「いちばん高い周波数の2倍より大きいサンプリング周波数でとれば、とったデータから、もとの波をもどせる」とまとめました。ここでは、②で後回しにした「なぜ $f$ と $f\pm f_{\mathrm s}$ が区別できないのか」を式で確かめ、定理をスペクトルの形で見ます。
+
+\phboxhead{とびとびの時刻では、$f_{\mathrm s}$ ずれた周波数が同じに見える}
+周波数 $f$ の回る矢印 $e^{j2\pi ft}$（9-3）を、時刻 $t=m\Delta t=m/f_{\mathrm s}$（$m$ は整数）でとります。周波数を $f_{\mathrm s}$ の整数倍 $nf_{\mathrm s}$ だけずらした矢印をとると、
+\begin{bkhenkei}[0.55]
+e^{j2\pi(f+nf_{\mathrm s})\frac{m}{f_{\mathrm s}}}=e^{j2\pi f\frac{m}{f_{\mathrm s}}}\times e^{j2\pi nm} & 指数の和を積に分ける（6-10） \\
+e^{j2\pi nm}=1 & $nm$ は整数。何周回っても同じ向き \\
+e^{j2\pi(f+nf_{\mathrm s})\frac{m}{f_{\mathrm s}}}=e^{j2\pi f\frac{m}{f_{\mathrm s}}} & どの $m$ でも同じ値 \\
+\end{bkhenkei}
+です。とった点の値はすべて同じなので、データだけでは $f$ と $f+nf_{\mathrm s}$ を区別できません。音のような実数の信号は、正の周波数 $f$ と負の周波数 $-f$ の矢印の組です（9-3）。だから、データの中では、$-f$ も $nf_{\mathrm s}-f$ と同じに見えます。②の $f_{\text{見}}=|f-nf_{\mathrm s}|$ は、この2つのことから出てきたのです。
+
+\phboxhead{スペクトルは $f_{\mathrm s}$ ごとにくり返す}
+もとの音のスペクトル（9-4 のフーリエ変換の大きさ）が、$-f_{\max}$ から $f_{\max}$ までの山だとします。とったデータのスペクトルは、この山を、$f_{\mathrm s}$ ずつずらして、いくつも並べたものになります（図\ref{ph:波-11:fig-kurikaesu}）。
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item $f_{\mathrm s}>2f_{\max}$ なら、となりの山と重なりません。$f_{\mathrm s}/2$ より下の山だけを残すフィルター（⑥）を通せば、もとの山だけが取り出せ、もとの波にもどせます。
+\item $f_{\mathrm s}<2f_{\max}$ なら、となりの山のすそが入りこんで重なります。重なった所は、もとの成分か、化けてきた成分か、区別できません。これがエイリアシングです。
+\end{itemize}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pa, width=124mm, height=30mm, xmin=-1.6, xmax=3.3, ymin=0, ymax=1.35, xtick={-1,0,1,2,3}, xticklabels={$-f_{\mathrm s}$,0,$f_{\mathrm s}$,$2f_{\mathrm s}$,$3f_{\mathrm s}$}, ytick=\empty, axis y line=none]
+  \addplot[fill=bkBlue!35, draw=bkBlue, line width=0.8pt] coordinates {(-0.35,0) (0,1) (0.35,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt] coordinates {(0.65,0) (1,1) (1.35,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt] coordinates {(1.65,0) (2,1) (2.35,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt] coordinates {(-1.35,0) (-1,1) (-0.65,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt] coordinates {(2.65,0) (3,1) (3.3,0.143) (3.3,0)} -- cycle;
+  \draw[bkRed, line width=0.8pt, dashed] (axis cs:-0.5,0) -- (axis cs:-0.5,1.25) -- (axis cs:0.5,1.25) -- (axis cs:0.5,0);
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:0.52,1.24) {残す所（$\pm f_{\mathrm s}/2$ の内側）};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:-1.6,1.25) {上：$f_{\mathrm s}>2f_{\max}$};
+\end{axis}
+\end{tikzpicture}\par\vspace{3mm}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=124mm, height=30mm, xmin=-1.6, xmax=3.3, ymin=0, ymax=1.35, xtick={-1,0,1,2,3}, xticklabels={$-f_{\mathrm s}$,0,$f_{\mathrm s}$,$2f_{\mathrm s}$,$3f_{\mathrm s}$}, ytick=\empty, axis y line=none, xlabel={周波数}]
+  \addplot[fill=bkBlue!35, draw=bkBlue, line width=0.8pt] coordinates {(-0.7,0) (0,1) (0.7,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt, fill opacity=0.8] coordinates {(0.3,0) (1,1) (1.7,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt, fill opacity=0.8] coordinates {(1.3,0) (2,1) (2.7,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt, fill opacity=0.8] coordinates {(-1.6,0.143) (-1,1) (-0.3,0) (-1.6,0)} -- cycle;
+  \addplot[fill=bkRed!45, draw=none] coordinates {(0.3,0) (0.5,0.2857) (0.7,0)} -- cycle;
+  \addplot[fill=bkRed!45, draw=none] coordinates {(-0.3,0) (-0.5,0.2857) (-0.7,0)} -- cycle;
+  \addplot[fill=bkGray!25, draw=bkGray, line width=0.8pt, fill opacity=0.8] coordinates {(2.3,0) (3,1) (3.3,0.571) (3.3,0)} -- cycle;
+  \addplot[fill=bkRed!45, draw=none] coordinates {(1.3,0) (1.5,0.2857) (1.7,0)} -- cycle;
+  \addplot[fill=bkRed!45, draw=none] coordinates {(2.3,0) (2.5,0.2857) (2.7,0)} -- cycle;
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:0.5,0.62) {重なる};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:-1.6,1.25) {下：$f_{\mathrm s}<2f_{\max}$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{とったデータのスペクトル。濃い山がもとの音（$-f_{\max}$〜$f_{\max}$）、薄い山は $f_{\mathrm s}$ ずつずれて現れたもの。上：$f_{\mathrm s}$ が十分大きく、山が重ならない。下：$f_{\mathrm s}<2f_{\max}$ で、すそが重なる（エイリアシング）。}\label{ph:波-11:fig-kurikaesu}
+\end{bkfigure}
+
+\begin{phflow}[サンプリング定理]
+\phflowrow{$F(\omega)$（9-4 のフーリエ変換）}{時間を $1/f_{\mathrm s}$ ごとに\\とびとびにとる}{スペクトルが $f_{\mathrm s}$ ごとにくり返す}
+\phflowrow{$f_{\mathrm s}$ ごとにくり返すスペクトル}{山が重ならない\\（$f_{\max}<f_{\mathrm s}/2$）}{$f_{\mathrm s}>2f_{\max}$ なら、もとの波にもどせる}
+\end{phflow}
+
+\phboxhead{とる前に、高い音を取り除く}
+\label{ph:波-11:aa}サンプリング定理を守るには、AD 変換器に入れる前に、$f_{\mathrm s}/2$ より高い成分を、アナログのフィルター（⑥）で取り除いておきます。これを\textbf{アンチエイリアシングフィルター}といいます。\bkidx{あんちえいりあしんぐふぃるたー}{アンチエイリアシングフィルター}CD では、人に聞こえる上限の約\qty{20}{kHz}までは通し、\qty{22.05}{kHz}より上は止める、とても急なフィルターが要ります。今の多くの機器は、いったん何倍も高い $f_{\mathrm s}$ でとり（ゆるいフィルターですむ）、そのあとディジタルの計算でフィルターをかけてから、とる回数を減らしています。
+
+\begin{seikaku}
+「2倍より大きい」の「より大きい」には意味があります。\qty{1}{kHz}の $\sin$ を、ちょうど2倍の\qty{2}{kHz}でとると、とる時刻がちょうど $\sin$ の0の所に重なることがあり、データが全部0になってしまいます。また、とった点から「もとの波をもどす」には、1つ1つの点を、$\sin(\pi f_{\mathrm s}t)/(\pi f_{\mathrm s}t)$ の形のなめらかな山におきかえてたし合わせます（専門の本で）。この山は左右にどこまでも広がるので、本当は、限りなく長いデータが要ります。実際の機器は、有限の長さで打ち切った近似を使います。
+\end{seikaku}
+
+\begin{phmodel}[サンプリング定理]
+\phignore{AD 変換器の、とる時刻の小さなずれ（ジッター）。量子化の誤差（⑧）。}
+\phassume{もとの音には、$f_{\max}$ より高い成分がない。とる時刻のきざみはいつも同じ。}
+\phlimit{フィルターで取りきれない高い成分が残るとき。シンバルの音のように、聞こえない高い成分が強い音を、フィルターなしでとるとき。}
+\end{phmodel}
+
+\bksubsection{6}{フィルター：RC の低域フィルターと移動平均}
+\label{ph:波-11:sec6}
+ある周波数の範囲だけを通し、ほかを弱める装置や計算を\textbf{フィルター}といいます。\bkidx{ふぃるたー}{フィルター}低い周波数だけを通すものを\textbf{低域フィルター}（ローパスフィルター）といいます。\bkidx{ていいきふぃるたー}{低域フィルター}ここでは、アナログの RC の回路と、ディジタルの移動平均を見ます。
+
+\phboxhead{RC の低域フィルター}
+9-8⑨では、抵抗とコンデンサーで作る回路の伝達関数が $G(s)=1/(\tau s+1)$ で、$s=j\omega$ を入れると「その周波数の倍率」になることを見ました（$\tau$ は時定数＝抵抗×静電容量）。倍率の大きさは、$\omega=2\pi f$ として
+\[|G|=\frac{1}{\sqrt{1+(2\pi f\tau)^2}}\]
+と書けます。ここで $f_{\mathrm c}=1/(2\pi\tau)$ とおくと、$2\pi f\tau=f/f_{\mathrm c}$ なので、
+\pheq{|G|=\frac{1}{\sqrt{1+(f/f_{\mathrm c})^2}}}{1 ＝ 1}
+です。$f_{\mathrm c}$ を\textbf{遮断周波数}（しゃだんしゅうはすう）といいます。\bkidx{しゃだんしゅうはすう}{遮断周波数}$f=f_{\mathrm c}$ のとき、倍率は $1/\sqrt2\approx0.707$ で、電力は半分です。dB で表すと、約 $-3$\,dB です。
+
+\begin{phyomi}[$|G|=1/\sqrt{1+(f/f_{\mathrm c})^2}$]
+「$f_{\mathrm c}$ よりずっと低い音は、ほぼそのまま（倍率1）。$f_{\mathrm c}$ よりずっと高い音は、倍率がほぼ $f_{\mathrm c}/f$」。$f$ が10倍になるごとに、倍率は $\tfrac{1}{10}$、つまり $-20$\,dB ずつ下がります。
+\end{phyomi}
+
+抵抗 \qty{1}{k\ohm}、静電容量 \qty{0.1}{\micro F}なら、
+\[\tau=1000\times0.1\times10^{-6}=\qty{1e-4}{s},\qquad f_{\mathrm c}=\frac{1}{2\pi\times10^{-4}}\approx\qty{1.6}{kHz}\]
+です。
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] *{6}{Q[c,m,wd=12.5mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+周波数 $f$〔Hz〕 & 100 & 1000 & 1592 & 2000 & \num{10000} & \num{16000} \\
+倍率 $|G|$ & 0.998 & 0.847 & 0.707 & 0.623 & 0.157 & 0.099 \\
+dB & $-0.02$ & $-1.4$ & $-3.0$ & $-4.1$ & $-16.1$ & $-20.1$ \\
+\end{bktable}
+\bktabcaption{$\tau=\qty{1e-4}{s}$ の RC の低域フィルター（$f_{\mathrm c}\approx\qty{1592}{Hz}$）の倍率。}\label{ph:波-11:tab-rc}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{semilogxaxis}[bkplot, axis x line=bottom, axis y line=left, width=116mm, height=54mm, xmin=10, xmax=100000, ymin=-52, ymax=5, ytick={-40,-30,-20,-10,0}, xtick={10,100,1000,10000,100000}, xticklabels={10,100,1000,\num{10000},\num{100000}}, xlabel={周波数 $f$（Hz）}, ylabel={倍率（dB）}, legend style={font=\sffamily\footnotesize, at={(0.02,0.04)}, anchor=south west, draw=bkLine, fill=white, inner sep=1pt}, legend cell align=left]
+  \addplot[bkcurve, domain=10:100000, samples=120] {-10*log10(1+(x/1591.5)^2)};
+  \addlegendentry{1段（実線）}
+  \addplot[bkcurve2, dash pattern=on 4pt off 2pt, domain=10:28000, samples=120] {-20*log10(1+(x/1591.5)^2)};
+  \addlegendentry{同じものを2段（破線。間にバッファー）}
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:1591.5,-52) -- (axis cs:1591.5,0);
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:1700,-1) {$f_{\mathrm c}$ で $-3$\,dB};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:18000,-14) {10倍ごとに $-20$\,dB};
+\end{semilogxaxis}
+\end{tikzpicture}
+\bkfigcaption{RC の低域フィルターの倍率（ボード線図。横軸は対数の目もり、3-12・9-8）。2段にすると、dB はちょうど2倍（たし算）になる。}\label{ph:波-11:fig-bode}
+\end{bkfigure}
+
+\begin{phmijika}[オーディオの dB は、たし算で見積もる]
+9-8 の工学の囲みで、「スピーカー・アンプ・部屋の響きを直列の箱と考えると、全体の dB は、それぞれの dB のたし算で見積もれる」と書きました。たとえば、ある低い音（\qty{100}{Hz}）について、アンプが $+20$\,dB、小さなスピーカーが $-8$\,dB（低い音が苦手）、部屋の響きが $+3$\,dB なら、全体は $20-8+3=+15$\,dB です（数は例）。音楽のイコライザーは、周波数ごとに、この dB の足し引きを調整する装置です。苦手な $-8$\,dB の所をイコライザーで $+8$\,dB 上げれば、ほかの周波数とそろいます。
+\end{phmijika}
+
+\phboxhead{ディジタルのフィルター：移動平均}
+とった数の列に、計算でフィルターをかけることもできます。いちばん簡単なのは、となりあう $M$ 個の値の平均を、新しい値にする\textbf{移動平均}です。\bkidx{いどうへいきん}{移動平均}
+\pheq{y_m=\frac{x_m+x_{m-1}+\cdots+x_{m-M+1}}{M}}{V ＝ V}
+たとえば $M=3$ で、2、5、3、6、4、7、5 の列は、$(2+5+3)\div3\approx3.33$、4.67、4.33、5.67、5.33 になります。上がり下がりのはげしい所がならされ、ゆっくりした変化だけが残ります。低域フィルターの働きです。
+
+移動平均には、決まった周波数の成分を、ちょうど0にする性質があります。$M$ 個の点が、ある $\sin$ のちょうど1周期にあたるとき、1周期の $\sin$ の平均は0（5-15）なので、その成分は消えます。そのような周波数は、
+\pheq{f=\frac{f_{\mathrm s}}{M},\ \frac{2f_{\mathrm s}}{M},\ \frac{3f_{\mathrm s}}{M},\ \cdots}{Hz}
+です。回る矢印の和（7-10 の等比数列の和）を計算すると、倍率の大きさは
+\[|H|=\left|\frac{\sin(\pi fM/f_{\mathrm s})}{M\sin(\pi f/f_{\mathrm s})}\right|\]
+とわかります（分子が0になる所が、上の周波数です）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=116mm, height=46mm, xmin=0, xmax=210, ymin=0, ymax=1.12, xtick={25,50,100,150,200}, ytick={0.5,1}, xlabel={周波数 $f$（Hz）}, ylabel={倍率 $|H|$}]
+  \addplot[bkcurve, domain=0.2:210, samples=300] {abs(sin(deg(pi*x*20/1000))/(20*sin(deg(pi*x/1000))))};
+  \fill[bkRed] (axis cs:50,0) circle (2pt) (axis cs:100,0) circle (2pt) (axis cs:150,0) circle (2pt) (axis cs:200,0) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:62,0.42) {50\,Hz が消える};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$f_{\mathrm s}=\qty{1000}{Hz}$、$M=20$ の移動平均の倍率。$1000\div20=\qty{50}{Hz}$ とその整数倍が、ちょうど0になる（●）。\qty{5}{Hz}は0.98倍で、ほぼそのまま通る。}\label{ph:波-11:fig-idou}
+\end{bkfigure}
+
+\noindent 心電図や地震計のような、ゆっくり変わる信号に、電源の\qty{50}{Hz}の雑音（ハム）がのっているとき、$f_{\mathrm s}=\qty{1000}{Hz}$ なら $M=20$ の移動平均で、ハムとその整数倍をまとめて消せます（\qty{60}{Hz}の地域で、$f_{\mathrm s}=\qty{1200}{Hz}$ なら $M=20$）。
+
+\begin{phbaisuru}{平均する点の数 $M$}
+0になる周波数 $f_{\mathrm s}/M$ が半分になり、もっと低い周波数まで弱めます。ならし方は強くなりますが、信号が急に変わったとき、出てくる値がそれに追いつくまでの時間（$M$ 点分）も2倍になります。よくならすことと、すばやく追いつくことは、両立しません。
+\end{phbaisuru}
+
+\bksubsection{7}{雑音と S/N 比：平均すると雑音が減る}
+\label{ph:波-11:sec7}
+はかった信号には、いつも\textbf{雑音}（ノイズ）がまじります。\bkidx{ざつおん}{雑音（ノイズ）}電子の熱による動き、周りの電気の機器、空気のゆれなど、原因はさまざまです。信号が雑音の何倍大きいかを、dB で表したものを \textbf{S/N 比}（エス・エヌ比、信号対雑音比）といいます。\bkidx{えすえぬひ}{S/N 比}信号の電力を $P_{\mathrm s}$、雑音の電力を $P_{\mathrm n}$ とすると、
+\pheq{\text{S/N 比}=10\log_{10}\frac{P_{\mathrm s}}{P_{\mathrm n}}=20\log_{10}\frac{\text{信号の実効値}}{\text{雑音の実効値}}}{dB}
+です（3-12⑦の、電力は10倍・電圧は20倍）。実効値は、値の2乗の平均の平方根です。平均が0の雑音なら、実効値は標準偏差 $\sigma$（3-14）と同じです。
+
+\phboxhead{同じ信号を $K$ 回はかって平均する}
+同じできごとを何回もくり返せるとき（超音波を何回も送る、同じ音を何回も鳴らす）、はかるたびの信号は同じ形で、雑音だけがでたらめに変わります。$K$ 回の記録を、時刻をそろえて平均すると、
+\begin{itemize}[leftmargin=1.2\zw, itemsep=1pt, topsep=2pt, label={\color{bkTheme}●}]
+\item 信号：同じ値を $K$ 回たして $K$ でわるので、そのまま。
+\item 雑音：でたらめな値の和では、\textbf{分散がたし算}になります（3-17⑤のサイコロの和と同じ）。$K$ 回の和の分散は $K\sigma^2$、標準偏差は $\sqrt K\,\sigma$。$K$ でわると $\sigma/\sqrt K$ です（3-14 の $\sigma/\sqrt n$ と同じしくみ）。
+\end{itemize}
+\pheq{\sigma_K=\frac{\sigma}{\sqrt K}}{V ＝ V}
+信号はそのままで、雑音の実効値が $1/\sqrt K$ になるので、
+\[\text{S/N 比がよくなる分}=20\log_{10}\sqrt K=10\log_{10}K\ \text{〔dB〕}\]
+です。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, scale only axis, width=30mm, height=26mm, xmin=0, xmax=200, ymin=-3, ymax=3.8, xtick={0,100,200}, ytick={-2,0,2}]
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (rel axis cs:1,1) {$K=1$};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:200, samples=80] {sin(deg(2*pi*10*x/1000))};
+  \addplot[bkBlue, line width=0.8pt] coordinates {(0.0,0.35) (4.0,1.15) (8.0,0.85) (12.0,-0.05) (16.0,0.88) (20.0,0.96) (24.0,-1.71) (28.0,1.2) (32.0,0.53) (36.0,0.26) (40.0,-0.64) (44.0,0.27) (48.0,0.72) (52.0,0.61) (56.0,0.55) (60.0,-0.53) (64.0,-0.57) (68.0,-2.55) (72.0,-1.79) (76.0,-1.34) (80.0,-0.18) (84.0,0.04) (88.0,-0.24) (92.0,-0.58) (96.0,-0.39) (100.0,-0.65) (104.0,1.47) (108.0,2.24) (112.0,0.49) (116.0,0.13) (120.0,2.47) (124.0,3.55) (128.0,0.14) (132.0,0.5) (136.0,0.45) (140.0,-0.51) (144.0,0.88) (148.0,0.41) (152.0,-1.18) (156.0,-1.54) (160.0,0.31) (164.0,-0.07) (168.0,-1.5) (172.0,-1.01) (176.0,-1.57) (180.0,-0.46) (184.0,0.04) (188.0,-2.24) (192.0,0.48) (196.0,0.86)};
+\end{axis}
+\end{tikzpicture}\hspace{5mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, scale only axis, width=30mm, height=26mm, xmin=0, xmax=200, ymin=-3, ymax=3.8, xtick={0,100,200}, ytick={-2,0,2}]
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (rel axis cs:1,1) {$K=16$};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:200, samples=80] {sin(deg(2*pi*10*x/1000))};
+  \addplot[bkBlue, line width=0.8pt] coordinates {(0.0,-0.03) (4.0,-0.22) (8.0,0.53) (12.0,0.79) (16.0,0.81) (20.0,1.02) (24.0,0.94) (28.0,1.26) (32.0,1.13) (36.0,0.93) (40.0,0.23) (44.0,0.48) (48.0,0.21) (52.0,-0.45) (56.0,-0.18) (60.0,-0.22) (64.0,-0.57) (68.0,-0.64) (72.0,-1.63) (76.0,-1.18) (80.0,-0.93) (84.0,-0.43) (88.0,-0.81) (92.0,-0.36) (96.0,-0.3) (100.0,-0.0) (104.0,0.63) (108.0,0.69) (112.0,1.04) (116.0,0.75) (120.0,1.23) (124.0,1.29) (128.0,0.58) (132.0,0.77) (136.0,0.87) (140.0,0.6) (144.0,0.57) (148.0,0.06) (152.0,-0.12) (156.0,0.05) (160.0,-0.54) (164.0,-0.49) (168.0,-1.14) (172.0,-1.02) (176.0,-1.07) (180.0,-0.82) (184.0,-1.02) (188.0,-0.81) (192.0,-0.82) (196.0,-0.59)};
+\end{axis}
+\end{tikzpicture}\hspace{5mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, scale only axis, width=30mm, height=26mm, xmin=0, xmax=200, ymin=-3, ymax=3.8, xtick={0,100,200}, ytick={-2,0,2}]
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (rel axis cs:1,1) {$K=100$};
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:200, samples=80] {sin(deg(2*pi*10*x/1000))};
+  \addplot[bkBlue, line width=0.8pt] coordinates {(0.0,-0.01) (4.0,0.34) (8.0,0.52) (12.0,0.58) (16.0,0.89) (20.0,0.98) (24.0,1.05) (28.0,0.94) (32.0,0.87) (36.0,0.84) (40.0,0.35) (44.0,0.32) (48.0,0.23) (52.0,-0.13) (56.0,-0.44) (60.0,-0.65) (64.0,-0.81) (68.0,-0.96) (72.0,-0.8) (76.0,-1.1) (80.0,-0.95) (84.0,-0.9) (88.0,-0.87) (92.0,-0.43) (96.0,-0.16) (100.0,-0.02) (104.0,0.26) (108.0,0.53) (112.0,0.7) (116.0,0.81) (120.0,0.94) (124.0,0.82) (128.0,1.0) (132.0,0.92) (136.0,0.68) (140.0,0.44) (144.0,0.31) (148.0,0.15) (152.0,-0.04) (156.0,-0.22) (160.0,-0.61) (164.0,-0.82) (168.0,-0.91) (172.0,-0.98) (176.0,-1.0) (180.0,-0.96) (184.0,-0.87) (188.0,-0.74) (192.0,-0.32) (196.0,-0.1)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{横軸は時刻（ms）。振幅1・\qty{10}{Hz}の $\sin$（破線）に、標準偏差1の雑音がまじった記録を、$K$ 回平均した（実線。Python で作った例）。残った雑音の標準偏差は、$K=1$ で0.92、16 で0.26、100 で0.10。$1/\sqrt K$（1、0.25、0.1）とよく合う。}\label{ph:波-11:fig-heikin}
+\end{bkfigure}
+
+図\ref{ph:波-11:fig-heikin}は、次のプログラムで作りました。雑音は、\texttt{rng.normal}（標準偏差1のでたらめな数を出す命令）で、毎回ちがうものを作ります。
+\begin{phcode}[Python]
+import numpy as np
+rng = np.random.default\_rng(1)
+t = np.arange(200) / 1000            \# 1秒に1000回、0.2秒分
+s = np.sin(2*np.pi*10*t)             \# 10 Hz・振幅1 の信号
+for K in [1, 16, 100]:
+    acc = np.zeros(len(t))
+    for k in range(K):
+        acc += s + rng.normal(0, 1, len(t))   \# 毎回ちがう雑音
+    acc /= K                                  \# K 回の平均
+    print(K, round(np.std(acc - s), 3))       \# 残った雑音
+\end{phcode}
+\begin{phcodeout}
+1 0.924
+16 0.259
+100 0.101
+\end{phcodeout}
+
+\begin{phyomi}[$\sigma_K=\sigma/\sqrt K$]
+「平均の回数を100倍にすると、雑音は10分の1、S/N 比は 20\,dB よくなる」。雑音は打ち消し合いながら少しずつしか増えないのに、信号はそろってたし算されるからです。
+\end{phyomi}
+
+\begin{phbaisuru}[4倍]{平均の回数 $K$}
+雑音は $1/\sqrt4=\tfrac12$ になり、S/N 比は $10\log_{10}4\approx6$\,dB よくなります。さらに 6\,dB よくするには、また4倍（全部で16倍）の回数が要ります。回数を増やすほど、1回あたりの効きめは小さくなります。
+\end{phbaisuru}
+
+\begin{phmijika}[病院の検査と、平均]
+耳の検査の一つに、小さな音を何百回から何千回も聞かせ、そのたびに頭の表面に出る、とても小さな電圧の変化を平均するものがあります（脳の電気の反応は、ほかの電気の雑音にうもれるほど小さい）。超音波の機器や、宇宙からの弱い電波を受ける電波望遠鏡も、くり返しとった記録を平均して、雑音の中から信号を取り出しています。
+\end{phmijika}
+
+\begin{seikaku}
+平均で減るのは、はかるたびにでたらめに変わる雑音だけです。電源のハムのように、はかるたびに同じ形で入る雑音は、信号と同じようにそろってたされるので、平均しても減りません（⑥のフィルターで取り除きます）。また、はかるたびに信号の時刻がずれると、信号どうしも打ち消し合ってしまいます。時刻をそろえる（同期をとる）ことが大切です。
+\end{seikaku}
+
+\bksubsection{8}{量子化の雑音：1ビットで約 6\,dB}
+\label{ph:波-11:sec8}
+①の量子化では、値を段に丸めるので、いつも小さな誤差 $e$ が出ます。この誤差は、信号にまじった雑音と考えられます（\textbf{量子化雑音}）。\bkidx{りょうしかざつおん}{量子化雑音}何ビットあれば十分かを、S/N 比で求めましょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=pa, width=58mm, height=46mm, xmin=0, xmax=4.2, ymin=0, ymax=4.6, xtick={1,2,3,4}, xticklabels={$q$,$2q$,$3q$,$4q$}, ytick={1,2,3,4}, yticklabels={$q$,$2q$,$3q$,$4q$}, xlabel={入る値}, ylabel={丸めた値}]
+  \addplot[bkGray, line width=0.6pt, dashed, domain=0:4.2] {x};
+  \addplot[bkOrange!85!black, line width=1.3pt, const plot] coordinates {(0,0) (0.5,1) (1.5,2) (2.5,3) (3.5,4) (4.2,4)};
+\end{axis}
+\begin{axis}[bkplot, axis x line=bottom, at={(pa.east)}, anchor=west, xshift=14mm, width=58mm, height=46mm, xmin=0, xmax=4.2, ymin=-0.8, ymax=0.8, xtick={1,2,3,4}, xticklabels={$q$,$2q$,$3q$,$4q$}, ytick={-0.5,0.5}, yticklabels={$-q/2$,$q/2$}, xlabel={入る値}, ylabel={誤差 $e$}]
+  \addplot[bkRed, line width=1.1pt] coordinates {(0,0) (0.5,-0.5)};
+  \addplot[bkRed, line width=1.1pt] coordinates {(0.5,0.5) (1.5,-0.5)};
+  \addplot[bkRed, line width=1.1pt] coordinates {(1.5,0.5) (2.5,-0.5)};
+  \addplot[bkRed, line width=1.1pt] coordinates {(2.5,0.5) (3.5,-0.5)};
+  \addplot[bkRed, line width=1.1pt] coordinates {(3.5,0.5) (4.2,-0.2)};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：いちばん近い段へ丸める（きざみ $q$。破線は丸める前）。右：丸めた値−入る値＝誤差 $e$。誤差は、いつも $-q/2$ から $q/2$ の間にある。}\label{ph:波-11:fig-ryoushi}
+\end{bkfigure}
+
+\phboxhead{誤差の大きさ（2乗の平均）}
+信号が大きく、こまかく動いているときは、誤差 $e$ は $-q/2$ から $q/2$ の間のどの値にも、同じくらいの起こりやすさでなります。$e^2$ の平均は、$e^2$ をこの区間で積分して、区間の長さ $q$ でわったものです（5-10）。
+\begin{bkhenkei}[0.55]
+\overline{e^2}=\frac{1}{q}\int_{-q/2}^{q/2}e^2\,\dd e & 平均＝積分÷区間の長さ \\
+=\frac{1}{q}\Bigl[\frac{e^3}{3}\Bigr]_{-q/2}^{q/2}=\frac{1}{q}\cdot\frac{2}{3}\cdot\frac{q^3}{8} & 原始関数 $e^3/3$（5-10） \\
+=\frac{q^2}{12} & 量子化雑音の電力 \\
+\end{bkhenkei}
+
+\phboxhead{いちばん大きな $\sin$ と、くらべる}
+AD 変換器が $-V$ から $V$ まで（はば $2V$）を $2^b$ 段に分けると、$q=2V/2^b$ です。入れられるいちばん大きな $\sin$（振幅 $V$）の電力は、$\sin^2$ の平均が $\tfrac12$（4-9⑦）なので $V^2/2$ です。比をとると、
+\begin{bkhenkei}[0.55]
+\frac{P_{\mathrm s}}{P_{\mathrm n}}=\frac{V^2/2}{q^2/12}=\frac{6V^2}{q^2} & 12÷2＝6 \\
+=\frac{6V^2}{(2V/2^b)^2}=\frac{6\times4^b}{4}=1.5\times4^b & $q=2V/2^b$ を入れる。$V$ が消える \\
+10\log_{10}(1.5\times4^b)=10\log_{10}1.5+b\times10\log_{10}4 & 積の対数は和（3-12③） \\
+\end{bkhenkei}
+$10\log_{10}1.5\approx1.76$、$10\log_{10}4=20\log_{10}2\approx6.02$ なので、
+\pheq{\text{量子化の S/N 比}\approx6.02\,b+1.76}{dB}
+\label{ph:波-11:6db}です。
+
+\begin{phyomi}[S/N 比＝$6.02b+1.76$\,dB]
+「ビットを1つ増やすごとに、S/N 比が約 6\,dB よくなる」。1ビット増やすと、きざみ $q$ が半分、誤差の大きさ（実効値）も半分になり、電圧の比で2倍、$20\log_{10}2\approx6$\,dB です（①の「2倍にすると」と同じこと）。
+\end{phyomi}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=22mm] *{4}{Q[c,m,wd=18mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+ビット数 $b$ & 8 & 12 & 16 & 24 \\
+S/N 比〔dB〕 & 49.9 & 74.0 & 98.1 & 146.2 \\
+\end{bktable}
+\bktabcaption{量子化の S/N 比（いちばん大きな $\sin$ のとき）。Python で実際に丸めて計算すると、8ビットで50.1\,dB、16ビットで98.1\,dB になり、式とよく合う。}\label{ph:波-11:tab-bit}
+\end{bkcenter}
+
+\noindent CD の16ビットは約 98\,dB です。ささやき声（約 30\,dB）から、耳がいたくなるほど大きな音（約 120\,dB）までの差は約 90\,dB なので（3-12⑦・波-9）、16ビットあれば、耳で聞く音楽にはおおむね足ります。
+
+\begin{seikaku}
+誤差が $-q/2$ から $q/2$ に一様に広がるという仮定は、信号がとても小さいとき（段の数段分しか動かない）や、同じ形をくり返す簡単な信号のときにはくずれます。そのとき、誤差は雑音ではなく、もとの音にない音（ひずみ）として聞こえます。そこで、録音の機器では、わざと小さな雑音（\textbf{ディザ}）を加えて、誤差を雑音らしくすることがあります。また、24ビットの 146\,dB は、マイクやアンプの回路の雑音よりずっと小さく、実際の S/N 比は回路で決まります。
+\end{seikaku}
+
+\bksubsection{9}{情報量とエントロピー}
+\label{ph:波-11:sec9}
+ここまでは、音を「どれだけ正しく」数にできるかを考えてきました。では、その数の列は、どれだけの「情報」を運んでいるのでしょう。情報の量を、数ではかる方法を作ります。
+
+\phboxhead{はい・いいえの質問の回数}
+友だちに、1から16までの数を1つ思いうかべてもらいます。「はい」か「いいえ」で答える質問だけで当てるには、何回の質問が要るでしょう。「8以下？」と聞けば、のこりの候補は半分の8個になります。また半分にする質問をくり返すと、
+\[16\to8\to4\to2\to1\qquad\text{で4回}\qquad 2^4=16\quad\text{だから}\quad4=\log_216\]
+です。候補が $\Omega$ 個で、どれも同じ確率なら、要る質問の回数は $\log_2\Omega$ 回です。はい・いいえの答え1つは、0か1かの1ビット（2-17）にあたります。
+
+\phboxhead{起こりにくいことほど、情報が多い}
+確率 $p$ のできごとが起きたと知ったときの\textbf{情報量}（じょうほうりょう）を、次のように決めます。\bkidx{じょうほうりょう}{情報量}
+\pheq{I=\log_2\frac{1}{p}}{ビット}
+\label{ph:波-11:info}候補 $\Omega$ 個から1つが同じ確率 $p=1/\Omega$ で選ばれるなら、$I=\log_2\Omega$ で、質問の回数と同じです。確率1のできごと（必ず起きる）の情報量は $\log_21=0$。知っても何もわからないので、0です。
+
+なぜ対数なのでしょう。コインを投げ（表は確率 $\tfrac12$）、サイコロをふる（1の目は $\tfrac16$）と、2つがいっしょに起きる確率は、かけ算 $\tfrac12\times\tfrac16=\tfrac1{12}$ です（3-17②）。一方、2つの結果を知ったときの情報は、それぞれの情報の\textbf{たし算}であってほしい量です。かけ算をたし算に変えるのは、対数です（3-12③）。
+\[\log_212=\log_22+\log_26=1+2.585=3.585\ \text{ビット}\]
+熱-15 ④で、ボルツマンが「状態の数はかけ算、エントロピーはたし算」だから対数を使ったのと、まったく同じ理由です。
+
+\phboxhead{情報量の平均：エントロピー}
+いくつかの結果が、それぞれ確率 $p_1$、$p_2$、…で起きるとき、1回の結果が運ぶ情報量の平均（期待値、3-17④）は、
+\pheq{H=\sum_ip_i\log_2\frac{1}{p_i}=-\sum_ip_i\log_2p_i}{ビット}
+\label{ph:波-11:entropy}です。これを\textbf{エントロピー}（情報エントロピー）といいます。\bkidx{えんとろぴー（じょうほう）}{エントロピー（情報）}シャノンが、1948年の論文「通信の数学的理論」で導入しました。
+
+\begin{phyomi}[$H=-\sum p_i\log_2p_i$]
+「結果を見る前に、どれくらい予想がつかないか」を、はい・いいえの質問の回数ではかったもの。どの結果も同じ確率のとき、いちばん予想がつかないので、$H$ がいちばん大きく $\log_2\Omega$ になります。
+\end{phyomi}
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+表が出る確率 $p$ のコインのエントロピーは、
+\[H=-p\log_2p-(1-p)\log_2(1-p)\]
+です。ふつうのコイン（$p=0.5$）で1ビット、$p=0.9$ の偏ったコインで0.47ビット、$p=0.99$ では0.08ビットです。結果がほぼ予想できるコインは、1回あたり少しの情報しか運びません。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=62mm, height=46mm, xmin=0, xmax=1.05, ymin=0, ymax=1.2, xtick={0.5,0.9,1}, ytick={0.47,1}, yticklabel style={/pgf/number format/fixed}, xlabel={$p$}, ylabel={$H$（ビット）}]
+  \addplot[bkcurve, domain=0.001:0.999, samples=150] {-x*log2(x)-(1-x)*log2(1-x)};
+  \fill[bkRed] (axis cs:0.9,0.469) circle (2pt) (axis cs:0.5,1) circle (2pt);
+  \draw[bkGray, line width=0.5pt, dashed] (axis cs:0.9,0) -- (axis cs:0.9,0.469) -- (axis cs:0,0.469);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\phboxhead{エントロピーより短くは書けない}
+天気の記録を、4つの記号 A（晴れ、確率 $\tfrac12$）、B（くもり、$\tfrac14$）、C（雨、$\tfrac18$）、D（雪、$\tfrac18$）で毎日送るとします。4つなので、どれも2ビット（00、01、10、11）で書けます。でも、よく出る記号を短く、まれな記号を長くして、A＝0、B＝10、C＝110、D＝111 とすると、1日あたりの平均の長さは
+\[\tfrac12\times1+\tfrac14\times2+\tfrac18\times3+\tfrac18\times3=1.75\ \text{ビット}\]
+に減ります（どの記号も、ほかの記号の頭の部分になっていないので、続けて送っても区切りを間違えません）。エントロピーを計算すると、
+\[H=\tfrac12\log_22+\tfrac14\log_24+\tfrac18\log_28\times2=0.5+0.5+0.75=1.75\ \text{ビット}\]
+で、ちょうど同じです。シャノンは、\textbf{どんな書き方をしても、平均の長さはエントロピーより短くできない}ことを示しました。このように確率に合わせて長さを決める書き方を、ハフマン符号（1952年）といいます。9-12①の MP3 は、聞こえにくい成分を捨てたあと、残った数をこのような符号で、さらに縮めています。
+
+\phboxhead{熱-15 のエントロピーとの関係}
+熱-15 ④のボルツマンの関係 $S=k_{\mathrm B}\ln\Omega$ と、同じ確率のときの $H=\log_2\Omega$ は、どちらも「状態（候補）の数の対数」です。底の変え方（3-12⑤）$\log_2\Omega=\ln\Omega/\ln2$ を使うと、
+\pheq{S=k_{\mathrm B}\ln\Omega=(k_{\mathrm B}\ln2)\times\log_2\Omega=(k_{\mathrm B}\ln2)\times H}{J/K ＝ J/K × 数}
+と書けます。1ビットは、熱のエントロピーにすると $k_{\mathrm B}\ln2\approx\qty{9.6e-24}{J/K}$ にあたります。確率がそろっていないときも、熱-15 のこの先の学びでふれたように、$-\sum P_i\ln P_i$ の形が、熱と情報の両方に出てきます。
+
+ただし、2つは\textbf{式の形が同じ、別の量}です。熱-15 の $S$ は、分子の並び方（ミクロな状態）の数で決まり、単位は J/K で、熱÷温度（熱-6）としてはかれます。情報のエントロピー $H$ は、送る記号の確率で決まり、単位はビットです。2つが本当に出会うのは、熱-15 の例題11 の場面です。メモリーの1ビットを消すと、そのビットの $k_{\mathrm B}\ln2$ のエントロピーが周りへ移り、\qty{300}{K}では少なくとも約\qty{2.9e-21}{J}の熱が出ます（ランダウアーの原理）。
+
+\bksubsection{10}{通信路容量：雑音があっても送れる速さ}
+\label{ph:波-11:sec10}
+電話の線や電波で情報を送るとき、使える周波数のはば（\textbf{帯域幅} $B$〔Hz〕）と、雑音の大きさ（S/N 比）は限られています。\bkidx{たいいきはば}{帯域幅}1秒にどれだけの情報を、まちがいなく送れるでしょう。シャノンは、1948年の論文で、その上限を求めました。
+\pheq{C=B\log_2\Bigl(1+\frac{P_{\mathrm s}}{P_{\mathrm n}}\Bigr)}{ビット/s ＝ Hz × ビット}
+\label{ph:波-11:shannon}$C$〔ビット/s〕を\textbf{通信路容量}といいます。\bkidx{つうしんろようりょう}{通信路容量}$P_{\mathrm s}/P_{\mathrm n}$ には dB ではなく、電力の比そのもの（30\,dB なら1000）を入れます。
+
+\phboxhead{なぜこの形か（見当のつけ方）}
+正しい導き方は情報理論の専門の本にゆずり、⑤と⑧の考えで、形の見当をつけます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 0〜$B$〔Hz〕の成分だけの信号は、1秒に $2B$ 回とった値で、すべて決まります（⑤のサンプリング定理で $f_{\mathrm s}=2B$）。だから、1秒に送れる値は $2B$ 個です。
+\item 1つの値には雑音がのります。雑音の大きさを1とすると、信号＋雑音の大きさはおよそ $\sqrt{1+P_{\mathrm s}/P_{\mathrm n}}$ です（電力は大きさの2乗）。雑音の大きさごとに段を作ると、区別できる段の数はおよそ $\sqrt{1+P_{\mathrm s}/P_{\mathrm n}}$ 個、1つの値で運べるのは $\log_2\sqrt{1+P_{\mathrm s}/P_{\mathrm n}}$ ビット、つまり $\tfrac12\log_2(1+P_{\mathrm s}/P_{\mathrm n})$ ビットです（⑨）。
+\item かけると、$2B\times\tfrac12\log_2(1+P_{\mathrm s}/P_{\mathrm n})=B\log_2(1+P_{\mathrm s}/P_{\mathrm n})$ ビット/s。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis x line=bottom, axis y line=left, width=112mm, height=50mm, xmin=-10, xmax=62, ymin=0, ymax=22, xtick={0,10,20,30,40,50,60}, ytick={1,5,10,15,20}, xlabel={S/N 比（dB）}, ylabel={$C/B$（ビット/s/Hz）}]
+  \addplot[bkcurve, domain=-10:62, samples=120] {log2(1+10^(x/10))};
+  \fill[bkRed] (axis cs:30,9.967) circle (2pt) (axis cs:0,1) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:31,9.6) {30\,dB で約10};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:31,7.4) {（電話の線 \qty{3}{kHz}なら約\qty{30}{kbit/s}）};
+  \node[font=\sffamily\footnotesize, anchor=west, fill=white, inner sep=1pt] at (axis cs:-9.5,3.4) {0\,dB で1};
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (axis cs:-8,20) {10\,dB ごとに約3.3ずつ増える};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{帯域幅 1\,Hz あたりの通信路容量。S/N 比が大きい所では、dB に比例して増える（10\,dB で $\log_210\approx3.3$）。}\label{ph:波-11:fig-youryou}
+\end{bkfigure}
+
+\begin{phbaisuru}{帯域幅 $B$ と、S/N 比}
+帯域幅 $B$ を2倍にすると、$C$ もちょうど2倍です（1秒に送れる値の数が2倍）。S/N 比を2倍（$+3$\,dB）にしても、$C$ は2倍にはならず、S/N 比が大きい所では、1\,Hz あたり約1ビット/s 増えるだけです（$\log_22=1$）。\qty{3}{kHz}・30\,dB の線は約\qty{29.9}{kbit/s}、33\,dB にすると約\qty{32.9}{kbit/s}です。速く送りたければ、まず帯域幅を広げるのが効きます。スマホの新しい通信の方式が、広い周波数のはばを使うのはこのためです。
+\end{phbaisuru}
+
+\noindent シャノンの式は、「どんなにくふうしても、これより速くは、まちがいなく送れない」上限です。同時に、「うまい書き方（誤り訂正の符号）をすれば、この上限の近くまで、まちがいをいくらでも少なくして送れる」ことも示しています。電話の線を使った昔のモデムは、いちばん速いもので\qty{33.6}{kbit/s}でした。今の携帯電話や Wi-Fi の方式は、この上限のかなり近くまで迫っています。
+
+\begin{phmada}[話し声の中から1人の声を聞き分けるしくみ]
+にぎやかなパーティーの中でも、わたしたちは話している相手の声を聞きとれます。遠くで自分の名前がよばれると、ふっと気づくこともあります。これを\textbf{カクテルパーティー効果}といいます（チェリーが1953年に実験で調べた）。\bkidx{かくてるぱーてぃーこうか}{カクテルパーティー効果}耳に入る音は、すべての人の声がたし算された1本の波なのに、脳はそれを、声ごとに分けているのです。声の高さ（基本の周波数）・左右の耳に届く時刻の差・話し方のくせなどを手がかりにしていることはわかってきましたが、脳がそれらをどのように組み合わせて、1人の声だけを取り出し、ほかの声を聞き流しているのかは、まだ完全にはわかっていません。コンピュータで同じことをさせる研究（音源分離）も、今さかんに行われています。
+\end{phmada}
+
+\begin{phsaki}{ディジタル信号処理と情報理論}
+この章では、移動平均という、いちばん簡単なディジタルのフィルターを扱いました。ディジタル信号処理の専門の本では、$z$ 変換（ラプラス変換のディジタル版）を使って、ねらった周波数だけを通すフィルターを設計する方法、短い区間ごとに DFT をくり返して「時刻と周波数の地図」（スペクトログラム）を作る方法、ウェーブレット変換などを学びます。情報理論の専門の本では、⑩のシャノンの式の正しい導き方と、まちがいを見つけて直す符号（誤り訂正符号）を学びます。電波に信号をのせて送るしくみは、この巻の読みもの（波-14）で見ます。
+\end{phsaki}
+
+\begin{senmonsho}[信号処理・情報理論の専門書の書き方]
+\begin{bkhonbun}
+窓関数 $w[n]$ を乗じた離散フーリエ変換は $X[k]=\sum_{n=0}^{N-1}w[n]x[n]W_N^{kn}$，$W_N=e^{-j2\pi/N}$ で与えられる．離散情報源のエントロピーは $H(X)=-\sum_xp(x)\log p(x)$，帯域幅 $W$ の白色雑音通信路の容量は $C=W\log_2(1+S/N)$ である．
+\end{bkhonbun}
+\bkyaku{$x[n]$ は、この本の $x_m$（番号を角かっこで書く）。$W_N$ は、1回に回る矢印 $e^{-j2\pi/N}$ に名前をつけたもの。$p(x)$ は、記号 $x$ が出る確率で、この本の $p_i$。$\log$ の底を書かないときは2（ビット）のことが多い。帯域幅を $W$、信号と雑音の電力を $S$・$N$ と書く本が多い（この本では $B$、$P_{\mathrm s}$・$P_{\mathrm n}$。$N$ はデータの数に使った）。「白色雑音」は、どの周波数にも同じ強さで広がった雑音のこと。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{データの量}$f_{\mathrm s}\times b\times$チャンネルの数〔ビット/s〕\\[3pt]
+\tsl{エイリアシング}$f_{\text{見}}=|f-nf_{\mathrm s}|$。$f_{\mathrm s}/2$ より下だけ正しい\\[3pt]
+\tsl{分解能}$\Delta f=f_{\mathrm s}/N=1/T_{\mathrm m}$。窓関数でもれを小さく\\[3pt]
+\tsl{サンプリング定理}$f_{\mathrm s}>2f_{\max}$ なら、もとの波にもどせる\\[3pt]
+\tsl{フィルター}RC：$f_{\mathrm c}=1/(2\pi\tau)$ で $-3$\,dB。移動平均：$f_{\mathrm s}/M$ で0\\[3pt]
+\tsl{雑音}$K$ 回の平均で $\sigma/\sqrt K$。量子化の S/N 比 $6.02b+1.76$\,dB\\[3pt]
+\tsl{情報}$H=-\sum p_i\log_2p_i$、$C=B\log_2(1+P_{\mathrm s}/P_{\mathrm n})$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{サンプリング・量子化}{とびとびの時刻で値をとること・値を段に丸めること。2つで、アナログの電圧を数にする。}
+\bkword{エイリアシング}{$f_{\mathrm s}/2$ より高い成分が、低い周波数に化けること。折り返し。}
+\bkword{ナイキスト周波数}{$f_{\mathrm s}/2$。正しく記録できる周波数の上限。}
+\bkword{周波数の分解能}{DFT の周波数の目もり $\Delta f=f_{\mathrm s}/N$。はかった時間の逆数。}
+\bkword{窓関数}{データの両はしをなめらかに0にするためにかける数の列。もれを小さくする。}
+\bkword{S/N 比}{信号の電力と雑音の電力の比を、dB で表したもの。}
+\bkword{情報量・エントロピー}{確率 $p$ のできごとの情報量 $\log_2(1/p)$ と、その平均。単位はビット。}
+\bkword{通信路容量}{雑音のある通信路で、まちがいなく送れる速さの上限。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\Delta f$}{デルタ・エフ}{DFT の周波数の目もりのきざみ（分解能）$f_{\mathrm s}/N$〔Hz〕}{frequency resolution}{波-11}}
+{\bkkigocard{$b$}{ビー}{量子化のビット数。$2^b$ 段に分ける（帯域幅は大文字の $B$）}{number of bits}{波-11}}
+\bkkigocards{\bkkigocard{$H$}{エイチ}{情報のエントロピー（情報量の平均）〔ビット〕。熱の巻のエントロピー $S$ とは別の記号で書く}{entropy (information)}{波-11}}
+{\bkkigocard{$C$}{シー}{通信路容量〔ビット/s〕。静電容量の $C$（『電磁気学』）とは別の量}{channel capacity}{波-11}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:波-11:ex1}
+\begin{phreidai}[CD のデータの量と、記録できる音の上限]
+音楽の CD は、1秒に \num{44100} 回、1回を16ビットで、左右2つのチャンネルを記録します。（1）1秒あたりのデータの量、（2）4分の曲のデータの量（MB。8ビット＝1バイト、1\,MB＝$10^6$ バイト）、（3）正しく記録できるいちばん高い周波数を求めましょう。
+\phbamen
+音をディジタルで記録するときの、データの量と、時間の細かさを見積もる場面です。
+\phmushi
+データを縮める（圧縮する）ことや、曲の名前などの追加のデータを無視します。
+\phzu
+$f_{\mathrm s}=\qty{44100}{Hz}$、$b=16$、チャンネルの数2、時間 $\qty{240}{s}$。
+\phriyu
+データの量は「$f_{\mathrm s}\times b\times$チャンネルの数」（①）。記録できる上限は、ナイキスト周波数 $f_{\mathrm s}/2$（②）です。
+\phtateru
+\[\text{データの量}=f_{\mathrm s}\times b\times2,\qquad f_{\text{上限}}=\frac{f_{\mathrm s}}{2}\]
+\phtoku
+（1）$\num{44100}\times16\times2=\num{1411200}$ ビット/s\\
+（2）$\num{1411200}\times240\div8\approx\num{42300000}$ バイト、約 42\,MB\\
+（3）$\num{44100}\div2=\qty{22050}{Hz}$
+\phtashikame
+（1）（2）は 9-12①と同じ数です。（3）は、人に聞こえる上限の約\qty{20}{kHz}より少し上で、聞こえる音はすべて記録できます。\\
+単位：回/s×ビット/回＝ビット/s。
+\kotae （1）\num{1411200} ビット/s、（2）約 42\,MB、（3）\qty{22050}{Hz}
+\end{phreidai}
+\begin{jibun}
+固定電話のディジタルの声は、1秒に8000回、8ビット、1チャンネルです。1秒あたりのデータの量と、正しく記録できるいちばん高い周波数を求めましょう。
+\bkjans{$8000\times8\times1=\num{64000}$ ビット/s。上限は $8000\div2=\qty{4000}{Hz}$}
+\end{jibun}
+
+\label{ph:波-11:ex2}
+\begin{phreidai}[動画の車輪（はてな？）]
+1秒24コマの動画で、スポーク8本の車輪が1秒に2.75回転しています。（1）画面では、車輪はどちら向きに、1秒に何度回って見えますか。（2）車輪が止まって見える回転の速さのうち、0でないいちばん遅いものを求めましょう。
+\phbamen
+動画のコマが、車輪の向きをとびとびにとるサンプリングになっている場面です。
+\phmushi
+写真1まいをとる時間の長さ（ぶれ）と、車輪のスポーク以外の模様を無視します。スポークはどれも同じ形とします。
+\phzu
+②の図\ref{ph:波-11:fig-sharin}。1コマの時間 $\tfrac{1}{24}$\,s、スポークの間の角\ang{45}。
+\phriyu
+スポークは\ang{45}ごとに同じ形なので、1コマの間に回る角から、\ang{45}の整数倍を引いた、いちばん小さい角が見かけの動きです（②）。
+\phtateru
+\[\text{1コマに回る角}=\frac{2.75\times360°}{24},\qquad\text{見かけの角}=\text{1コマに回る角}-45°\times n\]
+\phtoku
+（1）\[\frac{2.75\times360°}{24}=41.25°,\qquad 41.25°-45°=-3.75°\]
+1秒では $-3.75°\times24=-90°$。進む向きと逆に、1秒に\ang{90}回って見えます。\\
+（2）1コマにちょうど\ang{45}回れば止まって見えます。$\ang{45}\times24=\ang{1080}$/s、つまり1秒に3回転。
+\phtashikame
+周波数で確かめる：スポークの形の周波数 $2.75\times8=\qty{22}{Hz}$、$22-24=-2$\,Hz で、1秒に $2\div8=0.25$ 回転（\ang{90}）逆向き。合います。\\
+極端な場合：回転が遅く、1コマの角が\ang{22.5}より小さければ、正しい向きに見えます（1秒に1.5回転まで）。
+\kotae （1）逆向きに、1秒に\ang{90}、（2）1秒に3回転
+\end{phreidai}
+\begin{jibun}
+1秒30コマの動画で、スポーク8本の車輪が1秒に3回転しています。画面では、車輪はどちら向きに、1秒に何度回って見えますか。止まって見える、いちばん遅い回転の速さも求めましょう。
+\bkjans{1コマに $3\times360°\div30=36°$、$36°-45°=-9°$。逆向きに1秒に $9°\times30=\ang{270}$。止まって見えるのは1コマに\ang{45}のときで、$45°\times30\div360°=3.75$ 回転/s}
+\end{jibun}
+
+\label{ph:波-11:ex3}
+\begin{phreidai}[高い音が、低い音に化ける]
+1秒に8000回とる AD 変換器に、フィルターを通さずに次の音を入れました。データから読みとれる周波数（見かけの周波数）を求めましょう。（1）\qty{3000}{Hz}、（2）\qty{5000}{Hz}、（3）\qty{7000}{Hz}、（4）\qty{9000}{Hz}
+\phbamen
+アンチエイリアシングフィルター（⑤）を入れ忘れたときに、何が記録されるかを調べる場面です。
+\phmushi
+AD 変換器の雑音と量子化の誤差を無視します。
+\phzu
+②の図\ref{ph:波-11:fig-orikaeshi}。$f_{\mathrm s}=\qty{8000}{Hz}$、ナイキスト周波数\qty{4000}{Hz}。
+\phriyu
+$f$ から $f_{\mathrm s}$ の整数倍を引いて、0〜$f_{\mathrm s}/2$ に入る値を探します（②の $f_{\text{見}}=|f-nf_{\mathrm s}|$）。
+\phtateru
+\[f_{\text{見}}=|f-n\times8000|\qquad（0\leqq f_{\text{見}}\leqq4000\ \text{になる}\ n）\]
+\phtoku
+（1）$n=0$：$\qty{3000}{Hz}$（そのまま）\\
+（2）$n=1$：$|5000-8000|=\qty{3000}{Hz}$\\
+（3）$n=1$：$|7000-8000|=\qty{1000}{Hz}$\\
+（4）$n=1$：$|9000-8000|=\qty{1000}{Hz}$
+\phtashikame
+（3）は 9-4⑭と同じ答えです。（1）と（2）、（3）と（4）は、データでは区別できません。図\ref{ph:波-11:fig-orikaeshi}の折れ線で、同じ高さの点です。
+\kotae （1）\qty{3000}{Hz}、（2）\qty{3000}{Hz}、（3）\qty{1000}{Hz}、（4）\qty{1000}{Hz}
+\end{phreidai}
+\begin{jibun}
+1秒に \num{44100} 回とる AD 変換器に、フィルターを通さずに\qty{30}{kHz}と\qty{25}{kHz}の音を入れると、見かけの周波数はそれぞれいくらですか。
+\bkjans{$|30000-44100|=\qty{14100}{Hz}$、$|25000-44100|=\qty{19100}{Hz}$（どちらも聞こえる高さに化ける）}
+\end{jibun}
+
+\label{ph:波-11:ex4}
+\begin{phreidai}[照明の下の扇風機]
+交流\qty{50}{Hz}の地域の照明の中には、1秒に100回、明るくなったり暗くなったりするものがあります。羽根が3枚（\ang{120}ごと）の扇風機を、この照明の下で見ます（目は、明るい瞬間だけを見ていると考える）。（1）羽根が止まって見える、いちばん遅い回転数（毎分）を求めましょう。（2）毎分1980回転のとき、羽根はどちら向きに、毎分何回転で回って見えますか。
+\phbamen
+照明のちらつきが、回る羽根をとびとびに照らすサンプリングになっている場面です（ストロボと同じ）。
+\phmushi
+暗い瞬間にも少しは明るいこと、目が明るさを少しの間ためて感じることを無視します。
+\phzu
+光る間かく $\tfrac{1}{100}$\,s。羽根の間の角\ang{120}。回転数〔回/分〕÷60＝回/s。
+\phriyu
+例題2と同じく、「光る間に回る角」から\ang{120}の整数倍を引いた、いちばん小さい角が見かけの動きです（②）。
+\phtateru
+\[\text{光る間に回る角}=\frac{\text{回転数}}{60}\times360°\times\frac{1}{100}\]
+\phtoku
+（1）光る間にちょうど\ang{120}回れば止まって見えます。\[\frac{120°}{360°}\times100=33.3\ \text{回/s},\qquad 33.3\times60=2000\ \text{回/分}\]
+（2）\[\frac{1980}{60}\times360°\times\frac{1}{100}=118.8°,\qquad118.8°-120°=-1.2°\]
+1秒では $-1.2°\times100=-120°$、つまり $\ang{120}\div\ang{360}\times60=20$ 回/分。逆向きにゆっくり回って見えます。
+\phtashikame
+大きさ：ふつうの扇風機は毎分1000回転ほどです。そのときは、光る間に\ang{60}回り、羽根の間（\ang{120}）のちょうど半分なので、羽根が6枚あるように見えることがあります。\\
+日光の下では、光がちらつかないので、このようには見えません（やってみよう③）。
+\kotae （1）毎分2000回転、（2）逆向きに毎分20回転
+\end{phreidai}
+\begin{jibun}
+交流\qty{60}{Hz}の地域で、1秒に120回ちらつく照明の下で、例題4の扇風機を見ます。止まって見えるいちばん遅い回転数と、毎分2420回転のときの見え方を求めましょう。
+\bkjans{$\tfrac{120}{360}\times120\times60=$ 毎分2400回転。2420回転では、光る間に $2420\div60\times360\div120=\ang{121}$、$+\ang{1}$ で、正しい向きに1秒に\ang{120}（毎分20回転）}
+\end{jibun}
+
+\label{ph:波-11:ex5}
+\begin{phreidai}[周波数の目もりと、はかる時間]
+1秒に \num{10240} 回とった音から、1024点を FFT しました。（1）周波数の目もり $\Delta f$ と、はかった時間を求めましょう。（2）目もりを\qty{1}{Hz}にするには、同じ $f_{\mathrm s}$ で何点とればよいですか。
+\phbamen
+機械の音を FFT で調べるとき、どれだけ細かく周波数を見分けられるかを決める場面です。
+\phmushi
+窓関数による山の広がり（④）を無視し、目もりのきざみだけを考えます。
+\phzu
+$f_{\mathrm s}=\qty{10240}{Hz}$、$N=1024$、はかった時間 $T_{\mathrm m}=N/f_{\mathrm s}$。
+\phriyu
+DFT の周波数は $f_{\mathrm s}/N$ ごとのとびとびの値です（③）。
+\phtateru
+\[\Delta f=\frac{f_{\mathrm s}}{N}=\frac{1}{T_{\mathrm m}}\]
+\phtoku
+（1）\[\Delta f=\frac{10240}{1024}=\qty{10}{Hz},\qquad T_{\mathrm m}=\frac{1024}{10240}=\qty{0.1}{s}\]
+（2）$\Delta f=\qty{1}{Hz}$ なら $T_{\mathrm m}=\qty{1}{s}$、$N=\num{10240}\times1=\num{10240}$ 点。
+\phtashikame
+$\Delta f\times T_{\mathrm m}=10\times0.1=1$ で、$\Delta f=1/T_{\mathrm m}$ と合います。目もりを10分の1にするには、10倍長くはかります。$f_{\mathrm s}$ を変えても、$T_{\mathrm m}$ が同じなら $\Delta f$ は変わりません。
+\kotae （1）\qty{10}{Hz}、\qty{0.1}{s}、（2）\num{10240} 点（\qty{1}{s}分）
+\end{phreidai}
+\begin{jibun}
+1秒に \num{44100} 回とった音から、4096点を FFT しました。$\Delta f$ と、はかった時間を求めましょう。
+\bkjans{$\Delta f=44100\div4096\approx\qty{10.8}{Hz}$、$T_{\mathrm m}=4096\div44100\approx\qty{0.093}{s}$}
+\end{jibun}
+
+\label{ph:波-11:ex6}
+\begin{phreidai}[FFT はどれだけ速い？]
+1024点の DFT を、式のとおりに計算するときと、FFT で計算するときのかけ算の回数を、それぞれ $N^2$ と $N\log_2N$ で見積もり、FFT は何倍速いか求めましょう。\num{65536} 点ではどうですか。
+\phbamen
+スペクトルを、その場で計算して表示する機器で、計算の時間を見積もる場面です。
+\phmushi
+たし算の回数や、データを並べかえる手間など、かけ算以外の計算を無視します（9-4⑬と同じ見積もり）。
+\phzu
+$N=1024=2^{10}$、$\num{65536}=2^{16}$。
+\phriyu
+DFT は $X_k$ 1つに $N$ 回、それを $N$ 個で $N^2$ 回。FFT は半分に分けることを $\log_2N$ 回くり返し、1段に約 $N$ 回です（9-4⑬）。
+\phtateru
+\[\frac{N^2}{N\log_2N}=\frac{N}{\log_2N}\]
+\phtoku
+1024点：$N^2=\num{1048576}$、$N\log_2N=1024\times10=\num{10240}$、比は約102倍。\\
+\num{65536} 点：$\num{65536}\div16=4096$ 倍。
+\phtashikame
+1024点は、9-4⑬の表の「約105万回が約1万回、約100分の1」と合います。点が多いほど、FFT の得は大きくなります。
+\kotae 1024点で約100倍、\num{65536} 点で約4100倍
+\end{phreidai}
+\begin{jibun}
+8192点（$2^{13}$）では、FFT は DFT の約何倍速いですか。
+\bkjans{$8192\div13\approx630$ 倍}
+\end{jibun}
+
+\label{ph:波-11:ex7}
+\begin{phreidai}[ハンの窓をかけた音の成分]
+1秒に8000回、\qty{1}{s}（$T_{\mathrm m}=\qty{1}{s}$）とった、\qty{440}{Hz}・振幅1の $\sin$ に、ハンの窓 $w=0.5-0.5\cos(2\pi t/T_{\mathrm m})$ をかけました。（1）窓をかけた信号は、どの周波数の $\sin$ の和になりますか。積和の公式で求めましょう。（2）FFT の振幅を、窓の補正（2倍）をして読むと、それぞれいくつになりますか。
+\phbamen
+窓をかけると、目もりにちょうど合う音でも山が3本に広がる理由を、式で確かめる場面です。
+\phmushi
+はかった時間の外のことは考えません（DFT はデータがくり返すと考える）。
+\phzu
+④の図\ref{ph:波-11:fig-tsunagi}。$x=\sin(2\pi\cdot440t)$、$\cos(2\pi t/T_{\mathrm m})=\cos(2\pi\cdot1\cdot t)$（\qty{1}{Hz}）。
+\phriyu
+$\sin A\cos B$ は、積和の公式（4-9⑤）で2つの $\sin$ の和になります。
+\phtateru
+\[xw=0.5\sin(2\pi\cdot440t)-0.5\sin(2\pi\cdot440t)\cos(2\pi\cdot1t)\]
+\[\sin A\cos B=\tfrac12\{\sin(A+B)+\sin(A-B)\}\]
+\phtoku
+（1）\[xw=0.5\sin(2\pi\cdot440t)-0.25\sin(2\pi\cdot441t)-0.25\sin(2\pi\cdot439t)\]
+\qty{440}{Hz}が0.5、\qty{441}{Hz}と\qty{439}{Hz}が0.25ずつです（負の符号は位相が逆という意味で、振幅は0.25）。\\
+（2）2倍して、\qty{439}{Hz}・\qty{440}{Hz}・\qty{441}{Hz}が、0.5・1・0.5。
+\phtashikame
+Python で計算した値（④）と同じです。\qty{440}{Hz}の山の高さは補正すると1で、正しい振幅が読めます。そのかわり、山の幅が $\Delta f$ の3本分に広がりました。
+\kotae （1）\qty{440}{Hz}が0.5、\qty{439}{Hz}・\qty{441}{Hz}が0.25ずつ、（2）0.5・1・0.5
+\end{phreidai}
+\begin{jibun}
+$T_{\mathrm m}=\qty{0.5}{s}$ とった\qty{1000}{Hz}・振幅1の $\sin$ に、例題7と同じ形のハンの窓をかけました（窓の $\cos$ は\qty{2}{Hz}）。どの周波数の成分が、いくつずつ出ますか（補正する前）。
+\bkjans{\qty{1000}{Hz}が0.5、\qty{998}{Hz}と\qty{1002}{Hz}が0.25ずつ}
+\end{jibun}
+
+\label{ph:波-11:ex8}
+\begin{phreidai}[RC のフィルターと移動平均]
+（1）抵抗 \qty{1}{k\ohm}・静電容量 \qty{0.1}{\micro F}の RC の低域フィルターの遮断周波数を求めましょう。（2）\qty{16}{kHz}の音は、何 dB 弱まりますか。同じフィルターを2段（間にバッファー）にするとどうですか。（3）1秒に1000回とったデータに、20点の移動平均をかけます。ちょうど0になる周波数のうち、いちばん低いものを求めましょう。
+\phbamen
+録音に入った高い雑音や、電源のハムを弱める場面です。
+\phmushi
+（1）（2）：回路の部品の値のばらつき、つないだ先の回路が電流をとること（バッファーで防ぐ）を無視します。
+\phzu
+⑥の図\ref{ph:波-11:fig-bode}・図\ref{ph:波-11:fig-idou}。$\tau=$ 抵抗×静電容量、$f_{\mathrm s}=\qty{1000}{Hz}$、$M=20$。
+\phriyu
+RC は $|G|=1/\sqrt{1+(f/f_{\mathrm c})^2}$、箱をつなぐと dB はたし算（⑥・9-8）。移動平均は、$M$ 点がちょうど1周期になる周波数で0（⑥）。
+\phtateru
+\[f_{\mathrm c}=\frac{1}{2\pi\tau},\qquad\text{dB}=20\log_{10}|G|,\qquad f_0=\frac{f_{\mathrm s}}{M}\]
+\phtoku
+（1）$\tau=1000\times0.1\times10^{-6}=\qty{1e-4}{s}$、\[f_{\mathrm c}=\frac{1}{2\pi\times10^{-4}}\approx\qty{1590}{Hz}\]
+（2）$f/f_{\mathrm c}=16000\div1592\approx10.05$、\[|G|=\frac{1}{\sqrt{1+10.05^2}}\approx0.099,\qquad20\log_{10}0.099\approx-20\ \text{dB}\]
+2段では $-20\times2=-40$\,dB。\\
+（3）$f_0=1000\div20=\qty{50}{Hz}$。
+\phtashikame
+（2）$f$ が $f_{\mathrm c}$ の約10倍なので、「10倍ごとに $-20$\,dB」と合います。\\
+（3）\qty{50}{Hz}の1周期 \qty{0.02}{s} の間に、ちょうど20点（$0.02\times1000$）とるので、平均が0になります。
+\kotae （1）約\qty{1.6}{kHz}、（2）約 $-20$\,dB、2段で約 $-40$\,dB、（3）\qty{50}{Hz}
+\end{phreidai}
+\begin{jibun}
+（1）抵抗 \qty{2.2}{k\ohm}・静電容量 \qty{0.1}{\micro F}の RC の遮断周波数と、その10倍の周波数での弱まり方（dB）を求めましょう。（2）1秒に1200回とったデータに、20点の移動平均をかけると、ちょうど0になるいちばん低い周波数はいくつですか。
+\bkjans{（1）$\tau=\qty{2.2e-4}{s}$、$f_{\mathrm c}\approx\qty{720}{Hz}$。10倍で約 $-20$\,dB。（2）$1200\div20=\qty{60}{Hz}$}
+\end{jibun}
+
+\label{ph:波-11:ex9}
+\begin{phreidai}[くり返して平均する]
+超音波で、ある深さからのはね返りをはかると、1回の記録の S/N 比は 20\,dB でした。（1）100回の記録を平均すると、S/N 比は何 dB になりますか。（2）S/N 比を 50\,dB にするには、何回平均すればよいですか。
+\phbamen
+弱い信号を、くり返しの平均で雑音の中から取り出す場面です。
+\phmushi
+はかる間に、体や物が動いて信号の形が変わることを無視します。雑音は、毎回でたらめで、たがいに関係しないとします。
+\phzu
+⑦の図\ref{ph:波-11:fig-heikin}。平均の回数 $K$。
+\phriyu
+$K$ 回平均すると、雑音の大きさが $1/\sqrt K$、S/N 比は $10\log_{10}K$ dB よくなります（⑦）。
+\phtateru
+\[\text{S/N 比}=20+10\log_{10}K\ \text{〔dB〕}\]
+\phtoku
+（1）$20+10\log_{10}100=20+20=40$\,dB\\
+（2）$20+10\log_{10}K=50$ より $\log_{10}K=3$、$K=1000$ 回
+\phtashikame
+（1）雑音の大きさは $1/\sqrt{100}=\tfrac{1}{10}$ で、電圧の比10倍は 20\,dB（3-12）。合います。\\
+（2）は（1）のさらに10倍の回数で、30\,dB よくするには1000倍の回数が要ります。
+\kotae （1）40\,dB、（2）1000回
+\end{phreidai}
+\begin{jibun}
+1回の S/N 比が 10\,dB の記録を16回平均すると、雑音の大きさは何分の1になり、S/N 比は何 dB になりますか。
+\bkjans{$1/\sqrt{16}=\tfrac14$。$10+10\log_{10}16\approx10+12=22$\,dB}
+\end{jibun}
+
+\label{ph:波-11:ex10}
+\begin{phreidai}[16ビットの AD 変換器]
+$-\qty{1}{V}$から\qty{1}{V}までを16ビットで量子化する AD 変換器があります。（1）量子化のきざみ $q$、（2）いちばん大きな $\sin$ を入れたときの量子化の S/N 比を求めましょう。（3）8ビットなら、S/N 比はいくつですか。
+\phbamen
+録音機器に、何ビットの AD 変換器を選べばよいかを考える場面です。
+\phmushi
+回路の雑音、ディザ、AD 変換器の段の間かくのばらつきを無視し、量子化の誤差だけを考えます。
+\phzu
+⑧の図\ref{ph:波-11:fig-ryoushi}。はば $2V=\qty{2}{V}$、$2^{16}=\num{65536}$ 段。
+\phriyu
+きざみは「はば÷段の数」。量子化の S/N 比は $6.02b+1.76$\,dB（⑧）です。
+\phtateru
+\[q=\frac{2V}{2^b},\qquad\text{S/N 比}=6.02b+1.76\]
+\phtoku
+（1）\[q=\frac{2}{65536}\approx\qty{3.05e-5}{V}\approx\qty{30.5}{\micro V}\]
+（2）$6.02\times16+1.76\approx98.1$\,dB\\
+（3）$6.02\times8+1.76\approx49.9$\,dB
+\phtashikame
+（2）と（3）の差は $6.02\times8\approx48$\,dB で、8ビットぶんです。16ビットの段は、\qty{1}{V}の約3万分の1という、とても細かい段です。
+\kotae （1）約\qty{30.5}{\micro V}、（2）約 98\,dB、（3）約 50\,dB
+\end{phreidai}
+\begin{jibun}
+$-\qty{5}{V}$から\qty{5}{V}までを12ビットで量子化する AD 変換器の、きざみ $q$ と量子化の S/N 比を求めましょう。
+\bkjans{$q=10\div4096\approx\qty{2.44}{mV}$。S/N 比 $6.02\times12+1.76\approx74$\,dB}
+\end{jibun}
+
+\label{ph:波-11:ex11}
+\begin{phreidai}[文字とコインの情報量]
+（1）26文字のアルファベットが、どれも同じ確率で出るとき、1文字の情報量は何ビットですか。1文字を決まった長さの0と1で書くには、何ビット要りますか。（2）表が出る確率が0.9のコインを1回投げた結果の、エントロピーを求めましょう。このコインを1000回投げた結果は、いちばん縮めると約何ビットで書けますか。
+\phbamen
+データを、どこまで縮められるかを見積もる場面です。
+\phmushi
+（1）では、実際の文の中の文字の出やすさのちがい（e が多いなど）を無視します。（2）では、投げるたびの結果は前の結果によらないとします。
+\phzu
+（1）$\Omega=26$、$p=\tfrac1{26}$。（2）$p_1=0.9$、$p_2=0.1$。
+\phriyu
+同じ確率なら情報量は $\log_2\Omega$、そろっていなければ平均の $H=-\sum p_i\log_2p_i$（⑨）。平均の長さはエントロピーより短くできません（⑨）。
+\phtateru
+\[（1）\ I=\log_226\qquad（2）\ H=-0.9\log_20.9-0.1\log_20.1\]
+\phtoku
+（1）$\log_226=\log_{10}26\div\log_{10}2=1.415\div0.301\approx4.70$ ビット（3-12⑤）。決まった長さなら、$2^4=16<26\leqq2^5=32$ なので5ビット。\\
+（2）$\log_20.9\approx-0.152$、$\log_20.1\approx-3.32$ なので、\[H\approx0.9\times0.152+0.1\times3.32\approx0.137+0.332=0.469\ \text{ビット}\]
+1000回では、約 $1000\times0.469\approx469$ ビット。
+\phtashikame
+（1）4.70は5より小さいので、うまく書けば、1文字5ビットより短くできる余地があります。\\
+（2）ふつうのコインなら1000回で1000ビットですが、偏ったコインは、結果が予想しやすいので、半分より短く書けます。$p=1$ なら $H=0$（書く必要がない）です。
+\kotae （1）約4.70ビット、5ビット、（2）約0.47ビット、約470ビット
+\end{phreidai}
+\begin{jibun}
+（1）サイコロの目（6通り、同じ確率）の情報量を求めましょう。（2）表が出る確率が0.75のコインの、エントロピーを求めましょう（$\log_23\approx1.585$）。
+\bkjans{（1）$\log_26\approx2.58$ ビット。（2）$0.75\times0.415+0.25\times2=0.311+0.5\approx0.81$ ビット}
+\end{jibun}
+
+\label{ph:波-11:ex12}
+\begin{phreidai}[電話の線で送れる速さ]
+電話の線は、約\qty{3}{kHz}のはばの音を通し、S/N 比は約 30\,dB です。（1）シャノンの式で、通信路容量を求めましょう。（2）S/N 比が 40\,dB なら、どうなりますか。（3）\qty{40}{kbit/s}で送るには、S/N 比は何 dB 要りますか。
+\phbamen
+決まった線で、どこまで速くデータを送れるかの上限を見積もる場面です。
+\phmushi
+雑音は、どの周波数にも同じ強さで広がっているとします。線のはばの中では、信号の強さは同じとします。
+\phzu
+⑩の図\ref{ph:波-11:fig-youryou}。$B=\qty{3000}{Hz}$、30\,dB は $P_{\mathrm s}/P_{\mathrm n}=1000$。
+\phriyu
+雑音のある線で、まちがいなく送れる上限は、シャノンの式（⑩）です。dB は電力の比にもどしてから入れます。
+\phtateru
+\[C=B\log_2\Bigl(1+\frac{P_{\mathrm s}}{P_{\mathrm n}}\Bigr)\]
+\phtoku
+（1）\[C=3000\times\log_2(1+1000)\approx3000\times9.97\approx\num{29900}\ \text{ビット/s}\]
+（2）40\,dB は $10^4$：$C=3000\times\log_2\num{10001}\approx3000\times13.3\approx\num{39900}$ ビット/s\\
+（3）$\log_2(1+P_{\mathrm s}/P_{\mathrm n})=40000\div3000=13.3$ より、\[\frac{P_{\mathrm s}}{P_{\mathrm n}}=2^{13.3}-1\approx\num{10300},\qquad10\log_{10}10300\approx40\ \text{dB}\]
+\phtashikame
+（1）と（2）で、10\,dB よくすると、1\,Hz あたり約3.3ビット/s（$3000\times3.3\approx\qty{10}{kbit/s}$）増えます（図\ref{ph:波-11:fig-youryou}）。昔のモデムの最高\qty{33.6}{kbit/s}は、（1）と（2）の間にあります。
+\kotae （1）約\qty{30}{kbit/s}、（2）約\qty{40}{kbit/s}、（3）約 40\,dB
+\end{phreidai}
+\begin{jibun}
+Wi-Fi のように、\qty{20}{MHz}のはばで、S/N 比 20\,dB の通信路容量を求めましょう（$\log_2101\approx6.66$）。
+\bkjans{$\num{20000000}\times6.66\approx\num{133000000}$ ビット/s（約\qty{133}{Mbit/s}）}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{サンプリング周波数を上げれば、目もりも細かくなる？}
+\bkng{$f_{\mathrm s}$ を2倍にすれば、周波数の目もり $\Delta f$ は半分になる。}
+\bkok{$\Delta f=f_{\mathrm s}/N=1/T_{\mathrm m}$。同じ時間はかるなら、$f_{\mathrm s}$ を2倍にしても $N$ も2倍で、$\Delta f$ は同じ。目もりを細かくするには、長くはかる。}
+$f_{\mathrm s}$ で決まるのは、見える周波数の上限（$f_{\mathrm s}/2$）です（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$f_{\mathrm s}/2$ より高い音は、記録されないだけ？}
+\bkng{$f_{\mathrm s}/2$ より高い音は、データに残らないので、気にしなくてよい。}
+\bkok{高い音は消えずに、低い周波数に化けてデータに残る（エイリアシング）。とる前にフィルターで取り除く。}
+化けた音は、あとからは見分けられません（②⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{窓をかけた振幅を、そのまま読む}
+\bkng{ハンの窓をかけた FFT で、振幅が0.5と出たので、もとの音の振幅は0.5。}
+\bkok{ハンの窓は平均0.5なので、振幅は半分に出る。2倍（0.5でわる）して、振幅1と読む。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{S/N 比の 10 と 20}
+\bkng{信号の電圧が雑音の10倍なので、S/N 比は 10\,dB。}
+\bkok{電圧（実効値）の比は $20\log_{10}$ で、20\,dB。電力の比なら100倍で $10\log_{10}100=20$\,dB と、同じになる。}
+\end{tsumazuki}
+
+\begin{tsumazuki}{情報量が多い＝大事な知らせ？}
+\bkng{情報量の大きい知らせほど、内容が大事だ。}
+\bkok{情報量は、確率だけで決まる「予想のつかなさ」で、内容の大切さとは関係がない。}
+シャノンの情報量は、意味を考えないことで、どんな信号にも使える物差しになりました（⑨）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[録音・機械の診断・ノイズキャンセリング]
+\textbf{録音と音楽の配信}：マイクの電圧は、アンチエイリアシングフィルター（⑤）を通ってから、AD 変換器で数になります。$f_{\mathrm s}$ で記録できる上限が、ビット数で S/N 比が決まります（①⑧）。配信の音楽は、9-12①の MP3 のように、聞こえにくい成分を捨て、残りを符号で縮めて（⑨）、データの量を CD の10分の1ほどにしています。
+
+\textbf{機械の診断}：工場のポンプやモーターの振動を、加速度計（波-10）でとり、ハンの窓をかけて FFT します。9-12④のように、毎分1800回転の機械なら、\qty{30}{Hz}とその整数倍の山の高さを見ます。軸受のきずの小さな山を、大きな回転の山のそばで見つけるには、もれを小さくする窓（④）が欠かせません。\qty{1}{Hz}はなれた山を分けるには、1秒より長くはかります（③）。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=104mm, height=44mm, xmin=0, xmax=200, ymin=0, ymax=1.25, xtick={30,60,90,108,150}, ytick={0.5,1}, xlabel={周波数（Hz）}, ylabel={振動の大きさ}]
+  \addplot[ycomb, bkBlue, line width=2pt, no markers] coordinates {(30,1) (60,0.35) (90,0.12) (120,0.05) (150,0.03)};
+  \addplot[ycomb, bkRed, line width=2pt, no markers] coordinates {(108,0.08)};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:33,0.95) {回転数の1倍（かたより）};
+  \node[font=\sffamily\footnotesize, anchor=south west, fill=white, inner sep=1pt] at (axis cs:63,0.36) {2倍（軸のずれ）};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black, fill=white, inner sep=1pt] at (axis cs:110,0.2) {軸受のきずの山（小さい）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{毎分1800回転のポンプの振動のスペクトル（形を見るための作った例）。回転数の整数倍の山のあいだに、軸受の玉が外輪のきずを通る回数（玉が9個で、玉の直径が軸受の大きさの0.2倍なら約\qty{108}{Hz}）の小さな山が出る。}
+\end{bkcenter}
+
+\textbf{ノイズキャンセリング}：イヤホンの外側のマイクで周りの雑音をとり、向きを逆にした音（9-12③）を、すぐにイヤホンから出して打ち消します。とってから音を出すまでの時間が長いと、打ち消す音がずれるので、AD 変換と計算を、とても速く行います。
+
+\begin{phketa}[信号を数にするときの数の目安]
+\phketaline{サンプリング周波数}{声 \qty{8}{kHz}、音楽 \qty{44.1}{kHz}〜\qty{96}{kHz}、振動の計測 数 kHz〜数十 kHz}
+\phketaline{量子化の S/N 比}{8ビット 約 50\,dB、16ビット 約 98\,dB、24ビット（回路で決まる）}
+\phketaline{周波数の分解能}{\qty{1}{s}はかって\qty{1}{Hz}、\qty{0.1}{s}なら\qty{10}{Hz}}
+\phketaline{通信路容量}{電話の線 約\qty{30}{kbit/s}、\qty{20}{MHz}・20\,dB で約\qty{130}{Mbit/s}}
+\phboxhead{答えが桁で合っているか}
+データの量は、CD の音1秒で約\qty{1.4}{Mbit}です。1秒の音が何 GB にもなる答えが出たら、ビットとバイト（8倍）、kHz と Hz（1000倍）の取り違えを疑いましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{信号処理,計測工学,通信工学,情報理論}{サンプリング周波数、ナイキスト周波数、エイリアシング、窓関数、S/N 比、量子化ビット数、エントロピー、通信路容量}
+
+\begin{column}{「ビット」の名づけ親}
+シャノン（1916〜2001年）は、アメリカの電話会社の研究所で、1948年に「通信の数学的理論」という論文を発表しました。この論文で、情報の量を $\log_2$ ではかることと、その単位を「ビット」（binary digit、2進数の1けた）とよぶことを書いています。シャノンは論文の中で、ビットということばは同じ研究所のテューキーが考えたものだ、と書きました。テューキーは、のちに1965年、クーリーとともに FFT（9-4⑬）を発表した人です。この章の2つの道具、FFT とビットは、同じ人とつながっているのです。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{4}
+\bkproblem 1秒に \num{48000} 回、24ビット、2チャンネルで録音します。1秒あたりのデータの量と、1分の録音のデータの量（MB）、正しく記録できるいちばん高い周波数を求めましょう。
+\bkpans{$48000\times24\times2=\num{2304000}$ ビット/s。1分で $2304000\times60\div8\approx\num{17300000}$ バイト、約 17\,MB。上限 \qty{24000}{Hz}}
+\bkproblem 1秒に1000回とる AD 変換器に、フィルターを通さずに、（1）\qty{600}{Hz}、（2）\qty{950}{Hz}、（3）\qty{1200}{Hz}、（4）\qty{2300}{Hz}の音を入れました。見かけの周波数をそれぞれ求めましょう。
+\bkpans{（1）\qty{400}{Hz}、（2）\qty{50}{Hz}、（3）\qty{200}{Hz}、（4）\qty{300}{Hz}}
+\bkproblem 1秒30コマの動画で、スポーク6本（\ang{60}ごと）の車輪が、1秒に4.75回転しています。画面では、車輪はどちら向きに、1秒に何度回って見えますか。
+\bkpans{1コマに $4.75\times360°\div30=57°$、$57°-60°=-3°$。逆向きに、1秒に $3°\times30=\ang{90}$}
+\bkproblem 羽根が4枚の換気扇を、1秒に100回ちらつく照明の下で見ます。（1）止まって見えるいちばん遅い回転数（毎分）、（2）毎分1470回転のときの見え方を求めましょう。
+\bkpans{（1）$\tfrac{90}{360}\times100\times60=$ 毎分1500回転。（2）光る間に $1470\div60\times360\div100=88.2°$、$-1.8°$ で、逆向きに1秒に\ang{180}（毎分30回転）}
+\bkproblem 1秒に \num{44100} 回とった音から、\num{16384} 点を FFT します。（1）$\Delta f$ とはかった時間を求めましょう。（2）\qty{440}{Hz}と\qty{442}{Hz}の2つの音を、目もりで分けて見ることはできますか。
+\bkpans{（1）$\Delta f=44100\div16384\approx\qty{2.7}{Hz}$、$T_{\mathrm m}\approx\qty{0.37}{s}$。（2）2つの差\qty{2}{Hz}は $\Delta f$ より小さいので、分けて見られない（\qty{0.5}{s}より長くはかる）}
+\bkproblem $T_{\mathrm m}=\qty{0.25}{s}$ とった\qty{500}{Hz}・振幅1の $\sin$ に、ハンの窓をかけて FFT しました。（1）$\Delta f$ を求めましょう。（2）どの周波数に、いくつの振幅が出ますか（補正する前と、2倍に補正したあと）。
+\bkpans{（1）$1\div0.25=\qty{4}{Hz}$。（2）\qty{496}{Hz}・\qty{500}{Hz}・\qty{504}{Hz}に、補正前0.25・0.5・0.25、補正後0.5・1・0.5}
+\bkproblem 4096点（$2^{12}$）の DFT を FFT で計算すると、式のとおりに計算するときの約何倍速くなりますか。
+\bkpans{$N/\log_2N=4096\div12\approx340$ 倍}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 遮断周波数\qty{1.6}{kHz}の RC の低域フィルターを2段（間にバッファー）にすると、\qty{10}{kHz}の雑音は何 dB 弱まりますか。また、1秒に1000回とったデータに20点の移動平均をかけると、\qty{25}{Hz}の成分は何倍になりますか（$\sin(\pi/40)\approx0.0785$）。
+\bkpans{1段 $|G|=1/\sqrt{1+(10000/1592)^2}\approx0.157$、約 $-16.1$\,dB。2段で約 $-32$\,dB。移動平均：$|H|=\sin(\pi/2)\div(20\times0.0785)\approx0.64$ 倍}
+\bkproblem 10ビットの AD 変換器（ディザを加え、量子化の誤差が毎回でたらめになるようにした）で、同じ信号を100回とって平均します。いちばん大きな $\sin$ のときの量子化の S/N 比は、平均の前と後で、それぞれ約何 dB ですか。
+\bkpans{前：$6.02\times10+1.76\approx62$\,dB。100回の平均で $+20$\,dB、約 82\,dB}
+\bkproblem 表が出る確率が0.8のコインがあります（$\log_25\approx2.32$）。（1）1回の結果のエントロピー、（2）1000回の結果をいちばん縮めたときの長さ（ビット）、（3）（2）を熱のエントロピーにした値（$k_{\mathrm B}\ln2\approx\qty{9.6e-24}{J/K}$）を求めましょう。
+\bkpans{（1）$0.8\times0.32+0.2\times2.32\approx0.72$ ビット。（2）約720ビット。（3）$720\times9.6\times10^{-24}\approx\qty{6.9e-21}{J/K}$}
+\bkproblem \qty{3}{kHz}のはばの線で、\qty{60}{kbit/s}を送りたい。シャノンの式で、要る S/N 比（dB）を求めましょう（$\log_{10}2\approx0.301$）。
+\bkpans{$\log_2(1+P_{\mathrm s}/P_{\mathrm n})=60000\div3000=20$。$P_{\mathrm s}/P_{\mathrm n}=2^{20}-1\approx1.05\times10^6$、$10\log_{10}(1.05\times10^6)\approx60$\,dB}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 音をサンプリングと量子化で数の列にし、データの量を求められる。\bkfurref{ph:波-11:sec1}
+\item エイリアシングで、車輪が逆に回って見えるわけを説明できる。\bkfurref{ph:波-11:sec2}
+\item 目もり $\Delta f=f_{\mathrm s}/N$ を読み、窓関数でもれを小さくできる。\bkfurref{ph:波-11:sec4}
+\item サンプリング定理・フィルター・平均で、S/N 比を見積もれる。\bkfurref{ph:波-11:sec5}
+\item 情報量と通信路容量を計算し、熱のエントロピーとくらべられる。\bkfurref{ph:波-11:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{車輪が逆に回るのも、高い音が化けるのも、とびとびにとるせいだったんだ。情報の量の式は、熱のエントロピーとそっくりだね！}
