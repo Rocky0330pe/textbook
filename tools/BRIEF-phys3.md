@@ -45,6 +45,7 @@
     - 作業環境から届くサイト（11月5日に確かめた）：e-Gov 法令（laws.e-gov.go.jp・elaws.e-gov.go.jp）、厚生労働省（www.mhlw.go.jp）、JIS の閲覧（webdesk.jsa.or.jp）、NIST（webbook.nist.gov・janaf.nist.gov・physics.nist.gov）、IAPWS（www.iapws.org）、NASA（www.nasa.gov）、建築研究所（www.kenken.go.jp）。WebFetch で本文を読む。
     - 11月5日に許可が足された（国立天文台・理科年表・気象庁・環境省・文部科学省・JAXA・J-STAGE・arXiv・BIPM・ESA・KAGRA・すばる など）。**WebFetch が届かないときは、Bash の `curl -sL URL` で読む**（WebFetch は作業環境の許可とちがう道を通ることがある）。PDF は `curl -sL -o 一時ファイル URL` で保存して `pdftotext` で読む。
     - 届かないサイト（ISO・IEC・経済産業省・IPCC は相手のサイトが自動の読み取りを断る）は、WebSearch で一次資料の文や数を引いている資料を2つ以上見つけて照らし合わせる。
+    - **Wikipedia は出典にしない**（依頼者の指示：まちがっている可能性が高い）。検索で見つけても、その中で引いている一次資料・論文・公式サイトをたどって確かめる。
     - それでも確かめられない値だけを〔要確認〕にし、報告に「何を・どこで調べたか」を書く。確かめに1つの値で長い時間をかけない。
 
 ## 3. 試し組みと見直し（必ずやる）
