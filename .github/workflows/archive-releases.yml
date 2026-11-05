@@ -1,0 +1,45 @@
+# 過去の版の PDF を、保管用のリリースにする。
+#   ホームページ（3ryu-eng.com）は最新版だけを置き、過去の版はこのリポジトリのリリースから配る。
+#   tools/archive-releases.json に書いた版のうち、まだリリースがないものだけを作る（何度動いても大丈夫）。
+#   PDF はホームページに今置いてあるものを取ってきて、sha256 が json と同じか確かめてから付ける。
+name: 過去の版をリリースにする
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/archive-releases.json"
+      - ".github/workflows/archive-releases.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: リリースを作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          J=tools/archive-releases.json
+          n=$(jq length "$J")
+          for i in $(seq 0 $((n - 1))); do
+            TAG=$(jq -r ".[$i].tag" "$J")
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "$TAG：リリースはもうあります"
+              continue
+            fi
+            ASSET=$(jq -r ".[$i].asset" "$J")
+            curl -fsSL --retry 3 -o "$ASSET" "$(jq -r ".[$i].url" "$J")"
+            echo "$(jq -r ".[$i].sha256" "$J")  $ASSET" | sha256sum -c -
+            gh release create "$TAG" "$ASSET" --target "$(jq -r ".[$i].target" "$J")" \
+              --title "$TAG" --notes "$(jq -r ".[$i].notes" "$J")"
+            echo "$TAG：リリースを作りました"
+          done
