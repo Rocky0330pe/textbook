@@ -1,0 +1,997 @@
+%% 第22回編集委員会（物理第2巻）：組 熱W4
+%% p2-10.tex  熱-10　わく温度を圧力で読む：自由エネルギーと相平衡（★3〜5・3段）
+%% 中身は tools/phys2-plan.md の B「熱-10」。公式の持ち主は A（N52）。記号は C-1（F・G・f・g、μ、L、v、a・b、Z）。
+%% この章では重力加速度を文字で使わない（比ギブズの g とぶつけない。C-1）。ファラデー定数は文字にしない。
+%% 中学・高校の公式を、この章では導かない（N52 は大学の公式）。手引き 6-1-2・K-8 のとおり「この章で導く中学・高校の公式」の欄はおかない。
+%% 数値はすべて Python で計算した：checks/物理第2巻/熱-10/calc_p2_10.py（出力 calc_p2_10_out.txt）、vdw_equal_area.py
+%% 水と水蒸気の値は IAPWS-IF97 の式から計算（iapws 1.5.5）。氷は IAPWS 2006、昇華圧は IAPWS 2011（iapws）。CO2・N2 の本当の値は CoolProp 8.0。
+%% 出典（本文で使った事実）
+%%   ・ファンデルワールス定数（CO2：a＝3.640 L²·bar/mol²、b＝0.04267 L/mol。N2：a＝1.370、b＝0.0387）：CRC Handbook（Wikipedia "Van der Waals constants (data page)" で確かめた）
+%%   ・CO2 の臨界点 304.13 K・7.377 MPa、三重点 216.59 K・0.518 MPa：Span & Wagner (1996)（CoolProp 8.0 の値）
+%%   ・水の三重点 273.16 K・611.657 Pa、臨界点 647.096 K・22.064 MPa：IAPWS
+%%   ・ΔH・ΔG（25 ℃、H2O の生成）：液 −285.83・−237.13 kJ/mol、気体 −241.83・−228.59 kJ/mol（NIST-JANAF・CODATA の値）。ファラデー定数 96485 C/mol
+%%   ・ファンデルワールスの学位論文（1873年、ライデン）、1910年ノーベル物理学賞。マクスウェルの等面積の規則：Nature 11, 357 (1875)
+%%   ・クラペイロン（1834年）、クラウジウス（1850年）。ギブズ "On the Equilibrium of Heterogeneous Substances"（1875〜1878年）
+%%   ・水の液液臨界点の説：P. Gallo et al., Chem. Rev. 116, 7463 (2016)。実験：K. H. Kim et al., Science 370, 978 (2020)
+%%   ・高圧蒸気滅菌（オートクレーブ）の 121 ℃・15〜20 分：日本薬局方の参考情報（滅菌法）〔要確認：本文には「121 ℃で使うことが多い」とだけ書く〕
+\makeatletter
+% 注射器（横）  \qxksyringe{(左はし)}{長さ}
+\newcommand\qxksyringe[2]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkBlue!8, draw=bkInk, line width=0.7pt] (0,0) rectangle (#2,7);
+  \fill[bkBlue!30] (0.4,0.4) rectangle ({#2*0.35},6.6);
+  \filldraw[fill=bkGray!60, draw=bkInk, line width=0.6pt] ({#2*0.62},0.3) rectangle ({#2*0.62+1.6},6.7);
+  \draw[bkInk, line width=0.9pt] ({#2*0.62+1.6},3.5) -- ({#2+8},3.5);
+  \draw[bkInk, line width=1pt] ({#2+8},0.5) -- ({#2+8},6.5);
+  \filldraw[fill=bkGray!40, draw=bkInk] (-3,2.5) rectangle (0,4.5);
+  \end{scope}}
+\makeatother
+
+\phchapter{10}{わく温度を圧力で読む：\\自由エネルギーと相平衡}{圧力なべの中では、水は何℃でわく？}{\bklevelrange{3}{5}}{わく温度を圧力で読む：自由エネルギーと相平衡}
+\bkmichishirube{3-12,3-16,8-2,8-3,熱-6,熱-8}{熱-9,熱-15,電-4}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 蒸気表とファンデルワールスの式で、わく温度と実在気体の圧力を求められる。
+\item \bklevel{4}\enspace $\ln p$ と $1/T$ のグラフから蒸発熱を読み、わく温度を見積もれる。
+\item \bklevel{5}\enspace 自由エネルギーとマクスウェルの関係式から、相平衡の式を導ける。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+ふつうのなべでは、水は約100\,℃でわきます。圧力なべは、ふたをしっかり閉めて、中の圧力を上げます。ゲージ圧（大気圧との差）が\qty{80}{kPa}の圧力なべの中では、水は何\,℃でわくのでしょう。わく温度が上がると、なぜ料理が早くできるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.4\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.8pt] (0,0) rectangle (36,18);
+  \fill[bkBlue!25] (0.5,0.5) rectangle (35.5,10);
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.8pt] (-2,18) rectangle (38,21);
+  \filldraw[fill=bkRed!40, draw=bkInk, line width=0.6pt] (17,21) rectangle (19,25);
+  \draw[bkInk, line width=0.9pt] (38,19.5) -- (46,19.5);
+  \foreach \qxkx in {6,14,22,30} {\draw[bkBlue!70!black, line width=0.5pt] (\qxkx,3) circle (0.9) (\qxkx+2,6.5) circle (0.6);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (18,25.5) {おもり（圧力の調節）};
+  \node[font=\sffamily\bfseries\large, text=bkRed] at (18,14) {?\,℃};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 熱-8 では、蒸気表から「わく温度は圧力で決まる」ことを読みました。高い山の上では低い温度で、圧力なべの中では高い温度でわきます。この章では、その理由を\textbf{自由エネルギー}という量で説明し、表がなくても、わく温度を圧力から計算できる式（クラペイロン・クラウジウスの式）を導きます。そのために、熱-6 のエントロピーと、数学 8-3 の「止めておく量を書いた偏微分」を使います。
+
+\begin{yattemiyou}[注射器の中で、室温の水をわかす]
+\textbf{用意するもの}\par
+注射器（\qty{10}{mL}くらい、針はつけない）、室温の水、温度計、指（先をふさぐ）\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.6\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 水の温度を測る。注射器に水を\qty{3}{mL}くらい吸い、空気を追い出す。
+\item 先を指でしっかりふさいで、ピストンを強く引く。
+\item 水の中に泡ができ、わき立つように見える所を観察しよう。
+\item ピストンをはなすと、泡がすっと消えることも見よう。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \qxksyringe{(3,0)}{30}
+  \foreach \qxkx/\qxky in {6/2,9/4.5,7.5/5.8,12/2.6,10.5/1.5} {\draw[bkBlue!70!black, line width=0.4pt, fill=white] (\qxkx,\qxky) circle (0.6);}
+  \draw[bk arrow] (32,10) -- (42,10);
+  \node[font=\sffamily\footnotesize, anchor=south] at (37,10.5) {引く};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：ピストンを引くと、水の上の空間の圧力が下がります。水の温度が25\,℃なら、蒸気表（巻末、IAPWS-IF97 の式から計算）で25\,℃の飽和圧力は\qty{3.17}{kPa}なので、圧力がそこまで下がると、室温のままでわきます。内径\qty{14.5}{mm}の注射器（断面積 約\qty{1.65}{cm^2}）なら、大気の圧力との差 $101.3-3.2\approx\qty{98}{kPa}$ に面積をかけて、約\qty{16}{N}の力でピストンを引けば届く計算です。ピストンをはなすと圧力がもどり、泡は水にもどります。「わく」とは、温度だけでなく、\textbf{温度と圧力の組}で決まるできごとなのです。
+
+\begin{omoidasou}
+\bkrecall{3-12}{$\log$ はかけ算をたし算にする。片対数グラフでは、倍々に増える量が直線になる（⑥）。}
+\bkrecall{3-16}{点の組に直線 $y=ax+b$ をあてはめる最小二乗法。傾き $a$ は「共分散÷分散」（③）。}
+\bkrecall{8-2}{2回の偏微分は、順番を入れかえても同じ（⑧）。}
+\bkrecall{8-3}{全微分 $\dd f=\dfrac{\partial f}{\partial x}\dd x+\dfrac{\partial f}{\partial y}\dd y$（⑤）。止めておく量を右下に書く $\Bigl(\dfrac{\partial p}{\partial T}\Bigr)_V$（例題9）。}
+\bkrecall{熱-6}{$\dd S=\delta Q_{\mathrm{rev}}/T$。温度一定の熱の源とのやりとりでは $Q\leqq T\Delta S$（⑥）。}
+\bkrecall{熱-8}{飽和の表（蒸気表）。わく間は温度一定で、蒸発熱は $L=h''-h'$（$'$ は飽和液、$''$ は飽和蒸気）。}
+\end{omoidasou}
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{わく温度と圧力の関係を見る}{3}
+
+\bksubsection{1}{わく温度と圧力のグラフ}
+\label{ph:熱-10:sec1}
+熱-8 の蒸気表から、水がわく温度（飽和温度）と圧力（飽和圧力）の組を、いくつか抜き出します。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=44mm] Q[c,m,wd=26mm] Q[c,m,wd=26mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10}}
+場所・道具 & 圧力 $p$〔kPa〕 & わく温度〔℃〕 \\
+富士山頂（気圧の目安） & 63 & 87.2 \\
+高原（気圧の目安） & 80 & 93.5 \\
+海面（1気圧） & 101.325 & 99.97 \\
+圧力なべ（ゲージ圧\qty{80}{kPa}） & 181.3 & 117.1 \\
+発電所のボイラー（熱-8） & \num{10000} & 311.0 \\
+\end{bktable}
+\bktabcaption{わく温度と圧力（IAPWS-IF97 の式から計算）。圧力は絶対圧。}\label{ph:熱-10:tab-sat}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=56mm, xmin=0, xmax=160, ymin=0, ymax=650, xtick={20,40,60,80,100,120,140}, ytick={101.3,200,400,600}, yticklabels={101.3,200,400,600}, xlabel={わく温度（℃）}, ylabel={飽和圧力 $p$（kPa）}]
+  \addplot[bkcurve, smooth] coordinates {(0.01,0.61)(10,1.23)(20,2.34)(30,4.25)(40,7.38)(50,12.35)(60,19.95)(70,31.20)(80,47.41)(90,70.18)(100,101.42)(110,143.38)(120,198.67)(130,270.26)(140,361.50)(150,476.10)(160,618.14)};
+  \fill[bkRed] (axis cs:87.18,63) circle (2pt) (axis cs:99.97,101.325) circle (2pt) (axis cs:117.14,181.3) circle (2pt);
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkRed!75!black] at (axis cs:86,64) {富士山頂};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkRed!75!black] at (axis cs:98,104) {1気圧};
+  \node[font=\sffamily\footnotesize, anchor=south east, text=bkRed!75!black] at (axis cs:116,184) {圧力なべ};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (axis cs:55,420) {液体の水（線より上・左）};
+  \node[font=\sffamily\footnotesize, text=bkGray] at (axis cs:140,60) {水蒸気（線より下・右）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{水の飽和圧力の曲線（IAPWS-IF97）。線の上（圧力が高い）では液体、線の下（圧力が低い）では水蒸気が安定。線の上の点で、液体と水蒸気がいっしょにいられる。}\label{ph:熱-10:fig-psat}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 圧力が高いほど、わく温度は高い。富士山頂では87\,℃くらい、圧力なべでは117\,℃くらいです。
+\item 曲線は、温度が上がるほど急に立ち上がります。\qty{20}{K}上がるごとに、飽和圧力はおよそ2〜3倍になります（60\,℃で20 kPa、80\,℃で47 kPa、100\,℃で101 kPa）。倍々に増えるようすは、3-12 の片対数グラフで直線になりそうです（③）。
+\end{enumerate}
+
+\begin{phmijika}[圧力なべで料理が早くできるわけ]
+煮物がやわらかくなる（でんぷんが変わる、肉の筋がほぐれる）速さは、温度が高いほど急に速くなります。わく温度が100\,℃から117\,℃に上がると、ふつうのなべでは何十分もかかる料理が、ずっと短い時間でできます。病院の器具の滅菌に使う高圧蒸気滅菌器（オートクレーブ）も同じしくみで、121\,℃（飽和圧力は絶対圧で約\qty{205}{kPa}）で使うことが多いです。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{水の相図：三重点と臨界点}
+\label{ph:熱-10:sec2}
+温度を横、圧力をたてにとって、水が固体（氷）・液体・気体のどれになるかを塗り分けた図を\textbf{相図}といいます。圧力は\qty{1}{Pa}から\qty{100}{MPa}まで大きく変わるので、たての軸は対数の目もり（3-12⑥）にします。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=64mm, xmin=190, xmax=700, ymin=-1, ymax=8.4, xtick={200,273.16,373.15,500,647.1}, xticklabels={200,273.16,373.15,500,647.1}, ytick={0,2,5,8}, yticklabels={1\,Pa,100\,Pa,100\,kPa,100\,MPa}, xlabel={$T$（K）}, ylabel={圧力 $p$（対数の目もり）}, axis x line=bottom, axis y line=left]
+  \fill[bkBlue!10] (axis cs:190,8.4) -- (axis cs:190,-0.79) -- (axis cs:200.00,-0.7889) -- (axis cs:210.00,-0.1538) -- (axis cs:220.00,0.4239) -- (axis cs:230.00,0.9517) -- (axis cs:240.00,1.4356) -- (axis cs:250.00,1.8809) -- (axis cs:260.00,2.2918) -- (axis cs:270.00,2.6722) -- (axis cs:273.16,2.7865) -- (axis cs:272.95,6.4) -- (axis cs:271.5,7.4) -- (axis cs:264,8.0086) -- (axis cs:262,8.4) -- cycle;
+  \addplot[bkInk, line width=1.3pt, smooth] coordinates {(200.00,-0.7889)(210.00,-0.1538)(220.00,0.4239)(230.00,0.9517)(240.00,1.4356)(250.00,1.8809)(260.00,2.2918)(270.00,2.6722)(273.16,2.7865)};
+  \addplot[bkInk, line width=1.3pt, smooth] coordinates {(273.16,2.7865)(300.00,3.5486)(350.00,4.6199)(400.00,5.3905)(450.00,5.9694)(500.00,6.4214)(550.00,6.7865)(600.00,7.0915)(620.00,7.2014)(640.00,7.3068)(647.10,7.3437)};
+  \addplot[bkInk, line width=1.3pt] coordinates {(273.16,2.7865)(273.00,6.3315)(272.00,7.1800)(270.00,7.5945)(268.00,7.7896)(266.00,7.9159)(264.00,8.0086)(262.00,8.0812)};
+  \addplot[bkGray, dashed, line width=0.6pt] coordinates {(190,5.0057)(700,5.0057)};
+  \fill[bkRed] (axis cs:273.16,2.7865) circle (2.2pt) (axis cs:647.1,7.3437) circle (2.2pt) (axis cs:373.12,5.0057) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!75!black] at (axis cs:276,2.7) {三重点};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkRed!75!black] at (axis cs:647.1,7.5) {臨界点};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:375,4.9) {1気圧でわく点};
+  \node[font=\sffamily\small] at (axis cs:232,6.6) {氷};
+  \node[font=\sffamily\small] at (axis cs:400,6.9) {液体の水};
+  \node[font=\sffamily\small] at (axis cs:520,3.2) {水蒸気（気体）};
+  \node[font=\sffamily\footnotesize, anchor=south, text=bkGray] at (axis cs:600,5.1) {1気圧};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{水の相図（たては対数の目もり）。昇華の線（氷と水蒸気）、蒸発の線（水と水蒸気）、融解の線（氷と水）の3本が三重点で出会う。蒸発の線は臨界点で終わる。昇華と融解の線は IAPWS の式、蒸発の線は IAPWS-IF97 から計算。}\label{ph:熱-10:fig-phase}
+\end{bkfigure}
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 3本の線は、2つの相がいっしょにいられる温度と圧力の組です。線の上では2つの相が\textbf{つり合って}（相平衡）いて、線をこえると片方だけになります。\bkidx{そうへいこう}{相平衡}
+\item 3本の線が出会う点が\textbf{三重点}（\qty{273.16}{K}、\qty{611.657}{Pa}）です。\bkidx{さんじゅうてん}{三重点}氷・水・水蒸気の3つが同時にいられる、ただ1つの点です。\qty{611}{Pa}より低い圧力では、液体の水は安定に存在できず、氷は温めると直接水蒸気になります（昇華。例題9のフリーズドライ）。
+\item 蒸発の線は、\textbf{臨界点}（\qty{647.096}{K}、\qty{22.064}{MPa}）で終わります。それより高い温度・圧力では、液体と気体の区別がなくなります（⑧）。
+\item 融解の線は、ほとんどまっすぐ上に立っていますが、よく見ると少し左に傾いています。氷は圧力を上げると、少し低い温度でとけます（例題3）。氷が水に浮く（水より体積が大きい）ことと関係があります（⑦）。
+\end{enumerate}
+
+\begin{seikaku}
+二酸化炭素（CO$_2$）の三重点は\qty{216.59}{K}・\qty{0.518}{MPa}で、1気圧よりずっと高い圧力です。だから1気圧では液体になれず、ドライアイスは液体を通らずに直接気体になります（昇華）。臨界点は\qty{304.13}{K}（約31\,℃）・\qty{7.377}{MPa}です（CoolProp 8.0 で計算）。
+\end{seikaku}
+
+\Needspace{16\baselineskip}\phstage{te}{表計算で $\ln p$ と $1/T$ をグラフにする}{3}
+
+\bksubsection{3}{$\ln p$ と $1/T$ は、ほぼ直線}
+\label{ph:熱-10:sec3}
+①のグラフは曲がっていて、読みにくい形でした。ところが、横に $1/T$（$T$ は絶対温度）、たてに $\ln p$ をとると、ほとんどまっすぐな線になります。蒸気表の60\,℃〜140\,℃の9つの点で確かめましょう（$1/T$ は小さな数なので、1000倍した $1000/T$ で表にします）。
+
+\begin{bkcenter}
+\bksheet{5}{19}{%
+1 & $t$（℃） & $T$（K） & $1000/T$ & $p$（kPa） & $\ln p$ \\
+2 & 60 & 333.15 & 3.0017 & 19.946 & 2.9930 \\
+3 & 70 & 343.15 & 2.9142 & 31.201 & 3.4404 \\
+4 & 80 & 353.15 & 2.8317 & 47.415 & 3.8589 \\
+5 & 90 & 363.15 & 2.7537 & 70.182 & 4.2511 \\
+6 & 100 & 373.15 & 2.6799 & 101.418 & 4.6193 \\
+7 & 110 & 383.15 & 2.6099 & 143.376 & 4.9655 \\
+8 & 120 & 393.15 & 2.5436 & 198.665 & 5.2916 \\
+9 & 130 & 403.15 & 2.4805 & 270.260 & 5.5994 \\
+10 & 140 & 413.15 & 2.4204 & 361.501 & 5.8903 \\
+11 & & & 傾き & $-4.983$ & \\
+12 & & & 切片 & 17.965 & \\}
+\bktabcaption{蒸気表（IAPWS-IF97 の式から計算）の飽和圧力。B2＝A2＋273.15、C2＝1000/B2、E2＝LN(D2)。D11＝SLOPE(E2:E10, C2:C10)、D12＝INTERCEPT(E2:E10, C2:C10)。}\label{ph:熱-10:tab-sheet}
+\end{bkcenter}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=58mm, xmin=2.35, xmax=3.08, ymin=2.6, ymax=6.3, xtick={2.4,2.6,2.8,3.0}, ytick={3,4,5,6}, xlabel={$1000/T$（$T$ は K）}, ylabel={$\ln p$（$p$ は kPa）}, axis x line=bottom, axis y line=left]
+  \addplot[bkRed, line width=1pt, domain=2.38:3.05] {17.965-4.9833*x};
+  \addplot[bkBlue, mark=*, only marks] coordinates {(3.0017,2.9930)(2.9142,3.4404)(2.8317,3.8589)(2.7537,4.2511)(2.6799,4.6193)(2.6099,4.9655)(2.5436,5.2916)(2.4805,5.5994)(2.4204,5.8903)};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:2.75,4.6) {$\ln p=17.965-4.983\times(1000/T)$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black] at (axis cs:2.435,6.0) {140\,℃};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black] at (axis cs:2.99,3.05) {60\,℃};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{表\ref{ph:熱-10:tab-sheet}の点（●）と、最小二乗の直線。右へ行くほど温度が低い。9つの点は、直線から $\ln p$ で0.014以内にのる。}\label{ph:熱-10:fig-lnp}
+\end{bkfigure}
+
+\phboxhead{傾きは蒸発熱を表す}
+直線の式は、$x=1000/T$ として $\ln p=17.965-4.983x$ です。傾きが負なのは、温度が下がる（$1000/T$ が大きくなる）と、飽和圧力が下がるからです。⑦で導くクラウジウス・クラペイロンの式によると、この傾きは
+\[\text{傾き}=-\frac{L}{1000\,R_{\mathrm s}}\]
+（$L$ は\qty{1}{kg}あたりの蒸発熱、$R_{\mathrm s}=\qty{461.5}{J/(kg.K)}$ は水蒸気の比気体定数。熱-3 ③）になるはずです。だから、
+\[L=4.983\times1000\times461.5\approx\qty{2.30e6}{J/kg}=\qty{2300}{kJ/kg}\]
+です。蒸気表の蒸発熱（100\,℃で\qty{2257}{kJ/kg}、60\,℃で\qty{2358}{kJ/kg}）の、ちょうど間くらいの値です。\textbf{2つの数（圧力と温度）の表から、熱の量（蒸発熱）が読める}のです。
+
+\begin{phyomi}[$\ln p$ と $1/T$ が直線]
+「$1/T$ を少し変えると、$\ln p$ は決まった割合で変わる」。$\ln$ をはずすと、$p$ は $1/T$ について指数関数で変わる、ということ（3-11・3-12）。だから温度が少し上がるだけで、飽和圧力は大きく増える。
+\end{phyomi}
+
+\begin{phbaisuru}{蒸発熱 $L$}
+直線の傾きが2倍になります。同じだけ温度を変えたとき、$\ln p$ の変化が2倍になるので、飽和圧力の\textbf{倍率は2乗}になります。たとえば水で、ある温度の変化で飽和圧力が2倍になるなら、$L$ が2倍の物質では4倍になります。$L$ が大きい物質ほど、わく温度は圧力で変わりにくく、飽和圧力は温度で変わりやすいのです。
+\end{phbaisuru}
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{はてな？の答え：直線から、わく温度を読む}
+\label{ph:熱-10:sec4}
+\begin{phmodel}[圧力なべの中の水]
+\phignore{なべの中の場所による温度のちがい。水の深さによる圧力のちがい。とけている塩や砂糖。}
+\phassume{なべの中は、ゲージ圧\qty{80}{kPa}（絶対圧 $101.3+80=\qty{181.3}{kPa}$）で一定。水と水蒸気がつり合っている（相平衡）。}
+\phlimit{おもりが浮いて、蒸気を逃がしている途中。塩分が多く、わく温度が上がるとき（沸点上昇）。}
+\end{phmodel}
+
+\bkhatenaref の答えは、③の直線から読めます。ゲージ圧\qty{80}{kPa}は、大気圧に\qty{80}{kPa}を足した絶対圧\qty{181.3}{kPa}です（力-12 の絶対圧とゲージ圧）。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $\ln181.3\approx5.200$。
+\item 直線の式 $5.200=17.965-4.983x$ を解いて、$x=1000/T\approx2.5617$。
+\item $T\approx\qty{390.4}{K}$、つまり約117.2\,℃です。
+\end{enumerate}
+IAPWS-IF97 の式で計算した本当の値は117.1\,℃なので、\qty{0.1}{K}ほどしかずれていません。\textbf{圧力なべの中では、水は約117\,℃でわきます。}ふつうのなべより約\qty{17}{K}高い温度で煮えるので、料理が早くできるのです。
+
+\begin{phmijika}[同じ直線で、富士山頂も]
+富士山頂（約\qty{63}{kPa}）なら、$\ln63\approx4.143$ から $x\approx2.7738$、$T\approx\qty{360.5}{K}$ で約87.4\,℃です（本当は87.2\,℃。熱-8 例題1）。表の範囲（60\,℃〜140\,℃）の中なら、直線でよく当たります。
+\end{phmijika}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{自由エネルギーから相平衡へ}{5}
+
+\bksubsection{5}{$\dd U=T\,\dd S-p\,\dd V$ と、自由エネルギー $F$・$G$}
+\label{ph:熱-10:sec5}
+\phboxhead{内部エネルギーの全微分}
+熱-2 の第一法則 $\dd U=\delta Q+\delta W$ で、可逆な変化なら、受けとる熱は $\delta Q=T\,\dd S$（熱-6 ⑥）、される仕事は $\delta W=-p\,\dd V$（熱-2 ③）です。だから
+\pheq{\dd U=T\,\dd S-p\,\dd V}{J ＝ K × J/K ＝ Pa × m$^3$}
+です。左辺も右辺も状態量だけでできているので、この式は、可逆でない変化でも、はじめとおわりが落ち着いた状態なら使えます。8-3⑤の全微分の形と見くらべると、
+\[\Bigl(\frac{\partial U}{\partial S}\Bigr)_V=T,\qquad\Bigl(\frac{\partial U}{\partial V}\Bigr)_S=-p\]
+です。$U$ は、$S$ と $V$ を決めると決まり、その偏微分が温度と圧力になります。
+
+\phboxhead{困ること：エントロピーは、温度計のようには測れない}
+実験や工場で決めやすいのは、温度 $T$ と圧力 $p$（または体積 $V$）です。エントロピー $S$ を一定に保つ「エントロピー計」はありません。そこで、$S$ の代わりに $T$ を、$V$ の代わりに $p$ を使って状態を表す関数がほしくなります。そのための道具が、ルジャンドル変換です。
+
+\phboxhead{ルジャンドル変換：曲線を、接線で表す}
+下に出っぱった曲線 $y=f(x)$ を考えます。曲線は、点の集まりと見ることもできますし、\textbf{接線の集まり}と見ることもできます。接線は、傾き $t$ と、たての軸との交点（切片）$b$ で決まります。
+
+\noindent\begin{minipage}[c]{0.5\linewidth}\centering
+\begin{tikzpicture}[x=0.84mm, y=0.84mm]
+  \draw[bk arrow] (0,0) -- (56,0) node[right, font=\sffamily\footnotesize] {$x$（$S$）};
+  \draw[bk arrow] (0,-14) -- (0,40) node[above, font=\sffamily\footnotesize] {$y$（$U$）};
+  \draw[bkBlue, line width=1.4pt, domain=4:50, smooth, variable=\qxkx] plot ({\qxkx},{0.012*\qxkx*\qxkx+4});
+  \draw[bkOrange, line width=1pt, domain=0:52, variable=\qxkx] plot ({\qxkx},{0.72*\qxkx-6.8});
+  \fill[bkRed] (30,14.8) circle (0.9);
+  \fill[bkOrange!80!black] (0,-6.8) circle (0.9);
+  \draw[bkGray, dashed, line width=0.4pt] (30,0) -- (30,14.8);
+  \node[font=\sffamily\footnotesize, anchor=north] at (30,-0.8) {$x$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!75!black] at (1.5,-8.8) {切片 $b=f-tx$};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkOrange!75!black] at (36,28) {傾き $t=f'(x)$};
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkBlue!80!black] at (19,14) {$y=f(x)$};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.47\linewidth}\raggedright
+点 $x$ での接線の傾きは $t=f'(x)$、切片は
+\[b=f(x)-t\,x\]
+です（接線の式 $y=b+tx$ に $x$ を入れると $f(x)$）。傾き $t$ を決めると接点が1つに決まるので、$b$ は $t$ の関数と見られます。
+\end{minipage}
+
+\par\vspace{4pt}
+$b$ の小さな変化を計算すると、$\dd b=\dd f-t\,\dd x-x\,\dd t$ で、$\dd f=t\,\dd x$ なので
+\[\dd b=-x\,\dd t\]
+です。もとの関数 $f$ は「$x$ を決めると決まり、$\dd f=t\,\dd x$」、新しい関数 $b$ は「$t$ を決めると決まり、$\dd b=-x\,\dd t$」です。\textbf{変数の役を、$x$ から、傾きの $t$ へ取りかえた}のです。この取りかえを\textbf{ルジャンドル変換}といいます。\bkidx{るじゃんどるへんかん}{ルジャンドル変換}どの傾きの接線がどこを通るかがわかれば、曲線は全部わかるので、情報はなくなりません。
+
+\phboxhead{4つのエネルギーの関数}
+$V$ を止めて、$U$ を $S$ の関数と見ると、傾きは $(\partial U/\partial S)_V=T$ です。だから、上の $b=f-tx$ にあたる
+\pheq{F=U-TS}{J}
+は、$T$ と $V$ の関数で、$\dd F=\dd U-T\,\dd S-S\,\dd T=-S\,\dd T-p\,\dd V$ です。これを\textbf{ヘルムホルツの自由エネルギー}といいます。同じように、$-p$ を傾きとして $V$ を $p$ に取りかえたものが、熱-4 ②のエンタルピー $H=U+pV$ で、両方を取りかえたものが\textbf{ギブズの自由エネルギー}
+\pheq{G=H-TS=U-TS+pV}{J}
+です。\bkidx{じゆうえねるぎー}{自由エネルギー}4つの全微分を並べます。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=36mm] Q[c,m,wd=28mm] Q[l,m,wd=46mm]}, rowsep=2pt, row{1}={bg=bkTheme!10}}
+関数 & 決める変数 & 全微分 \\
+内部エネルギー $U$ & $S$、$V$ & $\dd U=T\,\dd S-p\,\dd V$ \\
+エンタルピー $H=U+pV$ & $S$、$p$ & $\dd H=T\,\dd S+V\,\dd p$ \\
+ヘルムホルツ $F=U-TS$ & $T$、$V$ & $\dd F=-S\,\dd T-p\,\dd V$ \\
+ギブズ $G=H-TS$ & $T$、$p$ & $\dd G=-S\,\dd T+V\,\dd p$ \\
+\end{bktable}
+\bktabcaption{4つのエネルギーの関数。$TS$ を引くと $S$ が $T$ に、$pV$ を足すと $V$ が $p$ に取りかわる。}\label{ph:熱-10:tab-four}
+\end{bkcenter}
+
+\phboxhead{$F$ の意味：温度一定でする、いちばん小さい仕事}
+温度 $T$ の大きな水そうの中で、ゆっくりでもすばやくても、物の状態を1から2へ変えます（はじめとおわりの温度は $T$）。熱-6 ⑥から、水そうから受けとる熱は $Q\leqq T\Delta S$ です（等号は可逆）。第一法則 $\Delta U=Q+W$ に入れると
+\[\Delta U\leqq T\Delta S+W\qquad\text{だから}\qquad W\geqq\Delta U-T\Delta S=\Delta F\]
+です。\textbf{温度一定で物の状態を変えるのにいる仕事は、$\Delta F$ より小さくできない}（可逆のとき、ちょうど $\Delta F$）。反対に、物から取り出せる仕事は、いちばん多くて $-\Delta F$ です。エネルギー $U$ のうち、温度一定で「自由に」仕事にできる分、という意味で、自由エネルギーとよびます。
+
+\phboxhead{$G$ の意味：温度と圧力が一定なら、$G$ が下がる向きに進む}
+温度も圧力も一定のまわりの中では、同じように考えて、まわりの圧力で押す仕事のほかの仕事（電気の仕事など）$W'$ について、$W'\geqq\Delta G$ です。電気の仕事などをしないとき（$W'=0$）は、
+\[\Delta G\leqq0\]
+で、物は\textbf{ギブズの自由エネルギーが下がる向きに}ひとりで変化し、いちばん低い所で止まります（つり合う）。料理・化学反応・相変化の多くは、まわりの温度と圧力が一定のまま進むので、工学でいちばんよく使うのは $G$ です。
+
+\begin{phflow}[自由エネルギー]
+\phflowrow{$W\geqq\Delta F=\Delta U-T\Delta S$}{温度一定\\理想気体（$\Delta U=0$）}{$W_{\text{最小}}=nRT\ln\dfrac{V_1}{V_2}$}
+\phflowrow{$W'\geqq\Delta G$}{温度・圧力が一定\\ほかの仕事なし}{$\Delta G\leqq0$（$G$ が下がる向き）}
+\end{phflow}
+
+%% ---------------------------------------------------------------
+\bksubsection{6}{マクスウェルの関係式と、偏微分の $-1$ の関係}
+\label{ph:熱-10:sec6}
+\phboxhead{2回の偏微分の順番から}
+$\dd F=-S\,\dd T-p\,\dd V$ を、8-3⑤の全微分の形と見くらべると、
+\[\Bigl(\frac{\partial F}{\partial T}\Bigr)_V=-S,\qquad\Bigl(\frac{\partial F}{\partial V}\Bigr)_T=-p\]
+です。1つめを $V$ で、2つめを $T$ で偏微分すると、どちらも $F$ の2回の偏微分なので、順番を入れかえても同じ（8-2⑧）です。だから
+\pheq{\Bigl(\frac{\partial S}{\partial V}\Bigr)_T=\Bigl(\frac{\partial p}{\partial T}\Bigr)_V}{J/(K·m$^3$) ＝ Pa/K}
+が成り立ちます。$\dd G=-S\,\dd T+V\,\dd p$ からは、同じように
+\[\Bigl(\frac{\partial S}{\partial p}\Bigr)_T=-\Bigl(\frac{\partial V}{\partial T}\Bigr)_p\]
+が出ます。このような式を\textbf{マクスウェルの関係式}といいます。\bkidx{まくすうぇるのかんけいしき}{マクスウェルの関係式}
+
+\begin{phyomi}[$\Bigl(\dfrac{\partial S}{\partial V}\Bigr)_T=\Bigl(\dfrac{\partial p}{\partial T}\Bigr)_V$]
+「温度を止めて体積を広げたときのエントロピーの増え方（測れない）は、体積を止めて温めたときの圧力の上がり方（圧力計と温度計で測れる）に等しい」。測れない量を、測れる量に言いかえる式。理想気体ならどちらも $nR/V$（例題7、8-3 例題9 の\qty{371}{Pa/K}）。
+\end{phyomi}
+
+\phboxhead{数学にない道具：偏微分の $-1$ の関係}
+圧力 $p$ が $T$ と $V$ の関数のとき、全微分（8-3⑤）は
+\[\dd p=\Bigl(\frac{\partial p}{\partial T}\Bigr)_V\dd T+\Bigl(\frac{\partial p}{\partial V}\Bigr)_T\dd V\]
+です。ここで、\textbf{圧力を変えないように}、$T$ と $V$ を同時に少し動かします。$\dd p=0$ とおくと、
+\[0=\Bigl(\frac{\partial p}{\partial T}\Bigr)_V\dd T+\Bigl(\frac{\partial p}{\partial V}\Bigr)_T\dd V\qquad\text{だから}\qquad\Bigl(\frac{\partial V}{\partial T}\Bigr)_p=\frac{\dd V}{\dd T}=-\frac{(\partial p/\partial T)_V}{(\partial p/\partial V)_T}\]
+です。偏微分は、止めておく量が同じなら、ふつうの分数のようにひっくり返せます（$(\partial V/\partial p)_T=1/(\partial p/\partial V)_T$。逆数の関係）。これを使って並べかえると、
+\pheq{\Bigl(\frac{\partial p}{\partial T}\Bigr)_V\Bigl(\frac{\partial T}{\partial V}\Bigr)_p\Bigl(\frac{\partial V}{\partial p}\Bigr)_T=-1}{単位なし}
+になります。分数のように約分すると1になりそうですが、\textbf{答えは $-1$} です。止めておく量がそれぞれちがうので、ふつうの分数のようには約分できないのです。
+
+\noindent\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=0.84mm, y=0.84mm]
+  \draw[bk arrow] (0,0) -- (52,0) node[right, font=\sffamily\footnotesize] {$T$};
+  \draw[bk arrow] (0,0) -- (0,42) node[above, font=\sffamily\footnotesize] {$V$};
+  \draw[bkBlue, line width=1.1pt] (0,0) -- (48,36);
+  \draw[bkBlue!50, line width=0.8pt] (0,0) -- (48,18);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black] at (48.5,36) {$p_1$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!60!black] at (48.5,18) {高い $p$};
+  \fill[bkRed] (20,15) circle (0.9);
+  \draw[bk arrow, bkRed, line width=1pt] (20,15) -- (40,15);
+  \draw[bk arrow, bkOrange, line width=1pt] (40,15) -- (40,30);
+  \node[font=\sffamily\footnotesize, anchor=south] at (30,15.4) {①};
+  \node[font=\sffamily\footnotesize, anchor=west] at (41,22.5) {②};
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}\raggedright
+理想気体の、圧力が一定の線（$V$ は $T$ に比例）。体積を止めて温めると（①）、圧力は上がって別の線に移ります。もとの圧力の線にもどるには、体積を増やして（②）圧力を下げる必要があります。①で上がった分を②で\textbf{打ち消す}ので、式にマイナスが出てきます。
+\end{minipage}
+
+\par\vspace{4pt}
+\phboxhead{理想気体で確かめる}
+$pV=nRT$ なら、$(\partial p/\partial T)_V=nR/V$、$(\partial T/\partial V)_p=p/(nR)$、$(\partial V/\partial p)_T=-nRT/p^2$ で、かけると
+\[\frac{nR}{V}\cdot\frac{p}{nR}\cdot\Bigl(-\frac{nRT}{p^2}\Bigr)=-\frac{nRT}{pV}=-1\]
+です。
+
+\phboxhead{密閉した液体を温めると：$(\partial p/\partial T)_V=\beta/\kappa_T$}
+液体の性質は、ふつう、温めたときのふくらみやすさ（体膨張率 $\beta$、熱-1 ⑦）と、押したときの縮みやすさ（等温圧縮率 $\kappa_T$）で表にします。
+\[\beta=\frac{1}{V}\Bigl(\frac{\partial V}{\partial T}\Bigr)_p,\qquad\kappa_T=-\frac{1}{V}\Bigl(\frac{\partial V}{\partial p}\Bigr)_T\]
+$-1$ の関係と逆数の関係を使うと、体積を止めて温めたときの圧力の上がり方は
+\pheq{\Bigl(\frac{\partial p}{\partial T}\Bigr)_V=-\frac{(\partial V/\partial T)_p}{(\partial V/\partial p)_T}=\frac{\beta}{\kappa_T}}{Pa/K ＝ (1/K) ÷ (1/Pa)}
+です。20\,℃の水なら、$\beta=\qty{2.07e-4}{1/K}$、$\kappa_T=\qty{4.58e-10}{1/Pa}$（IAPWS-IF97 の式から計算）なので、約\qty{0.45}{MPa/K}です。水をすきまなく閉じこめて\qty{1}{K}温めるだけで、圧力が約4.5気圧も上がります（例題8）。給湯器や暖房の配管に、膨張タンクや逃がし弁をつける理由です。
+
+\phboxhead{$c_p-c_v$ の、どんな物質でも使える式}
+1 kg あたりで書き、比体積を $v=1/\rho$ とします。エントロピー $s$ を $T$ と $v$ の関数と見ると、全微分は
+\[\dd s=\frac{c_v}{T}\,\dd T+\Bigl(\frac{\partial p}{\partial T}\Bigr)_v\dd v\]
+です（1つめの係数は、体積一定で温めるとき $T\,\dd s=c_v\,\dd T$ だから。2つめはマクスウェルの関係式）。これを、圧力を止めて $T$ でわると、左辺は $(\partial s/\partial T)_p=c_p/T$ なので、
+\[\frac{c_p}{T}=\frac{c_v}{T}+\Bigl(\frac{\partial p}{\partial T}\Bigr)_v\Bigl(\frac{\partial v}{\partial T}\Bigr)_p\qquad\text{だから}\qquad c_p-c_v=T\,\frac{\beta}{\kappa_T}\cdot\beta v=\frac{Tv\beta^2}{\kappa_T}\]
+です。理想気体（$\beta=1/T$、$\kappa_T=1/p$）なら $c_p-c_v=pv/T=R_{\mathrm s}$ で、熱-3 ④のマイヤーの関係が、別の道から出てきます。20\,℃の水では $Tv\beta^2/\kappa_T\approx\qty{27}{J/(kg.K)}$ で、$c_p$（\qty{4185}{J/(kg.K)}）の1\,\%も差がありません。だから液体では、比熱を1つ（$c$）で書いてよかったのです（熱-1）。
+
+\begin{phflow}[$c_p$ と $c_v$]
+\phflowrow{$c_p-c_v=\dfrac{Tv\beta^2}{\kappa_T}$}{理想気体\\$\beta=1/T$、$\kappa_T=1/p$}{$c_p-c_v=R_{\mathrm s}$（マイヤー）}
+\phflowrow{$c_p-c_v=\dfrac{Tv\beta^2}{\kappa_T}$}{液体・固体\\$\beta$ がとても小さい}{$c_p\approx c_v$（比熱は1つ）}
+\end{phflow}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{相平衡の条件 $g'=g''$ と、クラペイロン・クラウジウスの式}
+\label{ph:熱-10:sec7}
+\phboxhead{液と蒸気が、いっしょにいられる条件}
+温度 $T$・圧力 $p$ が一定のなべの中に、水（質量 $m'$）と水蒸気（質量 $m''$）がいるとします。\qty{1}{kg}あたりのギブズの自由エネルギーを $g=h-Ts$ と書くと、全体は
+\[G=m'g'+m''g''\]
+です。水が少し（$\dd m$）蒸発すると、$G$ は $(g''-g')\,\dd m$ だけ変わります。⑤から、温度と圧力が一定なら $G$ は下がる向きに変化します。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $g''<g'$ なら、蒸発すると $G$ が下がるので、水は全部蒸発する。
+\item $g''>g'$ なら、凝縮すると $G$ が下がるので、水蒸気は全部水になる。
+\item $g''=g'$ のときだけ、水と水蒸気がいっしょにいられる（つり合う）。
+\end{enumerate}
+\pheq{g'=g''\qquad\text{（相平衡の条件）}}{J/kg}
+
+\begin{phmijika}[蒸気表で確かめる]
+1気圧の飽和（99.97\,℃、$T=\qty{373.12}{K}$）では、IAPWS-IF97 の式から $h'=\qty{418.99}{kJ/kg}$、$s'=\qty{1.3067}{kJ/(kg.K)}$、$h''=\qty{2675.53}{kJ/kg}$、$s''=\qty{7.3544}{kJ/(kg.K)}$ です。
+\[g'=418.99-373.12\times1.3067\approx\qty{-68.6}{kJ/kg}\]
+\[g''=2675.53-373.12\times7.3544\approx\qty{-68.6}{kJ/kg}\]
+で、たしかに等しくなっています（負の数なのは、蒸気表の $h$ と $s$ の0の決め方による。差だけが意味をもつ）。
+\end{phmijika}
+
+$g'=g''$ を $h'-Ts'=h''-Ts''$ と書きなおすと、$s''-s'=\dfrac{h''-h'}{T}=\dfrac{L}{T}$ です。\textbf{蒸発のエントロピーは、蒸発熱を温度でわった値}で、熱-6 ⑦の $mL/T$ と同じです（例題6）。
+
+\phboxhead{飽和の線にそって動く：クラペイロンの式}
+飽和の線にそって、温度を $\dd T$、圧力を $\dd p$ だけ変えても、液と蒸気はつり合ったままなので、$g'$ と $g''$ は同じだけ変わります（$\dd g'=\dd g''$）。表\ref{ph:熱-10:tab-four}の $\dd G=-S\,\dd T+V\,\dd p$ を1 kg あたりにすると $\dd g=v\,\dd p-s\,\dd T$ なので、
+\[v'\,\dd p-s'\,\dd T=v''\,\dd p-s''\,\dd T\qquad\text{だから}\qquad\frac{\dd p}{\dd T}=\frac{s''-s'}{v''-v'}\]
+$s''-s'=L/T$ を入れて、
+\pheq{\frac{\dd p}{\dd T}=\frac{L}{T\,(v''-v')}}{Pa/K ＝ (J/kg) ÷ (K × m$^3$/kg)}
+です。これを\textbf{クラペイロンの式}といいます。1気圧の飽和では、$L=\qty{2256.5}{kJ/kg}$、$v''-v'=1.6733-0.0010=\qty{1.6723}{m^3/kg}$ なので、$\dd p/\dd T\approx\qty{3616}{Pa/K}$ です。蒸気表の飽和圧力の差から求めた傾き（\qty{3616}{Pa/K}）と、ぴったり合います。
+
+\phboxhead{2つの近似：クラウジウス・クラペイロンの式}
+クラペイロンの式に、2つの近似を入れます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 蒸気の比体積は液よりずっと大きい（1気圧で約1600倍）ので、$v''-v'\approx v''$。
+\item 蒸気を理想気体とみなし、$v''=R_{\mathrm s}T/p$（熱-3 ③の $p=\rho R_{\mathrm s}T$）。
+\end{enumerate}
+すると $\dfrac{\dd p}{\dd T}=\dfrac{Lp}{R_{\mathrm s}T^2}$、つまり
+\pheq{\frac{\dd(\ln p)}{\dd T}=\frac{L}{R_{\mathrm s}T^2}}{1/K}
+です（$\dd(\ln p)=\dd p/p$、5-14）。$\dd(1/T)=-\dd T/T^2$ なので、$\dfrac{\dd(\ln p)}{\dd(1/T)}=-\dfrac{L}{R_{\mathrm s}}$ です。$L$ がほぼ一定なら、\textbf{$\ln p$ と $1/T$ のグラフは、傾き $-L/R_{\mathrm s}$ の直線}になります。③の表計算で見つけた直線の理由が、これです。\bkidx{くらぺいろんくらうじうすのしき}{クラペイロン・クラウジウスの式}温度 $T_1$ で飽和圧力 $p_1$ がわかっているとき、$L$ を一定として積分すると
+\pheq{\ln\frac{p_2}{p_1}=\frac{L}{R_{\mathrm s}}\Bigl(\frac{1}{T_1}-\frac{1}{T_2}\Bigr)}{単位なし}
+です。これを\textbf{クラウジウス・クラペイロンの式}といいます。
+
+\begin{phflow}[わく温度と圧力]
+\phflowrow{$\dd g'=\dd g''$}{飽和の線に\\そって動く}{$\dfrac{\dd p}{\dd T}=\dfrac{L}{T(v''-v')}$}
+\phflowrow{$\dfrac{\dd p}{\dd T}=\dfrac{L}{T(v''-v')}$}{$v'$ を無視\\蒸気は理想気体}{$\dfrac{\dd\ln p}{\dd T}=\dfrac{L}{R_{\mathrm s}T^2}$}
+\phflowrow{$\dfrac{\dd\ln p}{\dd T}=\dfrac{L}{R_{\mathrm s}T^2}$}{$L$ が一定}{$\ln\dfrac{p_2}{p_1}=\dfrac{L}{R_{\mathrm s}}\Bigl(\dfrac{1}{T_1}-\dfrac{1}{T_2}\Bigr)$}
+\end{phflow}
+
+\phboxhead{はてな？の答え（式で）}
+1気圧の飽和（$p_1=\qty{101.325}{kPa}$、$T_1=\qty{373.12}{K}$、$L=\qty{2256.5}{kJ/kg}$）から、$p_2=\qty{181.3}{kPa}$ の温度を求めると、約117.3\,℃です（例題1）。IAPWS-IF97 の117.1\,℃と\qty{0.2}{K}しかちがいません。
+
+\phboxhead{氷の融点：融解の線は左に傾く}
+氷がとけるときも、クラペイロンの式が使えます（近似の①②は使えない）。氷は水より体積が大きい（密度\qty{917}{kg/m^3}と\qty{1000}{kg/m^3}）ので、とけると体積が減り、$v_{\text{水}}-v_{\text{氷}}<0$ です。だから $\dd p/\dd T<0$ で、\textbf{圧力を上げると融点は下がります}（②の相図で、融解の線が左に傾く理由）。ただし、その大きさは\qty{1}{MPa}（約10気圧）で\qty{0.074}{K}だけです（例題3）。
+
+%% ---------------------------------------------------------------
+\bksubsection{8}{実在気体：ファンデルワールスの式と臨界点}
+\label{ph:熱-10:sec8}
+\phboxhead{分子の大きさと、引き合う力}
+理想気体の式 $pV=nRT$ では、液体ができることも、臨界点があることも説明できません。1873年、オランダのファンデルワールスは、2つのことを理想気体の式に足しました。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{分子には大きさがある}：分子が動ける体積は、容器の体積 $V$ より、分子そのものの体積（1 mol あたり $b$）の分だけせまい。$V\to V-nb$。
+\item \textbf{分子どうしは引き合う}：壁にぶつかる直前の分子は、うしろの分子に引きもどされ、壁を押す力が弱くなる。弱まる分は、分子の数の密度 $n/V$ の2乗に比例する。$p\to p+a\,n^2/V^2$。
+\end{enumerate}
+\pheq{\Bigl(p+\frac{an^2}{V^2}\Bigr)(V-nb)=nRT}{Pa × m$^3$ ＝ J}
+これを\textbf{ファンデルワールスの状態方程式}といいます。\bkidx{ふぁんでるわーるすのじょうたいほうていしき}{ファンデルワールスの状態方程式}$a$ と $b$ は物質ごとに実験から決める数（経験則）で、二酸化炭素なら $a=\qty{0.3640}{Pa.m^6/mol^2}$、$b=\qty{4.267e-5}{m^3/mol}$ です。$a=b=0$ とおくと、理想気体の $pV=nRT$ にもどります。
+
+\begin{phmodel}[ファンデルワールスの気体]
+\phignore{分子の形（細長い・極性がある）。分子どうしの力の、距離によるくわしい形。}
+\phassume{分子は大きさ $b$ をもつ固い球で、平均すると $a\,n^2/V^2$ の分だけ壁を押す力が弱まる。}
+\phlimit{液体の密度や、臨界点の近くの細かいふるまいを正確に出したいとき（例題4）。水のように分子が強く引き合う物質。}
+\end{phmodel}
+
+\phboxhead{圧縮係数：理想気体からのずれ}
+本当の気体が理想気体からどれだけずれているかを、\textbf{圧縮係数}
+\[Z=\frac{pV}{nRT}\]
+で表します。理想気体なら $Z=1$ です。分子が引き合う効果が強い所（低い温度・中くらいの密度）では $Z<1$、分子の大きさが効く所（とても高い密度）では $Z>1$ になります。
+
+\phboxhead{等温線と臨界点}
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=62mm, xmin=0.3, xmax=4.2, ymin=0, ymax=2.0, xtick={1,2,3,4}, ytick={0.647,1,1.5}, yticklabels={0.647,1,1.5}, xlabel={$V/V_{\mathrm c}$}, ylabel={$p/p_{\mathrm c}$}, axis x line=bottom, axis y line=left, restrict y to domain=-1:2.05, unbounded coords=jump, legend style={at={(0.97,0.97)}, anchor=north east, font=\sffamily\footnotesize, draw=bkLine}]
+  \fill[bkOrange!25] (axis cs:0.6034,0.6470) -- (axis cs:0.6409,0.4996) -- (axis cs:0.6783,0.4367) -- (axis cs:0.7158,0.4199) -- (axis cs:0.7533,0.4280) -- (axis cs:0.7907,0.4490) -- (axis cs:0.8282,0.4761) -- (axis cs:0.8657,0.5052) -- (axis cs:0.9032,0.5340) -- (axis cs:0.9406,0.5613) -- (axis cs:0.9781,0.5864) -- (axis cs:1.0156,0.6091) -- (axis cs:1.0530,0.6293) -- (axis cs:1.0905,0.6470) -- cycle;
+  \fill[bkBlue!20] (axis cs:1.0905,0.6470) -- (axis cs:1.1744,0.6784) -- (axis cs:1.2583,0.6999) -- (axis cs:1.3422,0.7136) -- (axis cs:1.4260,0.7212) -- (axis cs:1.5099,0.7239) -- (axis cs:1.5938,0.7230) -- (axis cs:1.6777,0.7194) -- (axis cs:1.7616,0.7136) -- (axis cs:1.8455,0.7063) -- (axis cs:1.9294,0.6978) -- (axis cs:2.0133,0.6885) -- (axis cs:2.0971,0.6786) -- (axis cs:2.1810,0.6683) -- (axis cs:2.2649,0.6577) -- (axis cs:2.3488,0.6470) -- cycle;
+  \addplot[bkBlue, line width=1.3pt, domain=0.52:4.2, samples=120] {8*0.9/(3*x-1)-3/x^2}; \addlegendentry{$T=0.9T_{\mathrm c}$}
+  \addplot[bkRed, line width=1.3pt, dash pattern=on 6pt off 2pt, domain=0.47:4.2, samples=120] {8*1.0/(3*x-1)-3/x^2}; \addlegendentry{$T=T_{\mathrm c}$}
+  \addplot[bkOrange, line width=1.3pt, densely dotted, domain=0.44:4.2, samples=120] {8*1.1/(3*x-1)-3/x^2}; \addlegendentry{$T=1.1T_{\mathrm c}$}
+  \addplot[bkInk, line width=1pt, dashed, forget plot] coordinates {(0.6034,0.647)(2.3488,0.647)};
+  \fill[bkRed] (axis cs:1,1) circle (2.2pt);
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkRed!75!black] at (axis cs:1.05,0.93) {臨界点};
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkInk] at (axis cs:1.6,0.6) {同じ面積};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ファンデルワールスの式の等温線（臨界点の値でわった形）。臨界温度 $T_{\mathrm c}$ より低い等温線（$0.9T_{\mathrm c}$）は波打ち、本当の気体では、2つの面積が等しくなる高さの横の黒い破線（$p=0.647p_{\mathrm c}$）にそって、液と気体がいっしょにいる。}\label{ph:熱-10:fig-vdw}
+\end{bkfigure}
+
+温度が高い等温線は、理想気体のように、なめらかに下がります。温度を下げると、ある温度で、等温線が一瞬だけ平らになる点ができます。これが\textbf{臨界点}です。\bkidx{りんかいてん}{臨界点}臨界点では、傾き $\partial p/\partial V$ も、曲がり方 $\partial^2p/\partial V^2$ も0です。$n=\qty{1}{mol}$ として計算します。
+\[p=\frac{RT}{V-b}-\frac{a}{V^2},\quad\frac{\partial p}{\partial V}=-\frac{RT}{(V-b)^2}+\frac{2a}{V^3}=0,\quad\frac{\partial^2p}{\partial V^2}=\frac{2RT}{(V-b)^3}-\frac{6a}{V^4}=0\]
+1つめの式から $RT=2a(V-b)^2/V^3$。これを2つめに入れると
+\[\frac{4a}{V^3(V-b)}=\frac{6a}{V^4}\]
+つまり $4V=6(V-b)$ で、
+\pheq{V_{\mathrm c}=3b,\qquad T_{\mathrm c}=\frac{8a}{27Rb},\qquad p_{\mathrm c}=\frac{a}{27b^2}}{m$^3$/mol・K・Pa}
+です。このとき $Z_{\mathrm c}=p_{\mathrm c}V_{\mathrm c}/(RT_{\mathrm c})=3/8=0.375$ で、$a$ と $b$ によらない数になります。二酸化炭素では $T_{\mathrm c}\approx\qty{304}{K}$、$p_{\mathrm c}\approx\qty{7.4}{MPa}$ で、本当の値（\qty{304.13}{K}、\qty{7.377}{MPa}）に近くなります。ただし本当の $Z_{\mathrm c}$ は約0.27で、0.375 とはずれます（例題4）。
+
+\phboxhead{等面積の規則：波打つ所の本当の姿}
+$T_{\mathrm c}$ より低い等温線には、体積を増やすと圧力も上がる所（$\partial p/\partial V>0$）があります。押すと縮むどころかふくらむので、こんな状態は安定にいられません。本当は、この温度では、ある圧力 $p_{\mathrm s}$（飽和圧力）で、液と気体がいっしょにいて、体積が変わっても圧力が変わらない横の線になります（熱-8 の湿り蒸気）。
+
+その高さは、⑦の $g'=g''$ から決まります。温度が一定なら $\dd g=v\,\dd p$ なので、等温線にそって液から気体まで $\int v\,\dd p$ をたすと、$g''-g'=0$ です。これを図で読むと、\textbf{横の線と等温線が囲む2つの面積が等しい}、という条件になります（\textbf{等面積の規則}。マクスウェル、1875年）。
+
+\phboxhead{Python で、はさんでさがす}
+二酸化炭素\qty{1}{mol}・\qty{280}{K}の等温線で、2つの面積が等しくなる圧力を、2-13⑤の「はさんでさがす」方法で求めます。ある圧力 $p$ の横の線と等温線の交点（3次方程式の3つの解）を \texttt{np.roots} で出し、いちばん小さい解を液、いちばん大きい解を気体の体積とします。「等温線の下の面積」から「横の線の下の面積」を引いた差が正なら、横の線が低すぎるので上げます。
+\begin{phcode}
+import numpy as np
+from math import log
+R = 8.314; a = 0.3640; b = 4.267e-5; T = 280.0   \# CO2、1 mol
+def diff(p):              \# 等温線の下の面積 - 横の線の下の面積
+    V = np.roots([p, -(p * b + R * T), a, -a * b])
+    V = sorted(x.real for x in V if abs(x.imag) < 1e-9)
+    Vl, Vg = V[0], V[-1]
+    area = R * T * log((Vg - b) / (Vl - b)) + a * (1 / Vg - 1 / Vl)
+    return area - p * (Vg - Vl), Vl, Vg
+lo, hi = 4.2e6, 5.7e6     \# 等温線の山と谷の間ではさむ
+for k in range(30):
+    mid = (lo + hi) / 2
+    if diff(mid)[0] > 0: lo = mid
+    else: hi = mid
+d, Vl, Vg = diff(mid)
+print(round(mid / 1e6, 3), round(Vl * 1000, 4), round(Vg * 1000, 4))
+\end{phcode}
+\begin{phcodeout}
+5.283 0.0809 0.2655
+\end{phcodeout}
+飽和圧力は\qty{5.28}{MPa}、液と気体の体積は\qty{0.081}{L}と\qty{0.27}{L}と出ました。本当の二酸化炭素の\qty{280}{K}の飽和圧力は\qty{4.16}{MPa}（CoolProp 8.0 で計算）で、3割ほど高めです。ファンデルワールスの式は、液体ができるしくみと臨界点を、たった2つの数で\textbf{形として}説明できる式ですが、数を正確に出すには、もっとくわしい状態式（蒸気表の IAPWS や、冷媒の状態式）を使います。
+
+
+\begin{motto}[5]
+\phboxhead{絞り弁で冷える：ジュール・トムソン効果}
+熱-4 で、理想気体を絞り弁に通すと、エンタルピーが一定のまま、温度も変わらないことを学びました。本当の気体では、分子が引き合うので、絞って広がるときに分子を引きはなす仕事の分だけ温度が下がることがあります。この温度の変わり方 $(\partial T/\partial p)_h$ を、ファンデルワールスの式から（密度が低いとして）計算すると、およそ $\bigl(2a/(RT)-b\bigr)/C_{p}$（$C_p$ は定圧モル比熱）です。窒素（$a=\qty{0.1370}{Pa.m^6/mol^2}$、$b=\qty{3.87e-5}{m^3/mol}$）の\qty{300}{K}では約\qty{0.24}{K}/（\qty{100}{kPa}）で、CoolProp で計算した本当の値（約\qty{0.21}{K}/（\qty{100}{kPa}））に近い数です。$T$ が $2a/(Rb)$ より高いと、符号が変わって温まります。空気を何度も絞って冷やし、液体の空気をつくる方法（リンデの方法）は、この効果を使っています。
+\end{motto}
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{化学平衡の入口：$\Delta G$ と反応の向き、燃料電池}
+\label{ph:熱-10:sec9}
+\phboxhead{$\Delta G=\Delta H-T\Delta S$}
+温度と圧力が一定のまま進む変化（とける・わく・化学反応）では、⑤から、$\Delta G\leqq0$ の向きにだけ、ひとりで進みます。温度が一定なら、$G=H-TS$ から
+\pheq{\Delta G=\Delta H-T\Delta S}{J}
+です。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $\Delta H<0$（熱を出す）の変化は、$\Delta G$ を下げる向きにはたらく。
+\item $\Delta S>0$（エントロピーが増える）の変化も、$\Delta G$ を下げる向きにはたらく。$T$ が高いほど、この効果が強い。
+\item 2つが反対を向くとき（氷がとける：熱を受けとるが、エントロピーは増える）は、温度で勝ち負けが変わる。$\Delta G=0$ になる温度が、とける温度（融点）やわく温度（沸点）です（例題12）。
+\end{enumerate}
+
+\phboxhead{燃料電池：$-\Delta G$ を電気の仕事として取り出す}
+燃料電池は、水素と酸素から水をつくる反応（$\mathrm{H_2}+\tfrac12\mathrm{O_2}\to\mathrm{H_2O}$）のエネルギーを、燃やさずに、直接電気にします。25\,℃・1気圧で液体の水ができるとき、\qty{1}{mol}あたり $\Delta H=\qty{-285.83}{kJ}$、$\Delta G=\qty{-237.13}{kJ}$ です（NIST などの表の値）。⑤から、取り出せる電気の仕事は、いちばん多くて $-\Delta G=\qty{237.13}{kJ}$ です。
+
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 反応の熱 $-\Delta H$ に対する、取り出せる電気の割合は $237.13\div285.83\approx0.83$ です。熱機関のように、熱をいったん高い温度にして仕事に変えるのではないので、熱-5 のカルノーの効率の上限は当てはまりません。
+\item 残りの $-T\Delta S=\qty{48.7}{kJ}$ は、理想の電池でも熱として出ます（反応で気体が液体になり、エントロピーが減るから）。
+\item 水素\qty{1}{mol}で電子が\qty{2}{mol}流れます。電子\qty{1}{mol}の電気の量はファラデー定数\qty{96485}{C/mol}なので、電圧は $237130\div(2\times96485)\approx\qty{1.23}{V}$ です（例題10）。電池の電圧が、$\Delta G$ という熱力学の量で決まるのです（くわしくは物理シリーズの『電磁気学』（電-4））。
+\end{enumerate}
+
+\begin{phmada}[水には2種類の液体がある？]
+水は、4\,℃でいちばん密度が大きくなるなど、ほかの液体とちがうふしぎな性質をたくさんもっています。その理由として、0\,℃よりずっと冷やした（凍らないように過冷却した）水の中に、密度の高い液体と低い液体の2種類があり、その境目の線が「第2の臨界点」で終わる、という説が出されています（ギャロらの総説、2016年）。2020年には、高い圧力の下で2種類の液体の間の変化を見たとする実験も報告されました。でも、その温度では水はすぐに凍ってしまうので、実験はとても難しく、この説が正しいかどうかは、まだ確かめられている途中です。
+\end{phmada}
+
+\begin{phsaki}{化学の熱力学へ}
+この章のギブズの自由エネルギーを、物質の量でわった量（1 mol あたりの $G$）を\textbf{化学ポテンシャル} $\mu$ といいます。何種類もの物質がまざっていて、反応したり、相が分かれたりするときは、それぞれの物質の $\mu$ がつり合う、という条件で考えます。化学反応がどこまで進むか（平衡定数）、いくつの相がいっしょにいられるか（ギブズの相律）、溶液のわく温度が上がるわけ（沸点上昇）などは、化学熱力学の専門の本で扱います。冷媒や水の本当の値を正確に出す状態式（IAPWS-95 など）のつくり方も、専門の本の内容です。
+\end{phsaki}
+
+\begin{senmonsho}[熱力学の教科書ふうの書き方]
+\begin{bkhonbun}
+二相 $\alpha$，$\beta$ が共存するための条件は $T^\alpha=T^\beta$，$p^\alpha=p^\beta$，$\mu^\alpha=\mu^\beta$ である．共存曲線に沿っては $\dfrac{dp}{dT}=\dfrac{\Delta H_{\mathrm{m}}}{T\Delta V_{\mathrm{m}}}$（クラペイロン–クラウジウスの式）が成り立ち，蒸気を理想気体とみなせば $\dfrac{d\ln p}{d(1/T)}=-\dfrac{\Delta_{\mathrm{vap}}H_{\mathrm{m}}}{R}$ となる．
+\end{bkhonbun}
+\bkyaku{$\alpha$・$\beta$（アルファ・ベータ）は2つの相の名前。この本の $'$ と $''$。$\mu$ は1 mol あたりのギブズの自由エネルギー（化学ポテンシャル）で、この本の $g$ を1 mol あたりにしたもの。$\Delta H_{\mathrm m}$ は1 mol あたりの潜熱（$=LM$、$M$ はモル質量）、$\Delta V_{\mathrm m}$ は1 mol あたりの体積の差。vap は vaporization（蒸発）。1 mol あたりで書くので、$R_{\mathrm s}$ の代わりに $R$ が出てくる（$L/R_{\mathrm s}=LM/R$）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{4つの関数}$\dd U=T\dd S-p\dd V$、$\dd F=-S\dd T-p\dd V$、$\dd G=-S\dd T+V\dd p$\\[3pt]
+\tsl{自由エネルギー}温度一定で $W\geqq\Delta F$。温度・圧力一定で $\Delta G\leqq0$ の向きに進む\\[3pt]
+\tsl{マクスウェル}$\Bigl(\dfrac{\partial S}{\partial V}\Bigr)_T=\Bigl(\dfrac{\partial p}{\partial T}\Bigr)_V$。$-1$ の関係で $\Bigl(\dfrac{\partial p}{\partial T}\Bigr)_V=\dfrac{\beta}{\kappa_T}$\\[3pt]
+\tsl{相平衡}$g'=g''$。$\dfrac{\dd p}{\dd T}=\dfrac{L}{T(v''-v')}$。$\ln\dfrac{p_2}{p_1}=\dfrac{L}{R_{\mathrm s}}\Bigl(\dfrac{1}{T_1}-\dfrac{1}{T_2}\Bigr)$\\[3pt]
+\tsl{実在気体}$\Bigl(p+\dfrac{an^2}{V^2}\Bigr)(V-nb)=nRT$。$T_{\mathrm c}=\dfrac{8a}{27Rb}$、$p_{\mathrm c}=\dfrac{a}{27b^2}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{相平衡}{2つの相（液と蒸気など）が、つり合っていっしょにいる状態。}
+\bkword{ルジャンドル変換}{関数を、接線の傾きと切片で表しなおす変換。変数を取りかえる。}
+\bkword{自由エネルギー}{$F=U-TS$、$G=H-TS$。温度一定で仕事にできるエネルギー。}
+\bkword{マクスウェルの関係式}{2回の偏微分の順番から出る、状態量の偏微分の間の関係。}
+\bkword{臨界点}{液と気体の区別がなくなる点。蒸発の線の終わり。}
+\bkword{圧縮係数}{$Z=pV/(nRT)$。理想気体なら1。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$G$}{ジー}{ギブズの自由エネルギー $G=H-TS$〔J〕。1 kg あたりは $g$。温度・圧力が一定なら、$G$ が下がる向きに変化が進む}{Gibbs free energy}{熱-10}}
+{\bkkigocard{$F$}{エフ}{ヘルムホルツの自由エネルギー $F=U-TS$〔J〕。この章では力やファラデー定数に $F$ を使わない}{Helmholtz free energy}{熱-10}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\noindent 蒸気表の値（IAPWS-IF97 の式から計算した値）を使う例題は、3けたで書きます。水蒸気の比気体定数は $R_{\mathrm s}=\qty{461.5}{J/(kg.K)}$ とします。
+
+\label{ph:熱-10:ex1}
+\begin{phreidai}[圧力なべの中で、水がわく温度]
+ゲージ圧\qty{80}{kPa}の圧力なべの中で、水がわく温度を、クラウジウス・クラペイロンの式で求め、IAPWS-IF97 の値（117.1\,℃）とくらべましょう（\bkhatenaref）。1気圧（\qty{101.325}{kPa}）では\qty{373.12}{K}でわき、そのときの蒸発熱は\qty{2256.5}{kJ/kg}です。
+\phbamen
+ふたを閉めて圧力を上げたなべの中で、水と水蒸気がつり合っています。
+\phmushi
+水の深さによる圧力の差、とけている物を無視します。蒸発熱は温度によらず一定とします。
+\phzu
+$p_1=\qty{101.325}{kPa}$、$T_1=\qty{373.12}{K}$、$p_2=101.325+80=\qty{181.325}{kPa}$（絶対圧）、$T_2$ を求める。$L=\qty{2.2565e6}{J/kg}$。
+\phriyu
+わかっている1点（1気圧の沸点）から、別の圧力でのわく温度を求めるので、⑦のクラウジウス・クラペイロンの式を $1/T_2$ について解きます。
+\phtateru
+\[\frac{1}{T_2}=\frac{1}{T_1}-\frac{R_{\mathrm s}}{L}\ln\frac{p_2}{p_1}\]
+\phtoku
+$\ln(181.325/101.325)\approx0.5820$、$R_{\mathrm s}/L=461.5/2256500\approx\qty{2.045e-4}{1/K}$ なので、
+\[\frac{1}{T_2}\approx0.0026801-0.0001190=\qty{0.0025611}{1/K},\qquad T_2\approx\qty{390.5}{K}\]
+\phtashikame
+117.3\,℃で、IF97 の117.1\,℃より\qty{0.2}{K}高い。蒸発熱は温度が上がると小さくなる（117\,℃では\qty{2.21e3}{kJ/kg}くらい）のに、100\,℃の値を使ったためです。\\
+ゲージ圧のまま $p_2=\qty{80}{kPa}$ とすると、1気圧より低いので、100\,℃より低い答えになり、おかしいとわかります。
+\kotae 約117\,℃（式で117.3\,℃、IF97 で117.1\,℃）
+\end{phreidai}
+\begin{jibun}
+ゲージ圧\qty{100}{kPa}の圧力なべの中で、水がわく温度を、例題1と同じ式と数で求めましょう（IF97 では120.4\,℃）。
+\bkjans{$p_2=\qty{201.325}{kPa}$。$1/T_2\approx0.0025397$ で、$T_2\approx\qty{393.8}{K}$（約120.6\,℃）}
+\end{jibun}
+
+\label{ph:熱-10:ex2}
+\begin{phreidai}[2つの温度の飽和圧力から、蒸発熱を求める]
+水の飽和圧力は、80\,℃で\qty{47.415}{kPa}、100\,℃で\qty{101.418}{kPa}です。クラウジウス・クラペイロンの式から、この間の蒸発熱を見積もりましょう。
+\phbamen
+蒸気表に圧力と温度しか書いていなくても、熱の量が読めるか、という問題です（③の2点版）。
+\phmushi
+80\,℃〜100\,℃の間で、蒸発熱は一定とします。水蒸気は理想気体とします。
+\phzu
+$T_1=\qty{353.15}{K}$、$p_1=\qty{47.415}{kPa}$、$T_2=\qty{373.15}{K}$、$p_2=\qty{101.418}{kPa}$。
+\phriyu
+⑦の式は、$L$ がわかれば温度を、2点の圧力と温度がわかれば $L$ を出せます。
+\phtateru
+\[L=\frac{R_{\mathrm s}\ln(p_2/p_1)}{\dfrac{1}{T_1}-\dfrac{1}{T_2}}\]
+\phtoku
+$\ln(101.418/47.415)\approx0.7603$、$1/353.15-1/373.15\approx\qty{1.518e-4}{1/K}$ なので、
+\[L\approx\frac{461.5\times0.7603}{1.518\times10^{-4}}\approx\qty{2.31e6}{J/kg}\]
+\phtashikame
+蒸気表の90\,℃の蒸発熱は\qty{2283}{kJ/kg}で、1\,\%ほどのずれです（蒸気を理想気体としたことなどによる）。\\
+単位：J/(kg·K)÷(1/K)＝J/kg。
+\kotae 約\qty{2.31e3}{kJ/kg}
+\end{phreidai}
+\begin{jibun}
+水の飽和圧力は、40\,℃で\qty{7.3844}{kPa}、60\,℃で\qty{19.946}{kPa}です。この間の蒸発熱を見積もりましょう（蒸気表の50\,℃の値は\qty{2382}{kJ/kg}）。
+\bkjans{$\ln(19.946/7.3844)\approx0.9937$、$1/313.15-1/333.15\approx\num{1.917e-4}$ なので、$461.5\times0.9937\div\num{1.917e-4}$ より、約\qty{2.39e3}{kJ/kg}}
+\end{jibun}
+
+\label{ph:熱-10:ex3}
+\begin{phreidai}[氷の融点は、圧力でどれだけ下がる？]
+0\,℃・1気圧で、氷の密度は\qty{916.7}{kg/m^3}、水の密度は\qty{999.8}{kg/m^3}、融解熱は\qty{334}{kJ/kg}です。（1）圧力を\qty{1}{MPa}上げると、融点は何 K 変わりますか。（2）体重\qty{60}{kg}の人（重さ約\qty{590}{N}）が、スケートの刃の\qty{0.6}{cm^2}で立つときの圧力で、融点はどれだけ下がりますか。
+\phbamen
+「スケートがすべるのは、刃の圧力で氷がとけるから」という説明は正しいか、を数で調べます。
+\phmushi
+刃の下の圧力は一様とし、温度の上がり（摩擦の熱）は考えません。融点の変化は小さいので、$\dd T/\dd p$ は一定とします。
+\phzu
+$v_{\text{氷}}=1/916.7=\qty{1.0909e-3}{m^3/kg}$、$v_{\text{水}}=1/999.8=\qty{1.0002e-3}{m^3/kg}$、$\Delta v=v_{\text{水}}-v_{\text{氷}}\approx\qty{-9.07e-5}{m^3/kg}$、$T=\qty{273.15}{K}$。
+\phriyu
+氷と水の相平衡なので、⑦のクラペイロンの式を使います（$v'$ を無視する近似は使えない）。$\dd T/\dd p$ の形に直します。
+\phtateru
+\[\frac{\dd T}{\dd p}=\frac{T\,\Delta v}{L}\]
+\phtoku
+（1）
+\[\frac{\dd T}{\dd p}=\frac{273.15\times(-9.07\times10^{-5})}{334000}\approx\qty{-7.4e-8}{K/Pa}\]
+つまり\qty{1}{MPa}で $\qty{-0.074}{K}$ です。\par
+（2）圧力は $590\div(0.6\times10^{-4})\approx\qty{9.8e6}{Pa}$ なので、$-0.074\times9.8\approx\qty{-0.73}{K}$ です。
+\phtashikame
+符号：負で、圧力を上げると融点が下がる（氷が水に浮くから）。\\
+大きさ：約\qty{10}{MPa}の大きな圧力でも、融点は\qty{0.7}{K}しか下がりません。$-5$\,℃の氷でもスケートはすべるので、圧力だけでは説明できません。摩擦の熱と、氷の表面の薄い層が効くと考えられていて、くわしいしくみは研究が続いています（熱-1）。
+\kotae （1）約 $\qty{-0.074}{K}$。（2）約\qty{0.7}{K}下がる
+\end{phreidai}
+\begin{jibun}
+例題3と同じ数で、氷の融点を\qty{1}{K}下げる（$-1$\,℃でとかす）には、圧力を何 MPa 上げればよいでしょう。
+\bkjans{$1\div0.074\approx\qty{13}{MPa}$（約130気圧）}
+\end{jibun}
+
+\label{ph:熱-10:ex4}
+\begin{phreidai}[ファンデルワールスの式で、臨界点を求める]
+二酸化炭素の臨界温度・臨界圧力・臨界点の圧縮係数を、ファンデルワールスの式から求め、本当の値（\qty{304.13}{K}、\qty{7.377}{MPa}、0.274）とくらべましょう。ファンデルワールス定数は、$a=\qty{0.3640}{Pa.m^6/mol^2}$、$b=\qty{4.267e-5}{m^3/mol}$、気体定数は $R=\qty{8.314}{J/(mol.K)}$ とします。
+\phbamen
+冷媒や、超臨界の二酸化炭素（コーヒーの成分をとり出すなど）を使う装置で、臨界点の見当をつけます。
+\phmushi
+分子の形や、分子の力のくわしい形を無視し、2つの定数 $a$・$b$ だけで表します。
+\phzu
+$a$、$b$、$R$。求めるのは $T_{\mathrm c}$、$p_{\mathrm c}$、$Z_{\mathrm c}$。
+\phriyu
+⑧で、等温線の傾きと曲がり方が0になる条件から導いた式を使います。
+\phtateru
+\[T_{\mathrm c}=\frac{8a}{27Rb},\qquad p_{\mathrm c}=\frac{a}{27b^2},\qquad Z_{\mathrm c}=\frac{3}{8}\]
+\phtoku
+\[T_{\mathrm c}=\frac{8\times0.3640}{27\times8.314\times4.267\times10^{-5}}\approx\qty{304}{K}\]
+\[p_{\mathrm c}=\frac{0.3640}{27\times(4.267\times10^{-5})^2}\approx\qty{7.40e6}{Pa}\]
+\phtashikame
+温度と圧力は本当の値とよく合います（そもそも、$a$・$b$ は臨界点の値から決めることが多い）。\\
+$Z_{\mathrm c}=0.375$ は本当の0.274とずれます。ファンデルワールスの式は、臨界点の近くの体積をうまく表せません（モデルの限界）。
+\kotae $T_{\mathrm c}\approx\qty{304}{K}$、$p_{\mathrm c}\approx\qty{7.4}{MPa}$、$Z_{\mathrm c}=0.375$（本当は約0.27）
+\end{phreidai}
+\begin{jibun}
+窒素のファンデルワールス定数を $a=\qty{0.1370}{Pa.m^6/mol^2}$、$b=\qty{3.87e-5}{m^3/mol}$ として、臨界温度と臨界圧力を求め、本当の値（\qty{126.2}{K}、\qty{3.40}{MPa}）とくらべましょう。
+\bkjans{$T_{\mathrm c}\approx\qty{126}{K}$、$p_{\mathrm c}\approx\qty{3.39}{MPa}$。どちらもよく合う}
+\end{jibun}
+
+\label{ph:熱-10:ex5}
+\begin{phreidai}[高い圧力の二酸化炭素：理想気体との差]
+二酸化炭素\qty{1}{mol}を、\qty{0.50}{L}の容器に入れて\qty{300}{K}にしました。圧力を、理想気体の式とファンデルワールスの式で求め、圧縮係数 $Z$ も求めましょう（$a$、$b$、$R$ は例題4と同じ）。
+\phbamen
+炭酸ガスのボンベや、二酸化炭素を冷媒に使うヒートポンプのように、気体を小さな体積に押しこめる場面です。
+\phmushi
+容器の中の温度は一様で、気体は全部気体のまま（\qty{300}{K}は臨界温度より低いが、この体積では液にならない）とします。
+\phzu
+$n=\qty{1}{mol}$、$V=\qty{5.0e-4}{m^3}$、$T=\qty{300}{K}$。
+\phriyu
+分子どうしが近く、引き合う力と分子の大きさが効くので、⑧のファンデルワールスの式を使い、理想気体とくらべます。
+\phtateru
+\[p_{\text{理想}}=\frac{nRT}{V},\qquad p=\frac{nRT}{V-nb}-\frac{an^2}{V^2},\qquad Z=\frac{pV}{nRT}\]
+\phtoku
+$p_{\text{理想}}=2494\div0.00050\approx\qty{4.99}{MPa}$。$\dfrac{2494}{0.00050-0.0000427}\approx\qty{5.45}{MPa}$、$\dfrac{0.3640}{0.00050^2}\approx\qty{1.46}{MPa}$ なので、$p\approx5.45-1.46=\qty{4.00}{MPa}$。$Z=4.00/4.99\approx0.80$。
+\phtashikame
+分子の大きさで圧力は上がり（\qty{5.45}{MPa}）、引き合う力で大きく下がる（$\qty{-1.46}{MPa}$）。差し引きで、理想気体より2割低い。\\
+本当の値（CoolProp 8.0）は\qty{3.87}{MPa}、$Z\approx0.78$ で、理想気体よりずっとよく合います。
+\kotae ファンデルワールス 約\qty{4.0}{MPa}（理想気体 約\qty{5.0}{MPa}）、$Z\approx0.80$
+\end{phreidai}
+\begin{jibun}
+例題5の二酸化炭素\qty{1}{mol}を、\qty{1.0}{L}の容器に入れて\qty{300}{K}にしたときの、ファンデルワールスの式の圧力と $Z$ を求めましょう。
+\bkjans{$2.61-0.36\approx\qty{2.24}{MPa}$（理想気体は\qty{2.49}{MPa}）、$Z\approx0.90$}
+\end{jibun}
+
+\label{ph:熱-10:ex6}
+\begin{phreidai}[わくときのエントロピーの増え]
+1気圧（\qty{373.12}{K}）で水がわくとき、\qty{1}{kg}あたりのエントロピーの増えを、相平衡の条件から求めましょう。蒸発熱は\qty{2256.5}{kJ/kg}です。
+\phbamen
+やかんの中で、水が水蒸気になる場面です。温度は一定のままです。
+\phmushi
+水と水蒸気はつり合っていて、ゆっくり（可逆に）蒸発するとします。
+\phzu
+$L=h''-h'=\qty{2256.5}{kJ/kg}$、$T=\qty{373.12}{K}$。求めるのは $s''-s'$。
+\phriyu
+相平衡では $g'=g''$（⑦）。$g=h-Ts$ を入れれば、エントロピーの差が出ます。
+\phtateru
+\[h'-Ts'=h''-Ts''\qquad\text{だから}\qquad s''-s'=\frac{h''-h'}{T}=\frac{L}{T}\]
+\phtoku
+\[s''-s'=\frac{2256.5}{373.12}\approx\qty{6.05}{kJ/(kg.K)}\]
+\phtashikame
+蒸気表の $s''-s'=7.3544-1.3067=\qty{6.048}{kJ/(kg.K)}$ と合います。\\
+熱-6 ⑦の $mL/T$ と同じ式に、ギブズの自由エネルギーから着きました。
+\kotae 約\qty{6.05}{kJ/(kg.K)}
+\end{phreidai}
+\begin{jibun}
+50\,℃（\qty{323.15}{K}）の飽和で、水が蒸発するときのエントロピーの増えを求めましょう。蒸発熱は\qty{2382.0}{kJ/kg}です。
+\bkjans{$2382.0\div323.15\approx\qty{7.37}{kJ/(kg.K)}$}
+\end{jibun}
+
+\label{ph:熱-10:ex7}
+\begin{phreidai}[理想気体で、マクスウェルの関係式を確かめる]
+理想気体\qty{1}{mol}（$n=1$）が、体積\qty{0.0224}{m^3}にあるとき、$(\partial S/\partial V)_T$ と $(\partial p/\partial T)_V$ をそれぞれ求めて、等しいことを確かめましょう。8-3 例題9 と同じく $R=\qty{8.31}{J/(mol.K)}$ とします。
+\phbamen
+数学 8-3 例題9 で求めた「体積を止めて温めたときの圧力の上がり方」が、エントロピーとどうつながるかを見ます。
+\phmushi
+気体は理想気体とします。
+\phzu
+$n=1$、$V=\qty{0.0224}{m^3}$。エントロピーは熱-6 ⑦の $S=nC_V\ln T+nR\ln V+\text{定数}$。
+\phriyu
+2つの偏微分を別々に計算して、⑥のマクスウェルの関係式と見くらべます。
+\phtateru
+\[\Bigl(\frac{\partial S}{\partial V}\Bigr)_T=\frac{nR}{V},\qquad\Bigl(\frac{\partial p}{\partial T}\Bigr)_V=\frac{\partial}{\partial T}\Bigl(\frac{nRT}{V}\Bigr)=\frac{nR}{V}\]
+\phtoku
+\[\frac{nR}{V}=\frac{1\times8.31}{0.0224}\approx\qty{371}{Pa/K}\]
+\phtashikame
+どちらも\qty{371}{Pa/K}（単位 J/(K·m$^3$)＝Pa/K）で等しい。8-3 例題9 の答えと同じ数です。\\
+$S$ の式の定数や $C_V$ は、$V$ で偏微分すると消えるので、答えに効きません。
+\kotae どちらも約\qty{371}{Pa/K}
+\end{phreidai}
+\begin{jibun}
+理想気体\qty{2}{mol}が、体積\qty{0.050}{m^3}にあるときの $(\partial S/\partial V)_T$ を、$(\partial p/\partial T)_V$ から求めましょう（$R=\qty{8.314}{J/(mol.K)}$）。
+\bkjans{$2\times8.314\div0.050\approx\qty{333}{Pa/K}$}
+\end{jibun}
+
+\label{ph:熱-10:ex8}
+\begin{phreidai}[閉じこめた水を温めると、圧力はどれだけ上がる？]
+20\,℃・1気圧の水を、まったくふくらめない固い容器にすきまなく閉じこめて、\qty{1}{K}温めます。圧力はどれだけ上がりますか。水の体膨張率は $\beta=\qty{2.07e-4}{1/K}$、等温圧縮率は $\kappa_T=\qty{4.58e-10}{1/Pa}$ です（IAPWS-IF97 の式から計算）。
+\phbamen
+水を満たして閉じた配管やタンクが、日に当たって温まる場面です。
+\phmushi
+容器はまったく変形しないとします。$\beta$・$\kappa_T$ は、\qty{1}{K}の間では一定とします。
+\phzu
+体積一定で温めるので、求めるのは $(\partial p/\partial T)_V$。
+\phriyu
+$(\partial p/\partial T)_V$ は表にないので、表にある $\beta$ と $\kappa_T$ に、⑥の $-1$ の関係で言いかえます。
+\phtateru
+\[\Bigl(\frac{\partial p}{\partial T}\Bigr)_V=\frac{\beta}{\kappa_T}\]
+\phtoku
+\[\frac{2.07\times10^{-4}}{4.58\times10^{-10}}\approx\qty{4.5e5}{Pa/K}=\qty{0.45}{MPa/K}\]
+\phtashikame
+単位：(1/K)÷(1/Pa)＝Pa/K。\\
+くらべる：同じ20\,℃・1気圧の空気（理想気体）なら $p/T\approx\qty{0.35}{kPa/K}$。液体は縮みにくいので、約1300倍も大きく上がります。だから水の配管には、膨張タンクや逃がし弁が要ります。
+\kotae 約\qty{0.45}{MPa}（約4.5気圧）上がる
+\end{phreidai}
+\begin{jibun}
+60\,℃の水（$\beta=\qty{5.23e-4}{1/K}$、$\kappa_T=\qty{4.43e-10}{1/Pa}$）を固い容器に閉じこめて\qty{1}{K}温めると、圧力はどれだけ上がりますか。
+\bkjans{$\beta/\kappa_T$ より、約\qty{1.2e6}{Pa/K}。約\qty{1.2}{MPa}上がる}
+\end{jibun}
+
+\label{ph:熱-10:ex9}
+\begin{phreidai}[フリーズドライ：氷を直接水蒸気にする]
+凍らせた食品を、\qty{100}{Pa}まで圧力を下げた部屋に入れ、氷を昇華させて乾かします（フリーズドライ）。氷が昇華する温度を、三重点（\qty{273.16}{K}、\qty{611.7}{Pa}）からクラウジウス・クラペイロンの式で求めましょう。昇華熱は、融解熱と蒸発熱の和で\qty{2835}{kJ/kg}とします。
+\phbamen
+インスタントのみそ汁やコーヒーの作り方です。液体の水を通らないので、食品の形や味がこわれにくいのです。
+\phmushi
+昇華熱は一定とし、水蒸気は理想気体とします。氷の体積は無視します。
+\phzu
+$p_1=\qty{611.7}{Pa}$、$T_1=\qty{273.16}{K}$、$p_2=\qty{100}{Pa}$、$L=\qty{2.835e6}{J/kg}$。
+\phriyu
+三重点より低い圧力なので、相図（②）の昇華の線の上の点です。氷と水蒸気の相平衡にも、⑦の式がそのまま使えます。
+\phtateru
+\[\frac{1}{T_2}=\frac{1}{T_1}-\frac{R_{\mathrm s}}{L}\ln\frac{p_2}{p_1}\]
+\phtoku
+$\ln(100/611.7)\approx-1.811$、$R_{\mathrm s}/L\approx\qty{1.628e-4}{1/K}$ なので、$1/T_2\approx0.0036609+0.0002948=0.0039557$、$T_2\approx\qty{252.8}{K}$。
+\phtashikame
+約 $-20$\,℃で、IAPWS の昇華圧の式（2011年）から計算した $-20.3$\,℃と合います。\\
+圧力を下げるほど、低い温度で昇華します。三重点の\qty{611.7}{Pa}より高い圧力では、温めると先にとけてしまいます。
+\kotae 約 $-20$\,℃（約\qty{253}{K}）
+\end{phreidai}
+\begin{jibun}
+例題9と同じ数で、\qty{50}{Pa}のときに氷が昇華する温度を求めましょう。
+\bkjans{$\ln(50/611.7)\approx-2.504$ から $1/T_2\approx0.0040686$、$T_2\approx\qty{246}{K}$（約 $-27$\,℃）}
+\end{jibun}
+
+\label{ph:熱-10:ex10}
+\begin{phreidai}[燃料電池の、理論の効率と電圧]
+水素と酸素から液体の水をつくる燃料電池で、25\,℃・1気圧のとき、水素\qty{1}{mol}あたり $\Delta H=\qty{-285.83}{kJ}$、$\Delta G=\qty{-237.13}{kJ}$ です。理論の効率（$\Delta G/\Delta H$）と、電池1個の理論の電圧を求めましょう。ファラデー定数（電子\qty{1}{mol}の電気の量）は\qty{96485}{C/mol}です。
+\phbamen
+燃料電池自動車や家庭用の燃料電池の、いちばんよい場合の性能を見積もります。
+\phmushi
+電池の中の抵抗や、反応の遅れによる損失を無視します（可逆）。温度と圧力は一定とします。
+\phzu
+$\Delta H$、$\Delta G$、水素\qty{1}{mol}で電子\qty{2}{mol}が流れる。
+\phriyu
+⑤から、温度・圧力が一定のとき、取り出せる電気の仕事はいちばん多くて $-\Delta G$。電気の仕事＝電気の量×電圧です。
+\phtateru
+\[\eta=\frac{\Delta G}{\Delta H},\qquad E=\frac{-\Delta G}{2\times96485}\]
+\phtoku
+$\eta=237.13\div285.83\approx0.830$。$E=237130\div(2\times96485)\approx\qty{1.23}{V}$。
+\phtashikame
+単位：J÷C＝V。\\
+実際の燃料電池の1個の電圧は、電流を流すと抵抗などで下がり、\qty{0.6}{V}〜\qty{0.8}{V}くらいで使うことが多いです。そのため、たくさん直列につないで使います。
+\kotae 効率 約0.83、電圧 約\qty{1.23}{V}
+\end{phreidai}
+\begin{jibun}
+燃料電池で、できる水が気体（水蒸気）の場合は、$\Delta H=\qty{-241.83}{kJ}$、$\Delta G=\qty{-228.59}{kJ}$ です。理論の効率と電圧を求めましょう。
+\bkjans{効率 $228.59\div241.83\approx0.945$、電圧 約\qty{1.18}{V}}
+\end{jibun}
+
+\label{ph:熱-10:ex11}
+\begin{phreidai}[気体を縮めるのにいる、いちばん小さい仕事]
+\qty{300}{K}の部屋の中で、理想気体\qty{1}{mol}をゆっくり押して、体積を半分にします。気体の温度は部屋と同じに保たれます。いる仕事のいちばん小さい値を、ヘルムホルツの自由エネルギーから求めましょう。
+\phbamen
+空気をタンクにためる圧縮機の、理想の場合です（熱-3 ⑨の等温圧縮）。
+\phmushi
+理想気体とし、摩擦はなく、ゆっくり押します（可逆）。
+\phzu
+$n=1$、$T=\qty{300}{K}$、$V_2/V_1=1/2$。
+\phriyu
+温度が一定なので、⑤の $W\geqq\Delta F$ の等号の場合です。理想気体の温度一定では $\Delta U=0$、$\Delta S=nR\ln(V_2/V_1)$（熱-6 ④）。
+\phtateru
+\[W_{\text{最小}}=\Delta F=\Delta U-T\Delta S=-nRT\ln\frac{V_2}{V_1}\]
+\phtoku
+\[W_{\text{最小}}=1\times8.314\times300\times\ln2\approx\qty{1.73e3}{J}\]
+\phtashikame
+熱-3 ⑤の等温変化の仕事 $nRT\ln(V_1/V_2)$ と同じです。\\
+押した仕事は、全部熱として部屋へ出ていき、気体の $U$ は変わりません。$F$ が増えた分だけ、あとで仕事として取り出せます。
+\kotae 約\qty{1.73e3}{J}
+\end{phreidai}
+\begin{jibun}
+\qty{300}{K}で、理想気体\qty{2}{mol}をゆっくり押して、体積を $\tfrac13$ にするのにいる、いちばん小さい仕事を求めましょう。
+\bkjans{$2\times8.314\times300\times\ln3\approx\qty{5.48e3}{J}$}
+\end{jibun}
+
+\label{ph:熱-10:ex12}
+\begin{phreidai}[氷は、なぜ0\,℃より上でとける？]
+1気圧で、氷\qty{1}{kg}が水になるときの $\Delta g=\Delta h-T\Delta s$ を、$-10$\,℃と10\,℃で求めて、どちらの温度でとけるかを判断しましょう。融解熱は\qty{334}{kJ/kg}、とけるときのエントロピーの増えは $334/273.15\approx\qty{1.223}{kJ/(kg.K)}$ で、どちらも温度によらず一定とします。
+\phbamen
+冷凍庫の中の氷はとけず、机の上の氷はとける。その境目を、自由エネルギーで説明します。
+\phmushi
+\qty{10}{K}ほどの温度の差では、$\Delta h$ と $\Delta s$ はほとんど変わらないとします。
+\phzu
+$\Delta h=\qty{334}{kJ/kg}$、$\Delta s=\qty{1.223}{kJ/(kg.K)}$、$T=\qty{263.15}{K}$ と\qty{283.15}{K}。
+\phriyu
+温度・圧力が一定のとき、$\Delta g<0$ の向きに進む（⑨）ので、$\Delta g$ の符号を調べます。
+\phtateru
+\[\Delta g=\Delta h-T\Delta s\]
+\phtoku
+$-10$\,℃：$334-263.15\times1.223\approx\qty{+12}{kJ/kg}$。10\,℃：$334-283.15\times1.223\approx\qty{-12}{kJ/kg}$。
+\phtashikame
+10\,℃では負なので、とける向きに進む。$-10$\,℃では正なので、とけず、逆に水が凍る向きに進む。\\
+$\Delta g=0$ になるのは $T=334/1.223\approx\qty{273.1}{K}$、つまり0\,℃で、融点そのものです。
+\kotae $-10$\,℃で約 $+12$、10\,℃で約 $\qty{-12}{kJ/kg}$。10\,℃でとける
+\end{phreidai}
+\begin{jibun}
+1気圧の水が水蒸気になるときの $\Delta g$ を、90\,℃と110\,℃で求め、どちらでわくかを判断しましょう。蒸発熱は\qty{2256.5}{kJ/kg}、エントロピーの増えは\qty{6.048}{kJ/(kg.K)}で一定とします。
+\bkjans{90\,℃：約 $\qty{+60}{kJ/kg}$ でわかない。110\,℃：約 $\qty{-61}{kJ/kg}$ でわく}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{圧力なべの圧力は、ゲージ圧のまま？}
+\bkng{ゲージ圧\qty{80}{kPa}の圧力なべは、蒸気表の\qty{80}{kPa}の行を読む（93.5\,℃）。}
+\bkok{絶対圧 $101.3+80=\qty{181.3}{kPa}$ の行を読む（117.1\,℃）。}
+蒸気表もクラウジウス・クラペイロンの式も、絶対圧で書いてあります（力-12）。答えが100\,℃より低くなったら、ゲージ圧のまま使っています。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$1/T$ の $T$ は、℃でもよい？}
+\bkng{$\dfrac{1}{T_1}-\dfrac{1}{T_2}$ に、100\,℃と117\,℃を入れる。}
+\bkok{絶対温度で、$\dfrac{1}{373.15}-\dfrac{1}{390.15}$ を計算する。}
+この式は熱-6 のエントロピーから導いたので、$T$ は熱力学温度（K）です。℃を入れると、差が10倍以上ずれます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{圧力を上げると、氷はとけにくくなる？}
+\bkng{圧力を上げると、ほかの物と同じように、氷の融点も上がる。}
+\bkok{氷は、圧力を上げると融点が下がる。ただし\qty{1}{MPa}で\qty{0.074}{K}だけ。}
+ふつうの物は、固体のほうが液体より密度が大きいので、圧力で融点が上がります。氷は水に浮く（固体のほうが体積が大きい）ので、逆になります（⑦、例題3）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\Delta G<0$ なら、すぐに進む？}
+\bkng{$\Delta G$ が負で大きい反応ほど、速く進む。}
+\bkok{$\Delta G$ でわかるのは、進める\textbf{向き}だけ。速さはわからない。}
+水素と酸素をまぜても、火をつけなければ何年も反応しません。$\Delta G<0$ は「進んでもよい」という意味で、速さは反応のしくみで決まります（化学の反応速度の分野）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{偏微分は、分数のように約分できる？}
+\bkng{$\Bigl(\dfrac{\partial p}{\partial T}\Bigr)_V\Bigl(\dfrac{\partial T}{\partial V}\Bigr)_p\Bigl(\dfrac{\partial V}{\partial p}\Bigr)_T$ は、約分して1。}
+\bkok{答えは $-1$。止めておく量がちがう偏微分は、約分できない。}
+ひっくり返して逆数にできるのは、止めておく量が同じときだけです（⑥）。理想気体の式で、いつでも確かめられます。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[わく温度・圧力を使いこなす]
+\phboxhead{温度を圧力で決める}
+蒸気を使う工場や病院の機械では、温度計より圧力計のほうが、わく温度をすばやく正確に知る手がかりになります。圧力なべのおもり、高圧蒸気滅菌器、発電所のボイラー（熱-8）は、どれも「圧力を決めれば、わく温度が決まる」ことを使っています。反対に、真空ポンプで圧力を下げれば、低い温度でわかせたり（真空蒸留：熱に弱い物を濃くする）、氷を昇華させたり（フリーズドライ）できます。
+
+\phboxhead{冷媒を選ぶ}
+エアコンや冷蔵庫（熱-9）では、冷媒が蒸発器でわき、凝縮器で液にもどります。冷媒を選ぶときは、ほしい蒸発温度（5\,℃くらい）と凝縮温度（45\,℃くらい）での飽和圧力が、扱いやすい大きさになっているかを見ます。そのときの見当づけに、クラウジウス・クラペイロンの式と、臨界温度（冷媒は臨界温度より低い所で使う）を使います。
+
+\phboxhead{燃料電池の電圧}
+燃料電池の電池1個の理論の電圧\qty{1.23}{V}は、$\Delta G$ から決まります。実際の電圧（\qty{0.6}{V}〜\qty{0.8}{V}くらい）との差が、電池の中で失われるエネルギー（熱になる分）です。たくさんの電池を直列にして、モーターを回す電圧にします。
+
+\begin{phketa}[わく温度と圧力の目安]
+\phketaline{富士山頂（約\qty{63}{kPa}）}{約87\,℃}
+\phketaline{1気圧（\qty{101.325}{kPa}）}{99.97\,℃}
+\phketaline{圧力なべ（ゲージ圧\qty{80}{kPa}）}{約117\,℃}
+\phketaline{高圧蒸気滅菌（121\,℃）}{絶対圧 約\qty{205}{kPa}}
+\phketaline{水の臨界点}{374\,℃、\qty{22.1}{MPa}}
+\phboxhead{答えが桁で合っているか}
+100\,℃の近くでは、水の飽和圧力は\qty{1}{K}あたり約\qty{3.6}{kPa}（約3.6\,\%）変わります。わく温度を\qty{10}{K}上げるには、圧力を約1.4倍にします。計算でわく温度が何十 K も変わったら、ゲージ圧と絶対圧、℃と K を確かめましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{化学工学,冷凍空調工学,エネルギー変換工学,材料物性}{自由エネルギー、化学ポテンシャル、相平衡、飽和蒸気圧、アントワン式、臨界点、圧縮係数、状態方程式}
+
+\begin{column}{ファンデルワールスと、臨界点の発見}
+液体と気体の境目がなくなる臨界点は、1869年、アンドリュースが二酸化炭素を押し縮める実験で、はっきりと示しました。約31\,℃より高い温度では、どんなに押しても、液体と気体に分かれなかったのです。その4年後の1873年、オランダのファンデルワールスは、学位論文で、分子の大きさと引き合う力を入れた状態方程式を示し、この実験を説明しました。分子がまだ「本当にあるのか」と議論されていた時代のことです。ファンデルワールスは、1910年にノーベル物理学賞を受けました。
+\end{column}
+
+\begin{column}{実験に合わせてつくる式：アントワン式}
+工学の便覧では、飽和圧力を $\log_{10}p=A-\dfrac{B}{C+t}$（$t$ は℃、$A$・$B$・$C$ は物質ごとの定数）の形の式で表すことがよくあります。アントワン式（1888年）とよばれる、実験に合わせてつくった式（経験則）です。$C=273.15$ とおくと、クラウジウス・クラペイロンの式（$\ln p$ が $1/T$ の1次式）と同じ形になります。$C$ を少しずらすと、蒸発熱が温度で変わる分まで、うまく合わせられるのです。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 富士山頂（\qty{63}{kPa}）で水がわく温度を、1気圧（\qty{101.325}{kPa}）の沸点\qty{373.12}{K}と、蒸発熱\qty{2256.5}{kJ/kg}から、クラウジウス・クラペイロンの式で求めましょう（$R_{\mathrm s}=\qty{461.5}{J/(kg.K)}$）。IAPWS-IF97 の値は87.2\,℃です。
+\bkpans{$\ln(63/101.325)\approx-0.4752$ から $1/T_2\approx0.0027773$、$T_2\approx\qty{360.1}{K}$（約86.9\,℃）}
+\bkproblem 水の飽和圧力は、20\,℃で\qty{2.3392}{kPa}、40\,℃で\qty{7.3844}{kPa}です。この間の蒸発熱を見積もりましょう（$R_{\mathrm s}=\qty{461.5}{J/(kg.K)}$）。
+\bkpans{$\ln(7.3844/2.3392)\approx1.1495$、$1/293.15-1/313.15\approx\num{2.179e-4}$ より、約\qty{2.44e3}{kJ/kg}（蒸気表の30\,℃の値は\qty{2430}{kJ/kg}）}
+\bkproblem 二酸化炭素\qty{1}{mol}を\qty{2.0}{L}の容器に入れて\qty{300}{K}にしました。理想気体の式とファンデルワールスの式（$a=\qty{0.3640}{Pa.m^6/mol^2}$、$b=\qty{4.267e-5}{m^3/mol}$）で圧力を求め、圧縮係数を求めましょう。
+\bkpans{理想気体 約\qty{1.25}{MPa}。ファンデルワールス $1.27-0.09\approx\qty{1.18}{MPa}$、$Z\approx0.95$}
+\bkproblem 120\,℃（\qty{393.15}{K}）の飽和で、水の蒸発熱は\qty{2202.1}{kJ/kg}です。蒸発するときの、\qty{1}{kg}あたりのエントロピーの増えを求めましょう。
+\bkpans{$2202.1\div393.15\approx\qty{5.60}{kJ/(kg.K)}$}
+\bkproblem \qty{280}{K}の部屋の中で、理想気体\qty{0.50}{mol}をゆっくり押して、体積を $\tfrac14$ にします。いる仕事のいちばん小さい値を求めましょう。
+\bkpans{$0.50\times8.314\times280\times\ln4$ より、約\qty{1.6e3}{J}}
+\bkproblem 例題10の燃料電池（液体の水ができる）を100個直列にしたときの、理論の電圧を求めましょう。また、1個あたり\qty{0.70}{V}で使うとき、反応の熱 $-\Delta H$ のうち電気になる割合はいくらですか（理論の電圧 $-\Delta H/(2\times96485)\approx\qty{1.48}{V}$ との比で考える）。
+\bkpans{約\qty{123}{V}。$0.70\div1.48\approx0.47$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 理想気体\qty{1}{mol}が、$T=\qty{273}{K}$、$V=\qty{0.0224}{m^3}$ にあります（$R=\qty{8.314}{J/(mol.K)}$）。（1）$(\partial p/\partial T)_V$ と $(\partial V/\partial p)_T$ を求めましょう。（2）$-1$ の関係から $(\partial T/\partial V)_p$ を求め、$pV=nRT$ から直接求めた値とくらべましょう。
+\bkpans{（1）\nobreak $nR/V\approx\qty{371}{Pa/K}$、$-nRT/p^2\approx\qty{-2.21e-7}{m^3/Pa}$（$p\approx\qty{1.013e5}{Pa}$）。（2）\nobreak $-1$ を（1）の2つの積でわって、約 $\qty{1.22e4}{K/m^3}$。直接は $p/(nR)\approx\qty{1.22e4}{K/m^3}$ で同じ}
+\bkproblem 20\,℃の水の体膨張率は $\beta=\qty{2.07e-4}{1/K}$、等温圧縮率は $\kappa_T=\qty{4.58e-10}{1/Pa}$ です。比体積は $v=\qty{1.002e-3}{m^3/kg}$ です。⑥の式
+\[c_p-c_v=\frac{Tv\beta^2}{\kappa_T}\]
+で $c_p-c_v$ を求め、$c_p=\qty{4185}{J/(kg.K)}$ とくらべましょう。
+\bkpans{約\qty{27}{J/(kg.K)}。$c_p$ の約0.7\,\%で、$c_p\approx c_v$}
+\bkproblem 1気圧の水について、IAPWS-IF97 の式から、液と蒸気の $h$〔kJ/kg〕と $s$〔kJ/(kg·K)〕を計算しました（安定でない側の値も、式から計算できる）。90\,℃（\qty{363.15}{K}）：液 $h=376.99$・$s=1.1926$、蒸気 $h=2654.50$・$s=7.2972$。110\,℃（\qty{383.15}{K}）：液 $h=461.33$・$s=1.4187$、蒸気 $h=2696.16$・$s=7.4090$。それぞれの温度で $g=h-Ts$ をくらべ、液と蒸気のどちらが安定かを答えましょう。
+\bkpans{90\,℃：液 $g\approx\qty{-56.1}{kJ/kg}$、蒸気 $g\approx\qty{+4.5}{kJ/kg}$ で液が安定。110\,℃：液 $g\approx\qty{-82.2}{kJ/kg}$、蒸気 $g\approx\qty{-142.6}{kJ/kg}$ で蒸気が安定}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 蒸気表とファンデルワールスの式で、わく温度と実在気体の圧力を求められる。\bkfurref{ph:熱-10:sec8}
+\item $\ln p$ と $1/T$ のグラフから蒸発熱を読み、わく温度を見積もれる。\bkfurref{ph:熱-10:sec3}
+\item 自由エネルギーとマクスウェルの関係式から、相平衡の式を導ける。\bkfurref{ph:熱-10:sec7}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{わく温度は、温度計だけじゃなく圧力計でも読めるんだね。圧力なべの117\,℃が、表計算の直線1本で出せるなんて。}
