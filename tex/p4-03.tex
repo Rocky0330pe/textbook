@@ -1,0 +1,1292 @@
+%% 第26回編集委員会（物理第4巻）：組 電W2
+%% p4-03.tex  電-3　電気をためる：導体・誘電体とコンデンサー（★1〜5・3段）
+%% 中身は計画書 tools/phys4-plan.md の B「電-3」。公式の持ち主は A（A26〜A30・A63〜A65）。
+%%   電-1・電-2（組 電W1）を指すときは、計画書 B の節の番号を使う（電-1 ⑦ 広がった電荷・平面 σ/(2ε0)、電-2 ③ ガウスの法則、
+%%   ④ 対称な電荷、⑤ 電位と位置エネルギー、⑥ 一様な電場 V＝Ed、⑨ rot E＝0、⑩ 一意性、⑪ 表計算のラプラス方程式、⑫ とがった所、例題12 導体の箱）。
+%%   キルヒホッフの電圧則・電荷の保存は電-4 ⑥⑦ が持ち主。この章の⑤は、つながった極板の電荷の保存と「1周すると電位がもとにもどる」だけで直列・並列を作る。
+%%   q＝Cv（数学 6-1・6-4・6-6 が部品のきまりとして使った式）を④で導き、½CV²（6-6⑧）を⑦で導く（計画書 A-6 の P45、C-6-2）。
+%% 数値はすべて Python で計算した：checks/物理第4巻/電-3/calc_p4_03.py（出力 calc_p4_03_out.txt）、code_p4_03.py（⑫のプログラム。出力 code_p4_03_out.txt）
+%% 記号（この章）：電荷 Q（たまった電荷）・q（運ぶ途中の小さな電荷）、電場 E、電位 φ、電圧 V、静電容量 C、極板の面積 S、間かく d、
+%%   面電荷密度 σ（この章では導電率を使わない）、真空の誘電率 ε0、誘電率 ε＝εr ε0、比誘電率 εr、分極 P（ベクトル。電力 P はこの章で使わない）、
+%%   電束密度 D、静電エネルギー U、エネルギー密度 u、クーロンの定数 k（ばね定数とは別）、圧電定数 d_33（波-10 と同じ）。
+%%   長さ（同軸の長さ）l、同軸の内・外の半径 a・b、線電荷密度 λ（波長はこの章に出ない）、雲の高さ h。
+%% 出典（第26回 手引き 2章の16：書くときに確かめた。11月5日）
+%%   ・ε0＝8.8541878188×10⁻¹² F/m（CODATA 2022）：計画書 D6（NIST）。本文は 8.85×10⁻¹²（Y-6）
+%%   ・水の比誘電率 80.2（20 ℃）：計画書 D17（IAPWS R8-97 の式。iapws 1.5.5）
+%%   ・雷のとき、自動車（オープンカーは不可）・バス・列車の中は比較的安全：気象庁「雷から身を守るには」
+%%       https://www.jma.go.jp/jma/kishou/know/toppuu/thunder4-3.html（curl で本文を読んだ。日本大気電気学会の Q&A からの引用）
+%%   ・空気の絶縁破壊の強さ 約 3×10⁶ V/m（1気圧・常温・1 cm ほどの平らな電極）：NPTEL の高電圧工学の講義資料（31 kV/cm）、
+%%       learnemc.com の解説（約 30 kV/cm）の2つで照らし合わせた（WebSearch）
+%%   ・ライデンびん：1745年（クライスト）・1745〜1746年（ミュッセンブルーク）。ETHW（IEEE）"Leyden jar"、Britannica "Invention of the Leyden jar"（WebSearch）
+%%   ・圧電定数 PZT 約 400 pC/N、水晶時計 32768 Hz：波-10（tex/p3-10.tex）の値
+%% 〔要確認〕（確かめられなかった値。本文では「約」「〜とします」と書いた）
+%%   ・比誘電率 ポリエチレン 2.3（2.2〜2.3）、PET 約3（3.0〜3.3 と資料でばらつく）、ガラス 4〜10、チタン酸バリウム 1000 以上：
+%%       理科年表は作業環境から引けず、検索で見つかった表は Wikipedia と個人の表だけだった。例題は「PET を 3.0、ガラスを 7 とします」と仮の値で書いた
+%%   ・電気二重層キャパシタの 1 F・2.7 V：製品の代表の値として「〜とします」と書いた（メーカーのサイトに届かず）
+\makeatletter
+% 平行板（横から）  \sxdplates{(左下)}{はば}{間かく}
+\newcommand\sxdplates[3]{\begin{scope}[shift={#1}]
+  \fill[bkRed!55] (0,#3) rectangle (#2,#3+1.6);
+  \fill[bkBlue!55] (0,-1.6) rectangle (#2,0);
+  \draw[bkInk, line width=0.5pt] (0,#3) rectangle (#2,#3+1.6) (0,-1.6) rectangle (#2,0);
+  \end{scope}}
+% 電気力線の矢印（下向き）  \sxdline{(x,上)}{長さ}
+\newcommand\sxdline[2]{\draw[bkOrange!85!black, line width=0.8pt, -{Stealth[length=1.8mm]}] #1 -- ++(0,-#2);}
+% 乾電池（たて）  \sxdcell{(x,y)}：長い線が＋
+\newcommand\sxdcell[1]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=1.1pt] (-4,1.2) -- (4,1.2);
+  \draw[bkInk, line width=2.4pt] (-2,-1.2) -- (2,-1.2);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-4.4,2.4) {$+$};\end{scope}}
+% 自動車（横から）  \sxdcar{(左下)}
+\newcommand\sxdcar[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=bkGray!35, draw=bkInk, line width=0.8pt, rounded corners=1.5mm] (0,3) -- (0,11) -- (8,11) -- (13,18) -- (31,18) -- (37,11) -- (46,10) -- (46,3) -- cycle;
+  \fill[bkBlue!12] (14,11.6) -- (17,16.6) -- (23,16.6) -- (23,11.6) -- cycle;
+  \fill[bkBlue!12] (25,11.6) -- (25,16.6) -- (30,16.6) -- (34,11.6) -- cycle;
+  \filldraw[fill=bkInk!80, draw=bkInk] (10,3) circle (3.4) (36,3) circle (3.4);
+  \fill[bkGray!60] (10,3) circle (1.3) (36,3) circle (1.3);\end{scope}}
+\makeatother
+
+\phchapter{3}{電気をためる：\\導体・誘電体とコンデンサー}{雷が落ちても、金属の車の中の人が無事なのはなぜ？}{\bklevelrange{1}{5}}{電気をためる：導体・誘電体とコンデンサー}
+\bkmichishirube{5-12,6-4,6-6,8-8,8-11,8-12,電-1,電-2}{電-4,電-5,電-9,電-13,電-15}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace コンデンサーにためた電気で、豆電球や LED を光らせられる。
+\item \bklevel{3}\enspace 導体の中の電場が0になるわけと、静電遮へいを説明できる。
+\item \bklevel{3}\enspace 平行板の静電容量・つなぎ方・エネルギーを求められる。
+\item \bklevel{4}\enspace 分極と電束密度で、同軸・球の静電容量を導ける。
+\item \bklevel{5}\enspace 境界条件・仮想変位・鏡像法を使って、電場や力を求められる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{導体の中の電場は0、導体は等電位で、電荷は表面にある}{高校物理}{ph:電-3:doutai}
+\phk{$Q=CV$、$C=\varepsilon\dfrac{S}{d}$（平行板コンデンサー）}{高校物理}{ph:電-3:heikouban}
+\phk{並列 $C=C_1+C_2$、直列 $\dfrac1C=\dfrac1{C_1}+\dfrac1{C_2}$}{高校物理}{ph:電-3:setsuzoku}
+\phk{$U=\dfrac12QV=\dfrac12CV^2=\dfrac{Q^2}{2C}$（静電エネルギー）}{高校物理}{ph:電-3:energy}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+雷は、雲と地面のあいだを、とても大きな電流が一瞬で流れる現象です。雷が鳴ったら、広い場所や高い木の下はとても危険です。ところが、気象庁は、自動車・バス・列車の\textbf{中}は「比較的安全な空間」だと案内しています（オープンカーは別）。
+
+車に雷が落ちても、中の人が無事なのは、なぜでしょう。ゴムのタイヤが電気を通さないから、でしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=0.8mm, y=0.8mm]
+  \fill[bkGreen!20] (-4,-1) rectangle (54,0);
+  \draw[bkGreen!50!black, line width=0.6pt] (-4,0) -- (54,0);
+  \sxdcar{(2,0)}
+  \draw[bkYellow!80!black, line width=1.6pt] (22,36) -- (19,29) -- (25,26) -- (22,18.6);
+  \draw[bkRed!80!black, line width=1.1pt, -{Stealth[length=2mm]}] (23,18.8) -- (36,18.8) -- (44,11.5) -- (47.4,3.6) -- (47.4,0.6);
+  \node[font=\sffamily\footnotesize, anchor=west, align=left] at (34,27) {電流は\\車の外側を};
+  \node[font=\sffamily\footnotesize, anchor=south] at (22,36.5) {雷};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 電-1・電-2では、電荷がつくる電場と電位を調べました。そこでは、電荷は決まった場所にじっとしていました。この章では、まず、電荷が自由に動ける物（\textbf{導体}：金属など）と、動けない物（\textbf{絶縁体}：ガラス・プラスチックなど）に電場をかけると何が起きるかを見ます。次に、2枚の金属の板で電気をためる部品、\textbf{コンデンサー}を作ります。スマホの中にも何百個も入っている部品です。数学の本（6-1・6-4・6-6）で「部品のきまり」として使った $q=CV$ と $\tfrac12CV^2$ が、なぜ成り立つのかも、ここで導きます。
+
+\begin{omoidasou}
+\bkrecall{電-1}{真空の誘電率は $\varepsilon_0\approx8.85\times10^{-12}$\,F/m、クーロンの定数は $k=1/(4\pi\varepsilon_0)$。広い平面に1 m$^2$ あたり $\sigma$ の電荷があると、両側に一様な電場 $E=\sigma/(2\varepsilon_0)$ ができる（電-1 ⑦、8-11⑦）。}
+\bkrecall{電-2}{電荷 $Q$ から出る電気力線は $Q/\varepsilon_0$ 本（高校の教科書の「$4\pi kQ$ 本」と同じ）。1 m$^2$ を通る本数が電場の強さ（ガウスの法則：電-2 ③）。}
+\bkrecall{電-2}{電位 $\phi$ は1 C あたりの位置エネルギー。電位の差が電圧 $V$。一様な電場では $V=Ed$（電-2 ⑥）。静電場では、どの道を通っても1周すると電位はもとにもどる（電-2 ⑨）。}
+\bkrecall{5-12}{ばねを $x$ だけのばす仕事は、力のグラフの三角形の面積 $\tfrac12kx^2$（5-12④）。}
+\bkrecall{6-4}{コンデンサーにたまる電気の量は電圧に比例する：$q=CV$。数学の本では、これを部品のきまりとして使った（6-4⑦）。}
+\end{omoidasou}
+
+\begin{yattemiyou}[アルミはくとクリアファイルで、コンデンサーを作る]
+\textbf{用意するもの}：アルミはく、クリアファイル（A4）、セロハンテープ、静電容量をはかれるテスター（デジタルマルチメーター。なければ⑤だけ）、AM ラジオ\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item アルミはくを、はがき（\qty{10}{cm}×\qty{15}{cm}）ほどの大きさに2枚切り、クリアファイルの表と裏に、重なるようにはる。
+\item テスターの2本の線を、それぞれのアルミはくにつなぎ、静電容量の目もりで読む。
+\item 片方のアルミはくを少しずつ横へずらし、重なる面積を半分にしてみる。
+\item クリアファイルを2枚、3枚と重ねてはさみ、間を広げてみる。
+\item AM ラジオを鳴らし、アルミはくですき間なく包むと、音はどうなるか。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=0.9mm, y=0.9mm]
+  \draw[bkGray!70!black, line width=0.4pt, dashed] (8,1) -- (28,1) -- (33,6) -- (13,6) -- cycle;
+  \fill[bkBlue!10, opacity=0.85] (0,0) -- (36,0) -- (46,10) -- (10,10) -- cycle;
+  \draw[bkBlue!60!black, line width=0.4pt] (0,0) -- (36,0) -- (46,10) -- (10,10) -- cycle;
+  \fill[bkGray!45] (6,3) -- (26,3) -- (31,8) -- (11,8) -- cycle;
+  \draw[bkGray!70!black, line width=0.4pt] (6,3) -- (26,3) -- (31,8) -- (11,8) -- cycle;
+  \draw[bkRed!80!black, line width=0.8pt] (22,6) .. controls (26,16) .. (34,20);
+  \draw[bkInk, line width=0.8pt] (27,2) .. controls (40,-2) and (44,10) .. (42,20);
+  \filldraw[fill=bkYellow!30, draw=bkInk, line width=0.6pt] (30,20) rectangle (50,30);
+  \node[font=\sffamily\footnotesize] at (40,25) {テスター};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (16,-1.5) {アルミはく};
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：アルミはくの重なりを半分にすると、テスターの読みもほぼ半分になります。クリアファイルを2枚重ねて間を2倍にすると、読みはほぼ半分です。はがきの大きさで、クリアファイル1枚（厚さ約\qty{0.2}{mm}）なら、読みは数百 pF（ピコファラド。1 pF は1兆分の1 F）くらいです。ラジオをアルミはくで包むと、音が小さくなり、ほとんど聞こえなくなります。金属の殻の中には、外の電気のはたらきが入りにくいのです。どれも、この章の③④⑥で説明します。
+
+\noindent この章の記号：電位を $\phi$（ファイ）、2点の電位の差（電圧）を $V$ と書きます。高校の教科書は電位も $V$ と書きますが、この本では電位と電圧を分けます。たまった電荷は $Q$、運ぶ途中の小さな電荷は $q$ と書きます。
+
+
+%% ======================== 物理の道具 ========================
+\Needspace{16\baselineskip}\bksection{doguu}{物理の道具}
+
+\phstage{me}{電気がたまるようすを見る}{1}
+
+\bksubsection{1}{コンデンサーで電気をためる}
+\label{ph:電-3:sec1}
+小学校6年の理科では、手回し発電機でコンデンサーに電気をため、そのコンデンサーで豆電球や LED を光らせました（小学校理科）。豆電球はすぐ暗くなりますが、LED は長く光ります。LED は少しの電気で光るからです。コンデンサーは、電気を\textbf{ためて}、あとで\textbf{出す}部品です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：中身
+  \sxdplates{(4,0)}{30}{14}
+  \foreach \xx in {8,13,18,23,28,33} {\sxdline{(\xx,13.4)}{12.8}}
+  \foreach \xx in {6,11,16,21,26,31} {\node[font=\sffamily\footnotesize, text=bkRed!80!black] at (\xx+2,18.4) {$+$};}
+  \foreach \xx in {6,11,16,21,26,31} {\node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (\xx+2,-4.4) {$-$};}
+  \draw[bkInk, line width=0.8pt] (5,15.6) -- (5,24) -- (-6,24) -- (-6,9.2) (-6,4.8) -- (-6,-10) -- (5,-10) -- (5,-1.6);
+  \sxdcell{(-6,7)}
+  \node[font=\sffamily\footnotesize, anchor=west] at (36,15) {極板（＋$Q$）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (36,-1) {極板（－$Q$）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (36,7) {電場};
+  \node[font=\sffamily\footnotesize, anchor=east] at (-11,3) {電池};
+  % 右：水のたとえ
+  \begin{scope}[shift={(78,-8)}]
+  \fill[bkBlue!20] (0,0) rectangle (16,12);
+  \draw[bkInk, line width=0.8pt] (0,30) -- (0,0) -- (16,0) -- (16,30);
+  \fill[bkBlue!20] (26,0) rectangle (42,4);
+  \draw[bkInk, line width=0.8pt] (26,30) -- (26,0) -- (42,0) -- (42,30);
+  \draw[bkGray, line width=0.4pt, dashed] (16,12) -- (24,12);
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (21,4) -- (21,12);
+  \node[font=\sffamily\footnotesize, anchor=west] at (21.5,8) {高さの差};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (21,-1.5) {ポンプで水を左へ\\くみ上げてためる};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{コンデンサーの中身（左）。向かい合わせた2枚の金属の板（極板）の間を、空気やうすいプラスチックで分けてある。電池は、上の板から電子をくみ出して下の板へ送り、上の板に $+Q$、下の板に $-Q$ がたまる。右は、水そうの水を、ポンプでくみ上げてためるたとえ。}\label{ph:電-3:fig-naka}
+\end{bkfigure}
+
+\noindent コンデンサーの中には、2枚の金属の板（\textbf{極板}）が、うすいすき間をあけて向かい合っています。\bkidx{こんでんさー}{コンデンサー}電池をつなぐと、電池は、片方の極板から電子をくみ出して、もう片方へ送りこみます。すると、片方の極板は電子が足りなくなって $+Q$ に、もう片方は電子が余って $-Q$ に帯電します（電-1 ①）。2枚の電荷は、大きさが同じで符号が反対です。電荷は、電池が運んだ分だけ移っただけで、増えたり消えたりはしていないからです（電荷の保存：電-1 ①）。
+
+極板の間には電場ができ、2枚の極板の間に電圧 $V$ ができます。電池をはずしても、電荷は極板に残ります。極板の間は電気を通さないので、電荷の帰り道がないからです。あとで豆電球をつなぐと、それが帰り道になって電流が流れ、ためた電気が出ていきます。
+
+\phboxhead{電圧を変えて、たまる電荷を比べる}
+乾電池1個（\qty{1.5}{V}）、2個（\qty{3.0}{V}）、3個（\qty{4.5}{V}）で、同じコンデンサーに電気をため、たまった電荷をはかったとします（ためた電気をはかる装置を使う。この本では値だけ見ます）。ここでは、$\qty{100}{\micro F}$ と書かれたコンデンサーとします。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=40mm] *{3}{Q[c,m,wd=18mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+電圧 $V$〔V〕 & 1.5 & 3.0 & 4.5 \\
+たまった電荷 $Q$〔$\si{\micro C}$〕 & 150 & 300 & 450 \\
+\SetCell{bg=bkYellow!30} $Q\div V$〔$\si{\micro F}$〕 & 100 & 100 & 100 \\
+\end{bktable}
+\bktabcaption{電圧を2倍、3倍にすると、たまる電荷も2倍、3倍になる。}\label{ph:電-3:tab-QV}
+\end{bkcenter}
+
+\noindent 電荷は電圧に比例します。比例定数を $C$ と書くと、
+\pheq{Q=CV}{C ＝ F × V}
+です。$C$ をコンデンサーの\textbf{静電容量}といい、\bkidx{せいでんようりょう}{静電容量}単位は F（\textbf{ファラド}）です。\qty{1}{V}で\qty{1}{C}たまるのが\qty{1}{F}です（F＝C/V）。名前は、電気と磁気の実験で多くの発見をしたイギリスのファラデーからとっています。1 F はとても大きいので、ふつうは $\si{\micro F}$（100万分の1 F）、nF（10億分の1 F）、pF（1兆分の1 F）を使います。
+
+\begin{phyomi}[$Q=CV$]
+「電圧を1 V 上げるごとに、$C$〔C〕ずつ電荷がたまる」。$C$ は、そのコンデンサーの「電気の入りやすさ」です。たとえの水そうでは、$C$ は水そうの底面積にあたります。底が広い水そうほど、同じ高さ（電圧）まで、たくさんの水（電荷）が入ります。
+\end{phyomi}
+
+\noindent なぜ電荷が電圧に比例するのか、$C$ が何で決まるのかは、④で、電場の性質から導きます。
+
+\begin{phmijika}[コンデンサーの表示]
+電子工作で使うコンデンサーには、「$\qty{100}{\micro F}$\ 16 V」のように、静電容量と、かけてよい電圧（耐電圧：⑥）が書いてあります。筒の形の電解コンデンサーには＋と－の向きがあり、逆につないだり、耐電圧をこえる電圧をかけたりすると、こわれて危険です。
+\end{phmijika}
+
+
+\bksubsection{2}{金属に電荷を近づけると：静電誘導}
+\label{ph:電-3:sec2}
+金属の中には、原子から離れて自由に動き回れる電子（\textbf{自由電子}）がたくさんあります（電-4 ②で数えます）。下じきをこすって負に帯電させ、アルミ缶に近づけてみましょう。缶にさわらなくても、缶は下じきのほうへ転がってきます。
+
+負の電荷を近づけると、缶の中の自由電子は、同じ負の電荷に押されて、遠い側へ移ります。近い側は電子が足りなくなって正に、遠い側は電子が余って負になります。この現象を\textbf{静電誘導}といいます。\bkidx{せいでんゆうどう}{静電誘導}缶の中の電荷の合計は0のままですが、正の電荷のほうが下じきに近いので、引く力が押す力より大きくなり（クーロンの力は距離の2乗に反比例：電-1 ②）、缶は引き寄せられるのです（図\ref{ph:電-3:fig-yuudou}左）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 左：アルミ缶
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.7pt] (20,0) rectangle (42,24);
+  \filldraw[fill=bkBlue!15, draw=bkBlue!70!black, line width=0.7pt, rounded corners=1mm] (-2,6) rectangle (6,22);
+  \foreach \yy in {9,13,17,21} {\node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (2,\yy-1) {$-$};}
+  \foreach \yy in {4,9,14,19} {\node[font=\sffamily\footnotesize, text=bkRed!80!black] at (23,\yy) {$+$};}
+  \foreach \yy in {4,9,14,19} {\node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (39,\yy) {$-$};}
+  \draw[bkBlue!70!black, line width=0.8pt, -{Stealth[length=2mm]}] (34,12) -- (38,12);
+  \node[font=\sffamily\footnotesize, anchor=north] at (2,4) {下じき（－）};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (31,-1.5) {近い側に＋、\\遠い側に－};
+  \node[font=\sffamily\footnotesize, anchor=south] at (31,25) {電子は遠い側へ};
+  % 右：はく検電器
+  \begin{scope}[shift={(84,0)}]
+  \draw[bkInk, line width=0.8pt] (-12,0) -- (12,0) -- (12,22) -- (-12,22) -- cycle;
+  \fill[bkGray!50] (-4,26) rectangle (4,27.5);
+  \draw[bkInk, line width=1.2pt] (0,26) -- (0,10);
+  \draw[bkYellow!70!black, line width=1.4pt] (0,10) -- (-5,3);
+  \draw[bkYellow!70!black, line width=1.4pt] (0,10) -- (5,3);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (-7,5) {$-$};
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (7,5) {$-$};
+  \node[font=\sffamily\footnotesize, text=bkRed!80!black] at (0,29.6) {$+\ +$};
+  \filldraw[fill=bkBlue!15, draw=bkBlue!70!black, line width=0.7pt, rounded corners=1mm] (-8,33) rectangle (8,37);
+  \node[font=\sffamily\footnotesize, anchor=west] at (9,35) {下じき（－）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (13,12) {はくが開く};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{静電誘導。負の電荷を近づけると、金属の中の自由電子が遠い側へ追いやられる。近い側は電子が足りなくなって正になる（左）。はく検電器では、上の金属板に負の電荷を近づけると、電子が下のはくへ移り、2枚のはくが同じ負の電荷で反発して開く（右）。}\label{ph:電-3:fig-yuudou}
+\end{bkfigure}
+
+\phboxhead{電気を通さない物でも}
+ティッシュの小さな切れはしのように、電気を通さない物も、帯電した下じきに引き寄せられます。絶縁体の中の電子は、原子から離れられませんが、原子の中で少しだけ片寄ります。原子1つ1つの中で、正と負がわずかにずれて並ぶのです。これを\textbf{誘電分極}といいます（⑥で詳しく）。
+
+\begin{column}{ガラスびんに電気をためる：ライデンびん}
+電気をためる道具は、1745〜1746年に、ドイツのクライストとオランダのミュッセンブルークが、それぞれ見つけました。水を入れたガラスびんを手に持ち、こすって起こした電気（静電気）を、びんの中の水へ送りこんだあと、びんの中の針金にもう片方の手でさわると、強いショックを受けたのです。水と手が2枚の「極板」、ガラスが間の絶縁体になっていました。のちに、びんの内と外にすずのはくをはった形になり、ミュッセンブルークのいたライデンの町の名から「ライデンびん」とよばれました。家庭のコンセントや、強い静電気をためる実験は危険なので、まねをしてはいけません。
+\end{column}
+
+\Needspace{12\baselineskip}\phstage{te}{導体とコンデンサーのきまりを作る}{3}
+
+\bksubsection{3}{導体の性質：中の電場は0}
+\label{ph:電-3:sec3}
+金属のように、自由に動ける電荷がたくさんある物を\textbf{導体}といいます。\bkidx{どうたい}{導体}導体を電場の中に置くと、何が起きるでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % ①かけた瞬間
+  \foreach \yy in {4,10,16,22} {\draw[bkOrange!85!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (0,\yy) -- (36,\yy);}
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.7pt, fill opacity=0.85] (10,1) rectangle (26,25);
+  \node[font=\sffamily\footnotesize, anchor=north] at (18,-1) {① かけた瞬間};
+  \foreach \yy in {6,13,20} {\draw[bkBlue!70!black, line width=0.8pt, -{Stealth[length=1.6mm]}] (20,\yy) -- (14,\yy);}
+  \node[font=\sffamily\footnotesize, anchor=south] at (18,26) {電子が左へ};
+  % ②落ち着いたとき
+  \begin{scope}[shift={(48,0)}]
+  \foreach \yy in {4,10,16,22} {\draw[bkOrange!85!black, line width=0.7pt] (0,\yy) -- (10,\yy); \draw[bkOrange!85!black, line width=0.7pt, -{Stealth[length=1.8mm]}] (26,\yy) -- (36,\yy);}
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.7pt] (10,1) rectangle (26,25);
+  \foreach \yy in {4,10,16,22} {\node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (11.8,\yy) {$-$}; \node[font=\sffamily\footnotesize, text=bkRed!80!black] at (24.2,\yy) {$+$};}
+  \node[font=\sffamily\footnotesize] at (18,13) {$E=0$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (18,-1) {② 落ち着いたとき};
+  \end{scope}
+  % ③中が空の導体
+  \begin{scope}[shift={(96,0)}]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.7pt, even odd rule] (0,1) rectangle (30,25) (5,6) rectangle (25,20);
+  \node[font=\sffamily\footnotesize, align=center] at (15,13) {中の空所も\\$E=0$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (15,-1) {③ 金属の箱};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{導体を電場の中に置く。①電場に押されて自由電子が動く。②表面にたまった電荷がつくる電場が、外の電場を中で打ち消すと、電子は止まる。③中が空の金属の箱でも、中に電荷がなければ、空所の電場は0（静電遮へい）。}\label{ph:電-3:fig-doutai}
+\end{bkfigure}
+
+\noindent 電場の中に入れた瞬間、導体の中の自由電子は、電場から力 $-e\vec E$ を受けて、電場と反対の向きに動き出します（図\ref{ph:電-3:fig-doutai}①）。電子は導体の表面で止められ、片側の表面に負の電荷が、反対側の表面に正の電荷がたまります。たまった電荷は、もとの電場と\textbf{反対向き}の電場を、導体の中につくります。中の電場がまだ残っていれば、電子はさらに動き、電荷がさらにたまります。電子が動くのをやめるのは、中の電場がちょうど\textbf{0}になったときです（②）。電子が止まるまでの時間は、金属ではとても短く、ふだんは「一瞬」と考えてかまいません。
+
+\phboxhead{導体の4つの性質}
+\label{ph:電-3:doutai}電荷が止まって落ち着いた導体（静電場の中の導体）では、次のことが成り立ちます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{導体の中の電場は0}。0でなければ、自由電子が動き続けるからです。
+\item \textbf{導体全体が同じ電位}（等電位）。中のどの2点のあいだも、電場が0なので、電荷を運んでも仕事がいらないからです（電-2 ⑤）。
+\item \textbf{電荷は表面にだけある}。導体の中に小さな袋を考えると、袋の表面の電場は0なので、袋を通る電気力線は0本。ガウスの法則（電-2 ③）から、袋の中の電荷は0です。
+\item \textbf{表面のすぐ外の電場は、表面に垂直}。表面にそった向きの電場があれば、表面の電子がその向きに動くからです。表面の1 m$^2$ あたりの電荷を $\sigma$ とすると、表面のすぐ外の電場は $E=\sigma/\varepsilon_0$ です（⑨で導きます）。
+\end{enumerate}
+
+\phboxhead{静電遮へい}
+中が空になった金属の箱（図\ref{ph:電-3:fig-doutai}③）を、電場の中に置きます。電荷は外側の表面にたまり、外の電場を打ち消します。空所の中に電荷がなければ、空所の電場も0になります。外からどんな電場をかけても、空所には入ってきません。これを\textbf{静電遮へい}といいます。\bkidx{せいでんしゃへい}{静電遮へい}
+
+空所の電場が0になることは、「空所の中に電荷がなく、空所の壁の電位がどこでも同じなら、空所の中の電位も同じ値になるしかない」という、ラプラス方程式の答えが1つに決まる性質（\textbf{一意性}：電-2 ⑩・例題12）から確かめられます。電位がどこでも同じなら、電場（電位の坂）は0です。
+
+\begin{phmijika}[ラジオをアルミはくで包む]
+やってみようの⑤で、ラジオの音が小さくなったのは、アルミはくが金属の殻になって、外から来る電波の電場を中に入れにくくしたからです。電波は止まった電場ではなく、とても速く向きの変わる電場と磁場ですが、金属の殻が中を守るという考えは同じです（電波の遮へいは電-15）。精密な測定をする部屋や、病院の MRI の部屋は、壁に金属の板や網を入れて、外の電気の雑音を防いでいます。
+\end{phmijika}
+
+\phboxhead{はてな？の答え}
+\label{ph:電-3:hatena}\bkhatenaref の答えです。車に雷が落ちると、雷の電流は、電気をよく通す金属の車体の\textbf{外側}を通って、地面へぬけます。ゴムのタイヤは電気を通しにくいのですが、雷は、空気の層を何 km も突きぬけてきた放電です。タイヤの数 cm の厚さは問題になりません。タイヤの表面や、車体と地面のすき間を、火花になって飛びこえてしまいます。タイヤのおかげではないのです。
+
+車の中が守られるのは、車体が金属の殻になっているからです。止まった電荷については、③の静電遮へいのとおり、殻の中の電場は0になります。雷のように大きな電流が一瞬流れるときも、電流は、通りやすい金属の外側を流れ、中の人の体を通るほうへは、ほとんど流れません。窓がガラスでも、周りの金属の骨組みが殻の役目をします。
+
+ただし、オープンカーや窓を開けた車、車体の金属の部分に触れているときは、守りが弱くなります。雷が鳴ったら、窓を閉め、車体の金属に触れないようにして、車の中で待ちます。
+
+\begin{phmodel}[導体の性質]
+\phignore{電荷が動いて落ち着くまでの、短い時間。}
+\phassume{導体の中には、自由に動ける電荷がいくらでもある。電荷は止まっている（電流が流れていない）。}
+\phlimit{電流が流れ続けているとき（導線の中には電場があり、電流を押している：電-4 ③）。速く向きの変わる電場（電波）のとき（電-8・電-15）。}
+\end{phmodel}
+
+\bksubsection{4}{平行板コンデンサー：$C=\varepsilon_0S/d$}
+\label{ph:電-3:sec4}
+面積 $S$ の2枚の極板を、間かく $d$ で平行に向かい合わせます。極板の大きさは、間かく $d$ に比べて十分大きいとします。上の極板に $+Q$、下の極板に $-Q$ がたまっているときの電場を、電気力線の本数で求めましょう（電-2 ③）。
+
+\phboxhead{電気力線を数える}
+上の極板の電荷 $+Q$ から出る電気力線は $Q/\varepsilon_0$ 本です（電-2 ③）。極板が広いので、電気力線は極板に垂直に、まっすぐ下の極板へ向かい、下の極板の $-Q$ に入ります。極板の外側へは、ほとんど出ません（このあとの「2枚の板の電場をたす」で確かめます）。極板の間では、$Q/\varepsilon_0$ 本の電気力線が、面積 $S$ にむらなく並びます。1 m$^2$ を通る本数が電場の強さなので、
+\pheq{E=\frac{Q/\varepsilon_0}{S}=\frac{Q}{\varepsilon_0S}=\frac{\sigma}{\varepsilon_0}}{V/m ＝ C÷(F/m × m$^2$)}
+です（$\sigma=Q/S$ は極板の1 m$^2$ あたりの電荷）。電場は、極板の間のどこでも同じです（一様）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxdplates{(20,0)}{60}{20}
+  \foreach \xx in {26,34,42,50,58,66,74} {\sxdline{(\xx,19.4)}{18.8}}
+  \node[font=\sffamily\footnotesize, anchor=west] at (82,22) {$+Q$（1 m$^2$ に $+\sigma$）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (82,-1) {$-Q$（1 m$^2$ に $-\sigma$）};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (16,0) -- (16,20);
+  \node[font=\sffamily\footnotesize, anchor=east] at (15,10) {$d$};
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (20,26) -- (80,26);
+  \node[font=\sffamily\footnotesize, anchor=south] at (50,26.5) {面積 $S$ の極板};
+\end{tikzpicture}\par\smallskip
+{\small\begin{tabular}{@{}l@{\quad}c@{\quad}c@{\quad}c@{}}
+ & 上の板の外 & 間 & 下の板の外\\
+$+\sigma$ の板 & 上へ $\sigma/(2\varepsilon_0)$ & 下へ $\sigma/(2\varepsilon_0)$ & 下へ $\sigma/(2\varepsilon_0)$\\
+$-\sigma$ の板 & 下へ $\sigma/(2\varepsilon_0)$ & 下へ $\sigma/(2\varepsilon_0)$ & 上へ $\sigma/(2\varepsilon_0)$\\
+合計 & 0 & 下へ $\sigma/\varepsilon_0$ & 0
+\end{tabular}}
+\bkfigcaption{平行板コンデンサーの電場。電気力線は上の極板から出て、まっすぐ下の極板に入る。下の表は、2枚の板がそれぞれつくる電場（電-1 ⑦）をたしたもの。間では強め合い、外では打ち消し合う。}\label{ph:電-3:fig-heikou}
+\end{bkfigure}
+
+\phboxhead{2枚の板の電場をたす}
+同じことを、電-1 ⑦の「広い平面の電場 $\sigma/(2\varepsilon_0)$」をたして確かめます。$+\sigma$ の板は、両側に、板から離れる向きの $\sigma/(2\varepsilon_0)$ をつくります。$-\sigma$ の板は、両側に、板へ近づく向きの $\sigma/(2\varepsilon_0)$ をつくります。2つをたすと、極板の間では同じ向き（下向き）なので $\sigma/\varepsilon_0$、外側では向きが反対なので0になります（図\ref{ph:電-3:fig-heikou}の表）。数学の本の 8-11⑦で「コンデンサーの中の電場が一様なのは、このため」と書いたのは、このことです。
+
+\phboxhead{電圧を求める}
+一様な電場の中で、距離 $d$ だけ離れた2点の電圧は $V=Ed$ です（電-2 ⑥）。だから、
+\[V=Ed=\frac{Q}{\varepsilon_0S}\,d\qquad\text{より}\qquad Q=\varepsilon_0\frac{S}{d}\,V\]
+電荷 $Q$ が電圧 $V$ に比例することが導けました。比例定数が静電容量です。
+\pheq{C=\varepsilon_0\frac{S}{d}}{F ＝ F/m × m$^2$ ÷ m}
+\label{ph:電-3:heikouban}$\varepsilon_0$ の単位 F/m は、ここから来ています（$C$〔F〕$=\varepsilon_0\times$ m$^2$/m）。
+
+\Needspace{8\baselineskip}
+\begin{phflow}[ガウスの法則から平行板の公式へ]
+\phflowrow{電気力線は $Q/\varepsilon_0$ 本\\（ガウスの法則）}{極板が広い\\はしを無視}{$E=\dfrac{Q}{\varepsilon_0S}$（一様）}
+\phflowrow{$E=\dfrac{Q}{\varepsilon_0S}$}{一様な電場で\\$V=Ed$}{$Q=CV$、$C=\varepsilon_0\dfrac{S}{d}$}
+\end{phflow}
+
+\begin{phyomi}[$C=\varepsilon_0\dfrac{S}{d}$]
+「極板が広いほど、間がせまいほど、電気がたくさん入る」。同じ電圧なら、間がせまいほど電場 $E=V/d$ が強くなり、電場が強いほど、極板にたくさんの電荷が要ります（$Q=\varepsilon_0SE$）。静電容量は、極板の形（$S$ と $d$）と、間の物（⑥）だけで決まり、電圧や電荷にはよりません。
+\end{phyomi}
+
+\begin{phbaisuru}{極板の間かく $d$}
+静電容量は半分になります。間かくを3倍にすると $\tfrac13$ です。面積 $S$ を2倍にすると、静電容量は2倍です。下のグラフは、面積 \qty{0.01}{m^2}（\qty{10}{cm}×\qty{10}{cm}）の極板の静電容量です（例題1）。やってみようで、クリアファイルを2枚重ねると読みが半分になったのは、このためです。
+\par\smallskip\noindent\begin{tikzpicture}
+\begin{axis}[bkplot, width=96mm, height=44mm, xmin=0, xmax=4.6, ymin=0, ymax=200, xtick={1,2,3,4}, ytick={44.25,88.5,177}, yticklabels={44,88.5,177}, xlabel={間かく $d$（mm）}, ylabel={$C$（pF）}]
+  \addplot[bkcurve, domain=0.42:4.4, samples=80] {88.5/x};
+  \fill[bkRed] (axis cs:0.5,177) circle (1.8pt) (axis cs:1,88.5) circle (1.8pt) (axis cs:2,44.25) circle (1.8pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:2.1,52) {間かく2倍で半分};
+\end{axis}
+\end{tikzpicture}
+\end{phbaisuru}
+
+\begin{phmijika}[キーボードとコンデンサーマイク]
+パソコンのキーボードには、キーの下に小さなコンデンサーがあって、キーを押すと極板の間かくが変わり、静電容量が変わるのを読みとる方式のものがあります。コンデンサーマイクは、音でふるえるうすい膜が片方の極板になっていて、膜が近づいたり離れたりすると $C$ が変わります。$Q$ を一定にしておくと、$V=Q/C$ が音といっしょにゆれ、電気の信号になります。
+\end{phmijika}
+
+\begin{seikaku}
+極板のはしの近くでは、電気力線が外へふくらみ、電場は一様ではありません（\textbf{はしの効果}）。極板の大きさが間かくに比べて十分大きいほど、はしの部分の割合が小さくなり、$C=\varepsilon_0S/d$ に近くなります。はしの電場は、電-2 ⑪の表計算でラプラス方程式を解くと、詳しく求められます。
+\end{seikaku}
+
+\bksubsection{5}{コンデンサーのつなぎ方：並列と直列}
+\label{ph:電-3:sec5}
+コンデンサーを2つつなぐと、1つのコンデンサーとして見たとき、静電容量はいくらになるでしょう。2つの決まりだけを使います。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=2pt, topsep=2pt]
+\item \textbf{導線でつながった所は、同じ電位}（導線は導体：③）。
+\item \textbf{どこにもつながっていない極板の組の電荷の合計は変わらない}（電荷の保存）。
+\end{enumerate}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 並列
+  \draw[bkInk, line width=0.8pt] (0,0) -- (0,24) -- (40,24) (0,0) -- (40,0);
+  \draw[bkInk, line width=0.8pt] (14,24) -- (14,14) (14,10) -- (14,0) (34,24) -- (34,14) (34,10) -- (34,0);
+  \draw[bkInk, line width=1.6pt] (9,14) -- (19,14) (9,10) -- (19,10) (29,14) -- (39,14) (29,10) -- (39,10);
+  \node[font=\sffamily\footnotesize, anchor=west] at (19.5,12) {$C_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (39.5,12) {$C_2$};
+  \draw[bkInk, line width=0.8pt] (0,24) -- (-6,24) (0,0) -- (-6,0);
+  \fill[bkInk] (-6,24) circle (0.9) (-6,0) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-7.5,12) {$V$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (20,-2) {並列：電圧が同じ};
+  % 直列
+  \begin{scope}[shift={(82,0)}]
+  \draw[bkInk, line width=0.8pt] (0,24) -- (0,19) (0,15) -- (0,9) (0,5) -- (0,0);
+  \draw[bkInk, line width=1.6pt] (-5,19) -- (5,19) (-5,15) -- (5,15) (-5,9) -- (5,9) (-5,5) -- (5,5);
+  \node[font=\sffamily\footnotesize, anchor=west] at (10,18.5) {$C_1$\ $V_1$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (10,5.5) {$C_2$\ $V_2$};
+  \draw[bkRed!80!black, line width=0.5pt, dashed] (-8,7.5) rectangle (8,16.5);
+  \node[font=\sffamily\footnotesize, anchor=east, text=bkRed!75!black, align=right] at (-9,12) {まん中は\\合計0のまま};
+  \fill[bkInk] (0,24) circle (0.9) (0,0) circle (0.9);
+  \node[font=\sffamily\footnotesize, anchor=north] at (0,-2) {直列：電荷が同じ};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{コンデンサーの並列（左）と直列（右）。直列のまん中の部分（破線の中：$C_1$ の下の極板と $C_2$ の上の極板）は、どこにもつながっていないので、電荷の合計は0のまま。}\label{ph:電-3:fig-setsuzoku}
+\end{bkfigure}
+
+\phboxhead{並列：電圧が同じ}
+並列では、2つのコンデンサーの上の極板どうし、下の極板どうしが導線でつながっています。①から、どちらにも同じ電圧 $V$ がかかります。たまる電荷は $Q_1=C_1V$、$Q_2=C_2V$ で、全体の電荷は $Q=Q_1+Q_2=(C_1+C_2)V$ です。
+\pheq{C=C_1+C_2}{F ＝ F＋F}
+極板の面積を合わせて広くしたのと同じです。
+
+\phboxhead{直列：電荷が同じ}
+直列では、$C_1$ の下の極板と $C_2$ の上の極板がつながり、ほかのどこにもつながっていません（図\ref{ph:電-3:fig-setsuzoku}の破線）。はじめに電荷がなければ、②から、この部分の電荷の合計はずっと0です。$C_1$ の上の極板に $+Q$ がたまると、$C_1$ の下の極板には $-Q$、そのとなりの $C_2$ の上の極板には $+Q$、$C_2$ の下の極板には $-Q$ がたまります。どちらにも同じ $Q$ がたまるのです。電圧は、上から下まで順に下っていく電位の差の和なので（1周すると電位はもとにもどる：電-2 ⑨）、
+\[V=V_1+V_2=\frac{Q}{C_1}+\frac{Q}{C_2}=\Bigl(\frac1{C_1}+\frac1{C_2}\Bigr)Q\]
+です。だから、
+\pheq{\frac1C=\frac1{C_1}+\frac1{C_2}}{1/F ＝ 1/F＋1/F}
+\label{ph:電-3:setsuzoku}直列は、極板の間かくを足して広げたのと同じで、静電容量は小さくなります。
+
+\begin{phyomi}[並列と直列]
+「並列は $C$ をたす。直列は $1/C$ をたす」。直列では、電圧は静電容量の\textbf{小さい}コンデンサーに大きくかかります（$V_1=Q/C_1$）。同じ電荷を入れるのに、入りにくいほうが高い電圧を要るからです。抵抗のつなぎ方（電-4 ⑦）とは、並列と直列の式が入れかわっています。
+\end{phyomi}
+
+\begin{phbaisuru}{直列の片方の $C_2$}
+$C_1=C_2$ のときは、直列の静電容量は $C_1$ の半分で、電圧も半分ずつかかります。$C_2$ をどんどん大きくすると、直列の静電容量は $C_1$ に近づき、電圧はほとんど $C_1$ にかかります。直列の静電容量は、どちらの1つよりも小さくなります。
+\end{phbaisuru}
+
+\bksubsection{6}{誘電体と比誘電率}
+\label{ph:電-3:sec6}
+コンデンサーの極板の間に、空気の代わりにプラスチックの板をはさむと、静電容量が大きくなります。間にはさむ絶縁体を、コンデンサーの話では\textbf{誘電体}とよびます。\bkidx{ゆうでんたい}{誘電体}なぜ大きくなるのでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxdplates{(0,0)}{60}{26}
+  \fill[bkYellow!25] (0,1) rectangle (60,25);
+  \foreach \xx in {6,18,30,42,54} {\foreach \yy in {5,13,21} {
+    \filldraw[fill=bkRed!12, draw=bkRed!60!black, line width=0.4pt] (\xx,\yy) ellipse (4.2 and 3.2);
+    \draw[bkBlue!80!black, line width=0.9pt] (\xx-1.2,\yy+1.5) -- (\xx+1.2,\yy+1.5);
+    \draw[bkRed!80!black, line width=0.9pt] (\xx-1.2,\yy-1.5) -- (\xx+1.2,\yy-1.5) (\xx,\yy-2.7) -- (\xx,\yy-0.3);}}
+  \node[font=\sffamily\footnotesize, anchor=west] at (63,28) {極板（$+Q$）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (63,21) {上の面に $-$ が残る};
+  \node[font=\sffamily\footnotesize, anchor=west] at (63,5) {下の面に $+$ が残る};
+  \node[font=\sffamily\footnotesize, anchor=west] at (63,-2) {極板（$-Q$）};
+  \draw[bkOrange!85!black, line width=1.2pt, -{Stealth[length=2mm]}] (102,25) -- (102,3);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (102,1.5) {極板の\\電場};
+  \draw[bkGreen!50!black, line width=1.2pt, -{Stealth[length=2mm]}] (118,8) -- (118,20);
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (118,6.5) {面の電荷\\の電場};
+\end{tikzpicture}
+\bkfigcaption{誘電体の分極。極板の電場で、分子の中の電子の雲（－）が上へ、原子の核（＋）が下へ少しずれる。中では＋と－が打ち消し合うが、誘電体の上の面には－、下の面には＋が残る。この面の電荷が、極板の電場を弱める向きの電場をつくる。}\label{ph:電-3:fig-bunkyoku}
+\end{bkfigure}
+
+\phboxhead{分極が電場を弱める}
+誘電体の分子は、極板の電場の中で、電子の雲が正の極板のほうへ、原子の核が負の極板のほうへ、わずかにずれます（誘電分極：②）。水の分子のように、はじめから正と負が片寄った分子（電-1 ⑥の双極子）は、向きをそろえるように回ります。誘電体の中では、となりどうしの＋と－が打ち消し合いますが、正の極板に接する面には－が、負の極板に接する面には＋が、打ち消されずに残ります（図\ref{ph:電-3:fig-bunkyoku}）。この面の電荷は、極板の電荷の一部を打ち消すので、誘電体の中の電場は、同じ $Q$ でも弱くなります。
+
+電場が $\varepsilon_{\mathrm r}$ 分の1になったとすると、電圧 $V=Ed$ も $\varepsilon_{\mathrm r}$ 分の1になります。同じ電荷 $Q$ を低い電圧でためられるので、$C=Q/V$ は $\varepsilon_{\mathrm r}$ 倍になります。
+\pheq{C=\varepsilon_{\mathrm r}\varepsilon_0\frac{S}{d}=\varepsilon\frac{S}{d}}{F ＝ F/m × m$^2$ ÷ m}
+$\varepsilon_{\mathrm r}$ を\textbf{比誘電率}、\bkidx{ひゆうでんりつ}{比誘電率}$\varepsilon=\varepsilon_{\mathrm r}\varepsilon_0$ をその物の\textbf{誘電率}といいます。\bkidx{ゆうでんりつ}{誘電率}比誘電率は、真空を1としたときの値で、単位はありません。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=46mm] Q[c,m,wd=24mm] Q[l,m,wd=50mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+物 & 比誘電率 $\varepsilon_{\mathrm r}$ & 例題1の板で $C$ \\
+真空 & 1（定義） & 88.5 pF \\
+空気（1気圧） & 約1.0006 & 88.6 pF（真空とほぼ同じ） \\
+ポリエチレン & 約2.3 & 約 200 pF \\
+PET（クリアファイルなど） & 約3 & 約 270 pF \\
+ガラス & 約4〜10 & 種類で大きく違う \\
+水（\qty{20}{\celsius}） & 80.2 & 約 7100 pF \\
+チタン酸バリウム（セラミックス） & 1000 以上 & 小さなコンデンサーの材料 \\
+\end{bktable}
+\bktabcaption{いろいろな物の比誘電率（目安の値。温度や、電場の向きが変わる速さで変わる）。水の値は、水の誘電率の国際的な式（IAPWS）で計算した値。}\label{ph:電-3:tab-er}
+\end{bkcenter}
+
+\noindent 水の比誘電率が80と大きいのは、水の分子が大きな双極子で、電場の向きにそろうように回るからです。水の中では、電荷どうしのクーロンの力が約80分の1に弱まります。食塩が水にとけて、ナトリウムと塩素がばらばらのイオンになれるのは、このためです。
+
+\begin{phyomi}[$C=\varepsilon_{\mathrm r}\varepsilon_0\dfrac{S}{d}$]
+電圧を同じにしておくと、静電容量も電荷も $\varepsilon_{\mathrm r}$ 倍になります。電荷を同じにしておく（電池をはずしてから誘電体を入れる）と、電圧が $\varepsilon_{\mathrm r}$ 分の1に下がります。どちらでも、静電容量は $\varepsilon_{\mathrm r}$ 倍です。
+\end{phyomi}
+
+\phboxhead{耐えられる電圧：絶縁破壊}
+間を広げずに静電容量を大きくしたいなら、$d$ を小さくすればよいはずです。ところが、間がせますぎると、強い電場で、間の物が電気を通してしまいます（\textbf{絶縁破壊}）。\bkidx{ぜつえんはかい}{絶縁破壊}1気圧の乾いた空気は、平らな電極のあいだで、およそ $3\times10^6$\,V/m（1 mm あたり\qty{3}{kV}）の電場で火花が飛びます。コンデンサーには、かけてよい電圧（\textbf{耐電圧}）が書いてあり、それをこえて使ってはいけません。比誘電率が大きく、強い電場に耐える誘電体を、うすくむらなく作ることが、小さくて大きなコンデンサーを作るこつです。
+
+\bksubsection{7}{静電エネルギー：$\tfrac12CV^2$}
+\label{ph:電-3:sec7}
+はじめに電荷のないコンデンサーに、少しずつ電荷を運んで、$Q$ までためるとします。電荷を下の極板から上の極板へ運ぶには、極板の間の電場に逆らって押す仕事が要ります。
+
+\phboxhead{運ぶ仕事を、三角形の面積で求める}
+いま、すでに電荷 $q$ がたまっていて、極板の間の電圧が $v=q/C$ だとします。ここに小さな電荷 $\Delta q$ を運ぶ仕事は、電荷×電圧なので（電-2 ⑤：電位は1 C あたりの位置エネルギー）、$v\,\Delta q$ です。$q$ が増えるにつれて $v$ も比例して増えるので、0から $Q$ まで運ぶ仕事の合計は、$v$-$q$ のグラフの下の三角形の面積になります（5-12④のばねと同じ）。
+\[W=\int_0^Q\frac{q}{C}\,\dd q=\frac{Q^2}{2C}\]
+この仕事は、コンデンサーに\textbf{静電エネルギー} $U$ としてたくわえられます。\bkidx{せいでんえねるぎー}{静電エネルギー}$Q=CV$ を使って書きかえると、
+\pheq{U=\frac12QV=\frac12CV^2=\frac{Q^2}{2C}}{J ＝ C × V}
+\label{ph:電-3:energy}です。数学の本（6-6⑧）で、コイルとコンデンサーのゆれのエネルギーとして使った $\tfrac12CV^2$ が、これです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=54mm, height=44mm, xmin=0, xmax=1.25, ymin=0, ymax=1.25, xtick={1}, xticklabels={$Q$}, ytick={1}, yticklabels={$V$}, xlabel={電荷 $q$}, ylabel={電圧 $v$}]
+  \fill[bkYellow!45] (axis cs:0,0) -- (axis cs:1,1) -- (axis cs:1,0) -- cycle;
+  \addplot[bkcurve, domain=0:1.15] {x};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:1,0) -- (axis cs:1,1) -- (axis cs:0,1);
+  \fill[bkOrange!50] (axis cs:0.55,0) rectangle (axis cs:0.6,0.55);
+  \node[font=\sffamily\footnotesize, anchor=south east, fill=white, inner sep=1pt] at (axis cs:0.52,0.62) {$v\,\Delta q$};
+  \node[font=\sffamily\footnotesize, fill=bkYellow!45, inner sep=1pt] at (axis cs:0.82,0.3) {$\tfrac12QV$};
+\end{axis}
+\end{tikzpicture}\hspace{4mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=46mm, height=44mm, xmin=0, xmax=2.4, ymin=0, ymax=4.6, xtick={1,2}, xticklabels={$V_0$,$2V_0$}, ytick={1,4}, yticklabels={$U_0$,$4U_0$}, xlabel={電圧 $V$}, ylabel={$U$}]
+  \addplot[bkcurve, domain=0:2.15, samples=50] {x^2};
+  \fill[bkRed] (axis cs:1,1) circle (1.8pt) (axis cs:2,4) circle (1.8pt);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：電荷を運ぶ仕事。細い帯1本が $v\,\Delta q$。全部たすと三角形の面積 $\tfrac12QV$。右：同じコンデンサーで、電圧2倍ならエネルギーは4倍。}\label{ph:電-3:fig-energy}
+\end{bkfigure}
+
+\begin{phyomi}[$U=\tfrac12QV$]
+「電荷 $Q$ を電圧 $V$ の所まで運んだ、のではない」。はじめは電圧が0で、運ぶほど電圧が上がるので、平均の電圧は $V$ の半分です。だから $QV$ ではなく $\tfrac12QV$ になります。
+\end{phyomi}
+
+\begin{phbaisuru}{電圧 $V$}
+エネルギーは $V^2$ に比例するので4倍になります（図\ref{ph:電-3:fig-energy}右）。電圧を2倍にすると、電荷も2倍、平均の電圧も2倍になるからです。耐電圧の高いコンデンサーほど、たくさんのエネルギーをためられます。
+\end{phbaisuru}
+
+\phboxhead{表計算で、細い帯をたしてみる}
+積分を使わずに、図\ref{ph:電-3:fig-energy}左の細い帯を表計算でたしてみましょう。$\qty{100}{\micro F}$のコンデンサーを\qty{10}{V}まで充電します（$Q=CV=\qty{1000}{\micro C}$）。電荷を$\qty{100}{\micro C}$ずつ10回に分けて運び、1回ごとに「運ぶ前の電圧 $v$ × $\Delta q$」を仕事とします。
+\begin{bkcenter}
+\bksheet{5}{21}{%
+1 & 回 & 運ぶ前の $q$〔$\si{\micro C}$〕 & $v$〔V〕 & $v\,\Delta q$〔mJ〕 & 合計〔mJ〕 \\
+2 & 1 & 0 & 0 & 0 & 0 \\
+3 & 2 & 100 & 1 & 0.1 & 0.1 \\
+4 & 3 & 200 & 2 & 0.2 & 0.3 \\
+5 & 4 & 300 & 3 & 0.3 & 0.6 \\
+6 & 5 & 400 & 4 & 0.4 & 1.0 \\
+7 & 6 & 500 & 5 & 0.5 & 1.5 \\
+8 & 7 & 600 & 6 & 0.6 & 2.1 \\
+9 & 8 & 700 & 7 & 0.7 & 2.8 \\
+10 & 9 & 800 & 8 & 0.8 & 3.6 \\
+11 & 10 & 900 & 9 & 0.9 & 4.5 \\}
+\bktabcaption{C2＝B2/100（$v=q/C$）、D2＝C2*100/1000（V×$\si{\micro C}$ を mJ に直す）、E3＝E2＋D3。}\label{ph:電-3:tab-sheet}
+\end{bkcenter}
+合計は\qty{4.5}{mJ}で、三角形の面積 $\tfrac12CV^2=\tfrac12\times100\times10^{-6}\times10^2=\qty{5.0}{mJ}$ より少し小さくなりました。運ぶ途中で電圧が少しずつ上がる分を、「運ぶ前の電圧」で数えたからです。運んだあとの電圧で数えると\qty{5.5}{mJ}になり、本当の値は2つのあいだにあります。分ける回数を100回にすると、4.95 mJ と 5.05 mJ になり、5.0 mJ にはさまれて近づきます。これが積分の考えです（5-10）。
+
+\phboxhead{エネルギーは電場の中にある}
+平行板コンデンサーでは、$C=\varepsilon_0S/d$、$V=Ed$ なので、
+\[U=\frac12CV^2=\frac12\cdot\frac{\varepsilon_0S}{d}\cdot(Ed)^2=\frac12\varepsilon_0E^2\times Sd\]
+です。$Sd$ は極板の間の体積です。1 m$^3$ あたりのエネルギー（\textbf{エネルギー密度}）$u$ は、
+\pheq{u=\frac12\varepsilon_0E^2}{J/m$^3$ ＝ F/m × (V/m)$^2$}
+\label{ph:電-3:mitsudo}です。\bkidx{えねるぎーみつど}{エネルギー密度（電場）}エネルギーは極板にあるのではなく、電場のある空間にたくわえられている、と見ることができます。この見方は、電磁波がエネルギーを運ぶしくみ（電-14・電-15）につながります。空気がこわれない $3\times10^6$\,V/m でも、$u$ は約\qty{40}{J/m^3}で、1 L あたり 0.04 J しかありません。電場にためられるエネルギーは、意外に小さいのです。
+
+\phboxhead{電池でためると、半分は熱になる}
+電池（電圧 $V$）でコンデンサーに $Q=CV$ をためると、電池は電荷 $Q$ を電圧 $V$ で押し出すので、$QV$ の仕事をします。ところが、たまるのは $\tfrac12QV$ だけです。残りの半分は、導線の抵抗で熱（電-4 ⑤）になったり、電波になって出ていったりします。導線の抵抗を小さくしても、電流が大きくなって、やはり半分が失われます（電-9 で確かめます）。
+
+\begin{phmijika}[カメラのフラッシュと、電気二重層キャパシタ]
+カメラのフラッシュは、電池から時間をかけてコンデンサーにエネルギーをため、それを1000分の1秒ほどで一気に放電して光らせます。電池からは大きな電流を一度に出せないので、コンデンサーを「エネルギーのダム」に使うのです。電極の表面にできる、分子1つ分ほどのうすい層を極板の間かくにする\textbf{電気二重層キャパシタ}は、1 F をこえる大きな静電容量をもち、電車やバスのブレーキのエネルギーをためるのにも使われています（例題7）。
+\end{phmijika}
+
+\begin{phmodel}[コンデンサー]
+\phignore{極板のはしの効果。導線の抵抗と、電荷が移るのにかかる時間。誘電体の中を流れるわずかな電流（もれ電流）。}
+\phassume{極板は間かくに比べて十分広い。誘電体の比誘電率は、電場の強さによらない一定の値。電場は耐えられる強さより弱い。}
+\phlimit{極板が間かくと同じくらいの大きさのとき。強誘電体のように、比誘電率が電場で変わる物。電場が絶縁破壊の強さに近いとき。}
+\end{phmodel}
+
+\phkokomade
+
+\Needspace{16\baselineskip}\phstage{shiki}{電束密度と境界条件で解く}{5}
+
+\bksubsection{8}{分極 $\vec P$ と電束密度 $\vec D$}
+\label{ph:電-3:sec8}
+⑥では、「誘電体の中では電場が $\varepsilon_{\mathrm r}$ 分の1になる」として静電容量を求めました。ここでは、分極を量で表し、ガウスの法則（電-2 ③。積分形は 8-11⑦）を、誘電体の中でも使える形に書きかえます。
+
+\phboxhead{分極ベクトル}
+誘電体の小さな部分の中で、分子の＋と－がずれてできた双極子モーメント（電-1 ⑥）を、1 m$^3$ あたりで合計したベクトルを\textbf{分極} $\vec P$〔C/m$^2$〕といいます。\bkidx{ぶんきょく}{分極}多くの誘電体では、電場がそれほど強くなければ、分極は電場に比例します。
+\[\vec P=\varepsilon_0\chi\vec E\qquad(\chi\ \text{は電気感受率。単位なし})\]
+
+\phboxhead{分極の電荷を数える}
+一様に分極した誘電体の板（厚さ $d$、面積 $S$）では、正の電荷が全体として $\vec P$ の向きにずれ、板の片方の面に1 m$^2$ あたり $+P$、反対の面に $-P$ の電荷が残ります（図\ref{ph:電-3:fig-bunkyoku}）。ずれた電荷は、もとは分子の中にあった電荷で、極板の電荷のように外から持ちこんだり取り出したりはできません。これを\textbf{分極電荷}といい、極板の電荷のように動かせる電荷を\textbf{真電荷}といいます。
+
+\phboxhead{ガウスの法則を書きかえる}
+ガウスの法則は、袋の中の\textbf{すべての}電荷について成り立ちます（8-11⑦）。
+\[\oiint_S\varepsilon_0\vec E\cdot\vec n\,\dd S=Q_{\text{真}}+Q_{\text{分極}}\]
+分極電荷は、分極が袋の面を通って外へ出ていった分だけ、袋の中に負の電荷として残ります。だから $Q_{\text{分極}}=-\oiint_S\vec P\cdot\vec n\,\dd S$ です（8-8 の流束と同じ数え方）。これを左へ移すと、
+\pheq{\oiint_S\vec D\cdot\vec n\,\dd S=Q_{\text{真}},\qquad\vec D=\varepsilon_0\vec E+\vec P}{C ＝ C/m$^2$ × m$^2$}
+\label{ph:電-3:D}です。$\vec D$〔C/m$^2$〕を\textbf{電束密度}といいます。\bkidx{でんそくみつど}{電束密度}右辺には、自分で置いた真電荷だけが出てきます。$\vec P=\varepsilon_0\chi\vec E$ なら、
+\[\vec D=\varepsilon_0(1+\chi)\vec E=\varepsilon\vec E,\qquad\varepsilon_{\mathrm r}=1+\chi\]
+で、⑥の比誘電率とつながります。
+
+\phboxhead{平行板で確かめる}
+極板の片方をつつみ、もう片方の端が誘電体の中にある平らな箱（面積 $S$）を袋に選ぶと、$\vec D$ は極板に垂直で、箱の中の面だけを通るので、$DS=Q$、$D=Q/S$ です。誘電体の中の電場は $E=D/\varepsilon=Q/(\varepsilon S)$ で、$V=Ed$ から $C=\varepsilon S/d$。⑥と同じ答えが、分極電荷を1つ1つ数えなくても出ました。
+
+\begin{seikaku}
+数学の本（8-8）では、$\oiint\vec E\cdot\vec n\,\dd S$ を「電場の流束」とよびました。電気工学の本は、真空でも $\vec D=\varepsilon_0\vec E$ を使い、その流束を「電束」〔C〕とよびます。物の中では、$\vec D$ のガウスの法則に真電荷だけが出てくるので、$\vec D$ を使うと便利です。微分形は $\mathrm{div}\,\vec D=\rho_{\text{真}}$（$\rho_{\text{真}}$ は1 m$^3$ あたりの真電荷。8-9⑬）です。
+\end{seikaku}
+
+\bksubsection{9}{境界条件：電気力線は境目で曲がる}
+\label{ph:電-3:sec9}
+比誘電率の違う2つの誘電体の境目（真電荷はない）で、電場はどうつながるでしょう。境目をはさむ小さな袋と、小さな1周の道を考えます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!8] (0,0) rectangle (60,20);
+  \fill[bkYellow!25] (0,-20) rectangle (60,0);
+  \draw[bkInk, line width=0.7pt] (0,0) -- (60,0);
+  \node[font=\sffamily\footnotesize, anchor=west] at (1,16) {誘電体1（$\varepsilon_1$）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (1,-16) {誘電体2（$\varepsilon_2$）};
+  \draw[bkGreen!50!black, line width=0.6pt] (10,-3) rectangle (22,3);
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkGreen!40!black] at (16,-4) {うすい袋};
+  \draw[bkRed!70!black, line width=0.6pt, -{Stealth[length=1.6mm]}] (28,3) -- (40,3) -- (40,-3) -- (28,-3) -- cycle;
+  \node[font=\sffamily\footnotesize, anchor=north, text=bkRed!60!black] at (34,-4) {細い道};
+  % 曲がる電気力線
+  \draw[bkOrange!85!black, line width=1.1pt] (44,18) -- (52,0);
+  \draw[bkOrange!85!black, line width=1.1pt, -{Stealth[length=2mm]}] (52,0) -- (57.5,-18);
+  \draw[bkGray, line width=0.4pt, dashed] (52,20) -- (52,-20);
+  \draw[bkInk, line width=0.4pt] (52,10) arc (90:114:10);
+  \node[font=\sffamily\footnotesize, anchor=south] at (48.6,10.5) {$\theta_1$};
+  \draw[bkInk, line width=0.4pt] (52,-10) arc (-90:-73:10);
+  \node[font=\sffamily\footnotesize, anchor=west] at (58.5,-9.5) {$\theta_2$};
+  \node[anchor=west, font=\small, text width=58mm, align=left] at (64,0) {%
+  袋から：$D$ の垂直な成分がつながる\par $\varepsilon_1E_1\cos\theta_1=\varepsilon_2E_2\cos\theta_2$\par\vspace{3pt}
+  道から：$E$ の面にそった成分がつながる\par $E_1\sin\theta_1=E_2\sin\theta_2$};
+\end{tikzpicture}
+\bkfigcaption{2つの誘電体の境目。うすい袋に $\vec D$ のガウスの法則を、細い道に「1周すると電位がもとにもどる」を使う。電気力線（太い線）は、境目で向きを変える（図は $\varepsilon_2<\varepsilon_1$ のとき）。}\label{ph:電-3:fig-kyoukai}
+\end{bkfigure}
+
+\phboxhead{うすい袋：$D$ の垂直な成分}
+境目をはさむ、面積 $\Delta S$ のとてもうすい袋を考えます。厚さを0に近づけると、横の面を通る分は0になり、上の面と下の面だけが残ります。中に真電荷がないので、$\vec D$ のガウスの法則（⑧）から、上の面から出る分と下の面から入る分は等しくなります。
+\[D_{1\perp}=D_{2\perp}\qquad\text{つまり}\qquad\varepsilon_1E_{1\perp}=\varepsilon_2E_{2\perp}\]
+
+\phboxhead{細い道：$E$ の面にそった成分}
+境目をはさむ、とても細い長方形の道を1周します。静電場では、1周の線積分は0です（電-2 ⑨）。道のはばを0に近づけると、境目にそった2本の辺だけが残り、向きが反対なので、
+\[E_{1\parallel}=E_{2\parallel}\]
+です。2つの式を、図\ref{ph:電-3:fig-kyoukai}の角（境目に立てた垂線からの角）で書いてわり算すると、
+\pheq{\frac{\tan\theta_1}{\tan\theta_2}=\frac{\varepsilon_1}{\varepsilon_2}}{単位なし}
+\label{ph:電-3:kussetsu}です。電気力線は、誘電率の大きい物へ入ると、境目のほうへ倒れます（例題8）。光の屈折（波-12）と似ていますが、式は違います。
+
+\begin{seikaku}
+導体の表面では、中の電場が0なので、細い道から $E_{\parallel}=0$（表面のすぐ外の電場は表面に垂直：③の④）、うすい袋から $\varepsilon_0E_{\perp}=\sigma$（$\sigma$ は表面の1 m$^2$ あたりの電荷）です。③で「表面のすぐ外の電場は $\sigma/\varepsilon_0$」と書いたのは、このことです。平行板の極板の内側の面にも、この式が当てはまります。
+\end{seikaku}
+
+\bksubsection{10}{同軸ケーブルと球のコンデンサー}
+\label{ph:電-3:sec10}
+テレビのアンテナ線（同軸ケーブル）は、まん中の銅線（半径 $a$）を、誘電体（誘電率 $\varepsilon$）をはさんで、筒の形の網（内側の半径 $b$）でつつんだものです。中の線と外の網が、2枚の「極板」になっています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!45, draw=bkInk, line width=0.7pt] (0,0) circle (17);
+  \filldraw[fill=bkYellow!25, draw=bkInk, line width=0.5pt] (0,0) circle (15);
+  \filldraw[fill=bkOrange!70, draw=bkInk, line width=0.5pt] (0,0) circle (3);
+  \draw[bkGreen!50!black, line width=0.7pt, dashed] (0,0) circle (9);
+  \foreach \a in {0,45,...,315} {\draw[bkRed!80!black, line width=0.7pt, -{Stealth[length=1.6mm]}] (\a:3.6) -- (\a:14);}
+  \draw[bkInk, line width=0.4pt] (0,0) -- (-130:3);
+  \node[font=\sffamily\footnotesize, anchor=north east, fill=white, inner sep=1pt] at (-135:4.5) {$a$};
+  \draw[bkInk, line width=0.4pt] (0,0) -- (-60:15);
+  \node[font=\sffamily\footnotesize, anchor=north west, fill=white, inner sep=1pt] at (-60:15.6) {$b$};
+  \node[anchor=west, font=\small, text width=74mm, align=left] at (24,0) {%
+  中の線に1 m あたり $+\lambda$、外の網に $-\lambda$。\par\vspace{2pt}
+  半径 $r$・長さ $l$ の円柱の袋（破線）で、$D\times2\pi rl=\lambda l$\par\vspace{2pt}
+  $E=\dfrac{\lambda}{2\pi\varepsilon r}$（$a<r<b$）。中の線に近いほど強い。};
+\end{tikzpicture}
+\bkfigcaption{同軸ケーブルの断面。電場は中の線から外の網へ、放射状に向く。}\label{ph:電-3:fig-doujiku}
+\end{bkfigure}
+
+\noindent 中の線に1 m あたり $+\lambda$、外の網に $-\lambda$ の電荷があるとします。軸を中心とする半径 $r$（$a<r<b$）・長さ $l$ の円柱の袋に、$\vec D$ のガウスの法則（⑧）を使います。$\vec D$ は放射状で、側面に垂直、同じ $r$ では同じ大きさです。上下の面は通りません（8-11⑦の線の電荷と同じ袋）。
+\[D\times2\pi rl=\lambda l\qquad\text{より}\qquad E=\frac{D}{\varepsilon}=\frac{\lambda}{2\pi\varepsilon r}\]
+中の線と外の網の電圧は、電場を $a$ から $b$ まで積分して（電-2 ⑤）、
+\[V=\int_a^b\frac{\lambda}{2\pi\varepsilon r}\,\dd r=\frac{\lambda}{2\pi\varepsilon}\ln\frac{b}{a}\]
+1 m あたりの静電容量は $\lambda/V$ なので、
+\pheq{\frac{C}{l}=\frac{2\pi\varepsilon}{\ln(b/a)}}{F/m ＝ F/m}
+\label{ph:電-3:doujiku}です。\bkidx{どうじくけーぶる}{同軸ケーブル}半径の\textbf{比} $b/a$ だけで決まり、ケーブルを細くしても、比が同じなら1 m あたりの静電容量は変わりません。この値は、ケーブルを伝わる電気の波の速さと特性インピーダンス（\qty{50}{\ohm}・\qty{75}{\ohm}）を決めます（電-13）。
+
+\phboxhead{球のコンデンサー}
+半径 $a$ の金属の球を、半径 $b$ の金属の殻で同心につつみ、間を誘電率 $\varepsilon$ の物で満たします。中の球に $+Q$、殻に $-Q$ があると、半径 $r$ の球の袋で $D\times4\pi r^2=Q$、$E=Q/(4\pi\varepsilon r^2)$ です。$a$ から $b$ まで積分すると
+\[V=\frac{Q}{4\pi\varepsilon}\Bigl(\frac1a-\frac1b\Bigr)\]
+なので、
+\pheq{C=\frac{4\pi\varepsilon ab}{b-a}}{F ＝ F/m × m$^2$ ÷ m}
+です。外の殻をうんと遠くへ（$b\to\infty$）やると、$C=4\pi\varepsilon_0a$ になります。これが、\textbf{ひとつだけの金属の球}の静電容量です（相手の極板は、無限に遠い所）。地球も1つの導体の球と見ると、静電容量は約 $\qty{709}{\micro F}$ です（例題10）。
+
+\bksubsection{11}{極板が引き合う力：仮想変位}
+\label{ph:電-3:sec11}
+コンデンサーの2枚の極板は、$+Q$ と $-Q$ なので引き合います。その力を、エネルギーから求めましょう。
+
+\phboxhead{電荷を一定にして、間かくを少し広げる}
+電池をはずして、電荷 $Q$ を一定にしておきます。極板を、引く力 $F$ に逆らって、ゆっくり $\Delta d$ だけ引き離すと、手は $F\,\Delta d$ の仕事をします。電荷は出入りしないので、この仕事は全部、静電エネルギーの増えた分になります。$U=Q^2/(2C)=Q^2d/(2\varepsilon_0S)$ は $d$ に比例するので、
+\[F\,\Delta d=\Delta U=\frac{Q^2}{2\varepsilon_0S}\,\Delta d\qquad\text{より}\qquad F=\frac{Q^2}{2\varepsilon_0S}\]
+$E=Q/(\varepsilon_0S)$ を使うと、
+\pheq{F=\frac12QE}{N ＝ C × V/m}
+\label{ph:電-3:inryoku}です。少しだけ動かしたと考えて、エネルギーの変化から力を求める方法を\textbf{仮想変位}の方法といいます（力-4 の「位置エネルギーの坂が力」と同じ考え：$F=-\dd U/\dd x$）。\bkidx{かそうへんい}{仮想変位}
+
+\begin{phyomi}[$F=\tfrac12QE$]
+「なぜ $QE$ でなく半分？」。極板の間の電場 $E=\sigma/\varepsilon_0$ は、2枚の極板が半分ずつつくった電場の和でした（④）。上の極板の電荷が受ける力は、\textbf{相手の}極板がつくる電場 $\sigma/(2\varepsilon_0)=\tfrac12E$ だけによります。自分の電場で自分を押すことはできないからです。極板1 m$^2$ あたりの力（圧力）は $\tfrac12\varepsilon_0E^2$ で、⑦のエネルギー密度と同じ形です。
+\end{phyomi}
+
+\begin{seikaku}
+電池をつないだまま（電圧 $V$ が一定）で $d$ を広げると、$U=\tfrac12CV^2$ は\textbf{減り}ますが、電池が電荷を引き取る仕事も入るので、「$F=-\dd U/\dd d$」の符号をそのまま使うと間違えます。電池の分まで数えると、力はやはり $\tfrac12QE=\varepsilon_0SV^2/(2d^2)$ の引力です（章末問題）。仮想変位では、何を一定にして動かすかを、はっきりさせることが大切です。
+\end{seikaku}
+
+\bksubsection{12}{鏡像法：雷雲の下の地面}
+\label{ph:電-3:sec12}
+雷雲の下の地面には、どんな電荷が集まり、地面の電場はどうなるでしょう。地面は電気を通すので（雨にぬれた土や、地下の水）、導体の平面とみなします。
+
+\phboxhead{電位の条件を満たす「鏡の中の電荷」}
+高さ $h$ に電荷 $Q$ があり、下に、どこまでも広い導体の平面があるとします。導体の表面は等電位（③）で、遠くの電位と同じ0です。平面の下側の、鏡に映した位置（深さ $h$）に、反対の電荷 $-Q$ を置いてみましょう。$Q$ と $-Q$ から同じ距離にある点では、2つの電位 $kQ/r$ と $-kQ/r$ が打ち消し合うので（電-2 ⑤）、平面の上は、どこでも電位が0です。
+
+平面の上側には、もとの $Q$ しかありません。平面の上で電位が0、遠くで0という条件を満たす電位の分布は、1つしかありません（一意性：電-2 ⑩）。だから、平面の上側の電場は、「$Q$ と $-Q$ の2つの電荷の電場」とまったく同じです。この方法を\textbf{鏡像法}といい、$-Q$ を\textbf{鏡像電荷}といいます。\bkidx{きょうぞうほう}{鏡像法}本物の $-Q$ は地面の下にはなく、地面の表面に、静電誘導で負の電荷が広がって集まっています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=0.7mm, y=0.7mm]
+  \fill[bkGreen!15] (-34,-22) rectangle (34,0);
+  \draw[bkGreen!50!black, line width=0.8pt] (-34,0) -- (34,0);
+  \filldraw[fill=bkRed!40, draw=bkRed!70!black] (0,16) circle (2.2);
+  \node[font=\sffamily\footnotesize] at (0,16) {$+$};
+  \filldraw[fill=white, draw=bkBlue!70!black, dashed, line width=0.6pt] (0,-16) circle (2.2);
+  \node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (0,-16) {$-$};
+  \foreach \a in {-60,-30,0,30,60} {\draw[bkOrange!85!black, line width=0.7pt, -{Stealth[length=1.6mm]}] (0,14) .. controls ({14*sin(\a)},{14-10*cos(\a)}) and ({22*sin(\a)},4) .. ({26*sin(\a)},0.4);}
+  \foreach \xx in {-24,-16,-8,0,8,16,24} {\node[font=\sffamily\footnotesize, text=bkBlue!80!black] at (\xx,-2.6) {$-$};}
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (-29,0) -- (-29,16);
+  \draw[bkGray, line width=0.4pt, dashed] (-29,16) -- (-2.6,16);
+  \node[font=\sffamily\footnotesize, anchor=east] at (-29.5,9) {$h$};
+  \node[font=\sffamily\footnotesize, anchor=west] at (3,19) {雲 $Q$};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!70!black] at (3,-17) {鏡像 $-Q$};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (6,-6) {地面に $-$};
+\end{tikzpicture}\hspace{4mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=50mm, height=46mm, xmin=0, xmax=12, ymin=0, ymax=16, xtick={0,5,10}, ytick={5,10,14.4}, yticklabels={5,10,14.4}, xlabel={$x$（km）}, ylabel={電場（kV/m）}]
+  \addplot[bkcurve, domain=0:11.5, samples=80] {2*8.99e9*20*5000/(5000^2+(1000*x)^2)^1.5/1000};
+  \fill[bkRed] (axis cs:0,14.384) circle (1.8pt) (axis cs:5,5.086) circle (1.8pt);
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{鏡像法。左：雲の電荷 $Q$ と、地面の下の鏡の位置に置いた $-Q$ の電場は、地面の上では本物と同じ。地面の表面には、電気力線が垂直に入る。本物の $-Q$ はなく、地面の表面に負の電荷が集まる。右：例題12の雲（電荷の大きさ\qty{20}{C}、$h=\qty{5}{km}$）の下の、地面の電場の大きさ（$x$ は真下からの距離）。}\label{ph:電-3:fig-kyouzou}
+\end{bkfigure}
+
+\phboxhead{地面の電場と電荷}
+真下からの距離 $x$ の地面の点では、$Q$ と $-Q$ までの距離はどちらも $\sqrt{h^2+x^2}$ です。2つの電場の地面にそった成分は打ち消し合い、地面に垂直な成分（下向き）は強め合うので、
+\pheq{E=2\times\frac{kQ}{h^2+x^2}\times\frac{h}{\sqrt{h^2+x^2}}=\frac{2kQh}{(h^2+x^2)^{3/2}}}{V/m ＝ N·m$^2$/C$^2$ × C × m ÷ m$^3$}
+です。真下（$x=0$）では $2kQ/h^2$ で、雲の電荷がひとつだけあるときの2倍です。地面の表面の電荷は、⑨のせいかくに言うとから、1 m$^2$ あたり $\sigma=-\varepsilon_0E$ です。
+
+\phboxhead{プログラムで、地面の電荷を全部たす}
+地面に集まった負の電荷を全部たすと、いくらになるでしょう。地面を、真下を中心とする細い輪（半径 $r$、はば $\Delta r$、面積 $2\pi r\,\Delta r$）に分けて、$\sigma\times$（輪の面積）をたします（8-6⑦の円の分け方）。
+\begin{phcode}[Python]
+import math
+k, e0 = 8.99e9, 8.85e-12
+Q, h = 20, 5000                 \# 雲の電荷（C）、高さ（m）
+def E(x):                       \# 地面の電場の大きさ（V/m）
+    return 2 * k * Q * h / (h**2 + x**2)**1.5
+for x in [0, 2500, 5000, 10000]:
+    print(x, round(E(x)))
+total, dr = 0, 10               \# 輪に分けて、地面の電荷を足す
+for i in range(500000):         \# 半径 5000 km まで
+    r = (i + 0.5) * dr
+    total += -e0 * E(r) * 2 * math.pi * r * dr
+print(round(total, 2))
+\end{phcode}
+\begin{phcodeout}
+0 14384
+2500 10292
+5000 5086
+10000 1287
+-19.98
+\end{phcodeout}
+真下で $1.44\times10^4$\,V/m、雲の高さと同じ\qty{5}{km}離れると約3分の1、\qty{10}{km}離れると約11分の1です。地面の電荷の合計は $\qty{-19.98}{C}$ で、ほぼ $-Q$ になりました（半径\qty{5000}{km}より外の分、約\qty{0.02}{C}をたしていないため）。積分で計算すると、ちょうど $-Q$ になります。雲の電荷から出た電気力線が、全部地面に入るからです。
+
+\begin{phmodel}[雷雲と地面]
+\phignore{雲の電荷の広がり（1点に集める）。雲の中の正と負の電荷の組（ふつうは上が正、下が負）。地面の起伏、建物、空気中のイオン。}
+\phassume{地面は平らで、電気をよく通す導体。電荷は止まっている。}
+\phlimit{地面がかわいた砂地や岩で、電気を通しにくいとき。高い建物や木の先（電場がとがった所に集まる：電-2 ⑫）。}
+\end{phmodel}
+
+\bksubsection{13}{圧電素子とタッチパネル：身の回りのコンデンサー}
+\label{ph:電-3:sec13}
+\phboxhead{圧電素子は「力で電荷が出るコンデンサー」}
+波-10 で、圧電素子（PZT や水晶）を押すと、上下の面に力に比例した電荷 $Q=d_{33}F$ がたまることを学びました（$d_{33}$ は圧電定数）。圧電素子は、上下の面に電極をつけた誘電体の板なので、電気の側から見ると\textbf{コンデンサー}です。静電容量を $C$ とすると、たまった電荷による電圧は
+\pheq{V=\frac{Q}{C}=\frac{d_{33}F}{C}}{V ＝ C/N × N ÷ F}
+です（例題14）。静電容量が小さいほど、同じ力で大きな電圧が出ます。ガスコンロやライターの「カチッ」という点火は、圧電素子を強くたたいて、火花が飛ぶほどの電圧を出すしくみです。逆に、電圧をかけると板がのび縮みします。水晶時計の水晶は、電極から電圧をかけられて、1秒に\num{32768}回ふるえ続けています（波-10）。
+
+\phboxhead{タッチパネル}
+スマホのタッチパネル（静電容量方式）では、ガラスの下に、透明な電極がたくさん並んでいます。指は、体の中の水と塩分のおかげで電気をよく通す導体です。指がガラスにふれると、「電極—ガラス（誘電体）—指」が小さな平行板コンデンサーになり、電極の静電容量が数 pF 増えます（例題13）。スマホは、それぞれの電極に電気をためたり出したりする時間（電-9 の時定数）から静電容量の変化を読みとり、どこにふれたかを決めます。手袋をはめた指で反応しにくいのは、手袋の厚みで $d$ が大きくなり、静電容量の変化が小さくなるからです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!10] (0,0) rectangle (70,6);
+  \draw[bkInk, line width=0.5pt] (0,0) rectangle (70,6);
+  \foreach \xx in {6,18,30,42,54} {\fill[bkGreen!60!black] (\xx,-1.4) rectangle (\xx+8,0);}
+  \filldraw[fill=bkOrange!25, draw=bkOrange!70!black, line width=0.7pt] (26,6) .. controls (26,14) and (28,22) .. (30,30) -- (40,30) .. controls (42,22) and (44,14) .. (44,6) -- cycle;
+  \draw[bkInk, line width=0.5pt, {Stealth[length=2pt]}-{Stealth[length=2pt]}] (72,0) -- (72,6);
+  \node[font=\sffamily\footnotesize, anchor=west] at (73,3) {ガラス $d$};
+  \node[font=\sffamily\footnotesize, anchor=north] at (35,-2.5) {透明な電極};
+  \node[font=\sffamily\footnotesize, anchor=west] at (46,16) {指（導体）};
+  \node[anchor=west, font=\small, text width=40mm, align=left] at (88,10) {%
+  電極と指が「極板」、\par ガラスが誘電体。\par 指がふれた所だけ、\par $C$ が増える。};
+\end{tikzpicture}
+\bkfigcaption{静電容量方式のタッチパネル（断面を大きくかいた図）。}\label{ph:電-3:fig-touch}
+\end{bkfigure}
+
+\begin{phsaki}{電気をためる物と、電場を計算する方法}
+電気二重層キャパシタや電池の中で、電極と液体の境目にどのように電荷が並ぶかは、電気化学の分野で学びます。チタン酸バリウムのように、電場をかけなくても分極をもち、その向きを電場で反転できる物（\textbf{強誘電体}）は、メモリーや圧電素子に使われます。そのしくみは、物理シリーズの『原子』（原-8）で学びます。複雑な形の電極や誘電体の周りの電場は、有限要素法（力-16 と同じ考え）などのコンピュータの計算（電界解析）で求めます。
+\end{phsaki}
+
+\begin{senmonsho}[電気工学の専門書の書き方]
+\begin{bkhonbun}
+誘電率 $\varepsilon$ の誘電体中で，電界 $\symbfit{E}$ と電束密度 $\symbfit{D}$ の間には $\symbfit{D}=\varepsilon\symbfit{E}$ の関係がある．面積 $S$，間隔 $d$ の平行平板コンデンサの静電容量は，端効果を無視すれば $C=\varepsilon S/d$ で与えられる．異なる誘電体の境界面では，電束密度の法線成分と電界の接線成分が連続である．
+\end{bkhonbun}
+\bkyaku{「電界」は、この本の「電場」と同じもの（電気工学の本は電界・磁界とよぶ）。太字の $\symbfit{E}$ はベクトル（この本の $\vec E$）。「平行平板コンデンサ」は平行板コンデンサー。JIS の用語は長音なしの「コンデンサ」。「端効果」ははしの効果（④）、「法線成分」は境目に垂直な成分、「接線成分」は境目にそった成分（⑨）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{導体}中の電場は0、全体が等電位、電荷は表面。中が空の箱の中も電場0\\[3pt]
+\tsl{静電容量}$Q=CV$、平行板 $C=\varepsilon\dfrac{S}{d}=\varepsilon_{\mathrm r}\varepsilon_0\dfrac{S}{d}$\\[3pt]
+\tsl{つなぎ方}並列 $C=C_1+C_2$、直列 $\dfrac1C=\dfrac1{C_1}+\dfrac1{C_2}$\\[3pt]
+\tsl{エネルギー}$U=\dfrac12QV=\dfrac12CV^2=\dfrac{Q^2}{2C}$、密度 $u=\dfrac12\varepsilon_0E^2$\\[3pt]
+\tsl{電束密度}$\vec D=\varepsilon_0\vec E+\vec P=\varepsilon\vec E$、$\oiint\vec D\cdot\vec n\,\dd S=Q_{\text{真}}$\\[3pt]
+\tsl{境目}$D_\perp$ と $E_\parallel$ がつながる。$\dfrac{\tan\theta_1}{\tan\theta_2}=\dfrac{\varepsilon_1}{\varepsilon_2}$\\[3pt]
+\tsl{同軸・球}$\dfrac{C}{l}=\dfrac{2\pi\varepsilon}{\ln(b/a)}$、$C=\dfrac{4\pi\varepsilon ab}{b-a}$、極板の力 $F=\dfrac12QE$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{導体・絶縁体}{自由に動ける電荷がたくさんある物（金属など）と、ほとんどない物（ガラス・プラスチックなど）。}
+\bkword{静電誘導}{電荷を近づけると、導体の中の自由電子が動いて、近い側と遠い側に反対の電荷が現れること。}
+\bkword{静電遮へい}{金属の殻の中の空所に、外の電場が入ってこないこと。}
+\bkword{静電容量}{1 V あたりにたまる電荷 $C=Q/V$。単位 F（ファラド）。}
+\bkword{誘電分極・比誘電率}{電場で誘電体の分子の＋と－がずれること。それで静電容量が何倍になるかが比誘電率。}
+\bkword{電束密度}{$\vec D=\varepsilon_0\vec E+\vec P$。その流束が、袋の中の真電荷に等しい。}
+\bkword{鏡像法}{導体の面の反対側に、鏡に映した位置の電荷を置いて、電場を求める方法。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$C$}{シー}{静電容量〔F〕。熱容量は $C_{\mathrm{th}}$（熱-1）。波-11 の通信路容量 $C$、単位のクーロン C とは別}{capacitance}{電-3}}
+{\bkkigocard{$\varepsilon$}{イプシロン}{物質の誘電率〔F/m〕。$\varepsilon=\varepsilon_{\mathrm r}\varepsilon_0$、$\varepsilon_{\mathrm r}$ は比誘電率（単位なし）。真空の誘電率 $\varepsilon_0$ は電-1。第1巻のひずみ、第2巻の放射率とは別}{permittivity}{電-3}}
+\bkkigocards{\bkkigocard{$\vec D$}{ディー}{電束密度〔C/m$^2$〕。$\vec D=\varepsilon_0\vec E+\vec P$}{electric flux density}{電-3}}
+{\bkkigocard{$\vec P$}{ピー}{分極〔C/m$^2$〕。1 m$^3$ あたりの双極子モーメント。電力 $P$（電-4）とは別。電-3 では電力を使わない}{polarization}{電-3}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:電-3:ex1}
+\begin{phreidai}[平行板コンデンサーの静電容量]
+面積\qty{0.01}{m^2}（\qty{10}{cm}×\qty{10}{cm}）の2枚の金属の板を、間かく\qty{1.0}{mm}で平行に向かい合わせました。間は空気です。静電容量を求めましょう。
+\phbamen
+2枚の極板を向かい合わせた、いちばん簡単なコンデンサーです。
+\phmushi
+極板のはしの効果を無視します。空気の比誘電率は1とします（1.0006 なので、その差は無視できます）。
+\phzu
+図\ref{ph:電-3:fig-heikou}。$S=\qty{0.01}{m^2}$、$d=\qty{1.0e-3}{m}$。
+\phriyu
+極板が間かくの100倍も広いので、間の電場は一様とみなせ、$C=\varepsilon_0S/d$（④）が使えます。
+\phtateru
+\[C=\varepsilon_0\frac{S}{d}\]
+\phtoku
+\[C=8.85\times10^{-12}\times\frac{0.01}{1.0\times10^{-3}}=8.85\times10^{-11}\,\text{F}=\qty{88.5}{pF}\]
+\phtashikame
+単位：F/m×m$^2$÷m＝F。\\
+大きさ：手のひらほどの板でも、静電容量は 100 pF に足りません。1 F がどれほど大きいかがわかります。\\
+極端な場合：間かくを0に近づけると $C$ はどこまでも大きくなりますが、実際は絶縁破壊で使えなくなります。
+\kotae 約\qty{88.5}{pF}
+\end{phreidai}
+\begin{jibun}
+面積\qty{0.02}{m^2}の極板を、間かく\qty{0.50}{mm}で向かい合わせたコンデンサー（間は空気）の静電容量を求めましょう。また、間かくを\qty{2.0}{mm}にすると何 pF ですか。
+\bkjans{$C=\varepsilon_0S/d$ に数を入れて、約\qty{354}{pF}。間かく\qty{2.0}{mm}では4分の1の約\qty{89}{pF}}
+\end{jibun}
+
+\label{ph:電-3:ex2}
+\begin{phreidai}[\qty{1}{kV}をかけたコンデンサー]
+例題1のコンデンサーに\qty{1.0}{kV}の電圧をかけました（計算だけで、実際に高い電圧をかけてはいけません）。たまる電荷、極板の間の電場、たくわえられるエネルギーを求めましょう。空気はこわれないでしょうか。
+\phbamen
+平行板コンデンサーに電圧をかけて、電荷とエネルギーをためる場面です。
+\phmushi
+極板のはしの効果、導線の抵抗を無視します。
+\phzu
+$C=\qty{88.5}{pF}$、$V=\qty{1000}{V}$、$d=\qty{1.0e-3}{m}$。
+\phriyu
+電荷は $Q=CV$（①④）、一様な電場は $E=V/d$（電-2 ⑥）、エネルギーは $\tfrac12CV^2$（⑦）。
+\phtateru
+\[Q=CV,\qquad E=\frac{V}{d},\qquad U=\frac12CV^2\]
+\phtoku
+\[Q=88.5\times10^{-12}\times1000=8.85\times10^{-8}\,\text{C}\]
+\[E=\frac{1000}{1.0\times10^{-3}}=1.0\times10^6\,\text{V/m}\]
+\[U=\frac12\times88.5\times10^{-12}\times1000^2\approx4.4\times10^{-5}\,\text{J}\]
+\phtashikame
+単位：F×V＝C、V÷m＝V/m、F×V$^2$＝C×V＝J。\\
+大きさ：$1.0\times10^6$\,V/m は、空気がこわれる約 $3\times10^6$\,V/m の3分の1なので、ぎりぎり大丈夫です。エネルギー密度 $\tfrac12\varepsilon_0E^2=\qty{4.4}{J/m^3}$ に体積 $10^{-5}$\,m$^3$ をかけても、同じ $4.4\times10^{-5}$\,J になります（⑦）。
+\kotae $Q\approx8.9\times10^{-8}$\,C、$E=1.0\times10^6$\,V/m、$U\approx4.4\times10^{-5}$\,J。空気はこわれない
+\end{phreidai}
+\begin{jibun}
+じぶんでとこう1のコンデンサー（\qty{354}{pF}、間かく\qty{0.50}{mm}）に\qty{12}{V}をかけたとき、たまる電荷、極板の間の電場、エネルギーを求めましょう。
+\bkjans{$Q\approx4.2\times10^{-9}$\,C、$E=2.4\times10^4$\,V/m、$U\approx2.5\times10^{-8}$\,J}
+\end{jibun}
+
+\label{ph:電-3:ex3}
+\begin{phreidai}[\qty{2}{\micro F}と\qty{3}{\micro F}のつなぎ方]
+$\qty{2.0}{\micro F}$と$\qty{3.0}{\micro F}$のコンデンサーがあります。（1）並列、（2）直列につないだときの静電容量を求めましょう。（3）直列にして\qty{10}{V}をかけると、それぞれのコンデンサーの電荷と電圧はいくらですか（はじめはどちらも電荷0）。
+\phbamen
+2つのコンデンサーを組み合わせて、1つのコンデンサーとみる場面です。
+\phmushi
+導線の静電容量と抵抗を無視します。
+\phzu
+図\ref{ph:電-3:fig-setsuzoku}。$C_1=\qty{2.0}{\micro F}$、$C_2=\qty{3.0}{\micro F}$。
+\phriyu
+並列は電圧が同じなので $C$ をたす。直列はまん中の電荷の合計が0のままなので電荷が同じになり、$1/C$ をたす（⑤）。
+\phtateru
+\[C_{\text{並}}=C_1+C_2,\qquad\frac1{C_{\text{直}}}=\frac1{C_1}+\frac1{C_2},\qquad Q=C_{\text{直}}V,\quad V_1=\frac{Q}{C_1},\quad V_2=\frac{Q}{C_2}\]
+\phtoku
+（1）$2.0+3.0=\qty{5.0}{\micro F}$。\\
+（2）\[\frac1{C_{\text{直}}}=\frac12+\frac13=\frac56\qquad\text{より}\qquad C_{\text{直}}=\qty{1.2}{\micro F}\]
+（3）$Q=1.2\times10^{-6}\times10=\qty{1.2e-5}{C}$（$\qty{12}{\micro C}$）。$V_1=12\div2.0=\qty{6.0}{V}$、$V_2=12\div3.0=\qty{4.0}{V}$。
+\phtashikame
+$V_1+V_2=6.0+4.0=\qty{10}{V}$ で、かけた電圧と合います。静電容量の小さい $\qty{2.0}{\micro F}$ のほうに、大きな電圧がかかっています。直列の $\qty{1.2}{\micro F}$ は、どちらの1つよりも小さくなっています。
+\kotae （1）$\qty{5.0}{\micro F}$　（2）$\qty{1.2}{\micro F}$　（3）どちらも$\qty{12}{\micro C}$。電圧は$\qty{2.0}{\micro F}$に\qty{6.0}{V}、$\qty{3.0}{\micro F}$に\qty{4.0}{V}
+\end{phreidai}
+\begin{jibun}
+$\qty{1.0}{\micro F}$と$\qty{4.0}{\micro F}$のコンデンサーを、（1）並列、（2）直列につないだときの静電容量を求めましょう。（3）直列にして\qty{15}{V}をかけたとき、それぞれの電圧はいくらですか。
+\bkjans{（1）$\qty{5.0}{\micro F}$　（2）$\qty{0.80}{\micro F}$　（3）電荷は $0.80\times15=\qty{12}{\micro C}$。$\qty{1.0}{\micro F}$に\qty{12}{V}、$\qty{4.0}{\micro F}$に\qty{3.0}{V}}
+\end{jibun}
+
+\label{ph:電-3:ex4}
+\begin{phreidai}[間にプラスチックをはさむ]
+例題1のコンデンサーの間を、PET（ペット）の板ですき間なく満たしました。PET の比誘電率を3.0とします。静電容量を求めましょう。また、電荷を例題2と同じ $8.85\times10^{-8}$\,C にしたままで PET を入れると、電圧は何 V になりますか。
+\phbamen
+極板の間に誘電体をはさんで、静電容量を大きくする場面です。
+\phmushi
+はしの効果を無視し、PET は極板の間をちょうど満たしているとします。
+\phzu
+図\ref{ph:電-3:fig-bunkyoku}。$\varepsilon_{\mathrm r}=3.0$、空気のときの $C_0=\qty{88.5}{pF}$。
+\phriyu
+誘電体で満たすと、静電容量は $\varepsilon_{\mathrm r}$ 倍（⑥）。電荷が同じなら $V=Q/C$ で、電圧は $\varepsilon_{\mathrm r}$ 分の1。
+\phtateru
+\[C=\varepsilon_{\mathrm r}C_0,\qquad V=\frac{Q}{C}\]
+\phtoku
+\[C=3.0\times88.5\approx\qty{266}{pF},\qquad V=\frac{8.85\times10^{-8}}{266\times10^{-12}}\approx\qty{333}{V}\]
+\phtashikame
+電圧は、もとの\qty{1000}{V}の3分の1になりました。電荷は同じで、分極の面の電荷が極板の電荷の一部を打ち消し、電場が3分の1に弱まったからです。\\
+極端な場合：$\varepsilon_{\mathrm r}=1$（空気）なら、もとの\qty{88.5}{pF}にもどります。
+\kotae 約\qty{270}{pF}（\qty{266}{pF}）、電圧は約\qty{330}{V}
+\end{phreidai}
+\begin{jibun}
+例題1のコンデンサーの間を、（1）比誘電率2.3のポリエチレン、（2）比誘電率7のガラスで満たしたときの静電容量を求めましょう。
+\bkjans{（1）$2.3\times88.5$ で、約\qty{204}{pF}。（2）$7\times88.5$ で、約\qty{620}{pF}}
+\end{jibun}
+
+\label{ph:電-3:ex5}
+\begin{phreidai}[半分だけ誘電体を入れる]
+空気の平行板コンデンサー（静電容量 $C_0=\qty{88.5}{pF}$）の間に、比誘電率3.0の誘電体を、（1）厚さの半分（極板と平行に、間かくの半分の厚さの板を下の極板にのせる）、（2）面積の半分（間かくいっぱいの厚さで、極板の半分の面積）だけ入れました。それぞれの静電容量を求めましょう。
+\phbamen
+高校の入試でよく出る、誘電体を一部だけ入れる場面です。
+\phmushi
+はしの効果と、誘電体の境目近くで電場が曲がる効果を無視します。
+\phzu
+\noindent\begin{minipage}[c]{0.5\linewidth}
+（1）空気の層と誘電体の層が上下に重なっている。（2）空気の部分と誘電体の部分が左右に並んでいる。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \sxdplates{(0,0)}{24}{12}
+  \fill[bkYellow!50] (0,0) rectangle (24,6);
+  \node[font=\sffamily\footnotesize] at (12,-5) {（1）};
+  \sxdplates{(34,0)}{24}{12}
+  \fill[bkYellow!50] (46,0) rectangle (58,12);
+  \node[font=\sffamily\footnotesize] at (46,-5) {（2）};
+\end{tikzpicture}
+\end{minipage}
+\phriyu
+（1）上下の層の境目に、うすい金属の板をはさんだと考えても電場は変わらないので、「間かく $d/2$ の空気のコンデンサー」と「間かく $d/2$ の誘電体のコンデンサー」の直列とみなせます。（2）左右の部分はどちらも同じ電圧がかかるので、面積半分の2つのコンデンサーの並列です（⑤）。
+\phtateru
+（1）間かくが半分なので、空気の層は $2C_0$、誘電体の層は $2\varepsilon_{\mathrm r}C_0$。\[\frac1C=\frac1{2C_0}+\frac1{2\varepsilon_{\mathrm r}C_0}\]
+（2）面積が半分なので、空気の部分は $\tfrac12C_0$、誘電体の部分は $\tfrac12\varepsilon_{\mathrm r}C_0$。\[C=\frac12C_0+\frac12\varepsilon_{\mathrm r}C_0\]
+\phtoku
+（1）\[\frac1C=\frac1{2C_0}\Bigl(1+\frac13\Bigr)=\frac{2}{3C_0}\quad\text{より}\quad C=1.5\,C_0=1.5\times88.5\approx\qty{133}{pF}\]
+（2）\[C=\frac12(1+3.0)\,C_0=2.0\,C_0=\qty{177}{pF}\]
+\phtashikame
+どちらも、空気だけ（$C_0$）と全部誘電体（$3C_0$）の間に入っています。同じ量の誘電体を入れても、並べ方で答えが違います。電場の向きに直列に並べると、空気の層が電圧の多くを受けもつので、静電容量はあまり増えません。
+\kotae （1）約\qty{133}{pF}（$1.5C_0$）　（2）\qty{177}{pF}（$2C_0$）
+\end{phreidai}
+\begin{jibun}
+例題5の誘電体を、比誘電率2.0の物に変えると、（1）厚さの半分、（2）面積の半分を入れたときの静電容量は、$C_0$ の何倍ですか。
+\bkjans{（1）$2\times2.0\div(1+2.0)=4/3$ 倍（約\qty{118}{pF}）　（2）$(1+2.0)\div2=1.5$ 倍（約\qty{133}{pF}）}
+\end{jibun}
+
+\label{ph:電-3:ex6}
+\begin{phreidai}[コンデンサーのつなぎかえ]
+$\qty{3.0}{\micro F}$のコンデンサー A を\qty{10}{V}で充電したあと、電池をはずし、電荷のない$\qty{2.0}{\micro F}$のコンデンサー B と並列につなぎました。つないだあとの電圧と、つなぐ前と後のエネルギーを求めましょう。エネルギーはどこへ行きましたか。
+\phbamen
+高校の入試でよく出る、ためた電気を別のコンデンサーへ分ける場面です。
+\phmushi
+導線の抵抗の値は考えません（ただし、電流が流れるときに熱になる道があることは考えます）。
+\phzu
+つなぐ前：A に $Q_0=C_{\mathrm A}V_0$、B は0。つないだあと：A と B は同じ電圧 $V$。
+\phriyu
+A と B をつないだ部分は、ほかとつながっていないので、電荷の合計は変わりません（⑤の②）。並列なので電圧は同じ。エネルギーは $\tfrac12CV^2$（⑦）。
+\phtateru
+\[C_{\mathrm A}V_0=(C_{\mathrm A}+C_{\mathrm B})V,\qquad U_{\text{前}}=\frac12C_{\mathrm A}V_0^{\,2},\qquad U_{\text{後}}=\frac12(C_{\mathrm A}+C_{\mathrm B})V^2\]
+\phtoku
+\[V=\frac{3.0\times10}{3.0+2.0}=\qty{6.0}{V}\]
+\[U_{\text{前}}=\frac12\times3.0\times10^{-6}\times10^2=\qty{1.5e-4}{J}\]
+\[U_{\text{後}}=\frac12\times5.0\times10^{-6}\times6.0^2=\qty{9.0e-5}{J}\]
+\phtashikame
+電荷は前も後も $\qty{30}{\micro C}$ で、保存しています。エネルギーは $\qty{6.0e-5}{J}$（4割）減りました。つないだ瞬間に A から B へ電流が流れ、導線の抵抗で熱になったり、火花や電波になって出ていったりしたのです。抵抗をどんなに小さくしても、この量は変わりません（電-9）。
+\kotae 電圧\qty{6.0}{V}。エネルギーは$\qty{1.5e-4}{J}$から$\qty{9.0e-5}{J}$に減り、差の$\qty{6.0e-5}{J}$は熱などになった
+\end{phreidai}
+\begin{jibun}
+$\qty{1.0}{\micro F}$を\qty{12}{V}で充電し、電荷のない同じ$\qty{1.0}{\micro F}$と並列につなぎます。つないだあとの電圧と、エネルギーが何分のいくつになるかを求めましょう。
+\bkjans{電圧\qty{6.0}{V}。エネルギーは$\qty{72}{\micro J}$から$\qty{36}{\micro J}$で、2分の1}
+\end{jibun}
+
+\label{ph:電-3:ex7}
+\begin{phreidai}[電気二重層キャパシタのエネルギー]
+静電容量\qty{1.0}{F}、耐電圧\qty{2.7}{V}の電気二重層キャパシタがあるとします。\qty{2.7}{V}まで充電したときにたくわえられるエネルギーを求めましょう。そのエネルギーで、\qty{1.0}{kg}の物を何 m 持ち上げられますか。
+\phbamen
+大きな静電容量のコンデンサーに、エネルギーをためる場面です。
+\phmushi
+もれ電流と、内部の抵抗による損失を無視します。持ち上げるときの損失も無視します。
+\phzu
+$C=\qty{1.0}{F}$、$V=\qty{2.7}{V}$、$m=\qty{1.0}{kg}$、$g=\qty{9.8}{m/s^2}$。
+\phriyu
+たくわえられるエネルギーは $\tfrac12CV^2$（⑦）。それが全部、重力の位置エネルギー $mgh$（力-4）になるとします。
+\phtateru
+\[U=\frac12CV^2,\qquad mgh=U\]
+\phtoku
+\[U=\frac12\times1.0\times2.7^2\approx\qty{3.6}{J},\qquad h=\frac{3.6}{1.0\times9.8}\approx\qty{0.37}{m}\]
+\phtashikame
+単位：F×V$^2$＝J。\\
+大きさ：静電容量は例題1の約100億倍ですが、電圧が低いので、エネルギーは1 kg を\qty{37}{cm}持ち上げる分にすぎません。電池にくらべてためられるエネルギーは小さいのですが、大きな電流ですばやく出し入れでき、何十万回繰り返しても傷みにくいので、ブレーキのエネルギーを一瞬でためる用途に向いています。
+\kotae 約\qty{3.6}{J}、約\qty{0.37}{m}
+\end{phreidai}
+\begin{jibun}
+静電容量\qty{10}{F}のキャパシタを\qty{2.5}{V}まで充電しました。たくわえたエネルギーを求めましょう。また、電圧が半分の\qty{1.25}{V}に下がるまで使うと、何 J を取り出せますか。
+\bkjans{$\tfrac12\times10\times2.5^2\approx\qty{31}{J}$。$\tfrac12\times10\times(2.5^2-1.25^2)\approx\qty{23}{J}$（4分の3）}
+\end{jibun}
+
+\label{ph:電-3:ex8}
+\begin{phreidai}[境目で曲がる電気力線]
+比誘電率1（空気）の側から、比誘電率4の誘電体へ、電気力線が境目の垂線と45°の角で入ります。誘電体の中で、電気力線は垂線と何度の角になりますか。誘電体の中の電場の大きさは、空気の側の何倍ですか。
+\phbamen
+誘電率の違う物の境目で、電場の向きと大きさがどう変わるかを求める場面です。
+\phmushi
+境目に真電荷はないとします。境目は平らです。
+\phzu
+図\ref{ph:電-3:fig-kyoukai}。$\varepsilon_1=\varepsilon_0$、$\varepsilon_2=4\varepsilon_0$、$\theta_1=45°$。
+\phriyu
+境目では $D$ の垂直な成分と $E$ の面にそった成分がつながる（⑨）。その2つから $\tan\theta_2=(\varepsilon_2/\varepsilon_1)\tan\theta_1$。
+\phtateru
+\[\tan\theta_2=\frac{\varepsilon_2}{\varepsilon_1}\tan\theta_1,\qquad E_{2\parallel}=E_{1\parallel},\qquad E_{2\perp}=\frac{\varepsilon_1}{\varepsilon_2}E_{1\perp}\]
+\phtoku
+$\tan\theta_2=4\times\tan45°=4$ なので、$\theta_2\approx76°$。空気の側の電場を $E_1$ とすると、$E_{1\parallel}=E_{1\perp}=E_1\times0.707$。誘電体の中は $E_{2\parallel}=0.707E_1$、$E_{2\perp}=0.707E_1\div4\approx0.177E_1$ なので、
+\[E_2=\sqrt{0.707^2+0.177^2}\,E_1\approx0.73\,E_1\]
+\phtashikame
+誘電率の大きい物へ入ると、垂直な成分だけが弱まるので、電気力線は境目のほうへ倒れます（$\theta_2>\theta_1$）。\\
+極端な場合：垂直に入る（$\theta_1=0$）と、曲がらずに、電場が4分の1になります（⑥と同じ）。
+\kotae 約76°。電場は約0.73倍
+\end{phreidai}
+\begin{jibun}
+比誘電率1の側から比誘電率2の誘電体へ、電気力線が垂線と30°の角で入ります。誘電体の中の角を求めましょう。
+\bkjans{$\tan\theta_2=2\tan30°\approx1.15$ より、約49°}
+\end{jibun}
+
+\label{ph:電-3:ex9}
+\begin{phreidai}[同軸ケーブルの静電容量]
+同軸ケーブルの中の線の半径が\qty{0.45}{mm}、外の網の内側の半径が\qty{1.6}{mm}、間はポリエチレン（比誘電率2.3）です。1 m あたりの静電容量を求めましょう。\qty{10}{m}では何 pF ですか。
+\phbamen
+アンテナ線や測定器のケーブルの、線と網の間の静電容量を求める場面です（電-13 で同じケーブルを使います）。
+\phmushi
+ケーブルはまっすぐで、はしの効果を無視します。網はすき間のない筒とみなします。
+\phzu
+図\ref{ph:電-3:fig-doujiku}。$a=\qty{0.45}{mm}$、$b=\qty{1.6}{mm}$、$\varepsilon_{\mathrm r}=2.3$。
+\phriyu
+円柱の対称があるので、円柱の袋で $\vec D$ のガウスの法則が使え、$C/l=2\pi\varepsilon/\ln(b/a)$（⑩）。
+\phtateru
+\[\frac{C}{l}=\frac{2\pi\varepsilon_{\mathrm r}\varepsilon_0}{\ln(b/a)}\]
+\phtoku
+\[\ln\frac{1.6}{0.45}\approx\ln3.56\approx1.27\]
+\[\frac{C}{l}=\frac{2\pi\times2.3\times8.85\times10^{-12}}{1.27}\approx1.01\times10^{-10}\,\text{F/m}\]
+1 m あたり約\qty{101}{pF}、\qty{10}{m}で約\qty{1000}{pF}（1 nF）です。
+\phtashikame
+単位：F/m ÷（単位なし）＝F/m。\\
+大きさ：ケーブル1 m で、例題1の手のひら大のコンデンサーと同じくらいです。速い信号を送るときは、この静電容量に電気をためたり出したりするのに時間がかかることを考えます（電-9・電-13）。
+\kotae 約\qty{101}{pF/m}。\qty{10}{m}で約\qty{1.0}{nF}
+\end{phreidai}
+\begin{jibun}
+中の線の半径\qty{0.50}{mm}、外の網の内側の半径\qty{3.5}{mm}、比誘電率2.3の同軸ケーブルの、1 m あたりの静電容量を求めましょう。
+\bkjans{$\ln7\approx1.95$。$2\pi\times2.3\times8.85\times10^{-12}\div1.95$ で、約\qty{66}{pF/m}}
+\end{jibun}
+
+\label{ph:電-3:ex10}
+\begin{phreidai}[地球の静電容量]
+地球を、半径 $\qty{6.37e6}{m}$ のひとつだけの導体の球とみなして、静電容量を求めましょう。また、静電容量が\qty{1}{F}の金属の球の半径はいくらですか。
+\phbamen
+とても大きな導体の球を、1つのコンデンサーとみる場面です。
+\phmushi
+大気や電離層、地球の形のゆがみを無視します。相手の極板は、無限に遠い所とします。
+\phzu
+半径 $R=\qty{6.37e6}{m}$ の球。
+\phriyu
+ひとつだけの球の静電容量は $C=4\pi\varepsilon_0R$（⑩の $b\to\infty$）。
+\phtateru
+\[C=4\pi\varepsilon_0R,\qquad R=\frac{C}{4\pi\varepsilon_0}\]
+\phtoku
+\[C=4\pi\times8.85\times10^{-12}\times6.37\times10^6\approx7.09\times10^{-4}\,\text{F}=\qty{709}{\micro F}\]
+\[R=\frac{1}{4\pi\times8.85\times10^{-12}}\approx\qty{9.0e9}{m}\]
+\phtashikame
+$1/(4\pi\varepsilon_0)=k$ なので、1 F の球の半径は $k\approx9.0\times10^9$\,m です。地球の半径の約1400倍、月までの距離の約23倍です。1 F は、とんでもなく大きな静電容量なのです。電気二重層キャパシタが1 F をこえるのは、極板の間かくが分子ほどにうすく、面積がとても広いからです。
+\kotae 約$\qty{709}{\micro F}$。1 F の球の半径は約 $\qty{9.0e9}{m}$
+\end{phreidai}
+\begin{jibun}
+半径\qty{10}{cm}の金属の球の静電容量を求めましょう。この球を\qty{30}{kV}にするには、何 C の電荷が要りますか。
+\bkjans{$C=4\pi\varepsilon_0R$ で、約\qty{11}{pF}。電荷は $Q=CV$ で、約 $3.3\times10^{-7}$\,C}
+\end{jibun}
+
+\label{ph:電-3:ex11}
+\begin{phreidai}[極板が引き合う力]
+例題2のコンデンサー（$S=\qty{0.01}{m^2}$、$Q=8.85\times10^{-8}$\,C、$E=1.0\times10^6$\,V/m）の極板が引き合う力を求めましょう。
+\phbamen
+帯電した2枚の極板が、たがいに引き合う力を求める場面です。
+\phmushi
+はしの効果を無視します。電池ははずしてあり、電荷は一定とします。
+\phzu
+図\ref{ph:電-3:fig-heikou}。
+\phriyu
+電荷一定で間かくを少し動かしたときのエネルギーの変化から、$F=\tfrac12QE=Q^2/(2\varepsilon_0S)$（⑪）。
+\phtateru
+\[F=\frac12QE\]
+\phtoku
+\[F=\frac12\times8.85\times10^{-8}\times1.0\times10^6\approx\qty{0.044}{N}\]
+\phtashikame
+$Q^2/(2\varepsilon_0S)=(8.85\times10^{-8})^2\div(2\times8.85\times10^{-12}\times0.01)\approx\qty{0.044}{N}$ でも同じです。1 m$^2$ あたり $\tfrac12\varepsilon_0E^2\approx\qty{4.4}{Pa}$ で、大気圧の約2万分の1です。\\
+大きさ：約\qty{4.5}{g}の物の重さくらいの、小さな力です。
+\kotae 約\qty{0.044}{N}
+\end{phreidai}
+\begin{jibun}
+例題1のコンデンサーに\qty{100}{V}をかけて電池をはずしました。極板が引き合う力を求めましょう。
+\bkjans{$Q=8.85\times10^{-9}$\,C、$E=1.0\times10^5$\,V/m。$F=\tfrac12QE\approx\qty{4.4e-4}{N}$（例題11の100分の1）}
+\end{jibun}
+
+\label{ph:電-3:ex12}
+\begin{phreidai}[雷雲の真下の地面の電場]
+高さ\qty{5.0}{km}の雷雲の下の部分に、\qty{-20}{C}の電荷が集まっているとします。地面を導体の平面とみなして、雲の真下の地面の電場の大きさと、地面の1 m$^2$ あたりの電荷を求めましょう。
+\phbamen
+雷雲の下で、地面にどんな電場と電荷ができるかを見積もる場面です。
+\phmushi
+雲の電荷を1点に集め、雲の上のほうの正の電荷、地面の起伏、建物を無視します。
+\phzu
+図\ref{ph:電-3:fig-kyouzou}。$|Q|=\qty{20}{C}$、$h=\qty{5000}{m}$。
+\phriyu
+導体の平面の上の電場は、鏡の位置に反対の電荷を置いた2つの電荷の電場と同じ（鏡像法：⑫）。真下では $2k|Q|/h^2$。地面の電荷は $\sigma=\varepsilon_0E$（⑨）。
+\phtateru
+\[E=\frac{2k|Q|}{h^2},\qquad|\sigma|=\varepsilon_0E\]
+\phtoku
+\[E=\frac{2\times8.99\times10^9\times20}{5000^2}\approx\qty{1.4e4}{V/m}\]
+\[|\sigma|=8.85\times10^{-12}\times1.44\times10^4\approx1.3\times10^{-7}\,\text{C/m}^2\]
+雲の電荷が負なので、地面には正の電荷が集まり、電場は上向き（地面から雲へ）です。
+\phtashikame
+単位：N·m$^2$/C$^2$×C÷m$^2$＝N/C＝V/m。\\
+大きさ：1 m あたり\qty{14}{kV}で、空気がこわれる $3\times10^6$\,V/m よりずっと小さいのに、雷は始まります。とがった所に電場が集まることなどが関係していますが、雷の始まり方には、まだわかっていないことがあります（電-2）。
+\kotae 約 $1.4\times10^4$\,V/m、1 m$^2$ あたり約 $1.3\times10^{-7}$\,C（正）
+\end{phreidai}
+\begin{jibun}
+高さ\qty{3.0}{km}に\qty{-30}{C}の電荷があるとき、真下の地面の電場の大きさを求めましょう。
+\bkjans{$2\times8.99\times10^9\times30\div3000^2$ で、約 $6.0\times10^4$\,V/m}
+\end{jibun}
+
+\label{ph:電-3:ex13}
+\begin{phreidai}[タッチパネルの静電容量の変化]
+スマホのタッチパネルで、指先が面積\qty{1.0}{cm^2}でガラスにふれました。ガラスの厚さは\qty{1.0}{mm}、比誘電率を7とします。指と電極のあいだにできるコンデンサーの静電容量を求めましょう。
+\phbamen
+指とガラスと電極が、小さな平行板コンデンサーになる場面です。
+\phmushi
+電極の形、周りの電極との静電容量、指の丸みを無視し、指先とガラスはぴったりついているとします。
+\phzu
+図\ref{ph:電-3:fig-touch}。$S=\qty{1.0e-4}{m^2}$、$d=\qty{1.0e-3}{m}$、$\varepsilon_{\mathrm r}=7$。
+\phriyu
+指は導体、ガラスは誘電体なので、平行板コンデンサーの式 $C=\varepsilon_{\mathrm r}\varepsilon_0S/d$（⑥）。
+\phtateru
+\[C=\varepsilon_{\mathrm r}\varepsilon_0\frac{S}{d}\]
+\phtoku
+\[C=7\times8.85\times10^{-12}\times\frac{1.0\times10^{-4}}{1.0\times10^{-3}}\approx6.2\times10^{-12}\,\text{F}=\qty{6.2}{pF}\]
+\phtashikame
+数 pF という小さな変化ですが、スマホの回路は、それを時間の変化として読みとります（⑬）。\\
+極端な場合：厚さ\qty{1}{mm}の手袋（比誘電率2くらい）をはめると、ガラスと直列のコンデンサーが加わって静電容量が数分の1になり、反応しにくくなります。
+\kotae 約\qty{6.2}{pF}
+\end{phreidai}
+\begin{jibun}
+ガラスの厚さを\qty{0.50}{mm}、ふれる面積を\qty{0.50}{cm^2}にすると、静電容量はいくらですか（比誘電率7）。
+\bkjans{面積も厚さも半分なので変わらず、約\qty{6.2}{pF}}
+\end{jibun}
+
+\label{ph:電-3:ex14}
+\begin{phreidai}[圧電素子に出る電圧]
+圧電定数 $d_{33}=\qty{400e-12}{C/N}$ の圧電素子（波-10 と同じ）を\qty{10}{N}の力で押しました。素子の静電容量を\qty{1.0}{nF}とすると、電極の間に出る電圧はいくらですか。
+\phbamen
+圧電素子を、力で電荷がたまるコンデンサーとみる場面です（波-10 の約束）。
+\phmushi
+素子から電荷がもれていく分と、つないだ測定器の静電容量を無視します。
+\phzu
+$d_{33}=\qty{400e-12}{C/N}$、$F=\qty{10}{N}$、$C=\qty{1.0e-9}{F}$。
+\phriyu
+たまる電荷は $Q=d_{33}F$（波-10）。電極の間の電圧は $V=Q/C$（①）。
+\phtateru
+\[Q=d_{33}F,\qquad V=\frac{Q}{C}\]
+\phtoku
+\[Q=400\times10^{-12}\times10=\qty{4.0e-9}{C},\qquad V=\frac{4.0\times10^{-9}}{1.0\times10^{-9}}=\qty{4.0}{V}\]
+\phtashikame
+わずか4 nC の電荷でも、静電容量が小さいので数 V の電圧になります。ケーブルや測定器をつなぐと、その静電容量が並列に加わり、電圧が下がるので、圧電素子の信号は、ケーブルの静電容量まで考えて読みとります。
+\kotae \qty{4.0}{V}
+\end{phreidai}
+\begin{jibun}
+圧電定数 $\qty{250e-12}{C/N}$、静電容量\qty{2.0}{nF}の圧電素子を\qty{20}{N}で押すと、電圧はいくらですか。
+\bkjans{$Q=\qty{5.0e-9}{C}$、$V=5.0\div2.0=\qty{2.5}{V}$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{直列の静電容量}
+\bkng{\qty{2}{\micro F}と\qty{3}{\micro F}を直列につなぐと、$2+3=\qty{5}{\micro F}$。}
+\bkok{直列は $1/C$ をたす。$\tfrac12+\tfrac13=\tfrac56$ で、$\qty{1.2}{\micro F}$。}
+抵抗（電-4 ⑦）は直列でたしますが、コンデンサーは並列でたします。直列は間かくを広げたのと同じで、小さくなります（⑤）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{エネルギーは $QV$？}
+\bkng{電荷 $Q$ を電圧 $V$ でためたので、エネルギーは $QV$。}
+\bkok{はじめは電圧0から上がっていくので、平均の電圧は半分。エネルギーは $\tfrac12QV$。}
+電池がした仕事 $QV$ のうち、半分は導線で熱になります（⑦）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{電池をつないだまま、間かくを広げる}
+\bkng{間かくを2倍にすると、電圧が2倍になる。}
+\bkok{電池をつないだままなら、電圧は電池の電圧のまま。$C$ が半分になり、電荷が半分になる。}
+電池をはずしたとき（電荷が一定）は、電圧が2倍になります。何が一定かを、まず確かめます（⑪）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{導体の中の電場}
+\bkng{帯電した金属の球の中は、電荷がたくさんあるので、電場が強い。}
+\bkok{電荷は表面にだけあり、中の電場は0（③）。}
+中の電場が0でなければ、自由電子が動き続けてしまいます。
+\end{tsumazuki}
+
+\begin{tsumazuki}{誘電体を入れると}
+\bkng{誘電体を入れると、電場が強くなるので静電容量が大きくなる。}
+\bkok{同じ電荷なら、分極で電場が\textbf{弱く}なり、電圧が下がるので $C=Q/V$ が大きくなる。}
+分極の面の電荷は、極板の電荷と反対の符号です（⑥）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[コンデンサーの使いみち]
+\textbf{電源を安定させる}：スマホやパソコンの基板には、小さなセラミックコンデンサーが何百個もならんでいます。部品が急に電流を使うと電圧が下がりそうになるので、すぐそばのコンデンサーにためた電荷を出して、電圧を支えます（電-9）。
+
+\textbf{センサー}：タッチパネル、キーボード、コンデンサーマイク、水位計、湿度計（湿気で誘電体の比誘電率が変わる）など、「$C$ が何で変わるか」を読む部品が、たくさんあります。
+
+\textbf{エネルギーをためる}：カメラのフラッシュ、電気二重層キャパシタによる電車のブレーキのエネルギーの回収、発電所の電気の質を整える装置などに使われます。
+
+\textbf{高電圧の機器}：送電線のがいしや電力ケーブルでは、誘電体の中の電場が強くなりすぎないように、電極の形と誘電体の厚さを決めます（絶縁設計）。電場のとがりを避けるため、角を丸くします（電-2 ⑫）。
+
+\begin{phketa}[コンデンサーの数の目安]
+\phketaline{身の回りのコンデンサー}{数 pF〜数千 $\si{\micro F}$}
+\phketaline{電気二重層キャパシタ}{数 F〜数千 F}
+\phketaline{空気がこわれる電場}{約 $3\times10^6$\,V/m（1 mm あたり約\qty{3}{kV}）}
+\phketaline{比誘電率（空気・プラスチック）}{1、2〜3}
+\phketaline{比誘電率（ガラス・水・セラミックス）}{4〜10、80、1000 以上}
+\phboxhead{答えが桁で合っているか}
+手のひら大の空気のコンデンサーは 100 pF ほど、1 F の金属の球は太陽系ほどの大きさ（例題10）。答えが「手のひら大で $\si{\micro F}$」になったら、$\varepsilon_0$ の $10^{-12}$ を落としていないか確かめます。電場が $3\times10^6$\,V/m をこえたら、空気なら火花が飛ぶので、その答えのままでは使えません。
+\end{phketa}
+\end{phkougaku}
+\phstation{電子回路,電気材料,高電圧工学,センサー工学}{静電容量、誘電率、誘電損失、耐電圧、絶縁破壊、電束密度、電界解析、セラミックコンデンサ、電解コンデンサ、電気二重層キャパシタ}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 面積\qty{0.020}{m^2}の極板を間かく\qty{0.50}{mm}で向かい合わせた空気のコンデンサーに、\qty{12}{V}をかけます。（1）静電容量、（2）たまる電荷、（3）極板の間の電場、（4）たくわえられるエネルギーを求めましょう。
+\bkpans{（1）約\qty{354}{pF}　（2）約 $4.2\times10^{-9}$\,C　（3）$2.4\times10^4$\,V/m　（4）約 $2.5\times10^{-8}$\,J}
+\bkproblem $\qty{1.0}{\micro F}$・$\qty{2.0}{\micro F}$・$\qty{3.0}{\micro F}$の3つのコンデンサーがあります。（1）3つを並列、（2）3つを直列、（3）$\qty{1.0}{\micro F}$と$\qty{2.0}{\micro F}$を並列にしたものに$\qty{3.0}{\micro F}$を直列にしたとき、全体の静電容量を求めましょう。
+\bkpans{（1）$\qty{6.0}{\micro F}$　（2）$\tfrac11+\tfrac12+\tfrac13=\tfrac{11}6$ より、約$\qty{0.55}{\micro F}$　（3）$3.0$ と $3.0$ の直列で$\qty{1.5}{\micro F}$}
+\bkproblem $\qty{4.0}{\micro F}$と$\qty{12}{\micro F}$のコンデンサーを直列にして、\qty{12}{V}の電池につなぎました（はじめは電荷0）。全体の静電容量、それぞれの電荷と電圧を求めましょう。
+\bkpans{全体 $\qty{3.0}{\micro F}$。電荷はどちらも$\qty{36}{\micro C}$。$\qty{4.0}{\micro F}$に\qty{9.0}{V}、$\qty{12}{\micro F}$に\qty{3.0}{V}}
+\bkproblem $\qty{4.0}{\micro F}$のコンデンサーを\qty{10}{V}で充電して電池をはずし、電荷のない$\qty{1.0}{\micro F}$と並列につなぎます。つないだあとの電圧と、失われたエネルギーを求めましょう。
+\bkpans{電圧\qty{8.0}{V}。エネルギーは$\qty{200}{\micro J}$から$\qty{160}{\micro J}$になり、$\qty{40}{\micro J}$失われる}
+\bkproblem 静電容量\qty{50}{pF}の空気のコンデンサーを\qty{100}{V}で充電し、電池をはずしてから、間を比誘電率2.3のポリエチレンですき間なく満たしました。静電容量と電圧はいくらになりますか。
+\bkpans{静電容量 $50\times2.3=\qty{115}{pF}$。電荷は変わらないので、電圧は $100\div2.3$ で、約\qty{43}{V}}
+\bkproblem 空気がこわれる直前の電場 $3\times10^6$\,V/m のときの、電場のエネルギー密度を求めましょう。\qty{1}{L}あたりでは何 J ですか。
+\bkpans{$\tfrac12\times8.85\times10^{-12}\times(3\times10^6)^2$ で、約\qty{40}{J/m^3}。1 L あたり約\qty{0.04}{J}}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 中の線の半径\qty{0.50}{mm}、外の網の内側の半径\qty{3.5}{mm}、比誘電率2.3の同軸ケーブルがあります。（1）1 m あたりの静電容量を求めましょう。（2）中の線の表面の電場は、外の網の内側の表面の電場の何倍ですか。
+\bkpans{（1）約\qty{66}{pF/m}　（2）$E$ は $1/r$ に比例するので、$3.5\div0.50=7$ 倍}
+\bkproblem 広い導体の平面から高さ\qty{0.10}{m}の所に、\qty{1.0}{nC}の点電荷があります。（1）点電荷が平面から受ける力の大きさと向き、（2）真下の平面の上の電場の大きさを求めましょう（鏡像法）。
+\bkpans{（1）距離\qty{0.20}{m}の鏡像電荷 $-$\qty{1.0}{nC}との引力。$kq^2/(2h)^2$ で、約 $\qty{2.2e-7}{N}$。平面のほうへ向く　（2）$2kq/h^2\approx1.8\times10^3$\,V/m}
+\bkproblem 比誘電率2の誘電体から比誘電率6の誘電体へ、電気力線が境目の垂線と30°の角で入ります。比誘電率6の側の角を求めましょう。
+\bkpans{$\tan\theta_2=3\tan30°=\sqrt3$ より、60°}
+\bkproblem 面積 $\qty{1.0e-4}{m^2}$、間かく $\qty{10}{\micro m}$ の空気の平行板（小さな機械を電気で動かす部品）に、電池で\qty{20}{V}をかけ続けます。（1）極板が引き合う力を求めましょう。（2）電圧を一定にしたまま間かくを少し広げるとき、静電エネルギーは増えるか減るかを答え、それでも力が引力であるわけを、電池がする仕事を使って説明しましょう。
+\bkpans{（1）$F=\tfrac12QE=\varepsilon_0SV^2/(2d^2)$ に数を入れて、約 $\qty{1.8e-3}{N}$　（2）$U=\tfrac12CV^2$ は、$C$ が減るので減る。間かくを広げると、電荷 $|\Delta Q|$ が電池へもどり、電池はエネルギー $V|\Delta Q|$ を受けとる。静電エネルギーの減りは $\tfrac12V|\Delta Q|$ だけなので、残りの $\tfrac12V|\Delta Q|$ は手がした仕事 $F\,\Delta d$。それが正なので、手は引き離す仕事をしなければならない（引力）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item コンデンサーにためた電気で、豆電球や LED を光らせられる。\bkfurref{ph:電-3:sec1}
+\item 導体の中の電場が0になるわけと、静電遮へいを説明できる。\bkfurref{ph:電-3:sec3}
+\item 平行板の静電容量・つなぎ方・エネルギーを求められる。\bkfurref{ph:電-3:sec4}
+\item 分極と電束密度で、同軸・球の静電容量を導ける。\bkfurref{ph:電-3:sec8}
+\item 境界条件・仮想変位・鏡像法を使って、電場や力を求められる。\bkfurref{ph:電-3:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{車の中が安全なのは、タイヤのおかげじゃなくて、金属の殻のおかげだったんだ。スマホの画面も、指で小さなコンデンサーを作っていたなんて！}
