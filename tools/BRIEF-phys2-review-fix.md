@@ -1,7 +1,7 @@
 # 物理第2巻 確認の指摘を直す組への手引き（第23回）
 
 ## 始める前に
-1. worktree の HEAD が `BASE` をふくまないときは、`git merge --ff-only BASE` で進める。
+1. worktree の HEAD が `c21b926` をふくまないときは、`git merge --ff-only c21b926` で進める。
 2. 組むときは `export TEXMFHOME=$PWD/texmf`（リポジトリの根で）。
 3. 読むもの：
    - `docs/修正事項/物理第2巻_確認/決定_第23回.md`（巻全体の決定 U-1〜U-13。いちばん優先）と、第1巻の K-1〜K-20（`docs/修正事項/物理第1巻_委員確認/決定_第21回.md`）
