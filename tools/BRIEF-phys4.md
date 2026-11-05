@@ -97,3 +97,5 @@
 
 - **℃ の書き方**（熱W1 の報告から）：物理の共通部品で、`\qty{20}{\celsius}` も本文と同じ「℃」の1字で組むようにした。どちらの書き方でもよい（`\qty{20}{\celsius}` か「20\,℃」）。単位の積 `J/(kg.K)` は「J/(kg·K)」と、点の前後をあけずに組まれる。
 - **ph4-pages.tex**：`tools/tryp.py` が、なければ自動で作る（`phys/gen_phys.py`）。
+- **nullfont の「.01pt」の警告**（電W6・電W7 の報告から）：pgfplots の `\addplot[only marks]`・`\addplot coordinates`・`table` で出ることがある。紙面の字は欠けないが、`\draw`・`\fill` と `axis cs:` の線に置きかえると消える。
+- **`phcodeout` の中身の最初の行が「[」で始まる**と、題として読まれる（電W3 の報告から）。`\begin{phcodeout}[実行結果]` のように題を書いてよける。
