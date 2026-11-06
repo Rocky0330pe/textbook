@@ -5,6 +5,7 @@
 #   1〜9     数学シリーズの第1〜9巻（本文＋カバー展開図）
 #   guide    ガイドブック（子ども用・大人用）
 #   p1〜p5   物理シリーズ（ph<n>-body.tex のある巻は本文入り。ほかは表紙・もくじだけ）
+#   q1〜q9   問題集（mondai/v<n> から本文を書き出して組む。練習プリントのアプリ mqprint.html も作る）
 #   all      1〜9 と guide
 #
 # 1冊ごとの流れ（委員会で使ってきた手順と同じ）:
@@ -131,6 +132,19 @@ for t in "${expanded[@]}"; do
       ( cd tex && timeout "$TIMEOUT" lualatex -interaction=nonstopmode "phwrap$n.tex" > /dev/null 2>&1 || true )
       [ -f "tex/phwrap$n.pdf" ] && cp "tex/phwrap$n.pdf" "$OUT/"
       stats "ph$n" "物理第${n}巻" "${z:-?}" $(( $(date +%s) - t0 ))
+      ;;
+    q[1-9])
+      n=${t#q}
+      echo "== 問題集 第${n}巻 =="
+      node mondai/build/check.js "$n" > "$OUT/check_mondai_q$n.txt" 2>&1 || { echo "  わざの検査でまちがいがあった（check_mondai_q$n.txt）"; FAIL=1; }
+      node mondai/build/mk_book.js "$n" > /dev/null
+      lua2 "mq$n"
+      # 見開きのページを確かめる（NG の数を「ずれ」の欄に出す）
+      ( cd tex && python3 "$ROOT/mondai/build/mq_pages.py" "mq$n" ) > "$OUT/check_pages_q$n.txt" 2>&1
+      z=$(grep -c '  NG' "$OUT/check_pages_q$n.txt")
+      python3 -c 'import fontTools, brotli' 2>/dev/null || pip install -q fonttools brotli > /dev/null 2>&1 || true
+      node mondai/build/mk_app.js > /dev/null && cp mondai/dist/print.html "$OUT/mqprint.html"
+      stats "mq$n" "問題集第${n}巻" "${z:-?}" $(( $(date +%s) - t0 ))
       ;;
     *) echo "知らない対象: $t"; FAIL=1 ;;
   esac

@@ -12,6 +12,8 @@ GitHub はリリースのファイル名の日本語を「.」に置きかえて
        guide-kids.pdf  → ガイドブック_子ども用_はじめに読む本_Ver2.pdf
        guide-adult.pdf → ガイドブック_大人用_保護者・先生のための本_Ver2.pdf
        ph1.pdf         → 物理第1巻_力学_Ver2.pdf
+       mq1.pdf         → 問題集第1巻_かぞえる・はかる_Ver1.pdf
+       mqprint.html    → 練習プリント作成アプリ_Ver1.html（問題集のリリースだけ）
 出力のフォルダの assets.txt に、gh release create に渡す引数（1行に1つ、「ファイル#表示名」）を書く。
 """
 import os
@@ -56,6 +58,8 @@ def nouhin_name(b, ver, mt, pt):
         return f'ガイドブック_大人用_保護者・先生のための本_{ver}.pdf'
     if m := re.fullmatch(r'ph([1-5])', b):
         n = int(m.group(1)); return f'物理第{n}巻_{pt.get(n, "")}_{ver}.pdf'
+    if m := re.fullmatch(r'mq([1-9])', b):
+        n = int(m.group(1)); return f'問題集第{n}巻_{mt.get(n, "")}_{ver}.pdf'
     if m := re.fullmatch(r'phwrap([1-5])', b):
         return f'物理第{m.group(1)}巻_カバー展開図_入稿用_{ver}.pdf'
     return None
@@ -80,6 +84,13 @@ def main():
             z.write(os.path.join(src, f), f'{tag}/{name}')
             assets.append(f'{os.path.join(dst, ascii_name)}#{name}')
             print(f, '→', ascii_name, '（表示名', name + '）')
+        # 問題集のリリースには、練習プリントのアプリ（1つの HTML）もつける
+        if tag.startswith('q') and os.path.exists(os.path.join(src, 'mqprint.html')):
+            name = f'練習プリント作成アプリ_{ver}.html'
+            ascii_name = f'mqprint_{ver}.html'
+            shutil.copy(os.path.join(src, 'mqprint.html'), os.path.join(dst, ascii_name))
+            z.write(os.path.join(src, 'mqprint.html'), f'{tag}/{name}')
+            assets.append(f'{os.path.join(dst, ascii_name)}#{name}')
     assets.append(f'{zpath}#{tag}_納品の名前のPDF一式.zip')
     with open(os.path.join(dst, 'assets.txt'), 'w', encoding='utf-8') as fh:
         fh.write('\n'.join(assets) + '\n')
