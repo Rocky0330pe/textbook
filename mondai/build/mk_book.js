@@ -64,7 +64,7 @@ for (const part of parts) {
       if (!L.length) return;
       if (s === 's2' && !d.flow) out.push('\\mqrightpage');
       const fl = d.flow ? 'flow' : '';
-      out.push(s === 'trap' ? `\\mqtrapstep${fl}{${tx(M.STEP_TITLE[s])}}` : `\\mqstep${fl}{${s}}{${tx(M.STEP_TITLE[s])}}`);
+      out.push(s === 'trap' ? `\\mqtrapstep${fl}{${tx(M.stepTitle(vol, s))}}` : `\\mqstep${fl}{${s}}{${tx(M.stepTitle(vol, s))}}`);
       out.push(probs(d, L, n));
       nums[s] = L.length;
       n += L.length;
@@ -74,7 +74,7 @@ for (const part of parts) {
     // こたえ
     const a = [`\\mqanshead{${id}}{${tx(d.title)}}`];
     let k = 1;
-    const STEPNAME = { s1: 'ステップ1', s2: 'ステップ2', s3: 'ステップ3', trap: 'わな' };
+    const STEPNAME = { s1: 'ステップ1', s2: 'ステップ2', s3: 'ステップ3', trap: 'わな' };   // 巻によらない
     M.STEPS.forEach(s => {
       if (sh[s].length) a.push(`\\mqansstep{${STEPNAME[s]}}`);
       sh[s].forEach(p => {
@@ -109,7 +109,9 @@ for (const part of parts) {
       if (got.length) { pool.push(got[0]); t++; }
     }
     const mixed = r.shuffle(pool);
-    const intro = '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
+    const intro = vol > 1
+      ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。'
+      : '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
     // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
     const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step); const nb = (M.withBox(p.q).match(/□/g) || []).length; return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
     const half = Math.ceil(lines2.length / 2);
@@ -120,7 +122,9 @@ for (const part of parts) {
   }
   // 作ってみよう
   if (part.tsukuro && part.tsukuro.length && byPart(pid).length) {
-    const intro = 'こたえは 1つでは ないよ。 じぶんで 《作|つく》った もんだいを、 ともだちや おうちの 《人|ひと》と とき あって みよう。';
+    const intro = vol > 1
+      ? '《答|こた》えは1つではありません。《自分|じ|ぶん》で《作|つく》った《問題|もん|だい》を、ともだちと《解|と》き《合|あ》ってみましょう。'
+      : 'こたえは 1つでは ないよ。 じぶんで 《作|つく》った もんだいを、 ともだちや おうちの 《人|ひと》と とき あって みよう。';
     const qs = part.tsukuro.map((t, i) => `\\mqtsukuro{${i + 1}}{${tx(t.q, { box: '\\mqsq{}' })}}`);
     body.push(`\\def\\mqsplabelkey{tsukuro}\\mqspreadhead{${pid}}{${pname}}{${tx('《作|つく》って みよう')}}{${tx(intro)}}\n${qs.join('\n')}`);
     const a = [`\\mqanssub{${tx('《作|つく》って みよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
@@ -130,6 +134,6 @@ for (const part of parts) {
 }
 fs.writeFileSync(path.join(TEX, `mq${vol}-body.tex`), body.join('\n\n') + '\n');
 fs.writeFileSync(path.join(TEX, `mq${vol}-ans.tex`), ans.join('\n') + '\n');
-list.push('\\mqlistextra{こたえ}{mq:answers}');
+list.push(`\\mqlistextra{${vol > 1 ? '\\R{答}{こた}え' : 'こたえ'}}{mq:answers}`);
 fs.writeFileSync(path.join(TEX, `mq${vol}-list.tex`), list.join('\n') + '\n');
 console.log(`mq${vol}: わざ ${ids.length}、部 ${parts.length}。tex/mq${vol}-body.tex・-ans.tex・-list.tex を書いた`);

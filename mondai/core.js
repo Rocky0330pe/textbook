@@ -59,6 +59,14 @@
     s3: 'ステップ3　《見|み》かけが ちがう',
     trap: 'わなに ちゅうい',
   };
+  // 第2巻からは、教科書と同じく漢字にルビ（分かち書きにしない）
+  M.STEP_TITLE_K = {
+    s1: 'ステップ1　そのまま《使|つか》う',
+    s2: 'ステップ2　《少|すこ》し《形|かたち》を《変|か》える',
+    s3: 'ステップ3　《見|み》かけがちがう',
+    trap: 'わなに《注意|ちゅう|い》',
+  };
+  M.stepTitle = (vol, s) => (vol > 1 ? M.STEP_TITLE_K : M.STEP_TITLE)[s];
   M.DEFAULT_COUNTS = { s1: 10, s2: 8, s3: 6, trap: 2 };
   M.add = function (def) {
     if (!/^[1-9]-[0-9]{2}$/.test(def.id)) throw new Error('わざの番号の形がちがう: ' + def.id);
@@ -190,6 +198,11 @@
   M.toTeX = function (s, opt) {
     opt = opt || {};
     if (s == null) return '';
+    s = String(s);
+    // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に
+    if (s.includes('$')) {
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? seg.replace(/\\frac(?![a-z])/g, '\\dfrac').replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('');
+    }
     s = MK(s);
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
@@ -216,6 +229,10 @@
   M.toHTML = function (s, opt) {
     opt = opt || {};
     if (s == null) return '';
+    s = String(s);
+    if (s.includes('$')) {
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? M.mathHTML(seg.slice(1, -1), opt) : M.toHTML(seg, opt)).join('');
+    }
     s = MK(s);
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
@@ -235,6 +252,135 @@
     out += plain(s.slice(last));
     return out.replace(/\u0001/g, '<b class="mk">').replace(/\u0002/g, '</b>');
   };
+  // ---------------------------------------------------------------- 数式（第2巻から。TeX の書き方の一部）
+  // 使える書き方：数・1字の文字（斜体）・+ - = < > ( ) [ ] | ,・^{…}・_{…}・\frac{}{}（\dfrac・\tfrac）・\sqrt{}・\sqrt[n]{}
+  //   \times \div \cdot \pm \mp \pi \le \ge \ne \approx \to \infty \degree・\log \ln \sin \cos \tan \exp・\left( \right)・\text{}・\mathrm{}・\,・\quad・□（欄）
+  const MATHSYM = { times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', pi: 'π', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠',
+    approx: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
+    Delta: 'Δ', omega: 'ω', Omega: 'Ω', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
+  const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim'];
+  M.mathHTML = function (src, opt) {
+    opt = opt || {};
+    const s = src;
+    let i = 0;
+    const ws = () => { while (i < s.length && s[i] === ' ') i++; };
+    const readCmd = () => { // s[i] === '\\'
+      i++;
+      let j = i;
+      if (/[a-zA-Z]/.test(s[i] || '')) { while (i < s.length && /[a-zA-Z]/.test(s[i])) i++; return s.slice(j, i); }
+      i++; return s[j] || '';
+    };
+    const raw = () => { ws(); if (s[i] !== '{') return s[i++] || ''; let d = 0, j = ++i; for (; i < s.length; i++) { if (s[i] === '{') d++; else if (s[i] === '}') { if (!d) break; d--; } } const t = s.slice(j, i); i++; return t; };
+    const op = c => `<span class="mo">${c}</span>`;
+    function atom() {
+      ws();
+      const c = s[i];
+      if (c === undefined) return '';
+      if (c === '{') { i++; const h = seq('}'); i++; return h; }
+      if (c === '\\') {
+        const name = readCmd();
+        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') { const a = atom(), b = atom(); return `<span class="frac mf"><span>${a}</span><span>${b}</span></span>`; }
+        if (name === 'sqrt') {
+          ws(); let n = '';
+          if (s[i] === '[') { const j = s.indexOf(']', i); n = M.mathHTML(s.slice(i + 1, j), opt); i = j + 1; }
+          const x = atom();
+          return `<span class="msqrt">${n ? `<sup class="mroot">${n}</sup>` : ''}<span class="rad">√</span><span class="rc">${x}</span></span>`;
+        }
+        if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : d === '-' ? '−' : d; }
+        if (name === 'text' || name === 'mathrm' || name === 'textrm' || name === 'mbox' || name === 'mathsf') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
+        if (MATHFN.includes(name)) return `<span class="mfn">${name}</span>`;
+        if (name === ',' || name === ';' || name === ':') return '<span class="mthin"></span>';
+        if (name === 'quad' || name === 'qquad') return '<span class="mquad"></span>';
+        if (name === ' ') return ' ';
+        if (name === '\\') return '<br>';
+        if (MATHSYM[name] != null) { const t = MATHSYM[name]; return /^[×÷·±∓≤≥≠≒→]$/.test(t) ? op(t) : t; }
+        return htmlEsc(name);
+      }
+      if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; return s.slice(j, i); }
+      i++;
+      if (/[a-zA-Z]/.test(c)) return `<i class="mi">${c}</i>`;
+      if (c === '-') return op('−');
+      if (c === '+' || c === '=' || c === '<' || c === '>') return op(htmlEsc(c));
+      if (c === '□') return opt.box || '<span class="box"></span>';
+      if (c === "'") return '′';
+      if (c === '*') return op('×');
+      return htmlEsc(c);
+    }
+    function seq(end) {
+      let out = '';
+      while (i < s.length && s[i] !== end) {
+        if (s[i] === '^' || s[i] === '_') { const k = s[i++]; const x = atom(); out += k === '^' ? `<sup>${x}</sup>` : `<sub>${x}</sub>`; continue; }
+        out += atom();
+      }
+      return out;
+    }
+    return `<span class="math">${seq(undefined)}</span>`;
+  };
+  // 数式の値（小数）。vars は文字の値 { x: 1.3 }。読めないときは null
+  M.evalMath = function (src, vars) {
+    vars = vars || {};
+    const s = String(src).replace(/\\left|\\right|\\,|\;|\\!|\\quad/g, ' ').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
+      .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/');
+    let i = 0;
+    const ws = () => { while (i < s.length && s[i] === ' ') i++; };
+    const peek = () => { ws(); return s[i]; };
+    const cmdAt = () => { if (s[i] !== '\\') return null; const m = /^\\([a-zA-Z]+)/.exec(s.slice(i)); return m ? m[1] : null; };
+    const startsAtom = () => { const c = peek(); if (c === undefined) return false; if (/[0-9.a-zA-Z({]/.test(c)) return true; const n = cmdAt(); return !!n && ['frac', 'sqrt', 'pi', 'log', 'ln', 'sin', 'cos', 'tan', 'exp'].includes(n); };
+    function group() { // {…} か 1字
+      ws();
+      if (s[i] === '{') { i++; const v = expr(); ws(); if (s[i] !== '}') throw 0; i++; return v; }
+      return primary();
+    }
+    function primary() {
+      ws();
+      const c = s[i];
+      if (c === undefined) throw 0;
+      if (c === '(' || c === '[') { i++; const v = expr(); ws(); if (s[i] !== ')' && s[i] !== ']') throw 0; i++; return v; }
+      if (c === '{') return group();
+      if (c === '|') { i++; const v = expr(); ws(); if (s[i] !== '|') throw 0; i++; return Math.abs(v); }
+      if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; const v = parseFloat(s.slice(j, i)); if (isNaN(v)) throw 0; return v; }
+      if (/[a-zA-Z]/.test(c)) { i++; if (!(c in vars)) throw 0; return vars[c]; }
+      if (c === '\\') {
+        const n = cmdAt(); if (!n) throw 0; i += n.length + 1;
+        if (n === 'frac') { const a = group(), b = group(); return a / b; }
+        if (n === 'sqrt') { ws(); let k = 2; if (s[i] === '[') { const j = s.indexOf(']', i); k = M.evalMath(s.slice(i + 1, j), vars); i = j + 1; } const v = group(); return k === 2 ? Math.sqrt(v) : Math.pow(v, 1 / k); }
+        if (n === 'pi') return Math.PI;
+        if (n === 'log') { ws(); let b = 10; if (s[i] === '_') { i++; b = group(); } const v = power(); return Math.log(v) / Math.log(b); }
+        if (n === 'ln') return Math.log(power());
+        if (n === 'exp') return Math.exp(power());
+        if (n === 'sin') return Math.sin(power()); if (n === 'cos') return Math.cos(power()); if (n === 'tan') return Math.tan(power());
+        throw 0;
+      }
+      throw 0;
+    }
+    function power() {
+      let v = primary();
+      ws();
+      if (s[i] === '^') { i++; const e = group(); v = Math.pow(v, e); }
+      return v;
+    }
+    function unary() { ws(); if (s[i] === '-') { i++; return -unary(); } if (s[i] === '+') { i++; return unary(); } return power(); }
+    function term() {
+      let v = unary();
+      for (;;) {
+        ws();
+        if (s[i] === '*') { i++; v *= unary(); continue; }
+        if (s[i] === '/') { i++; v /= unary(); continue; }
+        if (startsAtom()) { v *= power(); continue; }
+        return v;
+      }
+    }
+    function expr() { let v = term(); for (;;) { ws(); if (s[i] === '+') { i++; v += term(); } else if (s[i] === '-') { i++; v -= term(); } else return v; } }
+    try { const v = expr(); ws(); if (i !== s.length) return null; return isFinite(v) ? v : null; } catch (e) { return null; }
+  };
+  // 数式の中の文字（1字。\frac などの命令の中の字は除く）
+  M.mathVars = function (src) {
+    const t = String(src).replace(/\\[a-zA-Z]+/g, ' ');
+    return [...new Set((t.match(/[a-zA-Z]/g) || []))];
+  };
+  const close = (x, y) => Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
+  // 文の中の数式を1つだけ取り出す（文が「$…$」だけ、または「$…$ ＝ □」のとき）
+  function onlyMath(t) { const m = /^\s*\$([^$]*)\$\s*(?:＝\s*□)?\s*$/.exec(String(t)); return m ? m[1] : null; }
   // ルビをとった、ただの文字（検算・同じ問題の判定用）
   M.plain = function (s) {
     return (s || '').replace(/\*\*/g, '').replace(TOKEN, (_, t) => t.startsWith('f:') ? t.slice(2) : t.split('|')[0]);
@@ -504,6 +650,25 @@
     return [...new Set(out)].sort();
   };
   M.sameVal = (x, y) => x && y && x[0] === y[0] && x[1] === y[1];
+  // 数式の問題の検算：答え（a）が式なら、問題の式・楽な形の式（＝ で区切ったどれも）と、文字に3とおりの値を入れて同じ値になるか
+  function checkMath(p) {
+    const errs = [];
+    const aM = onlyMath(p.a);
+    if (aM == null || /[=<>]|\\(?:le|ge|ne|pm)/.test(aM)) return errs;   // 答えが式でない（x ＝ 3 など）ときは verify にまかせる
+    const qM = (() => { const m = onlyMath(p.q); if (m == null || m.includes('□')) return null; const k = m.lastIndexOf('='); return k >= 0 ? null : m; })();
+    const eParts = typeof p.easy === 'string' && p.easyCheck !== false ? (p.easy.match(/\$[^$]*\$/g) || []).map(t => t.slice(1, -1)).flatMap(t => t.split('=')).map(t => t.trim()).filter(Boolean) : [];
+    const valM = p.val != null ? (onlyMath(p.val) != null ? onlyMath(p.val) : String(p.val)) : null;
+    const names = [...new Set([aM, qM || '', ...eParts].flatMap(M.mathVars))];
+    const sets = [0.37, 1.71, -2.29].map((b, k) => Object.fromEntries(names.map((n, j) => [n, b + 0.53 * j + 0.11 * k])));
+    for (const vs of sets) {
+      const va = M.evalMath(aM, vs);
+      if (va == null) return errs;
+      const target = valM != null ? M.evalMath(valM, vs) : va;
+      if (qM != null) { const vq = M.evalMath(qM, vs); if (vq != null && !close(vq, va)) { errs.push(`式の値と答え ${p.a} がちがう`); break; } }
+      for (const e of eParts) { const ve = M.evalMath(e, vs); if (ve != null && target != null && !close(ve, target)) { errs.push(`楽な形「${e}」の値が答えとちがう`); return errs; } }
+    }
+    return errs;
+  }
   // 1つの問題を確かめる。まちがいがあれば、理由の文字列の配列を返す
   M.checkProblem = function (p) {
     const errs = [];
@@ -529,6 +694,7 @@
         if (M.plain(want) !== got) errs.push(`ひっ算の答え ${got} と a ${p.a} がちがう`);
       } catch (e) { errs.push('ひっ算: ' + e.message); }
     }
+    if ([p.q, p.a, p.easy].some(t => typeof t === 'string' && t.includes('$'))) errs.push(...checkMath(p));
     if (typeof p.verify === 'function') { const v = p.verify(); if (v !== true) errs.push('verify: ' + v); }
     return errs;
   };

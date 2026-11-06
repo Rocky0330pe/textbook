@@ -34,7 +34,7 @@ for (const id of ids) {
     const bk = new Set();
     for (const f of ['title', 'mark', 'why', 'caution']) badKanji(d[f]).forEach(c => bk.add(c));
     for (const f of ['futsu', 'raku']) (d[f] || []).forEach(l => badKanji(l).forEach(c => bk.add(c)));
-    if (bk.size) errs.push(`教科書 第1巻にない漢字：${[...bk].join('')}`);
+    if (bk.size) errs.push(`教科書 第${vol}巻までにない漢字：${[...bk].join('')}`);
   }
   for (const f of ['title', 'mark', 'futsu', 'raku', 'why', 'caution', 'steps']) if (!d[f]) errs.push(`${f} がない`);
   const sheet = M.makeSheet(id);
