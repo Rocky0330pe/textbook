@@ -121,7 +121,8 @@
       const len = M.plain(q).replace(/\s/g, '').length;
       let body;
       if (!ans) {
-        body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}"></span>` });
+        const bh = M.boxhOf(w, p.step);
+        body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}${bh ? `;height:${bh}` : ''}"></span>` });
       } else {
         // 欄に答えを書きこむ。欄が2つ以上なら、答えの中の数を順に入れる（合わなければ欄の外に答えを書く）
         const nBox = (q.match(/□/g) || []).length;

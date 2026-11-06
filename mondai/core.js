@@ -79,6 +79,8 @@
   // 列の数・答えの欄のはば（わざ全体か、ステップごと {s1:2, s3:1}）
   M.colsOf = (def, step) => (def.cols && typeof def.cols === 'object') ? (def.cols[step] || 2) : (def.cols || 2);
   M.boxwOf = (def, step) => (def.boxw && typeof def.boxw === 'object') ? (def.boxw[step] || null) : (def.boxw || null);
+  // 欄の高さ（分数の答えなど。第2巻から）。なければ ふつうの高さ
+  M.boxhOf = (def, step) => (def.boxh && typeof def.boxh === 'object') ? (def.boxh[step] || null) : (def.boxh || null);
   M.list = function (vol) {
     return M.order.filter(id => !vol || M.waza[id].vol === vol).sort();
   };

@@ -15,7 +15,7 @@ const parts = M.parts[vol] || [];
 const ids = M.list(vol);
 const byPart = no => ids.filter(id => M.waza[id].part === no);
 
-function box(def, step) { const w = M.boxwOf(def, step); return w ? `\\mqbox[${w}]` : '\\mqbox{}'; }
+function box(def, step) { const w = M.boxwOf(def, step), h = M.boxhOf(def, step); if (h) return `\\mqboxt{${w || '15mm'}}{${h}}`; return w ? `\\mqbox[${w}]` : '\\mqbox{}'; }
 const SQ = { box: '\\mqsq{}' };   // 説明の文の □ は、書きこむ欄ではない
 function probLine(def, p, num, extra) {
   const q = M.withBox(p.q);
