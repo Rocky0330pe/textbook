@@ -29,6 +29,10 @@ for w, p in starts:
         n = nxt[0]
         # 次の頭が偶数ページから始まるときは、あいだにメモのページが入ることがある（n == p+3 はメモ1枚）
         if n - p > 3 or (n - p == 3 and n % 2 == 0): bad.append(f'{w}: 右ページがあふれた（{p}〜{n - 1}）')
+# 部の見開き（見わけよう・作ってみよう）も2ページに入るか（第30回）
+for p in [int(p) for k, w, p in seq if k == 'MQSPREAD']:
+    nxt = [h for h in heads if h > p]
+    if nxt and (nxt[0] - p > 3 or (nxt[0] - p == 3 and nxt[0] % 2 == 0)): bad.append(f'部の見開き：{p} から始まる見開きがあふれた（{p}〜{nxt[0] - 1}）')
 err = len(re.findall(r'^!', log, re.M))
 ob = [float(x) for x in re.findall(r'Overfull \\hbox \(([0-9.]+)pt', log)]
 obv = [float(x) for x in re.findall(r'Overfull \\vbox \(([0-9.]+)pt', log)]

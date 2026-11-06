@@ -13,7 +13,7 @@
     return {
       vol: +$('#vol').value,
       ids: $('#ids').value,
-      count: Math.max(1, Math.min(120, +$('#count').value || 20)),
+      count: Math.max(10, Math.min(100, +$('#count').value || 20)),   // 問題の数は 10〜100（依頼者 11月6日）
       steps: ['s1', 's2', 's3', 'trap'].filter(s => $('#st-' + s).checked),
       mix: $('#mix').checked,
       seed: (+$('#seed').value >>> 0) || 1,
@@ -41,7 +41,7 @@
     if (!h) return null;
     const p = new URLSearchParams(h);
     return {
-      vol: +p.get('v') || 1, ids: p.get('w') || '', count: +p.get('n') || 20,
+      vol: +p.get('v') || 1, ids: p.get('w') || '', count: Math.max(10, Math.min(100, +p.get('n') || 20)),
       steps: (p.get('s') || 's1,s2,s3').split(',').filter(Boolean), mix: p.get('m') === '1',
       seed: +p.get('seed') || 1, ruby: p.get('r') !== '0', name: p.get('t') || '',
     };
@@ -76,17 +76,18 @@
     return `<header class="head">
       <div class="ttl">${title}${kind ? `<span class="kind">${kind}</span>` : ''}</div>
       <div class="meta"><span>なまえ<span class="line"></span></span><span>${H('《月|がつ》', { noRuby: !st.ruby })}<span class="line short"></span>${H('《日|にち》', { noRuby: !st.ruby })}<span class="line short"></span></span></div>
-      <div class="sub">たねの ばんごう ${st.seed}　${pages > 1 ? `（${pageNo}／${pages}）` : ''}</div>
+      <div class="sub">${st.vol > 1 ? H('たねの《番号|ばん|ごう》', { noRuby: !st.ruby }) : 'たねの ばんごう'} ${st.seed}　${pages > 1 ? `（${pageNo}／${pages}）` : ''}</div>
     </header>`;
   }
   function titleOf(st, ids) {
-    if (st.name) return H(st.name, { noRuby: !st.ruby });
-    if (ids.length === 1) { const d = M.waza[ids[0]]; return `<span class="chip">わざ ${ids[0]}</span>${H(d.title, { noRuby: !st.ruby })}`; }
+    if (st.name) return `<span class="tt">${H(st.name, { noRuby: !st.ruby })}</span>`;
+    if (ids.length === 1) { const d = M.waza[ids[0]]; return `<span class="chip">わざ ${ids[0]}</span><span class="tt">${H(d.title, { noRuby: !st.ruby })}</span>`; }
     // 続く番号は「1-33〜1-40」とまとめる。番号の途中では改行しない（第29回 R2-23）
     const all = M.list(st.vol), runs = [];
     ids.slice().sort((a, b) => all.indexOf(a) - all.indexOf(b)).forEach(id => {
       const last = runs[runs.length - 1];
-      if (last && all.indexOf(id) === all.indexOf(last[1]) + 1) last[1] = id; else runs.push([id, id]);
+      const num = x => +x.split('-')[1];
+      if (last && all.indexOf(id) === all.indexOf(last[1]) + 1 && num(id) === num(last[1]) + 1) last[1] = id; else runs.push([id, id]);
     });
     let lst = runs.map(([a, b]) => `<span class="nw">${a === b ? a : a + '〜' + b}</span>`);
     if (lst.length > 5) lst = [lst[0], lst[1], '…', lst[lst.length - 1]];
@@ -108,7 +109,9 @@
     if (probs.length < st.count) msgs.push(`このわざ・ステップでは、ちがう問題が ${probs.length}問までしか作れませんでした（${st.count}問の かわりに ${probs.length}問）。ステップを ふやすと、問題が ふえます。`);
     $('#msg').textContent = msgs.join('　');
     const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
-    const per = oneCol ? 12 : 24;   // 1ページの問題の数（2列なら 12行×2）
+    // 式（$…$）の問題は、分数などで行が高くなるので、行の高さを中身に合わせ、1ページの数を減らす（第2巻から）
+    const mathy = probs.some(p => /\$/.test(String(p.q) + String(p.a)));
+    const per = mathy ? (oneCol ? 11 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
@@ -121,13 +124,15 @@
       const len = M.plain(q).replace(/\s/g, '').length;
       let body;
       if (!ans) {
-        body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}"></span>` });
+        const bh = M.boxhOf(w, p.step);
+        body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}${bh ? `;height:${bh}` : ''}"></span>` });
       } else {
         // 欄に答えを書きこむ。欄が2つ以上なら、答えの中の数を順に入れる（合わなければ欄の外に答えを書く）
         const nBox = (q.match(/□/g) || []).length;
-        const nums = String(M.plain(p.a)).match(/\d+(?:\.\d+)?(?:\/\d+)?/g) || [];
+        const nums = String(M.plain(p.a)).match(/(?<![0-9a-zA-Z.])-?\d+(?:\.\d+)?(?:\/\d+)?/g) || [];   // マイナスの数も（第30回）
         let k = 0;
-        const fill = nBox === 1 ? [p.a] : (nums.length === nBox ? nums : null);
+        // 式（$…$）の答えで欄が2つ以上のときは、欄に分けず、欄の外に答えを書く（変域・不等式などをまちがって分けないように）
+        const fill = nBox === 1 ? [p.a] : (!String(p.a).includes('$') && nums.length === nBox ? nums : null);
         const parts = H(q, { noRuby: !st.ruby, box: '\u0004' }).split('\u0004');
         body = parts.map((t, i) => i === 0 ? t : `<span class="box filled" style="min-width:${bw}">${fill ? H(String(fill[k++]), { noRuby: !st.ruby }) : ''}</span>` + t).join('');
         if (!fill) body += ` <b class="ansout">${H(p.a, { noRuby: !st.ruby })}</b>`;
@@ -137,7 +142,7 @@
         const u = M.usableWaza(p, ids);
         extra = ans ? `<span class="wz ansz">${u.length ? 'わざ ' + u.join('・') : 'なし'}</span>` : '<span class="wz">わざ<span class="box sm"></span></span>';
       }
-      const how = ans && p.easy ? `<span class="how">${H('とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
+      const how = ans && p.easy ? `<span class="how">${H(st.vol > 1 ? '《解|と》き《方|かた》' : 'とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
       return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}"><span class="q">${body}</span>${extra}${how}</li>`;
     };
     const ruleBox = () => {
@@ -154,13 +159,13 @@
     for (const ans of [false, true]) {
       for (let pg = 0; pg < pages; pg++) {
         const list = probs.slice(pg * per, (pg + 1) * per);
-        const kind = (st.mix ? H('《見|み》わけよう', { noRuby: !st.ruby }) : '') + (ans ? (st.mix ? '・' : '') + H('こたえと とき《方|かた》', { noRuby: !st.ruby }) : '');
+        const kind = (st.mix ? H('《見|み》わけよう', { noRuby: !st.ruby }) : '') + (ans ? (st.mix ? '・' : '') + H(st.vol > 1 ? '《答|こた》えと《解|と》き《方|かた》' : 'こたえと とき《方|かた》', { noRuby: !st.ruby }) : '');
         html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
-          ${!ans && st.mix ? `<p class="note">${H('まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
+          ${!ans && st.mix ? `<p class="note">${H(st.vol > 1 ? 'まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。' : 'まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
           ${ans && pg === 0 ? ruleBox() : ''}
-          <ol class="probs ${oneCol ? 'one' : 'two'}${ans ? ' withhow' : ''}" style="counter-reset:q ${pg * per}">`;
+          <ol class="probs ${oneCol ? 'one' : 'two'}${mathy ? ' auto' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${pg * per}">`;
         list.forEach(p => { html += cell(p, ans); });
-        html += `</ol><footer class="foot">${ans ? H('［ ］の 《中|なか》は らくな とき《方|かた》。　', { noRuby: !st.ruby }) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+        html += `</ol><footer class="foot">${ans ? H(st.vol > 1 ? '［ ］の《中|なか》は《楽|らく》な《解|と》き《方|かた》。　' : '［ ］の 《中|なか》は らくな とき《方|かた》。　', { noRuby: !st.ruby }) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　${st.vol > 1 ? 'たねの番号' : 'たねの ばんごう'} ${st.seed}</footer></section>`;
       }
     }
     out.innerHTML = html;
@@ -193,7 +198,7 @@
     let html = '';
     for (const ans of [false, true]) {
       pages.forEach((pg, k) => {
-        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, ans ? H('こたえと とき《方|かた》', { noRuby: !st.ruby }) : '', k + 1, pages.length)}<div class="hsflow">`;
+        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, ans ? H(st.vol > 1 ? '《答|こた》えと《解|と》き《方|かた》' : 'こたえと とき《方|かた》', { noRuby: !st.ruby }) : '', k + 1, pages.length)}<div class="hsflow">`;
         pg.forEach(it => {
           const p = it.p;
           if (p.hs) {
@@ -204,7 +209,7 @@
             html += `<div class="hsi txt" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span> ${body}${ans && p.easy ? `<div class="how">${H('とき《方|かた》', sq)} ［${H(p.easy, sq)}］</div>` : ''}</div>`;
           }
         });
-        html += `</div><footer class="foot">${ans ? H('《赤|あか》い 《字|じ》が こたえと とちゅうの けいさん。　', sq) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+        html += `</div><footer class="foot">${ans ? H('《赤|あか》い 《字|じ》が こたえと とちゅうの けいさん。　', sq) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　${st.vol > 1 ? 'たねの番号' : 'たねの ばんごう'} ${st.seed}</footer></section>`;
       });
     }
     return html;

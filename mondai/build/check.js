@@ -29,15 +29,19 @@ for (const id of ids) {
   const d = M.waza[id];
   const errs = [];
   if (vol <= 3) {
-    for (const f of ['title', 'mark', 'why', 'caution']) if (bareKanji(d[f])) errs.push(`${f} にルビのない漢字`);
+    for (const f of ['title', 'mark', 'why', 'caution', 'chap']) if (bareKanji(d[f])) errs.push(`${f} にルビのない漢字`);
     for (const f of ['futsu', 'raku']) (d[f] || []).forEach((l, i) => { if (bareKanji(l)) errs.push(`${f}[${i}] にルビのない漢字`); });
     const bk = new Set();
     for (const f of ['title', 'mark', 'why', 'caution']) badKanji(d[f]).forEach(c => bk.add(c));
     for (const f of ['futsu', 'raku']) (d[f] || []).forEach(l => badKanji(l).forEach(c => bk.add(c)));
-    if (bk.size) errs.push(`教科書 第1巻にない漢字：${[...bk].join('')}`);
+    if (bk.size) errs.push(`教科書 第${vol}巻までにない漢字：${[...bk].join('')}`);
   }
   for (const f of ['title', 'mark', 'futsu', 'raku', 'why', 'caution', 'steps']) if (!d[f]) errs.push(`${f} がない`);
+  // 制御文字（JS の文字列の '\t' などで \times がタブになる、など）が入っていないか（第30回）
+  for (const f of ['title', 'mark', 'why', 'caution']) if (/[\u0000-\u0008\u000b-\u001f]|\t/.test(d[f] || '')) errs.push(`${f} に制御文字（タブなど）`);
+  for (const f of ['futsu', 'raku']) (d[f] || []).forEach((l, i) => { if (/[\u0000-\u0008\u0009\u000b-\u001f]/.test(l)) errs.push(`${f}[${i}] に制御文字（タブなど）`); });
   const sheet = M.makeSheet(id);
+  M.STEPS.forEach(st => (sheet[st] || []).forEach(p => { for (const k of ['q', 'a', 'easy']) if (typeof p[k] === 'string' && /[\u0000-\u0008\u0009\u000b-\u001f]/.test(p[k])) errs.push(`${st} の ${k} に制御文字（タブなど）：${JSON.stringify(p[k]).slice(0, 40)}`); }));
   for (const s of M.STEPS) {
     const want = d.counts[s];
     if (d.steps[s] && sheet[s].length < want) errs.push(`${s}: ${want}問のはずが ${sheet[s].length}問しか作れない`);

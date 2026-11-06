@@ -39,6 +39,10 @@ try {
   console.log('フォントは入れなかった（fontTools がない）。ブラウザのフォントで組む');
 }
 html = html.replace('/*FONT*/', fontCss);
+// 書体の利用条件（SIL OFL 1.1）：著作権の表示と、利用条件の全文を入れる（依頼者の指示 11月6日。書体を配るときの条件）
+const ofl = fs.readFileSync(path.resolve(ROOT, '..', 'tex', 'fonts', 'OFL-KleeOne.txt'), 'utf8').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+html = html.replace('/*OFL*/', () => ofl);
+html = html.replace('<!doctype html>', '<!doctype html>\n<!-- 書体：Klee One（Copyright 2020 The Klee Project Authors, https://github.com/fontworks-fonts/Klee）の部分集合。SIL Open Font License 1.1。利用条件の全文は、画面の「書体について」にある。 -->');
 fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'dist', 'print.html'), html);
 console.log(`mondai/dist/print.html を書いた（${Math.round(html.length / 1024)} KB、わざの巻 ${vols.join('・')}）`);
