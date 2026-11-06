@@ -102,7 +102,8 @@
   };
 
   // ---------------------------------------------------------------- 問題を作る
-  function key(p) { return p.q; }
+  // 同じ問題かどうか：p.key があればそれ（例：8 ＋ 7 と 7 ＋ 8 を同じとみる）、なければ問題の文
+  function key(p) { return p.key || p.q; }
   // 1つのわざ・1つのステップの問題を n 問。同じ問題を2回出さない。
   M.makeStep = function (id, step, n, r, seen) {
     const def = M.waza[id];
@@ -441,10 +442,10 @@
   };
   // その問題に使えるわざ（作ったわざ ＋ p.also ＋ 部の中で fits(問題の文) が true のわざ）
   M.usableWaza = function (p, candidates) {
-    if (p.step === 'trap') return [];
-    const out = [p.id].concat(p.also || []);
+    // わなの問題は、作ったわざでは楽にならない。ほかのわざ（also・fits）で楽になるなら、それを書く
+    const out = (p.step === 'trap' ? [] : [p.id]).concat(p.also || []);
     const q = M.plain(p.q);
-    (candidates || []).forEach(id => { const d = M.waza[id]; if (d && d.fits && !out.includes(id)) { try { if (d.fits(q, p)) out.push(id); } catch (e) { } } });
+    (candidates || []).forEach(id => { const d = M.waza[id]; if (d && d.fits && !out.includes(id) && !(p.step === 'trap' && id === p.id)) { try { if (d.fits(q, p)) out.push(id); } catch (e) { } } });
     return [...new Set(out)].sort();
   };
   M.sameVal = (x, y) => x && y && x[0] === y[0] && x[1] === y[1];
