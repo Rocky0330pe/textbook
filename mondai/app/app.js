@@ -13,7 +13,7 @@
     return {
       vol: +$('#vol').value,
       ids: $('#ids').value,
-      count: Math.max(1, Math.min(120, +$('#count').value || 20)),
+      count: Math.max(10, Math.min(100, +$('#count').value || 20)),   // 問題の数は 10〜100（依頼者 11月6日）
       steps: ['s1', 's2', 's3', 'trap'].filter(s => $('#st-' + s).checked),
       mix: $('#mix').checked,
       seed: (+$('#seed').value >>> 0) || 1,
@@ -41,7 +41,7 @@
     if (!h) return null;
     const p = new URLSearchParams(h);
     return {
-      vol: +p.get('v') || 1, ids: p.get('w') || '', count: +p.get('n') || 20,
+      vol: +p.get('v') || 1, ids: p.get('w') || '', count: Math.max(10, Math.min(100, +p.get('n') || 20)),
       steps: (p.get('s') || 's1,s2,s3').split(',').filter(Boolean), mix: p.get('m') === '1',
       seed: +p.get('seed') || 1, ruby: p.get('r') !== '0', name: p.get('t') || '',
     };
