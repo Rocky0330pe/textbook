@@ -175,12 +175,14 @@
   }
   function htmlEsc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   // 本（LaTeX）
+  const MK = t => String(t).replace(/\*\*(.+?)\*\*/g, '\u0001$1\u0002');
   M.toTeX = function (s, opt) {
     opt = opt || {};
     if (s == null) return '';
+    s = MK(s);
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
-    const plain = t => texEsc(t).replace(/□/g, opt.box || '\\mqbox{}').replace(/\*\*(.+?)\*\*/g, '\\mqmk{$1}');
+    const plain = t => texEsc(t).replace(/□/g, opt.box || '\\mqbox{}');
     while ((m = TOKEN.exec(s))) {
       out += plain(s.slice(last, m.index));
       const t = m[1];
@@ -194,15 +196,16 @@
       last = m.index + m[0].length;
     }
     out += plain(s.slice(last));
-    return out;
+    return out.replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
   };
   // アプリ（HTML）
   M.toHTML = function (s, opt) {
     opt = opt || {};
     if (s == null) return '';
+    s = MK(s);
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
-    const plain = t => htmlEsc(t).replace(/□/g, opt.box || '<span class="box"></span>').replace(/\*\*(.+?)\*\*/g, '<b class="mk">$1</b>');
+    const plain = t => htmlEsc(t).replace(/□/g, opt.box || '<span class="box"></span>');
     while ((m = TOKEN.exec(s))) {
       out += plain(s.slice(last, m.index));
       const t = m[1];
@@ -216,7 +219,7 @@
       last = m.index + m[0].length;
     }
     out += plain(s.slice(last));
-    return out;
+    return out.replace(/\u0001/g, '<b class="mk">').replace(/\u0002/g, '</b>');
   };
   // ルビをとった、ただの文字（検算・同じ問題の判定用）
   M.plain = function (s) {
@@ -269,6 +272,14 @@
       return v;
     }
     try { const v = expr(); if (i !== s.length) return null; return v; } catch (e) { return null; }
+  };
+  // その問題に使えるわざ（作ったわざ ＋ p.also ＋ 部の中で fits(問題の文) が true のわざ）
+  M.usableWaza = function (p, candidates) {
+    if (p.step === 'trap') return [];
+    const out = [p.id].concat(p.also || []);
+    const q = M.plain(p.q);
+    (candidates || []).forEach(id => { const d = M.waza[id]; if (d && d.fits && !out.includes(id)) { try { if (d.fits(q, p)) out.push(id); } catch (e) { } } });
+    return [...new Set(out)].sort();
   };
   M.sameVal = (x, y) => x && y && x[0] === y[0] && x[1] === y[1];
   // 1つの問題を確かめる。まちがいがあれば、理由の文字列の配列を返す

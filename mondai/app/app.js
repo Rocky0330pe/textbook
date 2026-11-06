@@ -114,7 +114,8 @@
     // こたえ
     html += `<section class="sheet answers">${sheetHead(st, title, 'こたえ', 1, 1)}<ol class="ans">`;
     probs.forEach(p => {
-      const tag = st.mix || ids.length > 1 ? `<span class="wtag">${p.step === 'trap' ? 'わざ なし' : 'わざ ' + p.id}</span>` : '';
+      const u = M.usableWaza(p, ids);
+      const tag = st.mix || ids.length > 1 ? `<span class="wtag">${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}</span>` : '';
       html += `<li><b>${H(p.a, { noRuby: !st.ruby })}</b>${p.easy ? `<span class="easy">［${H(p.easy, { noRuby: !st.ruby })}］</span>` : ''}${tag}<span class="stp">${STEP_LABEL[p.step]}</span></li>`;
     });
     html += `</ol><footer class="foot">［ ］の中は らくな かたち。　たねの ばんごう ${st.seed}</footer></section>`;

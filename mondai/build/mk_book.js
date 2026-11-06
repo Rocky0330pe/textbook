@@ -95,7 +95,7 @@ for (const part of parts) {
     const lines2 = mixed.map((p, i) => `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: box(M.waza[p.id]) })}\\mqwazabox}`);
     body.push(`\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.join('\n')}\n\\end{mqprobs}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
-    mixed.forEach((p, i) => a.push(`\\mqa{${i + 1}}{${tx(p.a)}}{${p.step === 'trap' ? 'わざ なし' : 'わざ ' + p.id}${p.easy && p.step !== 'trap' ? '：' + tx(p.easy) : ''}}`));
+    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a)}}{${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.easy && u.length ? '：' + tx(p.easy) : ''}}`); });
     ans.push(a.join('\n'));
   }
   // 作ってみよう
