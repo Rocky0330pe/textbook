@@ -196,6 +196,19 @@
   }
   function htmlEsc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   // 本（LaTeX）
+  // 分数は大きく（\dfrac）。ただし指数・下つき（^{…}・_{…}）の中は \frac のまま
+  function dfracOutsideScripts(t) {
+    let out = '', depth = 0; const stack = [];
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if ((c === '^' || c === '_') && t[i + 1] === '{') { out += c + '{'; i++; stack.push(true); depth++; continue; }
+      if (c === '{') { stack.push(false); out += c; continue; }
+      if (c === '}') { if (stack.pop()) depth--; out += c; continue; }
+      if (c === '\\' && t.startsWith('\\frac', i) && !/[a-z]/.test(t[i + 5] || '')) { out += depth ? '\\frac' : '\\dfrac'; i += 4; continue; }
+      out += c;
+    }
+    return out;
+  }
   const MK = t => String(t).replace(/\*\*(.+?)\*\*/g, '\u0001$1\u0002');
   M.toTeX = function (s, opt) {
     opt = opt || {};
@@ -206,7 +219,7 @@
     // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に（太字の ** は、式をまたいでもよい）
     if (s.includes('$')) {
       s = MK(s);
-      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? seg.replace(/\\frac(?![a-z])/g, '\\dfrac').replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? dfracOutsideScripts(seg).replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
     }
     s = MK(s);
     let out = '', last = 0, m;
@@ -293,8 +306,14 @@
           const x = atom();
           return `<span class="msqrt">${n ? `<sup class="mroot">${n}</sup>` : ''}<span class="rad">√</span><span class="rc">${x}</span></span>`;
         }
-        if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : d === '-' ? '−' : d; }
-        if (name === 'text' || name === 'mathrm' || name === 'textrm' || name === 'mbox' || name === 'mathsf') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
+        if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim">${htmlEsc(d)}</span>`; }
+        if (name === 'text' || name === 'textrm' || name === 'mbox') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
+        if (name === 'mathrm' || name === 'mathsf' || name === 'rm') return `<span class="mtext">${M.mathHTML(raw(), Object.assign({}, opt, { upright: true })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
+        if (name === 'underline') return `<span class="munder">${atom()}</span>`;
+        if (name === 'phantom') return `<span class="mphantom">${atom()}</span>`;
+        if (name === 'bar' || name === 'overline') return `<span class="mbar">${atom()}</span>`;
+        if (name === 'hat') return `<span class="mhat">${atom()}</span>`;
+        if (name === 'mu' && opt.upright) return 'μ';
         if (MATHFN.includes(name)) return `<span class="mfn">${name}</span>`;
         if (name === ',' || name === ';' || name === ':') return '<span class="mthin"></span>';
         if (name === 'quad' || name === 'qquad') return '<span class="mquad"></span>';
@@ -305,8 +324,8 @@
       }
       if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; return s.slice(j, i); }
       i++;
-      if (/[a-zA-Z]/.test(c)) return `<i class="mi">${c}</i>`;
-      if (c === '-') return op('−');
+      if (/[a-zA-Z]/.test(c)) return opt.upright ? c : `<i class="mi">${c}</i>`;
+      if (c === '-') return op('<span class="mminus">−</span>');
       if (c === '+' || c === '=' || c === '<' || c === '>') return op(htmlEsc(c));
       if (c === '□') return opt.box || '<span class="box"></span>';
       if (c === "'") return '′';
@@ -395,7 +414,14 @@
     return (s || '').replace(/\*\*/g, '').replace(TOKEN, (_, t) => t.startsWith('f:') ? t.slice(2) : t.split('|')[0]);
   };
   // 問題の文に □ がなければ、答えの欄を最後につける
-  M.withBox = function (q) { return q.includes('□') ? q : q + ' ＝ □'; };
+  M.withBox = function (q) {
+    if (q.includes('□')) return q;
+    // 式が「＝」「不等号」をふくむとき（方程式など）は、「＝ □」ではなく、うしろに欄だけをつける
+    if (/\$[^$]*(?:=|<|>|\\le|\\ge)[^$]*\$\s*$/.test(q)) return q + '　□';
+    return q + ' ＝ □';
+  };
+  // 見わけようの問題の数：わざが多い部は、右ページの「この部のわざ」の表が入るように減らす（第30回）
+  M.miwakeCount = (part, nWaza) => Math.min(part.miwake.count, Math.max(14, 22 - Math.max(0, Math.ceil((nWaza - 10) / 2))));
 
   // ---------------------------------------------------------------- ひっ算（第29回：依頼者の指示 11月6日）
   // 問題の物に hs: { op: '+'|'-'|'*'|'/', a: '386', b: '47' } をつけると、ひっ算の形（方眼）で組む。

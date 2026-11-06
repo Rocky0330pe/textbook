@@ -97,7 +97,7 @@ for (const no of allParts) {
   if (pinfo && pinfo.miwake) {
     const r = M.rng(M.hash(`miwake:${vol}:${no}`));
     const seen = new Set(), pool = [];
-    const nTrap = pinfo.miwake.traps || 2, nMain = pinfo.miwake.count - nTrap;
+    const nTrap = pinfo.miwake.traps || 2, nMain = M.miwakeCount(pinfo, wz.length) - nTrap;
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
       const got = M.makeStep(order[k % order.length], r.pick(['s1', 's2']), 1, r, seen);
