@@ -215,11 +215,11 @@
     if (s == null) return '';
     s = String(s);
     // コード（`…`、第2巻の表計算・プログラム）は等幅で、そのまま
-    if (s.includes('`')) return MK(s).split(/(`[^`]*`)/).map((seg, k) => k % 2 ? '\\mqcode{' + texEsc(seg.slice(1, -1)) + '}' : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
+    if (s.includes('`')) return MK(s).split(/(`[^`]*`)/).map((seg, k) => k % 2 ? '\\mqcode{' + texEsc(seg.slice(1, -1)) + '}' : M.toTeX(seg, opt)).join('').replace(/(\\mqbox(?:\[[^\]]*\])?\{\}\}|\\mqboxt\{[^}]*\}\{[^}]*\}\})\$ (?=\S)/g, '$1$~').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
     // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に（太字の ** は、式をまたいでもよい）
     if (s.includes('$')) {
       s = MK(s);
-      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? dfracOutsideScripts(seg).replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? dfracOutsideScripts(seg).replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/(\\mqbox(?:\[[^\]]*\])?\{\}\}|\\mqboxt\{[^}]*\}\{[^}]*\}\})\$ (?=\S)/g, '$1$~').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
     }
     s = MK(s);
     let out = '', last = 0, m;

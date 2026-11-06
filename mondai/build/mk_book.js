@@ -50,10 +50,10 @@ for (const part of parts) {
   for (const id of byPart(pid)) {
     const d = M.waza[id];
     const sh = M.makeSheet(id);
-    list.push(`\\mqlistrow{${id}}{${tx(d.title, SQ)}}{${tx(d.mark, SQ)}}{${d.chap}}{${d.stars}}`);
+    list.push(`\\mqlistrow{${id}}{${tx(d.title, SQ)}}{${tx(d.mark, SQ)}}{${tx(d.chap)}}{${d.stars}}`);
     let n = 1;
     const out = [];
-    out.push(`\\mqwaza{${id}}{${tx(d.title, SQ)}}{${d.chap}}{${d.stars}}{${pid}}{${pname}}`);
+    out.push(`\\mqwaza{${id}}{${tx(d.title, SQ)}}{${tx(d.chap)}}{${d.stars}}{${pid}}{${pname}}`);
     if (d.flow) out.push(`\\typeout{MQFLOW ${id}}`);
     out.push(`\\mqmark{${tx(d.mark, SQ)}}`);
     out.push(`\\mqcompare{${lines(d.futsu)}}{${lines(d.raku)}}`);

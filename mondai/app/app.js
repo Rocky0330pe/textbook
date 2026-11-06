@@ -111,7 +111,7 @@
     const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
     // 式（$…$）の問題は、分数などで行が高くなるので、行の高さを中身に合わせ、1ページの数を減らす（第2巻から）
     const mathy = probs.some(p => /\$/.test(String(p.q) + String(p.a)));
-    const per = mathy ? (oneCol ? 10 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
+    const per = mathy ? (oneCol ? 9 : 12) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
@@ -161,7 +161,7 @@
         const list = probs.slice(pg * per, (pg + 1) * per);
         const kind = (st.mix ? H('《見|み》わけよう', { noRuby: !st.ruby }) : '') + (ans ? (st.mix ? '・' : '') + H(st.vol > 1 ? '《答|こた》えと《解|と》き《方|かた》' : 'こたえと とき《方|かた》', { noRuby: !st.ruby }) : '');
         html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
-          ${!ans && st.mix ? `<p class="note">${H('まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
+          ${!ans && st.mix ? `<p class="note">${H(st.vol > 1 ? 'まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。' : 'まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
           ${ans && pg === 0 ? ruleBox() : ''}
           <ol class="probs ${oneCol ? 'one' : 'two'}${mathy ? ' auto' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${pg * per}">`;
         list.forEach(p => { html += cell(p, ans); });
