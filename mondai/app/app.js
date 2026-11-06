@@ -82,7 +82,9 @@
   function titleOf(st, ids) {
     if (st.name) return H(st.name, { noRuby: !st.ruby });
     if (ids.length === 1) { const d = M.waza[ids[0]]; return `<span class="chip">わざ ${ids[0]}</span>${H(d.title, { noRuby: !st.ruby })}`; }
-    return `<span class="chip">わざ ${ids.length}こ</span>${ids.join('・')}`;
+    // わざが多いときは、はじめと終わりだけ（題が2行をこえて、プリントがあふれないように）
+    const lst = ids.length > 4 ? `${ids[0]} 〜 ${ids[ids.length - 1]}` : ids.join('・');
+    return `<span class="chip">わざ ${ids.length}こ</span><span class="ids">${lst}</span>`;
   }
   function make() {
     const st = state();
@@ -97,29 +99,54 @@
     const per = oneCol ? 12 : 24;   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
+    // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
+    const cell = (p, ans) => {
+      const w = M.waza[p.id];
+      const bw = M.boxwOf(w, p.step) || '15mm';
+      const q = M.withBox(p.q);
+      const len = M.plain(q).replace(/\s/g, '').length;
+      let body;
+      if (!ans) {
+        body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}"></span>` });
+      } else {
+        // 欄に答えを書きこむ。欄が2つ以上なら、答えの中の数を順に入れる（合わなければ欄の外に答えを書く）
+        const nBox = (q.match(/□/g) || []).length;
+        const nums = String(M.plain(p.a)).match(/\d+(?:\.\d+)?(?:\/\d+)?/g) || [];
+        let k = 0;
+        const fill = nBox === 1 ? [p.a] : (nums.length === nBox ? nums : null);
+        const parts = H(q, { noRuby: !st.ruby, box: '\u0004' }).split('\u0004');
+        body = parts.map((t, i) => i === 0 ? t : `<span class="box filled" style="min-width:${bw}">${fill ? H(String(fill[k++]), { noRuby: !st.ruby }) : ''}</span>` + t).join('');
+        if (!fill) body += ` <b class="ansout">${H(p.a, { noRuby: !st.ruby })}</b>`;
+      }
+      let extra = '';
+      if (st.mix) {
+        const u = M.usableWaza(p, ids);
+        extra = ans ? `<span class="wz ansz">${u.length ? 'わざ ' + u.join('・') : 'ー'}</span>` : '<span class="wz">わざ<span class="box sm"></span></span>';
+      }
+      const how = ans && p.easy ? `<span class="how">とき方 ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
+      return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}"><span class="q">${body}</span>${extra}${how}</li>`;
+    };
+    const ruleBox = () => {
+      // こたえの1ページめに、わざの「楽な形」のまとめ（わざが3つまでのとき）
+      if (ids.length > 3) return '';
+      return '<div class="summary">' + ids.map(id => {
+        const d = M.waza[id];
+        return `<div class="sm1"><span class="chip">わざ ${id}</span> <b>${H(d.title, { noRuby: !st.ruby })}</b><div class="raku">${d.raku.map(l => H(l, { noRuby: !st.ruby, box: '<span class="sq"></span>' })).join('<br>')}</div></div>`;
+      }).join('') + '</div>';
+    };
     let html = '';
-    for (let pg = 0; pg < pages; pg++) {
-      const list = probs.slice(pg * per, (pg + 1) * per);
-      html += `<section class="sheet">${sheetHead(st, title, st.mix ? '見わけよう' : '', pg + 1, pages)}
-        ${st.mix ? '<p class="note">まず、 つかう わざの ばんごうを 「わざ」に 書いてから とこう。 つかう わざが ない ときは「ー」。</p>' : ''}
-        <ol class="probs ${oneCol ? 'one' : 'two'}" start="${pg * per + 1}">`;
-      list.forEach(p => {
-        const w = M.waza[p.id];
-        const box = `<span class="box" style="min-width:${(M.boxwOf(w, p.step) || '15mm')}"></span>`;
-        const len = M.plain(M.withBox(p.q)).replace(/\s/g, '').length;
-        html += `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}"><span class="q">${H(M.withBox(p.q), { noRuby: !st.ruby, box })}</span>${st.mix ? '<span class="wz">わざ<span class="box sm"></span></span>' : ''}</li>`;
-      });
-      html += `</ol><footer class="foot">『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント</footer></section>`;
+    for (const ans of [false, true]) {
+      for (let pg = 0; pg < pages; pg++) {
+        const list = probs.slice(pg * per, (pg + 1) * per);
+        const kind = (st.mix ? '見わけよう' : '') + (ans ? (st.mix ? '・' : '') + 'こたえと とき方' : '');
+        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
+          ${!ans && st.mix ? '<p class="note">まず、 つかう わざの ばんごうを 「わざ」に 書いてから とこう。 つかう わざが ない ときは「ー」。</p>' : ''}
+          ${ans && pg === 0 ? ruleBox() : ''}
+          <ol class="probs ${oneCol ? 'one' : 'two'}${ans ? ' withhow' : ''}" style="counter-reset:q ${pg * per}">`;
+        list.forEach(p => { html += cell(p, ans); });
+        html += `</ol><footer class="foot">${ans ? '［ ］の中は らくな とき方。　' : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+      }
     }
-    // こたえ
-    html += `<section class="sheet answers">${sheetHead(st, title, 'こたえ', 1, 1)}<ol class="ans">`;
-    probs.forEach(p => {
-      const u = M.usableWaza(p, ids);
-      const tag = st.mix || ids.length > 1 ? `<span class="wtag">${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}</span>` : '';
-      const sq = { noRuby: !st.ruby, box: '<span class="sq"></span>' };
-      html += `<li><b>${H(p.a, sq)}</b>${p.easy ? `<span class="easy">［${H(p.easy, sq)}］</span>` : ''}${tag}<span class="stp">${STEP_LABEL[p.step]}</span></li>`;
-    });
-    html += `</ol><footer class="foot">［ ］の中は らくな かたち。　たねの ばんごう ${st.seed}</footer></section>`;
     out.innerHTML = html;
   }
 
@@ -131,12 +158,19 @@
     renderCatalog(+$('#vol').value);
     $('#vol').addEventListener('change', () => { renderCatalog(+$('#vol').value); make(); });
     $('#make').addEventListener('click', make);
-    $('#print').addEventListener('click', () => { make(); window.print(); });
+    // 印刷：問題と こたえ・問題だけ・こたえだけ
+    const printAs = mode => { make(); document.body.dataset.print = mode; window.print(); };
+    $('#print').addEventListener('click', () => printAs('both'));
+    $('#printq').addEventListener('click', () => printAs('q'));
+    $('#printa').addEventListener('click', () => printAs('a'));
+    window.addEventListener('afterprint', () => { delete document.body.dataset.print; });
     $('#dice').addEventListener('click', () => { $('#seed').value = 1 + Math.floor(Math.random() * 99999); make(); });
     ['#ids', '#count', '#seed', '#title'].forEach(s => $(s).addEventListener('change', make));
     ['#mix', '#ruby', '#st-s1', '#st-s2', '#st-s3', '#st-trap'].forEach(s => $(s).addEventListener('change', make));
     $('#ids').addEventListener('keydown', e => { if (e.key === 'Enter') make(); });
     $('#nwaza').textContent = M.list().length;
+    // アドレスの # のあとが変わったら（共有されたアドレスを貼ったときなど）、その設定で作り直す
+    window.addEventListener('hashchange', () => { const h2 = fromHash(); if (h2) { setState(h2); renderCatalog(+$('#vol').value); make(); } });
     make();
   }
   document.addEventListener('DOMContentLoaded', init);
