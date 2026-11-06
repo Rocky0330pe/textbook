@@ -187,9 +187,11 @@
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
     // 欄のすぐあとの単位（「□ こ」）は、欄と同じ行に置く
-    const plain = t => texEsc(t).replace(/□ (?=\S)/g, '□\u0003').replace(/□/g, opt.box || '\\mqbox{}').replace(/\u0003/g, '~');
+    // 欄のすぐあとの字（単位・「時」「分」など）は、欄と同じ行に置き、少しあける
+    const plain = t => texEsc(t).replace(/□ (?=\S)/g, '□\u0003').replace(/□/g, opt.box || '\\mqbox{}').replace(/\u0003/g, '~').replace(/(\\mq(?:box|sq)(?:\[[^\]]*\])?\{\})(?=[^\s~])/g, '$1\\nobreak\\,');
     while ((m = TOKEN.exec(s))) {
       out += plain(s.slice(last, m.index));
+      if (/\\mq(?:box|sq)(?:\[[^\]]*\])?\{\}$/.test(out)) out += '\\nobreak\\,';
       const t = m[1];
       if (t.startsWith('f:')) {
         const [a, b] = t.slice(2).split('/');

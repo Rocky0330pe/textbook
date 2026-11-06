@@ -74,7 +74,9 @@ for (const part of parts) {
     // こたえ
     const a = [`\\mqanshead{${id}}{${tx(d.title)}}`];
     let k = 1;
+    const STEPNAME = { s1: 'ステップ1', s2: 'ステップ2', s3: 'ステップ3', trap: 'わな' };
     M.STEPS.forEach(s => {
+      if (sh[s].length) a.push(`\\mqansstep{${STEPNAME[s]}}`);
       sh[s].forEach(p => {
         if (p.hs) a.push(`\\mqahs{${k}}{${tx(p.a, SQ)}}{${M.hissanTeX(M.hissanLayout(p.hs), { cell: 3.3, answer: true, font: '\\scriptsize' })}}`);
         else a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ)}}`);
@@ -83,6 +85,8 @@ for (const part of parts) {
     });
     ans.push(a.join('\n'));
   }
+  if (part.miwake && byPart(pid).length) list.push(`\\mqlistextra{${tx('《見|み》わけよう')}}{mq:sp:${pid}:miwake}`);
+  if (part.tsukuro && part.tsukuro.length && byPart(pid).length) list.push(`\\mqlistextra{${tx('《作|つく》って みよう')}}{mq:sp:${pid}:tsukuro}`);
   // 見分けよう
   if (part.miwake && byPart(pid).length) {
     const r = M.rng(M.hash(`miwake:${vol}:${pid}`));
@@ -103,19 +107,20 @@ for (const part of parts) {
       if (got.length) { pool.push(got[0]); t++; }
     }
     const mixed = r.shuffle(pool);
-    const intro = '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 書いて から とこう。 つかう わざが ない ときは「ー」と 書こう。';
-    const lines2 = mixed.map((p, i) => `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: box(M.waza[p.id], p.step) })}\\mqwazabox}`);
+    const intro = '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
+    // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
+    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step); return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
     const half = Math.ceil(lines2.length / 2);
-    body.push(`\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}`);
+    body.push(`\\def\\mqsplabelkey{miwake}\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}\n\\mqmiwaketable{${wz.map(id => `\\mqmwrow{${id}}{${tx(M.waza[id].title)}}`).join('')}}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
     mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.easy && u.length ? '：' + tx(p.easy, SQ) : ''}}`); });
     ans.push(a.join('\n'));
   }
   // 作ってみよう
   if (part.tsukuro && part.tsukuro.length && byPart(pid).length) {
-    const intro = 'こたえは 1つでは ないよ。 じぶんで 作った もんだいを、 ともだちや おうちの 人と とき あって みよう。';
+    const intro = 'こたえは 1つでは ないよ。 じぶんで 《作|つく》った もんだいを、 ともだちや おうちの 《人|ひと》と とき あって みよう。';
     const qs = part.tsukuro.map((t, i) => `\\mqtsukuro{${i + 1}}{${tx(t.q, { box: '\\mqsq{}' })}}`);
-    body.push(`\\mqspreadhead{${pid}}{${pname}}{${tx('《作|つく》って みよう')}}{${tx(intro)}}\n${qs.join('\n')}`);
+    body.push(`\\def\\mqsplabelkey{tsukuro}\\mqspreadhead{${pid}}{${pname}}{${tx('《作|つく》って みよう')}}{${tx(intro)}}\n${qs.join('\n')}`);
     const a = [`\\mqanssub{${tx('《作|つく》って みよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
     part.tsukuro.forEach((t, i) => a.push(`\\mqtsukuroans{${i + 1}}{${tx(t.ex, { box: '\\mqsq{}' })}}`));
     ans.push(a.join('\n'));
@@ -123,5 +128,6 @@ for (const part of parts) {
 }
 fs.writeFileSync(path.join(TEX, `mq${vol}-body.tex`), body.join('\n\n') + '\n');
 fs.writeFileSync(path.join(TEX, `mq${vol}-ans.tex`), ans.join('\n') + '\n');
+list.push('\\mqlistextra{こたえ}{mq:answers}');
 fs.writeFileSync(path.join(TEX, `mq${vol}-list.tex`), list.join('\n') + '\n');
 console.log(`mq${vol}: わざ ${ids.length}、部 ${parts.length}。tex/mq${vol}-body.tex・-ans.tex・-list.tex を書いた`);
