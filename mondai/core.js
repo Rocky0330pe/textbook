@@ -201,9 +201,12 @@
     opt = opt || {};
     if (s == null) return '';
     s = String(s);
-    // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に
+    // コード（`…`、第2巻の表計算・プログラム）は等幅で、そのまま
+    if (s.includes('`')) return MK(s).split(/(`[^`]*`)/).map((seg, k) => k % 2 ? '\\mqcode{' + texEsc(seg.slice(1, -1)) + '}' : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
+    // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に（太字の ** は、式をまたいでもよい）
     if (s.includes('$')) {
-      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? seg.replace(/\\frac(?![a-z])/g, '\\dfrac').replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('');
+      s = MK(s);
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? seg.replace(/\\frac(?![a-z])/g, '\\dfrac').replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
     }
     s = MK(s);
     let out = '', last = 0, m;
@@ -232,8 +235,10 @@
     opt = opt || {};
     if (s == null) return '';
     s = String(s);
+    if (s.includes('`')) return MK(s).split(/(`[^`]*`)/).map((seg, k) => k % 2 ? '<code class="mcode">' + htmlEsc(seg.slice(1, -1)) + '</code>' : M.toHTML(seg, opt)).join('').replace(/\u0001/g, '<b class="mk">').replace(/\u0002/g, '</b>');
     if (s.includes('$')) {
-      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? M.mathHTML(seg.slice(1, -1), opt) : M.toHTML(seg, opt)).join('');
+      s = MK(s);
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? M.mathHTML(seg.slice(1, -1), opt) : M.toHTML(seg, opt)).join('').replace(/\u0001/g, '<b class="mk">').replace(/\u0002/g, '</b>');
     }
     s = MK(s);
     let out = '', last = 0, m;
@@ -650,6 +655,25 @@
     const q = M.plain(p.q);
     (candidates || []).forEach(id => { const d = M.waza[id]; if (d && d.fits && !out.includes(id) && !(p.step === 'trap' && id === p.id)) { try { if (d.fits(q, p)) out.push(id); } catch (e) { } } });
     return [...new Set(out)].sort();
+  };
+  // 分数の部品（第2巻から、どの組も使う）。分数は [分子, 分母]（分母は正、約分ずみ）
+  M.F = {
+    gcd: (a, b) => gcd(a, b),
+    lcm: (a, b) => Math.abs(a * b) / gcd(a, b),
+    make: (n, d) => Q(n, d == null ? 1 : d),
+    add: (x, y) => add(x, y), sub: (x, y) => sub(x, y), mul: (x, y) => mul(x, y), div: (x, y) => div(x, y),
+    eq: (x, y) => x[0] === y[0] && x[1] === y[1],
+    val: x => x[0] / x[1],
+    // 小数の文字（'0.125'）から分数へ
+    fromDec: t => { const [i, f = ''] = String(t).split('.'); return Q(parseInt(i + f, 10) * (String(t).trim().startsWith('-') && parseInt(i + f, 10) > 0 ? -1 : 1), Math.pow(10, f.length)); },
+    // TeX の文字：整数ならそのまま、分数は \frac{}{}、負の数は前に －。mixed:true なら帯分数
+    tex: (x, o) => {
+      o = o || {};
+      const [n, d] = x, sg = n < 0 ? '-' : '', a = Math.abs(n);
+      if (d === 1) return sg + a;
+      if (o.mixed && a > d) return sg + Math.floor(a / d) + '\\frac{' + (a % d) + '}{' + d + '}';
+      return sg + '\\frac{' + a + '}{' + d + '}';
+    },
   };
   M.sameVal = (x, y) => x && y && x[0] === y[0] && x[1] === y[1];
   // 数式の問題の検算：答え（a）が式なら、問題の式・楽な形の式（＝ で区切ったどれも）と、文字に3とおりの値を入れて同じ値になるか
