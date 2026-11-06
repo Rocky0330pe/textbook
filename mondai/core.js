@@ -258,7 +258,7 @@
   // 使える書き方：数・1字の文字（斜体）・+ - = < > ( ) [ ] | ,・^{…}・_{…}・\frac{}{}（\dfrac・\tfrac）・\sqrt{}・\sqrt[n]{}
   //   \times \div \cdot \pm \mp \pi \le \ge \ne \approx \to \infty \degree・\log \ln \sin \cos \tan \exp・\left( \right)・\text{}・\mathrm{}・\,・\quad・□（欄）
   const MATHSYM = { times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', pi: 'π', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠',
-    approx: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
+    approx: '≒', leqq: '≦', geqq: '≧', lvert: '|', rvert: '|', vert: '|', mid: '|', square: '□', triangle: '△', angle: '∠', perp: '⊥', parallel: '∥', fallingdotseq: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
     Delta: 'Δ', omega: 'ω', Omega: 'Ω', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
   const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim'];
   M.mathHTML = function (src, opt) {
@@ -295,7 +295,7 @@
         if (name === 'quad' || name === 'qquad') return '<span class="mquad"></span>';
         if (name === ' ') return ' ';
         if (name === '\\') return '<br>';
-        if (MATHSYM[name] != null) { const t = MATHSYM[name]; return /^[×÷·±∓≤≥≠≒→]$/.test(t) ? op(t) : t; }
+        if (MATHSYM[name] != null) { const t = MATHSYM[name]; return /^[×÷·±∓≤≥≦≧≠≒→]$/.test(t) ? op(t) : t; }
         return htmlEsc(name);
       }
       if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; return s.slice(j, i); }
@@ -321,7 +321,7 @@
   // 数式の値（小数）。vars は文字の値 { x: 1.3 }。読めないときは null
   M.evalMath = function (src, vars) {
     vars = vars || {};
-    const s = String(src).replace(/\\left|\\right|\\,|\;|\\!|\\quad/g, ' ').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
+    const s = String(src).replace(/\\left|\\right|\\,|\\;|\\!|\\quad|\\displaystyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
       .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/');
     let i = 0;
     const ws = () => { while (i < s.length && s[i] === ' ') i++; };
