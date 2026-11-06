@@ -50,6 +50,8 @@
   const isFrac = (n, d) => n % d !== 0;
   const U = (n, u) => `$${nm(n)}\\,\\mathrm{${u}}$`;
   const FUN = '《分速|ふん|そく》';
+  // 「3分」「3分後」の読み（第30回 J-3。一の位が 1・3・4・6・8・0 なら ぷん）
+  const FN = n => `${n} ${M.fun(n)}`, FG = n => `${n}《分後|${M.funYomi(n)}|ご》`;
   const close = (a, b) => Math.abs(a - b) < 1e-9;
   const isInt = v => close(v, Math.round(v));
 
@@ -128,8 +130,19 @@
       return true;
     };
   }
-  // 連立方程式の問題
+  // 1つの式の係数と右辺が、同じ数でわれないか（第30回 J-2・第3巻 R1-8・R1-12）。
+  // 小数の式は 10・100 倍してから見る（$0.6x+0.4y=4.4$ → $6x+4y=44$ は 2 でわれる）。分数の式は分母の公倍数をかけて見る
+  function primEq(e) {
+    for (const m of [1, 10, 100, 1000].concat(Array.from({ length: 1000 }, (_, i) => i + 1))) {
+      const v = [e.a, e.b, e.c].map(t => t * m);
+      if (v.every(isInt)) return v.reduce((g, t) => gcd(g, Math.round(t)), 0) === 1;
+    }
+    return true;
+  }
+  const primSys = q => { const p = parseSys(M.plain(q)); return !p || p.e.every(primEq); };
+  // 連立方程式の問題（どちらかの式が同じ数でわれるときは null。作り直す）
   function mk(e1, e2, x, y, easy, extra) {
+    if (!primSys(sysQ(e1, e2))) return null;
     const p = { q: sysQ(e1, e2), a: solA(x, y), easy, key: keyOf(e1, e2) };
     p.verify = vSys(p.q, x, y);
     return Object.assign(p, extra || {});
@@ -151,6 +164,7 @@
   }
   // わなの行き先（H-1・H-2）：同じ部のほかのわざの fits と、extra（形を変えると使えるわざ）
   function dest(p, self, why, extra) {
+    if (!p) return null;
     const q = M.plain(p.q);
     const also = M.list(3).filter(id => {
       const d = M.waza[id];
@@ -231,6 +245,7 @@
           const a = nz(r, 1, 4), b = r.pick([-3, -2, 2, 3]);
           if (a + b * m === 0) return null;
           const c = a * x + b * y;
+          if (gcd(gcd(a, b), c) > 1) return null;   // 式が同じ数でわれない（J-2）
           return {
             q: `《直線|ちょく|せん》 $${yf(m, k)}$ と $${std(a, b, c)}$ の《交点|こう|てん》の《座標|ざ|ひょう》 □`,
             a: `$(${x},\\ ${y})$`, easy: `$${lin([[a, 'x']])}${paren(b, lin([[m, 'x'], [k, '']]))}=${c}$、$x=${x}$`,
@@ -273,7 +288,7 @@
     id: '3-16', part: PART, chap: '3-6③', stars: 1,
     title: '《係数|けい|すう》がそろった《文字|も|じ》はひいて《消|け》す',
     mark: '2つの《式|しき》で、《同|おな》じ《文字|も|じ》の《係数|けい|すう》が**そろっている**（《符号|ふ|ごう》も《同|おな》じ）。',
-    futsu: ['$2x+3y=420$、$2x+y=300$ で、', '$y=300-2x$ にして《代入|だい|にゅう》し、', '$2x+3(300-2x)=420$ を《解|と》く。'],
+    futsu: ['$2x+3y=420$、$2x+y=300$', '$y=300-2x$ にして《代入|だい|にゅう》し、', '$2x+3(300-2x)=420$ を《解|と》く。'],
     raku: ['1つめから2つめをひく。', '$2y=120$、$y=60$', '$2x+60=300$、$x=120$'],
     why: '《等式|とう|しき》どうしをひいても、つり《合|あ》いは《変|か》わらない。そろった《項|こう》は0になる（3-6③）。',
     caution: '《符号|ふ|ごう》が《反対|はん|たい》ならたす（わざ 3-17）。マイナスの《項|こう》をひくとプラスになる。',
@@ -301,7 +316,7 @@
       s3(r) {
         if (r.chance(0.5)) {
           const [s, t] = r.pick(ITEMS), x = r.int(6, 15) * 10, y = r.int(3, 9) * 10, n = r.int(2, 4), p = r.int(1, 5), q = r.int(1, 5);
-          if (p === q) return null;
+          if (p === q || gcd(n, p) > 1 || gcd(n, q) > 1) return null;   // 1つの式が同じ数でわれない（J-2）
           const c1 = n * x + p * y, c2 = n * x + q * y;
           return {
             q: `${s}${n}${KO}と${t}${p}${KO}で ${c1} ${EN}、${s}${n}${KO}と${t}${q}${KO}で ${c2} ${EN}。${s} □ ${EN}、${t} □ ${EN}（1${KO}）`,
@@ -314,6 +329,7 @@
         const E1 = k ? E(p, s, x, y) : E(s, p, x, y), E2 = k ? E(q, s, x, y) : E(s, q, x, y);
         const e1 = std(E1.a, E1.b, E1.c, 'a', 'b'), e2 = std(E2.a, E2.b, E2.c, 'a', 'b');
         const p2 = mk(e1, e2, x, y, elim([E1, E2], k, 1, 1, ['a', 'b'], [x, y]));
+        if (!p2) return null;
         p2.a = solA(x, y, 'a', 'b');
         return p2;
       },
@@ -401,7 +417,7 @@
     caution: '《右辺|う|へん》にもかける（$x+2y=8$ の2《倍|ばい》は $2x+4y=16$）。《倍数|ばい|すう》でなければ、わざ 3-19。',
     cols: 1,
     boxw: { s1: '36mm', s2: '36mm', s3: '36mm', trap: '36mm' },
-    counts: { s1: 8, s2: 7, s3: 5, trap: 2 },
+    counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
     fits: kgFits('3-18'),
     steps: {
       // 係数が1と k
@@ -412,7 +428,7 @@
       s3(r) {
         if (r.chance(0.5)) {
           const [s, t] = r.pick(ITEMS), x = r.int(6, 15) * 10, y = r.int(3, 9) * 10, n = r.int(2, 4), p = r.int(1, 5), q = r.int(1, 5);
-          if (p === n * q || n * q === -p || p === q) return null;
+          if (p === n * q || n * q === -p || p === q || gcd(n, p) > 1) return null;
           const c1 = n * x + p * y, c2 = x + q * y;
           return {
             q: `${s}${n}${KO}と${t}${p}${KO}で ${c1} ${EN}、${s}1${KO}と${t}${q}${KO}で ${c2} ${EN}。${s} □ ${EN}、${t} □ ${EN}（1${KO}）`,
@@ -425,6 +441,7 @@
         const U1 = 'I_{1}', U2 = 'I_{2}';
         const e1 = std(E1.a, E1.b, E1.c, U1, U2), e2 = std(E2.a, E2.b, E2.c, U1, U2);
         const p = mk(e1, e2, i1, i2, elim([E1, E2], 0, 1, k, [U1, U2], [i1, i2]));
+        if (!p) return null;
         p.q = `《回路|かい|ろ》の《式|しき》 ${p.q}`;
         p.a = solA(i1, i2, U1, U2);
         p.verify = vSys(p.q, i1, i2);
@@ -492,7 +509,7 @@
           const [s, t] = r.pick(ITEMS), x = r.int(6, 15) * 10, y = r.int(3, 9) * 10;
           const n1 = r.int(2, 5), n2 = r.int(2, 5), p = r.int(2, 5), q = r.int(2, 5);
           const pr = { e: [E(n1, p, x, y), E(n2, q, x, y)], f: ['std', 'std'] };
-          if (!KG['3-19'](pr) || swapped(pr)) return null;
+          if (!KG['3-19'](pr) || swapped(pr) || gcd(n1, p) > 1 || gcd(n2, q) > 1) return null;
           const c1 = n1 * x + p * y, c2 = n2 * x + q * y;
           const k = lcm(n1, n2) <= lcm(p, q) ? 0 : 1, L = k ? lcm(p, q) : lcm(n1, n2), g = k ? [p, q] : [n1, n2];
           return {
@@ -530,6 +547,7 @@
     const [E1, E2] = pr.e;
     const p = mk(std(E1.a, E1.b, E1.c, vs[0], vs[1]), std(E2.a, E2.b, E2.c, vs[0], vs[1]), x, y,
       elim(pr.e, k, L / Math.abs(g[0]), L / Math.abs(g[1]), vs, [x, y]));
+    if (!p) return null;
     p.a = solA(x, y, vs[0], vs[1]);
     return p;
   }
@@ -541,7 +559,7 @@
     mark: '《係数|けい|すう》が**《入|い》れかわっている**（$ax+by$ と $bx+ay$）。',
     futsu: ['$2x+3y=7$、$3x+2y=8$ で、', '1つめ×3、2つめ×2 で $x$ を6にそろえ、', 'ひいて $5y=5$ を《解|と》く。'],
     raku: ['たして $5x+5y=15$、$x+y=3$', 'ひいて $-x+y=-1$、$x-y=1$', '$x+y=3$、$x-y=1$ から $x=2$、$y=1$'],
-    why: 'たすと《係数|けい|すう》がどちらも $a+b$、ひくとどちらも $a-b$ になり、《小|ちい》さい《数|かず》の《連立|れん|りつ》になる。',
+    why: 'たすと《係数|けい|すう》がどちらも $a+b$、ひくと $a-b$ と $b-a$（《符号|ふ|ごう》だけちがう）になり、$x+y$ と $x-y$ の《式|しき》になる。',
     caution: '《符号|ふ|ごう》が《片方|かた|ほう》だけちがうとき（$2x+3y$ と $3x-2y$）は《使|つか》えない。',
     cols: 1,
     boxw: { s1: '36mm', s2: '36mm', s3: '15mm', trap: '36mm' },
@@ -568,7 +586,7 @@
       // 解かずに x+y・x−y の値
       s3(r) {
         const [x, y] = sol(r), a = r.int(2, 7), b = r.int(2, 7), plus = r.chance(0.5);
-        if (a === b) return null;
+        if (a === b || gcd(a, b) > 1) return null;   // 式が同じ数でわれない（J-2）
         const E1 = E(a, b, x, y), E2 = E(b, a, x, y), e1 = std(E1.a, E1.b, E1.c), e2 = std(E2.a, E2.b, E2.c);
         const v = plus ? x + y : x - y;
         return {
@@ -601,7 +619,8 @@
     cols: 1,
     boxw: { s1: '36mm', s2: '36mm', s3: '28mm', trap: '28mm' },
     counts: { s1: 9, s2: 6, s3: 4, trap: 2 },
-    fits(q) { const p = solveSys(q); return !!p && !allInt(p); },
+    // 小数・分数の係数。ただし、もう係数がそろっている（そのままたす・ひくで消える）ものは、わざ 3-16・3-17（わな）
+    fits(q) { const p = solveSys(q); return !!p && !allInt(p) && !REL(p).some(x => x === 'eq' || x === 'op'); },
     steps: {
       // 小数の係数（10倍）
       s1(r) {
@@ -642,6 +661,7 @@
         }
         const [x, y] = sol(r), A = nz(r, -9, 9), B = nz(r, -9, 9), C = nz(r, -9, 9), D = nz(r, -9, 9);
         if ([A, B, C, D].some(v => v % 5 === 0) || A * D - B * C === 0) return null;
+        if (Math.abs(A) === Math.abs(C) || Math.abs(B) === Math.abs(D)) return null;   // そのままたす・ひくで消える（わなの形。R1-11）
         const E1 = E(A, B, x, y), E2 = E(C, D, x, y);
         return mk(std(A / 10, B / 10, E1.c / 10), std(C / 10, D / 10, E2.c / 10), x, y, `どちらも×10：$${std(A, B, E1.c)}$、$${std(C, D, E2.c)}$`);
       },
@@ -681,7 +701,7 @@
     why: '《解|かい》は2《本|ほん》の《直線|ちょく|せん》の《交点|こう|てん》。《平行|へい|こう》なら《交点|こう|てん》がなく、《重|かさ》なればどの《点|てん》も《交点|こう|てん》（3-6④）。',
     caution: '《傾|かたむ》きがちがえば、《交点|こう|てん》はちょうど1つ。$0=10$ を「《解|かい》は0」としない。',
     cols: 1,
-    boxw: { s1: '18mm', s2: '18mm', s3: '15mm', trap: '18mm' },
+    boxw: { s1: '18mm', s2: '18mm', s3: '15mm', trap: '36mm' },
     counts: { s1: 8, s2: 7, s3: 5, trap: 2 },
     fits(q) {
       if (/（1組・なし・無数）|解がない|解が無数/.test(q)) return true;
@@ -733,16 +753,18 @@
           verify: () => (kindOf(`$${e1}$、$${std(j * a, j * b, j * c)}$ ${WHICH}`) === MUSU) || '無数にならない',
         };
       },
-      // わな：傾きがちがう（1組）
+      // わな：解を聞く。傾きが同じに見えるが、ちがう（解は1組）。代入して解く（R1-10・J-1）
       trap(r) {
-        const m = nz(r, -4, 4), k1 = r.int(-5, 6), kind = r.int(0, 1);
-        if (kind === 0) {
-          const k2 = r.chance(0.5) ? k1 : r.int(-5, 6);
-          return which(yf(m, k1), yf(-m, k2), ICHI, `（《傾|かたむ》きが $${m}$ と $${-m}$ でちがう。1《点|てん》で《交|まじ》わる）`);
+        const [x, y] = sol(r), m = r.intNot(-4, 4, v => Math.abs(v) < 2), k1 = y - m * x;
+        if (!k1 || Math.abs(k1) > 12) return null;
+        if (r.chance(0.5)) {
+          const k2 = y + m * x;   // y=-mx+k2（傾きの符号だけちがう）
+          if (!k2 || Math.abs(k2) > 12) return null;
+          return dest(mk(yf(m, k1), yf(-m, k2), x, y, ''), '3-22', `《傾|かたむ》きが $${m}$ と $${-m}$ でちがうので、《解|かい》は1《組|くみ》。《右辺|う|へん》どうしを《等|ひと》しくおいて`);
         }
-        const n = r.int(2, 3);
-        if (m === n || Math.abs(m) === 1) return null;
-        return which(yf(m, k1), `${n}y=${lin([[m, 'x'], [n * k1, '']])}`, ICHI, `（2つめは $y=${frac(m, n)}x${term(k1, '', false)}$。《傾|かたむ》きがちがう）`);
+        const n = r.int(2, 3), c = n * y - m * x;   // ny=mx+c（n でわると、x の係数は m/n）
+        if (m % n === 0 || !c || Math.abs(c) > 20) return null;
+        return dest(mk(yf(m, k1), `${n}y=${lin([[m, 'x'], [c, '']])}`, x, y, ''), '3-22', `2つめを${n}でわると《傾|かたむ》きは $${frac(m, n)}$ でちがうので、《解|かい》は1《組|くみ》。《代入|だい|にゅう》して`);
       },
     },
   });
@@ -761,7 +783,8 @@
     boxw: { s1: '30mm', s2: '30mm', s3: '30mm', trap: '30mm' },
     counts: { s1: 9, s2: 6, s3: 4, trap: 2 },
     fits(q) {
-      if (/を通る/.test(q) && /\$\(-?\d+,\\ -?\d+\)\$、\$\(-?\d+,\\ -?\d+\)\$/.test(q)) return true;
+      // (0, b) の点があれば、b はすぐわかる（わざ 3-10。わな）
+      if (/を通る/.test(q) && /\$\(-?\d+,\\ -?\d+\)\$、\$\(-?\d+,\\ -?\d+\)\$/.test(q)) return ![...q.matchAll(/\$\((-?\d+),\\ /g)].some(m => +m[1] === 0);
       const p = solveSys(q);
       return !!p && p.vs.join('') === 'ab' && bothStd(p) && close(p.e[0].b, 1) && close(p.e[1].b, 1);
     },
@@ -799,7 +822,7 @@
         }
         const a = r.int(2, 8), b = r.int(10, 25), x1 = r.int(1, 4), x2 = r.int(x1 + 2, 10);
         return {
-          q: `《水|みず》の《温度|おん|ど》は ${x1}《分後|ふん|ご》に ${a * x1 + b} ℃、${x2}《分後|ふん|ご》に ${a * x2 + b} ℃。$x$ 《分後|ふん|ご》に $y=ax+b$（℃）の $a$、$b$ □`,
+          q: `《水|みず》の《温度|おん|ど》は ${FG(x1)}に ${a * x1 + b} ℃、${FG(x2)}に ${a * x2 + b} ℃。$x$ 《分後|ふん|ご》に $y=ax+b$（℃）の $a$、$b$ □`,
           a: solA(a, b, 'a', 'b'), easy: `ひいて $${x2 - x1}a=${a * (x2 - x1)}$`,
           verify: () => true,
         };
@@ -810,7 +833,7 @@
         const P = [[0, b], [x2, a * x2 + b]], [p1, p2] = first ? P : [P[1], P[0]];
         return {
           q: `2《点|てん》 ${pt(p1[0], p1[1])}、${pt(p2[0], p2[1])} を《通|とお》る $y=ax+b$ の $a$、$b$ □`,
-          a: solA(a, b, 'a', 'b'), easy: `（${pt(0, b)} を《通|とお》るので、すぐ $b=${b}$。ひかなくてよい）`,
+          a: solA(a, b, 'a', 'b'), easy: `（${pt(0, b)} を《通|とお》るので、すぐ $b=${b}$。ひかなくてよい。わざ 3-10）`,
           verify: () => (a * x2 + b === P[1][1]) || '点が直線にのらない',
         };
       },
@@ -832,22 +855,27 @@
     title: '《出会|で|あ》いは《速|はや》さの《和|わ》、《追|お》いつきは《速|はや》さの《差|さ》',
     mark: '**《向|む》かい《合|あ》って**《進|すす》む・あとから**《追|お》いかける**。2つの《速|はや》さを1つにまとめる。',
     futsu: ['$y=60x$、$y=-90x+1500$ の', '《連立方程式|れん|りつ|ほう|てい|しき》を《作|つく》って《解|と》く。'],
-    raku: ['1《分|ぷん》で $60+90=150$ m 《近|ちか》づく。', '$1500\\div150=10$（10《分後|ふん|ご》）'],
+    raku: ['1《分|ぷん》で $60+90=150$ m 《近|ちか》づく。', '$1500\\div150=10$（10《分後|ぷん|ご》）'],
     why: '《向|む》かい《合|あ》うと、あいだは《速|はや》さの《和|わ》ずつちぢむ。《同|おな》じ《向|む》きなら《速|はや》さの《差|さ》ずつちぢむ。',
     caution: '《追|お》いかけるほうが《速|はや》くないと、いつまでも《追|お》いつかない（《差|さ》が0なら、あいだは《変|か》わらない）。',
     cols: 1,
     boxw: { s1: '12mm', s2: '12mm', s3: '12mm', trap: '28mm' },
-    counts: { s1: 9, s2: 5, s3: 3, trap: 2 },
-    fits(q) { return /向かい合|追いかけ|追う|反対向きに|同じ向きに/.test(q); },
+    counts: { s1: 9, s2: 4, s3: 3, trap: 2 },
+    fits(q) {
+      if (!/向かい合|追いかけ|追う|反対向きに|同じ向きに/.test(q)) return false;
+      // 追いかけるほうが速くないと、追いつかない（わな）
+      const m = /分速 \$(\d+)\\,\\mathrm\{m\}\$ で歩く人を、分速 \$(\d+)\\,\\mathrm\{m\}\$ で追/.exec(q);
+      return !(m && +m[2] <= +m[1]);
+    },
     steps: {
-      // 出会い（速さの和）
+      // 出会い（速さの和）。「1分で □ m 近づく」は1つの見開きに2問まで（key を2とおりだけにする。s2 も同じ。R1-24）
       s1(r) {
         const v1 = r.int(5, 8) * 10, v2 = r.int(5, 12) * 10, t = r.int(4, 15), D = (v1 + v2) * t;
         if (v1 === v2) return null;
         if (r.chance(0.4)) {
           return {
             q: `《向|む》かい《合|あ》う${FUN} ${U(v1, 'm')} と ${U(v2, 'm')} のふたりは、1《分|ぷん》で □ m 《近|ちか》づく`,
-            a: `$${v1 + v2}$`, easy: `$${v1}+${v2}=${v1 + v2}$`, key: `deai1:${[v1, v2].sort()}`,
+            a: `$${v1 + v2}$`, easy: `$${v1}+${v2}=${v1 + v2}$`, key: `deai1:${r.int(0, 1)}`,
           };
         }
         return {
@@ -860,20 +888,20 @@
         const v1 = r.int(4, 8) * 10, v2 = v1 + r.int(1, 5) * 10, t0 = r.int(3, 12), d = v1 * t0;
         if (d % (v2 - v1)) return null;
         const t = d / (v2 - v1);
-        if (r.chance(0.4)) {
+        if (r.chance(0.25)) {
           return {
             q: `${FUN} ${U(v2, 'm')} で、${FUN} ${U(v1, 'm')} の《人|ひと》を《追|お》いかける。1《分|ぷん》で □ m 《近|ちか》づく`,
-            a: `$${v2 - v1}$`, easy: `$${v2}-${v1}=${v2 - v1}$`, key: `oi1:${v1}:${v2}`,
+            a: `$${v2 - v1}$`, easy: `$${v2}-${v1}=${v2 - v1}$`, key: `oi1:${r.int(0, 1)}`,
           };
         }
         if (r.chance(0.5)) {
           return {
-            q: `《弟|おとうと》が${FUN} ${U(v1, 'm')} で《出|で》た ${t0} 《分後|ふん|ご》に、《兄|あに》が${FUN} ${U(v2, 'm')} で《追|お》う。《兄|あに》が《出|で》て □ 《分後|ふん|ご》に《追|お》いつく`,
+            q: `《弟|おとうと》が${FUN} ${U(v1, 'm')} で《出|で》た ${FG(t0)}に、《兄|あに》が${FUN} ${U(v2, 'm')} で《追|お》う。《兄|あに》が《出|で》て □ 《分後|ふん|ご》に《追|お》いつく`,
             a: `$${t}$`, easy: `$${v1}\\times${t0}\\div(${v2}-${v1})=${t}$`,
           };
         }
         return {
-          q: `${U(d, 'm')} 《先|さき》を${FUN} ${U(v1, 'm')} で《歩|ある》く《人|ひと》を、${FUN} ${U(v2, 'm')} で《追|お》いかける。□ 《分後|ふん|ご》に《追|お》いつく`,
+          q: `${U(d, 'm')} 《先|さき》を${FUN} ${U(v1, 'm')} で《歩|ある》く《人|ひと》を、${FUN} ${U(v2, 'm')} で《追|お》う。□ 《分後|ふん|ご》に《追|お》いつく`,
           a: `$${t}$`, easy: `$${d}\\div(${v2}-${v1})=${t}$`,
         };
       },
@@ -929,16 +957,23 @@
   M.add({
     id: '3-25', part: PART, chap: '3-7①⑥', stars: 1,
     title: '$xy$ が《一定|いっ|てい》なら《反比例|はん|ぴ|れい》',
-    mark: '《表|ひょう》の《組|くみ》ごとに $x\\times y$ を《計算|けい|さん》すると、**どれも《同|おな》じ《数|かず》**（$x$ が2《倍|ばい》で $y$ が $\\frac{1}{2}$ 《倍|ばい》）。',
-    futsu: ['$x$ が2、3、6 で $y$ が9、6、3 の《表|ひょう》を、', '《点|てん》にかいて《形|かたち》を《見|み》る。'],
+    mark: '《表|ひょう》の《組|くみ》ごとに $x\\times y$ を《計算|けい|さん》すると、**どれも《同|おな》じ《数|かず》**になる。',
+    futsu: ['《表|ひょう》の《点|てん》をグラフにかいて、', '《曲線|きょく|せん》の《形|かたち》を《見|み》る。'],
     raku: ['$2\\times9=3\\times6=6\\times3=18$', '$xy=18$ なので $y=\\frac{18}{x}$'],
-    why: '《反比例|はん|ぴ|れい》 $y=\\frac{a}{x}$ では、$xy$ がいつも $a$（3-7⑥）。かけ《算|ざん》1つで $a$ が《出|で》る。',
+    why: '$y=\\frac{a}{x}$ では、$xy$ がいつも $a$（3-7⑥）。かけ《算|ざん》1つで $a$ が《出|で》る。',
     caution: '$y\\div x$ が《一定|いっ|てい》なら《比例|ひ|れい》。$x+y$ が《一定|いっ|てい》なら、どちらでもない。',
     cols: 1,
     boxw: '22mm',
     boxh: { s1: '12mm', s3: '12mm' },
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
-    fits(q) { return /\$x\$ が \$[^$]*\$ のとき、\$y\$ は/.test(q) || /反比例/.test(q); },
+    fits(q) {
+      if (/反比例/.test(q)) return true;
+      // 表：どの組も x×y が同じ数（同じでなければ わな）
+      const m = /\$x\$ が \$([^$]*)\$ のとき、\$y\$ は \$([^$]*)\$/.exec(q);
+      if (!m) return false;
+      const xs = m[1].split(/,\\ /).map(Number), ys = m[2].split(/,\\ /).map(Number);
+      return xs.length === ys.length && xs.every((x, i) => close(x * ys[i], xs[0] * ys[0]));
+    },
     steps: {
       s1(r) {
         const a = r.pick(DIV), d = divisors(a).filter(v => v < a);
@@ -980,7 +1015,7 @@
         if (kind === 2) {
           const v = r.int(4, 8) * 10, t = r.int(10, 30), D = v * t;
           return {
-            q: `ある《道|みち》を${FUN} ${U(v, 'm')} で ${t} 《分|ふん》。${FUN} $x$ m なら $y$ 《分|ふん》。$y=$□`,
+            q: `ある《道|みち》を${FUN} ${U(v, 'm')} で ${FN(t)}。${FUN} $x$ m なら $y$ 《分|ふん》。$y=$□`,
             a: `$\\frac{${D}}{x}$`, val: String(D), easy: `$${v}\\times${t}=${D}$`,
           };
         }
@@ -1069,7 +1104,7 @@
         const D = lcm(v1, v2) * r.int(1, 3), t1 = D / v1;
         if (t1 > 40 || D / v2 > 40) return null;
         return {
-          q: `ある《道|みち》を${FUN} ${U(v1, 'm')} で ${t1} 《分|ふん》。${FUN} ${U(v2, 'm')} なら □ 《分|ふん》`,
+          q: `ある《道|みち》を${FUN} ${U(v1, 'm')} で ${FN(t1)}。${FUN} ${U(v2, 'm')} なら □ 《分|ふん》`,
           a: `$${v1 * t1 / v2}$`, easy: `$${v1}\\times${t1}\\div${v2}=${v1 * t1 / v2}$`,
         };
       },
@@ -1080,14 +1115,14 @@
           if (m1 === m2 || (l1 * m2) % m1) return null;
           return {
             q: `ばねは ${U(m1, 'g')} で ${U(l1, 'cm')} のびる。${U(m2, 'g')} なら □ cm のびる`,
-            a: `$${l1 * m2 / m1}$`, easy: `（《積|せき》は《一定|いっ|てい》でない。《比例|ひ|れい》なので $${l1}\\times${m2}\\div${m1}=${l1 * m2 / m1}$）`,
+            a: `$${l1 * m2 / m1}$`, easy: `（《積|せき》は《一定|いっ|てい》でない。《比例|ひ|れい》なので $${l1}\\times${m2}\\div${m1}=${l1 * m2 / m1}$。わざ 3-91）`,
           };
         }
         const v = r.int(4, 8) * 10, t1 = r.int(5, 15), t2 = r.int(5, 30);
         if (t1 === t2) return null;
         return {
-          q: `${FUN} ${U(v, 'm')} で ${t1} 《分|ふん》《歩|ある》くと ${U(v * t1, 'm')}。${t2} 《分|ふん》なら □ m`,
-          a: `$${v * t2}$`, easy: `（《積|せき》は《一定|いっ|てい》でない。《比例|ひ|れい》なので $${v * t1}\\div${t1}\\times${t2}=${v * t2}$）`,
+          q: `${FUN} ${U(v, 'm')} で ${FN(t1)}《歩|ある》くと ${U(v * t1, 'm')}。${FN(t2)}なら □ m`,
+          a: `$${v * t2}$`, easy: `（《積|せき》は《一定|いっ|てい》でない。《比例|ひ|れい》なので $${v * t1}\\div${t1}\\times${t2}=${v * t2}$。わざ 3-91）`,
         };
       },
     },
