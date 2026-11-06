@@ -93,7 +93,7 @@
     const out = $('#sheets');
     if (!ids.length) { out.innerHTML = '<p class="empty">わざの番号を入れてください（例：1-37、37、33〜40）。</p>'; return; }
     const probs = M.makePrint(ids, { seed: st.seed, steps: st.steps, count: st.count, mix: st.mix });
-    const oneCol = ids.some(id => (M.waza[id].cols || 2) === 1);
+    const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
     const per = oneCol ? 12 : 24;   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
@@ -105,7 +105,7 @@
         <ol class="probs ${oneCol ? 'one' : 'two'}" start="${pg * per + 1}">`;
       list.forEach(p => {
         const w = M.waza[p.id];
-        const box = `<span class="box" style="min-width:${(w.boxw || '15mm')}"></span>`;
+        const box = `<span class="box" style="min-width:${(M.boxwOf(w, p.step) || '15mm')}"></span>`;
         const len = M.plain(M.withBox(p.q)).replace(/\s/g, '').length;
         html += `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}"><span class="q">${H(M.withBox(p.q), { noRuby: !st.ruby, box })}</span>${st.mix ? '<span class="wz">わざ<span class="box sm"></span></span>' : ''}</li>`;
       });
@@ -116,7 +116,8 @@
     probs.forEach(p => {
       const u = M.usableWaza(p, ids);
       const tag = st.mix || ids.length > 1 ? `<span class="wtag">${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}</span>` : '';
-      html += `<li><b>${H(p.a, { noRuby: !st.ruby })}</b>${p.easy ? `<span class="easy">［${H(p.easy, { noRuby: !st.ruby })}］</span>` : ''}${tag}<span class="stp">${STEP_LABEL[p.step]}</span></li>`;
+      const sq = { noRuby: !st.ruby, box: '<span class="sq"></span>' };
+      html += `<li><b>${H(p.a, sq)}</b>${p.easy ? `<span class="easy">［${H(p.easy, sq)}］</span>` : ''}${tag}<span class="stp">${STEP_LABEL[p.step]}</span></li>`;
     });
     html += `</ol><footer class="foot">［ ］の中は らくな かたち。　たねの ばんごう ${st.seed}</footer></section>`;
     out.innerHTML = html;

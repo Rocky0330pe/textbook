@@ -5,7 +5,7 @@
 import re, sys, subprocess
 name = sys.argv[1]
 log = open(f'{name}.log', encoding='utf-8', errors='replace').read()
-seq = re.findall(r'(MQPAGE|MQRIGHT) ?(\S*) (\d+)', log)
+seq = re.findall(r'(MQPAGE|MQRIGHT|MQSPREAD) ?(\S*?) ?(\d+)\n', log)
 bad = []
 cur = None
 for kind, wid, pg in seq:
@@ -13,11 +13,20 @@ for kind, wid, pg in seq:
     if kind == 'MQPAGE':
         cur = (wid, pg)
         if pg % 2: bad.append(f'{wid}: 奇数ページ {pg} から始まる')
+    elif kind == 'MQSPREAD':
+        cur = None
     elif cur:
         # \mqrightpage の \clearpage のあとのページ番号
         if pg != cur[1] + 1: bad.append(f'{cur[0]}: 左ページがあふれた（右ページが {pg}、始まりは {cur[1]}）')
-# 見開きの終わり：次のわざ（または部の見開き）の始まりまでが2ページか
+# 見開きの終わり：次のわざ（または部の見開き・こたえ）の始まりまでが2ページか（右ページのあふれ）
 starts = [(w, int(p)) for k, w, p in seq if k == 'MQPAGE']
+heads = sorted([int(p) for k, w, p in seq if k in ('MQPAGE', 'MQSPREAD')])
+for w, p in starts:
+    nxt = [h for h in heads if h > p]
+    if nxt:
+        n = nxt[0]
+        # 次の頭が偶数ページから始まるときは、あいだにメモのページが入ることがある（n == p+3 はメモ1枚）
+        if n - p > 3 or (n - p == 3 and n % 2 == 0): bad.append(f'{w}: 右ページがあふれた（{p}〜{n - 1}）')
 err = len(re.findall(r'^!', log, re.M))
 ob = [float(x) for x in re.findall(r'Overfull \\hbox \(([0-9.]+)pt', log)]
 obv = [float(x) for x in re.findall(r'Overfull \\vbox \(([0-9.]+)pt', log)]

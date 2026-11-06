@@ -68,6 +68,9 @@
     M.waza[def.id] = def;
     M.order.push(def.id);
   };
+  // 列の数・答えの欄のはば（わざ全体か、ステップごと {s1:2, s3:1}）
+  M.colsOf = (def, step) => (def.cols && typeof def.cols === 'object') ? (def.cols[step] || 2) : (def.cols || 2);
+  M.boxwOf = (def, step) => (def.boxw && typeof def.boxw === 'object') ? (def.boxw[step] || null) : (def.boxw || null);
   M.list = function (vol) {
     return M.order.filter(id => !vol || M.waza[id].vol === vol).sort();
   };
@@ -182,7 +185,8 @@
     s = MK(s);
     let out = '', last = 0, m;
     TOKEN.lastIndex = 0;
-    const plain = t => texEsc(t).replace(/□/g, opt.box || '\\mqbox{}');
+    // 欄のすぐあとの単位（「□ こ」）は、欄と同じ行に置く
+    const plain = t => texEsc(t).replace(/□ (?=\S)/g, '□\u0003').replace(/□/g, opt.box || '\\mqbox{}').replace(/\u0003/g, '~');
     while ((m = TOKEN.exec(s))) {
       out += plain(s.slice(last, m.index));
       const t = m[1];
@@ -290,11 +294,12 @@
     const vq = p.q.includes('□') ? null : M.evalExpr(left);
     const va = M.evalExpr(String(p.a));
     if (vq && va && !M.sameVal(vq, va)) errs.push(`式の値 ${vq} と答え ${p.a} がちがう`);
-    if (p.easy) {
+    if (p.easy && p.easyCheck !== false) {
       // 楽な形が「式」なら、その値も答えと同じはず（「＝」で区切られた式は、どれも同じ値）
       M.plain(p.easy).split('＝').forEach(part => {
         const ve = M.evalExpr(part);
-        const target = va || vq;
+        // p.val があれば、楽な形はその値とくらべる（答えが □ の一部だけのときなど）
+        const target = p.val != null ? M.evalExpr(String(p.val)) : (va || vq);
         if (ve && target && !M.sameVal(ve, target)) errs.push(`楽な形「${part.trim()}」の値が答えとちがう`);
       });
     }

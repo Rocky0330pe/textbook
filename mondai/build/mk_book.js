@@ -15,17 +15,18 @@ const parts = M.parts[vol] || [];
 const ids = M.list(vol);
 const byPart = no => ids.filter(id => M.waza[id].part === no);
 
-function box(def) { return def.boxw ? `\\mqbox[${def.boxw}]` : '\\mqbox{}'; }
+function box(def, step) { const w = M.boxwOf(def, step); return w ? `\\mqbox[${w}]` : '\\mqbox{}'; }
+const SQ = { box: '\\mqsq{}' };   // 説明の文の □ は、書きこむ欄ではない
 function probLine(def, p, num, extra) {
   const q = M.withBox(p.q);
-  return `\\mqp{${num}}{${tx(q, { box: box(def) })}${extra || ''}}`;
+  return `\\mqp{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}}`;
 }
 function probs(def, list, start, extra) {
-  const cols = def.cols || 2;
+  const cols = M.colsOf(def, list[0] && list[0].step);
   const lines = list.map((p, i) => probLine(def, p, start + i, extra && extra(p)));
   return `\\begin{mqprobs}{${cols}}\n${lines.join('\n')}\n\\end{mqprobs}`;
 }
-function lines(arr) { return arr.map(l => tx(l)).join('\\\\\n'); }
+function lines(arr) { return arr.map(l => tx(l, SQ)).join('\\\\\n'); }
 
 const body = [];
 const ans = [];
@@ -43,14 +44,14 @@ for (const part of parts) {
   for (const id of byPart(pid)) {
     const d = M.waza[id];
     const sh = M.makeSheet(id);
-    list.push(`\\mqlistrow{${id}}{${tx(d.title)}}{${tx(d.mark)}}{${d.chap}}{${d.stars}}`);
+    list.push(`\\mqlistrow{${id}}{${tx(d.title)}}{${tx(d.mark, SQ)}}{${d.chap}}{${d.stars}}`);
     let n = 1;
     const out = [];
     out.push(`\\mqwaza{${id}}{${tx(d.title)}}{${d.chap}}{${d.stars}}{${pid}}{${pname}}`);
-    out.push(`\\mqmark{${tx(d.mark)}}`);
+    out.push(`\\mqmark{${tx(d.mark, SQ)}}`);
     out.push(`\\mqcompare{${lines(d.futsu)}}{${lines(d.raku)}}`);
-    out.push(`\\mqwhy{${tx(d.why)}}`);
-    out.push(`\\mqcaution{${tx(d.caution)}}`);
+    out.push(`\\mqwhy{${tx(d.why, SQ)}}`);
+    out.push(`\\mqcaution{${tx(d.caution, SQ)}}`);
     const nums = {};
     M.STEPS.forEach(s => {
       const L = sh[s];
@@ -67,7 +68,7 @@ for (const part of parts) {
     const a = [`\\mqanshead{${id}}{${tx(d.title)}}`];
     let k = 1;
     M.STEPS.forEach(s => {
-      sh[s].forEach(p => { a.push(`\\mqa{${k}}{${tx(p.a)}}{${tx(p.easy || '')}}`); k++; });
+      sh[s].forEach(p => { a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ)}}`); k++; });
     });
     ans.push(a.join('\n'));
   }
@@ -92,10 +93,11 @@ for (const part of parts) {
     }
     const mixed = r.shuffle(pool);
     const intro = '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 書いて から とこう。 つかう わざが ない ときは「ー」と 書こう。';
-    const lines2 = mixed.map((p, i) => `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: box(M.waza[p.id]) })}\\mqwazabox}`);
-    body.push(`\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.join('\n')}\n\\end{mqprobs}`);
+    const lines2 = mixed.map((p, i) => `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: box(M.waza[p.id], p.step) })}\\mqwazabox}`);
+    const half = Math.ceil(lines2.length / 2);
+    body.push(`\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
-    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a)}}{${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.easy && u.length ? '：' + tx(p.easy) : ''}}`); });
+    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.easy && u.length ? '：' + tx(p.easy, SQ) : ''}}`); });
     ans.push(a.join('\n'));
   }
   // 作ってみよう
