@@ -106,7 +106,8 @@
       list.forEach(p => {
         const w = M.waza[p.id];
         const box = `<span class="box" style="min-width:${(w.boxw || '15mm')}"></span>`;
-        html += `<li><span class="q">${H(M.withBox(p.q), { noRuby: !st.ruby, box })}</span>${st.mix ? '<span class="wz">わざ<span class="box sm"></span></span>' : ''}</li>`;
+        const len = M.plain(M.withBox(p.q)).replace(/\s/g, '').length;
+        html += `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}"><span class="q">${H(M.withBox(p.q), { noRuby: !st.ruby, box })}</span>${st.mix ? '<span class="wz">わざ<span class="box sm"></span></span>' : ''}</li>`;
       });
       html += `</ol><footer class="foot">『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント</footer></section>`;
     }
