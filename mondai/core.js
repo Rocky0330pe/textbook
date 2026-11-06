@@ -684,6 +684,9 @@
     (candidates || []).forEach(id => { const d = M.waza[id]; if (d && d.fits && !out.includes(id) && !(p.step === 'trap' && id === p.id)) { try { if (d.fits(q, p)) out.push(id); } catch (e) { } } });
     return [...new Set(out)].sort();
   };
+  // 「分」の読み（ふん／ぷん）：数の一の位で決める（1・3・4・6・8・0 は ぷん、2・5・7・9 は ふん）。M.fun(10) → '《分|ぷん》'
+  M.funYomi = n => ([1, 3, 4, 6, 8, 0].includes(Math.abs(Math.round(n)) % 10) ? 'ぷん' : 'ふん');
+  M.fun = n => '《分|' + M.funYomi(n) + '》';
   // 分数の部品（第2巻から、どの組も使う）。分数は [分子, 分母]（分母は正、約分ずみ）
   M.F = {
     gcd: (a, b) => gcd(a, b),

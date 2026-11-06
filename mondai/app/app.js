@@ -131,7 +131,8 @@
         const nBox = (q.match(/□/g) || []).length;
         const nums = String(M.plain(p.a)).match(/(?<![0-9a-zA-Z.])-?\d+(?:\.\d+)?(?:\/\d+)?/g) || [];   // マイナスの数も（第30回）
         let k = 0;
-        const fill = nBox === 1 ? [p.a] : (nums.length === nBox ? nums : null);
+        // 式（$…$）の答えで欄が2つ以上のときは、欄に分けず、欄の外に答えを書く（変域・不等式などをまちがって分けないように）
+        const fill = nBox === 1 ? [p.a] : (!String(p.a).includes('$') && nums.length === nBox ? nums : null);
         const parts = H(q, { noRuby: !st.ruby, box: '\u0004' }).split('\u0004');
         body = parts.map((t, i) => i === 0 ? t : `<span class="box filled" style="min-width:${bw}">${fill ? H(String(fill[k++]), { noRuby: !st.ruby }) : ''}</span>` + t).join('');
         if (!fill) body += ` <b class="ansout">${H(p.a, { noRuby: !st.ruby })}</b>`;

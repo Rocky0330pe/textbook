@@ -40,6 +40,7 @@ body.push(`%% 自動生成（mondai/build/mk_book.js）。直すときは mondai
 ans.push(`%% 自動生成（mondai/build/mk_book.js）`);
 list.push(`%% 自動生成（mondai/build/mk_book.js）`);
 
+const TSUKURO = vol > 1 ? '《作|つく》ってみよう' : '《作|つく》って みよう';
 for (const part of parts) {
   const pid = part.no;
   const pname = tx(part.name);
@@ -86,7 +87,7 @@ for (const part of parts) {
     ans.push(a.join('\n'));
   }
   if (part.miwake && byPart(pid).length) list.push(`\\mqlistextra{${tx('《見|み》わけよう')}}{mq:sp:${pid}:miwake}`);
-  if (part.tsukuro && part.tsukuro.length && byPart(pid).length) list.push(`\\mqlistextra{${tx('《作|つく》って みよう')}}{mq:sp:${pid}:tsukuro}`);
+  if (part.tsukuro && part.tsukuro.length && byPart(pid).length) list.push(`\\mqlistextra{${tx(TSUKURO)}}{mq:sp:${pid}:tsukuro}`);
   // 見分けよう
   if (part.miwake && byPart(pid).length) {
     const r = M.rng(M.hash(`miwake:${vol}:${pid}`));
@@ -126,8 +127,8 @@ for (const part of parts) {
       ? '《答|こた》えは1つではありません。《自分|じ|ぶん》で《作|つく》った《問題|もん|だい》を、ともだちと《解|と》き《合|あ》ってみましょう。'
       : 'こたえは 1つでは ないよ。 じぶんで 《作|つく》った もんだいを、 ともだちや おうちの 《人|ひと》と とき あって みよう。';
     const qs = part.tsukuro.map((t, i) => `\\mqtsukuro{${i + 1}}{${tx(t.q, { box: '\\mqsq{}' })}}`);
-    body.push(`\\def\\mqsplabelkey{tsukuro}\\mqspreadhead{${pid}}{${pname}}{${tx('《作|つく》って みよう')}}{${tx(intro)}}\n${qs.join('\n')}`);
-    const a = [`\\mqanssub{${tx('《作|つく》って みよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
+    body.push(`\\def\\mqsplabelkey{tsukuro}\\mqspreadhead{${pid}}{${pname}}{${tx(TSUKURO)}}{${tx(intro)}}\n${qs.join('\n')}`);
+    const a = [`\\mqanssub{${tx(TSUKURO)}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
     part.tsukuro.forEach((t, i) => a.push(`\\mqtsukuroans{${i + 1}}{${tx(t.ex, { box: '\\mqsq{}' }).replace(/ (＝|＋|－|×|÷) /g, ' $1\\mqeqbreak ')}}`));
     ans.push(a.join('\n'));
   }
