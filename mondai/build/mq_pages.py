@@ -6,6 +6,7 @@ import re, sys, subprocess
 name = sys.argv[1]
 log = open(f'{name}.log', encoding='utf-8', errors='replace').read()
 seq = re.findall(r'(MQPAGE|MQRIGHT|MQSPREAD) ?(\S*?) ?(\d+)\n', log)
+flow = set(re.findall(r'MQFLOW (\S+)', log))   # ひっ算のわざ：見開きを2つ以上使ってよい
 bad = []
 cur = None
 for kind, wid, pg in seq:
@@ -17,11 +18,12 @@ for kind, wid, pg in seq:
         cur = None
     elif cur:
         # \mqrightpage の \clearpage のあとのページ番号
-        if pg != cur[1] + 1: bad.append(f'{cur[0]}: 左ページがあふれた（右ページが {pg}、始まりは {cur[1]}）')
+        if cur[0] not in flow and pg != cur[1] + 1: bad.append(f'{cur[0]}: 左ページがあふれた（右ページが {pg}、始まりは {cur[1]}）')
 # 見開きの終わり：次のわざ（または部の見開き・こたえ）の始まりまでが2ページか（右ページのあふれ）
 starts = [(w, int(p)) for k, w, p in seq if k == 'MQPAGE']
 heads = sorted([int(p) for k, w, p in seq if k in ('MQPAGE', 'MQSPREAD')])
 for w, p in starts:
+    if w in flow: continue
     nxt = [h for h in heads if h > p]
     if nxt:
         n = nxt[0]

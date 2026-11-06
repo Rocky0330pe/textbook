@@ -232,6 +232,168 @@
   // 問題の文に □ がなければ、答えの欄を最後につける
   M.withBox = function (q) { return q.includes('□') ? q : q + ' ＝ □'; };
 
+  // ---------------------------------------------------------------- ひっ算（第29回：依頼者の指示 11月6日）
+  // 問題の物に hs: { op: '+'|'-'|'*'|'/', a: '386', b: '47' } をつけると、ひっ算の形（方眼）で組む。
+  // M.hissanLayout(hs) は、方眼のどこに何の字を書くか（全部の段）を返す：
+  //   { W, H, cells[r][c] = { t, ans }（ans が true の字は答え。問題では書かない）, rules: [{r, c0, c1}]（r の段の下の線）,
+  //     bracket: { r, c0, c1 }|null（わり算の「）」と上の線。r はわられる数の段）, dots: [{r, c}]（c のますの右下に小数点） }
+  function digitsOf(x) { return String(x); }
+  M.hissanLayout = function (hs) {
+    const op = hs.op;
+    let W, H, cells, rules = [], bracket = null, dots = [];
+    const grid = (h, w) => Array.from({ length: h }, () => Array(w).fill(null));
+    const put = (r, cEnd, str, ans) => { // str の右はしを cEnd に
+      for (let i = 0; i < str.length; i++) cells[r][cEnd - str.length + 1 + i] = { t: str[i], ans: !!ans };
+    };
+    if (op === '+' || op === '-') {
+      const sa = String(hs.a), sb = String(hs.b);
+      const fr = s => (s.split('.')[1] || '').length;
+      const F = Math.max(fr(sa), fr(sb));
+      const sc = s => { const [i, f = ''] = s.split('.'); return BigInt(i + f.padEnd(F, '0')); };
+      const v = op === '+' ? sc(sa) + sc(sb) : sc(sa) - sc(sb);
+      if (v < 0n) throw new Error('ひっ算：答えがマイナス');
+      let rs = v.toString().padStart(F + 1, '0');
+      const rint = rs.slice(0, rs.length - F), rfr = rs.slice(rs.length - F);
+      const ip = s => s.split('.')[0];
+      const intW = Math.max(ip(sa).length, ip(sb).length, rint.length);
+      W = 1 + intW + F; H = 3; cells = grid(H, W);
+      const place = (r, s, ans, keepFrac) => {
+        const [i, f = ''] = s.split('.');
+        put(r, intW, i, ans);
+        const ff = keepFrac ? f : f;
+        for (let k = 0; k < ff.length; k++) cells[r][intW + 1 + k] = { t: ff[k], ans: !!ans };
+        if (s.includes('.') || (keepFrac && F > 0)) dots.push({ r, c: intW });
+      };
+      place(0, sa, false);
+      place(1, sb, false);
+      cells[1][0] = { t: op === '+' ? '＋' : '－', ans: false, op: true };
+      rules.push({ r: 1, c0: 0, c1: W - 1 });
+      place(2, F ? rint + '.' + rfr : rint, true, true);
+      return { W, H, cells, rules, bracket, dots, result: F ? rint + '.' + rfr : rint };
+    }
+    if (op === '*') {
+      const sa = String(hs.a), sb = String(hs.b);
+      const A = BigInt(sa), R = A * BigInt(sb);
+      const parts = [];
+      for (let i = 0; i < sb.length; i++) { const d = +sb[sb.length - 1 - i]; if (d) parts.push({ v: (A * BigInt(d)).toString(), i }); }
+      const rs = R.toString();
+      W = Math.max(sa.length, sb.length + 1, rs.length, ...parts.map(p => p.v.length + p.i));
+      const multi = parts.length > 1;
+      H = multi ? 3 + parts.length : 3;
+      cells = grid(H, W);
+      put(0, W - 1, sa, false);
+      put(1, W - 1, sb, false);
+      cells[1][0] = { t: '×', ans: false, op: true };
+      rules.push({ r: 1, c0: 0, c1: W - 1 });
+      if (multi) {
+        parts.forEach((p, k) => put(2 + k, W - 1 - p.i, p.v, true));
+        rules.push({ r: 2 + parts.length - 1, c0: 0, c1: W - 1 });
+        put(H - 1, W - 1, rs, true);
+      } else {
+        put(2, W - 1, rs, true);
+      }
+      return { W, H, cells, rules, bracket, dots, result: rs, partials: parts.map(p => p.v) };
+    }
+    if (op === '/') {
+      const sD = String(hs.a), d = Number(hs.b), sd = String(hs.b), L = sD.length;
+      const off = sd.length + 1;
+      W = off + L;
+      const rows = [];            // わられる数より下の段：{ cells: Map(c → t) , rule }
+      const quot = Array(L).fill(null);
+      let pos = 0, cur = +sD[0];
+      while (cur < d && pos < L - 1) { pos++; cur = cur * 10 + +sD[pos]; }
+      let curRow = null;          // null はわられる数の段
+      let rem = cur;
+      for (;;) {
+        const qd = Math.floor(cur / d);
+        quot[pos] = qd;
+        if (qd === 0) {
+          if (pos === L - 1) { rem = cur; break; }
+          pos++; cur = cur * 10 + +sD[pos];
+          if (curRow) curRow.cells.set(pos, sD[pos]);
+          continue;
+        }
+        const prod = String(qd * d);
+        const prow = { cells: new Map(), rule: null };
+        for (let i = 0; i < prod.length; i++) prow.cells.set(pos - prod.length + 1 + i, prod[i]);
+        const left = Math.min(pos - prod.length + 1, pos - String(cur).length + 1);
+        prow.rule = { c0: left, c1: pos };
+        rows.push(prow);
+        rem = cur - qd * d;
+        const nrow = { cells: new Map(), rule: null };
+        if (pos === L - 1) {
+          const t = String(rem);
+          for (let i = 0; i < t.length; i++) nrow.cells.set(pos - t.length + 1 + i, t[i]);
+          rows.push(nrow);
+          break;
+        }
+        pos++;
+        const t = (rem > 0 ? String(rem) : '') + sD[pos];
+        for (let i = 0; i < t.length; i++) nrow.cells.set(pos - t.length + 1 + i, t[i]);
+        rows.push(nrow);
+        curRow = nrow;
+        cur = rem * 10 + +sD[pos];
+      }
+      // 商の頭の0は書かない
+      let first = quot.findIndex(x => x !== null && x !== 0);
+      if (first < 0) first = L - 1;
+      H = 2 + rows.length;
+      cells = grid(H, W);
+      for (let i = first; i < L; i++) if (quot[i] !== null) cells[0][off + i] = { t: String(quot[i]), ans: true };
+      put(1, sd.length - 1, sd, false);
+      for (let i = 0; i < L; i++) cells[1][off + i] = { t: sD[i], ans: false };
+      bracket = { r: 1, c0: off, c1: W - 1, cb: sd.length };
+      rows.forEach((row, k) => {
+        row.cells.forEach((t, c) => { cells[2 + k][off + c] = { t, ans: true }; });
+        if (row.rule) rules.push({ r: 2 + k, c0: off + row.rule.c0, c1: off + row.rule.c1 });
+      });
+      const q = quot.slice(first).map(x => x || 0).join('');
+      return { W, H, cells, rules, bracket, dots, result: String(+q), rem };
+    }
+    throw new Error('ひっ算：知らない計算 ' + op);
+  };
+  // SVG（アプリ）。answer が true なら答えの字も書く。cell はますの大きさ（mm）
+  M.hissanSVG = function (L, opt) {
+    opt = opt || {};
+    const c = opt.cell || 8, W = L.W, H = L.H;
+    let s = `<svg class="hs" xmlns="http://www.w3.org/2000/svg" viewBox="-0.1 -0.1 ${W + 0.2} ${H + 0.2}" width="${W * c}mm" height="${H * c}mm">`;
+    for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) s += `<rect x="${k}" y="${r}" width="1" height="1" fill="none" stroke="#c9c9c9" stroke-width="0.03"/>`;
+    for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) {
+      const x = L.cells[r][k]; if (!x) continue;
+      if (x.ans && !opt.answer) continue;
+      s += `<text x="${k + 0.5}" y="${r + 0.78}" text-anchor="middle" font-size="0.78" fill="${x.ans ? '#b3261e' : '#222'}"${x.ans ? ' font-weight="bold"' : ''}>${x.t}</text>`;
+    }
+    L.rules.forEach(u => { s += `<line x1="${u.c0}" y1="${u.r + 1}" x2="${u.c1 + 1}" y2="${u.r + 1}" stroke="#222" stroke-width="0.07"/>`; });
+    L.dots.forEach(d => { if (!opt.answer && L.cells[d.r][d.c] && L.cells[d.r][d.c].ans) return; s += `<circle cx="${d.c + 1}" cy="${d.r + 0.85}" r="0.07" fill="#222"/>`; });
+    if (L.bracket) {
+      const b = L.bracket;
+      s += `<line x1="${b.c0}" y1="${b.r}" x2="${b.c1 + 1}" y2="${b.r}" stroke="#222" stroke-width="0.07"/>`;
+      s += `<path d="M ${b.c0} ${b.r} Q ${b.c0 + 0.32} ${b.r + 0.5} ${b.c0 - 0.12} ${b.r + 1}" fill="none" stroke="#222" stroke-width="0.07"/>`;
+    }
+    return s + '</svg>';
+  };
+  // TikZ（本）。cell は mm
+  M.hissanTeX = function (L, opt) {
+    opt = opt || {};
+    const c = opt.cell || 7.5, W = L.W, H = L.H;
+    const fs = opt.font || '\\large';
+    let s = `\\begin{tikzpicture}[x=${c}mm, y=-${c}mm, baseline=(current bounding box.north)]`;
+    s += `\\draw[bkLine!70, line width=0.3pt] (0,0) grid (${W},${H});`;
+    for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) {
+      const x = L.cells[r][k]; if (!x) continue;
+      if (x.ans && !opt.answer) continue;
+      s += `\\node[inner sep=0pt, font=${fs}${x.ans ? '\\bfseries, text=bkDeep' : ''}] at (${k + 0.5},${r + 0.52}) {${x.t}};`;
+    }
+    L.rules.forEach(u => { s += `\\draw[bkInk, line width=0.9pt] (${u.c0},${u.r + 1}) -- (${u.c1 + 1},${u.r + 1});`; });
+    L.dots.forEach(d => { if (!opt.answer && L.cells[d.r][d.c] && L.cells[d.r][d.c].ans) return; s += `\\fill[bkInk] (${d.c + 1},${d.r + 0.86}) circle (0.075);`; });
+    if (L.bracket) {
+      const b = L.bracket;
+      s += `\\draw[bkInk, line width=0.9pt] (${b.c0},${b.r}) -- (${b.c1 + 1},${b.r});`;
+      s += `\\draw[bkInk, line width=0.9pt] (${b.c0},${b.r}) .. controls (${b.c0 + 0.34},${b.r + 0.35}) and (${b.c0 + 0.34},${b.r + 0.65}) .. (${b.c0 - 0.12},${b.r + 1});`;
+    }
+    return s + '\\end{tikzpicture}';
+  };
+
   // ---------------------------------------------------------------- 検算
   // 「47 × 9」「(25 ＋ 75) ＋ 37」「470 － 47」などの式の値を、分数（有理数）で計算する。
   // 読めない式（ことば・単位・□・あまり）は null を返す。
@@ -302,6 +464,14 @@
         const target = p.val != null ? M.evalExpr(String(p.val)) : (va || vq);
         if (ve && target && !M.sameVal(ve, target)) errs.push(`楽な形「${part.trim()}」の値が答えとちがう`);
       });
+    }
+    if (p.hs) {
+      try {
+        const L = M.hissanLayout(p.hs);
+        const want = String(p.a).replace(/\s/g, '');
+        const got = L.result + (L.rem ? 'あまり' + L.rem : '');
+        if (M.plain(want) !== got) errs.push(`ひっ算の答え ${got} と a ${p.a} がちがう`);
+      } catch (e) { errs.push('ひっ算: ' + e.message); }
     }
     if (typeof p.verify === 'function') { const v = p.verify(); if (v !== true) errs.push('verify: ' + v); }
     return errs;

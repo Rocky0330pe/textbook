@@ -135,6 +135,8 @@
       }).join('') + '</div>';
     };
     let html = '';
+    // ひっ算がまざるときは、方眼の大きさで A4 につめる（問題と こたえは同じつめ方）
+    if (probs.some(p => p.hs)) { out.innerHTML = hissanPages(st, probs, ids, title); return; }
     for (const ans of [false, true]) {
       for (let pg = 0; pg < pages; pg++) {
         const list = probs.slice(pg * per, (pg + 1) * per);
@@ -148,6 +150,45 @@
       }
     }
     out.innerHTML = html;
+  }
+
+  function hissanPages(st, probs, ids, title) {
+    const CELL = 8, PW = 182, PH = 222, GAP = 6;
+    const items = probs.map((p, i) => {
+      if (p.hs) {
+        const L = M.hissanLayout(p.hs);
+        return { p, i, L, w: Math.max(L.W * CELL, 18) + 2, h: L.H * CELL + 8 };
+      }
+      return { p, i, w: 86, h: 17 };
+    });
+    // ならべる：左から右、入らなければ次の行、入らなければ次のページ
+    const pages = [[]];
+    let x = 0, y = 0, rowH = 0;
+    items.forEach(it => {
+      if (x > 0 && x + it.w > PW) { x = 0; y += rowH + GAP; rowH = 0; }
+      if (y > 0 && y + it.h > PH) { pages.push([]); x = 0; y = 0; rowH = 0; }
+      pages[pages.length - 1].push(it);
+      x += it.w + GAP; rowH = Math.max(rowH, it.h);
+    });
+    const sq = { noRuby: !st.ruby, box: '<span class="sq"></span>' };
+    let html = '';
+    for (const ans of [false, true]) {
+      pages.forEach((pg, k) => {
+        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, ans ? 'こたえと とき方' : '', k + 1, pages.length)}<div class="hsflow">`;
+        pg.forEach(it => {
+          const p = it.p;
+          if (p.hs) {
+            html += `<div class="hsi" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span>${ans ? ` <b class="ansout">${H(p.a, sq)}</b>` : ''}<br>${M.hissanSVG(it.L, { cell: CELL, answer: ans })}${ans && p.easy ? `<div class="how">${H(p.easy, sq)}</div>` : ''}</div>`;
+          } else {
+            const q = M.withBox(p.q);
+            const body = ans ? H(q, { noRuby: !st.ruby, box: `<span class="box filled">${H(p.a, sq)}</span>` }) : H(q, { noRuby: !st.ruby });
+            html += `<div class="hsi txt" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span> ${body}${ans && p.easy ? `<div class="how">とき方 ［${H(p.easy, sq)}］</div>` : ''}</div>`;
+          }
+        });
+        html += `</div><footer class="foot">${ans ? '赤い 字が こたえと とちゅうの けいさん。　' : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+      });
+    }
+    return html;
   }
 
   function init() {

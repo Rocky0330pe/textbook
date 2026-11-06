@@ -22,6 +22,11 @@ function probLine(def, p, num, extra) {
   return `\\mqp{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}}`;
 }
 function probs(def, list, start, extra) {
+  // ひっ算の問題は、方眼の絵をならべる（左から右へ、入るだけ）
+  if (list.length && list[0].hs) {
+    const items = list.map((p, i) => `\\mqhsp{${start + i}}{${M.hissanTeX(M.hissanLayout(p.hs), { cell: def.cell || 7.5 })}}`);
+    return `\\begin{mqhsprobs}\n${items.join('\n')}\n\\end{mqhsprobs}`;
+  }
   const cols = M.colsOf(def, list[0] && list[0].step);
   const lines = list.map((p, i) => probLine(def, p, start + i, extra && extra(p)));
   return `\\begin{mqprobs}{${cols}}\n${lines.join('\n')}\n\\end{mqprobs}`;
@@ -48,6 +53,7 @@ for (const part of parts) {
     let n = 1;
     const out = [];
     out.push(`\\mqwaza{${id}}{${tx(d.title)}}{${d.chap}}{${d.stars}}{${pid}}{${pname}}`);
+    if (d.flow) out.push(`\\typeout{MQFLOW ${id}}`);
     out.push(`\\mqmark{${tx(d.mark, SQ)}}`);
     out.push(`\\mqcompare{${lines(d.futsu)}}{${lines(d.raku)}}`);
     out.push(`\\mqwhy{${tx(d.why, SQ)}}`);
@@ -56,7 +62,7 @@ for (const part of parts) {
     M.STEPS.forEach(s => {
       const L = sh[s];
       if (!L.length) return;
-      if (s === 's2') out.push('\\mqrightpage');
+      if (s === 's2' && !d.flow) out.push('\\mqrightpage');
       out.push(s === 'trap' ? `\\mqtrapstep{${tx(M.STEP_TITLE[s])}}` : `\\mqstep{${s}}{${tx(M.STEP_TITLE[s])}}`);
       out.push(probs(d, L, n));
       nums[s] = L.length;
@@ -68,7 +74,11 @@ for (const part of parts) {
     const a = [`\\mqanshead{${id}}{${tx(d.title)}}`];
     let k = 1;
     M.STEPS.forEach(s => {
-      sh[s].forEach(p => { a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ)}}`); k++; });
+      sh[s].forEach(p => {
+        if (p.hs) a.push(`\\mqahs{${k}}{${tx(p.a, SQ)}}{${M.hissanTeX(M.hissanLayout(p.hs), { cell: 3.3, answer: true, font: '\\scriptsize' })}}`);
+        else a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ)}}`);
+        k++;
+      });
     });
     ans.push(a.join('\n'));
   }
