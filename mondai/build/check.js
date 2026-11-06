@@ -44,6 +44,15 @@ for (const id of ids) {
   const cnt = M.STEPS.map(s => sheet[s].length).join('/');
   report.push(`${uniq.length ? 'NG' : 'OK'} ${id} ${M.plain(d.title)}  [${cnt}]` + (uniq.length ? '\n   - ' + uniq.slice(0, 8).join('\n   - ') : ''));
 }
+// 部の見開き（作ってみよう）の文
+for (const part of (M.parts[vol] || [])) {
+  const errs = [];
+  if (vol <= 3) {
+    if (bareKanji(part.name)) errs.push('name');
+    (part.tsukuro || []).forEach((t, i) => { if (bareKanji(t.q)) errs.push(`tsukuro[${i}].q`); if (bareKanji(t.ex)) errs.push(`tsukuro[${i}].ex`); });
+  }
+  if (errs.length) { bad++; report.push(`NG 第${part.no}部: ルビのない漢字 ${errs.join(', ')}`); }
+}
 console.log(report.join('\n'));
 console.log(`\nわざ ${ids.length}個、まちがいのあるわざ ${bad}個`);
 process.exit(bad ? 1 : 0);

@@ -141,8 +141,21 @@
     const pool = [];
     ids.forEach(id => steps.forEach(s => { if (M.waza[id] && M.waza[id].steps[s]) pool.push([id, s]); }));
     if (!pool.length) return [];
+    // 問題の数を、わざに同じくらいずつ、ステップには本の数（counts）の割合で分ける
+    const want = new Map();
+    const perId = ids.map((id, k) => Math.floor(total / ids.length) + (k < total % ids.length ? 1 : 0));
+    ids.forEach((id, k) => {
+      const d = M.waza[id]; if (!d) return;
+      const st = steps.filter(s => d.steps[s]);
+      const w = st.map(s => d.counts[s] || 1), W = w.reduce((a, b) => a + b, 0) || 1;
+      const raw = w.map(x => x * perId[k] / W), base = raw.map(Math.floor);
+      let rest = perId[k] - base.reduce((a, b) => a + b, 0);
+      raw.map((x, i) => [x - base[i], i]).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (rest > 0) { base[i]++; rest--; } });
+      st.forEach((s, i) => want.set(id + '|' + s, base[i]));
+    });
     const out = [];
-    // わざ・ステップを順にまわして、だいたい同じ数ずつ作る
+    pool.forEach(([id, s]) => { const n = want.get(id + '|' + s) || 0; if (n) out.push(...M.makeStep(id, s, n, r, seen)); });
+    // 作れる問題が足りないとき（種類の少ないわざ）は、ほかのステップで足す
     for (let k = 0; out.length < total && k < total * 20; k++) {
       const [id, s] = pool[k % pool.length];
       const got = M.makeStep(id, s, 1, r, seen);

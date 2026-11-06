@@ -12,6 +12,9 @@
   tex/guide-*・tools/mkguidetables.py             → guide
   tools/mkmap9.py・tools/mkseriesidx.py           → 9
   tex/p1-*・tex/phN*・tex/phwrapN.tex             → pN（物理シリーズ）
+  mondai/vN/*・tex/mqN*                           → qN（問題集。第29回）
+  mondai/core.js・mondai/build/・mondai/app/・tex/bk-mondai.sty・tex/mq-front.tex
+                                                  → 中身のある問題集の巻（mondai/vN がある qN）
   phys/*・tex/bk-phys*                            → 本文のある物理の巻（p1、ph<n>-body.tex がある pN）
   pages_actual.json                               → 値が変わった巻だけ
   組み上がりに効く共通の部品（tex/bk-*・tex/series-data.tex・tex/fonts/・tex/img/・texmf/・
@@ -30,8 +33,12 @@ import subprocess
 import sys
 
 MATH = [str(i) for i in range(1, 10)] + ['guide']
-ORDER = MATH + ['p1', 'p2', 'p3', 'p4', 'p5']
-VALID = re.compile(r'^([1-9]|guide|p[1-5])$')
+ORDER = MATH + ['p1', 'p2', 'p3', 'p4', 'p5'] + ['q%d' % i for i in range(1, 10)]
+VALID = re.compile(r'^([1-9]|guide|p[1-5]|q[1-9])$')
+
+
+def qvols():
+    return ['q%d' % n for n in range(1, 10) if os.path.isdir('mondai/v%d' % n)]
 
 
 def git(*args):
@@ -57,7 +64,7 @@ def from_input(text):
         elif VALID.match(w):
             t.append(w)
         else:
-            print(f'::warning::知らない対象を飛ばした: {w}（1〜9・guide・p1〜p5・all）', file=sys.stderr)
+            print(f'::warning::知らない対象を飛ばした: {w}（1〜9・guide・p1〜p5・q1〜q9・all）', file=sys.stderr)
     out(t)
 
 
@@ -75,6 +82,10 @@ def classify(files, base, head):
             t.update('p%d' % n for n in range(1, 6) if n == 1 or os.path.exists('tex/ph%d-body.tex' % n)); continue
         if m := re.match(r'tex/(?:p|ph|phwrap)([1-5])[-.a-z]', f):
             t.add('p' + m.group(1)); continue
+        if m := re.match(r'(?:mondai/v|tex/mq)([1-9])[-/.]', f):
+            t.add('q' + m.group(1)); continue
+        if f.startswith(('mondai/', 'tex/bk-mondai', 'tex/mq-')):
+            t.update(qvols()); continue
         if f == 'pages_actual.json':
             a, b = show_json(base, f), show_json(head, f)
             for k in set(a) | set(b):
@@ -84,7 +95,7 @@ def classify(files, base, head):
         if (f.startswith(('tex/bk-', 'tex/fonts/', 'tex/img/', 'texmf/'))
                 or f in ('tex/series-data.tex', 'series.py', 'gen.py', 'tools/syncpages.py',
                          'tools/check_pages.py', 'scripts/ci-build.sh')):
-            t.update(MATH); continue
+            t.update(MATH); t.update(qvols()); continue
         if f.startswith(('.github/workflows/', 'scripts/')):
             t.add('guide'); continue
     return t

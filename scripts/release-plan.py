@@ -13,7 +13,7 @@
   python3 scripts/release-plan.py union 組む巻のJSON リリースのJSON
                                                             2つの組む巻の一覧を合わせる
 出力: リリースは [{"target": "7", "tag": "vol7-ver2", "ver": "Ver2"}] の形の JSON。組む巻は ["6","7"] の形。
-タグの形は volN-verM・guide-verM・pN-verM・all-YYYY-MM-DD（全巻、版の欄は日付）。
+タグの形は volN-verM・guide-verM・pN-verM・qN-verM（問題集）・all-YYYY-MM-DD（全巻、版の欄は日付）。
 """
 import json
 import re
@@ -21,7 +21,7 @@ import subprocess
 import sys
 
 MATH = [str(i) for i in range(1, 10)] + ['guide']
-ORDER = MATH + ['p1', 'p2', 'p3', 'p4', 'p5']
+ORDER = MATH + ['p1', 'p2', 'p3', 'p4', 'p5'] + ['q%d' % i for i in range(1, 10)]
 VERSIONS = 'versions.json'
 
 
@@ -51,7 +51,7 @@ def parse_tag(tag):
     """タグの名前から (組む巻, 版の欄)。決まりにない形なら None。"""
     if m := re.fullmatch(r'vol([1-9])-ver([0-9]+)', tag):
         return m.group(1), f'Ver{m.group(2)}'
-    if m := re.fullmatch(r'(guide|p[1-5])-ver([0-9]+)', tag):
+    if m := re.fullmatch(r'(guide|p[1-5]|q[1-9])-ver([0-9]+)', tag):
         return m.group(1), f'Ver{m.group(2)}'
     if m := re.fullmatch(r'all-([0-9]{4}-[0-9]{2}-[0-9]{2})', tag):
         return 'all', m.group(1)
@@ -88,7 +88,7 @@ def cmd_tags(text, check):
     for tag in text.split():
         p = parse_tag(tag)
         if p is None:
-            print(f'::error::このタグの形は決まりにない: {tag}（volN-verM・guide-verM・pN-verM・all-YYYY-MM-DD）', file=sys.stderr)
+            print(f'::error::このタグの形は決まりにない: {tag}（volN-verM・guide-verM・pN-verM・qN-verM・all-YYYY-MM-DD）', file=sys.stderr)
             bad = True
             continue
         target, ver = p
