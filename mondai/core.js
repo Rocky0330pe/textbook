@@ -345,7 +345,7 @@
       bracket = { r: 1, c0: off, c1: W - 1, cb: sd.length };
       rows.forEach((row, k) => {
         row.cells.forEach((t, c) => { cells[2 + k][off + c] = { t, ans: true }; });
-        if (row.rule) rules.push({ r: 2 + k, c0: off + row.rule.c0, c1: off + row.rule.c1 });
+        if (row.rule) rules.push({ r: 2 + k, c0: off + row.rule.c0, c1: off + row.rule.c1, step: true });
       });
       const q = quot.slice(first).map(x => x || 0).join('');
       return { W, H, cells, rules, bracket, dots, result: String(+q), rem };
@@ -363,7 +363,7 @@
       if (x.ans && !opt.answer) continue;
       s += `<text x="${k + 0.5}" y="${r + 0.78}" text-anchor="middle" font-size="0.78" fill="${x.ans ? '#b3261e' : '#222'}"${x.ans ? ' font-weight="bold"' : ''}>${x.t}</text>`;
     }
-    L.rules.forEach(u => { s += `<line x1="${u.c0}" y1="${u.r + 1}" x2="${u.c1 + 1}" y2="${u.r + 1}" stroke="#222" stroke-width="0.07"/>`; });
+    L.rules.forEach(u => { if (u.step && !opt.answer) return; s += `<line x1="${u.c0}" y1="${u.r + 1}" x2="${u.c1 + 1}" y2="${u.r + 1}" stroke="#222" stroke-width="0.07"/>`; });
     L.dots.forEach(d => { if (!opt.answer && L.cells[d.r][d.c] && L.cells[d.r][d.c].ans) return; s += `<circle cx="${d.c + 1}" cy="${d.r + 0.85}" r="0.07" fill="#222"/>`; });
     if (L.bracket) {
       const b = L.bracket;
@@ -384,7 +384,7 @@
       if (x.ans && !opt.answer) continue;
       s += `\\node[inner sep=0pt, font=${fs}${x.ans ? '\\bfseries, text=bkDeep' : ''}] at (${k + 0.5},${r + 0.52}) {${x.t}};`;
     }
-    L.rules.forEach(u => { s += `\\draw[bkInk, line width=0.9pt] (${u.c0},${u.r + 1}) -- (${u.c1 + 1},${u.r + 1});`; });
+    L.rules.forEach(u => { if (u.step && !opt.answer) return; s += `\\draw[bkInk, line width=0.9pt] (${u.c0},${u.r + 1}) -- (${u.c1 + 1},${u.r + 1});`; });
     L.dots.forEach(d => { if (!opt.answer && L.cells[d.r][d.c] && L.cells[d.r][d.c].ans) return; s += `\\fill[bkInk] (${d.c + 1},${d.r + 0.86}) circle (0.075);`; });
     if (L.bracket) {
       const b = L.bracket;

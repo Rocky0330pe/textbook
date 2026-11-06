@@ -63,7 +63,8 @@ for (const part of parts) {
       const L = sh[s];
       if (!L.length) return;
       if (s === 's2' && !d.flow) out.push('\\mqrightpage');
-      out.push(s === 'trap' ? `\\mqtrapstep{${tx(M.STEP_TITLE[s])}}` : `\\mqstep{${s}}{${tx(M.STEP_TITLE[s])}}`);
+      const fl = d.flow ? 'flow' : '';
+      out.push(s === 'trap' ? `\\mqtrapstep${fl}{${tx(M.STEP_TITLE[s])}}` : `\\mqstep${fl}{${s}}{${tx(M.STEP_TITLE[s])}}`);
       out.push(probs(d, L, n));
       nums[s] = L.length;
       n += L.length;
