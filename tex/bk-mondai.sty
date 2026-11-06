@@ -3,6 +3,8 @@
 %% bk-b5.sty（と第1巻は bk-pict1.sty）のあとに読む。本文は mondai/build/mk_book.js が書き出す。
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{bk-mondai}[2026/11/06 v0.1 workbook parts]
+% 右をそろえない（\raggedright の右の空きは有限なので、かなの間が広がる。無限にして広げない）
+\newcommand\mqragged{\raggedright\rightskip=0pt plus 1fil\relax\@rightskip=0pt plus 1fil\relax}
 \RequirePackage{xparse}
 
 %% ------------------------------------------------------------
@@ -30,19 +32,19 @@
 % \mqwaza{番号}{わざの名前}{教科書の章}{★}{部の番号}{部の名前}
 %   左ページ（偶数）から始める。左右のページは \mqrightpage で分ける。
 \newcommand\mqpartname{}
+\newsavebox\mq@chipbox
 \newcommand\mqwaza[6]{%
   \clearpage\ifodd\value{page}\mqmemopage\fi
   \bksetrunning{#5}{\R{問題集}{もん|だい|しゅう}\hspace{0.5em}\R{第}{だい}\bkvol\R{巻}{かん}\hspace{0.8em}\R{第}{だい}#5\R{部}{ぶ}\hspace{0.5em}#6}{わざ\hspace{0.3em}#1\hspace{0.6em}#2}%
   \gdef\bk@tabpos{#5}%
   \phantomsection\label{mq:#1}\typeout{MQPAGE #1 \thepage}%
   \pdfbookmark[1]{わざ #1}{mqwaza#1}%
-  \noindent\begin{tikzpicture}[x=1mm, y=1mm]
-    \path (0,0) -- (\linewidth,0);
-    \node[anchor=north west, fill=bkTheme, text=white, rounded corners=3mm, font=\sffamily\bfseries\large,
-      inner xsep=3mm, inner ysep=1.6mm] (n) at (0,0) {わざ\hspace{0.3em}#1};
-    \node[anchor=north west, text width=\dimexpr\linewidth-33mm\relax, font=\bfseries, align=left, inner sep=0pt] (t) at ([xshift=3mm,yshift=-1.2mm]n.north east) {#2\hspace{0.6em}\mbox{\mdseries\mqtextbook{#3}\hspace{0.3em}{\footnotesize\mqstars{#4}}}};
-    \draw[bkTheme, line width=1.2pt] ([yshift=-1.2mm]current bounding box.south west) -- ([yshift=-1.2mm]current bounding box.south west -| {(\linewidth,0)});
-  \end{tikzpicture}\par\nobreak\vspace{1.2mm}%
+  % 番号の札のあとに名前。2行になるときは、札の右から書く（第29回：字の間を広げない）
+  \sbox\mq@chipbox{\tikz[baseline=(n.base)]\node[fill=bkTheme, text=white, rounded corners=3mm, font=\sffamily\bfseries\large,
+      inner xsep=3mm, inner ysep=1.6mm] (n) {わざ\hspace{0.3em}#1};}%
+  {\noindent\hangindent=\dimexpr\wd\mq@chipbox+3mm\relax\hangafter=1\rightskip=0pt plus 1fil\relax\parfillskip=0pt plus 1fil\relax
+   \usebox\mq@chipbox\hspace{3mm}{\bfseries #2}\hspace{0.6em}\mbox{\mqtextbook{#3}\hspace{0.3em}{\footnotesize\mqstars{#4}}}\par}%
+  \nobreak\nointerlineskip\vspace{1.4mm}\noindent{\color{bkTheme}\rule{\linewidth}{1.2pt}}\par\nobreak\nointerlineskip\vspace{1.2mm}%
 }
 % 見分ける目印
 \newcommand\mqmark[1]{\par\noindent
@@ -72,7 +74,7 @@
     inner xsep=2mm, inner ysep=0.8mm] (c) {#1};\hspace{0.6em}{\small らくに ならない もんだいだよ。 どうしてかな？}\par\nobreak\vspace{0.6mm}}
 % 問題のならび  \begin{mqprobs}{列の数} \mqp{番号}{問題} ... \end{mqprobs}
 \newenvironment{mqprobs}[1]{\par\noindent\setlength{\tabcolsep}{0pt}\def\mq@cols{#1}%
-  \setlength{\columnsep}{6mm}\ifnum#1>1 \begin{multicols}{#1}\fi\raggedright}{\ifnum\mq@cols>1 \end{multicols}\fi\par}
+  \setlength{\columnsep}{6mm}\ifnum#1>1 \begin{multicols}{#1}\fi\mqragged}{\ifnum\mq@cols>1 \end{multicols}\fi\par}
 \newcommand\mqp[2]{\par\noindent{\interlinepenalty=10000\hangindent=2.2em\hangafter=1\makebox[2.2em][l]{\small(#1)}#2\par}\vspace{1.4mm}}
 % 右ページへ
 \newcommand\mqrightpage{\clearpage\typeout{MQRIGHT \thepage}}
@@ -108,7 +110,8 @@
     \draw[bkDeep, line width=1.2pt] (0,-0.5) -- (\linewidth,-0.5);
   \end{tikzpicture}\par\vspace{2mm}\noindent #4\par\vspace{2mm}}
 % 見分けようの問題：答えの欄のあとに「わざ」を書く欄
-\newcommand\mqwazabox{\nobreak\hfill\mbox{\hspace{0.6em}{\footnotesize わざ}\hspace{0.2em}\mqbox[13mm]}}
+% 入らないときは、次の行の右に送る（TeXbook の \signed と同じ作り方）
+\newcommand\mqwazabox{\unskip\nobreak\hfil\penalty50\hskip0.6em\hbox{}\nobreak\hfill\mbox{{\footnotesize わざ}\hspace{0.2em}\mqbox[13mm]}{\parfillskip=0pt\par}}
 
 %% ------------------------------------------------------------
 %% 4. こたえ
@@ -147,10 +150,11 @@
 %% 6. ひっ算（第29回：依頼者の指示 11月6日）
 %% ------------------------------------------------------------
 % 方眼の絵をならべる。\mqhsp{番号}{tikz}
-\newenvironment{mqhsprobs}{\par\noindent\raggedright\setlength{\lineskip}{5mm}\setlength{\lineskiplimit}{5mm}\clubpenalty=0 \widowpenalty=0 \interlinepenalty=0 }{\par\vspace{2mm}}
+\newenvironment{mqhsprobs}{\par\noindent\mqragged\setlength{\lineskip}{5mm}\setlength{\lineskiplimit}{5mm}\clubpenalty=0 \widowpenalty=0 \interlinepenalty=0 }{\par\vspace{2mm}}
 \newcommand\mqhsp[2]{\mbox{\begin{tabular}[t]{@{}l@{}}{\small(#1)}\\[0.5mm]#2\end{tabular}}\hspace{7mm plus 4mm}\allowbreak}
 % こたえ：答えと、小さな方眼（とき方）
-\newcommand\mqahs[3]{\mbox{\begin{tabular}[t]{@{}l@{}}{\footnotesize(#1)\hspace{0.2em}\textbf{#2}}\\#3\end{tabular}}\hspace{0.8em plus 0.5em}\allowbreak}
+% \mqahs[わなの わけ]{番号}{答え}{方眼}。わなの問題は、方眼の下に わけを 小さく書く
+\newcommand\mqahs[4][]{\mbox{\begin{tabular}[t]{@{}l@{}}{\footnotesize(#2)\hspace{0.2em}\textbf{#3}}\\#4\ifx\relax#1\relax\else\\[0.3mm]\parbox[t]{36mm}{\mqragged\scriptsize #1}\fi\end{tabular}}\hspace{0.8em plus 0.5em}\allowbreak}
 % ひっ算のわざのステップの見出し（\Needspace を使わない。大きな方眼の行の前で、早めに改ページされるため）
 \newcommand\mqstepflow[2]{\par\addvspace{1.8mm}\noindent
   \tikz[baseline=(c.base)]\node[fill=bkTheme, text=white, rounded corners=1.5mm, font=\sffamily\bfseries\small,
@@ -165,7 +169,19 @@
 \newcommand\mqmiwaketable[1]{\par\vfill\noindent
   \begin{tcolorbox}[enhanced, colback=bkTheme!4, colframe=bkLine, boxrule=0.6pt, arc=2mm, left=2mm, right=2mm, top=1mm, bottom=1mm,
     fonttitle=\sffamily\bfseries\footnotesize, coltitle=bkDeep, colbacktitle=bkTheme!10, title={この ぶの わざ}]
-  {\footnotesize\raggedright #1}\end{tcolorbox}\par}
+  {\footnotesize\mqragged #1}\end{tcolorbox}\par}
 \newcommand\mqmwrow[2]{\mbox{\mqwazachipsmall{#1}\hspace{0.2em}#2}\hspace{0.8em plus 0.3em}\allowbreak}
 % わざの一覧の、見わけよう・作ってみよう・こたえの行
 \newcommand\mqlistextra[2]{\par\noindent\hangindent=6.6em\hangafter=1\makebox[5.4em][l]{}\hspace{0.4em}{\small #1}\nobreak\leaders\hbox to 0.8em{\hss・\hss}\hfill\nobreak{\footnotesize\pageref{#2}}\par\vspace{0.2mm}}
+% おうちの かたへの文（分かち書きでない文）：かなの前後でも改行してよい。グループの中だけで効く
+\newcommand\mqadult{%
+  \@tempcnta="3041\relax
+  \loop
+    \ltjsetparameter{prebreakpenalty={\@tempcnta,0}, postbreakpenalty={\@tempcnta,0}}%
+    \advance\@tempcnta\@ne
+  \ifnum\@tempcnta<"30FF\repeat
+  % 小さい かな・ー・・の前では改行しない（ふつうの禁則）
+  \@for\mq@k:={3041,3043,3045,3047,3049,3063,3083,3085,3087,308E,30A1,30A3,30A5,30A7,30A9,30C3,30E3,30E5,30E7,30EE,30F5,30F6,30FC,30FB}\do{\ltjsetparameter{prebreakpenalty={"\mq@k,10000}}}%
+  \bk@wakachi=0\relax\rightskip=0pt\relax\@rightskip=0pt\relax}
+% こたえの長い式は「＝」のあとで改行してよい（分かち書きの式は記号の前後で改行しないので、のびる空白で区切る）
+\newcommand\mqeqbreak{\hskip 0.25em plus 1fil\penalty0\hskip 0pt plus -1fil\relax}

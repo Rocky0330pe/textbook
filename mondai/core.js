@@ -279,7 +279,34 @@
       cells[1][0] = { t: op === '+' ? '＋' : '－', ans: false, op: true };
       rules.push({ r: 1, c0: 0, c1: W - 1 });
       place(2, F ? rint + '.' + rfr : rint, true, true);
-      return { W, H, cells, rules, bracket, dots, result: F ? rint + '.' + rfr : rint };
+      // くり上がり（小さい 1）・くり下がり（ななめの線と、小さく書いた へった数）。教科書 1-7 の書き方
+      const small = [], slash = [];
+      const dig = (r, c) => { const x = cells[r][c]; return x && /^[0-9]$/.test(x.t) ? +x.t : null; };
+      if (op === '+') {
+        let carry = 0;
+        for (let c = W - 1; c >= 1; c--) {
+          const x = dig(0, c), y = dig(1, c);
+          if (x === null && y === null && !carry) continue;
+          const t = (x || 0) + (y || 0) + carry;
+          carry = t >= 10 ? 1 : 0;
+          if (carry && c - 1 >= 1 && (dig(0, c - 1) !== null || dig(1, c - 1) !== null)) small.push({ c: c - 1, t: '1' });
+        }
+      } else {
+        const cur = []; for (let c = 0; c < W; c++) cur[c] = dig(0, c);
+        const changed = new Map();
+        for (let c = W - 1; c >= 1; c--) {
+          const y = dig(1, c) || 0;
+          if (cur[c] === null) { if (y) cur[c] = 0; else continue; }
+          if (cur[c] >= y) continue;
+          let k = c - 1; while (k >= 1 && !cur[k]) k--;
+          if (k < 1) break;
+          cur[k]--; changed.set(k, cur[k]);
+          for (let j = k + 1; j < c; j++) if (cur[j] !== null) { cur[j] = 9; changed.set(j, 9); }
+          cur[c] += 10;
+        }
+        changed.forEach((t, c) => { slash.push({ r: 0, c }); small.push({ c, t: String(t) }); });
+      }
+      return { W, H, cells, rules, bracket, dots, result: F ? rint + '.' + rfr : rint, small, slash, top: small.length ? 0.5 : 0 };
     }
     if (op === '*') {
       const sa = String(hs.a), sb = String(hs.b);
@@ -293,6 +320,15 @@
       cells = grid(H, W);
       put(0, W - 1, sa, false);
       put(1, W - 1, sb, false);
+      // 1けたを かけるときは、くり上がりの数を 上に 小さく書く（2けた以上を かけるときは、段ごとに ちがうので書かない）
+      const small = [];
+      if (sb.length === 1) {
+        let carry = 0;
+        for (let i = sa.length - 1; i >= 0; i--) {
+          const t = +sa[i] * +sb + carry; carry = Math.floor(t / 10);
+          if (carry && i > 0) small.push({ c: W - sa.length + i - 1, t: String(carry) });
+        }
+      }
       cells[1][0] = { t: '×', ans: false, op: true };
       rules.push({ r: 1, c0: 0, c1: W - 1 });
       if (multi) {
@@ -302,7 +338,7 @@
       } else {
         put(2, W - 1, rs, true);
       }
-      return { W, H, cells, rules, bracket, dots, result: rs, partials: parts.map(p => p.v) };
+      return { W, H, cells, rules, bracket, dots, result: rs, partials: parts.map(p => p.v), small, slash: [], top: small.length ? 0.5 : 0 };
     }
     if (op === '/') {
       const sD = String(hs.a), d = Number(hs.b), sd = String(hs.b), L = sD.length;
@@ -320,7 +356,8 @@
         if (qd === 0) {
           if (pos === L - 1) { rem = cur; break; }
           pos++; cur = cur * 10 + +sD[pos];
-          if (curRow) curRow.cells.set(pos, sD[pos]);
+          // おろした段は、いまの数（頭に 0 を書かない。404 ÷ 4 の2段目は「04」ではなく「4」）
+          if (curRow) { curRow.cells.clear(); const t = String(cur); for (let i = 0; i < t.length; i++) curRow.cells.set(pos - t.length + 1 + i, t[i]); }
           continue;
         }
         const prod = String(qd * d);
@@ -338,7 +375,7 @@
           break;
         }
         pos++;
-        const t = (rem > 0 ? String(rem) : '') + sD[pos];
+        const t = String(rem * 10 + +sD[pos]);
         for (let i = 0; i < t.length; i++) nrow.cells.set(pos - t.length + 1 + i, t[i]);
         rows.push(nrow);
         curRow = nrow;
@@ -365,8 +402,12 @@
   // SVG（アプリ）。answer が true なら答えの字も書く。cell はますの大きさ（mm）
   M.hissanSVG = function (L, opt) {
     opt = opt || {};
-    const c = opt.cell || 8, W = L.W, H = L.H;
-    let s = `<svg class="hs" xmlns="http://www.w3.org/2000/svg" viewBox="-0.1 -0.1 ${W + 0.2} ${H + 0.2}" width="${W * c}mm" height="${H * c}mm">`;
+    const c = opt.cell || 8, W = L.W, H = L.H, T = L.top || 0;
+    let s = `<svg class="hs" xmlns="http://www.w3.org/2000/svg" viewBox="-0.1 ${-T - 0.1} ${W + 0.2} ${H + T + 0.2}" width="${W * c}mm" height="${(H + T) * c}mm">`;
+    if (opt.answer) {
+      (L.small || []).forEach(m => { s += `<text x="${m.c + 0.5}" y="${-0.06}" text-anchor="middle" font-size="0.42" fill="#b3261e">${m.t}</text>`; });
+      (L.slash || []).forEach(m => { s += `<line x1="${m.c + 0.25}" y1="${m.r + 0.85}" x2="${m.c + 0.75}" y2="${m.r + 0.15}" stroke="#b3261e" stroke-width="0.06"/>`; });
+    }
     for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) s += `<rect x="${k}" y="${r}" width="1" height="1" fill="none" stroke="#c9c9c9" stroke-width="0.03"/>`;
     for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) {
       const x = L.cells[r][k]; if (!x) continue;
@@ -388,7 +429,12 @@
     const c = opt.cell || 7.5, W = L.W, H = L.H;
     const fs = opt.font || '\\large';
     let s = `\\begin{tikzpicture}[x=${c}mm, y=-${c}mm, baseline=(current bounding box.north)]`;
+    if (L.top) s += `\\path (0,${-L.top}) (${W},${-L.top});`;
     s += `\\draw[bkLine!70, line width=0.3pt] (0,0) grid (${W},${H});`;
+    if (opt.answer) {
+      (L.small || []).forEach(m => { s += `\\node[inner sep=0pt, font=\\tiny\\bfseries, text=bkDeep] at (${m.c + 0.5},${-L.top / 2}) {${m.t}};`; });
+      (L.slash || []).forEach(m => { s += `\\draw[bkDeep, line width=0.6pt] (${m.c + 0.25},${m.r + 0.85}) -- (${m.c + 0.75},${m.r + 0.15});`; });
+    }
     for (let r = 0; r < H; r++) for (let k = 0; k < W; k++) {
       const x = L.cells[r][k]; if (!x) continue;
       if (x.ans && !opt.answer) continue;

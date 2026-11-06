@@ -78,8 +78,8 @@ for (const part of parts) {
     M.STEPS.forEach(s => {
       if (sh[s].length) a.push(`\\mqansstep{${STEPNAME[s]}}`);
       sh[s].forEach(p => {
-        if (p.hs) a.push(`\\mqahs{${k}}{${tx(p.a, SQ)}}{${M.hissanTeX(M.hissanLayout(p.hs), { cell: 3.3, answer: true, font: '\\scriptsize' })}}`);
-        else a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ)}}`);
+        if (p.hs) a.push(`\\mqahs${s === 'trap' && p.easy ? `[${tx(p.easy, SQ)}]` : ''}{${k}}{${tx(p.a, SQ)}}{${M.hissanTeX(M.hissanLayout(p.hs), { cell: 3.3, answer: true, font: '\\scriptsize' })}}`);
+        else a.push(`\\mqa{${k}}{${tx(p.a, SQ)}}{${tx(p.easy || '', SQ).replace(/ (＝|＋|－|×|÷) /g, ' $1\\mqeqbreak ')}}`);
         k++;
       });
     });
@@ -95,8 +95,10 @@ for (const part of parts) {
     const pool = [];
     const nTrap = part.miwake.traps || 2;
     const nMain = part.miwake.count - nTrap;
+    // わざの順をまぜてから選ぶ（前のほうのわざだけに かたよらないように）
+    const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
-      const id = wz[k % wz.length];
+      const id = order[k % order.length];
       const got = M.makeStep(id, r.pick(['s1', 's2']), 1, r, seen);
       if (got.length) pool.push(got[0]);
     }
@@ -109,11 +111,11 @@ for (const part of parts) {
     const mixed = r.shuffle(pool);
     const intro = '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
     // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
-    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step); return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
+    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step); const nb = (M.withBox(p.q).match(/□/g) || []).length; return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
     const half = Math.ceil(lines2.length / 2);
     body.push(`\\def\\mqsplabelkey{miwake}\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}\n\\mqmiwaketable{${wz.map(id => `\\mqmwrow{${id}}{${tx(M.waza[id].title)}}`).join('')}}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
-    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.easy && u.length ? '：' + tx(p.easy, SQ) : ''}}`); });
+    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${u.length && p.easy && u.every(id => p.easy.includes(id)) ? tx(p.easy, SQ) : (u.length ? 'わざ ' + u.join('・') : 'わざ なし') + (p.easy && u.length ? '：' + tx(p.easy, SQ) : '')}}`); });
     ans.push(a.join('\n'));
   }
   // 作ってみよう
@@ -122,7 +124,7 @@ for (const part of parts) {
     const qs = part.tsukuro.map((t, i) => `\\mqtsukuro{${i + 1}}{${tx(t.q, { box: '\\mqsq{}' })}}`);
     body.push(`\\def\\mqsplabelkey{tsukuro}\\mqspreadhead{${pid}}{${pname}}{${tx('《作|つく》って みよう')}}{${tx(intro)}}\n${qs.join('\n')}`);
     const a = [`\\mqanssub{${tx('《作|つく》って みよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
-    part.tsukuro.forEach((t, i) => a.push(`\\mqtsukuroans{${i + 1}}{${tx(t.ex, { box: '\\mqsq{}' })}}`));
+    part.tsukuro.forEach((t, i) => a.push(`\\mqtsukuroans{${i + 1}}{${tx(t.ex, { box: '\\mqsq{}' }).replace(/ (＝|＋|－|×|÷) /g, ' $1\\mqeqbreak ')}}`));
     ans.push(a.join('\n'));
   }
 }

@@ -420,7 +420,7 @@
     why: '4800は 100が 48こ、 300は 100が 3こ。 100の たばで かぞえれば、 48 ÷ 3 と 《同|おな》じ。',
     caution: 'あまりが ある ときは、 あまりに とった 0を つけて もどす（250 ÷ 30 は 8 あまり 10）。',
     counts: { s1: 8, s2: 8, s3: 4, trap: 2 },
-    cols: { s3: 1 }, boxw: { s1: '15mm', s2: '15mm', s3: '15mm', trap: '30mm' },
+    cols: { s3: 1, trap: 1 }, boxw: { s1: '15mm', s2: '15mm', s3: '15mm', trap: '30mm' },
     steps: {
       s1(r) { const k = r.int(2, 9), q = r.int(2, 9), z = r.int(1, 2), D = k * q * P10(z), d = k * P10(z); return { q: `${D} ÷ ${d}`, a: S(q), easy: `${k * q} ÷ ${k}` }; },
       s2(r) {

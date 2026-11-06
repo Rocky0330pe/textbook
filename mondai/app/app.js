@@ -167,23 +167,28 @@
   }
 
   function hissanPages(st, probs, ids, title) {
-    const CELL = 8, PW = 182, PH = 222, GAP = 6;
-    const items = probs.map((p, i) => {
-      if (p.hs) {
-        const L = M.hissanLayout(p.hs);
-        return { p, i, L, w: Math.max(L.W * CELL, 18) + 2, h: L.H * CELL + 8 };
-      }
-      return { p, i, w: 86, h: 17 };
-    });
-    // ならべる：左から右、入らなければ次の行、入らなければ次のページ
-    const pages = [[]];
-    let x = 0, y = 0, rowH = 0;
-    items.forEach(it => {
-      if (x > 0 && x + it.w > PW) { x = 0; y += rowH + GAP; rowH = 0; }
-      if (y > 0 && y + it.h > PH) { pages.push([]); x = 0; y = 0; rowH = 0; }
-      pages[pages.length - 1].push(it);
-      x += it.w + GAP; rowH = Math.max(rowH, it.h);
-    });
+    const PW = 182, PH = 222, GAP = 6;
+    // ならべる：左から右、入らなければ次の行、入らなければ次のページ。ますが 8mm で ページが ふえるときは 7mm にする
+    const pack = CELL => {
+      const items = probs.map((p, i) => {
+        if (p.hs) {
+          const L = M.hissanLayout(p.hs);
+          return { p, i, L, w: Math.max(L.W * CELL, 18) + 2, h: (L.H + (L.top || 0)) * CELL + 8 };
+        }
+        return { p, i, w: 86, h: 17 };
+      });
+      const pages = [[]];
+      let x = 0, y = 0, rowH = 0;
+      items.forEach(it => {
+        if (x > 0 && x + it.w > PW) { x = 0; y += rowH + GAP; rowH = 0; }
+        if (y > 0 && y + it.h > PH) { pages.push([]); x = 0; y = 0; rowH = 0; }
+        pages[pages.length - 1].push(it);
+        x += it.w + GAP; rowH = Math.max(rowH, it.h);
+      });
+      return pages;
+    };
+    let CELL = 8, pages = pack(8);
+    if (pages.length > 1) { const p7 = pack(7); if (p7.length < pages.length) { CELL = 7; pages = p7; } }
     const sq = { noRuby: !st.ruby, box: '<span class="sq"></span>' };
     let html = '';
     for (const ans of [false, true]) {
@@ -192,7 +197,7 @@
         pg.forEach(it => {
           const p = it.p;
           if (p.hs) {
-            html += `<div class="hsi" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span>${ans ? ` <b class="ansout">${H(p.a, sq)}</b>` : ''}<br>${M.hissanSVG(it.L, { cell: CELL, answer: ans })}${ans && p.easy ? `<div class="how">${H(p.easy, sq)}</div>` : ''}</div>`;
+            html += `<div class="hsi" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span>${ans ? ` <b class="ansout${M.plain(p.a).length > 5 ? ' long' : ''}">${H(p.a, sq)}</b>` : ''}<br>${M.hissanSVG(it.L, { cell: CELL, answer: ans })}${ans && p.easy ? `<div class="how">${H(p.easy, sq)}</div>` : ''}</div>`;
           } else {
             const q = M.withBox(p.q);
             const body = ans ? H(q, { noRuby: !st.ruby, box: `<span class="box filled">${H(p.a, sq)}</span>` }) : H(q, { noRuby: !st.ruby });
