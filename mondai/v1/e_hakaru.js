@@ -41,15 +41,20 @@
   const BOX_JIFUN = '□《時|じ》 □《分|ふん》';
   const BOX_JIKAN = '□《時間|じ|かん》 □《分|ふん》';
   const tsu = n => (n < 10 ? `${n}つ` : `${n}`);   // 「5つ」「10」
+  // 入れかえただけの たし算は 同じ key（H-6）：kp('3,4', '2,8')
+  const kp = (...v) => P + v.map(String).sort().join('|');
+  // 午前・午後の 時こく（教科書 1-10 ⑦）
+  const goz = h => `《午前|ご|ぜん》${ji(h)}`, gog = h => `《午後|ご|ご》${ji(h)}`;
 
   // ---------------------------------------------------------------- 検算の部品
   // 単位の表（いちばん小さい単位を 1 に する）
   const U_LEN = { mm: 1, cm: 10, m: 1000 };
+  const U_KM = { m: 1, km: 1000 };
   const U_KASA = { mL: 1, dL: 100, L: 1000 };
   const U_OMO = { g: 1, kg: 1000 };
   const U_JI = { '時間': 60, '時': 60, '分': 1 };
   const U_BYOU = { '分': 60, '秒': 1 };
-  const RE_UNIT = /(\d+)\s*(mm|mL|cm|dL|kg|m|L|g|時間|時|分|秒|℃)/g;
+  const RE_UNIT = /(\d+)\s*(mm|mL|cm|dL|kg|km|m|L|g|時間|時|分|秒|℃)/g;
   // 「3 cm 4 mm」→ 34。単位のついた数だけで できて いなければ null
   function amt(s, U) {
     const t = M.plain(String(s));
@@ -97,7 +102,7 @@
   M.add({
     id: '1-26', part: 2, chap: '1-8', stars: 1,
     title: 'たんいを そろえる（cm と mm）',
-    mark: 'cm と mm が まじる。 mm どうしを たして **10 mm を こえたら** 1 cm に する。',
+    mark: 'cm と mm が まじる。 mm どうしを たして **10 mm に なったら**（こえたら）、 1 cm に する。',
     futsu: ['3 cm 4 mm ＋ 2 cm 8 mm を、', 'ものさしに ならべて', '1 mm ずつ かぞえる。'],
     raku: ['cm どうし 3 ＋ 2、 mm どうし 4 ＋ 8', '→ 5 cm 12 mm', '12 mm ＝ 1 cm 2 mm だから', '→ 6 cm 2 mm'],
     why: '1 cm ＝ 10 mm。 10 あつまると 1つ 《上|うえ》の たんいに くり《上|あ》がるのは、 たし《算|ざん》の ひっ《算|さん》と おなじ（1-8）。',
@@ -112,7 +117,7 @@
         const a = r.int(1, 8), c = r.int(1, 8), b = r.int(2, 9), d = r.int(2, 9);
         if (b + d <= 10) return null;
         const p = { q: `${a} cm ${b} mm ${P} ${c} cm ${d} mm ${E} □ cm □ mm`, a: `${a + c + 1} cm ${b + d - 10} mm`,
-          easy: `${a + c} cm ${b + d} mm` };
+          easy: `${a + c} cm ${b + d} mm`, key: kp(`${a},${b}`, `${c},${d}`) };
         return done(p, U_LEN, (a + c) * 10 + b + d, ['mm', 10]);
       },
       // ひき算：mm が ひけないので、1 cm を 10 mm に もどす
@@ -133,13 +138,13 @@
         }
         if (k === 2) { // mm どうしで 1 cm を こえる
           const x = r.int(4, 9), y = r.int(11 - x, 9);
-          const p = { q: `${x} mm ${P} ${y} mm ${E} □ cm □ mm`, a: `1 cm ${x + y - 10} mm`, easy: `${x + y} mm` };
+          const p = { q: `${x} mm ${P} ${y} mm ${E} □ cm □ mm`, a: `1 cm ${x + y - 10} mm`, easy: `${x + y} mm`, key: kp(x, y) };
           return done(p, U_LEN, x + y, ['mm', 10]);
         }
         if (k === 3) { // mm どうしの 2けたの たし算
           const x = r.int(12, 59), y = r.int(12, 59);
           if (x % 10 + y % 10 <= 10 || x + y >= 100) return null;
-          const p = { q: `${x} mm ${P} ${y} mm ${E} □ cm □ mm`, a: `${Math.floor((x + y) / 10)} cm ${(x + y) % 10} mm`, easy: `${x + y} mm` };
+          const p = { q: `${x} mm ${P} ${y} mm ${E} □ cm □ mm`, a: `${Math.floor((x + y) / 10)} cm ${(x + y) % 10} mm`, easy: `${x + y} mm`, key: kp(x, y) };
           return done(p, U_LEN, x + y, ['mm', 10]);
         }
         // くり上がりが あって、 2けたの cm
@@ -151,7 +156,7 @@
       trap(r) {
         if (r.chance(0.5)) { // mm が 10に ならない
           const a = r.int(1, 5), c = r.int(1, 9 - a), b = r.int(1, 7), d = r.int(1, 8 - b);
-          const p = { q: `${a} cm ${b} mm ${P} ${c} cm ${d} mm ${E} □ cm □ mm`, a: `${a + c} cm ${b + d} mm`, easy: '（そのまま たす）' };
+          const p = { q: `${a} cm ${b} mm ${P} ${c} cm ${d} mm ${E} □ cm □ mm`, a: `${a + c} cm ${b + d} mm`, easy: '（そのまま たす）', key: kp(`${a},${b}`, `${c},${d}`) };
           return done(p, U_LEN, (a + c) * 10 + b + d, ['mm', 10]);
         }
         // cm と mm の 数を たさない
@@ -206,7 +211,7 @@
         const k = r.int(1, 3);
         if (k === 1) { // cm どうしで 1 m を こえる
           const x = r.int(7, 19) * 5, y = r.int(Math.max(7, 21 - x / 5), 19) * 5;
-          const p = { q: `${x} cm ${P} ${y} cm ${E} □ m □ cm`, a: `1 m ${x + y - 100} cm`, easy: `${x + y} cm` };
+          const p = { q: `${x} cm ${P} ${y} cm ${E} □ m □ cm`, a: `1 m ${x + y - 100} cm`, easy: `${x + y} cm`, key: kp(x, y) };
           return done(p, U_LEN, (x + y) * 10, ['cm', 100]);
         }
         if (k === 2) { // ことばの もんだい
@@ -273,7 +278,7 @@
         }
         if (k === 2) { // mL どうしで 1 L を こえる
           const x = r.int(3, 9) * 100, y = r.int(11 - x / 100, 9) * 100;
-          const p = { q: `${x} mL ${P} ${y} mL ${E} □ L □ mL`, a: `1 L ${x + y - 1000} mL`, easy: `${x + y} mL` };
+          const p = { q: `${x} mL ${P} ${y} mL ${E} □ L □ mL`, a: `1 L ${x + y - 1000} mL`, easy: `${x + y} mL`, key: kp(x, y) };
           return done(p, U_KASA, x + y, ['mL', 1000]);
         }
         if (k === 3) { // 1 L から ひく
@@ -371,7 +376,7 @@
   M.add({
     id: '1-30', part: 2, chap: '1-10', stars: 1,
     title: 'ちょうどの 《時|じ》こくまで おぎなう',
-    mark: '《分|ふん》を たすと **60を こえる**。 まず、 ちょうどの 《時|じ》こくまで あと なん《分|ぷん》かを 《見|み》る。',
+    mark: '《分|ふん》を たすと **60に なる**（こえる）。 まず、 ちょうどの 《時|じ》こくまで あと なん《分|ぷん》かを 《見|み》る。',
     futsu: ['7《時|じ》45《分|ふん》の 30《分|ぷん》 あと。', '45 ＋ 30 ＝ 75 で', '「7《時|じ》75《分|ふん》」？ と まよう。'],
     raku: ['8《時|じ》まで あと 15《分|ふん》（60 － 45）', '30《分|ぷん》を 15《分|ふん》と 15《分|ふん》に わける', '8《時|じ》から 15《分|ふん》で 8《時|じ》15《分|ふん》'],
     why: '10を つくって たす（わざ 1-02）と おなじ。 《時計|と|けい》では、 10の かわりに 60で ひとまとまり（1-10）。',
@@ -394,8 +399,9 @@
         const h = r.int(1, 10), m = r.int(7, 11) * 5, d = r.int(2, 11) * 5;
         if (m + d <= 60) return null;
         const k = 60 - m;
+        // 楽な形は 左の ページと 同じ 分け方（R2-26）
         const p = { q: `${ji(h)}${fun(m)}の ${fun(d)} あとは、 ${BOX_JIFUN}`, a: `${ji(h + 1)} ${fun(m + d - 60)}`,
-          easy: `${ji(h + 1)} ${P} ${fun(d - k)}` };
+          easy: `${ji(h + 1)}まで ${fun(k)}、 あと ${fun(d - k)}` };
         return done(p, U_JI, h * 60 + m + d, ['分', 60]);
       },
       // ちょうどの 時こくを またぐ 時間
@@ -425,7 +431,7 @@
         const h = r.int(1, 10), m = r.intNot(41, 58, v => v % 5 === 0), d = r.int(4, 9) * 5;
         if (m + d <= 60) return null;
         const p = { q: `${ji(h)}${fun(m)}の ${fun(d)} あとは、 ${BOX_JIFUN}`, a: `${ji(h + 1)} ${fun(m + d - 60)}`,
-          easy: `${ji(h + 1)} ${P} ${fun(d - (60 - m))}` };
+          easy: `${ji(h + 1)}まで ${fun(60 - m)}、 あと ${fun(d - (60 - m))}` };
         return done(p, U_JI, h * 60 + m + d, ['分', 60]);
       },
       trap(r) {
@@ -440,7 +446,7 @@
   M.add({
     id: '1-31', part: 2, chap: '1-10', stars: 1,
     title: '60《分|ぷん》で くり《上|あ》がる',
-    mark: '《時間|じ|かん》を たす。 《分|ふん》が **60を こえたら**、 60《分|ぷん》を 1《時間|じ|かん》に する。',
+    mark: '《時間|じ|かん》を たす。 《分|ふん》が **60に なったら**（こえたら）、 60《分|ぷん》を 1《時間|じ|かん》に する。',
     futsu: ['ぜんぶ 《分|ふん》に なおす。', '60 ＋ 40 ＋ 35 ＝ 135《分|ふん》。', 'それを また なおす。'],
     raku: ['1《時間|じ|かん》40《分|ぷん》 ＋ 35《分|ふん》', '→ 1《時間|じ|かん》75《分|ふん》', '75《分|ふん》 ＝ 1《時間|じ|かん》15《分|ふん》', '→ 2《時間|じ|かん》15《分|ふん》'],
     why: '10で くり《上|あ》がる ひっ《算|さん》と おなじ。 《時間|じ|かん》は 60《分|ぷん》で 1つ 《上|うえ》に くり《上|あ》がる（1-10）。',
@@ -467,7 +473,7 @@
         const a = r.int(1, 3), b = r.int(4, 11) * 5, c = r.int(1, 2), d = r.int(3, 11) * 5;
         if (b + d <= 60) return null;
         const p = { q: `${jikan(a)}${fun(b)} ${P} ${jikan(c)}${fun(d)} ${E} ${BOX_JIKAN}`, a: `${jikan(a + c + 1)} ${fun(b + d - 60)}`,
-          easy: `${jikan(a + c)}${fun(b + d)}` };
+          easy: `${jikan(a + c)}${fun(b + d)}`, key: kp(`${a},${b}`, `${c},${d}`) };
         return done(p, U_JI, (a + c) * 60 + b + d, ['分', 60]);
       },
       s3(r) {
@@ -507,38 +513,45 @@
     title: '1《目|め》もりを さきに 《出|だ》す',
     mark: '《目|め》もりを よむ。 まず 1《目|め》もりが **いくつか** を 《出|だ》して から かぞえる。',
     futsu: ['0の 《目|め》もりから、', '1つずつ たどって', 'ながい あいだ かぞえる。'],
-    raku: ['0と 10の あいだが 5つ', '2ずつ 5かいで 10 → 1《目|め》もりは 2', '10から 2ずつ：12、 14'],
+    raku: ['0から 10までが 5《目|め》もり', '2ずつ 5かいで 10 → 1《目|め》もりは 2', '10から 2ずつ：12、 14'],
     why: '《目|め》もりの あいだは どこも おなじ。 1《目|め》もりが わかれば、 《近|ちか》くの 《数字|すう|じ》から その 《数|かず》ずつ かぞえれば よい（1-11）。',
     caution: '1《目|め》もりが 1の ときは、 そのまま かぞえる。 《線|せん》の 《数|かず》では なく、 あいだの 《数|かず》を かぞえる。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
     // 目もりの あいだの 数から 1目もりを 出す（1目もりが 1で ない）
     fits(q) {
-      const m = q.match(/(\d+)と (\d+)の あいだが (\d+)/);
+      const m = q.match(/^(\d+)から (\d+)までが (\d+)目もり。/);
       if (m) return (+m[2] - +m[1]) / +m[3] !== 1;
-      return /ますが \d+に 分かれて いる|^\d+に 分かれた |長い はりは 12の 数字で 60分/.test(q);
+      return /ますが \d+に 分かれて いる|^\d+に 分かれた |^長い はりは 1まわり 60分。/.test(q);
     },
     steps: {
+      // R2-17：「あいだが 10。」では なく 「0から 20までが 10目もり。」（1行に 入る ように 短く）
       s1(r) {
         const [step, n] = r.pick(STEPS32), hi = step * n;
-        const p = { q: `0と ${hi}の あいだが ${tsu(n)}。 1《目|め》もりは □`, a: String(step),
+        const p = { q: `0から ${hi}までが ${n}《目|め》もり。 1《目|め》もりは □`, a: String(step),
           easy: `${step}ずつ ${n}かい` };
         p.verify = () => (step * n === hi && +p.a === hi / n ? true : `1目もり ${p.a} が あわない`);
         return p;
       },
-      // 数字の ある 目もりから かぞえる
+      // 数字の ある 目もり（0 と はしの 数）から かぞえる。 目もりの そとには 出ない（R2-17）
       s2(r) {
-        const [step, n] = r.pick(STEPS32.filter(x => x[1] >= 4 && x[0] * x[1] <= 500)), L = step * n;
-        const j = r.int(0, 2), base = L * j, k = r.int(2, n - 1);
-        const seq = []; for (let i = 1; i <= k; i++) seq.push(base + step * i);
-        if (k > 5) return null;
-        const p = { q: `0と ${L}の あいだが ${tsu(n)}。 ${base}の ${k}《目|め》もり 《先|さき》は □`,
-          a: String(base + step * k), easy: `1《目|め》もり ${step}` };
-        p.verify = () => (+p.a === seq[seq.length - 1] && seq[seq.length - 1] - base === k * (L / n) ? true : `${p.a} が かぞえた 数と あわない`);
+        const [step, n] = r.pick(STEPS32.filter(x => x[1] >= 4 && x[0] * x[1] <= 50)), L = step * n;
+        const k = r.int(2, Math.min(5, n - 1)), back = r.chance(0.4);
+        const want = back ? L - step * k : step * k;
+        const head = `0から ${L}までが ${n}《目|め》もり。 `;
+        const p = back
+          ? { q: head + `${L}の ${k}つ 《前|まえ》は □`, a: String(want), easy: `1《目|め》もり ${step}` }
+          : { q: head + `0の ${k}つ 《先|さき》は □`, a: String(want), easy: `1《目|め》もり ${step}` };
+        p.verify = () => {
+          let v = back ? L : 0;
+          for (let i = 0; i < k; i++) v += back ? -L / n : L / n;
+          return +p.a === v && v >= 0 && v <= L ? true : `${p.a} が かぞえた 数と あわない`;
+        };
         return p;
       },
+      // 1 L ます・時計・温度計・1 m の ものさし（時計は すくなめに。 R2-17）
       s3(r) {
-        const k = r.int(1, 4);
+        const k = r.pick([1, 1, 2, 3, 3, 4, 4]);
         if (k === 1) { // 1 L ます
           const p = { q: '1 L ますが 10に 《分|わ》かれて いる。 1《目|め》もりは □ mL', a: '100 mL', easy: '10こで 1 L' };
           if (r.chance(0.5)) return done(p, U_KASA, 100);
@@ -548,15 +561,15 @@
         }
         if (k === 2) { // 時計の 長い はり
           const t = r.int(2, 11);
-          const p = { q: `《長|なが》い はりは 12の 《数字|すう|じ》で 60《分|ぷん》。 ${t}を さすと □《分|ふん》`,
+          const p = { q: `《長|なが》い はりは 1まわり 60《分|ぷん》。 ${t}を さすと □《分|ふん》`,
             a: fun(5 * t), easy: `1つ 5《分|ふん》、 ${t}つ` };
           return done(p, U_JI, 5 * t);
         }
-        if (k === 3) { // 温度計
-          const step = r.pick([2, 5]), n = 10 / step, base = r.pick([10, 20]), t = r.int(1, n - 1);
-          const p = { q: `10と 20の あいだが ${tsu(n)}。 ${base}の ${t}つ 《上|うえ》は □ ℃`,
-            a: `${base + step * t} ℃`, easy: `1《目|め》もり ${step}` };
-          p.verify = () => (amt(p.a, { '℃': 1 }) === base + (10 / n) * t ? true : '温度が あわない');
+        if (k === 3) { // 温度計（10 ℃ から 上に かぞえる。 20 ℃ の そとには 出ない）
+          const step = r.pick([2, 5]), n = 10 / step, t = r.int(1, n - 1);
+          const p = { q: `10から 20までが ${n}《目|め》もり。 10の ${t}つ 《上|うえ》は □ ℃`,
+            a: `${10 + step * t} ℃`, easy: `1《目|め》もり ${step}` };
+          p.verify = () => (amt(p.a, { '℃': 1 }) === 10 + (10 / n) * t ? true : '温度が あわない');
           return p;
         }
         // 1 m の ものさし
@@ -567,7 +580,7 @@
       trap(r) {
         if (r.chance(0.5)) { // 1目もりが 1
           const t = r.int(3, 9);
-          const p = { q: `0と 10の あいだが 10。 ${t}《目|め》もりは □`, a: String(t), easy: '（1《目|め》もりは 1）' };
+          const p = { q: `0から 10までが 10《目|め》もり。 ${t}《目|め》もりは □`, a: String(t), easy: '（1《目|め》もりは 1）' };
           p.verify = () => (+p.a === t ? true : `${p.a} が ${t} と ちがう`);
           return p;
         }
@@ -577,6 +590,139 @@
           easy: `（あいだは ${tsu(n)}）` };
         p.verify = () => (+p.a === hi / n ? true : `1目もり ${p.a} が あわない`);
         return p;
+      },
+    },
+  });
+
+  // ================================================================ 1-87（第29回 H-9：1-8 の 先。 km は 教科書 第1巻に ないので ★2）
+  M.add({
+    id: '1-87', part: 2, chap: '1-8', stars: 2,
+    title: 'km と m',
+    mark: 'km と m が まじって、 m が ひけない・1000に なる。 **1 km を 1000 m に** して から けいさんする。',
+    futsu: ['1 km 200 m － 500 m で、', '200 から 500 は ひけない。', 'どこから かりるか まよう。'],
+    raku: ['1 km 200 m ＝ 1200 m', '1200 m － 500 m ＝ 700 m'],
+    why: '1 km（キロメートル）＝ 1000 m。 1 kg ＝ 1000 g と おなじ 1000の まとまり（1-9）。 m に そろえると、 いつもの ひき《算|ざん》。',
+    caution: 'm だけで ひける ときは、 km は そのまま。 1 km は 100 m では なく 1000 m。',
+    counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
+    cols: 1, boxw: '16mm',
+    // km と m で、 m が 1000を こえる・ひけない・なおす（1 km の みちを あるく も）
+    fits(q) {
+      if (/^1 km の みちを \d+ m あるくと/.test(q)) return true;
+      return regroup(qty(q, 'km', 'm'), 1000);
+    },
+    steps: {
+      // km と m を m に（と、 その ぎゃく）
+      s1(r) {
+        const a = r.int(1, 4), b = r.chance(0.3) ? r.pick([5, 50, 80, 250, 750]) : r.int(1, 9) * 100;
+        if (r.chance(0.6)) {
+          const p = { q: `${a} km ${b} m ${E} □ m`, a: `${1000 * a + b} m`, easy: `${1000 * a} m ${P} ${b} m` };
+          return done(p, U_KM, 1000 * a + b);
+        }
+        const p = { q: `${1000 * a + b} m ${E} □ km □ m`, a: `${a} km ${b} m`, easy: `${1000 * a} m ${P} ${b} m` };
+        return done(p, U_KM, 1000 * a + b, ['m', 1000]);
+      },
+      // m が ひけない ひき算
+      s2(r) {
+        const a = r.chance(0.6) ? 1 : r.int(2, 3), b = r.int(0, 7) * 100, c = r.int(b / 100 + 1, 9) * 100;
+        const left = b ? `${a} km ${b} m` : `${a} km`;
+        const tot = 1000 * a + b - c;
+        if (a === 1) {
+          const p = { q: `${left} ${S} ${c} m ${E} □ m`, a: `${tot} m`, easy: `${1000 + b} m ${S} ${c} m` };
+          return done(p, U_KM, tot);
+        }
+        const p = { q: `${left} ${S} ${c} m ${E} □ km □ m`, a: `${a - 1} km ${tot - 1000 * (a - 1)} m`, easy: `${1000 * a + b} m ${S} ${c} m` };
+        return done(p, U_KM, tot, ['m', 1000]);
+      },
+      s3(r) {
+        const k = r.int(1, 3);
+        if (k === 1) { // m どうしで 1 km を こえる
+          const x = r.int(3, 9) * 100, y = r.int(11 - x / 100, 9) * 100;
+          const p = { q: `${x} m ${P} ${y} m ${E} □ km □ m`, a: `1 km ${x + y - 1000} m`, easy: `${x + y} m`, key: kp(x, y) };
+          return done(p, U_KM, x + y, ['m', 1000]);
+        }
+        if (k === 2) { // ことばの もんだい
+          const c = r.int(1, 19) * 50;
+          const p = { q: `1 km の みちを ${c} m あるくと、 のこりは □ m`, a: `${1000 - c} m`, easy: `1000 m ${S} ${c} m` };
+          return done(p, U_KM, 1000 - c);
+        }
+        const m = r.int(2, 4), c = r.int(1, 9) * 100;
+        const p = { q: `${m} km ${S} ${c} m ${E} □ km □ m`, a: `${m - 1} km ${1000 - c} m`, easy: `${1000 * m} m ${S} ${c} m` };
+        return done(p, U_KM, 1000 * m - c, ['m', 1000]);
+      },
+      trap(r) {
+        const a = r.int(1, 3);
+        if (r.chance(0.5)) { // m だけで ひける
+          const b = r.int(3, 9) * 100, c = r.int(1, b / 100 - 1) * 100;
+          const p = { q: `${a} km ${b} m ${S} ${c} m ${E} □ km □ m`, a: `${a} km ${b - c} m`, easy: '（m で ひける）' };
+          return done(p, U_KM, 1000 * a + b - c, ['m', 1000]);
+        }
+        const c = r.int(1, 9) * 100;
+        const p = { q: `${a} km ${P} ${c} m ${E} □ km □ m`, a: `${a} km ${c} m`, easy: '（たんいが べつ）' };
+        return done(p, U_KM, 1000 * a + c, ['m', 1000]);
+      },
+    },
+  });
+
+  // ================================================================ 1-88（第29回 H-9：教科書 1-10 ⑦ 午前と 午後）
+  M.add({
+    id: '1-88', part: 2, chap: '1-10', stars: 1,
+    title: '《正午|しょう|ご》を はさむ 《時間|じ|かん》',
+    mark: '《午前|ご|ぜん》から 《午後|ご|ご》まで。 まず **《正午|しょう|ご》（ひるの 12《時|じ》）まで** の 《時間|じ|かん》を 《出|だ》す。',
+    futsu: ['《午前|ご|ぜん》10《時|じ》30《分|ぷん》から', '《午後|ご|ご》2《時|じ》までを、 《時計|と|けい》の', 'はりを まわして かぞえる。'],
+    raku: ['《正午|しょう|ご》まで 1《時間|じ|かん》30《分|ぷん》', '《正午|しょう|ご》から 2《時間|じ|かん》', 'あわせて 3《時間|じ|かん》30《分|ぷん》'],
+    why: '《正午|しょう|ご》で 《時計|と|けい》の 《数字|すう|じ》は 12から 1に もどる。 12《時|じ》で 2つに 《分|わ》けると、 どちらも かんたん（わざ 1-30 と おなじ。 1-10）。',
+    caution: '《午前|ご|ぜん》どうし、 《午後|ご|ご》どうしなら、 《正午|しょう|ご》で 《分|わ》けずに そのまま ひく。',
+    counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
+    cols: 1, boxw: '12mm',
+    // 午前から 午後まで（正午を はさむ）
+    fits(q) {
+      return /^午前\d+時(\d+分)?から 午後\d+時(\d+分)?まで|^午前\d+時の \d+時間 あとは、 午後/.test(q);
+    },
+    steps: {
+      // ちょうどの 時こくから ちょうどの 時こくまで
+      s1(r) {
+        const h = r.int(8, 11), k = r.int(1, 5);
+        const p = { q: `${goz(h)}から ${gog(k)}までは、 □《時間|じ|かん》`, a: jikan(12 - h + k), easy: `${jikan(12 - h)} ${P} ${jikan(k)}` };
+        return done(p, U_JI, (12 - h + k) * 60);
+      },
+      // 午前に 分が ある
+      s2(r) {
+        const h = r.int(8, 11), m = r.int(1, 5) * 10, k = r.int(1, 5);
+        const H = 11 - h + k, F = 60 - m;
+        const easy = h === 11 ? `${fun(F)} ${P} ${jikan(k)}` : `${jikan(11 - h)}${fun(F)} ${P} ${jikan(k)}`;
+        const p = { q: `${goz(h)}${fun(m)}から ${gog(k)}までは、 ${BOX_JIKAN}`, a: `${jikan(H)} ${fun(F)}`, easy };
+        return done(p, U_JI, H * 60 + F, ['分', 60]);
+      },
+      s3(r) {
+        const k = r.int(1, 3);
+        if (k === 1) { // 午後にも 分が ある（くり上がらない）
+          const h = r.int(8, 11), m = r.int(2, 5) * 10, e = r.int(1, 5), n = r.int(1, m / 10 - 1) * 10;
+          const H = 11 - h + e, F = 60 - m + n;
+          const p = { q: `${goz(h)}${fun(m)}から ${gog(e)}${fun(n)}までは、 ${BOX_JIKAN}`, a: `${jikan(H)} ${fun(F)}`,
+            easy: `《正午|しょう|ご》まで ${h === 11 ? '' : jikan(11 - h)}${fun(60 - m)}、 あと ${jikan(e)}${fun(n)}` };
+          return done(p, U_JI, H * 60 + F, ['分', 60]);
+        }
+        if (k === 2) { // □時を もとめる
+          const h = r.int(8, 11), n = r.int(13 - h, 18 - h);
+          const p = { q: `${goz(h)}の ${jikan(n)} あとは、 《午後|ご|ご》□《時|じ》`, a: ji(h + n - 12),
+            easy: `《正午|しょう|ご》まで ${jikan(12 - h)}、 あと ${jikan(n - (12 - h))}` };
+          return done(p, U_JI, (h + n - 12) * 60);
+        }
+        const h = r.int(7, 11), e = r.int(1, 6); // ことばの もんだい
+        const p = { q: `${goz(h)}から ${gog(e)}まで 《出|で》かけた。 □《時間|じ|かん》`, a: jikan(12 - h + e),
+          easy: `${jikan(12 - h)} ${P} ${jikan(e)}` };
+        return done(p, U_JI, (12 - h + e) * 60);
+      },
+      // わな：午前どうし・午後どうし（正午を はさまない）
+      trap(r) {
+        if (r.chance(0.5)) {
+          const h = r.int(6, 9), k = r.int(h + 1, 11);
+          const p = { q: `${goz(h)}から ${goz(k)}までは、 □《時間|じ|かん》`, a: jikan(k - h), easy: '（《正午|しょう|ご》を はさまない。 そのまま ひく）' };
+          return done(p, U_JI, (k - h) * 60);
+        }
+        const h = r.int(1, 4), k = r.int(h + 1, 6);
+        const p = { q: `${gog(h)}から ${gog(k)}までは、 □《時間|じ|かん》`, a: jikan(k - h), easy: '（《正午|しょう|ご》を はさまない。 そのまま ひく）' };
+        return done(p, U_JI, (k - h) * 60);
       },
     },
   });
