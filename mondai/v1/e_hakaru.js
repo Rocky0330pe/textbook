@@ -5,6 +5,33 @@
   'use strict';
   const P = '＋', S = '－', E = '＝';
 
+  // ---------------------------------------------------------------- 見わけよう（fits）の 部品
+  // fits(q)：ほかの わざの 問題でも、 この わざが つかえるか（q は ルビを とった 問題の 文。 README 2章）
+  // 「3 m 60 cm － 70 cm ＝ □ m □ cm」を 量（大きい 単位 b・小さい 単位 s）と 記号に わける。
+  // ＝ の 左が 2つの 単位の 量だけで できて いなければ null
+  function qty(q, big, small) {
+    const [L, R] = q.split(' ＝ ');
+    if (R == null) return null;
+    const re = new RegExp('^(?:(\\d+) ' + big + ')?(?: ?(\\d+) ' + small + ')?$');
+    const t = [], ops = [];
+    for (const tok of L.split(/ ([＋－]) /)) {
+      if (tok === P || tok === S) { ops.push(tok); continue; }
+      const m = tok.match(re);
+      if (!m || (m[1] == null && m[2] == null)) return null;
+      t.push({ big: m[1] != null, s: +(m[2] || 0) });
+    }
+    return { t, ops, askBig: R.includes('□ ' + big) };
+  }
+  // くり上がり・くり下がり・単位の なおしが いるか（base：小さい 単位が いくつで 大きい 単位 1つか）
+  function regroup(x, base) {
+    if (!x) return false;
+    const { t, ops, askBig } = x, big = t.some(v => v.big);
+    if (t.length === 1) return askBig ? t[0].s >= base : big;
+    if (t.length !== 2) return false;
+    if (ops[0] === P) return t[0].s + t[1].s >= base || (!askBig && big);
+    return t[0].s < t[1].s || (!askBig && big);
+  }
+
   // ---------------------------------------------------------------- 文の部品
   // 「分」の読み：一の位が 2・5・7・9 なら ふん、ほかは ぷん（教科書 1-10 と同じ）
   const fun = n => `${n}《分|${[2, 5, 7, 9].includes(n % 10) ? 'ふん' : 'ぷん'}》`;
@@ -77,6 +104,8 @@
     caution: 'mm が 10に ならない ときは、 くり《上|あ》げない。 cm の 《数|かず》と mm の 《数|かず》を たさない。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // cm と mm で、 mm が 10を こえる・ひけない・mm を cm に なおす
+    fits(q) { return regroup(qty(q, 'cm', 'mm'), 10); },
     steps: {
       // mm どうしで 10を こえる たし算
       s1(r) {
@@ -144,6 +173,11 @@
     caution: 'cm だけで ひける ときは、 m は そのまま のこして よい。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // m と cm で、 cm が 100を こえる・ひけない・なおす（1 m の テープから きる も）
+    fits(q) {
+      if (/^1 m の テープから \d+ cm きると/.test(q)) return true;
+      return regroup(qty(q, 'm', 'cm'), 100);
+    },
     steps: {
       // m と cm を cm に（と、 その ぎゃく）
       s1(r) {
@@ -209,6 +243,8 @@
     caution: 'dL が 10に ならない ときは、 そのまま。 1 dL は 10 mL では なく 100 mL。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // L・dL・mL で、 くり上がる・ひけない・なおす
+    fits(q) { return regroup(qty(q, 'L', 'dL'), 10) || regroup(qty(q, 'L', 'mL'), 1000) || regroup(qty(q, 'dL', 'mL'), 100); },
     steps: {
       s1(r) {
         const a = r.int(1, 3), b = r.int(1, 9), c = r.int(2, 9);
@@ -274,6 +310,12 @@
     caution: 'g が 1000に ならない ときは、 そのまま。 1 kg 50 g は 150 g では なく 1050 g。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '16mm',
+    // kg と g で、 g が 1000を こえる・ひけない・なおす
+    fits(q) {
+      const m = q.match(/^\d+ kg (\d+) g に (\d+) g を たすと/);
+      if (m) return +m[1] + +m[2] >= 1000;
+      return regroup(qty(q, 'kg', 'g'), 1000);
+    },
     steps: {
       s1(r) {
         const a = r.int(1, 3), b = r.int(1, 9) * 100, c = r.int(2, 9) * 100;
@@ -336,6 +378,17 @@
     caution: '《分|ふん》を たしても 60に ならない ときは、 そのまま たす。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // 時こくに 分を たすと 60を こえる・ちょうどの 時こくを またぐ
+    fits(q) {
+      let m = q.match(/^\d+時(\d+)分の (\d+)分 あとは、/);
+      if (m) return +m[1] + +m[2] >= 60;
+      m = q.match(/^\d+時(\d+)分の (\d+)分 前は、/);
+      if (m) return +m[1] < +m[2];
+      m = q.match(/^(\d+)時\d+分から (\d+)時\d+分までは、/);
+      if (m) return +m[2] > +m[1];
+      m = q.match(/^□時 □分の (\d+)分 あとが \d+時(\d+)分$/);
+      return !!m && +m[2] < +m[1];
+    },
     steps: {
       s1(r) {
         const h = r.int(1, 10), m = r.int(7, 11) * 5, d = r.int(2, 11) * 5;
@@ -394,6 +447,14 @@
     caution: '《分|ふん》が 60に ならない ときは、 くり《上|あ》げない。 100《分|ぷん》で くり《上|あ》げない。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // 時間の たし算・ひき算で 分が 60を こえる・ひけない／ 分を 時間に、 秒を 分に なおす
+    fits(q) {
+      let m = q.match(/^(?:\d+時間)?(\d+)分 ([＋－]) (?:\d+時間)?(\d+)分 ＝/);
+      if (m) return m[2] === P ? +m[1] + +m[3] >= 60 : +m[1] < +m[3];
+      if (/^\d+時間 － \d+分 ＝/.test(q)) return true;
+      m = q.match(/^(\d+)(?:秒 ＝ □分 □秒|分 ＝ □時間 □分)$/);
+      return !!m && +m[1] >= 60;
+    },
     steps: {
       s1(r) {
         const a = r.int(1, 3), b = r.int(4, 11) * 5, c = r.int(3, 11) * 5;
@@ -451,6 +512,12 @@
     caution: '1《目|め》もりが 1の ときは、 そのまま かぞえる。 《線|せん》の 《数|かず》では なく、 あいだの 《数|かず》を かぞえる。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // 目もりの あいだの 数から 1目もりを 出す（1目もりが 1で ない）
+    fits(q) {
+      const m = q.match(/(\d+)と (\d+)の あいだが (\d+)/);
+      if (m) return (+m[2] - +m[1]) / +m[3] !== 1;
+      return /ますが \d+に 分かれて いる|^\d+に 分かれた |長い はりは 12の 数字で 60分/.test(q);
+    },
     steps: {
       s1(r) {
         const [step, n] = r.pick(STEPS32), hi = step * n;

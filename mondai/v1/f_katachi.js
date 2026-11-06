@@ -6,6 +6,14 @@
   'use strict';
   const P = '＋', S = '－', T = '×', E = '＝';
 
+  // ---------------------------------------------------------------- 見わけよう（fits）の 部品
+  // fits(q)：ほかの わざの 問題でも、 この わざが つかえるか（q は ルビを とった 問題の 文。 README 2章）
+  // たし算だけの 式（「a ＋ b ＋ c」）の 数。 ちがえば null
+  const adds = q => {
+    if (!/^\d+( ＋ \d+)+$/.test(q)) return null;
+    return q.split(' ＋ ').map(Number);
+  };
+
   // ---------------------------------------------------------------- 文の部品
   const MEM = '《目|め》もり';
   const NIN = '《人|にん》';
@@ -52,6 +60,13 @@
     caution: `1${MEM}が 1の ときは、 ${MEM}の 《数|かず》が そのまま こたえ。`,
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // 1目もりが 1で ない グラフ
+    fits(q) {
+      let m = q.match(/^1目もり (\d+)/);
+      if (m) return +m[1] !== 1;
+      m = q.match(/^0から (\d+)までが (\d+)目もり/);
+      return !!m && +m[1] / +m[2] !== 1;
+    },
     steps: {
       s1(r) {
         const u = r.pick([2, 5, 10]), k = r.int(2, 9), [w, g] = r.pick(WHO);
@@ -110,6 +125,11 @@
     caution: '10に なる くみが ない ときは、 じゅんに たす。 くみを つくっても ぜんぶ たすのを わすれない。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // 3つ いじょう たして、 一の くらいを たすと 10に なる くみが ある（表の ごうけい も）
+    fits(q) {
+      const n = /\d+組 \d+/.test(q) ? [...q.matchAll(/\d+組 (\d+)/g)].map(m => +m[1]) : adds(q);
+      return !!n && n.length >= 3 && n.some((x, i) => n.some((y, j) => j > i && x % 10 !== 0 && (x + y) % 10 === 0));
+    },
     steps: {
       // くみが となりあって いる
       s1(r) {
@@ -156,6 +176,8 @@
     caution: `もとの ${KAKU}が ${CHOK}か ${KAI}か わからない ときは、 ひけない。 あわせる ときは たす。`,
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '14mm',
+    // 直角・1回転・半回転を 分けた のこりの 角
+    fits(q) { return /^(直角|1回転|半回転)を .*分けた$/.test(q); },
     steps: {
       s1(r) {
         const x = r.chance(0.7) ? r.int(1, 17) * 5 : r.intNot(11, 79, v => v % 5 === 0);
@@ -206,6 +228,14 @@
     caution: `${HEN}の ${NAGA}が みんな ちがう 《三角形|さん|かく|けい》には つかえない。 ${HIRO}（たて × よこ）と まちがえない。`,
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // 長方形・正方形の まわり／ a ＋ a ＋ b ＋ b
+    fits(q) {
+      if (/(長方形|正方形|へや)の まわりは|^長方形の まわり \d+/.test(q)) return true;
+      const n = adds(q);
+      if (!n || n.length !== 4) return false;
+      const s = n.slice().sort((a, b) => a - b);
+      return s[0] === s[1] && s[2] === s[3];
+    },
     steps: {
       s1(r) {
         const t = r.int(2, 8), y = r.int(2, 8);
@@ -262,6 +292,8 @@
     caution: 'たてと よこを たさない。 たして 2ばい するのは、 まわりの 《長|なが》さ（わざ 1-60）。',
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // 長方形・正方形の 広さ（マス）
+    fits(q) { return /(長方形|正方形)の 広さは|に 1 cm の マスは □こ|^広さ \d+マスで たて \d+マス。 よこは/.test(q); },
     steps: {
       s1(r) {
         const a = r.int(2, 9), b = r.int(2, 9);
@@ -314,6 +346,8 @@
     caution: `きりとった ところが ${CHO}で ない ときや、 2つを ならべた かたちには つかえない。`,
     counts: { s1: 7, s2: 6, s3: 5, trap: 2 },
     cols: 1, boxw: '12mm',
+    // かど・まん中を きりとった 長方形
+    fits(q) { return /の (かど|まん中)から \d+ × \d+ を きり(とる|ぬく)|の かど \d+つから/.test(q); },
     steps: {
       // かどを きりとる
       s1(r) {
