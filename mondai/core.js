@@ -327,7 +327,9 @@
   M.evalMath = function (src, vars) {
     vars = vars || {};
     const s = String(src).replace(/\\left|\\right|\\,|\\;|\\!|\\quad|\\displaystyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
-      .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/');
+      .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/')
+      // 帯分数（数字のすぐあとの \frac{数}{数}）は、たし算として読む：2\frac{1}{3} → (2+\frac{1}{3})。指数・下つきの中の数は除く
+      .replace(/(^|[^0-9.^_{])(\d+)\s*\\frac\{(\d+)\}\{(\d+)\}/g, '$1($2+\\frac{$3}{$4})');
     let i = 0;
     const ws = () => { while (i < s.length && s[i] === ' ') i++; };
     const peek = () => { ws(); return s[i]; };
@@ -682,7 +684,9 @@
     const aM = onlyMath(p.a);
     if (aM == null || /[=<>]|\\(?:le|ge|ne|pm)/.test(aM)) return errs;   // 答えが式でない（x ＝ 3 など）ときは verify にまかせる
     const qM = (() => { const m = onlyMath(p.q); if (m == null || m.includes('□')) return null; const k = m.lastIndexOf('='); return k >= 0 ? null : m; })();
-    const eParts = typeof p.easy === 'string' && p.easyCheck !== false ? (p.easy.match(/\$[^$]*\$/g) || []).map(t => t.slice(1, -1)).flatMap(t => t.split('=')).map(t => t.trim()).filter(Boolean) : [];
+    let eParts = typeof p.easy === 'string' && p.easyCheck !== false ? (p.easy.match(/\$[^$]*\$/g) || []).map(t => t.slice(1, -1)).flatMap(t => t.split('=')).map(t => t.trim()).filter(Boolean) : [];
+    // easyCheck: 'last' のときは、楽な形の いちばん最後の式だけをくらべる（途中の式「$3\times4=12$」などを書くとき）
+    if (p.easyCheck === 'last') eParts = eParts.slice(-1);
     const valM = p.val != null ? (onlyMath(p.val) != null ? onlyMath(p.val) : String(p.val)) : null;
     const names = [...new Set([aM, qM || '', ...eParts].flatMap(M.mathVars))];
     const sets = [0.37, 1.71, -2.29].map((b, k) => Object.fromEntries(names.map((n, j) => [n, b + 0.53 * j + 0.11 * k])));

@@ -86,7 +86,8 @@
     const all = M.list(st.vol), runs = [];
     ids.slice().sort((a, b) => all.indexOf(a) - all.indexOf(b)).forEach(id => {
       const last = runs[runs.length - 1];
-      if (last && all.indexOf(id) === all.indexOf(last[1]) + 1) last[1] = id; else runs.push([id, id]);
+      const num = x => +x.split('-')[1];
+      if (last && all.indexOf(id) === all.indexOf(last[1]) + 1 && num(id) === num(last[1]) + 1) last[1] = id; else runs.push([id, id]);
     });
     let lst = runs.map(([a, b]) => `<span class="nw">${a === b ? a : a + '〜' + b}</span>`);
     if (lst.length > 5) lst = [lst[0], lst[1], '…', lst[lst.length - 1]];
