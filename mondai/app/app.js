@@ -82,19 +82,31 @@
   function titleOf(st, ids) {
     if (st.name) return H(st.name, { noRuby: !st.ruby });
     if (ids.length === 1) { const d = M.waza[ids[0]]; return `<span class="chip">わざ ${ids[0]}</span>${H(d.title, { noRuby: !st.ruby })}`; }
-    // わざが多いときは、はじめと終わりだけ（題が2行をこえて、プリントがあふれないように）
-    const lst = ids.length > 4 ? `${ids[0]} 〜 ${ids[ids.length - 1]}` : ids.join('・');
-    return `<span class="chip">わざ ${ids.length}こ</span><span class="ids">${lst}</span>`;
+    // 続く番号は「1-33〜1-40」とまとめる。番号の途中では改行しない（第29回 R2-23）
+    const all = M.list(st.vol), runs = [];
+    ids.slice().sort((a, b) => all.indexOf(a) - all.indexOf(b)).forEach(id => {
+      const last = runs[runs.length - 1];
+      if (last && all.indexOf(id) === all.indexOf(last[1]) + 1) last[1] = id; else runs.push([id, id]);
+    });
+    let lst = runs.map(([a, b]) => `<span class="nw">${a === b ? a : a + '〜' + b}</span>`);
+    if (lst.length > 5) lst = [lst[0], lst[1], '…', lst[lst.length - 1]];
+    return `<span class="chip">わざ ${ids.length}こ</span><span class="ids">${lst.join('・')}</span>`;
   }
   function make() {
     const st = state();
     history.replaceState(null, '', toHash(st));
-    const ids = M.parseIds(st.ids, st.vol).filter(id => M.waza[id]);
-    const unknown = M.parseIds(st.ids, st.vol).filter(id => !M.waza[id]);
-    $('#msg').textContent = unknown.length ? `まだない わざの番号：${unknown.join('、')}` : '';
+    const parsed = M.parseIds(st.ids, st.vol);
+    const ids = parsed.filter(id => M.waza[id]);
+    const unknown = parsed.filter(id => !M.waza[id]);
+    const msgs = [];
+    if (unknown.length) msgs.push(`まだない わざの番号：${unknown.join('、')}`);
+    if (parsed.bad && parsed.bad.length) msgs.push(`読めない書き方：${parsed.bad.join('、')}（例：1-37、37、33〜40、33-40、2, 7, 37）`);
+    if (!st.steps.length) msgs.push('ステップが1つも えらばれていないので、ステップ1〜3で作りました。');
     const out = $('#sheets');
-    if (!ids.length) { out.innerHTML = '<p class="empty">わざの番号を入れてください（例：1-37、37、33〜40）。</p>'; return; }
+    if (!ids.length) { $('#msg').textContent = msgs.join('　'); out.innerHTML = '<p class="empty">わざの番号を入れてください（例：1-37、37、33〜40）。</p>'; return; }
     const probs = M.makePrint(ids, { seed: st.seed, steps: st.steps, count: st.count, mix: st.mix });
+    if (probs.length < st.count) msgs.push(`このわざ・ステップでは、ちがう問題が ${probs.length}問までしか作れませんでした（${st.count}問の かわりに ${probs.length}問）。ステップを ふやすと、問題が ふえます。`);
+    $('#msg').textContent = msgs.join('　');
     const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
     const per = oneCol ? 12 : 24;   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
@@ -102,7 +114,9 @@
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
     const cell = (p, ans) => {
       const w = M.waza[p.id];
-      const bw = M.boxwOf(w, p.step) || '15mm';
+      // まぜるときは、欄のはばを 15mm より せまくしない（欄のはばが わざの手がかりに ならないように。R2-20）
+      const bw0 = M.boxwOf(w, p.step) || '15mm';
+      const bw = st.mix && parseFloat(bw0) < 15 ? '15mm' : bw0;
       const q = M.withBox(p.q);
       const len = M.plain(q).replace(/\s/g, '').length;
       let body;
@@ -121,9 +135,9 @@
       let extra = '';
       if (st.mix) {
         const u = M.usableWaza(p, ids);
-        extra = ans ? `<span class="wz ansz">${u.length ? 'わざ ' + u.join('・') : 'ー'}</span>` : '<span class="wz">わざ<span class="box sm"></span></span>';
+        extra = ans ? `<span class="wz ansz">${u.length ? 'わざ ' + u.join('・') : 'なし'}</span>` : '<span class="wz">わざ<span class="box sm"></span></span>';
       }
-      const how = ans && p.easy ? `<span class="how">とき方 ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
+      const how = ans && p.easy ? `<span class="how">${H('とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
       return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}"><span class="q">${body}</span>${extra}${how}</li>`;
     };
     const ruleBox = () => {
@@ -140,13 +154,13 @@
     for (const ans of [false, true]) {
       for (let pg = 0; pg < pages; pg++) {
         const list = probs.slice(pg * per, (pg + 1) * per);
-        const kind = (st.mix ? '見わけよう' : '') + (ans ? (st.mix ? '・' : '') + 'こたえと とき方' : '');
+        const kind = (st.mix ? H('《見|み》わけよう', { noRuby: !st.ruby }) : '') + (ans ? (st.mix ? '・' : '') + H('こたえと とき《方|かた》', { noRuby: !st.ruby }) : '');
         html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
-          ${!ans && st.mix ? '<p class="note">まず、 つかう わざの ばんごうを 「わざ」に 書いてから とこう。 つかう わざが ない ときは「ー」。</p>' : ''}
+          ${!ans && st.mix ? `<p class="note">${H('まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
           ${ans && pg === 0 ? ruleBox() : ''}
           <ol class="probs ${oneCol ? 'one' : 'two'}${ans ? ' withhow' : ''}" style="counter-reset:q ${pg * per}">`;
         list.forEach(p => { html += cell(p, ans); });
-        html += `</ol><footer class="foot">${ans ? '［ ］の中は らくな とき方。　' : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+        html += `</ol><footer class="foot">${ans ? H('［ ］の 《中|なか》は らくな とき《方|かた》。　', { noRuby: !st.ruby }) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
       }
     }
     out.innerHTML = html;
@@ -174,7 +188,7 @@
     let html = '';
     for (const ans of [false, true]) {
       pages.forEach((pg, k) => {
-        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, ans ? 'こたえと とき方' : '', k + 1, pages.length)}<div class="hsflow">`;
+        html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, ans ? H('こたえと とき《方|かた》', { noRuby: !st.ruby }) : '', k + 1, pages.length)}<div class="hsflow">`;
         pg.forEach(it => {
           const p = it.p;
           if (p.hs) {
@@ -182,16 +196,22 @@
           } else {
             const q = M.withBox(p.q);
             const body = ans ? H(q, { noRuby: !st.ruby, box: `<span class="box filled">${H(p.a, sq)}</span>` }) : H(q, { noRuby: !st.ruby });
-            html += `<div class="hsi txt" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span> ${body}${ans && p.easy ? `<div class="how">とき方 ［${H(p.easy, sq)}］</div>` : ''}</div>`;
+            html += `<div class="hsi txt" style="width:${it.w}mm"><span class="n">(${it.i + 1})</span> ${body}${ans && p.easy ? `<div class="how">${H('とき《方|かた》', sq)} ［${H(p.easy, sq)}］</div>` : ''}</div>`;
           }
         });
-        html += `</div><footer class="foot">${ans ? '赤い 字が こたえと とちゅうの けいさん。　' : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
+        html += `</div><footer class="foot">${ans ? H('《赤|あか》い 《字|じ》が こたえと とちゅうの けいさん。　', sq) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　たねの ばんごう ${st.seed}</footer></section>`;
       });
     }
     return html;
   }
 
+  // せまい画面では、見本のプリントを画面のはばに縮める（CSS の --z。印刷には効かない）
+  function fit() {
+    const a4 = 216 / 25.4 * 96;
+    document.documentElement.style.setProperty('--z', String(Math.min(1, (window.innerWidth - 4) / a4)));
+  }
   function init() {
+    fit(); window.addEventListener('resize', fit);
     const vols = [...new Set(M.list().map(id => M.waza[id].vol))].sort();
     $('#vol').innerHTML = vols.map(v => `<option value="${v}">第${v}巻</option>`).join('');
     const h = fromHash();

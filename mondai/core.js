@@ -86,7 +86,12 @@
       if ((m = w.match(/^0*([0-9]{1,2})$/))) return vol + '-' + m[1].padStart(2, '0');
       return null;
     };
+    const bad = [];
     norm(text).split(/[\s,、，]+/).filter(Boolean).forEach(w => {
+      // 「33-40」「1-33-40」「1-33-1-40」も、はんいとして読む（第29回 R2-24）
+      let m;
+      if ((m = w.match(/^([1-9])-(\d{1,2})-(?:\1-)?(\d{1,2})$/))) w = m[1] + '-' + m[2] + '~' + m[1] + '-' + m[3];
+      else if ((m = w.match(/^(\d{2})-(\d{1,2})$/))) w = m[1] + '~' + m[2];
       const rg = w.split('~');
       if (rg.length === 2) {
         const a = one(rg[0]), b = one(rg[1].includes('-') ? rg[1] : (rg[0].includes('-') ? rg[0].split('-')[0] + '-' + rg[1] : rg[1]));
@@ -96,9 +101,11 @@
         }
       }
       const id = one(w);
-      if (id) out.push(id);
+      if (id) out.push(id); else bad.push(w);
     });
-    return [...new Set(out)];
+    const res = [...new Set(out)];
+    res.bad = bad;   // 読めなかった書き方（アプリが知らせる）
+    return res;
   };
 
   // ---------------------------------------------------------------- 問題を作る
