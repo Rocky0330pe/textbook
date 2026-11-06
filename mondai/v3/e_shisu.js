@@ -15,14 +15,19 @@
   const TSUKATTE = 'を《使|つか》って';
   const RUIJO = '《累乗|るい|じょう》';
   const SHOSU = '《小数第|しょう|すう|だい》';
+  const isLetter = b => typeof b === 'string' && /^[a-z]$/.test(b);
   const DENRYOKU = '《電力|でん|りょく》', DENATSU = '《電圧|でん|あつ》', ZOFUKU = '《増幅器|ぞう|ふく|き》';
   const L2 = '$\\log_{10}2=0.301$', L3 = '$\\log_{10}3=0.477$', L5 = '$\\log_{10}5=0.699$';
   // 「□分」の読み（1・3・4・6・8・0 で終わる数は「ぷん」）
-  const FUN = n => `${n}《分|${[2, 5, 7, 9].includes(n % 10) ? 'ふん' : 'ぷん'}》`;
+  const FUN = n => `${n}${M.fun(n)}`;
+  // 「□本」の読み（1・6・8・10 は ぽん、3 は ぼん）
+  const HON = n => `${n}《本|${n % 10 === 3 ? 'ぼん' : [0, 1, 6, 8].includes(n % 10) ? 'ぽん' : 'ほん'}》`;
+  // 答えの形を問いに書く（J-8）：数の底の累乗は「（累乗で）」（底はそのまま）、値を出すときは「の値は □」
+  const RU = b => (isLetter(b) ? '' : '（《累乗|るい|じょう》で）');
+  const ATAI = ' の《値|あたい》は □';
   // 時間（分）を「1時間30分」のように
   const HM = min => { const h = Math.floor(min / 60), m = min % 60; return (h ? `${h}${JIKAN}` : '') + (m ? FUN(m) : ''); };
   const pw = (b, e) => `${b}^{${e}}`;
-  const isLetter = b => typeof b === 'string' && /^[a-z]$/.test(b);
 
   // ---------------------------------------------------------------- 数の書き方（近似値の計算は 1000倍した整数で）
   // 1000倍した整数 → 小数の文字（うしろの0はとる）
@@ -139,7 +144,7 @@
 
   // ---------------------------------------------------------------- 3-60
   M.add({
-    id: '3-60', part: 5, chap: '3-11', stars: 1,
+    id: '3-60', part: 5, chap: '3-11③', stars: 1,
     title: 'かけ《算|ざん》は《指数|し|すう》のたし《算|ざん》',
     mark: '**《同|おな》じ《底|てい》**の《累乗|るい|じょう》どうしの**かけ《算|ざん》**（$2^{5}\\times 2^{3}$、$x^{4}\\times x^{3}$）。',
     futsu: ['$2^{5}=32$、$2^{3}=8$ を《先|さき》に《出|だ》して、', '$32\\times 8=256$'],
@@ -158,13 +163,13 @@
       // 同じ底の2つの累乗のかけ算 → 累乗の形で
       s1(r) {
         const b = r.pick([2, 3, 5, 10, 'x', 'a']), m = r.int(2, 9), n = r.int(2, 9);
-        return { q: `$${pw(b, m)}\\times ${pw(b, n)}$`, a: `$${pw(b, m + n)}$`, easy: `$${pw(b, `${m}+${n}`)}=${pw(b, m + n)}$`, key: `60:${b}:${[m, n].sort()}` };
+        return { q: `${RU(b)}$${pw(b, m)}\\times ${pw(b, n)}$`, a: `$${pw(b, m + n)}$`, easy: `$${pw(b, `${m}+${n}`)}=${pw(b, m + n)}$`, key: `60:${b}:${[m, n].sort()}` };
       },
       s2(r) {
         const k = r.int(0, 3);
         if (k === 0) {   // 3つの累乗
           const b = r.pick([2, 3, 10, 'x']), e = [r.int(2, 6), r.int(2, 6), r.int(2, 6)], s = e[0] + e[1] + e[2];
-          return { q: `$${e.map(x => pw(b, x)).join('\\times ')}$`, a: `$${pw(b, s)}$`, easy: `$${pw(b, e.join('+'))}=${pw(b, s)}$`, key: `60:${b}:${e.slice().sort()}` };
+          return { q: `${RU(b)}$${e.map(x => pw(b, x)).join('\\times ')}$`, a: `$${pw(b, s)}$`, easy: `$${pw(b, e.join('+'))}=${pw(b, s)}$`, key: `60:${b}:${e.slice().sort()}` };
         }
         if (k === 1) {   // 数がかかった文字の累乗
           const v = r.pick(['x', 'a', 'y']), c = r.int(2, 5), d = r.int(2, 5), m = r.int(2, 6), n = r.int(2, 6);
@@ -172,7 +177,7 @@
         }
         if (k === 2) {   // マイナスの指数
           const b = r.pick([2, 10, 'x']), m = r.int(4, 9), n = r.int(1, m - 1);
-          return { q: `$${pw(b, m)}\\times ${pw(b, -n)}$`, a: `$${pw(b, m - n)}$`, easy: `$${pw(b, `${m}+(-${n})`)}=${pw(b, m - n)}$` };
+          return { q: `${RU(b)}$${pw(b, m)}\\times ${pw(b, -n)}$`, a: `$${pw(b, m - n)}$`, easy: `$${pw(b, `${m}+(-${n})`)}=${pw(b, m - n)}$` };
         }
         // 逆向き：2^{x+3} ＝ □ × 2^x
         const b = r.pick([2, 3, 5, 10]), h = b === 2 ? r.int(2, 5) : r.int(2, 3), v = Math.pow(b, h);
@@ -191,11 +196,11 @@
         }
         if (k === 2) {   // 光の進む道のり
           const t = r.int(2, 5);
-          return { q: `《光|ひかり》は1《秒|びょう》に《約|やく》$3\\times 10^{8}\\,\\mathrm{m}$《進|すす》みます。$10^{${t}}$《秒|びょう》では、《約|やく》 □ m《進|すす》みます。`, a: `$3\\times 10^{${8 + t}}$`, val: `$10^{${8 + t}}$`, easy: `$10^{8}\\times 10^{${t}}=10^{${8 + t}}$` };
+          return { q: `《光|ひかり》は1《秒|びょう》に《約|やく》$3\\times 10^{8}\\,\\mathrm{m}$《進|すす》む。$10^{${t}}$《秒|びょう》では、《約|やく》 □ m`, a: `$3\\times 10^{${8 + t}}$`, val: `$10^{${8 + t}}$`, easy: `$10^{8}\\times 10^{${t}}=10^{${8 + t}}$` };
         }
         // 細菌：続けてふえると、倍率はかけ算
         const m = r.int(2, 4), n = r.int(2, 5);
-        return { q: `${SAIKIN}が、1《時間|じ|かん》で$2^{${m}}$${BAI}になり、さらに2《時間|じ|かん》で$2^{${n}}$${BAI}になりました。《全部|ぜん|ぶ》で □ ${BAI}です（2の${RUIJO}で）。`, a: `$2^{${m + n}}$`, easy: `$2^{${m}}\\times 2^{${n}}=2^{${m + n}}$` };
+        return { q: `${SAIKIN}が、1《時間|じ|かん》で$2^{${m}}$${BAI}になり、さらに2《時間|じ|かん》で$2^{${n}}$${BAI}になった。《全部|ぜん|ぶ》で □ ${BAI}（2の${RUIJO}で）`, a: `$2^{${m + n}}$`, easy: `$2^{${m}}\\times 2^{${n}}=2^{${m + n}}$` };
       },
       // わな：底がちがう・たし算（指数はたせない）
       trap(r) {
@@ -203,18 +208,18 @@
           // 指数はそろえない（そろうと (ab)^n にまとめられる）
           const [b, c] = r.pick([[2, 3], [2, 5], [3, 2], [5, 2], [3, 5], [2, 7]]), m = r.int(3, 4), n = 2;
           const x = Math.pow(b, m), y = Math.pow(c, n);
-          return dest({ q: `$${pw(b, m)}\\times ${pw(c, n)}$`, a: String(x * y), key: `60t:${[b + '^' + m, c + '^' + n].sort()}` }, '3-60', `《底|てい》がちがう。$${x}\\times ${y}=${x * y}$`);
+          return dest({ q: `$${pw(b, m)}\\times ${pw(c, n)}$${ATAI}`, a: String(x * y), key: `60t:${[b + '^' + m, c + '^' + n].sort()}` }, '3-60', `《底|てい》がちがう。$${x}\\times ${y}=${x * y}$`);
         }
         const b = r.pick([2, 3]), m = r.int(2, 3), n = r.int(m + 1, b === 2 ? 6 : 4);
         const x = Math.pow(b, m), y = Math.pow(b, n);
-        return dest({ q: `$${pw(b, m)}+${pw(b, n)}$`, a: String(x + y) }, '3-60', `たし《算|ざん》。$${x}+${y}=${x + y}$`);
+        return dest({ q: `$${pw(b, m)}+${pw(b, n)}$${ATAI}`, a: String(x + y) }, '3-60', `たし《算|ざん》。$${x}+${y}=${x + y}$`);
       },
     },
   });
 
   // ---------------------------------------------------------------- 3-61
   M.add({
-    id: '3-61', part: 5, chap: '3-11', stars: 1,
+    id: '3-61', part: 5, chap: '3-11③', stars: 1,
     title: '《累乗|るい|じょう》の《累乗|るい|じょう》は《指数|し|すう》のかけ《算|ざん》',
     mark: '**かっこの《累乗|るい|じょう》**を、さらに《累乗|るい|じょう》している（$(a^{m})^{n}$）。',
     futsu: ['$(2^{3})^{2}=8^{2}$', '$=8\\times 8=64$'],
@@ -231,14 +236,14 @@
     steps: {
       s1(r) {
         const b = r.pick([2, 3, 5, 10, 'x', 'a']), m = r.int(2, 5), n = r.int(2, 4);
-        return { q: `$(${pw(b, m)})^{${n}}$`, a: `$${pw(b, m * n)}$`, easy: `$${pw(b, `${m}\\times ${n}`)}=${pw(b, m * n)}$` };
+        return { q: `${RU(b)}$(${pw(b, m)})^{${n}}$`, a: `$${pw(b, m * n)}$`, easy: `$${pw(b, `${m}\\times ${n}`)}=${pw(b, m * n)}$` };
       },
       s2(r) {
         const k = r.int(0, 3);
         if (k === 0) {   // 小さい数は値まで
           const [b, m, n] = r.pick([[2, 2, 2], [2, 2, 3], [2, 3, 2], [2, 4, 2], [2, 2, 4], [3, 2, 2], [10, 2, 2], [10, 3, 2], [5, 2, 2]]);
           const v = Math.pow(b, m * n);
-          return { q: `$(${pw(b, m)})^{${n}}$`, a: String(v), easy: `$${pw(b, `${m}\\times ${n}`)}=${pw(b, m * n)}=${v}$` };
+          return { q: `$(${pw(b, m)})^{${n}}$${ATAI}`, a: String(v), easy: `$${pw(b, `${m}\\times ${n}`)}=${pw(b, m * n)}=${v}$` };
         }
         if (k === 1) {   // 累乗の累乗と、かけ算
           const v = r.pick(['x', 'a']), m = r.int(2, 4), n = r.int(2, 3), p = r.int(1, 4);
@@ -247,7 +252,7 @@
         }
         if (k === 2) {   // マイナスの指数
           const m = r.int(1, 3), n = r.int(2, 4);
-          return { q: `$(10^{-${m}})^{${n}}$`, a: `$10^{-${m * n}}$`, easy: `$10^{-${m}\\times ${n}}=10^{-${m * n}}$` };
+          return { q: `${RU(10)}$(10^{-${m}})^{${n}}$`, a: `$10^{-${m * n}}$`, easy: `$10^{-${m}\\times ${n}}=10^{-${m * n}}$` };
         }
         // 数と文字の積の累乗
         const c = r.int(2, 3), v = r.pick(['x', 'a']), m = r.int(2, 4), n = r.int(2, 3);
@@ -257,11 +262,11 @@
         const k = r.int(0, 2);
         if (k === 0) {   // 細菌：1時間の倍率をくり返す
           const T = r.pick([10, 15, 20, 30]), c = 60 / T, h = r.int(2, 5);
-          return { q: `${FUN(T)}ごとに2${BAI}にふえる${SAIKIN}は、1${JIKAN}で$2^{${c}}$${BAI}になります。${h}${JIKAN}では □ ${BAI}です（2の${RUIJO}で）。`, a: `$2^{${c * h}}$`, easy: `$(2^{${c}})^{${h}}=2^{${c}\\times ${h}}=2^{${c * h}}$` };
+          return { q: `${FUN(T)}ごとに2${BAI}にふえる${SAIKIN}は、1${JIKAN}で$2^{${c}}$${BAI}になる。${h}${JIKAN}では □ ${BAI}（2の${RUIJO}で）`, a: `$2^{${c * h}}$`, easy: `$(2^{${c}})^{${h}}=2^{${c}\\times ${h}}=2^{${c * h}}$` };
         }
         if (k === 1) {   // 立方体の体積
           const m = r.int(1, 4);
-          return { q: `1《辺|へん》が$10^{${m}}\\,\\mathrm{cm}$の《立方体|りっ|ぽう|たい》の《体積|たい|せき》は □ $\\mathrm{cm}^{3}$です。`, a: `$10^{${3 * m}}$`, easy: `$(10^{${m}})^{3}=10^{${m}\\times 3}=10^{${3 * m}}$` };
+          return { q: `1《辺|へん》が$10^{${m}}\\,\\mathrm{cm}$の《立方体|りっ|ぽう|たい》の《体積|たい|せき》は □ $\\mathrm{cm}^{3}$`, a: `$10^{${3 * m}}$`, easy: `$(10^{${m}})^{3}=10^{${m}\\times 3}=10^{${3 * m}}$` };
         }
         // かっこの中の指数を求める
         const b = r.pick([2, 3, 10, 'x']), m = r.int(2, 5), n = r.int(2, 4);
@@ -272,14 +277,14 @@
         const b = r.pick([2, 3]), m = r.int(2, 3), c = r.pick([1, -1, 2]), n = 2;
         const inner = Math.pow(b, m) + c;
         if (inner <= 1) return null;
-        return dest({ q: `$(${pw(b, m)}${c > 0 ? '+' : '-'}${Math.abs(c)})^{${n}}$`, a: String(inner * inner) }, '3-61', `かっこの《中|なか》がたし《算|ざん》・ひき《算|ざん》。$${inner}^{2}=${inner * inner}$`);
+        return dest({ q: `$(${pw(b, m)}${c > 0 ? '+' : '-'}${Math.abs(c)})^{${n}}$${ATAI}`, a: String(inner * inner) }, '3-61', `かっこの《中|なか》がたし《算|ざん》・ひき《算|ざん》。$${inner}^{2}=${inner * inner}$`);
       },
     },
   });
 
   // ---------------------------------------------------------------- 3-62
   M.add({
-    id: '3-62', part: 5, chap: '3-11', stars: 1,
+    id: '3-62', part: 5, chap: '3-11③', stars: 1,
     title: 'わり《算|ざん》は《指数|し|すう》のひき《算|ざん》（$a^{0}=1$、$a^{-x}=\\frac{1}{a^{x}}$）',
     mark: '**《同|おな》じ《底|てい》**の《累乗|るい|じょう》の**わり《算|ざん》**、**0《乗|じょう》**、**マイナスの《指数|し|すう》**。',
     futsu: ['$2^{5}\\div 2^{8}=32\\div 256$', '$=\\frac{32}{256}=\\frac{1}{8}$（《約分|やく|ぶん》する）'],
@@ -303,7 +308,7 @@
           return { q: `$${pw(v, m)}\\div ${pw(v, n)}$`, a: `$${pw(v, m - n)}$`, easy: `$${pw(v, `${m}-${n}`)}=${pw(v, m - n)}$` };
         }
         const b = r.pick([2, 3, 5, 10]), m = r.int(2, 9), n = r.intNot(2, 9, x => x === m);
-        return { q: `$${pw(b, m)}\\div ${pw(b, n)}$`, a: `$${pw(b, m - n)}$`, easy: `$${pw(b, `${m}-${n}`)}=${pw(b, m - n)}$` };
+        return { q: `${RU(b)}$${pw(b, m)}\\div ${pw(b, n)}$`, a: `$${pw(b, m - n)}$`, easy: `$${pw(b, `${m}-${n}`)}=${pw(b, m - n)}$` };
       },
       // 値を求める（分数・1）
       s2(r) {
@@ -311,15 +316,15 @@
         const lim = { 2: 6, 3: 4, 5: 3, 10: 3 };
         if (k === 0) {   // a^{-n}
           const b = r.pick([2, 3, 5, 10]), n = r.int(2, lim[b]), v = Math.pow(b, n);
-          return { q: `$${pw(b, -n)}$`, a: `$${fr(1, v)}$`, easy: `$${fr(1, pw(b, n))}=${fr(1, v)}$` };
+          return { q: `$${pw(b, -n)}$${ATAI}`, a: `$${fr(1, v)}$`, easy: `$${fr(1, pw(b, n))}=${fr(1, v)}$` };
         }
         if (k === 1) {   // a^0
           const b = r.pick([2, 3, 5, 7, 10, 'x', 'a']);
-          return { q: `$${pw(b, 0)}$`, a: '1', easy: '0《回|かい》かけると、はじめのまま' };
+          return { q: `$${pw(b, 0)}$${ATAI}`, a: '1', easy: '0《回|かい》かけると、はじめのまま' };
         }
         if (k === 2) {   // 小さい ÷ 大きい
           const b = r.pick([2, 3, 10]), m = r.int(2, 4), d = r.int(1, lim[b]), n = m + d, v = Math.pow(b, d);
-          return { q: `$${pw(b, m)}\\div ${pw(b, n)}$`, a: `$${fr(1, v)}$`, easy: `$${pw(b, `${m}-${n}`)}=${pw(b, -d)}=${fr(1, v)}$` };
+          return { q: `$${pw(b, m)}\\div ${pw(b, n)}$${ATAI}`, a: `$${fr(1, v)}$`, easy: `$${pw(b, `${m}-${n}`)}=${pw(b, -d)}=${fr(1, v)}$` };
         }
         // 1/a^n を累乗の形に
         const b = r.pick([2, 3, 5, 10]), n = r.int(2, 5);
@@ -329,7 +334,7 @@
         const k = r.int(0, 3);
         if (k === 0) {   // マイナスの数でわる
           const m = r.int(2, 6), n = r.int(1, 4);
-          return { q: `$10^{${m}}\\div 10^{-${n}}$`, a: `$10^{${m + n}}$`, easy: `$10^{${m}-(-${n})}=10^{${m + n}}$` };
+          return { q: `${RU(10)}$10^{${m}}\\div 10^{-${n}}$`, a: `$10^{${m + n}}$`, easy: `$10^{${m}-(-${n})}=10^{${m + n}}$` };
         }
         if (k === 1) {   // かけ算とわり算のまじった式
           const v = r.pick(['x', 'a']), p = r.int(2, 5), s = r.int(2, 5), t = r.int(2, p + s - 1);
@@ -341,20 +346,20 @@
           return { q: `${FUN(T)}ごとに2${BAI}の${SAIKIN}の${h}${JIKAN}《前|まえ》の《数|かず》は、いまの □ ${BAI}（2の${RUIJO}で）`, a: `$2^{-${n}}$`, easy: `${n}${KAI}さかのぼるので $2^{-${n}}=${fr(1, Math.pow(2, n))}$`, val: `$2^{-${n}}$` };
         }
         // 長さの単位：km と mm など
-        const [big, eb, small, es] = r.pick([['km', 3, 'mm', -3], ['km', 3, 'cm', -2], ['m', 0, 'mm', -3], ['km', 3, 'um', -6], ['m', 0, 'um', -6]]);
-        const U = u => (u === 'um' ? '\\mu\\mathrm{m}' : `\\mathrm{${u}}`);
+        const [big, eb, small, es] = r.pick([['km', 3, 'mm', -3], ['km', 3, 'cm', -2], ['m', 0, 'mm', -3], ['m', 0, 'cm', -2]]);
+        const U = u => `\\mathrm{${u}}`;
         const lhs = eb === 0 ? '' : `$1\\,${U(big)}=10^{${eb}}\\,\\mathrm{m}$、`;
-        return { q: `${lhs}$1\\,${U(small)}=10^{${es}}\\,\\mathrm{m}$ です。$1\\,${U(big)}$ は $1\\,${U(small)}$ の □ ${BAI}です。`, a: `$10^{${eb - es}}$`, easy: `$10^{${eb}}\\div 10^{${es}}=10^{${eb - es}}$` };
+        return { q: `${lhs}$1\\,${U(small)}=10^{${es}}\\,\\mathrm{m}$。$1\\,${U(big)}$ は $1\\,${U(small)}$ の □ ${BAI}（10の${RUIJO}で）`, a: `$10^{${eb - es}}$`, easy: `$10^{${eb}}\\div 10^{${es}}=10^{${eb - es}}$` };
       },
       // わな：ひき算・底がちがう（指数はひけない）
       trap(r) {
         if (r.chance(0.5)) {
           const b = r.pick([2, 3]), n = r.int(2, 3), m = r.int(n + 1, b === 2 ? 6 : 4), x = Math.pow(b, m), y = Math.pow(b, n);
-          return dest({ q: `$${pw(b, m)}-${pw(b, n)}$`, a: String(x - y) }, '3-62', `ひき《算|ざん》。$${x}-${y}=${x - y}$`);
+          return dest({ q: `$${pw(b, m)}-${pw(b, n)}$${ATAI}`, a: String(x - y) }, '3-62', `ひき《算|ざん》。$${x}-${y}=${x - y}$`);
         }
         // 指数はそろえない（そろうと (a/b)^n にまとめられる）
         const [b, c] = r.pick([[2, 3], [3, 2], [2, 5], [5, 2], [3, 5]]), m = r.int(2, 3), n = 5 - m, x = Math.pow(b, m), y = Math.pow(c, n);
-        return dest({ q: `$${fr(pw(b, m), pw(c, n))}$`, a: `$${fr(x, y)}$` }, '3-62', `《底|てい》がちがう。$${fr(x, y)}$`);
+        return dest({ q: `$${fr(pw(b, m), pw(c, n))}$${ATAI}`, a: `$${fr(x, y)}$` }, '3-62', `《底|てい》がちがう。$${fr(x, y)}$`);
       },
     },
   });
@@ -364,7 +369,7 @@
   const ROOTS = { 2: [[4, 2], [8, 3], [16, 4], [32, 5]], 3: [[9, 2], [27, 3], [81, 4]], 5: [[25, 2], [125, 3]], 10: [[100, 2], [1000, 3]] };
   const LIM63 = { 2: 12, 3: 8, 5: 6, 10: 9 };
   M.add({
-    id: '3-63', part: 5, chap: '3-11', stars: 2,
+    id: '3-63', part: 5, chap: '3-11③の《先|さき》', stars: 2,
     title: '《底|てい》をそろえる',
     mark: '4・8・9・27・100 のように、**ほかの《数|かず》の《累乗|るい|じょう》**になっている《底|てい》がまじっている。',
     futsu: ['$4^{3}\\times 8=64\\times 8$', '$=512$'],
@@ -396,7 +401,7 @@
       s2(r) {
         if (r.chance(0.15)) {   // 9^{1/2} × 27、4^{1/2} × 8 の形（3-66 の分数の指数と）
           const [B, C, root, kb, kc] = r.pick([[9, 27, 3, 2, 3], [4, 8, 2, 2, 3], [16, 8, 2, 4, 3], [4, 32, 2, 2, 5], [25, 125, 5, 2, 3]]), e = kb / 2 + kc, v = Math.pow(root, e);
-          return { q: `$${B}^{\\tfrac{1}{2}}\\times ${C}$`, a: String(v), easy: `$${pw(root, kb / 2)}\\times ${pw(root, kc)}=${pw(root, e)}=${v}$` };
+          return { q: `$${B}^{\\tfrac{1}{2}}\\times ${C}$${ATAI}`, a: String(v), easy: `$${pw(root, kb / 2)}\\times ${pw(root, kc)}=${pw(root, e)}=${v}$` };
         }
         const root = r.pick([2, 2, 2, 3, 3, 5]);
         const [[B1, k1], [B2, k2]] = r.shuffle(ROOTS[root].concat([[root, 1]])).slice(0, 2);
@@ -407,7 +412,7 @@
         if (e < 1 || e > (root === 2 ? 10 : root === 3 ? 6 : 4)) return null;
         const v = Math.pow(root, e);
         const t1 = m === 1 ? String(B1) : pw(B1, m), t2 = n === 1 ? String(B2) : pw(B2, n);
-        return { q: `$${t1}${op}${t2}$`, a: String(v), easy: `$${pw(root, k1 * m)}${op}${pw(root, k2 * n)}=${pw(root, e)}=${v}$` };
+        return { q: `$${t1}${op}${t2}$${ATAI}`, a: String(v), easy: `$${pw(root, k1 * m)}${op}${pw(root, k2 * n)}=${pw(root, e)}=${v}$` };
       },
       s3(r) {
         const k = r.int(0, 2);
@@ -419,7 +424,7 @@
         }
         if (k === 1) {   // 倍率を2倍ずつの回数で
           const [B, kb] = r.pick([[4, 2], [8, 3], [16, 4]]), n = r.int(2, 5);
-          return { q: `${B}${BAI}ずつふえる《量|りょう》の${n}${KAI}《分|ぶん》は、2${BAI}ずつふえる《量|りょう》の □ ${KAI}《分|ぶん》です。`, a: String(kb * n), easy: `$${pw(B, n)}=${pw(2, `${kb}\\times ${n}`)}=${pw(2, kb * n)}$`, val: String(Math.pow(B, n)) };
+          return { q: `${B}${BAI}ずつふえる《量|りょう》の${n}${KAI}《分|ぶん》は、2${BAI}ずつふえる《量|りょう》の □ ${KAI}《分|ぶん》`, a: String(kb * n), easy: `$${pw(B, n)}=${pw(2, `${kb}\\times ${n}`)}=${pw(2, kb * n)}$`, val: String(Math.pow(B, n)) };
         }
         // 1/4 の累乗を 1/2 の累乗で
         const [B, kb] = r.pick([[4, 2], [8, 3], [9, 2], [27, 3]]), root = B % 3 ? 2 : 3, n = r.int(2, 4);
@@ -432,7 +437,7 @@
         const x = Math.pow(b, m), y = Math.pow(c, n);
         if (x * y > 2000) return null;
         const t2 = n === 1 ? String(c) : pw(c, n);
-        return dest({ q: `$${pw(b, m)}\\times ${t2}$`, a: String(x * y), key: `63t:${b}:${c}:${n}` }, '3-63', `${b}と${c}は《同|おな》じ《数|かず》の${RUIJO}にならない。$${x}\\times ${y}=${x * y}$`);
+        return dest({ q: `$${pw(b, m)}\\times ${t2}$${ATAI}`, a: String(x * y), key: `63t:${b}:${c}:${n}` }, '3-63', `${b}と${c}は《同|おな》じ《数|かず》の${RUIJO}にならない。$${x}\\times ${y}=${x * y}$`);
       },
     },
   });
@@ -446,7 +451,7 @@
     { name: `ある${BUSSHITSU}`, T: 8, u: JIKAN },
   ];
   M.add({
-    id: '3-64', part: 5, chap: '3-11', stars: 1,
+    id: '3-64', part: 5, chap: '3-11①④', stars: 1,
     title: '《倍々|ばい|ばい》・《半減|はん|げん》は「《回数|かい|すう》＝《時間|じ|かん》÷1《回|かい》の《時間|じ|かん》」',
     mark: '「**□《分|ふん》ごとに2《倍|ばい》**」「**《半減期|はん|げん|き》**」と、たった《時間|じ|かん》が《書|か》いてある。',
     futsu: ['20《分|ぷん》ごとに2《倍|ばい》で2《時間|じ|かん》：', '2、4、8、16、…と、《表|ひょう》を《作|つく》ってたどる。'],
@@ -474,8 +479,9 @@
         const s = r.pick(HALF), n = r.int(2, 5), t = s.T * n, d = Math.pow(2, n);
         if (r.chance(0.4)) {
           const m0 = r.pick([400, 800, 1600, 3200]);
-          if (m0 % d) return null;
-          return { q: `${HGK}${s.T}${s.u}の${s.name} ${m0} mgは、${t}${s.u}で □ mg`, a: String(m0 / d), easy: `$${n}$ ${KAI}、$${m0}\\times\\left(${fr(1, 2)}\\right)^{${n}}=${m0 / d}$`, easyCheck: false, verify: () => (m0 * Math.pow(0.5, t / s.T) === m0 / d ? true : 'ちがう') };
+          // 名前の長いテクネチウム99m は、□ と mg が1行に入らないので、倍を聞く問いだけにする
+          if (m0 % d || s.u === JIKAN && s.T === 6) return null;
+          return { q: `${HGK}${s.T}${s.u}の${s.name}が ${m0} mg。${t}${s.u}${GO}は □ mg`, a: String(m0 / d), easy: `$${n}$ ${KAI}、$${m0}\\times\\left(${fr(1, 2)}\\right)^{${n}}=${m0 / d}$`, easyCheck: false, verify: () => (m0 * Math.pow(0.5, t / s.T) === m0 / d ? true : 'ちがう') };
         }
         return { q: `${HGK}${s.T}${s.u}の${s.name}は、${t}${s.u}で □ ${BAI}`, a: `$${fr(1, d)}$`, easy: `$${t}\\div ${s.T}=${n}$ ${KAI}、$\\left(${fr(1, 2)}\\right)^{${n}}=${fr(1, d)}$`, easyCheck: false, verify: () => (near(Math.pow(0.5, t / s.T), 1 / d) ? true : 'ちがう') };
       },
@@ -492,8 +498,8 @@
           return { q: `${FUN(T)}ごとに2${BAI}になる${SAIKIN}${c0}《個|こ》は、${HM(t)}で □ 《個|こ》`, a: String(v), easy: `$${t}\\div ${T}=${n}$ ${KAI}、$${c0}\\times 2^{${n}}=${v}$`, easyCheck: false, verify: () => (c0 * Math.pow(2, t / T) === v ? true : 'ちがう') };
         }
         // 逆向き：何分後
-        const T = r.pick([10, 15, 20, 30]), n = r.int(4, 8), v = Math.pow(2, n);
-        return { q: `${FUN(T)}ごとに2${BAI}になる${SAIKIN}が${v}${BAI}になるのは □ 《分後|ふん|ご》`, a: String(T * n), easy: `$${v}=2^{${n}}$ で${n}${KAI}、$${T}\\times ${n}=${T * n}$`, easyCheck: false, verify: () => (Math.pow(2, (T * n) / T) === v ? true : 'ちがう') };
+        const T = r.pick([10, 20, 30]), n = r.int(4, 8), v = Math.pow(2, n);
+        return { q: `${FUN(T)}ごとに2${BAI}になる${SAIKIN}が${v}${BAI}になるのは □ ${M.fun(T * n)}${GO}`, a: String(T * n), easy: `$${v}=2^{${n}}$ で${n}${KAI}、$${T}\\times ${n}=${T * n}$`, easyCheck: false, verify: () => (Math.pow(2, (T * n) / T) === v ? true : 'ちがう') };
       },
       // わな：同じ数ずつふえる・へる（倍々ではない）
       trap(r) {
@@ -504,7 +510,7 @@
         }
         const L0 = r.pick([100, 120, 150]), d = r.pick([5, 8, 10, 12]), T = r.pick([10, 15, 20]), t = r.pick([60, 90]), n = t / T, v = L0 - d * n;
         if (!Number.isInteger(n) || v <= 0) return null;
-        return dest({ q: `《水|みず》そうの${L0} Lの《水|みず》が、${FUN(T)}ごとに${d} Lずつへると、${HM(t)}で □ L`, a: String(v) }, '3-64', `${HGK}ではなく、${d} Lずつ。$${L0}-${d}\\times ${n}=${v}$`);
+        return dest({ q: `${L0} Lの《水|みず》が、${FUN(T)}ごとに${d} Lずつへると、${HM(t)}で □ L`, a: String(v) }, '3-64', `${HGK}ではなく、${d} Lずつ。$${L0}-${d}\\times ${n}=${v}$`);
       },
     },
   });
@@ -512,22 +518,22 @@
   // ---------------------------------------------------------------- 3-65
   const pct = (p, up) => dec(100 + (up ? p : -p), 100);
   M.add({
-    id: '3-65', part: 5, chap: '3-11', stars: 1,
-    title: '％でふえる・へるは《倍率|ばい|りつ》をかける',
-    mark: '「**□％ずつ**ふえる・へる」（《利息|り|そく》、《値段|ね|だん》が《下|さ》がる、など）。',
+    id: '3-65', part: 5, chap: '3-11①', stars: 1,
+    title: '%でふえる・へるは《倍率|ばい|りつ》をかける',
+    mark: '「**□%ずつ**ふえる・へる」（《利息|り|そく》、《値段|ね|だん》が《下|さ》がる、など）。',
     futsu: ['1《年目|ねん|め》の《利息|り|そく》を《出|だ》してたし、', '2《年目|ねん|め》の《利息|り|そく》を《出|だ》してたす。'],
-    raku: ['4％ふえる＝1.04《倍|ばい》', '$50000\\times 1.04^{2}=54080$'],
+    raku: ['4%ふえる＝1.04《倍|ばい》', '$50000\\times 1.04^{2}=54080$'],
     why: 'ふえる《量|りょう》が、いまある《量|りょう》に《比例|ひ|れい》する。1《回|かい》ごとに $(1+0.04)$ 《倍|ばい》になる（3-11①）。',
-    caution: '「□《円|えん》ずつ」のように《同|おな》じ《量|りょう》がふえるときは、たし《算|ざん》。10％ずつ2《回|かい》は、20％ではない。',
+    caution: '「□《円|えん》ずつ」のように《同|おな》じ《量|りょう》がふえるときは、たし《算|ざん》。10%ずつ2《回|かい》は、20%ではない。',
     counts: { s1: 10, s2: 6, s3: 5, trap: 2 },
     cols: { s2: 1, s3: 1, trap: 1 },
     boxw: { s2: '22mm' },
-    fits(q) { return /\d+％/.test(q); },
+    fits(q) { return /\d+%/.test(q); },
     steps: {
       // 1回の倍率
       s1(r) {
         const p = r.pick([2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50]), up = r.chance(0.5), v = pct(p, up);
-        return { q: `${p}％${up ? 'ふえる' : 'へる'} → □ ${BAI}`, a: v, easy: `$1${up ? '+' : '-'}${dec(p, 100)}=${v}$`, key: `65:${p}:${up}` };
+        return { q: `${p}%${up ? 'ふえる' : 'へる'} → □ ${BAI}`, a: v, easy: `$1${up ? '+' : '-'}${dec(p, 100)}=${v}$`, key: `65:${p}:${up}` };
       },
       // 2年・3年あと
       s2(r) {
@@ -536,41 +542,41 @@
           const num = P * Math.pow(100 + p, y), den = Math.pow(100, y);
           if (num % den) return null;
           const v = num / den, rate = pct(p, true);
-          return { q: `《毎年|まい|とし》${p}％の《利息|り|そく》がつく《貯金|ちょ|きん》に${P}《円|えん》。${y}${NEN}${GO}は □ 《円|えん》`, a: String(v), easy: `$${P}\\times ${rate}^{${y}}=${v}$` };
+          return { q: `《毎年|まい|とし》${p}%の《利息|り|そく》がつく《貯金|ちょ|きん》に${P}《円|えん》。${y}${NEN}${GO}は □ 《円|えん》`, a: String(v), easy: `$${P}\\times ${rate}^{${y}}=${v}$` };
         }
         const P = r.pick([80, 100, 200, 400, 500, 800]), p = r.pick([10, 20, 25, 50]), y = r.pick([2, 3]);
         const num = P * Math.pow(100 - p, y), den = Math.pow(100, y);
         if (num % den) return null;
         const v = num / den, rate = pct(p, false);
-        return { q: `${P}《万|まん》《円|えん》の《機械|き|かい》が《毎年|まい|とし》${p}％ずつ《値下|ね|さ》がり。${y}${NEN}${GO}は □ 《万|まん》《円|えん》`, a: String(v), easy: `$${P}\\times ${rate}^{${y}}=${v}$` };
+        return { q: `${P}《万|まん》《円|えん》の《機械|き|かい》が《毎年|まい|とし》${p}%ずつ《値下|ね|さ》がり。${y}${NEN}${GO}は □ 《万|まん》《円|えん》`, a: String(v), easy: `$${P}\\times ${rate}^{${y}}=${v}$` };
       },
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {   // 何年で何倍
           const [p, up, y] = r.pick([[10, true, 2], [10, true, 3], [20, true, 2], [30, true, 2], [50, true, 2], [10, false, 2], [10, false, 3], [20, false, 2], [30, false, 2], [20, true, 3]]);
           const rate = pct(p, up), v = dec((100 + (up ? p : -p)) ** y, 100 ** y);
-          return { q: `1${NEN}ごとに${p}％ずつ${up ? 'ふえる' : 'へる'}《量|りょう》は、${y}${NEN}で □ ${BAI}`, a: v, easy: `$${rate}^{${y}}=${v}$` };
+          return { q: `1${NEN}ごとに${p}%ずつ${up ? 'ふえる' : 'へる'}《量|りょう》は、${y}${NEN}で □ ${BAI}`, a: v, easy: `$${rate}^{${y}}=${v}$` };
         }
         if (k === 1) {   // 何％へるか（たし算ではない）
           const [p, y] = r.pick([[10, 2], [20, 2], [30, 2], [50, 2], [10, 3], [20, 3]]);
           const left = (100 - p) ** y, v = dec(100 ** y - left, 100 ** (y - 1));
           const rate = pct(p, false);
-          return { q: `1${NEN}ごとに${p}％ずつへる《量|りょう》は、${y}${NEN}で □ ％へる`, a: v, easy: `$${rate}^{${y}}=${dec(left, 100 ** y)}$ で、$100-${dec(left, 100 ** (y - 1))}=${v}$`, easyCheck: false, verify: () => (near(100 - 100 * Math.pow(1 - p / 100, y), numOf(v)) ? true : 'ちがう') };
+          return { q: `1${NEN}ごとに${p}%ずつへる《量|りょう》は、${y}${NEN}で □ %へる`, a: v, easy: `$${rate}^{${y}}=${dec(left, 100 ** y)}$ で、$100-${dec(left, 100 ** (y - 1))}=${v}$`, easyCheck: false, verify: () => (near(100 - 100 * Math.pow(1 - p / 100, y), numOf(v)) ? true : 'ちがう') };
         }
         // ふえてからへる
         const [p, q] = r.pick([[50, 50], [20, 20], [10, 10], [25, 20], [50, 20], [20, 25], [100, 50], [30, 30]]);
         const v = dec((100 + p) * (100 - q), 10000);
-        return { q: `${p}％ふえてから${q}％へると、はじめの □ ${BAI}`, a: v, easy: `$${pct(p, true)}\\times ${pct(q, false)}=${v}$`, key: `65s3:${p}:${q}` };
+        return { q: `${p}%ふえてから${q}%へると、はじめの □ ${BAI}`, a: v, easy: `$${pct(p, true)}\\times ${pct(q, false)}=${v}$`, key: `65s3:${p}:${q}` };
       },
       // わな：同じ量ずつ下がる・のびる（％ではない）
       trap(r) {
         if (r.chance(0.5)) {
           const P = r.pick([80, 100, 120, 150]), d = r.pick([5, 10, 15, 20]), y = r.int(2, 4), v = P - d * y;
           if (v <= 0) return null;
-          return dest({ q: `${P}《万|まん》《円|えん》の《機械|き|かい》が《毎年|まい|とし》${d}《万|まん》《円|えん》ずつ《値下|ね|さ》がり。${y}${NEN}${GO}は □ 《万|まん》《円|えん》`, a: String(v) }, '3-65', `％ではなく、《同|おな》じ《金額|きん|がく》ずつ。$${P}-${d}\\times ${y}=${v}$`);
+          return dest({ q: `${P}《万|まん》《円|えん》の《機械|き|かい》が《毎年|まい|とし》${d}《万|まん》《円|えん》ずつ《値下|ね|さ》がり。${y}${NEN}${GO}は □ 《万|まん》《円|えん》`, a: String(v) }, '3-65', `%ではなく、《同|おな》じ《金額|きん|がく》ずつ。$${P}-${d}\\times ${y}=${v}$`);
         }
         const L0 = r.pick([50, 80, 100]), d = r.pick([6, 8, 12, 15]), y = r.int(3, 6), v = L0 + d * y;
-        return dest({ q: `${L0} cmの《木|き》が《毎年|まい|とし》${d} cmずつのびると、${y}${NEN}${GO}は □ cm`, a: String(v) }, '3-65', `％ではなく、《同|おな》じ《長|なが》さずつ。$${L0}+${d}\\times ${y}=${v}$`);
+        return dest({ q: `${L0} cmの《木|き》が《毎年|まい|とし》${d} cmずつのびると、${y}${NEN}${GO}は □ cm`, a: String(v) }, '3-65', `%ではなく、《同|おな》じ《長|なが》さずつ。$${L0}+${d}\\times ${y}=${v}$`);
       },
     },
   });
@@ -578,7 +584,7 @@
   // ---------------------------------------------------------------- 3-66
   const SQ = [[4, 2], [9, 3], [16, 4], [25, 5], [36, 6], [49, 7], [64, 8], [81, 9], [100, 10], [121, 11], [144, 12]];
   M.add({
-    id: '3-66', part: 5, chap: '3-11', stars: 1,
+    id: '3-66', part: 5, chap: '3-11⑤⑥', stars: 1,
     title: '《分数|ぶん|すう》の《指数|し|すう》は $\\sqrt{\\quad}$',
     mark: '《指数|し|すう》が**《分数|ぶん|すう》・《小数|しょう|すう》**（$a^{\\tfrac{1}{2}}$、$a^{1.5}$、$a^{-\\tfrac{1}{2}}$）。',
     futsu: ['$16^{1.5}$ は「1.5《回|かい》かける」？', 'そのままでは《計算|けい|さん》できない。'],
@@ -592,7 +598,7 @@
     fits(q) {
       if (/0\.707/.test(q)) return true;
       if (/時間ごとに\s*\d+\s*倍.*(?:30分では|1時間30分では)/.test(q)) return true;
-      return mathsOf(q).some(m => /\^\{-?\\t?frac/.test(m) || /\^\{-?\d+\.\d+\}/.test(m));
+      return mathsOf(q).some(m => !/\\log/.test(m) && (/\^\{-?\\t?frac/.test(m) || /\^\{-?\d+\.\d+\}/.test(m)));
     },
     steps: {
       s1(r) {
@@ -630,7 +636,7 @@
         if (!Number.isInteger(v10) || v10 % 10 === 0) return null;
         const v = dec(v10, 10);
         const part = k ? `\\left(${fr(1, 2)}\\right)^{${k}}\\times ` : '';
-        return { q: `${HGK}${s.T}${s.u}の${s.name} ${m0} ${unit}は、${t}${s.u}${GO}に《約|やく》 □ ${unit}（$\\left(${fr(1, 2)}\\right)^{0.5}=0.707$）`, a: v, easy: `$${['0.5', '1.5', '2.5'][k]}$ ${KAI}、$${m0}\\times ${part}0.707=${v}$`, easyCheck: false, verify: () => (near(m0 * Math.pow(0.5, k) * 0.707, numOf(v)) && Math.abs(m0 * Math.pow(0.5, t / s.T) - numOf(v)) < m0 * 0.001 ? true : 'ちがう') };
+        return { q: `${HGK}${s.T}${s.u}の${s.name}が ${m0} ${unit}。${t}${s.u}${GO}は《約|やく》 □ ${unit}（$\\left(${fr(1, 2)}\\right)^{0.5}=0.707$）`, a: v, easy: `$${['0.5', '1.5', '2.5'][k]}$ ${KAI}、$${m0}\\times ${part}0.707=${v}$`, easyCheck: false, verify: () => (near(m0 * Math.pow(0.5, k) * 0.707, numOf(v)) && Math.abs(m0 * Math.pow(0.5, t / s.T) - numOf(v)) < m0 * 0.001 ? true : 'ちがう') };
       },
       // わな：指数は整数（分数は底の方）・ただのかけ算
       trap(r) {
@@ -648,7 +654,7 @@
   // ---------------------------------------------------------------- 3-67
   const LOGB = { 2: 8, 3: 5, 5: 4, 10: 6 };
   M.add({
-    id: '3-67', part: 5, chap: '3-12', stars: 1,
+    id: '3-67', part: 5, chap: '3-12①②', stars: 1,
     title: '$\\log_{a}b$ は「$a$ を《何乗|なん|じょう》すると $b$ か」',
     mark: '$\\log_{2}32$、$\\log_{4}2$、$\\log_{10}0.01$ のような **log の《値|あたい》**を《求|もと》める。',
     futsu: ['《電卓|でん|たく》の log のキーは《底|てい》が10だけ。', '$\\log_{2}32$ は、そのままでは《出|で》ない。'],
@@ -729,7 +735,7 @@
   }
   const PAIRS68 = sumPairs();
   M.add({
-    id: '3-68', part: 5, chap: '3-12', stars: 1,
+    id: '3-68', part: 5, chap: '3-12③', stars: 1,
     title: 'log のかけ《算|ざん》はたし《算|ざん》、わり《算|ざん》はひき《算|ざん》',
     mark: '**《同|おな》じ《底|てい》の log のたし《算|ざん》・ひき《算|ざん》**、log の《中|なか》が**かけ《算|ざん》・わり《算|ざん》**。',
     futsu: ['$\\log_{2}12$ と $\\log_{2}3$ は、2を《何乗|なん|じょう》しても', '12や3にならず、《求|もと》められない。'],
@@ -758,7 +764,7 @@
           return { q: `$\\log_{${a}}${fr(p, q)}=\\log_{${a}}${p}-\\log_{${a}}□$`, a: String(q), easy: `$${fr(p, q)}=${p}\\div ${q}$`, val: `$${fr(p, q)}$`, verify: () => true };
         }
         // 近似値で：2つの数のかけ算・わり算
-        const [arg, i, j, d, how] = r.pick([['6', 1, 1, 0, '2\\times 3'], ['1.5', -1, 1, 0, '\\frac{3}{2}'], [fr(2, 3), 1, -1, 0, '\\frac{2}{3}'], ['5', -1, 0, 1, '\\frac{10}{2}'], ['20', 1, 0, 1, '2\\times 10'], ['30', 0, 1, 1, '3\\times 10'], ['0.2', 1, 0, -1, '\\frac{2}{10}'], ['0.3', 0, 1, -1, '\\frac{3}{10}'], [fr(10, 3), 0, -1, 1, '10\\div 3']]);
+        const [arg, i, j, d, how] = r.pick([['6', 1, 1, 0, '2\\times 3'], ['1.5', -1, 1, 0, '\\frac{3}{2}'], [fr(2, 3), 1, -1, 0, '2\\div 3'], ['5', -1, 0, 1, '\\frac{10}{2}'], ['20', 1, 0, 1, '2\\times 10'], ['30', 0, 1, 1, '3\\times 10'], ['0.2', 1, 0, -1, '\\frac{2}{10}'], ['0.3', 0, 1, -1, '\\frac{3}{10}'], [fr(10, 3), 0, -1, 1, '10\\div 3']]);
         const v = lg(i, j, d);
         const given = [i ? L2 : '', j ? L3 : ''].filter(Boolean).join('、');
         return { q: `$\\log_{10}${arg}=□$（${given}）`, a: ans(d3(v)), easy: `$${arg}=${how}$ → $${sum70(i, j, d)}$`, easyCheck: false, verify: () => (near(i * 0.301 + j * 0.477 + d, numOf(d3(v))) && Math.abs(lgTrue(i, j, d) - v / 1000) < 0.002 ? true : 'ちがう') };
@@ -789,7 +795,7 @@
 
   // ---------------------------------------------------------------- 3-69
   M.add({
-    id: '3-69', part: 5, chap: '3-12', stars: 1,
+    id: '3-69', part: 5, chap: '3-12③', stars: 1,
     title: 'log の《中|なか》の《累乗|るい|じょう》は《前|まえ》に《出|だ》す',
     mark: 'log の《中|なか》が**《累乗|るい|じょう》**（$\\log_{10}2^{10}$、$\\log_{10}\\sqrt{3}$）。',
     futsu: ['$2^{10}=1024$ を《先|さき》に《計算|けい|さん》しても、', '$\\log_{10}1024$ はわからない。'],
@@ -828,7 +834,7 @@
         // 累乗根：答えは分数
         const [a, m, j] = r.pick([[2, 3, 2], [2, 2, 1], [2, 2, 3], [2, 2, 5], [3, 2, 3], [3, 3, 2], [10, 3, 1], [10, 2, 3], [5, 2, 3]]);
         const g = (x, y) => (y ? g(y, x % y) : x), c = g(j, m);
-        const inner = Math.pow(a, j), root = m === 2 ? `\\sqrt{${inner}}` : `\\sqrt[${m}]{${inner}}`;
+        const inner = Math.pow(a, j), root = m === 2 ? `\\sqrt{${inner}}` : `${inner}^{\\tfrac{1}{${m}}}`;
         return { q: `$\\log_{${a}}${root}$`, a: `$${fr(j / c, m / c)}$`, easy: `$${fr(1, m)}\\times\\log_{${a}}${inner}=${fr(1, m)}\\times ${j}=${fr(j / c, m / c)}$` };
       },
       s3(r) {
@@ -842,9 +848,9 @@
           if (c !== 1) {
             const lc = c === 3 ? '0.477' : '0.699';
             if (c === b) return null;
-            return { q: `$y=${c}\\times ${b}^{x}$ の《常用対数|じょう|よう|たい|すう》は、$\\log_{10}y=${lc}+□x$ です（${given}）。`, a: dec(L), easy: `$\\log_{10}${b}^{x}=x\\log_{10}${b}$`, easyCheck: false, verify: () => true };
+            return { q: `$y=${c}\\times ${b}^{x}$ の《常用対数|じょう|よう|たい|すう》は、$\\log_{10}y=${lc}+□x$（${given}）`, a: dec(L), easy: `$\\log_{10}${b}^{x}=x\\log_{10}${b}$`, easyCheck: false, verify: () => true };
           }
-          return { q: `$y=${b}^{x}$ の《常用対数|じょう|よう|たい|すう》は、$\\log_{10}y=□x$ です（${given}）。`, a: dec(L), easy: `$\\log_{10}${b}^{x}=x\\log_{10}${b}$`, easyCheck: false, verify: () => true };
+          return { q: `$y=${b}^{x}$ の《常用対数|じょう|よう|たい|すう》は、$\\log_{10}y=□x$（${given}）`, a: dec(L), easy: `$\\log_{10}${b}^{x}=x\\log_{10}${b}$`, easyCheck: false, verify: () => true };
         }
         // log10 x がわかっているとき
         const [lx, L] = r.pick([['0.301', 301], ['0.477', 477], ['0.699', 699], ['1.2', 1200], ['0.5', 500]]), n = r.int(2, 6);
@@ -885,10 +891,11 @@
   const sum70 = (i, j, d) => [i ? `${i === 1 ? '' : i === -1 ? '-' : i + '\\times '}0.301` : '', j ? `${j === 1 ? '' : j === -1 ? '-' : j + '\\times '}0.477` : '', d ? String(d) : ''].filter(Boolean).join('+').replace(/\+-/g, '-');
   function make70(e, arg) {
     const { i, j, d } = e, v = lg(i, j, d);
-    return { q: `$\\log_{10}${arg}=□$（${given70(i, j)}）`, a: ans(d3(v)), easy: `$${arg}=${facTeX(i, j, d)}$ → $${sum70(i, j, d)}$`, easyCheck: false, verify: () => (near(i * 0.301 + j * 0.477 + d, numOf(d3(v))) && Math.abs(lgTrue(i, j, d) - v / 1000) < 0.003 ? true : 'ちがう') };
+    const f = facTeX(i, j, d);
+    return { q: `$\\log_{10}${arg}=□$（${given70(i, j)}）`, a: ans(d3(v)), easy: `${f === arg ? '' : `$${arg}=${f}$ → `}$${sum70(i, j, d)}$`, easyCheck: false, verify: () => (near(i * 0.301 + j * 0.477 + d, numOf(d3(v))) && Math.abs(lgTrue(i, j, d) - v / 1000) < 0.003 ? true : 'ちがう') };
   }
   M.add({
-    id: '3-70', part: 5, chap: '3-12', stars: 1,
+    id: '3-70', part: 5, chap: '3-12③', stars: 1,
     title: '$\\log_{10}2$・$\\log_{10}3$ で《組|く》み《立|た》てる',
     mark: '2・3・5・10 の**かけ《算|ざん》・わり《算|ざん》**でできた《数|かず》の《常用対数|じょう|よう|たい|すう》。',
     futsu: ['$\\log_{10}18$ は、《電卓|でん|たく》がないと', '《求|もと》められない？'],
@@ -944,7 +951,7 @@
     return { v, d: ip + 1 };
   };
   M.add({
-    id: '3-71', part: 5, chap: '3-12', stars: 1,
+    id: '3-71', part: 5, chap: '3-12①③', stars: 1,
     title: 'けた《数|すう》は log の《整数|せい|すう》の《部分|ぶ|ぶん》＋1',
     mark: '「$2^{40}$ は**《何|なん》けた**の《数|かず》か」。',
     futsu: ['$2^{40}$ を《全部|ぜん|ぶ》《計算|けい|さん》して、', 'けたを《数|かぞ》える。'],
@@ -998,13 +1005,13 @@
   // ceil(k / L) を近似値と本当の値で
   const firstOver = (lk, la, lkT, laT) => { const n = Math.floor(lk / la) + 1, nT = Math.floor(lkT / laT) + 1; return Math.abs(lk / la - Math.round(lk / la)) < 0.02 || n !== nT ? null : n; };
   M.add({
-    id: '3-72', part: 5, chap: '3-12', stars: 1,
+    id: '3-72', part: 5, chap: '3-12⑤', stars: 1,
     title: '《底|てい》の《変換|へん|かん》で《回数|かい|すう》を《出|だ》す',
     mark: '$\\log_{2}3$ のように《底|てい》が10でない log、「**はじめて□《倍|ばい》をこえる**のは《何|なん》《回目|かい|め》か」。',
     futsu: ['2、4、8、16、…と《倍|ばい》にしていき、', '1000をこえるまで《数|かぞ》える。'],
     raku: ['$\\log_{2}1000=\\frac{\\log_{10}1000}{\\log_{10}2}=\\frac{3}{0.301}$', '$=9.96\\cdots$ → 10《回目|かい|め》'],
     why: '$2^{p}=1000$ の《両辺|りょう|へん》の《常用対数|じょう|よう|たい|すう》をとると、$p\\times 0.301=3$（3-12⑤）。',
-    caution: '《回数|かい|すう》は《整数|せい|すう》なので、《小数|しょう|すう》になったら《次|つぎ》の《整数|せい|すう》。ちょうど《整数|せい|すう》（$\\log_{2}8$）なら 3-67 で。',
+    caution: '《回数|かい|すう》は《整数|せい|すう》なので、《小数|しょう|すう》になったら《次|つぎ》の《整数|せい|すう》。ちょうど《整数|せい|すう》（$\\log_{2}8$）なら、わざ 3-67 で。',
     counts: { s1: 8, s2: 5, s3: 5, trap: 2 },
     cols: 1,
     fits(q) {
@@ -1032,7 +1039,7 @@
         const n = firstOver(k * 1000, Lb, k, Math.log10(b));
         if (!n) return null;
         const big = `$10^{${k}}$`;
-        return { q: `${b}${BAI}ずつ：はじめて${big}${BAI}をこえるのは □ ${KAI}《目|め》（${b === 3 ? L3 : L2}）`, a: String(n), easy: `$${fr(k, dec(Lb))}=${dec(Math.floor(k * 1000 * 100 / Lb), 100)}\\cdots$`, easyCheck: false, verify: () => (Math.pow(b, n) > Math.pow(10, k) && Math.pow(b, n - 1) <= Math.pow(10, k) ? true : 'ちがう') };
+        return { q: `${b}${BAI}ずつ：はじめて${big}${BAI}をこえるのは □ ${KAI}《目|め》（${b === 3 ? L3 : b === 5 ? L5 : L2}）`, a: String(n), easy: `$${fr(k, dec(Lb))}=${dec(Math.floor(k * 1000 * 100 / Lb), 100)}\\cdots$`, easyCheck: false, verify: () => (Math.pow(b, n) > Math.pow(10, k) && Math.pow(b, n - 1) <= Math.pow(10, k) ? true : 'ちがう') };
       },
       s3(r) {
         if (r.chance(0.5)) {   // 半減期で 1/10^k 以下
@@ -1061,13 +1068,13 @@
   // ---------------------------------------------------------------- 3-73
   const BIG = k => ['1', '10', '100', '1000', '10000', '100000', '1000000'][k];
   M.add({
-    id: '3-73', part: 5, chap: '3-12', stars: 1,
+    id: '3-73', part: 5, chap: '3-12⑦', stars: 1,
     title: 'デシベルは10《倍|ばい》で10 dB、つなぐとたし《算|ざん》',
     mark: '**《電力|でん|りょく》・《音|おと》の《強|つよ》さ**の《比|ひ》を dB で。**《増幅器|ぞう|ふく|き》をつなぐ**。',
     futsu: ['100《倍|ばい》と1000《倍|ばい》をつなぐと100000《倍|ばい》。', 'その log をとって5、10《倍|ばい》して50 dB。'],
     raku: ['20 dB ＋ 30 dB ＝ 50 dB'],
     why: 'dB は《比|ひ》の《常用対数|じょう|よう|たい|すう》の10《倍|ばい》。かけ《算|ざん》がたし《算|ざん》になる（3-12⑦）。',
-    caution: '《同|おな》じ《強|つよ》さの《音|おと》2つは、dB をたさない（2《倍|ばい》なので＋3 dB）。《電圧|でん|あつ》の《比|ひ》は 3-74。',
+    caution: '《同|おな》じ《強|つよ》さの《音|おと》2つは、dB をたさない（2《倍|ばい》なので＋3 dB）。《電圧|でん|あつ》の《比|ひ》は、わざ 3-74。',
     counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
     cols: { s1: 2, s2: 1, s3: 1, trap: 2 },
     boxw: { s1: '20mm', s2: '22mm' },
@@ -1119,20 +1126,20 @@
         }
         const [v0, n] = [r.pick([1.5, 1.2, 9]), r.int(2, 6)];
         const v = dec(Math.round(v0 * 10) * n, 10);
-        return dest({ q: `${v0} Vの《電池|でん|ち》${n}《本|ほん》を《直列|ちょく|れつ》につなぐと □ V`, a: v, verify: () => (near(v0 * n, numOf(v)) ? true : 'ちがう') }, '3-73', `dB ではない。《電圧|でん|あつ》のたし《算|ざん》 $${v0}\\times ${n}=${v}$`);
+        return dest({ q: `${v0} Vの《電池|でん|ち》${HON(n)}を《直列|ちょく|れつ》につなぐと □ V`, a: v, verify: () => (near(v0 * n, numOf(v)) ? true : 'ちがう') }, '3-73', `dB ではない。《電圧|でん|あつ》のたし《算|ざん》 $${v0}\\times ${n}=${v}$`);
       },
     },
   });
 
   // ---------------------------------------------------------------- 3-74
   M.add({
-    id: '3-74', part: 5, chap: '3-12', stars: 1,
+    id: '3-74', part: 5, chap: '3-12⑦', stars: 1,
     title: '《電圧|でん|あつ》の《比|ひ》は20《倍|ばい》で dB',
     mark: '**《電圧|でん|あつ》**・《音圧|おん|あつ》の《比|ひ》を dB で（《電力|でん|りょく》は《電圧|でん|あつ》の2《乗|じょう》に《比例|ひ|れい》）。',
     futsu: ['《電圧|でん|あつ》1000《倍|ばい》 → 《電力|でん|りょく》は $1000^{2}=10^{6}$ 《倍|ばい》', '→ $10\\times 6=60$ dB'],
     raku: ['$20\\times\\log_{10}1000=20\\times 3$', '$=60$ dB'],
     why: '《電力|でん|りょく》は《電圧|でん|あつ》の2《乗|じょう》。$10\\log_{10}k^{2}=20\\log_{10}k$（3-12⑦）。',
-    caution: '《電力|でん|りょく》・《音|おと》の《強|つよ》さの《比|ひ》は10《倍|ばい》（3-73）。',
+    caution: '《電力|でん|りょく》・《音|おと》の《強|つよ》さの《比|ひ》は10《倍|ばい》（わざ 3-73）。',
     counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
     cols: { s1: 2, s2: 1, s3: 1, trap: 2 },
     boxw: { s2: '20mm' },
@@ -1147,7 +1154,7 @@
         const k = r.int(0, 2);
         if (k === 0) {   // dB → 電圧の比
           const d = 20 * r.int(1, 4);
-          return { q: `${DENATSU}の《比|ひ》${d} dB → □ ${BAI}`, a: BIG(d / 20), easy: `$${d}\\div 20=${d / 20}$、$10^{${d / 20}}$`, easyCheck: false, verify: () => (near(20 * Math.log10(+BIG(d / 20)), d) ? true : 'ちがう') };
+          return { q: `${DENATSU}の《比|ひ》${d} dBのとき、${DENATSU}は □ ${BAI}`, a: BIG(d / 20), easy: `$${d}\\div 20=${d / 20}$、$10^{${d / 20}}$`, easyCheck: false, verify: () => (near(20 * Math.log10(+BIG(d / 20)), d) ? true : 'ちがう') };
         }
         if (k === 1) {   // dB → 電力の比
           const d = 20 * r.int(1, 3);
@@ -1179,7 +1186,7 @@
   const KATA = '《片対数|かた|たい|すう》グラフ';
   const giv = g => (g ? `（${g}）` : '');
   M.add({
-    id: '3-97', part: 5, chap: '3-12', stars: 1,
+    id: '3-97', part: 5, chap: '3-12⑥', stars: 1,
     title: '《片対数|かた|たい|すう》グラフの《傾|かたむ》きから《倍率|ばい|りつ》',
     mark: '《片対数|かた|たい|すう》グラフ（たて《軸|じく》が $\\log_{10}y$）の**《直線|ちょく|せん》の《傾|かたむ》き**から、1つ《進|すす》むごとの《倍率|ばい|りつ》を《出|だ》す。',
     futsu: ['グラフから $y$ の《値|あたい》を《読|よ》んで、', 'わり《算|ざん》で《倍率|ばい|りつ》を《出|だ》す。'],
@@ -1231,7 +1238,7 @@
   // 0 < x < 1 で log10 x ＝ -L（L は 1000倍）のとき、はじめて0でない位
   const firstPlace = (L, tru) => { const p = Math.ceil(L / 1000), f = L % 1000; if (f < 15 || f > 985) return null; return Math.ceil(tru - 1e-12) === p ? p : null; };
   M.add({
-    id: '3-98', part: 5, chap: '3-12の《先|さき》', stars: 2,
+    id: '3-98', part: 5, chap: '3-12①の《先|さき》', stars: 2,
     title: '《小数|しょう|すう》ではじめて0でない《位|くらい》',
     mark: 'とても《小|ちい》さい《数|かず》が、**《小数第|しょう|すう|だい》《何位|なん|い》**ではじめて0でないか。',
     futsu: ['$\\frac{1}{2}$ を20《回|かい》かけて、', '《小数|しょう|すう》を《書|か》き《出|だ》す。'],
