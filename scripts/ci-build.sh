@@ -142,7 +142,7 @@ for t in "${expanded[@]}"; do
       # 見開きのページを確かめる（NG の数を「ずれ」の欄に出す）
       ( cd tex && python3 "$ROOT/mondai/build/mq_pages.py" "mq$n" ) > "$OUT/check_pages_q$n.txt" 2>&1
       z=$(grep -c '  NG' "$OUT/check_pages_q$n.txt")
-      python3 -c 'import fontTools' 2>/dev/null || pip install -q fonttools > /dev/null 2>&1 || true
+      python3 -c 'import fontTools, brotli' 2>/dev/null || pip install -q fonttools brotli > /dev/null 2>&1 || true
       node mondai/build/mk_app.js > /dev/null && cp mondai/dist/print.html "$OUT/mqprint.html"
       stats "mq$n" "問題集第${n}巻" "${z:-?}" $(( $(date +%s) - t0 ))
       ;;

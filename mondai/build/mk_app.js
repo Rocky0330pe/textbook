@@ -24,10 +24,16 @@ try {
   const tmp = path.join(require('os').tmpdir(), 'mq-chars.txt');
   fs.writeFileSync(tmp, [...chars].join(''));
   const font = path.resolve(ROOT, '..', 'tex', 'fonts', 'KleeOne-Regular.ttf');
-  const out = path.join(require('os').tmpdir(), 'mq-klee.woff');
-  execFileSync('python3', ['-m', 'fontTools.subset', font, `--text-file=${tmp}`, '--flavor=woff', `--output-file=${out}`, '--layout-features=*'], { stdio: 'ignore' });
+  // woff2（brotli がいる）が作れなければ woff にする
+  let fmt = 'woff2', out = path.join(require('os').tmpdir(), 'mq-klee.woff2');
+  try {
+    execFileSync('python3', ['-m', 'fontTools.subset', font, `--text-file=${tmp}`, '--flavor=woff2', `--output-file=${out}`, '--layout-features=*'], { stdio: 'ignore' });
+  } catch (e) {
+    fmt = 'woff'; out = path.join(require('os').tmpdir(), 'mq-klee.woff');
+    execFileSync('python3', ['-m', 'fontTools.subset', font, `--text-file=${tmp}`, '--flavor=woff', `--output-file=${out}`, '--layout-features=*'], { stdio: 'ignore' });
+  }
   const b64 = fs.readFileSync(out).toString('base64');
-  fontCss = `@font-face { font-family: "MQKlee"; src: url(data:font/woff;base64,${b64}) format("woff"); font-display: swap; }`;
+  fontCss = `@font-face { font-family: "MQKlee"; src: url(data:font/${fmt};base64,${b64}) format("${fmt}"); font-display: swap; }`;
   console.log(`フォント：Klee One から ${chars.size} 字（${Math.round(b64.length / 1024)} KB）`);
 } catch (e) {
   console.log('フォントは入れなかった（fontTools がない）。ブラウザのフォントで組む');
