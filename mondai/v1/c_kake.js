@@ -3,6 +3,19 @@
 (function (M) {
   'use strict';
   const T = '×', E = '＝', P = '＋', S = '－';
+
+  // ---------------------------------------------------------------- 見わけよう（fits）の 部品
+  // fits(q)：ほかの わざの 問題でも、 この わざが つかえるか（q は ルビを とった 問題の 文。 README 2章）
+  // 式だけの 問題（「a × b」「a × c ＋ b × c」）を 数と 記号に わける。 □・ことば・＝ が あれば null
+  const expr = q => {
+    if (!/^\d+(\.\d+)?( [＋－×÷] \d+(\.\d+)?)+$/.test(q)) return null;
+    const t = q.split(' ');
+    return { n: t.filter((_, i) => i % 2 === 0).map(Number), o: t.filter((_, i) => i % 2 === 1) };
+  };
+  // 「a × b」だけの 問題の [a, b]。 ちがえば null
+  const mul2 = q => { const e = expr(q); return e && e.n.length === 2 && e.o[0] === T ? e.n : null; };
+  // かけ算の 2つの かずの どちらかが f(x, もう 1つ) を みたす
+  const either = (k, f) => !!k && (f(k[0], k[1]) || f(k[1], k[0]));
   // a を n こ たす しき（a ＋ a ＋ … ＋ a）
   const rep = (a, n) => Array(n).fill(String(a)).join(` ${P} `);
   const not10 = v => v % 10 === 0;
@@ -18,6 +31,12 @@
     caution: 'たす かずが 1つでも ちがう ときは、 そのままでは かけ《算|ざん》に できない。',
     cols: 1,
     counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
+    // おなじ かずを 3つ いじょう たす／「1ふくろ □こずつ、 □ふくろで」
+    fits(q) {
+      const e = expr(q.split(' ＝ ')[0]);
+      if (e && e.n.length >= 3 && e.o.every(o => o === P) && e.n.every(x => x === e.n[0])) return true;
+      return /1\S+ \d+こずつ、 \d+\S+で □こ$/.test(q);
+    },
     steps: {
       // たし算の こたえを もとめる（かけ算に なおす）
       s1(r) { const a = r.int(2, 9), n = r.int(3, 5); return { q: rep(a, n), a: String(a * n), easy: `${a} ${T} ${n}` }; },
@@ -57,6 +76,15 @@
     why: 'おはじきの 《四角|し|かく》を くるっと まわしても、 かずは かわらない（《教科書|きょう|か|しょ》 1-13）。',
     caution: '《同|おな》じ かずどうし（7 × 7）は、 《入|い》れかえても かわらない。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // 2・3 × 大きい かず（2 × 9）／ 入れかえの □
+    fits(q) {
+      const k = mul2(q);
+      if (k) return (k[0] === 2 || k[0] === 3) && k[1] > k[0] && k[1] < 100;
+      let m = q.match(/^(\d+) × (\d+) ＝ (?:□ × (\d+)|(\d+) × □)$/);
+      if (m) { const c = m[3] || m[4]; return c === m[1] || c === m[2]; }
+      m = q.match(/^1人 (\d+)こずつ、 (\d+)人で □こ$/);
+      return !!m && (+m[1] === 2 || +m[1] === 3) && +m[2] > +m[1];
+    },
     steps: {
       // 2・3 × 大きい かず → 入れかえて 大きい かずの だんで
       s1(r) {
@@ -98,6 +126,17 @@
     caution: 'たすのは 1では なく、 1つ《分|ぶん》の かず（7 × 8 は 49 ＋ 1 では ない）。',
     cols: 1,
     counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
+    // 1つ まえの 九九が ある（a × b ＝ … だから、 a × (b＋1)）／ ×5・ましかくの となり（3 × 6、 7 × 8）
+    fits(q) {
+      let m = q.match(/^(\d+) × (\d+) ＝ \d+ だから、 (\d+) × (\d+) ＝ □$/);
+      if (m) return m[1] === m[3] && +m[4] === +m[2] + 1;
+      m = q.match(/^(\d+) × (\d+) ＝ (\d+) × (\d+) ＋ □$/);
+      if (m) return m[1] === m[3] && +m[4] === +m[2] - 1;
+      m = q.match(/^\d+こずつ (\d+)ふくろで \d+こ。 (\d+)ふくろで □こ$/);
+      if (m) return +m[2] === +m[1] + 1;
+      const k = mul2(q);
+      return !!k && k[0] >= 3 && k[0] <= 9 && k[1] <= 9 && (k[1] === 6 || k[1] === k[0] + 1);
+    },
     steps: {
       // 1つ まえの 九九が 書いて ある
       s1(r) {
@@ -137,6 +176,17 @@
     why: '1れつ 7こを 5こと 2こに 《分|わ》けても、 ぜんぶの かずは かわらない（《教科書|きょう|か|しょ》 1-13）。',
     caution: '2・3・4の だんは、 《分|わ》けると かえって ながく なる。 そのまま つかおう。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // 6〜9の だん（かける ほうが 6〜9 でも）／ × 11〜13 を 10と のこりに
+    fits(q) {
+      const m = q.match(/^(\d) × (\d) ＝ (?:□ ＋ (\d+)|(\d+) ＋ □)$/);
+      if (m) { const a = +m[1], b = +m[2], g = +(m[3] || m[4]); return a >= 6 && (g === 5 * b || g === (a - 5) * b); }
+      const k = mul2(q);
+      if (!k) return false;
+      const [a, b] = k;
+      if (a >= 2 && a <= 9 && b >= 11 && b <= 13) return true;
+      if (a > 9 || b > 9 || b < 2) return false;
+      return a >= 6 || (a >= 3 && b >= 6);
+    },
     steps: {
       // 6〜9の だん：1つ分を 5と のこりに
       s1(r) {
@@ -174,6 +224,12 @@
     why: '9は 10より 1 すくないので、 9が 7こ は、 10が 7こ より 7 すくない。',
     caution: '9の だんで ない ときは、 《九九|く|く》の まま けいさん しよう。',
     counts: { s1: 9, s2: 8, s3: 6, trap: 2 },
+    // × 9（もう 1つは 12まで）／ 9 ＋ 9 ＋ 9
+    fits(q) {
+      if (either(mul2(q), (x, y) => x === 9 && y >= 1 && y <= 12)) return true;
+      const e = expr(q);
+      return !!e && e.n.length >= 3 && e.o.every(o => o === P) && e.n.every(x => x === 9);
+    },
     steps: {
       s1(r) { const n = r.int(1, 9); return { q: `9 ${T} ${n}`, a: String(9 * n), easy: `10 ${T} ${n} ${S} ${n}` }; },
       s2(r) { const n = r.int(1, 9); return { q: `${n} ${T} 9`, a: String(9 * n), easy: `${n} ${T} 10 ${S} ${n}` }; },
@@ -202,6 +258,12 @@
     why: '1れつ 4こは、 2こと 2こ。 2の だんの こたえを 2つ たせば よい（《教科書|きょう|か|しょ》 1-13）。',
     caution: '3の だんや 7の だんは、 2ばいの 2ばいでは ない。',
     counts: { s1: 8, s2: 7, s3: 7, trap: 2 },
+    // × 4（もう 1つは 15まで）・× 8（2ばいの 2ばいの 2ばい）
+    fits(q) {
+      const m = q.match(/^4 × (\d+) ＝ (\d+) ＋ □$/);
+      if (m) return +m[2] === 2 * m[1];
+      return either(mul2(q), (x, y) => (x === 4 && y >= 2 && y <= 15) || (x === 8 && y >= 3 && y <= 9));
+    },
     steps: {
       s1(r) { const b = r.int(2, 9); return { q: `4 ${T} ${b}`, a: String(4 * b), easy: `${2 * b} ${P} ${2 * b}` }; },
       s2(r) { const b = r.int(2, 9); return { q: `${b} ${T} 4`, a: String(4 * b), easy: `${b} ${T} 2 ${P} ${b} ${T} 2` }; },
@@ -231,6 +293,11 @@
     caution: '5の だんで ない ときは つかえない。',
     counts: { s1: 8, s2: 7, s3: 7, trap: 2 },
     boxw: '11mm',
+    // × 5（もう 1つは 20まで）・5円玉
+    fits(q) {
+      if (/^5円玉 \d+まいで □円$/.test(q)) return true;
+      return either(mul2(q), (x, y) => x === 5 && y >= 2 && y <= 20);
+    },
     steps: {
       s1(r) { const b = r.int(2, 9); return { q: `5 ${T} ${b}`, a: String(5 * b), easy: `${10 * b}の はんぶん`, verify: () => (10 * b) / 2 === 5 * b || 'はんぶん' }; },
       s2(r) { const b = r.int(2, 9); return { q: `${b} ${T} 5`, a: String(5 * b), easy: `${10 * b}の はんぶん`, verify: () => (10 * b) / 2 === 5 * b || 'はんぶん' }; },
@@ -263,6 +330,14 @@
     why: '0こ の さらが いくつ あっても 0こ。 1つ《分|ぶん》が 1つ だけ なら、 その かずの まま。',
     caution: '× 1 を ＋ 1 と まちがえない（8 × 1 は 9では ない）。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // × 0・× 1
+    fits(q) {
+      const m = q.match(/^(\d+) × □ ＝ (\d+)$/);
+      if (m) return m[2] === '0' || m[1] === m[2];
+      if (/^からの さら \d+まいに|^\d+人に 1こずつで □こ$/.test(q)) return true;
+      const k = mul2(q);
+      return !!k && k.some(x => x === 0 || x === 1);
+    },
     steps: {
       s1(r) {
         const a = r.int(2, 9), k = r.int(0, 3);
@@ -307,6 +382,15 @@
     why: '10の まとまりが 3 × 4 ＝ 12こ。 10が 12こで 120。',
     caution: '0の つけわすれに ちゅうい。 50 × 4 ＝ 200 の ように、 《九九|く|く》の こたえに 0が ある ときも 0を つける。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // なん十（20〜90）・なん百 × 1けた（2〜9）
+    fits(q) {
+      const rt = x => (x % 10 === 0 && x >= 20 && x <= 90) || (x % 100 === 0 && x >= 200 && x <= 900);
+      let m = q.match(/^(\d+)円の ノート (\d+)さつで □円$/);
+      if (m) return rt(+m[1]) && +m[2] >= 2;
+      m = q.match(/^(\d+) × □ ＝ (\d+)$/);
+      if (m) return rt(+m[1]) && +m[2] % +m[1] === 0 && +m[2] / +m[1] >= 2 && +m[2] / +m[1] <= 9;
+      return either(mul2(q), (x, y) => rt(x) && y >= 2 && y <= 9);
+    },
     steps: {
       s1(r) { const t = r.int(2, 9), b = r.int(2, 9); return { q: `${10 * t} ${T} ${b}`, a: String(10 * t * b), easy: `${t} ${T} ${b} ${T} 10` }; },
       // 入れかえ・九九の こたえに 0が ある
@@ -344,6 +428,13 @@
     why: '7の だんを 5と 2に 《分|わ》けたのと 《同|おな》じ（《教科書|きょう|か|しょ》 1-13）。 20 × 4 は わざ 1-41。',
     caution: 'さいごの たし《算|ざん》の くり《上|あ》がりに ちゅうい。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // 2けた（なん十で ない）・3けた × 1けた（2〜9）
+    fits(q) {
+      const nn = x => x >= 11 && x <= 999 && x % 10 !== 0 && (x < 100 || x % 100 >= 10);
+      const m = q.match(/^(\d+)円の あめ (\d+)こで □円$/);
+      if (m) return nn(+m[1]) && +m[2] >= 2 && +m[2] <= 9;
+      return either(mul2(q), (x, y) => nn(x) && y >= 2 && y <= 9);
+    },
     steps: {
       s1(r) {
         const n = r.intNot(12, 49, not10), b = r.int(2, 5), t = n - n % 10, u = n % 10;
@@ -381,6 +472,10 @@
     raku: ['47 × 9 ＝ 47 × 10 － 47', '　　　　＝ 470 － 47', '　　　　＝ 423'],
     why: '9こ は 10こ より 1こ すくない。 10ばいは、 うしろに 0を つけるだけ。',
     caution: '× 8 や × 7 を 10から ひくと、 ひく かずが 2こ、 3こ ぶんに なって、 かえって たいへん。',
+    // 2けた × 9・× 99／ 1けた × 19
+    fits(q) {
+      return either(mul2(q), (x, y) => ((x === 9 || x === 99) && y >= 11 && y <= 99 && y % 10 !== 0) || (x === 19 && y >= 2 && y <= 9));
+    },
     steps: {
       s1(r) { const n = r.intNot(12, 59, v => v % 10 === 0); return { q: `${n} ${T} 9`, a: String(9 * n), easy: `${n * 10} ${S} ${n}` }; },
       s2(r) { const n = r.intNot(12, 98, v => v % 10 === 0); return { q: `9 ${T} ${n}`, a: String(9 * n), easy: `${n * 10} ${S} ${n}` }; },
@@ -401,6 +496,10 @@
     raku: ['23 × 11 ＝ 23 × 10 ＋ 23', '　　　　 ＝ 230 ＋ 23', '　　　　 ＝ 253'],
     why: '11こ は 10こ より 1こ おおい。 10ばいは、 うしろに 0を つけるだけ。',
     caution: '× 12 や × 13 を 10ばいから つくると、 たす かずが 2こ、 3こ ぶんに なって たいへん。',
+    // × 11・× 101／ 1けた × 21
+    fits(q) {
+      return either(mul2(q), (x, y) => ((x === 11 || x === 101) && y >= 2 && y <= 99 && y % 10 !== 0) || (x === 21 && y >= 2 && y <= 9));
+    },
     steps: {
       s1(r) { const n = r.intNot(12, 59, not10); return { q: `${n} ${T} 11`, a: String(11 * n), easy: `${n * 10} ${P} ${n}` }; },
       s2(r) { const n = r.intNot(12, 98, not10); return { q: `11 ${T} ${n}`, a: String(11 * n), easy: `${n * 10} ${P} ${n}` }; },
@@ -423,6 +522,12 @@
     why: '5こは 10こ の はんぶん。 10ばいして から はんぶんに する（わざ 1-39 と 《同|おな》じ）。',
     caution: '× 5 で ない ときは つかえない。 × 6 は 10ばいの はんぶんでは ない。',
     boxw: '11mm',
+    // 2けた（なん十で ない） × 5・2けたの ぐうすう × 50
+    fits(q) {
+      const m = q.match(/^(\d+) × 5 ＝ □ × 10$/);
+      if (m) return +m[1] % 2 === 0;
+      return either(mul2(q), (x, y) => (x === 5 && y >= 11 && y <= 99 && y % 10 !== 0) || (x === 50 && y >= 11 && y <= 99 && y % 2 === 0));
+    },
     steps: {
       s1(r) { const n = r.intNot(12, 48, v => v % 2 || not10(v)); return { q: `${n} ${T} 5`, a: String(5 * n), easy: `${10 * n}の はんぶん`, verify: () => (10 * n) / 2 === 5 * n || 'はんぶん' }; },
       s2(r) { const n = r.intNot(12, 98, v => v % 2 || not10(v)); return { q: `5 ${T} ${n}`, a: String(5 * n), easy: `${10 * n}の はんぶん`, verify: () => (10 * n) / 2 === 5 * n || 'はんぶん' }; },
@@ -447,6 +552,14 @@
     raku: ['2 × 5 ＝ 10 を さきに する。', '2 × 7 × 5 ＝ 10 × 7', '　　　　　＝ 70'],
     why: 'かけ《算|ざん》は、 かける じゅんばんを かえても こたえは 《同|おな》じ。 10を かけるのは 0を つけるだけ。',
     caution: 'たし《算|ざん》が まざって いる ときは、 じゅんばんを かえては いけない。',
+    // かけ算だけで、 かけて 10・100・1000に なる 2つが ある／ 12〜18の ぐうすう × 5（かくれた 2）
+    fits(q) {
+      const e = expr(q);
+      if (!e || !e.o.every(o => o === T)) return false;
+      const n = e.n;
+      if (n.length === 2) return either(n, (x, y) => x === 5 && y >= 12 && y <= 18 && y % 2 === 0);
+      return n.some((x, i) => n.some((y, j) => j > i && [10, 100, 1000].includes(x * y)));
+    },
     steps: {
       s1(r) {
         const a = r.int(3, 9);
@@ -488,6 +601,14 @@
     caution: 'かける かずが ちがう とき（7 × 6 ＋ 3 × 5）は まとめられない。',
     cols: 1,
     counts: { s1: 8, s2: 6, s3: 5, trap: 2 },
+    // a × c ＋ b × c で、 おなじ かずが あって、 のこりを たす（ひく）と なん十
+    fits(q) {
+      const m = q.match(/^(\d+) × (\d+) ([＋－]) (\d+) × (\d+)$/);
+      if (!m) return false;
+      const a = +m[1], b = +m[2], c = +m[4], d = +m[5], plus = m[3] === P;
+      const ok = (x, y) => (plus ? (x + y) % 10 === 0 : x > y && (x - y) % 10 === 0);
+      return (b === d && ok(a, c)) || (a === c && ok(b, d)) || (a === d && ok(b, c)) || (b === c && ok(a, d));
+    },
     steps: {
       s1(r) {
         const a = r.int(2, 8), c = r.int(2, 9);
@@ -524,6 +645,14 @@
     why: '2 ちがいの かけ《算|ざん》は、 まんなかの かずの ましかく（7 × 7）より 1 すくない（《教科書|きょう|か|しょ》 1-13 ななめの きまり）。',
     caution: '5 × 8 の ように、 まんなかの かずが ない ときは つかえない。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // 2 ちがい・4 ちがいで、 まんなかの ましかくを しって いる（まんなかが 4〜10、 または なん十）
+    fits(q) {
+      const k = mul2(q);
+      if (!k) return false;
+      const a = Math.min(k[0], k[1]), b = Math.max(k[0], k[1]), d = b - a, m = (a + b) / 2;
+      if (d !== 2 && d !== 4) return false;
+      return (m <= 10 && a >= 3) || (m % 10 === 0 && m <= 50);
+    },
     steps: {
       s1(r) {
         const m = r.int(3, 9), [x, y] = r.chance(0.5) ? [m - 1, m + 1] : [m + 1, m - 1];

@@ -4,6 +4,32 @@
 (function (M) {
   'use strict';
   const P = '＋', S = '－', T = '×';
+
+  // ---------------------------------------------------------------- 見わけよう（fits）の 部品
+  // fits(q)：ほかの わざの 問題でも、 この わざが つかえるか（q は ルビを とった 問題の 文。 README 2章）
+  // 式だけの 問題（「a ＋ b － c」）を 数と 記号に わける。 □・ことば・＝ が あれば null
+  const expr = q => {
+    if (!/^\d+(\.\d+)?( [＋－×÷] \d+(\.\d+)?)+$/.test(q)) return null;
+    const t = q.split(' ');
+    return { n: t.filter((_, i) => i % 2 === 0).map(Number), o: t.filter((_, i) => i % 2 === 1) };
+  };
+  // たし算だけの 式の 数。 ちがえば null
+  const adds = q => { const e = expr(q); return e && e.o.every(o => o === P) ? e.n : null; };
+  // ひき算 a － b の [a, b]（式・「a － □ ＝ c」・「おつりは」「のこりは」の ことばの もんだい）。 ちがえば null
+  const subs = q => {
+    const e = expr(q);
+    if (e) return e.n.length === 2 && e.o[0] === S ? e.n : null;
+    const m = q.match(/^(\d+) － □ ＝ (\d+)$/);
+    if (m) return [+m[1], +m[2]];
+    if (/(おつりは|のこりは) □/.test(q)) { const n = (q.match(/\d+/g) || []).map(Number); if (n.length === 2) return n; }
+    return null;
+  };
+  // 「□ ＋ b ＝ c」「b ＋ □ ＝ c」を ひき算 c － b と みる [c, b]。 ちがえば null
+  const boxSub = q => { const m = q.match(/^(?:□ ＋ (\d+)|(\d+) ＋ □) ＝ (\d+)$/); return m ? [+m[3], +(m[1] || m[2])] : null; };
+  // なん十 － なん十 で 100を こえる（130 － 50）の [13, 5]。 ちがえば null
+  const tens = (a, b) => (a > 100 && a < 200 && a % 10 === 0 && b % 10 === 0 && b <= 90 ? [a / 10, b / 10] : null);
+  // a － b で、 どこかの くらいが くり下がる
+  const borrow = (a, b) => { for (let x = a, y = b; y > 0; x = Math.floor(x / 10), y = Math.floor(y / 10)) if (x % 10 < y % 10) return true; return false; };
   const KURI = 'くり《下|さ》がらない';
 
   // ------------------------------------------------------------ 1-14
@@ -16,6 +42,13 @@
     why: '13は 10の まとまりと ばら 3。 10から ひくと、 10に なる くみで すぐ わかる（《教科書|きょう|か|しょ》 1-5）。',
     caution: 'ばらから ひける とき（15 － 3 など）は、 ばらから そのまま ひこう。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // くり下がる 1けたの ひき算（13 － 8、 43 － 6、 130 － 80）
+    fits(q) {
+      const s = subs(q);
+      if (!s) return false;
+      const [a, b] = tens(s[0], s[1]) || s;
+      return b >= 1 && b <= 9 && a > 10 && a % 10 < b;
+    },
     steps: {
       // 10いくつ － 1けた（ひく かずが 7・8・9）
       s1(r) {
@@ -55,6 +88,13 @@
     why: 'さきに ばらを ぜんぶ ひくと、 ちょうど 10に なる。 10から ひくのは かんたん（《教科書|きょう|か|しょ》 1-5）。',
     caution: 'ばらから ひける ときは わけなくて よい。 ひく かずが 8や 9なら、 10から ひく（わざ 1-14）ほうが らく。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // くり下がる 1けたの ひき算で、 ひく かずが ばらより 1〜3 大きい（13 － 4、 53 － 6）
+    fits(q) {
+      const s = subs(q);
+      if (!s) return false;
+      const [a, b] = tens(s[0], s[1]) || s, x = a % 10;
+      return b >= 1 && b <= 9 && a > 10 && x >= 1 && x < b && b - x <= 3;
+    },
     steps: {
       // 10いくつ － 1けた（ばらより 1〜3 大きい かずを ひく）
       s1(r) {
@@ -98,6 +138,14 @@
     why: '10 ひくと、 9より 1 おおく ひいた ことに なる。 おおく ひいた 1を もどす。',
     caution: '10 ひいたら、 1を ひくのでは なく、 1を たして もどす。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // － 9（19・29 …、 90）で くり下がる
+    fits(q) {
+      const s = subs(q) || boxSub(q);
+      if (!s) return false;
+      const [a, b] = s;
+      if (b % 10 === 9 && b < 90) return a >= b + 2 && a % 10 !== 9;
+      return b === 90 && a > 100 && a % 10 === 0 && (a / 10) % 10 !== 9;
+    },
     steps: {
       s1(r) {
         const a = r.intNot(11, 98, v => v % 10 === 9);
@@ -144,6 +192,15 @@
     why: '100 ひくと、 99より 1 おおく ひいた ことに なる。 その 1を たして もどす（わざ 1-16と おなじ）。',
     caution: 'くり《下|さ》がりが ない とき（299 － 99 など）は、 そのまま ひけば よい。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // － 97・98・99（199・999 …）で くり下がる
+    fits(q) {
+      const s = subs(q) || boxSub(q);
+      if (!s) return false;
+      const [a, b] = s;
+      if (a <= b) return false;
+      if (b % 1000 === 999) return a % 1000 !== 999;
+      return b > 90 && b % 100 >= 97 && a % 100 < b % 100;
+    },
     steps: {
       s1(r) {
         const a = r.intNot(110, 998, v => v % 100 >= 90 || v % 10 === 9);
@@ -186,6 +243,11 @@
     why: '10の まとまりは まとまりどうし、 ばらは ばらどうしで ひく（《教科書|きょう|か|しょ》 1-7）。',
     caution: 'ばらから ひけない とき（72 － 38 など）は、 くり《下|さ》がりが ある。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // ひく かずが 2けた いじょうで、 どの くらいも くり下がらない
+    fits(q) {
+      const s = subs(q);
+      return !!s && s[1] >= 10 && s[0] > s[1] && !borrow(s[0], s[1]);
+    },
     steps: {
       // 2けた － なん十
       s1(r) {
@@ -229,6 +291,14 @@
     why: '2つの かずに おなじ かずを たしても、 ちがいは かわらない（《教科書|きょう|か|しょ》 1-5の 「ちがい」）。',
     caution: 'ひく かず だけに たすのでは ない。 2つ とも、 おなじ かずだけ たす。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // ひく かずが 7・8・9で おわり くり下がる（82 － 39、 669 － 99）／ なん十から 1・2で おわる かずを ひく（90 － 61）
+    fits(q) {
+      const s = subs(q);
+      if (!s || s[1] < 10 || s[0] <= s[1]) return false;
+      const [a, b] = s;
+      if (b % 10 >= 7) return borrow(a, b);
+      return a < 100 && a % 10 === 0 && (b % 10 === 1 || b % 10 === 2);
+    },
     steps: {
       // ひく かずが 19・29・…・79（どちらにも 1 たす）
       s1(r) {
@@ -271,6 +341,15 @@
     why: 'ひき《算|ざん》の こたえは 「ちがい」。 《小|ちい》さい ほうから 《大|おお》きい ほうまで、 たして いけば よい（《教科書|きょう|か|しょ》 1-5）。',
     caution: '2つの かずが はなれて いる ときは、 たして いくと たいへん。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // 2つの かずが ちかく（ちがいが 12まで）、 なん十・なん百を またぐ（62 － 58、 58 ＋ □ ＝ 62）
+    fits(q) {
+      let s = subs(q);
+      const m = q.match(/^(\d+) ＋ □ ＝ (\d+)$/);
+      if (!s && m && +m[2] % 10 !== 0) s = [+m[2], +m[1]];
+      if (!s) return false;
+      const [a, b] = s, d = a - b;
+      return b >= 10 && d > 0 && d <= 12 && borrow(a, b);
+    },
     steps: {
       // なん十を またぐ 2けたの ひき算（62 － 58）
       s1(r) {
@@ -309,6 +388,14 @@
     why: '99から ひくと、 どの くらいも 9から ひく だけで、 くり《下|さ》がりが ない。',
     caution: 'さいごに 1を たすのを わすれない。 なん《十|じゅう》を ひく とき（100 － 40）は、 10の まとまりで。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // なん百から ひく（100 － 37、 300 － 46）／ なん十から 2けたを ひく（70 － 47）。 ひく かずは なん十で ない
+    fits(q) {
+      const s = subs(q);
+      if (!s) return false;
+      const [a, b] = s;
+      if (b % 10 === 0 || b >= a) return false;
+      return (a % 100 === 0 && a <= 900) || (a < 100 && a % 10 === 0 && b >= 10);
+    },
     steps: {
       s1(r) {
         const b = r.intNot(11, 89, v => v % 10 === 0);
@@ -350,6 +437,13 @@
     why: '999から ひくと、 どの くらいも 9から ひく だけ（わざ 1-21と おなじ）。',
     caution: 'さいごに 1を たすのを わすれない。 なん《百|びゃく》を ひく とき（1000 － 300）は、 100の まとまりで。',
     counts: { s1: 10, s2: 8, s3: 6, trap: 2 },
+    // なん千から ひく（1000 － 386、 □ ＋ 742 ＝ 1000）。 ひく かずは なん百で ない
+    fits(q) {
+      const s = subs(q) || boxSub(q);
+      if (!s) return false;
+      const [a, b] = s;
+      return a % 1000 === 0 && a <= 9000 && b >= 10 && b < a && b % 100 !== 0;
+    },
     steps: {
       s1(r) {
         const b = r.intNot(102, 989, v => v % 10 === 0);
@@ -393,6 +487,14 @@
     caution: 'ばらが ちがう とき（63 ＋ 28 － 5 など）は、 なん《十|じゅう》に ならない。',
     cols: 1,
     counts: { s1: 9, s2: 6, s3: 6, trap: 2 },
+    // ＋ と － が まざった 3つの かずで、 たす かずと ひく かずの 一の くらいが おなじ
+    fits(q) {
+      const e = expr(q);
+      if (!e || e.n.length !== 3 || !e.o.includes(P) || !e.o.includes(S)) return false;
+      const plus = [e.n[0]], minus = [];
+      e.o.forEach((o, i) => (o === P ? plus : minus).push(e.n[i + 1]));
+      return plus.some(x => minus.some(y => x % 10 !== 0 && x % 10 === y % 10));
+    },
     steps: {
       // a ＋ b － (bの ばら)
       s1(r) {
@@ -441,6 +543,14 @@
     caution: 'ふえかたが そろって いない ときは、 くみの わが ちがって しまう。',
     cols: 1,
     counts: { s1: 9, s2: 6, s3: 6, trap: 2 },
+    // 4つ いじょう、 おなじ だけ ふえて ならぶ（「…」の ならびも）
+    fits(q) {
+      if (/^\d+ ＋ \d+ ＋ \d+ ＋ … ＋ \d+$/.test(q)) return true;
+      const n = adds(q);
+      if (!n || n.length < 4) return false;
+      const d = n[1] - n[0];
+      return d > 0 && n.every((x, i) => i === 0 || x - n[i - 1] === d);
+    },
     steps: {
       // 1ずつ ふえる 4こ・6こ
       s1(r) {
@@ -484,6 +594,13 @@
     caution: 'まんなかからの ずれが うちけしあわない ときは、 そろえられない。',
     cols: 1,
     counts: { s1: 9, s2: 6, s3: 6, trap: 2 },
+    // 3つの かずが きりの よい まんなか（10・15・20 …）から 4まで ずれて、 ずれが うちけしあう
+    fits(q) {
+      const n = adds(q);
+      if (!n || n.length !== 3) return false;
+      const sum = n[0] + n[1] + n[2], m = sum / 3;
+      return sum % 15 === 0 && m >= 10 && n.every(x => Math.abs(x - m) <= 4);
+    },
     steps: {
       // m－d、 m、 m＋d
       s1(r) {
