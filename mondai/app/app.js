@@ -111,7 +111,7 @@
     const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
     // 式（$…$）の問題は、分数などで行が高くなるので、行の高さを中身に合わせ、1ページの数を減らす（第2巻から）
     const mathy = probs.some(p => /\$/.test(String(p.q) + String(p.a)));
-    const per = mathy ? (oneCol ? 9 : 12) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
+    const per = mathy ? (oneCol ? 11 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
