@@ -68,13 +68,13 @@ row('β（遅発中性子の割合）', 0.0065, '0.0065', '原-15（原-16 も�
 row('100 個の √N', math.sqrt(100), '10', '原-12 ⑨・原-14 ③')
 row('1000 個の √N', math.sqrt(1000), '32', '原-12 ⑨・原-14 ③')
 # 止めたあとのキセノン（原-15 ⑩・例題11）
-lI, lX = math.log(2) / 6.57, math.log(2) / 9.14
-r0 = 0.06 / 0.063 * (lX + 2.6e-18 * 3e13 * 3600) / lI  # 原-15 例題11 の I0/X0（3.22）
+lI, lX = math.log(2) / 6.58, math.log(2) / 9.14
+r0 = 0.064 / 0.0664 * (lX + 2.6e-18 * 3e13 * 3600) / lI  # 原-15 例題11 の I0/X0（3.26。出典の組が IAEA の値に直した）
 ts = [k / 1000 for k in range(1, 48000)]
 xs = [math.exp(-lX * t) + r0 * lI / (lX - lI) * (math.exp(-lI * t) - math.exp(-lX * t)) for t in ts]
 k = max(range(len(xs)), key=lambda i: xs[i])
 row('キセノン135 の山（時刻〔h〕）', ts[k], '8.3', '原-15 図（⑩）・例題11')
-row('  同じく高さ', xs[k], '1.87（原-15 の検算は 1.865）', '原-15 図（⑩）・例題11')
+row('  同じく高さ', xs[k], '1.88（原-15 の検算は 1.881）', '原-15 図（⑩）・例題11')
 
 for name, val, text, where in rows:
     print('%-36s %12.5g   本文 %-28s %s' % (name, val, text, where))
