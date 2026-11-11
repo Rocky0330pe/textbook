@@ -1,0 +1,994 @@
+%% 第31回編集委員会（物理第5巻）：組 原W3
+%% p5-05.tex  原-5　波で書く電子：シュレディンガー方程式（★3〜5・3段）
+%% 中身は計画書 tools/phys5-plan.md の B「原-5」。公式の持ち主は A（A48・A49）。
+%% 3段：目でわかる（①②、★3）→ 手でわかる（③〜⑤、★3。ここまでで十分）→ 式でわかる（⑥〜⑧ ★4、⑨〜⑫ ★5）。
+%%   X-1・N-1 の物差しで、シュレディンガー方程式を立てて無限に深い井戸を解く所は★4、期待値・時間の変化・輪・差分法は★5。
+%%   手でわかるの段は、λ＝h/p（原-3 ②）と弦の定在波（波-6 ③）と面積（5-10）だけでたどれるように書いた。
+%% 中学・高校の公式はこの章にない（N-10(c)）ので \phkoushiki は置かない。
+%% はてな？の答えは④（計画書は「⑥で答える」と書いたが、手でわかるの段で答えられるので④に置き、⑨で確かめる）。
+%% 数値はすべて Python で計算した：checks/物理第5巻/原-5/calc_p5_05.py（出力 calc_p5_05_out.txt）、
+%%   fig_p5_05.py（はてな？の点の座標、⑫の差分法の点）。
+%% 記号（N-2・N-3・計画書 C-1。原-6・原-7 も同じ書き方にする）：
+%%   波動関数 ψ（時間をふくむときは Ψ）、位置エネルギー（ポテンシャル）U、エネルギー E、箱の幅 L、量子数 n、
+%%   虚数単位 i（数学の本・電気の本の j と同じ数。④で一度だけ断る）、時間の部分 e^{-iEt/ħ}、複素共役 ψ*（数学の本の上線と同じ）、
+%%   確率の密度 |ψ|²、期待値 ⟨x⟩、不確かさ Δx・Δp、波数 k（ボルツマン定数は k_B）、有効質量 m*、電子の質量 m（この章では mₑ を m と書く）。
+%%   周期は T（⑩だけ。この章に温度は出ない）。
+%% 前の巻・数学との約束（計画書 A-6・C-6-2）：
+%%   Q30（波-6：箱の電子は弦と同じ定在波）→ ①③、例題1・11。Q2（力-2：原子の中の電子は量子力学）→ ①の頭。
+%%   Q27（波-3 ⑩：ハミルトン形式）→ ⑫のあとの専門書の囲み。
+%%   M4（6-10 のコラム：波動関数は e^{jθ} をふくむ複素数、大きさの2乗が確率）→ ④。
+%%   M6（7-8 のコラム：とびとびのエネルギーはシュレディンガー方程式の固有値）→ ⑦⑫。
+%%   M9（9-3 のもっと知りたい：e^{jkx}、負の波数、輪の上の電子 e^{j2πnx/L}）→ ⑪・例題10。
+%%   M11（9-13：原-5 ← 9-1・9-3）→ ⑧（9-1 ⑧の分けて解く）・⑪（9-3）。M19（8-13：e^{j(ωt−kx)}）→ ④の i の断り。
+%% 出典（11月11日に確かめた）
+%%   ・定数：CODATA 2022（NIST allascii.txt。計画書 D4）。ħ²/(2mₑ)＝0.0381 eV·nm²、h²/(8mₑ(1 nm)²)＝0.376 eV。
+%%   ・シュレディンガー方程式：E. Schrödinger, "Quantisierung als Eigenwertproblem", Annalen der Physik 79, 361 (1926)（4部作の第1部）。
+%%     1933年ノーベル物理学賞（シュレディンガーとディラック「原子の理論の新しい形の発見」）：nobelprize.org（計画書 D22）。
+%%   ・GaAs の伝導帯の電子の有効質量 0.067 mₑ：WebSearch の抜粋で、複数の資料（半導体の物性の表、
+%%     H. Filler のファラデー回転の測定 0.066±0.002（1966）、arXiv:2110.14539 の「低い密度で測った3次元の値」）を照らし合わせた。
+%%     作業環境から Ioffe 研究所の NSM のページ（www.ioffe.ru）は届かなかった。値は「約0.067倍」と書く。
+%%   ・量子ドットの色と大きさ：2023年ノーベル化学賞（バウェンディ・ブルス・エキモフ「量子ドットの発見と合成」）。
+%%     nobelprize.org/prizes/chemistry/2023/summary/ を WebSearch の抜粋で確かめた。本文では、大きさと色の関係を「小さいほど青い側」とだけ書く。
+%% 〔要確認〕なし。
+\makeatletter
+\tikzset{txf lab/.style={font=\sffamily\footnotesize, text=bkInk},
+  txf wall/.style={bkInk, line width=1.4pt},
+  txf hatch/.style={pattern=north east lines, pattern color=bkGray},
+  txf psi/.style={bkBlue, line width=1.2pt},
+  txf prob/.style={bkOrange!85!black, line width=1.2pt, dash pattern=on 3pt off 1.5pt},
+  txf lev/.style={bkInk!70, line width=0.6pt, dashed},
+  txf arr/.style={bkNavy, line width=0.8pt, -{Stealth[length=1.8mm, width=1.4mm]}},
+  txf dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}}}
+% 箱（無限に深い井戸）の壁：\txfbox{左下の x}{y}{幅}{高さ}
+\newcommand\txfbox[4]{\fill[txf hatch] (#1-3,#2) rectangle (#1,#2+#4); \fill[txf hatch] (#1+#3,#2) rectangle (#1+#3+3,#2+#4);
+  \draw[txf wall] (#1,#2+#4) -- (#1,#2) -- (#1+#3,#2) -- (#1+#3,#2+#4);}
+\makeatother
+
+\phchapter{5}{波で書く電子：\\シュレディンガー方程式}{電子は、原子の中のどこにいる？}{\bklevelrange{3}{5}}{波で書く電子：シュレディンガー方程式}
+\bkmichishirube{5-10,6-6,6-10,6-12,7-8,9-1,9-3,波-6,原-3,原-4}{原-6,原-7,原-8,原-9}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{3}\enspace 箱に閉じこめた電子のエネルギー $E_n=\dfrac{n^2h^2}{8mL^2}$ を、定在波と $\lambda=h/p$ から求められる。
+\item \bklevel{3}\enspace $|\psi|^2$ を「見つかる確率」として読み、ある範囲に電子が見つかる確率を求められる。
+\item \bklevel{4}\enspace シュレディンガー方程式を立て、無限に深い井戸を境界の条件で解ける。
+\item \bklevel{5}\enspace 重ね合わせと期待値を計算し、差分法で固有値を数値で求められる。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.55\linewidth}\raggedright
+原子の絵では、原子核の周りを電子が丸い道を描いて回っていることがよくあります。でも、原-4 の最後で見たように、本当に電子が回っているなら、電子は光を出しながらエネルギーを失い、すぐに原子核に落ちてしまうはずです。
+
+では、電子は原子の中のどこにいるのでしょう。そもそも「どこにいる」と言えるのでしょうか。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.42\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \txfbox{0}{0}{40}{23}
+  \foreach \p/\q in {19.2/15.5,20.6/12.6,27.5/1.5,23.2/16.2,15.2/14.0,24.9/15.6,28.4/17.3,26.0/17.1,17.3/18.2,16.0/4.3,27.5/18.1,11.5/9.1,24.3/4.9,22.5/5.4,33.3/19.8,24.7/19.9,19.7/19.8,27.9/11.9,27.8/14.4,15.0/14.2,26.4/12.0,21.4/9.0,15.8/18.8,15.9/8.1,19.3/11.9,10.6/8.0,13.1/12.6,15.8/3.2,16.4/7.8,10.3/6.8,13.9/11.7,16.8/18.3,21.4/2.5,23.4/16.1,16.8/6.0,26.4/6.5,27.7/8.6,37.7/8.0,22.3/18.2,27.0/12.2,26.3/14.2,24.4/10.6,25.5/8.3,28.3/18.0,6.2/18.5,16.2/8.8,26.1/10.8,26.1/1.7,17.6/6.8,21.6/13.2,16.8/15.5,18.1/14.2,14.4/12.5,27.5/7.9,17.5/5.1,6.6/17.7,11.1/12.9,19.4/5.5,24.2/5.1,20.1/18.8,13.4/4.1,20.8/11.2,25.2/11.9,9.7/20.4,13.5/9.6,28.6/10.0,26.8/16.8,24.3/17.4,16.8/5.7,25.7/6.1}
+    {\fill[bkBlue!80!black] (\p,\q) circle (0.55);}
+  \node[txf lab, anchor=north] at (20,-1.5) {電子を70回さがして、見つかった所};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 物理シリーズの『力学』（力-2）では、物の運動を「位置と速度が決まった1つの点」として追いかけました。ところが、原子の中の電子には、この考え方が使えません。原-3 で、電子は波としてもふるまうことを学びました。この章では、電子を\textbf{波}として書く方法を学びます。その波を\textbf{波動関数}といい、波動関数が満たす式が\textbf{シュレディンガー方程式}です。はじめに、物理シリーズの『波動』（波-6）の弦の定在波を思い出し、それを電子に当てはめます。
+
+\begin{yattemiyou}[なわとびのなわで、定在波を作る]
+\textbf{用意するもの}：なわとびのなわ（長めのもの）、2人、ストップウォッチ、表計算\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.62\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 1人はなわのはしを持って動かさない。もう1人が、はしを小さく上下にゆらし、なわ全体が1つの山になって大きくゆれる速さをさがす。10回ゆれる時間をはかる。
+\item ゆらす速さを上げ、山が2つ、3つになる速さをさがして、同じようにはかる。
+\item 表計算で、A列に $x$ を0から1まで0.05ずつ入れ、B列に $2\sin^2(\pi x)$ を計算する。B列のグラフを描き、$x$ が $\tfrac13$ から $\tfrac23$ までの B列の値の合計に0.05をかける。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.35\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \k/\yy in {1/18, 2/9, 3/0} {
+    \draw[txf psi] plot[domain=0:30, samples=60] (\x, {\yy+3.2*sin(180*\k*(\x/30))});
+    \draw[bkBlue!40, line width=0.8pt, dashed] plot[domain=0:30, samples=60] (\x, {\yy-3.2*sin(180*\k*(\x/30))});
+    \fill[bkInk] (0,\yy) circle (0.8) (30,\yy) circle (0.8);
+    \node[txf lab, anchor=west] at (31,\yy) {山\k};}
+\end{tikzpicture}
+\end{minipage}
+\end{yattemiyou}
+
+\noindent やってみようの答え：①②山が2つの速さは山が1つのときのほぼ2倍、山が3つでは3倍になります（波-6 ③の弦の固有振動）。③合計に0.05をかけると約0.61になります（全体の合計×0.05は約1）。この0.61が、はてな？の答えの数になります（④・例題3）。
+
+\begin{omoidasou}
+\bkrecall{波-6}{両はしを止めた長さ $L$ の弦の定在波は、波長が $\lambda_n=2L/n$（$n=1,\,2,\,3,\,\ldots$）のものだけ。振動数は $f_n=nc/(2L)$ で、$n$ に比例する（③）。}
+\bkrecall{原-3}{電子も波としてふるまい、波長は $\lambda=h/p$（ド・ブロイ波長、②）。波数 $k=2\pi/\lambda$ を使うと $p=\hbar k$（$\hbar=h/(2\pi)$）。}
+\bkrecall{原-4}{ボーアの模型の量子条件：円軌道の1周が電子の波長の整数倍 $2\pi r=n\lambda$（⑤）。}
+\bkrecall{6-6}{$y''=-\omega^2y$ の解は $y=A\sin\omega t+B\cos\omega t$（ばねの単振動。①）。}
+\bkrecall{7-8}{行列 $A$ をかけても向きが変わらない矢印 $\vec v$ が固有ベクトル、$A\vec v=\lambda\vec v$ の $\lambda$ が固有値（②）。}
+\end{omoidasou}
+
+\noindent この章の記号：電子の質量を $m$、位置エネルギーを $U$ と書きます（電圧の $V$ と分けるため）。波動関数は $\psi$（プサイ）、時間をふくむときは大文字の $\Psi$ です。この章のエネルギーは、電子ボルト（eV）で書くことが多く、$\qty{1}{eV}=\qty{1.60e-19}{J}$ です。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{電子を定在波として見る}{3}
+
+\bksubsection{1}{弦の定在波から、電子の定在波へ}
+\label{ph:原-5:sec1}
+ギターの弦は、両はしが止められています。弦をはじくと、両はしが動かない波（定在波）だけが残ります。両はしが節になるには、弦の長さ $L$ に、波の半分がちょうど整数個入らなければなりません。だから、許される波長はとびとびで、
+\[L=n\times\frac{\lambda}{2}\qquad\text{つまり}\qquad\lambda_n=\frac{2L}{n}\quad(n=1,\,2,\,3,\,\ldots)\]
+です（波-6 ③）。
+
+\noindent では、電子を幅 $L$ の「箱」に閉じこめたらどうなるでしょう。箱の壁は、電子がけっしてこえられない高い壁だとします。原-3 で見たように、電子も波です。壁の外には出られないので、電子の波は壁の所で0になるしかありません。これは、両はしを止めた弦と同じ条件です。だから、電子の波も、弦と同じ定在波になり、波長は $\lambda_n=2L/n$ にかぎられます（図\ref{ph:原-5:fig-gen}）。\bkidx{はこのなかのでんし}{箱の中の電子}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \foreach \k/\yy in {1/0, 2/14, 3/28} {
+      \draw[txf psi] plot[domain=0:40, samples=70] (\x, {\yy+4.5*sin(180*\k*(\x/40))});
+      \draw[bkBlue!40, line width=0.8pt, dashed] plot[domain=0:40, samples=70] (\x, {\yy-4.5*sin(180*\k*(\x/40))});
+      \draw[bkGray, line width=0.4pt] (0,\yy) -- (40,\yy);
+      \fill[bkInk] (-1.5,\yy-1.2) rectangle (0,\yy+1.2) (40,\yy-1.2) rectangle (41.5,\yy+1.2);
+      \node[txf lab, anchor=east] at (-3,\yy) {$n=\k$};}
+    \node[txf lab, anchor=north] at (20,-7) {(ア) 両はしを止めた弦};
+    \node[txf lab, anchor=south] at (20,34) {振動数 $f\propto n$};
+  \end{scope}
+  \begin{scope}[shift={(60,0)}]
+    \foreach \k/\yy/\lbl in {1/0/2L, 2/14/L, 3/28/2L\!/3} {
+      \draw[txf hatch] (-3,\yy-5.5) rectangle (0,\yy+5.5) (40,\yy-5.5) rectangle (43,\yy+5.5);
+      \draw[txf wall] (0,\yy-5.5) -- (0,\yy+5.5) (40,\yy-5.5) -- (40,\yy+5.5);
+      \draw[bkGray, line width=0.4pt] (0,\yy) -- (40,\yy);
+      \draw[txf psi] plot[domain=0:40, samples=70] (\x, {\yy+4.5*sin(180*\k*(\x/40))});
+      \node[txf lab, anchor=west] at (44,\yy) {$\lambda=\lbl$};}
+    \node[txf lab, anchor=north] at (20,-7) {(イ) 箱に閉じこめた電子の波 $\psi$};
+    \node[txf lab, anchor=south] at (20,34) {エネルギー $E\propto n^2$};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{(ア) 弦の定在波（実線と破線は、ゆれのいちばん上といちばん下）。(イ) 壁（斜線）の間に閉じこめた電子の波。どちらも、両はしが節になる波長だけが残る。}\label{ph:原-5:fig-gen}
+\end{bkfigure}
+
+\noindent 弦と電子の違いは、波長から決まる量です。弦では、波の速さ $c$ が決まっているので、振動数 $f=c/\lambda$ が $n$ に比例します。電子では、波長から運動量 $p=h/\lambda$ が決まり、運動エネルギーは $p^2/(2m)$ なので、エネルギーは $n$ の\textbf{2乗}に比例します（③で計算します）。
+
+\begin{phmijika}[原子の中の電子も、閉じこめられた波]
+原子の中の電子は、原子核のクーロン力で、およそ \qty{0.1}{nm}の広さに閉じこめられています。箱ほど単純ではありませんが、「閉じこめられた波は、とびとびの形しかとれない」ことは同じです。水素原子の電子の波は原-7 で、たくさんの原子が並んだ固体の中の電子の波は原-8 で扱います。
+\end{phmijika}
+
+%% ---------------------------------------------------------------
+\bksubsection{2}{とびとびのエネルギーは、定在波になれる波長だけ}
+\label{ph:原-5:sec2}
+原-4 ⑤のボーアの模型では、「円軌道の1周が、電子の波長の整数倍」になる軌道だけが許されました。これは、輪の上の定在波の条件です。輪の上を1周してもとの所にもどったとき、波の山と山がぴったり重ならなければ、波は自分自身と打ち消し合って消えてしまうからです（⑪で詳しく）。
+
+\noindent 箱の電子も同じです。どちらも、
+\begin{bkcenter}
+\fcolorbox{bkTheme}{white}{\parbox{0.86\linewidth}{\centering 閉じこめられた電子の波は、決まった形（定在波）しかとれない。\\だから、電子のエネルギーは、とびとびの値しかとれない。}}
+\end{bkcenter}
+\noindent と言えます。原子が決まった色の光しか出さない（原-4）のも、物理シリーズの『熱学』（熱-15）で、ゆれる原子のエネルギーが「粒」の何個分かで数えられたのも、このためです。とびとびのエネルギーの1つ1つを\textbf{エネルギー準位}、$n$ を\textbf{量子数}といいます。
+
+\begin{phbaisuru}{量子数 $n$}
+弦では、波長が半分になり、振動数は2倍になります。箱の電子でも波長は半分になり、運動量 $p=h/\lambda$ は2倍、エネルギー $p^2/(2m)$ は4倍になります。$n=1,\,2,\,3,\,4$ のエネルギーは $1:4:9:16$ で、上の準位ほど間かくが広がります（図\ref{ph:原-5:fig-ladder}）。
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (0,0) -- (0,36) node[txf lab, anchor=south] {弦の振動数};
+  \foreach \k in {1,2,3,4} {\draw[bkOrange!85!black, line width=1.2pt] (3,\k*8) -- (20,\k*8); \node[txf lab, anchor=west] at (21,\k*8) {$\k f_1$};}
+  \begin{scope}[shift={(55,0)}]
+  \draw[bkInk, line width=0.6pt, -{Stealth[length=1.8mm]}] (0,0) -- (0,36) node[txf lab, anchor=south] {電子のエネルギー};
+  \foreach \k/\e in {1/1,2/4,3/9,4/16} {\draw[bkBlue, line width=1.2pt, dash pattern=on 4pt off 1pt] (3,\e*2) -- (20,\e*2); \node[txf lab, anchor=west] at (21,\e*2) {$\e E_1$};}
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{弦の振動数（実線）は等しい間かく。箱の電子のエネルギー（破線）は $n^2$ に比例し、上ほど間かくが広い。}\label{ph:原-5:fig-ladder}
+\end{bkcenter}
+\end{phbaisuru}
+
+\Needspace{14\baselineskip}\phstage{te}{波長からエネルギーと確率を求める}{3}
+
+\bksubsection{3}{無限に深い井戸を、$\lambda=h/p$ だけで解く}
+\label{ph:原-5:sec3}
+箱の電子のエネルギーを、①の波長と原-3 のド・ブロイ波長だけで求めましょう。箱の中では、電子に力ははたらかず、位置エネルギーは0とします。外は、限りなく高い壁です。この形の箱を、物理では\textbf{無限に深い井戸}とよびます（位置エネルギーのグラフが、底の平らな深い井戸の形だから）。\bkidx{むげんにふかいいど}{無限に深い井戸}
+
+\noindent 求め方は3つの段です。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 波長は定在波の条件から：$\lambda_n=\dfrac{2L}{n}$。
+\item 運動量はド・ブロイの式から：$p_n=\dfrac{h}{\lambda_n}=\dfrac{nh}{2L}$。
+\item 箱の中は $U=0$ なので、エネルギーは運動エネルギーだけ：$E_n=\dfrac{p_n^{\,2}}{2m}$。
+\end{enumerate}
+③に②を入れると、
+\pheq{E_n=\frac{1}{2m}\Bigl(\frac{nh}{2L}\Bigr)^2=\frac{n^2h^2}{8mL^2}\qquad(n=1,\,2,\,3,\,\ldots)}{J ＝ (J·s)² ÷ (kg·m²)}
+\label{ph:原-5:en}です。単位は $(\text{J·s})^2/(\text{kg·m}^2)=\text{J}^2\text{·s}^2/(\text{kg·m}^2)$ で、$\text{J}=\text{kg·m}^2/\text{s}^2$ を1つ分使うと J になります。\bkidx{とびとびのえねるぎー}{とびとびのエネルギー（箱の電子）}
+
+\begin{phyomi}[$E_n=\dfrac{n^2h^2}{8mL^2}$]
+「閉じこめられた電子のエネルギーは、量子数の2乗に比例し、箱の幅の2乗に反比例し、質量に反比例する」と読みます。せまく閉じこめるほど、軽いほど、エネルギーは大きくなります。いちばん低いエネルギー $E_1$ も0ではありません。$n=0$ は波長が無限大で、箱の中に波がない（電子がいない）ことになるからです。
+\end{phyomi}
+
+\begin{phmodel}[無限に深い井戸の電子]
+\phignore{電子のスピンや、ほかの電子との力。相対論の効果（電子は光よりずっと遅い）。}
+\phassume{電子は1次元（$x$ の向きだけ）を動く。箱の中は $U=0$、壁は限りなく高い（$U=\infty$）。}
+\phlimit{壁の高さが電子のエネルギーとくらべて高くないとき（壁の中へしみ出す：原-6）。3次元の箱（原-8）。}
+\end{phmodel}
+
+\noindent 幅 \qty{1}{nm}（原子10個ほど）の箱では、$h=\qty{6.63e-34}{J.s}$、$m=\qty{9.11e-31}{kg}$ を使って
+\[E_1=\frac{(6.63\times10^{-34})^2}{8\times9.11\times10^{-31}\times(1\times10^{-9})^2}\approx\qty{6.0e-20}{J}\approx\qty{0.376}{eV}\]
+です（例題1）。原子1個ほどの \qty{0.2}{nm}なら、25倍の約 \qty{9.4}{eV}になります。原子の中の電子のエネルギーが数 eV なのは、電子が原子の大きさに閉じこめられているからです（原-3 ⑦の不確定性と同じ見積もり）。
+
+\begin{phbaisuru}{箱の幅 $L$}
+エネルギーは $1/L^2$ なので、$\tfrac14$ になります（\qty{1}{nm}で \qty{0.376}{eV}、\qty{2}{nm}で \qty{0.094}{eV}）。逆に、幅を半分にすると4倍です。
+\begin{bkcenter}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=42mm, xmin=0, xmax=3.3, ymin=0, ymax=4.3, xtick={0.5,1,2,3}, ytick={0.376,1.504}, yticklabels={0.376,1.50}, xlabel={幅 $L$（nm）}, ylabel={$E_1$（eV）}]
+  \addplot[bkcurve, domain=0.3:3.2, samples=80] {0.376/x^2};
+  \fill[bkRed] (axis cs:1,0.376) circle (1.8pt) (axis cs:0.5,1.504) circle (1.8pt) (axis cs:2,0.094) circle (1.8pt);
+  \node[txf lab, anchor=west, inner sep=1pt] at (axis cs:1.1,1.0) {$E_1=0.376/L^2$};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{いちばん低いエネルギーと箱の幅。幅が半分になるとエネルギーは4倍。}\label{ph:原-5:fig-baiL}
+\end{bkcenter}
+\end{phbaisuru}
+
+%% ---------------------------------------------------------------
+\bksubsection{4}{波動関数と確率}
+\label{ph:原-5:sec4}
+電子の波を表す関数を\textbf{波動関数}といい、$\psi(x)$ と書きます。\bkidx{はどうかんすう}{波動関数}箱の電子の波動関数は、①の定在波の形です。
+\pheq{\psi_n(x)=A\sin\frac{n\pi x}{L}\qquad(0\leqq x\leqq L)}{m$^{-1/2}$}
+$x=0$ と $x=L$ で0になり、間に山（や谷）が $n$ 個あります。では、この波の高さは、何を表しているのでしょう。
+
+\phboxhead{大きさの2乗が、見つかる確率}
+電子を見つける実験をすると、電子はいつも1か所で、粒として見つかります。どこで見つかるかは、1回ごとに違います。同じ状態の電子で何回も実験を繰り返すと、見つかる場所はばらつき、そのばらつき方が波動関数で決まります。
+\begin{bkcenter}
+\fcolorbox{bkTheme}{white}{\parbox{0.86\linewidth}{\centering $x$ と $x+\dd x$ の間に電子が見つかる確率は、$|\psi(x)|^2\,\dd x$}}
+\end{bkcenter}
+これを\textbf{ボルンの規則}（1926年）といい、$|\psi|^2$ を\textbf{確率の密度}といいます。\bkidx{かくりつのみつど}{確率の密度}波の高さそのものではなく、\textbf{大きさの2乗}が確率です。光の明るさが、電場の振幅の2乗で決まった（電-15）のと同じ形です。
+
+\phboxhead{全部たすと1：規格化}
+電子は箱のどこかに必ず1個います。だから、箱全体で確率をたすと1です。
+\pheq{\int_0^L|\psi(x)|^2\,\dd x=1}{単位なし ＝ m$^{-1}$ × m}
+\label{ph:原-5:kikaku}この条件を\textbf{規格化}といい、波動関数の大きさ $A$ が決まります。\bkidx{きかくか}{規格化}$\sin^2$ の山の面積は、ちょうど長方形の半分（$L/2$）なので（例題4）、$A^2\times L/2=1$、$A=\sqrt{2/L}$ です。
+\[\psi_n(x)=\sqrt{\frac{2}{L}}\,\sin\frac{n\pi x}{L}\]
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=46mm, height=38mm, xmin=0, xmax=1.08, ymin=-1.6, ymax=2.4, xtick={0.333,0.667,1}, xticklabels={$\tfrac13$,$\tfrac23$,1}, ytick={-1,1,2}, xlabel={$x/L$}, title={\footnotesize $n=1$}, title style={yshift=-2mm}]
+  \fill[bkOrange!20] (axis cs:0.333,0) -- plot[domain=0.333:0.667, samples=30] (axis cs:\x,{2*sin(180*\x)^2}) -- (axis cs:0.667,0) -- cycle;
+  \addplot[txf psi, domain=0:1] {sqrt(2)*sin(180*x)};
+  \addplot[txf prob, domain=0:1] {2*sin(180*x)^2};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=46mm, height=38mm, xmin=0, xmax=1.08, ymin=-1.6, ymax=2.4, xtick={0.333,0.667,1}, xticklabels={$\tfrac13$,$\tfrac23$,1}, ytick={-1,1,2}, xlabel={$x/L$}, title={\footnotesize $n=2$}, title style={yshift=-2mm}]
+  \fill[bkOrange!20] (axis cs:0.333,0) -- plot[domain=0.333:0.667, samples=30] (axis cs:\x,{2*sin(360*\x)^2}) -- (axis cs:0.667,0) -- cycle;
+  \addplot[txf psi, domain=0:1] {sqrt(2)*sin(360*x)};
+  \addplot[txf prob, domain=0:1] {2*sin(360*x)^2};
+\end{axis}
+\end{tikzpicture}\hspace{1mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=46mm, height=38mm, xmin=0, xmax=1.08, ymin=-1.6, ymax=2.4, xtick={0.333,0.667,1}, xticklabels={$\tfrac13$,$\tfrac23$,1}, ytick={-1,1,2}, xlabel={$x/L$}, title={\footnotesize $n=3$}, title style={yshift=-2mm}]
+  \fill[bkOrange!20] (axis cs:0.333,0) -- plot[domain=0.333:0.667, samples=30] (axis cs:\x,{2*sin(540*\x)^2}) -- (axis cs:0.667,0) -- cycle;
+  \addplot[txf psi, domain=0:1, samples=120] {sqrt(2)*sin(540*x)};
+  \addplot[txf prob, domain=0:1, samples=120] {2*sin(540*x)^2};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{幅 $L$ の箱の波動関数 $\psi$（実線）と確率の密度 $|\psi|^2$（破線）。たての目もりは $1/\sqrt L$（実線）と $1/L$（破線）を単位にした。色をつけた面積が、まん中の $\tfrac13$ に見つかる確率（例題3）。}\label{ph:原-5:fig-prob}
+\end{bkfigure}
+
+\label{ph:原-5:hatena}\noindent\bkhatenaref の答えです。電子の居場所は1点には決まっていません。決まっているのは「どこで見つかりやすいか」で、それが $|\psi|^2$ です。図\ref{ph:原-5:fig-prob}の $n=1$ では、まん中ほど見つかりやすく、壁の近くではほとんど見つかりません。まん中の $\tfrac13$ に見つかる確率は約0.61（61\,\%）で、どこも同じに見つかる場合の $\tfrac13$ よりずっと大きいのです（例題3）。はてな？の点の図は、この確率にしたがって70回さがした結果で、45個（64\,\%）がまん中の $\tfrac13$ に入りました。原子の中の電子も同じで、原子核の周りに「見つかる確率の雲」として広がっています。水素原子のいちばん低い状態では、原子核から約 \qty{0.053}{nm}（ボーア半径）の所がいちばん見つかりやすいことを、原-7 ③で確かめます。
+
+\phboxhead{波動関数は複素数でもよい}
+箱の定在波は実数の関数ですが、波動関数は、一般には\textbf{複素数}の値をとります（⑩⑪）。数学 6-10 のコラムで予告したとおりです。複素数の大きさの2乗は、共役の複素数をかけて $|\psi|^2=\psi^*\psi$ と求めます（$\psi^*$ は、数学の本の $\overline{\psi}$ と同じ。虚部の符号を変えたもの）。
+
+\phboxhead{虚数単位は $i$ と書く}
+この本の原-5〜原-8 では、虚数単位を $i$ と書きます（$i^2=-1$）。\bkidx{きょすうたんい}{虚数単位 $i$}数学の本や物理シリーズの『電磁気学』の $j$ と、同じ数です。電気の本では $i$ を電流に使うので $j$ と書きますが、量子力学の本は、どれも $i$ と書きます。また、時間とともに回る矢印を、数学の本は $e^{j\omega t}$（左回り）と書きましたが、量子力学の本は $e^{-iEt/\hbar}$（右回り）の向きにそろえます（⑩）。どちらの向きで書いても、物理の答えは同じです。原-9・原-10 の電子回路では、ふたたび $j$ を使います。
+
+\begin{seikaku}
+「電子の一部があちこちに散らばっている」のではありません。見つかるときは、いつも電子1個がまるごと1か所で見つかります。確率の密度は、見つかる前の「見つかりやすさ」を表します。電子の二重スリットの実験（原-3 ⑤）で、1個ずつ届く点が、たくさん集まると干渉じまになったのと同じです。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{5}{量子井戸と量子ドット：箱を小さくすると青くなる}
+\label{ph:原-5:sec5}
+③の式は、電子の工学で実際に使われています。\textbf{量子井戸}は、半導体の結晶の中に、厚さ数 nm〜十数 nm のうすい層をはさんだものです。\bkidx{りょうしいど}{量子井戸}層の中の電子は、厚さの向きに閉じこめられ、とびとびのエネルギーをもちます。層の厚さを変えると、エネルギーの段の大きさが変わり、出る光の色（波長）を変えられます。光通信や、ブルーレイの読み取り・レーザーポインターの半導体レーザーは、この量子井戸を使っています。
+
+\noindent \textbf{量子ドット}は、直径数 nm の小さな半導体の粒です。\bkidx{りょうしどっと}{量子ドット}電子は3つの向きすべてに閉じこめられます。粒が小さいほど、閉じこめられた電子のエネルギーの段が大きくなり、出る光は青い側（短い波長）になります。同じ物質でも、粒の大きさだけで色を作り分けられるので、ディスプレーに使われています（2023年のノーベル化学賞は、量子ドットの発見と作り方の研究にあたえられました）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \r/\xx/\c/\lbl in {1.6/0/bkBlue/約2\,nm, 2.4/30/bkGreen/約3\,nm, 3.4/62/bkRed/約5\,nm} {
+    \shade[ball color=\c!60] (\xx,0) circle (\r*2.2);
+    \draw[bkInk, line width=0.4pt] (\xx,0) circle (\r*2.2);
+    \node[txf lab, anchor=north] at (\xx,-9) {\lbl};}
+  \node[txf lab, anchor=north] at (0,-13.5) {青い光};
+  \node[txf lab, anchor=north] at (30,-13.5) {緑の光};
+  \node[txf lab, anchor=north] at (62,-13.5) {赤い光};
+  \draw[txf arr] (84,-14) -- (84,6);
+  \node[txf lab, anchor=west, align=left] at (86,-4) {粒が小さいほど\\エネルギーの段が大きく\\光は短い波長（青い側）};
+\end{tikzpicture}
+\bkfigcaption{量子ドットの大きさと出す光（大きさは目安。物質によって違う）。色は、ここでは見分けやすくするためにつけた。}\label{ph:原-5:fig-dot}
+\end{bkfigure}
+
+\phboxhead{結晶の中の電子は軽くなる：有効質量}
+結晶の中の電子は、周りの原子からの力を受けながら動くので、何もない所の電子とは動きやすさが違います。そのため、結晶の中では、電子の質量を\textbf{有効質量} $m^*$ に置きかえて、自由な電子のように計算できます（理由は原-8）。\bkidx{ゆうこうしつりょう}{有効質量}ガリウムヒ素（GaAs）の電子の有効質量は、何もない所の電子の約0.067倍です。$E\propto1/m$ なので、同じ幅の箱でも、エネルギーは約15倍になります（例題6）。
+
+\begin{column}{光の安全：レーザーと見えない光}
+量子井戸の半導体レーザーは、レーザーポインターや光通信に使われています。レーザーの光は、細いまま遠くまで届き、目に入ると網膜の1点に集まって、短い時間でも傷をつけることがあります。レーザーポインターは、\textbf{のぞかない・人や動物に向けない・鏡や窓に向けない}ことを守りましょう。また、光通信のレーザー（波長 \qty{1.3}{\micro m}・\qty{1.55}{\micro m}）や、例題2の \qty{1.1}{\micro m}の光のような赤外線は、目に見えないので、強い光が出ていても気づきません。この本では、レーザーを使う「やってみよう」は置きません。
+\end{column}
+
+\phkokomade
+
+\Needspace{12\baselineskip}\phstage{shiki}{方程式を立てて解く}{5}
+
+\bksubsection{6}{時間によらないシュレディンガー方程式}
+\label{ph:原-5:sec6}
+③では、箱の中の位置エネルギーが0だったので、波長は箱の中のどこでも同じでした。でも、原子の中の電子のように、位置エネルギー $U(x)$ が場所によって変わると、運動エネルギー $E-U$ も場所で変わり、波長も場所で変わります。こういうときにも使える「電子の波の式」を作りましょう。
+
+\phboxhead{定在波が満たす式}
+波長 $\lambda$ の定在波 $\psi=A\sin kx$（波数 $k=2\pi/\lambda$）を2回微分すると、
+\[\frac{\dd^2\psi}{\dd x^2}=-k^2A\sin kx=-k^2\psi\]
+です。6-6 のばねの式 $y''=-\omega^2y$ と同じ形で、$\cos kx$ も同じ式を満たします。これは、物理シリーズの『波動』の波動方程式（波-5 ④）に、定在波 $y=\psi(x)\cos\omega t$ を入れたときに出てくる、場所だけの式と同じです。
+
+\phboxhead{電子の $k$ をエネルギーで書く}
+電子では、原-3 の $p=\hbar k$ から $k=p/\hbar$ です。運動エネルギーは $p^2/(2m)=E-U$ なので、$p^2=2m(E-U)$、
+\[k^2=\frac{p^2}{\hbar^2}=\frac{2m(E-U)}{\hbar^2}\]
+です。これを $\psi''=-k^2\psi$ に入れ、両辺に $-\hbar^2/(2m)$ をかけて $U\psi$ を左へ移すと、
+\pheq{-\frac{\hbar^2}{2m}\,\frac{\dd^2\psi}{\dd x^2}+U(x)\,\psi=E\,\psi}{J·m$^{-1/2}$ ＝ J·m$^{-1/2}$}
+\label{ph:原-5:schr}となります。これを\textbf{時間によらないシュレディンガー方程式}といいます。\bkidx{しゅれでぃんがーほうていしき}{シュレディンガー方程式}オーストリアの物理学者シュレディンガーが1926年に発表し、1933年のノーベル物理学賞を受けました。左辺の第1項は運動エネルギー、第2項は位置エネルギーにあたり、「運動エネルギー＋位置エネルギー＝全体のエネルギー」を、波の言葉で書いた式です。
+
+\begin{phyomi}[$-\dfrac{\hbar^2}{2m}\psi''+U\psi=E\psi$]
+「波の曲がり方（2回微分）が、その場所の運動エネルギー $E-U$ に比例する」と読みます。$E-U$ が大きい所（電子が速い所）では、波は強く曲がり、波長が短くなります。$E-U$ が小さい所では、ゆるく曲がり、波長が長くなります。$E<U$ の所（ふつうの粒なら入れない所）では、曲がる向きが逆になります。これが原-6 のトンネル効果のもとです。
+\end{phyomi}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=48mm, xmin=0, xmax=10.5, ymin=-1.6, ymax=3.2, xtick=\empty, ytick=\empty, xlabel={$x$}, ylabel={}]
+  \addplot[bkthin, domain=0:10, samples=50] {1.0+0.13*x};
+  \draw[bkRed!80!black, line width=0.9pt, dashed] (axis cs:0,2.6) -- (axis cs:10,2.6);
+  \draw[bkGray, line width=0.4pt] (axis cs:0,0) -- (axis cs:10,0);
+  \addplot[txf psi, domain=0:10, samples=300] {0.5*(1.6/(1.6-0.13*x))^(0.25)*sin(deg(3.0*(2/3)*(1.6^1.5-(1.6-0.13*x)^1.5)/0.13))};
+  \node[txf lab, anchor=west, inner sep=1pt] at (axis cs:7.3,2.95) {エネルギー $E$（破線）};
+  \node[txf lab, anchor=west, inner sep=1pt] at (axis cs:0.3,2.05) {位置エネルギー $U$（細い線）};
+  \node[txf lab, anchor=north, inner sep=1pt] at (axis cs:2.4,-1.1) {$E-U$ が大きい：波長が短い};
+  \node[txf lab, anchor=north, inner sep=1pt] at (axis cs:8.2,-1.1) {$E-U$ が小さい：波長が長い};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{坂になった位置エネルギーの中の電子の波（実線。$x$ 軸を波の0として描いた）。右へ行くほど $E-U$ が小さく、電子は遅くなり、波長は長く、ゆれの幅は大きくなる（遅い所ほど長くとどまり、見つかりやすい）。}\label{ph:原-5:fig-saka}
+\end{bkfigure}
+
+\begin{seikaku}
+ここでは、$U$ が一定の所の式から、「$U$ が場所で変わっても同じ式が成り立つ」と考えて、方程式を作りました。これは数学の証明ではなく、新しい法則の\textbf{仮定}です。シュレディンガーも、こうした考えから方程式を見つけ、水素原子のエネルギー準位（原-4 のボーアの値）がぴったり出ることを確かめました。その後、原子・分子・固体の数えきれない実験と合ってきたので、正しい法則として使われています。また、時間をふくむ形は ⑩ で見ます。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{7}{固有値問題：決まった $E$ だけが許される}
+\label{ph:原-5:sec7}
+シュレディンガー方程式の左辺は、関数 $\psi$ に「2回微分して $-\hbar^2/(2m)$ 倍し、$U\psi$ をたす」という操作をして作った、新しい関数です。方程式は、
+\begin{bkcenter}
+\fcolorbox{bkTheme}{white}{\parbox{0.86\linewidth}{\centering 操作をしたら、もとの関数の $E$ 倍になった\qquad（形が変わらなかった）}}
+\end{bkcenter}
+\noindent と言っています。数学 7-8 ②の、行列 $A$ をかけても向きが変わらない矢印（$A\vec v=\lambda\vec v$）と同じ形です。ふつうの関数に操作をすると形が変わってしまい、形の変わらない特別な関数（\textbf{固有関数}）と特別な数（\textbf{固有値}）だけが、方程式を満たします。\bkidx{こゆうち}{固有値（量子力学）}数学 7-8 のコラムで「原子の中の電子のとびとびのエネルギーは、シュレディンガー方程式の固有値」と予告したのは、このことです。
+
+\noindent 固有値を決めるのは、境界の条件（壁で0、遠くで0 など）です。物理シリーズの『波動』（波-6 ⑩）で、弦の固有振動数を「固有値問題」として見たのと同じです。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[c,m,wd=36mm] Q[c,m,wd=34mm] Q[c,m,wd=26mm]}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+ & 式 & 固有値 & 決めるもの \\
+行列（7-8） & $A\vec v=\lambda\vec v$ & $\lambda$ & $\det(A-\lambda I)=0$ \\
+弦（波-6） & $y''=-k^2y$ & $k$（振動数） & 両はしが節 \\
+電子（この章） & $-\dfrac{\hbar^2}{2m}\psi''+U\psi=E\psi$ & $E$（エネルギー） & 壁・遠くで0 \\
+\end{bktable}
+\bktabcaption{3つの固有値問題。電子では、固有値が「とりうるエネルギー」になる。}\label{ph:原-5:tab-koyu}
+\end{bkcenter}
+
+%% ---------------------------------------------------------------
+\bksubsection{8}{無限に深い井戸を、方程式で解く}
+\label{ph:原-5:sec8}
+③の箱を、シュレディンガー方程式で解き直しましょう。
+
+\phboxhead{箱の中の式}
+箱の中は $U=0$ なので、
+\[-\frac{\hbar^2}{2m}\psi''=E\psi\qquad\text{つまり}\qquad\psi''=-k^2\psi,\qquad k=\frac{\sqrt{2mE}}{\hbar}\]
+です。特性方程式（6-12 ④）は $s^2=-k^2$ で、解は $s=\pm ik$。だから、
+\[\psi(x)=A\sin kx+B\cos kx\]
+です（6-6 と同じ。$e^{\pm ikx}$ を組み合わせた形）。
+
+\phboxhead{壁の条件}
+壁の外は $U=\infty$ で、電子は見つかりません。だから壁の外で $\psi=0$ です。電子の波は切れ目なくつながっていなければならないので、壁の所でも $\psi=0$ です。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $\psi(0)=0$：$A\sin0+B\cos0=B=0$。だから $\psi=A\sin kx$。
+\item $\psi(L)=0$：$A\sin kL=0$。$A=0$ では電子がいなくなるので、$\sin kL=0$、つまり $kL=n\pi$（$n=1,\,2,\,3,\,\ldots$）。
+\end{enumerate}
+$n=0$ は $\psi=0$（電子がいない）なので除きます。$n$ が負のときは、$\sin$ の符号が変わるだけで、同じ状態です。$k=n\pi/L$ をエネルギーの式に入れると、
+\[E_n=\frac{\hbar^2k^2}{2m}=\frac{\hbar^2}{2m}\Bigl(\frac{n\pi}{L}\Bigr)^2=\frac{n^2\pi^2\hbar^2}{2mL^2}=\frac{n^2h^2}{8mL^2}\]
+で、③の答えと同じです（$\hbar=h/(2\pi)$ を使った）。規格化（④）で $A=\sqrt{2/L}$ です。
+
+\begin{phflow}[方程式から、箱の電子へ]
+\phflowrow{$-\dfrac{\hbar^2}{2m}\psi''+U\psi=E\psi$}{箱の中 $U=0$\\壁で $\psi=0$}{$\psi_n=\sqrt{\dfrac2L}\sin\dfrac{n\pi x}{L}$}
+\phflowrow{$E=\dfrac{\hbar^2k^2}{2m}$}{$k=\dfrac{n\pi}{L}$}{$E_n=\dfrac{n^2h^2}{8mL^2}$}
+\end{phflow}
+
+\noindent 解き方は、数学 9-1 ⑧の熱方程式で、両はしの温度を0にして $\sin(n\pi x/L)$ の形の解を選んだのと同じです。熱方程式では、それぞれの $\sin$ の形が決まった速さで消えていきました。シュレディンガー方程式では、⑩で見るように、それぞれの形が決まった速さで「回り」ます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \txfbox{0}{0}{48}{72}
+  \foreach \k/\e/\lbl in {1/4/E_1, 2/16/E_2=4E_1, 3/36/E_3=9E_1, 4/64/E_4=16E_1} {
+    \draw[txf lev] (0,\e) -- (48,\e);
+    \draw[txf psi] plot[domain=0:48, samples=90] (\x, {\e+3.6*sin(180*\k*(\x/48))});
+    \node[txf lab, anchor=west] at (52,\e) {$n=\k$\quad $\lbl$};}
+  \draw[txf dim] (0,-3) -- (48,-3);
+  \node[txf lab, anchor=north] at (24,-3.5) {$L$};
+  \node[txf lab, anchor=south] at (-1.5,72.5) {$U=\infty$};
+  \node[txf lab, anchor=south] at (49.5,72.5) {$U=\infty$};
+\end{tikzpicture}
+\bkfigcaption{無限に深い井戸（中は $U=0$）のエネルギー準位（破線）と、それぞれの波動関数（実線。破線を0として描いた）。準位の高さは $n^2$ に比例する。}\label{ph:原-5:fig-ido}
+\end{bkfigure}
+
+%% ---------------------------------------------------------------
+\bksubsection{9}{期待値と不確かさ}
+\label{ph:原-5:sec9}
+電子の位置は1回ごとにばらつきます（④）。たくさんはかったときの平均を\textbf{期待値}といい、$\langle x\rangle$ と書きます。\bkidx{きたいち}{期待値}数学 3-17 の確率の平均（値×確率の合計）と同じ考えで、確率 $|\psi|^2\dd x$ をかけて積分します。
+\pheq{\langle x\rangle=\int x\,|\psi(x)|^2\,\dd x,\qquad \langle x^2\rangle=\int x^2\,|\psi(x)|^2\,\dd x}{m ＝ m × m$^{-1}$ × m}
+ばらつきの大きさ（標準偏差、3-14）は $\Delta x=\sqrt{\langle x^2\rangle-\langle x\rangle^2}$ で、これを位置の\textbf{不確かさ}とよびます。
+
+\noindent 箱の電子では、$|\psi_n|^2$ が左右対称なので $\langle x\rangle=L/2$ です。$\langle x^2\rangle$ は部分積分（5-16⑨）を2回使って計算でき、
+\[\langle x^2\rangle=L^2\Bigl(\frac13-\frac{1}{2n^2\pi^2}\Bigr),\qquad \Delta x=L\sqrt{\frac{1}{12}-\frac{1}{2n^2\pi^2}}\]
+です。$n=1$ で $\Delta x=0.18L$ です。$n$ が大きいと、2つめの分数が小さくなり、$\Delta x$ は
+\[\Delta x\to\frac{L}{\sqrt{12}}\approx0.29L\]
+に近づきます。これは、箱のどこにも同じ確率でいる、ふつうの粒の値です。
+
+\phboxhead{運動量の不確かさ}
+定在波 $\sin kx$ は、右へ進む波 $e^{ikx}$ と左へ進む波 $e^{-ikx}$ の重ね合わせです（数学 9-3 ①の2本の矢印）。
+\[\sin kx=\frac{e^{ikx}-e^{-ikx}}{2i}\]
+右へ進む波の運動量は $+\hbar k$、左は $-\hbar k$ で、どちらも半分ずつの確率です。だから、運動量の平均は0、ばらつきは $\Delta p=\hbar k=n\pi\hbar/L$ です。$n=1$ では、
+\[\Delta x\,\Delta p=0.181L\times\frac{\pi\hbar}{L}\approx0.57\hbar\]
+で、原-3 ⑦の不確定性関係 $\Delta x\,\Delta p\geqq\hbar/2$ を満たし、しかも最小の $0.5\hbar$ に近い値です（例題5）。
+
+%% ---------------------------------------------------------------
+\bksubsection{10}{時間の変化：回る矢印と、重ね合わせ}
+\label{ph:原-5:sec10}
+ここまでの $\psi(x)$ は、時間によらない形でした。エネルギー $E$ の状態の波動関数は、時間 $t$ とともに、
+\pheq{\Psi(x,t)=\psi(x)\,e^{-iEt/\hbar}}{m$^{-1/2}$}
+のように、複素数の矢印として回ります（$e^{-i\theta}$ は右回り。④の断り）。\bkidx{ていじょうじょうたい}{定常状態}回る速さ（角振動数）は $\omega=E/\hbar$ で、$E=\hbar\omega=hf$ は、原-2 の光子の式と同じ形です。矢印の大きさは1のまま変わらないので、
+\[|\Psi(x,t)|^2=|\psi(x)|^2\,|e^{-iEt/\hbar}|^2=|\psi(x)|^2\]
+で、確率の雲は\textbf{時間がたっても変わりません}。このような状態を\textbf{定常状態}といいます。原-4 ⑦の「ボーアの模型の電子は光を出して落ちるはず」という問題の答えはここにあります。決まったエネルギーの状態の電子は、ぐるぐる回る粒ではなく、止まった雲なので、光を出さないのです。
+
+\phboxhead{2つの状態の重ね合わせ}
+シュレディンガー方程式は、$\psi_1$ と $\psi_2$ が解なら、$c_1\psi_1+c_2\psi_2$ も解になる形です（重ね合わせ。波-5 ⑥）。2つの準位の重ね合わせの状態では、
+\[\Psi=c_1\psi_1e^{-iE_1t/\hbar}+c_2\psi_2e^{-iE_2t/\hbar}\]
+の2本の矢印が、違う速さで回ります。$c_1$・$c_2$ を実数とすると、大きさの2乗は
+\pheq{|\Psi|^2=c_1^{\,2}\psi_1^{\,2}+c_2^{\,2}\psi_2^{\,2}+2c_1c_2\,\psi_1\psi_2\cos\frac{(E_2-E_1)t}{\hbar}}{m$^{-1}$}
+で、最後の項が、周期
+\pheq{T=\frac{2\pi\hbar}{E_2-E_1}=\frac{h}{E_2-E_1}}{s ＝ J·s ÷ J}
+でゆれます。電子の雲が、箱の左右に行ったり来たりするのです（図\ref{ph:原-5:fig-yure}、例題8）。この周期の振動数 $(E_2-E_1)/h$ は、2つの準位の間で出入りする光の振動数（原-4 の振動数条件）と同じです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=40mm, xmin=0, xmax=1.08, ymin=0, ymax=3.4, xtick={0.5,1}, ytick={1,2,3}, xlabel={$x/L$}, title={\footnotesize $t=0$}, title style={yshift=-2mm}]
+  \addplot[txf prob, domain=0:1] {(sin(180*x)+sin(360*x))^2};
+  \addplot[bkthin, domain=0:1] {2*sin(180*x)^2};
+\end{axis}
+\end{tikzpicture}\hspace{4mm}%
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=60mm, height=40mm, xmin=0, xmax=1.08, ymin=0, ymax=3.4, xtick={0.5,1}, ytick={1,2,3}, xlabel={$x/L$}, title={\footnotesize $t=T/2$}, title style={yshift=-2mm}]
+  \addplot[txf prob, domain=0:1] {(sin(180*x)-sin(360*x))^2};
+  \addplot[bkthin, domain=0:1] {2*sin(180*x)^2};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$(\psi_1+\psi_2)/\sqrt2$ の確率の密度（破線）。半周期ごとに、左と右に寄る。細い線は、$\psi_1$ だけのときの確率の密度（ゆれない）。}\label{ph:原-5:fig-yure}
+\end{bkfigure}
+
+\phboxhead{はかると、どれか1つ}
+重ね合わせの状態の電子のエネルギーをはかると、答えは $E_1$ か $E_2$ のどちらかで、その間の値は出ません。$E_1$ が出る確率は $c_1^{\,2}$、$E_2$ は $c_2^{\,2}$ です（$c_1^{\,2}+c_2^{\,2}=1$ に規格化しておく）。たくさんはかった平均（期待値）は $c_1^{\,2}E_1+c_2^{\,2}E_2$ です（例題9）。
+
+\begin{seikaku}
+$\Psi(x,t)$ が満たす、時間をふくむシュレディンガー方程式は、
+\[i\hbar\,\frac{\partial\Psi}{\partial t}=-\frac{\hbar^2}{2m}\frac{\partial^2\Psi}{\partial x^2}+U\Psi\]
+です。$\Psi=\psi(x)e^{-iEt/\hbar}$ を入れると、左辺は $E\Psi$ になり、時間によらない式（⑥）にもどります。この本では、時間をふくむ式は、この重ね合わせのゆれだけに使います。
+\end{seikaku}
+
+%% ---------------------------------------------------------------
+\bksubsection{11}{輪の上の電子}
+\label{ph:原-5:sec11}
+1周の長さ $L$ の輪の上を動く電子を考えます。輪には壁がないので、条件は「1周すると、波動関数がもとの値にもどる」$\psi(x+L)=\psi(x)$ です。進む波 $\psi=e^{ikx}/\sqrt L$ がこれを満たすには、$e^{ikL}=1$、つまり $kL=2\pi n$ でなければなりません。
+\pheq{\psi_n(x)=\frac{1}{\sqrt L}\,e^{i2\pi nx/L},\qquad E_n=\frac{\hbar^2}{2m}\Bigl(\frac{2\pi n}{L}\Bigr)^2=\frac{n^2h^2}{2mL^2}\quad(n=0,\,\pm1,\,\pm2,\,\ldots)}{J}
+数学 9-3 のもっと知りたいで予告した、輪の上の電子の $e^{j2\pi nx/L}$ です（9-3 ⑩の輪の熱と同じ形。$j$ を $i$ と書いた）。箱との違いは3つです。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item $n=0$ が許される（波長が無限大の、平らな波。エネルギー0）。
+\item $n$ と $-n$（右回りと左回り）が、同じエネルギーの別の状態になる（\textbf{縮退}）。
+\item 同じ長さなら、$n=1$ のエネルギーは箱の4倍（波長が $L$。箱では $2L$）。
+\end{enumerate}
+原-4 ⑤のボーアの条件 $2\pi r=n\lambda$ は、半径 $r$ の輪の上の進む波の条件でした。
+
+%% ---------------------------------------------------------------
+\bksubsection{12}{差分法で、方程式を数値で解く}
+\label{ph:原-5:sec12}
+$U(x)$ がふくざつな形だと、シュレディンガー方程式は式では解けません。コンピュータで数値として解く方法の1つが、\textbf{差分法}です。\bkidx{さぶんほう}{差分法（固有値）}
+
+\phboxhead{2回微分を、となりの点の差で}
+箱を $N+1$ 等分し、間の $N$ 個の点 $x_j=j\Delta x$（$\Delta x=L/(N+1)$）で $\psi_j=\psi(x_j)$ を考えます。2回微分は、となりの点との差で近づけられます。
+\[\psi''(x_j)\approx\frac{\psi_{j+1}-2\psi_j+\psi_{j-1}}{(\Delta x)^2}\]
+両はしの壁では $\psi_0=\psi_{N+1}=0$ です。シュレディンガー方程式は、$a=\hbar^2/(2m(\Delta x)^2)$ とおくと、
+\[-a\psi_{j-1}+(2a+U_j)\psi_j-a\psi_{j+1}=E\psi_j\qquad(j=1,\,2,\,\ldots,\,N)\]
+の $N$ 本の式になります。これは、$N\times N$ の行列 $H$ の固有値問題 $H\vec\psi=E\vec\psi$ です（7-8）。$N=4$ なら、
+\[H=\begin{pmatrix}2a&-a&0&0\\-a&2a&-a&0\\0&-a&2a&-a\\0&0&-a&2a\end{pmatrix}+(\text{対角に }U_j)\]
+です。
+
+\phboxhead{Python で固有値を求める}
+数学 7-8 ⑤で固有値を求めた \texttt{numpy.linalg.eigh} を使います（\texttt{eigh} は対称な行列用）。長さは nm、エネルギーは eV で書き、$\hbar^2/(2m)=\qty{0.0381}{eV.nm^2}$ を使います。
+\begin{phcode}[Python]
+import numpy as np
+L, N = 1.0, 50                    \# 箱の幅 1 nm、点の数 N
+dx = L / (N + 1)
+a = 0.0381 / dx**2                \# ħ²/(2m Δx²)〔eV〕
+U = np.zeros(N)                   \# 箱の中の位置エネルギー（ここでは0）
+H = (np.diag(2*a + U) + np.diag(-a*np.ones(N-1), 1)
+     + np.diag(-a*np.ones(N-1), -1))
+E, psi = np.linalg.eigh(H)        \# 固有値（小さい順）と固有ベクトル
+print(E[:3].round(3))
+\end{phcode}
+\begin{phcodeout}[実行結果]
+[0.376 1.502 3.375]
+\end{phcodeout}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=30mm] *{3}{Q[c,m,wd=24mm]}}, rowsep=1.5pt, row{1}={bg=bkTheme!10, font=\sffamily\small}}
+点の数 $N$ & $E_1$〔eV〕 & $E_2$〔eV〕 & $E_3$〔eV〕 \\
+10 & 0.374 & 1.46 & 3.18 \\
+50 & 0.376 & 1.50 & 3.37 \\
+200 & 0.376 & 1.50 & 3.38 \\
+式（③） & 0.376 & 1.50 & 3.38 \\
+\end{bktable}
+\bktabcaption{差分法の固有値と、式の値（幅 \qty{1}{nm}）。点をふやすと式の値に近づく。上の準位ほど、点を多く要る。}\label{ph:原-5:tab-sabun}
+\end{bkcenter}
+
+\noindent 固有ベクトル \texttt{psi[:, 0]} は、点の上の $\psi_1$ の形です。$N=10$ でも、点の上の形は $\sin$ とぴったり重なります（図\ref{ph:原-5:fig-sabun}）。エネルギーが少しずれるのは、2回微分を差で近づけたためで、波の曲がりが強い上の準位ほど、ずれが大きくなります。\texttt{U} に場所ごとの値を入れれば、どんな形の井戸でも同じ数行で解けます（原-6 ⑥の有限の井戸）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=112mm, height=44mm, xmin=0, xmax=1.06, ymin=-1.7, ymax=1.8, xtick={1}, ytick={-1,1}, xlabel={$x/L$}, ylabel={$\psi\sqrt L$}]
+  \addplot[txf psi, domain=0:1] {sqrt(2)*sin(180*x)};
+  \addplot[bkcurve2, line width=1.2pt, dash pattern=on 4pt off 1.5pt, domain=0:1] {sqrt(2)*sin(360*x)};
+  \fill[bkBlue!70!black] (axis cs:0.0909,0.398) circle (1.7pt) (axis cs:0.1818,0.765) circle (1.7pt) (axis cs:0.2727,1.069) circle (1.7pt) (axis cs:0.3636,1.286) circle (1.7pt) (axis cs:0.4545,1.4) circle (1.7pt) (axis cs:0.5455,1.4) circle (1.7pt) (axis cs:0.6364,1.286) circle (1.7pt) (axis cs:0.7273,1.069) circle (1.7pt) (axis cs:0.8182,0.765) circle (1.7pt) (axis cs:0.9091,0.398) circle (1.7pt);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.0909,0.765) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.0909,0.765);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.1818,1.286) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.1818,1.286);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.2727,1.4) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.2727,1.4);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.3636,1.069) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.3636,1.069);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.4545,0.398) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.4545,0.398);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.5455,-0.398) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.5455,-0.398);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.6364,-1.069) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.6364,-1.069);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.7273,-1.4) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.7273,-1.4);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.8182,-1.286) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.8182,-1.286);
+  \draw[bkOrange!85!black, line width=0.8pt] ([xshift=-1.6pt, yshift=-1.6pt]axis cs:0.9091,-0.765) rectangle ([xshift=1.6pt, yshift=1.6pt]axis cs:0.9091,-0.765);
+  \node[txf lab, anchor=south west, inner sep=1pt] at (axis cs:0.62,1.36) {$n=1$（実線・●）};
+  \node[txf lab, anchor=west, inner sep=1pt] at (axis cs:0.04,-1.1) {$n=2$（破線・□）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{$N=10$ の差分法の固有ベクトル（●と□）と、式の波動関数（実線と破線）。}\label{ph:原-5:fig-sabun}
+\end{bkfigure}
+
+\phboxhead{表計算で「撃って合わせる」}
+表計算でも解けます。左の壁で $\psi_0=0$、$\psi_1=0.01$（小さな値なら何でもよい）とし、差分の式を $\psi_{j+1}$ について解いた
+\[\psi_{j+1}=2\psi_j-\psi_{j-1}-\frac{(\Delta x)^2}{\hbar^2/(2m)}\,(E-U_j)\,\psi_j\]
+で、右へ順に計算します（数学 6-2 の表で、ばねの動きを進めたのと同じ形）。$E$ を入れたセルの値を変えながら、右の壁で $\psi$ がちょうど0になる $E$ をさがします。幅 \qty{1}{nm}を $\Delta x=\qty{0.05}{nm}$ に分けると、$E=0.30$ で右の壁の値は $+0.023$、$E=0.40$ で $-0.006$ で、符号が変わる間の約 \qty{0.375}{eV}が答えです。弾を撃って、的に当たるまでねらいを変えるのに似ているので、\textbf{シューティング法}とよばれます（原-6 例題12）。
+
+\begin{senmonsho}[量子力学の専門書の書き方]
+\begin{bkhonbun}
+ハミルトニアン $\hat H=\dfrac{\hat p^2}{2m}+U(\hat x)$ を用いると，定常状態は固有値方程式 $\hat H\,|\psi\rangle=E\,|\psi\rangle$ を満たす．座標表示では $\hat p=-i\hbar\,\dfrac{\partial}{\partial x}$ であり，正準交換関係 $[\hat x,\hat p]=i\hbar$ が成り立つ．
+\end{bkhonbun}
+\bkyaku{$\hat H$（ハミルトニアン）は、物理シリーズの『波動』（波-3 ⑩）のハミルトンの関数 $H$（エネルギーを $q$ と $p$ で書いたもの）の $p$ を、「$-i\hbar$ をかけて微分する操作」に置きかえたもの。記号の上の $\hat{}$（ハット）は「操作（演算子）」の印。$|\psi\rangle$（ケット）は状態を矢印のように書く書き方（ブラケット記法）。$[\hat x,\hat p]=\hat x\hat p-\hat p\hat x$ は、「位置をかけてから微分」と「微分してから位置をかける」の差で、0にならないことが不確定性関係のもとになる。この本では名前と意味だけを見る。}
+\end{senmonsho}
+
+\begin{phmada}[波動関数は、何を表しているのか？]
+波動関数 $\psi$ を使って計算すると、原子のスペクトル、化学結合、半導体の性質など、数えきれない実験の結果がとても正確に出ます。計算の規則としては、何の問題もありません。ところが、$\psi$ がどんな「もの」なのかについては、物理学者の間で今も議論が続いています。$\psi$ は空間に本当にある波なのか、それとも、わたしたちが電子について知っていることを表す道具なのか。はかったとき、広がっていた雲が1点に決まるのは、何が起きているのか（原-3 の「観測」の問題と同じ）。いくつもの考え方（解釈）が提案されていますが、どれも同じ実験の予言をするので、実験で決着をつけるのは難しく、まだ1つに決まっていません。
+\end{phmada}
+
+\begin{phsaki}{量子力学の先へ}
+専門の本では、演算子とブラケットの書き方で量子力学を組み立て直し、近似で解く方法（摂動論）、ぶつかって曲がるようす（散乱理論）、粒が生まれたり消えたりする理論（場の量子論）へ進みます。量子化学や量子デバイスの工学も、この章の方程式の上に立っています。
+\end{phsaki}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[8.4\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{箱の電子}$\lambda_n=\dfrac{2L}{n}$、$E_n=\dfrac{n^2h^2}{8mL^2}$（$n=1,\,2,\,\ldots$）\\[3pt]
+\tsl{確率}$|\psi|^2\dd x$ が見つかる確率。$\displaystyle\int|\psi|^2\dd x=1$（規格化）\\[3pt]
+\tsl{シュレディンガー}$-\dfrac{\hbar^2}{2m}\dfrac{\dd^2\psi}{\dd x^2}+U\psi=E\psi$（固有値問題）\\[3pt]
+\tsl{時間の変化}$\Psi=\psi\,e^{-iEt/\hbar}$。重ね合わせは周期 $h/(E_2-E_1)$ でゆれる\\[3pt]
+\tsl{期待値}$\langle x\rangle=\displaystyle\int x|\psi|^2\dd x$、$\Delta x\,\Delta p\geqq\hbar/2$\\[3pt]
+\tsl{輪の電子}$E_n=\dfrac{n^2h^2}{2mL^2}$（$n=0,\,\pm1,\,\ldots$）
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{波動関数}{電子などの状態を表す波。$\psi$。複素数の値をとってよい。}
+\bkword{確率の密度}{$|\psi|^2$。その場所で見つかる確率の、長さあたりの割合。}
+\bkword{規格化}{全体の確率が1になるように、波動関数の大きさを決めること。}
+\bkword{シュレディンガー方程式}{電子の波が満たす式。とりうるエネルギーは、その固有値。}
+\bkword{固有値・固有関数}{操作をしても形が変わらない関数と、そのときの倍率。}
+\bkword{定常状態}{決まったエネルギーの状態。確率の雲は時間で変わらない。}
+\bkword{期待値}{何回もはかったときの平均。$\langle x\rangle$。}
+\bkword{量子井戸・量子ドット}{電子を数 nm に閉じこめた、うすい層と小さな粒。}
+\bkword{有効質量}{結晶の中の電子を、自由な電子として扱うときの質量。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\psi$}{プサイ}{波動関数〔1次元で m$^{-1/2}$〕。時間をふくむときは大文字 $\Psi$。$|\psi|^2$ が確率の密度。波動の本の位相 $\phi$ とは別の字}{wave function}{原-5}}
+{\bkkigocard{$i$}{アイ}{虚数単位（$i^2=-1$）。数学の本・『電磁気学』の $j$ と同じ数。原-5〜原-8 で使う（原-9・10 は $j$）}{imaginary unit}{原-5}}
+\bkkigocards{\bkkigocard{$\langle x\rangle$}{エックスの期待値}{何回もはかったときの平均。$\displaystyle\int x|\psi|^2\dd x$}{expectation value}{原-5}}
+{\bkkigocard{$m^*$}{エム・スター}{有効質量〔kg〕。結晶の中の電子の動きやすさを表す質量。$\psi^*$ の $*$（共役の複素数）とは別の意味}{effective mass}{原-5}}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:原-5:ex1}
+\begin{phreidai}[幅 1 nm の箱の電子]
+幅 \qty{1}{nm}の無限に深い井戸に、電子を1個閉じこめました。いちばん低い3つの準位のエネルギーを eV で求めましょう。
+\phbamen
+原子10個ほどの広さに閉じこめた電子の、とびとびのエネルギーを求める場面です。はてな？の入口です。
+\phmushi
+壁は限りなく高く、電子は $x$ の向きだけを動くとします。スピンは考えません。
+\phzu
+図\ref{ph:原-5:fig-ido}。$L=\qty{1e-9}{m}$、$m=\qty{9.11e-31}{kg}$、$h=\qty{6.63e-34}{J.s}$。
+\phriyu
+壁で波が0になるので、定在波の波長は $2L/n$ にかぎられる（③）。運動量は $p=h/\lambda$、エネルギーは $p^2/(2m)$。
+\phtateru
+\[E_n=\frac{n^2h^2}{8mL^2}\]
+\phtoku
+\[E_1=\frac{(6.63\times10^{-34})^2}{8\times9.11\times10^{-31}\times10^{-18}}\approx\qty{6.03e-20}{J}\]
+eV に直すと $6.03\times10^{-20}\div(1.60\times10^{-19})\approx\qty{0.376}{eV}$。$E_2=4E_1\approx\qty{1.50}{eV}$、$E_3=9E_1\approx\qty{3.38}{eV}$。
+\phtashikame
+単位は J（③の次元チェック）。原子の中の電子のエネルギー（数 eV）より少し小さい値で、箱が原子より大きいことと合います。比は $1:4:9$ です。
+\kotae $E_1\approx\qty{0.376}{eV}$、$E_2\approx\qty{1.50}{eV}$、$E_3\approx\qty{3.38}{eV}$
+\end{phreidai}
+\begin{jibun}
+幅 \qty{0.5}{nm}の箱の電子の $E_1$ と $E_2$ を eV で求めましょう。
+\bkjans{$E_1\approx\qty{1.50}{eV}$、$E_2\approx\qty{6.02}{eV}$（幅が半分なので、\qty{1}{nm}の箱の4倍）}
+\end{jibun}
+
+\label{ph:原-5:ex2}
+\begin{phreidai}[箱の電子が出す光]
+例題1の電子が、$n=2$ の準位から $n=1$ の準位にうつるとき、エネルギーの差を光子1個として出します。光子のエネルギーと波長を求めましょう。
+\phbamen
+とびとびの準位の間をうつるときに出る光の色を求める場面です（原-4 の振動数条件）。
+\phmushi
+うつるときに、光以外にエネルギーは出ないとします。
+\phzu
+$E_2=\qty{1.504}{eV}$、$E_1=\qty{0.376}{eV}$。光子のエネルギー $E_{\text{光}}$、波長 $\lambda$。
+\phriyu
+エネルギーの保存で $E_{\text{光}}=E_2-E_1$。光子のエネルギーと波長は $E=hc/\lambda$、$hc=\qty{1240}{eV.nm}$（原-2）。
+\phtateru
+\[E_{\text{光}}=E_2-E_1,\qquad \lambda=\frac{hc}{E_{\text{光}}}\]
+\phtoku
+\[E_{\text{光}}=1.504-0.376=\qty{1.128}{eV},\qquad \lambda=\frac{1240}{1.128}\approx\qty{1.10e3}{nm}\]
+\phtashikame
+\qty{1.10}{\micro m}は、目に見える光（約 \qtyrange{400}{780}{nm}）より長い赤外線です。$E_2-E_1=3E_1$ なので、$3\times0.376=1.128$ と確かめられます。
+\kotae \qty{1.13}{eV}、約 \qty{1.10}{\micro m}（赤外線）
+\end{phreidai}
+\begin{jibun}
+例題1の電子が $n=3$ から $n=2$ にうつるときの光子のエネルギーと波長を求めましょう。何色の光ですか。
+\bkjans{$3.384-1.504=\qty{1.88}{eV}$、$1240\div1.88\approx\qty{660}{nm}$（赤い光）}
+\end{jibun}
+
+\label{ph:原-5:ex3}
+\begin{phreidai}[まん中の $\tfrac13$ に見つかる確率]
+幅 $L$ の箱の電子が $n=1$・$n=2$・$n=3$ の状態にあるとき、まん中の $\tfrac13$（$L/3<x<2L/3$）に見つかる確率を、それぞれ求めましょう。
+\phbamen
+はてな？の答え：電子の居場所の「見つかりやすさ」を数で表す場面です。
+\phmushi
+箱の壁は限りなく高いとし、波動関数は④の形とします。
+\phzu
+図\ref{ph:原-5:fig-prob}の色をつけた面積。$|\psi_n|^2=\dfrac2L\sin^2\dfrac{n\pi x}{L}$。
+\phriyu
+見つかる確率は $|\psi|^2$ の面積（④）。面積は定積分（5-10）で求める。$\sin^2\theta=\dfrac{1-\cos2\theta}{2}$ を使うと積分できる。
+\phtateru
+\[P=\int_{L/3}^{2L/3}\frac2L\sin^2\frac{n\pi x}{L}\,\dd x=\frac13-\frac{1}{2n\pi}\Bigl(\sin\frac{4n\pi}{3}-\sin\frac{2n\pi}{3}\Bigr)\]
+\phtoku
+$n=1$：$\sin240^\circ-\sin120^\circ=-\sqrt3$ なので、$P=\dfrac13+\dfrac{\sqrt3}{2\pi}\approx0.333+0.276=0.609$。\\
+$n=2$：$\sin480^\circ-\sin240^\circ=\sqrt3$ なので、$P=\dfrac13-\dfrac{\sqrt3}{4\pi}\approx0.333-0.138=0.196$。\\
+$n=3$：$\sin720^\circ-\sin360^\circ=0$ なので、$P=\dfrac13$。
+\phtashikame
+$n=2$ はまん中に節があるので小さく、$n=1$ はまん中に山があるので大きい。やってみようの表計算の約0.61と合います。どの答えも0と1の間です。
+\kotae $n=1$：約0.61、$n=2$：約0.20、$n=3$：$\tfrac13$
+\end{phreidai}
+\begin{jibun}
+$n=1$ と $n=2$ の状態で、左のはしの $\tfrac14$（$0<x<L/4$）に見つかる確率を求めましょう。
+\bkjans{$P=\dfrac14-\dfrac{1}{2n\pi}\sin\dfrac{n\pi}{2}$。$n=1$：$0.25-0.159\approx0.091$、$n=2$：$\tfrac14$（$\sin\pi=0$）}
+\end{jibun}
+
+\label{ph:原-5:ex4}
+\begin{phreidai}[波動関数の大きさを決める：規格化]
+幅 $L$ の箱の $n=1$ の波動関数を $\psi=A\sin(\pi x/L)$ とします。規格化の条件から $A$ を求め、$L=\qty{1}{nm}$ のときの値を単位つきで求めましょう。
+\phbamen
+確率の合計が1になるように、波の大きさを決める場面です。
+\phmushi
+波動関数は実数とします（④）。
+\phzu
+$\displaystyle\int_0^L|\psi|^2\dd x=1$。
+\phriyu
+$\sin^2$ の積分は、$\sin^2\theta=(1-\cos2\theta)/2$ にすると、$\cos$ の部分が1周期分で0になり、半分の $L/2$ だけが残る。
+\phtateru
+\[A^2\int_0^L\sin^2\frac{\pi x}{L}\,\dd x=A^2\Bigl[\frac x2-\frac{L}{4\pi}\sin\frac{2\pi x}{L}\Bigr]_0^L=A^2\,\frac L2=1\]
+\phtoku
+\[A=\sqrt{\frac2L}=\sqrt{\frac{2}{1\times10^{-9}}}\approx\qty{4.47e4}{m^{-1/2}}\]
+\phtashikame
+単位：$|\psi|^2\dd x$ が単位なし（確率）なので、$\psi$ は $\text{m}^{-1/2}$。$|\psi|^2$ のいちばん大きい値は $2/L=\qty{2}{nm^{-1}}$ で、まん中の \qty{0.01}{nm}の幅に見つかる確率は約 $2\times0.01=0.02$ です。$n=2,\,3$ でも $\sin^2$ の面積は $L/2$ なので、$A$ は同じです。
+\kotae $A=\sqrt{2/L}$、$L=\qty{1}{nm}$ で約 \qty{4.47e4}{m^{-1/2}}
+\end{phreidai}
+\begin{jibun}
+幅 \qty{2}{nm}の箱で、$n=2$ の波動関数 $A\sin(2\pi x/L)$ の $A$ を求めましょう。
+\bkjans{$A=\sqrt{2/L}\approx\qty{3.16e4}{m^{-1/2}}$（$n$ によらない）}
+\end{jibun}
+
+\label{ph:原-5:ex5}
+\begin{phreidai}[不確定性関係を確かめる]
+幅 $L$ の箱の電子の、$n=1$ と $n=2$ の状態で、位置の不確かさ $\Delta x$ と運動量の不確かさ $\Delta p$ の積を求め、原-3 ⑦の $\Delta x\,\Delta p\geqq\hbar/2$ を満たすか確かめましょう。
+\phbamen
+箱の電子の波動関数から、不確定性関係を確かめる場面です。
+\phmushi
+⑨の式を使います（$\langle x^2\rangle$ の積分は計算ずみの結果を使う）。
+\phzu
+$\Delta x=L\sqrt{\dfrac1{12}-\dfrac{1}{2n^2\pi^2}}$、$\Delta p=\dfrac{n\pi\hbar}{L}$。
+\phriyu
+定在波は $+\hbar k$ と $-\hbar k$ の進む波の重ね合わせなので、$\Delta p=\hbar k$（⑨）。
+\phtateru
+\[\Delta x\,\Delta p=n\pi\sqrt{\frac1{12}-\frac{1}{2n^2\pi^2}}\;\hbar\]
+\phtoku
+$n=1$：$\sqrt{0.08333-0.05066}=0.1808$ なので $\Delta x=0.181L$、積は $\pi\times0.1808\,\hbar\approx0.57\hbar$。\\
+$n=2$：$\sqrt{0.08333-0.01267}=0.2658$ なので $\Delta x=0.266L$、積は $2\pi\times0.2658\,\hbar\approx1.67\hbar$。
+\phtashikame
+どちらも $0.5\hbar$ より大きく、不確定性関係を満たします。$n=1$ は最小値にかなり近い状態です。$L=\qty{1}{nm}$ なら $\Delta x\approx\qty{0.18}{nm}$、$\Delta p\approx\qty{3.3e-25}{kg.m/s}$、速さのばらつき約 \qty{3.6e5}{m/s}です。
+\kotae $n=1$：約 $0.57\hbar$、$n=2$：約 $1.67\hbar$（どちらも $\hbar/2$ 以上）
+\end{phreidai}
+\begin{jibun}
+$n=3$ の状態の $\Delta x$（$L$ の何倍か）と、$\Delta x\,\Delta p$（$\hbar$ の何倍か）を求めましょう。
+\bkjans{$\Delta x\approx0.279L$、$\Delta x\,\Delta p\approx3\pi\times0.2788\,\hbar\approx2.63\hbar$}
+\end{jibun}
+
+\label{ph:原-5:ex6}
+\begin{phreidai}[GaAs の量子井戸]
+ガリウムヒ素の、厚さ \qty{10}{nm}の層を量子井戸とみなします。層の中の電子の有効質量を $0.067m$ とし、厚さの向きのいちばん低いエネルギー $E_1$ を求めましょう。室温の熱のエネルギー $k_{\mathrm B}T=\qty{0.0259}{eV}$ とくらべましょう。
+\phbamen
+半導体レーザーの量子井戸の、閉じこめのエネルギーを見積もる場面です。
+\phmushi
+井戸の壁は限りなく高いとします（本当は高さ \qty{0.2}{eV}ほどの有限の壁で、エネルギーは少し低くなる：原-6）。
+\phzu
+$L=\qty{10}{nm}$、$m^*=0.067m$。
+\phriyu
+結晶の中では、質量を有効質量にかえれば③の式が使える（⑤）。
+\phtateru
+\[E_1=\frac{h^2}{8m^*L^2}=\frac{1}{0.067}\times\frac{h^2}{8m\,(\qty{10}{nm})^2}\]
+\phtoku
+自由な電子・幅 \qty{10}{nm}なら $0.376\div10^2=\qty{0.00376}{eV}$。それを0.067でわって、
+\[E_1\approx\frac{0.00376}{0.067}\approx\qty{0.056}{eV}\]
+\phtashikame
+$k_{\mathrm B}T$ の約2倍で、室温でも準位がはっきり分かれる大きさです。質量が小さいと、同じ幅でもエネルギーが大きくなります（$1/0.067\approx15$ 倍）。
+\kotae 約 \qty{0.056}{eV}（室温の $k_{\mathrm B}T$ の約2倍）
+\end{phreidai}
+\begin{jibun}
+同じ GaAs で、厚さ \qty{5}{nm}の量子井戸の $E_1$ を求めましょう。
+\bkjans{厚さが半分なので4倍、約 \qty{0.22}{eV}}
+\end{jibun}
+
+\label{ph:原-5:ex7}
+\begin{phreidai}[ふつうの物では、とびとびが見えない]
+質量 \qty{1}{g}の玉が、幅 \qty{1}{cm}の箱の中を \qty{1}{cm/s}で行き来しています。この玉を「箱の中の波」と考えると、量子数 $n$ はいくつですか。
+\phbamen
+とびとびのエネルギーが、身の回りの物で見えない理由を数で確かめる場面です。
+\phmushi
+摩擦や空気の抵抗はなく、壁で完全にはね返るとします。
+\phzu
+$m=\qty{1e-3}{kg}$、$L=\qty{1e-2}{m}$、$v=\qty{1e-2}{m/s}$。
+\phriyu
+運動量 $p=mv$ と、定在波の条件 $p_n=nh/(2L)$（③の②）を等しいとおけば $n$ が求まる。
+\phtateru
+\[n=\frac{2Lp}{h}=\frac{2Lmv}{h}\]
+\phtoku
+\[n=\frac{2\times10^{-2}\times10^{-3}\times10^{-2}}{6.63\times10^{-34}}\approx3\times10^{26}\]
+\phtashikame
+となりの準位とのエネルギーの差は、$E_n$ のおよそ $2/n\approx7\times10^{-27}$ 倍で、どんな測定でも見分けられません。量子数がとても大きいときは、とびとびの量子の世界が、なめらかなふつうの運動に見えます。
+\kotae $n\approx3\times10^{26}$
+\end{phreidai}
+\begin{jibun}
+質量 \qty{1}{\micro g}のちりが、幅 \qty{1}{\micro m}の箱を \qty{1}{mm/s}で行き来するときの $n$ を求めましょう。
+\bkjans{$n=2Lmv/h$。$2\times10^{-6}\times10^{-9}\times10^{-3}$ を $6.63\times10^{-34}$ でわって、約 $3\times10^{15}$}
+\end{jibun}
+
+\label{ph:原-5:ex8}
+\begin{phreidai}[重ね合わせの雲がゆれる周期]
+例題1の箱で、$\psi_1$ と $\psi_2$ を同じ割合で重ね合わせた状態の電子の雲は、左右にゆれます。ゆれの周期を求めましょう。
+\phbamen
+2つの準位の重ね合わせで、電子の雲が動くようすを見る場面です（⑩）。
+\phmushi
+光を出してエネルギーを失うことは考えません。
+\phzu
+図\ref{ph:原-5:fig-yure}。$E_1=\qty{0.376}{eV}$、$E_2=\qty{1.504}{eV}$、$h=\qty{4.14e-15}{eV.s}$。
+\phriyu
+2本の矢印の回る速さの差で、重なりの項が周期 $h/(E_2-E_1)$ でゆれる（⑩）。
+\phtateru
+\[T=\frac{h}{E_2-E_1}\]
+\phtoku
+\[T=\frac{4.14\times10^{-15}}{1.128}\approx\qty{3.67e-15}{s}\]
+\phtashikame
+約 \qty{3.7}{fs}（フェムト秒、$10^{-15}$ 秒）です。この周期の振動数 $1/T\approx\qty{2.7e14}{Hz}$ は、例題2の光（\qty{1.10}{\micro m}）の振動数 $c/\lambda$ と同じです。重ね合わせの電子は、出す光と同じ速さでゆれるのです。
+\kotae 約 \qty{3.7}{fs}
+\end{phreidai}
+\begin{jibun}
+幅 \qty{2}{nm}の箱で、同じ重ね合わせのゆれの周期を求めましょう。
+\bkjans{$E_2-E_1=\qty{0.282}{eV}$ なので、約 \qty{14.7}{fs}（4倍）}
+\end{jibun}
+
+\label{ph:原-5:ex9}
+\begin{phreidai}[重ね合わせの状態のエネルギーをはかる]
+例題1の箱の電子が、$\Psi=0.6\,\psi_1+0.8\,\psi_2$ の状態にあります（時間の部分は省いた）。エネルギーをはかると、どんな値が、どんな確率で出ますか。たくさんはかった平均はいくらですか。
+\phbamen
+重ね合わせの状態をはかったときの結果を予言する場面です（⑩）。
+\phmushi
+はかる道具の誤差はないとします。
+\phzu
+$c_1=0.6$、$c_2=0.8$、$E_1=\qty{0.376}{eV}$、$E_2=\qty{1.504}{eV}$。
+\phriyu
+はかると $E_1$ か $E_2$ のどちらかが出て、確率は $c_1^{\,2}$・$c_2^{\,2}$（⑩）。平均は値×確率の合計（3-17）。
+\phtateru
+\[P_1=c_1^{\,2},\quad P_2=c_2^{\,2},\qquad\langle E\rangle=c_1^{\,2}E_1+c_2^{\,2}E_2\]
+\phtoku
+$P_1=0.36$、$P_2=0.64$（合わせて1で、規格化されている）。
+\[\langle E\rangle=0.36\times0.376+0.64\times1.504\approx0.135+0.963\approx\qty{1.10}{eV}\]
+\phtashikame
+平均の \qty{1.10}{eV}は、1回のはかり方では一度も出ない値です。出るのは \qty{0.376}{eV}か \qty{1.504}{eV}だけです。
+\kotae \qty{0.376}{eV}が36\,\%、\qty{1.504}{eV}が64\,\%。平均約 \qty{1.10}{eV}
+\end{phreidai}
+\begin{jibun}
+$\Psi=0.8\,\psi_1+0.6\,\psi_3$ の状態で、出る値と確率、平均を求めましょう。
+\bkjans{\qty{0.376}{eV}が64\,\%、\qty{3.38}{eV}が36\,\%。平均 $0.64\times0.376+0.36\times3.384\approx\qty{1.46}{eV}$}
+\end{jibun}
+
+\label{ph:原-5:ex10}
+\begin{phreidai}[輪の上の電子]
+1周 \qty{1}{nm}の輪の上を動く電子の、低い準位のエネルギーを求めましょう。同じ長さの箱（幅 \qty{1}{nm}）とくらべましょう。
+\phbamen
+輪の形の分子（ベンゼンなど）の電子を、輪の上の波として考える場面です（⑪）。
+\phmushi
+輪の太さと、輪の外への動きは考えません。
+\phzu
+1周 $L=\qty{1}{nm}$。$\psi_n=e^{i2\pi nx/L}/\sqrt L$。
+\phriyu
+1周でもとの値にもどる条件から $k=2\pi n/L$、$n=0,\,\pm1,\,\ldots$（⑪）。
+\phtateru
+\[E_n=\frac{n^2h^2}{2mL^2}=4n^2\times\frac{h^2}{8mL^2}\]
+\phtoku
+$h^2/(8mL^2)=\qty{0.376}{eV}$ なので、$E_n=4\times0.376\,n^2\approx1.50n^2$〔eV〕。$E_0=0$、$E_{\pm1}=\qty{1.50}{eV}$、$E_{\pm2}=\qty{6.02}{eV}$。
+\phtashikame
+箱の $E_1=\qty{0.376}{eV}$ の4倍が輪の $E_{\pm1}$ で、輪では波長が $L$（箱は $2L$）だからです。$n=+1$ と $-1$ は回る向きが違うだけで、同じエネルギーです（縮退）。
+\kotae $E_n\approx1.50n^2$〔eV〕：0、\qty{1.50}{eV}（2つ）、\qty{6.02}{eV}（2つ）
+\end{phreidai}
+\begin{jibun}
+1周 \qty{2}{nm}の輪の電子の $E_{\pm1}$ と $E_{\pm2}$ を求めましょう。
+\bkjans{$E_n\approx0.376n^2$〔eV〕なので、$E_{\pm1}\approx\qty{0.376}{eV}$、$E_{\pm2}\approx\qty{1.50}{eV}$}
+\end{jibun}
+
+\label{ph:原-5:ex11}
+\begin{phreidai}[弦と箱の電子：3番目と1番目の比]
+両はしを止めた弦の3番目の固有振動数は、1番目の何倍ですか。箱の電子の3番目のエネルギーは、1番目の何倍ですか。違いのわけを説明しましょう。
+\phbamen
+物理シリーズの『波動』の弦と、この章の電子をくらべる場面です（①②）。
+\phmushi
+弦の張力と線密度は一定、箱の壁は限りなく高いとします。
+\phzu
+どちらも $\lambda_n=2L/n$。弦は $f=c/\lambda$、電子は $E=p^2/(2m)$、$p=h/\lambda$。
+\phriyu
+波長の条件は同じで、波長から量を求める式（分散）が違う。
+\phtateru
+\[f_n=\frac{c}{\lambda_n}=\frac{nc}{2L},\qquad E_n=\frac{1}{2m}\Bigl(\frac{h}{\lambda_n}\Bigr)^2=\frac{n^2h^2}{8mL^2}\]
+\phtoku
+$f_3/f_1=3$、$E_3/E_1=9$。
+\phtashikame
+弦の振動数は波数 $k$ に比例し、電子のエネルギーは $k^2$ に比例します。原-3 ⑨で見たように、電子の波は、速さが波長でかわる「分散のある波」です。
+\kotae 弦は3倍、箱の電子は9倍（電子のエネルギーは $k^2$ に比例するから）
+\end{phreidai}
+\begin{jibun}
+弦の5番目の振動数と、箱の電子の5番目のエネルギーは、それぞれ1番目の何倍ですか。
+\bkjans{弦は5倍、電子は25倍}
+\end{jibun}
+
+\label{ph:原-5:ex12}
+\begin{phreidai}[差分法で箱の電子を解く]
+⑫の Python のプログラムで、幅 \qty{1}{nm}の箱を $N=10$ と $N=50$ の点で解き、いちばん低い3つの固有値を、式の値（例題1）とくらべましょう。
+\phbamen
+方程式を数値で解く方法が、正しい答えを出すかを確かめる場面です。
+\phmushi
+2回微分を、となりの点の差で近づけます（⑫）。
+\phzu
+$\Delta x=L/(N+1)$、$a=0.0381/(\Delta x)^2$〔eV〕、$U=0$。
+\phriyu
+差分にすると、シュレディンガー方程式は行列の固有値問題になり（7-8）、\texttt{numpy.linalg.eigh} で解ける。
+\phtateru
+$N\times N$ の行列 $H$（対角 $2a$、となり $-a$）の固有値を求める。
+\phtoku
+$N=10$：0.374、1.46、\qty{3.18}{eV}。$N=50$：0.376、1.50、\qty{3.37}{eV}（表\ref{ph:原-5:tab-sabun}）。
+\phtashikame
+式の値は 0.376、1.50、\qty{3.38}{eV}です。$N=10$ では $E_1$ が0.7\,\% 低く、$E_3$ は6\,\% 低い。$N=50$ では $E_1$ のずれは0.03\,\% です。点をふやすほど正しい値に近づき、上の準位（曲がりの強い波）ほど点が多く要ります。
+\kotae $N=10$：0.374・1.46・\qty{3.18}{eV}、$N=50$：0.376・1.50・\qty{3.37}{eV}
+\end{phreidai}
+\begin{jibun}
+同じプログラムで \texttt{L = 2.0}、$N=50$ にすると、$E_1$ はいくらになりますか。式の値とくらべましょう。
+\bkjans{約 \qty{0.094}{eV}（式の値 $0.376\div4=\qty{0.094}{eV}$ と同じ）}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\begin{column}{シュレディンガーの1926年}
+シュレディンガーは1926年の前半に、続けて4つの論文を出しました。第1の論文の題は「固有値問題としての量子化」です。原-4 のボーアの模型では、「なぜとびとびなのか」は、量子条件という決まりとして置かれていました。シュレディンガーは、とびとびのエネルギーが、弦の固有振動数と同じように、波の方程式の固有値として自然に出てくることを示したのです。同じころ、ハイゼンベルクは行列を使った別の形の量子力学を作っていましたが、2つは同じ内容であることがすぐに示されました。原子の世界の物理は、わずか数年で、まったく新しい形に生まれ変わったのです。
+\end{column}
+
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{電子は、波の形にそって動いている？}
+\bkng{電子は、$\sin$ のグラフの形をなぞって、上下にゆれながら進む。}
+\bkok{$\psi$ のグラフの横軸は電子の位置、たて軸は「見つかりやすさ」を決める量。電子がその形の道を通るのではない。}
+箱の電子は $x$ の向きだけを動きます。グラフのたての向きは、空間の向きではありません（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{$\psi$ そのものが確率？}
+\bkng{$\psi$ が負の所は、確率が負になる。}
+\bkok{確率は $|\psi|^2$。$\psi$ が負でも複素数でも、2乗の大きさは0以上。}
+$\psi$ の符号は、重ね合わせのときの打ち消し合い・強め合いに効きます（⑩）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{いちばん低いエネルギーは0？}
+\bkng{いちばん低い状態の電子は止まっていて、エネルギーは0。}
+\bkok{箱の電子のいちばん低いエネルギーは $E_1=h^2/(8mL^2)>0$。}
+$n=0$ は箱に波がない（電子がいない）ことになります。閉じこめると、運動量にばらつき（⑨）が出るので、止まっていられません。原-6 の零点エネルギーと同じ考えです。
+\end{tsumazuki}
+
+\begin{tsumazuki}{箱を2倍にすると、エネルギーは半分？}
+\bkng{$E$ は幅 $L$ に反比例するので、半分。}
+\bkok{$E\propto1/L^2$ なので、$\tfrac14$。}
+波長が2倍で運動量が半分、エネルギーはその2乗で $\tfrac14$ です（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{節を、電子はどうやって通る？}
+\bkng{$n=2$ のまん中は確率0なので、電子は左半分と右半分を行き来できない。}
+\bkok{電子は粒として道をたどっているのではない。1つの波が箱全体に広がっていて、左でも右でも見つかる。}
+「粒が道を通る」という考え方そのものが、この世界では使えません（はてな？）。
+\end{tsumazuki}
+
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[閉じこめて、色と性質を設計する]
+\textbf{半導体レーザー・LED}：光る層を厚さ数 nm の量子井戸にすると、電子のエネルギーの段（⑤）の分だけ、出る光の波長を短い側へずらせます。層の厚さと材料の組み合わせで、光通信の \qty{1.55}{\micro m}から、ブルーレイの \qty{405}{nm}まで作り分けています（原-9 の LED）。
+
+\textbf{量子ドットのディスプレー}：大きさをそろえた量子ドットに青い光を当てると、粒の大きさで決まる緑や赤の光が出ます。色の純度が高く、あざやかな色が出せます。
+
+\textbf{計算で材料を作る}：新しい薬・電池・半導体の材料を、実験の前にコンピュータで探すとき、原子や分子のシュレディンガー方程式を、⑫の差分法などを発展させた方法で数値として解きます（量子化学計算）。
+
+\begin{phketa}[閉じこめのエネルギーの目安]
+\phketaline{原子の大きさ（\qty{0.2}{nm}）の箱}{約 \qty{9}{eV}}
+\phketaline{幅 \qty{1}{nm}の箱}{\qty{0.376}{eV}}
+\phketaline{GaAs の \qty{10}{nm}の量子井戸}{約 \qty{0.06}{eV}}
+\phketaline{室温の熱 $k_{\mathrm B}T$}{\qty{0.026}{eV}}
+\phboxhead{答えが桁で合っているか}
+$E_1=0.376/L^2$〔eV〕（$L$ は nm）を覚えておくと、すぐ確かめられます。質量が $m^*$ なら $m/m^*$ 倍です。答えが J の $10^{-20}$ 前後なら、eV に直すと 0.1 前後です。
+\end{phketa}
+\end{phkougaku}
+\phstation{量子力学,半導体デバイス,光デバイス,量子化学}{波動関数、シュレディンガー方程式、固有値、無限に深い井戸、量子井戸、量子ドット、有効質量、期待値、ハミルトニアン}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem 幅 \qty{0.3}{nm}の無限に深い井戸の電子について、（1）$E_1$ と $E_2$ を eV で求めましょう。（2）$n=2$ から $n=1$ にうつるとき出る光の波長を求めましょう。
+\bkpans{（1）$E_1\approx0.376\div0.09\approx\qty{4.18}{eV}$、$E_2\approx\qty{16.7}{eV}$。（2）$1240\div12.5\approx\qty{99}{nm}$（紫外線）}
+\bkproblem 幅 $L$ の箱の電子の $n=2$ の状態について、（1）見つかる確率が0になる場所（壁をのぞく）はどこですか。（2）左半分（$0<x<L/2$）に見つかる確率はいくらですか。
+\bkpans{（1）$x=L/2$（まん中の節）。（2）$|\psi_2|^2$ は左右対称なので $\tfrac12$}
+\bkproblem 箱の電子の $E_1$ は、（1）箱の幅を半分にすると何倍、（2）幅を3倍にすると何倍、（3）電子を質量が約1840倍の陽子にかえると何倍になりますか。
+\bkpans{（1）4倍。（2）$\tfrac19$ 倍。（3）約 $\tfrac{1}{1840}$ 倍}
+\bkproblem 量子ドットを、幅 \qty{1}{nm}の箱から幅 \qty{0.8}{nm}の箱にすると、$n=2$ から $n=1$ にうつるときの光の波長はどう変わりますか。どちらの向き（赤い側・青い側）へずれますか。
+\bkpans{$\Delta E=3\times0.376\div0.64\approx\qty{1.76}{eV}$、$1240\div1.76\approx\qty{703}{nm}$。\qty{1.10}{\micro m}から短くなり、青い側へずれる}
+\bkproblem 幅 \qty{1}{nm}の箱の電子が、$n=1$ から $n=3$ へ上がるために吸収する光の波長を求めましょう。
+\bkpans{$\Delta E=8\times0.376\approx\qty{3.01}{eV}$、$1240\div3.01\approx\qty{412}{nm}$（紫）}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 箱の電子の $\langle x^2\rangle=L^2\Bigl(\dfrac13-\dfrac{1}{2n^2\pi^2}\Bigr)$ について、$n=1$・$10$・$100$ の値を求め、$n$ が大きくなると、箱のどこにも同じ確率でいるふつうの粒の値 $L^2/3$ に近づくことを確かめましょう。
+\bkpans{$n=1$：$0.2827L^2$、$n=10$：$0.3328L^2$、$n=100$：$0.33333L^2$。$1/(2n^2\pi^2)$ が0に近づくので $L^2/3$ に近づく（量子数が大きいとふつうの粒に近づく）}
+\bkproblem ベンゼンの6個の炭素の輪を、1周 \qty{0.834}{nm}（\qty{0.139}{nm}×6 とします）の輪とみなします。輪の上の $\pi$ 電子6個は、エネルギーの低い状態から、1つの状態に2個まで（原-7）入ります。（1）6個が入ったとき、いちばん上の電子がいる準位の $n$ は？（2）その電子が1つ上の準位へ上がるとき吸収する光の波長を、輪の電子の式で見積もりましょう（実際にはかった強い吸収は約 \qtyrange{180}{200}{nm}）。
+\bkpans{（1）$n=0$ に2個、$n=\pm1$ に4個で、いちばん上は $|n|=1$。（2）$E_n=n^2h^2/(2mL^2)\approx2.16n^2$〔eV〕。$|n|=1\to2$ で $\Delta E\approx3\times2.16\approx\qty{6.5}{eV}$、$\lambda\approx1240\div6.49\approx\qty{191}{nm}$}
+\bkproblem 例題8の重ね合わせ $(\psi_1+\psi_2)/\sqrt2$ で、位置の期待値は次のようになります。
+\[\langle x\rangle=\frac L2-\frac{16L}{9\pi^2}\cos\frac{(E_2-E_1)t}{\hbar}\]
+幅 \qty{1}{nm}の箱で、$\langle x\rangle$ がゆれる幅（まん中からの最大のずれ）と周期を求めましょう。
+\bkpans{$16/(9\pi^2)\approx0.180$ なので、まん中から約 \qty{0.18}{nm}。周期は例題8と同じ約 \qty{3.7}{fs}}
+
+\begin{furikaeri}
+\begin{checklist}
+\item 箱に閉じこめた電子のエネルギー $E_n=n^2h^2/(8mL^2)$ を、定在波と $\lambda=h/p$ から求められる。\bkfurref{ph:原-5:sec3}
+\item $|\psi|^2$ を「見つかる確率」として読み、ある範囲に電子が見つかる確率を求められる。\bkfurref{ph:原-5:sec4}
+\item シュレディンガー方程式を立て、無限に深い井戸を境界の条件で解ける。\bkfurref{ph:原-5:sec8}
+\item 重ね合わせと期待値を計算し、差分法で固有値を数値で求められる。\bkfurref{ph:原-5:sec12}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{電子は「どこかにいる粒」じゃなくて「見つかりやすさの雲」なんだ。とびとびのエネルギーが、ギターの弦と同じ理由だったなんて！}
