@@ -97,3 +97,6 @@
 - **ph5-pages.tex**：`tools/tryp.py` が、なければ自動で作る（`phys/gen_phys.py`）。
 - **nullfont の「.01pt」の警告**（電W6・電W7 の報告から）：pgfplots の `\addplot[only marks]`・`\addplot coordinates`・`table` で出ることがある。紙面の字は欠けないが、`\draw`・`\fill` と `axis cs:` の線に置きかえると消える。
 - **`phcodeout` の中身の最初の行が「[」で始まる**と、題として読まれる（電W3 の報告から）。`\begin{phcodeout}[実行結果]` のように題を書いてよける。
+- **pgfplots の `axis` の中の `\foreach`** は止まることがある（原W8 の報告から）。`axis` の外で `\foreach` を回すか、`\addplot` を並べて書く。
+- **`\phdim` の札の最後に全角の「）」**を置くと枠の線に触れる（原W8）。**`phflow` の題が長い**と札が囲みの右へはみ出す（原W3）。どちらも文を短くしてよける。
+- **組どうしの確かめ**：本文の15章のあとの決定 Z5-1〜Z5-9 は `docs/作業メモ/物理第5巻_組どうしの確かめ.md`。序章・読みものを書く組も守る。
