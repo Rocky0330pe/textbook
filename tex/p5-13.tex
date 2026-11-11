@@ -1,0 +1,1243 @@
+%% 第31回編集委員会（物理第5巻）：組 原W7
+%% p5-13.tex  原-13　放射線が物にあたる：放射線と物質（★2〜5・3段）
+%% 中身は計画書 tools/phys5-plan.md の B「原-13」。公式の持ち主は A（A7・A11・A72〜A75）。
+%%   ほかの章は計画書 B の節の番号で指した（原-2 ④⑦、原-11 ②⑧、原-12 ②③④、原-14 ⑥⑦、原-15 ③⑥、
+%%   力-3 ④、電-15、波-7 ②）。
+%% 数値はすべて Python で計算した：checks/物理第5巻/原-13/calc_p5_13.py（出力 calc_p5_13_out.txt）、
+%%   常用漢字の確かめ kanji_p4_13.py（第4巻のものを写した。joyo.txt は2010年の2136字）。
+%% 前の巻・数学の本との約束（計画書 A-6・C-6-2）
+%%   ・Q58（p4-15:162「X 線・γ 線：がんの治療（原-13）」）→ ⑦⑫（放射線治療）と①の電磁波の家族
+%%   ・A7（中学：放射線の性質）・A11（物理基礎：種類と透過力・電離）→ ①②（ph:原-13:sec1・sec2）
+%%   ・A72〜A75 → ③④⑤⑥⑦⑧⑨
+%%   ・数学 3-11④（半減期）・3-12⑥（片対数）・3-17（乱数）・5-14⑪（e^{-t/τ}）・6-4④⑤（目標へ近づく形・時定数）を指した
+%% 記号（この章）：強さ I、減弱係数 μ（1/cm）、質量減弱係数 μ/ρ、密度 ρ、厚さ x、半価層 x_{1/2}、光子のエネルギー E、
+%%   阻止能 S、断面積 σ（b）、巨視的断面積 Σ（和の記号は使わない。本文の和は「合計」とことばで）、数密度 N、
+%%   中性子束 φ、1回の正面衝突で残る割合 α・平均の対数減少 ξ（この章だけ）、放射能 A（原-12 のカード）、崩壊定数 λ。
+%%   質量数は核種の左上の数だけ（N-4）。波長 λ はこの章では使わない（コンプトン散乱はエネルギーの形）。
+%% 出典（11月11日に確かめた）
+%%   ・質量減弱係数：NIST "X-Ray Mass Attenuation Coefficients"（Hubbell & Seltzer）の表を curl で読んだ。
+%%       鉛 https://physics.nist.gov/PhysRefData/XrayMassCoef/ElemTab/z82.html、鉄 z26、アルミ z13、
+%%       水 ComTab/water.html、コンクリート（Ordinary）concrete.html、骨（Bone, Cortical, ICRU-44）bone.html、
+%%       軟組織（Tissue, Soft, ICRU-44）tissue.html。0.662 MeV は 0.6 と 0.8 MeV の両対数の補間。
+%%       密度は同じ資料の表1・表2（鉛 11.35、鉄 7.874、アルミ 2.699、骨 1.92、軟組織 1.06、コンクリート 2.30 g/cm³）。
+%%   ・陽子の水の中の阻止能・CSDA 飛程：NIST PSTAR（https://physics.nist.gov/cgi-bin/Star/ap_table-t.pl、Water, Liquid。
+%%       70 MeV 4.080、150 MeV 15.77、225 MeV 31.74、250 MeV 37.94 g/cm²。水の平均励起エネルギー 75 eV）。
+%%       ベーテの式で計算した値は PSTAR と 1 % 以内で合う（calc_p5_13.py）。
+%%   ・α 粒子の空気中の CSDA 飛程：NIST ASTAR（Air, Dry。5.0 MeV 4.368e-3、5.5 MeV 5.048e-3 g/cm²）→ 5.30 MeV で約 4.0 cm。
+%%       ガイガーの経験式 R＝0.318E^{3/2} cm（4〜7 MeV）は 3.9 cm で合う。
+%%   ・電子のアルミの CSDA 飛程：NIST ESTAR（2.0 MeV 1.224、2.5 MeV 1.550 g/cm²）。カッツ・ペンフォールドの式
+%%       R＝0.412E^{1.265−0.0954 ln E} g/cm²（実際に届く最大の深さ）は 1.1 g/cm²。CSDA（道のりの長さ）のほうが長い。
+%%   ・放射線の透過力（α は紙1枚、β はアルミ板 2〜4 mm、γ は鉛や鉄の厚い板）、電離作用、中性子は水素と
+%%       ぶつかるとよくエネルギーを失う、X線検査で骨が白く映る：環境省「放射線による健康影響等に関する統一的な
+%%       基礎資料（令和7年度版）」HTML 版 01-03-06・01-03-08・01-03-09・01-03-10
+%%       （https://www.env.go.jp/chemi/rhm/current/01-03-08.html など）。
+%%   ・空気で1組のイオンを作るのに要る平均のエネルギー W＝33.97 eV（電子・光子）：ICRU Report 90（2016）が確かめた値
+%%       （検索の抜粋 2つ：Boutillon & Perroche-Roux 1987 の再評価、ICRU 90 を引く論文。arXiv:2410.21948）。本文は約 34 eV。
+%%   ・熱中性子の吸収断面積：H 0.3326 b、Co-59 37.18 b（NIST NCNR の散乱長と断面積の表〔Sears 1992〕を引く二次資料2つ：
+%%       Handbook of Nuclear Chemistry の表 332.6 mb、ASTM E481 の 37.233 b。www.ncnr.nist.gov は作業環境から届かなかった）。
+%%   ・核データ（二次資料2つ以上で照らし合わせた。DDEP・NNDC・IAEA は届かなかった）：Cs-137（Ba-137m）の γ 線 0.662 MeV・
+%%       放出の割合 約85 %（IAEA の γ 線の標準 0.8499、Rutgers の表 0.851）、Co-60 の半減期 5.27 年・γ 線 1.17 と 1.33 MeV、
+%%       Po-210 の α 線 5.30 MeV・半減期 138 日、Y-90 の β 線の最大 2.28 MeV（検索の抜粋：ORTEC の線源の表、
+%%       Michigan State Univ. の College Physics の付録、radiacode の核種の表）。セシウム137 の半減期 約30年は環境省 01-02-07。
+%%   ・FLASH 照射：Y. Ma ら, "Current Views on Mechanisms of the FLASH Effect in Cancer Radiotherapy", arXiv:2405.10219（2024）
+%%       の要旨「さまざまな模型と放射線で FLASH 効果が確かめられたが、そのしくみはまだはっきりしない」。
+%% 〔仮〕例題のために置いた値（本文に「とします」）：中性子束 1e13 /(cm²·s)、密度計の管 10 cm、照度計の値。
+\makeatletter
+% 光子の波の矢印  \txnphoton{(始点)}{(終点)}
+\newcommand\txnphoton[2]{\draw[bkOrange!85!black, line width=0.9pt, decorate, decoration={snake, amplitude=0.9mm, segment length=2.6mm, post length=2.2mm}, -{Stealth[length=2.2mm]}] #1 -- #2;}
+% 粒子の玉  \txnball{(中心)}{半径}{色}{字}
+\newcommand\txnball[4]{\filldraw[fill=#3, draw=bkInk, line width=0.5pt] #1 circle (#2); \node[font=\sffamily\bfseries\scriptsize, text=white, inner sep=0pt] at #1 {#4};}
+\tikzset{txn lab/.style={font=\sffamily\footnotesize, text=bkInk}, txn arr/.style={line width=1pt, -{Stealth[length=2.4mm]}},
+  txn dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+\makeatother
+
+\phchapter{13}{放射線が物にあたる：\\放射線と物質}{X線写真で、なぜ骨が白くうつる？}{\bklevelrange{2}{5}}{放射線が物にあたる：放射線と物質}
+\bkmichishirube{3-11,3-12,3-17,5-14,6-4,力-3,電-15,原-2,原-11,原-12}{原-14,原-15,原-16}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace α線・β線・γ線（X線）・中性子線が、どんな物で止まるか（透過力）と、物を電離するしくみを説明できる。
+\item \bklevel{4}\enspace 光子の減弱の式 $I=I_0e^{-\mu x}$ と半価層を使って、X線写真や遮へいの厚さを計算できる。
+\item \bklevel{3}\enspace 光電効果・コンプトン散乱・電子対生成のちがいと、荷電粒子・中性子の止まり方のちがいを説明できる。
+\item \bklevel{5}\enspace 阻止能とブラッグピーク、断面積と平均自由行程、中性子の減速を、式で読める。
+\item \bklevel{5}\enspace 放射化の式 $A=N\sigma\phi(1-e^{-\lambda t})$ で、飽和放射能に近づくようすを計算できる。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{放射線は目に見えず、物を通りぬけ、物の原子を電離する（放射線の性質）}{中学理科}{ph:原-13:sec1}
+\phk{α線・β線・γ線・X線・中性子線の透過力と電離作用}{高校物理基礎}{ph:原-13:sec2}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.52\linewidth}\raggedright
+骨を折ったかもしれないとき、病院ではX線写真をとります。写真では、骨は白く、そのまわりの筋肉や脂肪は黒っぽく、肺はもっと黒くうつります。
+
+X線は、目に見える光と同じ電磁波の仲間です（電-15）。光は手を通りぬけませんが、X線は手を通りぬけます。それなのに、なぜ骨の所だけ白く残るのでしょう。骨と筋肉は、X線にとって何がちがうのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % X線管
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.6pt] (21,44) rectangle (35,50);
+  \node[txn lab, anchor=south] at (28,50.5) {X線管};
+  \foreach \x in {6,16,28,40,50} {\draw[bkOrange!80!black, line width=0.5pt, dash pattern=on 1.5pt off 1pt] (28,44) -- (\x,8);}
+  % 手（軟組織）と骨
+  \fill[bkRed!18] (8,20) rectangle (48,30);
+  \draw[bkInk, line width=0.5pt] (8,20) rectangle (48,30);
+  \fill[bkGray!70] (18,23) rectangle (24,27) (32,23) rectangle (38,27);
+  \node[txn lab, anchor=west] at (49,25) {手};
+  % 検出器（写真）
+  \fill[bkInk!80] (4,4) rectangle (52,8);
+  \fill[white] (17.2,4) rectangle (24.8,8) (31.2,4) rectangle (38.8,8);
+  \draw[bkInk, line width=0.5pt] (4,4) rectangle (52,8);
+  \node[txn lab, anchor=north] at (28,3) {写真：骨の後ろが白い};
+\end{tikzpicture}\par
+{\sffamily\footnotesize 手の中の灰色の部分が骨}
+\end{minipage}
+\end{hatena}
+
+\begin{yattemiyou}[光が紙を通ると、どう減る？（放射線のかわりに光で）]
+\textbf{用意するもの}\par
+懐中電灯（LED）、トレーシングペーパー（同じ物を10枚ほど）、照度計のアプリを入れたスマホ、セロハンテープ、方眼紙\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.60\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 部屋を暗くし、スマホを机に置く。照度計のセンサー（画面の上のあたり）の真上\qty{30}{cm}に、懐中電灯を下向きに固定する。
+\item 紙なしで明るさ（lx）を読む。次に、センサーの上に紙を1枚、2枚、3枚…と重ねて、そのつど読む。
+\item 紙の枚数を横軸、明るさを縦軸にしてグラフをかく。縦軸を「1枚ごとに何倍になったか」で見る。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkGray!25, draw=bkInk, line width=0.5pt] (14,30) rectangle (24,36);
+  \node[txn lab, anchor=west] at (25,33) {懐中電灯};
+  \foreach \x in {15,19,23} \draw[bkYellow!90!black, line width=0.7pt, -{Stealth[length=1.6mm]}] (\x,29.5) -- (\x,14);
+  \foreach \y in {10.5,11.5,12.5} \draw[bkBlue!60, line width=0.9pt] (8,\y) -- (30,\y);
+  \node[txn lab, anchor=west] at (31,12) {紙};
+  \filldraw[fill=bkInk!75, draw=bkInk, line width=0.5pt, rounded corners=1mm] (6,4) rectangle (32,9.5);
+  \node[font=\sffamily\footnotesize, text=white] at (19,6.8) {照度計};
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{2pt}\textbf{気をつけること}：放射線を出す物や、X線を使う実験は、自分でしてはいけません。この章の実験は、どれも光で「まね」をします。懐中電灯の光を、人の目に向けないようにしましょう。
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=34mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm] Q[c,m,wd=10mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+紙の枚数 & 0 & 1 & 2 & 3 & 4 & 5 \\
+明るさ〔lx〕 & 1000 & 710 & 490 & 350 & 240 & 170 \\
+前の何倍か & ― & 0.71 & 0.69 & 0.71 & 0.69 & 0.71 \\
+\end{bktable}
+\bktabcaption{やってみようで、ソラさんが調べた結果}\label{ph:原-13:tab-yattemiyou}
+\end{bkcenter}
+
+\noindent やってみようの答え：表\ref{ph:原-13:tab-yattemiyou}を見ると、紙を1枚重ねるごとに、明るさは\textbf{いつもほぼ0.7倍}になっています。1枚めで減る量は約\qty{290}{lx}、5枚めで減る量は約\qty{70}{lx}で、「同じ量ずつ」ではなく「\textbf{同じ割合ずつ}」減っています。これは、数学の本で学んだ「同じ倍ずつ減る」形、つまり指数関数です（3-11①）。縦軸をけたの目もりにした片対数グラフ（3-12⑥）にかくと、点は1本のまっすぐな線にのります。X線やγ線が物を通るときも、まったく同じ形で減っていきます。その理由を③で考え、この「割合」が骨と筋肉でどれだけちがうかで、\bkhatenaref に答えます。
+
+前の章（原-12）では、原子核がこわれて放射線が出るしくみを見ました。この章では、出てきた放射線が\textbf{物にあたったとき}、何が起きるのかを調べます。放射線は、物の中の電子や原子核とぶつかりながら、少しずつエネルギーを渡し、やがて止まるか、物を通りぬけます。その「渡し方」と「止まり方」は、放射線の種類で大きくちがいます。それがわかると、X線写真のしくみも、放射線を止める壁の厚さも、がんの治療で放射線を体の奥のねらった所に集めるしかけも、同じ考え方で説明できます。次の章（原-14）では、ここで学ぶ「放射線が物にエネルギーを渡すしくみ」を使って、放射線をはかり、身を守る方法を考えます。
+
+\begin{omoidasou}
+\bkrecall{原-12}{原子核がこわれる（崩壊する）とき、α線（ヘリウムの原子核）、β線（電子）、γ線（電磁波）が出る。1秒に1個こわれる量が \qty{1}{Bq}（ベクレル）。放射能は $A=\lambda N$（$\lambda$ は崩壊定数、$N$ は原子の数）。半減期 $T_{1/2}=\ln2/\lambda$。}
+\bkrecall{原-2}{光は、エネルギー $E=hf$ のつぶ（光子）の集まりでもある。光子が電子に当たると、電子が飛び出す（光電効果）。光子が電子にぶつかってはね返ると、エネルギーが減る（コンプトン効果）。}
+\bkrecall{原-11}{質量はエネルギーに変わる：$E=mc^2$。電子の質量は $\qty{0.511}{MeV}$ のエネルギーにあたる。$\qty{1}{eV}=\qty{1.60e-19}{J}$、$\qty{1}{MeV}=10^6$ eV。}
+\bkrecall{5-14}{$\dfrac{\dd y}{\dd x}=-ky$ の答えは $y=y_0e^{-kx}$（⑪の減っていく形）。$e^{-0.693}=\dfrac12$、つまり $\ln2=0.693$。}
+\end{omoidasou}
+
+\noindent この章の記号：放射線の強さ（1秒に1 cm$^2$ を通る数）を $I$、物の厚さを $x$、減り方の大きさを表す\textbf{減弱係数}を $\mu$（ミュー）と書きます。第4巻の透磁率 $\mu$、原-9 の移動度 $\mu_{\mathrm n}$ とは別の量です。この章では、原-2〜4 の波長 $\lambda$ は使わず、$\lambda$ は崩壊定数（原-12）だけに使います。放射能 $A$ は原-12 と同じ意味で、質量数は ${}^{137}$Cs のように、核種の記号の左上の数としてだけ書きます。
+
+%% ======================== 物理の道具 ========================
+\bksection{doguu}{物理の道具}
+
+\phstage{me}{放射線は、物の中で何をするか}{2}
+
+\bksubsection{1}{何で止まるか：放射線の透過力}
+\label{ph:原-13:sec1}
+放射線は、目に見えず、においもなく、さわっても感じません。それでも、物を通りぬけたり、物の中の原子をこわしたり（電離）するので、写真のフィルムやセンサーを使えば、通った所がわかります。1895年にレントゲンがX線を見つけたのも、おおいをした管の近くで、光を受けると光る板が、かすかに光ったことからでした（この章のコラム）。
+
+放射線の種類によって、通りぬける力（\textbf{透過力}）は大きくちがいます。\bkidx{とうかりょく}{透過力}環境省の資料は、次のようにまとめています。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 板
+  \fill[bkYellow!25] (30,0) rectangle (31.2,46);
+  \fill[bkGray!35] (52,0) rectangle (56,46);
+  \fill[bkBlue!35!bkGray] (78,0) rectangle (88,46);
+  \fill[bkBlue!18] (104,0) rectangle (124,46);
+  \draw[bkInk, line width=0.4pt] (30,0) rectangle (31.2,46) (52,0) rectangle (56,46) (78,0) rectangle (88,46) (104,0) rectangle (124,46);
+  \node[txn lab, anchor=north, align=center] at (30.6,-1.5) {紙};
+  \node[txn lab, anchor=north, align=center] at (54,-1.5) {アルミ板\\（数 mm）};
+  \node[txn lab, anchor=north, align=center] at (83,-1.5) {鉛・鉄\\の厚い板};
+  \node[txn lab, anchor=north, align=center] at (114,-1.5) {水・コン\\クリート};
+  % α
+  \txnball{(4,40)}{2.2}{bkRed!80!black}{α}
+  \draw[bkRed!80!black, txn arr] (7,40) -- (29.5,40);
+  % β
+  \txnball{(4,29)}{1.6}{bkBlue!80!black}{β}
+  \draw[bkBlue!80!black, txn arr] (6.5,29) -- (51.5,29);
+  % γ
+  \node[txn lab] at (4,18) {γ・X};
+  \txnphoton{(10,18)}{(77.5,18)}
+  \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt, -{Stealth[length=1.8mm]}] (88.5,18) -- (101,18);
+  % 中性子
+  \txnball{(4,7)}{2}{bkGray}{n}
+  \draw[bkInk, txn arr] (7,7) -- (103.5,7);
+\end{tikzpicture}
+\bkfigcaption{放射線の透過力（環境省「放射線による健康影響等に関する統一的な基礎資料」の図をもとにかいた）。α線は紙1枚、β線はアルミ板（数 mm）で止まる。γ線・X線は鉛や鉄の厚い板で弱められるが、ゼロにはならない（破線）。中性子線は、水素を多くふくむ水やコンクリートで止める。}\label{ph:原-13:fig-toka}
+\end{bkfigure}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=17mm] Q[l,m,wd=30mm] Q[c,m,wd=10mm] Q[l,m,wd=30mm] Q[l,m,wd=30mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+放射線 & 正体 & 電荷 & 空気の中で進む距離 & 止めるもの \\
+α線 & ヘリウムの原子核 & $+2e$ & 数 cm & 紙1枚 \\
+β線 & 電子（$\beta^+$ は陽電子） & $-e$ & 数 m & アルミ板 2〜4 mm \\
+γ線・X線 & 電磁波（光子） & 0 & 数十〜数百 m & 鉛・鉄の厚い板で弱める \\
+中性子線 & 中性子 & 0 & 長い & 水・コンクリート \\
+\end{bktable}
+\bktabcaption{放射線の種類と透過力（環境省の基礎資料 1.3節の値）。γ線とX線は、どちらも電磁波で、原子核から出るものをγ線、原子核の外（電子）から出るものをX線とよぶ（原-12 ②）。}\label{ph:原-13:tab-shurui}
+\end{bkcenter}
+
+表\ref{ph:原-13:tab-shurui}から、次のことに気づきます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{電荷をもつ粒子}（α線・β線）は、ある厚さで\textbf{ぴたりと止まる}。電荷が大きく、重くて遅い α線ほど、すぐ止まる。
+\item \textbf{電荷をもたない}γ線・X線は、\textbf{ぴたりとは止まらない}。厚くするほど弱まるが、少しはもれる。だから「止める」ではなく「弱める（遮へいする）」という。
+\item 同じく電荷をもたない中性子線は、重い鉛よりも、軽い水素を多くふくむ水やコンクリートのほうが、よく止める。
+\end{enumerate}
+この3つのちがいが、なぜ生まれるのかを、③〜⑥で1つずつ調べます。
+
+\begin{phmijika}[透過力と、くらしの中の放射線]
+\textbf{X線写真}：X線が手や胸を通りぬける力を使います。通りぬけにくい骨が白く、通りぬけやすい肺が黒くうつります（③）。\par
+\textbf{空港の手荷物検査}：かばんにX線を当て、通りぬけ方のちがいで中身の形と材料を見分けます。\par
+\textbf{厚さ計}：工場では、紙やフィルムの厚さを、β線がどれだけ通りぬけるかで、止めずにはかっています（⑪）。
+\end{phmijika}
+
+\bksubsection{2}{物をこわすしくみ：電離}
+\label{ph:原-13:sec2}
+放射線が「物をこわす」とは、どういうことでしょう。原子は、まん中の原子核と、そのまわりの電子でできています（原-1）。放射線が原子のそばを通ると、電子をはじき飛ばして、原子を「＋の電気をもつイオン」と「自由な電子」に分けます。これを\textbf{電離}といいます。\bkidx{でんり}{電離}電離する力をもつ放射線を、\textbf{電離放射線}とよびます。ふつう「放射線」といえば、この電離放射線のことです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % α：太く短い道すじ
+  \begin{scope}
+    \txnball{(3,12)}{2.2}{bkRed!80!black}{α}
+    \draw[bkRed!80!black, line width=1.4pt] (6,12) -- (52,12);
+    \foreach \x in {8,10.5,...,51} {\node[font=\sffamily\scriptsize, text=bkRed!80!black] at (\x,15) {$+$}; \node[font=\sffamily\scriptsize, text=bkBlue!80!black] at (\x+0.8,9) {$-$};}
+    \node[txn lab, anchor=north] at (28,5.5) {α線：道すじにぎっしり電離し、すぐ止まる};
+  \end{scope}
+  % β：細いジグザグの道すじ
+  \begin{scope}[shift={(66,0)}]
+    \txnball{(3,12)}{1.6}{bkBlue!80!black}{β}
+    \draw[bkBlue!80!black, line width=0.8pt] (5,12) -- (15,15) -- (24,10) -- (33,16) -- (42,11) -- (54,14);
+    \foreach \x/\y in {11/17,22/7.5,31/18.5,46/9} {\node[font=\sffamily\scriptsize, text=bkRed!80!black] at (\x,\y) {$+$}; \node[font=\sffamily\scriptsize, text=bkBlue!80!black] at (\x+2,\y) {$-$};}
+    \node[txn lab, anchor=north] at (30,5.5) {β線：まばらに電離、ジグザグに進む};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{電離のようす（模式図。$+$ はイオン、$-$ は飛び出した電子）。α線は道すじにぎっしり電離し、すぐにエネルギーを使いはたす。β線はまばらに電離しながら、向きを変えて進む。}\label{ph:原-13:fig-denri}
+\end{bkfigure}
+
+空気の分子から電子を1個はがして、イオンと電子の1組を作るのに使われるエネルギーは、平均して約\qty{34}{eV}です（電子やγ線の場合）。\qty{1}{MeV}の放射線が空気の中で止まるまでに、およそ
+\[ \frac{\qty{1e6}{eV}}{\qty{34}{eV}}\approx\num{29000}\ \text{組} \]
+のイオンと電子ができます。1組ごとのエネルギー 34 eV は、分子の中の原子どうしの結びつきのエネルギー（数 eV）の何倍もあります。だから、放射線が体の細胞を通ると、DNA などの分子の結合が切れることがあります。これが、放射線が生き物に影響を与えるもとです（原-14 ⑪）。
+
+\phboxhead{電離するしかたは2通り}
+α線やβ線のように\textbf{電荷をもつ粒子}は、通り道の電子をクーロン力（電-1）で直接引っぱったり押したりして、次々に電離します。これを\textbf{直接電離}といいます。一方、\textbf{電荷をもたない}γ線・X線と中性子線は、ふだんは電子を引っぱりません。たまに1回ぶつかったときに、電子（γ線・X線の場合）や原子核（中性子線の場合）にまとめてエネルギーを渡し、はじき出されたその粒子が、まわりを電離します。これを\textbf{間接電離}といいます。\bkidx{かんせつでんり}{間接電離}
+\begin{bkcenter}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[draw=bkInk, line width=0.5pt, rounded corners=1mm, inner sep=2pt, txn lab, align=center, fill=bkRed!8] (a) at (0,10) {電荷をもつ\\α線・β線・陽子};
+  \node[draw=bkInk, line width=0.5pt, rounded corners=1mm, inner sep=2pt, txn lab, align=center, fill=bkOrange!10] (g) at (0,-4) {電荷をもたない\\γ線・X線};
+  \node[draw=bkInk, line width=0.5pt, rounded corners=1mm, inner sep=2pt, txn lab, align=center, fill=bkGray!12] (n) at (0,-17) {電荷をもたない\\中性子線};
+  \node[draw=bkInk, line width=0.5pt, rounded corners=1mm, inner sep=2pt, txn lab, align=center] (e) at (50,-4) {はじき出された電子};
+  \node[draw=bkInk, line width=0.5pt, rounded corners=1mm, inner sep=2pt, txn lab, align=center] (p) at (50,-17) {はじき出された原子核\\（水素なら陽子）};
+  \node[draw=bkInk, line width=0.8pt, rounded corners=1mm, inner sep=3pt, txn lab, align=center, fill=bkTheme!8] (d) at (98,-4) {まわりの原子を\\次々に電離};
+  \draw[txn arr, bkInk] (a.east) -- node[txn lab, above, sloped] {直接電離} (d.north west);
+  \draw[txn arr, bkInk] (g) -- node[txn lab, above] {1回ぶつかる} (e);
+  \draw[txn arr, bkInk] (n) -- node[txn lab, above] {1回ぶつかる} (p);
+  \draw[txn arr, bkInk] (e) -- (d);
+  \draw[txn arr, bkInk] (p.east) -- (d.south west);
+\end{tikzpicture}
+\bkfigcaption{直接電離と間接電離。最後はどれも「電荷をもつ粒子が、まわりを電離する」形になる。}\label{ph:原-13:fig-kansetsu}
+\end{bkcenter}
+
+①の3つのちがいは、ここから説明できます。電荷をもつ粒子は、通り道で\textbf{休まず}電子を引っぱり続けるので、少しずつ、しかし確実にエネルギーを失い、決まった距離で止まります（⑤）。電荷をもたない光子は、\textbf{1回ぶつかるかどうか}が確率で決まるので、運よくぶつからずに通りぬけるものが、いつも少し残ります（③）。
+
+\begin{phmodel}[放射線と物のやりとり]
+\phignore{原子どうしの結びつき（化学結合）が、電離のしかたに与える小さな影響。物の温度。}
+\phassume{物は、原子核と電子がばらばらに散らばった集まりで、放射線は1個ずつの電子や原子核とやりとりする。}
+\phlimit{とても低いエネルギー（数十 eV より小さい）では、結晶の形や化学結合が効いてくる（原-8）。}
+\end{phmodel}
+
+\Needspace{12\baselineskip}\phstage{te}{減り方と止まり方を、数で表す}{3}
+
+\bksubsection{3}{光子は「同じ割合ずつ」減る：減弱と半価層}
+\label{ph:原-13:sec3}
+γ線やX線の光子が、厚さ $x$ の板を通るときを考えます。板を、とてもうすい層に分けてみましょう。光子1個が、うすい厚さ $\Delta x$ の層の中で、原子とぶつかって消える（または向きを変えて、まっすぐの道からはずれる）確率は、層がうすいほど小さく、厚さ $\Delta x$ に比例します。その比例の係数を $\mu$ と書くと、確率は $\mu\,\Delta x$ です。
+
+強さ $I$（1秒に1 cm$^2$ を通りぬける光子の数）の光子が層に入ると、そのうち $\mu\,\Delta x$ の割合がぶつかって減るので、
+\[ \Delta I=-\mu I\,\Delta x \qquad\text{つまり}\qquad \frac{\Delta I}{\Delta x}=-\mu I \]
+です。これは、「減る速さが、いまある量に比例する」という、半減期の崩壊（原-12 ③）と同じ形の式です。層を限りなくうすくすると、微分方程式 $\dfrac{\dd I}{\dd x}=-\mu I$ になり、その答えは（5-14⑪）、
+\pheq{I=I_0e^{-\mu x}}{1/cm × cm ＝ 1（指数は数）}
+\label{ph:原-13:gensui}です。$I_0$ は板に入る前の強さです。$\mu$ を\textbf{減弱係数}（線減弱係数）といい、\bkidx{げんじゃくけいすう}{減弱係数}単位は 1/cm（cm$^{-1}$）です。$\mu x$ は単位のない数になります。
+
+\begin{phflow}[1つの層での確率から、減弱の式へ]
+\phflowrow{$\dfrac{\dd I}{\dd x}=-\mu I$}{$\mu$ は厚さによらない\\（一様な物）}{$I=I_0e^{-\mu x}$}
+\phflowrow{$I=I_0e^{-\mu x}$}{$I=\tfrac12I_0$\\となる厚さ}{$x_{1/2}=\dfrac{\ln2}{\mu}\approx\dfrac{0.693}{\mu}$}
+\end{phflow}
+
+\begin{phyomi}[$I=I_0e^{-\mu x}$]
+「厚さ $x$ を通ったあとに残る光子の割合は $e^{-\mu x}$」と読みます。$\mu$ は「1 cm 進むあいだにぶつかる確率」の目安で、$\mu$ が大きい物ほど、光子は早く減ります。$1/\mu$ は、光子がぶつかるまでに進む平均の距離（平均自由行程。⑧）です。式は「何枚目の層でも、入ってきた光子のうち同じ割合が減る」ことだけから出てきたので、やってみようの紙と光でも同じ形になったのです。
+\end{phyomi}
+
+\phboxhead{半価層：半分にする厚さ}
+強さがちょうど半分になる厚さを\textbf{半価層}といい、\bkidx{はんかそう}{半価層}$x_{1/2}$ と書きます。$e^{-\mu x_{1/2}}=\tfrac12$ の両辺の自然対数をとって、
+\pheq{x_{1/2}=\frac{\ln2}{\mu}}{cm ＝ 1 ÷ (1/cm)}
+\label{ph:原-13:hankaso}です。半価層の板を1枚重ねるごとに、強さは $\tfrac12$、$\tfrac14$、$\tfrac18$…になります。これは、半減期（3-11④）とまったく同じ考え方です。時間を厚さに、半減期を半価層に読みかえればよいのです。同じように、$\tfrac1{10}$ にする厚さを\textbf{1/10 価層}といい、$\ln10/\mu\approx2.30/\mu$ です。
+
+\begin{phbaisuru}{板の厚さ $x$}
+\noindent\begin{minipage}[c]{0.45\linewidth}\raggedright
+残る割合は2倍ではなく、\textbf{2乗}になります。1 cm で 0.80 残る物なら、2 cm では $0.80\times0.80=0.64$、4 cm では $0.64^2=0.41$ です。厚さを足し算すると、残る割合はかけ算になるのです。グラフは、60 keV の X線が筋肉などの軟組織を通るときの値（$\mu=\qty{0.217}{cm^{-1}}$）。破線は、もし「同じ量ずつ」減るとしたら、の直線です。指数関数の曲線は、どこまで行っても0になりません。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=50mm, height=42mm, xmin=0, xmax=12.5, ymin=0, ymax=1.1, xtick={0,2,4,6,8,10,12}, ytick={0.25,0.5,1}, yticklabels={0.25,0.5,1}, xlabel={厚さ $x$（cm）}, ylabel={残る割合}]
+  \addplot[bkcurve, domain=0:12, samples=60] {exp(-0.217*x)};
+  \addplot[bkGray, dashed, line width=0.8pt, domain=0:4.61] {1-0.217*x};
+  \draw[bkGray, dash pattern=on 1.5pt off 1pt, line width=0.5pt] (axis cs:3.19,0) -- (axis cs:3.19,0.5) -- (axis cs:0,0.5);
+  \draw[bkGray, dash pattern=on 1.5pt off 1pt, line width=0.5pt] (axis cs:6.39,0) -- (axis cs:6.39,0.25) -- (axis cs:0,0.25);
+  \fill[bkBlue] (axis cs:2,0.648) circle (1.5pt) (axis cs:4,0.420) circle (1.5pt);
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:3.3,0.52) {半価層 3.2 cm};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:6.5,0.27) {2枚で $\tfrac14$};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\begin{phbaisuru}{物の密度 $\rho$}
+同じ物質を2倍にぎっしりつめると、1 cm の中の原子の数が2倍になるので、ぶつかる確率 $\mu$ も2倍になります。そこで、$\mu$ を密度 $\rho$ でわった $\mu/\rho$（単位 cm$^2$/g）を\textbf{質量減弱係数}とよび、\bkidx{しつりょうげんじゃくけいすう}{質量減弱係数}物質の種類とエネルギーだけで決まる値として、表にまとめてあります（米国の国立標準技術研究所 NIST の表）。使うときは $\mu=(\mu/\rho)\times\rho$ にもどします。水と氷と水蒸気は、$\mu/\rho$ が同じで、$\mu$ は密度の分だけちがいます。
+\end{phbaisuru}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=30mm] Q[c,m,wd=17mm] Q[c,m,wd=19mm] Q[c,m,wd=19mm] Q[c,m,wd=19mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+物質 & 密度 $\rho$ 〔g/cm$^3$〕 & $\mu/\rho$〔cm$^2$/g〕 60 keV & $\mu/\rho$〔cm$^2$/g〕 0.662 MeV & $\mu/\rho$〔cm$^2$/g〕 1.25 MeV \\
+骨（緻密な骨） & 1.92 & 0.315 & 0.0833 & ― \\
+軟組織（筋肉など） & 1.06 & 0.205 & 0.0887 & ― \\
+水 & 1.00 & 0.206 & 0.0857 & 0.0632 \\
+コンクリート & 2.30 & 0.266 & 0.0788 & 0.0581 \\
+アルミニウム & 2.699 & 0.278 & 0.0746 & 0.0550 \\
+鉄 & 7.874 & 1.21 & 0.0735 & 0.0535 \\
+鉛 & 11.35 & 5.02 & 0.111 & 0.0588 \\
+\end{bktable}
+\bktabcaption{質量減弱係数（NIST の表。0.662 MeV は 0.6 MeV と 0.8 MeV の値から補間した）。骨・軟組織は国際放射線単位測定委員会（ICRU）の標準の組成。}\label{ph:原-13:tab-mu}
+\end{bkcenter}
+
+表\ref{ph:原-13:tab-mu}を見ると、0.662 MeV（セシウム137 のγ線）では、鉛を除いて $\mu/\rho$ がどれもほぼ 0.08 cm$^2$/g です。このエネルギーでは、遮へいの力はほぼ「1 cm$^2$ あたりの重さ」で決まり、\textbf{重い（密度の大きい）物ほど、うすくてすむ}のです。ところが 60 keV では、鉄や鉛の $\mu/\rho$ が水の何倍も大きくなります。低いエネルギーでは、原子番号の大きい原子が特に強く光子を止めるのです（④の光電効果）。
+
+\phboxhead{\bkhatenaref の答え}
+\label{ph:原-13:hatena}X線写真に使う X線のエネルギーを 60 keV として、表\ref{ph:原-13:tab-mu}から減弱係数を求めます。
+\[ \mu_{\text{骨}}=0.315\times1.92=\qty{0.60}{cm^{-1}},\qquad \mu_{\text{軟組織}}=0.205\times1.06=\qty{0.22}{cm^{-1}} \]
+骨は軟組織の約2.8倍、X線を止めます。厚さ 2 cm を通って残る割合は、骨が $e^{-0.60\times2}=0.30$（30 \%）、軟組織が $e^{-0.22\times2}=0.65$（65 \%）です（例題1）。骨にはカルシウム（原子番号20）やリン（15）が多くふくまれ、密度も大きいので、軟組織（水素・炭素・酸素が中心）よりずっと強く X線を止めるのです。
+
+X線写真のセンサー（昔はフィルム）は、\textbf{X線がたくさん届いた所ほど黒く}なります。骨の後ろには X線が少ししか届かないので、白いまま残ります。空気が多い肺は X線をほとんど止めないので、真っ黒にうつります。\textbf{骨が白いのは、骨が X線の「影」を作っているから}です。
+
+\begin{phmodel}[狭いビームの減弱]
+\phignore{いったん向きを変えた光子が、まわり道をして、またセンサーに届くこと（⑩のビルドアップ）。}
+\phassume{光子は細い1本のビームで進み、1回でもぶつかったら、ビームから消える。物は一様で、$\mu$ は場所によらない。}
+\phlimit{広いビームや厚い遮へい（散乱した光子も届くので、残る割合は $e^{-\mu x}$ より大きい）。X線管の X線のように、いろいろなエネルギーがまざっているとき（低いエネルギーが先に減り、だんだん通りぬけやすくなる）。}
+\end{phmodel}
+
+\phboxhead{表計算で、光子を1個ずつ進める}
+減弱の式を、光子1個ずつの「くじ引き」で確かめます。光子がぶつかるまでに進む距離は、乱数 $r$（0以上1未満）を使って $s=-\ln(1-r)/\mu$ で作れます（このように作ると、$s$ が $x$ をこえる確率がちょうど $e^{-\mu x}$ になります）。表計算で、軟組織（$\mu=\qty{0.217}{cm^{-1}}$）に 60 keV の光子を1000個入れてみます（3-17 の乱数）。
+\begin{bkcenter}
+\bksheet{4}{24}{%
+1 & 光子 & 乱数 $r$ & 進む距離（cm） & 2 cm より先？ \\
+2 & 1 & 0.623 & 4.49 & 1 \\
+3 & 2 & 0.742 & 6.24 & 1 \\
+4 & 3 & 0.795 & 7.30 & 1 \\
+5 & 4 & 0.942 & 13.12 & 1 \\
+6 & 5 & 0.740 & 6.21 & 1 \\
+7 & 6 & 0.922 & 11.75 & 1 \\
+8 & 7 & 0.029 & 0.14 & 0 \\
+9 & 8 & 0.466 & 2.89 & 1 \\}
+\bktabcaption{B列は \texttt{=RAND()}、C列は \texttt{=-LN(1-B2)/0.217}、D列は \texttt{=IF(C2>2,1,0)}。1001 行まで下へ写し、D列の合計を数える。乱数なので、計算するたびに少し変わる。}\label{ph:原-13:tab-mc}
+\end{bkcenter}
+1000個で計算した1回の結果は、2 cm より先まで行った光子が641個、5 cm では326個、10 cm では105個でした。式 $1000e^{-0.217x}$ の 648個・338個・114個と、よく合います。ずれは、数えた数の平方根（$\sqrt{641}\approx25$）くらいの、くじ引きのばらつきです（原-14 ③）。この方法を\textbf{モンテカルロ法}といい、\bkidx{もんてかるろほう}{モンテカルロ法}散乱して向きを変える光子まで追いかければ、⑩のビルドアップも計算できます。医療や原子炉の遮へいの設計では、この方法で何億個もの粒子を追いかけます。
+
+\Needspace{7\baselineskip}\bksubsection{4}{光子が物にぶつかる3つのしかた}
+\label{ph:原-13:sec4}
+光子が物にぶつかって、エネルギーを渡すしかたには、主に次の3つがあります。$\mu$ は、この3つのぶつかりやすさの合計です。
+
+\phboxhead{光電効果：光子が消えて、電子が飛び出す}
+光子が、原子の内側の電子に全部のエネルギーを渡して消え、電子が飛び出します。原-2 で学んだ金属の光電効果と同じしくみで、ここでは原子に強くしばられた内側の電子でも起きます。エネルギーの低い光子と、\textbf{原子番号 $Z$ の大きい原子}で特によく起きます。ぶつかりやすさは、おおよそ $Z^4$ から $Z^5$ に比例し、光子のエネルギーの3乗に反比例するといわれます（目安）。鉛（$Z=82$）が X線をよく止め、カルシウムをふくむ骨が X線写真に白く写るのは、主に光電効果のためです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 光電効果
+  \begin{scope}
+    \fill[bkGray!12] (2,0) rectangle (40,34);
+    \txnphoton{(3,20)}{(17,20)}
+    \filldraw[fill=bkRed!60, draw=bkInk, line width=0.4pt] (21,20) circle (1.8);
+    \draw[bkGray, line width=0.4pt] (21,20) circle (4.5) (21,20) circle (7.5);
+    \fill[bkBlue!80!black] (21,15.5) circle (0.8);
+    \draw[bkBlue!80!black, txn arr] (22,15) -- (36,6);
+    \node[txn lab, anchor=west] at (29,12) {電子};
+    \node[txn lab, anchor=south] at (21,34.5) {光電効果};
+    \node[txn lab, anchor=north, align=center] at (21,-1) {光子は消え、\\電子が飛び出す};
+  \end{scope}
+  % コンプトン散乱
+  \begin{scope}[shift={(44,0)}]
+    \fill[bkGray!12] (0,0) rectangle (40,34);
+    \txnphoton{(1,20)}{(18,20)}
+    \fill[bkBlue!80!black] (20,20) circle (0.8);
+    \txnphoton{(21,21)}{(36,31)}
+    \draw[bkBlue!80!black, txn arr] (21,19) -- (35,9);
+    \node[txn lab, anchor=west] at (27,8) {電子};
+    \node[txn lab, anchor=west] at (2,29) {弱い光子};
+    \node[txn lab, anchor=south] at (20,34.5) {コンプトン散乱};
+    \node[txn lab, anchor=north, align=center] at (20,-1) {光子は向きを変え、\\エネルギーが減る};
+  \end{scope}
+  % 電子対生成
+  \begin{scope}[shift={(88,0)}]
+    \fill[bkGray!12] (0,0) rectangle (40,34);
+    \txnphoton{(1,20)}{(16,20)}
+    \filldraw[fill=bkRed!60, draw=bkInk, line width=0.4pt] (19,20) circle (1.8);
+    \draw[bkBlue!80!black, txn arr] (21,21) -- (36,29);
+    \draw[bkRed!80!black, txn arr] (21,19) -- (36,11);
+    \node[txn lab, anchor=east] at (34,31) {電子};
+    \node[txn lab, anchor=east] at (34,8.5) {陽電子};
+    \node[txn lab, anchor=south] at (20,34.5) {電子対生成};
+    \node[txn lab, anchor=north, align=center] at (20,-1) {原子核の近くで、\\電子と陽電子に};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{光子が物にぶつかる3つのしかた（波の矢印が光子、赤い丸が原子核）。}\label{ph:原-13:fig-3sogo}
+\end{bkfigure}
+
+\phboxhead{コンプトン散乱：光子がはね返って、弱くなる}
+光子が電子とビリヤードの玉のようにぶつかり、電子をはじき飛ばして、自分は向きを変え、エネルギーが減ります（原-2 ⑦で読み、原-11 ⑧で導いた式）。エネルギー $E$ の光子が角 $\theta$ だけ向きを変えると、あとのエネルギー $E'$ は
+\pheq{E'=\frac{E}{1+\dfrac{E}{m_{\mathrm e}c^2}(1-\cos\theta)}}{MeV ＝ MeV ÷ 1}
+です（$m_{\mathrm e}c^2=\qty{0.511}{MeV}$）。セシウム137 の 0.662 MeV の光子なら、真後ろ（$\theta=\ang{180}$）にはね返ると 0.184 MeV になり、電子は差の 0.478 MeV をもらいます（原-2 例題10）。0.1 MeV から数 MeV のγ線では、どの物でも、このコンプトン散乱がいちばん多く起きます。電子の数は質量にほぼ比例するので、このエネルギーでは $\mu/\rho$ が物質によらずほぼ同じになるのです（表\ref{ph:原-13:tab-mu}の 0.662 MeV の列）。
+
+\phboxhead{電子対生成：光子が、電子と陽電子に変わる}
+\textbf{エネルギーが 1.022 MeV より大きい}光子は、原子核の近くで消えて、電子と陽電子（電子と同じ質量で＋の電荷をもつ、電子の反粒子）の1組に変わることがあります。電子と陽電子の質量は合わせて $2m_{\mathrm e}c^2=2\times0.511=\qty{1.022}{MeV}$ のエネルギーにあたるので（原-11 ②）、それより小さい光子では起きません。\textbf{エネルギーが質量に変わる}、目に見える例です。できた陽電子は、すぐに物の中の電子と出会って、2つとも消え、0.511 MeV の光子2個を、反対向きに出します（\textbf{対消滅}）。\bkidx{ついしょうめつ}{対消滅}病院の PET 検査は、体の中で出た陽電子が作るこの「反対向きの2個の光子」を、まわりの検出器で同時にとらえて、がんの場所を探します（例題6）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, xmode=log, ymode=log, width=104mm, height=62mm, xmin=0.03, xmax=3, ymin=0.03, ymax=40, xtick={0.04,0.06,0.1,0.2,0.4,0.662,1,2}, xticklabels={0.04,0.06,0.1,0.2,0.4,0.662,1,2}, ytick={0.05,0.1,0.5,1,5,10}, yticklabels={0.05,0.1,0.5,1,5,10}, xlabel={光子のエネルギー（MeV）}, ylabel={$\mu/\rho$（cm$^2$/g）}, every axis x label/.style={at={(axis description cs:0.5,-0.14)}, anchor=north, font=\sffamily\small}]
+  \draw[bkOrange, line width=1.7pt] (axis cs:0.04,14.36) -- (axis cs:0.05,8.041) -- (axis cs:0.06,5.021) -- (axis cs:0.08,2.419) -- (axis cs:0.088,1.910);
+  \draw[bkOrange, line width=1.7pt] (axis cs:0.088,7.683) -- (axis cs:0.1,5.549) -- (axis cs:0.15,2.014) -- (axis cs:0.2,0.9985) -- (axis cs:0.3,0.4031) -- (axis cs:0.4,0.2323) -- (axis cs:0.5,0.1614) -- (axis cs:0.6,0.1248) -- (axis cs:0.8,0.0887) -- (axis cs:1.0,0.07102) -- (axis cs:1.25,0.05876) -- (axis cs:1.5,0.05222) -- (axis cs:2.0,0.04606) -- (axis cs:3.0,0.04234);
+  \draw[bkBlue, line width=1.7pt, dashed] (axis cs:0.04,0.2683) -- (axis cs:0.05,0.2269) -- (axis cs:0.06,0.2059) -- (axis cs:0.08,0.1837) -- (axis cs:0.1,0.1707) -- (axis cs:0.15,0.1505) -- (axis cs:0.2,0.137) -- (axis cs:0.3,0.1186) -- (axis cs:0.4,0.1061) -- (axis cs:0.5,0.09687) -- (axis cs:0.6,0.08956) -- (axis cs:0.8,0.07865) -- (axis cs:1.0,0.07072) -- (axis cs:1.25,0.06323) -- (axis cs:1.5,0.05754) -- (axis cs:2.0,0.04942) -- (axis cs:3.0,0.03969);
+  \draw[bkGreen, line width=1.7pt, densely dotted] (axis cs:0.04,0.6655) -- (axis cs:0.05,0.4242) -- (axis cs:0.06,0.3148) -- (axis cs:0.08,0.2229) -- (axis cs:0.1,0.1855) -- (axis cs:0.15,0.148) -- (axis cs:0.2,0.1309) -- (axis cs:0.3,0.1113) -- (axis cs:0.4,0.09908) -- (axis cs:0.5,0.09022) -- (axis cs:0.6,0.08332) -- (axis cs:0.8,0.07308) -- (axis cs:1.0,0.06566) -- (axis cs:1.25,0.05871) -- (axis cs:1.5,0.05346) -- (axis cs:2.0,0.04607);
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at (axis cs:0.16,2.6) {鉛（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:0.092,9) {K 吸収端};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:0.031,0.95) {骨（点線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:0.25,0.085) {水（破線）};
+  \node[font=\sffamily\footnotesize, align=center, anchor=south, inner sep=1pt] at (axis cs:1.2,0.3) {コンプトン散乱が\\主な所};
+  \node[font=\sffamily\footnotesize, align=center, anchor=south west, inner sep=1pt] at (axis cs:0.031,0.034) {光電効果が\\主な所};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{質量減弱係数のエネルギーによる変わり方（NIST の表。両方の軸がけたの目もり）。低いエネルギーでは光電効果のため、鉛が水の何十倍も大きい。0.5〜2 MeV では、コンプトン散乱のため3つともほぼ同じになる。鉛の 88 keV の段は、鉛のいちばん内側（K 殻）の電子をはがせるようになるエネルギー（K 吸収端）。}\label{ph:原-13:fig-murho}
+\end{bkfigure}
+
+\begin{phbaisuru}[大きく]{原子番号 $Z$}
+低いエネルギー（100 keV ほど）では、光電効果のため、$Z$ の大きい原子ほど急に光子を止めやすくなります。100 keV の X線では、同じ厚さの鉛は、水の約370倍も強く止めます（例題5）。病院で X線をあつかう人が着る\textbf{鉛のエプロン}が、うすくても役に立つのはこのためです。一方、1 MeV ほどのγ線ではコンプトン散乱が主になり、$\mu/\rho$ は物質によらずほぼ同じなので、「重さ」で止めるしかありません。
+\end{phbaisuru}
+
+\Needspace{7\baselineskip}\bksubsection{5}{電荷をもつ粒子は、決まった距離で止まる}
+\label{ph:原-13:sec5}
+α線や β線、陽子のような電荷をもつ粒子は、物の中を進むあいだ、まわりの電子を休まずクーロン力で引っぱり、電離させ続けます。1回ごとに失うエネルギーは小さく（数十 eV ほど）、それが何万回も積み重なって、少しずつ遅くなり、やがて止まります。止まるまでに進む距離を\textbf{飛程}といいます。\bkidx{ひてい}{飛程}
+
+\phboxhead{止める力は $z^2/v^2$ に比例する}
+電荷 $ze$ の粒子が速さ $v$ で電子のそばを通りすぎるとき、電子が受ける力の大きさはクーロンの法則で $z$ に比例し、力がはたらく時間は、通りすぎる時間なので $1/v$ に比例します。電子がもらう運動量（力×時間：力-3 ①）は $z/v$ に比例し、電子がもらうエネルギーはその2乗の $z^2/v^2$ に比例します。だから、粒子が 1 cm 進むあいだに失うエネルギー（\textbf{阻止能}）は、おおよそ
+\pheq{(\text{1 cm で失うエネルギー})\ \propto\ \frac{z^2}{v^2}\times(\text{1 cm$^3$ の中の電子の数})}{MeV/cm}
+となります（⑦でくわしく読みます）。この式から、次のことがわかります。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{電荷が大きいほど、すぐ止まる}：α線（$z=2$）は、同じ速さの陽子（$z=1$）の4倍のエネルギーを失う。
+\item \textbf{遅いほど、すぐ止まる}：同じ運動エネルギーなら、重い α線は電子よりずっと遅いので、電子の何百倍も強く止められる。
+\item \textbf{遅くなるほど、ますます強く止められる}：止まる直前にエネルギーをいちばん多く落とす（⑦のブラッグピーク）。
+\end{enumerate}
+
+\phboxhead{α線と β線の飛程}
+α線の空気中の飛程は、エネルギー $E$（MeV）が 4〜7 MeV のとき、およそ
+\[ R\approx0.318\,E^{3/2}\ \text{cm}\qquad\text{（ガイガーの式。経験式）} \]
+で表されます。5.3 MeV（ポロニウム210 の α線）なら約 3.9 cm です（例題7）。この空気の重さは、1 cm$^2$ あたり約 5 mg です。ふつうのコピー用紙1枚は、1 cm$^2$ あたり 6〜7 mg ほど（空気約 5 cm 分）あるので、紙1枚で止まるのです。体の皮ふでは、いちばん外側の死んだ細胞の層（数十 \si{\micro m}）で止まります。だから、α線は体の外にあるときはほとんど影響がありませんが、α線を出す物を体の中に取りこむと、すぐそばの細胞に集中してエネルギーを渡します（原-14 ⑧）。
+
+β線は電子なので軽く、原子にぶつかるたびに大きく向きを変えて、ジグザグに進みます（図\ref{ph:原-13:fig-denri}）。最大のエネルギー $E$（MeV）が 0.01〜2.5 MeV の β線が届く最大の深さは、物の種類によらず「1 cm$^2$ あたりの重さ」で、およそ
+\[ R\approx0.412\,E^{\,1.265-0.0954\ln E}\ \text{g/cm$^2$}\qquad\text{（カッツ・ペンフォールドの式。経験式）} \]
+で表されます。2.28 MeV（イットリウム90）の β線なら約 \qty{1.1}{g/cm^2} で、アルミ（密度 2.70 g/cm$^3$）では約 4 mm、水では約 1 cm です（例題8）。環境省の資料の「アルミ板 2〜4 mm で止まる」は、ふつうの β線のエネルギーで、この値に合います。
+
+\begin{phmodel}[まっすぐ進んで、少しずつ止まる粒子]
+\phignore{粒子が向きを変えること。止まる距離が粒子ごとに少しずつばらつくこと。}
+\phassume{粒子は小さな損失を何万回も重ねて、なめらかにエネルギーを失い、まっすぐ進む。}
+\phlimit{電子（β線）：軽いので大きく向きを変え、ジグザグに進む。道のりの長さ（NIST の表では 2.28 MeV でアルミ 1.4 g/cm$^2$）は、届く深さ（1.1 g/cm$^2$）より長い。電子は止まるとき X線（制動放射）も出す。}
+\end{phmodel}
+
+\Needspace{7\baselineskip}\bksubsection{6}{中性子は、軽い原子核で止まる}
+\label{ph:原-13:sec6}
+中性子は電荷をもたないので、電子を引っぱりません。原子核に直接ぶつかったときだけ、エネルギーを失います。原子核の直径は原子の1万分の1から10万分の1ほどしかないので、中性子はなかなかぶつからず、物の奥まで入りこみます。
+
+ぶつかったとき、どれだけエネルギーを失うかは、相手の重さで決まります。ビリヤードの玉（力-3 ④）で考えましょう。同じ重さの玉に正面からぶつかると、ぶつかった玉は止まり、全部のエネルギーを相手に渡します。ところが、ボウリングの玉に当たったピンポン玉は、ほとんど同じ速さではね返ります。中性子とほぼ同じ質量の\textbf{水素の原子核（陽子）}は、1回で中性子を止めることさえあるのに、重い鉛やウランの原子核にぶつかっても、中性子はほとんど遅くなりません。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \txnball{(4,14)}{2.2}{bkGray}{n}
+    \draw[bkInk, txn arr] (7,14) -- (17,14);
+    \txnball{(22,14)}{2.2}{bkRed!70!black}{p}
+    \node[txn lab, anchor=south] at (13,18) {前};
+    \draw[bkGray, line width=0.5pt] (32,4) -- (32,24);
+    \txnball{(40,14)}{2.2}{bkGray}{n}
+    \txnball{(48,14)}{2.2}{bkRed!70!black}{p}
+    \draw[bkInk, txn arr] (51,14) -- (61,14);
+    \node[txn lab, anchor=south] at (50,18) {あと};
+    \node[txn lab, anchor=north, align=center] at (32,3) {水素（陽子）：中性子が止まり、\\相手が同じ速さで動き出す};
+  \end{scope}
+  \begin{scope}[shift={(68,0)}]
+    \txnball{(4,14)}{2.2}{bkGray}{n}
+    \draw[bkInk, txn arr] (7,14) -- (15,14);
+    \filldraw[fill=bkBlue!55!black, draw=bkInk, line width=0.5pt] (22,14) circle (5.5);
+    \node[font=\sffamily\bfseries\scriptsize, text=white] at (22,14) {鉛};
+    \node[txn lab, anchor=south] at (12,18) {前};
+    \draw[bkGray, line width=0.5pt] (31,4) -- (31,24);
+    \txnball{(44,14)}{2.2}{bkGray}{n}
+    \draw[bkInk, txn arr] (41,14) -- (34,14);
+    \filldraw[fill=bkBlue!55!black, draw=bkInk, line width=0.5pt] (52,14) circle (5.5);
+    \node[font=\sffamily\bfseries\scriptsize, text=white] at (52,14) {鉛};
+    \node[txn lab, anchor=south] at (46,20) {あと};
+    \node[txn lab, anchor=north, align=center] at (31,3) {鉛：中性子はほぼ同じ速さで\\はね返り、エネルギーを失わない};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{中性子（n）の正面衝突。軽い原子核ほど、1回で多くのエネルギーをうばう。}\label{ph:原-13:fig-neutron}
+\end{bkfigure}
+このため、中性子を止めるには、\textbf{水素を多くふくむ物}（水・コンクリート・ポリエチレン）を使います。原子炉では、核分裂で生まれた速い中性子（約 2 MeV）を、水などで何十回もぶつけて、まわりの原子とつり合った遅い中性子（\textbf{熱中性子}、約 0.025 eV）まで減速させます。\bkidx{ねつちゅうせいし}{熱中性子}遅い中性子は原子核に吸いこまれやすく、そのとき γ線を出したり（⑨の放射化）、ウラン235 を分裂させたりします（原-15）。何回ぶつかると遅くなるかは、⑧で計算します。
+
+\Needspace{8\baselineskip}
+\begin{phmijika}[ここまでのまとめ：放射線ごとの「渡し方」]
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] Q[l,m,wd=40mm] Q[l,m,wd=50mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+放射線 & 主なやりとりの相手 & 減り方・止まり方 \\
+α線・陽子 & 電子（クーロン力で引く） & 決まった飛程で止まる。止まる直前に多く落とす \\
+β線（電子） & 電子（引く・はね返す） & ジグザグに進み、ある深さまでで止まる \\
+γ線・X線 & 電子（3つのしかた） & $e^{-\mu x}$ で減る。ゼロにはならない \\
+中性子線 & 原子核（ぶつかる・吸収） & 軽い原子核で減速し、最後に吸収される \\
+\end{bktable}
+\end{bkcenter}
+\end{phmijika}
+
+\phkokomade
+
+\Needspace{9\baselineskip}\phstage{shiki}{阻止能・断面積・放射化を式で読む}{5}
+
+\bksubsection{7}{阻止能とブラッグピーク：陽子線でがんをねらう}
+\label{ph:原-13:sec7}
+⑤の「止める力」を、専門書の式で読みます。電荷 $ze$、速さ $v=\beta c$ の重い粒子が、1 cm$^3$ に $n_{\mathrm e}$ 個の電子をふくむ物を進むとき、単位の長さあたりに失うエネルギー（\textbf{阻止能} $S$）は、\bkidx{そしのう}{阻止能}
+\pheq{S=-\frac{\dd E}{\dd x}=\frac{4\pi n_{\mathrm e}z^2}{m_{\mathrm e}v^2}\Bigl(\frac{e^2}{4\pi\varepsilon_0}\Bigr)^{2}\Bigl[\ln\frac{2m_{\mathrm e}v^2}{I(1-\beta^2)}-\beta^2\Bigr]}{J/m}
+\label{ph:原-13:bethe}で表されます。これを\textbf{ベーテの式}（1930年代にベーテが量子力学で導いた）といいます。\bkidx{べーてのしき}{ベーテの式}$I$ は物質の平均励起エネルギー（水で約 75 eV）です。導き方は専門書にゆずり、ここでは式を読みます。
+
+\begin{phyomi}[ベーテの式]
+前の分数が⑤の「$z^2/v^2$ ×電子の数」そのものです。大かっこの中の対数は、速さが変わってもゆっくりしか変わらないので、おおざっぱには $S\propto z^2n_{\mathrm e}/v^2$ と見てかまいません。粒子の質量は式に入っていない（速さだけで決まる）ことにも注意しましょう。同じ速さなら、陽子もα線も、同じ電荷1つあたり同じだけ止められます。この式で水の中の陽子の阻止能を計算すると、NIST の表（PSTAR）の値と、50〜250 MeV で 1 \% 以内で合います。
+\end{phyomi}
+
+\phboxhead{ブラッグピーク}
+陽子は、進むにつれて遅くなり、遅くなるほど $S$ が大きくなります。だから、入口ではあまりエネルギーを落とさず、\textbf{止まる直前に、まとめてエネルギーを落とします}。深さとエネルギーの落とし方のグラフにすると、止まる所に鋭い山ができます。これを\textbf{ブラッグピーク}といいます。\bkidx{ぶらっぐぴーく}{ブラッグピーク}一方、X線（光子）は $e^{-\mu x}$ で減るので、入口の近くでいちばん多くエネルギーを落とし、体の奥へ行くほど少なくなり、がんの後ろの正常な組織にもエネルギーを落とします（図\ref{ph:原-13:fig-bragg}）。
+
+
+陽子のエネルギーを選べば、山の深さを、がんのある深さに合わせられます。これが\textbf{陽子線治療}です。\bkidx{ようしせんちりょう}{陽子線治療}陽子の水の中の飛程 $R$（cm）は、エネルギー $E$（MeV）が数十〜数百 MeV のとき、およそ
+\pheq{R\approx0.0022\,E^{1.77}}{cm}
+\label{ph:原-13:bk}で表されます（ブラッグ・クリーマンの式。経験式）。150 MeV なら 15.6 cm で、NIST の表の 15.8 cm と合います（例題9）。
+
+\phboxhead{表計算で、陽子を 1 cm ずつ進める}
+飛程の式を $E$ で微分して逆数をとると、エネルギー $E$ の陽子の阻止能は
+\[ S=\frac{\dd E}{\dd R}=\frac{E^{-0.77}}{0.0022\times1.77}\approx256.8\,E^{-0.77}\quad\text{（MeV/cm）} \]
+です。150 MeV の陽子を、1 cm ずつ進めて、そのつどエネルギーを $S\times1$ だけ減らします。
+\begin{bkcenter}
+\bksheet{3}{26}{%
+1 & 深さ（cm） & $E$（MeV） & $S$（MeV/cm） \\
+2 & 0 & 150.0 & 5.42 \\
+3 & 4 & 127.3 & 6.15 \\
+4 & 8 & 101.1 & 7.34 \\
+5 & 12 & 68.7 & 9.89 \\
+6 & 14 & 47.7 & 13.10 \\
+7 & 15 & 34.6 & 16.78 \\
+8 & 16 & 17.8 & 27.97 \\}
+\bktabcaption{1 cm ずつ計算した表から、4 cm ごとの行と 14〜16 cm の行を抜き出した。C列は \texttt{=256.8*B2\^{}(-0.77)}、次の行のB列は \texttt{=B2-C2*1}。}\label{ph:原-13:tab-bragg}
+\end{bkcenter}
+入口では 1 cm に 5.4 MeV しか落としませんが、15 cm をすぎると、1 cm に 17〜28 MeV も落とします。1 cm のきざみは粗いので、この表では止まる深さが少しずれます。きざみを 0.01 mm まで細かくすると、止まる深さは 15.6 cm になり、飛程の式の値と一致します。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=92mm, height=40mm, xmin=0, xmax=24, ymin=0, ymax=6.2, xtick={0,4,8,12,16,20,24}, ytick={1,2,3,4,5,6}, xlabel={水の中の深さ（cm）}, ylabel={落とすエネルギー（入口＝1）}, every axis x label/.style={at={(axis description cs:0.5,-0.14)}, anchor=north, font=\sffamily\small}]
+  \fill[bkRed!12] (axis cs:13.5,0) rectangle (axis cs:16,6.2);
+  \addplot[bkcurve, domain=0:15.38, samples=200] {((15.64-x)/15.64)^(-0.435)};
+  \draw[bkBlue, line width=1.7pt] (axis cs:15.38,6.0) -- (axis cs:15.64,0);
+  \addplot[bkcurve2, dashed, domain=0:24, samples=50] {exp(-0.0632*x)};
+  \node[font=\sffamily\footnotesize, anchor=west, inner sep=1pt] at (axis cs:16.2,4.6) {陽子 150 MeV（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west, inner sep=1pt] at (axis cs:16.3,0.8) {γ線 1.25 MeV（破線）};
+  \node[font=\sffamily\footnotesize, anchor=east, inner sep=1pt] at (axis cs:13.3,5.3) {ねらう所};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ブラッグピーク（陽子は、⑤のブラッグ・クリーマンの式から計算した $S$ の形。山の上は図の上のはしで切った。実際には、止まる深さが粒子ごとに少しずつばらつくので、山は丸くなる）。γ線は、狭いビームの $e^{-\mu x}$ の形で比べた。}\label{ph:原-13:fig-bragg}
+\end{bkfigure}
+
+\Needspace{7\baselineskip}\bksubsection{8}{断面積と平均自由行程：中性子の減速}
+\label{ph:原-13:sec8}
+③の $\mu$ を、原子1個の「的の大きさ」で書き直します。原子核や原子1個に、粒子が当たる「的の面積」を $\sigma$ と書き、\textbf{断面積}といいます。\bkidx{だんめんせき}{断面積}原子核の世界では、単位に\textbf{バーン}（b）を使います。
+\[ \qty{1}{b}=10^{-28}\ \text{m}^2=10^{-24}\ \text{cm}^2 \]
+1 b は、ウランの原子核を正面から見たくらいの面積です。
+
+\noindent\begin{minipage}[c]{0.56\linewidth}\raggedright
+1 cm$^3$ に $N$ 個の原子がある板を考えます。面積 1 cm$^2$、厚さ $\dd x$ の層の中には、$N\,\dd x$ 個の原子があり、的の面積の合計は $N\sigma\,\dd x$ です。粒子がこの層で当たる確率は、「的の面積の合計 ÷ 層の面積（1 cm$^2$）」なので $N\sigma\,\dd x$ です。③の $\mu\,\dd x$ とくらべて、
+\end{minipage}\hfill
+\begin{minipage}[c]{0.40\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \filldraw[fill=bkBlue!8, draw=bkInk, line width=0.5pt] (10,0) -- (22,6) -- (22,36) -- (10,30) -- cycle;
+  \foreach \p in {(13,5),(18,10),(14,13),(19,18),(13,21),(17,26),(20,30),(15,28),(16,8),(12,16)} {\fill[bkRed!75!black] \p circle (0.9);}
+  \foreach \y in {9,17,25} \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (0,\y) -- (9,\y);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (23,9) -- (32,9);
+  \draw[bkInk, line width=0.7pt, -{Stealth[length=1.8mm]}] (23,25) -- (32,25);
+  \draw[txn dim] (10,-3) -- (22,3);
+  \node[txn lab, anchor=north west] at (16,0) {$\dd x$};
+  \node[txn lab, anchor=west, align=left] at (23,17) {的（面積 $\sigma$）\\に当たった};
+\end{tikzpicture}
+\end{minipage}
+\pheq{\Sigma=N\sigma}{1/cm ＝ 1/cm$^3$ × cm$^2$}
+\label{ph:原-13:sigma}となります。光子の場合はこれが $\mu$ で、中性子の場合は大文字のシグマ $\Sigma$ と書いて\textbf{巨視的断面積}とよびます。\bkidx{きょしてきだんめんせき}{巨視的断面積}粒子がぶつかるまでに進む距離の平均（\textbf{平均自由行程}）は $1/\Sigma$ です。\bkidx{へいきんじゆうこうてい}{平均自由行程}
+
+たとえば、鉛の原子は 1 cm$^3$ に $3.30\times10^{22}$ 個あり、0.662 MeV の光子の $\mu=\qty{1.26}{cm^{-1}}$ から、原子1個の断面積は $\sigma=\mu/N\approx\qty{38}{b}$ と求められます。光子はおよそ 0.8 cm 進むたびに、1回ぶつかるのです。
+
+\phboxhead{中性子は、ぶつかるたびに、決まった割合で遅くなる}
+中性子（質量 1）が、質量数 $A$ の止まった原子核に正面からぶつかって弾性衝突すると、運動量とエネルギーの保存（力-3 ④）から、ぶつかったあとの中性子の速さは $\dfrac{A-1}{A+1}$ 倍になります。運動エネルギーは、その2乗の
+\pheq{\alpha=\Bigl(\frac{A-1}{A+1}\Bigr)^{2}}{1（割合）}
+倍に減ります。これが、1回で残るエネルギーのいちばん小さい割合です。正面でない、ななめのぶつかり方では、もっと多く残り、残る割合は $\alpha$ から1のあいだに、平らに散らばることが知られています。水素（$A=1$）なら $\alpha=0$ で、正面衝突なら1回で止まります。炭素（$A=12$）なら $\alpha=0.72$、ウラン（$A=238$）なら $\alpha=0.98$ で、ほとんど減りません。
+
+1回のぶつかりで、エネルギーの自然対数が平均してどれだけ減るかを $\xi$（グザイ）と書くと、
+\pheq{\xi=1+\frac{\alpha\ln\alpha}{1-\alpha}}{1（割合）}
+\label{ph:原-13:xi}となります（水素では $\xi=1$）。\bkidx{へいきんたいすうげんしょう}{平均の対数減少}エネルギーが毎回同じ「割合」で減るので、$E_0$ から $E$ まで減速するのに要る回数は、
+\[ n=\frac{\ln(E_0/E)}{\xi} \]
+です。2 MeV の中性子を 0.025 eV の熱中性子にするには、$\ln(2\times10^6/0.025)=18.2$ なので、水素なら約18回、炭素なら約115回、ウランなら約2170回ぶつかる必要があります（例題10）。原子炉で、水や黒鉛（炭素）を減速材に使い、重い物を使わないのはこのためです（原-15 ③）。
+
+\begin{phbaisuru}{相手の原子核の質量数 $A$}
+\noindent\begin{minipage}[c]{0.44\linewidth}\raggedright
+$A$ が大きいほど、1回で残る割合 $\alpha$ が1に近づき、要る回数は増えます。$A=2$（重水素）では18回が25回、$A=12$ では115回です。$A$ が大きいとき、$\xi$ はほぼ $2/A$ になるので、要る回数は $A$ にほぼ比例して増えます（$A$ を2倍にすると、回数もほぼ2倍）。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.53\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, xmode=log, ymode=log, width=46mm, height=40mm, xmin=0.8, xmax=300, ymin=10, ymax=4000, xtick={1,2,12,238}, xticklabels={1,2,12,238}, ytick={10,100,1000}, yticklabels={10,100,1000}, xlabel={$A$}, ylabel={回数}]
+  \draw[bkBlue, line width=1.7pt] (axis cs:1,18.2) -- (axis cs:2,25.1) -- (axis cs:12,115.3) -- (axis cs:16,151.7) -- (axis cs:238,2172);
+  \fill[bkBlue] (axis cs:1,18.2) circle (1.4pt) (axis cs:2,25.1) circle (1.4pt) (axis cs:12,115.3) circle (1.4pt) (axis cs:16,151.7) circle (1.4pt) (axis cs:238,2172) circle (1.4pt);
+  \node[font=\sffamily\footnotesize, anchor=north, inner sep=1pt] at (axis cs:1,16) {H};
+  \node[font=\sffamily\footnotesize, anchor=south, inner sep=1pt] at (axis cs:2,29) {D};
+  \node[font=\sffamily\footnotesize, anchor=north west, inner sep=1pt] at (axis cs:12.5,105) {C};
+  \node[font=\sffamily\footnotesize, anchor=south east, inner sep=1pt] at (axis cs:230,2500) {U};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\Needspace{7\baselineskip}\bksubsection{9}{放射化：中性子をあてると、物が放射能をもつ}
+\label{ph:原-13:sec9}
+遅い中性子が原子核に吸いこまれると、中性子が1個多い原子核ができます。それが不安定なら、放射性になります。これを\textbf{放射化}といいます。\bkidx{ほうしゃか}{放射化}たとえば、ふつうのコバルト59 は、中性子を吸うとコバルト60 になり、コバルト60 は半減期 5.27 年で β線とγ線（1.17 MeV と 1.33 MeV）を出します。医療や工業で使うコバルト60 の線源は、このようにして作られます。原子炉の中の鉄やコンクリートも、長く使ううちに少しずつ放射化します。
+
+1 g の物の中に、もとの原子が $N$ 個あり、中性子束 $\phi$（1秒に1 cm$^2$ を通る中性子の数）があたっているとします。1秒にできる放射性の原子の数は、⑧と同じ考えで $N\sigma\phi$ です。できた放射性の原子 $N^*$ 個のうち、1秒に $\lambda N^*$ 個がこわれます（原-12 ④）。だから、
+\[ \frac{\dd N^*}{\dd t}=N\sigma\phi-\lambda N^* \qquad\text{（生まれる数 − こわれる数）} \]
+です。照射を始めた時刻（$t=0$）に $N^*=0$ とすると、答えは数学 6-4④の「目標の値へ近づく形」で、放射能 $A=\lambda N^*$ は
+\pheq{A=N\sigma\phi\,\bigl(1-e^{-\lambda t}\bigr)}{Bq ＝ 1 × cm$^2$ × 1/(cm$^2$·s)}
+\label{ph:原-13:hoshaka}となります。長く照射すると $A$ は $N\sigma\phi$ に近づき、それ以上は増えません。これを\textbf{飽和放射能}といいます。\bkidx{ほうわほうしゃのう}{飽和放射能}生まれる数とこわれる数がつり合った状態です。
+
+\Needspace{14\baselineskip}
+\begin{phflow}[生まれる−こわれるから、放射化の式へ]
+\phflowrow{$\dfrac{\dd N^*}{\dd t}=N\sigma\phi-\lambda N^*$}{$N$・$\phi$ が一定\\はじめ $N^*=0$}{$A=N\sigma\phi(1-e^{-\lambda t})$}
+\phflowrow{$A=N\sigma\phi(1-e^{-\lambda t})$}{半減期より\\ずっと長く照射}{$A=N\sigma\phi$（飽和）}
+\end{phflow}
+
+\begin{phbaisuru}[何倍にしても]{照射する時間}
+\noindent\begin{minipage}[c]{0.45\linewidth}\raggedright
+照射する時間が半減期 $T_{1/2}$ と同じなら、$e^{-\lambda T_{1/2}}=\tfrac12$ なので、飽和の $\tfrac12$ です。2倍なら $\tfrac34$、3倍なら $\tfrac78$、4倍なら $\tfrac{15}{16}$ と、残りの半分ずつ近づきます。半減期の何倍照射しても、飽和はこえません。長すぎる照射は、むだになるのです。逆に、照射の時間を2倍にしても、放射能は2倍にはなりません。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.52\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=46mm, height=44mm, xmin=0, xmax=5.2, ymin=0, ymax=1.12, xtick={1,2,3,4,5}, ytick={0.5,0.75,1}, yticklabels={$\tfrac12$,$\tfrac34$,1}, xlabel={$t/T_{1/2}$}, ylabel={飽和との比}]
+  \addplot[bkcurve, domain=0:5, samples=60] {1-0.5^x};
+  \addplot[bkGray, dashed, line width=0.6pt, domain=0:5] {1};
+  \fill[bkBlue] (axis cs:1,0.5) circle (1.5pt) (axis cs:2,0.75) circle (1.5pt) (axis cs:3,0.875) circle (1.5pt);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\Needspace{10\baselineskip}\bksubsection{10}{狭いビームと広いビーム：ビルドアップ}
+\label{ph:原-13:sec10}
+③の $e^{-\mu x}$ は、「1回でもぶつかった光子は、もう数えない」という\textbf{狭いビーム}の式でした。実際の遮へいの壁では、コンプトン散乱で向きを変えた光子が、まわり道をして壁の向こうに出てくることがあります。これらの光子も、壁の向こうにいる人にエネルギーを渡します。
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \begin{scope}
+    \fill[bkGray!35] (20,0) rectangle (30,30);
+    \draw[bkInk, line width=0.4pt] (20,0) rectangle (30,30);
+    \filldraw[fill=bkInk!70, draw=bkInk] (0,13) rectangle (6,17);
+    \draw[bkInk, line width=0.8pt] (8,11.5) -- (14,11.5) (8,18.5) -- (14,18.5);
+    \txnphoton{(6,15)}{(19.5,15)}
+    \draw[bkOrange!85!black, line width=0.9pt, -{Stealth[length=2mm]}] (30.5,15) -- (38,15);
+    \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt, -{Stealth[length=1.8mm]}] (25,15) -- (33,24);
+    \filldraw[fill=bkBlue!40, draw=bkInk] (40,13) rectangle (44,17);
+    \draw[bkInk, line width=0.8pt] (36,11.5) -- (39,11.5) (36,18.5) -- (39,18.5);
+    \node[txn lab, anchor=north, align=center] at (22,-1) {狭いビーム：散乱した光子は\\センサーに入らない};
+  \end{scope}
+  \begin{scope}[shift={(68,0)}]
+    \fill[bkGray!35] (20,0) rectangle (30,30);
+    \draw[bkInk, line width=0.4pt] (20,0) rectangle (30,30);
+    \filldraw[fill=bkInk!70, draw=bkInk] (0,13) rectangle (6,17);
+    \txnphoton{(6,15)}{(19.5,15)}
+    \txnphoton{(6,17)}{(19.5,25)}
+    \txnphoton{(6,13)}{(19.5,5)}
+    \draw[bkOrange!85!black, line width=0.9pt, -{Stealth[length=2mm]}] (30.5,15) -- (38,15);
+    \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (24,25) -- (27,18) -- (31,16.5);
+    \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt, -{Stealth[length=1.8mm]}] (31,16.5) -- (38.5,15.8);
+    \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt] (24,5) -- (28,12) -- (31,14);
+    \draw[bkOrange!85!black, line width=0.6pt, dash pattern=on 1.5pt off 1pt, -{Stealth[length=1.8mm]}] (31,14) -- (38.5,14.3);
+    \filldraw[fill=bkBlue!40, draw=bkInk] (40,13) rectangle (44,17);
+    \node[txn lab, anchor=north, align=center] at (22,-1) {広いビーム：散乱した光子（破線）\\も届き、残る割合が増える};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{狭いビームと広いビーム（線源は左の黒い四角、センサーは右の四角）。}\label{ph:原-13:fig-buildup}
+\end{bkfigure}
+そこで、広いビームで実際に届く強さを
+\pheq{I=B\,I_0e^{-\mu x}}{1/(cm$^2$·s)}
+と書きます。$B$ を\textbf{ビルドアップ係数}といい、\bkidx{びるどあっぷけいすう}{ビルドアップ係数}いつも1より大きく、壁が厚いほど大きくなります。物質・光子のエネルギー・壁の厚さ（$\mu x$）ごとに表にまとめられていて、遮へいの設計では、その表かモンテカルロ法（③）で $B$ を求めます。\textbf{$e^{-\mu x}$ だけで壁の厚さを決めると、うすすぎる}（安全でない側になる）ことを覚えておきましょう。この本の例題では $B$ を無視しますが、それは「最低これだけは要る」という見積もりです。
+
+\Needspace{8\baselineskip}\bksubsection{11}{はかる・見る：密度計・レベル計・非破壊検査}
+\label{ph:原-13:sec11}
+減弱の式は、工場で「止めずに・こわさずに」はかる道具にも使われます。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=1pt]
+\item \textbf{密度計}：管の片側にγ線の線源、反対側に検出器を置きます。中を流れる物の密度 $\rho$ が変わると $\mu=(\mu/\rho)\rho$ が変わり、届く数が変わります（例題13）。管を開けずに、泥水やセメントの濃さを連続ではかれます。
+\item \textbf{レベル計}：タンクの外から、中の液がある高さまで来ているかを、γ線が通りぬけるかどうかで知ります。
+\item \textbf{厚さ計}：紙・フィルム・鉄板の厚さを、β線やγ線が通りぬける割合ではかります。
+\item \textbf{放射線透過試験（RT）}：溶接の継ぎ目に X線やγ線を当て、反対側のフィルムやセンサーで影を見ます。中に空洞やひびがあると、そこだけ物がうすいので、黒く写ります。橋・船・ガス管・発電所の配管などの検査に使われます。\bkidx{ほうしゃせんとうかしけん}{放射線透過試験}
+\end{itemize}
+
+\Needspace{8\baselineskip}\bksubsection{12}{放射線でがんを治す}
+\label{ph:原-13:sec12}
+放射線は、細胞の DNA を電離で傷つけます（②）。がんの細胞にねらいを定めて、正常な細胞より多くのエネルギーを落とせば、がんを治す力になります。これが\textbf{放射線治療}です。\bkidx{ほうしゃせんちりょう}{放射線治療}物理シリーズの『電磁気学』（電-15）の電磁波の表で「X線・γ線：がんの治療」と書いたのは、このことです。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=1pt]
+\item \textbf{X線治療}：加速器で作った高いエネルギーの X線を、体のまわりのいろいろな向きからがんに集めます。1つの向きからは $e^{-\mu x}$ で減っていきますが（⑦の図）、がんの所でだけビームが重なるので、がんにエネルギーが集まります。
+\item \textbf{陽子線・重粒子線治療}：⑦のブラッグピークを、がんの深さに合わせます。がんの後ろの組織には、ほとんどエネルギーを落としません。
+\item \textbf{小さな線源を入れる治療}：β線やγ線を出す小さな線源を、がんのすぐそばに置きます。β線は数 mm で止まるので（⑤）、まわりへの影響が小さくなります。
+\end{itemize}
+どの方法でも、1回にあてる量を小分けにして、何回かに分けてあてるのがふつうです。正常な細胞が、あいだの時間に傷を直せるようにするためです。
+
+\begin{phmada}[一瞬で大量にあてると、なぜ正常な組織が守られる？]
+同じ量の放射線を、ふつうの治療の何百倍以上もの速さで、0.1秒より短いあいだに一気にあてる\textbf{FLASH 照射}では、がんをおさえる効果は同じくらいなのに、まわりの正常な組織の害が小さくなることが、動物を使った実験などで、いくつも報告されています。いろいろな種類の放射線と、いろいろな生き物の実験で、この効果は確かめられてきました。けれども、\textbf{なぜそうなるのかは、まだはっきりしていません}。一瞬で大量の電離が起きると、組織の中の酸素が一時的に使いきられて傷がつきにくくなる、という考えが有力ですが、それだけでは説明しきれない結果もあり、電離でできる化学的に活発な分子のふるまいや、細胞の中の DNA・ミトコンドリア、体の免疫のはたらきなど、いくつもの考えが調べられています。人の治療に使えるかどうかを確かめる研究も始まっています。
+\end{phmada}
+
+\begin{phsaki}{放射線と物質の先へ}
+この章では、放射線が「何回ぶつかるか」を確率で考えました。専門の本では、粒子が物の中を進み、向きを変え、新しい粒子を生むようすを、場所・向き・エネルギーごとに数えあげる式（\textbf{輸送方程式}）を立て、計算機で解きます。原子炉の中性子の計算（原-15）も、遮へいの設計も、医学物理の治療の計画も、この式とモンテカルロ法の上に立っています。放射線工学・医学物理学・遮へい工学で学びます。
+\end{phsaki}
+
+\begin{senmonsho}[放射線工学の専門書の書き方]
+\begin{bkhonbun}
+光子の物質中での減弱は $I(x)=I_0\,e^{-\mu x}$ で与えられ，$\mu=\sigma_{\mathrm{tot}}N=(\tau+\sigma_{\mathrm C}+\kappa)N$ を線減弱係数という．ここで $\tau$，$\sigma_{\mathrm C}$，$\kappa$ はそれぞれ光電効果，コンプトン散乱，電子対生成の原子断面積である．荷電粒子の線阻止能 $S=-\mathrm dE/\mathrm dx$ は Bethe の式で与えられ，$S/\rho$ を質量阻止能 [MeV cm$^2$ g$^{-1}$] という．
+\end{bkhonbun}
+\bkyaku{「減弱」は弱まること。$\tau$（タウ）・$\kappa$（カッパ）は、専門書が3つのやりとりの断面積に使う記号で、この本の時定数 $\tau$ とは別。「原子断面積」は原子1個あたりの断面積（この章の $\sigma$）。専門書は、密度でわった阻止能（$S/\rho$）を表にすることが多い。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.6\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{減弱・半価層}$I=I_0e^{-\mu x}$、$x_{1/2}=\dfrac{\ln2}{\mu}$、$\mu=\Bigl(\dfrac{\mu}{\rho}\Bigr)\rho$\\[3pt]
+\tsl{光子のやりとり}光電効果（$Z$ 大・低エネルギー）、コンプトン散乱、電子対生成（1.022 MeV 以上）\\[3pt]
+\tsl{荷電粒子}阻止能 $S\propto\dfrac{z^2}{v^2}\times$（電子の数）、ブラッグピーク、飛程 $R\approx0.0022E^{1.77}$（陽子・水）\\[3pt]
+\tsl{断面積}$\Sigma=N\sigma$、平均自由行程 $\dfrac{1}{\Sigma}$、$\qty{1}{b}=10^{-24}$ cm$^2$\\[3pt]
+\tsl{中性子の減速}$\alpha=\Bigl(\dfrac{A-1}{A+1}\Bigr)^2$、回数 $n=\dfrac{\ln(E_0/E)}{\xi}$\\[3pt]
+\tsl{放射化}$A=N\sigma\phi(1-e^{-\lambda t})$、飽和放射能 $N\sigma\phi$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{透過力}{放射線が物を通りぬける力。α線＜β線＜γ線・中性子線。}
+\bkword{電離}{原子から電子をはじき出し、イオンと電子に分けること。}
+\bkword{減弱係数}{光子が 1 cm 進むあいだにぶつかる確率の目安 $\mu$。密度でわったものが質量減弱係数。}
+\bkword{半価層}{放射線の強さを半分にする厚さ。$x_{1/2}=\ln2/\mu$。}
+\bkword{阻止能}{荷電粒子が単位の長さあたりに失うエネルギー。}
+\bkword{飛程}{荷電粒子が止まるまでに進む距離。}
+\bkword{ブラッグピーク}{荷電粒子が止まる直前に、エネルギーを多く落とす山。}
+\bkword{断面積}{原子1個（原子核1個）の、粒子に対する的の面積。単位 b（バーン）。}
+\bkword{放射化}{中性子などをあてて、もとの物を放射性にすること。}
+\bkword{ビルドアップ}{散乱した光子が届くため、広いビームの強さが $e^{-\mu x}$ より大きくなること。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\mu$}{ミュー}{減弱係数〔1/cm〕。$I=I_0e^{-\mu x}$。第4巻の透磁率 $\mu$、原-9 の移動度 $\mu_{\mathrm n}$ とは別の量}{attenuation coefficient}{原-13}}
+{\bkkigocard{$x_{1/2}$}{エックス・にぶんのいち}{半価層〔cm〕。強さを半分にする厚さ。$x_{1/2}=\ln2/\mu$}{half-value layer}{原-13}}
+\bkkigocards{\bkkigocard{$\sigma$}{シグマ}{断面積〔b〕。$\qty{1}{b}=10^{-24}$ cm$^2$。原-8 の導電率、原-12 の標準偏差とは別の量}{cross section}{原-13}}
+{\bkkigocard{$\Sigma$}{シグマ（大文字）}{巨視的断面積〔1/cm〕。$\Sigma=N\sigma$。和の記号 $\sum$ とは別}{macroscopic cross section}{原-13}}
+\bkkigocards{\bkkigocard{$\phi$}{ファイ}{中性子束〔1/(cm$^2$·s)〕。1秒に 1 cm$^2$ を通る中性子の数。第4巻の電位 $\phi$ とは別の量}{neutron flux}{原-13}}
+{\bkkigocard{$S$}{エス}{阻止能〔MeV/cm〕。荷電粒子が 1 cm で失うエネルギー}{stopping power}{原-13}}
+\bkkigocards{\bkkigocard{$\xi$}{グザイ}{1回の衝突でエネルギーの自然対数が平均して減る量。$\xi=1+\alpha\ln\alpha/(1-\alpha)$}{mean logarithmic energy decrement}{原-13}}{}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:原-13:ex1}
+\begin{phreidai}[X線写真の骨と軟組織（はてな？）]
+60 keV の X線が、厚さ 2.0 cm の骨（密度 \qty{1.92}{g/cm^3}、$\mu/\rho=\qty{0.315}{cm^2/g}$）と、厚さ 2.0 cm の軟組織（密度 \qty{1.06}{g/cm^3}、$\mu/\rho=\qty{0.205}{cm^2/g}$）を通ります。それぞれの減弱係数と、通りぬけて残る割合を求めましょう。
+\phbamen
+X線写真で、骨と軟組織の影の濃さのちがいを、数で比べる場面です。
+\phmushi
+X線のエネルギーは 60 keV の1つだけとします（実際の X線管の X線は、いろいろなエネルギーがまざっています）。向きを変えた X線がセンサーに届くこと（ビルドアップ）は無視します。
+\phzu
+$\mu=(\mu/\rho)\rho$、厚さ $x=\qty{2.0}{cm}$。
+\phriyu
+光子が一様な物を通るので、狭いビームの減弱の式（③）を使います。
+\phtateru
+\[ \mu=\Bigl(\frac{\mu}{\rho}\Bigr)\rho,\qquad \frac{I}{I_0}=e^{-\mu x} \]
+\phtoku
+\[ \mu_{\text{骨}}=0.315\times1.92=\qty{0.60}{cm^{-1}},\qquad \mu_{\text{軟組織}}=0.205\times1.06=\qty{0.22}{cm^{-1}} \]
+\[ \text{骨：}e^{-0.60\times2.0}=e^{-1.2}=0.30,\qquad \text{軟組織：}e^{-0.22\times2.0}=e^{-0.43}=0.65 \]
+\phtashikame
+単位：cm$^2$/g × g/cm$^3$＝1/cm。$\mu x$ は単位のない数。\\
+大きさ：骨の後ろには、軟組織の後ろの半分ほどしか X線が届きません。この差が、写真の白と黒の差になります。\\
+極端な場合：厚さ0なら、どちらも 1（全部通る）。どんなに厚くしても、残る割合は0にはなりません。
+\kotae 骨 $\mu=\qty{0.60}{cm^{-1}}$・30 \%、軟組織 $\mu=\qty{0.22}{cm^{-1}}$・65 \%
+\end{phreidai}
+\begin{jibun}
+例題1 で、厚さを 1.0 cm にすると、骨と軟組織の残る割合はそれぞれいくらですか。差は 2.0 cm のときより大きいですか、小さいですか。
+\bkjans{骨 $e^{-0.60}=0.55$、軟組織 $e^{-0.22}=0.80$。差は 0.25 で、2.0 cm のとき（0.35）より小さい}
+\end{jibun}
+
+\label{ph:原-13:ex2}
+\begin{phreidai}[セシウム137 のγ線を鉛で弱める]
+セシウム137 のγ線（\qty{0.662}{MeV}）に対する鉛の質量減弱係数は \qty{0.111}{cm^2/g}、鉛の密度は \qty{11.35}{g/cm^3} です。鉛の減弱係数・半価層・1/10 価層を求めましょう。
+\phbamen
+γ線を出す線源の容器や、遮へいの板の厚さを見積もる場面です。
+\phmushi
+狭いビームとし、ビルドアップは無視します（⑩。実際の壁は、もっと厚くする必要があります）。
+\phzu
+$\mu/\rho=0.111$、$\rho=11.35$。
+\phriyu
+半価層は $\ln2/\mu$、1/10 価層は $\ln10/\mu$ です（③）。
+\phtateru
+\[ \mu=\Bigl(\frac{\mu}{\rho}\Bigr)\rho,\qquad x_{1/2}=\frac{\ln2}{\mu},\qquad x_{1/10}=\frac{\ln10}{\mu} \]
+\phtoku
+\[ \mu=0.111\times11.35=\qty{1.26}{cm^{-1}} \]
+\[ x_{1/2}=\frac{0.693}{1.26}=\qty{0.55}{cm},\qquad x_{1/10}=\frac{2.30}{1.26}=\qty{1.8}{cm} \]
+\phtashikame
+単位：1 ÷ (1/cm)＝cm。\\
+大きさ：半価層 0.55 cm を2枚重ねると $\tfrac14$、3枚で $\tfrac18$。1/10 価層は半価層の $\ln10/\ln2=3.3$ 倍で、合っています。\\
+極端な場合：密度の小さい物（水）なら、半価層はずっと厚くなるはずです（例題3）。
+\kotae $\mu=\qty{1.26}{cm^{-1}}$、半価層 \qty{0.55}{cm}、1/10 価層 \qty{1.8}{cm}
+\end{phreidai}
+\begin{jibun}
+例題2 の鉛を 2.0 cm にすると、γ線は何 \% 残りますか（ビルドアップは無視）。
+\bkjans{$e^{-1.26\times2.0}=0.080$ で、約8 \%}
+\end{jibun}
+
+\label{ph:原-13:ex3}
+\begin{phreidai}[鉄・水・コンクリートの半価層]
+同じ 0.662 MeV のγ線について、鉄（$\mu/\rho=0.0735$、$\rho=7.87$）、水（0.0857、1.00）、コンクリート（0.0788、2.30）の半価層を求め、鉛（例題2）と比べましょう。$\mu/\rho$ の単位は cm$^2$/g、$\rho$ は g/cm$^3$ です。
+\phbamen
+遮へいの材料を選ぶ場面です。
+\phmushi
+ビルドアップを無視します。コンクリートの組成は NIST の標準の組成とします。
+\phzu
+$x_{1/2}=\ln2/\{(\mu/\rho)\rho\}$。
+\phriyu
+物ごとに $\mu$ を求めて、半価層の式（③）に入れます。
+\phtateru
+\[ x_{1/2}=\frac{0.693}{(\mu/\rho)\,\rho} \]
+\phtoku
+\[ \text{鉄：}\frac{0.693}{0.0735\times7.87}=\qty{1.2}{cm},\qquad \text{水：}\frac{0.693}{0.0857\times1.00}=\qty{8.1}{cm} \]
+\[ \text{コンクリート：}\frac{0.693}{0.0788\times2.30}=\qty{3.8}{cm} \]
+\phtashikame
+単位：cm。\\
+大きさ：鉛 0.55 cm、鉄 1.2 cm、コンクリート 3.8 cm、水 8.1 cm。半価層は、ほぼ密度に反比例しています（このエネルギーでは $\mu/\rho$ がどれもほぼ 0.08 だから）。\\
+極端な場合：同じ重さ（1 cm$^2$ あたりの g）で比べると、鉛と水の差は小さくなります。うすさを取るなら鉛、安さと作りやすさを取るならコンクリートや水です。
+\kotae 鉄 \qty{1.2}{cm}、水 \qty{8.1}{cm}、コンクリート \qty{3.8}{cm}
+\end{phreidai}
+\begin{jibun}
+例題3 の鉄で、0.662 MeV のγ線を $\tfrac1{100}$ にするには、厚さは何 cm 要りますか（ビルドアップは無視）。
+\bkjans{$\ln100/\mu=4.61/0.578=\qty{8.0}{cm}$}
+\end{jibun}
+
+\label{ph:原-13:ex4}
+\begin{phreidai}[コバルト60 のγ線をコンクリートで 1/1000 に]
+コバルト60 は 1.17 MeV と 1.33 MeV のγ線を出します。平均の 1.25 MeV で考え、コンクリート（$\mu/\rho=\qty{0.0581}{cm^2/g}$、$\rho=\qty{2.30}{g/cm^3}$）で強さを $\tfrac1{1000}$ にする厚さを求めましょう。
+\phbamen
+γ線を使う照射施設の壁の厚さを見積もる場面です。
+\phmushi
+2本のγ線を平均の1本で代表させます。ビルドアップを無視します。
+\phzu
+$\mu=0.0581\times2.30$、目標 $I/I_0=10^{-3}$。
+\phriyu
+減弱の式（③）を厚さについて解きます。半価層を使って、何枚分かでも確かめます。
+\phtateru
+\[ e^{-\mu x}=10^{-3}\quad\text{より}\quad x=\frac{\ln1000}{\mu} \]
+\phtoku
+\[ \mu=0.0581\times2.30=\qty{0.134}{cm^{-1}},\qquad x_{1/2}=\frac{0.693}{0.134}=\qty{5.2}{cm} \]
+\[ x=\frac{6.91}{0.134}=\qty{52}{cm} \]
+\phtashikame
+単位：cm。\\
+大きさ：$2^{10}=1024\approx1000$ なので、半価層の約10枚分（$10\times5.2=52$）で、合っています。\\
+極端な場合：実際の壁では、散乱した光子が届く（ビルドアップ $B>1$）ので、52 cm では足りず、さらに厚くします。
+\kotae 半価層 \qty{5.2}{cm}、厚さ約 \qty{52}{cm}（ビルドアップを入れると、もっと厚く要る）
+\end{phreidai}
+\begin{jibun}
+例題4 と同じ 1.25 MeV のγ線を、鉛（$\mu/\rho=\qty{0.0588}{cm^2/g}$）で $\tfrac1{1000}$ にするには、何 cm 要りますか。
+\bkjans{$\mu=0.0588\times11.35=\qty{0.667}{cm^{-1}}$、$6.91/0.667=\qty{10}{cm}$（コンクリートの約5分の1）}
+\end{jibun}
+
+\label{ph:原-13:ex5}
+\begin{phreidai}[鉛のエプロンは、なぜうすくてよいか]
+100 keV の X線について、鉛の質量減弱係数は \qty{5.55}{cm^2/g}、水は \qty{0.171}{cm^2/g} です。同じ厚さの鉛と水で、減弱係数は何倍ちがいますか。また、鉛 0.25 mm を通ると、何 \% 残りますか。
+\phbamen
+病院の X線検査で、スタッフが着る鉛入りのエプロンを考える場面です。
+\phmushi
+X線を 100 keV の1つのエネルギーとし、ビルドアップを無視します。エプロンは鉛だけでできているとします。
+\phzu
+$\rho_{\text{鉛}}=11.35$、$\rho_{\text{水}}=1.00$、$x=\qty{0.025}{cm}$。
+\phriyu
+低いエネルギーでは光電効果で原子番号が効くので（④）、$\mu$ を比べ、減弱の式に入れます。
+\phtateru
+\[ \frac{\mu_{\text{鉛}}}{\mu_{\text{水}}}=\frac{5.55\times11.35}{0.171\times1.00},\qquad \frac{I}{I_0}=e^{-\mu_{\text{鉛}}x} \]
+\phtoku
+\[ \mu_{\text{鉛}}=\qty{63}{cm^{-1}},\quad \mu_{\text{水}}=\qty{0.171}{cm^{-1}},\quad \frac{63}{0.171}\approx370 \]
+\[ e^{-63\times0.025}=e^{-1.6}=0.21 \]
+\phtashikame
+単位：どちらも 1/cm。\\
+大きさ：鉛 0.25 mm は、水約 9 cm と同じ働きをします。\\
+極端な場合：1 MeV ほどのγ線では、$\mu/\rho$ が物質によらずほぼ同じになり（図\ref{ph:原-13:fig-murho}）、この差は鉛と水の密度の比（約11倍）まで小さくなります。エプロンは、γ線にはあまり効きません。
+\kotae 約370倍。鉛 0.25 mm で約 21 \% 残る（約8割を止める）
+\end{phreidai}
+\begin{jibun}
+60 keV の X線では、鉛（$\mu/\rho=5.02$）と水（0.206）の減弱係数は何倍ちがいますか。
+\bkjans{$5.02\times11.35/0.206\approx\num{280}$ 倍（277倍）}
+\end{jibun}
+
+\label{ph:原-13:ex6}
+\begin{phreidai}[電子対生成のしきいと、PET の光子]
+（1）光子が電子と陽電子の1組に変わるには、少なくとも何 MeV のエネルギーが要りますか。（2）陽電子が止まって電子と出会い、2つとも消えると、どんな光子が出ますか。電子の質量のエネルギーは $m_{\mathrm e}c^2=\qty{0.511}{MeV}$ です。
+\phbamen
+γ線が物の中で電子と陽電子に変わる場面と、PET 検査で体の中から光子が出てくる場面です。
+\phmushi
+原子核が受け取るエネルギー（ごく小さい）を無視します。（2）では、出会うときの陽電子と電子の運動エネルギーを0とします。
+\phzu
+電子と陽電子の質量はどちらも $m_{\mathrm e}$。
+\phriyu
+質量とエネルギーの等価性 $E=mc^2$（原-11 ②）と、エネルギー保存・運動量保存を使います。
+\phtateru
+（1）$E\ge2m_{\mathrm e}c^2$。（2）はじめの運動量は0なので、出る光子の運動量の和も0。光子は反対向きの同じエネルギーの2個。
+\phtoku
+（1）$2\times0.511=\qty{1.022}{MeV}$。（2）合わせて 1.022 MeV を2個で分けるので、1個 \qty{0.511}{MeV} が、反対向きに2個。
+\phtashikame
+単位：MeV。\\
+大きさ：コバルト60 のγ線（1.17・1.33 MeV）は、しきいを少しこえるので、電子対生成もわずかに起きます。セシウム137 の 0.662 MeV では起きません。\\
+極端な場合：光子1個だけでは、エネルギーと運動量の両方を保存できないので、必ず2個以上出ます。
+\kotae （1）\qty{1.022}{MeV}　（2）\qty{0.511}{MeV}の光子が2個、反対向きに出る
+\end{phreidai}
+\begin{jibun}
+2.0 MeV の光子が電子対生成を起こすと、電子と陽電子が分け合う運動エネルギーの合計は何 MeV ですか。
+\bkjans{$2.0-1.022=\qty{0.98}{MeV}$}
+\end{jibun}
+
+\label{ph:原-13:ex7}
+\begin{phreidai}[α線は空気中でどこまで飛ぶか]
+ポロニウム210 が出す 5.3 MeV の α線が、空気中で止まるまでに進む距離を、ガイガーの式 $R\approx0.318E^{3/2}$（cm、$E$ は MeV）で求めましょう。
+\phbamen
+α線を出す物から、どれだけ離れれば α線が届かないかを考える場面です。
+\phmushi
+α線はまっすぐ進み、なめらかにエネルギーを失うとします（⑤のモデル化の札）。空気は 20 ℃・1気圧とします。
+\phzu
+$E=5.3$。
+\phriyu
+4〜7 MeV の α線の空気中の飛程には、ガイガーの経験式が使えます（⑤）。
+\phtateru
+\[ R=0.318\times5.3^{3/2} \]
+\phtoku
+\[ 5.3^{3/2}=5.3\times\sqrt{5.3}=5.3\times2.30=12.2,\qquad R=0.318\times12.2=\qty{3.9}{cm} \]
+\phtashikame
+単位：式が cm で作られています。\\
+大きさ：NIST の表（ASTAR）から求めた値も約 4.0 cm で、合っています。紙1枚でも止まります。\\
+極端な場合：エネルギーが2倍なら、飛程は $2^{3/2}=2.8$ 倍。
+\kotae 約 \qty{3.9}{cm}
+\end{phreidai}
+\begin{jibun}
+4.0 MeV の α線の空気中の飛程は、ガイガーの式でいくらですか。
+\bkjans{$0.318\times4.0^{3/2}=0.318\times8.0=\qty{2.5}{cm}$}
+\end{jibun}
+
+\label{ph:原-13:ex8}
+\begin{phreidai}[β線はアルミで何 mm まで届くか]
+イットリウム90 は、最大 \qty{2.28}{MeV} の β線を出します。この β線が届く最大の深さを、カッツ・ペンフォールドの式で g/cm$^2$ の単位で求め、アルミ（密度 \qty{2.70}{g/cm^3}）の厚さに直しましょう。
+\phbamen
+β線を出す線源のまわりに、どれだけの板を置けば β線を止められるかを考える場面です。
+\phmushi
+β線が止まるときに出す X線（制動放射）は考えません。
+\phzu
+$E=2.28$、$\ln E=0.824$。
+\phriyu
+β線の届く深さには、「1 cm$^2$ あたりの重さ」で表したカッツ・ペンフォールドの式が、物の種類によらず使えます（⑤）。
+\phtateru
+\[ R=0.412\times2.28^{\,1.265-0.0954\times0.824}\ \text{g/cm$^2$},\qquad \text{厚さ}=\frac{R}{\rho} \]
+\phtoku
+\[ \text{指数}=1.265-0.0786=1.186 \]
+\[ R=0.412\times2.28^{1.186}=0.412\times2.66=\qty{1.1}{g/cm^2} \]
+\[ \text{アルミの厚さ}=\frac{1.1}{2.70}=\qty{0.41}{cm}=\qty{4.1}{mm} \]
+\phtashikame
+単位：g/cm$^2$ ÷ g/cm$^3$＝cm。\\
+大きさ：環境省の資料の「アルミ板 2〜4 mm で止まる」の上のはしに合います。2.28 MeV はかなり強い β線です。\\
+極端な場合：水なら 1.1 cm。密度が小さい物ほど、厚くなります。
+\kotae 約 \qty{1.1}{g/cm^2}、アルミ約 \qty{4.1}{mm}
+\end{phreidai}
+\begin{jibun}
+最大 \qty{1.0}{MeV} の β線は、アルミで何 mm まで届きますか（$\ln1.0=0$ に注意）。
+\bkjans{$R=0.412\times1.0^{1.265}=\qty{0.41}{g/cm^2}$、$0.412/2.70=\qty{0.15}{cm}=\qty{1.5}{mm}$}
+\end{jibun}
+
+\label{ph:原-13:ex9}
+\begin{phreidai}[陽子線治療で、陽子の止まる深さを選ぶ]
+陽子の水の中の飛程を、ブラッグ・クリーマンの式 $R\approx0.0022E^{1.77}$（cm、$E$ は MeV）で、70 MeV・150 MeV・230 MeV について求めましょう。体は水と同じとします。
+\phbamen
+陽子線治療で、がんの深さに合わせて陽子のエネルギーを選ぶ場面です（⑦）。
+\phmushi
+体を水とし、骨や肺のちがいを無視します。止まる深さのばらつきも無視します。
+\phzu
+$E=70$、150、230。
+\phriyu
+陽子の水の中の飛程には、ブラッグ・クリーマンの経験式が使えます（⑦）。
+\phtateru
+\[ R=0.0022\,E^{1.77} \]
+\phtoku
+\[ 70^{1.77}=\num{1844},\quad 150^{1.77}=\num{7108},\quad 230^{1.77}=\num{15146} \]
+\[ R=\qty{4.1}{cm},\quad \qty{15.6}{cm},\quad \qty{33}{cm} \]
+\phtashikame
+単位：式が cm で作られています。\\
+大きさ：NIST の表（PSTAR）では 4.08 cm・15.8 cm・33.0 cm で、よく合います。体のどの深さのがんにも届く範囲です。\\
+極端な場合：エネルギーを2倍にすると、飛程は $2^{1.77}=3.4$ 倍に増えます。遅い陽子ほど強く止められるからです。
+\kotae \qty{4.1}{cm}、\qty{15.6}{cm}、\qty{33}{cm}
+\end{phreidai}
+\begin{jibun}
+深さ 10 cm にあるがんに、陽子が止まるようにするには、何 MeV の陽子を使えばよいですか（ブラッグ・クリーマンの式で）。
+\bkjans{$E=(10/0.0022)^{1/1.77}\approx\qty{117}{MeV}$（約 \qty{1.2e2}{MeV}）}
+\end{jibun}
+
+\label{ph:原-13:ex10}
+\begin{phreidai}[中性子を遅くするのに、何回ぶつかるか]
+2 MeV の中性子を 0.025 eV まで遅くするのに、水素（$A=1$）・重水素（$A=2$）・炭素（$A=12$）・ウラン（$A=238$）では、それぞれ何回ぶつかる必要がありますか。正面衝突で残る割合 $\alpha$ も求めましょう。
+\phbamen
+原子炉で、中性子を遅くする物（減速材）を選ぶ場面です（原-15 ③）。
+\phmushi
+相手の原子核は止まっているとし、中性子は吸収されないとします。ぶつかり方は向きによらず同じように起きるとします。
+\phzu
+$\alpha=\{(A-1)/(A+1)\}^2$、$\xi=1+\alpha\ln\alpha/(1-\alpha)$（水素は1）。
+\phriyu
+1回ごとにエネルギーの対数が平均 $\xi$ ずつ減る（⑧）ので、回数は $\ln(E_0/E)/\xi$ です。
+\phtateru
+\[ n=\frac{\ln(2\times10^6/0.025)}{\xi}=\frac{18.2}{\xi} \]
+\phtoku
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=22mm] Q[c,m,wd=18mm] Q[c,m,wd=18mm] Q[c,m,wd=18mm] Q[c,m,wd=18mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+ & 水素 & 重水素 & 炭素 & ウラン \\
+$\alpha$ & 0 & 0.11 & 0.72 & 0.98 \\
+$\xi$ & 1 & 0.725 & 0.158 & 0.0084 \\
+回数 $n$ & 18 & 25 & 115 & 2170 \\
+\end{bktable}
+\end{bkcenter}
+\phtashikame
+単位：回数なので単位はありません。\\
+大きさ：水素は、1回で平均してエネルギーの対数が1減る（約 $\tfrac{1}{2.7}$ になる）ので、18回です。\\
+極端な場合：$A$ が大きいと $\xi\approx2/A$ で、ウランでは $2/238=0.0084$ と合います。重い原子核では、ほとんど減速できません。
+\kotae 水素 18回（$\alpha=0$）、重水素 25回（0.11）、炭素 115回（0.72）、ウラン 2170回（0.98）
+\end{phreidai}
+\begin{jibun}
+1 MeV の中性子を、水素で 0.025 eV まで遅くするには、何回ぶつかればよいですか。
+\bkjans{$\ln(10^6/0.025)=17.5$ なので、約18回（2 MeV のときとほとんど同じ）}
+\end{jibun}
+
+\label{ph:原-13:ex11}
+\begin{phreidai}[水の中の熱中性子は、どこまで進むか]
+熱中性子が水素の原子核に吸収される断面積は \qty{0.332}{b} です。水（分子量 18.0、密度 \qty{1.00}{g/cm^3}）の中で、熱中性子が吸収されるまでに進む道のりの平均を求めましょう。アボガドロ定数は $\qty{6.02e23}{mol^{-1}}$ です。
+\phbamen
+原子炉や遮へいの水の中で、熱中性子がどれだけ生き残るかを見積もる場面です。
+\phmushi
+酸素による吸収（水素よりずっと小さい）を無視します。中性子は何回も向きを変えて進みますが、道のりの長さを合計で考えます。
+\phzu
+1 cm$^3$ の水の分子の数 $N_{\text{水}}=\dfrac{1.00}{18.0}\times6.02\times10^{23}$、水素原子はその2倍。
+\phriyu
+巨視的断面積 $\Sigma=N\sigma$ の逆数が、平均の道のりです（⑧）。
+\phtateru
+\[ \Sigma_{\mathrm a}=2N_{\text{水}}\sigma,\qquad \text{平均の道のり}=\frac{1}{\Sigma_{\mathrm a}} \]
+\phtoku
+\[ N_{\text{水}}=\qty{3.34e22}{cm^{-3}},\quad \Sigma_{\mathrm a}=2\times3.34\times10^{22}\times0.332\times10^{-24}=\qty{0.022}{cm^{-1}} \]
+\[ \frac{1}{0.022}=\qty{45}{cm} \]
+\phtashikame
+単位：1/cm$^3$ × cm$^2$＝1/cm。\\
+大きさ：45 cm はジグザグの道のりの合計です。熱中性子は、吸収されるまでに水の原子核と何百回もはね返る（散乱の断面積は吸収よりずっと大きい）ので、まっすぐの距離にすると、ずっと短くなります。\\
+極端な場合：吸収されやすい物（ホウ素など）をとかすと、$\Sigma_{\mathrm a}$ が大きくなり、道のりは短くなります。原子炉の制御に使われます（原-15）。
+\kotae $\Sigma_{\mathrm a}=\qty{0.022}{cm^{-1}}$、平均の道のり約 \qty{45}{cm}
+\end{phreidai}
+\begin{jibun}
+例題11 の水の中で、熱中性子が道のりで 100 cm 進んでも、まだ吸収されていない割合はいくらですか。
+\bkjans{$e^{-0.022\times100}=0.11$（約11 \%）}
+\end{jibun}
+
+\label{ph:原-13:ex12}
+\begin{phreidai}[コバルト60 を作る：放射化と飽和]
+コバルト59 を 1.0 g（モル質量 \qty{58.9}{g/mol}）、中性子束 $\phi=10^{13}$ /(cm$^2$·s) の原子炉の中に置きます。コバルト59 が熱中性子を吸ってコバルト60 になる断面積は \qty{37}{b}、コバルト60 の半減期は 5.27 年です。1年・5.27年・20年照射したときのコバルト60 の放射能と、飽和放射能を求めましょう。
+\phbamen
+医療や工業で使うコバルト60 の線源を、原子炉で作る場面です。
+\phmushi
+中性子束は場所と時間によらず一定とします。コバルト59 が減ること（1年で約1 \%）と、コバルト60 がさらに中性子を吸うことは無視します。1年は 365.25 日とします。
+\phzu
+$N=\dfrac{1.0}{58.9}\times6.02\times10^{23}$、$\sigma=37\times10^{-24}$ cm$^2$、$\lambda=\ln2/T_{1/2}$。
+\phriyu
+生まれる−こわれるの式から出た放射化の式（⑨）を使います。
+\phtateru
+\[ A=N\sigma\phi\,(1-e^{-\lambda t})=N\sigma\phi\Bigl\{1-\Bigl(\frac12\Bigr)^{t/T_{1/2}}\Bigr\} \]
+\phtoku
+\[ N=\num{1.02e22},\qquad N\sigma\phi=1.02\times10^{22}\times3.7\times10^{-23}\times10^{13}=\qty{3.8e12}{Bq} \]
+\[ 1\text{年}：1-(1/2)^{1/5.27}=0.123\ \to\ \qty{4.7e11}{Bq} \]
+\[ 5.27\text{年}：\tfrac12\ \to\ \qty{1.9e12}{Bq},\qquad 20\text{年}：1-(1/2)^{3.80}=0.928\ \to\ \qty{3.5e12}{Bq} \]
+\phtashikame
+単位：個 × cm$^2$ × 1/(cm$^2$·s)＝1/s＝Bq。\\
+大きさ：半減期と同じ時間の照射で、ちょうど飽和の半分です。\\
+極端な場合：照射を何十年続けても、$\qty{3.8e12}{Bq}$ はこえません。
+\kotae 1年 $\qty{4.7e11}{Bq}$、5.27年 $\qty{1.9e12}{Bq}$、20年 $\qty{3.5e12}{Bq}$、飽和 $\qty{3.8e12}{Bq}$
+\end{phreidai}
+\begin{jibun}
+例題12 で、20年照射したあと原子炉から出し、5.27年置くと、放射能はいくらになりますか。
+\bkjans{半減期1つ分なので半分：約 $\qty{1.8e12}{Bq}$}
+\end{jibun}
+
+\label{ph:原-13:ex13}
+\begin{phreidai}[γ線で、管の中に水があるかを知る]
+内径 10 cm の管の片側に、セシウム137（0.662 MeV）の線源、反対側に検出器を置きます。管の中が空のときと、水で満ちているときで、検出器に届くγ線の数は何倍ちがいますか。水の $\mu/\rho$ は \qty{0.0857}{cm^2/g} です。
+\phbamen
+工場の配管の中を、開けずに調べる密度計・レベル計の場面です（⑪）。
+\phmushi
+管のかべは、空のときも水のときも同じだけ減らすので、比では打ち消し合うとして無視します。空気による減弱と、ビルドアップを無視します。
+\phzu
+水の $\mu=0.0857\times1.00$、厚さ $x=\qty{10}{cm}$。
+\phriyu
+水があるときだけ $e^{-\mu x}$ が余分にかかるので、比は $e^{\mu x}$ です（③）。
+\phtateru
+\[ \frac{I_{\text{水}}}{I_{\text{空}}}=e^{-\mu x} \]
+\phtoku
+\[ e^{-0.0857\times10}=e^{-0.857}=0.42,\qquad \frac{1}{0.42}=2.4 \]
+\phtashikame
+単位：$\mu x$ は単位のない数。\\
+大きさ：水があると、届く数が4割ほどに減ります。2.4倍の差は、検出器ではっきり見分けられます。\\
+極端な場合：油（密度 0.85）なら差は 2.1 倍に縮み、密度の差で「何が入っているか」もわかります。
+\kotae 水があると約 42 \%、空のときは水のときの約2.4倍
+\end{phreidai}
+\begin{jibun}
+例題13 の管に、密度 \qty{0.85}{g/cm^3} の油が満ちているとき、届く割合はいくらですか（$\mu/\rho$ は水と同じとする）。
+\bkjans{$e^{-0.0857\times0.85\times10}=e^{-0.73}=0.48$（約48 \%）}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{厚い鉛なら、γ線はゼロになる？}
+\bkng{鉛を十分に厚くすれば、γ線は完全に止まる。}
+\bkok{残る割合は $e^{-\mu x}$ で、どんなに厚くしても0にはならない。「何分の1まで減らすか」を量で決める。}
+γ線は確率で1回ぶつかるかどうかが決まるので、運よくぶつからずに通りぬける光子が、いつも少し残ります（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{厚さが2倍なら、残る割合は半分？}
+\bkng{半価層の2倍の厚さで、γ線は0になる（半分＋半分）。}
+\bkok{半価層の2倍で $\tfrac12\times\tfrac12=\tfrac14$。厚さは足し算、残る割合はかけ算。}
+「同じ量ずつ」ではなく「同じ割合ずつ」減ります（③の「2倍にすると」）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{放射線をあてた物は、放射線を出すようになる？}
+\bkng{X線写真をとった体や、γ線で検査した荷物は、放射性になる。}
+\bkok{X線・γ線・β線・α線をあてても、ふつうは物は放射性にならない。物を放射性にする（放射化）のは、主に中性子。}
+X線やγ線は、電子をはじき出すだけで、原子核を変えません。中性子は原子核に吸いこまれて、原子核の種類を変えます（⑨）。病院の X線検査のあと、体から放射線が出ることはありません。
+\end{tsumazuki}
+
+\begin{tsumazuki}{中性子は、重い鉛で止める？}
+\bkng{γ線を止めるのは鉛なので、中性子も鉛でよく止まる。}
+\bkok{中性子は、自分と同じくらい軽い水素の原子核とぶつかると、よくエネルギーを失う。水・コンクリート・ポリエチレンを使う。}
+重い原子核にぶつかっても、中性子ははね返るだけです（⑥⑧）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{α線は止まりやすいから、気にしなくてよい？}
+\bkng{α線は紙1枚で止まるので、どんな場合も影響はない。}
+\bkok{体の外からは皮ふの表面で止まるが、α線を出す物を体の中に取りこむと、すぐそばの細胞にエネルギーを集中して渡す。}
+どれだけ影響があるかは、放射線の種類と、どこで、どれだけの量を受けるかで決まります（原-14 ⑤⑧）。
+\end{tsumazuki}
+
+\begin{column}{レントゲンの見えない光}
+1895年、ドイツのレントゲンは、うすい気体をつめたガラスの管に高い電圧をかける実験（陰極線の実験）をしていました。管はおおいで囲ってあったのに、近くに置いてあった、光を受けると光る板が、かすかに光るのに気づきました。管から、おおいを通りぬける、まだ知られていない放射線が出ていたのです。レントゲンはこれを「X線」と名づけ、妻の手の骨を写した写真は、世界中をおどろかせました。X線は、すぐに病院で使われるようになり、レントゲンは1901年、最初のノーベル物理学賞を受けました。けれども、はじめのころは、X線が体に害を与えることが知られておらず、たくさんあびて、やけどやがんになった人もいました。この経験から、放射線から身を守るための研究とルールが生まれました（原-14）。
+\end{column}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[放射線を「止める」技術と「使う」技術]
+\textbf{止める}：放射線を使う部屋の壁、原子炉のまわりのコンクリート、線源の容器の厚さは、減弱の式と半価層で見積もり、ビルドアップをふくめた計算（⑩）とモンテカルロ法で決めます。γ線には密度の大きい鉛・鉄・コンクリート、中性子線には水素の多い水・ポリエチレン・コンクリートを組み合わせます。
+
+\textbf{使う}：病院の X線写真・CT（いろいろな向きから X線をあて、$\mu$ の分布を計算で組み立てる）、放射線治療（⑫）。工場の密度計・レベル計・厚さ計、溶接の放射線透過試験（⑪）。医療器具の滅菌（γ線や電子線で、熱を加えずに菌を殺す）。
+
+\begin{phketa}[放射線と物の数の目安]
+\phketaline{鉛の半価層（0.662 MeV）}{約 0.55 cm}
+\phketaline{コンクリートの半価層（1.25 MeV）}{約 5 cm}
+\phketaline{α線（5 MeV）の飛程}{空気で約 4 cm、体で数十 \si{\micro m}}
+\phketaline{β線（2 MeV）の飛程}{アルミで約 4 mm、水で約 1 cm}
+\phketaline{熱中性子のエネルギー}{約 0.025 eV（速い中性子は約 2 MeV）}
+\phboxhead{答えが桁で合っているか}
+γ線の遮へいでは、半価層が「鉛で cm より少しうすい、コンクリートで数 cm、水で 10 cm ほど」と覚えておくと、答えの桁を確かめられます。半価層が 1 mm や 1 m になったら、$\mu/\rho$ に密度をかけ忘れていないか（または2回かけていないか）を疑いましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{放射線工学,医学物理,遮へい設計,非破壊検査}{減弱係数、質量減弱係数、半価層、ビルドアップ係数、阻止能、飛程、ブラッグピーク、断面積、平均自由行程、放射化、飽和放射能}
+
+\begin{motto}[4]
+\textbf{CT は、どうやって体の断面を作る？}\par
+X線写真は、体を通りぬけた X線の「影」を1枚の写真にするので、骨と骨が重なると、どちらの骨かわかりません。CT（コンピュータ断層撮影）は、体のまわりのいろいろな向きから X線をあて、体の輪切り（断面）の中の、場所ごとの減弱係数 $\mu$ を計算で求めます。\bkidx{しーてぃー}{CT}
+
+断面を小さなます目に分け、ます目 $i$ の減弱係数を $\mu_i$、X線がそのます目を通る長さを $\Delta x_i$ とします。③の式を、ます目ごとにかけ合わせると、
+\[ \frac{I}{I_0}=e^{-\mu_1\Delta x_1}\,e^{-\mu_2\Delta x_2}\cdots \qquad\text{より}\qquad \ln\frac{I_0}{I}=\mu_1\Delta x_1+\mu_2\Delta x_2+\cdots \]
+です。1本の X線から、通り道の $\mu$ の\textbf{合計}が1つわかります。
+
+\noindent\begin{minipage}[c]{0.60\linewidth}\raggedright
+いちばん小さな例として、1辺 1 cm のます目4つ（$a$・$b$・$c$・$d$）を考えます。横の2本、たての2本、ななめの1本（$a$ と $d$ を、それぞれ 1.41 cm 通る）の X線をはかって、$\ln(I_0/I)$ が、上の横 0.82、下の横 0.44、左のたて 0.44、右のたて 0.82、ななめ 0.62 でした。
+\[ a+b=0.82,\quad c+d=0.44,\quad a+c=0.44 \]
+\[ b+d=0.82,\quad 1.41(a+d)=0.62 \]
+を解くと、$a=c=d=\qty{0.22}{cm^{-1}}$（軟組織）、$b=\qty{0.60}{cm^{-1}}$（骨）とわかります（例題1 の値）。たてと横だけでは、答えが1つに決まらないことにも注意しましょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.36\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkRed!15] (0,0) rectangle (24,24);
+  \fill[bkGray!55] (12,12) rectangle (24,24);
+  \draw[bkInk, line width=0.6pt] (0,0) grid[step=12] (24,24);
+  \node[txn lab] at (2.8,14.8) {$a$}; \node[txn lab, text=white] at (14.8,21.2) {$b$};
+  \node[txn lab] at (2.8,2.8) {$c$}; \node[txn lab] at (21.2,9.2) {$d$};
+  \foreach \y in {6,18} \draw[bkOrange!85!black, line width=0.7pt, -{Stealth[length=1.5mm]}] (-8,\y) -- (31,\y);
+  \foreach \x in {6,18} \draw[bkOrange!85!black, line width=0.7pt, -{Stealth[length=1.5mm]}] (\x,31) -- (\x,-7);
+  \draw[bkOrange!85!black, line width=0.7pt, dash pattern=on 2pt off 1pt, -{Stealth[length=1.5mm]}] (-5,29) -- (29,-5);
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{2pt}
+実際の CT では、断面を何十万ものます目に分け、何百もの向きから X線をあてて、計算機で連立方程式を解くのと同じことをします。計算のくふうには、専門の本で「フィルター補正逆投影法」や「逐次近似法」という名前で出てきます。
+\end{motto}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem セシウム137 のγ線に対する鉛の半価層は 0.55 cm です。（1）鉛 1.65 cm を通ると、γ線は何分の1になりますか。（2）$\tfrac1{16}$ にするには、鉛は何 cm 要りますか（ビルドアップは無視）。
+\bkpans{（1）半価層3枚分なので $\tfrac18$。（2）4枚分で $4\times0.55=\qty{2.2}{cm}$}
+\bkproblem 0.662 MeV のγ線に対するアルミニウムの質量減弱係数は \qty{0.0746}{cm^2/g}、密度は \qty{2.70}{g/cm^3} です。減弱係数と半価層を求めましょう。
+\bkpans{$\mu=0.0746\times2.70=\qty{0.20}{cm^{-1}}$、半価層 $0.693/0.201=\qty{3.4}{cm}$}
+\bkproblem 1.25 MeV のγ線が電子とコンプトン散乱をして、\ang{90} 向きを変えました。散乱したγ線のエネルギーと、はじき出された電子の運動エネルギーを求めましょう（$m_{\mathrm e}c^2=\qty{0.511}{MeV}$）。
+\bkpans{$E'=1.25/(1+1.25/0.511)=\qty{0.36}{MeV}$、電子は $1.25-0.36=\qty{0.89}{MeV}$}
+\bkproblem 6.0 MeV の α線の空気中の飛程を、ガイガーの式で求めましょう。5.3 MeV の α線（例題7）と比べて、紙1枚で止まると考えてよいですか。
+\bkpans{$0.318\times6.0^{3/2}=\qty{4.7}{cm}$。例題7 の約1.2倍。紙1枚は空気約 5 cm 分の重さなので、紙1枚でほぼ止まる}
+\bkproblem 2.0 MeV の中性子が、止まっている酸素の原子核（$A=16$）に正面からぶつかって弾性衝突しました。ぶつかったあとの中性子のエネルギーを求めましょう。水素の原子核なら、どうなりますか。
+\bkpans{$\alpha=(15/17)^2=0.78$ なので約 \qty{1.6}{MeV}。水素なら $\alpha=0$ で、中性子は止まる（エネルギー0）}
+\bkproblem 3.0 MeV の光子が、原子核の近くで電子対生成を起こしました。電子と陽電子が分け合う運動エネルギーの合計は何 MeV ですか。
+\bkpans{$3.0-2\times0.511=\qty{1.98}{MeV}$}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 0.662 MeV のγ線を、鉛 1.0 cm と鉄 5.0 cm を重ねた壁で弱めます（$\mu$ は鉛 \qty{1.26}{cm^{-1}}、鉄 \qty{0.578}{cm^{-1}}）。（1）残る割合を求めましょう。（2）同じ割合にするには、鉛だけなら何 cm 要りますか（ビルドアップは無視）。
+\bkpans{（1）$e^{-(1.26\times1.0+0.578\times5.0)}=e^{-4.15}=0.016$（約1.6 \%）。（2）$4.15/1.26=\qty{3.3}{cm}$}
+\bkproblem ある物に中性子を、できる放射性の原子の半減期の2倍の時間だけ照射し、そのあと半減期1つ分の時間だけ置きました。放射能は、飽和放射能の何倍ですか。
+\bkpans{照射のあと $1-(\tfrac12)^2=\tfrac34$、そのあと半分になるので $\tfrac38=0.375$ 倍}
+\bkproblem 2 MeV の中性子を、炭素（黒鉛）だけで 1 eV まで遅くするには、平均して何回ぶつかればよいですか（$\xi=0.158$）。
+\bkpans{$\ln(2\times10^6/1)/0.158=14.5/0.158\approx92$ 回}
+\bkproblem 100 MeV の陽子が水に入ります。（1）ブラッグ・クリーマンの式で飛程を求めましょう。（2）水を 5.0 cm 進んだときの陽子のエネルギーを、残りの飛程から求めましょう。（3）入口と 5.0 cm の所で、阻止能はどちらが大きいですか。
+\bkpans{（1）$0.0022\times100^{1.77}=\qty{7.6}{cm}$。（2）残りの飛程 2.6 cm から $E=(2.63/0.0022)^{1/1.77}\approx\qty{55}{MeV}$。（3）遅くなった 5.0 cm の所のほうが大きい（$S\propto E^{-0.77}$ で約1.6倍）}
+
+\begin{furikaeri}
+\begin{checklist}
+\item α線・β線・γ線（X線）・中性子線が、どんな物で止まるか（透過力）と、物を電離するしくみを説明できる。\bkfurref{ph:原-13:sec1}
+\item 光子の減弱の式 $I=I_0e^{-\mu x}$ と半価層を使って、X線写真や遮へいの厚さを計算できる。\bkfurref{ph:原-13:sec3}
+\item 光電効果・コンプトン散乱・電子対生成のちがいと、荷電粒子・中性子の止まり方のちがいを説明できる。\bkfurref{ph:原-13:sec4}
+\item 阻止能とブラッグピーク、断面積と平均自由行程、中性子の減速を、式で読める。\bkfurref{ph:原-13:sec7}
+\item 放射化の式 $A=N\sigma\phi(1-e^{-\lambda t})$ で、飽和放射能に近づくようすを計算できる。\bkfurref{ph:原-13:sec9}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{sora}{骨が白いのは、骨が X線の影を作っていたからなんだ。同じ「同じ割合ずつ減る」式で、壁の厚さも、陽子線でがんをねらう深さも決められるなんて、すごい！}
