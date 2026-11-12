@@ -25,6 +25,7 @@ function badKanji(s) {
 }
 let bad = 0;
 const report = [];
+const seenCmd = new Set();   // 知らない命令の検査：同じ文は1回だけ
 for (const id of ids) {
   const d = M.waza[id];
   const errs = [];
@@ -36,6 +37,7 @@ for (const id of ids) {
     for (const f of ['futsu', 'raku']) (d[f] || []).forEach(l => badKanji(l).forEach(c => bk.add(c)));
     if (bk.size) errs.push(`教科書 第${vol}巻までにない漢字：${[...bk].join('')}`);
   }
+  if (vol >= 5) { const u = []; [d.title, d.mark, d.why, d.caution, ...(d.futsu || []), ...(d.raku || [])].forEach(t => M.toHTML(String(t || ''), { unknown: u })); if (u.length) errs.push(`知らない命令：${[...new Set(u)].map(x => '\\' + x).join(' ')}`); }
   if (vol >= 4) {   // 第4巻から：ルビなし・常用漢字まで（教科書と同じ。L-A。第35回）
     const txt = [d.title, d.mark, d.why, d.caution, ...(d.futsu || []), ...(d.raku || [])].join(' ');
     if (/《/.test(txt)) errs.push('ルビ（《》）を書いている（第4巻からルビなし）');
@@ -58,6 +60,7 @@ for (const id of ids) {
       const e = M.checkProblem(p);
       if (e.length) errs.push(`${s} 種${seed}「${M.plain(p.q)}」: ${e.join(' / ')}`);
       if (vol <= 3) for (const f of ['q', 'a', 'easy']) if (bareKanji(p[f])) errs.push(`${s}「${M.plain(p.q)}」の ${f} にルビのない漢字`);
+      if (vol >= 5) for (const f of ['q', 'a', 'easy']) { const t = String(p[f] || ''); if (!t.includes('\\') || seenCmd.has(t)) continue; seenCmd.add(t); const u = []; M.toHTML(t, { unknown: u }); if (u.length) errs.push(`${s}「${M.plain(p.q)}」の ${f} に知らない命令：${[...new Set(u)].map(x => '\\' + x).join(' ')}`); }   // 第5巻から（組 d の要望）
       if (vol >= 4) for (const f of ['q', 'a', 'easy']) if (/《/.test(String(p[f] || ''))) errs.push(`${s}「${M.plain(p.q)}」の ${f} にルビ（第4巻からルビなし）`);
       for (const f of ['q', 'a', 'easy']) { const b = badKanji(p[f]); if (b.length) errs.push(`${s}「${M.plain(p.q)}」の ${f} に${vol >= 4 ? '常用漢字' : '教科書 第' + vol + '巻まで'}にない漢字：${b.join('')}`); }
     }

@@ -299,7 +299,7 @@
       if (c === '{') { i++; const h = seq('}'); i++; return h; }
       if (c === '\\') {
         const name = readCmd();
-        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') { const a = atom(), b = atom(); return `<span class="frac mf"><span>${a}</span><span>${b}</span></span>`; }
+        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') { const one = () => { ws(); return /[0-9]/.test(s[i] || '') ? s[i++] : atom(); }; const a = one(), b = one(); return   /* \frac12 は 1/2（数字は1字ずつ。第5巻 組 d） */ `<span class="frac mf"><span>${a}</span><span>${b}</span></span>`; }
         if (name === 'sqrt') {
           ws(); let n = '';
           if (s[i] === '[') { const j = s.indexOf(']', i); n = M.mathHTML(s.slice(i + 1, j), opt); i = j + 1; }
@@ -333,6 +333,7 @@
         if (name === ' ') return ' ';
         if (name === '\\') return '<br>';
         if (MATHSYM[name] != null) { const t = MATHSYM[name]; return /^[×÷·±∓≤≥≦≧≠≒→]$/.test(t) ? op(t) : t; }
+        if (opt.unknown && /^[a-zA-Z]+$/.test(name)) opt.unknown.push(name);   // 知らない命令（\tox など。check.js が止める）
         return htmlEsc(name);
       }
       if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; return s.slice(j, i); }
@@ -386,7 +387,7 @@
       if (/[a-zA-Z]/.test(c)) { i++; if (c === 'e' && !('e' in vars)) return Math.E; if (!(c in vars)) throw 0; return vars[c]; }   // e は、文字の値がなければネイピア数（第5巻。第37回）
       if (c === '\\') {
         const n = cmdAt(); if (!n) throw 0; i += n.length + 1;
-        if (n === 'frac') { const a = group(), b = group(); return a / b; }
+        if (n === 'frac') { const one = () => { ws(); return /[0-9]/.test(s[i] || '') ? +s[i++] : group(); }; const a = one(), b = one(); return a / b; }   // \frac12 は 1/2
         if (n === 'sqrt') { ws(); let k = 2; if (s[i] === '[') { const j = s.indexOf(']', i); k = M.evalMath(s.slice(i + 1, j), vars); i = j + 1; } const v = group(); return k === 2 ? Math.sqrt(v) : Math.pow(v, 1 / k); }
         if (n === 'pi') return Math.PI;
         if (n === 'log') { ws(); let b = 10; if (s[i] === '_') { i++; b = group(); } const v = power(); return Math.log(v) / Math.log(b); }
