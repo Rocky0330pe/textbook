@@ -893,7 +893,7 @@
       } catch (e) { errs.push('ひっ算: ' + e.message); }
     }
     if ([p.q, p.a, p.easy].some(t => typeof t === 'string' && t.includes('$'))) errs.push(...checkMath(p));
-    if (typeof p.verify === 'function') { const v = p.verify(); if (v !== true) errs.push('verify: ' + v); }
+    if (typeof p.verify === 'function') { const v = p.verify(p); if (v !== true) errs.push('verify: ' + v); }
     return errs;
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
