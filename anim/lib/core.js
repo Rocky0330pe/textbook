@@ -22,7 +22,8 @@
     alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
     Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω', partial: '∂', nabla: '∇', hbar: 'ℏ', ell: 'ℓ', int: '∫', oint: '∮', sum: 'Σ',
     ldots: '…', cdots: '⋯', prime: '′', propto: '∝', in: '∈', cdotp: '·', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
-  const FN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim', 'sinh', 'cosh', 'tanh', 'Re', 'Im', 'div', 'rot', 'grad', 'det'];
+  const FN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim', 'sinh', 'cosh', 'tanh', 'Re', 'Im', 'rot', 'grad', 'det', 'arg'];  // div（発散）は \\mathrm{div}。\\div は ÷
+  const CAL = { E: 'ℰ', B: 'ℬ', F: 'ℱ', H: 'ℋ', L: 'ℒ', M: 'ℳ', R: 'ℛ', T: '𝒯', I: 'ℐ', P: '𝒫' };
   // TeX のような書き方を HTML に（練習プリントのアプリの数式の組み方を写したもの）
   A.tex = function tex(s, opt) {
     opt = opt || {};
@@ -38,7 +39,13 @@
       if (c === '{') { i++; const h = seq('}'); i++; return h; }
       if (c === '\\') {
         const name = readCmd();
-        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') { const a = atom(), b = atom(); return `<span class="frac"><span>${a}</span><span>${b}</span></span>`; }
+        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') { const one = () => { ws(); return /[0-9]/.test(s[i] || '') ? s[i++] : atom(); }; const a = one(), b = one(); return `<span class="frac"><span>${a}</span><span>${b}</span></span>`; }
+        if (name === 'dot' || name === 'ddot') { const x = atom(); return `<span style="position:relative;display:inline-block">${x}<span style="position:absolute;left:0;right:0;top:-.55em;text-align:center;font-size:.8em">${name === 'dot' ? '˙' : '¨'}</span></span>`; }
+        if (name === 'phantom') { const x = atom(); return `<span style="visibility:hidden">${x}</span>`; }
+        if (name === 'mathcal') { const r = raw(); return CAL[r] || esc(r); }
+        if (name === 'operatorname' || name === 'mathsf') return `<span class="mfn">${esc(raw())}</span>`;
+        if (name === 'overrightarrow') return `<span class="mvec">${atom()}</span>`;
+        if (/^[bB]igg?[lr]?$/.test(name)) { ws(); if (s[i] === '\\') { const n2 = readCmd(); return `<span style="font-size:1.3em">${SYM[n2] || ''}</span>`; } const d = s[i++]; return `<span style="font-size:1.3em">${esc(d)}</span>`; }
         if (name === 'sqrt') { const x = atom(); return `<span class="msqrt">√<span class="rc">${x}</span></span>`; }
         if (name === 'text' || name === 'mathrm' || name === 'rm') return `<span class="mtext">${A.txt(raw())}</span>`;
         if (name === 'vec') return `<span class="mvec">${atom()}</span>`;
@@ -72,8 +79,8 @@
   // 文：《漢字|よみ》はルビ、$…$ は数式、**…** は強調。ほかの HTML はそのまま通す
   A.txt = function (s) {
     if (s == null) return '';
-    return String(s).split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? A.tex(seg.slice(1, -1))
-      : seg.replace(/《([^|》]+)\|([^》]+)》/g, (m, a, b) => A.R(a, b)).replace(/\*\*([^*]+)\*\*/g, '<b class="k">$1</b>')).join('');
+    return String(s).replace(/\*\*([^*]+)\*\*/g, '\u0001$1\u0002').split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? A.tex(seg.slice(1, -1))
+      : seg.replace(/《([^|》]+)\|([^》]+)》/g, (m, a, b) => A.R(a, b))).join('').replace(/\u0001/g, '<b class="k">').replace(/\u0002/g, '</b>');
   };
   // キャンバスに書く文字（ルビの記号を取る。《漢字|よみ》→ 漢字）
   const plain = s => String(s).replace(/《([^|》]+)\|[^》]+》/g, '$1');
@@ -118,7 +125,7 @@
       if (o.open) { g.fillStyle = A.color('bg'); g.fill(); g.stroke(); } else g.fill();
     }
     text(s, x, y, o = {}) {
-      const g = this.g, size = Math.max(13, o.size || 15);
+      const g = this.g, size = Math.max(13, o.size || 15) * (this.ts || 1);
       g.font = `${o.bold ? 'bold ' : ''}${o.italic ? 'italic ' : ''}${size}px ${o.math ? '"Times New Roman",serif' : this.fontFamily}`;
       g.textAlign = o.align || 'left'; g.textBaseline = o.base || 'middle';
       const t = plain(s);
@@ -186,7 +193,7 @@
       o = o || {};
       const c = A.color(o.color), d = (DASH[o.style] || []).join(',');
       let mk = '';
-      if (o.shape) { const sh = o.shape; mk = sh === 'square' ? `<rect x="12" y="4" width="8" height="8" fill="${c}"/>` : sh === 'tri' ? `<path d="M16 3 L21 12 L11 12 Z" fill="${c}"/>` : sh === 'diamond' ? `<path d="M16 2 L22 8 L16 14 L10 8 Z" fill="${c}"/>` : `<circle cx="16" cy="8" r="4.5" fill="${c}"/>`; }
+      if (o.shape) { const sh = o.shape; mk = sh === 'square' ? `<rect x="12" y="4" width="8" height="8" fill="${c}"/>` : sh === 'tri' ? `<path d="M16 3 L21 12 L11 12 Z" fill="${c}"/>` : sh === 'diamond' ? `<path d="M16 2 L22 8 L16 14 L10 8 Z" fill="${c}"/>` : sh === 'cross' ? `<path d="M12 4 L20 12 M20 4 L12 12" stroke="${c}" stroke-width="2.5"/>` : `<circle cx="16" cy="8" r="4.5" fill="${c}"/>`; }
       const ln = o.noline ? '' : `<line x1="2" y1="8" x2="30" y2="8" stroke="${c}" stroke-width="3" stroke-dasharray="${d}" stroke-linecap="round"/>`;
       return `<span><svg width="32" height="16" aria-hidden="true">${ln}${mk}</svg>${A.txt(label)}</span>`;
     }).join('');
@@ -212,7 +219,7 @@
   <div class="note"></div>
   <div class="note miss" hidden></div>
 </main>
-<footer class="an">${A.txt(def.foot || '工学を理解するための数学・物理シリーズの補助教材')}</footer>`);
+<footer class="an">${A.txt(def.foot || (def.ruby ? '《工学|こうがく》を《理解|りかい》するための《数学|すうがく》・《物理|ぶつり》シリーズの《補助|ほじょ》《教材|きょうざい》' : '工学を理解するための数学・物理シリーズの補助教材'))}</footer>`);
     const $ = s => root.querySelector(s);
     const nav = $('nav.sc'), canvas = $('canvas.an'), leg = $('.leg'), ro = $('.readout'), bar = $('.bar'), ctl = $('.ctl'), note = $('.note'), miss = $('.note.miss'), lead = $('.lead');
     readColors();
@@ -224,11 +231,12 @@
     const clone = o => JSON.parse(JSON.stringify(o || {}));
     function api() { return { cv, W, H, redraw, set, st, play: v => setPlay(v) }; }
     function set(k, v) { st[k] = v; syncCtl(); redraw(); }
-    function draw() { cv.begin(); try { scene().draw(cv, st, api()); } catch (e) { console.error(e); throw e; } if (scene().readout) ro.innerHTML = A.txt(scene().readout(st)); }
+    function fit() { const w = canvas.getBoundingClientRect().width || W; cv.ts = w < 520 ? Math.min(1.3, 1 + (520 - w) / 400) : 1; }
+    function draw() { fit(); cv.begin(); try { scene().draw(cv, st, api()); } catch (e) { console.error(e); throw e; } ro.innerHTML = scene().readout ? A.txt(scene().readout(st)) : ''; }
     let pend = false;
     function redraw() { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; draw(); }); }
     function syncCtl() { for (const c of ctrls) c.sync && c.sync(); }
-    function setPlay(v) { playing = v; const b = bar.querySelector('.play'); if (b) { b.textContent = playing ? '❚❚ 止める' : '▶ 再生'; b.classList.toggle('on', playing); } if (playing) { last = 0; requestAnimationFrame(tick); } }
+    function setPlay(v) { playing = v; const b = bar.querySelector('.play'); if (b) { b.innerHTML = playing ? '❚❚ ' + A.txt(def.ruby ? '《止|と》める' : '止める') : '▶ ' + A.txt(def.ruby ? '《再生|さいせい》' : '再生'); b.classList.toggle('on', playing); } if (playing) { last = 0; requestAnimationFrame(tick); } }
     function tick(ts) {
       if (!playing) return;
       if (!last) last = ts;
@@ -253,6 +261,7 @@
         const p = document.createElement('button'); p.className = 'play'; p.onclick = () => setPlay(!playing); bar.append(p);
         const s = document.createElement('button'); s.textContent = speed === 1 ? 'ゆっくり' : 'ふつうの速さ'; s.onclick = () => { speed = speed === 1 ? 0.3 : 1; s.textContent = speed === 1 ? 'ゆっくり' : 'ふつうの速さ'; s.classList.toggle('on', speed !== 1); }; bar.append(s);
       }
+      if (document.fullscreenEnabled) { const f = document.createElement('button'); f.innerHTML = A.txt(def.ruby ? '《大|おお》きく《見|み》る' : '大きく見る'); f.onclick = () => { const w = root.querySelector('.cvw'); document.fullscreenElement ? document.exitFullscreen() : w.requestFullscreen().then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {}); }; bar.append(f); }
       const r = document.createElement('button'); r.textContent = 'はじめから'; r.onclick = () => { buildScene(false); }; bar.append(r);
       for (const c of (sc.controls || [])) addCtl(c);
       setPlay(false);
@@ -298,7 +307,8 @@
       const k = def.scenes.findIndex(s => s.key === h[0]);
       if (k >= 0) si = k;
       buildScene(false);
-      for (const kv of h.slice(1)) { const [a, b] = kv.split('='); if (a in st) st[a] = isNaN(+b) ? b : +b; }
+      for (const kv of h.slice(1)) { const [a, b] = kv.split('='); if (a in st) { st[a] = b === 'true' ? true : b === 'false' ? false : isNaN(+b) ? b : +b; const c = (scene().controls || []).find(c => (c.range || c.seg || c.check) === a); if (c && c.on) c.on(st, api()); } }
+      if (h.length > 1 && scene().onhash) scene().onhash(st, api());
       syncCtl(); draw();
     }
     window.addEventListener('hashchange', fromHash);
@@ -306,7 +316,8 @@
     window.addEventListener('resize', () => { const d = Math.min(3, window.devicePixelRatio || 1); if (d !== cv.dpr) { cv.resize(); draw(); } });
     fromHash();
     // 自動の確かめ（anim/build/check.js）が使う
-    window.__ANIM = { def, scenes: def.scenes.map(s => s.key), setScene(k) { si = k; buildScene(false); }, run(sec) { const sc = scene(); if (!sc.step) return; let t = 0; while (t < sec) { const r = sc.step(st, 1 / 60, api()); t += 1 / 60; if (r === false) break; } draw(); }, state: () => st, controls: () => (scene().controls || []).length };
+    window.__ANIM = { def, scenes: def.scenes.map(s => s.key), setScene(k) { si = k; buildScene(false); }, run(sec) { const sc = scene(); if (sc.step) { let t = 0; while (t < sec) { const r = sc.step(st, 1 / 60, api()); t += 1 / 60; if (r === false) break; } } syncCtl(); draw(); },
+      set(o) { Object.assign(st, o); syncCtl(); draw(); }, redraw() { syncCtl(); draw(); }, state: () => st, controls: () => (scene().controls || []).length };
   };
 
   // ---------- よく使う計算 ----------
