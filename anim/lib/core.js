@@ -232,7 +232,7 @@
     function api() { return { cv, W, H, redraw, set, st, play: v => setPlay(v) }; }
     function set(k, v) { st[k] = v; syncCtl(); redraw(); }
     function fit() { const w = canvas.getBoundingClientRect().width || W; cv.ts = w < 520 ? Math.min(1.3, 1 + (520 - w) / 400) : 1; }
-    function draw() { fit(); cv.begin(); try { scene().draw(cv, st, api()); } catch (e) { console.error(e); throw e; } ro.innerHTML = scene().readout ? A.txt(scene().readout(st)) : ''; }
+    function draw() { fit(); cv.begin(); try { scene().draw(cv, st, api()); } catch (e) { console.error(e); throw e; } ro.innerHTML = scene().readout ? A.txt(scene().readout(st)).replace(/\u3000+/g, m => `<span class="gp" style="display:inline-block;width:${m.length * 0.75}em"></span>`) : ''; }
     let pend = false;
     function redraw() { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; draw(); }); }
     function syncCtl() { for (const c of ctrls) c.sync && c.sync(); }
