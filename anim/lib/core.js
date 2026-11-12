@@ -275,7 +275,9 @@
         const k = c.range, id = 'c_' + k;
         const r = document.createElement('input'); r.type = 'range'; r.id = id; lab.htmlFor = id; r.min = c.min; r.max = c.max; r.step = c.step || (c.max - c.min) / 200;
         const o = document.createElement('output'); o.htmlFor = id;
-        const fmt = c.fmt || (v => A.num(v, c.d == null ? 2 : c.d));
+        const dec = c.step ? Math.min(6, (String(c.step).split('.')[1] || '').length + (/e-/.test(String(c.step)) ? 6 : 0)) : 3;
+        const f0 = c.fmt || (v => A.num(v, c.d == null ? 2 : c.d));
+        const fmt = v => f0(+(+v).toFixed(dec));   // 再生中の値も、刻みのけたに丸めて出す
         const sync = () => { r.value = st[k]; o.innerHTML = A.txt(fmt(+st[k])); };
         r.oninput = () => { st[k] = +r.value; if (c.on) c.on(st, api()); o.innerHTML = A.txt(fmt(st[k])); redraw(); };
         ctl.append(lab, r, o); sync(); ctrls.push({ sync, k });
