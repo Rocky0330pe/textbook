@@ -487,7 +487,7 @@
       // $y=mx$ と $y=x^2$、$y=k^2$ と $y=x^2$
       s1(r) {
         if (turn(r, '49s1', 3)) {
-          const m = r.int(1, 5), L = Pm(0, m), A = F.div(fr(m * m * m), fr(6));
+          const m = r.int(2, 5), L = Pm(0, m), A = F.div(fr(m * m * m), fr(6));   // $y=x$ と $y=x^2$ は楽な形の例なので出さない（O-2）
           const e = [`y=${ptex(L)}`, 'y=x^{2}'], sw = r.chance(0.5);
           return {
             q: `$${e[sw ? 1 : 0]}$ と $${e[sw ? 0 : 1]}$ のグラフで囲まれた部分の面積`, a: `$${F.tex(A)}$`, key: `m${m}`,
@@ -526,10 +526,11 @@
       s3(r) {
         const al = r.int(-3, 1), be = r.int(al + 2, 3), c0 = r.pick([0, 1, -1, 2, 3, -2]), sg = r.pick([1, -1]), S = pairPL(al, be, sg, c0);
         if (deg(S.line) < 1) return null;
+        if (sg > 0 && c0 === 0 && (al === 0 || be === 0)) return null;   // $y=mx$ と $y=x^2$ はステップ1の形
         const pf = x => P.val(S.par, x), lf = x => P.val(S.line, x);
         const fig = areaFig([{ fn: pf, tex: ptex(S.par) }, { fn: lf, tex: ptex(S.line) }], al, be);
         return {
-          q: `図の色のついた部分（$y=${ptex(S.par)}$ と $y=${ptex(S.line)}$ のグラフで囲まれた部分）の面積`, a: `$${F.tex(S.A)}$`, fig, key: `f${ptex(S.par)}|${ptex(S.line)}`,
+          q: `図の色のついた部分（$y=${ptex(S.par)}$ と $y=${ptex(S.line)}$ のグラフで囲まれた部分）の面積`, a: `$${F.tex(S.A)}$`, fig, key: [ptex(S.par), ptex(S.line)].sort().join('|'),   // ステップ2と同じ key（図があっても同じ問題。R2-8）
           easy: `$x=${al},\\ ${be}$。$${DEF(al, be, ptex(sub(S.up, S.low)))}=${F.tex(S.A)}$`, easyCheck: 'last',
           verify: p => valIs(p.a, areaNum(pf, lf, -10, 10)),
         };
@@ -537,7 +538,7 @@
       // わな：面積ではなく定積分の値（横軸より下はマイナスのまま。5-47）
       trap(r) {
         const c = r.pick([2, 3, 4]), b = r.int(c + 1, c + 2), f = Pm(0, -c, 1), d = defProb(f, 0, b);
-        return dest({ q: `$y=${ptex(f)}$ のグラフについて、$${DEF(0, b, ptex(f))}$ の値`, a: `$${F.tex(d.I)}$`, key: `t${c}${b}`, calc: { kind: 'defint', f: ptex(f), a: 0, b } }, '5-49',
+        return dest({ q: `$y=${ptex(f)}$ のグラフについて、$${DEF(0, b, ptex(f))}$ の値`, a: `$${F.tex(d.I)}$`, key: `t${c}`, calc: { kind: 'defint', f: ptex(f), a: 0, b } }, '5-49',
           `囲まれた部分の面積ではなく、定積分の値。横軸より下（$0<x<${c}$）はマイナスのまま計算する`);
       },
     },
@@ -933,6 +934,7 @@
         const k = turn(r, '55s1', 2), T = k === 0 ? r.int(2, 4) : r.pick([3, 6, 6]);
         const f = k === 0 ? Pm(r.pick([0, 0, 1, 2]), 0, r.pick([1, 3, 6])) : Pm(0, T + r.int(0, 4), -1);
         if (!nonneg(f, 0, T)) return null;
+        if (k === 0 && T === 2 && ptex(f) === '3x^{2}') return null;   // 楽な形の例（$v=3t^2$、0〜2秒）は出さない（O-2）
         const A = avgOf(f, 0, T), I = F.sub(val(P.integ(f), T), fr(0));
         if (A[1] !== 1 || F.val(A) > 30) return null;   // 平均は整数
         return {
@@ -952,7 +954,7 @@
         if (t === 1) {
           const T = r.pick([3, 6]), c = r.pick([10, 15, 20]), b = T, f = Pm(c, b, -1), A = avgOf(f, 0, T);
           if (A[1] !== 1) return null;
-          return { q: `部屋の温度が $T=${ptex(f, 't')}$（℃、$t$ は時間）で変わった。$t=0$ から${T}までの平均の温度 □ ℃`, a: `$${F.tex(A)}$`, key: `T${c}${T}`,
+          return { q: `部屋の温度が $T=${ptex(f, 't')}$（℃、$t$ は時間）で変わった。0時間から${T}時間までの平均の温度 □ ℃`, a: `$${F.tex(A)}$`, key: `T${c}${T}`,
             easy: `$${DEF(0, T, ptex(f, 't'), 't')}=${F.tex(F.mul(A, fr(T)))}$、$\\div${T}$ で $${F.tex(A)}$`, easyCheck: 'last', verify: p => valIs(p.a, simpson(x => P.val(f, x), 0, T) / T) };
         }
         const p0 = r.pick([4, 6, 8, 10]), T = r.pick([2, 4]), f = Pm(p0, -1), A = avgOf(f, 0, T);
@@ -1244,6 +1246,7 @@
       // A：$v=2pt$（位置0から）、B：一定の速度でもどる
       s1(r) {
         const p = r.pick([1, 1, 2]), c = r.int(1, 6), T = r.int(2, 6), L = p * T * T + c * T;
+        if (p === 1 && c === 2 && T === 3) return null;   // 楽な形の例（A：$x=t^2$、B：$x=15-2t$）は出さない（O-2）
         return {
           q: `物体Aは位置0から速度 $v=${2 * p}t$ で、物体Bは位置 $${L}\\,\\mathrm{m}$ から速度 $${-c}\\,\\mathrm{m/s}$ で動く。2つが出会うのは □ 秒後`, a: `$${T}$`, key: `${p}|${c}|${L}`,
           easy: p === 2 && c % 2 === 0
@@ -1271,10 +1274,11 @@
           verify: q => { const g = t => p * t * t - (L + c * t); return (Math.abs(g(T)) < 1e-9 && g(0.001) < 0 && valsAre(q.a, [T, L + c * T]) === true) || '追いつく時刻か位置がちがう'; },
         };
       },
-      // わな：速度が同じになる時刻（位置ではない。微分して速度の式を等しく。5-10）
+      // わな：速度が同じになる時刻（位置ではない。微分して速度の式を等しく。5-10）。
+      // key は B の速度だけ：はじめの位置だけがちがう同じ問題（$2t=8$ が2問）を出さない（R2-10）
       trap(r) {
         const c = r.pick([2, 4, 6, 8]), L = r.int(3, 20);
-        return dest({ q: `物体Aの位置が $x=t^{2}$、物体Bの位置が $x=${L}+${c}t$（m）のとき、2つの速度が同じになるのは □ 秒後`, a: `$${c / 2}$`, key: `t${c}${L}`, verify: p => valIs(p.a, c / 2) }, '5-60',
+        return dest({ q: `物体Aの位置が $x=t^{2}$、物体Bの位置が $x=${L}+${c}t$（m）のとき、2つの速度が同じになるのは □ 秒後`, a: `$${c / 2}$`, key: `t${c}`, verify: p => valIs(p.a, c / 2) }, '5-60',
           '出会う時刻ではなく、速度が同じになる時刻。位置を微分して、速度の式どうしを等しくする（$2t=' + c + '$）', ['5-10']);
       },
     },
@@ -1307,8 +1311,10 @@
     steps: {
       s1(r) {
         const q = r.pick([2, 4, 6]), T = r.int(2, 6), p = q * T, V0 = r.pick([10, 20, 50, 100]), Vm = V0 + q * T * T / 2;
+        if (q === 6 && T === 5) return null;   // 楽な形の例（$30-6t$）は出さない（O-2）
         return {
-          q: `タンクの水の量 $V$ が $\\dfrac{\\dd V}{\\dd t}=${p}-${q}t$（L/min）で変わり、はじめは $${V0}\\,\\mathrm{L}$。いちばん多くなるのは □ 分後で、そのとき □ L`, a: `$${T}$、$${Vm}$`, key: `${p}|${q}|${V0}`,
+          // key は変わる速さの式だけ：はじめの量だけがちがう同じ式を、同じ見開きに出さない（R2-18）
+          q: `タンクの水の量 $V$ が $\\dfrac{\\dd V}{\\dd t}=${p}-${q}t$（L/min）で変わり、はじめは $${V0}\\,\\mathrm{L}$。いちばん多くなるのは □ 分後で、そのとき □ L`, a: `$${T}$、$${Vm}$`, key: `${p}|${q}`,
           easy: `$${p}-${q}t=0$ より $t=${T}$。$V=${V0}+${p}t-${q / 2 === 1 ? '' : q / 2}t^{2}$ に入れて $${Vm}$`, easyCheck: false,
           verify: pp => maxCheck(pp.a, t => p - q * t, V0, 3 * T),
         };
@@ -1319,9 +1325,10 @@
         const q = D(r.pick([0.2, 0.4, 0.5, 1, 2])), T = r.pick([2, 4, 5, 10]), p = F.mul(q, fr(T)), V0 = r.pick([10, 20, 25, 30]);
         const Vm = F.add(fr(V0), F.mul(F.div(q, fr(2)), fr(T * T)));
         if (!decOK(p[1]) || !decOK(Vm[1])) return null;
+        if (au === '℃' && F.val(Vm) > 90) return null;   // お湯は 100℃ をこえない（R2-1・O-6）
         const rt = ptex([p, F.mul(q, fr(-1))], 't', { dec: true });
         return {
-          q: `${what}が $\\dfrac{\\dd ${s}}{\\dd t}=${rt}$（${u}）で変わり、はじめは ${au === '℃' ? `${V0}℃` : `$${V0}\\,\\mathrm{cm}$`}。いちばん高くなるのは □ 分後で、そのとき □ ${au}`, a: `$${T}$、$${fx(Vm)}$`, key: `${s}${rt}|${V0}`,
+          q: `${what}が $\\dfrac{\\dd ${s}}{\\dd t}=${rt}$（${u}）で変わり、はじめは ${au === '℃' ? `${V0}℃` : `$${V0}\\,\\mathrm{cm}$`}。いちばん高くなるのは □ 分後で、そのとき □ ${au}`, a: `$${T}$、$${fx(Vm)}$`, key: `${fx(p)}|${fx(q)}`,   // ステップ1・3と同じ形の key（同じ速さの式を、水位・温度・水の量で重ねない。R2-18）
           easy: `$${rt}=0$ より $t=${T}$。$${V0}+${BR(ptex(P.integ([p, F.mul(q, fr(-1))]), 't', { dec: true }), 0, T)}=${fx(Vm)}$`, easyCheck: false,
           verify: pp => maxCheck(pp.a, t => F.val(p) - F.val(q) * t, V0, 3 * T),
         };
@@ -1331,7 +1338,7 @@
         if (turn(r, '93s3', 2)) {
           const q = r.pick([2, 4]), T = r.int(3, 8), p = q * T, V0 = r.pick([20, 40, 60]), Vm = V0 + q * T * T / 2;
           return {
-            q: `毎分 $${p}\\,\\mathrm{L}$ の水が入り、毎分 $${q}t\\,\\mathrm{L}$（$t$ は分）の水が出ていくタンク。はじめは $${V0}\\,\\mathrm{L}$。いちばん多くなるのは □ 分後で、そのとき □ L`, a: `$${T}$、$${Vm}$`, key: `${p}|${q}|${V0}`,   // ステップ1 と同じ key（同じ数の問題を同じ見開きに出さない）
+            q: `毎分 $${p}\\,\\mathrm{L}$ の水が入り、毎分 $${q}t\\,\\mathrm{L}$（$t$ は分）の水が出ていくタンク。はじめは $${V0}\\,\\mathrm{L}$。いちばん多くなるのは □ 分後で、そのとき □ L`, a: `$${T}$、$${Vm}$`, key: `${p}|${q}`,   // ステップ1 と同じ key（同じ式の問題を同じ見開きに出さない）
             easy: `変わる速さは $${p}-${q}t$。$t=${T}$ で $${V0}+${p * T}-${q * T * T / 2}=${Vm}$`, easyCheck: false,
             verify: pp => maxCheck(pp.a, t => p - q * t, V0, 3 * T),
           };
@@ -1343,12 +1350,16 @@
           verify: pp => maxCheck(pp.a, t => a3 - 3 * c * t * t, V0, 3 * T),
         };
       },
-      // わな：かぎられた時間のあいだ、ふえる速さがずっと＋（はしの値。5-25）
+      // わな：同じ形の変わる速さとはじめの量で、いちばん多い所をすぎた時刻の量を聞く（いちばん多い量ではない。
+      // 積分して、はじめの量で C を決め、その時刻を入れる → 5-57）。
+      // 「時刻にかぎりがあって、速さが0にならない（はしの値）」は 5-93 自身で解けるので、caution に回した（R2-9・N-3）
       trap(r) {
-        const q = r.pick([2, 4, 6]), T = r.int(4, 8), p = q * T, V0 = r.pick([10, 20, 50]), R = r.int(2, T - 1), Vr = V0 + p * R - q * R * R / 2;
-        return dest({ q: `タンクの水の量 $V$ が $\\dfrac{\\dd V}{\\dd t}=${p}-${q}t$（L/min）で変わり、はじめは $${V0}\\,\\mathrm{L}$。$0\\leqq t\\leqq${R}$ のあいだで、いちばん多い量 □ L`, a: `$${Vr}$`, key: `t${p}|${q}|${V0}|${R}`,
-          verify: pp => valIs(pp.a, maxNum(t => p - q * t, V0, R)[1]) }, '5-93',
-          `このあいだでは、ふえる速さ $${p}-${q}t$ がずっと＋なので、量はふえつづける。いちばん多いのは、おわりの $t=${R}$`, ['5-25']);
+        const q = r.pick([2, 4, 6]), T = r.int(3, 6), p = q * T, V0 = r.pick([10, 20, 50]), R = r.int(T + 1, 2 * T - 1), Vr = V0 + p * R - q * R * R / 2;
+        if (q === 6 && T === 5) return null;   // 楽な形の例（$30-6t$）は出さない（O-2）
+        const Vt = `${V0}+${p}t-${q / 2 === 1 ? '' : q / 2}t^{2}`;
+        return dest({ q: `タンクの水の量 $V$ が $\\dfrac{\\dd V}{\\dd t}=${p}-${q}t$（L/min）で変わり、はじめは $${V0}\\,\\mathrm{L}$。${R}分後の水の量 □ L`, a: `$${Vr}$`, key: `${p}|${q}`,   // ステップ1・3 と同じ key（同じ式を同じ見開きに出さない）
+          verify: pp => valIs(pp.a, V0 + simpson(t => p - q * t, 0, R)) }, '5-93',
+          `いちばん多い量ではなく、${R}分後の量（いちばん多いのは${T}分後で、そのあとはへる）。積分して $V=${Vt}$、$t=${R}$ を入れて $${Vr}$`);
       },
     },
   });

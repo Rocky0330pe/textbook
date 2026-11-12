@@ -1,4 +1,4 @@
-/* 問題集 第5巻『変化をつかむ』　第3部 グラフの面積と区分求積（わざ 5-31〜5-45。教科書 5-9・5-10）　組 c
+/* 問題集 第5巻『変化をつかむ』　第3部 グラフの面積と長方形の和（わざ 5-31〜5-45。教科書 5-9・5-10）　組 c
  * 書き方は v5/README.md（第5巻）・v4/README.md・v2/README.md。文は教科書 第5巻と同じ：ルビなし・常用漢字まで。式は $…$。
  * 教科書のことばにそろえる：進んだ距離、変位、道のり、はじめの速さ・おわりの速さ（5-9）、右はし・左はしの長方形（5-10）、
  *   台形で近似、下端・上端、うすい円板。はば・たて・もどる・ふえる はかな。
@@ -41,7 +41,7 @@
   const unturn = (r, tag, n) => { const k = '_turn' + tag; r[k] = (r[k] + n - 1) % n; return null; };   // 作れなかったとき：順番を1つもどして null
   const ASK = r => ['変位', '道のり'][turn(r, 'ask', 2)];
   const MS = v => `$${fmt(v)}\\,\\mathrm{m/s}$`;
-  const KMH = v => `時速$${fmt(v)}\\,\\mathrm{km}$`;
+  const KMH = v => `時速 $${fmt(v)}\\,\\mathrm{km}$`;            // 「車が${KMH(v)}」のように、前の字とのあいだに空白を入れない（R1-27）
   const BOX = u => `$□\\,\\mathrm{${u}}$`;
   const UNITS = '（$t$ は秒、$v$ は $\\mathrm{m/s}$）';
   // 数値積分（シンプソン法）。verify で、わざの計算とは別に面積を出し直す
@@ -171,11 +171,11 @@
     id: '5-31', part: PART, chap: '5-9①', stars: 1,
     title: '一定の速さは「速さ×時間」の長方形（単位をそろえ、区間ごとにたす）',
     mark: '速さが**一定**の区間が続く（$v$-$t$ グラフの横の線）。時速と分・秒がまざる。',
-    futsu: ['時速90 km を秒速に直す：', '$90\\times1000\\div3600=25$', '2分を秒に：$2\\times60=120$', '$25\\times120=3000\\,\\mathrm{m}$'],
-    raku: ['時速90 km は1分で', '$90\\div60=1.5\\,\\mathrm{km}$', '2分なら $1.5\\times2=3\\,\\mathrm{km}$', '区間が2つなら長方形を2つたす'],
+    futsu: ['時速 $90\\,\\mathrm{km}$ を秒速に直す：', '$90\\times1000\\div3600=25$', '2分を秒に：$2\\times60=120$', '$25\\times120=3000\\,\\mathrm{m}$'],
+    raku: ['時速 $90\\,\\mathrm{km}$ は1分で', '$90\\div60=1.5\\,\\mathrm{km}$', '2分なら $1.5\\times2=3\\,\\mathrm{km}$', '区間が2つなら長方形を2つたす'],
     why: '速さが一定なら、$v$-$t$ グラフは横の線で、その下は長方形。たて（速さ）×横（時間）が進んだ距離（5-9①）。速さの「1時間あたり」と時間の「分」のように、単位をそろえてからかける。とちゅうで速さが変わっても、速さが一定の区間ごとの長方形をたせばよい。',
-    caution: '時速と秒をそのままかけない（時速72 km で10秒は $72\\times10=720\\,\\mathrm{m}$ ではなく、$20\\times10=200\\,\\mathrm{m}$）。止まっていた物が速くなるときなど、速さが一定でない区間は長方形にならない。',
-    counts: { s1: 4, s2: 4, s3: 2, trap: 2 },
+    caution: '時速と秒をそのままかけない（時速 $72\\,\\mathrm{km}$ で10秒は $72\\times10=720\\,\\mathrm{m}$ ではなく、$20\\times10=200\\,\\mathrm{m}$）。止まっていた物が速くなるときなど、速さが一定でない区間は長方形にならない。',
+    counts: { s1: 4, s2: 3, s3: 2, trap: 2 },   // 右ページの最後の問題と「ふりかえり」のすき間をあけるため、ステップ2は3問（R1-25）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '16mm',
     fits(q) {
@@ -189,7 +189,7 @@
           const v1 = r.pick([20, 30, 40, 50, 60, 80]), v2 = r.intNot(2, 8, v => v * 10 === v1) * 10, t1 = r.int(1, 4), t2 = r.int(1, 3), obj = r.pick(['車', 'バス']);
           const A = v1 * t1, B = v2 * t2, ans = A + B;
           return {
-            q: `${obj}が ${KMH(v1)} で${t1}時間、続けて ${KMH(v2)} で${t2}時間走った。進んだ距離 ${BOX('km')}`,
+            q: `${obj}が${KMH(v1)} で${t1}時間、続けて${KMH(v2)} で${t2}時間走った。進んだ距離 ${BOX('km')}`,
             a: `$${ans}$`, key: '531:' + [`${v1}x${t1}`, `${v2}x${t2}`].sort().join(','),
             easy: `$${v1}\\times${t1}+${v2}\\times${t2}=${A}+${B}=${ans}$`,
             verify: p => ok(p.a, simpson(() => v1, 0, t1, 10) + simpson(() => v2, t1, t1 + t2, 10)),
@@ -214,7 +214,7 @@
           const ans = fq([V * t, 60]); if ((V * t) % 6 || V * t / 60 > 90) return null;
           const per = fq([V, 60]), perT = isTerm(per[1]);
           return {
-            q: `${r.pick(['車', 'バス', '電車'])}が ${KMH(V)} で${t}分走った。進んだ距離 ${BOX('km')}`,
+            q: `${r.pick(['車', 'バス', '電車'])}が${KMH(V)} で${t}分走った。進んだ距離 ${BOX('km')}`,
             a: `$${ft(ans)}$`, key: NK('531b', V, t),
             easy: perT ? `1分で $${V}\\div60=${ft(per)}\\,\\mathrm{km}$、$${ft(per)}\\times${t}=${ft(ans)}$` : `$${V}\\times\\frac{${t}}{60}=${ft(ans)}$`, easyCheck: false,
             verify: p => ok(p.a, (V * 1000 / 3600) * (t * 60) / 1000),
@@ -223,18 +223,18 @@
         if (k === 1) {
           const V = r.pick([18, 36, 54, 72, 90, 108]), t = r.pick([5, 10, 15, 20, 30, 40, 60]), v = V / 3.6, ans = v * t;
           return {
-            q: `${r.pick(['車', '電車'])}が ${KMH(V)} で${t}秒走った。進んだ距離 ${BOX('m')}`,
+            q: `${r.pick(['車', '電車'])}が${KMH(V)} で${t}秒走った。進んだ距離 ${BOX('m')}`,
             a: `$${fmt(ans)}$`, key: NK('531c', V, t),
-            easy: `$${V}\\div3.6=${fmt(v)}$（m/s）、$${fmt(v)}\\times${t}=${fmt(ans)}$`, easyCheck: false,
+            easy: `$${V}\\div3.6=${fmt(v)}\\,\\mathrm{m/s}$、$${fmt(v)}\\times${t}=${fmt(ans)}$`, easyCheck: false,
             verify: p => ok(p.a, V * 1000 * t / 3600),
           };
         }
         const V = r.pick([18, 36, 54, 72, 90]), v = V / 3.6, t1 = r.pick([10, 20, 30, 40]), v2 = r.intNot(5, 25, x => x === v), t2 = r.pick([10, 20, 30]);
         const A = v * t1, B = v2 * t2, ans = A + B;
         return {
-          q: `車が ${KMH(V)} で${t1}秒、続けて ${MS(v2)} で${t2}秒走った。進んだ距離 ${BOX('m')}`,
+          q: `車が${KMH(V)} で${t1}秒、続けて ${MS(v2)} で${t2}秒走った。進んだ距離 ${BOX('m')}`,
           a: `$${fmt(ans)}$`, key: NK('531d', V, t1, v2, t2),
-          easy: `時速${V} km は $${fmt(v)}\\,\\mathrm{m/s}$。$${fmt(v)}\\times${t1}+${v2}\\times${t2}=${fmt(A)}+${B}=${fmt(ans)}$`, easyCheck: false,
+          easy: `時速 $${V}\\,\\mathrm{km}$ は $${fmt(v)}\\,\\mathrm{m/s}$。$${fmt(v)}\\times${t1}+${v2}\\times${t2}=${fmt(A)}+${B}=${fmt(ans)}$`, easyCheck: false,
           verify: p => ok(p.a, V * 1000 / 3600 * t1 + v2 * t2),
         };
       },
@@ -262,7 +262,8 @@
           verify: p => ok(p.a, integPts(segs.flatMap(([a, b, v]) => [[a, v], [b, v]]), from, T)),
         };
       },
-      // わな：止まっていた物が一定の割合で速くなる（長方形でなく三角形 → 5-32）、はじめから動いていて速くなる（台形 → 5-33）
+      // わな：止まっていた物が一定の割合で速くなる（長方形でなく三角形 → 5-32）、走っていて一定の割合でおそくなる（台形 → 5-33）。
+      // となりの 5-32 のわなは「速くなる」台形なので、ここは「おそくなる」にして、同じ問題が続かないようにする（R1-26）
       trap(r) {
         const T = r.int(2, 8), V = r.int(3, 15) * 2;
         if (turn(r, '31t', 2) === 0) {
@@ -270,8 +271,8 @@
           const p = { q: `止まっていた車が、${T}秒で ${MS(V)} まで一定の割合で速くなった。この${T}秒で進んだ距離 ${BOX('m')}`, a: `$${fmt(ans)}$`, key: NK('532', T, V), verify: p => ok(p.a, simpson(t => V * t / T, 0, T)) };
           return dest(p, '5-31', `速さは0から ${V} まで変わり、一定ではない。長方形 $${V}\\times${T}$ ではなく三角形で $\\frac{1}{2}\\times${T}\\times${V}=${fmt(ans)}$`);
         }
-        const v1 = r.int(2, 10), v2 = v1 + r.int(2, 10), ans = (v1 + v2) * T / 2;
-        const p = { q: `${MS(v1)} で走っていた車が、一定の割合で速くなり、${T}秒後に ${MS(v2)} になった。この${T}秒で進んだ距離 ${BOX('m')}`, a: `$${fmt(ans)}$`, key: NK('533', v1, v2, T), verify: p => ok(p.a, simpson(t => v1 + (v2 - v1) * t / T, 0, T)) };
+        const v2 = r.int(2, 10), v1 = v2 + r.int(2, 10), ans = (v1 + v2) * T / 2;
+        const p = { q: `${MS(v1)} で走っていた車が、一定の割合でおそくなり、${T}秒後に ${MS(v2)} になった。この${T}秒で進んだ距離 ${BOX('m')}`, a: `$${fmt(ans)}$`, key: NK('533', v1, v2, T), verify: p => ok(p.a, simpson(t => v1 + (v2 - v1) * t / T, 0, T)) };
         return dest(p, '5-31', `速さが ${v1} から ${v2} まで変わり、一定ではない。台形で $\\frac{${v1}+${v2}}{2}\\times${T}=${fmt(ans)}$`);
       },
     },
@@ -324,7 +325,7 @@
         return {
           q: `止まっていた電車が、${T}秒で${KMH(V)} まで一定の割合で速くなった。この${T}秒で進んだ距離 ${BOX('m')}`,
           a: `$${fmt(ans)}$`, key: NK('532b', V, T),
-          easy: `時速${V} km は $${fmt(v)}\\,\\mathrm{m/s}$。$\\frac{1}{2}\\times${T}\\times${fmt(v)}=${fmt(ans)}$`,
+          easy: `時速 $${V}\\,\\mathrm{km}$ は $${fmt(v)}\\,\\mathrm{m/s}$。$\\frac{1}{2}\\times${T}\\times${fmt(v)}=${fmt(ans)}$`,
           verify: p => ok(p.a, simpson(t => (V * 1000 / 3600) * t / T, 0, T)),
         };
       },
@@ -352,7 +353,7 @@
       trap(r) {
         const T = r.int(2, 8), v1 = r.int(2, 10), v2 = v1 + r.int(2, 10), ans = (v1 + v2) * T / 2;
         const p = { q: `${MS(v1)} で走っていた車が、一定の割合で速くなり、${T}秒後に ${MS(v2)} になった。この${T}秒で進んだ距離 ${BOX('m')}`, a: `$${fmt(ans)}$`, key: NK('533', v1, v2, T), verify: p => ok(p.a, simpson(t => v1 + (v2 - v1) * t / T, 0, T)) };
-        return dest(p, '5-32', `止まっていたのではなく、はじめから ${v1} m/s で動いている。三角形ではなく台形：$\\frac{${v1}+${v2}}{2}\\times${T}=${fmt(ans)}$（$\\frac{1}{2}\\times${T}\\times${v2}=${fmt(T * v2 / 2)}$ ではない）`);
+        return dest(p, '5-32', `止まっていたのではなく、はじめから ${MS(v1)} で動いている。三角形ではなく台形：$\\frac{${v1}+${v2}}{2}\\times${T}=${fmt(ans)}$（$\\frac{1}{2}\\times${T}\\times${v2}=${fmt(T * v2 / 2)}$ ではない）`);
       },
     },
   });
@@ -393,7 +394,7 @@
         return {
           q: `${kmh ? KMH(V) : MS(V)} で走っていた車が、加速度 $-${fmt(a)}\\,\\mathrm{m/s^2}$ でブレーキをかけた。止まるまでに進む距離 ${BOX('m')}`,
           a: `$${fmt(ans)}$`, key: NK('533b', v, a),
-          easy: `${kmh ? `時速${V} km は $${fmt(v)}\\,\\mathrm{m/s}$。` : ''}$${fmt(v)}\\div${fmt(a)}=${fmt(ts)}$ 秒で止まる。$\\frac{${fmt(v)}}{2}\\times${fmt(ts)}=${fmt(ans)}$`, easyCheck: false,
+          easy: `${kmh ? `時速 $${V}\\,\\mathrm{km}$ は $${fmt(v)}\\,\\mathrm{m/s}$。` : ''}$${fmt(v)}\\div${fmt(a)}=${fmt(ts)}$ 秒で止まる。$\\frac{${fmt(v)}}{2}\\times${fmt(ts)}=${fmt(ans)}$`, easyCheck: false,
           verify: p => { let x = 0, s = v; const dt = 1e-4; while (s > 0) { const s2 = Math.max(0, s - a * dt); x += (s + s2) / 2 * dt; s = s2; } return ok(p.a, x, 1e-4); },
         };
       },
@@ -466,7 +467,7 @@
         return {
           q: `バスが、${t1}分で${KMH(V)} まで一定の割合で速くなり、そのまま${t2}分走り、${t3}分で一定の割合でおそくなって止まった。進んだ距離 ${BOX('km')}`,
           a: `$${ft(ans)}$`, key: NK('534b', t1, t3) + '|' + NK('', t2, V),
-          easy: `時速${V} km は1分で $${ft(fq([V, 60]))}\\,\\mathrm{km}$。$\\frac{${t2}+${T}}{2}\\times${ft(fq([V, 60]))}=${ft(ans)}$`, easyCheck: false,
+          easy: `時速 $${V}\\,\\mathrm{km}$ は1分で $${ft(fq([V, 60]))}\\,\\mathrm{km}$。$\\frac{${t2}+${T}}{2}\\times${ft(fq([V, 60]))}=${ft(ans)}$`, easyCheck: false,
           verify: p => ok(p.a, integPts([[0, 0], [t1, V / 60], [t1 + t2, V / 60], [T, 0]], 0, T)),
         };
       },
@@ -509,8 +510,8 @@
     futsu: ['数直線に、動いたようすをかく：', '0 → 12 まで進み、12 → 6 にもどる。', '最後の位置6と、動いた長さを読む。'],
     raku: ['$2\\times6=12$、$(-3)\\times2=-6$', '変位：$12+(-6)=6\\,\\mathrm{m}$', '道のり：$12+6=18\\,\\mathrm{m}$'],
     why: '速度がマイナスの区間は、$v$-$t$ グラフで横軸より下の長方形で、その面積をマイナスと考える（5-9⑦）。はじめの位置から最後の位置までの変化（変位）は、マイナスの面積もそのままたす。実際に動いた長さ（道のり）は、マイナスの面積もプラスにしてたす。',
-    caution: '道のりにマイナスはない。変位がマイナスなら、はじめの位置より－の向き（左・下）にいる。変位と道のりのどちらを聞いているかを、問題の文で確かめる。',
-    counts: { s1: 4, s2: 5, s3: 3, trap: 2 },
+    caution: '道のりにマイナスはない。変位がマイナスなら、はじめの位置より－の向き（左・下）にいる。もどる区間がなければ、変位と道のりは同じ。変位と道のりのどちらを聞いているかを、問題の文で確かめる。',
+    counts: { s1: 4, s2: 4, s3: 3, trap: 2 },   // わなが2行ずつになったので、ステップ2を1問へらした（右ページのあふれ）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '16mm',
     fits(q) { return NEG.test(q) && /(変位|道のり)/.test(q) && !/v=/.test(q); },
@@ -566,11 +567,14 @@
           verify: p => ok(p.a, integPts(pts, 0, tt, ask === '道のり')),
         };
       },
-      // わな：マイナスの区間がない（長方形をたすだけ → 5-31）
+      // わな：右向きを＋として変位・道のりを聞くが、速度が一定でなく、一定の割合で変わる（向きは変わらない。長方形でなく台形 → 5-33）。
+      // 「同じ向きに進むだけ」の問題は 5-35 自身で解けるので、caution に回した（R1-9・N-3）
       trap(r) {
-        const v1 = r.int(2, 6), t1 = r.int(2, 8), v2 = r.intNot(1, 6, v => v === v1), t2 = r.int(2, 8), ask = r.pick(['道のり', '変位']), ans = v1 * t1 + v2 * t2;
-        const p = { q: `${MS(v1)} で${t1}秒進み、同じ向きに ${MS(v2)} で${t2}秒進んだ。${ask} ${BOX('m')}`, a: `$${ans}$`, key: '535t:' + [v1, t1, v2, t2].join(','), verify: p => ok(p.a, v1 * t1 + v2 * t2) };
-        return dest(p, '5-35', `もどる区間（マイナスの面積）がないので、変位も道のりも同じ。長方形をたして $${v1}\\times${t1}+${v2}\\times${t2}=${ans}$`);
+        const T = r.int(2, 8), v1 = r.int(2, 9), v2 = r.intNot(1, 9, v => Math.abs(v - v1) < 2), ask = turn(r, '35t', 2) ? '道のり' : '変位';
+        if (((v1 + v2) * T) % 2) return unturn(r, '35t', 2);
+        const ans = (v1 + v2) * T / 2;
+        const p = { q: `速度が${T}秒で ${MS(v1)} から ${MS(v2)} に一定の割合で変わった。${ask} ${BOX('m')}`, a: `$${ans}$`, key: NK('535t', v1, v2, T), verify: p => ok(p.a, simpson(t => v1 + (v2 - v1) * t / T, 0, T)) };
+        return dest(p, '5-35', `速度はずっと＋で、もどる区間はないので、変位も道のりも同じ。速度は一定ではなく一定の割合で変わるので、長方形ではなく台形：$\\frac{${v1}+${v2}}{2}\\times${T}=${ans}$`, ['5-33']);
       },
     },
   });
@@ -778,6 +782,8 @@
   }
 
   // ================================================================ 5-38 階段の和ではさむ
+  // 左ページの楽な形の例（$v=3t$ の0〜2秒を0.5秒ずつ）は、問題に出さない（O-2・R1-2）
+  const RAKU38 = (c, T, h) => c === 3 && T === 2 && h === 0.5;
   M.add({
     id: '5-38', part: PART, chap: '5-9③・5-10②', stars: 2,
     title: '階段の和ではさむ：右はしの和－左はしの和＝（最後の高さ－最初の高さ）×はば',
@@ -794,7 +800,7 @@
       // v=ct の階段：はじめの速さの和から、おわりの速さの和（逆も）
       s1(r) {
         const c = r.int(1, 6), T = r.int(1, 4), h = r.pick([0.5, 1]), n = T / h;
-        if (n < 2 || n > 8) return null;
+        if (n < 2 || n > 8 || RAKU38(c, T, h)) return null;
         const S = sums(M.P.make(0, c), 0, T, n), fwd = r.chance(0.6), cT = c * T;
         const given = fwd ? S.L : S.R, ans = fwd ? S.R : S.L;
         return {
@@ -830,7 +836,7 @@
       // 図：v=ct の階段（ぬった長方形がはじめの速さ、点線の長方形がおわりの速さ）
       s3(r) {
         const c = r.int(1, 5), T = r.int(2, 4), h = r.pick([0.5, 1]), n = T / h;
-        if (n < 3 || n > 6) return null;
+        if (n < 3 || n > 6 || RAKU38(c, T, h)) return null;
         const S = sums(M.P.make(0, c), 0, T, n), fwd = r.chance(0.6), given = fwd ? S.L : S.R, ans = fwd ? S.R : S.L;
         const fig = stairFig(t => c * t, T, n, 'LR', { x: 't', y: 'v' }); if (!fig) return null;
         return {
@@ -921,6 +927,7 @@
   });
 
   // ================================================================ 5-40 長方形の和は、はばを外へ
+  const RAKU40 = 5;   // 楽な形の例（$y=x^2$ の0から1を5本。右はし・左はし）は、問題に出さない（O-2・R1-2）
   M.add({
     id: '5-40', part: PART, chap: '5-10③ 例題2', stars: 1,
     title: '長方形の和は、はばを外へ：$\\sum\\left(\\frac{k}{n}\\right)^2\\frac{1}{n}=\\frac{1}{n^3}\\sum k^2$',
@@ -929,7 +936,7 @@
     raku: ['分母は $5^2\\times5=125$ でそろう：', '$\\frac{1+4+9+16+25}{125}=\\frac{55}{125}=0.44$', '左はしは $k=0$ から4：$\\frac{30}{125}=0.24$'],
     why: '$k$ 本めの面積は $\\left(\\frac{k}{n}\\right)^2\\times\\frac{1}{n}=\\frac{k^2}{n^3}$ で、どの長方形も分母が $n^3$（5-10④）。分子の $k^2$ だけをたして、最後に $n^3$ でわる。左はしの長方形は、番号が1つずれて $k=0$ から $n-1$。',
     caution: '高さは $k^2$ ではなく $\\left(\\frac{k}{n}\\right)^2$（場所 $\\frac{k}{n}$ を $x^2$ に入れる）。0から2なら、はばは $\\frac{2}{n}$、右はしは $\\frac{2k}{n}$ で、どれも $2^3$ 倍。',
-    counts: { s1: 6, s2: 5, s3: 2, trap: 1 },
+    counts: { s1: 6, s2: 4, s3: 2, trap: 1 },   // 右ページの最後の問題と「ふりかえり」のすき間をあけるため、ステップ2は4問（R1-25）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '16mm',
     boxh: '12mm',
@@ -937,7 +944,7 @@
     steps: {
       // 右はしの長方形 n 本（0から1）
       s1(r) {
-        const n = r.int(2, 10), S = sums(M.P.make(0, 0, 1), 0, 1, n), num = S2(n), den = n ** 3, d = ft(S.R);
+        const n = r.intNot(2, 10, v => v === RAKU40), S = sums(M.P.make(0, 0, 1), 0, 1, n), num = S2(n), den = n ** 3, d = ft(S.R);
         return {
           q: `$y=x^2$ の0から1までを、右はしの長方形${n}本で近似した和 □`,
           a: `$${fr(S.R)}$`, key: NK('540', n),
@@ -949,7 +956,7 @@
       s2(r) {
         const k = turn(r, '40b', 3);
         if (k === 0) {
-          const n = r.int(2, 10), S = sums(M.P.make(0, 0, 1), 0, 1, n), num = S2(n - 1), den = n ** 3;
+          const n = r.intNot(2, 10, v => v === RAKU40), S = sums(M.P.make(0, 0, 1), 0, 1, n), num = S2(n - 1), den = n ** 3;
           return {
             q: `$y=x^2$ の0から1までを、左はしの長方形${n}本で近似した和 □`,
             a: `$${fr(S.L)}$`, key: NK('540L', n),
@@ -979,7 +986,7 @@
       // 図：長方形の図から、右はしか左はしかを読む
       s3(r) {
         const b = r.pick([1, 1, 2]), n = r.int(3, 6), kind = ['R', 'L'][turn(r, '40f', 2)], S = sums(M.P.make(0, 0, 1), 0, b, n), ans = kind === 'R' ? S.R : S.L;
-        if (b % n === 0) return null;
+        if (b % n === 0 || (b === 1 && n === RAKU40)) return null;
         const fig = stairFig(x => x * x, b, n, kind); if (!fig) return null;
         const ks = kind === 'R' ? range(1, n) : range(0, n - 1), den = b === 1 ? `${n ** 3}` : null;
         return {
@@ -1082,6 +1089,10 @@
   // 文の中の定積分：[全体, 下端, 上端, 中身, 変数]。はしは \frac{1}{2} のような分数でもよい
   const INTS = q => [...q.matchAll(/\\int_\{((?:[^{}]|\{[^{}]*\})*)\}\^\{((?:[^{}]|\{[^{}]*\})*)\}([^$]*?)\\,\\dd ([a-z])/g)];
   const powOK = body => !/\^\{?[3-9]/.test(body);
+  // 下端・上端の分数は、上つきの小さい字にせず、ふつうの大きさの分数で（R1-17）。アプリは \textstyle を読みとばす
+  const LIMF = (p, q) => `\\textstyle\\frac{${p}}{${q}}`;
+  // 楽な形の例（$\int_0^3x^2\,\dd x=9$、$v=3t^2$ の0〜2秒）は、問題に出さない（O-2・R1-2）。c は $x^2$ の係数
+  const RAKU42 = (c, b) => (c === 1 && b === 3) || (c === 3 && b === 2);
   M.add({
     id: '5-42', part: PART, chap: '5-10⑥', stars: 1,
     title: '$\\int_0^bx^2\\,\\dd x=\\frac{b^3}{3}$、$\\int_0^bx\\,\\dd x=\\frac{b^2}{2}$（$b$ を3乗・2乗）',
@@ -1105,6 +1116,7 @@
       // ∫_0^b x^2、∫_0^b x
       s1(r) {
         const sq = r.chance(0.65), b = sq ? r.int(1, 6) : r.int(1, 9), ans = sq ? fq([b ** 3, 3]) : fq([b * b, 2]);
+        if (RAKU42(sq ? 1 : 0, b)) return null;
         return {
           q: INT(0, b, sq ? 'x^2' : 'x'), a: `$${fr(ans)}$`, key: `542:${sq}:${b}`,
           easy: `$\\frac{${b}^${sq ? 3 : 2}}{${sq ? 3 : 2}}=${fr(ans)}$`,
@@ -1114,6 +1126,7 @@
       // 係数つき、v=ct^2 の距離
       s2(r) {
         const c = r.int(2, 6), b = r.int(1, 5);
+        if (RAKU42(c, b)) return null;
         if (turn(r, '42b', 2) === 0) {
           const ans = fq([c * b ** 3, 3]);
           return { q: `速度 $v=${c}t^2$（m/s）の物体が0秒から${b}秒までに進む距離 ${BOX('m')}`, a: `$${fr(ans)}$`, key: `542c:true:${c}:${b}`, easy: `$${c}\\times\\frac{${b}^3}{3}=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}t^2`, x: 't', a: 0, b } };
@@ -1125,9 +1138,10 @@
       s3(r) {
         if (turn(r, '42c', 2) === 0) {
           const [p, q] = r.pick([[1, 2], [3, 2], [1, 3], [2, 3], [5, 2], [3, 4]]), ans = fq([p ** 3, 3 * q ** 3]);
-          return { q: INT(0, `\\frac{${p}}{${q}}`, 'x^2'), a: `$${fr(ans)}$`, key: `542f:${p}/${q}`, easy: `$\\left(\\frac{${p}}{${q}}\\right)^3\\times\\frac{1}{3}=${fr(ans)}$`, calc: { kind: 'defint', f: 'x^2', a: 0, b: `\\frac{${p}}{${q}}` } };
+          return { q: INT(0, LIMF(p, q), 'x^2'), a: `$${fr(ans)}$`, key: `542f:${p}/${q}`, easy: `$\\left(\\frac{${p}}{${q}}\\right)^3\\times\\frac{1}{3}=${fr(ans)}$`, calc: { kind: 'defint', f: 'x^2', a: 0, b: `\\frac{${p}}{${q}}` } };
         }
         const c = r.pick([1, 1, 2, 3]), b = r.int(2, 6), ans = fq([c * b ** 3, 3]);
+        if (RAKU42(c, b)) return unturn(r, '42c', 2);
         return { q: `グラフ $y=${cx2(c)}x^2$ と $x$ 軸、直線 $x=${b}$ で囲まれた部分の面積 □`, a: `$${fr(ans)}$`, key: c === 1 ? `542:true:${b}` : `542c:true:${c}:${b}`, easy: `$\\int_0^{${b}}${cx2(c)}x^2\\,\\dd x=${c === 1 ? '' : `${c}\\times`}\\frac{${b}^3}{3}=${fr(ans)}$`, easyCheck: 'last', calc: { kind: 'defint', f: `${c}x^2`, a: 0, b } };
       },
       // わな：下端が0でない（差 → 5-43）
@@ -1140,6 +1154,7 @@
   });
 
   // ================================================================ 5-43 とちゅうからの面積は差（入れかえると符号が反対）
+  const RAKU43 = (a, b) => a === 2 && b === 3;   // 楽な形の例（$\int_2^3x^2\,\dd x=\frac{19}{3}$）は、問題に出さない（O-2・R1-2）
   M.add({
     id: '5-43', part: PART, chap: '5-10⑥ 例題7・⑤', stars: 1,
     title: 'とちゅうからの面積は「0からの面積の差」（上端と下端を入れかえると符号が反対）',
@@ -1161,6 +1176,7 @@
       // ∫_a^b x^2、∫_a^b x（0<a<b）
       s1(r) {
         const sq = r.chance(0.65), a = r.int(1, 4), b = a + r.int(1, 3), ans = sq ? fq([b ** 3 - a ** 3, 3]) : fq([b * b - a * a, 2]);
+        if (sq && RAKU43(a, b)) return null;
         const e = sq ? 3 : 2;
         return {
           q: INT(a, b, sq ? 'x^2' : 'x'), a: `$${fr(ans)}$`, key: `543:${sq}:${a}:${b}`,
@@ -1171,10 +1187,15 @@
       // v=ct^2 の a〜b 秒、上端と下端の入れかえ
       s2(r) {
         if (turn(r, '43b', 2) === 0) {
-          const c = r.pick([1, 3, 6]), a = r.int(1, 3), b = a + r.int(1, 3), ans = fq([c * (b ** 3 - a ** 3), 3]);
-          return { q: `速度 $v=${cx2(c)}t^2$（m/s）の物体が${a}秒から${b}秒までに進む距離 ${BOX('m')}`, a: `$${fr(ans)}$`, key: `543v:${c}:${a}:${b}`, easy: c === 1 ? `$\\frac{${b}^3}{3}-\\frac{${a}^3}{3}=${fr(ans)}$` : `$${c}\\times\\left(\\frac{${b}^3}{3}-\\frac{${a}^3}{3}\\right)=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}t^2`, x: 't', a, b } };
+          // key に係数を入れない：同じ区間で係数だけちがう（答えが何倍かになるだけの）問題を、同じ見開きに出さない（R1-28）。
+          // 係数1は、ステップ1の $\int_a^bx^2\,\dd x$ と同じ計算なので使わない
+          // 係数も順に回す（同じ係数ばかりにしない）
+          const c = [2, 3, 6][turn(r, '43v', 3)], a = r.int(1, 3), b = a + r.int(1, 3), ans = fq([c * (b ** 3 - a ** 3), 3]);
+          if (c === 3 && a === 1 && b === 3) return unturn(r, '43b', 2);   // 楽な形の例（$v=3t^2$ の1〜3秒）
+          return { q: `速度 $v=${cx2(c)}t^2$（m/s）の物体が${a}秒から${b}秒までに進む距離 ${BOX('m')}`, a: `$${fr(ans)}$`, key: `543v:${a}:${b}`, easy: `$${c}\\times\\left(\\frac{${b}^3}{3}-\\frac{${a}^3}{3}\\right)=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}t^2`, x: 't', a, b } };
         }
         const sq = r.chance(0.6), a = r.int(0, 3), b = a + r.int(1, 3), e = sq ? 3 : 2, ans = fq([-(b ** e - a ** e), e]);
+        if (sq && a === 0 && b === 1) return unturn(r, '43b', 2);   // 楽な形の例（$\int_1^0x^2\,\dd x$）
         return { q: INT(b, a, sq ? 'x^2' : 'x'), a: `$${fr(ans)}$`, key: `543:${sq}:${a}:${b}`, easy: a === 0 ? `入れかえると符号が反対：$-\\frac{${b}^${e}}{${e}}=${fr(ans)}$` : `入れかえると符号が反対：$-\\left(\\frac{${b}^${e}}{${e}}-\\frac{${a}^${e}}{${e}}\\right)=${fr(ans)}$`, easyCheck: 'last', calc: { kind: 'defint', f: sq ? 'x^2' : 'x', a: b, b: a } };
       },
       // 見かけがちがう：はしが分数、係数と入れかえ、2つの定積分の差
@@ -1182,13 +1203,14 @@
         const k = turn(r, '43c', 3);
         if (k === 0) {
           const [p, q] = r.pick([[1, 2], [3, 2], [1, 3]]), b = r.int(2, 3), A = fq([p, q]), ans = F.div(F.sub(F.make(b ** 3), F.mul(F.mul(A, A), A)), F.make(3));
-          return { q: INT(`\\frac{${p}}{${q}}`, b, 'x^2'), a: `$${fr(ans)}$`, key: `543f:${p}/${q}:${b}`, easy: `$\\frac{${b}^3}{3}-\\frac{1}{3}\\left(\\frac{${p}}{${q}}\\right)^3=${fr(ans)}$`, calc: { kind: 'defint', f: 'x^2', a: `\\frac{${p}}{${q}}`, b } };
+          return { q: INT(LIMF(p, q), b, 'x^2'), a: `$${fr(ans)}$`, key: `543f:${p}/${q}:${b}`, easy: `$\\frac{${b}^3}{3}-\\frac{1}{3}\\left(\\frac{${p}}{${q}}\\right)^3=${fr(ans)}$`, calc: { kind: 'defint', f: 'x^2', a: `\\frac{${p}}{${q}}`, b } };
         }
         if (k === 1) {
           const c = r.int(2, 6), a = r.int(0, 2), b = a + r.int(1, 3), ans = fq([-c * (b * b - a * a), 2]);
           return { q: INT(b, a, `${c}x`), a: `$${fr(ans)}$`, key: `543c:${c}:${a}:${b}`, easy: a === 0 ? `$-${c}\\times\\frac{${b}^2}{2}=${fr(ans)}$` : `$-${c}\\times\\left(\\frac{${b}^2}{2}-\\frac{${a}^2}{2}\\right)=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}x`, a: b, b: a } };
         }
         const a = r.int(1, 3), b = a + r.int(1, 3), ans = fq([b ** 3 - a ** 3, 3]);
+        if (RAKU43(a, b)) return unturn(r, '43c', 3);
         return { q: `$\\displaystyle\\int_{0}^{${b}}x^2\\,\\dd x-\\int_{0}^{${a}}x^2\\,\\dd x$ ＝ □`, a: `$${fr(ans)}$`, key: `543:true:${a}:${b}`, easy: `$x=${a}$ から${b}までの面積。$\\frac{${b}^3}{3}-\\frac{${a}^3}{3}=${fr(ans)}$`, easyCheck: false, calc: { kind: 'defint', f: 'x^2', a, b } };
       },
       // わな：x^3（教科書 5-10 にない → 5-46）
@@ -1202,6 +1224,7 @@
 
   // ================================================================ 5-44 台形の和は、左はしの和と右はしの和の平均
   const K44 = (c, a, b, h) => '544:' + [c, a, b, h].join(':');           // 同じ式・同じはしの問題（5-38 のわなも）
+  const RAKU44 = (c, b, h) => c === 1 && b === 2 && h === 0.5;   // 楽な形の例（$y=x^2$ の0から2を、はば0.5）は、問題に出さない（O-2・R1-2）
   const E44 = S => `左はし ${ft(S.L)}、右はし ${ft(S.R)}。$\\frac{${ft(S.L)}+${ft(S.R)}}{2}=${ft(S.T)}$`;
   M.add({
     id: '5-44', part: PART, chap: '5-10 例題8', stars: 2,
@@ -1219,7 +1242,7 @@
       // y=x^2 の0から b を、はば h の台形で
       s1(r) {
         const b = r.int(1, 4), h = r.pick([0.5, 1]), n = b / h;
-        if (n < 2) return null;
+        if (n < 2 || RAKU44(1, b, h)) return null;
         const S = sums(M.P.make(0, 0, 1), 0, b, n);
         return {
           q: `$y=x^2$ の0から${b}までを、はば${h}の台形${n}つで近似した値 □`,
@@ -1233,7 +1256,7 @@
         const k = turn(r, '44b', 3);
         if (k === 2) {
           const b = r.int(1, 4), h = r.pick([0.5, 1]), n = b / h;
-          if (n < 2) return null;
+          if (n < 2 || RAKU44(1, b, h)) return null;
           const S = sums(M.P.make(0, 0, 1), 0, b, n);
           return { q: `速度 $v=t^2$（m/s）の物体が0秒から${b}秒までに進む距離を、${h}秒ごとの台形で近似した値 ${BOX('m')}`, a: `$${ft(S.T)}$`, key: K44(1, 0, b, h), easy: `はじめの速さの和 ${ft(S.L)}、おわりの速さの和 ${ft(S.R)}。$\\frac{${ft(S.L)}+${ft(S.R)}}{2}=${ft(S.T)}$`, verify: p => ok(p.a, sumsF(t => t * t, 0, b, n).T) };
         }
@@ -1246,7 +1269,7 @@
       s3(r) {
         const [tex, P, f, tag] = [['x^2', M.P.make(0, 0, 1), x => x * x, 1], ['\\frac{1}{2}x^2', M.P.make(0, 0, [1, 2]), x => x * x / 2, 'h'], ['x^2+1', M.P.make(1, 0, 1), x => x * x + 1, 'p']][turn(r, '44f', 3)];
         const b = r.int(2, 4), n = r.pick([2, 3, 4, 6]), h = fq([b, n]);
-        if (!(h[1] === 1 || h[1] === 2) || h[0] / h[1] > 1) return null;
+        if (!(h[1] === 1 || h[1] === 2) || h[0] / h[1] > 1 || RAKU44(tag, b, fv(h))) return null;
         const S = sums(P, 0, b, n);
         if ([S.L, S.R, S.T].some(v => decOf(v).k > 3)) return null;
         const fig = stairFig(f, b, n, 'T'); if (!fig) return null;
@@ -1266,7 +1289,7 @@
     },
   });
 
-  // ================================================================ 5-45 うすい板の体積をたす：すいは 1/3×底面積×高さ
+  // ================================================================ 5-45 うすい板の体積をたす：円すい・角すいは 1/3×底面積×高さ
   // 円すいの図：頂点が上、底面の中心が原点。頂点から yv の所の円板（mode 'slab'）か切り口（mode 'cut'）
   // 長さのしるし（両はしに短い線）と数
   function dimV(x, y0, y1, t, dir) { return [['seg', [x, y0], [x, y1]], ['seg', [x - 0.2, y0], [x + 0.2, y0]], ['seg', [x - 0.2, y1], [x + 0.2, y1]], ['label', [x, (y0 + y1) / 2], t, dir]]; }
@@ -1287,7 +1310,7 @@
     items.push(...dimV(-R - 0.7, 0, H, `$${H0}$`, 'w'), ...dimV(Math.max(rc + 0.7, R * 0.5), yc, H, ylab, 'e'), ...dimH(0, R, -ry - 0.55, `$${R0}$`, 's'));
     return figOK({ s: FS, pad: 0.8, items });
   }
-  const FITS45 = q => /(円すい|角すい|高さ \$[0-9]+\$ のすい)/.test(q) && /(うすい|断面)/.test(q);
+  const FITS45 = q => /(円すい|角すい)/.test(q) && /(うすい|断面)/.test(q);
   // 比 (r/h) を2乗する式：整数なら 3^2、分数なら \left(\frac{3}{4}\right)^2
   const sq45 = c => (c[1] === 1 ? `${c[0]}^2` : `\\left(${fr(c)}\\right)^2`);
   const cy45 = c => (c[1] === 1 ? `${cx2(c[0])}y` : `\\frac{${c[0]}}{${c[1]}}y`);
@@ -1318,14 +1341,14 @@
           calc: { kind: 'defint', f: `\\pi\\left(${fr(c)}x\\right)^2`, a: 0, b: H },
         };
       },
-      // 四角すい、断面積が cy^2 のすい
+      // 四角すい、断面積が cy^2 の角すい
       s2(r) {
         if (turn(r, '45b', 2) === 0) {
           const A = r.int(1, 6), H = r.int(2, 9), c = fq([A, H]), ans = fq([A * A * H, 3]);
           return { q: `底面が1辺 $${A}$ の正方形、高さ $${H}$ の四角すい。頂点から $y$ の所の断面は1辺 $${cy45(c)}$ の正方形。うすい板の体積をたした、四角すいの体積 □`, a: `$${fr(ans)}$`, key: NK('545b', A) + ':' + H, easy: `$${c[0] === 1 && c[1] === 1 ? '' : `${sq45(c)}\\times`}\\frac{${H}^3}{3}=\\frac{1}{3}\\times${A}^2\\times${H}=${fr(ans)}$`, calc: { kind: 'defint', f: `\\left(${fr(c)}x\\right)^2`, a: 0, b: H } };
         }
         const c = r.int(1, 5), H = r.int(2, 6), ans = fq([c * H ** 3, 3]);
-        return { q: `高さ $${H}$ のすいを、頂点から $y$ の所で底面に平行に切った断面積が $${cx2(c)}y^2$。うすい板の体積をたした、すいの体積 □`, a: `$${fr(ans)}$`, key: NK('545c', c) + ':' + H, easy: `$${c === 1 ? '' : `${c}\\times`}\\frac{${H}^3}{3}=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}x^2`, a: 0, b: H } };
+        return { q: `高さ $${H}$ の角すいを、頂点から $y$ の所で底面に平行に切った断面積が $${cx2(c)}y^2$。うすい板の体積をたした、角すいの体積 □`, a: `$${fr(ans)}$`, key: NK('545c', c) + ':' + H, easy: `$${c === 1 ? '' : `${c}\\times`}\\frac{${H}^3}{3}=${fr(ans)}$`, calc: { kind: 'defint', f: `${c}x^2`, a: 0, b: H } };
       },
       // 図：円すいとうすい円板。円すい全体か、切り口より下の部分
       s3(r) {
