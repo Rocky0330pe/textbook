@@ -1,0 +1,1240 @@
+%% 第31回編集委員会（物理第5巻）：組 原W5
+%% p5-10.tex  原-10　スイッチと増幅：トランジスタと電子回路（★1〜5・3段）
+%% 中身は計画書 tools/phys5-plan.md の B「原-10」。公式の持ち主は A（A62〜A65）。中学・高校の公式はないので \phkoushiki は置かない（N-10・計画書 E の10(c)）。
+%%   ほかの組の章は、計画書 B の節の番号で指した（原-6、原-8 ⑧、原-9 ②⑤⑥⑦、原-14）。
+%%   計画書との並びのちがい：理想オペアンプ（A64）は X-1 の物差しで★4 なので、「手でわかる」（★3）から「式でわかる」の段の⑧へ移した。
+%%   計画書の⑧（CMOS とはてな？）は⑦に、⑨の RC の遅れは⑦に、⑫の A/D 変換は⑨に入れた。
+%% 数値はすべて Python で計算した：checks/物理第5巻/原-10/calc_p5_10.py（出力 calc_p5_10_out.txt）、
+%%   code_p5_10.py（⑫の囲みのプログラム）。本文の丸め k_B T/e＝0.0259 V（300 K）。
+%%   このため例題3 の g_m は 38.6 mS・増幅度 約 −180、例題12 の答えは 0.694 V・4.31 mA（計画書の 38.7 mS・−182・0.6925 V は k_B T/e＝0.02585 の値）。
+%% 前の巻・数学の本との約束（計画書 A-6・C-6-2）
+%%   ・M16（数学 2-17:59 スマホの頭脳にはスイッチ（トランジスタ）が何十億こ）→ はてな？・①⑦・例題1・例題2
+%%   ・Q49（電-4:678 ダイオードやトランジスタは半導体の性質から）→ ③④
+%%   ・Q50（電-5:686・1157 非線形の部品をふくむ回路を少しずつ直して解く）・M8（数学 7-11:310 トランジスタは少しずつ直す連立方程式）
+%%       → ⑫・例題12（ニュートン法の回路シミュレーター）
+%%   ・Q56（電-12:498 インバーターの半導体スイッチ）・Q60（電-16:366 パワーエレクトロニクスのスイッチ）→ ⑪・例題10
+%%   ・Q61・Q62（第4巻 巻末・計画書：トランジスタ・オペアンプ・パワー半導体）→ ③〜⑪
+%%   ・電-5 ⑦・例題10 のひずみゲージの 1.25 mV → ⑨・例題8
+%% 記号（この章）：第4巻の回路の章（Y-3）にそろえた。直流の電源の電圧 E（CMOS の電源も E。この章ではエネルギーを U と書く）、
+%%   時間で変わる電源 e は使わない（e は電気素量。F4-9 で本文に断った）、部品の電圧の瞬時値 v（小さな信号の入力 v_in・出力 v_out・ベースとエミッタの間のゆれ v_be）、電流の瞬時値 i、
+%%   直流の電圧・電流は大文字（V_BE、V_GS、V_DS、I_C、I_B、I_D）、しきい電圧 V_th、熱の電圧は k_B T/e のまま（V_T を作らない：N-4）、
+%%   相互コンダクタンス g_m、電流増幅率 h_FE（JIS。β は使わない：N-4）、飽和電流 I_s（原-9 と同じ）、MOSFET の係数 k'、
+%%   チャネルの幅と長さ W・L（この章では幅 W を空乏層の幅に使わない）、ゲートの絶縁膜の1 m² あたりの静電容量 C_ox、
+%%   移動度 μ_n（原-9 と同じ）、オン抵抗 R_on、切りかえの割合 α（この章だけ）、トランジスタの数 N、周波数 f（電-10 と同じ「周波数」）、
+%%   時定数 τ（数学 6-4 と同じ）、オペアンプの増幅度 A、抵抗 R_1・R_2。虚数単位は第4巻と同じ j（⑧の専門書の囲みだけ：N-3）。
+%% 出典（11月11日に確かめた）
+%%   ・1956年ノーベル物理学賞（ショックレー・バーディーン・ブラッテン「半導体の研究とトランジスタ効果の発見」）：
+%%       https://www.nobelprize.org/prizes/physics/1956/summary/（curl で読んだ）。最初の点接触トランジスタは 1947年12月（ベル研究所）。
+%%   ・2000年ノーベル物理学賞（半分がキルビー「集積回路の発明への貢献」）：https://www.nobelprize.org/prizes/physics/2000/summary/（curl で読んだ）。
+%%       キルビーの集積回路は 1958年。
+%%   ・原子1個のトランジスタ：M. Fuechsle ら, "A single-atom transistor", Nature Nanotechnology 7, 242 (2012)、DOI 10.1038/nnano.2012.21
+%%       （パデュー大学の論文庫 docs.lib.purdue.edu/nanopub/850 の書誌と、ニュースの記事2つの検索の抜粋で照らし合わせた。液体ヘリウムの温度で動作）。
+%% 〔要確認〕（一次資料に届かず、二次資料2つ以上で照らし合わせた値。11月11日）
+%%   ・スマホのチップのトランジスタの数「100億個をこえる」：2023年の発表のチップ（A17 Pro）で約190億個（TechCrunch 2024年9月9日の記事、
+%%       Digitimes 2025年1月の記事の検索の抜粋）。メーカーのサイトは確かめていない。本文は「100億個をこえる」とだけ書いた。
+%%   ・MOSFET の発明（1959〜60年、カーングとアタラ）、CMOS（1963年、ワンラス）：よく知られた年だが一次資料は確かめていない。本文では年を書かず
+%%       「1960年ごろ」とした。
+%%   出典の組（11月11日）：今回届くようになった一次資料には、この2つにあたるものがなく、〔要確認〕のまま。
+%%   ・ENIAC（1946年、真空管 17,468 本。本文は「1946年」「約1万8000本」）：一次資料（ペンシルベニア大学・コンピュータ歴史博物館のサイト）は
+%%       作業環境から届かず、二次資料（radiomuseum.org の ENIAC の項、wikichip.org の真空管の計算機の表）で照らし合わせた（修5-4、11月12日）。
+%%   ・例題の仮の値：チップの N＝10¹⁰・α＝0.01・C＝0.05 fF・E＝0.7 V・f＝3 GHz、MOSFET の k'＝200 μA/V²・W/L＝10・V_th＝0.5 V、
+%%       パワー MOSFET の 10 mΩ・50 A・300 V・100 ns・10 kHz、RC の 1 kΩ・1 fF は「〜とします」と書いた（計画書 B の〔仮〕）。
+\makeatletter
+% 回路の部品（tikzpicture[x=1mm, y=1mm] の中。導線を先にかき、その上に置く。角は導線の向き）。第4巻 p4-09 と同じ形
+\newcommand\txkR[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \filldraw[fill=white, draw=bkInk, line width=0.7pt] (-4.5,-1.6) rectangle (4.5,1.6);\end{scope}}
+\newcommand\txkE[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-1.2,-4.2) rectangle (1.2,4.2);
+  \draw[bkInk, line width=0.7pt] (-1.0,-4.0) -- (-1.0,4.0);
+  \draw[bkInk, line width=1.8pt] (1.0,-2.0) -- (1.0,2.0);\end{scope}}
+\newcommand\txkS[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-3.5,-0.6) rectangle (3.5,3.6);
+  \fill[bkInk] (-3,0) circle (0.6) (3,0) circle (0.6);
+  \draw[bkInk, line width=0.8pt] (-3,0) -- (2.6,3.0);\end{scope}}
+\newcommand\txkD[2]{\begin{scope}[shift={#1}, rotate=#2]
+  \fill[white] (-2.4,-2.6) rectangle (2.4,2.6);
+  \filldraw[fill=bkInk!15, draw=bkInk, line width=0.7pt] (-2,-2.2) -- (-2,2.2) -- (2,0) -- cycle;
+  \draw[bkInk, line width=1.1pt] (2,-2.2) -- (2,2.2);\end{scope}}
+% 豆電球（丸に×）
+\newcommand\txkbulb[1]{\filldraw[fill=bkYellow!40, draw=bkInk, line width=0.7pt] #1 circle (3); \draw[bkInk, line width=0.6pt] #1 ++(-2.1,-2.1) -- ++(4.2,4.2) #1 ++(-2.1,2.1) -- ++(4.2,-4.2);}
+% MOSFET（たて向き。#1 はゲートの線の中心。上がドレーン（n）、下がソース。#2 が 1 なら p チャネル（ゲートに丸））
+\newcommand\txkMOS[2]{\begin{scope}[shift={#1}]
+  \draw[bkInk, line width=0.9pt] (0,-3.2) -- (0,3.2);
+  \draw[bkInk, line width=1.3pt] (1.4,-3.6) -- (1.4,3.6);
+  \draw[bkInk, line width=0.7pt] (1.4,2.6) -- (4,2.6) -- (4,6.5) (1.4,-2.6) -- (4,-2.6) -- (4,-6.5);
+  \ifnum#2=1 \filldraw[fill=white, draw=bkInk, line width=0.7pt] (-1.1,0) circle (1.0); \draw[bkInk, line width=0.7pt] (-2.1,0) -- (-5,0);
+  \else \draw[bkInk, line width=0.7pt] (0,0) -- (-5,0); \fi\end{scope}}
+% オペアンプ（三角。#1 は三角の左の辺の中心。上の入力が−、下が＋。出力は右の頂点 (#1)+(16,0)）
+\newcommand\txkOP[1]{\begin{scope}[shift={#1}]
+  \filldraw[fill=white, draw=bkInk, line width=0.8pt] (0,-8) -- (0,8) -- (16,0) -- cycle;
+  \node[font=\footnotesize] at (2.4,4) {$-$}; \node[font=\footnotesize] at (2.4,-4) {$+$};\end{scope}}
+\tikzset{txk lab/.style={font=\sffamily\footnotesize, text=bkInk}, txk arr/.style={line width=1pt, -{Stealth[length=2.2mm]}},
+  txk dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}, txk w/.style={bkInk, line width=0.7pt}}
+\makeatother
+
+\phchapter{10}{スイッチと増幅：\\トランジスタと電子回路}{スマホのチップは、どうやって計算している？}{\bklevelrange{1}{5}}{スイッチと増幅：トランジスタと電子回路}
+\bkmichishirube{2-17,3-12,5-8,6-4,7-5,7-11,電-3,電-4,電-5,電-12,電-16,原-6,原-9}{原-14}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{1}\enspace スイッチ2つで AND と OR の回路を作り、オンとオフで2進数のたし算を表せる。
+\item \bklevel{3}\enspace バイポーラトランジスタと MOSFET がスイッチ・増幅器としてはたらくしくみを pn 接合と電場で説明し、相互コンダクタンス・増幅度・オン抵抗を求められる。
+\item \bklevel{3}\enspace CMOS の論理ゲートのしくみを説明し、チップの消費電力と信号のおくれを計算できる。
+\item \bklevel{4}\enspace 理想オペアンプの反転・非反転増幅の倍率を求め、センサーの小さな電圧を A/D 変換する流れを説明できる。
+\item \bklevel{5}\enspace MOSFET の電流の式を反転層の電荷とドリフトから導き、パワー半導体の損失と、ニュートン法で回路を解く方法を使える。
+\end{itemize}
+\end{goal}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.6\linewidth}\raggedright
+スマホは1秒に何十億回も計算します。でも、中にあるのは、つめくらいの黒い板（チップ）だけです。数学の本（2-17）では、その中に小さなスイッチが何十億こもある、と学びました。オンとオフだけで、どうやって計算するのでしょう。そして、スマホは、使っているとなぜ温かくなるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.37\linewidth}\centering
+\begin{tikzpicture}[x=0.78mm, y=0.78mm]
+  \draw[bkInk, line width=0.8pt, rounded corners=2mm, fill=bkGray!10] (0,0) rectangle (20,38);
+  \fill[bkInk!85] (5,16) rectangle (15,26);
+  \foreach \t in {0,...,4} {\draw[bkGray, line width=0.5pt] (5+2*\t+1,16) -- (5+2*\t+1,14.6) (5+2*\t+1,26) -- (5+2*\t+1,27.4);}
+  \draw[bkOrange!85!black, line width=0.9pt] (15,21) -- (28,30);
+  \draw[bkOrange!85!black, line width=0.9pt] (15,17) -- (28,6);
+  \draw[bkInk, line width=0.8pt, fill=white] (28,4) rectangle (56,32);
+  \foreach \i in {0,...,2} \foreach \j in {0,...,3} {\txkS{(34+8*\i,8.5+6.6*\j)}{0}}
+  \node[txk lab, anchor=north] at (10,-1) {チップ};
+  \node[txk lab, anchor=north, align=center] at (42,2.5) {中は、小さな\\スイッチの集まり};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 前の章（原-9）では、p形と n形の半導体の境目（pn 接合）が、電流を一方の向きにだけ通すことを学びました。この章では、半導体にもう1つしかけを加えて、「電気で電気を切りかえる」部品、\textbf{トランジスタ}を作ります。\bkidx{とらんじすた}{トランジスタ}トランジスタは、小さな電圧で大きな電流をオン・オフする\textbf{スイッチ}にも、小さな信号を大きくする\textbf{増幅器}にもなります。スマホのチップ、マイコン、エアコンや電気自動車のモーターを回すインバーター、音楽を大きくするアンプ。どれも、この2つのはたらきの組み合わせです。
+
+\begin{yattemiyou}[スイッチ2つで、AND と OR を作ろう]
+\textbf{用意するもの}\par
+乾電池（単3、2本）と電池ボックス、豆電球とソケット、スイッチ2つ（理科室のもの。なければ導線の先のミノムシクリップを、つけたり外したりする）、導線\par\vspace{2pt}
+\noindent\begin{minipage}[c]{0.52\linewidth}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item 図の「直列」のように、スイッチ A と B を1列につなぐ。A と B を、それぞれオン・オフして、4通りの組み合わせで豆電球がつくかを表にする。
+\item 図の「並列」のように、A と B を横に並べてつなぎ、同じことをする。
+\item オンを1、オフを0、豆電球がつくを1、つかないを0として、①②の表を数字で書きなおす。
+\end{enumerate}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.45\linewidth}\centering
+\begin{tikzpicture}[x=0.88mm, y=0.88mm]
+  \begin{scope}
+    \draw[txk w] (0,0) -- (0,20) -- (24,20) -- (24,0) -- cycle;
+    \txkE{(0,10)}{-90}
+    \txkS{(7,20)}{0} \txkS{(17,20)}{0}
+    \txkbulb{(12,0)}
+    \node[txk lab, anchor=south] at (7,23.5) {A};
+    \node[txk lab, anchor=south] at (17,23.5) {B};
+    \node[txk lab, anchor=north] at (12,-4) {直列};
+  \end{scope}
+  \begin{scope}[shift={(32,0)}]
+    \draw[txk w] (0,0) -- (0,20) -- (6,20) (18,20) -- (24,20) -- (24,0) -- (0,0);
+    \draw[txk w] (6,13) -- (6,27) -- (18,27) -- (18,13) -- cycle;
+    \txkE{(0,10)}{-90}
+    \txkS{(12,27)}{0} \txkS{(12,13)}{0}
+    \txkbulb{(12,0)}
+    \node[txk lab, anchor=south] at (12,30.5) {A};
+    \node[txk lab, anchor=south] at (12,16.5) {B};
+    \node[txk lab, anchor=north] at (12,-4) {並列};
+  \end{scope}
+\end{tikzpicture}
+\end{minipage}
+\par\vspace{6pt}\textbf{気をつけること}：家のコンセントにはつながない。豆電球をつながずに、電池の＋と－を導線だけでつながない（導線が熱くなる）。
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=16mm] Q[c,m,wd=16mm] Q[c,m,wd=30mm] Q[c,m,wd=30mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+A & B & 直列（豆電球） & 並列（豆電球） \\
+0（オフ） & 0（オフ） & 0（つかない） & 0（つかない） \\
+0 & 1（オン） & 0 & 1（つく） \\
+1 & 0 & 0 & 1 \\
+1 & 1 & 1 & 1 \\
+\end{bktable}
+\bktabcaption{やってみようの結果を、オン・つくを1、オフ・つかないを0で書いた表}\label{ph:原-10:tab-yattemiyou}
+\end{bkcenter}
+
+\noindent やってみようの答え：表\ref{ph:原-10:tab-yattemiyou}のとおり、直列では「A も B もオン」のときだけ、並列では「A か B の少なくとも1つがオン」のとき、豆電球がつきます。前者を \textbf{AND}（かつ）、後者を \textbf{OR}（または）といいます。スイッチのつなぎ方だけで、「かつ」「または」という考えを、電気で表せたのです。①では、これでたし算ができることを見ます。ただし、やってみようのスイッチは、人の手で動かしていました。チップの中では、スイッチを\textbf{電気で}動かします。それがトランジスタです（③〜⑤）。
+
+\begin{omoidasou}
+\bkrecall{2-17}{2進数は、0と1の2つの数字だけで数を表す。2あつまったら1つ左の位へ。$1+1=10$（2進数）。$n$ ビットで $2^n$ 通り。}
+\bkrecall{原-9}{pn 接合のダイオードの電流は $I=I_{\mathrm s}(e^{eV/(k_{\mathrm B}T)}-1)$。電圧が約 60 mV 上がるごとに電流が10倍（300 K で $k_{\mathrm B}T/e=\qty{0.0259}{V}$）。n形は電子、p形は正孔が多い。}
+\bkrecall{電-3}{コンデンサーの電荷は $Q=CV$、たまるエネルギーは $U=\tfrac12CV^2$。}
+\bkrecall{電-5}{キルヒホッフの法則：1つの点に入る電流の和は0（電流則）、輪を1周する電圧の和は0（電圧則）。節点電位法で、点の電位を未知数にして解く。}
+\bkrecall{6-4}{抵抗 $R$ とコンデンサー $C$ の回路の時定数は $\tau=RC$。電圧は $1-e^{-t/\tau}$ の形で近づき、半分になるのは $t=\tau\ln2\approx0.69\tau$。}
+\end{omoidasou}
+
+\noindent この章の記号：物理シリーズの『電磁気学』の回路の章と同じく、直流の電源の電圧を $E$、部品の電圧の瞬時値を小文字の $v$、電流を $i$ と書きます（『電磁気学』の時間で変わる電源 $e$ は、この章では使いません。$e$ は電気素量です）。トランジスタの直流の電圧・電流は、$V_{\mathrm{GS}}$・$I_{\mathrm D}$ のように大文字に添え字をつけます。エネルギーは $U$ と書きます。
+
+%% ======================== 物理の道具 ========================
+\Needspace{12\baselineskip}\bksection{doguu}{物理の道具}
+
+\phstage{me}{スイッチで数を表す}{1}
+
+\bksubsection{1}{スイッチで「かつ」「または」とたし算}
+\label{ph:原-10:sec1}
+やってみようの AND と OR を、記号で書きます。入力 $A$・$B$ と出力は、どれも0か1です。AND の出力は $A$ と $B$ のかけ算 $A\times B$ と同じで、OR は「足して1以上なら1」です。もう1つ、「入力が1なら0、0なら1」と反対にするものを \textbf{NOT}（でない）といいます。\bkidx{ろんりかいろ}{論理回路}このように、0と1で考えを表す回路を\textbf{論理回路}といい、AND・OR・NOT のような部品を\textbf{論理ゲート}といいます。
+
+\phboxhead{1けたのたし算を、ゲートで作る}
+2進数の1けたのたし算は、次の4通りしかありません（2-17）。
+\[ 0+0=00,\qquad 0+1=01,\qquad 1+0=01,\qquad 1+1=10 \]
+答えの右のけた（\textbf{和}）は、「$A$ と $B$ のどちらか1つだけが1なら1」で、左のけた（\textbf{くり上がり}）は「両方1なら1」、つまり AND です。和のほうは、「$A$ OR $B$」で、しかも「$A$ AND $B$ でない」もの、と組み立てられます（図\ref{ph:原-10:fig-adder}）。これを\textbf{半加算器}といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=16mm, minimum height=8mm] (or) at (32,20) {OR};
+  \node[bk node, minimum width=16mm, minimum height=8mm] (and) at (32,4) {AND};
+  \node[bk node, minimum width=16mm, minimum height=8mm] (not) at (60,4) {NOT};
+  \node[bk node, minimum width=16mm, minimum height=8mm] (and2) at (86,14) {AND};
+  \node[txk lab, anchor=east] at (5,21.5) {$A$};
+  \node[txk lab, anchor=east] at (5,2.5) {$B$};
+  \draw[txk w, -{Stealth[length=1.8mm]}] (6,21.5) -- (23.5,21.5);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (12,21.5) -- (12,5.5) -- (23.5,5.5);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (6,2.5) -- (23.5,2.5);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (17,2.5) -- (17,18.5) -- (23.5,18.5);
+  \fill[bkInk] (12,21.5) circle (0.8) (17,2.5) circle (0.8) (45,4) circle (0.8);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (40.5,4) -- (51.5,4);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (40.5,20) -- (64,20) -- (64,15.5) -- (77.5,15.5);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (68.5,4) -- (72,4) -- (72,12.5) -- (77.5,12.5);
+  \draw[txk w, -{Stealth[length=1.8mm]}] (94.5,14) -- (104,14);
+  \node[txk lab, anchor=west] at (105,14) {和};
+  \draw[txk w, -{Stealth[length=1.8mm]}] (45,4) -- (45,-6) -- (104,-6);
+  \node[txk lab, anchor=west] at (105,-6) {くり上がり};
+\end{tikzpicture}
+\bkfigcaption{1けたの2進数のたし算（半加算器）。くり上がりは $A$ AND $B$。和は「$A$ OR $B$」と「NOT（$A$ AND $B$）」の AND で、2つのうち1つだけが1のとき1になる。}\label{ph:原-10:fig-adder}
+\end{bkfigure}
+
+\noindent 半加算器を、くり上がりも受けとれるように2つ組み合わせ（全加算器）、それを32個や64個並べれば、何十億までの数のたし算が、一度にできます。ひき算・かけ算・わり算も、たし算と、けたをずらす操作の組み合わせで作れます。チップの中の計算は、ぜんぶ、このようなゲートの組み合わせなのです。
+
+\begin{phmijika}[表計算で論理回路を作る]
+表計算でも、論理回路を試せます。A 列と B 列に0と1を入れ、C 列に \texttt{=A2*B2}（AND）、D 列に \texttt{=IF(A2+B2>=1,1,0)}（OR）、E 列に \texttt{=1-C2}（NAND＝AND のあとに NOT）を入れて下へコピーすると、C 列と D 列に、表\ref{ph:原-10:tab-yattemiyou}の直列・並列と同じ数が並びます。和は \texttt{=D2*E2}、くり上がりは \texttt{=C2} です。
+\end{phmijika}
+
+\Needspace{12\baselineskip}\bksubsection{2}{真空管からトランジスタ・集積回路へ}
+\label{ph:原-10:sec2}
+電気でスイッチを動かす部品は、トランジスタの前にもありました。電磁石で接点を動かす\textbf{リレー}（電-7 ⑥）と、ガラスの管の中で、熱した電極から飛び出す電子の流れを、網の電極の電圧で開け閉めする\textbf{真空管}です。1946年にアメリカで作られた初期の計算機は、真空管を約1万8000本使い、大きな部屋をうめ、大きな電力を使いました。真空管は、電極を熱しつづける必要があり、こわれやすいのも問題でした。
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=20mm] Q[l,m,wd=94mm]}, rowsep=1pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+年 & できごと \\
+1947 & ベル研究所のバーディーンとブラッテンが、ゲルマニウムの結晶に2本の針を立てた「点接触トランジスタ」で、信号を大きくした \\
+1948〜49 & ショックレーが、pn 接合を2つ重ねた「接合トランジスタ」（③）の考えと、pn 接合の理論（原-9 ⑦）をまとめた \\
+1956 & 3人にノーベル物理学賞（半導体の研究とトランジスタ効果の発見） \\
+1958 & キルビーが、1つの結晶の上に、トランジスタ・抵抗・コンデンサーをまとめて作る「集積回路（IC）」を作った（2000年ノーベル物理学賞） \\
+1960年ごろ & 電場でスイッチする MOSFET（④）、それを2種類組み合わせた CMOS（⑦）が作られた \\
+いま & スマホのチップ1つに、MOSFET が100億個をこえる \\
+\end{bktable}
+\bktabcaption{トランジスタと集積回路の歴史}\label{ph:原-10:tab-history}
+\end{bkcenter}
+
+\noindent トランジスタは、熱する部品がなく、小さく、こわれにくく、電力をほとんど使いません。そして、写真の焼きつけのような方法（光で模様をうつす）で、1枚のケイ素の板の上に、たくさんのトランジスタをまとめて作れます。こうして作った部品を\textbf{集積回路}（IC）といいます。\bkidx{しゅうせきかいろ}{集積回路}小さく作るほど、1枚にたくさん入り、速く、少ない電力で動くので、トランジスタは、何十年も小さくなり続けてきました。
+
+\Needspace{12\baselineskip}\phstage{te}{トランジスタのしくみと使い方}{3}
+
+\bksubsection{3}{バイポーラトランジスタ：小さな電流で大きな電流を}
+\label{ph:原-10:sec3}
+n形・p形・n形の順に、3つの層を重ねたものを、\textbf{npn 形バイポーラトランジスタ}といいます（図\ref{ph:原-10:fig-npn}）。\bkidx{ばいぽーらとらんじすた}{バイポーラトランジスタ}左の n形を\textbf{エミッタ}（電子を出す所）、まん中のうすい p形を\textbf{ベース}、右の n形を\textbf{コレクタ}（電子を集める所）といいます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkBlue!12] (0,0) rectangle (34,20);
+  \fill[bkRed!12] (34,0) rectangle (42,20);
+  \fill[bkBlue!12] (42,0) rectangle (82,20);
+  \draw[bkInk, line width=0.6pt] (0,0) rectangle (82,20) (34,0) -- (34,20) (42,0) -- (42,20);
+  \node[txk lab, anchor=south] at (17,20.5) {エミッタ（n）};
+  \node[txk lab, anchor=south] at (38,26) {ベース（p）};
+  \draw[bkInk, line width=0.5pt] (38,25.6) -- (38,20.5);
+  \node[txk lab, anchor=south] at (62,20.5) {コレクタ（n）};
+  \foreach \x/\y in {6/5,12/14,20/8,27/15} {\filldraw[fill=bkBlue!80!black, draw=bkInk, line width=0.4pt] (\x,\y) circle (1.1);}
+  \draw[bkBlue!70!black, line width=1.2pt, -{Stealth[length=2.4mm]}] (8,10) -- (70,10);
+  \node[txk lab, text=bkBlue!70!black, anchor=south] at (62,11.5) {電子の大部分は通りぬける};
+  \draw[bkRed!70!black, line width=0.9pt, -{Stealth[length=2mm]}] (37,10) .. controls (37,4) .. (37,-3);
+  \node[txk lab, text=bkRed!70!black, anchor=north] at (37,-3.5) {ほんの少しだけベースへ};
+  % 記号
+  \begin{scope}[shift={(102,10)}]
+    \draw[bkInk, line width=1.4pt] (0,-5) -- (0,5);
+    \draw[txk w] (-8,0) -- (0,0);
+    \draw[txk w] (0,2.2) -- (6,7) -- (6,11);
+    \draw[txk w, -{Stealth[length=1.8mm]}] (0,-2.2) -- (5.5,-6.6);
+    \draw[txk w] (5.5,-6.6) -- (6,-7) -- (6,-11);
+    \node[txk lab, anchor=east] at (-8.5,0) {B};
+    \node[txk lab, anchor=west] at (7,10) {C};
+    \node[txk lab, anchor=west] at (7,-10) {E};
+    \node[txk lab, anchor=north] at (2,-12) {記号};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{npn 形バイポーラトランジスタ。エミッタとベースの間の pn 接合を順方向にすると、エミッタからベースへ電子が流れこむ。ベースはとてもうすいので、ほとんどの電子は正孔と出会う前にベースを通りぬけ、コレクタに吸いこまれる。右は回路の記号（B ベース、C コレクタ、E エミッタ。矢印は電流の向き）。}\label{ph:原-10:fig-npn}
+\end{bkfigure}
+
+\phboxhead{電子は、うすいベースを通りぬける}
+エミッタとベースの間の pn 接合を、順方向にします（ベースを＋に、電圧 $V_{\mathrm{BE}}$）。原-9 ⑦と同じく、坂が下がって、エミッタの電子がベースへ流れこみます。ふつうのダイオードなら、入った電子は p形の中で正孔と出会って消えます。ところが、ベースは、電子の拡散距離（原-9 ⑤、数十 \si{\micro m}）よりずっとうすく（\qty{1}{\micro m} より小さく）作ってあるので、電子のほとんどは消える前にベースを通りぬけます。その先のベースとコレクタの間には、逆方向の電圧がかかっていて、空乏層の強い電場（原-9 ⑥）が、来た電子をコレクタへ吸いこみます。
+
+こうして、エミッタから出た電子の99\,\% ほどがコレクタ電流 $I_{\mathrm C}$ になり、ベースで消えるわずかな分を補う電流だけが、ベース電流 $I_{\mathrm B}$ として流れます。2つの比
+\pheq{h_{\mathrm{FE}}=\frac{I_{\mathrm C}}{I_{\mathrm B}}}{1 ＝ A ÷ A}
+\label{ph:原-10:hfe}を\textbf{直流電流増幅率}といい、ふつう 100 ほどです。\bkidx{でんりゅうぞうふくりつ}{電流増幅率}ベースに \qty{10}{\micro A} 流すと、コレクタに \qty{1}{mA} 流れます。小さな電流で、100倍の大きな電流を操れるのです。
+
+\phboxhead{コレクタ電流は、ベースとエミッタの電圧で決まる}
+コレクタ電流は、エミッタからベースへ坂をこえる電子の数で決まるので、原-9 のダイオードの式と同じ形になります。
+\pheq{I_{\mathrm C}=I_{\mathrm s}\,e^{eV_{\mathrm{BE}}/(k_{\mathrm B}T)}}{A ＝ A × 1}
+\label{ph:原-10:ic}（$-1$ は、$I_{\mathrm C}$ がずっと大きいので省きました。）
+
+\begin{phyomi}[$I_{\mathrm C}=I_{\mathrm s}e^{eV_{\mathrm{BE}}/(k_{\mathrm B}T)}$]
+「コレクタ電流は、ベースとエミッタの電圧が 60 mV 上がるごとに10倍」と読みます。$V_{\mathrm{BE}}$ をわずか \qty{10}{mV} 上げるだけで、$e^{10/25.9}\approx1.47$ 倍、つまり5割近く増えます。小さな電圧の変化を、大きな電流の変化に変える。これが、⑥の増幅のもとです。
+\end{phyomi}
+
+\phboxhead{相互コンダクタンス：電圧の小さな変化で、電流がどれだけ変わるか}
+$V_{\mathrm{BE}}$ を少しだけ変えたとき、$I_{\mathrm C}$ がどれだけ変わるかは、指数関数の微分（5-14）で求められます。
+\[ g_{\mathrm m}=\frac{\dd I_{\mathrm C}}{\dd V_{\mathrm{BE}}}=\frac{e}{k_{\mathrm B}T}\,I_{\mathrm s}e^{eV_{\mathrm{BE}}/(k_{\mathrm B}T)}=\frac{I_{\mathrm C}}{k_{\mathrm B}T/e} \]
+この $g_{\mathrm m}$ を\textbf{相互コンダクタンス}といいます。\bkidx{そうごこんだくたんす}{相互コンダクタンス}単位は A/V＝S（ジーメンス）で、電流を熱の電圧 $k_{\mathrm B}T/e$ でわった値です。\phdim{S ＝ A ÷ V}\label{ph:原-10:gm}
+
+\begin{phbaisuru}{コレクタ電流 $I_{\mathrm C}$}
+$g_{\mathrm m}$ は $I_{\mathrm C}$ に比例します。$I_{\mathrm C}=\qty{1}{mA}$ なら $g_{\mathrm m}=1/25.9\approx\qty{38.6}{mS}$、2倍の \qty{2}{mA} なら \qty{77}{mS} です。指数関数のグラフは、上へ行くほど傾きが急になるので、たくさん流しているトランジスタほど、同じ電圧の変化で大きく電流が変わるのです（例題3）。トランジスタの形や大きさによらず、電流と温度だけで決まるのが、バイポーラトランジスタの便利な所です。
+\end{phbaisuru}
+
+\Needspace{14\baselineskip}\bksubsection{4}{MOSFET：電場で開け閉めする戸}
+\label{ph:原-10:sec4}
+今のチップのトランジスタは、ほとんどが \textbf{MOSFET}（モスフェット：金属・酸化膜・半導体の電界効果トランジスタ）です。\bkidx{もすふぇっと}{MOSFET}p形のケイ素の板に、2つの n形の島（\textbf{ソース}と\textbf{ドレーン}）を作り、その間の表面を、とてもうすい絶縁の膜（酸化ケイ素など）でおおい、その上に電極（\textbf{ゲート}）をのせます（図\ref{ph:原-10:fig-mos}）。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \ox/\on/\ttl in {0/0/{$V_{\mathrm{GS}}<V_{\mathrm{th}}$：オフ}, 66/1/{$V_{\mathrm{GS}}>V_{\mathrm{th}}$：オン}} {
+    \begin{scope}[shift={(\ox,0)}]
+      \fill[bkRed!10] (0,0) rectangle (56,20);
+      \draw[bkInk, line width=0.6pt] (0,0) rectangle (56,20);
+      \filldraw[fill=bkBlue!20, draw=bkInk, line width=0.6pt] (4,13) rectangle (18,20);
+      \filldraw[fill=bkBlue!20, draw=bkInk, line width=0.6pt] (38,13) rectangle (52,20);
+      \fill[bkYellow!50] (18,20) rectangle (38,21.4);
+      \draw[bkInk, line width=0.5pt] (18,20) rectangle (38,21.4);
+      \filldraw[fill=bkGray!45, draw=bkInk, line width=0.6pt] (18,21.4) rectangle (38,25);
+      \node[txk lab] at (11,16.5) {n};
+      \node[txk lab] at (45,16.5) {n};
+      \node[txk lab] at (28,3.2) {p形のケイ素};
+      \node[txk lab, anchor=south] at (11,20.5) {ソース};
+      \node[txk lab, anchor=south] at (45,20.5) {ドレーン};
+      \node[txk lab, anchor=south] at (28,25.5) {ゲート};
+      \node[txk lab, anchor=north] at (28,-1.5) {\ttl};
+      \ifnum\on=1
+        \fill[bkBlue!55] (18,18.8) rectangle (38,20);
+        \foreach \x in {20,23,26,29,32,35} {\filldraw[fill=bkBlue!80!black, draw=bkInk, line width=0.3pt] (\x,19.4) circle (0.55);}
+        \draw[bkBlue!70!black, line width=1.1pt, -{Stealth[length=2.2mm]}] (14,11) -- (42,11);
+        \node[txk lab, text=bkBlue!70!black, anchor=north] at (28,10.6) {電子の通り道（反転層）};
+      \fi
+    \end{scope}}
+  \node[txk lab, anchor=east, align=right] at (-1,22) {うすい\\絶縁の膜};
+  \draw[bkInk, line width=0.5pt] (-1,22) -- (18,20.7);
+\end{tikzpicture}
+\bkfigcaption{n チャネル MOSFET の断面。左：ゲートの電圧が小さいと、ソースとドレーンの間は p形で、どちら向きにも pn 接合が逆向きになり、電流は流れない。右：ゲートを＋にすると、ゲートの下の表面に電子が引き寄せられ、電子の通り道（反転層）ができて、電流が流れる。}\label{ph:原-10:fig-mos}
+\end{bkfigure}
+
+\phboxhead{ゲートは、コンデンサーの片方の板}
+ゲートと、その下のケイ素は、うすい絶縁の膜をはさんだ平行板コンデンサー（電-3 ④）です。ゲートに＋の電圧をかけると、反対側（ケイ素の表面）に－の電荷が集まります。はじめは、正孔が追い払われて、動けないアクセプターの－イオンだけが残ります（空乏層：原-9 ⑥）。さらに電圧を上げると、表面に電子が集まり、p形なのに、表面のうすい層だけが n形のようになります。これを\textbf{反転層}（チャネル）といいます。\bkidx{はんてんそう}{反転層}反転層は、ソースとドレーンの n形の島をつなぐので、電子が流れられるようになります。
+
+反転層ができはじめるゲートの電圧を\textbf{しきい電圧} $V_{\mathrm{th}}$ といいます。\bkidx{しきいでんあつ}{しきい電圧}$V_{\mathrm{GS}}$（ゲートとソースの間の電圧）が $V_{\mathrm{th}}$ より小さいとオフ、大きいとオンです。
+
+\begin{phmijika}[ゲートには、電流がほとんど流れない]
+ゲートは絶縁の膜で切りはなされているので、ゲートに電流は流れません（流れるのは、コンデンサーを充電・放電する一瞬だけ）。バイポーラトランジスタはベース電流が要りましたが、MOSFET は、電圧をかけておくだけで、オンを保てます。何十億個ものスイッチを、少ない電力で保っておけるのは、このためです。ゲートの膜はとてもうすく（数 nm）、その下の電荷の量は、膜がうすいほど大きくなります（$C=\varepsilon S/d$：電-3 ④）。
+\end{phmijika}
+
+\phboxhead{p チャネルの MOSFET}
+n形の板に p形の島を作り、ゲートを－にして正孔の通り道を作るものもあります。これを p チャネル MOSFET（pMOS）、図\ref{ph:原-10:fig-mos}のものを n チャネル MOSFET（nMOS）といいます。pMOS は、ゲートの電圧がソースより十分低いとオン、同じくらいだとオフで、nMOS と反対の動きをします。⑦では、この2つを組み合わせます。
+
+\Needspace{14\baselineskip}\bksubsection{5}{スイッチとしての MOSFET：オン抵抗}
+\label{ph:原-10:sec5}
+MOSFET のドレーンとソースの間に電圧 $V_{\mathrm{DS}}$ をかけたときの電流 $I_{\mathrm D}$ は、図\ref{ph:原-10:fig-idvds}のようになります（式は⑩で導きます）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=96mm, height=54mm, xmin=0, xmax=1.65, ymin=0, ymax=1.15, xtick={0,0.25,0.5,0.75,1,1.25,1.5}, xticklabels={0,0.25,0.5,0.75,1.0,1.25,1.5}, ytick={0,0.25,0.5,0.75,1}, yticklabels={0,0.25,0.5,0.75,1.0}, xlabel={$V_{\mathrm{DS}}$（V）}, ylabel={$I_{\mathrm D}$（mA）}]
+  \addplot[bkcurve, domain=0:0.5, samples=40] {2*((0.5)*x-x^2/2)};
+  \addplot[bkcurve, domain=0.5:1.6] {0.25};
+  \addplot[bkcurve2, dashed, domain=0:0.75, samples=40] {2*((0.75)*x-x^2/2)};
+  \addplot[bkcurve2, dashed, domain=0.75:1.6] {0.5625};
+  \addplot[bkPurple!80!black, line width=1.6pt, densely dotted, domain=0:1, samples=40] {2*((1.0)*x-x^2/2)};
+  \addplot[bkPurple!80!black, line width=1.6pt, densely dotted, domain=1:1.6] {1.0};
+  \draw[bkGray, line width=0.6pt] (axis cs:0,0) -- (axis cs:0.28,0.56);
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:1.0,0.27) {$V_{\mathrm{GS}}=\qty{1.0}{V}$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=south west] at (axis cs:1.0,0.585) {$V_{\mathrm{GS}}=\qty{1.25}{V}$（破線）};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:1.0,0.98) {$V_{\mathrm{GS}}=\qty{1.5}{V}$（点線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, align=left] at (axis cs:0.03,1.1) {はじめは直線\\（抵抗と同じ）};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:0.75,0.03) {飽和（$V_{\mathrm{DS}}$ によらない）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{MOSFET のドレーン電流（例題4 の MOSFET：$k'W/L=\qty{2}{mA/V^2}$、$V_{\mathrm{th}}=\qty{0.5}{V}$）。$V_{\mathrm{DS}}$ が小さい所では、電流は電圧に比例し（抵抗のよう）、$V_{\mathrm{DS}}$ が $V_{\mathrm{GS}}-V_{\mathrm{th}}$ をこえると、ほぼ一定になる（飽和）。}\label{ph:原-10:fig-idvds}
+\end{bkfigure}
+
+\noindent $V_{\mathrm{DS}}$ が小さい所では、電流は電圧にほぼ比例し、MOSFET は「抵抗」としてふるまいます。この抵抗を\textbf{オン抵抗} $R_{\mathrm{on}}$ といいます。\bkidx{おんていこう}{オン抵抗}反転層の電子の数は $V_{\mathrm{GS}}-V_{\mathrm{th}}$ に比例し、電子が多いほど電流が流れやすいので（電-4 の $I=envS$）、
+\pheq{R_{\mathrm{on}}=\frac{1}{k'\dfrac{W}{L}\,(V_{\mathrm{GS}}-V_{\mathrm{th}})}}{Ω ＝ 1 ÷ (A/V$^2$ × V)}
+\label{ph:原-10:ron}です。$W$ と $L$ は通り道（チャネル）の幅と長さ、$k'$ は材料と絶縁の膜の厚さで決まる定数です（⑩）。
+
+\begin{phyomi}[$R_{\mathrm{on}}=1/\{k'(W/L)(V_{\mathrm{GS}}-V_{\mathrm{th}})\}$]
+「オン抵抗は、通り道が太く短いほど、ゲートの電圧がしきい電圧をこえるほど小さい」と読みます。導線の抵抗が「長さに比例し、断面積に反比例する」（電-4）のと同じく、$L$ に比例し $W$ に反比例します。$V_{\mathrm{GS}}-V_{\mathrm{th}}$ に反比例するのは、ゲートの電圧で、通り道の電子の数（導線でいえば太さ）が決まるからです。
+\end{phyomi}
+
+\noindent スイッチとしての MOSFET は、ゲートの電圧が小さいときは、ほとんど電流を通さない（オフ）、大きいときは小さな抵抗 $R_{\mathrm{on}}$（オン）です。$R_{\mathrm{on}}$ が小さいほど、よいスイッチです。$V_{\mathrm{DS}}$ が大きい所では、電流が $V_{\mathrm{DS}}$ によらず一定になります（\textbf{飽和}）。この性質は、⑥の増幅で使います。
+
+\Needspace{14\baselineskip}\bksubsection{6}{増幅：小さな変化を大きく}
+\label{ph:原-10:sec6}
+マイクの信号は、数 mV しかありません。スピーカーを鳴らすには、これを何百倍にもする必要があります。トランジスタで、どうやって信号を大きくするのでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 回路
+  \draw[txk w] (30,40) -- (30,30);
+  \txkR{(30,34)}{90}
+  \draw[txk w] (30,30) -- (30,25) (30,15) -- (30,4) -- (60,4);
+  \draw[txk w] (24,40) -- (60,40);
+  \draw[bkInk, line width=1.4pt] (26,15) -- (26,25);
+  \draw[txk w] (26,22.5) -- (30,25);
+  \draw[txk w, -{Stealth[length=1.6mm]}] (26,17.5) -- (29.6,15.2);
+  \draw[txk w] (14,20) -- (26,20);
+  \draw[txk w] (30,28) -- (46,28);
+  \fill[bkInk] (30,28) circle (0.7);
+  \node[txk lab, anchor=east] at (27.5,34) {$R_{\mathrm C}$};
+  \node[txk lab, anchor=south] at (42,40.5) {電源 $E$（＋）};
+  \node[txk lab, anchor=north] at (45,3.5) {0 V};
+  \node[txk lab, anchor=east, align=right] at (13.5,20) {入力\\$V_{\mathrm{BE}}+v_{\mathrm{in}}$};
+  \node[txk lab, anchor=west] at (46.5,28) {出力 $v_{\mathrm{out}}$};
+  \draw[bkRed!70!black, line width=0.9pt, -{Stealth[length=2mm]}] (34,37) -- (34,30.5);
+  \node[txk lab, text=bkRed!70!black, anchor=west] at (35,24) {$I_{\mathrm C}+i_{\mathrm c}$};
+  % 波形
+  \begin{scope}[shift={(78,6)}]
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=1.4mm]}] (0,26) -- (40,26);
+    \draw[bkBlue, line width=1.2pt, domain=0:36, samples=60] plot (\x, {26+1.2*sin(\x*20)});
+    \node[txk lab, anchor=south west] at (0,28) {入力 $v_{\mathrm{in}}$（1 mV ほど）};
+    \draw[bkGray, line width=0.5pt, -{Stealth[length=1.4mm]}] (0,8) -- (40,8);
+    \draw[bkOrange, line width=1.2pt, domain=0:36, samples=60] plot (\x, {8-6*sin(\x*20)});
+    \node[txk lab, anchor=south west] at (0,15) {出力 $v_{\mathrm{out}}$（大きく、さかさ）};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{エミッタ接地の増幅回路。左：トランジスタのコレクタに抵抗 $R_{\mathrm C}$ をつなぎ、ベースに小さな信号 $v_{\mathrm{in}}$ を加える。右：入力のゆれ（上）と出力のゆれ（下）。出力は、入力の何百倍にもなり、上下が反対になる。}\label{ph:原-10:fig-amp}
+\end{bkfigure}
+
+\noindent 図\ref{ph:原-10:fig-amp}の回路を\textbf{エミッタ接地増幅回路}といいます。\bkidx{ぞうふく}{増幅}ベースには、電流 $I_{\mathrm C}$ が流れるような一定の電圧 $V_{\mathrm{BE}}$（0.65 V ほど）をかけておき、その上に、小さな信号 $v_{\mathrm{in}}$ を足します。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 入力が $v_{\mathrm{in}}$ だけ変わると、コレクタ電流は $i_{\mathrm c}=g_{\mathrm m}v_{\mathrm{in}}$ だけ変わる（③の相互コンダクタンス）。
+\item その電流が抵抗 $R_{\mathrm C}$ を流れるので、$R_{\mathrm C}$ の電圧が $R_{\mathrm C}i_{\mathrm c}$ だけ変わる。
+\item 出力（コレクタの電位）は、電源の電圧 $E$ から $R_{\mathrm C}$ の電圧を引いたものなので、$R_{\mathrm C}i_{\mathrm c}$ だけ\textbf{下がる}。
+\end{enumerate}
+まとめると、
+\pheq{v_{\mathrm{out}}=-g_{\mathrm m}R_{\mathrm C}\,v_{\mathrm{in}}}{V ＝ S × Ω × V}
+\label{ph:原-10:gain}となります。$-g_{\mathrm m}R_{\mathrm C}$ を\textbf{電圧増幅度}といいます。$I_{\mathrm C}=\qty{1}{mA}$、$R_{\mathrm C}=\qty{4.7}{k\ohm}$ なら、$-38.6\times10^{-3}\times4700\approx-180$ 倍です（例題3）。
+
+\begin{phyomi}[$v_{\mathrm{out}}=-g_{\mathrm m}R_{\mathrm C}v_{\mathrm{in}}$]
+「入力の電圧のゆれを、トランジスタで電流のゆれに変え、抵抗でもう一度、大きな電圧のゆれにもどす」と読みます。負の符号は、入力が上がると出力が下がる（さかさまになる）ことを表します。大きくなったエネルギーは、トランジスタが作り出したのではなく、電源 $E$ から来ています。トランジスタは、電源のエネルギーを、入力の形どおりに流す「弁」なのです。
+\end{phyomi}
+
+\begin{phmodel}[小さな信号の増幅]
+\phignore{コレクタの電圧で $I_{\mathrm C}$ が少し変わること（アーリー効果）。トランジスタの中の小さなコンデンサー（速い信号で効く）。}
+\phassume{入力 $v_{\mathrm{in}}$ は $k_{\mathrm B}T/e=\qty{25.9}{mV}$ よりずっと小さい（指数関数を接線の直線で近似できる：5-8）。}
+\phlimit{入力が大きいと、出力がひずむ（$v_{\mathrm{in}}=\qty{1}{mV}$ で約2\,\% のずれ）。出力は 0 V と $E$ の間しか動けないので、そこで頭打ちになる。}
+\end{phmodel}
+
+\Needspace{8\baselineskip}\bksubsection{7}{CMOS の論理ゲートと、はてな？の答え}
+\label{ph:原-10:sec7}
+チップの中では、nMOS と pMOS を組にして論理ゲートを作ります。これを \textbf{CMOS}（シーモス：相補形 MOS）といいます。\bkidx{しーもす}{CMOS}いちばん簡単な NOT（\textbf{インバーター}とよぶ）は、電源 $E$ と 0 V の間に、pMOS と nMOS を直列につなぎ、2つのゲートを入力に、つなぎ目を出力にします（図\ref{ph:原-10:fig-cmos}の左）。
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item 入力が $E$（1）：nMOS がオン、pMOS がオフ。出力は 0 V につながり、0。
+\item 入力が 0 V（0）：nMOS がオフ、pMOS がオン。出力は $E$ につながり、1。
+\end{itemize}
+どちらの状態でも、2つのうち1つは必ずオフなので、電源から 0 V へ、電流がまっすぐ流れ続けることはありません。電流が流れるのは、出力が切りかわる一瞬だけです。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % インバーター
+  \begin{scope}
+    \draw[txk w] (4,46) -- (24,46);
+    \node[txk lab, anchor=south] at (14,46.5) {電源 $E$};
+    \txkMOS{(10,34)}{1}
+    \txkMOS{(10,16)}{0}
+    \draw[txk w] (14,40.5) -- (14,46) (14,9.5) -- (14,4) (4,4) -- (24,4);
+    \node[txk lab, anchor=north] at (14,3.5) {0 V};
+    \draw[txk w] (14,27.5) -- (14,22.5);
+    \draw[txk w] (14,25) -- (26,25);
+    \fill[bkInk] (14,25) circle (0.7);
+    \draw[txk w] (5,34) -- (2,34) -- (2,16) -- (5,16);
+    \draw[txk w] (2,25) -- (-4,25);
+    \fill[bkInk] (2,25) circle (0.7);
+    \node[txk lab, anchor=east] at (-4.5,25) {入力};
+    \node[txk lab, anchor=west] at (26.5,25) {出力};
+    \node[txk lab, anchor=west] at (16,34) {pMOS};
+    \node[txk lab, anchor=west] at (16,16) {nMOS};
+    \node[txk lab, anchor=north] at (12,-2) {NOT（インバーター）};
+  \end{scope}
+  % NAND
+  \begin{scope}[shift={(66,0)}]
+    \draw[txk w] (0,46) -- (34,46);
+    \node[txk lab, anchor=south] at (17,46.5) {電源 $E$};
+    \txkMOS{(6,36)}{1}
+    \txkMOS{(22,36)}{1}
+    \draw[txk w] (10,42.5) -- (10,46) (26,42.5) -- (26,46);
+    \draw[txk w] (10,29.5) -- (10,27) -- (26,27) -- (26,29.5);
+    \draw[txk w] (18,27) -- (18,22.5);
+    \draw[txk w] (18,25) -- (36,25);
+    \fill[bkInk] (18,25) circle (0.7);
+    \node[txk lab, anchor=west] at (36.5,25) {出力};
+    \txkMOS{(14,16)}{0}
+    \txkMOS{(14,0)}{0}
+    \draw[txk w] (18,9.5) -- (18,6.5);
+    \draw[txk w] (18,-6.5) -- (18,-9) (6,-9) -- (30,-9);
+    \node[txk lab, anchor=north] at (18,-9.5) {0 V};
+    \node[txk lab, anchor=east] at (0.5,36) {A};
+    \node[txk lab, anchor=east] at (16.5,36) {B};
+    \node[txk lab, anchor=east] at (8.5,16) {A};
+    \node[txk lab, anchor=east] at (8.5,0) {B};
+    \node[txk lab, anchor=north] at (18,-14) {NAND};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{CMOS の論理ゲート（ゲートに丸のついたものが pMOS）。左：NOT は pMOS と nMOS の2個。入力が1なら下の nMOS がオンで出力0、入力が0なら上の pMOS がオンで出力1。右：NAND は4個。上の pMOS 2個は並列、下の nMOS 2個は直列で、A と B が両方1のときだけ出力が0になる。}\label{ph:原-10:fig-cmos}
+\end{bkfigure}
+
+\noindent NAND（AND のあとに NOT）は、nMOS 2個を直列に、pMOS 2個を並列にして作ります（図\ref{ph:原-10:fig-cmos}の右）。下の直列の nMOS は、A と B が両方オンのときだけ、出力を 0 V につなぎます。やってみようの直列のスイッチと同じです。NAND を組み合わせると、AND・OR・NOT のどれも作れるので、どんな計算の回路も作れます。
+
+\phboxhead{はてな？の答え：オン・オフで計算し、切りかえるたびに熱が出る}
+スマホのチップは、100億個をこえる MOSFET を CMOS のゲートに組み、①のような0と1の計算を、1秒に何十億回も繰り返しています。オン・オフのスイッチを組み合わせれば、2進数のたし算ができ、たし算を組み合わせれば、どんな計算もできるのです。
+
+出力の先には、次のゲートの MOSFET のゲート（小さなコンデンサー）と導線があり、合わせて静電容量 $C$ のコンデンサーとみなせます。出力が0から1になるとき、電源はこのコンデンサーを電圧 $E$ まで充電し、電荷 $CE$ を運びます。電源がする仕事は $CE\times E=CE^2$ で、半分の $\tfrac12CE^2$ がコンデンサーにたまり（電-3 ⑦）、半分は pMOS の抵抗で熱になります。出力が1から0にもどるとき、たまった $\tfrac12CE^2$ が nMOS で熱になります。結局、1回の0→1→0 の切りかえで、$CE^2$ が熱になります。チップ全体の消費電力は、トランジスタの数 $N$、1秒あたりの切りかえの回数（周波数 $f$）、そのうち実際に切りかわる割合 $\alpha$ をかけて、
+\pheq{P=\alpha NCE^2f}{W ＝ F × V$^2$ × 1/s}
+\label{ph:原-10:power}です。$N=10^{10}$、$\alpha=0.01$、$C=\qty{0.05}{fF}$、$E=\qty{0.7}{V}$、$f=\qty{3}{GHz}$ とすると、約 \qty{7}{W} です（例題1）。スマホが温かくなるのは、この熱のためです。
+
+\begin{phbaisuru}{電源の電圧 $E$}
+\noindent\begin{minipage}[c]{0.5\linewidth}\raggedright
+消費電力は $E^2$ に比例するので、電源の電圧を2倍にすると、4倍になります。反対に、電圧を下げれば、電力は2乗で減ります。チップの電源の電圧は、1990年ごろの 5 V から、いまの 1 V 以下まで下げられてきました。トランジスタを小さくして $C$ を小さくし、電圧を下げることで、何十億個ものスイッチを、手のひらの電池で動かせるようになったのです。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.46\linewidth}\centering
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=52mm, height=42mm, xmin=0, xmax=1.5, ymin=0, ymax=36, xtick={0,0.7,1,1.4}, xticklabels={0,0.7,1.0,1.4}, ytick={0,7.35,15,29.4}, yticklabels={0,7.4,15,29}, xlabel={$E$（V）}, ylabel={$P$（W）}]
+  \addplot[bkcurve, domain=0:1.45, samples=40] {15*x^2};
+  \fill[bkInk] (axis cs:0.7,7.35) circle (1.6pt) (axis cs:1.4,29.4) circle (1.6pt);
+  \draw[bkGray, line width=0.5pt, densely dotted] (axis cs:0.7,0) -- (axis cs:0.7,7.35) -- (axis cs:0,7.35) (axis cs:1.4,0) -- (axis cs:1.4,29.4) -- (axis cs:0,29.4);
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\end{phbaisuru}
+
+\phboxhead{速さの限界：RC のおくれ}
+出力が切りかわるには、コンデンサー $C$ を、MOSFET のオン抵抗 $R$ を通して充電・放電する必要があります。これは数学 6-4 の RC 回路そのもので、時定数 $\tau=RC$ で電圧が近づき、半分の電圧をこえるのに $\tau\ln2\approx0.69\tau$ かかります。$R=\qty{1}{k\ohm}$、$C=\qty{1}{fF}$ なら $\tau=\qty{1}{ps}$（1兆分の1秒）です。計算の途中で信号が何十段ものゲートを通るので、1段のおくれが、チップの速さ（$f$ の上限）を決めます（例題9）。
+
+\phkokomade
+
+\Needspace{9\baselineskip}\phstage{shiki}{回路の式とトランジスタの式}{5}
+
+\bksubsection{8}{理想オペアンプ：反転増幅と非反転増幅}
+\label{ph:原-10:sec8}
+⑥の増幅回路は、増幅度がトランジスタの $g_{\mathrm m}$（つまり電流と温度）で変わってしまいます。はかる道具に使うには、いつも同じ倍率で増幅したい。そこで、トランジスタを何十個も組み合わせて、とても大きな増幅度 $A$（$10^5$ ほど）をもつ増幅器を1つの IC にしたものを使います。これを\textbf{オペアンプ}（演算増幅器）といいます。\bkidx{おぺあんぷ}{オペアンプ}2つの入力（$-$ と $+$）の電圧の差を、$A$ 倍して出力します。
+\pheq{v_{\mathrm{out}}=A\,(v_+-v_-)}{V ＝ 1 × V}
+
+\phboxhead{理想オペアンプの2つの決まり}
+出力を、抵抗を通して $-$ の入力にもどす（\textbf{負帰還}）と、次の2つが成り立ちます。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 入力の端子には、電流が流れこまない（入力は MOSFET のゲートのようなもの）。
+\item 2つの入力の電圧は、ほぼ等しい（$v_+\approx v_-$）。出力が数 V でも、$A=10^5$ なら、入力の差は $\qty{10}{\micro V}$ ほどしかないからです。
+\end{enumerate}
+この2つが成り立つとしたオペアンプを、\textbf{理想オペアンプ}といいます。あとは、電-5 のキルヒホッフの電流則だけで、回路が解けます。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 反転増幅
+  \begin{scope}
+    \txkOP{(20,0)}
+    \draw[txk w] (0,4) -- (20,4);
+    \draw[txk w] (14,4) -- (14,16) -- (42,16) -- (42,0) -- (36,0);
+    \draw[txk w] (42,0) -- (48,0);
+    \draw[txk w] (20,-4) -- (14,-4) -- (14,-10);
+    \draw[txk w] (10,-10) -- (18,-10);
+    \txkR{(6,4)}{0}
+    \txkR{(28,16)}{0}
+    \fill[bkInk] (14,4) circle (0.7) (42,0) circle (0.7);
+    \node[txk lab, anchor=north] at (6,2.2) {$R_1$};
+    \node[txk lab, anchor=north] at (28,14.2) {$R_2$};
+    \node[txk lab, anchor=east] at (-0.5,4) {$v_{\mathrm{in}}$};
+    \node[txk lab, anchor=west] at (48.5,0) {$v_{\mathrm{out}}$};
+    \node[txk lab, anchor=north] at (14,-11) {0 V};
+    \draw[bkRed!70!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (2,7.5) -- (10,7.5);
+    \node[txk lab, text=bkRed!70!black, anchor=south] at (6,8.5) {$i$};
+    \draw[bkRed!70!black, line width=0.8pt, -{Stealth[length=1.8mm]}] (24,19.5) -- (32,19.5);
+    \node[txk lab, text=bkRed!70!black, anchor=south] at (28,20) {$i$};
+    \node[txk lab, anchor=north] at (24,-20) {反転増幅：$-R_2/R_1$ 倍};
+  \end{scope}
+  % 非反転増幅
+  \begin{scope}[shift={(70,0)}]
+    \txkOP{(16,0)}
+    \draw[txk w] (16,4) -- (10,4) -- (10,16) -- (38,16) -- (38,0) -- (32,0);
+    \draw[txk w] (38,0) -- (44,0);
+    \draw[txk w] (10,4) -- (2,4) -- (2,-10);
+    \draw[txk w] (-2,-10) -- (6,-10);
+    \draw[txk w] (12,-14) -- (12,-4) -- (16,-4);
+    \txkR{(24,16)}{0}
+    \txkR{(2,-3)}{90}
+    \fill[bkInk] (10,4) circle (0.7) (38,0) circle (0.7);
+    \node[txk lab, anchor=east] at (0,-3) {$R_1$};
+    \node[txk lab, anchor=south] at (24,18) {$R_2$};
+    \node[txk lab, anchor=north] at (2,-11) {0 V};
+    \node[txk lab, anchor=north] at (12,-14.5) {$v_{\mathrm{in}}$};
+    \node[txk lab, anchor=west] at (44.5,0) {$v_{\mathrm{out}}$};
+    \node[txk lab, anchor=north] at (22,-20) {非反転増幅：$1+R_2/R_1$ 倍};
+  \end{scope}
+\end{tikzpicture}
+\bkfigcaption{理想オペアンプの2つの増幅回路（三角がオペアンプ。上が $-$、下が $+$ の入力）。左：入力を $R_1$ を通して $-$ に入れる。右：入力を $+$ に入れ、出力を $R_2$ と $R_1$ で分けて $-$ にもどす。}\label{ph:原-10:fig-opamp}
+\end{bkfigure}
+
+\phboxhead{反転増幅}
+図\ref{ph:原-10:fig-opamp}の左で、$+$ は 0 V なので、決まり②から $v_-\approx0$ です。$R_1$ を流れる電流は $i=v_{\mathrm{in}}/R_1$。決まり①から、この電流はオペアンプに入らず、すべて $R_2$ を流れるので、$R_2$ の電圧は $R_2i$ です。$v_-=0$ から出力までの電圧降下が $R_2i$ なので、$v_{\mathrm{out}}=0-R_2i$。まとめると、
+\pheq{v_{\mathrm{out}}=-\frac{R_2}{R_1}\,v_{\mathrm{in}}}{V ＝ Ω ÷ Ω × V}
+\label{ph:原-10:inv}です（\textbf{反転増幅回路}）。
+
+\phboxhead{非反転増幅}
+図\ref{ph:原-10:fig-opamp}の右で、決まり②から $v_-\approx v_{\mathrm{in}}$ です。$v_-$ は、出力を $R_2$ と $R_1$ で分けた電圧（電-5 の分圧）なので、
+\[ v_-=\frac{R_1}{R_1+R_2}\,v_{\mathrm{out}} \]
+です。これが $v_{\mathrm{in}}$ と等しいので、
+\pheq{v_{\mathrm{out}}=\Bigl(1+\frac{R_2}{R_1}\Bigr)v_{\mathrm{in}}}{V ＝ V}
+\label{ph:原-10:noninv}です（\textbf{非反転増幅回路}）。
+
+\begin{phflow}[キルヒホッフから増幅の倍率へ]
+\phflowrow{$v_{\mathrm{out}}=A(v_+-v_-)$、電流則}{入力に電流が入らない\\$A\to\infty$（$v_+=v_-$）}{$v_{\mathrm{out}}=-\dfrac{R_2}{R_1}v_{\mathrm{in}}$}
+\phflowrow{$v_{\mathrm{out}}=A(v_+-v_-)$、分圧}{同じ2つの決まり}{$v_{\mathrm{out}}=\Bigl(1+\dfrac{R_2}{R_1}\Bigr)v_{\mathrm{in}}$}
+\end{phflow}
+
+\begin{phyomi}[$v_{\mathrm{out}}=-(R_2/R_1)v_{\mathrm{in}}$]
+「倍率は、2つの抵抗の比だけで決まる」と読みます。トランジスタの $g_{\mathrm m}$ も温度も、式に出てきません。抵抗の値は、温度でほとんど変わらない部品が作れるので、正確な倍率の増幅器ができるのです。$R_2$ を2倍にすれば、倍率も2倍です。
+\end{phyomi}
+
+\phboxhead{$A$ が有限のとき}
+非反転増幅で、$\beta=R_1/(R_1+R_2)$（\textbf{帰還率}。電流増幅率を $\beta$ と書く本もありますが、それとは別）とおくと、$v_{\mathrm{out}}=A(v_{\mathrm{in}}-\beta v_{\mathrm{out}})$ から
+\[ \frac{v_{\mathrm{out}}}{v_{\mathrm{in}}}=\frac{A}{1+A\beta} \]
+です。$A\beta\gg1$ なら $1/\beta=1+R_2/R_1$ になり、上の式と同じです。$A=10^5$、$1/\beta=1000$ なら、$10^5/(1+100)\approx990$ で、ずれは1\,\% です。大きな倍率を1段でとると、ずれが大きくなります。
+
+\begin{phmodel}[理想オペアンプ]
+\phignore{入力に流れこむわずかな電流。2つの入力のわずかな電圧のずれ（オフセット）。出力の電流の限界。}
+\phassume{増幅度 $A$ がとても大きく（$A\beta\gg1$）、どんな周波数でも同じ。出力は電源の電圧の範囲の中。}
+\phlimit{周波数が高いと $A$ が小さくなり、倍率が下がる（下の専門書の囲み）。出力が電源の電圧に届くと、頭打ちになる。}
+\end{phmodel}
+
+\Needspace{8\baselineskip}\bksubsection{9}{センサーの信号をはかる：計装と A/D 変換}
+\label{ph:原-10:sec9}
+物理シリーズの『電磁気学』（電-5 ⑦・例題10）では、ひずみゲージのブリッジから、\qty{1.25}{mV} の小さな電圧が出ることを見ました。この電圧を、コンピュータで読める数にするまでの流れを、図\ref{ph:原-10:fig-chain}に示します。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, minimum width=22mm, minimum height=12mm, align=center] (g) at (12,0) {ひずみ\\ゲージ};
+  \node[bk node, minimum width=22mm, minimum height=12mm, align=center] (a) at (44,0) {増幅\\（1000倍）};
+  \node[bk node, minimum width=22mm, minimum height=12mm, align=center] (d) at (76,0) {A/D 変換\\（12 ビット）};
+  \node[bk node, minimum width=22mm, minimum height=12mm, align=center] (c) at (108,0) {コン\\ピュータ};
+  \draw[bk link] (g) -- (a);
+  \draw[bk link] (a) -- (d);
+  \draw[bk link] (d) -- (c);
+  \node[txk lab, anchor=south] at (28,7.5) {1.25 mV};
+  \node[txk lab, anchor=south] at (60,7.5) {1.25 V};
+  \node[txk lab, anchor=north] at (92,-7.5) {\texttt{11000001111}};
+\end{tikzpicture}
+\bkfigcaption{はかる道具の流れ（計装）。センサーの小さな電圧を、オペアンプで大きくし、A/D 変換器で2進数に直して、コンピュータに渡す（数は例題8・例題11）。}\label{ph:原-10:fig-chain}
+\end{bkfigure}
+
+\phboxhead{A/D 変換：電圧を2進数に}
+\textbf{A/D 変換器}は、0 V から上限の電圧（\textbf{基準電圧}）までを、$2^n$ 個の段に分け、入力がどの段にあるかを、$n$ けたの2進数（$n$ ビット）で出力します。\bkidx{えーでぃーへんかん}{A/D 変換}1段の大きさ（1目もり）は、
+\pheq{\text{1目もり}=\frac{\text{基準電圧}}{2^n}}{V ＝ V}
+\label{ph:原-10:lsb}です。基準電圧 \qty{3.3}{V}、12 ビットなら $3.3/4096\approx\qty{0.81}{mV}$ で、\qty{1.25}{V} は1551段め、2進数で \texttt{11000001111} です（例題11、2-17 ③）。増幅しないと、1.25 mV は1目もりより小さく、はかれません。増幅は、信号を A/D 変換器の目もりに合う大きさにする役目なのです。
+
+\begin{phbaisuru}[1ビット増やす]{ビットの数 $n$}
+ビットを1つ増やすと、段の数は2倍、1目もりは半分になります（2-17 ④）。12 ビットから 16 ビットにすると、1目もりは $\tfrac1{16}$ になり、3.3 V で \qty{0.05}{mV} です。ただし、目もりを細かくしても、センサーや増幅器の雑音（電気のゆらぎ）より細かい所は、意味のある数になりません。
+\end{phbaisuru}
+
+\Needspace{14\baselineskip}\bksubsection{10}{MOSFET の電流の式を導く}
+\label{ph:原-10:sec10}
+⑤で結果を使った MOSFET の電流の式を、反転層の電荷とドリフト（原-9 ⑤）から導きます。
+
+\phboxhead{反転層の電荷}
+ゲートの絶縁の膜の 1 m$^2$ あたりの静電容量を $C_{\mathrm{ox}}$ とします（平行板コンデンサー：$C_{\mathrm{ox}}=\varepsilon_{\mathrm{ox}}/d$）。ゲートの電圧がしきい電圧をこえた分だけ、反転層に電子の電荷がたまるので、1 m$^2$ あたりの反転層の電荷の大きさは
+\[ Q=C_{\mathrm{ox}}\,(V_{\mathrm{GS}}-V_{\mathrm{th}}) \]
+です。たとえば、膜の厚さ \qty{2}{nm}（比誘電率 3.9）なら、$C_{\mathrm{ox}}\approx\qty{0.017}{F/m^2}$ で、1 V あたり 1 cm$^2$ に $10^{13}$ 個ほどの電子が集まります。
+
+\phboxhead{場所によって電荷が減る}
+ドレーンに電圧 $V_{\mathrm{DS}}$ をかけると、チャネルにそって電位 $V(y)$ が、ソース（$y=0$）の 0 からドレーン（$y=L$）の $V_{\mathrm{DS}}$ まで上がります。場所 $y$ では、ゲートとチャネルの間の電圧が $V_{\mathrm{GS}}-V(y)$ に減るので、電荷も
+\[ Q(y)=C_{\mathrm{ox}}\,\bigl(V_{\mathrm{GS}}-V_{\mathrm{th}}-V(y)\bigr) \]
+に減ります。この電荷が、電場 $\dd V/\dd y$ に押されて、速さ $\mu_{\mathrm n}\,\dd V/\dd y$ でドリフトします（原-9 ⑤）。幅 $W$ のチャネルを流れる電流は、どの場所でも同じで、
+\[ I_{\mathrm D}=W\,Q(y)\,\mu_{\mathrm n}\frac{\dd V}{\dd y}=\mu_{\mathrm n}C_{\mathrm{ox}}W\,\bigl(V_{\mathrm{GS}}-V_{\mathrm{th}}-V\bigr)\frac{\dd V}{\dd y} \]
+両辺を $y$ について 0 から $L$ まで積分します（右辺は $V$ について 0 から $V_{\mathrm{DS}}$ まで：数学 6-4 の変数分離と同じ考え）。
+\[ I_{\mathrm D}L=\mu_{\mathrm n}C_{\mathrm{ox}}W\Bigl[(V_{\mathrm{GS}}-V_{\mathrm{th}})V_{\mathrm{DS}}-\frac{V_{\mathrm{DS}}^{\,2}}{2}\Bigr] \]
+$k'=\mu_{\mathrm n}C_{\mathrm{ox}}$ とおくと、
+\pheq{I_{\mathrm D}=k'\frac{W}{L}\Bigl[(V_{\mathrm{GS}}-V_{\mathrm{th}})V_{\mathrm{DS}}-\frac{V_{\mathrm{DS}}^{\,2}}{2}\Bigr]}{A ＝ A/V$^2$ × V$^2$}
+\label{ph:原-10:linear}です（\textbf{線形領域}）。$V_{\mathrm{DS}}$ が小さければ $V_{\mathrm{DS}}^{\,2}$ の項を無視でき、$I_{\mathrm D}\approx k'(W/L)(V_{\mathrm{GS}}-V_{\mathrm{th}})V_{\mathrm{DS}}$。これが⑤のオン抵抗の式です。
+
+\phboxhead{ピンチオフと飽和}
+$V_{\mathrm{DS}}$ を上げて $V_{\mathrm{GS}}-V_{\mathrm{th}}$ に等しくすると、ドレーンのはしで $Q(L)=0$ になり、反転層がそこでなくなります（\textbf{ピンチオフ}）。それより $V_{\mathrm{DS}}$ を上げても、増えた電圧はドレーンのそばの空乏層にかかるだけで、電流はほとんど増えません。線形領域の式に $V_{\mathrm{DS}}=V_{\mathrm{GS}}-V_{\mathrm{th}}$ を入れて、
+\pheq{I_{\mathrm D}=\frac{k'}{2}\frac{W}{L}\,(V_{\mathrm{GS}}-V_{\mathrm{th}})^2}{A ＝ A/V$^2$ × V$^2$}
+\label{ph:原-10:sat}となります（\textbf{飽和領域}。\textbf{2乗則}ともいう）。\bkidx{2じょうそく}{2乗則}このときの相互コンダクタンスは、
+\[ g_{\mathrm m}=\frac{\dd I_{\mathrm D}}{\dd V_{\mathrm{GS}}}=k'\frac{W}{L}(V_{\mathrm{GS}}-V_{\mathrm{th}})=\frac{2I_{\mathrm D}}{V_{\mathrm{GS}}-V_{\mathrm{th}}} \]
+です（例題4）。
+
+\begin{phflow}[反転層から MOSFET の式へ]
+\phflowrow{$I_{\mathrm D}=WQ(y)\mu_{\mathrm n}\dfrac{\dd V}{\dd y}$}{$y$ で積分し、\\$V_{\mathrm{DS}}$ は小さい}{$R_{\mathrm{on}}=\dfrac{1}{k'\frac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})}$}
+\phflowrow{線形領域の式}{$V_{\mathrm{DS}}=V_{\mathrm{GS}}-V_{\mathrm{th}}$\\（ピンチオフ）}{$I_{\mathrm D}=\dfrac{k'}{2}\dfrac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})^2$}
+\end{phflow}
+
+\begin{phbaisuru}{$V_{\mathrm{GS}}-V_{\mathrm{th}}$}
+飽和領域の電流は $(V_{\mathrm{GS}}-V_{\mathrm{th}})^2$ に比例するので、$V_{\mathrm{GS}}-V_{\mathrm{th}}$ を2倍にすると、電流は4倍です（図\ref{ph:原-10:fig-idvds}で、0.5 V から 1.0 V にすると、0.25 mA から 1.0 mA）。バイポーラトランジスタの指数関数（③）に比べると、ゆるやかな増え方です。
+\end{phbaisuru}
+
+\begin{phmodel}[2乗則の MOSFET]
+\phignore{チャネルの長さが $V_{\mathrm{DS}}$ で少し短くなること（チャネル長変調）。しきい電圧より下でも流れる、わずかな電流。}
+\phassume{移動度は一定（電場によらない）。チャネルにそった電場は、ゲートからの電場より弱い。}
+\phlimit{チャネルが短い（今のチップの数十 nm）と、電子の速さが電場に比例しなくなり（速さの飽和）、電流は2乗より1乗に近くなる。}
+\end{phmodel}
+
+\Needspace{8\baselineskip}\bksubsection{11}{パワー半導体とインバーター}
+\label{ph:原-10:sec11}
+物理シリーズの『電磁気学』（電-12 ⑨・電-16 ⑤）では、インバーターのスイッチを「オンかオフだけの理想の部品」としました。本物のスイッチは、大きな電流・高い電圧に耐える MOSFET（\textbf{パワー MOSFET}）や、MOSFET とバイポーラトランジスタを組み合わせた IGBT です。\bkidx{ぱわーはんどうたい}{パワー半導体}理想と本物の違いは、損失（熱）です。
+
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=1pt, topsep=2pt]
+\item \textbf{導通損}：オンの間、オン抵抗 $R_{\mathrm{on}}$ に電流 $I$ が流れ、$R_{\mathrm{on}}I^2$ の熱が出る（電-4 のジュール熱）。
+\item \textbf{スイッチング損}：オンとオフの切りかえは一瞬ではなく、時間 $t_{\mathrm s}$（100 ns ほど）がかかる。その間、電圧も電流も0でないので、電力 $vi$ が熱になる。
+\end{itemize}
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \draw[bkGray, line width=0.5pt, -{Stealth[length=1.4mm]}] (0,0) -- (100,0);
+  \node[txk lab, anchor=north] at (98,-0.5) {時間};
+  % 電圧（実線）・電流（破線）
+  \draw[bkBlue, line width=1.3pt] (0,20) -- (20,20) -- (30,0) -- (60,0) -- (70,20) -- (98,20);
+  \draw[bkOrange, line width=1.3pt, dashed] (0,0.6) -- (20,0.6) -- (20,14) -- (70,14) -- (70,0.6) -- (98,0.6);
+  \fill[bkRed!35] (20,0) -- (20,10) -- (30,0) -- cycle;
+  \fill[bkRed!35] (60,0) -- (70,10) -- (70,0) -- cycle;
+  \node[txk lab, text=bkBlue!80!black, anchor=south] at (10,20.5) {電圧 $v$（実線）};
+  \node[txk lab, text=bkOrange!80!black, anchor=south] at (45,14.5) {電流 $i$（破線）};
+  \node[txk lab, anchor=south] at (84,20.5) {オフ};
+  \node[txk lab, anchor=south] at (45,2) {オン（$v$ は小さい）};
+  \draw[txk dim] (20,-4) -- (30,-4);
+  \node[txk lab, anchor=north] at (25,-4.5) {$t_{\mathrm s}$};
+  \node[txk lab, text=bkRed!70!black, anchor=west] at (72,8) {三角の所で熱が出る};
+  \draw[bkRed!70!black, line width=0.5pt] (72,8) -- (68,5);
+\end{tikzpicture}
+\bkfigcaption{パワー MOSFET を切りかえるときの電圧（実線）と電流（破線）。モーターのコイルの電流は急には変わらないので（電-8 ⑥）、電流 $I$ が流れたまま、電圧が $t_{\mathrm s}$ の間に $V$ と0の間を変わる。電力 $vi$ は $VI$ から0まで直線で変わるので、三角の面積 $\tfrac12VIt_{\mathrm s}$ が、1回の切りかえで熱になる。}\label{ph:原-10:fig-switch}
+\end{bkfigure}
+
+\noindent 1回の切りかえ（オンにする・オフにする）で $\tfrac12VIt_{\mathrm s}$ ずつ、1秒に $f$ 回繰り返すので、
+\pheq{P_{\text{導通}}=R_{\mathrm{on}}I^2,\qquad P_{\text{スイッチ}}=\frac12VI\,(t_{\mathrm{on}}+t_{\mathrm{off}})\,f}{W}
+\label{ph:原-10:loss}です（$t_{\mathrm{on}}$・$t_{\mathrm{off}}$ はオンにする・オフにする時間）。電気自動車のインバーターでは、300 V・50 A（\qty{15}{kW}）を 10 kHz で切りかえると、合わせて \qty{40}{W} ほど、0.3\,\% ほどが熱になります（例題10）。
+
+\begin{phbaisuru}{切りかえの周波数 $f$}
+周波数を2倍にすると、スイッチング損が2倍になります（導通損は変わらない）。周波数を上げると、モーターの電流がなめらかになり、コイルやコンデンサーを小さくできますが、熱が増えます。最近は、ケイ素より禁制帯の大きい炭化ケイ素（SiC）の MOSFET や、窒化ガリウム（GaN）のトランジスタが使われています。高い電圧に耐える板をうすく作れるので、オン抵抗が小さく、速く切りかえられるからです。
+\end{phbaisuru}
+
+\Needspace{8\baselineskip}\bksubsection{12}{回路シミュレーター：ニュートン法で解く}
+\label{ph:原-10:sec12}
+物理シリーズの『電磁気学』（電-5 ⑩）では、抵抗と電池の回路を、節点電位法で連立1次方程式にして、コンピュータで解きました。ダイオードやトランジスタが入ると、電流と電圧が比例しないので、1次方程式になりません。電池 $E=\qty{5}{V}$、抵抗 $R=\qty{1}{k\ohm}$、ダイオード（$I_{\mathrm s}=\qty{1e-14}{A}$）を直列にした回路で、考え方を見ます。
+
+ダイオードの電圧を $V$ とすると、抵抗の電流 $(E-V)/R$ と、ダイオードの電流 $I_{\mathrm s}(e^{V/0.0259}-1)$ が等しい（電流則）ので、
+\[ f(V)=I_{\mathrm s}\bigl(e^{V/0.0259}-1\bigr)-\frac{E-V}{R}=0 \]
+を解けばよいことになります。$V$ が指数関数の肩にあるので、式を変形しても解けません。
+
+\phboxhead{ニュートン法：接線で近づく}
+いまの答えの候補 $V_k$ で、$f$ のグラフに接線を引きます（数学 5-8 の1次近似）。
+\[ f(V)\approx f(V_k)+f'(V_k)(V-V_k) \]
+この接線が0になる所を、次の候補にします。
+\pheq{V_{k+1}=V_k-\frac{f(V_k)}{f'(V_k)}}{V ＝ V － A ÷ (A/V)}
+\label{ph:原-10:newton}これを\textbf{ニュートン法}といいます。\bkidx{にゅーとんほう}{ニュートン法}電気の言葉でいうと、ダイオードを「いまの電圧の周りで、その傾きの抵抗と電池」に置きかえて、1次の回路を解くことです。それを、答えが変わらなくなるまで繰り返します。数学 7-11 ②のロボットの逆運動学も、同じ考えを多くの変数で行うものでした。回路シミュレーターは、何万個もの点の電位について、これを行列で（$K\vec V=\vec I$ の形で）繰り返し解いています。
+
+\begin{phcode}[Python]
+import math
+E, R, Is, VT = 5.0, 1000.0, 1e-14, 0.0259
+for V in [0.7, 0.6]:                       \# はじめの値を2通り
+    print("はじめ", V)
+    for k in range(1, 6):
+        f = Is * (math.exp(V / VT) - 1) - (E - V) / R      \# 電流のずれ
+        df = Is / VT * math.exp(V / VT) + 1 / R            \# その傾き
+        V = V - f / df                                     \# 接線の0へ
+        print(k, round(V, 5), round((E - V) / R * 1000, 3))
+\end{phcode}
+\begin{phcodeout}[実行結果]
+はじめ 0.7
+1 0.6945 4.305
+2 0.69383 4.306
+3 0.69382 4.306
+4 0.69382 4.306
+5 0.69382 4.306
+はじめ 0.6
+1 1.38739 3.613
+2 1.36149 3.639
+3 1.33559 3.664
+4 1.30969 3.69
+5 1.28379 3.716
+\end{phcodeout}
+左から、回数、ダイオードの電圧（V）、抵抗の電流（mA）です。0.7 V から始めると、3回で答え $V=\qty{0.694}{V}$、$I=\qty{4.31}{mA}$ に落ち着きます。0.6 V から始めると、1回めで 1.39 V まで行きすぎ、そこから 1 回に約 0.026 V（$k_{\mathrm B}T/e$）ずつしか下がりません。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=96mm, height=52mm, xmin=0.55, xmax=0.76, ymin=-7, ymax=12, xtick={0.55,0.6,0.65,0.7,0.75}, xticklabels={0.55,0.60,0.65,0.70,0.75}, ytick={-5,0,5,10}, xlabel={ダイオードの電圧 $V$（V）}, ylabel={$f(V)$（mA）}]
+  \addplot[bkcurve, domain=0.55:0.7305, samples=100] {1e-11*(exp(x/0.0259)-1)-(5-x)};
+  \draw[bkGray, line width=0.5pt] (axis cs:0.55,0) -- (axis cs:0.76,0);
+  \draw[bkOrange, line width=1pt, dashed] (axis cs:0.6662,-6) -- (axis cs:0.7417,10);
+  \draw[bkPurple!80!black, line width=1.2pt, densely dotted] (axis cs:0.55,-4.557) -- (axis cs:0.76,-3.414);
+  \fill[bkInk] (axis cs:0.7,1.166) circle (1.6pt) (axis cs:0.6,-4.285) circle (1.6pt) (axis cs:0.6945,0) circle (1.6pt);
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:0.703,-0.4) {0.7 V};
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:0.692,0.3) {次は 0.6945 V};
+  \node[font=\sffamily\footnotesize, anchor=south] at (axis cs:0.6,-3.6) {0.6 V};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ニュートン法のようす。曲線は $f(V)$。0.7 V での接線（破線）は、すぐ近くの 0.6945 V で0になる。0.6 V では曲線がほぼ平らなので、接線（点線）が0になる所は 1.39 V と遠く、行きすぎる。}\label{ph:原-10:fig-newton}
+\end{bkfigure}
+
+\noindent ニュートン法は、答えの近くから始めれば、繰り返すたびに、合っているけた数がおよそ2倍になる、とても速い方法です（0.6945 → 0.69383 → 0.69382）。けれども、指数関数のように急に曲がる式では、はじめの値によって大きく行きすぎます。本物の回路シミュレーターは、1回に動かす電圧に上限をつけるなどのくふうをしています。
+
+%% ======================== まだ・この先 ========================
+\begin{phmada}[トランジスタは、どこまで小さくできる？]
+トランジスタは、数十年にわたって小さくなり続け、いまのチップでは、いちばん細い所が原子数十個ほどの大きさです。ここまで小さくなると、ゲートの絶縁の膜やチャネルを、電子が壁をすりぬけて流れる（トンネル効果：原-6）ようになり、オフでも電流がもれて熱が出ます。不純物の原子が何個入るかのばらつきで、トランジスタごとの性質も変わります。そこで、チャネルをゲートで3方や4方から囲む立体の形や、新しい材料が使われるようになりました。
+
+2012年には、ケイ素の中に置いたリンの原子1個を通り道にしたトランジスタが、とても低い温度で動くことが示されました（フクスレら）。けれども、何十億個を室温で、安く、ばらつきなく作れるのは、どこまでの大きさなのか。ケイ素の MOSFET のあとに何が来るのか（2次元の材料、電子のスピンを使う素子など）。これらは、まだわかっていません。
+\end{phmada}
+
+\begin{phsaki}{電子回路と集積回路の先へ}
+この章のトランジスタ・オペアンプ・論理ゲートは、電子回路・集積回路工学の出発点です。専門の本では、トランジスタを、小さな信号に対して抵抗・電流源・コンデンサーの組（小信号等価回路）に置きかえ、周波数による増幅度の変化を、物理シリーズの『電磁気学』（電-10）の複素数（$j\omega$）で計算します。集積回路の設計では、何十億個のトランジスタの回路を、ことばで書いた設計図からコンピュータで自動で組み立て、この章の⑫のようなシミュレーターで確かめます。パワーエレクトロニクスでは、インバーターのスイッチの切りかえ方と、モーターや電力系統の制御を学びます。
+\end{phsaki}
+
+\begin{senmonsho}[電子回路の専門書の書き方]
+\begin{bkhonbun}
+オペアンプの開ループ利得は，一次遅れの特性 $A(j\omega)=\dfrac{A_0}{1+j\omega/\omega_{\mathrm p}}$ で近似できる．帰還率を $\beta$ とすると，閉ループ利得は $G=\dfrac{A}{1+A\beta}\simeq\dfrac1\beta$ であり，利得帯域幅積 $A_0\omega_{\mathrm p}$ は一定となる．
+\end{bkhonbun}
+\bkyaku{「開ループ利得」は、オペアンプそのものの増幅度 $A$（この本の⑧）。$j$ は虚数単位で、物理シリーズの『電磁気学』（電-10）と同じ。周波数が $\omega_{\mathrm p}$ より高いと、$A$ は周波数に反比例して小さくなる。「閉ループ利得」は、負帰還をかけた増幅回路の倍率（この本の $v_{\mathrm{out}}/v_{\mathrm{in}}$）。「利得帯域幅積が一定」は、倍率を10倍にすると、その倍率で使える周波数の上限が10分の1になる、という意味。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{論理}AND（直列）・OR（並列）・NOT、和＝1つだけ1、くり上がり＝AND\\[3pt]
+\tsl{バイポーラ}$I_{\mathrm C}=h_{\mathrm{FE}}I_{\mathrm B}$、$I_{\mathrm C}=I_{\mathrm s}e^{eV_{\mathrm{BE}}/(k_{\mathrm B}T)}$、$g_{\mathrm m}=\dfrac{I_{\mathrm C}}{k_{\mathrm B}T/e}$\\[3pt]
+\tsl{増幅}$v_{\mathrm{out}}=-g_{\mathrm m}R_{\mathrm C}v_{\mathrm{in}}$、反転 $-\dfrac{R_2}{R_1}$、非反転 $1+\dfrac{R_2}{R_1}$\\[3pt]
+\tsl{MOSFET}$R_{\mathrm{on}}=\dfrac{1}{k'\frac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})}$、飽和 $I_{\mathrm D}=\dfrac{k'}2\dfrac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})^2$\\[3pt]
+\tsl{CMOS}$P=\alpha NCE^2f$、1段のおくれ $\approx0.69RC$\\[3pt]
+\tsl{パワー・A/D}$R_{\mathrm{on}}I^2+\tfrac12VI(t_{\mathrm{on}}+t_{\mathrm{off}})f$、1目もり＝基準電圧$/2^n$\\[3pt]
+\tsl{ニュートン法}$V_{k+1}=V_k-f(V_k)/f'(V_k)$
+\end{taisetsu}
+
+\bkkigocards{\bkkigocard{$g_{\mathrm m}$}{ジー・エム}{相互コンダクタンス〔S〕。入力の電圧の小さな変化で、出力の電流がどれだけ変わるか}{transconductance}{原-10}}
+{\bkkigocard{$h_{\mathrm{FE}}$}{エイチ・エフ・イー}{直流電流増幅率。$I_{\mathrm C}/I_{\mathrm B}$。専門書の $\beta$ と同じ量}{DC current gain}{原-10}}
+\bkkigocards{\bkkigocard{$V_{\mathrm{th}}$}{ブイ・ティー・エイチ}{しきい電圧〔V〕。MOSFET の反転層ができはじめるゲートの電圧}{threshold voltage}{原-10}}
+{\bkkigocard{$\alpha$}{アルファ}{原-10 では、1回の時計の間に実際に切りかわるトランジスタの割合}{activity factor}{原-10}}
+
+\begin{kotoba}
+\small
+\bkword{トランジスタ}{小さな電流や電圧で、大きな電流を操る半導体の部品。スイッチにも増幅器にもなる。}
+\bkword{相互コンダクタンス}{入力の電圧の小さな変化に対する、出力の電流の変化の割合 $g_{\mathrm m}$〔S〕。}
+\bkword{MOSFET・反転層}{ゲートの電場で、表面に電子の通り道（反転層）を作って開け閉めするトランジスタ。}
+\bkword{しきい電圧・オン抵抗}{反転層ができはじめるゲートの電圧 $V_{\mathrm{th}}$ と、オンのときの抵抗 $R_{\mathrm{on}}$。}
+\bkword{CMOS}{nMOS と pMOS を組にした論理ゲート。切りかえるときだけ電流が流れる。}
+\bkword{オペアンプ}{増幅度がとても大きい増幅器。負帰還をかけて、抵抗の比で倍率を決めて使う。}
+\bkword{A/D 変換}{電圧を、$n$ ビットの2進数に直すこと。}
+\bkword{ニュートン法}{接線が0になる所を次の候補にして、式の答えに近づく方法。}
+\end{kotoba}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:原-10:ex1}
+\begin{phreidai}[スマホのチップの熱（はてな？）]
+スマホのチップに MOSFET が $N=10^{10}$ 個あり、1つのゲートの出力につながる静電容量を $C=\qty{0.05}{fF}$（$\qty{5e-17}{F}$）、電源の電圧を $E=\qty{0.7}{V}$、時計の周波数を $f=\qty{3}{GHz}$、1回の時計で実際に切りかわる割合を $\alpha=0.01$ とします。1回の切りかえで熱になるエネルギーと、チップ全体の消費電力を求めましょう。
+\phbamen
+スマホが温かくなるわけを、数で確かめる場面です（はてな？）。
+\phmushi
+オフのときにもれる電流と、切りかえの途中で電源から 0 V へ直接流れる電流は無視します。
+\phzu
+$N=10^{10}$、$\alpha=0.01$、$C=\qty{5e-17}{F}$、$E=\qty{0.7}{V}$、$f=\qty{3e9}{Hz}$。
+\phriyu
+1回の0→1→0 の切りかえで $CE^2$ が熱になり、全体はそれに1秒の切りかえの回数 $\alpha Nf$ をかけた $P=\alpha NCE^2f$（⑦）です。
+\phtateru
+\[ U=CE^2,\qquad P=\alpha N\,U\,f \]
+\phtoku
+\[ U=5\times10^{-17}\times0.7^2\approx\qty{2.5e-17}{J} \]
+\[ P=0.01\times10^{10}\times2.45\times10^{-17}\times3\times10^9\approx\qty{7}{W} \]
+\phtashikame
+単位：F×V$^2$＝C×V＝J、J×1/s＝W。\\
+大きさ：1回のエネルギーは、室温の熱のエネルギー $k_{\mathrm B}T\approx\qty{4e-21}{J}$ の約6000倍。それが1秒に $3\times10^{17}$ 回繰り返されて、数 W になります。スマホの電池（10〜20 Wh ほど）を、全力なら数時間で使い切る大きさです。\\
+2倍の確かめ：$E$ を2倍にすれば、$P$ は4倍。
+\kotae 1回 約 $\qty{2.5e-17}{J}$、全体 約\qty{7}{W}
+\end{phreidai}
+\begin{jibun}
+例題1 のチップの電源の電圧を \qty{0.5}{V} に下げると、消費電力はいくらになりますか。ほかの値は同じとします。
+\bkjans{$P=0.01\times10^{10}$ $\times5\times10^{-17}$ $\times0.5^2\times3\times10^9$ $\approx\qty{3.8}{W}$（$(0.5/0.7)^2\approx0.51$ 倍）}
+\end{jibun}
+
+\label{ph:原-10:ex2}
+\begin{phreidai}[1けたのたし算の表]
+図\ref{ph:原-10:fig-adder}の半加算器で、入力 $A$・$B$ の4通りについて、OR・AND・NOT（$A$ AND $B$）・和・くり上がりを表にし、2進数のたし算になっていることを確かめましょう。
+\phbamen
+スイッチの組み合わせだけで、たし算ができることを確かめます（数学 2-17）。
+\phmushi
+電圧は0か1のどちらかで、ゲートのおくれは考えません。
+\phzu
+入力 $A$・$B$、出力は和 $S$ とくり上がり $C_{\mathrm o}$。
+\phriyu
+AND は「両方1」、OR は「少なくとも1つ1」、NOT は反対（①）。和は「OR」と「NOT（AND）」の AND です。
+\phtateru
+\[ C_{\mathrm o}=A\ \text{AND}\ B,\qquad S=(A\ \text{OR}\ B)\ \text{AND}\ \text{NOT}(A\ \text{AND}\ B) \]
+\phtoku
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[c,m,wd=8mm] Q[c,m,wd=8mm] Q[c,m,wd=12mm] Q[c,m,wd=12mm] Q[c,m,wd=24mm] Q[c,m,wd=10mm] Q[c,m,wd=20mm]}, rowsep=0pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+$A$ & $B$ & OR & AND & NOT（AND） & 和 $S$ & くり上がり \\
+0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+0 & 1 & 1 & 0 & 1 & 1 & 0 \\
+1 & 0 & 1 & 0 & 1 & 1 & 0 \\
+1 & 1 & 1 & 1 & 0 & 0 & 1 \\
+\end{bktable}
+\end{bkcenter}
+\phtashikame
+2進数の答え「くり上がり 和」を読むと、上から 00・01・01・10。$0+0=0$、$0+1=1$、$1+0=1$、$1+1=2$（2進数で10）で、合っています。
+\kotae 表のとおり。和とくり上がりが、2進数のたし算の答えになる
+\end{phreidai}
+\begin{jibun}
+NAND（AND のあとに NOT）の表を作りましょう。また、NAND の2つの入力に同じ信号 $A$ を入れると、どのゲートと同じになりますか。
+\bkjans{$A$・$B$ が 00・01・10・11 のとき、1・1・1・0。$A$ と $A$ を入れると、$A=0$ で1、$A=1$ で0 なので NOT と同じ}
+\end{jibun}
+
+\label{ph:原-10:ex3}
+\begin{phreidai}[エミッタ接地の増幅度]
+図\ref{ph:原-10:fig-amp}の回路で、コレクタ電流が $I_{\mathrm C}=\qty{1}{mA}$、$R_{\mathrm C}=\qty{4.7}{k\ohm}$ です。300 K の相互コンダクタンスと電圧増幅度を求めましょう。入力に \qty{1}{mV} のゆれを加えると、出力は何 V ゆれますか。
+\phbamen
+マイクの小さな信号を大きくする、いちばん基本の増幅回路です。
+\phmushi
+アーリー効果と、トランジスタの中の静電容量は無視します。入力は小さい（$\ll\qty{25.9}{mV}$）とします。
+\phzu
+$I_{\mathrm C}=\qty{1e-3}{A}$、$k_{\mathrm B}T/e=\qty{0.0259}{V}$、$R_{\mathrm C}=\qty{4700}{\ohm}$、$v_{\mathrm{in}}=\qty{1e-3}{V}$。
+\phriyu
+$g_{\mathrm m}=I_{\mathrm C}/(k_{\mathrm B}T/e)$（③）と、増幅度 $-g_{\mathrm m}R_{\mathrm C}$（⑥）を使います。
+\phtateru
+\[ g_{\mathrm m}=\frac{I_{\mathrm C}}{k_{\mathrm B}T/e},\qquad v_{\mathrm{out}}=-g_{\mathrm m}R_{\mathrm C}\,v_{\mathrm{in}} \]
+\phtoku
+\[ g_{\mathrm m}=\frac{10^{-3}}{0.0259}\approx\qty{38.6}{mS},\qquad -g_{\mathrm m}R_{\mathrm C}=-0.0386\times4700\approx-180 \]
+出力のゆれは $180\times\qty{1}{mV}=\qty{0.18}{V}$（上下さかさ）。
+\phtashikame
+単位：A÷V＝S、S×Ω＝1（倍率）。\\
+大きさ：1段で百倍をこえる増幅。$R_{\mathrm C}$ にかかる直流の電圧は $\qty{1}{mA}\times\qty{4.7}{k\ohm}=\qty{4.7}{V}$ なので、電源は 5 V より大きく、たとえば 9 V にします。\\
+極端な場合：$I_{\mathrm C}\to0$ では $g_{\mathrm m}\to0$ で、増幅しない。
+\kotae $g_{\mathrm m}\approx\qty{38.6}{mS}$、増幅度 約 $-180$ 倍、出力のゆれ 約\qty{0.18}{V}
+\end{phreidai}
+\begin{jibun}
+$I_{\mathrm C}=\qty{2}{mA}$、$R_{\mathrm C}=\qty{2.2}{k\ohm}$ にしたときの、相互コンダクタンスと電圧増幅度を求めましょう（300 K）。
+\bkjans{$g_{\mathrm m}=0.002\div0.0259\approx\qty{77}{mS}$、増幅度 $-0.0772\times2200\approx-170$ 倍}
+\end{jibun}
+
+\label{ph:原-10:ex4}
+\begin{phreidai}[MOSFET の電流と相互コンダクタンス]
+$k'=\qty{200}{\micro A/V^2}$、$W/L=10$、$V_{\mathrm{th}}=\qty{0.5}{V}$ の nMOS に、$V_{\mathrm{GS}}=\qty{1.0}{V}$ をかけ、飽和領域で使います。ドレーン電流と相互コンダクタンスを求めましょう。
+\phbamen
+MOSFET で増幅回路を作るときの、電流と増幅の強さを求めます。
+\phmushi
+チャネル長変調（$V_{\mathrm{DS}}$ でわずかに電流が増えること）は無視します。
+\phzu
+$k'W/L=200\times10^{-6}\times10=\qty{2e-3}{A/V^2}$、$V_{\mathrm{GS}}-V_{\mathrm{th}}=\qty{0.5}{V}$。
+\phriyu
+飽和領域の2乗則と、その微分の $g_{\mathrm m}$（⑩）を使います。
+\phtateru
+\[ I_{\mathrm D}=\frac{k'}{2}\frac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})^2,\qquad g_{\mathrm m}=k'\frac WL(V_{\mathrm{GS}}-V_{\mathrm{th}}) \]
+\phtoku
+\[ I_{\mathrm D}=\frac12\times2\times10^{-3}\times0.5^2=\qty{0.25}{mA},\qquad g_{\mathrm m}=2\times10^{-3}\times0.5=\qty{1.0}{mA/V} \]
+\phtashikame
+単位：A/V$^2$×V$^2$＝A、A/V$^2$×V＝A/V。\\
+確かめ：$g_{\mathrm m}=2I_{\mathrm D}/(V_{\mathrm{GS}}-V_{\mathrm{th}})=2\times0.25/0.5=\qty{1.0}{mA/V}$ と合う。\\
+比べる：同じ電流のバイポーラトランジスタなら $g_{\mathrm m}=0.25/25.9\approx\qty{9.7}{mA/V}$。MOSFET は、同じ電流では $g_{\mathrm m}$ が小さい。
+\kotae $I_{\mathrm D}=\qty{0.25}{mA}$、$g_{\mathrm m}=\qty{1.0}{mA/V}$
+\end{phreidai}
+\begin{jibun}
+例題4 の MOSFET に $V_{\mathrm{GS}}=\qty{1.2}{V}$ をかけたときの、ドレーン電流と相互コンダクタンスを求めましょう。
+\bkjans{$I_{\mathrm D}=\tfrac12\times2\times10^{-3}\times0.7^2=\qty{0.49}{mA}$、$g_{\mathrm m}=2\times10^{-3}\times0.7=\qty{1.4}{mA/V}$}
+\end{jibun}
+
+\label{ph:原-10:ex5}
+\begin{phreidai}[スイッチのオン抵抗]
+例題4 の MOSFET をスイッチに使い、オンのときゲートに $V_{\mathrm{GS}}=\qty{1.8}{V}$ をかけます。オン抵抗を求めましょう。
+\phbamen
+CMOS のゲートの出力を切りかえるスイッチの抵抗を求めます。⑦の RC のおくれの $R$ になります。
+\phmushi
+$V_{\mathrm{DS}}$ は小さく、線形領域の $V_{\mathrm{DS}}^{\,2}$ の項を無視します。
+\phzu
+$k'W/L=\qty{2e-3}{A/V^2}$、$V_{\mathrm{GS}}-V_{\mathrm{th}}=\qty{1.3}{V}$。
+\phriyu
+⑤のオン抵抗の式（導き方は⑩）を使います。
+\phtateru
+\[ R_{\mathrm{on}}=\frac{1}{k'\dfrac WL(V_{\mathrm{GS}}-V_{\mathrm{th}})} \]
+\phtoku
+\[ R_{\mathrm{on}}=\frac{1}{2\times10^{-3}\times1.3}\approx\qty{380}{\ohm} \]
+\phtashikame
+単位：1÷(A/V$^2$×V)＝V/A＝Ω。\\
+大きさ：数百 Ω。チップの中の小さなスイッチなら、この程度で十分です。大きな電流を流すパワー MOSFET（⑪）は、$W$ をとても大きくして、数 mΩ にします。\\
+極端な場合：$V_{\mathrm{GS}}\to V_{\mathrm{th}}$ では $R_{\mathrm{on}}\to\infty$（オフ）。
+\kotae 約\qty{380}{\ohm}
+\end{phreidai}
+\begin{jibun}
+同じ MOSFET の $W/L$ を 100 にすると、$V_{\mathrm{GS}}=\qty{1.8}{V}$ のオン抵抗はいくらになりますか。
+\bkjans{$1\div(200\times10^{-6}\times100\times1.3)\approx\qty{38}{\ohm}$（$W$ を10倍にして、1/10）}
+\end{jibun}
+
+\label{ph:原-10:ex6}
+\begin{phreidai}[反転増幅回路]
+図\ref{ph:原-10:fig-opamp}の左の反転増幅回路で、$R_1=\qty{10}{k\ohm}$、$R_2=\qty{100}{k\ohm}$ です。倍率と、入力が \qty{0.1}{V} のときの出力を求めましょう。
+\phbamen
+オペアンプで、正確な倍率の増幅器を作ります。
+\phmushi
+理想オペアンプとします（⑧の決まり①②）。
+\phzu
+$R_1=\qty{1e4}{\ohm}$、$R_2=\qty{1e5}{\ohm}$、$v_{\mathrm{in}}=\qty{0.1}{V}$。
+\phriyu
+$v_-=0$ と、入力に電流が入らないことから導いた $v_{\mathrm{out}}=-(R_2/R_1)v_{\mathrm{in}}$（⑧）を使います。
+\phtateru
+\[ v_{\mathrm{out}}=-\frac{R_2}{R_1}\,v_{\mathrm{in}} \]
+\phtoku
+\[ -\frac{R_2}{R_1}=-\frac{100}{10}=-10,\qquad v_{\mathrm{out}}=-10\times0.1=\qty{-1.0}{V} \]
+\phtashikame
+電流で確かめる：$R_1$ を流れる電流は $0.1/10^4=\qty{10}{\micro A}$。それが $R_2$ を流れて $10^{-5}\times10^5=\qty{1}{V}$ 下がり、出力は $\qty{-1.0}{V}$。\\
+大きさ：出力は電源の電圧（たとえば ±5 V）の範囲内なので、頭打ちにならない。
+\kotae 倍率 $-10$ 倍、出力 $\qty{-1.0}{V}$
+\end{phreidai}
+\begin{jibun}
+$R_1=\qty{2}{k\ohm}$、$R_2=\qty{30}{k\ohm}$ の反転増幅回路の倍率と、入力 \qty{0.2}{V} のときの出力を求めましょう。
+\bkjans{倍率 $-30\div2=-15$ 倍、出力 $-15\times0.2=\qty{-3.0}{V}$}
+\end{jibun}
+
+\label{ph:原-10:ex7}
+\begin{phreidai}[非反転増幅回路]
+図\ref{ph:原-10:fig-opamp}の右の非反転増幅回路で、$R_1=\qty{10}{k\ohm}$、$R_2=\qty{100}{k\ohm}$ です。倍率と、入力が \qty{0.1}{V} のときの出力を求めましょう。
+\phbamen
+入力の向きを変えずに増幅したいときの回路です。入力に電流がほとんど流れないので、センサーに負担をかけません。
+\phmushi
+理想オペアンプとします。
+\phzu
+$R_1=\qty{1e4}{\ohm}$、$R_2=\qty{1e5}{\ohm}$、$v_{\mathrm{in}}=\qty{0.1}{V}$。
+\phriyu
+$v_-=v_{\mathrm{in}}$ と分圧から導いた $v_{\mathrm{out}}=(1+R_2/R_1)v_{\mathrm{in}}$（⑧）を使います。
+\phtateru
+\[ v_{\mathrm{out}}=\Bigl(1+\frac{R_2}{R_1}\Bigr)v_{\mathrm{in}} \]
+\phtoku
+\[ 1+\frac{100}{10}=11,\qquad v_{\mathrm{out}}=11\times0.1=\qty{1.1}{V} \]
+\phtashikame
+分圧で確かめる：$v_-=1.1\times10/(10+100)=\qty{0.1}{V}=v_{\mathrm{in}}$。\\
+比べる：同じ抵抗の反転増幅は $-10$ 倍、非反転は $+11$ 倍。倍率は1以上にしかできません。
+\kotae 倍率 11 倍、出力 \qty{1.1}{V}
+\end{phreidai}
+\begin{jibun}
+$R_1=\qty{1}{k\ohm}$、$R_2=\qty{9}{k\ohm}$ の非反転増幅回路の倍率を求めましょう。
+\bkjans{$1+9\div1=10$ 倍}
+\end{jibun}
+
+\label{ph:原-10:ex8}
+\begin{phreidai}[ひずみゲージの信号を増幅する]
+電-5 例題10 のひずみゲージのブリッジから出る \qty{1.25}{mV} を、非反転増幅回路で1000倍にします。$R_1=\qty{100}{\ohm}$ なら $R_2$ をいくらにすればよいでしょう。出力は何 V ですか。また、オペアンプの増幅度が $A=10^5$ だとすると、実際の倍率はいくらになりますか。
+\phbamen
+橋や機械の部品のひずみをはかる道具（計装）の、増幅の段です（⑨）。
+\phmushi
+ブリッジの出力の抵抗と、オペアンプの入力の電流は無視します。
+\phzu
+$v_{\mathrm{in}}=\qty{1.25e-3}{V}$、倍率 $1+R_2/R_1=1000$、$R_1=\qty{100}{\ohm}$、$A=10^5$。
+\phriyu
+非反転増幅の倍率（⑧）と、$A$ が有限のときの式 $A/(1+A\beta)$（⑧）を使います。
+\phtateru
+\[ 1+\frac{R_2}{R_1}=1000,\qquad \frac{v_{\mathrm{out}}}{v_{\mathrm{in}}}=\frac{A}{1+A\beta},\quad \beta=\frac1{1000} \]
+\phtoku
+$R_2=999\times100=\qty{99.9}{k\ohm}$、出力 $1000\times1.25\times10^{-3}=\qty{1.25}{V}$。\\
+有限の $A$ では $10^5/(1+100)\approx990$ 倍、出力は約 \qty{1.24}{V}。
+\phtashikame
+大きさ：1.25 V は、例題11 の A/D 変換器（3.3 V まで）で読める大きさです。\\
+ずれ：理想の1000倍より約1\,\% 小さい。正確にはかるには、2段に分けて、1段の倍率を小さくします（章末問題）。
+\kotae $R_2=\qty{99.9}{k\ohm}$、出力 \qty{1.25}{V}（$A=10^5$ なら約990倍で約\qty{1.24}{V}）
+\end{phreidai}
+\begin{jibun}
+センサーの \qty{2.5}{mV} を \qty{2.0}{V} にしたい。非反転増幅回路の倍率はいくらにしますか。$R_1=\qty{1}{k\ohm}$ なら $R_2$ はいくらですか（理想オペアンプ）。
+\bkjans{倍率 $2.0\div0.0025=800$ 倍。$R_2=799\times1=\qty{799}{k\ohm}$}
+\end{jibun}
+
+\label{ph:原-10:ex9}
+\begin{phreidai}[CMOS のゲートの数とおくれ]
+（1）NOT と NAND（2入力）を CMOS で作るのに要る MOSFET の数を答えましょう。（2）ゲートの出力の抵抗を $R=\qty{1}{k\ohm}$、つながる静電容量を $C=\qty{1}{fF}$ とします。1段のおくれ（電圧が半分をこえるまで）と、10段つないだときのおくれを求めましょう。
+\phbamen
+チップの中の信号が、ゲートを何段も通る速さを見積もります。
+\phmushi
+次のゲートの入力が、出力のちょうど半分の電圧で切りかわるとします。導線のおくれは $C$ にふくめます。
+\phzu
+$R=\qty{1e3}{\ohm}$、$C=\qty{1e-15}{F}$。
+\phriyu
+（1）は⑦の回路図。（2）は数学 6-4 の RC 回路で、半分になるまでの時間 $\tau\ln2$ を使います。
+\phtateru
+\[ \tau=RC,\qquad t_{1段}=\tau\ln2\approx0.69\,\tau,\qquad t_{10段}=10\times0.69\,\tau \]
+\phtoku
+（1）NOT 2個（pMOS 1・nMOS 1）、NAND 4個（pMOS 2・nMOS 2）。\\
+（2）$\tau=10^3\times10^{-15}=\qty{1e-12}{s}=\qty{1}{ps}$。1段 約\qty{0.69}{ps}、10段 約\qty{6.9}{ps}。
+\phtashikame
+単位：Ω×F＝s。\\
+大きさ：3 GHz の時計の1周期は $1/(3\times10^9)\approx\qty{330}{ps}$。その間に、数十段のゲートを通れます。\\
+2倍の確かめ：$R$ か $C$ を2倍にすれば、おくれも2倍。
+\kotae （1）NOT 2個、NAND 4個。（2）1段 約\qty{0.69}{ps}、10段 約\qty{6.9}{ps}
+\end{phreidai}
+\begin{jibun}
+$R=\qty{2}{k\ohm}$、$C=\qty{2}{fF}$ のゲートを10段つないだときのおくれを求めましょう。
+\bkjans{$\tau=\qty{4}{ps}$、10段で $10\times0.69\times4\approx\qty{28}{ps}$}
+\end{jibun}
+
+\label{ph:原-10:ex10}
+\begin{phreidai}[インバーターのパワー MOSFET の損失]
+電気自動車のインバーターで、パワー MOSFET が 300 V・50 A を切りかえます。オン抵抗 \qty{10}{m\ohm}、オンにする時間とオフにする時間はどちらも \qty{100}{ns}、切りかえの周波数は \qty{10}{kHz} とします。電流はいつも流れているとして、導通損・スイッチング損と、扱う電力 \qty{15}{kW} に対する割合を求めましょう。
+\phbamen
+物理シリーズの『電磁気学』（電-12 ⑨）の「理想のスイッチ」を、本物の MOSFET に置きかえたときの熱を求めます。
+\phmushi
+ダイオードの損失と、ゲートを動かす電力は無視します。切りかえの間、電圧は直線で変わり、電流は一定とします。
+\phzu
+$V=\qty{300}{V}$、$I=\qty{50}{A}$、$R_{\mathrm{on}}=\qty{0.01}{\ohm}$、$t_{\mathrm{on}}=t_{\mathrm{off}}=\qty{1e-7}{s}$、$f=\qty{1e4}{Hz}$。
+\phriyu
+⑪の $R_{\mathrm{on}}I^2$ と $\tfrac12VI(t_{\mathrm{on}}+t_{\mathrm{off}})f$ を使います。
+\phtateru
+\[ P_{\text{導通}}=R_{\mathrm{on}}I^2,\qquad P_{\text{スイッチ}}=\frac12VI(t_{\mathrm{on}}+t_{\mathrm{off}})f \]
+\phtoku
+\[ P_{\text{導通}}=0.01\times50^2=\qty{25}{W},\qquad P_{\text{スイッチ}}=\frac12\times300\times50\times2\times10^{-7}\times10^4=\qty{15}{W} \]
+合計 \qty{40}{W}。$40\div15000\approx0.0027$、つまり約 0.27\,\%。
+\phtashikame
+単位：Ω×A$^2$＝W。V×A×s×1/s＝W。\\
+大きさ：99.7\,\% の効率。ただし 40 W の熱を、小さな素子から逃がす冷却が必要です。\\
+2倍の確かめ：周波数を2倍にすると、スイッチング損だけが2倍。
+\kotae 導通損 \qty{25}{W}、スイッチング損 \qty{15}{W}、合計 \qty{40}{W}（約0.27\,\%）
+\end{phreidai}
+\begin{jibun}
+例題10 で、切りかえの周波数を \qty{20}{kHz} にすると、損失の合計と割合はいくらになりますか。
+\bkjans{スイッチング損 \qty{30}{W}、合計 \qty{55}{W}、約0.37\,\%}
+\end{jibun}
+
+\label{ph:原-10:ex11}
+\begin{phreidai}[A/D 変換の1目もり]
+基準電圧 \qty{3.3}{V}、12 ビットの A/D 変換器の1目もりを求めましょう。例題8 の \qty{1.25}{V} は何段めで、2進数でどう表されますか。
+\phbamen
+マイコンが、増幅したセンサーの電圧を読みとる場面です（⑨）。
+\phmushi
+変換器の誤差と雑音は無視し、段の数は小数を切り捨てて数えます。
+\phzu
+基準電圧 \qty{3.3}{V}、$n=12$、入力 \qty{1.25}{V}。
+\phriyu
+1目もり＝基準電圧$/2^n$（⑨）。段の数は、入力÷1目もり。2進数は数学 2-17 ③のやり方で直します。
+\phtateru
+\[ \text{1目もり}=\frac{3.3}{2^{12}},\qquad \text{段}=\frac{1.25}{\text{1目もり}} \]
+\phtoku
+$2^{12}=4096$ なので、1目もり $=3.3/4096\approx\qty{0.81}{mV}$ です。
+\[ \text{段}=\frac{1.25}{3.3/4096}=\frac{1.25\times4096}{3.3}\approx1551.5 \]
+で、1551段め。$1551=1024+512+8+4+2+1$ なので、2進数で \texttt{11000001111}。
+\phtashikame
+けたの確かめ：12 けたの2進数で、いちばん大きい \texttt{111111111111} は4095。1551 は3分の1あまりで、$1.25/3.3\approx0.38$ と合う。\\
+大きさ：ひずみゲージの入力にもどすと、1目もりは $0.81/1000=\qty{0.81}{\micro V}$ 分。
+\kotae 1目もり 約\qty{0.81}{mV}、1551段め（\texttt{11000001111}）
+\end{phreidai}
+\begin{jibun}
+基準電圧 \qty{5}{V}、10 ビットの A/D 変換器の1目もりを求めましょう。\qty{2.5}{V} は何段めで、2進数でどう表されますか。
+\bkjans{1目もり $5\div1024\approx\qty{4.9}{mV}$。512段め、2進数で \texttt{1000000000}}
+\end{jibun}
+
+\label{ph:原-10:ex12}
+\begin{phreidai}[回路シミュレーター：ダイオードの回路をニュートン法で]
+電池 \qty{5}{V}、抵抗 \qty{1}{k\ohm}、ダイオード（$I_{\mathrm s}=\qty{1e-14}{A}$）を直列にした回路の、ダイオードの電圧と電流を、ニュートン法で求めましょう（300 K）。はじめの値を \qty{0.7}{V} とします。
+\phbamen
+回路シミュレーターが、ダイオードやトランジスタをふくむ回路を解く方法（⑫）を、手で1回たどります。
+\phmushi
+ダイオードの直列抵抗は無視し、理想ダイオードの式を使います。
+\phzu
+$E=\qty{5}{V}$、$R=\qty{1000}{\ohm}$、$I_{\mathrm s}=\qty{1e-14}{A}$、$k_{\mathrm B}T/e=\qty{0.0259}{V}$、ダイオードの電圧 $V$。
+\phriyu
+電流則から $f(V)=I_{\mathrm s}(e^{V/0.0259}-1)-(E-V)/R=0$。指数関数で式変形では解けないので、ニュートン法 $V_{k+1}=V_k-f/f'$（⑫）を使います。
+\phtateru
+\[ f(V)=I_{\mathrm s}\bigl(e^{V/0.0259}-1\bigr)-\frac{E-V}{R},\qquad f'(V)=\frac{I_{\mathrm s}}{0.0259}e^{V/0.0259}+\frac1R \]
+\phtoku
+$V_0=0.7$：ダイオードの電流 $\qty{5.47}{mA}$、抵抗の電流 $\qty{4.30}{mA}$ で、$f=\qty{1.17e-3}{A}$。$f'=\qty{0.212}{A/V}$。
+\[ V_1=0.7-\frac{1.17\times10^{-3}}{0.212}\approx\qty{0.6945}{V} \]
+同じことを繰り返すと $V_2\approx\qty{0.69383}{V}$、$V_3\approx\qty{0.69382}{V}$ で、変わらなくなります。電流は $(5-0.694)/1000\approx\qty{4.31}{mA}$。
+\phtashikame
+単位：A÷(A/V)＝V。\\
+確かめ：$V=\qty{0.694}{V}$ で、ダイオードの電流 $10^{-14}e^{0.694/0.0259}\approx\qty{4.31}{mA}$ と、抵抗の電流が等しい。\\
+はじめの値：0.6 V から始めると、1回めで 1.39 V まで行きすぎ、近づくのがとても遅い（⑫）。
+\kotae $V\approx\qty{0.694}{V}$、$I\approx\qty{4.31}{mA}$（3回でほぼ変わらなくなる）
+\end{phreidai}
+\begin{jibun}
+電池 \qty{3.3}{V}、抵抗 \qty{330}{\ohm}、同じダイオードの回路を、0.7 V から始めるニュートン法で解きましょう（2回分の値と答え）。
+\bkjans{$V_1\approx\qty{0.7113}{V}$、$V_2\approx\qty{0.7094}{V}$、答え $V\approx\qty{0.709}{V}$、$I=(3.3-0.709)\div330\approx\qty{7.85}{mA}$}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{トランジスタは、エネルギーを増やす？}
+\bkng{増幅器は、トランジスタが信号のエネルギーを何百倍にも作り出す。}
+\bkok{エネルギーは電源から来る。トランジスタは、電源の電流を、入力の形どおりに流す弁。}
+エネルギーの保存は、増幅器でも成り立ちます（⑥）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{MOSFET のゲートには、電流が流れ続ける？}
+\bkng{オンを保つには、ゲートに電流を流し続ける必要がある。}
+\bkok{ゲートは絶縁の膜で切りはなされたコンデンサー。電流は充電・放電の一瞬だけ。}
+バイポーラトランジスタ（ベース電流が要る）と取り違えないようにしましょう（④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{理想オペアンプの入力は、つながっている？}
+\bkng{$v_+=v_-$ なので、2つの入力は導線でつながっている。}
+\bkok{電圧が等しいだけで、電流は流れない（決まり①）。負帰還があるときだけ、等しくなる。}
+「仮想短絡」ともよびますが、本当にショートしているわけではありません（⑧）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{チップの電力は、電圧に比例する？}
+\bkng{電源の電圧を半分にすると、消費電力も半分。}
+\bkok{$P=\alpha NCE^2f$ なので、電圧を半分にすると $\tfrac14$。}
+1回の切りかえのエネルギーが $CE^2$ だからです（⑦）。
+\end{tsumazuki}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{18\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[スイッチと増幅で動く機械]
+\textbf{考える}：スマホ・パソコン・ゲーム機のチップ、家電や車の中の小さなコンピュータ（マイコン）。CMOS の論理ゲートの組み合わせ（⑦）です。車1台には、マイコンが何十個も入っています。
+
+\textbf{はかる}：体重計・血圧計・地震計・橋の点検のセンサーは、オペアンプで信号を大きくし（⑧）、A/D 変換して（⑨）、マイコンで計算します。
+
+\textbf{動かす}：エアコン・冷蔵庫・洗濯機・電車・電気自動車のモーターは、パワー MOSFET や IGBT のインバーター（⑪）で回転の速さを変えます。スマホの充電器（USB の電源）も、パワー MOSFET を 100 kHz 以上で切りかえて、小さな変圧器で電圧を変えています。
+
+\textbf{つくる}：チップの設計では、回路シミュレーター（⑫）で、何十億個のトランジスタの動きを確かめてから作ります。
+
+\begin{phketa}[電子回路の数の目安]
+\phketaline{熱の電圧 $k_{\mathrm B}T/e$}{\qty{25.9}{mV}（300 K）}
+\phketaline{チップの電源の電圧}{1 V 前後（0.5〜1.2 V ほど）}
+\phketaline{1回の切りかえのエネルギー}{$10^{-17}$〜$10^{-16}$ J ほど}
+\phketaline{オペアンプの増幅度 $A$}{$10^5$ ほど（低い周波数で）}
+\phketaline{パワー MOSFET のオン抵抗}{数 mΩ〜数十 mΩ}
+\phboxhead{答えが桁で合っているか}
+増幅回路の出力が、電源の電圧より大きくなったら、答えは間違いか、その回路は頭打ちになっています。チップの消費電力が kW になったら、fF（$10^{-15}$）や GHz（$10^9$）の換算を見直しましょう。
+\end{phketa}
+\end{phkougaku}
+\phstation{電子回路,集積回路,パワーエレクトロニクス,計測工学}{トランジスタ、MOSFET、しきい電圧、相互コンダクタンス、CMOS、オペアンプ、負帰還、A/D 変換、スイッチング損失}
+
+\begin{column}{世界で最初のトランジスタ}
+1947年12月、アメリカのベル研究所で、バーディーンとブラッテンは、ゲルマニウムの結晶の表面に、2本の金の細い線をごく近くに立て、片方に流す小さな電流で、もう片方の大きな電流を変えられることを確かめました（点接触トランジスタ）。同じ研究室のショックレーは、すぐに、pn 接合を2つ重ねた、より丈夫な接合トランジスタの考えをまとめました（③）。最初のトランジスタは、手のひらにのるくらいの手作りの装置でした。いまは、そのトランジスタが、つめの大きさのチップに100億個をこえて入っています。
+\end{column}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{3}
+\bkproblem スイッチ A と B を直列にしたものに、スイッチ C を並列につなぎ、電池と豆電球の回路にします。A・B・C のオン（1）とオフ（0）の8通りのうち、豆電球がつくのはどの組み合わせですか。
+\bkpans{（$A$ AND $B$）OR $C$。C が1の4通りと、A＝B＝1・C＝0 の、合わせて5通り}
+\bkproblem エミッタ接地の増幅回路で、$I_{\mathrm C}=\qty{0.5}{mA}$、$R_{\mathrm C}=\qty{10}{k\ohm}$ です。300 K の相互コンダクタンスと電圧増幅度を求めましょう。
+\bkpans{$g_{\mathrm m}=0.0005\div0.0259\approx\qty{19}{mS}$、増幅度 $-0.0193\times10^4\approx-190$ 倍}
+\bkproblem $k'=\qty{100}{\micro A/V^2}$、$W/L=20$、$V_{\mathrm{th}}=\qty{0.4}{V}$ の nMOS に $V_{\mathrm{GS}}=\qty{1.0}{V}$ をかけます。（1）飽和領域のドレーン電流と相互コンダクタンス、（2）スイッチとして使うときのオン抵抗を求めましょう。
+\bkpans{（1）\nobreak $I_{\mathrm D}=\qty{0.36}{mA}$、$g_{\mathrm m}=\qty{1.2}{mA/V}$。（2）\nobreak $1\div(2\times10^{-3}\times0.6)\approx\qty{830}{\ohm}$}
+\bkproblem 直流電流増幅率 $h_{\mathrm{FE}}=150$ のトランジスタのベースに \qty{20}{\micro A} を流します。コレクタ電流と、300 K の相互コンダクタンスを求めましょう。
+\bkpans{$I_{\mathrm C}=150\times20\times10^{-6}=\qty{3.0}{mA}$、$g_{\mathrm m}=0.0030\div0.0259\approx\qty{116}{mS}$}
+\bkproblem MOSFET が $2\times10^9$ 個、静電容量 \qty{0.1}{fF}、電源 \qty{1.0}{V}、周波数 \qty{1}{GHz}、切りかわる割合 0.05 のチップの消費電力を求めましょう。電源を \qty{0.5}{V} にすると、いくらになりますか。
+\bkpans{$0.05\times2\times10^9$ $\times10^{-16}\times1.0^2$ $\times10^9=\qty{10}{W}$。0.5 V では $\tfrac14$ の \qty{2.5}{W}}
+\bkproblem CMOS のゲートの出力の抵抗を \qty{5}{k\ohm}、つながる静電容量を \qty{0.4}{fF} とします。1段のおくれ（電圧が半分をこえるまで）と、30段つないだときのおくれを求めましょう。3 GHz の時計の1周期（約 \qty{333}{ps}）の中に収まりますか。
+\bkpans{$\tau=5\times10^3\times0.4\times10^{-15}=\qty{2}{ps}$。1段 $0.69\times2\approx\qty{1.4}{ps}$、30段 $30\times0.69\times2\approx\qty{41}{ps}$ で、1周期の中に収まる}
+\bkproblem 3つの入力 A・B・C の NAND（3つとも1のときだけ0）を CMOS で作ります。nMOS と pMOS をそれぞれ何個、どうつなげばよいですか。
+\bkpans{nMOS 3個を直列（出力と 0 V の間）、pMOS 3個を並列（電源と出力の間）。合わせて6個}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 例題4 の MOSFET（$k'=\qty{200}{\micro A/V^2}$、$V_{\mathrm{th}}=\qty{0.5}{V}$）を、$V_{\mathrm{GS}}=\qty{1.8}{V}$ でオン抵抗 \qty{10}{\ohm} 以下のスイッチにするには、$W/L$ を少なくともいくらにする必要がありますか。
+\bkpans{$W/L\geqq1\div(10\times200\times10^{-6}$ $\times1.3)\approx384.6$。少なくとも 385（下限なので切り上げ）}
+\bkproblem 例題10 のインバーターで、同じパワー MOSFET を2個並列にして、電流を半分ずつ流します。スイッチング損は変わらないとして、損失の合計と、\qty{15}{kW} に対する割合を求めましょう。
+\bkpans{導通損 $2\times0.01\times25^2=\qty{12.5}{W}$、スイッチング損 \qty{15}{W}、合計 \qty{27.5}{W}（約0.18\,\%）。導通損は半分になる}
+\bkproblem 電池 \qty{5}{V}、抵抗 \qty{1}{k\ohm} に、同じダイオード（$I_{\mathrm s}=\qty{1e-14}{A}$）を2個直列につなぎます。1個あたりの電圧を $V$ として、電流則の式 $f(V)=0$ と $f'(V)$ を書き、0.7 V から始めるニュートン法で、$V$ と電流を求めましょう（300 K）。
+\bkpans{$f'(V)$ の抵抗の項は $2/1000$。$V_1\approx\qty{0.6912}{V}$、$V_2\approx\qty{0.6894}{V}$、答え $V\approx\qty{0.689}{V}$、電流 約\qty{3.62}{mA}}
+\bkproblem オペアンプでセンサーの信号を増幅し、A/D 変換器で読みます。（1）理想オペアンプの反転増幅回路（$R_1=\qty{1}{k\ohm}$、$R_2=\qty{22}{k\ohm}$）に \qty{50}{mV} を入れると、出力は何 V ですか。（2）増幅度 $A=10^4$ のオペアンプで1000倍の非反転増幅回路を1段で作ると、実際の倍率はいくらですか。（3）10倍と100倍の2段に分けると、全体の倍率はいくらですか。（4）基準電圧 \qty{5}{V}、16 ビットの A/D 変換器の1目もりを求めましょう。
+\bkpans{（1）\nobreak 倍率 $-22$ 倍、出力 $-22\times0.05=\qty{-1.1}{V}$。（2）\nobreak $10^4/(1+10^4/1000)\approx909$ 倍（約9\,\% 小さい）。（3）\nobreak $10^4/(1+1000)\approx9.99$ 倍と $10^4/(1+100)\approx99.0$ 倍で、全体 約989倍（ずれ約1\,\%）。（4）\nobreak $5\div65536\approx\qty{76}{\micro V}$}
+
+\begin{furikaeri}
+\begin{checklist}
+\item スイッチ2つで AND と OR の回路を作り、オンとオフで2進数のたし算を表せる。\bkfurref{ph:原-10:sec1}
+\item バイポーラトランジスタと MOSFET がスイッチ・増幅器としてはたらくしくみを pn 接合と電場で説明し、相互コンダクタンス・増幅度・オン抵抗を求められる。\bkfurref{ph:原-10:sec3}
+\item CMOS の論理ゲートのしくみを説明し、チップの消費電力と信号のおくれを計算できる。\bkfurref{ph:原-10:sec7}
+\item 理想オペアンプの反転・非反転増幅の倍率を求め、センサーの小さな電圧を A/D 変換する流れを説明できる。\bkfurref{ph:原-10:sec8}
+\item MOSFET の電流の式を反転層の電荷とドリフトから導き、パワー半導体の損失と、ニュートン法で回路を解く方法を使える。\bkfurref{ph:原-10:sec10}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{スマホの計算は、スイッチのオンとオフのたし算の組み合わせだったんだね。切りかえるたびに小さなコンデンサーを充電して熱が出るから、使うと温かくなるなんて、納得！}

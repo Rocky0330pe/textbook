@@ -48,25 +48,42 @@
   }
 
   // ---------------------------------------------------------------- わざの一覧
+  // わざの一覧：巻ごとのタブ、部ごとにたたむ、番号・名前でさがす（依頼者 11月6日）
   function renderCatalog(vol) {
+    const vols = [...new Set(M.list().map(id => M.waza[id].vol))].sort();
+    $('#vtabs').innerHTML = vols.map(v => `<button type="button" class="vtab${v === vol ? ' on' : ''}" data-v="${v}">第${v}巻<span class="n">${M.list(v).length}</span></button>`).join('');
+    $('#vtabs').querySelectorAll('.vtab').forEach(b => b.addEventListener('click', () => {
+      const v = +b.dataset.v;
+      if (v === +$('#vol').value) return;
+      $('#vol').value = v; $('#wsearch').value = '';
+      renderCatalog(v); make();
+    }));
+    const q = ($('#wsearch').value || '').trim().replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[ー－―−]/g, '-');
+    const chosen = new Set(M.parseIds($('#ids').value, vol));
     const ids = M.list(vol);
     const parts = M.parts[vol] || [];
-    let html = '';
+    let html = '', shown = 0;
     parts.forEach(pt => {
-      const list = ids.filter(id => M.waza[id].part === pt.no);
+      const all = ids.filter(id => M.waza[id].part === pt.no);
+      if (!all.length) return;
+      const hit = id => !q || id.includes(q) || id.split('-')[1] === q.padStart(2, '0') || M.plain(M.waza[id].title).replace(/\s/g, '').includes(q.replace(/\s/g, ''));
+      const list = all.filter(hit);
       if (!list.length) return;
-      html += `<h3>第${pt.no}部　${H(pt.name, { noRuby: true })}</h3><ul>`;
+      shown += list.length;
+      const open = q || list.some(id => chosen.has(id));
+      html += `<details class="wpart"${open ? ' open' : ''}><summary>第${pt.no}部　${H(pt.name, { noRuby: true })}<span class="n">${list.length}こ</span></summary><ul>`;
       list.forEach(id => {
         const d = M.waza[id];
-        html += `<li><button type="button" class="pick" data-id="${id}">${id}</button> ${H(d.title, { noRuby: true })}${d.stars > 1 ? ' <span class="star">★★</span>' : ''}</li>`;
+        html += `<li><button type="button" class="pick${chosen.has(id) ? ' on' : ''}" data-id="${id}">${id}</button> ${H(d.title, { noRuby: true })}${d.stars > 1 ? ' <span class="star">★★</span>' : ''}</li>`;
       });
-      html += '</ul>';
+      html += '</ul></details>';
     });
-    $('#catalog').innerHTML = html || '<p>この巻のわざは、まだありません。</p>';
+    $('#catalog').innerHTML = html || (q ? '<p>見つかりませんでした。</p>' : '<p>この巻のわざは、まだありません。</p>');
     $('#catalog').querySelectorAll('.pick').forEach(b => b.addEventListener('click', () => {
       const cur = $('#ids').value.trim();
       const ids0 = M.parseIds(cur, vol);
       if (!ids0.includes(b.dataset.id)) $('#ids').value = (cur ? cur + ', ' : '') + b.dataset.id;
+      b.classList.add('on');
       make();
     }));
   }
@@ -228,6 +245,8 @@
     if (h) setState(h); else $('#seed').value = 1 + Math.floor(Math.random() * 99999);
     renderCatalog(+$('#vol').value);
     $('#vol').addEventListener('change', () => { renderCatalog(+$('#vol').value); make(); });
+    $('#wsearch').addEventListener('input', () => renderCatalog(+$('#vol').value));
+    $('#ids').addEventListener('change', () => renderCatalog(+$('#vol').value));
     $('#make').addEventListener('click', make);
     // 印刷：問題と こたえ・問題だけ・こたえだけ
     const printAs = mode => { make(); document.body.dataset.print = mode; window.print(); };

@@ -1,0 +1,1098 @@
+%% 第31回編集委員会（物理第5巻）：組 原W6
+%% p5-12.tex  原-12　こわれる原子核：放射性崩壊と半減期（★2〜5・3段）
+%% 第32回（確認 F5 の直し・修5-5）：tools/FIX-phys5-review-5.md。変えた数の検算は checks/物理第5巻/確認/fix5_check.py。
+%% 中身は計画書 tools/phys5-plan.md の B「原-12」。公式の持ち主は A（A7〔放射線の発見〕・A11〔種類〕・A12・A34・A35・A42・A69・A70〔統計〕・A71）。
+%%   ★は計画書 B の表（N-1）の 2〜5 にした（series_phys.py はまだ 4〜5。事務局が直す）。
+%% 数値はすべて Python で計算した：checks/物理第5巻/原-12/calc_p5_12.py（出力 calc_p5_12_out.txt）、
+%%   code_p5_12.py（⑤の囲みのプログラム。出力を本文に写した）。常用漢字の確かめは checks/物理第5巻/原-11/kanji_p5_11_12.py。
+%% 前の巻・数学の本との約束（計画書 A-6・C-6-2）
+%%   ・M13（3-11:399〜457 テクネチウム99m 6時間、3時間後は 75 % でなく曲線の上）→ ③・例題3（70.7 %）
+%%   ・M2（6-4:1100 炭素14 5730年・τ≈8270年。6-4 の書名『原子と原子核』は『原子』の誤り：事務局に報告済みの項目）→ ⑦・例題6
+%%   ・M5（6-14:624〜643・942 親と子 τ1＝2 h・τ2＝1 h・1000個、ベイトマン 1910年）→ ⑧・例題7（1.39 h・250個）
+%%   ・6-14:1046 テクネチウム・ジェネレーター（モリブデン99 約66 h、約23時間後に最大）→ ⑧・例題9（同じ数）
+%%   ・M3（6-4:649〜731・995 ガイガーカウンター 0.3 回/s、ポアソン分布）→ ⑨・例題10（e^{-3}＝0.050）
+%%   ・M14（3-14:722・3-17:784 √N、1分 100±10・10分 1000±32）→ ⑨
+%%   ・Q58（p4-15:162 X線とγ線は出るしくみで分ける：原-12）→ ②
+%%   ・原-11 ⑥の Q 値・β崩壊の電子の勘定 → ②・例題1。原-6 のトンネル → ⑩
+%% 記号（この章）：原子の数 N、崩壊定数 λ（この章で波長は使わない）、半減期 T_{1/2}（3-11 の T）、平均寿命 τ（6-4 の時定数と同じ）、
+%%   放射能 A〔Bq〕（この章では質量数を記号にせず、核種の記号の左上の数としてだけ書く：N-4）、原子番号 Z、
+%%   計数 n・平均 μ・標準偏差 σ、Q 値 Q、時刻 t。親と子は添字 1・2。
+%% 出典（11月11日に確かめた。Wikipedia は使っていない）
+%%   ・環境省「放射線による健康影響等に関する統一的な基礎資料（令和7年度版）」https://www.env.go.jp/chemi/rhm/current/kisoshiryohtml.html
+%%       01-02-04（U-238 は鉛206 まで、炭素14 は宇宙線の中性子と窒素から、βで窒素へ）、01-02-05（1 Bq）、
+%%       01-02-07（半減期：I-131 約8日・Cs-134 約2年・Cs-137 約30年）、01-02-08（U-238 45億年・K-40 13億年・鉛206 まで10数回）、
+%%       02-05-04（Rn-222 約3.8日・Po-218 約3分・Pb-214 約27分・Bi-214 約20分・Po-214 約1.6×10^-4 s・Pb-210 約22年・Bi-210 約5日・Po-210 約138日）、
+%%       02-05-10（ラジウムからラドン）、02-05-11（カリウムの0.01 %が放射性。体重60 kg で K-40 4000 Bq：スライドの画像）。
+%%   ・原子の質量：NIST（AME2020。checks/物理第5巻/原-11/nist_masses_20261111.json）。存在比 K-40 0.0117 %・U-235 0.7204 %・U-238 99.2742 %（同じ表）。
+%%   ・ノーベル賞（nobelprize.org）：1903 物理 ベクレル（1896年に、ウランの塩が写真乾板に写る放射線を出すことを見つけた：facts のページ）・キュリー夫妻、
+%%       1908 化学 ラザフォード（1899年に α線と β線を区別：facts のページ）、1911 化学 マリー・キュリー（ラジウムとポロニウム）、
+%%       1960 化学 リビー（1949年に炭素14 の年代測定：facts のページ）。
+%%   ・中性子の寿命：UCNτ 877.75 s（arXiv:2106.10375、計画書 D43）、ビームの方法 887.7 s（Yue ら, arXiv:1309.2623 の要旨）。
+%%   ・ベイトマン 1910年：数学 6-14 と同じ。
+%% 半減期と Q 値の一次資料（出典の組が 11月11日に確かめ直した。はじめは二次資料2つで照らしていた）：
+%%   ENSDF の評価値。IAEA LiveChart の API（https://nds.iaea.org/relnsd/v1/data?fields=ground_states&nuclides=14c など、
+%%   核種を変えて curl で読んだ）。α線のエネルギーは fields=decay_rads&rad_types=a。
+%%   ・炭素14 5700±30 年（計算は N-8 のとおり 5730 年）。ラジウム226 1600±7 年（α線 4.784 MeV が 94 %、Q 4.8707 MeV）。
+%%   ・ポロニウム212 294.3±0.8 ns（Q 8.954 MeV）。本文・図は「0.3 μs」、例題12 の半減期の比は 0.29 μs で計算した
+%%     （はじめは 0.30 μs。比は 4.7×10²³ → 4.9×10²³ で、答えの「約 5×10²³・約 10²⁴」は変わらない。G-N の図の点を −6.52 → −6.53 に）。
+%%   ・ウラン238 4.468×10⁹ 年（Q 4.2699 MeV）、ウラン235 7.04×10⁸ 年、ラドン222 3.8222 日、ポロニウム210 138.376 日（Q 5.4075 MeV）、
+%%     カリウム40 1.248×10⁹ 年、ヨウ素131 8.0252 日、セシウム134 2.0652 年、セシウム137 30.08 年：環境省の基礎資料の丸めた値と合う。
+%%   ・モリブデン99 65.924 h・テクネチウム99m 6.0072 h（6.0 h）：本文の約66 h・約6.0 h と合う。
+%% 二次資料で照らした値（11月11日）
+%%   ・オクロ：1972年にフランスの原子力庁が約20億年前の天然の原子炉と発表（physicsworld の記事と、arXiv:1404.4948 を紹介する記事）。
+%% 〔要確認〕
+%%   ・ガモフの α崩壊の理論 1928年（ガーニーとコンドンも同じ年）：一次資料に届かなかった。本文は「1928年」と書いた。
+%%   ・ガイガーとヌッタルの関係 1911年：同じ。本文は年を書かなかった。
+%%   出典の組（11月11日）：doi.org の先（link.springer.com・www.nature.com・www.tandfonline.com）と api.crossref.org は接続できず、〔要確認〕のまま。
+%%   ・バナナのカリウム 0.36 g は例題のための仮の値（本文に「とします」）。体のカリウム 120 g も仮の値（体重 60 kg）。
+%% 絵の部品の名前：txm…（原-12 → m）
+\makeatletter
+\tikzset{txm lab/.style={font=\sffamily\footnotesize, text=bkInk}, txm arr/.style={line width=1pt, -{Stealth[length=2.4mm]}},
+  txm dim/.style={bkGray, line width=0.5pt, {Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}}}
+% サイコロ  \txmdie{(x,y)}{1辺}
+\newcommand\txmdie[2]{\filldraw[fill=white, draw=bkInk, line width=0.6pt, rounded corners=0.6pt] ($#1-(#2/2,#2/2)$) rectangle ($#1+(#2/2,#2/2)$);
+  \fill[bkRed!80!black] #1 circle (#2*0.13);}
+\makeatother
+
+\phchapter{12}{こわれる原子核：\\放射性崩壊と半減期}{大昔の木や骨の年代は、どうやってわかる？}{\bklevelrange{2}{5}}{こわれる原子核：放射性崩壊と半減期}
+\bkmichishirube{3-11,6-4,6-14,3-14,3-17,原-6,原-11}{原-13,原-14,原-15,原-16}
+
+\begin{goal}
+\begin{itemize}[label={\color{bkTheme}●}, leftmargin=1.6\zw, itemsep=0pt, topsep=1pt]
+\item \bklevel{2}\enspace α崩壊・β崩壊・γ線で、原子核がどう変わるかを書ける。
+\item \bklevel{2}\enspace 半減期を使って、残る量や、たった時間を求められる。
+\item \bklevel{3}\enspace 放射能（Bq）と原子の数の関係 $A=\lambda N$ を使える。
+\item \bklevel{4}\enspace 崩壊の法則を微分方程式で書き、数えるばらつきを見積もれる。
+\item \bklevel{5}\enspace 親と子の崩壊（放射平衡）と、α崩壊のトンネルを式で読める。
+\end{itemize}
+\end{goal}
+
+\phkoushiki{%
+\phk{放射線の性質と利用}{中学理科}{ph:原-12:sec1}
+\phk{放射線の種類（α線・β線・γ線）}{高校物理基礎}{ph:原-12:sec2}
+\phk{崩壊で原子番号・質量数が変わる}{高校物理}{ph:原-12:alpha}
+\phk{半減期 $N=N_0\bigl(\tfrac12\bigr)^{t/T_{1/2}}$}{高校物理基礎}{ph:原-12:sec3}
+\phk{放射能（Bq）}{高校物理基礎}{ph:原-12:sec4}
+\phk{放射性同位体の利用（年代測定）}{高校化学基礎}{ph:原-12:sec7}
+}
+
+\begin{hatena}
+\noindent\begin{minipage}[c]{0.58\linewidth}\raggedright
+遺跡から出てきた木の柱や、動物の骨、貝がら。「これは今から約4千年前のもの」のように、年代がわかることがあります。年代を書いた紙が、いっしょに埋まっていたわけではありません。
+
+木や骨の中に、「時計」が入っているのでしょうか。その時計は、どんなしくみで時を刻んでいるのでしょう。
+\end{minipage}\hfill
+\begin{minipage}[c]{0.39\linewidth}\centering
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \fill[bkOrange!25] (0,0) rectangle (46,6);
+  \fill[bkOrange!15] (0,6) rectangle (46,12);
+  \draw[bkGray, line width=0.4pt] (0,6) -- (46,6) (0,12) -- (46,12);
+  \filldraw[fill=bkYellow!45, draw=bkInk, line width=0.6pt] (8,1.5) rectangle (12,15);
+  \filldraw[fill=white, draw=bkInk, line width=0.6pt] (22,3) .. controls (26,5) and (32,5) .. (36,3) -- (36.5,4.5) .. controls (32,6.5) and (26,6.5) .. (21.5,4.5) -- cycle;
+  \node[txm lab, anchor=south] at (10,15.5) {木の柱};
+  \node[txm lab, anchor=south] at (29,7) {骨};
+  \node[txm lab, anchor=south west, align=center] at (17,17) {何年前のもの？};
+\end{tikzpicture}
+\end{minipage}
+\end{hatena}
+
+\noindent 原-11 では、原子核の質量とエネルギーの関係を学びました。原子核の中には、そのままでは不安定で、やがてひとりでに別の原子核に変わるものがあります。そのとき、放射線が出ます。この章では、原子核がどのようにこわれ、どのくらいの速さで減っていくかを調べます。減り方は、原子1個1個がまったく偶然にこわれることから決まり、その減り方が、はてな？の「時計」になります。
+
+\begin{yattemiyou}[サイコロで、こわれる原子核をまねしよう]
+\textbf{用意するもの}：サイコロ 100個（紙のサイコロでもよい）、紙コップ、方眼紙（または表計算）\par\vspace{2pt}
+\begin{enumerate}[label={\bkcircled[bkGreen]{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=0pt]
+\item サイコロ1個を、原子核1個とします。100個全部を、いっせいにふります（これが1回）。
+\item 「1」の目が出たサイコロは「こわれた」として、取りのぞきます。残りの数を数えて、表に書きます。
+\item 残ったサイコロで②を繰り返します。10回まで続け、回数を横、残りの数をたてにしたグラフをかきましょう。
+\item 残りが50個、25個になったのは、それぞれ何回めあたりでしょう。
+\end{enumerate}
+\par\vspace{2pt}本物の放射性物質（鉱物など）を集めたり、使ったりはしません。サイコロで、こわれ方の「きまり」だけをまねします。
+\end{yattemiyou}
+
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=20mm] *{11}{Q[c,m,wd=6.2mm]}}, rowsep=0.5pt, colsep=1.6pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+回数 & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+残り（ミナ） & 100 & 83 & 71 & 59 & 52 & 47 & 41 & 34 & 25 & 20 & 19 \\
+$100\times\bigl(\tfrac56\bigr)^{\text{回数}}$ & 100 & 83 & 69 & 58 & 48 & 40 & 33 & 28 & 23 & 19 & 16 \\
+\end{bktable}
+\bktabcaption{サイコロ 100個で、ミナさんが調べた結果（上）と、毎回 6分の5 ずつ残るとした計算（下）}\label{ph:原-12:tab-dice}
+\end{bkcenter}
+
+\noindent やってみようの答え：1回ふるごとに、どのサイコロも6分の1の確率でこわれるので、残る数は平均して前の回の6分の5になります。表\ref{ph:原-12:tab-dice}のように、実験の数は、計算の数の周りで少しずつばらつきながら、同じように減っていきます。50個になるのは4回めのあたり、25個は8回めのあたりです。\textbf{いくつ残っていても、半分になるまでの回数はほぼ同じ}です。これが、放射性物質の減り方の基本の形です（③⑤）。
+
+\begin{omoidasou}
+\bkrecall{原-11}{原子核は陽子と中性子でできている。左上の質量数と左下の原子番号で ${}^{226}_{\ 88}\mathrm{Ra}$ と書く。核反応では電荷と核子の数が保存し、出るエネルギーは Q 値＝（前の質量－後の質量）$\times c^2$。}
+\bkrecall{3-11}{同じ時間ごとに同じ割合で減る量は、指数関数で表せる。テクネチウム99m は6時間ごとに半分になり、3時間後は 75\,\% ではなく約 71\,\% 残る。}
+\bkrecall{6-4}{$\dfrac{\dd N}{\dd t}=-\dfrac{N}{\tau}$ の答えは $N=N_0e^{-t/\tau}$。$\tau$ は時定数で、半減期は $\tau\ln2$。偶然起きることの回数はポアソン分布にしたがう。}
+\bkrecall{6-14}{親が子に変わり、子もまた変わっていく式（親と子）は、消去法で解ける。}
+\bkrecall{3-14}{たくさんはかって平均すると、ばらつきは小さくなる（$\sigma/\sqrt n$）。}
+\end{omoidasou}
+
+\noindent この章の記号：$N$ は原子の数、$\lambda$（ラムダ）は崩壊定数（⑤）、$T_{1/2}$ は半減期（3-11 では $T$ と書いた）、$A$ は放射能（Bq）です。この章では、質量数を記号にせず、核種の記号の左上の数としてだけ書きます（$A$ を放射能に使うため）。$\lambda$ は、第1部の波長とは別の量です。
+
+%% ======================== 物理の道具 ========================
+\Needspace{16\baselineskip}\bksection{doguu}{物理の道具}
+
+\phstage{me}{放射線を出してこわれる原子核}{2}
+
+\bksubsection{1}{放射線の発見}
+\label{ph:原-12:sec1}
+1896年、フランスのベクレルは、ウランをふくむ塩を、黒い紙に包んだ写真乾板の上に置いておくと、光を当てなくても乾板が感光することを見つけました。ウランから、目に見えず、紙を通りぬける何かが、ひとりでに出ていたのです。続いてキュリー夫妻は、もっと強くこれを出す新しい元素、ポロニウムとラジウムを見つけました。ベクレルとキュリー夫妻は、1903年のノーベル物理学賞を受けました。
+
+このように、原子核がひとりでに変わるときに出る、速い粒や、エネルギーの大きい光を\textbf{放射線}といいます。\bkidx{ほうしゃせん}{放射線}放射線を出す性質を\textbf{放射能}、放射線を出す物質を\textbf{放射性物質}、放射線を出す原子核をもつ同位体を\textbf{放射性同位体}といいます。\bkidx{ほうしゃのう}{放射能}\bkidx{ほうしゃせいどういたい}{放射性同位体}
+
+放射線には、次のような性質があります（中学校で学ぶことです）。
+\begin{enumerate}[label={\bkcircled{\arabic*}}, leftmargin=2.4\zw, itemsep=1pt, topsep=2pt]
+\item 目に見えず、においもしない。
+\item 物を通りぬける力（透過力）がある。通りぬけ方は、放射線の種類で大きく違う（②、原-13）。
+\item 通り道の原子から電子をはじき出す（\textbf{電離}）。写真乾板が感光したのも、このためです。電離で、生き物の細胞も傷つくことがあります（原-14）。
+\end{enumerate}
+この性質を使って、放射線は、病院の検査や治療、工場の厚さ計、物の中を調べる検査などに使われています（原-13・原-14）。
+
+\begin{phmijika}[放射性物質は、身の回りにもある]
+放射性物質は、特別な所にだけあるものではありません。食べ物にふくまれるカリウムの約 0.01\,\% は放射性のカリウム40 で、わたしたちの体の中でも、1秒に数千個のカリウム40 がこわれています（例題5）。岩石や土にはウランやトリウムがふくまれ、空気中には、そこから生まれたラドンがあります。放射線の影響は、受けた量で決まります。量のはかり方は原-14 で学びます。
+\end{phmijika}
+
+\Needspace{10\baselineskip}\bksubsection{2}{α崩壊・β崩壊・γ線}
+\label{ph:原-12:sec2}
+1899年、ラザフォードは、ウランから出る放射線に、すぐに止まってしまう\textbf{α線}と、もっと通りぬける\textbf{β線}の2種類があることを見つけました。のちに、さらによく通りぬける\textbf{γ線}も見つかりました。いまでは、それぞれの正体がわかっています。\bkidx{あるふぁせん}{α線}\bkidx{べーたせん}{β線}\bkidx{がんません}{γ線}
+
+\phboxhead{α崩壊}
+\label{ph:原-12:alpha}原子核が、ヘリウム4 の原子核（陽子2個と中性子2個。\textbf{α粒子}）を出す変化を\textbf{α崩壊}といいます。出てきた α粒子の流れが α線です。α崩壊をすると、原子番号は2、質量数は4へります。たとえばラジウム226 は、α崩壊でラドン222 になります。
+\[ {}^{226}_{\ 88}\mathrm{Ra}\longrightarrow{}^{222}_{\ 86}\mathrm{Rn}+{}^{4}_{2}\mathrm{He} \]
+左下の和は $88=86+2$、左上の和は $226=222+4$ で、電荷と核子の数が保存しています（原-11 ⑥）。
+
+\phboxhead{β崩壊}
+原子核の中の中性子1個が、陽子1個に変わり、電子1個と反ニュートリノ1個を出す変化を\textbf{β崩壊}といいます。出てきた電子の流れが β線です。β崩壊をすると、原子番号は1ふえ、質量数は変わりません。
+\[ {}^{14}_{\ 6}\mathrm{C}\longrightarrow{}^{14}_{\ 7}\mathrm{N}+\mathrm e^-+\bar\nu \]
+電子は、もともと原子核の中にあったのではなく、中性子が陽子に変わるときに生まれます（弱い力：原-11 ⑪）。陽子が中性子に変わって陽電子 e$^+$ を出す β\textsuperscript{+}崩壊もあります（このとき原子番号は1へる）。
+
+\phboxhead{γ線}
+α崩壊や β崩壊をしたあとの原子核は、エネルギーの高い状態（励起状態）に残ることがあります。原子核がエネルギーの低い状態に移るとき、そのエネルギーの差の光、\textbf{γ線}を出します。原子が光を出すのと同じしくみですが（原-4）、エネルギーが何百万倍も大きいのです。γ線を出しても、原子番号も質量数も変わりません。電-15 の電磁波の家族の表で、X線と γ線は波長の範囲が重なっていました。X線は原子核の外の電子から、γ線は原子核から出る光として、出るしくみで区別します。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \foreach \i in {0,...,7} {\draw[bkLine, line width=0.4pt] (\i*15+4,2) -- (\i*15+4,76);}
+  \foreach \j in {0,...,5} {\draw[bkLine, line width=0.4pt] (0,\j*15+4) -- (112,\j*15+4);}
+  \draw[bkInk, txm arr] (0,0) -- (116,0); \node[txm lab, anchor=north east] at (116,-1) {中性子の数};
+  \draw[bkInk, txm arr] (0,0) -- (0,80); \node[txm lab, anchor=west] at (1,80) {原子番号};
+  \node[draw=bkInk, fill=bkBlue!25, line width=0.7pt, minimum size=9mm, inner sep=0pt, txm lab] (o) at (71.5,41.5) {もと};
+  \node[draw=bkInk, fill=bkOrange!25, line width=0.6pt, minimum size=9mm, inner sep=0pt, txm lab] (a) at (41.5,11.5) {α後};
+  \node[draw=bkInk, fill=bkGreen!20, line width=0.6pt, minimum size=9mm, inner sep=0pt, txm lab] (b) at (56.5,56.5) {β後};
+  \node[draw=bkInk, fill=bkPurple!15, line width=0.6pt, minimum size=9mm, inner sep=0pt, txm lab] (c) at (86.5,26.5) {β\textsuperscript{+}後};
+  \draw[bkRed!75!black, txm arr, shorten <=0.5mm, shorten >=0.5mm] (o) -- (a);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten <=0.5mm, shorten >=0.5mm] (o) -- (b);
+  \draw[bkPurple!80!black, txm arr, densely dotted, shorten <=0.5mm, shorten >=0.5mm] (o) -- (c);
+\end{tikzpicture}
+\bkfigcaption{核種の図（横が中性子の数、たてが原子番号。1目が1個）の上での崩壊の動き。α崩壊（実線の矢印）は原子番号も中性子の数も2へって左下へ2目、β崩壊（破線の矢印）は中性子が陽子に変わって左上へ1目、β\textsuperscript{+}崩壊（点線の矢印）は右下へ1目動く。γ線を出すときは、同じ目の中でエネルギーだけが下がる。}\label{ph:原-12:fig-chart}
+\end{bkfigure}
+
+\begin{phmijika}[放射線の正体]
+\begin{bkcenter}
+\begin{bktable}{colspec={Q[l,m,wd=14mm] Q[l,m,wd=36mm] Q[l,m,wd=28mm] Q[l,m,wd=30mm]}, rowsep=0.5pt, row{1}={bg=bkTheme!10}, cells={font=\small}}
+放射線 & 正体 & 電気 & 止める物（原-13） \\
+α線 & ヘリウム4 の原子核 & $+2e$ & 紙1枚 \\
+β線 & 電子（β\textsuperscript{+} は陽電子） & $-e$（$+e$） & アルミ板 数 mm \\
+γ線 & エネルギーの大きい光 & なし & 鉛・厚いコンクリート \\
+\end{bktable}
+\end{bkcenter}
+\end{phmijika}
+
+\Needspace{12\baselineskip}\phstage{te}{半減期と放射能を数える}{3}
+
+\bksubsection{3}{半減期}
+\label{ph:原-12:sec3}
+数学 3-11 で見たように、病院の検査で使うテクネチウム99m は、6時間ごとに半分になります。はじめの原子の数を $N_0$ とすると、6時間後に $\tfrac12N_0$、12時間後に $\tfrac14N_0$、18時間後に $\tfrac18N_0$ です。放射性の原子が、はじめの半分になるまでの時間を\textbf{半減期} $T_{1/2}$ といいます。\bkidx{はんげんき}{半減期}時刻 $t$ に残っている原子の数は
+\pheq{N=N_0\Bigl(\frac12\Bigr)^{t/T_{1/2}}}{個 ＝ 個}
+です。$t/T_{1/2}$ は「半減期の何回分たったか」で、整数でなくてもかまいません（3-11 の分数の指数）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=110mm, height=50mm, xmin=0, xmax=26, ymin=0, ymax=110, xtick={3,6,12,18,24}, ytick={25,50,70.7,100}, yticklabels={25,50,70.7,100}, xlabel={$t$（h）}, ylabel={残り（\%）}]
+  \addplot[bkcurve, domain=0:25, samples=100] {100*0.5^(x/6)};
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0,50) -- (axis cs:6,50) -- (axis cs:6,0);
+  \draw[bkGray, dashed, line width=0.5pt] (axis cs:0,25) -- (axis cs:12,25) -- (axis cs:12,0);
+  \draw[bkRed!75!black, line width=0.7pt] (axis cs:0,70.71) -- (axis cs:3,70.71) -- (axis cs:3,0);
+  \draw[bkOrange!80!black, line width=0.8pt, densely dotted] (axis cs:0,100) -- (axis cs:6,50);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (axis cs:4.0,84) {直線なら3時間で 75\,\%（点線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkRed!75!black] at (axis cs:12,70.7) {本当は3時間で 70.7\,\%（3時間の線）};
+  \node[font=\sffamily\footnotesize, anchor=west] at (axis cs:14,38) {12時間で4分の1};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{テクネチウム99m（半減期6時間）の減り方（数学 3-11 と同じ数）。曲線は、同じ時間ごとに同じ割合で減る。}\label{ph:原-12:fig-tc}
+\end{bkfigure}
+
+\begin{phyomi}[$N=N_0(1/2)^{t/T_{1/2}}$]
+「半減期が1回たつごとに $\tfrac12$ 倍」と読みます。半減期の2回分で $\tfrac14$、10回分で $\tfrac{1}{1024}$（約1000分の1）です。半減期は、残っている量によらず、同じです。100個が50個になるのも、2個が1個になるのも（平均すると）同じ時間です。
+\end{phyomi}
+
+半減期は、放射性同位体ごとに決まっていて、とても短いものから、とても長いものまであります（図\ref{ph:原-12:fig-ladder}）。温度や圧力、化学の結びつき方を変えても、ほとんど変わりません。原子核の中のことは、原子の外の電子の状態にほとんど左右されないからです。
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=120mm, height=48mm, xmin=-8, xmax=19, ymin=0, ymax=1, xtick={-6,-3,0,3,6,9,12,15,18}, xticklabels={$10^{-6}$,$10^{-3}$,1,$10^{3}$,$10^{6}$,$10^{9}$,$10^{12}$,$10^{15}$,$10^{18}$}, ytick=\empty, axis lines=center, axis y line=none, xlabel={半減期（秒）}, every axis x label/.style={at={(ticklabel* cs:1)}, anchor=north west, font=\sffamily\small}, grid=none]
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:-6.53,0) -- (axis cs:-6.53,0.30); \fill[bkBlue!80!black] (axis cs:-6.53,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:-6.53,0.30) {Po-212\\0.3 \si{\micro s}};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:-3.8,0) -- (axis cs:-3.8,0.58); \fill[bkBlue!80!black] (axis cs:-3.8,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:-3.8,0.58) {Po-214\\0.16 ms};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:2.26,0) -- (axis cs:2.26,0.30); \fill[bkBlue!80!black] (axis cs:2.26,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:2.26,0.30) {Po-218\\3分};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:4.33,0) -- (axis cs:4.33,0.86); \fill[bkBlue!80!black] (axis cs:4.33,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:4.33,0.86) {Tc-99m\\6時間};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:5.84,0) -- (axis cs:5.84,0.58); \fill[bkBlue!80!black] (axis cs:5.84,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south west, inner sep=1pt, align=center] at (axis cs:5.84,0.58) {I-131\\8日};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:8.98,0) -- (axis cs:8.98,0.30); \fill[bkBlue!80!black] (axis cs:8.98,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:8.98,0.30) {Cs-137\\30年};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:11.26,0) -- (axis cs:11.26,0.86); \fill[bkBlue!80!black] (axis cs:11.26,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south, inner sep=1pt, align=center] at (axis cs:11.26,0.86) {C-14\\5730年};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:16.61,0) -- (axis cs:16.61,0.30); \fill[bkBlue!80!black] (axis cs:16.61,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south east, inner sep=1pt, align=center] at (axis cs:16.61,0.30) {K-40\\13億年};
+  \draw[bkBlue!80!black, line width=0.7pt] (axis cs:17.15,0) -- (axis cs:17.15,0.58); \fill[bkBlue!80!black] (axis cs:17.15,0) circle (1.3pt);
+  \node[font=\sffamily\footnotesize\setlength{\baselineskip}{10pt}, anchor=south east, inner sep=1pt, align=center] at (axis cs:17.15,0.58) {U-238\\45億年};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{いろいろな放射性同位体の半減期（横は対数の目もりで、1目もりが1000倍）。\si{\micro s} は100万分の1秒、ms は1000分の1秒。}\label{ph:原-12:fig-ladder}
+\end{bkfigure}
+
+\Needspace{8\baselineskip}\bksubsection{4}{放射能（Bq）と原子の数}
+\label{ph:原-12:sec4}
+放射性物質がどれだけ放射線を出すかは、1秒あたりにこわれる原子の数で表します。これを\textbf{放射能}の強さといい、単位は \textbf{Bq}（ベクレル）です。\bkidx{べくれる}{ベクレル}1 Bq は「1秒に1個の原子核がこわれる」ことです（環境省の資料の言い方）。放射能の強さを $A$ と書きます。
+
+放射性の原子は、1個1個がまったく偶然にこわれます。どの原子も、1秒の間にこわれる確率は同じで、これを\textbf{崩壊定数} $\lambda$〔1/s〕といいます。\bkidx{ほうかいていすう}{崩壊定数}原子が $N$ 個あれば、1秒にこわれる数は平均して $\lambda N$ 個なので
+\pheq{A=\lambda N,\qquad\lambda=\frac{\ln2}{T_{1/2}}=\frac{0.693}{T_{1/2}}}{Bq ＝ 1/s × 個}
+です（$\lambda$ と $T_{1/2}$ の関係は⑤で導きます）。
+
+\begin{phyomi}[$A=\lambda N$]
+「放射能は、原子の数×1個がこわれる確率（1秒あたり）」と読みます。原子がたくさんあっても、半減期が長ければ（$\lambda$ が小さければ）、放射能は弱いのです。ウラン238 は、地球ができてから45億年かけて、やっと半分になったところです（環境省の資料）。
+\end{phyomi}
+
+\begin{phbaisuru}{半減期 $T_{1/2}$}
+同じ数の原子なら、半減期が2倍の物質は、1秒にこわれる数（放射能）が半分です。そのかわり、長い間、放射線を出し続けます。半減期の短い物質は、はじめは強く放射線を出しますが、すぐに弱くなります。病院の検査にテクネチウム99m（6時間）が使われるのは、検査の間だけ十分な放射線を出し、そのあとすぐに減るからです。
+\end{phbaisuru}
+
+\begin{phmijika}[昔の単位キュリー]
+ラジウム226 の 1 g の放射能は約 $\qty{3.7e10}{Bq}$ です（例題4）。昔は、これを 1 Ci（キュリー）とよんで、放射能の単位にしていました。いまでも外国の資料には Ci が出てきます（$\qty{1}{Ci}=\qty{3.7e10}{Bq}$）。
+\end{phmijika}
+
+\Needspace{12\baselineskip}\bksubsection{5}{崩壊の法則を、式で書く}
+\label{ph:原-12:sec5}
+やってみようのサイコロは、1回ふるごとに6分の1がこわれました。1回めの前の数を $N_0$ とすると、$k$ 回めのあとは $N_0\bigl(\tfrac56\bigr)^k$ です。半分になる回数 $k$ は $(5/6)^k=1/2$ から
+\[ k=\frac{\log(1/2)}{\log(5/6)}=3.80\ \text{回} \]
+で、表\ref{ph:原-12:tab-dice}の「4回めのあたり」と合います。
+
+本物の原子は、サイコロのように「1回ずつ」ではなく、どの瞬間にも少しずつこわれます。短い時間 $\Delta t$ の間に、1個がこわれる確率は $\lambda\Delta t$ なので、$N$ 個のうち $\lambda N\Delta t$ 個がこわれます。
+\pheq{\Delta N=-\lambda N\,\Delta t}{個 ＝ 1/s × 個 × s}
+表計算で、$\Delta t$ を小さくとってこの計算を繰り返すと、指数関数のグラフになります。$\Delta t\to0$ の極限では
+\[ \frac{\dd N}{\dd t}=-\lambda N \]
+で、これは数学 6-4 の「減る速さが、いまの量に比例する」式と同じ形です。$\tau=1/\lambda$ とおけば 6-4 の時定数の式そのもので、答えは
+\pheq{N=N_0e^{-\lambda t}=N_0e^{-t/\tau}}{個 ＝ 個}
+\label{ph:原-12:law}です（6-4 ③の変数分離）。$\tau=1/\lambda$ は、原子1個がこわれるまでの時間の平均にもなっていて、\textbf{平均寿命}ともいいます。\bkidx{へいきんじゅみょう}{平均寿命}
+
+\begin{phflow}[崩壊の微分方程式から、半減期の式へ]
+\phflowrow{$\dfrac{\dd N}{\dd t}=-\lambda N$}{はじめ $N_0$ 個\\（6-4 の変数分離）}{$N=N_0e^{-\lambda t}$}
+\phflowrow{$N=N_0e^{-\lambda t}$}{$t=T_{1/2}$ で\\半分：$e^{-\lambda T_{1/2}}=\tfrac12$}{$T_{1/2}=\dfrac{\ln2}{\lambda}=\tau\ln2$}
+\phflowrow{$N=N_0e^{-\lambda t}$}{$e^{-\lambda}=\bigl(\tfrac12\bigr)^{1/T_{1/2}}$\\を入れる}{$N=N_0\Bigl(\dfrac12\Bigr)^{t/T_{1/2}}$}
+\end{phflow}
+テクネチウム99m では $\tau=6\div0.693=\qty{8.66}{h}$、炭素14 では $\tau=5730\div0.693\approx8270$ 年です（6-4 と同じ数）。
+
+\noindent サイコロの $3.80$ 回は、連続の式の $\ln2\div\lambda=0.693\div\tfrac16=4.16$ 回と少しずれています。1回にこわれる割合 $\tfrac16$ が大きいからです。1回に100分の1ずつこわれるなら、2つの答えは 69.0 回と 69.3 回で、ほとんど同じです。本物の原子は、1秒にこわれる確率がとても小さいので、連続の式がそのまま使えます。
+
+\begin{phcode}[Python]
+import random
+random.seed(1)
+n = 10000              \# はじめの原子の数
+for k in range(11):
+    print(k, n)
+    \# 1個ずつ、1/6 の確率でこわれる（残るのは 5/6）
+    n = sum(1 for i in range(n) if random.random() >= 1/6)
+\end{phcode}
+\begin{phcodeout}[実行結果]
+0 10000
+1 8304
+2 6912
+3 5736
+4 4777
+5 3940
+6 3259
+7 2749
+8 2345
+9 1941
+10 1616
+\end{phcodeout}
+1万個にすると、式 $10000\times(5/6)^k$ の値（8333、6944、5787、…、1615）と、ずれの割合が小さくなります。数が多いほど、偶然のばらつきが目立たなくなるのです（⑨）。
+
+\begin{phmodel}[原子1個1個は、偶然にこわれる]
+\phignore{原子の周りの温度・圧力・化学の結びつき方（半減期への影響はとても小さい）。}
+\phassume{どの原子も、ほかの原子と関係なく、1秒あたり同じ確率 $\lambda$ でこわれる。こわれる確率は、それまで何年たったかによらない。}
+\phlimit{ほとんどない。だから半減期は、時計（年代測定）に使える。原子の数がとても少ないときは、式の周りに偶然のばらつきが目立つ（⑨）。}
+\end{phmodel}
+
+\Needspace{12\baselineskip}\bksubsection{6}{崩壊系列}
+\label{ph:原-12:sec6}
+ウラン238 は、α崩壊でトリウム234 になります。トリウム234 も放射性で、β崩壊でプロトアクチニウム234 になります。このように、こわれてできた原子核もまた放射性で、次々に崩壊を繰り返し、安定な原子核に行きつくまでの道すじを\textbf{崩壊系列}といいます。\bkidx{ほうかいけいれつ}{崩壊系列}ウラン238 の系列（ウラン系列）は、14回崩壊して、安定な鉛206 で終わります（図\ref{ph:原-12:fig-series}）。
+
+
+\noindent α崩壊とβ崩壊の回数は、質量数と原子番号の変わり方から求められます。質量数は α崩壊でだけ4ずつへるので、$238-206=32$ から、α崩壊は $32\div4=8$ 回です。8回の α崩壊で原子番号は $92-16=76$ になりますが、鉛は82 なので、β崩壊で $82-76=6$ 回ふえたことになります。
+
+\begin{phmijika}[温泉とラドン]
+ラジウム226 がこわれてできるラドン222 は、ヘリウムやネオンと同じ仲間の気体で、ほかの元素と結びつきません。だから、岩石の中でできると、すき間を通って地面や水の中に出てきます（環境省の資料）。ラドンをふくむ温泉は「ラドン温泉」とよばれます。家の中のラドンの濃さは、世界の平均が 1 m$^3$ あたり約 39 Bq なのに対して、日本は約 16 Bq と少なめです（環境省の資料）。石造りの家が多い地域では高くなる傾向があります。
+\end{phmijika}
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % 横：中性子の数 124〜146、たて：原子番号 82〜92
+  \draw[bkLine, line width=0.3pt] (0.0,12.6) -- (0.0,91.0);
+  \draw[bkLine, line width=0.3pt] (9.2,12.6) -- (9.2,91.0);
+  \draw[bkLine, line width=0.3pt] (18.4,12.6) -- (18.4,91.0);
+  \draw[bkLine, line width=0.3pt] (27.6,12.6) -- (27.6,91.0);
+  \draw[bkLine, line width=0.3pt] (36.8,12.6) -- (36.8,91.0);
+  \draw[bkLine, line width=0.3pt] (46.0,12.6) -- (46.0,91.0);
+  \draw[bkLine, line width=0.3pt] (55.2,12.6) -- (55.2,91.0);
+  \draw[bkLine, line width=0.3pt] (64.4,12.6) -- (64.4,91.0);
+  \draw[bkLine, line width=0.3pt] (73.6,12.6) -- (73.6,91.0);
+  \draw[bkLine, line width=0.3pt] (82.8,12.6) -- (82.8,91.0);
+  \draw[bkLine, line width=0.3pt] (92.0,12.6) -- (92.0,91.0);
+  \draw[bkLine, line width=0.3pt] (101.2,12.6) -- (101.2,91.0);
+  \draw[bkLine, line width=0.3pt] (-2.3,16.8) -- (103.5,16.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,23.8) -- (103.5,23.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,30.8) -- (103.5,30.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,44.8) -- (103.5,44.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,58.8) -- (103.5,58.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,72.8) -- (103.5,72.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,79.8) -- (103.5,79.8);
+  \draw[bkLine, line width=0.3pt] (-2.3,86.8) -- (103.5,86.8);
+  \node[txm lab, anchor=east] at (-2.8,16.8) {Pb};
+  \node[txm lab, anchor=east] at (-2.8,23.8) {Bi};
+  \node[txm lab, anchor=east] at (-2.8,30.8) {Po};
+  \node[txm lab, anchor=east] at (-2.8,44.8) {Rn};
+  \node[txm lab, anchor=east] at (-2.8,58.8) {Ra};
+  \node[txm lab, anchor=east] at (-2.8,72.8) {Th};
+  \node[txm lab, anchor=east] at (-2.8,79.8) {Pa};
+  \node[txm lab, anchor=east] at (-2.8,86.8) {U};
+  \node[txm lab, anchor=north] at (0.0,4.2) {124};
+  \node[txm lab, anchor=north] at (18.4,4.2) {128};
+  \node[txm lab, anchor=north] at (36.8,4.2) {132};
+  \node[txm lab, anchor=north] at (55.2,4.2) {136};
+  \node[txm lab, anchor=north] at (73.6,4.2) {140};
+  \node[txm lab, anchor=north] at (92.0,4.2) {144};
+  \node[txm lab, anchor=north east] at (103.5,-0.3) {中性子の数};
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (101.2,86.8) -- (92.0,72.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (92.0,72.8) -- (87.4,79.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (87.4,79.8) -- (82.8,86.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (82.8,86.8) -- (73.6,72.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (73.6,72.8) -- (64.4,58.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (64.4,58.8) -- (55.2,44.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (55.2,44.8) -- (46.0,30.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (46.0,30.8) -- (36.8,16.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (36.8,16.8) -- (32.2,23.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (32.2,23.8) -- (27.6,30.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (27.6,30.8) -- (18.4,16.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (18.4,16.8) -- (13.8,23.8);
+  \draw[bkGreen!50!black, txm arr, dashed, shorten >=1mm] (13.8,23.8) -- (9.2,30.8);
+  \draw[bkRed!75!black, txm arr, shorten >=1mm] (9.2,30.8) -- (0.0,16.8);
+  \fill[bkBlue!80!black] (101.2,86.8) circle (0.9);
+  \fill[bkBlue!80!black] (92.0,72.8) circle (0.9);
+  \fill[bkBlue!80!black] (87.4,79.8) circle (0.9);
+  \fill[bkBlue!80!black] (82.8,86.8) circle (0.9);
+  \fill[bkBlue!80!black] (73.6,72.8) circle (0.9);
+  \fill[bkBlue!80!black] (64.4,58.8) circle (0.9);
+  \fill[bkBlue!80!black] (55.2,44.8) circle (0.9);
+  \fill[bkBlue!80!black] (46.0,30.8) circle (0.9);
+  \fill[bkBlue!80!black] (36.8,16.8) circle (0.9);
+  \fill[bkBlue!80!black] (32.2,23.8) circle (0.9);
+  \fill[bkBlue!80!black] (27.6,30.8) circle (0.9);
+  \fill[bkBlue!80!black] (18.4,16.8) circle (0.9);
+  \fill[bkBlue!80!black] (13.8,23.8) circle (0.9);
+  \fill[bkBlue!80!black] (9.2,30.8) circle (0.9);
+  \filldraw[fill=bkYellow!60, draw=bkInk, line width=0.6pt] (0.0,16.8) circle (1.4);
+  \node[txm lab, anchor=south east, inner sep=1pt] at (101.2,88.0) {${}^{238}$U 45億年};
+  \node[txm lab, anchor=north west, inner sep=1pt] at (65.4,58.0) {${}^{226}$Ra 1600年};
+  \node[txm lab, anchor=north west, inner sep=1pt] at (56.2,44.0) {${}^{222}$Rn 3.8日};
+  \node[txm lab, anchor=south, inner sep=1pt] at (27.6,32.2) {${}^{214}$Po};
+  \node[txm lab, anchor=north, inner sep=1pt] at (18.4,15.4) {${}^{210}$Pb};
+  \node[txm lab, anchor=south, inner sep=1pt] at (9.2,32.2) {${}^{210}$Po};
+  \node[txm lab, anchor=north, inner sep=1pt] at (0.0,15.0) {${}^{206}$Pb};
+  \node[txm lab, anchor=north, inner sep=1pt] at (36.8,15.4) {${}^{214}$Pb};
+\end{tikzpicture}
+\bkfigcaption{ウラン系列（横が中性子の数、たてが原子番号）。実線の矢印が α崩壊（8回）、破線の矢印が β崩壊（6回）。いちばん下の左の鉛206（大きい丸）は安定。鉛210 の半減期は約22年、ポロニウム210 は約138日（環境省の資料など）。}\label{ph:原-12:fig-series}
+\end{bkfigure}
+
+\Needspace{12\baselineskip}\bksubsection{7}{年代測定}
+\label{ph:原-12:sec7}
+\phboxhead{炭素14 の時計}
+地球の大気の上のほうでは、宇宙から来る放射線（宇宙線）が空気にぶつかって中性子が生まれ、その中性子が窒素14 に当たって、炭素14 ができています（環境省の資料）。
+\[ {}^{14}_{\ 7}\mathrm N+{}^{1}_{0}\mathrm n\longrightarrow{}^{14}_{\ 6}\mathrm C+{}^{1}_{1}\mathrm p \]
+炭素14 は、二酸化炭素になって大気にまざり、β崩壊で窒素14 にもどっていきます。でき方とこわれ方がつり合っているので、大気の炭素の中の炭素14 の割合は、ほぼ一定です。
+
+\begin{bkfigure}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  \node[bk node, text width=26mm, align=center] (a) at (0,18) {大気の CO$_2$\\（炭素14 は\\一定の割合）};
+  \node[bk node, text width=26mm, align=center] (b) at (52,18) {生きている\\木・動物\\（同じ割合）};
+  \node[bk node, text width=26mm, align=center] (c) at (104,18) {死んだあと\\炭素14 だけ\\減っていく};
+  \draw[bk link] (a) -- node[bk link label, above, align=center] {光合成\\食べる} (b);
+  \draw[bk link] (b) -- node[bk link label, above, align=center] {取りこみ\\が止まる} (c);
+  \node[txm lab, anchor=north, align=center] at (104,6) {半減期 5730年で減る};
+\end{tikzpicture}
+\bkfigcaption{炭素14 の時計。生きている間は大気と同じ割合、死ぬと取りこみが止まり、半減期で減りはじめる。}\label{ph:原-12:fig-c14}
+\end{bkfigure}
+
+植物は光合成で、動物は植物を食べて、生きている間はずっと炭素を取りこむので、体の中の炭素14 の割合は大気と同じです。死ぬと取りこみが止まり、炭素14 だけが半減期で減っていきます。だから、木や骨の中の炭素14 の割合が、生きていたときの何分の1になったかをはかれば、死んでからの時間がわかります。この方法は、1949年にアメリカのリビーが考え、1960年のノーベル化学賞を受けました。\bkidx{たんそじゅうよんねんだいそくてい}{炭素14 年代測定}
+
+残っている割合が $N/N_0$ のとき、$N/N_0=(1/2)^{t/T_{1/2}}$ を $t$ について解いて（3-12 の対数）
+\pheq{t=T_{1/2}\times\frac{\log(N_0/N)}{\log2}}{年 ＝ 年}
+\label{ph:原-12:age}です。この本では、数学 6-4 と同じく炭素14 の半減期を 5730年として計算します。いまの評価は約 5700年で、年代にすると 0.5\,\% ほどの違いです。
+
+\phboxhead{\bkhatenaref の答え}
+\label{ph:原-12:hatena}木や骨の中の「時計」は、炭素14 です。生き物は、生きている間、大気と同じ割合の炭素14 を取りこみます。死ぬと取りこみが止まり、炭素14 は半減期 5730年で減っていきます。残っている割合が 60\,\% なら約4200年前、25\,\%（半減期の2回分）なら約1万1千年前とわかります（例題6）。約5万年より古いと、炭素14 は 0.24\,\% ほどしか残らず、はかるのが難しくなります。恐竜の骨や岩石のような、もっと古い物の年代は、半減期の長いカリウム40（13億年）やウラン238（45億年）を使ってはかります。
+
+\noindent 大気の炭素14 の割合は、宇宙線の強さや、人が石炭・石油を燃やしたことなどで、少しずつ変わってきました。そのため、詳しい年代を出すときは、木の年輪などで年代のわかっている試料と比べて補正します。
+
+\phboxhead{いろいろな年代測定と、放射性同位体の利用}
+カリウム40 は、こわれるとアルゴン40 やカルシウム40 になります。岩石が固まったときには入っていなかったアルゴン40 が、どれだけたまっているかで、岩石が固まってからの年代がわかります。ウラン238 が鉛206 になる系列は、地球やいん石のような、何十億年も前の物の年代をはかるのに使われます。
+
+放射性同位体は、年代測定のほかに、薬や物質の動きを追う目印（\textbf{トレーサー}）としても使われます。体に入れたテクネチウム99m の γ線を体の外からとらえれば、薬がどこに集まったかがわかります（原-13・原-14）。\bkidx{とれーさー}{トレーサー}
+
+\phkokomade
+
+\Needspace{12\baselineskip}\phstage{shiki}{親と子・ばらつき・トンネル}{5}
+
+\bksubsection{8}{親と子：ベイトマンの式と放射平衡}
+\label{ph:原-12:sec8}
+崩壊でできた子の原子核も放射性のとき、子の数は、親から生まれる分だけ増え、自分がこわれる分だけ減ります。親を1、子を2の添字で書くと
+\pheq{\frac{\dd N_1}{\dd t}=-\lambda_1N_1,\qquad\frac{\dd N_2}{\dd t}=\lambda_1N_1-\lambda_2N_2}{個/s}
+\label{ph:原-12:bateman}です。これは数学 6-14 の「親と子」の式で、$\lambda_1=1/\tau_1$、$\lambda_2=1/\tau_2$ です（6-14 は時定数で書いた）。はじめ親が $N_{10}$ 個、子が0個なら、6-14 の消去法と同じ計算で
+\pheq{N_2=N_{10}\frac{\lambda_1}{\lambda_2-\lambda_1}\bigl(e^{-\lambda_1t}-e^{-\lambda_2t}\bigr)}{個 ＝ 個}
+となります（1910年にベイトマンが一般の場合まで解いたので、ベイトマンの式とよばれる）。子は、はじめ増えて、やがて減ります。いちばん多くなる時刻は、$\dd N_2/\dd t=0$ から
+\[ t_{\max}=\frac{\ln(\lambda_2/\lambda_1)}{\lambda_2-\lambda_1} \]
+です。このとき、$\dd N_2/\dd t=0$ なので $\lambda_1N_1=\lambda_2N_2$、つまり\textbf{親と子の放射能が等しく}なっています（例題7）。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=110mm, height=46mm, xmin=0, xmax=8.6, ymin=0, ymax=1100, xmajorgrids=false, xtick={1.39,2,4,6,8}, xticklabels={1.39,2,4,6,8}, ytick={250,500,1000}, xlabel={$t$（h）}, ylabel={数}]
+  \addplot[bkcurve, domain=0:8.2, samples=60] {1000*exp(-x/2)};
+  \addplot[bkcurve2, dashed, domain=0:8.2, samples=80] {1000*(exp(-x/2)-exp(-x))};
+  \draw[bkGray, line width=0.5pt] (axis cs:1.386,0) -- (axis cs:1.386,250) -- (axis cs:0,250);
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkBlue!80!black] at (axis cs:1.7,700) {親 $N_1$（実線）};
+  \node[font=\sffamily\footnotesize, anchor=west, text=bkOrange!80!black] at (axis cs:1.5,74) {子 $N_2$（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{数学 6-14 の親と子（$\tau_1=\qty{2}{h}$、$\tau_2=\qty{1}{h}$、はじめ親 1000個）。子は 1.39 時間後に 250個でいちばん多くなる。}\label{ph:原-12:fig-oyako}
+\end{bkfigure}
+
+\phboxhead{放射平衡}
+親の半減期が子よりずっと長い（$\lambda_1\ll\lambda_2$）ときは、$e^{-\lambda_1t}\approx1$ と見なせる時間の範囲で、子の放射能は
+\[ A_2=\lambda_2N_2\approx A_1\bigl(1-e^{-\lambda_2t}\bigr) \]
+となり、子の半減期の何倍かたつと、子の放射能は親の放射能と等しくなります。これを\textbf{永続平衡}といいます。\bkidx{えいぞくへいこう}{永続平衡}ラジウム226（1600年）とラドン222（3.8日）がその例です（例題8）。ウラン系列のように長くつながった系列でも、十分に時間がたつと、どの子の放射能も、いちばん上の親の放射能と等しくなります。
+
+親の半減期が子より長いが、ずっと長いとまではいえない（$\lambda_1<\lambda_2$）ときは、子の放射能は親の放射能の $\lambda_2/(\lambda_2-\lambda_1)$ 倍で、親と同じ半減期で減っていきます。これを\textbf{過渡平衡}といいます。\bkidx{かとへいこう}{過渡平衡}病院で使うモリブデン99（約66時間）とテクネチウム99m（約6時間）がその例です（例題9）。
+
+\begin{phflow}[ベイトマンの式から、永続平衡へ]
+\phflowrow{$N_2=N_{10}\dfrac{\lambda_1}{\lambda_2-\lambda_1}\times$\\$\bigl(e^{-\lambda_1t}-e^{-\lambda_2t}\bigr)$}{$\lambda_1\ll\lambda_2$、\\$e^{-\lambda_1t}\approx1$}{$A_2=A_1\bigl(1-e^{-\lambda_2t}\bigr)$}
+\phflowrow{$A_2=A_1\bigl(1-e^{-\lambda_2t}\bigr)$}{子の半減期より\\十分長くたつ}{$A_2=A_1$}
+\end{phflow}
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, name=ra, width=60mm, height=42mm, xmin=0, xmax=32, ymin=0, ymax=1.25, xtick={3.8,13,25}, ytick={0.5,1}, xlabel={$t$（日）}, ylabel={$A_2/A_1$}]
+  \addplot[bkcurve2, dashed, domain=0:30, samples=80] {1-0.5^(x/3.82)};
+  \addplot[bkcurve, domain=0:30] {1};
+  \draw[bkGray, line width=0.4pt] (axis cs:3.82,0) -- (axis cs:3.82,0.5);
+  \node[font=\sffamily\footnotesize, anchor=south east] at (axis cs:30,1.07) {親 Ra（実線）};
+  \node[font=\sffamily\footnotesize, anchor=north west, text=bkOrange!80!black] at (axis cs:8,0.62) {子 Rn（破線）};
+\end{axis}
+\begin{axis}[bkplot, at={(ra.east)}, anchor=west, xshift=16mm, width=60mm, height=42mm, xmin=0, xmax=80, ymin=0, ymax=1.18, xtick={23,48,72}, ytick={0.5,1}, xlabel={$t$（h）}, ylabel={放射能}]
+  \addplot[bkcurve, domain=0:76] {exp(-0.0105022*x)};
+  \addplot[bkcurve2, dashed, domain=0:76, samples=80] {1.1*(exp(-0.0105022*x)-exp(-0.115525*x))};
+  \draw[bkGray, line width=0.4pt] (axis cs:22.83,0) -- (axis cs:22.83,0.787);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black] at (axis cs:42,0.86) {親 Mo（実線）};
+  \node[font=\sffamily\footnotesize, anchor=north east, text=bkOrange!80!black] at (axis cs:76,0.32) {子 Tc（破線）};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{左：ラジウム226 とラドン222 の永続平衡（親の放射能を1とする）。右：モリブデン99 とテクネチウム99m の過渡平衡（はじめの親の放射能を1とし、親がこわれるとすべて子になるとした）。子は約23時間後にいちばん多くなり、そのあとは親の1.1倍で減る。}\label{ph:原-12:fig-heiko}
+\end{bkfigure}
+
+\begin{phbaisuru}{子の半減期}
+永続平衡に近づく速さは、子の半減期だけで決まります。子の放射能は、子の半減期の1回分で親の 50\,\%、2回分で 75\,\%、3回分で 87.5\,\% になります。子の半減期が2倍なら、平衡に近づくのに2倍の時間がかかります。
+\end{phbaisuru}
+
+\Needspace{12\baselineskip}\bksubsection{9}{数えるときの統計}
+\label{ph:原-12:sec9}
+放射線をはかる GM 計数管（原-14）は、放射線が1個来るたびに「カチッ」と1回数えます。原子がこわれるのは偶然なので、同じ物を同じ時間はかっても、数は毎回少しずつ違います。数学 6-4 で学んだように、平均して時間 $t$ に $\mu$ 回起きる偶然のできごとが、ちょうど $n$ 回起きる確率は
+\pheq{P(n)=\frac{\mu^n}{n!}e^{-\mu}}{（単位なし）}
+\label{ph:原-12:poisson}の\textbf{ポアソン分布}にしたがいます。\bkidx{ぽあそんぶんぷ}{ポアソン分布}原子の数がとても多く、そのうちのわずかがこわれるときは、こわれる数がこの分布になるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, axis lines=left, width=96mm, height=44mm, xmin=-0.8, xmax=10, ymin=0, ymax=0.27, xtick={0,1,...,9}, ytick={0.05,0.10,0.15,0.20,0.25}, yticklabel style={/pgf/number format/fixed, /pgf/number format/precision=2}, xlabel={$n$}, ylabel={$P(n)$}, grid=none]
+  \foreach \k/\v in {0/0.0498,1/0.1494,2/0.2240,3/0.2240,4/0.1680,5/0.1008,6/0.0504,7/0.0216,8/0.0081,9/0.0027}
+    {\edef\tmp{\noexpand\filldraw[fill=bkBlue!40, draw=bkInk, line width=0.5pt] (axis cs:\k-0.35,0) rectangle (axis cs:\k+0.35,\v);}\tmp}
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{平均3回（数学 6-4 のガイガーカウンター、1秒に平均0.3回を10秒）のポアソン分布。0回の確率は 0.050、2回と3回がいちばん多く 0.224。}\label{ph:原-12:fig-poisson}
+\end{bkfigure}
+
+ポアソン分布の標準偏差は、平均の平方根 $\sigma=\sqrt\mu$ です。だから、数えた数が $n$ 回なら、そのばらつきの目安は $\sqrt n$ で、結果は $n\pm\sqrt n$ と書きます（3-14・3-17：1分に 100±10、10分で 1000±32）。\bkidx{けいすうのとうけい}{計数の統計}ばらつきの割合 $\sqrt n/n=1/\sqrt n$ は、数えた数が多いほど小さくなります。
+
+\phboxhead{正味の計数}
+放射線は、はかりたい物がなくても、周りの土や空気、宇宙から少しずつ来ています（自然放射線：原-14）。これをバックグラウンドといいます。はかりたい物の正味の数は「物を置いたときの数」から「物がないときの数」を引いて求めます。2つの数のばらつきは足し合わさる（2乗して足す）ので
+\pheq{\sigma_{\text{正味}}=\sqrt{\sigma_{\text{全}}^{\,2}+\sigma_{\text{BG}}^{\,2}}=\sqrt{n_{\text{全}}+n_{\text{BG}}}}{カウント}
+です（例題11）。
+
+\begin{phbaisuru}[4倍]{はかる時間}
+はかる時間を4倍にすると、数える数も4倍、ばらつき $\sqrt n$ は2倍になり、ばらつきの割合は2分の1になります。ばらつきの割合を半分にするには、4倍の時間はからなければなりません。10分の1にするには100倍の時間が要ります。
+\end{phbaisuru}
+
+\Needspace{12\baselineskip}\bksubsection{10}{α崩壊はトンネル効果}
+\label{ph:原-12:sec10}
+α崩壊の半減期は、ポロニウム212 の \qty{0.3}{\micro s} から、ウラン238 の45億年まで、$10^{23}$ 倍以上も違います。ところが、出てくる α粒子のエネルギーは、4〜9 MeV と2倍ほどしか違いません。わずかなエネルギーの違いで、なぜ半減期がこんなに違うのでしょう。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=50mm, xmin=0, xmax=75, ymin=-20, ymax=34, xtick={61}, xticklabels={61}, ytick={4.27,27.9}, yticklabels={4.27,27.9}, xlabel={$r$（fm）}, ylabel={α粒子の位置エネルギー（MeV）}]
+  \fill[bkBlue!12] (axis cs:9.3,0) rectangle (axis cs:61,4.27);
+  \draw[bkInk, line width=1.4pt] (axis cs:0,-15) -- (axis cs:9.3,-15) -- (axis cs:9.3,27.87);
+  \addplot[bkcurve, domain=9.3:72, samples=80] {259.2/x};
+  \draw[bkRed!75!black, line width=1pt, dashed] (axis cs:0,4.27) -- (axis cs:72,4.27);
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkRed!75!black] at (axis cs:62,4.6) {Q（破線）};
+  \node[font=\sffamily\footnotesize, anchor=north] at (axis cs:4.6,-15.5) {原子核};
+  \node[font=\sffamily\footnotesize, anchor=south west, text=bkBlue!80!black] at (axis cs:20,14) {クーロン力の壁（実線）};
+  \node[font=\sffamily\footnotesize, anchor=north, align=center] at (axis cs:35,-3) {トンネルですりぬける所\\（破線の 9.3〜61 fm の部分）};
+  \node[font=\sffamily\footnotesize, anchor=north west] at (axis cs:10,-3) {9.3};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{ウラン238 の α崩壊。原子核の外では、α粒子はトリウム234 とクーロン力で押し合う。壁の高さは約 28 MeV なのに、α粒子のエネルギー（Q 値）は 4.27 MeV しかない。}\label{ph:原-12:fig-wall}
+\end{bkfigure}
+
+\noindent 図\ref{ph:原-12:fig-wall}のように、α粒子は、原子核の中では核力で閉じこめられています。外へ出ようとすると、残りの原子核とのクーロン力の壁があります。ウラン238 では、α粒子とトリウム234 が接する距離（$1.2\times(234^{1/3}+4^{1/3})\approx\qty{9.3}{fm}$）での壁の高さは
+\[ \frac{2\times90\times\qty{1.44}{MeV.fm}}{\qty{9.3}{fm}}\approx\qty{28}{MeV} \]
+です（$e^2/(4\pi\varepsilon_0)=\qty{1.44}{MeV.fm}$：原-11 例題12）。α粒子のエネルギー 4.27 MeV では、ニュートンの力学では決して外へ出られません。1928年、ガモフは、α粒子が原-6 のトンネル効果で壁をすりぬけて出てくる、と考えて、この謎を解きました。
+
+壁をすりぬける確率は、壁が高く厚いほど、指数関数で急に小さくなります（原-6）。クーロン力の壁では、すりぬける確率はおよそ
+\pheq{P\approx e^{-2\pi\eta},\qquad2\pi\eta=2\pi\,\frac{2Z\alpha c}{v}}{（単位なし）}
+\label{ph:原-12:gamow}となります（$2\pi\eta$ をガモフ因子という）。$Z$ は残る原子核の原子番号、$v$ は出ていく α粒子の速さ、$\alpha=e^2/(4\pi\varepsilon_0\hbar c)\approx1/137$ です。エネルギーが小さいと $v$ が小さく、$2\pi\eta$ が大きくなります。$2\pi\eta$ は百から二百ほどの大きな数なので、エネルギーが少し変わっただけで、$e^{-2\pi\eta}$ は何十けたも変わるのです。
+
+\begin{bkfigure}
+\begin{tikzpicture}
+\begin{axis}[bkplot, width=100mm, height=56mm, xmin=42, xmax=78, ymin=-10, ymax=20, xtick={45,50,...,75}, ytick={-6,0,6,12,18}, yticklabels={$10^{-6}$,1,$10^{6}$,$10^{12}$,$10^{18}$}, xlabel={$2\pi\eta/\ln10$}, ylabel={半減期（秒）}, axis lines=left]
+  \addplot[bkthin, dashed, domain=44:77] {0.865*x-46.58};
+  \fill[bkBlue!80!black] (axis cs:46.67,-6.53) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=north west, inner sep=3.5pt] at (axis cs:46.67,-6.53) {${}^{212}$Po};
+  \fill[bkBlue!80!black] (axis cs:49.9,-3.8) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=north west, inner sep=3.5pt] at (axis cs:49.9,-3.8) {${}^{214}$Po};
+  \fill[bkBlue!80!black] (axis cs:56.49,2.26) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=north west, inner sep=3.5pt] at (axis cs:56.49,2.26) {${}^{218}$Po};
+  \fill[bkBlue!80!black] (axis cs:60.54,5.52) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=north west, inner sep=3.5pt] at (axis cs:60.54,5.52) {${}^{222}$Rn};
+  \fill[bkBlue!80!black] (axis cs:60.05,7.08) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=south east, inner sep=3.5pt] at (axis cs:60.05,7.08) {${}^{210}$Po};
+  \fill[bkBlue!80!black] (axis cs:66.41,10.7) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=north west, inner sep=3.5pt] at (axis cs:66.41,10.7) {${}^{226}$Ra};
+  \fill[bkBlue!80!black] (axis cs:74.26,17.15) circle (1.8pt); \node[font=\sffamily\footnotesize, anchor=south east, inner sep=3.5pt] at (axis cs:74.26,17.15) {${}^{238}$U};
+\end{axis}
+\end{tikzpicture}
+\bkfigcaption{α崩壊の半減期（たては対数の目もり）と、ガモフ因子 $2\pi\eta$ を $\ln10$ でわった値（$e^{-2\pi\eta}$ が10の何乗分の1か）。7つの原子核が、ほぼ1本の直線（破線）にのる。Q 値は NIST の原子の質量から計算した。}\label{ph:原-12:fig-gn}
+\end{bkfigure}
+
+\noindent 図\ref{ph:原-12:fig-gn}のように、半減期の対数とガモフ因子は、ほぼ直線の関係になります。半減期が短い原子核ほど、α粒子のエネルギーが大きいというこの関係は、1911年ごろにガイガーとヌッタルが実験から見つけていました（ガイガー・ヌッタルの法則）。トンネル効果は、その理由を説明したのです。直線の傾きが1よりやや小さいことや、点が直線から少しずれることには、原子核の中で α粒子ができる確率など、ここで無視した細かい事情が効いています。
+
+\begin{phmodel}[α崩壊のトンネル]
+\phignore{原子核の中で α粒子ができる確率。原子核の形のゆがみ。α粒子が持ち出す回転（角運動量）。}
+\phassume{α粒子は原子核の中を行き来しながら、壁に当たるたびに $e^{-2\pi\eta}$ の確率ですりぬける。壁は点電荷どうしのクーロン力。}
+\phlimit{半減期の「けた」は合うが、正確な値には、無視した事情を入れた計算が要る。}
+\end{phmodel}
+
+\Needspace{12\baselineskip}\bksubsection{11}{中性子の寿命}
+\label{ph:原-12:sec11}
+原子核の中の中性子は、こわれないものが多いのですが、原子核の外に出た中性子（自由な中性子）は、β崩壊で陽子と電子と反ニュートリノに変わります（$Q=\qty{0.782}{MeV}$：原-11 ⑥のもっと知りたい）。平均寿命は約880秒（半減期では約10分）です。中性子の寿命は、宇宙のはじめにヘリウムがどれだけできたかを計算するときにも使う、大切な数です。ところが、その値は、まだ決まっていません（まだわかっていないこと）。
+
+\Needspace{12\baselineskip}\bksubsection{12}{天然の原子炉：オクロ}
+\label{ph:原-12:sec12}
+1972年、フランスの研究所で、アフリカのガボン共和国のオクロ鉱山のウランを調べたところ、ウラン235 の割合が、ほかのどこのウランより少ないことがわかりました。調べると、約20億年前に、この鉱床の中で、ウラン235 の核分裂が自然に続いていたのです（天然の原子炉）。
+
+いまの天然のウランでは、ウラン235 は 0.72\,\% しかなく、水と組み合わせただけでは核分裂は続きません（原-15）。でも、ウラン235 の半減期（7.04億年）はウラン238（44.7億年）より短いので、昔ほどウラン235 の割合は大きかったはずです。20億年前には約 3.7\,\% で、いまの原子力発電所（軽水炉）の燃料のウラン235 の割合（3〜5\,\%：環境省の資料）と同じくらいでした（例題13）。そこに地下水が入りこんで中性子を遅くし、核分裂が続いたと考えられています。
+
+%% ---------------------------------------------------------------
+\begin{phmada}[中性子の寿命は、なぜ2通りにはかると違う？]
+中性子の寿命は、2つの方法ではかられています。1つは、とても遅い中性子を、磁場や重力でできた「入れ物」に閉じこめ、時間がたったあとに何個残っているかを数える方法です。アメリカの UCN$\tau$ 実験は、877.75 秒という値を出しました（2021年の発表）。もう1つは、原子炉から出る中性子の流れ（ビーム）の中で、中性子がこわれてできた陽子を数える方法で、887.7 秒という値が出ています。2つの方法の値は、約10秒（1\,\% ほど）違い、それぞれの誤差よりずっと大きいのです。どちらかのはかり方に、まだ気づいていない問題があるのか、それとも、中性子がほかの何か（まだ見つかっていない粒）に変わる道があるのか、まだわかっていません。
+\end{phmada}
+
+\begin{phsaki}{放射性崩壊の先へ}
+β崩壊で出る電子のエネルギーがばらばらで、ニュートリノがエネルギーを分け合っていること、原子核のエネルギーの状態と γ線の関係は、原子核物理学の専門の本で学びます。放射性同位体の化学（放射化学）、放射線をはかる技術（放射線計測：原-14）、地球や宇宙の年代を調べる学問（年代学・地球化学）も、この章の続きです。
+\end{phsaki}
+
+\begin{senmonsho}[核データの表の書き方]
+\begin{bkhonbun}
+${}^{226}$Ra：$T_{1/2}=1600$ a，崩壊様式 $\alpha$ (100\,\%)，$Q_\alpha=4870.7$ keV．娘核種 ${}^{222}$Rn：$T_{1/2}=3.82$ d．
+永続平衡では，娘核種の放射能は親核種の放射能に等しく，$A_2=A_1$ となる．
+\end{bkhonbun}
+\bkyaku{「a」はラテン語の年（annus）で、年のこと。「d」は日。「崩壊様式」は、どの崩壊をするか（α・β$^-$・β\textsuperscript{+}・電子捕獲など）と、その割合。「$Q_\alpha$」は α崩壊の Q 値で、keV（1000 eV）で書くことが多い。「娘核種」は、この本の「子」のこと（親核種は「親」）。}
+\end{senmonsho}
+
+\begin{taisetsu}
+\def\tsl#1{\makebox[7.2\zw][l]{\sffamily\bfseries\small\color{\bkTT}#1}}
+\tsl{α・β・γ}α：原子番号 $-2$・質量数 $-4$、β：原子番号 $+1$、γ：変わらない\\[3pt]
+\tsl{半減期}$N=N_0\Bigl(\dfrac12\Bigr)^{t/T_{1/2}}=N_0e^{-\lambda t}$、$T_{1/2}=\dfrac{\ln2}{\lambda}=\tau\ln2$\\[3pt]
+\tsl{放射能}$A=\lambda N$〔Bq〕\\[3pt]
+\tsl{年代}$t=T_{1/2}\times\dfrac{\log(N_0/N)}{\log2}$\\[3pt]
+\tsl{親と子}$\dfrac{\dd N_2}{\dd t}=\lambda_1N_1-\lambda_2N_2$、永続平衡 $A_2=A_1$\\[3pt]
+\tsl{数える}$n\pm\sqrt n$、正味のばらつき $\sqrt{n_{\text{全}}+n_{\text{BG}}}$\\[3pt]
+\tsl{トンネル}すりぬける確率 $\approx e^{-2\pi\eta}$
+\end{taisetsu}
+
+\begin{kotoba}
+\small
+\bkword{放射線}{原子核がひとりでに変わるときに出る、速い粒やエネルギーの大きい光。}
+\bkword{放射能}{放射線を出す性質。その強さ（1秒にこわれる原子の数）の単位は Bq。}
+\bkword{α崩壊・β崩壊}{ヘリウム4 の原子核を出す変化と、中性子が陽子に変わって電子を出す変化。}
+\bkword{半減期}{放射性の原子の数が半分になるまでの時間。}
+\bkword{崩壊定数}{1個の原子が1秒にこわれる確率 $\lambda$。}
+\bkword{崩壊系列}{崩壊を繰り返して、安定な原子核に行きつくまでの道すじ。}
+\bkword{永続平衡}{子の放射能が、半減期のずっと長い親の放射能と等しくなった状態。}
+\bkword{ポアソン分布}{偶然のできごとの回数の分かれ方。ばらつきは平均の平方根。}
+\end{kotoba}
+
+\bkkigocards{\bkkigocard{$\lambda$}{ラムダ}{崩壊定数〔1/s〕。原子1個が1秒にこわれる確率。第4部の記号。第1部・原-11 の波長 $\lambda$ とは別の量}{decay constant}{原-12}}
+{\bkkigocard{$T_{1/2}$}{ティー・にぶんのいち}{半減期〔s〕。数学 3-11 は $T$ と書いた。$T_{1/2}=\ln2/\lambda$}{half-life}{原-12}}
+\bkkigocards{\bkkigocard{$A$}{エー}{放射能〔Bq〕。$A=\lambda N$。原-1・原-11 の質量数 $A$、原-4 のアインシュタインの係数 $A$ とは別の量（原-12〜14 では質量数を記号にしない）}{activity}{原-12}}{}
+
+%% ======================== 例題 ========================
+\Needspace{10\baselineskip}\bksection{reidai}{例題でたしかめよう}
+\label{ph:原-12:ex1}
+\begin{phreidai}[ラジウム226 の α崩壊のエネルギー]
+ラジウム226 が α崩壊してラドン222 になるときの Q 値と、α粒子の運動エネルギーを求めましょう。原子の質量は ${}^{226}$Ra 226.025410 u、${}^{222}$Rn 222.017578 u、${}^4$He 4.002603 u、1 u＝931.5 MeV とします。
+\phbamen
+α崩壊で出るエネルギーが、α粒子と残りの原子核にどう分かれるかを調べる場面です（②。原-11 ⑥）。
+\phmushi
+はじめのラジウムは止まっているとします。γ線は出さないとします。電子の勘定は、原子の質量を使えば左右でそろいます。
+\phzu
+${}^{226}_{\ 88}\mathrm{Ra}\to{}^{222}_{\ 86}\mathrm{Rn}+{}^4_2\mathrm{He}$。α粒子の運動エネルギー $K_\alpha$、ラドンの反動の運動エネルギー $K_{\mathrm{Rn}}$。
+\phriyu
+Q 値は質量の差から求めます。止まっていた物が2つに分かれるので、運動量の保存（力-3）から、2つは反対向きに同じ大きさの運動量 $p$ で飛びます。運動エネルギーは $p^2/(2m)$ なので、質量に反比例して分かれます。
+\phtateru
+\[ Q=931.5\times(m_{\mathrm{Ra}}-m_{\mathrm{Rn}}-m_{\mathrm{He}}),\qquad K_\alpha=Q\times\frac{m_{\mathrm{Rn}}}{m_{\mathrm{Rn}}+m_{\mathrm{He}}} \]
+\phtoku
+\[ m_{\mathrm{Ra}}-m_{\mathrm{Rn}}-m_{\mathrm{He}}=226.025410-222.017578-4.002603=\qty{0.005229}{u} \]
+\[ Q=931.5\times0.005229=\qty{4.87}{MeV},\qquad K_\alpha=4.87\times\frac{222}{226}=\qty{4.78}{MeV} \]
+ラドンの反動は $4.87-4.78=\qty{0.09}{MeV}$ です。
+\phtashikame
+単位：MeV。\\
+大きさ：α粒子が Q 値のほとんど（98\,\%）を持っていきます。実際に観測されるいちばん多い α線のエネルギーも、約 4.78 MeV です。\\
+極端な場合：残りの原子核がとても重ければ、α粒子が Q 値の全部を持っていきます。
+\kotae $Q=\qty{4.87}{MeV}$、α粒子 \qty{4.78}{MeV}（反動 \qty{0.09}{MeV}）
+\end{phreidai}
+\begin{jibun}
+ポロニウム210 が α崩壊して鉛206 になるときの Q 値と、α粒子の運動エネルギーを求めましょう（${}^{210}$Po 209.982874 u、${}^{206}$Pb 205.974466 u、${}^4$He 4.002603 u、1 u＝931.5 MeV）。
+\bkjans{$209.982874-205.974466$ $-4.002603$ $=\qty{0.005805}{u}$、$Q=\qty{5.407}{MeV}$。$K_\alpha=5.407\times206/210=\qty{5.30}{MeV}$}
+\end{jibun}
+
+\label{ph:原-12:ex2}
+\begin{phreidai}[ヨウ素131 が減っていく]
+ヨウ素131 の半減期は約8日です。80日たつと、はじめの何分の1になりますか。
+\phbamen
+放射性のヨウ素が、時間とともに減っていく場面です（③）。
+\phmushi
+体の外へ出ていくこと（生物学的な排出）は考えず、放射性の崩壊だけを考えます。半減期はちょうど8日とします。
+\phzu
+$T_{1/2}=8$ 日、$t=80$ 日。
+\phriyu
+半減期の何回分たったかを数えれば、$(1/2)^{\text{回数}}$ で残りがわかります。
+\phtateru
+\[ \frac{N}{N_0}=\Bigl(\frac12\Bigr)^{t/T_{1/2}} \]
+\phtoku
+$t/T_{1/2}=80\div8=10$ 回分なので
+\[ \frac{N}{N_0}=\Bigl(\frac12\Bigr)^{10}=\frac1{1024} \]
+\phtashikame
+単位：比なので単位なし。\\
+大きさ：約1000分の1（0.1\,\%）。半減期の10倍で約1000分の1、20倍で約100万分の1、と覚えておくと便利です。\\
+極端な場合：$t=0$ なら1（全部残る）。
+\kotae 約 $\dfrac{1}{1000}$（$\dfrac1{1024}$）
+\end{phreidai}
+\begin{jibun}
+セシウム134 の半減期は約2年です。10年たつと、はじめの何\,\% になりますか。
+\bkjans{$10\div2=5$ 回分で $(1/2)^5=1/32$、約 3.1\,\%}
+\end{jibun}
+
+\label{ph:原-12:ex3}
+\begin{phreidai}[テクネチウム99m（3けたで書く）]
+病院の検査で使うテクネチウム99m（半減期6時間）は、（1）24時間後、（2）3時間後に、はじめの何\,\% 残っていますか（数学 3-11 と同じ数なので、3けたで書きます）。
+\phbamen
+検査で体に入れた薬の放射能が、時間とともに減る場面です（③）。
+\phmushi
+体の外へ出ていくことは考えません。
+\phzu
+$T_{1/2}=\qty{6}{h}$。（1）$t=\qty{24}{h}$、（2）$t=\qty{3}{h}$。
+\phriyu
+半減期の式は、$t/T_{1/2}$ が整数でなくても使えます。
+\phtateru
+\[ \frac{N}{N_0}=\Bigl(\frac12\Bigr)^{t/6} \]
+\phtoku
+（1）$(1/2)^{24/6}=(1/2)^4=0.0625$ で 6.25\,\%。\\
+（2）$(1/2)^{3/6}=(1/2)^{1/2}=1/\sqrt2=0.707$ で 70.7\,\%。
+\phtashikame
+単位：比。\\
+大きさ：3時間は半減期の半分ですが、残りは 75\,\% ではありません。最初の3時間で減る割合と、次の3時間で減る割合が同じ（$0.707\times0.707=0.5$）だからです（図\ref{ph:原-12:fig-tc}）。\\
+極端な場合：$t=6$ 時間なら 50\,\%。
+\kotae （1）6.25\,\%　（2）70.7\,\%
+\end{phreidai}
+\begin{jibun}
+テクネチウム99m（半減期6時間）は、（1）9時間後、（2）1時間後に、はじめの何\,\% 残っていますか（3けたで書く）。
+\bkjans{（1）$(1/2)^{1.5}=0.354$ で 35.4\,\%　（2）$(1/2)^{1/6}=0.891$ で 89.1\,\%}
+\end{jibun}
+
+\label{ph:原-12:ex4}
+\begin{phreidai}[ラジウム226 1 g の放射能]
+ラジウム226（半減期 1600年）1 g の放射能を求めましょう。モル質量は 226 g/mol、$N_{\mathrm A}=\qty{6.02e23}{mol^{-1}}$、1年＝$\qty{3.16e7}{s}$ とします。
+\phbamen
+決まった量の放射性物質が、1秒にいくつこわれるかを求める場面です（④）。
+\phmushi
+ラジウムから生まれたラドンなどの子の放射能は数えず、ラジウム226 自身の放射能だけを考えます。
+\phzu
+質量 1 g、$T_{1/2}=1600$ 年。
+\phriyu
+放射能は $A=\lambda N$ です。原子の数 $N$ はモルの数×アボガドロ定数、$\lambda$ は $0.693/T_{1/2}$ で、時間を秒に直します。
+\phtateru
+\[ N=\frac{1}{226}\times N_{\mathrm A},\qquad\lambda=\frac{0.693}{T_{1/2}},\qquad A=\lambda N \]
+\phtoku
+\[ N=\frac{6.02\times10^{23}}{226}=\qty{2.664e21}{個} \]
+\[ \lambda=\frac{0.693}{1600\times3.16\times10^7}=\qty{1.371e-11}{s^{-1}} \]
+\[ A=1.371\times10^{-11}\times2.664\times10^{21}=\qty{3.65e10}{Bq}\approx\qty{3.7e10}{Bq} \]
+\phtashikame
+単位：(1/s)×個＝個/s＝Bq。\\
+大きさ：昔の単位 1 Ci（$\qty{3.7e10}{Bq}$）とほぼ同じ。もともと、ラジウム 1 g の放射能を 1 Ci と決めたのです。\\
+極端な場合：半減期が2倍なら、同じ 1 g の放射能は半分です。
+\kotae 約 $\qty{3.7e10}{Bq}$
+\end{phreidai}
+\begin{jibun}
+ウラン238（半減期 45億年、モル質量 238 g/mol）1 g の放射能を求めましょう（$N_{\mathrm A}=\qty{6.02e23}{mol^{-1}}$、1年＝$\qty{3.16e7}{s}$）。
+\bkjans{$N=\qty{2.53e21}{個}$、$\lambda=\qty{4.9e-18}{s^{-1}}$ で、約 $\qty{1.2e4}{Bq}$}
+\end{jibun}
+
+\label{ph:原-12:ex5}
+\begin{phreidai}[体の中のカリウム40]
+体重 60 kg の人の体には、カリウムが約 120 g あるとします。カリウムの 0.0117\,\% が放射性のカリウム40（半減期 13億年、モル質量 40 g/mol）です。体の中のカリウム40 の原子の数と、放射能を求めましょう（$N_{\mathrm A}=\qty{6.02e23}{mol^{-1}}$、1年＝$\qty{3.16e7}{s}$）。
+\phbamen
+わたしたちの体が、いつも自分の中から放射線を出している場面です（①④）。
+\phmushi
+体の中のほかの放射性物質（炭素14 など）は考えません。カリウムは体中に一様にあるとします。
+\phzu
+カリウム 120 g のうちカリウム40 は $120\times0.000117=\qty{0.0140}{g}$。
+\phriyu
+例題4 と同じく、原子の数を求めて $A=\lambda N$ を使います。
+\phtateru
+\[ N=\frac{0.0140}{40}\times N_{\mathrm A},\qquad A=\frac{0.693}{T_{1/2}}\times N \]
+\phtoku
+\[ N=\frac{0.0140}{40}\times6.02\times10^{23}=\qty{2.1e20}{個} \]
+\[ A=\frac{0.693}{1.3\times10^9\times3.16\times10^7}\times2.1\times10^{20}=\qty{3.6e3}{Bq} \]
+\phtashikame
+単位：Bq。\\
+大きさ：環境省の資料では、体重 60 kg の人の体の中のカリウム40 は約 4000 Bq で、ほぼ合います。1秒に約3600個のカリウム40 が、体の中でこわれています。\\
+極端な場合：体重が半分の子どもなら、カリウムも約半分で、放射能も約半分です。
+\kotae 原子 約 $\qty{2.1e20}{個}$、放射能 約 $\qty{3.6e3}{Bq}$
+\end{phreidai}
+\begin{jibun}
+バナナ1本にカリウムが 0.36 g ふくまれるとします。カリウム40 の放射能を求めましょう（存在比 0.0117\,\%、半減期 13億年、モル質量 40 g/mol、$N_{\mathrm A}=\qty{6.02e23}{mol^{-1}}$、1年＝$\qty{3.16e7}{s}$）。
+\bkjans{カリウム40 は $0.36\times0.000117=\qty{4.2e-5}{g}$、原子 $\qty{6.3e17}{個}$、放射能 約 \qty{11}{Bq}}
+\end{jibun}
+
+\label{ph:原-12:ex6}
+\begin{phreidai}[炭素14 で年代をはかる（はてな？）]
+遺跡から出た木の炭素14 の割合が、生きている木の（1）60\,\%、（2）25\,\% でした。それぞれ、木が切られてから何年たっていますか。炭素14 の半減期を 5730年とします（数学 6-4 と同じ）。
+\phbamen
+炭素14 の時計で、木が死んでからの時間を求める場面です（⑦）。
+\phmushi
+大気の炭素14 の割合の昔からの変化（補正）は考えません。
+\phzu
+$T_{1/2}=5730$ 年、$N/N_0=0.60$、$0.25$。
+\phriyu
+$N/N_0=(1/2)^{t/T_{1/2}}$ を、$t$ について解きます（3-12 の対数）。
+\phtateru
+\[ t=T_{1/2}\times\frac{\log(N_0/N)}{\log2} \]
+\phtoku
+（1）$\log(1/0.60)=0.2218$、$\log2=0.3010$ なので
+\[ t=5730\times\frac{0.2218}{0.3010}=\qty{4.2e3}{年} \]
+（2）$25\,\%=1/4$ は半減期の2回分なので、$t=2\times5730=11460$ 年、約1万1千年。
+\phtashikame
+単位：年。\\
+大きさ：60\,\% は半減期の1回分（50\,\%）より多く残っているので、5730年より短い。25\,\% は2回分です。いまの評価の半減期 5700年を使うと、（1）は約4200年で、違いは 0.5\,\% ほどです。\\
+極端な場合：$N/N_0=1$ なら $t=0$。時定数 $\tau=5730\div0.693\approx8270$ 年（6-4）を使って $t=\tau\ln(N_0/N)$ としても同じです。
+\kotae （1）約4200年　（2）約1万1千年（11460年）
+\end{phreidai}
+\begin{jibun}
+炭素14 の割合が、生きているときの（1）80\,\%、（2）10\,\% のとき、何年たっていますか（半減期 5730年）。
+\bkjans{（1）$5730\times\log1.25/\log2$ で約1800年　（2）$5730\times\log10/\log2$ で約1万9千年}
+\end{jibun}
+
+\label{ph:原-12:ex7}
+\begin{phreidai}[親と子：子がいちばん多くなるとき]
+数学 6-14 の例題と同じく、親の時定数（平均寿命）$\tau_1=\qty{2}{h}$、子の $\tau_2=\qty{1}{h}$、はじめ親 1000個、子 0個とします。子がいちばん多くなる時刻と、そのときの子の数を求めましょう。そのとき、親と子の放射能はどうなっていますか。
+\phbamen
+親がこわれて子になり、子もまたこわれる場面です（⑧）。
+\phmushi
+子からできる孫は考えません。原子の数は十分多く、ばらつきは無視します。
+\phzu
+$\lambda_1=1/\tau_1=\qty{0.5}{h^{-1}}$、$\lambda_2=1/\tau_2=\qty{1}{h^{-1}}$、$N_{10}=1000$。
+\phriyu
+ベイトマンの式（⑧）と、子がいちばん多い時刻の式を使います。
+\phtateru
+\[ t_{\max}=\frac{\ln(\lambda_2/\lambda_1)}{\lambda_2-\lambda_1},\qquad N_2=N_{10}\frac{\lambda_1}{\lambda_2-\lambda_1}\bigl(e^{-\lambda_1t}-e^{-\lambda_2t}\bigr) \]
+\phtoku
+$t_{\max}=\ln2\div0.5=\qty{1.39}{h}$。このとき $e^{-\lambda_1t}=e^{-\ln2}=\tfrac12$、$e^{-\lambda_2t}=\tfrac14$ なので
+\[ N_2=1000\times\frac{0.5}{0.5}\times\Bigl(\frac12-\frac14\Bigr)=250\ \text{個} \]
+親は $1000\times\tfrac12=500$ 個で、親の放射能は $0.5\times500=250$ 個/h、子の放射能は $1\times250=250$ 個/h で、等しくなっています。
+\phtashikame
+単位：h、個。\\
+大きさ：数学 6-14 の答え（約1.4時間後に250個）と同じです。\\
+極端な場合：子の寿命がとても短ければ、子はたまらず、すぐに親と同じ放射能になります（平衡）。
+\kotae 約1.39時間後に250個。そのとき親と子の放射能は等しい（どちらも250個/h）
+\end{phreidai}
+\begin{jibun}
+例題7 で、2時間後の親と子の数を求めましょう。
+\bkjans{親 $1000e^{-1}\approx368$ 個、子 $1000(e^{-1}-e^{-2})\approx233$ 個}
+\end{jibun}
+
+\label{ph:原-12:ex8}
+\begin{phreidai}[ラドンがラジウムとそろうまで]
+ラジウム226 を、空気がもれない容器に閉じこめました。はじめラドン222 は0です。ラドン222（半減期 3.8日）の放射能が、ラジウムの放射能の 99\,\% になるのは何日後ですか。
+\phbamen
+永続平衡に近づいていく場面です（⑧）。
+\phmushi
+ラジウムの半減期（1600年）は十分長いので、数十日の間、ラジウムの放射能は変わらないとします。ラドンからできる子も考えません。
+\phzu
+$T_2=3.8$ 日。$A_2/A_1=0.99$。
+\phriyu
+永続平衡の式 $A_2=A_1(1-e^{-\lambda_2t})$ で、$e^{-\lambda_2t}=(1/2)^{t/T_2}$ です。
+\phtateru
+\[ 1-\Bigl(\frac12\Bigr)^{t/3.8}=0.99,\qquad\Bigl(\frac12\Bigr)^{t/3.8}=0.01 \]
+\phtoku
+\[ t=3.8\times\frac{\log100}{\log2}=3.8\times\frac{2}{0.301}=\qty{25}{日} \]
+\phtashikame
+単位：日。\\
+大きさ：半減期の約6.6回分。半減期の7回分で $1-1/128=99.2\,\%$ なので、合っています。\\
+極端な場合：$t$ が半減期と同じなら 50\,\%。
+\kotae 約25日後
+\end{phreidai}
+\begin{jibun}
+例題8 で、ラドンの放射能がラジウムの 90\,\% になるのは何日後ですか。
+\bkjans{$3.8\times\log10/\log2$ で約13日後}
+\end{jibun}
+
+\label{ph:原-12:ex9}
+\begin{phreidai}[テクネチウムのジェネレーター]
+病院の「テクネチウム・ジェネレーター」には、モリブデン99（半減期 66時間）が入っていて、こわれてテクネチウム99m（半減期 6.0時間）ができます。テクネチウムを全部取り出した直後から数えて、テクネチウムがいちばん多くなるのは何時間後ですか（数学 6-14 と同じ数）。
+\phbamen
+過渡平衡の親と子の場面です（⑧）。
+\phmushi
+モリブデンがこわれると、すべてテクネチウム99m になるとします（実際は約9割）。テクネチウムからできる子は考えません。
+\phzu
+$\lambda_1=0.693/66=\qty{0.0105}{h^{-1}}$、$\lambda_2=0.693/6.0=\qty{0.1155}{h^{-1}}$。
+\phriyu
+子がいちばん多い時刻の式を使います。
+\phtateru
+\[ t_{\max}=\frac{\ln(\lambda_2/\lambda_1)}{\lambda_2-\lambda_1} \]
+\phtoku
+$\lambda_2/\lambda_1=66/6.0=11$ なので
+\[ t_{\max}=\frac{\ln11}{0.1155-0.0105}=\frac{2.398}{0.1050}=\qty{23}{h} \]
+\phtashikame
+単位：(1/h) でわって h。\\
+大きさ：約1日。だから病院では、毎朝テクネチウムを取り出して（しぼり出して）使います。\\
+極端な場合：子の半減期がもっと短ければ、もっと早くいちばん多くなります。
+\kotae 約23時間後
+\end{phreidai}
+\begin{jibun}
+例題9 で、十分に時間がたって過渡平衡になると、テクネチウム99m の放射能はモリブデン99 の放射能の何倍になりますか（モリブデンがこわれるとすべてテクネチウムになるとする）。
+\bkjans{$\lambda_2/(\lambda_2-\lambda_1)=66/(66-6.0)=1.1$ 倍}
+\end{jibun}
+
+\label{ph:原-12:ex10}
+\begin{phreidai}[ガイガーカウンターが鳴らない確率]
+数学 6-4 のガイガーカウンターは、平均して1秒に0.3回鳴ります。10秒の間に、（1）1回も鳴らない確率、（2）ちょうど3回鳴る確率を求めましょう（$e^{-3}=0.0498$）。
+\phbamen
+偶然に来る放射線を数える場面です（⑨）。
+\phmushi
+計数管が数え落とすこと（原-14）は考えません。平均の回数は一定とします。
+\phzu
+10秒の平均の回数 $\mu=0.3\times10=3$。
+\phriyu
+偶然のできごとの回数は、ポアソン分布にしたがいます。
+\phtateru
+\[ P(n)=\frac{\mu^n}{n!}e^{-\mu} \]
+\phtoku
+（1）$P(0)=e^{-3}=0.050$\\
+（2）$P(3)=\dfrac{3^3}{3!}e^{-3}=4.5\times0.0498=0.224$
+\phtashikame
+単位：確率なので単位なし。\\
+大きさ：平均3回なのに、1回も鳴らないことが20回に1回ほどあります。図\ref{ph:原-12:fig-poisson}の棒の高さと合います。\\
+極端な場合：$\mu$ がとても大きいと、0回の確率はほとんど0です。
+\kotae （1）約 0.050　（2）約 0.22
+\end{phreidai}
+\begin{jibun}
+例題10 で、10秒の間に（1）ちょうど1回鳴る確率、（2）1回以上鳴る確率を求めましょう。
+\bkjans{（1）$3e^{-3}\approx0.15$　（2）$1-e^{-3}\approx0.95$}
+\end{jibun}
+
+\label{ph:原-12:ex11}
+\begin{phreidai}[正味の計数率とばらつき]
+試料を置いて10分数えると1200カウント、試料をどけて10分数えると900カウント（バックグラウンド）でした。試料からの正味の計数率（1分あたりのカウント、cpm）と、そのばらつきを求めましょう。
+\phbamen
+バックグラウンドを引いて、試料だけの放射線を求める場面です（⑨）。
+\phmushi
+数え落としは考えません。バックグラウンドは、試料があってもなくても同じとします。
+\phzu
+$n_{\text{全}}=1200$、$n_{\text{BG}}=900$、どちらも10分。
+\phriyu
+数えた数のばらつきは $\sqrt n$ で、差のばらつきは、2つの2乗の和の平方根です。
+\phtateru
+\[ \text{正味の数}=n_{\text{全}}-n_{\text{BG}},\qquad\sigma=\sqrt{n_{\text{全}}+n_{\text{BG}}} \]
+\phtoku
+正味の数 $1200-900=300$ カウント、$\sigma=\sqrt{2100}=46$ カウント。10分でわって
+\[ \text{正味の計数率}=30\pm4.6\ \text{cpm} \]
+\phtashikame
+単位：カウント÷分＝cpm。\\
+大きさ：正味の数（300）より、ばらつき（46）は、正味の数の約15\,\% と大きい。バックグラウンドが大きいと、引き算のあとのばらつきが目立ちます。\\
+極端な場合：はかる時間を4倍にすると、ばらつきの割合は半分になります（⑨）。
+\kotae $30\pm4.6$ cpm
+\end{phreidai}
+\begin{jibun}
+例題11 と同じ試料とバックグラウンドを、40分ずつ数えると、4800カウントと3600カウントでした。正味の計数率とばらつきを求めましょう。
+\bkjans{$(4800-3600)\div40=30$ cpm、$\sqrt{8400}\div40\approx2.3$ cpm。$30\pm2.3$ cpm（ばらつきは約半分）}
+\end{jibun}
+
+\label{ph:原-12:ex12}
+\begin{phreidai}[ガモフ因子と半減期のけた]
+ポロニウム212（Q 値 8.95 MeV、残る原子核は原子番号 82）とウラン238（Q 値 4.27 MeV、残る原子核は原子番号 90）の α崩壊について、ガモフ因子 $2\pi\eta$ を求め、すりぬける確率 $e^{-2\pi\eta}$ が何けた違うか求めましょう。実際の半減期（\qty{0.29}{\micro s} と45億年）の比と比べましょう。α粒子の速さは、運動エネルギーをほぼ Q 値として $v/c=\sqrt{2Q/(m_\alpha c^2)}$、$m_\alpha c^2=\qty{3727}{MeV}$ とします（$\alpha=1/137$）。
+\phbamen
+わずかなエネルギーの違いが、半減期を何けたも変えることを確かめる場面です（⑩）。
+\phmushi
+原子核の中で α粒子ができる確率の違いと、反動は無視します。
+\phzu
+$2\pi\eta=2\pi\times2Z\alpha/(v/c)$。
+\phriyu
+すりぬける確率がけたで変わるので、$e^{-2\pi\eta}$ を10の何乗かで比べます（$e^{-x}=10^{-x/2.303}$）。
+\phtateru
+\[ \frac{v}{c}=\sqrt{\frac{2Q}{3727}},\qquad2\pi\eta=\frac{4\pi Z}{137\times(v/c)} \]
+\phtoku
+ポロニウム212：$v/c=\sqrt{2\times8.95/3727}=0.0693$、$2\pi\eta=4\times3.14\times82\div(137\times0.0693)=108$。\\
+ウラン238：$v/c=\sqrt{2\times4.27/3727}=0.0479$、$2\pi\eta=4\times3.14\times90\div(137\times0.0479)=172$。\\
+差は $172-108=64$ なので、確率の比は $e^{64}=10^{64/2.303}\approx10^{28}$。\\
+実際の半減期の比は $45\times10^8\times3.16\times10^7\div(0.29\times10^{-6})\approx5\times10^{23}$、約 $10^{24}$。
+\phtashikame
+単位：$2\pi\eta$ は単位なし。\\
+大きさ：エネルギーは約2倍しか違わないのに、すりぬける確率は約28けた、半減期は約24けた違います。けたの大きさはほぼ合い、トンネルの考えが正しいことを示しています。4けたのずれは、無視した事情によるものです。\\
+極端な場合：Q 値が壁の高さ（約 28 MeV）に近づくと、$2\pi\eta$ は小さくなり、すぐにこわれます。
+\kotae $2\pi\eta$ は約108と約172、確率は約 $10^{28}$ 倍違う（半減期の比は約 $10^{24}$。けたの大きさは合う）
+\end{phreidai}
+\begin{jibun}
+ラドン222（Q 値 5.59 MeV、残る原子核の原子番号 84）とラジウム226（Q 値 4.87 MeV、原子番号 86）で、$e^{-2\pi\eta}$ は何けた違いますか。実際の半減期（3.8日と1600年）の比と比べましょう（例題12 と同じ近似）。
+\bkjans{$2\pi\eta$ は約141と約154、確率は約 $10^{6}$ 倍。半減期の比は約 $1.5\times10^5$（けたが合う）}
+\end{jibun}
+
+\label{ph:原-12:ex13}
+\begin{phreidai}[20億年前のウラン（オクロ）]
+いまの天然のウランは、ウラン235 が 0.7204\,\%、ウラン238 が 99.2742\,\% です。半減期をウラン235 は 7.04億年、ウラン238 は 44.7億年として、20億年前のウランの中のウラン235 の割合を求めましょう。
+\phbamen
+時間をさかのぼって、昔の同位体の割合を求める場面です（⑫）。
+\phmushi
+ウラン234 などのほかの同位体と、鉱床の中で起きた反応は無視します。
+\phzu
+いまの数の比 $r=0.7204/99.2742=0.00726$。
+\phriyu
+過去へさかのぼると、どちらの原子も $2^{t/T_{1/2}}$ 倍だけ多かったことになります。比は、その倍率の比で変わります。
+\phtateru
+\[ r_{\text{昔}}=r\times\frac{2^{t/T_{235}}}{2^{t/T_{238}}} \]
+\phtoku
+$2^{20/7.04}=2^{2.84}=7.16$、$2^{20/44.7}=2^{0.447}=1.36$ なので
+\[ r_{\text{昔}}=0.00726\times\frac{7.16}{1.36}=0.0381 \]
+割合は $0.0381\div(1+0.0381)=0.0367$、約 3.7\,\% です。
+\phtashikame
+単位：比・割合。\\
+大きさ：いまの軽水炉の燃料（ウラン235 が 3〜5\,\%）と同じくらいです。これなら、水があれば核分裂が続けられます。\\
+極端な場合：$t=0$ なら、いまの 0.72\,\% にもどります。
+\kotae 約 3.7\,\%
+\end{phreidai}
+\begin{jibun}
+例題13 と同じ半減期で、10億年前のウランの中のウラン235 の割合を求めましょう。
+\bkjans{$0.00726\times2^{10/7.04}\div2^{10/44.7}=0.0166$、割合は約 1.6\,\%}
+\end{jibun}
+
+%% ======================== まちがえやすいところ ========================
+\Needspace{11\baselineskip}\bksection{tsumazuki}{まちがえやすいところをチェック}
+\begin{tsumazuki}{半減期の半分の時間で、4分の3が残る？}
+\bkng{半減期6時間のテクネチウム99m は、3時間後に 75\,\% 残る。}
+\bkok{$(1/2)^{3/6}=0.707$ で、70.7\,\%。減り方は直線ではなく、同じ時間で同じ割合。}
+3時間で 70.7\,\% になり、次の3時間でもその 70.7\,\% になって、合わせて 50\,\% です（③・例題3）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{半減期の2倍たつと、全部なくなる？}
+\bkng{半減期で半分なくなるので、もう一度半減期がたつと、残りの半分もなくなって0になる。}
+\bkok{半減期の2回分で、残りは $\tfrac12\times\tfrac12=\tfrac14$。0にはならない。}
+半減期ごとに「そのとき残っている量の」半分になります（③）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{β崩壊の電子は、原子の周りの電子？}
+\bkng{β線は、原子の周りを回っていた電子が飛び出したもの。}
+\bkok{β線の電子は、原子核の中で中性子が陽子に変わるときに生まれたもの。だから原子番号が1ふえる。}
+原子の周りの電子が出ても、原子核は変わりません（②）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{放射能と放射線は、同じもの？}
+\bkng{放射能が体についた、放射能をあびた。}
+\bkok{体につくのは放射性物質。あびるのは放射線。放射能は、放射線を出す性質・強さ（Bq）。}
+ことばを分けると、量（Bq と Sv：原-14）も分けて考えられます（①④）。
+\end{tsumazuki}
+
+\begin{tsumazuki}{同じものを2回はかって数が違ったら、どちらかが失敗？}
+\bkng{1回めが 100 カウント、2回めが 108 カウントだったので、どちらかが間違い。}
+\bkok{偶然のばらつきは $\sqrt{100}=10$ ほどある。8 の違いは、ふつうのばらつき。}
+放射線の数は、毎回少しずつ違うのが当たり前です（⑨）。
+\end{tsumazuki}
+
+\begin{column}{ベクレルの写真乾板}
+よく語られる話では、ベクレルは、ウランの塩が、日光に当たると光を出す（蛍光）のではないかと考え、塩を写真乾板の上に置いて日光に当てる実験を計画していました。ところが、曇りの日が続いたので、乾板と塩を引き出しにしまっておきました。念のために現像してみると、日光に当てていないのに、乾板ははっきり感光していました。ウランは、外からエネルギーをもらわなくても、ひとりでに放射線を出していたのです。ここから原子核の物理が始まりました。
+\end{column}
+
+%% ======================== 工学ではこう使う ========================
+\Needspace{10\baselineskip}\bksection{phgear}{工学ではこう使う}
+\begin{phkougaku}[半減期と放射能を使う技術]
+\textbf{核医学}：テクネチウム99m のγ線を体の外から写す検査、PET 検査（原-11）のように、半減期の短い放射性同位体は、検査が終わればすぐ減るように選ばれています。病院では、モリブデン99 から毎日テクネチウムを取り出して使います（例題9）。
+
+\textbf{年代測定}：考古学では炭素14、地質学ではカリウム40・ウラン238 で年代をはかります（⑦）。炭素14 の量は、加速器で原子を1個ずつ数える方法でもはかられます。
+
+\textbf{放射線管理}：原子力発電所や病院では、放射性物質の量（Bq）と半減期から、どれだけ保管すれば放射能が十分に減るかを計算して管理します（原-14・原-16）。
+
+\begin{phketa}[崩壊の数の目安]
+\phketaline{半減期の10倍}{約1000分の1（$1/1024$）}
+\phketaline{ラジウム 1 g}{約 $\qty{3.7e10}{Bq}$（1 Ci）}
+\phketaline{体の中のカリウム40（60 kg）}{約 \qty{4000}{Bq}（環境省の資料）}
+\phboxhead{答えが桁で合っているか}
+$\lambda$ を求めるとき、半減期を秒に直し忘れると、放射能が $3\times10^7$ 倍（1年の秒数）もずれます。
+\end{phketa}
+\end{phkougaku}
+\phstation{放射線計測,核医学,放射化学,年代学}{放射能、半減期、崩壊定数、崩壊系列、放射平衡、計数統計、娘核種}
+
+%% ======================== 章末問題 ========================
+\bkendproblems
+\bkproblemgroup{基本}{2}
+\bkproblem 次の崩壊の式の □ に入る原子核を書きましょう。（1）${}^{238}_{\ 92}\mathrm U\to\square+{}^4_2\mathrm{He}$（α崩壊）　（2）${}^{234}_{\ 90}\mathrm{Th}\to\square+\mathrm e^-+\bar\nu$（β崩壊）　（3）${}^{131}_{\ 53}\mathrm I\to\square+\mathrm e^-+\bar\nu$（β崩壊）
+\bkpans{（1）${}^{234}_{\ 90}\mathrm{Th}$　（2）${}^{234}_{\ 91}\mathrm{Pa}$　（3）${}^{131}_{\ 54}\mathrm{Xe}$}
+\bkproblem トリウム232（原子番号 90）は、崩壊を繰り返して、鉛208（原子番号 82）になります。α崩壊と β崩壊を、それぞれ何回したことになりますか。
+\bkpans{質量数が $232-208=24$ へるので α崩壊 6回。原子番号は $90-12=78$ になるので、β崩壊で $82-78=4$ 回ふえた。α 6回、β 4回}
+\bkproblem セシウム137 の半減期は約30年です。120年たつと、はじめの何\,\% になりますか。
+\bkpans{$120\div30=4$ 回分で $(1/2)^4=1/16$、約 6.3\,\%}
+\bkproblem テクネチウム99m（半減期6時間）は、12時間後と18時間後に、はじめの何\,\% 残っていますか。
+\bkpans{12時間後 25\,\%、18時間後 12.5\,\%}
+\bkproblem ヨウ素131（半減期8日）が、はじめの8分の1になるのは何日後ですか。
+\bkpans{$1/8=(1/2)^3$ なので、半減期の3回分で24日後}
+\bkproblem 木の炭素14 の割合が、生きている木の 12.5\,\% でした。何年前に切られた木ですか（半減期 5730年）。
+\bkpans{$12.5\,\%=1/8$ は半減期の3回分。$3\times5730=17190$ 年、約1万7千年前}
+\bkproblemgroup{チャレンジ}{5}
+\bkproblem 親の時定数（平均寿命）$\tau_1=\qty{4}{h}$、子の $\tau_2=\qty{1}{h}$、はじめ親 1000個、子 0個です。子がいちばん多くなる時刻と、そのときの子の数を求めましょう。
+\bkpans{$\lambda_1=0.25$、$\lambda_2=1$ /h。$t_{\max}=\ln4\div0.75=\qty{1.85}{h}$。$N_2=1000\times\frac{0.25}{0.75}(e^{-0.462}-e^{-1.85})$ で約157個}
+\bkproblem 試料を置くと 1分に平均 200 カウント、置かないと 1分に平均 100 カウント数えます。置いたときと置かないときを同じ $t$ 分ずつはかるとき、正味の計数率（100 cpm）のばらつきを 5 cpm にするには、$t$ を何分にすればよいですか。
+\bkpans{ばらつき $\sqrt{200t+100t}\div t=\sqrt{300/t}$ cpm。$\sqrt{300/t}=5$ より $t=12$ 分}
+\bkproblem ポロニウム214（Q 値 7.83 MeV）とポロニウム210（Q 値 5.41 MeV）は、どちらも α崩壊で鉛（原子番号 82）になります。例題12 と同じ近似で、すりぬける確率 $e^{-2\pi\eta}$ が何けた違うか求め、半減期（$\qty{1.6e-4}{s}$ と138日）の比と比べましょう。
+\bkpans{$2\pi\eta$ は約116と約140、確率は約 $10^{10}$ 倍。半減期の比は約 $7\times10^{10}$ で、けたが合う}
+\bkproblem 地球ができた46億年前の天然のウランでは、ウラン235 の割合は何\,\% でしたか（半減期はウラン235 が 7.04億年、ウラン238 が 44.7億年、いまの比 0.00726）。
+\bkpans{$0.00726\times2^{46/7.04}\div2^{46/44.7}=0.330$、割合は $0.330\div1.330$ で約25\,\%}
+
+\begin{furikaeri}
+\begin{checklist}
+\item α崩壊・β崩壊・γ線で、原子核がどう変わるかを書ける。\bkfurref{ph:原-12:sec2}
+\item 半減期を使って、残る量や、たった時間を求められる。\bkfurref{ph:原-12:sec3}
+\item 放射能（Bq）と原子の数の関係 $A=\lambda N$ を使える。\bkfurref{ph:原-12:sec4}
+\item 崩壊の法則を微分方程式で書き、数えるばらつきを見積もれる。\bkfurref{ph:原-12:sec5}
+\item 親と子の崩壊（放射平衡）と、α崩壊のトンネルを式で読める。\bkfurref{ph:原-12:sec8}
+\end{checklist}
+\end{furikaeri}
+\bkfukidashi{mina}{1個1個はいつこわれるかわからないのに、たくさん集まると、きっちり半減期で減るんだね。その「偶然のきまり」が、何千年もの時計になるなんて！}
