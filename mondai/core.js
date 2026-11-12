@@ -656,12 +656,16 @@
   function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
     return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
       if (!(k % 2)) return htmlEsc(seg);
-      let t = seg.slice(1, -1).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
+      const up = []; let t = seg.slice(1, -1).replace(/\\(?:mathrm|text)\{([^}]*)\}/g, (m, x) => { up.push(x); return '\u0001' + (up.length - 1) + '\u0002'; }).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
         .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
       t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);
+      t = t.replace(/\u0001(\d+)\u0002/g, (m, k) => htmlEsc(up[k]));   // \mathrm{A} は立てた字
       return t.replace(/\u0003([^\u0004]*)\u0004/g, '<tspan baseline-shift="super" font-size="70%">$1</tspan>').replace(/\u0005([^\u0006]*)\u0006/g, '<tspan baseline-shift="sub" font-size="70%">$1</tspan>');
     }).join('');
   }
+  // 立体の見取図：(x 右, y おく行き, z 上) を紙の上の点に（斜投影。おく行きは k 倍して、角 deg の向きへ）
+  M.proj3 = (p, k = 0.5, deg = 30) => [p[0] + k * p[1] * Math.cos(deg * Math.PI / 180), p[2] + k * p[1] * Math.sin(deg * Math.PI / 180)];
+  //   立体の例：const Q = p => M.proj3(p); items: [['poly', [Q([0,0,0]), Q([3,0,0]), Q([3,0,2]), Q([0,0,2])]], ['seg', Q([0,0,0]), Q([0,4,0]), {dash: true}], …]
   function figBox(fig) {   // 図の大きさ（単位）。ラベルの分の余白を足す
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     const P = p => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); };

@@ -17,7 +17,7 @@
       steps: ['s1', 's2', 's3', 'trap'].filter(s => $('#st-' + s).checked),
       mix: $('#mix').checked,
       seed: (+$('#seed').value >>> 0) || 1,
-      ruby: $('#ruby').checked,
+      ruby: $('#ruby').checked && +$('#vol').value < 4,   // 第4巻からはルビなし（教科書と同じ。第35回）
       name: $('#title').value,
     };
   }
