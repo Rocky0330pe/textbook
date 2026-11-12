@@ -196,15 +196,19 @@
   const between = t => t && t.ns === 2 && t.na === 1 && !Object.keys(t.sides).includes(Object.keys(t.angs)[0].toLowerCase());
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2）
-  function dest(p, self, why) {
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く（第36回 N-3：行き先はかならず書く）。
+  // extra：ほかの部のわざで楽になるときの、その番号（fits では見つからないので、ここで足す）
+  function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(4).filter(id => {
       const d = M.waza[id];
       if (id === self || d.part !== PART || !d.fits) return false;
       try { return !!d.fits(q, p); } catch (e) { return false; }
     });
+    (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
+    also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}${also.length ? `。わざ ${also.join('・')}` : ''}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -333,7 +337,7 @@
           q: `三角形ABCで、$\\mathrm{AB}=\\mathrm{AC}=${L}$、$\\mathrm{BC}=${2 * m}$ のとき、$\\${f} B$`, a,
           verify: () => { const P = triPts(2 * m, L, L), th = angAt(P.C, P.B, P.A); return numOK(a, TF[f](th)); },
         };
-        return dest(p, '4-32', `直角三角形ではない。Aから辺BCに垂線を下ろして直角三角形を作る。高さは $\\sqrt{${L}^{2}-${m}^{2}}=${hh}$ → $\\${f} B=${tx(v)}$`);
+        return dest(p, '4-32', `直角三角形ではない。Aから辺BCに垂線を下ろして直角三角形を作る。高さは $\\sqrt{${L}^{2}-${m}^{2}}=${hh}$ → $\\${f} B=${tx(v)}$`, ['4-20']);
       },
     },
   });
@@ -399,7 +403,7 @@
         const f = r.pick(['sin', 'cos']), t = r.pick([15, 75]), v = TRIG[f](t);
         const sp = t === 15 ? '45^{\\circ}-30^{\\circ}' : '45^{\\circ}+30^{\\circ}';
         return dest({ q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$` }, '4-33',
-          `$${DG(t)}$ は三角定規の角ではない。$${DG(t)}=${sp}$ に分けて加法定理を使う：$${tx(v)}$（4部のわざ 4-56）`);
+          `$${DG(t)}$ は三角定規の角ではない。$${DG(t)}=${sp}$ に分けて加法定理を使う：$${tx(v)}$`, ['4-56']);
       },
     },
   });
@@ -426,7 +430,7 @@
     fits(q) {
       if (rtKind(q) === 'hyp→leg') return true;
       if (/極座標/.test(q)) return true;
-      if (/(はしご|うで|坂道)/.test(q) && /地面と|水平と|肩から/.test(q) && !/板の長さ|坂道の長さ/.test(q)) return true;
+      if (/(はしご|うで|坂道)/.test(q) && /地面と|水平と|かべと|肩から/.test(q) && !/板の長さ|坂道の長さ|はしごの長さ/.test(q)) return true;
       if (/(ひも|ロープ)/.test(q) && /引く/.test(q) && /水平/.test(q) && !/斜面|つるす|合力/.test(q)) return true;
       return false;
     },
@@ -460,9 +464,18 @@
           verify: () => numOK(a, h * (opp ? Math.sin(rad(th)) : Math.cos(rad(th)))),
         };
       },
-      // 場面：はしご・坂道・ロボットのうで。約の値も
+      // 場面：はしご・坂道・ロボットのうで。約の値も。かべからはかった角（sin と cos が入れかわる。第36回 N-3 でわなから移した）
       s3(r) {
-        const k = r.int(0, 3);
+        const k = r.int(0, 4);
+        if (k === 4) {
+          const L = r.pick([2, 4, 6, 8]), w = r.pick([30, 60]), up = r.chance(0.5);
+          const v = R.mul(rq(L), up ? cosR(w) : sinR(w)), a = `$${tx(v)}$`;
+          return {
+            q: `長さ ${UN(L, 'm')} のはしごを、**かべと** $${DG(w)}$ の角になるように立てかける。${up ? '上のはしの高さ' : '下のはしからかべまでの距離'}は □ m`, a,
+            easy: `地面との角は $90^{\\circ}-${DG(w)}=${DG(90 - w)}$：$${L}\\${up ? 'sin' : 'cos'}${DG(90 - w)}=${L}\\${up ? 'cos' : 'sin'}${DG(w)}=${tx(v)}$`, easyCheck: 'last',
+            verify: () => { const g = 90 - w; return numOK(a, L * (up ? Math.sin(rad(g)) : Math.cos(rad(g)))); },
+          };
+        }
         if (k === 0 || k === 3) {
           const L = r.pick([2, 3, 4, 5, 6]), th = r.pick(NICE), up = r.chance(0.6), f = up ? 'sin' : 'cos';
           const v = R.mul(rq(L), TRIG[f](th)), what = up ? '上のはしの高さ' : '下のはしからかべまでの距離';
@@ -484,15 +497,15 @@
         return { q: `長さ ${UN(L, 'cm')} のロボットのうでを、肩から $${DG(th)}$ の向きにのばす。肩を原点として、手の $(x,\\ y)$`, a, easyCheck: false,
           easy: `$(${L}\\cos${DG(th)},\\ ${L}\\sin${DG(th)})$`, verify: () => ptOK(a, L * Math.cos(rad(th)), L * Math.sin(rad(th))) };
       },
-      // わな：かべ（たての線）からはかった角。sin と cos が入れかわる
+      // わな：はしごの長さ（斜辺）を求める。かけ算ではなく、わり算（4-35）
       trap(r) {
-        const L = r.pick([2, 4, 6, 8]), w = r.pick([30, 60]), up = r.chance(0.5);
-        const v = R.mul(rq(L), up ? cosR(w) : sinR(w)), a = `$${tx(v)}$`;
+        const L = r.pick([2, 4, 6, 8]), th = r.pick(NICE), up = r.chance(0.5), f = up ? 'sin' : 'cos';
+        const leg = R.mul(rq(L), TRIG[f](th)), a = `$${L}$`;
         const p = {
-          q: `長さ ${UN(L, 'm')} のはしごを、**かべと** $${DG(w)}$ の角になるように立てかける。${up ? '上のはしの高さ' : '下のはしからかべまでの距離'}は □ m`, a,
-          verify: () => { const g = 90 - w; return numOK(a, L * (up ? Math.sin(rad(g)) : Math.cos(rad(g)))); },
+          q: `地面と $${DG(th)}$ の角でかべに立てかけたはしごの、${up ? '上のはしの高さ' : '下のはしからかべまでの距離'}が ${UN(tx(leg), 'm')} だった。はしごの長さは □ m`, a,
+          verify: () => numOK(a, R.val(leg) / TF[f](rad(th))),
         };
-        return dest(p, '4-34', `かべ（たての線）からはかった角。地面との角は $90^{\\circ}-${DG(w)}=${DG(90 - w)}$ なので、${up ? '高さ' : 'かべまで'}＝$${L}\\${up ? 'sin' : 'cos'}${DG(90 - w)}=${L}\\${up ? 'cos' : 'sin'}${DG(w)}=${tx(v)}$（$\\sin$ と $\\cos$ が入れかわる）`);
+        return dest(p, '4-34', `わかっているのは${up ? '高さ（対辺）' : 'かべまでの距離（隣辺）'}で、求めるのは斜辺（はしご）。かけ算ではなく、わり算 $\\frac{${tx(leg)}}{\\${f}${DG(th)}}=${L}$`);
       },
     },
   });
@@ -511,7 +524,10 @@
     boxw: '20mm', boxh: '10mm',
     fits(q) {
       if (rtKind(q) === 'leg→hyp') return true;
-      return /板の長さ|坂道の長さ|スロープの長さ/.test(q);
+      // 「三角形ABCで、$a=4$、$C=90^{\circ}$、$A=60^{\circ}$ のとき、$c$」：90° の向かいの辺（斜辺）を、ほかの1辺と角から（H-2・第36回 N-10）
+      const t = triParse(q), ask = (/\$([abc])\$$/.exec(q.trim()) || [])[1];
+      if (t && ask && t.ns === 1 && t.na === 2 && t.angs[ask.toUpperCase()] === 90 && !t.sides[ask]) return true;
+      return /板の長さ|坂道の長さ|スロープの長さ|はしごの長さ/.test(q);
     },
     steps: {
       // Cが直角、対辺と角 → 斜辺（÷sin）
@@ -539,7 +555,7 @@
         const k = r.int(0, 2), th = r.pick(NICE);
         if (k === 0) {
           const h = r.pick(['1.2', '1.5', '2', '2.4', '3']), v = R.div(R.dec(h), sinR(th)), a = `$${tx(v, { dec: true })}$`;
-          return { q: `高さ ${UN(h, 'm')} の台に、$${DG(th)}$ の角で板をかけてすべり台を作る。板の長さは □ m`, a,
+          return { q: `高さ ${UN(h, 'm')} の台に、地面と $${DG(th)}$ の角で板をかけてすべり台を作る。板の長さは □ m`, a,
             easy: `$\\frac{${h}}{\\sin${DG(th)}}=${tx(v, { dec: true })}$`, verify: () => numOK(a, +h / Math.sin(rad(th))) };
         }
         if (k === 1) {
@@ -550,7 +566,7 @@
         const h = r.pick([1, 2, 3, 4]), v = R.div(rq(h), sinR(th));
         if (R.isQ(v)) return null;
         const kk = v[0].k, a = `$${apx(v, 1)}$`;
-        return { q: `高さ ${UN(h, 'm')} の所まで、$${DG(th)}$ の角でまっすぐなスロープをかける。$\\sqrt{${kk}}=${APX[kk]}$ として、スロープの長さを小数第1位まで求めると □ m`, a, easyCheck: false,
+        return { q: `高さ ${UN(h, 'm')} の所まで、地面と $${DG(th)}$ の角でまっすぐなスロープをかける。$\\sqrt{${kk}}=${APX[kk]}$ として、スロープの長さを小数第1位まで求めると □ m`, a, easyCheck: false,
           easy: `$\\frac{${h}}{\\sin${DG(th)}}=${tx(v)}$、約 $${apx(v, 1)}$`, verify: () => apxOK(a, h / Math.sin(rad(th)), 1) };
       },
       // わな：斜辺がわかっていて、辺を求める（かけ算。4-34）
@@ -577,7 +593,7 @@
     cols: 1,
     boxw: '20mm', boxh: { s1: '10mm' },
     fits(q) {
-      if (/大きい・小さい/.test(q)) return false;
+      if (/倍/.test(q)) return false;   // 傾きの比（わな。4-33）
       if (rtKind(q) === 'leg→leg') return true;
       return /傾き|仰角|見上げる|軸の正の向きとなす角|上がった高さ/.test(q);
     },
@@ -620,20 +636,25 @@
         return { q: `塔から ${UN(d, 'm')} はなれた所で、てっぺんを見上げる角（仰角）は $${DG(th)}$。目の高さを ${UN(e, 'm')}、$\\tan${DG(th)}=${t}$ として、塔の高さを小数第1位まで求めると □ m`, a, easyCheck: false,
           easy: `$${d}\\times${t}+${e}=${fmt(d * +t + +e)}$`, verify: () => apxOK(a, d * Math.tan(rad(th)) + +e, 1) };
       },
-      // わな：傾きと角は比例しない
+      // わな：角が2倍・半分でも、傾きは2倍・半分にならない（傾きと角は比例しない）。
+      // 許された角どうしでくらべる（電卓なし。K-4・第36回 N-1）。傾きの比は三角定規の tan の比（4-33）
       trap(r) {
-        const s = r.pick([[2, '2'], [3, '3'], [4, '4'], [0.5, '\\frac{1}{2}'], [1 / 3, '\\frac{1}{3}']]), naive = 45 * s[0];
-        const real = deg(Math.atan(s[0])), ans = real > naive ? '大きい' : '小さい';
+        const [b, n] = r.pick([[30, 60], [60, 30], [45, 60], [45, 30], [30, 45], [60, 45]]);
+        const v = R.div(tanR(n), tanR(b)), a = `$${tx(v)}$`, k = n / b;
+        const how = k === 2 ? '角は2倍だが、' : k === 0.5 ? '角は半分だが、' : '';
         const p = {
-          q: `傾き1の坂の角は $45^{\\circ}$ である。傾き $${s[1]}$ の坂の角は、$${fmt(naive)}^{\\circ}$ より（大きい・小さい） □`, a: ans,
-          verify: () => ((Math.tan(rad(naive)) > s[0] || naive >= 90) === (ans === '小さい')) || 'まちがい',
+          q: `水平と $${DG(b)}$ の坂と、水平と $${DG(n)}$ の坂。${how}$${DG(n)}$ の坂の傾きは、$${DG(b)}$ の坂の傾きの □ 倍`, a, key: `w${b},${n}`,
+          // 別の道すじ：坂の上の点の座標（横1進んだときの高さ）を、角から作ってくらべる
+          verify: () => { const h = t => { const P = [Math.cos(rad(t)), Math.sin(rad(t))]; return P[1] / P[0]; }; return numOK(a, h(n) / h(b)); },
         };
-        return dest(p, '4-36', `傾きと角は比例しない。傾き $${s[1]}$ の角は約 $${real.toFixed(1)}^{\\circ}$（電卓の $\\tan^{-1}$ で）。傾きが大きいほど、角はゆっくりしかふえない`);
+        return dest(p, '4-36', `傾きは角に比例しない。傾きは $\\tan$ なので、三角定規の比から $\\tan${DG(n)}\\div\\tan${DG(b)}=${tx(tanR(n))}\\div${tx(tanR(b))}=${tx(v)}$`, ['4-33']);
       },
     },
   });
 
   // ================================================================ 4-37
+  // 4-37 のステップ1・2：θ（三角形と向き）を1回ずつにするので、組を1つ足して 7×2＝14 とおり（8＋6問）
+  const PRIM37 = PRIM.concat([[12, 35, 37]]);
   M.add({
     id: '4-37', part: PART, chap: '4-6⑤', stars: 1,
     title: '$\\sin$ がわかれば、直角三角形をかいて $\\cos$・$\\tan$',
@@ -647,35 +668,35 @@
     boxw: '18mm', boxh: '10mm',
     fits(q) { return /鋭角で/.test(q); },
     steps: {
-      // sin がわかる（整数の辺の組）
+      // sin がわかる（整数の辺の組）。key は θ（三角形と向き）：ステップ2で同じ θ を逆から聞かない（第36回 N-2）
       s1(r) {
-        const [o0, d0, h] = r.pick(PRIM), sw = r.chance(0.5), o = sw ? d0 : o0, d = sw ? o0 : d0, f = r.pick(['cos', 'tan']);
+        const [o0, d0, h] = r.pick(PRIM37), sw = r.chance(0.5), o = sw ? d0 : o0, d = sw ? o0 : d0, f = r.pick(['cos', 'tan']);
         const v = f === 'cos' ? rq(d, h) : rq(o, d), a = `$${tx(v)}$`;
         return {
-          q: `$\\theta$ が鋭角で、$\\sin\\theta=\\frac{${o}}{${h}}$ のとき、$\\${f}\\theta$`, a,
+          q: `$\\theta$ が鋭角で、$\\sin\\theta=\\frac{${o}}{${h}}$ のとき、$\\${f}\\theta$`, a, key: `t${o},${d}`,
           easy: `対辺${o}、斜辺${h}：隣辺 $\\sqrt{${h}^{2}-${o}^{2}}=${d}$ → $${tx(v)}$`, easyCheck: 'last',
           verify: () => { const th = Math.asin(o / h); return numOK(a, TF[f](th)); },
         };
       },
-      // cos・tan がわかる
+      // cos・tan がわかる（ステップ1と同じ θ はよける）
       s2(r) {
-        const [o0, d0, h] = r.pick(PRIM), sw = r.chance(0.5), o = sw ? d0 : o0, d = sw ? o0 : d0;
+        const [o0, d0, h] = r.pick(PRIM37), sw = r.chance(0.5), o = sw ? d0 : o0, d = sw ? o0 : d0;
         const g = r.pick(['cos', 'tan']), f = g === 'cos' ? r.pick(['sin', 'tan']) : r.pick(['sin', 'cos']);
         const giv = g === 'cos' ? `\\frac{${d}}{${h}}` : `\\frac{${o}}{${d}}`;
         const v = f === 'sin' ? rq(o, h) : f === 'cos' ? rq(d, h) : rq(o, d), a = `$${tx(v)}$`;
         const third = g === 'cos' ? `対辺 $\\sqrt{${h}^{2}-${d}^{2}}=${o}$` : `斜辺 $\\sqrt{${o}^{2}+${d}^{2}}=${h}$`;
         return {
-          q: `$\\theta$ が鋭角で、$\\${g}\\theta=${giv}$ のとき、$\\${f}\\theta$`, a,
+          q: `$\\theta$ が鋭角で、$\\${g}\\theta=${giv}$ のとき、$\\${f}\\theta$`, a, key: `t${o},${d}`,
           easy: `${third} → $${tx(v)}$`, easyCheck: 'last',
           verify: () => { const th = Math.atan2(o, d); return numOK(a, TF[f](th)); },
         };
       },
-      // 辺が整数にならない（√ が残る）
+      // 辺が整数にならない（√ が残る）。わかっている比は約分ずみ（楽な形の三角形がいちばん小さくなるように）
       s3(r) {
         const g = r.pick(['sin', 'cos', 'tan']);
         let o, d, h;   // 対辺・隣辺・斜辺（R）
-        if (g === 'tan') { o = rq(r.int(1, 4)); d = rq(r.int(1, 5)); h = R.sqrt(R.add(R.mul(o, o), R.mul(d, d))); }
-        else { h = rq(r.int(3, 7)); const s = rq(r.int(1, R.val(h) - 1)); if (g === 'sin') { o = s; d = R.sqrt(R.sub(R.mul(h, h), R.mul(o, o))); } else { d = s; o = R.sqrt(R.sub(R.mul(h, h), R.mul(d, d))); } }
+        if (g === 'tan') { const p = r.int(1, 4), q = r.int(1, 5); if (gcd(p, q) !== 1) return null; o = rq(p); d = rq(q); h = R.sqrt(R.add(R.mul(o, o), R.mul(d, d))); }
+        else { const hn = r.int(3, 7), sn = r.int(1, hn - 1); if (gcd(hn, sn) !== 1) return null; h = rq(hn); const s = rq(sn); if (g === 'sin') { o = s; d = R.sqrt(R.sub(R.mul(h, h), R.mul(o, o))); } else { d = s; o = R.sqrt(R.sub(R.mul(h, h), R.mul(d, d))); } }
         if (![o, d, h].every(x => x.length === 1) || [o, d, h].every(R.isQ) || (R.isQ(o) && R.isQ(d) && R.isQ(h))) return null;
         const gv = g === 'sin' ? R.div(o, h) : g === 'cos' ? R.div(d, h) : R.div(o, d);
         if (!R.isQ(gv)) return null;
@@ -690,7 +711,8 @@
       trap(r) {
         const [o0, d0, h] = r.pick(PRIM.slice(0, 4)), sw = r.chance(0.5), o = sw ? d0 : o0, d = sw ? o0 : d0, f = r.pick(['cos', 'tan']);
         const v = f === 'cos' ? rq(-d, h) : rq(-o, d), a = `$${tx(v)}$`;
-        const p = { q: `$\\theta$ が鈍角で、$\\sin\\theta=\\frac{${o}}{${h}}$ のとき、$\\${f}\\theta$`, a,
+        // key：わな2つが同じ sin の値にならないように
+        const p = { q: `$\\theta$ が鈍角で、$\\sin\\theta=\\frac{${o}}{${h}}$ のとき、$\\${f}\\theta$`, a, key: `n${o},${h}`,
           verify: () => { const th = Math.PI - Math.asin(o / h); return numOK(a, TF[f](th)); } };
         return dest(p, '4-37', `鈍角なので、直角三角形はかけない。$${o}$、$${d}$、$${h}$ の三角形で大きさを出し、鈍角の $\\${f}$ は負なので $${tx(v)}$`);
       },
@@ -718,16 +740,16 @@
       return ds.some((d, i) => ds.some((e, j) => i !== j && d + e === 90)) || /\\(sin|cos|tan)□/.test(q);
     },
     steps: {
-      // sin70°=cos□、sin20°÷cos70°
+      // sin70°=cos□、sin20°÷cos70°。key は「余角の組と、式の形」：入れかえただけ・逆に聞いただけの問題を、同じ見開きに出さない（第36回 N-2）
       s1(r) {
-        const t = r.pick(ODD), u = 90 - t, k = r.int(0, 3);
+        const t = r.pick(ODD), u = 90 - t, k = r.int(0, 3), pr = Math.min(t, u);
         if (k === 3) {
           const [f, g] = r.pick([['sin', 'cos'], ['cos', 'sin']]);
-          return { q: `$\\frac{\\${f}${DG(t)}}{\\${g}${DG(u)}}$`, a: '$1$', easy: `$\\${g}${DG(u)}=\\${f}${DG(t)}$ なので $1$`, easyCheck: 'last' };
+          return { q: `$\\frac{\\${f}${DG(t)}}{\\${g}${DG(u)}}$`, a: '$1$', key: `c${pr}:r`, easy: `$\\${g}${DG(u)}=\\${f}${DG(t)}$ なので $1$`, easyCheck: 'last' };
         }
         const [f, g] = [['sin', 'cos'], ['cos', 'sin'], ['tan', 'tan']][k], a = `$${DG(u)}$`;
         const q = k === 2 ? `$\\tan${DG(t)}=\\frac{1}{\\tan□}$` : `$\\${f}${DG(t)}=\\${g}□$`;
-        return { q, a, easy: `$90^{\\circ}-${DG(t)}=${DG(u)}$`,
+        return { q, a, key: `c${pr}:${k === 2 ? 'tn' : 'sc'}`, easy: `$90^{\\circ}-${DG(t)}=${DG(u)}$`,
           verify: () => { const d = rad(degsIn(a)[0]); const L = TF[f](rad(t)), Rr = k === 2 ? 1 / Math.tan(d) : TF[g](d); return close(L, Rr, 1e-9) || '式が成り立たない'; } };
       },
       // 和が90°の2つの角をふくむ式
@@ -741,7 +763,7 @@
           [`\\cos${DG(p)}\\div\\sin${DG(q)}`, 1, `\\cos${DG(p)}\\div\\cos${DG(p)}=1`, x => Math.cos(rad(p)) / Math.sin(rad(q))],
         ][k];
         const a = `$${F[1]}$`;
-        return { q: `$${F[0]}$`, a, easy: `$${F[2]}$`, verify: () => numOK(a, F[3]()) };
+        return { q: `$${F[0]}$`, a, key: `c${t}:${['sq', 'sq', 'tn', 'sc', 'r'][k]}`, easy: `$${F[2]}$`, verify: () => numOK(a, F[3]()) };
       },
       // 値が書いてある・文字の角
       s3(r) {
@@ -753,7 +775,7 @@
         }
         if (k === 1) {
           const t = r.pick(Object.keys(TANT).map(Number)), u = 90 - t, val = round(1 / +TANT[t], 3), a = `$${val.toFixed(3)}$`;
-          return { q: `$\\tan${DG(t)}=${TANT[t]}$ のとき、$\\tan${DG(u)}$ を小数第3位まで`, a, easyCheck: false,
+          return { q: `$\\tan${DG(t)}=${TANT[t]}$ のとき、$\\tan${DG(u)}$ を小数第3位まで`, a, easyCheck: false, key: `v${Math.min(t, u)}`,
             easy: `$\\tan${DG(u)}=\\frac{1}{\\tan${DG(t)}}=\\frac{1}{${TANT[t]}}$、約 $${val.toFixed(3)}$`, verify: () => numOK(a, Math.tan(rad(u)), 2e-3) };
         }
         const [o, d, h] = r.pick(PRIM), g = r.pick(['sin', 'cos', 'tan']);
@@ -791,7 +813,8 @@
     raku: ['$\\sin135^{\\circ}=\\sin45^{\\circ}=\\frac{\\sqrt{2}}{2}$', '$\\cos150^{\\circ}=-\\cos30^{\\circ}=-\\frac{\\sqrt{3}}{2}$', '$\\sin\\theta=\\frac{\\sqrt{3}}{2}$ → $60^{\\circ}$ と $180^{\\circ}-60^{\\circ}=120^{\\circ}$'],
     why: '半円の上で、$\\theta$ の点と $180^{\\circ}-\\theta$ の点は、$y$ 軸について左右反対。高さ（$\\sin$）は同じで、横（$\\cos$）は符号だけが反対になる（4-6⑧）。',
     caution: '$\\cos120^{\\circ}$ は $\\frac{1}{2}$ ではなく $-\\frac{1}{2}$。$\\sin\\theta$ が1より小さい正の値になる角は、鋭角と鈍角の2つある。',
-    counts: { s1: 8, s2: 6, s3: 4, trap: 2 },
+    // ステップ1は鈍角の値（9とおり）。ステップ2で同じ値を逆に聞かないように、ステップ1は6問（第36回 N-2）
+    counts: { s1: 6, s2: 6, s3: 4, trap: 2 },
     cols: { s1: 2, s2: 1, s3: 1, trap: 2 },
     boxw: { s1: '18mm', s2: '24mm', s3: '24mm', trap: '18mm' }, boxh: { s1: '10mm', trap: '10mm' },
     fits(q) {
@@ -803,17 +826,17 @@
       return /\\(sin|cos|tan)/.test(q) && !/三角形|斜面|うで|ロープ|合力|面積/.test(q) && ds.some(d => d > 90 && d <= 180);
     },
     steps: {
-      // 鈍角の値
+      // 鈍角の値。key は「関数と鈍角」：ステップ2・3で、同じ値から角を聞く問題（逆の問題）をよける
       s1(r) {
         const f = r.pick(['sin', 'cos', 'tan']), t = r.pick(OBT), v = TRIG[f](t), sg = f === 'sin' ? '' : '-';
-        return { q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$`, easy: `$${sg}\\${f}${DG(180 - t)}=${tx(v)}$` };
+        return { q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$`, key: `${f}:${t}`, easy: `$${sg}\\${f}${DG(180 - t)}=${tx(v)}$` };
       },
-      // sin θ＝□ の θ（2つ）、cos・tan（1つ）
+      // sin θ＝□ の θ（2つ）、cos・tan（1つ）。ステップ1の鈍角の値はよける（sin は鈍角のほうの答え 180°−θ で見る）
       s2(r) {
-        const f = r.pick(['sin', 'sin', 'cos', 'tan']), t = r.pick(f === 'sin' ? [30, 45, 60] : [30, 45, 60, 120, 135, 150]);
+        const f = r.pick(['sin', 'sin', 'sin', 'cos', 'tan']), t = r.pick(f === 'sin' ? [30, 45, 60] : [30, 45, 60, 120, 135, 150, 120, 135, 150]);
         const v = TRIG[f](t), sols = solve180(f, R.val(v)), a = angAns(sols);
         return {
-          q: `$0^{\\circ}\\leqq\\theta\\leqq180^{\\circ}$ で、$\\${f}\\theta=${tx(v)}$ になる $\\theta$`, a, easyCheck: false,
+          q: `$0^{\\circ}\\leqq\\theta\\leqq180^{\\circ}$ で、$\\${f}\\theta=${tx(v)}$ になる $\\theta$`, a, easyCheck: false, key: `${f}:${f === 'sin' ? 180 - t : t}`,
           easy: f === 'sin' ? `鋭角 $${DG(t)}$ と、$180^{\\circ}-${DG(t)}=${DG(180 - t)}$` : `$\\${f}$ は1つに決まる：$${DG(t)}$`,
           verify: () => degsOK(a, sols),
         };
@@ -823,25 +846,25 @@
         const k = r.int(0, 2);
         if (k === 0) {
           const t = r.pick(OBT), f = r.pick(['sin', 'cos']), v = TRIG[f](f === 'sin' ? t : t), a = `$${DG(t)}$`;
-          return { q: `$\\theta$ が鈍角で、$\\${f}\\theta=${tx(v)}$ のとき、$\\theta$`, a, easyCheck: false,
+          return { q: `$\\theta$ が鈍角で、$\\${f}\\theta=${tx(v)}$ のとき、$\\theta$`, a, easyCheck: false, key: `${f}:${t}`,
             easy: f === 'sin' ? `鋭角なら $${DG(180 - t)}$。鈍角は $180^{\\circ}-${DG(180 - t)}=${DG(t)}$` : `$\\cos$ が負なので鈍角：$${DG(t)}$`,
             verify: () => degsOK(a, solve180(f, R.val(v)).filter(x => x > 90 && x < 180)) };
         }
         if (k === 1) {
           const [f, val, txt] = r.pick([['sin', 0, '0'], ['sin', 1, '1'], ['cos', 0, '0'], ['cos', -1, '-1'], ['cos', 1, '1']]);
           const sols = solve180(f, val), a = angAns(sols);
-          return { q: `$0^{\\circ}\\leqq\\theta\\leqq180^{\\circ}$ で、$\\${f}\\theta=${txt}$ になる $\\theta$`, a, easyCheck: false,
+          return { q: `$0^{\\circ}\\leqq\\theta\\leqq180^{\\circ}$ で、$\\${f}\\theta=${txt}$ になる $\\theta$`, a, easyCheck: false, key: `${f}:${sols[sols.length - 1]}`,
             easy: `半円の上の点が、${f === 'sin' ? (val ? 'いちばん上' : '$x$ 軸の上（右はしと左はし）') : (val === 0 ? '$y$ 軸の上' : val > 0 ? '右はし' : '左はし')}`, verify: () => degsOK(a, sols) };
         }
         const t = r.pick([0, 90, 180]), f = r.pick(['sin', 'cos']), v = TRIG[f](t);
-        return { q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$`, easy: `半円の上の点 $${PT(cosR(t), sinR(t))}$ の ${f === 'sin' ? '$y$' : '$x$'} 座標：$${tx(v)}$`, easyCheck: 'last' };
+        return { q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$`, key: `${f}:${t}`, easy: `半円の上の点 $${PT(cosR(t), sinR(t))}$ の ${f === 'sin' ? '$y$' : '$x$'} 座標：$${tx(v)}$`, easyCheck: 'last' };
       },
-      // わな：180° をこえる角（半円の外。第4部 4-49）
+      // わな：180° をこえる角（半円の外。わざ 4-49）
       trap(r) {
         const t = r.pick([210, 225, 240, 300, 315, 330]), f = r.pick(['sin', 'cos']), v = TRIG[f](t);
         const ref = t < 270 ? t - 180 : 360 - t;
-        return dest({ q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$` }, '4-39',
-          `$180^{\\circ}$ をこえる角で、半円の外。単位円で、$x$ 軸とのとがった角 $${DG(ref)}$ と、${t < 270 ? '左下' : '右下'}の符号を見る：$${tx(v)}$（4部のわざ 4-49）`);
+        return dest({ q: `$\\${f}${DG(t)}$`, a: `$${tx(v)}$`, key: `n${f}${tx(v)}` }, '4-39',
+          `$180^{\\circ}$ をこえる角で、半円の外。単位円で、$x$ 軸とのとがった角 $${DG(ref)}$ と、${t < 270 ? '左下' : '右下'}の符号を見る：$${tx(v)}$`, ['4-49']);
       },
     },
   });
@@ -923,7 +946,7 @@
     title: '2辺とあいだの角なら、面積は $\\frac{1}{2}ab\\sin C$',
     mark: '**2辺**と、その**あいだの角**がわかっていて、三角形の**面積**を求める。',
     futsu: ['頂点から垂線を下ろして高さを出し、', '底辺×高さ÷2 を計算する。'],
-    raku: ['$a=6$、$b=5$、$C=30^{\\circ}$', '$S=\\frac{1}{2}\\times6\\times5\\times\\sin30^{\\circ}$', '$=\\frac{1}{2}\\times6\\times5\\times\\frac{1}{2}=7.5$'],
+    raku: ['$a=6$、$b=5$、$C=30^{\\circ}$', '$S=\\frac{1}{2}\\times6\\times5\\times\\sin30^{\\circ}$', '$=\\frac{1}{2}\\times6\\times5\\times\\frac{1}{2}=\\frac{15}{2}$'],
     why: '底辺を $a$ にすると、高さは $b\\sin C$（斜辺 $b$ の直角三角形の対辺）。だから底辺×高さ÷2 が $\\frac{1}{2}ab\\sin C$（4-7②）。',
     caution: '角は2辺の「あいだ」の角。鈍角でも $\\sin$ は正（$\\sin135^{\\circ}=\\sin45^{\\circ}$）なので、面積はいつも正。',
     counts: { s1: 8, s2: 6, s3: 4, trap: 2 },
@@ -934,23 +957,23 @@
       return /面積/.test(q) && between(triParse(q));
     },
     steps: {
-      // 鋭角（30°・45°・60°・90°）
+      // 鋭角（30°・45°・60°・90°）。答えは分数の形にそろえる（第36回 N-7・R1-32）
       s1(r) {
         const [x, y, Z] = r.pick(ROT), p = r.int(2, 12), q = r.int(2, 12), t = r.pick([30, 45, 60, 90]);
-        const v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v, { decQ: true })}$`;
+        const v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v)}$`;
         return {
           q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], '面積'), a,
-          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=\\frac{1}{2}\\times${p}\\times${q}\\times${tx(sinR(t))}=${tx(v, { decQ: true })}$`,
+          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=\\frac{1}{2}\\times${p}\\times${q}\\times${tx(sinR(t))}=${tx(v)}$`,
           verify: () => { const P = { C: [0, 0], B: [p, 0], A: [q * Math.cos(rad(t)), q * Math.sin(rad(t))] }; return numOK(a, p * P.A[1] / 2); },
         };
       },
       // 鈍角（120°・135°・150°）
       s2(r) {
         const [x, y, Z] = r.pick(ROT), p = r.int(2, 12), q = r.int(2, 12), t = r.pick(OBT);
-        const v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v, { decQ: true })}$`;
+        const v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v)}$`;
         return {
           q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], '面積'), a,
-          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=\\frac{1}{2}\\times${p}\\times${q}\\times${tx(sinR(t))}=${tx(v, { decQ: true })}$`,
+          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=\\frac{1}{2}\\times${p}\\times${q}\\times${tx(sinR(t))}=${tx(v)}$`,
           verify: () => numOK(a, p * q * Math.sin(rad(t)) / 2),
         };
       },
@@ -958,18 +981,18 @@
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const p = r.int(3, 10), q = r.int(3, 10), t = r.pick([30, 45, 60, 120, 135, 150]), v = R.mul(rq(p * q), sinR(t)), a = `$${tx(v, { decQ: true })}$`;
+          const p = r.int(3, 10), q = r.int(3, 10), t = r.pick([30, 45, 60, 120, 135, 150]), v = R.mul(rq(p * q), sinR(t)), a = `$${tx(v)}$`;
           return { q: `となり合う2辺が $${p}$ と $${q}$ で、そのあいだの角が $${DG(t)}$ の平行四辺形の面積`, a,
-            easy: `三角形2つ分：$${p}\\times${q}\\times\\sin${DG(t)}=${tx(v, { decQ: true })}$`, easyCheck: 'last', verify: () => numOK(a, p * q * Math.sin(rad(t))) };
+            easy: `三角形2つ分：$${p}\\times${q}\\times\\sin${DG(t)}=${tx(v)}$`, easyCheck: 'last', verify: () => numOK(a, p * q * Math.sin(rad(t))) };
         }
         if (k === 1) {
           const s = r.int(2, 12), v = R.mul(R.q(s * s, 2), sinR(60)), a = `$${tx(v)}$`;
           return { q: `1辺が $${s}$ の正三角形の面積`, a, easy: `$\\frac{1}{2}\\times${s}\\times${s}\\times\\sin60^{\\circ}=${tx(v)}$`,
             verify: () => numOK(a, s * (s * Math.sqrt(3) / 2) / 2) };
         }
-        const p = r.pick([10, 20, 30, 40]), q = r.pick([12, 15, 20, 25]), t = r.pick([30, 150]), v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v, { decQ: true })}$`;
+        const p = r.pick([10, 20, 30, 40]), q = r.pick([12, 16, 20, 24]), t = r.pick([30, 150]), v = R.mul(R.q(p * q, 2), sinR(t)), a = `$${tx(v)}$`;
         return { q: `三角形の土地で、2辺が ${UN(p, 'm')} と ${UN(q, 'm')}、そのあいだの角が $${DG(t)}$ だった。面積は □ $\\mathrm{m^{2}}$`, a,
-          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=${tx(v, { decQ: true })}$`, verify: () => numOK(a, p * q * Math.sin(rad(t)) / 2) };
+          easy: `$\\frac{1}{2}\\times${p}\\times${q}\\times\\sin${DG(t)}=${tx(v)}$`, verify: () => numOK(a, p * q * Math.sin(rad(t)) / 2) };
       },
       // わな：3辺だけ（角は余弦定理で先に。4-45）
       trap(r) {
@@ -1004,24 +1027,26 @@
       return /\\angle/.test(q) && /\\mathrm\{(AB|BC|AC)\}=/.test(q) && /(AC|BC)/.test(q) && !/直角/.test(q);
     },
     steps: {
-      // 1辺と両はしの角（のこりの角を出してから）
+      // 1辺と両はしの角（のこりの角を出してから）。文に出す角は 90° にしない（直角三角形なら 4-34・4-35 が楽。第36回 N-10）
       s1(r) {
         const [P, Q2, S] = r.shuffle(LET), A = r.pick(SA.slice(0, 6)), Cc = r.pick(SA.filter(x => A + x < 180 && x !== A));
         const B = 180 - A - Cc, s = r.pick([4, 6, 8, 10, 12, 20, 40, 60, 80, 100]);
+        if (A === 90 || B === 90) return null;
         // 角 S＝Cc の向かいの辺（長さ s）がわかっていて、角 P＝A、角 Q2＝B。求めるのは P の向かいの辺
         const v = R.div(R.mul(rq(s), sinR(A)), sinR(Cc)), a = `$${tx(v)}$`, sl = S.toLowerCase(), pl = P.toLowerCase();
         return {
-          q: triQ(r.shuffle([`${sl}=${s}`, `${P}=${DG(A)}`, `${Q2}=${DG(B)}`]), `$${pl}$`), a,
+          q: triQ(r.shuffle([`${sl}=${s}`, `${P}=${DG(A)}`, `${Q2}=${DG(B)}`]), `$${pl}$`), a, key: `a${A},${Cc}`,   // 同じ3つの角の三角形を、辺の長さだけ変えてくり返さない
           easy: `$${S}=180^{\\circ}-${DG(A)}-${DG(B)}=${DG(Cc)}$、$${pl}=\\frac{${s}\\sin${DG(A)}}{\\sin${DG(Cc)}}=${tx(v)}$`, easyCheck: 'last',
           verify: () => { const T = triAng(A, B); if (!close(T.angS, Cc, 1e-6)) return '三角形が作れない'; return numOK(a, s * T.oP); },
         };
       },
-      // 角と向かいの辺の組が、はじめからそろっている
+      // 角と向かいの辺の組が、はじめからそろっている（90° は出さない）
       s2(r) {
         const [P, Q2, S] = r.shuffle(LET), A = r.pick(SA.slice(0, 6)), B = r.pick(SA.filter(x => A + x < 180 && x !== A)), s = r.pick([4, 6, 8, 10, 12, 20]);
+        if (A === 90 || B === 90) return null;
         const v = R.div(R.mul(rq(s), sinR(B)), sinR(A)), a = `$${tx(v)}$`, pl = P.toLowerCase(), ql = Q2.toLowerCase();
         return {
-          q: triQ(r.shuffle([`${pl}=${s}`, `${P}=${DG(A)}`, `${Q2}=${DG(B)}`]), `$${ql}$`), a,
+          q: triQ(r.shuffle([`${pl}=${s}`, `${P}=${DG(A)}`, `${Q2}=${DG(B)}`]), `$${ql}$`), a, key: `b${A},${B}`,
           easy: `$\\frac{${ql}}{\\sin${DG(B)}}=\\frac{${s}}{\\sin${DG(A)}}$ より $${ql}=\\frac{${s}\\sin${DG(B)}}{\\sin${DG(A)}}=${tx(v)}$`, easyCheck: 'last',
           // 座標で：底辺の両はしから角 A・B の半直線をのばし、交わりで三角形を作って長さをくらべる
           verify: () => { const T = triAng(A, B); return numOK(a, s / T.oP * T.oQ); },
@@ -1030,6 +1055,7 @@
       // 場面：川の向こうの木・屋根の部材。約の値も
       s3(r) {
         const A = r.pick([30, 45, 60]), Cc = r.pick([30, 45, 60, 90].filter(x => x !== A && A + x < 180)), B = 180 - A - Cc, s = r.pick([20, 40, 60, 80, 100]);
+        if (B === 90) return null;   // 文に 90° を出さない
         const v = R.div(R.mul(rq(s), sinR(A)), sinR(Cc));
         const base = `川の向こうの木Cまでの距離を知りたい。こちらの岸の2点A、Bで、$\\mathrm{AB}=${s}\\,\\mathrm{m}$、$\\angle\\mathrm{CAB}=${DG(A)}$、$\\angle\\mathrm{CBA}=${DG(B)}$ をはかった。$\\mathrm{BC}$ は`;
         if (!R.isQ(v) && v[0].k !== 6 && r.chance(0.5)) {
@@ -1148,7 +1174,7 @@
         const t = r.pick([60, 60, 120, 120, 90]), [p0, q0, c] = t === 90 ? r.pick(TRI90) : r.pick(TRI[t]), sw = r.chance(0.5), p = sw ? q0 : p0, q = sw ? p0 : q0;
         const [x, y, Z] = r.pick(ROT), z = Z.toLowerCase(), a = `$${c}$`, cv = tx(cosR(t)), cw = /^-/.test(cv) ? `\\left(${cv}\\right)` : cv;
         return {
-          q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], `$${z}$`), a,
+          q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], `$${z}$`), a, key: `e${t}:${[p, q].sort((m, n) => m - n)}`,   // 2辺を入れかえただけの問題は同じとみる（第36回 N-2）
           easy: `$${z}^{2}=${p}^{2}+${q}^{2}-2\\times${p}\\times${q}\\times${cw}=${c * c}$、$${z}=${c}$`, easyCheck: 'last',
           verify: () => { const A = [q * Math.cos(rad(t)), q * Math.sin(rad(t))]; return numOK(a, dist(A, [p, 0])); },
         };
@@ -1159,7 +1185,7 @@
         if (R.isQ(v)) return null;
         const [x, y, Z] = r.pick(ROT), z = Z.toLowerCase(), a = `$${tx(v)}$`, c2 = p * p + q * q + (t === 60 ? -p * q : p * q);
         return {
-          q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], `$${z}$`), a,
+          q: triQ([`${x}=${p}`, `${y}=${q}`, `${Z}=${DG(t)}`], `$${z}$`), a, key: `e${t}:${[p, q].sort((m, n) => m - n)}`,
           easy: `$${z}^{2}=${p * p}+${q * q}${t === 60 ? '-' : '+'}${p * q}=${c2}$、$${z}=${tx(v)}$`, easyCheck: 'last',
           verify: () => { const A = [q * Math.cos(rad(t)), q * Math.sin(rad(t))]; return numOK(a, dist(A, [p, 0])); },
         };
@@ -1215,7 +1241,7 @@
         const t = r.pick([60, 120, 120, 90]), [p, q, c] = t === 90 ? r.pick(TRI90) : r.pick(TRI[t]), [x, y, Z] = r.pick(ROT), z = Z.toLowerCase();
         const gs = { [x]: p, [y]: q, [z]: c }, a = `$${DG(t)}$`;
         return {
-          q: triQ(['a', 'b', 'c'].map(s => `${s}=${gs[s]}`), `$${Z}$`), a,
+          q: triQ(['a', 'b', 'c'].map(s => `${s}=${gs[s]}`), `$${Z}$`), a, key: 'k' + [p, q, c].sort((m, n) => m - n).join(','),   // 3辺を入れかえただけの問題は同じとみる（第36回 N-2。ステップ2の key と同じ形）
           easy: `$\\cos ${Z}=\\frac{${p}^{2}+${q}^{2}-${c}^{2}}{2\\times${p}\\times${q}}=${tx(cosR(t))}$、$${Z}=${DG(t)}$`, easyCheck: 'last',
           verify: () => { const P = triPts(gs.a, gs.b, gs.c), V = { A: [P.B, P.A, P.C], B: [P.A, P.B, P.C], C: [P.A, P.C, P.B] }[Z]; return close(deg(angAt(...V)), t, 1e-6) || `角は ${deg(angAt(...V))}°`; },
         };
@@ -1254,11 +1280,11 @@
       },
       // わな：角の比を辺の比にする（辺は sin の比。正弦定理）
       trap(r) {
-        const [ratio, angs] = r.pick([['1:2:3', [30, 60, 90]], ['1:1:2', [45, 45, 90]], ['1:1:4', [30, 30, 120]]]);
+        const [ratio, angs, to] = r.pick([['1:2:3', [30, 60, 90], '4-23'], ['1:1:2', [45, 45, 90], '4-22'], ['1:1:4', [30, 30, 120], '4-23']]);
         const s = angs.map(t => R.div(sinR(t), sinR(angs[0]))), ans = `$${s.map(x => tx(x)).join(':')}$`;
         const p = { q: `3つの角の比が $${ratio}$ の三角形の、辺の比（小さい順）は □`, a: ans,
           verify: () => { const got = strip(ans).split(':').map(x => M.evalMath(x, {})), w = angs.map(t => Math.sin(rad(t)) / Math.sin(rad(angs[0]))); return got.every((g, i) => close(g, w[i], 1e-9)) || '比が合わない'; } };
-        return dest(p, '4-45', `辺の比は角の比ではない。角は $${angs.map(DG).join('$、$')}$ で、辺の比は $\\sin$ の比（正弦定理）：${ans}`);
+        return dest(p, '4-45', `辺の比は角の比ではない。角は $${angs.map(DG).join('$、$')}$ で、${to === '4-22' ? '直角二等辺三角形の' : angs[2] === 90 ? '三角定規の' : '正三角形の半分を2つならべた形の'}比：${ans}`, [to]);
       },
     },
   });
@@ -1276,7 +1302,8 @@
     counts: { s1: 5, s2: 4, s3: 3, trap: 2 },
     cols: 1,
     boxw: '20mm',
-    fits(q) { return /合力/.test(q) && !/東へ|北へ|同じ向き/.test(q) && !degsIn(q).includes(90); },
+    // 東西南北の向き（直角・同じ向き・反対の向き。第5部 4-63・4-65）、成分で書いた力（4-68・4-96）、なす角 90° は除く（第36回、修C の報告）
+    fits(q) { return /合力/.test(q) && !/[東西南北](へ|向き)|同じ向き|反対の向き|\(-?\d+,\\ /.test(q) && !degsIn(q).includes(90); },
     steps: {
       // 答えが整数（なす角 60°・120°）
       s1(r) {
@@ -1318,12 +1345,12 @@
           easy: `中の角 $${DG(180 - th)}$：$R^{2}=${F1 * F1}+${F2 * F2}${th === 60 ? '+' : '-'}${F1 * F2}=${(c * 10) ** 2}$、$R=${c * 10}$`, easyCheck: 'last',
           verify: () => numOK(a, Math.hypot(F1 + F2 * Math.cos(rad(th)), F2 * Math.sin(rad(th)))) };
       },
-      // わな：直角（三平方。第5部 4-63）、同じ向き（たすだけ）
+      // わな：直角（三平方。わざ 4-20・4-63）、同じ向き（たすだけ）
       trap(r) {
         const [p, q, c] = r.pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17]]);
         if (r.chance(0.6)) {
           const a = `$${c}$`, p0 = { q: `東へ ${fN(p)}、北へ ${fN(q)} の力で、1つの物を引く。合力は □ N`, a, verify: () => numOK(a, Math.hypot(p, q)) };
-          return dest(p0, '4-46', `東と北で、なす角は $90^{\\circ}$。$\\cos90^{\\circ}=0$ なので三平方の定理だけ：$\\sqrt{${p}^{2}+${q}^{2}}=${c}$（5部のわざ 4-63）`);
+          return dest(p0, '4-46', `東と北で、なす角は $90^{\\circ}$。余弦定理はいらず、三平方の定理だけ：$\\sqrt{${p}^{2}+${q}^{2}}=${c}$`, ['4-20', '4-63']);
         }
         const F1 = p * 10, F2 = q * 10, a = `$${F1 + F2}$`;
         return dest({ q: `${fN(F1)} と ${fN(F2)} の力で、同じ向きに1つの物を引く。合力は □ N`, a, verify: () => numOK(a, Math.hypot(F1 + F2, 0)) },
@@ -1367,8 +1394,10 @@
     if (Math.hypot(...b) < 0.2) b = [-u2[1], u2[0]];
     const bl = Math.hypot(...b);
     items.push(['label', [E[0] + b[0] / bl * 0.75, E[1] + b[1] / bl * 0.75], 'E', 'c']);
-    const u3 = unit(E, P);
-    items.push(['label', [P[0] + u3[0] * 0.75, P[1] + u3[1] * 0.75], 'P', 'c']);
+    // 手の名前：下のうでをのばした向き。y 軸の近くなら、y 軸を上にのばして、軸の文字 y と P をはなす（「yP」に見えないように。第36回 N-6・R1-19）
+    const u3 = unit(E, P), lp = [P[0] + u3[0] * 0.75, P[1] + u3[1] * 0.75];
+    items.push(['label', lp, 'P', 'c']);
+    if (Math.abs(lp[0]) < 1.5) items[0][4] = Math.max(y1, lp[1] + 1.5);
     // 長さのラベル：線分の右がわ（時計まわりの向き）か、左がわ
     const lab = (A, B, t, sgn) => { const u = unit(A, B), m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; return ['label', [m[0] + sgn * u[1] * 0.7, m[1] - sgn * u[0] * 0.7], t, 'c']; };
     items.push(lab(O, E, String(L1), -1), lab(E, P, String(L2), -1));   // θ1 の角のしるしは OE の右下、θ2 は EP の右がわにあるので、長さは左がわに

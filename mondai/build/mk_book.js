@@ -108,9 +108,12 @@ for (const part of parts) {
       const got = M.makeStep(id, r.pick(['s1', 's2']), 1, r, seen);
       if (got.length) pool.push(got[0]);
     }
+    const usedTrap = new Set();
     for (let k = 0, t = 0; t < nTrap && k < 200; k++) {
       const id = r.pick(wz);
       if (!M.waza[id].steps.trap) continue;
+      if (vol >= 4 && usedTrap.has(id) && k < 150) continue;   // 第4巻から：わなは1わざ1問（修B の要望）
+      usedTrap.add(id);
       const got = M.makeStep(id, 'trap', 1, r, seen);
       if (got.length) { pool.push(got[0]); t++; }
     }

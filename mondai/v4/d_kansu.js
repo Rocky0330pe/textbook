@@ -82,15 +82,19 @@
   const valIs = (ans, v) => (close(numOf(ans), v) || `答え ${ans} の値が ${v} でない`);
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2）
-  function dest(p, self, why) {
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く（第36回 N-3：行き先はかならず書く）。
+  // extra：ほかの部のわざで楽になるときの、その番号（fits では見つからないので、ここで足す）
+  function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(4).filter(id => {
       const d = M.waza[id];
       if (id === self || d.part !== 4 || !d.fits) return false;
       try { return !!d.fits(q, p); } catch (e) { return false; }
     });
+    (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
+    also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}${also.length ? `。わざ ${also.join('・')}` : ''}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -320,7 +324,7 @@
         const t = r.pick(TRI), h = t[2], dec = decOK(h), fn = r.pick(['sin', 'cos']), other = fn === 'sin' ? 'cos' : 'sin';
         const gT = ratioTeX(t[0], h, dec), oT = ratioTeX(t[1], h, dec);
         return dest({
-          q: `$\\${fn}\\theta=${gT}$ のとき $\\${other}\\theta$`, a: `$${oT}$ か $-${oT}$`,
+          q: `$\\${fn}\\theta=${gT}$ のとき $\\${other}\\theta$`, a: `$${oT}$ か $-${oT}$`, boxw: '34mm', boxh: '11mm',
           verify: () => close(numOf(oT) ** 2 + numOf(gT) ** 2, 1) || '値がちがう',
         }, '4-50', '象限が書いていないので、符号を1つに決められない。答えは2つ');
       },
@@ -405,7 +409,7 @@
         return dest({
           q: `点 $${ax ? P(R0, 0) : P(0, R0)}$ を原点のまわりに左回りに $${dg(a)}$ 回した点`, a: `$${P(xT, yT)}$`,
           verify: () => { const b = ax ? a : a + 90; return (close(numOf(xT), R0 * Math.cos(rd(b))) && close(numOf(yT), R0 * Math.sin(rd(b)))) || '座標がちがう'; },
-        }, '4-51', `$90^{\\circ}$ の倍数でないので、入れかえは使えない。原点から $${R0}$ の所なので $(${R0}\\cos${dg(ax ? a : a + 90)},\\ ${R0}\\sin${dg(ax ? a : a + 90)})$`);
+        }, '4-51', `$90^{\\circ}$ の倍数でないので、入れかえは使えない。原点から $${R0}$ の所なので $(${R0}\\cos${dg(ax ? a : a + 90)},\\ ${R0}\\sin${dg(ax ? a : a + 90)})$`, [ax ? '4-34' : '4-49']);
       },
     },
   });
@@ -648,7 +652,7 @@
         return dest({
           q: `半径 $${A}\\,\\mathrm{m}$ の円を $\\omega=${piT(c)}\\,\\mathrm{rad/s}$ で回る点の影の高さ $y=${A}\\sin\\omega t$。$t=${t}$ のときの $y$`, a: `$${y}$`,
           verify: () => valIs(`$${y}$`, +A * Math.sin(F.val(c) * Math.PI * t)),
-        }, '4-54', `$\\omega t=${piT(F.mul(c, fr(t)))}$ は rad。$${dg(deg)}$ に直してから $\\sin$ を出す`);
+        }, '4-54', `$\\omega t=${piT(F.mul(c, fr(t)))}$ は rad。$${dg(deg)}$ に直してから $\\sin$ を出す`, ['4-10']);
       },
     },
   });
@@ -683,7 +687,7 @@
       s1(r) {
         const w = wheel(r);
         return {
-          q: `1周 ${w.T} 分。${w.t} 分後と同じ位置になる、${w.T} 分より前の時刻 □ 分後`, a: `$${w.rem}$`, easyCheck: false,
+          q: `1周 ${w.T} 分。${w.t} 分後と同じ位置になる、いちばん早い時刻 □ 分後`, a: `$${w.rem}$`, easyCheck: false,
           easy: `$${w.t}\\div${w.T}=${w.n}$ あまり ${w.rem}`, verify: () => ((w.t - w.rem) % w.T === 0 && w.rem > 0 && w.rem < w.T) || 'あまりがちがう',
         };
       },
@@ -761,7 +765,7 @@
         const [x, y] = r.chance(0.5) ? [a, b] : [b, a], c = plus ? x + y : x - y;
         if (![15, 75].includes(refAng(c))) return null;
         const ans = evt(fn, c);
-        return { q: `$\\${fn}(${dg(x)}${plus ? '+' : '-'}${dg(y)})$`, a: `$${ans}$`, easy: `$${expand(fn, x, y, plus)}=${ans}$` };
+        return { q: `$\\${fn}(${dg(x)}${plus ? '+' : '-'}${dg(y)})$`, a: `$${ans}$`, key: plus ? `${fn}+${[x, y].sort((m, n) => m - n)}` : undefined, easy: `$${expand(fn, x, y, plus)}=${ans}$` };
       },
       // 角を分ける：15°・75°・105°・165° など
       s2(r) {
@@ -795,7 +799,7 @@
         const S = x => `\\sin${dg(x)}`, C = x => `\\cos${dg(x)}`;
         const e = [`${S(a)}${C(b)}+${C(a)}${S(b)}`, `${S(a)}${C(b)}-${C(a)}${S(b)}`, `${C(a)}${C(b)}-${S(a)}${S(b)}`, `${C(a)}${C(b)}+${S(a)}${S(b)}`][kind];
         const fn = kind < 2 ? 'sin' : 'cos';
-        return dest({ q: `$${e}$`, a: `$${evt(fn, s)}$` }, '4-56', `$${dg(a)}$ や $${dg(b)}$ の値は使わない。加法定理を逆に読んで $\\${fn}(${dg(a)}${plus ? '+' : '-'}${dg(b)})=\\${fn}${dg(s)}$`);
+        return dest({ q: `$${e}$`, a: `$${evt(fn, s)}$` }, '4-56', `$${dg(a)}$ や $${dg(b)}$ の値は使わない。加法定理を逆に読んで $\\${fn}(${dg(a)}${plus ? '+' : '-'}${dg(b)})=\\${fn}${dg(s)}=${evt(fn, s)}$（三角定規の値）`, ['4-33']);
       },
     },
   });
@@ -1169,10 +1173,10 @@
         const I2 = r.pick([6, 8, 10, 12, 15]);
         return { q: `電気ストーブ（電流は電圧とずれない）に、実効値 $${V}\\,\\mathrm{V}$ で $${I2}\\,\\mathrm{A}$。平均の電力 □ W`, a: `$${V * I2}$`, easy: `$${V}\\times${I2}\\times\\cos0^{\\circ}=${V * I2}$` };
       },
-      // わな：山の高さ（電力の式ではない。実効値の √2 倍。3-10）
+      // わな：山の高さ（電力の式ではない。実効値の √2 倍）
       trap(r) {
         const V = r.pick([100, 200, 50, 6]);
-        return dest({ q: `実効値 $${V}\\,\\mathrm{V}$ の交流の電圧の、山の高さ（最大の値）□ V`, a: `$${V}\\sqrt{2}$`, verify: () => valIs(`$${V}\\sqrt{2}$`, V * Math.SQRT2) }, '4-62', '電力ではない。山の高さは実効値の $\\sqrt{2}$ 倍（3-10）');
+        return dest({ q: `実効値 $${V}\\,\\mathrm{V}$ の交流の電圧の、山の高さ（最大の値）□ V`, a: `$${V}\\sqrt{2}$`, verify: () => valIs(`$${V}\\sqrt{2}$`, V * Math.SQRT2) }, '4-62', '電力ではない。山の高さは実効値の $\\sqrt{2}$ 倍');
       },
     },
   });
@@ -1197,15 +1201,17 @@
         const re = /(\d*)\\(sin|cos)(?:\\theta|\(\\theta([+-]\d+)\^\{\\circ\}\))/g, ts = [...m.matchAll(re)];
         if (ts.length < 2 || m.replace(re, '').replace(/\+/g, '') !== '') return false;   // 項がこの形だけ
         const sh = ts.map(t => norm(+(t[3] || 0)));
-        return ts.every(t => t[1] === ts[0][1] && t[2] === ts[0][2]) && sh.every(x => x % 120 === 0) && new Set(sh).size === sh.length;
+        // 3つそろっていれば、係数がちがっても（1つを分ければ）使える。2つのときは係数が同じもの
+        return ts.every(t => (ts.length === 3 || t[1] === ts[0][1]) && t[2] === ts[0][2]) && sh.every(x => x % 120 === 0) && new Set(sh).size === sh.length;
       });
     },
     steps: {
       // 3つの和
       s1(r) {
-        const fn = r.pick(['sin', 'cos']), ds = r.shuffle(r.pick([[0, -120, 120], [0, -120, -240], [0, 120, 240]])), A = r.pick([1, 1, 2, 3, 100]);
+        const fn = r.pick(['sin', 'cos']), d0 = r.pick([[0, -120, 120], [0, -120, -240], [0, 120, 240]]), ds = r.shuffle(d0), A = r.pick([1, 1, 2, 3, 100]);
         const e = ds.map((d, i) => (i ? '+' : '') + coefT(A) + sh(fn, d)).join('');
-        return { q: `$${e}$`, a: '$0$', easyCheck: false, easy: '$120^{\\circ}$ ずつずれた、同じ振幅の3つの波 → 0', verify: () => sameTheta(e, '0') };
+        // key：項の順番を入れかえただけの問題は同じとみる（第36回 N-2）
+        return { q: `$${e}$`, a: '$0$', easyCheck: false, key: `z${fn}${A}:${ds.slice().sort((m, n) => m - n)}`, easy: '$120^{\\circ}$ ずつずれた、同じ振幅の3つの波 → 0', verify: () => sameTheta(e, '0') };
       },
       // 2つの和 → のこりの1つのマイナス
       s2(r) {
@@ -1213,8 +1219,13 @@
         const e = two.map((d, i) => (i ? '+' : '') + sh(fn, d)).join(''), ans = `-${sh(fn, miss)}`;
         return { q: `$${e}$ を短く`, a: `$${ans}$`, easyCheck: false, easy: `3つめの $${sh(fn, miss)}$ をたすと0なので、$${ans}$`, verify: () => sameTheta(e, ans) };
       },
-      // 三相交流の電圧・θ を入れた値
+      // 三相交流の電圧・θ を入れた値・振幅がそろっていない形（1つを分ける。第36回 N-3 でわなから移した）
       s3(r) {
+        if (r.chance(0.25)) {
+          const fn = r.pick(['sin', 'cos']), A = r.int(2, 4), e = `${A}${sh(fn, 0)}+${sh(fn, -120)}+${sh(fn, 120)}`, ans = `${A - 1 === 1 ? '' : A - 1}\\${fn}\\theta`;
+          return { q: `$${e}$ を短く`, a: `$${ans}$`, easyCheck: false, key: `a${fn}`,
+            easy: `$${A}${sh(fn, 0)}$ を $${sh(fn, 0)}$ と $${A - 1 === 1 ? '' : A - 1}${sh(fn, 0)}$ に分ける。3つの和は0なので、のこりは $${ans}$`, verify: () => sameTheta(e, ans) };
+        }
         if (r.chance(0.6)) {
           const A = r.pick([100, 200, 140]), th = r.pick([30, 90, 150, 210, 270, 330]), vs = [0, -120, 120].map(d => fmt(A * FN.sin(th + d)));
           const [i, j] = r.pick([[0, 1], [0, 2], [1, 2]]), k = 3 - i - j, v3 = vs[k];
@@ -1229,12 +1240,16 @@
           verify: () => valIs(`$${ans}$`, FN[fn](th - 120) + FN[fn](th + 120)),
         };
       },
-      // わな：振幅がそろっていない・ずれが 90°
+      // わな：ずれが 60°・90° の2つの波の山（合成 4-59）・ずれが 90° の3つ（4-51）
       trap(r) {
         const fn = r.pick(['sin', 'cos']);
         if (r.chance(0.5)) {
-          const A = r.int(2, 4), e = `${A}${sh(fn, 0)}+${sh(fn, -120)}+${sh(fn, 120)}`, ans = `${A - 1 === 1 ? '' : A - 1}\\${fn}\\theta`;
-          return dest({ q: `$${e}$ を短く`, a: `$${ans}$`, verify: () => sameTheta(e, ans) }, '4-95', `振幅がそろっていないので0にならない。$${A}${sh(fn, 0)}$ を $${sh(fn, 0)}$ と $${A - 1 === 1 ? '' : A - 1}${sh(fn, 0)}$ に分けると、のこりは $${ans}$`);
+          const d = r.pick([60, 90]), e = `${sh(fn, 0)}+${sh(fn, d)}`, RT = d === 60 ? '\\sqrt{3}' : '\\sqrt{2}';
+          return dest({
+            q: `$${e}$ の最大の値`, a: `$${RT}$`,
+            // 別の道すじ：θ を 0.05° ずつ動かして、いちばん大きい値をさがす
+            verify: () => { let mx = -Infinity; for (let t = 0; t < 360; t += 0.05) mx = Math.max(mx, FN[fn](t) + FN[fn](t + d)); return Math.abs(mx - numOf(`$${RT}$`)) < 1e-4 || `最大は ${mx}`; },
+          }, '4-95', `ずれが $${dg(d)}$ で、$120^{\\circ}$ ずつの3つではない。加法定理で広げて $a\\sin\\theta+b\\cos\\theta$ の形にし、山の高さは $\\sqrt{a^{2}+b^{2}}=${RT}$`);
         }
         const e = `${sh(fn, 0)}+${sh(fn, 90)}+${sh(fn, 180)}`, ans = fn === 'sin' ? '\\cos\\theta' : '-\\sin\\theta';
         return dest({ q: `$${e}$ を短く`, a: `$${ans}$`, verify: () => sameTheta(e, ans) }, '4-95', `ずれが $90^{\\circ}$ ずつで、$120^{\\circ}$ ではない。$${sh(fn, 180)}=-${sh(fn, 0)}$ と打ち消しあい、のこりは $${sh(fn, 90)}=${ans}$`);
