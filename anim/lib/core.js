@@ -202,6 +202,8 @@
   // ---------- ページ ----------
   // def = { id, title, from, vol, ruby, W, H, state, scenes:[{ key, label, note, miss, controls, init, step, draw, drag, readout, legend, autoplay }] }
   A.item = function (def) {
+    // 項目のファイルの最後まで読みこんでから作る（A.item より下の const を描く関数で使っても止まらないように）
+    if (!def.__ready) { def.__ready = true; Promise.resolve().then(() => A.item(def)); return; }
     const W = def.W || 880, H = def.H || 440;
     document.title = plain(def.title);
     if (def.ruby) document.body.classList.add('ruby');
