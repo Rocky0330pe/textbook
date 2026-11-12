@@ -13,8 +13,11 @@
   tools/mkmap9.py・tools/mkseriesidx.py           → 9
   tex/p1-*・tex/phN*・tex/phwrapN.tex             → pN（物理シリーズ）
   mondai/vN/*・tex/mqN*                           → qN（問題集。第29回）
-  mondai/core.js・mondai/build/・mondai/app/・tex/bk-mondai.sty・tex/mq-front.tex
+  mondai/app/                                     → 問題集の1つの巻（アプリはどの巻でも同じものができる）
+  mondai/core.js・mondai/build/・tex/bk-mondai.sty・tex/mq-front.tex
                                                   → 中身のある問題集の巻（mondai/vN がある qN）
+  phys/pages_actual_phys.json                     → 値が変わった物理の巻だけ
+  phys/series_phys.py                             → VOLS の中で変わった物理の巻だけ（巻の外が変われば下の行と同じ）
   phys/*・tex/bk-phys*                            → 本文のある物理の巻（p1、ph<n>-body.tex がある pN）
   pages_actual.json                               → 値が変わった巻だけ
   組み上がりに効く共通の部品（tex/bk-*・tex/series-data.tex・tex/fonts/・tex/img/・texmf/・
@@ -52,6 +55,37 @@ def show_json(rev, path):
         return {}
 
 
+def _phys_series(rev):
+    """phys/series_phys.py を rev の版で読み、(巻ごとの VOLS, 巻の外のもの) を返す。読めなければ None。"""
+    import types
+    try:
+        src = git('show', f'{rev}:phys/series_phys.py')
+        g = {'__name__': 'series_phys_' + rev[:7], '__file__': '/nonexistent/series_phys.py'}
+        exec(compile(src, 'series_phys.py', 'exec'), g)
+    except Exception:
+        return None
+    def code_key(c):  # 関数の中身（行番号・番地はのぞく）
+        return (c.co_code, c.co_names, c.co_varnames,
+                tuple(code_key(x) if isinstance(x, types.CodeType) else repr(x) for x in c.co_consts))
+    vlist = g.get('VOLS', [])
+    vols = {v['no']: repr(v) for v in vlist}
+    rest = {}
+    for k, v in g.items():
+        if (k.startswith('__') or k in ('VOLS', 'ACTUAL') or isinstance(v, types.ModuleType)
+                or any(v is x for x in vlist)):  # ループの変数（_v など）が VOLS の巻をさしているもの
+            continue
+        rest[k] = code_key(v.__code__) if isinstance(v, types.FunctionType) else repr(v)
+    return vols, rest
+
+
+def phys_series_changed(base, head):
+    """series_phys.py で中身が変わった物理の巻の番号の集合。巻の外が変わったときは None（全部の巻）。"""
+    a, b = _phys_series(base), _phys_series(head)
+    if a is None or b is None or a[1] != b[1]:
+        return None
+    return {n for n in set(a[0]) | set(b[0]) if a[0].get(n) != b[0].get(n)}
+
+
 def out(targets):
     print(json.dumps([x for x in ORDER if x in set(targets)]))
 
@@ -77,6 +111,18 @@ def classify(files, base, head):
             t.add('guide'); continue
         if f in ('tools/mkmap9.py', 'tools/mkseriesidx.py'):
             t.add('9'); continue
+        if f == 'phys/pages_actual_phys.json':
+            # 第32回のあと：値が変わった物理の巻だけ（数学の pages_actual.json と同じ）
+            a, b = show_json(base, f), show_json(head, f)
+            for k in set(a) | set(b):
+                if a.get(k) != b.get(k):
+                    t.add('p' + str(k))
+            continue
+        if f == 'phys/series_phys.py':
+            # 第32回のあと：VOLS の中で変わった巻だけ。巻の外（関数・色・ページの決まりなど）が変われば全部の物理の巻
+            vols = phys_series_changed(base, head)
+            if vols is not None:
+                t.update('p%d' % n for n in vols); continue
         if f.startswith(('phys/', 'tex/bk-phys')):
             # 第21回：本文のある物理の巻（tex/ph<n>-body.tex がある巻。第1巻と、第2巻『熱学』から）
             t.update('p%d' % n for n in range(1, 6) if n == 1 or os.path.exists('tex/ph%d-body.tex' % n)); continue
@@ -84,6 +130,9 @@ def classify(files, base, head):
             t.add('p' + m.group(1)); continue
         if m := re.match(r'(?:mondai/v|tex/mq)([1-9])[-/.]', f):
             t.add('q' + m.group(1)); continue
+        if f.startswith('mondai/app/'):
+            # 第32回のあと：アプリ（print.html）はどの巻を組んでも同じものができるので、問題集の1つの巻だけ
+            t.update(qvols()[:1]); continue
         if f.startswith(('mondai/', 'tex/bk-mondai', 'tex/mq-')):
             t.update(qvols()); continue
         if f == 'pages_actual.json':
