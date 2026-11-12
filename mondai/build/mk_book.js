@@ -15,12 +15,12 @@ const parts = M.parts[vol] || [];
 const ids = M.list(vol);
 const byPart = no => ids.filter(id => M.waza[id].part === no);
 
-function box(def, step) { const w = M.boxwOf(def, step), h = M.boxhOf(def, step); if (h) return `\\mqboxt{${w || '15mm'}}{${h}}`; return w ? `\\mqbox[${w}]` : '\\mqbox{}'; }
+function box(def, step, p) { const w = M.boxwOf(def, step, p), h = M.boxhOf(def, step, p); if (h) return `\\mqboxt{${w || '15mm'}}{${h}}`; return w ? `\\mqbox[${w}]` : '\\mqbox{}'; }
 const SQ = { box: '\\mqsq{}' };   // 説明の文の □ は、書きこむ欄ではない
 function probLine(def, p, num, extra) {
   const q = M.withBox(p.q);
-  if (p.fig) return `\\mqpf{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}}{${M.figTeX(p.fig)}}`;   // 図（第4巻から。第35回）：文の右に図
-  return `\\mqp{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}}`;
+  if (p.fig) return `\\mqpf{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}{${M.figTeX(p.fig)}}`;   // 図（第4巻から。第35回）：文の右に図
+  return `\\mqp{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}`;
 }
 function probs(def, list, start, extra) {
   // ひっ算の問題は、方眼の絵をならべる（左から右へ、入るだけ）
@@ -115,7 +115,7 @@ for (const part of parts) {
       ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。'
       : '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
     // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
-    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step); const nb = (M.withBox(p.q).match(/□/g) || []).length; return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
+    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step, p); const nb = (M.withBox(p.q).match(/□/g) || []).length; return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
     const half = Math.ceil(lines2.length / 2);
     body.push(`\\def\\mqsplabelkey{miwake}\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}\n\\mqmiwaketable{${wz.map(id => `\\mqmwrow{${id}}{${tx(M.waza[id].title, SQ)}}`).join('')}}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];

@@ -139,13 +139,13 @@
     const cell = (p, ans) => {
       const w = M.waza[p.id];
       // まぜるときは、欄のはばを 15mm より せまくしない（欄のはばが わざの手がかりに ならないように。R2-20）
-      const bw0 = M.boxwOf(w, p.step) || '15mm';
+      const bw0 = M.boxwOf(w, p.step, p) || '15mm';
       const bw = st.mix && parseFloat(bw0) < 15 ? '15mm' : bw0;
       const q = M.withBox(p.q);
       const len = M.plain(q).replace(/\s/g, '').length;
       let body;
       if (!ans) {
-        const bh = M.boxhOf(w, p.step);
+        const bh = M.boxhOf(w, p.step, p);
         body = H(q, { noRuby: !st.ruby, box: `<span class="box" style="min-width:${bw}${bh ? `;height:${bh}` : ''}"></span>` });
       } else {
         // 欄に答えを書きこむ。欄が2つ以上なら、答えの中の数を順に入れる（合わなければ欄の外に答えを書く）

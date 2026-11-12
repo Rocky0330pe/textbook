@@ -78,9 +78,9 @@
   };
   // 列の数・答えの欄のはば（わざ全体か、ステップごと {s1:2, s3:1}）
   M.colsOf = (def, step) => (def.cols && typeof def.cols === 'object') ? (def.cols[step] || 2) : (def.cols || 2);
-  M.boxwOf = (def, step) => (def.boxw && typeof def.boxw === 'object') ? (def.boxw[step] || null) : (def.boxw || null);
+  M.boxwOf = (def, step, p) => (p && p.boxw) || ((def.boxw && typeof def.boxw === 'object') ? (def.boxw[step] || null) : (def.boxw || null));   // 問題ごとの p.boxw・p.boxh があれば、それを使う（組 f の要望）
   // 欄の高さ（分数の答えなど。第2巻から）。なければ ふつうの高さ
-  M.boxhOf = (def, step) => (def.boxh && typeof def.boxh === 'object') ? (def.boxh[step] || null) : (def.boxh || null);
+  M.boxhOf = (def, step, p) => (p && p.boxh) || ((def.boxh && typeof def.boxh === 'object') ? (def.boxh[step] || null) : (def.boxh || null));   // 問題ごとの p.boxw・p.boxh があれば、それを使う（組 f の要望）
   M.list = function (vol) {
     return M.order.filter(id => !vol || M.waza[id].vol === vol).sort();
   };
@@ -682,7 +682,14 @@
       else if (k === 'circle' || k === 'arc') { P([a[0] - b, a[1] - b]); P([a[0] + b, a[1] + b]); }
       else if (k === 'ellipse') { P([a[0] - b, a[1] - c]); P([a[0] + b, a[1] + c]); }
       else if (k === 'par') { P(a); P(b); }
-      else if (k === 'dot' || k === 'label') P(a);
+      else if (k === 'dot') P(a);
+      else if (k === 'label') {   // ラベルの字のはばも入れる（組 f の要望）。字の大きさは 3.4 mm、1字はおよそ 0.6 字ぶん（漢字・かなは1字）
+        P(a); const u = (fig.font || 3.4) / (fig.s || 5), v = ANCH[c || 'c'] || ANCH.c;
+        const txt = String(b).replace(/\$/g, '').replace(/\\(?:mathrm|text|vec|overrightarrow)\{([^}]*)\}/g, '$1').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}^_ ]/g, '');
+        const w = [...txt].reduce((t, ch) => t + (/[\u3000-\u9fff]/.test(ch) ? 1 : 0.6), 0) * u, cx = a[0] + v[0] * 0.75 * u, cy = a[1] + v[1] * 0.75 * u;
+        const L = v[0] > 0.3 ? cx : v[0] < -0.3 ? cx - w : cx - w / 2;
+        P([L, cy - 0.45 * u]); P([L + w, cy + 0.6 * u]);
+      }
       else if (k === 'angle' || k === 'right') { P(a); P(b); P(c); }
       else if (k === 'grid') { P([a, b]); P([c, d]); }
       else if (k === 'axes') { P([a, c]); P([b, d]); }
