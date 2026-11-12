@@ -112,7 +112,7 @@
 
   // ---------------------------------------------------------------- 目印の読み方（fits の部品）
   const KMH = /km\/h|時速/, MS = /m\/s|秒速/;
-  const ASKD = /\)'|\\\}'|微分|f'\(|y'=|\\dd|v=□|\$v=|傾き|速さ/;          // 導関数・微分係数・速さを聞いている
+  const ASKD = /\)'|\\\}'|微分|f'\(|y'=|\\dd|v=□|\$v=|傾き|速さ|速度/;          // 導関数・微分係数・速さを聞いている
   const NOTD = /定義|平均|\\lim|接線の式|接線が|接線と|傾きが|平行|通る/;      // 微分のきまりでなく、ほかのわざの目印
   // 関数の式（「$f(x)=…$」「$(…)'$」「$y=…$」「$x=…$」）をとり出す
   function funcOf(q) {
@@ -159,18 +159,20 @@
       // 時速 → 秒速（÷3.6）
       s1(r) {
         const v = D(r.pick(V01)), A = F.mul(v, D('3.6'));
+        if (F.val(v) === 20) return null;   // 楽な形の例（$72\\,\\mathrm{km/h}$ → 20。O-2）
         return { q: `$${ft(A)}\\,\\mathrm{km/h}=□\\,\\mathrm{m/s}$`, a: `$${ft(v)}$`, easy: `$${ft(A)}\\div3.6=${ft(v)}$`, key: `v${ft(v)}` };
       },
       // 秒速 → 時速（×3.6）。s1 の逆の問題を同じ見開きに出さない（key が同じ。N-2）
       s2(r) {
         const v = D(r.pick(V01)), A = F.mul(v, D('3.6'));
+        if (F.val(v) === 15) return null;   // 楽な形の例（$15\\,\\mathrm{m/s}$ → 54。O-2）
         return { q: `$${ft(v)}\\,\\mathrm{m/s}=□\\,\\mathrm{km/h}$`, a: `$${ft(A)}$`, easy: `$${ft(v)}\\times3.6=${ft(A)}$`, key: `v${ft(v)}` };
       },
       // 場面の文で、両向きをまぜる（スピードメーター・新幹線・音・100 m 走・分速）
       s3(r) {
         const k = r.int(0, 4);
         if (k === 0) {
-          const v = r.pick([10, 15, 20, 25, 30]), A = 3.6 * v;
+          const v = r.pick([10, 25, 30]), A = 3.6 * v;   // 時速72 km（20）と 54 km（15）は楽な形の例
           return { q: `スピードメーターが時速 $${fmt(A)}\\,\\mathrm{km}$ を指している。この速さのまま1秒に進む距離 $□\\,\\mathrm{m}$`, a: `$${v}$`, easy: `$${fmt(A)}\\div3.6=${v}$`, key: `m${v}` };
         }
         if (k === 1) {
@@ -233,17 +235,18 @@
     futsu: ['進んだ距離とかかった時間を、', '文や表から1つずつ読みとって考える。'],
     raku: ['A（$2\\,\\mathrm{s}$、$6\\,\\mathrm{m}$）、B（$5\\,\\mathrm{s}$、$21\\,\\mathrm{m}$）', '→ $\\frac{21-6}{5-2}=\\frac{15}{3}=5\\,\\mathrm{m/s}$'],
     why: '平均の速さは、進んだ距離 $\\Delta x$（あと$-$まえ）を、かかった時間 $\\Delta t$（あと$-$まえ）でわったもの。$x$-$t$ グラフでは、たての変化量÷横の変化量なので、2点を結ぶ直線の傾きと同じ式になる（5-1①②）。',
-    caution: '「まえ」と「あと」を両方とも同じ順でひく。位置がもどる（へる）ときは、平均の速さはマイナス（向きもふくめた速度）。表は、ほしい2つの時刻の列だけを見る。',
+    caution: '「まえ」と「あと」を両方とも同じ順でひく。位置がもどる（へる）ときは、平均の速度はマイナス（向きもふくめた速さを速度という）。表は、ほしい2つの時刻の列だけを見る。',
     counts: { s1: 8, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '15mm',
-    fits(q) { return (/平均の速さ/.test(q) && /位置|\$t\$（|2点/.test(q) && !/往復|\+h/.test(q)) || /通る直線の傾き|2点を結ぶ直線の傾き/.test(q); },
+    fits(q) { return (/平均の(?:速さ|速度)/.test(q) && /位置|\$t\$（|2点/.test(q) && !/往復|\+h/.test(q)) || /通る直線の傾き|2点を結ぶ直線の傾き/.test(q); },
     steps: {
       // 2つの時刻と位置
       s1(r) {
         const t1 = r.int(0, 8), dt = r.int(1, 6), v = D(r.pick([1, 2, 3, 4, 5, 6, 7, 8, 1.5, 2.5, 0.5])), x1 = r.int(0, 30);
         const dx = F.mul(v, fr(dt)); if (dx[1] !== 1) return null;
         const t2 = t1 + dt, x2 = x1 + dx[0];
+        if (`${t1},${x1},${t2},${x2}` === '2,6,5,21') return null;   // 楽な形の例（左ページ）の数は出さない（O-2）
         const q = r.chance(0.5)
           ? `$x$-$t$ グラフの2点 A（${un(t1, 's')}、${un(x1, 'm')}）、B（${un(t2, 's')}、${un(x2, 'm')}）。AからBの平均の速さ $□\\,\\mathrm{m/s}$`
           : `時刻 ${un(t1, 's')} に位置 ${un(x1, 'm')}、${un(t2, 's')} に位置 ${un(x2, 'm')} にいた。平均の速さ $□\\,\\mathrm{m/s}$`;
@@ -253,7 +256,7 @@
       s2(r) {
         if (r.chance(0.35)) {   // 坂を上って下りるボール：もどるとマイナス
           const t1 = r.int(2, 6), dt = r.int(1, 4), v = r.int(1, 4), x2 = r.int(1, 8), x1 = x2 + v * dt;
-          return { q: `坂を上ってから下りてきたボールが、時刻 ${un(t1, 's')} に位置 ${un(x1, 'm')}、${un(t1 + dt, 's')} に位置 ${un(x2, 'm')} にいた（坂の上向きが正）。このあいだの平均の速さ $□\\,\\mathrm{m/s}$`,
+          return { q: `坂を上ってから下りてきたボールが、時刻 ${un(t1, 's')} に位置 ${un(x1, 'm')}、${un(t1 + dt, 's')} に位置 ${un(x2, 'm')} にいた（坂の上向きが正）。このあいだの平均の速度 $□\\,\\mathrm{m/s}$`,
             a: `$${-v}$`, easy: `$\\frac{${x2}-${x1}}{${t1 + dt}-${t1}}=\\frac{${-v * dt}}{${dt}}=${-v}$`, key: `b${t1},${x1},${dt},${x2}` };
         }
         // 車の記録（km）。どのあいだも平均の速さは 10 の倍数、0〜120 km/h
@@ -314,13 +317,13 @@
   // 往復の平均の速さ 2ab/(a+b)。片道を a と b の公倍数にとる
   const SP03 = [2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 36, 40, 45, 48, 50, 60, 72, 80, 90, 120];
   const PAIRS03 = [];
-  SP03.forEach(a => SP03.forEach(b => { if (a < b && b <= 4 * a && (2 * a * b) % (a + b) === 0) PAIRS03.push([a, b]); }));
+  SP03.forEach(a => SP03.forEach(b => { if (a < b && b <= 4 * a && (2 * a * b) % (a + b) === 0 && !(a === 40 && b === 60)) PAIRS03.push([a, b]); }));   // 40 と 60 は楽な形の例（O-2）
   M.add({
     id: '5-03', part: 1, chap: '5-1 例題7', stars: 1,
     title: '同じ道の往復は、片道を2つの速さの公倍数にとって時間を出す',
     mark: '行きと帰りで速さがちがい、片道の距離が同じ（書いていなくてもよい）。',
     futsu: ['片道を $L$ とおき、$\\frac{2L}{\\frac{L}{a}+\\frac{L}{b}}$ を', '文字のまま計算する。'],
-    raku: ['時速 60 km と 40 km → 片道を 120 km とおく', '2時間と3時間 → $\\frac{240}{5}=48\\,\\mathrm{km/h}$'],
+    raku: ['時速 $60\\,\\mathrm{km}$ と $40\\,\\mathrm{km}$ → 片道を $120\\,\\mathrm{km}$ とおく', '2時間と3時間 → $\\frac{240}{5}=48\\,\\mathrm{km/h}$'],
     why: '平均の速さは「全部の距離÷全部の時間」（5-1 例題7）。片道の距離はどれでも答えは同じなので、2つの速さでわりきれる数（公倍数）にとると、時間が整数になって計算が楽になる。',
     caution: '$\\frac{60+40}{2}=50$ としない（速さの平均ではない）。おそいほうに長い時間かかるので、平均はおそいほうに引っぱられる。',
     counts: { s1: 4, s2: 3, s3: 3, trap: 2 },
@@ -333,7 +336,7 @@
         const L = F.lcm(a, b), H = 2 * a * b / (a + b), walk = b <= 6;
         return {
           q: `同じ道を、行きは時速 $${a}\\,\\mathrm{km}$、帰りは時速 $${b}\\,\\mathrm{km}$ で${walk ? '歩いて' : '走って'}往復した。往復の平均の速さ $□\\,\\mathrm{km/h}$`,
-          a: `$${H}$`, easy: `片道を ${L} km とおくと ${L / a} 時間と ${L / b} 時間 → $\\frac{${2 * L}}{${L / a + L / b}}=${H}$`, key: [a, b].sort((m, n) => m - n).join(','),
+          a: `$${H}$`, easy: `片道を $${L}\\,\\mathrm{km}$ とおくと ${L / a}時間と${L / b}時間 → $\\frac{${2 * L}}{${L / a + L / b}}=${H}$`, key: [a, b].sort((m, n) => m - n).join(','),
           verify: p => close(num(p.a), 2 / (1 / a + 1 / b)) || '往復の平均の速さがちがう',
         };
       },
@@ -348,7 +351,7 @@
         const [g, k] = walk ? ['山道', ['上り', '下り']] : ['道', ['行き', '帰り']];
         return {
           q: `片道 $${L}\\,\\mathrm{km}$ の${g}を、${k[0]}は時速 $${a}\\,\\mathrm{km}$、${k[1]}は時速 $${b}\\,\\mathrm{km}$ で往復した。往復の平均の速さ $□\\,\\mathrm{km/h}$`,
-          a: `$${ft(H)}$`, easy: `${k[0]} ${ft(ta)} 時間、${k[1]} ${ft(tb)} 時間 → $\\frac{${2 * L}}{${ft(F.add(ta, tb))}}=${ft(H)}$`, key: `${L}:${[a, b].sort((m, n) => m - n)}`,
+          a: `$${ft(H)}$`, easy: `${k[0]} ${ft(ta)}時間、${k[1]} ${ft(tb)}時間 → $\\frac{${2 * L}}{${ft(F.add(ta, tb))}}=${ft(H)}$`, key: `${L}:${[a, b].sort((m, n) => m - n)}`,
           verify: p => close(num(p.a), 2 * L / (L / a + L / b)) || '往復の平均の速さがちがう',
         };
       },
@@ -358,7 +361,7 @@
           const [x, y] = r.pick(PAIRS03), sw = r.chance(0.5), a = sw ? y : x, b = sw ? x : y, H = 2 * a * b / (a + b), L = F.lcm(a, b);
           return {
             q: `同じ道を往復する。行きは時速 $${a}\\,\\mathrm{km}$ だった。往復の平均の速さを時速 $${H}\\,\\mathrm{km}$ にするには、帰りは時速 $□\\,\\mathrm{km}$`,
-            a: `$${b}$`, easy: `片道を ${L} km とおくと、往復で $${2 * L}\\div${H}=${2 * L / H}$ 時間、行き ${L / a} 時間 → 帰り ${2 * L / H - L / a} 時間 → $${L}\\div${2 * L / H - L / a}=${b}$`, easyCheck: 'last', key: `rev${a > b ? 1 : 0}`,
+            a: `$${b}$`, easy: `片道を $${L}\\,\\mathrm{km}$ とおくと、往復で $${2 * L}\\div${H}=${2 * L / H}$ 時間、行き ${L / a}時間 → 帰り ${2 * L / H - L / a}時間 → $${L}\\div${2 * L / H - L / a}=${b}$`, easyCheck: 'last', key: `rev${a > b ? 1 : 0}`,
             verify: p => close(2 / (1 / a + 1 / num(p.a)), H) || '往復の平均が合わない',
           };
         }
@@ -368,7 +371,7 @@
         if (!isDec(H, 2) || L > 60) return null;
         return {
           q: `静水での速さが時速 $${V}\\,\\mathrm{km}$ の船が、時速 $${c}\\,\\mathrm{km}$ で流れる川を、同じ道のりだけ上って下りた（往復）。往復の平均の速さ $□\\,\\mathrm{km/h}$`,
-          a: `$${ft(H)}$`, easy: `上り時速 ${up} km、下り時速 ${dn} km。片道を ${L} km とおくと ${L / up} 時間と ${L / dn} 時間 → $\\frac{${2 * L}}{${L / up + L / dn}}=${ft(H)}$`, key: `w${V},${c}`,
+          a: `$${ft(H)}$`, easy: `上り時速 $${up}\\,\\mathrm{km}$、下り時速 $${dn}\\,\\mathrm{km}$。片道を $${L}\\,\\mathrm{km}$ とおくと ${L / up}時間と${L / dn}時間 → $\\frac{${2 * L}}{${L / up + L / dn}}=${ft(H)}$`, key: `w${V},${c}`,
           verify: p => close(num(p.a), 2 / (1 / up + 1 / dn)) || '往復の平均の速さがちがう',
         };
       },
@@ -408,13 +411,14 @@
     fits(q) {
       if (/[tx]\^\{3\}/.test(q)) return false;
       if (/\((-?[\d.]+)\+h\)\^\{?2\}?/.test(q)) return true;
-      if (/平均の速さ|平均変化率/.test(q) && /\+h|[\d.]+秒から[\d.]+秒/.test(q) && /[tx]\^\{2\}/.test(q)) return true;
+      if (/平均の(?:速さ|速度)|平均変化率/.test(q) && /\+h|[\d.]+秒から[\d.]+秒/.test(q) && /[tx]\^\{2\}/.test(q)) return true;
       return /定義から/.test(q) && /x\^\{2\}/.test(q) && /微分係数/.test(q);
     },
     steps: {
       // x=ct^2 の a 秒から a+h 秒まで・f(x)=x^2 の平均変化率
       s1(r) {
         const c = r.pick([1, 2, 3, 4, 5, 10]), a = r.int(1, 4);
+        if (c === 5 && a === 2) return null;   // 楽な形の例（$x=5t^2$、2秒から）は出さない（O-2）
         if (c === 1) {
           return { q: `$f(x)=x^{2}$ の、$x=${a}$ から $x=${a}+h$ までの平均変化率　□`, a: `$${2 * a}+h$`, easy: `$2\\times${a}+h=${2 * a}+h$`, key: `f${a}`, verify: p => avgOK(p.a, 'x^{2}', 'x', a) };
         }
@@ -435,14 +439,15 @@
         }
         const c = r.pick([1, 2, 3, 5]), b = r.pick([-4, -3, -2, -1, 1, 2, 3, 4]), a = r.int(1, 3), f = `${cx(c, 't')}^{2}${plusT(b, 't')}`;
         const k0 = 2 * c * a + b;
-        return {
-          q: `$x=${f}$（m）の、${a}秒から $${a}+h$ 秒までの平均の速さ　□`, a: `$${k0}+${cx(c, 'h')}$`,
+        return {   // 1次の項が負なら、平均は負にもなる（O-3：負になりうる量は「速度」）
+          q: `$x=${f}$（m）の、${a}秒から $${a}+h$ 秒までの平均の${b < 0 ? '速度' : '速さ'}　□`, a: `$${k0}+${cx(c, 'h')}$`,
           easy: `$${c === 1 ? '' : `${c}\\times`}(2\\times${a}+h)${b > 0 ? '+' : ''}${b}=${k0}+${cx(c, 'h')}$`, key: `b${c}:${b}:${a}`, verify: p => avgOK(p.a, f, 't', a),
         };
       },
       // h を数で：0.1・0.01 のあいだ（後ろからも前からも）
       s3(r) {
         const c = r.pick([1, 2, 5, 10]), a = r.int(1, 4), h = r.pick(['0.1', '0.01']), back = r.chance(0.35);
+        if (c === 5 && a === 2) return null;   // 楽な形の例（O-2）
         const A = D(a), H = D(h), t1 = back ? F.sub(A, H) : A, t2 = back ? A : F.add(A, H);
         const v = F.mul(D(c), F.add(t1, t2));
         if (c === 1 && r.chance(0.5)) {
@@ -465,12 +470,13 @@
   });
 
   // ================================================================ 5-05
-  const C05 = [[2, 'm'], [3, 'm'], [4, 'm'], [5, 'm'], [10, 'm'], [20, 'cm'], [4.9, 'm'], [1.5, 'm'], [2.5, 'm']];
+  // 楽な形の例の $x=20t^2$（cm）と、ステップ3の落下の $4.9t^2$ は入れない（O-2・R1-22）
+  const C05 = [[2, 'm'], [3, 'm'], [4, 'm'], [5, 'm'], [10, 'm'], [30, 'cm'], [1.5, 'm'], [2.5, 'm']];
   M.add({
     id: '5-05', part: 1, chap: '5-2④', stars: 1,
     title: '$x=at^2$ なら $v=2at$（瞬間の速さを定義から出さない）',
     mark: '$x=$ 数 $\\times t^2$ と、「□秒の瞬間の速さ」「速さが□になる時刻」。',
-    futsu: ['$t$ 秒から $t+h$ 秒までの平均の速さを', '$h$ の式にして、$h$ を0に近づける。'],
+    futsu: ['$t$ 秒から $t+h$ 秒までの', '平均の速さを $h$ の式にして、', '$h$ を0に近づける。'],
     raku: ['$x=20t^2$ → $v=2\\times20\\times t=40t$', '2.5秒では $40\\times2.5=100\\,\\mathrm{cm/s}$'],
     why: '$x=at^2$ の平均の速さは $2at+ah$ になり、$h$ を0に近づけると $ah$ が消えて $v=2at$（5-2④）。2は、$(t+h)^2=t^2+2th+h^2$ の $2th$ の2。一度この式を作れば、どの時刻の速さも、かけ算1回で出る。',
     caution: '$x=5t^2$ の1秒の速さを、$\\frac{5}{1}=5$（0秒から1秒の平均）としない。瞬間の速さは $2\\times5\\times1=10$。1次の項 $bt$ があるときは、$v=2at+b$（1項ずつ微分）。',
@@ -502,13 +508,13 @@
         }
         if (k === 1) {
           const t = r.int(1, 4), v = F.mul(D('9.8'), fr(t));
-          return { q: `物を落とすと、$t$ 秒で $x=4.9t^{2}$（m）落ちる。${t}秒後の速さ $□\\,\\mathrm{m/s}$`, a: `$${ft(v)}$`, easy: `$v=9.8t$ → $9.8\\times${t}=${ft(v)}$`, easyCheck: 'last', key: `g${t}`,
+          return { q: `物を落とすと、$t$ 秒で $x=4.9t^{2}$（m）落ちる。${t}秒後の速さ $□\\,\\mathrm{m/s}$`, a: `$${ft(v)}$`, easy: `$v=9.8t$ → $9.8\\times${t}=${ft(v)}$`, easyCheck: 'last', key: 'g',   // 落下（$4.9t^2$）は見開きに1問（R1-22）
             verify: p => close(num(p.a), nd('4.9t^{2}', 't', t), 1e-6) || '速さがちがう' };
         }
-        if (k === 2) {
-          const v = r.pick([40, 60, 80, 100, 120, 140]);
-          return { q: `坂をころがるボールの位置は $x=20t^{2}$（cm）。速さが $${v}\\,\\mathrm{cm/s}$ になるのは □ 秒後`, a: `$${ft(fr(v, 40))}$`, easy: `$v=40t$、$40t=${v}$ → $t=${ft(fr(v, 40))}$`, easyCheck: false, key: `b${v}`,
-            verify: p => close(nd('20t^{2}', 't', num(p.a)), v, 1e-6) || '時刻がちがう' };
+        if (k === 2) {   // 楽な形の例（$x=20t^2$）とは別の係数（O-2）。key は s1・s2 と同じ形
+          const c = r.pick([10, 15, 25, 30]), T = r.pick([1, 1.5, 2, 2.5, 3, 4]), v = 2 * c * T;
+          return { q: `坂をころがるボールの位置は $x=${c}t^{2}$（cm）。速さが $${v}\\,\\mathrm{cm/s}$ になるのは □ 秒後`, a: `$${T}$`, easy: `$v=${2 * c}t$、$${2 * c}t=${v}$ → $t=${T}$`, easyCheck: false, key: `${c}:${T}`,
+            verify: p => close(nd(`${c}t^{2}`, 't', num(p.a)), v, 1e-6) || '時刻がちがう' };
         }
         const [c, t] = r.pick([[1.5, 6], [1.5, 4], [2.5, 4], [2.5, 2], [2, 5], [1.25, 8], [1.5, 2]]), v = F.mul(fr(2 * t), D(c)), A = F.mul(v, D('3.6'));
         return { q: `発進した車は、$t$ 秒で $x=${c}t^{2}$（m）進む。${t}秒後の速さは、時速 $□\\,\\mathrm{km}$`, a: `$${ft(A)}$`, easy: `$v=${ft(F.mul(fr(2), D(c)))}t$ → $${ft(v)}\\,\\mathrm{m/s}$、$${ft(v)}\\times3.6=${ft(A)}$`, easyCheck: 'last', key: `c${c}:${t}`,
@@ -568,6 +574,7 @@
     steps: {
       s1(r) {
         const a = r.pick([-12, -9, -8, -7, -5, -4, -3, -2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12]), b = r.pick([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]);
+        if (a === 8 && b === 2) return null;   // 楽な形の例（O-2）
         return { q: `$${LIM}\\frac{${hpoly([a, b])}}{h}$`, a: `$${a}$`, easy: `$${LIM}(${a}${plusT(b, 'h')})=${a}$`, easyCheck: 'last', key: `${a},${b}`, verify: p => limOK(p) };
       },
       // 項が3つ・降べきの順・分母が kh
@@ -583,6 +590,7 @@
           return { q: `$${LIM}\\frac{${hpoly([a, b], 'h', true)}}{h}$`, a: `$${a}$`, easy: `$h$ の1乗の係数 → $${a}$`, easyCheck: 'last', key: `d:${a},${b}`, verify: p => limOK(p) };
         }
         const d = r.pick([2, 3, 4]), a = r.pick([-9, -6, -5, -3, 2, 3, 4, 5, 6, 8, 9]), b = r.pick([-2, -1, 1, 2, 3]), L = fr(a, d);
+        if (a === 8 && b === 2) return null;   // 分子が楽な形の例と同じ（O-2）
         return { q: `$${LIM}\\frac{${hpoly([a, b])}}{${d}h}$`, a: `$${F.tex(L)}$`, easy: `$${LIM}\\frac{${a}${plusT(b, 'h')}}{${d}}=${F.tex(L)}$`, easyCheck: 'last', key: `k:${a},${b},${d}`, verify: p => limOK(p) };
       },
       // Δt で書いた極限・かけ算の形・x をふくむ（導関数の計算のとちゅう）
@@ -613,8 +621,8 @@
   // ================================================================ 5-07
   // 放物線 y=cx^2 と、x=a での接線の図（ステップ3）。Q：接線と y 軸の交わる点
   function tanFig(c, a, withQ) {
-    const m = 2 * c * a, k = -c * a * a, xs = [-3.6, 3.6];
-    const ys = [Math.min(0, k, c * 9) - 1, Math.max(0, k, c * 9) + 0.5];
+    const m = 2 * c * a, k = -c * a * a, xs = [-3.6, 3.6], tl = [m * (a - 0.45) + k, m * (a + 0.45) + k];   // 接線は P の両がわまで見せる（R1-1）
+    const ys = [Math.min(0, k, c * 9, ...tl) - 1, Math.max(0, k, c * 9, ...tl) + 0.5];
     const G = M.graph({ x0: xs[0], x1: xs[1], y0: ys[0], y1: ys[1], w: 8, h: 7 });
     const its = [...G.axes({ xt: c > 0 ? [a] : [], x: 'x', y: 'y', o: a < 0 ? 'se' : 'sw' })];
     if (c < 0) its.push(['seg', [a * G.sx, -0.15], [a * G.sx, 0.15]], ['label', [a * G.sx, 0], String(a).replace('-', '−'), 'n']);   // 接点が軸の下のときは、目もりの数を軸の上に
@@ -640,6 +648,7 @@
     steps: {
       s1(r) {
         const c = r.pick([1, 1, 1, 2, 3, -1]), a = r.pick([-4, -3, -2, -1, 1, 2, 3, 4]), f = QF07(c);
+        if (c === 1 && a === 2) return null;   // 楽な形の例（$y=x^2$、$x=2$）は出さない（O-2）
         const m = fr(2 * c * a), k = fr(-c * a * a), fa = c * a * a;
         return { q: `$y=${f}$ のグラフの、$x=${a}$ の点での接線の式　□`, a: `$${lineTeX(m, k)}$`, easy: `接点 $${P2(a, fa)}$、傾き $${2 * c * a}$ → $y=${2 * c * a}(x${a > 0 ? '-' : '+'}${Math.abs(a)})${fa >= 0 ? '+' : ''}${fa}$`, easyCheck: false, key: `${c}:${a}`,
           verify: p => tangentOK(p.a, f, a) };
@@ -661,12 +670,14 @@
       // 図：放物線と接線。接線の式か、接線と y 軸の交わる点Qの y 座標
       s3(r) {
         const c = r.pick([1, 1, 2, -1]), a = r.pick([-2, -1, 1, 2, 3]), f = QF07(c), m = fr(2 * c * a), k = fr(-c * a * a);
-        if (Math.abs(c * a * a) > 9 || (c < 0 && Math.abs(a) === 1)) return null;   // y=-x^2 の x=±1 は、接点が軸に近くてラベルが重なる
+        if (Math.abs(c * a * a) > 9 || (c < 0 && Math.abs(a) === 1) || (c === 1 && a === 2)) return null;   // y=-x^2 の x=±1 は、接点が軸に近くてラベルが重なる。$y=x^2$ の $x=2$ は楽な形の例
+        // key は s1 と同じ形（同じ式・同じ点を、見開きに2回出さない。O-2・R1-13）
         if (r.chance(0.5)) {
-          return { q: `図は $y=${f}$ のグラフと、点P（$x=${a}$）での接線。接線の式　□`, a: `$${lineTeX(m, k)}$`, fig: tanFig(c, a, false), easy: `接点 $${P2(a, c * a * a)}$、傾き $${2 * c * a}$`, easyCheck: false, key: `f${c}:${a}`,
+          return { q: `図は $y=${f}$ のグラフと、点P（$x=${a}$）での接線。接線の式　□`, a: `$${lineTeX(m, k)}$`, fig: tanFig(c, a, false), easy: `接点 $${P2(a, c * a * a)}$、傾き $${2 * c * a}$`, easyCheck: false, key: `${c}:${a}`,
             verify: p => tangentOK(p.a, f, a) };
         }
-        return { q: `図は $y=${f}$ のグラフと、点P（$x=${a}$）での接線。接線と $y$ 軸が交わる点Qの $y$ 座標　□`, a: `$${ft(k)}$`, fig: tanFig(c, a, true), easy: `$y=${lineTeX(m, k).slice(2)}$ に $x=0$ → $${ft(k)}$`, easyCheck: 'last', key: `q${c}:${a}`,
+        if (Math.abs(c * a * a) < 3) return null;   // Q が原点に近いと、Q と O の字が重なる
+        return { q: `図は $y=${f}$ のグラフと、点P（$x=${a}$）での接線。接線と $y$ 軸が交わる点Qの $y$ 座標　□`, a: `$${ft(k)}$`, fig: tanFig(c, a, true), easy: `$y=${lineTeX(m, k).slice(2)}$ に $x=0$ → $${ft(k)}$`, easyCheck: 'last', key: `${c}:${a}`,
           verify: p => close(num(p.a), ev(f, 'x', a) - nd(f, 'x', a) * a, 1e-6) || 'Q の y 座標がちがう' };
       },
       // わな：2点を通る直線の傾き（接線ではない。平均変化率。5-02）
@@ -734,23 +745,24 @@
             verify: p => contactOK(p.a, f, m) };
         }
         const b = k === 1 ? r.pick([3, 6, 12]) : 0, s = r.int(1, 3), m = 3 * s * s - b, Pf = PN(0, -b, 0, 1), f = ptex(Pf), y = sv => sv ** 3 - b * sv;
+        if (b === 0 && s === 2) return null;   // $y=x^3$、傾き12 は楽な形の例（O-2）
         return { q: `$y=${f}$ で、接線の傾きが $${m}$ になる接点（すべて）　□`, a: `$${P2(s, y(s))}$ と $${P2(-s, y(-s))}$`, easy: `$3x^2${b ? `-${b}` : ''}=${m}$ → $x^2=${s * s}$ → $x=${s},\\ -${s}$`, easyCheck: false, key: `c${b}:${m}`,
           verify: p => contactOK(p.a, f, m) };
       },
       // 平行な接線の式・傾きが決まった接線の式（2つ）
       s3(r) {
         if (r.chance(0.5)) {
-          const a = r.pick([-3, -2, -1, 1, 2, 3]), m = 2 * a, d = r.pick([-5, -1, 1, 3, 6]);
-          return { q: `$y=x^{2}$ の接線のうち、直線 $y=${m}x${d > 0 ? '+' : ''}${d}$ に平行なものの式　□`, a: `$${lineTeX(fr(m), fr(-a * a))}$`, easy: `$2x=${m}$ → 接点 $${P2(a, a * a)}$`, easyCheck: false, key: `p${m}`,
+          const a = r.pick([-2, -1, 1, 2]), m = 2 * a, d = r.pick([-5, -1, 1, 3, 6]);   // 接点の |a|≦2。わなの接点（|a|≧3）と重ねない（R1-12）
+          return { q: `$y=x^{2}$ の接線のうち、直線 $y=${m}x${d > 0 ? '+' : ''}${d}$ に平行なものの式　□`, a: `$${lineTeX(fr(m), fr(-a * a))}$`, easy: `$2x=${m}$ → 接点 $${P2(a, a * a)}$`, easyCheck: false, key: `1:${m}`,
             verify: p => linesOK(p.a, 'x^{2}', m) };
         }
-        const s = r.int(1, 2), m = 3 * s * s, n = 2 * s ** 3;
-        return { q: `$y=x^{3}$ の接線のうち、傾きが $${m}$ のものの式（2つ）　□`, a: `$y=${m}x-${n}$ と $y=${m}x+${n}$`, easy: `$3x^2=${m}$ → 接点 $${P2(s, s ** 3)}$ と $${P2(-s, -(s ** 3))}$`, easyCheck: false, key: `c${m}`,
+        const s = r.pick([1, 3]), m = 3 * s * s, n = 2 * s ** 3;   // s=2（傾き12）は楽な形の例
+        return { q: `$y=x^{3}$ の接線のうち、傾きが $${m}$ のものの式（2つ）　□`, a: `$y=${m}x-${n}$ と $y=${m}x+${n}$`, easy: `$3x^2=${m}$ → 接点 $${P2(s, s ** 3)}$ と $${P2(-s, -(s ** 3))}$`, easyCheck: false, key: `c0:${m}`,
           verify: p => maths(p.a).length !== 2 ? '接線は2つ' : linesOK(p.a, 'x^{3}', m) };
       },
       // わな：グラフの外の点を通る接線（傾きがわからない。接点を (a, a^2) とおく）
       trap(r) {
-        const s = r.int(1, 4), d = r.int(-1, 1), a1 = d - s, a2 = d + s, px = d, py = a1 * a2;
+        const [a1, a2] = r.pick([[-3, 3], [-4, 4], [-5, 5], [-3, 5], [-5, 3]]), px = (a1 + a2) / 2, py = a1 * a2;   // 接点は |a|≧3（ステップ3の接点 |a|≦2 と重ねない。R1-12）
         const L = a => lineTeX(fr(2 * a), fr(-a * a));
         return dest({ q: `$y=x^{2}$ の接線のうち、点 $${P2(px, py)}$ を通るものの式（2つ）　□`, a: `$${L(a2)}$ と $${L(a1)}$`,
           verify: p => maths(p.a).length !== 2 ? '接線は2つ' : linesOK(p.a, 'x^{2}', null, [px, py]) },
@@ -827,6 +839,7 @@
           return { q: `$(${c})'=□$`, a: '$0$', easy: `$${c}$ は定数（グラフは横にまっすぐ）なので $0$`, easyCheck: false, key: 'const', calc: { kind: 'diff', f: `${c}` } };
         }
         const n = r.int(2, 12), v = r.chance(0.8) ? 'x' : 't', ans = mono(n, n - 1, v);
+        if (n === 5 && v === 'x') return null;   // 楽な形の例（$x^5$。O-2）
         return { q: `$(${v}^{${n}})'=□$`, a: `$${ans}$`, easy: `指数 ${n} を前に出し、指数を $${n}-1=${n - 1}$ に → $${ans}$`, easyCheck: 'last', key: `p${n}`, calc: { kind: 'diff', f: `${v}^{${n}}`, x: v } };
       },
       // 微分係数・接線の傾き（導関数を作ってから代入）・時間の式
@@ -866,6 +879,7 @@
           return { q: `${lead} $${Y}=a^{${n}}$ を $a$ で微分すると $\\frac{\\dd ${Y}}{\\dd a}=□$`, a: `$${ans}$`, easy: `指数 ${n} を前に出し、指数を1へらす → $${ans}$`, easyCheck: 'last', key: 'k3', calc: { kind: 'diff', f: `a^{${n}}`, x: 'a' } };
         }
         const n = r.int(3, 12), g = mono(n, n - 1, 'x');
+        if (n === 5) return null;   // 楽な形の例（$5x^4$）の逆
         return {
           q: `微分すると $${g}$ になるのは、$x^{n}$ の $n=□$ のとき`, a: `$${n}$`, easy: `前に出た数が指数 → $${n}$（指数は $${n}-1=${n - 1}$ で合う）`, easyCheck: false, key: 'k4',
           verify: p => [0.6, 1.4].every(x => close(nd(`x^{${num(p.a)}}`, 'x', x), ev(g, 'x', x), 1e-6)) || '微分しても、もとの式にならない',
@@ -943,19 +957,19 @@
           verify: p => close(num(p.a), nd(f, 'x', a), 1e-6) || '微分係数がちがう',
         };
       },
-      // 位置の式から速さ（式・値・時刻）
+      // 位置の式から速度（式・値・時刻）。速度は負にもなるので「速さ」と書かない（O-3）
       s3(r) {
         const si = r.int(0, SC10.length - 1), sc = SC10[si](r), f = ptex(sc.P, 't', { dec: true }), dP = M.P.diff(sc.P), vt = ptex(dP, 't', { dec: true }), k = r.int(0, 2);
         const head = `${sc.lead} $x=${f}$（m）のとき、`;
-        if (k === 0) return { q: `${head}$t$ 秒の瞬間の速さ $v=□$`, a: `$${vt}$`, easy: `$${stepTeX(sc.P, 't', { dec: true })}=${vt}$`, key: `${si}:0`, boxw: '24mm', calc: { kind: 'diff', f, x: 't' } };
+        if (k === 0) return { q: `${head}$t$ 秒の瞬間の速度 $v=□$`, a: `$${vt}$`, easy: `$${stepTeX(sc.P, 't', { dec: true })}=${vt}$`, key: `${si}:0`, boxw: '24mm', calc: { kind: 'diff', f, x: 't' } };
         if (k === 1) {
           const T = r.int(1, 4), v = M.P.at(dP, T);
-          return { q: `${head}${T}秒の瞬間の速さ $□\\,\\mathrm{m/s}$`, a: `$${ft(v)}$`, easy: `$v=${vt}$ に $t=${T}$ → $${ft(v)}$`, easyCheck: 'last', key: `${si}:1`,
-            verify: p => close(num(p.a), nd(f, 't', T), 1e-6) || '速さがちがう' };
+          return { q: `${head}${T}秒の瞬間の速度 $□\\,\\mathrm{m/s}$`, a: `$${ft(v)}$`, easy: `$v=${vt}$ に $t=${T}$ → $${ft(v)}$`, easyCheck: 'last', key: `${si}:1`,
+            verify: p => close(num(p.a), nd(f, 't', T), 1e-6) || '速度がちがう' };
         }
         const T = D(r.pick([1, 2, 3, 4, 5, 0.5, 1.5, 2.5])), V = M.P.at(dP, T);
         if (!isDec(V, 1) || V[0] < 0) return null;
-        return { q: `${head}速さが $${ft(V)}\\,\\mathrm{m/s}$ になるのは □ 秒後`, a: `$${ft(T)}$`, easy: `$v=${vt}$、$${vt}=${ft(V)}$ → $t=${ft(T)}$`, easyCheck: false, key: `${si}:2`,
+        return { q: `${head}速度が $${ft(V)}\\,\\mathrm{m/s}$ になるのは □ 秒後`, a: `$${ft(T)}$`, easy: `$v=${vt}$、$${vt}=${ft(V)}$ → $t=${ft(T)}$`, easyCheck: false, key: `${si}:2`,
           verify: p => close(nd(f, 't', num(p.a)), F.val(V), 1e-6) || '時刻がちがう' };
       },
       // わな：かっこのかけ算（1項ずつにできない。5-13）・平均の速さ（微分しない。5-02・5-04）
@@ -1093,7 +1107,7 @@
     steps: {
       // 1/x^n と x^{-n}
       s1(r) {
-        const n = r.int(1, 8), d = mono(-n, -n - 1, 'x');
+        const n = r.int(3, 9), d = mono(-n, -n - 1, 'x');   // $\\frac{1}{x}$・$\\frac{1}{x^2}$ は楽な形の例（O-2）
         if (r.chance(0.7)) {
           const ans = `-\\frac{${n}}{x^{${n + 1}}}`;
           return { q: `$\\left(\\frac{1}{${mono(1, n, 'x')}}\\right)'=□$`, a: `$${ans}$`, easy: `$x^{-${n}}$ → $${d}=${ans}$`, easyCheck: 'last', key: `n${n}`, calc: { kind: 'diff', f: `\\frac{1}{x^{${n}}}` } };
@@ -1156,7 +1170,7 @@
     futsu: ['$f(x+h)-f(x)$ を、かっこのまま計算して', '$h$ でわり、$h$ を0に近づける。'],
     raku: ['$(x+2)(x-3)=x^2-x-6$ → $2x-1$', '$(2x+1)^2=4x^2+4x+1$ → $8x+4$'],
     why: 'かっこのままでは、まだ $(x^n)\'=nx^{n-1}$ のきまりが使えない。展開して $x^n$ の和にすれば、1つの項ずつ微分できる（5-4 例題7。展開は3-8）。',
-    caution: '微分どうしをかけない（$\\{(x+2)(x-3)\\}\'$ は $1\\times1$ ではない）。$\\{(2x+1)^2\\}\'$ を $2(2x+1)$ としない（かっこの中が $x$ だけのときのきまり）。3乗より大きいかっこは、展開が長くなる。',
+    caution: '微分どうしをかけない（$\\{(x+2)(x-3)\\}\'$ は $1\\times1$ ではない）。$\\{(2x+1)^2\\}\'$ を $2(2x+1)$ としない（かっこの中が $x$ だけのときのきまり）。3乗より大きいかっこも展開すれば微分できるが、項が多くて長い（かっこを1つの文字と見るきまり 5-20 が速い）。',
     counts: { s1: 10, s2: 8, s3: 4, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 1, trap: 1 },
     boxw: { s1: '20mm', s2: '20mm', s3: '26mm', trap: '26mm' },
@@ -1173,12 +1187,13 @@
         const a = r.pick(NZ(6)), b = r.pick(NZ(6));
         if (a === b) return null;
         const f = br(1, a) + br(1, b), Pf = M.P.mul(PN(a, 1), PN(b, 1)), ans = ptex(M.P.diff(Pf));
+        if (a + b === -1 && a * b === -6) return null;   // 楽な形の例（$(x+2)(x-3)$。O-2）
         return { q: `$\\{${f}\\}'=□$`, a: `$${ans}$`, easy: `$${ptex(Pf)}$ → $${ans}$`, easyCheck: 'last', key: [a, b].sort((x, y) => x - y).join(','), calc: { kind: 'diff', f } };
       },
       // (ax+b)^2・(b-ax)^2
       s2(r) {
         const a = r.pick([1, 1, 2, 2, 3, 4, 5]), b = r.pick(NZ(5)), rev = b > 0 && r.chance(0.2);
-        if (F.gcd(a, Math.abs(b)) !== 1) return null;
+        if (F.gcd(a, Math.abs(b)) !== 1 || (a === 2 && b === 1 && !rev)) return null;   // $(2x+1)^2$ は楽な形の例（O-2）
         const f = `${rev ? `(${b}-${cx(a, 'x')})` : br(a, b)}^{2}`, Pf = M.P.pow(PN(b, rev ? -a : a), 2), ans = ptex(M.P.diff(Pf));
         return { q: `$\\{${f}\\}'=□$`, a: `$${ans}$`, easy: `$${ptex(Pf)}$ → $${ans}$`, easyCheck: 'last', key: `s${rev ? -a : a},${b}`, calc: { kind: 'diff', f } };
       },
@@ -1201,18 +1216,24 @@
           return { q: `$\\{${f}\\}'=□$`, a: `$${ans}$`, easy: `$${ptex(Pf)}$ → $${ans}$`, easyCheck: 'last', key: 'k2', calc: { kind: 'diff', f } };
         }
         const a = r.pick(NZ(5)), b = r.pick(NZ(5)), x0 = r.pick([-2, -1, 1, 2, 3]);
-        if (a === b) return null;
+        if (a === b || (a + b === -1 && a * b === -6)) return null;   // $(x+2)(x-3)$ は楽な形の例
         const f = br(1, a) + br(1, b), Pf = M.P.mul(PN(a, 1), PN(b, 1)), dP = M.P.diff(Pf), val = M.P.at(dP, x0)[0];
         return { q: `$f(x)=${f}$ のとき $f'(${x0})=□$`, a: `$${val}$`, easy: `$f(x)=${ptex(Pf)}$、$f'(x)=${ptex(dP)}$ に $x=${x0}$ → $${val}$`, easyCheck: 'last', key: 'k3', boxw: '15mm',
           verify: p => close(num(p.a), nd(f, 'x', x0), 1e-6) || '微分係数がちがう' };
       },
-      // わな：4乗から上のかっこ（展開が長い。かっこを1つの文字と見るきまりで。5-20）
+      // わな：かっこが分母にある（展開しても多項式にならないので、1項ずつ微分できない。5-22）
+      // （4乗から上のかっこは、長いが展開すれば解けるので、わなにしない。caution に書いた。O-5・R1-9）
       trap(r) {
-        const n = r.pick([4, 5, 6]), a = r.pick([1, 2, 3]), b = r.pick(NZ(3));
-        if (F.gcd(a, Math.abs(b)) !== 1) return null;
-        const f = `${br(a, b)}^{${n}}`;
-        return dest({ q: `$\\{${f}\\}'=□$`, a: `$${n * a}${br(a, b)}^{${n - 1}}$`, calc: { kind: 'diff', f } },
-          '5-13', `${n}乗を展開すると項が${n + 1}こになり、計算が長い。かっこを1つの文字と見るきまりで`, ['5-20']);
+        if (r.chance(0.5)) {
+          const a = r.int(1, 4), b = r.int(a + 1, 6), D2 = ptex(PN(a * b, a + b, 1)), f = `\\frac{1}{${br(1, a)}${br(1, b)}}`;
+          return dest({ q: `$\\left(${f}\\right)'=□$`, a: `$-\\frac{${ptex(PN(a + b, 2))}}{(${D2})^{2}}$`, key: `trapA${a}${b}`, calc: { kind: 'diff', f } },
+            '5-13', `かっこが分母にある。展開しても $\\frac{1}{${D2}}$ で、多項式にならない。分母を中身と見て、$\\frac{1}{u}$ の微分（中身の微分 $${ptex(PN(a + b, 2))}$ をかける）`, ['5-22']);
+        }
+        const a = r.pick([1, 2, 3]), b = r.pick([1, 2, 3, 5]);
+        if (F.gcd(a, b) !== 1 || (a === 2 && b === 1)) return null;   // $(2x+1)$ は楽な形の例のかっこ
+        const f = `\\frac{1}{${br(a, b)}^{2}}`;
+        return dest({ q: `$\\left(${f}\\right)'=□$`, a: `$-\\frac{${2 * a}}{${br(a, b)}^{3}}$`, key: `trapB${a}${b}`, calc: { kind: 'diff', f } },
+          '5-13', `かっこが分母にあるので、展開しても1項ずつ微分できない。$${br(a, b)}^{-2}$ と見て、$-2${br(a, b)}^{-3}\\times${a}$`, ['5-22']);
       },
     },
   });
@@ -1245,9 +1266,9 @@
   ];
   // 物理の式：[場面, 名前, 式, 微分する文字, 定数の文字, 答え, 答えの名前（v=□ か \frac{\dd …}{\dd …}=□）, 意味]
   const U14 = [
-    ['落下の距離', 'x', '\\frac{1}{2}gt^{2}', 't', '$g$', 'gt', 'v', '速さ'],
-    ['投げ上げの高さ', 'x', 'v_{0}t-\\frac{1}{2}gt^{2}', 't', '$v_{0}$、$g$', 'v_{0}-gt', 'v', '速さ'],
-    ['加速度 $a$ が一定の運動の位置', 'x', '\\frac{1}{2}at^{2}', 't', '$a$', 'at', 'v', '速さ'],
+    ['落下の距離', 'x', '\\frac{1}{2}gt^{2}', 't', '$g$', 'gt', 'v', '速度'],
+    ['投げ上げの高さ', 'x', 'v_{0}t-\\frac{1}{2}gt^{2}', 't', '$v_{0}$、$g$', 'v_{0}-gt', 'v', '速度'],
+    ['加速度 $a$ が一定の運動の位置', 'x', '\\frac{1}{2}at^{2}', 't', '$a$', 'at', 'v', '速度'],
     ['ばねを $x$ だけのばす仕事', 'W', '\\frac{1}{2}kx^{2}', 'x', '$k$', 'kx', null, 'ばねの力の大きさ'],
     ['抵抗 $R$ の電力', 'P', 'RI^{2}', 'I', '$R$', '2RI', null, ''],
   ];
@@ -1274,7 +1295,7 @@
     steps: {
       // π と文字1つ
       s1(r) {
-        const k = r.int(0, 9);
+        const k = r.int(1, 9);   // S14[0]（円の面積 $\\pi r^2$）は楽な形の例なので出さない（O-2）
         let lead, Y, f, ans, easy, X = 'r';
         if (k < 6) [lead, Y, f, ans, easy] = S14[k];
         else if (k < 7) {
@@ -1297,16 +1318,17 @@
       // 物理の式・ある半径での値
       s3(r) {
         if (r.chance(0.6)) {
-          const [lead, Y, f, X, cs, ans, name, mean] = r.pick(U14);
+          const [lead, Y, f, X, cs, ans, name, mean] = r.pick(U14.slice(1));   // U14[0]（落下 $\\frac{1}{2}gt^2$）は楽な形の例（O-2）
           return {
             q: `${lead} $${Y}=${f}$ を $${X}$ で微分（${cs} は定数）　${name ? `${mean} $${name}=□$` : `$${dd(Y, X)}=□$`}`, a: `$${ans}$`,
             easy: `$${X}$ のほかの文字は数と同じ → $${ans}$${!name && mean ? `（${mean}）` : ''}`, easyCheck: 'last', key: `${f}:${X}`, verify: p => diffOK(p.a, f, X),
           };
         }
-        const [lead, Y, f, , ] = r.pick(S14.slice(0, 3)), a = r.int(2, 6), dv = { '\\pi r^{2}': 2 * a, '\\frac{4}{3}\\pi r^{3}': 4 * a * a, '4\\pi r^{2}': 8 * a }[f];
+        // ある半径での値（$\\pi r^2$ は楽な形の例なのでよける。key は s1 と同じ形：同じ式を見開きに2回出さない。O-2）
+        const [lead, Y, f, , ] = r.pick([S14[1], S14[2], S14[4], S14[5]]), a = r.int(2, 6), dv = { '\\frac{4}{3}\\pi r^{3}': 4 * a * a, '4\\pi r^{2}': 8 * a, '\\frac{1}{2}\\pi r^{2}': a, '\\frac{2}{3}\\pi r^{3}': 2 * a * a }[f];
         const d = S14.find(s => s[2] === f)[3];
         return {
-          q: `${lead} $${Y}=${f}$ で、$r=${a}$ のときの $${dd(Y, 'r')}$ の値　□`, a: `$${dv}\\pi$`, easy: `$${dd(Y, 'r')}=${d}$ に $r=${a}$ → $${dv}\\pi$`, easyCheck: 'last', key: `val${f}`,
+          q: `${lead} $${Y}=${f}$ で、$r=${a}$ のときの $${dd(Y, 'r')}$ の値　□`, a: `$${dv === 1 ? '' : dv}\\pi$`, easy: `$${dd(Y, 'r')}=${d}$ に $r=${a}$ → $${dv === 1 ? '' : dv}\\pi$`, easyCheck: 'last', key: f,
           verify: p => close(num(p.a), nd(f, 'r', a), 1e-6) || '値がちがう',
         };
       },
@@ -1331,6 +1353,7 @@
   function tire(r) {
     const L = r.pick(L91), T = r.pick(T91), N = r.int(2, 12), dist = F.mul(D(L), fr(N)), v = F.div(dist, D(T));
     if (!isDec(dist, 1) || !isDec(v, 1) || F.val(v) < 8 || F.val(v) > 36) return null;
+    if (L === '1.5' && T === '0.25' && N === 4) return null;   // 楽な形の例の数（O-2）
     return { L, T, N, dist, v, head: `まわりの長さ ${un(L, 'm')} のタイヤが、${T}秒に${N}回転した。`, key: `${L},${T},${N}`,
       ok: x => close(x, parseFloat(L) * N / parseFloat(T), 1e-9) };
   }
@@ -1381,7 +1404,7 @@
         if (k === 2) {
           const v = r.pick([12, 15, 18, 20, 24, 25, 30]), n = F.div(fr(v), D(L));
           if (!isDec(n, 1) || (n[1] !== 1 && n[1] !== 2)) return null;
-          return { q: `秒速 ${un(v, 'm')} の車。まわりの長さ ${un(L, 'm')} のタイヤは1秒に □ 回転`, a: `$${ft(n)}$`, easy: `1秒に ${v} m 進む → $${v}\\div${L}=${ft(n)}$`, easyCheck: 'last', key: 'k2',
+          return { q: `秒速 ${un(v, 'm')} の車。まわりの長さ ${un(L, 'm')} のタイヤは1秒に □ 回転`, a: `$${ft(n)}$`, easy: `1秒に $${v}\\,\\mathrm{m}$ 進む → $${v}\\div${L}=${ft(n)}$`, easyCheck: 'last', key: 'k2',
             verify: p => close(num(p.a) * parseFloat(L), v, 1e-9) || '回転数がちがう' };
         }
         const A = r.pick([36, 54, 72, 90, 108]), v = A / 3.6, n = F.div(fr(v), D(L));

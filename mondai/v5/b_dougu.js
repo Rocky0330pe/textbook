@@ -120,6 +120,7 @@
       // 1回微分（速度）
       s1(r) {
         const P = posPoly(r, r.chance(0.5) ? 2 : 3), X = PT(P, 't'), V = PT(PP.diff(P), 't'), dot = r.chance(0.3);
+        if (V === '3t^{2}-12t+9') return null;   // 楽な形の例（$x=t^3-6t^2+9t$）と同じ速度（O-2）
         return {
           q: dot ? `位置 $x=${X}$（m）のとき、$\\dot{x}$` : `位置 $x=${X}$（m）のとき、速度 $v$`, a: `$${V}$`, key: `x${X}`,
           easy: `1項ずつ微分して $${V}$`, easyCheck: 'last', calc: { kind: 'diff', f: X, x: 't' },
@@ -128,6 +129,7 @@
       // 2回微分（加速度）
       s2(r) {
         const P = posPoly(r, r.chance(0.3) ? 2 : 3), X = PT(P, 't'), V = PT(PP.diff(P), 't'), A = PT(PP.diff(PP.diff(P)), 't'), dd = r.chance(0.3);
+        if (V === '3t^{2}-12t+9') return null;   // 楽な形の例と同じ（O-2）
         return {
           q: dd ? `位置 $x=${X}$（m）のとき、$\\ddot{x}$` : `位置 $x=${X}$（m）のとき、加速度 $a$`, a: `$${A}$`, key: `x${X}`,
           easy: `$v=${V}$ をもう1回微分して $${A}$`, easyCheck: false,
@@ -138,7 +140,7 @@
       s3(r) {
         const k = r.int(0, 2);
         if (k === 2) {
-          const [al, be] = r.pick([[1, 3], [2, 4], [1, 5], [3, 5], [2, 6]]);
+          const [al, be] = r.pick([[1, 4], [2, 4], [1, 5], [3, 5], [2, 6]]);   // 1秒と3秒は楽な形の例（O-2）
           const P = PP.make(r.int(0, 5), 3 * al * be, -3 * (al + be) / 2, 1), X = PT(P, 't');
           return {
             q: `位置 $x=${X}$（m）の物体の速度が0になるのは □ 秒と □ 秒`, a: `${al} 秒と ${be} 秒`, key: `x${X}`, boxw: '12mm',
@@ -147,6 +149,7 @@
           };
         }
         const P = posPoly(r, 3), X = PT(P, 't'), T = r.int(1, 4), V = PP.diff(P), A = PP.diff(V);
+        if (PT(V, 't') === '3t^{2}-12t+9') return null;   // 楽な形の例と同じ（O-2）
         const isV = k === 0, val = F.val(PP.at(isV ? V : A, T));
         return {
           q: `位置 $x=${X}$（m）の、${T}秒での${isV ? '速度' : '加速度'} $□\\,\\mathrm{${isV ? 'm/s' : 'm/s^2'}}$`, a: `$${val}$`, key: `x${X}`,
@@ -194,6 +197,7 @@
       // 時速から（教科書 5-5 例題2）
       s2(r) {
         const V = r.pick([10, 15, 20, 25, 30]), T = r.pick([2, 4, 5, 8, 10, 20, 25, 30]), a = V / T;
+        if (V === 20 && T === 8) return null;   // 楽な形の例（O-2）
         if (a > 6 || !termDec(fr(V, T)) || fmt(a).length > 5) return null;
         const obj = r.pick(['車', '電車', 'バス']);
         if (a > (obj === '車' ? 4 : 1.5)) return null;
@@ -207,6 +211,7 @@
       s3(r) {
         if (r.chance(0.6)) {
           const V = r.pick([10, 15, 20, 25, 30]), T = r.pick([2, 4, 5, 8, 10]), a = -V / T;
+          if (V === 20 && T === 8) return null;   // 楽な形の例（時速72 km、8秒）の逆向き（O-2）
           if (!termDec(fr(V, T)) || -a > 8) return null;
           return {
             q: `時速 $${KMH(V)}\\,\\mathrm{km}$ で走っていた車がブレーキをかけ、${T}秒で止まった。平均の加速度 $□\\,\\mathrm{m/s^2}$`, a: `$${fmt(a)}$`, key: `b${V}:${T}`,
@@ -237,8 +242,10 @@
   // 投げ上げ：x = h0 + v0 t − (g/2) t²。いちばん高いのは k 秒後
   function throwUp(r, opt) {
     opt = opt || {};
-    const g49 = !opt.g10 && r.chance(0.2);
-    const k = g49 ? r.int(1, 4) : r.pick([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6]);
+    const g49 = !opt.g10 && !opt.s3 && r.chance(0.2);
+    // $v_0=30$（$x=30t-5t^2$）は楽な形の例なので出さない（O-2）。そのぶん 5.5・6.5 と、g=9.8 の 5 を足す。
+    // $v_0=15$・$35$ は、ステップ3の「時刻と高さ」の型だけに使う（s1・s2 と同じ式を出さず、この型が見開きに出るように。R1-3）
+    const k = opt.s3 ? r.pick([1.5, 3.5]) : g49 ? r.int(1, 5) : r.pick([0.5, 1, 2, 2.5, 4, 4.5, 5, 5.5, 6, 6.5]);
     const v0 = g49 ? 9.8 * k : 10 * k, c = g49 ? 4.9 : 5, h0 = opt.h0 ? r.pick([2, 5, 10, 15, 20]) : 0;
     const H = h0 + c * k * k;
     const X = `${h0 ? `${h0}+` : ''}${fmt(v0)}t-${c}t^2`;
@@ -286,18 +293,18 @@
             verify: () => close(xmaxNum(o.X, 2 * o.k + 1).mx, o.H, 1e-6) || '最も高い所の高さがちがう',
           };
         }
-        const o = throwUp(r);
+        const o = throwUp(r, { s3: true });
         return {
-          q: `真上に投げたボールの高さが $x=${o.X}$（m）。最も高くなるのは □ 秒後で、その高さは $□\\,\\mathrm{m}$`, a: `${fmt(o.k)} 秒後、$${fmt(o.H)}\\,\\mathrm{m}$`, key: `w${o.v0}`, boxw: '12mm',
+          q: `真上に投げたボールの高さが $x=${o.X}$（m）。最も高くなるのは □ 秒後で、その高さは $□\\,\\mathrm{m}$`, a: `${fmt(o.k)} 秒後、$${fmt(o.H)}\\,\\mathrm{m}$`, key: `v${o.v0}`, boxw: '12mm',   // key は s1・s2 と同じ形（同じ式を見開きに2回出さない。O-2・R1-3）
           easy: `$\\dot{x}=0$ → $t=${fmt(o.k)}$、$\\frac{${o.v0}}{2}\\times${fmt(o.k)}=${fmt(o.H)}$`, easyCheck: false,
           verify: () => { const s = xmaxNum(o.X, 2 * o.k + 1); return (close(s.xmx, o.k, 1e-4) && close(s.mx, o.H, 1e-6)) || 'ちがう'; },
         };
       },
       // わな：最も高い所より後の時刻の速度（v=0 ではない。マイナス → 5-15）
       trap(r) {
-        const k = r.int(2, 4), v0 = 10 * k, T = k + r.int(1, 2), V = v0 - 10 * T, X = `${v0}t-5t^2`;
+        const k = r.pick([2, 4, 5]), v0 = 10 * k, T = k + r.int(1, 2), V = v0 - 10 * T, X = `${v0}t-5t^2`;   // $v_0=30$ は楽な形の例。key：わなの2問は別の式に
         return dest({
-          q: `ボールの高さ $x=${X}$（m）。${T}秒での速度 $□\\,\\mathrm{m/s}$`, a: `$${V}$`,
+          q: `ボールの高さ $x=${X}$（m）。${T}秒での速度 $□\\,\\mathrm{m/s}$`, a: `$${V}$`, key: `t${v0}`,
           verify: () => close(dnum(X, T, 't'), V, 1e-6) || '速度がちがう',
         }, '5-17', `最も高い時刻（${k}秒）ではない。$\\dot{x}=${v0}-10t$ に $t=${T}$ を入れる。下向きなのでマイナス`);
       },
@@ -389,7 +396,7 @@
     const t2 = `${wrapP(f)}\\times${isMono(gp) ? par(gpT) : `(${gpT})`}`;
     return `${t1}+${t2}`;
   }
-  const yq = Y => `$y=${Y}$ のとき、$y'$`;
+  const yq = Y => `$y=${Y}$ のとき、$y'=□$`;   // 「$y'$」と「＝」を1つの式に（行で分かれないように。R1-11）
   M.add({
     id: '5-19', part: PART, chap: '5-6②', stars: 1,
     title: '積の微分は「片方ずつ微分してたす」（微分どうしをかけない）',
@@ -411,6 +418,7 @@
       s1(r) {
         const f = PP.make(r.intNot(-5, 5, v => v === 0), r.pick([1, 2, 3])), g = PP.make(r.intNot(-6, 6, v => v === 0), 0, r.pick([1, 1, 2, 3]));
         const ans = PT(PP.diff(PP.mul(f, g))), Y = `(${PT(f)})(${PT(g)})`;
+        if (Y === '(2x+1)(x^{2}-3)') return null;   // 楽な形の例（O-2）
         return { q: yq(Y), a: `$${ans}$`, key: [PT(f), PT(g)].sort().join('*'), easy: `$${prodEasy(f, g)}=${ans}$`, calc: { kind: 'diff', f: Y } };
       },
       // x^m×1次式、2次式×2次式、1次式×(2次式)
@@ -429,7 +437,7 @@
           const a = r.int(1, 3), b = r.int(1, 6), c = r.int(1, 3), d = r.int(1, 5), T = r.int(1, 3);
           const val = a * (c * T + d) + (a * T + b) * c, VT = lin(a, b, 't'), IT = lin(c, d, 't');
           return {
-            q: `電圧が $V=${VT}$、電流が $I=${IT}$ で変わるとき、電力 $P=VI$ の変わる速さ $\\frac{\\dd P}{\\dd t}$ の、$t=${T}$ での値`, a: `$${val}$`, key: `p${VT}*${IT}:${T}`,
+            q: `電圧 $V=${VT}$（V）と電流 $I=${IT}$（A）が、時刻 $t$（秒）とともに変わる。電力 $P=VI$ の変わる速さ $\\frac{\\dd P}{\\dd t}$ の、$t=${T}$ での値 $□\\,\\mathrm{W/s}$`, a: `$${val}$`, key: `p${VT}*${IT}:${T}`,   // 単位（N-7・R1-10）
             easy: `$${a}\\times${c * T + d}+${a * T + b}\\times${c}=${val}$`,
             verify: () => close(dnum(`(${VT})(${IT})`, T, 't'), val, 1e-6) || 'ちがう',
           };
@@ -470,33 +478,37 @@
       // (ax+b)^n
       s1(r) {
         const a = r.pick([1, 2, 2, 3, 3, 4, 5]), b = r.intNot(-9, 9, v => v === 0), n = r.int(3, 6), U = lin(a, b), Y = pw(U, n), A = `${n * a}${pw(U, n - 1)}`;
+        if (Y === '(2x-5)^{4}') return null;   // 楽な形の例（O-2）
         return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$${n}${pw(U, n - 1)}\\times${a}=${A}$`, calc: { kind: 'diff', f: Y } };
       },
       // (b−ax)^n・定数倍（教科書 5-6 例題2（2））
       s2(r) {
         if (r.chance(0.6)) {
           const a = r.pick([1, 1, 2, 3]), b = r.int(1, 9), n = r.int(3, 5), U = linR(b, a), Y = pw(U, n), A = `-${n * a}${pw(U, n - 1)}`;
+          if (Y === '(4-x)^{3}') return null;   // 楽な形の例（O-2）
           return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$${n}${pw(U, n - 1)}\\times(-${a})=${A}$`, calc: { kind: 'diff', f: Y } };
         }
         const k = r.pick([2, 3, 5, -1, -2]), a = r.pick([2, 3]), b = r.intNot(-7, 7, v => v === 0), n = r.int(3, 5), U = lin(a, b), Y = `${cf(k)}${pw(U, n)}`, A = `${k * n * a}${pw(U, n - 1)}`;
+        if (U === '2x-5' && n === 4) return null;   // 楽な形の例の数倍（O-2）
         return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$${k === -1 ? '-' : `${k}\\times`}${n}${pw(U, n - 1)}\\times${a}=${A}$`, calc: { kind: 'diff', f: Y } };
       },
       // ある点の接線の傾き・位置の式の速度
       s3(r) {
         const a = r.pick([1, 2, 3]), b = r.intNot(-5, 5, v => v === 0), n = r.int(3, 4), x0 = r.int(-1, 2), inner = a * x0 + b;
         if (Math.abs(inner) > 3 || inner === 0) return null;
-        const val = n * a * Math.pow(inner, n - 1);
+        const val = n * a * Math.pow(inner, n - 1), KY = pw(lin(a, b), n);   // key は s1 と同じ形（同じ式を見開きに2回出さない。O-2）
+        if (KY === '(2x-5)^{4}') return null;   // 楽な形の例
         if (r.chance(0.5)) {
-          const Y = pw(lin(a, b), n);
+          const Y = KY;
           return {
-            q: `$y=${Y}$ のグラフの、$x=${x0}$ の点での接線の傾き`, a: `$${val}$`, key: `${Y}:${x0}`,
+            q: `$y=${Y}$ のグラフの、$x=${x0}$ の点での接線の傾き`, a: `$${val}$`, key: KY,
             easy: `$y'=${n * a}${pw(lin(a, b), n - 1)}$ に $x=${x0}$`, easyCheck: false, verify: () => close(dnum(Y, x0), val, 1e-6) || 'ちがう',
           };
         }
         if (x0 < 0 || inner < 0) return null;
         const X = pw(lin(a, b, 't'), n);
         return {
-          q: `位置が $x=${X}$（m）の物体の、${x0}秒での速度 $□\\,\\mathrm{m/s}$`, a: `$${val}$`, key: `${X}:${x0}`,
+          q: `位置が $x=${X}$（m）の物体の、${x0}秒での速度 $□\\,\\mathrm{m/s}$`, a: `$${val}$`, key: KY,
           easy: `$\\dot{x}=${n * a}${pw(lin(a, b, 't'), n - 1)}$ に $t=${x0}$`, easyCheck: false, verify: () => close(dnum(X, x0, 't'), val, 1e-6) || 'ちがう',
         };
       },
@@ -526,6 +538,7 @@
       // (x²+c)^n
       s1(r) {
         const c = r.intNot(-9, 9, v => v === 0), n = r.int(3, 5), U = sq2(c), Y = pw(U, n), A = `${2 * n}x${pw(U, n - 1)}`;
+        if (Y === '(x^{2}+1)^{4}') return null;   // 楽な形の例（O-2）
         return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$${n}${pw(U, n - 1)}\\times2x=${A}$`, calc: { kind: 'diff', f: Y } };
       },
       // (ax²+c)^n・(x³+c)^n・(x²+bx)^n
@@ -543,8 +556,9 @@
         const c = r.intNot(-4, 4, v => v === 0), n = r.int(2, 4), x0 = r.pick([1, -1, 2]), inner = x0 * x0 + c, val = n * Math.pow(inner, n - 1) * 2 * x0;
         if (inner === 0 || Math.abs(val) > 500) return null;
         const Y = pw(sq2(c), n);
-        return {
-          q: `$y=${Y}$ のグラフの、$x=${x0}$ の点での接線の傾き`, a: `$${val}$`, key: `${Y}:${x0}`,
+        if (Y === '(x^{2}+1)^{4}') return null;   // 楽な形の例
+        return {   // key は s1 と同じ形：同じ式を見開きに2回出さない（$x=\\mp1$ で符号だけちがう組も出ない。O-2・R1-23）
+          q: `$y=${Y}$ のグラフの、$x=${x0}$ の点での接線の傾き`, a: `$${val}$`, key: Y,
           easy: `$y'=${2 * n}x${pw(sq2(c), n - 1)}$ に $x=${x0}$`, easyCheck: false, verify: () => close(dnum(Y, x0), val, 1e-6) || 'ちがう',
         };
       },
@@ -580,6 +594,7 @@
       s1(r) {
         if (r.chance(0.5)) {
           const c = r.int(1, 25), U = sq2(c), Y = `\\sqrt{${U}}`, A = `\\frac{x}{\\sqrt{${U}}}`;
+          if (c === 9) return null;   // 楽な形の例（$\\sqrt{x^2+9}$。O-2）
           return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$\\frac{2x}{2\\sqrt{${U}}}=${A}$`, calc: { kind: 'diff', f: Y, pts: [0.37, 0.83, 1.29] } };
         }
         const a = r.int(1, 6), b = r.int(1, 9), U = lin(a, b), Y = `\\sqrt{${U}}`, A = sqrtLinD(a, U);
@@ -589,7 +604,7 @@
       s2(r) {
         const k = r.int(0, 2), a = r.int(1, 5), b = r.intNot(-7, 7, v => v === 0);
         let Y, A, E;
-        if (k === 0) { const U = lin(a, b); Y = `\\frac{1}{${U}}`; A = `-\\frac{${a}}{(${U})^{2}}`; E = `-\\frac{1}{(${U})^{2}}\\times${a}`; }
+        if (k === 0) { if (a === 2 && b === 1) return null; const U = lin(a, b); Y = `\\frac{1}{${U}}`; A = `-\\frac{${a}}{(${U})^{2}}`; E = `-\\frac{1}{(${U})^{2}}\\times${a}`; }   // $\\frac{1}{2x+1}$ は楽な形の例
         else if (k === 1) { const U = sq2(r.int(1, 9)); Y = `\\frac{1}{${U}}`; A = `-\\frac{2x}{(${U})^{2}}`; E = `-\\frac{1}{(${U})^{2}}\\times2x`; }
         else { const U = lin(a, b); Y = `\\frac{1}{(${U})^{2}}`; A = `-\\frac{${2 * a}}{(${U})^{3}}`; E = `-2(${U})^{-3}\\times${a}`; }
         return { q: yq(Y), a: `$${A}$`, key: Y, easy: `$${E}=${A}$`, calc: { kind: 'diff', f: Y, pts: [0.37, 0.83, 1.29] } };
@@ -598,11 +613,12 @@
       s3(r) {
         const k = r.int(0, 2);
         let Y, x0, val;
-        if (k === 0) { const [p, c, q] = r.pick([[4, 9, 5], [3, 16, 5], [12, 25, 13], [5, 144, 13], [6, 64, 10], [8, 36, 10], [8, 225, 17], [15, 64, 17], [1, 3, 2], [2, 5, 3]]); Y = `\\sqrt{x^{2}+${c}}`; x0 = p; val = fr(p, q); }
+        // key は s1・s2 と同じ形（同じ式を見開きに2回出さない。O-2・R1-15）。$\\sqrt{x^2+9}$・$\\frac{1}{2x+1}$ は楽な形の例
+        if (k === 0) { const [p, c, q] = r.pick([[3, 16, 5], [12, 25, 13], [5, 144, 13], [6, 64, 10], [8, 36, 10], [8, 225, 17], [15, 64, 17], [1, 3, 2], [2, 5, 3]]); Y = `\\sqrt{x^{2}+${c}}`; x0 = p; val = fr(p, q); }
         else if (k === 1) { const a = r.int(1, 4), m = r.int(2, 5), x = r.int(1, 6), b = m * m - a * x; if (b <= 0 || b > 20) return null; Y = `\\sqrt{${lin(a, b)}}`; x0 = x; val = fr(a, 2 * m); }
-        else { const a = r.int(1, 4), b = r.int(1, 5), x = r.int(0, 2), u = a * x + b; Y = `\\frac{1}{${lin(a, b)}}`; x0 = x; val = fr(-a, u * u); }
+        else { const a = r.int(1, 4), b = r.int(1, 5), x = r.int(0, 2), u = a * x + b; if (a === 2 && b === 1) return null; Y = `\\frac{1}{${lin(a, b)}}`; x0 = x; val = fr(-a, u * u); }
         return {
-          q: `$y=${Y}$ の、$x=${x0}$ での $y'$ の値`, a: `$${F.tex(val)}$`, key: `${Y}:${x0}`,
+          q: `$y=${Y}$ の、$x=${x0}$ での $y'$ の値`, a: `$${F.tex(val)}$`, key: Y,
           easy: `微分してから $x=${x0}$ を入れる`, easyCheck: false, verify: () => close(dnum(Y, x0), F.val(val), 1e-6) || 'ちがう',
         };
       },
@@ -712,6 +728,7 @@
   function cubic(r, opt) {
     opt = opt || {};
     const al = r.int(opt.lo == null ? -3 : opt.lo, 3), be = al + r.int(1, 4), lead = ((al + be) % 2 === 0 ? 1 : 2) * (opt.neg ? -1 : 1);
+    if (lead === 1 && al === 1 && be === 3) return null;   // 5-24 の楽な形の例（$x^3-6x^2+9x$）は出さない（O-2）
     const fp = PP.scale(PP.mul(PP.make(-al, 1), PP.make(-be, 1)), 3 * lead), f = PP.integ(fp);
     f[0] = fr(opt.c ? r.int(-6, 6) : 0);
     const fa = F.val(PP.at(f, al)), fb = F.val(PP.at(f, be));
@@ -763,7 +780,7 @@
           const o = cubic(r, { neg: r.chance(0.3), c: r.chance(0.3) }); if (!o) return null;
           const a = r.pick([o.al, o.be]), f2 = PP.diff(o.fp), v2 = F.val(PP.at(f2, a)), top = v2 < 0;
           return {
-            q: `$f(x)=${o.T}$ では $f'(${a})=0$。$f''(${a})=□$ なので、$x=${a}$ で □（極大・極小）`, a: `$${v2}$、${top ? '極大' : '極小'}`, key: `${o.T}:${a}`,
+            q: `$f(x)=${o.T}$ では $f'(${a})=0$。$f''(${a})=□$ なので、$x=${a}$ で □（極大・極小）`, a: `$${v2}$、${top ? '極大' : '極小'}`, key: `d${o.dk}`,
             easy: `$f''(x)=${PT(f2)}$、$f''(${a})=${v2}${top ? '<0' : '>0'}$ なので${top ? '山（極大）' : '谷（極小）'}`, easyCheck: false,
             verify: p => {
               const T = fOf(p.q), E = localExt(fnum(T), o.al - 2, o.be + 2), hit = (top ? E.max : E.min).some(e => close(e[0], a, 1e-4));
@@ -782,14 +799,14 @@
         };
       },
       // 減少（増加）する範囲・極大と極小の数（符号が変わらないと0こ）・定数を決める
-      // （数を聞く形は1見開きに1問、定数を決める形は2問までにして、3つの形がかたよらないようにする。key）
+      // （数を聞く形は1見開きに1問（key 'cnt'）。範囲と定数の形は、key を s1・s2 と同じ形 d… にして、同じ式（$+c$ だけちがう式も）を見開きに2回出さない。O-2・R1-24）
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const o = cubic(r, { neg: r.chance(0.4), c: r.chance(0.3) }); if (!o) return null;
           const down = o.lead > 0;
           return {
-            q: `$f(x)=${o.T}$ が${down ? '減少' : '増加'}する $x$ の範囲は □`, a: `$${o.al}<x<${o.be}$`, key: `r${o.dk}`, boxw: '24mm',
+            q: `$f(x)=${o.T}$ が${down ? '減少' : '増加'}する $x$ の範囲は □`, a: `$${o.al}<x<${o.be}$`, key: `d${o.dk}`, boxw: '24mm',
             easy: `$f'(x)=${o.fpT}$ が${down ? '負' : '正'}になるのは、$${o.al}$ と $${o.be}$ のあいだ`, easyCheck: false,
             verify: p => {
               const T = fOf(p.q), sg = down ? -1 : 1, m = /^\$(-?\d+)<x<(-?\d+)\$$/.exec(p.a); if (!m) return '答えの形がちがう';
@@ -819,7 +836,7 @@
         const isMin = r.chance(0.6), t = r.int(0, 5), c = t - (isMin ? o.vmin : o.vmax);
         if (c === 0) return null;
         return {
-          q: `$f(x)=${o.T}+c$ の${isMin ? '極小値' : '極大値'}が $${t}$ になる定数 $c$`, a: `$${c}$`, key: `c${r.int(0, 1)}`,
+          q: `$f(x)=${o.T}+c$ の${isMin ? '極小値' : '極大値'}が $${t}$ になる定数 $c$`, a: `$${c}$`, key: `d${o.dk}`,
           easy: `$f'(x)=${o.fpT}$ より、$x=${isMin ? o.xmin : o.xmax}$ で${isMin ? '極小' : '極大'}。$${isMin ? o.vmin : o.vmax}+c=${t}$`, easyCheck: false,
           verify: p => { const T = fOf(p.q), cv = numOf(p.a), E = localExt(x => ev(T, { x, c: cv }), o.al - 2, o.be + 2), e = isMin ? E.min : E.max; return (e.length === 1 && close(e[0][1], t, 1e-6)) || `${isMin ? '極小値' : '極大値'}が ${e.length ? e[0][1] : 'ない'}`; },
         };
@@ -831,7 +848,7 @@
           const a = o.al - r.int(0, 1), b = o.be + r.int(1, 2), vb = F.val(PP.at(o.f, b));
           if (vb <= o.vmax || vb > 99) continue;
           return dest({
-            q: `$f(x)=${o.T}$ の、$${a}\\leqq x\\leqq${b}$ での最大値 □`, a: `$${vb}$（$x=${b}$）`, key: `t${o.T}`,
+            q: `$f(x)=${o.T}$ の、$${a}\\leqq x\\leqq${b}$ での最大値 □`, a: `$${vb}$（$x=${b}$）`, key: `d${o.dk}`,   // ステップ1〜3と同じ式を出さない（O-2）
             verify: p => { const s = scan(fnum(fOf(p.q)), a, b, 300), m = /^\$(-?\d+)\$（\$x=(-?\d+)\$）$/.exec(p.a); return (!!m && close(s.mx, +m[1], 1e-6) && close(s.xmx, +m[2], 1e-4)) || `最大は ${s.mx}（x=${s.xmx}）`; },
           }, '5-24', `範囲がある。極大値 $${o.vmax}$ より、はしの $f(${b})=${vb}$ が大きい`);
         }
@@ -872,9 +889,17 @@
     const e = scan(f, x0, x1, 300), sp = Math.max(s.mx, 0) - Math.min(s.mn, 0);   // 範囲の外の点線は、上下に3わりまで見せる
     const y0 = Math.min(0, Math.max(e.mn, s.mn - 0.3 * sp)) - 0.06 * sp, y1 = Math.max(0, Math.min(e.mx, s.mx + 0.3 * sp)) + 0.06 * sp;
     const G = M.graph({ x0, x1, y0, y1, w: 8, h: 4.6 });
-    const tick = t => (t === 0 ? [] : [['seg', [t * G.sx, -0.15], [t * G.sx, 0.15]], ['label', [t * G.sx, 0], `$${t}$`, f(t) < 0 ? 'n' : 's']]);
     // 曲線が原点の近くを通るとき、O は曲線のない向きに置く
-    const d = (x1 - x0) * 0.06, near0 = Math.abs(f(0)) < 0.15 * sp, o = !near0 || f(-d) >= 0 ? 'sw' : f(d) >= 0 ? 'se' : 'nw';
+    const d = (x1 - x0) * 0.06, near0 = Math.abs(f(0)) < 0.15 * sp;
+    // はしの目もりの数（ふつうは曲線と反対がわ）が O と重なるとき（$-1$ と O など）は、O を曲線も目もりの数もない向きへ。
+    // どこにも置けないときだけ、目もりの数を反対がわへ（R1-19）
+    const free = oo => !near0 || (oo === 'sw' ? f(-d) >= 0 : oo === 'se' ? f(d) >= 0 : oo === 'nw' ? f(-d) <= 0 : f(d) <= 0);
+    const hitO = (oo, t, w) => t !== 0 && Math.abs(t * G.sx) < (w || 2.2) && (oo[0] === 's') === (f(t) >= 0) && (oo[1] === 'w') === (t < 0);
+    const yLow = y1 * G.sy < 0.5;   // 軸の上がみじかいと、右上は $y$ の字と重なる
+    const o0 = !near0 || f(-d) >= 0 ? 'sw' : f(d) >= 0 ? 'se' : 'nw';
+    const o = [o0, 'sw', 'se', 'ne', 'nw'].find(oo => free(oo) && !(oo === 'ne' && yLow) && ![a, b].some(t => hitO(oo, t))) || o0;
+    const up = t => (f(t) < 0) !== hitO(o, t, 1.6);
+    const tick = t => (t === 0 ? [] : [['seg', [t * G.sx, -0.15], [t * G.sx, 0.15]], ['label', [t * G.sx, 0], `$${t}$`, up(t) ? 'n' : 's']]);
     return {
       s: 5, items: [
         ...G.axes({ o }), ...tick(a), ...tick(b),
@@ -901,7 +926,7 @@
       s1(r) {
         const up = r.chance(0.7), p0 = r.int(1, 5), c = r.int(-3, 9), a = p0 - r.int(1, 3), b = p0 + r.int(1, 4);
         const f = up ? PP.make(c, -2 * p0, 1) : PP.make(c, 2 * p0, -1), T = PT(f), mm = pickMM(f, [a, p0, b]);
-        if (!mm) return null;
+        if (!mm || (up && p0 === 2)) return null;   // $x^2-4x+c$ は楽な形の例と同じ $f'(x)=2x-4$（O-2）
         return {
           q: `$f(x)=${T}$（$${rangeT(a, b)}$）の最大値 □ と最小値 □`, a: mmA(mm), key: T,
           easy: `$f'(x)=${PT(PP.diff(f))}=0$ は $x=${p0}$。${candT(mm.c)} をくらべる${whereT(mm)}`, easyCheck: false,
@@ -913,7 +938,7 @@
         if (r.chance(0.3)) {
           const up = r.chance(0.6), p0 = r.int(-2, 6), c = r.int(-3, 9), left = r.chance(0.5), a = left ? p0 + r.int(1, 2) : p0 - r.int(3, 6), b = left ? a + r.int(2, 4) : p0 - r.int(1, 2);
           const f = up ? PP.make(c, -2 * p0, 1) : PP.make(c, 2 * p0, -1), T = PT(f), mm = pickMM(f, [a, b]);
-          if (!mm || b - a < 2) return null;
+          if (!mm || b - a < 2 || (up && p0 === 2)) return null;
           return {
             q: `$f(x)=${T}$（$${rangeT(a, b)}$）の最大値 □ と最小値 □`, a: mmA(mm), key: T,
             easy: `$f'(x)=${PT(PP.diff(f))}=0$ の $x=${p0}$ は範囲の外。はしの ${candT(mm.c)} をくらべる${whereT(mm)}`, easyCheck: false,
@@ -990,7 +1015,7 @@
     raku: ['ロープ40 m：$S=x(20-x)$、$0<x<20$', '$S\'=20-2x=0$ → $x=10$（正方形）', '箱：$V=x(18-2x)^2$、$0<x<9$', '$V\'=(18-2x)(18-6x)=0$ → $x=3$'],
     why: '大きく（小さく）したい量を1つの文字の式にして、範囲を書き、$f\'=0$ の解から範囲の中のものをえらぶ（5-7⑥）。前後で $f\'$ が ＋ から － なら最大、－ から ＋ なら最小。まわりの長さが決まった長方形は正方形、1辺 $a$ の紙の箱は $x=\\frac{a}{6}$、缶は高さ＝直径、電池は器具の抵抗＝内部抵抗のときが、いちばん。',
     caution: '範囲の外の解（箱の $x=9$ は底の1辺が0）は答えにしない。聞かれているのが $x$ か、面積・体積かを確かめる。かべを使うときのロープは3辺ぶん（$x$ が2本と横が1本）。',
-    counts: { s1: 4, s2: 3, s3: 3, trap: 2 },
+    counts: { s1: 4, s2: 2, s3: 3, trap: 2 },   // 右ページの最後と「ふりかえり」のあいだをあける（R1-25）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '13mm',
     fits(q) { return /最大|最小/.test(q) && /ロープ|針金|紙|箱|缶|電池/.test(q); },
@@ -1000,6 +1025,7 @@
         const wall = r.chance(0.45), rope = wall || r.chance(0.6), u = rope ? 'm' : 'cm';
         const L = r.pick(wall ? [8, 12, 16, 20, 24, 28, 32, 36, 40, 48, 60, 80] : [8, 10, 12, 14, 16, 20, 24, 28, 30, 32, 36, 40, 48, 60, 80]);
         const x = fr(L, 4), S = wall ? fr(L * L, 8) : fr(L * L, 16);
+        if (!wall && L === 40) return null;   // 楽な形の例（ロープ $40\\,\\mathrm{m}$。O-2）
         const q = wall
           ? `かべを1辺にして、長さ $${L}\\,\\mathrm{m}$ のロープで残りの3辺を囲む長方形の面積は、かべと直角な辺が $□\\,\\mathrm{m}$ のとき最大で、$□\\,\\mathrm{m^2}$`
           : `長さ $${L}\\,\\mathrm{${u}}$ の${rope ? 'ロープで囲む' : '針金でつくる'}長方形の面積は、たてが $□\\,\\mathrm{${u}}$ のとき最大で、$□\\,\\mathrm{${u}^2}$`;
@@ -1012,6 +1038,7 @@
       // 箱（教科書 5-7 例題6）：x＝a/6
       s2(r) {
         const a = 3 * r.int(2, 12), x = fr(a, 6), V = F.mul(x, fr(4 * a * a, 9)), giveV = r.chance(0.35);
+        if (a === 18) return null;   // 楽な形の例（1辺18の紙。O-2）
         const scanV = () => scan(t => t * (a - 2 * t) * (a - 2 * t), 0, a / 2, 900);
         if (giveV) return {
           q: `箱の体積 $V=x(${a}-2x)^{2}$（$0<x<${fmtF(fr(a, 2))}$）が最大になる $x$`, a: `$${fmtF(x)}$`, key: `v${a}`,
@@ -1054,6 +1081,7 @@
           };
         }
         const a = 6 * r.int(1, 8), x = a / 6;
+        if (a === 18) return null;   // 楽な形の例
         return {
           q: `図の紙の4すみ（1辺 $x\\,\\mathrm{cm}$ の正方形）を切りとり、点線で折って箱をつくる。体積が最大のとき、底の1辺は $□\\,\\mathrm{cm}$、深さは $□\\,\\mathrm{cm}$`, a: `底の1辺 $${a - 2 * x}\\,\\mathrm{cm}$、深さ $${x}\\,\\mathrm{cm}$`, key: `p${a}`,
           easy: `$V=x(${a}-2x)^{2}$、$V'=(${a}-2x)(${a}-6x)=0$ → $x=${x}$。底の1辺は $${a}-2\\times${x}=${a - 2 * x}$`, easyCheck: false,
@@ -1099,6 +1127,7 @@
       s1(r) {
         const [obj, lo, hi] = r.pick([['走る車', 10, 30], ['走る自転車', 3, 10], ['走る電車', 15, 40], ['進む船', 2, 12]]);
         const x0 = r.pick([20, 30, 50, 80, 100, 120, 150, 200]), v = r.int(lo, hi), dt = r.pick([0.1, 0.2, 0.4, 0.5]);
+        if (x0 === 100 && v === 15 && dt === 0.2) return null;   // 楽な形の例（O-2）
         const ans = fmt(x0 + v * dt);
         return {
           q: `位置 $${x0}\\,\\mathrm{m}$ の所を $${v}\\,\\mathrm{m/s}$ で${obj}の、${dt}秒後の位置の予想 $x\\approx□\\,\\mathrm{m}$`, a: `$${ans}$`, key: `${x0}:${v}:${dt}`,
@@ -1118,8 +1147,9 @@
         }
         const a = r.pick([2, 3, 4, 5, 10, -2, -4]), b = a < 0 ? r.pick([20, 30]) : r.pick([0, 0, 1, 2, 5]), t0 = r.int(1, 4), x0 = r.int(2, 40), dt = r.pick([0.1, 0.2, 0.5]);
         const VT = vLin(a, b), v = a * t0 + b, ans = fmt(x0 + v * dt);
-        return {
-          q: `速度 $v=${VT}$（m/s）の物体が、$t=${t0}$ のとき位置 $${x0}\\,\\mathrm{m}$ にいる。${dt}秒後の位置の予想 $x\\approx□\\,\\mathrm{m}$`, a: `$${ans}$`, key: `${VT}:${t0}:${x0}:${dt}`,
+        if (VT === '2t') return null;   // $v=2t$ は楽な形の例（O-2）
+        return {   // key は速度の式だけ（同じ速度の式を見開きに2回出さない。ステップ3とも同じ形。O-2・R1-14）
+          q: `速度 $v=${VT}$（m/s）の物体が、$t=${t0}$ のとき位置 $${x0}\\,\\mathrm{m}$ にいる。${dt}秒後の位置の予想 $x\\approx□\\,\\mathrm{m}$`, a: `$${ans}$`, key: `v${VT}`,
           easy: `今の速度は $${v}$。$${x0}+${v}\\times${dt}=${ans}$`, easyCheck: 'last',
           verify: p => { const m = /\$v=([^$]*)\$/.exec(p.q); return close(eulerF(m[1], x0, t0, dt, 1)[0], numOf(p.a)) || 'ちがう'; },
         };
@@ -1128,18 +1158,19 @@
       s3(r) {
         const a = r.pick([2, 4, 6, 10, -2, -4]), b = a < 0 ? r.pick([10, 20]) : r.pick([0, 0, 1, 3]), dt = r.pick([1, 1, 0.5]), x0 = r.chance(0.25) ? r.int(1, 10) : 0;
         const VT = vLin(a, b), xs = [x0], ts = [0];
+        if (VT === '2t') return null;   // $v=2t$ を1秒ごと（$0\\to0\\to2\\to6$）は楽な形の例（O-2）
         for (let k = 0; k < 3; k++) { xs.push(xs[k] + (a * ts[k] + b) * dt); ts.push(ts[k] + dt); }
         const lead = `速度 $v=${VT}$（m/s）、$t=0$ で位置 $${x0}\\,\\mathrm{m}$。${dt}秒ごとに予想をくり返すと、`;
         const chain = xs.map(fmt).join('\\to');
         const getV = p => /\$v=([^$]*)\$/.exec(p.q)[1];
         if (r.chance(0.6)) return {
-          q: `${lead}${ts.slice(1).map(t => fmt(t)).join('・')}秒の位置の予想は、順に □、□、$□\\,\\mathrm{m}$`, a: xs.slice(1).map(x => `$${fmt(x)}$`).join('、'), key: `${VT}:${dt}:${x0}`,
+          q: `${lead}${ts.slice(1).map(t => fmt(t)).join('・')}秒の位置の予想は、順に □、□、$□\\,\\mathrm{m}$`, a: xs.slice(1).map(x => `$${fmt(x)}$`).join('、'), key: `v${VT}`,
           easy: `はじめの速度は $${[0, 1, 2].map(k => fmt(a * ts[k] + b)).join('$、$')}$。$${chain}$`, easyCheck: false,
           verify: p => { const e = eulerF(getV(p), x0, 0, dt, 3), v = numsOf(p.a); return (v.length === 3 && e.every((x, k) => close(x, v[k]))) || `予想は ${e}`; },
         };
         const XP = PP.make(x0, b, fr(a, 2)), real = F.val(PP.at(XP, F.fromDec(fmt(ts[3])))), diff = fmt(Math.abs(xs[3] - real));
         return {
-          q: `${lead}${fmt(ts[3])}秒の位置の予想は $□\\,\\mathrm{m}$。ほんとうの位置 $x=${PT(XP, 't')}$ との差は $□\\,\\mathrm{m}$`, a: `$${fmt(xs[3])}$、$${diff}$`, key: `d${VT}:${dt}:${x0}`,
+          q: `${lead}${fmt(ts[3])}秒の位置の予想は $□\\,\\mathrm{m}$。ほんとうの位置 $x=${PT(XP, 't')}$ との差は $□\\,\\mathrm{m}$`, a: `$${fmt(xs[3])}$、$${diff}$`, key: `v${VT}`,
           easy: `$${chain}$。ほんとうは $${fmt(real)}$`, easyCheck: false,
           verify: p => { const e = eulerF(getV(p), x0, 0, dt, 3), v = numsOf(p.a), X = /\$x=([^$]*)\$/.exec(p.q)[1]; return (close(e[2], v[0]) && close(Math.abs(e[2] - ev(X, { t: ts[3] })), v[1]) && [0.3, 1.1].every(t => close(dnum(X, t, 't'), ev(getV(p), { t }), 1e-6))) || `予想は ${e[2]}`; },
         };
@@ -1181,7 +1212,7 @@
         const m = r.int(2, 10), d = fr(...r.pick(DELTAS)), h = F.mul(fr(2 * m), d);
         if ((h[0] * 100) % h[1] !== 0 || F.val(h) / (m * m) > 0.07) return null;
         const N = fD(F.add(fr(m * m), h)), ans = fD(F.add(fr(m), d));
-        if (N.length > 4) return null;                                   // 2列に入る長さ
+        if (N.length > 4 || N === '9.2' || N === '25.5') return null;   // 2列に入る長さ。$\\sqrt{9.2}$ は楽な形の例、$\\sqrt{25.5}$ は目印の例（O-2）
         return {
           q: `1次近似で $\\sqrt{${N}}\\approx□$`, a: `$${ans}$`, key: `s${N}`,
           easy: `$a=${m * m}$、$h=${fD(h)}$。$${m}+\\frac{1}{${2 * m}}\\times${fD(h)}=${ans}$`, easyCheck: 'last',
@@ -1207,6 +1238,7 @@
           const val = m + F.val(d), t = val * 1000, ans = (Math.round(t) / 1000).toFixed(3);
           if (Math.abs(t - Math.floor(t) - 0.5) < 1e-6) return null;
           const N = fD(fr(10 * m * m + h10, 10)), hT = fD(fr(h10, 10));
+          if (N === '9.2') return null;   // 楽な形の例（O-2）
           return {
             q: `1次近似で $\\sqrt{${N}}\\approx□$（四捨五入して小数第3位まで）`, a: `$${ans}$`, key: `s${N}`,
             easy: `$a=${m * m}$、$h=${hT}$。$${m}${h10 < 0 ? '-' : '+'}\\frac{1}{${2 * m}}\\times${fD(fr(Math.abs(h10), 10))}=${m}${h10 < 0 ? '-' : '+'}${(Math.abs(F.val(d))).toFixed(5).slice(0, 6)}\\cdots$`, easyCheck: false,
@@ -1215,6 +1247,7 @@
         }
         const a = r.pick([2, 3, 4, 5, 10]), n = r.pick([2, 3, 3]), h = fr(r.pick(a === 10 ? [1, 2, -1, 10, -10] : [1, 2, -1, -2]), 100);
         const ans = fD(F.add(fr(Math.pow(a, n)), F.mul(fr(n * Math.pow(a, n - 1)), h))), base = fD(F.add(fr(a), h));
+        if (base === '2.01' && n === 3) return null;   // 目印の例（$2.01^3$）
         return {
           q: `1次近似で $${base}^{${n}}\\approx□$`, a: `$${ans}$`, key: `p${base}:${n}`,
           easy: `$f(x)=x^{${n}}$、$a=${a}$、$h=${fD(h)}$。$${Math.pow(a, n)}+${n * Math.pow(a, n - 1)}\\times${par(fD(h))}=${ans}$`, easyCheck: 'last',
@@ -1222,13 +1255,15 @@
         };
       },
       // 文章（立方体の体積・正方形の1辺）・逆数・3乗根
+      // 立方体と3乗根は、見開きにそれぞれ1問まで（key 'cube'・'root'。R1-4・O-10）。
+      // 立方体の1辺のずれ（±0.03・±0.05）と3乗根の答えのずれ（±0.04）は、ステップ2の $a^n$（±0.01・±0.02）とも、たがいにも重ならない数にする（同じ数・逆の問題を出さない。O-2）
       s3(r) {
         const k = r.int(0, 3);
         if (k === 0) {
-          const a = r.pick([2, 3, 4, 5, 10]), h = fr(r.pick(a === 10 ? [1, 2, -1] : [1, 2, -1, -2]), a === 10 ? 10 : 100), x = fD(F.add(fr(a), h));
+          const a = r.pick([2, 3, 4, 5, 10]), h = a === 10 ? fr(r.pick([3, -3]), 10) : fr(r.pick([3, 5, -3, -5]), 100), x = fD(F.add(fr(a), h));
           const ans = fD(F.add(fr(a * a * a), F.mul(fr(3 * a * a), h)));
           return {
-            q: `1辺 $${x}\\,\\mathrm{cm}$ の立方体の体積を1次近似で求めると、およそ $□\\,\\mathrm{cm^3}$`, a: `$${ans}$`, key: `c${x}`,
+            q: `1辺 $${x}\\,\\mathrm{cm}$ の立方体の体積を1次近似で求めると、およそ $□\\,\\mathrm{cm^3}$`, a: `$${ans}$`, key: 'cube',
             easy: `$${a}^{3}+3\\times${a}^{2}\\times${par(fD(h))}=${ans}$`,
             verify: p => { const b = +/\$([\d.]+)\\,/.exec(p.q)[1], a0 = Math.round(b); return close(lin1('x^{3}', a0, b - a0), numOf(p.a), 1e-9) || 'ちがう'; },
           };
@@ -1238,7 +1273,7 @@
           if ((h[0] * 100) % h[1] !== 0 || F.val(h) / (m * m) > 0.07) return null;
           const N = fD(F.add(fr(m * m), h)), ans = fD(F.add(fr(m), d));
           return {
-            q: `面積 $${N}\\,\\mathrm{cm^2}$ の正方形の1辺を1次近似で求めると、およそ $□\\,\\mathrm{cm}$`, a: `$${ans}$`, key: `q${N}`,
+            q: `面積 $${N}\\,\\mathrm{cm^2}$ の正方形の1辺を1次近似で求めると、およそ $□\\,\\mathrm{cm}$`, a: `$${ans}$`, key: `s${N}`,   // ステップ1・2の $\\sqrt{N}$ と同じ key
             easy: `1辺は $\\sqrt{${N}}$。$${m}+\\frac{1}{${2 * m}}\\times${fD(h)}=${ans}$`, easyCheck: 'last',
             verify: p => { const n = +/\$([\d.]+)\\,/.exec(p.q)[1], a = Math.pow(Math.round(Math.sqrt(n)), 2); return close(lin1('\\sqrt{x}', a, n - a), numOf(p.a), 1e-9) || 'ちがう'; },
           };
@@ -1253,9 +1288,9 @@
             verify: p => { const b = +/\\frac\{1\}\{([\d.]+)\}/.exec(p.q)[1], a0 = Math.round(b); return close(lin1('\\frac{1}{x}', a0, b - a0), numOf(p.a), 1e-9) || 'ちがう'; },
           };
         }
-        const m = r.pick([2, 3, 4, 5]), dl = fr(r.pick([1, 2, -1, -2]), 100), h = F.mul(fr(3 * m * m), dl), N = fD(F.add(fr(m * m * m), h)), ans = fD(F.add(fr(m), dl));
+        const m = r.pick([3, 4, 5]), dl = fr(r.pick([4, -4]), 100), h = F.mul(fr(3 * m * m), dl), N = fD(F.add(fr(m * m * m), h)), ans = fD(F.add(fr(m), dl));
         return {
-          q: `1次近似で $\\sqrt[3]{${N}}\\approx□$`, a: `$${ans}$`, key: `r${N}`,
+          q: `1次近似で $\\sqrt[3]{${N}}\\approx□$`, a: `$${ans}$`, key: 'root',
           easy: `$f(x)=x^{\\frac{1}{3}}$、$f'(x)=\\frac{1}{3}x^{-\\frac{2}{3}}$、$a=${m * m * m}$、$h=${fD(h)}$。$${m}+\\frac{1}{${3 * m * m}}\\times${par(fD(h))}=${ans}$`, easyCheck: 'last',
           verify: p => { const n = +/\\sqrt\[3\]\{([\d.]+)\}/.exec(p.q)[1], a = Math.pow(Math.round(Math.cbrt(n)), 3); return close(lin1('\\sqrt[3]{x}', a, n - a), numOf(p.a), 1e-9) || 'ちがう'; },
         };
@@ -1294,7 +1329,7 @@
     mark: '1に近い数（$1.02$・$0.99$）の $n$ 乗・逆数・ルート。',
     futsu: ['$1.02\\times1.02\\times\\cdots$ と、', '筆算で4回かけ算する', '（$1.1040808032$。', 'けたがどんどんふえる）。'],
     raku: ['$1.02^5=(1+0.02)^5\\approx1+5\\times0.02=1.1$', '$\\frac{1}{0.98}=(1-0.02)^{-1}\\approx1.02$', '$\\sqrt{0.96}=(1-0.04)^{\\frac{1}{2}}\\approx0.98$'],
-    why: '$f(x)=x^n$ の、$x=1$ での1次近似。$f(1)=1$、$f\'(1)=n$ なので $(1+h)^n\\approx1+nh$（5-8④）。$n$ はマイナスや分数でもよいので、$\\frac{1}{1+h}=(1+h)^{-1}\\approx1-h$、$\\sqrt{1+h}=(1+h)^{\\frac{1}{2}}\\approx1+\\frac{h}{2}$。数えていないのは、$h^2$ より小さい項だけ。',
+    why: '$f(x)=x^n$ の、$x=1$ での1次近似。$f(1)=1$、$f\'(1)=n$ なので $(1+h)^n\\approx1+nh$（5-8④）。$n$ はマイナスや分数でもよいので、$\\frac{1}{1+h}=(1+h)^{-1}\\approx1-h$、$\\sqrt{1+h}=(1+h)^{\\frac{1}{2}}\\approx1+\\frac{h}{2}$。数えていないのは、$h^2$ の項と、それより小さい項だけ。',
     caution: '$h$ が小さいときだけ使う（$1.5^4$ を $1+4\\times0.5=3$ としない。ほんとうは5.0625）。1より小さい数は、$h$ がマイナス（$0.99=1+(-0.01)$）。逆数では符号が反対になる（$\\frac{1}{0.98}\\approx1.02$）。',
     counts: { s1: 8, s2: 8, s3: 5, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 1, trap: 2 },
@@ -1306,6 +1341,7 @@
         const n = r.int(2, 10), h = hPick(r, [10, 20, 30, 40, 50, 5, 2, 1]);
         if (Math.abs(n * F.val(h)) > 0.2) return null;
         const b = baseT(h), ans = fD(F.add(fr(1), F.mul(fr(n), h)));
+        if (b === '1.02' && n === 5) return null;   // 楽な形の例（O-2）
         return {
           q: `1次近似で $${b}^{${n}}\\approx□$`, a: `$${ans}$`, key: `${b}:${n}`,
           easy: `$1+${n}\\times${par(fD(h))}=${ans}$`, verify: near1Check,
@@ -1315,12 +1351,14 @@
       s2(r) {
         if (r.chance(0.5)) {
           const h = hPick(r, [10, 20, 30, 40, 50, 60, 80, 5]), b = baseT(h), ans = fD(F.sub(fr(1), h));
+          if (b === '0.98') return null;   // 楽な形の例（O-2）
           return {
             q: `1次近似で $\\frac{1}{${b}}\\approx□$`, a: `$${ans}$`, key: `i${b}`, boxh: '11mm',
             easy: `$(1${F.val(h) < 0 ? '-' : '+'}${fD([Math.abs(h[0]), h[1]])})^{-1}$ なので $n=-1$。$1+(-1)\\times${par(fD(h))}=${ans}$`, easyCheck: 'last', verify: near1Check,
           };
         }
         const h = hPick(r, [20, 40, 60, 80, 100, 10, 30]), b = baseT(h), ans = fD(F.add(fr(1), F.mul(fr(1, 2), h)));
+        if (b === '0.96') return null;   // 楽な形の例（O-2）
         return {
           q: `1次近似で $\\sqrt{${b}}\\approx□$`, a: `$${ans}$`, key: `s${b}`,
           easy: `$(1${F.val(h) < 0 ? '-' : '+'}${fD([Math.abs(h[0]), h[1]])})^{\\frac{1}{2}}$ なので $n=\\frac{1}{2}$。$1+\\frac{1}{2}\\times${par(fD(h))}=${ans}$`, easyCheck: 'last', verify: near1Check,
@@ -1331,7 +1369,7 @@
         const k = r.pick([0, 0, 1, 1, 2, 3, 4]);
         if (k === 0) {
           const pc = r.pick([1, 2, 3, 0.5]), n = r.pick([2, 3, 4, 5, 10]), h = F.fromDec(String(pc / 100));
-          if (pc * n > 20) return null;
+          if (pc * n > 20 || (pc === 2 && n === 5)) return null;   // $1.02^5$ は楽な形の例（O-2）
           const b = baseT(h), ans = fD(F.add(fr(1), F.mul(fr(n), h)));
           return {
             q: `1年に${pc}%の利息がつく預金は、${n}年で $${b}^{${n}}$ 倍になる。1次近似で、およそ □ 倍`, a: `$${ans}$`, key: `r${b}:${n}`,
@@ -1354,6 +1392,7 @@
         }
         if (k === 3) {
           const h = hPick(r, [20, 40, 60, 80]), b = baseT(h), ans = fD(F.sub(fr(1), F.mul(fr(1, 2), h)));
+          if (b === '0.96') return null;   // $\\frac{1}{\\sqrt{0.96}}$ は楽な形の例 $\\sqrt{0.96}$ の逆数（O-2）
           return {
             q: `1次近似で $\\frac{1}{\\sqrt{${b}}}\\approx□$`, a: `$${ans}$`, key: `k${b}`, boxh: '11mm',
             easy: `$(1${F.val(h) < 0 ? '-' : '+'}${fD([Math.abs(h[0]), h[1]])})^{-\\frac{1}{2}}$ なので $n=-\\frac{1}{2}$。$1-\\frac{1}{2}\\times${par(fD(h))}=${ans}$`, easyCheck: 'last', verify: near1Check,
@@ -1361,7 +1400,7 @@
         }
         const h = hPick(r, [30, 60, 90, 120]), b = baseT(h), ans = fD(F.add(fr(1), F.mul(fr(1, 3), h)));
         return {
-          q: `1次近似で $\\sqrt[3]{${b}}\\approx□$`, a: `$${ans}$`, key: `c${b}`,
+          q: `1次近似で $\\sqrt[3]{${b}}\\approx□$`, a: `$${ans}$`, key: 'root',   // 3乗根は見開きに1問まで（教科書 5-8 にない。O-10・R1-29）
           easy: `$(1${F.val(h) < 0 ? '-' : '+'}${fD([Math.abs(h[0]), h[1]])})^{\\frac{1}{3}}$ なので $n=\\frac{1}{3}$。$1+\\frac{1}{3}\\times${par(fD(h))}=${ans}$`, easyCheck: 'last', verify: near1Check,
         };
       },
@@ -1397,7 +1436,7 @@
     raku: ['立方体の体積 $V=x^3$：1辺のずれが1%', '→ 体積のずれは $3\\times1=3$ %', '体積のずれを1.5%以内にするには、', '1辺のずれを $1.5\\div3=0.5$ %以内に'],
     why: '$y=x^n$ のとき、$\\Delta y\\approx nx^{n-1}\\Delta x$。両辺を $y=x^n$ でわると、$\\frac{\\Delta y}{y}\\approx n\\times\\frac{\\Delta x}{x}$（5-8⑤）。ずれの割合は、指数の $n$ 倍にふくらむ。$\\pi$ や $\\frac{4}{3}$ のような係数は約分で消えるので、関係しない。$\\sqrt{x}=x^{\\frac{1}{2}}$ の形なら半分になる。',
     caution: 'ずれが大きいと使えない（1辺が10%長い立方体の体積は $1.1^3=1.331$ 倍で、30%ではなく33.1%大きい）。割合（%）と、ずれそのもの（cm）をまぜない。逆向き（面積・体積のずれ → 長さのずれ）は、指数でわる。',
-    counts: { s1: 6, s2: 4, s3: 4, trap: 2 },
+    counts: { s1: 6, s2: 4, s3: 3, trap: 2 },   // 右ページの最後と「ふりかえり」のあいだをあける（R1-25）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: '13mm',
     fits(q) { return (/ずれ/.test(q) || /%/.test(q)) && /約/.test(q) && !/1次近似/.test(q); },
@@ -1405,6 +1444,7 @@
       // 長さのずれの割合 → 面積・体積のずれの割合
       s1(r) {
         const key = r.pick(['sq', 'cube', 'circ', 'ball', 'surf', 'cube', 'sq']), Q = QUANT[key], pc = r.pick([0.5, 1, 1.5, 2, 3]), ans = pcT(Q.n * pc);
+        if (key === 'cube' && (pc === 1 || pc === 0.5)) return null;   // 楽な形の例（1辺1% → 3%、体積1.5% ↔ 1辺0.5%）は出さない（O-2）
         return {
           q: `${Q.obj}の${Q.len}に${pc}%のずれがあるとき、${Q.name} $${Q.sym}=${Q.T}$ のずれは約 □ %`, a: `$${ans}$`, key: `${key}:${pc}`,
           easy: `$${Q.n}\\times${pc}=${ans}$`,
@@ -1416,6 +1456,7 @@
         const key = r.pick(['sq', 'cube', 'circ', 'ball']), Q = QUANT[key], k = r.int(0, 2);
         if (k === 0) {
           const pc = r.pick([0.5, 1, 1.5, 2]), tot = pcT(Q.n * pc);
+          if (key === 'cube' && (pc === 0.5 || pc === 1)) return null;   // 楽な形の例とその逆（O-2）
           return {
             q: `${Q.obj}の${Q.name} $${Q.sym}=${Q.T}$ を、ずれ${tot}%以内で求めたい。${Q.len}のずれは約 □ %以内にする`, a: `$${pc}$`, key: `i${key}:${pc}`,
             easy: `$${tot}\\div${Q.n}=${pc}$`,
@@ -1423,7 +1464,7 @@
           };
         }
         const L = r.pick([5, 10, 20, 25, 50]), pc = r.pick([0.5, 1, 2, 4]), dL = fmt(L * pc / 100);
-        if (String(dL).length > 4) return null;
+        if (String(dL).length > 4 || (key === 'cube' && (pc === 0.5 || pc === 1))) return null;   // 立方体の1%・0.5%は楽な形の例（O-2）
         if (k === 1) {
           const ans = pcT(Q.n * pc);
           return {
@@ -1467,6 +1508,7 @@
           };
         }
         const cube = r.chance(0.6), L = r.pick([5, 10, 20]), dL = r.pick([0.1, 0.2]), n = cube ? 3 : 2, ans = fmt(n * Math.pow(L, n - 1) * dL);
+        if (cube && L === 10 && dL === 0.1) return null;   // 「ふつうに解くと」の $10.1^3$ と同じ数
         return {
           q: `${cube ? '立方体' : '正方形'}の1辺をはかったら $${L.toFixed(1)}\\,\\mathrm{cm}$ で、ずれは $${dL}\\,\\mathrm{cm}$。${cube ? '体積' : '面積'}のずれは約 $□\\,\\mathrm{cm^${n}}$`, a: `$${ans}$`, key: `abs${cube}:${L}:${dL}`,
           easy: `$\\Delta ${cube ? 'V' : 'S'}\\approx${cube ? '3x^{2}' : '2x'}\\Delta x$。$${n}\\times${L}${n === 3 ? '^{2}' : ''}\\times${dL}=${ans}$`, easyCheck: 'last',
@@ -1475,7 +1517,7 @@
       },
       // わな：ずれ（変化）が大きい（指数倍にならない。そのまま計算する）
       trap(r) {
-        const [sq, pc] = r.pick([[true, 10], [true, 20], [true, 30], [true, 50], [false, 10], [false, 20], [false, 50]]), n = sq ? 2 : 3;
+        const [sq, pc] = r.pick([[true, 10], [true, 20], [true, 30], [true, 50], [false, 20], [false, 30], [false, 50]]), n = sq ? 2 : 3;   // 立方体の10%は caution の例（33.1%）
         const b = fr(100 + pc, 100), times = PP.at(PP.pow(PP.make(0, 1), n), b), ans = fD(F.mul(F.sub(times, fr(1)), fr(100)));
         return dest({
           q: `${sq ? '正方形' : '立方体'}の1辺を${pc}%長くすると、${sq ? '面積' : '体積'}はちょうど □ %大きくなる`, a: `$${ans}$`,
@@ -1520,6 +1562,7 @@
         const simple = r.chance(0.5), a = simple ? 1 : r.int(1, 3), b = simple ? 0 : r.intNot(-5, 5, v => v === 0), c = r.pick([1, 1, 1, 2, 3]), d = r.intNot(-6, 6, v => v === 0);
         if (a * d - b * c === 0 || F.gcd(c, d) !== 1) return null;
         const f = PP.make(b, a), g = PP.make(d, c), o = quot(f, g);
+        if (o.Y === '\\frac{x}{x+2}') return null;   // 楽な形の例（O-2）
         return { q: yq(o.Y), a: `$${o.ans}$`, key: o.Y, easy: `$${o.easy}=${o.ans}$`, calc: { kind: 'diff', f: o.Y, pts: ptsFor(g) } };
       },
       // 2次式が入る（分子に x が残る）
@@ -1531,41 +1574,46 @@
         else if (k === 2) { f = PP.make(r.intNot(-5, 5, v => v === 0), 0, 1); g = PP.make(a, 1); }
         else { f = PP.make(r.intNot(-3, 3, v => v === 0), r.int(1, 2)); g = PP.make(c, 0, 1); }
         const o = quot(f, g);
-        if (deg(o.N) === 0) return null;
+        if (deg(o.N) === 0 || o.Y === '\\frac{x^{2}}{x+1}') return null;   // 目印の例（O-2）
         return { q: yq(o.Y), a: `$${o.ans}$`, key: o.Y, easy: `$${o.easy}=${o.ans}$`, calc: { kind: 'diff', f: o.Y, pts: ptsFor(g) } };
       },
-      // ある点での値・傾きが0になる x・分母が2乗
+      // ある点での値・傾きが0になる x・分母が2乗（key は s1・s2 と同じ形：同じ式を見開きに2回出さない。O-2）
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const a = r.int(1, 3), b = r.int(-4, 4), c = r.pick([1, 1, 2]), d = r.int(1, 5), x0 = r.int(-1, 2), K = a * d - b * c, u = c * x0 + d;
           if (K === 0 || u === 0 || Math.abs(u) > 6 || F.gcd(c, d) !== 1) return null;
           const o = quot(PP.make(b, a), PP.make(d, c)), val = fr(K, u * u);
+          if (o.Y === '\\frac{x}{x+2}') return null;   // 楽な形の例
           return {
-            q: `$y=${o.Y}$ の、$x=${x0}$ での $y'$ の値`, a: `$${F.tex(val)}$`, key: `${o.Y}:${x0}`,
+            q: `$y=${o.Y}$ の、$x=${x0}$ での $y'$ の値`, a: `$${F.tex(val)}$`, key: o.Y,
             easy: `$y'=${o.ans}$ に $x=${x0}$`, easyCheck: false, verify: p => close(dnum(yOf(p.q), x0), numOf(p.a), 1e-6) || 'ちがう',
           };
         }
         if (k === 1) {
           const a = r.int(1, 6), o = quot(PP.make(0, 1), PP.make(a * a, 0, 1));
           return {
-            q: `$y=${o.Y}$ のグラフで、接線の傾きが0になる正の $x$`, a: `$${a}$`, key: `z${o.Y}`,
+            q: `$y=${o.Y}$ のグラフで、接線の傾きが0になる正の $x$`, a: `$${a}$`, key: o.Y,
             easy: `$y'=${o.ans}=0$ より $x^{2}=${a * a}$。正なので $x=${a}$`, easyCheck: false,
             verify: p => { const Y = yOf(p.q), x = numOf(p.a); return (x > 0 && Math.abs(dnum(Y, x)) < 1e-8 && Math.abs(dnum(Y, x + 0.5)) > 1e-5) || '傾きが0にならない'; },
           };
         }
         const a = r.intNot(-4, 5, v => v === 0), U = lin(1, a), Y = `\\frac{x}{(${U})^{2}}`, A = a > 0 ? `\\frac{${a}-x}{(${U})^{3}}` : `-\\frac{x+${-a}}{(${U})^{3}}`;
         return {
-          q: yq(Y), a: `$${A}$`, key: Y, boxw: '26mm',
+          q: yq(Y), a: `$${A}$`, key: `sq${a > 0 ? 1 : 0}`, boxw: '26mm',   // 分母が2乗の形は見開きに2問まで（ほかの形がかたよらないように）
           easy: `$\\frac{(${U})^{2}-x\\times2(${U})}{(${U})^{4}}=\\frac{(${U})-2x}{(${U})^{3}}$ をまとめて $${A}$`,
           calc: { kind: 'diff', f: Y, pts: ptsFor(PP.make(a, 1)) },
         };
       },
-      // わな：約分できる分数（商の微分はいらない。約分すると多項式 → 5-10）
+      // わな：分子が数だけ（商の微分でも出るが、$\\frac{1}{\\text{中身}}$ のきまりが速い → 5-22）
+      // （約分できる分数は、商の微分でもそのまま出るので、わなにせず caution に書いた。O-5・R1-9）
       trap(r) {
-        const cube = r.chance(0.5), a = cube ? r.pick([1, 1, 2, 3]) : r.pick([2, 3, 4, 5]), b = r.intNot(-6, 6, v => v === 0);
-        const f = cube ? PP.make(0, b, 0, a) : PP.make(0, b, a), red = cube ? PP.make(b, 0, a) : PP.make(b, a), Y = `\\frac{${PT(f)}}{x}`, A = PT(PP.diff(red));
-        return dest({ q: yq(Y), a: `$${A}$`, calc: { kind: 'diff', f: Y, pts: [0.37, 0.83, 1.29] }, boxh: '12mm' }, '5-92', `先に約分すると $${PT(red)}$。商の微分はいらない`, ['5-10']);
+        const k = r.pick([1, 1, 2, 3]), a = r.int(1, 3), b = r.intNot(-5, 5, v => v === 0);
+        if (F.gcd(a, Math.abs(b)) !== 1) return null;
+        const U = lin(a, b), sq = r.chance(0.5), Y = sq ? `\\frac{${k}}{(${U})^{2}}` : `\\frac{${k}}{${U}}`;
+        const A = sq ? `-\\frac{${2 * k * a}}{(${U})^{3}}` : `-\\frac{${k * a}}{(${U})^{2}}`;
+        return dest({ q: yq(Y), a: `$${A}$`, key: `t${Y}`, calc: { kind: 'diff', f: Y, pts: ptsFor(PP.make(b, a)) }, boxh: '12mm' }, '5-92',
+          `分子が数だけ（分子の微分は0）。$${k === 1 ? '' : k}(${U})^{${sq ? -2 : -1}}$ と見て、外側の微分×中身の微分 $${a}$`, ['5-22']);
       },
     },
   });
