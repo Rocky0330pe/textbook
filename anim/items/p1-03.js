@@ -38,7 +38,7 @@ A.item({
       legend: [['接する円（半径 $\\rho$）', { color: 'd', style: 'dash' }], ['速度 $\\vec v$', { color: 'a', style: 'dash' }], ['法線加速度 $a_n$', { color: 'c', style: 'dot' }]],
       controls: [{ range: 'vv', label: '速さ $v$〔m/s〕', min: 2, max: 20, step: 0.5, d: 1 }],
       init(st) { st.s = 8; },
-      step(st, dt) { st.s += st.vv * dt * 0.6; if (st.s > ROAD.len - 8) st.s = 8; },
+      step(st, dt) { st.s += st.vv * dt * 0.6; if (st.s > road().len - 8) st.s = 8; },
       draw: drawEn,
       readout: st => { const p = roadAt(st.s); const r = 1 / Math.abs(p.k); return `曲率半径 $\\rho$ ＝ ${r > 999 ? '1000 m より大きい' : A.num(r, 1) + ' m'}　　$a_n=v^2/\\rho$ ＝ <b>${A.num(st.vv * st.vv * Math.abs(p.k), 2)} m/s²</b>`; }
     }
@@ -120,22 +120,23 @@ function drawBrake(cv, st) {
 }
 
 // ③ の道：y = 15 sin(2πx/80)（m）。弧の長さで点を進めるため、表を作っておく
-const ROAD = (() => {
+let ROAD_ = null;
+function road() { return ROAD_ || (ROAD_ = (() => {
   const f = x => 15 * Math.sin(2 * Math.PI * x / 80), d1 = x => 15 * 2 * Math.PI / 80 * Math.cos(2 * Math.PI * x / 80), d2 = x => -15 * (2 * Math.PI / 80) ** 2 * Math.sin(2 * Math.PI * x / 80);
   const xs = [0], ss = [0]; let s = 0;
   for (let i = 1; i <= 2000; i++) { const x0 = (i - 1) * 0.08, x1 = i * 0.08; s += Math.hypot(x1 - x0, f(x1) - f(x0)); xs.push(x1); ss.push(s); }
   return { f, d1, d2, xs, ss, len: s };
-})();
+})()); }
 function roadAt(s) {
-  const { xs, ss, f, d1, d2 } = ROAD; let i = 1; while (i < ss.length - 1 && ss[i] < s) i++;
+  const { xs, ss, f, d1, d2 } = road(); let i = 1; while (i < ss.length - 1 && ss[i] < s) i++;
   const u = (s - ss[i - 1]) / (ss[i] - ss[i - 1]), x = xs[i - 1] + u * (xs[i] - xs[i - 1]);
   const p = d1(x), q = d2(x), k = q / Math.pow(1 + p * p, 1.5);
   return { x, y: f(x), tx: 1 / Math.hypot(1, p), ty: p / Math.hypot(1, p), k };
 }
 function drawEn(cv, st) {
   const V = cv.view({ x0: -2, x1: 162, y0: -42, y1: 42, box: [10, 10, 860, 420], equal: true });
-  V.plot(ROAD.f, { x0: 0, x1: 160, color: 'sub', width: 14, alpha: 0.2 });
-  V.plot(ROAD.f, { x0: 0, x1: 160, color: 'sub', width: 1, style: 'dot' });
+  V.plot(road().f, { x0: 0, x1: 160, color: 'sub', width: 14, alpha: 0.2 });
+  V.plot(road().f, { x0: 0, x1: 160, color: 'sub', width: 1, style: 'dot' });
   const p = roadAt(st.s), nx = -p.ty * Math.sign(p.k || 1), ny = p.tx * Math.sign(p.k || 1);
   const r = 1 / Math.max(1e-6, Math.abs(p.k));
   if (r < 400) {

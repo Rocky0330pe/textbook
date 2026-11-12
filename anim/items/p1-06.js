@@ -39,7 +39,7 @@ A.item({
   ]
 });
 
-const fmtv = v => Math.abs(v) > 1e4 || !isFinite(v) ? '（大きくなりすぎた）' : A.num(v, 2) + ' m/s';
+function fmtv(v) { return Math.abs(v) > 1e4 || !isFinite(v) ? '（大きくなりすぎた）' : A.num(v, 2) + ' m/s'; }
 function sims(h, n) {
   const fa = (t, y) => [G - C / 80 * y[0] * y[0]];
   const e = [0], r = [0];

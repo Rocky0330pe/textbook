@@ -104,7 +104,7 @@ function drawBane(cv, st) {
   void Kg;
 }
 
-const t0 = () => Math.sqrt(2 * 1.0 / 9.8);
+function t0() { return Math.sqrt(2 * 1.0 / 9.8); }
 function bounce(e, t) {
   // 高さ 1.0 m から落としたボール。n 回めのはね返りのあとの位置
   let T = t0(); if (t < T) return { n: 0, y: 1 - 4.9 * t * t, v: -9.8 * t };
