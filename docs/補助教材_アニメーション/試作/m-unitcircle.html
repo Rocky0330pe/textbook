@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>回る点の影：単位円と sin</title>
+<style>
+:root{--ink:#222;--sub:#666;--bg:#fff;--line:#bbb;--a:#1f5fa8;--b:#c4501b;--c:#2c8a3e;--grid:#e6e6e6}
+@media (prefers-color-scheme:dark){:root{--ink:#eee;--sub:#aaa;--bg:#16181c;--line:#555;--grid:#2a2d33}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;line-height:1.7}
+header{padding:12px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:1.15rem;margin:0}
+.from{font-size:.85rem;color:var(--sub)}
+nav{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px}
+nav button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:18px;background:none;color:var(--ink);cursor:pointer}
+nav button[aria-selected=true]{background:var(--a);color:#fff;border-color:var(--a)}
+main{padding:0 16px 24px;max-width:900px;margin:auto}
+canvas{width:100%;height:auto;display:block;touch-action:none;border:1px solid var(--line);border-radius:8px}
+.ctl{display:grid;grid-template-columns:7em 1fr 4.5em;gap:6px 10px;align-items:center;margin:12px 0}
+.ctl input[type=range]{width:100%;height:32px}
+.ctl output{font-variant-numeric:tabular-nums;text-align:right}
+.btns{display:flex;gap:8px;margin:8px 0}
+.btns button{font:inherit;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer}
+.note{background:rgba(127,127,127,.08);border-left:4px solid var(--a);padding:8px 12px;margin:12px 0}
+.leg{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem;color:var(--sub)}
+.leg span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.l1::before{border-color:var(--a)!important}.l2::before{border-color:var(--b)!important;border-top-style:dashed!important}.l3::before{border-color:var(--c)!important;border-top-style:dotted!important}
+</style>
+</head>
+<body>
+<header>
+<h1>回る点の影：単位円と sin</h1>
+<div class="from">数学 4-8・5-15・6-6／物理 波-1・電-10 の図から</div>
+</header>
+<nav role="tablist" id="tabs">
+<button role="tab" data-s="shadow" aria-selected="true">① 影が波になる</button>
+<button role="tab" data-s="param">② 振幅・角速度・ずれ</button>
+<button role="tab" data-s="velocity">③ 速度は90°先</button>
+</nav>
+<main>
+<canvas id="cv" width="880" height="400" aria-label="単位円と、その影がえがく波のグラフ"></canvas>
+<div class="leg"><span class="l1">点 P の高さ（sin）</span><span class="l2">横のかげ（cos）</span><span class="l3">速度の矢印</span></div>
+<div class="btns"><button id="play">▶ 再生</button><button id="slow">ゆっくり</button><button id="reset">はじめから</button></div>
+<div class="ctl" id="ctl"></div>
+<div class="note" id="note"></div>
+</main>
+<script>
+"use strict";
+const SCENES={
+ shadow:{note:"点 P が円の上を回ると、その高さ（かげ）が右へ流れて、なめらかな波になります。これが sin のグラフです。1周（2π）で、波も1つ分進みます。",
+  sl:[["θ（角）","th",0,12.566,0.01,v=>(v/Math.PI).toFixed(2)+"π"]]},
+ param:{note:"A を大きくすると波が高くなり、ω を大きくすると波がつまります。φ を変えると、波が左右にずれます。cos は sin を 90°（π/2）だけずらしたものです。",
+  sl:[["A（振幅）","A",0.2,1.5,0.01,v=>v.toFixed(2)],["ω（角速度）","w",0.5,3,0.01,v=>v.toFixed(2)],["φ（ずれ）","ph",-3.1416,3.1416,0.01,v=>(v/Math.PI).toFixed(2)+"π"]]},
+ velocity:{note:"速度の矢印は、いつも半径を 90° 回した向きです。だから sin の傾きは cos の形になり、高さが一番の所で速さは 0 になります。",
+  sl:[["θ（角）","th",0,12.566,0.01,v=>(v/Math.PI).toFixed(2)+"π"]]}
+};
+const st={scene:"shadow",th:0,A:1,w:1,ph:0,play:false,speed:1};
+const cv=document.getElementById("cv"),g=cv.getContext("2d");
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function build(){
+ const box=document.getElementById("ctl");box.innerHTML="";
+ const sc=SCENES[st.scene];document.getElementById("note").textContent=sc.note;
+ for(const [lab,key,mn,mx,step,fmt] of sc.sl){
+  const l=document.createElement("label");l.textContent=lab;
+  const r=document.createElement("input");r.type="range";r.min=mn;r.max=mx;r.step=step;r.value=st[key];r.setAttribute("aria-label",lab);
+  const o=document.createElement("output");o.textContent=fmt(+r.value);
+  r.oninput=()=>{st[key]=+r.value;o.textContent=fmt(st[key]);draw()};
+  box.append(l,r,o);st["_"+key]=[r,o,fmt];
+ }
+ draw();
+}
+function arrow(x1,y1,x2,y2,col,w){g.strokeStyle=col;g.fillStyle=col;g.lineWidth=w;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+ const a=Math.atan2(y2-y1,x2-x1),h=10;g.beginPath();g.moveTo(x2,y2);g.lineTo(x2-h*Math.cos(a-.4),y2-h*Math.sin(a-.4));g.lineTo(x2-h*Math.cos(a+.4),y2-h*Math.sin(a+.4));g.fill()}
+function draw(){
+ const W=cv.width,H=cv.height,cx=150,cy=H/2,R=120,x0=320,xs=(W-x0-20)/(4*Math.PI);
+ const ink=css("--ink"),sub=css("--sub"),ca=css("--a"),cb=css("--b"),cc=css("--c"),grid=css("--grid");
+ g.clearRect(0,0,W,H);g.lineWidth=1;g.strokeStyle=grid;
+ for(let k=-1;k<=1;k+=.5){g.beginPath();g.moveTo(x0,cy-k*R);g.lineTo(W-20,cy-k*R);g.stroke()}
+ for(let k=0;k<=4;k++){const x=x0+k*Math.PI*xs;g.beginPath();g.moveTo(x,cy-R*1.5);g.lineTo(x,cy+R*1.5);g.stroke()}
+ g.strokeStyle=sub;g.beginPath();g.moveTo(cx-R-20,cy);g.lineTo(W-20,cy);g.stroke();g.beginPath();g.moveTo(cx,cy-R-20);g.lineTo(cx,cy+R+20);g.stroke();
+ g.fillStyle=sub;g.font="15px sans-serif";["0","π","2π","3π","4π"].forEach((t,k)=>g.fillText(t,x0+k*Math.PI*xs-6,cy+R*1.5+16));
+ const A=st.scene==="param"?st.A:1,w=st.scene==="param"?st.w:1,ph=st.scene==="param"?st.ph:0;
+ g.strokeStyle=sub;g.beginPath();g.arc(cx,cy,R*A,0,2*Math.PI);g.stroke();
+ const T=st.scene==="param"?st.th:st.th,ang=w*T+ph,px=cx+R*A*Math.cos(ang),py=cy-R*A*Math.sin(ang);
+ g.strokeStyle=ca;g.lineWidth=3;g.beginPath();
+ for(let t=0;t<=T;t+=0.02){const x=x0+t*xs,y=cy-R*A*Math.sin(w*t+ph);t?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();
+ if(st.scene==="param"){g.setLineDash([8,6]);g.strokeStyle=cb;g.lineWidth=2;g.beginPath();
+  for(let t=0;t<=4*Math.PI;t+=0.02){const x=x0+t*xs,y=cy-R*A*Math.cos(w*t+ph);t?g.lineTo(x,y):g.moveTo(x,y)}g.stroke();g.setLineDash([])}
+ g.setLineDash([4,4]);g.strokeStyle=sub;g.lineWidth=1;g.beginPath();g.moveTo(px,py);g.lineTo(x0+T*xs,py);g.stroke();g.setLineDash([]);
+ arrow(cx,cy,px,py,ink,2);
+ if(st.scene==="velocity"){g.setLineDash([2,4]);arrow(px,py,px-R*.7*Math.sin(ang),py-R*.7*Math.cos(ang),cc,3);g.setLineDash([])}
+ g.fillStyle=ca;g.beginPath();g.arc(px,py,7,0,2*Math.PI);g.fill();g.beginPath();g.arc(x0+T*xs,py,6,0,2*Math.PI);g.fill();
+ g.fillStyle=ink;g.font="16px sans-serif";g.fillText("P",px+10,py-10);
+}
+let last=0;function tick(ts){if(st.play){const dt=Math.min(.05,(ts-last)/1000);st.th+=dt*st.speed;if(st.th>12.566)st.th=0;
+ if(st._th){st._th[0].value=st.th;st._th[1].textContent=st._th[2](st.th)}draw()}last=ts;requestAnimationFrame(tick)}
+document.getElementById("play").onclick=e=>{st.play=!st.play;e.target.textContent=st.play?"❚❚ 止める":"▶ 再生"};
+document.getElementById("slow").onclick=e=>{st.speed=st.speed===1?.3:1;e.target.textContent=st.speed===1?"ゆっくり":"ふつうの速さ"};
+document.getElementById("reset").onclick=()=>{st.th=0;build()};
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));st.scene=b.dataset.s;location.hash=st.scene;build()});
+const h=location.hash.slice(1);if(SCENES[h]){st.scene=h;document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.s===h))}
+build();requestAnimationFrame(tick);
+</script>
+</body>
+</html>
