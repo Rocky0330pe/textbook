@@ -85,7 +85,7 @@ function drawWall(cv, st) {
   if (st.broken) cv.text('計算がこわれた（Δt が大きすぎる）', 250, 200, { align: 'center', size: 17, bold: true, color: 'b', bg: true });
   // 外へ出る熱（対数の目もり）
   // 時間も対数の目もり（はじめの数分と 24 時間後を1つのグラフに）
-  const lg = Math.log10, g = cv.view({ x0: 0, x1: lg(1440), y0: 0, y1: 3, box: [500, 30, 360, 360] });
+  const lg = Math.log10, g = cv.view({ x0: 0, x1: lg(1440), y0: 0, y1: 3, box: [500, 30, 335, 360] });
   g.axes({ xt: [0, 1, lg(60), lg(360), lg(1440)], yt: [0, 1, 2, 3], xl: '時間（対数）', yl: '外へ出る熱（W/m²）', xfmt: x => ['1分', '10分', '1時間', '6時間', '24時間'][[0, 1, lg(60), lg(360), lg(1440)].indexOf(x)], yfmt: y => String(Math.pow(10, y)), zero: true });
   g.line([[0, lg(7.71)], [lg(1440), lg(7.71)]], { color: 'sub', style: 'dash', width: 1.5 });
   cv.text('定常 7.7', g.X(lg(1440)) - 4, g.Y(lg(7.71)) - 12, { size: 14, color: 'sub', align: 'right' });

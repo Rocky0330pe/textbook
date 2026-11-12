@@ -151,6 +151,7 @@ function hammerInit(st) {
   st.p = new Array(HN + 1).fill(0); st.u = new Array(HN + 1).fill(st.vw);
 }
 function hammerStep(st, dt) {
+  if (!st.p || (st.t === 0 && st.u[0] !== st.vw)) hammerInit(st);
   const L = 600, dts = L / HN / st.a, B = RHO * st.a;
   st.acc = (st.acc || 0) + dt;
   while (st.acc >= dts) {
@@ -170,6 +171,7 @@ function hammerStep(st, dt) {
   if (st.t > 7.5) return false;
 }
 function drawHammer(cv, st) {
+  if (!st.p || (st.t === 0 && st.u[0] !== st.vw)) hammerInit(st);
   const dp = RHO * st.a * st.vw / 1e6;
   // 管（色で圧力）
   const x0 = 60, x1 = 820, y = 70, h = 34, dx = (x1 - x0) / HN;
