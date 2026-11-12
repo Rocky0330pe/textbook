@@ -40,6 +40,8 @@
     return (/[1-9]/.test(t) ? sg : '') + t;
   }
   const D = s => F.fromDec(String(s));                               // '0.05' → 分数
+  // ほんとうの値（小数。e^3 などで、ちょうど …5 にはならない）を小数第 k 位までに丸めた文字（roundStr とくらべる。O-4）
+  const trueRd = (v, k) => { const t = (Math.sign(v) * Math.round(Math.abs(v) * 10 ** k) / 10 ** k).toFixed(k); return /[1-9]/.test(t) ? t : t.replace('-', ''); };
   const dt = f => decStr(f);                                         // 分数 → '0.05'
   // 係数 c（分数）× 式 body。over：分数のとき body を分子に（\frac{(x^2+1)^4}{8}）
   function cx(c, body, over) {
@@ -249,6 +251,7 @@
       // 多項式の中身（教科書の例題1）
       s1(r) {
         const G = polyG(r), n = r.int(2, degOf(G) === 3 ? 4 : 6), pp = powProb(G, fr(1), n);
+        if (pp.body === '3x^{2}(x^{3}+2)^{4}') return null;   // 楽な形の例（O-2）
         return { q: `$${INT(pp.body)}$`, a: `$${pp.a}$`, easy: `$u=${pp.g}$、$\\dd u=${pp.fac}\\,\\dd x$。$\\displaystyle\\int u^{${n}}\\,\\dd u$`, easyCheck: false, calc: { kind: 'int', f: pp.f }, key: pp.body };
       },
       // sin・cos・e の中身（教科書の例題2）
@@ -326,6 +329,7 @@
         else if (kind === 1) m = fr(r.pick([1, 2, 4, 5, 6]), 3);
         else m = fr(1, 2);
         const n = r.int(2, kind === 1 ? 4 : 5), pp = powProb(G, m, n); if (!pp) return null;
+        if (pp.body === '4x(x^{2}+5)^{3}') return null;   // 楽な形の例（O-2）
         return { q: `$${INT(pp.body)}$`, a: `$${pp.a}$`, easy: `$u=${pp.g}$、$${pp.fac}\\,\\dd x=${cx(m, '\\,\\dd u')}$`.replace('=\\,\\dd u', '=\\dd u'), easyCheck: false, calc: { kind: 'int', f: pp.f }, key: pp.body };
       },
       // e・sin・cos の中身（教科書の例題2の（1）（3））
@@ -382,7 +386,7 @@
       s1(r) {
         const k = r.int(0, 2);
         let g, num;
-        if (k === 0) { const c = r.int(1, 9); g = `x^{2}+${c}`; num = '2x'; }
+        if (k === 0) { const c = r.intNot(1, 9, x => x === 4); g = `x^{2}+${c}`; num = '2x'; }   // x^2+4 は楽な形の例（O-2）
         else if (k === 1) { const a = r.intNot(-3, 3, x => x === 0), b = r.int(Math.floor(a * a / 4) + 1, Math.floor(a * a / 4) + 4); g = P.tex(P.make(b, a, 1)); num = P.tex(P.make(a, 2)); }
         else { const c = r.int(1, 5); g = `e^{x}+${c}`; num = 'e^{x}'; }
         const body = `\\frac{${num}}{${g}}`;
@@ -392,7 +396,7 @@
       s2(r) {
         const k = r.int(0, 3);
         if (k === 0) {
-          const c = r.int(1, 9), m = r.pick([1, 1, 3, 4, 6]), g = `x^{2}+${c}`, body = `\\frac{${m === 1 ? '' : m}x}{${g}}`;
+          const c = r.intNot(1, 9, x => x === 4), m = r.pick([1, 1, 3, 4, 6]), g = `x^{2}+${c}`, body = `\\frac{${m === 1 ? '' : m}x}{${g}}`;
           return { q: `$${INT(body)}$`, a: `$${cx(fr(m, 2), `\\ln(${g})`)}+C$`, easy: `分母の微分は $2x$。分子はその $${F.tex(fr(m, 2))}$ 倍`, easyCheck: false, calc: { kind: 'int', f: body }, key: body };
         }
         if (k === 1) {
@@ -410,7 +414,7 @@
           const body = '\\frac{e^{x}}{e^{x}+1}';
           return { q: `$${INT(body, 'x', 0, 1)}$`, a: '$\\ln\\frac{e+1}{2}$', easy: '$\\Bigl[\\,\\ln(e^{x}+1)\\,\\Bigr]_{0}^{1}=\\ln(e+1)-\\ln2$', easyCheck: false, calc: { kind: 'defint', f: body, a: 0, b: 1 }, key: 'e' };
         }
-        const [c, b] = r.pick([[1, 1], [1, 2], [1, 3], [3, 1], [4, 2], [9, 3], [5, 2], [2, 1]]), m = k === 0 ? 1 : 2;
+        const [c, b] = r.pick([[1, 1], [1, 2], [1, 3], [3, 1], [9, 3], [5, 2], [2, 1]]), m = k === 0 ? 1 : 2;   // x^2+4 は楽な形の例（O-2）
         const body = `\\frac{${m === 1 ? '' : m}x}{x^{2}+${c}}`, top = b * b + c, g = gcd(top, c), fv = c / g === 1 ? `${top / g}` : `\\frac{${top / g}}{${c / g}}`;
         const lnT = `\\ln${fv}`, a = m === 2 ? lnT : `\\frac{1}{2}${lnT}`;
         return { q: `$${INT(body, 'x', 0, b)}$`, a: `$${a}$`, easy: `$${m === 2 ? '' : '\\frac{1}{2}'}\\Bigl[\\,\\ln(x^{2}+${c})\\,\\Bigr]_{0}^{${b}}=${m === 2 ? `\\ln${top}-\\ln${c}` : `\\frac{1}{2}(\\ln${top}-\\ln${c})`}$`, easyCheck: false, calc: { kind: 'defint', f: body, a: 0, b: b }, key: `d${m},${c},${b}` };
@@ -443,6 +447,7 @@
         const lo = r.int(0, 1), hi = r.int(lo + 1, 2), n = r.int(2, 3), pp = powProb(G, fr(1), n);
         const ua = P.at(G, lo)[0], ub = P.at(G, hi)[0];
         if (Math.pow(ub, n + 1) > 1300) return null;
+        if (pp.body === '2x(x^{2}+1)^{3}' && lo === 0 && hi === 1) return null;   // 楽な形の例（O-2）
         const val = fr(Math.pow(ub, n + 1) - Math.pow(ua, n + 1), n + 1);
         return {
           q: `$${INT(pp.body, 'x', lo, hi)}$`, a: `$${F.tex(val)}$`, easyCheck: false, calc: { kind: 'defint', f: pp.f, a: lo, b: hi },
@@ -508,22 +513,24 @@
   });
 
   // ================================================================ 5-80
-  // 図：円の 1/4（'q'：0〜r）・半円（'h'：-r〜r）・左がわの 1/4（'l'：-r〜0）。x と y の倍率を同じにして、弧と、ぬった部分と、目もり
-  //   弧は折れ線で描く（'arc' は図の大きさを円全体でとるので、下に大きなあきができる）。目もりの数は、目もりの線・ぬり・弧と重ならない所に置く
+  // 図：グラフ y=√(r^2-x^2) は上半円を全部描き、問う部分だけをぬる（R2-20）：円の 1/4（'q'：0〜r）・半円（'h'：-r〜r）・左がわの 1/4（'l'：-r〜0）。
+  //   x と y の倍率を同じにして、弧と、ぬった部分と、目もり。弧は折れ線で描く（'arc' は図の大きさを円全体でとるので、下に大きなあきができる）。
+  //   目もりの数は、目もりの線・ぬり・弧と重ならない所に置く（y の目もりの数は、弧の上の外側）
   function circFig(R, mode) {
-    const u = 3, a = mode === 'q' ? 0 : -R, b = mode === 'l' ? 0 : R, G = M.graph({ x0: a, x1: b, y0: 0, y1: R, w: mode === 'h' ? 2 * u : u, h: u });
-    const d0 = mode === 'l' ? 90 : 0, d1 = mode === 'q' ? 90 : 180, n = 60;
-    const arc = Array.from({ length: n + 1 }, (_, i) => { const th = (d0 + (d1 - d0) * i / n) * Math.PI / 180; return G.T(R * Math.cos(th), R * Math.sin(th)); });
+    const u = 3, G = M.graph({ x0: -R, x1: R, y0: 0, y1: R, w: 2 * u, h: u }), n = 120;
+    const arcOf = (d0, d1) => Array.from({ length: n + 1 }, (_, i) => { const th = (d0 + (d1 - d0) * i / n) * Math.PI / 180; return G.T(R * Math.cos(th), R * Math.sin(th)); });
+    const all = arcOf(0, 180), part = mode === 'q' ? arcOf(0, 90) : mode === 'l' ? arcOf(90, 180) : all;
     const num = v => `$${v}$`;
-    const xt = (mode === 'q' ? [R] : mode === 'h' ? [-R, R] : [-R]).flatMap(t => [['seg', [t * G.sx, -0.12], [t * G.sx, 0.12]], ['label', [t * G.sx, -0.3], num(t), 's']]);
+    const xt = [-R, R].flatMap(t => [['seg', [t * G.sx, -0.12], [t * G.sx, 0.12]], ['label', [t * G.sx, -0.3], num(t), 's']]);
+    const yl = [[-0.1, R * G.sy + 0.1], 'nw'];   // 弧の外（左上）
     return {
       s: 5.5,
       items: [
-        ['poly', mode === 'h' ? arc : [G.T(0, 0), ...arc], { fill: true, noline: true }],
-        ['axes', a * G.sx - 0.6, b * G.sx + 1.4, -0.5, R * G.sy + 0.8, { o: mode === 'h' ? 'se' : 'sw' }],   // x 軸は長めに（目もりの数と x の字が重ならない）。O は、ぬりのない側
-        ['path', arc, { thick: true }],
+        ['poly', mode === 'h' ? part : [G.T(0, 0), ...part], { fill: true, noline: true }],
+        ['axes', -R * G.sx - 0.6, R * G.sx + 1.4, -0.5, R * G.sy + 0.8, { o: mode === 'l' ? 'se' : 'sw' }],   // x 軸は長めに（目もりの数と x の字が重ならない）。O は、ぬりのない側
+        ['path', all, { thick: true }],
         ...xt,
-        ['seg', [-0.12, R * G.sy], [0.12, R * G.sy]], ['label', mode === 'q' ? [-0.2, R * G.sy] : [-0.1, R * G.sy + 0.1], num(R), mode === 'q' ? 'w' : 'nw'],
+        ['seg', [-0.12, R * G.sy], [0.12, R * G.sy]], ['label', yl[0], num(R), yl[1]],
       ],
     };
   }
@@ -546,24 +553,26 @@
       return Number.isInteger(R) && [lo, hi].every(b => b != null && [0, R, -R].some(z => near(b, z)));
     },
     steps: {
+      // 半径の決め方（同じ積分・左右の 1/4 で同じ答えを、1つの見開きに出さない。N-2・O-2・R2-18）：
+      //   右の 1/4 と係数つき（s1・s2）は 1・3〜7、半円（s2）は 1・4・6・7、図（s3）は 右の 1/4 が 8・12、半円が 5、左がわの 1/4 が 9・10（右の 1/4 と同じ半径にしない）。
+      //   楽な形の例（半径2の 1/4）と、見わけようの例（半径3の半円）は出さない（O-2）
       s1(r) {
-        const R = r.int(1, 6), body = `\\sqrt{${R * R}-x^{2}}`;
+        const R = r.pick([1, 3, 4, 5, 6, 7]), body = `\\sqrt{${R * R}-x^{2}}`;
         return { q: `$${INT(body, 'x', 0, R)}$`, a: `$${quarter(R)}$`, easy: `半径 $${R}$ の円の $\\frac{1}{4}$：$\\frac{\\pi\\times${R}^{2}}{4}$`, easyCheck: false, verify: DEF(body, 0, R, 'x', R), key: 'q' + R };
       },
-      // 半円・左の 1/4・係数つき（左がわは1問だけ。半径は、図のステップ3と重ならない 1 か 6）
+      // 半円・係数つき（左がわの 1/4 は、ステップ3の図で1問だけ。係数つきは s1 と同じ半径にしない）
       s2(r) {
-        const k = r.int(0, 2), R = k === 1 ? r.pick([1, 6]) : r.int(1, 6), body0 = `\\sqrt{${R * R}-x^{2}}`;
+        const k = r.int(0, 1), R = k === 0 ? r.pick([1, 4, 6, 7]) : r.pick([1, 3, 4, 5, 6, 7]), body0 = `\\sqrt{${R * R}-x^{2}}`;
         if (k === 0) return { q: `$${INT(body0, 'x', -R, R)}$`, a: `$${piTeX(R * R, 2)}$`, easy: `半径 $${R}$ の半円：$\\frac{\\pi\\times${R}^{2}}{2}$`, easyCheck: false, verify: DEF(body0, -R, R, 'x', R), key: 'h' + R };
-        if (k === 1) return { q: `$${INT(body0, 'x', -R, 0)}$`, a: `$${quarter(R)}$`, easy: `左がわの $\\frac{1}{4}$ 円`, easyCheck: false, verify: DEF(body0, -R, 0, 'x', R), key: 'l' };
         const c = r.pick([2, 4]), body = `${c}\\sqrt{${R * R}-x^{2}}`;
-        return { q: `$${INT(body, 'x', 0, R)}$`, a: `$${piTeX(c * R * R, 4)}$`, easy: `$${c}\\times\\frac{\\pi\\times${R}^{2}}{4}$`, easyCheck: false, verify: DEF(body, 0, R, 'x', R), key: `c${c}${R}` };
+        return { q: `$${INT(body, 'x', 0, R)}$`, a: `$${piTeX(c * R * R, 4)}$`, easy: `$${c}\\times\\frac{\\pi\\times${R}^{2}}{4}$`, easyCheck: false, verify: DEF(body, 0, R, 'x', R), key: 'q' + R };
       },
-      // 図で（ステップ3）：円の 1/4・半円・左がわの 1/4。key は s1・s2 と同じ形（同じ積分を2回出さない。N-2）
+      // 図で（ステップ3）：円の 1/4・半円・左がわの 1/4 が1問ずつ（key は形だけ。R2-18）
       s3(r) {
-        const R = r.int(2, 5), mode = r.pick(['q', 'h', 'l']), body = `\\sqrt{${R * R}-x^{2}}`, lo = mode === 'q' ? 0 : -R, hi = mode === 'l' ? 0 : R;
+        const mode = r.pick(['q', 'h', 'l']), R = r.pick({ q: [8, 12], h: [5], l: [9, 10] }[mode]), body = `\\sqrt{${R * R}-x^{2}}`, lo = mode === 'q' ? 0 : -R, hi = mode === 'l' ? 0 : R;
         return {
           q: `図は $y=${body}$ のグラフ。ぬった部分の面積 $${INT(body, 'x', lo, hi)}$`, a: `$${mode === 'h' ? piTeX(R * R, 2) : quarter(R)}$`, fig: circFig(R, mode),
-          easy: `半径 $${R}$ の${mode === 'h' ? '半円' : mode === 'q' ? '円の $\\frac{1}{4}$' : '円の $\\frac{1}{4}$（左がわ）'}`, easyCheck: false, verify: DEF(body, lo, hi, 'x', R), key: (mode === 'l' ? 'L' : mode) + R,
+          easy: `半径 $${R}$ の${mode === 'h' ? '半円' : mode === 'q' ? '円の $\\frac{1}{4}$' : '円の $\\frac{1}{4}$（左がわ）'}`, easyCheck: false, verify: DEF(body, lo, hi, 'x', R), key: 'S' + mode,
         };
       },
       // わな：前に x がかかる（円の面積ではない。置換 5-77・5-79）
@@ -601,6 +610,7 @@
         const base = r.pick(['cos', 'sin', 'exp', 'exp']), k = base === 'exp' ? r.pick([1, 2, 3, -1, -2]) : r.pick([1, 1, 2, 3]), c = r.pick([1, 1, 1, 2, 3]), v = r.pick(['x', 'x', 't']);
         if (base === 'exp' && c > 1 && Math.abs(k) > 1) return null;
         const body = `${c === 1 ? '' : c}${v}${base === 'exp' ? ex(k, v) : trig(base, k, v)}`;
+        if (body === 'x\\cos x') return null;   // 楽な形の例（O-2）
         const g = base === 'exp' ? cx(fr(1, k), ex(k, v)) : base === 'cos' ? cx(fr(1, k), trig('sin', k, v)) : cx(fr(-1, k), trig('cos', k, v));
         return { q: `$${INT(body, v)}$`, a: `$${partsAns(base, k, c, v)}+C$`, easy: `$f=${c === 1 ? '' : c}${v}$、$g=${g}$`, easyCheck: false, calc: { kind: 'int', f: body, x: v }, key: body };
       },
@@ -662,6 +672,7 @@
     steps: {
       s1(r) {
         const k = r.pick([1, -1, 1, -1, 2, -2]), c = Math.abs(k) === 1 ? r.pick([1, 1, 2, 3]) : 1, v = r.pick(['x', 'x', 't']);
+        if (k === 1 && c === 1 && v === 'x') return null;   // 楽な形の例 ∫x^2e^x（O-2）
         const body = `${c === 1 ? '' : c}${v}^{2}${ex(k, v)}`;
         const gs = [1, 2, 3].map(j => cx(fr(1, Math.pow(k, j)), ex(k, v)));   // 積分する側：e^{kx} を1回・2回・3回積分したもの
         return { q: `$${INT(body, v)}$`, a: `$${x2eAns(k, c, v)}+C$`, easy: k === 1 ? `$${c === 1 ? '' : c}${v}^{2}$、$${2 * c}${v}$、$${2 * c}$ に $${ex(1, v)}$ をかけて ＋－＋` : `積分する側は $${gs.join('$ → $')}$。$${c === 1 ? '' : c}${v}^{2}$、$${2 * c}${v}$、$${2 * c}$ にかけて ＋－＋`, easyCheck: false, calc: { kind: 'int', f: body, x: v }, key: `${k},${c}` };
@@ -725,7 +736,7 @@
         let k = r.int(2, 5);
         if (fn === 'sin' && k % 2 === 0) k++;
         if (fn === 'cos' && k % 2 === 1) k--;
-        if (fn !== 'exp' && a < 0) return null;
+        if ((fn !== 'exp' && a < 0) || (fn === 'cos' && a === 2)) return null;   // cos2x は楽な形の例（O-2）
         const c = fr(deriv0(fn, a, k), fact(k)), f = FN83[fn](a, 'x');
         return {
           q: `$${f}$ のテイラー展開の、$x^{${k}}$ の係数`, a: `$${F.tex(c)}$`, easyCheck: false, key: `${fn}${a}`,   // 同じ関数は1問だけ
@@ -740,7 +751,8 @@
       s3(r) {
         const k = r.int(0, 3);
         let f, ps, chk;
-        if (k === 0) { const fn = r.pick(['sin', 'cos']), a = r.pick([2, 3]); f = trig(fn, a, 'x'); const ds = fn === 'sin' ? [1, 3, 5] : [0, 2, 4]; ps = ds.map(d => [d, fr(deriv0(fn, a, d), fact(d))]); chk = x => Math[fn](a * x); }
+        // cos2x は楽な形の例なので出さない（O-2）
+        if (k === 0) { const fn = r.pick(['sin', 'cos']), a = r.pick([2, 3]); if (fn === 'cos' && a === 2) return null; f = trig(fn, a, 'x'); const ds = fn === 'sin' ? [1, 3, 5] : [0, 2, 4]; ps = ds.map(d => [d, fr(deriv0(fn, a, d), fact(d))]); chk = x => Math[fn](a * x); }
         else if (k === 1) { const b = r.pick([-1, -2, 2, 1]); f = `e^{${b === 1 ? '' : b === -1 ? '-' : b}x^{2}}`; ps = [0, 1, 2].map(j => [2 * j, fr(Math.pow(b, j), fact(j))]); chk = x => Math.exp(b * x * x); }
         else if (k === 2) { const a = r.pick([2, 3, -2, -3]); f = ex(a, 'x'); ps = [0, 1, 2].map(j => [j, fr(Math.pow(a, j), fact(j))]); chk = x => Math.exp(a * x); }
         else { const a = r.pick([1, 1, 2, -1]); f = a === 1 ? '\\ln(1+x)' : a === -1 ? '\\ln(1-x)' : `\\ln(1+${a}x)`; ps = [1, 2, 3].map(j => [j, fr((j % 2 ? 1 : -1) * Math.pow(a, j), j)]); chk = x => Math.log(1 + a * x); }
@@ -765,7 +777,7 @@
         return dest({
           q: `$\\${fn}${x}$ のおよその値（$\\pi=3.14$ として、小数第2位まで）`, a: `$${roundStr(val, 2)}$`,
           verify: p => (Math.abs(ev(strip(p.a)) - Math[fn](+x)) < 0.006 || 'ほんとうの値とずれる'),
-        }, '5-83', `$${x}$ は0に近くないので、展開のはじめの項に入れてはいけない。$\\${fn}${x}=${fn === 'cos' ? '-' : ''}\\${fn}(\\pi-${x})$、$\\pi-${x}=${ys}$ は小さい角`, ['5-85']);
+        }, '5-83', `$${x}$ は0に近くないので、展開のはじめの項に入れてはいけない。$\\${fn}${x}=${fn === 'cos' ? '-' : ''}\\${fn}(\\pi-${x})$、$\\pi-${x}\\approx3.14-${x}=${ys}$ は小さい角`, ['5-85']);
       },
     },
   });
@@ -803,7 +815,7 @@
           const a = r.pick([2, 3, -1, -2, -3, 4]), A = [fr(1), fr(a), fr(a * a, 2)];
           return { q: `$${ex(a, 'x')}$ の2次近似`, a: `$${ascTeX(A)}$`, easy: `$1+${a < 0 ? `(${a})` : a}x+\\frac{${a < 0 ? `(${a})` : a}^{2}}{2}x^{2}$`, easyCheck: false, verify: p => quadOK(p.a, x => Math.exp(a * x)), key: 'e' + a };
         }
-        const isInt = r.chance(0.6), rr = isInt ? fr(r.int(2, 12)) : r.pick([fr(1, 2), fr(-1), fr(-2), fr(-1, 2), fr(3, 2), fr(1, 3)]);
+        const isInt = r.chance(0.6), rr = isInt ? fr(r.intNot(2, 12, x => x === 10)) : r.pick([fr(1, 2), fr(-1), fr(-2), fr(-1, 2), fr(3, 2), fr(1, 3)]);   // (1+x)^{10} は楽な形の例（O-2）
         const A = binom2(rr), f = isInt ? `(1+x)^{${rr[0]}}` : RTEX[rKey(rr)][0], R = F.val(rr);
         return { q: `$${f}$ の2次近似`, a: `$${ascTeX(A)}$`, easy: `$r=${F.tex(rr)}$、$\\frac{r(r-1)}{2}=${F.tex(A[2])}$`, easyCheck: false, verify: p => quadOK(p.a, x => Math.pow(1 + x, R)), key: 'r' + rKey(rr) };
       },
@@ -819,6 +831,7 @@
         const x = D(r.pick(kind === 0 ? ['0.01', '0.02', '0.03', '-0.01', '-0.02'] : ['0.02', '0.04', '-0.02', '0.1', '-0.04', '0.06']));
         const base = dt(F.add(fr(1), x)), A = binom2(rr), v = P.at(A, x), R = F.val(rr), X = F.val(x);
         if (Math.abs(R * X) > 0.3 + 1e-9) return null;   // rx が大きいと、2次近似でもずれが大きい（1.03^{20} など）
+        if (kind === 0 && R === 10 && dt(x) === '0.01') return null;   // 1.01^{10} は楽な形の例（O-2）
         const qx = rr[1] === 1 && rr[0] > 0 ? `${base}^{${rr[0]}}` : RTEX[rKey(rr)][1](base);
         const c3 = Math.abs(R * (R - 1) * (R - 2) / 6 * X * X * X);
         return {
@@ -831,6 +844,7 @@
       s3(r) {
         if (r.chance(0.5)) {
           const n = r.int(3, 10), i = r.pick([1, 2, 3]), x = fr(i, 100), A = binom2(fr(n)), v = F.mul(fr(10000), P.at(A, x));
+          if (n === 10 && i === 1) return null;   // 1.01^{10} は楽な形の例（O-2）
           return {
             q: `1年に $${i}$ % の利息がつく預金に $10000$ 円を $${n}$ 年あずけると、$10000\\times${dt(F.add(fr(1), x))}^{${n}}$ 円。2次近似で □ 円`, a: `$${dt(v)}$`, easyCheck: false, key: `m${n % 2}`,   // 預金は2問まで
             easy: `$${dt(F.add(fr(1), x))}^{${n}}\\approx1+${dt(F.mul(fr(n), x))}+${dt(P.at([fr(0), fr(0), A[2]], x))}$`,
@@ -875,6 +889,7 @@
       // sin θ ≈ θ、cos θ ≈ 1−θ²/2
       s1(r) {
         const t = r.pick(['0.1', '0.2', '0.3', '0.05', '0.02', '0.04', '0.15', '0.12', '0.25', '0.08']), fn = r.pick(['sin', 'cos', 'cos']), x = D(t);
+        if (fn === 'cos' && t === '0.2') return null;   // 楽な形の例 cos0.2（O-2）
         const v = fn === 'sin' ? x : F.sub(fr(1), F.div(F.mul(x, x), fr(2)));
         return { q: `小さい角（rad）の近似で $\\${fn}${t}\\approx□$`, a: `$${dt(v)}$`, easy: fn === 'sin' ? `$\\sin\\theta\\approx\\theta$` : `$1-\\frac{${t}^{2}}{2}=1-${dt(F.div(F.mul(x, x), fr(2)))}$`, easyCheck: false, key: fn === 'sin' ? cap('sin', t, 3) : fn + t, verify: p => (Math.abs(ev(strip(p.a)) - Math[fn](+t)) < Math.pow(+t, fn === 'sin' ? 3 : 4) / 5 + 1e-12 || 'ほんとうの値とずれる') };   // sin は3問まで
       },
@@ -883,20 +898,21 @@
         const k = r.int(0, 2);
         if (k === 0) {
           const t = r.pick(['0.1', '0.2', '0.3']), x = D(t), v = F.sub(x, F.div(F.mul(F.mul(x, x), x), fr(6)));
-          return { q: `$\\sin${t}$ を $\\theta-\\frac{\\theta^{3}}{6}$ で（小数第4位まで）`, a: `$${roundStr(v, 4)}$`, easy: `$${t}-\\frac{${dt(F.mul(F.mul(x, x), x))}}{6}$`, easyCheck: false, key: cap('s', t, 2), verify: p => (Math.abs(ev(strip(p.a)) - Math.sin(+t)) < 0.0001 || 'ほんとうの値とずれる') };
+          return { q: `$\\theta-\\frac{\\theta^{3}}{6}$ で $\\sin${t}\\approx□$（小数第4位まで）`, a: `$${roundStr(v, 4)}$`, easy: `$${t}-\\frac{${dt(F.mul(F.mul(x, x), x))}}{6}$`, easyCheck: false, key: cap('s', t, 2), verify: p => (Math.abs(ev(strip(p.a)) - Math.sin(+t)) < 0.0001 || 'ほんとうの値とずれる') };
         }
         if (k === 1) {
           const t = r.pick(['0.2', '0.3', '0.4']), x = D(t), x2 = F.mul(x, x), v = F.add(F.sub(fr(1), F.div(x2, fr(2))), F.div(F.mul(x2, x2), fr(24)));
-          return { q: `$\\cos${t}$ を $1-\\frac{\\theta^{2}}{2}+\\frac{\\theta^{4}}{24}$ で（小数第4位まで）`, a: `$${roundStr(v, 4)}$`, easy: `$1-${dt(F.div(x2, fr(2)))}+\\frac{${dt(F.mul(x2, x2))}}{24}$`, easyCheck: false, key: cap('c', t, 2), verify: p => (Math.abs(ev(strip(p.a)) - Math.cos(+t)) < 0.0001 || 'ほんとうの値とずれる') };   // 次の項までは sin・cos 2問ずつまで（のこりは度）
+          return { q: `$1-\\frac{\\theta^{2}}{2}+\\frac{\\theta^{4}}{24}$ で $\\cos${t}\\approx□$（小数第4位まで）`, a: `$${roundStr(v, 4)}$`, easy: `$1-${dt(F.div(x2, fr(2)))}+\\frac{${dt(F.mul(x2, x2))}}{24}$`, easyCheck: false, key: cap('c', t, 2), verify: p => (Math.abs(ev(strip(p.a)) - Math.cos(+t)) < 0.0001 || 'ほんとうの値とずれる') };   // 次の項までは sin・cos 2問ずつまで（のこりは度）
         }
         const d = r.pick([3, 6, 9, 12, 15, 18]), x = F.div(F.mul(fr(d), D('3.14')), fr(180));
         // 度は rad に直してから（教科書 まちがえやすいところ）。sin θ ≈ θ のずれは θ^3/6（15° で 0.003）なので、小数第3位まで
         const th = d * Math.PI / 180;
-        return { q: `$\\sin${d}^{\\circ}$ を $\\sin\\theta\\approx\\theta$ で（$\\pi=3.14$ として、小数第3位まで）`, a: `$${roundStr(x, 3)}$`, easy: `rad に直す：$${d}\\times\\frac{3.14}{180}$`, easyCheck: false, key: 'd' + d, verify: p => (Math.abs(ev(strip(p.a)) - Math.sin(th)) < 1.3 * th * th * th / 6 + 0.0006 || 'ほんとうの値とずれる') };
+        return { q: `$\\sin\\theta\\approx\\theta$ で $\\sin${d}^{\\circ}\\approx□$（$\\pi=3.14$ として、小数第3位まで）`, a: `$${roundStr(x, 3)}$`, easy: `rad に直す：$${d}\\times\\frac{3.14}{180}$`, easyCheck: false, key: 'd' + d, verify: p => (Math.abs(ev(strip(p.a)) - Math.sin(th)) < 1.3 * th * th * th / 6 + 0.0006 || 'ほんとうの値とずれる') };
       },
       // 振り子の高さ・横のずれ（教科書 例題11）
       s3(r) {
         const L = r.pick(['0.5', '0.8', '1', '1.2', '1.5', '2', '2.5', '3']), t = r.pick(['0.1', '0.2', '0.3', '0.15']), up = r.chance(0.7);
+        if (L === '2' && t === '0.2') return null;   // 楽な形の例（長さ 2 m で 0.2 rad。O-2）
         const h = up ? F.div(F.mul(F.mul(fr(100), D(L)), F.mul(D(t), D(t))), fr(2)) : F.mul(F.mul(fr(100), D(L)), D(t));
         return {
           q: `長さ $${L}\\,\\mathrm{m}$ の振り子が $${t}\\,\\mathrm{rad}$ ふれた。おもりは、いちばん下から${up ? '約何 cm 上がっているか（$\\cos\\theta\\approx1-\\frac{\\theta^{2}}{2}$ で）' : '横に約何 cm ずれているか（$\\sin\\theta\\approx\\theta$ で）'}　□ cm`,
@@ -916,7 +932,8 @@
   // ================================================================ 5-86
   // L/g = k^2（k は 0.1 きざみ）になる長さ。周期は 2kπ
   //   s2 は s1 に出た長さをよける（N-2）ので、数は 6＋6 より多くいる
-  const KS = ['0.1', '0.2', '0.25', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1', '1.2', '1.5', '2'];
+  //   0.5（長さ 2.45 m、周期 π）は楽な形の例なので出さない（O-2）
+  const KS = ['0.1', '0.2', '0.25', '0.3', '0.4', '0.6', '0.7', '0.8', '0.9', '1', '1.2', '1.5', '2'];
   const periodTeX = k => { const t = F.mul(fr(2), D(k)); return t[1] === 1 && t[0] === 1 ? '\\pi' : `${dt(t)}\\pi`; };
   M.add({
     id: '5-86', part: 6, chap: '5-17⑧ 例題5', stars: 1,
@@ -940,20 +957,25 @@
       s2(r) {
         const k = r.pick(KS), L = dt(F.mul(D('9.8'), F.mul(D(k), D(k))));
         if (KS.indexOf(k) % 2 === 0) return { q: `周期が $${periodTeX(k)}$ 秒の振り子の長さ（$g=9.8\\,\\mathrm{m/s^{2}}$）　□ m`, a: `$${L}$`, easyCheck: false, key: 'L' + k, easy: `$\\sqrt{\\frac{L}{g}}=${k}$ なので $L=9.8\\times${k}^{2}$`, verify: p => numOK(p.a, 9.8 * Math.pow(+k, 2), 1e-9) };
-        const T = F.mul(F.mul(fr(2), D(k)), D('3.14'));
-        return { q: `長さ $${L}\\,\\mathrm{m}$ の振り子の周期を、小数第2位まで（$g=9.8\\,\\mathrm{m/s^{2}}$、$\\pi=3.14$）　□ 秒`, a: `$${roundStr(T, 2)}$`, easyCheck: false, key: 'L' + k, easy: `$2\\pi\\times${k}=${periodTeX(k)}$`, verify: p => (Math.abs(ev(strip(p.a)) - 2 * Math.PI * +k) < 0.01 || '値がずれる') };
+        // π=3.14 で出した周期を丸めた数と、ほんとうの周期を丸めた数が同じになるけたで聞く（2π×2=12.566… は 12.56 と 12.57 がくいちがうので小数第1位。O-4・R2-2）
+        const T = F.mul(F.mul(fr(2), D(k)), D('3.14')), kd = [2, 1].find(d => roundStr(T, d) === (2 * Math.PI * +k).toFixed(d));
+        if (!kd) return null;
+        const ans = roundStr(T, kd);
+        return { q: `長さ $${L}\\,\\mathrm{m}$ の振り子の周期は約 □ 秒（$g=9.8\\,\\mathrm{m/s^{2}}$、$\\pi=3.14$ として、小数第${kd}位まで）`, a: `$${ans}$`, easyCheck: false, key: 'L' + k,
+          easy: `$2\\pi\\times${k}=${periodTeX(k)}\\approx${dt(T)}${dt(T) === ans ? '' : `\\approx${ans}`}$`, verify: p => (Math.abs(ev(strip(p.a)) - 2 * Math.PI * +k) <= 0.5 * 10 ** -kd + 1e-9 || '値がずれる') };
       },
       // 見かけがちがう：長さを何倍・月の上（どの形も2問まで）
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) { const m = r.int(2, 5); return { q: `振り子の糸の長さを $${m * m}$ 倍にすると、周期は □ 倍`, a: `$${m}$`, easy: `$\\sqrt{${m * m}}=${m}$`, easyCheck: false, key: 'm' + (m % 2) }; }
         if (k === 1) { const m = r.int(2, 4); return { q: `振り子の周期を $${m}$ 倍にするには、糸の長さを □ 倍にする`, a: `$${m * m}$`, easy: `周期は $\\sqrt{L}$ に比例。$${m}^{2}=${m * m}$`, easyCheck: false, key: 'n' + (m % 2) }; }
-        const kk = r.pick(['0.5', '1', '0.25', '1.5']), L = dt(F.mul(D('1.6'), F.mul(D(kk), D(kk))));
+        const kk = r.pick(['1', '0.25', '1.5']), L = dt(F.mul(D('1.6'), F.mul(D(kk), D(kk))));
         return { q: `月の上（$g=1.6\\,\\mathrm{m/s^{2}}$）で、長さ $${L}\\,\\mathrm{m}$ の振り子の周期　□ 秒`, a: `$${periodTeX(kk)}$`, easyCheck: false, key: 'g' + (kk.length % 2), easy: `$\\frac{${L}}{1.6}=${dt(F.mul(D(kk), D(kk)))}=${kk}^{2}$`, verify: p => numOK(p.a, 2 * Math.PI * Math.sqrt(+L / 1.6), 1e-9) };
       },
       // わな：ふれが大きい（sin θ ≈ θ が使えない。周期は長くなる）
       trap(r) {
-        const k = r.pick(['0.5', '1']), L = dt(F.mul(D('9.8'), F.mul(D(k), D(k)))), ang = r.pick([60, 90]), T = periodTeX(k);
+        // 長さは、ステップ1・2の表（KS）にない数（わなの文の周期が、ステップ1・2の答えにならないように。O-2）
+        const k = r.pick(['2.5', '3']), L = dt(F.mul(D('9.8'), F.mul(D(k), D(k)))), ang = r.pick([60, 90]), T = periodTeX(k);
         // ふれはば ang の周期（ほんとうの値）：T0 × (2/π) K(sin(ang/2))（数値で積分）
         const ratio = (() => { const m = Math.sin(ang * Math.PI / 360), n = 4000; let s = 0; for (let i = 0; i < n; i++) { const t = (i + 0.5) / n * Math.PI / 2; s += 1 / Math.sqrt(1 - m * m * Math.sin(t) * Math.sin(t)); } return s / n; })();
         return dest({
@@ -989,6 +1011,7 @@
     steps: {
       s1(r) {
         const a = r.pick(AS), C = r.pick([2, 3, 4, 5, 10, 20, 50, 80, 100]);
+        if (a === '-3' && C === 5) return null;   // 楽な形の例 f'=-3f、f(0)=5（O-2）
         return { q: `$f'=${co(a)}f$、$f(0)=${C}$ をみたす $f(t)$`, a: `$f(t)=${fnE(C, a, 't')}$`, easy: `$f=Ce^{${kv(+a, 't')}}$、$C=f(0)=${C}$`, easyCheck: false, key: `${a},${C}`, verify: p => deOK(p.a, { order: 1, k: +a, x0: C }) };
       },
       // t での値（e の値を文に。教科書 例題1）。at＝e の右肩（±1・±2・±3）が整数になる時刻だけ
@@ -997,19 +1020,25 @@
         const ats = ['-1', '1', '-2', '2', '-3', '3'].filter(e => { const t = F.div(D(e), D(a)); return t[1] === 1 && t[0] > 0 && t[0] <= 30; });
         if (!ats.length) return null;
         const at = r.pick(ats), t = F.div(D(at), D(a))[0], E = ETAB[at], v = F.mul(fr(C), D(E)), k = digits(F.val(v)), want = C * Math.exp(+at);
+        if (a === '-3' && C === 5) return null;   // 楽な形の例（O-2）
+        // 文の値（e^3=20.09 など）で出した数を丸めた答えと、ほんとうの値を丸めた答えがくいちがう組は出さない（50×20.09=1004.5 → 1005、ほんとうは 1004。O-4・R2-4）
+        const ans = roundStr(v, k);
+        if (ans !== trueRd(want, k)) return null;
         return {
-          q: `$f'=${co(a)}f$、$f(0)=${C}$。$f(${t})\\approx□$（$${eName(at)}=${E}$、${keta(k)}）`, a: `$${roundStr(v, k)}$`, easyCheck: false, key: `${a},${C}`,
-          easy: `$f=${fnE(C, a, 't')}$。$${C}${eName(at)}=${C}\\times${E}$`, verify: p => (Math.abs(ev(strip(p.a)) - want) < want * 0.003 + 0.51 * Math.pow(10, -k) || '値がずれる'),
+          q: `$f'=${co(a)}f$、$f(0)=${C}$。$f(${t})\\approx□$（$${eName(at)}=${E}$、${keta(k)}）`, a: `$${ans}$`, easyCheck: false, key: `${a},${C}`,
+          easy: `$f=${fnE(C, a, 't')}$。$${C}${eName(at)}\\approx${C}\\times${E}=${dt(v)}${dt(v) === ans ? '' : `\\approx${ans}`}$`, verify: p => (Math.abs(ev(strip(p.a)) - want) < want * 0.003 + 0.51 * Math.pow(10, -k) || '値がずれる'),
         };
       },
       // 見かけがちがう：へる物質・ふえる細菌（dN/dt）
       s3(r) {
         const up = r.chance(0.4), k = up ? r.pick(['0.1', '0.2', '0.5']) : r.pick(['0.1', '0.2', '0.05']), N0 = up ? r.pick([100, 200, 500]) : r.pick([1000, 2000, 500]);
         const at = up ? r.pick(['1', '2']) : r.pick(['-1', '-2']), t = F.div(D(at.replace('-', '')), D(k))[0], E = ETAB[at], v = F.mul(fr(N0), D(E));
+        // 文の値で出した数を丸めた答えと、ほんとうの値を丸めた答えがくいちがう組は出さない（2000×0.135=270、ほんとうは 271。O-4・R2-3）
+        if (roundStr(v, 0) !== trueRd(N0 * Math.exp(+at), 0)) return null;
         return {
           q: `${up ? '細菌の数 $N$（個）' : '放射性の物質の量 $N$（g）'}が $\\frac{\\dd N}{\\dd t}=${up ? '' : '-'}${k}N$（$t$ は時間）で${up ? 'ふえる' : 'へる'}。はじめ $${N0}$ ${up ? '個' : 'g'} なら、$${t}$ 時間後は約 □ ${up ? '個' : 'g'}（$${eName(at)}=${E}$、整数で）`,
           a: `$${roundStr(v, 0)}$`, easyCheck: false, key: `n${at}`,   // ふえる・へるが2問ずつ（e の右肩 ±1・±2）
-          easy: `$N=${N0}${ex(up ? +k : -k, 't')}$。$${N0}\\times${E}$`, verify: p => (Math.abs(ev(strip(p.a)) - N0 * Math.exp(+at)) < N0 * Math.exp(+at) * 0.003 + 0.6 || '値がずれる'),
+          easy: `$N=${N0}${ex(up ? +k : -k, 't')}$。$${N0}${eName(at)}\\approx${N0}\\times${E}=${dt(v)}${dt(v) === roundStr(v, 0) ? '' : `\\approx${roundStr(v, 0)}`}$`, verify: p => (Math.abs(ev(strip(p.a)) - N0 * Math.exp(+at)) < N0 * Math.exp(+at) * 0.003 + 0.6 || '値がずれる'),
         };
       },
       // わな：f' が定数（e ではない。5-57）
@@ -1037,6 +1066,7 @@
     steps: {
       s1(r) {
         const Ts = r.pick([20, 25, 22, 18, 5]), warm = Ts >= 18 && r.chance(0.3), T0 = warm ? r.pick([5, 10, 2]) : Ts + r.pick([40, 50, 60, 70]), k = r.pick(['0.05', '0.1', '0.02', '0.04', '0.2']), d = T0 - Ts;
+        if (Ts === 20 && (T0 === 80 && k === '0.05' || T0 === 5 && k === '0.1')) return null;   // 楽な形・気をつけることの例（O-2）
         return {
           q: `${Ts === 5 ? '冷蔵庫の中' : '部屋'}の温度は $${Ts}$ ℃。$T'=-${k}(T-${Ts})$、$T(0)=${T0}$ をみたす $T$`, a: `$T=${Ts}${d < 0 ? '-' : '+'}${Math.abs(d)}e^{-${k}t}$`, easyCheck: false, key: `${Ts},${T0},${k}`,
           easy: `はじめの差 $${T0}-${Ts}=${d}$`, verify: p => deOK(p.a, { order: 1, k: -k, s: Ts, x0: T0 }),
@@ -1045,10 +1075,13 @@
       // t 分後の温度（e^{-1}・e^{-2} を文に）
       s2(r) {
         const Ts = r.pick([20, 25, 22]), warm = r.chance(0.3), T0 = warm ? r.pick([5, 10]) : Ts + r.pick([40, 50, 60, 70]), k = r.pick(['0.05', '0.1', '0.02', '0.04']), at = r.pick(['-1', '-1', '-2']);
-        const t = F.div(D(at.replace('-', '')), D(k))[0], d = T0 - Ts, v = F.add(fr(Ts), F.mul(fr(d), D(ETAB[at])));
+        const t = F.div(D(at.replace('-', '')), D(k))[0], d = T0 - Ts, v = F.add(fr(Ts), F.mul(fr(d), D(ETAB[at]))), ans = roundStr(v, 1);
+        if (Ts === 20 && (T0 === 80 && k === '0.05' || T0 === 5 && k === '0.1')) return null;   // 楽な形・気をつけることの例（O-2）
+        // 文の値で出した数を丸めた答えと、ほんとうの値を丸めた答えがくいちがう組は出さない（20−10×0.135=18.65 → 18.7、ほんとうは 18.6。O-4・R2-5）
+        if (ans !== trueRd(Ts + d * Math.exp(+at), 1)) return null;
         return {
-          q: `部屋の温度は $${Ts}$ ℃。$T'=-${k}(T-${Ts})$（$t$ は分）、はじめ $${T0}$ ℃。$${t}$ 分後は □ ℃（$e^{${at}}=${ETAB[at]}$ として、小数第1位まで）`, a: `$${roundStr(v, 1)}$`, easyCheck: false, key: `${Ts},${T0},${k}`,
-          easy: `$${Ts}${d < 0 ? '-' : '+'}${Math.abs(d)}e^{${at}}=${Ts}${d < 0 ? '-' : '+'}${Math.abs(d)}\\times${ETAB[at]}$`, verify: p => (Math.abs(ev(strip(p.a)) - (Ts + d * Math.exp(+at))) < 0.1 || '値がずれる'),
+          q: `部屋の温度は $${Ts}$ ℃。$T'=-${k}(T-${Ts})$（$t$ は分）、はじめ $${T0}$ ℃。$${t}$ 分後は約 □ ℃（$e^{${at}}=${ETAB[at]}$ として、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `${Ts},${T0},${k}`,
+          easy: `$${Ts}${d < 0 ? '-' : '+'}${Math.abs(d)}e^{${at}}\\approx${Ts}${d < 0 ? '-' : '+'}${Math.abs(d)}\\times${ETAB[at]}=${dt(v)}${dt(v) === ans ? '' : `\\approx${ans}`}$`, verify: p => (Math.abs(ev(strip(p.a)) - (Ts + d * Math.exp(+at))) < 0.1 || '値がずれる'),
         };
       },
       // 見かけがちがう：差が半分になる時刻（ln 2。教科書 例題5）・はじめの冷める速さ・近づく温度が1問ずつ。冷蔵庫・dT/dt の書き方
@@ -1056,11 +1089,13 @@
         const kind = r.int(0, 2), k = r.pick(['0.05', '0.1', '0.02', '0.04', '0.07']), Ts = r.pick([20, 25, 5]), d = Ts === 5 ? r.pick([10, 16, 20]) : r.pick([40, 50, 60, 70]), T0 = Ts + d, half = Ts + d / 2;
         const head = `${Ts === 5 ? '冷蔵庫の中' : '部屋'}の温度は $${Ts}$ ℃。$\\frac{\\dd T}{\\dd t}=-${k}(T-${Ts})$（$t$ は分）、はじめ $${T0}$ ℃。`;
         const Tt = t => Ts + d * Math.exp(-k * t);   // 確かめ用：答えの式 T=Ts+d e^{-kt}
+        if (Ts === 20 && d === 60 && k === '0.05') return null;   // 楽な形の例（O-2）
         if (kind === 0) {
-          const t = F.div(D('0.693'), D(k));
+          const t = F.div(D('0.693'), D(k)), ans = roundStr(t, 1);
+          if (ans !== trueRd(Math.LN2 / +k, 1)) return null;   // 文の値とほんとうの値で、丸めた答えがくいちがう組は出さない（O-4）
           return {
-            q: `${head}$${half}$ ℃ になるのは □ 分後（$\\ln2=0.693$ として、小数第1位まで）`, a: `$${roundStr(t, 1)}$`, easyCheck: false, key: 'h',
-            easy: `差が半分：$e^{-${k}t}=\\frac{1}{2}$、$t=\\frac{\\ln2}{${k}}=\\frac{0.693}{${k}}$`, verify: p => (Math.abs(Tt(ev(strip(p.a))) - half) < d / 2 * k * 0.07 || '時刻がずれる'),
+            q: `${head}$${half}$ ℃ になるのは約 □ 分後（$\\ln2=0.693$ として、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: 'h',
+            easy: `差が半分：$e^{-${k}t}=\\frac{1}{2}$、$t=\\frac{\\ln2}{${k}}\\approx\\frac{0.693}{${k}}=${dt(t)}${dt(t) === ans ? '' : `\\approx${ans}`}$`, verify: p => (Math.abs(Tt(ev(strip(p.a))) - half) < d / 2 * k * 0.07 || '時刻がずれる'),
           };
         }
         if (kind === 1) {
@@ -1108,6 +1143,7 @@
       // 位置か速度の片方が0（教科書 例題2）
       s1(r) {
         const w = r.int(1, 6), amp = D(r.pick(AMPS)), pos = r.chance(0.55), x0 = pos ? amp : fr(0), v0 = pos ? fr(0) : F.mul(amp, fr(w));
+        if (w === 3 && pos && dt(amp) === '0.2') return null;   // 楽な形の例（O-2）
         const a = shmTeX(pos ? fr(0) : amp, pos ? amp : fr(0), w, 'x');
         return {
           q: `$\\ddot{x}=-${w * w === 1 ? '' : w * w}x$、$x(0)=${dt(x0)}$、$\\dot{x}(0)=${dt(v0)}$ をみたす $x$`, a: `$${a}$`, easyCheck: false, key: `${w},${dt(x0)},${dt(v0)}`,
@@ -1124,7 +1160,7 @@
       },
       // 見かけがちがう：周期・m x'' = −kx・ばねを静かにはなす（教科書 5-18③ の例2）
       s3(r) {
-        const k = r.int(0, 2), w = r.int(2, 6);
+        const k = r.int(0, 2), w = r.intNot(2, 6, x => x === 3);   // ẍ=-9x は楽な形の例（O-2）
         if (k === 0) return { q: `$\\ddot{x}=-${w * w}x$ の動きの周期`, a: `$${piTeX(2, w)}$`, easy: `$\\omega=${w}$、$\\frac{2\\pi}{\\omega}$`, easyCheck: false, key: 'T' + (w % 2), verify: p => numOK(p.a, 2 * Math.PI / w, 1e-9) };
         if (k === 1) {
           const m = r.pick([2, 3, 4]), amp = D(r.pick(['0.1', '0.2', '0.05']));
@@ -1168,8 +1204,8 @@
     steps: {
       // e^{at} と e^{-at}（教科書 例題4）
       s1(r) {
-        // a は1つずつ（答えが 1・4・9・16・25・0.25 と、ばらばらになる）
-        const a = r.pick(['1', '2', '3', '4', '5', '0.5']), A = r.intNot(-3, 3, x => x === 0), B = r.intNot(-3, 3, x => x === 0), y = expPair(A, B, +a, 't');
+        // a は1つずつ（答えが 1・9・16・25・36・0.25 と、ばらばらになる）。a=2（4倍）は楽な形の例なので出さない（O-2）
+        const a = r.pick(['1', '3', '4', '5', '6', '0.5']), A = r.intNot(-3, 3, x => x === 0), B = r.intNot(-3, 3, x => x === 0), y = expPair(A, B, +a, 't');
         return { q: `$y=${y}$ のとき $y''=□y$`, a: `$${dt(F.mul(D(a), D(a)))}$`, easy: `どの項も2回微分で $${a}^{2}$ 倍（$(-${a})^{2}$ も同じ）`, easyCheck: false, key: 'e' + a, verify: p => timesOK(p, 2) };
       },
       // sin・cos、1回微分（3問ずつ）
@@ -1221,6 +1257,7 @@
       // 係数・定数つき
       s1(r) {
         const k = r.int(1, 5), m = r.chance(0.5) ? r.intNot(-3, 3, x => x === 0) : 0, v = r.pick(['x', 'x', 't']);   // 定数つきと、なしが3問ずつ
+        if (k === 1 && m === 0 && v === 'x') return null;   // 楽な形の例 ∫ln x（O-2）
         const body = m === 0 ? `${k === 1 ? '' : k}\\ln ${v}` : `(${k === 1 ? '' : k}\\ln ${v}${m > 0 ? '+' : ''}${m})`;
         const a = sum([`${k === 1 ? '' : k}${v}\\ln ${v}`, (m - k) === 0 ? '' : `${m - k === 1 ? '' : m - k === -1 ? '-' : m - k}${v}`]);
         return { q: `$${INT(body, v)}$`, a: `$${a}+C$`, easy: `$${k === 1 && !m ? `${v}\\ln ${v}-${v}` : `${k === 1 ? '' : k}(${v}\\ln ${v}-${v})`}${m ? `${m > 0 ? '+' : ''}${co(m)}${v}` : ''}$`, easyCheck: false, calc: { kind: 'int', f: body, x: v }, key: (m ? 'm' : 'p') + (k % 3) };
@@ -1229,6 +1266,7 @@
       s2(r) {
         // [x ln x − x] の 1 から b まで：[係数, 式] の和（e → 1、e^2 → e^2+1、2 → 2 ln 2 − 1、4 → 4 ln 4 − 3 = 8 ln 2 − 3）
         const k = r.int(1, 3), b = r.pick(['e', 'e^{2}', '2', '3', '4']);
+        if (k === 1 && b === 'e') return null;   // 見わけようの例 ∫_1^e ln x（答えが楽な形からすぐ出る。O-2）
         const tbl = { e: [[1, '']], 'e^{2}': [[1, 'e^{2}'], [1, '']], 2: [[2, '\\ln2'], [-1, '']], 3: [[3, '\\ln3'], [-2, '']], 4: [[8, '\\ln2'], [-3, '']] };
         const body = `${k === 1 ? '' : k}\\ln x`, ans = sum(tbl[b].map(([c, t]) => (t ? co(k * c) + t : String(k * c))));
         return { q: `$${INT(body, 'x', 1, b)}$`, a: `$${ans}$`, easy: `$${k === 1 ? '' : k}\\Bigl[\\,x\\ln x-x\\,\\Bigr]_{1}^{${b}}$`, easyCheck: false, calc: { kind: 'defint', f: body, a: 1, b: b }, key: body + b };
@@ -1269,6 +1307,7 @@
       // 位置か速度の片方が0（教科書 例題7）
       s1(r) {
         const a = r.int(1, 4), v = r.chance(0.3) ? '\\theta' : 'x', pos = r.chance(0.6), c = D(r.pick(pos ? ['0.01', '0.02', '0.2', '2', '4', '1'] : ['0.1', '0.2', '1', '2']));
+        if (a === 2 && pos && dt(c) === '0.01') return null;   // 楽な形の例 θ''=4θ、θ(0)=0.01（O-2）
         const x0 = pos ? c : fr(0), v0 = pos ? fr(0) : F.mul(c, fr(2 * a)), h = pos ? F.div(c, fr(2)) : F.div(v0, fr(2 * a)), ht = dt(h) === '1' ? '' : dt(h);
         const a2 = `${ex(a, 't')}${pos ? '+' : '-'}${ex(-a, 't')}`;
         return {
@@ -1335,6 +1374,7 @@
         if (r.chance(0.3)) { const extra = r.pick(GROW.slice(1, 6)); if (!pick.includes(extra)) pick.push(extra); }
         const L = r.shuffle(pick), T = 1e8, order = L.slice().sort((x, y) => x.lg(T) - y.lg(T));
         if (L.every((g, i) => g === order[i])) return null;   // はじめから小さい順にならんでいるものは出さない
+        if (order.map(g => g.t).join() === '\\ln t,t^{3},e^{t}') return null;   // 楽な形の例 ln t ≪ t^3 ≪ e^t（O-2）
         return {
           q: `$t$ が大きいとき、${L.map(g => `$${g.t}$`).join('、')} を小さい順にならべると　□`, a: order.map(g => `$${g.t}$`).join('、'), easyCheck: false, key: 'o' + order.map(g => g.t).join(),
           easy: '$\\ln t\\ll t^n\\ll e^{ct}$（$t^n$ どうしは指数の大きい順）',
@@ -1363,11 +1403,14 @@
       // 見かけがちがう：展開の1項でこえる t・ln t のふえ方
       s3(r) {
         if (r.chance(0.5)) {
-          const n = r.int(1, 4);
+          const n = r.pick([1, 2, 4]);   // n=3（t^4/4! と t^3）は楽な形の例（O-2）
           return { q: `$e^{t}$ の展開にある $\\frac{t^{${n + 1}}}{${n + 1}!}$ の項だけで $t^{${n}}$ をこえるのは、$t>□$ のとき`.replace('t^{1}$ をこえる', 't$ をこえる'), a: `$${fact(n + 1)}$`, easy: `$\\frac{t^{${n + 1}}}{${fact(n + 1)}}>${n === 1 ? 't' : `t^{${n}}`}$ より $t>${fact(n + 1)}$`, easyCheck: false, key: 'n' + n, verify: p => { const T = ev(strip(p.a)); const g = t => Math.pow(t, n + 1) / fact(n + 1) - Math.pow(t, n); return (g(T * 1.01) > 0 && g(T * 0.99) < 0) || 'さかい目がちがう'; } };
         }
-        const [m, lnv] = r.pick([['10', '2.30'], ['100', '4.60'], ['1000', '6.90'], ['2', '0.693'], ['4', '1.386'], ['8', '2.079']]);
-        return { q: `$t$ が $${m}$ 倍になると、$\\ln t$ は □ ふえる（$${m.length > 1 ? '\\ln10=2.30' : '\\ln2=0.693'}$ として）`, a: `$${lnv}$`, easy: `$\\ln(${m}t)=\\ln t+\\ln${m}$`, easyCheck: false, key: 'g' + m, verify: p => (Math.abs(ev(strip(p.a)) - Math.log(+m)) < 0.01 || 'ふえる量がちがう') };
+        // 近似の答えなので「約」と ≈（L-5）。ln10=2.30 の100倍・1000倍は、4.60・6.90 がほんとうの値を丸めた 4.61・6.91 とくいちがうので出さない（O-4・R2-6）。
+        //   10倍（2.30）は左ページのわけ（why）にあるので出さない（O-2）
+        const n2 = r.pick([1, 2, 3]), m = 2 ** n2, lnv = (n2 * 0.693).toFixed(3);
+        return { q: `$t$ が $${m}$ 倍になると、$\\ln t$ は約 □ ふえる（$\\ln2=0.693$ として）`, a: `$${lnv}$`, easy: `$\\ln(${m}t)=\\ln t+\\ln${m}${n2 === 1 ? '' : `=\\ln t+${n2}\\ln2`}\\approx\\ln t+${lnv}$`, easyCheck: false, key: 'g' + m,
+          verify: p => (strip(p.a) === (n2 * Math.LN2).toFixed(3) || 'ふえる量がちがう') };
       },
       // わな：t が小さいとき（ならべ方は t が大きいときだけ）
       trap(r) {

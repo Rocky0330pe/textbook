@@ -55,14 +55,16 @@
   const exactDec = (v, k) => Math.abs(v * 10 ** k - Math.round(v * 10 ** k)) < 1e-7;
   // 文で与えた値（0.693・0.368 など）で出した答え vG。ほんとうの値 vT を同じけたで丸めた値と同じになる、いちばん細かいけた（小数第 kmax 位〜第1位）で答える。
   // vG がそのけたでちょうどなら note は ''、丸めるなら「、小数第□位まで」。どのけたでも合わなければ null（その数は出さない）
+  //   ちょうどのときも、そのけたまで書く（$\ln10=2.30$ なら答えも 2.30。文に書いた値のけたを落とさない。O-4・R2-7）
   function gv(vG, vT, kmax) {
     for (let k = kmax == null ? 3 : kmax; k >= 1; k--) {
       if (rd(vG, k) !== rd(vT, k)) continue;
-      return exactDec(vG, k) ? { ans: fmt(vG), note: '' } : { ans: rd(vG, k), note: `、小数第${k}位まで` };
+      return exactDec(vG, k) ? { ans: rd(vG, k), note: '' } : { ans: rd(vG, k), note: `、小数第${k}位まで` };
     }
     return null;
   }
-  // 楽な形の終わり：ちょうどなら「式=答え」、丸めるなら「式=与えた値での数≈答え」
+  // 楽な形の終わり：ちょうどなら「式=答え」、丸めるなら「式=与えた値での数≈答え」。
+  //   expr は、与えた値（0.693 など）を入れた式。ほんとうの値の式から与えた値に移る所は、呼ぶ側で「\approx」にする
   const gE = (g, expr, vG) => (g.note ? `$${expr}=${fmt(vG)}\\approx${g.ans}$` : `$${expr}=${g.ans}$`);
   const LN2 = 0.693, EM1 = 0.368, EM2 = 0.135;
   const ln2T = '$\\ln2=0.693$', em1T = '$e^{-1}=0.368$';
@@ -154,20 +156,20 @@
       s1(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const n = r.pick([2, 4, 5, 10, 20]);
+          const n = r.pick([2, 5, 10, 20]);
           return { q: `1年あたり100%を1年に${n}回に分けると、1回分の利率は □ %`, a: `$${100 / n}$`, easy: `$100\\times\\frac{1}{${n}}=${100 / n}$`, key: `p${n}` };
         }
         if (k === 1) {
-          const n = r.pick([2, 4, 5, 10, 20]);
+          const n = r.pick([2, 5, 10, 20]);
           return { q: `1年あたり100%を1年に${n}回に分けると、お金は1回ごとに □ 倍`, a: `$${fmt(1 + 1 / n)}$`, easy: `1回分 ${100 / n}% → $1+${fmt(1 / n)}=${fmt(1 + 1 / n)}$`, easyCheck: 'last', key: `b${n}` };
         }
-        const n = r.pick([2, 3, 4]), P = r.pick([1, 2, 4, 10]);
+        const n = r.pick([2, 3]), P = r.pick([1, 2, 4, 10]);
         let f = fr(1); for (let i = 0; i < n; i++) f = F.mul(f, fr(n + 1, n));
         const v = P * fv(f), ok = exactDec(v, 2), ans = ok ? fmt(v) : rd(v, 2);
         const step = n === 3 ? `$\\left(\\frac{4}{3}\\right)^{3}=\\frac{64}{27}$` : `$${fmt(1 + 1 / n)}^{${n}}=${fmt(fv(f))}$`;
         return {
           q: `1年あたり100%の利率で${P}万円を預け、利息を${PER[n]}に計算してもらう。1年後のお金は${ok ? '' : '約'} □ 万円${ok ? '' : '（小数第2位まで）'}`,
-          a: `$${ans}$`, easyCheck: false, key: `m${n}${P}`,
+          a: `$${ans}$`, easyCheck: false, key: `m${n}`,   // 2行になる問題は2問まで（左ページに入るように）
           easy: `1回分 $\\frac{1}{${n}}$、${step} 倍 → ${P === 1 ? '' : `$${P}\\times$ で `}$${ans}$`,
           verify: p => { let m = P; for (let i = 0; i < n; i++) m *= 1 + 1 / n; return (ok ? close(numOf(p.a), m) : strip(p.a) === m.toFixed(2)) || `${m} とちがう`; },
         };
@@ -179,7 +181,7 @@
         const b = 1 + per / 100, N = n * y, ans = Math.round(P * b ** N);
         return {
           q: `1年あたり${n * per}%の利率で${P}円を預け、利息を${PER[n]}に計算してもらう。${y}年後のお金 □ 円`,
-          a: `$${ans}$`, easyCheck: 'last', key: `${n}${per}${y}${P}`,
+          a: `$${ans}$`, easyCheck: 'last', key: `${n}${per}${y}`,
           easy: `1回分 ${per}%、${N}回 → $${P}\\times${fmt(b)}^{${N}}=${ans}$`,
           verify: p => { let m = P; for (let i = 0; i < N; i++) m = m * (100 + per) / 100; return valIs(p.a, m) ; },
         };
@@ -191,7 +193,7 @@
           const P = r.pick([100, 10, 1000]), ans = fmt(P * val);
           return {
             q: `${P}万円が、1年あたり $r=${rr}$ でたえずふえる（$y=y_0e^{rt}$）。${t}年後は約 □ 万円（$e^{${rt}}=${val}$）`,
-            a: `$${ans}$`, easy: `$${P}e^{${rr}\\times${t}}=${P}\\times${val}=${ans}$`, easyCheck: 'last', key: `c${rr}${t}${P}`,
+            a: `$${ans}$`, easy: `$${P}e^{${rr}\\times${t}}\\approx${P}\\times${val}=${ans}$`, easyCheck: 'last', key: `c${rr}${t}`,
             verify: p => (close(rr * t, +rt) && Math.abs(Math.exp(+rt) - val) < 1e-4 && valIs(p.a, P * val)) || 'e の値か答えがちがう',
           };
         }
@@ -199,14 +201,14 @@
         const P = r.pick([100, 10, 1000]), ans = fmt(P * val);
         return {
           q: `1年あたり${R}%の利率で${P}万円を預け、利息を毎月（1年に12回）計算してもらう。1年後は約 □ 万円（$${b}^{12}=${val}$）`,
-          a: `$${ans}$`, easy: `1回分 $${R}\\%\\times\\frac{1}{12}=${R / 12}\\%$ → $${P}\\times${b}^{12}=${ans}$`, easyCheck: 'last', key: `d${R}${P}`,
+          a: `$${ans}$`, easy: `1回分 $${R}\\%\\times\\frac{1}{12}=${R / 12}\\%$ → $${P}\\times${b}^{12}\\approx${P}\\times${val}=${ans}$`, easyCheck: 'last', key: `d${R}${P}`,
           verify: p => (close(b, 1 + R / 1200) && Math.abs(b ** 12 - val) < 1e-5 && valIs(p.a, P * val)) || '累乗の値か答えがちがう',
         };
       },
       // わな：利息を預けたお金にたさない（利息に利息がつかない）、たえずふえるお金が2倍になる時間（5-68）
       trap(r) {
         if (r.chance(0.5)) {
-          const n = r.pick([2, 4, 12]), P = r.pick([1, 2, 10]);
+          const n = r.pick([2, 12]), P = r.pick([1, 2, 10]);
           return dest({ key: '5-61trapA', q: `1年あたり100%の利率で${P}万円を預ける。利息は${PER[n]}に受けとって、預けたお金にはたさない。1年で受けとる利息の合計 □ 万円`, a: `$${P}$`,
             verify: p => valIs(p.a, P * (1 / n) * n) }, '5-61', `預けたお金にたさないので、利息に利息はつかない。${P}万円の $\\frac{1}{${n}}$ が${n}回で ${P}万円`);
         }
@@ -236,9 +238,9 @@
       // c e^{ax}
       s1(r) {
         const a = r.pick([2, 3, 4, 5, 6, -1, -2, -3, -4, -5, 1]), c = r.pick([1, 1, 2, 3, 4, 5, -1, -2]);
-        if (a === 1 && c === 1) return null;
+        if ((a === 1 && c === 1) || (a === 4 && c === 1) || (a === -1 && c === 3)) return null;   // 楽な形の例（e^{4x}・3e^{-x}）は出さない（O-2）
         const f = cT(c, E(a)), ans = cT(c * a, E(a));
-        return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${ex(a, 'x')}$ の微分 $${a}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `${c},${a}` };
+        return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${ex(a, 'x')}$ の微分 $${a}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `a${a}` };   // 右肩の数が同じものは1問だけ（R2-18）
       },
       // e^{ax+b}・e^{kx^2}・e^{x^3}
       s2(r) {
@@ -246,11 +248,12 @@
         if (k === 0) {
           const a = r.pick([1, 2, 3, 4, -1, -2]), b = r.pick([1, 2, 3, 5, -1, -2]), c = r.pick([1, 1, 2, 3, -1]);
           const e = `e^{${lin(a, b)}}`, f = cT(c, e), ans = cT(c * a, e);
-          return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${lin(a, b)}$ の微分 $${a}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `l${a},${b},${c}` };
+          return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${lin(a, b)}$ の微分 $${a}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `l${a},${b}` };
         }
         const n = k === 1 ? 2 : 3, m = r.pick(n === 2 ? [1, -1, 2, -2, 3] : [1, -1]), c = r.pick([1, 1, 2, -1]);
+        if (n === 2 && m === 1 && c === 1) return null;   // 楽な形の例 e^{x^2}
         const e = `e^{${ex(m, `x^{${n}}`)}}`, f = cT(c, e), ans = cT(c * m * n, (n === 2 ? 'x' : 'x^{2}') + e);
-        return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${ex(m, `x^{${n}}`)}$ の微分 $${cT(m * n, n === 2 ? 'x' : 'x^{2}')}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `p${n},${m},${c}` };
+        return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身 $${ex(m, `x^{${n}}`)}$ の微分 $${cT(m * n, n === 2 ? 'x' : 'x^{2}')}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `p${n},${m}` };
       },
       // 見かけがちがう：1/e^{ax}、e^{ax}×e^{bx}、(e^{ax})^2、e^{ax}/e^{bx}、たし算、√
       s3(r) {
@@ -300,12 +303,14 @@
       // t=0 のへる速さ
       s1(r) {
         const N0 = r.pick([1000, 500, 800, 200, 2000, 400, 600]), k = r.pick([0.1, 0.2, 0.05, 0.3, 0.02, 0.5]), [u, tu] = r.pick(UNITS);
+        if (N0 === 1000 && k === 0.1) return null;   // 楽な形の例（1000 の 0.1 倍）は出さない（O-2）
         const ans = fmt(N0 * k);
         return { q: `ある物質の量が $N=${N0}${E(-k, 't')}$（${u}、$t$ は${tu}）でへっていく。$t=0$ でのへる速さは、1${tu}あたり □ ${u}`, a: `$${ans}$`, easy: `$${N0}\\times${k}=${ans}$`, key: `${N0},${k}` };
       },
       // ふえる量・いまの量からへる速さ・dN/dt=□N
       s2(r) {
         const k = r.int(0, 2), N0 = r.pick([1000, 500, 800, 200, 400]), kk = r.pick([0.1, 0.2, 0.05, 0.3, 0.5]);
+        if (N0 === 1000 && kk === 0.1) return null;   // 楽な形の例（O-2）
         if (k === 0) {
           const ans = fmt(N0 * kk);
           return { q: `細菌の数が $N=${N0}${E(kk, 't')}$（$t$ は時間）でふえる。$t=0$ でのふえる速さは、1時間あたり □`, a: `$${ans}$`, easy: `$${N0}\\times${kk}=${ans}$`, key: `${N0},${kk}` };
@@ -313,9 +318,10 @@
         if (k === 1) {
           const Mv = N0 * r.pick([0.5, 0.25, 0.2, 0.6, 0.4]), ans = fmt(Mv * kk);
           if (!Number.isInteger(Mv)) return null;
-          return { q: `ある物質の量が $N=${N0}${E(-kk, 't')}$（g、$t$ は時間）でへっていく。$N$ が ${Mv} g になったときのへる速さは、1時間あたり □ g`, a: `$${ans}$`, easy: `いまの量 × $${kk}$：$${Mv}\\times${kk}=${ans}$`, easyCheck: 'last', key: `${N0},${kk}` };
+          return { q: `ある物質の量が $N=${N0}${E(-kk, 't')}$（g、$t$ は時間）でへっていく。$N$ が $${Mv}\\,\\mathrm{g}$ になったときのへる速さは、1時間あたり □ g`, a: `$${ans}$`, easy: `いまの量 × $${kk}$：$${Mv}\\times${kk}=${ans}$`, easyCheck: 'last', key: `${N0},${kk}` };
         }
         const sg = r.chance(0.5) ? -1 : 1;
+        if (sg < 0 && kk === 0.1) return null;   // 楽な形の例 dN/dt=-0.1N（O-2）
         return {
           q: `$N=${N0}${E(sg * kk, 't')}$ のとき、$\\dfrac{\\dd N}{\\dd t}=□N$`, a: `$${fmt(sg * kk)}$`, key: `${N0},${kk}`, easyCheck: false,
           easy: `$\\dfrac{\\dd N}{\\dd t}=${fmt(N0 * sg * kk)}${E(sg * kk, 't')}=${fmt(sg * kk)}N$`,
@@ -329,14 +335,14 @@
           const A = r.pick([60, 50, 70, 80]), kk = r.pick([0.05, 0.1, 0.02]), d = r.pick([10, 20, 30, 40]);
           if (d >= A) return null;
           const ans = fmt(kk * d);
-          return { q: `コーヒーと部屋の温度差が $\\theta=${A}${E(-kk, 't')}$（℃、$t$ は分）でへっていく。温度差が${d}℃のとき、温度差のへる速さは1分あたり □ ℃`, a: `$${ans}$`, easy: `いまの温度差 × $${kk}$：$${d}\\times${kk}=${ans}$`, easyCheck: 'last', key: `c${A},${kk},${d}` };
+          return { q: `コーヒーと部屋の温度差が $\\theta=${A}${E(-kk, 't')}$（℃、$t$ は分）でへっていく。温度差が${d}℃のとき、温度差のへる速さは1分あたり □ ℃`, a: `$${ans}$`, easy: `いまの温度差 × $${kk}$：$${d}\\times${kk}=${ans}$`, easyCheck: 'last', key: 'c' };   // s3 は3つの形が1問ずつ（同じ形をならべない。R2-18）
         }
         if (k === 1) {
           const tau = r.pick([2, 4, 5, 10]), N0 = tau * r.pick([20, 50, 100, 30]);
-          return { q: `ある物質の量が $N=${N0}e^{-t/${tau}}$（g、$t$ は時間）でへっていく。$t=0$ でのへる速さは、1時間あたり □ g`, a: `$${N0 / tau}$`, easy: `$k=\\frac{1}{${tau}}$ → $${N0}\\div${tau}=${N0 / tau}$`, easyCheck: 'last', key: `t${N0},${tau}` };
+          return { q: `ある物質の量が $N=${N0}e^{-t/${tau}}$（g、$t$ は時間）でへっていく。$t=0$ でのへる速さは、1時間あたり □ g`, a: `$${N0 / tau}$`, easy: `$k=\\frac{1}{${tau}}$ → $${N0}\\div${tau}=${N0 / tau}$`, easyCheck: 'last', key: 't' };
         }
         const N0 = r.pick([100, 200, 50]), kk = r.pick([0.2, 0.3, 0.5, 0.7]), Mv = N0 * r.pick([5, 10, 20]), ans = fmt(Mv * kk);
-        return { q: `細菌の数が $N=${N0}${E(kk, 't')}$（$t$ は時間）でふえる。数が${Mv}になったときのふえる速さは、1時間あたり □`, a: `$${ans}$`, easy: `いまの数 × $${kk}$：$${Mv}\\times${kk}=${ans}$`, easyCheck: 'last', key: `b${N0},${kk},${Mv}` };
+        return { q: `細菌の数が $N=${N0}${E(kk, 't')}$（$t$ は時間）でふえる。数が${Mv}になったときのふえる速さは、1時間あたり □`, a: `$${ans}$`, easy: `いまの数 × $${kk}$：$${Mv}\\times${kk}=${ans}$`, easyCheck: 'last', key: 'b' };
       },
       // わな：まっすぐへる（5-10）、底が2（5-65）
       trap(r) {
@@ -370,12 +376,12 @@
     steps: {
       // ln(ax+b)・ln(ax)
       s1(r) {
-        if (r.chance(0.25)) {
-          const a = r.pick([2, 3, 4, 5]);
-          return { q: `$\\{\\ln(${a}x)\\}'$`, a: '$\\frac{1}{x}$', easy: `$\\frac{${a}}{${a}x}=\\frac{1}{x}$`, calc: { kind: 'diff', f: `\\ln(${a}x)` }, key: `a${a}` };
+        if (r.chance(0.25)) {   // 答えがどれも 1/x になるので、1つの見開きに1問だけ（R2-18）。ln(3x) は楽な形の例なので出さない（O-2）
+          const a = r.pick([2, 4, 5]);
+          return { q: `$\\{\\ln(${a}x)\\}'$`, a: '$\\frac{1}{x}$', easy: `$\\frac{${a}}{${a}x}=\\frac{1}{x}$`, calc: { kind: 'diff', f: `\\ln(${a}x)` }, key: 'ax' };
         }
         const a = r.pick([1, 2, 3, 4, 5]), b = r.pick([1, 2, 3, 5, -1, -2, -3]);
-        if (F.gcd(a, Math.abs(b)) !== 1) return null;
+        if (F.gcd(a, Math.abs(b)) !== 1 || (a === 2 && b === 1)) return null;   // ln(2x+1) は楽な形の例（O-2）
         const u = lin(a, b), ans = `\\frac{${a}}{${u}}`, x0 = Math.max(0, -b / a);
         return { q: `$\\{\\ln(${u})\\}'$`, a: `$${ans}$`, easy: `中身の微分 $${a}$ ÷ 中身 → $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln(${u})`, pts: [x0 + 0.37, x0 + 0.83, x0 + 1.29] }, key: `${a},${b}` };
       },
@@ -383,14 +389,14 @@
       s2(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const c = r.int(1, 9), u = `x^{2}+${c}`, ans = `\\frac{2x}{${u}}`;
+          const c = r.intNot(1, 9, x => x === 4), u = `x^{2}+${c}`, ans = `\\frac{2x}{${u}}`;   // ln(x^2+4) は楽な形の例（O-2）
           return { q: `$\\{\\ln(${u})\\}'$`, a: `$${ans}$`, easy: `中身の微分 $2x$ ÷ 中身 → $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln(${u})` }, key: `q${c}` };
         }
         if (k === 1) {
           const m = r.pick([2, 3, 4]), a = r.pick([1, 2, 3]), b = r.pick([1, 2, 3, -1]);
-          if (F.gcd(a, Math.abs(b)) !== 1) return null;
+          if (F.gcd(a, Math.abs(b)) !== 1 || (a === 2 && b === 1)) return null;
           const u = lin(a, b), ans = `\\frac{${m * a}}{${u}}`, x0 = Math.max(0, -b / a);
-          return { q: `$\\{${m}\\ln(${u})\\}'$`, a: `$${ans}$`, easy: `$${m}\\times\\frac{${a}}{${u}}=${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f: `${m}\\ln(${u})`, pts: [x0 + 0.37, x0 + 0.83, x0 + 1.29] }, key: `m${m},${a},${b}` };
+          return { q: `$\\{${m}\\ln(${u})\\}'$`, a: `$${ans}$`, easy: `$${m}\\times\\frac{${a}}{${u}}=${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f: `${m}\\ln(${u})`, pts: [x0 + 0.37, x0 + 0.83, x0 + 1.29] }, key: `${a},${b}` };   // 中身が s1 と同じものは出さない
         }
         const c = r.int(1, 5), u = `x^{3}+${c}`, ans = `\\frac{3x^{2}}{${u}}`;
         return { q: `$\\{\\ln(${u})\\}'$`, a: `$${ans}$`, easy: `中身の微分 $3x^{2}$ ÷ 中身 → $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln(${u})` }, key: `c${c}` };
@@ -398,12 +404,14 @@
       // 見かけがちがう：ln x^n、ln√x、ln e^{kx}、ln(1/x)、ln(2x+1)^3
       s3(r) {
         const k = r.int(0, 4);
-        if (k === 0) { const n = r.int(2, 5); return { q: `$(\\ln x^{${n}})'$`, a: `$\\frac{${n}}{x}$`, easy: `$\\ln x^{${n}}=${n}\\ln x$ → $\\frac{${n}}{x}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln x^{${n}}` }, key: `n${n}` }; }
+        if (k === 0) { const n = r.int(2, 5); return { q: `$(\\ln x^{${n}})'$`, a: `$\\frac{${n}}{x}$`, easy: `$\\ln x^{${n}}=${n}\\ln x$ → $\\frac{${n}}{x}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln x^{${n}}` }, key: 'n' }; }
         if (k === 1) return { q: '$(\\ln\\sqrt{x})\'$', a: '$\\frac{1}{2x}$', easy: '$\\ln\\sqrt{x}=\\frac{1}{2}\\ln x$ → $\\frac{1}{2x}$', easyCheck: 'last', calc: { kind: 'diff', f: '\\ln\\sqrt{x}' }, key: 'sq' };
         if (k === 2) { const m = r.pick([2, 3, 4, 5, -2, -3]); return { q: `$(\\ln ${E(m)})'$`, a: `$${m}$`, easy: `$\\ln ${E(m)}=${ex(m, 'x')}$ → $${m}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln ${E(m)}` }, key: `e${m}` }; }
         if (k === 3) { const n = r.pick([1, 2, 3]); const xn = n === 1 ? 'x' : `x^{${n}}`; return { q: `$\\Bigl(\\ln\\frac{1}{${xn}}\\Bigr)'$`, a: `$-\\frac{${n}}{x}$`, easy: `$\\ln\\frac{1}{${xn}}=-${n === 1 ? '' : n}\\ln x$ → $-\\frac{${n}}{x}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln\\frac{1}{${xn}}` }, key: `i${n}` }; }
         const a = r.pick([2, 3]), b = r.pick([1, -1]), n = r.pick([2, 3]), u = lin(a, b), x0 = Math.max(0, -b / a);
-        return { q: `$\\{\\ln(${u})^{${n}}\\}'$`, a: `$\\frac{${n * a}}{${u}}$`, easy: `$\\ln(${u})^{${n}}=${n}\\ln(${u})$ → $\\frac{${n * a}}{${u}}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln(${u})^{${n}}`, pts: [x0 + 0.37, x0 + 0.83, x0 + 1.29] }, key: `p${a}${b}${n}` };
+        if (a === 2 && b === 1) return null;   // 2x+1 は楽な形の例（O-2）
+        // ln の中身が (2x-1)^3。$\ln\{(2x-1)^{3}\}$ と書く（(\ln(2x-1))^3 と読まれないように。R2-19）。key は s1 と同じ形（同じ中身の ln を2回出さない。O-2）
+        return { q: `$\\Bigl(\\ln\\{(${u})^{${n}}\\}\\Bigr)'$`, a: `$\\frac{${n * a}}{${u}}$`, easy: `$\\ln\\{(${u})^{${n}}\\}=${n}\\ln(${u})$ → $\\frac{${n * a}}{${u}}$`, easyCheck: 'last', calc: { kind: 'diff', f: `\\ln((${u})^{${n}})`, pts: [x0 + 0.37, x0 + 0.83, x0 + 1.29] }, key: `${a},${b}` };
       },
       // わな：(ln x)^2（5-21）、x ln x（5-19）
       trap(r) {
@@ -434,21 +442,22 @@
       // a^x・c a^x
       s1(r) {
         const b = r.pick([2, 3, 5, 7, 10, 4]), c = r.pick([1, 1, 2, 3, 5]);
+        if (b === 2 && c === 1) return null;   // 楽な形の例 (2^x)'（O-2）
         const f = c === 1 ? `${b}^{x}` : `${c}\\cdot${b}^{x}`, ans = `${f}\\ln${b}`;
         return { q: `$(${f})'$`, a: `$${ans}$`, easy: `$${b}^{x}=e^{x\\ln${b}}$ → $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f }, key: `${b},${c}` };
       },
       // 傾き（x=0、x=n）、近似値
       s2(r) {
-        const k = r.int(0, 2), b = r.pick([2, 3, 5, 10]);
+        // 2^x は、約の値を出す問題（1つの見開きに1問）だけにする。x=0 の傾き ln2 は楽な形の例（O-2）。同じ式がならばないように（R2-18）
+        const k = r.int(0, 2), b = r.pick([3, 5, 10]);
         if (k === 0) return { q: `$y=${b}^{x}$ の、$x=0$ での接線の傾き`, a: `$\\ln${b}$`, easy: `$${b}^{0}\\ln${b}=\\ln${b}$`, key: `${b},0` };
         const n = r.pick([1, 2, 3]);
         if (k === 1) return { q: `$y=${b}^{x}$ の、$x=${n}$ での接線の傾き`, a: `$${b ** n}\\ln${b}$`, easy: `$${b}^{${n}}\\ln${b}=${b ** n}\\ln${b}$`, key: `${b},${n}` };
-        const bb = r.pick([2, 10]), m = bb === 2 ? r.int(0, 4) : r.int(0, 1), L = bb === 2 ? LN2 : 2.30, Lt = bb === 2 ? '0.693' : '2.30';
-        const g = gv(bb ** m * L, bb ** m * Math.log(bb));
+        const m = r.int(1, 4), g = gv(2 ** m * LN2, 2 ** m * Math.LN2);
         if (!g) return null;
         return {
-          q: `$y=${bb}^{x}$ の、$x=${m}$ での接線の傾きは約 □（$\\ln${bb}=${Lt}$${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `${bb},${m}`,
-          easy: m === 0 ? `$${bb}^{0}\\ln${bb}=\\ln${bb}=${g.ans}$` : gE(g, `${bb}^{${m}}\\ln${bb}=${bb ** m}\\times${Lt}`, bb ** m * L), verify: p => nearTrue(p.a, bb ** m * Math.log(bb)),
+          q: `$y=2^{x}$ の、$x=${m}$ での接線の傾きは約 □（${ln2T}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: 'a2',
+          easy: gE(g, `2^{${m}}\\ln2\\approx${2 ** m}\\times0.693`, 2 ** m * LN2), verify: p => nearTrue(p.a, 2 ** m * Math.log(2)),
         };
       },
       // 見かけがちがう：a^{kx}、(1/a)^x、a^{x+1}、細菌が2倍ずつ
@@ -460,8 +469,8 @@
         const N0 = r.pick([100, 200, 50, 20]), g = gv(N0 * LN2, N0 * Math.LN2);
         if (!g) return null;
         return {
-          q: `細菌の数が1時間ごとに2倍になり、$N=${N0}\\cdot2^{t}$（$t$ は時間）でふえる。$t=0$ でのふえる速さは、1時間あたり約 □（${ln2T}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `b${N0}`,
-          easy: gE(g, `${N0}\\cdot2^{0}\\ln2=${N0}\\times0.693`, N0 * LN2), verify: p => nearTrue(p.a, N0 * Math.log(2)),
+          q: `細菌の数が1時間ごとに2倍になり、$N=${N0}\\cdot2^{t}$（$t$ は時間）でふえる。$t=0$ でのふえる速さは、1時間あたり約 □（${ln2T}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: 'b',   // 細菌の問題は1問だけ（R2-18）
+          easy: gE(g, `${N0}\\cdot2^{0}\\ln2\\approx${N0}\\times0.693`, N0 * LN2), verify: p => nearTrue(p.a, N0 * Math.log(2)),
         };
       },
       // わな：底が x（x^n → 5-09）
@@ -493,6 +502,7 @@
       // 不定積分
       s1(r) {
         const a = r.pick([2, 3, 4, 5, -1, -2, -3]), c = r.pick([1, 1, 2, 3, 4, 6, -1]), v = r.chance(0.3) ? 't' : 'x';
+        if (a === 2 && c === 1) return null;   // 楽な形の例 ∫e^{2x}（O-2）
         const f = cT(c, E(a, v)), ans = cT(fr(c, a), E(a, v));
         return { q: `$\\displaystyle\\int ${c < 0 ? `(${f})` : f}\\,\\dd ${v}$`, a: `$${ans}+C$`, easy: `$${a}$ でわって $${ans}+C$`, easyCheck: 'last', calc: { kind: 'int', f, x: v }, key: `${c},${a}` };
       },
@@ -501,6 +511,7 @@
         const k = r.int(0, 2);
         if (k === 0) {
           const a = r.pick([1, -1, 2, -2, 3]), b = r.pick([1, 2]), ab = Math.abs(a * b);
+          if (a === -1 && b === 1) return null;   // 楽な形の例 ∫_0^1 e^{-x}（O-2）
           const eT = n => (n === 1 ? 'e' : `e^{${n}}`);
           let ans;
           if (a > 0) ans = a === 1 ? `${eT(ab)}-1` : `\\frac{${eT(ab)}-1}{${a}}`;
@@ -510,7 +521,7 @@
         }
         if (k === 1) {
           const a = r.pick([1, 2, 3]), K = r.pick([2, 3, 4, 5]);
-          if (a === 3 && K > 3) return null;
+          if ((a === 3 && K > 3) || (a === 1 && K === 2)) return null;   // ∫_0^{ln2} e^x は楽な形の例（O-2）
           const val = fr(K ** a - 1, a), prim = cT(fr(1, a), E(a));
           return { q: `$\\displaystyle\\int_0^{\\ln${K}}${E(a)}\\,\\dd x$`, a: `$${F.tex(val)}$`, easy: `$\\Bigl[\\,${prim}\\,\\Bigr]_0^{\\ln${K}}$、$e^{${a === 1 ? '' : a}\\ln${K}}=${K ** a}$ → $${F.tex(val)}$`, easyCheck: 'last', calc: { kind: 'defint', f: E(a), a: 0, b: `\\ln${K}` }, key: `l${a},${K}` };
         }
@@ -575,6 +586,7 @@
       // b/a が整数
       s1(r) {
         const a = r.int(1, 6), m = r.pick([2, 3, 4, 5]), b = a * m;
+        if (a === 2 && m === 3) return null;   // 楽な形の例 ∫_2^6（O-2）
         const easy = a === 1 ? `$\\ln${b}-\\ln1=\\ln${b}$` : `$\\ln${b}-\\ln${a}=\\ln\\frac{${b}}{${a}}=\\ln${m}$`;
         return { q: `$\\displaystyle\\int_{${a}}^{${b}}\\frac{1}{x}\\,\\dd x$`, a: `$\\ln${m}$`, easy, calc: { kind: 'defint', f: '\\frac{1}{x}', a, b }, key: `${a},${b}` };
       },
@@ -607,7 +619,7 @@
         const given = ten ? '$\\ln10=2.30$' : ln2T;
         return {
           q: `曲線 $y=\\frac{1}{x}$ と $x$ 軸、2直線 $x=${a}$、$x=${b}$ で囲まれた部分の面積は約 □（${given}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `${a},${b}`,
-          easy: ten || n === 1 ? `$\\ln\\frac{${b}}{${a}}=\\ln${m}=${g.ans}$` : gE(g, `\\ln\\frac{${b}}{${a}}=\\ln${m}=${n}\\ln2=${n}\\times0.693`, n * LN2),
+          easy: ten || n === 1 ? `$\\ln\\frac{${b}}{${a}}=\\ln${m}\\approx${g.ans}$` : gE(g, `\\ln\\frac{${b}}{${a}}=\\ln${m}=${n}\\ln2\\approx${n}\\times0.693`, n * LN2),
           verify: p => nearTrue(p.a, Math.log(b / a)),
         };
       },
@@ -644,7 +656,7 @@
     steps: {
       // e^{-kt} の半減期
       s1(r) {
-        const k = r.pick([0.1, 0.2, 0.3, 0.05, 0.07, 0.03, 0.15, 0.5, 0.7, 0.02]), u = r.pick(TU), h = halfAns(k, 1);
+        const k = r.pick([0.2, 0.3, 0.05, 0.07, 0.03, 0.15, 0.5, 0.7, 0.02]), u = r.pick(TU), h = halfAns(k, 1);   // 0.1 は楽な形の例（O-2）
         if (!h) return null;
         return {
           q: `$N=N_0${E(-k, 't')}$（$t$ は${u}）の半減期は約 □ ${u}（${ln2T}${h.note}）`, a: `$${h.ans}$`, easyCheck: false, key: `k${k}`,
@@ -654,33 +666,33 @@
       // 倍加時間、時定数 τ のとき
       s2(r) {
         if (r.chance(0.5)) {
-          const k = r.pick([0.1, 0.2, 0.3, 0.05, 0.07, 0.35, 0.7]), N0 = r.pick([50, 100, 200, 500]), u = r.pick(['時間', '日', '年']), h = halfAns(k, 1);
+          const k = r.pick([0.2, 0.3, 0.05, 0.07, 0.35, 0.7, 0.21, 0.33, 0.63]), N0 = r.pick([50, 100, 200, 500]), u = r.pick(['時間', '日', '年']), h = halfAns(k, 1);
           if (!h) return null;
           return {
             q: `$N=${N0}${E(k, 't')}$（$t$ は${u}）の倍加時間は約 □ ${u}（${ln2T}${h.note}）`, a: `$${h.ans}$`, easyCheck: false, key: `k${k}`,
             easy: `$e^{${k}T}=2$ → ` + gE(h, `\\frac{0.693}{${k}}`, LN2 / k), verify: p => nearTrue(p.a, Math.LN2 / k),
           };
         }
-        const tau = r.pick([2, 3, 4, 5, 6, 8, 10, 20]), ans = apx(tau * LN2, tau * Math.LN2, 1);
+        const tau = r.pick([3, 4, 5, 6, 8, 10, 20]), ans = apx(tau * LN2, tau * Math.LN2, 1);   // τ=2 は楽な形の例（O-2）
         if (ans == null) return null;
         return {
-          q: `電気の量 $Q=Q_0e^{-t/${tau}}$（$t$ は秒）が半分になるまでの時間は約 □ 秒（${ln2T}、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `t${tau}`,
-          easy: `時定数 ${tau} 秒 → $${tau}\\times0.693\\approx${ans}$`, verify: p => strip(p.a) === (tau * Math.LN2).toFixed(1) || 'ちがう',
+          q: `電気の量 $Q=Q_0e^{-t/${tau}}$（$t$ は秒）が半分になるまでの時間は約 □ 秒（${ln2T}、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `t${tau % 2}`,   // 2行になる時定数の問題は2問まで（右ページに入るように）
+          easy: `時定数${tau}秒 → $${tau}\\times0.693=${fmt(tau * LN2)}\\approx${ans}$`, verify: p => strip(p.a) === (tau * Math.LN2).toFixed(1) || 'ちがう',
         };
       },
       // 見かけがちがう：半減期から k、4分の1・8分の1、人口が2倍
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const [T, kk] = r.pick([[6.93, 0.1], [13.86, 0.05], [2.31, 0.3], [9.9, 0.07], [1.386, 0.5], [34.65, 0.02], [23.1, 0.03], [69.3, 0.01]]);
-          return { q: `$N=N_0e^{-kt}$（$t$ は年）でへる物質の半減期が約 ${T} 年のとき、$k=□$（${ln2T}）`, a: `$${kk}$`, easy: `$\\frac{0.693}{${T}}=${kk}$`, key: `k${kk}`,
+          const [T, kk] = r.pick([[13.86, 0.05], [2.31, 0.3], [9.9, 0.07], [1.386, 0.5], [34.65, 0.02], [23.1, 0.03], [69.3, 0.01]]);
+          return { q: `$N=N_0e^{-kt}$（$t$ は年）でへる物質の半減期が約${T}年のとき、$k=□$（${ln2T}）`, a: `$${kk}$`, easy: `$\\frac{0.693}{${T}}=${kk}$`, key: `k${kk}`,
             verify: p => close(LN2 / T, numOf(p.a)) || 'ちがう' };
         }
         if (k === 1) {
-          const kk = r.pick([0.1, 0.2, 0.3, 0.05, 0.07]), m = r.pick([2, 3]), u = r.pick(TU), h = halfAns(kk, m);
+          const kk = r.pick([0.2, 0.3, 0.05, 0.07]), m = r.pick([2, 3]), u = r.pick(TU), h = halfAns(kk, m);
           if (!h) return null;
           return {
-            q: `$N=N_0${E(-kk, 't')}$（$t$ は${u}）でへる物質が、はじめの $\\frac{1}{${2 ** m}}$ になるまでの時間は約 □ ${u}（${ln2T}${h.note}）`, a: `$${h.ans}$`, easyCheck: false, key: `q${kk},${m}`,
+            q: `$N=N_0${E(-kk, 't')}$（$t$ は${u}）でへる物質が、はじめの $\\frac{1}{${2 ** m}}$ になるまでの時間は約 □ ${u}（${ln2T}${h.note}）`, a: `$${h.ans}$`, easyCheck: false, key: 'q',   // 1/4・1/8 は1問だけ
             easy: `半減期の${m}倍：` + gE(h, `${m}\\times\\frac{0.693}{${kk}}`, m * LN2 / kk), verify: p => nearTrue(p.a, m * Math.LN2 / kk),
           };
         }
@@ -688,7 +700,7 @@
         if (ans == null) return null;
         return {
           q: `ある町の人口が、1年あたり${pc}%でたえずふえる（$y=y_0e^{${rr}t}$）。人口が2倍になるのは約 □ 年後（${ln2T}、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `p${pc}`,
-          easy: `$\\frac{0.693}{${rr}}\\approx${ans}$`, verify: p => strip(p.a) === (Math.LN2 / rr).toFixed(1) || 'ちがう',
+          easy: `$\\frac{0.693}{${rr}}=${fmt(LN2 / rr)}\\approx${ans}$`, verify: p => strip(p.a) === (Math.LN2 / rr).toFixed(1) || 'ちがう',
         };
       },
       // わな：e^{-1}（約37%）になる時間（時定数）、まっすぐへる量が半分
@@ -721,7 +733,8 @@
     steps: {
       // t=τ の値
       s1(r) {
-        const V0 = r.pick([10, 12, 5, 20, 6, 9, 15, 25]), tau = r.pick([2, 3, 4, 5, 10]), vG = V0 * (1 - EM1), vT = V0 * (1 - Math.exp(-1)), g = gv(vG, vT);
+        // 10 V は楽な形の例（6.32。O-2）
+        const V0 = r.pick([12, 5, 20, 6, 9, 15, 25]), tau = r.pick([2, 3, 4, 5, 10]), vG = V0 * (1 - EM1), vT = V0 * (1 - Math.exp(-1)), g = gv(vG, vT);
         if (!g) return null;
         return { q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。${tau}秒後の電圧は約 □ V（${em1T}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `V${V0}`,
           easy: gE(g, `${V0}\\times(1-0.368)`, vG), verify: p => nearTrue(p.a, vT) };
@@ -729,6 +742,7 @@
       // t=0 のふえる速さ
       s2(r) {
         const tau = r.pick([2, 3, 4, 5, 10]), V0 = tau === 3 ? r.pick([6, 9, 12, 15]) : r.pick([10, 12, 5, 20, 6, 9, 15]);
+        if (V0 === 10 && tau === 2) return null;   // 楽な形の例（O-2）
         const ans = fmt(V0 / tau);
         return { q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。$t=0$ での電圧のふえる速さは、毎秒 □ V`, a: `$${ans}$`, easy: `$\\frac{${V0}}{${tau}}=${ans}$`, key: `${V0},${tau}` };
       },
@@ -737,7 +751,7 @@
         const k = r.int(0, 3);
         if (k === 0) {
           const V0 = r.pick([10, 20, 5, 12]), tau = r.pick([2, 3, 5]), vG = V0 * (1 - EM2), vT = V0 * (1 - Math.exp(-2)), g = gv(vG, vT);
-          if (!g) return null;
+          if (!g || (V0 === 10 && tau === 2)) return null;   // 楽な形の例の式（O-2）
           return { q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。${2 * tau}秒後の電圧は約 □ V（$e^{-2}=0.135$${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `w${V0},${tau}`,
             easy: gE(g, `${V0}\\times(1-0.135)`, vG), verify: p => nearTrue(p.a, vT) };
         }
@@ -749,7 +763,7 @@
         }
         if (k === 2) {
           const tau = r.pick([2, 4, 5, 10]), V0 = r.pick([10, 20, 40]), vG = V0 / tau * EM1, vT = V0 / tau * Math.exp(-1), g = gv(vG, vT);
-          if (!g) return null;
+          if (!g || (V0 === 10 && tau === 2)) return null;   // 楽な形の例の式（O-2）
           return { q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。$t=${tau}$ での電圧のふえる速さは、毎秒約 □ V（${em1T}${g.note}）`, a: `$${g.ans}$`, easyCheck: false, key: `r${V0},${tau}`,
             easy: `はじめの $\\frac{${V0}}{${tau}}$ の $e^{-1}$ 倍：` + gE(g, `${fmt(V0 / tau)}\\times0.368`, vG), verify: p => nearTrue(p.a, vT) };
         }
@@ -759,15 +773,16 @@
       // わな：へっていく e^{-t/τ}、最後の値の半分（5-68）
       trap(r) {
         const V0 = r.pick([10, 12, 20, 5]), tau = r.pick([2, 4, 5, 10]);
+        if (V0 === 10 && tau === 2) return null;   // 楽な形の例の式（O-2）
         if (r.chance(0.5)) {
           const g = gv(V0 * EM1, V0 * Math.exp(-1));
           if (!g) return null;
           return dest({ key: '5-69trapA', q: `コンデンサーの電圧が $V=${V0}e^{-t/${tau}}$（V、$t$ は秒）でへっていく。${tau}秒後の電圧は約 □ V（${em1T}${g.note}）`, a: `$${g.ans}$`,
-            verify: p => nearTrue(p.a, V0 * Math.exp(-1)) }, '5-69', `$1-$ のない、へっていく形。$${V0}\\times e^{-1}=${V0}\\times0.368$`);
+            verify: p => nearTrue(p.a, V0 * Math.exp(-1)) }, '5-69', `$1-$ のない、へっていく形。$${V0}\\times e^{-1}\\approx${V0}\\times0.368$`);
         }
         const ans = apx(tau * LN2, tau * Math.LN2, 1);
         if (ans == null) return null;
-        return dest({ key: '5-69trapB', q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。最後の値の半分（${fmt(V0 / 2)} V）になるのは約 □ 秒後（${ln2T}、小数第1位まで）`, a: `$${ans}$`,
+        return dest({ key: '5-69trapB', q: `コンデンサーの電圧が $V=${V0}(1-e^{-t/${tau}})$（V、$t$ は秒）でふえていく。最後の値の半分（$${fmt(V0 / 2)}\\,\\mathrm{V}$）になるのは約 □ 秒後（${ln2T}、小数第1位まで）`, a: `$${ans}$`,
           verify: p => strip(p.a) === (tau * Math.LN2).toFixed(1) || 'ちがう' }, '5-69', `$e^{-t/${tau}}=\\frac{1}{2}$ になる時間。$${tau}\\ln2$`);
       },
     },
@@ -791,7 +806,7 @@
       // A sin ωt・A cos ωt
       s1(r) {
         const A = r.pick([1, 2, 3, 4, 5, -1, -2, -3]), w = r.pick([1, 2, 3, 4, 5, 6]), fn = r.pick(['sin', 'cos']);
-        if (A === 1 && w === 1) return null;
+        if ((A === 1 && w === 1) || (A === 3 && w === 2 && fn === 'sin') || (A === -1 && w === 5 && fn === 'cos')) return null;   // 楽な形の例（O-2）
         const f = trigT(A, fn, w), ans = fn === 'sin' ? trigT(A * w, 'cos', w) : trigT(-A * w, 'sin', w);
         return { q: `$(${f})'$`, a: `$${ans}$`, easy: `中身の微分 $${w}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f, x: 't' }, key: `${A},${fn},${w}` };
       },
@@ -800,6 +815,7 @@
         const k = r.int(0, 2), fn = r.pick(['sin', 'cos']), other = fn === 'sin' ? 'cos' : 'sin', sg = fn === 'sin' ? 1 : -1;
         if (k === 0) {
           const w = r.pick([2, 3, 4, 5]), b = r.pick([1, 2, 3, -1, -2]), A = r.pick([1, 1, 2, -1]);
+          if (w === 3 && b === 1 && A === 1 && fn === 'sin') return null;   // 楽な形の例 sin(3t+1)（O-2）
           const u = `(${lin(w, b, 't')})`, f = cT(A, `\\${fn}${u}`), ans = cT(sg * A * w, `\\${other}${u}`);
           return { q: `$\\{${f}\\}'$`, a: `$${ans}$`, easy: `中身 $${lin(w, b, 't')}$ の微分 $${w}$ をかけて $${ans}$`, easyCheck: 'last', calc: { kind: 'diff', f, x: 't' }, key: `l${fn}${w}${b}${A}` };
         }
@@ -857,11 +873,13 @@
       // 速さの最大
       s1(r) {
         const A = r.pick([0.1, 0.2, 0.05, 0.3, 0.5, 2, 3]), w = r.pick([2, 3, 4, 5, 10]), fn = r.pick(['sin', 'sin', 'cos']), ans = fmt(A * w);
+        if (A === 0.1 && w === 4) return null;   // 楽な形の例 x=0.1sin4t（O-2）
         return { q: `おもりの位置が $x=${dT(A, `\\${fn}${w}t`)}$（m、$t$ は秒）。速さの最大値は □ m/s`, a: `$${ans}$`, easy: `$${A}\\times${w}=${ans}$`, key: `${A},${w}` };
       },
       // 加速度の大きさの最大
       s2(r) {
         const A = r.pick([0.1, 0.2, 0.05, 0.3, 0.5, 2]), w = r.pick([2, 3, 4, 5, 10]), fn = r.pick(['sin', 'cos']), ans = fmt(A * w * w);
+        if (A === 0.1 && w === 4) return null;   // 楽な形の例（O-2）
         return { q: `ばねのおもりの位置が $x=${dT(A, `\\${fn}${w}t`)}$（m、$t$ は秒）。加速度の大きさの最大値は □ $\\mathrm{m/s^2}$`, a: `$${ans}$`, easy: `$${A}\\times${w}^{2}=${ans}$`, key: `${A},${w}` };
       },
       // 見かけがちがう：観覧車（周期から ω）、ばね定数と質量
@@ -869,14 +887,15 @@
         if (r.chance(0.6)) {
           const R = r.pick([30, 40, 50, 60]), T = r.pick([10, 12, 15, 16, 20]), v = fr(R, 30 * T), ans = piT(v);
           return {
-            q: `半径 ${R} m、1周 ${T} 分の観覧車の高さは $y=${R}-${R}\\cos\\omega t$（m、$t$ は秒）。上がる速さの最大値は □ m/s（$\\pi$ を残して）`,
+            q: `半径 $${R}\\,\\mathrm{m}$、1周${T}分の観覧車の高さは $y=${R}-${R}\\cos\\omega t$（m、$t$ は秒）。上がる速さの最大値は □ m/s（$\\pi$ を残して）`,
             a: `$${ans}$`, easyCheck: 'last', key: `f${R},${T}`,
             easy: `$\\omega=\\frac{2\\pi}{${60 * T}}$ → $${R}\\omega=${ans}$`, verify: p => valIs(p.a, R * 2 * Math.PI / (60 * T)),
           };
         }
         const [m, k] = r.pick([[0.5, 8], [2, 18], [0.2, 5], [1, 4], [0.5, 2], [2, 8], [0.1, 10]]), A = r.pick([0.1, 0.05, 0.2]), w = Math.sqrt(k / m), ans = fmt(A * w);
+        if (A === 0.1 && w === 4) return null;   // 楽な形の例と同じ動き（O-2）
         return {
-          q: `質量 ${m} kg のおもりを、ばね定数 ${k} N/m のばねにつなぎ、振幅 ${A} m で単振動させる（$\\omega^{2}=\\frac{k}{m}$）。速さの最大値は □ m/s`,
+          q: `質量 $${m}\\,\\mathrm{kg}$ のおもりを、ばね定数 $${k}\\,\\mathrm{N/m}$ のばねにつなぎ、振幅 $${A}\\,\\mathrm{m}$ で単振動させる（$\\omega^{2}=\\frac{k}{m}$）。速さの最大値は □ m/s`,
           a: `$${ans}$`, easyCheck: 'last', key: `s${m},${k},${A}`,
           easy: `$\\omega=\\sqrt{\\frac{${k}}{${m}}}=${fmt(w)}$ → $${A}\\times${fmt(w)}=${ans}$`, verify: p => valIs(p.a, A * Math.sqrt(k / m)),
         };
@@ -884,6 +903,7 @@
       // わな：周期（2π/ω）
       trap(r) {
         const A = r.pick([0.1, 0.2, 2]), w = r.pick([2, 3, 4, 5, 10]);
+        if (A === 0.1 && w === 4) return null;   // 楽な形の例（O-2）
         return dest({ q: `おもりの位置が $x=${dT(A, `\\sin${w}t`)}$（m、$t$ は秒）。ゆれの周期は □ 秒`, a: `$${piT(fr(2, w))}$`, key: `T${w}`,
           verify: p => (close(Math.sin(w * numOf(p.a) + 0.3), Math.sin(0.3)) && numOf(p.a) > 0 && close(numOf(p.a), 2 * Math.PI / w)) || '周期がちがう' },
           '5-71', `速さの最大ではなく周期。$${w}t$ が $2\\pi$ ふえる時間で $\\frac{2\\pi}{${w}}$`);
@@ -914,6 +934,7 @@
       s1(r) {
         const A = r.pick([1, 2, 3, 4, 6, -2]), w = r.pick([1, 2, 3, 4, 5]), fn = r.pick(['sin', 'cos']);
         if (A === 1 && w === 1 && r.chance(0.5)) return null;
+        if (A === 1 && w === 3 && fn === 'cos') return null;   // 楽な形の例 ∫cos3t（O-2）
         const f = trigT(A, fn, w), ans = fn === 'sin' ? trigT(fr(-A, w), 'cos', w) : trigT(fr(A, w), 'sin', w);
         const how = w === 1 ? (fn === 'sin' ? '$\\sin$ の積分は $-\\cos$ →' : '$\\cos$ の積分は $\\sin$ →') : `$${w}$ でわって`;
         return { q: `$\\displaystyle\\int ${A < 0 ? `(${f})` : f}\\,\\dd t$`, a: `$${ans}+C$`, easy: `${how} $${ans}+C$`, easyCheck: 'last', calc: { kind: 'int', f, x: 't' }, key: `${A},${fn},${w}` };
@@ -922,6 +943,7 @@
       s2(r) {
         const fn = r.pick(['sin', 'cos']), w = r.pick([1, 2, 3]), A = r.pick([1, 1, 2, 3, 4, 6]);
         const [p, q, base] = fn === 'sin' ? r.pick([[1, 3, fr(1, 2)], [1, 2, fr(1)], [2, 3, fr(3, 2)], [1, 1, fr(2)]]) : r.pick([[1, 6, fr(1, 2)], [1, 2, fr(1)], [5, 6, fr(1, 2)]]);
+        if (fn === 'sin' && w === 1 && A === 1 && p === 1 && q === 1) return null;   // 楽な形の例 ∫_0^π sin t（O-2）
         const f = trigT(A, fn, w), b = bOf(p, q, w), val = F.mul(fr(A, w), base);
         const prim = fn === 'sin' ? trigT(fr(-A, w), 'cos', w) : trigT(fr(A, w), 'sin', w);
         return { q: `$\\displaystyle\\int_0^{${b}}${f}\\,\\dd t$`, a: `$${F.tex(val)}$`, easy: `$\\Bigl[\\,${prim}\\,\\Bigr]_0^{${b}}=${F.tex(val)}$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b, x: 't' }, key: `${fn}${w}${A}${p}${q}` };
@@ -983,8 +1005,10 @@
       s1(r) {
         const w = r.pick([1, 2, 3, 4]), k = r.pick([1, 1, 2]), fn = r.pick(['sin', 'cos']), A = r.pick([1, 1, 2, 3, 5]);
         if (w === 1 && k === 1 && r.chance(0.5)) return null;
+        if (w === 2 && k === 1 && fn === 'sin' && A === 1) return null;   // 楽な形の例 ∫_0^π sin2t（O-2）
         const b = piT(fr(2 * k, w)), f = trigT(A, fn, w);
-        return { q: `$\\displaystyle\\int_0^{${b}}${f}\\,\\dd t$`, a: '$0$', easy: `周期 $${piT(fr(2, w))}$ の${k === 1 ? 'ちょうど1' : k}周期 → $0$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b, x: 't' }, key: `${w},${k},${fn},${A}` };
+        // 前の数だけがちがう同じ積分は、1つの見開きに1問（key に前の数を入れない）
+        return { q: `$\\displaystyle\\int_0^{${b}}${f}\\,\\dd t$`, a: '$0$', easy: `周期 $${piT(fr(2, w))}$ の${k === 1 ? 'ちょうど1' : k}周期 → $0$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b, x: 't' }, key: `${w},${k},${fn}` };
       },
       // 0 から始まらない、定数の項がある
       s2(r) {
@@ -1029,7 +1053,7 @@
     title: '$\\sin^2$・$\\cos^2$ の1周期（半周期）の平均は $\\dfrac{1}{2}$：積分は「区間の長さ÷2」（実効値は $\\dfrac{V_0}{\\sqrt2}$）',
     mark: '0から始まる $\\sin^2\\omega t$・$\\cos^2\\omega t$ の定積分で、区間の長さが $\\dfrac{\\pi}{2\\omega}$ の整数倍。交流の実効値・平均の電力。',
     futsu: ['2倍角の式で $\\frac{1-\\cos2t}{2}$ に直し、', '原始関数 $\\frac{t}{2}-\\frac{\\sin2t}{4}$ に', '上端と下端を入れてひく。'],
-    raku: ['$\\displaystyle\\int_0^{\\pi}\\sin^{2}t\\,\\dd t$ → 平均 $\\frac{1}{2}$', '区間の長さ $\\pi$ の半分 → $\\frac{\\pi}{2}$', '実効値100 V → $V_0=100\\sqrt{2}$'],
+    raku: ['$\\displaystyle\\int_0^{\\pi}\\sin^{2}t\\,\\dd t$ → 平均 $\\frac{1}{2}$', '区間の長さ $\\pi$ の半分 → $\\frac{\\pi}{2}$', '実効値 $100\\,\\mathrm{V}$ → $V_0=100\\sqrt{2}$'],
     why: '$\\sin^2t=\\frac{1-\\cos2t}{2}$（5-15⑨）。$\\cos2t$ の部分は、区間の長さが $\\pi$ の整数倍なら（0から始まる区間なら $\\frac{\\pi}{2}$ の整数倍でも）積分が0になり、$\\frac{1}{2}$ の部分だけが残る。だから平均は $\\frac{1}{2}$。交流の平均の電力 $\\frac{V_0^2}{2R}$ を直流とくらべたのが実効値 $\\frac{V_0}{\\sqrt2}$。',
     caution: '区間が半端なとき（$\\int_0^{\\frac{\\pi}{4}}\\sin^2t\\,\\dd t$ や、0から始まらない $\\int_{\\frac{\\pi}{4}}^{\\frac{3\\pi}{4}}\\sin^2t\\,\\dd t$）は、2倍角にして計算する（わざ 5-96）。$\\sin t$ の1周期は0（わざ 5-73）。',
     counts: { s1: 6, s2: 4, s3: 4, trap: 2 },
@@ -1049,8 +1073,10 @@
       // 1周期・半周期（区間の長さ π/ω の整数倍）
       s1(r) {
         const w = r.pick([1, 1, 2, 3]), k = r.pick([1, 2]), fn = r.pick(['sin', 'cos']), A = r.pick([1, 1, 2, 4]);
+        if (w === 1 && k === 1 && fn === 'sin' && A === 1) return null;   // 楽な形の例 ∫_0^π sin^2 t（O-2）
         const L = fr(k, w), f = cT(A, `\\${fn}^{2}${W(w)}t`), val = piT(F.mul(L, fr(A, 2)));
-        return { q: `$\\displaystyle\\int_0^{${piT(L)}}${f}\\,\\dd t$`, a: `$${val}$`, easy: `平均 $${F.tex(fr(A, 2))}$ × 長さ $${piT(L)}$ → $${val}$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b: piT(L), x: 't' }, key: `${w},${k},${fn},${A}` };
+        // 前の数だけがちがう同じ積分は、1つの見開きに1問（key に前の数を入れない）
+        return { q: `$\\displaystyle\\int_0^{${piT(L)}}${f}\\,\\dd t$`, a: `$${val}$`, easy: `平均 $${F.tex(fr(A, 2))}$ × 長さ $${piT(L)}$ → $${val}$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b: piT(L), x: 't' }, key: `${w},${k},${fn}` };
       },
       // 長さが π/(2ω)（4分の1周期）、平均
       s2(r) {
@@ -1066,11 +1092,12 @@
       // 実効値・平均の電力
       s3(r) {
         const k = r.int(0, 3);
-        if (k === 0) { const V0 = r.pick([100, 200, 140, 280, 50]); return { q: `電圧の最大値が ${V0} V の交流の、実効値は □ V（$\\sqrt{2}$ を残して）`, a: `$${V0 / 2}\\sqrt{2}$`, easy: `$\\frac{${V0}}{\\sqrt{2}}=${V0 / 2}\\sqrt{2}$`, key: `v${V0}` }; }
-        if (k === 1) { const Ve = r.pick([100, 200, 50, 70]); return { q: `実効値が ${Ve} V の交流の、電圧の最大値は □ V（$\\sqrt{2}$ を残して）`, a: `$${Ve}\\sqrt{2}$`, easy: `$\\sqrt{2}\\times${Ve}=${Ve}\\sqrt{2}$`, key: `v${2 * Ve}` }; }
+        // 楽な形の例（実効値 100 V → 100√2）と同じ数は出さない（O-2）：最大値 200 V、実効値 100 V
+        if (k === 0) { const V0 = r.pick([100, 140, 280, 50]); return { q: `電圧の最大値が $${V0}\\,\\mathrm{V}$ の交流の、実効値は □ V（$\\sqrt{2}$ を残して）`, a: `$${V0 / 2}\\sqrt{2}$`, easy: `$\\frac{${V0}}{\\sqrt{2}}=${V0 / 2}\\sqrt{2}$`, key: `v${V0}` }; }
+        if (k === 1) { const Ve = r.pick([200, 50, 70]); return { q: `実効値が $${Ve}\\,\\mathrm{V}$ の交流の、電圧の最大値は □ V（$\\sqrt{2}$ を残して）`, a: `$${Ve}\\sqrt{2}$`, easy: `$\\sqrt{2}\\times${Ve}=${Ve}\\sqrt{2}$`, key: `v${2 * Ve}` }; }
         if (k === 2) {
           const [Ve, R] = r.pick([[100, 20], [100, 50], [100, 25], [200, 40], [200, 100], [100, 10]]);
-          return { q: `実効値 ${Ve} V のコンセントに、$${R}\\,\\Omega$ の抵抗をつなぐ。平均の電力は □ W`, a: `$${Ve * Ve / R}$`, easy: `$\\frac{${Ve}^{2}}{${R}}=${Ve * Ve / R}$`, key: `p${Ve},${R}`,
+          return { q: `実効値 $${Ve}\\,\\mathrm{V}$ のコンセントに、$${R}\\,\\Omega$ の抵抗をつなぐ。平均の電力は □ W`, a: `$${Ve * Ve / R}$`, easy: `$\\frac{${Ve}^{2}}{${R}}=${Ve * Ve / R}$`, key: `p${Ve},${R}`,
             verify: p => { const V0 = Ve * Math.SQRT2; return valIs(p.a, V0 * V0 / (2 * R)); } };
         }
         const [V0, R] = r.pick([[100, 50], [200, 100], [100, 10], [20, 4], [10, 5]]);
@@ -1111,7 +1138,7 @@
     futsu: ['$x$ を1回微分し、もう1回微分して、', '$x$ の何倍になっているかを調べる。'],
     raku: ['$x=2\\sin6t$ → $\\ddot{x}=-6^{2}x=-36x$、$k=36$', '$\\ddot{x}=-9x$ → $\\omega=\\sqrt{9}=3$', '前の数（振幅）は $k$ に関係しない'],
     why: '$\\sin\\omega t$・$\\cos\\omega t$ を2回微分すると、$\\omega$ が2回かかって $-$ が1つつき、もとの $-\\omega^2$ 倍になる（5-15⑥）。だから $\\ddot{x}=-kx$ なら $\\omega^2=k$、$\\omega=\\sqrt{k}$。たし算 $A\\sin\\omega t+B\\cos\\omega t$ でも同じ。',
-    caution: '$\\ddot{x}=-9x$ を $\\sin9t$ としない（$\\omega$ は $\\sqrt{9}=3$）。$e^{2t}$ は2回微分で $+4$ 倍（符号が＋）で、ゆれない。',
+    caution: '$\\ddot{x}=-9x$ を $\\sin9t$ としない（$\\omega$ は $\\sqrt{9}=3$）。$e^{at}$ は2回微分で $+a^2$ 倍（符号が＋）で、ゆれない。',
     counts: { s1: 6, s2: 6, s3: 4, trap: 2 },
     cols: 1,
     boxw: '16mm', boxh: '11mm',
@@ -1119,31 +1146,33 @@
     steps: {
       // x から k
       s1(r) {
-        const A = r.pick([1, 2, 3, 5, 4, 0.5]), w = r.pick([2, 3, 4, 5, 6, 7]), fn = r.pick(['sin', 'cos']), k = w * w, f = dT(A, `\\${fn}${w}t`);
+        // ω=6（k=36）と ω=3（k=9）は楽な形の例なので出さない（O-2）
+        const A = r.pick([1, 2, 3, 5, 4, 0.5]), w = r.pick([2, 4, 5, 7, 8, 9, 10]), fn = r.pick(['sin', 'cos']), k = w * w, f = dT(A, `\\${fn}${w}t`);
         return { q: `$x=${f}$ は $\\ddot{x}=-kx$ をみたす。$k$`, a: `$${k}$`, easy: `$\\omega=${w}$ → $k=${w}^{2}=${k}$`, easyCheck: 'last', key: `k${k}`,
           verify: p => close(d2ratio(f, 0.37), -numOf(p.a), 1e-4) || 'k がちがう' };
       },
       // k から ω、ばね
       s2(r) {
         if (r.chance(0.7)) {
-          const k = r.pick([4, 9, 16, 25, 36, 49, 2, 3, 5, 8, 12]), s = Math.sqrt(k);
-          const ans = Number.isInteger(s) ? `${s}` : { 8: '2\\sqrt{2}', 12: '2\\sqrt{3}' }[k] || `\\sqrt{${k}}`;
+          const k = r.pick([4, 16, 25, 49, 64, 81, 100, 2, 3, 5, 8, 12, 18, 20]), s = Math.sqrt(k);   // 9・36 は楽な形の例（O-2）
+          const ans = Number.isInteger(s) ? `${s}` : { 8: '2\\sqrt{2}', 12: '2\\sqrt{3}', 18: '3\\sqrt{2}', 20: '2\\sqrt{5}' }[k] || `\\sqrt{${k}}`;
           return { q: `$x=A\\sin\\omega t$（$\\omega>0$）が $\\ddot{x}=-${k}x$ をみたす。$\\omega$`, a: `$${ans}$`, easy: `$\\omega^{2}=${k}$ → $\\omega=${ans}$`, easyCheck: 'last', key: `k${k}`,
             verify: p => (close(numOf(p.a) ** 2, k) && numOf(p.a) > 0) || 'ω がちがう' };
         }
-        const [m, kk] = r.pick([[0.5, 8], [2, 18], [0.2, 5], [1, 4], [0.1, 10], [4, 16]]), w = Math.sqrt(kk / m);
-        return { q: `ばね定数 ${kk} N/m のばねにつないだ、質量 ${m} kg のおもりの位置は $${m}\\ddot{x}=-${kk}x$ をみたす。$x=A\\sin\\omega t$ の $\\omega$（$\\omega>0$）`, a: `$${fmt(w)}$`, easy: `$\\omega^{2}=\\frac{${kk}}{${m}}=${fmt(w * w)}$ → $${fmt(w)}$`, easyCheck: 'last', key: `k${fmt(kk / m)}`,
+        const [m, kk] = r.pick([[0.5, 8], [0.2, 5], [1, 4], [0.1, 10], [4, 16], [2, 50]]), w = Math.sqrt(kk / m);
+        return { q: `ばね定数 $${kk}\\,\\mathrm{N/m}$ のばねにつないだ、質量 $${m}\\,\\mathrm{kg}$ のおもりの位置は $${m}\\ddot{x}=-${kk}x$ をみたす。$x=A\\sin\\omega t$ の $\\omega$（$\\omega>0$）`, a: `$${fmt(w)}$`, easy: `$\\omega^{2}=\\frac{${kk}}{${m}}=${fmt(w * w)}$ → $${fmt(w)}$`, easyCheck: 'last', key: `k${fmt(kk / m)}`,
           verify: p => close(numOf(p.a) ** 2 * m, kk) || 'ω がちがう' };
       },
       // 見かけがちがう：たし算、中身に定数、t/n、□x の形
       s3(r) {
         const k = r.int(0, 3);
         let f, ans, easy, key;
-        if (k === 0) { const w = r.pick([2, 3, 4]), A = r.pick([1, 2, 3]), B = r.pick([1, 4, 5]); f = join([trigT(A, 'sin', w), trigT(B, 'cos', w)]); ans = w * w; easy = `どちらの項も $\\omega=${w}$ → $k=${ans}$`; key = `s${w}${A}${B}`; }
-        else if (k === 1) { const w = r.pick([2, 3, 5]), c = r.pick([1, 2]), A = r.pick([2, 3]); f = cT(A, `\\cos(${w}t+${c})`); ans = w * w; easy = `中身の $t$ の係数 $${w}$ → $k=${ans}$`; key = `c${w}${c}${A}`; }
+        // ω は、楽な形の例（3・6）とわなの数（2・4）をよける（O-2）
+        if (k === 0) { const w = r.pick([5, 7]), A = r.pick([1, 2, 3]), B = r.pick([1, 4, 5]); f = join([trigT(A, 'sin', w), trigT(B, 'cos', w)]); ans = w * w; easy = `どちらの項も $\\omega=${w}$ → $k=${ans}$`; key = `s${w}${A}${B}`; }
+        else if (k === 1) { const w = r.pick([5, 7]), c = r.pick([1, 2]), A = r.pick([2, 3]); f = cT(A, `\\cos(${w}t+${c})`); ans = w * w; easy = `中身の $t$ の係数 $${w}$ → $k=${ans}$`; key = `c${w}${c}${A}`; }
         else if (k === 2) { const n = r.pick([2, 3]), A = r.pick([1, 4]); f = cT(A, `\\sin\\frac{t}{${n}}`); ans = `\\frac{1}{${n * n}}`; easy = `$\\omega=\\frac{1}{${n}}$ → $k=${ans}$`; key = `f${n}${A}`; }
         else {
-          const w = r.pick([2, 3, 4, 5]), A = r.pick([2, 3, 0.5]), fn = r.pick(['sin', 'cos']); f = dT(A, `\\${fn}${w}t`);
+          const w = r.pick([5, 7, 8]), A = r.pick([2, 3, 0.5]), fn = r.pick(['sin', 'cos']); f = dT(A, `\\${fn}${w}t`);
           return { q: `$x=${f}$ のとき、$\\ddot{x}=□x$`, a: `$-${w * w}$`, easy: `$-\\omega^{2}=-${w * w}$`, easyCheck: 'last', key: `k${w * w}`,
             verify: p => close(d2ratio(f, 0.37), numOf(p.a), 1e-4) || 'ちがう' };
         }
@@ -1152,7 +1181,7 @@
       },
       // わな：e^{ωt}（符号が＋。5-62）
       trap(r) {
-        const w = r.pick([2, 3, 4]), s = r.pick([1, -1]), A = r.pick([1, 2, 3]), f = cT(A, `e^{${s < 0 ? '-' : ''}${w}t}`);
+        const w = r.pick([2, 4]), s = r.pick([1, -1]), A = r.pick([1, 2, 3]), f = cT(A, `e^{${s < 0 ? '-' : ''}${w}t}`);   // ω=3 は楽な形の例（9）
         return dest({ q: `$x=${f}$ は $\\ddot{x}=□x$ をみたす`, a: `$${w * w}$`, key: `E${w}`, verify: p => close(d2ratio(f, 0.37), numOf(p.a), 1e-4) || 'ちがう' },
           '5-75', `$\\sin$・$\\cos$ ではない。$e$ の式は2回微分で $(${s < 0 ? '-' : ''}${w})^{2}=${w * w}$ 倍（符号が＋）`);
       },
@@ -1165,8 +1194,8 @@
     title: '円運動は $\\omega=2\\pi f$、$v=r\\omega$、$a=r\\omega^2$',
     mark: '「毎秒□回転」「1分間に□回転」「1周□秒」の等速円運動の、角速度・速さ・加速度。',
     futsu: ['$x=r\\cos\\omega t$、$y=r\\sin\\omega t$ を', '2回微分して、成分から', '速度と加速度の大きさを出す。'],
-    raku: ['毎秒5回転 → $\\omega=5\\times2\\pi=10\\pi$', '半径0.2 m → $v=0.2\\times10\\pi=2\\pi$', '$a=0.2\\times(10\\pi)^{2}=20\\pi^{2}$'],
-    why: '1回転は $2\\pi$ rad なので、毎秒 $f$ 回転なら角速度 $\\omega=2\\pi f$。1秒に進む弧の長さは「半径×角」で $r\\omega$（5-15⑤）。座標を2回微分すると $-\\omega^2$ 倍なので、加速度の大きさは $r\\omega^2$（5-15⑥、例題3）。',
+    raku: ['毎秒5回転 → $\\omega=5\\times2\\pi=10\\pi$', '半径 $0.2\\,\\mathrm{m}$ → $v=0.2\\times10\\pi=2\\pi$', '$a=0.2\\times(10\\pi)^{2}=20\\pi^{2}$'],
+    why: '1回転は $2\\pi\\,\\mathrm{rad}$ なので、毎秒 $f$ 回転なら角速度 $\\omega=2\\pi f$。1秒に進む弧の長さは「半径×角」で $r\\omega$（5-15⑤）。座標を2回微分すると $-\\omega^2$ 倍なので、加速度の大きさは $r\\omega^2$（5-15⑥、例題3）。',
     caution: '回転数 $f$ をそのまま $\\omega$ にしない（$2\\pi$ をかける）。「1分間に」は60でわって毎秒にする。回る速さが変わるとき（$\\theta=2t^2$）は、$\\theta$ を微分する。',
     counts: { s1: 6, s2: 5, s3: 4, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
@@ -1177,19 +1206,21 @@
       s1(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const f = r.pick([1, 2, 3, 5, 10, 0.5, 4, 50]);
-          return { q: `毎秒 ${f} 回転する円運動の角速度 $\\omega$ は □ rad/s`, a: `$${f === 0.5 ? '' : fmt(2 * f)}\\pi$`, easy: `$${f}\\times2\\pi=${f === 0.5 ? '' : fmt(2 * f)}\\pi$`, key: `f${f}` };
+          const f = r.pick([1, 2, 3, 10, 0.5, 4, 50]);   // 毎秒5回転は楽な形の例（O-2）
+          return { q: `毎秒${f}回転する円運動の角速度 $\\omega$ は □ rad/s`, a: `$${f === 0.5 ? '' : fmt(2 * f)}\\pi$`, easy: `$${f}\\times2\\pi=${f === 0.5 ? '' : fmt(2 * f)}\\pi$`, key: `f${f}` };
         }
+        // 数と単位は $0.2\,\mathrm{m}$ の形（行で分かれない。N-7・R2-12）
         const rr = r.pick([0.2, 0.5, 0.1, 2, 3, 0.3]), w = r.pick([2, 3, 4, 5, 10]);
-        if (k === 1) return { q: `半径 ${rr} m の円の上を、角速度 ${w} rad/s で回る点の速さは □ m/s`, a: `$${fmt(rr * w)}$`, easy: `$${rr}\\times${w}=${fmt(rr * w)}$`, key: `v${rr},${w}` };
-        return { q: `半径 ${rr} m の円の上を、角速度 ${w} rad/s で回る点の加速度の大きさは □ $\\mathrm{m/s^2}$`, a: `$${fmt(rr * w * w)}$`, easy: `$${rr}\\times${w}^{2}=${fmt(rr * w * w)}$`, key: `v${rr},${w}` };
+        if (k === 1) return { q: `半径 $${rr}\\,\\mathrm{m}$ の円の上を、角速度 $${w}\\,\\mathrm{rad/s}$ で回る点の速さは □ m/s`, a: `$${fmt(rr * w)}$`, easy: `$${rr}\\times${w}=${fmt(rr * w)}$`, key: `v${rr},${w}` };
+        return { q: `半径 $${rr}\\,\\mathrm{m}$ の円の上を、角速度 $${w}\\,\\mathrm{rad/s}$ で回る点の加速度の大きさは □ $\\mathrm{m/s^2}$`, a: `$${fmt(rr * w * w)}$`, easy: `$${rr}\\times${w}^{2}=${fmt(rr * w * w)}$`, key: `v${rr},${w}` };
       },
       // 半径と回転数から、速さ・加速度（π を残して）
       s2(r) {
         const rr = r.pick([0.2, 0.5, 0.1, 0.3, 2, 0.4]), f = r.pick([1, 2, 3, 5, 10]), w = 2 * f;
-        if (r.chance(0.5)) return { q: `半径 ${rr} m、毎秒 ${f} 回転の円運動の速さは □ m/s（$\\pi$ を残して）`, a: `$${dT(rr * w, '\\pi')}$`, easy: `$\\omega=${w}\\pi$ → $${rr}\\times${w}\\pi=${dT(rr * w, '\\pi')}$`, easyCheck: 'last', key: `${rr},${f}`,
+        if (rr === 0.2 && f === 5) return null;   // 楽な形の例（O-2）
+        if (r.chance(0.5)) return { q: `半径 $${rr}\\,\\mathrm{m}$、毎秒${f}回転の円運動の速さは □ m/s（$\\pi$ を残して）`, a: `$${dT(rr * w, '\\pi')}$`, easy: `$\\omega=${w}\\pi$ → $${rr}\\times${w}\\pi=${dT(rr * w, '\\pi')}$`, easyCheck: 'last', key: `${rr},${f}`,
           verify: p => valIs(p.a, rr * 2 * Math.PI * f) };
-        return { q: `半径 ${rr} m、毎秒 ${f} 回転の円運動の加速度の大きさは □ $\\mathrm{m/s^2}$（$\\pi$ を残して）`, a: `$${dT(rr * w * w, '\\pi^{2}')}$`, easy: `$${rr}\\times(${w}\\pi)^{2}=${dT(rr * w * w, '\\pi^{2}')}$`, easyCheck: 'last', key: `${rr},${f}`,
+        return { q: `半径 $${rr}\\,\\mathrm{m}$、毎秒${f}回転の円運動の加速度の大きさは □ $\\mathrm{m/s^2}$（$\\pi$ を残して）`, a: `$${dT(rr * w * w, '\\pi^{2}')}$`, easy: `$${rr}\\times(${w}\\pi)^{2}=${dT(rr * w * w, '\\pi^{2}')}$`, easyCheck: 'last', key: `${rr},${f}`,
           verify: p => valIs(p.a, rr * (2 * Math.PI * f) ** 2) };
       },
       // 見かけがちがう：1分間に□回転、1周□秒、速さと半径から加速度、π=3.14
@@ -1197,22 +1228,22 @@
         const k = r.int(0, 3);
         if (k === 0) {
           const N = r.pick([60, 120, 300, 600, 900]), rr = r.pick([0.1, 0.2, 0.05, 0.3]), f = N / 60, ans = dT(rr * 2 * f, '\\pi');
-          return { q: `扇風機の羽根が1分間に ${N} 回転している。中心から ${rr} m の点の速さは □ m/s（$\\pi$ を残して）`, a: `$${ans}$`, easy: `毎秒 ${f} 回転 → $${rr}\\times${2 * f}\\pi=${ans}$`, easyCheck: 'last', key: `m${N},${rr}`,
+          return { q: `扇風機の羽根が1分間に${N}回転している。中心から $${rr}\\,\\mathrm{m}$ の点の速さは □ m/s（$\\pi$ を残して）`, a: `$${ans}$`, easy: `毎秒${f}回転 → $${rr}\\times${2 * f}\\pi=${ans}$`, easyCheck: 'last', key: `m${N},${rr}`,
             verify: p => valIs(p.a, rr * 2 * Math.PI * N / 60) };
         }
         if (k === 1) {
           const T = r.pick([2, 4, 5, 10, 3, 8]);
-          return { q: `1周 ${T} 秒で、同じ速さで円の上を回る点の角速度は □ rad/s`, a: `$${piT(fr(2, T))}$`, easy: `$\\frac{2\\pi}{${T}}=${piT(fr(2, T))}$`, key: `T${T}`, verify: p => valIs(p.a, 2 * Math.PI / T) };
+          return { q: `1周${T}秒で、同じ速さで円の上を回る点の角速度は □ rad/s`, a: `$${piT(fr(2, T))}$`, easy: `$\\frac{2\\pi}{${T}}=${piT(fr(2, T))}$`, key: `T${T}`, verify: p => valIs(p.a, 2 * Math.PI / T) };
         }
         if (k === 2) {
           const [v, rr] = r.pick([[2, 0.5], [3, 0.5], [4, 2], [10, 5], [6, 3], [2, 0.4], [20, 50]]);
-          return { q: `半径 ${rr} m の円の上を、速さ ${v} m/s で回る点の加速度の大きさは □ $\\mathrm{m/s^2}$`, a: `$${fmt(v * v / rr)}$`, easy: `$\\omega=\\frac{${v}}{${rr}}=${fmt(v / rr)}$ → $${rr}\\times${fmt(v / rr)}^{2}=${fmt(v * v / rr)}$`, easyCheck: 'last', key: `a${v},${rr}`,
+          return { q: `半径 $${rr}\\,\\mathrm{m}$ の円の上を、速さ $${v}\\,\\mathrm{m/s}$ で回る点の加速度の大きさは □ $\\mathrm{m/s^2}$`, a: `$${fmt(v * v / rr)}$`, easy: `$\\omega=\\frac{${v}}{${rr}}=${fmt(v / rr)}$ → $${rr}\\times${fmt(v / rr)}^{2}=${fmt(v * v / rr)}$`, easyCheck: 'last', key: `a${v},${rr}`,
             verify: p => valIs(p.a, v * v / rr) };
         }
         const rr = r.pick([0.5, 0.2, 1, 0.25]), f = r.pick([1, 2, 4]), vG = 2 * 3.14 * rr * f, ans = apx(vG, 2 * Math.PI * rr * f, 1);
         if (ans == null) return null;
-        return { q: `半径 ${rr} m の円の上を、毎秒 ${f} 回転する点の速さは約 □ m/s（$\\pi=3.14$、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `${rr},${f}`,
-          easy: `$${rr}\\times2\\times3.14\\times${f}=${fmt(vG)}$`, verify: p => strip(p.a) === (2 * Math.PI * rr * f).toFixed(1) || 'ちがう' };
+        return { q: `半径 $${rr}\\,\\mathrm{m}$ の円の上を、毎秒${f}回転する点の速さは約 □ m/s（$\\pi=3.14$、小数第1位まで）`, a: `$${ans}$`, easyCheck: false, key: `${rr},${f}`,
+          easy: `$${rr}\\times2\\times3.14\\times${f}=${fmt(vG)}${fmt(vG) === ans ? '' : `\\approx${ans}`}$`, verify: p => strip(p.a) === (2 * Math.PI * rr * f).toFixed(1) || 'ちがう' };
       },
       // わな：x 方向の速度（5-70）、回る速さが変わる（5-05）
       trap(r) {
@@ -1224,7 +1255,7 @@
         }
         const c = r.pick([2, 3, 0.5]), t0 = r.pick([1, 2, 3]);
         return dest({ key: '5-95trapB', q: `回りはじめた円板の角が $\\theta=${fmt(c)}t^{2}$（rad、$t$ は秒）。$t=${t0}$ での角速度は □ rad/s`, a: `$${fmt(2 * c * t0)}$`,
-          verify: p => valIs(p.a, ((c * (t0 + 1e-6) ** 2) - c * (t0 - 1e-6) ** 2) / 2e-6, 1e-5) }, '5-95', `回る速さが変わるので、$2\\pi f$ は使えない。$\\theta$ を $t$ で微分して $${fmt(2 * c)}t$`, ['5-05']);
+          verify: p => valIs(p.a, ((c * (t0 + 1e-6) ** 2) - c * (t0 - 1e-6) ** 2) / 2e-6, 1e-5) }, '5-95', `回る速さが変わるので、$2\\pi f$ は使えない。$\\theta$ を $t$ で微分して $${dT(2 * c, 't')}$`, ['5-05']);   // 係数が1なら $t$（R2-13）
       },
     },
   });
@@ -1249,6 +1280,7 @@
       // 不定積分
       s1(r) {
         const fn = r.pick(['sin', 'cos']), w = r.pick([1, 1, 2, 3]), A = r.pick([1, 1, 2, 4]);
+        if (fn === 'sin' && w === 1 && A === 1) return null;   // 楽な形の例 ∫sin^2 t（O-2）
         const f = cT(A, `\\${fn}^{2}${W(w)}t`), sg = fn === 'sin' ? -1 : 1;
         const ans = join([fB(fr(A, 2), 't'), fB(fr(sg * A, 4 * w), `\\sin${2 * w}t`)]);
         const in2 = `1${sg < 0 ? '-' : '+'}\\cos${2 * w}t`, dbl = A === 1 ? `\\frac{${in2}}{2}` : A === 2 ? in2 : `${A / 2}(${in2})`;
@@ -1257,6 +1289,7 @@
       // 定積分（区間が π/2 の整数倍でない）
       s2(r) {
         const fn = r.pick(['sin', 'cos']), w = r.pick([1, 1, 2]), [p, q] = r.pick(w === 1 ? [[1, 2], [3, 2], [1, 3], [2, 3], [4, 3], [5, 3]] : [[1, 2], [2, 3], [4, 3], [1, 3]]);
+        if (fn === 'sin' && w === 1 && p === 1 && q === 2) return null;   // 楽な形の例 ∫_0^{π/4} sin^2 t（O-2）
         const { val, f, b } = sqDef(fn, w, p, q);
         return { q: `$\\displaystyle\\int_0^{${b}}${f}\\,\\dd t$`, a: `$${val}$`, easy: `$\\Bigl[\\,\\frac{t}{2}${fn === 'sin' ? '-' : '+'}\\frac{\\sin${2 * w}t}{${4 * w}}\\,\\Bigr]_0^{${b}}=${val}$`, easyCheck: 'last', calc: { kind: 'defint', f, a: 0, b, x: 't' }, key: `${fn}${w}${p}${q}` };
       },
