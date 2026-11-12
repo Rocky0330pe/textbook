@@ -50,7 +50,12 @@
   // ---------------------------------------------------------------- わざの一覧
   // わざの一覧：巻ごとのタブ、部ごとにたたむ、番号・名前でさがす（依頼者 11月6日）
   function renderCatalog(vol) {
-    { const rb = $('#ruby'); rb.disabled = vol >= 4; rb.parentNode.title = vol >= 4 ? '第4巻からは、教科書と同じく ふりがなを つけません' : ''; rb.parentNode.style.opacity = vol >= 4 ? 0.5 : ''; }   // 第35回 K-8
+    { // 第4巻からはふりがなをつけない（K-8）。チェックを外して見せ、ほかの巻にもどったら元にもどす（第36回 R2-21）
+      const rb = $('#ruby'), note = $('#rubynote');
+      if (vol >= 4) { if (!rb.disabled) rb.dataset.prev = rb.checked ? '1' : '0'; rb.checked = false; rb.disabled = true; }
+      else if (rb.disabled) { rb.disabled = false; rb.checked = rb.dataset.prev !== '0'; }
+      rb.parentNode.style.opacity = vol >= 4 ? 0.5 : ''; if (note) note.hidden = vol < 4;
+    }
     const vols = [...new Set(M.list().map(id => M.waza[id].vol))].sort();
     $('#vtabs').innerHTML = vols.map(v => `<button type="button" class="vtab${v === vol ? ' on' : ''}" data-v="${v}">第${v}巻<span class="n">${M.list(v).length}</span></button>`).join('');
     $('#vtabs').querySelectorAll('.vtab').forEach(b => b.addEventListener('click', () => {
@@ -126,7 +131,7 @@
     const probs = M.makePrint(ids, { seed: st.seed, steps: st.steps, count: st.count, mix: st.mix });
     if (probs.length < st.count) msgs.push(`このわざ・ステップでは、ちがう問題が ${probs.length}問までしか作れませんでした（${st.count}問の かわりに ${probs.length}問）。ステップを ふやすと、問題が ふえます。`);
     $('#msg').textContent = msgs.join('　');
-    const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
+    const oneCol = probs.some(p => !p.fig && M.colsOf(M.waza[p.id], p.step) === 1);   // 図のある問題は、2列のときも横いっぱいの1行にする（第36回 R2-20）
     // 式（$…$）の問題は、分数などで行が高くなるので、行の高さを中身に合わせ、1ページの数を減らす（第2巻から）
     const mathy = probs.some(p => /\$/.test(String(p.q) + String(p.a)));
     const figs = probs.some(p => p.fig);
@@ -140,7 +145,7 @@
       const w = M.waza[p.id];
       // まぜるときは、欄のはばを 15mm より せまくしない（欄のはばが わざの手がかりに ならないように。R2-20）
       const bw0 = M.boxwOf(w, p.step, p) || '15mm';
-      const bw = st.mix && parseFloat(bw0) < 15 ? '15mm' : bw0;
+      const bw = st.mix && st.vol >= 4 ? (parseFloat(bw0) > 20 ? '32mm' : '15mm') : st.mix && parseFloat(bw0) < 15 ? '15mm' : bw0;   // 第4巻の見わけようは2種類のはば（第36回 N-5）
       const q = M.withBox(p.q);
       const len = M.plain(q).replace(/\s/g, '').length;
       let body;
@@ -179,10 +184,10 @@
       // 問題と答えのシートを1枚ずつ、全部の問題を入れて画面の外に組み、1問ごとの高さと、問題の欄の上・下の高さをはかる
       const mm = 96 / 25.4, tmp = document.createElement('div');
       tmp.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden';
-      const one = ans => `<section class="sheet ${ans ? 'answers' : 'questions'}" style="min-height:0">${sheetHead(st, title, 'x', 1, 2)}${!ans && st.mix ? '<p class="note">' + H('まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。', { noRuby: !st.ruby }) + '</p>' : ''}${ans ? ruleBox() : ''}<ol class="probs ${oneCol ? 'one' : 'two'} auto${ans ? ' withhow' : ''}">${probs.map(p => cell(p, ans)).join('')}</ol><footer class="foot">x</footer></section>`;
+      const one = ans => `<section class="sheet ${ans ? 'answers' : 'questions'}" style="min-height:0">${sheetHead(st, title, 'x', 1, 2)}${!ans && st.mix ? '<p class="note">' + H('まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。', { noRuby: !st.ruby }) + '</p>' : ''}${ans ? ruleBox() : ''}<ol class="probs ${oneCol ? 'one' : 'two'} auto${st.vol >= 4 ? ' uni' : ''}${ans ? ' withhow' : ''}">${probs.map(p => cell(p, ans)).join('')}</ol><footer class="foot">x</footer></section>`;
       tmp.innerHTML = one(false) + one(true);
       $('#sheets').appendChild(tmp);
-      const secs = tmp.querySelectorAll('section'), hs = probs.map(() => 0);
+      const secs = tmp.querySelectorAll('section'), hs = probs.map(() => 0), rows = [];
       let top1 = 0, top = 0, bot = 0;
       secs.forEach(sec => {
         const ol = sec.querySelector('ol'), r0 = sec.getBoundingClientRect(), ro = ol.getBoundingClientRect(), f = sec.querySelector('.foot');
@@ -191,14 +196,18 @@
         top = Math.max(top, (ro.top - r0.top - (sm ? sm.getBoundingClientRect().height + 2 * mm : 0)) / mm);
         bot = Math.max(bot, (f.getBoundingClientRect().height + parseFloat(fs.marginTop)) / mm + 12);
         const lis = ol.querySelectorAll(':scope > li');
-        if (oneCol) lis.forEach((li, i) => { hs[i] = Math.max(hs[i], li.getBoundingClientRect().height / mm); });
-        else for (let i = 0; i < lis.length; i += 2) { const h = Math.max(lis[i].getBoundingClientRect().height, lis[i + 1] ? lis[i + 1].getBoundingClientRect().height : 0) / mm + 1.5; hs[i] = Math.max(hs[i], h); }
+        // 1列なら1問ずつ。2列なら、図のない問題を2つずつ1行、図のある問題は1問で1行（行のはじめの番号に、その行の高さ）
+        rows.length = 0;
+        for (let i = 0; i < lis.length;) {
+          const two = !oneCol && !probs[i].fig && i + 1 < lis.length && !probs[i + 1].fig;
+          const h = Math.max(lis[i].getBoundingClientRect().height, two ? lis[i + 1].getBoundingClientRect().height : 0) / mm + (oneCol ? 0 : 1.5);
+          hs[i] = Math.max(hs[i], h); rows.push([i, two ? 2 : 1]); i += two ? 2 : 1;
+        }
       });
       tmp.remove();
       // 2列のときは、2問ずつ1行（行の高さは高いほう）
       let s0 = 0, h = 0;
-      const step = oneCol ? 1 : 2;
-      for (let i = 0; i < probs.length; i += step) {
+      for (const [i] of rows) {
         const cap = 297 - bot - (ranges.length ? top : top1) - 3;
         if (i > s0 && h + hs[i] > cap) { ranges.push([s0, i]); s0 = i; h = 0; }
         h += hs[i];
@@ -216,7 +225,7 @@
         html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
           ${!ans && st.mix ? `<p class="note">${H(st.vol > 1 ? 'まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。' : 'まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
           ${ans && pg === 0 ? ruleBox() : ''}
-          <ol class="probs ${oneCol ? 'one' : 'two'}${mathy || figs ? ' auto' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${ranges[pg][0]}">`;
+          <ol class="probs ${oneCol ? 'one' : 'two'}${mathy || figs ? ' auto' : ''}${st.vol >= 4 ? ' uni' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${ranges[pg][0]}">`;
         list.forEach(p => { html += cell(p, ans); });
         html += `</ol><footer class="foot">${ans ? H(st.vol > 1 ? '［ ］の《中|なか》は《楽|らく》な《解|と》き《方|かた》。　' : '［ ］の 《中|なか》は らくな とき《方|かた》。　', { noRuby: !st.ruby }) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　${st.vol > 1 ? 'たねの番号' : 'たねの ばんごう'} ${st.seed}</footer></section>`;
       }
