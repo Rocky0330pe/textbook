@@ -567,7 +567,7 @@
     const items = [];
     const dimL = dim === 'bot' ? dimV(-(x.pyr ? 0.2 : R) - 0.8, 0, yc, NUMLAB(x.h - x.y), 'w') : dimV(-(x.pyr ? 0.2 : R) - 0.8, yc, H, NUMLAB(x.y), 'w');
     if (!x.pyr) {
-      const ry = R * 0.28, rc = R * x.y / x.h, T = [0, H];
+      const ry = Math.max(R * 0.28, 1.05), rc = R * x.y / x.h, T = [0, H];   // 底のだ円は、半径の数の字がうしろの点線にかからない高さ（1.05 以上）にする
       items.push(['seg', T, [-R, 0]], ['seg', T, [R, 0]], ['ellipse', [0, 0], R, ry, 180, 360], ['ellipse', [0, 0], R, ry, 0, 180, { dash: true }],
         ['ellipse', [0, yc], rc, rc * 0.28, 180, 360], ['ellipse', [0, yc], rc, rc * 0.28, 0, 180, { dash: true }],
         ['seg', T, [0, 0], { dash: true }], ['seg', [0, 0], [R, 0]], ['right', T, [0, 0], [R, 0], 0.35], ['label', [R / 2, 0], NUMLAB(x.R), 'n'],

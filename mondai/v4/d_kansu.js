@@ -488,7 +488,8 @@
       },
       // わな：かっこの中が 2θ−60° のとき（くくると右へ30°）・sin と cos の和の振幅（合成）
       trap(r) {
-        if (r.chance(0.5)) {
+        // （第36回 N-3）sin(kθ−b) のずれは 4-52 自身でくくれば読めるので、わなにしない（caution に書いてある）
+        if (false) {
           const k = r.pick([2, 3]), s = r.pick([15, 20, 30, 45]), b = k * s, fn = r.pick(['sin', 'cos']);
           return dest({
             q: `$y=\\${fn}(${k}\\theta-${dg(b)})$ は $y=\\${fn}${k}\\theta$ を右へ何度ずらしたか`, a: `$${dg(s)}$`,

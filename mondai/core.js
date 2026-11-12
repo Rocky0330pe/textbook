@@ -690,7 +690,15 @@
         const L = v[0] > 0.3 ? cx : v[0] < -0.3 ? cx - w : cx - w / 2;
         P([L, cy - 0.45 * u]); P([L + w, cy + 0.6 * u]);
       }
-      else if (k === 'angle' || k === 'right') { P(a); P(b); P(c); }
+      else if (k === 'angle' || k === 'right') {
+        P(a); P(b); P(c);
+        if (k === 'angle' && d) {   // 角の文字も図の大きさに入れる（修A の要望）。置き場所は figSVG と同じ
+          const [a0, a1] = angleArc(a, b, c), m = (a0 + a1) / 2, R = (it[5] || 0.8) + (it[7] != null ? it[7] : 0.75), u = (fig.font || 3.4) / (fig.s || 5);
+          const txt = String(d).replace(/\$/g, '').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}^_ ]/g, ''), w = [...txt].length * 0.6 * u;
+          const cx = b[0] + R * Math.cos(m), cy = b[1] + R * Math.sin(m);
+          P([cx - w / 2, cy - 0.45 * u]); P([cx + w / 2, cy + 0.6 * u]);
+        }
+      }
       else if (k === 'grid') { P([a, b]); P([c, d]); }
       else if (k === 'axes') { P([a, c]); P([b, d]); }
     }
