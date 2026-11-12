@@ -6,7 +6,8 @@
   'use strict';
   const M = globalThis.MONDAI;
   const $ = s => document.querySelector(s);
-  const H = (s, o) => M.toHTML(s, o);
+  // 第5巻からは、近似の記号を教科書 5-8 と同じ ≈ にする（第3巻までは ≒）
+  const H = (s, o) => { const h = M.toHTML(s, o), v = document.querySelector('#vol'); return v && +v.value >= 5 ? h.replace(/≒/g, '≈') : h; };
   const STEP_LABEL = { s1: 'ステップ1', s2: 'ステップ2', s3: 'ステップ3', trap: 'わな' };
 
   function state() {
@@ -138,7 +139,9 @@
     const per = mathy ? (oneCol ? 11 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
     // ページの分け方：[はじめ, おわり] の組。図があるときは、画面で高さをはかって A4 に入るだけ入れる（第35回）
     const ranges = [];
-    if (!figs) for (let i = 0; i < Math.max(1, probs.length); i += per) ranges.push([i, Math.min(probs.length, i + per)]);
+    // 第4巻からは、図がなくても画面で高さをはかって分ける（題が2行になる・式が高いときに A4 をこえないように。第5巻）
+    const measure = (figs || st.vol >= 4) && !probs.some(p => p.hs);
+    if (!measure) for (let i = 0; i < Math.max(1, probs.length); i += per) ranges.push([i, Math.min(probs.length, i + per)]);
     const title = titleOf(st, ids);
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
     const cell = (p, ans) => {
@@ -180,7 +183,7 @@
         return `<div class="sm1"><span class="chip">わざ ${id}</span> <b>${H(d.title, { noRuby: !st.ruby })}</b><div class="raku">${d.raku.map(l => H(l, { noRuby: !st.ruby, box: '<span class="sq"></span>' })).join('<br>')}</div></div>`;
       }).join('') + '</div>';
     };
-    if (figs) {
+    if (measure) {
       // 問題と答えのシートを1枚ずつ、全部の問題を入れて画面の外に組み、1問ごとの高さと、問題の欄の上・下の高さをはかる
       const mm = 96 / 25.4, tmp = document.createElement('div');
       tmp.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden';
@@ -208,7 +211,7 @@
       // 2列のときは、2問ずつ1行（行の高さは高いほう）
       let s0 = 0, h = 0;
       for (const [i] of rows) {
-        const cap = 297 - bot - (ranges.length ? top : top1) - 3;
+        const cap = 297 - bot - (ranges.length ? top : top1) - 8;   // ゆとり 8 mm（答えのページの解き方の行の折り返しのぶん）
         if (i > s0 && h + hs[i] > cap) { ranges.push([s0, i]); s0 = i; h = 0; }
         h += hs[i];
       }
@@ -225,7 +228,7 @@
         html += `<section class="sheet ${ans ? 'answers' : 'questions'}">${sheetHead(st, title, kind, pg + 1, pages)}
           ${!ans && st.mix ? `<p class="note">${H(st.vol > 1 ? 'まず、《使|つか》うわざの《番号|ばん|ごう》を「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。' : 'まず、 つかう わざの ばんごうを 「わざ」に 《書|か》いてから とこう。 つかえる わざが ない ときは 「なし」と 《書|か》こう。', { noRuby: !st.ruby })}</p>` : ''}
           ${ans && pg === 0 ? ruleBox() : ''}
-          <ol class="probs ${oneCol ? 'one' : 'two'}${mathy || figs ? ' auto' : ''}${st.vol >= 4 ? ' uni' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${ranges[pg][0]}">`;
+          <ol class="probs ${oneCol ? 'one' : 'two'}${mathy || measure ? ' auto' : ''}${st.vol >= 4 ? ' uni' : ''}${ans ? ' withhow' : ''}" style="counter-reset:q ${ranges[pg][0]}">`;
         list.forEach(p => { html += cell(p, ans); });
         html += `</ol><footer class="foot">${ans ? H(st.vol > 1 ? '［ ］の《中|なか》は《楽|らく》な《解|と》き《方|かた》。　' : '［ ］の 《中|なか》は らくな とき《方|かた》。　', { noRuby: !st.ruby }) : ''}『物理を理解するための数学 問題集』第${st.vol}巻　練習プリント　${st.vol > 1 ? 'たねの番号' : 'たねの ばんごう'} ${st.seed}</footer></section>`;
       }

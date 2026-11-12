@@ -675,7 +675,7 @@
   const FIGSYM = { ell: 'ℓ', sojisym: '∽', infty: '∞', lvert: '|', rvert: '|', mid: '|', pm: '±', le: '≤', ge: '≥', leqq: '≦', geqq: '≧', sim: '∽', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
   function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
     return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
-      if (!(k % 2)) return htmlEsc(seg);
+      if (!(k % 2)) return htmlEsc(seg.replace(/(^|[^0-9A-Za-z])-(?=\d)/g, '$1−'));   // 式の外の「-20」もマイナスの字に
       const up = []; let t = seg.slice(1, -1).replace(/\\(?:mathrm|text)\{([^}]*)\}/g, (m, x) => { up.push(x); return '\u0001' + (up.length - 1) + '\u0002'; }).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
         .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
       t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => c.length > 1 ? `<tspan font-style="italic" font-family="Times New Roman,serif">${c[0]}</tspan><tspan dx="-0.72em" dy="-0.95em" font-size="75%">→</tspan><tspan dy="0.95em" font-size="75%">\u200B</tspan>` : `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);   // \vec の矢印は小さい → を上に（組合せ文字は出ないことがある）
@@ -695,8 +695,8 @@
       axes(a) {
         a = a || {};
         const its = [['axes', o.x0 * sx - (o.x0 < 0 ? 0 : 0.6), o.x1 * sx + 0.8, o.y0 * sy - (o.y0 < 0 ? 0 : 0.6), o.y1 * sy + 0.8, { x: a.x, y: a.y, o: a.o }]];
-        (a.xt || []).forEach(t => { its.push(['seg', [t * sx, -0.15], [t * sx, 0.15]], ['label', [t * sx, 0], a.xfmt ? a.xfmt(t) : fmt(t), 's']); });
-        (a.yt || []).forEach(t => { its.push(['seg', [-0.15, t * sy], [0.15, t * sy]], ['label', [0, t * sy], a.yfmt ? a.yfmt(t) : fmt(t), 'w']); });
+        (a.xt || []).forEach(t => { its.push(['seg', [t * sx, -0.15], [t * sx, 0.15]], ['label', [t * sx, -0.2], a.xfmt ? a.xfmt(t) : fmt(t), 's']); });
+        (a.yt || []).forEach(t => { its.push(['seg', [-0.15, t * sy], [0.15, t * sy]], ['label', [-0.25, t * sy], a.yfmt ? a.yfmt(t) : fmt(t), 'w']); });
         return its;
       },
       plot(f, a, b, st) {
@@ -725,7 +725,8 @@
       const [k, a, b, c, d] = it;
       if (k === 'seg' || k === 'tick') { P(a); P(b); }
       else if (k === 'poly' || k === 'path') a.forEach(P);
-      else if (k === 'circle' || k === 'arc') { P([a[0] - b, a[1] - b]); P([a[0] + b, a[1] + b]); }
+      else if (k === 'circle') { P([a[0] - b, a[1] - b]); P([a[0] + b, a[1] + b]); }
+      else if (k === 'arc') { for (let j = 0; j <= 24; j++) { const t = (c + (d - c) * j / 24) * Math.PI / 180; P([a[0] + b * Math.cos(t), a[1] + b * Math.sin(t)]); } }   // 弧は、弧の通る所だけ（組 f の要望）
       else if (k === 'ellipse') { P([a[0] - b, a[1] - c]); P([a[0] + b, a[1] + c]); }
       else if (k === 'par') { P(a); P(b); }
       else if (k === 'dot') P(a);
@@ -797,7 +798,7 @@
     opt = opt || {};
     const s = fig.s || 5, f = v => +(+v).toFixed(3), P = p => `(${f(p[0])},${f(p[1])})`;
     const sty = a => [a && a.dash ? 'densely dashed' : '', a && a.thick ? 'thick' : '', a && a.arrow ? '-{Stealth[length=1.6mm]}' : ''].filter(Boolean).join(',');
-    const lab = t => M.toTeX(t);
+    const lab = t => M.toTeX(String(t).split(/(\$[^$]*\$)/).map((g, k) => k % 2 ? g : g.replace(/(^|[^0-9A-Za-z])-(?=\d)/g, '$1$-$')).join(''));   // 式の外の「-20」もマイナスの字に
     const TIKZA = { n: 'above', s: 'below', e: 'right', w: 'left', ne: 'above right', nw: 'above left', se: 'below right', sw: 'below left', c: '' };
     let o = `\\begin{tikzpicture}[x=${s}mm,y=${s}mm,line width=0.3mm,font=\\small,baseline=(current bounding box.north)]`;
     const [bx0, by0, bx1, by1] = figBox(fig);
@@ -936,11 +937,11 @@
         // 同じ f・変数・はしの積分は1回だけ計算する（check.js は種を200とおり回すので。第5巻 組 e の要望）
         const key = c.f + '|' + X + '|' + a + '|' + b; let I = DEFINT.get(key);
         if (I === undefined) {
-          const n = 2000, hh = (b - a) / n; let sum = ev(c.f, a) + ev(c.f, b);
+          const n = 4000, hh = (b - a) / n; let sum = ev(c.f, a) + ev(c.f, b);
           for (let k = 1; k < n; k++) sum += (k % 2 ? 4 : 2) * ev(c.f, a + k * hh);
           I = sum * hh / 3; if (DEFINT.size > 5000) DEFINT.clear(); DEFINT.set(key, I);
         }
-        if (!isFinite(I)) errs.push('calc：中身が読めない'); else if (!near(I, va) && Math.abs(I - va) > 1e-7) errs.push(`calc：定積分がちがう（${I} と ${va}）`);
+        if (!isFinite(I)) errs.push('calc：中身が読めない'); else if (Math.abs(I - va) > 3e-5 * Math.max(1, Math.abs(I), Math.abs(va))) errs.push(`calc：定積分がちがう（${I} と ${va}）`);
       }
     } else errs.push('calc：kind がちがう');
     return errs;
