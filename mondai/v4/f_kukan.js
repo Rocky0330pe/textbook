@@ -164,23 +164,55 @@
 
   // ================================================================ 4-79
   // 直方体の見取図（教科書 4-13 と同じ向き：x を手前ななめ、y を右、z を上）。O が見えない角で、O から出る3本の辺は点線
+  //  ラベルは、線（辺・軸・太線）とほかのラベルに重ならない向きを、候補の順にさがして置く（R2-8）。
+  //  太線（聞く2点）は、見えない面（x=0・y=0・z=0 の面）の上にあれば点線（底面の対角線 AC など）。
   function boxFig(a, b, c, ask) {
     const T = p => M.proj3([p[1], -p[0], p[2]], 0.6, 35);
     const P8 = { O: [0, 0, 0], A: [a, 0, 0], B: [a, b, 0], C: [0, b, 0], D: [0, 0, c], E: [a, 0, c], F: [a, b, c], G: [0, b, c] };
     const P = k => T(P8[k]), ex = 1.4;
+    const hidden = [0, 1, 2].some(i => P8[ask[0]][i] === 0 && P8[ask[1]][i] === 0);   // 2点が同じ見えない面の上
+    //  [線, 重み]：太線（聞く2点）に重なるのがいちばんいけない。点線と軸は軽く
+    const segs = [
+      [[P('A'), T([a + ex, 0, 0])], 1], [[P('C'), T([0, b + ex, 0])], 1], [[P('D'), T([0, 0, c + ex])], 1],
+      ...['AB', 'BC', 'CG', 'GD', 'DE', 'EA', 'EF', 'FG', 'FB'].map(e => [[P(e[0]), P(e[1])], 2]),
+      ...['OA', 'OC', 'OD'].map(e => [[P(e[0]), P(e[1])], 1]),
+      [[P(ask[0]), P(ask[1])], 4],
+    ];
     const items = [
       ['seg', P('A'), T([a + ex, 0, 0]), { arrow: true }], ['seg', P('C'), T([0, b + ex, 0]), { arrow: true }], ['seg', P('D'), T([0, 0, c + ex]), { arrow: true }],
       ['poly', ['A', 'B', 'C', 'G', 'D', 'E'].map(P)], ['seg', P('E'), P('F')], ['seg', P('F'), P('G')], ['seg', P('F'), P('B')],
       ['seg', P('O'), P('A'), { dash: true }], ['seg', P('O'), P('C'), { dash: true }], ['seg', P('O'), P('D'), { dash: true }],
-      ['seg', P(ask[0]), P(ask[1]), { thick: true }],
+      ['seg', P(ask[0]), P(ask[1]), hidden ? { thick: true, dash: true } : { thick: true }],
       ['label', T([a + ex, 0, 0]), '$x$', 'sw'], ['label', T([0, b + ex, 0]), '$y$', 'e'], ['label', T([0, 0, c + ex]), '$z$', 'n'],
     ];
-    const LD = { O: 'ne', A: 's', B: 's', C: 'ne', D: 'nw', E: 'w', F: 'se', G: 'ne' };
     const W0 = b + ex + 0.49 * (a + ex) + 1.8, H0 = c + ex + 0.344 * (a + ex) + 1.8, sc = Math.min(5, 52 / W0, 27 / H0);
-    if (0.49 * a * sc < 7) LD.F = 'n';   // F の右の辺 CG が近いとき
-    for (const k of 'OABCDEFG') items.push(['dot', P(k)], ['label', P(k), k, LD[k]]);
+    // ラベルの四角（図の単位）。字の大きさ 3.4 mm、1字のはば 0.62 字
+    const u = 3.4 / sc, V8 = { n: [0, 1], s: [0, -1], e: [1, 0], w: [-1, 0], ne: [0.8, 0.8], nw: [-0.8, 0.8], se: [0.8, -0.8], sw: [-0.8, -0.8] };
+    //  （アプリの SVG と本の TikZ で字の置き方が少しちがうので、両方をふくむ大きさにする）
+    const boxOf = (p, t, d) => { const v = V8[d], w = 0.34 * u * String(t).length, hw = w + 0.06 * u, hh = 0.38 * u; const cx = p[0] + v[0] * (0.45 * u + w), cy = p[1] + v[1] * 0.75 * u; return [cx - hw, cy - hh, cx + hw, cy + hh]; };
+    const segHit = (B, [p, q]) => {   // 線分 pq が四角 B を通るか（線分を細かく分けて調べる）
+      for (let i = 0; i <= 40; i++) { const t = i / 40, x = p[0] + (q[0] - p[0]) * t, y = p[1] + (q[1] - p[1]) * t; if (x > B[0] && x < B[2] && y > B[1] && y < B[3]) return true; }
+      return false;
+    };
+    const boxHit = (A, B) => A[0] < B[2] && B[0] < A[2] && A[1] < B[3] && B[1] < A[3];
+    const placed = [boxOf(T([a + ex, 0, 0]), 'x', 'sw'), boxOf(T([0, b + ex, 0]), 'y', 'e'), boxOf(T([0, 0, c + ex]), 'z', 'n')];
+    const put = (p, t, cands) => {
+      let best = cands[0], bad = Infinity;
+      for (const d of cands) {
+        const B = boxOf(p, t, d), n = segs.reduce((m, [s, wt]) => m + (segHit(B, s) ? wt : 0), 0) + 2 * placed.filter(Q => boxHit(B, Q)).length;
+        if (n < bad) { bad = n; best = d; }
+        if (!n) break;
+      }
+      placed.push(boxOf(p, t, best));
+      return best;
+    };
+    // 長さのラベルを先に（辺のまん中）、それから頂点の名前
+    const lens = [[mid(P('C'), P('B')), `${a}`, ['se', 'e', 'nw']], [mid(P('A'), P('B')), `${b}`, ['s', 'n']], [mid(P('E'), P('A')), `${c}`, ['w', 'e']]];
+    const lenItems = lens.map(([p, t, cs]) => ['label', p, t, put(p, t, cs)]);
+    const LC = { F: ['se', 'n', 'ne', 'e', 'nw'], E: ['w', 'nw', 'sw', 'n'], D: ['nw', 'n', 'w', 'ne'], G: ['ne', 'n', 'e', 'nw'], C: ['ne', 'se', 'e', 's', 'n'], B: ['s', 'se', 'sw', 'e'], A: ['se', 's', 'w', 'sw', 'nw'], O: ['ne', 'w', 'se', 'nw', 's', 'sw', 'n', 'e'] };
+    for (const k of 'FEDGCBAO') items.push(['dot', P(k)], ['label', P(k), k, put(P(k), k, LC[k])]);
     items.push(['label', T([a + ex + 1.4, 0, 0]), '', 'c'], ['label', T([0, b + ex + 1.1, 0]), '', 'c'], ['label', T([0, 0, c + ex + 0.9]), '', 'c']);   // 見えない点（図のはば）
-    items.push(['label', mid(P('C'), P('B')), `${a}`, 'se'], ['label', mid(P('A'), P('B')), `${b}`, 's'], ['label', mid(P('E'), P('A')), `${c}`, 'w']);
+    items.push(...lenItems);
     return { s: +sc.toFixed(2), items };
   }
   add({
@@ -244,11 +276,11 @@
           const t = r.pick(TRIP), [x, y] = sgn(r, r.shuffle(t.slice())), z = r.pick([2, 5, 6, 7, 9, 12]) * (r.chance(0.3) ? -1 : 1);
           const N = x * x + y * y, R = rootTeX(N);
           return dest({ q: `点P$${V(x, y, z)}$ と $z$ 軸の距離`, a: `$${R}$`, verify: (ans) => numOK(ans, Math.hypot(x, y)) }, '4-79',
-            `$z$ 軸からの距離は、床の上の $\\sqrt{${x * x}+${y * y}}$ だけ。$z$ は入れない`);
+            `$z$ 軸からの距離は、床の上の $\\sqrt{${x * x}+${y * y}}$ だけ。$z$ は入れない。床の上の2点の距離として、わざ 4-25 で`);
         }
         const p = sgn(r, [r.int(1, 6), r.int(1, 6), r.int(2, 9)]);
         return dest({ q: `点P$${V(...p)}$ と床（$xy$ 平面）の距離`, a: `$${Math.abs(p[2])}$`, verify: (ans) => numOK(ans, Math.abs(p[2])) }, '4-79',
-          '床からの距離は高さ $z$ だけ。2乗してたさなくてよい');
+          '楽な形なし。床からの距離は高さ $z$ の大きさだけ。2乗してたさなくてよい');
       },
     },
   });
@@ -354,7 +386,7 @@
         const a = [r.int(1, 3), r.int(1, 4), r.int(-3, 3)], m = r.pick([2, 3, -2]), j = r.int(0, 2), k = a[j] * m;
         const bt = a.map((x, i) => (i === j ? 'k' : x * m));
         return dest({ q: `$${V(...a)}$ と $${V(...bt)}$ が平行になるときの $k$`, a: `$${k}$`, verify: (ans) => { const kk = M.evalMath(strip(ans), {}), b = a.map((x, i) => (i === j ? kk : x * m)); return kk != null && cross(a, b).every(v => Math.abs(v) < 1e-9) ? true : '平行でない'; } }, '4-80',
-          `平行は内積0ではない。ほかの成分が ${m} 倍なので、$k=${par(a[j])}\\times${par(m)}$`);
+          `平行は内積0ではない。ほかの成分が ${m} 倍なので、$k=${par(a[j])}\\times${par(m)}=${k}$。実数倍は成分ごと（わざ 4-68）で`);
       },
     },
   });
@@ -424,7 +456,7 @@
           const a = sgn(r, perm(r, r.pick(QUAD.slice(0, 6)))), n = Math.round(Math.sqrt(dot(a, a))), m = r.pick([2, 3]);
           const ans = `$${V(...a.map(x => x * m))}$`;
           return dest({ q: `$\\vec{a}=${V(...a)}$ と同じ向きで、大きさが $${n * m}$ のベクトル`, a: ans, verify: (ans) => tupleOK(ans, a.map(x => x / Math.hypot(...a) * n * m)) }, '4-81',
-            `大きさ ${n} の ${m} 倍なので、成分を ${m} 倍するだけ。単位ベクトルを作らなくてよい`);
+            `大きさ ${n} の ${m} 倍なので、成分を ${m} 倍するだけ。単位ベクトルを作らなくてよい。実数倍は成分ごと（わざ 4-68）で`);
         }
         const [u, v] = r.pick(NICE[90].filter(([a, b]) => a.every(Boolean) && b.filter(Boolean).length >= 2));
         return dest({ q: `$\\vec{a}=${V(...u)}$ と $\\vec{b}=${V(...v)}$ のなす角`, a: `$${D(90)}$`, verify: (ans) => numOK(ans, Math.acos(dot(u, v) / Math.sqrt(dot(u, u) * dot(v, v)))) }, '4-81',
@@ -451,7 +483,7 @@
     cols: 1,
     boxw: { s1: '30mm', s2: '30mm', s3: '30mm', trap: '30mm' },
     boxh: { trap: '12mm' },
-    fits(q) { return /平面の式|平面$/.test(q) || (/法線/.test(q) && /平面/.test(q)) || (/平面/.test(q) && /上にある/.test(q)); },
+    fits(q) { if (/3点/.test(q)) return false; return /平面の式|平面$/.test(q) || (/法線/.test(q) && /平面/.test(q)) || (/平面/.test(q) && /上にある/.test(q)); },   // 3点だけ（法線がない）は外積が先（4-85）
     steps: {
       // 法線と通る点から（成分はプラスか0）
       s1(r) {
@@ -519,7 +551,7 @@
         const n = r.pick([[1, 2, 2], [2, 1, 2], [2, 2, 1], [2, -1, 2], [1, -2, 2]]), d = 3 * r.int(1, 4) + r.pick([0, 0, 1]);
         const ans = `$${Stex(S(d, 3))}$`;
         return dest({ q: `平面 $${planeTeX(n, d)}$ と原点の距離`, a: ans, verify: (ans) => numOK(ans, Math.abs(d) / Math.hypot(...n)) }, '4-82',
-          `平面の式を作る問題ではない。法線の大きさ3で右辺をわる：$\\frac{${d}}{3}$（教科書 4-13 のもっと）`);
+          `平面の式を作る問題ではない。平面の上の点の、法線の単位ベクトル $\\frac{1}{3}${V(...n)}$ の向きの成分（正射影）なので、右辺を法線の大きさ3でわる：$${d % 3 ? `\\frac{${d}}{3}` : `${d}\\div3=${d / 3}`}$。わざ 4-78 で`);
       },
     },
   });
@@ -577,7 +609,7 @@
     counts: { s1: 8, s2: 4, s3: 2, trap: 2 },
     cols: { s2: 1, s3: 1, trap: 1 },
     boxw: '18mm',
-    fits(q) { return /うで|スパナ|シーソー|レンチ|棒|ドア/.test(q) && !has2(q) && !has3(q) && !/x=|クレーン|座標/.test(q); },
+    fits(q) { return /うで|スパナ|シーソー|レンチ|棒|ドア|支点/.test(q) && !has2(q) && !has3(q) && !/x=|クレーン|座標/.test(q); },
     steps: {
       // うで・力・なす角（30°・150°・90° は分数、45°・60° は √ が残る）
       s1(r) {
@@ -586,7 +618,7 @@
         if (th % 45 === 0 && th % 90 && (r10 * F) % 20) return null;
         const Mv = moment(r10, F, th), ans = `$${Stex(Mv)}$`;
         return {
-          q: `うで $${fmt(r10 / 10)}\\,\\mathrm{m}$、力 $${F}\\,\\mathrm{N}$、なす角 $${D(th)}$ のモーメント`, a: ans,
+          q: `うで $${fmt(r10 / 10)}\\,\\mathrm{m}$、力 $${F}\\,\\mathrm{N}$、なす角 $${D(th)}$ のモーメントは □ $\\mathrm{N\\cdot m}$`, a: ans,
           easy: `$${fmt(r10 / 10)}\\times${F}\\times\\sin${D(th)}=${Stex(Mv)}$`,
         };
       },
@@ -618,31 +650,33 @@
           if (th % 45 === 0 && (r10 * F) % 20) return null;
           const Mv = moment(r10, F, th);
           return {
-            q: `図のように、Oのまわりに回る長さ $${fmt(r10 / 10)}\\,\\mathrm{m}$ の棒の先を、棒の向きから $${D(th)}$ の向きに $${F}\\,\\mathrm{N}$ で引く。モーメント`,
+            q: `図のように、Oのまわりに回る長さ $${fmt(r10 / 10)}\\,\\mathrm{m}$ の棒の先を、棒の向きから $${D(th)}$ の向きに $${F}\\,\\mathrm{N}$ で引く。モーメントは □ $\\mathrm{N\\cdot m}$`,
             a: `$${Stex(Mv)}$`, easy: `$${fmt(r10 / 10)}\\times${F}\\times\\sin${D(th)}=${Stex(Mv)}$`, fig: armFig(r10 / 10, F, th),
+          };
+        }
+        if (r.chance(0.5)) {
+          // 力がうでにそって支点を向く（わなから移した。R2-11 の言い方）
+          const r10 = r.pick([2, 3, 4, 5]), F = r.pick([30, 40, 50, 60]);
+          return {
+            q: `長さ $${fmt(r10 / 10)}\\,\\mathrm{m}$ のスパナの先を、柄にそってボルトのほうへ $${F}\\,\\mathrm{N}$ で押す。モーメントは □ $\\mathrm{N\\cdot m}$`, a: '$0$', key: 'zero',
+            easy: `うでと力のなす角は $${D(0)}$。$${fmt(r10 / 10)}\\times${F}\\times\\sin${D(0)}=0$`, easyCheck: 'last',
+            verify: (ans) => numOK(ans, (r10 / 10) * F * Math.sin(0)),
           };
         }
         const al = r.pick([45, 60]), r10 = r.pick([6, 8, 10]), F = r.pick([10, 20, 30, 40]);
         if ((r10 * F) % 20) return null;
         const Mv = moment(r10, F, 90 - al);
         return {
-          q: `図はドアを上から見たもの。ちょうつがいOから $${fmt(r10 / 10)}\\,\\mathrm{m}$ のノブを、面に垂直な向きから $${D(al)}$ かたむけて $${F}\\,\\mathrm{N}$ で引く。モーメント`,
+          q: `図はドアを上から見たもの。ちょうつがいOから $${fmt(r10 / 10)}\\,\\mathrm{m}$ のノブを、面に垂直な向きから $${D(al)}$ かたむけて $${F}\\,\\mathrm{N}$ で引く。モーメントは □ $\\mathrm{N\\cdot m}$`,
           a: `$${Stex(Mv)}$`, easyCheck: 'last', easy: `うでと力のなす角は $${D(90 - al)}$。$${fmt(r10 / 10)}\\times${F}\\times\\sin${D(90 - al)}=${Stex(Mv)}$`, fig: doorFig(r10 / 10, F, al),
         };
       },
-      // わな：力がうでにそって支点を向く（回さない）、点の座標と力の成分（4-84）
+      // わな：点の座標と力の成分（4-84）。力がうでにそって支点を向く（$\sin0^{\circ}=0$）は自分で解けるので s3 へ（第36回 N-3）
       trap(r) {
-        if (r.chance(0.5)) {
-          const r10 = r.pick([2, 3, 4, 5]), F = r.pick([30, 40, 50, 60]);
-          return dest({
-            q: `$${fmt(r10 / 10)}\\,\\mathrm{m}$ のスパナをボルトの向きに $${F}\\,\\mathrm{N}$ で押すモーメント`, a: '$0$',
-            verify: (ans) => numOK(ans, (r10 / 10) * F * Math.sin(Math.PI)),
-          }, '4-83', '力がうでにそって支点を向いている。うでに直角な部分がないので回さない（$\\sin0^{\\circ}=0$）');
-        }
         const x = r.int(1, 5) / 10, y = r.int(1, 5) / 10, Fx = r.pick([10, 20, 30]), Fy = r.pick([10, 20, -10, -20]);
         const Mv = x * Fy - y * Fx;
         if (Math.abs(Mv) < 1e-9) return null;
-        return dest({ q: `点P$${V(fmt(x), fmt(y))}$ に $\\vec{F}=${V(Fx, Fy)}$。原点のまわりのモーメント`, a: `$${fmt(Mv)}$`, verify: (ans) => numOK(ans, dot(cross([x, y, 0], [Fx, Fy, 0]), [0, 0, 1])) }, '4-83',
+        return dest({ q: `点P$${V(fmt(x), fmt(y))}$（m）に $\\vec{F}=${V(Fx, Fy)}$（N）。原点のまわりのモーメントは □ $\\mathrm{N\\cdot m}$`, a: `$${fmt(Mv)}$`, verify: (ans) => numOK(ans, dot(cross([x, y, 0], [Fx, Fy, 0]), [0, 0, 1])) }, '4-83',
           'うでの長さもなす角も書いていない。座標と力の成分から');
       },
     },
@@ -670,7 +704,7 @@
         if (x > 0 && y > 0 && Fx > 0 && Fy > 0 && r.chance(0.5)) return null;
         const Mv = x * Fy - y * Fx;
         return {
-          q: `${pP(x, y)} に $\\vec{F}=${V(Fx, Fy)}$。原点のまわりのモーメント`, a: `$${fmt(Mv)}$`,
+          q: `${pP(x, y)}（m）に $\\vec{F}=${V(Fx, Fy)}$（N）。原点のまわりのモーメントは □ $\\mathrm{N\\cdot m}$`, a: `$${fmt(Mv)}$`,
           easy: `$${par(x)}\\times${par(Fy)}-${par(y)}\\times${par(Fx)}=${fmt(Mv)}$`,
         };
       },
@@ -703,7 +737,7 @@
         const up = r.pick([10, 20, 30, 40]), side = r.pick([10, 20, 30]), toR = r.chance(0.5), up1 = r.chance(0.7);
         const Fx = toR ? side : -side, Fy = up1 ? up : -up, Mv = x * Fy - y * Fx;
         return {
-          q: `点${pP(x, y)} を、${up1 ? '真上' : '真下'}に $${up}\\,\\mathrm{N}$ と、${toR ? '右' : '左'}へ $${side}\\,\\mathrm{N}$ で同時に押す。原点のまわりのモーメント（左回りを＋）`,
+          q: `点${pP(x, y)}（m）を、${up1 ? '真上' : '真下'}に $${up}\\,\\mathrm{N}$ と、${toR ? '右' : '左'}へ $${side}\\,\\mathrm{N}$ で同時に押す。原点のまわりのモーメント（左回りを＋）は □ $\\mathrm{N\\cdot m}$`,
           a: `$${fmt(Mv)}$`, easyCheck: 'last', easy: `$\\vec{F}=${V(Fx, Fy)}$。$${par(x)}\\times${par(Fy)}-${par(y)}\\times${par(Fx)}=${fmt(Mv)}$`,
           verify: (ans) => numOK(ans, cross([x, y, 0], [Fx, Fy, 0])[2]),
         };
@@ -713,13 +747,13 @@
         if (r.chance(0.5)) {
           const r10 = r.pick([2, 4, 5, 6]), F = r.pick([20, 40, 60]), th = r.pick([30, 150]);
           const Mv = r10 * F / 20;
-          return dest({ q: `長さ $${fmt(r10 / 10)}\\,\\mathrm{m}$ のうでの先に、うでとのなす角 $${D(th)}$ で $${F}\\,\\mathrm{N}$ の力。モーメントの大きさ`, a: `$${fmt(Mv)}$`, verify: (ans) => numOK(ans, r10 / 10 * F * Math.sin(rad(th))) }, '4-84',
+          return dest({ q: `長さ $${fmt(r10 / 10)}\\,\\mathrm{m}$ のうでの先に、うでとのなす角 $${D(th)}$ で $${F}\\,\\mathrm{N}$ の力。モーメントの大きさは □ $\\mathrm{N\\cdot m}$`, a: `$${fmt(Mv)}$`, verify: (ans) => numOK(ans, r10 / 10 * F * Math.sin(rad(th))) }, '4-84',
             '座標も成分もない。うでと角から $rF\\sin\\theta$');
         }
         const j = r.int(0, 2), rr = [0, 0, 0], F = [0, 0, 0], k = (j + 1 + r.int(0, 1)) % 3;
         rr[j] = r.int(2, 5) / 10; F[k] = r.pick([20, 40, 50, -30]);
         const c = cross(rr, F), ans = `$${V(...c.map(fmt))}$`;
-        return dest({ q: `$\\vec{r}=${V(...rr.map(fmt))}$、$\\vec{F}=${V(...F)}$ のトルク $\\vec{r}\\times\\vec{F}$`, a: ans, verify: (ans) => tupleOK(ans, c) }, '4-84',
+        return dest({ q: `$\\vec{r}=${V(...rr.map(fmt))}$（m）、$\\vec{F}=${V(...F)}$（N）のトルク $\\vec{r}\\times\\vec{F}$ は □ $\\mathrm{N\\cdot m}$`, a: ans, verify: (ans) => tupleOK(ans, c) }, '4-84',
           '空間のベクトル。答えは数ではなくベクトルで、外積の成分の式');
       },
     },
@@ -805,7 +839,7 @@
           const c = cross(rr, F).map(x => +x.toFixed(6));
           if (c.every(x => x === 0)) return null;
           const ans = `$${V(...c.map(fmt))}$`;
-          return { q: `ボルトから見て $\\vec{r}=${V(...rr.map(fmt))}$（m）の所に、力 $\\vec{F}=${V(...F)}$（N）をかける。トルク $\\vec{r}\\times\\vec{F}$`, a: ans, easyCheck: false, easy: '成分の式で、$x$・$y$・$z$ の順に', verify: (ans) => tupleOK(ans, crossByTable(rr, F)) };
+          return { q: `ボルトから見て $\\vec{r}=${V(...rr.map(fmt))}$（m）の所に、力 $\\vec{F}=${V(...F)}$（N）をかける。トルク $\\vec{r}\\times\\vec{F}$ は □ $\\mathrm{N\\cdot m}$`, a: ans, easyCheck: false, easy: '成分の式で、$x$・$y$・$z$ の順に', verify: (ans) => tupleOK(ans, crossByTable(rr, F)) };
         }
         const a = [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)], b = [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)], j = r.int(0, 2), c = cross(a, b);
         if (a.filter(Boolean).length < 2 || b.filter(Boolean).length < 2) return null;
@@ -821,7 +855,7 @@
         }
         const A = r.pick([2, 3, 4, 6]), B = r.pick([4, 5, 6, 8]), th = r.pick([30, 150, 90]), v = A * B * (th === 90 ? 1 : 0.5);
         return dest({ q: `$\\lvert\\vec{a}\\rvert=${A}$、$\\lvert\\vec{b}\\rvert=${B}$、なす角 $${D(th)}$ のとき、$\\vec{a}\\times\\vec{b}$ の大きさ`, a: `$${fmt(v)}$`, verify: (ans) => numOK(ans, A * B * Math.sin(rad(th))) }, '4-85',
-          `成分がないので、たすきがけは使えない。大きさ $\\lvert\\vec{a}\\rvert\\lvert\\vec{b}\\rvert\\sin\\theta=${A}\\times${B}\\times\\sin${D(th)}$`);
+          `成分がないので、たすきがけは使えない。大きさは2本がつくる平行四辺形の面積で、$\\frac{1}{2}ab\\sin C$ の2倍：$${A}\\times${B}\\times\\sin${D(th)}=${fmt(v)}$。わざ 4-41 で`);
       },
     },
   });
@@ -880,17 +914,17 @@
         if (!det) return null;
         return { q: `3本のくいA$${V(...A)}$、B$${V(...B)}$、C$${V(...C)}$（m）を結んだ三角形の土地の面積（$\\mathrm{m^2}$）`, a: `$${Math.abs(det) / 2}$`, easyCheck: 'last', easy: `$\\overrightarrow{\\mathrm{AB}}=${V(B[0] - A[0], B[1] - A[1])}$、$\\overrightarrow{\\mathrm{AC}}=${V(C[0] - A[0], C[1] - A[1])}$。$\\frac{1}{2}\\times${Math.abs(det)}=${Math.abs(det) / 2}$` };
       },
-      // わな：3辺だけ、2辺とあいだの角（座標がない。第3部）
+      // わな：3辺だけ（4-45 で角、4-41 で面積）、2辺とあいだの角（4-41）。座標がない
       trap(r) {
         if (r.chance(0.5)) {
           const [a, b, c, ar] = r.pick([[3, 5, 7, S(15, 4, 3)], [5, 7, 8, S(10, 1, 3)], [3, 7, 8, S(6, 1, 3)], [7, 8, 13, S(14, 1, 3)]]);
           const ans = `$${Stex(ar)}$`, s = (a + b + c) / 2;
           return dest({ q: `3辺が $${a}$、$${b}$、$${c}$ の三角形の面積`, a: ans, verify: (ans) => numOK(ans, Math.sqrt(s * (s - a) * (s - b) * (s - c))) }, '4-86',
-            '座標もベクトルもない。余弦定理で角を出してから $\\frac{1}{2}ab\\sin C$（第3部）');
+            `座標もベクトルもない。いちばん長い辺 ${c} の向かいの角を余弦定理で出して（わざ 4-45）、$\\frac{1}{2}ab\\sin C$（わざ 4-41）。わざ 4-45・4-41 で`);
         }
         const a = r.pick([4, 6, 8, 10]), b = r.pick([3, 5, 6, 7]), th = r.pick([30, 150]), v = a * b / 4;
         return dest({ q: `$\\mathrm{AB}=${a}$、$\\mathrm{AC}=${b}$、$\\angle\\mathrm{A}=${D(th)}$ の三角形の面積`, a: `$${Stex(S(a * b, 4))}$`, verify: (ans) => numOK(ans, 0.5 * a * b * Math.sin(rad(th))) }, '4-86',
-          '座標がない。2辺とあいだの角なら $\\frac{1}{2}bc\\sin A$（第3部）');
+          `座標がない。2辺とあいだの角なので $\\frac{1}{2}bc\\sin A=\\frac{1}{2}\\times${a}\\times${b}\\times\\sin${D(th)}$。わざ 4-41 で`);
       },
     },
   });
@@ -923,11 +957,11 @@
     futsu: ['左手の3本の指を', '電流・磁場・力に合わせて、', '力の向きをさがす'],
     raku: ['電流 $x$ の＋、磁場 $y$ の＋', '$\\vec{i}\\times\\vec{j}=\\vec{k}$ で $z$ の＋の向き', '大きさ $3\\times0.2\\times0.5=0.3$（N）'],
     why: '$\\vec{F}=I\\vec{L}\\times\\vec{B}$。電流と磁場が軸の向きなら、$\\vec{L}$ と $\\vec{B}$ は基本ベクトルの何倍かなので、外積は $\\vec{i}\\times\\vec{j}=\\vec{k}$ などの表だけで決まる。直角なので $\\sin90^{\\circ}=1$ で、大きさは $ILB$（4-14⑧）。',
-    caution: '$x\\to y\\to z\\to x$ の順なら＋、逆の順なら－。－の向きの電流・磁場は、符号を先にかけておく。',
+    caution: '$x\\to y\\to z\\to x$ の順なら＋、逆の順なら－。－の向きの電流・磁場は、符号を先にかけておく。電流と磁場が平行なら力は0（$\\vec{i}\\times\\vec{i}=\\vec{0}$）。',
     counts: { s1: 5, s2: 4, s3: 3, trap: 2 },
     cols: 1,
     boxw: '38mm',
-    fits(q) { return /電流/.test(q) && /磁場/.test(q); },
+    fits(q) { return /電流/.test(q) && /磁場/.test(q) && !has3(q); },   // 磁場が成分で書いてあれば、外積の成分の式（4-85）
     steps: {
       // ＋の向きどうしで、x→y→z の順（i×j=k、j×k=i、k×i=j）
       s1(r) {
@@ -950,8 +984,18 @@
       },
       // 場面：東・北・上（教科書 4-13 のドローンと同じ向き）
       s3(r) {
-        const w = wire(r, r.chance(0.4));
         const cw = (j, s) => COMPASS[j][s > 0 ? 0 : 1];
+        if (r.chance(0.25)) {
+          // 電流と磁場が平行（力は0。わなから移した。第36回 N-3）
+          const I = r.int(1, 5), L10 = r.pick([1, 2, 3, 5]), B10 = r.pick([1, 2, 4, 5]), j = r.int(0, 2), s = r.pick([1, -1]);
+          const Lv = [0, 0, 0], Bv = [0, 0, 0]; Lv[j] = L10 / 10; Bv[j] = s * B10 / 10;
+          return {
+            q: `東・北・上が $x$・$y$・$z$ の＋の向き。電流 $${I}\\,\\mathrm{A}$ が${cw(j, 1)}向き（導線 $${fmt(L10 / 10)}\\,\\mathrm{m}$）、磁場 $${fmt(B10 / 10)}\\,\\mathrm{T}$ が${cw(j, s)}向き。導線が受ける力は □`,
+            a: '$0\\,\\mathrm{N}$', easyCheck: false, key: `zero${j},${s}`, easy: `平行なので $${BV[j]}\\times${s < 0 ? `(-${BV[j]})` : BV[j]}=\\vec{0}$。力ははたらかない`,
+            verify: (ans) => (ans === '$0\\,\\mathrm{N}$' && crossByTable(Lv, Bv).every(x => x === 0) ? true : '力が0でない'),
+          };
+        }
+        const w = wire(r, r.chance(0.4));
         const ans = `${cw(w.n, w.F[w.n])}向きに $${fmt(w.mag)}\\,\\mathrm{N}$`;
         return {
           q: `東・北・上が $x$・$y$・$z$ の＋の向き。電流 $${w.I}\\,\\mathrm{A}$ が${cw(w.j, w.sj)}向き（導線 $${fmt(w.L10 / 10)}\\,\\mathrm{m}$）、磁場 $${fmt(w.B10 / 10)}\\,\\mathrm{T}$ が${cw(w.k, w.sk)}向き。導線が受ける力は □`,
@@ -959,14 +1003,16 @@
           verify: (ans) => { const v = forceVal(ans); return v ? tupleOK(`$${V(...v.map(fmt))}$`, w.F) : `読めない（${ans}）`; },
         };
       },
-      // わな：電流と磁場が平行（力は0）
+      // わな：磁場が軸の向きでない（成分が2つ）。基本ベクトルの表ではなく、成分のたすきがけ（4-85）
+      //   電流と磁場が平行（$\vec{i}\times\vec{i}=\vec{0}$）は自分で解けるので s3・caution へ（第36回 N-3）
       trap(r) {
-        const I = r.int(1, 5), L10 = r.pick([1, 2, 3, 5]), B10 = r.pick([1, 2, 4, 5]), j = r.int(0, 2), s = r.pick([1, -1]);
-        const Lv = [0, 0, 0], Bv = [0, 0, 0]; Lv[j] = L10 / 10; Bv[j] = s * B10 / 10;
+        const I = r.pick([1, 2, 5]), L = r.pick([0.5, 1, 2]), j = r.int(0, 2), u = (j + 1) % 3, w = (j + 2) % 3;
+        const Lv = [0, 0, 0], Bv = [0, 0, 0]; Lv[j] = L; Bv[u] = r.pick([1, 2, 3, 4]) / 10; Bv[w] = r.pick([1, 2, -2, 3, 4]) / 10;
+        const F = cross(Lv, Bv).map(x => +(x * I).toFixed(6)), ans = `$${V(...F.map(fmt))}$`;
         return dest({
-          q: `電流 $${I}\\,\\mathrm{A}$ が${dirTxt(j, 1)}（導線 $${fmt(L10 / 10)}\\,\\mathrm{m}$）、磁場 $${fmt(B10 / 10)}\\,\\mathrm{T}$ が${dirTxt(j, s)}。導線が受ける力は □`,
-          a: '$0\\,\\mathrm{N}$', verify: (ans) => (ans === '$0\\,\\mathrm{N}$' && cross(Lv, Bv).every(x => x === 0) ? true : '力が0でない'),
-        }, '4-87', `電流と磁場が平行（$${BV[j]}\\times${BV[j]}=\\vec{0}$）。力ははたらかない`);
+          q: `電流 $${I}\\,\\mathrm{A}$ が${dirTxt(j, 1)}（導線 $${fmt(L)}\\,\\mathrm{m}$）、磁場 $\\vec{B}=${V(...Bv.map(fmt))}$（T）。導線が受ける力 $\\vec{F}=I\\vec{L}\\times\\vec{B}$ の成分は □ N`,
+          a: ans, verify: (ans) => tupleOK(ans, crossByTable(Lv, Bv).map(x => x * I)),
+        }, '4-87', `磁場が軸の向きではないので、基本ベクトルの表だけでは決まらない。$I\\vec{L}=${V(...Lv.map(x => fmt(x * I)))}$ と $\\vec{B}$ の外積を成分の式で`, ['4-85']);
       },
     },
   });
@@ -985,10 +1031,10 @@
     id: '4-88', part: 6, chap: '4-15①', stars: 1,
     title: '$(x,\\ y)$ から極座標：$r$ は三平方、角は区画を見てから',
     mark: '点の座標を $(r,\\ \\theta)$ に。まず点が**どの区画**にあるかを見て、それから角を決める。',
-    futsu: ['$\\tan\\theta=\\frac{y}{x}$ の角を、そのまま答えにして', '$(-3,\\ 3)$ を $-45^{\\circ}$', 'としてしまう'],
+    futsu: ['$\\cos\\theta=\\frac{-3}{3\\sqrt{2}}=-\\frac{\\sqrt{2}}{2}$ から', '$\\theta$ の候補 $135^{\\circ}$、$225^{\\circ}$ を出し、', '$\\sin\\theta=\\frac{\\sqrt{2}}{2}$ も計算して $135^{\\circ}$ にしぼる'],
     raku: ['$(-3,\\ 3)$：$r=\\sqrt{9+9}=3\\sqrt{2}$', '左上の区画。とがった角は $45^{\\circ}$', '$180^{\\circ}-45^{\\circ}=135^{\\circ}$'],
     why: '$\\tan$ は、180°ちがう向きでも同じ値になる。点が左上・左下・右下のどこにあるかを先に見れば、とがった角（$x$ 軸とのあいだの角）から、180°・360°を使って角が1つに決まる（4-15①）。',
-    caution: '$0^{\\circ}\\leqq\\theta<360^{\\circ}$ で答える。$x=0$ の点は $90^{\\circ}$ か $270^{\\circ}$。',
+    caution: '$\\tan\\theta=\\frac{y}{x}$ の角をそのまま答えにしない（$(-3,\\ 3)$ は $-45^{\\circ}$ ではない）。$0^{\\circ}\\leqq\\theta<360^{\\circ}$ で答える。$x=0$ の点は $90^{\\circ}$ か $270^{\\circ}$。原点は $r=0$ で、角は決まらない。',
     counts: { s1: 6, s2: 6, s3: 3, trap: 2 },
     cols: { s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '24mm', s2: '24mm', s3: '24mm', trap: '30mm' },
@@ -1019,19 +1065,16 @@
         const th = r.pick([30, 60, 120, 135, 150, 210, 240, 300, 315]), p = polarPt(r, th);
         if (r.chance(0.5)) {
           const ans = `$${V(Stex(p.R), D(th))}$`;
-          return { q: `ロボットが手を $${V(Stex(p.x), Stex(p.y))}$（cm）に置く。うでの長さと角の組 $(r,\\ \\theta)$`, a: ans, easyCheck: false, easy: `$r=${Stex(p.R)}$、区画を見て $${D(th)}$`, verify: (ans) => polarOK(ans, Sval(p.x), Sval(p.y), false) };
+          return { q: `ロボットが手を $${V(Stex(p.x), Stex(p.y))}$（cm）に置く。うでの長さと角の組 $(r,\\ \\theta)$（$0^{\\circ}\\leqq\\theta<360^{\\circ}$）`, a: ans, easyCheck: false, easy: `$r=${Stex(p.R)}$、区画を見て $${D(th)}$`, verify: (ans) => polarOK(ans, Sval(p.x), Sval(p.y), false) };
         }
         const ans = `$\\left${V(Stex(p.R), piTeX(th, 180))}\\right$`.replace(/\)\\right\$$/, '\\right)$');
         return { q: `点 $${V(Stex(p.x), Stex(p.y))}$ の極座標（$\\theta$ はラジアンで、$0\\leqq\\theta<2\\pi$）`, a: ans, easyCheck: false, easy: `$r=${Stex(p.R)}$、$\\theta=${D(th)}=${piTeX(th, 180)}$`, verify: (ans) => polarOK(ans, Sval(p.x), Sval(p.y), true) };
       },
-      // わな：反対向き（極座標から (x, y)）、原点
+      // わな：反対向き（極座標から (x, y)。4-34 と 4-49）。原点（角が決まらない）は caution へ（第36回 N-3）
       trap(r) {
-        if (r.chance(0.7)) {
-          const th = r.pick([120, 135, 150, 210, 240, 300, 330]), p = polarPt(r, th), ans = `$${V(Stex(p.x), Stex(p.y))}$`;
-          return dest({ q: `極座標 $${V(Stex(p.R), D(th))}$ の点の $(x,\\ y)$`, a: ans, verify: (ans) => tupleOK(ans, [Sval(p.R) * Math.cos(rad(th)), Sval(p.R) * Math.sin(rad(th))]) }, '4-88',
-            '反対向き。$x=r\\cos\\theta$、$y=r\\sin\\theta$ で直す');
-        }
-        return dest({ q: '原点 $(0,\\ 0)$ の極座標', a: '$r=0$、角は決まらない', verify: (ans) => (ans === '$r=0$、角は決まらない' ? true : '原点の答えがちがう') }, '4-88', 'どの向きに0進んでも原点。角は決まらない');
+        const th = r.pick([120, 135, 150, 210, 225, 240, 300, 315, 330]), p = polarPt(r, th), ans = `$${VL(Stex(p.x), Stex(p.y))}$`;
+        return dest({ q: `極座標 $${V(Stex(p.R), D(th))}$ の点の $(x,\\ y)$`, a: ans, verify: (ans) => tupleOK(ans, [Sval(p.R) * Math.cos(rad(th)), Sval(p.R) * Math.sin(rad(th))]) }, '4-88',
+          `反対向き。$x=${Stex(p.R)}\\cos${D(th)}$、$y=${Stex(p.R)}\\sin${D(th)}$（斜辺×cos・sin：わざ 4-34）。符号は区画で（わざ 4-49）。わざ 4-34・4-49 で`);
       },
     },
   });
@@ -1050,7 +1093,7 @@
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '34mm', s2: '40mm', s3: '44mm', trap: '16mm' },
     boxh: { s2: '12mm', s3: '12mm' },
-    fits(q) { return /円柱座標|球座標|北緯|南緯|緯度|緯線|クレーン/.test(q) && !/大円|表面にそった/.test(q); },
+    fits(q) { return /円柱座標|球座標|北緯|南緯|緯度|緯線|クレーン/.test(q) && !/大円|表面にそった|距離/.test(q); },   // 距離を聞くものは、直さずに三平方（4-89 のわな）
     steps: {
       // 円柱座標 → (x, y, z)、(x, y, z) → 円柱座標
       s1(r) {
@@ -1093,7 +1136,7 @@
           const h = Smul(S(R), cosS(b)), x = Smul(h, cosS(ph)), y = Smul(h, sinS(ph)), z = Smul(S(R), sinS(b)), ans = `$${V(Stex(x), Stex(y), Stex(z))}$`;
           return {
             q: `地球（半径 $6400\\,\\mathrm{km}$。北極が $z$ 軸、東経 $0^{\\circ}$ の赤道が $x$ 軸）の${lat(b)}・東経 $${D(ph)}$ の地点の $(x,\\ y,\\ z)$`,
-            a: ans, easyCheck: false, easy: `$\\theta=${D(90 - b)}$。高さ $6400\\sin${D(b)}$、緯線の半径 $6400\\cos${D(b)}=${Stex(h)}$`,
+            a: ans, easyCheck: false, easy: `$\\theta=${D(90 - b)}$。高さ $${b < 0 ? '-' : ''}6400\\sin${D(Math.abs(b))}=${Stex(z)}$、緯線の半径 $6400\\cos${D(Math.abs(b))}=${Stex(h)}$`,
             verify: (ans) => tupleOK(ans, [R * Math.sin(rad(90 - b)) * Math.cos(rad(ph)), R * Math.sin(rad(90 - b)) * Math.sin(rad(ph)), R * Math.cos(rad(90 - b))]),
           };
         }
@@ -1102,7 +1145,7 @@
           const h = Smul(S(R), sinS(th)), x = Smul(h, cosS(ph)), y = Smul(h, sinS(ph)), z = Smul(S(R), cosS(th)), ans = `$${V(R, D(th), D(ph))}$`;
           return {
             q: `点 $${V(Stex(x), Stex(y), Stex(z))}$ の球座標 $(r,\\ \\theta,\\ \\varphi)$`, a: ans, easyCheck: false,
-            easy: `$r=${R}$、$\\cos\\theta=\\frac{${Stex(z)}}{${R}}$ で $${D(th)}$、床の上の点の角 $${D(ph)}$`,
+            easy: `$r=${R}$、$\\cos\\theta=${Stex(cosS(th))}$ で $${D(th)}$、床の上の点の角 $${D(ph)}$`,
             verify: (ans) => { const c = tuple(ans).map(t => M.evalMath(t, {})); return tupleOK(`$${V(...[c[0] * Math.sin(c[1]) * Math.cos(c[2]), c[0] * Math.sin(c[1]) * Math.sin(c[2]), c[0] * Math.cos(c[1])].map(fx))}$`, [Sval(x), Sval(y), Sval(z)]); },
           };
         }
@@ -1112,17 +1155,13 @@
           a: ans, easyCheck: false, easy: `円柱座標 $${V(R, D(th), z)}$。床の上だけ極座標で直す`, verify: (ans) => tupleOK(ans, [R * Math.cos(rad(th)), R * Math.sin(rad(th)), z]),
         };
       },
-      // わな：円柱座標の点の、原点からの距離・z 軸からの距離（直さなくてよい）
+      // わな：円柱座標の点の、原点からの距離（直さずに、r と z の直角三角形。ピタゴラス数：4-20）
+      //   z 軸からの距離（r そのもの）は自分で解けるので caution へ（第36回 N-3）
       trap(r) {
-        const th = r.pick([30, 60, 120, 210, 300, 0]);
-        if (r.chance(0.6)) {
-          const [a, b] = r.pick([[3, 4], [6, 8], [5, 12], [8, 6], [4, 3]]);
-          return dest({ q: `円柱座標 $${V(a, D(th), b)}$ の点の、原点からの距離`, a: `$${Math.hypot(a, b)}$`, verify: (ans) => numOK(ans, Math.hypot(a * Math.cos(rad(th)), a * Math.sin(rad(th)), b)) }, '4-89',
-            `$(x,\\ y,\\ z)$ に直さなくてよい。$r=${a}$ は $z$ 軸からの距離なので、$\\sqrt{${a * a}+${b * b}}$`);
-        }
-        const a = r.int(2, 9), b = r.int(1, 9);
-        return dest({ q: `円柱座標 $${V(a, D(th), b)}$ の点と $z$ 軸の距離`, a: `$${a}$`, verify: (ans) => numOK(ans, Math.hypot(a * Math.cos(rad(th)), a * Math.sin(rad(th)))) }, '4-89',
-          '円柱座標の $r$ が、そのまま $z$ 軸からの距離');
+        const th = r.pick([30, 60, 120, 135, 210, 240, 300]);
+        const [a, b] = r.pick([[3, 4], [6, 8], [5, 12], [8, 6], [4, 3], [12, 5], [8, 15], [9, 12]]);
+        return dest({ q: `円柱座標 $${V(a, D(th), b)}$ の点の、原点からの距離`, a: `$${Math.hypot(a, b)}$`, verify: (ans) => numOK(ans, Math.hypot(a * Math.cos(rad(th)), a * Math.sin(rad(th)), b)) }, '4-89',
+          `$(x,\\ y,\\ z)$ に直さなくてよい。$r=${a}$ は $z$ 軸からの距離なので、$${a}$ と $${b}$ の直角三角形の斜辺。$${a}:${b}$ はピタゴラス数の倍で $${Math.hypot(a, b)}$。わざ 4-20 で`);
       },
     },
   });
@@ -1143,9 +1182,10 @@
         ['axes', -3.5, 4.6, -3.5, 3.6, { o: false }], ['circle', [0, 0], R], ['seg', [0, 0], P], ['dot', P],
         ['arc', [0, 0], 0.8, 0, th, { arrow: true }], ['label', [1.45 * Math.cos(rad(la)), 1.45 * Math.sin(rad(la))], '$\\theta$', 'c'],
         ['label', [0.95 * Math.cos(rad(lo)), 0.95 * Math.sin(rad(lo))], 'O', 'c'],
-        ['seg', P, Q, { arrow: true, thick: true }], ['label', [Q[0] + 0.75 * e[0], Q[1] + 0.75 * e[1]], '$\\vec{v}$', 'c'],
+        // v の文字は、矢の先から円の外向き（半径の向き）に置く（矢の先の向きに置くと、軸やその文字に重なる。R2-9）
+        ['seg', P, Q, { arrow: true, thick: true }], ['label', [Q[0] + 0.25 * e[0] + 0.7 * c, Q[1] + 0.25 * e[1] + 0.7 * sn], '$\\vec{v}$', 'c'],
         ['label', [P[0] + 0.8 * on[0] / ol, P[1] + 0.8 * on[1] / ol], 'P', 'c'],
-        ['label', [Q[0] + 1.4 * e[0], Q[1] + 1.4 * e[1]], '', 'c'], ['label', [0, -4.2], '', 'c'],   // 見えない点（図のはば）
+        ['label', [Q[0] + 1.3 * c, Q[1] + 1.3 * sn], '', 'c'], ['label', [0, -4.2], '', 'c'],   // 見えない点（図のはば）
       ],
     };
   }
@@ -1162,7 +1202,7 @@
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '30mm', s2: '30mm', s3: '30mm', trap: '30mm' },
     boxh: { s1: '12mm' },
-    fits(q) { return /角速度|rad\/s|\\vec\{e\}_\\theta|円運動/.test(q) && !/加速度/.test(q); },
+    fits(q) { return /角速度|rad\/s|\\vec\{e\}_\\theta|円運動/.test(q) && !/加速度|変化/.test(q); },
     steps: {
       // 速さ rω と、e_θ の成分
       s1(r) {
@@ -1179,6 +1219,14 @@
         if (Math.abs(rw - Math.round(rw)) > 1e-9 || rw > 12 || rw % 2) return null;   // 速さは偶数（成分が分数にならない）
         const th = r.pick([30, 60, 120, 150, 210, 240, 300, 330, 45, 135, 90, 180]);
         if (th % 45 === 0 && th % 90 && rw % 2) return null;
+        if (r.chance(0.25)) {
+          // 右回り（$\vec{e}_\theta$ と反対向き。わなから移した。第36回 N-3）
+          const v = vel(-rw, th), ans = `$${VL(Stex(v[0]), Stex(v[1]))}$`;
+          return {
+            q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ で**右回り**、$\\theta=${D(th)}$ での速度`, a: ans, easyCheck: false, key: `cw${th}`,
+            easy: `右回りは $\\vec{e}_\\theta$ と反対向き：$-${fmt(rw)}(-\\sin${D(th)},\\ \\cos${D(th)})$`, verify: (ans) => tupleOK(ans, [rw * Math.sin(rad(th)), -rw * Math.cos(rad(th))]),
+          };
+        }
         const v = vel(rw, th), ans = `$${VL(Stex(v[0]), Stex(v[1]))}$`;
         return {
           q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ で左回り、$\\theta=${D(th)}$ での速度`, a: ans, easyCheck: false,
@@ -1189,7 +1237,7 @@
       s3(r) {
         const sc = r.int(0, 2);
         const [rr, w] = sc === 0 ? [r.pick([20, 40]), 0.1] : sc === 1 ? [0.2, r.pick([10, 20, 30])] : [r.pick([1, 2]), r.pick([2, 4, 6])];   // 速さが偶数（成分が分数にならない）
-        const rw = +(rr * w).toFixed(6), th = r.pick([60, 120, 150, 210, 240]);   // x 軸に近い角と右下は、速度の矢印と x のラベルが重なるので出さない
+        const rw = +(rr * w).toFixed(6), th = r.pick([30, 120, 210, 300]);   // 速度の矢印（接線）が次の軸に向かうので、区画のはじめの角だけ（60°・150°・240° は矢印と v が軸に重なる。R2-9）
         const v = vel(rw, th), ans = `$${VL(Stex(v[0]), Stex(v[1]))}$`;
         const head = sc === 0 ? `図の観覧車（半径 $${rr}\\,\\mathrm{m}$）が $0.1\\,\\mathrm{rad/s}$ で左回り。ゴンドラPが $\\theta=${D(th)}$ のとき` :
           sc === 1 ? `図の洗たく機（半径 $0.2\\,\\mathrm{m}$）の点Pが $${w}\\,\\mathrm{rad/s}$ で左回り。$\\theta=${D(th)}$ のとき` :
@@ -1200,19 +1248,21 @@
           fig: circFig(th),
         };
       },
-      // わな：加速度の大きさ rω²、右回り（e_θ と反対向き）
+      // わな：速度の変化の大きさ（4分の1周は直角な速度の差で 4-66、半周は一直線で 4-65）、加速度の大きさ rω²（楽な形なし）
+      //   右回り（$-r\omega\,\vec{e}_\theta$）は自分で解けるので s2 へ（第36回 N-3）
       trap(r) {
-        const rr = r.pick([0.5, 1, 2]), w = r.pick([2, 4, 6]);
-        if (r.chance(0.5)) {
-          const a = rr * w * w;
-          return dest({ q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ の円運動の加速度の大きさ`, a: `$${fmt(a)}$`, verify: (ans) => numOK(ans, rr * w * w) }, '4-90',
-            `速度ではなく加速度。速度の矢印の先も半径 $r\\omega$ の円を回るので、$r\\omega^2=${fmt(rr)}\\times${w}^2$（教科書 4-15②のもっと）`);
+        const rr = r.pick([0.5, 1, 2]), w = r.pick([2, 4, 6]), rw = rr * w;
+        if (r.chance(0.6)) {
+          const quarter = r.chance(0.6), t0 = r.pick(quarter ? [0, 90, 180] : [0, 90]), t1 = t0 + (quarter ? 90 : 180), ans = quarter ? `${fmt(rw)}\\sqrt{2}` : fmt(2 * rw);
+          const v0 = [-Math.sin(rad(t0)), Math.cos(rad(t0))].map(x => x * rw), v1 = [-Math.sin(rad(t1)), Math.cos(rad(t1))].map(x => x * rw);
+          return dest({ q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ で左回り。$\\theta=${D(t0)}$ から $\\theta=${D(t1)}$ まで回るあいだの、速度の変化の大きさは □ m/s`, a: `$${ans}$`,
+            verify: (ans) => numOK(ans, Math.hypot(v1[0] - v0[0], v1[1] - v0[1])) }, '4-90',
+            quarter ? `成分を出さなくてよい。速さ $${fmt(rw)}$ のまま向きが $${D(90)}$ 変わるので、$\\sqrt{${fmt(rw)}^2+${fmt(rw)}^2}=${ans}$。わざ 4-66 で`
+              : `成分を出さなくてよい。速さ $${fmt(rw)}$ のまま反対向きになる一直線なので、$${fmt(rw)}-(-${fmt(rw)})=${ans}$。わざ 4-65 で`);
         }
-        const rw = rr * w, th = r.pick([30, 60, 120, 150, 210, 240]);
-        if (rw % 2) return null;   // 成分が分数にならないように
-        const v = vel(-rw, th), ans = `$${VL(Stex(v[0]), Stex(v[1]))}$`;
-        return dest({ q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ で**右回り**、$\\theta=${D(th)}$ での速度`, a: ans, verify: (ans) => tupleOK(ans, [rw * Math.sin(rad(th)), -rw * Math.cos(rad(th))]) }, '4-90',
-          `右回りは $\\vec{e}_\\theta$ と反対向き：$-${fmt(rw)}\\,\\vec{e}_\\theta=${fmt(rw)}(\\sin${D(th)},\\ -\\cos${D(th)})$`);
+        const a = rr * w * w;
+        return dest({ q: `半径 $${fmt(rr)}\\,\\mathrm{m}$、$${w}\\,\\mathrm{rad/s}$ の円運動の加速度の大きさ（$\\mathrm{m/s^2}$）`, a: `$${fmt(a)}$`, verify: (ans) => numOK(ans, rr * w * w) }, '4-90',
+          `楽な形なし。速度ではなく加速度。速度の矢印の先も半径 $r\\omega$ の円を $\\omega$ で回るので、$r\\omega\\times\\omega=${fmt(rr)}\\times${w}^2=${fmt(a)}$`);
       },
     },
   });
@@ -1246,10 +1296,10 @@
         const k = r.int(0, 2), R = 6400;
         let al, txt, how;
         if (k === 0) {
-          const b1 = r.pick([0, 15, 30, 45, 60, 75]), b2 = r.pick([15, 30, 45, 60, 75, 90]) * (r.chance(0.4) ? -1 : 1);
+          const b1 = r.pick([0, 15, 30, 45, 60, 75]), b2 = r.pick([15, 30, 45, 60, 75]) * (r.chance(0.4) ? -1 : 1);
           al = Math.abs(b1 - b2);
           if (!al || al > 150 || b2 === -90) return null;
-          txt = `東経 $${D(r.pick([0, 30, 135, 140]))}$ の${b1 ? lat(b1) : '赤道'} の地点と、同じ経度の${lat(b2)} の地点`; how = `緯度の差 $${D(al)}$`;
+          txt = `東経 $${D(r.pick([0, 30, 135, 140]))}$ の${b1 ? lat(b1) + ' ' : '赤道'}の地点と、同じ経度の${lat(b2)} の地点`; how = `緯度の差 $${D(al)}$`;
         } else if (k === 1) {
           const b = r.pick([30, 45, 60, 75]), p = r.pick([0, 30, 45]); al = 180 - 2 * b;
           txt = `${lat(b)}・東経 $${D(p)}$ の地点と、${lat(b)}・${p ? `西経 $${D(180 - p)}$` : '東経 $180^{\\circ}$'} の地点`; how = `北極をこえて、$${D(90 - b)}$ が2つで $${D(al)}$`;
@@ -1265,7 +1315,7 @@
         if (r.chance(0.6)) {
           const al = r.pick([45, 90, 135, 180]), v = 6400 * 3.14 * al / 180;
           const where = al === 180 ? 'ちょうど反対がわの地点' : `中心角 $${D(al)}$ の地点`;
-          return { q: `地球（半径 $6400\\,\\mathrm{km}$）で、飛行機が、ある空港から${where}まで大円にそって飛ぶ距離は約何 km か（$\\pi=3.14$）`, a: `$${fmt(v)}$`, easy: `$6400\\times\\frac{3.14\\times${al}}{180}=${fmt(v)}$` };
+          return { q: `地球（半径 $6400\\,\\mathrm{km}$）で、飛行機が、ある空港から${where}まで大円にそって飛ぶ距離は約何 km か（$\\pi=3.14$ として、整数で）`, a: `$${fmt(v)}$`, easy: `$6400\\times\\frac{3.14\\times${al}}{180}=${fmt(v)}$` };
         }
         const b = r.pick([30, 45, 60, 75, 15]), al = 90 - b, ans = piTeX2(6400 * al, 180);
         return { q: `地球（半径 $6400\\,\\mathrm{km}$）で、${lat(b)} の地点から北極まで、地球の表面にそった最短の距離（km）`, a: `$${ans}$`, easyCheck: 'last', easy: `中心角は $${D(90)}-${D(b)}=${D(al)}$。$6400\\times${piTeX(al, 180)}=${ans}$` };
@@ -1277,9 +1327,9 @@
           return dest({ q: `地球（半径 $6400\\,\\mathrm{km}$）で、${lat(b)} の緯線にそって、東経 $0^{\\circ}$ から東経 $${D(dp)}$ まで進む道のり（km）`, a: ans, verify: (ans) => numOK(ans, 6400 * Math.cos(rad(b)) * rad(dp)) }, '4-98',
             `緯線は大円ではない。緯線の円の半径 $6400\\cos${D(b)}$ に $${piTeX(dp, 180)}$ をかける`);
         }
-        const al = r.pick([60, 90, 120, 180]), ch = Smul(S(2 * 6400), sinS(al / 2)), ans = `$${Stex(ch)}$`;
+        const al = r.pick([60, 90, 120]), ch = Smul(S(2 * 6400), sinS(al / 2)), ans = `$${Stex(ch)}$`;
         return dest({ q: `地球（半径 $6400\\,\\mathrm{km}$）で、中心角 $${D(al)}$ の2地点を、地下のまっすぐなトンネルで結んだ長さ（km）`, a: ans, verify: (ans) => numOK(ans, Math.hypot(6400 - 6400 * Math.cos(rad(al)), 6400 * Math.sin(rad(al)))) }, '4-98',
-          '表面にそった弧ではなく、まっすぐな弦。中心と2地点の二等辺三角形で考える');
+          `表面にそった弧ではなく、まっすぐな弦。中心と2地点の三角形で、2辺 $6400$ とあいだの角 $${D(al)}$ の向かいの辺を余弦定理で。わざ 4-44 で`);
       },
     },
   });
@@ -1291,10 +1341,10 @@
     id: '4-99', part: 6, chap: '4-15⑤', stars: 1,
     title: '極方程式は rad で代入',
     mark: '**極方程式** $r=2\\theta$ のように、$\\theta$ が式の中で**数**として使われている。度は rad に直してから入れる。',
-    futsu: ['$r=2\\theta$ に $\\theta=90^{\\circ}$ を', '度のまま入れて $r=180$', 'としてしまう（まちがい）'],
-    raku: ['$\\theta=90^{\\circ}=\\frac{\\pi}{2}$ に直して', '$r=2\\times\\frac{\\pi}{2}=\\pi$', '点は $(0,\\ \\pi)$'],
+    futsu: ['$90^{\\circ}$ は1周の $\\frac{90}{360}=\\frac{1}{4}$ なので、', '半径1の円周 $2\\pi$ の $\\frac{1}{4}$ で $\\theta=\\frac{\\pi}{2}$', '$r=2\\times\\frac{\\pi}{2}=\\pi$'],
+    raku: ['$180^{\\circ}=\\pi$ でおきかえて', '$\\theta=90^{\\circ}=\\frac{\\pi}{2}$、$r=2\\times\\frac{\\pi}{2}=\\pi$', '点は $(0,\\ \\pi)$'],
     why: '$r=2\\theta$ の $\\theta$ は、長さ $r$ を決める数として使われている。度の数はただの目もりの数なので、弧の長さ・半径と同じ仲間の数にするには rad で入れる（4-2・4-15⑤）。',
-    caution: '$\\theta$ が $\\cos\\theta$ の中にだけあるときは、度のまま cos の値を使ってよい。',
+    caution: '度のまま入れて $r=2\\times90=180$ としない。$\\theta$ が $\\cos\\theta$ の中にだけあるときは、度のまま cos の値を使ってよい。',
     counts: { s1: 6, s2: 4, s3: 3, trap: 2 },
     cols: { s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '26mm', s3: '22mm', trap: '26mm' },
@@ -1334,13 +1384,13 @@
       // わな：θ が cos の中だけ（度のままでよい）、r が一定の円
       trap(r) {
         if (r.chance(0.5)) {
-          const dg = r.pick([60, 90, 120, 180, 0]), a = r.pick([1, 2]), v = a + Math.cos(rad(dg)), ans = Stex(Sr(v));
+          const dg = r.pick([60, 90, 120, 180]), a = r.pick([1, 2]), v = a + Math.cos(rad(dg)), ans = Stex(Sr(v));
           return dest({ q: `極方程式 $r=${a}+\\cos\\theta$ で、$\\theta=${D(dg)}$ のときの $r$`, a: `$${ans}$`, verify: (ans) => numOK(ans, a + Math.cos(rad(dg))) }, '4-99',
-            `$\\theta$ は cos の中だけ。rad に直さなくてよい：$${a}+\\cos${D(dg)}$`);
+            `$\\theta$ は cos の中だけ。rad に直さなくてよい：$${a}+\\cos${D(dg)}=${ans}$。cos の値は${dg >= 90 ? '単位円で。わざ 4-49 で' : '三角定規の比から。わざ 4-33 で'}`);
         }
         const R = r.pick([2, 4, 6]), dg = r.pick([120, 150, 210, 240, 300]), x = Smul(S(R), cosS(dg)), y = Smul(S(R), sinS(dg)), ans = `$${V(Stex(x), Stex(y))}$`;
         return dest({ q: `極方程式 $r=${R}$ の円の、$\\theta=${D(dg)}$ の点の $(x,\\ y)$`, a: ans, verify: (ans) => tupleOK(ans, [R * Math.cos(rad(dg)), R * Math.sin(rad(dg))]) }, '4-99',
-          `$r$ は $\\theta$ によらず ${R}。$(${R}\\cos${D(dg)},\\ ${R}\\sin${D(dg)})$`);
+          `$r$ は $\\theta$ によらず ${R}。$(${R}\\cos${D(dg)},\\ ${R}\\sin${D(dg)})$（斜辺×cos・sin：わざ 4-34）。符号は区画で（わざ 4-49）。わざ 4-34・4-49 で`);
       },
     },
   });

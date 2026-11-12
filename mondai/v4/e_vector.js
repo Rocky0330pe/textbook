@@ -20,6 +20,7 @@
   const pt = (n, x, y) => `$\\mathrm{${n}}${P(x, y)}$`;              // 点 A(1,\ 2)
   const un = (v, unit) => `$${v}\\,\\mathrm{${unit}}$`;              // 単位つき
   const dg = d => `${d}^{\\circ}`;
+  const sfrac = (n, den) => `${n < 0 ? '-' : ''}\\frac{${Math.abs(n)}}{${den}}`;   // 分子が負なら − を分数の前に（R2-17）
   // n = k^2 m（m は平方数でわれない）
   function surd(n) { let k = 1, m = n; for (let f = 2; f * f <= m; f++) while (m % (f * f) === 0) { m /= f * f; k *= f; } return [k, m]; }
   // p/q × √n を TeX に（約分・ルートの中を小さく）
@@ -92,13 +93,16 @@
   const PERP = q => /東|西/.test(q) && /北|南/.test(q);                     // 直角な2つの向き
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2）
-  function dest(p, self, why) {
+  // extra：fits では当たらないが、行き先にするわざ（第36回 N-3）
+  function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(4).filter(id => {
       const d = M.waza[id];
       if (id === self || d.part !== 5 || !d.fits) return false;
       try { return !!d.fits(q, p); } catch (e) { return false; }
     });
+    (extra || []).forEach(id => { if (!also.includes(id)) also.push(id); });
+    also.sort();
     if (also.length) p.also = also;
     p.easy = `（${why}${also.length ? `。わざ ${also.join('・')} で` : ''}）`;
     p.easyCheck = false;
@@ -198,14 +202,14 @@
           const ans = same ? a + b : a - b;
           return {
             q: `${d}へ ${un(a, 'N')} と${same ? d : OPP[d]}へ ${un(b, 'N')} の2つの力の合力の大きさは □ N`, a: `$${ans}$`,
-            easy: same ? `（同じ向き。大きさをそのままたしてよい：$${a}+${b}=${ans}$。三平方はいらない）` : `（反対向き。一直線なので、ひけばよい：$${a}-${b}=${ans}$。三平方はいらない）`,
-            easyCheck: false, verify: () => numOK(`$${ans}$`, len(add(mul(a, DIR[d]), mul(b, mul(same ? 1 : -1, DIR[d]))))),
+            easy: same ? `（同じ向きの一直線なので、三平方はいらない。片方を＋として符号で：$${a}+${b}=${ans}$。わざ 4-65 で）` : `（反対向きの一直線なので、三平方はいらない。片方を＋として符号で：$${a}+(-${b})=${ans}$。わざ 4-65 で）`,
+            easyCheck: false, also: ['4-65'], verify: () => numOK(`$${ans}$`, len(add(mul(a, DIR[d]), mul(b, mul(same ? 1 : -1, DIR[d]))))),
           };
         }
         const [a, b, t, c] = r.pick([[3, 5, 60, 7], [5, 3, 60, 7], [7, 8, 60, 13], [8, 7, 60, 13], [5, 16, 60, 19], [5, 5, 120, 5], [3, 8, 120, 7], [5, 8, 120, 7], [8, 15, 120, 13], [7, 15, 120, 13]]);
         return {
           q: `${un(a, 'N')} と ${un(b, 'N')} の力が、同じ点になす角 $${dg(t)}$ ではたらく。合力の大きさは □ N`, a: `$${c}$`,
-          easy: `（直角でないので三平方は使えない。余弦定理：$${a}^2+${b}^2-2\\times${a}\\times${b}\\times\\cos${dg(180 - t)}=${c * c}$。第3部のわざ 4-46）`, easyCheck: false,
+          easy: `（直角でないので三平方は使えない。三角形の中の角 $${dg(180 - t)}$ で余弦定理：$${a}^2+${b}^2-2\\times${a}\\times${b}\\times\\cos${dg(180 - t)}=${c * c}$。わざ 4-46 で）`, easyCheck: false, also: ['4-46'],
           verify: () => numOK(`$${c}$`, Math.hypot(a + b * Math.cos(rad(t)), b * Math.sin(rad(t)))),
         };
       },
@@ -396,7 +400,7 @@
           const ax = r.pick(AX), v1 = r.int(6, 20), v2 = r.int(2, v1 - 1);
           return {
             q: `${ax[0]}へ ${un(v1, 'm/s')} で当たり、${ax[1]}へ ${un(v2, 'm/s')} ではね返った。へった速さは □ m/s`,
-            a: `$${v1 - v2}$`, easy: `（速さは向きのない大きさ：$${v1}-${v2}=${v1 - v2}$。速度の変化（${ax[1]}へ $${v1 + v2}$）とはちがう）`, easyCheck: false,
+            a: `$${v1 - v2}$`, easy: `（楽な形なし。速さは向きのない大きさなので、そのままひく：$${v1}-${v2}=${v1 - v2}$。速度の変化（${ax[1]}へ $${v1 + v2}$）とはちがう）`, easyCheck: false,
             verify: () => numOK(`$${v1 - v2}$`, len(mul(v1, DIR[ax[0]])) - len(mul(v2, DIR[ax[1]]))),
           };
         }
@@ -493,7 +497,7 @@
         }
         return {
           q: `速さ ${un(v, 'm/s')} で、進む向きを $${dg(60)}$ 変えた。$\\lvert\\Delta\\vec{v}\\rvert$ ＝ □ m/s`, a: `$${v}$`,
-          easy: `（直角でないので三平方は使えない。始点をそろえた2本の矢印と $\\Delta\\vec{v}$ は、1辺 ${v} の正三角形になる）`, easyCheck: false,
+          easy: `（直角でないので三平方は使えない。$\\Delta\\vec{v}$ は、あとの速度と「まえの反対」の合力で、あいだの角は $${dg(120)}$。同じ大きさの2つが $${dg(120)}$ なら合力も同じ大きさ。わざ 4-46 で）`, easyCheck: false, also: ['4-46'],
           verify: () => numOK(`$${v}$`, len(sub(mul(v, [Math.cos(rad(60)), Math.sin(rad(60))]), [v, 0]))),
         };
       },
@@ -583,8 +587,9 @@
 
   // ================================================================ 4-68
   // 方眼の図：a は左の半分（x 0〜4）、b は右の半分（x 5〜9）。始点は格子点。名前は矢印のわき（もう1本と反対がわ）
+  // 方眼は矢印のはんいより1目もり広くして、矢印が方眼のふちにのらないようにする（R2-23）
   function gridFig(vs, r) {
-    const items = [['grid', 0, 0, 9, 6]], ends = [];
+    const items = [['grid', -1, -1, 10, 7]], ends = [];
     const regions = [[0, 4], [5, 9]];
     for (let i = 0; i < vs.length; i++) {
       const [vx, vy] = vs[i], [x0, x1] = regions[i];
@@ -712,7 +717,7 @@
     boxw: { s1: '32mm', s2: '32mm', s3: '18mm', trap: '15mm' },
     fits(q) {
       if (/仕事|つり合|つる|内積|向きの成分|x\$?\s*成分が/.test(q)) return false;
-      return /°|circ/.test(q) && /成分/.test(q) && /x\$?\s*軸|y\$?\s*軸|たての線|地面|斜面|水平|床/.test(q);
+      return /°|circ/.test(q) && /成分/.test(q) && /x\$?\s*軸|y\$?\s*軸|真上|たての線|地面|斜面|水平|床/.test(q);
     },
     steps: {
       // x 軸の正の向きからの角
@@ -732,7 +737,7 @@
           const F = fn === 2 ? `${f}\\sqrt{2}` : `${f}`, [c, s] = TRIG[ph], Fv = f * Math.sqrt(fn);
           const x = fTrig(side * f, fn, s), y = fTrig(f, fn, c), ans = `$${V2(x, y)}$`;
           return {
-            q: `たての線から${side > 0 ? '右' : '左'}へ $${dg(ph)}$ の向きの、${un(F, 'N')} の力の成分は □`, a: ans,
+            q: `真上から${side > 0 ? '右' : '左'}へ $${dg(ph)}$ かたむいた向きの、${un(F, 'N')} の力の成分は □`, a: ans,   // 真上＝上向きのたての線（R2-10）
             easy: `（たての線からの角なので $x$ 成分が $${side < 0 ? '-' : ''}${F}\\sin${dg(ph)}$、$y$ 成分が $${F}\\cos${dg(ph)}$）`, easyCheck: false,
             verify: () => vecOK(ans, [Fv * Math.cos(rad(90 + side * -ph)), Fv * Math.sin(rad(90 + side * -ph))]),
           };
@@ -817,7 +822,7 @@
         const k = r.int(0, 2);
         if (k === 0) {
           const u = r.int(1, 5), v = 2 * u, W = r.pick([60, 80, 100, 120, 200]);
-          return { q: `はば ${un(W, 'm')}、流れ ${un(u, 'm/s')} の川を、水に対して ${un(v, 'm/s')} のボートで真正面の岸へわたる。船首を上流へ何度かたむければよいか。□`, a: `$${dg(30)}$`, easy: `（$\\sin\\theta=\\frac{${u}}{${v}}=\\frac{1}{2}$ なので $30^{\\circ}$）`, easyCheck: false, verify: () => numOK(`$${dg(30)}$`, Math.asin(u / v)) };
+          return { q: `はば ${un(W, 'm')}、流れ ${un(u, 'm/s')} の川を、水に対して ${un(v, 'm/s')} のボートで真正面の岸へわたる。船首を上流へ何度かたむければよいか。□`, a: `$${dg(30)}$`, easy: `（$\\sin\\theta=${u === 1 ? '\\frac{1}{2}' : `\\frac{${u}}{${v}}=\\frac{1}{2}`}$ なので $30^{\\circ}$）`, easyCheck: false, verify: () => numOK(`$${dg(30)}$`, Math.asin(u / v)) };
         }
         if (k === 1) {
           const u = r.int(1, 9), v = r.intNot(u + 1, 20, x => x === 2 * u), ans = tq(u, v);
@@ -831,7 +836,7 @@
       trap(r) {
         const u = r.int(1, 4), v = r.int(u + 1, 9), down = r.chance(0.5), ans = down ? v + u : v - u;
         const p = { q: `流れ ${un(u, 'm/s')} の川を、水に対して ${un(v, 'm/s')} のボートが${down ? '下流' : '上流'}へ向かって進む。岸から見た速さは □ m/s`, a: `$${ans}$`, verify: () => numOK(`$${ans}$`, Math.abs(v * (down ? 1 : -1) + u)) };
-        return dest(p, '4-70', `流れと同じ一直線の向き。たてと横に分けずに、そのまま${down ? `たす：$${v}+${u}=${ans}$` : `ひく：$${v}-${u}=${ans}$`}`);
+        return dest(p, '4-70', `流れと同じ一直線の向き。たてと横に分けずに、ボートの進む向きを＋として符号で：$${down ? `${v}+${u}` : `${v}+(-${u})`}=${ans}$`, ['4-65']);
       },
     },
   });
@@ -885,7 +890,7 @@
         if (k === 0) {
           const [x, y, c] = r.pick(UNI), [sx, sy] = sgn2(r), A = [sx * x, sy * y], F = c * r.int(2, 3);
           const w = mul(F / c, A), ans = `$${P(...w)}$`;
-          return { q: `原点から点 ${pt('A', ...A)} の向きに ${un(F, 'N')} で引く力の成分は □`, a: ans, easy: `（$\\lvert${ar('OA')}\\rvert=${c}$。$\\frac{${F}}{${c}}${P(...A)}$）`, easyCheck: false, verify: () => { const g = vecOf(ans); return (close(len(g), F) && angBetween(g, A) < 1e-6) || '合わない'; } };
+          return { q: `原点から点 ${pt('A', ...A)} の向きに ${un(F, 'N')} で引く力の成分は □`, a: ans, easy: `（$\\lvert${ar('OA')}\\rvert=${c}$。$\\frac{${F}}{${c}}=${F / c}$ 倍して $${F / c}${P(...A)}$）`, easyCheck: false, verify: () => { const g = vecOf(ans); return (close(len(g), F) && angBetween(g, A) < 1e-6) || '合わない'; } };
         }
         if (k === 1) {
           const [x, y, c] = r.pick(UNI.slice(0, 4)), [sx, sy] = sgn2(r), a = [sx * x, sy * y], v = c * r.int(2, 4);
@@ -1105,9 +1110,16 @@
           verify: () => numOK(`$${W}$`, m * 9.8 * s * Math.cos(rad(60))),
         };
       },
-      // 負の仕事・下ろす・45°
+      // 負の仕事・下ろす・45°・力と動く向きが直角（仕事は0。わなから移した。第36回 N-3）
       s3(r) {
-        const k = r.int(0, 2);
+        const k = r.int(0, 3);
+        if (k === 3) {
+          const F = r.pick([20, 30, 40, 50]), s = r.int(3, 20);
+          return {
+            q: `荷物を真上向きに ${un(F, 'N')} の力で支えたまま、水平に ${un(s, 'm')} 歩いた（力と動く向きの角は $${dg(90)}$）。支える力の仕事は □ J`, a: '$0$',
+            easy: `$${F}\\times${s}\\times\\cos${dg(90)}=0$`, easyCheck: 'last', key: 'zero', verify: () => numOK('$0$', dot([0, F], [s, 0])),
+          };
+        }
         if (k === 0) {
           const t = r.pick([120, 135, 150]), F = r.pick([10, 20, 30, 40, 50]), s = r.int(2, 8), [c] = TRIG[t], ans = rs(F * s * c[0], 2, c[1]);
           return { q: `${un(F, 'N')} の力が、物の動く向きと $${dg(t)}$ の角をなしている。物が ${un(s, 'm')} 動くあいだに、この力のした仕事は □ J`, a: `$${ans}$`, easy: `$${F}\\times${s}\\times\\cos${dg(t)}=${ans}$`, verify: () => numOK(`$${ans}$`, F * s * Math.cos(rad(t))) };
@@ -1119,16 +1131,9 @@
         const F = r.pick([10, 20, 30, 40]), s = r.int(2, 10), ans = rs(F * s, 2, 2);
         return { q: `トロッコを、レールから $${dg(45)}$ ずれた向きに ${un(F, 'N')} の力で押して、レールにそって ${un(s, 'm')} 動かした。押した力の仕事は □ J`, a: `$${ans}$`, easy: `$${F}\\times${s}\\times\\cos${dg(45)}=${ans}$`, verify: () => numOK(`$${ans}$`, F * s * Math.SQRT1_2) };
       },
-      // わな：力と動く向きが直角（仕事は0）・成分で書いた力と動き（内積。4-75）
+      // わな：成分で書いた力と動き（角がわからない。内積。4-75）。直角（仕事は0）は自分で解けるので s3 へ（第36回 N-3）
       trap(r) {
-        if (r.chance(0.5)) {
-          const F = r.pick([20, 30, 40, 50]), s = r.int(3, 20);
-          return {
-            q: `荷物を ${un(F, 'N')} で支えて水平に ${un(s, 'm')} 歩いた。支える力の仕事は □ J`, a: '$0$',
-            easy: `（力は上向き、動く向きは水平で直角。仕事は0。$${F}\\times${s}$ ではない）`, easyCheck: false, verify: () => numOK('$0$', dot([0, F], [s, 0])),
-          };
-        }
-        const F = [r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)], s = [r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)], W = dot(F, s);
+        const F =[r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)], s = [r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)], W = dot(F, s);
         const p = { q: `力 $\\vec{F}=${P(...F)}$（N）がはたらく物が、$\\vec{s}=${P(...s)}$（m）だけ動いた。力のした仕事は □ J`, a: `$${W}$`, verify: () => numOK(`$${W}$`, len(F) * len(s) * Math.cos(rad(angBetween(F, s)))) };
         return dest(p, '4-74', `角がわからない。成分で内積：$${F[0]}\\times${pr(s[0])}+${pr(F[1])}\\times${pr(s[1])}=${W}$`);
       },
@@ -1150,6 +1155,8 @@
     boxw: { s1: '13mm', s2: '15mm', s3: '18mm', trap: '28mm' },
     fits(q) {
       if (/鋭角・直角・鈍角/.test(q)) return true;
+      // 成分がわかっていて「|a||b|cosθ」を聞く（角を出さずに内積。4-76 のわな）
+      if (/\\lvert\\vec\{a\}\\rvert\\lvert\\vec\{b\}\\rvert\\cos/.test(q) && coords(q).length >= 2) return true;
       if (/なす角|直交|垂直|向きの成分|偏差|単位|相関/.test(q)) return false;
       if (/\\cdot/.test(q) && coords(q).length >= 1) return true;
       if (/仕事/.test(q) && /\\vec\{F\}=\(/.test(q) && /\\vec\{s\}=\(/.test(q)) return true;
@@ -1227,6 +1234,7 @@
     boxh: { s3: '12mm' },
     fits(q) {
       if (/合力|偏差|相関|速度|雨/.test(q)) return false;
+      if (/\\lvert\\vec\{a\}\\rvert\\lvert\\vec\{b\}\\rvert\\cos/.test(q) && coords(q).length >= 2) return false;   // 成分があれば角はいらない（4-75）
       if (/なす角/.test(q) && !/鋭角・直角・鈍角/.test(q)) return true;
       return /\\lvert\\vec\{a\}\\rvert=/.test(q) && /\\cdot/.test(q) && /°|circ/.test(q);
     },
@@ -1238,7 +1246,7 @@
         const [a, b, t] = pr2, d = dot(a, b), na = dot(a, a), nb = dot(b, b);
         return {
           q: `$\\vec{a}=${P(...a)}$、$\\vec{b}=${P(...b)}$ のなす角は □`, a: `$${dg(t)}$`,
-          easy: `$\\cos\\theta=\\frac{${d}}{${rs(1, 1, na)}\\times${rs(1, 1, nb)}}=${rs(d, 1, 1) === '0' ? '0' : rs(Math.sign(d), 2, 2)}$`, easyCheck: false,
+          easy: `$\\cos\\theta=${sfrac(d, `${rs(1, 1, na)}\\times${rs(1, 1, nb)}`)}=${rs(d, 1, 1) === '0' ? '0' : rs(Math.sign(d), 2, 2)}$`, easyCheck: false,
           verify: () => numOK(`$${dg(t)}$`, rad(angBetween(a, b))),
         };
       },
@@ -1251,16 +1259,27 @@
           easy: `$${A}\\times${B}\\times\\cos${dg(t)}=${ans}$`, verify: () => numOK(`$${ans}$`, len(mul(A, [1, 0])) * len(mul(B, [Math.cos(rad(t)), Math.sin(rad(t))])) * Math.cos(rad(angBetween([1, 0], [Math.cos(rad(t)), Math.sin(rad(t))])))),
         };
       },
-      // cosθ の値・内積と大きさからなす角
+      // cosθ の値・内積と大きさからなす角・矢印をつないだ所の角（わなから移した。第36回 N-3）
       s3(r) {
-        if (r.chance(0.5)) {
+        const k = r.int(0, 2);
+        if (k === 2) {
+          // つなぎめの角はなす角ではない。始点をそろえると、なす角は 180° からひいた角
+          const A = r.int(2, 8), B = r.int(2, 8), phi = r.pick([60, 45, 30, 120]), t = 180 - phi, [c] = TRIG[t], ans = rs(A * B * c[0], 2, c[1]);
+          return {
+            q: `$\\lvert\\vec{a}\\rvert=${A}$、$\\lvert\\vec{b}\\rvert=${B}$ で、$\\vec{a}$ の先に $\\vec{b}$ をつないだ角が $${dg(phi)}$。$\\vec{a}\\cdot\\vec{b}$ ＝ □`, a: `$${ans}$`,
+            easy: `（つないだ角はなす角ではない。始点をそろえると、なす角は $180^{\\circ}-${dg(phi)}=${dg(t)}$。$${A}\\times${B}\\times\\cos${dg(t)}=${ans}$）`, easyCheck: false,
+            // 別の道すじ：a を x 軸に置き、つなぎめで phi だけ曲がる向きに b を作る
+            verify: () => { const a = [A, 0], b = [B * Math.cos(rad(180 - phi)), B * Math.sin(rad(180 - phi))]; return numOK(`$${ans}$`, dot(a, b)); },
+          };
+        }
+        if (k === 0) {
           const a = [r.intNot(-4, 4, v => v === 0), r.intNot(-4, 4, v => v === 0)], b = [r.intNot(-4, 4, v => v === 0), r.intNot(-4, 4, v => v === 0)];
           const d = dot(a, b), N = dot(a, a) * dot(b, b);
           if (d === 0 || cross(a, b) === 0) return null;
           const [k, m] = surd(N), ans = rs(d, k * m, m);
           return {
             q: `$\\vec{a}=${P(...a)}$、$\\vec{b}=${P(...b)}$ のなす角を $\\theta$ とするとき、$\\cos\\theta$ ＝ □`, a: `$${ans}$`,
-            easy: `$\\frac{${d}}{${rs(1, 1, dot(a, a))}\\times${rs(1, 1, dot(b, b))}}=${ans}$`, verify: () => numOK(`$${ans}$`, Math.cos(rad(angBetween(a, b)))),
+            easy: `$${sfrac(d, `${rs(1, 1, dot(a, a))}\\times${rs(1, 1, dot(b, b))}`)}=${ans}$`, verify: () => numOK(`$${ans}$`, Math.cos(rad(angBetween(a, b)))),
           };
         }
         const A = r.int(2, 8), B = r.int(2, 8), t = r.pick([60, 120, 45, 135, 90]);
@@ -1270,15 +1289,18 @@
           easy: `（$\\cos\\theta=${pr(d)}\\div${A * B}=${rs(c[0], 2, c[1])}$）`, easyCheck: false, verify: () => numOK(`$${dg(t)}$`, Math.acos(M.evalMath(d, {}) / (A * B))),
         };
       },
-      // わな：矢印をつないだ所の角（なす角は 180° からひいた角）
+      // わな：成分がわかっていて |a||b|cosθ を聞く（角を出さなくてよい。内積は積の和。4-75）
+      //   「つなぎめの角」は 4-76 自身で解けるので s3 へ移した（第36回 N-3・R2-2）
       trap(r) {
-        const A = r.int(2, 8), B = r.int(2, 8), phi = r.pick([60, 45, 30, 120]), t = 180 - phi, [c] = TRIG[t], ans = rs(A * B * c[0], 2, c[1]);
-        return {
-          q: `$\\lvert\\vec{a}\\rvert=${A}$、$\\lvert\\vec{b}\\rvert=${B}$。$\\vec{a}$ の先に $\\vec{b}$ の始点をつないだら、つなぎめの角が $${dg(phi)}$ だった。$\\vec{a}\\cdot\\vec{b}$ ＝ □`, a: `$${ans}$`,
-          easy: `（つなぎめの角はなす角ではない。始点をそろえると、なす角は $180^{\\circ}-${dg(phi)}=${dg(t)}$。$${A}\\times${B}\\times\\cos${dg(t)}=${ans}$）`, easyCheck: false, also: ['4-76'],
-          // 別の道すじ：a を x 軸に置き、つなぎめで phi だけ曲がる向きに b を作る
-          verify: () => { const a = [A, 0], b = [B * Math.cos(rad(180 - phi)), B * Math.sin(rad(180 - phi))]; return numOK(`$${ans}$`, dot(a, b)); },
+        const a = [r.intNot(-5, 5, v => v === 0), r.intNot(-5, 5, v => v === 0)], b = [r.intNot(-5, 5, v => v === 0), r.intNot(-5, 5, v => v === 0)];
+        if (cross(a, b) === 0) return null;
+        const d = dot(a, b);
+        const p = {
+          q: `$\\vec{a}=${P(...a)}$、$\\vec{b}=${P(...b)}$、なす角 $\\theta$ のとき、$\\lvert\\vec{a}\\rvert\\lvert\\vec{b}\\rvert\\cos\\theta$ ＝ □`, a: `$${d}$`,
+          // 別の道すじ：大きさと、atan2 で出したなす角から
+          verify: () => numOK(`$${d}$`, len(a) * len(b) * Math.cos(rad(angBetween(a, b)))),
         };
+        return dest(p, '4-76', `$\\theta$ を出さなくてよい。これは内積そのもの。成分の積の和：$${dotTeX(a, b)}=${d}$`);
       },
     },
   });
@@ -1353,12 +1375,12 @@
           verify: () => (Math.abs(angBetween(A, [bx, kk]) - 90) < 1e-9) || '直角にならない',
         };
       },
-      // わな：平行（内積0ではなく、実数倍）
+      // わな：平行（内積0ではなく、実数倍。実数倍は成分ごと：4-68）
       trap(r) {
         const b = [r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)], p = r.intNot(-6, 6, v => v === 0 || (v * b[1]) % b[0] !== 0), k = p * b[1] / b[0];
         return {
           q: `$\\vec{a}=${P(p, 'k')}$ と $\\vec{b}=${P(...b)}$ が平行のとき、$k=□$`, a: `$${k}$`,
-          easy: `（平行は直交ではない。内積0ではなく、$\\vec{a}$ が $\\vec{b}$ の $${tq(p, b[0])}$ 倍：$k=${pr(b[1])}\\times${pr(tq(p, b[0]))}=${k}$）`, easyCheck: false,
+          easy: `（平行は直交ではない。内積0ではなく、$\\vec{a}$ が $\\vec{b}$ の $${tq(p, b[0])}$ 倍（実数倍は成分ごと）：$k=${pr(b[1])}\\times${pr(tq(p, b[0]))}=${k}$。わざ 4-68 で）`, easyCheck: false, also: ['4-68'],
           verify: () => close(cross([p, k], b), 0) || '平行にならない',
         };
       },
@@ -1405,7 +1427,7 @@
         }
         const d = r.pick([[1, 1], [1, -1], [-1, 1]]), F = [r.int(-5, 9), r.int(-5, 9)], t = dot(F, d), ans = rs(t, 2, 2);
         if (t === 0) return null;
-        return { q: `力 $\\vec{F}=${P(...F)}$（N）の、$${P(...d)}$ の向きの成分は □ N`, a: `$${ans}$`, easy: `$\\vec{e}=\\frac{1}{\\sqrt{2}}${P(...d)}$。$\\frac{${t}}{\\sqrt{2}}=${ans}$`, easyCheck: 'last', verify: () => numOK(`$${ans}$`, len(F) * Math.cos(rad(angBetween(F, d)))) };
+        return { q: `力 $\\vec{F}=${P(...F)}$（N）の、$${P(...d)}$ の向きの成分は □ N`, a: `$${ans}$`, easy: `$\\vec{e}=\\frac{1}{\\sqrt{2}}${P(...d)}$。$${sfrac(t, '\\sqrt{2}')}=${ans}$`, easyCheck: 'last', verify: () => numOK(`$${ans}$`, len(F) * Math.cos(rad(angBetween(F, d)))) };
       },
       // 場面：坂を下る向きの重力・スピードガン・x 軸の向き
       s3(r) {
@@ -1537,7 +1559,7 @@
         if (dy.every(v => v === 0)) return null;
         return {
           q: `$\\vec{d}_x=${VN(dx)}$、$\\vec{d}_y=${VN(dy)}$ のとき $r$ ＝ □`, a: `$${ans}$`,
-          easy: `$\\frac{${d}}{${rs(1, 1, nx)}\\times${rs(1, 1, ny)}}=${ans}$`,
+          easy: `$${sfrac(d, `${rs(1, 1, nx)}\\times${rs(1, 1, ny)}`)}=${ans}$`,
           verify: () => numOK(`$${ans}$`, corr(dx.map(v => v + 7), dy.map(v => v + 40))),
         };
       },
@@ -1549,7 +1571,7 @@
         if (ys.some(v => v < 0 || v > 100) || xs.some(v => v < 0)) return null;
         return {
           q: `${n}人の勉強時間 $x$（時間）が ${listTeX(xs)}、テストの点 $y$ が ${listTeX(ys)} のとき、相関係数 $r$ ＝ □`, a: `$${ans}$`,
-          easy: `平均 $${mx}$、$${my}$。偏差 $${VN(dx)}$、$${VN(dy)}$。$r=\\frac{${dot(dx, dy)}}{${rs(1, 1, dot(dx, dx))}\\times${rs(1, 1, dot(dy, dy))}}=${ans}$`, easyCheck: 'last',
+          easy: `平均 $${mx}$、$${my}$。偏差 $${VN(dx)}$、$${VN(dy)}$。$r=${sfrac(dot(dx, dy), `${rs(1, 1, dot(dx, dx))}\\times${rs(1, 1, dot(dy, dy))}`)}=${ans}$`, easyCheck: 'last',
           verify: () => numOK(`$${ans}$`, corr(xs, ys)),
         };
       },
@@ -1572,11 +1594,11 @@
         const [dx] = r.pick(DEV), n = dx.length, k = r.pick([1, 2, 3]), d = mul(k, dx), S = dot(d, d);
         if (r.chance(0.5)) {
           const ans = rs(1, n, S * n);   // √S÷√n ＝ √(Sn)÷n
-          return { q: `偏差のベクトルが $${VN(d)}$ のデータの標準偏差は □`, a: `$${ans}$`, easy: `（cos ではない。偏差のベクトルの大きさ $${rs(1, 1, S)}$ を $\\sqrt{${n}}$ でわる）`, easyCheck: false, verify: () => numOK(`$${ans}$`, Math.sqrt(d.reduce((s, x) => s + x * x, 0) / n)) };
+          return { q: `偏差のベクトルが $${VN(d)}$ のデータの標準偏差は □`, a: `$${ans}$`, easy: `（楽な形なし。cos ではない。偏差のベクトルの大きさ $\\sqrt{${S}}${rs(1, 1, S) === `\\sqrt{${S}}` ? '' : `=${rs(1, 1, S)}`}$ を $${n === 4 ? '\\sqrt{4}=2' : `\\sqrt{${n}}`}$ でわる）`, easyCheck: false, verify: () => numOK(`$${ans}$`, Math.sqrt(d.reduce((s, x) => s + x * x, 0) / n)) };
         }
         const [, w] = r.pick(DEV.filter(([a]) => a.length === n)), [p, q] = r.pick(PQ), dy = add(mul(p, dx), mul(q, w));
         const ans = tq(dot(d, dy), n, true);
-        return { q: `偏差のベクトルが $\\vec{d}_x=${VN(d)}$、$\\vec{d}_y=${VN(dy)}$ のとき、共分散は □`, a: `$${ans}$`, easy: `（cos ではない。偏差の内積 $${dot(d, dy)}$ を人数 ${n} でわる）`, easyCheck: false, verify: () => numOK(`$${ans}$`, corr(d, dy) * Math.sqrt(dot(d, d) / n) * Math.sqrt(dot(dy, dy) / n)) };
+        return { q: `偏差のベクトルが $\\vec{d}_x=${VN(d)}$、$\\vec{d}_y=${VN(dy)}$ のとき、共分散は □`, a: `$${ans}$`, easy: `（cos ではない。偏差の内積（積の和）$${dot(d, dy)}$ を人数 ${n} でわる。わざ 4-75 で）`, easyCheck: false, also: ['4-75'], verify: () => numOK(`$${ans}$`, corr(d, dy) * Math.sqrt(dot(d, d) / n) * Math.sqrt(dot(dy, dy) / n)) };
       },
     },
   });

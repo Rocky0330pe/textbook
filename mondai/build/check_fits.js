@@ -98,6 +98,8 @@ for (const no of allParts) {
     const r = M.rng(M.hash(`miwake:${vol}:${no}`));
     const seen = new Set(), pool = [];
     const nTrap = pinfo.miwake.traps || 2, nMain = M.miwakeCount(pinfo, wz.length) - nTrap;
+    const must = pinfo.miwake.must || [], wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));   // mk_book.js と同じ（第36回 N-4）
+    for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
       const got = M.makeStep(order[k % order.length], r.pick(['s1', 's2']), 1, r, seen);
@@ -111,7 +113,7 @@ for (const no of allParts) {
     }
     console.log('\n 本の 見わけようの 答え');
     r.shuffle(pool).forEach((p, i) => {
-      const u = M.usableWaza(p, wz);
+      const u = M.usableWaza(p, wzAll);
       console.log(`  ${pad(i + 1, 3)}${pad(M.plain(p.q), 34)} → ${u.length ? 'わざ ' + u.join('・') : 'わざ なし'}${p.step === 'trap' ? `（${p.id} の わな）` : ''}`);
     });
   }

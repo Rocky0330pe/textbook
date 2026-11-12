@@ -99,7 +99,7 @@ for (const part of parts) {
     // must：かならず入れる問題 [[わざ, ステップ], …]。ほかの部のわざでもよい（第4巻 第5部で 4-46 と 4-63 をまぜる。K-7・第36回）
     const must = part.miwake.must || [];
     const wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));
-    const nMain = M.miwakeCount(part, wz.length) - nTrap - must.length;
+    const nMain = M.miwakeCount(part, wz.length) - nTrap;   // must の問題もふくめた数（pool に先に入れる）
     for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
     // わざの順をまぜてから選ぶ（前のほうのわざだけに かたよらないように）
     const order = r.shuffle(wz.slice());
