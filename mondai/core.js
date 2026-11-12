@@ -336,7 +336,7 @@
     function seq(end) {
       let out = '';
       while (i < s.length && s[i] !== end) {
-        if (s[i] === '^' || s[i] === '_') { const k = s[i++]; const x = atom(); out += k === '^' ? `<sup>${x}</sup>` : `<sub>${x}</sub>`; continue; }
+        if (s[i] === '^' || s[i] === '_') { const k = s[i++]; const x = atom(); out += k === '^' ? (x === '°' ? '<span class="mdeg">°</span>' : `<sup>${x}</sup>`) : `<sub>${x}</sub>`; continue; }   // 度は上つきにしない（字の大きさのまま。第35回）
         out += atom();
       }
       return out;
@@ -652,7 +652,7 @@
   //   ['tick', P, Q, n]                          辺 PQ のまん中に、同じ長さのしるし（n 本）
   //   ['grid', x0, y0, x1, y1]                   方眼（1単位ごと）
   //   ['axes', x0, x1, y0, y1, {x: 'x', y: 'y', o: true}]   座標軸（矢じりつき）と O
-  const FIGSYM = { theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
+  const FIGSYM = { ell: 'ℓ', sojisym: '∽', infty: '∞', lvert: '|', rvert: '|', mid: '|', pm: '±', le: '≤', ge: '≥', leqq: '≦', geqq: '≧', sim: '∽', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
   function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
     return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
       if (!(k % 2)) return htmlEsc(seg);
