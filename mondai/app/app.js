@@ -209,13 +209,20 @@
       });
       tmp.remove();
       // 2列のときは、2問ずつ1行（行の高さは高いほう）
-      let s0 = 0, h = 0;
-      for (const [i] of rows) {
-        const cap = 297 - bot - (ranges.length ? top : top1) - 8;   // ゆとり 8 mm（答えのページの解き方の行の折り返しのぶん）
-        if (i > s0 && h + hs[i] > cap) { ranges.push([s0, i]); s0 = i; h = 0; }
-        h += hs[i];
-      }
-      ranges.push([s0, probs.length]);
+      // 入るだけつめる（k は高さの何割まで使うか）。ページの数が同じなら、いちばん小さい k でならし直す（最後のページが1〜2問にならないように。第5巻 R2-15）
+      const pack = k => {
+        const rs = []; let s0 = 0, h = 0;
+        for (const [i] of rows) {
+          const cap = (297 - bot - (rs.length ? top : top1) - 8) * k;   // ゆとり 8 mm（答えのページの解き方の行の折り返しのぶん）
+          if (i > s0 && h + hs[i] > cap) { rs.push([s0, i]); s0 = i; h = 0; }
+          h += hs[i];
+        }
+        rs.push([s0, probs.length]); return rs;
+      };
+      const full = pack(1);
+      let lo = 0.3, hi = 1;
+      if (full.length > 1) for (let it = 0; it < 14; it++) { const mid = (lo + hi) / 2; if (pack(mid).length <= full.length) hi = mid; else lo = mid; }
+      ranges.push(...(full.length > 1 ? pack(hi) : full));
     }
     const pages = ranges.length;
     let html = '';

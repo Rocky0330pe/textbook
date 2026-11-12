@@ -349,6 +349,8 @@
     function seq(end) {
       let out = '';
       while (i < s.length && s[i] !== end) {
+        // 先頭・かっこや ＝ のすぐあとの − は、符号（前後をあけない。第5巻 R2-17）
+        if (s[i] === '-' && (out === '' || /[(\[{,]$|<span class="mo">[^<]*<\/span>$|<span class="mdelim[^"]*">[^<]*<\/span>$/.test(out))) { i++; out += '<span class="mminus mun">−</span>'; continue; }
         if (s[i] === '^' || s[i] === '_') { const k = s[i++]; const x = atom(); out += k === '^' ? (x === '°' ? '<span class="mdeg">°</span>' : `<sup>${x}</sup>`) : `<sub>${x}</sub>`; continue; }   // 度は上つきにしない（字の大きさのまま。第35回）
         out += atom();
       }
@@ -675,7 +677,7 @@
   const FIGSYM = { ell: 'ℓ', sojisym: '∽', infty: '∞', lvert: '|', rvert: '|', mid: '|', pm: '±', le: '≤', ge: '≥', leqq: '≦', geqq: '≧', sim: '∽', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
   function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
     return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
-      if (!(k % 2)) return htmlEsc(seg.replace(/(^|[^0-9A-Za-z])-(?=\d)/g, '$1−'));   // 式の外の「-20」もマイナスの字に
+      if (!(k % 2)) return htmlEsc(seg.replace(/-(?=\d)/g, '−'));   // 式の外の「-20」もマイナスの字に
       const up = []; let t = seg.slice(1, -1).replace(/\\(?:mathrm|text)\{([^}]*)\}/g, (m, x) => { up.push(x); return '\u0001' + (up.length - 1) + '\u0002'; }).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
         .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
       t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => c.length > 1 ? `<tspan font-style="italic" font-family="Times New Roman,serif">${c[0]}</tspan><tspan dx="-0.72em" dy="-0.95em" font-size="75%">→</tspan><tspan dy="0.95em" font-size="75%">\u200B</tspan>` : `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);   // \vec の矢印は小さい → を上に（組合せ文字は出ないことがある）
@@ -798,7 +800,7 @@
     opt = opt || {};
     const s = fig.s || 5, f = v => +(+v).toFixed(3), P = p => `(${f(p[0])},${f(p[1])})`;
     const sty = a => [a && a.dash ? 'densely dashed' : '', a && a.thick ? 'thick' : '', a && a.arrow ? '-{Stealth[length=1.6mm]}' : ''].filter(Boolean).join(',');
-    const lab = t => M.toTeX(String(t).split(/(\$[^$]*\$)/).map((g, k) => k % 2 ? g : g.replace(/(^|[^0-9A-Za-z])-(?=\d)/g, '$1$-$')).join(''));   // 式の外の「-20」もマイナスの字に
+    const lab = t => M.toTeX(String(t).split(/(\$[^$]*\$)/).map((g, k) => k % 2 ? g : g.replace(/-(?=\d)/g, '$-$')).join(''));   // 式の外の「-20」もマイナスの字に
     const TIKZA = { n: 'above', s: 'below', e: 'right', w: 'left', ne: 'above right', nw: 'above left', se: 'below right', sw: 'below left', c: '' };
     let o = `\\begin{tikzpicture}[x=${s}mm,y=${s}mm,line width=0.3mm,font=\\small,baseline=(current bounding box.north)]`;
     const [bx0, by0, bx1, by1] = figBox(fig);
