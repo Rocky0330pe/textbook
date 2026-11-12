@@ -36,6 +36,12 @@ for (const id of ids) {
     for (const f of ['futsu', 'raku']) (d[f] || []).forEach(l => badKanji(l).forEach(c => bk.add(c)));
     if (bk.size) errs.push(`教科書 第${vol}巻までにない漢字：${[...bk].join('')}`);
   }
+  if (vol >= 4) {   // 第4巻から：ルビなし・常用漢字まで（教科書と同じ。L-A。第35回）
+    const txt = [d.title, d.mark, d.why, d.caution, ...(d.futsu || []), ...(d.raku || [])].join(' ');
+    if (/《/.test(txt)) errs.push('ルビ（《》）を書いている（第4巻からルビなし）');
+    const bk = new Set(); [d.title, d.mark, d.why, d.caution, ...(d.futsu || []), ...(d.raku || [])].forEach(t => badKanji(t).forEach(c => bk.add(c)));
+    if (bk.size) errs.push(`常用漢字にない字：${[...bk].join('')}`);
+  }
   for (const f of ['title', 'mark', 'futsu', 'raku', 'why', 'caution', 'steps']) if (!d[f]) errs.push(`${f} がない`);
   // 制御文字（JS の文字列の '\t' などで \times がタブになる、など）が入っていないか（第30回）
   for (const f of ['title', 'mark', 'why', 'caution']) if (/[\u0000-\u0008\u000b-\u001f]|\t/.test(d[f] || '')) errs.push(`${f} に制御文字（タブなど）`);
@@ -52,7 +58,8 @@ for (const id of ids) {
       const e = M.checkProblem(p);
       if (e.length) errs.push(`${s} 種${seed}「${M.plain(p.q)}」: ${e.join(' / ')}`);
       if (vol <= 3) for (const f of ['q', 'a', 'easy']) if (bareKanji(p[f])) errs.push(`${s}「${M.plain(p.q)}」の ${f} にルビのない漢字`);
-      for (const f of ['q', 'a', 'easy']) { const b = badKanji(p[f]); if (b.length) errs.push(`${s}「${M.plain(p.q)}」の ${f} に教科書 第1巻にない漢字：${b.join('')}`); }
+      if (vol >= 4) for (const f of ['q', 'a', 'easy']) if (/《/.test(String(p[f] || ''))) errs.push(`${s}「${M.plain(p.q)}」の ${f} にルビ（第4巻からルビなし）`);
+      for (const f of ['q', 'a', 'easy']) { const b = badKanji(p[f]); if (b.length) errs.push(`${s}「${M.plain(p.q)}」の ${f} に${vol >= 4 ? '常用漢字' : '教科書 第' + vol + '巻まで'}にない漢字：${b.join('')}`); }
     }
     if (errs.length > 8) break;
   }

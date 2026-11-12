@@ -276,7 +276,7 @@
   // 使える書き方：数・1字の文字（斜体）・+ - = < > ( ) [ ] | ,・^{…}・_{…}・\frac{}{}（\dfrac・\tfrac）・\sqrt{}・\sqrt[n]{}
   //   \times \div \cdot \pm \mp \pi \le \ge \ne \approx \to \infty \degree・\log \ln \sin \cos \tan \exp・\left( \right)・\text{}・\mathrm{}・\,・\quad・□（欄）
   const MATHSYM = { times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', pi: 'π', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠',
-    approx: '≒', leqq: '≦', geqq: '≧', lvert: '|', rvert: '|', vert: '|', mid: '|', square: '□', triangle: '△', angle: '∠', perp: '⊥', parallel: '∥', fallingdotseq: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
+    approx: '≒', ell: 'ℓ', sojisym: '∽', backsim: '∽', infty: '∞', leqq: '≦', geqq: '≧', lvert: '|', rvert: '|', vert: '|', mid: '|', square: '□', triangle: '△', angle: '∠', perp: '⊥', parallel: '∥', fallingdotseq: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
     Delta: 'Δ', omega: 'ω', Omega: 'Ω', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
   const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim'];
   M.mathHTML = function (src, opt) {
@@ -310,6 +310,7 @@
         if (name === 'text' || name === 'textrm' || name === 'mbox') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
         if (name === 'mathrm' || name === 'mathsf' || name === 'rm') return `<span class="mtext">${M.mathHTML(raw(), Object.assign({}, opt, { upright: true })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
         if (name === 'underline') return `<span class="munder">${atom()}</span>`;
+        if (name === 'vec' || name === 'overrightarrow') return `<span class="mvec">${atom()}</span>`;   // ベクトル（第4巻。第35回）
         if (name === 'phantom') return `<span class="mphantom">${atom()}</span>`;
         if (name === 'bar' || name === 'overline') return `<span class="mbar">${atom()}</span>`;
         if (name === 'hat') return `<span class="mhat">${atom()}</span>`;
@@ -384,6 +385,7 @@
     function power() {
       let v = primary();
       ws();
+      if (s.startsWith('^{\\circ}', i) || s.startsWith('^\\circ', i)) { i += s.startsWith('^{', i) ? 8 : 6; return v * Math.PI / 180; }   // 度（第4巻。第35回）
       if (s[i] === '^') { i++; const e = group(); v = Math.pow(v, e); }
       return v;
     }
@@ -644,6 +646,9 @@
   //   ['label', P, '文字', '向き']               ラベル。向き：n・s・e・w・ne・nw・se・sw・c。文字の $…$ は式
   //   ['angle', A, B, C, '文字', r]              角 ABC のしるし（B が頂点、A→C の向きに弧）と、その角の文字
   //   ['right', A, B, C, 大きさ]                 角 ABC が直角のしるし
+  //   ['angle', A, B, C, '文字', r, n]           n＝2・3 で、弧を2重・3重に（同じ大きさの角）
+  //   ['par', P, Q, n]                           辺 PQ のまん中に、平行のしるし（＞を n こ）
+  //   ['ellipse', C, rx, ry, 度0, 度1, {dash}]   だ円の弧（円すい・円柱の底。度を省くと1周）
   //   ['tick', P, Q, n]                          辺 PQ のまん中に、同じ長さのしるし（n 本）
   //   ['grid', x0, y0, x1, y1]                   方眼（1単位ごと）
   //   ['axes', x0, x1, y0, y1, {x: 'x', y: 'y', o: true}]   座標軸（矢じりつき）と O
@@ -665,6 +670,8 @@
       if (k === 'seg' || k === 'tick') { P(a); P(b); }
       else if (k === 'poly' || k === 'path') a.forEach(P);
       else if (k === 'circle' || k === 'arc') { P([a[0] - b, a[1] - b]); P([a[0] + b, a[1] + b]); }
+      else if (k === 'ellipse') { P([a[0] - b, a[1] - c]); P([a[0] + b, a[1] + c]); }
+      else if (k === 'par') { P(a); P(b); }
       else if (k === 'dot' || k === 'label') P(a);
       else if (k === 'angle' || k === 'right') { P(a); P(b); P(c); }
       else if (k === 'grid') { P([a, b]); P([c, d]); }
@@ -702,10 +709,12 @@
       else if (k === 'dot') { const [, P, a] = it; o += `<circle cx="${X(P[0])}" cy="${Y(P[1])}" r="0.7" ${a && a.open ? 'fill="white" stroke="currentColor" stroke-width="0.3"' : 'fill="currentColor"'}/>`; }
       else if (k === 'label') { const [, P, t, d] = it, v = ANCH[d || 'c'] || ANCH.c, dx = v[0] * fs * 0.75, dy = -v[1] * fs * 0.75; o += `<text x="${(X(P[0]) + dx).toFixed(2)}" y="${(Y(P[1]) + dy + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="${v[0] > 0.3 ? 'start' : v[0] < -0.3 ? 'end' : 'middle'}">${figText(t)}</text>`; }
       else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), P = [B[0] + r * Math.cos(a0), B[1] + r * Math.sin(a0)], Q = [B[0] + r * Math.cos(a1), B[1] + r * Math.sin(a1)];
-        o += `<path d="M${X(P[0])} ${Y(P[1])} A${(r * s).toFixed(2)} ${(r * s).toFixed(2)} 0 0 0 ${X(Q[0])} ${Y(Q[1])}" ${st()}/>`;
+        for (let j = 0; j < (it[6] || 1); j++) { const rj = r + j * 0.22, Pj = [B[0] + rj * Math.cos(a0), B[1] + rj * Math.sin(a0)], Qj = [B[0] + rj * Math.cos(a1), B[1] + rj * Math.sin(a1)]; o += `<path d="M${X(Pj[0])} ${Y(Pj[1])} A${(rj * s).toFixed(2)} ${(rj * s).toFixed(2)} 0 0 0 ${X(Qj[0])} ${Y(Qj[1])}" ${st()}/>`; }
         if (t) { const m = (a0 + a1) / 2, R = r + 0.75; o += `<text x="${X(B[0] + R * Math.cos(m))}" y="${(Y(B[1] + R * Math.sin(m)) + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="middle">${figText(t)}</text>`; } }
       else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
         o += `<path d="M${X(B[0] + a[0])} ${Y(B[1] + a[1])} L${X(B[0] + a[0] + c[0])} ${Y(B[1] + a[1] + c[1])} L${X(B[0] + c[0])} ${Y(B[1] + c[1])}" ${st()}/>`; }
+      else if (k === 'ellipse') { const [, C, rx, ry, d0, d1, a] = it; if (d0 == null) o += `<ellipse cx="${X(C[0])}" cy="${Y(C[1])}" rx="${(rx * s).toFixed(2)}" ry="${(ry * s).toFixed(2)}" ${st(a)}/>`; else { const pts = []; for (let j = 0; j <= 40; j++) { const t = (d0 + (d1 - d0) * j / 40) * Math.PI / 180; pts.push([C[0] + rx * Math.cos(t), C[1] + ry * Math.sin(t)]); } o += `<path d="${pts.map((p, j) => (j ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ')}" ${st(a)}/>`; } }
+      else if (k === 'par') { const [, P, Q, n] = it, mx = (P[0] + Q[0]) / 2, my = (P[1] + Q[1]) / 2, a = Math.atan2(Q[1] - P[1], Q[0] - P[0]), L = 0.3; for (let j = 0; j < (n || 1); j++) { const off = (j - ((n || 1) - 1) / 2) * 0.25, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); const p1 = [cx - L * Math.cos(a - 0.6), cy - L * Math.sin(a - 0.6)], p2 = [cx - L * Math.cos(a + 0.6), cy - L * Math.sin(a + 0.6)]; o += `<path d="M${X(p1[0])} ${Y(p1[1])} L${X(cx)} ${Y(cy)} L${X(p2[0])} ${Y(p2[1])}" ${st()}/>`; } }
       else if (k === 'tick') { const [, P, Q, n] = it, mx = (P[0] + Q[0]) / 2, my = (P[1] + Q[1]) / 2, a = Math.atan2(Q[1] - P[1], Q[0] - P[0]), L = 0.3, g = 0.18;
         for (let i = 0; i < (n || 1); i++) { const off = (i - ((n || 1) - 1) / 2) * g, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); o += `<line x1="${X(cx - L * Math.sin(a))}" y1="${Y(cy + L * Math.cos(a))}" x2="${X(cx + L * Math.sin(a))}" y2="${Y(cy - L * Math.cos(a))}" ${st()}/>`; } }
     }
@@ -732,10 +741,12 @@
       else if (k === 'dot') { const [, A, a] = it; o += a && a.open ? `\\draw[fill=white] ${P(A)} circle (0.7mm);` : `\\fill ${P(A)} circle (0.7mm);`; }
       else if (k === 'label') { const [, A, t, d] = it; o += `\\node[${TIKZA[d || 'c']},inner sep=1.5pt] at ${P(A)} {${lab(t)}};`; }
       else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), d0 = a0 * 180 / Math.PI, d1 = a1 * 180 / Math.PI, m = (a0 + a1) / 2;
-        o += `\\draw (${f(B[0] + r * Math.cos(a0))},${f(B[1] + r * Math.sin(a0))}) arc[start angle=${f(d0)},end angle=${f(d1)},radius=${f(r)}];`;
+        for (let j = 0; j < (it[6] || 1); j++) { const rj = r + j * 0.22; o += `\\draw (${f(B[0] + rj * Math.cos(a0))},${f(B[1] + rj * Math.sin(a0))}) arc[start angle=${f(d0)},end angle=${f(d1)},radius=${f(rj)}];`; }
         if (t) o += `\\node at (${f(B[0] + (r + 0.75) * Math.cos(m))},${f(B[1] + (r + 0.75) * Math.sin(m))}) {${lab(t)}};`; }
       else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
         o += `\\draw (${f(B[0] + a[0])},${f(B[1] + a[1])})--(${f(B[0] + a[0] + c[0])},${f(B[1] + a[1] + c[1])})--(${f(B[0] + c[0])},${f(B[1] + c[1])});`; }
+      else if (k === 'ellipse') { const [, C, rx, ry, d0, d1, a] = it; o += d0 == null ? `\\draw[${sty(a)}] ${P(C)} ellipse[x radius=${f(rx)},y radius=${f(ry)}];` : `\\draw[${sty(a)}] (${f(C[0] + rx * Math.cos(d0 * Math.PI / 180))},${f(C[1] + ry * Math.sin(d0 * Math.PI / 180))}) arc[start angle=${d0},end angle=${d1},x radius=${f(rx)},y radius=${f(ry)}];`; }
+      else if (k === 'par') { const [, A, B, n] = it, mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, a = Math.atan2(B[1] - A[1], B[0] - A[0]), L = 0.3; for (let j = 0; j < (n || 1); j++) { const off = (j - ((n || 1) - 1) / 2) * 0.25, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); o += `\\draw (${f(cx - L * Math.cos(a - 0.6))},${f(cy - L * Math.sin(a - 0.6))})--(${f(cx)},${f(cy)})--(${f(cx - L * Math.cos(a + 0.6))},${f(cy - L * Math.sin(a + 0.6))});`; } }
       else if (k === 'tick') { const [, A, B, n] = it, mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, a = Math.atan2(B[1] - A[1], B[0] - A[0]), L = 0.3, g = 0.18;
         for (let i = 0; i < (n || 1); i++) { const off = (i - ((n || 1) - 1) / 2) * g, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); o += `\\draw (${f(cx - L * Math.sin(a))},${f(cy + L * Math.cos(a))})--(${f(cx + L * Math.sin(a))},${f(cy - L * Math.cos(a))});`; } }
     }
