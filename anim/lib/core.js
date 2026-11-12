@@ -21,7 +21,7 @@
     approx: '≒', leqq: '≦', geqq: '≧', vert: '|', mid: '|', angle: '∠', perp: '⊥', parallel: '∥', to: '→', rightarrow: '→', leftarrow: '←', infty: '∞', degree: '°', circ: '°',
     alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ε', zeta: 'ζ', eta: 'η', theta: 'θ', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
     Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω', partial: '∂', nabla: '∇', hbar: 'ℏ', ell: 'ℓ', int: '∫', oint: '∮', sum: 'Σ',
-    ldots: '…', cdots: '⋯', prime: '′', propto: '∝', in: '∈', cdotp: '·', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
+    ldots: '…', cdots: '⋯', langle: '⟨', rangle: '⟩', prime: '′', propto: '∝', in: '∈', cdotp: '·', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
   const FN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'lim', 'sinh', 'cosh', 'tanh', 'Re', 'Im', 'rot', 'grad', 'det', 'arg'];  // div（発散）は \\mathrm{div}。\\div は ÷
   const CAL = { E: 'ℰ', B: 'ℬ', F: 'ℱ', H: 'ℋ', L: 'ℒ', M: 'ℳ', R: 'ℛ', T: '𝒯', I: 'ℐ', P: '𝒫' };
   // TeX のような書き方を HTML に（練習プリントのアプリの数式の組み方を写したもの）
