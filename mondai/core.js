@@ -358,7 +358,7 @@
   // 数式の値（小数）。vars は文字の値 { x: 1.3 }。読めないときは null
   M.evalMath = function (src, vars) {
     vars = vars || {};
-    const s = String(src).replace(/\\left|\\right|\\,|\\;|\\!|\\quad|\\displaystyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
+    const s = String(src).replace(/\\left|\\right|\\Biggl|\\Biggr|\\Bigl|\\Bigr|\\bigl|\\bigr|\\,|\\;|\\!|\\quad|\\displaystyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
       .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/')
       // 帯分数（数字のすぐあとの \frac{数}{数}）は、たし算として読む：2\frac{1}{3} → (2+\frac{1}{3})。指数・下つきの中の数は除く
       .replace(/(^|[^0-9.^_{])(\d+)\s*\\frac\{(\d+)\}\{(\d+)\}/g, '$1($2+\\frac{$3}{$4})');
@@ -437,7 +437,7 @@
   M.withBox = function (q) {
     if (q.includes('□')) return q;
     // 式が「＝」「不等号」をふくむとき（方程式など）は、「＝ □」ではなく、うしろに欄だけをつける
-    if (/\$[^$]*(?:=|<|>|\\le|\\ge)[^$]*\$\s*$/.test(q)) return q + '　□';
+    if (/\$[^$]*(?:=|<|>|\\le(?![a-z])|\\ge(?![a-z]))[^$]*\$\s*$/.test(q)) return q + '　□';   // \left を \le と読まない（第5巻 組 e）
     return q + ' ＝ □';
   };
   // 見わけようの問題の数：わざが多い部は、右ページの「この部のわざ」の表が入るように減らす（第30回）
@@ -906,6 +906,7 @@
   //   kind 'int'   ：ans（「+C」をふくむ）が f の不定積分か（+C を取って微分し、f とくらべる）。p.a に +C がなければまちがい
   //   kind 'defint'：ans の値が、f を a〜b で積分した値か（シンプソン法）。a・b も TeX の式でよい（\frac{\pi}{2} など）
   //   ans を省くと p.a の式を使う（「$f'(x)=…$」のときは、＝ の右）。x は変数の名前（ふつう 'x'。'\\theta'・'t' など）。pts はくらべる x の値
+  const DEFINT = new Map();
   M.calcCheck = function (p) {
     const c = p.calc, errs = [], X = String(c.x || 'x').replace(/^\\/, '');
     let ans = c.ans != null ? String(c.ans) : (onlyMath(p.a) || String(p.a).replace(/\$/g, ''));
@@ -931,9 +932,13 @@
       const a = M.evalMath(String(c.a), {}), b = M.evalMath(String(c.b), {}), va = M.evalMath(ans, {});
       if (a == null || b == null || va == null) errs.push('calc：はしか答えが読めない');
       else {
-        const n = 2000, hh = (b - a) / n; let sum = ev(c.f, a) + ev(c.f, b);
-        for (let k = 1; k < n; k++) sum += (k % 2 ? 4 : 2) * ev(c.f, a + k * hh);
-        const I = sum * hh / 3;
+        // 同じ f・変数・はしの積分は1回だけ計算する（check.js は種を200とおり回すので。第5巻 組 e の要望）
+        const key = c.f + '|' + X + '|' + a + '|' + b; let I = DEFINT.get(key);
+        if (I === undefined) {
+          const n = 2000, hh = (b - a) / n; let sum = ev(c.f, a) + ev(c.f, b);
+          for (let k = 1; k < n; k++) sum += (k % 2 ? 4 : 2) * ev(c.f, a + k * hh);
+          I = sum * hh / 3; if (DEFINT.size > 5000) DEFINT.clear(); DEFINT.set(key, I);
+        }
         if (!isFinite(I)) errs.push('calc：中身が読めない'); else if (!near(I, va) && Math.abs(I - va) > 1e-7) errs.push(`calc：定積分がちがう（${I} と ${va}）`);
       }
     } else errs.push('calc：kind がちがう');
