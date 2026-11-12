@@ -606,7 +606,7 @@
     raku: ['0.3 m、50 N、なす角 $30^{\\circ}$', '$0.3\\times50\\times\\sin30^{\\circ}$', '$=0.3\\times50\\times\\frac{1}{2}=7.5$（N·m）'],
     why: 'うでにそった部分 $F\\cos\\theta$ は中心を引くだけで回さない。直角な部分 $F\\sin\\theta$ だけが回すので、$M=r\\times F\\sin\\theta$。つり合いは「左回り＝右回り」（4-14①②）。',
     caution: '$rF\\cos\\theta$ にしない。$\\theta=0^{\\circ}$（中心に向かって押す）で回らないことから、sin とわかる。',
-    counts: { s1: 8, s2: 4, s3: 2, trap: 2 },
+    counts: { s1: 6, s2: 4, s3: 2, trap: 2 },   // 単位 N·m を足して1問が3行になったので s1 を6問に（第36回）
     cols: { s2: 1, s3: 1, trap: 1 },
     boxw: '18mm',
     fits(q) { return /うで|スパナ|シーソー|レンチ|棒|ドア|支点/.test(q) && !has2(q) && !has3(q) && !/x=|クレーン|座標/.test(q); },
