@@ -133,6 +133,19 @@ def find(doc, kind, text, fname=None):
     return None
 
 
+def item_meta(cid):
+    """anim/items/<id>.js から題と場面（key・名前）を読む"""
+    p = os.path.join(ROOT, 'anim', 'items', cid + '.js')
+    if not os.path.exists(p): return {}
+    src = open(p, encoding='utf-8').read()
+    m = re.search(r'^//\s*@title\s+(.*)$', src, re.M)
+    title = re.sub(r'《([^|》]+)\|[^》]+》', r'\1', m.group(1).strip()) if m else ''
+    scenes = []
+    for k, lab in re.findall(r"key:\s*'([^']+)'\s*,\s*label:\s*'([^']*)'", src):
+        scenes.append({'key': k, 'label': re.sub(r'《([^|》]+)\|[^》]+》', r'\1', lab)})
+    return {'title': title, 'scenes': scenes}
+
+
 def main():
     pdfdir = sys.argv[1]
     docs = {}
@@ -170,7 +183,8 @@ def main():
                              'by': kind, 'match': frag,
                              'rect': [round(rect.x0 / W, 4), round(rect.y0 / H, 4), round(rect.x1 / W, 4), round(rect.y1 / H, 4)],
                              'found': True})
-            items.append({'id': cid, 'what': what, 'locations': locs})
+            meta = item_meta(cid)
+            items.append({'id': cid, 'title': meta.get('title', ''), 'file': cid + '.html', 'scenes': meta.get('scenes', []), 'what': what, 'locations': locs})
     out = {'note': 'アニメーションの項目（id）と、本の図の場所。page は PDF のページ（1から。ビューアの ?page=）、label は本のノンブル。'
                    'rect は図の説明（または近くの文）の位置で、ページの幅・高さを1とした [左, 上, 右, 下]。by=caption は図の説明で、text は近くの本文で見つけたもの。',
            'books': {b: v[1] for b, v in docs.items()}, 'items': items}
@@ -193,14 +207,14 @@ def write_md(out):
          '使った PDF：' + '、'.join(sorted(set(out['books'].values()))), '']
     # 項目ごとの主な場所（図の説明で見つけたものを先に）
     L += ['## 項目ごとの主な場所（169項目）', '', 'ビューアで最初にボタンを置く1か所。ほかの場所は、下の巻ごとの表にある。', '',
-          '| アニメーション | 本（id） | PDF | ノンブル | 目じるし | ほかの場所の数 |', '| --- | --- | --- | --- | --- | --- |']
+          '| アニメーション | 題 | 本（id） | PDF | ノンブル | 目じるし | 場面（#key） | ほかの場所の数 |', '| --- | --- | --- | --- | --- | --- | --- | --- |']
     for it in out['items']:
         fl = [l for l in it['locations'] if l['found']]
         if not fl:
-            L.append(f"| {it['id']} | × | × | × | （見つからない） | 0 |"); continue
+            L.append(f"| {it['id']} | {it.get('title', '')} | × | × | × | （見つからない） | | 0 |"); continue
         fl.sort(key=lambda l: (l['by'] != 'caption',))
         l = fl[0]
-        L.append(f"| {it['id']} | {VOLNAME[l['book']]}（`{l['book']}`） | {l['page']} | {l['label']} | {'' if l['by'] == 'caption' else '△ '}{l['match']} | {len(fl) - 1} |")
+        L.append(f"| {it['id']} | {it.get('title', '')} | {VOLNAME[l['book']]}（`{l['book']}`） | {l['page']} | {l['label']} | {'' if l['by'] == 'caption' else '△ '}{l['match']} | {', '.join(sc['key'] for sc in it.get('scenes', []))} | {len(fl) - 1} |")
     L.append('')
     order = list(BOOKS)
     for b in order:
