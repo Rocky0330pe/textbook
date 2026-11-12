@@ -703,9 +703,15 @@
       },
       plot(f, a, b, st) {
         st = st || {}; const n = st.n || 80, its = []; let cur = [];
+        // わくの外へ出る・入る所は、わくの境まで線をのばして切る（区間を丸ごと捨てない。第5巻 R1-1）
+        const inb = y => isFinite(y) && y >= o.y0 - 1e-9 && y <= o.y1 + 1e-9;
+        const edge = (x1, y1, x2, y2) => { const yb = (y2 > o.y1 || y1 > o.y1) ? o.y1 : o.y0; let lo = x1, hi = x2; for (let j = 0; j < 40; j++) { const m = (lo + hi) / 2, ym = f(m); if (inb(ym) === inb(y1)) lo = m; else hi = m; } return T((lo + hi) / 2, Math.min(o.y1, Math.max(o.y0, f((lo + hi) / 2)))); };
+        let px = null, py = null;
         for (let k = 0; k <= n; k++) {
           const x = a + (b - a) * k / n, y = f(x);
-          if (isFinite(y) && y >= o.y0 - 1e-9 && y <= o.y1 + 1e-9) cur.push(T(x, y)); else { if (cur.length > 1) its.push(['path', cur, st]); cur = []; }
+          if (inb(y)) { if (px !== null && !inb(py) && isFinite(py)) cur.push(edge(px, py, x, y)); cur.push(T(x, y)); }
+          else { if (cur.length && px !== null && inb(py) && isFinite(y)) cur.push(edge(px, py, x, y)); if (cur.length > 1) its.push(['path', cur, st]); cur = []; }
+          px = x; py = y;
         }
         if (cur.length > 1) its.push(['path', cur, st]);
         return its;
