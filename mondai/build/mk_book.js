@@ -96,7 +96,11 @@ for (const part of parts) {
     const seen = new Set();
     const pool = [];
     const nTrap = part.miwake.traps || 2;
-    const nMain = M.miwakeCount(part, wz.length) - nTrap;
+    // must：かならず入れる問題 [[わざ, ステップ], …]。ほかの部のわざでもよい（第4巻 第5部で 4-46 と 4-63 をまぜる。K-7・第36回）
+    const must = part.miwake.must || [];
+    const wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));
+    const nMain = M.miwakeCount(part, wz.length) - nTrap - must.length;
+    for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
     // わざの順をまぜてから選ぶ（前のほうのわざだけに かたよらないように）
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
@@ -115,11 +119,17 @@ for (const part of parts) {
       ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。'
       : '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
     // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
-    const lines2 = mixed.map((p, i) => { const bw = M.boxwOf(M.waza[p.id], p.step, p); const nb = (M.withBox(p.q).match(/□/g) || []).length; return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: `\\mqbox[${nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm'}]` })}\\mqwazabox}`; });
+    const lines2 = mixed.map((p, i) => {
+      const bw = M.boxwOf(M.waza[p.id], p.step, p), bh = M.boxhOf(M.waza[p.id], p.step, p), nb = (M.withBox(p.q).match(/□/g) || []).length;
+      // 第4巻から：欄のはばは2種類だけ（15mm と 32mm。はばがわざの手がかりにならないように。H-7・第36回）。高い欄（分数）はそのまま
+      const w = vol >= 4 ? (nb > 1 ? '13mm' : bw && parseFloat(bw) > 20 ? '32mm' : '15mm') : (nb > 1 ? '13mm' : bw && parseFloat(bw) > 15 ? bw : '15mm');
+      const bx = vol >= 4 && bh && nb <= 1 ? `\\mqboxt{${w}}{${bh}}` : `\\mqbox[${w}]`;
+      return `\\mqp{${i + 1}}{${tx(M.withBox(p.q), { box: bx })}\\mqwazabox}`;
+    });
     const half = Math.ceil(lines2.length / 2);
-    body.push(`\\def\\mqsplabelkey{miwake}\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}\n\\mqmiwaketable{${wz.map(id => `\\mqmwrow{${id}}{${tx(M.waza[id].title, SQ)}}`).join('')}}`);
+    body.push(`\\def\\mqsplabelkey{miwake}\\mqspreadhead{${pid}}{${pname}}{${tx('《見|み》わけよう')}}{${tx(intro)}}\n\\begin{mqprobs}{1}\n${lines2.slice(0, half).join('\n')}\n\\end{mqprobs}\n\\mqrightpage\n\\begin{mqprobs}{1}\n${lines2.slice(half).join('\n')}\n\\end{mqprobs}\n\\mqmiwaketable{${wzAll.map(id => `\\mqmwrow{${id}}{${tx(M.waza[id].title, SQ)}}`).join('')}}`);
     const a = [`\\mqanssub{${tx('《見|み》わけよう')}（\\R{第}{だい}${pid}\\R{部}{ぶ}）}`];
-    mixed.forEach((p, i) => { const u = M.usableWaza(p, wz); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${u.length && p.easy && u.every(id => p.easy.includes(id)) ? tx(p.easy, SQ) : (u.length ? 'わざ ' + u.join('・') : 'わざ なし') + (p.easy ? '：' + tx(p.easy, SQ) : '')}}`); });
+    mixed.forEach((p, i) => { const u = M.usableWaza(p, wzAll); const nashi = !u.length && p.easy && /わざなし|わざ なし|楽な形なし/.test(M.plain(p.easy)); a.push(`\\mqa{${i + 1}}{${tx(p.a, SQ)}}{${(u.length && p.easy && u.every(id => p.easy.includes(id))) || nashi ? tx(p.easy, SQ) : (u.length ? 'わざ ' + u.join('・') : 'わざ なし') + (p.easy ? '：' + tx(p.easy, SQ) : '')}}`); });   // 楽な形に「わざなし」があれば前に重ねない（第36回）
     ans.push(a.join('\n'));
   }
   // 作ってみよう
