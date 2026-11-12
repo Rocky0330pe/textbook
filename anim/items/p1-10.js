@@ -43,7 +43,7 @@ function drawCycloid(cv, st) {
   const xc = R * st.phi;   // 中心が進んだ距離（1回転で 2πr）
   V.param(p => R * (p - Math.sin(p)), p => R * (1 - Math.cos(p)), 0, st.phi, { color: 'b', width: 2.5 });
   V.param(p => R * (p - Math.sin(p)), p => R * (1 - Math.cos(p)), st.phi, 4 * Math.PI, { color: 'b', width: 1, alpha: 0.25 });
-  for (const k of [0, 1, 2]) V.text('止まる', 2 * Math.PI * R * k, -0.12, { size: 14, color: 'sub', align: 'center' });
+  for (const k of [0, 1, 2]) if (Math.abs(2 * Math.PI * R * k - xc) > 0.35 || st.mode !== 'all') V.text('止まる', 2 * Math.PI * R * k, -0.12, { size: 14, color: 'sub', align: 'center' });
   // 車輪とスポーク
   V.circle(xc, R, R, { color: 'ink', width: 3 });
   for (let k = 0; k < 4; k++) { const a = -st.phi + Math.PI * k / 2; V.line([[xc, R], [xc + R * Math.cos(a), R + R * Math.sin(a)]], { color: 'sub', width: 1 }); }

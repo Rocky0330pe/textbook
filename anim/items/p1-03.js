@@ -120,7 +120,7 @@ function drawBrake(cv, st) {
 }
 
 // ③ の道：y = 15 sin(2πx/80)（m）。弧の長さで点を進めるため、表を作っておく
-let ROAD_ = null;
+var ROAD_ = null;   // var：A.item のときに使っても、まだ作っていなくてよいように
 function road() { return ROAD_ || (ROAD_ = (() => {
   const f = x => 15 * Math.sin(2 * Math.PI * x / 80), d1 = x => 15 * 2 * Math.PI / 80 * Math.cos(2 * Math.PI * x / 80), d2 = x => -15 * (2 * Math.PI / 80) ** 2 * Math.sin(2 * Math.PI * x / 80);
   const xs = [0], ss = [0]; let s = 0;
@@ -139,7 +139,7 @@ function drawEn(cv, st) {
   V.plot(road().f, { x0: 0, x1: 160, color: 'sub', width: 1, style: 'dot' });
   const p = roadAt(st.s), nx = -p.ty * Math.sign(p.k || 1), ny = p.tx * Math.sign(p.k || 1);
   const r = 1 / Math.max(1e-6, Math.abs(p.k));
-  if (r < 400) {
+  if (r < 150) {
     const cx = p.x + nx * r, cy = p.y + ny * r;
     V.clip(() => V.circle(cx, cy, r, { color: 'd', style: 'dash', width: 2 }));
     if (r < 60) { V.dot(cx, cy, { color: 'd', r: 4 }); V.line([[p.x, p.y], [cx, cy]], { color: 'd', width: 1 }); V.text('ρ = ' + A.num(r, 1) + ' m', (p.x + cx) / 2 + 2, (p.y + cy) / 2, { size: 15, color: 'd', bg: true }); }

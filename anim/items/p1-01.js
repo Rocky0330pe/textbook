@@ -92,7 +92,7 @@ function drawFall(cv, st) {
   for (let m = 0; m <= 20; m += 5) { b.line([[-0.25, -m], [0.25, -m]], { color: 'sub', width: 1 }); cv.text(m + ' m', b.X(0.35), b.Y(-m), { size: 14, color: 'sub' }); }
   const x1 = 4.9 * T1 * T1, x2 = 4.9 * (T1 + d) ** 2;
   b.dot(0, -x1, { color: 'b', r: 8 }); cv.text('1 s', b.X(-0.35), b.Y(-x1), { size: 15, align: 'right' });
-  if (x2 < 21) { b.dot(0, -x2, { color: 'b', r: 8, open: true }); cv.text((1 + d).toFixed(d < 0.1 ? 3 : 2).replace(/0+$/, '').replace(/\.$/, '') + ' s', b.X(-0.35), b.Y(-x2), { size: 15, align: 'right' }); }
+  if (x2 < 21) { b.dot(0, -x2, { color: 'b', r: 8, open: true }); if (d > 0.12) cv.text((1 + d).toFixed(d < 0.1 ? 3 : 2).replace(/0+$/, '').replace(/\.$/, '') + ' s', b.X(-0.35), b.Y(-x2), { size: 15, align: 'right' }); }
   cv.text('↓ x', b.X(0), 14, { size: 15, align: 'center', color: 'sub' });
   const g = cv.view({ x0: 0, x1: 2.2, y0: 0, y1: 24, box: [230, 20, 380, 380] });
   g.axes({ xt: [0.5, 1, 1.5, 2], yt: [5, 10, 15, 20], xl: 't〔s〕', yl: 'x〔m〕' });
