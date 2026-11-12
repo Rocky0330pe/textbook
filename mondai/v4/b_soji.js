@@ -41,6 +41,8 @@
   // 10^e 倍すると、どれも整数になる 10^e（e は 0〜3）
   function scaleInt(...vs) { for (let e = 0; e <= 3; e++) { const f = 10 ** e; if (vs.every(v => Math.abs(v * f - Math.round(v * f)) < 1e-9)) return f; } return null; }
   const isSq = n => Number.isInteger(n) && n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
+  // 同じ見開きの重なり（第36回 N-2）の key：数を小さい順にならべる。入れかえただけの問題・逆の問題（答えと数を入れかえたもの）が同じ key になる
+  const NK = (tag, ...v) => tag + ':' + v.map(Number).sort((a, b) => a - b).join(',');
 
   // ---------------------------------------------------------------- 直角三角形の辺（見わけようの判定にも使う）
   const TRIPLES = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]];
@@ -117,6 +119,53 @@
     return items.map(it => it.map(a => (pt(a) ? f(a) : Array.isArray(a) && a.length && pt(a[0]) ? a.map(f) : a)));
   }
   const NUMLAB = v => (typeof v === 'number' ? fmt(v) : v);
+  // 図の字の重なりを見る（第36回 N-6）：字の箱（ラベル）どうし、字の箱と線・点。重なれば、そのわけを返す（なければ ''）
+  // 字のはばは core.js の figBox と同じ見つもり（字の大きさ 3.4 mm、数字・ローマ字は 0.6 字ぶん）
+  const FONT = 3.4, LANCH = { n: [0, 1], s: [0, -1], e: [1, 0], w: [-1, 0], ne: [0.8, 0.8], nw: [-0.8, 0.8], se: [0.8, -0.8], sw: [-0.8, -0.8], c: [0, 0] };
+  const textW = (t, sc) => [...String(t).replace(/\$/g, '').replace(/\\(?:mathrm|text)\{([^}]*)\}/g, '$1').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}^_ ]/g, '')].reduce((a, ch) => a + (/[　-鿿]/.test(ch) ? 1 : 0.6), 0) * FONT / sc;
+  // ラベルの箱：アプリ（SVG）の置き方と、本（TikZ：点から 1.5pt はなして above・right…）の置き方の両方
+  function labBoxes(it, sc) {
+    const u = FONT / sc, v = LANCH[it[3] || 'c'], w = textW(it[2], sc), P = it[1], sep = 1.5 * 0.3528 / sc, h = 0.8 * u;
+    const cx = P[0] + v[0] * 0.75 * u, cy = P[1] + v[1] * 0.75 * u, L = v[0] > 0.3 ? cx : v[0] < -0.3 ? cx - w : cx - w / 2;
+    const tx = v[0] > 0.3 ? P[0] + sep : v[0] < -0.3 ? P[0] - sep - w : P[0] - w / 2, ty = v[1] > 0.3 ? P[1] + sep : v[1] < -0.3 ? P[1] - sep - h : P[1] - h / 2;
+    return [[L, cy - 0.4 * u, L + w, cy + 0.4 * u, it[2]], [tx, ty, tx + w, ty + h, it[2]]];
+  }
+  // 線分 PQ が箱 b（[x0, y0, x1, y1]、まわりを e だけ小さくした箱）を通るか
+  function segBox(P, Q, b, e) {
+    let t0 = 0, t1 = 1;
+    const dx = Q[0] - P[0], dy = Q[1] - P[1];
+    for (const [pp, qq] of [[-dx, P[0] - (b[0] + e)], [dx, (b[2] - e) - P[0]], [-dy, P[1] - (b[1] + e)], [dy, (b[3] - e) - P[1]]]) {
+      if (pp === 0) { if (qq < 0) return false; continue; }
+      const t = qq / pp;
+      if (pp < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+    }
+    return t0 < t1;
+  }
+  function figClash(fig) {
+    const sc = fig.s || 5, boxes = [], segs = [], pts = [];
+    for (const it of fig.items) {
+      const k = it[0];
+      if (k === 'label' && it[2]) { const id = boxes.length; labBoxes(it, sc).forEach(b => boxes.push(b.concat(id))); }
+      else if (k === 'seg') segs.push([it[1], it[2]]);
+      else if (k === 'poly' || k === 'path') { const ps = it[1]; for (let i = 0; i + 1 < ps.length; i++) segs.push([ps[i], ps[i + 1]]); if (k === 'poly') segs.push([ps[ps.length - 1], ps[0]]); }
+      else if (k === 'ellipse') { const [, C, rx, ry, d0 = 0, d1 = 360] = it; for (let j = 0; j < 24; j++) { const a0 = (d0 + (d1 - d0) * j / 24) * Math.PI / 180, a1 = (d0 + (d1 - d0) * (j + 1) / 24) * Math.PI / 180; segs.push([[C[0] + rx * Math.cos(a0), C[1] + ry * Math.sin(a0)], [C[0] + rx * Math.cos(a1), C[1] + ry * Math.sin(a1)]]); } }
+      else if (k === 'dot') pts.push(it[1]);
+    }
+    const e = 0.06, inB = (q, b) => q[0] > b[0] + e && q[0] < b[2] - e && q[1] > b[1] + e && q[1] < b[3] - e;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i];
+      for (let j = i + 1; j < boxes.length; j++) { const c = boxes[j], g = 0.15; if (c[5] === b[5]) continue; if (b[0] < c[2] + g && c[0] < b[2] + g && b[1] < c[3] + g && c[1] < b[3] + g) return `字「${b[4]}」と字「${c[4]}」`; }
+      for (const [A, B] of segs) if (segBox(A, B, b, e)) return `字「${b[4]}」と線`;
+      for (const q of pts) if (inB(q, b)) return `字「${b[4]}」と点`;
+    }
+    return '';
+  }
+  // 辺の長さのラベルが、その辺にいちばん近いか（ほかの辺のほうが近いと、どの辺の長さか読みにくい。R1-20）
+  function labNearest(lab, own, others) {
+    const d = (q, [A, B]) => { const ab = [B[0] - A[0], B[1] - A[1]], t = Math.max(0, Math.min(1, ((q[0] - A[0]) * ab[0] + (q[1] - A[1]) * ab[1]) / (ab[0] ** 2 + ab[1] ** 2))); return Math.hypot(q[0] - A[0] - t * ab[0], q[1] - A[1] - t * ab[1]); };
+    const c = lab[1], mine = d(c, own);
+    return others.every(sg => d(c, sg) > mine + 0.25);
+  }
   const FIGPAD = 1.0;                                               // 図のまわりの余白（単位）。はしのラベルの字が切れないように
 
   // ================================================================ 4-15
@@ -140,7 +189,7 @@
     const q = `$\\triangle${rm(T1)}\\sojisym\\triangle${rm(T2)}$、$${rm(s1i)}=${X}$、$${rm(s2i)}=${Xp}$、$${rm(known)}=${Y}$ のとき $${rm(asked)}$`;
     const ratio = opt.askFirst ? `${rm(s2i)}:${rm(s1i)}=${Xp}:${X}=${t}:${s}` : `${rm(s1i)}:${rm(s2i)}=${X}:${Xp}=${s}:${t}`;
     return {
-      q, a: `$${fmt(ans)}$`,
+      q, a: `$${fmt(ans)}$`, key: NK('415', X, Xp) + '|' + NK('', Y, ans),
       easy: `$${ratio}$、$${rm(asked)}=${Y}\\times${fr(g, f)}=${fmt(ans)}$`,
       verify: () => close(ans * (opt.askFirst ? Xp : X), Y * (opt.askFirst ? X : Xp)) || '比例式が合わない',
     };
@@ -182,7 +231,7 @@
       trap(r) {
         const X = r.int(4, 9), Y = r.int(3, 12), Xp = r.intNot(4, 15, v => v === X), ang = r.chance(0.5);
         const p = {
-          q: `$\\triangle\\mathrm{ABC}$ と $\\triangle\\mathrm{DEF}$、${ang ? '$\\angle\\mathrm{B}=\\angle\\mathrm{E}$、' : ''}$\\mathrm{AB}=${X}$、$\\mathrm{BC}=${Y}$、$\\mathrm{DE}=${Xp}$。$\\mathrm{EF}$ は（決まる・決まらない）□`,
+          q: `$\\triangle\\mathrm{ABC}$ と $\\triangle\\mathrm{DEF}$、${ang ? '$\\angle\\mathrm{B}=\\angle\\mathrm{E}$、' : ''}$\\mathrm{AB}=${X}$、$\\mathrm{BC}=${Y}$、$\\mathrm{DE}=${Xp}$。$\\mathrm{EF}$ は$\\text{（決まる・決まらない）}□$`,
           a: '決まらない',
           // EF がどんな長さでも、DE と（∠E と）は三角形DEFを作れる：2とおりの EF で、ともに条件をみたす
           verify: () => [Y * Xp / X, Y * Xp / X + 1].every(e => e > 0) || 'まちがい',
@@ -211,7 +260,7 @@
     if (!Number.isInteger(CD * 2) || OA > 16 || OC > 16 || AB > 20 || CD > 20 || AB < 2 || CD < 2) return null;
     return { OA, OC, AB, CD, s, t };
   }
-  const xq = x => `X字形で $\\mathrm{AB}\\parallel\\mathrm{CD}$、$\\mathrm{OA}=${x.OA}$、$\\mathrm{OC}=${x.OC}$、$\\mathrm{AB}=${x.AB}$ のとき、$\\mathrm{CD}$`;
+  const xq = x => `ACとBDが点Oで交わるX字形で $\\mathrm{AB}\\parallel\\mathrm{CD}$、$\\mathrm{OA}=${x.OA}$、$\\mathrm{OC}=${x.OC}$、$\\mathrm{AB}=${x.AB}$ のとき、$\\mathrm{CD}$`;
   M.add({
     id: '4-16', part: PART, chap: '4-3③④', stars: 1,
     title: '影は「高さ÷影」が同じ（ピンホールは距離の比）',
@@ -230,7 +279,7 @@
         const x = shadow(r); if (!x) return null;
         return {
           q: `$${fmt(x.h1)}\\,\\mathrm{m}$ の棒の影が $${fmt(x.s1)}\\,\\mathrm{m}$。同じ時刻に影 $${x.S}\\,\\mathrm{m}$ の${x.obj}の高さ □ m`,
-          a: `$${x.H}$`, easyCheck: false,
+          a: `$${x.H}$`, easyCheck: false, key: NK('416', x.h1, x.s1, x.H, x.S),
           easy: `高さ÷影＝$${fmt(x.h1)}\\div${fmt(x.s1)}=${fr(x.a, x.b)}$、$${x.S}\\times${fr(x.a, x.b)}=${x.H}$`,
           verify: () => close(x.H * x.s1, x.S * x.h1) || '比例式が合わない',
         };
@@ -242,14 +291,14 @@
         if (r.chance(0.5)) {
           return {
             q: `${who}の影が $${fmt(x.s1)}\\,\\mathrm{m}$。同じ時刻に高さ $${x.H}\\,\\mathrm{m}$ の${x.obj}の影 □ m`,
-            a: `$${x.S}$`, easyCheck: false,
+            a: `$${x.S}$`, easyCheck: false, key: NK('416', x.h1, x.s1, x.H, x.S),
             easy: `影÷高さ＝$${fmt(x.s1)}\\div${fmt(x.h1)}=${fr(x.b, x.a)}$、$${x.H}\\times${fr(x.b, x.a)}=${x.S}$`,
             verify: () => close(x.H * x.s1, x.S * x.h1) || '比例式が合わない',
           };
         }
         return {
           q: `${who}の影が $${fmt(x.s1)}\\,\\mathrm{m}$。同じ時刻に影 $${x.S}\\,\\mathrm{m}$ の${x.obj}の高さ □ m`,
-          a: `$${x.H}$`, easyCheck: false,
+          a: `$${x.H}$`, easyCheck: false, key: NK('416', x.h1, x.s1, x.H, x.S),
           easy: `高さ÷影＝$${fmt(x.h1)}\\div${fmt(x.s1)}=${fr(x.a, x.b)}$、$${x.S}\\times${fr(x.a, x.b)}=${x.H}$`,
           verify: () => close(x.H * x.s1, x.S * x.h1) || '比例式が合わない',
         };
@@ -279,7 +328,7 @@
         const S = x.S + r.pick([-2, 3, 5]);
         if (S <= 0) return null;
         const p = {
-          q: `${t1}に $${fmt(x.h1)}\\,\\mathrm{m}$ の棒の影が $${fmt(x.s1)}\\,\\mathrm{m}$。${t2}に影 $${S}\\,\\mathrm{m}$ の${x.obj}の高さは（決まる・決まらない）□`,
+          q: `${t1}に $${fmt(x.h1)}\\,\\mathrm{m}$ の棒の影が $${fmt(x.s1)}\\,\\mathrm{m}$。${t2}に影 $${S}\\,\\mathrm{m}$ の${x.obj}の高さは$\\text{（決まる・決まらない）}□$`,
           a: '決まらない', verify: () => t1 !== t2 || 'まちがい',
         };
         return dest(p, '4-16', '時刻がちがうと、日光のかたむきがちがう。2つの三角形は相似にならない');
@@ -290,6 +339,7 @@
   // ================================================================ 4-17
   const RAT17 = [[1, 1], [1, 2], [2, 1], [2, 3], [3, 2], [3, 1], [1, 3], [3, 4], [4, 3], [2, 5], [5, 2], [4, 1]];
   const TRI17 = '$\\triangle\\mathrm{ABC}$、$\\mathrm{DE}\\parallel\\mathrm{BC}$、';
+  const K417 = x => NK('417', ...Object.values(x.given), x[x.ask]);
   // 平行線と線分の比の問題（kind：DE・EC・DB・DE2）。AD:DB＝a:b、BC＝(a+b)n
   function heikou(r, kind, rats) {
     const [a, b] = r.pick(rats || RAT17), m = r.int(1, 3), n = r.int(1, 4), k = r.int(1, 3);
@@ -355,7 +405,12 @@
     const lab = Object.assign({}, x.given); lab[x.ask] = '$x$';
     const segs = { AD: [pA, pD, pC], DB: [pD, pB, pC], AE: [pA, pE, pB], EC: [pE, pC, pB], BC: [pB, pC, pA], DE: [pD, pE, pB] };
     let items = [['poly', [pA, pB, pC]], ['seg', pD, pE], ['par', pD, pE, 1], ['par', pB, pC, 1], ['dot', pD], ['dot', pE]];
-    for (const key of Object.keys(lab)) { const [P1, P2, aw] = segs[key]; items.push(sideLab(P1, P2, NUMLAB(lab[key]), key === 'DE' ? pA : aw, 0.7)); }
+    const sides = { AD: [pA, pD], DB: [pD, pB], AE: [pA, pE], EC: [pE, pC], BC: [pB, pC], DE: [pD, pE] };
+    for (const key of Object.keys(lab)) {
+      const [P1, P2, aw] = segs[key], L = sideLab(P1, P2, NUMLAB(lab[key]), key === 'DE' ? pA : aw, key === 'DE' ? 0.5 : 0.7);
+      if (!labNearest(L, sides[key], Object.keys(sides).filter(k => k !== key).map(k => sides[k]))) return null;
+      items.push(L);
+    }
     // D・E のラベルは、辺の外がわ（辺の長さのラベルと同じ向き。2つの長さのラベルのあいだに来る）
     const out = (P1, P2, away) => { const n = unit([-(P2[1] - P1[1]), P2[0] - P1[0]]); return (away[0] - P1[0]) * n[0] + (away[1] - P1[1]) * n[1] > 0 ? [-n[0], -n[1]] : n; };
     items.push(['label', pA, 'A', 'n'], ['label', pB, 'B', 'sw'], ['label', pC, 'C', 'se'], ['label', pD, 'D', dirOf(out(pA, pB, pC))], ['label', pE, 'E', dirOf(out(pA, pC, pB))]);
@@ -377,11 +432,11 @@
     fits(q) { return /\\parallel/.test(q) && /DE/.test(q) && !/X字形/.test(q); },
     steps: {
       // AD・DB・BC から DE
-      s1(r) { const x = heikou(r, 'DE'); if (!x) return null; return { q: TRI17 + x.q, a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify }; },
+      s1(r) { const x = heikou(r, 'DE'); if (!x) return null; return { q: TRI17 + x.q, a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify, key: K417(x) }; },
       // AE:EC、DB を求める、E の側から DE
       s2(r) {
         const x = heikou(r, r.pick(['EC', 'DB', 'DE2'])); if (!x) return null;
-        return { q: TRI17 + x.q, a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify };
+        return { q: TRI17 + x.q, a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify, key: K417(x) };
       },
       // 図で（さかさまの三角形も）
       s3(r) {
@@ -390,7 +445,8 @@
         // 図に書く2辺の長さが近いもの（細長い三角形にしない）
         const AB = x.AD + x.DB, AC = x.AE + x.EC, q = x.kind === 'EC' ? AB / AC : x.kind === 'DE2' ? AC / x.BC : AB / x.BC;
         if (q < 0.6 || q > 1.6) return null;
-        return { q: '図で、$\\mathrm{DE}\\parallel\\mathrm{BC}$ のとき、$x$', a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify, fig: fig17(r, x), key: x.q };
+        const fig = fig17(r, x); if (!fig || figClash(fig)) return null;
+        return { q: '図で、$\\mathrm{DE}\\parallel\\mathrm{BC}$ のとき、$x$', a: x.a, easy: x.easy, easyCheck: x.easyCheck, verify: x.verify, fig, key: K417(x) };
       },
       // わな：X字形（全体ではなく、交わる点Oからの長さの比）
       trap(r) {
@@ -423,10 +479,10 @@
         const base = vol ? s ** 3 * r.int(1, 4) : s * s * r.int(1, 6), ans = base * (t / s) ** (vol ? 3 : 2);
         if (ans > 1000) return null;
         const what = vol ? '体積' : '表面積', unit = vol ? 'cm^3' : 'cm^2';
-        if (tri) return { q: `相似比 $${s}:${t}$ の三角形の、小さいほうの面積が $${base}$。大きいほう`, a: `$${fmt(ans)}$`, easy: `$${base}\\times${kTeX(s, t, 2)}=${fmt(ans)}$` };
+        if (tri) return { q: `相似比 $${s}:${t}$ の三角形の、小さいほうの面積が $${base}$。大きいほう`, a: `$${fmt(ans)}$`, easy: `$${base}\\times${kTeX(s, t, 2)}=${fmt(ans)}$`, key: `418:${s}:${t}:${vol}:${base}` };
         return {
           q: `相似比 $${s}:${t}$ の立体の、小さいほうの${what}が $${base}$。大きいほう`,
-          a: `$${fmt(ans)}$`, easy: `$${base}\\times${kTeX(s, t, vol ? 3 : 2)}=${fmt(ans)}$`,
+          a: `$${fmt(ans)}$`, easy: `$${base}\\times${kTeX(s, t, vol ? 3 : 2)}=${fmt(ans)}$`, key: `418:${s}:${t}:${vol}:${base}`,
         };
       },
       // 大きいほうから小さいほうへ／面積の比から体積の比／□倍にした
@@ -435,7 +491,7 @@
         if (k === 0) {
           const vol = r.chance(0.5), big = vol ? t ** 3 * r.int(1, 3) : t * t * r.int(1, 4), ans = big * (s / t) ** (vol ? 3 : 2);
           const what = vol ? '体積' : '表面積';
-          return { q: `相似比 $${s}:${t}$ の立体の、大きいほうの${what}が $${big}$。小さいほう`, a: `$${fmt(ans)}$`, easy: `$${big}\\times${kTeX(t, s, vol ? 3 : 2)}=${fmt(ans)}$` };
+          return { q: `相似比 $${s}:${t}$ の立体の、大きいほうの${what}が $${big}$。小さいほう`, a: `$${fmt(ans)}$`, easy: `$${big}\\times${kTeX(t, s, vol ? 3 : 2)}=${fmt(ans)}$`, key: `418:${s}:${t}:${vol}:${fmt(ans)}` };
         }
         if (k === 1) {
           return {
@@ -503,6 +559,7 @@
     const R = r.pick(Rs), c = R * a / b;
     return { a, b, h, y, R, c, pyr };
   }
+  const K419 = x => `419:${x.pyr}${x.h},${x.y},${x.R}`;
   const suiName = x => (x.pyr ? `底面の1辺 $${x.R}$ の正四角すい` : `半径 $${x.R}$ の円すい`);
   // 円すい（または四角すい・円柱）と、底面に平行な切り口の図。dim：'top'（頂点から）か 'bot'（底面から）
   function figSui(x, dim) {
@@ -549,7 +606,7 @@
         const x = sui(r, r.chance(0.3)); if (!x) return null;
         return {
           q: `高さ $${x.h}$、${suiName(x)}の、頂点から $${x.y}$ の断面の${x.pyr ? '1辺' : '半径'}`,
-          a: `$${fmt(x.c)}$`, easy: `$${x.R}\\times\\frac{${x.y}}{${x.h}}=${x.y === x.a ? '' : `${x.R}\\times${fr(x.a, x.b)}=`}${fmt(x.c)}$`,
+          a: `$${fmt(x.c)}$`, key: K419(x), easy: `$${x.R}\\times\\frac{${x.y}}{${x.h}}=${x.y === x.a ? '' : `${x.R}\\times${fr(x.a, x.b)}=`}${fmt(x.c)}$`,
         };
       },
       // 断面の面積／底面からの長さ／切りとった小さいすいの体積
@@ -560,7 +617,7 @@
           const A = x.c * x.c, a = x.pyr ? `$${fmt(A)}$` : `$${piT(Math.round(A * 4), 4)}$`;
           if (!Number.isInteger(A * 4)) return null;
           return {
-            q: `高さ $${x.h}$、${suiName(x)}の、頂点から $${x.y}$ の断面の面積`, a,
+            q: `高さ $${x.h}$、${suiName(x)}の、頂点から $${x.y}$ の断面の面積`, a, key: K419(x),
             easy: x.pyr ? `1辺 $${x.R}\\times${fr(x.a, x.b)}=${fmt(x.c)}$、$${fmt(x.c)}^2=${fmt(A)}$` : `半径 $${x.R}\\times${fr(x.a, x.b)}=${fmt(x.c)}$、$\\pi\\times${fmt(x.c)}^2=${piT(Math.round(A * 4), 4)}$`,
             easyCheck: false, verify: () => ok(a, (x.pyr ? 1 : Math.PI) * (x.R * x.R) * (x.y / x.h) ** 2),
           };
@@ -568,7 +625,7 @@
         if (k === 1) {
           return {
             q: `高さ $${x.h}$、${suiName(x)}の、底面から $${x.h - x.y}$ の断面の${x.pyr ? '1辺' : '半径'}`,
-            a: `$${fmt(x.c)}$`, easyCheck: false,
+            a: `$${fmt(x.c)}$`, easyCheck: false, key: K419(x),
             easy: `頂点からは $${x.h}-${x.h - x.y}=${x.y}$、$${x.R}\\times${fr(x.y, x.h)}=${fmt(x.c)}$`,
             verify: () => close(x.c * x.h, x.R * x.y) || 'まちがい',
           };
@@ -586,7 +643,7 @@
         if (dim === 'bot' && x.h - x.y < 1) return null;
         return {
           q: `図の${x.pyr ? '正四角すい' : '円すい'}を、底面に平行に切った断面の${x.pyr ? '1辺' : '半径'}`,
-          a: `$${fmt(x.c)}$`, easyCheck: false, fig: figSui(x, dim), key: `${x.pyr}${x.h},${x.y},${x.R}`,
+          a: `$${fmt(x.c)}$`, easyCheck: false, fig: figSui(x, dim), key: K419(x),
           easy: `${dim === 'bot' ? `頂点からは $${x.h}-${x.h - x.y}=${x.y}$。` : ''}$${x.R}\\times\\frac{${x.y}}{${x.h}}=${fmt(x.c)}$`,
           verify: () => close(x.c * x.h, x.R * x.y) || 'まちがい',
         };
@@ -632,7 +689,7 @@
         const x = triple(r, [2, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]); if (!x || x.k > 4 && x.t[2] > 5) return null;
         const [p, q] = r.chance(0.5) ? [x.a, x.b] : [x.b, x.a];
         return {
-          q: `直角をはさむ2辺が $${p}$ と $${q}$ の直角三角形の斜辺`, a: `$${x.c}$`, easyCheck: false,
+          q: `直角をはさむ2辺が $${p}$ と $${q}$ の直角三角形の斜辺`, a: `$${x.c}$`, easyCheck: false, key: NK('420', x.a, x.b, x.c),
           easy: `$${x.k}\\times(${x.t[0]},\\ ${x.t[1]},\\ ${x.t[2]})$ と見て、$${x.k}\\times${x.t[2]}=${x.c}$`, verify: () => pyth(p, q, x.c),
         };
       },
@@ -643,7 +700,7 @@
         const [g, w] = r.chance(0.5) ? [x.a, x.b] : [x.b, x.a];
         const dec = x.k < 1, kk = dec ? x.k * 10 : x.k;
         return {
-          q: `斜辺が $${x.c}$、1辺が $${g}$ の直角三角形の、のこりの辺`, a: `$${w}$`, easyCheck: false,
+          q: `斜辺が $${x.c}$、1辺が $${g}$ の直角三角形の、のこりの辺`, a: `$${w}$`, easyCheck: false, key: NK('420', x.a, x.b, x.c),
           easy: dec ? `10倍すると ${fmt(x.c * 10)} と ${fmt(g * 10)}、$${fmt(kk)}\\times(${x.t.join(',\\ ')})$。のこりは $${fmt(w * 10)}\\div10=${w}$` : `$${x.k}\\times(${x.t.join(',\\ ')})$ と見て、$${x.k}\\times${x.t[0] * x.k === g ? x.t[1] : x.t[0]}=${w}$`,
           verify: () => pyth(g, w, x.c),
         };
@@ -654,13 +711,13 @@
         if (k === 0) {
           const x = triple(r, [0.1, 0.2, 0.5, 1]); if (!x || x.c > 8 || x.c < 2) return null;
           const [d, h] = x.a < x.b ? [x.a, x.b] : [x.b, x.a];
-          return { q: ladder(x.c, d), a: `$${h}$`, easyCheck: false, easy: `はしごが斜辺。$${fmt(x.k * 10)}\\times(${x.t.join(',\\ ')})$ の $\\frac{1}{10}$ と見て、高さは $${h}$`, verify: () => pyth(d, h, x.c) };
+          return { q: ladder(x.c, d), a: `$${h}$`, easyCheck: false, key: NK('420', x.a, x.b, x.c), easy: `はしごが斜辺。$${fmt(x.k * 10)}\\times(${x.t.join(',\\ ')})$ の $\\frac{1}{10}$ と見て、高さは $${h}$`, verify: () => pyth(d, h, x.c) };
         }
         const x = triple(r, [2, 3, 4, 5, 6, 8, 10, 20]); if (!x || x.c > 60) return null;
         const place = k === 1 ? '画面' : '長方形の公園', unit = k === 1 ? 'cm' : 'm';
         return {
           q: `たて $${x.a}\\,\\mathrm{${unit}}$、横 $${x.b}\\,\\mathrm{${unit}}$ の${place}の対角線は □ ${unit}`,
-          a: `$${x.c}$`, easyCheck: false, easy: `$${x.k}\\times(${x.t.join(',\\ ')})$ と見て、$${x.k}\\times${x.t[2]}=${x.c}$`, verify: () => pyth(x.a, x.b, x.c),
+          a: `$${x.c}$`, easyCheck: false, key: NK('420', x.a, x.b, x.c), easy: `$${x.k}\\times(${x.t.join(',\\ ')})$ と見て、$${x.k}\\times${x.t[2]}=${x.c}$`, verify: () => pyth(x.a, x.b, x.c),
         };
       },
       // わな：どの組の倍でもない2辺（3と5も、直角をはさむなら斜辺は $\sqrt{34}$）
@@ -670,8 +727,9 @@
         else [a, b] = r.pick([[4, 6], [2, 3], [3, 6], [2, 5], [4, 7], [6, 9], [5, 10], [2, 6]]);
         if (isTripleLegs(a, b)) return null;
         const s = a * a + b * b, ans = rt(s);
-        const p = { q: `直角をはさむ2辺が $${a}$ と $${b}$ の直角三角形の斜辺`, a: `$${ans}$`, verify: () => ok(ans, Math.hypot(a, b)) };
-        return dest(p, '4-20', `${a}、${b} は、どの組の倍でもない。ふつうに $\\sqrt{${a}^2+${b}^2}=\\sqrt{${s}}${ans === `\\sqrt{${s}}` ? '' : `=${ans}`}$`, true);
+        const p = { q: `直角をはさむ2辺が $${a}$ と $${b}$ の直角三角形の斜辺`, a: `$${ans}$`, key: NK('420t', a, b), verify: () => ok(ans, Math.hypot(a, b)) };
+        const hl = isTripleHL(b, a);   // 1辺と斜辺なら組になる（3と5、6と10 など）が、ここでは2辺とも直角をはさむ辺
+        return dest(p, '4-20', `直角をはさむ2辺が ${a}、${b} になる組はない${hl ? `（${b} が斜辺なら組になるが、ここでは ${b} も直角をはさむ辺）` : ''}。ふつうに $\\sqrt{${a}^2+${b}^2}=\\sqrt{${s}}${ans === `\\sqrt{${s}}` ? '' : `=${ans}`}$`, true);
       },
     },
   });
@@ -693,7 +751,7 @@
     mark: '**斜辺**と1辺がわかっていて、のこりの辺を求める。',
     futsu: ['$13^2-5^2=169-25=144$ と、', '2乗を計算してからひく。'],
     raku: ['$\\sqrt{13^2-5^2}=\\sqrt{(13+5)(13-5)}$', '$=\\sqrt{18\\times8}=\\sqrt{144}=12$'],
-    why: '$c^2-a^2=(c+a)(c-a)$（3-35 の和と差の積）。大きい数の2乗を計算しなくてよく、$\\sqrt{\\phantom{2}}$ の中も、かけ算の形のまま整理できる。',
+    why: '$c^2-a^2=(c+a)(c-a)$（わざ 3-35 の和と差の積）。大きい数の2乗を計算しなくてよく、$\\sqrt{\\phantom{2}}$ の中も、かけ算の形のまま整理できる。',
     caution: 'どれが斜辺かを先に確かめる。直角をはさむ2辺がわかっているときは、たし算 $a^2+b^2$ なので、この方法は使えない。',
     counts: { s1: 8, s2: 6, s3: 4, trap: 2 },
     cols: 1,
@@ -708,7 +766,7 @@
         if (!isSq(b2) && (sqf(b2)[1] > 15 || r.chance(0.5))) return null;   // 整数か、√ の中が小さい数になるものを
         const sq = isSq(b2) ? `${Math.sqrt(b2)}` : `\\sqrt{${b2}}${ans === `\\sqrt{${b2}}` ? '' : `=${ans}`}`;
         return {
-          q: `斜辺が $${c}$、1辺が $${a}$ の直角三角形の、のこりの辺`, a: `$${ans}$`,
+          q: `斜辺が $${c}$、1辺が $${a}$ の直角三角形の、のこりの辺`, a: `$${ans}$`, key: NK('421', c, a, Math.sqrt(b2)),
           easy: `$\\sqrt{(${c}+${a})(${c}-${a})}=\\sqrt{${S}\\times${D}}=${isSq(b2) ? `\\sqrt{${b2}}=` : ''}${sq}$`,
         };
       },
@@ -718,7 +776,7 @@
         if (!x || x.c === Math.round(x.c) && x.c < 30) return null;
         const S = +fmt(x.c + x.a), D = +fmt(x.c - x.a);
         return {
-          q: `斜辺が $${fmt(x.c)}$、1辺が $${fmt(x.a)}$ の直角三角形の、のこりの辺`, a: `$${fmt(x.b)}$`,
+          q: `斜辺が $${fmt(x.c)}$、1辺が $${fmt(x.a)}$ の直角三角形の、のこりの辺`, a: `$${fmt(x.b)}$`, key: NK('421', x.a, x.b, x.c),
           easy: `$\\sqrt{(${fmt(x.c)}+${fmt(x.a)})(${fmt(x.c)}-${fmt(x.a)})}=\\sqrt{${fmt(S)}\\times${fmt(D)}}=\\sqrt{${fmt(S * D)}}=${fmt(x.b)}$`,
         };
       },
@@ -727,7 +785,7 @@
         if (r.chance(0.5)) {
           const x = hlByDiff(r, [1.2, 1.5, 2, 2.4, 3, 3.6, 4], [0.2, 0.4, 0.5, 0.8, 1], 7); if (!x || x.a >= x.c || x.a > x.b) return null;
           return {
-            q: ladder(x.c, x.a), a: `$${fmt(x.b)}$`,
+            q: ladder(x.c, x.a), a: `$${fmt(x.b)}$`, key: NK('421', x.a, x.b, x.c),
             easy: `はしごが斜辺。$\\sqrt{(${fmt(x.c)}+${fmt(x.a)})(${fmt(x.c)}-${fmt(x.a)})}=\\sqrt{${fmt(x.c + x.a)}\\times${fmt(x.c - x.a)}}=${fmt(x.b)}$`,
           };
         }
@@ -772,21 +830,21 @@
       s1(r) {
         const a = r.int(2, 15), k = r.int(0, 2);
         const q = k === 0 ? `1辺が $${a}$ の正方形の対角線` : k === 1 ? `直角をはさむ辺が $${a}$ の直角二等辺三角形の斜辺` : `$\\angle\\mathrm{C}=90^{\\circ}$、$\\angle\\mathrm{A}=45^{\\circ}$ の $\\triangle\\mathrm{ABC}$ で、$\\mathrm{BC}=${a}$ のとき $\\mathrm{AB}$`;
-        return { q, a: `$${a}\\sqrt{2}$`, easy: `$${a}\\times\\sqrt{2}=${a}\\sqrt{2}$` };
+        return { q, a: `$${a}\\sqrt{2}$`, easy: `$${a}\\times\\sqrt{2}=${a}\\sqrt{2}$`, key: '422a:' + a };
       },
       // 斜辺（対角線）から1辺、√2 のついた辺
       s2(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const h = 2 * r.int(1, 9);
-          return { q: `斜辺が $${h}$ の直角二等辺三角形の、直角をはさむ辺`, a: `$${rt(2, h / 2)}$`, easy: `$\\frac{${h}}{\\sqrt{2}}=\\frac{${h}\\sqrt{2}}{2}=${rt(2, h / 2)}$` };
+          return { q: `斜辺が $${h}$ の直角二等辺三角形の、直角をはさむ辺`, a: `$${rt(2, h / 2)}$`, key: '422h:' + h, easy: `$\\frac{${h}}{\\sqrt{2}}=\\frac{${h}\\sqrt{2}}{2}=${rt(2, h / 2)}$` };
         }
         if (k === 1) {
           const d = 2 * r.int(1, 9);
-          return { q: `対角線が $${d}$ の正方形の1辺`, a: `$${rt(2, d / 2)}$`, easy: `$\\frac{${d}}{\\sqrt{2}}=\\frac{${d}\\sqrt{2}}{2}=${rt(2, d / 2)}$` };
+          return { q: `対角線が $${d}$ の正方形の1辺`, a: `$${rt(2, d / 2)}$`, key: '422h:' + d, easy: `$\\frac{${d}}{\\sqrt{2}}=\\frac{${d}\\sqrt{2}}{2}=${rt(2, d / 2)}$` };
         }
         const m = r.int(2, 9);
-        return { q: `1辺が $${m}\\sqrt{2}$ の正方形の対角線`, a: `$${2 * m}$`, easy: `$${m}\\sqrt{2}\\times\\sqrt{2}=${m}\\times2=${2 * m}$` };
+        return { q: `1辺が $${m}\\sqrt{2}$ の正方形の対角線`, a: `$${2 * m}$`, key: '422h:' + 2 * m, easy: `$${m}\\sqrt{2}\\times\\sqrt{2}=${m}\\times2=${2 * m}$` };
       },
       // 場面と、約の値（$\sqrt2=1.414$）
       s3(r) {
@@ -795,16 +853,16 @@
           const a = r.int(5, 20), v = rnd(a * 1414, 1000, 1);
           return {
             q: `直角をはさむ辺が $${a}\\,\\mathrm{cm}$ の直角二等辺三角形の斜辺は、約 □ cm（$\\sqrt{2}=1.414$、小数第1位まで）`,
-            a: `$${v}$`, easyCheck: false, easy: `$${a}\\sqrt{2}$ に $1.414$ を入れて $${a}\\times1.414=${fmt(a * 1414 / 1000)}$、約 $${v}$`,
+            a: `$${v}$`, easyCheck: false, key: '422a:' + a, easy: `$${a}\\sqrt{2}$ に $1.414$ を入れて $${a}\\times1.414=${fmt(a * 1414 / 1000)}$、約 $${v}$`,
             verify: () => (Math.abs(+v - a * Math.SQRT2) < 0.06 && +v === Math.round(a * 1.414 * 10 + 1e-9) / 10) || 'まちがい',
           };
         }
         if (k === 1) {
           const L = 2 * r.int(2, 15);
-          return { q: `$45^{\\circ}$ の坂を、斜面にそって $${L}\\,\\mathrm{m}$ 進むと、□ m 高くなる`, a: `$${rt(2, L / 2)}$`, easy: `斜面が斜辺。$\\frac{${L}}{\\sqrt{2}}=${rt(2, L / 2)}$` };
+          return { q: `$45^{\\circ}$ の坂を、斜面にそって $${L}\\,\\mathrm{m}$ 進むと、□ m 高くなる`, a: `$${rt(2, L / 2)}$`, key: '422h:' + L, easy: `斜面が斜辺。$\\frac{${L}}{\\sqrt{2}}=${rt(2, L / 2)}$` };
         }
         const a = r.int(2, 12);
-        return { q: `1辺 $${a}\\,\\mathrm{cm}$ の正方形の紙を、対角線で切った切り口の長さ □ cm`, a: `$${a}\\sqrt{2}$`, easy: `$${a}\\times\\sqrt{2}=${a}\\sqrt{2}$` };
+        return { q: `1辺 $${a}\\,\\mathrm{cm}$ の正方形の紙を、対角線で切った切り口の長さ □ cm`, a: `$${a}\\sqrt{2}$`, key: '422a:' + a, easy: `$${a}\\times\\sqrt{2}=${a}\\sqrt{2}$` };
       },
       // わな：30°・60°の直角三角形、正方形でない長方形の対角線
       trap(r) {
@@ -840,14 +898,14 @@
         const k = r.int(0, 2);
         if (k === 0) { const s = 2 * r.int(1, 10); return { q: `1辺が $${s}$ の正三角形の高さ`, a: `$${rt(3, s / 2)}$`, easy: `$${s}\\div2\\times\\sqrt{3}=${rt(3, s / 2)}$` }; }
         const a = r.int(2, 12);
-        if (k === 1) return { q: `${T306}$\\mathrm{BC}=${a}$ のとき $\\mathrm{AB}$`, a: `$${2 * a}$`, easy: `$${a}\\times2=${2 * a}$` };
-        return { q: `${T306}$\\mathrm{BC}=${a}$ のとき $\\mathrm{AC}$`, a: `$${rt(3, a)}$`, easy: `$${a}\\times\\sqrt{3}=${rt(3, a)}$` };
+        if (k === 1) return { q: `${T306}$\\mathrm{BC}=${a}$ のとき $\\mathrm{AB}$`, a: `$${2 * a}$`, easy: `$${a}\\times2=${2 * a}$`, key: '423ab:' + a };
+        return { q: `${T306}$\\mathrm{BC}=${a}$ のとき $\\mathrm{AC}$`, a: `$${rt(3, a)}$`, easy: `$${a}\\times\\sqrt{3}=${rt(3, a)}$`, key: '423ac:' + a };
       },
       // 斜辺から、長いほうの辺から、高さから1辺
       s2(r) {
         const k = r.int(0, 3);
-        if (k === 0) { const h = 2 * r.int(2, 10); return { q: `${T306}$\\mathrm{AB}=${h}$ のとき $\\mathrm{BC}$`, a: `$${h / 2}$`, easy: `$${h}\\div2=${h / 2}$` }; }
-        if (k === 1) { const h = 2 * r.int(2, 10); return { q: `${T306}$\\mathrm{AB}=${h}$ のとき $\\mathrm{AC}$`, a: `$${rt(3, h / 2)}$`, easy: `$${h}\\div2\\times\\sqrt{3}=${rt(3, h / 2)}$` }; }
+        if (k === 0) { const h = 2 * r.int(2, 10); return { q: `${T306}$\\mathrm{AB}=${h}$ のとき $\\mathrm{BC}$`, a: `$${h / 2}$`, easy: `$${h}\\div2=${h / 2}$`, key: '423ab:' + h / 2 }; }
+        if (k === 1) { const h = 2 * r.int(2, 10); return { q: `${T306}$\\mathrm{AB}=${h}$ のとき $\\mathrm{AC}$`, a: `$${rt(3, h / 2)}$`, easy: `$${h}\\div2\\times\\sqrt{3}=${rt(3, h / 2)}$`, key: '423ac:' + h / 2 }; }
         if (k === 2) { const L = 3 * r.int(1, 6); return { q: `${T306}$\\mathrm{AC}=${L}$ のとき $\\mathrm{BC}$`, a: `$${rt(3, L / 3)}$`, easy: `$\\frac{${L}}{\\sqrt{3}}=\\frac{${L}\\sqrt{3}}{3}=${rt(3, L / 3)}$` }; }
         const h = 3 * r.int(1, 5);
         return { q: `高さが $${h}$ の正三角形の1辺`, a: `$${rt(3, 2 * h / 3)}$`, easy: `半分は $\\frac{${h}}{\\sqrt{3}}$、1辺は $2\\times\\frac{${h}}{\\sqrt{3}}=\\frac{${2 * h}\\sqrt{3}}{3}=${rt(3, 2 * h / 3)}$`, easyCheck: false, verify: () => ok(`$${rt(3, 2 * h / 3)}$`, 2 * h / Math.sqrt(3)) };
@@ -859,14 +917,14 @@
           const L = 2 * r.int(2, 9), what = r.pick(['すべり台', 'たこの糸']);
           return {
             q: `地面と $30^{\\circ}$ の角をつくる長さ $${L}\\,\\mathrm{m}$ の${what}。${what === 'すべり台' ? 'いちばん上の高さ' : 'たこの高さ（手から）'}は □ m`,
-            a: `$${L / 2}$`, easy: `${what === 'すべり台' ? 'すべり台' : '糸'}が斜辺。高さは斜辺の半分：$${L}\\div2=${L / 2}$`,
+            a: `$${L / 2}$`, key: '423ab:' + L / 2, easy: `${what === 'すべり台' ? 'すべり台' : '糸'}が斜辺。高さは斜辺の半分：$${L}\\div2=${L / 2}$`,
           };
         }
         if (k === 1) {
           const L = 2 * r.int(2, 8), v = rnd(L / 2 * 173, 100, 1);
           return {
             q: `地面と $30^{\\circ}$ の角をつくる長さ $${L}\\,\\mathrm{m}$ のすべり台の横はばは、約 □ m（$\\sqrt{3}=1.73$、小数第1位まで）`,
-            a: `$${v}$`, easyCheck: false, easy: `横は $${L / 2}\\sqrt{3}$。$${L / 2}\\times1.73=${fmt(L / 2 * 1.73)}$、約 $${v}$`,
+            a: `$${v}$`, easyCheck: false, key: '423ac:' + L / 2, easy: `横は $${L / 2}\\sqrt{3}$。$${L / 2}\\times1.73=${fmt(L / 2 * 1.73)}$、約 $${v}$`,
             verify: () => (Math.abs(+v - L / 2 * Math.sqrt(3)) < 0.07 && +v === Math.round(L / 2 * 173 / 10 + 1e-9) / 10) || 'まちがい',
           };
         }
@@ -916,7 +974,7 @@
         const x = threeSides(r, r.chance(0.5), [1, 2, 3, 4, 5]); if (!x) return null;
         const [a, b, c] = x.sorted, s = a * a + b * b;
         return {
-          q: `3辺が $${x.s[0]}$、$${x.s[1]}$、$${x.s[2]}$ の三角形は、直角三角形で（ある・ない）□`, a: x.right ? 'ある' : 'ない',
+          q: `3辺が $${x.s[0]}$、$${x.s[1]}$、$${x.s[2]}$ の三角形は、直角三角形で$\\text{（ある・ない）}□$`, a: x.right ? 'ある' : 'ない', key: NK('424', ...x.s),
           easy: `いちばん長い ${c} とくらべる：$${a}^2+${b}^2=${s}$、$${c}^2=${c * c}$${x.right ? '。等しい' : '。等しくない'}`,
           verify: () => (isRight(...x.s) === x.right) || 'まちがい',
         };
@@ -928,7 +986,7 @@
           const x = threeSides(r, r.chance(0.3), [1, 2, 3]); if (!x) return null;
           const [a, b, c] = x.sorted, s = a * a + b * b, ans = s === c * c ? '直角' : s > c * c ? '鋭角' : '鈍角';
           return {
-            q: `3辺が $${x.s[0]}$、$${x.s[1]}$、$${x.s[2]}$ の三角形の、いちばん大きい角は（直角・鋭角・鈍角）□`, a: ans,
+            q: `3辺が $${x.s[0]}$、$${x.s[1]}$、$${x.s[2]}$ の三角形の最大の角は$\\text{（直角・鋭角・鈍角）}□$`, a: ans, key: NK('424', ...x.s),
             easy: `$${a}^2+${b}^2=${s}$、$${c}^2=${c * c}$。${s === c * c ? '等しい' : s > c * c ? `$${s}>${c * c}$` : `$${s}<${c * c}$`}`,
             verify: () => { const cosC = (a * a + b * b - c * c) / (2 * a * b); return (ans === (Math.abs(cosC) < 1e-9 ? '直角' : cosC > 0 ? '鋭角' : '鈍角')) || 'まちがい'; },
           };
@@ -939,7 +997,7 @@
           // names[2] の向かいが斜辺
           const len = { [opp[names[0]]]: x.a, [opp[names[1]]]: x.b, [opp[names[2]]]: x.c };
           return {
-            q: `$\\mathrm{BC}=${len.BC}$、$\\mathrm{CA}=${len.CA}$、$\\mathrm{AB}=${len.AB}$ の $\\triangle\\mathrm{ABC}$ で、直角なのは`, a: `$\\angle\\mathrm{${names[2]}}$`,
+            q: `$\\mathrm{BC}=${len.BC}$、$\\mathrm{CA}=${len.CA}$、$\\mathrm{AB}=${len.AB}$ の $\\triangle\\mathrm{ABC}$ で、直角なのは □`, a: `$\\angle\\mathrm{${names[2]}}$`, key: NK('424', x.a, x.b, x.c),
             easy: `いちばん長い $${rm(opp[names[2]])}=${x.c}$ の向かいの角。$${x.a}^2+${x.b}^2=${x.c * x.c}=${x.c}^2$`,
             verify: () => { const L = [['A', len.BC], ['B', len.CA], ['C', len.AB]].sort((p, q) => q[1] - p[1]); return (L[0][0] === names[2] && pyth(L[1][1], L[2][1], L[0][1]) === true) || 'まちがい'; },
           };
@@ -947,7 +1005,7 @@
         const [s1, s2, s3, ans] = r.pick([['1', '\\sqrt{3}', '2', 'ある'], ['1', '1', '\\sqrt{2}', 'ある'], ['2', '\\sqrt{5}', '3', 'ある'], ['\\sqrt{2}', '\\sqrt{3}', '\\sqrt{5}', 'ある'], ['2', '3', '\\sqrt{10}', 'ない'], ['1', '2', '\\sqrt{3}', 'ある'], ['3', '\\sqrt{7}', '4', 'ある'], ['2', '\\sqrt{3}', '3', 'ない']]);
         const v = [s1, s2, s3].map(t => M.evalMath(t, {})), sorted = v.slice().sort((p, q) => p - q);
         return {
-          q: `3辺が $${s1}$、$${s2}$、$${s3}$ の三角形は、直角三角形で（ある・ない）□`, a: ans,
+          q: `3辺が $${s1}$、$${s2}$、$${s3}$ の三角形は、直角三角形で$\\text{（ある・ない）}□$`, a: ans, key: '424r:' + [s1, s2, s3].sort().join(','),
           easy: `2乗すると ${v.map(t => fmt(Math.round(t * t * 1e6) / 1e6)).join('、')}。$${fmt(Math.round(sorted[0] ** 2))}+${fmt(Math.round(sorted[1] ** 2))}${ans === 'ある' ? '=' : '\\ne'}${fmt(Math.round(sorted[2] ** 2))}$`,
           verify: () => (isRight(...v) === (ans === 'ある')) || 'まちがい',
         };
@@ -958,23 +1016,23 @@
           const x = threeSides(r, r.chance(0.6), [0.3, 0.2, 0.1, 1]); if (!x || x.sorted[2] > 6) return null;
           const unit = 'm', [a, b, c] = x.sorted;
           return {
-            q: `ひもで作った3辺 $${x.s[0]}\\,\\mathrm{${unit}}$、$${x.s[1]}\\,\\mathrm{${unit}}$、$${x.s[2]}\\,\\mathrm{${unit}}$ の三角形は、直角三角形で（ある・ない）□`,
-            a: x.right ? 'ある' : 'ない', easy: `$${a}^2+${b}^2=${fmt(a * a + b * b)}$、$${c}^2=${fmt(c * c)}$${x.right ? '。等しい' : '。等しくない'}`,
+            q: `ひもで作った3辺 $${x.s[0]}\\,\\mathrm{${unit}}$、$${x.s[1]}\\,\\mathrm{${unit}}$、$${x.s[2]}\\,\\mathrm{${unit}}$ の三角形は、直角三角形で$\\text{（ある・ない）}□$`,
+            a: x.right ? 'ある' : 'ない', key: NK('424', ...x.s), easy: `$${a}^2+${b}^2=${fmt(a * a + b * b)}$、$${c}^2=${fmt(c * c)}$${x.right ? '。等しい' : '。等しくない'}`,
             verify: () => (isRight(...x.s) === x.right) || 'まちがい',
           };
         }
         const x = triple(r, [1, 2, 3]); if (!x) return null;
         const right = r.chance(0.5), a = x.a, b = right ? x.b : x.b + 1, n = a + b + x.c, c = n - a - b;
         return {
-          q: `1周 $${n}\\,\\mathrm{m}$ のひもで、2辺が $${a}\\,\\mathrm{m}$、$${b}\\,\\mathrm{m}$ の三角形を作ると、直角三角形で（ある・ない）□`,
-          a: right ? 'ある' : 'ない', easy: (() => { const t = [a, b, c].sort((p, q) => p - q); return `のこりは $${n}-${a}-${b}=${c}$。$${t[0]}^2+${t[1]}^2=${t[0] ** 2 + t[1] ** 2}$、$${t[2]}^2=${t[2] ** 2}$`; })(),
+          q: `1周 $${n}\\,\\mathrm{m}$ のひもで、2辺が $${a}\\,\\mathrm{m}$、$${b}\\,\\mathrm{m}$ の三角形を作ると、直角三角形で$\\text{（ある・ない）}□$`,
+          a: right ? 'ある' : 'ない', key: NK('424', a, b, c), easy: (() => { const t = [a, b, c].sort((p, q) => p - q); return `のこりは $${n}-${a}-${b}=${c}$。$${t[0]}^2+${t[1]}^2=${t[0] ** 2 + t[1] ** 2}$、$${t[2]}^2=${t[2] ** 2}$`; })(),
           verify: () => (isRight(a, b, c) === right) || 'まちがい',
         };
       },
       // わな：2辺だけ（直角がわからないので、3つめの辺は決まらない）
       trap(r) {
         const [a, b] = r.pick([[4, 6], [3, 4], [5, 7], [6, 8], [5, 12], [2, 3]]);
-        const p = { q: `2辺が $${a}$ と $${b}$ の三角形の、3つめの辺は（決まる・決まらない）□`, a: '決まらない', verify: () => (b - a < b + a) || 'まちがい' };
+        const p = { q: `2辺が $${a}$ と $${b}$ の三角形の、3つめの辺は$\\text{（決まる・決まらない）}□$`, a: '決まらない', key: NK('424t', a, b), verify: () => (b - a < b + a) || 'まちがい' };
         return dest(p, '4-24', `直角があるかわからないので、三平方の定理は使えない。3つめの辺は $${b - a}$ より長く $${a + b}$ より短い、どんな長さにもなる`);
       },
     },
@@ -1016,14 +1074,14 @@
           for (let x = -12; x <= 12; x++) for (let y = -12; y <= 12; y++) if (x && y && Math.abs(x * x + y * y - R2) <= 8) pts.push([x, y]);
           const [x, y] = r.pick(pts), s = x * x + y * y, ans = s === R2 ? '上' : s < R2 ? '内側' : '外側';
           return {
-            q: `点 $${P(x, y)}$ は、円 $x^2+y^2=${R2}$ の（上・内側・外側）□`, a: ans,
+            q: `点 $${P(x, y)}$ は、円 $x^2+y^2=${R2}$ の$\\text{（上・内側・外側）}□$`, a: ans, key: NK(`425c${R2}`, Math.abs(x), Math.abs(y)),
             easy: `$${par(x)}^2+${par(y)}^2=${s}$、$${s}${s === R2 ? '=' : s < R2 ? '<' : '>'}${R2}$`,
             verify: () => (ans === (Math.abs(Math.hypot(x, y) - Math.sqrt(R2)) < 1e-9 ? '上' : Math.hypot(x, y) < Math.sqrt(R2) ? '内側' : '外側')) || 'まちがい',
           };
         }
         const x = r.intNot(-9, 9, v => v === 0), y = r.intNot(-9, 9, v => v === 0), s = x * x + y * y;
         return {
-          q: `原点を中心とし、点 $${P(x, y)}$ を通る円の式`, a: `$x^2+y^2=${s}$`, easy: `$r^2=${par(x)}^2+${par(y)}^2=${s}$（$\\sqrt{\\phantom{2}}$ にしない）`,
+          q: `原点を中心とし、点 $${P(x, y)}$ を通る円の式`, a: `$x^2+y^2=${s}$`, key: NK('425o', Math.abs(x), Math.abs(y)), easy: `$r^2=${par(x)}^2+${par(y)}^2=${s}$（$\\sqrt{\\phantom{2}}$ にしない）`,
           verify: () => close(M.evalMath('x^2+y^2', { x, y }), s) || 'まちがい',
         };
       },
@@ -1034,14 +1092,14 @@
         const what = r.pick(['学校', '図書館', '公園', '病院']);
         if (r.chance(0.6)) {
           return {
-            q: `駅を原点、東を $x$、北を $y$ の向き（単位 km）として、${what} $${P(px, py)}$ までの直線距離 □ km`,
+            q: `駅を原点、東を $x$、北を $y$ の向き（単位 km）として、${what} $${P(px, py)}$ までの直線距離 □ km`, key: NK('425s', x.a, x.b),
             a: `$${x.c}$`, easyCheck: false, easy: `$\\sqrt{${par(+fmt(px))}^2+${par(+fmt(py))}^2}=\\sqrt{${fmt(x.c * x.c)}}=${x.c}$`, verify: () => pyth(px, py, x.c),
           };
         }
         const R = +fmt(x.c + r.pick([-0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.5])), s = +fmt(px * px + py * py), ans = s <= R * R + 1e-9 ? '入る' : '入らない';
         if (R < 0.5) return null;
         return {
-          q: `駅を原点、東を $x$、北を $y$ の向き（単位 km）として、${what} $${P(px, py)}$ は駅から半径 $${fmt(R)}\\,\\mathrm{km}$ の範囲に（入る・入らない）□`,
+          q: `駅を原点、東を $x$、北を $y$ の向き（単位 km）として、${what} $${P(px, py)}$ は駅から半径 $${fmt(R)}\\,\\mathrm{km}$ の範囲に$\\text{（入る・入らない）}□$`,
           a: ans, easy: `$${par(+fmt(px))}^2+${par(+fmt(py))}^2=${fmt(s)}$、$${fmt(R)}^2=${fmt(R * R)}$`,
           verify: () => (ans === (Math.hypot(px, py) <= R + 1e-9 ? '入る' : '入らない')) || 'まちがい',
         };
@@ -1050,7 +1108,7 @@
       trap(r) {
         const a = r.int(2, 8), b = r.int(2, 8);
         const [d1, d2] = r.pick([['東', '北'], ['西', '北'], ['東', '南'], ['北', '東']]);
-        const p = { q: `原点から道にそって${d1}へ $${a}$ km、${d2}へ $${b}$ km 歩いた道のり □ km`, a: `$${a + b}$`, verify: () => (a + b > Math.hypot(a, b)) || 'まちがい' };
+        const p = { q: `原点から道にそって${d1}へ $${a}$ km、${d2}へ $${b}$ km 歩いた道のり □ km`, a: `$${a + b}$`, key: NK('425t', a, b), verify: () => (a + b > Math.hypot(a, b)) || 'まちがい' };
         return dest(p, '4-25', `道のりは直線の距離ではない。$${a}+${b}=${a + b}$（三平方の定理はいらない）`);
       },
     },
@@ -1068,7 +1126,7 @@
     const items = [S('A', 'B'), S('B', 'C'), S('C', 'D', { dash: true }), S('D', 'A', { dash: true }), S('E', 'F'), S('F', 'G'), S('G', 'H'), S('H', 'E'),
       S('A', 'E'), S('B', 'F'), S('C', 'G'), S('D', 'H', { dash: true })];
     items.push(S('A', 'G', { thick: true }), ['label', Q(V.G), 'G', 'ne']);
-    items.push(['label', Q(A3), 'A', 'sw'], ['label', mid(Q(V.A), Q(V.B)), NUMLAB(a), 's'], ['label', mid(Q(V.B), Q(V.C)), NUMLAB(b), 'se'], ['label', mid(Q(V.A), Q(V.E)), NUMLAB(c), 'w'], ['label', [Q(V.A)[0] - 1.1, mid(Q(V.A), Q(V.E))[1]], '', 'c']);   // 字のない点：左の2けたの字が切れないように
+    items.push(['label', Q(A3), 'A', 'sw'], ['label', mid(Q(V.A), Q(V.B)), NUMLAB(a), 's'], ['label', mid(Q(V.B), Q(V.C)), NUMLAB(b), 'se'], ['label', mid(Q(V.A), Q(V.E)), NUMLAB(c), 'w']);
     return { s: 5, pad: FIGPAD, items };
   }
   M.add({
@@ -1087,7 +1145,7 @@
       // 3辺から（答えが整数）
       s1(r) {
         const [a, b, c] = r.shuffle(r.pick(BOX)), s = a * a + b * b + c * c;
-        return { q: `横 $${a}$、おく行き $${b}$、高さ $${c}$ の直方体の対角線`, a: `$${Math.sqrt(s)}$`, easy: `$\\sqrt{${a}^2+${b}^2+${c}^2}=\\sqrt{${s}}=${Math.sqrt(s)}$` };
+        return { q: `横 $${a}$、おく行き $${b}$、高さ $${c}$ の直方体の対角線`, a: `$${Math.sqrt(s)}$`, key: NK('426', a, b, c), easy: `$\\sqrt{${a}^2+${b}^2+${c}^2}=\\sqrt{${s}}=${Math.sqrt(s)}$` };
       },
       // 立方体、答えが √、対角線から3つめの辺
       s2(r) {
@@ -1097,10 +1155,10 @@
           const a = r.int(1, 6), b = r.int(1, 6), c = r.int(2, 8), s = a * a + b * b + c * c;
           if (isSq(s) || a === b && b === c) return null;
           const ans = rt(s);
-          return { q: `横 $${a}$、おく行き $${b}$、高さ $${c}$ の直方体の対角線`, a: `$${ans}$`, easy: `$\\sqrt{${a}^2+${b}^2+${c}^2}=\\sqrt{${s}}${ans === `\\sqrt{${s}}` ? '' : `=${ans}`}$` };
+          return { q: `横 $${a}$、おく行き $${b}$、高さ $${c}$ の直方体の対角線`, a: `$${ans}$`, key: NK('426', a, b, c), easy: `$\\sqrt{${a}^2+${b}^2+${c}^2}=\\sqrt{${s}}${ans === `\\sqrt{${s}}` ? '' : `=${ans}`}$` };
         }
         const [a, b, c] = r.shuffle(r.pick(BOX)), d = Math.sqrt(a * a + b * b + c * c);
-        return { q: `対角線が $${d}$、横 $${a}$、おく行き $${b}$ の直方体の高さ`, a: `$${c}$`, easy: `$\\sqrt{${d}^2-${a}^2-${b}^2}=\\sqrt{${c * c}}=${c}$` };
+        return { q: `対角線が $${d}$、横 $${a}$、おく行き $${b}$ の直方体の高さ`, a: `$${c}$`, key: NK('426', a, b, c), easy: `$\\sqrt{${d}^2-${a}^2-${b}^2}=\\sqrt{${c * c}}=${c}$` };
       },
       // 見取図で（立体の対角線、箱に入る棒）
       s3(r) {
@@ -1108,7 +1166,7 @@
         const bo = r.chance(0.4);
         return {
           q: bo ? '図の箱（直方体）に入る、まっすぐな棒のいちばん長い長さ' : '図の直方体の対角線 $\\mathrm{AG}$ の長さ',
-          a: `$${d}$`, fig: figBox(a, b, c), key: `${a},${b},${c}`,
+          a: `$${d}$`, fig: figBox(a, b, c), key: NK('426', a, b, c),
           easy: `$\\sqrt{${a}^2+${b}^2+${c}^2}=\\sqrt{${s}}=${d}$`,
         };
       },
@@ -1131,7 +1189,7 @@
     raku: ['底辺ACが同じなので、', '高さを先にたす', '$10\\times(3+5)\\div2=40$', 'ひし形は $8\\times6\\div2=24$'],
     why: '2つの三角形は底辺ACが同じなので、$\\mathrm{AC}\\times h_1\\div2$ と $\\mathrm{AC}\\times h_2\\div2$ の和は $\\mathrm{AC}\\times(h_1+h_2)\\div2$（分配法則。4-5③）。対角線が垂直に交わるひし形では、$h_1+h_2$ がもう1本の対角線になる。',
     caution: '高さは、対角線に垂直にはかった長さ。ななめの辺の長さを高さにしない。',
-    counts: { s1: 8, s2: 6, s3: 4, trap: 2 },
+    counts: { s1: 6, s2: 6, s3: 4, trap: 2 },   // ステップ1は文が2行（高さが何かを書く。R1-12）なので6問
     cols: 1,
     boxw: '12mm',
     fits(q) { return /対角線/.test(q) && /面積/.test(q) && /四角形|ひし形|正方形|畑|タイル/.test(q) && !/直方体/.test(q); },
@@ -1141,32 +1199,32 @@
         const d = r.int(4, 16), h1 = r.int(2, 9), h2 = r.intNot(2, 9, v => v === h1);
         if ((d * (h1 + h2)) % 2) return null;
         return {
-          q: `四角形ABCDの対角線 $\\mathrm{AC}=${d}$、高さ $h_1=${h1}$、$h_2=${h2}$ の面積`,
+          q: `四角形ABCDの対角線 $\\mathrm{AC}=${d}$、ACとB、Dの距離 $h_1=${h1}$、$h_2=${h2}$ のときの面積`, key: `427:${d}|` + NK('', h1, h2),
           a: `$${d * (h1 + h2) / 2}$`, easy: `$${d}\\times(${h1}+${h2})\\div2=${d * (h1 + h2) / 2}$`,
         };
       },
       // ひし形・正方形・対角線が垂直な四角形
       s2(r) {
         const k = r.int(0, 2);
-        if (k === 0) { const p = r.int(3, 16), q = r.intNot(3, 16, v => v === p); if ((p * q) % 2) return null; return { q: `対角線が $${p}$ と $${q}$ のひし形の面積`, a: `$${p * q / 2}$`, easy: `$${p}\\times${q}\\div2=${p * q / 2}$` }; }
+        if (k === 0) { const p = r.int(3, 16), q = r.intNot(3, 16, v => v === p); if ((p * q) % 2) return null; return { q: `対角線が $${p}$ と $${q}$ のひし形の面積`, a: `$${p * q / 2}$`, key: NK('427d', p, q), easy: `$${p}\\times${q}\\div2=${p * q / 2}$` }; }
         if (k === 1) { const d = 2 * r.int(2, 9); return { q: `対角線が $${d}$ の正方形の面積`, a: `$${d * d / 2}$`, easy: `$${d}\\times${d}\\div2=${d * d / 2}$` }; }
         const p = r.int(4, 14), q = r.intNot(4, 14, v => v === p); if ((p * q) % 2) return null;
-        return { q: `2本の対角線が垂直に交わり、長さが $${p}$ と $${q}$ の四角形の面積`, a: `$${p * q / 2}$`, easy: `$${p}\\times${q}\\div2=${p * q / 2}$` };
+        return { q: `2本の対角線が垂直に交わり、長さが $${p}$ と $${q}$ の四角形の面積`, a: `$${p * q / 2}$`, key: NK('427d', p, q), easy: `$${p}\\times${q}\\div2=${p * q / 2}$` };
       },
       // 場面：畑・タイル、面積から対角線
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const d = 10 * r.int(2, 6), h1 = r.int(5, 20), h2 = r.int(5, 20);
-          return { q: `四角形の畑ABCDで、対角線ACが $${d}\\,\\mathrm{m}$、ACとB、Dの距離 $${h1}\\,\\mathrm{m}$、$${h2}\\,\\mathrm{m}$。面積 □ $\\mathrm{m^2}$`, a: `$${d * (h1 + h2) / 2}$`, easy: `$${d}\\times(${h1}+${h2})\\div2=${d * (h1 + h2) / 2}$` };
+          return { q: `四角形の畑ABCDで、対角線ACが $${d}\\,\\mathrm{m}$、ACとB、Dの距離 $${h1}\\,\\mathrm{m}$、$${h2}\\,\\mathrm{m}$。面積 $□\\,\\mathrm{m^2}$`, a: `$${d * (h1 + h2) / 2}$`, easy: `$${d}\\times(${h1}+${h2})\\div2=${d * (h1 + h2) / 2}$` };
         }
         if (k === 1) {
           const p = r.int(4, 12), q = r.int(4, 12); if ((p * q) % 2) return null;
-          return { q: `対角線が $${p}\\,\\mathrm{cm}$、$${q}\\,\\mathrm{cm}$ のひし形のタイル10まいの面積 □ $\\mathrm{cm^2}$`, a: `$${p * q * 5}$`, easyCheck: false, easy: `1まい $${p}\\times${q}\\div2=${p * q / 2}$、10まいで $${p * q * 5}$`, verify: () => close(p * q * 5, 10 * (p * q / 2)) || 'まちがい' };
+          return { q: `対角線が $${p}\\,\\mathrm{cm}$、$${q}\\,\\mathrm{cm}$ のひし形のタイル10まいの面積 $□\\,\\mathrm{cm^2}$`, a: `$${p * q * 5}$`, key: NK('427d', p, q), easyCheck: false, easy: `1まい $${p}\\times${q}\\div2=${p * q / 2}$、10まいで $${p * q * 5}$`, verify: () => close(p * q * 5, 10 * (p * q / 2)) || 'まちがい' };
         }
         const p = r.int(3, 12), q = r.intNot(3, 14, v => v === p), S = p * q / 2;
         if (!Number.isInteger(S)) return null;
-        return { q: `面積が $${S}$ のひし形で、1本の対角線が $${p}$ のとき、もう1本の対角線`, a: `$${q}$`, easy: `$${S}\\times2\\div${p}=${q}$` };
+        return { q: `面積が $${S}$ のひし形で、1本の対角線が $${p}$ のとき、もう1本の対角線`, a: `$${q}$`, key: NK('427d', p, q), easy: `$${S}\\times2\\div${p}=${q}$` };
       },
       // わな：平行四辺形・三角形の面積にななめの辺（対角線で分ける形ではない）
       trap(r) {
@@ -1202,7 +1260,7 @@
         const k = r.int(0, 2), rad = r.int(2, 10);
         if (k === 0) {
           const c = rad * rad;
-          return { q: `半径 $${rad}$ の円の面積（$\\pi=3.14$）`, a: `$${PI314(c)}$`, easyCheck: false, easy: `$\\pi\\times${rad}^2=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * rad * rad) };
+          return { q: `半径 $${rad}$ の円の面積（$\\pi=3.14$）`, a: `$${PI314(c)}$`, key: '428A:' + rad, easyCheck: false, easy: `$\\pi\\times${rad}^2=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * rad * rad) };
         }
         const ang = r.pick([30, 40, 45, 60, 72, 90, 120, 150, 180, 240, 270]);
         if (k === 1) {
@@ -1237,11 +1295,11 @@
         if (k === 1) {
           const D = r.pick([20, 24, 28, 32, 36, 40]), n = r.pick([4, 6, 8]), c = (D / 2) ** 2 / n;
           if (!Number.isInteger(c)) return null;
-          return { q: `直径 $${D}\\,\\mathrm{cm}$ の丸いピザを $${n}$ 等分した1切れの面積 □ $\\mathrm{cm^2}$（$\\pi=3.14$）`, a: `$${PI314(c)}$`, easyCheck: false, easy: `半径 ${D / 2}。$\\pi\\times${D / 2}^2\\div${n}=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * (D / 2) ** 2 / n) };
+          return { q: `直径 $${D}\\,\\mathrm{cm}$ の丸いピザを $${n}$ 等分した1切れの面積 $□\\,\\mathrm{cm^2}$（$\\pi=3.14$）`, a: `$${PI314(c)}$`, easyCheck: false, easy: `半径 ${D / 2}。$\\pi\\times${D / 2}^2\\div${n}=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * (D / 2) ** 2 / n) };
         }
         const rad = r.int(2, 9), w = 1;
         const c = (rad + w) ** 2 - rad * rad;
-        return { q: `半径 $${rad}\\,\\mathrm{m}$ の円い花だんのまわりの、はば $${w}\\,\\mathrm{m}$ の道の面積 □ $\\mathrm{m^2}$（$\\pi=3.14$）`, a: `$${PI314(c)}$`, easyCheck: false, easy: `$\\pi\\times${rad + w}^2-\\pi\\times${rad}^2=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * ((rad + w) ** 2 - rad * rad)) };
+        return { q: `半径 $${rad}\\,\\mathrm{m}$ の円い花だんのまわりの、はば $${w}\\,\\mathrm{m}$ の道の面積 $□\\,\\mathrm{m^2}$（$\\pi=3.14$）`, a: `$${PI314(c)}$`, easyCheck: false, easy: `$\\pi\\times${rad + w}^2-\\pi\\times${rad}^2=${piT(c)}$、$${c}\\times3.14=${PI314(c)}$`, verify: () => ok(`$${PI314(c)}$`, 3.14 * ((rad + w) ** 2 - rad * rad)) };
       },
       // わな：円周・面積から半径（はじめから3.14でわる。最後にかける形ではない）
       trap(r) {
@@ -1252,7 +1310,7 @@
           return dest(p, '4-28', `はじめから3.14でわる：$${C}\\div3.14=${2 * rad}$ が直径、半径は $${rad}$`);
         }
         const A = PI314(rad * rad);
-        const p = { q: `面積が $${A}$ の円の半径（$\\pi=3.14$）`, a: `$${rad}$`, verify: () => close(rad * rad * 3.14, +A) || 'まちがい' };
+        const p = { q: `面積が $${A}$ の円の半径（$\\pi=3.14$）`, a: `$${rad}$`, key: '428A:' + rad, verify: () => close(rad * rad * 3.14, +A) || 'まちがい' };
         return dest(p, '4-28', `はじめから3.14でわる：$${A}\\div3.14=${rad * rad}$、2乗して ${rad * rad} になる数で、半径は $${rad}$`);
       },
     },
@@ -1277,27 +1335,27 @@
         const pyr = r.chance(0.35), R = r.int(2, 9), h = r.int(2, 12), V = R * R * h;
         if (V % 3) return null;
         if (pyr) return { q: `底面が1辺 $${R}$ の正方形で、高さ $${h}$ の四角すいの体積`, a: `$${V / 3}$`, easy: `$${R}\\times${R}\\times${h}\\times\\frac{1}{3}=${V}\\times\\frac{1}{3}=${V / 3}$` };
-        return { q: `底面の半径 $${R}$、高さ $${h}$ の円すいの体積`, a: `$${piT(V / 3)}$`, easy: `$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V)}\\times\\frac{1}{3}=${piT(V / 3)}$` };
+        return { q: `底面の半径 $${R}$、高さ $${h}$ の円すいの体積`, a: `$${piT(V / 3)}$`, key: `429:${R},${h}`, easy: `$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V)}\\times\\frac{1}{3}=${piT(V / 3)}$` };
       },
       // 底面積がわかる三角すい、直径、体積から高さ
       s2(r) {
         const k = r.int(0, 2);
         if (k === 0) { const S = r.int(4, 30), h = r.int(3, 12); if ((S * h) % 3) return null; return { q: `底面積が $${S}$、高さが $${h}$ の三角すいの体積`, a: `$${S * h / 3}$`, easy: `$${S}\\times${h}\\times\\frac{1}{3}=${S * h / 3}$` }; }
-        if (k === 1) { const R = r.int(1, 6), h = r.int(2, 12), V = R * R * h; if (V % 3) return null; return { q: `底面の直径 $${2 * R}$、高さ $${h}$ の円すいの体積`, a: `$${piT(V / 3)}$`, easyCheck: false, easy: `半径は ${R}。$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$`, verify: () => ok(`$${piT(V / 3)}$`, Math.PI * R * R * h / 3) }; }
+        if (k === 1) { const R = r.int(1, 6), h = r.int(2, 12), V = R * R * h; if (V % 3) return null; return { q: `底面の直径 $${2 * R}$、高さ $${h}$ の円すいの体積`, a: `$${piT(V / 3)}$`, key: `429:${R},${h}`, easyCheck: false, easy: `半径は ${R}。$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$`, verify: () => ok(`$${piT(V / 3)}$`, Math.PI * R * R * h / 3) }; }
         const R = r.int(2, 6), h = r.int(2, 12), V = R * R * h;
         if (V % 3) return null;
-        return { q: `体積が $${piT(V / 3)}$、底面の半径が $${R}$ の円すいの高さ`, a: `$${h}$`, easy: `同じ底面・高さの円柱なら $${piT(V)}$。底面積 $${piT(R * R)}$ でわって $${V}\\div${R * R}=${h}$`, easyCheck: false, verify: () => close(Math.PI * R * R * h / 3, ev(`$${piT(V / 3)}$`)) || 'まちがい' };
+        return { q: `体積が $${piT(V / 3)}$、底面の半径が $${R}$ の円すいの高さ`, a: `$${h}$`, key: `429:${R},${h}`, easy: `同じ底面・高さの円柱なら $${piT(V)}$。底面積 $${piT(R * R)}$ でわって $${V}\\div${R * R}=${h}$`, easyCheck: false, verify: () => close(Math.PI * R * R * h / 3, ev(`$${piT(V / 3)}$`)) || 'まちがい' };
       },
       // 場面：円すい形の容器、砂山、円柱から円すいをくりぬく
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const R = r.int(2, 6), h = r.int(6, 15), V = R * R * h; if (V % 3) return null;
-          return { q: `底面の半径 $${R}\\,\\mathrm{cm}$、深さ $${h}\\,\\mathrm{cm}$ の円すい形の容器に入る水の体積は □ $\\mathrm{cm^3}$`, a: `$${piT(V / 3)}$`, easy: `$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$` };
+          return { q: `底面の半径 $${R}\\,\\mathrm{cm}$、深さ $${h}\\,\\mathrm{cm}$ の円すい形の容器に入る水の体積は $□\\,\\mathrm{cm^3}$`, a: `$${piT(V / 3)}$`, easy: `$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$` };
         }
         if (k === 1) {
           const R = r.int(2, 5), h = r.int(1, 4), V = R * R * h; if (V % 3) return null;
-          return { q: `直径 $${2 * R}\\,\\mathrm{m}$、高さ $${h}\\,\\mathrm{m}$ の円すい形の砂山の体積は □ $\\mathrm{m^3}$`, a: `$${piT(V / 3)}$`, easyCheck: false, easy: `半径は ${R}。$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$`, verify: () => ok(`$${piT(V / 3)}$`, Math.PI * R * R * h / 3) };
+          return { q: `直径 $${2 * R}\\,\\mathrm{m}$、高さ $${h}\\,\\mathrm{m}$ の円すい形の砂山の体積は $□\\,\\mathrm{m^3}$`, a: `$${piT(V / 3)}$`, easyCheck: false, easy: `半径は ${R}。$\\pi\\times${R}^2\\times${h}\\times\\frac{1}{3}=${piT(V / 3)}$`, verify: () => ok(`$${piT(V / 3)}$`, Math.PI * R * R * h / 3) };
         }
         const R = r.int(2, 6), h = r.int(3, 12), V = R * R * h; if (V % 3) return null;
         return { q: `底面の半径 $${R}$、高さ $${h}$ の円柱から、同じ底面・同じ高さの円すいをくりぬいた。残りの体積`, a: `$${piT(2 * V / 3)}$`, easyCheck: false, easy: `円柱 $${piT(V)}$ の $1-\\frac{1}{3}=\\frac{2}{3}$ で $${piT(2 * V / 3)}$`, verify: () => ok(`$${piT(2 * V / 3)}$`, Math.PI * R * R * h - Math.PI * R * R * h / 3) };
@@ -1348,13 +1406,13 @@
       s3(r) {
         if (r.chance(0.5)) {
           const R = r.int(4, 10), L = R + r.int(4, 14);
-          return { q: `底面の半径 $${R}\\,\\mathrm{cm}$、母線 $${L}\\,\\mathrm{cm}$ の円すいの形の帽子（底はない）を作る。いる紙の面積は □ $\\mathrm{cm^2}$`, a: `$${piT(R * L)}$`, easy: `側面だけ。$\\pi\\times${R}\\times${L}=${piT(R * L)}$` };
+          return { q: `底面の半径 $${R}\\,\\mathrm{cm}$、母線 $${L}\\,\\mathrm{cm}$ の円すいの形の帽子（底はない）を作る。いる紙の面積は $□\\,\\mathrm{cm^2}$`, a: `$${piT(R * L)}$`, easy: `側面だけ。$\\pi\\times${R}\\times${L}=${piT(R * L)}$` };
         }
         const x = triple(r, [0.5, 1]); if (!x) return null;
         const [R, h] = x.a > x.b ? [x.a, x.b] : [x.b, x.a];
         if (R > 8) return null;
         return {
-          q: `底面の半径 $${fmt(R)}\\,\\mathrm{m}$、高さ $${fmt(h)}\\,\\mathrm{m}$ の円すいの形のテント（底はない）の、布の面積は □ $\\mathrm{m^2}$`, a: `$${piT(Math.round(R * x.c * 4), 4)}$`, easyCheck: false,
+          q: `底面の半径 $${fmt(R)}\\,\\mathrm{m}$、高さ $${fmt(h)}\\,\\mathrm{m}$ の円すいの形のテント（底はない）の、布の面積は $□\\,\\mathrm{m^2}$`, a: `$${piT(Math.round(R * x.c * 4), 4)}$`, easyCheck: false,
           easy: `母線 $\\sqrt{${fmt(R)}^2+${fmt(h)}^2}=${fmt(x.c)}$。$\\pi\\times${fmt(R)}\\times${fmt(x.c)}=${piT(Math.round(R * x.c * 4), 4)}$`,
           verify: () => ok(`$${piT(Math.round(R * x.c * 4), 4)}$`, Math.PI * x.c * x.c * (R / Math.hypot(R, h))),
         };
@@ -1388,14 +1446,13 @@
       items.push(['poly', [[0, 0], [W, 0], [0, H]]], ['right', [W, 0], [0, 0], [0, H], 0.35], ['label', [W / 2, 0], opt.wl, 's'], ['label', [0, H / 2], opt.hl, 'w']);
     }
     items.push(['seg', [0, -0.9], [0, H + 0.9], { dash: true }], ['label', [0, H + 0.9], '軸', 'n']);
-    if (opt.horiz) items.push(['label', [0, H + 1.9], '', 'c']);   // 字のない点：横にした図で「軸」の字が切れないように
     if (opt.right) items = mapFig(items, p => [-p[0], p[1]]).map(it => (it[0] === 'label' && it[3] === 'e' ? [it[0], it[1], it[2], 'w'] : it[0] === 'label' && it[3] === 'w' ? [it[0], it[1], it[2], 'e'] : it));
     if (opt.horiz) items = mapFig(items, p => [p[1], -p[0]]).map(it => (it[0] === 'label' ? [it[0], it[1], it[2], { s: 'w', e: 's', w: 'n', n: 'e' }[it[3]] || it[3]] : it));
     return { s: 5, pad: FIGPAD, items };
   }
   M.add({
     id: '4-31', part: PART, chap: '4-5⑧', stars: 1,
-    title: '回転体は、軸から遠い辺が半径',
+    title: '回転体は、軸に垂直な辺が半径',
     mark: '長方形・直角三角形を、**1辺を軸にして1回転**させた立体。',
     futsu: ['見取図をかいて、どんな', '立体になるかをたしかめて', 'から、半径と高さを読む。'],
     raku: ['軸にくっついた辺が高さ、', '軸に垂直な辺が半径', 'たて4・横3の長方形をたてで', '→ 半径3・高さ4の円柱 $36\\pi$', '6と8の直角三角形を8の辺で', '→ 半径6・高さ8の円すい $96\\pi$'],
@@ -1411,7 +1468,7 @@
         const a = r.int(2, 8), b = r.intNot(2, 8, v => v === a), ax = r.pick(['たて', '横']);
         const [R, h] = ax === 'たて' ? [b, a] : [a, b];
         return {
-          q: `たて $${a}$、横 $${b}$ の長方形を、${ax}の辺を軸に1回転した体積`, a: `$${piT(R * R * h)}$`,
+          q: `たて $${a}$、横 $${b}$ の長方形を、${ax}の辺を軸に1回転した体積`, a: `$${piT(R * R * h)}$`, key: `431cyl:${R},${h}`,
           easy: `半径 ${R}・高さ ${h} の円柱：$\\pi\\times${R}^2\\times${h}=${piT(R * R * h)}$`,
         };
       },
@@ -1420,7 +1477,7 @@
         const p = r.int(2, 9), q = r.intNot(2, 9, v => v === p), ax = r.pick([p, q]), R = ax === p ? q : p, V = R * R * ax;
         if (V % 3) return null;
         return {
-          q: `直角の2辺が $${p}$、$${q}$ の直角三角形を辺 $${ax}$ を軸に1回転した体積`, a: `$${piT(V / 3)}$`,
+          q: `直角の2辺が $${p}$、$${q}$ の直角三角形を辺 $${ax}$ を軸に1回転した体積`, a: `$${piT(V / 3)}$`, key: `431cone:${R},${ax}`,
           easy: `半径 ${R}・高さ ${ax} の円すい：$\\pi\\times${R}^2\\times${ax}\\times\\frac{1}{3}=${piT(V / 3)}$`,
         };
       },
@@ -1431,7 +1488,7 @@
         const ans = tri ? piT(V / 3) : piT(V), horiz = r.chance(0.3), right = !horiz && r.chance(0.4);
         return {
           q: `図の${tri ? '直角三角形' : '長方形'}を、点線を軸に1回転した体積`, a: `$${ans}$`,
-          fig: figRot(tri ? 'tri' : 'rect', w, h, { wl: String(w), hl: String(h), horiz, right }), key: `${tri}${w},${h}`,
+          fig: figRot(tri ? 'tri' : 'rect', w, h, { wl: String(w), hl: String(h), horiz, right }), key: `431${tri ? 'cone' : 'cyl'}:${w},${h}`,
           easy: `半径 ${w}・高さ ${h} の${tri ? '円すい' : '円柱'}：$\\pi\\times${w}^2\\times${h}${tri ? '\\times\\frac{1}{3}' : ''}=${ans}$`,
         };
       },
@@ -1470,7 +1527,7 @@
         const cm = L * N, inKm = cm >= 100000;
         const ans = inKm ? kmStr(cm) : mStr(cm), unit = inKm ? 'km' : 'm', per = N / 100;
         return {
-          q: `縮尺 $1:${N}$ の地図で $${fmt(L)}\\,\\mathrm{cm}$ の長さは、本物で □ ${unit}`, a: `$${ans}$`, easyCheck: false,
+          q: `縮尺 $1:${N}$ の地図で $${fmt(L)}\\,\\mathrm{cm}$ の長さは、本物で □ ${unit}`, a: `$${ans}$`, easyCheck: false, key: `492:${N},${L}`,
           easy: `1 cm は $${fmt(per)}$ m。$${fmt(L)}\\times${fmt(per)}=${fmt(L * per)}$ m${inKm ? `＝$${ans}$ km` : ''}`,
           verify: () => close(+ans * (inKm ? 100000 : 100), L * N) || 'まちがい',
         };
@@ -1481,14 +1538,14 @@
           const N = r.pick([10000, 20000, 25000, 50000]), per = N / 100, L = r.pick([2, 3, 4, 5, 6, 8, 10, 12]), m = L * per;
           const useKm = m >= 1000 && r.chance(0.7);
           return {
-            q: `縮尺 $1:${N}$ の地図で、本物の $${useKm ? fmt(m / 1000) : fmt(m)}\\,\\mathrm{${useKm ? 'km' : 'm'}}$ は、地図の上で □ cm`, a: `$${L}$`, easyCheck: false,
+            q: `縮尺 $1:${N}$ の地図で、本物の $${useKm ? fmt(m / 1000) : fmt(m)}\\,\\mathrm{${useKm ? 'km' : 'm'}}$ は、地図の上で □ cm`, a: `$${L}$`, easyCheck: false, key: `492:${N},${L}`,
             easy: `1 cm は $${fmt(per)}$ m。${useKm ? `$${fmt(m / 1000)}$ km＝$${fmt(m)}$ m、` : ''}$${fmt(m)}\\div${fmt(per)}=${L}$`,
             verify: () => close(L * N, m * 100) || 'まちがい',
           };
         }
         const N = r.pick([50, 100, 200]), L = r.pick([3, 4.5, 6, 7.5, 8, 9, 12, 15]), m = L * N / 100;
         return {
-          q: `縮尺 $1:${N}$ の家の設計図で $${fmt(L)}\\,\\mathrm{cm}$ の長さは、本物で □ m`, a: `$${fmt(m)}$`, easyCheck: false,
+          q: `縮尺 $1:${N}$ の家の設計図で $${fmt(L)}\\,\\mathrm{cm}$ の長さは、本物で □ m`, a: `$${fmt(m)}$`, easyCheck: false, key: `492:${N},${L}`,
           easy: `1 cm は $${fmt(N / 100)}$ m。$${fmt(L)}\\times${fmt(N / 100)}=${fmt(m)}$`,
           verify: () => close(m * 100, L * N) || 'まちがい',
         };
@@ -1498,21 +1555,21 @@
         if (r.chance(0.5)) {
           const N = r.pick([10000, 20000, 25000, 50000, 100000]), L = r.pick([2, 3, 4, 5, 6, 8]), km = L * N / 100000;
           return {
-            q: `地図で $${L}\\,\\mathrm{cm}$ が本物で $${fmt(km)}\\,\\mathrm{km}$ のとき、縮尺は $1:□$`, a: `$${N}$`, easyCheck: false,
+            q: `地図で $${L}\\,\\mathrm{cm}$ が本物で $${fmt(km)}\\,\\mathrm{km}$ のとき、縮尺は $1:□$`, a: `$${N}$`, easyCheck: false, key: `492:${N},${L}`,
             easy: `$${fmt(km)}$ km＝$${fmt(km * 100000)}$ cm。$${fmt(km * 100000)}\\div${L}=${N}$`,
             verify: () => close(L * N, km * 100000) || 'まちがい',
           };
         }
         const N = r.pick([100, 200, 250, 500, 1000]), L = r.pick([4, 6, 8, 10, 12, 15, 20]), m = L * N / 100;
         return {
-          q: `縮尺 $1:${N}$ の建物の模型の高さが $${L}\\,\\mathrm{cm}$。本物の高さ □ m`, a: `$${fmt(m)}$`, easyCheck: false,
+          q: `縮尺 $1:${N}$ の建物の模型の高さが $${L}\\,\\mathrm{cm}$。本物の高さ □ m`, a: `$${fmt(m)}$`, easyCheck: false, key: `492:${N},${L}`,
           easy: `1 cm は $${fmt(N / 100)}$ m。$${L}\\times${fmt(N / 100)}=${fmt(m)}$`, verify: () => close(m * 100, L * N) || 'まちがい',
         };
       },
       // わな：地図の上の面積（縮尺の2乗）
       trap(r) {
         const N = r.pick([500, 1000, 2000, 5000]), A = r.pick([2, 3, 4, 5, 6]), per = N / 100, ans = A * per * per;
-        const p = { q: `縮尺 $1:${N}$ の地図で、面積が $${A}\\,\\mathrm{cm^2}$ の土地は、本物で □ $\\mathrm{m^2}$`, a: `$${fmt(ans)}$`, verify: () => close(ans * 10000, A * N * N) || 'まちがい' };
+        const p = { q: `縮尺 $1:${N}$ の地図で、面積が $${A}\\,\\mathrm{cm^2}$ の土地は、本物で $□\\,\\mathrm{m^2}$`, a: `$${fmt(ans)}$`, verify: () => close(ans * 10000, A * N * N) || 'まちがい' };
         return dest(p, '4-92', `面積は縮尺の2乗。1 cm は ${fmt(per)} m なので、$1\\,\\mathrm{cm^2}$ は $${fmt(per)}\\times${fmt(per)}=${fmt(per * per)}\\,\\mathrm{m^2}$。$${A}\\times${fmt(per * per)}=${fmt(ans)}$`);
       },
     },
@@ -1537,22 +1594,22 @@
         if (r.chance(0.6)) {
           const a = 10 * r.int(2, 9), b = 10 * r.int(2, 9), c = r.pick([12, 15, 20, 24, 25, 30, 36, 40, 45]), V = a * b * c, L = V / 1000;
           return {
-            q: `たて $${a}\\,\\mathrm{cm}$・横 $${b}\\,\\mathrm{cm}$・深さ $${c}\\,\\mathrm{cm}$ の水そうに入る水 □ L`, a: `$${fmt(L)}$`, easyCheck: false,
+            q: `たて $${a}\\,\\mathrm{cm}$・横 $${b}\\,\\mathrm{cm}$・深さ $${c}\\,\\mathrm{cm}$ の水そうに入る水 □ L`, a: `$${fmt(L)}$`, easyCheck: false, key: NK('493c', a, b, c),
             easy: `$${a}\\times${b}\\times${c}=${V}$ $\\mathrm{cm^3}$、$${V}\\div1000=${fmt(L)}$`,
             verify: () => close(L, (a / 10) * (b / 10) * (c / 10)) || 'まちがい',   // 10 cm の立方体（1 L）がいくつ入るか
           };
         }
         const v = r.pick([0.5, 1.2, 1.5, 2, 2.4, 3, 4.5, 6, 0.8, 0.25]);
-        return { q: `$${fmt(v)}\\,\\mathrm{m^3}$ は □ L`, a: `$${fmt(v * 1000)}$`, easy: `$${fmt(v)}\\times1000=${fmt(v * 1000)}$` };
+        return { q: `$${fmt(v)}\\,\\mathrm{m^3}$ は □ L`, a: `$${fmt(v * 1000)}$`, key: '493v:' + fmt(v), easy: `$${fmt(v)}\\times1000=${fmt(v * 1000)}$` };
       },
       // m の水そう、L から $\mathrm{m^3}$、cm と m がまざる
       s2(r) {
         const k = r.int(0, 2);
         if (k === 0) {
           const a = r.pick([1, 1.5, 2, 2.5, 3]), b = r.pick([0.5, 1, 1.2, 1.5, 2]), c = r.pick([0.4, 0.5, 0.8, 1, 1.2]), V = +fmt(a * b * c);
-          return { q: `たて $${a}\\,\\mathrm{m}$・横 $${b}\\,\\mathrm{m}$・深さ $${c}\\,\\mathrm{m}$ の水そうに入る水 □ L`, a: `$${fmt(V * 1000)}$`, easyCheck: false, easy: `$${a}\\times${b}\\times${c}=${fmt(V)}$ $\\mathrm{m^3}$、$${fmt(V)}\\times1000=${fmt(V * 1000)}$`, verify: () => close(V * 1000, (a * 10) * (b * 10) * (c * 10)) || 'まちがい' };
+          return { q: `たて $${a}\\,\\mathrm{m}$・横 $${b}\\,\\mathrm{m}$・深さ $${c}\\,\\mathrm{m}$ の水そうに入る水 □ L`, a: `$${fmt(V * 1000)}$`, key: NK('493m', a, b, c), easyCheck: false, easy: `$${a}\\times${b}\\times${c}=${fmt(V)}$ $\\mathrm{m^3}$、$${fmt(V)}\\times1000=${fmt(V * 1000)}$`, verify: () => close(V * 1000, (a * 10) * (b * 10) * (c * 10)) || 'まちがい' };
         }
-        if (k === 1) { const L = r.pick([500, 1200, 2500, 3000, 4800, 750, 200, 6000]); return { q: `$${L}\\,\\mathrm{L}$ は □ $\\mathrm{m^3}$`, a: `$${fmt(L / 1000)}$`, easy: `$${L}\\div1000=${fmt(L / 1000)}$` }; }
+        if (k === 1) { const L = r.pick([500, 1200, 2500, 3000, 4800, 750, 200, 6000]); return { q: `$${L}\\,\\mathrm{L}$ は $□\\,\\mathrm{m^3}$`, a: `$${fmt(L / 1000)}$`, key: '493v:' + fmt(L / 1000), easy: `$${L}\\div1000=${fmt(L / 1000)}$` }; }
         const a = r.pick([1, 1.2, 1.5, 2]), b = r.pick([40, 50, 60, 80]), c = r.pick([30, 40, 50]), L = a * 10 * (b / 10) * (c / 10);
         return { q: `たて $${a}\\,\\mathrm{m}$・横 $${b}\\,\\mathrm{cm}$・深さ $${c}\\,\\mathrm{cm}$ の水そうに入る水 □ L`, a: `$${fmt(L)}$`, easyCheck: false, easy: `cm にそろえて $${fmt(a * 100)}\\times${b}\\times${c}=${fmt(a * 100 * b * c)}$ $\\mathrm{cm^3}$、$\\div1000$ で $${fmt(L)}$`, verify: () => close(L * 1000, a * 100 * b * c) || 'まちがい' };
       },
@@ -1568,12 +1625,12 @@
         }
         const a = r.pick([1, 2]), b = r.pick([1, 1.5, 2]), d = r.pick([0.5, 1, 1.2]), V = +fmt(a * b * d * 1000), q = r.pick([20, 25, 40, 50, 100]), t = V / q;
         if (!Number.isInteger(t)) return null;
-        return { q: `たて $${a}\\,\\mathrm{m}$・横 $${b}\\,\\mathrm{m}$・深さ $${d}\\,\\mathrm{m}$ の水そうに毎分 $${q}\\,\\mathrm{L}$ 入れると、いっぱいまで □ 分`, a: `$${t}$`, key: `tank${a},${b},${d}`, easyCheck: false, easy: `$${fmt(a * b * d)}\\,\\mathrm{m^3}=${V}$ L、$${V}\\div${q}=${t}$`, verify: () => close(t * q, a * 10 * b * 10 * d * 10) || 'まちがい' };
+        return { q: `たて $${a}\\,\\mathrm{m}$・横 $${b}\\,\\mathrm{m}$・深さ $${d}\\,\\mathrm{m}$ の水そうに毎分 $${q}\\,\\mathrm{L}$ 入れると、いっぱいまで □ 分`, a: `$${t}$`, key: NK('493t', a, b, d), easyCheck: false, easy: `$${fmt(a * b * d)}\\,\\mathrm{m^3}=${V}$ L、$${V}\\div${q}=${t}$`, verify: () => close(t * q, a * 10 * b * 10 * d * 10) || 'まちがい' };
       },
       // わな：面積の単位（換算は2回）
       trap(r) {
         const A = r.pick([2, 3, 1.5, 0.5, 4, 2.5]), ans = A * 10000;
-        const p = { q: `$${fmt(A)}\\,\\mathrm{m^2}$ は □ $\\mathrm{cm^2}$`, a: `$${fmt(ans)}$`, verify: () => close(ans, A * 100 * 100) || 'まちがい' };
+        const p = { q: `$${fmt(A)}\\,\\mathrm{m^2}$ は $□\\,\\mathrm{cm^2}$`, a: `$${fmt(ans)}$`, verify: () => close(ans, A * 100 * 100) || 'まちがい' };
         return dest(p, '4-93', `面積は長さの換算を2回：$100\\times100=10000$ 倍で $${fmt(A)}\\times10000=${fmt(ans)}$（体積の3回ではない）`);
       },
     },
