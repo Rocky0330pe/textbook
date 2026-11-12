@@ -19,7 +19,7 @@ function box(def, step) { const w = M.boxwOf(def, step), h = M.boxhOf(def, step)
 const SQ = { box: '\\mqsq{}' };   // 説明の文の □ は、書きこむ欄ではない
 function probLine(def, p, num, extra) {
   const q = M.withBox(p.q);
-  return `\\mqp{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}}`;
+  return `\\mqp{${num}}{${tx(q, { box: box(def, p.step) })}${extra || ''}${p.fig ? `\\mqfig{${M.figTeX(p.fig)}}` : ''}}`;   // 図（第4巻から。第35回）
 }
 function probs(def, list, start, extra) {
   // ひっ算の問題は、方眼の絵をならべる（左から右へ、入るだけ）

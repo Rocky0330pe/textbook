@@ -631,6 +631,117 @@
     return s + '\\end{tikzpicture}';
   };
 
+
+  // ---------------------------------------------------------------- 図（第4巻から。第35回）
+  // 1つの書き方から、アプリの SVG（M.figSVG）と、本の TikZ（M.figTeX）を作る。座標は数学の向き（y は上）。
+  // fig = { s: 1単位の mm（ふつう 5）, pad: 余白の単位, items: [ … ] }
+  //   ['seg', P, Q, {dash, arrow, thick}]       線分（arrow: true で Q に矢じり）
+  //   ['poly', [P, Q, R, …], {fill, dash}]       多角形（閉じる）。fill: true で うすくぬる
+  //   ['path', [P, Q, …], {dash, arrow}]         折れ線（閉じない）
+  //   ['circle', C, r, {dash, fill}]             円
+  //   ['arc', C, r, 度0, 度1, {dash, arrow}]     弧（反時計まわり）
+  //   ['dot', P, {open}]                         点（open: 白丸）
+  //   ['label', P, '文字', '向き']               ラベル。向き：n・s・e・w・ne・nw・se・sw・c。文字の $…$ は式
+  //   ['angle', A, B, C, '文字', r]              角 ABC のしるし（B が頂点、A→C の向きに弧）と、その角の文字
+  //   ['right', A, B, C, 大きさ]                 角 ABC が直角のしるし
+  //   ['tick', P, Q, n]                          辺 PQ のまん中に、同じ長さのしるし（n 本）
+  //   ['grid', x0, y0, x1, y1]                   方眼（1単位ごと）
+  //   ['axes', x0, x1, y0, y1, {x: 'x', y: 'y', o: true}]   座標軸（矢じりつき）と O
+  const FIGSYM = { theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
+  function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
+    return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
+      if (!(k % 2)) return htmlEsc(seg);
+      let t = seg.slice(1, -1).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
+        .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
+      t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);
+      return t.replace(/\u0003([^\u0004]*)\u0004/g, '<tspan baseline-shift="super" font-size="70%">$1</tspan>').replace(/\u0005([^\u0006]*)\u0006/g, '<tspan baseline-shift="sub" font-size="70%">$1</tspan>');
+    }).join('');
+  }
+  function figBox(fig) {   // 図の大きさ（単位）。ラベルの分の余白を足す
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const P = p => { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); };
+    for (const it of fig.items) {
+      const [k, a, b, c, d] = it;
+      if (k === 'seg' || k === 'tick') { P(a); P(b); }
+      else if (k === 'poly' || k === 'path') a.forEach(P);
+      else if (k === 'circle' || k === 'arc') { P([a[0] - b, a[1] - b]); P([a[0] + b, a[1] + b]); }
+      else if (k === 'dot' || k === 'label') P(a);
+      else if (k === 'angle' || k === 'right') { P(a); P(b); P(c); }
+      else if (k === 'grid') { P([a, b]); P([c, d]); }
+      else if (k === 'axes') { P([a, c]); P([b, d]); }
+    }
+    const pad = fig.pad == null ? 0.9 : fig.pad;
+    return [x0 - pad, y0 - pad, x1 + pad, y1 + pad];
+  }
+  const ANCH = { n: [0, 1], s: [0, -1], e: [1, 0], w: [-1, 0], ne: [0.8, 0.8], nw: [-0.8, 0.8], se: [0.8, -0.8], sw: [-0.8, -0.8], c: [0, 0] };
+  function angleArc(A, B, C) {   // B から見た A・C の向き（ラジアン）。小さいほうの角（反時計まわりに a0→a1）
+    let a0 = Math.atan2(A[1] - B[1], A[0] - B[0]), a1 = Math.atan2(C[1] - B[1], C[0] - B[0]);
+    let d = a1 - a0; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI;
+    if (d < 0) { const t = a0; a0 = a1; a1 = t; d = -d; }
+    return [a0, a0 + d];
+  }
+  M.figSVG = function (fig, opt) {
+    opt = opt || {};
+    const s = fig.s || 5, [bx0, by0, bx1, by1] = figBox(fig);
+    const X = x => +((x - bx0) * s).toFixed(2), Y = y => +((by1 - y) * s).toFixed(2);
+    const W = (bx1 - bx0) * s, H = (by1 - by0) * s, fs = fig.font || 3.4;
+    const st = o => `stroke="currentColor" stroke-width="${o && o.thick ? 0.5 : 0.3}" fill="none"${o && o.dash ? ' stroke-dasharray="1.2 0.9"' : ''}`;
+    const head = (P, Q) => { const a = Math.atan2(Q[1] - P[1], Q[0] - P[0]), L = 1.6 / s, w = 0.45; const p1 = [Q[0] - L * Math.cos(a - w), Q[1] - L * Math.sin(a - w)], p2 = [Q[0] - L * Math.cos(a + w), Q[1] - L * Math.sin(a + w)]; return `<path d="M${X(Q[0])} ${Y(Q[1])} L${X(p1[0])} ${Y(p1[1])} L${X(p2[0])} ${Y(p2[1])} Z" fill="currentColor"/>`; };
+    let o = `<svg class="mqfig" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" width="${W.toFixed(1)}mm" height="${H.toFixed(1)}mm">`;
+    for (const it of fig.items) {
+      const k = it[0];
+      if (k === 'grid') { const [, x0, y0, x1, y1] = it; for (let x = Math.ceil(x0); x <= x1; x++) o += `<line x1="${X(x)}" y1="${Y(y0)}" x2="${X(x)}" y2="${Y(y1)}" stroke="currentColor" stroke-opacity="0.25" stroke-width="0.2"/>`; for (let y = Math.ceil(y0); y <= y1; y++) o += `<line x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}" stroke="currentColor" stroke-opacity="0.25" stroke-width="0.2"/>`; }
+      else if (k === 'axes') { const [, x0, x1, y0, y1, a] = it, aa = a || {}; o += `<line x1="${X(x0)}" y1="${Y(0)}" x2="${X(x1)}" y2="${Y(0)}" ${st()}/>` + head([x0, 0], [x1, 0]) + `<line x1="${X(0)}" y1="${Y(y0)}" x2="${X(0)}" y2="${Y(y1)}" ${st()}/>` + head([0, y0], [0, y1]);
+        o += `<text x="${X(x1) - 0.5}" y="${Y(0) + fs * 1.2}" font-size="${fs}" text-anchor="end">${figText('$' + (aa.x || 'x') + '$')}</text><text x="${X(0) + 1}" y="${Y(y1) + fs * 0.8}" font-size="${fs}">${figText('$' + (aa.y || 'y') + '$')}</text>`;
+        if (aa.o !== false) o += `<text x="${X(0) - 0.6}" y="${Y(0) + fs * 1.1}" font-size="${fs}" text-anchor="end">${figText('O')}</text>`; }
+      else if (k === 'seg') { const [, P, Q, a] = it; o += `<line x1="${X(P[0])}" y1="${Y(P[1])}" x2="${X(Q[0])}" y2="${Y(Q[1])}" ${st(a)}/>` + (a && a.arrow ? head(P, Q) : ''); }
+      else if (k === 'poly' || k === 'path') { const [, ps, a] = it; o += `<path d="${ps.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ')}${k === 'poly' ? ' Z' : ''}" ${st(a)}${a && a.fill ? ' fill="currentColor" fill-opacity="0.08"' : ''}/>` + (k === 'path' && a && a.arrow ? head(ps[ps.length - 2], ps[ps.length - 1]) : ''); }
+      else if (k === 'circle') { const [, C, r, a] = it; o += `<circle cx="${X(C[0])}" cy="${Y(C[1])}" r="${(r * s).toFixed(2)}" ${st(a)}${a && a.fill ? ' fill="currentColor" fill-opacity="0.08"' : ''}/>`; }
+      else if (k === 'arc') { const [, C, r, d0, d1, a] = it, a0 = d0 * Math.PI / 180, a1 = d1 * Math.PI / 180, P = [C[0] + r * Math.cos(a0), C[1] + r * Math.sin(a0)], Q = [C[0] + r * Math.cos(a1), C[1] + r * Math.sin(a1)];
+        o += `<path d="M${X(P[0])} ${Y(P[1])} A${(r * s).toFixed(2)} ${(r * s).toFixed(2)} 0 ${(d1 - d0) % 360 > 180 ? 1 : 0} 0 ${X(Q[0])} ${Y(Q[1])}" ${st(a)}/>` + (a && a.arrow ? head([C[0] + r * Math.cos(a1 - 0.05), C[1] + r * Math.sin(a1 - 0.05)], Q) : ''); }
+      else if (k === 'dot') { const [, P, a] = it; o += `<circle cx="${X(P[0])}" cy="${Y(P[1])}" r="0.7" ${a && a.open ? 'fill="white" stroke="currentColor" stroke-width="0.3"' : 'fill="currentColor"'}/>`; }
+      else if (k === 'label') { const [, P, t, d] = it, v = ANCH[d || 'c'] || ANCH.c, dx = v[0] * fs * 0.75, dy = -v[1] * fs * 0.75; o += `<text x="${(X(P[0]) + dx).toFixed(2)}" y="${(Y(P[1]) + dy + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="${v[0] > 0.3 ? 'start' : v[0] < -0.3 ? 'end' : 'middle'}">${figText(t)}</text>`; }
+      else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), P = [B[0] + r * Math.cos(a0), B[1] + r * Math.sin(a0)], Q = [B[0] + r * Math.cos(a1), B[1] + r * Math.sin(a1)];
+        o += `<path d="M${X(P[0])} ${Y(P[1])} A${(r * s).toFixed(2)} ${(r * s).toFixed(2)} 0 0 0 ${X(Q[0])} ${Y(Q[1])}" ${st()}/>`;
+        if (t) { const m = (a0 + a1) / 2, R = r + 0.75; o += `<text x="${X(B[0] + R * Math.cos(m))}" y="${(Y(B[1] + R * Math.sin(m)) + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="middle">${figText(t)}</text>`; } }
+      else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
+        o += `<path d="M${X(B[0] + a[0])} ${Y(B[1] + a[1])} L${X(B[0] + a[0] + c[0])} ${Y(B[1] + a[1] + c[1])} L${X(B[0] + c[0])} ${Y(B[1] + c[1])}" ${st()}/>`; }
+      else if (k === 'tick') { const [, P, Q, n] = it, mx = (P[0] + Q[0]) / 2, my = (P[1] + Q[1]) / 2, a = Math.atan2(Q[1] - P[1], Q[0] - P[0]), L = 0.3, g = 0.18;
+        for (let i = 0; i < (n || 1); i++) { const off = (i - ((n || 1) - 1) / 2) * g, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); o += `<line x1="${X(cx - L * Math.sin(a))}" y1="${Y(cy + L * Math.cos(a))}" x2="${X(cx + L * Math.sin(a))}" y2="${Y(cy - L * Math.cos(a))}" ${st()}/>`; } }
+    }
+    return o + '</svg>';
+  };
+  M.figTeX = function (fig, opt) {
+    opt = opt || {};
+    const s = fig.s || 5, f = v => +(+v).toFixed(3), P = p => `(${f(p[0])},${f(p[1])})`;
+    const sty = a => [a && a.dash ? 'densely dashed' : '', a && a.thick ? 'thick' : '', a && a.arrow ? '-{Stealth[length=1.6mm]}' : ''].filter(Boolean).join(',');
+    const lab = t => M.toTeX(t);
+    const TIKZA = { n: 'above', s: 'below', e: 'right', w: 'left', ne: 'above right', nw: 'above left', se: 'below right', sw: 'below left', c: '' };
+    let o = `\\begin{tikzpicture}[x=${s}mm,y=${s}mm,line width=0.3mm,font=\\small,baseline=(current bounding box.north)]`;
+    const [bx0, by0, bx1, by1] = figBox(fig);
+    o += `\\useasboundingbox (${f(bx0)},${f(by0)}) rectangle (${f(bx1)},${f(by1)});`;
+    for (const it of fig.items) {
+      const k = it[0];
+      if (k === 'grid') { const [, x0, y0, x1, y1] = it; o += `\\draw[black!25,line width=0.2mm,step=1] (${x0},${y0}) grid (${x1},${y1});`; }
+      else if (k === 'axes') { const [, x0, x1, y0, y1, a] = it, aa = a || {}; o += `\\draw[-{Stealth[length=1.6mm]}] (${x0},0)--(${x1},0) node[below left]{$${aa.x || 'x'}$};\\draw[-{Stealth[length=1.6mm]}] (0,${y0})--(0,${y1}) node[below right]{$${aa.y || 'y'}$};` + (aa.o !== false ? `\\node[below left] at (0,0) {O};` : ''); }
+      else if (k === 'seg') { const [, A, B, a] = it; o += `\\draw[${sty(a)}] ${P(A)}--${P(B)};`; }
+      else if (k === 'poly') { const [, ps, a] = it; o += `\\draw[${sty(a)}${a && a.fill ? ',fill=black!8' : ''}] ${ps.map(P).join('--')}--cycle;`; }
+      else if (k === 'path') { const [, ps, a] = it; o += `\\draw[${sty(a)}] ${ps.map(P).join('--')};`; }
+      else if (k === 'circle') { const [, C, r, a] = it; o += `\\draw[${sty(a)}${a && a.fill ? ',fill=black!8' : ''}] ${P(C)} circle (${f(r)});`; }
+      else if (k === 'arc') { const [, C, r, d0, d1, a] = it; o += `\\draw[${sty(a)}] (${f(C[0] + r * Math.cos(d0 * Math.PI / 180))},${f(C[1] + r * Math.sin(d0 * Math.PI / 180))}) arc[start angle=${d0},end angle=${d1},radius=${f(r)}];`; }
+      else if (k === 'dot') { const [, A, a] = it; o += a && a.open ? `\\draw[fill=white] ${P(A)} circle (0.7mm);` : `\\fill ${P(A)} circle (0.7mm);`; }
+      else if (k === 'label') { const [, A, t, d] = it; o += `\\node[${TIKZA[d || 'c']},inner sep=1.5pt] at ${P(A)} {${lab(t)}};`; }
+      else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), d0 = a0 * 180 / Math.PI, d1 = a1 * 180 / Math.PI, m = (a0 + a1) / 2;
+        o += `\\draw (${f(B[0] + r * Math.cos(a0))},${f(B[1] + r * Math.sin(a0))}) arc[start angle=${f(d0)},end angle=${f(d1)},radius=${f(r)}];`;
+        if (t) o += `\\node at (${f(B[0] + (r + 0.75) * Math.cos(m))},${f(B[1] + (r + 0.75) * Math.sin(m))}) {${lab(t)}};`; }
+      else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
+        o += `\\draw (${f(B[0] + a[0])},${f(B[1] + a[1])})--(${f(B[0] + a[0] + c[0])},${f(B[1] + a[1] + c[1])})--(${f(B[0] + c[0])},${f(B[1] + c[1])});`; }
+      else if (k === 'tick') { const [, A, B, n] = it, mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, a = Math.atan2(B[1] - A[1], B[0] - A[0]), L = 0.3, g = 0.18;
+        for (let i = 0; i < (n || 1); i++) { const off = (i - ((n || 1) - 1) / 2) * g, cx = mx + off * Math.cos(a), cy = my + off * Math.sin(a); o += `\\draw (${f(cx - L * Math.sin(a))},${f(cy + L * Math.cos(a))})--(${f(cx + L * Math.sin(a))},${f(cy - L * Math.cos(a))});`; } }
+    }
+    return o + '\\end{tikzpicture}';
+  };
+
   // ---------------------------------------------------------------- 検算
   // 「47 × 9」「(25 ＋ 75) ＋ 37」「470 － 47」などの式の値を、分数（有理数）で計算する。
   // 読めない式（ことば・単位・□・あまり）は null を返す。

@@ -128,7 +128,8 @@
     const oneCol = probs.some(p => M.colsOf(M.waza[p.id], p.step) === 1);
     // 式（$…$）の問題は、分数などで行が高くなるので、行の高さを中身に合わせ、1ページの数を減らす（第2巻から）
     const mathy = probs.some(p => /\$/.test(String(p.q) + String(p.a)));
-    const per = mathy ? (oneCol ? 11 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）
+    const figs = probs.some(p => p.fig);
+    const per = figs ? (oneCol ? 5 : 8) : mathy ? (oneCol ? 11 : 16) : (oneCol ? 12 : 24);   // 1ページの問題の数（2列なら 12行×2）。図があると少なく（第35回）
     const pages = Math.max(1, Math.ceil(probs.length / per));
     const title = titleOf(st, ids);
     // 問題のプリントと、こたえ（とき方）のプリントを、同じ問題・同じならびで作る
@@ -160,7 +161,8 @@
         extra = ans ? `<span class="wz ansz">${u.length ? 'わざ ' + u.join('・') : 'なし'}</span>` : '<span class="wz">わざ<span class="box sm"></span></span>';
       }
       const how = ans && p.easy ? `<span class="how">${H(st.vol > 1 ? '《解|と》き《方|かた》' : 'とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
-      return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}"><span class="q">${body}</span>${extra}${how}</li>`;
+      const fig = p.fig ? `<div class="qfig">${M.figSVG(p.fig)}</div>` : '';   // 図（第4巻から。第35回）
+      return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}${p.fig ? ' hasfig' : ''}"><span class="q">${body}</span>${fig}${extra}${how}</li>`;
     };
     const ruleBox = () => {
       // こたえの1ページめに、わざの「楽な形」のまとめ（わざが3つまでのとき）
