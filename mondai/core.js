@@ -354,7 +354,10 @@
     const ws = () => { while (i < s.length && s[i] === ' ') i++; };
     const peek = () => { ws(); return s[i]; };
     const cmdAt = () => { if (s[i] !== '\\') return null; const m = /^\\([a-zA-Z]+)/.exec(s.slice(i)); return m ? m[1] : null; };
-    const startsAtom = () => { const c = peek(); if (c === undefined) return false; if (/[0-9.a-zA-Z({]/.test(c)) return true; const n = cmdAt(); return !!n && ['frac', 'sqrt', 'pi', 'log', 'ln', 'sin', 'cos', 'tan', 'exp'].includes(n); };
+    const startsAtom = () => { const c = peek(); if (c === undefined) return false; if (/[0-9.a-zA-Z({]/.test(c)) return true; const n = cmdAt(); return !!n && (['frac', 'sqrt', 'pi', 'log', 'ln', 'sin', 'cos', 'tan', 'exp'].includes(n) || n in vars); };
+    const FN = ['sin', 'cos', 'tan', 'log', 'ln', 'exp'];
+    // 三角関数の中身：\sin2\theta は sin(2θ)。つぎの関数（\cos など）・＋・－ の前まで（第4巻。第35回）
+    function fnArg() { let v = power(); for (;;) { ws(); const n = cmdAt(); if (n && FN.includes(n)) return v; if (s[i] === '(' || !startsAtom()) return v; v *= power(); } }
     function group() { // {…} か 1字
       ws();
       if (s[i] === '{') { i++; const v = expr(); ws(); if (s[i] !== '}') throw 0; i++; return v; }
@@ -377,7 +380,8 @@
         if (n === 'log') { ws(); let b = 10; if (s[i] === '_') { i++; b = group(); } const v = power(); return Math.log(v) / Math.log(b); }
         if (n === 'ln') return Math.log(power());
         if (n === 'exp') return Math.exp(power());
-        if (n === 'sin') return Math.sin(power()); if (n === 'cos') return Math.cos(power()); if (n === 'tan') return Math.tan(power());
+        if (n === 'sin' || n === 'cos' || n === 'tan') { ws(); let e = 1; if (s[i] === '^') { i++; e = group(); } const v = Math[n](fnArg()); return Math.pow(v, e); }   // \sin^{2}x も読む
+        if (n in vars) return vars[n];   // \theta などのギリシャ文字の変数
         throw 0;
       }
       throw 0;
@@ -405,8 +409,9 @@
   };
   // 数式の中の文字（1字。\frac などの命令の中の字は除く）
   M.mathVars = function (src) {
+    const g = (String(src).match(/\\(theta|alpha|beta|phi|varphi|omega)(?![a-zA-Z])/g) || []).map(x => x.slice(1));   // ギリシャ文字も変数（第35回）
     const t = String(src).replace(/\\[a-zA-Z]+/g, ' ');
-    return [...new Set((t.match(/[a-zA-Z]/g) || []))];
+    return [...new Set((t.match(/[a-zA-Z]/g) || []).concat(g))];
   };
   const close = (x, y) => Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
   // 文の中の数式を1つだけ取り出す（文が「$…$」だけ、または「$…$ ＝ □」のとき）
@@ -646,7 +651,8 @@
   //   ['label', P, '文字', '向き']               ラベル。向き：n・s・e・w・ne・nw・se・sw・c。文字の $…$ は式
   //   ['angle', A, B, C, '文字', r]              角 ABC のしるし（B が頂点、A→C の向きに弧）と、その角の文字
   //   ['right', A, B, C, 大きさ]                 角 ABC が直角のしるし
-  //   ['angle', A, B, C, '文字', r, n]           n＝2・3 で、弧を2重・3重に（同じ大きさの角）
+  //   ['angle', A, B, C, '文字', r, n, d]        n＝2・3 で、弧を2重・3重に（同じ大きさの角）。d は弧から文字までの距離（ふつう 0.75）
+  //   ['axes', …, {o: 'se'}]                     O の向き（ふつう 'sw'。false で書かない）
   //   ['par', P, Q, n]                           辺 PQ のまん中に、平行のしるし（＞を n こ）
   //   ['ellipse', C, rx, ry, 度0, 度1, {dash}]   だ円の弧（円すい・円柱の底。度を省くと1周）
   //   ['tick', P, Q, n]                          辺 PQ のまん中に、同じ長さのしるし（n 本）
@@ -658,7 +664,7 @@
       if (!(k % 2)) return htmlEsc(seg);
       const up = []; let t = seg.slice(1, -1).replace(/\\(?:mathrm|text)\{([^}]*)\}/g, (m, x) => { up.push(x); return '\u0001' + (up.length - 1) + '\u0002'; }).replace(/\\vec\{([^}]*)\}|\\vec\s*(\S)/g, (m, a, b) => (a || b) + '\u20D7').replace(/\\sqrt\{([^}]*)\}/g, '√$1').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '$1/$2').replace(/\^\{?\\circ\}?/g, '°')
         .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
-      t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);
+      t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => c.length > 1 ? `<tspan font-style="italic" font-family="Times New Roman,serif">${c[0]}</tspan><tspan dx="-0.72em" dy="-0.95em" font-size="75%">→</tspan><tspan dy="0.95em" font-size="75%">\u200B</tspan>` : `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);   // \vec の矢印は小さい → を上に（組合せ文字は出ないことがある）
       t = t.replace(/\u0001(\d+)\u0002/g, (m, k) => htmlEsc(up[k]));   // \mathrm{A} は立てた字
       return t.replace(/\u0003([^\u0004]*)\u0004/g, '<tspan baseline-shift="super" font-size="70%">$1</tspan>').replace(/\u0005([^\u0006]*)\u0006/g, '<tspan baseline-shift="sub" font-size="70%">$1</tspan>');
     }).join('');
@@ -704,7 +710,7 @@
       if (k === 'grid') { const [, x0, y0, x1, y1] = it; for (let x = Math.ceil(x0); x <= x1; x++) o += `<line x1="${X(x)}" y1="${Y(y0)}" x2="${X(x)}" y2="${Y(y1)}" stroke="currentColor" stroke-opacity="0.25" stroke-width="0.2"/>`; for (let y = Math.ceil(y0); y <= y1; y++) o += `<line x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}" stroke="currentColor" stroke-opacity="0.25" stroke-width="0.2"/>`; }
       else if (k === 'axes') { const [, x0, x1, y0, y1, a] = it, aa = a || {}; o += `<line x1="${X(x0)}" y1="${Y(0)}" x2="${X(x1)}" y2="${Y(0)}" ${st()}/>` + head([x0, 0], [x1, 0]) + `<line x1="${X(0)}" y1="${Y(y0)}" x2="${X(0)}" y2="${Y(y1)}" ${st()}/>` + head([0, y0], [0, y1]);
         o += `<text x="${X(x1) - 0.5}" y="${Y(0) + fs * 1.2}" font-size="${fs}" text-anchor="end">${figText('$' + (aa.x || 'x') + '$')}</text><text x="${X(0) + 1}" y="${Y(y1) + fs * 0.8}" font-size="${fs}">${figText('$' + (aa.y || 'y') + '$')}</text>`;
-        if (aa.o !== false) o += `<text x="${X(0) - 0.6}" y="${Y(0) + fs * 1.1}" font-size="${fs}" text-anchor="end">${figText('O')}</text>`; }
+        if (aa.o !== false) { const v = ANCH[typeof aa.o === 'string' ? aa.o : 'sw'] || ANCH.sw, dx = v[0] * fs * 0.75, dy = -v[1] * fs * 0.75; o += `<text x="${(X(0) + dx).toFixed(2)}" y="${(Y(0) + dy + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="${v[0] > 0.3 ? 'start' : v[0] < -0.3 ? 'end' : 'middle'}">${figText('O')}</text>`; } }   // o：'sw'（ふつう）・'se'・'ne'・'nw' で O の向き、false で書かない
       else if (k === 'seg') { const [, P, Q, a] = it; o += `<line x1="${X(P[0])}" y1="${Y(P[1])}" x2="${X(Q[0])}" y2="${Y(Q[1])}" ${st(a)}/>` + (a && a.arrow ? head(P, Q) : ''); }
       else if (k === 'poly' || k === 'path') { const [, ps, a] = it; o += `<path d="${ps.map((p, i) => (i ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ')}${k === 'poly' ? ' Z' : ''}" ${st(a)}${a && a.fill ? ' fill="currentColor" fill-opacity="0.08"' : ''}/>` + (k === 'path' && a && a.arrow ? head(ps[ps.length - 2], ps[ps.length - 1]) : ''); }
       else if (k === 'circle') { const [, C, r, a] = it; o += `<circle cx="${X(C[0])}" cy="${Y(C[1])}" r="${(r * s).toFixed(2)}" ${st(a)}${a && a.fill ? ' fill="currentColor" fill-opacity="0.08"' : ''}/>`; }
@@ -714,7 +720,7 @@
       else if (k === 'label') { const [, P, t, d] = it, v = ANCH[d || 'c'] || ANCH.c, dx = v[0] * fs * 0.75, dy = -v[1] * fs * 0.75; o += `<text x="${(X(P[0]) + dx).toFixed(2)}" y="${(Y(P[1]) + dy + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="${v[0] > 0.3 ? 'start' : v[0] < -0.3 ? 'end' : 'middle'}">${figText(t)}</text>`; }
       else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), P = [B[0] + r * Math.cos(a0), B[1] + r * Math.sin(a0)], Q = [B[0] + r * Math.cos(a1), B[1] + r * Math.sin(a1)];
         for (let j = 0; j < (it[6] || 1); j++) { const rj = r + j * 0.22, Pj = [B[0] + rj * Math.cos(a0), B[1] + rj * Math.sin(a0)], Qj = [B[0] + rj * Math.cos(a1), B[1] + rj * Math.sin(a1)]; o += `<path d="M${X(Pj[0])} ${Y(Pj[1])} A${(rj * s).toFixed(2)} ${(rj * s).toFixed(2)} 0 0 0 ${X(Qj[0])} ${Y(Qj[1])}" ${st()}/>`; }
-        if (t) { const m = (a0 + a1) / 2, R = r + 0.75; o += `<text x="${X(B[0] + R * Math.cos(m))}" y="${(Y(B[1] + R * Math.sin(m)) + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="middle">${figText(t)}</text>`; } }
+        if (t) { const m = (a0 + a1) / 2, R = r + (it[7] != null ? it[7] : 0.75); o += `<text x="${X(B[0] + R * Math.cos(m))}" y="${(Y(B[1] + R * Math.sin(m)) + fs * 0.35).toFixed(2)}" font-size="${fs}" text-anchor="middle">${figText(t)}</text>`; } }
       else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
         o += `<path d="M${X(B[0] + a[0])} ${Y(B[1] + a[1])} L${X(B[0] + a[0] + c[0])} ${Y(B[1] + a[1] + c[1])} L${X(B[0] + c[0])} ${Y(B[1] + c[1])}" ${st()}/>`; }
       else if (k === 'ellipse') { const [, C, rx, ry, d0, d1, a] = it; if (d0 == null) o += `<ellipse cx="${X(C[0])}" cy="${Y(C[1])}" rx="${(rx * s).toFixed(2)}" ry="${(ry * s).toFixed(2)}" ${st(a)}/>`; else { const pts = []; for (let j = 0; j <= 40; j++) { const t = (d0 + (d1 - d0) * j / 40) * Math.PI / 180; pts.push([C[0] + rx * Math.cos(t), C[1] + ry * Math.sin(t)]); } o += `<path d="${pts.map((p, j) => (j ? 'L' : 'M') + X(p[0]) + ' ' + Y(p[1])).join(' ')}" ${st(a)}/>`; } }
@@ -736,7 +742,7 @@
     for (const it of fig.items) {
       const k = it[0];
       if (k === 'grid') { const [, x0, y0, x1, y1] = it; o += `\\draw[black!25,line width=0.2mm,step=1] (${x0},${y0}) grid (${x1},${y1});`; }
-      else if (k === 'axes') { const [, x0, x1, y0, y1, a] = it, aa = a || {}; o += `\\draw[-{Stealth[length=1.6mm]}] (${x0},0)--(${x1},0) node[below left]{$${aa.x || 'x'}$};\\draw[-{Stealth[length=1.6mm]}] (0,${y0})--(0,${y1}) node[below right]{$${aa.y || 'y'}$};` + (aa.o !== false ? `\\node[below left] at (0,0) {O};` : ''); }
+      else if (k === 'axes') { const [, x0, x1, y0, y1, a] = it, aa = a || {}; o += `\\draw[-{Stealth[length=1.6mm]}] (${x0},0)--(${x1},0) node[below left]{$${aa.x || 'x'}$};\\draw[-{Stealth[length=1.6mm]}] (0,${y0})--(0,${y1}) node[below right]{$${aa.y || 'y'}$};` + (aa.o !== false ? `\\node[${TIKZA[typeof aa.o === 'string' ? aa.o : 'sw'] || TIKZA.sw},inner sep=1.5pt] at (0,0) {O};` : ''); }
       else if (k === 'seg') { const [, A, B, a] = it; o += `\\draw[${sty(a)}] ${P(A)}--${P(B)};`; }
       else if (k === 'poly') { const [, ps, a] = it; o += `\\draw[${sty(a)}${a && a.fill ? ',fill=black!8' : ''}] ${ps.map(P).join('--')}--cycle;`; }
       else if (k === 'path') { const [, ps, a] = it; o += `\\draw[${sty(a)}] ${ps.map(P).join('--')};`; }
@@ -746,7 +752,7 @@
       else if (k === 'label') { const [, A, t, d] = it; o += `\\node[${TIKZA[d || 'c']},inner sep=1.5pt] at ${P(A)} {${lab(t)}};`; }
       else if (k === 'angle') { const [, A, B, C, t, rr] = it, r = rr || 0.8, [a0, a1] = angleArc(A, B, C), d0 = a0 * 180 / Math.PI, d1 = a1 * 180 / Math.PI, m = (a0 + a1) / 2;
         for (let j = 0; j < (it[6] || 1); j++) { const rj = r + j * 0.22; o += `\\draw (${f(B[0] + rj * Math.cos(a0))},${f(B[1] + rj * Math.sin(a0))}) arc[start angle=${f(d0)},end angle=${f(d1)},radius=${f(rj)}];`; }
-        if (t) o += `\\node at (${f(B[0] + (r + 0.75) * Math.cos(m))},${f(B[1] + (r + 0.75) * Math.sin(m))}) {${lab(t)}};`; }
+        if (t) { const R = r + (it[7] != null ? it[7] : 0.75); o += `\\node at (${f(B[0] + R * Math.cos(m))},${f(B[1] + R * Math.sin(m))}) {${lab(t)}};`; } }
       else if (k === 'right') { const [, A, B, C, ss] = it, q = ss || 0.5, u = n => { const L = Math.hypot(n[0] - B[0], n[1] - B[1]); return [(n[0] - B[0]) / L * q, (n[1] - B[1]) / L * q]; }, a = u(A), c = u(C);
         o += `\\draw (${f(B[0] + a[0])},${f(B[1] + a[1])})--(${f(B[0] + a[0] + c[0])},${f(B[1] + a[1] + c[1])})--(${f(B[0] + c[0])},${f(B[1] + c[1])});`; }
       else if (k === 'ellipse') { const [, C, rx, ry, d0, d1, a] = it; o += d0 == null ? `\\draw[${sty(a)}] ${P(C)} ellipse[x radius=${f(rx)},y radius=${f(ry)}];` : `\\draw[${sty(a)}] (${f(C[0] + rx * Math.cos(d0 * Math.PI / 180))},${f(C[1] + ry * Math.sin(d0 * Math.PI / 180))}) arc[start angle=${d0},end angle=${d1},x radius=${f(rx)},y radius=${f(ry)}];`; }

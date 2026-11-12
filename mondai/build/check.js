@@ -76,7 +76,13 @@ for (const part of (M.parts[vol] || [])) {
     (part.tsukuro || []).forEach((t, i) => { const b = badKanji(t.q).concat(badKanji(t.ex)); if (b.length) errs.push(`tsukuro[${i}] 教科書にない漢字 ${[...new Set(b)].join('')}`); });
     (part.tsukuro || []).forEach((t, i) => { if (bareKanji(t.q)) errs.push(`tsukuro[${i}].q`); if (bareKanji(t.ex)) errs.push(`tsukuro[${i}].ex`); });
   }
-  if (errs.length) { bad++; report.push(`NG 第${part.no}部: ルビのない漢字 ${errs.join(', ')}`); }
+  if (vol >= 4) {   // 第4巻から：ルビなし・常用漢字まで（第35回 K-8）
+    [['name', part.name], ...(part.tsukuro || []).flatMap((t, i) => [[`tsukuro[${i}].q`, t.q], [`tsukuro[${i}].ex`, t.ex]])].forEach(([k, t]) => {
+      if (/《/.test(String(t || ''))) errs.push(`${k} にルビ`);
+      const b = badKanji(t); if (b.length) errs.push(`${k} に常用漢字にない字 ${[...new Set(b)].join('')}`);
+    });
+  }
+  if (errs.length) { bad++; report.push(`NG 第${part.no}部: ${vol >= 4 ? '' : 'ルビのない漢字 '}${errs.join(', ')}`); }
 }
 console.log(report.join('\n'));
 console.log(`\nわざ ${ids.length}個、まちがいのあるわざ ${bad}個`);
