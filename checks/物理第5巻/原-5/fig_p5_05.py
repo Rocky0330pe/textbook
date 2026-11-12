@@ -9,11 +9,11 @@ while len(pts) < 70:
     x = rng.random()
     if rng.random() < np.sin(np.pi * x)**2:
         y = rng.random()
-        pts.append((round(1 + 38 * x, 1), round(1.5 + 19 * y, 1)))
+        pts.append((round(40 * x, 2), round(1.5 + 19 * y, 1)))  # 修5-2（F2-23）：箱 0〜40 mm に 40x で置く（もとは 1+38x）
 print('(1) はてな？の点（mm）')
 print(' '.join(f'{a}/{b}' for a, b in pts))
 xs = np.array([p[0] for p in pts])
-print('まん中の 1/3（13.67〜26.33 mm）に入った割合', np.mean((xs > 1 + 38 / 3) & (xs < 1 + 76 / 3)))
+print('まん中の 1/3（13.33〜26.67 mm）に入った数と割合', int(np.sum((xs > 40 / 3) & (xs < 80 / 3))), np.mean((xs > 40 / 3) & (xs < 80 / 3)))
 
 hb = 0.0380998
 N = 10
