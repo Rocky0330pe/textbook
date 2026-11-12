@@ -6,5 +6,5 @@ for V in [0.7, 0.6]:                       # はじめの値を2通り
     for k in range(1, 6):
         f = Is * (math.exp(V / VT) - 1) - (E - V) / R      # 電流のずれ
         df = Is / VT * math.exp(V / VT) + 1 / R            # その傾き
-        V = V - f / df                                      # 接線で0になる所へ
+        V = V - f / df                                      # 接線の0へ
         print(k, round(V, 5), round((E - V) / R * 1000, 3))
