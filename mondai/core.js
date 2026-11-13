@@ -1444,7 +1444,7 @@
     //   consts：ほかの文字の値（{ zeta: 0.5, omega_n: 2 }。下つきの文字は 'omega_n' の形）
     fn(c, p, ans, errs) {
       const V = (c.vars || ['s']).map(varName), W = calcSrc(c.want), A = Array.isArray(c.ans) ? String(c.ans[0]) : ans;
-      const cx = c.complex || /(^|[^a-zA-Z\\])j(?![a-zA-Z])/.test(W + ' ' + A);
+      const cx = c.complex || /(^|[^a-zA-Z\\])j/.test(W + ' ' + A);   // e^{jt}・e^{-jn\omega t} のように j のあとに文字が続いても複素数（第9巻 組b の要望）
       const ev = (t, vs) => (cx ? M.evalC(t, vs) : M.evalMath(t, vs));
       const mag = v => (v == null ? Infinity : cx ? Math.hypot(...v) : Math.abs(v));
       const INT = /^(n|k|m)$/;
