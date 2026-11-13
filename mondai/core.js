@@ -404,7 +404,7 @@
       let out = '';
       while (i < s.length && s[i] !== end) {
         // 先頭・かっこや ＝ のすぐあとの − は、符号（前後をあけない。第5巻 R2-17）
-        if (s[i] === '-' && (out === '' || /[(\[{,]$|<span class="mo">[^<]*<\/span>$|<span class="mdelim[^"]*">[^<]*<\/span>$/.test(out))) { i++; out += '<span class="mminus mun">−</span>'; continue; }
+        if (s[i] === '-' && (out === '' || /[(\[{,][\s\u00a0]*$|<span class="mo">[^<]*<\/span>$|<span class="mdelim[^"]*">[^<]*<\/span>$/.test(out))) { i++; out += '<span class="mminus mun">−</span>'; continue; }
         if (s[i] === '^' || s[i] === '_') { const k = s[i++]; const x = atom(); out += k === '^' ? (x === '°' ? '<span class="mdeg">°</span>' : `<sup>${x}</sup>`) : `<sub>${x}</sub>`; continue; }   // 度は上つきにしない（字の大きさのまま。第35回）
         out += atom();
       }
