@@ -7,7 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { files, ROOT } = require('./load');
-const vols = fs.readdirSync(ROOT).filter(d => /^v[1-9]$/.test(d)).map(d => +d.slice(1)).sort();
+// node build/mk_app.js 6 なら第6巻まで（確認の前の巻を入れずに版を作るとき）
+const upto = +process.argv[2] || 9;
+const vols = fs.readdirSync(ROOT).filter(d => /^v[1-9]$/.test(d)).map(d => +d.slice(1)).filter(v => v <= upto).sort();
 let srcs = [path.join(ROOT, 'core.js')];
 vols.forEach(v => { srcs = srcs.concat(files(v).slice(1)); });
 srcs.push(path.join(ROOT, 'app', 'app.js'));
