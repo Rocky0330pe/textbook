@@ -139,6 +139,8 @@ for t in "${expanded[@]}"; do
       node mondai/build/check.js "$n" > "$OUT/check_mondai_q$n.txt" 2>&1 || { echo "  わざの検査でまちがいがあった（check_mondai_q$n.txt）"; FAIL=1; }
       node mondai/build/mk_book.js "$n" > /dev/null
       lua2 "mq$n"
+      # 問題集だけ：ページの参照が変わったと出たら、あと2回まで組み直す（わざの一覧のページ番号のずれ。第9巻 R1-3）
+      for i in 1 2; do grep -q "Label(s) may have changed" "tex/mq$n.log" || break; ( cd tex && timeout "$TIMEOUT" lualatex -interaction=nonstopmode "mq$n.tex" > /dev/null 2>&1 || true ); done
       # 見開きのページを確かめる（NG の数を「ずれ」の欄に出す）
       ( cd tex && python3 "$ROOT/mondai/build/mq_pages.py" "mq$n" ) > "$OUT/check_pages_q$n.txt" 2>&1
       z=$(grep -c '  NG' "$OUT/check_pages_q$n.txt")
