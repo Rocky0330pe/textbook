@@ -33,8 +33,14 @@
     for (let k = Math.min(kmax, d); k >= 0; k--) if (rd(vG, k) === rd(vT, k)) return { ans: rd(vG, k), note: k ? `、小数第${k}位まで` : '、整数で', exact: false };
     return null;
   }
-  // 楽な形の終わり：丸めたなら「=与えた値での数≈答え」、そのままなら「=答え」
-  const tail = (g, vG) => (g.exact ? `=${g.ans}` : `=${fmt(vG)}\\approx${g.ans}`);
+  // 楽な形の終わり：そのままなら「=答え」。丸めたなら、途中の数を答え＋1けたまでで書いて「≈」でつなぐ（S-3。8けたで切らない）：
+  //   答え＋1けたで割り切れる数は「=1.915≈1.92」、割り切れない数は「≈1.911≈1.91」。答え＋1けたで丸めた数をさらに丸めると答えとちがう（2回丸め）ときは「≈答え」だけ
+  function tail(g, vG) {
+    if (g.exact) return `=${g.ans}`;
+    const d = (g.ans.split('.')[1] || '').length, k = d + 1, mid = rd(vG, k);
+    if (rd(+mid, d) !== g.ans) return `\\approx${g.ans}`;
+    return `${isDec(vG, k) ? '=' : '\\approx'}${mid}\\approx${g.ans}`;
+  }
   // 単位つきの数：U(0.5, 'kg') → $0.5\,\mathrm{kg}$
   const U = (v, u) => `$${typeof v === 'number' ? fmt(v) : v}\\,\\mathrm{${u}}$`;
   const MU = '\\mu ';
@@ -172,11 +178,12 @@
 
   // ================================================================ 6-32
   // 宇宙のいすの問題（重い計算。ステップ3だけ。P-4）：k・T から kT^2/39.48 が整数に近い組（ほんとうの 4π^2 でも同じ整数）
+  //   3000 N/m は楽な形の例のばね定数なので使わない（O-2・S-2。R1-22）
   const HEAVY = (() => {
     const out = [];
-    for (const k of [2000, 2500, 3000, 4000, 5000]) for (let i = 70; i <= 140; i++) {
+    for (const k of [2000, 2500, 4000, 5000]) for (let i = 70; i <= 140; i++) {
       const T = i / 100, mG = k * T * T / PI4, mT = k * T * T / (4 * Math.PI * Math.PI);
-      if (Math.abs(mG - Math.round(mG)) < 0.12 && Math.round(mG) === Math.round(mT) && mG >= 45 && mG <= 110 && !(k === 3000 && i === 96)) out.push({ k, T, tot: Math.round(mG) });
+      if (Math.abs(mG - Math.round(mG)) < 0.12 && Math.round(mG) === Math.round(mT) && mG >= 45 && mG <= 110) out.push({ k, T, tot: Math.round(mG) });
     }
     return out;
   })();
@@ -441,11 +448,11 @@
   const lcEasy = o => `$LC=${o.Lm}\\times10^{-3}\\times${o.Cu}\\times10^{-6}=${sciT(o.a, -o.n)}$、$\\sqrt{LC}=${sciT(Math.sqrt(o.a), -o.n / 2)}$`;
   M.add({
     id: '6-35', part: 3, chap: '6-6⑧・例題7', stars: 1,
-    title: 'LC 回路：$\\omega_{\\mathrm n}=\\frac{1}{\\sqrt{LC}}$、$T=2\\pi\\sqrt{LC}$（m・μ を10の累乗に直して、$LC$ を $10^{-\\text{偶数}}$ の形に）',
+    title: 'LC 回路：$\\omega_{\\mathrm n}=\\frac{1}{\\sqrt{LC}}$、$T=2\\pi\\sqrt{LC}$（$\\mathrm{m}$・$\\mathrm{\\mu}$ を10の累乗に直して、$LC$ を $10^{-\\text{偶数}}$ の形に）',
     mark: 'コイルとコンデンサーの回路の「固有角振動数」「周期」「振動数」。',
     futsu: ['$L$ と $C$ を $0.01$、$0.000001$ のような小数に直して', 'かけ算し、小数のまま $\\sqrt{\\phantom{L}}$ をとる。'],
     raku: ['$10\\,\\mathrm{mH}$・$1\\,\\mathrm{\\mu F}$ → $LC=10^{-2}\\times10^{-6}=10^{-8}$', '$\\omega_{\\mathrm n}=10^{4}$、周期 $0.628\\,\\mathrm{ms}$、約 $1590\\,\\mathrm{Hz}$', '$C$ を4倍 → 周期は2倍'],
-    why: 'コイルとコンデンサーの式 $L\\ddot q=-\\frac{1}{C}q$ は、ばねの $m\\ddot x=-kx$ で $m\\to L$、$k\\to\\frac{1}{C}$ とおきかえた形（6-6⑧）。だから $\\omega_{\\mathrm n}=\\sqrt{\\frac{1}{LC}}$、$T=2\\pi\\sqrt{LC}$。m は $10^{-3}$、μ は $10^{-6}$ なので、指数をたして $LC=10^{-\\square}$ にすると、$\\sqrt{\\phantom{L}}$ は指数を半分にするだけ。',
+    why: 'コイルとコンデンサーの式 $L\\ddot q=-\\frac{1}{C}q$ は、ばねの $m\\ddot x=-kx$ で $m\\to L$、$k\\to\\frac{1}{C}$ とおきかえた形（6-6⑧）。だから $\\omega_{\\mathrm n}=\\sqrt{\\frac{1}{LC}}$、$T=2\\pi\\sqrt{LC}$。$\\mathrm{m}$ は $10^{-3}$、$\\mathrm{\\mu}$ は $10^{-6}$ なので、指数をたして $LC=10^{-\\square}$ にすると、$\\sqrt{\\phantom{L}}$ は指数を半分にするだけ。',
     caution: '接頭語を直さずに $L=10$、$C=1$ としない。$LC$ の指数が奇数（$10^{-7}$）なら、$10\\times10^{-8}$ と書きかえてから $\\sqrt{\\phantom{L}}$ をとる。周期は $\\sqrt{LC}$ に比例するので、$C$ が4倍なら周期は2倍。',
     counts: { s1: 4, s2: 4, s3: 3, trap: 2 },
     cols: 1,
@@ -531,20 +538,42 @@
     const w = r.pick([2, 4, 5, 10]), [n12, cc, cr, sc, sr] = r.pick(ANG), u = r.pick([0.05, 0.1, 0.02, 0.04, 0.03]);
     const xc = cc * u, yc = sc * u, X = 2 * u;   // x0 = xc√cr、点のたて yc√sr
     const vc = -w * yc;                            // v0 = -ω×たて
-    if (w === 2 && n12 === -4 && u === 0.1) return null;   // 楽な形の例（ω=2、0.1、0.2√3）
+    if (n12 === -4) return null;   // 楽な形の例の角 φ=-π/3（ω=2、0.1、0.2√3 → t=π/6）。ω や大きさを変えただけの点・答えが例の何倍かになる点も出さない（O-2・S-2。R1-4）
     return { w, n12, X: +fmt(X), x0T: radT(+fmt(xc), cr), yT: radT(+fmt(yc), sr), v0T: radT(+fmt(vc), sr), x0: radV(xc, cr), y: radV(yc, sr), v0: radV(vc, sr), phT: piF(n12, 12), key: `P${fmt(radV(xc, cr))},${fmt(radV(yc, sr))}` };
   }
   const cartHead = (w, x0T, v0T) => `ばねの台車（$\\omega_{\\mathrm n}=${w}\\,\\mathrm{rad/s}$、右向きが正）が、はじめ $x_0=${x0T}\\,\\mathrm{m}$、$v_0=${v0T}\\,\\mathrm{m/s}$ で動き出す。`;
   // 図：横 x、たて -v/ω、点 P、原点からの線分、半径 X の円、角 φ の弧（数のラベルは書かない。数は問題の文にある）
   //   O は、弧のない側（φ>0 なら下、φ<0 なら上）の、P と反対の横に置く
+  //   φ の字は、線（軸・OP・点線・円）と P・O の字にかからない所のうち、原点にいちばん近い所に置き、弧はその少し内側にかく（R1-24）
+  //   字の大きさ：φ は図の単位で横 ±0.3・たて ±0.38 の箱（s=4.5 mm）。P が虚軸の上なら、P の字は軸の名前と反対の左に
   function phaseFig(o) {
     const R = o.X * 1.3, Gp = M.graph({ x0: -R, x1: R, y0: -R, y1: R, w: 6, h: 6 }), T = Gp.T, P = T(o.x0, o.y), rad = T(o.X, 0)[0];
     const ph = Math.atan2(o.y, o.x0) * 180 / Math.PI, oq = (ph > 0 ? 's' : 'n') + (o.x0 > 1e-9 ? 'w' : 'e');
-    const pl = (o.y >= 0 ? 'n' : 's') + (o.x0 >= 0 ? 'e' : 'w');
+    const onY = Math.abs(o.x0) < 1e-9, pl = (o.y >= 0 ? 'n' : 's') + (o.x0 > 1e-9 || (onY && o.y < 0) ? 'e' : 'w');
     const its = [...Gp.axes({ x: 'x', y: '-v/\\omega_{\\mathrm{n}}', o: oq }), ['circle', [0, 0], rad, { dash: true }], ['seg', T(0, 0), P, { thick: true }], ['dot', P], ['label', P, 'P', pl]];
-    if (Math.abs(o.y) > 1e-9 && Math.abs(o.x0) > 1e-9) its.push(['seg', P, T(o.x0, 0), { dash: true }], ['seg', P, T(0, o.y), { dash: true }]);
-    const ar = rad * 0.3, d0 = Math.min(0, ph), d1 = Math.max(0, ph), mid = (d0 + d1) / 2 * Math.PI / 180;
-    its.push(['arc', [0, 0], ar, d0, d1], ['label', [(ar + 0.4) * Math.cos(mid), (ar + 0.4) * Math.sin(mid)], '$\\phi$', 'c']);
+    const lines = [[[-3.5, 0], [3.5, 0]], [[0, -3.5], [0, 3.5]], [[0, 0], P]];
+    if (Math.abs(o.y) > 1e-9 && !onY) {
+      its.push(['seg', P, T(o.x0, 0), { dash: true }], ['seg', P, T(0, o.y), { dash: true }]);
+      lines.push([P, [P[0], 0]], [P, [0, P[1]]]);
+    }
+    // よける点：線の上の点（0.05 ごと）・円・P と O の字のまん中
+    const obs = [];
+    lines.forEach(([A, B]) => { const L = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(L / 0.05)); for (let k = 0; k <= n; k++) obs.push([A[0] + (B[0] - A[0]) * k / n, A[1] + (B[1] - A[1]) * k / n, 1]); });
+    for (let k = 0; k < 360; k += 2) obs.push([rad * Math.cos(k * Math.PI / 180), rad * Math.sin(k * Math.PI / 180), 1]);
+    const off = d => [(d.includes('e') ? 1 : d.includes('w') ? -1 : 0) * 0.35, (d.includes('n') ? 1 : d.includes('s') ? -1 : 0) * 0.35];
+    obs.push([P[0] + off(pl)[0], P[1] + off(pl)[1], 2], [off(oq)[0], off(oq)[1], 2]);
+    const fitOf = (x, y) => Math.min(...obs.map(([u, v, w]) => Math.max(Math.abs(x - u) / (0.3 * w), Math.abs(y - v) / (0.38 * w))));
+    const d0 = Math.min(0, ph), d1 = Math.max(0, ph), span = d1 - d0, mid = (d0 + d1) / 2;
+    let best = null;
+    for (let rho = 1.0; rho <= rad - 0.35 + 1e-9 && !(best && best.ok); rho += 0.03) {
+      for (let dd = 0; dd <= span / 2 - 6; dd += 2) for (const a of dd ? [mid - dd, mid + dd] : [mid]) {
+        const x = rho * Math.cos(a * Math.PI / 180), y = rho * Math.sin(a * Math.PI / 180), f = fitOf(x, y);
+        if (!best || (f >= 1 && !best.ok) || (!best.ok && f > best.f)) best = { x, y, rho, f, ok: f >= 1 };
+        if (best.ok) break;
+      }
+    }
+    const ar = Math.max(0.5, Math.min(rad * 0.6, best.rho - 0.45));
+    its.push(['arc', [0, 0], ar, d0, d1], ['label', [best.x, best.y], '$\\phi$', 'c']);
     return { s: 4.5, items: its };
   }
   M.add({
@@ -565,7 +594,7 @@
       s1(r) {
         const w = r.pick([2, 4, 5, 10]), [a, b, c] = r.pick([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10], [5, 12, 13], [12, 5, 13], [8, 15, 17], [15, 8, 17]]), u = r.pick([0.01, 0.02]);
         const sx = r.chance(0.5) ? 1 : -1, sy = r.chance(0.5) ? 1 : -1, x0 = +fmt(sx * a * u), y = +fmt(sy * b * u), v0 = +fmt(-w * y), X = +fmt(c * u);
-        if (Math.abs(v0) > 2) return null;
+        if (Math.abs(v0) > 2 || X === 0.2) return null;   // 振幅 0.2 は楽な形の例の答え（O-2）
         return { q: cartHead(w, fmt(x0), fmt(v0)) + `振幅 $X=□\\,\\mathrm{m}$`, a: `$${fmt(X)}$`, key: `P${x0},${y}`, easyCheck: false,
           easy: `点 $(${fmt(x0)},\\ ${fmt(y)})$、$X=\\sqrt{${fmt(x0 * x0)}+${fmt(y * y)}}=${fmt(X)}$`, verify: p => valIs(p.a, Math.hypot(x0, v0 / w)) };
       },
@@ -582,13 +611,14 @@
         const fig = phaseFig(o);
         if (r.chance(0.6)) {
           const ph = o.n12 < 0 ? `-${piF(-o.n12, 12)}` : `+${piF(o.n12, 12)}`;
-          const ans = `x=${fmt(o.X)}\\cos\\Bigl(${o.w}t${ph}\\Bigr)`;
+          const ans = `${fmt(o.X)}\\cos\\Bigl(${o.w}t${ph}\\Bigr)`;   // 文の末尾が「＝ □」になるので、答えに「x=」を書かない（S-11）
           return { q: cartHead(o.w, o.x0T, o.v0T) + `図の P は $(x_0,\\,-v_0/\\omega_{\\mathrm n})$。$x$ を $X\\cos(\\omega_{\\mathrm n}t+\\phi)$ の形で書くと`, a: `$${ans}$`, key: o.key, easyCheck: false, fig,
             easy: `$X=${fmt(o.X)}$、$\\phi=${o.phT}$`, calc: { kind: 'ode', x: 't', coef: [1, 0, o.w * o.w], init: [[0, o.x0], [0, o.v0, 1]] } };
         }
         // はじめていちばん右に来る時刻：点が横軸の右（角0）まで左回りに回る
         const turn = o.n12 < 0 ? -o.n12 : 24 - o.n12;   // 回る角（π/12 の何倍）
         const tT = piF(turn, 12 * o.w);
+        if (turn * 6 === 12 * o.w) return null;   // 答え π/6 は楽な形の例の答え（O-2）
         return { q: cartHead(o.w, o.x0T, o.v0T) + `図の P は $(x_0,\\,-v_0/\\omega_{\\mathrm n})$。台車がはじめていちばん右に来るのは、$t=□$ 秒後`, a: `$${tT}$`, key: o.key, easyCheck: false, fig,
           easy: `$\\phi=${o.phT}$。左回りに $${piF(turn, 12)}$ 回ると横軸の右 → $${piF(turn, 12)}\\div${o.w}=${tT}$`,
           verify: p => { const t = numOf(p.a), x = tt => o.X * Math.cos(o.w * tt + o.n12 * Math.PI / 12); let first = null; for (let k = 1; k <= 20000; k++) { const tt = k * 2 * Math.PI / o.w / 20000; if (x(tt) > o.X * (1 - 1e-7) && first == null) first = tt; } return (first != null && Math.abs(first - t) < 2 * Math.PI / o.w / 2000 && close(x(t), o.X, 1e-9)) || `時刻 ${first} とちがう`; } };
@@ -693,7 +723,7 @@
     futsu: ['$\\frac{1}{2}CV^2$ を小数で計算し、', '$\\frac{1}{2}Li^2$ とおいて $i^2$ を出してから $\\sqrt{\\phantom{i}}$ をとる。'],
     raku: ['$1\\,\\mathrm{\\mu F}$・$10\\,\\mathrm{V}$・$10\\,\\mathrm{mH}$', '→ $10\\sqrt{\\frac{10^{-6}}{10^{-2}}}=10\\sqrt{10^{-4}}=0.1\\,\\mathrm{A}$', '$8\\,\\mathrm{\\mu F}$・$5\\,\\mathrm{V}$・$20\\,\\mathrm{mH}$ → $5\\sqrt{4\\times10^{-4}}=0.1\\,\\mathrm{A}$'],
     why: 'コンデンサーが空になる瞬間は、エネルギーがすべてコイルに移っていて、電流がいちばん大きい（ばねのまん中と同じ。6-6⑧）。$\\frac{1}{2}CV^2=\\frac{1}{2}Li^2$ の両辺を2倍して $L$ でわると $i^2=\\frac{C}{L}V^2$。$\\frac{1}{2}$ は両辺にあるので、エネルギーを計算しなくてよい。',
-    caution: 'μF・mH を直してから $\\frac{C}{L}$ を作る。$\\sqrt{\\frac{L}{C}}$ と逆にしない（$C$ が大きいほど、電流は大きい）。',
+    caution: '$\\mathrm{\\mu F}$・$\\mathrm{mH}$ を直してから $\\frac{C}{L}$ を作る。$\\sqrt{\\frac{L}{C}}$ と逆にしない（$C$ が大きいほど、電流は大きい）。',
     counts: { s1: 5, s2: 3, s3: 3, trap: 2 },
     cols: 1,
     boxw: '18mm',
@@ -713,7 +743,7 @@
           const Cu = r.pick([1, 2, 4, 5, 8, 10, 20, 0.5]), V = r.pick([2, 3, 4, 5, 6, 10, 20]), E = 0.5 * Cu * V * V;
           if (Cu === 1 && V === 10) return null;   // 楽な形の例（50 μJ）
           return { q: `$C=${Cu}\\,\\mathrm{${MU}F}$ のコンデンサーを $${V}\\,\\mathrm{V}$ にためた。コンデンサーにたまったエネルギーは □ $\\mathrm{${MU}J}$`, a: `$${fmt(E)}$`, key: `e${Cu},${V}`, easyCheck: false,
-            easy: `$\\frac{1}{2}\\times${Cu}\\times${V}^{2}=${fmt(E)}$（μ はそのまま）`, verify: p => valIs(p.a, 0.5 * Cu * 1e-6 * V * V * 1e6) };
+            easy: `$\\frac{1}{2}\\times${Cu}\\times${V}^{2}=${fmt(E)}$（$\\mathrm{\\mu F}$ のまま計算すれば $\\mathrm{\\mu J}$）`, verify: p => valIs(p.a, 0.5 * Cu * 1e-6 * V * V * 1e6) };
         }
         const kind = r.int(0, 2), n = kind === 0 ? r.pick([2, 3, 0.5]) : r.pick([4, 9, 0.25, 16]);
         const f = kind === 0 ? n : kind === 1 ? Math.sqrt(n) : 1 / Math.sqrt(n), fT = f >= 1 ? fmt(f) : `\\frac{1}{${fmt(1 / f)}}`;
@@ -836,6 +866,28 @@
     if (Math.ceil(a - 1e-9) !== Math.ceil(b - 1e-9) || Math.abs(a - Math.round(a)) < 0.03) return null;
     return { n: Math.ceil(a - 1e-9), q: a };
   }
+  // 対数減衰率を聞く問題（R1-30・S-4：かっこの値がそのまま答えにならないように）：前の山÷あとの山 R=num/den を、
+  //   文に書く $\ln2=0.693$・$\ln3=1.099$（P-3）から出す。ln R=p2 ln2+p3 ln3。文の値で出した答えとほんとうの値がくいちがわないけたで答える（O-4）
+  const LN2 = 0.693, LN3 = 1.099;
+  const RAT23 = [[4, 1, 2, 0], [8, 1, 3, 0], [6, 1, 1, 1], [12, 1, 2, 1], [9, 1, 0, 2], [3, 2, -1, 1], [4, 3, 2, -1], [9, 4, -2, 2]].map(([num, den, p2, p3]) => {
+    const vG = +fmt(p2 * LN2 + p3 * LN3), g = apx(vG, Math.log(num / den), 3, true);
+    return g && (g.ans.split('.')[1] || '').length >= 2 ? { num, den, R: num / den, p2, p3, vG, g } : null;
+  }).filter(Boolean);
+  // ln R の式（2\ln2、\ln2+\ln3、\ln3-\ln2、2\ln3-2\ln2）と、その数の式（2\times0.693、0.693+1.099）
+  const lnTerm = (c, b, first) => (c === 0 ? '' : `${c < 0 ? '-' : first ? '' : '+'}${Math.abs(c) === 1 ? '' : Math.abs(c)}\\ln${b}`);
+  const lnNum = (c, v, first) => (c === 0 ? '' : `${c < 0 ? '-' : first ? '' : '+'}${Math.abs(c) === 1 ? '' : `${Math.abs(c)}\\times`}${v}`);
+  const ln23T = o => lnTerm(o.p2, 2, true) + lnTerm(o.p3, 3, o.p2 === 0);
+  const ln23N = o => lnNum(o.p2, '0.693', true) + lnNum(o.p3, '1.099', o.p2 === 0);
+  const ln23Q = o => [o.p2 ? '$\\ln2=0.693$' : '', o.p3 ? '$\\ln3=1.099$' : ''].filter(Boolean).join('、');
+  const rT = o => (o.den === 1 ? fmt(o.num) : `\\frac{${o.num}}{${o.den}}`);
+  function peakPair23(r) {
+    const o = r.pick(RAT23), u = r.pick([1, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 15, 20]), a = +fmt(o.num * u), b = +fmt(o.den * u);
+    if (!isDec(a, 1) || !isDec(b, 1) || a > 120 || a < 10 || b < 4) return null;
+    return Object.assign({}, o, { a, b });
+  }
+  // δ の答えの、楽な形の終わり：ln R=式=数（≈答え）
+  const dEasy23 = o => `$\\ln${rT(o)}=${ln23T(o)}=${ln23N(o)}${tail(o.g, o.vG)}$`;
+  const dVer23 = o => p => apxIs(p.a, o.p2 * LN2 + o.p3 * LN3, Math.log(o.R));
   function peakPair(r) {
     const [R, lnT] = r.pick(RAT), b = r.pick([10, 15, 20, 25, 30, 40, 50, 60, 8, 12, 16, 5]), a = +fmt(b * R);
     if (!isDec(a, 1) || a > 120) return null;
@@ -862,15 +914,17 @@
     boxw: '18mm',
     fits(q) { return /山/.test(q) && /対数減衰率|周期あと/.test(ask(q)) && !/減衰比|熱|ダンパー|\\zeta/.test(q); },
     steps: {
-      // 対数減衰率（山の高さ2つ・1回ごとに□倍）
+      // 対数減衰率（山の高さ2つ・1回ごとに□倍）。$\ln2$・$\ln3$ から出す（かっこの値がそのまま答えにならない。R1-30）
       s1(r) {
-        const o = peakPair(r); if (!o) return null;
-        if (r.chance(0.6)) return { q: `ゆれの山の高さが ${U(o.a, 'mm')}、${U(o.b, 'mm')}、…と、同じ割合でへっていく。対数減衰率 $\\delta=□$（$\\ln${fmt(o.R)}=${o.lnT}$）`, a: `$${o.lnT}$`, key: `d${o.R}`,
-          easy: `$\\delta=\\ln\\frac{${fmt(o.a)}}{${fmt(o.b)}}=\\ln${fmt(o.R)}=${o.lnT}$`, easyCheck: false, verify: p => (close(o.a / o.b, o.R) && Math.abs(Math.log(o.a / o.b) - numOf(p.a)) < 6e-4) || 'ちがう' };
-        const rr = +fmt(1 / o.R);
-        if (!isDec(rr, 2)) return null;
-        return { q: `ゆれの山が、1回ごとに ${fmt(rr)}倍になっていく。対数減衰率 $\\delta=□$（$\\ln${fmt(o.R)}=${o.lnT}$）`, a: `$${o.lnT}$`, key: `d${o.R}`,
-          easy: `前の山÷あとの山は $\\frac{1}{${fmt(rr)}}=${fmt(o.R)}$、$\\delta=${o.lnT}$`, easyCheck: false, verify: p => Math.abs(Math.log(1 / rr) - numOf(p.a)) < 6e-4 || 'ちがう' };
+        if (r.chance(0.7)) {
+          const o = peakPair23(r); if (!o) return null;
+          return { q: `ゆれの山の高さが ${U(o.a, 'mm')}、${U(o.b, 'mm')}、…と、同じ割合でへっていく。対数減衰率 $\\delta$ は約 □（${ln23Q(o)}${o.g.note}）`, a: `$${o.g.ans}$`, key: `d${fmt(o.R)}`,
+            easy: `$\\delta=\\ln\\frac{${fmt(o.a)}}{${fmt(o.b)}}$、` + dEasy23(o), easyCheck: false, verify: p => (close(o.a / o.b, o.R) && dVer23(o)(p)) };
+        }
+        const o = r.pick(RAT23), rr = +fmt(1 / o.R);
+        if (!isDec(rr, 3)) return null;
+        return { q: `ゆれの山が、1回ごとに ${fmt(rr)}倍になっていく。対数減衰率 $\\delta$ は約 □（${ln23Q(o)}${o.g.note}）`, a: `$${o.g.ans}$`, key: `d${fmt(o.R)}`,
+          easy: `前の山÷あとの山は $\\frac{1}{${fmt(rr)}}=${rT(o)}$、` + dEasy23(o), easyCheck: false, verify: p => (close(1 / rr, o.R) && dVer23(o)(p)) };
       },
       // n 周期あとの山・何周期あとに 1/10（1/100）より小さくなる
       s2(r) {
@@ -888,10 +942,14 @@
       },
       // 図：はじめの2つの山の高さ
       s3(r) {
+        const head = '図のゆれで、';
+        if (r.chance(0.5)) {   // 対数減衰率（$\ln2$・$\ln3$ から。R1-30）。図に山が見えるように、比は6まで
+          const o = peakPair23(r); if (!o || o.R > 6) return null;
+          return { q: head + `はじめの2つの山の高さから、対数減衰率 $\\delta$ は約 □（${ln23Q(o)}${o.g.note}）`, a: `$${o.g.ans}$`, key: `d${fmt(o.R)}`, fig: decayFig(o), easyCheck: false,
+            easy: `$\\delta=\\ln\\frac{${fmt(o.a)}}{${fmt(o.b)}}$、` + dEasy23(o), verify: p => (close(o.a / o.b, o.R) && dVer23(o)(p)) };
+        }
         const o = peakPair(r); if (!o || o.R === 1.1) return null;
-        const fig = decayFig(o), head = '図のゆれで、';
-        if (r.chance(0.5)) return { q: head + `はじめの2つの山の高さから、対数減衰率 $\\delta=□$（$\\ln${fmt(o.R)}=${o.lnT}$）`, a: `$${o.lnT}$`, key: `d${o.R}`, fig, easyCheck: false,
-          easy: `$\\ln\\frac{${fmt(o.a)}}{${fmt(o.b)}}=\\ln${fmt(o.R)}=${o.lnT}$`, verify: p => Math.abs(Math.log(o.a / o.b) - numOf(p.a)) < 6e-4 || 'ちがう' };
+        const fig = decayFig(o);
         const c = nCyc(o.R, o.lnT, 10); if (!c) return null;
         return { q: head + `山がはじめの $\\frac{1}{10}$ より小さくなるのは □ 周期あと（$\\ln${fmt(o.R)}=${o.lnT}$、$\\ln10=2.30$）`, a: `$${c.n}$`, key: `n${o.R},10`, fig, easyCheck: false,
           easy: `$\\frac{2.30}{${o.lnT}}\\approx${fmt(+c.q.toFixed(2))}$ → ${c.n}周期あと`, verify: p => { const n = numOf(p.a); return (Math.pow(o.b / o.a, n) < 0.1 && Math.pow(o.b / o.a, n - 1) >= 0.1) || 'ちがう'; } };
@@ -1001,6 +1059,12 @@
   // ================================================================ 6-42
   const LNN = { 10: '2.30', 2: '0.693', 4: '1.386', 3: '1.099' };
   const lnNv = n => +LNN[n];
+  // 答えのかたより（R1-9・S-4）：$\ln10=2.30$ を 5・0.5・10 でわると、0.46・4.6 ばかりになる。時間・α の答えは、数字のならび（0.46 と 4.6 は同じ「46」）を key にして、
+  //   同じ見開きで同じならびを2回出さない。楽な形の例の答え（0.58・0.575・1.15）と同じならびも出さない（O-2）。
+  //   α=1・t=1 は、かっこの値（2.30 など）がそのまま答えになるので使わない。α=2・4・8 は例の α（とその2倍）なので使わない
+  const digs = a => String(a).replace(/[^\d]/g, '').replace(/^0+/, '').replace(/0+$/, '');
+  const vKey = a => (['58', '575', '115'].includes(digs(a)) ? null : `v42:${digs(a)}`);
+  const AL42 = [0.5, 1.5, 2.5, 5, 0.2, 0.25, 0.4, 10, 20, 0.8, 0.6, 1.2, 3, 6, 0.3, 0.75, 1.25];
   M.add({
     id: '6-42', part: 3, chap: '6-7④・例題6', stars: 1,
     title: 'つつみ $e^{-\\alpha t}$ がはじめの $\\frac{1}{n}$ になる時間は $\\frac{\\ln n}{\\alpha}$（$\\alpha$ が半分なら2倍かかる）',
@@ -1016,9 +1080,9 @@
     steps: {
       // α から 1/n になる時間
       s1(r) {
-        const al = r.pick([0.5, 1, 1.5, 2.5, 5, 0.2, 0.25, 0.4, 10, 20, 0.8]), n = r.pick([10, 10, 2, 4, 3]);
-        const g = apx(lnNv(n) / al, Math.log(n) / al, 2, true); if (!g) return null;
-        return { q: `へる速さ $\\alpha=${al}\\,/\\mathrm{s}$ のゆれ。つつみ（$e^{-\\alpha t}$ の形）がはじめの $\\frac{1}{${n}}$ になるのは約 □ 秒後（$\\ln${n}=${LNN[n]}$${g.note}）`, a: `$${g.ans}$`, key: `a${al},${n}`, easyCheck: false,
+        const al = r.pick(AL42), n = r.pick([10, 10, 2, 4, 3]);
+        const g = apx(lnNv(n) / al, Math.log(n) / al, 2, true); if (!g || !vKey(g.ans)) return null;
+        return { q: `へる速さ $\\alpha=${al}\\,/\\mathrm{s}$ のゆれ。つつみ（$e^{-\\alpha t}$ の形）がはじめの $\\frac{1}{${n}}$ になるのは約 □ 秒後（$\\ln${n}=${LNN[n]}$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
           easy: `$t=\\frac{${LNN[n]}}{${al}}${tail(g, lnNv(n) / al)}$`, verify: p => apxIs(p.a, lnNv(n) / al, Math.log(n) / al) };
       },
       // α=c/2m から・1/100・α が n 倍なら
@@ -1030,32 +1094,32 @@
             easy: `時間は $\\frac{\\ln10}{\\alpha}$ なので、$\\alpha$ の逆数倍`, verify: p => valIs(p.a, 1 / n) };
         }
         if (kind === 1) {
-          const al = r.pick([0.5, 1, 2.5, 5, 0.25, 10]), g = apx(2 * LN10 / al, Math.log(100) / al, 2, true); if (!g) return null;
-          return { q: `へる速さ $\\alpha=${al}\\,/\\mathrm{s}$ のゆれ。つつみがはじめの $\\frac{1}{100}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: `a${al},100`, easyCheck: false,
+          const al = r.pick([0.5, 2.5, 5, 0.25, 10, 0.6, 1.5, 3, 1.2, 0.8]), g = apx(2 * LN10 / al, Math.log(100) / al, 2, true); if (!g || !vKey(g.ans)) return null;
+          return { q: `へる速さ $\\alpha=${al}\\,/\\mathrm{s}$ のゆれ。つつみがはじめの $\\frac{1}{100}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
             easy: `$\\frac{1}{100}=\\Bigl(\\frac{1}{10}\\Bigr)^{2}$ → $\\frac{2\\times2.30}{${al}}${tail(g, 2 * LN10 / al)}$`, verify: p => apxIs(p.a, 2 * LN10 / al, Math.log(100) / al) };
         }
-        const m = r.pick([0.5, 1, 2, 4]), c = r.pick([0.4, 1, 2, 4, 5]), al = +fmt(c / (2 * m)), g = apx(LN10 / al, Math.LN10 / al, 2, true);
-        if (!g || al === 4 || al === 2) return null;
-        return { q: `質量 ${U(m, 'kg')} の台車に、減衰係数 ${U(c, 'N\\cdot s/m')} のダンパーをつけた（ゆれながら止まる）。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: `a${al},10`, easyCheck: false,
+        const m = r.pick([0.5, 1, 2, 4]), c = r.pick([0.4, 1, 1.2, 2, 3, 4, 5, 6]), al = +fmt(c / (2 * m)), g = apx(LN10 / al, Math.LN10 / al, 2, true);
+        if (!g || [1, 2, 4, 8].includes(al) || !vKey(g.ans)) return null;
+        return { q: `質量 ${U(m, 'kg')} の台車に、減衰係数 ${U(c, 'N\\cdot s/m')} のダンパーをつけた（ゆれながら止まる）。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
           easy: `$\\alpha=\\frac{${c}}{2\\times${m}}=${fmt(al)}$、$\\frac{2.30}{${fmt(al)}}${tail(g, LN10 / al)}$`, verify: p => apxIs(p.a, LN10 * 2 * m / c, Math.LN10 * 2 * m / c) };
       },
       // 見かけがちがう：ζ と ω_n から、RLC 回路（ms）、時間から α
       s3(r) {
         const kind = r.int(0, 2);
         if (kind === 0) {
-          const [z, w] = r.pick([[0.1, 10], [0.05, 20], [0.2, 5], [0.1, 5], [0.25, 4], [0.05, 10], [0.5, 10]]), al = +fmt(z * w), g = apx(LN10 / al, Math.LN10 / al, 2, true);
-          if (!g || al === 4 || al === 2) return null;
-          return { q: `減衰比 $\\zeta=${z}$、固有角振動数 $\\omega_{\\mathrm n}=${w}\\,\\mathrm{rad/s}$ のゆれ。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: `a${al},10`, easyCheck: false,
+          const [z, w] = r.pick([[0.1, 6], [0.05, 30], [0.2, 15], [0.25, 10], [0.05, 50], [0.02, 60], [0.1, 12], [0.25, 12], [0.1, 5], [0.05, 10], [0.2, 4]]), al = +fmt(z * w), g = apx(LN10 / al, Math.LN10 / al, 2, true);
+          if (!g || [1, 2, 4, 8].includes(al) || !vKey(g.ans)) return null;
+          return { q: `減衰比 $\\zeta=${z}$、固有角振動数 $\\omega_{\\mathrm n}=${w}\\,\\mathrm{rad/s}$ のゆれ。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ 秒後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
             easy: `$\\alpha=\\zeta\\omega_{\\mathrm n}=${fmt(al)}$、$\\frac{2.30}{${fmt(al)}}${tail(g, LN10 / al)}$`, verify: p => apxIs(p.a, LN10 / (z * w), Math.LN10 / (z * w)) };
         }
         if (kind === 1) {
-          const [Lm, R] = r.pick([[10, 20], [10, 40], [5, 20], [20, 20], [1, 10], [4, 20], [50, 50]]), al = R / (2 * Lm / 1000), tm = 1000 * LN10 / al, g = apx(tm, 1000 * Math.LN10 / al, 3, true);
-          if (!g) return null;
-          return { q: `$L=${Lm}\\,\\mathrm{mH}$ のコイルと $R=${R}\\,\\Omega$ の抵抗が入った、ゆれながら止まる回路。つつみのへる速さは $\\alpha=\\frac{R}{2L}$。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ ms 後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: `e${Lm},${R}`, easyCheck: false,
-            easy: `$\\alpha=\\frac{${R}}{2\\times${fmt(Lm / 1000)}}=${fmt(al)}$、$\\frac{2.30}{${fmt(al)}}\\,\\mathrm{s}=${fmt(tm)}\\,\\mathrm{ms}$`, verify: p => apxIs(p.a, 1000 * LN10 * 2 * Lm / 1000 / R, 1000 * Math.LN10 * 2 * Lm / 1000 / R) };
+          const [Lm, R] = r.pick([[10, 30], [20, 30], [5, 30], [25, 20], [8, 20], [2, 10], [16, 20], [40, 20], [4, 30], [10, 40]]), al = R / (2 * Lm / 1000), tm = 1000 * LN10 / al, g = apx(tm, 1000 * Math.LN10 / al, 3, true);
+          if (!g || !vKey(g.ans)) return null;
+          return { q: `$L=${Lm}\\,\\mathrm{mH}$ のコイルと $R=${R}\\,\\Omega$ の抵抗が入った、ゆれながら止まる回路。つつみのへる速さは $\\alpha=\\frac{R}{2L}$。つつみがはじめの $\\frac{1}{10}$ になるのは約 □ ms 後（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
+            easy: `$\\alpha=\\frac{${R}}{2\\times${fmt(Lm / 1000)}}=${fmt(al)}$、$\\frac{2.30}{${fmt(al)}}\\,\\mathrm{s}=\\frac{2300}{${fmt(al)}}\\,\\mathrm{ms}${tail(g, tm)}$`, verify: p => apxIs(p.a, 1000 * LN10 * 2 * Lm / 1000 / R, 1000 * Math.LN10 * 2 * Lm / 1000 / R) };
         }
-        const t = r.pick([0.5, 1, 2, 4, 5, 10, 0.25]), g = apx(LN10 / t, Math.LN10 / t, 2, true); if (!g) return null;
-        return { q: `ゆれのつつみが、${fmt(t)}秒ではじめの $\\frac{1}{10}$ になった。へる速さ $\\alpha$ は約 □ /s（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: `t${t}`, easyCheck: false,
+        const t = r.pick([0.5, 5, 10, 0.25, 1.5, 3, 0.6, 2.5, 0.4, 0.8, 1.2]), g = apx(LN10 / t, Math.LN10 / t, 2, true); if (!g || !vKey(g.ans)) return null;   // t=2・4 は例の数を入れかえたもの（α=1.15・0.58）
+        return { q: `ゆれのつつみが、${fmt(t)}秒ではじめの $\\frac{1}{10}$ になった。へる速さ $\\alpha$ は約 □ /s（$\\ln10=2.30$${g.note}）`, a: `$${g.ans}$`, key: vKey(g.ans), easyCheck: false,
           easy: `$e^{-\\alpha\\times${fmt(t)}}=\\frac{1}{10}$ → $\\alpha=\\frac{2.30}{${fmt(t)}}${tail(g, LN10 / t)}$`, verify: p => apxIs(p.a, LN10 / t, Math.LN10 / t) };
       },
       // わな：山の比から何周期あと・何周期あとの山（6-40）
@@ -1123,7 +1187,7 @@
         const u = r.pick([1, 2, 3, 4, 5]), a = p0 * u, b = q0 * u;
         if (a > 120 || a < 10) return null;
         return { q: `ゆれの山の高さが ${U(a, 'mm')}、${U(b, 'mm')}、…と、同じ割合でへる。減衰比 $\\zeta$ は約 □（$\\ln\\frac{${p0}}{${q0}}=${lnT}$、${tl}）`, a: `$${g.ans}$`, key: `d${rr}`, easyCheck: false,
-          easy: `$\\delta=\\ln\\frac{${a}}{${b}}=\\ln\\frac{${p0}}{${q0}}=${lnT}$、$\\zeta\\approx\\frac{${lnT}}{6.28}${ap(g)}$`,
+          easy: `$\\delta=\\ln\\frac{${a}}{${b}}${u === 1 ? '' : `=\\ln\\frac{${p0}}{${q0}}`}=${lnT}$、$\\zeta\\approx\\frac{${lnT}}{6.28}${ap(g)}$`,
           verify: p => (close(a / b, p0 / q0) && apxIs(p.a, +lnT / (2 * PI), Math.log(a / b) / (2 * Math.PI))) };
       },
       // 見かけがちがう：何周期かのあいだの比、「□%ずつ小さくなる」、ζ から1回ごとの比
@@ -1192,7 +1256,7 @@
     futsu: ['$L\\ddot q+R\\dot q+\\frac{1}{C}q=0$ を表計算で動かして、', '電圧がゆれなくなる抵抗の境目をさがす。'],
     raku: ['$10\\,\\mathrm{mH}$・$1\\,\\mathrm{\\mu F}$ → $\\frac{L}{C}=10^{4}$ → $R_{\\mathrm c}=2\\sqrt{10^{4}}=200\\,\\Omega$', '$20\\,\\Omega$ なら $\\zeta=\\frac{20}{200}=0.1$', '$\\zeta=0.5$ にするなら $0.5\\times200=100\\,\\Omega$'],
     why: 'RLC 回路の式 $L\\ddot q+R\\dot q+\\frac{1}{C}q=0$ は、$m\\ddot x+c\\dot x+kx=0$ で $m\\to L$、$c\\to R$、$k\\to\\frac{1}{C}$ とおきかえた形（6-7⑦）。だから $c_{\\mathrm c}=2\\sqrt{mk}$ は $R_{\\mathrm c}=2\\sqrt{L\\times\\frac{1}{C}}=2\\sqrt{\\frac{L}{C}}$、減衰比は $\\zeta=\\frac{R}{R_{\\mathrm c}}$。止まり方の3つ（$\\zeta<1$、$=1$、$>1$）も、ばねと同じ。',
-    caution: 'm・μ を直してから $\\frac{L}{C}$ を作る（$\\frac{10\\times10^{-3}}{1\\times10^{-6}}=10^{4}$）。$\\sqrt{LC}$ や $\\sqrt{\\frac{C}{L}}$ とまちがえない。2をかけ忘れない。',
+    caution: '$\\mathrm{m}$・$\\mathrm{\\mu}$ を直してから $\\frac{L}{C}$ を作る（$\\frac{10\\times10^{-3}}{1\\times10^{-6}}=10^{4}$）。$\\sqrt{LC}$ や $\\sqrt{\\frac{C}{L}}$ とまちがえない。2をかけ忘れない。',
     counts: { s1: 4, s2: 4, s3: 3, trap: 2 },
     cols: 1,
     boxw: '18mm',

@@ -163,6 +163,30 @@
 
   // ---- 図（M.cplane）
   const dirOf = (x, y) => (y >= 0 ? (x >= 0 ? 'ne' : 'nw') : (x >= 0 ? 'se' : 'sw'));
+  // ラベルの向き（8方向）：点 pt から出ていく線の向き ds と、点が軸の上なら軸の向きから、いちばん遠い向き（同じくらいなら斜め）（R2-20）
+  const gapA = (p, q) => { const d = Math.abs(p - q) % (2 * Math.PI); return Math.min(d, 2 * Math.PI - d); };
+  function awayDir(pt, ...ds) {
+    const all = ds.concat(pt[1] === 0 ? [[1, 0], [-1, 0]] : [], pt[0] === 0 ? [[0, 1], [0, -1]] : []);
+    const ang = all.filter(([a, b]) => Math.hypot(a, b) > 1e-9).map(([a, b]) => Math.atan2(b, a));
+    let best = 'ne', bv = -1;
+    for (const [nm, c] of [['ne', 45], ['nw', 135], ['sw', -135], ['se', -45], ['n', 90], ['e', 0], ['s', -90], ['w', 180]]) {
+      const v = Math.min(...ang.map(a => gapA(a, c * Math.PI / 180))) + (nm.length === 2 ? 0.05 : 0);
+      if (v > bv + 1e-9) { bv = v; best = nm; }
+    }
+    return best;
+  }
+  // O の字の向き：原点から出る線（矢印）からいちばん遠い象限（R2-20）
+  //   図の右（上）のはしが原点に近いときは、軸の名前 Re（Im）が O の右下（右上）に来るので、そこをさける。more：図に入るほかの点
+  function oDir(ds, more) {
+    const ang = ds.filter(([a, b]) => Math.hypot(a, b) > 1e-9).map(([a, b]) => Math.atan2(b, a)), all = ds.concat(more || []);
+    const xr = Math.max(0, ...all.map(q => q[0])) + 1.2, yt = Math.max(0, ...all.map(q => q[1])) + 1.2;
+    let best = 'sw', bv = -1;
+    for (const [nm, c] of [['sw', -135], ['se', -45], ['nw', 135], ['ne', 45]]) {
+      const v = Math.min(...ang.map(a => gapA(a, c * Math.PI / 180))) - (nm === 'se' && xr < 3 ? 1 : 0) - (nm === 'ne' && yt < 3 ? 1 : 0);
+      if (v > bv + 1e-9) { bv = v; best = nm; }
+    }
+    return best;
+  }
   // pts（と原点）が入る複素平面。たてと横は同じ倍率
   function plane(pts) {
     const xs = pts.map(p => p[0]).concat(0), ys = pts.map(p => p[1]).concat(0);
@@ -365,9 +389,10 @@
         const zT = zt(...u), wT = zt(...v);
         if (t === 0) {
           const G = plane([u, v, sum]), O = G.T(0, 0), Pz = G.T(...u), Pw = G.T(...v), Ps = G.T(...sum);
-          const fig = { s: 5, items: [...G.axes({}),
+          // ラベルは、その点につながる線を全部よける向きに。O は矢印のない象限に（R2-20）
+          const fig = { s: 5, items: [...G.axes({ o: oDir([u, v], [sum]) }),
             ['seg', O, Pz, { arrow: true, thick: true }], ['seg', O, Pw, { arrow: true }], ['seg', Pz, Ps, { arrow: true, thick: true }], ['seg', Pw, Ps, { dash: true }],
-            ['label', Pz, '$z$', dirOf(u[0] - v[0], u[1] - v[1])], ['label', Pw, '$w$', dirOf(v[0] - u[0], v[1] - u[1])], ['dot', Ps], ['label', Ps, '$z+w$', dirOf(...sum)]] };
+            ['label', Pz, '$z$', awayDir(u, [-u[0], -u[1]], v)], ['label', Pw, '$w$', awayDir(v, [-v[0], -v[1]], u)], ['dot', Ps], ['label', Ps, '$z+w$', awayDir(sum, [-v[0], -v[1]], [-u[0], -u[1]])]] };
           return {
             q: `図のように、$z=${zT}$ の矢印の先に、$w=${wT}$ の矢印をつないだ。行き着いた点が表す複素数 $z+w$`, a: `$${zt(...sum)}$`, fig, key: keyPM('+', u, v),
             easy: `$(${u[0]}+${sgn(v[0])})+(${u[1]}+${sgn(v[1])})j=${zt(...sum)}$`,
@@ -376,9 +401,9 @@
         }
         if (t === 1) {
           const G = plane([u, v]), O = G.T(0, 0), Pz = G.T(...u), Pw = G.T(...v);
-          const fig = { s: 5, items: [...G.axes({}),
+          const fig = { s: 5, items: [...G.axes({ o: oDir([u, v]) }),
             ['seg', O, Pz, { arrow: true }], ['seg', O, Pw, { arrow: true }], ['seg', Pw, Pz, { arrow: true, thick: true }],
-            ['label', Pz, '$z$', dirOf(...u)], ['label', Pw, '$w$', dirOf(...v)]] };
+            ['label', Pz, '$z$', awayDir(u, [-u[0], -u[1]], [v[0] - u[0], v[1] - u[1]])], ['label', Pw, '$w$', awayDir(v, [-v[0], -v[1]], [u[0] - v[0], u[1] - v[1]])]] };
           return {
             q: `図の、点 $w=${wT}$ から点 $z=${zT}$ へ向かう矢印が表す複素数 $z-w$`, a: `$${zt(...dif)}$`, fig, key: keyPM('-', u, v),
             easy: `$(${u[0]}-${sgn(v[0])})+(${u[1]}-${sgn(v[1])})j=${zt(...dif)}$`,
@@ -413,13 +438,14 @@
     const c = [u[0] * v[0], u[0] * v[1], u[1] * v[0], u[1] * v[1]], tail = ['', 'j', 'j', 'j^{2}'];
     return c.map((x, i) => (x === 0 ? '' : (i && x > 0 ? '+' : '') + (x === -1 && i ? '-' : x === 1 && i ? '' : x) + tail[i])).join('').replace(/^\+/, '') || '0';
   }
-  const ex48 = (u, v) => { const k = [zt(...u), zt(...v)].sort().join('|'); return k === ['3+2j', '1-4j'].sort().join('|'); };
+  // 左ページの例 (3+2j)(1-4j)：どちらかの因数が例の因数（3+2j・1-4j）の組は出さない（例の因数をそのまま使うと、ほぼ同じ式になる。O-2・R2-4）
+  const ex48 = (u, v) => [u, v].some(x => (x[0] === 3 && x[1] === 2) || (x[0] === 1 && x[1] === -4));
   M.add({
     id: '6-48', part: 4, chap: '6-8⑥ 例題3', stars: 1,
     title: 'かけ算は展開して、$j^2$ はすぐ $-1$（$j$ をかけると90°回る）',
     mark: '$(a+bj)(c+dj)$、$(a+bj)^2$、$j(a+bj)$ のようなかけ算。',
     futsu: ['$(3+2j)(1-4j)$ を', '$3\\times1+3\\times(-4j)+2j\\times1+\\cdots$ と', '4つの積に分けて書き、', '$j^2$ は最後にまとめて直す。'],
-    raku: ['$3-12j+2j-8j^2$（$j^2$ はすぐ $-1$）', '$=3+8-10j=11-10j$', '$j(2+5j)=2j-5$：90°回る'],
+    raku: ['$3-12j+2j-8j^2$（$j^2$ はすぐ $-1$）', '$=3+8-10j=11-10j$', '$j(2+5j)=-5+2j$：90°回る'],
     why: '$j$ を文字のように考えて展開し（3-8）、$j^2$ が出たらすぐ $-1$ にする（6-8⑥）。$j$ をかけると、点 $(a,\\ b)$ は原点のまわりに90°回って $(-b,\\ a)$ になる（4-8）。',
     caution: '$(2j)^2=4j^2=-4$（$+4$ ではない）。$(a+bj)^2$ のまん中の項 $2abj$ を忘れない。',
     counts: { s1: 8, s2: 6, s3: 3, trap: 2 },
@@ -445,6 +471,7 @@
       // 2乗・j をかける
       s2(r) {
         const u = [r.intNot(-6, 6, v => v === 0), r.intNot(-6, 6, v => v === 0)];
+        if (ex48(u, u)) return null;   // 例の因数（3+2j・1-4j）は、2乗・j をかける形でも出さない（O-2）
         if (turn(r, '48s2', 2)) {
           const A = zt(...zmul(u, u));
           return { q: `$(${zt(...u)})^{2}$`, a: `$${A}$`, key: `q|${zt(...u)}`, easy: `$${u[0] * u[0]}${u[0] * u[1] > 0 ? '+' : '-'}${Math.abs(2 * u[0] * u[1])}j+${u[1] * u[1]}j^{2}=${A}$` };
@@ -472,6 +499,7 @@
           return { q: `$(${zt(...u)})^{3}$`, a: `$${A}$`, key: `c|${zt(...u)}`, easy: `$(${zt(...u)})^{2}=${zt(...sq)}$。$(${zt(...sq)})(${zt(...u)})=${A}$`, easyCheck: 'last' };
         }
         const n = r.pick([3, 5, 6, 7]), u = [r.intNot(-5, 5, v => v === 0), r.intNot(-5, 5, v => v === 0)], A = zt(...zmul(jp(n), u));
+        if (ex48(u, u)) return null;
         return { q: `$j^{${n}}(${zt(...u)})$`, a: `$${A}$`, key: `n|${n}|${zt(...u)}`, easy: `$j^{${n}}=${jpT(n)}$ なので $${jpT(n)}(${zt(...u)})=${A}$`, easyCheck: 'last' };
       },
       // わな：わり算（6-50）
@@ -573,7 +601,7 @@
           return { q: `$\\frac{${N}}{j}$`, a: `$${A}$`, key: `j|${N}`, easy: `$\\frac{${N}\\times(-j)}{j\\times(-j)}=${A}$` };
         }
         const u = [r.intNot(-4, 4, v => v === 0), r.intNot(-4, 4, v => v === 0)], k = r.pick([1, 1, 2, 3, -1, -2]), D = u[0] * u[0] + u[1] * u[1], N = k * D;
-        if (N === 5 && u[0] === 1 && u[1] === 2) return null;   // 左ページの例（O-2）
+        if (u[0] === 1 && u[1] === 2) return null;   // 左ページの例の分母 1+2j は、分子を変えても出さない（答えが例の何倍かになる。O-2・R2-5）
         const A = zt(k * u[0], -k * u[1]);
         return { q: `$\\frac{${N}}{${zt(...u)}}$`, a: `$${A}$`, key: `${N}|${zt(...u)}`, easy: `$\\frac{${N}(${zt(u[0], -u[1])})}{${u[0] * u[0]}+${u[1] * u[1]}}=${A}$` };
       },
@@ -591,6 +619,7 @@
       s3(r) {
         const t = turn(r, '50s3', 3), u = [r.intNot(-4, 4, v => v === 0), r.intNot(-4, 4, v => v === 0)], D = u[0] * u[0] + u[1] * u[1];
         if (t === 0) {
+          if (u[0] === 1 && u[1] === 2) return null;   // 例の分母（答えが例の何分の1かになる。O-2）
           const c = r.pick([1, 1, 2, 3, -1]);
           if ((c * u[0]) % D === 0 && (c * u[1]) % D === 0) return null;   // 整数になるものはステップ1
           const A = ztex({ re: S(fr(c * u[0], D)), im: S(fr(-c * u[1], D)) });
@@ -1091,7 +1120,7 @@
           const s = [P.u[0] + P.v[0], P.u[1] + P.v[1]]; if (s[0] === 0 && s[1] === 0) return null;
           return {
             q: `$z_1=${zt(...P.u)}$、$z_2=${zt(...P.v)}$ のとき、$z_1+z_2$、$z_2-z_1$、2つの点の距離（順に）`,
-            a: `$${zt(...s)}$、$${zt(...P.d)}$、$${sqrtT(P.L2)}$`, key: key56(P.u, P.v),   // 答えの欄からはみ出さないように、値だけを順に
+            a: `$${zt(...s)}$、$${zt(...P.d)}$、$${sqrtT(P.L2)}$`, key: key56(P.u, P.v), boxw: '58mm',   // 答えの欄からはみ出さないように、値だけを順に。3つ書くので欄を広く（R2-21）
             easy: `距離は ${rootHow(P.d)}`, easyCheck: false,
             verify: p => {
               const D = defs(p.q), u = evC(D.z_1), v = evC(D.z_2), ms = maths(p.a).map(x => x.replace(/^.*=/, ''));
@@ -1217,8 +1246,10 @@
   });
 
   // ================================================================ 6-58
-  // 左ページの例：z=2(cos30°+j sin30°)、w=3(cos60°+j sin60°)（O-2。この2つの組は出さない）
-  const ex58 = (a, b) => { const k = [a.join(','), b.join(',')].sort().join('|'); return k === ['2,30', '3,60'].sort().join('|'); };
+  // 左ページの例：z=2(cos30°+j sin30°)、w=3(cos60°+j sin60°)（O-2。どちらか1つでも例の数と同じ組は出さない。R2-6）
+  const ex58 = (a, b) => [a, b].some(([rr, d]) => (rr === 2 && d === 30) || (rr === 3 && d === 60));
+  // 答えが例の数・例の答え（6j=6∠90°、3/2∠30°）と同じ極形式になるものも出さない
+  const ex58a = (R, d) => [[2, 30], [3, 60], [6, 90], [1.5, 30]].some(([rr, dd]) => Math.abs(R - rr) < 1e-9 && d === dd);
   const polQ = (r1, a1, r2, a2) => `$z=${polT(String(r1), a1)}$、$w=${polT(String(r2), a2)}$ のとき、`;
   const key58 = (op, r1, a1, r2, a2) => (op === 'm' ? `m|${[`${r1},${a1}`, `${r2},${a2}`].sort().join('|')}` : `d|${r1},${a1}|${r2},${a2}`);
   const v58 = (op, check) => p => { const D = defs(p.q), z = evC(D.z), w = evC(D.w); return check(strip(p.a), op === 'm' ? cmul(z, w) : cdiv(z, w)); };
@@ -1233,7 +1264,7 @@
     caution: '偏角はかけない（$30^{\\circ}\\times60^{\\circ}$ ではなく $30^{\\circ}+60^{\\circ}$）。たした角が $180^{\\circ}$ をこえたら $360^{\\circ}$ をひく（$220^{\\circ}$ は $-140^{\\circ}$）。たし算・ひき算は、極形式では楽にならない。',
     counts: { s1: 4, s2: 4, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
-    boxw: { s1: '40mm', s2: '46mm', s3: '46mm', trap: '30mm' }, boxh: { s2: '12mm' },
+    boxw: { s1: '40mm', s2: '46mm', s3: '46mm', trap: '30mm' }, boxh: { s2: '10mm' },   // s2 の欄は 10mm（第40回の直しで問題が変わり、12mm では右ページがあふれた）
     fits(q) {
       if (/回した|うで/.test(q)) return false;
       if (/のとき/.test(q) && /\\cos/.test(q) && hasM(q, /^(zw|\\frac\{[zw]\}\{[zw]\})$/)) return true;
@@ -1244,7 +1275,7 @@
       // zw（偏角の和が範囲の中）
       s1(r) {
         const r1 = r.int(2, 5), r2 = r.int(2, 5), a1 = 10 * r.intNot(-15, 15, v => v === 0), a2 = 10 * r.intNot(-15, 15, v => v === 0), s = a1 + a2;
-        if (s <= -180 || s > 180 || s === 0 || ex58([r1, a1], [r2, a2])) return null;
+        if (s <= -180 || s > 180 || s === 0 || ex58([r1, a1], [r2, a2]) || ex58a(r1 * r2, s)) return null;
         return {
           q: `${polQ(r1, a1, r2, a2)}$zw$（極形式で）`, a: `$${polT(String(r1 * r2), s)}$`, key: key58('m', r1, a1, r2, a2),
           easy: `絶対値 $${r1}\\times${r2}=${r1 * r2}$、偏角 $${dg(a1)}+${dgp(a2)}=${dg(s)}$`, easyCheck: false, verify: v58('m', polOK),
@@ -1253,7 +1284,7 @@
       // z/w（絶対値が分数になるものも）
       s2(r) {
         const r2 = r.int(1, 4), r1 = r.chance(0.6) ? r2 * r.int(2, 3) : r.int(1, 9), a1 = 10 * r.intNot(-15, 15, v => v === 0), a2 = 10 * r.intNot(-15, 15, v => v === 0), s = a1 - a2;
-        if (r1 === r2 || s <= -180 || s > 180 || s === 0 || ex58([r1, a1], [r2, a2])) return null;
+        if (r1 === r2 || s <= -180 || s > 180 || s === 0 || ex58([r1, a1], [r2, a2]) || ex58a(r1 / r2, s)) return null;
         const rT = F.tex(fr(r1, r2));
         return {
           q: `${polQ(r1, a1, r2, a2)}$\\frac{z}{w}$（極形式で）`, a: `$${polT(rT, s)}$`, key: key58('d', r1, a1, r2, a2),
@@ -1268,6 +1299,7 @@
           const sg = r.pick([1, -1]), a1 = sg * 10 * r.int(6, 17), a2 = (op === 'm' ? sg : -sg) * 10 * r.int(6, 17), s = op === 'm' ? a1 + a2 : a1 - a2;
           if (Math.abs(s) <= 180 || Math.abs(s) >= 360 || a1 === 180 || a2 === 180 || ex58([r1, a1], [r2, a2])) return null;
           const R = op === 'm' ? String(r1 * r2) : String(r1 / r2);
+          if (ex58a(+R, nd(s))) return null;
           return {
             q: `${polQ(r1, a1, r2, a2)}${op === 'm' ? '$zw$' : '$\\frac{z}{w}$'}（極形式で）`, a: `$${polT(R, nd(s))}$`, key: key58(op, r1, a1, r2, a2),
             easy: `偏角 $${dg(a1)}${op === 'm' ? '+' : '-'}${dgp(a2)}=${dg(s)}$ は、$${dg(nd(s))}$ と同じ向き`, easyCheck: false, verify: v58(op, polOK),
@@ -1310,6 +1342,7 @@
   // ================================================================ 6-59
   // 左ページの例：(1+j)^8=16、(1+√3 j)^4=-8-8√3 j（O-2）
   const ex59 = (rT, d, n) => (rT === '\\sqrt2' && d === 45 && n === 8) || (rT === '2' && d === 60 && n === 4);
+  const ex59a = A => A === '16' || A === '-8-8\\sqrt3\\,j';   // 例の答えと同じ答えも出さない（O-2）
   const NS = [10, 20, 40, 50, 70, 80, 100, 110, 130, 140, 160, 170];   // 特別でない角
   // 偏角 d の n 乗が、範囲の中ではどの角か
   const turnHow = (d, n) => `$${dgp(d)}\\times${n}=${dg(d * n)}$${nd(d * n) === d * n ? '' : `（$${dg(nd(d * n))}$ と同じ向き）`}`;
@@ -1336,7 +1369,9 @@
       // (a+bj)^n（偏角が特別な角）
       s1(r) {
         const B = r.pick(B59), n = r.int(4, B.rT === '2' ? 6 : 10); if (ex59(B.rT, B.d, n)) return null;
+        if ((B.rT === '\\sqrt2' && B.d === 45) || (B.rT === '2' && B.d === 60)) return null;   // 例の底 1+j・1+\sqrt3 j は、指数を変えても出さない（R2-23）
         const rn = stex(sPow(B.rS, n));
+        if (ex59a(ztex(zP(B.z, n)))) return null;
         return {
           q: `$(${ztex(B.z)})^{${n}}$`, a: `$${ztex(zP(B.z, n))}$`, key: `${B.rT}|${B.d}|${n}`,
           easy: `$${B.rT}$、$${dg(B.d)}$。$(${B.rT})^{${n}}=${rn}$、${turnHow(B.d, n)}`, easyCheck: false,
@@ -1347,7 +1382,7 @@
         if (turn(r, '59s2', 2)) {
           const th = r.pick(NS), n = r.int(3, 6), T = nd(th * n), k = r.pick([1, 1, 2]);
           if (!special(T) || (k === 2 && n > 5)) return null;
-          const A = ztex(zSc(S(k ** n), cs(T)));
+          const A = ztex(zSc(S(k ** n), cs(T))); if (ex59a(A)) return null;
           const q = k === 1 ? `(\\cos${dg(th)}+j\\sin${dg(th)})^{${n}}` : `\\{${polT(String(k), th)}\\}^{${n}}`;
           return {
             q: `$${q}$`, a: `$${A}$`, key: `${k}|${th}|${n}`,
@@ -1357,7 +1392,7 @@
         }
         const th = r.pick([15, 30, 45, 60, 20, 40, -15, -30, -45, -60]), n = r.int(2, 6), T = nd(th * n), k = r.int(2, 3);
         if (!special(T) || T === 0 || k ** n > 81 || (special(th) && n === 2)) return null;
-        const A = ztex(zSc(S(k ** n), cs(T)));
+        const A = ztex(zSc(S(k ** n), cs(T))); if (ex59a(A)) return null;
         return {
           q: `$\\lvert z\\rvert=${k}$、$\\arg z=${dg(th)}$ のとき、$z^{${n}}$ を $a+bj$ の形で`, a: `$${A}$`, key: `${k}|${th}|${n}`,
           easy: `$${k}^{${n}}=${k ** n}$、${turnHow(th, n)}。$${polT(String(k ** n), T)}=${A}$`, easyCheck: false,
@@ -1409,11 +1444,31 @@
     return cclose(want, A) || `回した点が ${want.map(v => +v.toFixed(6)).join(', ')} でない`;
   }
   // もとの点 P・回した点 Q・角の弧の図
+  //   弧は大きめ（OP・OQ の短いほうの半分。0.8〜1.6）にし、角の字は、線（軸・OP・OQ）と P・Q・O の字にかからない所のうち、弧にいちばん近い所に置く（R2-28）
   function rotFig(P, Qv, th) {
     const G = plane([P, Qv]), A = G.T(...P), B = G.T(...Qv), d0 = Math.atan2(P[1], P[0]) * 180 / Math.PI, L = Math.min(Math.hypot(...A), Math.hypot(...B));
-    return { s: 5, items: [...G.axes({}), ['seg', [0, 0], A], ['seg', [0, 0], B, { dash: true }], ['dot', A], ['dot', B],
-      ['label', A, '$\\mathrm{P}$', dirOf(...P)], ['label', B, '$\\mathrm{Q}$', dirOf(...Qv)], ...angArc(d0 + th, Math.min(1, 0.45 * L), `$${th}^{\\circ}$`, d0)] };
+    const lp = awayDir(P, [-P[0], -P[1]]), lq = awayDir(Qv, [-Qv[0], -Qv[1]]), oq = oDir([P, Qv]);
+    const rad = Math.max(0.8, Math.min(1.6, 0.5 * L)), lab = `$${th}^{\\circ}$`, hw = th >= 100 ? 0.9 : 0.75, hh = 0.35;
+    const obs = [], seg = (U, V) => { const n = Math.max(1, Math.ceil(Math.hypot(V[0] - U[0], V[1] - U[1]) / 0.05)); for (let k = 0; k <= n; k++) obs.push([U[0] + (V[0] - U[0]) * k / n, U[1] + (V[1] - U[1]) * k / n, 0, 0]); };
+    seg([-12, 0], [12, 0]); seg([0, -12], [0, 12]); obs.forEach(o => { o[2] = o[3] = 0.1; }); seg([0, 0], A); seg([0, 0], B);   // 軸からは少し多めにはなす
+    for (let k = 0; k <= 40; k++) { const a = (d0 + th * k / 40) * Math.PI / 180; obs.push([rad * Math.cos(a), rad * Math.sin(a), 0.03, 0.03]); }
+    const off = (Pt, d) => [Pt[0] + (d.includes('e') ? 0.35 : d.includes('w') ? -0.35 : 0), Pt[1] + (d.includes('n') ? 0.35 : d.includes('s') ? -0.35 : 0), 0.3, 0.3];
+    obs.push(off(A, lp), off(B, lq), off([0, 0], oq));
+    // 軸の名前（Re は右のはしの左下、Im は上のはしの右下）
+    const xe = G.T(Math.max(0, P[0], Qv[0]) + 1.2, 0)[0] + 0.8, ye = G.T(0, Math.max(0, P[1], Qv[1]) + 1.2)[1] + 0.8;
+    obs.push([xe - 0.55, -0.4, 0.55, 0.3], [0.55, ye - 0.4, 0.55, 0.3]);
+    const fit = (x, y) => obs.every(([u, v, ew, eh]) => Math.abs(x - u) >= hw + ew || Math.abs(y - v) >= hh + eh);
+    // 入る所のうち、弧に近く、角のまん中の向きに近い所（弧からの距離＋まん中からの角度×0.02）
+    let at = null, cost = Infinity;
+    for (let rho = rad + 0.35; rho <= rad + 2.5; rho += 0.05) for (let dd = 0; dd <= th / 2; dd += 2) for (const a of dd ? [d0 + th / 2 - dd, d0 + th / 2 + dd] : [d0 + th / 2]) {
+      const x = rho * Math.cos(a * Math.PI / 180), y = rho * Math.sin(a * Math.PI / 180), c = rho - rad + 0.02 * dd;
+      if (c < cost && fit(x, y)) { at = [x, y]; cost = c; }
+    }
+    return { s: 5, items: [...G.axes({ o: oq }), ['seg', [0, 0], A], ['seg', [0, 0], B, { dash: true }], ['dot', A], ['dot', B],
+      ['label', A, '$\\mathrm{P}$', lp], ['label', B, '$\\mathrm{Q}$', lq], ...(at ? [...angArc(d0 + th, rad, null, d0), ['label', at, lab, 'c']] : angArc(d0 + th, rad, lab, d0))] };
   }
+  // 図の問題の点：P が原点に近すぎず（弧と角の字が入る）、Q が軸にほとんど重ならない（軸の上ちょうどはよい。R2-28）
+  const fig60ok = (x, y, th) => { const q = zVal(rot(x, y, th)), nearAx = v => Math.abs(v) > 1e-9 && Math.abs(v) < 0.6; return Math.hypot(x, y) >= 2.5 && !nearAx(q[0]) && !nearAx(q[1]); };
   M.add({
     id: '6-60', part: 4, chap: '6-9⑨ 例題7・8', stars: 1,
     title: '点を回す：$90^{\\circ}$ は $j$ をかける、$\\theta$ は $\\cos\\theta+j\\sin\\theta$ をかける（2リンクのうでは $u_1(L_1+L_2u_2)$）',
@@ -1458,9 +1513,9 @@
           for (let k = 0; k < 40; k++) {
             th = r.pick([90, 60, 30, 45, 120]);
             if (th === 45) { x = r.int(1, 4); y = r.int(-3, 3); } else { x = 2 * r.int(1, 2); y = 2 * r.int(-1, 2); }
-            if (!(th === 45 && (x - y) % 2) && !ex60(x, y, th)) break;
+            if (!(th === 45 && (x - y) % 2) && !ex60(x, y, th) && fig60ok(x, y, th)) break;
           }
-          if ((th === 45 && (x - y) % 2) || ex60(x, y, th)) return null;
+          if ((th === 45 && (x - y) % 2) || ex60(x, y, th) || !fig60ok(x, y, th)) return null;
           const Q = rot(x, y, th);
           return {
             q: `図の点 $\\mathrm{P}(${x},\\ ${y})$ を、原点のまわりに${rotT(th)}回した点 $\\mathrm{Q}$ の座標`, a: `$${ptS(Q)}$`, fig: rotFig([x, y], zVal(Q), th), key: `${x},${y}|${th}`,
