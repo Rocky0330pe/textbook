@@ -89,6 +89,20 @@
           ex: '例：$\\dfrac{10}{2s+1}$ と $K_{\\mathrm p}=1.9$、$\\dfrac{19}{s+1}$ と $K_{\\mathrm p}=1$、$\\dfrac{2}{0.5s+1}$ と $K_{\\mathrm p}=9.5$。確かめ：残るずれは $\\dfrac{1}{1+aK_{\\mathrm p}}$ なので、$aK_{\\mathrm p}=19$ になっていればよい（$\\tau$ はどれでもよい。わざ 9-73）。' },
       ] },
     // 第6部（組 f）：9-76〜9-90、9-98・9-99
-    { no: 6, name: '状態方程式と行列の指数関数', chaps: '9-10〜9-13', miwake: { count: 9, traps: 2 }, tsukuro: [] },
+    { no: 6, name: '状態方程式と行列の指数関数', chaps: '9-10〜9-13', miwake: { count: 11, traps: 2, must: [['9-78', 'trap']] },
+      // 見わけよう 11問（左6・右5）。must：目録の「1 rad の棒（わざなし）」のわな（9-78）。わなは must とあわせて3問
+      // 作ってみよう（組 f）：答えが1つに決まらない問い。例と、確かめ方（H-8・N-9・M-5）
+      tsukuro: [
+        { q: '固有値が $-1$ と $-2$ になる2×2 の行列 $A$ を3つ作りましょう。',
+          ex: '例：$\\begin{pmatrix}0&1\\\\-2&-3\\end{pmatrix}$（車A）、$\\begin{pmatrix}-1&0\\\\0&-2\\end{pmatrix}$、$\\begin{pmatrix}-1&1\\\\0&-2\\end{pmatrix}$。確かめ：ななめの和 $a+d$ が $-3$、行列式 $ad-bc$ が2ならよい。特性方程式が $\\lambda^2+3\\lambda+2=(\\lambda+1)(\\lambda+2)=0$ になる（わざ 9-79）。' },
+        { q: '$A^2=O$ になる、$O$ でない2×2 の行列 $A$ を2つ作りましょう。',
+          ex: '例：$\\begin{pmatrix}0&3\\\\0&0\\end{pmatrix}$、$\\begin{pmatrix}1&1\\\\-1&-1\\end{pmatrix}$、$\\begin{pmatrix}2&-4\\\\1&-2\\end{pmatrix}$。確かめ：$A$ を2回かけて、4つの成分がすべて0ならよい（ななめの和が0で、行列式も0）。そのとき $e^{At}=I+At$（わざ 9-86）。' },
+        { q: '$A=\\begin{pmatrix}0&1\\\\4&0\\end{pmatrix}$、$B=\\begin{pmatrix}0\\\\1\\end{pmatrix}$ の棒を、$A-BK$ の固有値が $-p$ の重解になるように立たせます。$\\Delta t=0.1$ 秒のくり返しでも落ち着く $k_1$・$k_2$ の組を2つ作りましょう。',
+          ex: '例：$p=2$ で $k_1=8$、$k_2=4$。$p=5$ で $k_1=29$、$k_2=10$。$p=1$ で $k_1=5$、$k_2=2$。確かめ：$k_2=2p$、$k_1=p^2+4$（わざ 9-80）で、くり返しの $\\mu=1-0.1p$ の大きさが1より小さいこと、つまり $0<p<20$ ならよい（わざ 9-81）。' },
+        { q: '入れるもの $u$ が1つで、可制御でない $A$（$O$ でない2×2）と $B$（$\\vec 0$ でない1列）の組を2つ作りましょう。',
+          ex: '例：$A=\\begin{pmatrix}-1&0\\\\0&-2\\end{pmatrix}$、$B=\\begin{pmatrix}1\\\\0\\end{pmatrix}$（つながっていない2つの部屋）。$A=\\begin{pmatrix}1&2\\\\0&3\\end{pmatrix}$、$B=\\begin{pmatrix}1\\\\0\\end{pmatrix}$。確かめ：$AB$ が $B$ と平行（$B$ が $A$ の固有ベクトル）で、$\\det\\begin{pmatrix}B&AB\\end{pmatrix}=0$ ならよい（わざ 9-98）。' },
+        { q: '$\\det e^{At}=e^{-4t}$ になる、対角でない2×2 の行列 $A$ を3つ作りましょう。',
+          ex: '例：$\\begin{pmatrix}0&1\\\\-3&-4\\end{pmatrix}$、$\\begin{pmatrix}-1&2\\\\5&-3\\end{pmatrix}$、$\\begin{pmatrix}-2&1\\\\0&-2\\end{pmatrix}$。確かめ：ななめの和 $a+d$ が $-4$ ならよい。ほかの成分は何でもよい（わざ 9-99）。' },
+      ] },
   ];
 })(globalThis.MONDAI);
