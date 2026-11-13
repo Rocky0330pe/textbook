@@ -260,3 +260,47 @@
   - 9-73 に「PI 制御で残るずれ」→ 9-75。
   - 9-74 に「$\frac{K}{(s+1)(s+2)(s+3)}$ をつないで安定になる $K$」→ 9-72。
   - 9-75 に「同じ箱を比例だけ（$K_{\mathrm p}=4$、$K_{\mathrm i}=0$）で動かしたときのずれ」→ 9-73（$\frac15$）。
+
+## 第6部　状態方程式と行列の指数関数（教科書 9-10〜9-13）　組 f（`v9/f_jotai.js`）
+
+| 番号 | わざ | 目印 | 例（ふつう → 楽な形） | 教科書 | ★ | 作 | 組 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 9-76 | 2階の式は $x_1=x$、$x_2=\dot x$：$\ddot x$ について解いた式が $A$ の2行め、$u$ の係数が $B$ | 2階の微分方程式と入れる力（場合 A） | $2\ddot x+6\dot x+10x=F$ → $\ddot x=-5x-3\dot x+0.5F$ → $A=\begin{pmatrix}0&1\\-5&-3\end{pmatrix}$、$B=\begin{pmatrix}0\\0.5\end{pmatrix}$（1行めはいつも $(0,\ 1)$） | 9-10③ 例題1 | 1 | A（答えは行列） | f |
+| 9-77 | 1階の式がいくつか・電気回路は、量（水位、$v_C$ と $i$）をそのまま状態にして係数を並べる | 水そう、$C\dot v_C=i$・$L\dot i=v-Ri-v_C$（場合 B・C） | $L=0.5$ H、$C=100\ \mathrm{\mu F}$、$R=10\ \Omega$ → $\dot v_C=10^4i$、$\dot i=2(v-10i-v_C)$ → $A=\begin{pmatrix}0&10^4\\-2&-20\end{pmatrix}$、$B=\begin{pmatrix}0\\2\end{pmatrix}$ | 9-10④ 例題2・3 | 1 | A（答えは行列） | f |
+| 9-78 | $\sin\theta\approx\theta$、$\cos\theta\approx1$ で線形化し、$\frac g\ell$ を出す | 倒立振子・振り子（場合 D） | $\ell=0.49$ m → $\frac{9.8}{0.49}=20$ → $\ddot\theta=20\theta+u$ → $A=\begin{pmatrix}0&1\\20&0\end{pmatrix}$、固有値 $\pm2\sqrt5$（正があるのでたおれる） | 9-10④ 例題4 | 1 | A（図はステップ3：台車の上の棒） | f |
+| 9-79 | 落ち着くかは $\det(A-\lambda I)=0$ の解の実部：2×2 は $\lambda^2-(a+d)\lambda+(ad-bc)=0$ | $\dot{\vec x}=A\vec x$ は落ち着くか（場合 E・9-11 の I） | $A=\begin{pmatrix}0&1\\-8&-2\end{pmatrix}$ → $\lambda^2+2\lambda+8=0$、$-1\pm\sqrt7\,j$ で落ち着く。$\begin{pmatrix}0&1\\3&-2\end{pmatrix}$ → $1$・$-3$ で落ち着かない（ななめの $-2$ が負でも） | 9-10⑤ 例題5・9-11⑦ 例題10 | 1 | A | f |
+| 9-80 | 状態フィードバック $u=-K\vec x$：$A-BK$ の特性方程式 $\lambda^2+k_2\lambda+(k_1-a)$ を、選んだ固有値の式とくらべる | 「固有値を2つとも□にする $k_1$・$k_2$」（場合 F） | $A=\begin{pmatrix}0&1\\9&0\end{pmatrix}$、固有値 $-5$・$-5$ → $(\lambda+5)^2=\lambda^2+10\lambda+25$ → $k_2=10$、$k_1-9=25$ で $k_1=34$ | 9-10⑦ 例題6 | 1 | A | f |
+| 9-81 | コンピュータのくり返し $A_{\mathrm d}=I+(A-BK)\Delta t$：固有値 $\lambda$ なら $\mu=1+\lambda\Delta t$ の大きさが1より小さいか | $\Delta t$ ごとのくり返し、「$\Delta t$ が何秒より小さいとき」（場合 G） | $A-BK$ の固有値 $-5$（重解）→ $\mu=1-5\Delta t$、$-1<1-5\Delta t<1$ で $0<\Delta t<0.4$ 秒。$\Delta t=0.1$ なら $\mu=0.5$（$A_{\mathrm d}$ の行列式を作り直さない） | 9-10⑨ 例題7 | 1 | A | f |
+| 9-82 | $G=C(sI-A)^{-1}B$：$B=\begin{pmatrix}0\\1\end{pmatrix}$ なら逆行列の2列め、$C=\begin{pmatrix}1&0\end{pmatrix}$ なら1行め（成分を1つだけ出す） | 状態方程式から伝達関数（9-10 の H・9-8 の E） | $A=\begin{pmatrix}0&1\\-6&-5\end{pmatrix}$ → $\det(sI-A)=s^2+5s+6$、逆行列の1行め2列めは $\frac{1}{s^2+5s+6}$ → $G=\frac{1}{s^2+5s+6}$。速度をはかる $C=\begin{pmatrix}0&1\end{pmatrix}$ なら $\frac{s}{s^2+5s+6}$ | 9-10⑩ 例題8・9-8⑩ 例題6 | 1 | A | f |
+| 9-83 | 対角の $A$ は成分ごとに $e^{\lambda t}$ | つながっていない式（場合 A） | $\dot x_1=-2x_1$、$\dot x_2=-0.5x_2$、はじめ $(1,\ 4)$ → $e^{At}=\begin{pmatrix}e^{-2t}&0\\0&e^{-0.5t}\end{pmatrix}$、$t=2$ で $(e^{-4},\ 4e^{-1})$ | 9-11④ 例題1 | 1 | A | f |
+| 9-84 | 対角化 $e^{At}=Pe^{Dt}P^{-1}$：$P$ の列に $e^{\lambda t}$ をかけ、右から $P^{-1}$（順番を逆にしない） | 固有値がちがう実数、固有ベクトルがわかっている（場合 B） | $A=\begin{pmatrix}-2&1\\1&-2\end{pmatrix}$（固有値 $-1$：$(1,\ 1)$、$-3$：$(1,\ -1)$）→ $e^{At}=\frac12\begin{pmatrix}e^{-t}+e^{-3t}&e^{-t}-e^{-3t}\\e^{-t}-e^{-3t}&e^{-t}+e^{-3t}\end{pmatrix}$ | 9-11⑤ 例題2 | 1 | A | f |
+| 9-85 | 固有値が $\sigma\pm j\omega$ なら $N=A-\sigma I$、$N^2=-\omega^2I$ で $e^{At}=e^{\sigma t}\bigl(\cos\omega t\,I+\frac{\sin\omega t}{\omega}N\bigr)$ | ゆれる $A$（場合 C） | $A=\begin{pmatrix}0&1\\-4&0\end{pmatrix}$（$\pm2j$、$\sigma=0$）→ $N=A$、$N^2=-4I$ → $e^{At}=\begin{pmatrix}\cos2t&\frac12\sin2t\\-2\sin2t&\cos2t\end{pmatrix}$ | 9-11⑧ 例題3 | 1 | A | f |
+| 9-86 | $A^2=O$ ならたし算は2項で切れて $I+At$。$M^2=\gamma^2I$ なら $\cosh\gamma t\,I+\frac{\sinh\gamma t}{\gamma}M$ | $A^2$ を先に計算してみる（場合 D） | $A=\begin{pmatrix}0&2\\0&0\end{pmatrix}$ → $e^{At}=\begin{pmatrix}1&2t\\0&1\end{pmatrix}$。$M=\begin{pmatrix}0&1\\4&0\end{pmatrix}$（$M^2=4I$）→ $e^{M\ell}=\begin{pmatrix}\cosh2\ell&\frac12\sinh2\ell\\2\sinh2\ell&\cosh2\ell\end{pmatrix}$ | 9-11⑨ 例題4・5 | 1 | A | f |
+| 9-87 | $(sI-A)^{-1}$ を成分ごとに部分分数でもどす（重解は $te^{-at}$）。$t=0$ で $I$ になるかで確かめる | 固有値が重なる（場合 E・F） | $A=\begin{pmatrix}0&1\\-16&-8\end{pmatrix}$ → $\frac{1}{(s+4)^2}\begin{pmatrix}s+8&1\\-16&s\end{pmatrix}$ → $e^{At}=e^{-4t}\begin{pmatrix}1+4t&t\\-16t&1-4t\end{pmatrix}$ | 9-11⑩ 例題6・7 | 1 | A | f |
+| 9-88 | 入れるものがあるときは $(sI-A)^{-1}(\vec x_0+BU)$ をもどす（ほしい成分の1行だけでよい） | 一定の入力 $u$、はじめ止まっている（場合 G） | $A=\begin{pmatrix}0&1\\-3&-4\end{pmatrix}$、$B=\begin{pmatrix}0\\1\end{pmatrix}$、$u=3$ → $X=\frac{3}{s(s+1)(s+3)}=\frac1s-\frac{1.5}{s+1}+\frac{0.5}{s+3}$ → $x=1-1.5e^{-t}+0.5e^{-3t}$、最後は1 | 9-11⑪ 例題8 | 1 | A | f |
+| 9-89 | ノイズキャンセリングの消し残りは $\lvert1-e^{-j\theta}\rvert=2\sin\frac{\theta}{2}$、$\theta=360°\times$周波数$\times$おくれ（低い音ほど消える） | おくれて出す反対の音 | おくれ0.1 ms、1000 Hz → $\theta=36°$、消し残り $2\sin18°\approx0.62$（$\sin18°=0.309$）。200 Hz なら $\theta=7.2°$、約0.13（$\sin3.6°=0.063$） | 9-12③ | 1 | B 文 | f |
+| 9-90 | 専門書の式は「名前の段 → 記号を訳す → 実際の操作 → 数で確かめる」の4つの手順で | $\frac Es=\bigl(R+\frac{1}{sC}\bigr)I(s)$ のような専門書の式 | $E=6$ V、$R=3\ \mathrm{k\Omega}$、$C=200\ \mathrm{\mu F}$ → $I(s)=\frac ER\cdot\frac{1}{s+\frac{1}{RC}}$ → $i=2e^{-t/0.6}$ mA（$t=0$ で2 mA、時定数0.6 s） | 9-13⑯⑱ | 1 | B 文 | f |
+
+- 9-76〜9-82 は表9-10 の場合 A〜H。9-83〜9-88 は表9-11 の場合 A〜G（場合 H の数値 `expm` は足す候補、場合 I の「落ち着くかだけ」は 9-79 にまとめた）。
+- 第6部は行列の答えが多い。行列は pmatrix で書き、検算は `calc: { kind: 'mat' }`（Q-2）。$e^{At}$ のように成分が $t$ の式のときは、いくつかの $t$ で値をくらべる部品がいる（下の「エンジンに要るもの」）。外に出した $e^{-4t}$ や $\frac12$ の形も、中に入れた形も正（Q-2 と同じ考え）。
+- 9-77 は水そう（1階の式が2つ）と電気回路（$v_C$ と $i$）をまとめた（K-6）。ステップ1・2で片方ずつ、ステップ3でまぜる。
+- 9-79 の固有値の答えは順を問わない（Q-3）。「落ち着く・落ち着かない（ゆれ続ける）」は両方出るように回す（U-3）。
+- 9-80・9-81 は倒立振子を主役にする（9-78 の $A$）。9-81 は「連続は実部、くり返しは大きさ」の取りちがえを caution に。
+- 9-84 の固有ベクトルは文に書く（7-8 の計算は第7巻のわざ）。
+- 9-89 は 9-12（読みもの）、9-90 は 9-13（終章）から作った（Q-9 と同じ考え。委員会で決めてほしいこと 8）。9-90 の答えは $i(t)$ の式と、$t=0$ の値・時定数。
+- わなの案：
+  - 9-76 に「$\ddot x+3\dot x+2x=u$ の状態の行列の固有値」→ 9-79（$-1$・$-2$）。
+  - 9-77 に「$\ddot\theta=\frac{g}{\ell}\sin\theta$ を状態方程式に」→ 9-78（先に線形化）。
+  - 9-78 に「1 rad（57°）かたむいたときの、たおれる加速度を線形化した式で」→ わざなし（線形化は0.1 rad ほどまで）。
+  - 9-79 に「$A=\begin{pmatrix}0&1\\4&0\end{pmatrix}$ を立たせる $k_1$・$k_2$」→ 9-80。
+  - 9-80 に「$\Delta t=0.1$ 秒のくり返しで落ち着くか」→ 9-81。
+  - 9-81 に「$\dot{\vec x}=(A-BK)\vec x$ の固有値 $-5$ は、大きさが1より大きいので落ち着かないか」→ 9-79（連続の式は実部で見る）。
+  - 9-82 に「$e^{At}$ の1行め1列め」→ 9-87。
+  - 9-83 に「$A=\begin{pmatrix}-1&1\\0&-2\end{pmatrix}$ の $e^{At}$」→ 9-87（対角でない）。
+  - 9-84 に「固有値が $\pm2j$ の $A$ の $e^{At}$」→ 9-85。
+  - 9-85 に「$A=\begin{pmatrix}0&1\\0&0\end{pmatrix}$ の $e^{At}$」→ 9-86（$A^2=O$）。
+  - 9-86 に「$A=\begin{pmatrix}-1&0\\0&-3\end{pmatrix}$ の $e^{At}$」→ 9-83（対角）。
+  - 9-87 に「$e^{At}$ を、成分ごとに $e^{a_{ij}t}$ にした行列」→ わざなし（$t=0$ で $I$ にならないので、まちがい）。
+  - 9-88 に「$u=0$、はじめ $(1,\ 0)$ の $x(t)$」→ 9-87（入れるものがない）。
+  - 9-89 に「消し残り0.62倍は何 dB か（$\log_{10}0.62=-0.208$）」→ 9-66（約 $-4.2$ dB）。
+  - 9-90 に「$V(s)=\bigl(R+sL+\frac{1}{sC}\bigr)I(s)$ に $s=j\omega$ を入れた倍率」→ 9-65。
