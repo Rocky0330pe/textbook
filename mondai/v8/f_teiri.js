@@ -53,6 +53,7 @@
   const agree = (f, v, k) => { const a = roundStr(f, k); return a === trueRd(v, k) ? a : null; };
   const fx = f => (f[1] === 1 ? String(f[0]) : dec(f) || F.tex(f));   // 分数 → 整数・小数・\frac
   const fxs = f => (f[0] < 0 ? `(${fx(f)})` : fx(f));                 // 負なら（ ）をつける
+  const cfT = (c, body) => (c === 1 ? body : c === -1 ? '-' + body : fmt(c) + body);   // 係数 × 文字（1・−1 は書かない。Z-7）
   const U = (v, u) => `$${v}\\,\\mathrm{${u}}$`;
   // π の係数 f（分数）× π：64\pi、\pi、\frac{20\pi}{3}、-\frac{\pi}{2}
   function piT(f, useDec) {
@@ -160,7 +161,7 @@
     title: '閉じた面から出る量は「発散×体積」',
     mark: '閉じた面（球・立方体）から出ていく量 $\\oiint_S\\vec F\\cdot\\vec n\\,\\dd S$。成分が1次式。',
     futsu: ['球の面を2つの角で表し、', '$\\vec F\\cdot\\vec n$ を重積分する'],
-    raku: ['$(3x,\\ y,\\ 2z)$、半径2の球', '→ 発散 $3+1+2=6$', '→ $6\\times\\frac{32}{3}\\pi=64\\pi$', '$(2x^2,\\ y^2,\\ 3z)$、1辺1 → 6'],
+    raku: ['$(3x,\\ y,\\ 2z)$、半径 $2$ の球', '→ 発散 $3+1+2=6$', '→ $6\\times\\frac{32}{3}\\pi=64\\pi$', '$(2x^2,\\ y^2,\\ 3z)$、1辺 $1$ → 6'],
     why: 'ガウスの定理 $\\oiint_S\\vec F\\cdot\\vec n\\,\\dd S=\\iiint_V\\mathrm{div}\\,\\vec F\\,\\dd V$（8-11⑤）。発散が定数なら「発散×体積」、1次式なら「箱のまん中の値×体積」。',
     caution: '開いた面（底のないドーム）には、そのまま使えない（8-76）。$\\vec n$ は外向き。',
     counts: { s1: 7, s2: 5, s3: 3, trap: 2 },
@@ -182,7 +183,7 @@
         if (shape === 'S' && A[1] !== 1) return null;
         const a = shape === 'S' ? piT(A) : fx(A);
         if (BAN75.has(a) || !cap(r, '75s1', a)) return null;
-        const where = shape === 'S' ? `原点が中心の半径${R}の球` : `立方体 $0\\leqq x,\\ y,\\ z\\leqq${R}$`;
+        const where = shape === 'S' ? `原点が中心の半径 $${R}$ の球` : `立方体 $0\\leqq x,\\ y,\\ z\\leqq${R}$`;
         const Fn = pFun(comps);
         return { q: `${vF(comps)} が${where}から出る量`, a: `$${a}$`, key: `75|${abc.slice().sort()}|${shape}${R}`,
           easy: shape === 'S' ? `発散 $${Dv}$、$${Dv}\\times\\frac43\\pi\\times${R}^3=${a}$` : `発散 $${Dv}$、$${Dv}\\times${R}^3=${a}$`, easyCheck: 'last',
@@ -223,7 +224,7 @@
         const R = r.pick([1, 2, 3]), A = fr(4 * R ** 3 * Dv, 3); if (A[1] !== 1) return null;
         const a = piT(A); if (BAN75.has(a) || !cap(r, '75s2', a)) return null;
         const Fn = pFun(comps);
-        return { q: `${vF(comps)} が原点が中心の半径${R}の球から出る量`, a: `$${a}$`, key: `75c|${comps.map(pTeX)}|${R}`,
+        return { q: `${vF(comps)} が原点が中心の半径 $${R}$ の球から出る量`, a: `$${a}$`, key: `75c|${comps.map(pTeX)}|${R}`,
           easy: `発散 $${abc.join('+')}=${Dv}$（$y$ や $z$ の項は、$x$ で微分すると0）、$${Dv}\\times\\frac43\\pi\\times${R}^3$`, easyCheck: false,
           verify: p => near(ev(strip(p.a)), fluxSphere(Fn, R), 1e-6) || '面の上でたした量とちがう' };
       },
@@ -263,7 +264,7 @@
         const A = F.add(fr(2 * Dv * R ** 3, 3), fr(d * R * R)); if (A[1] !== 1) return null;
         if (abc.join() === '1,1,1' && d === 3 && R === 2) return null;   // 8-76 の例
         const a = piT(A), Fn = pFun(comps);
-        return dest({ q: `${vF(comps)} が底のない半径${R}のドーム（$z\\geqq0$）を内から外へ通る量`, a: `$${a}$`, key: `75t|${abc}|${d}|${R}`,
+        return dest({ q: `${vF(comps)} が底のない半径 $${R}$ のドーム（$z\\geqq0$）を内から外へ通る量`, a: `$${a}$`, key: `75t|${abc}|${d}|${R}`,
           verify: p => near(ev(strip(p.a)), fluxSphere(Fn, R, Math.PI / 2), 1e-6) || 'ドームの上でたした量とちがう' }, '8-75', '閉じた面ではない。ふたをして閉じ、ふたの分をひく', ['8-76']);
       },
     },
@@ -279,7 +280,7 @@
     title: '開いた面（ドーム）は、ふたをして閉じ、ふたの分をひく',
     mark: '底のないドーム・放物面・おわんを「内から外へ」通る量。閉じていない面。',
     futsu: ['ドームの面を2つの角で表し、', '$\\vec F\\cdot\\vec n$ を重積分する'],
-    raku: ['$(x,\\ y,\\ z+3)$、半径2のドーム', '全体 $3\\times\\frac{16}{3}\\pi=16\\pi$', 'ふた（下向き）$-3\\times4\\pi$', '→ $16\\pi-(-12\\pi)=28\\pi$'],
+    raku: ['$(x,\\ y,\\ z+3)$、半径 $2$ のドーム', '全体 $3\\times\\frac{16}{3}\\pi=16\\pi$', 'ふた（下向き）$-3\\times4\\pi$', '→ $16\\pi-(-12\\pi)=28\\pi$'],
     why: 'ふたをして閉じると、ガウスの定理が使える（8-11⑥）。ドーム＝（閉じた全体）－（ふた）。ふたは $z=0$ を入れた $\\vec F\\cdot\\vec n$×面積。',
     caution: 'ふたの外向きは下向き（$\\vec F\\cdot\\vec n=-F_z$）。「発散×体積」だけでは、ふたの分がちがう。',
     counts: { s1: 6, s2: 4, s3: 3, trap: 2 },
@@ -295,7 +296,7 @@
         const cl = fr(2 * Dv * R ** 3, 3); if (cl[1] !== 1) return null;
         const A = F.add(cl, fr(d * R * R)), a = piT(A); if (A[0] <= 0 || BAN76.has(a) || !cap(r, '76s1', a)) return null;
         const Fn = pFun(comps);
-        return { q: `${vF(comps)} が底のない半径${R}のドーム（$z\\geqq0$）を内から外へ通る量`, a: `$${a}$`, key: `76|${abc}|${d}|${R}`,
+        return { q: `${vF(comps)} が底のない半径 $${R}$ のドーム（$z\\geqq0$）を内から外へ通る量`, a: `$${a}$`, key: `76|${abc}|${d}|${R}`,
           easy: `閉じた全体 $${piT(cl)}$、ふた $${piT(fr(-d * R * R))}$、$${minusT(cl, fr(-d * R * R))}=${a}$`, easyCheck: false,
           verify: p => near(ev(strip(p.a)), fluxSphere(Fn, R, Math.PI / 2), 1e-6) || 'ドームの上でたした量とちがう' };
       },
@@ -307,7 +308,8 @@
           const comps = abc.map((a, k) => lin(a, k, k === 2 ? d : 0)), V = fr(c * c, 2);
           const cl = F.mul(fr(Dv), V), A = F.add(cl, fr(d * c)), a = piT(A); if (BAN76.has(a) || !cap(r, '76s2', a)) return null;
           const Fn = pFun(comps);
-          return { q: `${vF(comps)} が底のない放物面 $z=${c}-x^2-y^2$（$z\\geqq0$）を下から上へ通る量。下の立体の体積は $${piT(V)}$`, a: `$${a}$`, key: `76p|${abc}|${d}|${c}`,
+          // 体積はかっこで前に置き、「＝ □」が聞く量（通る量）につくように（Z-6）
+          return { q: `${vF(comps)} が底のない放物面 $z=${c}-x^2-y^2$（$z\\geqq0$。下の立体の体積は $${piT(V)}$）を下から上へ通る量`, a: `$${a}$`, key: `76p|${abc}|${d}|${c}`,
             easy: `閉じた全体 $${Dv}\\times${piT(V)}$、ふた（半径 $${sqT(c)}$ の円、下向き）$${piT(fr(-d * c))}$`, easyCheck: false,
             verify: p => near(ev(strip(p.a)), fluxPara(Fn, c), 1e-6) || '放物面の上でたした量とちがう' };
         }
@@ -316,7 +318,7 @@
         const comps = abc.map((a, k) => lin(a, k, k === 2 ? d : 0)), cl = fr(2 * Dv * R ** 3, 3); if (cl[1] !== 1) return null;
         const A = neg(F.add(cl, fr(d * R * R))), a = piT(A); if (BAN76.has(a) || !cap(r, '76s2', a)) return null;
         const Fn = pFun(comps);
-        return { q: `${vF(comps)} が底のない半径${R}のドーム（$z\\geqq0$）を外から内へ通る量`, a: `$${a}$`, key: `76i|${abc}|${d}|${R}`,
+        return { q: `${vF(comps)} が底のない半径 $${R}$ のドーム（$z\\geqq0$）を外から内へ通る量`, a: `$${a}$`, key: `76i|${abc}|${d}|${R}`,
           easy: `内側から外側へが $${piT(neg(A))}$。向きが逆なので符号を変える`, easyCheck: false,
           verify: p => near(ev(strip(p.a)), -fluxSphere(Fn, R, Math.PI / 2), 1e-6) || 'ドームの上でたした量とちがう' };
       },
@@ -327,13 +329,13 @@
           const comps = abc.map((a, k) => lin(a, k, k === 2 ? d : 0)), cl = fr(2 * Dv * R ** 3, 3); if (cl[1] !== 1) return null;
           const A = F.sub(cl, fr(d * R * R)), a = piT(A); if (BAN76.has(a) || !cap(r, '76s3', a)) return null;
           const Fn = pFun(comps);
-          return { q: `${vF(comps)} が上の開いた半径${R}のおわん（$z\\leqq0$）を内から外へ通る量`, a: `$${a}$`, key: `76b|${abc}|${d}|${R}`,
+          return { q: `${vF(comps)} が上の開いた半径 $${R}$ のおわん（$z\\leqq0$）を内から外へ通る量`, a: `$${a}$`, key: `76b|${abc}|${d}|${R}`,
             easy: `閉じた全体 $${piT(cl)}$、ふた（$z=0$、上向き）$${piT(fr(d * R * R))}$`, easyCheck: false,
             verify: p => near(ev(strip(p.a)), fluxSphere(Fn, R, Math.PI, Math.PI / 2), 1e-6) || 'おわんの上でたした量とちがう' };
         }
         const v = r.pick([2, 3, 4, 5, 0.5, 1.5]), R = r.pick([2, 3, 4, 5]), A = F.mul(D(v), fr(R * R)), a = piT(A, true);
         if (BAN76.has(a) || !cap(r, '76s3', a)) return null;
-        return { q: `上向きの一様な風 $\\vec v=(0,\\ 0,\\ ${fmt(v)})$〔m/s〕が、底のない半径 ${U(R, 'm')} のドーム形のテントを内から外へ通る量 ＝ $□\\,\\mathrm{m^3/s}$`, a: `$${a}$`, key: `76w|${v}|${R}`,
+        return { q: `上向きの一様な風 $\\vec v=(0,\\ 0,\\ ${fmt(v)})$〔$\\mathrm{m/s}$〕が、底のない半径 ${U(R, 'm')} のドーム形のテントを内から外へ通る量 ＝ $□\\,\\mathrm{m^3/s}$`, a: `$${a}$`, key: `76w|${v}|${R}`,
           easy: `発散0。ふた（下向き）$-${fx(A)}\\pi$ なので、テントは $${a}$`, easyCheck: false,
           verify: p => near(num1(p.a), fluxSphere(() => [0, 0, v], R, Math.PI / 2), 1e-6) || 'ドームの上でたした量とちがう' };
       },
@@ -349,8 +351,10 @@
   });
 
   // ================================================================ 8-77 対称な袋・道（ガウスの法則・アンペールの法則）
-  const Kt = '$k=9.0\\times10^9$';
-  const MUt = '$\\mu_0=4\\pi\\times10^{-7}$';
+  // 定数の単位も書く（Z-8）。8-78（s2・わな）は文が長くなり右ページがあふれるので書かない（Z-8「文が長くなりすぎなければ」）
+  const KU = '9.0\\times10^9\\,\\mathrm{N\\cdot m^2/C^2}';
+  const Kt = `$k=${KU}$`;
+  const MUt = '$\\mu_0=4\\pi\\times10^{-7}\\,\\mathrm{T\\cdot m/A}$';
   const C9 = n => `${fmt(n)}.0\\times10^{-9}`;
   const ex77 = new Set(['P|1|0.3', 'L|1|0.3', 'W|2|8|0.5']);
   M.add({
@@ -377,7 +381,7 @@
         if (decLen(A) > 1 || F.val(A) > 20000) return null;
         const a = fx(A); if (!cap(r, '77s1', a)) return null;
         const q0 = kind === 'P' ? `点電荷 $Q=${C9(q)}\\,\\mathrm{C}$ から ${U(rr, 'm')}` : `長い線電荷 $\\lambda=${C9(q)}\\,\\mathrm{C/m}$ から ${U(rr, 'm')}`;
-        return { q: `${q0}の電場の大きさ（${Kt}）＝ $□\\,\\mathrm{N/C}$`, a: `$${a}$`, key: `77${kind}|${q}|${rr}`,
+        return { q: `${q0} の電場の大きさ（${Kt}）＝ $□\\,\\mathrm{N/C}$`, a: `$${a}$`, key: `77${kind}|${q}|${rr}`,
           easy: kind === 'P' ? `$E=\\frac{kQ}{r^2}=\\frac{${9 * q}}{${fmt(rr * rr)}}$` : `$E=\\frac{2k\\lambda}{r}=\\frac{${18 * q}}{${fmt(rr)}}$`, easyCheck: false,
           // 確かめ：電荷を小さく分けてたす（点はそのまま、線は長い線を細かく分けて数でたす）
           verify: p => { const kq = 9e9 * q * 1e-9; const E = kind === 'P' ? kq / rr ** 2 : 2 * simp(s => kq * rr / (rr * rr + s * s) ** 1.5, 0, 2000 * rr, 200000); return near(num1(p.a), E, 1e-4) || `電場は ${E} のはず`; } };
@@ -508,7 +512,7 @@
         if (Q === 4 && rr === 2) return null;   // 楽な形の例
         const A = F.div(fr(Q), F.mul(fr(2), D(rr))), a = A[1] === 1 ? `\\frac{${A[0]}}{\\pi}` : `\\frac{${A[0]}}{${A[1]}\\pi}`;
         if (!cap(r, '78s2', a)) return null;
-        return { q: `1秒に $${Q}\\,\\mathrm{m^2/s}$ わき出す口だけの池。口から ${U(rr, 'm')} の水の速さ ＝ $□\\,\\mathrm{m/s}$`, a: `$${a.replace(/^\\frac\{1\}/, '\\frac{1}')}$`, key: `78v|${Q}|${rr}`,
+        return { q: `$${Q}\\,\\mathrm{m^2/s}$ わき出す口だけの池。口から ${U(rr, 'm')} の水の速さ ＝ $□\\,\\mathrm{m/s}$`, a: `$${a.replace(/^\\frac\{1\}/, '\\frac{1}')}$`, key: `78v|${Q}|${rr}`,
           easy: `$v\\times2\\pi\\times${fmt(rr)}=${Q}$`, easyCheck: false,
           verify: p => near(num1(p.a), Q / (2 * Math.PI * rr), 1e-9) || '円から出る量の式とちがう' };
       },
@@ -531,7 +535,7 @@
       trap(r) {
         const q = r.pick([1, 2, 3, 4]), L = r.pick([0.2, 0.4, 0.6]), h = +(L / 2).toFixed(6), E = F.div(fr(9 * q), F.mul(D(h), D(h)));
         if (decLen(E) > 1) return null;
-        return dest({ q: `1辺 ${U(L, 'm')} の立方体の袋のまん中の点電荷 $Q=${C9(q)}\\,\\mathrm{C}$。1つの面のまん中の点の電場の大きさ（${Kt}）＝ $□\\,\\mathrm{N/C}$`, a: `$${fx(E)}$`, key: `78t|${q}|${L}`,
+        return dest({ q: `1辺 ${U(L, 'm')} の立方体の袋のまん中の点電荷 $Q=${C9(q)}\\,\\mathrm{C}$。1つの面のまん中の点の電場の大きさ（$k=9.0\\times10^9$）＝ $□\\,\\mathrm{N/C}$`, a: `$${fx(E)}$`, key: `78t|${q}|${L}`,
           verify: p => near(num1(p.a), 9e9 * q * 1e-9 / h ** 2, 1e-9) || '点電荷の電場とちがう' }, '8-78', '流束ではなく1点の電場。電荷から1辺の半分の距離の、点電荷の電場', ['8-77']);
       },
     },
@@ -544,7 +548,7 @@
     if (kind === 'sq') { const L = r.pick([1, 2, 3, 4, 5]); return { t: `正方形 $0\\leqq x,\\ y\\leqq${L}$ のふち`, area: fr(L * L), pi: false, path: [[0, 0], [L, 0], [L, L], [0, L], [0, 0]], key: `s${L}` }; }
     if (kind === 'rect') { const a = r.pick([2, 3, 4, 5]), b = r.pick([1, 2, 3].filter(v => v !== a)); return { t: `長方形 $0\\leqq x\\leqq${a}$、$0\\leqq y\\leqq${b}$ のふち`, area: fr(a * b), pi: false, path: [[0, 0], [a, 0], [a, b], [0, b], [0, 0]], key: `r${a},${b}` }; }
     if (kind === 'tri') { const a = r.pick([2, 3, 4, 6]), b = r.pick([2, 4, 5, 6]); return { t: `三角形 $(0,\\ 0)$、$(${a},\\ 0)$、$(0,\\ ${b})$ のふち`, area: fr(a * b, 2), pi: false, path: [[0, 0], [a, 0], [0, b], [0, 0]], key: `t${a},${b}` }; }
-    if (kind === 'circ') { const R = r.pick([1, 2, 3, 4]); return { t: `原点が中心の半径${R}の円`, area: fr(R * R), pi: true, rf: t => [R * Math.cos(t), R * Math.sin(t)], key: `c${R}` }; }
+    if (kind === 'circ') { const R = r.pick([1, 2, 3, 4]); return { t: `原点が中心の半径 $${R}$ の円`, area: fr(R * R), pi: true, rf: t => [R * Math.cos(t), R * Math.sin(t)], key: `c${R}` }; }
     const a = r.pick([2, 3, 4, 5]), b = r.pick([1, 2, 3].filter(v => v !== a)); return { t: `だ円 $x=${a}\\cos t$、$y=${b === 1 ? '' : b}\\sin t$（$0\\leqq t\\leqq2\\pi$）`, area: fr(a * b), pi: true, rf: t => [a * Math.cos(t), b * Math.sin(t)], key: `e${a},${b}` };
   }
   // 力 (p y + x の項, q x + y の項)：回転は q − p
@@ -561,7 +565,7 @@
     title: '回転が一定なら、閉じた道の1周は「回転×かこんだ面積」',
     mark: '閉じた道を左回りに1周する $\\oint_C\\vec F\\cdot\\dd\\vec r$。$(ay,\\ bx)$ の形の力。',
     futsu: ['道を辺（円なら角）で表し、', '辺ごとに定積分してたす'],
-    raku: ['$(-4y,\\ 2x)$ → 回転 $2-(-4)=6$', '1辺3の正方形 → $6\\times9=54$', '半径1の円 → $6\\pi$'],
+    raku: ['$(-4y,\\ 2x)$ → 回転 $2-(-4)=6$', '1辺 $3$ の正方形 → $6\\times9=54$', '半径 $1$ の円 → $6\\pi$'],
     why: 'グリーンの定理（8-11⑨）で、道の積分を「回転 $\\frac{\\partial F_y}{\\partial x}-\\frac{\\partial F_x}{\\partial y}$ の面積分」に取りかえる。回転が一定なら「回転×面積」。',
     caution: '右回りは符号が逆。$\\frac{(-y,\\ x)}{x^2+y^2}$ のように、回転が決まらない点をかこむ道には使えない（8-97）。',
     counts: { s1: 6, s2: 4, s3: 3, trap: 2 },
@@ -593,12 +597,12 @@
         const kind = turn(r, '79s3', 3);
         if (kind === 0) {
           const k = r.pick([1, 2, 3, 5]), R = r.pick([2, 3, 4, 5, 10]), A = fr(2 * k * R * R), a = piT(A); if (BAN79.has(a) || !cap(r, '79s3', a)) return null;
-          return { q: `力 $\\vec F=(-${k === 1 ? '' : k}y,\\ ${k === 1 ? '' : k}x)$〔N〕で、原点が中心の半径 ${U(R, 'm')} の円を左回りに1周する仕事 ＝ $□\\,\\mathrm{J}$`, a: `$${a}$`, key: `79w|${k}|${R}`,
+          return { q: `力 $\\vec F=(-${k === 1 ? '' : k}y,\\ ${k === 1 ? '' : k}x)$〔$\\mathrm{N}$〕で、原点が中心の半径 ${U(R, 'm')} の円を左回りに1周する仕事 ＝ $□\\,\\mathrm{J}$`, a: `$${a}$`, key: `79w|${k}|${R}`,
             easy: `回転 $${2 * k}$、$${2 * k}\\times\\pi\\times${R}^2$`, easyCheck: false, verify: lineV({ rf: t => [R * Math.cos(t), R * Math.sin(t)] }, (x, y) => [-k * y, k * x]) };
         }
         if (kind === 1) {
           const w = r.pick([0.5, 1, 2, 3, 0.2]), R = r.pick([1, 2, 3, 0.5]), A = F.mul(F.mul(fr(2), D(w)), F.mul(D(R), D(R))), a = piT(A, true); if (!cap(r, '79s3', a)) return null;
-          return { q: `回転台の速度 $\\vec v=(-${fmt(w)}y,\\ ${fmt(w)}x)$〔m/s〕で、中心から ${U(R, 'm')} の円を左回りに1周する循環 ＝ $□\\,\\mathrm{m^2/s}$`, a: `$${a}$`, key: `79v|${w}|${R}`,
+          return { q: `回転台の速度 $\\vec v=(${cfT(-w, 'y')},\\ ${cfT(w, 'x')})$〔$\\mathrm{m/s}$〕で、中心から ${U(R, 'm')} の円を左回りに1周する循環 ＝ $□\\,\\mathrm{m^2/s}$`, a: `$${a}$`, key: `79v|${w}|${R}`,
             easy: `回転 $2\\times${fmt(w)}=${fmt(2 * w)}$、×円の面積 $${piT(F.mul(D(R), D(R)), true)}$`, easyCheck: false, verify: lineV({ rf: t => [R * Math.cos(t), R * Math.sin(t)] }, (x, y) => [-w * y, w * x]) };
         }
         const f = force79(r, false); if (!f || f.rot <= 0) return null;
@@ -610,8 +614,9 @@
       // わな：穴のある場 (−y, x)/(x²+y²)（8-97・8-47）
       trap(r) {
         const c = r.pick([1, 2, 3, 4, 5]), R = r.pick([1, 2, 3, 4]), A = fr(2 * c), a = piT(A);
+        if (!cap(r, '79t', String(c), 1)) return null;   // 同じ場で半径だけちがう（答えが同じ）わなを重ねない（Z-2）
         const tt = c === 1 ? '\\frac{(-y,\\ x)}{x^2+y^2}' : `${c}\\times\\frac{(-y,\\ x)}{x^2+y^2}`;
-        return dest({ q: `$\\vec F=${tt}$ で、原点が中心の半径${R}の円を左回りに1周する線積分`, a: `$${a}$`, key: `79t|${c}|${R}`,
+        return dest({ q: `$\\vec F=${tt}$ で、原点が中心の半径 $${R}$ の円を左回りに1周する線積分`, a: `$${a}$`, key: `79t|${c}|${R}`,
           verify: lineV({ rf: t => [R * Math.cos(t), R * Math.sin(t)] }, (x, y) => [-c * y / (x * x + y * y), c * x / (x * x + y * y)]) }, '8-79', '回転は原点で決まらない（穴）。かこんだ面積には比例しない', ['8-47', '8-97']);
       },
     },
@@ -709,6 +714,8 @@
       s1(r) {
         const three = r.chance(0.5), a = r.pick([1, 2, 3, 4, 5, -1, -2, -3]), b = r.pick([1, 2, 3, -1, -2, -4]), c = three ? r.pick([1, 2, 3, -1, -2]) : 0;
         const ts = [mono(a, 2), mono(b, 0, 2)].concat(three ? [mono(c, 0, 0, 2)] : []).concat(r.chance(0.6) ? [mono(r.pick([2, 3, 4, -2, 5, -3]), 1, 1)] : []).concat(r.chance(0.4) ? [mono(r.pick([1, 3, -2, 4]), 1)] : []).concat(r.chance(0.3) ? [mono(r.pick([1, 2, -1]), 0, 1)] : []);
+        // 例 $4x^2-y^2+3z^2+5xy$ と2乗の係数（の大きさ）が同じ組は、符号を変えただけになるので出さない（R2-16・Z-2）
+        if (three && [a, b, c].map(Math.abs).join() === '4,1,3') return null;
         const A = 2 * (a + b + c); if (A === 0 || BAN81.has(String(A)) || !cap(r, '81s1', String(A))) return null;
         return { q: `$f=${pTeX(ts)}$ の $\\nabla^2f$`, a: `$${A}$`, key: `81|${pTeX(ts)}`,
           easy: `$${[2 * a, 2 * b].concat(three ? [2 * c] : []).map((v, k) => (k && v < 0 ? `(${v})` : v)).join('+')}=${A}$`, easyCheck: 'last',
@@ -938,12 +945,14 @@
       if (V2 >= V1) continue;
       const a = F.div(fr(V1 - V2), F.sub(F.div(fr(1), D(r1)), F.div(fr(1), D(r2)))), b = F.sub(fr(V2), F.div(a, D(r2)));
       const rq = +(r1 * r.pick([1.5, 2, 2.5, 3].filter(t => t < m))).toFixed(6); if (!(rq > r1 && rq < r2)) continue;
-      if (r1 === 0.1 && r2 === 0.3 && V1 === 60 && V2 === 0 && rq === 0.2) continue;   // 楽な形の例
+      if (r1 === 0.1 && r2 === 0.3) continue;   // 楽な形の例と同じ半径の組（電圧だけ何倍かになる。R2-17・Z-2）
       const phi = F.add(F.div(a, D(rq)), b); if (decLen(phi) > 1 || decLen(a) > 3) continue;
       return { r1, r2, V1, V2, rq, a, b, phi };
     }
     return null;
   }
+  // 同じ半径で、電圧だけ何倍かの組（答えも何倍か）を、同じ見開きに重ねない（R2-17・Z-2）
+  const rat84 = g => `84r|${g.r1},${g.r2},${fmt(g.V2 / g.V1)}`;
   M.add({
     id: '8-84', part: 6, chap: '8-12⑦ 例題7・例題8', stars: 1,
     title: '球・円柱の形の $\\nabla^2$：$r^2$（円柱は $r$）をかけてから微分し、わる',
@@ -969,7 +978,7 @@
       },
       // 同じ中心の球の電位
       s2(r) {
-        const g = gen84(r); if (!g || !once(r, `84|${g.r1},${g.r2},${g.V1},${g.V2}`)) return null;
+        const g = gen84(r); if (!g || !once(r, `84|${g.r1},${g.r2},${g.V1},${g.V2}`) || !once(r, rat84(g))) return null;
         const a = fx(g.phi); if (!cap(r, '84s2', a)) return null;
         return { q: `同じ中心の金属球：内（${U(g.r1, 'm')}）が ${U(g.V1, 'V')}、外（${U(g.r2, 'm')}）が ${U(g.V2, 'V')}。$r=${fmt(g.rq)}\\,\\mathrm{m}$ の電位 ＝ $□\\,\\mathrm{V}$`, a: `$${a}$`, key: `84v|${g.r1},${g.r2},${g.V1},${g.V2},${g.rq}`,
           easy: `$a=${fx(g.a)}$、$b=${fx(g.b)}$`, easyCheck: false,
@@ -977,7 +986,7 @@
       },
       // 見かけがちがう：球の殻の中の温度・電場の大きさ
       s3(r) {
-        const g = gen84(r); if (!g || !once(r, `84|${g.r1},${g.r2},${g.V1},${g.V2}`)) return null;
+        const g = gen84(r); if (!g || !once(r, `84|${g.r1},${g.r2},${g.V1},${g.V2}`) || !once(r, rat84(g))) return null;
         if (turn(r, '84s3', 2) === 0) {
           const a = fx(g.phi); if (!cap(r, '84s3', a)) return null;
           return { q: `同じ中心の2つの球面ではさんだ殻：内（${U(g.r1, 'm')}）${g.V1}℃、外（${U(g.r2, 'm')}）${g.V2}℃（落ち着いた）。中心から ${U(g.rq, 'm')} の温度 ＝ □℃`, a: `$${a}$`, key: `84t|${g.r1},${g.r2},${g.V1},${g.V2},${g.rq}`,
@@ -1078,7 +1087,7 @@
         for (let k = 0; k < 20; k++) {
           const dt = r.pick([0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.5, 2, 2.5, 3]), rr = al[0] * dt / (dx * dx);
           if ((rr <= 0.5) !== want || Math.abs(rr - 0.5) < 1e-9) continue;
-          return dest({ q: `${al[1]}（$\\alpha=${al[2]}$）の棒を $\\Delta x=${dx}\\,\\mathrm{m}$、$\\Delta t=${dt}\\,\\mathrm{s}$ で表計算する。（こわれる・こわれない）`, a: want ? 'こわれない' : 'こわれる', key: `85t|${al[1]}|${dx}|${dt}`,
+          return dest({ q: `${al[1]}（$\\alpha=${al[2]}\\,\\mathrm{m^2/s}$）の棒を $\\Delta x=${dx}\\,\\mathrm{m}$、$\\Delta t=${dt}\\,\\mathrm{s}$ で表計算する。（こわれる・こわれない）`, a: want ? 'こわれない' : 'こわれる', key: `85t|${al[1]}|${dx}|${dt}`,
             verify: p => p.a === (al[0] * dt / (dx * dx) <= 0.5 ? 'こわれない' : 'こわれる') || '$r\\leqq\\frac12$ の判定とちがう' }, '8-85', '1歩の計算ではなく、こわれない条件。$r=\\frac{\\alpha\\Delta t}{\\Delta x^2}$ を出す', ['8-86']);
         }
         return null;
@@ -1087,8 +1096,10 @@
   });
 
   // ================================================================ 8-86 こわれない条件 r≦1/2、ぎざぎざの倍率 1−4r
-  const MAT = [['銅', '0.00012', '1.2\\times10^{-4}'], ['アルミ', '0.0001', '1.0\\times10^{-4}'], ['鉄', '0.000023', '2.3\\times10^{-5}'], ['ステンレス', '0.000004', '4\\times10^{-6}']];
-  const alT = m => `${m[0]}（$\\alpha=${m[2]}$）`;
+  const MAT = [['銅', '0.00012', '1.2\\times10^{-4}'], ['アルミ', '0.0001', '1.0\\times10^{-4}'], ['鉄', '0.000023', '2.3\\times10^{-5}'], ['ステンレス', '0.000004', '4.0\\times10^{-6}']];
+  const alT = m => `${m[0]}（$\\alpha=${m[2]}\\,\\mathrm{m^2/s}$）`;   // 熱拡散率の単位を書く（Z-8）
+  // 例（$\alpha=10^{-4}$、$\Delta x=0.01$）と同じ α・Δx の組、Δx を半分にしただけの組（使えないときの「$\frac14$」）を出さない（R2-18・Z-1）
+  const ex86 = (m, dx) => m[0] === 'アルミ' && (dx === 0.01 || dx === 0.005);
   const rOf = (m, dx, dt) => F.div(F.mul(D(m[1]), D(dt)), F.mul(D(dx), D(dx)));
   // こわれるかを、ぎざぎざを実際に1歩ずつ進めて確かめる（20点、200歩）
   function breaks(rr) {
@@ -1112,8 +1123,9 @@
     steps: {
       s1(r) {
         const m = r.pick(MAT), dx = r.pick(m[0] === 'ステンレス' ? [0.001, 0.002] : m[0] === '鉄' ? [0.01, 0.005] : [0.01, 0.02, 0.005]), dt = r.pick([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.5, 2, 3]);
-        const R = rOf(m, dx, dt); if (F.val(R) > 1.2 || F.val(R) < 0.05 || decLen(R) > 3) return null;
-        const a = fx(R); if (BAN86.has(a) || !cap(r, '86s1', a)) return null;
+        const R = rOf(m, dx, dt); if (ex86(m, dx) || F.val(R) > 1.2 || F.val(R) < 0.05 || decLen(R) > 3) return null;
+        // 同じ物・同じ Δx で、Δt だけちがう（答えが何倍かだけの）問題を重ねない（Z-2）
+        const a = fx(R); if (BAN86.has(a) || !cap(r, '86s1', a) || !cap(r, '86s1m', m[0] + dx, 1)) return null;
         return { q: `${alT(m)}の棒、$\\Delta x=${dx}\\,\\mathrm{m}$、$\\Delta t=${dt}\\,\\mathrm{s}$ の表計算の $r$`, a: `$${a}$`, key: `86|${m[0]}|${dx}|${dt}`,
           easy: `$r=\\frac{${m[2]}\\times${dt}}{${dx}^2}=${a}$`, easyCheck: false,
           verify: p => near(num1(p.a), +m[1] * dt / (dx * dx), 1e-9) || '$\\frac{\\alpha\\Delta t}{\\Delta x^2}$ とちがう' };
@@ -1122,7 +1134,7 @@
       s2(r) {
         if (turn(r, '86s2', 2) === 0) {
           const m = r.pick(MAT), dx = r.pick(m[0] === 'ステンレス' ? [0.001, 0.002, 0.004] : [0.01, 0.02, 0.005, 0.004]);
-          const A = F.div(F.mul(D(dx), D(dx)), F.mul(fr(2), D(m[1]))); if (decLen(A) > 3) return null;
+          const A = F.div(F.mul(D(dx), D(dx)), F.mul(fr(2), D(m[1]))); if (ex86(m, dx) || decLen(A) > 3) return null;
           const a = fx(A); if (BAN86.has(a) || !cap(r, '86s2', a)) return null;
           return { q: `${alT(m)}の棒、$\\Delta x=${dx}\\,\\mathrm{m}$。こわれない一番大きい $\\Delta t$ ＝ $□\\,\\mathrm{s}$`, a: `$${a}$`, key: `86m|${m[0]}|${dx}`,
             easy: `$\\frac{\\Delta x^2}{2\\alpha}=\\frac{${dx}^2}{2\\times${m[2]}}$`, easyCheck: false,
@@ -1151,10 +1163,12 @@
             verify: p => { const dx = 0.01, dt0 = dx * dx / 2e-4, dt1 = (dx / n) ** 2 / 2e-4; return near(num1(p.a), dt1 / dt0, 1e-12) || '上限の比とちがう'; } };
         }
         const want = peek(r, '86s3b', 2) === 0, m = r.pick(MAT), dx = r.pick(m[0] === 'ステンレス' ? [0.001, 0.002] : [0.01, 0.005, 0.02]);
+        if (ex86(m, dx)) return null;
         for (let k = 0; k < 20; k++) {
           const dt = r.pick([0.05, 0.1, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1, 2, 3, 4]), R = F.val(rOf(m, dx, dt)); if ((R <= 0.5) !== want || R < 0.1 || R > 2 || near(R, 0.5)) continue;
           const A = want ? 'こわれない' : 'こわれる'; if (!cap(r, '86s3c', A)) return null; adv(r, '86s3b', 2);
-          return { q: `${alT(m)}の板、$\\Delta x=${dx}\\,\\mathrm{m}$、$\\Delta t=${dt}\\,\\mathrm{s}$ の表計算は（こわれる・こわれない）`, a: A, key: `86b|${m[0]}|${dx}|${dt}`,
+          // こわれない条件 $r\leqq\frac12$ は棒（1次元）の表計算のもの。「板」は使わない（Z-5）
+          return { q: `${alT(m)}の棒、$\\Delta x=${dx}\\,\\mathrm{m}$、$\\Delta t=${dt}\\,\\mathrm{s}$ の表計算は（こわれる・こわれない）`, a: A, key: `86b|${m[0]}|${dx}|${dt}`,
             easy: `$r=${fx(rOf(m, dx, dt))}$`, easyCheck: false,
             verify: p => p.a === (breaks(R) ? 'こわれる' : 'こわれない') || 'ぎざぎざを進めた結果とちがう' };
         }
@@ -1170,7 +1184,8 @@
   });
 
   // ================================================================ 8-87 熱方程式の答え e^{−λt} sin ax：λ = α a²、半分になる時間 ln2/λ
-  const AL = [['1\\times10^{-4}', '0.0001'], ['4\\times10^{-6}', '0.000004'], ['1.2\\times10^{-4}', '0.00012']];
+  const AL = [['1.0\\times10^{-4}', '0.0001'], ['4.0\\times10^{-6}', '0.000004'], ['1.2\\times10^{-4}', '0.00012']];   // 書き方をそろえる（Z-8）
+  const eT = l => (l === '1' ? 'e^{-t}' : `e^{-${l}t}`);   // 係数の1は書かない（Z-7）
   const HEQ = '熱方程式 $\\frac{\\partial T}{\\partial t}=\\alpha\\frac{\\partial^2T}{\\partial x^2}$';
   // 代入して確かめる：T=C e^{-λt} sin ax の、ある点での左辺と右辺（中心差分）
   const heatOK = (C, lam, al, a) => { const T = (x, t) => C * Math.exp(-lam * t) * Math.sin(a * x), x = 0.37 / a, t = 0.5 / lam, h = 1e-4 / a, k = 1e-4 / lam; const L = (T(x, t + k) - T(x, t - k)) / (2 * k), R = al * (T(x + h, t) - 2 * T(x, t) + T(x - h, t)) / (h * h); return Math.abs(L - R) <= 1e-5 * Math.max(Math.abs(L), 1e-12); };
@@ -1193,7 +1208,7 @@
         if (al[1] === '0.0001' && a === 20) return null;
         const L = F.mul(D(al[1]), fr(a * a)); if (decLen(L) > 4) return null;
         const A = fx(L); if (!cap(r, '87s1', A)) return null;
-        return { q: `$\\alpha=${al[0]}$ の棒で、$T=${C}e^{-\\lambda t}\\sin${a}x$ が熱方程式をみたす $\\lambda$`, a: `$${A}$`, key: `87|${al[1]}|${a}`,
+        return { q: `$\\alpha=${al[0]}\\,\\mathrm{m^2/s}$ の棒で、$T=${C}e^{-\\lambda t}\\sin${a}x$ が熱方程式をみたす $\\lambda$`, a: `$${A}$`, key: `87|${al[1]}|${a}`,
           easy: `$\\lambda=\\alpha a^2=${al[0]}\\times${a}^2$`, easyCheck: false,
           verify: p => heatOK(C, num1(p.a), +al[1], a) || '代入すると左辺と右辺がちがう' };
       },
@@ -1210,7 +1225,7 @@
         const al = r.pick(AL.slice(0, 2)), a = r.pick([10, 20, 30, 50, 100]), lam = F.mul(D(al[1]), fr(a * a)); if (decLen(lam) > 4) return null;
         if (al[1] === '0.0001' && a === 20) return null;
         const C = r.pick([3, 5, 8]), A = al[0]; if (!cap(r, '87s2', A)) return null;
-        return { q: `$T=${C}e^{-${fx(lam)}t}\\sin${a}x$ が熱方程式をみたす棒の $\\alpha$ ＝ $□\\,\\mathrm{m^2/s}$`, a: `$${A}$`, key: `87a|${fx(lam)}|${a}`,
+        return { q: `$T=${C}${eT(fx(lam))}\\sin${a}x$ が熱方程式をみたす棒の $\\alpha$ ＝ $□\\,\\mathrm{m^2/s}$`, a: `$${A}$`, key: `87a|${fx(lam)}|${a}`,
           easy: `$\\alpha=\\frac{\\lambda}{a^2}=\\frac{${fx(lam)}}{${a * a}}$`, easyCheck: false,
           verify: p => heatOK(C, F.val(lam), num1(p.a), a) || '代入すると左辺と右辺がちがう' };
       },
@@ -1251,6 +1266,8 @@
         pv = Array(7).fill(0); nw = Array(7).fill(0);
         const s0 = dir === 1 ? st : st + 1; sh.forEach((v, j) => { pv[s0 + j] = v; nw[s0 + dir + j] = v; });
         if (pv[0] || pv[6] || nw[0] || nw[6]) continue;
+        // 例（右へ進む 1・3・1 の山）と同じ形（右へ進む左右対称の3つの山）で、高さ・場所だけちがう組をよける（R2-19・Z-2）
+        if (dir === 1 && sh.length === 3 && sh[0] === sh[2]) continue;
       } else { pv = [0, 0, 0, 0, 0, 0, 0].map((v, i) => (i && i < 6 ? r.int(0, 3) : 0)); nw = [0, 0, 0, 0, 0, 0, 0].map((v, i) => (i && i < 6 ? r.int(0, 3) : 0)); }
       if (ex88(pv, nw) || pv.every(v => !v)) continue;
       const nx = waveNext(pv, nw); if (nx.some(v => v < 0 || v > 9)) continue;
@@ -1307,7 +1324,7 @@
       s3(r) {
         const g = gen88(r), i = r.int(1, 5); if (!g || !once(r, `88|${g.pv}|${g.nw}`)) return null;
         const a = String(g.nx[i]); if (!cap(r, '88s3', a)) return null;
-        const nxRow = g.nx.map((v, j) => (j === i ? '□' : j < i ? String(v) : ''));
+        const nxRow = g.nx.map((v, j) => (j === i ? '□' : j < i || j === 6 ? String(v) : ''));   // 玉7は0のままなので書く（Z-10）
         return { q: '波の表計算（$s=1$。玉1・7は0のまま）の表の □', a: `$${a}$`, key: `88t|${g.pv}|${g.nw}|${i}`,
           table: { head: ['玉', '1', '2', '3', '4', '5', '6', '7'], rows: [['1つ前'].concat(g.pv.map(String)), ['今'].concat(g.nw.map(String)), ['次'].concat(nxRow)] },
           easy: `$${g.nw[i + 1]}+${g.nw[i - 1]}-${g.pv[i]}=${a}$`, easyCheck: 'last',
@@ -1382,7 +1399,7 @@
       trap(r) {
         const a = r.pick([10, 20, 30, 50]), lam = F.mul(D('0.0001'), fr(a * a)), C = r.pick([5, 10]);
         if (a === 30) return null;   // 8-87 の問題と同じ組をよける
-        return dest({ q: `$T=${C}e^{-${fx(lam)}t}\\sin${a}x$ が熱方程式をみたす棒の $\\alpha$ ＝ $□\\,\\mathrm{m^2/s}$`, a: '$1\\times10^{-4}$', key: `89t|${a}`,
+        return dest({ q: `$T=${C}${eT(fx(lam))}\\sin${a}x$ が熱方程式をみたす棒の $\\alpha$ ＝ $□\\,\\mathrm{m^2/s}$`, a: '$1.0\\times10^{-4}$', key: `89t|${a}`,
           verify: p => heatOK(C, F.val(lam), num1(p.a), a) || '代入すると左辺と右辺がちがう' }, '8-89', '波ではなく熱（$t$ は $e$ の肩）。$\\lambda=\\alpha a^2$', ['8-87']);
       },
     },
@@ -1409,7 +1426,8 @@
       s1(r) {
         const v = r.pick([1, 2, 3, 0.5, 1.5, 2.5]), gx = r.pick([0.5, 0.2, 0.1, 1, -0.5, -0.2, -0.1, -1]), Tt = r.pick([1, 2, 3, 0.5, -1, -2, -0.5]);
         const vk = F.mul(D(v), D('3.6')), A = F.add(D(Tt), F.mul(vk, D(gx))); if (decLen(A) > 2) return null;
-        const a = fx(A); if (BAN90.has(a) || (v === 3 && gx === -0.5 && Tt === 2) || !cap(r, '90s1', a)) return null;
+        // 例（3 m/s、$+2$、0.5℃ 低い）の符号を変えただけの組もよける（R2-20・Z-2）
+        const a = fx(A); if (BAN90.has(a) || (v === 3 && Math.abs(gx) === 0.5) || !cap(r, '90s1', a)) return null;
         return { q: `川が下流へ ${U(v, 'm/s')}。どの場所でも水温は1時間に ${fmt(Math.abs(Tt))}℃ ${Tt > 0 ? '上がり' : '下がり'}、1 km 下流ほど ${fmt(Math.abs(gx))}℃ ${gx > 0 ? '高い' : '低い'}。流れにのった温度計の変わる速さ ＝ □℃/h（上がるとき正）`, a: `$${a}$`, key: `90|${v}|${gx}|${Tt}`,
           easy: `$${fmt(v)}\\,\\mathrm{m/s}=${fx(vk)}\\,\\mathrm{km/h}$、$${sgn(Tt).replace('+', '')}+${fx(vk)}\\times${fxs(D(gx))}=${a}$`, easyCheck: false,
           verify: p => near(num1(p.a), ride(Tt, gx, v * 3.6), 1e-6) || '温度計をのせて動かした変化とちがう' };
@@ -1438,7 +1456,7 @@
         if (v0 === 1 && k === 10 && x === 0.1) return null;   // 教科書の例
         const A = F.mul(F.add(D(v0), F.mul(fr(k), D(x))), fr(k)); if (decLen(A) > 2) return null;
         const a = fx(A); if (!cap(r, '90s3', a)) return null;
-        return { q: `ノズルの水の速さ $v=${fmt(v0)}+${k}x$〔m/s〕（$x$ は入口からの距離〔m〕。時間では変わらない）。$x=${fmt(x)}\\,\\mathrm{m}$ の水のつぶの加速度 ＝ $□\\,\\mathrm{m/s^2}$`, a: `$${a}$`, key: `90n|${v0}|${k}|${x}`,
+        return { q: `ノズルの水の速さ $v=${fmt(v0)}+${k}x$〔$\\mathrm{m/s}$〕（$x$ は入口からの距離〔$\\mathrm{m}$〕。時間では変わらない）。$x=${fmt(x)}\\,\\mathrm{m}$ の水のつぶの加速度 ＝ $□\\,\\mathrm{m/s^2}$`, a: `$${a}$`, key: `90n|${v0}|${k}|${x}`,
           easy: `$0+v\\frac{\\partial v}{\\partial x}=${fmt(v0 + k * x)}\\times${k}$`, easyCheck: false,
           verify: p => { let X = x, V = v0 + k * x; const h = 1e-6, X2 = X + V * h, V2 = v0 + k * X2; return near(num1(p.a), (V2 - V) / h, 1e-4) || 'つぶを少し動かして出した加速度とちがう'; } };
       },
@@ -1531,13 +1549,13 @@
         const R = r.pick([1, 2, 3, 4]), a = enc ? r.pick([0, 0, 1, -1]) : r.pick([0, 3, 4, 5, -4, 6]), b = enc ? r.pick([0, 0, 1]) : r.pick([0, 3, 4, 5, -3]);
         const d = Math.hypot(a, b); if (enc ? d >= R - 0.3 : d <= R + 0.3) continue;
         if (a === 0 && b === 5 && R === 2) continue;   // 楽な形の例
-        return { t: a === 0 && b === 0 ? `原点が中心の半径${R}の円` : `中心 $(${a},\\ ${b})$・半径${R}の円`, rf: t => [a + R * Math.cos(t), b + R * Math.sin(t)], key: `c${a},${b},${R}` };
+        return { t: a === 0 && b === 0 ? `原点が中心の半径 $${R}$ の円` : `中心 $(${a},\\ ${b})$・半径 $${R}$ の円`, rf: t => [a + R * Math.cos(t), b + R * Math.sin(t)], key: `c${a},${b},${R}` };
       }
       const L = r.pick([2, 4, 6]), h = L / 2, a = enc ? r.pick([0, 0, 1, -1].filter(v => Math.abs(v) < h)) : r.pick([3, 4, 5, -4, 6]), b = enc ? r.pick([0, 0]) : r.pick([0, 2, 3, -3, 4]);
       if (enc ? (Math.abs(a) >= h || Math.abs(b) >= h) : (Math.abs(a) <= h + 0.3 && Math.abs(b) <= h + 0.3)) continue;
       if (enc && L === 4 && a === 0 && b === 0) continue;   // 楽な形の例
       const P = [[a - h, b - h], [a + h, b - h], [a + h, b + h], [a - h, b + h], [a - h, b - h]];
-      return { t: `正方形 ${P.slice(0, 4).map(Q => `$(${Q[0]},\\ ${Q[1]})$`).join('、')}`, path: P, key: `s${a},${b},${L}` };
+      return { t: `正方形 ${P.slice(0, 4).map(Q => `$(${Q[0]},\\ ${Q[1]})$`).join('、')}`, path: P, key: `s${a},${b},${L}`, name: '正方形', pts: P.slice(0, 4) };
     }
     return null;
   }
@@ -1546,7 +1564,7 @@
     title: '穴のある場 $\\frac{(-y,\\ x)}{x^2+y^2}$ の1周：原点をかこめば $2\\pi$、かこまなければ0',
     mark: '$\\vec F=\\frac{(-y,\\ x)}{x^2+y^2}$（原点以外で回転0）を、閉じた道で1周。',
     futsu: ['道を辺（角）で表して、', '定積分してたす'],
-    raku: ['1辺4の正方形（中心が原点）', '→ 原点をかこむ → $2\\pi$', '中心 $(0,\\ 5)$、半径2の円 → 0'],
+    raku: ['1辺 $4$ の正方形（中心が原点）', '→ 原点をかこむ → $2\\pi$', '中心 $(0,\\ 5)$、半径 $2$ の円 → 0'],
     why: '原点は場が決まらない「穴」（8-11⑫）。穴をくりぬくと残りは回転0なので「外の1周＝小さな円の1周＝$2\\pi$」。かこまなければ0。',
     caution: '右回りなら $-2\\pi$。前に数がかかれば、$2\\pi$ もその倍。',
     counts: { s1: 6, s2: 4, s3: 2, trap: 2 },
@@ -1556,7 +1574,7 @@
     steps: {
       s1(r) {
         const enc = turn(r, '97s1', 3) < 2, c = r.pick(enc ? [2, 3, 4, 5, 1] : [1, 2, 3, 4]), P = path97(r, enc); if (!P || !once(r, '97p|' + P.key)) return null;
-        const a = enc ? piT(fr(2 * c)) : '0'; if (!cap(r, '97s1', a)) return null;
+        const a = enc ? piT(fr(2 * c)) : '0'; if (!cap(r, '97s1', a, enc ? 1 : 2)) return null;   // かこむ道で同じ答え（大きさだけちがう道）を重ねない（Z-2）
         return { q: `$\\vec F=${holeT(c)}$ で、${P.t}を左回りに1周`, a: `$${a}$`, key: `97|${c}|${P.key}`,
           easy: enc ? `原点をかこむ：小さな円と同じ $${c === 1 ? '' : c + '\\times'}2\\pi$` : '原点をかこまない：中の回転は0', easyCheck: false,
           verify: p => near(ev(strip(p.a)), lineOf(P, holeF(c)), 1e-6) || '道を1周してたした値とちがう' };
@@ -1574,12 +1592,14 @@
             const inside = [0, 1, 2].every(j => cross([T[(j + 1) % 3][0] - T[j][0], T[(j + 1) % 3][1] - T[j][1]], [-T[j][0], -T[j][1]]) > 0);
             const onEdge = [0, 1, 2].some(j => { const e = [T[(j + 1) % 3][0] - T[j][0], T[(j + 1) % 3][1] - T[j][1]]; return Math.abs(cross(e, [-T[j][0], -T[j][1]])) / Math.hypot(...e) < 0.6; });   // 原点から辺まで 0.6 以上（穴の近くを通らない）
             if (inside !== enc || onEdge) continue;
-            P = { t: `三角形 ${T.map(Q => `$${ptT(Q)}$`).join('、')}`, path: T.concat([T[0]]), key: `t${T}` };
+            P = { t: `三角形 ${T.map(Q => `$${ptT(Q)}$`).join('、')}`, path: T.concat([T[0]]), key: `t${T}`, name: '三角形', pts: T };
           }
         }
         if (!P || !once(r, '97p|' + P.key)) return null;
         const A = fr((cw ? -2 : 2) * (enc ? c : 0)), a = enc ? piT(A) : '0'; if (!cap(r, '97s2', a)) return null;
-        return { q: `$\\vec F=${holeT(c)}$ で、${P.t}を${cw ? '右回り' : '左回り'}に1周`, a: `$${a}$`, key: `97|${c}|${P.key}|${cw}`,
+        // 頂点は、たどる順に書く（右回りなら逆の順。8-96 とそろえる。R2-23・Z-9）
+        const pt = P.pts ? `${P.name} ${(cw ? P.pts.slice().reverse() : P.pts).map(Q => `$${ptT(Q)}$`).join('、')}` : P.t;
+        return { q: `$\\vec F=${holeT(c)}$ で、${pt}を${cw ? '右回り' : '左回り'}に1周`, a: `$${a}$`, key: `97|${c}|${P.key}|${cw}`,
           easy: enc ? `原点をかこむ${cw ? '。右回りなので符号が逆' : ''}` : '原点をかこまないので0', easyCheck: false,
           verify: p => near(ev(strip(p.a)), lineOf(P, holeF(c), cw), 1e-6) || '道を1周してたした値とちがう' };
       },
@@ -1602,7 +1622,7 @@
       // わな：穴のない (−cy, cx)（8-79）
       trap(r) {
         const c = r.pick([1, 2, 3]), a = r.pick([3, 4, 5]), R = r.pick([1, 2]), A = fr(2 * c * R * R), P = { rf: t => [a + R * Math.cos(t), R * Math.sin(t)] };
-        return dest({ q: `$\\vec F=(-${c === 1 ? '' : c}y,\\ ${c === 1 ? '' : c}x)$ で、中心 $(${a},\\ 0)$・半径${R}の円を左回りに1周`, a: `$${piT(A)}$`, key: `97t|${c}|${a}|${R}`,
+        return dest({ q: `$\\vec F=(-${c === 1 ? '' : c}y,\\ ${c === 1 ? '' : c}x)$ で、中心 $(${a},\\ 0)$・半径 $${R}$ の円を左回りに1周`, a: `$${piT(A)}$`, key: `97t|${c}|${a}|${R}`,
           verify: p => near(ev(strip(p.a)), lineOf(P, (x, y) => [-c * y, c * x]), 1e-6) || '道を1周してたした値とちがう' }, '8-97', '分母のない場で、穴はない。原点をかこまなくても0にならない。回転×面積', ['8-79']);
       },
     },
@@ -1610,6 +1630,7 @@
 
   // ================================================================ 8-98 変わる磁場のまわりの電場
   const BAN98 = new Set(['0.012\\pi', '0.03']);
+  // 円の半径は、例と同じ $0.2\,\mathrm m$ を使わない（答えが例の何倍かになる。R2-24・Z-2）
   // 確かめ：磁束 Φ(t)=B(t)×面積 を、面積を数でたして、時間の差で微分する
   const emfOf = (rr, k) => { const area = simp2((s, ph) => s, 0, rr, 0, 2 * Math.PI, 20), Phi = t => (0.5 + k * t) * area, h = 1e-3; return (Phi(1 + h) - Phi(1 - h)) / (2 * h); };
   M.add({
@@ -1626,15 +1647,17 @@
     fits(q) { return /(強くなる|弱くなる|強くなり|T\/s)/.test(q) && /(起電力|電場)/.test(q); },
     steps: {
       s1(r) {
-        const rr = r.pick([0.1, 0.2, 0.05, 0.3, 0.5, 0.4]), k = r.pick(['0.1', '0.2', '0.4', '0.5', '0.05', '2', '0.3']), A = F.mul(F.mul(D(rr), D(rr)), D(k)); if (decLen(A) > 3) return null;
-        const a = piT(A, true); if (BAN98.has(a) || !cap(r, '98s1', a)) return null;
+        const rr = r.pick([0.1, 0.05, 0.3, 0.5, 0.4, 0.6]), k = r.pick(['0.1', '0.2', '0.4', '0.5', '0.05', '2', '0.3']), A = F.mul(F.mul(D(rr), D(rr)), D(k)); if (decLen(A) > 3) return null;
+        // 同じ半径で、変わる速さだけ何倍かの問題を1つのステップに重ねない（Z-2）
+        const a = piT(A, true); if (BAN98.has(a) || !cap(r, '98s1', a, 1) || !cap(r, '98s1r', String(rr), 1)) return null;
         return { q: `半径 ${U(rr, 'm')} の円の中の一様な磁場（面に直角）が1秒に $${k}\\,\\mathrm{T}$ 強くなる。円を1周する起電力 ＝ $□\\,\\mathrm{V}$`, a: `$${a}$`, key: `98|${rr}|${k}`,
           easy: `$\\pi\\times${fmt(rr)}^2\\times${k}=${a}$`, easyCheck: 'last',
           verify: p => near(ev(strip(p.a)), emfOf(rr, +k), 1e-6) || '磁束の変わる速さとちがう' };
       },
       // 円の上の電場・電場から磁場の変わる速さを
       s2(r) {
-        const rr = r.pick([0.1, 0.2, 0.05, 0.3, 0.5, 0.4]), k = r.pick(['0.1', '0.2', '0.4', '0.5', '0.05', '2', '0.3', '0.6']), E = F.div(F.mul(D(rr), D(k)), fr(2)); if (decLen(E) > 4) return null;
+        const rr = r.pick([0.1, 0.05, 0.3, 0.5, 0.4, 0.6]), k = r.pick(['0.1', '0.2', '0.4', '0.5', '0.05', '2', '0.3', '0.6']), E = F.div(F.mul(D(rr), D(k)), fr(2)); if (decLen(E) > 4) return null;
+        if (!cap(r, '98s2r', String(rr), 1)) return null;   // 同じ半径の問題を1つのステップに重ねない（Z-2）
         if (turn(r, '98s2', 3) < 2) {
           const a = fx(E); if (BAN98.has(a) || (rr === 0.2 && k === '0.3') || !cap(r, '98s2', a)) return null;
           return { q: `半径 ${U(rr, 'm')} の円の中の一様な磁場（面に直角）が1秒に $${k}\\,\\mathrm{T}$ ${r.chance(0.3) ? '弱く' : '強く'}なる。円の上の電場の大きさ ＝ $□\\,\\mathrm{V/m}$`, a: `$${a}$`, key: `98e|${rr}|${k}`,
@@ -1655,7 +1678,7 @@
             easy: `面積×$\\frac{\\dd B}{\\dd t}$：$${fmt(L)}^2\\times${k}$`, easyCheck: false,
             verify: p => near(num1(p.a), simp2(() => 1, 0, L, 0, L, 8) * +k, 1e-9) || '面積×磁場の変わる速さ とちがう' };
         }
-        const rr = r.pick([0.1, 0.2, 0.5, 0.3]), k = r.pick(['0.1', '0.2', '0.5', '0.4', '2']), A = F.mul(F.mul(F.mul(D(rr), D(rr)), D(k)), D('3.14'));
+        const rr = r.pick([0.1, 0.5, 0.3, 0.4]), k = r.pick(['0.1', '0.2', '0.5', '0.4', '2']), A = F.mul(F.mul(F.mul(D(rr), D(rr)), D(k)), D('3.14'));
         const tv = Math.PI * rr * rr * +k, nd = decLen(A) > 4 ? null : Math.min(4, decLen(A)); if (nd == null) return null;
         const a = agree(A, tv, nd); if (a == null || !cap(r, '98s3', a)) return null;
         return { q: `半径 ${U(rr, 'm')} の円の中の一様な磁場（面に直角）が1秒に $${k}\\,\\mathrm{T}$ 強くなる。円を1周する起電力（$\\pi=3.14$、小数第${nd}位まで）＝ 約 $□\\,\\mathrm{V}$`, a: `$${a}$`, key: `98p|${rr}|${k}`,
@@ -1664,7 +1687,7 @@
       },
       // わな：変わらない電流のまわりの磁場（8-77）
       trap(r) {
-        const I = r.pick([2, 5, 10, 20]), rr = r.pick([0.02, 0.05, 0.1]), B = 2e-7 * I / rr, a = sciT(B); if (!/^\d(\.\d)?\\times10\^\{-\d\}$/.test(a)) return null;
+        const I = r.pick([2, 5, 10, 20]), rr = r.pick([0.02, 0.05, 0.1]), B = 2e-7 * I / rr, a = sciT(B); if (!/^\d(\.\d)?\\times10\^\{-\d\}$/.test(a) || !cap(r, '98t', String(I), 1)) return null;   // 同じ電流で距離だけちがうわなを重ねない
         return dest({ q: `まっすぐな導線に変わらない電流 ${U(I, 'A')}。導線から ${U(rr, 'm')} の磁場の大きさ（${MUt}）＝ $□\\,\\mathrm{T}$`, a: `$${a}$`, key: `98t|${I}|${rr}`,
           verify: p => near(num1(p.a) * 2 * Math.PI * rr, 4 * Math.PI * 1e-7 * I, 1e-9) || '円の道の式とちがう' }, '8-98', '磁場は変わらないので電場のうずはない。円の道でアンペールの法則', ['8-77', '8-74']);
       },
@@ -1672,7 +1695,7 @@
   });
 
   // ================================================================ 8-99 浮力は ρgV
-  const RG = '水（$\\rho=1000\\,\\mathrm{kg/m^3}$、$g=9.8$）';
+  const RG = '水（$\\rho=1000\\,\\mathrm{kg/m^3}$、$g=9.8\\,\\mathrm{m/s^2}$）';   // 定数の単位も書く（Z-8）
   // 確かめ：上と下の面を押す力の差（圧力 ρg×深さ。横の面は打ち消す）を、深さを変えて面ごとにたす
   const buoyBox = (a, b, c, rho) => { const d = 0.7; return rho * 9.8 * (d + c) * a * b - rho * 9.8 * d * a * b; };
   const buoySph = (R, rho) => simp(z => rho * 9.8 * Math.PI * (R * R - z * z), -R, R, 200);   // 薄い円板ごとの ρgV
@@ -1726,7 +1749,7 @@
         if (kind === 0) {
           const V = r.pick(['0.01', '0.02', '0.05', '0.1', '0.2', '0.5']), A = F.mul(F.mul(fr(1030), D('9.8')), D(V)); if (decLen(A) > 2) return null;
           const a = fx(A); if (!cap(r, '99s3', a)) return null;
-          return { q: `海水（$\\rho=1030\\,\\mathrm{kg/m^3}$、$g=9.8$）にしずんだ体積 $${V}\\,\\mathrm{m^3}$ の物の浮力 ＝ $□\\,\\mathrm{N}$`, a: `$${a}$`, key: `99w|${V}`,
+          return { q: `海水（$\\rho=1030\\,\\mathrm{kg/m^3}$、$g=9.8\\,\\mathrm{m/s^2}$）にしずんだ体積 $${V}\\,\\mathrm{m^3}$ の物の浮力 ＝ $□\\,\\mathrm{N}$`, a: `$${a}$`, key: `99w|${V}`,
             easy: `$1030\\times9.8\\times${V}$`, easyCheck: false, verify: p => near(num1(p.a), buoyBox(+V, 1, 1, 1030), 1e-9) || '上と下の面を押す力の差とちがう' };
         }
         if (kind === 1) {
@@ -1766,6 +1789,33 @@
       const f = d.steps[s]; if (!f) return;
       d.steps[s] = r => { const p = f(r); return p && (ban.has(p.a) || (EXQ[id] && EXQ[id].test(p.q))) ? null : p; };
     });
+  });
+
+  // ================================================================ 答えの分数は \dfrac（第5部とそろえる。好み）。肩（^{ }）の中の分数はそのまま
+  const dfracA = a => { let o = '', dep = [], k = 0; const s = String(a);
+    while (k < s.length) {
+      if (s.startsWith('^{', k)) { dep.push(1); o += '^{'; k += 2; continue; }
+      if (s[k] === '{') { dep.push(0); o += '{'; k++; continue; }
+      if (s[k] === '}') { dep.pop(); o += '}'; k++; continue; }
+      if (s.startsWith('\\frac', k) && !dep.includes(1)) { o += '\\dfrac'; k += 5; continue; }
+      o += s[k]; k++;
+    }
+    return o; };
+  // ================================================================ 見わけようのわなが、見開きのわなと同じ問題にならないように（Z-4。組の側で）
+  // 本の見開き（makeSheet）では、同じ r で s3 を作ってから trap を作る。見わけよう・アプリのプリントでは、その r で s3 を作っていない。
+  // そのときは、本の見開きのわなと同じ問題（key・文）をよける（makeStep が別の問題を作りなおす）
+  const bookTraps = {};
+  M.list(8).filter(id => M.waza[id].part === 6).forEach(id => {
+    const d = M.waza[id];
+    ['s1', 's2', 's3', 'trap'].forEach(s => { const f = d.steps[s]; if (f) d.steps[s] = r => { const p = f(r); if (p && /\\frac/.test(p.a)) p.a = dfracA(p.a); return p; }; });
+    const s3 = d.steps.s3, tr = d.steps.trap; if (!s3 || !tr) return;
+    const tag = '\u0000s3:' + id;
+    d.steps.s3 = r => { r[tag] = true; return s3(r); };
+    d.steps.trap = r => {
+      const p = tr(r); if (!p || r[tag]) return p;
+      const b = bookTraps[id] || (bookTraps[id] = new Set(M.makeSheet(id).trap.flatMap(t => [t.key || t.q, t.q])));
+      return b.has(p.key || p.q) || b.has(p.q) ? null : p;
+    };
   });
 
   // ==== END ====

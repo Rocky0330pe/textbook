@@ -100,7 +100,7 @@
     ['上へ行くほど短くなる、上向きの矢印', (x, y) => [0, 3 - y], [0, 0]],
     ['上へ行くほど長くなる、下向きの矢印', (x, y) => [0, -(y + 3)], [0, 0]],
     ['どこでも同じ長さの、下向きの矢印', (x, y) => [0, -1], [0, 0]],
-    ['上へ行くほど長くなる、右向きの矢印', (x, y) => [y + 3, 0], [0, 0]],
+    // 「上へ行くほど長くなる、右向きの矢印」は使えないとき（caution）の例なので、ステップ1に出さない（Z-4）
     ['右へ行くほど長くなる、上向きの矢印', (x, y) => [0, x + 3], [0, 0]],
     ['左へ行くほど長くなる、下向きの矢印', (x, y) => [0, x - 3], [0, 0]],
   ];
@@ -286,7 +286,7 @@
         if (bad62(o, s) || s === 0 || o.filter(v => v < 0).length > 2) return null;
         return { q: `1辺 $${U(1, 'm')}$ のマス 2×2 で、外まわりの辺を通る量（右向き・上向きを正、$\\mathrm{m^2/s}$）は、右 $${t10(r1)}$ と $${t10(r2)}$、左 $${t10(l1)}$ と $${t10(l2)}$、上 $${t10(u1)}$ と $${t10(u2)}$、下 $${t10(d1)}$ と $${t10(d2)}$。4つのマスの発散の合計`,
           a: `$${U(t10(s), '/s')}$`, key: `62:${o}`, easyCheck: false,
-          easy: `外まわりの「右－左＋上－下」$=${t10(r1 + r2)}-${par((l1 + l2) / 10)}+${t10(u1 + u2)}-${par((d1 + d2) / 10)}$`,
+          easy: `外まわりの「右－左＋上－下」$=${t10(r1 + r2)}-${par((l1 + l2) / 10)}+${par((u1 + u2) / 10)}-${par((d1 + d2) / 10)}$`,
           verify: p => near(numOf(p.a), o.reduce((t, v, i) => t + (i < 2 || (i >= 4 && i < 6) ? v : -v), 0) / 10) || '合計がちがう' };
       },
       // 3つのマスの発散がわかっていて、残りの1つ・3つ並んだマス
@@ -322,7 +322,7 @@
         const table = { head: ['たての辺（右向きが正）', '$x=0$', '$x=1$', '$x=2$'], rows: [['上の段', ...V[0].map(m$)], ['下の段', ...V[1].map(m$)]] };
         const hz = ['2', '1', '0'].map((y, k) => `$y=${y}$ の線は $${t10(Hh[k][0])}$ と $${t10(Hh[k][1])}$`).join('、');
         return { q: `1辺 $${U(1, 'm')}$ のマス 2×2 の辺を通る量（$\\mathrm{m^2/s}$）。たての辺は表のとおり。横の辺（上向きが正、左の列・右の列の順）は、${hz}。4つのマスの発散の合計`, a: `$${U(t10(tot), '/s')}$`, key: `62:${outer}`, easyCheck: false, table,
-          easy: `外まわりだけ：$${t10(V[0][2] + V[1][2])}-${par((V[0][0] + V[1][0]) / 10)}+${t10(Hh[0][0] + Hh[0][1])}-${par((Hh[2][0] + Hh[2][1]) / 10)}$`,
+          easy: `外まわりだけ：$${t10(V[0][2] + V[1][2])}-${par((V[0][0] + V[1][0]) / 10)}+${par((Hh[0][0] + Hh[0][1]) / 10)}-${par((Hh[2][0] + Hh[2][1]) / 10)}$`,
           verify: p => near(numOf(p.a), tot / 10) || '合計がちがう' };
       },
       // わな：外まわりを1周する循環（辺にそう速度）→ 8-68
@@ -417,6 +417,7 @@
   // ================================================================ 8-64
   // 点のわき出し k(x, y)/(x^2+y^2)：∂v_x/∂x = k(y^2-x^2)/(x^2+y^2)^2、∂v_y/∂y = k(x^2-y^2)/(x^2+y^2)^2
   const srcTxt = k => `\\dfrac{${k === 1 ? '(x,\\ y)' : `(${cf(k, 'x')},\\ ${cf(k, 'y')})`}}{x^2+y^2}`;
+  const TWO64 = '$\\dfrac{\\partial v_x}{\\partial x}=$ □、$\\dfrac{\\partial v_y}{\\partial y}=$ □';   // 偏微分を2つ聞くときは欄を2つ（V-2・Z-6）
   const bad64pt = (a, b) => absKey([a, b]) === '1,2' || Math.abs(a) === Math.abs(b);   // 例の点 (2, 1)（と入れかえ・符号ちがい）、a²=b²（どちらも0）をよける
   const fits64 = q => /x\^2\+y\^2|\{r\^3\}|\(x-\d\)\^2/.test(q) && /\\partial|発散/.test(q) && !/回転|循環|円から/.test(q);
   M.add({
@@ -438,8 +439,8 @@
         const k = r.pick([1, 2, 3, -1, -2, 4, 5]), a = r.int(-3, 3), b = r.int(-3, 3);
         if (bad64pt(a, b)) return null;
         const R2 = a * a + b * b, n1 = k * (b * b - a * a), A1 = frac(n1, R2 * R2), A2 = frac(-n1, R2 * R2);
-        return { q: `$\\vec v=${srcTxt(k)}$ の、点 $${P(a, b)}$ での $\\dfrac{\\partial v_x}{\\partial x}$ と $\\dfrac{\\partial v_y}{\\partial y}$`, a: `$${A1}$ と $${A2}$`, key: `64:${k}:${a},${b}`, easyCheck: false,
-          easy: `$${k === 1 ? '' : k + '\\times'}\\dfrac{${b * b}-${a * a}}{${R2}^2}$、たすと0`,
+        return { q: `$\\vec v=${srcTxt(k)}$ の、点 $${P(a, b)}$ での ${TWO64}`, a: `$${A1}$、$${A2}$`, key: `64:${k}:${a},${b}`, easyCheck: false, boxw: '16mm',
+          easy: `$${k === 1 ? '' : k === -1 ? '-' : k + '\\times'}\\dfrac{${b * b}-${a * a}}{${R2}^2}$、たすと0`,
           calc: { kind: 'pdiff', f: [`${k}*x/(x^2+y^2)`, `${k}*y/(x^2+y^2)`], vars: ['x', 'y'], wrt: [['x'], ['y']], at: [a, b], ans: [A1, A2] } };
       },
       // 式で：∂v_x/∂x・∂v_y/∂y（k は 1・−1 でない。例と同じ式・符号ちがいをよける）と、点の発散
@@ -451,9 +452,10 @@
           return { q: `$\\vec v=${srcTxt(k)}$ の、点 $${P(a, b)}$ での発散`, a: '$0$', key: `64d:${k}:${a},${b}`, easyCheck: false,
             easy: '2つの偏微分が打ち消す', calc: { kind: 'pdiff', op: 'div', f: [`${k}*x/(x^2+y^2)`, `${k}*y/(x^2+y^2)`], vars: ['x', 'y'], at: [a, b] } };
         }
+        if (!once(r, '64s2k', Math.abs(k), 1)) return null;   // 符号ちがい・文字だけちがう問題を重ねない（Z-2）
         const xx = kind === 0, num = (k > 0) === xx ? `${Math.abs(k)}(y^2-x^2)` : `${Math.abs(k)}(x^2-y^2)`;
         return { q: `$\\vec v=${srcTxt(k)}$ の $\\dfrac{\\partial v_${xx ? 'x' : 'y'}}{\\partial ${xx ? 'x' : 'y'}}$（原点以外）`, a: `$\\dfrac{${num}}{(x^2+y^2)^2}$`, key: `64f:${k}:${kind}`, easyCheck: false,
-          easy: `商の微分：$\\dfrac{${k}(x^2+y^2)-${k}${xx ? 'x' : 'y'}\\times2${xx ? 'x' : 'y'}}{(x^2+y^2)^2}$`,
+          easy: `商の微分：$\\dfrac{${k}(x^2+y^2)-${k < 0 ? `(${k}${xx ? 'x' : 'y'})` : k + (xx ? 'x' : 'y')}\\times2${xx ? 'x' : 'y'}}{(x^2+y^2)^2}$`,
           calc: { kind: 'pdiff', f: xx ? `${k}*x/(x^2+y^2)` : `${k}*y/(x^2+y^2)`, vars: ['x', 'y'], wrt: [xx ? 'x' : 'y'] } };
       },
       // 空間の点のわき出し（r が整数の点）・口が原点でない場
@@ -461,24 +463,26 @@
         if (turn(r, '64s3', 2) === 0) {
           // 空間：k(x, y, z)/r^3 の1つの偏微分を、r と文字の式で（点の値は分母が大きくなるので聞かない）
           const k = r.pick([2, 3, 4, 5, -1, -2]), i = r.int(0, 2), n = ['x', 'y', 'z'][i];
-          const A = `\\dfrac{${k}}{r^3}${k > 0 ? '-' : '+'}\\dfrac{${Math.abs(3 * k)}${n}^2}{r^5}`;
+          if (!once(r, '64s3k', k, 1)) return null;   // 同じ場で文字だけちがう問題を重ねない（Z-2）
+          const A = `${k < 0 ? '-' : ''}\\dfrac{${Math.abs(k)}}{r^3}${k > 0 ? '-' : '+'}\\dfrac{${Math.abs(3 * k)}${n}^2}{r^5}`;
           const R3 = '(x^2+y^2+z^2)^(1.5)', R5 = '(x^2+y^2+z^2)^(2.5)';
           return { q: `$\\vec E=\\dfrac{(${cf(k, 'x')},\\ ${cf(k, 'y')},\\ ${cf(k, 'z')})}{r^3}$（$r=\\sqrt{x^2+y^2+z^2}$）の $\\dfrac{\\partial E_${n}}{\\partial ${n}}$ を、$r$ と $${n}$ の式で`, a: `$${A}$`, key: `64r:${k}:${n}`, easyCheck: false,
-            easy: `積の微分：$${k}\\Bigl(\\dfrac{1}{r^3}+${n}\\times\\Bigl(-\\dfrac{3${n}}{r^5}\\Bigr)\\Bigr)$`,
+            easy: `積の微分：$${k === -1 ? '-' : k}\\Bigl(\\dfrac{1}{r^3}+${n}\\times\\Bigl(-\\dfrac{3${n}}{r^5}\\Bigr)\\Bigr)$`,
             calc: { kind: 'pdiff', f: `${k}*${n}/${R3}`, vars: ['x', 'y', 'z'], wrt: [n], ans: `${k}/${R3}-${3 * k}*${n}^2/${R5}` },
             verify: p => [[0.37, 0.83, 1.29], [1.13, -0.61, 0.47]].every(v => { const rr = Math.hypot(...v), vs = { x: v[0], y: v[1], z: v[2], r: rr }; return near(M.evalMath(maths(p.a)[0], vs), k / rr ** 3 - 3 * k * v[i] ** 2 / rr ** 5, 1e-9); }) || '式がちがう' };
         }
         const c = r.int(1, 3), e = r.int(-2, 2), a = c + r.pick([-2, -1, 1, 2, 3]), b = e + r.pick([-3, -1, 1, 2]);
         const u = a - c, w = b - e; if (bad64pt(u, w) || bad64pt(a, b)) return null;
         const R2 = u * u + w * w, sx = e === 0 ? 'y' : `(y${e > 0 ? '-' : '+'}${Math.abs(e)})`, sxx = `(x-${c})`;
-        return { q: `口が点 $${P(c, e)}$ の $\\vec v=\\dfrac{(x-${c},\\ ${e === 0 ? 'y' : `y${e > 0 ? '-' : '+'}${Math.abs(e)}`})}{${sxx}^2+${sx}^2}$ の、点 $${P(a, b)}$ での $\\dfrac{\\partial v_x}{\\partial x}$ と $\\dfrac{\\partial v_y}{\\partial y}$`,
-          a: `$${frac(w * w - u * u, R2 * R2)}$ と $${frac(u * u - w * w, R2 * R2)}$`, key: `64s:${c},${e}:${a},${b}`, easyCheck: false,
+        return { q: `口が点 $${P(c, e)}$ の $\\vec v=\\dfrac{(x-${c},\\ ${e === 0 ? 'y' : `y${e > 0 ? '-' : '+'}${Math.abs(e)}`})}{${sxx}^2+${sx}^2}$ の、点 $${P(a, b)}$ での ${TWO64}`,
+          a: `$${frac(w * w - u * u, R2 * R2)}$、$${frac(u * u - w * w, R2 * R2)}$`, key: `64s:${c},${e}:${a},${b}`, easyCheck: false, boxw: '16mm',
           easy: `口から見た点 $${P(u, w)}$ で、$\\dfrac{${w * w}-${u * u}}{${R2}^2}$`,
           calc: { kind: 'pdiff', f: [`(x-${c})/((x-${c})^2+(y-(${e}))^2)`, `(y-(${e}))/((x-${c})^2+(y-(${e}))^2)`], vars: ['x', 'y'], wrt: [['x'], ['y']], at: [a, b], ans: [frac(w * w - u * u, R2 * R2), frac(u * u - w * w, R2 * R2)] } };
       },
       // わな：口をかこむ円から出る量 → 8-78
       trap(r) {
         const k = r.pick([1, 2, 3, -1, 4]), R = r.pick([1, 2, 3, 0.5]);
+        if (!once(r, '64tk', k, 1)) return null;   // 同じ場で半径だけちがう（答えが同じ）わなを重ねない（Z-2）
         return dest({ q: `$\\vec v=${srcTxt(k)}$ で、原点を中心とする半径 $${fmt(R)}$ の円から外へ出る量`, a: `$${cf(2 * k, '\\pi')}$`, key: `64t:${k}:${R}`,
           // 出る量 ∮(v_x dy − v_y dx) を、線積分の部品で（F を (−v_y, v_x) にする）
           calc: { kind: 'line', r: [`${R}*cos(t)`, `${R}*sin(t)`], t: [0, '2*pi'], F: [`-${k}*y/(x^2+y^2)`, `${k}*x/(x^2+y^2)`] } }, '8-64',
@@ -589,7 +593,8 @@
       // (ax, ay, az) と体積（L）→ 全体の W
       s1(r) {
         const a = r.pick([200, 300, 400, 500, 600, 800, 1200, 1500, 2000, 2500]), VL = r.pick([0.5, 1, 1.5, 2, 3, 4, 5, 0.2]), c = 3 * a, w = W66(c, VL);
-        if ((a === 1000 && VL === 2) || w === 6 || !once(r, '66s1', w, 1)) return null;
+        // 例（1000・2 L → 6 W）と同じ体積・同じ係数・同じ答えをよける（例の何倍かの組。S-2・Z-1）
+        if (VL === 2 || a === 1000 || [6, 3, 12].includes(w) || !once(r, '66s1', w, 1) || !once(r, '66s1a', a, 1)) return null;
         return { q: `電気を流して熱を出しているブロックの中で、熱の流れが $\\vec q=${P3(a + 'x', a + 'y', a + 'z')}$〔$\\mathrm{W/m^2}$〕。体積は $${U(fmt(VL), 'L')}$。ブロック全体で1秒間に生まれる熱`,
           a: `$${U(fmt(w), 'W')}$`, key: `66:${a},${VL}`, easyCheck: false,
           easy: `$\\mathrm{div}\\,\\vec q=${U(c, 'W/m^3')}$、$\\times${fmt(VL / 1000)}$`,
@@ -600,7 +605,7 @@
       s2(r) {
         const kind = turn(r, '66s2', 3);
         if (kind === 2) {   // 逆：全体の熱と体積から係数
-          const a = r.pick([300, 400, 500, 600, 800, 1500]), VL = r.pick([0.5, 1, 2, 4, 5]), w = W66(3 * a, VL);
+          const a = r.pick([300, 400, 500, 600, 800, 1500]), VL = r.pick([0.5, 1, 1.5, 4, 5]), w = W66(3 * a, VL);
           if (a === 1000 || w === 6) return null;
           return { q: `ブロックの中の熱の流れが $\\vec q=(ax,\\ ay,\\ az)$〔$\\mathrm{W/m^2}$〕で、体積 $${U(fmt(VL), 'L')}$ のブロック全体で1秒間に $${U(fmt(w), 'W')}$ の熱が生まれる。$a$`,
             a: `$a=${a}$`, key: `66r:${a},${VL}`, easyCheck: false,
@@ -627,8 +632,8 @@
             a: `$${U(0, 'W/m^3')}$`, key: `66w:${q}`, easyCheck: false, easy: '定数の偏微分は0（入った熱がそのまま出る）',
             calc: { kind: 'pdiff', op: 'div', f: [String(q), '0', '0'], vars: ['x', 'y', 'z'], ans: '0' } };
         }
-        const k = r.pick([16, 50, 20, 40]), c = r.pick([10, 20, 25, 50, 5]), T0 = r.pick([60, 80, 90, 100]), w = 6 * k * c; if (w === 3000) return null;
-        return { q: `熱伝導率 $k=${U(k, 'W/(m\\cdot K)')}$ のブロックの中の温度が $T=${T0}-${c}(x^2+y^2+z^2)$〔℃〕。$\\vec q=-k\\,\\mathrm{grad}\\,T$ のとき、$1\\,\\mathrm{m^3}$ あたり1秒間に生まれる熱`,
+        const k = r.pick([16, 50, 20, 40]), c = r.pick([10, 20, 25, 50, 5]), T0 = r.pick([60, 80, 90, 100]), w = 6 * k * c; if (w === 3000 || !once(r, '66s3k', k, 1)) return null;   // 同じ k で係数だけ何倍かの問題を重ねない（Z-2）
+        return { q: `熱伝導率 $k=${U(k, 'W/(m\\cdot K)')}$ のブロックの中の温度が $T=${T0}-${c}(x^2+y^2+z^2)$〔℃〕（$x$、$y$、$z$ は m）。$\\vec q=-k\\,\\mathrm{grad}\\,T$ のとき、$1\\,\\mathrm{m^3}$ あたり1秒間に生まれる熱`,
           a: `$${U(w, 'W/m^3')}$`, key: `66T:${k},${c},${T0}`, easyCheck: false,
           easy: `$\\vec q=${2 * k * c}(x,\\ y,\\ z)$、$\\mathrm{div}\\,\\vec q=${2 * k * c}\\times3$`,
           calc: { kind: 'pdiff', op: 'div', f: [`${2 * k * c}*x`, `${2 * k * c}*y`, `${2 * k * c}*z`], vars: ['x', 'y', 'z'], ans: String(w) },
@@ -637,8 +642,9 @@
       // わな：温度から熱の流れの矢印 → 8-28
       trap(r) {
         const k = r.pick([16, 1.6, 0.6]), a = r.pick([100, 200, 300, 500]), b = r.pick([100, 200, 400, 600]), T0 = r.pick([40, 60, 80]);
-        if (a === b) return null;
-        return dest({ q: `温度が $T=${T0}-${a}x-${b}y$〔℃〕の板（熱伝導率 $k=${fmt(k)}$）の、熱の流れ $\\vec q=-k\\,\\mathrm{grad}\\,T$`,
+        if (a === b || !once(r, '66tk', k, 1)) return null;
+        // 単位を書き（Z-8）、聞く量 $\vec q$ に「＝ □」がつくように式はかっこへ（Z-6）
+        return dest({ q: `温度が $T=${T0}-${a}x-${b}y$〔℃〕（$x$、$y$ は m）の板（熱伝導率 $k=${U(fmt(k), 'W/(m\\cdot K)')}$）の、熱の流れ $\\vec q$（$=-k\\,\\mathrm{grad}\\,T$）`,
           a: `$${U(P(fmt(k * a), fmt(k * b)), 'W/m^2')}$`, key: `66t:${k},${a},${b},${T0}`,
           calc: { kind: 'vec', want: [k * a, k * b], ans: [fmt(k * a), fmt(k * b)] } }, '8-66',
           '発散（生まれる熱）ではなく、熱の流れの矢印そのもの。温度の勾配に $-k$ をかける', ['8-28']);
@@ -657,7 +663,7 @@
     ['左へ行くほど速い、上向きの流れ', (x, y) => [0, 3 - x]],
     ['下へ行くほど速い、左向きの流れ', (x, y) => [y - 3, 0]],
     ['点Oのまわりを右回りに回り、点Oから遠いほど速い流れ', (x, y) => [y, -x]],
-    ['右へ行くほど速い、右向きの流れ', (x, y) => [x + 3, 0]],
+    // 「右へ行くほど速い、右向きの流れ」は使えないとき（caution）の例なので、ステップ1に出さない（Z-4）
     ['上へ行くほど速い、上向きの流れ', (x, y) => [0, y + 3]],
     ['どこでも同じ向き・同じ速さの流れ', (x, y) => [1, 2]],
     ['点Oから外へ広がり、点Oから遠いほど速い流れ', (x, y) => [x, y]],
@@ -903,7 +909,7 @@
     if (!dec(c, 3) || !dec(U0, 2) || Math.abs(y0) >= a || U0 > 3) return null;
     return { c, U0 };
   }
-  const vxTxt = (U0, c) => `${fmt(U0)}-${fmt(c)}y^2`;
+  const vxTxt = (U0, c) => `${fmt(U0)}-${cf(+fmt(c), 'y^2')}`;   // 係数の1は書かない（Z-7）
   M.add({
     id: '8-70', part: 5, chap: '8-10⑤ 例題4', stars: 1,
     title: '用水路の回転は $-\\dfrac{\\partial v_x}{\\partial y}$、風車はその半分',
@@ -923,13 +929,13 @@
           const c = r.pick([0.1, 0.2, 0.3, 0.5, 0.6, 1.5, 0.25, 0.05]), a = r.pick([1, 1.5, 2, 3]), U0 = c * a * a;
           if (c === 0.4 || !dec(U0, 3)) return null;
           return { q: `用水路の水の速度が $\\vec v=(${vxTxt(U0, c)},\\ 0)$〔$\\mathrm{m/s}$〕（岸は $y=\\pm${fmt(a)}$）。回転を $y$ の式で`,
-            a: `$${cf(+fmt(2 * c), 'y')}$`, key: `70:${c},${a}`, easyCheck: false, easy: `$-\\dfrac{\\partial v_x}{\\partial y}=-(-${fmt(2 * c)}y)$`,
+            a: `$${cf(+fmt(2 * c), 'y')}$`, key: `70:${c},${a}`, easyCheck: false, easy: `$-\\dfrac{\\partial v_x}{\\partial y}=-(-${cf(+fmt(2 * c), 'y')})$`,
             calc: { kind: 'pdiff', op: 'rot', f: [`${U0}-${c}*y^2`, '0'], vars: ['x', 'y'] } };
         }
         const U0 = r.pick([0.6, 0.8, 1, 1.2, 1.5, 2]), a = r.pick([2, 3, 1.5]), k = 2 * U0 / (a * a);
         if (!dec(k, 3) || (U0 === 1.2 && a === 2)) return null;
         return { q: `はば $${U(fmt(2 * a), 'm')}$ の用水路（岸は $y=\\pm${fmt(a)}$）で、水の速度が $\\vec v=\\Bigl(${U0 === 1 ? "" : fmt(U0)}\\Bigl(1-\\dfrac{y^2}{${fmt(a * a)}}\\Bigr),\\ 0\\Bigr)$〔$\\mathrm{m/s}$〕。回転を $y$ の式で`,
-          a: `$${cf(+fmt(k), 'y')}$`, key: `70b:${U0},${a}`, easyCheck: false, easy: `$v_x=${fmt(U0)}-${fmt(U0 / (a * a))}y^2$、$-\\dfrac{\\partial v_x}{\\partial y}$`,
+          a: `$${cf(+fmt(k), 'y')}$`, key: `70b:${U0},${a}`, easyCheck: false, easy: `$v_x=${vxTxt(U0, U0 / (a * a))}$、$-\\dfrac{\\partial v_x}{\\partial y}$`,
           calc: { kind: 'pdiff', op: 'rot', f: [`${U0}*(1-y^2/${a * a})`, '0'], vars: ['x', 'y'] } };
       },
       // 風車の向きと角速度・1回転の時間（π を残す）
@@ -941,7 +947,7 @@
         if (kind < 2) {
           adv(r, '70s2w', 2);
           return { q: `${q0}の、回る向きと角速度`, a: `${y0 > 0 ? '左回り' : '右回り'}に $${U(fmt(om), 'rad/s')}$`, key: `70w:${vx}:${y0}`, easyCheck: false,
-            easy: `回転 $${fmt(2 * cn.c)}y=${fmt(2 * cn.c * y0)}$ の半分`,
+            easy: `回転 $${cf(+fmt(2 * cn.c), 'y')}$ に $y=${fmt(y0)}$ を入れた $${fmt(2 * cn.c * y0)}$ の半分`,
             verify: p => (near(numOf(p.a), Math.abs(rotNum((x, y) => [cn.U0 - cn.c * y * y, 0], 0, y0)) / 2, 1e-6) && p.a.startsWith(y0 > 0 ? '左回り' : '右回り')) || '風車がちがう' };
         }
         const T = 2 / om;   // π の何倍か
@@ -1069,8 +1075,9 @@
     steps: {
       // T 秒で1回転 → 回転
       s1(r) {
-        const T = r.pick([2, 3, 4, 5, 6, 8, 12, 15, 20, 30, 40, 16]);
-        if (T === 10 || !once(r, '72s1', T, 1)) return null;
+        // 例（10 s → 回転 $\frac{2\pi}{5}$）の2倍・半分・何倍か（10 の約数・倍数の T）をよける（Z-2）
+        const T = r.pick([3, 4, 6, 8, 12, 15, 16, 24, 9]);
+        if (!once(r, '72s1', T, 1)) return null;
         return { q: `回転台が $${U(T, 's')}$ で1回転し、台の上の水がいっしょに回る。水の流れの回転`, a: `$${U(piFrac(4, T), '1/s')}$`, key: `72:${T}`, easyCheck: false,
           easy: `$\\omega=${piFrac(2, T)}$、$2\\omega$`,
           verify: p => near(numOf(p.a), rotNum((x, y) => [-(2 * Math.PI / T) * y, (2 * Math.PI / T) * x], 0.4, 0.9), 1e-6) || '回転がちがう' };
@@ -1348,6 +1355,21 @@
           '小さな箱でなく、大きな球。発散が定数なので、発散×球の体積（ガウスの定理）', ['8-75']);
       },
     },
+  });
+
+  // ================================================================ 見わけようのわなが、見開きのわなと同じ問題にならないように（Z-4。組の側で）
+  // 本の見開き（makeSheet）では、同じ r で s3 を作ってから trap を作る。見わけよう・アプリのプリントでは、その r で s3 を作っていない。
+  // そのときは、本の見開きのわなと同じ問題（key・文）をよける（makeStep が別の問題を作りなおす）
+  const bookTraps = {};
+  M.list(8).filter(id => M.waza[id].part === 5).forEach(id => {
+    const d = M.waza[id], s3 = d.steps.s3, tr = d.steps.trap; if (!s3 || !tr) return;
+    const tag = '\u0000s3:' + id;
+    d.steps.s3 = r => { r[tag] = true; return s3(r); };
+    d.steps.trap = r => {
+      const p = tr(r); if (!p || r[tag]) return p;
+      const b = bookTraps[id] || (bookTraps[id] = new Set(M.makeSheet(id).trap.flatMap(t => [t.key || t.q, t.q])));
+      return b.has(p.key || p.q) || b.has(p.q) ? null : p;
+    };
   });
 
 })(globalThis.MONDAI);
