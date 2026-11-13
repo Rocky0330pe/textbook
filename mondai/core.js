@@ -359,6 +359,19 @@
         if (name === 'end') { raw(); return ''; }
         if (name === 'dot' || name === 'ddot') return `<span class="m${name}">${atom()}</span>`;
         if (/^(Bigl|Bigr|bigl|bigr|Biggl|Biggr|bigg|Bigg)$/.test(name)) { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? `<span class="mdelim mbigd">${n2}</span>` : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim mbigd">${htmlEsc(d)}</span>`; }
+        // \left( … \right) の中に行列・掃き出しの表があるときは、かっこを中の高さまでのばす（第7巻 R1-6）
+        if (name === 'left') {
+          let k = i, dep = 1; const re = /\\(left|right)\b/g; re.lastIndex = i; let m;
+          while ((m = re.exec(s))) { if (m[1] === 'left') dep++; else if (--dep === 0) { k = m.index; break; } }
+          const d1 = s[i] === '\\' ? '' : s[i];
+          if (dep === 0 && d1 && s.slice(i + 1, k).includes('\\begin{')) {
+            const d2 = s[k + 6], cls = { '(': 'p', ')': 'p', '[': 'b', ']': 'b', '|': 'v' };
+            const dl = (d, side) => cls[d] ? `<span class="mmd mmd-${cls[d]} mmd-${side}"></span>` : '';
+            const inner = M.mathHTML(s.slice(i + 1, k), opt).replace(/^<span class="math">|<\/span>$/g, '');
+            i = k + 7;
+            return `<span class="mmat">${dl(d1, 'l')}${inner}${dl(d2, 'r')}</span>`;
+          }
+        }
         if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim">${htmlEsc(d)}</span>`; }
         if (name === 'text' || name === 'textrm' || name === 'mbox') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
         if (name === 'mathrm' || name === 'mathsf' || name === 'rm') return `<span class="mtext">${M.mathHTML(raw().replace(/(\\[a-zA-Z]+) +/g, '$1{}'), Object.assign({}, opt, { upright: true })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;

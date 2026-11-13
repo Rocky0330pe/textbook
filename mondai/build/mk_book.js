@@ -127,7 +127,7 @@ for (const part of parts) {
     }
     const mixed = r.shuffle(pool);
     // 第7巻から：右ページの「この部のわざ」の表は、題の前半（式の外の「：」「。」「（」の前）だけ（表が長くて問題をへらさないように。第7巻 書く組の要望）
-    const mwTitle = t => { if (vol < 7) return t; let o = ''; const sg = t.split(/(\$[^$]*\$)/); for (let k = 0; k < sg.length; k++) { if (k % 2) { o += sg[k]; continue; } const m = sg[k].search(/[：。（]/); if (m >= 0) { o += sg[k].slice(0, m); return o.trim().length >= 4 ? o.trim() : t; } o += sg[k]; } return t; };
+    const mwTitle = t => { if (vol < 7) return t; let o = '', q = 0; const sg = t.split(/(\$[^$]*\$)/); for (let k = 0; k < sg.length; k++) { if (k % 2) { o += sg[k]; continue; } for (const ch of sg[k]) { if (ch === '「') q++; else if (ch === '」') q--; else if (q <= 0 && /[：。（]/.test(ch)) return o.trim().length >= 4 ? o.trim() : t; o += ch; } } return t; };   // 「 」の中では切らない（第7巻 R1-21）
     const intro = vol > 1
       ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。' + (vol >= 6 ? '前の部のわざを使うときは、その番号を書きます。' : '')
       : '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
