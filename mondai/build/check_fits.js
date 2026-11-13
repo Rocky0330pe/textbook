@@ -99,13 +99,17 @@ for (const no of allParts) {
     const seen = new Set(), pool = [];
     const nTrap = pinfo.miwake.traps ?? 2, nMain = M.miwakeCount(pinfo, wz.length) - nTrap;
     const must = pinfo.miwake.must || [], wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));   // mk_book.js と同じ（第36回 N-4）
-    for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
+    // ここから下は mk_book.js の見わけようと同じ作り方（第6巻から見開きの問題をよける fresh、第7巻から must のわなを「もう選んだわな」に）
+    const usedTrap0 = new Set(), onSheet = new Set();
+    if (vol >= 6) for (const id of wzAll) { const sh = M.makeSheet(id); M.STEPS.forEach(s => sh[s].forEach(p => { onSheet.add(id + '\u0000' + (p.key || p.q)); onSheet.add('\u0001' + p.q); })); }
+    const fresh = p => !onSheet.has(p.id + '\u0000' + (p.key || p.q)) && !onSheet.has('\u0001' + p.q);
+    for (const [id, st] of must) { for (let j = 0; j < 30; j++) { const got = M.makeStep(id, st, 1, r, seen); if (got.length && ((st === 'trap' && (vol < 7 || j >= 25)) || fresh(got[0]))) { pool.push(got[0]); break; } } if (vol >= 7 && st === 'trap') usedTrap0.add(id); }
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
       const got = M.makeStep(order[k % order.length], r.pick(['s1', 's2']), 1, r, seen);
-      if (got.length) pool.push(got[0]);
+      if (got.length && fresh(got[0])) pool.push(got[0]);
     }
-    const usedTrap = new Set();
+    const usedTrap = usedTrap0;
     for (let k = 0, t = 0; t < nTrap && k < 200; k++) {
       const id = r.pick(wz);
       if (!M.waza[id].steps.trap) continue;
