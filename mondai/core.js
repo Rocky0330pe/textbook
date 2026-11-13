@@ -326,6 +326,7 @@
         if (name === 'dd') return 'd';
         if (name === 'mathsf' || name === 'mathbf' || name === 'boldsymbol') return `<span class="mtext m${name}">${M.mathHTML(raw(), Object.assign({}, opt, { upright: name === 'mathsf' })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
         if (name === 'texttt') return `<code>${htmlEsc(raw())}</code>`;
+        if (name === 'mathrel' || name === 'mathbin' || name === 'mathord') return M.mathHTML(raw(), opt).replace(/^<span class="math">|<\/span>$/g, '');   // 第7巻 組c の要望
         if (name === 'xrightarrow' || name === 'xleftarrow') { ws(); let lo = ''; if (s[i] === '[') { const j = s.indexOf(']', i); lo = M.mathHTML(s.slice(i + 1, j), opt).replace(/^<span class="math">|<\/span>$/g, ''); i = j + 1; } const up = M.mathHTML(raw(), opt).replace(/^<span class="math">|<\/span>$/g, ''); return `<span class="mop mxarrow"><span class="mopu">${up}</span><span class="mxa">${name === 'xrightarrow' ? '⟶' : '⟵'}</span><span class="mopd">${lo}</span></span>`; }
         // 行列（第7巻から。第39回）：\begin{pmatrix} … \end{pmatrix}・bmatrix・vmatrix・matrix・array{rr|r}
         if (name === 'begin') {
@@ -338,7 +339,8 @@
           const cells = rows.map(r => split(r, '&').map(c => M.mathHTML(c.trim(), opt).replace(/^<span class="math">|<\/span>$/g, '')));
           const nc = Math.max(...cells.map(r => r.length)), bar = []; let col = 0; for (const ch of spec) { if (ch === '|') bar.push(col); else if (/[lcr]/.test(ch)) col++; }
           const grid = cells.map(r => Array.from({ length: nc }, (_, k) => `<span class="mcell${bar.includes(k) && k > 0 ? ' mbar-l' : ''}">${r[k] || ''}</span>`).join('')).join('');
-          const g = `<span class="mgrid" style="grid-template-columns:repeat(${nc},auto)">${grid}</span>`;
+          const g = `<span class="mgrid${env === 'cases' ? ' mcases' : ''}" style="grid-template-columns:repeat(${nc},auto)">${grid}</span>`;
+          if (env === 'cases') return `<span class="mmat"><span class="mmd" style="font-size:${(0.9 + 1.05 * rows.length).toFixed(2)}em;transform:scaleX(0.55)">{</span>${g}</span>`;   // 連立方程式（第7巻 組c の要望）
           const D = { pmatrix: ['(', ')'], bmatrix: ['[', ']'], vmatrix: ['|', '|'], Bmatrix: ['{', '}'] }[env];
           // ( ) [ ] | | は、字でなく線でかく（行が3つ以上でも、かっこが行列の高さにのびるように。第7巻 組a の要望）
           const dd = (k, side) => /^[pbv]matrix$/.test(env) ? `<span class="mmd mmd-${env[0]} mmd-${side}"></span>` : `<span class="mmd">${D[k]}</span>`;
