@@ -134,6 +134,14 @@
   // 場の成分の項の候補（2次まで）。[文字の部分, 値の関数]
   const MONO2 = ['x^2', 'xy', 'y^2', 'x', 'y', ''];             // ならべる順（2次の項が先）
   const MONO3 = ['x^2', 'z^2', 'xy', 'yz', 'xz', 'x', 'y', 'z', ''];
+  // 同じ見開き（s1・s2）で、符号を変えただけ・何倍かしただけの1次の場を2回使わない（R1-18・Z-2）。使いきったら、よけない
+  function fresh30(r, c) {
+    const g = c.reduce((a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; }, 0) || 1;
+    const s = Math.sign(c.find(v => v !== 0) || 1), k = c.map(v => v / g * s).join(',');
+    const u = r.s30 || (r.s30 = new Set());
+    if (u.has(k) && u.size < 30) return false;
+    u.add(k); return true;
+  }
   function randComp(r, monos, nonlin) {
     const n = r.int(1, 2), ms = r.shuffle(monos).slice(0, n).sort((a, b) => monos.indexOf(a) - monos.indexOf(b)), out = ms.map(m => [r.intNot(-3, 3, v => v === 0), m]);
     if (nonlin && !ms.some(m => /\^|xy|yz|xz/.test(m))) return null;
@@ -161,6 +169,7 @@
         if (!p && !q) return null;
         const Fx = lin2(a, b), Fy = lin2(cc, d), u = a * p + b * q, v = cc * p + d * q;
         if ((!u || !v) && r.chance(0.85)) return null;   // 0 の成分はときどき
+        if (!fresh30(r, c)) return null;
         return { q: `$\\vec F=${P2(Fx, Fy)}$ の、点 $${P2(p, q)}$ での矢印`, a: `$${P2(u, v)}$`, key: `30:${c.join(',')}@${p},${q}`,
           easy: `$x=${p}$、$y=${q}$ を入れる：$F_x=${u}$、$F_y=${v}$`,
           calc: { kind: 'vec', want: [ev(Fx, { x: p, y: q }), ev(Fy, { x: p, y: q })] } };
@@ -172,7 +181,7 @@
           const c = [0, 1, 2, 3].map(() => r.int(-3, 3)), [a, b, cc, d] = c;
           if ((!a && !b) || (!cc && !d) || BAN30.has(c.join(','))) return null;
           const p = r.int(-3, 3), q = r.int(-3, 3), u = a * p + b * q, v = cc * p + d * q, n = u * u + v * v;
-          if ((!p && !q) || !n || !u || !v) return null;
+          if ((!p && !q) || !n || !u || !v || !fresh30(r, c)) return null;
           const Fx = lin2(a, b), Fy = lin2(cc, d);
           return ok({ q: `$\\vec F=${P2(Fx, Fy)}$ の、点 $${P2(p, q)}$ での矢印の大きさ`, a: `$${sqrtTeX(n)}$`, key: `30m:${c.join(',')}@${p},${q}`,
             easy: `矢印は $${P2(u, v)}$。$\\sqrt{${par(u)}^2+${par(v)}^2}=\\sqrt{${n}}${sqrtParts(n)[0] > 1 || sqrtParts(n)[1] === 1 ? '=' + sqrtTeX(n) : ''}$`,
@@ -220,7 +229,7 @@
         const h = `${H}${poly([[-a, 'x^2'], [-b, 'y^2']]).replace(/^(?!-)/, '+')}`;
         return tok(dest({ q: `山 $h=${h}$ の $-\\mathrm{grad}\\,h$ の、点 $${P2(p, q)}$ での矢印`, a: `$${P2(2 * a * p, 2 * b * q)}$`, key: `30g:${H},${a},${b}@${p},${q}`,
           calc: { kind: 'pdiff', op: 'grad', f: `-(${h})`, vars: ['x', 'y'], at: [p, q] } }, '8-30',
-        `矢印の式が書いてない。先に偏微分して $-\\mathrm{grad}\\,h=${P2(2 * a + 'x', 2 * b + 'y')}$ を作る`, ['8-23']));
+        `矢印の式が書いてない。先に偏微分して $-\\mathrm{grad}\\,h=${P2(2 * a + 'x', 2 * b + 'y')}$ を作る`, ['8-23', '8-27']));   // 8-27（点での勾配）でも解ける（R1-29・Z-4）
       },
     },
   });
@@ -234,7 +243,8 @@
   //   $(y,\ -x)$・$(-2y,\ 2x)$・$(2y,\ -2x)$）とその符号ちがい・何倍かをよけるため、$k$ は5から（a と b がちがう場は例の何倍かにならない）
   const rotF = (dir, a, b) => (dir === 'L' ? P2(poly([[-a, 'y']]), poly([[b, 'x']])) : P2(poly([[a, 'y']]), poly([[-b, 'x']])));
   // 同じ見開きで同じ場 (−ky, kx) を2回使わない（使いきったら、よけない）
-  function fresh31(r, key) { const u = r.s31u || (r.s31u = new Set()); if (u.has(key) && u.size < 9) return false; u.add(key); return true; }
+  //   符号を変えただけの場（(−ky, kx) と (ky, −kx)）も同じとみて、key は k だけ（Z-2）。k は5〜12 の8とおり
+  function fresh31(r, key) { const u = r.s31u || (r.s31u = new Set()); if (u.has(key) && u.size < 8) return false; u.add(key); return true; }
   // 答えの「左回り、大きさ5」を読む
   function rotIs(p, dir, mag) {
     const m = /^(左|右)回り、大きさ \$(.*)\$$/.exec(String(p.a));
@@ -255,7 +265,7 @@
     futsu: ['方眼の点ごとに矢印を計算して', '矢印の場の図をかき、', '矢印をつないだ流線をかいて、', '進む向きから回る向きを読む。'],
     raku: ['$(-4y,\\ 4x)$：$(1,\\ 0)$ で $(0,\\ 4)$ 上、', '$(0,\\ 1)$ で $(-4,\\ 0)$ 左 → 左回り', '大きさはどれも4', '$(3y,\\ -3x)$ → 右回り'],
     why: '右の点 $(1,\\ 0)$ で上向き、上の点 $(0,\\ 1)$ で左向き、左の点で下向き、下の点で右向き、と矢印が順に回っていけば、原点のまわりを左回り（時計と反対回り）に回るうず（8-5③）。$(-ky,\\ kx)$ の大きさは $k\\sqrt{x^2+y^2}$ で、原点からの距離の $k$ 倍。',
-    caution: '$y$ の前が負で $x$ の前が正なら左回り、逆なら右回り。大きさは距離に比例するので、距離が2倍なら2倍。$(ay,\\ bx)$ で $a$ と $b$ が同じ符号の場は、回らない（たとえば $(y,\\ x)$）。',
+    caution: '$y$ の前が負で $x$ の前が正なら左回り、逆なら右回り。大きさは距離に比例するので、距離が2倍なら2倍。$(ay,\\ bx)$ で $a$ と $b$ が同じ符号の場は、原点のまわりを回らない（たとえば $(y,\\ x)$。そこに置いた風車が回るかは、べつのわざ）。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '30mm', s2: '30mm', s3: '30mm', trap: '30mm' },
@@ -264,8 +274,8 @@
       // (−ky, kx)・(ky, −kx)：向きと、4つの点の矢印の大きさ
       // （例の 1〜4 倍の場と、その符号を変えた場はよける。U-2）
       s1(r) {
-        const st = r.s31 || (r.s31 = { n: r.int(0, 1) }), dir = st.n % 2 ? 'R' : 'L', k = r.int(5, 9);
-        if (!fresh31(r, dir + k)) return null;
+        const st = r.s31 || (r.s31 = { n: r.int(0, 1) }), dir = st.n % 2 ? 'R' : 'L', k = r.int(5, 12);
+        if (!fresh31(r, k)) return null;
         st.n++;
         const Fv = rotF(dir, k, k), [FxT, FyT] = M.readVec(Fv);
         return { q: `$\\vec F=${Fv}$ の回る向き（左回り・右回り）と、点 $(1,\\ 0)$、$(0,\\ 1)$、$(-1,\\ 0)$、$(0,\\ -1)$ での矢印の大きさ`,
@@ -277,8 +287,8 @@
       s2(r) {
         const st = r.s31b || (r.s31b = { n: r.int(0, 1) }), dir = st.n % 2 ? 'R' : 'L', [kind, ok] = alt(r, '31s2', 2);
         if (kind === 0) {
-          const k = r.int(5, 8), R = r.int(2, 4);
-          if (!fresh31(r, dir + k)) return null;
+          const k = r.int(5, 10), R = r.int(2, 4);
+          if (!fresh31(r, k)) return null;
           st.n++; ok(true);
           const Fv = rotF(dir, k, k), [FxT, FyT] = M.readVec(Fv);
           return { q: `$\\vec F=${Fv}$ の回る向きと、原点から距離 ${R} の所での矢印の大きさ`, a: `${dir === 'L' ? '左' : '右'}回り、大きさ $${k * R}$`, key: `31:${dir}${k},${k}@${R}`,
@@ -303,25 +313,44 @@
             easy: `$(1,\\ 0)$ で $${P2(a, b)}$（${b > 0 ? '上' : '下'}向きの成分）、$(0,\\ 1)$ で $${P2(-b, a)}$（${b > 0 ? '左' : '右'}向きの成分）。${a > 0 ? '外へ広がり' : '中へ集まり'}ながら回る`,
             verify: p => rotIs(p, rotDir(FxT, FyT), Math.hypot(a, b)) });
         }
-        const dir = r.chance(0.5) ? 'L' : 'R', k = r.int(5, 9), R = r.int(3, 5), Fv = rotF(dir, k, k), [FxT, FyT] = M.readVec(Fv);
-        if (!fresh31(r, dir + k)) return null;   // s1・s2 と同じ場、2つの図で同じ場を出さない
-        // 軸の上の点（原点のほか）には矢印をかかない（目もりの字と重ならないように）。縮める割合は2回の quiver でそろえる
-        const G = M.graph({ x0: -2.6, x1: 2.6, y0: -2.6, y1: 2.6, w: 8, h: 8 }), xs = [-2, -1, 1, 2], Fq = (x, y) => [ev(FxT, { x, y }), ev(FyT, { x, y })], sc = 0.85 / (k * 2 * Math.SQRT2);
-        const fig = { s: 5, items: [...G.axes({ xt: [1, 2], yt: [1, 2] }), ...G.quiver(Fq, xs, xs, { scale: sc, legend: { len: 2 * k, label: `$${2 * k}$` } }), ...G.quiver(Fq, [0], [0], { scale: sc })] };
+        const dir = r.chance(0.5) ? 'L' : 'R', k = r.int(5, 12), R = r.int(3, 5), Fv = rotF(dir, k, k), [FxT, FyT] = M.readVec(Fv);
+        if (!fresh31(r, k)) return null;   // s1・s2 と同じ場、2つの図で同じ場を出さない
+        // 軸の上の点（わざで見る4つの点もふくむ）にも矢印をかく（R1-26・Z-9）。目もりの字と重ならないように、目もりはかかない（点の間は1）
+        const G = M.graph({ x0: -2.6, x1: 2.6, y0: -2.6, y1: 2.6, w: 8, h: 8 }), xs = [-2, -1, 0, 1, 2], Fq = (x, y) => [ev(FxT, { x, y }), ev(FyT, { x, y })], sc = 0.85 / (k * 2 * Math.SQRT2);
+        const fig = { s: 5, items: [...G.axes({}), ...G.quiver(Fq, xs, xs, { scale: sc, legend: { len: 2 * k, label: `$${2 * k}$` } })] };
         return ok({ q: `図は $\\vec F=${Fv}$ の矢印の場（右下の物差しの矢印が大きさ ${2 * k}）。矢印の大きさが ${k * R} になる所は、原点を中心とする半径いくつの円の上か`, a: `$${R}$`, key: `31f:${dir}${k}@${R}`, fig,
           easy: `大きさは原点からの距離の ${k} 倍。$${k * R}\\div${k}=${R}$`,
           verify: p => valIs(p, k * R / Math.hypot(ev(FxT, { x: 1, y: 0 }), ev(FyT, { x: 1, y: 0 }))) });
       },
       // わな：ずれの場に風車を置く（8-67。矢印は回っていなくても、風車は回る）
+      //   答えは「左回り・右回り・回らない」を順に回す（R1-19・Z-3）。8-31 の4つの点の読み方では答えが出ない場にする：
+      //   (ay, bx) で a と b が同じ符号（流線は原点のまわりを回らないが、a≠b なので風車は回る）、ずれの場 (ky, 0)・(0, kx)、(kx, −ky)（回らない）
       trap(r) {
-        // 答えの「左回り・右回り」を交互に（U-3）。(ky, 0) は k>0 で右回り、(0, kx) は k>0 で左回り
-        const st = r.s31t || (r.s31t = { n: r.int(0, 3) }), onX = st.n % 2 === 0, left = Math.floor(st.n / 2) % 2 === 0, m = r.int(2, 4);
-        const k = onX ? (left ? -m : m) : (left ? m : -m);
+        const st = r.s31t || (r.s31t = { n: r.int(0, 2) }), want = ['L', 'R', 'N'][st.n % 3], m = r.int(2, 4);
+        let Fv, why;
+        if (want === 'N') {
+          const k = r.chance(0.5) ? m : -m;
+          Fv = P2(poly([[k, 'x']]), poly([[-k, 'y']]));
+          why = '流線は原点のまわりを回るうずではない。風車が回るかは、羽根の両側の速さのちがいで決まる（横向きの矢印は上と下で同じ、たて向きの矢印は右と左で同じなので、回らない）';
+        } else if ((st.m = (st.m == null ? r.int(0, 1) : st.m + 1)) % 2 === 0) {   // 2つの形を交互に
+          // (ay, bx)、a・b は同じ符号で大きさがちがう。回転 b−a の符号で向きが決まる
+          const sg = r.chance(0.5) ? 1 : -1, x1 = r.int(1, 4), x2 = r.intNot(1, 4, v => v === x1);
+          const lo = Math.min(x1, x2), hi = Math.max(x1, x2);
+          // b−a>0 なら左回り：sg>0 なら b が大きい、sg<0 なら |b| が小さい
+          const [a, b] = (want === 'L') === (sg > 0) ? [sg * lo, sg * hi] : [sg * hi, sg * lo];
+          Fv = P2(poly([[a, 'y']]), poly([[b, 'x']]));
+          why = '$y$ の前と $x$ の前が同じ符号なので、流線は原点のまわりを回るうずではない。それでも風車は、羽根の両側の速さのちがいで回る（右と左のたて向きのちがいと、上と下の横向きのちがいが、つり合わない）';
+        } else {
+          // (ky, 0) は k>0 で右回り、(0, kx) は k>0 で左回り
+          const onX = r.chance(0.5), left = want === 'L', k = onX ? (left ? -m : m) : (left ? m : -m);
+          Fv = onX ? P2(poly([[k, 'y']]), 0) : P2(0, poly([[k, 'x']]));
+          why = `流線はまっすぐで、原点のまわりを回るうずではない。風車は羽根の両側の速さのちがいで回る（${onX ? '上と下で、横向きの矢印がちがう' : '右と左で、たて向きの矢印がちがう'}）`;
+        }
         st.n++;
-        const Fv = onX ? P2(poly([[k, 'y']]), 0) : P2(0, poly([[k, 'x']])), [FxT, FyT] = M.readVec(Fv);
-        return dest({ q: `$\\vec F=${Fv}$ の場に小さな風車を置くと、風車は回るか。回るなら左回り・右回りのどちらか`, a: `回る（${left ? '左' : '右'}回り）`, key: `31t:${Fv}`,
-          verify: p => { const R = (ev(FyT, { x: 1e-3, y: 0 }) - ev(FyT, { x: -1e-3, y: 0 })) / 2e-3 - (ev(FxT, { x: 0, y: 1e-3 }) - ev(FxT, { x: 0, y: -1e-3 })) / 2e-3; return p.a === `回る（${R > 0 ? '左' : '右'}回り）` || `答え ${p.a}`; } },
-        '8-31', `流線はまっすぐで、原点のまわりを回るうずではない。風車は羽根の両側の速さのちがいで回る（${onX ? '上と下で、横向きの矢印がちがう' : '右と左で、たて向きの矢印がちがう'}）`, ['8-67']);
+        const [FxT, FyT] = M.readVec(Fv), A = { L: '回る（左回り）', R: '回る（右回り）', N: '回らない' }[want];
+        return dest({ q: `$\\vec F=${Fv}$ の場に小さな風車を置くと、風車は回るか。回るなら左回り・右回りのどちらか`, a: A, key: `31t:${Fv}`,
+          verify: p => { const R = (ev(FyT, { x: 0.3 + 1e-3, y: 0.2 }) - ev(FyT, { x: 0.3 - 1e-3, y: 0.2 })) / 2e-3 - (ev(FxT, { x: 0.3, y: 0.2 + 1e-3 }) - ev(FxT, { x: 0.3, y: 0.2 - 1e-3 })) / 2e-3; return p.a === (Math.abs(R) < 1e-6 ? '回らない' : `回る（${R > 0 ? '左' : '右'}回り）`) || `答え ${p.a}`; } },
+        '8-31', why, ['8-67']);
       },
     },
   });
@@ -505,7 +534,7 @@
         const Fv = P2(poly([[-c, 'y']]), poly([[c, 'x']]));
         return dest({ q: `$\\vec F=${Fv}$ の、点 $${P2(x0, y0)}$ を通る流線を、左回りに1周する線積分 $\\oint_C\\vec F\\cdot\\dd\\vec r$`, a: `$${piTeX(fr(2 * c * R2))}$`, key: `33t:${c}@${R2}`,
           calc: { kind: 'line', r: [`sqrt(${R2})*cos(t)`, `sqrt(${R2})*sin(t)`], t: [0, '2*pi'], F: [`-${c}*y`, `${c}*x`] } },
-        '8-33', `流線の式を求める問いではない。流線は半径 $\\sqrt{${R2}}$ の円で、矢印はいつも円にそう。内積は $${c}R^2=${c * R2}$ で一定、$\\times2\\pi$`, ['8-47']);
+        '8-33', `流線の式を求める問いではない。流線は半径 $\\sqrt{${R2}}$ の円で、矢印はいつも円にそう。内積は $${poly([[c, 'R^2']])}=${c * R2}$ で一定、$\\times2\\pi$`, ['8-47']);
       },
     },
   });
@@ -804,7 +833,7 @@
           const x0 = r.int(-2, 2), y0 = r.int(-1, 2), X = [x0, x0 + r.int(1, 3)], Y = [y0, y0 + r.int(1, 2)], V = intBox(T, X, Y);
           if ((!x0 && !y0) || V[1] > 6 || Math.abs(F.val(V)) > 300 || V[0] === 0) return null;
           return ok({ q: `$\\iint_D(${f})\\,\\dd A$（$D$ は ${rangeT([X, Y], ['x', 'y'])} の長方形）`, a: `$${fq(V)}$`, key: `36:${f}|${X},${Y}`,
-            easy: `内側で $y$ を止めて $x$ で ${X[0]} から ${X[1]} まで、外側で $y$ で ${Y[0]} から ${Y[1]} まで`,
+            easy: `内側で $y$ を止めて $x$ で $${X[0]}$ から $${X[1]}$ まで、外側で $y$ で $${Y[0]}$ から $${Y[1]}$ まで`,   // 負の数は式に（R1-21・Z-7）
             ...Q2(r, f, [['y', ...Y], ['x', ...X]]) });
         }
         const T2 = [[fr(r.int(2, 12)), 0, 0, 0]].concat(T.filter(t => t[1] + t[2] >= 1)), f2 = polyT(T2), p = r.int(1, 3), q = r.int(1, 2), V = intBox(T2, [0, p], [0, q]);
@@ -1006,10 +1035,13 @@
       },
       // わな：円の範囲（8-40）
       trap(r) {
-        const R = r.pick([1, 3, 4]);
-        return dest({ q: `$\\iint_D(x^2+y^2)\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(fr(R ** 4, 2))}$`, key: `38t:${R}`,
-          verify: p => valIs(p, quad('r^3', [['theta', 0, '2*pi'], ['r', 0, R]]), 1e-8) },
-        '8-38', `たて線で切ると、はしが $\\pm\\sqrt{${R * R}-x^2}$ になり、手では計算しにくい。極座標で $\\int_0^{${R}}r^2\\times2\\pi r\\,\\dd r$`, ['8-40']);
+        // 半径は 8-40 のステップ1（1・3・4）と別にし、定数をたした形もまぜる（見わけようで 8-40 の見開きと同じ問題にならないように。R1-30・Z-2）。
+        //   半径2の $x^2+y^2$ だけの形は 8-40 の左ページの例（$8\pi$）なのでよける
+        const [R, c] = r.pick([[2, 1], [2, 2], [2, 3], [2, 4], [2, 5], [5, 0], [5, 1], [5, 2], [5, 3], [5, 4], [5, 5]]);
+        const f = c ? `x^2+y^2+${c}` : 'x^2+y^2', V = F.add(fr(R ** 4, 2), fr(c * R * R));
+        return dest({ q: `$\\iint_D(${f})\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(V)}$`, key: `38t:${R},${c}`,
+          verify: p => valIs(p, quad(`(r^2+${c})*r`, [['theta', 0, '2*pi'], ['r', 0, R]]), 1e-8) },
+        '8-38', `たて線で切ると、はしが $\\pm\\sqrt{${R * R}-x^2}$ になり、手では計算しにくい。極座標で $\\int_0^{${R}}${c ? `(r^2+${c})` : 'r^2'}\\times2\\pi r\\,\\dd r$`, ['8-40']);
       },
     },
   });
@@ -1100,7 +1132,8 @@
     return o;
   };
   // f が中心からの距離 r だけで決まるか（x^2+y^2 のまとまり・√ だけ）
-  const onlyR = f => !/[xy]/.test(String(f).replace(/x\^2\+y\^2|-x\^2-y\^2/g, ''));
+  //   「2x^2+y^2」の中の「x^2+y^2」は、まとまりとみない（前が数のときは、x^2 に係数がついている）
+  const onlyR = f => !/[xy]/.test(String(f).replace(/(^|[+({])x\^2\+y\^2|-x\^2-y\^2/g, '$1'));
   const BAN40 = new Set(['0.1|0.05|2', 'disk2', 'ring?']);
   add({
     id: '8-40', part: 3, chap: '8-6⑦ 例題7・8-3⑧ 例題8', stars: 1,
@@ -1132,7 +1165,7 @@
         }
         const R = r.pick([1, 3, 4]), c = r.pick([0, 0, 1, 2, 3]), f = c ? `x^2+y^2+${c}` : 'x^2+y^2', V = F.add(fr(R ** 4, 2), fr(c * R * R));
         return ok({ q: `$\\iint_D(${f})\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(V)}$`, key: `40d:${f}|${R}`,
-          easy: `細い輪：$\\int_0^{${R}}(r^2${c ? '+' + c : ''})\\times2\\pi r\\,\\dd r$`, ...P40(r, f, 2 * Math.PI, 0, R) });
+          easy: `細い輪：$\\int_0^{${R}}${c ? `(r^2+${c})` : 'r^2'}\\times2\\pi r\\,\\dd r$`, ...P40(r, f, 2 * Math.PI, 0, R) });   // 要らないかっこを書かない（R1-30・Z-10）
       },
       // √(x^2+y^2)、R^2−x^2−y^2、輪、4分の1の円
       s2(r) {
@@ -1175,6 +1208,18 @@
     },
   });
 
+  // 8-40 の見開きで、ステップ1・2・3 に同じ答えを2回出さない（$\iint(x^2+y^2)$ と $\iint(9-x^2-y^2)$ がどちらも $\frac{81\pi}{2}$ など。R1-30・Z-2）。
+  //   使いきったら（アプリで多く出すとき）、よけない
+  for (const s of ['s1', 's2', 's3']) {
+    const f = M.waza['8-40'].steps[s];
+    M.waza['8-40'].steps[s] = r => {
+      const p = f(r); if (!p) return p;
+      const u = r.a40 || (r.a40 = new Set()), a = String(p.a);
+      if (u.has(a) && u.size < 20) return null;
+      u.add(a); return p;
+    };
+  }
+
   // ================================================================ 8-41
   // 対称性：折り返して符号が変わる項は0、90°回して入れかわる量は同じ
   const BAN41 = new Set(['0.15', '0.3', '0.6']);   // 教科書 8-6 例題5・じぶんでとこう・章末問題の半円の半径
@@ -1197,7 +1242,9 @@
       const I = readQ(q); if (!I.P) return false;
       const sym = /円 \$?x\^2\+y\^2\\leqq/.test(q) || (I.R.x && I.R.y && I.R.x[0] === -I.R.x[1] && I.R.y[0] === -I.R.y[1]);
       if (!sym) return false;
-      const odd = I.P.some(t => t[1] % 2 || t[2] % 2), sq = /円/.test(q) && I.P.length === 1 && (t => (t[1] === 2 && !t[2]) || (t[2] === 2 && !t[1]))(I.P[0]);
+      // sq：円で、$x^2$ だけ・$y^2$ だけ、または係数のちがう $ax^2+by^2$（90°回して入れかわる）
+      const pure = t => (t[1] === 2 && !t[2]) || (t[2] === 2 && !t[1]);
+      const odd = I.P.some(t => t[1] % 2 || t[2] % 2), sq = /円/.test(q) && I.P.every(pure) && (I.P.length === 1 || (I.P.length === 2 && I.P[0][1] !== I.P[1][1] && JSON.stringify(I.P[0][0]) !== JSON.stringify(I.P[1][0])));
       return odd || sq;
     },
     steps: {
@@ -1211,17 +1258,31 @@
           easy: `$${poly([[c, odd]])}$ の部分は折り返しで打ち消して0。$${b}\\times$ 面積 $${circ ? piTeX(fr(R * R)) : 4 * R * R}$`,
           ...(circ ? P40(r, f, 2 * Math.PI, 0, R) : Q2(r, f, [['y', -R, R], ['x', -R, R]])) };
       },
-      // 半円の重心、円の ∬x^2・∬y^2
+      // 半円の重心、円の ∬x^2・∬y^2、円の ∬(ax^2+by^2)
+      //   半円は1つの見開きに1問まで（半円どうしは、回しただけ・何倍かになる）。円の半径は見開きで同じものを使わない（$x^2$ と $y^2$ の入れかえで答えが同じ。R1-22・Z-2）
       s2(r) {
-        if (r.chance(0.5)) {
+        const st = r.s41 || (r.s41 = { n: r.int(0, 2), semi: 0, R: new Set() });
+        let kind = st.n % 3;
+        if (kind === 0 && st.semi >= 1 && st.n < 20) kind = 1 + r.int(0, 1);
+        if (kind === 0) {
           const R = r.pick([3, 6, 9, 1.5]), up = r.chance(0.6), c = F.div(F.mul(fr(4), D(String(R))), fr(3)), cT = c[1] === 1 ? `\\frac{${c[0]}}{\\pi}` : `\\frac{${c[0]}}{${c[1]}\\pi}`;
-          return { q: `半径 ${R} の半円の板（$x^2+y^2\\leqq${fmt(R * R)}$、$${up ? 'y' : 'x'}\\geqq0$。厚さは一定）の重心`, a: `$${up ? P2(0, cT) : P2(cT, 0)}$`, key: `41h:${R},${up}`,
+          st.n++; st.semi++;
+          return { q: `半径 $${fmt(R)}$ の半円の板（$x^2+y^2\\leqq${fmt(R * R)}$、$${up ? 'y' : 'x'}\\geqq0$。厚さは一定）の重心`, a: `$${up ? P2(0, cT) : P2(cT, 0)}$`, key: `41h:${R},${up}`,
             easy: `${up ? '左右' : '上下'}対称なので $\\bar ${up ? 'x' : 'y'}=0$。$\\bar ${up ? 'y' : 'x'}=\\frac{4R}{3\\pi}$`,
             verify: p => { const S = Math.PI * R * R / 2, m = quadPolar(up ? 'y' : 'x', up ? 0 : -Math.PI / 2, up ? Math.PI : Math.PI / 2, 0, R) / S; return vecIs(p.a, up ? [0, m] : [m, 0], 1e-8); } };
         }
-        const R = r.pick([1, 3, 5]), w = r.pick(['x', 'y']);
-        return { q: `$\\iint_D ${w}^2\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(fr(R ** 4, 4))}$`, key: `41q:${w},${R}`,
-          easy: `$\\iint ${w}^2\\,\\dd A=\\frac12\\iint r^2\\,\\dd A=\\frac12\\int_0^{${R}}r^2\\times2\\pi r\\,\\dd r$`, ...P40(r, `${w}^2`, 2 * Math.PI, 0, R) };
+        const R = kind === 1 ? r.pick([1, 3, 5]) : r.pick([1, 2, 3, 4]);
+        if (st.R.has(R) && st.R.size < 5) return null;
+        st.n++; st.R.add(R);
+        if (kind === 1) {
+          const w = r.pick(['x', 'y']);
+          return { q: `$\\iint_D ${w}^2\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(fr(R ** 4, 4))}$`, key: `41q:${R}`,
+            easy: `$\\iint ${w}^2\\,\\dd A=\\frac12\\iint r^2\\,\\dd A=\\frac12\\int_0^{${R}}r^2\\times2\\pi r\\,\\dd r$`, ...P40(r, `${w}^2`, 2 * Math.PI, 0, R) };
+        }
+        // ∬(ax^2+by^2)（a≠b）：90°回して $\iint x^2=\iint y^2=\frac{\pi R^4}{4}$ なので $(a+b)\frac{\pi R^4}{4}$
+        const a = r.int(1, 3), b = r.intNot(1, 3, v => v === a), f = poly([[a, 'x^2'], [b, 'y^2']]), V = fr((a + b) * R ** 4, 4);
+        return { q: `$\\iint_D(${f})\\,\\dd A$（$D$ は円 $x^2+y^2\\leqq${R * R}$）`, a: `$${piTeX(V)}$`, key: `41ab:${Math.min(a, b)},${Math.max(a, b)},${R}`,
+          easy: `90°回して $\\iint x^2\\,\\dd A=\\iint y^2\\,\\dd A=\\frac{\\pi R^4}{4}$ なので $(${a}+${b})\\times\\frac{\\pi\\times${R ** 4}}{4}$`, ...P40(r, f, 2 * Math.PI, 0, R) };
       },
       // 丸い棒の断面二次モーメント、半円の重心の約の値
       s3(r) {
@@ -1326,6 +1387,14 @@
   const MT = [['0.01', '0.01', 100], ['0.01', '0.04', 50], ['0.04', '0.01', 50], ['0.04', '0.04', 25], ['0.01', '0.25', 20], ['0.25', '0.01', 20]];
   const BAN43 = new Set(['0.01,0.04,20', '0.01,0.04,40', '0.01,0.04,60', '0.01,0.02,100']);   // 目録・教科書 8-6⑧ 例題8・じぶんでとこう・章末問題の山
   const hT = (H, p, q) => `${H}-${p}x^2-${q}y^2`;
+  // 同じ見開きで、同じ山（$x$・$y$ の入れかえもふくめて）を2回使わない。ステップ1では同じ形（係数の組）を2回まで（R1-23・Z-2）。使いきったら、よけない
+  function fresh43(r, p, q, H, s1) {
+    const u = r.s43 || (r.s43 = { m: new Set(), t: new Map() }), t = [p, q].sort().join(','), k = `${t},${H}`;
+    if (u.m.has(k) && u.m.size < 20) return false;
+    if (s1 && (u.t.get(t) || 0) >= 2) return false;
+    u.m.add(k); if (s1) u.t.set(t, (u.t.get(t) || 0) + 1);
+    return true;
+  }
   // だ円 px^2+qy^2≦c の面積を数で（x=a sinφ と置いて、なめらかな式をガウス・ルジャンドルで）：切り口の公式 πab とは別の道すじ
   const ellArea = (c, p, q) => { const a = Math.sqrt(c / p), b = Math.sqrt(c / q); let s = 0; for (let i = 0; i < 10; i++) { const t = Math.PI / 2 * GLX[i]; s += GLW[i] * 2 * b * Math.cos(t) * a * Math.cos(t); } return s * Math.PI / 2; };
   // 山の体積を数で：x=a r cosθ、y=b r sinθ（a=√(H/p)、b=√(H/q)）で ab∬ max(h−z0, 0) r dr dθ
@@ -1347,16 +1416,17 @@
       // 切り口の面積 A(z)
       s1(r) {
         const [p, q, K] = r.pick(MT), H = r.pick([10, 20, 30, 40, 50, 60]);
-        if (BAN43.has(`${p},${q},${H}`)) return null;
-        return { q: `山 $h=${hT(H, p, q)}$ を高さ $z$ の所で水平に切った切り口（だ円）の面積 $A(z)$`, a: `$${K}\\pi(${H}-z)$`, key: `43a:${p},${q},${H}`,
+        if (BAN43.has(`${p},${q},${H}`) || !fresh43(r, p, q, H, true)) return null;
+        // 係数が同じなら切り口は円なので「（だ円）」を書かない（R1-24・Z-10）
+        return { q: `山 $h=${hT(H, p, q)}$ を高さ $z$ の所で水平に切った切り口${p === q ? '' : '（だ円）'}の面積 $A(z)$`, a: `$${K}\\pi(${H}-z)$`, key: `43a:${[p, q].sort()},${H}`,
           easy: `横の半径 $${fmt(Math.sqrt(1 / +p))}\\sqrt{${H}-z}$、たての半径 $${fmt(Math.sqrt(1 / +q))}\\sqrt{${H}-z}$ で $\\pi ab$`,
           verify: pp => { for (const z of [0.3 * H, 0.71 * H]) { const v = ev(strip(pp.a), { z }), w = ellArea(H - z, +p, +q); if (!near(v, w, 1e-8)) return `z=${z} で ${w} にならない`; } return true; } };
       },
       // 山の体積
       s2(r) {
         const [p, q, K] = r.pick(MT), H = r.pick([10, 20, 30, 40, 50, 60]), V = fr(K * H * H, 2);
-        if (BAN43.has(`${p},${q},${H}`)) return null;
-        return { q: `山 $h=${hT(H, p, q)}$ の、地面（$h=0$）より上の体積`, a: `$${piTeX(V)}$`, key: `43v:${p},${q},${H}`,
+        if (BAN43.has(`${p},${q},${H}`) || !fresh43(r, p, q, H)) return null;
+        return { q: `山 $h=${hT(H, p, q)}$ の、地面（$h=0$）より上の体積`, a: `$${piTeX(V)}$`, key: `43v:${[p, q].sort()},${H}`,
           easy: `$A(z)=${K}\\pi(${H}-z)$。$\\int_0^{${H}}${K}\\pi(${H}-z)\\,\\dd z=${K}\\pi\\times${H * H / 2}$`, verify: pp => valIs(pp, mtVol(H, +p, +q, 0), 1e-7) };
       },
       // 頂上の部分の体積、円すい
@@ -1364,7 +1434,7 @@
         const [k, ok] = alt(r, '43s3', 2);
         if (k === 0) {
           const [p, q, K] = r.pick(MT), H = r.pick([20, 30, 40, 50]), z0 = r.pick([10, 20, 30]);
-          if (z0 >= H) return null;
+          if (z0 >= H || !fresh43(r, p, q, H)) return null;
           const V = fr(K * (H - z0) ** 2, 2);
           return ok({ q: `山 $h=${hT(H, p, q)}$ の、高さ $${z0}$ より上の部分の体積`, a: `$${piTeX(V)}$`, key: `43u:${p},${q},${H},${z0}`,
             easy: `$\\int_{${z0}}^{${H}}${K}\\pi(${H}-z)\\,\\dd z$（$z$ は ${z0} から）`, verify: pp => valIs(pp, mtVol(H, +p, +q, z0), 1e-7) });
@@ -1434,9 +1504,9 @@
         if (BAN44.has(L.join(',')) || (k === 1 && S % L.length)) return null;
         const table = { rows: Array.from({ length: rows }, (_, i) => L.slice(3 * i, 3 * i + 3).map(String)) };
         const num = () => table.rows.flat().map(Number);
-        if (k === 0) return ok({ q: `表は、1 km 四方のマスが、たて ${rows} つ・横3つならぶ流域に降った雨の量（mm）。流域に降った雨の体積`, a: `$${sci(S * 1000)}\\,\\mathrm{m^3}$`, key: `44:${L.slice().sort((a, b) => a - b)}|1000`, table,
+        if (k === 0) return ok({ q: `表は、1 km 四方のマスが、たて${rows}つ・横3つならぶ流域に降った雨の量（mm）。流域に降った雨の体積`, a: `$${sci(S * 1000)}\\,\\mathrm{m^3}$`, key: `44:${L.slice().sort((a, b) => a - b)}|1000`, table,
           easy: `行ごとに ${table.rows.map(rw => rw.reduce((s, v) => s + +v, 0)).join('、')}、合計 $${S}\\,\\mathrm{mm}$。$\\times1000$`, verify: p => valIs(p, num().reduce((s, v) => s + v * 1000, 0), 1e-9) });
-        return ok({ q: `表は、1 km 四方のマスが、たて ${rows} つ・横3つならぶ流域に降った雨の量（mm）。流域の平均の雨の量`, a: `$${S / L.length}\\,\\mathrm{mm}$`, key: `44a:${L.slice().sort((a, b) => a - b)}`, table,
+        return ok({ q: `表は、1 km 四方のマスが、たて${rows}つ・横3つならぶ流域に降った雨の量（mm）。流域の平均の雨の量`, a: `$${S / L.length}\\,\\mathrm{mm}$`, key: `44a:${L.slice().sort((a, b) => a - b)}`, table,
           easy: `合計 $${S}\\,\\mathrm{mm}$ を ${L.length} でわる`, verify: p => valIs(p, num().reduce((s, v) => s + v, 0) / L.length, 1e-9) });
       },
       // わな：雨の量が1次式（8-35）

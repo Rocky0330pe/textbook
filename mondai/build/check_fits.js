@@ -116,6 +116,7 @@ for (const no of allParts) {
       if (vol >= 4 && usedTrap.has(id) && k < 150) continue;   // 第4巻から：わなは1わざ1問（修B の要望）
       usedTrap.add(id);
       const got = M.makeStep(id, 'trap', 1, r, seen);
+      if (got.length && vol >= 8 && !fresh(got[0]) && k < 150) continue;   // 第8巻から：数で選ぶわなも、見開きと同じ問題をよける（第8巻 修B の要望）
       if (got.length) { pool.push(got[0]); t++; }
     }
     console.log('\n 本の 見わけようの 答え');

@@ -242,15 +242,16 @@
           easy: `${hv ? `横（$y=${y0}$）` : `たて（$x=${x0}$）`}$${seg(0)}$、${hv ? `たて（$x=${x0 + p}$）` : `横（$y=${y0 + q}$）`}$${seg(1)}$`, easyCheck: false }, F, path);
       },
       // 見かけがちがう：方眼の図の階段の道（左や下へもどる区間もある）
+      //   道は軸の線と重ならないように、はじめの点 P を原点からずらし、どの点も $x\geqq1$、$y\geqq1$ に置く（太い矢印が軸に埋もれないように。R2-22・Z-9）
       s3(r) {
         for (let k = 0; k < 60; k++) {
-          const n = r.pick([3, 4]), path = [[0, 0]];
+          const n = r.pick([3, 4]), path = [[r.pick([1, 1, 2]), r.pick([1, 1, 2])]];
           let horiz = r.chance(0.5);
           for (let i = 0; i < n; i++) {
             const [x, y] = path[path.length - 1];
-            const step = horiz ? r.pick([1, 2, 1, -1]) : r.pick([1, 2, 1]);
+            const step = horiz ? r.pick([1, 2, 1, -1]) : r.pick([1, 2, 1, -1]);
             const nx = horiz ? x + step : x, ny = horiz ? y : y + step;
-            if (nx < 0 || nx > 4 || ny < 0 || ny > 3) break;
+            if (nx < 1 || nx > 4 || ny < 1 || ny > 3) break;
             path.push([nx, ny]); horiz = !horiz;
           }
           if (path.length < 4) continue;
@@ -263,8 +264,8 @@
           const G = M.graph({ x0: 0, x1: 4, y0: 0, y1: 3, w: 4, h: 3 });
           const its = [['grid', 0, 0, 4, 3], ...G.axes({ xt: [1, 2, 3, 4], yt: [1, 2, 3] })];
           for (let i = 1; i < path.length; i++) its.push(['seg', G.T(...path[i - 1]), G.T(...path[i]), { arrow: true, thick: true }]);
-          its.push(['dot', G.T(...path[path.length - 1])], ['label', G.T(...path[path.length - 1]), 'Q', 'ne']);
-          return lineP('8-45', { q: `図の折れ線の道（原点 O から Q へ、矢印の向きに進む）で、$\\vec F=${vecT(F)}$ の線積分`, a: `$${ans}$`, key: `45c:${chain(path)}:${a},${b},${c0}`,
+          its.push(['dot', G.T(...path[0])], ['label', G.T(...path[0]), 'P', 'sw'], ['dot', G.T(...path[path.length - 1])], ['label', G.T(...path[path.length - 1]), 'Q', 'ne']);
+          return lineP('8-45', { q: `図の折れ線の道（P から Q へ、矢印の向きに進む）で、$\\vec F=${vecT(F)}$ の線積分`, a: `$${ans}$`, key: `45c:${chain(path)}:${a},${b},${c0}`,
             fig: { s: 6, items: its }, easy: `区間ごとに：${path.slice(1).map((p, i) => fracT(lineInt(F, path.slice(i, i + 2)))).map(x => `$${x}$`).join('、')}`, easyCheck: false }, F, path);
         }
         return null;
@@ -356,12 +357,14 @@
           verify: p => vNear(p, curveInt(Ff, c, n, X, rev, sw)) }, calc);
       },
       // わな：円を1周する道 → 8-47
+      //   見わけようのわなが見開きのわなと同じ問題になりにくいように、半径と「1周・上半分」の組をふやす（Z-4）
       trap(r) {
-        const a = r.pick([1, 2, 3]), R = r.pick([1, 2, 4]);
-        const F = [[[-a, 0, 1]], [[a, 1, 0]]], Ff = Ffun(F);
-        return dest(withCalc('8-46', { q: `$\\vec F=${vecT(F)}$、原点が中心で半径 $${R}$ の円を、点 $${pt(R, 0)}$ から左回りに1周する道の線積分`, a: `$${piT(2 * a * R * R)}$`, key: `46t:${a},${R}`,
-          verify: p => vNear(p, gln(t => { const f = Ff(R * Math.cos(t), R * Math.sin(t)); return -f[0] * R * Math.sin(t) + f[1] * R * Math.cos(t); }, 0, 2 * Math.PI, 8)) },
-        { kind: 'line', r: [`${R}*cos(t)`, `${R}*sin(t)`], t: [0, '2*pi'], F: Fc(F) }), '8-46', '円の道は角 $\\theta$ を道の数にする（まっすぐでも $y=g(x)$ でもない）');
+        const a = r.pick([1, 2, 3]), R = r.pick([1, 2, 4, 5]), half = r.chance(0.4);
+        const F = [[[-a, 0, 1]], [[a, 1, 0]]], Ff = Ffun(F), th1 = half ? Math.PI : 2 * Math.PI;
+        const how = half ? `点 $${pt(R, 0)}$ から点 $${pt(-R, 0)}$ まで左回りに半周する道` : `点 $${pt(R, 0)}$ から左回りに1周する道`;
+        return dest(withCalc('8-46', { q: `$\\vec F=${vecT(F)}$、原点が中心で半径 $${R}$ の円を、${how}の線積分`, a: `$${piT((half ? 1 : 2) * a * R * R)}$`, key: `46t:${a},${R},${half}`,
+          verify: p => vNear(p, gln(t => { const f = Ff(R * Math.cos(t), R * Math.sin(t)); return -f[0] * R * Math.sin(t) + f[1] * R * Math.cos(t); }, 0, th1, 8)) },
+        { kind: 'line', r: [`${R}*cos(t)`, `${R}*sin(t)`], t: [0, half ? 'pi' : '2*pi'], F: Fc(F) }), '8-46', '円の道は角 $\\theta$ を道の数にする（まっすぐでも $y=g(x)$ でもない）');
       },
     },
   });
@@ -518,7 +521,7 @@
       const m = r.pick([2, 4, 5, 8, 10, 20, 25, 50]), mu = r.pick([0.1, 0.2, 0.25, 0.3, 0.4, 0.5]);
       if (EX49.includes(m + ',' + mu)) continue;
       const f = dec(mu * m * G98);
-      if (!fewDec(f, 1)) continue;
+      if (!fewDec(f, 1) || f === 9.8) continue;   // 摩擦力が左ページの例と同じ 9.8 N の組（4 kg・0.25 など）もよける（R2 好み・Z-2）
       return { m, mu, f };
     }
     return null;
@@ -608,7 +611,7 @@
     futsu: ['道を1つ決めて $\\vec r(t)$ で表し、', '力と1歩の内積を作って', '定積分する'],
     raku: ['40 kg の人が 25 m 登る：重力の仕事', '$-40\\times9.8\\times25=-9800$ J', '$\\vec F_1$ で $(2,\\ 1)\\to(1,\\ 4)$：$U$ は $-2$ から $-4$、$-2-(-4)=2$'],
     why: '$\\vec F=-\\mathrm{grad}\\,U$ と書ける力（保存力）では、1歩の仕事 $\\vec F\\cdot\\dd\\vec r$ が $-\\dd U$（$U$ のへった分）になる。たすと、はじめとおわりの $U$ の差だけが残り、途中の道によらない（8-7⑨）。重力は $U=mgz$（$z$ は高さ）で、仕事は $mg\\times$（下がった高さ）。もとの点にもどれば $U$ の差は0。',
-    caution: '引くのは「はじめ−おわり」（おわり−はじめではない）。登るときの重力の仕事は負、人がする仕事は正。$U$ が使えるのは保存力だけで、$\\vec F_2=(-y,\\ x)$ や摩擦力には使えない（道ごとに計算する）。',
+    caution: '引くのは $U(\\text{はじめ})-U(\\text{おわり})$（$U(\\text{おわり})-U(\\text{はじめ})$ ではない）。登るときの重力の仕事は負、人がする仕事は正。$U$ が使えるのは保存力だけで、$\\vec F_2=(-y,\\ x)$ や摩擦力には使えない（道ごとに計算する）。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '20mm', s2: '16mm', s3: '20mm', trap: '16mm' },
@@ -884,7 +887,7 @@
         const w = r.pick([1, 2, 3]), H = r.pick([1, 2]), a = r.pick([0.5, 1, 1.5]), b = r.pick([0.2, 0.4, 0.5, 1]);
         const Q = dec((a + b * H / 2) * w * H);
         if (EX55.includes([w, H, a, b].join(','))) return null;
-        return dest({ q: `${winT(w, H)}を直角に通りぬける風の量（1秒間）。下の辺から高さ $z$〔m〕の所の速さは $v=${sum([fmt(a), cf(b, 'z')])}$〔m/s〕`,
+        return dest({ q: `下の辺から高さ $z$〔m〕の所の速さが $v=${sum([fmt(a), cf(b, 'z')])}$〔m/s〕のとき、${winT(w, H)}を直角に通りぬける風の量（1秒間）`,
           a: `$${U(fmt(Q), 'm^3/s')}$`, key: `53t:${w},${H},${a},${b}`, verify: p => vNear(p, gl(z => (a + b * z) * w, 0, H), 1e-9) }, '8-53', '風が場所（高さ）で変わるので、一様な流れではない。ふつうの定積分に直す');
       },
     },
@@ -893,9 +896,14 @@
   // ================================================================ 8-54
   // 座標軸と p・q・r で交わる平面 x/p + y/q + z/r = 1 の三角形。A n = (qr, rp, pq)/2
   const lcm = (a, b) => a / gcd(a, b) * b;
-  function planeT(p, q, r) {
+  // 平面の式の係数（いちばん小さい整数の組）[a, b, c, d]（ax+by+cz=d）
+  function planeC(p, q, r) {
     const L = lcm(lcm(p, q), r), c = [L / p, L / q, L / r], g = gcd(gcd(gcd(c[0], c[1]), c[2]), L);
-    return `${sum([cf(c[0] / g, 'x'), cf(c[1] / g, 'y'), cf(c[2] / g, 'z')])}=${L / g}`;
+    return [c[0] / g, c[1] / g, c[2] / g, L / g];
+  }
+  function planeT(p, q, r) {
+    const [a, b, c, d] = planeC(p, q, r);
+    return `${sum([cf(a, 'x'), cf(b, 'y'), cf(c, 'z')])}=${d}`;
   }
   const cross = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
   const dot = (u, v) => u.reduce((s, x, i) => s + x * v[i], 0);
@@ -911,6 +919,15 @@
       return v;
     }
     return null;
+  }
+  // 8-54 の見開きでは、同じ三角形（3つの切片の入れかえもふくめて）を2回使わない（答えが入れかえになる問題・s1 の答えをそのまま使う問題をよける。Z-2）
+  //   使った三角形は、問題ができたときだけ覚える（8-54 の登録のあとで、ステップの関数をつつむ）
+  const key54 = v => v.slice().sort((a, b) => a - b).join(',');
+  function pqr54u(r, ok) {
+    const v = pqr54(r); if (!v || (ok && !ok(v))) return null;
+    const u = r.used54 || (r.used54 = new Set());
+    if (u.has(key54(v)) && u.size < 12) return null;
+    r.last54 = v; return v;
   }
   function sqrtT(N) {   // √N を外に出せる数を出した形に
     let out = 1, inn = N;
@@ -941,16 +958,20 @@
     steps: {
       // 面積ベクトル
       s1(r) {
-        const v = pqr54(r); if (!v) return null;
+        const v = pqr54u(r); if (!v) return null;
         const [p, q, z] = v, A = [q * z / 2, z * p / 2, p * q / 2];
-        if (cap(r, '54s1', A.join(','), 1)) return null;
+        // 答えが平面の式の係数そのものになる組（係数を写すだけで当たる）は、1つのステップに1問まで（R2-8・Z-3）
+        const same = planeC(p, q, z).slice(0, 3).every((c, i) => c === A[i]);
+        const one = (r.caps && r.caps['54s1one'] && r.caps['54s1one'].get(1)) || 0;
+        if ((same && one >= 1) || cap(r, '54s1', A.join(','), 1)) return null;
+        if (same) cap(r, '54s1one', 1, 1);
         return { q: `${triQ(p, q, z)}の面積ベクトル $A\\vec n$（原点から遠ざかる向き）`, a: `$${v3(A)}$`, key: `54:${v}`,
           easy: `頂点 $(${p},\\ 0,\\ 0)$、$(0,\\ ${q},\\ 0)$、$(0,\\ 0,\\ ${z})$。$\\frac12(${-p},\\ ${q},\\ 0)\\times(${-p},\\ 0,\\ ${z})$`, easyCheck: false,
           calc: { kind: 'vec', want: An(p, q, z) } };
       },
       // どこでも同じ流れが通る量・面積
       s2(r) {
-        const v = pqr54(r); if (!v) return null;
+        const v = pqr54u(r); if (!v) return null;
         const [p, q, z] = v, A = An(p, q, z);
         if (turn(r, '54s2', 3) < 2) {
           const F = flow54(r), Q = dot(F, A);
@@ -965,7 +986,7 @@
       },
       // 見かけがちがう：立体の図（3本の軸と三角形）
       s3(r) {
-        const v = pqr54(r); if (!v || Math.max(...v) > 2 * Math.min(...v)) return null;   // 図で三角形がつぶれないように、切片の比は2まで
+        const v = pqr54u(r, w => Math.max(...w) <= 2 * Math.min(...w)); if (!v) return null;   // 図で三角形がつぶれないように、切片の比は2まで
         const [p, q, z] = v, A = An(p, q, z), F = flow54(r), Q = dot(F, A);
         if (Q === 10 || cap(r, '54s3', Q, 1)) return null;
         // x 軸を左下（手前）、y 軸を右、z 軸を上にかく（斜投影。M.proj3 に (y, x, z) を入れて、x の向きを 210°に）
@@ -978,7 +999,7 @@
       },
       // わな：場所で変わる場 (0, 0, cz) が上向きに通る量 → 8-57（面を z = g(x, y) と見る）
       trap(r) {
-        const v = pqr54(r); if (!v) return null;
+        const v = pqr54u(r); if (!v) return null;
         const [p, q, z] = v, c = r.pick([1, 2, 3]), val = c * p * q * z / 6;
         return dest(withCalc('8-54', { q: `場所で変わる流れ $\\vec F=(0,\\ 0,\\ ${cf(c, 'z')})$ が、${triQ(p, q, z)}を上向きに通りぬける量`, a: `$${fracT(val)}$`, key: `54t:${v}:${c}`,
           verify: pp => vNear(pp, gl(x => gl(y => c * z * (1 - x / p - y / q), 0, q * (1 - x / p)), 0, p)) },
@@ -987,6 +1008,11 @@
       },
     },
   });
+  // 8-54 のステップの関数をつつみ、問題ができたときだけ、使った三角形を覚える（pqr54u）
+  for (const s of ['s1', 's2', 's3', 'trap']) {
+    const f = M.waza['8-54'].steps[s];
+    M.waza['8-54'].steps[s] = r => { r.last54 = null; const p = f(r); if (p && r.last54) (r.used54 || (r.used54 = new Set())).add(key54(r.last54)); return p; };
+  }
 
   // ================================================================ 8-55
   // 平らな面で場所によって変わる流れ。例（左ページ）：2 m×2 m、v = 0.5 + 0.3z → 3.2。教科書の窓（2×1.5、0.8+0.4z）・（1.5×2、0.5+0.5z）・（2×1、1+0.5z）もよける
@@ -1015,7 +1041,7 @@
         if (EX55.includes([w, H, a, b].join(','))) return null;
         const Q = dec((a + b * H / 2) * w * H);
         if (!fewDec(Q, 2) || Q === 3.2 || cap(r, '55s1', Q)) return null;
-        return withCalc('8-55', { q: `${winT(w, H)}を直角に通りぬける風の量（1秒間）。下の辺から高さ $z$〔m〕の所の速さは $v=${sum([fmt(a), cf(b, 'z')])}$〔m/s〕`,
+        return withCalc('8-55', { q: `下の辺から高さ $z$〔m〕の所の速さが $v=${sum([fmt(a), cf(b, 'z')])}$〔m/s〕のとき、${winT(w, H)}を直角に通りぬける風の量（1秒間）`,
           a: `$${U(fmt(Q), 'm^3/s')}$`, key: `55:${w},${H},${a},${b}`, easy: `まん中 $z=${fmt(H / 2)}$ の $${fmt(a + b * H / 2)}$ に面積 $${fmt(w * H)}$`, easyCheck: false,
           verify: p => vNear(p, gl(z => (a + b * z) * w, 0, H), 1e-9) }, { kind: 'defint2', f: `${a}+${b}*z`, ranges: [['z', 0, H], ['x', 0, w]] });
       },
@@ -1023,13 +1049,14 @@
       s2(r) {
         const kind = turn(r, '55s2', 3), w = r.pick([1, 2, 3]), H = r.pick([1, 2, 3]);
         let vT, vf, cs;
-        if (kind === 0) { const c = r.pick([0.1, 0.2, 0.3, 0.6]); if (c === 0.2 && w === 2 && H === 2) return null; vT = cf(c, 'z^2'); vf = (x, z) => c * z * z; cs = `${c}*z^2`; }
+        // v = c z^2 は、左ページの例の $0.2z^2$ をよけ、例と同じ窓（はば・高さとも 2 m）もよける（例の何倍かにしない。R2-9・Z-1）
+        if (kind === 0) { const c = r.pick([0.1, 0.3, 0.6]); if (w === 2 && H === 2) return null; vT = cf(c, 'z^2'); vf = (x, z) => c * z * z; cs = `${c}*z^2`; }
         else if (kind === 1) { const a = r.pick([0.5, 1, 2]), b = r.pick([0.2, 0.5, 1]); vT = sum([fmt(a), cf(b, 'x')]); vf = x => a + b * x; cs = `${a}+${b}*x`; }
         else { const a = r.pick([0.5, 1]), b = r.pick([0.2, 0.5]), c = r.pick([0.2, 0.4, 1]); vT = sum([fmt(a), cf(b, 'x'), cf(c, 'z')]); vf = (x, z) => a + b * x + c * z; cs = `${a}+${b}*x+${c}*z`; }
         const Q = gl(x => gl(z => vf(x, z), 0, H), 0, w), ans = numT(Q);
         if (cap(r, '55s2', ans, 1)) return null;
         const where = kind === 0 ? '下の辺から高さ $z$〔m〕の所' : kind === 1 ? '左の辺から $x$〔m〕の所' : '左下の角から右へ $x$〔m〕、上へ $z$〔m〕の所';
-        return withCalc('8-55', { q: `${winT(w, H)}を直角に通りぬける風の量（1秒間）。${where}の速さは $v=${vT}$〔m/s〕`,
+        return withCalc('8-55', { q: `${where}の速さが $v=${vT}$〔m/s〕のとき、${winT(w, H)}を直角に通りぬける風の量（1秒間）`,
           a: `$${U(ans, 'm^3/s')}$`, key: `55b:${kind},${w},${H},${vT}`, easy: `$\\int_0^{${H}}\\!\\Bigl(\\int_0^{${w}}(${vT})\\,\\dd x\\Bigr)\\dd z$`, easyCheck: false,
           verify: p => vNear(p, Q) }, { kind: 'defint2', f: cs, ranges: [['z', 0, H], ['x', 0, w]] });
       },
@@ -1085,19 +1112,24 @@
         if (R === 3 && k === 1) return null;
         if (R === 2 && k === 1) return null;
         const c = 4 * k * R ** 3, ans = piT(c);
-        if (cap(r, '56s1', ans, 1)) return null;
+        if (cap(r, '56s1', ans, 1) || cap(r, '56all', ans, 1)) return null;
         return { q: `$\\vec F=${k === 1 ? '' : fmt(k)}(x,\\ y,\\ z)$ が、${sph(R)}を外へ通りぬける量`, a: `$${ans}$`, key: `56:${k},${R}`,
           easy: `$\\vec F\\cdot\\vec n=${fmt(k * R)}$、$${fmt(k * R)}\\times4\\pi\\times${R * R}$`, easyCheck: false,
           verify: p => vNear(p, sphFlux((x, y, z) => [k * x, k * y, k * z], R, 0, Math.PI)) };
       },
-      // (x, y, z)/r^3（半径によらない）・(x, y, z)/r・中心から外向きで大きさ一定
+      // (x, y, z)/r^3 と (x, y, z) の和（半径によらない項と、よる項）・(x, y, z)/r・中心から外向きで大きさ一定
+      //   $\dfrac{k(x,\ y,\ z)}{r^3}$ だけの場は、答えがいつも左ページの例の $k$ 倍になるので、$c(x,\ y,\ z)$ をたした形にする（R2 好み・Z-2）
       s2(r) {
         const kind = turn(r, '56s2', 3), k = r.pick([1, 2, 3, 5]), R = r.pick([1, 2, 3, 4, 5, 10]);
         let q, c, Ff, e;
         if (kind === 0) {
-          if (k === 1) return null;
-          q = `$\\vec F=\\dfrac{${k}(x,\\ y,\\ z)}{r^3}$${rT3}が、${sph(R)}を外へ通りぬける量`; c = 4 * k; e = `$\\dfrac{${k}}{R^2}\\times4\\pi R^2$`;
-          Ff = (x, y, z) => { const rr = Math.hypot(x, y, z) ** 3; return [k * x / rr, k * y / rr, k * z / rr]; };
+          const m = r.pick([1, 2]), R0 = r.pick([1, 2, 3]), kT = k === 1 ? '' : k, mT = m === 1 ? '' : m;
+          q = `$\\vec F=\\dfrac{${kT}(x,\\ y,\\ z)}{r^3}+${mT}(x,\\ y,\\ z)$${rT3}が、${sph(R0)}を外へ通りぬける量`; c = 4 * (k + m * R0 ** 3);
+          e = `$\\vec F\\cdot\\vec n=\\dfrac{${k}}{${R0 * R0}}+${m * R0}$ で一定、$\\times4\\pi\\times${R0 * R0}$`;
+          Ff = (x, y, z) => { const rr = Math.hypot(x, y, z) ** 3; return [k * x / rr + m * x, k * y / rr + m * y, k * z / rr + m * z]; };
+          const ans0 = piT(c);
+          if (cap(r, '56s2', ans0, 1) || cap(r, '56all', ans0, 1)) return null;
+          return { q, a: `$${ans0}$`, key: `56b:0,${k},${m},${R0}`, easy: e, easyCheck: false, verify: p => vNear(p, sphFlux(Ff, R0, 0, Math.PI)) };
         } else if (kind === 1) {
           q = `$\\vec F=\\dfrac{${k === 1 ? '' : k}(x,\\ y,\\ z)}{r}$${rT3}が、${sph(R)}を外へ通りぬける量`; c = 4 * k * R * R; e = `大きさ $${k}$ で一定、$${k}\\times4\\pi\\times${R * R}$`;
           Ff = (x, y, z) => { const rr = Math.hypot(x, y, z); return [k * x / rr, k * y / rr, k * z / rr]; };
@@ -1106,7 +1138,7 @@
           Ff = (x, y, z) => { const rr = Math.hypot(x, y, z); return [k * x / rr, k * y / rr, k * z / rr]; };
         }
         const ans = piT(c);
-        if (cap(r, '56s2', ans, 1)) return null;
+        if (cap(r, '56s2', ans, 1) || cap(r, '56all', ans, 1)) return null;   // 56all：s1 と同じ答えも出さない
         return { q, a: `$${ans}$`, key: `56b:${kind},${k},${R}`, easy: e, easyCheck: false, verify: p => vNear(p, sphFlux(Ff, R, 0, Math.PI)) };
       },
       // 見かけがちがう：点電荷（ε0 の値を文に）、電球の光
@@ -1131,6 +1163,7 @@
         const R = r.pick([1, 2, 3, 4]), c = r.pick([1, 2, 3]);
         if (R === 2 && c === 1) return null;   // 教科書の例
         const val = 2 * c * R ** 3 / 3;
+        if (cap(r, '56all', piT(val), 1)) return null;   // s1・s2 と同じ答えにしない
         return dest({ q: `$\\vec F=(0,\\ 0,\\ ${cf(c, 'z')})$ が、原点が中心で半径 $${R}$ の上半分の球面を外へ通りぬける量`, a: `$${piT(val)}$`, key: `56t:${R},${c}`,
           verify: p => vNear(p, sphFlux((x, y, z) => [0, 0, c * z], R, 0, Math.PI / 2)) }, '8-56', '$\\vec F\\cdot\\vec n=cR\\cos^2\\theta$ は場所で変わり、面も球面全体でない。球面のタイルで積分する');
       },
@@ -1174,6 +1207,7 @@
       // z = R^2 − x^2 − y^2（z ≥ 0）
       s1(r) {
         const R = r.pick([1, 2, 3]), t = turn(r, '57s1', 4), k = t === 1 ? r.pick([1, 2, 3, 5]) : r.pick([1, 2, 3]);
+        if (t === 0 && R === 2) return null;   // 左ページの例（$z=4-x^2-y^2$、$(x,\ y,\ 0)$）の何倍か（R2-10・Z-2）
         const [FT, FC, Ff] = F57[t](k), g = `${R * R}-r^2`;
         const val = graphFlux(Ff, (x, y) => R * R - x * x - y * y, x => -2 * x, (x, y) => -2 * y, R), ans = piT(val / Math.PI);
         if (EX57.includes(ans) || cap(r, '57s1', ans, 1)) return null;
@@ -1185,6 +1219,7 @@
       s2(r) {
         if (turn(r, '57s2', 2) === 0) {
           const R = r.pick([1, 2, 3]), t = r.int(0, 3), k = r.pick([1, 2, 3]), [FT, FC, Ff] = F57[t](k);
+          if (t === 0 && R === 2) return null;   // 影が例と同じ $r\leqq2$ で $(ax,\ ay,\ 0)$ は、例の何倍か（$-3$ 倍など。R2-10・Z-2）
           const val = graphFlux(Ff, (x, y) => x * x + y * y, x => 2 * x, (x, y) => 2 * y, R), ans = piT(val / Math.PI);
           if (EX57.includes(ans) || cap(r, '57s2', ans, 1)) return null;
           return withCalc('8-57', { q: `面 $z=x^2+y^2$（$z\\leqq${R * R}$ の部分）を、$\\vec F=${FT}$ が上向きに通りぬける量`, a: `$${ans}$`, key: `57b:${R},${t},${k}`,
@@ -1333,8 +1368,10 @@
       ['seg', V(0, 0, a), V(0, 0, 1.45 * a), { arrow: true }], ['label', V(0, 0, 1.45 * a), '$z$', 'w'], ['label', V(0, 0, 0), 'O', 's']);
     const ar = (C, d, L, lab, dir) => { const A = V(...C), B = V(C[0] + d[0] * L * a, C[1] + d[1] * L * a, C[2] + d[2] * L * a); its.push(['dot', A], ['seg', A, B, { arrow: true }], ['label', B, lab, dir]); };
     ar([0, a / 2, 0.75 * a], [-1, 0, 0], 0.55, '$x=0$', 'w');
-    ar([a / 2, a / 2, a], [0, 0, 1], 0.45, `$z=${a}$`, 'e');
-    ar([0.15 * a, 0, 0.62 * a], [0, -1, 0], 0.45, '$y=0$', 's');   // 手前へ出る矢印（前の面のまん中より左上。点線の辺とはなす）
+    // 上の面の矢印は右寄りから出し、ラベルを $z$ 軸の名前からはなす。前の面の矢印は、点線の辺がない右上から手前（右下）へ出し、
+    //   ラベルを箱の右の外に置く（前の面の左の辺・点線と重ねない。R2 好み・Z-9）
+    ar([0.8 * a, a / 2, a], [0, 0, 1], 0.45, `$z=${a}$`, 'e');
+    ar([0.82 * a, 0, 0.72 * a], [0, -1, 0], 0.7, '$y=0$', 'e');
     return { s: 5, items: its };
   }
   add({
@@ -1413,12 +1450,19 @@
     steps: {
       // α = 60°・120°・180°（90° は例）。立体角・全体の何倍・穴から出る光
       s1(r) {
-        const al = r.pick([60, 90, 120, 180]), kind = turn(r, '93s1', 3), P = r.pick([2, 4, 8, 12, 20]);
+        // 半分の角 180° は円すいにならない（まわり全体）ので出さない。60° の 2 W は教科書 8-8 例題12 そのものなのでよける（R2 好み「8-93 の書き方」・Z-10）
+        //   立体角・何倍かの問いは、同じ角を2回使わない（同じ数の組で、答えが $4\pi$ でわっただけになる。Z-2）。使いきったら光の問いにする
+        const used = r.s93 || (r.s93 = new Set()), al = r.pick([60, 90, 120]), P = r.pick([2, 4, 8, 12, 20]);
+        let kind = turn(r, '93s1', 3);
+        if (kind < 2 && used.size >= 2) kind = 2;
         if (al === 90 && kind < 2) return null;
+        if (kind < 2 && used.has(al)) return null;
+        if (al === 60 && kind === 2 && P === 2) return null;
         const fr = (1 - COSA[al][0]) / 2, Om = 2 * (1 - COSA[al][0]);
         const ans = kind === 0 ? `$${U(piT(Om), 'sr')}$` : kind === 1 ? `$${fracT(fr)}$` : `$${U(fmt(dec(P * fr)), 'W')}$`;
         if (kind === 2 && al === 180) return null;
         if (cap(r, '93s1', ans, 1)) return null;
+        if (kind < 2) used.add(al);
         const q = kind === 0 ? `半分の角が $${deg(al)}$ の円すいの立体角` : kind === 1 ? `半分の角が $${deg(al)}$ の円すいの立体角は、まわり全体の何倍か`
           : `どの向きにも同じ強さで、全部で $${U(P, 'W')}$ の光を出す小さな電球を、半分の角が $${deg(al)}$ の円すいの形の穴の頂点に置いた。穴から出ていく光`;
         return { q, a: ans, key: `93:${al},${kind},${kind === 2 ? P : ''}`, easy: `$2\\pi(1-\\cos${deg(al)})=2\\pi${COSA[al][0] < 0 ? `\\Bigl(1-\\bigl(${COSA[al][1]}\\bigr)\\Bigr)` : `\\Bigl(1-${COSA[al][1]}\\Bigr)`}$${kind ? `、$4\\pi$ の $${fracT(fr)}$` : ''}`, easyCheck: false,
@@ -1438,7 +1482,8 @@
         const [h, a, c] = r.pick([[3, 4, 5], [4, 3, 5], [5, 12, 13], [12, 5, 13], [8, 6, 10], [6, 8, 10]]);
         const Om = 2 * (1 - h / c), ans = piT(Om);
         if (cap(r, '93s3', ans, 1)) return null;
-        return { q: `半径 $${a}$ の円板を、円板のまん中から真上に $${h}$ はなれた点から見た立体角`, a: `$${U(ans, 'sr')}$`, key: `93c:${h},${a}`,
+        // 長さは単位をつけて式に書く（地の文の「半径 6」「8 はなれた」にしない。R2 好み・Z-8・Z-10）
+        return { q: `半径 $${U(a, 'cm')}$ の円板を、円板のまん中から真上に $${U(h, 'cm')}$ はなれた点から見た立体角`, a: `$${U(ans, 'sr')}$`, key: `93c:${h},${a}`,
           easy: `ふちまでの距離 $${c}$、$\\cos\\alpha=\\dfrac{${h}}{${c}}$、$2\\pi\\Bigl(1-\\dfrac{${h}}{${c}}\\Bigr)$`, easyCheck: false,
           verify: p => vNear(p, 2 * Math.PI * gl(t => Math.sin(t), 0, Math.atan2(a, h)), 1e-9) };
       },
