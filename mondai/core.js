@@ -418,7 +418,7 @@
   })();
   function evalWith(N, src, vars, opt) {
     vars = vars || {}; opt = opt || {};
-    const s = String(src).replace(/\\left|\\right|\\Biggl|\\Biggr|\\Bigl|\\Bigr|\\bigl|\\bigr|\\,|\;|\\!|\\quad|\\displaystyle|\\textstyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
+    const s = String(src).replace(/\\left|\\right|\\Biggl|\\Biggr|\\Bigl|\\Bigr|\\bigl|\\bigr|\\,|\;|\\!|\\quad|\\displaystyle|\\textstyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\\{/g, '(').replace(/\\\}/g, ')').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
       .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/')
       // 帯分数（数字のすぐあとの \frac{数}{数}）は、たし算として読む：2\frac{1}{3} → (2+\frac{1}{3})。指数・下つきの中の数は除く
       .replace(/(^|[^0-9.^_{])(\d+)\s*\\frac\{(\d+)\}\{(\d+)\}/g, '$1($2+\\frac{$3}{$4})');
