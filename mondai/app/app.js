@@ -7,7 +7,8 @@
   const M = globalThis.MONDAI;
   const $ = s => document.querySelector(s);
   // 第5巻からは、近似の記号を教科書 5-8 と同じ ≈ にする（第3巻までは ≒）
-  const H = (s, o) => { const h = M.toHTML(s, o), v = document.querySelector('#vol'); return v && +v.value >= 5 ? h.replace(/≒/g, '≈') : h; };
+  // 巻の番号を式の組み方に渡す（第8巻からの組み方を、第7巻までに出さない。第42回）
+  const H = (s, o) => { const v = document.querySelector('#vol'), h = M.toHTML(s, Object.assign({ vol: v ? +v.value : 0 }, o)); return v && +v.value >= 5 ? h.replace(/≒/g, '≈') : h; };
   const STEP_LABEL = { s1: 'ステップ1', s2: 'ステップ2', s3: 'ステップ3', trap: 'わな' };
 
   function state() {
@@ -175,7 +176,7 @@
       }
       const how = ans && p.easy ? `<span class="how">${H(st.vol > 1 ? '《解|と》き《方|かた》' : 'とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
       const fig = p.fig ? `<div class="qfig">${M.figSVG(p.fig)}</div>` : '';   // 図（第4巻から。第35回）
-      const below = (p.table ? `<div class="qbelow">${M.tableHTML(p.table, { noRuby: !st.ruby, box: '<span class="box sm"></span>' })}</div>` : '') + (p.code ? `<div class="qbelow">${M.codeHTML(p.code)}</div>` : '');   // 表・プログラム（第6巻から）
+      const below = (p.table ? `<div class="qbelow">${M.tableHTML(p.table, { vol: st.vol, noRuby: !st.ruby, box: '<span class="box sm"></span>' })}</div>` : '') + (p.code ? `<div class="qbelow">${M.codeHTML(p.code)}</div>` : '');   // 表・プログラム（第6巻から）
       return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}${p.fig ? ' hasfig' : ''}${below ? ' hasbelow' : ''}"><span class="q">${body}${below}</span>${fig}${extra}${how}</li>`;
     };
     const ruleBox = () => {
