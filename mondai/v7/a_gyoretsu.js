@@ -18,6 +18,15 @@
   const close = (x, y) => x != null && y != null && isFinite(x) && isFinite(y) && Math.abs(x - y) <= 1e-9 * Math.max(1, Math.abs(x), Math.abs(y));
   // 同じステップの中で、問題の形を順番に回す（第5巻 組 d と同じ）。はじめの形は乱数、あとは1ずつ
   const turn = (r, key, n) => { const d = r.turns || (r.turns = {}); d[key] = d[key] == null ? r.int(0, n - 1) : (d[key] + 1) % n; return d[key]; };
+  // turn と同じく形を順に回すが、問題ができたときだけ次の形へ進む（よける条件の多い形が、とばされないように）。
+  //   同じ形で30回つづけてできないときは、次の形へ進む（止まるように）
+  const sticky = (r, key, n, f) => {
+    const d = r.turns || (r.turns = {}), m = key + '#miss';
+    if (d[key] == null) d[key] = r.int(0, n - 1);
+    const p = f(d[key]);
+    if (p || (d[m] = (d[m] || 0) + 1) >= 30) { d[key] = (d[key] + 1) % n; d[m] = 0; }
+    return p;
+  };
   const nz = (r, lo, hi) => r.intNot(lo, hi, v => v === 0);
   // 数の TeX（整数はそのまま、小数はきりのよい形）
   const num = v => (Number.isInteger(v) ? String(v) : String(+(+v).toFixed(6)));
@@ -120,7 +129,7 @@
         const L = r.pick(LET), l = L.toLowerCase(), i = r.int(1, n), j = r.int(1, m);
         if (n === 2 && m === 2 && i === j && r.chance(0.6)) return null;   // 2×2 は ななめでない成分を多めに
         return {
-          q: `$${L}=${pm(A)}$ の $${l}_{${i}${j}}$`, a: `$${A[i - 1][j - 1]}$`, key: kM(A) + `|${i}${j}`,
+          q: `$${L}=${pm(A)}$ の $${l}_{${i}${j}}$`, a: `$${A[i - 1][j - 1]}$`, key: `v${A[i - 1][j - 1]}`,   // 同じ答え（数）を2回出さない（U-3・R1-20）
           easy: `${i}行め $${vecH(A[i - 1])}$ の${j}つめ`, easyCheck: false,
           verify: p => { const B = matsOf(p.q)[0], [a, b] = elemQ(p.q); return close(numsOf(p.a)[0], B[a - 1][b - 1]) || `${a}行め${b}列めは ${B[a - 1][b - 1]}`; },
         };
@@ -132,13 +141,13 @@
         if (turn(r, '01s2', 2)) {
           const v = A[i - 1][j - 1];
           return {
-            q: `$${L}=${pm(A)}$ の成分 $${v}$ は何行め何列めにあるか。記号でも □`, a: `${i}行め${j}列め。$${l}_{${i}${j}}=${v}$`, key: kM(A) + `|${i}${j}`, boxw: '34mm',
+            q: `$${L}=${pm(A)}$ の成分 $${v}$ は何行め何列めにあるか。記号でも □`, a: `${i}行め${j}列め。$${l}_{${i}${j}}=${v}$`, key: `v${v}`, boxw: '34mm',
             easy: `$${v}$ は上から${i}段めの、左から${j}つめ`, easyCheck: false,
             verify: p => { const B = matsOf(p.q)[0], v2 = M.evalMath(maths(p.q)[1].replace(/^.*=/, ''), {}), m2 = /(\d)行め(\d)列め/.exec(p.a); return (m2 && close(B[+m2[1] - 1][+m2[2] - 1], v2) && p.a.includes(`_{${m2[1]}${m2[2]}}`)) || '場所がちがう'; },
           };
         }
         return {
-          q: `$${L}=${pm(A)}$ の $${l}_{${i}${j}}$`, a: `$${A[i - 1][j - 1]}$`, key: kM(A) + `|${i}${j}`,
+          q: `$${L}=${pm(A)}$ の $${l}_{${i}${j}}$`, a: `$${A[i - 1][j - 1]}$`, key: `v${A[i - 1][j - 1]}`,   // 同じ答え（数）を2回出さない（U-3・R1-20）
           easy: `${i}行め $${vecH(A[i - 1])}$ の${j}つめ`, easyCheck: false,
           verify: p => { const B = matsOf(p.q)[0], [a, b] = elemQ(p.q); return close(numsOf(p.a)[0], B[a - 1][b - 1]) || `${a}行め${b}列めは ${B[a - 1][b - 1]}`; },
         };
@@ -192,6 +201,8 @@
   // ================================================================ 7-02
   // 左ページの例：3×2 の (6 -2; 1 8; 0 9)、成分6個、九九の表 9×9（O-2。大きさ 3×2・成分6個・9×9 は出さない）
   const SIZE = (n, m) => `${n}×${m} 行列`;
+  // 見開きに出た大きさ（"3×4"）。r に持たせる（見開き1つぶんは同じ r）
+  const used02 = r => { const d = r.turns || (r.turns = {}); return d.u02 || (d.u02 = new Set()); };
   M.add({
     id: '7-02', part: 1, chap: '7-1①', stars: 1,
     title: '大きさは「行の数×列の数」（行が先）。成分の数はそのかけ算、行と列が同じなら正方行列',
@@ -212,46 +223,56 @@
       s1(r) {
         const [n, m] = r.pick([[2, 3], [2, 4], [4, 2], [3, 3], [1, 3], [3, 1], [2, 2], [4, 3], [3, 4], [1, 4]]);
         const A = rmat(r, n, m, -9, 9);
+        // key は答え（成分の数・大きさ）。同じ答えを2回出さない。s1 に出た大きさは s2・s3 でよける（U-2・U-3・R1-19）
+        const u = used02(r);
+        if (u.has(`${n}×${m}`)) return null;
         if (turn(r, '02s1', 2)) {
           if (n * m === 6) return null;
-          return { q: `$${pm(A)}$ の成分は何個か □`, a: `${n * m}個`, key: kM(A), easy: `${n}行${m}列なので $${n}\\times${m}=${n * m}$`, easyCheck: false,
+          u.add(`${n}×${m}`);
+          return { q: `$${pm(A)}$ の成分は何個か □`, a: `${n * m}個`, key: `c${n * m}`, easy: `${n}行${m}列なので $${n}\\times${m}=${n * m}$`, easyCheck: false,
             verify: p => { const B = matsOf(p.q)[0]; return p.a === `${B.length * B[0].length}個` || '成分の数がちがう'; } };
         }
         if (n === 3 && m === 2) return null;
-        return { q: `$${pm(A)}$ は何×何行列か □`, a: SIZE(n, m), key: kM(A), easy: `横の段（行）が${n}つ、たての列が${m}つ`, easyCheck: false,
+        u.add(`${n}×${m}`);
+        return { q: `$${pm(A)}$ は何×何行列か □`, a: SIZE(n, m), key: `s${n}×${m}`, easy: `横の段（行）が${n}つ、たての列が${m}つ`, easyCheck: false,
           verify: p => { const B = matsOf(p.q)[0]; return p.a === SIZE(B.length, B[0].length) || '大きさがちがう'; } };
       },
       // 行列を書かずに：成分の数・大きさ・正方行列はどれ
       s2(r) {
-        const t = turn(r, '02s2', 3), n = r.int(2, 6), m = r.int(2, 7);
+        return sticky(r, '02s2', 3, t => {
+        const n = r.int(2, 6), m = r.int(2, 7);
         if (n === m && t < 2) return null;
+        const u = used02(r);
+        if (t < 2 && u.has(`${n}×${m}`)) return null;   // s1 に出た大きさ（同じ問い。R1-19）
+        if (t < 2) u.add(`${n}×${m}`);
         if (t === 0) {
           if (n * m === 6) return null;
-          return { q: `${n}×${m} 行列の成分の数 □`, a: `${n * m}個`, key: `n${n},${m}`, easy: `$${n}\\times${m}=${n * m}$`, easyCheck: false,
+          return { q: `${n}×${m} 行列の成分の数 □`, a: `${n * m}個`, key: `c${n * m}`, easy: `$${n}\\times${m}=${n * m}$`, easyCheck: false,
             verify: p => { const k = /(\d)×(\d)/.exec(p.q); return p.a === `${+k[1] * +k[2]}個` || '数がちがう'; } };
         }
         if (t === 1) {
           if (n === 3 && m === 2) return null;
-          return { q: `成分が${n * m}個で、行が${n}つある行列は、何×何行列か □`, a: SIZE(n, m), key: `n${n},${m}`, easy: `1つの行に $${n * m}\\div${n}=${m}$ 個ずつ並ぶので、列は${m}つ`, easyCheck: false,
+          return { q: `成分が${n * m}個で、行が${n}つある行列は、何×何行列か □`, a: SIZE(n, m), key: `s${n}×${m}`, easy: `1つの行に $${n * m}\\div${n}=${m}$ 個ずつ並ぶので、列は${m}つ`, easyCheck: false,
             verify: p => { const k = /成分が(\d+)個で、行が(\d)つ/.exec(p.q); return p.a === SIZE(+k[2], +k[1] / +k[2]) || '大きさがちがう'; } };
         }
         const sq = r.int(2, 5), c = r.shuffle([[sq, sq], [sq, sq + 1], [sq + 1, 1]]), lab = ['ア', 'イ', 'ウ'];
         const ans = lab[c.findIndex(([a, b]) => a === b)];
-        return { q: `次のうち、正方行列はどれか □　${c.map(([a, b], k) => `${lab[k]} ${a}×${b} 行列`).join('　')}`, a: ans, key: `sq${c.flat().join(',')}`, boxw: '12mm',
+        return { q: `次のうち、正方行列はどれか □　${c.map(([a, b], k) => `${lab[k]} ${a}×${b} 行列`).join('　')}`, a: ans, key: `sq|${ans}`, boxw: '12mm',   // 同じ答え（記号）を2回出さない（U-3）
           easy: `行の数と列の数が同じなのは ${ans}`, easyCheck: false,
           verify: p => { const hit = [...p.q.matchAll(/([アイウ]) (\d)×(\d)/g)].filter(m => m[2] === m[3]).map(m => m[1]); return (hit.length === 1 && hit[0] === p.a) || '正方行列がちがう'; } };
+        });
       },
       // 表を行列にする（何人×何種類、時間わり、写真の画素）
       s3(r) {
         const t = turn(r, '02s3', 3);
         if (t === 0) {
-          const n = r.int(3, 6), m = r.int(2, 5); if (n === m) return null;
+          const n = r.int(3, 6), m = r.int(2, 5); if (n === m || used02(r).has(`${n}×${m}`)) return null;
           return { q: `${n}人が${m}種類の品物を買った個数を、行が人、列が品物の行列にした。何×何行列で、成分は何個か □`, a: `${SIZE(n, m)}で、成分は${n * m}個`, key: `n${n},${m}`,
             easy: `行は人の数で${n}、列は品物の数で${m}。成分は $${n}\\times${m}=${n * m}$ 個`, easyCheck: false,
             verify: p => { const k = /(\d)人が(\d)種類/.exec(p.q); return p.a === `${SIZE(+k[1], +k[2])}で、成分は${+k[1] * +k[2]}個` || 'ちがう'; } };
         }
         if (t === 1) {
-          const n = r.pick([5, 6]), m = r.int(4, 7); if (n === m) return null;
+          const n = r.pick([5, 6]), m = r.int(4, 7); if (n === m || used02(r).has(`${n}×${m}`)) return null;
           return { q: `月曜日から${n === 5 ? '金' : '土'}曜日までの、${m}時間めまでの時間わりを、行が曜日、列が時間めの行列にした。何×何行列で、成分は何個か □`, a: `${SIZE(n, m)}で、成分は${n * m}個`, key: `n${n},${m}`,
             easy: `行は曜日の数で${n}、列は時間めの数で${m}`, easyCheck: false,
             verify: p => { const k = /(.)曜日までの、(\d)時間め/.exec(p.q), d = k[1] === '金' ? 5 : 6; return p.a === `${SIZE(d, +k[2])}で、成分は${d * +k[2]}個` || 'ちがう'; } };
@@ -387,10 +408,10 @@
     futsu: ['$1.1\\begin{pmatrix}120&100\\\\60&80\\end{pmatrix}$ を、', '$1.1\\times120$ のような', '小数のかけ算を4回して求める。'],
     raku: ['1.1倍は「1割たす」：$120+12=132$ など', '$\\begin{pmatrix}132&110\\\\66&88\\end{pmatrix}$', '$\\begin{pmatrix}6&12\\\\18&24\\end{pmatrix}=6\\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}$', '$\\frac{1}{12}\\begin{pmatrix}4&-2\\\\-2&4\\end{pmatrix}$ は $\\frac{1}{12}$ を外に出したまま'],
     why: '行列の実数倍は、すべての成分に同じ数をかけること（7-1③）。逆に、成分がみな同じ数の倍数なら、その数を外に出して「数×行列」と書ける。外に出したままにすると中の数が小さくなり、逆行列（7-5①）などの計算が楽になる。',
-    caution: 'かけるのは全部の成分（1つの行や列だけではない）。くくり出す数は、どの成分もわりきれる数にする。',
+    caution: 'かけるのは全部の成分（1つの行や列だけではない）。くくり出す数は、どの成分もわりきれる数にする。1つでもわりきれない成分があれば、その数はくくり出せない。',
     counts: { s1: 6, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 2, s2: 1, s3: 1, trap: 1 },
-    boxw: { s1: '22mm', s2: '26mm', s3: '22mm', trap: '30mm' }, boxh: '12mm',
+    boxw: { s1: '22mm', s2: '26mm', s3: '22mm', trap: '22mm' }, boxh: '12mm',
     fits(q) {
       if (/かけられ|たせ|mathsf|対称/.test(q)) return false;
       if (/くくり出/.test(q)) {
@@ -459,15 +480,15 @@
           easy: `どの成分も $${g}$ の何倍かで書ける：$${g}${pm(B)}$`, easyCheck: false,
           verify: p => { const f = facOf(p.a); return (close(f, M.evalMath(maths(p.q)[1], {})) && matsOf(p.a)[0].flat().every(Number.isInteger) && same(ansM(p.a), matsOf(p.q)[0])) || 'くくり出しがちがう'; } };
       },
-      // わな：1つの成分だけが倍数でない（共通の数がない）
+      // わな：前にあるのは数ではなく対角の行列（行ごとにちがう数をかける。7-12）。
+      //   「共通な数はない（くくり出せない）」のわなは、このわざの手順で解けるので、caution にまわした（N-3・O-5・R1-25）
       trap(r) {
-        const g = r.int(2, 9), B = rmat(r, 2, 2, 1, 9), i = r.int(0, 1), j = r.int(0, 1);
-        const A = scaleN(B, g); A[i][j] += r.pick([1, -1]);
-        if (gcdAll(A) !== 1 || bad04(A)) return null;
-        const v = A[i][j];
-        return dest({ q: `$${pm(A)}$ ${KUKURI}`, a: '共通な数はない（くくり出せない）', key: `g|${kM(A)}`,
-          verify: p => gcdAll(matsOf(p.q)[0]) === 1 || '共通な数がある' }, '7-04',
-        `ほかの成分は $${g}$ の倍数だが、$${v}$ だけは $${g}$ でわりきれない。どの成分もわりきれる数（1より大きい）はない`);
+        const d = r.shuffle([2, 3, 4, 5, 10]).slice(0, 2), A = rmat(r, 2, 2, -3, 9);
+        if (isDiag(A) || zero(A) || bad04(A) || A.flat().filter(v => v === 0).length > 1) return null;
+        const C = Mmul(diag(d), A);
+        return dest({ q: `$${pm(diag(d))}${pm(A)}$`, a: `$${pm(C)}$`, key: 'D|' + d + '|' + kM(A), calc: calcM(C),
+          verify: p => { const [U, V] = matsOf(p.q); return okM(ansM(p.a), mul(U, V), '積'); } }, '7-04',
+        `前にあるのは数ではなく対角の行列。全部の成分に同じ数をかけるのではなく、1行めを $${d[0]}$ 倍、2行めを $${d[1]}$ 倍`, ['7-12']);
       },
     },
   });
@@ -497,12 +518,15 @@
     },
     steps: {
       // 大きさだけで：かけられるか、答えの大きさ
+      //   「かけられる」2つに「かけられない」1つの順に回す（「かけられない」が3つ以上にならないように。U-3）。かけられるときは、答えの大きさも重ねない
       s1(r) {
-        const m = r.int(1, 4), n = r.int(2, 4), q = r.int(1, 4), p = r.chance(0.65) ? n : r.intNot(1, 4, v => v === n);
+        return sticky(r, '05s1', 3, t => {
+        const m = r.int(1, 4), n = r.int(2, 4), q = r.int(1, 4), p = t < 2 ? n : r.intNot(1, 4, v => v === n);
         if (EX05.includes([m, n, p, q].join(',')) || p * q === 1) return null;
-        return { q: `${m}×${n} 行列と ${p}×${q} 行列の積（この順）は、かけられるか。かけられるなら、答えの大きさも □`, a: canTxt(m, n, p, q), key: `m${m},${n},${p},${q}`,
+        return { q: `${m}×${n} 行列と ${p}×${q} 行列の積（この順）は、かけられるか。かけられるなら、答えの大きさも □`, a: canTxt(m, n, p, q), key: n === p ? `a${m}×${q}` : `m${m},${n},${p},${q}`,
           easy: n === p ? `内側が ${n} と ${p} で同じ。外側の ${m} と ${q} で ${m}×${q}` : `内側が ${n} と ${p} でちがう`, easyCheck: false,
           verify: p0 => { const [[a, b], [c, d]] = sz(p0.q); return p0.a === canTxt(a, b, c, d) || 'ちがう'; } };
+        });
       },
       // 数の行列の積・和
       s2(r) {
@@ -571,7 +595,7 @@
     caution: '負の数どうしの積は正（$(-2)\\times(-1)=2$）。答えのベクトルの成分の数は、行列の行の数と同じ。',
     counts: { s1: 6, s2: 2, s3: 3, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 1, trap: 1 },
-    boxw: { s1: '12mm', s2: '12mm', s3: '14mm', trap: '24mm' }, boxh: { s1: '12mm', s2: '16mm', s3: '12mm', trap: '8mm' },
+    boxw: { s1: '12mm', s2: '12mm', s3: '14mm', trap: '24mm' }, boxh: { s1: '12mm', s2: '16mm', s3: '12mm', trap: '12mm' },   // わなの「かけられない」の欄も行列の欄と同じ高さ（欄の形で答えが分からないように。U-10・R1-39）
     fits(q) {
       if (/かけられ|大きさ/.test(q)) return false;
       if (prods(q).some(([A, B]) => B[0].length === 1 && B.length >= 2 && A.length >= 2 && canMul(A, B))) return true;
@@ -626,6 +650,16 @@
   const badPrice = (p, q) => (p === 120 && q === 60) || (p === 100 && q === 80);
   const NUT = [[156, 2.5], [142, 12.2]];   // 100 g あたりの栄養（ごはん・卵。教科書 7-1 の物理・工学）
   const numsIn = (s, re) => [...String(s).matchAll(re)].map(m => +m[1]);
+  // 見開きに出た合計（円）。左ページの例の答え（420・300・900・440・280）も入れておく。同じ合計を2回出さない（U-3・R1-26）
+  //   見開き1つぶんは同じ r。アプリで出しつくしたときは、50回つづけてよけたら重ねてよい（止まるように）
+  function fresh07(r, C) {
+    const d = r.turns || (r.turns = {}), u = d.u07 || (d.u07 = new Set([420, 300, 900, 440, 280]));
+    const vs = C.flat();
+    if ((new Set(vs).size < vs.length || vs.some(v => u.has(v))) && (d.m07 = (d.m07 || 0) + 1) < 50) return false;
+    d.m07 = 0;
+    vs.forEach(v => u.add(v));
+    return true;
+  }
   M.add({
     id: '7-07', part: 1, chap: '7-1④⑥ 例題4', stars: 1,
     title: '合計は「個数の行列（行が人、列が品物）×値段のたてのベクトル」。店が2つなら値段を2列にして1回で',
@@ -647,6 +681,7 @@
         const N = [[r.int(1, 6), r.int(1, 6)], [r.int(1, 6), r.int(1, 6)]], p = 10 * r.int(10, 15), q = 10 * r.int(4, 9);
         if (badPrice(p, q)) return null;
         const C = Mmul(N, col([p, q]));
+        if (!fresh07(r, C)) return null;
         return {
           q: `ソラさんはりんご${N[0][0]}個とみかん${N[0][1]}個、ミナさんはりんご${N[1][0]}個とみかん${N[1][1]}個を買う。りんご1個${p}円、みかん1個${q}円のとき、2人の合計（円）を行列×ベクトルで □`,
           a: `$${pm(C)}$`, key: `${kM(N)}|${p},${q}`, calc: calcM(C),
@@ -656,10 +691,12 @@
       },
       // 3人・2つの品物、2人・3つの品物
       s2(r) {
-        if (turn(r, '07s2', 2)) {
+        return sticky(r, '07s2', 2, t => {
+        if (t) {
           const N = [0, 1, 2].map(() => [r.int(0, 6), r.int(0, 6)]), p = 10 * r.int(10, 15), q = 10 * r.int(4, 9);
           if (badPrice(p, q) || N.some(row => row[0] + row[1] === 0)) return null;
           const C = Mmul(N, col([p, q]));
+          if (!fresh07(r, C)) return null;
           return {
             q: `3人が、りんごとみかんを、1人めから順に（${N[0][0]}個、${N[0][1]}個）、（${N[1][0]}個、${N[1][1]}個）、（${N[2][0]}個、${N[2][1]}個）買う。りんご1個${p}円、みかん1個${q}円のとき、3人の合計（円）を行列×ベクトルで □`,
             a: `$${pm(C)}$`, key: `${kM(N)}|${p},${q}`, calc: calcM(C),
@@ -670,19 +707,23 @@
         const N = [[r.int(1, 5), r.int(1, 5), r.int(1, 5)], [r.int(1, 5), r.int(1, 5), r.int(1, 5)]], pr = [10 * r.int(10, 15), 10 * r.int(4, 9), 10 * r.int(2, 6)];
         if (badPrice(pr[0], pr[1])) return null;
         const C = Mmul(N, col(pr));
+        if (!fresh07(r, C)) return null;
         return {
           q: `ソラさんはりんご${N[0][0]}個・みかん${N[0][1]}個・バナナ${N[0][2]}本、ミナさんはりんご${N[1][0]}個・みかん${N[1][1]}個・バナナ${N[1][2]}本を買う。りんご1個${pr[0]}円、みかん1個${pr[1]}円、バナナ1本${pr[2]}円のとき、2人の合計（円）を行列×ベクトルで □`,
           a: `$${pm(C)}$`, key: `${kM(N)}|${pr}`, calc: calcM(C), boxh: '12mm',
           easy: `個数の行列×値段のベクトル。${rowsTxt(N, pr)}`, easyCheck: false,
           verify: p0 => { const c = numsIn(p0.q, /(\d+)[個本]・?/g), v = numsIn(p0.q, /(\d+)円/g); return okM(ansM(p0.a), [[c[0] * v[0] + c[1] * v[1] + c[2] * v[2]], [c[3] * v[0] + c[4] * v[1] + c[5] * v[2]]], '合計'); },
         };
+        });
       },
       // 店が2つ（行列×行列）・食事の栄養
       s3(r) {
-        if (turn(r, '07s3', 2)) {
+        return sticky(r, '07s3', 2, t => {
+        if (t) {
           const N = [[r.int(1, 5), r.int(1, 5)], [r.int(1, 5), r.int(1, 5)]], P = [[10 * r.int(10, 15), 10 * r.int(8, 14)], [10 * r.int(4, 9), 10 * r.int(4, 9)]];
           if (badPrice(P[0][0], P[1][0]) || badPrice(P[0][1], P[1][1]) || P[0][0] === P[0][1]) return null;
           const C = Mmul(N, P);
+          if (!fresh07(r, C)) return null;
           return {
             q: `ソラさんはりんご${N[0][0]}個とみかん${N[0][1]}個、ミナさんはりんご${N[1][0]}個とみかん${N[1][1]}個を買う。くだもの屋ではりんご1個${P[0][0]}円・みかん1個${P[1][0]}円、スーパーではりんご1個${P[0][1]}円・みかん1個${P[1][1]}円。2人がそれぞれの店で買う4つの合計（円）を、1回の積で行列（行が人、列が店）に □`,
             a: `$${pm(C)}$`, key: `${kM(N)}|${kM(P)}`, calc: calcM(C),
@@ -699,6 +740,7 @@
           easy: `食べた量の行列×栄養の行列。${prodTxt(Q, NUT, C)}`, easyCheck: false,
           verify: p0 => { const v = [...p0.q.matchAll(/ごはん \$(\d+)\\,\\mathrm\{g\}\$ と卵 \$(\d+)\\,/g)].map(m => [+m[1] / 100, +m[2] / 100]); return okM(ansM(p0.a), mul(v, [[156, 2.5], [142, 12.2]]), '栄養'); },
         };
+        });
       },
       // わな：合計から値段を求める（連立方程式。7-40）
       trap(r) {
@@ -866,8 +908,8 @@
     raku: ['$\\begin{pmatrix}1&1&1\\\\1&-1&0\\\\0&1&-1\\end{pmatrix}\\begin{pmatrix}4\\\\3\\\\2\\end{pmatrix}$', '1行め $9$、2行め $4-3=1$、3行め $3-2=1$', '→ 右辺 $(9,\\ 1,\\ 1)$ と同じで、答え'],
     why: '3×3 でも、答えの $i$ 番めの成分は $i$ 行めとベクトルの内積（7-1④）。連立方程式は $A\\vec x=\\vec b$ なので、答えの候補を並べたベクトルに $A$ をかけて $\\vec b$ になれば答え。3つの式に入れなおすのと同じ計算を、行列の形で1回にまとめている。',
     caution: 'ない文字の係数0も、行列の中に書いておく（行の数がずれない）。1つの行でも右辺とちがえば、答えではない。',
-    counts: { s1: 4, s2: 2, s3: 2, trap: 2 },
-    cols: { s1: 2, s2: 1, s3: 1, trap: 1 },
+    counts: { s1: 3, s2: 2, s3: 2, trap: 2 },   // s1 は3問、1列（2列では「＝ □」が次の行に落ちて高くなる。左ページの下の欄がページ番号にふれないように。U-10・R1-22）
+    cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '12mm', s2: '44mm', s3: '44mm', trap: '22mm' }, boxh: { s1: '16mm', s2: '8mm', s3: '8mm', trap: '16mm' },
     fits(q) {
       if (prods(q).some(([A, B]) => A.length === 3 && A[0].length === 3 && B.length === 3 && B[0].length === 1)) return true;
@@ -883,10 +925,12 @@
           verify: p => { const [U, V] = matsOf(p.q); return okM(ansM(p.a), mul(U, V), '積'); } };
       },
       // 連立方程式の答えかどうか（係数行列にかける）
+      //   「である」「でない」を順に（2問なら両方が出る。U-3・R1-38）
       s2(r) {
+        return sticky(r, '09s2', 2, t => {
         const A = rmat(r, 3, 3, -2, 3), sol = [r.int(-2, 5), r.int(-2, 5), r.int(-2, 5)];
         if (kM(A) === EX09 || A.some(row => row.filter(k => k).length < 2) || det3(A) === 0) return null;
-        const b = Mmul(A, col(sol)).map(x => x[0]), ok = r.chance(0.5), c = sol.slice();
+        const b = Mmul(A, col(sol)).map(x => x[0]), ok = t === 0, c = sol.slice();
         if (!ok) { const k = r.int(0, 2); c[k] += r.pick([1, -1, 2]); }
         if (String(c) === '4,3,2') return null;
         const Ac = Mmul(A, col(c)).map(x => x[0]);
@@ -900,6 +944,7 @@
             return (p.a.startsWith(okk ? '答えである' : '答えでない') && p.a.includes(vecH(w))) || '確かめがちがう';
           },
         };
+        });
       },
       // 文房具の答えの確かめ・3人の3つの品物の合計
       s3(r) {
@@ -907,7 +952,7 @@
           const sol = [10 * r.int(10, 16), 10 * r.int(6, 12), 10 * r.int(4, 9)];
           const A = [[r.int(1, 3), r.int(1, 3), 0], [0, r.int(1, 3), r.int(1, 3)], [r.int(1, 3), 0, r.int(1, 3)]];
           if (det3(A) === 0) return null;
-          const b = Mmul(A, col(sol)).map(x => x[0]), ok = r.chance(0.5), c = sol.slice();
+          const b = Mmul(A, col(sol)).map(x => x[0]), ok = turn(r, '09s3ok', 2) === 0, c = sol.slice();
           if (!ok) { const k = r.int(0, 2); c[k] += r.pick([10, -10, 20]); }
           const Ac = Mmul(A, col(c)).map(x => x[0]);
           return {
@@ -957,7 +1002,7 @@
     caution: '同じ場所どうしをかけるのではない（それは Python の `*`）。かける順を入れかえると、答えが変わることがある（$AB\\neq BA$）。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 2, s2: 1, s3: 1, trap: 1 },
-    boxw: { s1: '20mm', s2: '22mm', s3: '22mm', trap: '20mm' }, boxh: { s1: '12mm', s2: '16mm', s3: '12mm', trap: '8mm' },
+    boxw: { s1: '20mm', s2: '22mm', s3: '22mm', trap: '20mm' }, boxh: { s1: '12mm', s2: '16mm', s3: '12mm', trap: '12mm' },   // わなの「かけられない」の欄も行列の欄と同じ高さ（U-10・R1-39）
     fits(q) {
       if (/かけられ|大きさ|たせ/.test(q) || (/成分/.test(q) && !/すべて/.test(q))) return false;
       if (prods(q).some(([A, B]) => canMul(A, B) && B[0].length >= 2)) return true;
@@ -1055,19 +1100,19 @@
           const v = Mmul(N, P)[i - 1][j - 1];
           return {
             q: `個数 $N=${pm(N)}$（行はソラ・ミナ、列はりんご・みかん）、値段 $P=${pm(P)}$（円。列はくだもの屋・スーパー）。$NP$ の (${i}, ${j}) 成分は何を表すか。値も □`,
-            a: `${WHO2[i - 1]}さんが${STORE[j - 1]}で買うときの合計で、${num(v)}円`, key: `n|${kM(N)}|${kM(P)}|${i}${j}`,
+            a: `${WHO2[i - 1]}さんの${STORE[j - 1]}での合計、${num(v)}円`, key: `n|${kM(N)}|${kM(P)}|${i}${j}`,
             easy: `$N$ の${i}行めは${WHO2[i - 1]}さん、$P$ の${j}列めは${STORE[j - 1]}。$${dotTxt(N[i - 1], colOf(P, j - 1))}=${num(v)}$`, easyCheck: false,
-            verify: p => { const D = defs(p.q), [a, b] = ijOf(p.q); return p.a === `${WHO2[a - 1]}さんが${STORE[b - 1]}で買うときの合計で、${num(mul(D.N, D.P)[a - 1][b - 1])}円` || 'ちがう'; },
+            verify: p => { const D = defs(p.q), [a, b] = ijOf(p.q); return p.a === `${WHO2[a - 1]}さんの${STORE[b - 1]}での合計、${num(mul(D.N, D.P)[a - 1][b - 1])}円` || 'ちがう'; },
           };
         }
         const Q = [[r.pick([0.5, 1, 1.5, 2]), r.pick([0.5, 1])], [r.pick([1, 1.5, 2, 2.5]), r.pick([0.5, 1, 1.5])]];
         if (kM(Q) === kM([[1.5, 0.5], [2, 1]])) return null;   // 教科書のじぶんでとこうの組
         const v = Mmul(Q, NUT)[i - 1][j - 1];
         return {
-          q: `食べた量 $M=${pm(Q)}$（行は朝食・昼食、列はごはん・卵、$100\\,\\mathrm{g}$ 単位）、$100\\,\\mathrm{g}$ あたりの栄養 $F=${pm(NUT)}$（列はエネルギー〔kcal〕・たんぱく質〔g〕）。$MF$ の (${i}, ${j}) 成分は何を表すか。値も □`,
-          a: `${MEAL[i - 1]}の${NUTN[j - 1]}で、$${num(v)}\\,\\mathrm{${NUTU[j - 1]}}$`, key: `m|${kM(Q)}|${i}${j}`,
+          q: `食べた量 $M=${pm(Q)}$（行は朝食・昼食、列はごはん・卵、$100\\,\\mathrm{g}$ 単位）、$100\\,\\mathrm{g}$ あたりの栄養 $F=${pm(NUT)}$（列はエネルギー・たんぱく質で、単位は $\\mathrm{kcal}$・$\\mathrm{g}$）。$MF$ の (${i}, ${j}) 成分は何を表すか。値も □`,
+          a: `${MEAL[i - 1]}の${NUTN[j - 1]}、$${num(v)}\\,\\mathrm{${NUTU[j - 1]}}$`, key: `m|${kM(Q)}|${i}${j}`,
           easy: `$M$ の${i}行めは${MEAL[i - 1]}、$F$ の${j}列めは${NUTN[j - 1]}。$${dotTxt(Q[i - 1], colOf(NUT, j - 1))}=${num(v)}$`, easyCheck: false,
-          verify: p => { const D = defs(p.q), [a, b] = ijOf(p.q); return (p.a.startsWith(`${MEAL[a - 1]}の${NUTN[b - 1]}で`) && close(numsOf(p.a)[0], mul(D.M, D.F)[a - 1][b - 1])) || 'ちがう'; },
+          verify: p => { const D = defs(p.q), [a, b] = ijOf(p.q); return (p.a.startsWith(`${MEAL[a - 1]}の${NUTN[b - 1]}、`) && close(numsOf(p.a)[0], mul(D.M, D.F)[a - 1][b - 1])) || 'ちがう'; },
         };
       },
       // わな：積の4つの成分すべて（7-10）
@@ -1084,7 +1129,9 @@
 
   // ================================================================ 7-12
   // 左ページの例：(2 0; 0 3)(1 4; 5 6)、右からかけた (1 4; 5 6)(2 0; 0 3)（O-2。この行列は出さない）
-  const EX12 = kM([[1, 4], [5, 6]]);
+  //   例の行列の転置・行や列の入れかえ、対角 (3, 2)（例の (2, 3) の入れかえ）も出さない（U-2・R1-34）
+  const EX12 = kM([[1, 4], [5, 6]]), EX12s = [[[1, 4], [5, 6]], [[1, 5], [4, 6]], [[5, 6], [1, 4]], [[4, 1], [6, 5]], [[6, 5], [4, 1]]].map(kM);
+  const bad12 = (d, A) => String(d) === '2,3' || String(d) === '3,2' || EX12s.includes(kM(A));
   const diag = ds => ds.map((d, i) => ds.map((_, j) => (i === j ? d : 0)));
   const powM = (A, k) => { let R = A; for (let t = 1; t < k; t++) R = mul(R, A); return R; };
   const DS = [2, 3, 4, 5, -1, -2, -3];
@@ -1108,7 +1155,7 @@
       // 左から対角（2×2）
       s1(r) {
         const d = [r.pick(DS), r.pick(DS)], A = rmat(r, 2, 2, -3, 6);
-        if (d[0] === d[1] || String(d) === '2,3' || isDiag(A) || kM(A) === EX12) return null;
+        if (d[0] === d[1] || bad12(d, A) || isDiag(A)) return null;
         const C = Mmul(diag(d), A);
         return { q: `$${pm(diag(d))}${pm(A)}$`, a: `$${pm(C)}$`, key: 'L|' + d + '|' + kM(A), calc: calcM(C),
           easy: `左から対角：1行めを $${num(d[0])}$ 倍、2行めを $${num(d[1])}$ 倍`, easyCheck: false,
@@ -1119,7 +1166,7 @@
         const t = turn(r, '12s2', 3);
         if (t === 0) {
           const m = r.pick([2, 3]), d = Array.from({ length: m }, () => r.pick(DS)), A = rmat(r, 2, m, -3, 6);
-          if (new Set(d).size < m || String(d) === '2,3' || zero(A) || kM(A) === EX12) return null;
+          if (new Set(d).size < m || bad12(d, A) || zero(A)) return null;
           const C = Mmul(A, diag(d));
           return { q: `$${pm(A)}${pm(diag(d))}$`, a: `$${pm(C)}$`, key: 'R|' + d + '|' + kM(A), calc: calcM(C), boxw: m === 3 ? '28mm' : '22mm',
             easy: `右から対角：${d.map((x, k) => `${k + 1}列めを $${num(x)}$ 倍`).join('、')}`, easyCheck: false,
@@ -1127,7 +1174,7 @@
         }
         if (t === 1) {
           const n = r.pick([2, 3]), A = rmat(r, n, n, -4, 7), left = r.chance(0.5);
-          if (isDiag(A)) return null;
+          if (isDiag(A) || EX12s.includes(kM(A))) return null;
           return { q: left ? `$${pm(diag(Array(n).fill(1)))}${pm(A)}$` : `$${pm(A)}${pm(diag(Array(n).fill(1)))}$`, a: `$${pm(A)}$`, key: 'I|' + kM(A), calc: calcM(A), boxh: n === 3 ? '16mm' : '12mm',
             easy: `単位行列 $I$ なので、${left ? '$IA=A$' : '$AI=A$'}（変わらない）`, easyCheck: false,
             verify: p => { const [U, V] = matsOf(p.q); return okM(ansM(p.a), mul(U, V), '積'); } };
@@ -1142,7 +1189,7 @@
       // 対角行列の累乗：PD^k・D^kP（7-9 例題6 の形）
       s3(r) {
         const d = [r.pick([2, 3, -1, -2]), r.pick([2, 3, -1, -2, 1])], k = r.pick([2, 3]), P = rmat(r, 2, 2, -3, 5);
-        if (d[0] === d[1] || String(d) === '2,3' || isDiag(P)) return null;
+        if (d[0] === d[1] || bad12(d, P) || isDiag(P)) return null;
         const dk = d.map(x => x ** k), right = turn(r, '12s3', 2) === 0;
         const C = right ? Mmul(P, diag(dk)) : Mmul(diag(dk), P);
         return {
@@ -1261,7 +1308,7 @@
         const p0 = r.int(-5, 9), s0 = r.int(-5, 9), v = nz(r, -6, 9), up = r.chance(0.5);
         const A = up ? [[p0, 'a'], [v, s0]] : [[p0, v], ['a', s0]];
         if (up && p0 === 4 && v === -2 && s0 === 1) return null;
-        return { q: `$${pmS(A)}$ が対称な行列になる $a$`, a: `$a=${v}$`, key: `${p0},${s0},${v},${up}`,
+        return { q: `$${pmS(A)}$ が対称な行列になる $a$`, a: `$a=${v}$`, key: `a${v}`,   // 同じ答えを2回出さない（U-3）
           easy: `向かい合う ${up ? '(1, 2) と (2, 1)' : '(2, 1) と (1, 2)'} の1組だけ：$a=${v}$`, easyCheck: false,
           verify: p => { const R = rawP(p.q), at = R[0][1] === 'a' ? R[1][0] : R[0][1]; return p.a === `$a=${at}$` || 'ちがう'; } };
       },
@@ -1279,27 +1326,29 @@
             easy: `$a$ と $b$ の向かい合う成分を見る：$a=${va}$、$b=${vb}$`, easyCheck: false,
             verify: p => { const R = rawP(p.q), at = ch => { for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) if (R[i][j] === ch) return R[j][i]; }; return p.a === `$a=${at('a')}$、$b=${at('b')}$` || 'ちがう'; } };
         }
-        const ok = r.chance(0.5), A = S.map(row => row.slice());
+        const ok = turn(r, '14s2ok', 2) === 0, A = S.map(row => row.slice());
         let bad = null;
         if (!ok) { const [i, j] = r.pick([[0, 1], [0, 2], [1, 2]]); A[j][i] = A[i][j] + r.pick([1, -1, 2]); if (A[i][j] !== 0 && r.chance(0.4)) A[j][i] = -A[i][j]; bad = [i, j]; }
         if (!ok && A[bad[0]][bad[1]] === A[bad[1]][bad[0]]) return null;
-        return { q: `$${pm(A)}$ は対称な行列か □`, a: ok ? '対称である' : `対称でない（(${bad[0] + 1}, ${bad[1] + 1}) 成分と (${bad[1] + 1}, ${bad[0] + 1}) 成分がちがう）`, key: kM(A),
+        // 答えは短く（答えの節で列からはみ出さない。U-1・R1-5）。「対称でない」にそろえる（R1-35）
+        return { q: `$${pm(A)}$ は対称な行列か □`, a: ok ? '対称である' : `対称でない（(${bad[0] + 1}, ${bad[1] + 1}) と (${bad[1] + 1}, ${bad[0] + 1}) がちがう）`, key: kM(A),
           easy: '向かい合う3組（(1, 2) と (2, 1)、(1, 3) と (3, 1)、(2, 3) と (3, 2)）だけを見る', easyCheck: false,
-          verify: p => { const U = matsOf(p.q)[0]; const diff = [[0, 1], [0, 2], [1, 2]].filter(([i, j]) => U[i][j] !== U[j][i]); return (diff.length === 0 ? p.a === '対称である' : p.a === `対称でない（(${diff[0][0] + 1}, ${diff[0][1] + 1}) 成分と (${diff[0][1] + 1}, ${diff[0][0] + 1}) 成分がちがう）`) || 'ちがう'; } };
+          verify: p => { const U = matsOf(p.q)[0]; const diff = [[0, 1], [0, 2], [1, 2]].filter(([i, j]) => U[i][j] !== U[j][i]); return (diff.length === 0 ? p.a === '対称である' : p.a === `対称でない（(${diff[0][0] + 1}, ${diff[0][1] + 1}) と (${diff[0][1] + 1}, ${diff[0][0] + 1}) がちがう）`) || 'ちがう'; } };
       },
       // ア〜ウから選ぶ・式の入った成分
       s3(r) {
         if (turn(r, '14s3', 2)) {
-          const make = kind => {
-            const n = r.pick([2, 3]), A = rmat(r, n, n, -3, 9); for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) A[i][j] = A[j][i];
+          const ns = r.shuffle([2, 2, 3]), make = (kind, k) => {   // 3×3 は1つだけ（アプリで1行に入るように）
+            const n = ns[k], A = rmat(r, n, n, -3, 9); for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) A[i][j] = A[j][i];
             if (kind === 1) { const [i, j] = n === 2 ? [0, 1] : r.pick([[0, 1], [0, 2], [1, 2]]); A[j][i] = A[i][j] === 0 ? 1 : -A[i][j]; }
             if (kind === 2) { const [i, j] = n === 2 ? [0, 1] : r.pick([[0, 1], [0, 2], [1, 2]]); A[j][i] = A[i][j] + 1; }
             return A;
           };
-          const kinds = r.shuffle([0, r.pick([0, 1, 2]), r.pick([1, 2])]), As = kinds.map(make);
+          const kinds = r.shuffle([0, r.pick([0, 1, 2]), r.pick([1, 2])]), As = kinds.map((kd, k) => make(kd, k));
           if (As.some(A => kM(A) === kM([[3, 0, 2], [0, 1, 4], [2, 4, 6]]))) return null;
           const ans = As.map((A, k) => (symm(A) ? LAB[k] : null)).filter(Boolean).join('と');
-          return { q: `次のうち、対称な行列はどれか（すべて）□　${As.map((A, k) => `${LAB[k]} $${pm(A)}$`).join('　')}`, a: ans, key: As.map(kM).join('/'), boxw: '20mm',
+          // 行列を先に、文をあとに（アプリで、行の折り返しが文の所にくるように。第41回 アプリの指摘）
+          return { q: `${As.map((A, k) => `${LAB[k]} $${pm(A)}$`).join('　')} のうち、対称な行列（すべて）□`, a: ans, key: As.map(kM).join('/'), boxw: '20mm',
             easy: '向かい合う組だけをくらべる。符号だけちがう組も等しくない', easyCheck: false,
             verify: p => { const ms = matsOf(p.q); return p.a === ms.map((A, k) => (symm(A) ? LAB[k] : null)).filter(Boolean).join('と') || 'ちがう'; } };
         }
@@ -1315,8 +1364,8 @@
       trap(r) {
         const [n, m] = r.pick([[2, 3], [3, 2]]), A = rmat(r, n, m, 0, 6);
         for (let i = 0; i < Math.min(n, m); i++) for (let j = 0; j < i; j++) A[i][j] = A[j][i];   // 向かい合う組は等しく見える
-        return dest({ q: `$${pm(A)}$ は対称な行列か □`, a: `対称ではない（${n}×${m} で、正方行列ではない）`, key: 't|' + kM(A),
-          verify: p => { const U = matsOf(p.q)[0]; return (U.length !== U[0].length && p.a.startsWith('対称ではない')) || 'ちがう'; } }, '7-14',
+        return dest({ q: `$${pm(A)}$ は対称な行列か □`, a: '対称でない（正方行列でない）', key: 't|' + kM(A),
+          verify: p => { const U = matsOf(p.q)[0]; return (U.length !== U[0].length && p.a.startsWith('対称でない')) || 'ちがう'; } }, '7-14',
         `${n}×${m} 行列は正方行列ではない。転置すると ${m}×${n} になり、もとと同じにはならない`, ['7-02']);
       },
     },
@@ -1435,6 +1484,10 @@
       s1(r) {
         const a = [nz(r, -4, 6), nz(r, -4, 6)], b = [nz(r, -4, 6), r.int(-4, 6)];
         if (String(a) === '2,3' || String(b) === '4,-1') return null;
+        // 同じ答えを3つ以上出さない（U-3）。40回つづけてよけたら重ねてよい（止まるように）
+        const t = r.turns || (r.turns = {}), c = t.c91 || (t.c91 = {}), v = dot(a, b);
+        if ((c[v] || 0) >= 2 && (t.m91 = (t.m91 || 0) + 1) < 40) return null;
+        t.m91 = 0; c[v] = (c[v] || 0) + 1;
         return { q: `$${pm([a])}${pm(col(b))}$`, a: `$${dot(a, b)}$`, key: `${a}|${b}`,
           easy: `$${dotTxt(a, b)}=${dot(a, b)}$（数1つ）`, easyCheck: false,
           verify: p => { const [U, V] = matsOf(p.q); return close(numsOf(p.a)[0], mul(U, V)[0][0]) || 'ちがう'; } };
@@ -1471,7 +1524,7 @@
         }
         const Fv = [nz(r, -3, 6), nz(r, -3, 6)], sv = [r.int(1, 5), r.int(-2, 4)], w = dot(Fv, sv);
         if (w <= 0) return null;
-        return { q: `力 $\\vec F=${pm(col(Fv))}$〔N〕で、物体が $\\vec s=${pm(col(sv))}$〔m〕だけ動いた。力がした仕事 $W=\\vec F^{\\mathsf T}\\vec s$`, a: `$${w}\\,\\mathrm{J}$`, key: `w|${Fv}|${sv}`, boxw: '18mm',
+        return { q: `力 $\\vec F=${pm(col(Fv))}$（N）で、物体が $\\vec s=${pm(col(sv))}$（m）だけ動いた。力がした仕事 $W=\\vec F^{\\mathsf T}\\vec s$`, a: `$${w}\\,\\mathrm{J}$`, key: `w|${Fv}|${sv}`, boxw: '18mm',
           easy: `$${dotTxt(Fv, sv)}=${w}$（4-12 の仕事と同じ）`, easyCheck: false,
           verify: p => { const D = vdefs(p.q); return close(numsOf(p.a)[0], dot(D.F, D.s)) || 'ちがう'; } };
       },
@@ -1487,13 +1540,24 @@
 
   // ================================================================ 左ページの例の行列をよける（O-2）
   // 「ふつうに解くと」「楽な形にすると」に書いた行列・ベクトル（成分が2つ以上）が、同じ見開きの問題の文に出たら、その問題は作りなおす
+  //   第41回（U-2・R1-34）：2×2 以上の行列は、転置・行の入れかえ・列の入れかえ・ななめの入れかえ（diag(2, 3) → diag(3, 2)）もよける（単位行列はのぞく）。
+  //   また、ステップ1・2の問題に出た行列（ななめだけの行列と、成分が 0・±1 だけの行列はのぞく）を、同じ見開きのステップ3では使わない（s3 と s1・s2 の同じ式）
+  const varsOf = A => (A.length < 2 || A[0].length < 2 || A.flat().every(v => v === 0 || v === 1 || v === -1) ? [A] : [A, MT(A), A.slice().reverse(), A.map(row => row.slice().reverse()), A.slice().reverse().map(row => row.slice().reverse())]);
+  const plainMat = A => isDiag(A) || A.flat().every(v => v === 0 || v === 1 || v === -1);
   M.list(7).filter(id => M.waza[id].part === 1).forEach(id => {
     const d = M.waza[id];
-    const ex = new Set([...[...d.futsu, ...d.raku].join(' ').matchAll(PMRE)].map(m => readP(m[1])).filter(A => A.flat().length > 1 && A.flat().every(v => v != null)).map(kM));
-    if (!ex.size) return;
+    const ex = new Set([...[...d.futsu, ...d.raku].join(' ').matchAll(PMRE)].map(m => readP(m[1])).filter(A => A.flat().length > 1 && A.flat().every(v => v != null)).flatMap(varsOf).filter(A => !(isDiag(A) && A.flat().every(v => v === 0 || v === 1))).map(kM));
     Object.keys(d.steps).forEach(st => {
       const f = d.steps[st];
-      d.steps[st] = r => { const p = f(r); return p && matsOf(p.q).some(A => ex.has(kM(A))) ? null : p; };
+      d.steps[st] = r => {
+        const p = f(r); if (!p) return p;
+        const ms = matsOf(p.q).filter(A => A.flat().every(v => v != null));
+        if (ms.some(A => ex.has(kM(A)))) return null;
+        const t = r.turns || (r.turns = {}), u = t['m12|' + id] || (t['m12|' + id] = new Set()), big = ms.filter(A => A.length >= 2 && A[0].length >= 2 && !plainMat(A)).map(kM);
+        if (st === 's3' && big.some(k => u.has(k))) return null;
+        if (st === 's1' || st === 's2') big.forEach(k => u.add(k));
+        return p;
+      };
     });
   });
 

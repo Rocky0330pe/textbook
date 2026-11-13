@@ -9,7 +9,7 @@
  *   くいちがう組は出さない（O-4。agree()）。近似の答えは「約」と ≈。電卓なし（Q-5）：腕の角は 0°・90°・180°・$-90^{\circ}$ だけ（わなの手の位置だけ 30°・60°）。
  * 図はステップ3だけ（K-2）：7-18 は方眼の家（もとの家は点線）、7-21 は2本の腕、7-27 は箱の回路（M.figResistor）。
  * 左ページの「楽な形」と目印の例の数は、同じ見開きの問題に出さない（O-2。bad()）。key は、ステップがちがっても同じ問題なら同じになる形にする。
- * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「楽な形なし」）を書く（dest。N-3）。 */
+ * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「わざなし」。第40回 S-7・第41回 U-4）を書く（dest。N-3）。 */
 (function (M) {
   'use strict';
 
@@ -38,6 +38,7 @@
   // 文の値で計算した答え f（分数）と、ほんとうの値 v を、小数第 k 位で丸めて同じなら、その文字（O-4）。ちがえば null
   const agree = (f, v, k) => { const a = roundStr(f, k); return a === trueRd(v, k) ? a : null; };
   const nt = x => { const f = D(x); return f[1] === 1 ? String(f[0]) : (dec(f) || F.tex(f)); };   // 数の TeX：整数・小数・\frac
+  const ntp = x => (D(x)[0] < 0 ? `(${nt(x)})` : nt(x));   // かけ算の右の負の数はかっこごと（$10\times(-1)$。U-6・R1-12）
   const n2 = x => { const f = D(x); if (f[0] === 0) return '0'; const s = dec(f); if (!s) return F.tex(f); const [i, fr = ''] = s.split('.'); return fr.length >= 2 ? s : i + '.' + (fr + '00').slice(0, 2); };   // 長さ（m）：0.30 のように小数第2位まで
   const mk = rows => rows.map(r => r.map(D));                             // 分数の行列
   const mt = (A, f) => `\\begin{pmatrix}${A.map(r => r.map(f || nt).join('&')).join('\\\\')}\\end{pmatrix}`;
@@ -90,7 +91,7 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -143,11 +144,13 @@
     const T = P => [A[0][0] * P[0] + A[0][1] * P[1], A[1][0] * P[0] + A[1][1] * P[1]];
     const all = HOUSE.concat(HOUSE.map(T));
     const x0 = Math.floor(Math.min(0, ...all.map(p => p[0]))) - 1, x1 = Math.ceil(Math.max(0, ...all.map(p => p[0]))) + 1;
-    const y0 = Math.floor(Math.min(0, ...all.map(p => p[1]))) - 1, y1 = Math.ceil(Math.max(0, ...all.map(p => p[1]))) + 1;
+    // 上に1マス余分にとる（y のラベルが屋根の先に重ならないように。U-8・R1-3）
+    const y0 = Math.floor(Math.min(0, ...all.map(p => p[1]))) - 1, y1 = Math.ceil(Math.max(0, ...all.map(p => p[1]))) + 2;
     const s = Math.min(3.6, 46 / (x1 - x0), 24 / (y1 - y0));
+    // 点線のもとの家は、実線の家のぬりのあとに描く（ぬりにかくれないように。U-1・R1-3）
     return { s, pad: Math.max(0.6, 4 / s), items: [['grid', x0, y0, x1, y1], ['axes', x0, x1 + 0.3, y0, y1 + 0.3, { o: 'sw' }],
-      ['poly', HOUSE, { dash: true }], ['path', DOOR, { dash: true }],
-      ['poly', HOUSE.map(T), { fill: true, thick: true }], ['path', DOOR.map(T), { thick: true }]] };
+      ['poly', HOUSE.map(T), { fill: true, thick: true }], ['path', DOOR.map(T), { thick: true }],
+      ['poly', HOUSE, { dash: true }], ['path', DOOR, { dash: true }]] };
   }
 
   // ================================================================ 7-16
@@ -356,9 +359,23 @@
   const CH18 = '';
   function pick18(r, which) {
     const L1 = [NAMED.Fy, NAMED.Fx, ...[2, 3, 4, 0.5].map(k => stretch('x', k)), ...[3, 4, 0.5].map(k => stretch('y', k))];
-    const L2 = [NAMED.Fd, NAMED.R90, NAMED.Rm90, ...[1, 2, -1, 3].map(shear)];
+    const L2 = [NAMED.Fd, NAMED.R90, NAMED.Rm90, ...(which === 0 ? [1, 2, -1] : [1, 2, -1, 3]).map(shear)];   // 図（s3）のずらしは右上が2まで（3だと家が細い帯になる。U-8・R1-29）
     const T = r.pick(which === 1 ? L1 : which === 2 ? L2 : L1.concat(L2));
     return EX18.some(E => sameM(E, T.m)) ? null : T;
+  }
+  // 同じ答えを、1つのステップに3つ以上出さない（U-3）。tag はわざとステップ。40回つづけてよけたら重ねてよい（止まるように）
+  function cap2(r, tag, ans) {
+    const t = r.turns || (r.turns = {}), c = t['c2|' + tag] || (t['c2|' + tag] = {}), m = 'c2m|' + tag;
+    if ((c[ans] || 0) >= 2 && (t[m] = (t[m] || 0) + 1) < 40) return false;
+    t[m] = 0; c[ans] = (c[ans] || 0) + 1;
+    return true;
+  }
+  // s1・s2 の答えのことば（「ずらし（上ほど右へ）」など）を、同じ見開きで2回出さない（U-3）。40回つづけてよけたら重ねてよい（止まるように）
+  function fresh18(r, T) {
+    const t = r.turns || (r.turns = {}), u = t.u18 || (t.u18 = new Set());
+    if (u.has(T.n) && (t.m18 = (t.m18 || 0) + 1) < 40) return false;
+    t.m18 = 0; u.add(T.n);
+    return true;
   }
   const check18 = (p, A) => { const B = matOfName(p.a, A); return (B && sameN(B, A)) || `ことば「${p.a}」が行列とちがう`; };
   M.add({
@@ -376,13 +393,13 @@
     steps: {
       // 裏返し・のびる・ちぢむ（1つの列だけが変わる）
       s1(r) {
-        const T = pick18(r, 1); if (!T) return null;
+        const T = pick18(r, 1); if (!T || !fresh18(r, T)) return null;
         return { q: `$${mt(T.m)}$ をかけたときの家の変わり方`, a: T.n, key: `18|${sig(T.m)}`, easyCheck: false,
           easy: `$\\vec e_x\\to${pt([T.m[0][0], T.m[1][0]])}$、$\\vec e_y\\to${pt([T.m[0][1], T.m[1][1]])}$`, verify: p => check18(p, T.m) };
       },
       // 2本とも動く：$y=x$ で折り返し・回る・ずらし
       s2(r) {
-        const T = pick18(r, 2); if (!T) return null;
+        const T = pick18(r, 2); if (!T || !fresh18(r, T)) return null;
         return { q: `$${mt(T.m)}$ をかけたときの家の変わり方`, a: T.n, key: `18|${sig(T.m)}`, easyCheck: false,
           easy: `$\\vec e_x\\to${pt([T.m[0][0], T.m[1][0]])}$、$\\vec e_y\\to${pt([T.m[0][1], T.m[1][1]])}$`, verify: p => check18(p, T.m) };
       },
@@ -473,7 +490,7 @@
           a: `$${pt(out)}$`, key: `19|br${a},${b},${c}|${s},${t}`, easyCheck: false, easy: `$${combPt([[s, [a, b]], [t, [b, c]]])}$`,
           verify: p => ptIs(p, [s * a + t * b, s * b + t * c]) };
       },
-      // わな：わかっていない向きが入る（楽な形なし）
+      // わな：わかっていない向きが入る（わざなし）
       trap(r) {
         const u = [r.int(-3, 5), r.int(-3, 5)], v = [r.int(-3, 5), r.int(-3, 5)];
         if ((!u[0] && !u[1]) || (!v[0] && !v[1])) return null;
@@ -528,7 +545,7 @@
         }
         const c = r.pick([1, 2, 4]), L = d.map(x => D(x * c));
         return { q: `1辺 $${c}$ の立方体に $${mt(A)}$ をかけてできる箱の、$x$・$y$・$z$ の向きの長さ`, a: `$${nt(L[0])}$、$${nt(L[1])}$、$${nt(L[2])}$`, key: `20|${sig(A)}|cube${c}`, easyCheck: false,
-          easy: `対角の数を $${c}$ 倍`, verify: p => { const n = nums(p.a); return (n.length === 3 && n.every((x, i) => closeN(x, d[i] * c))) || '長さがちがう'; } };
+          easy: c === 1 ? '1辺が1なので、対角の数がそのまま長さ' : `1辺 $${c}$ に対角の数をかける`, verify: p => { const n = nums(p.a); return (n.length === 3 && n.every((x, i) => closeN(x, d[i] * c))) || '長さがちがう'; } };
       },
       // 見かけがちがう：見取り図の行列、ななめの光の影
       s3(r) {
@@ -590,7 +607,7 @@
   }
   M.add({
     id: '7-21', part: 2, chap: '7-2⑧ 例題6', stars: 1,
-    title: 'ヤコビ行列は「肩→手」「ひじ→手」の矢印を $90^{\\circ}$ 回して（$(x,\\ y)\\to(-y,\\ x)$）列に並べる',
+    title: 'ヤコビ行列は「肩→手」「ひじ→手」の矢印を $90^{\\circ}$ 回して列に並べる',   // 題を短く（見わけようの表で文が切れないように。U-9・R1-21）。回し方 $(x,\ y)\to(-y,\ x)$ は caution に
     mark: '2本の腕（肩・ひじ）の長さと関節の角、関節の角速度 $\\dot\\theta_1$・$\\dot\\theta_2$ から、手の速度を聞かれる。',
     futsu: ['手の位置を $\\theta_1$・$\\theta_2$ の式で書き、', '時間で微分して（合成関数の微分）、', '$\\dot\\theta_1$・$\\dot\\theta_2$ の係数を並べる'],
     raku: ['$L_1=0.30$、$L_2=0.25$、$\\theta_1=0^{\\circ}$、$\\theta_2=90^{\\circ}$', 'ひじ $(0.30,\\ 0)$、手 $(0.30,\\ 0.25)$', '1列め：$(0.30,\\ 0.25)$ を $90^{\\circ}$ → $(-0.25,\\ 0.30)$', '2列め：$(0,\\ 0.25)$ を $90^{\\circ}$ → $(-0.25,\\ 0)$'],
@@ -672,6 +689,7 @@
       s1(r) {
         const S = sigma(r); if (!S) return null;
         const e = r.pick(['x', 'y']), v = EVEC[e];
+        if (!cap2(r, '22s1', String(mulNv(S, v)))) return null;
         return { q: `応力 $\\sigma=${mt(S)}$（MPa）で、$\\vec n=\\vec e_${e}$ の切り口の力 $\\vec t$`, a: `$${pt(mulv(mk(S), v))}$（MPa）`, key: `22|${sig(S)}|${v}`, easyCheck: false,
           easy: `${e === 'x' ? 1 : 2}列め`, verify: p => ptIs(p, mulNv(S, v)) };
       },
@@ -759,6 +777,7 @@
         const a = r.pick(TWK), b = r.pick(TWK);
         if (a === b || commute(TW[a].m, TW[b].m) || (a === 'S2x' && b === 'R90')) return null;
         const A = mul2(TW[b].m, TW[a].m);
+        if (!cap2(r, '23s2', sig(A))) return null;
         return { q: `はじめに${TW[a].te}、つぎに${TW[b].ru}変換の行列`, a: `$${mt(A)}$`, key: `23|${sig(TW[b].m)}|${sig(TW[a].m)}`, easyCheck: false,
           easy: `$${mt(TW[b].m)}${mt(TW[a].m)}$（先が右）`, calc: { kind: 'mat', want: A }, verify: p => matIs(p, mulN(TW[b].m, TW[a].m)) };
       },
@@ -813,6 +832,7 @@
     fits(q) {
       if (!/AB\$ ?と ?\$BA/.test(q)) return false;
       const ms = qMats(q); if (ms.length !== 2) return true;
+      if (ms.some(A => A.length !== 2 || A[0].length !== 2)) return false;   // 正方行列でない組（大きさがちがう。7-05）
       const dg = A => A[0][1] === 0 && A[1][0] === 0, sc = A => dg(A) && A[0][0] === A[1][1];
       return !((dg(ms[0]) && !sc(ms[0]) && !dg(ms[1])) || (dg(ms[1]) && !sc(ms[1]) && !dg(ms[0])));
     },
@@ -851,19 +871,23 @@
         return { q: txt, a: abAns(A, B), key: `24|${[sig(A), sig(B)].sort()}`, easyCheck: false,
           easy: `$A=${mt(A)}$、$B=${mt(B)}$`, verify: p => check24(p, A.map(r2 => r2.map(nv)), B.map(r2 => r2.map(nv))) };
       },
-      // わな：片方だけが対角（7-12）
+      // わな：正方行列でない組（$AB$ と $BA$ は大きさからちがう。7-05）。
+      //   「片方だけ対角」のわなは、このわざの楽な形と caution で解けるのでやめた（N-3・O-5・U-4・R1-9）
       trap(r) {
-        const Dg = [[r.pick([2, 3, -1, 4]), 0], [0, r.pick([3, 5, -2, 1])]], N = [[r.int(-2, 3), r.int(1, 3)], [r.int(1, 3), r.int(-2, 3)]];
-        if (isScalar(Dg) || commute(Dg, N)) return null;
-        const [A, B] = r.chance(0.5) ? [Dg, N] : [N, Dg];
-        return dest({ q: `$A=${mt(A)}$、$B=${mt(B)}$ の $AB$ と $BA$`, a: abAns(A, B), key: `24t|${[sig(A), sig(B)].sort()}`, verify: p => check24(p, A, B) }, '7-24',
-          '片方だけが対角の組。対角の行列を左からかけると行を、右からかけると列を何倍にするので、ふつうはちがう', ['7-12']);
+        const [m, n] = r.pick([[2, 3], [3, 2], [1, 2], [2, 1]]), A = Array.from({ length: m }, () => Array.from({ length: n }, () => r.int(-2, 4))), B = Array.from({ length: n }, () => Array.from({ length: m }, () => r.int(-2, 4)));
+        if (A.flat().filter(x => !x).length > 1 || B.flat().filter(x => !x).length > 1) return null;
+        const sz = (a, b) => `${a}×${b}`;
+        return dest({ q: `$A=${mt(A)}$、$B=${mt(B)}$ の $AB$ と $BA$ は同じか。それぞれ何×何行列か □`, a: `同じでない（$AB$ は ${sz(m, m)}、$BA$ は ${sz(n, n)}）`, key: `24t|${sig(A)}|${sig(B)}`,
+          verify: p => { const [U, V] = qMats(p.q); return (U[0].length === V.length && V[0].length === U.length && U.length !== V.length && p.a === `同じでない（$AB$ は ${sz(U.length, U.length)}、$BA$ は ${sz(V.length, V.length)}）`) || '大きさがちがう'; } }, '7-24',
+          `正方行列でない組。$AB$ は ${sz(m, n)} と ${sz(n, m)} の積で ${sz(m, m)}、$BA$ は ${sz(n, n)}。大きさがちがうので、成分を計算するまでもなく同じでない`, ['7-05']);
       },
     },
   });
 
   // ================================================================ 7-25
   const EX25 = [[[1, 2], [0, 1]], [[0, 1], [1, 0]], [[2, 0], [0, 3]]];
+  // 例の行列の、ななめ・行・列を入れかえたものと転置（diag(3, 2)、(1 0; 2 1) など。U-2・R1-34）
+  const EX25v = [[[3, 0], [0, 2]], [[1, 0], [2, 1]], [[0, 1], [1, 2]], [[2, 1], [1, 0]], [[1, 0], [0, 1]]];
   const UNI = [[[2, 1], [1, 1]], [[1, 2], [0, 1]], [[3, 2], [1, 1]], [[1, 0], [3, 1]], [[2, 3], [1, 2]], [[1, 0], [-2, 1]], [[3, 1], [2, 1]], [[1, -1], [0, 1]]];
   const rnd2 = (r, lo, hi) => [[r.int(lo, hi), r.int(lo, hi)], [r.int(lo, hi), r.int(lo, hi)]];
   M.add({
@@ -883,6 +907,7 @@
       s1(r) {
         const A = rnd2(r, -1, 3), B = rnd2(r, -1, 3), Dg = [[r.pick([2, 3, -1, 4]), 0], [0, r.pick([2, 3, -2, 5])]];
         if (isDiag(A) || isDiag(B) || isScalar(Dg) || A.flat().filter(x => !x).length > 2 || B.flat().filter(x => !x).length > 2) return null;
+        if ([A, B, Dg].some(X => EX25v.some(E => sameM(E, X)))) return null;   // 例の行列の入れかえ・転置（U-2・R1-34）
         const right = r.chance(0.6), [X, Y, Z] = right ? [A, B, Dg] : [Dg, A, B];
         if (sameM(X, EX25[0]) && sameM(Y, EX25[1]) && sameM(Z, EX25[2])) return null;
         const P = Mat.mul(mul2(X, Y), mk(Z));
@@ -951,7 +976,7 @@
         if (EX26.some(E => sameM(E, A)) && n === 3) return null;
         const P = Mat.pow(mk(A), n);
         return { q: powTxt(A, n), a: `$${mt(P)}$`, key: `26|${sig(A)}|${n}`, easyCheck: false,
-          easy: kind === 0 ? `右上が $${n}\\times${nt(A[0][1])}$` : kind === 1 ? `左下が $${n}\\times${nt(A[1][0])}$` : 'ななめの数を $n$ 乗', calc: { kind: 'mat', want: P }, verify: p => matIs(p, powN(A, n)) };
+          easy: kind === 0 ? `右上が $${n}\\times${ntp(A[0][1])}$` : kind === 1 ? `左下が $${n}\\times${ntp(A[1][0])}$` : 'ななめの数を $n$ 乗', calc: { kind: 'mat', want: P }, verify: p => matIs(p, powN(A, n)) };
       },
       // 回転・裏返し、形のない行列の2乗
       s2(r) {
@@ -959,7 +984,8 @@
         if (kind < 3) { A = r.pick([TW.R90.m, TW.Rm90.m, TW.Fx.m, TW.Fy.m, TW.Fd.m, TW.R90.m]); n = r.int(2, 9); const rot = A[0][0] === 0 && A[0][1] !== A[1][0]; e = rot ? `$90^{\\circ}$ を $${n}$ 回（$${n}$ を4でわった余り $${n % 4}$）` : `裏返しは2回でもどる（$${n}$ は${n % 2 ? '奇数' : '偶数'}）`; }
         else { A = rnd2(r, -2, 3); n = 2; if (isDiag(A) || EX26.some(E => sameM(E, A)) || A.flat().filter(x => !x).length > 1) return null; e = '$AA$ を行と列で（成分の2乗ではない）'; }
         const P = Mat.pow(mk(A), n);
-        return { q: powTxt(A, n), a: `$${mt(P)}$`, key: `26|${sig(A)}|${n}`, easyCheck: false, easy: e, calc: { kind: 'mat', want: P }, verify: p => matIs(p, powN(A, n)) };
+        // 回転・裏返しは、答え（$I$ など）が重ならないように、key を答えにする（U-3）
+        return { q: powTxt(A, n), a: `$${mt(P)}$`, key: kind < 3 ? `26a|${sig(P)}` : `26|${sig(A)}|${n}`, easyCheck: false, easy: e, calc: { kind: 'mat', want: P }, verify: p => matIs(p, powN(A, n)) };
       },
       // 見かけがちがう：同じ箱を $n$ 個、同じ変換を $n$ 回
       s3(r) {
@@ -1057,6 +1083,15 @@
     return r.chance(0.6) ? [['S', R], ['P', Rp]] : [['P', Rp], ['S', R]];
   }
   const VA = (v, i) => `${U(nt(v), 'V')}、${U(nt(i), 'A')}`;
+  // s1・s2 の答え：左ページの例と同じ「左下×出口の電圧」（$0.5\times1$、$0.25\times4=1$）の組をよけ、同じ電流の答えを2回出さない（U-2・U-3・R1-27）。
+  //   見開き1つぶんは同じ r。アプリで出しつくしたときは、40回つづけてよけたら重ねてよい（止まるように）
+  function fresh28(r, A, V, i) {
+    if ((F.eq(A[1][0], D(0.25)) && V === 4) || (F.eq(A[1][0], D(0.5)) && V === 1)) return false;
+    const t = r.turns || (r.turns = {}), u = t.u28 || (t.u28 = new Set()), k = nt(i);
+    if (u.has(k) && (t.m28 = (t.m28 || 0) + 1) < 40) return false;
+    t.m28 = 0; u.add(k);
+    return true;
+  }
   M.add({
     id: '7-28', part: 2, chap: '7-3⑥ 例題7', stars: 1,
     title: '出口を開く（出口の電流0）なら、入口は「1列め×出口の電圧」',
@@ -1075,6 +1110,7 @@
         const L = twoBox(r), A = boxM(L), V = r.pick([1, 2, 3, 4, 5, 6, 10]);
         if (EX28.some(E => sameM(E, A))) return null;
         const v = F.mul(A[0][0], D(V)), i = F.mul(A[1][0], D(V));
+        if (!fresh28(r, A, V, i)) return null;
         return { q: `箱の行列が $${mt(A)}$ の回路で、出口を開いて（出口の電流 $0$）、出口の電圧を ${U(V, 'V')} にするときの、入口の電圧と電流`, a: VA(v, i), key: `28|${sig(A)}|${V}`, easyCheck: false,
           easy: `1列め $${pt([A[0][0], A[1][0]])}$ の $${V}$ 倍`, verify: p => { const n = nums(p.a), B = boxN(L); return (n.length === 2 && closeN(n[0], B[0][0] * V) && closeN(n[1], B[1][0] * V)) || 'ちがう'; } };
       },
@@ -1083,14 +1119,15 @@
         const L = twoBox(r), A = boxM(L), V = r.pick([1, 2, 3, 4, 5, 6, 10]);
         if (EX28.some(E => sameM(E, A))) return null;
         const v = F.mul(A[0][0], D(V)), i = F.mul(A[1][0], D(V));
-        return { q: `${boxW(L[0])} の箱（入口側）と ${boxW(L[1])} の箱（出口側）をつないだ回路で、出口を開いて、出口の電圧を ${U(V, 'V')} にするときの、入口の電圧と電流`, a: VA(v, i), key: `28|${sig(A)}|${V}`, easyCheck: false,
+        if (!fresh28(r, A, V, i)) return null;
+        return { q: `${boxW(L[0])} の箱（入口側）と${boxW(L[1])} の箱（出口側）をつないだ回路で、出口を開いて、出口の電圧を ${U(V, 'V')} にするときの、入口の電圧と電流`, a: VA(v, i), key: `28|${sig(A)}|${V}`, easyCheck: false,
           easy: `1列めは $${pt([A[0][0], A[1][0]])}$`, verify: p => { const n = nums(p.a), B = boxN(L); return (n.length === 2 && closeN(n[0], B[0][0] * V) && closeN(n[1], B[1][0] * V)) || 'ちがう'; } };
       },
       // 入口の電圧から、出口の電圧（左上でわる）
       s3(r) {
         const L = twoBox(r), A = boxM(L), V2 = r.pick([1, 2, 3, 4, 5, 6, 8, 10]), E = F.mul(A[0][0], D(V2));
         if (EX28.some(X => sameM(X, A)) || F.eq(A[0][0], F.make(1)) || !dec(E) || dec(E).length > 4) return null;
-        return { q: `${boxW(L[0])} の箱（入口側）と ${boxW(L[1])} の箱（出口側）をつないだ回路の入口に ${U(nt(E), 'V')} をかけ、出口を開いたときの出口の電圧`, a: U(V2, 'V'), key: `28|${sig(A)}|${V2}`, easyCheck: false,
+        return { q: `${boxW(L[0])} の箱（入口側）と${boxW(L[1])} の箱（出口側）をつないだ回路の入口に ${U(nt(E), 'V')} をかけ、出口を開いたときの出口の電圧`, a: U(V2, 'V'), key: `28|${sig(A)}|${V2}`, easyCheck: false,
           easy: `左上 $${nt(A[0][0])}$ で、$${nt(E)}\\div${nt(A[0][0])}$`, verify: p => { const n = nums(p.a), B = boxN(L); return (n.length === 1 && closeN(n[0], nv(E) / B[0][0])) || 'ちがう'; } };
       },
       // わな：出口を導線でつなぐ（2列め。7-16）
@@ -1206,6 +1243,10 @@
       s2(r) {
         const g = lcw(r, { ratio: true }); if (!g) return null;
         const a11 = F.sub(F.make(1), g.x), ab = [Math.abs(a11[0]), a11[1]], ratio = F.div(F.make(1), ab);
+        // 同じ答え（何倍）を2回出さない（U-3）。40回つづけてよけたら重ねてよい（止まるように）
+        const t = r.turns || (r.turns = {}), u = t.u30 || (t.u30 = new Set());
+        if (u.has(nt(ratio)) && (t.m30 = (t.m30 || 0) + 1) < 40) return null;
+        t.m30 = 0; u.add(nt(ratio));
         return { q: `コイルの箱（入口側）とコンデンサーの箱（出口側）をつないだ回路（${lcTxt(g)}）で、出口を開いたとき、出口の電圧の大きさは入口の何倍`, a: `$${nt(ratio)}$ 倍`,
           key: `30|${g.Lm},${g.Cu},${g.w}`, easyCheck: false, easy: `左上 $1-${nt(g.x)}=${nt(a11)}$。$V_1=${nt(a11)}V_2$`,
           verify: p => { const t = (+g.w) ** 2 * (g.Lm / 1000) * (+g.Cu / 1e6), n = nums(p.a); return (n.length === 1 && Math.abs(n[0] - 1 / Math.abs(1 - t)) < 1e-9) || 'ちがう'; } };
@@ -1218,12 +1259,12 @@
           key: `30|${g.Lm},${g.Cu},${g.w}`, easyCheck: false, easy: `$\\begin{pmatrix}1&0\\\\${jt(g.BC)}&1\\end{pmatrix}\\begin{pmatrix}1&${jt(g.XL)}\\\\0&1\\end{pmatrix}$。右下が $1-${nt(g.x)}$`,
           calc: { kind: 'mat', complex: true, want: [['1', jt(g.XL)], [jt(g.BC), nt(a22)]] }, verify: p => check30(p, g, true) };
       },
-      // わな：左上が0になる ω（共振。楽な形なし）
+      // わな：左上が0になる ω（共振。わざなし）
       trap(r) {
         const [Lm, Cu, w] = r.pick([[10, '1', 10000], [1, '10', 10000], [100, '0.1', 10000], [4, '2.5', 10000], [25, '0.4', 10000], [10, '4', 5000], [40, '1', 5000], [20, '2', 5000], [1, '2.5', 20000], [5, '0.5', 20000], [2.5, '1', 20000], [50, '0.2', 10000]]);
         return dest({ q: `コイル（$L=${Lm}\\,\\mathrm{mH}$）の箱とコンデンサー（$C=${Cu}\\,\\mathrm{\\mu F}$）の箱をつないだ回路の行列で、左上の数が0になる（出口の電圧がとても大きくなる）角周波数 $\\omega$`,
           a: `$\\omega=${w}\\,\\mathrm{rad/s}$`, key: `30t|${Lm},${Cu}`, verify: p => { const n = nums(p.a); return (n.length === 1 && Math.abs(n[0] * n[0] * Lm / 1000 * +Cu / 1e6 - 1) < 1e-9) || 'ちがう'; } }, '7-30',
-          `$1-\\omega^2LC=0$ を $\\omega$ について解く問い。$\\omega=\\frac{1}{\\sqrt{LC}}$（6-13 の共振）`, []);
+          `$1-\\omega^2LC=0$ を $\\omega$ について解く問い。$\\omega=\\frac{1}{\\sqrt{LC}}$（教科書 6-13 の共振）`, []);   // 「6-13」だけだと問題集のわざ 6-13 と読める（U-6・R1-8）
       },
     },
   });
@@ -1243,6 +1284,8 @@
   const optW = ([t, v]) => (t === 'G' ? `長さ $${v}\\,\\mathrm{m}$ のすき間` : `焦点距離 $${v}\\,\\mathrm{m}$ のレンズ`);
   const DS = ['0.02', '0.05', '0.1', '0.2', '0.3', '0.4'], FS = ['0.05', '0.1', '0.2', '0.25', '0.5'];
   const bad92 = (d, f) => d === '0.1' && f === '0.05';
+  // 見開きに出た「すき間 d のあとレンズ f」の組（同じ行列を2回使わない。U-2・R1-18）。見開き1つぶんは同じ r
+  const used92 = r => { const t = r.turns || (r.turns = {}); return t.u92 || (t.u92 = new Set()); };
   M.add({
     id: '7-92', part: 2, chap: '7-3（物理・工学）・章末問題', stars: 1,
     title: 'レンズの光線の行列は、先に通るものを右に（電気の箱と向きが反対）',
@@ -1258,7 +1301,8 @@
     steps: {
       // すき間のあとレンズ
       s1(r) {
-        const d = r.pick(DS), f = r.pick(FS); if (bad92(d, f)) return null;
+        const d = r.pick(DS), f = r.pick(FS); if (bad92(d, f) || used92(r).has(`${d},${f}`)) return null;
+        used92(r).add(`${d},${f}`);
         const L = [['G', d], ['L', f]], A = optM(L);
         return { q: `光線が、${optW(L[0])}を進んでから、${optW(L[1])}を通る。2つをつないだ行列`, a: `$${mt(A)}$`, key: `92|${L}`, easyCheck: false,
           easy: `$${mt(LENS(f))}${mt(GAP(d))}$（先のすき間が右）`, calc: { kind: 'mat', want: A }, verify: p => matIs(p, optN(L)) };
@@ -1272,7 +1316,8 @@
             easy: `$${mt(GAP(d))}${mt(LENS(f))}$（先のレンズが右）`, calc: { kind: 'mat', want: A }, verify: p => matIs(p, optN(L)) };
         }
         const L = [['G', d], ['L', f]], A = optM(L), y = r.pick(['0.01', '0.02', '0.005', '0']), th = r.pick(['0.1', '0', '-0.1', '0.05', '0.2']);
-        if (y === '0' && th === '0') return null;
+        if ((y === '0' && th === '0') || used92(r).has(`${d},${f}`)) return null;   // s1 と同じ行列を使わない（U-2・R1-18）
+        used92(r).add(`${d},${f}`);
         const out = mulv(A, [y, th]);
         return { q: `高さ $${y}\\,\\mathrm{m}$、かたむき $${th}\\,\\mathrm{rad}$ の光線が、${optW(L[0])}を進んでから、${optW(L[1])}を通った。出た光の（高さ、かたむき）`, a: `$${pt(out)}$`, key: `92|${L}|${y},${th}`, easyCheck: false,
           easy: `$${mt(A)}${cv([y, th])}$`, verify: p => ptIs(p, mulNv(optN(L), [+y, +th])) };
@@ -1291,7 +1336,8 @@
       trap(r) {
         const d = r.pick(DS), f = r.pick(FS); if (bad92(d, f)) return null;
         const L = [['G', d], ['L', f]], A = optM(L), x = [r.pick(['0.01', '0.02', '0']), r.pick(['0.1', '0', '-0.1', '0.2'])];
-        if (x[0] === '0' && x[1] === '0') return null;
+        if ((x[0] === '0' && x[1] === '0') || used92(r).has(`${d},${f}`)) return null;
+        used92(r).add(`${d},${f}`);
         const out = mulv(A, x);
         return dest({ q: `${optW(L[0])}を進んでから、${optW(L[1])}を通って出た光の（高さ、かたむき）が $${pt(out)}$ のとき、入った光の（高さ、かたむき）`, a: `$${pt(x)}$`, key: `92t|${L}|${x}`,
           verify: p => ptIs(p, x.map(Number)) && (sameN(mulNv(optN(L), readPts(p.a)[0]), out.map(nv)) || 'もどらない') }, '7-92',
@@ -1303,12 +1349,28 @@
   // 目印・ふつうに解くと・楽な形にすると に書いた行列（2×2 以上）が問題の文に入ったら、その問題は作り直す
   {
     const matsIn = s => [...String(s).matchAll(/\\begin\{pmatrix\}([\s\S]*?)\\end\{pmatrix\}/g)].map(m => m[1].replace(/\s/g, '')).filter(t => t.includes('&') && t.includes('\\\\'));
+    // 第41回（U-2・R1-34）：転置・行の入れかえ・列の入れかえ・ななめの入れかえ（diag(2, 3) → diag(3, 2)）もよける（単位行列はのぞく）。
+    //   また、ステップ1・2の問題に出た行列（ななめだけの行列と、成分が 0・±1 だけの行列はのぞく）を、同じ見開きのステップ3では使わない
+    const cells = t => t.split('\\\\').map(row => row.split('&'));
+    const join = A => A.map(row => row.join('&')).join('\\\\');
+    const varsOf = t => { const A = cells(t); return [A, A[0].map((_, j) => A.map(row => row[j])), A.slice().reverse(), A.map(row => row.slice().reverse()), A.slice().reverse().map(row => row.slice().reverse())].map(join); };
+    const diagT = t => cells(t).every((row, i) => row.every((c, j) => i === j || ev(c) === 0));
+    const isI = t => diagT(t) && cells(t).every((row, i) => ev(row[i]) === 1);
+    const plainT = t => diagT(t) || cells(t).every(row => row.every(c => [0, 1, -1].includes(ev(c))));
     for (const id of M.list(7).filter(i => M.waza[i].part === 2)) {
-      const d = M.waza[id], left = new Set([d.mark, ...d.futsu, ...d.raku].flatMap(matsIn));
-      if (!left.size) continue;
+      // 成分が 0・±1 だけの例（裏返し・回転など、名前のある形）は、その行列だけ（入れかえると別の名前の形になるので）
+      const d = M.waza[id], left = new Set([d.mark, ...d.futsu, ...d.raku].flatMap(matsIn).flatMap(t => (cells(t).every(row => row.every(c => [0, 1, -1].includes(ev(c)))) ? [t] : varsOf(t))).filter(t => !isI(t)));
       for (const st of M.STEPS) {
         const f = d.steps[st]; if (!f) continue;
-        d.steps[st] = r => { const p = f(r); return p && matsIn(p.q).some(m => left.has(m)) ? null : p; };
+        d.steps[st] = r => {
+          const p = f(r); if (!p) return p;
+          const ms = matsIn(p.q);
+          if (ms.some(m => left.has(m))) return null;
+          const t = r.turns || (r.turns = {}), u = t['m12|' + id] || (t['m12|' + id] = new Set()), big = ms.filter(m => !plainT(m));
+          if (st === 's3' && big.some(m => u.has(m))) return null;
+          if (st === 's1' || st === 's2') big.forEach(m => u.add(m));
+          return p;
+        };
       }
     }
   }
