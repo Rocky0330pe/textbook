@@ -198,7 +198,7 @@
         const fs = getComputedStyle(f), sm = sec.querySelector('.summary');
         top1 = Math.max(top1, (ro.top - r0.top) / mm);
         top = Math.max(top, (ro.top - r0.top - (sm ? sm.getBoundingClientRect().height + 2 * mm : 0)) / mm);
-        bot = Math.max(bot, (f.getBoundingClientRect().height + parseFloat(fs.marginTop)) / mm + 6);
+        bot = Math.max(bot, (f.getBoundingClientRect().height + parseFloat(fs.marginTop)) / mm + 12);
         const lis = ol.querySelectorAll(':scope > li');
         // 1列なら1問ずつ。2列なら、図のない問題を2つずつ1行、図のある問題は1問で1行（行のはじめの番号に、その行の高さ）
         rows.length = 0;
@@ -214,7 +214,7 @@
       const pack = k => {
         const rs = []; let s0 = 0, h = 0;
         for (const [i] of rows) {
-          const cap = (297 - bot - (rs.length ? top : top1) - 4) * k;   // ゆとり 4 mm（答えのページの解き方の行の折り返しのぶん）
+          const cap = (297 - bot - (rs.length ? top : top1) - 8) * k;   // ゆとり 8 mm（答えのページの解き方の行の折り返しのぶん）
           if (i > s0 && h + hs[i] > cap) { rs.push([s0, i]); s0 = i; h = 0; }
           h += hs[i];
         }
