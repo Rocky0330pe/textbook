@@ -386,8 +386,12 @@
     });
     return out.join('、');
   }
-  const EX18 = { 'rho=\\dfrac{m}{V}': [1, 2], 'P=\\dfrac{V^2}{R}': [2, 1] };   // 左ページの例（何倍かしただけの組もよける。S-2）
-  const bad18 = (S, ps) => !!EX18[S.f.replace(/^\\/, '')] && propTo(ps, EX18[S.f.replace(/^\\/, '')]);
+  // 「べきの大きさ：ずれ」の組（並べた順）。文字や量の名前だけがちがう式は、同じ問題とみる（R1-9）
+  const pairs18 = (S, ps) => S.vars.map((x, i) => [Math.abs(x[1]), ps[i]]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const key18 = (S, ps) => 'D' + pairs18(S, ps).map(t => t.join(':')).join(',');
+  // 左ページの例（$\rho=\dfrac mV$ の ±1％・±2％、$P=\dfrac{V^2}{R}$ の ±2％・±1％）の組と、それを何倍かしただけの組は、どの式でもよける（S-2・Z-2）
+  const EXP18 = [[[1, 1], [1, 2]], [[1, 1], [2, 2]]];
+  const bad18 = (S, ps) => { const P = pairs18(S, ps); return EXP18.some(E => E.length === P.length && P.every((t, i) => t[0] === E[i][0] && Math.abs(t[1] * E[0][1] - E[i][1] * P[0][1]) < 1e-9)); };
   function prob18(S, ps, key) {
     const v = r9(S.vars.reduce((s, x, i) => s + Math.abs(x[1]) * ps[i], 0));
     return { q: `${S.name} $${S.f}$ で、${pmList(S.vars, ps)}のずれがありうる。$${S.s}$ のずれは、いちばん大きくて約 □ ％`, a: `$${nf(v)}$`, key,
@@ -411,17 +415,17 @@
       s1(r) {
         const S = r.pick(DV18), ps = S.vars.map(() => r.pick(PC18));
         if (bad18(S, ps)) return null;
-        return prob18(S, ps, `${S.name}|${ps}`);
+        return prob18(S, ps, key18(S, ps));
       },
       s2(r) {
         const S = r.pick(PW18), ps = S.vars.map(() => r.pick(PC18));
         if (bad18(S, ps)) return null;
-        return prob18(S, ps, `${S.name}|${ps}`);
+        return prob18(S, ps, key18(S, ps));
       },
       s3(r) {
         const S = r.pick(MX18), ps = S.vars.map((x, i) => (i > 0 && r.chance(0.4) ? null : r.pick(PC18)));
         for (let i = 0; i < ps.length; i++) if (ps[i] == null) ps[i] = ps[i - 1];
-        return prob18(S, ps, `${S.name}|${ps}`);
+        return prob18(S, ps, key18(S, ps));
       },
       // わな：1つの量で偏微分した値（8-15。ずれの割合ではない）
       trap(r) {
@@ -618,7 +622,9 @@
       // 図の腕（角は 90° の倍数）
       s3(r) {
         const [L1, L2] = r.pick(ARML), t1 = r.pick([0, 90, 180, -90]), t2 = r.pick([90, -90]);
-        if (L1 === '0.30' && L2 === '0.25' && t1 === 90 && t2 === -90) return null;   // 左ページの例（O-2）
+        if (t1 === 90 && t2 === -90) return null;   // 左ページの例の角の組（腕がちがっても2行めが例と同じになる。O-2・R1-10）
+        const ua = r.a20 || (r.a20 = new Set()); if (ua.has(`${t1},${t2}`)) return null;   // 同じ角の組を2回出さない
+        ua.add(`${t1},${t2}`);
         const g = armOf(L1, L2, t1, t2);
         return { q: `図の2本の腕（${armTxt(g)}）のヤコビ行列 $J$`, a: `$${pmx(g.J)}$`, key: `arm|${L1},${L2}`, easyCheck: false, fig: armFig(g),
           easy: `$\\theta_1+\\theta_2=${deg(t1 + t2)}$。1行め $(-L_1\\sin\\theta_1-L_2\\sin(\\theta_1+\\theta_2),\\ -L_2\\sin(\\theta_1+\\theta_2))$ に入れる`,
@@ -658,13 +664,16 @@
         if (bad21(L1, L2, t2)) return null;
         const [n, d] = SIN[t2], v = r9(L12(L1, L2) * n / d);
         if ([0.0375, 0.075].includes(Math.abs(v)) || (L1 === '0.30' && L2 === '0.25')) return null;   // 左ページの例の腕・同じ答え・符号を変えただけの答え（U-2）
+        (r.v21 || (r.v21 = new Set())).add(Math.abs(v));
         return { q: `腕（$L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$）の、$\\theta_1=${deg(t1)}$、$\\theta_2=${deg(t2)}$ でのヤコビアン $\\det J$`, a: `$${nf(v)}$`, key: `21|${L1},${L2},${t1},${t2}`,
           easy: `$${L1}\\times${L2}\\times${par(n === 0 ? '0' : d === 1 ? String(n) : nf(n / d))}=${nf(v)}$`, easyCheck: 'last',
           verify: p => { const J = jacTrig(+L1, +L2, t1, t2); return valIs(p, J[0][0] * J[1][1] - J[0][1] * J[1][0], 1e-9); } };
       },
       // sin が √ の角（45°・60°・120°…）。答えは √ を残した形
       s2(r) {
-        const [L1, L2] = r.pick(ARML), t1 = r.pick(T1X), t2 = r.pick([45, 60, 120, 135, -45, -60, -120, -135]);
+        const o = r.s21 || (r.s21 = { n: r.int(0, 1), used: new Set() }), [L1, L2] = r.pick(ARML), t1 = r.pick(T1X), t2 = (o.n % 2 ? -1 : 1) * r.pick([45, 60, 120, 135]);
+        if (o.used.has(Math.abs(t2)) || o.used.has(L1 + L2) || (L1 === '0.30' && L2 === '0.25')) return null;   // 同じひじの角・同じ腕を2回出さない。正・負を交互に（R1-16）。例の腕もよける
+        o.n++; o.used.add(Math.abs(t2)); o.used.add(L1 + L2);
         const m = [45, 135, -45, -135].includes(t2) ? 2 : 3, sg = t2 < 0 ? -1 : 1, c = r9(sg * L12(L1, L2) / 2);
         return { q: `腕（$L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$）の、$\\theta_1=${deg(t1)}$、$\\theta_2=${deg(t2)}$ でのヤコビアン $\\det J$`, a: `$${surd(c, m)}$`, key: `21|${L1},${L2},${t1},${t2}`, easyCheck: false,
           easy: `$${L1}\\times${L2}\\times${sg < 0 ? '\\Bigl(-' : ''}\\dfrac{\\sqrt${m}}{2}${sg < 0 ? '\\Bigr)' : ''}$`,
@@ -673,15 +682,18 @@
       // 近似の値（$\sin45^{\circ}=0.707$ を文に）、うで2の向きを水平からの角 φ で
       s3(r) {
         const [L1, L2] = r.pick(ARML);
-        if (turn(r, '21s3', 2) === 0) {
+        const o = r.k21 || (r.k21 = { n: r.int(0, 1) });   // 2つの形を交互に（出した問題だけ進める）
+        if (o.n % 2 === 0) {
           const t1 = r.pick([0, 30, 60]), t2 = r.pick([45, 135, 60, 120]), m = [45, 135].includes(t2) ? 2 : 3, sv = m === 2 ? '0.707' : '0.866';
           const tv = L12(L1, L2) * Math.sin(t2 * Math.PI / 180), a = agree(F.mul(F.fromDec(String(L12(L1, L2))), F.fromDec(sv)), tv, 4);
           if (!a) return null;
+          o.n++;
           return { q: `腕（$L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$）の、$\\theta_1=${deg(t1)}$、$\\theta_2=${deg(t2)}$ でのヤコビアン $\\det J$（$\\sin${deg(t2)}=${sv}$。小数第4位まで）`, a: `約 $${a}$`, key: `21a|${L1},${L2},${t1},${t2}`,
             easy: `$${nf(L12(L1, L2))}\\times${sv}\\approx${a}$`, easyCheck: false, verify: p => valIs(p, Math.round(tv * 1e4) / 1e4, 1e-9) };
         }
         const t1 = r.pick([0, 30, 45, 60]), e = r.pick([30, 90, 150, -30, -90]), phi = t1 + e, [n, d] = SIN[e], v = r9(L12(L1, L2) * n / d);
-        if (L1 === '0.30' && L2 === '0.25') return null;   // 左ページの例の腕（答えが例の符号ちがいになる。U-2）
+        if ((L1 === '0.30' && L2 === '0.25') || (r.v21 && r.v21.has(Math.abs(v)))) return null;   // 左ページの例の腕（答えが例の符号ちがいになる。U-2）、s1 と同じ大きさの答え
+        o.n++;
         return { q: `うで2の向きを水平からの角 $\\varphi$ で表した腕（$L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$）の、$\\theta_1=${deg(t1)}$、$\\varphi=${deg(phi)}$ でのヤコビアン $\\det J$`, a: `$${nf(v)}$`, key: `21p|${L1},${L2},${t1},${phi}`,
           easy: `ひじの角は $\\varphi-\\theta_1=${deg(e)}$。$${L1}\\times${L2}\\times${par(d === 1 ? String(n) : nf(n / d))}=${nf(v)}$`, easyCheck: 'last',
           verify: p => { const a = t1 * Math.PI / 180, b = phi * Math.PI / 180, J = [[-L1 * Math.sin(a), -L2 * Math.sin(b)], [L1 * Math.cos(a), L2 * Math.cos(b)]]; return valIs(p, J[0][0] * J[1][1] - J[0][1] * J[1][0], 1e-9); } };
@@ -920,13 +932,18 @@
   });
 
   // ================================================================ 8-25
-  const TRI = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]];
+  const TRI = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29], [9, 40, 41]];
+  // ステップ2の点：PY に、8・15・17、20・21・29、9・40・41 の組になる点を足す（3・4・5 と 5・12・13 は例の何倍か・入れかえになるため）
+  const PY25 = [[15, 4], [21, 10], [14, 24], [48, 7], [7, 12], [30, 8], [16, 15], [40, 21], [18, 40]];
+  // 答えの成分の大きさの組。同じ組は1つのステップに1回、見開きに2回まで（Z-2）
+  const triOK25 = (r, st, u) => { const k = u.map(f => Math.abs(f[0] / f[1]).toFixed(6)).sort().join(), d = r.tri25 || (r.tri25 = {}); if ((d[k] || []).includes(st) || (d[k] || []).length >= 2) return false; (d[k] = d[k] || []).push(st); return true; };
   // 長さ1の矢印（成分が分数なら \left( \right)）
   function unitTex(g) {
     const L = F.fromDec(String(r9(Math.hypot(...g)))), u = g.map(v => F.div(F.fromDec(String(v)), L)), tx = u.map(fx);
     return { u, tex: u.some(f => f[1] !== 1 && !dec(f)) ? `\\left(${tx.join(',\\ ')}\\right)` : `(${tx.join(',\\ ')})` };
   }
-  const exAns25 = t => { const a = t.replace(/-/g, ''); return a === '(0.6,\\ 0.8)' || a === '\\left(\\dfrac{12}{13},\\ \\dfrac{5}{13}\\right)'; };   // 左ページの例の答えと、符号を変えただけのもの（O-2・U-2）
+  // 左ページの例の答え $(-0.6,\ -0.8)$・$\Bigl(\dfrac{12}{13},\ -\dfrac{5}{13}\Bigr)$ と、符号を変えた・入れかえただけのもの（成分の大きさの組が同じ。O-2・U-2・R1-11）
+  const exAns25 = u => { const a = u.map(f => Math.abs(f[0] / f[1])).sort((x, y) => x - y); return [[0.6, 0.8], [5 / 13, 12 / 13]].some(e => a.length === 2 && near(a[0], e[0]) && near(a[1], e[1])); };
   add({
     id: '8-25', part: 2, chap: '8-4⑤ 例題3', stars: 1,
     title: 'いちばん急な上りの向きは grad÷その長さ',
@@ -943,15 +960,16 @@
       // grad が与えられている（3・4・5 などの組）
       s1(r) {
         const [p, q, n] = r.pick(TRI), k = r.pick([0.1, 0.2, 0.04, 0.05, 0.3]), sw = r.chance(0.5), g = (sw ? [q, p] : [p, q]).map(v => r9(v * k * sgnR(r)));
-        const U = unitTex(g); if (exAns25(U.tex)) return null;
+        const U = unitTex(g); if (exAns25(U.u) || !triOK25(r, 1, U.u)) return null;
         return { q: `${gradTxt(g)} の点で、いちばん急な上りの向き（長さ1の矢印）`, a: `$${U.tex}$`, key: `25|${g}`, easyCheck: false,
           easy: `長さ $\\sqrt{${nf(g[0] * g[0])}+${nf(g[1] * g[1])}}=${nf(n * k)}$ でわる`, calc: { kind: 'vec', want: g.map(v => v / Math.hypot(...g)) } };
       },
       // 主役の山の点（上り・下り）
       s2(r) {
-        const [x, y] = signed(r, PY.slice(0, 21)); if (H(x, y) <= 10 || (x === 15 && y === 10)) return null;
-        const g = gH(x, y), up = turn(r, '25s2', 2) === 0, w = up ? g : g.map(v => r9(-v)), U = unitTex(w);
-        if (exAns25(U.tex)) return null;
+        const [x, y] = signed(r, PY25); if (H(x, y) <= 10 || (x === 15 && y === 10)) return null;
+        const g = gH(x, y), o = r.ud25 || (r.ud25 = { n: r.int(0, 1) }), up = o.n % 2 === 0, w = up ? g : g.map(v => r9(-v)), U = unitTex(w);
+        if (exAns25(U.u) || !triOK25(r, 2, U.u)) return null;
+        o.n++;   // 上り・下りを交互に（出した問題だけ進める。U-3）
         return { q: `${MT} の点 ${PT(x, y)} で、いちばん急な${up ? '上り' : '下り'}の向き（長さ1の矢印）`, a: `$${U.tex}$`, key: `25|${x},${y}`, easyCheck: false,
           easy: `${gradTxt(g)}${up ? ' ' : ' の反対'}を、長さ $${nf(Math.hypot(...g))}$ でわる`, calc: { kind: 'vec', want: w.map(v => v / Math.hypot(...w)) } };
       },
@@ -1003,6 +1021,9 @@
     its.push(['seg', P, Q, { arrow: true, thick: true }], ['dot', P], ['label', P, 'P', anch([-u[0], -u[1]])]);
     return { s: 4.8, items: its };
   }
+  // 左ページの例（grad $(0.2,\ -0.8)$、向き $(4,\ 1)$、傾き $0.25$）の入れかえ・符号ちがい（向きの成分の大きさが 1 と 4、傾きの大きさが $\frac14$・4）（O-2・R1-12）
+  const exDir26 = d => [Math.abs(d[0]), Math.abs(d[1])].sort((a, b) => a - b).join() === '1,4';
+  const exSl26 = s => F.eq(s, F.make(1, 4)) || F.eq(s, F.make(-1, 4)) || F.eq(s, F.make(4)) || F.eq(s, F.make(-4));
   const FIG26 = [[30, 20], [-30, 20], [30, -20], [-30, -20], [40, 15], [-40, 15], [40, -15], [-40, -15], [50, 10], [-50, -10], [20, 25], [-20, -25]];   // 軸の上の点は、矢印が軸と重なるのでよける
   add({
     id: '8-26', part: 2, chap: '8-4⑤ 例題4', stars: 1,
@@ -1020,7 +1041,7 @@
       // grad が与えられている
       s1(r) {
         const g = [r.pick(GR24), r.pick(GR24)], d = contourDir(g);
-        if (d[0] === 4 && d[1] === 1) return null;   // 左ページの例の答え（O-2）
+        if (exDir26(d)) return null;   // 左ページの例の答え（入れかえ・符号ちがいも。O-2・R1-12）
         return { q: `${gradTxt(g)} の点を通る等高線の向き（1つの矢印）`, a: `$${vt(d)}$`, key: `26|${d}|${g}`, easyCheck: false,
           easy: `入れかえて片方の符号を変えた $${vt([g[1], r9(-g[0])])}$（何倍でも、反対向きでもよい）`, verify: p => perpIs(p, g) };
       },
@@ -1029,13 +1050,13 @@
         const P = r.chance(0.5) ? signed(r, PY) : ptMain(r); if (!P) return null;
         const [x, y] = P, g = gH(x, y); if (H(x, y) <= 10 || (x === -10 && y === 20)) return null;
         if (turn(r, '26s2', 2) === 0) {
-          const d = contourDir(g); if (d[0] === 4 && d[1] === 1) return null;
+          const d = contourDir(g); if (exDir26(d)) return null;
           return { q: `${MT} の点 ${PT(x, y)} を通る等高線の向き（1つの矢印）`, a: `$${vt(d)}$`, key: `26|${x},${y}`, easyCheck: false,
             easy: `${gradTxt(g)} と直角な $${vt([g[1], r9(-g[0])])}$`, verify: p => perpIs(p, [-0.02 * x, -0.04 * y]) };
         }
         if (y === 0) return null;
         const s = F.div(F.fromDec(String(-g[0])), F.fromDec(String(g[1])));
-        if (F.eq(s, F.make(1, 4))) return null;
+        if (exSl26(s)) return null;
         return { q: `${MT} の点 ${PT(x, y)} を通る等高線の接線の傾き $\\dfrac{\\dd y}{\\dd x}$`, a: `$${fx(s)}$`, key: `26|${x},${y}`, easyCheck: false,
           easy: `${gradTxt(g)}。$-\\dfrac{${nf(g[0])}}{${nf(g[1])}}$`, verify: p => valIs(p, -(0.02 * x) / (0.04 * y), 1e-9) };
       },
@@ -1043,11 +1064,11 @@
       s3(r) {
         const [x, y] = r.pick(FIG26), g = gH(x, y);
         if (turn(r, '26s3', 2) === 0 || y === 0) {
-          const d = contourDir(g);
+          const d = contourDir(g); if (exDir26(d)) return null;
           return { q: `図は ${MT} の等高線と、点 P${PT(x, y)} の $\\mathrm{grad}\\,h$ の矢印。P を通る等高線の向き（1つの矢印）`, a: `$${vt(d)}$`, key: `26|${x},${y}`, easyCheck: false, fig: figContour(x, y),
             easy: `${gradTxt(g)} と直角な $${vt([g[1], r9(-g[0])])}$`, verify: p => perpIs(p, [-0.02 * x, -0.04 * y]) };
         }
-        const s = F.div(F.fromDec(String(-g[0])), F.fromDec(String(g[1])));
+        const s = F.div(F.fromDec(String(-g[0])), F.fromDec(String(g[1]))); if (exSl26(s)) return null;
         return { q: `図は ${MT} の等高線と、点 P${PT(x, y)} の $\\mathrm{grad}\\,h$ の矢印。P を通る等高線の接線の傾き $\\dfrac{\\dd y}{\\dd x}$`, a: `$${fx(s)}$`, key: `26|${x},${y}`, easyCheck: false, fig: figContour(x, y),
           easy: `${gradTxt(g)}。$-\\dfrac{${nf(g[0])}}{${nf(g[1])}}$`, verify: p => valIs(p, -(0.02 * x) / (0.04 * y), 1e-9) };
       },
@@ -1063,18 +1084,21 @@
 
   // ================================================================ 8-27
   // e・sin・cos の入った2つの変数の式と、その勾配（式）
-  function fnGrad(r) {
+  function fnGrad(r, used) {
     const a = r.pick([2, 3, -1, -2]), b = r.pick([2, 3, 4]), c = r.pick([1, 2, 3]);
     const co = (k, t) => (k === 1 ? t : k === -1 ? '-' + t : k + t);   // 係数 1・-1 は書かない
     const ea = co(a, 'x'), eay = co(a, 'y'), ec = co(c, 'y');
-    return r.pick([
+    const FS = [
       () => ({ f: `e^{${ea}}\\sin y`, g: [co(a, `e^{${ea}}\\sin y`), `e^{${ea}}\\cos y`] }),
       () => ({ f: `e^{x}\\cos ${b}y`, g: ['e^{x}\\cos ' + b + 'y', co(-b, `e^{x}\\sin ${b}y`)] }),
       () => ({ f: `x^2e^{${ec}}`, g: [`2xe^{${ec}}`, co(c, `x^2e^{${ec}}`)] }),
       () => ({ f: `\\sin(${b}x+y)`, g: [co(b, `\\cos(${b}x+y)`), `\\cos(${b}x+y)`] }),
       () => ({ f: `xe^{${eay}}`, g: [`e^{${eay}}`, co(a, `xe^{${eay}}`)] }),
       () => ({ f: `\\ln(x^2+y^2)`, g: ['\\dfrac{2x}{x^2+y^2}', '\\dfrac{2y}{x^2+y^2}'] }),
-    ])();
+    ];
+    const ks = FS.map((f, k) => k).filter(k => !used || !used.has(k) || used.size >= FS.length), k = r.pick(ks), T = FS[k]();
+    T.form = k;
+    return T;
   }
   add({
     id: '8-27', part: 2, chap: '8-4③⑥⑦ 例題5', stars: 1,
@@ -1113,7 +1137,8 @@
       },
       // 式のまま（e・sin・ln の入った関数）
       s3(r) {
-        const T = fnGrad(r);
+        const used = r.f27 || (r.f27 = new Set()), T = fnGrad(r, used);   // 同じ形（$\sin(2x+y)$ と $\sin(4x+y)$ など）を2回出さない（R1-13）
+        used.add(T.form);
         return { q: `$f=${T.f}$ の $\\nabla f$（式で）`, a: `$\\left(${T.g.join(',\\ ')}\\right)$`, key: `27f|${T.f}`, easyCheck: false,
           easy: `$y$ を止めて $x$ で、$x$ を止めて $y$ で偏微分して並べる`,
           calc: { kind: 'pdiff', op: 'grad', f: T.f, vars: ['x', 'y'], pts: [[0.37, 0.83], [1.13, -0.61], [-0.71, 1.41]] } };
@@ -1138,7 +1163,7 @@
   const MAT = [['ステンレス', 16], ['コンクリート', 1.6], ['れんが', 0.6]];
   const EX28 = new Set(['(-6,\\ -8)', '(-300,\\ 400)', '(48,\\ -64)']);   // 左ページの例の答え（O-2）
   const linTeX = (c, a, b) => polyTeX([[c, 0, 0], [a, 1, 0], [b, 0, 1]], ['x', 'y']);
-  const sprTxt = k => `ばね定数 $k=${k}\\,\\mathrm{N/m}$ のばね（位置エネルギー $U=\\dfrac{1}{2}k(x^2+y^2)$、単位は J・m）`;
+  const sprTxt = k => `ばね定数 $k=${k}\\,\\mathrm{N/m}$ のばねの位置エネルギー $U=\\dfrac{1}{2}k(x^2+y^2)$（J。$x$、$y$ は m）`;
   const phiTxt = (a, b, c) => `電位が $\\phi=${c == null ? linTeX(0, a, b) : polyTeX([[a, 1, 0, 0], [b, 0, 1, 0], [c, 0, 0, 1]], ['x', 'y', 'z'])}$（V。$x$、$y$${c == null ? '' : '、$z$'} は m）`;
   const matTxt = (m, k, T) => `${m}の板（熱伝導率 $k=${k}\\,\\mathrm{W/(m\\cdot K)}$）の中の温度が $T=${T}$（℃。$x$、$y$ は m）`;
   add({
@@ -1218,7 +1243,7 @@
       // わな：ばねの力がする仕事（8-50。U の差）
       trap(r) {
         const k = r.pick(KS), [x, y] = signed(r, SPR), v = r9(k * (x * x + y * y) / 2);
-        return dest({ q: `${sprTxt(k)}につながれた物を、点 ${PT(x, y)} から原点までもどすとき、ばねの力がする仕事（J）`, a: `$${nf(v)}$`, key: `t28|${k}|${x},${y}`,
+        return dest({ q: `${sprTxt(k)}で、つながれた物を、点 ${PT(x, y)} から原点までもどすとき、ばねの力がする仕事（J）`, a: `$${nf(v)}$`, key: `t28|${k}|${x},${y}`,
           verify: p => valIs(p, k * (x * x + y * y) / 2, 1e-9) }, '8-28',
           `力ではなく仕事。保存力の仕事は、道によらず $U(\\text{はじめ})-U(\\text{おわり})=\\dfrac{1}{2}\\times${k}\\times${nf(r9(x * x + y * y))}-0=${nf(v)}$`, ['8-50']);
       },
@@ -1260,9 +1285,11 @@
       },
       // 主役の山の、軸の上の点（grad が東西南北を向く）
       s2(r) {
-        const onX = r.chance(0.5), v = onX ? r.pick([10, 20, 25, 30, 40, 50, 60]) * sgnR(r) : r.pick([5, 10, 15, 20, 25, 30]) * sgnR(r), [x, y] = onX ? [v, 0] : [0, v];
+        const o = r.s29 || (r.s29 = { n: r.int(0, 2), ans: new Set() }), onX = o.n % 3 === 0, v = onX ? r.pick([10, 20, 25, 30, 40, 50, 60]) * sgnR(r) : r.pick([5, 10, 15, 20, 25, 30]) * sgnR(r), [x, y] = onX ? [v, 0] : [0, v];
         if (x === -50 && y === 0) return null;   // 左ページの例（O-2）
         const g = gH(x, y), m = Math.hypot(...g), al = norm360(Math.round(Math.atan2(g[1], g[0]) * 180 / Math.PI)), th = r.pick([60, 90, 120]), s = r9(m * TH29[th]);
+        if (o.ans.has(twoAng(al, th)) || EXANS['8-29'].includes(twoAng(al, th).replace(/\$/g, ''))) return null;   // 同じ答えの角を2回出さない（R1-17）。例の答えもここでよける
+        o.n++; o.ans.add(twoAng(al, th));
         return { q: `${MT} の点 ${PT(x, y)} で、坂が $${nf(s)}$ になる道の向き（東から左回りの角で2つ）`, a: twoAng(al, th), key: `29p|${x},${y}|${th}`, easyCheck: false,
           easy: `${gradTxt(g)}（長さ $${nf(m)}$、向き $${al}^{\\circ}$）。$\\cos\\theta=${nf(TH29[th])}$ で $\\theta=${th}^{\\circ}$`, verify: p => angIs(p, Math.hypot(0.02 * x, 0.04 * y), Math.atan2(-0.04 * y, -0.02 * x) * 180 / Math.PI, s) };
       },
@@ -1272,7 +1299,7 @@
           const m = r.pick(M29), th = r.pick([60, 120, 45, 135, 30, 150, 180]);
           const cs = { 60: [0.5, 1], 120: [-0.5, 1], 180: [-1, 1], 45: [0.5, 2], 135: [-0.5, 2], 30: [0.5, 3], 150: [-0.5, 3] }[th], a = surd(r9(m * cs[0] * (cs[1] === 1 ? 1 : 1)), cs[1]);
           return { q: `$\\lvert\\mathrm{grad}\\,h\\rvert=${nf(m)}$ の点で、grad の向きから $${th}^{\\circ}$ ずれた向きの道の坂`, a: `$${a}$`, key: `29f|${m},${th}`, easyCheck: false,
-            easy: `$${nf(m)}\\cos${th}^{\\circ}$`, verify: p => valIs(p, m * Math.cos(th * Math.PI / 180), 1e-9) };
+            easy: `$${m === 1 ? '' : nf(m)}\\cos${th}^{\\circ}$`, verify: p => valIs(p, m * Math.cos(th * Math.PI / 180), 1e-9) };
         }
         const y = r.pick([5, 10, 15, 20]) * sgnR(r), x = 2 * Math.abs(y) * sgnR(r), g = gH(x, y), al = norm360(Math.round(Math.atan2(g[1], g[0]) * 180 / Math.PI)), th = r.pick([45, 135]), s = r9(Math.abs(g[0]) * (th === 45 ? 1 : -1));
         return { q: `${MT} の点 ${PT(x, y)} で、坂が $${nf(s)}$ になる道の向き（東から左回りの角で2つ）`, a: twoAng(al, th), key: `29d|${x},${y}|${th}`, easyCheck: false,
@@ -1324,6 +1351,7 @@
       s1(r) {
         const n = r.pick([1, 2, 3, 4]), K = r.pick(KP), V = gasV(n, K);
         if (!V || (n === 1 && K === 1000) || K === 1000) return null;   // 左ページの例（O-2）
+        (r.k91 || (r.k91 = new Set())).add(K);
         return { q: `理想気体 $p=\\dfrac{nRT}{V}$（$R=8.31$）で、$n=${n}$、$V=${V}\\,\\mathrm{m^3}$ のときの $${PD('p', 'T', 'V')}$（$\\mathrm{Pa/K}$）`, a: `$${K}$`, key: `91|${K}`, easyCheck: 'last',
           easy: `$\\dfrac{nR}{V}=\\dfrac{${n}\\times8.31}{${V}}=${K}$`, verify: p => valIs(p, n * 8.31 * (301 - 300) / +V, 1e-9) };
       },
@@ -1338,13 +1366,17 @@
       },
       // $\left(\frac{\partial V}{\partial T}\right)_p$ の値（10 のべき）、温度を上げたときの圧力の増え方
       s3(r) {
-        if (turn(r, '91s3', 2) === 0) {
+        const o = r.s91 || (r.s91 = { n: r.int(0, 1), ans: new Set() });   // 2つの形を交互に。同じ値の答えを2回出さない（R1-15）
+        if (o.n % 2 === 0) {
           const n = r.pick([1, 2, 3, 4, 5]), p0 = r.pick([83100, 166200, 41550]), v = n * 8.31 / p0;
+          if (o.ans.has(sci(v))) return null;
+          o.n++; o.ans.add(sci(v));
           return { q: `理想気体 $V=\\dfrac{nRT}{p}$（$R=8.31$）で、$n=${n}$、$p=${p0}\\,\\mathrm{Pa}$ のときの $${PD('V', 'T', 'p')}$（$\\mathrm{m^3/K}$）`, a: `$${sci(v)}$`, key: `91v|${n},${p0}`, easyCheck: false,
             easy: `$\\dfrac{nR}{p}=\\dfrac{${n}\\times8.31}{${p0}}$`, verify: p => valIs(p, n * 8.31 / p0, 1e-9) };
         }
         const n = r.pick([1, 2]), K = r.pick([100, 200, 300, 500]), V = gasV(n, K), dT = r.pick([2, 3, 5, 10, 20]);
-        if (!V) return null;
+        if (!V || o.ans.has(String(K * dT)) || (r.k91 && (r.k91.has(K) || r.k91.has(K * dT)))) return null;   // s1 と同じ K・同じ答えの数はよける
+        o.n++; o.ans.add(String(K * dT));
         return { q: `理想気体 $p=\\dfrac{nRT}{V}$（$R=8.31$）で、$n=${n}$、$V=${V}\\,\\mathrm{m^3}$ の容器の体積を変えずに、温度を $${dT}\\,\\mathrm{K}$ 上げたときの圧力の増え方（Pa。$${PD('p', 'T', 'V')}$ から）`, a: `$${K * dT}$`, key: `91|${K}`, easyCheck: false,
           easy: `$${PD('p', 'T', 'V')}=\\dfrac{nR}{V}=${K}$。$${K}\\times${dT}$`, verify: p => valIs(p, n * 8.31 * dT / +V, 1e-9) };
       },

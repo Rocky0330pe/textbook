@@ -385,6 +385,8 @@
   // ================================================================ 8-05
   // [何ごと, 間, 単位]。左ページの例と教科書の例の組はよける
   const BAN05 = new Set(['4,200', '4,80', '10,25', '20,40', '4,100', '4,250', '4,125', '4,160']);
+  // 同じ見開きに出した [何ごと, 間] の組と、等高線の傾き（'r' と値）。ステップをまたいで、同じ計算（同じ組）・何倍かしただけの組（同じ傾き）を2回出さない（R1-4・Z-2）
+  const used05 = r => r.used05 || (r.used05 = new Set());
   // 等高線・等圧線の図：少し曲がった2本の線、線の値のラベル、間の長さの両向きの矢印
   function fig05(L0, L1, gap, W) {
     const bend = (x0) => [[x0, 0], [x0 + 0.35, 1.2], [x0 + 0.3, 2.4], [x0, 3.6]];
@@ -411,23 +413,29 @@
       s1(r) {
         if (turn(r, '05s1', 2) === 0) {
           const d = r.pick([10, 20, 25, 40, 50, 320, 400, 500]);
-          if (BAN05.has(`4,${d}`)) return null;
+          if (BAN05.has(`4,${d}`) || used05(r).has(`4,${d}`)) return null;
           const v = 4 / d * 100;
+          used05(r).add(`4,${d}`);
           return { q: `$4\\,\\mathrm{hPa}$ ごとの等圧線で、となりの線までの間が $${d}\\,\\mathrm{km}$。$100\\,\\mathrm{km}$ あたりの気圧の変化〔hPa〕`, a: `$${fmt(v)}$`, key: `4,${d}`,
             easy: `$4\\div${d}\\times100=${fmt(v)}$`, easyCheck: 'last', verify: p => valIs(p, 400 / d) };
         }
         const D = r.pick([5, 10, 20, 50]), g = r.pick([8, 10, 16, 20, 25, 40, 50, 80, 100, 125, 200]), v = D / g;
-        if (BAN05.has(`${D},${g}`) || v >= 2 || v < 0.1 || !Number.isInteger(v * 100)) return null;
+        if (BAN05.has(`${D},${g}`) || used05(r).has(`${D},${g}`) || used05(r).has('r' + fmt(v)) || v >= 2 || v < 0.1 || !Number.isInteger(v * 100)) return null;
+        used05(r).add(`${D},${g}`); used05(r).add('r' + fmt(v));
         return { q: `$${D}\\,\\mathrm{m}$ ごとの等高線で、となりの線までの間が $${g}\\,\\mathrm{m}$。この間の平均の傾き`, a: `$${fmt(v)}$`, key: `${D},${g}`,
           easy: `$${D}\\div${g}=${fmt(v)}$`, easyCheck: 'last', verify: p => valIs(p, D / g) };
       },
       // 2か所をくらべる（何 m ごとかがちがう地図）。A・B の答えを交互に、間のせまいほうが急でない組もまぜる
       s2(r) {
         const o = r.cmp05 || (r.cmp05 = { n: r.int(0, 3) }), wantA = o.n % 2 === 0, trick = o.n % 4 < 2;
-        const D1 = r.pick([5, 10, 20, 50]), g1 = r.pick([10, 20, 25, 40, 50, 80, 100]), D2 = r.pick([5, 10, 20, 50]), g2 = r.pick([10, 20, 25, 40, 50, 80, 100]);
-        const v1 = D1 / g1, v2 = D2 / g2;
-        if (D1 === D2 || v1 === v2 || (v1 > v2) !== wantA || ((g1 > g2) === (v1 > v2)) !== trick || [v1, v2].some(v => !Number.isInteger(v * 100) || v >= 2) || BAN05.has(`${D1},${g1}`) || BAN05.has(`${D2},${g2}`)) return null;
+        let D1, g1, D2, g2, v1, v2, t = 0;
+        for (; t < 200; t++) {
+          D1 = r.pick([5, 10, 20, 50]); g1 = r.pick([10, 20, 25, 40, 50, 80, 100]); D2 = r.pick([5, 10, 20, 50]); g2 = r.pick([10, 20, 25, 40, 50, 80, 100]);
+          v1 = D1 / g1; v2 = D2 / g2;
+          if (!(D1 === D2 || v1 === v2 || (v1 > v2) !== wantA || ((g1 > g2) === (v1 > v2)) !== trick || [v1, v2].some(v => !Number.isInteger(v * 100) || v >= 2) || BAN05.has(`${D1},${g1}`) || BAN05.has(`${D2},${g2}`) || used05(r).has(`${D1},${g1}`) || used05(r).has(`${D2},${g2}`) || used05(r).has('r' + fmt(v1)) || used05(r).has('r' + fmt(v2)))) break;
+        }
         o.n++;
+        if (t >= 200) return null; used05(r).add(`${D1},${g1}`); used05(r).add(`${D2},${g2}`); used05(r).add('r' + fmt(v1)); used05(r).add('r' + fmt(v2));
         const w = v1 > v2 ? 'A' : 'B';
         return { q: `地点Aでは $${D1}\\,\\mathrm{m}$ ごとの等高線の間が $${g1}\\,\\mathrm{m}$、地点Bでは $${D2}\\,\\mathrm{m}$ ごとの等高線の間が $${g2}\\,\\mathrm{m}$。坂が急なのはどちらか`, a: `${w}（$${fmt(v1)}$ と $${fmt(v2)}$）`, key: `${D1},${g1}|${D2},${g2}`,
           easy: `A は $${D1}\\div${g1}=${fmt(v1)}$、B は $${D2}\\div${g2}=${fmt(v2)}$`, easyCheck: false,
@@ -435,15 +443,18 @@
       },
       // 図：等圧線（等高線）2本と、間の長さ
       s3(r) {
-        if (turn(r, '05s3', 2) === 0) {
+        const o3 = r.s05 || (r.s05 = { n: r.int(0, 1) });   // 等圧線・等高線を交互に（出した問題だけ進める）
+        if (o3.n % 2 === 0) {
           const d = r.pick([20, 40, 50, 64, 320]), P0 = 4 * r.int(249, 254), v = 4 / d * 100;
-          if (BAN05.has(`4,${d}`)) return null;
+          if (BAN05.has(`4,${d}`) || used05(r).has(`4,${d}`)) return null;
+          used05(r).add(`4,${d}`); o3.n++;
           return { q: '図の2本の等圧線（単位は hPa）の間で、$100\\,\\mathrm{km}$ あたりの気圧の変化〔hPa〕', a: `$${fmt(v)}$`, key: `4,${d}`,
             fig: fig05(String(P0), String(P0 - 4), `$${d}\\,\\mathrm{km}$`, d < 100 ? 3.2 : 5.5),
             easy: `差は $${P0}-${P0 - 4}=4$。$4\\div${d}\\times100=${fmt(v)}$`, easyCheck: false, verify: p => valIs(p, 400 / d) };
         }
         const D = r.pick([10, 20]), g = r.pick([16, 25, 40, 50, 80]), h0 = D * r.int(5, 14), v = D / g;
-        if (BAN05.has(`${D},${g}`)) return null;
+        if (BAN05.has(`${D},${g}`) || used05(r).has(`${D},${g}`) || used05(r).has('r' + fmt(v))) return null;
+        used05(r).add(`${D},${g}`); used05(r).add('r' + fmt(v)); o3.n++;
         return { q: '図の2本の等高線の間の、平均の傾き', a: `$${fmt(v)}$`, key: `${D},${g}`,
           fig: fig05(`$${h0 + D}\\,\\mathrm{m}$`, `$${h0}\\,\\mathrm{m}$`, `$${g}\\,\\mathrm{m}$`, g < 40 ? 3.2 : 5),
           easy: `差は $${h0 + D}-${h0}=${D}$。$${D}\\div${g}=${fmt(v)}$`, easyCheck: false, verify: p => valIs(p, D / g) };
@@ -532,6 +543,7 @@
 
   // ================================================================ 8-07
   // 主役の山の切り口：$x=v$ で切ると $h=(100-0.01v^2)-0.02y^2$、$y=v$ で切ると $h=(100-0.02v^2)-0.01x^2$
+  const used07 = r => r.used07 || (r.used07 = new Set());   // s1・s2 で止めた値（わなの文の切り口の式が、s1 の答えにならないように。R1-2）
   const cut07 = (ax, v) => (ax === 'x' ? `h=${fmt(100 - 0.01 * v * v)}-0.02y^2` : `h=${fmt(100 - 0.02 * v * v)}-0.01x^2`);
   // 答えの式「h=…」が、止めた文字に v を入れた主役の山と同じか（3つの値でくらべる）
   const chkCut = (p, ax, v) => { const t = strip(p.a).replace(/^h=/, ''), fr = ax === 'x' ? 'y' : 'x'; for (const u of [-13.7, 2.9, 31.3]) { const vs = ax === 'x' ? { x: v, y: u } : { x: u, y: v }; if (!near(ev(t, { [fr]: u }), ev(HSRC, vs))) return `${fr}=${u} で値がちがう`; } return true; };
@@ -557,6 +569,7 @@
       // 切り口の式
       s1(r) {
         const ax = r.chance(0.5) ? 'x' : 'y', V = ax === 'x' ? 10 * r.int(2, 9) : 10 * r.int(1, 6), v = r.chance(0.5) ? V : -V;
+        used07(r).add(`${ax}${V}`);
         return { q: `主役の山を $${ax}=${v}$ の所で${ax === 'x' ? '南北' : '東西'}に切った切り口の式`, a: `$${cut07(ax, v)}$`, key: `${ax}${V}`,
           easy: `$${ax}=${v}$ を入れる：$100-${ax === 'x' ? `0.01\\times${par(v)}^2` : `0.02\\times${par(v)}^2`}=${fmt(HM(ax === 'x' ? v : 0, ax === 'x' ? 0 : v))}$ が定数`, easyCheck: false,
           verify: p => chkCut(p, ax, v) };
@@ -566,6 +579,7 @@
         const ax = r.chance(0.5) ? 'x' : 'y', V = ax === 'x' ? 10 * r.int(2, 9) : 10 * r.int(1, 6), v = r.chance(0.5) ? V : -V, fr = ax === 'x' ? 'y' : 'x';
         const u = 10 * r.int(1, 6), c = ax === 'x' ? HM(v, u) : HM(u, v);
         if (c <= 0) return null;
+        used07(r).add(`${ax}${V}`);
         return { q: `主役の山を $${ax}=${v}$ の所で${ax === 'x' ? '南北' : '東西'}に切った。その上で、高さが $${c}\\,\\mathrm{m}$ になる $${fr}$（$${fr}>0$）`, a: `$${fr}=${u}$`, key: `${ax}${V}`,
           easy: `$${cut07(ax, v)}=${c}$ から $${fr}^2=${u * u}$`, easyCheck: false,
           verify: p => { const w = nums(p.a)[0]; return (w > 0 && near(ev(HSRC, ax === 'x' ? { x: v, y: w } : { x: w, y: v }), c)) || `${fr}=${w} で ${c} にならない`; } };
@@ -574,7 +588,7 @@
       s3(r) {
         if (turn(r, '07s3', 2) === 0) {
           const [F, ax, G] = r.pick(POLY07), k = r.int(2, 5), v = r.intNot(-3, 4, w => w === 0 || w === 1), fr = ax === 'x' ? 'y' : 'x';
-          const f = F(k), g = G(v, k).replace(/\+-/g, '-').replace(/--/g, '+').replace(/^1y/, 'y');
+          const f = F(k), g = G(v, k).replace(/\+-/g, '-').replace(/--/g, '+').replace(/(^|[+-])1(?=[xy])/g, '$1');   // 係数の1は書かない（Z-7）
           return { q: `$f(x,\\ y)=${f}$ を $${ax}=${v}$ で止めた切り口（$${fr}$ の式）`, a: `$${g}$`, key: `f${f}|${v}`,
             easy: `$${ax}=${v}$ を入れて、$${fr}$ だけの式にまとめる`, easyCheck: false,
             verify: p => { for (const u of [-1.3, 0.7, 2.9]) { const vs = ax === 'x' ? { x: v, y: u } : { x: u, y: v }; if (!near(ev(strip(p.a), { [fr]: u }), ev(f, vs))) return `${fr}=${u} で値がちがう`; } return true; } };
@@ -589,6 +603,7 @@
       trap(r) {
         const ax = r.chance(0.5) ? 'x' : 'y', v = 10 * r.intNot(-4, 4, w => w === 0), u = 10 * r.intNot(-5, 5, w => w === 0), fr = ax === 'x' ? 'y' : 'x';
         const s = ax === 'x' ? -0.04 * u : -0.02 * u;
+        if (used07(r).has(`${ax}${Math.abs(v)}`)) return null;
         return dest({ q: `主役の山を $${ax}=${v}$ で切った切り口 $${cut07(ax, v)}$ の、$${fr}=${u}$ での傾き`, a: `$${fmt(s)}$`, key: `t${ax}${v}|${u}`,
           calc: { kind: 'pdiff', f: HSRC, vars: ['x', 'y'], wrt: [fr], at: ax === 'x' ? [v, u] : [u, v] } },
         '8-07', `切り口の式ではなく傾き。$${fr}$ で微分（止めた $${ax}$ はそのまま）して $${ax === 'x' ? '-0.04y' : '-0.02x'}$ に $${fr}=${u}$ を入れる`, ['8-11']);
@@ -619,8 +634,8 @@
         if (turn(r, '08s1', 2) === 0) {
           const a = r.int(15, 20), b = r.pick([1, 1.5, 2, 2.5, 3, 4]), z = r.pick([0.5, 1, 1.5, 2, 2.5]), c = a + b * z;
           if (BAN08T.has(`${a},${b}`)) return null;
-          return { q: `部屋の温度が $T(x,\\ y,\\ z)=${a}+${fmt(b)}z$〔℃〕（$z$ は床からの高さ〔m〕）のとき、$${fmt(c)}$℃の等値面`, a: flat08(z), key: `T${a},${b}|${c}`,
-            easy: `$${a}+${fmt(b)}z=${fmt(c)}$ から $z=${fmt(z)}$。$x$・$y$ は何でもよい`, easyCheck: false,
+          return { q: `部屋の温度が $T(x,\\ y,\\ z)=${a}+${cf(b)}z$〔℃〕（$z$ は床からの高さ〔m〕）のとき、$${fmt(c)}$℃の等値面`, a: flat08(z), key: `T${a},${b}|${c}`,
+            easy: `$${a}+${cf(b)}z=${fmt(c)}$ から $z=${fmt(z)}$。$x$・$y$ は何でもよい`, easyCheck: false,
             verify: p => p.a === flat08((c - a) / b) || `答え ${p.a}` };
         }
         const c = r.pick([9, 36, 64, 81, 100, 8, 12, 18, 20, 27, 32, 50]);
@@ -633,7 +648,7 @@
         if (turn(r, '08s2', 2) === 0) {
           const a = r.int(14, 22), b = r.pick([0.5, 1.5, 2, 2.5, 3]), z = r.pick([0.4, 0.8, 1.2, 1.6, 2, 2.4]), c = a + b * z;
           if (BAN08T.has(`${a},${b}`)) return null;
-          return { q: `部屋の温度が $T=${a}+${fmt(b)}z$〔℃〕（$z$ は床からの高さ〔m〕）のとき、床から $${fmt(z)}\\,\\mathrm{m}$ の水平な面は、何℃の等値面か`, a: `$${fmt(c)}$℃`, key: `T${a},${b}|${fmt(c)}`,
+          return { q: `部屋の温度が $T=${a}+${cf(b)}z$〔℃〕（$z$ は床からの高さ〔m〕）のとき、床から $${fmt(z)}\\,\\mathrm{m}$ の水平な面は、何℃の等値面か`, a: `$${fmt(c)}$℃`, key: `T${a},${b}|${fmt(c)}`,
             easy: `$${a}+${fmt(b)}\\times${fmt(z)}=${fmt(c)}$`, easyCheck: false, verify: p => valIs(p, ev(`${a}+${b}z`, { z })) };
         }
         const k = r.pick([2, 3, 4]), R = r.int(1, 5), m = r.pick([0, 1, 2, 5]), c = k * R * R + m;
@@ -825,6 +840,10 @@
   // ================================================================ 8-11
   // 主役の山の点での坂：東 $-0.02x$、北 $-0.04y$。左ページの例 $(-30,\ 10)$・$(30,\ 20)$ と教科書の例 $(-20,\ 10)$・$(20,\ -30)$ は、符号を変えた点もよける
   const ban11 = (a, b) => ['30,20', '30,10', '20,10', '20,30'].includes(`${Math.abs(a)},${Math.abs(b)}`);
+  // 左ページの例と同じ計算（東の坂は $x$ だけ、北の坂は $y$ だけで決まる）：東の坂の $x=\pm30$、北の坂の $y=\pm10$・$\pm20$ もよける（R1-3）
+  const banE11 = a => Math.abs(a) === 30, banN11 = b => Math.abs(b) === 10 || Math.abs(b) === 20;
+  // 同じ見開きで使った東の坂の $x$・北の坂の $y$（同じ計算を2回出さない。Z-2）
+  const used11 = r => r.used11 || (r.used11 = { x: new Set(), y: new Set() });
   const ex = a => -0.02 * a, ny = b => -0.04 * b;
   const ud = v => (v > 0 ? '上り' : '下り');
   // 長さ1の矢印との内積（北東・北西）の答え：$k\sqrt2$ の形
@@ -848,7 +867,8 @@
       // 東の坂と北の坂（偏微分の値）
       s1(r) {
         const a = 5 * r.int(-10, 10), b = 5 * r.int(-8, 8);
-        if (ban11(a, b) || (a === 0 && b === 0) || HM(a, b) <= 0) return null;
+        if (ban11(a, b) || banE11(a) || banN11(b) || (a === 0 && b === 0) || HM(a, b) <= 0 || used11(r).x.has(a) || used11(r).y.has(b)) return null;
+        used11(r).x.add(a); used11(r).y.add(b);
         return { q: `主役の山の点 $${pt(a, b)}$ で、$${dfr('h', 'x')}=$ □、$${dfr('h', 'y')}=$ □`, a: `$${fmt(ex(a))}$、$${fmt(ny(b))}$`, key: `${a},${b}`,
           easy: `$-0.02\\times${par(a)}=${fmt(ex(a))}$、$-0.04\\times${par(b)}=${fmt(ny(b))}$`, easyCheck: false,
           calc: calcPd(HSRC, ['x', 'y'], [fmt(ex(a)), fmt(ny(b))], [a, b]) };
@@ -857,25 +877,27 @@
       s2(r) {
         const o = r.ud11 || (r.ud11 = { n: r.int(0, 3) }), up = o.n % 2 === 0, east = o.n % 4 < 2;
         const a = 5 * r.int(-10, 10), b = 5 * r.int(-8, 8), s = east ? ex(a) : ny(b);
-        if (ban11(a, b) || s === 0 || (s > 0) !== up || HM(a, b) <= 0) return null;
-        o.n++;
+        if (ban11(a, b) || (east ? banE11(a) || used11(r).x.has(a) : banN11(b) || used11(r).y.has(b)) || s === 0 || (s > 0) !== up || HM(a, b) <= 0) return null;
+        o.n++; used11(r)[east ? 'x' : 'y'].add(east ? a : b);
         return { q: `主役の山の点 $${pt(a, b)}$ から${east ? '東' : '北'}へ進む。上りか下りかと、坂の値`, a: `${ud(s)}、$${fmt(s)}$`, key: `${a},${b}`,
           easy: `$${east ? `-0.02\\times${par(a)}` : `-0.04\\times${par(b)}`}=${fmt(s)}$。${s > 0 ? '正なので上り' : '負なので下り'}`, easyCheck: false,
           verify: p => { const t = ev(east ? '-0.02x' : '-0.04y', { x: a, y: b }); return p.a === `${t > 0 ? '上り' : '下り'}、$${fmt(t)}$` || `答え ${p.a}`; } };
       },
       // どちらが急か、別の山
       s3(r) {
-        if (turn(r, '11s3', 2) === 0) {
+        const k3 = r.k11 || (r.k11 = { n: r.int(0, 1) });   // 2つの形を交互に（出した問題だけ進める）
+        if (k3.n % 2 === 0) {
           const o = r.st11 || (r.st11 = { n: r.int(0, 1) }), wantE = o.n % 2 === 0;
           const a = 5 * r.intNot(-10, 10, v => v === 0), b = 5 * r.intNot(-8, 8, v => v === 0), e = ex(a), n = ny(b);
-          if (ban11(a, b) || Math.abs(e) === Math.abs(n) || (Math.abs(e) > Math.abs(n)) !== wantE || HM(a, b) <= 0) return null;
-          o.n++;
+          if (ban11(a, b) || banE11(a) || banN11(b) || used11(r).x.has(a) || used11(r).y.has(b) || Math.abs(e) === Math.abs(n) || (Math.abs(e) > Math.abs(n)) !== wantE || HM(a, b) <= 0) { if ((o.f = (o.f || 0) + 1) % 40 === 0) { o.n++; if (o.f % 80 === 0) k3.n++; } return null; }   // 組が見つからないときは、東・北の向きや形を変える（止まらないように）
+          o.n++; k3.n++; used11(r).x.add(a); used11(r).y.add(b);
           return { q: `主役の山の点 $${pt(a, b)}$ で、東へ進むときと北へ進むときでは、どちらの坂が急か`, a: `${wantE ? '東' : '北'}（$${fmt(Math.abs(e))}$ と $${fmt(Math.abs(n))}$）`, key: `${a},${b}`,
             easy: `東 $${fmt(e)}$、北 $${fmt(n)}$。急さは大きさでくらべる`, easyCheck: false,
             verify: p => p.a === `${Math.abs(ev('-0.02x', { x: a })) > Math.abs(ev('-0.04y', { y: b })) ? '東' : '北'}（$${fmt(Math.abs(e))}$ と $${fmt(Math.abs(n))}$）` || `答え ${p.a}` };
         }
         const [T, pp, qq] = r.pick(MT02), a = 10 * r.intNot(-5, 5, v => v === 0), b = 10 * r.intNot(-5, 5, v => v === 0);
         if (T - pp * a * a - qq * b * b <= 0 || ban11(a, b)) return null;
+        k3.n++;
         const src = `${T}-${pp}x^2-${qq}y^2`, gx = fmt(-2 * pp * a), gy = fmt(-2 * qq * b);
         return { q: `山の高さ $g(x,\\ y)=${src}$ の、点 $${pt(a, b)}$ での $${dfr('g', 'x')}=$ □、$${dfr('g', 'y')}=$ □`, a: `$${gx}$、$${gy}$`, key: `g${T}|${a},${b}`,
           easy: `$${dfr('g', 'x')}=${fmt(-2 * pp)}x$、$${dfr('g', 'y')}=${fmt(-2 * qq)}y$ に点を入れる`, easyCheck: false,
@@ -900,6 +922,7 @@
   const kTeX = (k, rest) => (k === 1 ? rest : k === -1 ? '-' + rest : fmt(k) + rest);   // 係数×式
   const by = b => (b === 1 ? 'y' : `${b}y`);
   // 左ページの例（$\sin(4x-y)$、$e^{-2x}\cos y$）、教科書の例（$e^{-x}\sin y$・$e^{-2x}\sin y$・$e^{2x}\sin y$・$e^{3x}\cos y$、$\sin(2x+3y)$・$\sin(3x+y)$）
+  const used12 = r => r.used12 || (r.used12 = new Set());   // s1 に出した式（わなに同じ関数を出さない。R1-8）
   const BAN12 = new Set(['e:-2,1,cos', 'e:-1,1,sin', 'e:-2,1,sin', 'e:2,1,sin', 'e:3,1,cos', 'l:4,-1,sin', 'l:2,3,sin', 'l:3,1,sin']);
   add({
     id: '8-12', part: 1, chap: '8-2⑦ 例題4', stars: 1,
@@ -922,6 +945,7 @@
         const a = r.intNot(-3, 3, v => v === 0), b = r.int(1, 3), fn = r.pick(['sin', 'cos']), g = fn === 'sin' ? 'cos' : 'sin';
         if (BAN12.has(`e:${a},${b},${fn}`)) return null;
         const F = `${eTeX(a)}${trig(fn, by(b))}`, ax = kTeX(a, `${eTeX(a)}${trig(fn, by(b))}`), ay = kTeX(fn === 'sin' ? b : -b, `${eTeX(a)}${trig(g, by(b))}`);
+        used12(r).add(`e:${a},${b},${fn}`);
         return { q: `$f=${F}$ で、${boxes('f', ['x', 'y'])}`, a: `$${ax}$、$${ay}$`, key: `e:${a},${b},${fn}`,
           easy: `$x$ で：$${trig(fn, by(b))}$ は数。$y$ で：$${eTeX(a)}$ は数`, easyCheck: false, calc: calcPd(F, ['x', 'y'], [ax, ay]) };
       },
@@ -940,7 +964,7 @@
         if (turn(r, '12s3', 2) === 0) {
           const A = r.pick([0.1, 0.2, 0.3, 0.5]), k = r.int(1, 3), w = r.int(2, 5);
           if (A === 0.2 && k === 1 && w === 2) return null;   // 教科書の波
-          const I = `${k === 1 ? '' : k}x-${w}t`, F = `${fmt(A)}\\sin(${I})`, ax = `${fmt(A * k)}\\cos(${I})`, at = `${fmt(-A * w)}\\cos(${I})`;
+          const I = `${k === 1 ? '' : k}x-${w}t`, F = `${fmt(A)}\\sin(${I})`, ax = kTeX(+fmt(A * k), `\\cos(${I})`), at = kTeX(+fmt(-A * w), `\\cos(${I})`);   // 係数の1は書かない（Z-7）
           return { q: `ロープの波 $y(x,\\ t)=${F}$ で、$${dfr('y', 'x')}=$ □、$${dfr('y', 't')}=$ □`, a: `$${ax}$、$${at}$`, key: `w${A},${k},${w}`,
             easy: `$x$ で：$t$ は数、中身の偏微分は ${k}。$t$ で：$x$ は数、中身の偏微分は $-${w}$`, easyCheck: false,
             calc: calcPd(F, ['x', 't'], [ax, at]) };
@@ -954,9 +978,10 @@
       },
       // わな：ラプラシアン（2回ずつ偏微分してたす。8-81）。「みたす・みたさない」を交互に
       trap(r) {
-        const yes = turn(r, '12t', 2) === 0, b = r.int(1, 3), a = yes ? r.pick([b, -b]) : r.intNot(-3, 3, v => v === 0 || Math.abs(v) === b), fn = r.pick(['sin', 'cos']);
+        const o = r.t12 || (r.t12 = { n: r.int(0, 1) }), yes = o.n % 2 === 0, b = r.int(1, 3), a = yes ? r.pick([b, -b]) : r.intNot(-3, 3, v => v === 0 || Math.abs(v) === b), fn = r.pick(['sin', 'cos']);
         const F = `${eTeX(a)}${trig(fn, by(b))}`;
-        if (BAN12.has(`e:${a},${b},${fn}`)) return null;   // 左ページ・教科書の例の式はよける
+        if (BAN12.has(`e:${a},${b},${fn}`) || used12(r).has(`e:${a},${b},${fn}`)) return null;   // 左ページ・教科書の例の式、s1 の式はよける
+        o.n++;   // 「みたす・みたさない」を交互に（出した問題だけ進める）
         return dest({ q: `$f=${F}$ は、$\\nabla^2f=0$ をみたすか`, a: yes ? 'みたす' : 'みたさない', key: `t${F}`,
           verify: p => { const L = (x, y) => { const h = 1e-3, f = (u, v) => ev(F, { x: u, y: v }); return (f(x + h, y) - 2 * f(x, y) + f(x - h, y) + f(x, y + h) - 2 * f(x, y) + f(x, y - h)) / (h * h); }; const z = Math.abs(L(0.3, 0.7)) < 1e-3 && Math.abs(L(-0.4, 1.1)) < 1e-3; return p.a === (z ? 'みたす' : 'みたさない') || `答え ${p.a}`; } },
         '8-12', `1回の偏微分ではなく、2回ずつ偏微分してたす。$${dfr('f', 'x', 2).replace('x}', 'x^2}')}+${dfr('f', 'y', 2).replace('y}', 'y^2}')}=(${a * a}-${b * b})${F}$`, ['8-81']);
@@ -1025,7 +1050,7 @@
         const a = r.int(1, 3), b = r.int(1, 3), c = r.intNot(-3, 3, v => v === 0), X = [r.int(1, 2), r.int(-2, 2), r.int(1, 3)];
         if (X[1] === 0) return null;
         const T = `${a === 1 ? '' : a}x^2+${b === 1 ? '' : b}y^2${c > 0 ? '+' : '-'}${Math.abs(c) === 1 ? '' : Math.abs(c)}z`, G = [2 * a * X[0], 2 * b * X[1], c];
-        return dest({ q: `温度 $T=${T}$ の点 $${pt(...X)}$ で、温度がいちばん急に上がる向き（3つの偏微分を並べた矢印）`, a: `$${pt(...G)}$`, key: `t${T}@${X}`,
+        return dest({ q: `温度 $T=${T}$ の点 $${pt(...X)}$ で、温度がいちばん急に上がる向き`, a: `$${pt(...G)}$`, key: `t${T}@${X}`,
           calc: { kind: 'pdiff', op: 'grad', f: T, vars: V3, at: X } },
         '8-13', `3つの偏微分の値ではなく、それを並べた矢印（勾配）$\\mathrm{grad}\\,T$`, ['8-27']);
       },
@@ -1056,17 +1081,19 @@
       s1(r) {
         const P = [{ c: r.pick([1, 1, 2, 3, -1, -2]), e: [r.int(2, 4), r.int(2, 4)] }], F = polyTeX(P, ['x', 'y']);
         const A = ['xx', 'yy', 'xy'].map(k => polyTeX(d2(P, ...D2[k].map(v => +(v === 'y'))), ['x', 'y']));
-        if (BAN14.has(F) || A.some(a => BANA14.has(a))) return null;
-        return { q: `$f=${F}$ で、${['xx', 'yy', 'xy'].map(k => `$${dfr2('f', k)}=$ □`).join('、')}`, a: A.map(a => `$${a}$`).join('、'), key: keyPoly(P),
+        if (BAN14.has(F) || BAN14.has(polyTeX([{ c: 1, e: P[0].e }], ['x', 'y'])) || A.some(a => BANA14.has(a))) return null;   // 例の式の符号ちがい・何倍かもよける
+        (r.used14 || (r.used14 = new Set())).add(P[0].e + '');   // s2 に、この式の何倍かをふくむ式を出さない
+        return { q: `$f=${F}$ で、${['xx', 'yy', 'xy'].map(k => `$${dfr2('f', k)}=$ □`).join('、')}`, a: A.map(a => `$${a}$`).join('、'), key: `m${P[0].e}`,   // 係数だけちがう式（何倍か）は同じ問題（R1-5）
           easy: `$${dfr('f', 'x')}=${polyTeX(dPoly(P, 0), ['x', 'y'])}$、$${dfr('f', 'y')}=${polyTeX(dPoly(P, 1), ['x', 'y'])}$ をもう一度`, easyCheck: false,
           calc: { kind: 'pdiff', f: F, vars: ['x', 'y'], wrt: [['x', 'x'], ['y', 'y'], ['x', 'y']], ans: A } };
       },
       // 2つ・3つの項で、1つだけを聞く（まぜた2回をふくむ）
       s2(r) {
-        const k = ['xy', 'xx', 'yy', 'xy'][turn(r, '14s2', 4)];
+        const o = r.k14 || (r.k14 = { n: r.int(0, 3) }), k = ['xy', 'xx', 'yy', 'xy'][o.n % 4];   // 聞く偏微分を回す（出した問題だけ進める）
         const P = poly10(r, r.int(1, 2), 1, false).map(t => ({ c: t.c, e: t.e.map(v => (v ? Math.min(v + 1, 3) : 0)) })), F = polyTeX(P, ['x', 'y']);   // 3次まで（検算の差分のずれを小さく）
         const A = polyTeX(d2(P, ...D2[k].map(v => +(v === 'y'))), ['x', 'y']);
-        if (BAN14.has(F) || BANA14.has(A) || A === '0' || new Set(P.map(t => t.e + '')).size < P.length) return null;
+        if (BAN14.has(F) || BANA14.has(A) || A === '0' || P.some(t => (r.used14 || new Set()).has(t.e + '')) || new Set(P.map(t => t.e + '')).size < P.length) return null;
+        o.n++;
         return { q: `$f=${F}$ で、$${dfr2('f', k)}$`, a: `$${A}$`, key: `${keyPoly(P)}|${k}`,
           easy: k === 'xy' ? `$${dfr('f', 'y')}=${polyTeX(dPoly(P, 1), ['x', 'y'])}$ を $x$ で（順番はどちらでもよい）` : `$${dfr('f', k[0])}=${polyTeX(dPoly(P, k === 'xx' ? 0 : 1), ['x', 'y'])}$ をもう一度 $${k[0]}$ で`, easyCheck: false,
           calc: { kind: 'pdiff', f: F, vars: ['x', 'y'], wrt: D2[k] } };
@@ -1093,8 +1120,8 @@
         const m = r.int(1, 3), n = r.int(1, 3), dx = r.pick([0.01, 0.02, -0.01, 0.03]), dy = r.pick([0.01, 0.02, -0.02]), x0 = r.int(1, 2), y0 = r.int(1, 2);
         const F = polyTeX([{ c: 1, e: [m, n] }], ['x', 'y']), fx = m * x0 ** (m - 1) * y0 ** n, fy = n * x0 ** m * y0 ** (n - 1), v = Math.round((fx * dx + fy * dy) * 1e9) / 1e9;
         if (F === 'x^2y^3' || v === 0) return null;
-        const mv = (d, s) => `${s}が $${fmt(Math.abs(d))}$ ${d > 0 ? 'ふえ' : 'へっ'}`;
-        return dest({ q: `$f=${F}$ で、点 $${pt(x0, y0)}$ から ${mv(dx, '$x$ ')}た、${mv(dy, '$y$ ')}たときの $f$ の変化を、偏微分を使って見積もろう`, a: `$${fmt(v)}$`, key: `t${F}@${x0},${y0},${dx},${dy}`,
+        const mv = (d, s, end) => `${s}が $${fmt(Math.abs(d))}$ ${d > 0 ? 'ふえ' : end ? 'へっ' : 'へり'}${end ? 'た' : ''}`;   // 「$x$ が 0.02 ふえ、$y$ が 0.02 へったとき」（R1-6）
+        return dest({ q: `$f=${F}$ で、点 $${pt(x0, y0)}$ から ${mv(dx, '$x$ ')}、${mv(dy, '$y$ ', true)}ときの $f$ の変化を、偏微分を使って見積もろう`, a: `$${fmt(v)}$`, key: `t${F}@${x0},${y0},${dx},${dy}`,
           verify: p => valIs(p, ev(`${m}x^${m - 1}y^${n}`, { x: x0, y: y0 }) * dx + ev(`${n}x^${m}y^${n - 1}`, { x: x0, y: y0 }) * dy, 1e-9) },
         '8-14', `2回の偏微分ではなく、1回の偏微分×動いた量を2つたす（全微分）。$${fx}\\times${par(fmt(dx))}+${fy}\\times${par(fmt(dy))}$`, ['8-16']);
       },
@@ -1151,7 +1178,7 @@
         const dT = byZ ? c * d : -b * d;
         if ((dT > 0) !== up || (b === 0.5 && c === 1.5)) return null;
         o.n++; kk.n++;
-        return { q: `部屋の温度 $T=${a}-${cf(b)}x+${cf(c)}z$〔℃〕（$x$ はストーブからの距離、$z$ は高さ〔m〕）で、${byZ ? `$x$ はそのままで $${d}\\,\\mathrm{m}$ 高い所` : `$z$ はそのままで、ストーブから $${d}\\,\\mathrm{m}$ はなれた所`}へ動くと、温度はどれだけ変わるか`,
+        return { q: `部屋の温度 $T=${a}-${cf(b)}x+${cf(c)}z$〔℃〕（$x$ はストーブからの距離、$z$ は高さ〔m〕）で、${byZ ? `$x$ はそのままで、$${d}\\,\\mathrm{m}$ 高い所へ動くと` : `$z$ はそのままで、ストーブから、さらに $${d}\\,\\mathrm{m}$ はなれると`}、温度はどれだけ変わるか`,
           a: ud15(dT), key: `T${a},${b},${c}|${byZ}${d}`,
           easy: `$\\dfrac{\\partial T}{\\partial ${byZ ? 'z' : 'x'}}=${byZ ? fmt(c) : fmt(-b)}$、変化 $${d}$ をかけて $${fmt(dT)}$`, easyCheck: false,
           verify: p => p.a === ud15(ev(`${a}-${b}x+${c}z`, byZ ? { x: 0, z: d } : { x: d, z: 0 }) - a) || `答え ${p.a}` };
