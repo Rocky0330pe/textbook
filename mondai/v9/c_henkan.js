@@ -18,6 +18,10 @@
 
   // ---------------------------------------------------------------- 数と式の部品
   const fmt = v => { const s = String(+(+v).toFixed(10)); return s === '-0' ? '0' : s; };   // 0.30000000004 → 0.3
+  // 近似の答えは10進で丸める（toFixed は 3.9349999…（2進のずれ）を 3.93 にするので、1e-9 を足してから。Y-2・O-4）。tie：文の値で計算するとちょうど5になる組（よける）
+  const rd = (x, k) => Math.round(x * 10 ** k + 1e-9) / 10 ** k;
+  const fx = (x, k) => rd(x, k).toFixed(k);
+  const tie = (x, k) => { const y = x * 10 ** k; return Math.abs(y - Math.floor(y) - 0.5) < 1e-6; };
   const near = (x, y, tol) => x != null && y != null && isFinite(x) && isFinite(y) && Math.abs(x - y) <= (tol || 1e-9) * Math.max(1, Math.abs(x), Math.abs(y));
   const nearC = (x, y, tol) => x && y && Math.hypot(x[0] - y[0], x[1] - y[1]) <= (tol || 1e-9) * Math.max(1, Math.hypot(...x), Math.hypot(...y));
   const turn = (r, key, n) => { const d = r.turns || (r.turns = {}); d[key] = d[key] == null ? r.int(0, n - 1) : (d[key] + 1) % n; return d[key]; };
@@ -108,7 +112,17 @@
   // 同じ見開きの1つのステップで、同じ答えを1回だけにする（答えの種類が少ないステップ用）。アプリで多く出すとき（20問をこえたら）はよけない
   const onceA = (r, key, a) => { const d = r.onceA || (r.onceA = {}), u = d[key] || (d[key] = new Set()); if (u.has(a) && u.size < 20) return false; u.add(a); return true; };
   // わざの登録：1つのステップに同じ答えを3つ出さない（U-3）
+  //   わなの2問めは別の形（R1-15・Y-5。数だけちがう同じ形にしない）：trap2 を書いたわざは、同じ乱数の物でわなを作るたびに trap・trap2・trap… と回す
+  //   （はじめは trap。見わけようの must のわなも trap の形）
   function add(def) {
+    if (def.steps.trap2) {
+      const t0 = def.steps.trap, t1 = def.steps.trap2; delete def.steps.trap2;
+      def.steps.trap = r => {
+        const d = r.trapN || (r.trapN = {}), p = ((d[def.id] || 0) % 2 ? t1 : t0)(r);
+        if (p) d[def.id] = (d[def.id] || 0) + 1;
+        return p;
+      };
+    }
     for (const k of ['s1', 's2', 's3']) {
       const f = def.steps[k]; if (!f) continue;
       def.steps[k] = r => { const p = f(r); if (!p) return p; return ansOK(r, def.id + k, String(p.a), 2, p.key || p.q) ? p : null; };
@@ -166,7 +180,7 @@
     const G2 = M.graph({ x0: o.x0, x1: o.x1, y0: o.y0, y1: o.y1, w: 5.4, h: 3.6 });
     const g = w => (Math.abs(w) < 1e-9 ? F0 : 2 * h * Math.sin(a * w) / w);
     const right = [...axesAt(G2, o, '$\\omega$', '$F(\\omega)$'), ...G2.plot(g, o.x0, o.x1, { n: 200, thick: true }),
-      ['dot', G2.T(0, F0)], ['label', G2.T(0, F0), '$\\mathrm A$', 'ne'], ['dot', G2.T(z, 0)], ['label', G2.T(z, 0), '$\\mathrm B$', 'sw']];
+      ['dot', G2.T(0, F0)], ['label', [G2.T(0, F0)[0] + 0.12, G2.T(0, F0)[1] + 0.15], '$\\mathrm A$', 'e'], ['dot', G2.T(z, 0)], ['label', G2.T(z, 0), '$\\mathrm B$', 'ne']];   // A は軸の名前に重ならないように右へ、B はたて軸にかからないように右上へ（R1-14）
     return { s: 4.3, items: [...left, ...shift(right, 3.6 / 2 + 1.4 + 5.4 / 2, 0.35 * F0 * G2.sy - 0.0)] };
   }
   const fits31 = q => {
@@ -228,6 +242,14 @@
           calc: { kind: 'fn', want: `1/(${a}+j*omega)`, vars: ['omega'] } }, '9-31',
           '0でない所が有限の区間ではない。$\\displaystyle\\int_0^{\\infty}$ の広義積分で $\\dfrac{1}{a+j\\omega}$', ['9-33']);
       },
+      // わな（2問め）：まん中が0でないパルスの F(ω) → 9-36
+      trap2(r) {
+        const b = r.pick([1, 2, 3]), w = r.pick([2, 4]), h = r.pick([1, 2, 3]), c = b + w, t0 = (b + c) / 2, a = w / 2;
+        if (b === 2 && c === 6) return null;   // 9-36 の例
+        return dest({ q: `${pulseQ(a, h, b, c)}の ${FW}`, a: `$${shiftF(t0, a, h)}$`, key: `31t2:${b}:${w}:${h}`,
+          calc: { kind: 'fn', want: `exp(-j*${t0}*omega)*2*${h}*sin(${a}*omega)/omega`, vars: ['omega'] } }, '9-31',
+          `まん中が0でない（$t_0=${fmt(t0)}$ にずれた）パルス。$-${fmt(a)}<t<${fmt(a)}$ のパルスの式に $${ejw(t0)}$ をかける`, ['9-36']);
+      },
     },
   });
 
@@ -235,7 +257,7 @@
   // f(kt) → (1/k) F(ω/k)。例：-1<t<1 で1 → はば半分（k=2）は 2 sin(ω/2)/ω、はじめて0は 2π（O-2：a=1・k=2 はよける）
   const K32 = [[2, 1], [3, 1], [4, 1], [1, 2], [1, 3], [3, 2]];   // k = 分子/分母（はばは 1/k 倍）
   const kT = ([n, d]) => (d === 1 ? String(n) : `\\frac{${n}}{${d}}`);
-  const widthWord = ([n, d]) => (d === 1 ? `はばを $\\dfrac{1}{${n}}$ にした` : n === 1 ? `はばを $${d}$ 倍に広げた` : `はばを $\\dfrac{${d}}{${n}}$ 倍にした`);
+  const widthWord = ([n, d]) => (d === 1 ? `はばを $\\dfrac{1}{${n}}$ 倍にした` : n === 1 ? `はばを $${d}$ 倍にした` : `はばを $\\dfrac{${d}}{${n}}$ 倍にした`);   // 「□倍にした」にそろえる（R1-26）
   // f(kt) の書き方
   // 楽な形：(1/k) F(ω/k) を、k の値で書く（k=3 → 1/3 F(ω/3)、k=1/2 → 2F(2ω)）
   const scaleEasy = ([n, d]) => {
@@ -310,7 +332,7 @@
         }
         const up = r.chance(0.5);
         adv(r, '32s3', 2);
-        return { q: `ガウスの形 $e^{-t^2/(2\\sigma^2)}$ で、時間のはば $\\sigma$ を ${up ? `$${k}$ 倍` : `$\\dfrac{1}{${k}}$ `}にすると、周波数の世界のはばは □ 倍、$F(0)$ は □ 倍`,
+        return { q: `ガウスの形 $e^{-t^2/(2\\sigma^2)}$ で、時間のはば $\\sigma$ を ${up ? `$${k}$` : `$\\dfrac{1}{${k}}$`} 倍にすると、周波数の世界のはばは □ 倍、$F(0)$ は □ 倍`,
           a: up ? `$\\dfrac{1}{${k}}$、$${k}$` : `$${k}$、$\\dfrac{1}{${k}}$`, key: `32d:${k}:${up}`, easyCheck: false,
           easy: 'はばは $\\dfrac{1}{\\sigma}$、$F(0)$ は面積',
           verify: p => (up ? near(numOf(p.a, 0), 1 / k) && near(numOf(p.a, 1), k) : near(numOf(p.a, 0), k) && near(numOf(p.a, 1), 1 / k)) || '倍がちがう' };
@@ -322,6 +344,13 @@
         return dest({ q: `はば $${fmt(w)}$、高さ $${h}$ のパルスの $F(0)$`, a: `$${fmt(w * h)}$`, key: `32t:${w}:${h}`,
           verify: p => near(numOf(p.a), ftNum(() => h, 0, w, 0)[0], 1e-7) || '面積とちがう' }, '9-32',
           'ちぢめる前の形がない。$F(0)$ はグラフの面積（高さ×はば）', ['9-31']);
+      },
+      // わな（2問め）：f(t-t0)（ちぢめるのではなく、ずらす）→ 9-36
+      trap2(r) {
+        const t0 = r.pick([1, 2, 3, 4]), [F, W] = r.pick([['\\dfrac{2}{1+\\omega^2}', '2/(1+omega^2)'], ['\\dfrac{1}{1+j\\omega}', '1/(1+j*omega)']]);
+        return dest({ q: `$f(t)$ のフーリエ変換が $${F}$ のとき、$f(t-${t0})$ のフーリエ変換`, a: `$${ejw(t0)}${F}$`, key: `32t2:${t0}:${W}`,
+          calc: { kind: 'fn', want: `exp(-j*${t0}*omega)*${W}`, vars: ['omega'] } }, '9-32',
+          `ちぢめたのではなく、時間を $${t0}$ ずらした形。$${ejw(t0)}$ をかける`, ['9-36']);
       },
     },
   });
@@ -358,9 +387,9 @@
           const a = r.pick([1, 3, 4, 5, 6]), A = r.pick([1, 2, 3]);
           if (2 * A === a) return null;   // 例と同じ答え (1-j)/4（O-2）
           const g = gcd(A, 2 * a), n = A / g, d = 2 * a / g;
-          const ans = d === 1 ? `${n}-${n}j` : `\\dfrac{${n === 1 ? '1-j' : `${n}-${n}j`}}{${d}}`;
+          const nj = n === 1 ? '1-j' : `${n}-${n}j`, ans = d === 1 ? nj : `\\dfrac{${nj}}{${d}}`;   // 係数の1は書かない（Y-6）
           return { q: `${expQ(A, a)} の波の $F(${a})$（$a+bj$ の形で）`, a: `$${ans}$`, key: `33:${a}:${A}`, easyCheck: false,
-            easy: `$\\dfrac{${A}}{${a}+${a}j}$ の分子と分母に $${a}-${a}j$ をかける`,
+            easy: `$\\dfrac{${A}}{${a}+${a === 1 ? '' : a}j}$ の分子と分母に $${a}-${a === 1 ? '' : a}j$ をかける`,
             verify: p => nearC(cnumOf(p.a), [A / (2 * a), -A / (2 * a)]) || '値がちがう' };
         }
         const [a, w] = r.pick(PY), A = r.pick([1, 2, 5]), D = a * a + w * w;
@@ -397,6 +426,13 @@
         return dest({ q: `$f(t)=e^{-${a === 1 ? '' : a}\\lvert t\\rvert}$ の ${FW}`, a: `$\\dfrac{${2 * a}}{${a * a}+\\omega^2}$`, key: `33t:${a}`,
           calc: { kind: 'fn', want: `${2 * a}/(${a * a}+omega^2)`, vars: ['omega'] } }, '9-33',
           '$t<0$ でも0でない（両側）。$t<0$ と $t>0$ に分けて2回たす', ['9-34']);
+      },
+      // わな（2問め）：同じ $e^{-at}$ のラプラス変換 → 9-41
+      trap2(r) {
+        const a = r.pick([2, 3, 4, 6]), A = r.pick([1, 2, 3]);
+        return dest({ q: `$t\\geqq0$ で $f=${cf(A, eT(-a))}$ のラプラス変換 $\\mathcal L[f]$`, a: `$\\dfrac{${A}}{s+${a}}$`, key: `33t2:${a}:${A}`,
+          calc: { kind: 'fn', want: `${A}/(s+${a})`, vars: ['s'] } }, '9-33',
+          'フーリエ変換ではなく、ラプラス変換（$e^{-st}$ をかけて0から積分）。$\\mathcal L[e^{at}]=\\dfrac{1}{s-a}$', ['9-41']);
       },
     },
   });
@@ -465,6 +501,14 @@
           calc: { kind: 'fn', want: `${s}*sqrt(2*pi)*exp(-${s * s}*omega^2/2)`, vars: ['omega'] } }, '9-34',
           '肩が $\\lvert t\\rvert$ ではなく $t^2$（ガウスの形）。$\\sigma$ を読んで $\\sigma\\sqrt{2\\pi}\\,e^{-\\sigma^2\\omega^2/2}$', ['9-35']);
       },
+      // わな（2問め）：$\cos$ がかかった両側の指数 → 9-37
+      trap2(r) {
+        const a = r.pick([1, 2, 3]), wc = r.pick([5, 10, 20]);
+        const ans = `\\dfrac{${a}}{${a * a}+(\\omega-${wc})^2}+\\dfrac{${a}}{${a * a}+(\\omega+${wc})^2}`;
+        return dest({ q: `$f(t)=e^{-${a === 1 ? '' : a}\\lvert t\\rvert}\\cos${wc}t$ の ${FW}`, a: `$${ans}$`, key: `34t2:${a}:${wc}`,
+          calc: { kind: 'fn', want: `${a}/(${a * a}+(omega-${wc})^2)+${a}/(${a * a}+(omega+${wc})^2)`, vars: ['omega'] } }, '9-34',
+          `$\\cos${wc}t$ がかかっている。$\\dfrac{${2 * a}}{${a * a}+\\omega^2}$ を $\\pm${wc}$ へ半分ずつ移す（性質の表）`, ['9-37']);
+      },
     },
   });
 
@@ -474,7 +518,7 @@
   const G35 = [[2, 1, '\\sqrt{2\\pi}', '1'], [8, 4, '2\\sqrt{2\\pi}', '\\dfrac{1}{2}'], [18, 9, '3\\sqrt{2\\pi}', '\\dfrac{1}{3}'], [50, 25, '5\\sqrt{2\\pi}', '\\dfrac{1}{5}'],
     [0.5, 0.25, '0.5\\sqrt{2\\pi}', '2'], [4, 2, '2\\sqrt{\\pi}', '\\dfrac{1}{\\sqrt2}'], [1, 0.5, '\\sqrt{\\pi}', '\\sqrt2']];
   const gT = c => (c === 1 ? 'e^{-t^2}' : c === 0.5 ? 'e^{-2t^2}' : `e^{-t^2/${c}}`);
-  const gF = (g, A) => { const [, s2, lead] = g; const L = A === 1 ? lead : /^\d/.test(lead) ? fmt(A * parseFloat(lead)) + lead.replace(/^[\d.]+/, '') : `${A}${lead}`; const [n, d] = toFr(s2); return `${L}\\,e^{${gExp(n, 2 * d)}}`; };
+  const gF = (g, A) => { const [, s2, lead] = g; const L = A === 1 ? lead : /^\d/.test(lead) ? (fmt(A * parseFloat(lead)) === '1' ? '' : fmt(A * parseFloat(lead))) + lead.replace(/^[\d.]+/, '') : `${A}${lead}`; const [n, d] = toFr(s2); return `${L}\\,e^{${gExp(n, 2 * d)}}`; };   // 0.5×2 の1は書かない（Y-6）
   const gWant = (g, A) => `${A}*sqrt(${g[1]})*sqrt(2*pi)*exp(-${g[1]}*omega^2/2)`;
   const SQ2PI = 2.507;
   add({
@@ -509,10 +553,10 @@
         // 約の値：σ が整数か 0.5 のもの。小数第2位まで（文の値とほんとうの値で、丸めがくいちがう組はよける。O-4）
         const g = r.pick(G35.filter(x => Number.isInteger(Math.sqrt(x[1])) || x[1] === 0.25)), A = r.pick([1, 2]), s = Math.sqrt(g[1]);
         const byText = A * s * SQ2PI, truth = A * s * Math.sqrt(2 * Math.PI);
-        if (byText.toFixed(2) !== truth.toFixed(2)) return null;
-        return { q: `$f(t)=${cf(A, gT(g[0]))}$ の $F(0)$ の約の値（$\\sqrt{2\\pi}=${SQ2PI}$、小数第2位まで）`, a: `約 $${byText.toFixed(2)}$`, key: `35:${g[0]}:${A}`, easyCheck: false,
-          easy: `$${fmt(A * s)}\\times${SQ2PI}\\approx${byText.toFixed(2)}$`,
-          verify: p => near(numOf(p.a), +truth.toFixed(2)) || '約の値がちがう' };
+        if (tie(byText, 2) || rd(byText, 2) !== rd(truth, 2)) return null;
+        return { q: `$f(t)=${cf(A, gT(g[0]))}$ の $F(0)$ の約の値（$\\sqrt{2\\pi}=${SQ2PI}$、小数第2位まで）`, a: `約 $${fx(byText, 2)}$`, key: `35:${g[0]}:${A}`, easyCheck: false,
+          easy: `$${fmt(A * s)}\\times${SQ2PI}\\approx${fx(byText, 2)}$`,
+          verify: p => near(numOf(p.a), rd(truth, 2)) || '約の値がちがう' };
       },
       // 見かけがちがう：σ を文で言う、F(ω) から f(t) を作る
       s3(r) {
@@ -536,6 +580,13 @@
           calc: { kind: 'fn', want: `sqrt(2*pi)/2*(exp(-(omega-${wc})^2/2)+exp(-(omega+${wc})^2/2))`, vars: ['omega'] } }, '9-35',
           '$\\cos$ がかかっている。スペクトルを $\\pm' + wc + '$ へ半分ずつ移す（性質の表）', ['9-37']);
       },
+      // わな（2問め）：ずらしたガウスの形 → 9-36
+      trap2(r) {
+        const t0 = r.pick([1, 2, 3, -1, -2]), sh = t0 > 0 ? `t-${t0}` : `t+${-t0}`;
+        return dest({ q: `$f(t)=e^{-(${sh})^2/2}$ の ${FW}`, a: `$${ejw(t0)}\\sqrt{2\\pi}\\,e^{-\\omega^2/2}$`, key: `35t2:${t0}`,
+          calc: { kind: 'fn', want: `exp(-j*${t0}*omega)*sqrt(2*pi)*exp(-omega^2/2)`, vars: ['omega'] } }, '9-35',
+          `まん中が0でない（${LR(t0)}ずらした）ガウスの形。$e^{-t^2/2}$ の変換に $${ejw(t0)}$ をかける`, ['9-36']);
+      },
     },
   });
 
@@ -556,7 +607,7 @@
   // 9-36 の図：点線のもとのパルス（-a<t<a）と、実線のずらしたパルス
   function fig36(P) {
     const { b, c, h, a } = P, lo = Math.min(-a, b) - 1, hi = Math.max(a, c) + 1;
-    const G = M.graph({ x0: lo, x1: hi, y0: 0, y1: h * 1.4, w: Math.min(9, (hi - lo) * 0.9), h: 3 });
+    const G = M.graph({ x0: lo, x1: hi, y0: 0, y1: h * 1.4, w: Math.min(11, (hi - lo) * 1.2), h: 3 });   // 目もり（−2・−1 など）がくっつかないように広く（R1-20）
     const xt = [...new Set([-a, a, b, c])].sort((x, y) => x - y);
     return { s: 5, items: [...G.axes({ xt, x: 't', y: 'f', o: false, xfmt: v => '$' + fmt(v) + '$' }), ['label', G.T(c, h), '$' + fmt(h) + '$', 'ne'],
       ['path', [G.T(-a, 0), G.T(-a, h), G.T(a, h), G.T(a, 0)], { dash: true }],
@@ -632,6 +683,13 @@
           verify: p => near(numOf(p.a), w * h) || '面積とちがう' }, '9-36',
           '$F(0)$ はずらしても面積のまま。$e^{-j\\omega t_0}$ は $\\omega=0$ で1', ['9-31']);
       },
+      // わな（2問め）：f(kt)（ずらすのではなく、ちぢめる）→ 9-32
+      trap2(r) {
+        const k = r.pick([2, 3, 4]);
+        return dest({ q: `$f(t)$ のフーリエ変換が $\\dfrac{2}{1+\\omega^2}$ のとき、$f(${k}t)$ のフーリエ変換`, a: `$\\dfrac{${2 * k}}{${k * k}+\\omega^2}$`, key: `36t2:${k}`,
+          calc: { kind: 'fn', want: `(1/${k})*2/(1+(omega/${k})^2)`, vars: ['omega'] } }, '9-36',
+          `ずらしたのではなく、時間を $\\dfrac{1}{${k}}$ にちぢめた形。$\\dfrac{1}{${k}}F\\Bigl(\\dfrac{\\omega}{${k}}\\Bigr)$`, ['9-32']);
+      },
     },
   });
 
@@ -678,13 +736,13 @@
         if (!Number.isInteger(d * 2) || d === 0) return null;
         const peakT = s * SQ2PI / 2, sideT = peakT * ex;
         const peak = s * Math.sqrt(2 * Math.PI) / 2, side = peak * Math.exp(-x);
-        if (peakT.toFixed(2) !== peak.toFixed(2) || sideT.toFixed(2) !== side.toFixed(2)) return null;
-        const w2 = wc + d, aT = `約 $${peakT.toFixed(2)}$、約 $${sideT.toFixed(2)}$`;
+        if (tie(peakT, 2) || tie(sideT, 2) || rd(peakT, 2) !== rd(peak, 2) || rd(sideT, 2) !== rd(side, 2)) return null;
+        const w2 = wc + d, aT = `約 $${fx(peakT, 2)}$、約 $${fx(sideT, 2)}$`;
         if (!onceA(r, '37s2', aT)) return null;   // 同じ答えの組は1つのステップに1回（S-4）
         return { q: `$f(t)=${gT(g[0])}\\cos${wc}t$ の約の値（$\\sqrt{2\\pi}=${SQ2PI}$、$e^{-${xT}}=${ex}$、小数第2位まで）：$F(${wc})$ ＝ □、$F(${fmt(w2)})$ ＝ □`,
-          a: `約 $${peakT.toFixed(2)}$、約 $${sideT.toFixed(2)}$`, key: `37v:${g[0]}:${wc}:${d}`, easyCheck: false,
+          a: `約 $${fx(peakT, 2)}$、約 $${fx(sideT, 2)}$`, key: `37v:${g[0]}:${wc}:${d}`, easyCheck: false,
           easy: `山の高さ $${s === 1 ? '\\dfrac{\\sqrt{2\\pi}}{2}' : s === 2 ? '\\sqrt{2\\pi}' : '\\dfrac{\\sqrt{2\\pi}}{4}'}$、となりは $e^{-${xT === '1' ? '' : xT}}$ 倍`,
-          verify: p => { const F = w => ftNum(t => Math.exp(-t * t / g[0]) * Math.cos(wc * t), -14, 14, w, 40000)[0]; return (near(numOf(p.a, 0), +F(wc).toFixed(2), 1e-9) && near(numOf(p.a, 1), +F(w2).toFixed(2), 1e-9)) || '約の値がちがう'; } };
+          verify: p => { const F = w => ftNum(t => Math.exp(-t * t / g[0]) * Math.cos(wc * t), -14, 14, w, 40000)[0]; return (near(numOf(p.a, 0), rd(F(wc), 2), 1e-9) && near(numOf(p.a, 1), rd(F(w2), 2), 1e-9)) || '約の値がちがう'; } };
       },
       // 見かけがちがう：両側の指数に cos、F がわかっている声の波
       s3(r) {
@@ -708,7 +766,15 @@
         const t0 = r.pick([1, 2, 3, 4]);
         return dest({ q: `$f(t)=e^{-(t-${t0})^2/2}$ の ${FW}`, a: `$${ejw(t0)}\\sqrt{2\\pi}\\,e^{-\\omega^2/2}$`, key: `37t:${t0}`,
           calc: { kind: 'fn', want: `exp(-j*${t0}*omega)*sqrt(2*pi)*exp(-omega^2/2)`, vars: ['omega'] } }, '9-37',
-          `$\\cos$ をかけたのではなく、$t$ を $${t0}$ ずらした形。$e^{-j${t0}\\omega}$ をかける`, ['9-36']);
+          `$\\cos$ をかけたのではなく、$t$ を $${t0}$ ずらした形。$${ejw(t0)}$ をかける`, ['9-36']);
+      },
+      // わな（2問め）：$\cos$ をかけた形のラプラス変換 → 9-47
+      trap2(r) {
+        const a = r.pick([1, 2, 4]), w = r.pick([3, 4, 5]);
+        if (a === 2 && w === 3) return null;   // 教科書 9-6 の例題の形
+        return dest({ q: `$${LL(`${eT(-a)}\\cos${w}t`)}$`, a: `$\\dfrac{s+${a}}{(s+${a})^2+${w * w}}$`, key: `37t2:${a}:${w}`,
+          calc: { kind: 'fn', want: `(s+${a})/((s+${a})^2+${w * w})`, vars: ['s'] } }, '9-37',
+          `フーリエ変換ではなく、ラプラス変換。$\\cos$ の行の $s$ を $s+${a}$ にずらす（第4部）`, ['9-47']);
       },
     },
   });
@@ -786,6 +852,13 @@
           verify: p => (near(numOf(p.a, 0), T) && near(numOf(p.a, 1), f)) || '周期か周波数がちがう' }, '9-38',
           `DFT ではなく、くり返す長さを見る。4つで1周期、$1000\\div${fmt(T)}$`, ['9-01']);
       },
+      // わな（2問め）：周波数のきざみ（$X_k$ の計算ではない）→ 9-39
+      trap2(r) {
+        const [dt, fs] = r.pick(DT38), N = r.pick([8, 16]), st = fs / N;
+        return dest({ q: `$${fmt(dt)}\\,\\mathrm{ms}$ ごとに $${N}$ 個の値をとって FFT したときの、周波数のきざみ ＝ $□\\,\\mathrm{Hz}$`, a: `$${fmt(st)}$`, key: `38t2:${dt}:${N}`,
+          verify: p => near(numOf(p.a), 1000 / (dt * N)) || 'きざみがちがう' }, '9-38',
+          `$X_k$ を計算するのではなく、きざみ $\\dfrac{f_{\\mathrm s}}{N}=\\dfrac{${fs}}{${N}}$`, ['9-39']);
+      },
     },
   });
 
@@ -824,7 +897,7 @@
             a: `$${fmt(amp)}$、$${fmt(fs / 2)}$`, key: `39:${fs}:${T}`, easyCheck: false,
             easy: `$\\dfrac{2\\times${X}}{${N}}$、$\\dfrac{${fs}}{2}$`,
             verify: p => (near(numOf(p.a, 0), 2 * X / (fs * T)) && near(numOf(p.a, 1), fs / 2)) || '値がちがう' };
-        const k = r.pick([50, 100, 220, 440, 880, 1000]) * T; if (k * fs / N > fs / 2) return null;
+        const k = r.pick([50, 100, 220, 440, 880, 1000]) * T; if (!Number.isInteger(k) || k * fs / N > fs / 2) return null;   // 番号は整数（R1-1）
         return { q: `$f_{\\mathrm s}=${fs}\\,\\mathrm{Hz}$ で $${fmt(T)}$ 秒間とった音を FFT した。$${k}$ 番めの成分の周波数 ＝ $□\\,\\mathrm{Hz}$、その $\\lvert X_k\\rvert$ が $${X}$ のときの振幅 ＝ □`,
           a: `$${fmt(k * fs / N)}$、$${fmt(amp)}$`, key: `39:${fs}:${T}`, easyCheck: false,
           easy: `$${k}\\times\\dfrac{${fs}}{${N}}$、$\\dfrac{2\\times${X}}{${N}}$`,
@@ -847,6 +920,14 @@
         return dest({ q: `$f_{\\mathrm s}=${fs}\\,\\mathrm{Hz}$ でとった ${HZ(f)} の $\\cos$ の音は、FFT の結果では何 Hz の所に出るか`, a: `$${fmt(fs - f)}\\,\\mathrm{Hz}$`, key: `39t:${fs}:${f}`,
           verify: p => near(numOf(p.a), fs - f) || '周波数がちがう' }, '9-39',
           `${HZ(f)} は上限 ${HZ(fs / 2)} より高いので、そのままの所には出ない。$${fs}-${fmt(f)}$ に化ける`, ['9-40']);
+      },
+      // わな（2問め）：FFT の結果を読むのではなく、8つの値から $X_4$ を計算する → 9-38
+      trap2(r) {
+        const x = [0, 1, 2, 3, 4, 5, 6, 7].map(() => r.pick([-2, -1, 0, 1, 1, 2, 3]));
+        const X = x.reduce((s, v, m) => s + (m % 2 ? -v : v), 0); if (X === 0) return null;
+        return dest({ q: `FFT のもとになる DFT で、8つの値 $x_m=${xsT(x)}$（$m=0$〜$7$）の $X_4$`, a: `$${X}$`, key: `39t2:${x}`,
+          verify: p => near(numOf(p.a), dft(x, 4)[0]) || '$X_4$ がちがう' }, '9-39',
+          '結果を読むのではなく、8つの値から計算する。$k=4$ のかける数は $1,\\ -1$ のくり返し', ['9-38']);
       },
     },
   });
@@ -921,6 +1002,14 @@
           verify: p => near(numOf(p.a), f) || '値がちがう' }, '9-40',
           `${HZ(f)} は $\\dfrac{f_{\\mathrm s}}{2}=${fs / 2}\\,\\mathrm{Hz}$ より低いので、化けない`);
       },
+      // わな（2問め）：化ける音ではなく、FFT の周波数のきざみ → 9-39
+      trap2(r) {
+        const fs = r.pick([1000, 2000, 4000, 8000]), N = r.pick([500, 1000, 2000, 4000]), st = fs / N;
+        if (N > 2 * fs || fs === N) return null;
+        return dest({ q: `$f_{\\mathrm s}=${fs}\\,\\mathrm{Hz}$ で $N=${N}$ 個の値をとって FFT したときの、周波数のきざみ ＝ $□\\,\\mathrm{Hz}$`, a: `$${fmt(st)}$`, key: `40t2:${fs}:${N}`,
+          verify: p => near(numOf(p.a), fs / N) || 'きざみがちがう' }, '9-40',
+          `化ける音をさがすのではなく、きざみ $\\dfrac{f_{\\mathrm s}}{N}=\\dfrac{${fs}}{${N}}$`, ['9-39']);
+      },
     },
   });
 
@@ -967,7 +1056,7 @@
         if (lin && c === 6) return null;
         const f = lin ? cf(c, 't') : fmt(c), F = lin ? ft(c, 's^2') : ft(c, 's');
         return { q: `定義の積分で求めた $${LL(f)}$ と、使える $s$ の範囲`, a: `$${F}$（$s>0$）`, key: `41:${lin ? 't' : 'c'}:${c}`, easyCheck: false,
-          easy: lin ? `部分積分。はしの項 $\\Bigl[-\\dfrac{${c === 1 ? '' : fmt(c)}t}{s}e^{-st}\\Bigr]_0^{\\infty}=0$` : `$\\displaystyle\\int_0^{\\infty}${fmt(c)}e^{-st}\\,\\dd t$`,
+          easy: lin ? `部分積分。はしの項 $\\Bigl[-\\dfrac{${c === 1 ? '' : fmt(c)}t}{s}e^{-st}\\Bigr]_0^{\\infty}=0$` : `$\\displaystyle\\int_0^{\\infty}${c === 1 ? '' : fmt(c)}e^{-st}\\,\\dd t$`,
           calc: { kind: 'fn', want: termW(lin ? 't' : 'c', c, 0), vars: ['s'], ans: F },
           verify: p => (p.a.includes('$s>0$') && near(numOf(p.a, 0, { s: 1.7 }), ltNum(termF(lin ? 't' : 'c', c, 0), 1.7), 1e-6)) || '値か $s$ の範囲がちがう' };
       },
@@ -985,7 +1074,7 @@
         const vv = lin ? v : c / s, fr0 = toFr(vv);
         if (!fr0 || fr0[1] > 64 || c === 6) return null;
         adv(r, '41s3', 2);
-        return { q: `$s=${fmt(s)}$ のときの $\\displaystyle\\int_0^{\\infty}${lin ? (c === 1 ? '' : c) + 't' : c}\\,e^{-st}\\,\\dd t$ の値`, a: `$${frac(fr0[0], fr0[1])}$`, key: `41v:${lin}:${c}:${s}`, easyCheck: false,
+        return { q: `$s=${fmt(s)}$ のときの $\\displaystyle\\int_0^{\\infty}${lin ? (c === 1 ? '' : c) + 't' : c === 1 ? '' : c}\\,e^{-st}\\,\\dd t$ の値`, a: `$${frac(fr0[0], fr0[1])}$`, key: `41v:${lin}:${c}:${s}`, easyCheck: false,
           easy: lin ? `$\\mathcal L[${c}t]=\\dfrac{${c}}{s^2}$ に $s=${fmt(s)}$` : `$\\mathcal L[${c}]=\\dfrac{${c}}{s}$ に $s=${fmt(s)}$`,
           verify: p => near(numOf(p.a), ltNum(lin ? t => c * t : () => c, s, 80 / s, 20000), 1e-6) || '積分の値とちがう' };
       },
@@ -995,6 +1084,13 @@
         return dest({ q: `$${LL(`${eT(-a)}\\sin${b === 1 ? ' ' : b}t`)}$`, a: `$\\dfrac{${b}}{(s+${a})^2+${b * b}}$`, key: `41t:${a}:${b}`,
           calc: { kind: 'fn', want: `${b}/((s+${a})^2+${b * b})`, vars: ['s'] } }, '9-41',
           '$e^{-at}$ と $\\sin$ のかけ算。表の $\\sin$ の行の $s$ を $s+a$ にずらす（第4部）', ['9-47']);
+      },
+      // わな（2問め）：$t^2$・$t^3$（定義の積分では部分積分をくり返す）→ 9-46
+      trap2(r) {
+        const n = r.pick([2, 3]), c = r.pick([1, 2, 3, 5]), v = c * (n === 2 ? 2 : 6);
+        return dest({ q: `$${LL(`${c === 1 ? '' : c}t^${n}`)}$`, a: `$\\dfrac{${v}}{s^${n + 1}}$`, key: `41t2:${n}:${c}`,
+          calc: { kind: 'fn', want: `${v}/s^${n + 1}`, vars: ['s'] } }, '9-41',
+          `$t^${n}$ は、定義の積分では部分積分を${n}回くり返す。表の $\\dfrac{n!}{s^{n+1}}$ を引く（第4部）`, ['9-46']);
       },
     },
   });
@@ -1027,7 +1123,7 @@
     boxw: { s1: '40mm', s2: '40mm', s3: '36mm', trap: '20mm' }, boxh: { s1: '12mm', s2: '12mm', s3: '12mm', trap: '12mm' },
     fits(q) {
       if (/定義の積分|te\^|\\sin|\\cos|\\dot|\\int/.test(q)) return false;
-      const m = /\\mathcal L\[([^\]]*)\]/.exec(q); if (m) return /.[+-]/.test(m[1]);
+      const m = /\\mathcal L\[([^\]]*)\]/.exec(q); if (m) return /.[+-]/.test(m[1].replace(/\{[^{}]*\}/g, ''));   // 肩の中の − は項の和ではない
       return /翻訳|ラプラス変換した/.test(q) && /\$[A-Za-z]=[^$]*[+-][^$]*e\^/.test(q);
     },
     steps: {
@@ -1075,6 +1171,13 @@
         return dest({ q: `$${LL(`${c === 1 ? '' : c}t${eT(-a)}`)}$`, a: `$\\dfrac{${c}}{(s+${a})^2}$`, key: `42t:${a}:${c}`,
           calc: { kind: 'fn', want: `${c}/(s+${a})^2`, vars: ['s'] } }, '9-42',
           `$t$ と $${eT(-a)}$ のかけ算は、項ごとにならない（$\\dfrac{1}{s^2}\\times\\dfrac{1}{s+${a}}$ ではない）。$\\dfrac{1}{s^2}$ の $s$ を $s+${a}$ にずらす`, ['9-47']);
+      },
+      // わな（2問め）：$t$ と $\sin$ のかけ算 → 9-50
+      trap2(r) {
+        const w = r.pick([1, 2, 3, 4]);
+        return dest({ q: `$${LL(`t\\sin${w === 1 ? ' ' : w}t`)}$`, a: `$\\dfrac{${2 * w}s}{(s^2+${w * w})^2}$`, key: `42t2:${w}`,
+          calc: { kind: 'fn', want: `${2 * w}*s/(s^2+${w * w})^2`, vars: ['s'] } }, '9-42',
+          `$t$ と $\\sin${w === 1 ? ' ' : w}t$ のかけ算は、項ごとにならない。$t$ をかける行 $-\\dfrac{\\dd F}{\\dd s}$（第4部）`, ['9-50']);
       },
     },
   });
@@ -1148,6 +1251,13 @@
           calc: { kind: 'ode', x: 't', coef: [1, b, c], init: [[0, x0], [0, 0, 1]] } }, '9-43',
           '変換ではなく、もどす（逆変換）。かくす方法で部分分数に分けて表を逆に引く（第4部）', ['9-54']);
       },
+      // わな（2問め）：1回微分の式を部分分数に分けた形 → 9-44
+      trap2(r) {
+        const tau = r.pick([1, 2, 5]), E = r.pick([3, 6, 10, 12]), a = 1 / tau;
+        return dest({ q: `$${tau === 1 ? '' : tau}\\dfrac{\\dd V}{\\dd t}+V=${E}$、$V(0)=0$ を変換し、部分分数に分けた $V(s)$`, a: `$${sumF([ft(E, 's'), ft(-E, vpa('s', a))])}$`, key: `43t2:${tau}:${E}`,
+          calc: { kind: 'fn', want: `${E}/s-${E}/(s+${a})`, vars: ['s'] } }, '9-43',
+          `2回微分ではなく1回微分の式。$(s+${fmt(a)})$ でわって $\\dfrac{A}{s}+\\dfrac{B}{s+${fmt(a)}}$ に分ける`, ['9-44']);
+      },
     },
   });
 
@@ -1203,13 +1313,13 @@
       s2(r) {
         const g = scene44(r, turn(r, '44s2', 3)); if (!g) return null;
         const ev0 = +E44[g.x], byText = g.A + g.B * ev0, truth = g.A + g.B * Math.exp(-g.x);
-        if (byText.toFixed(g.dig) !== truth.toFixed(g.dig)) return null;
+        if (tie(byText, g.dig) || rd(byText, g.dig) !== rd(truth, g.dig)) return null;
         if (g.key === '44o:0.1:30:90') return null;
         return { q: `$${g.eq}$、$${g.init}$ をラプラス変換で解いた $${g.v}$ ＝ □、${g.when}の値 ＝ 約 ${g.unit === '℃' ? '□℃' : `$□\\,\\mathrm{${g.unit}}$`}（$e^{-${fmt(g.x)}}=${E44[g.x]}$、小数第${g.dig}位まで）`,
-          a: `$${T44(g)}$、約 $${byText.toFixed(g.dig)}$`, key: g.key, easyCheck: false,
+          a: `$${T44(g)}$、約 $${fx(byText, g.dig)}$`, key: g.key, easyCheck: false,
           easy: `$${S44(g)}$ をもどす`,
           calc: { kind: 'ode', x: 't', coef: g.coef, rhs: g.rhs, init: [[0, g.y0]], ans: T44(g).split('=')[1] },
-          verify: p => near(numOf(p.a, 1), +truth.toFixed(g.dig)) || '約の値がちがう' };
+          verify: p => near(numOf(p.a, 1), rd(truth, g.dig)) || '約の値がちがう' };
       },
       // 見かけがちがう：回路の部品から式を作る
       s3(r) {
@@ -1225,6 +1335,14 @@
         return dest({ q: `$${odeT(b, c)}$、${init43(x0, 0)} を変換した $X(s)$`, a: `$${X43(b, c, x0, 0)}$`, key: `44t:${b}:${c}:${x0}`,
           calc: { kind: 'fn', want: W43(b, c, x0, 0), vars: ['s'] } }, '9-44',
           '2回微分の式。$\\ddot x$ は $s^2X-sx(0)-\\dot x(0)$（1階の形ではない）', ['9-43']);
+      },
+      // わな（2問め）：変換がわかっているときの最後の温度（解かなくてよい）→ 9-52
+      trap2(r) {
+        const c = r.pick([10, 15, 20, 25, 30]), d = r.pick([40, 50, 60, 70]), a = r.pick([0.25, 0.4, 0.08]);   // ステップ1の T(s) と同じ式にしない（ステップ1の k は 0.02・0.04・0.05・0.1・0.2・0.5。U-2）
+        if (c + d > 100 || (c === 20 && d === 60) || (c === 30 && d === 60 && a === 0.1)) return null;   // はじめは100℃以下。教科書・左ページの例
+        return dest({ q: `お湯の温度の変換が $T(s)=\\dfrac{${c}}{s}+\\dfrac{${d}}{s+${a}}$ のとき、最後の温度（℃）`, a: `$${c}$`, key: `44t2:${c}:${d}:${a}`,
+          verify: p => near(numOf(p.a), c) || '最後の温度がちがう' }, '9-44',
+          'もどさなくても、最後の値は $sT(s)$ で $s\\to0$（最終値の定理。第4部）', ['9-52']);
       },
     },
   });
@@ -1243,7 +1361,7 @@
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '28mm', s2: '28mm', s3: '24mm', trap: '28mm' }, boxh: { s1: '12mm', s2: '12mm', s3: '12mm' },
-    fits(q) { return (/\\mathcal L\[f\]=|\\mathcal L\[e\^/.test(q) && /フーリエ変換|F\(\\omega\)|F\([\d.]+\)/.test(q) || /フーリエ変換が \$F\(\\omega\)=.*\\mathcal L\[f\]\$/.test(q)) && !/定義の積分/.test(q); },
+    fits(q) { return (/\\mathcal L\[f\]=|\\mathcal L\[e\^/.test(q) && /フーリエ変換|F\(\\omega\)|F\([\d.]+\)/.test(q) || /フーリエ変換が \$F\(\\omega\)=.*\\mathcal L\[f\]\$/.test(q)) && !/定義の積分|\\lvert t\\rvert/.test(q); },   // 両側の指数（$t<0$ でも0でない）は使えない
     steps: {
       s1(r) {
         const a = r.pick([1, 2, 4, 5, 0.5, 10]), c = r.pick([1, 1, 2, 3, 5]);
@@ -1289,6 +1407,13 @@
           verify: p => /求められない/.test(p.a) || 'ことばがちがう' }, '9-45',
           `ふえ続ける形。$\\mathcal L[${eT(a)}]=\\dfrac{1}{s-${fmt(a)}}$ は $s>${fmt(a)}$ でしか使えないので、$s=j\\omega$ を入れてはいけない`);
       },
+      // わな（2問め）：$t<0$ でも0でない両側の指数（$s=j\omega$ を入れるだけではだめ）→ 9-34
+      trap2(r) {
+        const a = r.pick([1, 2, 3, 5]);
+        return dest({ q: `$t\\geqq0$ の部分のラプラス変換は $\\dfrac{1}{s+${a}}$。$f(t)=e^{-${a === 1 ? '' : a}\\lvert t\\rvert}$（$t<0$ でも0でない）の $F(\\omega)$`, a: `$\\dfrac{${2 * a}}{${a * a}+\\omega^2}$`, key: `45t2:${a}`,
+          calc: { kind: 'fn', want: `${2 * a}/(${a * a}+omega^2)`, vars: ['omega'] } }, '9-45',
+          '$t<0$ でも0でない（両側）ので、$s=j\\omega$ を入れるだけではだめ。$t<0$ と $t>0$ に分けて $\\dfrac{2a}{a^2+\\omega^2}$');
+      },
     },
   });
 
@@ -1317,7 +1442,7 @@
     fits(q) { return /両側スペクトル|線の高さ|の所の線/.test(q) && /\\cos|\\sin/.test(q) && !/e\^/.test(q); },
     steps: {
       s1(r) {
-        const g = gen93(r, false); if (!g || !onceA(r, '93w', g.w1)) return null;   // 同じ角周波数ばかりにならないように
+        const g = gen93(r, false); if (!g || !onceA(r, '93w', g.w1) || !onceA(r, '93A', g.A)) return null;   // 同じ角周波数・同じ答え（はじめの欄）ばかりにならないように（R1-9・Y-4）
         return { q: `$f(t)=${g.tx}$ の両側スペクトルの線の高さ：$\\omega=\\pm${g.w1}$ ＝ □、$\\omega=\\pm${g.w2}$ ＝ □`, a: `$${fmt(g.A / 2)}$、$${fmt(g.B / 2)}$`, key: `93:${g.tx}`, easyCheck: false,
           easy: `振幅の半分：$\\dfrac{${g.A}}{2}$、$\\dfrac{${g.B}}{2}$`,
           verify: p => (near(numOf(p.a, 0), cAt(g, g.w1)[2]) && near(numOf(p.a, 1), cAt(g, g.w2)[2])) || '高さがちがう' };
@@ -1332,7 +1457,8 @@
       // 図：両側スペクトルの線（高さは文字）
       s3(r) {
         const g = gen93(r, false); if (!g || g.w2 > 3 * g.w1) return null;   // 図のはばが 60 mm に入るもの
-        const fig = { s: g.w2 === 2 * g.w1 ? 4.4 : 5, items: M.stem([[-g.w2, g.B / 2, '$\\mathrm B$'], [-g.w1, g.A / 2, '$\\mathrm A$'], [g.w1, g.A / 2, '$\\mathrm A$'], [g.w2, g.B / 2, '$\\mathrm B$']], { x: '\\omega', h: 2.5, dx: 1.9 }) };
+        const r2 = g.w2 === 2 * g.w1, big = String(g.w2).length >= 3;   // 3けたの目もり（−600・−200）はくっつくので間を広げる（R1-20）
+        const fig = { s: r2 ? (big ? 4.2 : 4.4) : (big ? 4.8 : 5), items: M.stem([[-g.w2, g.B / 2, '$\\mathrm B$'], [-g.w1, g.A / 2, '$\\mathrm A$'], [g.w1, g.A / 2, '$\\mathrm A$'], [g.w2, g.B / 2, '$\\mathrm B$']], { x: '\\omega', h: 2.5, dx: big ? (r2 ? 2.3 : 2.4) : 1.9 }) };
         return { q: `図は $f(t)=${g.tx}$ の両側スペクトル。線の高さ A ＝ □、B ＝ □`, a: `$${fmt(g.A / 2)}$、$${fmt(g.B / 2)}$`, key: `93:${g.tx}`, easyCheck: false, fig,
           easy: '振幅の半分',
           verify: p => (near(numOf(p.a, 0), g.A / 2) && near(numOf(p.a, 1), g.B / 2)) || '高さがちがう' };
@@ -1343,6 +1469,13 @@
         return dest({ q: `${pulseQ(a, h)}（1回だけ）の ${FW}`, a: `$${pulseF(a, h)}$`, key: `93t:${a}:${h}`,
           calc: { kind: 'fn', want: `2*${h}*sin(${a}*omega)/omega`, vars: ['omega'] } }, '9-93',
           'くり返さないので、線ではなく、すきまのない曲線のスペクトル。0でない区間の定積分', ['9-31']);
+      },
+      // わな（2問め）：線ではなく、くり返しの周期 → 9-03
+      trap2(r) {
+        const g = gen93(r, false); if (!g) return null;
+        return dest({ q: `$f(t)=${g.tx}$ のくり返しの周期 $T$`, a: `$${piT(2, g.w1)}$`, key: `93t2:${g.tx}`,
+          verify: p => (near(numOf(p.a), 2 * Math.PI / g.w1) && [0.3, 1.7].every(t => near(g.A * Math.cos(g.w1 * (t + numOf(p.a))) + g.B * Math.sin(g.w2 * (t + numOf(p.a))), g.A * Math.cos(g.w1 * t) + g.B * Math.sin(g.w2 * t), 1e-7))) || '周期がちがう' }, '9-93',
+          `スペクトルの線ではなく、周期。$\\omega=${g.w2}$ は $${g.w1}$ の $${g.w2 / g.w1}$ 倍なので、小さいほうの $\\dfrac{2\\pi}{${g.w1}}$ でそろう（基本角周波数 $\\omega_0=\\dfrac{2\\pi}{T}$）`, ['9-03']);
       },
     },
   });

@@ -48,6 +48,11 @@
         const p = f(r); if (!p) return p;
         if (p.easyCheck == null) p.easyCheck = false;
         if (!ansOK(r, def.id + k, String(p.a), 2, p.key || p.q)) return null;
+        // spread：見開き全体（ステップをまたいで）同じ答えの数を spread こまでにする（9-52。R2-13・Y-4）。もう出した key（makeStep が同じ問題としてよける）は数えない
+        if (def.spread && k !== 'trap' && !usedKey(r, def.id, p.key || p.q)) {
+          const n = nums(p.a), av = n.length === 1 && n[0] != null ? fmt(n[0]) : String(p.a);
+          if (!ansOK(r, def.id + 'all', av, def.spread, p.key || p.q)) return null;
+        }
         (r.usedKeys || (r.usedKeys = new Set())).add(def.id + '|' + (p.key || p.q));
         return p;
       };
@@ -302,9 +307,13 @@
   const nums = a => (String(a).match(/\$[^$]*\$/g) || []).map(t => ev(unitless(t)));
   const valIs = (p, v, tol) => { const n = nums(p.a); return (n.length === 1 && near(n[0], v, tol)) || `答え ${p.a} が ${fmt(v)} でない`; };
   // 「約 $1.90$」の形の答えが、正しい値 v を k けたに丸めた値か（O-4：文に書いた値で計算した値 w も、同じ丸めになること）
+  // 10進で丸める（toFixed は 3.9349999…（2進のずれ）を 3.93 にするので、1e-9 を足してから。Y-2・O-4）。tie：文の値で計算するとちょうど5になる組（よける）
+  const rd = (x, k) => Math.round(x * 10 ** k + 1e-9) / 10 ** k;
+  const fx = (x, k) => rd(x, k).toFixed(k);
+  const tie = (x, k) => { const y = x * 10 ** k; return Math.abs(y - Math.floor(y) - 0.5) < 1e-6; };
   function approxIs(p, v, w, k) {
     const n = nums(p.a); if (n.length !== 1) return `答え ${p.a} が読めない`;
-    const rv = +v.toFixed(k), rw = +w.toFixed(k);
+    const rv = rd(v, k), rw = rd(w, k);
     if (rv !== rw) return `ほんとうの値 ${v} と文の値 ${w} の丸めがちがう（O-4）`;
     return (near(n[0], rv, 1e-12) && /約/.test(p.a)) || `答え ${p.a} が 約${rv} でない`;
   }
@@ -314,7 +323,7 @@
   // ================================================================ 9-46
   // 時間の式 [種類, 係数, n か ω]：'t'（t^n）・'sin'・'cos'。key は 'tbl|種類|n'（係数は何倍かなので key に入れず、例の何倍かをよける）
   //   BAN：左ページの例（t^4・sin5t・cos2t。何倍かも）。教科書の例題1・じぶんでとこう・章末問題1（係数1のもの）
-  const BAN46 = new Set(['t|4', 'sin|5', 'cos|2']);
+  const BAN46 = new Set(['t|4', 'sin|5', 'cos|2', 'cos|5']);   // cos5t も例の sin5t と同じ分母なのでよける（R2-14）
   const TEXT46 = new Set(['t|3', 'sin|3', 'cos|3', 't|2', 'sin|5', 'cos|2', 't|4', 'sin|4', 'cos|1']);
   const bad46 = (kind, n, c) => BAN46.has(`${kind}|${n}`) || (c === 1 && TEXT46.has(`${kind}|${n}`));
   const tpow = n => (n === 1 ? 't' : `t^{${n}}`);
@@ -371,7 +380,7 @@
       s3(r) {
         const [k, ok] = alt(r, '46s3', 2);
         if (k === 0) {
-          const kind = r.pick(['t', 't', 'sin', 'cos']), n = kind === 't' ? r.int(2, 5) : r.int(2, 7);
+          const kind = r.pick(['t', 't', 'sin', 'cos']), n = kind === 't' ? r.int(2, 5) : r.int(2, 9);
           if (bad46(kind, n, 1)) return null;
           if (usedKey(r, '9-46', `tbl|${kind}|${n}`)) return null;
           const T = tab46(kind, 1, n), g = kind === 't' ? tpow(n) : T.f;
@@ -394,12 +403,11 @@
           return ok(dest({ q: Lf(f), a: `$${Fs}$`, key: `t46|${f}`, L: { f }, calc: { kind: 'fn', vars: ['s'], want: fn === 'sin' ? `${w}/((s+${a})^2+${w}^2)` : `(s+${a})/((s+${a})^2+${w}^2)` } },
             '9-46', `$e^{-${a === 1 ? '' : a}t}$ がかかっている。表の行をそのまま引かず、$s$ を $s+${a}$ にずらす`, ['9-47']));
         }
-        const f = `t${trig(fn, w)}`, S = w * w;
-        if (fn === 'cos' && w <= 2) return null;
-        if (fn === 'sin' && (w <= 4 || w === 5)) return null;
-        const Fs = fn === 'sin' ? `\\frac{${2 * w}s}{(s^2+${S})^2}` : `\\frac{s^2-${S}}{(s^2+${S})^2}`;
-        return ok(dest({ q: Lf(f), a: `$${Fs}$`, key: `t46|${f}`, L: { f }, calc: { kind: 'fn', vars: ['s'], want: fn === 'sin' ? `2*${w}*s/(s^2+${w}^2)^2` : `(s^2-${w}^2)/(s^2+${w}^2)^2` } },
-          '9-46', `$t$ と $\\${fn}${w === 1 ? ' t' : w + 't'}$ のかけ算は、表の1つの行ではない。$-\\frac{\\dd F}{\\dd s}$`, ['9-50']));
+        const wt = fn === 'cos' ? r.pick([3, 4, 6]) : r.pick([6, 7]);   // cos5t も例の sin5t と同じ分母なのでよける（R2-14）
+        const f = `t${trig(fn, wt)}`, S = wt * wt;
+        const Fs = fn === 'sin' ? `\\frac{${2 * wt}s}{(s^2+${S})^2}` : `\\frac{s^2-${S}}{(s^2+${S})^2}`;
+        return ok(dest({ q: Lf(f), a: `$${Fs}$`, key: `t46|${f}`, L: { f }, calc: { kind: 'fn', vars: ['s'], want: fn === 'sin' ? `2*${wt}*s/(s^2+${wt}^2)^2` : `(s^2-${wt}^2)/(s^2+${wt}^2)^2` } },
+          '9-46', `$t$ と $\\${fn}${wt === 1 ? ' t' : wt + 't'}$ のかけ算は、表の1つの行ではない。$-\\frac{\\dd F}{\\dd s}$`, ['9-50']));
       },
     },
   });
@@ -476,7 +484,7 @@
         if (bad47(kind, a, w, 1)) return null;
         const T = sh47(kind, 1, a, w), f = f47(kind, 1, a, w), g = `\\dfrac{\\${kind}${w}t}{${a === 1 ? 'e^{t}' : `e^{${a}t}`}}`;
         return ok({ q: Lf(g), a: `$${T.F}$`, key: `sh|${kind}|${a}|${w}`, L: { f }, calc: { kind: 'fn', vars: ['s'], want: T.want },
-          easy: `$e^{${a}t}$ でわるのは $${expT(a)}$ をかけること。${T.row} の $s$ を $s+${a}$ に` });
+          easy: `$e^{${a === 1 ? '' : a}t}$ でわるのは $${expT(a)}$ をかけること。${T.row} の $s$ を $s+${a}$ に` });
       },
       // わな：おくれて始まる e^{-a(t-t0)}H(t-t0)（時間のずらし。9-48）
       trap(r) {
@@ -819,6 +827,7 @@
     why: '微分の行 $\\int_0^{\\infty}f\'(t)e^{-st}\\,\\dd t=sF(s)-f(0)$ で $s\\to0$ とすると、左辺は「最後－はじめ」になり、$\\lim_{t\\to\\infty}f(t)=\\lim_{s\\to0}sF(s)$（最終値の定理）。$s\\to\\infty$ では左辺が0になり、$f(0)=\\lim_{s\\to\\infty}sF(s)$（初期値の定理。9-6⑨）。',
     caution: '最終値の定理は、落ち着くときだけ使える：$sF(s)$ の分母が0になる $s$ が、すべて実部が負（左半分）のとき。$\\pm j\\omega$（実部0）があればゆれ続け、正の $s$ があればふえ続ける。$s$ をかけ忘れて $F(s)$ の極限をとらない。',
     counts: { s1: 6, s2: 3, s3: 3, trap: 2 },
+    spread: 2,   // 見開き全体で同じ答えは2つまで（R2-13）
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '14mm', s2: '14mm', s3: '14mm', trap: '16mm' },
     fits(q) { return /最後の値|はじめの値|近づく値|初期値|最終値|(はじめ|最後)の(温度|電圧)/.test(q) && !/秒後の|での値|おくれ/.test(q); },
@@ -832,6 +841,7 @@
           if (TEXT52.has(`${K}|${a}`)) return null;
           const v = fr(K, a);
           if (F.val(v) === 2) return null;
+          (r.e52 || (r.e52 = new Set())).add(`${K}|${a}`);   // わなで同じ式を出さない（R2-13）
           return ok({ q: `$F(s)=\\dfrac{${K}}{s(s+${a})}$ のもとの関数の、最後の値`, a: `$${fval(v)}$`, key: `fin|${a}`, verify: p => valIs(p, K / a),
             easy: `$sF=\\frac{${K}}{s+${a}}$ で $s\\to0$。分母が0になる $-${a}$ は左半分` });
         }
@@ -847,10 +857,12 @@
         const [k, ok] = alt(r, '52s2', 3);
         if (k === 0) {
           const p0 = r.intNot(1, 6, v => v === 2), q0 = r.int(1, 9), a = r.int(1, 3), b = a + r.int(1, 3);   // 例の答え（はじめ0・最後2）と同じ答えは出さない
+          if (q0 === p0 * a || q0 === p0 * b) return null;   // 約分できる（分子と分母に同じ1次式。Y-7）
           return ok({ q: `$F(s)=\\dfrac{${p0 === 1 ? '' : p0}s+${q0}}{(s+${a})(s+${b})}$ のもとの関数の、はじめの値 $f(0)$`, a: `$${p0}$`, key: `ini|${p0}|${q0}|${a}|${b}`, verify: p => valIs(p, p0),
-            easy: `$sF=\\frac{${p0 === 1 ? '' : p0}s^2+${q0}s}{s^2+${a + b}s+${a * b}}$ で $s\\to\\infty$：$s^2$ の係数の比` });
+            easy: `$sF=\\frac{${p0 === 1 ? '' : p0}s^2+${q0 === 1 ? '' : q0}s}{s^2+${a + b}s+${a * b}}$ で $s\\to\\infty$：$s^2$ の係数の比` });
         }
-        const c = r.int(2, 9) * 10, d = r.int(1, 8) * 10, a = r.pick([0.05, 0.1, 0.2, 0.5, 2]), first = k === 1;
+        // お湯：最後（部屋）は 10〜30 ℃、はじめは 100 ℃以下（R2-3・O-6）
+        const c = r.int(1, 3) * 10, d = r.int(3, (100 - c) / 10) * 10, a = r.pick([0.05, 0.1, 0.2, 0.5, 2]), first = k === 1;
         if (c === 20 && d === 60) return null;
         return ok({ q: `お湯の温度の変換 $T(s)=\\dfrac{${c}}{s}+\\dfrac{${d}}{s+${a}}$ の、${first ? 'はじめの温度' : '最後の温度'}（℃）`, a: `$${first ? c + d : c}$`, key: `sum|${c}|${d}|${a}|${first}`, verify: p => valIs(p, first ? c + d : c),
           easy: `$sT=${c}+\\frac{${d}s}{s+${a}}$ で ${first ? `$s\\to\\infty$：$${c}+${d}$` : `$s\\to0$：$${c}$`}` });
@@ -862,12 +874,12 @@
         if (yes) {
           const [k] = [r.int(0, 1)];
           if (k === 0) {
-            const aa = r.int(1, 3), w = r.int(1, 3), b = aa * aa + w * w, K = b * r.int(1, 3);
+            const aa = r.int(1, 3), w = r.int(1, 3), b = aa * aa + w * w, K = b * r.pick([1, 3, 4, 5, 6, 7, 8]);
             if (TEXT52.has(`${K}|${aa}|${w}c`)) return null;
             q = `$F(s)=\\dfrac{${K}}{s(${polyT([b, 2 * aa, 1])})}$`; v = K / b; key = `s3|${K}|${aa}|${w}`;
             easy = `$sF$ の分母が0になる $s=-${aa}\\pm ${w === 1 ? '' : w}j$ は左半分。$s\\to0$ で $\\frac{${K}}{${b}}$`;
           } else {
-            const aa = r.int(1, 3), K = aa * aa * r.int(1, 3);
+            const aa = r.int(1, 3), K = aa * aa * r.pick([1, 3, 4, 5, 6, 7, 8]);
             q = `$F(s)=\\dfrac{${K}}{s(s+${aa})^2}$`; v = K / (aa * aa); key = `s3r|${K}|${aa}`;
             easy = `$sF$ の分母が0になる $s=-${aa}$（2回）は左半分。$s\\to0$ で $\\frac{${K}}{${aa * aa}}$`;
           }
@@ -888,9 +900,10 @@
       trap(r) {
         const a = r.intNot(1, 4, v => v === 3), m = r.int(2, 9), ts = [[1, 1], [2, 2], [3, 3]].concat(a % 2 === 0 ? [[0.5, 0.5]] : []), [x] = r.pick(ts), t = x / a, K = m * a;
         if (!Number.isInteger(t * 2) && t !== 0.25 && t !== 0.75) return null;
+        if (r.e52 && r.e52.has(`${K}|${a}`)) return null;   // ステップ1と同じ式にしない（R2-13）
         const v = m * (1 - Math.exp(-x)), w = m * (1 - EXPV[x]);
-        if (+v.toFixed(2) !== +w.toFixed(2)) return null;
-        return dest({ q: `$F(s)=\\dfrac{${K}}{s(s+${a})}$ のもとの関数の $t=${fmt(t)}$ での値（${expNote(x)}、小数第2位まで）`, a: `約 $${(+w.toFixed(2)).toFixed(2)}$`, key: `t52|${a}`,
+        if (tie(w, 2) || rd(v, 2) !== rd(w, 2)) return null;
+        return dest({ q: `$F(s)=\\dfrac{${K}}{s(s+${a})}$ のもとの関数の $t=${fmt(t)}$ での値（${expNote(x)}、小数第2位まで）`, a: `約 $${fx(w, 2)}$`, key: `t52|${a}`,
           verify: p => approxIs(p, v, w, 2) },
         '9-52', `はじめでも最後でもない時刻の値。もどして $${m}-${m}${expT(a)}$ に $t=${fmt(t)}$ を入れる`, ['9-54']);
       },
@@ -1327,16 +1340,16 @@
         }
         const x = r.pick(a === 1 ? [1, 2, 3] : a === 2 ? [1, 2, 3] : [1, 2]), T = t0 + x / a;
         const v = m * (1 - Math.exp(-x)), w = m * (1 - EXPV[x]);
-        if (+v.toFixed(2) !== +w.toFixed(2)) return null;
+        if (tie(w, 2) || rd(v, 2) !== rd(w, 2)) return null;
         st.n++;
-        return { q: `スイッチをおくれて入れた回路のコンデンサーの電圧の変換が $${Vs}$ のとき、${fmt(T)}秒後の電圧（V。${expNote(x)}、小数第2位まで）`, a: `約 $${w.toFixed(2)}$`, key: `F|B|${t0}|${a}`, L,
+        return { q: `スイッチをおくれて入れた回路のコンデンサーの電圧の変換が $${Vs}$ のとき、${fmt(T)}秒後の電圧（V。${expNote(x)}、小数第2位まで）`, a: `約 $${fx(w, 2)}$`, key: `F|B|${t0}|${a}`, L,
           easy: `もどしてずらすと $${m}-${m}${expT(a, t0)}$。$t=${fmt(T)}$ で $${m}-${m}e^{-${x}}$`, verify: p => approxIs(p, v, w, 2) };
       },
       // わな：$s$ をふくまない $e^{-k}$（ただの定数倍。ずらさない。9-53）
       trap(r) {
         const k = r.int(1, 3), a = r.int(1, 4), kind = r.pick(['e', 't']), E = `e^{-${k}}`;
         if (kind === 'e') {
-          return dest({ q: Linv(`\\dfrac{${E}}{s+${a}}`), a: `$${E}${expT(a)}$`, key: `t58|e|${k}|${a}`, L: { F: `\\dfrac{${E}}{s+${a}}` }, calc: { kind: 'fn', vars: ['t'], want: `exp(-${k})*exp(-${a}*t)` } },
+          return dest({ q: Linv(`\\dfrac{${E}}{s+${a}}`), a: `$e^{-${a === 1 ? '' : a}t-${k}}$`, key: `t58|e|${k}|${a}`, L: { F: `\\dfrac{${E}}{s+${a}}` }, calc: { kind: 'fn', vars: ['t'], want: `exp(-${k})*exp(-${a}*t)` } },   // 答えは $e^{-1}e^{-4t}$ ではなく $e^{-4t-1}$（Y-6）
             '9-58', `$${E}$ には $s$ がないので、ただの定数倍。ずらさずに、表の行3の${E}倍`.replace(`の${E}倍`, `の $${E}$ 倍`));
         }
         return dest({ q: Linv(`\\dfrac{${E}}{s^2}`), a: `$${E}t$`, key: `t58|t|${k}`, L: { F: `\\dfrac{${E}}{s^2}` }, calc: { kind: 'fn', vars: ['t'], want: `exp(-${k})*t` } },
@@ -1444,9 +1457,10 @@
       s1(r) {
         const P0 = pair60(r); if (!P0) return null;
         const { al, be, c, d } = P0;
-        return { q: `Python の \`signal.residue\` で、分母が0になる $s$ が $${fmt(-al)}\\pm ${fmt(be)}j$、係数が $${fmt(c)}${d < 0 ? '\\pm' : '\\mp'} ${fmt(Math.abs(d))}j$（同じ順）と出たとき、もどした関数`,
+        const jT = v => `${v === 1 ? '' : fmt(v)}j`;   // 係数の1は書かない（Y-6）
+        return { q: `Python の \`signal.residue\` で、分母が0になる $s$ が $${fmt(-al)}\\pm ${jT(be)}$、係数が $${fmt(c)}${d < 0 ? '\\pm' : '\\mp'} ${jT(Math.abs(d))}$（同じ順）と出たとき、もどした関数`,
           a: `$${P0.T}$`, key: `I|${al}|${be}|${c}|${d}`, calc: { kind: 'fn', vars: ['t'], want: P0.want },
-          easy: `実部の2倍：$2${expT(al)}(${fmt(c)}\\cos ${fmt(be)}t${d < 0 ? '' : '+'}${fmt(d)}\\sin ${fmt(be)}t)$`.replace(/\\cos 1t/, '\\cos t').replace(/\\sin 1t/, '\\sin t') };
+          easy: `実部の2倍：$2${expT(al)}(${sumT([[c, trig('cos', be)], [d, trig('sin', be)]])})$` };
       },
       // 共役な組と実数の s（表示）
       s2(r) {
@@ -1525,12 +1539,12 @@
         if (tau === 20 && rr === 0.2) return null;
         const R = rr * tau, head = `時定数 $${tau}\\,\\mathrm s$ の温度計で、温度が1秒に $${fmt(rr)}$℃ずつ上がり続けます（はじめは計器と同じ）。`;
         if (k === 1) {
-          return ok({ q: `${head}やがて一定になる、計器のおくれ（℃）`, a: `$${fmt(R)}$℃`, key: `TC3|${tau}|${rr}`, verify: p => valIs(p, R), easy: `おくれ $${fmt(R)}(1-${eTau(tau)})$ は $r\\tau=${fmt(rr)}\\times${tau}=${fmt(R)}$ に近づく` });
+          return ok({ q: `${head}やがて一定になる、計器のおくれ（℃）`, a: `$${fmt(R)}$℃`, key: `TC3|${tau}|${rr}`, verify: p => valIs(p, R), easy: `おくれ $${R === 1 ? '' : fmt(R)}(1-${eTau(tau)})$ は $r\\tau=${fmt(rr)}\\times${tau}=${fmt(R)}$ に近づく` });
         }
         const x = r.pick([1, 2, 3, 0.5]), T = x * tau, v = R * (1 - Math.exp(-x)), w = R * (1 - EXPV[x]);
-        if (+v.toFixed(2) !== +w.toFixed(2)) return null;
-        return ok({ q: `${head}${fmt(T)}秒後の、計器のおくれ（℃。${expNote(x)}、小数第2位まで）`, a: `約 $${w.toFixed(2)}$℃`, key: `TC3|${tau}|${rr}`, verify: p => approxIs(p, v, w, 2),
-          easy: `おくれ $rt-y=${fmt(R)}(1-${eTau(tau)})$ に $t=${fmt(T)}$` });
+        if (tie(w, 2) || rd(v, 2) !== rd(w, 2)) return null;
+        return ok({ q: `${head}${fmt(T)}秒後の、計器のおくれ（℃。${expNote(x)}、小数第2位まで）`, a: `約 $${fx(w, 2)}$℃`, key: `TC3|${tau}|${rr}`, verify: p => approxIs(p, v, w, 2),
+          easy: `おくれ $rt-y=${R === 1 ? '' : fmt(R)}(1-${eTau(tau)})$ に $t=${fmt(T)}$` });
       },
       // わな：温度がいきなり上がる（ステップ。重解でない。9-54）
       trap(r) {
@@ -1549,7 +1563,7 @@
   const K95 = [0.05, 0.1, 0.2, 0.25, 0.5, 1];
   function sys95(k, A, B, v) {
     v = v || ['h', 'h'];
-    const [x, y] = [`${v[0]}_1`, `${v[1]}_2`], kk = fmt(k);
+    const [x, y] = [`${v[0]}_1`, `${v[1]}_2`], kk = k === 1 ? '' : fmt(k);   // 係数の1は書かない（Y-6）
     return `$\\dot ${x}=-${kk}(${x}-${y})$、$\\dot ${y}=${kk}(${x}-${y})$、$${x}(0)=${A}$、$${y}(0)=${B}$`;
   }
   const h95 = (k, A, B, one) => sumT([[(A + B) / 2, ''], [(one ? 1 : -1) * (A - B) / 2, expT(2 * k)]]);
@@ -1589,10 +1603,10 @@
       s3(r) {
         const kk = r.pick([0.05, 0.1, 0.25, 0.5]), A = r.pick([60, 70, 80, 90]), B = r.pick([10, 20, 30]), x = r.pick([1, 2, 0.5]), T = x / (2 * kk), one = r.chance(0.5);
         const v = (A + B) / 2 + (one ? 1 : -1) * (A - B) / 2 * Math.exp(-x), w = (A + B) / 2 + (one ? 1 : -1) * (A - B) / 2 * EXPV[x];
-        if (+v.toFixed(1) !== +w.toFixed(1)) return null;
+        if (tie(w, 1) || rd(v, 1) !== rd(w, 1)) return null;
         return { q: `ふれ合った2つの物体の温度〔℃〕が ${sys95(kk, A, B, ['T', 'T'])}（$t$ は分）のとき、${fmt(T)}分後の $T_${one ? 1 : 2}$（${expNote(x)}、小数第1位まで）`,
-          a: `約 $${w.toFixed(1)}$℃`, key: `S3|${kk}|${A}|${B}|${x}|${one}`, verify: p => approxIs(p, v, w, 1),
-          easy: `和は一定 ${A + B}、差は $${A - B}e^{-${fmt(2 * kk)}t}$。$T_${one ? 1 : 2}=${h95(kk, A, B, one)}$ に $t=${fmt(T)}$` };
+          a: `約 $${fx(w, 1)}$℃`, key: `S3|${kk}|${A}|${B}|${x}|${one}`, verify: p => approxIs(p, v, w, 1),
+          easy: `和は一定 ${A + B}、差は $${A - B}${expT(2 * kk)}$。$T_${one ? 1 : 2}=${h95(kk, A, B, one)}$ に $t=${fmt(T)}$` };
       },
       // わな：相手の水位が一定（1つの1次の式。9-44）
       trap(r) {

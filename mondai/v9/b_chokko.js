@@ -83,9 +83,9 @@
   const exNorm = s => normA(String(s).replace(/^約\s*/, '').replace(/\$/g, ''));
   const EXANS = {
     '9-16': ['2\\pi'], '9-17': ['\\dfrac{1}{2}', '-\\dfrac{1}{2}', '-\\dfrac{1}{4}'], '9-18': ['100'],
-    '9-19': ['\\dfrac{4\\sin\\frac{n\\pi}{2}}{n\\pi}'], '9-20': ['\\dfrac{3\\pi}{2}', '-\\dfrac{12}{\\pi n^2}、0'], '9-21': ['\\dfrac{60(-1)^{n+1}}{n\\pi}', '19.1', '-9.55'],
+    '9-19': ['\\dfrac{4\\sin\\frac{n\\pi}{2}}{n\\pi}'], '9-20': ['\\dfrac{3\\pi}{2}', '奇数 -\\dfrac{12}{\\pi n^2}、偶数 0'], '9-21': ['\\dfrac{60(-1)^{n+1}}{n\\pi}', '19.1', '-9.55'],
     '9-22': ['-\\dfrac{4}{3\\pi}'], '9-24': ['16.5', '\\dfrac{\\pi^2}{8}'], '9-25': ['20', '48.3'], '9-26': ['2', '3', '4', '-4j', '4j'], '9-27': ['4\\cos t-6\\sin t'],
-    '9-28': ['3', '\\dfrac{6}{jn\\pi}、0'], '9-29': ['0.90', '0.13', '\\dfrac{1}{\\sqrt2}', '\\dfrac{1}{\\sqrt{10}}'], '9-30': ['50', '69', '69.3', '7.7'],
+    '9-28': ['3', '奇数 \\dfrac{6}{jn\\pi}、偶数 0'], '9-29': ['0.90', '0.13', '\\dfrac{1}{\\sqrt2}', '\\dfrac{1}{\\sqrt{10}}'], '9-30': ['50', '69', '69.3', '7.7'],
     '9-91': ['0.811', '\\dfrac{8}{\\pi^2}'], '9-92': ['\\dfrac{j(-1)^n}{n}'],
   };
   function add(def) {
@@ -279,7 +279,8 @@
         const ans = cx([re, 0], [im, 0]);
         const sub = n < 0 ? `{${n}}` : (n > 9 ? `{${n}}` : n);
         return { q: `$f(t)=${tex17(kind, A, m)}$ の $c_${sub}$`, a: `$${ans}$`, key: `c|${kind}|${A},${m}|${n}`, easyCheck: false,
-          easy: kind === 'sc1' ? `$${tex17(kind, A, m)}=${pq(h)}\\sin${2 * m}t$。$c_{${2 * m}}=\\dfrac{0-j\\times${pq(h)}}{2}$` : (n === 0 ? 'オイラーの公式で $e$ の式に直し、定数の項を読む' : `オイラーの公式で $e$ の式に直し、$e^{${n < 0 ? '-' : ''}j${Math.abs(n) === 1 ? '' : Math.abs(n)}t}$ の前の数を読む`),
+          // sc1 は聞いた番号まで書く（$c_{-4}$ なら $\overline{c_4}$ まで。Y-11・R1-18）。係数の1は書かない（Y-6）
+          easy: kind === 'sc1' ? `$${tex17(kind, A, m)}=${A === 2 ? '' : pq(h)}\\sin${2 * m}t$。$c_{${2 * m}}=\\dfrac{0-j${A === 2 ? '' : `\\times${pq(h)}`}}{2}=${cx(0, [neg(q), 0])}$${n < 0 ? `、$c_{${n}}=\\overline{c_{${2 * m}}}=${ans}$` : ''}` :(n === 0 ? 'オイラーの公式で $e$ の式に直し、定数の項を読む' : `オイラーの公式で $e$ の式に直し、$e^{${n < 0 ? '-' : ''}j${Math.abs(n) === 1 ? '' : Math.abs(n)}t}$ の前の数を読む`),
           verify: p => cvalIs(p, cnNum(fn17(kind, A, m), 2 * Math.PI, n), 1e-7) };
       },
       // わな：全波整流・半波整流の平均（公式で和に直せない。面積÷周期。9-18）
@@ -353,7 +354,7 @@
       // わな：半波整流の a_n（平均ではない。積和の式で定積分。9-22）
       trap(r) {
         const A = r.pick([1, 2, 3, 4, 6]), n = r.pick([2, 4, 6]), v = fr(-2 * A, n * n - 1);
-        return dest({ q: `最大 $${A}$ の半波整流した波（$0<t<\\pi$ で $${AT(A)}\\sin t$、$\\pi<t<2\\pi$ で0）の $a_${n}$`, a: `$${pq(v, -1)}$`, key: `a|${A}|${n}`,
+        return dest({ q: `最大 $${A}$ の半波整流した波（$0<t<\\pi$ で $${AT(A)}\\sin t$、$\\pi<t<2\\pi$ で $0$）の $a_${n}$`, a: `$${pq(v, -1)}$`, key: `a|${A}|${n}`,
           verify: p => valIs(p, anNum(t => Math.max(0, A * Math.sin(t)), 2 * Math.PI, n), 1e-7) }, '9-18',
           `平均ではなく $\\cos${n}t$ の係数。$\\sin t\\cos${n}t$ を積和の式で和に直して、0から $\\pi$ で定積分`, ['9-22']);
       },
@@ -484,11 +485,11 @@
         const k = r.pick([1, 2, 4, 5, 6]), T = tri20('k', k), j = turn(r, '20s1', 3);
         if (j === 0) return { q: `${SYM} $f(t)=${T.tex}$ の平均 $\\dfrac{a_0}{2}$`, a: `$${pq(...T.avg)}$`, key: `k|${k}|avg`, easyCheck: false,
           easy: `三角形の面積 $${pq(fr(k), 2)}$ を $2\\pi$ でわる`, verify: p => valIs(p, meanNum(T.f, 2 * Math.PI, -Math.PI), 1e-7) };
-        if (j === 1) return { q: `${SYM} $f(t)=${T.tex}$ の $a_n$：${OE}`, a: `$-\\dfrac{${4 * k}}{\\pi n^2}$、$0$`, key: `k|${k}|an`, easyCheck: false, boxw: '20mm',
+        if (j === 1) return { q: `${SYM} $f(t)=${T.tex}$ の $a_n$：${OE}`, a: `奇数 $-\\dfrac{${4 * k}}{\\pi n^2}$、偶数 $0$`, key: `k|${k}|an`, easyCheck: false, boxw: '20mm',
           easy: `$a_n=\\dfrac{${2 * k}}{\\pi}\\cdot\\dfrac{(-1)^n-1}{n^2}$`, verify: p => oeIs(p, n => anNum(T.f, 2 * Math.PI, n, -Math.PI)) };
         const n = r.pick([1, 3, 5]);
         return { q: `${SYM} $f(t)=${T.tex}$ の $a_${n}$`, a: `$${pq(fr(-4 * k, n * n), -1)}$`, key: `k|${k}|a${n}`, easyCheck: false,
-          easy: `$\\dfrac{${2 * k}}{\\pi}\\cdot\\dfrac{-2}{${n * n}}$`, verify: p => valIs(p, anNum(T.f, 2 * Math.PI, n, -Math.PI), 1e-7) };
+          easy: `$\\dfrac{${2 * k}}{\\pi}\\cdot${n === 1 ? '(-2)' : `\\dfrac{-2}{${n * n}}`}$`, verify: p => valIs(p, anNum(T.f, 2 * Math.PI, n, -Math.PI), 1e-7) };
       },
       // π−|t|、定数をたした形
       s2(r) {
@@ -500,7 +501,7 @@
             verify: p => valIs(p, meanNum(T.f, 2 * Math.PI, -Math.PI), 1e-7) };
         }
         const num = -T.s * 4 * k;
-        return { q: `${SYM} $f(t)=${T.tex}$ の $a_n$：${OE}`, a: `$${dfn(num, '\\pi n^2')}$、$0$`, key: `${form}|${k},${c}|an`, easyCheck: false, boxw: '20mm',
+        return { q: `${SYM} $f(t)=${T.tex}$ の $a_n$：${OE}`, a: `奇数 $${dfn(num, '\\pi n^2')}$、偶数 $0$`, key: `${form}|${k},${c}|an`, easyCheck: false, boxw: '20mm',
           easy: `${T.s < 0 ? '$-\\lvert t\\rvert$ の分で符号が逆。' : '定数は $a_n$ に効かない。'}$a_n=${T.s < 0 ? '-' : ''}\\dfrac{${2 * k}}{\\pi}\\cdot\\dfrac{(-1)^n-1}{n^2}$`,
           verify: p => oeIs(p, n => anNum(T.f, 2 * Math.PI, n, -Math.PI)) };
       },
@@ -533,7 +534,7 @@
   function shape21(kind, a, b) {
     if (kind === 'up') return { f: x => a * x, txt: `$f(x)=${a}\\dfrac{x}{L}$`, bn: n => 2 * a * (n % 2 ? 1 : -1) / (n * Math.PI), tex: `\\dfrac{${2 * a}(-1)^{n+1}}{n\\pi}`, val: n => fr(2 * a * (n % 2 ? 1 : -1), n) };
     if (kind === 'down') return { f: x => a * (1 - x), txt: `$f(x)=${a}\\Bigl(1-\\dfrac{x}{L}\\Bigr)$`, bn: n => 2 * a / (n * Math.PI), tex: `\\dfrac{${2 * a}}{n\\pi}`, val: n => fr(2 * a, n) };
-    return { f: x => b + (a - b) * x, txt: `左はし $${b}$ ℃・右はし $${a}$ ℃の直線`, bn: n => 2 * (b + a * (n % 2 ? 1 : -1)) / (n * Math.PI), tex: null, val: n => fr(2 * (b + a * (n % 2 ? 1 : -1)), n) };
+    return { f: x => b + (a - b) * x, txt: `左はしの $${b}$ ℃から右はしの $${a}$ ℃まで直線で変わる`, bn: n => 2 * (b + a * (n % 2 ? 1 : -1)) / (n * Math.PI), tex: null, val: n => fr(2 * (b + a * (n % 2 ? 1 : -1)), n) };
   }
   // 数値の b_n（検算：問題を作った式とは別の道すじ。L=1 として 2∫_0^1 f sin nπx dx）
   const bn21 = (f, n) => 2 * simpson(x => f(x) * Math.sin(n * Math.PI * x), 0, 1);
@@ -544,7 +545,10 @@
       ...(Math.abs(g(0)) > 1e-9 ? [['seg', G.T(0, g(0)), G.T(0, -g(0)), { dash: true }]] : [])] };
   }
   const ROD = 'はじめの温度が';
-  const ROD2 = 'の棒（両はし0 ℃）の';
+  const ROD2 = '棒（両はし $0$ ℃）の';
+  // 「はじめの温度が $f(x)=…$ の棒（両はし $0$ ℃）の」
+  // 直線は「はじめの温度が左はしの … まで直線で変わる棒（そのあと両はしを $0$ ℃に保つ）の」（はじめの温度と、はしの温度を読みまちがえないように。R1-8）
+  const rod21 = S => (S.txt.startsWith('$') ? `${ROD} ${S.txt} の${ROD2}` : `${ROD}${S.txt}棒（そのあと両はしを $0$ ℃に保つ）の`);
   add({
     id: '9-21', part: 2, chap: '9-2⑩ 例題4', stars: 1,
     title: '0から $L$ だけの形は、半回転して広げて $\\sin$ だけに',
@@ -561,10 +565,10 @@
       // f = kx/L
       s1(r) {
         const a = r.pick([10, 20, 40, 50, 60, 80]), S = shape21('up', a), j = turn(r, '21s1', 2);
-        if (j === 0) return { q: `${ROD}${S.txt.startsWith("$") ? " " : ""}${S.txt}${S.txt.endsWith("$") ? " " : ""}${ROD2} $b_n$（$n$ の式で）`, a: `$${S.tex}$`, key: `up|${a}`, easyCheck: false,
+        if (j === 0) return { q: `${rod21(S)} $b_n$（$n$ の式で）`, a: `$${S.tex}$`, key: `up|${a}`, easyCheck: false,
           easy: `$b_n=\\dfrac{2}{L}\\cdot\\dfrac{${a}}{L}\\cdot\\dfrac{L^2(-1)^{n+1}}{n\\pi}$`, verify: p => fnIs(p, n => bn21(S.f, n), [1, 2, 3, 4]) };
         const n = r.pick([1, 2, 3]);
-        return { q: `${ROD}${S.txt.startsWith("$") ? " " : ""}${S.txt}${S.txt.endsWith("$") ? " " : ""}${ROD2} $b_${n}$`, a: `$${pq(S.val(n), -1)}$`, key: `up|${a}`, easyCheck: false,
+        return { q: `${rod21(S)} $b_${n}$`, a: `$${pq(S.val(n), -1)}$`, key: `up|${a}`, easyCheck: false,
           easy: `$b_n=\\dfrac{${2 * a}(-1)^{n+1}}{n\\pi}$ に $n=${n}$`, verify: p => valIs(p, bn21(S.f, n), 1e-7) };
       },
       // 右はしが0の直線、両方のはしが0でない直線
@@ -572,11 +576,11 @@
         const lin = turn(r, '21s2', 2) === 0, a = r.pick([20, 40, 50, 60, 80, 100]), b = r.pick([20, 30, 40, 60]);
         if (lin && a === b) return null;   // どこも同じ温度（わざ 9-14）
         const S = shape21(lin ? 'lin' : 'down', a, b);
-        if (!lin && r.chance(0.4)) return { q: `${ROD}${S.txt.startsWith("$") ? " " : ""}${S.txt}${S.txt.endsWith("$") ? " " : ""}${ROD2} $b_n$（$n$ の式で）`, a: `$${S.tex}$`, key: `down|${a}`, easyCheck: false,
+        if (!lin && r.chance(0.4)) return { q: `${rod21(S)} $b_n$（$n$ の式で）`, a: `$${S.tex}$`, key: `down|${a}`, easyCheck: false,
           easy: `$\\dfrac{2}{L}\\displaystyle\\int_0^L${a}\\Bigl(1-\\dfrac{x}{L}\\Bigr)\\sin\\dfrac{n\\pi x}{L}\\,\\dd x$`, verify: p => fnIs(p, n => bn21(S.f, n), [1, 2, 3, 4]) };
         const n = r.pick([1, 2, 3]), v = S.val(n);
         if (!v[0]) return null;
-        return { q: `${ROD}${S.txt.startsWith("$") ? " " : ""}${S.txt}${S.txt.endsWith("$") ? " " : ""}${ROD2} $b_${n}$`, a: `$${pq(v, -1)}$`, key: `${lin ? 'lin' : 'down'}|${a},${b}|b${n}`, easyCheck: false,
+        return { q: `${rod21(S)} $b_${n}$`, a: `$${pq(v, -1)}$`, key: `${lin ? 'lin' : 'down'}|${a},${b}|b${n}`, easyCheck: false,
           easy: lin ? `$${b}\\Bigl(1-\\dfrac{x}{L}\\Bigr)$ と $${a}\\dfrac{x}{L}$ に分けて、$\\dfrac{${2 * b}}{n\\pi}+\\dfrac{${2 * a}(-1)^{n+1}}{n\\pi}$` : `$b_n=\\dfrac{${2 * a}}{n\\pi}$ に $n=${n}$`,
           verify: p => valIs(p, bn21(S.f, n), 1e-7) };
       },
@@ -588,7 +592,8 @@
         const S = shape21(kind, a, b), n = r.pick([1, 2, 3]), v = S.val(n);
         if (!v[0]) return null;
         const top = Math.max(a, kind === 'lin' ? b : 0);
-        return { q: `図の実線は棒（両はし0 ℃）のはじめの温度（℃）、点線は原点で半回転して広げた形。$b_${n}$`, a: `$${pq(v, -1)}$`, key: `${kind}|${a},${b}|b${n}`, easyCheck: false,
+        // 直線は両はしの値を文に書く（左はしの値は目もりにないので。Y-1・R1-2）
+        return { q: `${kind === 'lin' ? `図の実線は、両はしを $0$ ℃に保つ棒のはじめの温度（℃。左はし $${b}$ ℃から右はし $${a}$ ℃までの直線）` : '図の実線は棒（両はし $0$ ℃）のはじめの温度（℃）'}、点線は原点で半回転して広げた形。$b_${n}$`, a: `$${pq(v, -1)}$`, key: `${kind}|${a}|${kind === 'lin' ? b : ''}`, easyCheck: false,
           easy: `$b_${n}=\\dfrac{2}{L}\\displaystyle\\int_0^Lf\\sin\\dfrac{${n === 1 ? '' : n}\\pi x}{L}\\,\\dd x$`, fig: fig21(S, top),
           verify: p => valIs(p, bn21(S.f, n), 1e-7) };
       },
@@ -596,9 +601,9 @@
       trap(r) {
         const U0 = r.pick([20, 40, 60, 80, 100]), lft = r.pick([0, 10, 20]);
         const v = (U0 + lft) / 2;
-        return dest({ q: `長さ $L$ の棒の左はしを ${lft} ℃、右はしを ${U0} ℃に保つ。十分に時間がたったあとの、棒のまん中の温度（℃）`, a: `$${nf(v)}$`, key: `t|${U0}|${lft}`,
+        return dest({ q: `長さ $L$ の棒の左はしを $${lft}$ ℃、右はしを $${U0}$ ℃に保つ。十分に時間がたったあとの、棒のまん中の温度（℃）`, a: `$${nf(v)}$`, key: `t|${U0}|${lft}`,
           verify: p => valIs(p, lft + (U0 - lft) * 0.5) }, '9-21',
-          `両はしが0 ℃でないので、$\\sin\\frac{n\\pi x}{L}$ だけのたし算にならない。最後は両はしを結ぶ直線になり、まん中は $\\dfrac{${lft}+${U0}}{2}$`);
+          `両はしが $0$ ℃でないので、$\\sin\\frac{n\\pi x}{L}$ だけのたし算にならない。最後は両はしを結ぶ直線になり、まん中は $\\dfrac{${lft}+${U0}}{2}$`);
       },
     },
   });
@@ -606,7 +611,7 @@
   // ================================================================ 9-22
   // 整流した波の a_n（n は偶数）：半波 −2A/(π(n²−1))、全波 −4A/(π(n²−1))
   const rectF = (full, A) => t => (full ? Math.abs(A * Math.sin(t)) : Math.max(0, A * Math.sin(t)));
-  const HALF = A => `$0<t<\\pi$ で $${AT(A)}\\sin t$、$\\pi<t<2\\pi$ で0`;
+  const HALF = A => `$0<t<\\pi$ で $${AT(A)}\\sin t$、$\\pi<t<2\\pi$ で $0$`;
   add({
     id: '9-22', part: 2, chap: '9-2⑨ 例題8', stars: 1,
     title: '整流した波の係数は、積和の式で和に直して定積分',
@@ -643,7 +648,7 @@
         const full = turn(r, '22s3', 2) === 0, V = r.pick([10, 20, 30, 60, 90, 120]), f0 = r.pick([50, 60]);
         if (full) {
           const n = r.pick([2, 4]), fq = n * f0, v = fr(4 * V, n * n - 1);
-          return { q: `最大 ${U(V, 'V')}、${f0} Hz の交流を全波整流した電圧の、${fq} Hz の成分の大きさ（V）`, a: `$${pq(v, -1)}$`, key: `f|${V}|${f0}|${n}`, easyCheck: false,
+          return { q: `最大 ${U(V, 'V')}、${f0} Hz の交流を全波整流した電圧の、${fq} Hz の成分の大きさ（V。$\\pi$ を残す）`, a: `$${pq(v, -1)}$`, key: `f|${V}|${f0}|${n}`, easyCheck: false,
             easy: `${fq} Hz は周期 $2\\pi$ で見た $\\cos${n}t$。$\\lvert a_${n}\\rvert=\\dfrac{2}{\\pi}\\cdot${V}\\Bigl\\lvert\\displaystyle\\int_0^{\\pi}\\sin t\\cos${n}t\\,\\dd t\\Bigr\\rvert$`,
             verify: p => valIs(p, Math.abs(anNum(rectF(true, V), 2 * Math.PI, n)), 1e-7) };
         }
@@ -665,7 +670,7 @@
 
   // ================================================================ 9-23
   const DEG = k => `${k}`;
-  const f1d = v => (Math.round(v * 10) / 10).toFixed(1);
+  const f1d = v => rd(v, 1);   // 10進で丸める（2進のずれで下に丸めない。Y-2）
   // 表（N 点。1行に入りきらないときは2段）
   function dataTable(fs, step, split) {
     const ts = fs.map((_, k) => DEG(k * step)), cell = v => `$${typeof v === 'string' ? v : nf(v)}$`;
@@ -738,7 +743,7 @@
         const A = r.pick([2, 4, 6, 8, 10]), m = r.pick([1, 2]);
         return dest({ q: `式 $f(t)=${A}${tf('sin', m)}${tf('cos', m)}$ で表される波の $b_${2 * m}$`, a: `$${nf(A / 2)}$`, key: `t|${A}|${m}`,
           verify: p => valIs(p, bnNum(t => A * Math.sin(m * t) * Math.cos(m * t), 2 * Math.PI, 2 * m), 1e-7) }, '9-23',
-          `式があるなら、データの和にしなくてよい。2倍角の式で $${nf(A / 2)}${tf('sin', 2 * m)}$`, ['9-17']);
+          `式があるなら、データの和にしなくてよい。2倍角の式で $${A === 2 ? '' : nf(A / 2)}${tf('sin', 2 * m)}$`, ['9-17']);
       },
     },
   });
@@ -812,7 +817,7 @@
         const [a, b, c] = r.pick([[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 6, 10], [4, 3, 5]]);
         return dest({ q: `$f(t)=${a}\\sin t+${b}\\cos t$ の最大値`, a: `$${c}$`, key: `t|${a},${b}`,
           verify: p => { let mx = -Infinity; for (let k = 0; k < 20000; k++) mx = Math.max(mx, a * Math.sin(k * 2 * Math.PI / 20000) + b * Math.cos(k * 2 * Math.PI / 20000)); return valIs(p, mx, 1e-6); } }, '9-24',
-          `2乗の平均（$\\frac{${a}^2+${b}^2}{2}$）ではなく、最大値。1つの $\\sin$ にまとめると振幅 $\\sqrt{${a}^2+${b}^2}=${c}$`);
+          `2乗の平均（$\\frac{${a}^2+${b}^2}{2}$）ではなく、最大値。1つの $\\sin$ にまとめると振幅 $\\sqrt{${a}^2+${b}^2}=${c}$`, ['4-59']);
       },
     },
   });
@@ -1038,7 +1043,7 @@
       s1(r) {
         const A = r.pick([2, 4, 5, 8, 10, 12]), j = turn(r, '28s1', 4);
         if (j === 0) return { q: `${HB(A, 0)} をくり返す波の $c_0$`, a: `$${pq(fr(A, 2))}$`, key: `c0|${A}`, easyCheck: false, easy: `平均（面積 $${A}\\pi$ ÷ $2\\pi$）`, verify: p => valIs(p, cnPw(A, 0, 0)[0], 1e-7) };
-        if (j === 1) return { q: `${HB(A, 0)} をくり返す波の $c_n$（$n\\neq0$）：${OE}`, a: `$\\dfrac{${A}}{jn\\pi}$、$0$`, key: `cn|${A}`, easyCheck: false, boxw: '20mm',
+        if (j === 1) return { q: `${HB(A, 0)} をくり返す波の $c_n$（$n\\neq0$）：${OE}`, a: `奇数 $\\dfrac{${A}}{jn\\pi}$、偶数 $0$`, key: `cn|${A}`, easyCheck: false, boxw: '20mm',
           easy: `$\\dfrac{${A}}{2\\pi}\\cdot\\dfrac{1-(-1)^n}{jn}$`, verify: p => oeIs(p, n => cnPw(A, 0, n)) };
         const n = r.pick([1, -1, 3, -3]);
         return { q: `${HB(A, 0)} をくり返す波の $c_${cnSub(n)}$`, a: `$${cnOdd(A, n)}$`, key: `c|${A}|${n}`, easyCheck: false,
@@ -1049,7 +1054,7 @@
         const A = r.pick([1, 2, 3, 4, 5, 6]), B = r.pick([-1, -2, -3, -4, 1, 2]), j = turn(r, '28s2', 3);
         if (A === B) return null;
         if (j === 0) return { q: `${HB(A, B)} をくり返す波の $c_0$`, a: `$${pq(fr(A + B, 2))}$`, key: `c0|${A},${B}`, easyCheck: false, easy: `平均 $\\dfrac{${A}+${par(B)}}{2}$`, verify: p => valIs(p, cnPw(A, B, 0)[0], 1e-7) };
-        if (j === 1) return { q: `${HB(A, B)} をくり返す波の $c_n$（$n\\neq0$）：${OE}`, a: `$\\dfrac{${A - B}}{jn\\pi}$、$0$`, key: `cn|${A},${B}`, easyCheck: false, boxw: '20mm',
+        if (j === 1) return { q: `${HB(A, B)} をくり返す波の $c_n$（$n\\neq0$）：${OE}`, a: `奇数 $\\dfrac{${A - B}}{jn\\pi}$、偶数 $0$`, key: `cn|${A},${B}`, easyCheck: false, boxw: '20mm',
           easy: `$\\dfrac{1}{2\\pi}\\cdot\\dfrac{(${A}-${par(B)})(1-(-1)^n)}{jn}$`, verify: p => oeIs(p, n => cnPw(A, B, n)) };
         const n = r.pick([1, -1, 3]);
         return { q: `${HB(A, B)} をくり返す波の $c_${cnSub(n)}$`, a: `$${cnOdd(A - B, n)}$`, key: `c|${A},${B}|${n}`, easyCheck: false,
@@ -1137,8 +1142,8 @@
       // わな：基本波にある電力の割合（回路を通さない。パーセバル。9-24）
       trap(r) {
         const two = r.chance(0.5), txt = two ? 0.811 * (1 + 1 / 9) : 0.811, s = agree(100 * txt, 100 * 8 / Math.PI ** 2 * (two ? 10 / 9 : 1), 1);
-        return dest({ q: `高さ1の方形波（2乗の平均1、奇数番だけ $c_n=\\dfrac{2}{jn\\pi}$）で、$n=\\pm1$${two ? '・$\\pm3$' : ''} の成分の電力は、全体の電力の約何％か（$\\dfrac{8}{\\pi^2}=0.811$、小数第1位まで）`, a: `約 $${s}$`, key: `t|${two}`,
-          verify: p => valIs(p, +s) }, '9-29', `回路は通さない。全体の電力1のうち、$2\\lvert c_1\\rvert^2=\\dfrac{8}{\\pi^2}$${two ? '、$2\\lvert c_3\\rvert^2=\\dfrac{8}{9\\pi^2}$' : ''}（パーセバルの等式）`, ['9-24']);
+        return dest({ q: `高さ $1$ の方形波（2乗の平均 $1$、奇数番だけ $c_n=\\dfrac{2}{jn\\pi}$）で、$n=\\pm1$${two ? '・$\\pm3$' : ''} の成分の電力は、全体の電力の約何％か（$\\dfrac{8}{\\pi^2}=0.811$、小数第1位まで）`, a: `約 $${s}$`, key: `t|${two}`,
+          verify: p => valIs(p, +s) }, '9-29', `回路は通さない。全体の電力 $1$ のうち、$2\\lvert c_1\\rvert^2=\\dfrac{8}{\\pi^2}$${two ? '、$2\\lvert c_3\\rvert^2=\\dfrac{8}{9\\pi^2}$' : ''}（パーセバルの等式）`, ['9-24']);
       },
     },
   });
@@ -1190,7 +1195,7 @@
       trap(r) {
         const U0 = r.pick([40, 60, 80, 100]), txt = 1.273 * U0 * 0.3727, s = agree(txt, 4 * U0 / Math.PI * Math.exp(-0.987), 1);
         if (!s) return null;
-        return dest({ q: `両はしを0 ℃に保つ長さ ${U(0.1, 'm')} の棒（はじめどこも ${U0} ℃、$\\alpha\\bigl(\\frac{\\pi}{L}\\bigr)^2=0.0987$）の10秒後のまん中の温度（℃。1項めだけ。$\\dfrac{4}{\\pi}=1.273$、$e^{-0.987}=0.3727$、小数第1位まで）`, a: `約 $${s}$`, key: `t|${U0}`,
+        return dest({ q: `両はしを $0$ ℃に保つ長さ ${U(0.1, 'm')} の棒（はじめどこも $${U0}$ ℃、$\\alpha\\bigl(\\frac{\\pi}{L}\\bigr)^2=0.0987$）の10秒後のまん中の温度（℃。1項めだけ。$\\dfrac{4}{\\pi}=1.273$、$e^{-0.987}=0.3727$、小数第1位まで）`, a: `約 $${s}$`, key: `t|${U0}`,
           verify: p => valIs(p, +s) }, '9-30', `輪ではなく両はしのある棒。$\\sin\\frac{n\\pi x}{L}$ の展開で、1項めは $\\dfrac{4\\times${U0}}{\\pi}e^{-0.0987t}$`, ['9-14']);
       },
     },
@@ -1216,7 +1221,7 @@
       // b_n の値（π を残す）
       s1(r) {
         const h = r.pick([2, 3, 4, 5, 6, 10]), u = r.pick(['mm', 'cm']), j = turn(r, '91s1', 4);
-        if (j === 3) return { q: `長さ $L$ の弦のまん中を高さ ${U(h, u)} つまんではなす。はじめの形の $b_n$：${OE}`, a: `$\\dfrac{${8 * h}\\sin\\frac{n\\pi}{2}}{n^2\\pi^2}$、$0$`, key: `f|${h}|${u}`, easyCheck: false, boxw: '26mm',
+        if (j === 3) return { q: `長さ $L$ の弦のまん中を高さ ${U(h, u)} つまんではなす。はじめの形の $b_n$：${OE}`, a: `奇数 $\\dfrac{${8 * h}\\sin\\frac{n\\pi}{2}}{n^2\\pi^2}$、偶数 $0$`, key: `f|${h}|${u}`, easyCheck: false, boxw: '26mm',
           easy: `$\\dfrac{8h}{n^2\\pi^2}\\sin\\dfrac{n\\pi}{2}$ に $h=${h}$`, verify: p => oeIs(p, n => bnPluck(0.5, h, n)) };
         const n = [1, 3, 5][j], v = fr(8 * h * (n % 4 === 1 ? 1 : -1), n * n);
         return { q: `長さ $L$ の弦のまん中を高さ ${U(h, u)} つまんではなす。はじめの形の $b_${n}$（${u}）`, a: `$${pq(v, -2)}$`, key: `b|${h}|${u}|${n}`, easyCheck: false,

@@ -99,6 +99,20 @@
     '9-14': ['23.7', '\\frac{200}{\\pi}', '63.66'],
     '9-15': ['200', '600', '400'],
   };
+  // 同じ見開きで同じものを出さない（Y-3・Y-4）：p.uniq（9-12 の級数。わなもふくめ、見開きに1回）と、def.xAns なら答え（ステップをまたいで）。
+  //   よけられないとき（よけた数が 60 をこえたら）はそのまま（アプリのプリントで、問題が足りなくならないように）
+  function crossOK(r, def, k, p) {
+    const d = r.cross || (r.cross = {}), c = d[def.id] || (d[def.id] = { u: new Map(), a: new Map(), miss: 0 });
+    const ua = def.xAns ? normA(p.ans || p.a) : null;
+    const hit = (p.uniq != null && c.u.has(p.uniq)) ||(ua != null && c.a.has(ua) && c.a.get(ua) !== k);
+    if (hit && c.miss++ < 60) return false;
+    return true;
+  }
+  function crossAdd(r, def, k, p) {
+    const c = r.cross[def.id];
+    if (p.uniq != null) c.u.set(p.uniq, k);
+    if (def.xAns) { const ua = normA(p.ans || p.a); if (!c.a.has(ua)) c.a.set(ua, k); }
+  }
   function add(def) {
     const ex = new Set((EXANS[def.id] || []).map(exNorm));
     for (const k of ['s1', 's2', 's3', 'trap']) {
@@ -106,7 +120,10 @@
       def.steps[k] = r => {
         const p = f(r); if (!p) return p;
         if (k !== 'trap' && (ex.has(exNorm(p.a)) || (p.exKeys || []).some(x => ex.has(exNorm(x))))) return null;
-        return ansOK(r, def.id + k, normA(p.ans || p.a), 2, p.key || p.q) ? p : null;
+        if (!crossOK(r, def, k, p)) return null;
+        if (!ansOK(r, def.id + k, normA(p.ans || p.a), 2, p.key || p.q)) return null;
+        crossAdd(r, def, k, p);
+        return p;
       };
     }
     M.add(def);
@@ -526,7 +543,7 @@
         }
         const n = r.pick([1, 3, 5, 7]);
         return { q: `${sqTxt(nf(a), nf(-a))} をくり返す方形波の $b_${n}$`, a: `$${fracX(4 * a * 2, 2 * n, '\\pi')}$`, key: `n|${a}|${n}`,
-          easy: `$${n}$ は奇数なので $\\dfrac{4\\times${nf(a)}}{${n}\\pi}=${fracX(4 * a * 2, 2 * n, '\\pi')}$`, easyCheck: 'last', verify: p => valIs(p, bnNum(sqPcs(a), n), 1e-7) };
+          easy: `$${n}$ は奇数なので $\\dfrac{4\\times${nf(a)}}{${n === 1 ? '' : n}\\pi}=${fracX(4 * a * 2, 2 * n, '\\pi')}$`, easyCheck: 'last', verify: p => valIs(p, bnNum(sqPcs(a), n), 1e-7) };
       },
       // 見かけがちがう：級数の前の数・周期が 2π でない方形波
       s3(r) {
@@ -544,7 +561,7 @@
         const k = r.pick([1, 2, 3, 4]);
         return dest({ q: `$0<t<\\pi$ で $${k === 1 ? '' : k}t$、$\\pi<t<2\\pi$ で $0$ をくり返す信号の $b_n$：$n$ が奇数なら □、偶数なら □`, a: oe(fracX(k, 1, 'n'), fracX(-k, 1, 'n')), key: `t|${k}`,
           verify: p => oddEvenIs(p, n => bnNum([[0, PI, t => k * t], [PI, 2 * PI, () => 0]], n)) }, '9-06',
-          `区間の中が一定でなく $t$ の1次式なので、$\\displaystyle\\int_0^{\\pi}t\\sin nt\\,\\dd t=\\dfrac{\\pi(-1)^{n+1}}{n}$ を部分積分で出す。$b_n=\\dfrac{${k}(-1)^{n+1}}{n}$`, ['9-09']);
+          `区間の中が一定でなく $t$ の1次式なので、$\\displaystyle\\int_0^{\\pi}t\\sin nt\\,\\dd t=\\dfrac{\\pi(-1)^{n+1}}{n}$ を部分積分で出す。$b_n=\\dfrac{${k === 1 ? '' : k}(-1)^{n+1}}{n}$`, ['9-09']);
       },
     },
   });
@@ -663,7 +680,7 @@
         if (k === 0) {
           const b = r.pick([1, 2, -1, 3, -2]);
           return { q: `$-\\pi<t<\\pi$ で $f(t)=${c === 1 ? '' : nf(c)}t${b < 0 ? '' : '+'}${b}$ をくり返すのこぎり波の、フーリエ級数の $t=\\pi$ での値`, a: `$${b}$`, key: `s|${c}|${b}`,
-            easy: `$\\dfrac{(${nf(c)}\\pi${b < 0 ? '' : '+'}${b})+(-${nf(c)}\\pi${b < 0 ? '' : '+'}${b})}{2}=${b}$`, easyCheck: 'last', verify: p => valIs(p, fsCF(b, z0, n => 2 * c * (n % 2 ? 1 : -1) / n, PI), 1e-6) };
+            easy: `$\\dfrac{(${c === 1 ? '' : nf(c)}\\pi${b < 0 ? '' : '+'}${b})+(-${c === 1 ? '' : nf(c)}\\pi${b < 0 ? '' : '+'}${b})}{2}=${b}$`, easyCheck: 'last', verify: p => valIs(p, fsCF(b, z0, n => 2 * c * (n % 2 ? 1 : -1) / n, PI), 1e-6) };
         }
         if (k === 1) {
           const tt = r.pick([['0', 0], ['2\\pi', 2]]);
@@ -676,7 +693,8 @@
       // 見かけがちがう：図の波（2周期）
       s3(r) {
         if (turn(r, '08s3', 2) === 0) {
-          const A = r.pick([4, 5, 8, 10]), B = r.pick([-2, 0, 1, 2]), k = r.pick([2, 3, 4]);
+          // B の目もりのラベルが原点の「O」にくっつかないように、0 でない B は A の4分の1以上（Y-10・R1-24）
+          const A = r.pick([4, 5, 8, 10]), B = r.pick([-3, -2, 0, 2, 3].filter(x => x === 0 || 4 * Math.abs(x) >= A)), k = r.pick([2, 3, 4]);
           return { q: `図の波のフーリエ級数の、$t=${k}\\pi$ での値`, a: `$${nf((A + B) / 2)}$`, key: `${A}|${B}`, fig: figWave(abPcs(A, B), { yt: [A, B].filter(y => y !== 0), t0: k * PI }),
             easy: `$t=${k}\\pi$ はとび。$\\dfrac{${A}+${par(B)}}{2}=${nf((A + B) / 2)}$`, easyCheck: 'last', verify: p => valIs(p, fsCF((A + B) / 2, z0, sq1(A, B), k * PI), 1e-6) };
         }
@@ -744,7 +762,7 @@
           const n = r.int(1, 4), q = red(Math.round(4 * k) * sgn1(n), 2 * n);
           return { q: `$\\displaystyle\\int_{-\\pi}^{\\pi}(${kT(k)}t${c < 0 ? '' : '+'}${c})\\sin${n === 1 ? ' ' : n}t\\,\\dd t$`, a: `$${fracNum(q[0], q[1], '\\pi')}$`, key: `${k}|${n}`,
             calc: { kind: 'defint', f: `(${k}t+(${c}))\\sin(${n}t)`, x: 't', a: '-\\pi', b: '\\pi' },
-            easy: `定数の部分は $\\displaystyle\\int_{-\\pi}^{\\pi}${c}\\sin${n === 1 ? ' ' : n}t\\,\\dd t=0$。残りは部分積分で $${fracNum(q[0], q[1], '\\pi')}$`, easyCheck: false };
+            easy: `定数の部分は $\\displaystyle\\int_{-\\pi}^{\\pi}${kT(c)}\\sin${n === 1 ? ' ' : n}t\\,\\dd t=0$。残りは部分積分で $${fracNum(q[0], q[1], '\\pi')}$`, easyCheck: false };
         }
         const [u, d] = toFr(2 * k);
         return { q: `$-\\pi<t<\\pi$ で $f(t)=${kT(k)}t${c < 0 ? '' : '+'}${c}$ をくり返す波の $b_n$：$n$ が奇数なら □、偶数なら □`, a: oe(fracX(u, d, 'n'), fracX(-u, d, 'n')),
@@ -818,7 +836,7 @@
   // ================================================================ 9-11
   const V11 = [2, 4, 5, 8, 10, 12, 1.5, 3];
   const F11 = [50, 60, 100, 200, 500, 1000, 2000];
-  const sigTxt = (V, f, first0) => `0 V と ${U(nf(V), 'V')} を、1秒に ${f} 回（${U(f, 'Hz')}）同じ時間ずつ交互に出す信号（前半が ${first0 ? U(0, 'V') : U(nf(V), 'V')}）`;
+  const sigTxt = (V, f, first0) => `${U(0, 'V')} と ${U(nf(V), 'V')} を、1秒に ${f} 回（${U(f, 'Hz')}）同じ時間ずつ交互に出す信号（前半が ${first0 ? U(0, 'V') : U(nf(V), 'V')}）`;
   add({
     id: '9-11', part: 1, chap: '9-1④ 例題4', stars: 1,
     title: '周期が $2\\pi$ でない信号は $\\theta=\\omega_0t$ で周期 $2\\pi$ にもどす',
@@ -878,7 +896,7 @@
   // 検算：たしていく（交互の和は、となりどうしの平均。2乗の和は残りを見積もってたす）
   const leibNum = m => { let s = 0, s0 = 0; const N = 20000; for (let k = 0; k <= N; k++) { s0 = s; s += (k % 2 ? -1 : 1) / (2 * k + 1); } return m * (s + s0) / 2; };
   const odd2Num = m => { let s = 0; const N = 20000; for (let k = 0; k < N; k++) s += 1 / ((2 * k + 1) ** 2); return m * (s + 1 / (4 * N)); };
-  const M12 = [2, 3, 4, 5, 6, 8, 0.5];
+  const M12 = [2, 3, 4, 5, 6, 7, 8, 10, 12, 0.5];   // 同じ見開きで同じ級数（m の組）を重ねない（Y-3。uniq）
   add({
     id: '9-12', part: 1, chap: '9-1⑦ 例題9', stars: 1,
     title: '値のわかる点を入れて級数の和を出す（定数の項は先にひく）',
@@ -896,7 +914,7 @@
         const m = r.pick(M12), kind = turn(r, '12s1', 2);
         const src = kind === 0 ? (h => `高さ $${h}$ の方形波の級数 $\\tfrac{${4 * h}}{\\pi}\\bigl(\\sin t+\\tfrac13\\sin3t+\\tfrac15\\sin5t+\\cdots\\bigr)$ は、$0<t<\\pi$ で $${h}$`)(r.pick([1, 2, 3, 5]))
           : '$-\\pi<t<\\pi$ で $t=2\\bigl(\\sin t-\\tfrac{\\sin2t}{2}+\\tfrac{\\sin3t}{3}-\\cdots\\bigr)$';
-        return { q: `${src}。$t=\\dfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `L|${m}`,
+        return { q: `${src}。$t=\\dfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `L|${m}`, uniq: `L|${m}`,
           easy: `$1-\\dfrac13+\\dfrac15-\\cdots=\\dfrac{\\pi}{4}$。その $${m}$ 倍で $${pFr(m / 4, '\\pi')}$`, easyCheck: 'last', verify: p => valIs(p, leibNum(m), 1e-7) };
       },
       // 定数の項がある（先にひく）
@@ -904,14 +922,14 @@
         const kind = turn(r, '12s2', 3), m = r.pick(M12);
         if (kind === 0) {
           const A = r.pick([2, 4, 6, 10]);
-          return { q: `前半 $${A}$・後半 $0$ の信号の級数 $${nf(A / 2)}+\\tfrac{${2 * A}}{\\pi}\\bigl(\\sin t+\\tfrac13\\sin3t+\\cdots\\bigr)$ は、$0<t<\\pi$ で $${A}$。$t=\\tfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `A|${A}|${m}`,
+          return { q: `前半 $${A}$・後半 $0$ の信号の級数 $${nf(A / 2)}+\\tfrac{${2 * A}}{\\pi}\\bigl(\\sin t+\\tfrac13\\sin3t+\\cdots\\bigr)$ は、$0<t<\\pi$ で $${A}$。$t=\\tfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `A|${A}|${m}`, uniq: `L|${m}`,
             easy: `先に $${nf(A / 2)}$ をひく：$${nf(A / 2)}=\\dfrac{${2 * A}}{\\pi}(\\cdots)$。かっこの中は $\\dfrac{\\pi}{4}$、その $${m}$ 倍`, easyCheck: false, verify: p => valIs(p, leibNum(m), 1e-7) };
         }
         if (kind === 1) {
-          return { q: `$0<t<2\\pi$ で $t=\\pi-2\\bigl(\\sin t+\\tfrac{\\sin2t}{2}+\\tfrac{\\sin3t}{3}+\\cdots\\bigr)$。$t=\\tfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `S|${m}`,
+          return { q: `$0<t<2\\pi$ で $t=\\pi-2\\bigl(\\sin t+\\tfrac{\\sin2t}{2}+\\tfrac{\\sin3t}{3}+\\cdots\\bigr)$。$t=\\tfrac{\\pi}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `S|${m}`, uniq: `L|${m}`,
             easy: `$\\dfrac{\\pi}{2}=\\pi-2(\\cdots)$。先に $\\pi$ をひいて $(\\cdots)=\\dfrac{\\pi}{4}$、その $${m}$ 倍`, easyCheck: false, verify: p => valIs(p, leibNum(m), 1e-7) };
         }
-        return { q: `$-\\pi\\leqq t\\leqq\\pi$ で $\\lvert t\\rvert=\\tfrac{\\pi}{2}-\\tfrac{4}{\\pi}\\bigl(\\cos t+\\tfrac{\\cos3t}{9}+\\tfrac{\\cos5t}{25}+\\cdots\\bigr)$。$t=0$ を入れて、$${odd2(m)}$ の値`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `T|${m}`,
+        return { q: `$-\\pi\\leqq t\\leqq\\pi$ で $\\lvert t\\rvert=\\tfrac{\\pi}{2}-\\tfrac{4}{\\pi}\\bigl(\\cos t+\\tfrac{\\cos3t}{9}+\\tfrac{\\cos5t}{25}+\\cdots\\bigr)$。$t=0$ を入れて、$${odd2(m)}$ の値`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `T|${m}`, uniq: `O|${m}`,
           easy: `$0=\\dfrac{\\pi}{2}-\\dfrac{4}{\\pi}(\\cdots)$ から $(\\cdots)=\\dfrac{\\pi^2}{8}$、その $${m}$ 倍`, easyCheck: false, verify: p => valIs(p, odd2Num(m), 1e-7) };
       },
       // 見かけがちがう：熱の棒の答え、三角波の t = π
@@ -919,24 +937,24 @@
         const m = r.pick(M12);
         if (turn(r, '12s3', 2) === 0) {
           const Ut = r.pick([20, 40, 60, 80]);
-          return { q: `はじめどこも $${Ut}$ ℃の棒の答え $T=\\displaystyle\\sum_{n=1,3,5,\\cdots}\\dfrac{${4 * Ut}}{n\\pi}e^{-\\alpha(n\\pi/L)^2t}\\sin\\dfrac{n\\pi x}{L}$ に、$t=0$、$x=\\dfrac{L}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `U|${Ut}|${m}`,
+          return { q: `はじめどこも $${Ut}$ ℃の棒の答え $T=\\displaystyle\\sum_{n=1,3,5,\\cdots}\\dfrac{${4 * Ut}}{n\\pi}e^{-\\alpha(n\\pi/L)^2t}\\sin\\dfrac{n\\pi x}{L}$ に、$t=0$、$x=\\dfrac{L}{2}$ を入れて、$${leib(m)}$ の値`, a: `$${pFr(m / 4, '\\pi')}$`, key: `U|${Ut}|${m}`, uniq: `L|${m}`,
             easy: `$${Ut}=\\dfrac{${4 * Ut}}{\\pi}\\Bigl(1-\\dfrac13+\\dfrac15-\\cdots\\Bigr)$。かっこの中は $\\dfrac{\\pi}{4}$、その $${m}$ 倍`, easyCheck: false, verify: p => valIs(p, leibNum(m), 1e-7) };
         }
-        return { q: `$-\\pi\\leqq t\\leqq\\pi$ で $\\lvert t\\rvert=\\tfrac{\\pi}{2}-\\tfrac{4}{\\pi}\\bigl(\\cos t+\\tfrac{\\cos3t}{9}+\\tfrac{\\cos5t}{25}+\\cdots\\bigr)$。$t=\\pi$ を入れて、$${odd2(m)}$ の値`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `Tp|${m}`,
+        return { q: `$-\\pi\\leqq t\\leqq\\pi$ で $\\lvert t\\rvert=\\tfrac{\\pi}{2}-\\tfrac{4}{\\pi}\\bigl(\\cos t+\\tfrac{\\cos3t}{9}+\\tfrac{\\cos5t}{25}+\\cdots\\bigr)$。$t=\\pi$ を入れて、$${odd2(m)}$ の値`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `Tp|${m}`, uniq: `O|${m}`,
           easy: `$\\cos n\\pi=-1$（奇数）。$\\pi=\\dfrac{\\pi}{2}+\\dfrac{4}{\\pi}(\\cdots)$ から $(\\cdots)=\\dfrac{\\pi^2}{8}$、その $${m}$ 倍`, easyCheck: false, verify: p => valIs(p, odd2Num(m), 1e-7) };
       },
       // わな：2乗の逆数の和を、方形波だけから（パーセバル。9-24）
       trap(r) {
         const m = r.pick([1, 2, 4]);
-        return dest({ q: `高さ1の方形波 $\\tfrac{4}{\\pi}\\bigl(\\sin t+\\tfrac13\\sin3t+\\tfrac15\\sin5t+\\cdots\\bigr)$ を使って、$${odd2(m)}$ の値（方形波の2乗の平均は1）`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `P|${m}`,
+        return dest({ q: `高さ $1$ の方形波 $\\tfrac{4}{\\pi}\\bigl(\\sin t+\\tfrac13\\sin3t+\\tfrac15\\sin5t+\\cdots\\bigr)$ を使って、$${odd2(m)}$ の値（方形波の2乗の平均は $1$）`, a: `$${pFr(m / 8, '\\pi^2')}$`, key: `P|${m}`, uniq: `O|${m}`,
           verify: p => valIs(p, odd2Num(m), 1e-7) }, '9-12',
-          `点を入れても $\\dfrac{1}{n^2}$ の和は出てこない。2乗の平均（パーセバル）$1=\\dfrac12\\sum\\dfrac{16}{n^2\\pi^2}$ から $\\dfrac{\\pi^2}{8}$${m === 1 ? '' : `、その $${m}$ 倍`}`, ['9-24']);
+          `方形波の級数では、点を入れても $\\dfrac{1}{n^2}$ の和は出てこない。2乗の平均（パーセバル）$1=\\dfrac12\\sum\\dfrac{16}{n^2\\pi^2}$ から $\\dfrac{\\pi^2}{8}$${m === 1 ? '' : `、その $${m}$ 倍`}`, ['9-24']);
       },
     },
   });
 
   // ================================================================ 9-13
-  const ROD = '両はしを0 ℃に保った棒';
+  const ROD = '両はしを $0$ ℃に保った棒';
   const TAU13 = [8, 9, 12, 16, 18, 20, 25, 36, 45, 50, 72, 100];
   add({
     id: '9-13', part: 1, chap: '9-1⑧', stars: 1,
@@ -991,14 +1009,14 @@
         if (a == null) return null;
         return dest({ q: `${ROD}の温度が、はじめ $\\sin\\tfrac{\\pi x}{L}$ の形だった。$\\alpha\\bigl(\\tfrac{\\pi}{L}\\bigr)^2=${k}$（1/s）のとき、半分になる時間（秒。$\\ln2=0.693$、小数第1位まで）`, a: `約 $${a}$`, key: `h|${k}`,
           verify: p => valIs(p, +rd(Math.LN2 / k, 1)) }, '9-13',
-          `何倍かではなく、時間そのものを聞いている。$e^{-${k}t}=\\dfrac12$ から $t=\\dfrac{\\ln2}{${k}}\\approx${a}$（6-4 の「半分になる時間」）`);
+          `何倍かではなく、時間そのものを聞いている。$e^{-${k}t}=\\dfrac12$ から $t=\\dfrac{\\ln2}{${k}}\\approx${a}$ を出すのは、教科書 6-4 の「半分になる時間」`, ['6-20']);
       },
     },
   });
 
   // ================================================================ 9-14
   const U14 = [10, 20, 25, 30, 40, 60, 80, 100];
-  const rodTxt = Ut => `はじめどこも $${Ut}$ ℃の棒（両はし0 ℃）`;
+  const rodTxt = Ut => `はじめどこも $${Ut}$ ℃の棒（両はし $0$ ℃）`;
   // 熱の棒の係数（検算：0〜L の一定の温度を、半回転して広げた方形波として数で積分）
   const rodBn = (Ut, n) => 2 * integ(x => Ut * Math.sin(n * PI * x), 0, 1, 2000);
   const E14 = { 5: 0.6105, 10: 0.3727, 15: 0.2275, 20: 0.1389, 25: 0.0848, 30: 0.0518 };
@@ -1039,9 +1057,9 @@
           return { q: `${rodTxt(Ut)}のまん中の、${t}秒後の温度（℃）を1項めだけで（$\\alpha(\\frac{\\pi}{L})^2=0.0987$、$\\dfrac{4}{\\pi}=1.273$、$e^{-${nf(0.0987 * t)}}=${e}$。小数第1位まで）`, a: `約 $${a}$`, key: `T|${Ut}|${t}`,
             easy: `$${Ut}\\times1.273\\times${e}\\approx${a}$`, easyCheck: false, verify: p => valIs(p, +rd(rodBn(Ut, 1) * Math.exp(-0.0987 * t), 1)) };
         }
-        const C = 4 * Ut / PI, Cs = (Math.round(C * 100) / 100).toFixed(2), Tm = r.pick([10, 15, 20, 25, 30, 40, 50].filter(x => x < 0.8 * Ut));
+        const C = 4 * Ut / PI, Cs = rd(C, 2), Tm = r.pick([10, 15, 20, 25, 30, 40, 50].filter(x => x < 0.8 * Ut));
         if (!Tm) return null;
-        const L = Math.log(Tm / +Cs), Ls = (Math.round(L * 1000) / 1000).toFixed(3), tt = -(+Ls) / 0.0987, tr = -Math.log(Tm / C) / 0.0987;
+        const L = Math.log(Tm / +Cs), Ls = rd(L, 3), tt = -(+Ls) / 0.0987, tr = -Math.log(Tm / C) / 0.0987;
         if (tr < 5) return null;
         const a = agree(tt, tr, 1); if (a == null) return null;
         return { q: `${rodTxt(Ut)}のまん中が $${Tm}$ ℃になる時刻（秒）を1項めだけで（$\\alpha(\\frac{\\pi}{L})^2=0.0987$、$\\dfrac{${4 * Ut}}{\\pi}=${Cs}$、$\\ln\\dfrac{${Tm}}{${Cs}}=${Ls}$。小数第1位まで）`, a: `約 $${a}$`, key: `t|${Ut}|${Tm}`,
@@ -1050,7 +1068,7 @@
       // わな：はじめが直線の棒（半区間の展開。9-21）
       trap(r) {
         const k = r.pick([30, 60, 100, 50]);
-        return dest({ q: `長さ $L$ の棒の、はじめの温度が $${k}\\dfrac{x}{L}$ ℃（両はしは0 ℃に保つ）。$\\sin\\dfrac{n\\pi x}{L}$ の係数 $b_n$：$n$ が奇数なら □、偶数なら □`, a: oe(fracX(2 * k, 1, 'n\\pi'), fracX(-2 * k, 1, 'n\\pi')), key: `l|${k}`,
+        return dest({ q: `長さ $L$ の棒の、はじめの温度が $${k}\\dfrac{x}{L}$ ℃（両はしは $0$ ℃に保つ）。$\\sin\\dfrac{n\\pi x}{L}$ の係数 $b_n$：$n$ が奇数なら □、偶数なら □`, a: oe(fracX(2 * k, 1, 'n\\pi'), fracX(-2 * k, 1, 'n\\pi')), key: `l|${k}`,
           verify: p => oddEvenIs(p, n => 2 * integ(x => k * x * Math.sin(n * PI * x), 0, 1, 2000)) }, '9-14',
           `はじめがどこも同じ温度ではないので、方形波にならない。$b_n=\\dfrac{2}{L}\\displaystyle\\int_0^L${k}\\dfrac{x}{L}\\sin\\dfrac{n\\pi x}{L}\\,\\dd x=\\dfrac{${2 * k}(-1)^{n+1}}{n\\pi}$`, ['9-21']);
       },
@@ -1061,7 +1079,7 @@
   const L15 = [0.25, 0.3, 0.4, 0.6, 0.65, 0.75, 0.8, 1.2];
   const F15 = [100, 110, 150, 200, 220, 250, 300, 440];
   add({
-    id: '9-15', part: 1, chap: '9-1⑨ 例題8', stars: 1,
+    id: '9-15', part: 1, chap: '9-1⑨ 例題8', stars: 1, xAns: true,   // ステップをまたいで同じ答え（300 など）をなるべく出さない（Y-4・R1-22）
     title: '弦の $n$ 番めは $f_n=\\dfrac{nc}{2L}$：$c=2Lf_1$、長さ半分で2倍',
     mark: '弦の長さ・基本の周波数・倍音。',
     futsu: ['毎回 $f_n=\\dfrac{nc}{2L}$ に戻り、', 'まず $c$ を出してから', '$n$ と $L$ を入れ直す。'],
