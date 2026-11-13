@@ -49,6 +49,8 @@
   }
 
   // ---------------------------------------------------------------- わざの一覧
+  // 巻の一覧：わざのある巻と、部（parts.js）のある巻（第8・9巻は、わざが0こでもタブを出す。第42回）
+  const volList = () => [...new Set(M.list().map(id => M.waza[id].vol).concat(Object.keys(M.parts).map(Number)))].filter(v => v >= 1).sort((a, b) => a - b);
   // わざの一覧：巻ごとのタブ、部ごとにたたむ、番号・名前でさがす（依頼者 11月6日）
   function renderCatalog(vol) {
     { // 第4巻からはふりがなをつけない（K-8）。チェックを外して見せ、ほかの巻にもどったら元にもどす（第36回 R2-21）
@@ -57,7 +59,7 @@
       else if (rb.disabled) { rb.disabled = false; rb.checked = rb.dataset.prev !== '0'; }
       rb.parentNode.style.opacity = vol >= 4 ? 0.5 : ''; if (note) note.hidden = vol < 4;
     }
-    const vols = [...new Set(M.list().map(id => M.waza[id].vol))].sort();
+    const vols = volList();
     $('#vtabs').innerHTML = vols.map(v => `<button type="button" class="vtab${v === vol ? ' on' : ''}" data-v="${v}">第${v}巻<span class="n">${M.list(v).length}</span></button>`).join('');
     $('#vtabs').querySelectorAll('.vtab').forEach(b => b.addEventListener('click', () => {
       const v = +b.dataset.v;
@@ -295,7 +297,7 @@
   }
   function init() {
     fit(); window.addEventListener('resize', fit);
-    const vols = [...new Set(M.list().map(id => M.waza[id].vol))].sort();
+    const vols = volList();
     $('#vol').innerHTML = vols.map(v => `<option value="${v}">第${v}巻</option>`).join('');
     const h = fromHash();
     if (h) setState(h); else $('#seed').value = 1 + Math.floor(Math.random() * 99999);
