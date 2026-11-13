@@ -92,12 +92,14 @@
     return null;
   }
   // 傾きの場の図（ステップ3）：f(t, y)、y の上はし、出発する点、たての目もり
-  function field01(f, ymax, dot, yt) {
+  // atDot：● の所にも短い線をかく（「● の点での傾き」を聞くとき。第40回 S-8）
+  function field01(f, ymax, dot, yt, atDot) {
     const G = M.graph({ x0: 0, x1: 6, y0: 0, y1: ymax, w: 7, h: 4.4 });
     const ys = range(ymax / 8, ymax, ymax / 8).slice(0, 7);
     return { s: 5, items: [
       ...G.axes({ xt: [2, 4, 6], yt, x: 't', y: 'y' }),
       ...G.field(f, [0.5, 1.5, 2.5, 3.5, 4.5, 5.5], ys, { len: 0.62 }),
+      ...(atDot ? G.field(f, [dot[0]], [dot[1]], { len: 0.9, thick: true }) : []),
       ['dot', G.T(dot[0], dot[1])],
     ] };
   }
@@ -186,13 +188,13 @@
           };
         }
         let a, b, y0, v;
-        for (let k = 0; k < 30; k++) { a = r.pick([0.25, 0.5, 1]); b = r.pick([2, 3, 4]); y0 = r.int(0, 2 * b); v = -a * (y0 - b); if (y0 !== b && decs(v) <= 2) break; }
+        for (let k = 0; k < 30; k++) { a = r.pick([0.25, 0.5, 1]); b = r.pick([2, 3, 4]); y0 = r.int(1, 2 * b - 1); v = -a * (y0 - b); if (y0 !== b && decs(v) <= 2) break; }   // ● は場の中（軸の上にしない。S-8）
         if (y0 === b || decs(v) > 2) return null;
         const t0 = r.int(1, 5);
         return {
           q: `図は、微分方程式 $${ruleN('y', a, b)}$ の傾きの場です。● の点 $(${t0},\\ ${y0})$ での短い線の傾き □`, a: M$(v), key: `01|${a}|${b}|${y0}`,
           easy: `右辺に $t$ がないので、同じ高さならどの時刻でも同じ傾き。$-${a === 1 ? '' : fmt(a) + '\\times'}(${y0}-${b})=${fmt(v)}$`, easyCheck: false,
-          fig: field01((t, y) => -a * (y - b), 2 * b, [t0, y0], [b]),
+          fig: field01((t, y) => -a * (y - b), 2 * b, [t0, y0], [b], true),
           verify: p => valIs(p.a, rhsAt(rule1(p.q), y0)),
         };
       },
@@ -229,7 +231,7 @@
   }
   M.add({
     id: '6-02', part: 1, chap: '6-1③ 例題2', stars: 1,
-    title: 'ことばからルール：「差の□倍で冷める」は $-\\square\\,(T-\\text{部屋の温度})$',
+    title: 'ことばからルール：「差の□倍で冷める」は $-k\\,(T-\\text{部屋の温度})$',
     mark: '「部屋は□℃」「冷める速さは、部屋との温度の差の□倍〔1/分〕」。',
     futsu: ['主役の量、変わる速さ、', '差、比例、向きを', '1つずつ考え、', 'ことばを記号に置きかえる。'],
     raku: ['部屋25℃、差の0.04倍', '→ $\\frac{\\dd T}{\\dd t}=-0.04\\,(T-25)$', '（マイナスを先に、かっこの中は「$T-$部屋」）', '85℃なら $-0.04\\times60=-2.4$'],
@@ -320,29 +322,29 @@
   const vOverRC = RC => (RC === 1 ? '-V' : RC < 1 ? `-${fmt(1 / RC)}V` : `-\\frac{V}{${fmt(RC)}}`);   // -V/RC の書き方
   M.add({
     id: '6-03', part: 1, chap: '6-1④ 例題3', stars: 1,
-    title: '$RC$ は k と μ を直してから（kΩ×μF は「数どうしをかけて1000でわる」と秒）',
-    mark: '「$R=\\square\\,\\mathrm{k}\\Omega$、$C=\\square\\,\\mu\\mathrm{F}$」と放電のルール $\\frac{\\dd V}{\\dd t}=-\\frac{V}{RC}$。',
+    title: '$RC$ は $\\mathrm{k}$ と $\\mathrm{\\mu}$ を直してから（$\\mathrm{k\\Omega}\\times\\mathrm{\\mu F}$ は「数どうしをかけて1000でわる」と秒）',
+    mark: '「$R=\\square\\,\\mathrm{k\\Omega}$、$C=\\square\\,\\mathrm{\\mu F}$」と放電のルール $\\frac{\\dd V}{\\dd t}=-\\frac{V}{RC}$。',
     futsu: ['$R=20\\times1000=20000\\,\\Omega$、', '$C=100\\div1000000=0.0001\\,\\mathrm{F}$', 'と直してから', '$RC=20000\\times0.0001=2$ 秒。'],
-    raku: ['$20\\,\\mathrm{k}\\Omega$ と $100\\,\\mu\\mathrm{F}$', '→ $20\\times100\\div1000=2$ 秒', '→ $\\frac{\\dd V}{\\dd t}=-\\frac{V}{2}$、10 V で毎秒5 V 下がる', '$50\\,\\mathrm{k}\\Omega$・$20\\,\\mu\\mathrm{F}$ → 1秒 → $-V$'],
-    why: 'k は1000倍、μ は100万分の1。kΩ×μF は $1000\\times\\frac{1}{1000000}$、つまり $\\frac{1}{1000}$ なので、数どうしをかけて1000でわれば Ω×F（秒）になる（6-1④）。放電の電圧の変わる速さは $-\\frac{V}{RC}$ で、今の電圧を $RC$ でわった速さで下がる。',
-    caution: 'kΩ・μF のまま $20\\times100=2000$ としない（単位が秒ではない）。$RC$ は「秒」。下がる速さは今の電圧で変わる（10 V なら毎秒5 V、4 V なら毎秒2 V）。',
+    raku: ['$20\\,\\mathrm{k\\Omega}$ と $100\\,\\mathrm{\\mu F}$', '→ $20\\times100\\div1000=2$ 秒', '→ $\\frac{\\dd V}{\\dd t}=-\\frac{V}{2}$、$10\\,\\mathrm{V}$ で毎秒 $5\\,\\mathrm{V}$ 下がる', '$50\\,\\mathrm{k\\Omega}$・$20\\,\\mathrm{\\mu F}$ → 1秒 → $-V$'],
+    why: '$\\mathrm{k}$ は1000倍、$\\mathrm{\\mu}$ は100万分の1。$\\mathrm{k\\Omega}\\times\\mathrm{\\mu F}$ は $1000\\times\\frac{1}{1000000}$、つまり $\\frac{1}{1000}$ なので、数どうしをかけて1000でわれば $\\mathrm{\\Omega}\\times\\mathrm{F}$（秒）になる（6-1④）。放電の電圧の変わる速さは $-\\frac{V}{RC}$ で、今の電圧を $RC$ でわった速さで下がる。',
+    caution: '$\\mathrm{k\\Omega}$・$\\mathrm{\\mu F}$ のまま $20\\times100=2000$ としない（単位が秒ではない）。$RC$ は「秒」。下がる速さは今の電圧で変わる（$10\\,\\mathrm{V}$ なら毎秒 $5\\,\\mathrm{V}$、$4\\,\\mathrm{V}$ なら毎秒 $2\\,\\mathrm{V}$）。',
     counts: { s1: 4, s2: 3, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '18mm', s2: '16mm', s3: '16mm', trap: '16mm' }, boxh: { s1: '12mm' },
-    fits(q) { return (/\\Omega/.test(q) || /抵抗/.test(q) && /放電|充電/.test(q)) && /\\mu\\mathrm\{F\}/.test(q) && !/一定の電流|オイラー|\\Delta t/.test(q); },
+    fits(q) { return (/\\Omega/.test(q) || /抵抗/.test(q) && /放電|充電/.test(q)) && /\\mathrm\{\\mu F\}/.test(q) && !/一定の電流|オイラー|\\Delta t/.test(q); },
     steps: {
       s1(r) {
         const g = pick03(r); if (!g) return null;
         const { R, C, RC } = g;
         if (turn(r, '03s1', 2)) {
           return {
-            q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k}\\Omega$、静電容量 $C=${fmt(C)}\\,\\mu\\mathrm{F}$ で、コンデンサーを放電させます。$RC$ □ 秒`, a: M$(RC), key: `03|${R}|${C}`,
+            q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k\\Omega}$、静電容量 $C=${fmt(C)}\\,\\mathrm{\\mu F}$ で、コンデンサーを放電させます。$RC$ は □ 秒`, a: M$(RC), key: `03|${R}|${C}`,
             easy: `$${R}\\times${C}\\div1000=${fmt(RC)}$`, easyCheck: false,
             verify: p => valIs(p.a, (R * 1000) * (C / 1000000)),
           };
         }
         return {
-          q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k}\\Omega$、静電容量 $C=${fmt(C)}\\,\\mu\\mathrm{F}$ で放電させるときのルール $${DT('V')}=-\\frac{V}{RC}$ に数を入れると、$${DT('V')}=□$`, a: `$${vOverRC(RC)}$`, key: `03|${R}|${C}`,
+          q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k\\Omega}$、静電容量 $C=${fmt(C)}\\,\\mathrm{\\mu F}$ で放電させるときのルール $${DT('V')}=-\\frac{V}{RC}$ に数を入れると、$${DT('V')}=□$`, a: `$${vOverRC(RC)}$`, key: `03|${R}|${C}`,
           easy: `$RC=${R}\\times${C}\\div1000=${fmt(RC)}$ 秒`, easyCheck: false,
           verify: p => { const f = ev(strip(p.a), { V: 6 }); return close(f, -6 / ((R * 1000) * (C / 1000000))) || `答え ${p.a} がちがう`; },
         };
@@ -353,7 +355,7 @@
         const { R, C, RC } = g, V = r.pick([2, 3, 4, 5, 6, 8, 9, 10, 12]), v = -V / RC;
         if (decs(v) > 2) return null;
         return {
-          q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k}\\Omega$、静電容量 $C=${fmt(C)}\\,\\mu\\mathrm{F}$ で、コンデンサーを放電させます。電圧が ${U(V, 'V')} のときの、電圧の変わる速さ □ V/s`, a: M$(v), key: `03|${R}|${C}`,
+          q: `抵抗 $R=${fmt(R)}\\,\\mathrm{k\\Omega}$、静電容量 $C=${fmt(C)}\\,\\mathrm{\\mu F}$ で、コンデンサーを放電させます。電圧が ${U(V, 'V')} のときの、電圧の変わる速さ □ V/s`, a: M$(v), key: `03|${R}|${C}`,
           easy: `$RC=${fmt(RC)}$ 秒、$-\\frac{${V}}{${fmt(RC)}}=${fmt(v)}$（1秒あたり${fmt(-v)} V 下がる）`, easyCheck: false,
           verify: p => valIs(p.a, -V / ((R * 1000) * (C / 1000000))),
         };
@@ -366,7 +368,7 @@
           const V = r.pick([2, 4, 5, 6, 8, 10, 12]), rr = V / RC;
           if (decs(rr) > 2) return null;
           return {
-            q: `静電容量 $C=${fmt(C)}\\,\\mu\\mathrm{F}$ のコンデンサーを抵抗につないで放電させると、電圧が ${U(V, 'V')} のとき、1秒あたり ${U(rr, 'V')} の速さで下がりました。抵抗 $R$ □ kΩ`, a: M$(R), key: `03|${R}|${C}`,
+            q: `静電容量 $C=${fmt(C)}\\,\\mathrm{\\mu F}$ のコンデンサーを抵抗につないで放電させると、電圧が ${U(V, 'V')} のとき、1秒あたり ${U(rr, 'V')} の速さで下がりました。抵抗 $R$ は $□\\,\\mathrm{k\\Omega}$`, a: M$(R), key: `03|${R}|${C}`,
             easy: `$RC=${V}\\div${fmt(rr)}=${fmt(RC)}$ 秒。$R=${fmt(RC)}\\times1000\\div${C}=${R}$`, easyCheck: false,
             verify: p => valIs(p.a, V / rr / (C / 1000000) / 1000),
           };
@@ -375,7 +377,7 @@
           const E = r.pick([3, 5, 6, 9, 10, 12]), V1 = r.pick([0, 0, 1, 2]), v = (E - V1) / RC;
           if (V1 >= E || decs(v) > 2) return null;
           return {
-            q: `電池 ${U(E, 'V')}、抵抗 $R=${fmt(R)}\\,\\mathrm{k}\\Omega$、コンデンサー $C=${fmt(C)}\\,\\mu\\mathrm{F}$ を1列につないで充電します（ルール $${DT('V')}=\\frac{E-V}{RC}$）。コンデンサーの電圧が ${U(V1, 'V')} のときの、電圧の変わる速さ □ V/s`, a: M$(v), key: `03|${R}|${C}`,
+            q: `電池 ${U(E, 'V')}、抵抗 $R=${fmt(R)}\\,\\mathrm{k\\Omega}$、コンデンサー $C=${fmt(C)}\\,\\mathrm{\\mu F}$ を1列につないで充電します（ルール $${DT('V')}=\\frac{E-V}{RC}$）。コンデンサーの電圧が ${U(V1, 'V')} のときの、電圧の変わる速さ □ V/s`, a: M$(v), key: `03|${R}|${C}`,
             easy: `$RC=${fmt(RC)}$ 秒。$\\frac{${E}-${V1}}{${fmt(RC)}}=${fmt(v)}$`, easyCheck: false,
             verify: p => valIs(p.a, (E - V1) / ((R * 1000) * (C / 1000000))),
           };
@@ -383,8 +385,8 @@
         const Rw = R * 1000 / 10, Cw = C * 10;   // Ω と μF（同じ RC）
         if (Rw < 10 || Cw > 5000) return null;
         return {
-          q: `抵抗 $R=${fmt(Rw)}\\,\\Omega$、静電容量 $C=${fmt(Cw)}\\,\\mu\\mathrm{F}$ で、コンデンサーを放電させます。$RC$ □ 秒`, a: M$(RC), key: `03|${R}|${C}`,
-          easy: `Ω はそのまま、μF は100万でわる：$${fmt(Rw)}\\times${fmt(Cw)}\\div1000000=${fmt(RC)}$`, easyCheck: false,
+          q: `抵抗 $R=${fmt(Rw)}\\,\\mathrm{\\Omega}$、静電容量 $C=${fmt(Cw)}\\,\\mathrm{\\mu F}$ で、コンデンサーを放電させます。$RC$ は □ 秒`, a: M$(RC), key: `03|${R}|${C}`,
+          easy: `$\\mathrm{\\Omega}$ はそのまま、$\\mathrm{\\mu F}$ は100万でわる：$${fmt(Rw)}\\times${fmt(Cw)}\\div1000000=${fmt(RC)}$`, easyCheck: false,
           verify: p => valIs(p.a, Rw * (Cw / 1000000)),
         };
       },
@@ -392,7 +394,7 @@
       trap(r) {
         const C = r.pick([50, 100, 200, 500]), I = r.pick([0.5, 1, 2]), Vt = r.pick([2, 3, 4, 5, 6]), t = Vt * C / 1000 / I;
         if (decs(t) > 2 || (C === 100 && I === 1 && Vt === 5)) return null;
-        return dest({ q: `静電容量 $C=${fmt(C)}\\,\\mu\\mathrm{F}$ のコンデンサーに、一定の電流 ${U(I, 'mA')} を流しこみます。はじめ $V=0$ のとき、電圧が ${U(Vt, 'V')} になる時刻 □ 秒`, a: M$(t), key: `03t|${C}|${I}`,
+        return dest({ q: `静電容量 $C=${fmt(C)}\\,\\mathrm{\\mu F}$ のコンデンサーに、一定の電流 ${U(I, 'mA')} を流しこみます。はじめ $V=0$ のとき、電圧が ${U(Vt, 'V')} になる時刻 □ 秒`, a: M$(t), key: `03t|${C}|${I}`,
           verify: p => valIs(p.a, Vt * (C / 1000000) / (I / 1000)) },
         '6-03', `抵抗につないだ放電・充電ではない。一定の電流なら $${DT('V')}=\\frac{I}{C}$ で、電圧はまっすぐ上がる`, ['6-14']);
       },
@@ -439,7 +441,7 @@
         const { m, k, K } = g, x = r.pick(X04) * r.pick([1, -1]), acc = -K * x;
         if (decs(acc) > 2 || Math.abs(acc) > 40) return null;
         return {
-          q: `質量 ${U(m, 'kg')} のおもりを、ばね定数 ${U(k, 'N/m')} のばねにつけました（右向きを正）。ずれが $x=${fmt(x)}\\,\\mathrm{m}$ のときの加速度 □ $\\mathrm{m/s^2}$`, a: M$(acc), key: `04|${m}|${k}`,
+          q: `質量 ${U(m, 'kg')} のおもりを、ばね定数 ${U(k, 'N/m')} のばねにつけました（右向きを正）。ずれが $x=${fmt(x)}\\,\\mathrm{m}$ のときの加速度 $□\\,\\mathrm{m/s^2}$`, a: M$(acc), key: `04|${m}|${k}`,
           easy: `$${D2('x')}=-${K}x$。$-${K}\\times${par(x)}=${fmt(acc)}$（${acc > 0 ? '右' : '左'}向き）`, easyCheck: false,
           verify: p => valIs(p.a, (-k * x) / m),
         };
@@ -452,7 +454,7 @@
           const grams = m * 1000, x = r.pick(X04), acc = -K * x;
           if (m >= 1 || decs(acc) > 2) return null;
           return {
-            q: `質量 $${fmt(grams)}\\,\\mathrm{g}$ のおもりを、ばね定数 ${U(k, 'N/m')} のばねにつけました（右向きを正）。ずれが $x=${fmt(x)}\\,\\mathrm{m}$ のときの加速度 □ $\\mathrm{m/s^2}$`, a: M$(acc), key: `04|${m}|${k}`,
+            q: `質量 $${fmt(grams)}\\,\\mathrm{g}$ のおもりを、ばね定数 ${U(k, 'N/m')} のばねにつけました（右向きを正）。ずれが $x=${fmt(x)}\\,\\mathrm{m}$ のときの加速度 $□\\,\\mathrm{m/s^2}$`, a: M$(acc), key: `04|${m}|${k}`,
             easy: `${fmt(grams)} g＝${fmt(m)} kg。$${k}\\div${fmt(m)}=${K}$、$-${K}\\times${fmt(x)}=${fmt(acc)}$`, easyCheck: false,
             verify: p => valIs(p.a, -k * x / (grams / 1000)),
           };
@@ -531,9 +533,14 @@
           verify: p => { const ok = cands.map(c => solves05(c[0], a, y0)); return (ok.filter(Boolean).length === 1 && p.a === `（${lab[ok.indexOf(true)]}）`) || `答え ${p.a} がちがう`; },
         };
       },
-      // 解を書く
+      // 解を書く（同じ見開きで、はじめの値も係数の大きさもくり返さない。第40回 R1-31）
       s2(r) {
-        const g = pick05(r); if (!g) return null;
+        const used = r.u05 || (r.u05 = { y: new Set(), a: new Set() });
+        if (used.y.size >= 6) { used.y.clear(); used.a.clear(); }   // アプリで何問も作るときは、ひとまわりしたら、また使う
+        let g = null;
+        for (let k = 0; k < 30 && !g; k++) { g = pick05(r); if (g && (used.y.has(g.y0) || used.a.has(Math.abs(g.a)))) g = null; }
+        if (!g) return null;
+        used.y.add(g.y0); used.a.add(Math.abs(g.a));
         const { a, y0, v } = g;
         return {
           q: `微分方程式 $${DT(v)}=${cf(a)}${v}$、初期条件 $${v}(0)=${y0}$ の解 □`, a: `$${v}=${sol05(y0, a)}$`, key: `05|${a}|${y0}`,
@@ -609,17 +616,17 @@
         const k = turn(r, '06s1', 3), g = pick06(r); if (!g) return null;
         const { w, A, K } = g, fn = r.pick(['cos', 'sin']);
         if (k === 0) return {
-          q: `$x=${trig(A, fn, w)}$ が微分方程式 $${D2('x')}=-Kx$ の解になるとき、$K$ □`, a: M$(K), key: `06|${w}|${A}`,
+          q: `$x=${trig(A, fn, w)}$ が微分方程式 $${D2('x')}=-Kx$ の解になるとき、$K$ □`, a: M$(K), key: `06s1|${w}`,
           easy: `$${w}^2=${K}$`, easyCheck: false,
           verify: p => { const h = 1e-3, F = t => ev(trig(A, fn, w), { t }), t0 = 0.37; return valIs(p.a, -((F(t0 + h) - 2 * F(t0) + F(t0 - h)) / (h * h)) / F(t0), 1e-4); },
         };
         if (k === 1) return {
-          q: `微分方程式 $${D2('x')}=-${K}x$ の解 $x=${fmt(A)}\\cos□t$`, a: M$(w), key: `06|${w}|${A}`,
+          q: `微分方程式 $${D2('x')}=-${K}x$ の解 $x=${fmt(A)}\\cos□t$`, a: M$(w), key: `06s1|${w}`,
           easy: `$\\omega^2=${K}$ より $\\omega=${w}$`, easyCheck: false,
           verify: p => { const c = numOf(p.a); return close(c * c, K) && c > 0 || `答え ${p.a} がちがう`; },
         };
         return {
-          q: `$x=${trig(A, fn, w)}$ を2回微分すると、もとの $x$ の □ 倍`, a: M$(-K), key: `06|${w}|${A}`,
+          q: `$x=${trig(A, fn, w)}$ を2回微分すると、もとの $x$ の □ 倍`, a: M$(-K), key: `06s1|${w}`,
           easy: `$-${w}^2=-${K}$`, easyCheck: false,
           verify: p => { const h = 1e-3, F = t => ev(trig(A, fn, w), { t }), t0 = 0.29; return valIs(p.a, ((F(t0 + h) - 2 * F(t0) + F(t0 - h)) / (h * h)) / F(t0), 1e-4); },
         };
@@ -794,12 +801,14 @@
 
   // ================================================================ 6-08
   const F08 = [0.75, 0.8, 0.9, 0.92, 0.95, 0.96, 0.98];
-  function pick08(r, warm) {   // 比例の数 a、Δt=h（差の倍率 f=1-ah）、部屋 b、差 d、歩数 n（左ページの例 -0.1(T-20)・60℃・0.5 はよける）
+  // 比例の数 a、Δt=h（差の倍率 f=1-ah）、部屋 b、差 d、歩数 n。
+  //   左ページの例（-0.1(T-20)・60℃・0.5 → 差40に0.95を2回）と同じルール、同じ（差, 倍率）の組はよける（途中の 38・36.1 が左ページにあるので。第40回 S-1）
+  function pick08(r, warm) {
     for (let k = 0; k < 60; k++) {
       const a = r.pick([0.02, 0.04, 0.05, 0.1, 0.2, 0.25]), h = r.pick([0.5, 1, 2]), f = +fmt(1 - a * h);
       if (!F08.includes(f)) continue;
       const b = r.pick([15, 18, 20, 22, 25]), d = warm ? -r.pick([10, 12, 15, 16, 20]) : r.pick([20, 30, 40, 50, 60, 64]), n = r.pick([2, 3]);
-      if (a === 0.1 && b === 20 && d === 40 && h === 0.5) continue;
+      if ((a === 0.1 && b === 20) || (f === 0.95 && d === 40)) continue;
       if (warm && (b + d < 2 || b + d > 10)) continue;   // 冷蔵庫から出した牛乳は 2〜10℃（凍った温度や負の温度にしない）
       const T = b + d * f ** n;
       if (decs(T) > 3) continue;
@@ -847,7 +856,7 @@
           };
         }
         const E = r.pick([5, 6, 8, 10, 12]), RC = r.pick([1, 2, 4, 5]), h = r.pick([0.25, 0.5, 1]), f = +fmt(1 - h / RC), n = 2;
-        if (!(f >= 0.5 && f <= 0.9) || (E === 10 && RC === 2 && h === 0.5)) return null;
+        if (!(f >= 0.5 && f <= 0.9) || (E === 10 && f === 0.75)) return null;   // 左ページの例（残り10に0.75を2回）と同じ計算はよける
         const rule = k === 0 ? (RC === 1 ? `${E}-V` : `\\frac{${E}-V}{${RC}}`) : (RC === 1 ? '-V' : `-\\frac{V}{${RC}}`);
         const V0 = k === 0 ? 0 : E, Vn = k === 0 ? E - E * f ** n : E * f ** n;
         if (decs(Vn) > 4) return null;
@@ -985,12 +994,13 @@
   });
 
   // ================================================================ 6-10
-  function pick10(r) {   // a・Δt=h で ah>1（左ページの例 -0.05(T-20)・80℃・30分、60分 はよける）
+  // a・Δt=h で ah>1。左ページの例（-0.05(T-20)・80℃、Δt=30 → 倍率 -0.5、Δt=60 → 倍率 -2）と同じ ah（1.5・3）と、同じルールはよける（倍率は部屋の温度によらない。第40回 S-1）
+  function pick10(r) {
     for (let k = 0; k < 60; k++) {
-      const a = r.pick([0.05, 0.1, 0.2, 0.25, 0.5]), ah = r.pick([1.2, 1.5, 2, 2.5, 3]), h = +fmt(ah / a), f = +fmt(1 - ah);
+      const a = r.pick([0.05, 0.1, 0.2, 0.25, 0.5]), ah = r.pick([1.2, 1.4, 1.6, 1.8, 2, 2.4, 2.5]), h = +fmt(ah / a), f = +fmt(1 - ah);
       if (!Number.isInteger(h) || h > 60) continue;
       const b = r.pick([15, 20, 25]), d = r.pick([20, 30, 40, 50, 60]);
-      if (a === 0.05 && b === 20 && d === 60) continue;
+      if (a === 0.05 && b === 20) continue;
       return { a, h, f, b, d, T0: b + d };
     }
     return null;
@@ -1043,7 +1053,7 @@
       s3(r) {
         const k = turn(r, '10s3', 3);
         if (k === 2) {
-          const E = r.pick([5, 6, 10, 12]), RC = r.pick([1, 2, 4]), h = RC * r.pick([1.5, 2.5, 3]), f = 1 - h / RC, n = r.pick([1, 2]), V = E - E * f ** n;
+          const E = r.pick([5, 6, 10, 12]), RC = r.pick([1, 2, 4]), h = RC * r.pick([1.4, 2.4, 2.5]), f = 1 - h / RC, n = r.pick([1, 2]), V = E - E * f ** n;
           if (decs(V) > 2 || decs(h) > 1) return null;
           return {
             q: `電池 ${U(E, 'V')} の充電のルール $${DT('V')}=${RC === 1 ? `${E}-V` : `\\frac{${E}-V}{${RC}}`}$（$t$ は秒）で、はじめ $V=0$ です。$\\Delta t=${fmt(h)}$ 秒のオイラー法で、${fmt(n * h)}秒後の電圧 □ V`, a: M$(V), key: `10V|${E}|${RC}|${h}`,
@@ -1072,10 +1082,11 @@
   // ================================================================ 6-11
   // 速度を先に進めるオイラー法：[x, v] から1歩（a は加速度の式）
   const step11 = (acc, x, v, h) => { const a = acc(x, v), v1 = v + a * h; return [x + v1 * h, v1, a]; };
-  function pick11(r) {   // 左ページの例（-16x、0.1、0.05）はよける
+  // 左ページの例（-16x、0.1、0.05）と同じ KΔt²=0.04 の組はよける（位置は x0 の何倍かになり、答えが例の何倍かになる。第40回 S-1・S-2）
+  function pick11(r) {
     for (let k = 0; k < 40; k++) {
       const K = r.pick([4, 9, 16, 25, 100]), x0 = r.pick([0.04, 0.05, 0.08, 0.1, 0.2]), h = r.pick([0.02, 0.05, 0.1]);
-      if (K === 16 && x0 === 0.1 && h === 0.05) continue;
+      if (Math.abs(K * h * h - 0.04) < 1e-12) continue;
       if (K * h * h > 0.3) continue;
       return { K, x0, h };
     }
@@ -1133,6 +1144,7 @@
         const g = pick11(r); if (!g) return null;
         const { K, x0, h } = g;
         if (turn(r, '11s3', 2)) {
+          if (K === 16) return null;   // 左ページの例の $a=-16x$
           return {
             q: `微分方程式 $${D2('x')}=-${K}x$ を、1回微分の式2つにすると、$${DT('x')}=v$、$${DT('v')}=□$`, a: `$-${K}x$`, key: `11|${K}|w`,
             easy: '位置の変わる速さは速度、速度の変わる速さは加速度', easyCheck: false,
@@ -1160,8 +1172,10 @@
 
   // ================================================================ 6-12
   // 積分するだけで解けるルール（YES）と、解けないルール（NO）。左ページの例（3t^2、-12、-2y、(6-V)/3）は入れない
-  const YES12 = [`${DT('y')}=4t-1`, `${DT('T')}=0.5`, `${DT('h')}=2-0.1t`, `${DT('V')}=10-0.5t`, `${DT('v')}=-9.8`, `${DT('V')}=5`, `${DT('y')}=6t^2+1`, `${DT('x')}=3t^2-2t`];
-  const NO12 = [`${DT('N')}=0.3N`, `${DT('T')}=-0.1\\,(T-25)`, `${DT('q')}=-\\frac{q}{5}`, `${DT('v')}=9.8-0.2v`, `${DT('V')}=\\frac{10-V}{2}`, `${DT('y')}=y^2`, `${DT('y')}=2y+1`, `${DT('h')}=-0.5h`];
+  const YES12 = [`${DT('y')}=4t-1`, `${DT('T')}=0.5`, `${DT('h')}=2-0.1t`, `${DT('V')}=10-0.5t`, `${DT('v')}=-9.8`, `${DT('V')}=5`, `${DT('y')}=6t^2+1`, `${DT('x')}=3t^2-2t`,
+    `${DT('T')}=-2`, `${DT('x')}=8-2t`, `${DT('q')}=0.2`, `${DT('V')}=6t`, `${DT('h')}=-0.4`, `${DT('y')}=5-4t^2`];
+  const NO12 = [`${DT('N')}=0.3N`, `${DT('T')}=-0.1\\,(T-25)`, `${DT('q')}=-\\frac{q}{5}`, `${DT('v')}=9.8-0.2v`, `${DT('V')}=\\frac{10-V}{2}`, `${DT('y')}=y^2`, `${DT('y')}=2y+1`, `${DT('h')}=-0.5h`,
+    `${DT('T')}=0.2\\,(30-T)`, `${DT('N')}=-0.05N`, `${DT('V')}=-V`, `${DT('y')}=3y-t`, `${DT('x')}=x+2`, `${DT('q')}=-4q`];
   const YES12b = [`${DT('q')}=0.5e^{-t/2}`, `${D2('x')}=9.8`, `${D2('T', 'x')}=0`, `${DT('x')}=3\\cos2t`, `${D2('y', 'x')}=0.004`, `${DT('p', 'z')}=-11760`, `${DT('T', 'x')}=-40`, `${DT('N')}=100e^{0.1t}`];
   const NO12b = [`${DT('T', 'x')}=-T`, `${D2('x')}=-16x`, `${DT('h')}=-0.02\\sqrt h`, `${DT('y')}=ty`, `${DT('y')}=t+y`, `${D2('y', 'x')}=-4y`, `${DT('p', 'z')}=-0.0001p`, `${DT('v')}=9.8-0.004v^2`];
   // 別の道すじ：左辺で微分されている量（主役）の文字が、右辺の文字に入っているか
@@ -1172,6 +1186,14 @@
   // 検算用（only12 とは別の読み方）：右辺から \命令 を消し、主役の文字が1字でも残っているか
   const noMain12 = t => { const v = /\\frac\{\\dd(?:\^2)? ?([A-Za-z])\}/.exec(t)[1]; return !t.slice(t.indexOf('=') + 1).replace(/\\[a-zA-Z]+/g, ' ').includes(v); };
   const list12 = ts => ts.map((t, i) => `（${i + 1}）$${t}$`).join('　');
+  // 同じ見開きで同じルールをくり返さない（第40回 R1-18）：池 pool から、まだ使っていないものを n こ。足りなければ（アプリで何問も作るとき）その池をひとまわりさせる
+  function take12(r, pool, n) {
+    const u = r.u12 || (r.u12 = new Set());
+    let c = r.shuffle(pool).filter(t => !u.has(t));
+    if (c.length < n) { pool.forEach(t => u.delete(t)); c = r.shuffle(pool); }
+    c = c.slice(0, n); c.forEach(t => u.add(t));
+    return c;
+  }
   const ans12 = ts => ts.map((t, i) => (only12(t) ? `（${i + 1}）` : null)).filter(Boolean).join('・');
   M.add({
     id: '6-12', part: 1, chap: '6-3① 例題1', stars: 1,
@@ -1188,7 +1210,7 @@
     steps: {
       // 1つのルール
       s1(r) {
-        const t = r.pick(r.chance(0.5) ? YES12 : NO12), A = only12(t) ? '解ける' : '解けない';
+        const t = take12(r, r.chance(0.5) ? YES12 : NO12, 1)[0], A = only12(t) ? '解ける' : '解けない';
         return {
           q: `ルール $${t}$ は、積分するだけで解ける形か □`, a: A, key: `12|${t}`,
           easy: only12(t) ? '右辺に、左辺で微分されている量がない' : '右辺に、左辺で微分されている量がある', easyCheck: false,
@@ -1197,7 +1219,7 @@
       },
       // 4つから選ぶ
       s2(r) {
-        const ts = r.shuffle(r.shuffle(YES12).slice(0, r.int(1, 3)).concat(r.shuffle(NO12))).slice(0, 4);
+        const ny = r.int(1, 3), ts = r.shuffle(take12(r, YES12, ny).concat(take12(r, NO12, 4 - ny)));
         if (!ts.some(only12) || ts.every(only12)) return null;
         return {
           q: `次のルールのうち、積分するだけで解けるものをすべて選ぶと □　${list12(ts)}`, a: ans12(ts), key: `12|${ts.join('|')}`,
@@ -1207,7 +1229,7 @@
       },
       // 変数が時間でない・2回微分・e や cos の入った右辺
       s3(r) {
-        const yes = r.shuffle(YES12b).slice(0, r.int(1, 3)), ts = r.shuffle(yes.concat(r.shuffle(NO12b))).slice(0, 4);
+        const ny = r.int(1, 3), ts = r.shuffle(take12(r, YES12b, ny).concat(take12(r, NO12b, 4 - ny)));
         if (!ts.some(only12) || ts.every(only12)) return null;
         return {
           q: `次のルールのうち、積分するだけで解けるものをすべて選ぶと □　${list12(ts)}`, a: ans12(ts), key: `12|${ts.join('|')}`,
@@ -1302,7 +1324,7 @@
     futsu: ['ルールを積分して $C$ をつけ、', 'はじめの値から $C$ を決めて式を作り、', 'その式に値を入れて', '方程式を解く。'],
     raku: ['1250 W、$4200\\,\\mathrm{J/K}$、20→100℃', '→ $80\\times\\frac{4200}{1250}=268.8$ 秒（約4.5分）', '$Q=12-0.4t$、はじめ50 L → $12t-0.2t^2+50$', '$i=0.5e^{-t/2}$ → $q=1-e^{-t/2}$'],
     why: '右辺が一定（ただの数）なら、変わる速さが一定なのでグラフは直線になり、かかる時間は「ふやす量÷速さ」（6-3③④）。右辺が $t$ の式なら、項ごとに積分して $+C$ をつけ、$t=0$ の値で $C$ を決める（6-3⑤）。$e^{at}$ の積分は $\\frac{1}{a}e^{at}$。',
-    caution: '熱容量は「1℃上げるのに要る熱」。$\\frac{P}{C_{\\mathrm{th}}}$ は1秒に上がる温度。mA・μF は A・F に直す（$\\frac{I}{C}$）。$C$ ははじめの値で決める（$e^0=1$ に注意）。',
+    caution: '熱容量は「1℃上げるのに要る熱」。$\\frac{P}{C_{\\mathrm{th}}}$ は1秒に上がる温度。$\\mathrm{mA}$・$\\mathrm{\\mu F}$ は $\\mathrm{A}$・$\\mathrm{F}$ に直す（$\\frac{I}{C}$）。$C$ ははじめの値で決める（$e^0=1$ に注意）。',
     counts: { s1: 3, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '36mm', s3: '16mm', trap: '20mm' }, boxh: { s2: '12mm', trap: '12mm' },
@@ -1320,7 +1342,7 @@
           const C = r.pick([50, 100, 200, 500]), I = r.pick([0.5, 1, 2, 5]), V = r.pick([2, 3, 4, 5, 6, 8, 10]), t = V * C / 1000 / I;
           if (decs(t) > 2 || (C === 100 && I === 1 && V === 5)) return null;
           return {
-            q: `静電容量 $C=${C}\\,\\mu\\mathrm{F}$ のコンデンサーに、一定の電流 ${U(I, 'mA')} を流しこみます。はじめ $V=0$ のとき、電圧が ${U(V, 'V')} になる時刻 □ 秒`, a: M$(t), key: `14I|${C}|${I}|${V}`,
+            q: `静電容量 $C=${C}\\,\\mathrm{\\mu F}$ のコンデンサーに、一定の電流 ${U(I, 'mA')} を流しこみます。はじめ $V=0$ のとき、電圧が ${U(V, 'V')} になる時刻 □ 秒`, a: M$(t), key: `14I|${C}|${I}|${V}`,
             easy: `$\\frac{I}{C}=\\frac{${fmt(I / 1000)}}{${fmt(C / 1e6)}}=${fmt(I * 1000 / C)}$〔V/s〕。$${V}\\div${fmt(I * 1000 / C)}=${fmt(t)}$`, easyCheck: false,
             verify: p => valIs(p.a, V / ((I / 1000) / (C / 1e6))),
           };
@@ -1410,10 +1432,11 @@
   }
   const wallT = (s, Ti) => `T=${Ti}${s < 0 ? '-' : '+'}${fmt(Math.abs(s))}x`;
   function wallFig(L, Ti, To) {
-    const lo = Math.min(0, To) - 4, hi = Ti + 5, G = M.graph({ x0: 0, x1: L, y0: lo, y1: hi, w: 5.4, h: 4 });
+    const lo = Math.min(0, To) - 4, hi = Ti + 5, G = M.graph({ x0: 0, x1: 1.3 * L, y0: lo, y1: hi, w: 6.6, h: 4 });   // 横軸は L の先までのばし、軸の名前 x を目もり L からはなす（第40回 S-8）
     return { s: 5, items: [
-      G.area(() => hi - 1, () => lo + 1, 0, L, { hatch: true }),
-      ...G.axes({ xt: [L], yt: [Ti, To].filter(v => v !== 0), x: 'x', y: 'T', o: To < 0 ? 'nw' : 'sw' }),
+      G.area(() => hi - 1, () => 0, 0, L, { hatch: true }),   // かべの斜線は 0℃ より上だけ（温度の線を斜線にうめない）
+      ...G.axes({ xt: To < 0 ? [] : [L], yt: [Ti, To].filter(v => v !== 0), x: 'x', y: 'T', o: To < 0 ? 'nw' : 'sw' }),
+      ...(To < 0 ? [['seg', [G.T(L, 0)[0], -0.15], [G.T(L, 0)[0], 0.15]], ['label', G.T(L, 0), fmt(L), 'ne']] : []),   // 外が0℃より下のときは、目もり L を軸の上に（温度の線の下はしと重ねない）
       ['seg', G.T(0, Ti), G.T(L, To), { thick: true }], ['dot', G.T(0, Ti)], ['dot', G.T(L, To)],
       ['label', G.T(0, hi - 1), '部屋', 'nw'], ['label', G.T(L, hi - 1), '外', 'ne'],
     ] };
@@ -1528,7 +1551,7 @@
     title: '深さと水圧：$p=p_0+\\rho g\\times$深さ（深さ $d$ は $z=-d$）',
     mark: '$\\frac{\\dd p}{\\dd z}=-\\rho g$、水面（海面）の圧力と、深さ・水圧。',
     futsu: ['$\\frac{\\dd p}{\\dd z}=-\\rho g$ を $z$ で積分して $p=-\\rho gz+C$、', '$z=0$ の圧力で $C$ を決め、', '深さ $d$ のとき $z=-d$ を入れる。'],
-    raku: ['海水 $\\rho g=10094$、深さ30 m', '→ $p=101300+10094\\times30$', '$=101300+302820=404120$ Pa'],
+    raku: ['海水 $\\rho g=10094$、深さ $30\\,\\mathrm{m}$', '→ $p=101300+10094\\times30$', '$=101300+302820=404120\\,\\mathrm{Pa}$'],
     why: '$\\frac{\\dd p}{\\dd z}=-\\rho g$ は右辺が一定なので、圧力は高さ $z$ について直線（6-3⑥）。$z$ は上向きなので、深さ $d$ の所は $z=-d$ で、$p=p_0-\\rho g\\times(-d)=p_0+\\rho g d$。深さ1 m ごとに $\\rho g$ ずつふえると読めばよい。',
     caution: '深さ $d$ を $z=d$ と入れない（圧力がへってしまう）。水面の大気の圧力 $p_0$ をたし忘れない。$\\rho g$ の単位は Pa/m。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
@@ -1541,7 +1564,7 @@
         const L = r.pick(LIQ91), d = r.pick(D91), p = P0 + L.rg * d;
         if (L.rg === 10094 && d === 30) return null;
         return {
-          q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が $${P0}$ Pa のとき、深さ ${U(d, 'm')} の水圧 □ Pa`, a: M$(p), key: `91|${L.rg}|${d}`,
+          q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が ${U(P0, 'Pa')} のとき、深さ ${U(d, 'm')} の水圧 □ Pa`, a: M$(p), key: `91|${L.rg}|${d}`,
           easy: `$${P0}+${L.rg}\\times${d}=${P0}+${L.rg * d}=${p}$`, easyCheck: false,
           calc: { kind: 'ode', x: 'z', coef: [1, 0], rhs: String(-L.rg), init: [[0, P0]], ans: `${P0}-${L.rg}z` },
           verify: p_ => valIs(p_.a, P0 - L.rg * (-d)),
@@ -1553,14 +1576,14 @@
         if (turn(r, '91s2', 2)) {
           const n = r.pick([2, 3, 4]), d = (n - 1) * P0 / L.rg, g = gv(d, d, 1);
           return {
-            q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が $${P0}$ Pa のとき、水圧が${L.top}の${n}倍（$${n * P0}$ Pa）になる深さは約 □ m（小数第1位まで）`, a: `$${g.ans}$`, key: `91n|${L.rg}|${n}`,
-            easy: `ふえる分は $${(n - 1) * P0}$ Pa。$${(n - 1) * P0}\\div${L.rg}\\approx${g.ans}$`, easyCheck: false,
+            q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が ${U(P0, 'Pa')} のとき、水圧が${L.top}の${n}倍（${U(n * P0, 'Pa')}）になる深さは約 □ m（小数第1位まで）`, a: `$${g.ans}$`, key: `91n|${L.rg}|${n}`,
+            easy: `ふえる分は $${(n - 1) * P0}\\,\\mathrm{Pa}$。$${(n - 1) * P0}\\div${L.rg}\\approx${g.ans}$`, easyCheck: false,
             verify: p_ => valIs(p_.a, +rd(((n * P0) - P0) / L.rg, 1)),
           };
         }
         const d = r.pick(D91), p = P0 + L.rg * d;
         return {
-          q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が $${P0}$ Pa のとき、水圧が $${p}$ Pa になる深さ □ m`, a: M$(d), key: `91|${L.rg}|${d}`,
+          q: `${L.name}（$\\rho g=${L.rg}$〔Pa/m〕）で、${L.top}の圧力が ${U(P0, 'Pa')} のとき、水圧が ${U(p, 'Pa')} になる深さ □ m`, a: M$(d), key: `91|${L.rg}|${d}`,
           easy: `$(${p}-${P0})\\div${L.rg}=${d}$`, easyCheck: false,
           verify: p_ => valIs(p_.a, (p - P0) / L.rg),
         };
@@ -1570,14 +1593,14 @@
         if (turn(r, '91s3', 2)) {
           const L = r.pick(LIQ91);
           return {
-            q: `${L.name}の中で $\\frac{\\dd p}{\\dd z}=-${L.rg}$ です（$z$ は上向きの高さ〔m〕で、${L.top}が $z=0$、そこで $p=${P0}$ Pa）。$p$ を $z$ の式で □`, a: `$p=${P0}-${L.rg}z$`, key: `91z|${L.rg}`,
+            q: `${L.name}の中で $\\frac{\\dd p}{\\dd z}=-${L.rg}$ です（$z$ は上向きの高さ〔m〕で、${L.top}が $z=0$、そこで $p=${P0}\\,\\mathrm{Pa}$）。$p$ を $z$ の式で □`, a: `$p=${P0}-${L.rg}z$`, key: `91z|${L.rg}`,
             easy: `$z$ で積分して $p=-${L.rg}z+C$、$z=0$ で $C=${P0}$`, easyCheck: false,
             calc: { kind: 'ode', x: 'z', coef: [1, 0], rhs: String(-L.rg), init: [[0, P0]] },
           };
         }
         const [nm, rho] = r.pick([['油', 800], ['油', 900], ['海水', 1020], ['しょう油', 1200]]), rg = +fmt(rho * 9.8), d = r.pick([2, 5, 10, 20]), p = P0 + rg * d;
         return {
-          q: `密度 $\\rho=${rho}\\,\\mathrm{kg/m^3}$ の${nm}（$g=9.8$）で、表面の圧力が $${P0}$ Pa のとき、深さ ${U(d, 'm')} の圧力 □ Pa`, a: M$(+fmt(p)), key: `91o|${rho}|${d}`,
+          q: `密度 $\\rho=${rho}\\,\\mathrm{kg/m^3}$ の${nm}（$g=9.8$）で、表面の圧力が ${U(P0, 'Pa')} のとき、深さ ${U(d, 'm')} の圧力 □ Pa`, a: M$(+fmt(p)), key: `91o|${rho}|${d}`,
           easy: `$\\rho g=${rho}\\times9.8=${fmt(rg)}$。$${P0}+${fmt(rg)}\\times${d}=${fmt(p)}$`, easyCheck: false,
           verify: p_ => valIs(p_.a, P0 + rho * 9.8 * d),
         };
@@ -1585,7 +1608,7 @@
       // わな：空気（右辺に p。6-17）
       trap(r) {
         const k = r.pick([0.0001, 0.00012, 0.00013]);
-        return dest({ q: `空気は押しちぢめられるので、上空ほど密度が小さく、$\\frac{\\dd p}{\\dd z}=-${fmt(k)}p$（$z$ は上向きの高さ〔m〕）とします。地面（$z=0$）で $p=${P0}$ Pa のとき、$p$ を $z$ の式で □`, a: `$p=${P0}e^{-${fmt(k)}z}$`, key: `91t|${k}`,
+        return dest({ q: `空気は押しちぢめられるので、上空ほど密度が小さく、$\\frac{\\dd p}{\\dd z}=-${fmt(k)}p$（$z$ は上向きの高さ〔m〕）とします。地面（$z=0$）で $p=${P0}\\,\\mathrm{Pa}$ のとき、$p$ を $z$ の式で □`, a: `$p=${P0}e^{-${fmt(k)}z}$`, key: `91t|${k}`,
           calc: { kind: 'ode', x: 'z', coef: [1, k], init: [[0, P0]], pts: [10, 300, 1200] } },
         '6-91', '右辺に $p$ があるので、積分するだけでは解けない（圧力は直線でへらない）。「自分に比例してへる」形で、$p_0e^{-kz}$', ['6-17']);
       },
@@ -1755,5 +1778,14 @@
         '6-93', 'ふつうのオイラー法のふくらみではなく、速度を先に進めるオイラー法の1歩の値。加速度→新しい速度→新しい位置', ['6-11']);
       },
     },
+  });
+  // ---------------------------------------------------------------- わなの答えと s3 の答えを重ねない（第40回 S-2）
+  // 同じ見開き（アプリでは同じプリント）で、s3 に出た答えと同じ答えのわなは出さない（作りなおす。makeStep の回数の上限の中で）
+  ['6-01', '6-02', '6-03', '6-04', '6-05', '6-06', '6-07', '6-08', '6-09', '6-10', '6-11', '6-12', '6-13', '6-14', '6-15', '6-91', '6-92', '6-93'].forEach(id => {
+    const d = M.waza[id], s3 = d.steps.s3, trap = d.steps.trap;
+    if (!s3 || !trap) return;
+    const seen = r => { const o = r.s3ans || (r.s3ans = {}); return o[id] || (o[id] = new Set()); };
+    d.steps.s3 = r => { const p = s3(r); if (p) seen(r).add(String(p.a)); return p; };
+    d.steps.trap = r => { const p = trap(r); return p && seen(r).has(String(p.a)) ? null : p; };
   });
 })(globalThis.MONDAI);

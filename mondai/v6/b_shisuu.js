@@ -3,13 +3,13 @@
  * 教科書にそろえる：$\dfrac{\dd T}{\dd t}=-0.05\,(T-20)$、目標へ近づく形 $y=y_\infty+(y_0-y_\infty)e^{-t/\tau}$、$v_{\mathrm f}$（比例の抵抗）・$v_{\mathrm t}$（2乗の抵抗）、
  *   $C_{\mathrm{th}}$・$R_{\mathrm{th}}$・$T_{\mathrm a}$。落ちる物は「速さ」（下向きが正。教科書 6-5）。体重計の加速度は上向きを正（負にもなるので「加速度」の値で聞く）。
  * 近似値（第39回 P-3・O-4）：$e^{-1}=0.368$、$e^{-2}=0.135$、$e^{-3}=0.050$、$\ln2=0.693$、$\ln3=1.099$、$\ln4=1.386$、$\ln10=2.30$、$\sqrt2=1.414$。
- *   表にない値（$e^{-4}=0.018$・$e^{-5}=0.007$・$e^{-0.5}=0.607$・$e^{-1.5}=0.223$）は教科書 6-4 の値。$\ln1.5=0.405$ は教科書になく、目録のわなの案（6-20）の値。使う値とけたを問題の文に書き、
+ *   表にない値（$e^{-4}=0.018$・$e^{-5}=0.007$・$e^{-0.5}=0.607$・$e^{-1.5}=0.223$）は教科書 6-4 の値。$\ln1.5$ は P-3 の値から3けためが合わないので使わない（第40回 R1-19）。使う値とけたを問題の文に書き、
  *   文の値で計算して丸めた答えと、ほんとうの値を丸めた答えがくいちがう組は出さない（approx()。O-4）。近似の答えは「約 □」、楽な形に ≈。
  * 答えの確かめ：微分方程式の解は calc（kind 'ode'）。数の答えは verify(p) で、問題を作った式とは別の道すじ
  *   （e と ln をほんとうの値で計算する、微分方程式を細かいオイラー法でたどる、力のつり合いを数で解く）で出し直してくらべる。
  * 図は 6-22 のステップ3だけ（M.graph。$e^{-t/\tau}$・$1-e^{-t/\tau}$ の曲線と、$\tau$・$3\tau$・$5\tau$ の目もり。K-2・P-2）。回路・エレベーターの図は出さない（文だけ）。
  * 同じ見開きの重なり（O-2）：左ページの「楽な形にすると」の例の数（RAKU_*）は問題に出さない。key は s1〜s3・わなで同じ形（同じ式・同じ数の組を2回出さない）。
- * わなは、そのわざ自身で解けない問題。答えにはかならず行き先（わざの番号か「楽な形なし」。dest。N-3）。 */
+ * わなは、そのわざ自身で解けない問題。答えにはかならず行き先（わざの番号か「わざなし」。dest。N-3・第40回 S-7）。 */
 (function (M) {
   'use strict';
 
@@ -52,13 +52,13 @@
   const tail = A => (!A.ex ? `\\approx${A.a}` : +A.ex === +A.a ? `=${A.a}` : `=${A.ex}\\approx${A.a}`);
   // 近似の値（教科書 第6巻・第39回 P-3）
   const EXP = { 1: '0.368', 2: '0.135', 3: '0.050', 4: '0.018', 5: '0.007', 0.5: '0.607', 1.5: '0.223' };   // e^{-k}
-  const LN = { 2: '0.693', 3: '1.099', 4: '1.386', 10: '2.30', 1.5: '0.405' };
+  const LN = { 2: '0.693', 3: '1.099', 4: '1.386', 10: '2.30' };
   const eTxt = k => `$e^{-${k}}=${EXP[k]}$`;
   const lnTxt = n => `$\\ln${n}=${LN[n]}$`;
   // 数と単位（1かたまり。O-7）
-  //   単位の中の μ・Ω は Unicode の字で書く（P-14 の \mathrm{\mu F}・\mathrm{k\Omega} は、本の lualatex で μ・Ω が消える（Missing character）。アプリの表示は同じ）
-  const U = (v, u) => `$${v}\\,\\mathrm{${u.replace(/\\mu ?/g, 'μ').replace(/\\Omega/g, 'Ω')}}$`;
-  const C = v => `$${v}$ ℃`;                                          // ℃ は式の外（教科書と同じ）
+  //   単位の中の μ・Ω は \mathrm{\mu F}・\mathrm{k\Omega}（P-14。本では core.js が立てた字 \upmu・\upOmega に直す。第40回 S-6 で組 a・c とそろえた）
+  const U = (v, u) => `$${v}\\,\\mathrm{${u}}$`;
+  const C = v => `$${v}$℃`;                                           // ℃ は式の外（教科書と同じ）。数と ℃ のあいだはあけない（行末で分かれないように。第40回 S-6）
   const DY = v => `\\dfrac{\\dd ${v}}{\\dd t}`;
   // e の右肩：τ が整数なら e^{-t/τ}、そうでなければ e^{-at}（a=1 は e^{-t}）
   const eT = tau => `e^{-t/${fmt(tau)}}`;
@@ -120,7 +120,7 @@
   }
 
   // ---------------------------------------------------------------- わなの行き先（H-1・N-3）
-  // easy に「（わけ。わざ □ で）」か「（わけ。楽な形なし）」。extra：ほかの部のわざなど、fits では見つからない行き先
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」。extra：ほかの部のわざなど、fits では見つからない行き先
   function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(6).filter(id => {
@@ -131,7 +131,7 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -158,7 +158,7 @@
     title: '差は「同じ時間で同じ割合」でへる：$t$ で $r$ 倍なら、$nt$ で $r^n$ 倍（$e$ も $\\ln$ も使わない）',
     mark: '部屋との温度の差や電圧が「□分で半分」「1秒で0.6倍」とわかっていて、その整数倍の時間後を聞かれる。',
     futsu: ['10分で半分から $k=\\dfrac{\\ln2}{10}$ を出し、', '$T=20+60e^{-kt}$ に $t=30$ を入れる'],
-    raku: ['30分は10分の3回分', '差 $60\\times\\Bigl(\\dfrac12\\Bigr)^3=7.5$', '温度は $20+7.5=27.5$ ℃'],
+    raku: ['30分は10分の3回分', '差 $60\\times\\Bigl(\\dfrac12\\Bigr)^3=7.5$', '温度は $20+7.5=27.5$℃'],
     why: 'ルール $\\dfrac{\\dd T}{\\dd t}=-k\\,(T-20)$ では、差が半分なら下がる速さも半分。だから、差が何℃でも、同じ時間で同じ割合だけへる（6-4①）。$t$ で $r$ 倍なら、次の $t$ でもまた $r$ 倍で、$nt$ では $r^n$ 倍（3-11）。',
     caution: '割合でへるので、ひき算ではない（10分で30℃下がったから、次の10分も30℃、ではない）。温度を聞かれたら、差に部屋の温度をたしてもどす。冷たい物が温まるときは、部屋の温度から差をひく。',
     counts: { s1: 5, s2: 3, s3: 3, trap: 2 },
@@ -181,7 +181,7 @@
           const p = r.pick([5, 10, 15, 20, 4, 6]);
           if (P.D0 === 60 && P.rr === 'half' && P.n === 3) return null;   // 左ページの例（O-2）
           return {
-            q: `お湯と部屋の温度の差が ${C(P.D0)} ある。差は $${p}$ 分ごとに${rWord(P.rr)}になる。$${P.n * p}$ 分後の差は □ ℃`, a: `$${P.s}$`, key: `${P.D0}|${P.rr}|${P.n}`,
+            q: `お湯と部屋の温度の差が ${C(P.D0)}ある。差は $${p}$ 分ごとに${rWord(P.rr)}になる。$${P.n * p}$ 分後の差は □ ℃`, a: `$${P.s}$`, key: `${P.D0}|${P.rr}|${P.n}`,
             easy: `$${P.n * p}\\div${p}=${P.n}$ 回分。$${P.D0}\\times${rTeX(P.rr)}^{${P.n}}=${P.s}$`, easyCheck: false,
             verify: p2 => isNum(p2.a, viaExp(P.D0, P.rr, p, P.n * p), 1e-9),
           };
@@ -202,7 +202,7 @@
         const T0 = warm ? Ta - P.D0 : Ta + P.D0, A = warm ? F.sub(fr(Ta), P.v) : F.add(fr(Ta), P.v), ans = decStr(A);
         if (T0 > 95 || T0 < 0 || (Ta === 20 && T0 === 80 && P.rr === 'half' && P.n === 3)) return null;   // 100℃をこえない。左ページの例（O-2）
         return {
-          q: `部屋の温度は ${C(Ta)}。はじめ ${C(T0)} の${warm ? '飲み物' : 'お湯'}は、部屋との温度の差が $${p}$ 分ごとに${rWord(P.rr)}になる。$${P.n * p}$ 分後の温度は □ ℃`,
+          q: `部屋の温度は ${C(Ta)}。はじめ ${C(T0)}の${warm ? '飲み物' : 'お湯'}は、部屋との温度の差が $${p}$ 分ごとに${rWord(P.rr)}になる。$${P.n * p}$ 分後の温度は □ ℃`,
           a: `$${ans}$`, key: `${P.D0}|${P.rr}|${P.n}`, easyCheck: false,
           easy: `差 $${P.D0}\\times${rTeX(P.rr)}^{${P.n}}=${P.s}$。$${Ta}${warm ? '-' : '+'}${P.s}=${ans}$`,
           verify: p2 => isNum(p2.a, Ta + (warm ? -1 : 1) * viaExp(P.D0, P.rr, p, P.n * p), 1e-9),
@@ -216,7 +216,7 @@
           const D1 = F.mul(fr(D0), rF(rr)), v = F.mul(fr(D0), fpow(rF(rr), n)), s = decStr(v), T1 = decStr(F.add(fr(Ta), D1)), ans = decStr(F.add(fr(Ta), v));
           if (!s || decLen(s) > 2 || decLen(T1) > 1 || Ta + D0 > 95) return null;
           return {
-            q: `部屋の温度は ${C(Ta)}。はじめ ${C(Ta + D0)} のお湯が、$${p}$ 分後に ${C(T1)} になった。はじめから $${n * p}$ 分後の温度は □ ℃`,
+            q: `部屋の温度は ${C(Ta)}。はじめ ${C(Ta + D0)}のお湯が、$${p}$ 分後に ${C(T1)}になった。はじめから $${n * p}$ 分後の温度は □ ℃`,
             a: `$${ans}$`, key: `${D0}|${rr}|${n}`, easyCheck: false,
             easy: `差は $${D0}\\to${decStr(D1)}$ で、$${p}$ 分で $${rr === 'half' ? '\\frac{1}{2}' : rr}$ 倍。$${D0}\\times${rTeX(rr)}^{${n}}=${s}$、$${Ta}+${s}=${ans}$`,
             verify: p2 => isNum(p2.a, Ta + viaExp(D0, rr, p, n * p), 1e-9),
@@ -244,7 +244,7 @@
         const f = m === 0.5 ? F.div(fr(D0), D('1.414')) : F.div(fr(D0), F.mul(fr(2), D('1.414'))), A = approx(f, D0 * Math.pow(2, -m), [1]);
         if (!A) return null;
         return dest({
-          q: `お湯と部屋の温度の差が ${C(D0)} ある。差は $${p}$ 分ごとに半分になる。$${fmt(m * p)}$ 分後の差は約 □ ℃（$\\sqrt2=1.414$ として、小数第1位まで）`,
+          q: `お湯と部屋の温度の差が ${C(D0)}ある。差は $${p}$ 分ごとに半分になる。$${fmt(m * p)}$ 分後の差は約 □ ℃（$\\sqrt2=1.414$ として、小数第1位まで）`,
           a: `$${A.a}$`, key: `t${D0}|${m}`, verify: p2 => isRd(p2.a, D0 * Math.pow(2, -m)),
         }, '6-16', `$${fmt(m * p)}$ 分は $${p}$ 分の整数倍でない（$${m}$ 回分）。$T-T_{\\mathrm a}=${D0}e^{-t/\\tau}$ の式で、$\\Bigl(\\frac{1}{2}\\Bigr)^{${m}}=${m === 0.5 ? '\\frac{1}{\\sqrt2}' : '\\frac{1}{2\\sqrt2}'}$。$${D0}\\div${m === 0.5 ? '1.414' : '2.828'}${tail(A)}$`, ['6-18']);
       },
@@ -313,7 +313,7 @@
   });
 
   // ================================================================ 6-18
-  const raku18 = (Ta, tau, T0) => Ta === 20 && ((tau === 20 && T0 === 80) || (tau === 10 && T0 === 5));   // 左ページの例（O-2）
+  const raku18 = (Ta, tau, T0) => Ta === 20 && (tau === 20 || (tau === 10 && T0 === 5));   // 左ページの例（O-2）。-0.05(T-20) は、はじめの温度によらず出さない（第40回 R1-6）
   const ans18 = (v, yi, tau, y0) => `${v}=${near0(yi, y0 - yi, Number.isInteger(tau) && tau > 1 ? eT(tau) : eA(1 / tau))}`;
   // 部屋の温度・τ・はじめ（熱い物・冷たい物）
   function pick18(r) {
@@ -328,7 +328,7 @@
     futsu: ['差 $u=T-20$ とおいて変数分離し、', '$\\ln u=-0.05t+C$ から $u=Ae^{-0.05t}$、', '$t=0$ で $A$ を決めて $T$ にもどす'],
     raku: ['$-0.05\\,(T-20)$、$T(0)=80$', '$\\tau=\\dfrac{1}{0.05}=20$、はじめの差 $80-20=60$', '$T=20+60e^{-t/20}$'],
     why: '目標との差 $u=y-y_\\infty$ は、目標が定数なので $\\dfrac{\\dd u}{\\dd t}=-\\dfrac{u}{\\tau}$。自分に比例してへる形なので $u=(y_0-y_\\infty)e^{-t/\\tau}$（6-4④）。答えは「最後の値＋はじめの差×へり方」。',
-    caution: '$e$ の前の数は、はじめの温度ではなく「はじめの差」（はじめ－目標）。5 ℃ の飲み物を 20 ℃ の部屋に置くと、差は $5-20=-15$ で $T=20-15e^{-t/10}$。$t=0$ を入れて、はじめの値になるか確かめる。',
+    caution: '$e$ の前の数は、はじめの温度ではなく「はじめの差」（はじめ－目標）。5℃の飲み物を 20℃の部屋に置くと、差は $5-20=-15$ で $T=20-15e^{-t/10}$。$t=0$ を入れて、はじめの値になるか確かめる。',
     counts: { s1: 5, s2: 3, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '32mm', s2: '32mm', s3: '32mm', trap: '16mm' },
@@ -362,7 +362,7 @@
         }
         if (kind === 1) {
           const Tw = r.pick([40, 60, 80, 50]), tau = r.pick([5, 10, 20, 4]), x0 = r.pick([20, 25, 15]);
-          return { q: `温度計を ${C(Tw)} のお湯に入れる。温度計の示す温度 $x$ は $${DY('x')}=\\dfrac{${Tw}-x}{${tau}}$（$t$ は秒）、$x(0)=${x0}$。$x$ を $t$ の式で □`, a: `$${ans18('x', Tw, tau, x0)}$`, key: `${Tw}|${tau}`, easy: `目標はお湯の $${Tw}$、はじめの差 $${x0}-${Tw}=${x0 - Tw}$`, easyCheck: false, ...lin1(1 / tau, Tw / tau, x0) };
+          return { q: `温度計を ${C(Tw)}のお湯に入れる。温度計の示す温度 $x$ は $${DY('x')}=\\dfrac{${Tw}-x}{${tau}}$（$t$ は秒）、$x(0)=${x0}$。$x$ を $t$ の式で □`, a: `$${ans18('x', Tw, tau, x0)}$`, key: `${Tw}|${tau}`, easy: `目標はお湯の $${Tw}$、はじめの差 $${x0}-${Tw}=${x0 - Tw}$`, easyCheck: false, ...lin1(1 / tau, Tw / tau, x0) };
         }
         const tau = r.pick([2, 4, 5, 10]), yi = r.pick([30, 12, 50, 8]), y0 = r.pick([0, 10, 20, 2, 60]);
         if (y0 === yi) return null;
@@ -455,11 +455,11 @@
   M.add({
     id: '6-20', part: 2, chap: '6-4⑤ 例題1・6', stars: 1,
     title: '差が半分になる時間は $\\tau\\ln2$（どこから数えても同じ）',
-    mark: '「半分になるのは何分後」「50 ℃ から 35 ℃ までは」（部屋との差が半分）。時定数かルールがわかっている。',
-    futsu: ['$T=20+60e^{-t/20}=50$ を作り、', '$e^{-t/20}=\\dfrac12$ にしてから $\\ln$ をとる', '（50 ℃ から 35 ℃ も、もう一度解く）'],
-    raku: ['$\\tau=20$ 分なら、差が半分になるのは', '$20\\ln2\\approx20\\times0.693\\approx13.9$ 分', '80→50 ℃ も 50→35 ℃ も同じ'],
+    mark: '「半分になるのは何分後」「50℃から 35℃までは」（部屋との差が半分）。時定数かルールがわかっている。',
+    futsu: ['$T=20+60e^{-t/20}=50$ を作り、', '$e^{-t/20}=\\dfrac12$ にしてから $\\ln$ をとる', '（50℃から 35℃も、もう一度解く）'],
+    raku: ['$\\tau=20$ 分なら、差が半分になるのは', '$20\\ln2\\approx20\\times0.693\\approx13.9$ 分', '80→50℃も 50→35℃も同じ'],
     why: '差は $e^{-t/\\tau}$ 倍になるので、半分になるのは $e^{-t/\\tau}=\\dfrac12$、つまり $t=\\tau\\ln2$（6-4⑤）。式に、はじめの差が入っていないので、どこから数えても同じ（半減期）。$\\dfrac14$ は半分の2回分で $2\\tau\\ln2$。',
-    caution: '半分になるのは「部屋との差」で、温度そのものではない（80 ℃ のお湯が 40 ℃ になる時刻ではない）。半減期 $\\tau\\ln2$ は時定数 $\\tau$ より短い（0.693 倍）。',
+    caution: '半分になるのは「部屋との差」で、温度そのものではない（80℃のお湯が 40℃になる時刻ではない）。半減期 $\\tau\\ln2$ は時定数 $\\tau$ より短い（0.693 倍）。',
     counts: { s1: 5, s2: 2, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '16mm', s3: '16mm', trap: '16mm' },
@@ -484,8 +484,8 @@
         if (raku20(tau) || Ta + Dd > 95) return null;
         const A = half20(tau, [1]); if (!A) return null;
         const T0 = Ta + Dd, head = `部屋の温度は ${C(Ta)}。$${DY('T')}=-${k}\\,(T-${Ta})$（$t$ は分）にしたがって冷める。`;
-        const q = turn(r, '20s2', 2) === 0 ? `${head}はじめ ${C(T0)} のとき、${C(Ta + Dd / 2)} になるのは約 □ 分後`
-          : `${head}${C(Ta + Dd / 2)} から ${C(Ta + Dd / 4)} になるのに、約 □ 分かかる`;
+        const q = turn(r, '20s2', 2) === 0 ? `${head}はじめ ${C(T0)}のとき、${C(Ta + Dd / 2)}になるのは約 □ 分後`
+          : `${head}${C(Ta + Dd / 2)}から ${C(Ta + Dd / 4)}になるのに、約 □ 分かかる`;
         return {
           q: `${q}（${lnTxt(2)} として、小数第1位まで）`, a: `$${A.a}$`, key: `${fmt(tau)}`,
           easy: `差 $${q.includes('から') ? Dd / 2 + '\\to' + Dd / 4 : Dd + '\\to' + Dd / 2}$ で半分。$\\tau=${fmt(tau)}$、$${fmt(tau)}\\times0.693${tail(A)}$`, easyCheck: false,
@@ -519,14 +519,14 @@
           easy: `$\\tau=\\frac{1}{${k}}=${fmt(tau)}$。$${fmt(tau)}\\times0.693${tail(A)}$`, easyCheck: false, verify: p => isRd(p.a, tau * Math.LN2),
         };
       },
-      // わな：差が 2/3（半分でない）→ わざ 6-21（$\ln1.5$）
+      // わな：差が 1/3・1/10（半分でない）→ わざ 6-21（$\ln3$・$\ln10$。1/4 は半分の2回分で、このわざで解けるので出さない）
       trap(r) {
-        const tau = r.pick([10, 30, 15, 25, 40]), Ta = r.pick([20, 25]), Dd = r.pick([60, 30, 45, 66]), T0 = Ta + Dd, T1 = Ta + Dd * 2 / 3;
-        const A = approx(F.mul(fr(tau), D(LN[1.5])), tau * Math.log(1.5), [1]); if (!A) return null;
+        const n = r.pick([3, 10]), tau = r.pick([10, 30, 15, 25, 40, 12]), Ta = r.pick([20, 25]), Dd = r.pick(n === 3 ? [60, 30, 45, 66, 54] : [60, 50, 70, 40]), T0 = Ta + Dd, T1 = Ta + Dd / n;
+        const A = approx(F.mul(fr(tau), D(LN[n])), tau * Math.log(n), [1]); if (!A) return null;
         return dest({
-          q: `部屋の温度は ${C(Ta)}。時定数 $${tau}$ 分のお湯が、はじめ ${C(T0)} から ${C(T1)} になるのは約 □ 分後（${lnTxt(1.5)} として、小数第1位まで）`, a: `$${A.a}$`, key: `t${tau}|${Dd}`,
-          verify: p => isRd(p.a, tau * Math.log(1.5)),
-        }, '6-20', `差は $${Dd}\\to${Dd * 2 / 3}$ で $\\frac{2}{3}$ 倍（半分でない）。$e^{-t/${tau}}=\\frac{2}{3}$ から $t=${tau}\\ln1.5\\approx${tau}\\times0.405${tail(A)}$`, ['6-21']);
+          q: `部屋の温度は ${C(Ta)}。時定数 $${tau}$ 分のお湯が、はじめ ${C(T0)}から ${C(T1)}になるのは約 □ 分後（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: `t${tau}|${n}`,
+          verify: p => isRd(p.a, tau * Math.log(n)),
+        }, '6-20', `差は $${Dd}\\to${Dd / n}$ で $\\frac{1}{${n}}$ 倍（半分でない）。$e^{-t/${tau}}=\\frac{1}{${n}}$ から $t=${tau}\\ln${n}\\approx${tau}\\times${LN[n]}${tail(A)}$`, ['6-21']);
       },
     },
   });
@@ -537,10 +537,10 @@
     id: '6-21', part: 2, chap: '6-4⑤ 例題3', stars: 1,
     title: '「$\\dfrac1n$ になる時刻」は、$e$ の式だけにしてから $\\ln$：$e^{-t/\\tau}=\\dfrac1n$ → $t=\\tau\\ln n$',
     mark: '「□ ℃ になるのは何分後」で、残りの差がはじめの $\\dfrac13$・$\\dfrac14$・$\\dfrac{1}{10}$ になる。',
-    futsu: ['$20-15e^{-t/10}=15$ の両辺の $\\ln$ をとろうとして、', '$\\ln(20-15e^{-t/10})$ で止まる'],
+    futsu: ['$20-15e^{-t/10}=15$ を $15e^{-t/10}=5$ にし、', '両辺の $\\ln$ をとって $\\ln15-\\dfrac{t}{10}=\\ln5$、', '$t=10\\,(\\ln15-\\ln5)$ を計算する'],
     raku: ['$20-15e^{-t/10}=15$ → $15e^{-t/10}=5$', '$e^{-t/10}=\\dfrac13$ → $t=10\\ln3$', '$\\approx10\\times1.099\\approx11$ 分'],
     why: '$\\ln(a+b)$ は $\\ln a+\\ln b$ にならない（5-14）。たし算の数を先に移し、$e$ の前の数でわって、$e^{-t/\\tau}$ だけを残す。$e^{-t/\\tau}=\\dfrac1n$ なら、両辺の $\\ln$ をとって $-\\dfrac{t}{\\tau}=-\\ln n$、$t=\\tau\\ln n$（6-4⑤）。',
-    caution: '「残りの差」がはじめの差の何分の1かを先に見る（20 ℃ に近づくお湯が 30 ℃ になるとき、残りは $30-20$）。$\\ln\\dfrac1n=-\\ln n$ なので、マイナスは消える。',
+    caution: '「残りの差」がはじめの差の何分の1かを先に見る（20℃に近づくお湯が 30℃になるとき、残りは $30-20$）。$\\ln\\dfrac1n=-\\ln n$ なので、マイナスは消える。たし算が残ったまま $\\ln$ をとると、$\\ln(20-15e^{-t/10})$ で先へ進めない。',
     counts: { s1: 6, s2: 2, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '18mm', s2: '16mm', s3: '16mm', trap: '16mm' },
@@ -555,7 +555,7 @@
         const Dd = n * r.pick([4, 5, 6, 8, 10, 12, 3]), d = warm ? -Dd : Dd, T1 = Ta + d / n, T0 = Ta + d;
         if (raku21(tau, n) || (tau === 10 && Dd === 15) || (tau === 20 && Dd === 20) || T0 > 95 || T0 < 0 || Dd > 75) return null;
         return {
-          q: `$T=${near0(Ta, d, eT(tau))}$ が ${C(T1)} になる時刻 $t$`, a: `$${tau}\\ln${n}$`, key: `${tau}|${n}`,
+          q: `$T=${near0(Ta, d, eT(tau))}$ が ${C(T1)}になる時刻 $t$`, a: `$${tau}\\ln${n}$`, key: `${tau}|${n}`,
           easy: `$${Math.abs(d)}e^{-t/${tau}}=${Math.abs(d / n)}$、$e^{-t/${tau}}=\\frac{1}{${n}}$`, easyCheck: false,
           verify: p => { const t = numOf(p.a); return near(Ta + d * Math.exp(-t / tau), T1, 1e-9) || `t=${t} で ${T1} にならない`; },
         };
@@ -567,7 +567,7 @@
         if (raku21(tau, n) || (tau === 10 && Dd === 15) || (tau === 20 && Dd === 20) || T0 > 95 || T0 < 0 || Dd > 75) return null;
         const A = approx(F.mul(fr(tau), D(LN[n])), tau * Math.log(n), [1]); if (!A) return null;
         return {
-          q: `${warm ? '冷たい飲み物' : 'お湯'}の温度 $T$ が $${DY('T')}=\\dfrac{${Ta}-T}{${tau}}$（$t$ は分）にしたがう。はじめ ${C(T0)}。${C(T1)} になるのは約 □ 分後（${lnTxt(n)} として、小数第1位まで）`,
+          q: `${warm ? '冷たい飲み物' : 'お湯'}の温度 $T$ が $${DY('T')}=\\dfrac{${Ta}-T}{${tau}}$（$t$ は分）にしたがう。はじめ ${C(T0)}。${C(T1)}になるのは約 □ 分後（${lnTxt(n)} として、小数第1位まで）`,
           a: `$${A.a}$`, key: `${tau}|${n}`, easyCheck: false,
           easy: `残りの差 $${T1}-${Ta}=${d / n}$ は、はじめの差 $${d}$ の $\\frac{1}{${n}}$。$t=${tau}\\ln${n}\\approx${tau}\\times${LN[n]}${tail(A)}$`,
           verify: p => isRd(p.a, tau * Math.log(n)),
@@ -615,7 +615,7 @@
   });
 
   // ================================================================ 6-22
-  const raku22 = (tau, amp) => +tau === 2 || (+tau === 20 && amp === 60);   // 左ページの例（RC=2 秒で6秒後＝3τ、τ=20 分・差 60 ℃。O-2）。RC=2 秒は電圧によらず出さない
+  const raku22 = (tau, amp) => +tau === 2 || (+tau === 20 && amp === 60);   // 左ページの例（RC=2 秒で6秒後＝3τ、τ=20 分・差 60℃。O-2）。RC=2 秒は電圧によらず出さない
   const PCT = { 1: '36.8', 2: '13.5', 3: '5.0', 5: '0.7' };
   // 図（ステップ3）：曲線と、τ・3τ・5τ の目もりと点線、最後の値の点線。たての目もりは最後の値（と、はじめの値）だけ
   function fig22(f, tau, yTop, yt, ylab, fin) {
@@ -706,7 +706,7 @@
         if (T0 > 95 || raku22(tau, Dd)) return null;
         const fn = t => Ta + Dd * Math.exp(-t / tau);
         return {
-          q: `図は、部屋の温度 ${C(Ta)} で冷めるお湯の温度 $T$ のグラフ（はじめ ${C(T0)}、時定数 $\\tau=${tau}$ 分）。部屋との差がはじめの5%になる（ほぼ終わる）のは □ 分後（${eTxt(3)}）`,
+          q: `図は、部屋の温度 ${C(Ta)}で冷めるお湯の温度 $T$ のグラフ（はじめ ${C(T0)}、時定数 $\\tau=${tau}$ 分）。部屋との差がはじめの5%になる（ほぼ終わる）のは □ 分後（${eTxt(3)}）`,
           a: `$${3 * tau}$`, key: `${tau}|3`, easyCheck: false, fig: fig22(fn, tau, T0, [Ta, T0], 'T', Ta),
           easy: `$e^{-3}=0.050$ なので、5%は $3\\tau=3\\times${tau}=${3 * tau}$`,
           verify: p => { const t = numOf(p.a); return (Math.abs((fn(t) - Ta) / Dd - 0.05) < 0.0003) || `t=${t} で差が5%にならない`; },
@@ -726,7 +726,8 @@
 
   // ================================================================ 6-23
   // 差の割合 n（はじめ÷あと）と時間 t。答えは t÷ln n
-  const raku23 = (t, n) => (t === 12 && n === 4) || (t === 30 && n === 4);   // 左ページの例（O-2）
+  const raku23 = (t, n) => (+t === 12 && n === 4) || (+t === 30 && n === 4) || (+t === 6 && n === 2) || (+t === 15 && n === 2);   // 左ページの例（O-2）。t÷ln4 は (t÷2)÷ln2 と同じ τ なので、それもよける（第40回 R1-22）
+  const key23 = (t, n) => (n === 4 ? `${fmt(+t / 2)}|2` : `${t}|${n}`);   // 同じ τ を同じ key に（ln4=2ln2）
   const tau23 = (t, n, ks) => approx(F.div(D(t), D(LN[n])), +t / Math.log(n), ks || [1]);
   // 確かめ：答えの τ で e^{-t/τ} を計算すると、はかった割合 1/n になるか
   const tau23OK = (ans, t, n) => { let lo = 1e-6, hi = 1e6; for (let k = 0; k < 200; k++) { const m = Math.sqrt(lo * hi); if (Math.exp(-t / m) * n < 1) lo = m; else hi = m; } return isRd(ans, Math.sqrt(lo * hi)); };   // e^{-t/τ}=1/n を、τ をはさみうちして解いた値とくらべる
@@ -737,7 +738,7 @@
     futsu: ['$40e^{-12/\\tau}=10$ を作り、', '両辺の $\\ln$ をとって $\\tau$ について解く'],
     raku: ['$\\dfrac{40}{10}=4$ 倍にへった', '$\\tau=\\dfrac{12}{\\ln4}=\\dfrac{12}{1.386}$', '$\\approx8.7$ 分'],
     why: '差は $e^{-t/\\tau}$ 倍になるので、はじめ÷あと $=e^{t/\\tau}$。両辺の $\\ln$ をとると $\\ln(\\text{はじめ}\\div\\text{あと})=\\dfrac{t}{\\tau}$ で、$\\tau=\\dfrac{t}{\\ln(\\text{はじめ}\\div\\text{あと})}$（6-4⑤）。',
-    caution: '温度そのものではなく、部屋との差でわる（はじめ 60 ℃、部屋 20 ℃ なら差は 40 ℃）。わる向きは「はじめ÷あと」（1より大きい数）。半分なら $\\ln2$、$\\dfrac14$ なら $\\ln4$。',
+    caution: '温度そのものではなく、部屋との差でわる（はじめ 60℃、部屋 20℃なら差は 40℃）。わる向きは「はじめ÷あと」（1より大きい数）。半分なら $\\ln2$、$\\dfrac14$ なら $\\ln4$。',
     counts: { s1: 5, s2: 4, s3: 3, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '16mm', s3: '16mm', trap: '16mm' },
@@ -748,7 +749,7 @@
         if (raku23(t, n) || D0 > 75) return null;
         const A = tau23(t, n); if (!A) return null;
         return {
-          q: `部屋との温度の差が、はじめ ${C(D0)}、$${t}$ 分後に ${C(D1)} だった。時定数は約 □ 分（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: `${t}|${n}`, easyCheck: false,
+          q: `部屋との温度の差が、はじめ ${C(D0)}、$${t}$ 分後に ${C(D1)}だった。時定数は約 □ 分（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: key23(t, n), easyCheck: false,
           easy: `$\\frac{${D0}}{${D1}}=${n}$。$\\tau=\\frac{${t}}{\\ln${n}}\\approx\\frac{${t}}{${LN[n]}}${tail(A)}$`, verify: p => tau23OK(p.a, t, n),
         };
       },
@@ -759,36 +760,41 @@
         const T0 = warm ? Ta - Dd : Ta + Dd, T1 = warm ? Ta - D1 : Ta + D1;
         const A = tau23(t, n); if (!A) return null;
         return {
-          q: `部屋の温度は ${C(Ta)}。${warm ? '冷たい飲み物' : 'お湯'}の温度が、はじめ ${C(T0)}、$${t}$ 分後に ${C(T1)} だった。時定数は約 □ 分（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: `${t}|${n}`, easyCheck: false,
+          q: `部屋の温度は ${C(Ta)}。${warm ? '麦茶' : 'お湯'}の温度が、はじめ ${C(T0)}、$${t}$ 分後に ${C(T1)}だった。時定数は約 □ 分（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: key23(t, n), easyCheck: false,
           easy: `差は $${Dd}\\to${D1}$ で $\\frac{1}{${n}}$。$\\frac{${t}}{${LN[n]}}${tail(A)}$`, verify: p => tau23OK(p.a, t, n),
         };
       },
       // 見かけがちがう：放電の電圧から時定数・抵抗、半分になる時間から時定数
       s3(r) {
         const kind = turn(r, '23s3', 3);
+        // 数をさがしなおすときも同じ形のなかで（形が回って、同じ形が2問にならないように。回数に上限）
         if (kind === 0) {
-          const n = r.pick([2, 4, 10]), t = r.pick([1, 2, 3, 5, 6, 0.5]), V1 = r.pick([1, 2, 3, 2.5, 1.5]), V0 = V1 * n;
-          if (V0 > 30 || raku23(t, n)) return null;
-          const A = tau23(t, n, [2, 1]); if (!A) return null;
+          let n, t, V1, V0, A = null;
+          for (let k = 0; k < 30 && !A; k++) { n = r.pick([2, 4, 10]); t = r.pick([1, 2, 3, 5, 6, 0.5]); V1 = r.pick([1, 2, 3, 2.5, 1.5]); V0 = V1 * n; if (V0 <= 30 && !raku23(t, n)) A = tau23(t, n, [2, 1]); }
+          if (!A) return null;
           return {
-            q: `コンデンサーの放電で、電圧がはじめ ${U(fmt(V0), 'V')}、$${t}$ 秒後に ${U(fmt(V1), 'V')} だった。時定数は約 □ 秒（${lnTxt(n)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: `${t}|${n}`, easyCheck: false,
+            q: `コンデンサーの放電で、電圧がはじめ ${U(fmt(V0), 'V')}、$${t}$ 秒後に ${U(fmt(V1), 'V')} だった。時定数は約 □ 秒（${lnTxt(n)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: key23(t, n), easyCheck: false,
             easy: `$\\frac{${fmt(V0)}}{${fmt(V1)}}=${n}$。$\\frac{${t}}{${LN[n]}}${tail(A)}$`, verify: p => tau23OK(p.a, t, n),
           };
         }
         if (kind === 1) {
-          const n = r.pick([2, 4]), t = r.pick([3, 6, 9, 12]), Cc = r.pick([100, 50, 200]), V0 = r.pick([8, 12, 16]);
-          const f = F.div(F.mul(D(t), fr(1000)), F.mul(D(LN[n]), fr(Cc))), want = t * 1000 / (Math.log(n) * Cc), A = approx(f, want, [1]);
+          let n, t, Cc, V0, want, A = null;
+          for (let k = 0; k < 30 && !A; k++) {
+            n = r.pick([2, 4]); t = r.pick([3, 6, 9, 12]); Cc = r.pick([100, 50, 200]); V0 = r.pick([8, 12, 16]);
+            if (raku23(t, n)) continue;   // RC が左ページの例の τ（12÷ln4）と同じ数になる組はよける
+            want = t * 1000 / (Math.log(n) * Cc); A = approx(F.div(F.mul(D(t), fr(1000)), F.mul(D(LN[n]), fr(Cc))), want, [1]);
+          }
           if (!A) return null;
           return {
-            q: `${U(Cc, '\\mu F')} のコンデンサーを抵抗につないで放電すると、電圧がはじめ ${U(V0, 'V')}、$${t}$ 秒後に ${U(fmt(V0 / n), 'V')} だった。抵抗は約 □ kΩ（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: `R${A.a}`, easyCheck: false,
-            easy: `$RC=\\frac{${t}}{${LN[n]}}$ 秒。$R=\\frac{${t}}{${LN[n]}\\times${fmt(Cc / 1e6)}}$ Ω $${tail(A)}$ kΩ`, verify: p => isRd(p.a, want),
+            q: `${U(Cc, '\\mu F')} のコンデンサーを抵抗で放電すると、電圧がはじめ ${U(V0, 'V')}、$${t}$ 秒後に ${U(fmt(V0 / n), 'V')} だった。抵抗は約 $□\\,\\mathrm{k\\Omega}$（${lnTxt(n)} として、小数第1位まで）`, a: `$${A.a}$`, key: `R${A.a}`, easyCheck: false,
+            easy: `$RC=\\frac{${t}}{${LN[n]}}$ 秒。$R=\\frac{${t}}{${LN[n]}\\times${fmt(Cc / 1e6)}}\\,\\mathrm{\\Omega}${tail(A)}\\,\\mathrm{k\\Omega}$`, verify: p => isRd(p.a, want),
           };
         }
-        const tau = r.pick([5, 10, 20, 30, 40, 8]);
-        if (tau === 20) return null;
-        const th = roundStr(F.mul(fr(tau), D(LN[2])), 1), A = tau23(th, 2); if (!A) return null;
+        let th, A = null;
+        for (let k = 0; k < 30 && !A; k++) { const tau = r.pick([5, 10, 30, 40, 8]); th = roundStr(F.mul(fr(tau), D(LN[2])), 1); A = tau23(th, 2); }
+        if (!A) return null;
         return {
-          q: `部屋との温度の差が、はじめ ${C(60)}、$${th}$ 分後に ${C(30)} だった。時定数は約 □ 分（${lnTxt(2)} として、小数第1位まで）`, a: `$${A.a}$`, key: `${th}|2`, easyCheck: false,
+          q: `部屋との温度の差が、はじめ ${C(60)}、$${th}$ 分後に ${C(30)}だった。時定数は約 □ 分（${lnTxt(2)} として、小数第1位まで）`, a: `$${A.a}$`, key: `${th}|2`, easyCheck: false,
           easy: `半分になる時間が $${th}$ 分。$\\tau=\\frac{${th}}{0.693}${tail(A)}$`, verify: p => tau23OK(p.a, +th, 2),
         };
       },
@@ -798,7 +804,7 @@
         const D1 = F.mul(fr(D0), rF(rr)), D2 = decStr(F.mul(D1, rF(rr))), d1 = decStr(D1);
         if (!D2 || decLen(D2) > 2 || decLen(d1) > 1) return null;
         return dest({
-          q: `部屋との温度の差が、${C(D0)} から $${t}$ 分で ${C(d1)} になった。さらに $${t}$ 分後の差は □ ℃`, a: `$${D2}$`, key: `t${D0}|${rr}`,
+          q: `部屋との温度の差が、${C(D0)}から $${t}$ 分で ${C(d1)}になった。さらに $${t}$ 分後の差は □ ℃`, a: `$${D2}$`, key: `t${D0}|${rr}`,
           verify: p => isNum(p.a, +d1 * (+d1 / D0), 1e-9),
         }, '6-23', `時定数を出さなくても、同じ $${t}$ 分でもう一度 $\\frac{${d1}}{${D0}}$ 倍：$${d1}\\times\\frac{${d1}}{${D0}}=${D2}$`, ['6-16']);
       },
@@ -814,7 +820,7 @@
     title: '熱：最後の温度 $T_{\\mathrm a}+PR_{\\mathrm{th}}$、時定数 $C_{\\mathrm{th}}R_{\\mathrm{th}}$（J/K×K/W＝秒）',
     mark: '電力 $P$・熱容量 $C_{\\mathrm{th}}$・熱抵抗 $R_{\\mathrm{th}}$・部屋の温度 $T_{\\mathrm a}$。「最後の温度」「時定数」。',
     futsu: ['$C_{\\mathrm{th}}\\dfrac{\\dd T}{\\dd t}=P-\\dfrac{T-T_{\\mathrm a}}{R_{\\mathrm{th}}}$ を立て、', '目標へ近づく形に変形して解く'],
-    raku: ['はんだごて 20 W、$5\\,\\mathrm{J/K}$、$18\\,\\mathrm{K/W}$', '最後 $20+20\\times18=380$ ℃', '$\\tau=5\\times18=90$ 秒'],
+    raku: ['はんだごて 20 W、$5\\,\\mathrm{J/K}$、$18\\,\\mathrm{K/W}$', '最後 $20+20\\times18=380$℃', '$\\tau=5\\times18=90$ 秒'],
     why: '最後には温度が変わらず、入る熱 $P$ と逃げる熱 $\\dfrac{T-T_{\\mathrm a}}{R_{\\mathrm{th}}}$ がつり合う：$T=T_{\\mathrm a}+PR_{\\mathrm{th}}$。式を目標へ近づく形にすると、分母が $C_{\\mathrm{th}}R_{\\mathrm{th}}$ になる（6-4⑥）。単位は $\\dfrac{\\mathrm J}{\\mathrm K}\\times\\dfrac{\\mathrm K}{\\mathrm W}=\\dfrac{\\mathrm J}{\\mathrm J/\\mathrm s}=$ 秒。',
     caution: '最後の温度は「部屋の温度＋$PR_{\\mathrm{th}}$」（$PR_{\\mathrm{th}}$ だけではない）。最後の温度に熱容量は入らない（$C_{\\mathrm{th}}$ は時定数だけを決める）。時定数の単位は秒なので、分にするなら60でわる。',
     counts: { s1: 5, s2: 4, s3: 3, trap: 2 },
@@ -876,9 +882,9 @@
         const t = decStr(F.div(fr(Cc * dT), fr(P)));
         if (!t || decLen(t) > 1) return null;
         return dest({
-          q: `$${L}$ L の水（熱容量 ${U(Cc, 'J/K')}）を、${U(P, 'W')} のヒーターで温める。熱は逃げないとする。${C(T0)} から ${C(T0 + dT)} になるのは □ 秒後`, a: `$${t}$`, key: `t${L}|${P}|${dT}`,
+          q: `$${L}$ L の水（熱容量 ${U(Cc, 'J/K')}）を、${U(P, 'W')} のヒーターで温める。熱は逃げないとする。${C(T0)}から ${C(T0 + dT)}になるのは □ 秒後`, a: `$${t}$`, key: `t${L}|${P}|${dT}`,
           verify: p => { const T = numOf(p.a); return near(walk(() => P / Cc, T0, T, 10), T0 + dT, 1e-9) || `${p.a} 秒では ${T0 + dT} ℃ にならない`; },
-        }, '6-24', `熱抵抗がない（逃げる熱が0）ので、目標へ近づく形ではなく、1秒に $\\frac{${P}}{${Cc}}$ ℃ ずつ上がり続ける。$${dT}\\times\\frac{${Cc}}{${P}}=${t}$`, ['6-14']);
+        }, '6-24', `熱抵抗がない（逃げる熱が0）ので、目標へ近づく形ではなく、1秒に $\\frac{${P}}{${Cc}}$℃ずつ上がり続ける。$${dT}\\times\\frac{${Cc}}{${P}}=${t}$`, ['6-14']);
       },
     },
   });
@@ -886,17 +892,18 @@
   // ================================================================ 6-25
   // [R（kΩ）, C（μF）]。RC=R×C÷1000 秒
   const RC25 = [[10, 100], [50, 20], [100, 10], [1, 1000], [5, 200], [20, 50], [50, 100], [100, 50], [10, 500], [40, 100], [20, 200], [100, 100], [50, 200], [2, 500], [5, 100], [10, 50], [1, 500], [100, 20], [50, 40], [25, 40], [4, 250]];
-  const raku25 = (R, Cc) => R === 20 && Cc === 100;   // 左ページの例（O-2）
+  const raku25 = (R, Cc) => (R === 20 && Cc === 100) || (R === 100 && Cc === 20);   // 左ページの例（O-2）と、それを入れかえた組（20×100 のかけ算が同じ。N-2・第40回 R1-8）
+  const key25 = (R, Cc) => `${Math.min(R, Cc)}|${Math.max(R, Cc)}`;   // 入れかえた組は同じ問題とみる
   const rcOf = (R, Cc) => R * Cc / 1000;
   const parts25 = (E, R, Cc) => `${U(E, 'V')} の電池、${U(R, 'k\\Omega')} の抵抗、${U(Cc, '\\mu F')} の空のコンデンサーを直列につなぎ、スイッチを入れる。`;
   M.add({
     id: '6-25', part: 2, chap: '6-4⑦ 例題6・7・8', stars: 1,
     title: 'RC：放電 $V_0e^{-t/RC}$、充電 $E\\,(1-e^{-t/RC})$、スイッチを入れた直後の電流 $\\dfrac ER$（$C$・$R$ を変えると $\\tau$ だけが変わる）',
-    mark: '電池・抵抗・コンデンサーと「□ 秒後の電圧」「直後の電流」。k と μ は数に直してから。',
+    mark: '電池・抵抗・コンデンサーと「□ 秒後の電圧」「直後の電流」。$\\mathrm{k}$ と $\\mathrm{\\mu}$ は数に直してから。',
     futsu: ['$C\\dfrac{\\dd V}{\\dd t}=-\\dfrac{V}{R}$ を立てて変数分離し、', '$V=Ae^{-t/RC}$ の $A$ をはじめの電圧で決める'],
-    raku: ['$20\\,\\mathrm{kΩ}$・$100\\,\\mathrm{μF}$ →$\\tau=20000\\times0.0001=2$ 秒', '放電 10 V：2 秒後 $10e^{-1}\\approx3.7$ V', '充電：直後の電流 $\\dfrac{10}{20000}=0.5$ mA'],
+    raku: ['$20\\,\\mathrm{k\\Omega}$・$100\\,\\mathrm{\\mu F}$ → $\\tau=20000\\times0.0001=2$ 秒', '放電 $10\\,\\mathrm{V}$：2 秒後 $10e^{-1}\\approx3.7\\,\\mathrm{V}$', '充電：直後の電流 $\\dfrac{10}{20000}\\,\\mathrm{A}=0.5\\,\\mathrm{mA}$'],
     why: '放電は「自分に比例してへる」形で $y_\\infty=0$、充電は目標 $E$ へ近づく形で、どちらも $\\tau=RC$（6-4⑦）。スイッチを入れた直後はコンデンサーの電圧が0なので、電池の電圧が全部抵抗にかかり、電流は $\\dfrac ER$。$C$ や $R$ を変えても、最後の電圧（$E$ か0）は変わらない。',
-    caution: 'k は1000倍、μ は100万分の1倍。kΩ×μF は「数どうしをかけて1000でわると秒」（$20\\times100\\div1000=2$）。kΩ でわった電流は mA（$\\dfrac{10\\,\\mathrm V}{20\\,\\mathrm{kΩ}}=0.5$ mA）。',
+    caution: '$\\mathrm{k}$ は1000倍、$\\mathrm{\\mu}$ は100万分の1倍。$\\mathrm{k\\Omega}\\times\\mathrm{\\mu F}$ は「数どうしをかけて1000でわると秒」（$20\\times100\\div1000=2$）。$\\mathrm{k\\Omega}$ でわった電流は $\\mathrm{mA}$（$\\dfrac{10\\,\\mathrm V}{20\\,\\mathrm{k\\Omega}}=0.5\\,\\mathrm{mA}$）。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '16mm', s3: '16mm', trap: '16mm' },
@@ -907,10 +914,10 @@
         const [R, Cc] = r.pick(RC25), tau = rcOf(R, Cc), V0 = r.pick([10, 12, 6, 9, 5, 20]);
         if (raku25(R, Cc)) return null;
         const head = `${U(V0, 'V')} までためた ${U(Cc, '\\mu F')} のコンデンサーを、${U(R, 'k\\Omega')} の抵抗につなぐ。`;
-        if (turn(r, '25s1', 2) === 0) return { q: `${head}時定数は □ 秒`, a: `$${fmt(tau)}$`, key: `${R}|${Cc}`, easyCheck: false, easy: `$${R * 1000}\\times${fmt(Cc / 1e6)}=${fmt(tau)}$`, verify: p => isNum(p.a, (R * 1e3) * (Cc * 1e-6), 1e-9) };
+        if (turn(r, '25s1', 2) === 0) return { q: `${head}時定数は □ 秒`, a: `$${fmt(tau)}$`, key: key25(R, Cc), easyCheck: false, easy: `$${R * 1000}\\times${fmt(Cc / 1e6)}=${fmt(tau)}$`, verify: p => isNum(p.a, (R * 1e3) * (Cc * 1e-6), 1e-9) };
         const k = r.pick([1, 2, 3]), A = approx(F.mul(fr(V0), D(EXP[k])), V0 * Math.exp(-k), 'auto'); if (!A) return null;
         return {
-          q: `${head}$${fmt(k * tau)}$ 秒後の電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: `${R}|${Cc}`, easyCheck: false,
+          q: `${head}$${fmt(k * tau)}$ 秒後の電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: key25(R, Cc), easyCheck: false,
           easy: `$\\tau=${fmt(tau)}$ 秒、$${fmt(k * tau)}$ 秒は $${k === 1 ? '' : k}\\tau$。$${V0}\\times${EXP[k]}${tail(A)}$`, verify: p => isRd(p.a, walk((t, y) => -y / (R * 1e3 * Cc * 1e-6), V0, k * tau, 2000)),
         };
       },
@@ -921,11 +928,11 @@
         if (turn(r, '25s2', 2) === 0) {
           const I = decStr(F.div(fr(E), fr(R)));
           if (!I || decLen(I) > 3) return null;
-          return { q: `${parts25(E, R, Cc)}直後の電流は □ mA`, a: `$${I}$`, key: `${R}|${Cc}`, easyCheck: false, easy: `はじめコンデンサーは $0$ V なので、$\\frac{${E}}{${R}}=${I}$ mA`, verify: p => isNum(p.a, (E / (R * 1e3)) * 1e3, 1e-9) };
+          return { q: `${parts25(E, R, Cc)}直後の電流は □ mA`, a: `$${I}$`, key: key25(R, Cc), easyCheck: false, easy: `はじめコンデンサーは $0$ V なので、$\\frac{${E}}{${R}}=${I}$ mA`, verify: p => isNum(p.a, (E / (R * 1e3)) * 1e3, 1e-9) };
         }
         const k = r.pick([1, 2, 3]), A = approx(F.mul(fr(E), F.sub(fr(1), D(EXP[k]))), E * (1 - Math.exp(-k)), 'auto'); if (!A) return null;
         return {
-          q: `${parts25(E, R, Cc)}$${fmt(k * tau)}$ 秒後のコンデンサーの電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: `${R}|${Cc}`, easyCheck: false,
+          q: `${parts25(E, R, Cc)}$${fmt(k * tau)}$ 秒後のコンデンサーの電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: key25(R, Cc), easyCheck: false,
           easy: `$\\tau=${fmt(tau)}$ 秒、$${k === 1 ? '' : k}\\tau$。$${E}\\times(1-${EXP[k]})${tail(A)}$`, verify: p => isRd(p.a, walk((t, y) => (E - y) / (R * 1e3 * Cc * 1e-6), 0, k * tau, 2000)),
         };
       },
@@ -937,17 +944,17 @@
         if (kind === 0) {
           const C2 = Cc * m, tau2 = rcOf(R, C2);
           if (!Number.isInteger(C2) || raku25(R, C2)) return null;   // かえたあとが左ページの例にならない
-          return { q: `${head}コンデンサーを ${U(C2, '\\mu F')} にかえると、時定数は □ 秒`, a: `$${fmt(tau2)}$`, key: `${R}|${Cc}`, easyCheck: false, easy: `$\\tau=RC$ は $C$ に比例：$${fmt(rcOf(R, Cc))}\\times${m}=${fmt(tau2)}$`, verify: p => isNum(p.a, R * 1e3 * C2 * 1e-6, 1e-9) };
+          return { q: `${head}コンデンサーを ${U(C2, '\\mu F')} にかえると、時定数は □ 秒`, a: `$${fmt(tau2)}$`, key: key25(R, Cc), easyCheck: false, easy: `$\\tau=RC$ は $C$ に比例：$${fmt(rcOf(R, Cc))}\\times${m}=${fmt(tau2)}$`, verify: p => isNum(p.a, R * 1e3 * C2 * 1e-6, 1e-9) };
         }
         if (kind === 1) {
           const R2 = R * m;
           if (!Number.isInteger(R2) || raku25(R2, Cc)) return null;
-          return { q: `${head}抵抗を ${U(R2, 'k\\Omega')} にかえると、じゅうぶん時間がたったときの電圧は □ V`, a: `$${E}$`, key: `${R}|${Cc}`, easyCheck: false, easy: `最後の電圧は $E$ で、$R$ や $C$ によらない（$\\tau$ だけが変わる）`, verify: p => isNum(p.a, walk((t, y) => (E - y) / (R2 * Cc * 1e-3), 0, 40 * R2 * Cc / 1000, 4000), 1e-6) };
+          return { q: `${head}抵抗を ${U(R2, 'k\\Omega')} にかえると、じゅうぶん時間がたったときの電圧は □ V`, a: `$${E}$`, key: key25(R, Cc), easyCheck: false, easy: `最後の電圧は $E$ で、$R$ や $C$ によらない（$\\tau$ だけが変わる）`, verify: p => isNum(p.a, walk((t, y) => (E - y) / (R2 * Cc * 1e-3), 0, 40 * R2 * Cc / 1000, 4000), 1e-6) };
         }
         const R2 = R * m, tau2 = rcOf(R2, Cc), k = r.pick([1, 2]), A = approx(F.mul(fr(E), F.sub(fr(1), D(EXP[k]))), E * (1 - Math.exp(-k)), 'auto');
         if (!A || !Number.isInteger(R2) || raku25(R2, Cc)) return null;
         return {
-          q: `${head}抵抗を ${U(R2, 'k\\Omega')} にかえると、$${fmt(k * tau2)}$ 秒後の電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: `${R}|${Cc}`, easyCheck: false,
+          q: `${head}抵抗を ${U(R2, 'k\\Omega')} にかえると、$${fmt(k * tau2)}$ 秒後の電圧は約 □ V（${eTxt(k)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: key25(R, Cc), easyCheck: false,
           easy: `$\\tau=${R2}\\times${Cc}\\div1000=${fmt(tau2)}$ 秒、$${k === 1 ? '' : k}\\tau$。$${E}\\times(1-${EXP[k]})${tail(A)}$`, verify: p => isRd(p.a, walk((t, y) => (E - y) / (R2 * Cc * 1e-3), 0, k * tau2, 2000)),
         };
       },
@@ -969,7 +976,7 @@
   const I26 = (E, R) => { const I = F.div(fr(E), fr(R)); return F.val(I) < 1 ? { v: decStr(F.mul(I, fr(1000))), u: 'mA', x: 1000 } : { v: decStr(I), u: 'A', x: 1 }; };
   const head26 = (E, R, L) => `${U(E, 'V')} の電池、${U(R, '\\Omega')} の抵抗、${U(L, 'H')} のコイルを直列につなぎ、スイッチを入れる。`;
   M.add({
-    id: '6-26', part: 2, chap: '6-4⑦・6-5⑦ 例題9・6-5 例題8', stars: 1,
+    id: '6-26', part: 2, chap: '6-4⑦ 例題9・6-5⑦ 例題8', stars: 1,
     title: 'RL：最後の電流 $\\dfrac ER$、時定数 $\\dfrac LR$、$i=\\dfrac ER\\,(1-e^{-t/\\tau})$（電流の終端速度）',
     mark: '電池・抵抗・コイル（インダクタンス □ H）。「最後の電流」「時定数」「□ ms 後の電流」。',
     futsu: ['$E=Ri+L\\dfrac{\\dd i}{\\dd t}$ を立て、', '$\\dfrac{\\dd i}{\\dd t}=\\dfrac{\\frac ER-i}{\\frac LR}$ に変形して解く'],
@@ -1033,12 +1040,15 @@
   const raku27 = (n, T, t) => n === 3 && T === 10 && (t === 10 || t === 5);   // 左ページの例（10秒に3回。O-2）
   // 確かめ：時間を細かく分けて「その区間で起きる確率 λΔt」をかけ合わせる（0回）・1つだけ選ぶ（1回）。教科書 6-4⑨ の表と同じ道すじ
   const p0Num = x => Math.pow(1 - x / 1e6, 1e6), p1Num = x => 1e6 * (x / 1e6) * Math.pow(1 - x / 1e6, 1e6 - 1);
-  const LT = ['1', '2', '3', '0.5', '1.5', '4'];
-  // 「平均して T 秒に n 回」と、聞く時間 t（λt が LT のどれか）
-  function pick27(r) {
-    for (let k = 0; k < 30; k++) {
+  // λt の候補。左ページの例の λt=3（0回 0.050・1回 0.15 が左ページにある）は出さない。0回の確率（s1・s3 の窓口）は、例の「5 秒より長く待つ」の λt=1.5 も出さない（第40回 R1-7）
+  const LT0 = ['1', '2', '0.5', '4', '5'], LT1 = ['1', '2', '0.5', '1.5', '4'];
+  // 「平均して T 秒に n 回」と、聞く時間 t（λt が LT のどれか）。同じ見開きで、同じ「T 秒に n 回・t 秒」をくり返さない（s1 と s2。R1-7）
+  function pick27(r, LT) {
+    const used = r.u27 || (r.u27 = new Set());
+    for (let k = 0; k < 60; k++) {
+      if (k === 30) used.clear();   // 見つからないとき（アプリで何問も作るとき）は、ひとまわりしたとみて、また使う
       const n = r.pick([1, 2, 3, 4, 5, 6]), T = r.pick([10, 20, 30, 60, 5, 2]), x = r.pick(LT), t = +x * T / n;
-      if (Number.isInteger(t) && t > 0 && T > n && !raku27(n, T, t)) return { n, T, x, t };   // 「2 秒に 2 回」のような書き方はさける
+      if (Number.isInteger(t) && t > 0 && T > n && !raku27(n, T, t) && !used.has(`${n}|${T}|${t}`)) { used.add(`${n}|${T}|${t}`); return { n, T, x, t }; }   // 「2 秒に 2 回」のような書き方はさける
     }
     return null;
   }
@@ -1057,7 +1067,7 @@
     steps: {
       // 0回の確率
       s1(r) {
-        const P = pick27(r); if (!P) return null;
+        const P = pick27(r, LT0); if (!P) return null;
         const { n, T, x, t } = P, A = approx(D(EXP[x]), Math.exp(-x), [3]); if (!A) return null;
         return {
           q: `ガイガーカウンターが、平均して $${T}$ 秒に $${n}$ 回鳴る。$${t}$ 秒間に1回も鳴らない確率は約 □（${eTxt(x)} として、小数第3位まで）`, a: `$${A.a}$`, key: `0|${x}`, easyCheck: false,
@@ -1066,7 +1076,7 @@
       },
       // ちょうど1回の確率
       s2(r) {
-        const P = pick27(r); if (!P) return null;
+        const P = pick27(r, LT1); if (!P) return null;
         const { n, T, x, t } = P, A = approx(F.mul(D(x), D(EXP[x])), +x * Math.exp(-x), [3, 2]); if (!A) return null;
         return {
           q: `放射線を数えると、平均して $${T}$ 秒に $${n}$ 回だった。$${t}$ 秒間に、ちょうど1回数える確率は約 □（${eTxt(x)} として、${keta(A.k)}）`, a: `$${A.a}$`, key: `1|${x}`, easyCheck: false,
@@ -1077,12 +1087,12 @@
       s3(r) {
         const kind = turn(r, '27s3', 2), lam = r.pick([2, 3, 4, 6, 1]);
         if (kind === 0) {
-          const x = r.pick(LT), sec = +x / lam * 60;
+          const x = r.pick(LT0), sec = +x / lam * 60, mn = F.make(sec, 60), mnTeX = decStr(mn) || `\\frac{${mn[0]}}{${mn[1]}}`;   // 秒を分に。割り切れないときは分数（20 秒は $\frac13$ 分。第40回 S-1・R1-5）
           if (!Number.isInteger(sec)) return null;
           const A = approx(D(EXP[x]), Math.exp(-x), [3]); if (!A) return null;
           return {
             q: `ある窓口には、平均して1分に $${lam}$ 人が来る（来る時刻はばらばら）。次の人が来るまで $${sec}$ 秒より長く待つ確率は約 □（${eTxt(x)} として、小数第3位まで）`, a: `$${A.a}$`, key: `m${x}`, easyCheck: false,
-            easy: `$${sec}$ 秒 $=${fmt(sec / 60)}$ 分。$\\lambda t=${lam}\\times${fmt(sec / 60)}=${x}$、$e^{-${x}}\\approx${EXP[x]}$`, verify: p => isRd(p.a, p0Num(+x)),
+            easy: `$${sec}$ 秒は $${mnTeX}$ 分。$\\lambda t=${lam}\\times${mnTeX}=${x}$、$e^{-${x}}\\approx${EXP[x]}$`, verify: p => isRd(p.a, p0Num(+x)),
           };
         }
         const T = r.pick([10, 20, 60, 30]), n = r.pick([2, 3, 4, 5, 6]), w = decStr(F.div(fr(T), fr(n)));
@@ -1171,8 +1181,9 @@
   });
 
   // ================================================================ 6-29
-  const raku29 = (m, a) => m === 60 && (Math.abs(a) === 1 || Math.abs(a - 0.49) < 1e-9);   // 左ページの例（60 kg、±1、目もり 63.0 kg。O-2）
-  const AS29 = ['0.49', '0.98', '1.96', '2.45', '1', '1.5', '0.5', '2', '0.7', '1.4'];
+  // 左ページの例（60 kg、±1、目もり 63.0 kg → 0.49。O-2）。目もりは質量に比例するので、例と同じ加速度の大きさ（1・0.49）は質量によらず出さず、60 kg も出さない（第40回 R1-22）
+  const raku29 = (m, a) => m === 60 || Math.abs(Math.abs(a) - 1) < 1e-9 || Math.abs(Math.abs(a) - 0.49) < 1e-9;
+  const AS29 = ['0.98', '1.96', '2.45', '1.5', '0.5', '2', '0.7', '1.4'];
   // 目もり m(g+a)/g（分数）。ちょうどの小数なら「□」、丸めるなら「約 □（小数第1位まで）」
   function scale29(m, a) {
     const f = F.div(F.mul(fr(m), F.add(D('9.8'), D(a))), D('9.8')), ex = decStr(f);
@@ -1196,7 +1207,7 @@
     steps: {
       // 加速度の向きと大きさから目もり
       s1(r) {
-        const m = r.pick([40, 45, 50, 55, 60, 65, 70, 75, 80]), ab = r.pick(AS29), up = r.chance(0.55), a = (up ? 1 : -1) * +ab;
+        const m = r.pick([40, 45, 50, 55, 65, 70, 75, 80]), ab = r.pick(AS29), up = r.chance(0.55), a = (up ? 1 : -1) * +ab;
         if (raku29(m, a)) return null;
         const S = scale29(m, up ? ab : '-' + ab); if (!S) return null;
         return {
@@ -1206,7 +1217,7 @@
       },
       // 動き方のことばから、加速度の向きを読む
       s2(r) {
-        const m = r.pick([40, 45, 50, 55, 60, 65, 70, 75, 80]), ab = r.pick(AS29), sc = r.pick([['上へ動き出す', 1], ['上へ動いていて止まる', -1], ['下へ動き出す', -1], ['下へ動いていて止まる', 1]]), a = sc[1] * +ab;
+        const m = r.pick([40, 45, 50, 55, 65, 70, 75, 80]), ab = r.pick(AS29), sc = r.pick([['上へ動き出す', 1], ['上へ動いていて止まる', -1], ['下へ動き出す', -1], ['下へ動いていて止まる', 1]]), a = sc[1] * +ab;
         if (raku29(m, a)) return null;
         const S = scale29(m, sc[1] > 0 ? ab : '-' + ab); if (!S) return null;
         return {
@@ -1218,14 +1229,14 @@
       s3(r) {
         const kind = turn(r, '29s3', 3);
         if (kind < 2) {
-          const m = r.pick([40, 50, 60, 70, 80, 100]), rat = r.pick(['1.05', '0.95', '1.1', '0.9', '1.2', '0.8', '1.15', '0.85']), R = decStr(F.mul(fr(m), D(rat))), a = decStr(F.mul(D('9.8'), F.sub(D(rat), fr(1))));
+          const m = r.pick([40, 50, 70, 80, 100]), rat = r.pick(['1.1', '0.9', '1.2', '0.8', '1.15', '0.85']), R = decStr(F.mul(fr(m), D(rat))), a = decStr(F.mul(D('9.8'), F.sub(D(rat), fr(1))));   // 1.05・0.95（±0.49）は左ページの例の答え
           if (raku29(m, +a) || decLen(R) > 1 || +R === 63) return null;   // 左ページの例（目もり 63.0 kg）
           return {
-            q: `体重 ${U(m, 'kg')} の人が、エレベーターの中の体重計に乗ると、目もりが ${U(R + (decLen(R) ? '' : '.0'), 'kg')} だった。エレベーターの加速度（上向きを正）は □ $\\mathrm{m/s^{2}}$（$g=9.8$）`, a: `$${a}$`, key: `${fmt(+a)}`, easyCheck: false,
+            q: `体重 ${U(m, 'kg')} の人が、エレベーターの中の体重計に乗ると、目もりが ${U(R + (decLen(R) ? '' : '.0'), 'kg')} だった。エレベーターの加速度（上向きを正）は $□\\,\\mathrm{m/s^{2}}$（$g=9.8$）`, a: `$${a}$`, key: `${fmt(+a)}`, easyCheck: false,
             easy: `$\\frac{${R}}{${m}}=${rat}$。$a=9.8\\times(${rat}-1)=${a}$`, verify: p => { const A = numOf(p.a); return near(m * (9.8 + A) / 9.8, +R, 1e-9) || `a=${A} では目もりが ${R} にならない`; },
           };
         }
-        const m = r.pick([40, 50, 60, 70]);
+        const m = r.pick([40, 50, 70, 80]);
         return { q: `体重 ${U(m, 'kg')} の人がエレベーターの中で体重計に乗っている。ケーブルが切れて、エレベーターが自由落下する（加速度は下向きに $g$）と、目もりは □ kg`, a: '$0$', key: `-9.8`, easyCheck: false, easy: `$a=-9.8$ で、$${m}\\times\\frac{9.8-9.8}{9.8}=0$（無重量）`, verify: p => scaleOK(p.a, m, -9.8) };
       },
       // わな：エレベーターでなく、2乗の抵抗の終端速度 → わざ 6-28
@@ -1267,8 +1278,8 @@
       // 熱容量と熱抵抗から（係数か、時定数を分で）
       s2(r) {
         const [Cc, R] = r.pick(CR30), S = Cc * R, Ta = r.pick([20, 25, 22]), k = k30(S);
-        if (S === 1200 || !k) return null;
-        const head = `熱容量 ${U(Cc, 'J/K')} の物が、熱抵抗 ${U(R, 'K/W')} で ${C(Ta)} の部屋へ熱を逃がす。`;
+        if (S === 1200 || Cc === 1000 || !k) return null;   // 左ページの例（1000 J/K・1.2 K/W、部屋 20℃）の熱容量はよける（第40回 R1-22）
+        const head = `熱容量 ${U(Cc, 'J/K')} の物が、熱抵抗 ${U(R, 'K/W')} で ${C(Ta)}の部屋へ熱を逃がす。`;
         if (turn(r, '30s2', 2) === 0) return { q: `${head}$t$ を分にした式 $${DY('T')}=-k\\,(T-${Ta})$ の $k$（1/分）`, a: `$${k}$`, key: `${S}`, easyCheck: false, easy: `秒の式は $-\\frac{T-${Ta}}{${Cc}\\times${R}}=-\\frac{T-${Ta}}{${S}}$。$\\frac{60}{${S}}=${k}$`, verify: p => sameRule(S, numOf(p.a), Ta) || `係数 ${p.a} がちがう` };
         const m = decStr(F.div(fr(S), fr(60)));
         if (!m || decLen(m) > 1) return null;
@@ -1296,7 +1307,7 @@
         const k = r.pick(['0.1', '0.04', '0.02', '0.2', '0.025']), Ta = r.pick([20, 25]), Dd = r.pick([60, 40, 50]), T0 = Ta + Dd, tau = 1 / +k;
         const A = approx(F.mul(fr(60 * tau), D(LN[2])), 60 * tau * Math.LN2, [0]); if (!A) return null;
         return dest({
-          q: `部屋の温度は ${C(Ta)}。$${DY('T')}=-${k}\\,(T-${Ta})$（$t$ は分）、はじめ ${C(T0)}。${C(Ta + Dd / 2)} になるのは約 □ 秒後（${lnTxt(2)} として、整数で）`, a: `$${A.a}$`, key: `t${k}|${Dd}`,
+          q: `部屋の温度は ${C(Ta)}。$${DY('T')}=-${k}\\,(T-${Ta})$（$t$ は分）、はじめ ${C(T0)}。${C(Ta + Dd / 2)}になるのは約 □ 秒後（${lnTxt(2)} として、整数で）`, a: `$${A.a}$`, key: `t${k}|${Dd}`,
           verify: p => isRd(p.a, 60 * tau * Math.LN2),
         }, '6-30', `式を直すのではなく、時刻を求める。差が半分なので $${fmt(tau)}\\ln2$ 分、それを60倍：$${fmt(tau)}\\times0.693\\times60${tail(A)}$`, ['6-20']);
       },
@@ -1312,10 +1323,10 @@
     id: '6-94', part: 2, chap: '6-5④ 例題4', stars: 1,
     title: '2乗の抵抗のオイラー法：加速度 $9.8-kv^2$ を出して、次の速さ＝今の速さ＋加速度×$\\Delta t$',
     mark: '$\\dfrac{\\dd v}{\\dd t}=9.8-kv^2$ と「$\\Delta t=\\square$ 秒のオイラー法で □ 秒後の速さ」。',
-    futsu: ['式で解こうとして、', '変数分離の積分（$\\tanh$ が出る）で止まる'],
+    futsu: ['表計算に、加速度の列と速さの列の式を入れ、', '下へコピーして表を作り、', '□ 秒後の行の速さを読む'],
     raku: ['0 秒：$a=9.8$、1 秒後 $v=0+9.8\\times1=9.8$', '1 秒：$a=9.8-0.00325\\times9.8^2=9.488$', '2 秒後 $v=9.8+9.488\\times1\\approx19.3$'],
     why: '2乗の抵抗の式は、目標へ近づく形にならない（$e$ の式で書けない）。そこで、6-2のオイラー法で1行ずつ進める（6-5④）：今の速さから今の加速度を出し、次の速さ＝今の速さ＋加速度×$\\Delta t$。',
-    caution: '加速度は「今の速さ」で計算する（次の速さではない）。$kv^2$ は $v$ を2乗してから $k$ をかける。$\\Delta t$ が1でないときは、加速度に $\\Delta t$ をかけるのを忘れない。',
+    caution: '加速度は「今の速さ」で計算する（次の速さではない）。$kv^2$ は $v$ を2乗してから $k$ をかける。$\\Delta t$ が1でないときは、加速度に $\\Delta t$ をかけるのを忘れない。変数分離で式を解こうとすると $\\tanh$ が出て、手では進めにくい。',
     counts: { s1: 4, s2: 2, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '16mm', s2: '16mm', s3: '16mm', trap: '16mm' },
@@ -1371,5 +1382,25 @@
           `1行ずつ進めなくても、$${DY('v')}=0$ とおけば $v=\\sqrt{\\frac{9.8}{${k}}}=${v}$`, ['6-28']);
       },
     },
+  });
+
+  // ---------------------------------------------------------------- 答えの「y=」（第40回 S-11）
+  // 文に □ がない問題は、文の末尾に「＝ □」がつくので、答えには「y=」を書かない（「＝」が重ならないように）。
+  //   「…を $t$ の式で □」のように文に □ があるときは、答えは「V=…」のまま
+  ['6-16', '6-17', '6-18', '6-19', '6-20', '6-21', '6-22', '6-23', '6-24', '6-25', '6-26', '6-27', '6-28', '6-29', '6-30', '6-94'].forEach(id => {
+    const d = M.waza[id];
+    Object.keys(d.steps).forEach(st => {
+      const f = d.steps[st];
+      d.steps[st] = r => { const p = f(r); if (p && !String(p.q).includes('□')) p.a = String(p.a).replace(/^\$[A-Za-z]+=/, '$'); return p; };
+    });
+  });
+  // ---------------------------------------------------------------- わなの答えと s3 の答えを重ねない（第40回 S-2）
+  // 同じ見開き（アプリでは同じプリント）で、s3 に出た答えと同じ答えのわなは出さない（作りなおす。makeStep の回数の上限の中で）
+  ['6-16', '6-17', '6-18', '6-19', '6-20', '6-21', '6-22', '6-23', '6-24', '6-25', '6-26', '6-27', '6-28', '6-29', '6-30', '6-94'].forEach(id => {
+    const d = M.waza[id], s3 = d.steps.s3, trap = d.steps.trap;
+    if (!s3 || !trap) return;
+    const seen = r => { const o = r.s3ans || (r.s3ans = {}); return o[id] || (o[id] = new Set()); };
+    d.steps.s3 = r => { const p = s3(r); if (p) seen(r).add(String(p.a)); return p; };
+    d.steps.trap = r => { const p = trap(r); return p && seen(r).has(String(p.a)) ? null : p; };
   });
 })(globalThis.MONDAI);
