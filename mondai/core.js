@@ -750,7 +750,7 @@
   //   ['tick', P, Q, n]                          辺 PQ のまん中に、同じ長さのしるし（n 本）
   //   ['grid', x0, y0, x1, y1]                   方眼（1単位ごと）
   //   ['axes', x0, x1, y0, y1, {x: 'x', y: 'y', o: true}]   座標軸（矢じりつき）と O
-  const FIGSYM = { ell: 'ℓ', sojisym: '∽', infty: '∞', lvert: '|', rvert: '|', mid: '|', pm: '±', le: '≤', ge: '≥', leqq: '≦', geqq: '≧', sim: '∽', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
+  const FIGSYM = { tau: 'τ', lambda: 'λ', mu: 'μ', Delta: 'Δ', Omega: 'Ω', sigma: 'σ', zeta: 'ζ', delta: 'δ', rho: 'ρ', eta: 'η', kappa: 'κ', nu: 'ν', psi: 'ψ', infty: '∞', to: '→', approx: '≈', cdots: '⋯', ell: 'ℓ', sojisym: '∽', infty: '∞', lvert: '|', rvert: '|', mid: '|', pm: '±', le: '≤', ge: '≥', leqq: '≦', geqq: '≧', sim: '∽', theta: 'θ', alpha: 'α', beta: 'β', gamma: 'γ', phi: 'φ', varphi: 'φ', pi: 'π', omega: 'ω', circ: '°', degree: '°', times: '×', cdot: '·', prime: '′', perp: '⊥', parallel: '∥', angle: '∠', triangle: '△' };
   function figText(s) {   // SVG の字：$…$ の中の文字は斜体、TeX の記号は Unicode に
     return String(s).split(/(\$[^$]*\$)/).map((seg, k) => {
       if (!(k % 2)) return htmlEsc(seg.replace(/-(?=\d)/g, '−'));   // 式の外の「-20」もマイナスの字に
