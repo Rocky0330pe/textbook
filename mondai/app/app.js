@@ -173,7 +173,8 @@
       }
       const how = ans && p.easy ? `<span class="how">${H(st.vol > 1 ? '《解|と》き《方|かた》' : 'とき《方|かた》', { noRuby: !st.ruby })} ［${H(p.easy, { noRuby: !st.ruby, box: '<span class="sq"></span>' })}］</span>` : '';
       const fig = p.fig ? `<div class="qfig">${M.figSVG(p.fig)}</div>` : '';   // 図（第4巻から。第35回）
-      return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}${p.fig ? ' hasfig' : ''}"><span class="q">${body}</span>${fig}${extra}${how}</li>`;
+      const below = (p.table ? `<div class="qbelow">${M.tableHTML(p.table, { noRuby: !st.ruby, box: '<span class="box sm"></span>' })}</div>` : '') + (p.code ? `<div class="qbelow">${M.codeHTML(p.code)}</div>` : '');   // 表・プログラム（第6巻から）
+      return `<li class="${len > (oneCol ? 40 : 15) ? 'long' : ''}${ans ? ' a' : ''}${p.fig ? ' hasfig' : ''}"><span class="q">${body}${below}</span>${fig}${extra}${how}</li>`;
     };
     const ruleBox = () => {
       // こたえの1ページめに、わざの「楽な形」のまとめ（わざが3つまでのとき）

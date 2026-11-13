@@ -19,6 +19,9 @@ function box(def, step, p) { const w = M.boxwOf(def, step, p), h = M.boxhOf(def,
 const SQ = { box: '\\mqsq{}' };   // 説明の文の □ は、書きこむ欄ではない
 function probLine(def, p, num, extra) {
   const q = M.withBox(p.q);
+  // 表・プログラム（第6巻から。第39回）：文の下に置く
+  const below = (p.table ? `\\mqfig{${M.tableTeX(p.table, { box: '\\mqbox[10mm]' })}}` : '') + (p.code ? `\\mqcodeblock{${M.codeTeX(p.code)}}` : '');
+  if (below) return `\\mqp{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}${below}}`;
   if (p.fig) return `\\mqpf{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}{${M.figTeX(p.fig)}}`;   // 図（第4巻から。第35回）：文の右に図
   return `\\mqp{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}`;
 }

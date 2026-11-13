@@ -277,8 +277,8 @@
   //   \times \div \cdot \pm \mp \pi \le \ge \ne \approx \to \infty \degree・\log \ln \sin \cos \tan \exp・\left( \right)・\text{}・\mathrm{}・\,・\quad・□（欄）
   const MATHSYM = { times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', pi: 'π', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠',
     approx: '≒', ell: 'ℓ', sojisym: '∽', backsim: '∽', infty: '∞', leqq: '≦', geqq: '≧', lvert: '|', rvert: '|', vert: '|', mid: '|', square: '□', triangle: '△', angle: '∠', perp: '⊥', parallel: '∥', fallingdotseq: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
-    Delta: 'Δ', omega: 'ω', Omega: 'Ω', tau: 'τ', Sigma: 'Σ', ll: '≪', gg: '≫', partial: '∂', gamma: 'γ', varepsilon: 'ε', epsilon: 'ε', kappa: 'κ', nu: 'ν', xi: 'ξ', eta: 'η', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
-  const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min'];
+    Delta: 'Δ', omega: 'ω', Omega: 'Ω', zeta: 'ζ', delta: 'δ', psi: 'ψ', Psi: 'Ψ', Phi: 'Φ', Lambda: 'Λ', leftrightarrow: '↔', Leftrightarrow: '⇔', Rightarrow: '⇒', mapsto: '↦', neq: '≠', top: 'T', tau: 'τ', Sigma: 'Σ', ll: '≪', gg: '≫', partial: '∂', gamma: 'γ', varepsilon: 'ε', epsilon: 'ε', kappa: 'κ', nu: 'ν', xi: 'ξ', eta: 'η', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
+  const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'sinh', 'cosh', 'tanh', 'arg', 'det', 'tr', 'rank'];
   M.mathHTML = function (src, opt) {
     opt = opt || {};
     const s = src;
@@ -316,6 +316,25 @@
           return `<span class="mop"><span class="mopu">${hi}</span>${sym}<span class="mopd">${lo}</span></span>`;
         }
         if (name === 'dd') return 'd';
+        if (name === 'mathsf' || name === 'mathbf' || name === 'boldsymbol') return `<span class="mtext m${name}">${M.mathHTML(raw(), Object.assign({}, opt, { upright: name === 'mathsf' })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
+        if (name === 'texttt') return `<code>${htmlEsc(raw())}</code>`;
+        if (name === 'xrightarrow' || name === 'xleftarrow') { ws(); let lo = ''; if (s[i] === '[') { const j = s.indexOf(']', i); lo = M.mathHTML(s.slice(i + 1, j), opt).replace(/^<span class="math">|<\/span>$/g, ''); i = j + 1; } const up = M.mathHTML(raw(), opt).replace(/^<span class="math">|<\/span>$/g, ''); return `<span class="mop mxarrow"><span class="mopu">${up}</span><span class="mxa">${name === 'xrightarrow' ? '⟶' : '⟵'}</span><span class="mopd">${lo}</span></span>`; }
+        // 行列（第7巻から。第39回）：\begin{pmatrix} … \end{pmatrix}・bmatrix・vmatrix・matrix・array{rr|r}
+        if (name === 'begin') {
+          const env = raw(); let spec = '';
+          if (env === 'array') spec = raw();
+          const endTag = `\\end{${env}}`, j = s.indexOf(endTag, i); if (j < 0) return '';
+          const body = s.slice(i, j); i = j + endTag.length;
+          const split = (t, sep) => { const out = []; let d = 0, k0 = 0; for (let k = 0; k < t.length; k++) { const ch = t[k]; if (ch === '{') d++; else if (ch === '}') d--; else if (d === 0 && t.startsWith(sep, k) && (sep !== '\\\\' || t[k - 1] !== '\\')) { out.push(t.slice(k0, k)); k0 = k + sep.length; k += sep.length - 1; } } out.push(t.slice(k0)); return out; };
+          const rows = split(body.replace(/\\\\\[[^\]]*\]/g, '\\\\'), '\\\\').map(r => r.trim()).filter((r, k, a) => r || k < a.length - 1).filter(r => r !== '');
+          const cells = rows.map(r => split(r, '&').map(c => M.mathHTML(c.trim(), opt).replace(/^<span class="math">|<\/span>$/g, '')));
+          const nc = Math.max(...cells.map(r => r.length)), bar = []; let col = 0; for (const ch of spec) { if (ch === '|') bar.push(col); else if (/[lcr]/.test(ch)) col++; }
+          const grid = cells.map(r => Array.from({ length: nc }, (_, k) => `<span class="mcell${bar.includes(k) && k > 0 ? ' mbar-l' : ''}">${r[k] || ''}</span>`).join('')).join('');
+          const g = `<span class="mgrid" style="grid-template-columns:repeat(${nc},auto)">${grid}</span>`;
+          const D = { pmatrix: ['(', ')'], bmatrix: ['[', ']'], vmatrix: ['|', '|'], Bmatrix: ['{', '}'] }[env];
+          return `<span class="mmat">${D ? `<span class="mmd">${D[0]}</span>` : ''}${g}${D ? `<span class="mmd">${D[1]}</span>` : ''}</span>`;
+        }
+        if (name === 'end') { raw(); return ''; }
         if (name === 'dot' || name === 'ddot') return `<span class="m${name}">${atom()}</span>`;
         if (/^(Bigl|Bigr|bigl|bigr|Biggl|Biggr|bigg|Bigg)$/.test(name)) { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? `<span class="mdelim mbigd">${n2}</span>` : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim mbigd">${htmlEsc(d)}</span>`; }
         if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim">${htmlEsc(d)}</span>`; }
@@ -765,6 +784,12 @@
         if (cur.length > 1) its.push(['path', cur, st]);
         return its;
       },
+      // 傾きの場（第6巻から）：f(x, y) の傾きの短い線分を、方眼の点ごとに。len は図の上の長さ（単位）
+      field(f, xs, ys, st) {
+        st = st || {}; const L = st.len || 0.6, its = [];
+        for (const x of xs) for (const y of ys) { const m = f(x, y); if (!isFinite(m)) continue; const dx = sx, dy = m * sy, d = Math.hypot(dx, dy); const ux = dx / d * L / 2, uy = dy / d * L / 2, c = T(x, y); its.push(['seg', [c[0] - ux, c[1] - uy], [c[0] + ux, c[1] + uy], st]); }
+        return its;
+      },
       area(f, g, a, b, st) {
         st = Object.assign({ fill: true, noline: true }, st || {}); const n = st.n || 60, top = [], bot = [];
         for (let k = 0; k <= n; k++) { const x = a + (b - a) * k / n; top.push(T(x, f(x))); bot.push(T(x, g ? g(x) : 0)); }
@@ -772,6 +797,32 @@
       },
     };
   };
+  // 複素平面（第6巻から）：M.graph と同じで、軸の名前は Re・Im、虚軸の目もりは j・2j…
+  M.cplane = function (o) {
+    const G = M.graph(o), jf = t => '$' + (t === 1 ? 'j' : t === -1 ? '-j' : t + 'j') + '$';
+    G.axes = (ax => a => ax(Object.assign({ x: '\\mathrm{Re}', y: '\\mathrm{Im}', yfmt: jf }, a || {})))(G.axes);
+    G.point = (re, im, lab, dir, arrow) => { const P = G.T(re, im), its = [['dot', P], ['label', P, lab, dir || 'ne']]; if (arrow) its.unshift(['seg', G.T(0, 0), P, { arrow: true }]); return its; };
+    return G;
+  };
+  // 図の部品（第7巻から）：ばね（ジグザグ）と抵抗（長方形）。項目の配列を返す
+  M.figSpring = function (P, Q, o) {
+    o = o || {}; const n = o.n || 6, w = o.w || 0.3, lead = o.lead || 0.15, dx = Q[0] - P[0], dy = Q[1] - P[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, vx = -uy, vy = ux, pts = [P];
+    const a = P.map((v, k) => v + [ux, uy][k] * L * lead), b = Q.map((v, k) => v - [ux, uy][k] * L * lead), seg = (L * (1 - 2 * lead)) / (2 * n);
+    pts.push(a); for (let k = 0; k < 2 * n; k++) { const t = (k + 0.5) * seg, sg = k % 2 ? -1 : 1; pts.push([a[0] + ux * t + vx * w * sg, a[1] + uy * t + vy * w * sg]); } pts.push(b, Q);
+    return [['path', pts, o.st || {}]];
+  };
+  M.figResistor = function (P, Q, o) {
+    o = o || {}; const len = o.len || 1.2, w = o.w || 0.4, dx = Q[0] - P[0], dy = Q[1] - P[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, vx = -uy * w / 2, vy = ux * w / 2;
+    const m = [(P[0] + Q[0]) / 2, (P[1] + Q[1]) / 2], a = [m[0] - ux * len / 2, m[1] - uy * len / 2], b = [m[0] + ux * len / 2, m[1] + uy * len / 2];
+    return [['seg', P, a], ['poly', [[a[0] + vx, a[1] + vy], [b[0] + vx, b[1] + vy], [b[0] - vx, b[1] - vy], [a[0] - vx, a[1] - vy]]], ['seg', b, Q]];
+  };
+  // 問題に出す表とプログラム（第6巻から。第39回）
+  //   p.table = { head: ['$t$', '$x$', …], rows: [['0', '1.00', …], …] }（文字は $…$ の式も書ける。□ は欄）
+  //   p.code = 'x = 1\nfor k in range(3):\n    x = 2 * x'（複数行のプログラム。等幅でそのまま）
+  M.tableHTML = (t, opt) => `<table class="qtab">${t.head ? `<tr>${t.head.map(c => `<th>${M.toHTML(String(c), opt)}</th>`).join('')}</tr>` : ''}${t.rows.map(r => `<tr>${r.map(c => `<td>${M.toHTML(String(c), opt)}</td>`).join('')}</tr>`).join('')}</table>`;
+  M.tableTeX = (t, opt) => { const n = Math.max(t.head ? t.head.length : 0, ...t.rows.map(r => r.length)); return `{\\setlength{\\tabcolsep}{2.5mm}\\renewcommand{\\arraystretch}{1.35}\\begin{tabular}{|${'c|'.repeat(n)}}\\hline ${t.head ? t.head.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline\\hline ' : ''}${t.rows.map(r => r.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline').join(' ')}\\end{tabular}}`; };
+  M.codeHTML = c => `<pre class="qcode">${htmlEsc(String(c))}</pre>`;
+  M.codeTeX = c => String(c).split('\n').map(l => '\\mqcodeline{' + l.replace(/[\\{}$&#%_^~]/g, ch => ({ '\\': '\\textbackslash{}', '^': '\\textasciicircum{}', '~': '\\textasciitilde{}' })[ch] || '\\' + ch).replace(/ /g, '\\ ') + '}').join('');
   // 立体の見取図：(x 右, y おく行き, z 上) を紙の上の点に（斜投影。おく行きは k 倍して、角 deg の向きへ）
   M.proj3 = (p, k = 0.5, deg = 30) => [p[0] + k * p[1] * Math.cos(deg * Math.PI / 180), p[2] + k * p[1] * Math.sin(deg * Math.PI / 180)];
   //   立体の例：const Q = p => M.proj3(p); items: [['poly', [Q([0,0,0]), Q([3,0,0]), Q([3,0,2]), Q([0,0,2])]], ['seg', Q([0,0,0]), Q([0,4,0]), {dash: true}], …]
@@ -1000,6 +1051,26 @@
         }
         if (!isFinite(I)) errs.push('calc：中身が読めない'); else if (Math.abs(I - va) > 3e-5 * Math.max(1, Math.abs(I), Math.abs(va))) errs.push(`calc：定積分がちがう（${I} と ${va}）`);
       }
+    } else if (c.kind === 'ode') {
+      // 微分方程式の解（第6巻から）：c.coef = [a_n, …, a_1, a_0]（a_n x^{(n)} + … + a_0 x）、c.rhs（右辺。t の式。省くと 0）、
+      // c.init = [[t0, 値, 何回微分した値か], …]。答え ans（t の式）を入れて、左辺＝右辺と、はじめの値を確かめる
+      const h = 1e-3, X0 = x => ev(ans, x);
+      const der = (x, k) => k === 0 ? X0(x) : k === 1 ? (X0(x + h) - X0(x - h)) / (2 * h) : k === 2 ? (X0(x + h) - 2 * X0(x) + X0(x - h)) / (h * h) : NaN;
+      const coef = c.coef.map(v => +M.evalMath(String(v), {})), n = coef.length - 1;
+      for (const x of pts) {
+        let lhs = 0; for (let k = 0; k <= n; k++) lhs += coef[k] * der(x, n - k);
+        const rhs = c.rhs != null ? ev(String(c.rhs), x) : 0;
+        if (!isFinite(lhs) || rhs == null) { errs.push(`calc：式が読めない（${ans}）`); break; }
+        if (Math.abs(lhs - rhs) > 2e-3 * Math.max(1, Math.abs(rhs), Math.abs(X0(x)))) { errs.push(`calc：微分方程式をみたさない（${X}=${x} で 左 ${lhs.toFixed(5)}、右 ${(+rhs).toFixed(5)}）`); break; }
+      }
+      for (const [t0, v0, k] of (c.init || [])) { const d = der(+M.evalMath(String(t0), {}), k || 0), w = +M.evalMath(String(v0), {}); if (!(Math.abs(d - w) <= 2e-3 * Math.max(1, Math.abs(w)))) errs.push(`calc：はじめの値がちがう（${k ? k + '回微分' : '値'} ${d.toFixed(5)} と ${w}）`); }
+    } else if (c.kind === 'mat') {
+      // 行列・ベクトルの答え（第7巻から）：c.want は正しい行列（M.Mat の分数の行列か、数・TeX の2重の配列）。答えの pmatrix と成分ごとにくらべる
+      const got = M.readMat(c.ans != null ? c.ans : p.a);
+      const want = c.want.map(r => r.map(v => (Array.isArray(v) && v.length === 2 && typeof v[0] === 'number' && Number.isInteger(v[1]) && v[1] > 0 && !c.complex ? [v[0] / v[1], 0] : M.evalC(String(v), {}))));
+      if (!got) errs.push('calc：答えの行列が読めない');
+      else if (got.length !== want.length || got.some((r, i) => r.length !== want[i].length)) errs.push('calc：行列の大きさがちがう');
+      else if (got.some((r, i) => r.some((v, j) => !want[i][j] || Math.hypot(v[0] - want[i][j][0], v[1] - want[i][j][1]) > 1e-9 * Math.max(1, Math.hypot(...want[i][j]))))) errs.push('calc：行列の成分がちがう');
     } else errs.push('calc：kind がちがう');
     return errs;
   };
@@ -1026,6 +1097,50 @@
       return o || '0';
     },
   };
+  // 行列（第7巻から。第39回）：成分は M.F の分数。A = M.Mat.make([[1, 2], [3, 4]])
+  M.Mat = (() => {
+    const F = M.F, fr = v => (Array.isArray(v) ? v : F.make(v)), Z = F.make(0), O = F.make(1);
+    const make = rows => rows.map(r => r.map(fr));
+    const dims = A => [A.length, A[0].length];
+    const map2 = (A, B, f) => A.map((r, i) => r.map((x, j) => f(x, B[i][j])));
+    const mul = (A, B) => A.map((r, i) => B[0].map((_, j) => r.reduce((acc, x, k) => F.add(acc, F.mul(x, B[k][j])), Z)));
+    const eye = n => Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? O : Z)));
+    const det = A => {
+      const n = A.length; if (n === 1) return A[0][0];
+      if (n === 2) return F.sub(F.mul(A[0][0], A[1][1]), F.mul(A[0][1], A[1][0]));
+      let d = Z; for (let j = 0; j < n; j++) { const m = A.slice(1).map(r => r.filter((_, k) => k !== j)); const t = F.mul(A[0][j], det(m)); d = j % 2 ? F.sub(d, t) : F.add(d, t); } return d;
+    };
+    const inv = A => {   // 掃き出し法。逆がなければ null
+      const n = A.length, W = A.map((r, i) => r.concat(eye(n)[i]));
+      for (let c = 0; c < n; c++) {
+        let p = c; while (p < n && W[p][c][0] === 0) p++; if (p === n) return null;
+        [W[c], W[p]] = [W[p], W[c]];
+        const pv = W[c][c]; W[c] = W[c].map(x => F.div(x, pv));
+        for (let r = 0; r < n; r++) if (r !== c && W[r][c][0] !== 0) { const f = W[r][c]; W[r] = W[r].map((x, k) => F.sub(x, F.mul(f, W[c][k]))); }
+      }
+      return W.map(r => r.slice(n));
+    };
+    const pow = (A, k) => { let R = eye(A.length); for (let t = 0; t < k; t++) R = mul(R, A); return R; };
+    const T = A => A[0].map((_, j) => A.map(r => r[j]));
+    const eq = (A, B) => A.length === B.length && A.every((r, i) => r.length === B[i].length && r.every((x, j) => F.eq(x, B[i][j])));
+    // TeX：pmatrix。factor: true なら、分母の最小公倍数を外に出す（1/12 (…)）
+    const tex = (A, o) => {
+      o = o || {};
+      if (o.factor) { const L = A.flat().reduce((l, x) => F.lcm(l, x[1]), 1); if (L > 1) return `\\frac{1}{${L}}` + tex(A.map(r => r.map(x => F.mul(x, F.make(L)))), { env: o.env }); }
+      return `\\begin{${o.env || 'pmatrix'}}` + A.map(r => r.map(x => F.tex(x)).join('&')).join('\\\\') + `\\end{${o.env || 'pmatrix'}}`;
+    };
+    const np = A => '[' + A.map(r => '[' + r.map(x => (x[1] === 1 ? String(x[0]) : String(+(x[0] / x[1]).toFixed(8)))).join(' ') + ']').join('\n ') + ']';
+    return { make, dims, add: (A, B) => map2(A, B, F.add), sub: (A, B) => map2(A, B, F.sub), scale: (A, c) => A.map(r => r.map(x => F.mul(x, fr(c)))), mul, eye, det, inv, pow, T, eq, tex, np };
+  })();
+  // 答えの行列を読む：「数（省いてよい）× pmatrix」→ 成分の値（複素数 [実, 虚]）の2重の配列。読めなければ null
+  M.readMat = function (t) {
+    t = String(t).replace(/\$/g, ''); if (t.includes('=')) t = t.slice(t.lastIndexOf('=') + 1);
+    const m = /^(.*?)\\begin\{([pbv]?matrix)\}([\s\S]*?)\\end\{\2\}\s*$/.exec(t.trim()); if (!m) return null;
+    const fac = m[1].trim() ? M.evalC(m[1].trim(), {}) : [1, 0]; if (!fac) return null;
+    const rows = m[3].split(/\\\\(?:\[[^\]]*\])?/).map(r => r.trim()).filter(Boolean).map(r => r.split('&').map(c => M.evalC(c.trim(), {})));
+    if (rows.some(r => r.some(v => v == null))) return null;
+    return rows.map(r => r.map(v => [fac[0] * v[0] - fac[1] * v[1], fac[0] * v[1] + fac[1] * v[0]]));
+  };
   M.sameVal = (x, y) => x && y && x[0] === y[0] && x[1] === y[1];
   // 数式の問題の検算：答え（a）が式なら、問題の式・楽な形の式（＝ で区切ったどれも）と、文字に3とおりの値を入れて同じ値になるか
   function checkMath(p) {
@@ -1037,7 +1152,20 @@
     // easyCheck: 'last' のときは、楽な形の いちばん最後の式だけをくらべる（途中の式「$3\times4=12$」などを書くとき）
     if (p.easyCheck === 'last') eParts = eParts.slice(-1);
     const valM = p.val != null ? (onlyMath(p.val) != null ? onlyMath(p.val) : String(p.val)) : null;
-    const econst = !!(p.id && M.waza[p.id] && M.waza[p.id].vol >= 5);
+    const vol = p.id && M.waza[p.id] ? M.waza[p.id].vol : 0, econst = vol >= 5;
+    // 第6巻から：式に j があれば、j を虚数単位として複素数でくらべる（第39回）
+    if (vol >= 6 && /(^|[^a-zA-Z\\])j(?![a-zA-Z])/.test([aM, qM || '', ...eParts, valM || ''].join(' '))) {
+      const names = [...new Set([aM, qM || '', ...eParts].flatMap(t => M.mathVars(t, { econst })))].filter(n => n !== 'j');
+      const sets = [0.37, 1.71, -2.29].map((b, k) => Object.fromEntries(names.map((n, j) => [n, b + 0.53 * j + 0.11 * k])));
+      const cl = (x, y) => Math.hypot(x[0] - y[0], x[1] - y[1]) <= 1e-9 * Math.max(1, Math.hypot(x[0], x[1]), Math.hypot(y[0], y[1]));
+      for (const vs of sets) {
+        const va = M.evalC(aM, vs); if (va == null) return errs;
+        const target = valM != null ? M.evalC(valM, vs) : va;
+        if (qM != null) { const vq = M.evalC(qM, vs); if (vq != null && !cl(vq, va)) { errs.push(`式の値と答え ${p.a} がちがう（複素数）`); break; } }
+        for (const e of eParts) { const ve = M.evalC(e, vs); if (ve != null && target != null && !cl(ve, target)) { errs.push(`楽な形「${e}」の値が答えとちがう（複素数）`); return errs; } }
+      }
+      return errs;
+    }
     const names = [...new Set([aM, qM || '', ...eParts].flatMap(t => M.mathVars(t, { econst })))];
     const sets = [0.37, 1.71, -2.29].map((b, k) => Object.fromEntries(names.map((n, j) => [n, b + 0.53 * j + 0.11 * k])));
     for (const vs of sets) {
