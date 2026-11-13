@@ -347,7 +347,7 @@
         if (/^(Bigl|Bigr|bigl|bigr|Biggl|Biggr|bigg|Bigg)$/.test(name)) { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? `<span class="mdelim mbigd">${n2}</span>` : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim mbigd">${htmlEsc(d)}</span>`; }
         if (name === 'left' || name === 'right' || name === 'big' || name === 'Big') { ws(); if (s[i] === '\\') { const n2 = readCmd(); return n2 === '{' || n2 === '}' ? n2 : ''; } const d = s[i++]; return d === '.' ? '' : `<span class="mdelim">${htmlEsc(d)}</span>`; }
         if (name === 'text' || name === 'textrm' || name === 'mbox') return `<span class="mtext">${M.toHTML(raw(), opt)}</span>`;
-        if (name === 'mathrm' || name === 'mathsf' || name === 'rm') return `<span class="mtext">${M.mathHTML(raw(), Object.assign({}, opt, { upright: true })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
+        if (name === 'mathrm' || name === 'mathsf' || name === 'rm') return `<span class="mtext">${M.mathHTML(raw().replace(/(\\[a-zA-Z]+) +/g, '$1'), Object.assign({}, opt, { upright: true })).replace(/^<span class="math">|<\/span>$/g, '')}</span>`;
         if (name === 'underline') return `<span class="munder">${atom()}</span>`;
         if (name === 'vec' || name === 'overrightarrow') return `<span class="mvec">${atom()}</span>`;   // ベクトル（第4巻。第35回）
         if (name === 'phantom') return `<span class="mphantom">${atom()}</span>`;
