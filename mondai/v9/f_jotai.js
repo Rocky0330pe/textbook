@@ -49,6 +49,7 @@
   }
   const sum = ts => ts.filter(t => t && t !== '0').map((t, i) => (i && !/^-/.test(t) ? '+' : '') + t).join('') || '0';
   const cf = (c, body) => (c === 0 ? '' : c === 1 ? body : c === -1 ? '-' + body : nf(c) + body);   // 係数 × 式（1・−1 は書かない）
+  const c1 = v => (v === 1 ? '' : v === -1 ? '-' : nf(v));   // かっこ・e・I の前の係数（1・−1 は書かない。Y-6）
   // 有理数 [n, d]（分母は正、約分ずみ）
   const Q = (n, d) => { d = d == null ? 1 : d; if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); return [n / g, d / g]; };
   const toQ = v => { for (let d = 1; d <= 5000; d++) { const n = Math.round(v * d); if (Math.abs(n - v * d) < 1e-7 * Math.max(1, Math.abs(v * d))) return Q(n, d); } return null; };
@@ -524,7 +525,7 @@
     mark: '$\\dot{\\vec x}=A\\vec x$ は「落ち着くか」。固有値も（場合 E・9-11 の I）。',
     futsu: ['$e^{At}$ を求めて、$t$ を大きくしたとき', '4つの成分がどれも0に近づくかを', '1つずつ調べる'],
     raku: ['$\\begin{pmatrix}0&1\\\\-8&-2\\end{pmatrix}$ → $\\lambda^2+2\\lambda+8=0$', '→ $-1\\pm\\sqrt7\\,j$、実部が負で落ち着く', '$\\begin{pmatrix}0&1\\\\3&-2\\end{pmatrix}$ → $1$・$-3$、落ち着かない'],
-    why: '$\\dot{\\vec x}=A\\vec x$ の答えは、固有値 $\\lambda$ ごとの $e^{\\lambda t}$ の和で、$\\lambda=\\sigma+j\\omega$ なら大きさは $e^{\\sigma t}$（9-11⑦）。だから実部がすべて負なら落ち着き、1つでも0以上なら落ち着かない。$e^{At}$ を作らなくても、特性方程式を解くだけでわかる（場合 I）。2×2 の特性方程式は、ななめの和 $a+d$ と行列式 $ad-bc$ で書ける。',
+    why: '$\\dot{\\vec x}=A\\vec x$ の答えは、固有値 $\\lambda$ ごとの $e^{\\lambda t}$ の和で、$\\lambda=\\sigma+j\\omega$ なら大きさは $e^{\\sigma t}$（9-11⑦）。だから実部がすべて負なら落ち着き、1つでも0以上なら落ち着かない。$e^{At}$ を作らなくても、特性方程式を解くだけでわかる（場合 I）。2×2 の特性方程式は、対角の和 $a+d$ と行列式 $ad-bc$ で書ける。',
     caution: '$A$ の成分の符号だけでは決まらない（ななめの $-2$ が負でも、固有値1があれば落ち着かない。まちがえやすいところ⑦）。実部が0（$\\pm2j$）はゆれ続けるので、落ち着かない。固有値の順は問わない。',
     counts: { s1: 3, s2: 3, s3: 2, trap: 2 },
     cols: 1,
@@ -704,7 +705,7 @@
         const bTeX = bq[1] === 1 || [2, 4, 5, 10, 20].includes(bq[1]) ? nf(qv(bq)) : qTeX(bq);
         return { q: `$A-BK$ の固有値が ${two ? `$${-p}$ と $${-q}$` : `$${-p}$（重解）`} のとき、くり返しが落ち着く $\\Delta t$〔s〕の範囲`,
           a: `$0<\\Delta t<${bTeX}$`, key: `R|${p}|${q}`, easyCheck: false,
-          easy: two ? `$\\mu=1-${p}\\Delta t$ と $1-${q}\\Delta t$。きびしいのは $${-q}$ のほう` : `$-1<1-${p}\\Delta t<1$`, verify: pp => rangeCheck(pp, Mx) };
+          easy: two ? `$\\mu=1-${c1(p)}\\Delta t$ と $1-${c1(q)}\\Delta t$。きびしいのは $${-q}$ のほう` : `$-1<1-${c1(p)}\\Delta t<1$`, verify: pp => rangeCheck(pp, Mx) };
       },
       // 見かけがちがう：A と K が書いてある（A−BK の固有値を先に出す）
       s3(r) {
@@ -779,6 +780,8 @@
   const gq = (A, B, C) => `$A=${pm(A)}$、$B=${cv(B)}$、$C=${rv(C)}$ の $G(s)$`;
   function gProb(A, B, C, key, easy) {
     const g = gOf(A, B, C); if (g.n1 === 0 && g.n0 === 0) return null;
+    // 分子の0になる s が分母も0にする組（極と零点が消し合い、約分できる）は出さない（R2-6・Y-7）
+    if (g.n1 !== 0) { const z = -g.n0 / g.n1; if (Math.abs(z * z + g.c1 * z + g.c0) < 1e-9) return null; }
     return { q: gq(A, B, C), a: gTeX(g), key, easyCheck: false, easy, calc: { kind: 'fn', want: gWant(g), vars: ['s'] }, verify: p => gCheck(p, A, B, C) };
   }
   add({
@@ -821,7 +824,8 @@
           const A = [[r.int(-5, 2), r.pick([-3, -2, -1, 1, 2, 3])], [r.pick([-4, -2, -1, 1, 2, 3]), r.int(-5, 1)]], B = r.pick([[1, 0], [1, 1], [0, 2]]), C = r.pick([[1, 0], [0, 1]]);
           if (det2(A) === 0 || (A[0][0] === 0 && A[0][1] === 1) || exLike(A, EX82)) continue;
           const g = gOf(A, B, C); if (g.n1 === 0 && g.n0 === 0) continue;
-          return gProb(A, B, C, kA(A), `$\\det(sI-A)=${den2(g.c1, g.c0)}$。$(sI-A)^{-1}B$ を作ってから $C$`);
+          const P = gProb(A, B, C, kA(A), `$\\det(sI-A)=${den2(g.c1, g.c0)}$。$(sI-A)^{-1}B$ を作ってから $C$`);
+          if (P) return P;   // 約分できる組なら、ほかの A をさがす
         }
         return null;
       },
@@ -988,12 +992,13 @@
 
   // ---------------------------------------------------------------- 9-85〜9-87 の部品
   // 2乗が0の、0でない 2×2（(a b; c −a)、a^2+bc=0）。a=0 なら右上か左下だけ
-  function nil2(r, allowZeroA) {
+  //   wide：数の組の種類をふやす（9-86。a=4・6 で 1・4・4・16、4・6・6・9 の組も）
+  function nil2(r, allowZeroA, wide) {
     for (let k = 0; k < 60; k++) {
-      const a = allowZeroA && r.chance(0.3) ? 0 : r.pick([1, 2, 3, -1, -2]);
+      const a = allowZeroA && r.chance(0.3) ? 0 : r.pick(wide ? [1, 2, 3, 4, 6, -1, -3, -4, -6] : [1, 2, 3, -1, -2]);
       if (a === 0) { const b = r.pick([1, 2, 3, -1, -2, 4]); return r.chance(0.5) ? [[0, b], [0, 0]] : [[0, 0], [b, 0]]; }
-      const bs = [1, 2, 3, 4, 6, 9].flatMap(x => [x, -x]).filter(b => (a * a) % b === 0), b = r.pick(bs), c = -(a * a) / b;
-      if (Math.abs(c) > 9) continue;
+      const bs = [1, 2, 3, 4, 6, 9, 16].flatMap(x => [x, -x]).filter(b => (a * a) % b === 0), b = r.pick(bs), c = -(a * a) / b;
+      if (Math.abs(c) > (wide ? 16 : 9) || Math.abs(b) > (wide ? 16 : 9)) continue;
       return [[a, b], [c, -a]];
     }
     return null;
@@ -1038,7 +1043,7 @@
       const o = odeIn(q); return !!o && /x\(t\)/.test(q) && o[1] * o[1] - 4 * o[2] < 0;
     },
     steps: {
-      // σ=0（ななめの和が0）
+      // σ=0（対角の和が0）
       s1(r) {
         const A = genC(r, 0, true); if (!A) return null;
         const e = eAtC(A); if (!e) return null;
@@ -1067,7 +1072,7 @@
         const A = genC(r, r.pick([-1, -2])); if (!A) return null;
         const e = eAtC(A, 0); if (!e) return null;
         return { q: `$A=${pm(A)}$ の $e^{At}$ の1列め`, a: e.tex, key: kA(A), easyCheck: false,
-          easy: `$${e.s}\\pm${e.w === 1 ? ' ' : e.w}j$、$N=${pm(e.N)}$、$N^2=${-e.w * e.w}I$`, calc: { kind: 'mat', vars: ['t'], want: e.want }, verify: p => expmCheck(p, A, 0) };
+          easy: `$${e.s}\\pm${e.w === 1 ? ' ' : e.w}j$、$N=${pm(e.N)}$、$N^2=${c1(-e.w * e.w)}I$`, calc: { kind: 'mat', vars: ['t'], want: e.want }, verify: p => expmCheck(p, A, 0) };
       },
       // わな：A^2=O（9-86）
       trap(r) {
@@ -1080,8 +1085,15 @@
   });
 
   // ================================================================ 9-86
-  const EX86 = [[[0, 2], [0, 0]], [[0, 1], [4, 0]]];
+  // 例の行列：楽な形の2つと、注意の「$A^2=O$ になるのは右上だけの行列とは限らない」の行列（入れかえ・何倍かも。R2-5）
+  const EX86 = [[[0, 2], [0, 0]], [[0, 1], [4, 0]], [[2, -4], [1, -2]]];
   const bad86 = A => EX86.some(B => exLike(A, B));
+  // A^2=O の行列：同じ見開きで、数の組が同じか何倍か（入れかえ・符号ちがいも）のものを、組の種類（4つ）を使い切るまで出さない（U-2）
+  function fresh86(r, A) {
+    const a = absSort(A), m = a[a.length - 1], k = a.map(x => nf(x / m)).join(','), s = r.cls86 || (r.cls86 = new Set());
+    if (s.has(k) && s.size < 4) return false;
+    s.add(k); return true;
+  }
   // M^2=γ^2 I（(a b; c −a)、a^2+bc=γ^2）
   function genH(r) {
     for (let k = 0; k < 80; k++) {
@@ -1103,7 +1115,7 @@
     futsu: ['特性方程式・固有ベクトル・$P^{-1}$ を', '求めて対角化しようとし、', '（$A^2=O$ では対角化できず）', '$(sI-A)^{-1}$ の部分分数にまわる'],
     raku: ['$A=\\begin{pmatrix}0&2\\\\0&0\\end{pmatrix}$、$A^2=O$ → $e^{At}=I+At$', '$M=\\begin{pmatrix}0&1\\\\4&0\\end{pmatrix}$ → $M^2=4I$', '→ $e^{M\\ell}=\\cosh2\\ell\\,I+\\frac12\\sinh2\\ell\\,M$'],
     why: '$A^2=O$ なら $A^3$ から先もすべて $O$ なので、$e^{At}=I+At$（9-11⑨）。$M^2=\\gamma^2I$ なら累乗は $I$、$M$、$\\gamma^2I$、$\\gamma^2M$、…で、偶数番めと奇数番めに分けると、6-11 の $\\cosh$・$\\sinh$ のたし算の形になる。ばね（$A^2=-I$）なら $\\cos$・$\\sin$ になる（わざ 9-85 と同じ考え）。',
-    caution: '$\\sinh$ の係数は $\\dfrac{1}{\\gamma}$。$A^2=O$ になるのは右上だけの行列とは限らない（$\\begin{pmatrix}2&-4\\\\1&-2\\end{pmatrix}$ も）。ななめの和が0で $ad-bc$ が負なら $M^2=\\gamma^2I$。送電線では $\\frac{z}{\\gamma}=Z_0$（特性インピーダンス）。',
+    caution: '$\\sinh$ の係数は $\\dfrac{1}{\\gamma}$。$A^2=O$ になるのは右上だけの行列とは限らない（$\\begin{pmatrix}2&-4\\\\1&-2\\end{pmatrix}$ も）。対角の和が0で $ad-bc$ が負なら $M^2=\\gamma^2I$。送電線では $\\frac{z}{\\gamma}=Z_0$（特性インピーダンス）。',
     counts: { s1: 3, s2: 2, s3: 2, trap: 2 },
     cols: 1,
     boxw: { s1: '40mm', s2: '60mm', s3: '46mm', trap: '40mm' }, boxh: { s1: '11mm', s2: '12mm', s3: '11mm', trap: '11mm' },
@@ -1115,7 +1127,7 @@
     steps: {
       // A^2=O（右上だけでない形）
       s1(r) {
-        const Nn = nil2(r, false); if (!Nn || bad86(Nn)) return null;
+        const Nn = nil2(r, false, true); if (!Nn || bad86(Nn) || !fresh86(r, Nn)) return null;
         const cells = [[sum(['1', cf(Nn[0][0], 't')]), cf(Nn[0][1], 't') || 0], [cf(Nn[1][0], 't') || 0, sum(['1', cf(Nn[1][1], 't')])]];
         return { q: `$A=${pm(Nn)}$ の $e^{At}$`, a: ansMat(cells), key: kA(Nn), easyCheck: false, easy: '$A^2=O$ なので $e^{At}=I+At$',
           calc: { kind: 'mat', vars: ['t'], want: Nn.map((row, i) => row.map((x, j) => `${i === j ? 1 : 0}+${x}*t`)) }, verify: p => expmCheck(p, Nn) };
@@ -1130,19 +1142,22 @@
       },
       // 見かけがちがう：送電線の数、A^2=O の状態
       s3(r) {
-        if (turn(r, '86s3', 2) === 0) {
+        if (peek(r, '86s3', 2) === 0) {   // できたときだけ回す（A^2=O の行列が見開きで5つにならないように）
           const [z, y] = r.pick([[1, 1], [9, 1], [4, 4], [16, 1], [2, 8], [8, 2], [1, 16], [4, 9], [9, 4]]), g = Math.sqrt(z * y), Z0 = Math.sqrt(z / y);
           const n = r.pick([1, 2]), ell = r9(n / g); if (decs(ell) > 2) return null;
           const [ch, sh] = CSH[n], v = [[+ch, Z0 * sh], [sh / Z0, +ch]], tv = [[Math.cosh(n), Z0 * Math.sinh(n)], [Math.sinh(n) / Z0, Math.cosh(n)]];
           const cells = v.map((row, i) => row.map((x, j) => agree(x, tv[i][j], 3)));
           if (cells.flat().some(c => c == null)) return null;
           const M = [[0, z], [y, 0]];
+          if (bad86(M)) return null;   // 例の M の何倍か（2・8 など）は出さない（R2-5）
+          adv(r, '86s3', 2);
           return { q: `送電線（直列 $z=${U(z, '\\Omega/km')}$、並列 $y=${U(y, 'S/km')}$）の長さ $\\ell=${U(nf(ell), 'km')}$ の行列 $e^{M\\ell}$（$M=${pm(M)}$、$\\cosh${n}=${ch}$、$\\sinh${n}=${sh}$、小数第3位まで）`,
             a: `$${pm(cells)}$`, key: kA(M), easyCheck: false, easy: `$\\gamma=\\sqrt{zy}=${g}$、$Z_0=\\sqrt{\\frac zy}=${nf(Z0)}$、$\\gamma\\ell=${n}$`,
             verify: p => matNear(matOfAns(p.a), tv.map(row => row.map(x => +rd(x, 3))), 1e-9) || '行列がちがう' };
         }
-        const Nn = nil2(r, false); if (!Nn || bad86(Nn)) return null;
+        const Nn = nil2(r, false, true); if (!Nn || bad86(Nn) || !fresh86(r, Nn)) return null;
         const x0 = [r.pick([1, 2, 3, -1]), r.pick([1, 2, -1, 0])], T = r.pick([2, 3, 4, 5]), w = mulv(madd(eye(2), mscale(Nn, T)), x0);
+        adv(r, '86s3', 2);
         return { q: `$\\dot{\\vec x}=A\\vec x$、$A=${pm(Nn)}$、はじめ $${vt(x0)}$ の、$t=${T}$ の状態`, a: `$${vt(w)}$`, key: kA(Nn), easyCheck: false,
           easy: `$A^2=O$。$\\vec x=(I+${T}A)\\vec x_0$`, verify: p => { const g = vecAt(p.a), e = mulv(expmNum(Nn, T), x0); return (g && g.every((v, i) => near(v, e[i], 1e-7))) || `${JSON.stringify(e)} でない`; } };
       },
@@ -1150,6 +1165,7 @@
       trap(r) {
         const a = r.pick([-1, -2, -3, -4, -0.5, 1]), d = r.pick([-1, -3, -5, -0.2, 2]); if (a === d) return null;
         const A = [[a, 0], [0, d]];
+        if (bad86(A)) return null;   // 数の組が例の M（1・4）と同じか何倍か（−4 と −1 など）も出さない（R2-5）
         return dest({ q: `$A=${pm(A)}$ の $e^{At}$`, a: ansMat([[ex(a), 0], [0, ex(d)]]), key: kA(A), calc: { kind: 'mat', vars: ['t'], want: [[`exp(${a}*t)`, 0], [0, `exp(${d}*t)`]] }, verify: p => expmCheck(p, A) }, '9-86',
           `$A^2$ は $O$ でも単位行列の何倍でもない（ななめが $${nf(a * a)}$ と $${nf(d * d)}$）。対角なので成分ごとに $e$`, ['9-83']);
       },
@@ -1275,13 +1291,13 @@
           const [p, q] = pq, kk = r.pick([1, 2, 3]), X = r.pick([1, 2, 3, -1]), U = kk * p * q, A = [[0, 1], [-p * q, -(p + q)]], cs = step88(p, q, U, X, 0);
           if (X === kk) return null;
           return { q: `$A=${pm(A)}$、$B=${cv([0, 1])}$ で、はじめ $\\vec x_0=${vt([X, 0])}$ から $u=${U}$ を入れ続ける。位置 $x(t)$`, a: `$x(t)=${xTeX(cs, p, q)}$`, key: kA(A), easyCheck: false,
-            easy: `$\\vec x_0+BU$ は $${vt([X, `\\frac{${U}}{s}`])}$。1行めは $\\dfrac{${X}(s+${p + q})+\\frac{${U}}{s}}{(s+${p})(s+${q})}$`, calc: { kind: 'ode', x: 't', coef: [1, p + q, p * q], rhs: String(U), init: [[0, X], [0, 0, 1]] },
+            easy: `$\\vec x_0+BU$ は $${vt([X, `\\frac{${U}}{s}`])}$。1行めは $\\dfrac{${c1(X)}(s+${p + q})+\\frac{${U}}{s}}{(s+${p})(s+${q})}$`, calc: { kind: 'ode', x: 't', coef: [1, p + q, p * q], rhs: String(U), init: [[0, X], [0, 0, 1]] },
             verify: pp => rkCheck(pp, A, [0, 1], U, [X, 0], 0) };
         }
         const p = r.pick([1, 2, 3, 4]), U = r.pick([1, 2, 4, 8, 9, 16]), A = [[0, 1], [-p * p, -2 * p]];
         const x = lin([[Q(U, p * p), ''], [Q(-U, p * p), ex(-p)], [Q(-U, p), 't' + ex(-p)]]);
         return { q: `$A=${pm(A)}$、$B=${cv([0, 1])}$ で、はじめ止まっている状態に $u=${U}$ を入れ続ける。位置 $x(t)$`, a: `$x(t)=${x}$`, key: kA(A), easyCheck: false,
-          easy: `$X=\\dfrac{${U}}{s(s+${p})^2}$。$\\dfrac{1}{(s+${p})^2}$ の項から $te^{${-p}t}$`, calc: { kind: 'ode', x: 't', coef: [1, 2 * p, p * p], rhs: String(U), init: [[0, 0], [0, 0, 1]] },
+          easy: `$X=\\dfrac{${U}}{s(s+${p})^2}$。$\\dfrac{1}{(s+${p})^2}$ の項から $t${ex(-p)}$`, calc: { kind: 'ode', x: 't', coef: [1, 2 * p, p * p], rhs: String(U), init: [[0, 0], [0, 0, 1]] },
           verify: pp => rkCheck(pp, A, [0, 1], U, [0, 0], 0) };
       },
       // わな：入れるものがない（9-87）
@@ -1399,7 +1415,7 @@
       s1(r) {
         const g = rc90(r); if (!g) return null;
         return { q: `${BOOK90} で、${rcTxt(g)} のときの電流 $i(t)$〔mA〕`, a: `$i(t)=${g.I0 === 1 ? '' : nf(g.I0)}${eTau(g.tau)}$`, key: `${g.E}|${g.R}|${g.C}`, easyCheck: false,
-          easy: `$I(s)=${nf(g.I0)}\\cdot\\dfrac{1}{s+${nf(r9(1 / g.tau))}}$`, calc: { kind: 'ode', x: 't', coef: [1, r9(1 / g.tau)], init: [[0, g.I0]] } };
+          easy: `$I(s)=${g.I0 === 1 ? '' : `${nf(g.I0)}\\cdot`}\\dfrac{1}{s+${nf(r9(1 / g.tau))}}$`, calc: { kind: 'ode', x: 't', coef: [1, r9(1 / g.tau)], init: [[0, g.I0]] } };
       },
       // はじめの電流と時定数・時定数の時刻の電流
       s2(r) {
@@ -1410,15 +1426,15 @@
         }
         const k = r.pick([1, 2]), ev = k === 1 ? '0.3679' : '0.1353', s = agree(g.I0 * ev, g.I0 * Math.exp(-k), 3); if (s == null) return null;
         return { q: `${BOOK90} で、${rcTxt(g)} のとき、$${nf(k * g.tau)}$ 秒後の電流（mA。$e^{-${k}}=${ev}$、小数第3位まで）`, a: `約 $${s}$`, key: `${g.E}|${g.R}|${g.C}`, easyCheck: false,
-          easy: `$i=${nf(g.I0)}${eTau(g.tau)}$、時定数の${k}倍で $e^{-${k}}$ 倍`, verify: p => near(valsOf(p.a)[0][0], +s, 1e-9) || '値がちがう' };
+          easy: `$i=${c1(g.I0)}${eTau(g.tau)}$、時定数の${k}倍で $e^{-${k}}$ 倍`, verify: p => near(valsOf(p.a)[0][0], +s, 1e-9) || '値がちがう' };
       },
       // 見かけがちがう：コイルの式、コンデンサーの電圧
       s3(r) {
         if (turn(r, '90s3', 2) === 0) {
           const E = r.pick([5, 6, 10, 12, 20]), R = r.pick([2, 4, 5, 10, 20]), L = r.pick([0.1, 0.2, 0.5, 1, 2]), a = r9(R / L), I = r9(E / R);
           if (!isInt(a) || decs(I) > 2) return null;
-          return { q: `$\\dfrac{E}{s}=(R+sL)I(s)$ で、$E=${U(E, 'V')}$、$R=${U(R, '\\Omega')}$、$L=${U(nf(L), 'H')}$ のときの電流 $i(t)$〔A〕`, a: `$i(t)=${nf(I)}(1-${ex(-a)})$`, key: `RL|${E}|${R}|${L}`, easyCheck: false,
-            easy: `$I(s)=\\dfrac{E}{s(R+sL)}=${nf(I)}\\Bigl(\\dfrac1s-\\dfrac{1}{s+${a}}\\Bigr)$`, calc: { kind: 'ode', x: 't', coef: [1, a], rhs: String(r9(E / L)), init: [[0, 0]] } };
+          return { q: `$\\dfrac{E}{s}=(R+sL)I(s)$ で、$E=${U(E, 'V')}$、$R=${U(R, '\\Omega')}$、$L=${U(nf(L), 'H')}$ のときの電流 $i(t)$〔A〕`, a: `$i(t)=${c1(I)}(1-${ex(-a)})$`, key: `RL|${E}|${R}|${L}`, easyCheck: false,
+            easy: `$I(s)=\\dfrac{E}{s(R+sL)}=${c1(I)}\\Bigl(\\dfrac1s-\\dfrac{1}{s+${a}}\\Bigr)$`, calc: { kind: 'ode', x: 't', coef: [1, a], rhs: String(r9(E / L)), init: [[0, 0]] } };
         }
         const g = rc90(r); if (!g) return null;
         return { q: `${BOOK90} と $V_C(s)=\\dfrac{1}{sC}I(s)$ で、${rcTxt(g)} のときのコンデンサーの電圧 $v_C(t)$〔V〕`, a: `$v_C(t)=${g.E}(1-${eTau(g.tau)})$`, key: `${g.E}|${g.R}|${g.C}|V`, easyCheck: false,
@@ -1539,12 +1555,12 @@
   }
   add({
     id: '9-99', part: 6, chap: '9-11⑫（もっと）', stars: 1,
-    title: '$\\det e^{At}=e^{(a+d)t}$（ななめの和で、面積の倍率）',
+    title: '$\\det e^{At}=e^{(a+d)t}$（対角の和で、面積の倍率）',
     mark: '$e^{At}$ の行列式、状態の広がり（面積）が何倍になるか。',
     futsu: ['$e^{At}$ の4つの成分を求めてから、', '$ad-bc$ を計算して、', '$e$ の積をまとめる'],
     raku: ['回転（ばね）$\\begin{pmatrix}0&1\\\\-1&0\\end{pmatrix}$：$a+d=0$ → $1$', '車A $\\begin{pmatrix}0&1\\\\-2&-3\\end{pmatrix}$：$a+d=-3$ → $e^{-3t}$', '（$e^{At}$ を作らなくてよい）'],
-    why: '対角化すると $\\det e^{At}=\\det e^{Dt}=e^{\\lambda_1t}e^{\\lambda_2t}=e^{(\\lambda_1+\\lambda_2)t}$。特性方程式 $\\lambda^2-(a+d)\\lambda+(ad-bc)=0$ の2つの解の和は $a+d$ なので、$\\det e^{At}=e^{(a+d)t}$（9-11 もっと知りたい）。行列式は「面積が何倍になるか」（7-4）なので、ななめの和が負なら、状態の広がりは小さくなる。',
-    caution: '$e^{\\det A\\cdot t}$ ではない（使うのは、ななめの和 $a+d$）。$e^{At}$ の対角の和（トレース）は $e^{\\lambda_1t}+e^{\\lambda_2t}$ で、これとは別のもの。ばね・送電線のように $a+d=0$ なら、いつも1（$\\cos^2t+\\sin^2t=1$、$\\cosh^2-\\sinh^2=1$）。',
+    why: '対角化すると $\\det e^{At}=\\det e^{Dt}=e^{\\lambda_1t}e^{\\lambda_2t}=e^{(\\lambda_1+\\lambda_2)t}$。特性方程式 $\\lambda^2-(a+d)\\lambda+(ad-bc)=0$ の2つの解の和は $a+d$ なので、$\\det e^{At}=e^{(a+d)t}$（9-11 もっと知りたい）。行列式は「面積が何倍になるか」（7-4）なので、対角の和が負なら、状態の広がりは小さくなる。',
+    caution: '$e^{\\det A\\cdot t}$ ではない（使うのは、対角の和 $a+d$）。$e^{At}$ の対角の和（トレース）は $e^{\\lambda_1t}+e^{\\lambda_2t}$ で、これとは別のもの。ばね・送電線のように $a+d=0$ なら、いつも1（$\\cos^2t+\\sin^2t=1$、$\\cosh^2-\\sinh^2=1$）。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },
     cols: 1,
     boxw: { s1: '18mm', s2: '18mm', s3: '20mm', trap: '30mm' },
@@ -1565,7 +1581,7 @@
         if (turn(r, '99s2', 2) === 0) {
           const A = [[r.int(-4, 1), r.pick([-2, -1, 1, 3])], [r.pick([-3, -1, 2]), r.int(-4, 1)]], tr = tr2(A), T = r.pick([0.5, 1, 2, 3, 5]);
           if (tr === 0 || tr === -3 || bad99(A) || decs(tr * T) > 1 || Math.abs(tr * T) > 8) return null;
-          return { q: `$A=${pm(A)}$ の、$t=${nf(T)}$ での $\\det e^{At}$（$e$ を残した形で）`, a: `$e^{${nf(r9(tr * T))}}$`, key: kA(A) + '|' + T, easyCheck: false, easy: `$e^{(a+d)t}=e^{${tr}\\times${nf(T)}}$`,
+          return { q: `$A=${pm(A)}$ の、$t=${nf(T)}$ での $\\det e^{At}$（$e$ を残した形で）`, a: `$${r9(tr * T) === 1 ? 'e' : `e^{${nf(r9(tr * T))}}`}$`, key: kA(A) + '|' + T, easyCheck: false, easy: `$e^{(a+d)t}=e^{${tr}\\times${nf(T)}}$`,
             verify: p => detCheck(p, A, [T]) };
         }
         const b = r.pick([1, 2, 4, 5, 6, 0.5]), c = r.int(1, 10), A = [[0, 1], [-c, -b]];
@@ -1591,9 +1607,9 @@
       trap(r) {
         const a = r.pick([-1, -2, -3, -0.5]), d = r.pick([-1, -4, -5, -0.2, 1]); if (a === d) return null;
         const A = [[a, 0], [0, d]];
-        return dest({ q: `$A=${pm(A)}$ の $e^{At}$ の、ななめの成分の和（行列式ではない）`, a: `$${ex(a)}+${ex(d)}$`, key: kA(A), calc: { kind: 'fn', want: `exp(${a}*t)+exp(${d}*t)`, vars: ['t'] },
+        return dest({ q: `$A=${pm(A)}$ の $e^{At}$ の、対角の成分の和（行列式ではない）`, a: `$${ex(a)}+${ex(d)}$`, key: kA(A), calc: { kind: 'fn', want: `exp(${a}*t)+exp(${d}*t)`, vars: ['t'] },
           verify: p => near(exprAt(p.a, 0.7), expmNum(A, 0.7)[0][0] + expmNum(A, 0.7)[1][1], 1e-8) || 'ちがう' }, '9-99',
-          `行列式ではなく、ななめの和。対角なので $e^{At}$ のななめは $${ex(a)}$ と $${ex(d)}$`, ['9-83']);
+          `行列式ではなく、$e^{At}$ の対角の成分の和。$A$ が対角なので、$e^{At}$ のななめは $${ex(a)}$ と $${ex(d)}$`, ['9-83']);
       },
     },
   });

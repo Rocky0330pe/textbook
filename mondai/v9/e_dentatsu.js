@@ -50,6 +50,13 @@
   const frT = x => { const f = toFr(x); return f ? frac(f[0], f[1]) : fmt(x); };     // いつも分数（0.25 → \dfrac14）
   // 係数×式（1・−1 は書かない）
   const cf = (c, body) => (c === 0 ? '' : body === '' ? fmt(c) : c === 1 ? body : c === -1 ? '-' + body : fmt(c) + body);
+  const c1 = v => (v === 1 ? '' : v === -1 ? '-' : fmt(v));   // かっこ・e の前の係数（1・−1 は書かない。Y-6）
+  // 文に書いた値で計算した値は、10進で丸める（2進のずれで 3.935 を 3.93 にしない。Y-2・O-4）
+  const rdN = (v, k) => Math.sign(v) * Math.round(Math.abs(v) * 10 ** k + 1e-9) / 10 ** k;
+  const rdT = (v, k) => rdN(v, k).toFixed(k);
+  const tie5 = (v, k) => { const w = Math.abs(v) * 10 ** k; return Math.abs(w - Math.floor(w) - 0.5) < 1e-6; };   // ちょうど …5（けたの境）
+  // 文の値で計算した a と、ほんとうの値 v を小数第 k 位で丸めて同じか（どちらかがちょうど …5 の組は出さない。O-4・Y-2）
+  const agreeK = (a, v, k) => !tie5(a, k) && !tie5(v, k) && rdT(a, k) === rdT(v, k);
   const sum = ts => ts.filter(t => t && t !== '0').map((t, i) => (i && !/^-/.test(t) ? '+' : '') + t).join('') || '0';
   const par = v => (v < 0 ? `(${fmt(v)})` : fmt(v));
   const U = (v, u) => `${v}\\,\\mathrm{${u}}`;
@@ -267,7 +274,7 @@
         if (kind === 1) {   // ÿ + b ẏ + c y = u̇ + z u
           const pr = r.pick([[1, 2], [1, 3], [2, 3], [1, 4], [2, 5], [1, 5], [3, 4]]), b = pr[0] + pr[1], c = pr[0] * pr[1], z = r.pick([1, 2, 3, 4, 5, 6].filter(v => !pr.includes(v)));
           const num = [1, z], den = [1, b, c];
-          return { q: `$\\ddot y+${b}\\dot y+${c}y=\\dot u+${z}u$ の ${QG}`, a: `$${fracT(`s+${z}`, polyT(den))}$`, key: gkey(num, den), easyCheck: false,
+          return { q: `$\\ddot y+${b}\\dot y+${c}y=\\dot u+${cf(z, 'u')}$ の ${QG}`, a: `$${fracT(`s+${z}`, polyT(den))}$`, key: gkey(num, den), easyCheck: false,
             easy: `右辺も $\\dot u\\to sU$ と置きかえ、$(s+${z})U$ でくくる`,
             verify: p0 => fnSame(p0.a, 0, gv(num, den)) || '伝達関数がちがう' };
         }
@@ -349,7 +356,7 @@
         if (bad62(a, p, b, q) || exLike([a, p, b, q], [2, 1, 3, 2])) return null;
         const num = [a + b, a * q + b * p], den = pmul([1, p], [1, q]);
         return { q: `$${firstT(a, p)}$ と $${firstT(b, q)}$ を並列につないだ全体の $G(s)$`, a: `$${fracT(polyT(num), `${fac(p)}${fac(q)}`)}$`, key: gkey(num, den), easyCheck: false,
-          easy: `分子 $${a}${fac(q)}+${b}${fac(p)}$`, verify: p0 => fnSame(p0.a, 0, x => a / (x + p) + b / (x + q)) || 'たし算とちがう' };
+          easy: `分子 $${c1(a)}${fac(q)}+${c1(b)}${fac(p)}$`, verify: p0 => fnSame(p0.a, 0, x => a / (x + p) + b / (x + q)) || 'たし算とちがう' };
       },
       // 見かけがちがう：ブロック線図（直列は τ の形と最後の値、並列は1つの分数）
       s3(r) {
@@ -477,7 +484,7 @@
           const c = r.pick([1, 2, 3, 5, 6, 10]), h = r.pick([1, 2, 3, 5]), a = trim0(c * p / h);
           if (!Number.isInteger(a * 10) || bad64(a, p) || a > 50) return null;
           adv(r, '64s1', 2);
-          return { q: `$G=${firstT(a, p)}$ に、大きさ $${h}$ のステップを入れたときの $y(t)$`, a: `$y=${c}-${c}${eT(-p)}$`, key: gkey([a], [1, p]) + `:h${h}`, easyCheck: false,
+          return { q: `$G=${firstT(a, p)}$ に、大きさ $${h}$ のステップを入れたときの $y(t)$`, a: `$y=${c}-${c1(c)}${eT(-p)}$`, key: gkey([a], [1, p]) + `:h${h}`, easyCheck: false,
             easy: `$\\dfrac{${fmt(a * h)}}{s(s+${fmt(p)})}=\\dfrac{${c}}{s}-\\dfrac{${c}}{s+${fmt(p)}}$`,
             calc: { kind: 'ode', x: 't', coef: [1, p], rhs: String(a * h), init: [[0, 0]] } };
         }
@@ -505,24 +512,24 @@
           const F = r.pick([200, 240, 300, 400, 600, 800]), vf = F / c;
           if (!Number.isInteger(vf * 10)) return null;
           const byText = vf * (1 - 0.3679), truth = vf * (1 - Math.exp(-1));
-          if (byText.toFixed(2) !== truth.toFixed(2)) return null;
+          if (!agreeK(byText, truth, 2)) return null;
           adv(r, '64s3', 2);
           return { q: `車のからだ $G=${fracT(1, `${m}s+${c}`)}$（力→速さ）に、$${U(F, 'N')}$ の力を入れ続けた。速さ $v$ ＝ □、$${tau}$ 秒後の速さ ＝ 約 $□\\,\\mathrm{m/s}$（$e^{-1}=0.3679$、小数第2位まで）`,
-            a: `$v=${fmt(vf)}-${fmt(vf)}${eT(-c / m)}$、約 $${byText.toFixed(2)}$`, key: gkey([1], [m, c]) + `:F${F}`, easyCheck: false,
+            a: `$v=${fmt(vf)}-${c1(vf)}${eT(-c / m)}$、約 $${rdT(byText, 2)}$`, key: gkey([1], [m, c]) + `:F${F}`, easyCheck: false,
             easy: `$\\dfrac{${F}}{s(${m}s+${c})}$ を部分分数に`,
             calc: { kind: 'ode', x: 't', coef: [m, c], rhs: String(F), init: [[0, 0]], ans: `${fmt(vf)}-${fmt(vf)}${eT(-c / m)}` },
-            verify: p0 => near(numOf(p0.a, 1), +truth.toFixed(2)) || '約の値がちがう' };
+            verify: p0 => near(numOf(p0.a, 1), rdN(truth, 2)) || '約の値がちがう' };
         }
         const J = r.pick([400, 600, 800, 1200, 1600, 2000, 3000]), v0 = J / m;
         if (!Number.isInteger(v0 * 10)) return null;
         const byText = v0 * 0.3679, truth = v0 * Math.exp(-1);
-        if (byText.toFixed(2) !== truth.toFixed(2)) return null;
+        if (!agreeK(byText, truth, 2)) return null;
         adv(r, '64s3', 2);
         return { q: `止まった車（$G=${fracT(1, `${m}s+${c}`)}$、力→速さ）を、力積 $${U(J, 'N\\cdot s')}$ で後ろからおした（インパルス）。速さ $v$ ＝ □、$${tau}$ 秒後の速さ ＝ 約 $□\\,\\mathrm{m/s}$（$e^{-1}=0.3679$、小数第2位まで）`,
-          a: `$v=${fmt(v0)}${eT(-c / m)}$、約 $${byText.toFixed(2)}$`, key: gkey([1], [m, c]) + `:J${J}`, easyCheck: false,
+          a: `$v=${c1(v0)}${eT(-c / m)}$、約 $${rdT(byText, 2)}$`, key: gkey([1], [m, c]) + `:J${J}`, easyCheck: false,
           easy: `$V=\\dfrac{${J}}{${m}s+${c}}=\\dfrac{${fmt(v0)}}{s+${fmt(c / m)}}$`,
           calc: { kind: 'ode', x: 't', coef: [m, c], rhs: '0', init: [[0, v0]], ans: `${fmt(v0)}${eT(-c / m)}` },
-          verify: p0 => near(numOf(p0.a, 1), +truth.toFixed(2)) || '約の値がちがう' };
+          verify: p0 => near(numOf(p0.a, 1), rdN(truth, 2)) || '約の値がちがう' };
       },
       // わな：sin を入れて落ち着いたときの倍率 → 9-65
       trap(r) {
@@ -584,7 +591,7 @@
           num = [K]; den = [1, b, w * w]; gT = frT(K / (b * w)); lag = 90; ez = `分母 $${jT(b * w)}$（純虚数）`;
         } else if (kind === 1) {
           const a = r.pick([1, 2, 3, 4, 5, 10]), K = r.pick([1, 2, 3, 4, 6, 10]); w = a;
-          num = [K]; den = [1, a]; gT = s2T(K / a); lag = 45; ez = `分母 $${a}+${a}j$：大きさ $${a === 1 ? '' : a}\\sqrt2$、角45°`;
+          num = [K]; den = [1, a]; gT = s2T(K / a); lag = 45; ez = `分母 $${a}+${jT(a)}$：大きさ $${a === 1 ? '' : a}\\sqrt2$、角45°`;
         } else {
           const c = r.pick([4, 9, 16, 25, 36]), K = r.pick([1, 2, 3, 4, 5, 6, 10]);
           w = kind === 2 ? r.pick([1, 2, 3, 4, 5].filter(v => v * v < c)) : r.pick([2, 3, 4, 5, 6, 7, 8].filter(v => v * v > c));
@@ -602,17 +609,17 @@
           const m = r.pick([0.5, 1, 2]), w = r.pick([2, 3, 4, 5, 10]), c = r.pick([0.5, 1, 2, 4]), F0 = r.pick([1, 2, 4, 10]), k = m * w * w;
           const amp = F0 / (c * w); if (!toFr(amp) || bad65(1, c / m, w * w)) return null;
           const num = [1], den = [m, c, k];
-          return { q: `質量 $${U(fmt(m), 'kg')}$、ダンパー $${U(fmt(c), 'N\\cdot s/m')}$、ばね $${U(fmt(k), 'N/m')}$ のおもりを、力 $${F0}\\cos${w}t$〔N〕でゆすり続けた。落ち着いたゆれの大きさ ＝ □ m、おくれ ＝ □${DEG}`,
+          return { q: `質量 $${U(fmt(m), 'kg')}$、ダンパー $${U(fmt(c), 'N\\cdot s/m')}$、ばね $${U(fmt(k), 'N/m')}$ のおもりを、力 $${c1(F0)}\\cos${w}t$〔N〕でゆすり続けた。落ち着いたゆれの大きさ ＝ □ m、おくれ ＝ □${DEG}`,
             a: `$${frT(amp)}$、$90$${DEG}`, key: gkey(num, den) + `:w${w}`, easyCheck: false,
-            easy: `$G=${fracT(1, polyT(den))}$、分母 $${fmt(k)}-${fmt(m * w * w)}+${fmt(c * w)}j=${fmt(c * w)}j$`,
+            easy: `$G=${fracT(1, polyT(den))}$、分母 $${fmt(k)}-${fmt(m * w * w)}+${jT(c * w)}=${jT(c * w)}$`,
             verify: p => chk(near(numOf(p.a, 0), F0 * absG(num, den, w)) || 'ゆれの大きさがちがう', near(numOf(p.a, 1), lagG(num, den, w), 1e-7) || 'おくれがちがう') };
         }
         const [x, y, h] = r.pick([[1, 1, 0], [3, 4, 5], [12, 5, 13]]), t = r.pick([0.01, 0.02, 0.05, 0.1, 0.25, 0.5]), w = trim0(x / y / t), V0 = r.pick([1, 2, 3, 5, 10]);
         if (!Number.isInteger(w)) return null;
         const num = [1], den = [t, 1], amp = h ? V0 * y / h : V0 / Math.SQRT2;
         const aT = h ? frT(amp) : s2T(V0);
-        return { q: `ローパスフィルター $G=${tauT(1, t)}$ に、電圧 $${V0}\\sin${w}t$〔V〕を入れ続けた。落ち着いた出口の電圧のゆれの大きさ〔V〕`, a: `$${aT}$`, key: gkey(num, den) + `:w${w}`, easyCheck: false,
-          easy: `分母 $1+${fmt(t * w)}j$ の大きさ ${h ? `$\\sqrt{1+${fmt(t * w)}^2}=${fmt(h / y)}$` : '$\\sqrt2$'}`,
+        return { q: `ローパスフィルター $G=${tauT(1, t)}$ に、電圧 $${c1(V0)}\\sin${w}t$〔V〕を入れ続けた。落ち着いた出口の電圧のゆれの大きさ〔V〕`, a: `$${aT}$`, key: gkey(num, den) + `:w${w}`, easyCheck: false,
+          easy: `分母 $1+${jT(t * w)}$ の大きさ ${h ? `$\\sqrt{1+${fmt(t * w)}^2}=${fmt(h / y)}$` : '$\\sqrt2$'}`,
           verify: p => near(numOf(p.a), V0 * absG(num, den, w)) || 'ゆれの大きさがちがう' };
       },
       // わな：ステップを入れた最後の値 → 9-61（G(0)）
@@ -632,7 +639,7 @@
   const QL2 = '（$\\log_{10}2=0.301$）';
   const dbT = v => `${fmt(v)}\\,\\mathrm{dB}`;
   // 文の値で計算した dB（2けた）と、ほんとうの値を丸めた dB がくいちがわないか（O-4）
-  const dbOK = (byText, truth) => byText.toFixed(2) === truth.toFixed(2);
+  const dbOK = (byText, truth) => agreeK(byText, truth, 2);
   add({
     id: '9-66', part: 5, chap: '9-8⑨ 例題9', stars: 1,
     title: '倍率の dB は $20\\log_{10}\\lvert G\\rvert$。直列は dB のたし算',
@@ -653,8 +660,8 @@
         const exact = Math.log10(n) * 20, byText = LG[n] * 20, sg = inv ? -1 : 1;
         if (!dbOK(byText, exact)) return null;
         const pow10 = [10, 100, 1000].includes(n);
-        return { q: `倍率 $\\lvert G\\rvert=${inv ? frac(1, n) : n}$ は何 dB か${pow10 ? '' : QL2}`, a: `${pow10 ? '' : '約 '}$${dbT(sg * +byText.toFixed(2))}$`, key: `66:${sg * n}`, easyCheck: false,
-          easy: `$20\\log_{10}${inv ? frac(1, n) : n}=${sg < 0 ? '-' : ''}20\\times${fmt(LG[n])}$`, verify: p => near(numOf(p.a), +(sg * exact).toFixed(2)) || 'dB がちがう' };
+        return { q: `倍率 $\\lvert G\\rvert=${inv ? frac(1, n) : n}$ は何 dB か${pow10 ? '' : QL2}`, a: `${pow10 ? '' : '約 '}$${dbT(sg * rdN(byText, 2))}$`, key: `66:${sg * n}`, easyCheck: false,
+          easy: `$20\\log_{10}${inv ? frac(1, n) : n}=${sg < 0 ? '-' : ''}20\\times${fmt(LG[n])}$`, verify: p => near(numOf(p.a), rdN(sg * exact, 2)) || 'dB がちがう' };
       },
       // 何段か・dB から倍率
       s2(r) {
@@ -673,8 +680,8 @@
         const [g, n] = r.pick([[2, 3], [4, 2], [5, 2], [2, 4], [8, 2], [5, 3]]), inv = r.chance(0.6), sg = inv ? -1 : 1;
         const exact = 20 * n * Math.log10(g), byText = 20 * n * LG[g];
         if (!dbOK(byText, exact)) return null;
-        return { q: `1段の倍率が $${inv ? frac(1, g) : g}$ の箱を $${n}$ 段直列につないだ全体は何 dB か${QL2}`, a: `約 $${dbT(sg * +byText.toFixed(2))}$`, key: `66g:${sg * g}:${n}`, easyCheck: false,
-          easy: `1段 $${fmt(sg * +(20 * LG[g]).toFixed(2))}$ dB の $${n}$ 倍`, verify: p => near(numOf(p.a), +(sg * exact).toFixed(2)) || 'dB がちがう' };
+        return { q: `1段の倍率が $${inv ? frac(1, g) : g}$ の箱を $${n}$ 段直列につないだ全体は何 dB か${QL2}`, a: `約 $${dbT(sg * rdN(byText, 2))}$`, key: `66g:${sg * g}:${n}`, easyCheck: false,
+          easy: `1段 $${fmt(sg * rdN(20 * LG[g], 2))}$ dB の $${n}$ 倍`, verify: p => near(numOf(p.a), rdN(sg * exact, 2)) || 'dB がちがう' };
       },
       // 見かけがちがう：ローパスフィルターを何段か（ωτ=f/fc）
       s3(r) {
@@ -682,9 +689,9 @@
         const v = 1 + x * x, byText = -10 * n * { 2: L2, 5: 1 - L2, 10: 1, 50: 2 - L2 }[v], exact = -10 * n * Math.log10(v);
         if (!dbOK(byText, exact)) return null;
         return { q: `$${fc}\\,\\mathrm{Hz}$ で折れるローパスフィルター $\\dfrac{1}{\\tau s+1}$（$\\omega\\tau=\\dfrac{f}{${fc}}$）を、バッファーをはさんで $${n}$ 段つなぐ。$${f}\\,\\mathrm{Hz}$ の信号は何 dB か${v === 10 ? '' : QL2}`,
-          a: `${v === 10 ? '' : '約 '}$${dbT(+byText.toFixed(2))}$`, key: `66f:${x}:${n}`, easyCheck: false,
+          a: `${v === 10 ? '' : '約 '}$${dbT(rdN(byText, 2))}$`, key: `66f:${x}:${n}`, easyCheck: false,
           easy: `$\\omega\\tau=${x}$、1段 $-10\\log_{10}${v}$ dB の $${n}$ 倍`,
-          verify: p => near(numOf(p.a), +(20 * n * Math.log10(absG([1], [1, 1], x))).toFixed(2)) || 'dB がちがう' };
+          verify: p => near(numOf(p.a), rdN(20 * n * Math.log10(absG([1], [1, 1], x)), 2)) || 'dB がちがう' };
       },
       // わな：電力の倍率 → わざなし（10log10）
       trap(r) {
@@ -729,10 +736,10 @@
             a: `$${fmt(K)}$、$${t}$`, key: `67h:${P}:${Y}:${t}`, easyCheck: false, easy: `$K=${Y}\\div${P}$`,
             verify: p => chk(near(numOf(p.a, 0), K) || 'K がちがう', near(numOf(p.a, 1), t) || 'τ がちがう') };
         }
-        const T0 = r.pick([10, 15, 20, 25]), T1 = r.pick([60, 70, 80, 90]), t = r.pick([5, 8, 12, 15, 20, 25]), d = T1 - T0, y1 = +(T0 + 0.632 * d).toFixed(2);
+        const T0 = r.pick([10, 15, 20, 25]), T1 = r.pick([60, 70, 80, 90]), t = r.pick([5, 8, 12, 15, 20, 25]), d = T1 - T0, y1 = rdN(T0 + 0.632 * d, 2);
         if (d === 60 && t === 30) return null;
         return { q: `$${T0}$ ℃の温度計を $${T1}$ ℃のお湯に入れると、読みは $${t}$ 秒後に $${fmt(y1)}$ ℃、やがて $${T1}$ ℃。上がり分を入れたものとして $K$ ＝ □、$\\tau$ ＝ □ s`,
-          a: `$1$、$${t}$`, key: `67t:${T0}:${T1}`, easyCheck: false, easy: `上がり分 $${d}$ ℃、その63.2 % は $${fmt(+(0.632 * d).toFixed(2))}$ ℃`,
+          a: `$1$、$${t}$`, key: `67t:${T0}:${T1}`, easyCheck: false, easy: `上がり分 $${d}$ ℃、その63.2 % は $${fmt(rdN(0.632 * d, 2))}$ ℃`,
           verify: p => chk(near(numOf(p.a, 0), 1) || 'K がちがう', near(numOf(p.a, 1), t) || 'τ がちがう') };
       },
       // 見かけがちがう：ステップ応答の表
@@ -785,7 +792,9 @@
     const x0 = Math.min(-1, ...xs) - 1.2, x1 = Math.max(0.8, ...xs) + 1.6, y1 = Math.max(1, ...ys) * 1.3 + 0.8;   // × がぬりのはし・Re の字に重ならないように
     const W = 5.2, sc = W / (x1 - x0), H = Math.min(4.2, Math.max(2.6, 2 * y1 * sc));
     const P = M.cplane({ x0, x1, y0: -y1, y1, w: W, h: H });
-    return { s: 5, items: [...P.shadeLeft(), ...P.axes({ xt: [], yt: [] }), ...ps.flatMap(z => P.mark(z[0], z[1], 'x', 0.22)), ...(zs || []).flatMap(z => P.mark(z[0], z[1], 'o', 0.22))] };
+    // 原点の「O」は、ふつう左下。右半分に極がないときは右下に置く（−1 などの × に重ならないように。R2-11）
+    const oDir = ps.concat(zs || []).some(z => z[0] > 1e-9) ? 'sw' : 'se';
+    return { s: 5, items: [...P.shadeLeft(), ...P.axes({ xt: [], yt: [], o: oDir }), ...ps.flatMap(z => P.mark(z[0], z[1], 'x', 0.22)), ...(zs || []).flatMap(z => P.mark(z[0], z[1], 'o', 0.22))] };
   }
 
   // ================================================================ 9-68 極は分母＝0 の s：実部の符号で落ち着くか、虚部でゆれ
@@ -837,8 +846,12 @@
       s3(r) {
         const k = peek(r, '68s3', 4), a = r.pick([1, 2, 3, 4, 5]);
         let fs;
-        if (k === 0) { const [p, q, c] = r.shuffle([1, 2, 3, 4, 5, 6]).slice(0, 3).sort((x, y) => x - y); fs = [{ r: -p }, { r: -q }, { r: -c }]; }
-        else if (k === 1) { const c = den2(r, 1); if (!c) return null; fs = [{ r: -a }, c[0]]; }
+        if (k === 0) {   // 3つの実数の極は2以上はなす（図の × がくっつかないように。R2-11）
+          const [p, q, c] = r.shuffle([1, 2, 3, 4, 5, 6, 7]).slice(0, 3).sort((x, y) => x - y);
+          if (q - p < 2 || c - q < 2) return null;
+          fs = [{ r: -p }, { r: -q }, { r: -c }];
+        }
+        else if (k === 1) { const c = den2(r, 1); if (!c || (c[0].a === -a && c[0].b < 2)) return null; fs = [{ r: -a }, c[0]]; }   // 同じ実部で虚部1は × がくっつく
         else if (k === 2) { const c = den2(r, 2); if (!c) return null; fs = [{ r: -a }, c[0]]; }
         else { const c = den2(r, 1); if (!c) return null; fs = [{ r: r.pick([1, 2, 0.5]) }, c[0]]; }
         const D = denOf(fs), ps = polesOf(fs);
@@ -912,12 +925,12 @@
             verify: p => chk(near(numOf(p.a, 0), h * pv(num, [0, 0])[0] / pv(den, [0, 0])[0]) || '最後の変化がちがう', near(numOf(p.a, 1), -1 / roots(den)[0][0]) || '時刻がちがう') };
         }
         const n = r.pick([0.5, 1, 2, 3]), tt = n * tau, byText = K * h * (1 - +EN[n]), truth = K * h * (1 - Math.exp(-n));
-        if (!Number.isInteger(+(tt * 100).toFixed(6)) || byText.toFixed(2) !== truth.toFixed(2)) return null;
+        if (!Number.isInteger(+(tt * 100).toFixed(6)) || !agreeK(byText, truth, 2)) return null;
         adv(r, '69s3', 2);
         return { q: `センサー $G=${fracT(a, polyT(den))}$（$s$ の単位は1/秒）に、入れたものを $t=0$ に $${h}$ 上げた。$${fmt(tt)}$ 秒後の変化 ＝ 約 □（$e^{-${fmt(n)}}=${EN[n]}$、小数第2位まで）`,
-          a: `約 $${byText.toFixed(2)}$`, key: gkey(num, den) + `:h${h}`, easyCheck: false,
-          easy: `$K=${numT(K)}$、$\\tau=${numT(tau)}$。$${numT(K * h)}(1-e^{-${fmt(n)}})$`,
-          verify: p => near(numOf(p.a), +simulate([b, c], () => a * h, tt, 4000).toFixed(2)) || '約の値がちがう' };
+          a: `約 $${rdT(byText, 2)}$`, key: gkey(num, den) + `:h${h}`, easyCheck: false,
+          easy: `$K=${numT(K)}$、$\\tau=${numT(tau)}$。$${near(K * h, 1) ? '' : numT(K * h)}(1-e^{-${fmt(n)}})$`,
+          verify: p => near(numOf(p.a), rdN(simulate([b, c], () => a * h, tt, 4000), 2)) || '約の値がちがう' };
       },
       // わな：1次おくれが2つ（2次の分母）→ わざなし
       trap(r) {
@@ -1123,7 +1136,7 @@
             if (!exLike(c, [1, 3, 2])) cs = c;
           } else {
             const a2 = r.int(1, 6), a1 = r.int(1, 9), a0 = r.int(1, 40);
-            if (a2 * a1 === a0 || exLike([a2, a1], [4, 5])) continue;
+            if (a2 * a1 === a0 || exLike([a2, a1], [4, 5]) || (a2 === 3 && a1 === 3)) continue;   // 3・3 は教科書の例題9の形
             if (!yes && r.chance(0.3)) { cs = [1, a2, -a1, a0]; break; }
             if ((a2 * a1 > a0) === yes) cs = [1, a2, a1, a0];
           }
@@ -1136,14 +1149,15 @@
       // K の範囲（(s+a)^3+bK を展開した形・ふつうの3次）
       s2(r) {
         if (turn(r, '72s2', 2) === 0) {
-          const a = r.pick([1, 2, 3, 4, 0.5]), b = r.pick([1, 1, 2, 4, 8]), hi = 8 * a ** 3 / b;
+          // a=1 は教科書 9-9 例題9（$s^3+3s^2+3s+(1+K)$）そのものか、その $K$ を何倍かしただけなので出さない（U-2・R2-16）
+          const a = r.pick([2, 3, 4, 5, 0.5]), b = r.pick([1, 1, 2, 4, 8]), hi = 8 * a ** 3 / b;
           if (!Number.isInteger(hi) || (a === 2 && b === 8)) return null;
           const f = K => [1, 3 * a, 3 * a * a, a ** 3 + b * K];
           return { q: `分母が $s^3+${fmt(3 * a)}s^2+${fmt(3 * a * a)}s+${Kc(fmt(a ** 3), b)}$ の箱が安定になる $K$ の範囲（$K>0$）`, a: `$0<K<${hi}$`, key: `72k:${f(0)}:${b}`, easyCheck: false,
             easy: `$${fmt(3 * a)}\\times${fmt(3 * a * a)}>${fmt(a ** 3)}+${b === 1 ? '' : b}K$`, verify: p0 => (near(hiOf(p0.a), hi) && rangeOK(f, hiOf(p0.a))) || '範囲がちがう' };
         }
         const a2 = r.int(2, 6), a1 = r.int(2, 9), c = r.int(1, 6), hi = a2 * a1 - c;
-        if (hi <= 2 || exLike([a2, a1, c], [4, 5, 2])) return null;
+        if (hi <= 2 || exLike([a2, a1, c], [4, 5, 2]) || (a2 === 3 && a1 === 3)) return null;   // s^3+3s^2+3s+… は教科書の例題9の形（R2-16）
         const f = K => [1, a2, a1, c + K];
         return { q: `分母が $s^3+${a2}s^2+${a1}s+${Kc(c, 1)}$ の箱が安定になる $K$ の範囲（$K>0$）`, a: `$0<K<${hi}$`, key: `72k:${f(0)}:1`, easyCheck: false,
           easy: `$${a2}\\times${a1}>${c}+K$`, verify: p0 => (near(hiOf(p0.a), hi) && rangeOK(f, hiOf(p0.a))) || '範囲がちがう' };
@@ -1175,7 +1189,7 @@
   // ================================================================ 9-73 フィードバックの極と、比例だけで残るずれ 1/(1+G(0))
   // 例：G=5/(2s+1)、K_p=3 → 全体 15/(2s+16)、極 −8、残るずれ 1/16（6.25 %）（O-2）
   const KP = 'K_{\\mathrm p}';
-  const bad73 = (a, t, kp) => (a === 5 && t === 2 && kp === 3) || near(1 / (1 + a * kp), 1 / 16);
+  const bad73 = (a, t, kp) => (a === 5 && t === 2) || near(1 / (1 + a * kp), 1 / 16);   // 例と同じ箱は、K_p がちがっても出さない（R2-14）
   add({
     id: '9-73', part: 5, chap: '9-9⑨⑪ 例題6・7', stars: 1,
     title: '比例のフィードバック：極は全体の分母から、ずれは $\\dfrac{1}{1+G_1(0)}$',
@@ -1211,12 +1225,13 @@
         if (!Number.isInteger(+(T * 100).toFixed(6)) || !Number.isInteger(+(tc * 10).toFixed(6))) return null;
         return { q: `外 $${To}$ ℃、設定 $${Ts}$ ℃、$RC=${RC}$ 分のエアコンを $RK_{\\mathrm p}=${k}$ で比例制御。落ち着く温度 ＝ □ ℃、時定数 ＝ □ 分`,
           a: `$${fmt(T)}$、$${fmt(tc)}$`, key: `73a:${To}:${Ts}:${RC}:${k}`, easyCheck: false,
-          easy: `$${RC}\\dot T=(${To}-T)-${k}(T-${Ts})$ で $\\dot T=0$`,
+          easy: `$${RC}\\dot T=(${To}-T)-${c1(k)}(T-${Ts})$ で $\\dot T=0$`,
           verify: p0 => chk(near(numOf(p0.a, 0), +simulate([RC, 1 + k], () => To + k * Ts, 40 * tc).toFixed(6)) || '温度がちがう', near(numOf(p0.a, 1), -1 / roots([RC, 1 + k])[0][0]) || '時定数がちがう') };
       },
       // わな：ずれの積分を足す → 9-75
       trap(r) {
         const a = r.pick([2, 5, 10]), t = r.pick([0.5, 2]), kp = r.pick([1, 2]), ki = r.pick([2, 4, 5]);
+        if (a === 5 && t === 2) return null;   // 例と同じ箱（R2-14）
         return dest({ q: `$G=${tauT(a, t)}$ を、$${KP}=${kp}$ にずれの積分 $K_{\\mathrm i}=${ki}$ を足して制御したとき、残るずれ`, a: '$0$', key: `73t:${a}:${t}:${kp}:${ki}`,
           verify: p0 => near(numOf(p0.a), 0) || 'ずれがちがう' }, '9-73',
           'ずれの積分 $\\dfrac{K_{\\mathrm i}}{s}$ がある（PI 制御）。$s\\to0$ で1周の倍率がかぎりなく大きくなり、ずれは0', ['9-75']);
@@ -1270,7 +1285,7 @@
             easy: `分母 $s^2+${a}s+${b}K$、$${WN}^2=${b}K=${fmt(wn * wn)}$`,
             verify: p0 => { const ps = roots([1, a, b * numOf(p0.a)]), w = Math.hypot(...ps[0]); return near(-ps[0][0] / w, z, 1e-6) || '$\\zeta$ にならない'; } };
         }
-        const a = r.pick([2, 4, 6, 8, 10]), K = r.pick([1, 4, 9, 16, 25, 36, 100]), z = a / (2 * Math.sqrt(K));
+        const a = r.pick([2, 4, 6, 10, 12]), K = r.pick([1, 4, 9, 16, 25, 36, 100]), z = a / (2 * Math.sqrt(K));   // 例の腕 s(s+8) は出さない（R2-14）
         if (!Number.isInteger(z * 100) || z >= 1.5 || bad74(a, z)) return null;
         return { q: `${armQ(a)}で $K=${K}$ のときの $\\zeta$`, a: `$${fmt(z)}$`, key: `74:${a}:${K}`, easyCheck: false,
           easy: `$${WN}=\\sqrt{${K}}=${fmt(Math.sqrt(K))}$、$2\\zeta\\times${fmt(Math.sqrt(K))}=${a}$`,
