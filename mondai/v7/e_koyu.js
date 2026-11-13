@@ -9,7 +9,8 @@
  * 図は 7-66 のステップ3だけ（ばね M.figSpring と台車。K-2・Q-6）。プログラムの表示（p.code）は 7-69 のステップ3だけ、表（p.table）は 7-70 のステップ3だけ
  *   （見わけようは図・表・プログラムを出さないので、ステップ1・2 は numpy の表示も文の中に1行で書く）。
  * 左ページの「楽な形」と目印・注意の例の数は、同じ見開きの問題に出さない（O-2）。key は行列（と、たずねるもの）で作り、ステップがちがっても同じ行列は同じ key にする。
- * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「楽な形なし」）を書く（dest。N-3）。 */
+ *   例の数の入れかえ・符号を変えただけ・転置・何倍かも出さない（exLike。S-2・U-2）。
+ * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「わざなし」。S-7）を書く（dest。N-3）。 */
 (function (M) {
   'use strict';
 
@@ -18,6 +19,9 @@
   const fmt = v => String(+(+v).toFixed(10));                        // 0.30000000004 → 0.3
   const near = (x, y, tol) => x != null && y != null && isFinite(x) && isFinite(y) && Math.abs(x - y) <= (tol || 1e-9) * Math.max(1, Math.abs(x), Math.abs(y));
   const turn = (r, key, n) => { const d = r.turns || (r.turns = {}); d[key] = d[key] == null ? r.int(0, n - 1) : (d[key] + 1) % n; return d[key]; };
+  // 問題ができたときだけ進める回し方（答えのかたよりをなくす。S-4・U-3）：peek で今の番を見て、問題を返す前に adv で進める
+  const peek = (r, key, n) => { const d = r.turns || (r.turns = {}); if (d[key] == null) d[key] = r.int(0, n - 1); return d[key]; };
+  const adv = (r, key, n) => { r.turns[key] = (r.turns[key] + 1) % n; };
   const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
   const isSq = n => Number.isInteger(n) && n >= 0 && Math.round(Math.sqrt(n)) ** 2 === n;
   const pm = A => `\\begin{pmatrix}${A.map(row => row.map(fmt).join('&')).join('\\\\')}\\end{pmatrix}`;   // 行列
@@ -25,6 +29,14 @@
   const vt = v => `(${v.map(fmt).join(',\\ ')})`;                                                         // 文の中のベクトル (1,\ -2)
   const kA = A => A.flat().map(fmt).join(',');                                                            // 行列の key
   const same = (A, B) => kA(A) === kA(B);
+  // 例の行列 B と、数の大きさの組が同じか、何倍かになっている（入れかえ・符号を変えただけ・転置・何倍か。S-2・U-2）
+  const absSort = A => A.flat().map(x => Math.abs(x)).sort((x, y) => x - y);
+  function exLike(A, B) {
+    if (A.length !== B.length || A.flat().length !== B.flat().length) return false;
+    const a = absSort(A), b = absSort(B), ma = a[a.length - 1], mb = b[b.length - 1];
+    if (!ma || !mb) return false;
+    return a.every((x, i) => Math.abs(x - ma / mb * b[i]) < 1e-9 * Math.max(1, ma));
+  }
   const sum = ts => ts.filter(t => t && t !== '0').map((t, i) => (i && !/^-/.test(t) ? '+' : '') + t).join('') || '0';
   const cf = (c, body) => (c === 0 ? '' : c === 1 ? body : c === -1 ? '-' + body : fmt(c) + body);   // 係数 × 式（1・−1 は書かない）
   // √N を外に出せる数を出した形に（200 → 10\sqrt{2}）
@@ -189,7 +201,7 @@
   }
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2・N-3）
-  // easy に「（わけ。わざ □ で）」か「（わけ。楽な形なし）」を書く。extra：ほかの部のわざ・fits では見つからないわざの番号
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く（S-7）。extra：ほかの部のわざ・fits では見つからないわざの番号
   function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(7).filter(id => {
@@ -200,13 +212,16 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
 
   // ================================================================ 7-62
   const EX62 = [[4, 1], [2, 3]];   // 左ページの例
+  const Q62 = '（固有値も）';   // 「そうなら固有値も答える」。1行に入る長さに   // 答えの約束を問題の文に（U-5）
+  // 同じ見開きで、同じ固有値の答えを重ねない（S-4・U-3）。固有値 l がもう出ていれば true
+  const dup62 = (r, l) => { const u = r.ans62 || (r.ans62 = new Set()); if (l == null) return false; if (u.has(l)) return true; u.add(l); return false; };
   M.add({
     id: '7-62', part: 5, chap: '7-8②③ 例題1', stars: 1,
     title: '固有ベクトルか確かめるには、$A\\vec v$ を計算して成分の比がそろうかを見る（そろった倍率が固有値）',
@@ -222,19 +237,21 @@
     steps: {
       // 整数の行列とベクトル（2つに1つは固有ベクトル）
       s1(r) {
-        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: A => same(A, EX62) || symEq(A) }); if (!g) return null;
-        const yes = turn(r, '62s1', 3) < 2, A = g.A;
+        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: A => exLike(A, EX62) || symEq(A) }); if (!g) return null;
+        const yes = peek(r, '62s1', 2) === 0, A = g.A;
         let v, l = null;
         if (yes) { const i = r.int(0, 1), sc = r.pick([1, 1, -1, 2]); v = g.v[i].map(x => x * sc); l = g.l[i]; }
         else { v = [r.int(1, 3), r.pick([-2, -1, 1, 2, 3])]; if (isEig(A, v, mulv(A, v)[0] / v[0])) return null; }
+        if (dup62(r, l)) return null;
+        adv(r, '62s1', 2);
         const Av = mulv(A, v);
-        return { q: `$A=${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
+        return { q: `$${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか${Q62}`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
           easy: `$A\\vec v=${vt(Av)}$${yes ? `、どちらも $${l}$ 倍` : '、倍率がそろわない'}`,
           verify: p => (p.a === 'ちがう' ? (Math.abs(Av[0] * v[1] - Av[1] * v[0]) > 1e-9 || '平行なのに「ちがう」') : (isEig(A, v, valsOf(p.a)[0][0]) || '固有値がちがう')) };
       },
       // 成分に0・固有値0・固有値が負
       s2(r) {
-        const kind = turn(r, '62s2', 3), yes = r.chance(0.65);
+        const kind = turn(r, '62s2', 3), yes = peek(r, '62s2y', 2) === 0;
         let A, v, l = null;
         if (kind === 0) {
           const a = r.int(-3, 6), d = r.intNot(-3, 6, x => x === a), e = r.pick([-3, -2, -1, 1, 2, 3]), up = r.chance(0.5);
@@ -248,18 +265,20 @@
           if (A.flat().some(x => x === 0)) return null;
           if (yes) { v = norm([t, -s]); l = 0; } else { v = [r.int(1, 2), r.pick([1, 2, 3])]; if (Math.abs(mulv(A, v)[0] * v[1] - mulv(A, v)[1] * v[0]) < 1e-9) return null; }
         } else {
-          const g = genInt(r, { lo: -5, hi: 4, vmax: 3, bad: (B, l1, l2) => l2 >= 0 || same(B, EX62) }); if (!g) return null;
+          const g = genInt(r, { lo: -5, hi: 4, vmax: 3, bad: (B, l1, l2) => l2 >= 0 || exLike(B, EX62) }); if (!g) return null;
           A = g.A;
           if (yes) { v = g.v[1].map(x => -x); l = g.l[1]; } else { v = [r.int(1, 2), r.pick([-1, -2, 1])]; if (Math.abs(mulv(A, v)[0] * v[1] - mulv(A, v)[1] * v[0]) < 1e-9) return null; }
         }
+        if (dup62(r, l)) return null;
+        adv(r, '62s2y', 2);
         const Av = mulv(A, v);
-        return { q: `$A=${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
+        return { q: `$${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか${Q62}`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
           easy: `$A\\vec v=${vt(Av)}$${yes ? (l === 0 ? '＝$\\vec 0$（0倍）' : `、どちらも $${l}$ 倍${kind === 0 ? '（0の成分は0のまま）' : ''}`) : '、倍率がそろわない'}`,
           verify: p => (p.a === 'ちがう' ? (Math.abs(Av[0] * v[1] - Av[1] * v[0]) > 1e-9 || '平行なのに「ちがう」') : (isEig(A, v, valsOf(p.a)[0][0]) || '固有値がちがう')) };
       },
       // 見かけがちがう：3×3 の行列・連立の式の形
       s3(r) {
-        const yes = r.chance(0.6);
+        const yes = peek(r, '62s3y', 3) < 2;
         if (turn(r, '62s3', 2) === 0) {
           for (let k = 0; k < 200; k++) {
             const v = [1, r.pick([-1, 0, 1, 2]), r.pick([-1, 1, 2, 0])]; if (v[1] === 0 && v[2] === 0) continue;
@@ -270,25 +289,29 @@
             if (A.flat().some(x => Math.abs(x) > 9)) continue;
             const Av = mulv(A, v), par = Av.every((x, i) => Math.abs(x * v[0] - Av[0] * v[i]) < 1e-9);
             if (par !== yes) continue;
-            return { q: `$A=${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
+            if (dup62(r, yes ? l : null)) return null;
+            adv(r, '62s3y', 3);
+            return { q: `$${pm(A)}$ で、$${vt(v)}$ は固有ベクトルか${Q62}`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
               easy: `$A\\vec v=${vt(Av)}$${yes ? `、どれも $${l}$ 倍` : '、倍率がそろわない'}（3×3 でも同じ）`,
               verify: p => (p.a === 'ちがう' ? (!Av.every((x, i) => near(x * v[0], Av[0] * v[i])) || '平行なのに「ちがう」') : (isEig(A, v, valsOf(p.a)[0][0]) || '固有値がちがう')) };
           }
           return null;
         }
-        const g = genInt(r, { lo: -4, hi: 5, vmax: 3, bad: A => same(A, EX62) }); if (!g) return null;
+        const g = genInt(r, { lo: -4, hi: 5, vmax: 3, bad: A => exLike(A, EX62) }); if (!g) return null;
         const A = g.A, i = r.int(0, 1);
         let v = g.v[i], l = g.l[i];
         if (!yes) { v = [r.int(1, 2), r.pick([-1, 1, 2, -2])]; if (Math.abs(mulv(A, v)[0] * v[1] - mulv(A, v)[1] * v[0]) < 1e-9) return null; l = null; }
+        if (dup62(r, l)) return null;
+        adv(r, '62s3y', 3);
         const eq = (k, n) => `\\dot x_${n}=${sum([cf(A[k][0], 'x_1'), cf(A[k][1], 'x_2')])}`;
         const Av = mulv(A, v);
-        return { q: `$${eq(0, 1)}$、$${eq(1, 2)}$ を $\\dot{\\vec x}=A\\vec x$ と書いた。この $A$ で、$${vt(v)}$ は固有ベクトルか`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
+        return { q: `$${eq(0, 1)}$、$${eq(1, 2)}$ を $\\dot{\\vec x}=A\\vec x$ と書いた。この $A$ で、$${vt(v)}$ は固有ベクトルか${Q62}`, a: yes ? `固有値 $${l}$` : 'ちがう', key: kA(A), easyCheck: false,
           easy: `$A=${pm(A)}$、$A\\vec v=${vt(Av)}$${yes ? `、どちらも $${l}$ 倍` : '、倍率がそろわない'}`,
           verify: p => (p.a === 'ちがう' ? (Math.abs(Av[0] * v[1] - Av[1] * v[0]) > 1e-9 || '平行なのに「ちがう」') : (isEig(A, v, valsOf(p.a)[0][0]) || '固有値がちがう')) };
       },
       // わな：ためすベクトルがない（固有値をすべて）→ 7-64
       trap(r) {
-        const g = genInt(r, { lo: -3, hi: 6, bad: A => same(A, EX62) || A[0][1] === A[1][0] }); if (!g) return null;
+        const g = genInt(r, { lo: -3, hi: 6, bad: A => exLike(A, EX62) || A[0][1] === A[1][0] }); if (!g) return null;
         return dest({ q: `$A=${pm(g.A)}$ の固有値をすべて`, a: `$${g.l[0]}$、$${g.l[1]}$`, key: kA(g.A), verify: p => valsCheck(p, roots2(g.A)) }, '7-62',
           'ためすベクトルが書いていない。かけて確かめる前に、特性方程式で固有値を出す', ['7-64']);
       },
@@ -297,7 +320,7 @@
 
   // ================================================================ 7-63
   const EX63 = [[[2, 1], [1, 2]], [[-110, 10], [10, -110]], [[-0.1, 0.1], [0.1, -0.1]], [[2, 1], [3, 2]], [[5, 2], [2, 2]]];
-  const bad63 = A => EX63.some(B => same(A, B));
+  const bad63 = A => EX63.some(B => exLike(A, B));   // 例の何倍か（水そうの半分など。R2-2）・入れかえ・符号ちがいもよける
   M.add({
     id: '7-63', part: 5, chap: '7-8②③・7-9②', stars: 1,
     title: '$\\begin{pmatrix}a&b\\\\b&a\\end{pmatrix}$ は、$(1,\\ 1)$ で $a+b$ 倍、$(1,\\ -1)$ で $a-b$ 倍',
@@ -305,7 +328,7 @@
     futsu: ['$\\det(A-\\lambda I)=(a-\\lambda)^2-b^2$ を展開し、', '特性方程式を解の公式で解いて、', 'それぞれ $(A-\\lambda I)\\vec v=\\vec 0$ を解く'],
     raku: ['主役 $\\begin{pmatrix}2&1\\\\1&2\\end{pmatrix}$ → $2+1=3$、$2-1=1$', '台車 $\\begin{pmatrix}-110&10\\\\10&-110\\end{pmatrix}$ → $-100$、$-120$', '水そう $\\begin{pmatrix}-0.1&0.1\\\\0.1&-0.1\\end{pmatrix}$ → $0$、$-0.2$'],
     why: '$(1,\\ 1)$ をかけると、どの行も $a+b$ になるので $(a+b,\\ a+b)$、つまり $(1,\\ 1)$ の $a+b$ 倍。$(1,\\ -1)$ をかけると $(a-b,\\ b-a)$、つまり $(1,\\ -1)$ の $a-b$ 倍。教科書の主役・台車・水そうの行列は、みなこの形（7-8③）。6-14 で「和と差」でほどけたのも、このため（7-9②）。',
-    caution: '対角が同じでも、右上と左下がちがう（$\\begin{pmatrix}2&1\\\\3&2\\end{pmatrix}$）と使えない。右上と左下が同じでも、対角がちがう（$\\begin{pmatrix}5&2\\\\2&2\\end{pmatrix}$）と使えない。$b$ が負なら $a-b$ のほうが大きい。',
+    caution: '対角が同じでも、右上と左下がちがう（$\\begin{pmatrix}2&1\\\\3&2\\end{pmatrix}$）と使えない。右上と左下が同じでも、対角がちがう（$\\begin{pmatrix}5&2\\\\2&2\\end{pmatrix}$）と使えない。$b$ が負なら $a-b$ のほうが大きい。固有ベクトルは何倍でもよく、固有値の順は問わない。',
     counts: { s1: 4, s2: 3, s3: 3, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 1, trap: 2 },
     boxw: { s1: '16mm', s2: '40mm', s3: '24mm', trap: '16mm' },
@@ -341,11 +364,14 @@
             easy: `係数の行列 $${pm(A)}$ は $a=${d}$、$b=${o}$ の形`, verify: p => valsCheck(p, roots2(A)) };
         }
         if (kind === 1) {
-          const c = r.pick([0.05, 0.2, 0.3, 0.4, 0.5]), A = [[-c, c], [c, -c]];
-          return { q: `2つの水そうの水位の式 $\\dot h_1=${sum([cf(-c, 'h_1'), cf(c, 'h_2')])}$、$\\dot h_2=${sum([cf(c, 'h_1'), cf(-c, 'h_2')])}$ の、係数の行列の固有値と固有ベクトル`, a: `$0$：$(1,\\ 1)$、$${fmt(-2 * c)}$：$(1,\\ -1)$`, key: kA(A), easyCheck: false,
-            easy: `係数の行列 $${pm(A)}$。$a+b=0$、$a-b=${fmt(-2 * c)}$`, verify: p => pairsCheck(p, A) };
+          // 2つの水そうのあいだの流れ c と、どちらからも外へ流れ出る e（例の水そう $\\begin{pmatrix}-0.1&0.1\\\\0.1&-0.1\\end{pmatrix}$ の何倍かにならない）
+          const c = r.pick([0.1, 0.2, 0.3, 0.4, 0.5]), e = r.pick([0.1, 0.2, 0.3]), d = +(-(c + e)).toFixed(6), A = [[d, c], [c, d]];
+          if (bad63(A)) return null;
+          return { q: `どちらからも外へ水が流れ出る2つの水そうの水位の式 $\\dot h_1=${sum([cf(d, 'h_1'), cf(c, 'h_2')])}$、$\\dot h_2=${sum([cf(c, 'h_1'), cf(d, 'h_2')])}$ の、係数の行列の固有値と固有ベクトル`, a: `$${fmt(-e)}$：$(1,\\ 1)$、$${fmt(d - c)}$：$(1,\\ -1)$`, key: kA(A), easyCheck: false,
+            easy: `係数の行列 $${pm(A)}$。$a+b=${fmt(-e)}$、$a-b=${fmt(d - c)}$`, verify: p => pairsCheck(p, A) };
         }
         const a = r.pick([20, 30, 40, 50, 60, 80, -20]), b = r.pick([10, 20, 30, 40, -10, -30]), A = [[a, b], [b, a]];
+        if (bad63(A)) return null;
         return { q: `応力の行列 $${pm(A)}$（MPa）の主応力（固有値）`, a: `$${U(a + b, 'MPa')}$、$${U(a - b, 'MPa')}$`, key: kA(A), easyCheck: false,
           easy: `$a+b=${a + b}$、$a-b=${a - b}$`, verify: p => valsCheck(p, roots2(A)) };
       },
@@ -363,7 +389,7 @@
 
   // ================================================================ 7-64
   const EX64 = [[[5, 2], [2, 2]], [[1, 4], [2, 3]]];
-  const bad64 = A => EX64.some(B => same(A, B));
+  const bad64 = A => EX64.some(B => exLike(A, B));   // 入れかえ・符号ちがい・転置・何倍かも（U-2）
   const charEq = A => { const tr = A[0][0] + A[1][1], det = A[0][0] * A[1][1] - A[0][1] * A[1][0]; return `${sum(['\\lambda^2', cf(-tr, '\\lambda'), fmt(det)])}=0`; };
   M.add({
     id: '7-64', part: 5, chap: '7-8⑥ 例題5・⑨', stars: 1,
@@ -457,7 +483,7 @@
     steps: {
       // 整数の行列、λ が書いてある
       s1(r) {
-        const g = genInt(r, { lo: -3, hi: 7, vmax: 4, bad: A => same(A, EX65) }); if (!g) return null;
+        const g = genInt(r, { lo: -3, hi: 7, vmax: 4, bad: A => exLike(A, EX65) }); if (!g) return null;
         const i = r.int(0, 1), A = g.A, l = g.l[i], row = [A[0][0] - l, A[0][1]];
         return { q: `$A=${pm(A)}$ の、$\\lambda=${l}$ の固有ベクトル`, a: `$${vt(g.v[i])}$`, key: kA(A), easyCheck: false,
           easy: `1行め $${vt(row)}$ → $${vt([row[1], -row[0]])}$`, verify: p => vecCheck(p, A, l) };
@@ -470,7 +496,7 @@
           return { q: `$A=${pm(A)}$ の、$\\lambda=${l}$ の固有ベクトル`, a: `$${vt(v)}$`, key: kA(A), easyCheck: false,
             easy: `1行め $(0,\\ 0)$ なので2行め $${vt([c, d - l])}$ → $${vt([d - l, -c])}$`, verify: p => vecCheck(p, A, l) };
         }
-        const g = genInt(r, { lo: -6, hi: 6, vmax: 4, bad: (A, l1, l2) => same(A, EX65) || l2 >= 0 || gcd(A[0][0] - l2, A[0][1]) < 2 }); if (!g) return null;
+        const g = genInt(r, { lo: -6, hi: 6, vmax: 4, bad: (A, l1, l2) => exLike(A, EX65) || l2 >= 0 || gcd(A[0][0] - l2, A[0][1]) < 2 }); if (!g) return null;
         const A = g.A, l = g.l[1], row = [A[0][0] - l, A[0][1]];
         return { q: `$A=${pm(A)}$ の、$\\lambda=${l}$ の固有ベクトル`, a: `$${vt(g.v[1])}$`, key: kA(A), easyCheck: false,
           easy: `1行め $${vt(row)}$ → $${vt([row[1], -row[0]])}$ を $${gcd(row[0], row[1])}$ でわる`, verify: p => vecCheck(p, A, l) };
@@ -478,7 +504,7 @@
       // 見かけがちがう：応力の主方向・状態の行列
       s3(r) {
         if (turn(r, '65s3', 2) === 0) {
-          const g = genInt(r, { lo: -3, hi: 8, sym: true, vmax: 3, bad: A => A[0][0] === A[1][1] }); if (!g) return null;
+          const g = genInt(r, { lo: -3, hi: 8, sym: true, vmax: 3, bad: A => A[0][0] === A[1][1] || exLike(A, EX65) }); if (!g) return null;
           const A = g.A.map(row => row.map(x => 10 * x)), i = r.int(0, 1), l = 10 * g.l[i];
           return { q: `応力の行列 $${pm(A)}$（MPa）で、主応力 $${U(l, 'MPa')}$ の主方向（固有ベクトル）`, a: `$${vt(g.v[i])}$`, key: kA(A), easyCheck: false,
             easy: `1行め $${vt([A[0][0] - l, A[0][1]])}$ → $${vt([A[0][1], l - A[0][0]])}$`, verify: p => vecCheck(p, A, l) };
@@ -490,7 +516,7 @@
       },
       // わな：書いてある λ が固有値でない → 7-64
       trap(r) {
-        const g = genInt(r, { lo: -2, hi: 7, bad: A => same(A, EX65) || symEq(A) }); if (!g) return null;
+        const g = genInt(r, { lo: -2, hi: 7, bad: A => exLike(A, EX65) || symEq(A) }); if (!g) return null;
         const bad = r.intNot(Math.min(...g.l) - 2, Math.max(...g.l) + 2, x => g.l.includes(x)), A = g.A;
         return dest({ q: `$A=${pm(A)}$ の、$\\lambda=${bad}$ の固有ベクトル`, a: `$${bad}$ は固有値でない（固有値は $${g.l[0]}$、$${g.l[1]}$）`, key: kA(A),
           verify: p => { const v = valsOf(p.a); return (v.length === 3 && cnear(v[0], [bad, 0]) && !near((A[0][0] - bad) * (A[1][1] - bad) - A[0][1] * A[1][0], 0) && sameSet(v.slice(1), roots2(A))) || '固有値の答えがちがう'; } }, '7-65',
@@ -569,7 +595,7 @@
         }
         const w1s = r.pick([4, 9, 16, 25, 36, 49, 64, 81, 100, 50, 20]), w2s = w1s + 2 * r.pick([2, 5, 10, 18, 20, 25, 50]);
         const o = (w2s - w1s) / 2, B = [[-(w1s + o), o], [o, -(w1s + o)]];
-        if (EX66.some(e => same(B, cartB(...e)))) return null;
+        if (EX66.some(e => exLike(B, cartB(...e)))) return null;
         return { q: `台車2つの $\\ddot{\\vec x}=B\\vec x$ で、$B=${pm(B)}$。${MODE_Q}`, a: `いっしょ $${U(wTeX(w1s), 'rad/s')}$、反対 $${U(wTeX(w2s), 'rad/s')}$`, key: kA(B), easyCheck: false,
           easy: `$a+b=${-w1s}$、$a-b=${-w2s}$ → $\\omega=\\sqrt{-\\lambda}$`, verify: p => modeCheck(wsOf(p.a), B) };
       },
@@ -590,21 +616,23 @@
             return (okAp && /約|approx/.test(p.a)) ? modeCheck(ws, B) : '約の値がちがう';
           } };
       },
-      // わな：質量がちがう台車 → 楽な形なし
+      // わな：質量がちがう台車 → 7-64（B の特性方程式。R2-17）
       trap(r) {
         const [m1, m2, k, K, a, b] = r.pick(T66), sw = r.chance(0.5), M1 = sw ? m2 : m1, M2 = sw ? m1 : m2;
         const B = [[-(k + K) / M1, K / M1], [K / M2, -(k + K) / M2]];
         return dest({ q: `質量 $m_1=${U(M1, 'kg')}$ と $m_2=${U(M2, 'kg')}$ の台車を、外側のばね $k=${U(k, 'N/m')}$ 2本と、つなぎのばね $K=${U(K, 'N/m')}$ でつないだ。2つのモードの角振動数`,
           a: `$${U(wTeX(a), 'rad/s')}$ と $${U(wTeX(b), 'rad/s')}$`, key: `t${M1},${M2},${k},${K}`,
           verify: p => sameSet(wsOf(p.a).map(w => [-(w ** 2), 0]), roots2(B)) || '角振動数がちがう' }, '7-66',
-          '質量がちがうと $B$ が対称にならず、モードは $(1,\\ 1)$・$(1,\\ -1)$ でない。$B$ の特性方程式を解く（numpy の eig でもよい）');
+          '質量がちがうと $B$ が対称にならず、モードは $(1,\\ 1)$・$(1,\\ -1)$ でない。$B$ の特性方程式を解く（numpy の eig でもよい）', ['7-64']);
       },
     },
   });
 
   // ================================================================ 7-67
   const nk = (a, b, c) => `${fmt(b / a)},${fmt(c / a)}`;   // 式を最高次の係数でわった形（同じ式を同じ key に）
-  const EX67 = ['4,3', '3,2'];
+  const EX67 = ['4,3', '3,2', '5,6'];   // 楽な形と注意の例（$\\lambda^2+5\\lambda+6=0$）
+  // 根 −pp、−qq が、例の根 (1, 3)・(1, 2)・(2, 3) の何倍かになる組（$2\\ddot x+12\\dot x+16x=0$ の −2、−4 など。R2-3・U-2）
+  const bad67 = (pp, qq) => qq === 3 * pp || qq === 2 * pp || 2 * qq === 3 * pp;
   const springTxt = (m, c, k) => `$m=${U(fmt(m), 'kg')}$、$c=${U(fmt(c), 'N\\cdot s/m')}$、$k=${U(fmt(k), 'N/m')}$`;
   // 固有値の答えを、状態の行列 (0 1; −k/m −c/m) の特性方程式（解の公式）とくらべる
   const stateA = (m, c, k) => [[0, 1], [-k / m, -c / m]];
@@ -631,15 +659,15 @@
     steps: {
       // 2つの負の整数
       s1(r) {
-        const pp = r.int(1, 6), qq = r.int(pp + 1, 8), b = pp + qq, c = pp * qq;
-        if (EX67.includes(nk(1, b, c))) return null;
+        const pp = r.int(1, 6), qq = r.int(pp + 1, 9), b = pp + qq, c = pp * qq;
+        if (EX67.includes(nk(1, b, c)) || bad67(pp, qq)) return null;
         return { q: `$${ode(1, b, c)}$ の状態の行列の固有値`, a: `$${-pp}$、$${-qq}$`, key: nk(1, b, c), easyCheck: false,
           easy: `$\\lambda^2+${b}\\lambda+${c}=0$`, verify: p => stateCheck(p, 1, b, c) };
       },
       // 係数が1でない式・状態の行列が書いてある
       s2(r) {
-        const pp = r.int(1, 5), qq = r.int(pp + 1, 7), b = pp + qq, c = pp * qq;
-        if (EX67.includes(nk(1, b, c))) return null;
+        const pp = r.int(1, 6), qq = r.int(pp + 1, 8), b = pp + qq, c = pp * qq;
+        if (EX67.includes(nk(1, b, c)) || bad67(pp, qq)) return null;
         if (turn(r, '67s2', 2) === 0) {
           const a = r.pick([2, 3, 4, 0.5]);
           return { q: `$${ode(a, a * b, a * c)}$ の状態の行列の固有値`, a: `$${-pp}$、$${-qq}$`, key: nk(1, b, c), easyCheck: false,
@@ -653,7 +681,7 @@
         const kind = turn(r, '67s3', 3);
         if (kind === 0) {
           const m = r.pick([1, 2, 0.5, 4]), pp = r.int(1, 6), qq = r.int(pp + 1, 10);
-          if (EX67.includes(nk(1, pp + qq, pp * qq))) return null;
+          if (EX67.includes(nk(1, pp + qq, pp * qq)) || bad67(pp, qq)) return null;
           const c = m * (pp + qq), k = m * pp * qq;
           return { q: `ばね・質量・ダンパー（${springTxt(m, c, k)}）の状態の行列の固有値`, a: `$${-pp}$、$${-qq}$`, key: nk(m, c, k), easyCheck: false,
             easy: `$${sum([cf(m, '\\lambda^2'), cf(c, '\\lambda'), fmt(k)])}=0$`, verify: p => stateCheck(p, m, c, k) };
@@ -664,11 +692,11 @@
             easy: `$(\\lambda+${pp})^2=0$`, verify: p => stateCheck(p, a, a * 2 * pp, a * pp * pp) };
         }
         const pp = r.int(1, 7), qq = r.int(pp + 1, 10), b = pp + qq, c = pp * qq;
-        if (EX67.includes(nk(1, b, c))) return null;
+        if (EX67.includes(nk(1, b, c)) || bad67(pp, qq)) return null;
         return { q: `$\\ddot x=${sum([cf(-c, 'x'), cf(-b, '\\dot x')])}$ の状態の行列の固有値`, a: `$${-pp}$、$${-qq}$`, key: nk(1, b, c), easyCheck: false,
           easy: `移項して $${ode(1, b, c)}$`, verify: p => stateCheck(p, 1, b, c) };
       },
-      // わな：固有値ではなく x を聞く（はじめの値つき）→ 楽な形なし
+      // わな：固有値ではなく x を聞く（はじめの値つき）→ わざなし
       trap(r) {
         const w = r.int(2, 6), x0 = r.pick(['0.1', '0.2', '0.05', '0.3']);
         return dest({ q: `$${ode(1, 0, w * w)}$、$x(0)=${x0}$、$\\dot x(0)=0$ をみたす $x$`, a: `$${x0}\\cos${w}t$`, key: `t${w}`,
@@ -762,13 +790,22 @@
   // eig の表示を作る：固有ベクトルの成分に0がなく、1つが ±1 のもの（いちばん小さい成分でわると整数になる）
   function genEig(r, bad) {
     for (let k = 0; k < 200; k++) {
-      const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad }); if (!g) return null;
+      const g = genInt(r, { lo: -3, hi: 6, vmax: 4, bad }); if (!g) return null;
       if (g.v.some(v => v.includes(0) || Math.min(...v.map(Math.abs)) !== 1)) continue;
       const ord = r.chance(0.5) ? [0, 1] : [1, 0], ls = ord.map(i => g.l[i]), vs = ord.map(i => unit(g.v[i], r.pick([1, -1])));
       const V = [[vs[0][0], vs[1][0]], [vs[0][1], vs[1][1]]];
       return { A: g.A, ls, vs: ord.map(i => g.v[i]), V };
     }
     return null;
+  }
+  // 同じ見開きで、答えの固有ベクトルを重ねない。成分の大きさの形（$(3,\\ 1)$ と $(3,\\ -1)$ は同じ形）は3回まで（S-4・R2-12）
+  function use69(r, vs) {
+    const u = r.ans69 || (r.ans69 = { v: new Set(), f: {} });
+    if (u.v.size >= 8) return true;   // 見開き1つぶん（7本）をこえたら（アプリのプリント）しばらない
+    const ks = vs.map(v => vt(v)), fs = vs.map(v => v.map(Math.abs).sort().join(','));
+    if (ks.some(k => u.v.has(k)) || new Set(ks).size < ks.length) return false;
+    const f = Object.assign({}, u.f); for (const x of fs) { f[x] = (f[x] || 0) + 1; if (f[x] > 3) return false; }
+    ks.forEach(k => u.v.add(k)); u.f = f; return true;
   }
   const EIG_Q = (ls, V) => `\`np.linalg.eig(A)\` の表示が \`w\`：\`[${npNums(ls, 8).join(' ')}]\`、\`V\`：\`${npV3(V)}\` のとき、`;
   M.add({
@@ -778,7 +815,7 @@
     futsu: ['表示を使わずに、$A$ の特性方程式を解いて', '固有値を出し、それぞれの固有ベクトルを', '求めなおす'],
     raku: ['`[5.+0.j 2.+0.j]`、`[[0.707 -0.447] [0.707 0.894]]`', '→ 5：1列め $(0.707,\\ 0.707)$ を $0.707$ でわって $(1,\\ 1)$', '→ 2：2列め $(-0.447,\\ 0.894)$ を $-0.447$ でわって $(1,\\ -2)$'],
     why: '`w` の $k$ 番めの固有値と組になるのは、`V` の $k$ 列め（7-8⑤）。`V` の列は、長さが1になるようにわってある（$0.70710678=\\frac{1}{\\sqrt2}$、$0.4472136=\\frac{1}{\\sqrt5}$）。固有ベクトルは何倍してもよいので、いちばん小さい成分の大きさでわれば、整数の比が出る。`+0.j` は虚部が0ということ。',
-    caution: '1行めを固有ベクトルと読まない（行は固有値の組ではない）。負の数でわると符号が変わるが、何倍しても同じ固有ベクトル。わって $1.9999$ や $2.0004$ のようになったら2（表示の丸め）。',
+    caution: '1行めを固有ベクトルと読まない（行は固有値の組ではない）。負の数でわると符号が変わるが、何倍しても同じ固有ベクトル（答えは何倍でもよく、固有値の順も問わない）。わって $1.9999$ や $2.0004$ のようになったら2（表示の丸め）。',
     counts: { s1: 2, s2: 2, s3: 1, trap: 2 },
     cols: 1,
     boxw: { s1: '20mm', s2: '42mm', s3: '20mm', trap: '62mm' },
@@ -789,26 +826,30 @@
     steps: {
       // 1つの固有値の固有ベクトル
       s1(r) {
-        const g = genEig(r, A => same(A, EX62)); if (!g) return null;
+        const g = genEig(r, A => exLike(A, EX62)); if (!g) return null;
         const i = r.int(0, 1), l = g.ls[i];
+        if (!use69(r, [g.vs[i]])) return null;
         return { q: `${EIG_Q(g.ls, g.V)}固有値 $${l}$ の固有ベクトル（整数の形）`, a: `$${vt(g.vs[i])}$`, key: kA(g.A), easyCheck: false,
           easy: `${i + 1}列め $(${g.V[0][i].toFixed(3)},\\ ${g.V[1][i].toFixed(3)})$ を、小さいほうの成分でわる`, verify: p => vecCheck(p, g.A, l) };
       },
       // 2つとも（固有値と固有ベクトルの組）
       s2(r) {
-        const g = genEig(r, A => same(A, EX62)); if (!g) return null;
+        const g = genEig(r, A => exLike(A, EX62)); if (!g) return null;
+        if (!use69(r, g.vs)) return null;
         return { q: `${EIG_Q(g.ls, g.V)}固有値と固有ベクトルの組`, a: `$${g.ls[0]}$：$${vt(g.vs[0])}$、$${g.ls[1]}$：$${vt(g.vs[1])}$`, key: kA(g.A), easyCheck: false,
           easy: '1列めが1つめの固有値、2列めが2つめの固有値の組', verify: p => pairsCheck(p, g.A) };
       },
       // 見かけがちがう：プログラムと、そのままの表示（小数第8位まで）
       s3(r) {
-        const g = genEig(r, A => same(A, EX62)); if (!g) return null;
+        const g = genEig(r, A => exLike(A, EX62)); if (!g) return null;
         const i = r.int(0, 1), l = g.ls[i];
-        return { q: `$A=${pm(g.A)}$ で \`w, V = np.linalg.eig(A)\` を実行し、\`print(w)\`、\`print(V)\` で下のように表示された。固有値 $${l}$ の固有ベクトル（整数の形）`, a: `$${vt(g.vs[i])}$`, key: kA(g.A), easyCheck: false,
+        if (!use69(r, [g.vs[i]])) return null;
+        // 実際の numpy とは、固有値の順や列の符号がちがうことがあるので「表示されたとします」（R2-15・U-5）
+        return { q: `$A=${pm(g.A)}$ で \`w, V = np.linalg.eig(A)\` を実行し、\`print(w)\`、\`print(V)\` で次のように表示されたとします。固有値 $${l}$ の固有ベクトル（整数の形）`, a: `$${vt(g.vs[i])}$`, key: kA(g.A), easyCheck: false,
           code: `${npW(g.ls)}\n${npV(g.V)}`,
           easy: `${i + 1}列めを、いちばん小さい成分の大きさでわる`, verify: p => vecCheck(p, g.A, l) };
       },
-      // わな：w だけでは A は決まらない（楽な形なし）・固有値が複素数（7-68）
+      // わな：w だけでは A は決まらない（わざなし）・固有値が複素数（7-68）
       trap(r) {
         if (turn(r, '69t', 2) === 0) {
           const l2 = r.int(-2, 4), l1 = l2 + 2 * r.int(1, 3), D = [[l1, 0], [0, l2]], S = [[(l1 + l2) / 2, (l1 - l2) / 2], [(l1 - l2) / 2, (l1 + l2) / 2]];
@@ -831,7 +872,7 @@
   // べき乗法がはやく近づく行列：いちばん大きい固有値が正で、もう1つの大きさがその 0.4 倍以下
   function genPow(r) {
     for (let k = 0; k < 100; k++) {
-      const g = genInt(r, { lo: 0, hi: 6, vmax: 2, bad: (A, l1, l2) => same(A, EX70) || l1 <= 0 || Math.abs(l2) > 0.4 * l1 || A.flat().some(x => x < 0) }); if (!g) return null;
+      const g = genInt(r, { lo: 0, hi: 6, vmax: 2, bad: (A, l1, l2) => exLike(A, EX70) || l1 <= 0 || Math.abs(l2) > 0.4 * l1 || A.flat().some(x => x < 0) }); if (!g) return null;
       if (g.v[0][0] === 0 || g.A[1][0] === 0) continue;   // (1, 0) がはじめから固有ベクトルの向きのものはよける
       const t = g.v[0][1] / g.v[0][0], x = iter(g.A, 4);
       if (Math.abs(x[1][1] / x[1][0] - t) < 0.15 * Math.max(1, Math.abs(t))) continue;   // 1回めでもう近い（そろうようすが見えない）
@@ -870,7 +911,7 @@
       // 3回かける
       s1(r) {
         const A = [[r.int(1, 5), r.int(0, 4)], [r.int(1, 4), r.int(1, 5)]], rt = roots2(A);
-        if (same(A, EX70) || !(D2(A) > 0) || near(Math.abs(rt[0][0]), Math.abs(rt[1][0]))) return null;   // 固有値の大きさがちがう2つの実数（そろっていくもの）
+        if (exLike(A, EX70) || !(D2(A) > 0) || near(Math.abs(rt[0][0]), Math.abs(rt[1][0]))) return null;   // 固有値の大きさがちがう2つの実数（そろっていくもの）
         const xs = iter(A, 3);
         return { q: `$A=${pm(A)}$ を $(1,\\ 0)$ に3回かけた矢印（前の答えにかけていく）`, a: `$${vt(xs[3])}$`, key: kA(A), easyCheck: false,
           easy: `$${vt(xs[1])}$ → $${vt(xs[2])}$ → $${vt(xs[3])}$`,
@@ -894,10 +935,10 @@
         const f = (a, b) => `=${a}*B2+${b}*C2`;
         return { q: `表計算で、2行めに $(1,\\ 0)$ を入れ、B3 に \`${f(A[0][0], A[0][1])}\`、C3 に \`${f(A[1][0], A[1][1])}\`、D3 に \`=C3/B3\`、E3 に \`=B3/B2\` を入れて下へコピーした。近づく固有ベクトルと固有値の予想`,
           a: `$${vt(g.v[0])}$ の向き、固有値 $${g.l[0]}$`, key: kA(A), easyCheck: false,
-          table: { head: ['', 'A', 'B', 'C', 'D', 'E'], rows: [['1', '回数', '$x$', '$y$', '$y\\div x$', '何倍か'], ...xs.map((x, k) => [String(k + 2), String(k), String(x[0]), String(x[1]), k ? r3(x[1] / x[0]) : '', k ? r3(x[0] / xs[k - 1][0]) : ''])] },
+          table: { head: ['', 'A', 'B', 'C', 'D', 'E'], rows: [['1', '回数', '$x$', '$y$', '$y\\div x$', '何倍か'], ...xs.map((x, k) => [String(k + 2), String(k), String(x[0]), String(x[1]), k ? (x[1] / x[0]).toFixed(3) : '', k ? (x[0] / xs[k - 1][0]).toFixed(3) : ''])] },
           easy: `D列は $${r3(g.v[0][1] / g.v[0][0])}$ に、E列は $${g.l[0]}$ に近づく`, verify: p => powCheck(p, A) };
       },
-      // わな：回る行列（固有値が複素数）→ 7-48
+      // わな：回る行列（固有値が複素数）→ 7-68（R2-18）
       trap(r) {
         const k = r.pick([1, 1, 2, 3]), sg = r.pick([1, -1]), A = [[0, -sg * k], [sg * k, 0]];
         return dest({ q: `$A=${pm(A)}$ を $(1,\\ 0)$ にくり返しかけたとき、近づく固有ベクトルと固有値の予想`, a: `近づかない（回り続ける。固有値 $\\pm ${k === 1 ? '' : k}j$）`, key: kA(A),
@@ -905,14 +946,14 @@
             const v = valsOf(p.a).filter(z => z && Math.abs(z[1]) > 0), x = iter(A, 1)[1], deg = Math.round(Math.atan2(x[1], x[0]) * 180 / Math.PI), len = Math.hypot(...x);
             return (/^近づかない（回り続ける/.test(p.a) && Math.abs(deg) === 90 && near(len, k) && sameSet(v, roots2(A))) || '回る角・固有値がちがう';
           } }, '7-70',
-          `$${vt([0, sg * k])}$、$${vt([-(k * k), 0])}$、… と $90^{\\circ}$ ずつ回るだけで、向きがそろわない（固有値は複素数）`, ['7-48']);
+          `$${vt([0, sg * k])}$、$${vt([-(k * k), 0])}$、… と $90^{\\circ}$ ずつ回るだけで、向きがそろわない（固有値は複素数）`, ['7-68']);
       },
     },
   });
 
   // ================================================================ 7-71
   const EX71 = [[[50, 20], [20, 20]], [[40, 30], [30, -40]]];
-  const bad71 = A => EX71.some(B => same(A, B)) || EX71.some(B => same(A, B.map(r => r.map(x => x / 10))));
+  const bad71 = A => EX71.some(B => exLike(A, B));   // 10分の1・入れかえ・符号ちがいも（U-2）
   // 対称な行列 A = l2 I + t v vᵀ（v の固有値 l2 + t|v|²、v に直交する向きの固有値 l2）。対角は同じにしない
   function genSym(r, o) {
     o = o || {};
@@ -984,7 +1025,9 @@
   });
 
   // ================================================================ 7-72
-  const EX72 = [[4, 1], [2, 3]], EXP72 = [[[4, 1], [2, 3]], [[1, 1], [1, -2]], [[2, 1], [1, -1]], [[5, 2], [5, -4]]];   // 左ページの例の A と、P・P^{-1}・AP
+  const EX72 = [[4, 1], [2, 3]];
+  const bad72 = (A, l1, l2) => exLike(A, EX72) || (l1 != null && (Math.abs(l1 * 2 - l2 * 5) < 1e-9 || Math.abs(l2 * 2 - l1 * 5) < 1e-9));   // 例と同じ固有値の組（$5$ と $2$ の何倍か。R2-9）
+  const EXP72 = [[[4, 1], [2, 3]], [[1, 1], [1, -2]], [[2, 1], [1, -1]], [[5, 2], [5, -4]]];   // 左ページの例の A と、P・P^{-1}・AP
   const colsP = (u, v) => [[u[0], v[0]], [u[1], v[1]]];   // u を1列め、v を2列めに
   const diagD = (a, b) => [[a, 0], [0, b]];
   const PinvAP = (A, P) => M.Mat.mul(M.Mat.inv(M.Mat.make(P)), M.Mat.mul(M.Mat.make(A), M.Mat.make(P)));   // 確かめ：逆行列をかけて計算する（別の道すじ）
@@ -995,7 +1038,7 @@
     futsu: ['$\\det P=-3$ から $P^{-1}=\\dfrac13\\begin{pmatrix}2&1\\\\1&-1\\end{pmatrix}$ を作り、', '$AP$ を計算してから、左から $P^{-1}$ をかける', '（2×2 のかけ算2回と逆行列）'],
     raku: ['$\\begin{pmatrix}4&1\\\\2&3\\end{pmatrix}$、$P=\\begin{pmatrix}1&1\\\\1&-2\\end{pmatrix}$', '$AP=\\begin{pmatrix}5&2\\\\5&-4\\end{pmatrix}$：1列めは5倍、2列めは2倍', '→ $P^{-1}AP=D=\\begin{pmatrix}5&0\\\\0&2\\end{pmatrix}$'],
     why: '$AP$ の $k$ 列めは $A\\times$（$P$ の $k$ 列め）。固有ベクトルなら、固有値倍になるだけ（7-9⑤）。$PD$ の $k$ 列めも、$P$ の $k$ 列めの固有値倍。だから $AP=PD$ で、左から $P^{-1}$ をかけると $P^{-1}AP=D$。$AP$ の列が $P$ の列の何倍かを見れば、$P^{-1}$ を作らずに $D$ がわかる。',
-    caution: '$D$ の対角の順は、$P$ の列の順と同じ（$P$ の1列めの固有値が $D$ の左上）。$P$ の列を何倍しても $D$ は同じ。かける順は $P^{-1}AP$（$PAP^{-1}$ ではない）。固有ベクトルが1本しかない行列は対角化できない（わざ 7-75）。',
+    caution: '$D$ の対角の順は、$P$ の列の順と同じ（$P$ の1列めの固有値が $D$ の左上）。$P$ の列を何倍しても $D$ は同じ（$P$ と $D$ を作る問題の答えは、列を何倍しても、列の順を変えても、$D$ がそれに合っていればよい）。かける順は $P^{-1}AP$（$PAP^{-1}$ ではない）。固有ベクトルが1本しかない行列は対角化できない（わざ 7-75）。',
     counts: { s1: 2, s2: 2, s3: 1, trap: 1 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
     boxw: { s1: '24mm', s2: '24mm', s3: '50mm', trap: '50mm' },
@@ -1008,7 +1051,7 @@
     steps: {
       // A と P から P^{-1}AP（列の何倍かを見る）
       s1(r) {
-        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: A => same(A, EX72) }); if (!g) return null;
+        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: bad72 }); if (!g) return null;
         const o = r.chance(0.5) ? [0, 1] : [1, 0], P = colsP(g.v[o[0]], g.v[o[1]]), D = diagD(g.l[o[0]], g.l[o[1]]), AP = M.Mat.mul(M.Mat.make(g.A), M.Mat.make(P)).map(r => r.map(F_));
         if (EXP72.some(B => same(P, B))) return null;
         return { q: `$A=${pm(g.A)}$、$P=${pm(P)}$ のとき、$P^{-1}AP$`, a: `$${pm(D)}$`, key: kA(g.A), easyCheck: false,
@@ -1016,7 +1059,7 @@
       },
       // 固有値・固有ベクトルが文に書いてあり、P の列の順や長さがちがう
       s2(r) {
-        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: A => same(A, EX72) }); if (!g) return null;
+        const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: bad72 }); if (!g) return null;
         const s = r.pick([2, -1, 3]), u = g.v[1].map(x => x * s), P = colsP(u, g.v[0]), D = diagD(g.l[1], g.l[0]);
         if (EXP72.some(B => same(P, B))) return null;
         return { q: `$A=${pm(g.A)}$ は、固有値 $${g.l[0]}$ の固有ベクトル $${vt(g.v[0])}$、固有値 $${g.l[1]}$ の固有ベクトル $${vt(g.v[1])}$ をもつ。$P=${pm(P)}$ のとき、$P^{-1}AP$`,
@@ -1025,7 +1068,7 @@
       // P と D を作る・台車の B
       s3(r) {
         if (turn(r, '72s3', 2) === 0) {
-          const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: A => same(A, EX72) }); if (!g) return null;
+          const g = genInt(r, { lo: -3, hi: 6, vmax: 3, bad: bad72 }); if (!g) return null;
           return { q: `$A=${pm(g.A)}$ は、固有値 $${g.l[0]}$ の固有ベクトル $${vt(g.v[0])}$、固有値 $${g.l[1]}$ の固有ベクトル $${vt(g.v[1])}$ をもつ。$P^{-1}AP=D$ となる $P$ と $D$`,
             a: `$P=${pm(colsP(g.v[0], g.v[1]))}$、$D=${pm(diagD(g.l[0], g.l[1]))}$`, key: kA(g.A), easyCheck: false, easy: '固有ベクトルを列に、固有値を同じ順に対角に',
             verify: p => {
@@ -1035,7 +1078,7 @@
             } };
         }
         const w1s = r.pick([4, 9, 16, 25, 36, 100]), o = r.pick([5, 10, 20, 50]), B = [[-(w1s + o), o], [o, -(w1s + o)]], P = r.chance(0.5) ? [[1, 1], [1, -1]] : [[1, 1], [-1, 1]];
-        if (EX66.some(e => same(B, cartB(...e)))) return null;
+        if (EX66.some(e => exLike(B, cartB(...e)))) return null;
         const D = P[1][0] === 1 ? diagD(-w1s, -w1s - 2 * o) : diagD(-w1s - 2 * o, -w1s);   // P の1列めが (1, 1) か (1, −1) か
         return { q: `台車2つの $\\ddot{\\vec x}=B\\vec x$ で、$B=${pm(B)}$。$P=${pm(P)}$ のとき、$P^{-1}BP$`, a: `$${pm(D)}$`, key: kA(B), easyCheck: false,
           easy: `$BP$ の1列めは $${-w1s}$ 倍、2列めは $${-w1s - 2 * o}$ 倍`, calc: { kind: 'mat', want: PinvAP(B, P) } };
@@ -1053,7 +1096,7 @@
 
   // ================================================================ 7-73
   const EX73 = [[[2, 1], [1, 2]], [[3, 1], [1, 3]]];
-  const bad73 = A => EX73.some(B => same(A, B));
+  const bad73 = A => EX73.some(B => exLike(A, B));   // 何倍か（主役の2倍の (6 2; 2 6) など）・入れかえ・符号ちがいも（U-2）
   const RtAR = A => { const s = Math.SQRT1_2, R = [[s, -s], [s, s]], Rt = [[s, s], [-s, s]], m = (X, Y) => X.map((row, i) => Y[0].map((_, j) => row.reduce((acc, x, k) => acc + x * Y[k][j], 0))); return m(Rt, m(A, R)); };
   M.add({
     id: '7-73', part: 5, chap: '7-9①⑥ 例題1・3', stars: 1,
@@ -1131,22 +1174,25 @@
     fits(q) { const m = /\\end\{pmatrix\}\^\{(\d+)\}/.exec(q); return !!m && +m[1] >= 2 && symEq(matsIn(q)[0]); },
     steps: {
       s1(r) {
-        const a = r.int(1, 5), b = r.pick([1, 2, 3]), n = r.int(2, 5), A = [[a, b], [b, a]];
-        if (EX74.some(B => same(A, B)) || Math.abs(a) === Math.abs(b) || (a + b) ** n > 1100) return null;
+        const a = r.int(1, 6), b = r.pick([1, 2, 3, 4]), n = r.int(2, 5), A = [[a, b], [b, a]];
+        if (EX74.some(B => exLike(A, B)) || Math.abs(a) === Math.abs(b) || (a + b) ** n > 1100) return null;
         return { q: `$${pm(A)}^{${n}}$`, a: `$${pm(powM(A, n).map(row => row.map(F_)))}$`, key: kA(A), easyCheck: false,
           easy: `$${a + b}^{${n}}=${(a + b) ** n}$、$${a - b < 0 ? `(${a - b})` : a - b}^{${n}}=${(a - b) ** n}$`, calc: { kind: 'mat', want: powM(A, n) } };
       },
       // a−b が負・b が負
       s2(r) {
-        const a = r.int(-2, 4), b = r.pick([-3, -2, -1, 2, 3, 4]), n = r.int(2, 6), A = [[a, b], [b, a]];
-        if (EX74.some(B => same(A, B)) || Math.abs(a) === Math.abs(b) || a - b >= 0 && b > 0 || Math.max(Math.abs(a + b), Math.abs(a - b)) ** n > 1100 || a === 0 && Math.abs(b) === 1) return null;
+        const a = r.int(-3, 5), b = r.pick([-4, -3, -2, -1, 2, 3, 4]), n = r.int(2, 6), A = [[a, b], [b, a]];
+        if (EX74.some(B => exLike(A, B)) || Math.abs(a) === Math.abs(b) || a - b >= 0 && b > 0 || Math.max(Math.abs(a + b), Math.abs(a - b)) ** n > 1100 || a === 0 && Math.abs(b) === 1) return null;
         return { q: `$${pm(A)}^{${n}}$`, a: `$${pm(powM(A, n).map(row => row.map(F_)))}$`, key: kA(A), easyCheck: false,
           easy: `$(a+b)^{${n}}=${(a + b) ** n}$、$(a-b)^{${n}}=${(a - b) ** n}$`, calc: { kind: 'mat', want: powM(A, n) } };
       },
       // ベクトルにかける：A^n (x, y)
       s3(r) {
-        const a = r.int(1, 4), b = r.pick([-2, -1, 1, 2]), n = r.int(3, 6), A = [[a, b], [b, a]], x = r.int(1, 4), y = r.pick([0, 1, 2, -1]);
-        if (EX74.some(B => same(A, B)) || Math.abs(a) === Math.abs(b) || x === y || x === -y || Math.max(Math.abs(a + b), Math.abs(a - b)) ** n > 1100 || (x + y) % 2) return null;
+        // 例の何倍か・入れかえをよけると行列が少ないので、n と点は、使えるものから選ぶ
+        const a = r.int(1, 6), b = r.pick([-4, -3, -2, -1, 1, 2, 3, 4]), A = [[a, b], [b, a]], big = Math.max(Math.abs(a + b), Math.abs(a - b));
+        if (EX74.some(B => exLike(A, B)) || Math.abs(a) === Math.abs(b)) return null;
+        const ns = [3, 4, 5, 6].filter(k => big ** k <= 1100); if (!ns.length) return null;
+        const n = r.pick(ns), x = r.int(1, 4), y = r.pick([0, 1, 2, -1, -2, 3].filter(v => (x + v) % 2 === 0 && v !== x && v !== -x));
         const W = M.Mat.mul(powM(A, n), M.Mat.make([[x], [y]]));
         return { q: `$${pm(A)}^{${n}}${cv([x, y])}$`, a: `$${cv(W.map(row => F_(row[0])))}$`, key: kA(A), easyCheck: false,
           easy: `$q_1=${(x + y) / 2}$、$q_2=${(x - y) / 2}$ をそれぞれ $${a + b < 0 ? `(${a + b})` : a + b}^{${n}}$ 倍、$${a - b < 0 ? `(${a - b})` : a - b}^{${n}}$ 倍してもどす`, calc: { kind: 'mat', want: W } };
@@ -1162,7 +1208,7 @@
 
   // ================================================================ 7-75
   const EX75 = [[[2, 1], [0, 3]], [[2, 1], [0, 2]], [[2, 1], [1, 2]], [[3, 0], [0, 3]], [[1, 1], [0, 1]], [[2, 0], [0, 3]]];
-  const bad75 = A => EX75.some(B => same(A, B));
+  const bad75 = A => EX75.some(B => exLike(A, B));   // 転置・何倍かも（U-2）
   // 対角化できるか（別の道すじ：重解なら A−λI が0の行列か）
   const canDiag = A => { const rt = roots2(A); if (Math.abs(rt[0][1]) > 1e-12) return false; if (!cnear(rt[0], rt[1])) return true; const l = rt[0][0]; return [A[0][0] - l, A[0][1], A[1][0], A[1][1] - l].every(x => Math.abs(x) < 1e-12); };
   const triTxt = A => pm(A);
@@ -1173,7 +1219,7 @@
     futsu: ['$\\det(A-\\lambda I)$ を', '$(2-\\lambda)(3-\\lambda)-1\\times0$ と書き、', '展開して解いて、固有ベクトルをさがす'],
     raku: ['$\\begin{pmatrix}2&1\\\\0&3\\end{pmatrix}$ → 2と3 → できる', '$\\begin{pmatrix}2&1\\\\0&2\\end{pmatrix}$ → 2だけ、固有ベクトル1本', '→ できない'],
     why: '左下が0なら $\\det(A-\\lambda I)$ は $(a-\\lambda)(d-\\lambda)-b\\times0$、つまり $(a-\\lambda)(d-\\lambda)$ で、展開しなくても解は $a$ と $d$（右上が0でも同じ）。固有値がちがえば、固有ベクトルは平行にならず2本あるので、対角化できる。重解で、右上（左下）が0でないと、$A-\\lambda I$ の式は1つだけで固有ベクトルは1本、$P$ が作れない（7-9⑧ せいかくに言うと）。',
-    caution: '三角の形でないと、対角成分は固有値でない（主役の行列は、対角が2と2でも、固有値は3と1）。重解でも、もともと対角行列（$3I$ など）なら、そのまま $D$。上の三角の $P$ は1列め $(1,\\ 0)$、2列め $(b,\\ d-a)$。',
+    caution: '三角の形でないと、対角成分は固有値でない（主役の行列は、対角が2と2でも、固有値は3と1）。重解でも、もともと対角行列（$3I$ など）なら、そのまま $D$。上の三角の $P$ は1列め $(1,\\ 0)$、2列め $(b,\\ d-a)$（何倍でもよく、固有値の順も問わない）。',
     counts: { s1: 4, s2: 4, s3: 3, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 1, trap: 2 },
     boxw: { s1: '18mm', s2: '16mm', s3: '58mm', trap: '16mm' },
@@ -1193,8 +1239,9 @@
       },
       // 対角化できるか
       s2(r) {
-        const yes = turn(r, '75s2', 2) === 0, a = r.int(-3, 7), d = yes ? r.intNot(-3, 7, x => x === a) : a, e = r.pick([-4, -2, -1, 1, 2, 3, 5]), A = r.chance(0.5) ? [[a, e], [0, d]] : [[a, 0], [e, d]];
+        const yes = peek(r, '75s2', 2) === 0, a = r.int(-3, 7), d = yes ? r.intNot(-3, 7, x => x === a) : a, e = r.pick([-4, -2, -1, 1, 2, 3, 5]), A = r.chance(0.5) ? [[a, e], [0, d]] : [[a, 0], [e, d]];
         if (bad75(A)) return null;
+        adv(r, '75s2', 2);
         return { q: `$${triTxt(A)}$ は対角化できるか（できる・できない）`, a: yes ? 'できる' : 'できない', key: kA(A), easyCheck: false,
           easy: yes ? `固有値 $${a}$ と $${d}$ がちがう` : `固有値 $${a}$ の重解で、ななめ以外が0でない`, verify: p => (p.a === (canDiag(A) ? 'できる' : 'できない')) || '対角化できるかがちがう' };
       },
@@ -1316,5 +1363,22 @@
           'はじめのずれは、角振動数には関係しない（ずれで決まるのは $q_1$、$q_2$ だけ）。モードの角振動数は、ばねと質量だけで決まる', ['7-66']);
       },
     },
+  });
+  // ---------------------------------------------------------------- 答えのかたより（S-4・U-3）
+  // 1つのステップに同じ答えを3つ以上出さない。本の数（counts）をこえて作るとき（アプリのプリント）はしばらない
+  const na3 = a => String(a == null ? '' : a).replace(/[\s$]|\\[,;! ]/g, '');
+  M.list(7).filter(id => M.waza[id].part === 5).forEach(id => {
+    const d = M.waza[id];
+    ['s1', 's2', 's3'].forEach(s => {
+      const fn = d.steps[s]; if (!fn) return;
+      d.steps[s] = r => {
+        const p = fn(r); if (!p) return p;
+        const u = r.ans3 || (r.ans3 = { keys: new Set() }), c = u[id + s] || (u[id + s] = { n: 0, a: {} }), a = na3(p.a), kk = id + '\u0000' + (p.key || p.q);
+        if (u.keys.has(kk)) return null;   // 同じ問題は makeStep がはねるので、ここで数えない
+        if (c.n < (d.counts[s] || 0) && (c.a[a] || 0) >= 2) return null;
+        u.keys.add(kk); c.n++; c.a[a] = (c.a[a] || 0) + 1;
+        return p;
+      };
+    });
   });
 })(globalThis.MONDAI);

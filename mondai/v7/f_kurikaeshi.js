@@ -11,7 +11,7 @@
  * 図は 7-80（移り方の丸と矢印。曲がった矢印は弧）と 7-90（地面と抵抗2本。M.figResistor）のステップ3だけ（K-2）。
  * プログラム（p.code）は 7-88 のステップ3だけ。見わけようは文しか出さないので、ステップ1・2 は1行のコード（`…`）を文の中に書く。
  * 左ページの「楽な形」と目印の例の数は、同じ見開きの問題に出さない（O-2）。key は、ステップがちがっても同じ問題（同じ数の組）なら同じになる形にする。
- * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「楽な形なし」）を書く（dest。N-3）。 */
+ * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「わざなし」。S-7）を書く（dest。N-3）。 */
 (function (M) {
   'use strict';
 
@@ -24,6 +24,9 @@
   const fmt = v => String(+(+v).toFixed(10));                        // 0.30000000004 → 0.3
   const D = x => (Array.isArray(x) ? x : F.fromDec(String(x)));        // 0.5 → [1, 2]
   const turn = (r, key, n) => { const d = r.turns || (r.turns = {}); d[key] = d[key] == null ? r.int(0, n - 1) : (d[key] + 1) % n; return d[key]; };
+  // 問題ができたときだけ進める回し方（答えのかたよりをなくす。S-4・U-3）：peek で今の番を見て、問題を返す前に adv で進める
+  const peek = (r, key, n) => { const d = r.turns || (r.turns = {}); if (d[key] == null) d[key] = r.int(0, n - 1); return d[key]; };
+  const adv = (r, key, n) => { r.turns[key] = (r.turns[key] + 1) % n; };
   // 分数 f の、正確な小数（分母が 2 と 5 だけのとき）。そうでなければ null
   function dec(f) {
     const [n, d] = f, sg = n < 0 ? '-' : '';
@@ -95,7 +98,7 @@
   }
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2・N-3）
-  // easy に「（わけ。わざ □ で）」か「（わけ。楽な形なし）」を書く。extra：ほかの部のわざ・fits では見つからないわざの番号
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く（S-7）。extra：ほかの部のわざ・fits では見つからないわざの番号
   function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(7).filter(id => {
@@ -106,7 +109,7 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -124,6 +127,8 @@
     const want = (swap ? 'ゆれながら' : '') + (grow ? 'ふえる' : '0に近づく');
     return p.a === want || `ふるまいは ${want} のはず`;
   }
+  // 同じ見開きで、同じ「倍率とはじめの数」の組を重ねない（7-77 s1 と s3 の 1.5倍・200。U-2）。もう出ていれば true
+  const dup77 = (r, a, x0) => { const u = r.ax77 || (r.ax77 = new Set()), k = `${a}|${x0}`; if (u.has(k)) return true; u.add(k); return false; };
   const ax = (a, v) => `${a === 1 ? '' : a === -1 ? '-' : fmt(a)}${v}_n`;
   M.add({
     id: '7-77', part: 6, chap: '7-10④ 例題1', stars: 1,
@@ -147,7 +152,7 @@
         const a = r.pick([2, -2, 3, -3, 0.5, -0.5, 1.5, -1.5, 0.2, -0.2, 0.1, -0.1, 0.4, -0.4]), n = r.int(2, 4), x0 = r.pick([1, 2, 3, 4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 80, 100, 125, 200, 1000]);
         if (a === -0.5 && x0 === 16) return null;   // 楽な形の例（O-2）
         let v = fr(1); for (let k = 0; k < n; k++) v = F.mul(v, D(a)); v = F.mul(v, fr(x0));
-        if (decLen(v) > 3 || Math.abs(F.val(v)) > 5000 || (Math.abs(F.val(v)) < 0.01)) return null;
+        if (decLen(v) > 3 || Math.abs(F.val(v)) > 5000 || (Math.abs(F.val(v)) < 0.01) || dup77(r, a, x0)) return null;
         return { q: `$x_{n+1}=${ax(a, 'x')}$、$x_0=${x0}$ のとき $x_${n}$`, a: `$${fx(v)}$`, key: `${a}|${x0}|${n}`,
           easy: `$x_${n}=${fxs(D(a))}^${n}\\times${x0}$`, easyCheck: 'last',
           verify: p => near(nums(p.a)[0], iter1(a, 0, x0, n), 1e-9) || '1回ずつたどった値とちがう' };
@@ -179,20 +184,20 @@
         if (kind === 0) {
           const a = r.pick([0.8, 0.5, 0.6, 0.4, 0.9]), h = r.pick([1, 2, 5, 10, 4]), n = r.int(2, 3);
           const v = F.mul(F.mul(fr(h), D(a)), n === 3 ? F.mul(D(a), D(a)) : D(a));
-          if (decLen(v) > 3) return null;
+          if (decLen(v) > 3 || dup77(r, a, h)) return null;
           return { q: `はねるたびに、高さが前の $${a}$ 倍になるボールを、高さ ${U(h, 'm')} から落とした。${n}回はねたあとの高さ ＝ $□\\,\\mathrm{m}$`, a: `$${fx(v)}$`, key: `${a}|${h}|${n}`,
             easy: `$${a}^${n}\\times${h}=${fx(v)}$`, easyCheck: 'last', verify: p => near(nums(p.a)[0], iter1(a, 0, h, n), 1e-9) || 'たどった高さとちがう' };
         }
         if (kind === 1) {
           const a = r.pick([-0.5, 0.5, -0.2, 0.8, -0.8, 0.2]), Ta = r.pick([20, 25, 15]), u0 = r.pick([40, 50, 60, 80]), n = r.int(2, 3);
           let u = fr(u0); for (let k = 0; k < n; k++) u = F.mul(u, D(a));
-          const T = F.add(fr(Ta), u); if (decLen(T) > 3) return null;
+          const T = F.add(fr(Ta), u); if (decLen(T) > 3 || dup77(r, a, u0)) return null;
           return { q: `部屋の温度との差が、1歩ごとに $${a}$ 倍になる計算をした（部屋は ${Ta}℃、はじめのお湯は ${Ta + u0}℃）。${n}歩あとの温度 ＝ □℃`, a: `$${fx(T)}$`, key: `${a}|${u0}|${n}`,
             easy: `差は $${fxs(D(a))}^${n}\\times${u0}=${fx(u)}$`, easyCheck: false, verify: p => near(nums(p.a)[0], Ta + iter1(a, 0, u0, n), 1e-9) || 'たどった温度とちがう' };
         }
         const a = r.pick([2, 3, 1.5]), x0 = r.pick([100, 200, 300, 500]), n = r.int(3, 5);
         let v = fr(x0); for (let k = 0; k < n; k++) v = F.mul(v, D(a));
-        if (!isInt(v) || F.val(v) > 50000) return null;
+        if (!isInt(v) || F.val(v) > 50000 || dup77(r, a, x0)) return null;
         return { q: `1時間ごとに $${a}$ 倍になる細菌が、はじめ ${x0} 個いる。${n}時間あとの数 ＝ □ 個`, a: `$${fx(v)}$`, key: `${a}|${x0}|${n}`,
           easy: `$${a}^${n}\\times${x0}=${fx(v)}$`, easyCheck: 'last', verify: p => near(nums(p.a)[0], iter1(a, 0, x0, n), 1e-9) || 'たどった数とちがう' };
   }
@@ -259,11 +264,11 @@
           : `池の魚が1年で $${a}$ 倍にへり、毎年 ${fx(c)} 匹を放す。放した直後の数の落ち着く先 ＝ □ 匹`;
         return { q, a: `$${y}$`, key: `${a}|${fx(c)}`, easy: `$\\frac{${fx(c)}}{1-${a}}=${y}$`, easyCheck: 'last', verify: p => near(nums(p.a)[0], iter1(a, F.val(c), 0, 600), 1e-6) || 'たどった量とちがう' };
       },
-      // わな：|a|>1 は落ち着かない（楽な形なし）
+      // わな：|a|>1 は落ち着かない（わざなし）
       trap(r) {
         const a = r.pick([1.2, 1.5, 2, 1.1, -1.5, -2, 1.25]), c = r.pick([10, 20, 5, 30, 40]);
         const bad = F.div(fr(c), F.sub(fr(1), D(a)));
-        return dest({ q: `$y_{n+1}=${fmt(a)}y_n+${c}$、$y_1=${c}$ の落ち着く先`, a: '落ち着かない', key: `t${a}|${c}`,
+        return dest({ q: `$y_{n+1}=${fmt(a)}y_n+${c}$、$y_0=${c}$ の落ち着く先`, a: '落ち着かない', key: `t${a}|${c}`,
           verify: () => Math.abs(iter1(a, c, c, 300)) > 1e6 || 'ふえ続けていない' }, '7-78',
         `$\\lvert${fmt(a)}\\rvert>1$ なので、くり返すたびに${a < 0 ? 'ゆれながら' : ''}大きくなる。$\\frac{${c}}{1-${fxs(D(a))}}=${fx(bad)}$ は答えではない`);
       },
@@ -350,7 +355,7 @@
         return { q: `植木鉢に毎朝 ${U(c, 'mL')} の水をやり、土の水は1日で $${x}$ 倍になる。はじめの朝を1日めとして、4日め（水をやった直後）の量 ＝ $□\\,\\mathrm{mL}$`, a: `$${fx(S)}$`, key: `${x}|4|${c}`, easyCheck: false,
           easy: `$${c}\\,(1+${x}+${x}^2+${x}^3)=${c}\\times\\frac{1-${x}^4}{1-${x}}$`, verify: p => near(nums(p.a)[0], iter1(x, c, c, 3), 1e-9) || '1日ずつたどった量とちがう' };
       },
-      // わな：比の大きさが1以上（落ち着かない。楽な形なし）
+      // わな：比の大きさが1以上（落ち着かない。わざなし）
       trap(r) {
         const x = r.pick([2, 3, 1.5, -2, -3, 1.1]), ts = [fr(1)]; for (let k = 1; k < 4; k++) ts.push(F.mul(ts[k - 1], D(x)));
         const bad = F.div(fr(1), F.sub(fr(1), D(x)));
@@ -383,7 +388,9 @@
     ] };
   }
   const wPick = (r, bad) => { for (let k = 0; k < 30; k++) { const p = r.int(1, 9), q = r.int(1, 9); if (p !== q && !(bad && bad(p, q))) return [p, q]; } return null; };
-  const ex80 = (p, q) => (p === 9 && q === 5);   // 楽な形の例（O-2）
+  // 例の行列 (p, q) と、4つの数の組が同じもの（晴れと雨を入れかえただけの行列など。U-2）
+  const wSame = (p, q, P, Q) => [p, q, 10 - p, 10 - q].sort().join() === [P, Q, 10 - P, 10 - Q].sort().join();
+  const ex80 = (p, q) => wSame(p, q, 9, 5);   // 楽な形の例（O-2）
   const dayOf = q => { const m = /(\d+)日後/.exec(q); return m ? +m[1] : /あさって/.test(q) ? 2 : /明日/.test(q) ? 1 : null; };
 
   // ================================================================ 7-80
@@ -462,7 +469,7 @@
     return out;
   })();
   const linkWords = L => L.map((l, i) => `${PAGES[i]} は ${l.map(j => PAGES[j]).join(' と ')} へ`).join('、') + 'リンクしている';
-  const ex81 = (p, q) => (p === 9 && q === 5) || (p === 8 && q === 4);   // 楽な形と目印の例（O-2）
+  const ex81 = (p, q) => wSame(p, q, 9, 5) || wSame(p, q, 8, 4);   // 楽な形と目印の例（O-2・U-2）
   const statOf = (p, q) => { const s = F.div(fr(q), fr(10 - p + q)); return [s, F.sub(fr(1), s)]; };
   M.add({
     id: '7-81', part: 6, chap: '7-10②・7-11⑨ 例題3', stars: 1,
@@ -519,8 +526,11 @@
 
   // ================================================================ 7-82
   // 固有ベクトルがわかる行列：[行列, [λ1, v1], [λ2, v2]]
-  const SYM = [[3, 1], [2, 0], [3, -1], [4, 0], [5, 1], [5, -1], [4, -2], [4, 2], [2, -2], [3, -3], [5, 3]]   // [λ1, λ2]：[[a,b],[b,a]]、a=(λ1+λ2)/2、b=(λ1−λ2)/2
-    .map(([l1, l2]) => [[[(l1 + l2) / 2, (l1 - l2) / 2], [(l1 - l2) / 2, (l1 + l2) / 2]], [l1, [1, 1]], [l2, [1, -1]]]);
+  // [λ1, λ2]：[[a,b],[b,a]]、a=(λ1+λ2)/2、b=(λ1−λ2)/2。楽な形の例 (2 1; 1 2)（[3, 1]）と、その入れかえ（[3, −1]）は入れない（U-2）
+  const symOf = ([l1, l2]) => [[[(l1 + l2) / 2, (l1 - l2) / 2], [(l1 - l2) / 2, (l1 + l2) / 2]], [l1, [1, 1]], [l2, [1, -1]]];
+  const SYM = [[2, 0], [4, 0], [5, 1], [5, -1], [4, -2], [4, 2], [2, -2], [3, -3], [5, 3]].map(symOf);
+  // s3 の「$n$ の式」：固有値 ±1 と、0でない大きい固有値（固有値0だと $n=0$ で式が成り立たない。R2-14）
+  const SYMN = [[5, 1], [5, -1], [7, 1], [7, -1]].map(symOf);
   const NONSYM = [
     [[[4, 1], [2, 3]], [5, [1, 1]], [2, [1, -2]]], [[[3, 1], [2, 2]], [4, [1, 1]], [1, [1, -2]]], [[[2, 2], [1, 3]], [4, [1, 1]], [1, [2, -1]]],
     [[[4, 2], [1, 3]], [5, [2, 1]], [2, [1, -1]]], [[[5, 2], [2, 2]], [6, [2, 1]], [1, [1, -2]]], [[[1, 1], [0, 2]], [2, [1, 1]], [1, [1, 0]]], [[[2, 0], [1, 1]], [2, [1, 1]], [1, [0, 1]]],
@@ -534,7 +544,6 @@
       if (x0.some(x => x === 0) && r.chance(0.7)) continue;
       const y = [0, 1].map(i => c1 * l1 ** n * v1[i] + c2 * l2 ** n * v2[i]);
       if (y.some(x => Math.abs(x) > 3000)) continue;
-      if (A[0][0] === 2 && A[0][1] === 1 && A[1][0] === 1 && x0[0] === 3 && x0[1] === 1 && n === 4) continue;   // 楽な形の例（O-2）
       if (opt && opt.bad && opt.bad(A, x0, n)) continue;
       return { A, l1, v1, l2, v2, c1, c2, n, x0, y };
     }
@@ -582,7 +591,7 @@
           return { q: `水そうのオイラー法の1歩の行列 $G=${pm(G)}$ を、はじめの水位 $(${h},\\ 0)$（cm）に ${n} 回かけた、${n}歩あとの水位（左、右）`, a: `$${tup([yl, yr])}$`, key: `${G}|${h},0|${n}`, easyCheck: false,
             easy: `$(${h},\\ 0)=${h / 2}(1,\\ 1)+${h / 2}(1,\\ -1)$、差の向きは1歩で $${fmt(mu)}$ 倍`, verify: p => vnear(pairOf(p.a), y) || '1歩ずつ進めた水位とちがう' };
         }
-        const g = gen82(r, SYM.filter(s => s[2][0] === 1 || s[2][0] === -1 || s[2][0] === 0)); if (!g) return null;
+        const g = gen82(r, SYMN); if (!g) return null;
         // 項 c×λ^n（λ が1なら数だけ、−1 なら (−1)^n、0 なら書かない）
         const tm = (c, l) => { if (c === 0 || l === 0) return null; const b = l === 1 ? null : l === -1 ? '(-1)^n' : `${l}^n`, a = Math.abs(c); return [c < 0 ? -1 : 1, b ? (a === 1 ? b : `${a}\\times${b}`) : String(a)]; };
         const comp = i => { const ts = [tm(g.c1 * g.v1[i], g.l1), tm(g.c2 * g.v2[i], g.l2)].filter(Boolean); return ts.length ? ts.map(([sg, s], k) => (sg < 0 ? '-' : k ? '+' : '') + s).join('') : '0'; };
@@ -643,10 +652,16 @@
     steps: {
       // 固有値がわかっているとき（3つの行き先）
       s1(r) {
-        const l1 = r.pick(LAM83), l2 = r.pick(LAM83);
+        const want = peek(r, '83s1', 3);   // 0：ふえる、1：0に近づく、2：落ち着く（R2-13）
+        const big = want === 0 ? LAM83.filter(l => Math.abs(l) > 1) : want === 1 ? LAM83.filter(l => Math.abs(l) < 1) : [1];
+        const l1 = r.pick(big), small = LAM83.filter(l => Math.abs(l) < Math.abs(l1) || (want === 0 && Math.abs(l) !== Math.abs(l1)));
+        if (!small.length) return null;
+        const l2 = r.pick(small), sw = r.chance(0.5);
         if (Math.abs(l1) === Math.abs(l2) || (l1 === 0.8 && l2 === 0.4) || (l1 === 0.4 && l2 === 0.8)) return null;
-        const B = [[(l1 + l2) / 2, (l1 - l2) / 2], [(l1 - l2) / 2, (l1 + l2) / 2]], g = fate(B, [1, 0]).grow, m = Math.max(Math.abs(l1), Math.abs(l2));
-        return { q: `行列 $B$ は $(1,\\ 1)$ を $${fmt(l1)}$ 倍、$(1,\\ -1)$ を $${fmt(l2)}$ 倍する。$B$ を点 $(1,\\ 0)$ に何回もかけると${GROW3}`, a: m > 1 ? 'ふえる' : m < 1 ? '0に近づく' : '落ち着く', key: `${fmt(l1)},${fmt(l2)}`, easyCheck: false,
+        const [u1, u2] = sw ? [l2, l1] : [l1, l2];   // どちらの向きが大きいかも入れかえる
+        adv(r, '83s1', 3);
+        const B = [[(u1 + u2) / 2, (u1 - u2) / 2], [(u1 - u2) / 2, (u1 + u2) / 2]], g = fate(B, [1, 0]).grow, m = Math.max(Math.abs(l1), Math.abs(l2));
+        return { q: `行列 $B$ は $(1,\\ 1)$ を $${fmt(u1)}$ 倍、$(1,\\ -1)$ を $${fmt(u2)}$ 倍する。$B$ を点 $(1,\\ 0)$ に何回もかけると${GROW3}`, a: m > 1 ? 'ふえる' : m < 1 ? '0に近づく' : '落ち着く', key: `${fmt(u1)},${fmt(u2)}`, easyCheck: false,
           easy: `大きさの大きいほうは $\\lvert${fmt(Math.abs(l1) > Math.abs(l2) ? l1 : l2)}\\rvert$`, verify: p => p.a === g || `何回もかけると ${g}` };
       },
       // 対角が同じ対称な行列：そろう向きと、ふえるか
@@ -669,7 +684,9 @@
       },
       // わな：固有値が複素数（回る。7-84）
       trap(r) {
-        const [B, k] = r.pick([[[[0.6, -0.8], [0.8, 0.6]], 0], [[[0.8, -0.6], [0.6, 0.8]], 0], [[[0, -1], [1, 0]], 0], [[[0, -0.5], [0.5, 0]], 1], [[[0.3, -0.4], [0.4, 0.3]], 1], [[[1, -1], [1, 1]], 2], [[[0.5, -0.5], [0.5, 0.5]], 1], [[[1.2, -0.9], [0.9, 1.2]], 2]]);
+        const T83 = [[[[0.6, -0.8], [0.8, 0.6]], 0], [[[0.8, -0.6], [0.6, 0.8]], 0], [[[0, -1], [1, 0]], 0], [[[0, -0.5], [0.5, 0]], 1], [[[0.3, -0.4], [0.4, 0.3]], 1], [[[1, -1], [1, 1]], 2], [[[0.5, -0.5], [0.5, 0.5]], 1], [[[1.2, -0.9], [0.9, 1.2]], 2]];
+        const want = peek(r, '83t', 3), cand = T83.filter(t => t[1] === want), [B, k] = r.pick(cand);   // 回り続ける・原点へ・広がるを回す（U-3）
+        adv(r, '83t', 3);
         return dest({ q: `$B=${pm(B)}$ を点 $(1,\\ 0)$ に何回もかけると${UZUQ}`, a: UZU[k], key: `t${B}`, easyCheck: false,
           verify: p => { const f = fate(B, [1, 0]); return (f.rot && UZU[{ '落ち着く': 0, '0に近づく': 1, 'ふえる': 2 }[f.grow]] === p.a) || `何回もかけると ${f.grow}`; } }, '7-83',
         `固有値が複素数 $${cpx(B[0][0], B[1][0])}$ で、そろう向きがない。大きさ $${sqrtDec(+(B[0][0] ** 2 + B[1][0] ** 2).toFixed(6))}$ で決まる`, ['7-84']);
@@ -713,8 +730,7 @@
         if (turn(r, '84s2', 3) < 2) {
           const rr = r.pick([0.9, 0.5, 0.8, 2, 0.6, 1.1]), th = r.pick([30, 45, 60, 90, 120, 180]), tot = r.pick([180, 360, 360]), n = tot / th;
           if (!Number.isInteger(n) || n < 2 || (rr === 0.9 && th === 30 && n === 12)) return null;
-          const P = D(fmt(rr)), pw = F.make(Math.pow(P[0], n), Math.pow(P[1], n)), sgn = tot === 180 ? '-' : '';
-          const cf = decLen(pw) <= 4 && Math.abs(F.val(pw)) < 1e4 ? fx(pw) : `${fmt(rr)}^{${n}}`;
+          const sgn = tot === 180 ? '-' : '', cf = `${fmt(rr)}^{${n}}`;   // いつも $r^n$ の形（$-0.6^{4}I$ は $-(0.6^4)I$）
           return { q: `$\\bigl(${fmt(rr)}R(${th}^{\\circ})\\bigr)^{${n}}$ を、$I$ を使って`, a: `$${sgn}${cf}I$`, key: `${rr}|${th}|${n}`, easyCheck: false, boxw: '22mm',
             easy: `$${n}\\times${th}^{\\circ}=${tot}^{\\circ}$、$${fmt(rr)}^{${n}}R(${tot}^{\\circ})$`,
             verify: p => { const c = ev(strip(p.a).replace(/I$/, '')), A = rotPow(rr, th, n); return (c != null && near(A[0][0], c, 1e-9) && near(A[1][1], c, 1e-9) && Math.abs(A[0][1]) < 1e-9 * Math.max(1, Math.abs(c))) || '何回もかけた行列とちがう'; } };
@@ -742,7 +758,10 @@
       },
       // わな：固有値が実数（そろう。7-83）
       trap(r) {
-        const l1 = r.pick([1.2, 0.5, 1.5, 0.8, 0.9, 2]), l2 = r.pick([0.5, 0.3, 1.1, 0.6, 0.4]); if (l1 === l2) return null;
+        const want = peek(r, '84t', 4), grow = want < 2, first = want % 2 === 0;   // そろう向きと、ふえる・0に近づくを回す（U-3）
+        const bg = r.pick(grow ? [1.2, 1.5, 2, 1.1] : [0.5, 0.8, 0.9, 0.6]), sm = r.pick([0.3, 0.4, 0.5, 0.6, 0.8, 0.9, 1.1].filter(x => x < bg));
+        const [l1, l2] = first ? [bg, sm] : [sm, bg];
+        adv(r, '84t', 4);
         const B = [[l1, 0], [0, l2]], big = Math.abs(l1) > Math.abs(l2) ? [1, 0] : [0, 1];
         return dest({ q: `$B=${pm(B)}$ を点 $(1,\\ 1)$ に何回もかけると、${dirQ([1, 0], [0, 1])}`, a: `$${vecT(big)}$、${Math.max(l1, l2) > 1 ? 'ふえる' : '0に近づく'}`, key: `t${l1},${l2}`, easyCheck: false,
           verify: p => dirCheck(p, B, [1, 1]) }, '7-84',
@@ -755,7 +774,8 @@
   const I2 = [[1, 0], [0, 1]];
   const step1 = (A, dt) => A.map((row, i) => row.map((x, j) => +((i === j ? 1 : 0) + x * dt).toFixed(6)));
   const tankA = k => [[-k, k], [k, -k]];
-  const ex85 = (A, dt) => A[0][0] === -0.1 && A[0][1] === 0.1 && A[1][0] === 0.1 && dt === 2;   // 楽な形の例
+  // 楽な形の例：$H$ そのもの（$k=0.1$ の水そう）か、1歩の行列が例の答え $\\begin{pmatrix}0.8&0.2\\\\0.2&0.8\\end{pmatrix}$ になる組（R2-4・O-2）
+  const ex85 = (A, dt) => (A[0][0] === -0.1 && A[0][1] === 0.1 && A[1][0] === 0.1 && A[1][1] === -0.1) || String(step1(A, dt)) === '0.8,0.2,0.2,0.8';
   const eigPair = (p, want) => { const v = nums(p.a); return (v.length === 2 && ((near(v[0], want[0]) && near(v[1], want[1])) || (near(v[0], want[1]) && near(v[1], want[0])))) || `固有値は ${want.map(fmt).join('、')} のはず`; };
   const dotx = '\\dot{\\vec x}';
   M.add({
@@ -791,11 +811,12 @@
           const l1 = r.pick([0, -0.1, -0.2, -0.05, -0.4]), l2 = r.pick([-0.5, -0.3, -1, -0.25, -0.6]), dt = r.pick([0.5, 1, 2, 4, 0.2]);
           if (l1 === l2) return null;
           const m = [1 + l1 * dt, 1 + l2 * dt].map(x => +x.toFixed(6));
+          if ((l1 === 0 && l2 === -0.2) || [...m].sort().join() === '0.6,1') return null;   // 例の固有値（0 と −0.2）・例の答え（1 と 0.6。R2-4）
           return { q: `$A$ の固有値が $${fmt(l1)}$ と $${fmt(l2)}$ のとき、$\\Delta t=${fmt(dt)}$ のオイラー法の1歩の行列の固有値`, a: `$${fmt(m[0])}$、$${fmt(m[1])}$`, key: `${l1},${l2}|${dt}`, easyCheck: false,
             easy: `$1+(${fmt(l1)})\\times${fmt(dt)}$、$1+(${fmt(l2)})\\times${fmt(dt)}$`,
             verify: p => { const B = step1([[l1, 0], [0, l2]], dt), e = eig2(B); return eigPair(p, e); } };
         }
-        const k = r.pick([0.1, 0.2, 0.05, 0.25, 0.5]), dt = r.pick([0.5, 1, 2, 2.5, 4, 1.5]), A = tankA(k);
+        const k = r.pick([0.2, 0.05, 0.25, 0.5, 0.4]), dt = r.pick([0.5, 1, 2, 2.5, 4, 1.5]), A = tankA(k);
         if (ex85(A, dt)) return null;
         const m = 1 - 2 * k * dt;
         return { q: `水そう $${dotx}=${pm(A)}\\vec x$ を $\\Delta t=${fmt(dt)}$ のオイラー法で進めるときの、1歩の行列の固有値`, a: `$1$、$${fmt(+m.toFixed(6))}$`, key: `${A}|${dt}`, easyCheck: false,
@@ -803,17 +824,19 @@
       },
       // 見かけがちがう：はじめの水位から2歩・1歩
       s3(r) {
-        const k = r.pick([0.1, 0.2, 0.05, 0.25]), dt = r.pick([1, 2, 0.5, 4, 2.5]), h = r.pick([20, 10, 30, 40]), n = r.int(1, 2), A = tankA(k);
+        const k = r.pick([0.2, 0.05, 0.25, 0.4]), dt = r.pick([1, 2, 0.5, 4, 2.5]), h = r.pick([20, 10, 30, 40]), n = r.int(1, 2), A = tankA(k);
         if (ex85(A, dt) || 2 * k * dt >= 2) return null;
+        const u85 = r.kd85 || (r.kd85 = new Set()); if (u85.has(`${k}|${dt}`) && u85.size < 6) return null;   // 同じ水そう・Δt の問題を2つ出さない
+        u85.add(`${k}|${dt}`);
         const G = step1(A, dt), y = powV(G, [h, 0], n);
         if (y.some(x => decLen(D(fmt(+x.toFixed(9)))) > 3)) return null;
         return { q: `水そう $${dotx}=${pm(A)}\\vec x$（水位 cm、時刻 分）を、はじめ $(${h},\\ 0)$ から $\\Delta t=${fmt(dt)}$ のオイラー法で${n}歩進めた水位`,
           a: `$${tup(y.map(x => fmt(+x.toFixed(9))))}$`, key: `${A}|${dt}|${h}|${n}`, easyCheck: false,
           easy: `1歩の行列 $${pm(G)}$`, verify: p => { let v = [h, 0]; for (let j = 0; j < n; j++) { const z = mv(A, v); v = [v[0] + z[0] * dt, v[1] + z[1] * dt]; } return vnear(pairOf(p.a), v) || 'オイラー法でたどった水位とちがう'; } };
       },
-      // わな：ほんとうの水位の差（Δt で区切らない。楽な形なし）
+      // わな：ほんとうの水位の差（Δt で区切らない。わざなし）
       trap(r) {
-        const k = r.pick([0.1, 0.2, 0.05, 0.25, 0.5]), h1 = r.pick([20, 30, 40, 16]), h2 = r.pick([0, 4, 10]), d0 = h1 - h2;
+        const k = r.pick([0.2, 0.05, 0.25, 0.5]), h1 = r.pick([20, 30, 40, 16]), h2 = r.pick([0, 4, 10]), d0 = h1 - h2;
         return dest({ q: `水そう $\\frac{\\dd h_1}{\\dd t}=-${fmt(k)}\\,(h_1-h_2)$、$\\frac{\\dd h_2}{\\dd t}=${fmt(k)}\\,(h_1-h_2)$、はじめ $(${h1},\\ ${h2})$。オイラー法ではなく、ほんとうの水位の差 $h_1-h_2$ を $t$ の式で`, a: `$${d0}e^{-${2 * k === 1 ? '' : fmt(2 * k)}t}$`, key: `t${k}|${d0}`, boxw: '24mm',
           calc: { kind: 'ode', x: 't', coef: [1, 2 * k], rhs: '0', init: [[0, d0]] } }, '7-85',
         `$\\Delta t$ で区切らないので、1歩の行列は使わない。差 $d$ は $\\frac{\\dd d}{\\dd t}=-${2 * k === 1 ? '' : fmt(2 * k)}d$（6-14）`);
@@ -869,19 +892,19 @@
       s3(r) {
         const kind = turn(r, '86s3', 2), which = r.int(0, 1);
         if (kind === 0) {
-          const E = r.pick([5, 10, 12, 6]), tau = r.pick([2, 4, 0.5, 5, 10, 0.2]), b = which === 0 ? tau : 2 * tau;
+          const E = r.pick([5, 10, 12, 6]), tau = r.pick([2, 4, 0.5, 5, 0.2, 8]), b = which === 0 ? tau : 2 * tau;   // τ=10（λ=−0.1）は例と同じなので入れない（R2-5）
           return { q: `コンデンサーの電圧が $\\frac{\\dd V}{\\dd t}=\\frac{${E}-V}{${fmt(tau)}}$（$t$ は秒）で変わる。オイラー法で${which === 0 ? 'ゆれずに近づく' : 'こわれない'} $\\Delta t$（秒）の範囲`, a: `$\\Delta t${which === 0 ? '\\leqq' : '<'}${fmt(b)}$`, key: `${fmt(1 / tau)}|${which}`, easyCheck: false,
             easy: `目標との差は $\\lambda=-\\frac{1}{${fmt(tau)}}$`, verify: p => dtCheck(p, -1 / tau, which) };
         }
-        const k = r.pick([0.1, 0.05, 0.25, 0.5, 0.2]), b = which === 0 ? 1 / (2 * k) : 1 / k;
+        const k = r.pick([0.1, 0.25, 0.5, 0.2, 0.125]), b = which === 0 ? 1 / (2 * k) : 1 / k;   // k=0.05（差の λ=−0.1）は例と同じなので入れない（R2-5）
         return { q: `水そう $\\frac{\\dd h_1}{\\dd t}=-${fmt(k)}\\,(h_1-h_2)$、$\\frac{\\dd h_2}{\\dd t}=${fmt(k)}\\,(h_1-h_2)$（$t$ は分）をオイラー法で進めるとき、水位の差が${which === 0 ? 'ゆれずに0に近づく' : 'こわれない'} $\\Delta t$ の範囲`,
           a: `$\\Delta t${which === 0 ? '\\leqq' : '<'}${fmt(b)}$`, key: `${fmt(2 * k)}|${which}`, easyCheck: false,
           easy: `差の向きの固有値 $\\lambda=-${fmt(2 * k)}$`, verify: p => dtCheck(p, -2 * k, which) };
       },
-      // わな：固有値が複素数（楽な形なし）
+      // わな：固有値が複素数（わざなし）
       trap(r) {
         const [a, b] = r.pick([[1, 1], [1, 2], [2, 1], [0.4, 0.3], [3, 4], [0.5, 0.5], [2, 2], [1, 3], [0.3, 0.4]]), bd = 2 * a / (a * a + b * b);
-        return dest({ q: `$\\dot{\\vec x}=A\\vec x$ の $A$ の固有値が $-${cpx(a, b)}$ のとき、オイラー法でこわれない $\\Delta t$ の範囲`, a: `$0<\\Delta t<${fmt(bd)}$`, key: `t${a},${b}`, easyCheck: false,
+        return dest({ q: `$\\dot{\\vec x}=A\\vec x$ の $A$ の固有値が $-${cpx(a, b)}$ のとき、オイラー法でこわれない $\\Delta t$ の範囲`, a: `$\\Delta t<${fmt(bd)}$`, key: `t${a},${b}`, easyCheck: false,
           verify: p => { const m = /<([\d.]+)\$?$/.exec(strip(p.a)), B = m && +m[1], g = dt => Math.hypot(1 - a * dt, b * dt); return (B != null && g(B * 0.999) < 1 && g(B * 1.001) > 1) || 'こわれない境がちがう'; } }, '7-86',
         `$\\lambda$ が複素数なので、$\\frac{2}{\\lvert\\lambda\\rvert}$ ではない。$\\lvert1+\\lambda\\,\\Delta t\\rvert^2=(1-${a === 1 ? '' : fmt(a)}\\Delta t)^2+(${b === 1 ? '' : fmt(b)}\\Delta t)^2<1$ をとく`);
       },
@@ -943,7 +966,7 @@
         return { q: `$\\omega=${w}$ のばねを、ふつうのオイラー法（$\\Delta t=${fmt(dt)}$）で進めるとき、1歩の行列の行列式（ゆれの円の面積の倍率）`, a: `$${fmt(s)}$`, key: `${w}|${dt}`, easyCheck: false, boxw: '16mm',
           easy: `$1\\times1-${fmt(dt)}\\times(-${fmt(w * w * dt)})=1+${fmt(z)}^2$`, verify: p => { const G = eulerG(w, dt); return near(nums(p.a)[0], G[0][0] * G[1][1] - G[0][1] * G[1][0], 1e-12) || '行列式がちがう'; } };
       },
-      // わな：ダンパーつき（固有値の実部がある。楽な形なし）
+      // わな：ダンパーつき（固有値の実部がある。わざなし）
       trap(r) {
         const [al, L2] = r.pick([[0.4, 16], [0.5, 25], [0.2, 4], [1, 100], [0.5, 9], [0.3, 9], [0.2, 16]]), dt = r.pick([0.02, 0.05, 0.1, 0.01]);
         const v = +(1 - 2 * al * dt + L2 * dt * dt).toFixed(8);
@@ -958,7 +981,8 @@
   // ================================================================ 7-88
   // numpy の整数の配列の表示をまねる（はばのちがう数は、はばをそろえて右に寄せる）。ここではそろわない組をのぞくので、はばの同じものだけ
   const npVec = v => `[${v.join(' ')}]`;
-  const npMat = A => `[${A.map(npVec).join(' ')}]`;
+  const npMat = A => `[${A.map(npVec).join('\n ')}]`;   // numpy と同じく2行（2行めの頭に空白1つ）
+  const npMatAns = A => `\`[${npVec(A[0])}\` と \`${npVec(A[1])}]\` の2行`;   // 答えの文：1行ずつ
   const sameW = arr => new Set(arr.flat().map(x => String(x).length)).size === 1 && arr.flat().every(x => x >= 0);
   const pyArr = v => `np.array([${v.join(', ')}])`;
   const pyMat = A => `np.array([${A.map(rw => `[${rw.join(', ')}]`).join(', ')}])`;
@@ -1032,8 +1056,8 @@
         for (let k = 0; k < 20; k++) {
           const A = [[r.int(1, 4), r.int(0, 3)], [r.int(0, 3), r.int(1, 4)]], B = [[r.int(0, 3), r.int(0, 2)], [r.int(1, 3), r.int(0, 2)]], C = A.map((rw, i) => rw.map((a, j) => a * B[i][j]));
           if (!sameW(C)) continue;
-          return dest({ q: `\`A = ${pyMat(A)}\`、\`B = ${pyMat(B)}\` のとき、\`print(A * B)\` の表示`, a: `\`${npMat(C)}\``, key: `t${A}|${B}`, easyCheck: false,
-            verify: p => codeAns(p)[0] === runPy(`A = ${pyMat(A)}\nB = ${pyMat(B)}\nprint(A * B)`)[0] || 'プログラムの表示とちがう' }, '7-88',
+          return dest({ q: `\`A = ${pyMat(A)}\`、\`B = ${pyMat(B)}\` のとき、\`print(A * B)\` の表示`, a: npMatAns(C), key: `t${A}|${B}`, easyCheck: false,
+            verify: p => codeAns(p).join('\n') === runPy(`A = ${pyMat(A)}\nB = ${pyMat(B)}\nprint(A * B)`)[0].split('\n').map(l => l.trim()).join('\n') || 'プログラムの表示とちがう' }, '7-88',
           '`*` は行列の積ではなく、同じ場所どうしのかけ算', ['7-15']);
         }
         return null;
@@ -1057,6 +1081,8 @@
       const dp = mv(J, dth).map(x => +x.toFixed(6));
       if (dp.some(x => x === 0 || decLen(D(fmt(x))) > 3)) continue;
       if (L1 === 0.3 && L2 === 0.25 && t1 === 0 && t2 === 90 && dth[0] === 0.1 && dth[1] === 0.02) continue;   // 楽な形の例（O-2）
+      const u89 = r.dth89 || (r.dth89 = new Set()); if (u89.has(String(dth)) && k < 30) continue;   // 同じ見開きで同じ答えを重ねない（R2-12）
+      u89.add(String(dth));
       return { L1, L2, t1, t2, J, P, dth, dp, det: +(J[0][0] * J[1][1] - J[0][1] * J[1][0]).toFixed(6) };
     }
     return null;
@@ -1119,12 +1145,15 @@
       ['seg', [0, 0], [8, 0], { thick: true }], ['label', [4, 0], '地面（電位0）', 's'],
       ...M.figResistor([2, 0], [2, 3]), ...M.figResistor([2, 3], [6, 3]),
       ['dot', [2, 3]], ['dot', [6, 3]], ['label', [2, 3], '1', 'nw'], ['label', [6, 3], '2', 'se'],
-      ['label', [2, 1.5], `$${Uo(R1)}$`, 'e'], ['label', [4, 3.3], `$${Uo(R2)}$`, 'n'],
-      ['seg', [2, 5], [2, 3.25], { arrow: true }], ['label', [2, 5], '$I_1$', 'n'],
-      ['seg', [6, 5], [6, 3.25], { arrow: true }], ['label', [6, 5], '$I_2$', 'n'],
+      ['label', [2.45, 1.5], `$${Uo(R1)}$`, 'e'], ['label', [4, 3.5], `$${Uo(R2)}$`, 'n'],   // 抵抗の箱（はば0.4）にふれないように（R2-29）
+      ['seg', [2, 5], [2, 3.25], { arrow: true }], ['label', [2, 5], '$I_{1}$', 'n'],
+      ['seg', [6, 5], [6, 3.25], { arrow: true }], ['label', [6, 5], '$I_{2}$', 'n'],
     ] };
   }
-  const ex90 = (R1, R2, V1, V2) => V1 === 1 && V2 === 3;   // 楽な形の例の電位（O-2）
+  const ex90 = (R1, R2, V1, V2) => (V1 === 1 && V2 === 3) || (R1 === 10 && R2 === 10);   // 楽な形の例の電位・抵抗（O-2）
+  // 同じ見開きで、同じ抵抗の組 (R1, R2) を重ねない（R2-11）。もう出ていれば true
+  //   見開き1つ（7問）は100回もかからずに作れるので、100回をこえたら（アプリのプリント）重ねてよい
+  const dup90 = (r, R1, R2) => { const u = r.rr90 || (r.rr90 = { s: new Set(), t: 0 }), k = `${R1},${R2}`; u.t++; if (u.s.has(k) && u.t < 100) return true; u.s.add(k); return false; };
   M.add({
     id: '7-90', part: 6, chap: '7-11④・7-2', stars: 1,
     title: '抵抗の網は、ばねの網と同じ形の行列（対角 $2G$・$G$、ほか $-G$。$G=\\frac1R$）：電位を入れると、流しこむ電流が出る',
@@ -1139,27 +1168,30 @@
     steps: {
       s1(r) {
         const R = r.pick(Rs), V1 = r.int(1, 12), V2 = r.int(1, 12);
-        if (V1 === V2 || ex90(R, R, V1, V2)) return null;
+        if (V1 === V2 || ex90(R, R, V1, V2) || dup90(r, R, R)) return null;
         return { q: `地面と点1、点1と点2のあいだに $${Uo(R)}$ の抵抗。点1の電位 ${U(V1, 'V')}、点2の電位 ${U(V2, 'V')} のとき、外から流しこむ電流 $I_1$・$I_2$`, a: iAns(netI(R, R, V1, V2)), key: `${R},${R}|${V1},${V2}`, easyCheck: false,
           easy: `$G=${fmt(1 / R)}$、$${pm(netK(R, R))}${colv([V1, V2])}$`, verify: p => iCheck(p, R, R, V1, V2) };
       },
       // 行列を作る・抵抗が2種類
       s2(r) {
         const R1 = r.pick(Rs), R2 = r.pick(Rs);
-        if (turn(r, '90s2', 2) === 0)
+        if (ex90(R1, R2)) return null;
+        if (turn(r, '90s2', 2) === 0) {
+          if (dup90(r, R1, R2)) return null;   // 抵抗の組をおぼえるのは、問題ができるときだけ
           return { q: `地面と点1のあいだに $${Uo(R1)}$、点1と点2のあいだに $${Uo(R2)}$ の抵抗。電位 $(V_1,\\ V_2)$ から流しこむ電流 $(I_1,\\ I_2)$ を出す行列`, a: `$${pm(netK(R1, R2))}$`, key: `${R1},${R2}|K`, boxh: '11mm', easyCheck: false,
             easy: `$G_1=${fmt(1 / R1)}$、$G_2=${fmt(1 / R2)}$。対角 $G_1+G_2$・$G_2$`, calc: { kind: 'mat', want: netK(R1, R2).map(rw => rw.map(x => D(fmt(x)))) },
             verify: p => { const K = M.readMat(p.a).map(rw => rw.map(c => c[0])); return vnear(mv(K, [1.3, -0.7]), netI(R1, R2, 1.3, -0.7)) || '電流のつりあいとちがう'; } };
-        const V1 = r.int(1, 12), V2 = r.int(1, 12); if (V1 === V2 || R1 === R2 || ex90(R1, R2, V1, V2)) return null;
-        return { q: `地面と点1のあいだに $${Uo(R1)}$、点1と点2のあいだに $${Uo(R2)}$ の抵抗。点1の電位 ${U(V1, 'V')}、点2の電位 ${U(V2, 'V')} のとき、流しこむ電流 $I_1$・$I_2$`, a: iAns(netI(R1, R2, V1, V2)), key: `${R1},${R2}|${V1},${V2}`, easyCheck: false,
+        }
+        const V1 = r.int(1, 12), V2 = r.int(1, 12); if (V1 === V2 || R1 === R2 || ex90(R1, R2, V1, V2) || dup90(r, R1, R2)) return null;
+        return { q: `地面と点1のあいだに $${Uo(R1)}$、点1と点2のあいだに $${Uo(R2)}$ の抵抗。電位 $V_1=${V1}\\,\\mathrm{V}$、$V_2=${V2}\\,\\mathrm{V}$ で流しこむ電流 $I_1$・$I_2$`, a: iAns(netI(R1, R2, V1, V2)), key: `${R1},${R2}|${V1},${V2}`, easyCheck: false,
           easy: `$${pm(netK(R1, R2))}${colv([V1, V2])}$`, verify: p => iCheck(p, R1, R2, V1, V2) };
       },
       // 見かけがちがう：図の網・ばねの網
       s3(r) {
         if (turn(r, '90s3', 2) === 0) {
           const R1 = r.pick(Rs), R2 = r.pick(Rs), V1 = r.int(1, 12), V2 = r.int(1, 12);
-          if (V1 === V2 || ex90(R1, R2, V1, V2)) return null;
-          return { q: `図の網で、点1の電位 ${U(V1, 'V')}、点2の電位 ${U(V2, 'V')}（地面は0）のとき、外から流しこむ電流 $I_1$・$I_2$`, a: iAns(netI(R1, R2, V1, V2)), key: `${R1},${R2}|${V1},${V2}`, fig: fig90(R1, R2), easyCheck: false,
+          if (V1 === V2 || ex90(R1, R2, V1, V2) || dup90(r, R1, R2)) return null;
+          return { q: `図の網で、電位 $V_1=${V1}\\,\\mathrm{V}$、$V_2=${V2}\\,\\mathrm{V}$（地面は0）のとき、外から流しこむ電流 $I_1$・$I_2$`, a: iAns(netI(R1, R2, V1, V2)), key: `${R1},${R2}|${V1},${V2}`, fig: fig90(R1, R2), easyCheck: false,
             easy: `$${pm(netK(R1, R2))}${colv([V1, V2])}$`, verify: p => iCheck(p, R1, R2, V1, V2) };
         }
         const k = r.pick([100, 200, 50, 400]), u1 = r.pick([0.01, 0.02, 0.03, 0.05]), u2 = r.pick([0.01, 0.02, 0.04, 0.05, -0.01]);
@@ -1190,6 +1222,8 @@
   }
   const AB99 = [[1, 2], [2, 1], [1, 6], [2, 3], [3, 4], [1, 3], [3, 1], [2, 2], [1, 12], [4, 5], [2, 8], [3, 10], [1, 5], [4, 1], [2, 4]];
   const recT = (a, b, v) => `${v}_{n+1}=${a === 1 ? '' : a}${v}_n+${b === 1 ? '' : b}${v}_{n-1}`;
+  // 同じ見開きで、同じくり返しの式（係数 a、b）を重ねない（s1 の行列と s3 の近似が同じ式など。U-2）。もう出ていれば true
+  const dup99 = (r, a, b) => { const u = r.ab99 || (r.ab99 = new Set()), k = `${a},${b}`; if (u.has(k) && u.size < 12) return true; u.add(k); return false; };
   const seq99 = (a, b, x1, x2, n) => { const s = [null, x1, x2]; for (let k = 3; k <= n; k++) s.push(a * s[k - 1] + b * s[k - 2]); return s; };
   // 近似：√m の値（小数第3位まで）と、答えのけた（くいちがわないけた。O-4）
   const SQV = { 2: 1.414, 3: 1.732, 5: 2.236, 6: 2.449, 7: 2.646, 13: 3.606, 21: 4.583, 17: 4.123, 10: 3.162 };
@@ -1211,19 +1245,19 @@
       // 項を出す・行列で書く
       s1(r) {
         if (turn(r, '99s1', 2) === 0) {
-          const [a, b] = r.pick([[1, 1], [1, 1], [1, 2], [2, 1], [1, 3], [2, 3]]), x1 = r.int(1, 3), x2 = r.int(1, 5), n = r.int(6, 9), s = seq99(a, b, x1, x2, n);
-          if (s[n] > 3000 || (a === 1 && b === 1 && x1 === 1 && x2 === 1 && n <= 8)) return null;
+          const [a, b] = r.pick([[1, 2], [2, 1], [1, 3], [2, 3], [3, 1]]), x1 = r.int(1, 3), x2 = r.int(1, 5), n = r.int(5, 8), s = seq99(a, b, x1, x2, n);   // 係数 (1, 1) は例そのもの（R2-6）
+          if (s[n] > 3000 || dup99(r, a, b)) return null;
           return { q: `$${recT(a, b, 'x')}$、$x_1=${x1}$、$x_2=${x2}$ のとき $x_${n}$`, a: `$${s[n]}$`, key: `${a},${b}|${x1},${x2}|${n}`, easyCheck: false,
             easy: s.slice(1, n + 1).join('、'), verify: p => { let u = x1, v = x2; for (let k = 3; k <= n; k++) [u, v] = [v, a * v + b * u]; return near(nums(p.a)[0], v) || '1つずつ作った数とちがう'; } };
         }
-        const [a, b] = r.pick(AB99.concat([[1, 1]]));
+        const [a, b] = r.pick(AB99); if (dup99(r, a, b)) return null;   // 係数 (1, 1) の行列 $\\begin{pmatrix}1&1\\\\1&0\\end{pmatrix}$ は楽な形の例そのもの（R2-6）
         return { q: `$${recT(a, b, 'x')}$ を、組 $(x_n,\\ x_{n-1})$ から次の組 $(x_{n+1},\\ x_n)$ を作る行列 $A$ で書くときの $A$`, a: `$${pm([[a, b], [1, 0]])}$`, key: `${a},${b}|A`, easyCheck: false, boxw: '20mm', boxh: '11mm',
           easy: `1行め $(${a},\\ ${b})$、2行め $(1,\\ 0)$`, calc: { kind: 'mat', want: [[a, b], [1, 0]] },
           verify: p => { const A = M.readMat(p.a).map(rw => rw.map(c => c[0])); return vnear(mv(A, [7, 3]), [a * 7 + b * 3, 7]) || 'くり返しとちがう'; } };
       },
       // となりの比が近づく数（√ を残した形）
       s2(r) {
-        const [a, b] = r.pick(AB99);
+        const [a, b] = r.pick(AB99); if (dup99(r, a, b)) return null;
         return { q: `$${recT(a, b, 'x')}$（$x_1=1$、$x_2=1$）で、となりの比 $x_{n+1}\\div x_n$ が近づく数`, a: `$${bigRoot(a, b)}$`, key: `${a},${b}|lim`, easyCheck: false,
           easy: `$\\lambda^2-${a === 1 ? '' : a}\\lambda-${b}=0$ の大きいほう`,
           verify: p => { let u = 1, v = 1; for (let k = 0; k < 400; k++) { [u, v] = [v, a * v + b * u]; const n = Math.abs(v); u /= n; v /= n; } return near(ev(strip(p.a)), v / u, 1e-9) || 'となりの比が近づく数とちがう'; } };
@@ -1234,6 +1268,7 @@
           const [a, b] = r.pick(AB99.filter(([a0, b0]) => SQV[(() => { let m = a0 * a0 + 4 * b0; for (let f = 2; f * f <= m; f++) while (m % (f * f) === 0) m /= f * f; return m; })()])), Dd = a * a + 4 * b;
           let k = 1, m = Dd; for (let f = 2; f * f <= m; f++) while (m % (f * f) === 0) { m /= f * f; k *= f; }
           const approx = F.div(F.add(fr(a), F.mul(fr(k), D(String(SQV[m])))), fr(2)), tv = (a + Math.sqrt(Dd)) / 2;
+          if (dup99(r, a, b)) return null;
           for (const dg of [3, 2]) {
             const s = agree(approx, tv, dg); if (s == null) continue;
             return { q: `$${recT(a, b, 'x')}$ で、となりの比 $x_{n+1}\\div x_n$ が近づく数（$\\sqrt{${m}}=${SQV[m]}$ として、小数第${dg}位まで）`, a: `約 $${s}$`, key: `${a},${b}|lim`, easyCheck: false,
@@ -1259,4 +1294,21 @@
     },
   });
 
+  // ---------------------------------------------------------------- 答えのかたより（S-4・U-3）
+  // 1つのステップに同じ答えを3つ以上出さない。本の数（counts）をこえて作るとき（アプリのプリント）はしばらない
+  const na3 = a => String(a == null ? '' : a).replace(/[\s$]|\\[,;! ]/g, '');
+  M.list(7).filter(id => M.waza[id].part === 6).forEach(id => {
+    const d = M.waza[id];
+    ['s1', 's2', 's3'].forEach(s => {
+      const fn = d.steps[s]; if (!fn) return;
+      d.steps[s] = r => {
+        const p = fn(r); if (!p) return p;
+        const u = r.ans3 || (r.ans3 = { keys: new Set() }), c = u[id + s] || (u[id + s] = { n: 0, a: {} }), a = na3(p.a), kk = id + '\u0000' + (p.key || p.q);
+        if (u.keys.has(kk)) return null;   // 同じ問題は makeStep がはねるので、ここで数えない
+        if (c.n < (d.counts[s] || 0) && (c.a[a] || 0) >= 2) return null;
+        u.keys.add(kk); c.n++; c.a[a] = (c.a[a] || 0) + 1;
+        return p;
+      };
+    });
+  });
 })(globalThis.MONDAI);
