@@ -101,6 +101,7 @@ for (const part of parts) {
     const nTrap = part.miwake.traps ?? 2;
     // must：かならず入れる問題 [[わざ, ステップ], …]。ほかの部のわざでもよい（第4巻 第5部で 4-46 と 4-63 をまぜる。K-7・第36回）
     const must = part.miwake.must || [];
+    const usedTrap0 = new Set();
     const wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));
     const nMain = M.miwakeCount(part, wz.length) - nTrap;   // must の問題もふくめた数（pool に先に入れる）
     // 第6巻から：わざの見開きに出たステップ1・2の問題（key）は、見わけようでよける（第6巻 R2-19・第40回）。わなは数が決まっているのでそのまま
@@ -108,7 +109,7 @@ for (const part of parts) {
     const onSheet = new Set();
     if (vol >= 6) for (const id of wzAll) { const sh = M.makeSheet(id); M.STEPS.forEach(s => sh[s].forEach(p => { onSheet.add(id + '\u0000' + (p.key || p.q)); onSheet.add('\u0001' + p.q); })); }   // ほかのわざで同じ文になる問題も
     const fresh = p => !onSheet.has(p.id + '\u0000' + (p.key || p.q)) && !onSheet.has('\u0001' + p.q);
-    for (const [id, st] of must) { for (let j = 0; j < 30; j++) { const got = M.makeStep(id, st, 1, r, seen); if (got.length && (st === 'trap' || fresh(got[0]))) { pool.push(got[0]); break; } } }
+    for (const [id, st] of must) { for (let j = 0; j < 30; j++) { const got = M.makeStep(id, st, 1, r, seen); if (got.length && ((st === 'trap' && (vol < 7 || j >= 25)) || fresh(got[0]))) { pool.push(got[0]); break; } } if (vol >= 7 && st === 'trap') usedTrap0.add(id); }   // 第7巻から：must のわなも見開きと同じ問題をなるべくよけ、「もう選んだわな」に入れる（修B・修C の要望）
     // わざの順をまぜてから選ぶ（前のほうのわざだけに かたよらないように）
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
@@ -116,7 +117,7 @@ for (const part of parts) {
       const got = M.makeStep(id, r.pick(['s1', 's2']), 1, r, seen);
       if (got.length && fresh(got[0])) pool.push(got[0]);
     }
-    const usedTrap = new Set();
+    const usedTrap = usedTrap0;
     for (let k = 0, t = 0; t < nTrap && k < 200; k++) {
       const id = r.pick(wz);
       if (!M.waza[id].steps.trap) continue;

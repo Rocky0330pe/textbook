@@ -785,7 +785,7 @@
         .replace(/\\([a-zA-Z]+)/g, (m, n) => FIGSYM[n] || n).replace(/\^\{([^}]*)\}|\^(\S)/g, (m, a, b) => '\u0003' + (a || b) + '\u0004').replace(/_\{([^}]*)\}|_(\S)/g, (m, a, b) => '\u0005' + (a || b) + '\u0006').replace(/[{}]/g, '').replace(/\\,/g, ' ').replace(/-/g, '−');
       t = htmlEsc(t).replace(/[A-Za-z]\u20D7?/g, c => c.length > 1 ? `<tspan font-style="italic" font-family="Times New Roman,serif">${c[0]}</tspan><tspan dx="-0.72em" dy="-0.95em" font-size="75%">→</tspan><tspan dy="0.95em" font-size="75%">\u200B</tspan>` : `<tspan font-style="italic" font-family="Times New Roman,serif">${c}</tspan>`);   // \vec の矢印は小さい → を上に（組合せ文字は出ないことがある）
       t = t.replace(/\u0001(\d+)\u0002/g, (m, k) => htmlEsc(up[k]));   // \mathrm{A} は立てた字
-      return t.replace(/\u0003([^\u0004]*)\u0004/g, '<tspan baseline-shift="super" font-size="70%">$1</tspan>').replace(/\u0005([^\u0006]*)\u0006/g, '<tspan baseline-shift="sub" font-size="70%">$1</tspan>');
+      return t.replace(/\u0003([^\u0004]*)\u0004/g, '<tspan baseline-shift="super" font-size="70%">$1</tspan>').replace(/\u0005([^\u0006]*)\u0006/g, '<tspan baseline-shift="-0.22em" font-size="70%">$1</tspan>');
     }).join('');
   }
   // グラフ（第5巻から。第37回）：x と y で別の倍率。G = M.graph({ x0, x1, y0, y1, w, h })（w・h は図の単位。ふつう w 10、h 7）
