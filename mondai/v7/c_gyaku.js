@@ -7,7 +7,7 @@
  *   （行列式は小数の掃き出しで、連立方程式は答えを代入して、逆行列はかけて I になるかで、最小二乗はずれの2乗の和が小さくなるかで）確かめる。
  * 図は 7-32・7-33 のステップ3だけ（方眼・平行四辺形・家。K-2）。表（p.table）は 7-46・7-94 のステップ3だけ（見わけようは表を出さないので、ステップ1・2 は文だけ）。
  * 左ページの「楽な形」と目印の例の数は、同じ見開きの問題に出さない（O-2。BAN）。key は、ステップがちがっても同じ行列なら同じになる形にする。
- * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「楽な形なし」）を書く（dest。N-3）。
+ * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「わざなし」。S-7）を書く（dest。N-3）。
  * 角は 0°・30°・45°・60°・90° と、それを 180° から足し引きした角だけ（Q-5）。近似値は使わない（答えは √ を残した形）。 */
 (function (M) {
   'use strict';
@@ -41,6 +41,25 @@
   const pk = x => (typeof x === 'string' && /[+-]/.test(x) ? `(${x})` : par(cell(x)));   // k+3 もかっこに
   const det2 = A => A[0][0] * A[1][1] - A[0][1] * A[1][0];
   const keyM = A => A.map(r => r.map(x => (Array.isArray(x) ? x.join('/') : x)).join(',')).join(';');
+  // 2×2 の行列の「入れかえ・転置」をまとめた形（ななめの組と、もう一方のななめの組）。例の行列の入れかえ・転置をよけるのに使う（U-2・第41回）
+  const canon2 = A => [[A[0][0], A[1][1]], [A[0][1], A[1][0]]].map(p => p.map(String).sort().join(',')).sort().join('|');
+  // 同じ見開き（同じ乱数の物 r）で、同じ答えを lim 回より多く出さない（U-3・第41回）。アプリで同じわざを多く出すとき（そのわざで ok が20問をこえたら）は、よけない
+  //   key（問題の key）を渡すと、同じ問題（makeStep が同じ key でよける問題）は数えない
+  function ansOK(r, id, a, lim, key) {
+    const d = r.ansC || (r.ansC = {}), m = d[id] || (d[id] = new Map()), n = d[id + '#'] || 0, s = m.get(a) || new Set();
+    if (key != null && s.has(key)) return true;
+    if (n < 20 && s.size >= (lim || 1)) return false;
+    s.add(key != null ? key : Symbol()); m.set(a, s); d[id + '#'] = n + 1;
+    return true;
+  }
+  // わざの登録：1つのステップに同じ答えを3つ出さない（U-3・第41回）。ことばだけの答え（「ない」「無数にある」など）は除く
+  function add(def) {
+    for (const k of ['s1', 's2', 's3']) {
+      const f = def.steps[k]; if (!f) continue;
+      def.steps[k] = r => { const p = f(r); if (!p || !/^\$/.test(String(p.a))) return p; return ansOK(r, def.id + k, String(p.a), 2, p.key || p.q) ? p : null; };
+    }
+    M.add(def);
+  }
   const sgn = (v, first) => (v < 0 ? `-${-v}` : (first ? `${v}` : `+${v}`));
   // ax+by の項（係数1は書かない。0の項は書かない）。vars は文字の名前の配列
   function lin(cs, vars) {
@@ -135,7 +154,7 @@
   }
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2・第36回 N-3）
-  // easy に「（わけ。わざ □ で）」か「（わけ。楽な形なし）」を書く。extra：ほかの部のわざで楽になるときの番号（fits では見つからないので、ここで足す）
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く。extra：ほかの部のわざで楽になるときの番号（fits では見つからないので、ここで足す）
   function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(7).filter(id => {
@@ -146,7 +165,7 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -180,7 +199,7 @@
 
   // ================================================================ 7-31
   const BAN31 = new Set(['5,2;3,4', '3,0;7,2', '2,1;1,2']);
-  M.add({
+  add({
     id: '7-31', part: 3, chap: '7-4②', stars: 1,
     title: '2×2 の行列式は「左上×右下－右上×左下」（ななめにかけてひく）。0があればかけ算は1つ',
     mark: '$\\det$ と2×2 の行列。「行列式を求めよう」。',
@@ -281,7 +300,8 @@
     return { s: Math.min(4.5, 44 / Math.max(x1 - x0 + 3, y1 - y0 + 2)), items };
   }
   const BAN32 = new Set(['3,1;1,2', '2,1;1,4']);
-  M.add({
+  const bad32 = A => BAN32.has(keyM(A)) || canon2(A) === canon2([[3, 1], [1, 2]]);   // 例の行列のななめを入れかえたもの・転置もよける（R1-14）
+  add({
     id: '7-32', part: 3, chap: '7-4①② 例題1', stars: 1,
     title: '方眼で数えるかわりに $ad-bc$：1マスの正方形の行き先（平行四辺形）の面積は、行列式の大きさ',
     mark: '「1マスの正方形は平行四辺形になる」「方眼の平行四辺形の面積」。',
@@ -297,23 +317,24 @@
       // 正の成分（行列式も正）
       s1(r) {
         const A = rand2(r, 1, 5, 0.15), D = det2(A);
-        if (D <= 0 || BAN32.has(keyM(A)) || A.flat().filter(x => x === 0).length > 1) return null;
+        if (D <= 0 || bad32(A) || A.flat().filter(x => x === 0).length > 1) return null;
         return { q: `$${pm(A)}$ をかけた1マスの正方形（平行四辺形）の面積`, a: `$${D}$`, easy: detEasy(A), key: keyM(A), verify: p => valIs(p, Math.abs(detNum(A))) };
       },
       // 行列式が負（面積は大きさ）・マイナスの成分・2本の矢印で
       s2(r) {
         const k = turn(r, '32s2', 2);
         const A = rand2(r, -4, 6, 0.1), D = det2(A);
-        if (D === 0 || BAN32.has(keyM(A)) || (k === 0 && D > 0) || A.flat().filter(x => x === 0).length > 1) return null;
+        if (D === 0 || bad32(A) || (k === 0 && D > 0) || A.flat().filter(x => x === 0).length > 1) return null;
         const e = `${detEasy(A)}。面積は大きさの ${Math.abs(D)}`;
         if (k === 0) return { q: `$${pm(A)}$ をかけた1マスの正方形（平行四辺形）の面積`, a: `$${Math.abs(D)}$`, easy: e, easyCheck: false, key: keyM(A), verify: p => valIs(p, Math.abs(detNum(A))) };
         return { q: `原点から出る2本の矢印 $(${A[0][0]},\\ ${A[1][0]})$ と $(${A[0][1]},\\ ${A[1][1]})$ を2辺とする平行四辺形の面積`, a: `$${Math.abs(D)}$`, easy: `2本を列にならべた $${pm(A)}$ で、${e}`, easyCheck: false, key: keyM(A), verify: p => valIs(p, Math.abs(detNum(A))) };
       },
-      // 図：原点からの平行四辺形と、原点にない平行四辺形
+      // 図：原点からの平行四辺形と、原点にない平行四辺形（例と同じ答え5は出さない。R1-14）
       s3(r) {
-        const k = turn(r, '32s3', 2);
+        const st = r.s32 || (r.s32 = { n: r.int(0, 1) }), k = st.n % 2;   // 2つの図を交互に（出せたときだけ次へ）
         const A = [[r.int(2, 4), r.int(0, 2)], [r.int(0, 2), r.int(2, 4)]], D = det2(A);
-        if (D < 3 || BAN32.has(keyM(A)) || A[0][0] + A[0][1] > 6 || A[1][0] + A[1][1] > 5 || (!A[0][1] && !A[1][0])) return null;
+        if (D < 3 || D === 5 || bad32(A) || A[0][0] + A[0][1] > 6 || A[1][0] + A[1][1] > 5 || (!A[0][1] && !A[1][0])) return null;
+        st.n++;
         const u = [A[0][0], A[1][0]], v = [A[0][1], A[1][1]];
         if (k === 0) {
           return { q: `図は、行列 $${pm(A)}$ をかけた1マスの正方形（方眼の平行四辺形）。点線の長方形でかこまずに、平行四辺形の面積`, a: `$${D}$`, easy: detEasy(A), key: keyM(A), fig: figPara(u, v), verify: p => valIs(p, Math.abs(detNum(A))) };
@@ -347,12 +368,15 @@
   function figShape(A, shape, door) {
     const S2 = shape.map(p => mv(A, p)), all = shape.concat(S2, [[0, 0]]);
     const x0 = Math.floor(Math.min(...all.map(p => p[0]))), x1 = Math.ceil(Math.max(...all.map(p => p[0]))), y0 = Math.floor(Math.min(...all.map(p => p[1]))), y1 = Math.ceil(Math.max(...all.map(p => p[1])));
-    const items = [['grid', x0, y0, x1, y1], ['axes', x0, x1 + 0.8, y0, y1 + 0.8, { o: x0 < 0 ? 'se' : 'sw' }], ['poly', shape, { dash: true }], ['poly', S2, { fill: true, thick: true }]];
-    if (door) items.push(['poly', door, { dash: true }], ['poly', door.map(p => mv(A, p)), {}]);
+    // 点線のもとの図形は、ぬりのあとに描く（ぬりにかくれないように。R1-4）
+    const items = [['grid', x0, y0, x1, y1], ['axes', x0, x1 + 0.8, y0, y1 + 0.8, { o: x0 < 0 ? 'se' : 'sw' }], ['poly', S2, { fill: true, thick: true }]];
+    if (door) items.push(['poly', door.map(p => mv(A, p)), {}]);
+    items.push(['poly', shape, { dash: true }]);
+    if (door) items.push(['poly', door, { dash: true }]);
     return { s: Math.min(4, 40 / Math.max(x1 - x0 + 2, y1 - y0 + 2)), items };
   }
   const BAN33 = new Set(['2,1;1,2', '1,3;2,1']);
-  M.add({
+  add({
     id: '7-33', part: 3, chap: '7-4①③ 例題2', stars: 1,
     title: '変えた図形の面積は「もとの面積×行列式の大きさ」、行列式が負なら裏返し',
     mark: '図形と行列。「面積は何倍」「変えた図形の面積」「裏返しになるか」。',
@@ -380,6 +404,10 @@
         const A = rand2(r, -3, 5, 0.1), D = det2(A);
         if (Math.abs(D) < 2 || BAN33.has(keyM(A)) || A.flat().filter(x => x === 0).length > 1) return null;
         if (k === 0) {
+          // 「なる」と「ならない」を交互に（U-3・R1-15）。出せたときだけ次へ進める
+          const u = r.ura33 || (r.ura33 = { n: r.int(0, 1) });
+          if ((D < 0) !== (u.n % 2 === 1)) return null;
+          u.n++;
           const ura = D < 0, ans = `${Math.abs(D)}倍、裏返しに${ura ? 'なる' : 'ならない'}`;
           return { q: `$${pm(A)}$ で、面積は何倍か。裏返しになるか`, a: ans, easy: `行列式 ${detEasy(A)}。大きさ ${Math.abs(D)}、${ura ? '負' : '正'}`, easyCheck: false, key: keyM(A),
             verify: p => { const d = detNum(A); return p.a === `${Math.round(Math.abs(d))}倍、裏返しに${d < 0 ? 'なる' : 'ならない'}` || `答え ${p.a}`; } };
@@ -440,7 +468,7 @@
     return { A, base, m };
   }
   const BAN34 = new Set(['1,k;2,4', 'k,3;2,6', '1,2;2,4', '1,3;2,6']);
-  M.add({
+  add({
     id: '7-34', part: 3, chap: '7-4④ 例題3', stars: 1,
     title: '行列式が0になる数は「2本の列が平行（比が同じ）」から。点はみな1列めの直線の上へ',
     mark: '$k$ をふくむ行列で「行列式が0になる $k$」「平らにつぶれる」「答えが1つに決まらない」。',
@@ -460,7 +488,7 @@
       s1(r) {
         const { A } = para2(r, 1, 4, true), i = r.int(0, 1), j = r.int(0, 1);
         const kv = A[i][j], B = A.map((row, a) => row.map((x, b) => (a === i && b === j ? 'k' : x)));
-        if (A[1 - i][1 - j] === 0 || BAN34.has(keyM(B)) || BAN34.has(keyM(A))) return null;
+        if (A[1 - i][1 - j] === 0 || BAN34.has(keyM(B)) || BAN34.has(keyM(A)) || !ansOK(r, '7-34', kv, 2, keyM(B))) return null;   // 同じ k を3回出さない（R1-20）
         return { q: `$\\det${pm(B)}=0$ の $k$`, a: `$k=${kv}$`, key: keyM(B),
           easy: `行列式 $${pk(B[0][0])}\\times ${pk(B[1][1])}-${pk(B[0][1])}\\times ${pk(B[1][0])}=0$ を解くかわりに、2本の列が平行（比が同じ）になる $k$`, easyCheck: false,
           verify: p => { const k = assigns(p.a).k; return near(detNum(A.map((row, a) => row.map((x, b) => (a === i && b === j ? k : x)))), 0) || `k=${k} で行列式が0でない`; } };
@@ -469,7 +497,7 @@
       s2(r) {
         const { A, base } = para2(r, -4, 4, false), i = r.int(0, 1), j = r.int(0, 1);
         const kv = A[i][j], B = A.map((row, a) => row.map((x, b) => (a === i && b === j ? 'k' : x)));
-        if (A[1 - i][1 - j] === 0 || BAN34.has(keyM(B))) return null;
+        if (A[1 - i][1 - j] === 0 || BAN34.has(keyM(B)) || !ansOK(r, '7-34', kv, 2, keyM(B))) return null;
         const L = lineTeX(base[0], base[1]);
         return { q: `$\\det${pm(B)}=0$ の $k$ と、そのとき平面の点が集まる直線の式`, a: `$k=${kv}$、$${L}$`, key: keyM(B),
           easy: `2本の列は $(${base[0]},\\ ${base[1]})$ の向きで平行。点はみな $(${base[0]},\\ ${base[1]})$ の何倍か`, easyCheck: false,
@@ -499,7 +527,7 @@
         // 連立方程式（2つめの式の y の係数が k）
         const { A } = para2(r, 1, 4, true), b0 = r.int(1, 9), b1 = r.int(1, 12);
         const kv = A[1][1], B = [[A[0][0], A[0][1]], [A[1][0], 'k']];
-        if (BAN34.has(keyM(B))) return null;
+        if (BAN34.has(keyM(B)) || !ansOK(r, '7-34', kv, 2, keyM(B) + '|e')) return null;
         const e1 = `$${lin(A[0], ['x', 'y'])}=${b0}$`, e2 = `$${lin([A[1][0]], ['x'])}+ky=${b1}$`;
         return { q: `連立方程式 ${e1}、${e2} の答えが、ちょうど1つにならない $k$`, a: `$k=${kv}$`, key: keyM(B) + '|e',
           easy: `係数の行列 $${pm(B)}$ の行列式が0になる $k$（2本の列が平行）`, easyCheck: false,
@@ -542,7 +570,7 @@
     return L[which];
   }
   const BAN35 = new Set(['2,1;1,2', '1,1;0,1']);
-  M.add({
+  add({
     id: '7-35', part: 3, chap: '7-4⑤ 例題4・7-5①', stars: 1,
     title: '積の行列式は行列式の積（積を作らない）：$\\det(kA)=k^2\\det A$（3×3 は $k^3$）、$\\det(A^{-1})=\\dfrac{1}{\\det A}$',
     mark: '$\\det(AB)$、$\\det(2A)$、$\\det(A^3)$、$\\det(A^{-1})$。$\\det A$ だけがわかっているとき。',
@@ -577,7 +605,8 @@
           const w = r.pick(['A2B', 'ABinv', 'kAB']);
           const [tx, val, ez, fn] = form35(r, a, b, w);
           const A = withDet(r, a), B = withDet(r, b);
-          return { q: `$\\det A=${a}$、$\\det B=${b}$ のとき、$\\det(${tx})$`, a: `$${F.tex(val)}$`, easy: ez, easyCheck: false, key: `${w}|${tx}|${a}|${b}`,
+          // kAB は行列の大きさで答えが変わる（2×2 なら $k^2$、3×3 なら $k^3$）ので、大きさを書く（R1-1）
+          return { q: `${w === 'kAB' ? '2×2 の行列 $A$、$B$ で ' : ''}$\\det A=${a}$、$\\det B=${b}$ のとき、$\\det(${tx})$`, a: `$${F.tex(val)}$`, easy: ez, easyCheck: false, key: `${w}|${tx}|${a}|${b}`,
             verify: p => valIs(p, detNum(fn(numM(A), numM(B)))) };
         }
         const A = rand2(r, -3, 4, 0.1), B = rand2(r, -3, 4, 0.1), a = det2(A), b = det2(B);
@@ -613,7 +642,7 @@
           if (!plus && D2 === a - b) continue;
           return dest({ q: `$A=${pm(A)}$、$B=${pm(B)}$ のとき、$\\det(A${plus ? '+' : '-'}B)$`, a: `$${D2}$`, key: `t35${keyM(A)}|${keyM(B)}|${plus}`,
             verify: p => valIs(p, detNum(numM(A).map((row, i) => row.map((x, j) => x + (plus ? 1 : -1) * B[i][j])))) },
-            '7-35', `たし算・ひき算には、行列式のきまりがない（$\\det A${plus ? '+' : '-'}\\det B=${plus ? a + b : a - b}$ ではない）。$A${plus ? '+' : '-'}B=${pm(S2.map(row => row.map(x => x[0])))}$ を作ってから、たすきにかけてひく`);
+            '7-35', `たし算・ひき算には、行列式のきまりがない（$\\det A${plus ? '+' : '-'}\\det B=${plus ? a + b : a - b}$ ではない）。$A${plus ? '+' : '-'}B=${pm(S2.map(row => row.map(x => x[0])))}$ を作ってから、たすきにかけてひく`, ['7-03']);   // 和を作るのは 7-03（U-4・R1-11）
         }
         const A = [[r.int(1, 3), r.int(0, 2), r.int(-1, 2)], [r.int(0, 2), r.int(1, 3), r.int(-1, 2)]], B = [[r.int(1, 2), r.int(0, 1)], [r.int(-1, 1), r.int(1, 2)], [r.int(0, 2), r.int(-1, 1)]];
         const P = mulNum(A, B), D = Math.round(detNum(P));
@@ -632,7 +661,7 @@
     idx.forEach(t => { A[Math.floor(t / 3)][t % 3] = 0; });
     return A;
   };
-  M.add({
+  add({
     id: '7-36', part: 3, chap: '7-4⑥ 例題5', stars: 1,
     title: '3×3 はサラスの方法：0をふくむななめは書かない（ななめより下が全部0なら対角の積だけ）',
     mark: '3×3 の行列の行列式。3本のベクトルがつくる箱の体積。',
@@ -680,7 +709,12 @@
           const c1 = Math.round(f(1) - f(0)), c0 = Math.round(f(0));
           if (c1 === 0 || c0 === 0) return null;
           const ans = M.P.tex(M.P.make(c0, c1), 'k');
-          return { q: `$${DET(B)}$ を $k$ の式で`, a: `$${ans}$`, key: 'k' + keyM(B), easy: `サラスの方法で、$k$ をふくむ項は ${c1 > 0 ? 'たす' : 'ひく'}ななめにある`, easyCheck: false,
+          // k を通るななめは、たす1本とひく1本（R1-2。7-37 の caution と同じ）。たすななめは列 (s+行)、ひくななめは列 (s−行)
+          const diag = sg => [0, 1, 2].map(row => B[row][((sg > 0 ? j - i + row : j + i - row) % 3 + 3) % 3]);
+          const kt = xs => { const c = xs.filter(x => x !== 'k').reduce((s, x) => s * x, 1); return `${xs.map(x => (x === 'k' ? 'k' : par(x))).join('\\times ')}=${c === 0 ? '0' : c === 1 ? 'k' : c === -1 ? '-k' : c + 'k'}`; };
+          const kc = xs => xs.filter(x => x !== 'k').reduce((s, x) => s * x, 1);
+          return { q: `$${DET(B)}$ を $k$ の式で`, a: `$${ans}$`, key: 'k' + keyM(B), easyCheck: false,
+            easy: `サラスの方法で、$k$ を通るななめは、たす $${kt(diag(1))}$ とひく $${kt(diag(-1))}$ の2本（$k$ の係数は $${kc(diag(1))}${kc(diag(-1)) < 0 ? '+' + -kc(diag(-1)) : '-' + kc(diag(-1))}=${c1}$）`,
             verify: p => { const t = strip(p.a); for (const kk of [-1.7, 0.4, 2.9]) if (!near(ev(t, { k: kk }), f(kk), 1e-9)) return `k=${kk} で値がちがう`; return true; } };
         }
         const A = [[r.int(1, 3), r.int(0, 1), r.int(0, 2)], [0, r.int(1, 3), r.int(0, 2)], [r.int(0, 1), 0, r.int(1, 4)]];
@@ -697,7 +731,7 @@
         const rowFirst = r.chance(0.5), x = [r.int(-2, 3), r.int(-2, 3), r.int(-2, 3)];
         const A = rowFirst ? [[a, 0, 0, 0], ...B.map((row, i) => [x[i], ...row])] : [[a, ...x], ...B.map(row => [0, ...row])];
         return dest({ q: `$${DET(A)}$`, a: `$${D}$`, key: 't36' + keyM(A), verify: p => valIs(p, detNum(A)) },
-          '7-36', `4×4 にはサラスの方法は使えない（ななめは8本、項は24個）。${rowFirst ? '1行め' : '1列め'}が $${a}$ のほかは0なので、$${a}\\times$（残りの3×3 の行列式 ${sarrus(B).det}）$=${D}$（余因子展開。7-4⑥ もっと知りたい）`);
+          '7-36', `4×4 にはサラスの方法は使えない（ななめは8本、項は24個）。${rowFirst ? '1行め' : '1列め'}が $${a}$ のほかは0なので、$${a}\\times$（残りの3×3 の行列式 $${sarrus(B).det}$）$=${D}$（余因子展開。7-4⑥ もっと知りたい）`);
       },
     },
   });
@@ -714,9 +748,9 @@
     }
     return null;
   }
-  const comb = (s, t) => `3列め＝${s === 1 ? '' : s === -1 ? '－' : s + '×'}1列め${t > 0 ? '＋' : '－'}${Math.abs(t) === 1 ? '' : Math.abs(t) + '×'}2列め`;
+  const comb = (s, t) => `3列め＝${s === 1 ? '' : s === -1 ? '－' : s < 0 ? '－' + -s + '×' : s + '×'}1列め${t > 0 ? '＋' : '－'}${Math.abs(t) === 1 ? '' : Math.abs(t) + '×'}2列め`;
   const BAN37 = new Set(['1,2,k;0,1,1;1,0,1', '1,0,2;k,1,1;1,1,1', '1,2,3;0,1,1;1,0,1']);
-  M.add({
+  add({
     id: '7-37', part: 3, chap: '7-4⑥ 例題6', stars: 1,
     title: '3×3 の行列式が0 → 3列めは1列めと2列めの組み合わせ（3本の列が1つの平面に）',
     mark: '$k$ をふくむ3×3 の行列で「行列式が0になる $k$」「3本のベクトルが1つの平面にのる」。',
@@ -795,7 +829,7 @@
   }
   const deg = d => `${d}^{\\circ}`;
   const ARM = [[0.30, 0.25], [0.30, 0.20], [0.50, 0.40], [0.20, 0.10], [0.40, 0.20], [0.50, 0.30], [0.60, 0.40]];
-  M.add({
+  add({
     id: '7-38', part: 3, chap: '7-4⑦ 例題7・8', stars: 1,
     title: '工学の行列式は式の形で：腕は $\\det J=L_1L_2\\sin\\theta_2$（肩の角に関係しない）、2本のひもは $-\\sin(\\theta_1+\\theta_2)$',
     mark: 'ロボットの腕のヤコビ行列 $J$ の行列式。2本のひもでつるすつり合いの行列の行列式。',
@@ -820,7 +854,11 @@
       s2(r) {
         const k = turn(r, '38s2', 3);
         if (k === 0) {
-          const [a, b] = r.pick([[30, 30], [45, 45], [60, 60], [30, 90], [90, 30], [60, 90], [90, 60], [90, 90]]);
+          // ひもが真下にたれる 90° はよける（R1-33）。たして90°（$-1$）は楽な形の例と同じ答えなので出さない
+          //   ステップ3の電灯と同じ角のひもも出さない（同じ行列になるので。S-2）
+          const used = r.h38 || (r.h38 = new Set()), ts = [30, 60].filter(x => !used.has(x));
+          if (!ts.length) return null;
+          const a = r.pick(ts), b = a; used.add(a);
           const A = cSin(-1, a + b);
           return { q: `左のひもが水平から $${deg(a)}$、右のひもが $${deg(b)}$ のつり合いの行列 $\\begin{pmatrix}-\\cos${deg(a)}&\\cos${deg(b)}\\\\\\sin${deg(a)}&\\sin${deg(b)}\\end{pmatrix}$ の行列式`, a: `$${A}$`, key: `h${Math.min(a, b)},${Math.max(a, b)}`,
             easy: `$-\\sin(${deg(a)}+${deg(b)})=-\\sin${deg(a + b)}=${A}$`, easyCheck: false,
@@ -838,13 +876,20 @@
       },
       // 90° のときの何倍か、電灯（行列式とひもの力）
       s3(r) {
-        if (turn(r, '38s3', 2) === 0) {
+        // 2つの形を交互に（出せたときだけ次へ）。同じ答えは出さない（U-3）
+        const st = r.s38 || (r.s38 = { n: r.int(0, 1) });
+        if (st.n % 2 === 0) {
           const [L1, L2] = r.pick(ARM), t2 = r.pick([30, 45, 60, 120, 135, 150]);
           const A = cSin(1, t2);
+          if (!ansOK(r, '7-38s3', A)) return null;
+          st.n++;
           return { q: `$L_1=${L1.toFixed(2)}\\,\\mathrm{m}$、$L_2=${L2.toFixed(2)}\\,\\mathrm{m}$ のロボットの腕で、ひじの角が $${deg(t2)}$ のときの $\\det J$ は、ひじの角が $90^{\\circ}$ のときの何倍か`, a: `$${A}$`, key: `r${L1},${L2},${t2}`,
             easy: `$L_1L_2$ は同じなので、$\\frac{\\sin${deg(t2)}}{\\sin90^{\\circ}}=${A}$`, easyCheck: false, verify: p => valIs(p, sinv(t2) / sinv(90), 1e-9) };
         }
-        const t = r.pick([30, 45, 60]), W = t === 60 ? r.pick([30, 60, 90, 120]) : r.pick([20, 40, 60, 80, 100]);
+        const used = r.h38 || (r.h38 = new Set()), ts = [30, 60].filter(x => !used.has(x));
+        if (!ts.length) { st.n++; return null; }
+        const t = r.pick(ts), W = t === 60 ? r.pick([30, 60, 90, 120]) : r.pick([20, 40, 60, 80, 100]);
+        used.add(t); st.n++;
         const D = cSin(-1, 2 * t), T = t === 30 ? `${W}` : t === 45 ? `${W / 2}\\sqrt{2}` : `${W / 3}\\sqrt{3}`;
         return { q: `重さ $${W}\\,\\mathrm{N}$ の電灯を、左右とも水平から $${deg(t)}$ のひもでつるす。つり合いの行列 $\\begin{pmatrix}-\\cos${deg(t)}&\\cos${deg(t)}\\\\\\sin${deg(t)}&\\sin${deg(t)}\\end{pmatrix}$ の行列式と、ひもの力 $T$`,
           a: `$${D}$、$T=${T}\\,\\mathrm{N}$`, key: `h${t},${t}`,
@@ -879,7 +924,7 @@
     return `${detEasy(A)}。$${A[0][0]}$ と $${A[1][1]}$ を入れかえ、$${A[0][1]}$ と $${A[1][0]}$ の符号を変えて${D === 1 ? '、そのまま' : `、$${D}$ でわる`}`;
   }
   const BAN39 = new Set(['3,1;5,2', '4,2;2,4']);
-  M.add({
+  add({
     id: '7-39', part: 3, chap: '7-5① 例題1', stars: 1,
     title: '2×2 の逆行列は「左上と右下を入れかえ、右上と左下に $-$、行列式でわる」：行列式は外に出したまま',
     mark: '「逆行列を求めよう」「$A^{-1}$」。2×2 の行列。',
@@ -945,7 +990,6 @@
   });
 
   // ================================================================ 7-40
-  const decOK1 = f => { const d = dec(f); return d != null && !/\.\d\d/.test(d); };   // 整数か小数第1位まで
   // 行列式が0の連立方程式（わなで使う）：2つめの式＝1つめ×m（右辺はそろうか、ずれる）
   function sing2(r) {
     const a = r.int(1, 4), b = r.intNot(-4, 5, v => v === 0), c = r.int(1, 9), m = r.pick([2, 3, -1, -2]), ok = r.chance(0.5);
@@ -966,7 +1010,7 @@
   };
   const BAN40 = new Set(['2,3;2,1', '4,2;2,4']);
   const BAN40b = new Set(['420,300', '12,0', '9,6']);
-  M.add({
+  add({
     id: '7-40', part: 3, chap: '7-5② 例題2・3', stars: 1,
     title: '$A\\vec x=\\vec b$ は $\\vec x=A^{-1}\\vec b$（左からかける）。右辺に0があれば、逆行列の1列（2列）だけ',
     mark: '2文字の連立方程式。$A\\vec x=\\vec b$ の形。右辺だけが変わる回路。',
@@ -997,7 +1041,7 @@
         const A = matDet(r, [1, 2, 4, 5, -2, -4, 8], -2, 6); if (!A || BAN40.has(keyM(A))) return null;
         const i0 = r.int(0, 1), beta = r.int(1, 12), b = i0 === 0 ? [beta, 0] : [0, beta];
         const X = Mat.inv(Mat.make(A)), sol = [F.mul(X[0][i0], fr(beta)), F.mul(X[1][i0], fr(beta))];
-        if (!sol.every(decOK1) || BAN40b.has(b.join(','))) return null;
+        if (!sol.every(v => v[1] === 1) || BAN40b.has(b.join(','))) return null;   // 答えは整数の組（小数 −16.5 などを出さない。R1-32）
         return { q: `$${pm(A)}\\vec x=${vec(b)}$ の $\\vec x$`, a: `$${vec(sol)}$`, key: keyM(A) + '|' + b, calc: { kind: 'mat', want: sol.map(v => [v]) },
           easy: `右辺の${i0 ? 1 : 2}行めが0なので、$A^{-1}=${invTeX(A)}$ の${i0 + 1}列めの $${beta}$ 倍`, easyCheck: false };
       },
@@ -1030,10 +1074,12 @@
   // クラメルの公式の楽な形：x（j=0）か y（j=1）
   function cramer(A, b, j, names) {
     const Aj = A.map((row, i) => row.map((x, k) => (k === j ? b[i] : x))), D = det2(A), N = det2(Aj);
-    return { val: fr(N, D), tex: `$${names[j]}=\\frac{${detNoEq(Aj)}}{${D}}=\\frac{${N}}{${D}}=${F.tex(fr(N, D))}$`.replace(/=\\frac\{(-?\d+)\}\{1\}/, '=$1') };
+    // 同じ値を「$=4=4$」と2回書かない（R1-13）：分母が1のときと、約分できないときは、最後の「＝」を書かない
+    const mid = D === 1 ? String(N) : `\\frac{${N}}{${D}}`, fin = F.tex(fr(N, D));
+    return { val: fr(N, D), tex: `$${names[j]}=\\frac{${detNoEq(Aj)}}{${D}}=${mid}${fin === mid ? '' : '=' + fin}$` };
   }
   const detNoEq = A => `${par(cell(A[0][0]))}\\times${par(cell(A[1][1]))}-${par(cell(A[0][1]))}\\times${par(cell(A[1][0]))}`;
-  M.add({
+  add({
     id: '7-41', part: 3, chap: '7-5②（もっと）', stars: 1,
     title: 'クラメルの公式：$x=\\dfrac{\\det(\\text{1列めを右辺にかえた行列})}{\\det A}$（$x$ だけほしいとき）',
     mark: '2文字の連立方程式で、1つの文字だけを聞かれたとき。',
@@ -1055,6 +1101,7 @@
         const A = matDet(r, [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6], 1, 6, true); if (!A || BAN41.has(keyM(A))) return null;
         const sol = [r.intNot(-3, 9, v => v === 0), r.intNot(-3, 9, v => v === 0)], b = [A[0][0] * sol[0] + A[0][1] * sol[1], A[1][0] * sol[0] + A[1][1] * sol[1]];
         const c = cramer(A, b, 0, ['x', 'y']);
+        if (!ansOK(r, '7-41', String(sol[0]), 2, keyM(A) + '|' + b)) return null;   // 同じ答えを3回出さない（わなもふくめて。R1-20）
         return { q: `連立方程式 ${eqs(A, b, ['x', 'y'])} の $x$`, a: `$${sol[0]}$`, key: keyM(A) + '|' + b, easy: c.tex, easyCheck: false,
           verify: p => valIs(p, solveNum(A, b)[0]) };
       },
@@ -1063,6 +1110,7 @@
         const A = matDet(r, [1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 7, -7], -4, 6, true); if (!A || BAN41.has(keyM(A))) return null;
         const sol = [r.intNot(-4, 8, v => v === 0), r.intNot(-4, 8, v => v === 0)], b = [A[0][0] * sol[0] + A[0][1] * sol[1], A[1][0] * sol[0] + A[1][1] * sol[1]];
         const c = cramer(A, b, 1, ['x', 'y']);
+        if (!ansOK(r, '7-41', String(sol[1]), 2, keyM(A) + '|' + b)) return null;
         return { q: `連立方程式 ${eqs(A, b, ['x', 'y'])} の $y$`, a: `$${sol[1]}$`, key: keyM(A) + '|' + b, easy: c.tex, easyCheck: false,
           verify: p => valIs(p, solveNum(A, b)[1]) };
       },
@@ -1070,7 +1118,7 @@
       s3(r) {
         const A = matDet(r, [3, -3, 5, -5, 7, -7, 4, -4], -3, 6, true); if (!A || BAN41.has(keyM(A))) return null;
         const b = [r.intNot(-5, 12, v => v === 0), r.int(-5, 12)], j = r.int(0, 1), c = cramer(A, b, j, ['x', 'y']);
-        if (c.val[1] === 1 || c.val[1] > 7 || Math.abs(c.val[0]) > 30) return null;
+        if (c.val[1] === 1 || c.val[1] > 7 || Math.abs(c.val[0]) > 30 || !ansOK(r, '7-41', F.tex(c.val), 2, keyM(A) + '|' + b)) return null;
         if (turn(r, '41s3', 2) === 0) {
           return { q: `連立方程式 ${eqs(A, b, ['x', 'y'])} の $${'xy'[j]}$（分数で）`, a: `$${F.tex(c.val)}$`, key: keyM(A) + '|' + b, easy: c.tex, easyCheck: false,
             verify: p => valIs(p, solveNum(A, b)[j]) };
@@ -1079,12 +1127,12 @@
         return { q: `回路の式 ${eqs(A, b, ['I_1', 'I_2'])}（電圧は V、電流は A）の $I_${j + 1}$（分数で）`, a: `$${F.tex(c2.val)}$`, key: keyM(A) + '|' + b, easy: c2.tex, easyCheck: false,
           verify: p => valIs(p, solveNum(A, b)[j]) };
       },
-      // わな：3文字の連立方程式（2×2 のクラメルは使えない。7-43 の掃き出し法）
+      // わな：3文字の連立方程式（3×3 の行列式を計算するより、7-43 の掃き出し法が楽。R1-10）
       trap(r) {
-        const g = sys3(r, 1); if (!g) return null;
+        const g = sys3(r, 1); if (!g || !ansOK(r, '7-41', String(g.sol[0]), 2, 't41' + keyM(g.A) + g.b)) return null;
         return dest({ q: `連立方程式 ${eqs(g.A, g.b, ['x', 'y', 'z'])} の $x$`, a: `$${g.sol[0]}$`, key: 't41' + keyM(g.A) + g.b,
           verify: p => valIs(p, solveNum(g.A, g.b)[0]) },
-          '7-41', '文字が3つなので、2×2 の行列式のクラメルの公式は使えない。掃き出し法で解いて $x$ を読む', ['7-43']);
+          '7-41', '文字が3つ。クラメルの公式は3×3 でも同じ形だが、3×3 の行列式を2つ（$\\det A$ と、1列めを右辺にかえた行列式）計算するより、掃き出し法が楽。掃き出し法で解いて $x$ を読む', ['7-43']);
       },
     },
   });
@@ -1112,7 +1160,11 @@
   const unit2 = (r, lo, hi) => matDet(r, [1, 1, -1], lo, hi);
   const pmF = X => Mat.tex(X, { factor: true });
   const BAN42 = new Set(['2,1;1,1', '1,0;2,1', '1,-1;-1,2', '1,0;-2,1']);
-  M.add({
+  // 例の行列（と答え）の、入れかえ・転置もよける（R1-34）
+  const CAN42 = new Set([[[2, 1], [1, 1]], [[1, 0], [2, 1]], [[1, -1], [-1, 2]], [[1, 0], [-2, 1]], [[1, -1], [-3, 4]]].map(canon2));
+  const bad42 = X => BAN42.has(keyM(X)) || CAN42.has(canon2(X));
+  const bad42m = X => CAN42.has(canon2(X.map(row => row.map(f => f[0] / f[1]))));   // 答えの行列（分数）
+  add({
     id: '7-42', part: 3, chap: '7-5③ 例題4', stars: 1,
     title: 'つないだ機械の逆は順番も逆：$(AB)^{-1}=B^{-1}A^{-1}$',
     mark: '$(AB)^{-1}$、$(ABC)^{-1}$。$A^{-1}$ と $B^{-1}$ がわかっているとき。',
@@ -1127,17 +1179,17 @@
     steps: {
       // A^{-1}・B^{-1} がわかっているとき
       s1(r) {
-        const Ai = unit2(r, -2, 3), Bi = unit2(r, -2, 3); if (!Ai || !Bi || BAN42.has(keyM(Ai)) || BAN42.has(keyM(Bi)) || keyM(Ai) === keyM(Bi)) return null;
+        const Ai = unit2(r, -2, 3), Bi = unit2(r, -2, 3); if (!Ai || !Bi || bad42(Ai) || bad42(Bi) || keyM(Ai) === keyM(Bi)) return null;
         const X = Mat.mul(Mat.make(Bi), Mat.make(Ai)), Y = Mat.mul(Mat.make(Ai), Mat.make(Bi));
-        if (Mat.eq(X, Y)) return null;
+        if (Mat.eq(X, Y) || bad42m(X)) return null;
         return { q: `$A^{-1}=${pm(Ai)}$、$B^{-1}=${pm(Bi)}$ のとき、$(AB)^{-1}$`, a: `$${Mat.tex(X)}$`, key: 'i' + keyM(Ai) + '|' + keyM(Bi), calc: { kind: 'mat', want: X },
           easy: `$AB$ を作らずに、$B^{-1}A^{-1}=${pm(Bi)}${pm(Ai)}=${Mat.tex(X)}$`, easyCheck: false };
       },
       // A・B がわかっているとき（行列式は ±1）。(BA)^{-1} も
       s2(r) {
-        const A = unit2(r, -1, 3), B = unit2(r, -1, 3); if (!A || !B || BAN42.has(keyM(A)) || BAN42.has(keyM(B)) || keyM(A) === keyM(B)) return null;
+        const A = unit2(r, -1, 3), B = unit2(r, -1, 3); if (!A || !B || bad42(A) || bad42(B) || keyM(A) === keyM(B)) return null;
         const ba = r.chance(0.3), Ai = Mat.inv(Mat.make(A)), Bi = Mat.inv(Mat.make(B)), X = ba ? Mat.mul(Ai, Bi) : Mat.mul(Bi, Ai);
-        if (Mat.eq(Mat.mul(Bi, Ai), Mat.mul(Ai, Bi))) return null;
+        if (Mat.eq(Mat.mul(Bi, Ai), Mat.mul(Ai, Bi)) || bad42m(X)) return null;
         return { q: `$A=${pm(A)}$、$B=${pm(B)}$ のとき、$(${ba ? 'BA' : 'AB'})^{-1}$`, a: `$${Mat.tex(X)}$`, key: keyM(A) + '|' + keyM(B) + ba, calc: { kind: 'mat', want: X },
           easy: ba ? `$A^{-1}B^{-1}=${Mat.tex(Ai)}${Mat.tex(Bi)}=${Mat.tex(X)}$` : `$B^{-1}A^{-1}=${Mat.tex(Bi)}${Mat.tex(Ai)}=${Mat.tex(X)}$`, easyCheck: false };
       },
@@ -1146,24 +1198,25 @@
         const k = turn(r, '42s3', 2);
         if (k === 0) {
           const Ai = unit2(r, -1, 2), Bi = unit2(r, -1, 2), Ci = unit2(r, -1, 2);
-          if (!Ai || !Bi || !Ci || [Ai, Bi, Ci].some(X => BAN42.has(keyM(X)))) return null;
+          if (!Ai || !Bi || !Ci || [Ai, Bi, Ci].some(X => bad42(X))) return null;
           const X = Mat.mul(Mat.mul(Mat.make(Ci), Mat.make(Bi)), Mat.make(Ai));
-          if (X.flat().some(x => Math.abs(x[0]) > 12)) return null;
+          if (X.flat().some(x => Math.abs(x[0]) > 12) || bad42m(X)) return null;
           return { q: `$A^{-1}=${pm(Ai)}$、$B^{-1}=${pm(Bi)}$、$C^{-1}=${pm(Ci)}$ のとき、$(ABC)^{-1}$`, a: `$${Mat.tex(X)}$`, key: 'c' + keyM(Ai) + keyM(Bi) + keyM(Ci), calc: { kind: 'mat', want: X },
             easy: `いちばん右の $C$ から先にもどす：$C^{-1}B^{-1}A^{-1}=${Mat.tex(X)}$`, easyCheck: false };
         }
-        const Ai = unit2(r, -2, 3), B = unit2(r, -1, 3); if (!Ai || !B || BAN42.has(keyM(Ai)) || BAN42.has(keyM(B))) return null;
+        const Ai = unit2(r, -2, 3), B = unit2(r, -1, 3); if (!Ai || !B || bad42(Ai) || bad42(B)) return null;
         const Bi = Mat.inv(Mat.make(B)), X = Mat.mul(Bi, Mat.make(Ai));
+        if (bad42m(X)) return null;
         return { q: `$A^{-1}=${pm(Ai)}$、$B=${pm(B)}$ のとき、$(AB)^{-1}$`, a: `$${Mat.tex(X)}$`, key: 'h' + keyM(Ai) + '|' + keyM(B), calc: { kind: 'mat', want: X },
           easy: `$B^{-1}=${Mat.tex(Bi)}$ を作って、$B^{-1}A^{-1}=${Mat.tex(X)}$`, easyCheck: false };
       },
       // わな：和の逆行列（きまりがない）
       trap(r) {
         const A = rand2(r, -1, 3, 0.3), B = rand2(r, -1, 3, 0.3), S = Mat.add(Mat.make(A), Mat.make(B)), d = F.val(Mat.det(S));
-        if (!d || !det2(A) || !det2(B) || Math.abs(d) > 12 || BAN42.has(keyM(A)) || BAN42.has(keyM(B))) return null;
+        if (!d || !det2(A) || !det2(B) || Math.abs(d) > 12 || bad42(A) || bad42(B)) return null;
         const X = Mat.inv(S);
         return dest({ q: `$A=${pm(A)}$、$B=${pm(B)}$ のとき、$(A+B)^{-1}$`, a: `$${pmF(X)}$`, key: 't42' + keyM(A) + '|' + keyM(B), calc: { kind: 'mat', want: X } },
-          '7-42', `和の逆行列にはきまりがない（$A^{-1}+B^{-1}$ ではない）。$A+B=${Mat.tex(S)}$ を作ってから、ふつうに逆行列を作る`);
+          '7-42', `和の逆行列にはきまりがない（$A^{-1}+B^{-1}$ ではない）。$A+B=${Mat.tex(S)}$ を作ってから、ふつうに逆行列を作る`, ['7-03']);   // 和を作るのは 7-03（U-4・R1-11）
       },
     },
   });
@@ -1177,7 +1230,7 @@
     for (let c = 0; c < n; c++) {
       let p = c; while (p < n && W[p][c][0] === 0) p++;
       if (p === n) return null;
-      if (p !== c) { [W[p], W[c]] = [W[c], W[p]]; ops.push(`${CIR[c]}↔${CIR[p]}`); }
+      if (p !== c) { [W[p], W[c]] = [W[c], W[p]]; ops.push(`${CIR[c]}$\\leftrightarrow$${CIR[p]}`); }   // ↔ は式の矢印（教科書 7-5④。R1-23）
       const pv = W[c][c];
       if (!(pv[0] === 1 && pv[1] === 1)) { W[c] = W[c].map(x => F.div(x, pv)); ops.push(pv[0] === -1 && pv[1] === 1 ? `${CIR[c]}×(－1)` : `${CIR[c]}÷${pv[0] < 0 ? '(－' + numT([-pv[0], pv[1]]) + ')' : numT(pv)}`); }
       for (let i = 0; i < n; i++) {
@@ -1193,12 +1246,12 @@
   const aug = (A, B) => `\\left(\\begin{array}{${'r'.repeat(A[0].length)}|${'r'.repeat(B[0].length)}}${A.map((row, i) => row.concat(B[i]).map(x => cell(x, { frac: true })).join('&')).join('\\\\')}\\end{array}\\right)`;
   const BAN43 = new Set(['0,1,3;1,1,1;1,-1,2', '1,2,1;1,1,-1;2,-1,1', '1,1,1;1,-1,0;0,1,-1', '1,1,1;1,2,-1;2,-1,1', '1,1,0;0,1,1;1,0,1', '0,1,2;1,1,1;1,2,0']);
   const ansXYZ = (sol, names) => sol.map((v, i) => `$${(names || ['x', 'y', 'z'])[i]}=${fmt(v)}$`).join('、');
-  M.add({
+  add({
     id: '7-43', part: 3, chap: '7-5④ 例題5', stars: 1,
     title: '掃き出し法は1列ずつ、ななめを1・ほかを0に。ななめが0なら、その列が0でない行と入れかえる。右辺もいっしょに',
     mark: '3文字の連立方程式。「掃き出し法で解こう」。係数と右辺をならべた表。',
     futsu: ['1つの式を $x=\\cdots$ の形にして', 'ほかの2つの式に代入し、', '残った2文字の式で', 'また代入をくり返す。'],
-    raku: ['$y+3z=11$、$x+y+z=6$、$x-y+2z=5$', '→ ①↔②、③－①、①－②、③＋2×②、', '③÷7、①＋2×③、②－3×③', '→ $x=1$、$y=2$、$z=3$'],
+    raku: ['$y+3z=11$、$x+y+z=6$、$x-y+2z=5$', '→ ①$\\leftrightarrow$②、③－①、①－②、③＋2×②、', '③÷7、①＋2×③、②－3×③', '→ $x=1$、$y=2$、$z=3$'],
     why: '表の1行は1つの式。行に数をかける・行から行の何倍かをひく・行を入れかえる、の3つは、加減法で式を変形しただけなので答えは変わらない（7-5④）。左の3列が単位行列 $I$ になれば、各行が $x=\\cdots$、$y=\\cdots$、$z=\\cdots$ と読める。',
     caution: '右辺もいっしょに計算する（1行全体をひく）。ななめにしたい所が0なら、0では割れないので、その列が0でない行と行ごと入れかえる（列は入れかえない）。答えは元の式に入れて確かめる。',
     counts: { s1: 2, s2: 2, s3: 2, trap: 1 },
@@ -1262,7 +1315,7 @@
     return null;
   }
   const I2 = [[1, 0], [0, 1]], I3 = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  M.add({
+  add({
     id: '7-44', part: 3, chap: '7-5④ 例題6', stars: 1,
     title: '掃き出しで逆行列：$(A\\mid I)$ を、左が $I$ になるまで掃き出す → 右が $A^{-1}$',
     mark: '「掃き出し法で逆行列を求めよう」。3×3 の逆行列。右に $I$ をならべた表。',
@@ -1319,7 +1372,7 @@
 
   // ================================================================ 7-45
   const BAN45 = new Set(['1,2;2,4', '3,-1;6,-2', '2,6;1,3']);
-  M.add({
+  add({
     id: '7-45', part: 3, chap: '7-4④・7-5⑥ 例題7', stars: 1,
     title: '行列式が0の連立方程式は、右辺も同じ比なら答えは無数、ちがえば答えなし（掃き出すと「$0=0$」か「$0=-1$」）',
     mark: '係数の行が比例している2文字の連立方程式。「答えは無数にあるか、ないか」。',
@@ -1417,7 +1470,7 @@
     return null;
   }
   const BAN46 = new Set(['1,3;2,5;3,6;4,8', '1,14;2,15.9;3,18.1;4,20.1;5,21.9', '0,1;1,3;2,2', '0,1;1,2;2,4;3,5', '0,2;1,2;2,5']);
-  M.add({
+  add({
     id: '7-46', part: 3, chap: '7-5⑦ 例題9', stars: 1,
     title: '最小二乗の直線は4つの和だけで：正規方程式は「$x^2$ の和・$x$ の和・点の数」と「$xy$ の和・$y$ の和」',
     mark: '点の組と「最小二乗法で直線 $y=ax+b$ を引こう」。$\\begin{pmatrix}x^2\\text{の和}&x\\text{の和}\\\\x\\text{の和}&\\text{点の数}\\end{pmatrix}\\begin{pmatrix}a\\\\b\\end{pmatrix}=\\begin{pmatrix}xy\\text{の和}\\\\y\\text{の和}\\end{pmatrix}$',
@@ -1447,8 +1500,9 @@
       // 表のデータ（ばね）、正規方程式の行列
       s3(r) {
         // ばねの長さ：はじめ y0 cm、1個で sl cm のびる（0.5 cm ずつのずれ）
-        const n = r.int(4, 5), y0 = r.pick([10, 12, 15, 20]), sl = r.pick([1, 1.5, 2, 2.5, 3]);
-        const P = Array.from({ length: n }, (_, i) => [i + 1, y0 + sl * (i + 1) + r.pick([-0.5, 0, 0, 0.5])]), L = lsq(P);
+        // おもりの数は 0 から（例の $x=1,2,3,4$ と同じ $A^{\mathsf T}A$ を出さない。R1-17）か、1〜5
+        const n = r.int(4, 5), x0 = n === 4 ? 0 : r.int(0, 1), y0 = r.pick([10, 12, 15, 20]), sl = r.pick([1, 1.5, 2, 2.5, 3]);
+        const P = Array.from({ length: n }, (_, i) => [x0 + i, y0 + sl * (x0 + i) + r.pick([-0.5, 0, 0, 0.5])]), L = lsq(P);
         const da = dec(L.a), db = dec(L.b);
         if (!da || !db || L.a[0] <= 0 || (da.split('.')[1] || '').length > 2 || (db.split('.')[1] || '').length > 2) return null;
         if (P.every(q => F.eq(D10(q[1]), F.add(F.mul(L.a, fr(q[0])), L.b)))) return null;
@@ -1475,7 +1529,7 @@
   // ================================================================ 7-93
   const swapC = (A, i, j) => A.map(row => row.map((x, k) => (k === i ? row[j] : k === j ? row[i] : x)));
   const BAN93 = new Set(['1,3;2,4', '3,1;4,2', '0,1;1,0']);
-  M.add({
+  add({
     id: '7-93', part: 3, chap: '7-4③', stars: 1,
     title: '列を入れかえると、行列式の符号が変わる（入れかえた行列は、計算しなおさない）',
     mark: '行列式がわかっている行列と、列の順だけがちがう行列。「列を入れかえた行列の行列式」。',
@@ -1559,7 +1613,7 @@
     return null;
   }
   const BAN94 = new Set(['1,2;2,3']);
-  M.add({
+  add({
     id: '7-94', part: 3, chap: '7-5⑦', stars: 1,
     title: '原点を通る最小二乗の直線は $a=\\dfrac{xy\\text{ の和}}{x^2\\text{ の和}}$（ずれが直線に直角）',
     mark: '点の組と「原点を通る直線 $y=ax$ を最小二乗法で」。比例の係数（ばね定数・抵抗）を、はかった値から決める。',
@@ -1574,7 +1628,7 @@
     steps: {
       // 点が2つか3つ
       s1(r) {
-        const g = ols0(r, r.int(2, 3), 2); if (!g || BAN94.has(g.P.join(';'))) return null;
+        const g = ols0(r, r.int(2, 3), 2); if (!g || BAN94.has(g.P.join(';')) || !ansOK(r, '7-94', fx(g.a))) return null;   // 同じ見開きで同じ答えを出さない（R1-16）
         return { q: `${g.P.length}つの点 ${ptsTeX(g.P)} に、最小二乗法で原点を通る直線 $y=ax$ を引くときの $a$`, a: `$${fx(g.a)}$`, key: g.P.join(';'),
           easy: `$a=\\frac{${g.P.map(p => `${p[0]}\\times${p[1]}`).join('+')}}{${g.P.map(p => `${p[0]}^{2}`).join('+')}}=\\frac{${g.Sxy}}{${g.Sxx}}=${fx(g.a)}$`, easyCheck: false,
           verify: p => { const a = nums(p.a)[0], S = aa => g.P.reduce((s, q) => s + (q[1] - aa * q[0]) ** 2, 0); return (S(a) <= S(a + 1e-4) && S(a) <= S(a - 1e-4)) || `a=${a} で S がいちばん小さくない`; } };
@@ -1582,17 +1636,17 @@
       // 和だけ、点が4つ
       s2(r) {
         if (turn(r, '94s2', 2) === 0) {
-          const g = ols0(r, r.int(4, 5), 2, 1, 4); if (!g) return null;
+          const g = ols0(r, r.int(4, 5), 2, 1, 4); if (!g || !ansOK(r, '7-94', fx(g.a))) return null;
           return { q: `$xy$ の和が ${g.Sxy}、$x^{2}$ の和が ${g.Sxx} の点の組に、最小二乗法で原点を通る直線 $y=ax$ を引くときの $a$`, a: `$${fx(g.a)}$`, key: `S${g.Sxy},${g.Sxx}`,
             easy: `$a=\\frac{${g.Sxy}}{${g.Sxx}}=${fx(g.a)}$`, easyCheck: false, verify: p => valIs(p, g.Sxy / g.Sxx) };
         }
-        const g = ols0(r, 4, 2); if (!g) return null;
+        const g = ols0(r, 4, 2); if (!g || !ansOK(r, '7-94', fx(g.a))) return null;
         return { q: `4つの点 ${ptsTeX(g.P)} に、最小二乗法で原点を通る直線 $y=ax$ を引くときの $a$`, a: `$${fx(g.a)}$`, key: g.P.join(';'),
           easy: `$a=\\frac{${g.Sxy}}{${g.Sxx}}=${fx(g.a)}$`, easyCheck: false, verify: p => valIs(p, g.P.reduce((s, q) => s + q[0] * q[1], 0) / g.P.reduce((s, q) => s + q[0] * q[0], 0)) };
       },
       // 表：電流と電圧（抵抗）、ばねののびと力（ばね定数）
       s3(r) {
-        const g = ols0(r, r.int(3, 4), 2, 2, 4); if (!g) return null;
+        const g = ols0(r, r.int(3, 4), 2, 2, 4); if (!g || !ansOK(r, '7-94', fx(g.a))) return null;
         if (turn(r, '94s3', 2) === 0) {
           const table = { head: ['電流 $I$（mA）', ...g.P.map(p => String(p[0]))], rows: [['電圧 $V$（V）', ...g.P.map(p => String(p[1]))]] };
           return { q: '表は、ある抵抗の電流と電圧をはかった値。最小二乗法で原点を通る直線 $V=RI$ を引くときの抵抗 $R$（kΩ）', a: `$${fx(g.a)}$`, key: g.P.join(';') + 'R', table,
@@ -1624,7 +1678,7 @@
   }
   const illEq = g => `$${lin([1, g.c], ['x', 'y'])}=${g.p}$、$x+${fx(F.add(fr(g.c), g.e))}y=${fx(g.q)}$`;
   const BAN95 = new Set(['1/1000|1|1|1']);
-  M.add({
+  add({
     id: '7-95', part: 3, chap: '7-5⑥', stars: 1,
     title: '条件が悪い連立方程式：行列式が0に近いと、右辺の小さな変化で答えが大きく変わる',
     mark: 'ほとんど比例している2つの式（係数が 1 と 1.001 など）。「右辺を少し変えると、答えは」。',
@@ -1647,14 +1701,14 @@
         const g = illSys(r), k = r.pick([1, 2, -1, 3]), dq = F.mul(g.e, fr(k)), q2 = F.add(g.q, dq);
         if (BAN95.has(`${g.e.join('/')}|${g.c}|${g.x0}|${g.y0}`)) return null;
         const x2 = g.x0 - g.c * k, y2 = g.y0 + k;
-        return { q: `連立方程式 ${illEq(g)} の答えは $x=${g.x0}$、$y=${g.y0}$。2つめの式の右辺 ${fx(g.q)} を ${fx(q2)} に変えたときの答え`, a: `$x=${x2}$、$y=${y2}$`, key: `${g.e.join('/')}|${g.c}|${g.x0}|${g.y0}|${k}`,
+        return { q: `連立方程式 ${illEq(g)} の答えは $x=${g.x0}$、$y=${g.y0}$。2つめの式の右辺 $${fx(g.q)}$ を $${fx(q2)}$ に変えたときの答え`, a: `$x=${x2}$、$y=${y2}$`, key: `${g.e.join('/')}|${g.c}|${g.x0}|${g.y0}|${k}`,
           easy: `行列式は $${fx(g.e)}$。右辺が $${fx(dq)}$ 変わると、$y$ は $\\frac{${fx(dq)}}{${fx(g.e)}}=${k}$ 変わる`, easyCheck: false,
           verify: p => solves(p, g.A, [g.p, q2], ['x', 'y']) };
       },
       // y がどれだけ変わるか（ふえればプラス）
       s2(r) {
         const g = illSys(r), dq = F.mul(g.e, fr(r.pick([1, 2, 3, 5, -2]))), q2 = F.add(g.q, dq), dy = F.div(dq, g.e);
-        return { q: `連立方程式 ${illEq(g)} の、2つめの式の右辺 ${fx(g.q)} を ${fx(q2)} に変えると、$y$ はいくつ変わるか（ふえるならプラス）`, a: `$${fx(dy)}$`, key: `${g.e.join('/')}|${g.c}|${g.x0}|${g.y0}|d${fx(dq)}`,
+        return { q: `連立方程式 ${illEq(g)} の、2つめの式の右辺 $${fx(g.q)}$ を $${fx(q2)}$ に変えると、$y$ はいくつ変わるか（ふえるならプラス）`, a: `$${fx(dy)}$`, key: `${g.e.join('/')}|${g.c}|${g.x0}|${g.y0}|d${fx(dq)}`,
           easy: `2つの式をひくと $${fx(g.e)}y=\\cdots$。$\\frac{${fx(dq)}}{${fx(g.e)}}=${fx(dy)}$`, easyCheck: false,
           verify: p => { const s1 = solveNum(numM(g.A), [g.p, F.val(g.q)]), s2 = solveNum(numM(g.A), [g.p, F.val(q2)]); return valIs(p, s2[1] - s1[1], 1e-6); } };
       },
@@ -1669,7 +1723,7 @@
             verify: p => { const d1 = Math.abs(F.val(g.e)), d2 = Math.abs(b - 1); return p.a === ((d1 < d2) === first ? '（ア）' : '（イ）') || `答え ${p.a}`; } };
         }
         const g = illSys(r), dq = F.mul(g.e, fr(r.pick([2, 3, 5]))), dy = F.div(dq, g.e);
-        return { q: `連立方程式 ${illEq(g)} の右辺 ${fx(g.q)} ははかった値で、$\\pm${fx(dq)}$ のずれがある。このずれで、$y$ は最大でいくつずれるか`, a: `$${fx(dy)}$`, key: `m${g.e.join('/')}|${g.c}|${fx(dq)}`,
+        return { q: `連立方程式 ${illEq(g)} の右辺 $${fx(g.q)}$ ははかった値で、$\\pm${fx(dq)}$ のずれがある。このずれで、$y$ は最大でいくつずれるか`, a: `$${fx(dy)}$`, key: `m${g.e.join('/')}|${g.c}|${fx(dq)}`,
           easy: `$\\frac{${fx(dq)}}{${fx(g.e)}}=${fx(dy)}$（行列式 $${fx(g.e)}$ でわる）`, easyCheck: false, verify: p => valIs(p, F.val(dq) / F.val(g.e), 1e-9) };
       },
       // わな：行列式だけ（7-31）、条件のよい式（答えはほとんど変わらない。7-40）
@@ -1681,7 +1735,7 @@
         }
         const x0 = r.int(1, 4), y0 = r.int(0, 3), d = r.pick([fr(1, 10), fr(1, 100)]);
         const A = [[1, 1], [1, -1]], b = [x0 + y0, x0 - y0], b2 = F.add(fr(b[1]), d), sol = [F.div(F.add(fr(b[0]), b2), fr(2)), F.div(F.sub(fr(b[0]), b2), fr(2))];
-        return dest({ q: `連立方程式 $x+y=${b[0]}$、$x-y=${b[1]}$ の、2つめの式の右辺を ${fx(b2)} に変えたときの答え`, a: `$x=${fx(sol[0])}$、$y=${fx(sol[1])}$`, key: `t95g${x0},${y0},${fx(d)}`,
+        return dest({ q: `連立方程式 $x+y=${b[0]}$、$x-y=${b[1]}$ の、2つめの式の右辺を $${fx(b2)}$ に変えたときの答え`, a: `$x=${fx(sol[0])}$、$y=${fx(sol[1])}$`, key: `t95g${x0},${y0},${fx(d)}`,
           verify: p => solves(p, A, [b[0], F.val(b2)], ['x', 'y']) },
           '7-95', '行列式は $-2$ で0から遠い（条件がよい）。答えは少ししか変わらない。ふつうに逆行列で解く', ['7-40']);
       },

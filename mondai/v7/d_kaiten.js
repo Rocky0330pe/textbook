@@ -22,7 +22,16 @@
   const D = x => (Array.isArray(x) ? x : F.fromDec(String(x)));        // 0.15 → [3, 20]
   const turn = (r, key, n) => { const d = r.turns || (r.turns = {}); d[key] = d[key] == null ? r.int(0, n - 1) : (d[key] + 1) % n; return d[key]; };
   // 同じ見開き（同じ乱数の物 r）で、同じ答えを2回出さない
-  const seenAns = (r, k, a) => { const d = r.seenA || (r.seenA = {}), s = d[k] || (d[k] = new Set()); if (s.has(a)) return true; s.add(a); return false; };
+  //   key（問題の key）を渡すと、同じ問題（makeStep が同じ key でよける問題）は数えない（数えると、ほかの問題までよけてしまうので）
+  const seenAns = (r, k, a, key) => { const d = r.seenA || (r.seenA = {}), s = d[k] || (d[k] = new Map()); if (s.has(a) && s.get(a) !== key) return true; s.set(a, key); return false; };
+  // 同じ見開きで、同じ値（角など）を lim 回より多く使わない（U-3・第41回）。アプリで同じわざを多く出すとき（20回をこえたら）は、よけない
+  function cntOK(r, k, v, lim, key) {
+    const d = r.cntV || (r.cntV = {}), m = d[k] || (d[k] = new Map()), n = d[k + '#'] || 0, s = m.get(v) || new Set();
+    if (key != null && s.has(key)) return true;
+    if (n < 20 && s.size >= (lim || 1)) return false;
+    s.add(key != null ? key : Symbol()); m.set(v, s); d[k + '#'] = n + 1;
+    return true;
+  }
   const RAD = Math.PI / 180;
   const decOK = d => { while (d % 2 === 0) d /= 2; while (d % 5 === 0) d /= 5; return d === 1; };
   const fdec = f => (decOK(f[1]) ? String(+(f[0] / f[1]).toFixed(10)) : null);   // 正確な小数（分母が 2・5 だけ）か null
@@ -92,9 +101,11 @@
   // 成分の分数は \tfrac（本の組み方は \frac を \dfrac にするので、行列が高くなりすぎる。教科書の行列の中の分数も小さい分数）
   function matT(rows, o) {
     const ts = rows.map(r => r.map(x => (typeof x === 'string' ? x : (o && o.dec ? stexD(x) : stex(x))).replace(/\\frac/g, '\\tfrac')));
-    const sep = ts.flat().some(hasFrac) ? '\\\\[2pt]' : '\\\\';
+    const sep = ts.flat().some(t => /\\t?frac/.test(t)) ? '\\\\[2pt]' : '\\\\';   // \tfrac に変えたあとでも分数を見つける
     return `\\begin{pmatrix}${ts.map(r => r.join('&')).join(sep)}\\end{pmatrix}`;
   }
+  // 同次変換行列 A(θ, L)：左上の回転は分数（$\tfrac{\sqrt2}{2}$）、右の列は小数（$0.1\sqrt2$）で書く（R2-24）
+  const amT = A => matT(A.map(row => row.map((x, j) => (j < row.length - 1 ? stex(x) : stexD(x)))));
   const matV = rows => rows.map(r => r.map(x => (typeof x === 'number' ? x : sVal(sv(x)))));   // calc の want（小数の値）
   const dg = d => `${d}^{\\circ}`;
   const dgp = d => (d < 0 ? `(${dg(d)})` : dg(d));                     // \cos(-30^{\circ})
@@ -211,8 +222,9 @@
     const st = def.steps, dup = def.dupOK || [];
     for (const k of Object.keys(st)) {
       const f = st[k];
-      if (dup.includes(k)) continue;
-      st[k] = r => { const p = f(r); if (!p || /^(回転行列|ちがう|同じ向き|ちがう向き|ならない|前の|後ろの)/.test(String(p.a))) return p; return seenAns(r, 'A' + def.id, String(p.a).replace(/^約 /, '').replace(/（(m|N|m\/s)）$/, '')) ? null : p; };
+      // dupOK のステップも、同じ答えは2回まで（1つのステップに同じ答えを3つ出さない。U-3）
+      if (dup.includes(k)) { st[k] = r => { const p = f(r); return !p || cntOK(r, 'D' + def.id + k, String(p.a), 2, p.key || p.q) ? p : null; }; continue; }
+      st[k] = r => { const p = f(r); if (!p || /^(回転行列|ちがう|同じ向き|ちがう向き|ならない|前の|後ろの)/.test(String(p.a))) return p; return seenAns(r, 'A' + def.id, String(p.a).replace(/^約 /, '').replace(/（(m|N|m\/s)）$/, ''), p.key || p.q) ? null : p; };
     }
     M.add(def);
   }
@@ -231,7 +243,7 @@
     caution: '1行めを $(\\cos\\theta,\\ \\sin\\theta)$ と書くと $R(-\\theta)$（右回り）になる。迷ったら $\\theta=90^{\\circ}$ を入れて、$(1,\\ 0)$ が $(0,\\ 1)$ へ行くか確かめる。$x$ 軸で折り返す行列のような、回転でない行列には使えない。',
     counts: { s1: 6, s2: 4, s3: 4, trap: 2 },
     cols: { s1: 2, s2: 2, s3: 2, trap: 2 },
-    boxw: { s1: '30mm', s2: '24mm', s3: '30mm', trap: '20mm' }, boxh: { s1: '14mm', s2: '10mm', s3: '12mm', trap: '12mm' },
+    boxw: { s1: '30mm', s2: '24mm', s3: '30mm', trap: '20mm' }, boxh: { s1: '18mm', s2: '10mm', s3: '12mm', trap: '12mm' },   // s1 は分数の2×2 なので高く（R2 好み）
     fits(q) {
       if (/\^\{-1\}|\\mathsf|R_|ですか|回した|もとの点|\)\^\{?\d|かけ|\+R|微分/.test(q)) return false;
       const n = (q.match(/R\(/g) || []).length;
@@ -397,7 +409,7 @@
       // (L, 0)・(0, L) を回す：1列め（2列め）の L 倍
       s1(r) {
         const L = r.int(2, 6), d = r.pick(P49), onX = r.chance(0.7), a = onX ? L : 0, b = onX ? 0 : L;
-        if (bad49(a, b, d)) return null;
+        if (bad49(a, b, d) || !cntOK(r, '49d', d, 2)) return null;   // 同じ角を3回使わない（150° が4問だった。U-3）
         const P = rot(d, a, b);
         return { q: `点 $(${a},\\ ${b})$ を、原点のまわりに${turnT(d)}回した点`, a: `$${ptT(P)}$`, key: `49:${a},${b},${d}`,
           easy: onX ? `1列めの ${L} 倍` : `2列めの ${L} 倍`, easyCheck: false, verify: p => vecIs(p.a, mvf(Rf(d), [a, b])) };
@@ -405,7 +417,7 @@
       // ふつうの点
       s2(r) {
         const a = r.int(-4, 4), b = r.int(-4, 4), d = r.pick(P49);
-        if (!a || !b || bad49(a, b, d)) return null;
+        if (!a || !b || bad49(a, b, d) || !cntOK(r, '49d', d, 2)) return null;
         const P = rot(d, a, b), C = Rm(d);
         return { q: `点 $(${a},\\ ${b})$ を、原点のまわりに${turnT(d)}回した点`, a: `$${ptT(P)}$`, key: `49:${a},${b},${d}`,
           easy: `$${coefT(a)}${ptT([C[0][0], C[1][0]])}${b < 0 ? '' : '+'}${coefT(b)}${ptT([C[0][1], C[1][1]])}$`, easyCheck: false, verify: p => vecIs(p.a, mvf(Rf(d), [a, b])) };
@@ -417,7 +429,7 @@
           const a = r.int(-4, 5), b = r.int(-4, 5);
           if (!a && !b || bad49(a, b, d) || (!a || !b) && r.chance(0.7)) return null;
           const T = rot(d, a, b), G = rotG(d, a, b), ap = T.map((t, i) => apx(G[i], t, 3));
-          if (ap.includes(null)) return null;
+          if (ap.includes(null) || !cntOK(r, '49d', d, 2)) return null;
           return { q: `点 $(${a},\\ ${b})$ を、原点のまわりに${turnT(d)}回した点（${givenT(d)} を使い、小数第3位まで）`, a: `約 $(${ap.join(',\\ ')})$`, key: `49:${a},${b},${d}`,
             easy: `$x=${prodT([[gcs(d)[0], a], [F.mul(gcs(d)[1], fr(-1)), b]].filter(t => t[1] && t[0][0]))}$、$y=${prodT([[gcs(d)[1], a], [gcs(d)[0], b]].filter(t => t[1] && t[0][0]))}$`, easyCheck: false,
             verify: p => vecIs(p.a, mvf(Rf(d), [a, b]), 1e-3) };
@@ -425,20 +437,20 @@
         const a = r.int(2, 4), b = r.int(1, 4), c = r.int(1, 4);
         const pts = [[0, 0], [a, 0], [b, c]], G = pts.map(([x, y]) => rotG(d, x, y)), T = pts.map(([x, y]) => rot(d, x, y));
         const ap = T.map((t, i) => t.map((u, j) => apx(G[i][j], u, 3)));
-        if (ap.flat().includes(null) || bad49(b, c, d)) return null;
+        if (ap.flat().includes(null) || bad49(b, c, d) || !cntOK(r, '49d', d, 2)) return null;
         return { q: `3点 O$(0,\\ 0)$、A$(${a},\\ 0)$、B$(${b},\\ ${c})$ を列に並べた行列に、左から $R(${dg(d)})$ をかけた行列（${givenT(d)} を使い、小数第3位まで）`,
           a: `約 $\\begin{pmatrix}${[0, 1].map(j => ap.map(v => v[j]).join('&')).join('\\\\')}\\end{pmatrix}$`, key: `49m:${a},${b},${c},${d}`, boxw: '46mm', boxh: '12mm',
           calc: { kind: 'mat', ans: `\\begin{pmatrix}${[0, 1].map(j => ap.map(v => v[j]).join('&')).join('\\\\')}\\end{pmatrix}`, want: [0, 1].map(j => pts.map(([x, y]) => mvf(Rf(d), [x, y])[j])).map(row => row.map(v => +v.toFixed(3))) },
           easy: '列ごとに、点を1つずつ回す（O は動かない）', easyCheck: false };
       },
-      // わな：原点ではない点のまわりに90° → 7-48
+      // わな：原点ではない点のまわりに90° → わざなし（7-48 は原点のまわりだけ。7-48 の caution のとおり。U-4・R2-22）
       trap(r) {
         const c1 = r.int(-2, 3), c2 = r.int(-2, 3), a = r.int(-3, 5), b = r.int(-3, 5);
         if ((!c1 && !c2) || (a === c1 && b === c2) || bad49(c1, c2, 0) || bad49(a, b, 0)) return null;   // 楽な形の例の点 (2, 0)・(3, 1) は中心にも使わない
         const d = r.pick([90, -90, 180]), P = R90(d, a - c1, b - c2);
         return dest({ q: `点 $(${a},\\ ${b})$ を、点 C$(${c1},\\ ${c2})$ のまわりに${d === 180 ? '180°' : turnT(d)}回した点`, a: `$(${P[0] + c1},\\ ${P[1] + c2})$`, key: `49t:${a},${b},${c1},${c2},${d}`,
           verify: p => vecIs(p.a, mvf(Rf(d), [a - c1, b - c2]).map((v, i) => v + [c1, c2][i])) }, '7-49',
-          '回す中心が原点ではない。C を引いてから90°の倍数で回し、C をたしてもどす', ['7-48']);
+          '回す中心が原点ではない。C を引いてから90°の倍数で回し、C をたしてもどす');
       },
     },
   });
@@ -448,6 +460,7 @@
   const RAKU50 = ['30,45', '20,40', '-60,150'];
   const bad50 = (...ds) => ds.length === 2 && RAKU50.includes(ds.slice().sort((x, y) => x - y).join(','));
   const prodR = ds => ds.map(d => `R(${dg(d)})`).join('');
+  let book50 = null;   // 本の見開きのわなの key（わなで使う）
   add({
     id: '7-50', part: 4, chap: '7-6④ 例題2', stars: 1,
     title: '回転をつなぐと角はたし算：$R(\\alpha)R(\\beta)=R(\\alpha+\\beta)$（積を成分で計算しない）',
@@ -497,12 +510,14 @@
           key: `50:${[a, sg * b].sort((x, y) => x - y).join(',')}`, easy: `$R(${dg(sg * b)})R(${dg(a)})=R(${dg(T)})$（あとの回転が左）`, easyCheck: false,
           verify: p => { const t = angRead(p.a); return (t != null && mod360(t - a - sg * b) === 0) || `${p.a} がちがう`; } };
       },
-      // わな：回転行列のたし算 → 楽な形なし
+      // わな：回転行列のたし算 → 7-03（同じ場所どうしをたす。U-4・R2-20）
       trap(r) {
         const pairs = [[30, 60], [45, 90], [90, 180], [45, 135], [60, 120], [60, 90], [30, 90], [30, 120]];   // たして0になる組・回転行列になる組（30°と150°）は出さない
         const [a, b] = r.pick(pairs), A = Rm(a), B = Rm(b), C = A.map((row, i) => row.map((x, j) => sAdd(x, B[i][j])));
+        // 新しい乱数の物ではじめに作るわな（見わけようの must）は、本の見開きのわなとちがう組にする（U-9。見開きではステップ1〜3 のあとなので r.seenA がある）
+        if (!r.seenA) { book50 = book50 || new Set(M.makeSheet('7-50').trap.map(p => p.key)); if (book50.has(`50t:${a},${b}`)) return null; }
         return dest({ q: `$R(${dg(a)})+R(${dg(b)})$ を成分で書いた行列`, a: `$${matT(C)}$`, key: `50t:${a},${b}`, calc: { kind: 'mat', want: matV(C) } }, '7-50',
-          `たし算は回転をつなぐことではないので、$R(${dg(a + b)})$ にはならない。成分ごとにたす`);
+          `たし算は回転をつなぐことではないので、$R(${dg(a + b)})$ にはならない。成分ごとにたす`, ['7-03']);
       },
     },
   });
@@ -520,8 +535,8 @@
     why: '$R(\\theta)$ を $n$ 回かけると、角は $\\theta$ が $n$ 個たされて $n\\theta$（7-6④）。360°回すと1周してもとにもどるので、$n\\theta$ が360°の倍数になれば $I$、180°なら $-I$。',
     caution: '回転行列の $n$ 乗だけに使える。$\\begin{pmatrix}1&1\\\\0&1\\end{pmatrix}$ のような、回転でない行列は何回かけても $I$ にならないことがある。「はじめて」$I$ になる回数は、$n\\theta$ がいちばん小さい360°の倍数になる $n$。',
     counts: { s1: 8, s2: 4, s3: 3, trap: 2 },
-    cols: { s1: 2, s2: 2, s3: 1, trap: 1 },
-    boxw: { s1: '16mm', s2: '20mm', s3: '16mm', trap: '40mm' }, boxh: { s2: '12mm' },
+    cols: { s1: 1, s2: 2, s3: 1, trap: 1 },   // s1 は「角は0°以上360°未満で」を同じ行に書くので1列（R2-27）
+    boxw: { s1: '16mm', s2: '20mm', s3: '16mm', trap: '40mm' }, boxh: { s2: '12mm', trap: '12mm' },   // わなの欄も行列の欄と同じ高さに（R1-39）
     fits(q) {
       if (/R_|\\mathsf|\^\{-1\}/.test(q)) return false;
       if (/R\(-?\d+\^\{\\circ\}\)\^\{?\d/.test(q)) return true;
@@ -532,8 +547,8 @@
       // R(θ)^n = R(□)
       s1(r) {
         const t = r.pick([10, 15, 20, 25, 30, 40, 45, 50, 60, 70, 80, 90, 120]), n = r.int(2, 6);
-        if (t * n > 360 || bad51(t, n)) return null;
-        return { q: `$R(${dg(t)})^{${n}}=R(□)$`, a: `$${dg(t * n)}$`, key: `51:${t}:${n}`, easy: `$${t}\\times${n}=${t * n}$`, easyCheck: false,
+        if (t * n >= 360 || bad51(t, n)) return null;   // 360° ちょうど（0° と同じ）は出さない
+        return { q: `$R(${dg(t)})^{${n}}=R(□)$（角は0°以上360°未満で）`, a: `$${dg(t * n)}$`, key: `51:${t}:${n}`, easy: `$${t}\\times${n}=${t * n}$`, easyCheck: false,
           verify: p => { const u = angRead(p.a); let A = [[1, 0], [0, 1]]; for (let k = 0; k < n; k++) A = mulf(A, Rf(t)); return (u != null && close(A[0][0], Math.cos(u * RAD)) && close(A[1][0], Math.sin(u * RAD))) || `${p.a} がちがう`; } };
       },
       // 何回で I ・ n 乗を成分で（±I・±R90）
@@ -647,6 +662,8 @@
   const TRIP = [[3, 4, 5], [4, 3, 5], [5, 12, 13], [12, 5, 13], [8, 15, 17], [15, 8, 17], [7, 24, 25], [24, 7, 25]];
   const trT = (n, h) => { const f = fr(n, h); return fdec(f) != null && h !== 17 && h !== 13 ? fdec(f) : F.tex(f); };   // 0.6、0.28、\frac{5}{13}
   const RAKU53 = ['0.6,-0.8,0.8,0.6', '0.6,0.8,0.8,-0.6', '1,-1,1,1'];
+  // 2×2 の問題では、例の数 0.6・0.8（3・4・5）を使わない（入れかえ・符号を変えただけになるので。R2-7・S-2）
+  const TRIP53 = TRIP.filter(t => t[2] !== 5);
   function kind53(A) {   // 回転行列か（列の長さ・内積・行列式で）。ことばで
     const c1 = A[0][0] ** 2 + A[1][0] ** 2, c2 = A[0][1] ** 2 + A[1][1] ** 2, ip = A[0][0] * A[0][1] + A[1][0] * A[1][1], dt = A[0][0] * A[1][1] - A[0][1] * A[1][0];
     if (!close(c1, 1) || !close(c2, 1)) return 'ちがう（列の長さが1でない）';
@@ -669,7 +686,7 @@
     steps: {
       // 回転行列ですか（2×2）
       s1(r) {
-        const k = r.int(0, 4), [a, b, h] = r.pick(TRIP), sa = r.pick([1, -1]), sb = r.pick([1, -1]);
+        const k = r.int(0, 4), [a, b, h] = r.pick(TRIP53), sa = r.pick([1, -1]), sb = r.pick([1, -1]);
         const c = sa * a / h, s = sb * b / h, cT = (sa < 0 ? '-' : '') + trT(a, h), sT = (sb < 0 ? '-' : '') + trT(b, h), nsT = (sb < 0 ? '' : '-') + trT(b, h), ncT = (sa < 0 ? '' : '-') + trT(a, h);
         let A, T;
         if (k <= 1) { A = [[c, -s], [s, c]]; T = [[cT, nsT], [sT, cT]]; }
@@ -684,8 +701,8 @@
       },
       // 1列めから2列め・あいている成分
       s2(r) {
-        const [a, b, h] = r.pick(TRIP), sa = r.pick([1, -1]), sb = r.pick([1, -1]);
-        const cT = (sa < 0 ? '-' : '') + trT(a, h), sT = (sb < 0 ? '-' : '') + trT(b, h), nsT = (sb < 0 ? '' : '-') + trT(b, h);
+        const [a, b, h] = r.pick(TRIP53), sa = r.pick([1, -1]), sb = r.pick([1, -1]);
+        const cT =(sa < 0 ? '-' : '') + trT(a, h), sT = (sb < 0 ? '-' : '') + trT(b, h), nsT = (sb < 0 ? '' : '-') + trT(b, h);
         if (RAKU53.includes([sa * a / h, -sb * b / h, sb * b / h, sa * a / h].map(x => String(+x.toFixed(6))).join(','))) return null;
         const pa = x => (hasFrac(x) ? `\\left(${x}\\right)` : `(${x})`);
         if (turn(r, '53s2', 2)) {
@@ -710,9 +727,8 @@
       },
       // わな：回転行列で点を動かす → 7-16
       trap(r) {
-        const [a, b, h] = r.pick(TRIP.filter(t => t[2] !== 17 && t[2] !== 13)), L = r.pick([h, 2 * h]), onX = r.chance(0.6);
+        const [a, b, h] = r.pick(TRIP53.filter(t => t[2] !== 17 && t[2] !== 13)), L = r.pick([h, 2 * h]), onX = r.chance(0.6);
         const cT = trT(a, h), sT = trT(b, h);
-        if (cT === '0.6' && sT === '0.8') return null;
         const P = onX ? [a * L / h, b * L / h] : [-b * L / h, a * L / h];
         return dest({ q: `回転行列 $${matT([[cT, '-' + sT], [sT, cT]])}$ で、点 $(${onX ? L : 0},\\ ${onX ? 0 : L})$ はどこへ行くか`, a: `$(${P.map(v => +v.toFixed(6)).join(',\\ ')})$`, key: `53t:${cT}:${L}:${onX}`,
           verify: p => vecIs(p.a, P) }, '7-53', `回転行列かどうかではなく、点の行き先を聞いている。${onX ? '1' : '2'}列めの ${L} 倍`, ['7-16']);
@@ -762,8 +778,8 @@
       },
       // 坂の荷物の重力（√ を残した形）
       s2(r) {
-        const m = r.pick(['0.5', '1.0', '2.0', '3.0', '4.0', '5.0']), th = r.pick([30, 45, 60]);
-        if (m === '1.0' && th === 30) return null;
+        // 例の角30°はよける（5.0 kg・30°は例 1.0 kg・30°のちょうど5倍になる。R2-1・S-2）
+        const m = r.pick(['0.5', '1.0', '2.0', '3.0', '4.0', '5.0']), th = r.pick([45, 60]);
         const mg = F.mul(D('9.8'), D(m)), [c, s] = cs(th), Fx = sMul(sNeg(S(mg)), s), Fy = sMul(sNeg(S(mg)), c);
         return { q: `質量 $${m}\\,\\mathrm{kg}$ の荷物が、${th}°の坂にのっています。荷物にはたらく重力 $(0,\\ -${fdec(mg)})$（N）を、坂にそって上向きの $x'$ 軸と、坂に垂直で上向きの $y'$ 軸の成分で表した力`,
           a: `$${ptT([Fx, Fy], { dec: true })}$（N）`, key: `54g:${m}:${th}`, easy: `$R(${dg(th)})^{\\mathsf T}$ をかける。$(-mg\\sin${dg(th)},\\ -mg\\cos${dg(th)})$`, easyCheck: false,
@@ -772,8 +788,7 @@
       // 図：坂の荷物（小数）・点（小数）
       s3(r) {
         if (turn(r, '54s3', 2)) {
-          const m = r.pick(['0.5', '1.0', '2.0', '3.0', '4.0', '1.5', '2.5']), th = r.pick([30, 45, 60]);
-          if (m === '1.0' && th === 30) return null;
+          const m = r.pick(['0.5', '1.0', '2.0', '3.0', '4.0', '1.5', '2.5']), th = r.pick([45, 60]);   // 例の角30°はよける（R2-1）
           const mg = F.mul(D('9.8'), D(m)), [c, s] = cs(th), [gc, gs] = gcs(th), mmg = F.mul(mg, fr(-1));
           const ap = [apx(F.mul(mmg, gs), sMul(S(mmg), s), 2), apx(F.mul(mmg, gc), sMul(S(mmg), c), 2)];
           if (ap.includes(null)) return null;
@@ -805,28 +820,57 @@
   const hand = (L1, L2, t1, t2) => { const [c1, s1] = cs(t1), [c2, s2] = cs(t1 + t2), a = S(D(L1)), b = S(D(L2)); return [sAdd(sMul(a, c1), sMul(b, c2)), sAdd(sMul(a, s1), sMul(b, s2))]; };
   const handf = (L1, L2, t1, t2) => [+L1 * Math.cos(t1 * RAD) + +L2 * Math.cos((t1 + t2) * RAD), +L1 * Math.sin(t1 * RAD) + +L2 * Math.sin((t1 + t2) * RAD)];
   const armQ = (L1, L2, t1, t2) => `2本の腕の長さが $L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$ のロボットで、肩の角が $\\theta_1=${dg(t1)}$、ひじの角が $\\theta_2=${dg(t2)}$ のときの手の位置`;
-  // ひじのラベルの向き：肩・手・のばした線の3本の向きから、いちばん離れた向き（8方向）
-  function elbowDir(E, P, X) {
-    const u = A => { const d = Math.hypot(A[0] - E[0], A[1] - E[1]) || 1; return [(A[0] - E[0]) / d, (A[1] - E[1]) / d]; };
-    const vs = [u([0, 0]), u(P), u(X)], dirs = { n: 90, ne: 45, e: 0, se: -45, s: -90, sw: -135, w: 180, nw: 135 };
-    let best = 's', bv = -9;
-    for (const [k, a] of Object.entries(dirs)) { const c = [Math.cos(a * RAD), Math.sin(a * RAD)], m = Math.min(...vs.map(v => 1 - (v[0] * c[0] + v[1] * c[1]))); if (m > bv) { bv = m; best = k; } }
-    return best;
-  }
   // 2本の腕の図：肩・ひじ・手、関節の角のしるし、長さのラベル（手の点に座標は書かない）
-  function armFig(L1, L2, t1, t2) {
-    const k = 7 / (+L1 + +L2), E = [k * +L1 * Math.cos(t1 * RAD), k * +L1 * Math.sin(t1 * RAD)], P = [E[0] + k * +L2 * Math.cos((t1 + t2) * RAD), E[1] + k * +L2 * Math.sin((t1 + t2) * RAD)];
+  const armPts = (L1, L2, t1, t2) => { const k = 8 / (+L1 + +L2), E = [k * +L1 * Math.cos(t1 * RAD), k * +L1 * Math.sin(t1 * RAD)]; return [E, [E[0] + k * +L2 * Math.cos((t1 + t2) * RAD), E[1] + k * +L2 * Math.sin((t1 + t2) * RAD)]]; };
+  // 図で手が軸の上や近くにくる（ラベルが軸と重なる）組か（R2-28・R2-29）
+  const armNearAxis = (L1, L2, t1, t2) => { const [, P] = armPts(L1, L2, t1, t2); return Math.abs(P[0]) < 0.8 || Math.abs(P[1]) < 0.8; };
+  const DIR8 = { e: 0, ne: 45, n: 90, nw: 135, w: 180, sw: -135, s: -90, se: -45 };
+  const dir8 = a => Object.entries(DIR8).reduce((b, [k, d]) => { const e = Math.abs(((a - d) % 360 + 540) % 360 - 180); return e < b[1] ? [k, e] : b; }, ['e', 999])[0];
+  // 図の組み立て（R2-28・R2-29）。ラベルは、ほかのラベル・腕・のばした線・軸と重ならない場所を、候補から順にさがして置く。
+  //   字の大きさ 3.4 mm ÷ s 4 mm ＝ 0.85 の単位で、字の箱を見積もる。置けないラベルがあれば ok が false（その組は図に使わない）
+  let ARM55 = null;   // 7-55 ステップ3 の図に使える組（はじめて使うときに作る）
+  const ANC8 = { n: [0, 1], s: [0, -1], e: [1, 0], w: [-1, 0], ne: [0.8, 0.8], nw: [-0.8, 0.8], se: [0.8, -0.8], sw: [-0.8, -0.8] };
+  function armLayout(L1, L2, t1, t2) {
+    const [E, P] = armPts(L1, L2, t1, t2), u = 0.85, T = t1 + t2;
     const ext = [E[0] + 2.2 * Math.cos(t1 * RAD), E[1] + 2.2 * Math.sin(t1 * RAD)];
     const xs = [0, E[0], P[0], ext[0]], ys = [0, E[1], P[1], ext[1]];
+    const top = P[1] >= Math.max(...ys) - 0.01;   // 手がいちばん上なら、手のラベルを真上に置かない（図が高くならないように）
     const x0 = Math.min(...xs, 0) - 0.8, x1 = Math.max(...xs, 2) + 1, y0 = Math.min(...ys, 0) - 0.8, y1 = Math.max(...ys) + 1;
-    const mid = (A, B) => [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
-    const lab = (A, B, t) => { const m = mid(A, B), d = Math.atan2(B[1] - A[1], B[0] - A[0]), n = [-Math.sin(d), Math.cos(d)]; return ['label', [m[0] + n[0] * 0.5, m[1] + n[1] * 0.5], t, n[1] > 0.3 ? 'n' : n[1] < -0.3 ? 's' : n[0] > 0 ? 'e' : 'w']; };
+    const segs = [[[0, 0], E], [E, P], [E, ext]];
+    const placed = [[[0.45, y1 - 0.8], 0.9], [[x1 - 0.4, -0.55], 0.7], [[-0.55, -0.55], 0.7]];   // [中心, はば]。はじめは軸の字 y・x・O
+    const a1 = t1 / 2 * RAD, a2 = (t1 + T) / 2 * RAD;
+    // θ1・θ2 の字（角のしるしの外がわ）。角をはさむ線にくっつくなら（角が小さいとき）ok でない
+    const th1 = [1.95 * Math.cos(a1), 1.95 * Math.sin(a1)], th2 = [E[0] + 1.65 * Math.cos(a2), E[1] + 1.65 * Math.sin(a2)];
+    if (t1) placed.push([th1, 1.1 * u]);
+    if (t2) placed.push([th2, 1.1 * u]);
+    let ok = !(t1 && (Math.abs(th1[1]) < 0.5 || dSeg(th1, [0, 0], E) < 0.5)) && !(t2 && (dSeg(th2, E, P) < 0.5 || dSeg(th2, E, ext) < 0.5));
+    const free = (c, w) => placed.every(([d, v]) => Math.abs(c[0] - d[0]) >= (w + v) / 2 + 0.15 || Math.abs(c[1] - d[1]) >= u + 0.1)
+      && segs.every(([A, B]) => dSeg(c, A, B) >= 0.45 && dSeg([c[0] - w / 2 + 0.2, c[1]], A, B) >= 0.4 && dSeg([c[0] + w / 2 - 0.2, c[1]], A, B) >= 0.4)
+      && !(Math.abs(c[0]) < w / 2 + 0.2 && c[1] > y0 - 0.3 && c[1] < y1 + 0.3) && !(Math.abs(c[1]) < u / 2 + 0.15 && c[0] > x0 - 0.3 && c[0] < x1 + 0.3);   // 軸と重ならない
+    const ctr = (A, d, w) => { const v = ANC8[d]; return [A[0] + v[0] * (0.75 * u + (Math.abs(v[0]) > 0.3 ? w / 2 : 0)), A[1] + v[1] * 0.75 * u]; };   // ラベルの字のまん中
+    const near8 = a => Object.keys(DIR8).sort((p, q) => { const e = d => Math.abs(((a - DIR8[d]) % 360 + 540) % 360 - 180); return e(p) - e(q); });
+    const put = (A, dirs, w, t) => { for (const d of dirs) { const c = ctr(A, d, w); if (free(c, w)) { placed.push([c, w]); return ['label', A, t, d]; } } ok = false; return ['label', A, t, dirs[0]]; };
+    // 手：下の腕ののびる向きに近い向きから。ひじ：腕・のばした線から遠い向きから
+    const hl = put(P, near8(T).filter(d => !(top && d === 'n')), u, '手');
+    const ds = [t1, T, t1 + 180].map(mod360).sort((p, q) => p - q), gp = ds.map((d, i) => [(ds[(i + 1) % 3] - d + 360) % 360 || 360, d]).sort((p, q) => q[0] - p[0])[0];   // 3本の向きのいちばん広いすきま
+    const el = put(E, near8(gp[1] + gp[0] / 2), 2 * u, 'ひじ');
+    // 長さのラベル：腕のまん中のあたりの、角のしるしと反対の側から。だめなら、もう一方の側や、少しずらした所
+    const lenLab = (A, B, t, sg) => {
+      const d = Math.atan2(B[1] - A[1], B[0] - A[0]);
+      for (const s of [sg, -sg]) for (const f of [0.5, 0.62, 0.38, 0.75]) {
+        const m = [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f], n = [-Math.sin(d) * s, Math.cos(d) * s], Q = [m[0] + n[0] * 0.5, m[1] + n[1] * 0.5];
+        const dd = n[1] > 0.3 ? 'n' : n[1] < -0.3 ? 's' : n[0] > 0 ? 'e' : 'w', c = ctr(Q, dd, 1.1 * u);
+        if (c[1] > 0.3 && free(c, 1.1 * u)) {   // x 軸より下には置かない
+          placed.push([c, 1.1 * u]); return ['label', Q, t, dd]; }
+      }
+      ok = false; return ['label', A, t, 'c'];
+    };
+    const l1 = lenLab([0, 0], E, '$L_1$', t1 >= 0 ? 1 : -1), l2 = lenLab(E, P, '$L_2$', t2 >= 0 ? 1 : -1);
     const its = [['axes', x0, x1, y0, y1, { o: 'sw' }], ['seg', [0, 0], E, { thick: true }], ['seg', E, P, { thick: true }], ['seg', E, ext, { dash: true }],
-      ['circle', [0, 0], 0.25], ['circle', E, 0.25], ['dot', P], ['label', P, '手', P[1] >= E[1] ? 'n' : 's'], ['label', E, 'ひじ', elbowDir(E, P, ext)],
-      lab([0, 0], E, '$L_1$'), lab(E, P, '$L_2$')];
+      ['circle', [0, 0], 0.25], ['circle', E, 0.25], ['dot', P], hl, el, l1, l2];
     if (t1) its.push(['angle', [2, 0], [0, 0], E, '$\\theta_1$', 1.2]);
     if (t2) its.push(['angle', ext, E, P, '$\\theta_2$', 0.9]);
-    return { s: 4, items: its };
+    return { fig: { s: 4, items: its }, ok };
   }
   add({
     id: '7-55', part: 4, chap: '7-6⑦ 例題7', stars: 1,
@@ -867,16 +911,27 @@
       },
       // 図：小数で（小数第3位まで）
       s3(r) {
-        const L1 = r.pick(LEN), L2 = r.pick(LEN), t1 = r.pick([30, 45, 60, 0, 90]), t2 = r.pick([30, 45, 60, 90, -30, -45, -60, 120, -90]), T = t1 + t2;
-        if (!famOK(t1, T) || (fam(t1) === 0 && fam(T) === 0) || T <= -90 || T > 180 || (L1 === '0.40' && L2 === '0.30' && t1 === 30 && t2 === 60)) return null;
+        // 図では上の腕が軸と重ならないように、肩の角は 30°・45°・60°（0°・90° だと上の腕が軸に重なる）。手も軸の近くに置かない。
+        //   ラベルが重ならず、図の高さが 34 mm まで（2問で見開きに入る）の組だけを、はじめに1回だけ集めておいて、その中から選ぶ（R2-28・R2-29）
+        if (!ARM55) {
+          ARM55 = [];
+          for (const L1 of LEN) for (const L2 of LEN) for (const t1 of [30, 45, 60]) for (const t2 of [30, 45, 60, 90, -30, -45, -60, 120, -90]) {
+            const T = t1 + t2;
+            if (!famOK(t1, T) || (fam(t1) === 0 && fam(T) === 0) || T <= -90 || T > 180 || (L1 === '0.40' && L2 === '0.30' && t1 === 30 && t2 === 60) || armNearAxis(L1, L2, t1, t2)) continue;
+            const lay = armLayout(L1, L2, t1, t2);
+            if (lay.ok && +/height="([\d.]+)mm"/.exec(M.figSVG(lay.fig))[1] <= 34) ARM55.push([L1, L2, t1, t2, lay.fig]);
+          }
+        }
+        const [L1, L2, t1, t2, fig] = r.pick(ARM55), T = t1 + t2;
         const [g1c, g1s] = gcs(t1), [gTc, gTs] = gcs(T), H = hand(L1, L2, t1, t2);
-        const G = [F.add(F.mul(D(L1), g1c), F.mul(D(L2), gTc)), F.add(F.mul(D(L1), g1s), F.mul(D(L2), gTs))], ap = G.map((g, i) => apx(g, H[i], 3));
-        if (ap.includes(null)) return null;
+        const G = [F.add(F.mul(D(L1), g1c), F.mul(D(L2), gTc)), F.add(F.mul(D(L1), g1s), F.mul(D(L2), gTs))], ap0 = G.map((g, i) => apx(g, H[i], 3));
+        if (ap0.includes(null) || !cntOK(r, '55s3', `${t1},${t2}`)) return null;   // 同じ角の組を、長さだけ変えて2回出さない
+        const ap = ap0.map(d3);
         return { q: `図の2本の腕（$L_1=${L1}\\,\\mathrm{m}$、$L_2=${L2}\\,\\mathrm{m}$、$\\theta_1=${dg(t1)}$、$\\theta_2=${dg(t2)}$）の手の位置（${givenT(t1, T)} を使い、小数第3位まで）`,
-          a: `約 $(${ap.join(',\\ ')})$（m）`, key: `55:${L1},${L2},${t1},${t2}`, fig: armFig(L1, L2, t1, t2), easy: `下の腕は $${t1}+${sgn(t2)}=${T}$°回す`, easyCheck: false,
+          a: `約 $(${ap.join(',\\ ')})$（m）`, key: `55:${L1},${L2},${t1},${t2}`, fig, easy: `下の腕は $${t1}+${sgn(t2)}=${T}$°回す`, easyCheck: false,
           verify: p => vecIs(p.a, handf(L1, L2, t1, t2), 2e-3) };
       },
-      // わな：手の位置から関節の角（逆運動学）→ 7-89
+      // わな：手の位置から関節の角（逆運動学）→ わざなし（7-89 は1歩近づけるだけで、ちょうどの角は出ない。U-4・R2-21）
       trap(r) {
         const L = r.pick(LEN), t1 = r.pick([0, 30, 60, 90, 45]), t2 = r.pick([60, 90, 120]);
         if (!famOK(t1, t1 + t2) || t1 + t2 > 180 || (fam(t1) && fam(t1 + t2))) return null;   // 手の点の成分が長くならないように
@@ -884,7 +939,7 @@
         return dest({ q: `$L_1=L_2=${L}\\,\\mathrm{m}$ の腕で、手を点 $${ptT(H, { dec: true })}$（m）に持っていく関節の角（$\\theta_2>0$ のほう）`,
           a: `$\\theta_1=${dg(t1)}$、$\\theta_2=${dg(t2)}$`, key: `55t:${L},${t1},${t2}`,
           verify: p => { const m = maths(p.a).map(x => +(/=(-?\d+)/.exec(x) || [])[1]); const g = handf(L, L, m[0], m[1]), w = handf(L, L, t1, t2); return (m[1] > 0 && close(g[0], w[0]) && close(g[1], w[1])) || `角 ${p.a} で手が届かない`; } }, '7-55',
-          `手の位置から関節の角を求める（逆運動学）。ひじを反対に曲げた組 $\\theta_1=${dg(A2[0])}$、$\\theta_2=${dg(A2[1])}$ もある`, ['7-89']);
+          `手の位置から関節の角を求める（逆運動学）。ひじを反対に曲げた組 $\\theta_1=${dg(A2[0])}$、$\\theta_2=${dg(A2[1])}$ もある`);
       },
     },
   });
@@ -896,19 +951,38 @@
   const p3 = v => `(${v.join(',\\ ')})`;
   const AXN = { x: '$x$ 軸', y: '$y$ 軸', z: '$z$ 軸' };
   const R3T = (ax, d) => `R_${ax}(${dg(d)})`;
+  // 同じ見開きで、前の問題の点や答えの点を、また問題の点・答えにしない（くり返しに見えないように。R2 好み）
+  function fresh56(r, v, w) {
+    const s = r.pts56 || (r.pts56 = new Set()), a = v.join(','), b = w.join(',');
+    if (s.size < 40 && (s.has(a) || s.has(b))) return false;
+    s.add(a); s.add(b); return true;
+  }
   // 立体の図：3本の軸、点 P と原点からの点線、回す軸のまわりの矢印（右ねじ）
+  //   点のラベルは「P」だけ（座標は文にある。ラベルが軸の矢じりや y と重ならないように）。回す矢印は、点より先の所に置き、
+  //   点線・点・ラベルに近ければ null（その点と軸の組は使わない。R2-29・R2 好み）
+  const dSeg = (p, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / l)) : 0; return Math.hypot(p[0] - A[0] - t * dx, p[1] - A[1] - t * dy); };
   function axis3Fig(ax, v) {
-    const Q = p => M.proj3(p), L = 4.2, its = [];
-    [['x', [L, 0, 0]], ['y', [0, L + 1.5, 0]], ['z', [0, 0, L]]].forEach(([n, e]) => { its.push(['seg', Q([0, 0, 0]), Q(e), { arrow: true }], ['label', Q(e), `$${n}$`, n === 'z' ? 'n' : 'e']); });
-    const [a, b, c] = v;
-    its.push(['path', [Q([a, 0, 0]), Q([a, b, 0]), Q([0, b, 0])], { dash: true }], ['seg', Q([a, b, 0]), Q([a, b, c]), { dash: true }], ['dot', Q(v)], ['label', Q(v), `P(${v.join(', ')})`, 'e']);
-    const R = 0.7, h = 3.2, pts = [];
-    for (let k = 0; k <= 24; k++) {
-      const t = (-40 + 280 * k / 24) * RAD, u = R * Math.cos(t), w = R * Math.sin(t);
-      pts.push(Q(ax === 'z' ? [u, w, h] : ax === 'x' ? [h, u, w] : [w, h, u]));   // x：y→z、y：z→x、z：x→y の向きが＋
+    const Q = p => M.proj3(p), [a, b, c] = v, R = 0.55, P = Q(v), lab = [P[0] + 0.68, P[1] + 0.46];   // lab：「P」の字のまん中（ne）
+    const dash = [[Q([a, 0, 0]), Q([a, b, 0])], [Q([a, b, 0]), Q([0, b, 0])], [Q([a, b, 0]), Q([a, b, c])]];
+    const far = (p, d0, d1, d2) => Math.hypot(p[0] - P[0], p[1] - P[1]) >= d0 && Math.hypot(p[0] - lab[0], p[1] - lab[1]) >= d1 && dash.every(([A, B]) => dSeg(p, A, B) >= d2);
+    // 回す矢印の場所（軸の上の h）と、y 軸の長さの候補。点・ラベル・点線から離れる、いちばんはじめの組を使う
+    const hs = ax === 'x' ? [a + 1.5, a + 2.2] : ax === 'z' ? [c + 1.5, c + 2.2] : [b + 3, b + 3.8, 1.1];
+    for (const Ly0 of [5.7, 7.2]) for (const h of hs) {
+      const Lx = Math.max(4.2, ax === 'x' ? h + 1.1 : 0), Ly = Math.max(Ly0, ax === 'y' ? h + 1.6 : 0), Lz = Math.max(4.2, ax === 'z' ? h + 1.1 : 0);
+      const yl = Q([0, Ly, 0]), ylab = [yl[0] + 0.8, yl[1]];   // y の字のまん中
+      if (!far(ylab, 0.8, 0.9, 0.6) || dSeg(P, [0, 0], yl) < 0.5 || dSeg(lab, [0, 0], yl) < 0.6) continue;   // 点と「P」を y 軸（矢じり）からも離す
+      const pts = [];
+      for (let k = 0; k <= 24; k++) {
+        const t = (-40 + 280 * k / 24) * RAD, u = R * Math.cos(t), w = R * Math.sin(t);
+        pts.push(Q(ax === 'z' ? [u, w, h] : ax === 'x' ? [h, u, w] : [w, h, u]));   // x：y→z、y：z→x、z：x→y の向きが＋
+      }
+      if (!pts.every(p => far(p, 0.6, 0.6, 0.3) && Math.hypot(p[0] - ylab[0], p[1] - ylab[1]) >= 0.5)) continue;
+      const its = [];
+      [['x', [Lx, 0, 0]], ['y', [0, Ly, 0]], ['z', [0, 0, Lz]]].forEach(([n, e]) => { its.push(['seg', Q([0, 0, 0]), Q(e), { arrow: true }], ['label', Q(e), `$${n}$`, n === 'z' ? 'n' : 'e']); });
+      its.push(['path', [Q([a, 0, 0]), Q([a, b, 0]), Q([0, b, 0])], { dash: true }], ['seg', Q([a, b, 0]), Q([a, b, c]), { dash: true }], ['dot', P], ['label', P, 'P', 'ne'], ['path', pts, { arrow: true, thick: true }]);
+      return { s: 4.5, items: its };
     }
-    its.push(['path', pts, { arrow: true, thick: true }]);
-    return { s: 4.5, items: its };
+    return null;
   }
   add({
     id: '7-56', part: 4, chap: '7-7④⑤⑥ 例題1', stars: 1,
@@ -932,7 +1006,7 @@
         const ax = r.pick(['z', 'z', 'x']), v = [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)];
         if (v.some(x => !x) || RAKU56.includes(v.join(','))) return null;
         const w = r3(ax, 90, v);
-        if (RAKU56.includes(w.join(','))) return null;
+        if (RAKU56.includes(w.join(',')) || !fresh56(r, v, w)) return null;
         return { q: `点 $${p3(v)}$ を、${AXN[ax]}のまわりに90°回した点`, a: `$${p3(w)}$`, key: `56:${v.join(',')}:${ax}90`,
           easy: ax === 'z' ? '$z$ はそのまま、$(x,\\ y)\\to(-y,\\ x)$' : '$x$ はそのまま、$(y,\\ z)\\to(-z,\\ y)$', easyCheck: false, verify: p => vecIs(p.a, mvf(RAX[ax](90), v)) };
       },
@@ -943,7 +1017,7 @@
           const ax = k === 0 ? 'y' : r.pick(['x', 'y', 'z']), d = k === 0 ? 90 : r.pick([-90, 180]), v = [r.int(-4, 4), r.int(-4, 4), r.int(-4, 4)];
           if (v.some(x => !x) || RAKU56.includes(v.join(','))) return null;
           const w = r3(ax, d, v);
-          if (RAKU56.includes(w.join(','))) return null;
+          if (RAKU56.includes(w.join(',')) || !fresh56(r, v, w)) return null;
           return { q: `点 $${p3(v)}$ を、${AXN[ax]}のまわりに${d === 180 ? '180°' : d < 0 ? '$-90^{\\circ}$' : '90°'}回した点`, a: `$${p3(w)}$`, key: `56:${v.join(',')}:${ax}${d}`,
             easy: ax === 'y' && d === 90 ? '$y$ はそのまま、$z$ を $x$ のほうへ：$(z,\\ x)\\to(-x,\\ z)$' : d === 180 ? `${AXN[ax]}の座標はそのまま、残りの2つの符号を変える` : `90°の反対：${AXN[ax]}の座標はそのまま`, easyCheck: false,
             verify: p => vecIs(p.a, mvf(RAX[ax](d), v)) };
@@ -956,9 +1030,9 @@
       s3(r) {
         const ax = r.pick(['x', 'y', 'z']), v = [r.int(1, 3), r.int(1, 3), r.int(1, 3)];
         if (RAKU56.includes(v.join(','))) return null;
-        const w = r3(ax, 90, v);
-        if (RAKU56.includes(w.join(','))) return null;
-        return { q: `図の点 P$${p3(v)}$ を、${AXN[ax]}のまわりに、矢印の向き（右ねじ）に90°回した点`, a: `$${p3(w)}$`, key: `56:${v.join(',')}:${ax}90`, fig: axis3Fig(ax, v),
+        const w = r3(ax, 90, v), fig = axis3Fig(ax, v);
+        if (!fig || RAKU56.includes(w.join(',')) || !fresh56(r, v, w)) return null;
+        return { q: `図の点 P$${p3(v)}$ を、${AXN[ax]}のまわりに、矢印の向き（右ねじ）に90°回した点`, a: `$${p3(w)}$`, key: `56:${v.join(',')}:${ax}90`, fig,
           easy: { z: '$z$ はそのまま、$(x,\\ y)\\to(-y,\\ x)$', x: '$x$ はそのまま、$(y,\\ z)\\to(-z,\\ y)$', y: '$y$ はそのまま、$(z,\\ x)\\to(-x,\\ z)$' }[ax], easyCheck: false,
           verify: p => vecIs(p.a, mvf(RAX[ax](90), v)) };
       },
@@ -1000,6 +1074,7 @@
         const a = r.pick(['x', 'y', 'z']), b = r.pick(['x', 'y', 'z'].filter(t => t !== a)), c = r.pick(['x', 'y', 'z']);
         if (RAKU57.includes(`${a}90${b}90${c}`)) return null;
         const w = r3s([[a, 90], [b, 90]], EV[c]), m = r3(b, 90, EV[c]);
+        (r.k57 || (r.k57 = new Set())).add(`57:${a}${b}${c}`);   // ステップ3 でよける（ステップ3 の key はステップ1 と同じ形）
         return { q: `$${R3T(a, 90)}${R3T(b, 90)}\\vec e_${c}$`, a: `$${p3(w)}$`, key: `57:${a}${b}${c}`, easy: `先に $${R3T(b, 90)}$ で $${p3(m)}$、次に $${R3T(a, 90)}$ で $${p3(w)}$`, easyCheck: false,
           verify: p => vecIs(p.a, mvf(RAX[a](90), mvf(RAX[b](90), EV[c]))) };
       },
@@ -1014,9 +1089,11 @@
       // スマホ（教科書 7-7③ の場面）
       s3(r) {
         const first = r.pick(['x', 'y', 'z']), second = r.pick(['x', 'y', 'z'].filter(t => t !== first)), part = r.pick([['上のはし', 'x'], ['画面', 'z'], ['左のはし', 'y']]);
+        // key はステップ1と同じ形にして、同じ式 $R_aR_b\vec e_c$ を出さない（R2-10・S-2）。楽な形の例もよける
+        if (RAKU57.includes(`${second}90${first}90${part[1]}`) || (r.k57 && r.k57.has(`57:${second}${first}${part[1]}`))) return null;
         const w = r3s([[second, 90], [first, 90]], EV[part[1]]);
         return { q: `机の上にスマホを置き、上のはしを $x$ の向き、左のはしを $y$ の向き、画面を $z$ の向きにしました。スマホを、${AXN[first]}のまわりに90°回してから、${AXN[second]}のまわりに90°回します（どちらも動かない軸のまわり）。${part[0]}の向きの矢印（成分）`,
-          a: `$${p3(w)}$`, key: `57s:${first}${second}${part[1]}`, easy: `$${R3T(second, 90)}${R3T(first, 90)}\\vec e_${part[1]}$ を右から1つずつ`, easyCheck: false,
+          a: `$${p3(w)}$`, key: `57:${second}${first}${part[1]}`, easy: `$${R3T(second, 90)}${R3T(first, 90)}\\vec e_${part[1]}$ を右から1つずつ`, easyCheck: false,
           verify: p => vecIs(p.a, mvf(RAX[second](90), mvf(RAX[first](90), EV[part[1]]))) };
       },
       // わな：同じ軸の回転 → 7-50
@@ -1036,6 +1113,10 @@
   const nosef = (ps, th, ph) => mvf(mulf(mulf(Rzf(ps), Ryf(th)), Rxf(ph)), [1, 0, 0]);
   const attT = (ps, th, ph) => `ヨー $\\psi=${dg(ps)}$、ピッチ $\\theta=${dg(th)}$、ロール $\\phi=${dg(ph)}$`;
   const Rfull = (ps, th, ph) => mulf(mulf(Rzf(ps), Ryf(th)), Rxf(ph));
+  // 例 ψ=60°・θ=−30° と同じ数（符号・順だけちがう）の機首の向きは出さない（R2-8・S-2。ψ=120°・θ=−30° は (−0.433, 0.75, 0.5)）
+  const absKey = v => v.map(x => Math.abs(sVal(x)).toFixed(6)).sort().join(',');
+  const bad58 = (ps, th) => (ps === 60 && th === -30) || absKey(nose(ps, th)) === absKey(nose(60, -30));
+  const d3 = s => { const t = (+s).toFixed(3); return t === '-0.000' ? '0.000' : t; };   // 「小数第3位まで」は3けたそろえて書く（0.750・0.500）
   add({
     id: '7-58', part: 4, chap: '7-7⑧⑨ 例題3・4', stars: 1,
     title: '機首の向きは $(\\cos\\psi\\cos\\theta,\\ \\sin\\psi\\cos\\theta,\\ -\\sin\\theta)$（ロールは関係しない）。ピッチ $-90^{\\circ}$ なら、向きは $\\psi+\\phi$ だけで決まる（ジンバルロック）',
@@ -1052,7 +1133,7 @@
       // 機首の向き（√ を残した形）
       s1(r) {
         const ps = r.pick([0, 30, 45, 60, 90, 120, 135, 150, 180, -30, -45, -60, -90]), th = r.pick([0, -30, -45, -60, 30, 45, 60, -90]), ph = r.pick([0, 10, 20, 30, 40, -20, 45]);
-        if (!famOK(ps, th) || (ps === 60 && th === -30) || (ps % 90 === 0 && th % 90 === 0)) return null;
+        if (!famOK(ps, th) || bad58(ps, th) || (ps % 90 === 0 && th % 90 === 0) || !cntOK(r, '58s1', absKey(nose(ps, th)))) return null;   // 符号を変えただけの向きを2回出さない（S-2）
         const N = nose(ps, th);
         return { q: `ドローンが、${attT(ps, th, ph)} の姿勢です。地面の座標で、機首の向き`, a: `$${ptT(N)}$`, key: `58:${ps},${th}`,
           easy: `$x=\\cos${dgp(ps)}\\cos${dgp(th)}$、$y=\\sin${dgp(ps)}\\cos${dgp(th)}$、$z=-\\sin${dgp(th)}$。ロールは関係しない`, easyCheck: false, verify: p => vecIs(p.a, nosef(ps, th, ph)) };
@@ -1078,19 +1159,20 @@
       // 小数で（教科書の例題の形）
       s3(r) {
         const ps = r.pick([30, 45, 60, 120, 135, -30, -45, -60, 90]), th = r.pick([-30, -45, -60, 30, 45]), ph = r.pick([10, 20, 30, 50, -20]);
-        if (!famOK(ps, th) || (ps === 60 && th === -30)) return null;
-        const [gcp, gsp] = gcs(ps), [gct, gst] = gcs(th), N = nose(ps, th), G = [F.mul(gcp, gct), F.mul(gsp, gct), F.mul(gst, fr(-1))], ap = G.map((g, i) => apx(g, N[i], 3));
-        if (ap.includes(null)) return null;
+        if (!famOK(ps, th) || bad58(ps, th) || !cntOK(r, '58s3', absKey(nose(ps, th)))) return null;
+        const [gcp, gsp] = gcs(ps), [gct, gst] = gcs(th), N = nose(ps, th), G = [F.mul(gcp, gct), F.mul(gsp, gct), F.mul(gst, fr(-1))], ap0 = G.map((g, i) => apx(g, N[i], 3));
+        if (ap0.includes(null)) return null;
+        const ap = ap0.map(d3);
         return { q: `ドローンが、${attT(ps, th, ph)} の姿勢です。地面の座標で、機首の向き（${givenT(ps, th)} を使い、小数第3位まで）`, a: `約 $(${ap.join(',\\ ')})$`, key: `58:${ps},${th}`,
           easy: `$x$：$${fdec(gcp)}\\times${fdec(gct)}$、$y$：$${fdec(gsp)}\\times${fdec(gct)}$、$z$：$-(${fdec(gst)})$`, easyCheck: false, verify: p => vecIs(p.a, nosef(ps, th, ph), 2e-3) };
       },
-      // わな：右のつばさの向き → 楽な形なし
+      // わな：右のつばさの向き → 7-57（右から1つずつかける。R2-19）
       trap(r) {
         const ps = r.pick([30, 45, 60, 90, 120, 135, 150, -30, -60]), th = r.pick([-30, -45, 30, 0]);
         const [c, s] = cs(ps), W = [s, sNeg(c), S(0)];
         return dest({ q: `ドローンが、${attT(ps, th, 0)} の姿勢です。地面の座標で、右のつばさの向き（機体の座標で $(0,\\ -1,\\ 0)$）`, a: `$${ptT(W)}$`, key: `58t:${ps},${th}`,
           verify: p => vecIs(p.a, mvf(Rfull(ps, th, 0), [0, -1, 0])) }, '7-58',
-          '機首の向きの式は $R$ の1列めだけ。右のつばさは2列めの $-1$ 倍で、右から1つずつかけて求める');
+          '機首の向きの式は $R$ の1列めだけ。右のつばさは2列めの $-1$ 倍で、右から1つずつかけて求める', ['7-57']);
       },
     },
   });
@@ -1174,7 +1256,7 @@
       // 90°の倍数の2本の腕
       s1(r) {
         const t1 = r.pick([0, 90, -90, 180, 90]), t2 = r.pick([90, -90, 180, 0]), L1 = r.pick(LEN), L2 = r.pick(LEN);
-        if ((!t1 && !t2) || (t1 === 90 && t2 === -90 && L1 === '0.40' && L2 === '0.30')) return null;
+        if ((!t1 && !t2) || (t1 === 90 && t2 === -90 && L1 === '0.40' && L2 === '0.30') || !cntOK(r, '60a', `${t1},${t2}`)) return null;   // 同じ角の組を、長さだけ変えて2回出さない（R2 好み）
         const H = hand(L1, L2, t1, t2);
         return { q: `2本の腕の手の位置を、$T=${AT(t1, L1)}${AT(t2, L2)}$ の右の列から求めた座標`, a: `$${ptT(H, { dec: true })}$（m）`, key: `60:${t1},${L1},${t2},${L2}`,
           easy: `$${AT(t1, L1)}$ の1行め・2行めと、$${AT(t2, L2)}$ の右の列 $(${stexD(sMul(S(D(L2)), cs(t2)[0]))},\\ ${stexD(sMul(S(D(L2)), cs(t2)[1]))},\\ 1)$ の内積`, easyCheck: false,
@@ -1184,7 +1266,7 @@
       s2(r) {
         if (turn(r, '60s2', 2)) {
           const t = r.pick([30, 45, 60, 90, 120, -30, -45, -60, 180, -90]), L = r.pick(LEN), A = Amat(t, L);
-          return { q: `$${AT(t, L)}$ を成分で書いた行列`, a: `$${matT(A, { dec: true })}$`, key: `60m:${t},${L}`, calc: { kind: 'mat', want: matV(A) },
+          return { q: `$${AT(t, L)}$ を成分で書いた行列`, a: `$${amT(A)}$`, key: `60m:${t},${L}`, calc: { kind: 'mat', want: matV(A) },
             easy: `左上の2×2は $R(${dg(t)})$、右の列は $(${L}\\cos${dgp(t)},\\ ${L}\\sin${dgp(t)},\\ 1)$`, easyCheck: false };
         }
         const t1 = r.pick([0, 30, 45, 60, 90]), t2 = r.pick([30, 45, 60, -30, -45, -60, 90, -90]), L1 = r.pick(LEN), L2 = r.pick(LEN);
@@ -1198,9 +1280,9 @@
       s3(r) {
         if (turn(r, '60s3', 2)) {
           const t1 = r.pick([0, 90, -90, 180]), t2 = r.pick([90, -90, 180]), L1 = r.pick(LEN), L2 = r.pick(LEN);
-          if (t1 === 90 && t2 === -90 && L1 === '0.40' && L2 === '0.30') return null;
+          if (t1 === 90 && t2 === -90 && L1 === '0.40' && L2 === '0.30' || !cntOK(r, '60a', `${t1},${t2}`)) return null;
           const A = Amat(t1, L1), B = Amat(t2, L2), T = mulf(Af(t1, L1), Af(t2, L2));
-          return { q: `2本の腕の同次変換行列が $${matT(A, { dec: true })}$ と $${matT(B, { dec: true })}$ です。手の位置（積の右の列の上の2つ）`, a: `$(${r0(T[0][2])},\\ ${r0(T[1][2])})$（m）`, key: `60:${t1},${L1},${t2},${L2}`,
+          return { q: `2本の腕の同次変換行列が $${amT(A)}$ と $${amT(B)}$ です。手の位置（積の右の列の上の2つ）`, a: `$(${r0(T[0][2])},\\ ${r0(T[1][2])})$（m）`, key: `60:${t1},${L1},${t2},${L2}`,
             easy: '左の行列の1行め・2行めと、右の行列の右の列の内積', easyCheck: false, verify: p => vecIs(p.a, [T[0][2], T[1][2]]) };
         }
         const t1 = r.pick([0, 90, -90]), t2 = r.pick([90, -90, 0]), t3 = r.pick([90, -90, 180]), L1 = r.pick(LEN), L2 = r.pick(LEN), L3 = r.pick(['0.10', '0.20', '0.15']);
@@ -1222,7 +1304,7 @@
 
   // ================================================================ 7-61
   // 楽な形の例：d=(0, 0, 30)・ヨー90°・機体 (10, 5, −30) → (−5, 10, 0)、地面 (10, 10, 0) → (10, −10, −30)（O-2）
-  const droneQ = (d, ps) => `ドローンが地面の点 $${p3(d)}$（m）にいて、ロール0°・ピッチ0°・ヨー${ps}°の姿勢です`;
+  const droneQ = (d, ps) => `ドローンが地面の点 $${p3(d)}$（m）にいて、ロール0°・ピッチ0°・ヨー${ps < 0 ? ` $${dg(ps)}$ ` : `${ps}°`}の姿勢です`;   // 負の角は式に（R2-23）
   const bad61 = (d, ps, v) => d.join(',') === '0,0,30' && ps === 90 && ['10,5,-30', '10,10,0', '-5,10,0', '10,-10,-30'].includes(v.join(','));
   add({
     id: '7-61', part: 4, chap: '7-7⑬ 例題7', stars: 1,
@@ -1318,7 +1400,7 @@
         if (fam(d)) { if (real) b = 0; else a = 0; }
         if ((!a && !b) || (fam(d) === 0 && (!a || !b)) || (a === 3 && b === 1)) return null;
         const P = rot(d, a, b);
-        if (seenAns(r, "96", ztex(P[0], P[1]))) return null;
+        if (seenAns(r, '96', ztex(P[0], P[1]), `96:${a},${b},${d}`)) return null;
         return { q: `$${a && b ? `(${zt(a, b)})` : zt(a, b)}(${cisT(d)})$`, a: `$${ztex(P[0], P[1])}$`, key: `96:${a},${b},${d}`,
           easy: d === 90 ? '$j$ をかける' : d === -90 ? '$-j$ をかける' : d === 180 ? '$-1$ をかける' : `$\\cos${dgp(d)}+j\\sin${dgp(d)}=${ztex(...cs(d))}$ をかける`, easyCheck: false };
       },
@@ -1327,7 +1409,7 @@
         const d = r.pick([30, 45, 60, -30, -45, -60, 120, 150, 135]), a = r.int(-4, 4), b = r.int(-4, 4);
         if (!a || !b || bad49(a, b, d)) return null;
         const P = rot(d, a, b), [c, s] = cs(d);
-        if (seenAns(r, '96', ztex(P[0], P[1]))) return null;   // 同じ答えを2つ出さない（$(1-3j)$ を60°と $(-3-j)$ を150°など）
+        if (seenAns(r, '96', ztex(P[0], P[1]), `96:${a},${b},${d}`)) return null;   // 同じ答えを2つ出さない（$(1-3j)$ を60°と $(-3-j)$ を150°など）
         return { q: `$(${zt(a, b)})(${cisT(d)})$`, a: `$${ztex(P[0], P[1])}$`, key: `96:${a},${b},${d}`, easy: `$(${zt(a, b)})(${ztex(c, s)})$ を展開して $j^2=-1$`, easyCheck: false };
       },
       // 小数・座標で・回す前の数
@@ -1377,12 +1459,12 @@
     return (neg ? '-' : '') + (den === 1 ? num : `\\frac{${num}}{${den}}`);
   };
   add({
-    id: '7-97', part: 4, chap: '7-6 もっと知りたい⑤', stars: 1,
+    id: '7-97', part: 4, chap: '7-6⑦（もっと）', stars: 1,
     title: '回転行列の微分：$\\dfrac{\\dd R}{\\dd\\theta}=R(\\theta)R_{90}$。回る点の速度は、位置を90°回して $\\omega$ 倍',
     mark: '角速度 $\\omega$ で原点のまわりを回る点の速度。',
     futsu: ['位置を $(r\\cos\\omega t,\\ r\\sin\\omega t)$', 'の形に書き、成分ごとに', '$t$ で微分して、', 'その時刻の値を入れる。'],
     raku: ['$\\vec r=(2,\\ 0)$、$\\omega=3$：', '位置を90°回して $(0,\\ 2)$', '3倍して、速度 $(0,\\ 6)$'],
-    why: '$R(\\theta)$ を成分ごとに微分すると $R(\\theta)R_{90}=R(\\theta+90^{\\circ})$ になる（7-6 もっと知りたい⑤）。$\\vec r=R(\\omega t)\\vec r_0$ を合成関数の微分で微分すると $\\omega R_{90}\\vec r$：速度は位置の矢印を90°回して $\\omega$ 倍したもの。大きさは $r\\omega$、向きは円の接線。',
+    why: '$R(\\theta)$ を成分ごとに微分すると $R(\\theta)R_{90}=R(\\theta+90^{\\circ})$ になる（7-6⑦ のもっと知りたい）。$\\vec r=R(\\omega t)\\vec r_0$ を合成関数の微分で微分すると $\\omega R_{90}\\vec r$：速度は位置の矢印を90°回して $\\omega$ 倍したもの。大きさは $r\\omega$、向きは円の接線。',
     caution: '右回りなら $\\omega$ が負（$-90^{\\circ}$ 回す向きになる）。原点のまわりの円の上を回るときだけ使える（だ円の上を回る点や、まっすぐ進む点には使えない）。',
     counts: { s1: 6, s2: 3, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 1 },
@@ -1457,7 +1539,7 @@
     caution: '台の行列は腕の行列の左（根もとの側）にかける。4つめの数は、点なら1、向きなら0。左上が $I$ でないときは、回してからたす。',
     counts: { s1: 6, s2: 2, s3: 2, trap: 2 },
     cols: { s1: 1, s2: 1, s3: 1, trap: 2 },
-    boxw: { s1: '30mm', s2: '16mm', s3: '36mm', trap: '24mm' }, boxh: { s2: '20mm' },
+    boxw: { s1: '30mm', s2: '16mm', s3: '36mm', trap: '24mm' }, boxh: { s2: '26mm' },   // 4×4 の答えが入るように（R2 好み）
     fits(q) { if (/のびちぢみ/.test(q)) return false; return /4×4|台の上|高さ.*の台|\\\\0&0&0&1\\end\{pmatrix\}\\begin\{pmatrix\}/.test(q); },
     steps: {
       // 4×4 のずらす行列を点・向きにかける
@@ -1479,7 +1561,7 @@
         }
         const h = r.pick(['0.20', '0.30', '0.50', '0.15', '0.25', '1.2', '0.80']), A = shift4(0, 0, +h);
         return { q: `腕を高さ $${h}\\,\\mathrm{m}$ の台にのせるときにかける、4×4の同次変換行列`, a: `$${matT(A.map(row => row.map(x => S(D(String(x))))), { dec: true })}$`, key: `98h:${h}`, calc: { kind: 'mat', want: A },
-          easy: `回さない（左上は $I$）。右の列の $z$ に ${h}`, easyCheck: false, boxw: '28mm' };
+          easy: `回さない（左上は $I$）。右の列の $z$ に ${h}`, easyCheck: false, boxw: '30mm' };
       },
       // 台の上の2本の腕
       s3(r) {
