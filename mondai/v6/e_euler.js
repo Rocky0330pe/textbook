@@ -21,11 +21,12 @@
   const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
   // 四捨五入（小数第 k 位まで）と、文で与えた値で出した答え vG・ほんとうの値 vT が同じになるけた（v5 組 e と同じ。O-4）
   const rd = (v, k) => (Math.sign(v) * Math.round(Math.abs(v) * 10 ** k + 1e-7) / 10 ** k).toFixed(k);
+  const digT = k => (k ? `、小数第${k}位まで` : '、整数で');   // 答えのけた（いつも文に書く。S-3・R2-9）
   const exactDec = (v, k) => Math.abs(v * 10 ** k - Math.round(v * 10 ** k)) < 1e-7;
   function gv(vG, vT, kmax, kmin) {
     for (let k = kmax == null ? 3 : kmax; k >= (kmin == null ? 1 : kmin); k--) {
       if (rd(vG, k) !== rd(vT, k)) continue;
-      return exactDec(vG, k) ? { ans: rd(vG, k), note: '', k } : { ans: rd(vG, k), note: `、小数第${k}位まで`, k };
+      return { ans: rd(vG, k), note: exactDec(vG, k) ? '' : `、小数第${k}位まで`, k, dg: digT(k) };
     }
     return null;
   }
@@ -280,7 +281,7 @@
     caution: 'たし算 $e^{ja}+e^{jb}$ は、肩のたし算にならない（$e^{j(a+b)}$ ではない。わざ 6-63・6-64）。答えの角が $\\pi$ をこえたら $2\\pi$ をひいて、単位円の上で読む。',
     counts: { s1: 6, s2: 4, s3: 4, trap: 2 },
     cols: { s1: 1, s2: 2, s3: 2, trap: 2 },   // かけ算の式と欄が2列では入らない
-    boxw: { s1: '34mm', s2: '30mm', s3: '30mm', trap: '20mm' },
+    boxw: { s1: '34mm', s2: '30mm', s3: '27mm', trap: '20mm' },   // ステップ3は (-1+√3 j)^6 の行がはみ出さない幅（S-9）
     fits(q) {
       const sh = shoulders(q);
       if (/\\times/.test(q) && sh.filter(pureJ).length >= 2 && !/\+\s*\d*e\^|-\s*\d*e\^\{-j/.test(q)) return true;
@@ -412,7 +413,7 @@
         const vG = plus ? (+ep + +em) / 2 : (+ep - +em) / 2, vT = plus ? Math.cosh(x) : Math.sinh(x), g = gv(vG, vT, 3);
         if (!g) return null;
         const xs = fmt(x);
-        return dest({ key: `6-63trap${plus ? 'A' : 'B'}`, q: `$${eP(x)}=${ep}$、$${eM(x)}=${em}$ として、$\\dfrac{${eP(x)}${plus ? '+' : '-'}${eM(x)}}{2}$ は約 □${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`,
+        return dest({ key: `6-63trap${plus ? 'A' : 'B'}`, q: `$${eP(x)}=${ep}$、$${eM(x)}=${em}$ として、$\\dfrac{${eP(x)}${plus ? '+' : '-'}${eM(x)}}{2}$ は約 □（${g.dg.slice(1)}）`, a: `$${g.ans}$`,
           verify: p => nearTrue(p.a, vT) }, '6-63', `肩に $j$ がないので、回る点ではない。$\\${plus ? 'cosh' : 'sinh'}${xs}$ の定義そのもの`);
       },
     },
@@ -420,7 +421,8 @@
 
   // ================================================================ 6-64
   // a sin + b cos の組（3・4・5 などの三角形）と、tan^{-1}(b/a) の値（小数第1位）
-  const PYT = [[4, 3, 5], [5, 12, 13], [12, 5, 13], [8, 15, 17], [15, 8, 17], [7, 24, 25], [24, 7, 25], [20, 21, 29], [21, 20, 29], [30, 40, 50], [40, 30, 50]];   // 3・4 は楽な形の例（O-2）。key は b÷a（4・3 と 40・30 は同じ角）
+  const PYT = [[5, 12, 13], [12, 5, 13], [8, 15, 17], [15, 8, 17], [7, 24, 25], [24, 7, 25], [20, 21, 29], [21, 20, 29], [9, 40, 41], [40, 9, 41], [12, 35, 37], [35, 12, 37], [28, 45, 53], [45, 28, 53]];   // 3・4・5 は楽な形の例。入れかえた 4・3 も、10倍の 30・40 も出さない（O-2・S-2・R2-7）
+  const pKey = (a, b) => `p${Math.min(a, b)},${Math.max(a, b)}`;   // 入れかえただけ（5・12 と 12・5）も同じ key（N-2）
   const atanD = (b, a) => +(Math.atan2(b, a) * 180 / Math.PI).toFixed(1);
   const phT = d => (d === 0 ? '' : d > 0 ? `+${fmt(d)}^{\\circ}` : `-${fmt(-d)}^{\\circ}`);
   const sinT = (A, d, fn) => `${A === 1 ? '' : A}\\${fn || 'sin'}${d ? `(\\omega t${phT(d)})` : '\\omega t'}`;
@@ -455,7 +457,7 @@
     title: '同じ $\\omega$ の波のたし算は、フェーザ（$\\sin$ は横、$\\cos$ は上向きの矢印）のたし算。和の長さが振幅、角が位相',
     mark: '角振動数が同じ $\\sin$・$\\cos$ の和と「1つの $\\sin$ の形で」「振幅」。',
     futsu: ['加法定理で $\\sin(\\omega t+\\phi)$ を広げて、', '$\\sin\\omega t$ と $\\cos\\omega t$ の係数をくらべる。'],
-    raku: ['$3\\sin\\omega t+4\\cos\\omega t$ → フェーザ $3$ と $4j$', '和 $3+4j$ → 長さ5、角 $\\tan^{-1}\\dfrac{4}{3}=53.1^{\\circ}$', '→ $5\\sin(\\omega t+53.1^{\\circ})$'],
+    raku: ['$3\\sin\\omega t+4\\cos\\omega t$ → フェーザ $3$ と $4j$', '和 $3+4j$ → 長さ5、角 $\\tan^{-1}\\dfrac{4}{3}\\approx53.1^{\\circ}$', '→ 約 $5\\sin(\\omega t+53.1^{\\circ})$'],
     why: '同じ $\\omega$ で回る矢印は、あいだの角が変わらないので、たした矢印も同じ速さで回る。影（虚部）はたし算になるので、波の和は矢印の和で計算できる（6-10⑨）。$A\\sin(\\omega t+\\alpha)$ のフェーザは長さ $A$、角 $\\alpha$ の矢印 $Ae^{j\\alpha}$ で、$\\cos\\omega t=\\sin(\\omega t+90^{\\circ})$ は上向き（$j$）。',
     caution: '振幅は、振幅どうしのたし算ではない（ずれがあると和はへる）。角振動数がちがう波（$\\sin\\omega t$ と $\\sin2\\omega t$）は、1つの $\\sin$ にならない。',
     counts: { s1: 4, s2: 3, s3: 2, trap: 2 },   // 図が2つ入るので、ステップ2は3問（4問では右ページがあふれる）
@@ -468,8 +470,8 @@
         const [a, b0, R] = r.pick(PYT), b = r.chance(0.3) ? -b0 : b0, d = atanD(b, a);
         const q0 = `${a}\\sin\\omega t${b < 0 ? '-' : '+'}${Math.abs(b)}\\cos\\omega t`, ans = sinT(R, d);
         return {
-          q: `1つの $\\sin$ の形に（$\\tan^{-1}\\frac{${b0}}{${a}}=${fmt(Math.abs(d))}^{\\circ}$）：$${q0}=□$`, a: `$${ans}$`, key: `p${fmt(b0 / a)}`,
-          easy: `フェーザの和 $${cT(S(a), S(b))}$。大きさ $\\sqrt{${a * a}+${b * b}}=${R}$、角 $${fmt(d)}^{\\circ}$ → $${ans}$`, easyCheck: 'last',
+          q: `1つの $\\sin$ の形に（$\\tan^{-1}\\frac{${b0}}{${a}}\\approx${fmt(Math.abs(d))}^{\\circ}$）：$${q0}$ は約 □`, a: `$${ans}$`, key: pKey(a, b0),
+          easy: `フェーザの和 $${cT(S(a), S(b))}$。大きさ $\\sqrt{${a * a}+${b * b}}=${R}$、角は約 $${fmt(d)}^{\\circ}$ → $${ans}$`, easyCheck: 'last',
           verify: p => (atanD(b0, a) === Math.abs(d) && waveIs(p.a, x => a * Math.sin(x) + b * Math.cos(x), R)),
         };
       },
@@ -486,18 +488,19 @@
       },
       // 図：2本のフェーザと和（ステップ1と同じ key）
       s3(r) {
-        const [a, b0, R] = r.pick(PYT.filter(x => x[2] <= 29)), b = r.chance(0.4) ? -b0 : b0, d = atanD(b, a);
+        const [a, b0, R] = r.pick(PYT), b = r.chance(0.4) ? -b0 : b0, d = atanD(b, a);
         const q0 = `${a}\\sin\\omega t${b < 0 ? '-' : '+'}${Math.abs(b)}\\cos\\omega t`, ans = sinT(R, d);
         return {
-          q: `図は $${q0}$ の2つのフェーザと、その和。1つの $\\sin$ の形に（$\\tan^{-1}\\frac{${b0}}{${a}}=${fmt(Math.abs(d))}^{\\circ}$）：$${q0}=□$`, a: `$${ans}$`, key: `p${fmt(b0 / a)}`, fig: phasorFig(a, b),
-          easy: `和の矢印 $${cT(S(a), S(b))}$。長さ $\\sqrt{${a * a}+${b * b}}=${R}$、角 $\\phi=${fmt(d)}^{\\circ}$ → $${ans}$`, easyCheck: 'last',
+          q: `図は $${q0}$ の2つのフェーザと、その和。1つの $\\sin$ の形に（$\\tan^{-1}\\frac{${b0}}{${a}}\\approx${fmt(Math.abs(d))}^{\\circ}$）：$${q0}$ は約 □`, a: `$${ans}$`, key: pKey(a, b0), fig: phasorFig(a, b),
+          easy: `和の矢印 $${cT(S(a), S(b))}$。長さ $\\sqrt{${a * a}+${b * b}}=${R}$、角 $\\phi\\approx${fmt(d)}^{\\circ}$ → $${ans}$`, easyCheck: 'last',
           verify: p => waveIs(p.a, x => a * Math.sin(x) + b * Math.cos(x), R),
         };
       },
       // わな：かけ算（2倍角）、角振動数がちがう（1つの sin にならない）
       trap(r) {
         if (r.chance(0.5)) {
-          const [a, b] = r.pick([[3, 4], [2, 5], [4, 5], [3, 2]]), ans = `${a * b / 2 === 1 ? '' : fmt(a * b / 2)}\\sin2\\omega t`;
+          // 楽な形の例の 3・4 は出さない（O-2）
+          const [a, b] = r.pick([[2, 5], [4, 5], [3, 2], [5, 6]]), ans =`${a * b / 2 === 1 ? '' : fmt(a * b / 2)}\\sin2\\omega t`;
           return dest({ key: '6-64trapA', q: `1つの $\\sin$ の形に：$${a}\\sin\\omega t\\times${b}\\cos\\omega t=□$`, a: `$${ans}$`,
             verify: p => waveIs(p.a.replace(/2\\omega t/, '(2\\omega t)'), x => a * b * Math.sin(x) * Math.cos(x)) }, '6-64', 'たし算ではなく、かけ算。フェーザのたし算は使えない。2倍角 $2\\sin\\omega t\\cos\\omega t=\\sin2\\omega t$（第4巻）');
         }
@@ -605,7 +608,7 @@
     caution: '$j^2=-1$ を忘れない（2回微分は $-\\omega^2$ 倍）。$\\dfrac{1}{j}=-j$（$\\dfrac{j}{j^2}$）。肩に $j$ がない $e^{-2t}$ の微分は、回らない（$(e^{at})\'=ae^{at}$ のまま）。',
     counts: { s1: 6, s2: 6, s3: 4, trap: 2 },
     cols: 2,
-    boxw: { s1: '24mm', s2: '24mm', s3: '18mm', trap: '20mm' },
+    boxw: { s1: '24mm', s2: '21mm', s3: '18mm', trap: '20mm' },   // ステップ2は □e^{j10t} の行がはみ出さない幅（S-9）
     boxh: { s2: '12mm', s3: '12mm' },
     fits(q) { return shoulders(q).some(s => /^-?\d*j\d*t$|^-?j\\omega t$/.test(s)) && /\\dd|微分|積分/.test(q); },
     steps: {
@@ -743,7 +746,7 @@
   }
   M.add({
     id: '6-68', part: 5, chap: '6-10⑪ 例題10', stars: 1,
-    title: '$e^{(\\sigma+j\\omega)t}$ の実部は $e^{\\sigma t}\\cos\\omega t$（肩を分けて $e^{\\sigma t}\\times e^{j\\omega t}$）',
+    title: '$e^{(\\sigma+j\\omega)t}=e^{\\sigma t}e^{j\\omega t}$ の実部は $e^{\\sigma t}\\cos\\omega t$',   // わざの一覧で1行に入る長さ（S-9）
     mark: '肩に実部と虚部がある $e$ の「実部」「虚部」と、その値。',
     futsu: ['$e^{(\\sigma+j\\omega)t}$ を $a+bj$ に直す方法がわからず、', 'テイラー展開から考えようとする。'],
     raku: ['$e^{(-1+2j)t}=e^{-t}\\times e^{j2t}$', '$e^{-t}$ は実数なので、実部は $e^{-t}\\cos2t$', '$t=\\dfrac{\\pi}{2}$ → $e^{-\\pi/2}\\cos\\pi=-e^{-\\pi/2}$'],
@@ -831,7 +834,7 @@
         const vG = cs ? (+ep + +em) / 2 : (+ep - +em) / 2, vT = cs ? Math.cosh(x) : Math.sinh(x), g = gv(vG, vT, 3);
         if (!g) return null;
         return {
-          q: `${eVals(x, ep, em)}、$${hypT(cs ? 'cosh' : 'sinh', x)}$ は約 □${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`, key: `${cs ? 'c' : 's'}${x}`,
+          q: `${eVals(x, ep, em)}、$${hypT(cs ? 'cosh' : 'sinh', x)}$ は約 □（${g.dg.slice(1)}）`, a: `$${g.ans}$`, key: `${cs ? 'c' : 's'}${x}`,
           easy: `$\\frac{${ep}${cs ? '+' : '-'}${em}}{2}=\\frac{${fmt(cs ? +ep + +em : +ep - +em)}}{2}=${fmt(vG)}${g.note ? `\\approx${g.ans}` : ''}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT),
         };
@@ -843,7 +846,7 @@
           const cs = k === 0, vG = cs ? (+ep + +em) / 2 : -(+ep - +em) / 2, vT = cs ? Math.cosh(-x) : Math.sinh(-x), g = gv(vG, vT, 3);
           if (!g) return null;
           return {
-            q: `${eVals(x, ep, em)}、$\\${cs ? 'cosh' : 'sinh'}(-${fmt(x)})$ は約 □${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`, key: `${cs ? 'c' : 's'}${x}`,
+            q: `${eVals(x, ep, em)}、$\\${cs ? 'cosh' : 'sinh'}(-${fmt(x)})$ は約 □（${g.dg.slice(1)}）`, a: `$${g.ans}$`, key: `${cs ? 'c' : 's'}${x}`,
             easy: cs ? `$\\cosh(-x)=\\cosh x$（左右対称）→ $\\frac{${ep}+${em}}{2}${g.note ? '\\approx' : '='}${g.ans}$` : `$\\sinh(-x)=-\\sinh x$ → $-\\frac{${ep}-${em}}{2}${g.note ? '\\approx' : '='}${g.ans}$`, easyCheck: false,
             verify: p => nearTrue(p.a, vT),
           };
@@ -928,7 +931,7 @@
         const [x, ep, em] = r.pick([[2, '7.389', '0.135'], [0.5, '1.649', '0.607'], [1.5, '4.482', '0.223']]), cs = r.chance(0.6);
         const vG = cs ? (+ep + +em) / 2 : (+ep - +em) / 2, vT = cs ? Math.cosh(x) : Math.sinh(x), g = gv(vG, vT, 3);
         if (!g) return null;
-        return dest({ key: `6-70trap${cs ? 'A' : 'B'}`, q: `${eVals(x, ep, em)}、$${hypT(cs ? 'cosh' : 'sinh', x)}$ は約 □${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`, boxh: null,
+        return dest({ key: `6-70trap${cs ? 'A' : 'B'}`, q: `${eVals(x, ep, em)}、$${hypT(cs ? 'cosh' : 'sinh', x)}$ は約 □（${g.dg.slice(1)}）`, a: `$${g.ans}$`, boxh: null,
           verify: p => nearTrue(p.a, vT) }, '6-70', `片方の値ではなく、$e^x$ と $e^{-x}$ の値がある。定義に入れる`);
       },
     },
@@ -952,8 +955,8 @@
     steps: {
       // (c cosh ax)'・(c sinh ax)'
       s1(r) {
-        const fn = r.pick(['cosh', 'sinh']), a = r.pick([2, 3, 4, 5, 6, 0.5]), c = r.pick([1, 1, 2, 3, -1, -2]);
-        if (fn === 'cosh' && a === 3) return null;   // 楽な形の例 cosh3x（O-2）
+        const fn = r.pick(['cosh', 'sinh']), a = r.pick([3, 4, 5, 6, 0.5, 1.5]), c = r.pick([1, 1, 2, 3, -1, -2]);
+        if (fn === 'cosh' && a === 3) return null;   // 楽な形の例 cosh3x。中が 2x の式も出さない（O-2・R2-24）
         const g = fn === 'cosh' ? 'sinh' : 'cosh', f = `${coT(c)}\\${fn}${argT(a, 'x')}`, ans = `${coT(c * a)}\\${g}${argT(a, 'x')}`;
         return { q: `$(${f})'=□$`, a: `$${ans}$`, key: c === a ? `d${g}${a}` : `${fn}${a}`, calc: { kind: 'diff', f },   // c=a なら s2 の2回微分と同じ答え
           easy: `中の微分 $${fmt(a)}$ をかけて、$\\${fn}$ → $\\${g}$（符号はそのまま）→ $${ans}$`, easyCheck: 'last' };
@@ -961,15 +964,14 @@
       // 2回微分・tanh
       s2(r) {
         if (r.chance(0.5)) {
-          const fn = r.pick(['cosh', 'sinh']), a = r.pick([2, 3, 4, 5, 10]);
-          if (fn === 'sinh' && a === 2) return null;   // 楽な形の例（O-2）
+          const fn = r.pick(['cosh', 'sinh']), a = r.pick([3, 4, 5, 10]);   // 楽な形の例の中 2x は出さない（O-2・R2-24）
+          if (fn === 'cosh' && a === 3) return null;   // 楽な形の例 cosh3x
           const f = `\\${fn}${a}x`, ans = `${a * a}\\${fn}${a}x`;
-          return { q: `$\\dfrac{\\dd^2}{\\dd x^2}${f}=□$`, a: `$${ans}$`, key: `d${fn}${a}`,
+          return { q: `$\\dfrac{\\dd^2}{\\dd x^2}${f}=□$`, a: `$${ans}$`, key: `d${fn}${a}`, boxw: '24mm',   // 2列の行がはみ出さない幅（S-9）
             easy: `2回微分で $${a}^2=${a * a}$ 倍（$\\${fn}$ にもどる）→ $${ans}$`, easyCheck: 'last',
             verify: p => { const h = 1e-3, F = x => M.evalMath(f, { x }); for (const x of [0.11, 0.23, 0.37]) { const d2 = (F(x + h) - 2 * F(x) + F(x - h)) / (h * h); if (!close(d2, M.evalMath(strip(p.a), { x }), 1e-4)) return 'ちがう'; } return true; } };
         }
-        const a = r.pick([2, 3, 4, 0.5]), c = r.pick([1, 2, 3, 4, 6, 10]);
-        if (a === 2 && c === 5) return null;
+        const a = r.pick([3, 4, 5]), c = r.pick([1, 2, 3, 4, 6, 10]);   // 楽な形の例の中 2t は出さない（O-2・R2-24）。小数の中（1.5t）は欄からはみ出す（S-9）
         const k = c * a, f = `${coT(c)}\\tanh${argT(a, 't')}`, ans = k === 1 ? `1-\\tanh^{2}${argT(a, 't').trim()}` : `${fmt(k)}\\,(1-\\tanh^{2}${argT(a, 't').trim()})`;
         return { q: `$(${f})'=□$`, a: `$${ans}$`, key: `t${a},${c}`, calc: { kind: 'diff', f, x: 't' },
           easy: `$${c}\\times${fmt(a)}\\,(1-\\tanh^{2}u)$ → $${ans}$`, easyCheck: 'last' };
@@ -978,7 +980,7 @@
       s3(r) {
         const k = r.int(0, 2);
         if (k === 0) {
-          const fn = r.pick(['cosh', 'sinh']), a = r.pick([2, 3, 4]), b = r.pick([1, -1, 2, 3]), g = fn === 'cosh' ? 'sinh' : 'cosh';
+          const fn = r.pick(['cosh', 'sinh']), a = r.pick([3, 4, 5]), b = r.pick([1, -1, 2, 3]), g = fn === 'cosh' ? 'sinh' : 'cosh';   // 中が 2x の式は出さない（O-2・R2-24）
           const u = `${a}x${b > 0 ? '+' : ''}${b}`, f = `\\${fn}(${u})`, ans = `${a}\\${g}(${u})`;
           return { q: `$\\{${f}\\}'=□$`, a: `$${ans}$`, key: 'l', calc: { kind: 'diff', f }, easy: `中 $${u}$ の微分 $${a}$ をかける → $${ans}$`, easyCheck: 'last' };
         }
@@ -991,7 +993,7 @@
       },
       // わな：双曲線関数でない（cos・sin。符号が変わる）
       trap(r) {
-        const fn = r.pick(['cos', 'sin']), a = r.pick([2, 3, 4, 5]), f = `\\${fn}${a}x`, ans = fn === 'cos' ? `-${a}\\sin${a}x` : `${a}\\cos${a}x`;
+        const fn = r.pick(['cos', 'sin']), a = r.pick([3, 4, 5, 6]), f = `\\${fn}${a}x`, ans = fn === 'cos' ? `-${a}\\sin${a}x` : `${a}\\cos${a}x`;
         return dest({ key: `6-71trap${fn}`, q: `$(${f})'=□$`, a: `$${ans}$`, calc: { kind: 'diff', f } }, '6-71', `双曲線関数ではなく、ふつうの三角関数。$\\${fn}$ の微分（第5巻）${fn === 'cos' ? 'で、符号が変わる' : ''}`);
       },
     },
@@ -1083,7 +1085,7 @@
         if (!Number.isInteger(t * 2) || t > 12) return null;
         const vG = vt * +TANH[u], vT = vt * Math.tanh(u), g = gv(vG, vT, 1);
         if (!g) return null;
-        return { q: `終端速度 $v_{\\mathrm t}=${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ち始める。$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$ で、${fmt(t)}秒後の速さは約 □ m/s（${gT}、$\\tanh${fmt(u)}=${TANH[u]}$${g.note}）`, a: `$${g.ans}$`, key: `v${u}`,
+        return { q: `終端速度 $v_{\\mathrm t}=${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ち始める。$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$ で、${fmt(t)}秒後の速さは約 □ m/s（${gT}、$\\tanh${fmt(u)}=${TANH[u]}$${g.dg}）`, a: `$${g.ans}$`, key: `v${u}`,
           easy: `$u=\\frac{9.8\\times${fmt(t)}}{${fmt(vt)}}=${fmt(u)}$ → $${fmt(vt)}\\times${TANH[u]}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1092,7 +1094,7 @@
         const k = r.pick([2, 3, 4, 5, 6]), [pp, us] = r.pick(ATANH), vt = 9.8 * k;
         const vG = +us * k, vT = Math.atanh(pp) * k, g = gv(vG, vT, 1);
         if (!g) return null;
-        return { q: `終端速度 $v_{\\mathrm t}=${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ち始める。$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$ で、終端速度の${fmt(pp * 100)}%になるのは約 □ 秒後（${gT}、$\\tanh${us}=${fmt(pp)}${pp === 0.5 || pp === 0.6 || pp === 0.8 || pp === 0.9 ? '00' : ''}$${g.note}）`, a: `$${g.ans}$`, key: `p${k},${pp}`,
+        return { q: `終端速度 $v_{\\mathrm t}=${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ち始める。$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$ で、終端速度の${fmt(pp * 100)}%になるのは約 □ 秒後（${gT}、$\\tanh${us}=${fmt(pp)}${pp === 0.5 || pp === 0.6 || pp === 0.8 || pp === 0.9 ? '00' : ''}$${g.dg}）`, a: `$${g.ans}$`, key: `p${k},${pp}`,
           easy: `$\\tanh u=${fmt(pp)}$ → $u=${us}$。$t=\\frac{${us}\\times${fmt(vt)}}{9.8}=${us}\\times${k}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1104,13 +1106,13 @@
           if (!Number.isInteger(t * 2) || t > 12) return null;
           const vG = 100 * +TANH[u], vT = 100 * Math.tanh(u), g = gv(vG, vT, 1);
           if (!g) return null;
-          return { q: `終端速度 $${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ちる（$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$）。${fmt(t)}秒後の速さは、終端速度の約 □ %（${gT}、$\\tanh${fmt(u)}=${TANH[u]}$）`, a: `$${g.ans}$`, key: `v${u}`,
+          return { q: `終端速度 $${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ちる（$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$）。${fmt(t)}秒後の速さは、終端速度の約 □ %（${gT}、$\\tanh${fmt(u)}=${TANH[u]}$${g.dg}）`, a: `$${g.ans}$`, key: `v${u}`,
             easy: `$u=\\frac{9.8\\times${fmt(t)}}{${fmt(vt)}}=${fmt(u)}$。$\\tanh u$ が終端速度の何倍か → $${g.ans}$ %`, easyCheck: false,
             verify: p => nearTrue(p.a, vT) };
         }
         const [pp, us] = r.pick(ATANH), v = pp * vt, vG = +us * k, vT = Math.atanh(pp) * k, g = gv(vG, vT, 1);
         if (!g || !exactDec(v, 1)) return null;
-        return { q: `終端速度 $${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ちる（$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$）。速さが $${fmt(v)}\\,\\mathrm{m/s}$ になるのは約 □ 秒後（${gT}、$\\tanh${us}=${fmt(pp)}00$）`, a: `$${g.ans}$`, key: `p${k},${pp}`,
+        return { q: `終端速度 $${fmt(vt)}\\,\\mathrm{m/s}$ の${who(k)}が、止まった状態から落ちる（$v=v_{\\mathrm t}\\tanh\\dfrac{gt}{v_{\\mathrm t}}$）。速さが $${fmt(v)}\\,\\mathrm{m/s}$ になるのは約 □ 秒後（${gT}、$\\tanh${us}=${fmt(pp)}00$${g.dg}）`, a: `$${g.ans}$`, key: `p${k},${pp}`,
           easy: `$\\frac{${fmt(v)}}{${fmt(vt)}}=${fmt(pp)}$ → $u=${us}$ → $t=${us}\\times${k}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1163,7 +1165,7 @@
         if ((a === 50 && u === 1) || (a === 100 && u === 0.5) || a * u > 80) return null;
         const vG = a * (+CH[u][0] - 1), vT = a * (Math.cosh(u) - 1), g = gv(vG, vT, 1);
         if (!g) return null;
-        return { q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} を、はば $${fmt(W)}\\,\\mathrm{m}$ にはった。たるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.note}）`, a: `$${g.ans}$`, key: `s${a},${u}`,
+        return { q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} を、はば $${fmt(W)}\\,\\mathrm{m}$ にはった。たるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.dg}）`, a: `$${g.ans}$`, key: `s${a},${u}`,
           easy: `$\\frac{x}{a}=\\frac{${fmt(W / 2)}}{${a}}=${fmt(u)}$。$${a}\\times${fmt(+CH[u][0] - 1)}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1173,7 +1175,7 @@
         if ((a === 50 && u === 1) || (a === 100 && u === 0.5) || a * u > 80) return null;
         const vG = 2 * a * +CH[u][1], vT = 2 * a * Math.sinh(u), g = gv(vG, vT, 1);
         if (!g) return null;
-        return { q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} を、はば $${fmt(W)}\\,\\mathrm{m}$ にはった。くさりの長さは約 □ m（$\\sinh${fmt(u)}=${CH[u][1]}$${g.note}）`, a: `$${g.ans}$`, key: `l${a},${u}`,
+        return { q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} を、はば $${fmt(W)}\\,\\mathrm{m}$ にはった。くさりの長さは約 □ m（$\\sinh${fmt(u)}=${CH[u][1]}$${g.dg}）`, a: `$${g.ans}$`, key: `l${a},${u}`,
           easy: `$\\frac{x}{a}=${fmt(u)}$。片がわ $${a}\\times${CH[u][1]}$ の2倍 → $${2 * a}\\times${CH[u][1]}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1183,14 +1185,14 @@
         if (r.chance(0.5)) {
           const u = r.pick([0.5, 1, 1.5]), W = 2 * a * u, vG = a * (+CH[u][0] - 1), vT = a * (Math.cosh(u) - 1), g = gv(vG, vT, 1);
           if (!g) return null;
-          return { q: `図の実線は、$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ}（点線は、同じはば・たるみの放物線）。はば $${fmt(W)}\\,\\mathrm{m}$ のたるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.note}）`, a: `$${g.ans}$`, key: `s${a},${u}`, fig: catFig(a, W),
+          return { q: `図の実線は、$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ}（点線は、同じはば・たるみの放物線）。はば $${fmt(W)}\\,\\mathrm{m}$ のたるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.dg}）`, a: `$${g.ans}$`, key: `s${a},${u}`, fig: catFig(a, W),
             easy: `$\\frac{x}{a}=${fmt(u)}$ → $${a}\\times${fmt(+CH[u][0] - 1)}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
             verify: p => nearTrue(p.a, vT) };
         }
         const [uP, uE] = r.pick([[0.5, 1], [1, 2], [0.5, 1.5], [1, 1.5]]), W = 2 * a * uE, X = a * uP;
         const vG = a * (+CH[uP][0] - 1), vT = a * (Math.cosh(uP) - 1), g = gv(vG, vT, 1);
         if (!g) return null;
-        return { q: `図の実線は、$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ}（はば $${fmt(W)}\\,\\mathrm{m}$。点線は放物線）。$x=${fmt(X)}$ の点Pの高さは約 □ m（$\\cosh${fmt(uP)}=${CH[uP][0]}$${g.note}）`, a: `$${g.ans}$`, key: `s${a},${uP}`, fig: catFig(a, W, X),
+        return { q: `図の実線は、$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ}（はば $${fmt(W)}\\,\\mathrm{m}$。点線は放物線）。$x=${fmt(X)}$ の点Pの高さは約 □ m（$\\cosh${fmt(uP)}=${CH[uP][0]}$${g.dg}）`, a: `$${g.ans}$`, key: `s${a},${uP}`, fig: catFig(a, W, X),
           easy: `はしではなく点P：$\\frac{x}{a}=\\frac{${fmt(X)}}{${a}}=${fmt(uP)}$ → $${a}\\times${fmt(+CH[uP][0] - 1)}${exactDec(vG, g.k) ? '=' : '\\approx'}${g.ans}$`, easyCheck: false,
           verify: p => nearTrue(p.a, vT) };
       },
@@ -1198,7 +1200,7 @@
       trap(r) {
         const [a, W] = r.pick([[400, 40], [1000, 100], [800, 80], [625, 50]]), x = W / 2, vT = a * (Math.cosh(x / a) - 1), g = sagG(a, x);
         if (!g) return null;
-        return dest({ key: `6-74trap${a}`, q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} の形の電線を、はば $${W}\\,\\mathrm{m}$ にはった。たるみは約 □ m${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`,
+        return dest({ key: `6-74trap${a}`, q: `$a=${a}\\,\\mathrm{m}$ の懸垂線 ${catQ} の形の電線を、はば $${W}\\,\\mathrm{m}$ にはった。たるみは約 □ m（${g.dg.slice(1)}）`, a: `$${g.ans}$`,
           verify: p => nearTrue(p.a, vT) }, '6-74', `$\\frac{x}{a}=${fmt(x / a)}$ が小さく、$\\cosh$ の値がない。放物線 $\\frac{x^2}{2a}$ で近似する`);
       },
     },
@@ -1209,7 +1211,7 @@
   const AX = [];
   for (const a of [200, 250, 400, 500, 625, 800, 1000, 1250]) for (const x of [10, 15, 20, 25, 30, 40, 50]) { const s = x * x / (2 * a); if (x / a <= 0.1 && exactDec(s, 3)) AX.push([a, x]); }
   // 放物線の値（ちょうどの小数）が、懸垂線のほんとうの値をそのけたで丸めた数と同じときだけ使う（O-4）
-  const sagG = (a, x) => { const vG = x * x / (2 * a), vT = a * (Math.cosh(x / a) - 1), t = fmt(vG), k = (t.split('.')[1] || '').length; return rd(vT, k) === rd(vG, k) ? { ans: t, note: '' } : null; };
+  const sagG = (a, x) => { const vG = x * x / (2 * a), vT = a * (Math.cosh(x / a) - 1), t = fmt(vG), k = (t.split('.')[1] || '').length; return rd(vT, k) === rd(vG, k) ? { ans: t, note: '', k, dg: digT(k) } : null; };
   M.add({
     id: '6-75', part: 5, chap: '6-11⑦ 例題8', stars: 1,
     title: '電線のたるみは放物線で $\\dfrac{x^2}{2a}$、$a=\\dfrac{H}{w}$（$\\dfrac{x}{a}$ が小さいとき）',
@@ -1227,7 +1229,7 @@
       s1(r) {
         const [a, x] = r.pick(AX), g = sagG(a, x);
         if (!g || (a === 500 && x === 25) || (a === 400 && x === 40)) return null;
-        return { q: `$a=${a}\\,\\mathrm{m}$ の電線を、はば $${2 * x}\\,\\mathrm{m}$ にはった。たるみは約 □ m${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`, key: `${a},${x}`,
+        return { q: `$a=${a}\\,\\mathrm{m}$ の電線を、はば $${2 * x}\\,\\mathrm{m}$ にはった。たるみは約 □ m（${g.dg.slice(1)}）`, a: `$${g.ans}$`, key: `${a},${x}`,
           easy: `$\\frac{x}{a}=\\frac{${x}}{${a}}$ は小さい → $\\frac{${x}^2}{2\\times${a}}=${fmt(x * x / (2 * a))}$`, easyCheck: false,
           verify: p => nearTrue(p.a, a * (Math.cosh(x / a) - 1)) };
       },
@@ -1235,7 +1237,7 @@
       s2(r) {
         const [a, x] = r.pick(AX), w = r.pick([4, 5, 8, 10, 12, 16, 20]), H = a * w, g = sagG(a, x);
         if (!g || (a === 500 && x === 25) || (a === 400 && x === 40) || !Number.isInteger(H) || (w === 10 && H === 5000) || (w === 8 && H === 3200)) return null;   // 楽な形の例の数（O-2）
-        return { q: `$1\\,\\mathrm{m}$ あたりの重さ $${w}\\,\\mathrm{N/m}$ の電線を、いちばん下の張力 $${H}\\,\\mathrm{N}$ で、はば $${2 * x}\\,\\mathrm{m}$ にはった。たるみは約 □ m${g.note ? `（${g.note.slice(1)}）` : ''}`, a: `$${g.ans}$`, key: `${a},${x}`,
+        return { q: `$1\\,\\mathrm{m}$ あたりの重さ $${w}\\,\\mathrm{N/m}$ の電線を、いちばん下の張力 $${H}\\,\\mathrm{N}$ で、はば $${2 * x}\\,\\mathrm{m}$ にはった。たるみは約 □ m（${g.dg.slice(1)}）`, a: `$${g.ans}$`, key: `${a},${x}`,
           easy: `$a=\\frac{${H}}{${w}}=${a}$。$\\frac{${x}^2}{2\\times${a}}=${fmt(x * x / (2 * a))}$`, easyCheck: false,
           verify: p => nearTrue(p.a, a * (Math.cosh(x / a) - 1)) };
       },
@@ -1259,7 +1261,7 @@
         const u = r.pick([1, 0.5]), a = u === 1 ? r.pick([20, 30, 40]) : r.pick([40, 60, 80]), W = 2 * a * u;
         const vG = a * (+CH[u][0] - 1), vT = a * (Math.cosh(u) - 1), g = gv(vG, vT, 1);
         if (!g) return null;
-        return dest({ key: `6-75trap${u}`, q: `$a=${a}\\,\\mathrm{m}$ のくさりを、はば $${W}\\,\\mathrm{m}$ にはった。たるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.note}）`, a: `$${g.ans}$`,
+        return dest({ key: `6-75trap${u}`, q: `$a=${a}\\,\\mathrm{m}$ のくさりを、はば $${W}\\,\\mathrm{m}$ にはった。たるみは約 □ m（$\\cosh${fmt(u)}=${CH[u][0]}$${g.dg}）`, a: `$${g.ans}$`,
           verify: p => nearTrue(p.a, vT) }, '6-75', `$\\frac{x}{a}=${fmt(u)}$ は小さくないので、放物線ではずれる。$a\\Bigl(\\cosh\\frac{x}{a}-1\\Bigr)$ に入れる`);
       },
     },
@@ -1323,7 +1325,7 @@
         }
         const A = r.pick([3, 4, 5]), [b, tv] = r.pick([[1, '0.762'], [2, '0.964']]), g = gv(A * +tv, A * Math.tanh(b), 2);
         if (!g) return null;
-        return dest({ key: '6-95trapB', q: `$y=${A}\\tanh${b === 1 ? ' ' : b}t$ の、$t=1$ での値は約 □（$\\tanh${b}=${tv}$${g.note}）`, a: `$${g.ans}$`,
+        return dest({ key: '6-95trapB', q: `$y=${A}\\tanh${b === 1 ? ' ' : b}t$ の、$t=1$ での値は約 □（$\\tanh${b}=${tv}$${g.dg}）`, a: `$${g.ans}$`,
           verify: p => nearTrue(p.a, A * Math.tanh(b)) }, '6-95', 'みたす式ではなく、値。$t=1$ をそのまま入れる');
       },
     },

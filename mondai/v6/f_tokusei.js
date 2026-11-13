@@ -10,7 +10,7 @@
  * 図は 6-84 のステップ3だけ（共振曲線。M.graph。K-2）。目もりは山の ω を書かない（図を読んで答えを出さない）。
  * 表（p.table）は 6-87 のステップ3だけ（見わけようは表を出さないので、ステップ1・2 は文だけ）。
  * 左ページの「楽な形」と目印の例の数は、同じ見開きの問題に出さない（O-2）。key は、ステップがちがっても同じ問題（同じ式・同じはじめの状態）なら同じになる形にする。
- * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「楽な形なし」）を書く（dest。N-3）。
+ * わなは、そのわざ自身で解けないもの。答えにはかならず行き先（わざの番号か「わざなし」）を書く（dest。N-3）。
  * 6-15（まとめ）の「式の形から解き方を選ぶ」は、わざにせず、6-76 のわな（右辺あり・1回微分・積分するだけ・$v^2$）と見わけようの must で出す（P-13）。 */
 (function (M) {
   'use strict';
@@ -61,7 +61,7 @@
     const [n, d] = s, sg = n < 0 ? '-' : '', a = Math.abs(n);
     if (d === 1) return `e^{${sg}${a === 1 ? '' : a}t}`;
     if (a === 1 && !o.dec) return `e^{${sg}t/${d}}`;
-    const dc = dec([a, d]);
+    const dc = o.frac ? null : dec([a, d]);
     return dc ? `e^{${sg}${dc}t}` : `e^{${sg}${a}t/${d}}`;
   }
   const trig = (fn, w) => { const t = fx(D(w)); return `\\${fn}${t === '1' ? ' ' : t}t`; };   // \cos t・\cos3t・\sin0.5t
@@ -173,7 +173,7 @@
   }
 
   // ---------------------------------------------------------------- わなの行き先（H-1・H-2・N-3）
-  // easy に「（わけ。わざ □ で）」か「（わけ。楽な形なし）」を書く。extra：ほかの部のわざ・fits では見つからないわざの番号
+  // easy に「（わけ。わざ □ で）」か「（わけ。わざなし）」を書く。extra：ほかの部のわざ・fits では見つからないわざの番号
   function dest(p, self, why, extra) {
     const q = M.plain(p.q);
     const also = M.list(6).filter(id => {
@@ -184,7 +184,7 @@
     (extra || []).forEach(id => { if (id !== self && !also.includes(id)) also.push(id); });
     also.sort();
     if (also.length) p.also = also;
-    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : '楽な形なし'}）`;
+    p.easy = `（${why}。${also.length ? `わざ ${also.join('・')} で` : 'わざなし'}）`;
     p.easyCheck = false;
     return p;
   }
@@ -228,7 +228,7 @@
   function genDbl(r, opt) {
     opt = opt || {};
     for (let k = 0; k < 40; k++) {
-      const a = r.int(1, 6), x0 = opt.x0 != null ? opt.x0 : r.pick([1, 2, 3, 0.5]), v0 = opt.v0 != null ? opt.v0 : 0;
+      const a = r.int(1, opt.amax || 6), x0 = opt.x0 != null ? opt.x0 : r.pick([1, 2, 3, 0.5]), v0 = opt.v0 != null ? opt.v0 : 0;
       if (opt.bad && opt.bad(a, x0, v0)) continue;
       return { a, x0, v0, s: dblRoot(a, x0, v0), eq: ode(1, 2 * a, a * a), calc: odeCalc(1, 2 * a, a * a, x0, v0) };
     }
@@ -243,6 +243,7 @@
     }
     return null;
   }
+  const icK = (x0, v0) => (+x0 === 0 ? 'v' : fmt(+v0 / +x0));   // はじめの値の比（x0・v0 を何倍かしただけの問題は、答えも何倍かになる。O-2・S-2）
   const initTxt = (x0, v0, v) => { v = v || 'x'; return `$${v}(0)=${fx(D(x0))}$、$\\dot ${v}(0)=${fx(D(v0))}$`; };
   const solveQ = (eq, x0, v0) => `$${eq}$、${initTxt(x0, v0)} をみたす $x$`;
 
@@ -368,30 +369,30 @@
     steps: {
       // 静かにはなす（$\dot x(0)=0$）
       s1(r) {
-        const g = genTwo(r, { bad: (p, q, x0) => p === 2 && q === 3 && x0 === 1 }); if (!g) return null;
-        return { q: solveQ(g.eq, g.x0, 0), a: `$${g.s.ans}$`, key: `${g.p},${g.q}|${g.x0},0`, easyCheck: false,
+        const g = genTwo(r, { bad: (p, q) => p === 2 && q === 3 }); if (!g) return null;   // 楽な形の例の式（O-2）
+        return { q: solveQ(g.eq, g.x0, 0), a: `$${g.s.ans}$`, key: `${g.p},${g.q}|0`, easyCheck: false,
           easy: `$s=-${g.p}$、$-${g.q}$。$A+B=${g.x0}$、$-${g.p === 1 ? '' : g.p}A-${g.q}B=0$`, calc: g.calc };
       },
       // はじめの速度がある・係数が1でない
       s2(r) {
         const kind = turn(r, '77s2', 2);
         const x0 = kind === 0 ? 0 : r.pick([1, 2]), v0 = r.pick([2, 3, 4, 6, -2, -3, 1]);
-        const g = genTwo(r, { x0, v0 }); if (!g) return null;
+        const g = genTwo(r, { x0, v0, bad: (p, q) => p === 2 && q === 3 }); if (!g) return null;
         const a = r.chance(0.4) ? r.pick([2, 3]) : 1, eq = ode(a, a * (g.p + g.q), a * g.p * g.q);
-        return { q: solveQ(eq, x0, v0), a: `$${g.s.ans}$`, key: `${g.p},${g.q}|${x0},${v0}`, easyCheck: false,
+        return { q: solveQ(eq, x0, v0), a: `$${g.s.ans}$`, key: `${g.p},${g.q}|${icK(x0, v0)}`, easyCheck: false,
           easy: `$s=-${g.p}$、$-${g.q}$。$A+B=${x0}$、$-${g.p === 1 ? '' : g.p}A-${g.q}B=${v0}$`, calc: odeCalc(a, a * (g.p + g.q), a * g.p * g.q, x0, v0) };
       },
       // 見かけがちがう：移項した形・ばね・質量・ダンパー（引いて静かにはなす）
       s3(r) {
         if (turn(r, '77s3', 2) === 0) {
-          const g = genTwo(r, { bad: (p, q, x0) => p === 2 && q === 3 && x0 === 1 }); if (!g) return null;
-          return { q: `$\\ddot x=${sum([cf(-(g.p + g.q), '\\dot x'), cf(-g.p * g.q, 'x')])}$、${initTxt(g.x0, 0)} をみたす $x$`, a: `$${g.s.ans}$`, key: `${g.p},${g.q}|${g.x0},0`, easyCheck: false,
+          const g = genTwo(r, { bad: (p, q) => p === 2 && q === 3 }); if (!g) return null;
+          return { q: `$\\ddot x=${sum([cf(-(g.p + g.q), '\\dot x'), cf(-g.p * g.q, 'x')])}$、${initTxt(g.x0, 0)} をみたす $x$`, a: `$${g.s.ans}$`, key: `${g.p},${g.q}|0`, easyCheck: false,
             easy: `移項して $${g.eq}$。$s=-${g.p}$、$-${g.q}$`, calc: g.calc };
         }
         const m = r.pick([1, 2, 0.5]), x0 = r.pick(['0.1', '0.2']);
-        const g = genTwo(r, { x0 }); if (!g) return null;
+        const g = genTwo(r, { x0, bad: (p, q) => p === 2 && q === 3 }); if (!g) return null;
         const c = m * (g.p + g.q), k = m * g.p * g.q;
-        return { q: `ばね・質量・ダンパー（${spring(m, k, c)}）のおもりを $${x0}\\,\\mathrm{m}$ 引いて、静かにはなした。位置 $x$（m）`, a: `$${g.s.ans}$`, key: `${g.p},${g.q}|${x0},0`, easyCheck: false,
+        return { q: `ばね・質量・ダンパー（${spring(m, k, c)}）のおもりを $${x0}\\,\\mathrm{m}$ 引いて、静かにはなした。位置 $x$（m）`, a: `$${g.s.ans}$`, key: `${g.p},${g.q}|0`, easyCheck: false,
           easy: `$${ode(m, c, k)}$、$s=-${g.p}$、$-${g.q}$。$A+B=${x0}$`, calc: odeCalc(m, c, k, x0, 0) };
       },
       // わな：重解（6-79）
@@ -406,7 +407,7 @@
   // ================================================================ 6-78
   M.add({
     id: '6-78', part: 6, chap: '6-12④ 例題2', stars: 1,
-    title: '複素数の解 $-\\alpha\\pm j\\omega_{\\mathrm d}$：$A=x_0$、$B=\\tfrac{v_0+\\alpha x_0}{\\omega_{\\mathrm d}}$',
+    title: '複素数の解 $-\\alpha\\pm j\\omega_{\\mathrm d}$：$A=x_0$、$B=\\dfrac{v_0+\\alpha x_0}{\\omega_{\\mathrm d}}$',
     mark: '判別式が負の特性方程式と、はじめの位置・速度。$\\ddot x+2\\dot x+10x=0$、$x(0)=1$、$\\dot x(0)=0$。',
     futsu: ['$x=e^{-t}(A\\cos3t+B\\sin3t)$ を積の微分で微分し、', '$\\dot x=-e^{-t}(\\cdots)$', '$\\quad+e^{-t}(-3A\\sin3t+3B\\cos3t)$', 'に $t=0$ を入れて、$-A+3B=0$ を解く'],
     raku: ['$s^2+2s+10=0$ → $s=-1\\pm3j$', '$A=x_0=1$、$B=\\dfrac{0+1\\times1}{3}=\\dfrac13$', '$x=e^{-t}\\Bigl(\\cos3t+\\dfrac13\\sin3t\\Bigr)$'],
@@ -479,8 +480,8 @@
     },
     steps: {
       s1(r) {
-        const g = genDbl(r, { bad: (a, x0) => a === 3 && x0 === 1 }); if (!g) return null;
-        return { q: solveQ(g.eq, g.x0, 0), a: `$${g.s.ans}$`, key: `${g.a}|${g.x0},0`, easyCheck: false,
+        const g = genDbl(r, { amax: 7, bad: a => a === 3 }); if (!g) return null;   // 楽な形の例の式 (s+3)^2（O-2・R2-11）
+        return { q: solveQ(g.eq, g.x0, 0), a: `$${g.s.ans}$`, key: `${g.a}|0`, easyCheck: false,
           easy: `$(s+${g.a})^2=0$、$s=-${g.a}$。$A=${g.x0}$、$B=0+${g.a}\\times${g.x0}$`, calc: g.calc };
       },
       // はじめの速度がある・係数が1でない（$4\ddot x+4\dot x+x=0$ の $s=-\frac12$ も）
@@ -489,22 +490,22 @@
         if (kind === 2) {
           const x0 = r.pick([1, 2, 4]), v0 = r.pick([0, 1, -1, 2]);
           const s = dblRoot(fr(1, 2), x0, v0);
-          return { q: solveQ(ode(4, 4, 1), x0, v0), a: `$${s.ans}$`, key: `h|${x0},${v0}`, easyCheck: false,
+          return { q: solveQ(ode(4, 4, 1), x0, v0), a: `$${s.ans}$`, key: `h|${icK(x0, v0)}`, easyCheck: false,
             easy: `$(2s+1)^2=0$、$s=-\\frac12$。$A=${x0}$、$B=${v0}+\\frac12\\times${x0}$`, calc: odeCalc(4, 4, 1, x0, v0) };
         }
         const x0 = kind === 0 ? 0 : r.pick([1, 2]), v0 = kind === 0 ? r.pick([1, 2, 3, 5, 0.5]) : r.pick([1, 2, 3, 4, -2]);
-        const g = genDbl(r, { x0, v0 }); if (!g) return null;
+        const g = genDbl(r, { x0, v0, amax: 7, bad: a => a === 3 }); if (!g) return null;
         const a = r.chance(0.35) ? 2 : 1;
-        return { q: solveQ(ode(a, a * 2 * g.a, a * g.a * g.a), x0, v0), a: `$${g.s.ans}$`, key: `${g.a}|${x0},${v0}`, easyCheck: false,
+        return { q: solveQ(ode(a, a * 2 * g.a, a * g.a * g.a), x0, v0), a: `$${g.s.ans}$`, key: `${g.a}|${icK(x0, v0)}`, easyCheck: false,
           easy: `$s=-${g.a}$（重解）。$A=${x0}$、$B=${v0}+${g.a}\\times${x0}$`, calc: odeCalc(a, a * 2 * g.a, a * g.a * g.a, x0, v0) };
       },
       // 見かけがちがう：ちょうどよいダンパーをつける・RLC 回路の放電（境めの抵抗）
       s3(r) {
         const kind = turn(r, '79s3', 3);
         if (kind < 2) {
-          const [m, k] = r.pick([[1, 4], [1, 9], [1, 25], [2, 8], [2, 18], [4, 16], [0.5, 8], [0.5, 2], [2, 32]]), x0 = r.pick(['0.1', '0.2', '0.05']);
+          const [m, k] = r.pick([[1, 4], [1, 25], [2, 8], [4, 16], [0.5, 8], [0.5, 2], [2, 32], [1, 1], [4, 4], [1, 36], [0.5, 18], [1, 49]]), x0 = r.pick(['0.1', '0.2', '0.05']);   // ωn=3 は楽な形の例の式（O-2）
           const c = 2 * Math.sqrt(m * k), w = Math.sqrt(k / m), s = dblRoot(w, x0, 0);
-          return { q: `${spring(m, k)} のばねに、ゆれずにいちばん早くもどるダンパーをつけ、おもりを $${x0}\\,\\mathrm{m}$ 引いて静かにはなした。位置 $x$（m）`, a: `$${s.ans}$`, key: `${fmt(w)}|${x0},0`, easyCheck: false,
+          return { q: `${spring(m, k)} のばねに、ゆれずにいちばん早くもどるダンパーをつけ、おもりを $${x0}\\,\\mathrm{m}$ 引いて静かにはなした。位置 $x$（m）`, a: `$${s.ans}$`, key: `${fmt(w)}|0`, easyCheck: false,
             easy: `$c=2\\sqrt{${fmt(m)}\\times${fmt(k)}}=${fmt(c)}$、$s=-${fmt(w)}$（重解）。$A=${x0}$、$B=${fmt(w)}\\times${x0}$`, calc: odeCalc(m, c, k, x0, 0) };
         }
         const [L, C] = r.pick([[0.001, 1e-7], [0.004, 1e-7], [0.01, 4e-6], [0.04, 1e-6]]), V = r.pick([10, 5, 20]);
@@ -553,7 +554,7 @@
   const RLCS = [[0.01, 1e-6, 1e4], [0.004, 1e-7, 5e4], [0.001, 1e-7, 1e5], [0.04, 1e-6, 5e3], [0.001, 1e-6, Math.sqrt(1e9)]].filter(x => Number.isInteger(x[2]));
   M.add({
     id: '6-80', part: 6, chap: '6-12⑥⑧ 例題4・6', stars: 1,
-    title: '$\\omega_{\\mathrm d}=\\omega_{\\mathrm n}\\sqrt{1-\\zeta^2}$、ゆれの周期 $T_{\\mathrm d}=\\tfrac{2\\pi}{\\omega_{\\mathrm d}}$、1周期で山は $e^{-\\alpha T_{\\mathrm d}}$ 倍',
+    title: '$\\omega_{\\mathrm d}=\\omega_{\\mathrm n}\\sqrt{1-\\zeta^2}$、ゆれの周期 $T_{\\mathrm d}=\\dfrac{2\\pi}{\\omega_{\\mathrm d}}$、1周期で山は $e^{-\\alpha T_{\\mathrm d}}$ 倍',
     mark: '質量・ばね定数・減衰係数（または $L$・$C$・$R$）と「$\\omega_{\\mathrm d}$」「ゆれの周期」「1周期で山は何倍」。',
     futsu: ['特性方程式 $300s^2+1800s+30000=0$ を', '解の公式で解き、解の虚部から $\\omega_{\\mathrm d}$、', '実部から $\\alpha$ を出す'],
     raku: ['$300\\,\\mathrm{kg}$・$30000\\,\\mathrm{N/m}$・$1800\\,\\mathrm{N\\cdot s/m}$', '$\\omega_{\\mathrm n}=10$、$\\zeta=\\dfrac{1800}{6000}=0.3$、$\\alpha=3$', '$\\omega_{\\mathrm d}=10\\sqrt{0.91}=10\\times0.954=9.54$', '周期 $\\dfrac{2\\pi}{9.54}\\approx0.66$ 秒、1周期で $e^{-1.976}\\approx0.139$ 倍'],
@@ -572,7 +573,8 @@
         const g = gen80(r); if (!g) return null;
         const ex0 = !ZT[g.z][0], ans = ex0 ? fx(g.wd) : agree(g.wd, g.wdTrue, (dec(g.wd).split('.')[1] || '').length);
         if (ans == null) return null;
-        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）の $\\omega_{\\mathrm d}${ex0 ? '=' : '\\approx'}□\\,\\mathrm{rad/s}$${ex0 ? '' : `（${sqTxt(g.z)}）`}`, a: `$${ans}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
+        const kd = (ans.split('.')[1] || '').length;
+        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）の $\\omega_{\\mathrm d}${ex0 ? '=' : '\\approx'}□\\,\\mathrm{rad/s}$${ex0 ? '' : `（${sqTxt(g.z)}、${kd ? `小数第${kd}位まで` : '整数で'}）`}`, a: `$${ans}$`, key: `${g.wn},${g.z}`, easyCheck: false,
           easy: `$\\omega_{\\mathrm n}=${g.wn}$、$\\zeta=${g.z}$。$\\omega_{\\mathrm d}=${g.wn}\\times${ZT[g.z][1]}$`, verify: p => valIs(p, g.wdTrue, ex0 ? 1e-9 : 0.006 / g.wdTrue) };
       },
       // ゆれの周期（2π=6.28、小数第2位まで）
@@ -580,7 +582,7 @@
         const g = gen80(r); if (!g) return null;
         const T = F.div(D('6.28'), g.wd), ans = agree(T, 2 * Math.PI / g.wdTrue, 2);
         if (ans == null) return null;
-        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）のゆれの周期 $T_{\\mathrm d}\\approx□$ 秒（$2\\pi=6.28$${ZT[g.z][0] ? `、${sqTxt(g.z)}` : ''} として、小数第2位まで）`, a: `$${ans}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
+        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）のゆれの周期 $T_{\\mathrm d}\\approx□$ 秒（$2\\pi=6.28$${ZT[g.z][0] ? `、${sqTxt(g.z)}` : ''} として、小数第2位まで）`, a: `$${ans}$`, key: `${g.wn},${g.z}`, easyCheck: false,
           easy: `$\\omega_{\\mathrm d}=${g.wn}\\times${ZT[g.z][1]}=${fx(g.wd)}$。$\\frac{6.28}{${fx(g.wd)}}$`,
           verify: p => { const T0 = nums(p.a)[0], { xs, h } = rk4(g.m, g.c, g.k, () => 0, 1, 0, 1.5 * T0, 6000); let z = []; for (let i = 1; i < xs.length; i++) if (xs[i - 1] > 0 !== xs[i] > 0) z.push((i - 1 + xs[i - 1] / (xs[i - 1] - xs[i])) * h); return (z.length >= 3 && Math.abs(z[2] - z[0] - T0) < 0.006) || '周期がちがう'; } };
       },
@@ -589,7 +591,7 @@
         if (turn(r, '80s3', 2) === 0) {
           const [al, wd, wn] = r.pick(PY), m = r.pick([1, 2]), k = m * wn * wn, c = 2 * m * al, R0 = F.make(2 * al, wd);
           const E = `e^{-${R0[1] === 1 ? (R0[0] === 1 ? '' : R0[0]) + '\\pi' : `\\frac{${R0[0] === 1 ? '' : R0[0]}\\pi}{${R0[1]}}`}}`;
-          return { q: `ばね・質量・ダンパー（${spring(m, k, c)}）。1周期たつと、ゆれの山の高さは □ 倍（$e$ と $\\pi$ を残した形で）`, a: `$${E}$`, key: `${wn},${al}|e`, easyCheck: false,
+          return { q: `ばね・質量・ダンパー（${spring(m, k, c)}）。1周期たつと、ゆれの山の高さは □ 倍（$e$ と $\\pi$ を残した形で）`, a: `$${E}$`, key: `${fmt(al / wd)}|e`, easyCheck: false,   // α÷ωd が同じ組（3・4 と 6・8）は答えが同じ
             easy: `$\\alpha=\\frac{c}{2m}=${al}$、$\\omega_{\\mathrm d}=\\sqrt{${wn * wn}-${al * al}}=${wd}$、$T_{\\mathrm d}=\\frac{2\\pi}{${wd}}$`,
             verify: p => { const v = ev(strip(p.a)), pr = peakRatio(m, c, k); return (pr != null && near(v, pr, 1e-4)) || `山の割合は ${pr} のはず`; } };
         }
@@ -597,7 +599,7 @@
         if (L === 0.01 && C === 1e-6 && z === '0.1') return null;   // 楽な形の例（10 mH・1 μF・20 Ω）
         const wd = F.mul(fr(wn), D(ZT[z][1])), ex0 = !ZT[z][0], ans = ex0 ? fx(wd) : agree(wd, wn * Math.sqrt(1 - z * z), 0);
         if (ans == null) return null;
-        return { q: `RLC 回路（${rlc(L, C, R)}）の $\\omega_{\\mathrm d}${ex0 ? '=' : '\\approx'}□\\,\\mathrm{rad/s}$${ex0 ? '' : `（${sqTxt(z)}）`}`, a: `$${ans}$`, key: `${wn},${z}|d`, easyCheck: false,
+        return { q: `RLC 回路（${rlc(L, C, R)}）の $\\omega_{\\mathrm d}${ex0 ? '=' : '\\approx'}□\\,\\mathrm{rad/s}$${ex0 ? '' : `（${sqTxt(z)}、整数で）`}`, a: `$${ans}$`, key: `${wn},${z}|d`, easyCheck: false,
           easy: `$\\omega_{\\mathrm n}=\\frac{1}{\\sqrt{LC}}=${wn}$、$\\zeta=\\frac R2\\sqrt{\\frac CL}=${z}$`,
           verify: p => { const a = L, b = R, c = 1 / C, wdT = Math.sqrt(4 * a * c - b * b) / (2 * a); return near(nums(p.a)[0], wdT, ex0 ? 1e-9 : 0.6 / wdT) || 'ωd がちがう'; } };
       },
@@ -627,7 +629,7 @@
   }
   M.add({
     id: '6-81', part: 6, chap: '6-13④⑤ 例題1', stars: 1,
-    title: 'ダンパーのない強制振動：$x_{\\mathrm p}=\\tfrac{F}{\\omega_{\\mathrm n}^2-\\omega^2}\\cos\\omega t$、止まった所からは $P(\\cos\\omega t-\\cos\\omega_{\\mathrm n}t)$',
+    title: 'ダンパーのない強制振動：$x_{\\mathrm p}=\\dfrac{F}{\\omega_{\\mathrm n}^2-\\omega^2}\\cos\\omega t$、止まった所からは $P(\\cos\\omega t-\\cos\\omega_{\\mathrm n}t)$',
     mark: '$\\ddot x+\\omega_{\\mathrm n}^2x=F\\cos\\omega t$（$\\dot x$ の項がない）と、$x(0)=0$、$\\dot x(0)=0$。',
     futsu: ['$x_{\\mathrm p}=P\\cos t$ を入れて係数を比べ、', '自分のゆれ $A\\cos3t+B\\sin3t$ を足して、', '位置と速度の式から $A$、$B$ を決める'],
     raku: ['$\\ddot x+9x=8\\cos t$：$P=\\dfrac{8}{9-1}=1$', '止まった所から → $x=\\cos t-\\cos3t$'],
@@ -705,7 +707,7 @@
   }
   M.add({
     id: '6-82', part: 6, chap: '6-13⑤⑥⑧ 例題2・4', stars: 1,
-    title: 'ゆすりに合うゆれは、複素数のわり算1回：$X=\\tfrac{F_0}{(k-m\\omega^2)+jc\\omega}$',
+    title: 'ゆすりに合うゆれは、複素数のわり算1回：$X=\\dfrac{F_0}{(k-m\\omega^2)+jc\\omega}$',
     mark: '$m\\ddot x+c\\dot x+kx=F_0\\cos\\omega t$ と「ゆすりに合うゆれ」「振幅」「位相のおくれ」。',
     futsu: ['$x=P\\cos t+Q\\sin t$ と置いて2回微分し、', '$\\cos t$ と $\\sin t$ の係数を比べて、', '$P$、$Q$ の連立方程式を解く'],
     raku: ['$\\ddot x+4\\dot x+3x=10\\cos t$', '$X=\\dfrac{10}{(3-1)+4j}=\\dfrac{10}{2+4j}=1-2j$', '$x_{\\mathrm p}=\\cos t+2\\sin t$、振幅 $\\lvert X\\rvert=\\sqrt5$'],
@@ -759,12 +761,12 @@
   function gen83(r, opt) {
     opt = opt || {};
     for (let t = 0; t < 60; t++) {
-      const p = r.int(1, 3), q = r.int(p + 1, 4), g = gen82(r, { w: 1, m: 1, a: p * q - 1, b: p + q }); if (!g) continue;
+      const p = r.int(1, 3), q = r.int(p + 1, 6); if (p === 1 && q === 3) continue;   // 楽な形の例の左辺（O-2・R2-12）
+      const g = gen82(r, { w: 1, m: 1, a: p * q - 1, b: p + q }); if (!g) continue;
       const A = F.div(F.add(g.Q, F.mul(fr(q), g.P)), fr(p - q)), B = F.sub(F.mul(g.P, fr(-1)), A);
       if (!dec(A) || !dec(B) || A[0] === 0 || B[0] === 0) continue;
-      if (p === 1 && q === 3 && g.F0 === 10) continue;   // 楽な形の例（O-2）
       if (g.F0 > 100 || Math.abs(F.val(A)) > 30 || Math.abs(F.val(B)) > 30) continue;   // 数を手で計算できる大きさに
-      return Object.assign(g, { p, q, A, B, full: sum([g.xp, cf(A, ex(-p)), cf(B, ex(-q))]), key2: `${p},${q},${g.F0}` });
+      return Object.assign(g, { p, q, A, B, full: sum([g.xp, cf(A, ex(-p)), cf(B, ex(-q))]), key2: `${p},${q}` });   // 右辺を何倍かしただけの問題は、答えも何倍か（S-2）
     }
     return null;
   }
@@ -776,7 +778,7 @@
       if (!dec(A) || !dec(B)) continue;
       const neg = A[0] <= 0 && B[0] <= 0, Aa = neg ? F.mul(A, fr(-1)) : A, Ba = neg ? F.mul(B, fr(-1)) : B;
       const inner = sum([cf(Aa, trig('cos', wd)), cf(Ba, trig('sin', wd))]);
-      return Object.assign(g, { al, wd, A, B, full: `${g.xp}${neg ? '-' : '+'}${ex(-al)}(${inner})`, key2: `c${al},${wd},${g.F0}` });
+      return Object.assign(g, { al, wd, A, B, full: `${g.xp}${neg ? '-' : '+'}${ex(-al)}(${inner})`, key2: `c${al},${wd}` });
     }
     return null;
   }
@@ -813,11 +815,11 @@
         return { q: solveQ(g.eq, 0, 0), a: `$${g.full}$`, key: g.key2, easyCheck: false, boxh: '11mm',
           easy: `$x_{\\mathrm p}=${g.xp}$、自分のゆれ $${ex(-g.al)}(A${trig('cos', g.wd)}+B${trig('sin', g.wd)})$。$A=${fx(g.A)}$、$B=${fx(g.B)}$`, calc: odeCalc(1, g.c, g.k, 0, 0, g.rhs) };
       },
-      // わな：振幅だけ（自分のゆれは要らない。6-82）
+      // わな：振幅だけ（自分のゆれは要らない。6-82）。ステップ1・2は $\cos t$ なので、わなは $\cos2t$ でゆする（文の $x_{\mathrm p}$ を読むだけにならない。S-2・R2-16）
       trap(r) {
-        const g = gen83(r); if (!g) return null;
-        return dest({ q: `$${g.eq}$ の、ゆすりに合うゆれの振幅`, a: `$${ampTeX(g.lam, g.a * g.a + g.b * g.b)}$`, key: `t${g.key2}`,
-          verify: p => near(ev(strip(p.a)), g.F0 / Math.hypot(g.k - 1, g.c), 1e-9) || '振幅がちがう' }, '6-83',
+        const g = gen82(r, { w: 2, bad: (a, b) => b < 2 }); if (!g) return null;
+        return dest({ q: `$${g.eq}$ の、ゆすりに合うゆれの振幅`, a: `$${ampTeX(g.lam, g.a * g.a + g.b * g.b)}$`, key: `t${g.key}`,
+          verify: p => near(ev(strip(p.a)), g.F0 / Math.hypot(g.k - g.m * g.w * g.w, g.c * g.w), 1e-9) || '振幅がちがう' }, '6-83',
           'はじめの状態がなく、聞いているのは、やがて残るゆすりに合うゆれの振幅だけ。自分のゆれは足さなくてよい', ['6-82']);
       },
     },
@@ -841,7 +843,7 @@
   }
   M.add({
     id: '6-84', part: 6, chap: '6-13⑦ 例題6', stars: 1,
-    title: 'いちばん大きくゆれる $\\omega$ は $\\omega_{\\mathrm n}\\sqrt{1-2\\zeta^2}$（$\\omega^2=\\tfrac km-\\tfrac{c^2}{2m^2}$）',
+    title: 'いちばん大きくゆれる $\\omega$ は $\\omega_{\\mathrm n}\\sqrt{1-2\\zeta^2}$（$\\omega^2=\\dfrac km-\\dfrac{c^2}{2m^2}$）',
     mark: 'ばね・質量・ダンパーをゆする、「振幅がいちばん大きくなる $\\omega$」「そのときの振幅」。',
     futsu: ['$G(\\omega)=(100-\\omega^2)^2+16\\omega^2$ を微分して', '$G\'(\\omega)=4\\omega(\\omega^2-92)$、', '増減表をかいて、いちばん小さい所をさがす'],
     raku: ['$m=1$、$k=100$、$c=4$', '$\\omega^2=\\dfrac{100}{1}-\\dfrac{4^2}{2\\times1^2}=100-8=92$', '$\\omega=\\sqrt{92}=2\\sqrt{23}$', '振幅は $G=(k-m\\omega^2)^2+c^2\\omega^2$ に $\\omega^2=92$ を入れて'],
@@ -900,16 +902,16 @@
   // ================================================================ 6-85
   // ゆする角振動数 w での振幅を、複素数のわり算 F0/(k-mw²+jcw) の大きさで（ωn だけの形 F0/(cωn) とは別の道すじ）
   const ampAt = (m, k, c, F0, w) => { const X = M.evalC(`\\frac{${F0}}{${k - m * w * w}+${c * w}j}`, {}); return Math.hypot(X[0], X[1]); };
-  const ZQ = ['0.05', '0.1', '0.2', '0.25', '0.02', '0.125'];
+  const ZQ = ['0.05', '0.2', '0.25', '0.02', '0.125'];   // 楽な形の例の ζ=0.1（5倍）は出さない（O-2・R2-10）
   function gen85(r) {
     const [m, wn] = r.pick([[1, 2], [1, 4], [1, 5], [1, 10], [0.5, 4], [2, 5], [2, 2], [0.5, 10]]), z = r.pick(ZQ), k = m * wn * wn, c = 2 * +z * m * wn;
     if (!dec(D(fmt(c)))) return null;
-    if ((m === 0.5 && wn === 4 && z === '0.1') || (m === 1 && wn === 5 && z === '0.2')) return null;   // 楽な形の例（O-2）
+    if (m === 1 && wn === 5 && z === '0.2') return null;   // 楽な形の例（O-2）
     return { m, wn, z, k, c };
   }
   M.add({
     id: '6-85', part: 6, chap: '6-13③⑩・問題', stars: 1,
-    title: '$\\omega=\\omega_{\\mathrm n}$ でゆすると、振幅は $\\tfrac{F_0}{c\\,\\omega_{\\mathrm n}}$（$\\tfrac{F_0}{k}$ の $\\tfrac{1}{2\\zeta}$ 倍）',
+    title: '$\\omega=\\omega_{\\mathrm n}$ でゆすると、振幅は $\\dfrac{F_0}{c\\,\\omega_{\\mathrm n}}$（$\\dfrac{F_0}{k}$ の $\\dfrac{1}{2\\zeta}$ 倍）',
     mark: '「ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすった」「共振のときの振幅」「何倍ゆれる」。',
     futsu: ['$X=\\dfrac{F_0}{k-m\\omega^2+jc\\omega}$ に $\\omega=4$ を入れて、', '$k-m\\omega^2=8-0.5\\times16=0$ を確かめ、', '分母の大きさ $\\sqrt{0^2+1.6^2}$ を計算する'],
     raku: ['$m=0.5$、$k=8$、$c=0.4$、$F_0=0.8$', '$\\omega_{\\mathrm n}=4$ → $\\dfrac{0.8}{0.4\\times4}=0.5\\,\\mathrm{m}$', '$\\dfrac{F_0}{k}=0.1$ の5倍（$\\zeta=0.1$、$\\dfrac{1}{2\\zeta}=5$）'],
@@ -920,10 +922,15 @@
     fits(q) { return /ちょうど \$\\omega=\\omega_\{\\mathrm n\}\$/.test(q); },
     steps: {
       s1(r) {
+        const A = r.pick(['0.1', '0.2', '0.25', '0.4', '0.05']);
         const g = gen85(r); if (!g) return null;
-        const A = r.pick(['0.1', '0.2', '0.5', '0.25', '0.4', '0.05']), F0 = F.mul(D(A), D(fmt(g.c * g.wn)));
+        const used = (r.turns = r.turns || {}).sys85 || (r.turns.sys85 = []), sys = `${g.m},${g.wn},${g.z}`;   // 同じ系で力だけ何倍かした問題にしない（S-2）
+        if (used.includes(sys)) return null;
+        if (used.length > 30) used.length = 0;
+        const F0 = F.mul(D(A), D(fmt(g.c * g.wn)));
         if (!dec(F0) || (dec(F0).split('.')[1] || '').length > 2) return null;
-        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）を、ちょうど $\\omega=\\omega_{\\mathrm n}$ で、力 $${fx(F0)}\\cos\\omega t$（N）でゆすった。振幅は □ m`, a: `$${A}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
+        used.push(sys);
+        return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）を、ちょうど $\\omega=\\omega_{\\mathrm n}$ で、力 $${fx(F0) === '1' ? '' : fx(F0)}\\cos\\omega t$（N）でゆすった。振幅は □ m`, a: `$${A}$`, key: `A${A}`, easyCheck: false,   // 同じ答えを2回出さない（S-4・R2-10）
           easy: `$\\omega_{\\mathrm n}=${g.wn}$。$\\frac{${fx(F0)}}{${fmt(g.c)}\\times${g.wn}}$`, verify: p => near(nums(p.a)[0], ampAt(g.m, g.k, g.c, F.val(F0), g.wn), 2e-3) || '振幅がちがう' };
       },
       // ゆっくりおしたときの何倍か（m・k・c から、ζ から）
@@ -931,10 +938,10 @@
         if (turn(r, '85s2', 2) === 0) {
           const g = gen85(r); if (!g) return null;
           const R = F.div(fr(1), F.mul(fr(2), D(g.z)));
-          return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）を、ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすった。振幅は、同じ力でゆっくりおし続けたときののび $\\frac{F_0}{k}$ の □ 倍`, a: `$${fx(R)}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
+          return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）を、ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすった。振幅は、同じ力でゆっくりおし続けたときののび $\\frac{F_0}{k}$ の □ 倍`, a: `$${fx(R)}$`, key: `z${g.z}`, easyCheck: false,
             easy: `$\\zeta=\\frac{${fmt(g.c)}}{2\\sqrt{${fmt(g.m)}\\times${fmt(g.k)}}}=${g.z}$、$\\frac{1}{2\\zeta}$`, verify: p => near(nums(p.a)[0], g.k / Math.hypot(g.k - g.m * g.wn * g.wn, g.c * g.wn), 1e-9) || '倍率がちがう' };
         }
-        const z = r.pick(ZQ.concat(['0.01', '0.04'])), R = F.div(fr(1), F.mul(fr(2), D(z)));
+        const z = r.pick(ZQ.concat(['0.01', '0.04'])), R = F.div(fr(1), F.mul(fr(2), D(z)));   // ζ=0.1 は楽な形の例（O-2）
         return { q: `$\\zeta=${z}$ のばね・質量・ダンパーを、ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすった。振幅は、ゆっくりおし続けたときののび $\\frac{F_0}{k}$ の □ 倍`, a: `$${fx(R)}$`, key: `z${z}`, easyCheck: false,
           easy: `$\\frac{1}{2\\times${z}}$`, verify: p => near(nums(p.a)[0], 1 / Math.hypot(0, 2 * z), 1e-9) || '倍率がちがう' };
       },
@@ -942,19 +949,19 @@
       s3(r) {
         if (turn(r, '85s3', 2) === 0) {
           const g = gen85(r); if (!g) return null;
-          const A = r.pick(['0.1', '0.2', '0.05', '0.5']), F0 = F.mul(D(A), D(fmt(g.c * g.wn)));
+          const A = r.pick(['0.1', '0.2', '0.05', '0.4']), F0 = F.mul(D(A), D(fmt(g.c * g.wn)));
           if (!dec(F0) || (dec(F0).split('.')[1] || '').length > 2) return null;
-          return { q: `${spring(g.m, g.k)} のばねを、ちょうど $\\omega=\\omega_{\\mathrm n}$ で、力 $${fx(F0)}\\cos\\omega t$（N）でゆする。振幅を $${A}\\,\\mathrm{m}$ 以下にするダンパーの $c$ は、□ $\\mathrm{N\\cdot s/m}$ 以上`, a: `$${fmt(g.c)}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
+          return { q: `${spring(g.m, g.k)} のばねを、ちょうど $\\omega=\\omega_{\\mathrm n}$ で、力 $${fx(F0) === '1' ? '' : fx(F0)}\\cos\\omega t$（N）でゆする。振幅を $${A}\\,\\mathrm{m}$ 以下にするダンパーの $c$ は、□ $\\mathrm{N\\cdot s/m}$ 以上`, a: `$${fmt(g.c)}$`, key: `${g.m},${g.wn},${g.z}`, easyCheck: false,
             easy: `$\\frac{${fx(F0)}}{c\\times${g.wn}}=${A}$ より $c=\\frac{${fx(F0)}}{${A}\\times${g.wn}}$`, verify: p => near(F.val(F0) / Math.hypot(0, nums(p.a)[0] * g.wn), +A, 1e-9) || 'c がちがう' };
         }
-        const R = r.pick([2, 4, 5, 8, 10, 20, 25, 50]), z = F.div(fr(1), fr(2 * R));
+        const R = r.pick([2, 4, 10, 20, 25, 50]), z = F.div(fr(1), fr(2 * R));   // 5倍（ζ=0.1）は楽な形の例（O-2）
         if (!dec(z)) return null;
-        return { q: `ばね・質量・ダンパーを、ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすったら、ゆっくりおし続けたときののび $\\frac{F_0}{k}$ の $${R}$ 倍ゆれた。減衰比 $\\zeta$`, a: `$${dec(z)}$`, key: `R${R}`, easyCheck: false,
+        return { q: `ばね・質量・ダンパーを、ちょうど $\\omega=\\omega_{\\mathrm n}$ でゆすったら、ゆっくりおし続けたときののび $\\frac{F_0}{k}$ の $${R}$ 倍ゆれた。減衰比 $\\zeta$`, a: `$${dec(z)}$`, key: `z${dec(z)}`, easyCheck: false,   // ステップ2の「ζ から倍率」と逆の問題にしない（N-2）
           easy: `$\\frac{1}{2\\zeta}=${R}$`, verify: p => near(1 / (2 * nums(p.a)[0]), R, 1e-9) || 'ζ がちがう' };
       },
       // わな：ω=2ωn（ωn ではない。6-82）
       trap(r) {
-        const o = r.pick(T85), A = r.pick([0.1, 0.2, 0.5, 0.05]), F0 = +fmt(o.n * o.h * A);
+        const o = r.pick(T85), A = r.pick([0.3, 0.6, 0.15, 0.75]), F0 = +fmt(o.n * o.h * A);   // ステップ1〜3の答え（振幅・c・ζ）と重ねない（S-2・R2-10）
         if (F0 > 60 || !Number.isInteger(F0 * 10)) return null;
         return dest({ q: `ばね・質量・ダンパー（${spring(1, o.n * o.n, o.c)}）を、$\\omega=2\\omega_{\\mathrm n}$ で、力 $${fmt(F0)}\\cos\\omega t$（N）でゆすった。振幅は □ m`, a: `$${fmt(A)}$`, key: `t${o.n},${o.c},${fmt(F0)}`,
           verify: p => near(nums(p.a)[0], ampAt(1, o.n * o.n, o.c, F0, 2 * o.n), 2e-3) || '振幅がちがう' }, '6-85',
@@ -970,10 +977,13 @@
   // ω=1/√(LC) がきりのよい数になる (L, C)（10 mH・1 μF は楽な形の例なので出さない。O-2）
   const LCW = [[0.001, 1e-5, 1e4], [0.004, 2.5e-6, 1e4], [0.025, 4e-7, 1e4], [0.04, 2.5e-7, 1e4], [0.1, 1e-7, 1e4], [0.001, 4e-7, 5e4], [0.004, 1e-7, 5e4], [0.001, 1e-7, 1e5],
     [0.01, 4e-6, 5e3], [0.04, 1e-6, 5e3], [0.1, 1e-5, 1e3], [0.1, 1.6e-6, 2500], [0.04, 4e-6, 2500], [1, 1e-6, 1e3], [0.01, 1e-4, 1e3]];
+  // 6-86 で使う組（R2-13・S-4）：楽な形の例の $\sqrt{LC}=10^{-4}$（ω=10^4、1592 Hz）は出さない。答えの数がかさならないように、key は ω
+  const LCW86w = LCW.filter(x => x[2] === 5e4 || x[2] === 1e5).concat([[0.001, 2.5e-6, 2e4]]);   // 共振の角振動数（10 の累乗の計算）
+  const LCW86f = LCW.filter(x => x[2] === 1e3 || x[2] === 2500 || x[2] === 5e3).concat([[0.1, 2.5e-6, 2000], [0.025, 1e-5, 2000], [0.025, 2.5e-6, 4000], [0.01, 6.25e-6, 4000]]);   // 共振周波数（2π=6.28 でも整数がくいちがわない ω）
   const pfOf = (L, f, c4) => 1e12 / (c4 * f * f * L);   // 放送を選ぶ C（pF）
   M.add({
     id: '6-86', part: 6, chap: '6-13⑪ 例題7', stars: 1,
-    title: 'RLC の共振：$f=\\tfrac{1}{2\\pi\\sqrt{LC}}$、電流は $\\tfrac{V_0}{R}$、放送を選ぶ $C=\\tfrac{1}{(2\\pi f)^2L}$',
+    title: 'RLC の共振：$f=\\dfrac{1}{2\\pi\\sqrt{LC}}$、電流は $\\dfrac{V_0}{R}$、放送を選ぶ $C=\\dfrac{1}{(2\\pi f)^2L}$',
     mark: '$L$・$C$・$R$ と交流の電源、「共振周波数」「共振のときの電流」「放送を選ぶ $C$」。',
     futsu: ['電流の大きさ $\\dfrac{V_0}{\\sqrt{R^2+\\bigl(\\omega L-\\frac{1}{\\omega C}\\bigr)^2}}$', 'がいちばん大きい $\\omega$ を、', '分母を微分してさがす'],
     raku: ['$L=10\\,\\mathrm{mH}$、$C=1\\,\\mathrm{\\mu F}$：$\\sqrt{LC}=10^{-4}$', '$f=\\dfrac{10^4}{2\\pi}\\approx1592\\,\\mathrm{Hz}$', '$R=20\\,\\mathrm{\\Omega}$、$V_0=1\\,\\mathrm{V}$ なら $\\dfrac{1}{20}\\,\\mathrm{A}=50\\,\\mathrm{mA}$'],
@@ -986,20 +996,20 @@
       // 共振の角振動数・共振のときの電流
       s1(r) {
         if (turn(r, '86s1', 2) === 0) {
-          const [L, C, w] = r.pick(LCW);
-          return { q: `${rlc(L, C)} の RLC 回路の、共振の角振動数 $\\omega=□\\,\\mathrm{rad/s}$`, a: `$${w}$`, key: `${L},${C}`, easyCheck: false,
+          const [L, C, w] = r.pick(LCW86w);
+          return { q: `${rlc(L, C)} の RLC 回路の、共振の角振動数 $\\omega=□\\,\\mathrm{rad/s}$`, a: `$${w}$`, key: `w${w}`, easyCheck: false,
             easy: `$LC=${pow10(L * C)}$、$\\sqrt{LC}=${pow10(1 / w)}$`, verify: p => near(nums(p.a)[0] * nums(p.a)[0] * L * C, 1, 1e-9) || 'ωL=1/(ωC) にならない' };
         }
         const [L, C] = r.pick(LCW), V = r.pick([1, 2, 5, 10]), R = r.pick([5, 10, 20, 40, 50, 100]), I = F.make(V, R);
-        if ((V === 1 && R === 20) || !dec(I)) return null;
-        return { q: `${rlc(L, C, R)} の回路に、$V_0=${V}\\,\\mathrm{V}$ の交流をつなぐ。共振のときの電流（いちばん大きい値）は □ A`, a: `$${dec(I)}$`, key: `${L},${C},${V},${R}`, easyCheck: false,
+        if ((V === 1 && R === 20) || !dec(I) || (L === 0.01 && C === 1e-6)) return null;   // 楽な形の例（O-2）
+        return { q: `${rlc(L, C, R)} の回路に、$V_0=${V}\\,\\mathrm{V}$ の交流をつなぐ。共振のときの電流（いちばん大きい値）は □ A`, a: `$${dec(I)}$`, key: `i${dec(I)}`, easyCheck: false,   // 同じ答えを2回出さない（S-4）
           easy: `$\\frac{V_0}{R}=\\frac{${V}}{${R}}$`, verify: p => { const w = 1 / Math.sqrt(L * C); return near(nums(p.a)[0], V / Math.hypot(R, w * L - 1 / (w * C)), 1e-9) || '電流がちがう'; } };
       },
       // 共振周波数（2π=6.28、整数で）
       s2(r) {
-        const [L, C, w] = r.pick(LCW), f = agree(F.div(fr(w), D('6.28')), w / (2 * Math.PI), 0);
+        const [L, C, w] = r.pick(LCW86f), f = agree(F.div(fr(w), D('6.28')), w / (2 * Math.PI), 0);
         if (f == null) return null;
-        return { q: `${rlc(L, C)} の RLC 回路の共振周波数 $f\\approx□\\,\\mathrm{Hz}$（$2\\pi=6.28$ として、整数で）`, a: `$${f}$`, key: `${L},${C}`, easyCheck: false,
+        return { q: `${rlc(L, C)} の RLC 回路の共振周波数 $f\\approx□\\,\\mathrm{Hz}$（$2\\pi=6.28$ として、整数で）`, a: `$${f}$`, key: `w${w}`, easyCheck: false,
           easy: `$\\sqrt{LC}=${pow10(1 / w)}$、$\\frac{1}{6.28\\times${pow10(1 / w)}}$`, verify: p => Math.abs(nums(p.a)[0] - 1 / (2 * Math.PI * Math.sqrt(L * C))) < 0.6 || '周波数がちがう' };
       },
       // 見かけがちがう：放送を選ぶ C（4π²=39.48）・C を変えると周波数は何倍
@@ -1157,10 +1167,10 @@
             table: { head: ['$t$〔分〕', '$h_1$〔cm〕', '$h_2$〔cm〕', '差'], rows: [['0', String(g.h1), String(g.h2), dif(0)], [fx(dt), fx(rows[1][0]), fx(rows[1][1]), dif(1)], [fx(F.mul(dt, fr(2))), i === 0 ? '（ア）' : '', i === 1 ? '（ア）' : '', '']] },
             easy: `今の行の差 $${dif(1)}$ で、変わる量 $${g.a}\\times${dif(1)}\\times${g.dt}$`, verify: p => valIs(p, tankClosed(g, 2, i)) };
         }
-        const [K, b] = r.pick(SP87), x0 = r.pick(['0.1', '0.2', '0.05']), dt = '0.1';
+        const [K, b] = r.pick(SP87), x0 = r.pick(['0.1', '0.2', '0.05', '0.5', '1']), dt = '0.1';
         if (K === 16 && b === '0.8' && x0 === '0.1') return null;   // 教科書の例題2
         const rows = eulSpring(K, b, x0, dt, 2), ans = rows[2][0];
-        if (decs(ans) > 6) return null;
+        if (decs(ans) > 4) return null;   // けたの軽い答えだけ（R2-31）
         return { q: `$\\ddot x=${sum([cf(-K, 'x'), cf(fmt(-b), '\\dot x')])}$ を、速度を先に進めるオイラー法（$\\Delta t=${dt}$）で進めた表です。（ア）に入る位置 □ m`, a: `$${fx(ans)}$`, key: `x${K},${b},${x0},${dt}`, easyCheck: false,
           table: { head: ['$t$〔s〕', '$x$〔m〕', '$v$〔m/s〕', '$a$〔m/s$^2$〕'], rows: [['0', x0, '0', mx(rows[0][2])], [dt, fx(rows[1][0]), mx(rows[1][1]), mx(rows[1][2])], ['0.2', '（ア）', '', '']] },   // 負の数は $…$ に（マイナスの記号で）
           easy: `$v=${fx(rows[1][1])}+${par(rows[1][2])}\\times${dt}=${fx(rows[2][1])}$、新しい $v$ で $x=${fx(rows[1][0])}+${par(rows[2][1])}\\times${dt}$`,
@@ -1286,11 +1296,11 @@
     return sum([cf(u, trig('cos', g.w1)), cf(i ? F.mul(w, fr(-1)) : w, trig('cos', g.w2))]);
   }
   // 質量がちがう台車（和と差に分かれない。わな）：ω が整数になる組
-  const T89 = [];
-  [[2, 3, 24, 6], [3, 2, 24, 6], [2, 3, 96, 24], [3, 2, 96, 24]].forEach(([a, b, k, K]) => [0.5, 1, 2].forEach(s => T89.push([a * s, b * s, k * s, K * s])));
+  // 質量のちがう台車（m1、m2、k、K）。比のちがう組だけ（何倍かしただけの組は、答えも同じ。S-2・R2-17）。小さいほうのモードの ω は 3・4・5・3・4・2
+  const T89 = [[2, 3, 24, 6], [1, 2, 28, 6], [1, 2, 40, 30], [1, 3, 21, 12], [1, 3, 36, 30], [1, 4, 12, 8]];
   M.add({
     id: '6-89', part: 6, chap: '6-14⑥ 例題6', stars: 1,
-    title: '振動モード：いっしょ $\\sqrt{k/m}$、反対 $\\sqrt{(k+2K)/m}$。$x_1=\\tfrac{u+w}{2}$、$x_2=\\tfrac{u-w}{2}$',
+    title: '振動モード：いっしょ $\\sqrt{k/m}$、反対 $\\sqrt{(k+2K)/m}$。$x_1=\\dfrac{u+w}{2}$、$x_2=\\dfrac{u-w}{2}$',
     mark: '同じ台車2つ・外側のばね2本・つなぎのばね、「モードの角振動数」「$x_1$、$x_2$ の式」。',
     futsu: ['2つの運動方程式を4つの列（$x_1$、$x_2$、$v_1$、$v_2$）の', '表計算で進め、グラフから', 'ゆれの周期を読む'],
     raku: ['$2\\,\\mathrm{kg}$・$k=200$・$K=100$', '$\\omega_1=\\sqrt{100}=10$、$\\omega_2=\\sqrt{\\dfrac{400}{2}}=\\sqrt{200}$', 'はじめ $0.05$・$0.01$ → $u=0.06\\cos10t$、$w=0.04\\cos\\sqrt{200}\\,t$', '$x_1=0.03\\cos10t+0.02\\cos\\sqrt{200}\\,t$'],
@@ -1328,11 +1338,11 @@
           easy: kind === 0 ? `$u=w=${fx(X)}$ を大きさとする $\\cos$。$x_2=\\frac{u-w}{2}$` : kind === 1 ? '差 $w$ はずっと0。1次モードだけ' : '和 $u$ はずっと0。2次モードだけ',
           verify: p => sysIs(p, f89(g.m, g.k, g.K), [F.val(X1), F.val(X2), 0, 0], i, 1 / g.w1) };
       },
-      // わな：質量がちがう台車（和と差に分かれない。楽な形なし）
+      // わな：質量がちがう台車（和と差に分かれない。わざなし）
       trap(r) {
-        const [m1, m2, k, K] = r.pick(T89);
+        const [a1, a2, k, K] = r.pick(T89), [m1, m2] = r.chance(0.5) ? [a1, a2] : [a2, a1];
         const A = (k + K) / m1 + (k + K) / m2, B = ((k + K) ** 2 - K * K) / (m1 * m2), w = Math.sqrt((A - Math.sqrt(A * A - 4 * B)) / 2);
-        return dest({ q: `$m_1=${fmt(m1)}\\,\\mathrm{kg}$ と $m_2=${fmt(m2)}\\,\\mathrm{kg}$ の台車を、外側のばね2本（$k=${fmt(k)}\\,\\mathrm{N/m}$）とまん中のばね（$K=${fmt(K)}\\,\\mathrm{N/m}$）でつないだ。小さいほうのモードの角振動数 $\\omega=□\\,\\mathrm{rad/s}$`, a: `$${Math.round(w)}$`, key: `t${m1},${m2},${k},${K}`,
+        return dest({ q: `$m_1=${fmt(m1)}\\,\\mathrm{kg}$ と $m_2=${fmt(m2)}\\,\\mathrm{kg}$ の台車を、外側のばね2本（$k=${fmt(k)}\\,\\mathrm{N/m}$）とまん中のばね（$K=${fmt(K)}\\,\\mathrm{N/m}$）でつないだ。小さいほうのモードの角振動数 $\\omega=□\\,\\mathrm{rad/s}$`, a: `$${Math.round(w)}$`, key: `t${Math.round(w)}`,
           verify: p => { const v = nums(p.a)[0], d = (k + K - m1 * v * v) * (k + K - m2 * v * v) - K * K, w2 = Math.sqrt((A + Math.sqrt(A * A - 4 * B)) / 2); return (near(d, 0, 1e-9) && v < w2) || 'モードの角振動数でない'; } }, '6-89',
           '質量がちがうので、たしてもひいても $x_1$ と $x_2$ が残る（和と差に分かれない）。$\\omega_1=\\sqrt{\\frac km}$ の形は使えない（係数の表の行列で解く。第7巻）');
       },
@@ -1360,7 +1370,7 @@
   const NAME90 = { m: '質量', c: 'ダンパーの減衰係数', k: 'ばね定数', x: '位置', v: '速度', F: '力', L: 'インダクタンス', R: '抵抗', '\\frac{1}{C}': '静電容量の逆数', q: '電荷', i: '電流', E: '電源の電圧' };
   M.add({
     id: '6-90', part: 6, chap: '6-15③④ 例題4', stars: 1,
-    title: '相似の表：$m\\leftrightarrow L$、$c\\leftrightarrow R$、$k\\leftrightarrow\\tfrac1C$。$\\zeta$ が同じなら、ゆれ方の形は同じ',
+    title: '相似の表：$m\\leftrightarrow L$、$c\\leftrightarrow R$、$k\\leftrightarrow\\dfrac1C$。$\\zeta$ が同じなら、ゆれ方の形は同じ',
     mark: 'ばね・質量・ダンパーと RLC 回路の数をくらべる、「ゆれ方の形」「対応する量」「何倍速い」。',
     futsu: ['ばねの式と回路の式を、それぞれ特性方程式から解き、', '2つの答えのグラフをかいて', '形をくらべる'],
     raku: ['ばね $0.5\\,\\mathrm{kg}$・$8\\,\\mathrm{N/m}$・$0.4\\,\\mathrm{N\\cdot s/m}$：$\\omega_{\\mathrm n}=4$、$\\zeta=0.1$', '回路 $10\\,\\mathrm{mH}$・$1\\,\\mathrm{\\mu F}$・$20\\,\\mathrm{\\Omega}$：$\\omega_{\\mathrm n}=10^4$、$\\zeta=0.1$', '$\\zeta$ が同じ → 形は同じ。回路は $\\dfrac{10^4}{4}=2500$ 倍速い'],
@@ -1373,7 +1383,7 @@
       // ゆれ方の形は同じか・対応する量
       s1(r) {
         if (turn(r, '90s1', 2) === 0) {
-          const same = r.chance(0.5), g = gen90(r, { same }); if (!g) return null;
+          const same = turn(r, '90same', 2) === 0, g = gen90(r, { same }); if (!g) return null;   // 「同じ」と「ちがう」を順に（S-4・R2-29）
           return { q: `ばね・質量・ダンパー（${spring(g.m, g.k, g.c)}）と、RLC 回路（${rlc(g.L, g.C, g.R)}）のゆれ方の形は（同じ・ちがう）`, a: same ? '同じ' : 'ちがう', key: g.key, easyCheck: false,
             easy: `ばね $\\zeta=\\frac{${fmt(g.c)}}{2\\sqrt{${fmt(g.m)}\\times${fmt(g.k)}}}=${g.z}$、回路 $\\zeta=\\frac{${fmt(g.R)}}{2}\\sqrt{\\frac CL}=${g.zr}$`,
             verify: p => { const zs = g.c / (2 * Math.sqrt(g.m * g.k)), ze = g.R / 2 * Math.sqrt(g.C / g.L); return p.a === (near(zs, ze, 1e-9) ? '同じ' : 'ちがう') || `ζ は ${zs} と ${ze}`; } };
@@ -1432,7 +1442,7 @@
       if (!dec(B) || decs(B) > 1 || H >= h0) continue;
       if ((tau === 4 && h0 === 40) || (tau === 2 && h0 === 30)) continue;   // 楽な形の例・教科書のじぶんでとこう（O-2）
       const E = ex(fr(-1, tau)), ans = H ? `(${sum([String(H), cf(B, 't')])})${E}` : cf(B, 't' + E);
-      return { tau, h0, H, B, E, ans, key: `${tau},${h0},${H}` };
+      return { tau, h0, H, B, E, ans, key: `${tau}` };   // 式は τ だけで決まる（同じ式を、はじめの水位や名前だけかえて出さない。S-2・R2-15）
     }
     return null;
   }
@@ -1452,7 +1462,7 @@
   }
   M.add({
     id: '6-97', part: 6, chap: '6-14⑦ 例題7', stars: 1,
-    title: '直列の水そう（消去法）：$h_2=\\tfrac{h_0}{\\tau}\\,te^{-t/\\tau}$、いちばん高いのは $t=\\tau$',
+    title: '直列の水そう（消去法）：$h_2=\\dfrac{h_0}{\\tau}\\,te^{-t/\\tau}$、いちばん高いのは $t=\\tau$',
     mark: '上の水そうから下の水そうへ落ち、下から外へ出る（2つの時定数が同じ）、「下の水位の式」「いちばん高くなる時刻」。',
     futsu: ['下の式を $h_1=\\tau\\dot h_2+h_2$ にして上の式に入れ、', '$\\tau^2\\ddot h_2+2\\tau\\dot h_2+h_2=0$ の重解 $s=-\\dfrac1\\tau$ から', '$(A+Bt)e^{-t/\\tau}$ の $A$、$B$ を決める'],
     raku: ['$\\tau=4$ 分、はじめ上 $40$、下 $0$', '$h_2=\\dfrac{40}{4}\\,te^{-t/4}=10te^{-t/4}$', 'いちばん高いのは4分後、$40e^{-1}\\approx14.7\\,\\mathrm{cm}$'],
@@ -1472,12 +1482,12 @@
         const g = gen97(r); if (!g) return null;
         const mx = sysMax(f97(g.tau), [g.h0, 0], 1, g.tau);
         if (turn(r, '97s2', 2) === 0) {
-          return { q: `${eqs97(g.tau)}（cm、分）で、はじめ $h_1=${g.h0}$、$h_2=0$。下の水位がいちばん高くなるのは □ 分後`, a: `$${g.tau}$`, key: g.key, easyCheck: false,
+          return { q: `${eqs97(g.tau)}（cm、分）で、はじめ $h_1=${g.h0}$、$h_2=0$。下の水位がいちばん高くなるのは □ 分後`, a: `$${g.tau}$`, key: `m${g.key}`, easyCheck: false,
             easy: `$h_2=${g.ans}$。$\\dot h_2=0$ は $t=\\tau$`, verify: p => near(nums(p.a)[0], mx.t, 1e-4) || `いちばん高いのは ${mx.t}` };
         }
         const H = agree(F.mul(fr(g.h0), D('0.368')), g.h0 * Math.exp(-1), 1);
-        if (H == null) return null;
-        return { q: `${eqs97(g.tau)}（cm、分）で、はじめ $h_1=${g.h0}$、$h_2=0$。下の水位のいちばん高い値は約 □ cm（$e^{-1}=0.368$ として、小数第1位まで）`, a: `$${H}$`, key: g.key, easyCheck: false,
+        if (H == null || g.h0 === 40) return null;   // いちばん高い値は h0 だけで決まる。楽な形の例（40e^{-1}≈14.7）と同じ答えにしない（O-2）
+        return { q: `${eqs97(g.tau)}（cm、分）で、はじめ $h_1=${g.h0}$、$h_2=0$。下の水位のいちばん高い値は約 □ cm（$e^{-1}=0.368$ として、小数第1位まで）`, a: `$${H}$`, key: `m${g.key}`, easyCheck: false,
           easy: `$t=${g.tau}$ で $${g.h0}e^{-1}=${g.h0}\\times0.368$`, verify: p => Math.abs(nums(p.a)[0] - mx.v) < 0.051 || `いちばん高い値は ${mx.v}` };
       },
       // 見かけがちがう：下にもはじめ水がある・薬（胃腸と血液。同じ速さ）
@@ -1488,7 +1498,7 @@
             easy: `$(A+Bt)e^{-t/${g.tau}}$、$A=${g.H}$、$B=\\dot h_2(0)+\\frac{A}{${g.tau}}=\\frac{${g.h0}-${g.H}}{${g.tau}}+\\frac{${g.H}}{${g.tau}}$`, verify: p => sysIs(p, f97(g.tau), [g.h0, g.H], 1, g.tau) };
         }
         const rho = r.pick(['0.5', '0.25', '0.2', '1']), G0 = r.pick([100, 200, 300, 400, 500]), B = F.mul(D(rho), fr(G0)), E = ex(F.mul(D(rho), fr(-1)), { dec: true });
-        return { q: `飲み薬の、胃腸の量 $G$ と血液の量 $B$（mg）が $\\dot G=-${rho === '1' ? '' : rho}G$、$\\dot B=${rho === '1' ? '' : rho}G-${rho === '1' ? '' : rho}B$（$t$ は時間）にしたがい、はじめ $G=${G0}$、$B=0$。$B$ を $t$ の式で`, a: `$${cf(B, 't' + E)}$`, key: `g${rho},${G0}`, easyCheck: false,
+        return { q: `飲み薬の、胃腸の量 $G$ と血液の量 $B$（mg）が $\\dot G=-${rho === '1' ? '' : rho}G$、$\\dot B=${rho === '1' ? '' : rho}G-${rho === '1' ? '' : rho}B$（$t$ は時間）にしたがい、はじめ $G=${G0}$、$B=0$。$B$ を $t$ の式で`, a: `$${cf(B, 't' + E)}$`, key: fmt(1 / +rho), easyCheck: false,   // 水そうの式と同じ key（τ=1/ρ）
           easy: `2つの速さが同じなので重解。$B=${fx(B)}t${E}$（$${rho}\\times${G0}$）`, verify: p => sysIs(p, f97(1 / +rho), [G0, 0], 1, 1 / +rho) };
       },
       // わな：時定数がちがう（親と子。6-98）
@@ -1511,17 +1521,17 @@
       const ratio = F.val(F.div(b, a)); if (opt.peak && ratio !== 2 && ratio !== 0.5) continue;
       const N0 = r.pick([1000, 600, 800, 400, 1200, 2000, 200, 900]), C = F.div(F.mul(a, fr(N0)), F.sub(b, a));
       if (C[1] !== 1) continue;
-      if ((F.val(a) === 0.5 && F.val(b) === 1 && N0 === 1000) || (F.val(a) === 1 && F.val(b) === 0.5 && N0 === 200)) continue;   // 楽な形の例・教科書のじぶんでとこう（O-2）
-      const Ea = ex(F.mul(a, fr(-1))), Eb = ex(F.mul(b, fr(-1))), ans = C[0] > 0 ? `${C[0]}(${Ea}-${Eb})` : `${-C[0]}(${Eb}-${Ea})`;
+      if ((F.val(a) === 0.5 && F.val(b) === 1) || (F.val(a) === 1 && F.val(b) === 0.5 && N0 === 200)) continue;   // 楽な形の例の式（はじめの数によらず。O-2・R2-3）・教科書のじぶんでとこう
+      const Ea = ex(F.mul(a, fr(-1)), { frac: true }), Eb = ex(F.mul(b, fr(-1)), { frac: true }), ans = C[0] > 0 ? `${C[0]}(${Ea}-${Eb})` : `${-C[0]}(${Eb}-${Ea})`;
       // いちばん多い時刻（ln2 の何倍か）と値
       const tl = ratio === 2 ? F.div(fr(1), a) : ratio === 0.5 ? F.div(fr(2), a) : null, Nm = ratio === 2 ? N0 / 4 : ratio === 0.5 ? N0 / 2 : null;
-      return { a, b, N0, C, ans, tl, Nm, key: `${fx(a)},${fx(b)},${N0}` };
+      return { a, b, N0, C, ans, tl, Nm, key: `${fx(a)},${fx(b)}` };   // key は式だけ（同じ式を、はじめの数や名前だけかえて出さない。S-2・R2-15）
     }
     return null;
   }
   M.add({
     id: '6-98', part: 6, chap: '6-14⑦ 例題8', stars: 1,
-    title: '親と子（消去法）：$N_2=\\tfrac{aN_0}{b-a}(e^{-at}-e^{-bt})$',
+    title: '親と子（消去法）：$N_2=\\dfrac{aN_0}{b-a}(e^{-at}-e^{-bt})$',
     mark: '親がこわれて子になり、子もこわれる（2つの速さがちがう）、「子の数の式」「いちばん多くなる時刻と数」。',
     futsu: ['子の式を $N_1=2(\\dot N_2+N_2)$ にして親の式に入れ、', '$2\\ddot N_2+3\\dot N_2+N_2=0$ を特性方程式で解き、', '$N_2(0)=0$、$\\dot N_2(0)$ で $A$、$B$ を決める'],
     raku: ['$\\dot N_1=-N_1/2$、$\\dot N_2=N_1/2-N_2$、$N_0=1000$', '$\\tfrac{aN_0}{b-a}=\\tfrac{0.5\\times1000}{1-0.5}=1000$', '$N_2=1000(e^{-t/2}-e^{-t})$', '$e^{-t/2}=\\tfrac12$ で $t=2\\ln2$、$N_2=1000\\bigl(\\tfrac12-\\tfrac14\\bigr)=250$'],
@@ -1541,9 +1551,11 @@
         const g = gen98(r, { peak: true }); if (!g) return null;
         const mx = sysMax(f98(F.val(g.a), F.val(g.b)), [g.N0, 0], 1, 1 / Math.min(F.val(g.a), F.val(g.b)));
         if (turn(r, '98s2', 2) === 0) {
+          if (F.val(g.tl) === 2) return null;   // 楽な形の例の答え 2ln2（O-2・R2-3）
           return { q: `${eqs98(g.a, g.b)}（$t$ は時間）で、はじめ $N_1=${g.N0}$、$N_2=0$。子がいちばん多くなる時刻（$\\ln$ を残した形で）`, a: `$${cf(g.tl, '\\ln2')}$`, key: g.key, easyCheck: false,
             easy: `$N_2=${g.ans}$。$\\dot N_2=0$ から $${cf(g.a, ex(F.mul(g.a, fr(-1))))}=${cf(g.b, ex(F.mul(g.b, fr(-1))))}$`, verify: p => near(ev(strip(p.a)), mx.t, 1e-4) || `いちばん多いのは ${mx.t}` };
         }
+        if (g.Nm === 250) return null;   // 楽な形の例の答え（O-2）
         return { q: `${eqs98(g.a, g.b)}（$t$ は時間）で、はじめ $N_1=${g.N0}$、$N_2=0$。子のいちばん多い数 □`, a: `$${g.Nm}$`, key: g.key, easyCheck: false,
           easy: `$N_2=${g.ans}$。$\\dot N_2=0$ のとき、速いほうの $e$ はおそいほうの2乗`, verify: p => near(nums(p.a)[0], mx.v, 1e-5) || `いちばん多い数は ${mx.v}` };
       },
@@ -1551,10 +1563,11 @@
       s3(r) {
         const g = gen98(r, { peak: turn(r, '98s3', 2) === 1 }); if (!g) return null;
         const q0 = `飲み薬の、胃腸の量 $G$ と血液の量 $B$（mg）が ${eqs98(g.a, g.b, 'G', 'B')}（$t$ は時間）にしたがい、はじめ $G=${g.N0}$、$B=0$。`, f = f98(F.val(g.a), F.val(g.b));
-        if (!g.Nm) return { q: q0 + '$B$ を $t$ の式で', a: `$${g.ans}$`, key: `g${g.key}`, easyCheck: false,
+        if (!g.Nm) return { q: q0 + '$B$ を $t$ の式で', a: `$${g.ans}$`, key: g.key, easyCheck: false,
           easy: `$s=-${fx(g.a)}$、$-${fx(g.b)}$。$A=\\frac{${fx(g.a)}\\times${g.N0}}{${fx(g.b)}-${fx(g.a)}}$`, verify: p => sysIs(p, f, [g.N0, 0], 1, 1 / F.val(g.a)) };
         const mx = sysMax(f, [g.N0, 0], 1, 1 / Math.min(F.val(g.a), F.val(g.b)));
-        return { q: q0 + '血液の薬がいちばん多いときの量 □ mg', a: `$${g.Nm}$`, key: `g${g.key}`, easyCheck: false,
+        if (g.Nm === 250) return null;   // 楽な形の例の答え（O-2）
+        return { q: q0 + '血液の薬がいちばん多いときの量 □ mg', a: `$${g.Nm}$`, key: g.key, easyCheck: false,
           easy: `$B=${g.ans}$。$\\dot B=0$ から時刻を出して入れる`, verify: p => near(nums(p.a)[0], mx.v, 1e-5) || `いちばん多い量は ${mx.v}` };
       },
       // わな：2つの速さが同じ（重解。6-97）
@@ -1577,10 +1590,10 @@
     return wn / (cross(pk.w, 3 * wn) - cross(1e-9 * wn, pk.w));
   }
   const qTol = z => 0.15 * z + 1e-4;   // Q≈1/(2ζ) のずれは ζ=0.1 で約1%、ζ=0.125 で約1.6%（ζ が小さいほど小さい）
-  const ZQ99 = ['0.01', '0.02', '0.025', '0.05', '0.1', '0.125'];
+  const ZQ99 = ['0.01', '0.02', '0.025', '0.05', '0.125', '0.04', '0.005', '0.0125'];   // 楽な形の例の ζ=0.1（Q≈5）は出さない（O-2・R2-22）
   M.add({
     id: '6-99', part: 6, chap: '6-13⑩', stars: 1,
-    title: 'Q 値＝$\\tfrac{\\omega_{\\mathrm n}}{\\text{半値幅}}\\approx\\tfrac{1}{2\\zeta}$',
+    title: 'Q 値＝$\\dfrac{\\omega_{\\mathrm n}}{\\text{半値幅}}\\approx\\dfrac{1}{2\\zeta}$',
     mark: '共振曲線の山の「鋭さ」、「半値幅」「Q 値」。',
     futsu: ['共振曲線をかいて、山の高さの0.707倍の高さで', '曲線と交わる2つの $\\omega$ を読み、', 'そのはばで $\\omega_{\\mathrm n}$ をわる'],
     raku: ['$\\zeta=0.1$、$\\omega_{\\mathrm n}=4$：はば約0.81', '$Q=\\dfrac{4}{0.81}\\approx4.9$', '$\\dfrac{1}{2\\zeta}=\\dfrac{1}{0.2}=5$ とほぼ同じ'],
@@ -1592,24 +1605,23 @@
     steps: {
       // ωn と半値幅から Q・Q と ωn から半値幅
       s1(r) {
-        const Q = r.pick([4, 5, 8, 10, 20, 25, 40, 50]), wn = r.pick([2, 4, 5, 10, 20, 100, 1000]), w = F.make(wn, Q);
-        if (!dec(w) || decs(w) > 2 || (wn === 4 && Q === 5)) return null;
+        const Q = r.pick([4, 8, 10, 20, 25, 40, 50]), wn = r.pick([2, 4, 5, 10, 20, 100, 1000]), w = F.make(wn, Q);   // Q=5 は楽な形の例の答え（O-2・R2-22）
+        if (!dec(w) || decs(w) > 2) return null;
         const head = `共振曲線の山が $\\omega_{\\mathrm n}=${wn}\\,\\mathrm{rad/s}$ のあたりにある。`;
-        if (turn(r, '99s1', 2) === 0) return { q: head + `半値幅が $${fx(w)}\\,\\mathrm{rad/s}$ のとき、Q 値 □`, a: `$${Q}$`, key: `${wn},${Q}`, easyCheck: false,
+        if (turn(r, '99s1', 2) === 0) return { q: head + `半値幅が $${fx(w)}\\,\\mathrm{rad/s}$ のとき、Q 値 □`, a: `$${Q}$`, key: `Q${Q}`, easyCheck: false,   // 同じ Q の答えを2回出さない（S-4）
           easy: `$\\frac{${wn}}{${fx(w)}}$`, verify: p => near(nums(p.a)[0] * F.val(w), wn, 1e-9) || 'Q×半値幅が ωn にならない' };
-        return { q: head + `Q 値が $${Q}$ のとき、半値幅 □ $\\mathrm{rad/s}$`, a: `$${fx(w)}$`, key: `${wn},${Q}`, easyCheck: false,
+        return { q: head + `Q 値が $${Q}$ のとき、半値幅 □ $\\mathrm{rad/s}$`, a: `$${fx(w)}$`, key: `Q${Q}`, easyCheck: false,
           easy: `$\\frac{${wn}}{${Q}}$`, verify: p => near(nums(p.a)[0] * Q, wn, 1e-9) || 'Q×半値幅が ωn にならない' };
       },
       // ζ から（m・k・c から）Q≈1/(2ζ)
       s2(r) {
         const z = r.pick(ZQ99), Q = fx(F.div(fr(1), F.mul(fr(2), D(z))));
         if (turn(r, '99s2', 2) === 0) {
-          if (z === '0.1') return null;   // 楽な形の例（ζ=0.1 → 5。O-2）
           return { q: `減衰比 $\\zeta=${z}$ のばね・質量・ダンパーを、$\\omega_{\\mathrm n}$ のあたりでゆする。共振の Q 値はおよそ □`, a: `$${Q}$`, key: `z${z}`, easyCheck: false,
             easy: `$Q\\approx\\frac{1}{2\\times${z}}$`, verify: p => Math.abs(nums(p.a)[0] / qNum(1, +z) - 1) < qTol(+z) || `Q は ${qNum(1, +z)}` };
         }
         const [m, wn] = r.pick([[1, 2], [1, 4], [1, 5], [1, 10], [2, 5], [2, 10], [0.5, 10], [4, 5]]), k = m * wn * wn, c = +fmt(2 * +z * m * wn);
-        if (!dec(D(String(c))) || (z === '0.1' && wn === 4)) return null;
+        if (!dec(D(String(c)))) return null;
         return { q: `ばね・質量・ダンパー（${spring(m, k, c)}）の、共振の Q 値はおよそ □`, a: `$${Q}$`, key: `z${z}`, easyCheck: false,
           easy: `$\\zeta=\\frac{${fmt(c)}}{2\\sqrt{${fmt(m)}\\times${fmt(k)}}}=${z}$、$Q\\approx\\frac{1}{2\\zeta}$`, verify: p => Math.abs(nums(p.a)[0] / qNum(wn, c / (2 * Math.sqrt(m * k))) - 1) < qTol(+z) || 'Q がちがう' };
       },
@@ -1618,12 +1630,12 @@
         if (turn(r, '99s3', 2) === 0) {
           const [L, C, w] = r.pick(LCW), z = r.pick(ZQ99), R = +fmt(2 * +z * L * w);
           if (!dec(D(String(R))) || decs(D(String(R))) > 2) return null;
-          return { q: `RLC 回路（${rlc(L, C, R)}）の共振の Q 値はおよそ □`, a: `$${fx(F.div(fr(1), F.mul(fr(2), D(z))))}$`, key: `r${L},${C},${z}`, easyCheck: false,
+          return { q: `RLC 回路（${rlc(L, C, R)}）の共振の Q 値はおよそ □`, a: `$${fx(F.div(fr(1), F.mul(fr(2), D(z))))}$`, key: `z${z}`, easyCheck: false,   // ステップ2と同じ Q の答えにしない
             easy: `$\\zeta=\\frac R2\\sqrt{\\frac CL}=${z}$、$Q\\approx\\frac{1}{2\\zeta}$`, verify: p => Math.abs(nums(p.a)[0] / qNum(w, R / 2 * Math.sqrt(C / L)) - 1) < qTol(+z) || 'Q がちがう' };
         }
         const Q = r.pick([4, 10, 20, 25, 50, 40]), z = F.make(1, 2 * Q);   // 5（ζ=0.1）は楽な形の例なので出さない（O-2）
         if (!dec(z)) return null;
-        return { q: `ラジオの同調の回路で、共振の Q 値をおよそ $${Q}$ にしたい。減衰比 $\\zeta$ はおよそ □`, a: `$${fx(z)}$`, key: `q${Q}`, easyCheck: false,
+        return { q: `ラジオの同調の回路で、共振の Q 値をおよそ $${Q}$ にしたい。減衰比 $\\zeta$ はおよそ □`, a: `$${fx(z)}$`, key: `z${fx(z)}`, easyCheck: false,   // ステップ2の「ζ から Q」と逆の問題にしない（N-2）
           easy: `$\\frac{1}{2\\zeta}=${Q}$`, verify: p => Math.abs(qNum(1, nums(p.a)[0]) / Q - 1) < qTol(1 / (2 * Q)) || 'Q がちがう' };
       },
       // わな：いちばん大きくゆれる ω（Q 値ではない。6-84）
