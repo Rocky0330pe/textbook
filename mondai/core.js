@@ -147,9 +147,19 @@
     const r = M.rng(seed);
     const seen = new Set();
     const res = {};
+    // 第6巻から：わなの答えは、同じ見開きのステップ3の答えと重ねない（S-2・第40回。よけられないときはそのまま）
+    const vol = +String(id).split('-')[0], na = a => String(a == null ? '' : a).replace(/[\s$]|\\[,;! ]/g, '');
     M.STEPS.forEach(s => {
       const n = (opts.counts && opts.counts[s] != null) ? opts.counts[s] : def.counts[s];
-      res[s] = M.makeStep(id, s, n, r, seen);
+      if (s === 'trap' && vol >= 6 && res.s3 && res.s3.length) {
+        const s3a = new Set(res.s3.map(p => na(p.a))), out = [];
+        for (let k = 0; out.length < n && k < n * 8; k++) {
+          const got = M.makeStep(id, s, 1, r, seen);
+          if (!got.length) break;
+          if (!s3a.has(na(got[0].a)) || k >= n * 6) out.push(got[0]);
+        }
+        res[s] = out;
+      } else res[s] = M.makeStep(id, s, n, r, seen);
     });
     return res;
   };
