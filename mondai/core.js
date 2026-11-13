@@ -340,7 +340,9 @@
           const grid = cells.map(r => Array.from({ length: nc }, (_, k) => `<span class="mcell${bar.includes(k) && k > 0 ? ' mbar-l' : ''}">${r[k] || ''}</span>`).join('')).join('');
           const g = `<span class="mgrid" style="grid-template-columns:repeat(${nc},auto)">${grid}</span>`;
           const D = { pmatrix: ['(', ')'], bmatrix: ['[', ']'], vmatrix: ['|', '|'], Bmatrix: ['{', '}'] }[env];
-          return `<span class="mmat">${D ? `<span class="mmd">${D[0]}</span>` : ''}${g}${D ? `<span class="mmd">${D[1]}</span>` : ''}</span>`;
+          // ( ) [ ] | | は、字でなく線でかく（行が3つ以上でも、かっこが行列の高さにのびるように。第7巻 組a の要望）
+          const dd = (k, side) => /^[pbv]matrix$/.test(env) ? `<span class="mmd mmd-${env[0]} mmd-${side}"></span>` : `<span class="mmd">${D[k]}</span>`;
+          return `<span class="mmat">${D ? dd(0, 'l') : ''}${g}${D ? dd(1, 'r') : ''}</span>`;
         }
         if (name === 'end') { raw(); return ''; }
         if (name === 'dot' || name === 'ddot') return `<span class="m${name}">${atom()}</span>`;
@@ -827,7 +829,9 @@
   // 問題に出す表とプログラム（第6巻から。第39回）
   //   p.table = { head: ['$t$', '$x$', …], rows: [['0', '1.00', …], …] }（文字は $…$ の式も書ける。□ は欄）
   //   p.code = 'x = 1\nfor k in range(3):\n    x = 2 * x'（複数行のプログラム。等幅でそのまま）
-  M.tableHTML = (t, opt) => `<table class="qtab">${t.head ? `<tr>${t.head.map(c => `<th>${M.toHTML(String(c), opt)}</th>`).join('')}</tr>` : ''}${t.rows.map(r => `<tr>${r.map(c => `<td>${M.toHTML(String(c), opt)}</td>`).join('')}</tr>`).join('')}</table>`;
+  //   表の数だけのセルは式の字に（「0.2」と「−3.2」で字体がちがわないように。第6巻 R2-31）
+  const cellHTML = (c, opt) => { c = String(c); return M.toHTML(/^\s*[-−]?\d[\d.,]*\s*$/.test(c) ? '$' + c.trim().replace('−', '-') + '$' : c, opt); };
+  M.tableHTML = (t, opt) => `<table class="qtab">${t.head ? `<tr>${t.head.map(c => `<th>${cellHTML(c, opt)}</th>`).join('')}</tr>` : ''}${t.rows.map(r => `<tr>${r.map(c => `<td>${cellHTML(c, opt)}</td>`).join('')}</tr>`).join('')}</table>`;
   M.tableTeX = (t, opt) => { const n = Math.max(t.head ? t.head.length : 0, ...t.rows.map(r => r.length)); return `{\\setlength{\\tabcolsep}{2.5mm}\\renewcommand{\\arraystretch}{1.35}\\begin{tabular}{|${'c|'.repeat(n)}}\\hline ${t.head ? t.head.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline\\hline ' : ''}${t.rows.map(r => r.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline').join(' ')}\\end{tabular}}`; };
   M.codeHTML = c => `<pre class="qcode">${htmlEsc(String(c))}</pre>`;
   M.codeTeX = c => String(c).split('\n').map(l => '\\mqcodeline{' + l.replace(/[\\{}$&#%_^~]/g, ch => ({ '\\': '\\textbackslash{}', '^': '\\textasciicircum{}', '~': '\\textasciitilde{}' })[ch] || '\\' + ch).replace(/ /g, '\\ ') + '}').join('');
