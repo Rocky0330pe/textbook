@@ -526,7 +526,7 @@
         if (['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'].includes(n)) {   // \sin^{2}x も読む。\tan^{-1}x は逆関数（第6巻）
           ws(); let e = null; if (s[i] === '^') { i++; e = group(); }
           const inv = e && N.real(e) === -1 && (!N.J || Math.abs(e[1]) < 1e-12) && ['sin', 'cos', 'tan'].includes(n);
-          const v = N.fn(inv ? 'a' + n : n, fnArg());
+          ws(); const v = N.fn(inv ? 'a' + n : n, s[i] === '(' ? primary() : fnArg());   // \sin(u)^2 は (sin u)^2（かっこのあとの ^ は関数の値に。第8巻 組c の要望）
           return e && !inv ? N.pow(v, e) : v;
         }
         { const sn = subVar(n); if (sn) return V(sn); }
@@ -1118,7 +1118,7 @@
     opt = opt || {};
     const s = fig.s || 5, f = v => +(+v).toFixed(3), P = p => `(${f(p[0])},${f(p[1])})`;
     const sty = a => [a && a.dash ? 'densely dashed' : '', a && a.thick ? 'thick' : '', a && a.arrow ? '-{Stealth[length=1.6mm]}' : ''].filter(Boolean).join(',');
-    const lab = t => M.toTeX(String(t).split(/(\$[^$]*\$)/).map((g, k) => k % 2 ? g : g.replace(/-(?=\d)/g, '$-$')).join(''));   // 式の外の「-20」もマイナスの字に
+    const lab = t => M.toTeX(String(t).split(/(\$[^$]*\$)/).map((g, k) => k % 2 ? g : g.replace(opt && opt.vol >= 8 ? /[-−](?=\d)/g : /-(?=\d)/g, '$-$')).join(''));   // 第8巻から：目もりの「−2」（U+2212）も式のマイナスに（組c の要望。本で「- 2」とあかないように）   // 式の外の「-20」もマイナスの字に
     const TIKZA = { n: 'above', s: 'below', e: 'right', w: 'left', ne: 'above right', nw: 'above left', se: 'below right', sw: 'below left', c: '' };
     let o = `\\begin{tikzpicture}[x=${s}mm,y=${s}mm,line width=0.3mm,font=\\small,baseline=(current bounding box.north)]`;
     const [bx0, by0, bx1, by1] = figBox(fig);
@@ -1326,13 +1326,20 @@
   }
   const varName = n => String(n).replace(/^\\/, '');
   // 重積分（ranges は外側から：[['x', 0, 2], ['y', 0, 'x']]。内側のはしに外側の文字を書ける）
+  // ガウス・ルジャンドル（8点）を区間に分けてたす。シンプソンより少ない点で同じくらい正しい（第8巻 組c の要望：重積分が遅い）
+  const GLX = [0.1834346424956498, 0.5255324099163290, 0.7966664774136267, 0.9602898564975363], GLW = [0.3626837833783620, 0.3137066458778873, 0.2223810344533745, 0.1012285362903763];
+  function gauss(fn, a, b, panels) {
+    const h = (b - a) / panels; let sum = 0;
+    for (let k = 0; k < panels; k++) { const m = a + (k + 0.5) * h, r = h / 2; for (let j = 0; j < 4; j++) sum += GLW[j] * (fn(m - r * GLX[j]) + fn(m + r * GLX[j])) * r; }
+    return sum;
+  }
   function multiInt(f, ranges, extra) {
-    const R = ranges.map(r => [varName(r[0]), calcSrc(r[1]), calcSrc(r[2])]), F = calcSrc(f), n = ranges.length === 1 ? 2000 : ranges.length === 2 ? 240 : 48;
+    const R = ranges.map(r => [varName(r[0]), calcSrc(r[1]), calcSrc(r[2])]), F = calcSrc(f), n = ranges.length === 1 ? 64 : ranges.length === 2 ? 12 : 5;
     const rec = (k, vs) => {
       if (k === R.length) { const v = M.evalMath(F, vs); return v == null ? NaN : v; }
       const a = M.evalMath(R[k][1], vs), b = M.evalMath(R[k][2], vs);
       if (a == null || b == null) return NaN;
-      return simpson(x => rec(k + 1, Object.assign({}, vs, { [R[k][0]]: x })), a, b, n, true);
+      return gauss(x => rec(k + 1, Object.assign({}, vs, { [R[k][0]]: x })), a, b, n);
     };
     return rec(0, Object.assign({}, extra || {}));
   }

@@ -22,7 +22,7 @@ function probLine(def, p, num, extra) {
   // 表・プログラム（第6巻から。第39回）：文の下に置く
   const below = (p.table ? `\\mqfig{${M.tableTeX(p.table, { box: '\\mqbox[10mm]' })}}` : '') + (p.code ? `\\mqcodeblock{${M.codeTeX(p.code)}}` : '');
   if (below) return `\\mqp{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}${below}}`;
-  if (p.fig) return `\\mqpf{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}{${M.figTeX(p.fig)}}`;   // 図（第4巻から。第35回）：文の右に図
+  if (p.fig) return `\\mqpf{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}{${M.figTeX(p.fig, { vol })}}`;   // 図（第4巻から。第35回）：文の右に図
   return `\\mqp{${num}}{${tx(q, { box: box(def, p.step, p) })}${extra || ''}}`;
 }
 function probs(def, list, start, extra) {
