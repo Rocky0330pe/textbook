@@ -983,7 +983,7 @@
     o = o || {}; const ns = pts.map(p => p[0]), lo = Math.min(...ns), hi = Math.max(...ns), big = Math.max(...pts.map(p => Math.abs(p[1]))) || 1, sy = (o.h || 3) / big;
     const step = o.step || (ns.length > 1 ? Math.min(...ns.slice(1).map((v, k) => Math.abs(v - ns[k])).filter(v => v > 0)) : 1);
     const xlab = n => (o.xfmt ? o.xfmt(n) : '$' + String(n) + '$'), wch = t => [...String(t).replace(/\$/g, '').replace(/\\[a-zA-Z]+/g, 'x').replace(/[{}^_ ]/g, '')].length;
-    const dx = o.dx || Math.max(1, 0.6 * 3.4 / (o.s || 5) * Math.max(...ns.map(n => wch(xlab(n)))) + 0.35);
+    const dx = o.dx || Math.max(1, 0.75 * 3.4 / (o.s || 5) * Math.max(...ns.map(n => wch(xlab(n)))) + 0.5);   // 目もりの字がくっつかないように（第9巻 R1-13）
     const X = n => n / step * dx, x0 = Math.min(0, X(lo)) - 0.7 * dx, x1 = X(hi) + 1.1 * dx;
     const fmt = v => '$' + (o.vfmt ? o.vfmt(v) : String(+(+v).toFixed(4))).replace(/^\$|\$$/g, '') + '$';
     const its = [['seg', [x0, 0], [x1, 0], { arrow: true }], ['label', [x1, 0], o.x != null ? (/\$/.test(o.x) ? o.x : '$' + o.x + '$') : '$n$', 'se']];
@@ -991,7 +991,7 @@
       const x = X(n), y = v * sy;
       if (Math.abs(v) > 1e-12) its.push(['seg', [x, 0], [x, y], { thick: true }], ['dot', [x, y]]);
       else its.push(['dot', [x, 0]]);
-      if (lab !== false && (lab != null || Math.abs(v) > 1e-12)) its.push(['label', [x, y], lab != null ? lab : fmt(v), v < 0 ? 's' : 'n']);
+      if (lab !== false && (lab != null || Math.abs(v) > 1e-12)) its.push(['label', [x, y + (v < 0 ? -0.22 : 0.22)], lab != null ? lab : fmt(v), v < 0 ? 's' : 'n']);   // 棒の先の丸から少し離す（第9巻 R1-13）
       if (o.xt !== false) its.push(['label', [x, 0], xlab(n), v < 0 ? 'n' : 's']);
     }
     return its;
