@@ -48,7 +48,7 @@
 \newsavebox\mq@chipbox
 \newcommand\mqwaza[6]{%
   \clearpage\ifodd\value{page}\mqmemopage\fi
-  \bksetrunning{#5}{\R{問題集}{もん|だい|しゅう}\hspace{0.5em}\R{第}{だい}\bkvol\R{巻}{かん}\hspace{0.8em}\R{第}{だい}#5\R{部}{ぶ}\hspace{0.5em}#6}{わざ\hspace{0.3em}#1\hspace{0.6em}#2}%
+  \bksetrunning{#5}{\R{問題集}{もん|だい|しゅう}\hspace{0.5em}\R{第}{だい}\bkvol\R{巻}{かん}\hspace{0.8em}\R{第}{だい}#5\R{部}{ぶ}\hspace{0.5em}#6}{\mq@runfit{わざ\hspace{0.3em}#1\hspace{0.6em}#2}}%
   \gdef\bk@tabpos{#5}%
   \phantomsection\label{mq:#1}\typeout{MQPAGE #1 \thepage}%
   \pdfbookmark[1]{わざ #1}{mqwaza#1}%
@@ -64,16 +64,23 @@
   \begin{tcolorbox}[enhanced, colback=bkTheme!6, colframe=bkTheme, boxrule=1pt, arc=2mm, left=1.5mm, right=2mm, top=0.5mm, bottom=0.5mm, before skip=0pt, after skip=0pt]
   \tikz[baseline=(c.base)]\node[fill=bkTheme, text=white, rounded corners=1.2mm, font=\sffamily\bfseries\footnotesize, inner xsep=1.5mm, inner ysep=0.6mm] (c) {\mqT{mark}};\hspace{0.5em}#1\end{tcolorbox}\par}
 % ふつうの解き方と、楽な解き方を並べる  \mqcompare{ふつう}{らく}
+% 囲みの高さをそろえる組：第3巻までは本全体で1つ。第4巻からは、わざごと（本全体でそろえると、いちばん高い囲みに合わせて見開きがあふれる。第35回）
+\newcount\mq@cmpn
+\def\mq@cmpgroup{mqcmp}
+% 右ページの柱：本文のはば（120 mm）をこえる長い題は縮めて収める（第5巻 R1-5）
+\newsavebox\mq@runb
+\newcommand\mq@runfit[1]{\sbox\mq@runb{#1}\ifdim\wd\mq@runb>120mm\resizebox{120mm}{!}{\usebox\mq@runb}\else\usebox\mq@runb\fi}
 \newcommand\mqcompare[2]{%
+  \ifnum\bkvol>3 \global\advance\mq@cmpn 1 \edef\mq@cmpgroup{mqcmp\the\mq@cmpn}\fi
   \par\vspace{1.2mm}\noindent{\small
   \begin{tcolorbox}[enhanced, width=0.42\linewidth, nobeforeafter, box align=top, colback=white, colframe=bkGray!70, boxrule=0.8pt, arc=2mm,
     left=1.5mm, right=1.5mm, top=0.5mm, bottom=1mm, fonttitle=\sffamily\bfseries\small, coltitle=bkGray, colbacktitle=bkGray!12,
-    title={\mqT{futsu}}, equal height group=mqcmp, before upper=\mqragged]
+    title={\mqT{futsu}}, equal height group=\mq@cmpgroup, before upper=\mqragged]
   #1\end{tcolorbox}\hfill
   \raisebox{-10mm}{\tikz\fill[bkTheme] (0,0) -- (4mm,2.5mm) -- (0,5mm) -- cycle;}\hfill
   \begin{tcolorbox}[enhanced, width=0.52\linewidth, nobeforeafter, box align=top, colback=bkTheme!5, colframe=bkTheme, boxrule=1.2pt, arc=2mm,
     left=1.5mm, right=1.5mm, top=0.5mm, bottom=1mm, fonttitle=\sffamily\bfseries\small, coltitle=white, colbacktitle=bkTheme,
-    title={\mqT{raku}}, equal height group=mqcmp, before upper=\mqragged]
+    title={\mqT{raku}}, equal height group=\mq@cmpgroup, before upper=\mqragged]
   #2\end{tcolorbox}}\par\vspace{1mm}}
 % なぜ楽になるか・使えないとき
 \newcommand\mqwhy[1]{\par\noindent{\small{\sffamily\bfseries\small\color{bkDeep}\mqT{why}}\hspace{0.5em}#1\par}}
@@ -88,6 +95,18 @@
 % 問題のならび  \begin{mqprobs}{列の数} \mqp{番号}{問題} ... \end{mqprobs}
 \newenvironment{mqprobs}[1]{\par\noindent\setlength{\tabcolsep}{0pt}\def\mq@cols{#1}%
   \setlength{\columnsep}{6mm}\ifnum#1>1 \begin{multicols}{#1}\fi\mqragged}{\ifnum\mq@cols>1 \end{multicols}\fi\par}
+% 問題の図（第4巻から。第35回）：問題の文の下に、番号の字下げにそろえて置く
+\newcommand\mqfig[1]{\par\nopagebreak\vspace{1mm}\hspace*{2.2em}#1\par}
+% 問題に出すプログラム（第6巻から。第39回）：文の下に、等幅の字で枠に入れる
+\newcommand\mqcodeline[1]{\hbox{\strut#1}}
+\newcommand\mqcodeblock[1]{\par\nopagebreak\vspace{1mm}\hspace*{2.2em}\fbox{\vbox{\ttfamily\small\baselineskip=1.25em #1}}\par}
+% 図のある問題（第35回。組 d の要望）：1列のときは、文を左、図を右にならべる（縦の場所をとらない）。せまい列では文の下に置く
+\newsavebox\mq@figbox
+\newcommand\mqpf[3]{\par\sbox\mq@figbox{#3}%
+  \ifdim\linewidth<100mm \mqp{#1}{#2\mqfig{\usebox\mq@figbox}}\else
+  \noindent{\interlinepenalty=10000\makebox[2.2em][l]{\small(#1)}%
+  \begin{minipage}[t]{\dimexpr\linewidth-2.2em-\wd\mq@figbox-4mm\relax}\mqragged #2\end{minipage}\hfill
+  \raisebox{\dimexpr1.2\ht\strutbox-\ht\mq@figbox\relax}{\usebox\mq@figbox}}\par\vspace{1.4mm}\fi}
 \newcommand\mqp[2]{\par\noindent{\interlinepenalty=10000\hangindent=2.2em\hangafter=1\makebox[2.2em][l]{\small(#1)}#2\par}\vspace{1.4mm}}
 % 右ページへ
 \newcommand\mqrightpage{\clearpage\typeout{MQRIGHT \thepage}}
@@ -142,8 +161,9 @@
   \hspace{0.6em}{\footnotesize\color{bkGray}\ifnum\bkvol=1 きょうかしょ\else\R{教科書}{きょう|か|しょ}\fi\hspace{0.2em}#3}\par\nobreak\vspace{1mm}}
 % {番号}{名前}{目印}{教科書}{★}
 \newcommand\mqlistrow[5]{\par\noindent\hangindent=6.6em\hangafter=1
-  \makebox[5.4em][l]{\mqwazachipsmall{#1}}\hspace{0.4em}{\small\bfseries #2}\hspace{0.4em}{\scriptsize\mqstars{#5}\hspace{0.3em}\color{bkGray}\ifnum\bkvol=1 きょうかしょ\else\R{教科書}{きょう|か|しょ}\fi\ #4}%
-  \nobreak\leaders\hbox to 0.8em{\hss・\hss}\hfill\nobreak{\footnotesize\pageref{mq:#1}}\par\vspace{0.2mm}}
+  \makebox[5.4em][l]{\mqwazachipsmall{#1}}\hspace{0.4em}{\small\bfseries #2}\hspace{0.4em}{\scriptsize\mqstars{#5}\hspace{0.3em}\color{bkGray}\ifnum\bkvol=1 きょうかしょ\else\R{教科書}{きょう|か|しょ}\fi\ \ifnum\bkvol>3 \mbox{#4}\else#4\fi}%   第4巻から：札を行で切らない（第5巻 R1-20）
+  \ifnum\bkvol>3 \hskip0.3em\penalty50\null\nobreak\leaders\hbox to 0.8em{\hss・\hss}\hskip2.4em plus 1fill\else\nobreak\leaders\hbox to 0.8em{\hss・\hss}\hfill\fi   % 第4巻から：点線の最小のはばをとる。入らなければ次の行へ（第36回 R1-23）
+  \nobreak{\footnotesize\pageref{mq:#1}}\par\vspace{0.2mm}}
 \newcommand\mqtsukuro[2]{\par\addvspace{3mm}\Needspace{6\baselineskip}\noindent
   \tikz[baseline=(c.base)]\node[circle, fill=bkTheme, text=white, font=\sffamily\bfseries\small, inner sep=1.2pt, minimum size=6mm] (c) {#1};\hspace{0.5em}%
   \parbox[t]{\dimexpr\linewidth-2.4em\relax}{#2}\par\vspace{1mm}
@@ -152,8 +172,14 @@
     \foreach \i in {1,2} \draw[bkLine, line width=0.4pt, dash pattern=on 1.5pt off 2pt] (3,\i*10) -- (\linewidth-3mm,\i*10);
   \end{tikzpicture}\par}
 \newcommand\mqtsukuroans[2]{\par\noindent{\footnotesize(#1)\hspace{0.3em}#2}\par}
+\newsavebox\mq@apbox
 \newcommand\mqanspart[2]{\par\addvspace{3mm}\noindent
-  \tikz[baseline=(c.base)]\node[fill=bkDeep, text=white, rounded corners=1.5mm, font=\sffamily\bfseries\small, inner xsep=2mm, inner ysep=0.8mm] (c) {\R{第}{だい}#1\R{部}{ぶ}\hspace{0.4em}#2};\par\nobreak\vspace{0.5mm}}
+  \sbox\mq@apbox{\sffamily\bfseries\small\R{第}{だい}#1\R{部}{ぶ}\hspace{0.4em}#2}%
+  \ifdim\wd\mq@apbox>\dimexpr\linewidth-4.5mm\relax   % 部の名前が長いときは、列のはばで折り返す（第5巻）
+    \tikz[baseline=(c.base)]\node[fill=bkDeep, text=white, rounded corners=1.5mm, font=\sffamily\bfseries\small, inner xsep=2mm, inner ysep=0.8mm, text width=\dimexpr\linewidth-4.5mm\relax, align=left] (c) {\R{第}{だい}#1\R{部}{ぶ}\hspace{0.4em}#2};%
+  \else
+    \tikz[baseline=(c.base)]\node[fill=bkDeep, text=white, rounded corners=1.5mm, font=\sffamily\bfseries\small, inner xsep=2mm, inner ysep=0.8mm] (c) {\R{第}{だい}#1\R{部}{ぶ}\hspace{0.4em}#2};%
+  \fi\par\nobreak\vspace{0.5mm}}
 % 文の中の □（書きこむ欄ではない、ふつうの四角）
 \newcommand\mqsq{\tikz[baseline=-0.6ex]\draw[bkInk, line width=0.6pt] (0,-1.6mm) rectangle (3.6mm,2.2mm);}
 % 目印として強める。第29回：下線は行の途中で改行できないので、本では太字だけ（色だけにはしていない）
@@ -199,3 +225,5 @@
 % こたえの長い式は「＝」のあとで改行してよい（分かち書きの式は記号の前後で改行しないので、のびる空白で区切る）
 \newcommand\mqeqbreak{\hskip 0.25em plus 1fil\penalty0\hskip 0pt plus -1fil\relax}
 \newcommand\mqcode[1]{{\ttfamily\small #1}}
+% ℃ の前では改行しない（LuaTeX-ja の禁則表に ℃ がない。第6巻 修A の要望）
+\AtBeginDocument{\ltjsetparameter{prebreakpenalty={"2103,10000}}}
