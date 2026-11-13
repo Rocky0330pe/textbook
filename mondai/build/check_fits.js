@@ -97,7 +97,7 @@ for (const no of allParts) {
   if (pinfo && pinfo.miwake) {
     const r = M.rng(M.hash(`miwake:${vol}:${no}`));
     const seen = new Set(), pool = [];
-    const nTrap = pinfo.miwake.traps || 2, nMain = M.miwakeCount(pinfo, wz.length) - nTrap;
+    const nTrap = pinfo.miwake.traps ?? 2, nMain = M.miwakeCount(pinfo, wz.length) - nTrap;
     const must = pinfo.miwake.must || [], wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));   // mk_book.js と同じ（第36回 N-4）
     for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
     const order = r.shuffle(wz.slice());

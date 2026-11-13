@@ -98,7 +98,7 @@ for (const part of parts) {
     const wz = byPart(pid);
     const seen = new Set();
     const pool = [];
-    const nTrap = part.miwake.traps || 2;
+    const nTrap = part.miwake.traps ?? 2;
     // must：かならず入れる問題 [[わざ, ステップ], …]。ほかの部のわざでもよい（第4巻 第5部で 4-46 と 4-63 をまぜる。K-7・第36回）
     const must = part.miwake.must || [];
     const wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));
