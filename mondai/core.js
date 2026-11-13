@@ -359,44 +359,90 @@
     return `<span class="math">${seq(undefined)}</span>`;
   };
   // 数式の値（小数）。vars は文字の値 { x: 1.3 }。読めないときは null
-  M.evalMath = function (src, vars) {
-    vars = vars || {};
-    const s = String(src).replace(/\\left|\\right|\\Biggl|\\Biggr|\\Bigl|\\Bigr|\\bigl|\\bigr|\\,|\\;|\\!|\\quad|\\displaystyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
+  // 数式の値。数の仕組み（R：ふつうの数、C：複素数）を入れかえて、同じ読み方で計算する（第6巻から複素数。第39回）
+  const RN = {
+    num: x => x, add: (a, b) => a + b, sub: (a, b) => a - b, mul: (a, b) => a * b, div: (a, b) => a / b, neg: a => -a,
+    pow: (a, b) => Math.pow(a, b), abs: a => Math.abs(a), real: a => a, ok: a => isFinite(a), J: null,
+    fn: (n, a) => { const f = { sin: Math.sin, cos: Math.cos, tan: Math.tan, exp: Math.exp, ln: Math.log, sqrt: Math.sqrt, sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh, asin: Math.asin, acos: Math.acos, atan: Math.atan }[n]; if (!f) throw 0; return f(a); },
+    conj: a => a, re: a => a, im: () => 0, arg: a => (a < 0 ? Math.PI : 0),
+  };
+  const CN = (() => {
+    const C = (re, im) => [re, im || 0];
+    const exp = a => C(Math.exp(a[0]) * Math.cos(a[1]), Math.exp(a[0]) * Math.sin(a[1]));
+    const ln = a => C(Math.log(Math.hypot(a[0], a[1])), Math.atan2(a[1], a[0]));
+    const mul = (a, b) => C(a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0]);
+    const div = (a, b) => { const d = b[0] * b[0] + b[1] * b[1]; return C((a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d); };
+    const add = (a, b) => C(a[0] + b[0], a[1] + b[1]), sub = (a, b) => C(a[0] - b[0], a[1] - b[1]), neg = a => C(-a[0], -a[1]);
+    const pow = (a, b) => {
+      if (b[1] === 0 && Number.isInteger(b[0]) && Math.abs(b[0]) <= 64) { let r = C(1, 0); for (let k = 0; k < Math.abs(b[0]); k++) r = mul(r, a); return b[0] < 0 ? div(C(1, 0), r) : r; }
+      if (a[0] === 0 && a[1] === 0) return C(0, 0);
+      if (a[1] === 0 && b[1] === 0 && a[0] > 0) return C(Math.pow(a[0], b[0]), 0);
+      return exp(mul(b, ln(a)));
+    };
+    const J = C(0, 1), half = C(0.5, 0);
+    const sin = a => div(sub(exp(mul(J, a)), exp(neg(mul(J, a)))), C(0, 2)), cos = a => mul(add(exp(mul(J, a)), exp(neg(mul(J, a)))), half);
+    const sinh = a => mul(sub(exp(a), exp(neg(a))), half), cosh = a => mul(add(exp(a), exp(neg(a))), half);
+    const real1 = f => a => { if (Math.abs(a[1]) > 1e-12) throw 0; return C(f(a[0]), 0); };
+    return {
+      num: x => C(x, 0), add, sub, mul, div, neg, pow, J, abs: a => C(Math.hypot(a[0], a[1]), 0), real: a => a[0], ok: a => isFinite(a[0]) && isFinite(a[1]),
+      fn: (n, a) => ({ sin, cos, tan: z => div(sin(z), cos(z)), exp, ln, sqrt: z => pow(z, half), sinh, cosh, tanh: z => div(sinh(z), cosh(z)), asin: real1(Math.asin), acos: real1(Math.acos), atan: real1(Math.atan) })[n](a),
+      conj: a => C(a[0], -a[1]), re: a => C(a[0], 0), im: a => C(a[1], 0), arg: a => C(Math.atan2(a[1], a[0]), 0),
+    };
+  })();
+  function evalWith(N, src, vars, opt) {
+    vars = vars || {}; opt = opt || {};
+    const s = String(src).replace(/\\left|\\right|\\Biggl|\\Biggr|\\Bigl|\\Bigr|\\bigl|\\bigr|\\,|\;|\\!|\\quad|\\displaystyle|\\textstyle/g, ' ').replace(/\\[lr]?vert/g, '|').replace(/\\cdot|\\times/g, '*').replace(/\\div/g, '/')
       .replace(/\\dfrac|\\tfrac/g, '\\frac').replace(/[−－]/g, '-').replace(/＋/g, '+').replace(/×/g, '*').replace(/÷/g, '/')
       // 帯分数（数字のすぐあとの \frac{数}{数}）は、たし算として読む：2\frac{1}{3} → (2+\frac{1}{3})。指数・下つきの中の数は除く
       .replace(/(^|[^0-9.^_{])(\d+)\s*\\frac\{(\d+)\}\{(\d+)\}/g, '$1($2+\\frac{$3}{$4})');
+    const V = n => (typeof vars[n] === 'number' ? N.num(vars[n]) : vars[n]);
     let i = 0;
     const ws = () => { while (i < s.length && s[i] === ' ') i++; };
     const peek = () => { ws(); return s[i]; };
     const cmdAt = () => { if (s[i] !== '\\') return null; const m = /^\\([a-zA-Z]+)/.exec(s.slice(i)); return m ? m[1] : null; };
-    const startsAtom = () => { const c = peek(); if (c === undefined) return false; if (/[0-9.a-zA-Z({]/.test(c)) return true; const n = cmdAt(); return !!n && (['frac', 'sqrt', 'pi', 'log', 'ln', 'sin', 'cos', 'tan', 'exp'].includes(n) || n in vars); };
-    const FN = ['sin', 'cos', 'tan', 'log', 'ln', 'exp'];
+    const FN = ['sin', 'cos', 'tan', 'log', 'ln', 'exp', 'sinh', 'cosh', 'tanh', 'arctan', 'arcsin', 'arccos'];
+    const startsAtom = () => { const c = peek(); if (c === undefined) return false; if (/[0-9.a-zA-Z({]/.test(c)) return true; const n = cmdAt(); return !!n && (['frac', 'sqrt', 'pi', 'bar', 'overline', 'mathrm', 'arg'].includes(n) || FN.includes(n) || n in vars); };
     // 三角関数の中身：\sin2\theta は sin(2θ)。つぎの関数（\cos など）・＋・－ の前まで（第4巻。第35回）
-    function fnArg() { let v = power(); for (;;) { ws(); const n = cmdAt(); if (n && FN.includes(n)) return v; if (s[i] === '(' || !startsAtom()) return v; v *= power(); } }
+    function fnArg() { let v = power(); for (;;) { ws(); const n = cmdAt(); if (n && FN.includes(n)) return v; if (s[i] === '(' || !startsAtom()) return v; v = N.mul(v, power()); } }
     function group() { // {…} か 1字
       ws();
       if (s[i] === '{') { i++; const v = expr(); ws(); if (s[i] !== '}') throw 0; i++; return v; }
       return primary();
     }
+    const rawGroup = () => { ws(); if (s[i] !== '{') throw 0; const j = s.indexOf('}', i); const t = s.slice(i + 1, j); i = j + 1; return t; };
     function primary() {
       ws();
       const c = s[i];
       if (c === undefined) throw 0;
       if (c === '(' || c === '[') { i++; const v = expr(); ws(); if (s[i] !== ')' && s[i] !== ']') throw 0; i++; return v; }
       if (c === '{') return group();
-      if (c === '|') { i++; const v = expr(); ws(); if (s[i] !== '|') throw 0; i++; return Math.abs(v); }
-      if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; const v = parseFloat(s.slice(j, i)); if (isNaN(v)) throw 0; return v; }
-      if (/[a-zA-Z]/.test(c)) { i++; if (c === 'e' && !('e' in vars)) return Math.E; if (!(c in vars)) throw 0; return vars[c]; }   // e は、文字の値がなければネイピア数（第5巻。第37回）
+      if (c === '|') { i++; const v = expr(); ws(); if (s[i] !== '|') throw 0; i++; return N.abs(v); }
+      if (/[0-9.]/.test(c)) { let j = i; while (i < s.length && /[0-9.]/.test(s[i])) i++; const v = parseFloat(s.slice(j, i)); if (isNaN(v)) throw 0; return N.num(v); }
+      if (/[a-zA-Z]/.test(c)) {
+        i++;
+        if (c === 'j' && N.J && !('j' in vars)) return N.J;   // 第6巻：j は虚数単位
+        if (c === 'e' && !('e' in vars)) return N.num(Math.E);   // e は、文字の値がなければネイピア数（第5巻。第37回）
+        if (!(c in vars)) throw 0; return V(c);
+      }
       if (c === '\\') {
         const n = cmdAt(); if (!n) throw 0; i += n.length + 1;
-        if (n === 'frac') { const one = () => { ws(); return /[0-9]/.test(s[i] || '') ? +s[i++] : group(); }; const a = one(), b = one(); return a / b; }   // \frac12 は 1/2
-        if (n === 'sqrt') { ws(); let k = 2; if (s[i] === '[') { const j = s.indexOf(']', i); k = M.evalMath(s.slice(i + 1, j), vars); i = j + 1; } const v = group(); return k === 2 ? Math.sqrt(v) : Math.pow(v, 1 / k); }
-        if (n === 'pi') return Math.PI;
-        if (n === 'log') { ws(); let b = 10; if (s[i] === '_') { i++; b = group(); } const v = power(); return Math.log(v) / Math.log(b); }
-        if (n === 'ln') return Math.log(power());
-        if (n === 'exp') return Math.exp(power());
-        if (n === 'sin' || n === 'cos' || n === 'tan') { ws(); let e = 1; if (s[i] === '^') { i++; e = group(); } const v = Math[n](fnArg()); return Math.pow(v, e); }   // \sin^{2}x も読む
-        if (n in vars) return vars[n];   // \theta などのギリシャ文字の変数
+        if (n === 'frac') { const one = () => { ws(); return /[0-9]/.test(s[i] || '') ? N.num(+s[i++]) : group(); }; const a = one(), b = one(); return N.div(a, b); }   // \frac12 は 1/2
+        if (n === 'sqrt') { ws(); let k = 2; if (s[i] === '[') { const j = s.indexOf(']', i); k = M.evalMath(s.slice(i + 1, j), vars); i = j + 1; } const v = group(); return k === 2 ? N.fn('sqrt', v) : N.pow(v, N.num(1 / k)); }
+        if (n === 'pi') return N.num(Math.PI);
+        if (n === 'log') { ws(); let b = N.num(10); if (s[i] === '_') { i++; b = group(); } const v = power(); return N.div(N.fn('ln', v), N.fn('ln', b)); }
+        if (n === 'ln') return N.fn('ln', power());
+        if (n === 'exp') return N.fn('exp', power());
+        if (n === 'bar' || n === 'overline') return N.conj(group());   // 共役（第6巻）
+        if (n === 'arg') return N.arg(fnArg());
+        if (n === 'mathrm' || n === 'operatorname') { const t = rawGroup().trim(); if (t === 'Re' || t === 'Im') { const v = fnArg(); return t === 'Re' ? N.re(v) : N.im(v); } throw 0; }
+        if (/^arc(sin|cos|tan)$/.test(n)) return N.fn('a' + n.slice(3), fnArg());
+        if (['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'].includes(n)) {   // \sin^{2}x も読む。\tan^{-1}x は逆関数（第6巻）
+          ws(); let e = null; if (s[i] === '^') { i++; e = group(); }
+          const inv = e && N.real(e) === -1 && (!N.J || Math.abs(e[1]) < 1e-12) && ['sin', 'cos', 'tan'].includes(n);
+          const v = N.fn(inv ? 'a' + n : n, fnArg());
+          return e && !inv ? N.pow(v, e) : v;
+        }
+        if (n in vars) return V(n);   // \theta などのギリシャ文字の変数
         throw 0;
       }
       throw 0;
@@ -404,26 +450,29 @@
     function power() {
       let v = primary();
       ws();
-      if (s[i] === '!') { i++; if (v < 0 || v > 170 || v !== Math.round(v)) throw 0; let f = 1; for (let k = 2; k <= v; k++) f *= k; v = f; ws(); }   // 階乗（第5巻）
-      if (s.startsWith('^{\\circ}', i) || s.startsWith('^\\circ', i)) { i += s.startsWith('^{', i) ? 8 : 6; return v * Math.PI / 180; }   // 度（第4巻。第35回）
-      if (s[i] === '^') { i++; const e = group(); v = Math.pow(v, e); }
+      if (s[i] === '!') { i++; const r = N.real(v); if (r < 0 || r > 170 || r !== Math.round(r)) throw 0; let f = 1; for (let k = 2; k <= r; k++) f *= k; v = N.num(f); ws(); }   // 階乗（第5巻）
+      if (s.startsWith('^{\\circ}', i) || s.startsWith('^\\circ', i)) { i += s.startsWith('^{', i) ? 8 : 6; return N.mul(v, N.num(Math.PI / 180)); }   // 度（第4巻。第35回）
+      if (s[i] === '^') { i++; const e = group(); v = N.pow(v, e); }
       return v;
     }
-    function unary() { ws(); if (s[i] === '-') { i++; return -unary(); } if (s[i] === '+') { i++; return unary(); } return power(); }
+    function unary() { ws(); if (s[i] === '-') { i++; return N.neg(unary()); } if (s[i] === '+') { i++; return unary(); } return power(); }
     function term() {
       let v = unary();
       for (;;) {
         ws();
-        if (s[i] === '*') { i++; v *= unary(); continue; }
-        if (s[i] === '/') { i++; v /= unary(); continue; }
-        if (startsAtom()) { v *= power(); continue; }
+        if (s[i] === '*') { i++; v = N.mul(v, unary()); continue; }
+        if (s[i] === '/') { i++; v = N.div(v, unary()); continue; }
+        if (startsAtom()) { v = N.mul(v, power()); continue; }
         return v;
       }
     }
-    function expr() { let v = term(); for (;;) { ws(); if (s[i] === '+') { i++; v += term(); } else if (s[i] === '-') { i++; v -= term(); } else return v; } }
-    try { const v = expr(); ws(); if (i !== s.length) return null; return isFinite(v) ? v : null; } catch (e) { return null; }
-  };
-  // 数式の中の文字（1字。\frac などの命令の中の字は除く）
+    function expr() { let v = term(); for (;;) { ws(); if (s[i] === '+') { i++; v = N.add(v, term()); } else if (s[i] === '-') { i++; v = N.sub(v, term()); } else return v; } }
+    try { const v = expr(); ws(); if (i !== s.length) return null; return N.ok(v) ? v : null; } catch (e) { return null; }
+  }
+  // 数式の値（小数）。vars は文字の値 { x: 1.3 }。読めないときは null
+  M.evalMath = (src, vars) => evalWith(RN, src, vars);
+  // 複素数の値 [実部, 虚部]（第6巻から。j は虚数単位）。vars の値は数か [実部, 虚部]。読めないときは null
+  M.evalC = (src, vars) => evalWith(CN, src, vars);
   M.mathVars = function (src, o) {
     const g = (String(src).match(/\\(theta|alpha|beta|phi|varphi|omega|tau|lambda|mu)(?![a-zA-Z])/g) || []).map(x => x.slice(1));   // ギリシャ文字も変数（第35回）
     const t = String(src).replace(/\\[a-zA-Z]+/g, ' ');
