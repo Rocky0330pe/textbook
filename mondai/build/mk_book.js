@@ -103,13 +103,18 @@ for (const part of parts) {
     const must = part.miwake.must || [];
     const wzAll = wz.concat(must.map(m => m[0]).filter(id => !wz.includes(id)));
     const nMain = M.miwakeCount(part, wz.length) - nTrap;   // must の問題もふくめた数（pool に先に入れる）
-    for (const [id, st] of must) { const got = M.makeStep(id, st, 1, r, seen); if (got.length) pool.push(got[0]); }
+    // 第6巻から：わざの見開きに出たステップ1・2の問題（key）は、見わけようでよける（第6巻 R2-19・第40回）。わなは数が決まっているのでそのまま
+    //   key はわざごとにくらべる（ほかのわざの同じ形の key でよけすぎないように）
+    const onSheet = new Set();
+    if (vol >= 6) for (const id of wzAll) { const sh = M.makeSheet(id); M.STEPS.forEach(s => sh[s].forEach(p => { onSheet.add(id + '\u0000' + (p.key || p.q)); onSheet.add('\u0001' + p.q); })); }   // ほかのわざで同じ文になる問題も
+    const fresh = p => !onSheet.has(p.id + '\u0000' + (p.key || p.q)) && !onSheet.has('\u0001' + p.q);
+    for (const [id, st] of must) { for (let j = 0; j < 30; j++) { const got = M.makeStep(id, st, 1, r, seen); if (got.length && (st === 'trap' || fresh(got[0]))) { pool.push(got[0]); break; } } }
     // わざの順をまぜてから選ぶ（前のほうのわざだけに かたよらないように）
     const order = r.shuffle(wz.slice());
     for (let k = 0; pool.length < nMain && k < 2000; k++) {
       const id = order[k % order.length];
       const got = M.makeStep(id, r.pick(['s1', 's2']), 1, r, seen);
-      if (got.length) pool.push(got[0]);
+      if (got.length && fresh(got[0])) pool.push(got[0]);
     }
     const usedTrap = new Set();
     for (let k = 0, t = 0; t < nTrap && k < 200; k++) {
@@ -122,7 +127,7 @@ for (const part of parts) {
     }
     const mixed = r.shuffle(pool);
     const intro = vol > 1
-      ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。'
+      ? '《見|み》たことのあるわざがまざっています。まず、どのわざを《使|つか》うかを《右|みぎ》の「わざ」に《書|か》いてから《解|と》きましょう。《使|つか》えるわざがないときは「なし」と《書|か》きます。わざの《番号|ばん|ごう》は、《右|みぎ》のページの《下|した》の《表|ひょう》を《見|み》ましょう。' + (vol >= 6 ? '前の部のわざを使うときは、その番号を書きます。' : '')
       : '《見|み》た ことの ある わざが まざって いるよ。 まず、 どの わざを つかうかを 《右|みぎ》の「わざ」に 《書|か》いて から とこう。 つかう わざが ない ときは「なし」と 《書|か》こう。 わざの ばんごうは、 《右|みぎ》の ページの 下の ひょうを 《見|み》よう。';
     // 欄のはばは、どのわざでも同じにする（はばが手がかりにならないように）
     const lines2 = mixed.map((p, i) => {
