@@ -1030,7 +1030,7 @@
   //   start：はじめの行の番号（ふつう 1）、col：はじめの列の文字（ふつう 'A'）。セルの式は `=B$2*2` のように ` ` でかこむ（等幅）
   const sheetGrid = t => { const rows = (t.head ? [t.head] : []).concat(t.rows), n = Math.max(...rows.map(r => r.length)), c0 = String(t.col || 'A').charCodeAt(0), s0 = t.start || 1; return { rows, n, cols: Array.from({ length: n }, (_, k) => String.fromCharCode(c0 + k)), num: k => s0 + k }; };
   const sheetHTML = (t, opt) => { const g = sheetGrid(t); return `<table class="qtab qsheet"><tr><th class="sh"></th>${g.cols.map(c => `<th class="sh">${c}</th>`).join('')}</tr>${g.rows.map((r, k) => `<tr><th class="sh">${g.num(k)}</th>${Array.from({ length: g.n }, (_, j) => `<td>${r[j] == null ? '' : cellHTML(r[j], opt)}</td>`).join('')}</tr>`).join('')}</table>`; };
-  const sheetTeX = (t, opt) => { const g = sheetGrid(t); return `{\\begin{tblr}{hlines={0.4pt,black!60}, vlines={0.4pt,black!60}, colspec={${'c'.repeat(g.n + 1)}}, rowsep=1.2pt, colsep=2.2mm, row{1}={bg=black!8,font=\\sffamily\\footnotesize}, column{1}={bg=black!8,font=\\sffamily\\footnotesize}} ${[' & ' + g.cols.join(' & ')].concat(g.rows.map((r, k) => g.num(k) + ' & ' + Array.from({ length: g.n }, (_, j) => (r[j] == null ? '' : M.toTeX(String(r[j]), opt))).join(' & '))).join(' \\\\ ')} \\\\ \\end{tblr}}`; };
+  const sheetTeX = (t, opt) => { const g = sheetGrid(t); return `{\\begin{tblr}{hlines={0.4pt,black!60}, vlines={0.4pt,black!60}, colspec={${'c'.repeat(g.n + 1)}}, rowsep=1.2pt, colsep=2.2mm, row{1}={bg=black!8,font=\\sffamily\\footnotesize}, column{1}={bg=black!8,font=\\sffamily\\footnotesize}} ${[' & ' + g.cols.join(' & ')].concat(g.rows.map((r, k) => g.num(k) + ' & ' + Array.from({ length: g.n }, (_, j) => (r[j] == null ? '' : M.toTeX(/^\s*[-−]?\d[\d.,]*\s*$/.test(String(r[j])) ? '$' + String(r[j]).trim().replace('−', '-') + '$' : String(r[j]), opt))).join(' & '))).join(' \\\\ ')} \\\\ \\end{tblr}}`; };
   M.tableHTML = (t, opt) => t.sheet ? sheetHTML(t, opt) : `<table class="qtab">${t.head ? `<tr>${t.head.map(c => `<th>${cellHTML(c, opt)}</th>`).join('')}</tr>` : ''}${t.rows.map(r => `<tr>${r.map(c => `<td>${cellHTML(c, opt)}</td>`).join('')}</tr>`).join('')}</table>`;
   M.tableTeX = (t, opt) => { if (t.sheet) return sheetTeX(t, opt); const n = Math.max(t.head ? t.head.length : 0, ...t.rows.map(r => r.length)); return `{\\setlength{\\tabcolsep}{2.5mm}\\renewcommand{\\arraystretch}{1.35}\\begin{tabular}{|${'c|'.repeat(n)}}\\hline ${t.head ? t.head.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline\\hline ' : ''}${t.rows.map(r => r.map(c => M.toTeX(String(c), opt)).join(' & ') + ' \\\\ \\hline').join(' ')}\\end{tabular}}`; };
   M.codeHTML = c => `<pre class="qcode">${htmlEsc(String(c))}</pre>`;
@@ -1350,9 +1350,11 @@
     if (!wrt.length) return ev(vs);
     if (wrt.length === 1) { const h = 1e-5 * Math.max(1, Math.abs(vs[wrt[0]])); return (ev(sh(vs, wrt[0], h)) - ev(sh(vs, wrt[0], -h))) / (2 * h); }
     if (wrt.length === 2) {
-      const [a, b] = wrt, h = 1e-3 * Math.max(1, Math.abs(vs[a])), k = 1e-3 * Math.max(1, Math.abs(vs[b]));
-      if (a === b) return (ev(sh(vs, a, h)) - 2 * ev(vs) + ev(sh(vs, a, -h))) / (h * h);
-      return (ev(sh(sh(vs, a, h), b, k)) - ev(sh(sh(vs, a, h), b, -k)) - ev(sh(sh(vs, a, -h), b, k)) + ev(sh(sh(vs, a, -h), b, -k))) / (4 * h * k);
+      // 2回の偏微分：きざみ h と 2h の差分からリチャードソン補外（4次の多項式のまぜた微分も通るように。第8巻 組a の要望）
+      const [a, b] = wrt, h0 = 1e-3 * Math.max(1, Math.abs(vs[a])), k0 = 1e-3 * Math.max(1, Math.abs(vs[b]));
+      const D = (h, k) => a === b ? (ev(sh(vs, a, h)) - 2 * ev(vs) + ev(sh(vs, a, -h))) / (h * h)
+        : (ev(sh(sh(vs, a, h), b, k)) - ev(sh(sh(vs, a, h), b, -k)) - ev(sh(sh(vs, a, -h), b, k)) + ev(sh(sh(vs, a, -h), b, -k))) / (4 * h * k);
+      return (4 * D(h0, k0) - D(2 * h0, 2 * k0)) / 3;
     }
     return NaN;
   }
