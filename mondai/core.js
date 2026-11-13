@@ -210,6 +210,14 @@
     return out;
   }
   const MK = t => String(t).replace(/\*\*(.+?)\*\*/g, '\u0001$1\u0002');
+  // 本の数式の書体（Latin Modern Math と Schola を重ねたもの）では、\mathrm{} の中のギリシャ文字（\mathrm{k\Omega}・\mathrm{\mu F}）が消える。
+  // \mathrm の外に出して、立てた字（\upOmega・\upmu）にする（第6巻 組 a・e の報告。第39回）
+  function upGreek(t) {
+    return t.replace(/\\mathrm\{((?:[^{}]|\{[^{}]*\})*)\}/g, (m, body) => {
+      if (!/\\[a-zA-Z]+/.test(body) || !/\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)(?![a-zA-Z])/.test(body)) return m;
+      return ('\\mathrm{' + body.replace(/\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Phi|Psi|Omega)(?![a-zA-Z])/g, '}\\up$1\\mathrm{') + '}').replace(/\\mathrm\{\}/g, '');
+    });
+  }
   M.toTeX = function (s, opt) {
     opt = opt || {};
     if (s == null) return '';
@@ -219,7 +227,7 @@
     // 数式（$…$、第2巻から）は、そのまま TeX に渡す。□ は欄に（太字の ** は、式をまたいでもよい）
     if (s.includes('$')) {
       s = MK(s);
-      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? dfracOutsideScripts(seg).replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/(\\mqbox(?:\[[^\]]*\])?\{\}\}|\\mqboxt\{[^}]*\}\{[^}]*\}\})\$ (?=\S)/g, '$1$~').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
+      return s.split(/(\$[^$]*\$)/).map((seg, k) => k % 2 ? upGreek(dfracOutsideScripts(seg)).replace(/□/g, '\\mbox{' + (opt.box || '\\mqbox{}') + '}') : M.toTeX(seg, opt)).join('').replace(/(\\mqbox(?:\[[^\]]*\])?\{\}\}|\\mqboxt\{[^}]*\}\{[^}]*\}\})\$ (?=\S)/g, '$1$~').replace(/\u0001/g, '\\mqmk{').replace(/\u0002/g, '}');
     }
     s = MK(s);
     let out = '', last = 0, m;
@@ -277,7 +285,7 @@
   //   \times \div \cdot \pm \mp \pi \le \ge \ne \approx \to \infty \degree・\log \ln \sin \cos \tan \exp・\left( \right)・\text{}・\mathrm{}・\,・\quad・□（欄）
   const MATHSYM = { times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓', pi: 'π', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠',
     approx: '≒', ell: 'ℓ', sojisym: '∽', backsim: '∽', infty: '∞', leqq: '≦', geqq: '≧', lvert: '|', rvert: '|', vert: '|', mid: '|', square: '□', triangle: '△', angle: '∠', perp: '⊥', parallel: '∥', fallingdotseq: '≒', to: '→', rightarrow: '→', infty: '∞', degree: '°', circ: '°', alpha: 'α', beta: 'β', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ',
-    Delta: 'Δ', omega: 'ω', Omega: 'Ω', zeta: 'ζ', delta: 'δ', psi: 'ψ', Psi: 'Ψ', Phi: 'Φ', Lambda: 'Λ', leftrightarrow: '↔', Leftrightarrow: '⇔', Rightarrow: '⇒', mapsto: '↦', neq: '≠', top: 'T', tau: 'τ', Sigma: 'Σ', ll: '≪', gg: '≫', partial: '∂', gamma: 'γ', varepsilon: 'ε', epsilon: 'ε', kappa: 'κ', nu: 'ν', xi: 'ξ', eta: 'η', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
+    Delta: 'Δ', omega: 'ω', Omega: 'Ω', upmu: 'μ', upOmega: 'Ω', zeta: 'ζ', delta: 'δ', psi: 'ψ', Psi: 'Ψ', Phi: 'Φ', Lambda: 'Λ', leftrightarrow: '↔', Leftrightarrow: '⇔', Rightarrow: '⇒', mapsto: '↦', neq: '≠', top: 'T', tau: 'τ', Sigma: 'Σ', ll: '≪', gg: '≫', partial: '∂', gamma: 'γ', varepsilon: 'ε', epsilon: 'ε', kappa: 'κ', nu: 'ν', xi: 'ξ', eta: 'η', rho: 'ρ', varphi: 'φ', phi: 'φ', ldots: '…', cdots: '⋯', prime: '′', percent: '%', '%': '%', '{': '{', '}': '}', '$': '$', '#': '#', '&': '&' };
   const MATHFN = ['log', 'ln', 'sin', 'cos', 'tan', 'exp', 'max', 'min', 'sinh', 'cosh', 'tanh', 'arg', 'det', 'tr', 'rank'];
   M.mathHTML = function (src, opt) {
     opt = opt || {};
